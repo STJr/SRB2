@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2021 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -512,6 +512,39 @@ void R_DrawTranslucentColumn_8(void)
 	}
 }
 
+// Hack: A cut-down copy of R_DrawTranslucentColumn_8 that does not read texture
+// data since something about calculating the texture reading address for drop shadows is broken.
+// dc_texturemid and dc_iscale get wrong values for drop shadows, however those are not strictly
+// needed for the current design of the shadows, so this function bypasses the issue
+// by not using those variables at all.
+void R_DrawDropShadowColumn_8(void)
+{
+	register INT32 count;
+	register UINT8 *dest;
+
+	count = dc_yh - dc_yl + 1;
+
+	if (count <= 0) // Zero length, column does not exceed a pixel.
+		return;
+
+	dest = &topleft[dc_yl*vid.width + dc_x];
+
+	{
+#define DSCOLOR 31 // palette index for the color of the shadow
+		register const UINT8 *transmap_offset = dc_transmap + (dc_colormap[DSCOLOR] << 8);
+#undef DSCOLOR
+		while ((count -= 2) >= 0)
+		{
+			*dest = *(transmap_offset + (*dest));
+			dest += vid.width;
+			*dest = *(transmap_offset + (*dest));
+			dest += vid.width;
+		}
+		if (count & 1)
+			*dest = *(transmap_offset + (*dest));
+	}
+}
+
 void R_DrawAlphaColumn_8(void)
 {
 	register INT32 count;
@@ -877,7 +910,7 @@ void R_DrawTiltedSpan_8(void)
 	uz = ds_sup->z + ds_sup->y*(centery-ds_y) + ds_sup->x*(ds_x1-centerx);
 	vz = ds_svp->z + ds_svp->y*(centery-ds_y) + ds_svp->x*(ds_x1-centerx);
 
-	R_CalcTiltedLighting(iz);
+	CALC_SLOPE_LIGHT
 
 	dest = ylookup[ds_y] + columnofs[ds_x1];
 	source = ds_source;
@@ -997,7 +1030,7 @@ void R_DrawTiltedTranslucentSpan_8(void)
 	uz = ds_sup->z + ds_sup->y*(centery-ds_y) + ds_sup->x*(ds_x1-centerx);
 	vz = ds_svp->z + ds_svp->y*(centery-ds_y) + ds_svp->x*(ds_x1-centerx);
 
-	R_CalcTiltedLighting(iz);
+	CALC_SLOPE_LIGHT
 
 	dest = ylookup[ds_y] + columnofs[ds_x1];
 	source = ds_source;
@@ -1095,7 +1128,7 @@ void R_DrawTiltedAlphaSpan_8(void)
 	uz = ds_sup->z + ds_sup->y*(centery-ds_y) + ds_sup->x*(ds_x1-centerx);
 	vz = ds_svp->z + ds_svp->y*(centery-ds_y) + ds_svp->x*(ds_x1-centerx);
 
-	R_CalcTiltedLighting(iz);
+	CALC_SLOPE_LIGHT
 
 	dest = ylookup[ds_y] + columnofs[ds_x1];
 	source = ds_source;
@@ -1172,10 +1205,10 @@ void R_DrawTiltedAlphaSpan_8(void)
 	}
 }
 
-/**	\brief The R_DrawTiltedTranslucentWaterSpan_8 function
+/**	\brief The R_DrawTiltedWaterSpan_8 function
 	Like DrawTiltedTranslucentSpan, but for water
 */
-void R_DrawTiltedTranslucentWaterSpan_8(void)
+void R_DrawTiltedWaterSpan_8(void)
 {
 	// x1, x2 = ds_x1, ds_x2
 	int width = ds_x2 - ds_x1;
@@ -1197,7 +1230,7 @@ void R_DrawTiltedTranslucentWaterSpan_8(void)
 	uz = ds_sup->z + ds_sup->y*(centery-ds_y) + ds_sup->x*(ds_x1-centerx);
 	vz = ds_svp->z + ds_svp->y*(centery-ds_y) + ds_svp->x*(ds_x1-centerx);
 
-	R_CalcTiltedLighting(iz);
+	CALC_SLOPE_LIGHT
 
 	dest = ylookup[ds_y] + columnofs[ds_x1];
 	dsrc = screens[1] + (ds_y+ds_bgofs)*vid.width + ds_x1;
@@ -1297,7 +1330,7 @@ void R_DrawTiltedAlphaWaterSpan_8(void)
 	uz = ds_sup->z + ds_sup->y*(centery-ds_y) + ds_sup->x*(ds_x1-centerx);
 	vz = ds_svp->z + ds_svp->y*(centery-ds_y) + ds_svp->x*(ds_x1-centerx);
 
-	R_CalcTiltedLighting(iz);
+	CALC_SLOPE_LIGHT
 
 	dest = ylookup[ds_y] + columnofs[ds_x1];
 	dsrc = screens[1] + (ds_y+ds_bgofs)*vid.width + ds_x1;
@@ -1398,7 +1431,7 @@ void R_DrawTiltedSplat_8(void)
 	uz = ds_sup->z + ds_sup->y*(centery-ds_y) + ds_sup->x*(ds_x1-centerx);
 	vz = ds_svp->z + ds_svp->y*(centery-ds_y) + ds_svp->x*(ds_x1-centerx);
 
-	R_CalcTiltedLighting(iz);
+	CALC_SLOPE_LIGHT
 
 	dest = ylookup[ds_y] + columnofs[ds_x1];
 	source = ds_source;
@@ -2600,7 +2633,7 @@ void R_DrawAlphaSpan_8(void)
 	}
 }
 
-void R_DrawTranslucentWaterSpan_8(void)
+void R_DrawWaterSpan_8(void)
 {
 	UINT32 xposition;
 	UINT32 yposition;
@@ -2788,6 +2821,164 @@ void R_DrawFogSpan_8(void)
 	}
 }
 
+/**	\brief The R_DrawTiltedFogSpan_8 function
+	Draws a tilted span with fogging.
+*/
+void R_DrawTiltedFogSpan_8(void)
+{
+	int width = ds_x2 - ds_x1;
+
+	UINT8 *dest = ylookup[ds_y] + columnofs[ds_x1];
+
+	double iz = ds_szp->z + ds_szp->y*(centery-ds_y) + ds_szp->x*(ds_x1-centerx);
+
+	CALC_SLOPE_LIGHT
+
+	do
+	{
+		UINT8 *colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
+		*dest = colormap[*dest];
+		dest++;
+	} while (--width >= 0);
+}
+
+/**	\brief The R_DrawSolidColorSpan_8 function
+	Draws a solid color span.
+*/
+void R_DrawSolidColorSpan_8(void)
+{
+	size_t count = (ds_x2 - ds_x1 + 1);
+
+	UINT8 source = ds_colormap[ds_source[0]];
+	UINT8 *dest = ylookup[ds_y] + columnofs[ds_x1];
+
+	memset(dest, source, count);
+}
+
+/**	\brief The R_DrawTransSolidColorSpan_8 function
+	Draws a translucent solid color span.
+*/
+void R_DrawTransSolidColorSpan_8(void)
+{
+	size_t count = (ds_x2 - ds_x1 + 1);
+
+	UINT8 source = ds_colormap[ds_source[0]];
+	UINT8 *dest = ylookup[ds_y] + columnofs[ds_x1];
+
+	const UINT8 *deststop = screens[0] + vid.rowbytes * vid.height;
+
+	while (count-- && dest <= deststop)
+	{
+		*dest = *(ds_transmap + (source << 8) + *dest);
+		dest++;
+	}
+}
+
+void R_DrawAlphaSolidColorSpan_8(void)
+{
+	// TODO
+}
+
+/**	\brief The R_DrawTiltedSolidColorSpan_8 function
+	Draws a tilted solid color span.
+*/
+void R_DrawTiltedSolidColorSpan_8(void)
+{
+	int width = ds_x2 - ds_x1;
+
+	UINT8 source = ds_source[0];
+	UINT8 *dest = ylookup[ds_y] + columnofs[ds_x1];
+
+	double iz = ds_szp->z + ds_szp->y*(centery-ds_y) + ds_szp->x*(ds_x1-centerx);
+
+	CALC_SLOPE_LIGHT
+
+	do
+	{
+		UINT8 *colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
+		*dest++ = colormap[source];
+	} while (--width >= 0);
+}
+
+/**	\brief The R_DrawTiltedTransSolidColorSpan_8 function
+	Draws a tilted and translucent solid color span.
+*/
+void R_DrawTiltedTransSolidColorSpan_8(void)
+{
+	int width = ds_x2 - ds_x1;
+
+	UINT8 source = ds_source[0];
+	UINT8 *dest = ylookup[ds_y] + columnofs[ds_x1];
+
+	double iz = ds_szp->z + ds_szp->y*(centery-ds_y) + ds_szp->x*(ds_x1-centerx);
+
+	CALC_SLOPE_LIGHT
+
+	do
+	{
+		UINT8 *colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
+		*dest = *(ds_transmap + (colormap[source] << 8) + *dest);
+		dest++;
+	} while (--width >= 0);
+}
+
+/**	\brief The R_DrawWaterSolidColorSpan_8 function
+	Draws a water solid color span.
+*/
+void R_DrawWaterSolidColorSpan_8(void)
+{
+	UINT8 source = ds_source[0];
+	UINT8 *colormap = ds_colormap;
+	UINT8 *dest = ylookup[ds_y] + columnofs[ds_x1];
+	UINT8 *dsrc = screens[1] + (ds_y+ds_bgofs)*vid.width + ds_x1;
+
+	size_t count = (ds_x2 - ds_x1 + 1);
+	const UINT8 *deststop = screens[0] + vid.rowbytes * vid.height;
+
+	while (count-- && dest <= deststop)
+	{
+		*dest = colormap[*(ds_transmap + (source << 8) + *dsrc++)];
+		dest++;
+	}
+}
+
+/**	\brief The R_DrawTiltedWaterSolidColorSpan_8 function
+	Draws a tilted water solid color span.
+*/
+void R_DrawTiltedWaterSolidColorSpan_8(void)
+{
+	int width = ds_x2 - ds_x1;
+
+	UINT8 source = ds_source[0];
+	UINT8 *dest = ylookup[ds_y] + columnofs[ds_x1];
+	UINT8 *dsrc = screens[1] + (ds_y+ds_bgofs)*vid.width + ds_x1;
+
+	double iz = ds_szp->z + ds_szp->y*(centery-ds_y) + ds_szp->x*(ds_x1-centerx);
+
+	CALC_SLOPE_LIGHT
+
+	do
+	{
+		UINT8 *colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
+		*dest++ = *(ds_transmap + (colormap[source] << 8) + *dsrc++);
+	} while (--width >= 0);
+}
+
+void R_DrawAlphaWaterSolidColorSpan_8(void)
+{
+	// TODO
+}
+
+void R_DrawTiltedAlphaSolidColorSpan_8(void)
+{
+	// TODO
+}
+
+void R_DrawTiltedAlphaWaterSolidColorSpan_8(void)
+{
+	// TODO
+}
+
 /**	\brief The R_DrawFogColumn_8 function
 	Fog wall.
 */
@@ -2849,7 +3040,7 @@ void R_DrawShadowedColumn_8(void)
 	{
 		// If the height of the light is above the column, get the colormap
 		// anyway because the lighting of the top should be affected.
-		solid = dc_lightlist[i].flags & FF_CUTSOLIDS;
+		solid = dc_lightlist[i].flags & FOF_CUTSOLIDS;
 
 		height = dc_lightlist[i].height >> LIGHTSCALESHIFT;
 		if (solid)

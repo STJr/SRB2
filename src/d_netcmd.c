@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2021 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -16,6 +16,7 @@
 
 #include "console.h"
 #include "command.h"
+#include "i_time.h"
 #include "i_system.h"
 #include "g_game.h"
 #include "hu_stuff.h"
@@ -47,6 +48,8 @@
 #include "m_cond.h"
 #include "m_anigif.h"
 #include "md5.h"
+#include "m_perfstats.h"
+#include "hardware/u_list.h" // TODO: this should be a standard utility class
 
 #ifdef NETGAME_DEVMODE
 #define CV_RESTRICT CV_NETVAR
@@ -63,7 +66,9 @@ static void Got_WeaponPref(UINT8 **cp, INT32 playernum);
 static void Got_Mapcmd(UINT8 **cp, INT32 playernum);
 static void Got_ExitLevelcmd(UINT8 **cp, INT32 playernum);
 static void Got_RequestAddfilecmd(UINT8 **cp, INT32 playernum);
+static void Got_RequestAddfoldercmd(UINT8 **cp, INT32 playernum);
 static void Got_Addfilecmd(UINT8 **cp, INT32 playernum);
+static void Got_Addfoldercmd(UINT8 **cp, INT32 playernum);
 static void Got_Pause(UINT8 **cp, INT32 playernum);
 static void Got_Suicide(UINT8 **cp, INT32 playernum);
 static void Got_RandomSeed(UINT8 **cp, INT32 playernum);
@@ -115,6 +120,7 @@ static void Command_Map_f(void);
 static void Command_ResetCamera_f(void);
 
 static void Command_Addfile(void);
+static void Command_Addfolder(void);
 static void Command_ListWADS_f(void);
 static void Command_RunSOC(void);
 static void Command_Pause(void);
@@ -187,7 +193,7 @@ static CV_PossibleValue_t joyport_cons_t[] = {{1, "/dev/js0"}, {2, "/dev/js1"}, 
 static CV_PossibleValue_t teamscramble_cons_t[] = {{0, "Off"}, {1, "Random"}, {2, "Points"}, {0, NULL}};
 
 static CV_PossibleValue_t startingliveslimit_cons_t[] = {{1, "MIN"}, {99, "MAX"}, {0, NULL}};
-static CV_PossibleValue_t sleeping_cons_t[] = {{-1, "MIN"}, {1000/TICRATE, "MAX"}, {0, NULL}};
+static CV_PossibleValue_t sleeping_cons_t[] = {{0, "MIN"}, {1000/TICRATE, "MAX"}, {0, NULL}};
 static CV_PossibleValue_t competitionboxes_cons_t[] = {{0, "Normal"}, {1, "Mystery"}, //{2, "Teleport"},
 	{3, "None"}, {0, NULL}};
 
@@ -197,37 +203,37 @@ static CV_PossibleValue_t matchboxes_cons_t[] = {{0, "Normal"}, {1, "Mystery"}, 
 static CV_PossibleValue_t chances_cons_t[] = {{0, "MIN"}, {9, "MAX"}, {0, NULL}};
 static CV_PossibleValue_t pause_cons_t[] = {{0, "Server"}, {1, "All"}, {0, NULL}};
 
-consvar_t cv_showinputjoy = CVAR_INIT ("showinputjoy", "Off", 0, CV_OnOff, NULL);
+consvar_t cv_showinputjoy = CVAR_INIT ("showinputjoy", "Off", CV_ALLOWLUA, CV_OnOff, NULL);
 
 #ifdef NETGAME_DEVMODE
 static consvar_t cv_fishcake = CVAR_INIT ("fishcake", "Off", CV_CALL|CV_NOSHOWHELP|CV_RESTRICT, CV_OnOff, Fishcake_OnChange);
 #endif
 static consvar_t cv_dummyconsvar = CVAR_INIT ("dummyconsvar", "Off", CV_CALL|CV_NOSHOWHELP, CV_OnOff, DummyConsvar_OnChange);
 
-consvar_t cv_restrictskinchange = CVAR_INIT ("restrictskinchange", "Yes", CV_SAVE|CV_NETVAR|CV_CHEAT, CV_YesNo, NULL);
-consvar_t cv_allowteamchange = CVAR_INIT ("allowteamchange", "Yes", CV_SAVE|CV_NETVAR, CV_YesNo, NULL);
+consvar_t cv_restrictskinchange = CVAR_INIT ("restrictskinchange", "Yes", CV_SAVE|CV_NETVAR|CV_CHEAT|CV_ALLOWLUA, CV_YesNo, NULL);
+consvar_t cv_allowteamchange = CVAR_INIT ("allowteamchange", "Yes", CV_SAVE|CV_NETVAR|CV_ALLOWLUA, CV_YesNo, NULL);
 
-consvar_t cv_startinglives = CVAR_INIT ("startinglives", "3", CV_SAVE|CV_NETVAR|CV_CHEAT, startingliveslimit_cons_t, NULL);
+consvar_t cv_startinglives = CVAR_INIT ("startinglives", "3", CV_SAVE|CV_NETVAR|CV_CHEAT|CV_ALLOWLUA, startingliveslimit_cons_t, NULL);
 
 static CV_PossibleValue_t respawntime_cons_t[] = {{1, "MIN"}, {30, "MAX"}, {0, "Off"}, {0, NULL}};
-consvar_t cv_respawntime = CVAR_INIT ("respawndelay", "3", CV_SAVE|CV_NETVAR|CV_CHEAT, respawntime_cons_t, NULL);
+consvar_t cv_respawntime = CVAR_INIT ("respawndelay", "3", CV_SAVE|CV_NETVAR|CV_CHEAT|CV_ALLOWLUA, respawntime_cons_t, NULL);
 
-consvar_t cv_competitionboxes = CVAR_INIT ("competitionboxes", "Mystery", CV_SAVE|CV_NETVAR|CV_CHEAT, competitionboxes_cons_t, NULL);
+consvar_t cv_competitionboxes = CVAR_INIT ("competitionboxes", "Mystery", CV_SAVE|CV_NETVAR|CV_CHEAT|CV_ALLOWLUA, competitionboxes_cons_t, NULL);
 
 static CV_PossibleValue_t seenames_cons_t[] = {{0, "Off"}, {1, "Colorless"}, {2, "Team"}, {3, "Ally/Foe"}, {0, NULL}};
-consvar_t cv_seenames = CVAR_INIT ("seenames", "Ally/Foe", CV_SAVE, seenames_cons_t, 0);
-consvar_t cv_allowseenames = CVAR_INIT ("allowseenames", "Yes", CV_SAVE|CV_NETVAR, CV_YesNo, NULL);
+consvar_t cv_seenames = CVAR_INIT ("seenames", "Ally/Foe", CV_SAVE|CV_ALLOWLUA, seenames_cons_t, 0);
+consvar_t cv_allowseenames = CVAR_INIT ("allowseenames", "Yes", CV_SAVE|CV_NETVAR|CV_ALLOWLUA, CV_YesNo, NULL);
 
 // names
 consvar_t cv_playername = CVAR_INIT ("name", "Sonic", CV_SAVE|CV_CALL|CV_NOINIT, NULL, Name_OnChange);
 consvar_t cv_playername2 = CVAR_INIT ("name2", "Tails", CV_SAVE|CV_CALL|CV_NOINIT, NULL, Name2_OnChange);
 // player colors
 UINT16 lastgoodcolor = SKINCOLOR_BLUE, lastgoodcolor2 = SKINCOLOR_BLUE;
-consvar_t cv_playercolor = CVAR_INIT ("color", "Blue", CV_CALL|CV_NOINIT, Color_cons_t, Color_OnChange);
-consvar_t cv_playercolor2 = CVAR_INIT ("color2", "Orange", CV_CALL|CV_NOINIT, Color_cons_t, Color2_OnChange);
+consvar_t cv_playercolor = CVAR_INIT ("color", "Blue", CV_CALL|CV_NOINIT|CV_ALLOWLUA, Color_cons_t, Color_OnChange);
+consvar_t cv_playercolor2 = CVAR_INIT ("color2", "Orange", CV_CALL|CV_NOINIT|CV_ALLOWLUA, Color_cons_t, Color2_OnChange);
 // player's skin, saved for commodity, when using a favorite skins wad..
-consvar_t cv_skin = CVAR_INIT ("skin", DEFAULTSKIN, CV_CALL|CV_NOINIT, NULL, Skin_OnChange);
-consvar_t cv_skin2 = CVAR_INIT ("skin2", DEFAULTSKIN2, CV_CALL|CV_NOINIT, NULL, Skin2_OnChange);
+consvar_t cv_skin = CVAR_INIT ("skin", DEFAULTSKIN, CV_CALL|CV_NOINIT|CV_ALLOWLUA, NULL, Skin_OnChange);
+consvar_t cv_skin2 = CVAR_INIT ("skin2", DEFAULTSKIN2, CV_CALL|CV_NOINIT|CV_ALLOWLUA, NULL, Skin2_OnChange);
 
 // saved versions of the above six
 consvar_t cv_defaultplayercolor = CVAR_INIT ("defaultcolor", "Blue", CV_SAVE, Color_cons_t, NULL);
@@ -262,43 +268,43 @@ consvar_t cv_mouse2opt = CVAR_INIT ("mouse2opt", "0", CV_SAVE, NULL, NULL);
 consvar_t cv_mouse2port = CVAR_INIT ("mouse2port", "COM2", CV_SAVE, mouse2port_cons_t, NULL);
 #endif
 
-consvar_t cv_matchboxes = CVAR_INIT ("matchboxes", "Normal", CV_SAVE|CV_NETVAR|CV_CHEAT, matchboxes_cons_t, NULL);
-consvar_t cv_specialrings = CVAR_INIT ("specialrings", "On", CV_SAVE|CV_NETVAR, CV_OnOff, NULL);
-consvar_t cv_powerstones = CVAR_INIT ("powerstones", "On", CV_SAVE|CV_NETVAR, CV_OnOff, NULL);
+consvar_t cv_matchboxes = CVAR_INIT ("matchboxes", "Normal", CV_SAVE|CV_NETVAR|CV_CHEAT|CV_ALLOWLUA, matchboxes_cons_t, NULL);
+consvar_t cv_specialrings = CVAR_INIT ("specialrings", "On", CV_SAVE|CV_NETVAR|CV_ALLOWLUA, CV_OnOff, NULL);
+consvar_t cv_powerstones = CVAR_INIT ("powerstones", "On", CV_SAVE|CV_NETVAR|CV_ALLOWLUA, CV_OnOff, NULL);
 
-consvar_t cv_recycler =      CVAR_INIT ("tv_recycler",      "5", CV_SAVE|CV_NETVAR|CV_CHEAT, chances_cons_t, NULL);
-consvar_t cv_teleporters =   CVAR_INIT ("tv_teleporter",    "5", CV_SAVE|CV_NETVAR|CV_CHEAT, chances_cons_t, NULL);
-consvar_t cv_superring =     CVAR_INIT ("tv_superring",     "5", CV_SAVE|CV_NETVAR|CV_CHEAT, chances_cons_t, NULL);
-consvar_t cv_supersneakers = CVAR_INIT ("tv_supersneaker",  "5", CV_SAVE|CV_NETVAR|CV_CHEAT, chances_cons_t, NULL);
-consvar_t cv_invincibility = CVAR_INIT ("tv_invincibility", "5", CV_SAVE|CV_NETVAR|CV_CHEAT, chances_cons_t, NULL);
-consvar_t cv_jumpshield =    CVAR_INIT ("tv_jumpshield",    "5", CV_SAVE|CV_NETVAR|CV_CHEAT, chances_cons_t, NULL);
-consvar_t cv_watershield =   CVAR_INIT ("tv_watershield",   "5", CV_SAVE|CV_NETVAR|CV_CHEAT, chances_cons_t, NULL);
-consvar_t cv_ringshield =    CVAR_INIT ("tv_ringshield",    "5", CV_SAVE|CV_NETVAR|CV_CHEAT, chances_cons_t, NULL);
-consvar_t cv_forceshield =   CVAR_INIT ("tv_forceshield",   "5", CV_SAVE|CV_NETVAR|CV_CHEAT, chances_cons_t, NULL);
-consvar_t cv_bombshield =    CVAR_INIT ("tv_bombshield",    "5", CV_SAVE|CV_NETVAR|CV_CHEAT, chances_cons_t, NULL);
-consvar_t cv_1up =           CVAR_INIT ("tv_1up",           "5", CV_SAVE|CV_NETVAR|CV_CHEAT, chances_cons_t, NULL);
-consvar_t cv_eggmanbox =     CVAR_INIT ("tv_eggman",        "5", CV_SAVE|CV_NETVAR|CV_CHEAT, chances_cons_t, NULL);
+consvar_t cv_recycler =      CVAR_INIT ("tv_recycler",      "5", CV_SAVE|CV_NETVAR|CV_CHEAT|CV_ALLOWLUA, chances_cons_t, NULL);
+consvar_t cv_teleporters =   CVAR_INIT ("tv_teleporter",    "5", CV_SAVE|CV_NETVAR|CV_CHEAT|CV_ALLOWLUA, chances_cons_t, NULL);
+consvar_t cv_superring =     CVAR_INIT ("tv_superring",     "5", CV_SAVE|CV_NETVAR|CV_CHEAT|CV_ALLOWLUA, chances_cons_t, NULL);
+consvar_t cv_supersneakers = CVAR_INIT ("tv_supersneaker",  "5", CV_SAVE|CV_NETVAR|CV_CHEAT|CV_ALLOWLUA, chances_cons_t, NULL);
+consvar_t cv_invincibility = CVAR_INIT ("tv_invincibility", "5", CV_SAVE|CV_NETVAR|CV_CHEAT|CV_ALLOWLUA, chances_cons_t, NULL);
+consvar_t cv_jumpshield =    CVAR_INIT ("tv_jumpshield",    "5", CV_SAVE|CV_NETVAR|CV_CHEAT|CV_ALLOWLUA, chances_cons_t, NULL);
+consvar_t cv_watershield =   CVAR_INIT ("tv_watershield",   "5", CV_SAVE|CV_NETVAR|CV_CHEAT|CV_ALLOWLUA, chances_cons_t, NULL);
+consvar_t cv_ringshield =    CVAR_INIT ("tv_ringshield",    "5", CV_SAVE|CV_NETVAR|CV_CHEAT|CV_ALLOWLUA, chances_cons_t, NULL);
+consvar_t cv_forceshield =   CVAR_INIT ("tv_forceshield",   "5", CV_SAVE|CV_NETVAR|CV_CHEAT|CV_ALLOWLUA, chances_cons_t, NULL);
+consvar_t cv_bombshield =    CVAR_INIT ("tv_bombshield",    "5", CV_SAVE|CV_NETVAR|CV_CHEAT|CV_ALLOWLUA, chances_cons_t, NULL);
+consvar_t cv_1up =           CVAR_INIT ("tv_1up",           "5", CV_SAVE|CV_NETVAR|CV_CHEAT|CV_ALLOWLUA, chances_cons_t, NULL);
+consvar_t cv_eggmanbox =     CVAR_INIT ("tv_eggman",        "5", CV_SAVE|CV_NETVAR|CV_CHEAT|CV_ALLOWLUA, chances_cons_t, NULL);
 
-consvar_t cv_ringslinger = CVAR_INIT ("ringslinger", "No", CV_NETVAR|CV_NOSHOWHELP|CV_CALL|CV_CHEAT, CV_YesNo, Ringslinger_OnChange);
-consvar_t cv_gravity = CVAR_INIT ("gravity", "0.5", CV_RESTRICT|CV_FLOAT|CV_CALL, NULL, Gravity_OnChange);
+consvar_t cv_ringslinger = CVAR_INIT ("ringslinger", "No", CV_NETVAR|CV_NOSHOWHELP|CV_CALL|CV_CHEAT|CV_ALLOWLUA, CV_YesNo, Ringslinger_OnChange);
+consvar_t cv_gravity = CVAR_INIT ("gravity", "0.5", CV_RESTRICT|CV_FLOAT|CV_CALL|CV_ALLOWLUA, NULL, Gravity_OnChange);
 
 consvar_t cv_soundtest = CVAR_INIT ("soundtest", "0", CV_CALL, NULL, SoundTest_OnChange);
 
-static CV_PossibleValue_t minitimelimit_cons_t[] = {{15, "MIN"}, {9999, "MAX"}, {0, NULL}};
-consvar_t cv_countdowntime = CVAR_INIT ("countdowntime", "60", CV_SAVE|CV_NETVAR|CV_CHEAT, minitimelimit_cons_t, NULL);
+static CV_PossibleValue_t minitimelimit_cons_t[] = {{1, "MIN"}, {9999, "MAX"}, {0, NULL}};
+consvar_t cv_countdowntime = CVAR_INIT ("countdowntime", "60", CV_SAVE|CV_NETVAR|CV_CHEAT|CV_ALLOWLUA, minitimelimit_cons_t, NULL);
 
-consvar_t cv_touchtag = CVAR_INIT ("touchtag", "Off", CV_SAVE|CV_NETVAR, CV_OnOff, NULL);
-consvar_t cv_hidetime = CVAR_INIT ("hidetime", "30", CV_SAVE|CV_NETVAR|CV_CALL, minitimelimit_cons_t, Hidetime_OnChange);
+consvar_t cv_touchtag = CVAR_INIT ("touchtag", "Off", CV_SAVE|CV_NETVAR|CV_ALLOWLUA, CV_OnOff, NULL);
+consvar_t cv_hidetime = CVAR_INIT ("hidetime", "30", CV_SAVE|CV_NETVAR|CV_CALL|CV_ALLOWLUA, minitimelimit_cons_t, Hidetime_OnChange);
 
-consvar_t cv_autobalance = CVAR_INIT ("autobalance", "Off", CV_SAVE|CV_NETVAR|CV_CALL, CV_OnOff, AutoBalance_OnChange);
-consvar_t cv_teamscramble = CVAR_INIT ("teamscramble", "Off", CV_SAVE|CV_NETVAR|CV_CALL|CV_NOINIT, teamscramble_cons_t, TeamScramble_OnChange);
-consvar_t cv_scrambleonchange = CVAR_INIT ("scrambleonchange", "Off", CV_SAVE|CV_NETVAR, teamscramble_cons_t, NULL);
+consvar_t cv_autobalance = CVAR_INIT ("autobalance", "Off", CV_SAVE|CV_NETVAR|CV_CALL|CV_ALLOWLUA, CV_OnOff, AutoBalance_OnChange);
+consvar_t cv_teamscramble = CVAR_INIT ("teamscramble", "Off", CV_SAVE|CV_NETVAR|CV_CALL|CV_NOINIT|CV_ALLOWLUA, teamscramble_cons_t, TeamScramble_OnChange);
+consvar_t cv_scrambleonchange = CVAR_INIT ("scrambleonchange", "Off", CV_SAVE|CV_NETVAR|CV_ALLOWLUA, teamscramble_cons_t, NULL);
 
-consvar_t cv_friendlyfire = CVAR_INIT ("friendlyfire", "Off", CV_SAVE|CV_NETVAR, CV_OnOff, NULL);
-consvar_t cv_itemfinder = CVAR_INIT ("itemfinder", "Off", CV_CALL, CV_OnOff, ItemFinder_OnChange);
+consvar_t cv_friendlyfire = CVAR_INIT ("friendlyfire", "Off", CV_SAVE|CV_NETVAR|CV_ALLOWLUA, CV_OnOff, NULL);
+consvar_t cv_itemfinder = CVAR_INIT ("itemfinder", "Off", CV_CALL|CV_ALLOWLUA, CV_OnOff, ItemFinder_OnChange);
 
 // Scoring type options
-consvar_t cv_overtime = CVAR_INIT ("overtime", "Yes", CV_SAVE|CV_NETVAR, CV_YesNo, NULL);
+consvar_t cv_overtime = CVAR_INIT ("overtime", "Yes", CV_SAVE|CV_NETVAR|CV_ALLOWLUA, CV_YesNo, NULL);
 
 consvar_t cv_rollingdemos = CVAR_INIT ("rollingdemos", "On", CV_SAVE, CV_OnOff, NULL);
 
@@ -309,13 +315,13 @@ static CV_PossibleValue_t powerupdisplay_cons_t[] = {{0, "Never"}, {1, "First-pe
 consvar_t cv_powerupdisplay = CVAR_INIT ("powerupdisplay", "First-person only", CV_SAVE, powerupdisplay_cons_t, NULL);
 
 static CV_PossibleValue_t pointlimit_cons_t[] = {{1, "MIN"}, {MAXSCORE, "MAX"}, {0, "None"}, {0, NULL}};
-consvar_t cv_pointlimit = CVAR_INIT ("pointlimit", "None", CV_SAVE|CV_NETVAR|CV_CALL|CV_NOINIT, pointlimit_cons_t, PointLimit_OnChange);
+consvar_t cv_pointlimit = CVAR_INIT ("pointlimit", "None", CV_SAVE|CV_NETVAR|CV_CALL|CV_NOINIT|CV_ALLOWLUA, pointlimit_cons_t, PointLimit_OnChange);
 static CV_PossibleValue_t timelimit_cons_t[] = {{1, "MIN"}, {30, "MAX"}, {0, "None"}, {0, NULL}};
-consvar_t cv_timelimit = CVAR_INIT ("timelimit", "None", CV_SAVE|CV_NETVAR|CV_CALL|CV_NOINIT, timelimit_cons_t, TimeLimit_OnChange);
+consvar_t cv_timelimit = CVAR_INIT ("timelimit", "None", CV_SAVE|CV_NETVAR|CV_CALL|CV_NOINIT|CV_ALLOWLUA, timelimit_cons_t, TimeLimit_OnChange);
 static CV_PossibleValue_t numlaps_cons_t[] = {{1, "MIN"}, {50, "MAX"}, {0, NULL}};
-consvar_t cv_numlaps = CVAR_INIT ("numlaps", "4", CV_NETVAR|CV_CALL|CV_NOINIT, numlaps_cons_t, NumLaps_OnChange);
+consvar_t cv_numlaps = CVAR_INIT ("numlaps", "4", CV_NETVAR|CV_CALL|CV_NOINIT|CV_ALLOWLUA, numlaps_cons_t, NumLaps_OnChange);
 static CV_PossibleValue_t basenumlaps_cons_t[] = {{1, "MIN"}, {50, "MAX"}, {0, "Map default"}, {0, NULL}};
-consvar_t cv_basenumlaps = CVAR_INIT ("basenumlaps", "Map default", CV_SAVE|CV_NETVAR|CV_CALL|CV_CHEAT, basenumlaps_cons_t, BaseNumLaps_OnChange);
+consvar_t cv_basenumlaps = CVAR_INIT ("basenumlaps", "Map default", CV_SAVE|CV_NETVAR|CV_CALL|CV_CHEAT|CV_ALLOWLUA, basenumlaps_cons_t, BaseNumLaps_OnChange);
 
 // Point and time limits for every gametype
 INT32 pointlimits[NUMGAMETYPES];
@@ -324,11 +330,11 @@ INT32 timelimits[NUMGAMETYPES];
 // log elemental hazards -- not a netvar, is local to current player
 consvar_t cv_hazardlog = CVAR_INIT ("hazardlog", "Yes", 0, CV_YesNo, NULL);
 
-consvar_t cv_forceskin = CVAR_INIT ("forceskin", "None", CV_NETVAR|CV_CALL|CV_CHEAT, NULL, ForceSkin_OnChange);
+consvar_t cv_forceskin = CVAR_INIT ("forceskin", "None", CV_NETVAR|CV_CALL|CV_CHEAT|CV_ALLOWLUA, NULL, ForceSkin_OnChange);
 consvar_t cv_downloading = CVAR_INIT ("downloading", "On", 0, CV_OnOff, NULL);
-consvar_t cv_allowexitlevel = CVAR_INIT ("allowexitlevel", "No", CV_SAVE|CV_NETVAR, CV_YesNo, NULL);
+consvar_t cv_allowexitlevel = CVAR_INIT ("allowexitlevel", "No", CV_SAVE|CV_NETVAR|CV_ALLOWLUA, CV_YesNo, NULL);
 
-consvar_t cv_killingdead = CVAR_INIT ("killingdead", "Off", CV_NETVAR, CV_OnOff, NULL);
+consvar_t cv_killingdead = CVAR_INIT ("killingdead", "Off", CV_NETVAR|CV_ALLOWLUA, CV_OnOff, NULL);
 
 consvar_t cv_netstat = CVAR_INIT ("netstat", "Off", 0, CV_OnOff, NULL); // show bandwidth statistics
 static CV_PossibleValue_t nettimeout_cons_t[] = {{TICRATE/7, "MIN"}, {60*TICRATE, "MAX"}, {0, NULL}};
@@ -346,32 +352,39 @@ consvar_t cv_showping = CVAR_INIT ("showping", "Warning", CV_SAVE, showping_cons
 
 // Intermission time Tails 04-19-2002
 static CV_PossibleValue_t inttime_cons_t[] = {{0, "MIN"}, {3600, "MAX"}, {0, NULL}};
-consvar_t cv_inttime = CVAR_INIT ("inttime", "10", CV_SAVE|CV_NETVAR, inttime_cons_t, NULL);
+consvar_t cv_inttime = CVAR_INIT ("inttime", "10", CV_SAVE|CV_NETVAR|CV_ALLOWLUA, inttime_cons_t, NULL);
 
 static CV_PossibleValue_t coopstarposts_cons_t[] = {{0, "Per-player"}, {1, "Shared"}, {2, "Teamwork"}, {0, NULL}};
-consvar_t cv_coopstarposts = CVAR_INIT ("coopstarposts", "Per-player", CV_SAVE|CV_NETVAR|CV_CALL, coopstarposts_cons_t, CoopStarposts_OnChange);
+consvar_t cv_coopstarposts = CVAR_INIT ("coopstarposts", "Per-player", CV_SAVE|CV_NETVAR|CV_CALL|CV_ALLOWLUA, coopstarposts_cons_t, CoopStarposts_OnChange);
 
 static CV_PossibleValue_t cooplives_cons_t[] = {{0, "Infinite"}, {1, "Per-player"}, {2, "Avoid Game Over"}, {3, "Single pool"}, {0, NULL}};
-consvar_t cv_cooplives = CVAR_INIT ("cooplives", "Avoid Game Over", CV_SAVE|CV_NETVAR|CV_CALL|CV_CHEAT, cooplives_cons_t, CoopLives_OnChange);
+consvar_t cv_cooplives = CVAR_INIT ("cooplives", "Avoid Game Over", CV_SAVE|CV_NETVAR|CV_CALL|CV_CHEAT|CV_ALLOWLUA, cooplives_cons_t, CoopLives_OnChange);
 
 static CV_PossibleValue_t advancemap_cons_t[] = {{0, "Off"}, {1, "Next"}, {2, "Random"}, {0, NULL}};
-consvar_t cv_advancemap = CVAR_INIT ("advancemap", "Next", CV_SAVE|CV_NETVAR, advancemap_cons_t, NULL);
+consvar_t cv_advancemap = CVAR_INIT ("advancemap", "Next", CV_SAVE|CV_NETVAR|CV_ALLOWLUA, advancemap_cons_t, NULL);
 
 static CV_PossibleValue_t playersforexit_cons_t[] = {{0, "One"}, {1, "1/4"}, {2, "Half"}, {3, "3/4"}, {4, "All"}, {0, NULL}};
-consvar_t cv_playersforexit = CVAR_INIT ("playersforexit", "All", CV_SAVE|CV_NETVAR, playersforexit_cons_t, NULL);
+consvar_t cv_playersforexit = CVAR_INIT ("playersforexit", "All", CV_SAVE|CV_NETVAR|CV_ALLOWLUA, playersforexit_cons_t, NULL);
 
-consvar_t cv_exitmove = CVAR_INIT ("exitmove", "On", CV_SAVE|CV_NETVAR|CV_CALL, CV_OnOff, ExitMove_OnChange);
+consvar_t cv_exitmove = CVAR_INIT ("exitmove", "On", CV_SAVE|CV_NETVAR|CV_CALL|CV_ALLOWLUA, CV_OnOff, ExitMove_OnChange);
 
-consvar_t cv_runscripts = CVAR_INIT ("runscripts", "Yes", 0, CV_YesNo, NULL);
+consvar_t cv_runscripts = CVAR_INIT ("runscripts", "Yes", CV_ALLOWLUA, CV_YesNo, NULL);
 
-consvar_t cv_pause = CVAR_INIT ("pausepermission", "Server", CV_SAVE|CV_NETVAR, pause_cons_t, NULL);
-consvar_t cv_mute = CVAR_INIT ("mute", "Off", CV_NETVAR|CV_CALL, CV_OnOff, Mute_OnChange);
+consvar_t cv_pause = CVAR_INIT ("pausepermission", "Server", CV_SAVE|CV_NETVAR|CV_ALLOWLUA, pause_cons_t, NULL);
+consvar_t cv_mute = CVAR_INIT ("mute", "Off", CV_NETVAR|CV_CALL|CV_ALLOWLUA, CV_OnOff, Mute_OnChange);
 
 consvar_t cv_sleep = CVAR_INIT ("cpusleep", "1", CV_SAVE, sleeping_cons_t, NULL);
 
 static CV_PossibleValue_t perfstats_cons_t[] = {
 	{0, "Off"}, {1, "Rendering"}, {2, "Logic"}, {3, "ThinkFrame"}, {0, NULL}};
-consvar_t cv_perfstats = CVAR_INIT ("perfstats", "Off", 0, perfstats_cons_t, NULL);
+consvar_t cv_perfstats = CVAR_INIT ("perfstats", "Off", CV_CALL, perfstats_cons_t, PS_PerfStats_OnChange);
+static CV_PossibleValue_t ps_samplesize_cons_t[] = {
+	{1, "MIN"}, {1000, "MAX"}, {0, NULL}};
+consvar_t cv_ps_samplesize = CVAR_INIT ("ps_samplesize", "1", CV_CALL, ps_samplesize_cons_t, PS_SampleSize_OnChange);
+static CV_PossibleValue_t ps_descriptor_cons_t[] = {
+	{1, "Average"}, {2, "SD"}, {3, "Minimum"}, {4, "Maximum"}, {0, NULL}};
+consvar_t cv_ps_descriptor = CVAR_INIT ("ps_descriptor", "Average", 0, ps_descriptor_cons_t, NULL);
+
 consvar_t cv_freedemocamera = CVAR_INIT("freedemocamera", "Off", CV_SAVE, CV_OnOff, NULL);
 
 char timedemo_name[256];
@@ -398,16 +411,16 @@ const char *netxcmdnames[MAXNETXCMD - 1] =
 	"MAP",
 	"EXITLEVEL",
 	"ADDFILE",
+	"ADDFOLDER",
 	"PAUSE",
 	"ADDPLAYER",
 	"TEAMCHANGE",
 	"CLEARSCORES",
-	"LOGIN",
 	"VERIFIED",
 	"RANDOMSEED",
 	"RUNSOC",
 	"REQADDFILE",
-	"DELFILE", // replace next time we add an XD
+	"REQADDFOLDER",
 	"SETMOTD",
 	"SUICIDE",
 	"LUACMD",
@@ -441,7 +454,9 @@ void D_RegisterServerCommands(void)
 	RegisterNetXCmd(XD_MAP, Got_Mapcmd);
 	RegisterNetXCmd(XD_EXITLEVEL, Got_ExitLevelcmd);
 	RegisterNetXCmd(XD_ADDFILE, Got_Addfilecmd);
+	RegisterNetXCmd(XD_ADDFOLDER, Got_Addfoldercmd);
 	RegisterNetXCmd(XD_REQADDFILE, Got_RequestAddfilecmd);
+	RegisterNetXCmd(XD_REQADDFOLDER, Got_RequestAddfoldercmd);
 	RegisterNetXCmd(XD_PAUSE, Got_Pause);
 	RegisterNetXCmd(XD_SUICIDE, Got_Suicide);
 	RegisterNetXCmd(XD_RUNSOC, Got_RunSOCcmd);
@@ -449,56 +464,57 @@ void D_RegisterServerCommands(void)
 	RegisterNetXCmd(XD_LUAFILE, Got_LuaFile);
 
 	// Remote Administration
-	COM_AddCommand("password", Command_Changepassword_f);
-	COM_AddCommand("login", Command_Login_f); // useful in dedicated to kick off remote admin
-	COM_AddCommand("promote", Command_Verify_f);
+	COM_AddCommand("password", Command_Changepassword_f, COM_LUA);
+	COM_AddCommand("login", Command_Login_f, COM_LUA); // useful in dedicated to kick off remote admin
+	COM_AddCommand("promote", Command_Verify_f, COM_LUA);
 	RegisterNetXCmd(XD_VERIFIED, Got_Verification);
-	COM_AddCommand("demote", Command_RemoveAdmin_f);
+	COM_AddCommand("demote", Command_RemoveAdmin_f, COM_LUA);
 	RegisterNetXCmd(XD_DEMOTED, Got_Removal);
 
-	COM_AddCommand("motd", Command_MotD_f);
+	COM_AddCommand("motd", Command_MotD_f, COM_LUA);
 	RegisterNetXCmd(XD_SETMOTD, Got_MotD_f); // For remote admin
 
 	RegisterNetXCmd(XD_TEAMCHANGE, Got_Teamchange);
-	COM_AddCommand("serverchangeteam", Command_ServerTeamChange_f);
+	COM_AddCommand("serverchangeteam", Command_ServerTeamChange_f, COM_LUA);
 
 	RegisterNetXCmd(XD_CLEARSCORES, Got_Clearscores);
-	COM_AddCommand("clearscores", Command_Clearscores_f);
-	COM_AddCommand("map", Command_Map_f);
+	COM_AddCommand("clearscores", Command_Clearscores_f, COM_LUA);
+	COM_AddCommand("map", Command_Map_f, COM_LUA);
 
-	COM_AddCommand("exitgame", Command_ExitGame_f);
-	COM_AddCommand("retry", Command_Retry_f);
-	COM_AddCommand("exitlevel", Command_ExitLevel_f);
-	COM_AddCommand("showmap", Command_Showmap_f);
-	COM_AddCommand("mapmd5", Command_Mapmd5_f);
+	COM_AddCommand("exitgame", Command_ExitGame_f, COM_LUA);
+	COM_AddCommand("retry", Command_Retry_f, COM_LUA);
+	COM_AddCommand("exitlevel", Command_ExitLevel_f, COM_LUA);
+	COM_AddCommand("showmap", Command_Showmap_f, COM_LUA);
+	COM_AddCommand("mapmd5", Command_Mapmd5_f, COM_LUA);
 
-	COM_AddCommand("addfile", Command_Addfile);
-	COM_AddCommand("listwad", Command_ListWADS_f);
+	COM_AddCommand("addfolder", Command_Addfolder, COM_LUA);
+	COM_AddCommand("addfile", Command_Addfile, COM_LUA);
+	COM_AddCommand("listwad", Command_ListWADS_f, COM_LUA);
 
-	COM_AddCommand("runsoc", Command_RunSOC);
-	COM_AddCommand("pause", Command_Pause);
-	COM_AddCommand("suicide", Command_Suicide);
+	COM_AddCommand("runsoc", Command_RunSOC, COM_LUA);
+	COM_AddCommand("pause", Command_Pause, COM_LUA);
+	COM_AddCommand("suicide", Command_Suicide, COM_LUA);
 
-	COM_AddCommand("gametype", Command_ShowGametype_f);
-	COM_AddCommand("version", Command_Version_f);
+	COM_AddCommand("gametype", Command_ShowGametype_f, COM_LUA);
+	COM_AddCommand("version", Command_Version_f, COM_LUA);
 #ifdef UPDATE_ALERT
-	COM_AddCommand("mod_details", Command_ModDetails_f);
+	COM_AddCommand("mod_details", Command_ModDetails_f, COM_LUA);
 #endif
-	COM_AddCommand("quit", Command_Quit_f);
+	COM_AddCommand("quit", Command_Quit_f, COM_LUA);
 
-	COM_AddCommand("saveconfig", Command_SaveConfig_f);
-	COM_AddCommand("loadconfig", Command_LoadConfig_f);
-	COM_AddCommand("changeconfig", Command_ChangeConfig_f);
-	COM_AddCommand("isgamemodified", Command_Isgamemodified_f); // test
-	COM_AddCommand("showscores", Command_ShowScores_f);
-	COM_AddCommand("showtime", Command_ShowTime_f);
-	COM_AddCommand("cheats", Command_Cheats_f); // test
+	COM_AddCommand("saveconfig", Command_SaveConfig_f, 0);
+	COM_AddCommand("loadconfig", Command_LoadConfig_f, 0);
+	COM_AddCommand("changeconfig", Command_ChangeConfig_f, 0);
+	COM_AddCommand("isgamemodified", Command_Isgamemodified_f, COM_LUA); // test
+	COM_AddCommand("showscores", Command_ShowScores_f, COM_LUA);
+	COM_AddCommand("showtime", Command_ShowTime_f, COM_LUA);
+	COM_AddCommand("cheats", Command_Cheats_f, COM_LUA); // test
 #ifdef _DEBUG
-	COM_AddCommand("togglemodified", Command_Togglemodified_f);
-	COM_AddCommand("archivetest", Command_Archivetest_f);
+	COM_AddCommand("togglemodified", Command_Togglemodified_f, COM_LUA);
+	COM_AddCommand("archivetest", Command_Archivetest_f, COM_LUA);
 #endif
 
-	COM_AddCommand("downloads", Command_Downloads_f);
+	COM_AddCommand("downloads", Command_Downloads_f, COM_LUA);
 
 	// for master server connection
 	AddMServCommands();
@@ -585,7 +601,7 @@ void D_RegisterServerCommands(void)
 	CV_RegisterVar(&cv_blamecfail);
 #endif
 
-	COM_AddCommand("ping", Command_Ping_f);
+	COM_AddCommand("ping", Command_Ping_f, COM_LUA);
 	CV_RegisterVar(&cv_nettimeout);
 	CV_RegisterVar(&cv_jointimeout);
 
@@ -596,6 +612,10 @@ void D_RegisterServerCommands(void)
 	CV_RegisterVar(&cv_showping);
 
 	CV_RegisterVar(&cv_allowseenames);
+
+	// Other filesrch.c consvars are defined in D_RegisterClientCommands
+	CV_RegisterVar(&cv_addons_option);
+	CV_RegisterVar(&cv_addons_folder);
 
 	CV_RegisterVar(&cv_dummyconsvar);
 }
@@ -629,25 +649,25 @@ void D_RegisterClientCommands(void)
 	if (dedicated)
 		return;
 
-	COM_AddCommand("numthinkers", Command_Numthinkers_f);
-	COM_AddCommand("countmobjs", Command_CountMobjs_f);
+	COM_AddCommand("numthinkers", Command_Numthinkers_f, COM_LUA);
+	COM_AddCommand("countmobjs", Command_CountMobjs_f, COM_LUA);
 
-	COM_AddCommand("changeteam", Command_Teamchange_f);
-	COM_AddCommand("changeteam2", Command_Teamchange2_f);
+	COM_AddCommand("changeteam", Command_Teamchange_f, COM_LUA);
+	COM_AddCommand("changeteam2", Command_Teamchange2_f, COM_LUA);
 
-	COM_AddCommand("playdemo", Command_Playdemo_f);
-	COM_AddCommand("timedemo", Command_Timedemo_f);
-	COM_AddCommand("stopdemo", Command_Stopdemo_f);
-	COM_AddCommand("playintro", Command_Playintro_f);
+	COM_AddCommand("playdemo", Command_Playdemo_f, 0);
+	COM_AddCommand("timedemo", Command_Timedemo_f, 0);
+	COM_AddCommand("stopdemo", Command_Stopdemo_f, COM_LUA);
+	COM_AddCommand("playintro", Command_Playintro_f, COM_LUA);
 
-	COM_AddCommand("resetcamera", Command_ResetCamera_f);
+	COM_AddCommand("resetcamera", Command_ResetCamera_f, COM_LUA);
 
-	COM_AddCommand("setcontrol", Command_Setcontrol_f);
-	COM_AddCommand("setcontrol2", Command_Setcontrol2_f);
+	COM_AddCommand("setcontrol", Command_Setcontrol_f, 0);
+	COM_AddCommand("setcontrol2", Command_Setcontrol2_f, 0);
 
-	COM_AddCommand("screenshot", M_ScreenShot);
-	COM_AddCommand("startmovie", Command_StartMovie_f);
-	COM_AddCommand("stopmovie", Command_StopMovie_f);
+	COM_AddCommand("screenshot", M_ScreenShot, COM_LUA);
+	COM_AddCommand("startmovie", Command_StartMovie_f, COM_LUA);
+	COM_AddCommand("stopmovie", Command_StopMovie_f, COM_LUA);
 
 	CV_RegisterVar(&cv_screenshot_option);
 	CV_RegisterVar(&cv_screenshot_folder);
@@ -709,7 +729,7 @@ void D_RegisterClientCommands(void)
 	CV_RegisterVar(&cv_ghost_last);
 	CV_RegisterVar(&cv_ghost_guest);
 
-	COM_AddCommand("displayplayer", Command_Displayplayer_f);
+	COM_AddCommand("displayplayer", Command_Displayplayer_f, COM_LUA);
 
 	// FIXME: not to be here.. but needs be done for config loading
 	CV_RegisterVar(&cv_globalgamma);
@@ -778,8 +798,8 @@ void D_RegisterClientCommands(void)
 	CV_RegisterVar(&cv_digitaldeadzone2);
 
 	// filesrch.c
-	CV_RegisterVar(&cv_addons_option);
-	CV_RegisterVar(&cv_addons_folder);
+	//CV_RegisterVar(&cv_addons_option); // These two are now defined
+	//CV_RegisterVar(&cv_addons_folder); // in D_RegisterServerCommands
 	CV_RegisterVar(&cv_addons_md5);
 	CV_RegisterVar(&cv_addons_showall);
 	CV_RegisterVar(&cv_addons_search_type);
@@ -861,10 +881,12 @@ void D_RegisterClientCommands(void)
 	CV_RegisterVar(&cv_soundtest);
 
 	CV_RegisterVar(&cv_perfstats);
+	CV_RegisterVar(&cv_ps_samplesize);
+	CV_RegisterVar(&cv_ps_descriptor);
 
 	// ingame object placing
-	COM_AddCommand("objectplace", Command_ObjectPlace_f);
-	COM_AddCommand("writethings", Command_Writethings_f);
+	COM_AddCommand("objectplace", Command_ObjectPlace_f, COM_LUA);
+	//COM_AddCommand("writethings", Command_Writethings_f);
 	CV_RegisterVar(&cv_speed);
 	CV_RegisterVar(&cv_opflags);
 	CV_RegisterVar(&cv_ophoopflags);
@@ -875,32 +897,32 @@ void D_RegisterClientCommands(void)
 	CV_RegisterVar(&cv_freedemocamera);
 
 	// add cheat commands
-	COM_AddCommand("noclip", Command_CheatNoClip_f);
-	COM_AddCommand("god", Command_CheatGod_f);
-	COM_AddCommand("notarget", Command_CheatNoTarget_f);
-	COM_AddCommand("getallemeralds", Command_Getallemeralds_f);
-	COM_AddCommand("resetemeralds", Command_Resetemeralds_f);
-	COM_AddCommand("setrings", Command_Setrings_f);
-	COM_AddCommand("setlives", Command_Setlives_f);
-	COM_AddCommand("setcontinues", Command_Setcontinues_f);
-	COM_AddCommand("devmode", Command_Devmode_f);
-	COM_AddCommand("savecheckpoint", Command_Savecheckpoint_f);
-	COM_AddCommand("scale", Command_Scale_f);
-	COM_AddCommand("gravflip", Command_Gravflip_f);
-	COM_AddCommand("hurtme", Command_Hurtme_f);
-	COM_AddCommand("jumptoaxis", Command_JumpToAxis_f);
-	COM_AddCommand("charability", Command_Charability_f);
-	COM_AddCommand("charspeed", Command_Charspeed_f);
-	COM_AddCommand("teleport", Command_Teleport_f);
-	COM_AddCommand("rteleport", Command_RTeleport_f);
-	COM_AddCommand("skynum", Command_Skynum_f);
-	COM_AddCommand("weather", Command_Weather_f);
-	COM_AddCommand("toggletwod", Command_Toggletwod_f);
+	COM_AddCommand("noclip", Command_CheatNoClip_f, COM_LUA);
+	COM_AddCommand("god", Command_CheatGod_f, COM_LUA);
+	COM_AddCommand("notarget", Command_CheatNoTarget_f, COM_LUA);
+	COM_AddCommand("getallemeralds", Command_Getallemeralds_f, COM_LUA);
+	COM_AddCommand("resetemeralds", Command_Resetemeralds_f, COM_LUA);
+	COM_AddCommand("setrings", Command_Setrings_f, COM_LUA);
+	COM_AddCommand("setlives", Command_Setlives_f, COM_LUA);
+	COM_AddCommand("setcontinues", Command_Setcontinues_f, COM_LUA);
+	COM_AddCommand("devmode", Command_Devmode_f, COM_LUA);
+	COM_AddCommand("savecheckpoint", Command_Savecheckpoint_f, COM_LUA);
+	COM_AddCommand("scale", Command_Scale_f, COM_LUA);
+	COM_AddCommand("gravflip", Command_Gravflip_f, COM_LUA);
+	COM_AddCommand("hurtme", Command_Hurtme_f, COM_LUA);
+	COM_AddCommand("jumptoaxis", Command_JumpToAxis_f, COM_LUA);
+	COM_AddCommand("charability", Command_Charability_f, COM_LUA);
+	COM_AddCommand("charspeed", Command_Charspeed_f, COM_LUA);
+	COM_AddCommand("teleport", Command_Teleport_f, COM_LUA);
+	COM_AddCommand("rteleport", Command_RTeleport_f, COM_LUA);
+	COM_AddCommand("skynum", Command_Skynum_f, COM_LUA);
+	COM_AddCommand("weather", Command_Weather_f, COM_LUA);
+	COM_AddCommand("toggletwod", Command_Toggletwod_f, COM_LUA);
 #ifdef _DEBUG
-	COM_AddCommand("causecfail", Command_CauseCfail_f);
+	COM_AddCommand("causecfail", Command_CauseCfail_f, COM_LUA);
 #endif
 #ifdef LUA_ALLOW_BYTECODE
-	COM_AddCommand("dumplua", Command_Dumplua_f);
+	COM_AddCommand("dumplua", Command_Dumplua_f, COM_LUA);
 #endif
 }
 
@@ -1860,7 +1882,7 @@ static void Command_Map_f(void)
 	const char *gametypename;
 	boolean newresetplayers;
 
-	boolean mustmodifygame;
+	boolean wouldSetCheats;
 
 	INT32 newmapnum;
 
@@ -1881,11 +1903,11 @@ static void Command_Map_f(void)
 	option_gametype =   COM_CheckPartialParm("-g");
 	newresetplayers = ! COM_CheckParm("-noresetplayers");
 
-	mustmodifygame =
-		!( netgame     || multiplayer ) &&
-		(!modifiedgame || savemoddata );
+	wouldSetCheats =
+		!( netgame || multiplayer ) &&
+		!( usedCheats );
 
-	if (mustmodifygame && !option_force)
+	if (wouldSetCheats && !option_force)
 	{
 		/* May want to be more descriptive? */
 		CONS_Printf(M_GetText("Sorry, level change disabled in single player.\n"));
@@ -1939,9 +1961,9 @@ static void Command_Map_f(void)
 		return;
 	}
 
-	if (mustmodifygame && option_force)
+	if (wouldSetCheats && option_force)
 	{
-		G_SetGameModified(false);
+		G_SetUsedCheats(false);
 	}
 
 	// new gametype value
@@ -2014,7 +2036,7 @@ static void Command_Map_f(void)
 	// ... unless you're in a dedicated server.  Yes, technically this means you can view any level by
 	// running a dedicated server and joining it yourself, but that's better than making dedicated server's
 	// lives hell.
-	if (!dedicated && M_MapLocked(newmapnum))
+	if (!dedicated && M_MapLocked(newmapnum, serverGamedata))
 	{
 		CONS_Alert(CONS_NOTICE, M_GetText("You need to unlock this level before you can warp to it!\n"));
 		Z_Free(realmapname);
@@ -3217,7 +3239,7 @@ static void Command_RunSOC(void)
 static void Got_RunSOCcmd(UINT8 **cp, INT32 playernum)
 {
 	char filename[256];
-	filestatus_t ncs = FS_NOTFOUND;
+	filestatus_t ncs = FS_NOTCHECKED;
 
 	if (playernum != serverplayer && !IsPlayerAdmin(playernum))
 	{
@@ -3255,6 +3277,69 @@ static void Got_RunSOCcmd(UINT8 **cp, INT32 playernum)
 	G_SetGameModified(true);
 }
 
+// C++ would make this SO much simpler!
+typedef struct addedfile_s
+{
+	struct addedfile_s *next;
+	struct addedfile_s *prev;
+	char *value;
+} addedfile_t;
+
+static boolean AddedFileContains(addedfile_t *list, const char *value)
+{
+	addedfile_t *node;
+	for (node = list; node; node = node->next)
+	{
+		if (!strcmp(value, node->value))
+			return true;
+	}
+
+	return false;
+}
+
+static void AddedFilesAdd(addedfile_t **list, const char *value)
+{
+	addedfile_t *item = Z_Calloc(sizeof(addedfile_t), PU_STATIC, NULL);
+	item->value = Z_StrDup(value);
+	ListAdd(item, (listitem_t**)list);
+}
+
+static void AddedFilesRemove(void *pItem, addedfile_t **itemHead)
+{
+	addedfile_t *item = (addedfile_t *)pItem;
+
+	if (item == *itemHead) // Start of list
+	{
+		*itemHead = item->next;
+
+		if (*itemHead)
+			(*itemHead)->prev = NULL;
+	}
+	else if (item->next == NULL) // end of list
+	{
+		item->prev->next = NULL;
+	}
+	else // Somewhere in between
+	{
+		item->prev->next = item->next;
+		item->next->prev = item->prev;
+	}
+
+	Z_Free(item->value);
+	Z_Free(item);
+}
+
+static void AddedFilesClearList(addedfile_t **itemHead)
+{
+	addedfile_t *item;
+	addedfile_t *next;
+	for (item = *itemHead; item; item = next)
+	{
+		next = item->next;
+		AddedFilesRemove(item, itemHead);
+	}
+}
+
 /** Adds a pwad at runtime.
   * Searches for sounds, maps, music, new images.
   */
@@ -3263,8 +3348,7 @@ static void Command_Addfile(void)
 	size_t argc = COM_Argc(); // amount of arguments total
 	size_t curarg; // current argument index
 
-	const char *addedfiles[argc]; // list of filenames already processed
-	size_t numfilesadded = 0; // the amount of filenames processed
+	addedfile_t *addedfiles = NULL; // list of filenames already processed
 
 	if (argc < 2)
 	{
@@ -3279,25 +3363,14 @@ static void Command_Addfile(void)
 		char buf[256];
 		char *buf_p = buf;
 		INT32 i;
-		size_t ii;
 		int musiconly; // W_VerifyNMUSlumps isn't boolean
 		boolean fileadded = false;
 
 		fn = COM_Argv(curarg);
 
 		// For the amount of filenames previously processed...
-		for (ii = 0; ii < numfilesadded; ii++)
-		{
-			// If this is one of them, don't try to add it.
-			if (!strcmp(fn, addedfiles[ii]))
-			{
-				fileadded = true;
-				break;
-			}
-		}
-
-		// If we've added this one, skip to the next one.
-		if (fileadded)
+		fileadded = AddedFileContains(addedfiles, fn);
+		if (fileadded) // If this is one of them, don't try to add it.
 		{
 			CONS_Alert(CONS_WARNING, M_GetText("Already processed %s, skipping\n"), fn);
 			continue;
@@ -3306,13 +3379,16 @@ static void Command_Addfile(void)
 		// Disallow non-printing characters and semicolons.
 		for (i = 0; fn[i] != '\0'; i++)
 			if (!isprint(fn[i]) || fn[i] == ';')
+			{
+				AddedFilesClearList(&addedfiles);
 				return;
+			}
 
 		musiconly = W_VerifyNMUSlumps(fn, false);
 
 		if (musiconly == -1)
 		{
-			addedfiles[numfilesadded++] = fn;
+			AddedFilesAdd(&addedfiles, fn);
 			continue;
 		}
 
@@ -3331,7 +3407,7 @@ static void Command_Addfile(void)
 		if (!(netgame || multiplayer) || musiconly)
 		{
 			P_AddWadFile(fn);
-			addedfiles[numfilesadded++] = fn;
+			AddedFilesAdd(&addedfiles, fn);
 			continue;
 		}
 
@@ -3341,12 +3417,12 @@ static void Command_Addfile(void)
 				break;
 		++p;
 
-		// check total packet size and no of files currently loaded
+		// check no of files currently loaded
 		// See W_LoadWadFile in w_wad.c
-		if ((numwadfiles >= MAX_WADFILES)
-		|| ((packetsizetally + nameonlylength(fn) + 22) > MAXFILENEEDED*sizeof(UINT8)))
+		if (numwadfiles >= MAX_WADFILES)
 		{
 			CONS_Alert(CONS_ERROR, M_GetText("Too many files loaded to add %s\n"), fn);
+			AddedFilesClearList(&addedfiles);
 			return;
 		}
 
@@ -3373,6 +3449,9 @@ static void Command_Addfile(void)
 
 			for (i = 0; i < numwadfiles; i++)
 			{
+				if (wadfiles[i]->type == RET_FOLDER)
+					continue;
+
 				if (!memcmp(wadfiles[i]->md5sum, md5sum, 16))
 				{
 					CONS_Alert(CONS_ERROR, M_GetText("%s is already loaded\n"), fn);
@@ -3383,19 +3462,145 @@ static void Command_Addfile(void)
 			WRITEMEM(buf_p, md5sum, 16);
 		}
 
-		addedfiles[numfilesadded++] = fn;
+		AddedFilesAdd(&addedfiles, fn);
 
 		if (IsPlayerAdmin(consoleplayer) && (!server)) // Request to add file
 			SendNetXCmd(XD_REQADDFILE, buf, buf_p - buf);
 		else
 			SendNetXCmd(XD_ADDFILE, buf, buf_p - buf);
 	}
+
+	AddedFilesClearList(&addedfiles);
+}
+
+static void Command_Addfolder(void)
+{
+	size_t argc = COM_Argc(); // amount of arguments total
+	size_t curarg; // current argument index
+
+	addedfile_t *addedfolders = NULL; // list of filenames already processed
+
+	if (argc < 2)
+	{
+		CONS_Printf(M_GetText("addfolder <path> [path2...] [...]: Load add-ons\n"));
+		return;
+	}
+
+	// start at one to skip command name
+	for (curarg = 1; curarg < argc; curarg++)
+	{
+		const char *fn, *p;
+		char *fullpath;
+		char buf[256];
+		char *buf_p = buf;
+		INT32 i, stat;
+		boolean folderadded = false;
+
+		fn = COM_Argv(curarg);
+
+		// For the amount of filenames previously processed...
+		folderadded = AddedFileContains(addedfolders, fn);
+		if (folderadded) // If we've added this one, skip to the next one.
+		{
+			CONS_Alert(CONS_WARNING, M_GetText("Already processed %s, skipping\n"), fn);
+			continue;
+		}
+
+		// Disallow non-printing characters and semicolons.
+		for (i = 0; fn[i] != '\0'; i++)
+			if (!isprint(fn[i]) || fn[i] == ';')
+			{
+				AddedFilesClearList(&addedfolders);
+				return;
+			}
+
+		// Add file on your client directly if you aren't in a netgame.
+		if (!(netgame || multiplayer))
+		{
+			P_AddFolder(fn);
+			AddedFilesAdd(&addedfolders, fn);
+			continue;
+		}
+
+		p = fn+strlen(fn);
+		while(--p >= fn)
+			if (*p == '\\' || *p == '/' || *p == ':')
+				break;
+		++p;
+
+		// Don't add an empty path.
+		if (M_IsStringEmpty(fn))
+		{
+			CONS_Alert(CONS_WARNING, M_GetText("Folder name is empty, skipping\n"));
+			continue;
+		}
+
+		// check no of files currently loaded
+		// See W_LoadWadFile in w_wad.c
+		if (numwadfiles >= MAX_WADFILES)
+		{
+			CONS_Alert(CONS_ERROR, M_GetText("Too many files loaded to add %s\n"), fn);
+			AddedFilesClearList(&addedfolders);
+			return;
+		}
+
+		// Check if the path is valid.
+		stat = W_IsPathToFolderValid(fn);
+
+		if (stat == 0)
+		{
+			CONS_Alert(CONS_WARNING, M_GetText("Path %s is invalid, skipping\n"), fn);
+			continue;
+		}
+		else if (stat < 0)
+		{
+#ifndef AVOID_ERRNO
+			CONS_Alert(CONS_WARNING, M_GetText("Error accessing %s (%s), skipping\n"), fn, strerror(direrror));
+#else
+			CONS_Alert(CONS_WARNING, M_GetText("Error accessing %s, skipping\n"), fn);
+#endif
+			continue;
+		}
+
+		// Get the full path for this folder.
+		fullpath = W_GetFullFolderPath(fn);
+
+		if (fullpath == NULL)
+		{
+			CONS_Alert(CONS_WARNING, M_GetText("Path %s is invalid, skipping\n"), fn);
+			continue;
+		}
+
+		// Check if the folder is already added.
+		for (i = 0; i < numwadfiles; i++)
+		{
+			if (wadfiles[i]->type != RET_FOLDER)
+				continue;
+
+			if (samepaths(wadfiles[i]->path, fullpath) > 0)
+			{
+				CONS_Alert(CONS_ERROR, M_GetText("%s is already loaded\n"), fn);
+				continue;
+			}
+		}
+
+		Z_Free(fullpath);
+
+		AddedFilesAdd(&addedfolders, fn);
+
+		WRITESTRINGN(buf_p,p,240);
+
+		if (IsPlayerAdmin(consoleplayer) && (!server)) // Request to add file
+			SendNetXCmd(XD_REQADDFOLDER, buf, buf_p - buf);
+		else
+			SendNetXCmd(XD_ADDFOLDER, buf, buf_p - buf);
+	}
 }
 
 static void Got_RequestAddfilecmd(UINT8 **cp, INT32 playernum)
 {
 	char filename[241];
-	filestatus_t ncs = FS_NOTFOUND;
+	filestatus_t ncs = FS_NOTCHECKED;
 	UINT8 md5sum[16];
 	boolean kick = false;
 	boolean toomany = false;
@@ -3420,9 +3625,7 @@ static void Got_RequestAddfilecmd(UINT8 **cp, INT32 playernum)
 		return;
 	}
 
-	// See W_LoadWadFile in w_wad.c
-	if ((numwadfiles >= MAX_WADFILES)
-	|| ((packetsizetally + nameonlylength(filename) + 22) > MAXFILENEEDED*sizeof(UINT8)))
+	if (numwadfiles >= MAX_WADFILES)
 		toomany = true;
 	else
 		ncs = findfile(filename,md5sum,true);
@@ -3452,10 +3655,66 @@ static void Got_RequestAddfilecmd(UINT8 **cp, INT32 playernum)
 	COM_BufAddText(va("addfile %s\n", filename));
 }
 
+static void Got_RequestAddfoldercmd(UINT8 **cp, INT32 playernum)
+{
+	char path[241];
+	filestatus_t ncs = FS_NOTCHECKED;
+	boolean kick = false;
+	boolean toomany = false;
+	INT32 i,j;
+
+	READSTRINGN(*cp, path, 240);
+
+	/// \todo Integrity checks.
+
+	// Only the server processes this message.
+	if (client)
+		return;
+
+	// Disallow non-printing characters and semicolons.
+	for (i = 0; path[i] != '\0'; i++)
+		if (!isprint(path[i]) || path[i] == ';')
+			kick = true;
+
+	if ((playernum != serverplayer && !IsPlayerAdmin(playernum)) || kick)
+	{
+		CONS_Alert(CONS_WARNING, M_GetText("Illegal addfolder command received from %s\n"), player_names[playernum]);
+		SendKick(playernum, KICK_MSG_CON_FAIL | KICK_MSG_KEEP_BODY);
+		return;
+	}
+
+	if (numwadfiles >= MAX_WADFILES)
+		toomany = true;
+	else
+		ncs = findfolder(path);
+
+	if (ncs != FS_FOUND || toomany)
+	{
+		char message[256];
+
+		if (toomany)
+			sprintf(message, M_GetText("Too many files loaded to add %s\n"), path);
+		else if (ncs == FS_NOTFOUND)
+			sprintf(message, M_GetText("The server doesn't have %s\n"), path);
+		else
+			sprintf(message, M_GetText("Unknown error finding folder (%s)\n"), path);
+
+		CONS_Printf("%s",message);
+
+		for (j = 0; j < MAXPLAYERS; j++)
+			if (adminplayers[j])
+				COM_BufAddText(va("sayto %d %s", adminplayers[j], message));
+
+		return;
+	}
+
+	COM_BufAddText(va("addfolder \"%s\"\n", path));
+}
+
 static void Got_Addfilecmd(UINT8 **cp, INT32 playernum)
 {
 	char filename[241];
-	filestatus_t ncs = FS_NOTFOUND;
+	filestatus_t ncs = FS_NOTCHECKED;
 	UINT8 md5sum[16];
 
 	READSTRINGN(*cp, filename, 240);
@@ -3500,20 +3759,71 @@ static void Got_Addfilecmd(UINT8 **cp, INT32 playernum)
 	G_SetGameModified(true);
 }
 
+static void Got_Addfoldercmd(UINT8 **cp, INT32 playernum)
+{
+	char path[241];
+	filestatus_t ncs = FS_NOTCHECKED;
+
+	READSTRINGN(*cp, path, 240);
+
+	/// \todo Integrity checks.
+
+	if (playernum != serverplayer)
+	{
+		CONS_Alert(CONS_WARNING, M_GetText("Illegal addfolder command received from %s\n"), player_names[playernum]);
+		if (server)
+			SendKick(playernum, KICK_MSG_CON_FAIL | KICK_MSG_KEEP_BODY);
+		return;
+	}
+
+	ncs = findfolder(path);
+
+	if (ncs != FS_FOUND || !P_AddFolder(path))
+	{
+		Command_ExitGame_f();
+		if (ncs == FS_FOUND)
+		{
+			CONS_Printf(M_GetText("The server tried to add %s,\nbut you have too many files added.\nRestart the game to clear loaded files\nand play on this server."), path);
+			M_StartMessage(va("The server added a folder \n(%s)\nbut you have too many files added.\nRestart the game to clear loaded files.\n\nPress ESC\n",path), NULL, MM_NOTHING);
+		}
+		else if (ncs == FS_NOTFOUND)
+		{
+			CONS_Printf(M_GetText("The server tried to add %s,\nbut you don't have this file.\nYou need to find it in order\nto play on this server."), path);
+			M_StartMessage(va("The server added a folder \n(%s)\nthat you do not have.\n\nPress ESC\n",path), NULL, MM_NOTHING);
+		}
+		else
+		{
+			CONS_Printf(M_GetText("Unknown error finding folder (%s) the server added.\n"), path);
+			M_StartMessage(va("Unknown error trying to load a folder\nthat the server added \n(%s).\n\nPress ESC\n",path), NULL, MM_NOTHING);
+		}
+		return;
+	}
+
+	G_SetGameModified(true);
+}
+
 static void Command_ListWADS_f(void)
 {
 	INT32 i = numwadfiles;
 	char *tempname;
-	CONS_Printf(M_GetText("There are %d wads loaded:\n"),numwadfiles);
+
+#ifdef ENFORCE_WAD_LIMIT
+	CONS_Printf(M_GetText("There are %d/%d files loaded:\n"),numwadfiles,MAX_WADFILES);
+#else
+	CONS_Printf(M_GetText("There are %d files loaded:\n"),numwadfiles);
+#endif
+
 	for (i--; i >= 0; i--)
 	{
 		nameonly(tempname = va("%s", wadfiles[i]->filename));
 		if (!i)
 			CONS_Printf("\x82 IWAD\x80: %s\n", tempname);
-		else if (i <= mainwads)
+		else if (i < mainwads)
 			CONS_Printf("\x82 * %.2d\x80: %s\n", i, tempname);
 		else if (!wadfiles[i]->important)
 			CONS_Printf("\x86   %.2d: %s\n", i, tempname);
+		else if (wadfiles[i]->type == RET_FOLDER)
+			CONS_Printf("\x82 * %.2d\x84: %s\n", i, tempname);
 		else
 			CONS_Printf("   %.2d: %s\n", i, tempname);
 	}
@@ -3635,15 +3945,9 @@ void ItemFinder_OnChange(void)
 	if (!cv_itemfinder.value)
 		return; // it's fine.
 
-	if (!M_SecretUnlocked(SECRET_ITEMFINDER))
+	if (!M_SecretUnlocked(SECRET_ITEMFINDER, clientGamedata))
 	{
 		CONS_Printf(M_GetText("You haven't earned this yet.\n"));
-		CV_StealthSetValue(&cv_itemfinder, 0);
-		return;
-	}
-	else if (netgame || multiplayer)
-	{
-		CONS_Printf(M_GetText("This only works in single player.\n"));
 		CV_StealthSetValue(&cv_itemfinder, 0);
 		return;
 	}
@@ -3995,7 +4299,7 @@ void D_GameTypeChanged(INT32 lastgametype)
 
 static void Ringslinger_OnChange(void)
 {
-	if (!M_SecretUnlocked(SECRET_PANDORA) && !netgame && cv_ringslinger.value && !cv_debug)
+	if (!M_SecretUnlocked(SECRET_PANDORA, serverGamedata) && !netgame && cv_ringslinger.value && !cv_debug)
 	{
 		CONS_Printf(M_GetText("You haven't earned this yet.\n"));
 		CV_StealthSetValue(&cv_ringslinger, 0);
@@ -4003,12 +4307,12 @@ static void Ringslinger_OnChange(void)
 	}
 
 	if (cv_ringslinger.value) // Only if it's been turned on
-		G_SetGameModified(multiplayer);
+		G_SetUsedCheats(false);
 }
 
 static void Gravity_OnChange(void)
 {
-	if (!M_SecretUnlocked(SECRET_PANDORA) && !netgame && !cv_debug
+	if (!M_SecretUnlocked(SECRET_PANDORA, serverGamedata) && !netgame && !cv_debug
 		&& strcmp(cv_gravity.string, cv_gravity.defaultvalue))
 	{
 		CONS_Printf(M_GetText("You haven't earned this yet.\n"));
@@ -4024,7 +4328,7 @@ static void Gravity_OnChange(void)
 #endif
 
 	if (!CV_IsSetToDefault(&cv_gravity))
-		G_SetGameModified(multiplayer);
+		G_SetUsedCheats(false);
 	gravity = cv_gravity.value;
 }
 
@@ -4320,7 +4624,7 @@ void Command_Retry_f(void)
 		CONS_Printf(M_GetText("You must be in a level to use this.\n"));
 	else if (netgame || multiplayer)
 		CONS_Printf(M_GetText("This only works in single player.\n"));
-	else if (!&players[consoleplayer] || players[consoleplayer].lives <= 1)
+	else if (players[consoleplayer].lives <= 1)
 		CONS_Printf(M_GetText("You can't retry without any lives remaining!\n"));
 	else if (G_IsSpecialStage(gamemap))
 		CONS_Printf(M_GetText("You can't retry special stages!\n"));
@@ -4340,7 +4644,7 @@ static void Fishcake_OnChange(void)
 	// so don't make modifiedgame always on!
 	if (cv_debug)
 	{
-		G_SetGameModified(multiplayer);
+		G_SetUsedCheats(false);
 	}
 
 	else if (cv_debug != cv_fishcake.value)
@@ -4357,11 +4661,11 @@ static void Fishcake_OnChange(void)
 static void Command_Isgamemodified_f(void)
 {
 	if (savemoddata)
-		CONS_Printf(M_GetText("modifiedgame is true, but you can save emblem and time data in this mod.\n"));
+		CONS_Printf(M_GetText("modifiedgame is true, but you can save time data in this mod.\n"));
 	else if (modifiedgame)
-		CONS_Printf(M_GetText("modifiedgame is true, extras will not be unlocked\n"));
+		CONS_Printf(M_GetText("modifiedgame is true, time data can't be saved\n"));
 	else
-		CONS_Printf(M_GetText("modifiedgame is false, you can unlock extras\n"));
+		CONS_Printf(M_GetText("modifiedgame is false, you can save time data\n"));
 }
 
 static void Command_Cheats_f(void)

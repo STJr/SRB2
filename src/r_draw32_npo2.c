@@ -186,7 +186,7 @@ void R_DrawTiltedSpan_NPO2_32(void)
 	uz = ds_sup->z + ds_sup->y*(centery-ds_y) + ds_sup->x*(ds_x1-centerx);
 	vz = ds_svp->z + ds_svp->y*(centery-ds_y) + ds_svp->x*(ds_x1-centerx);
 
-	R_CalcTiltedLighting(iz);
+	CALC_SLOPE_LIGHT
 
 	dest = (UINT32 *)(ylookup[ds_y] + columnofs[ds_x1]);
 	source = ds_source;
@@ -573,7 +573,7 @@ void R_DrawTiltedTranslucentSpan_NPO2_32(void)
 	uz = ds_sup->z + ds_sup->y*(centery-ds_y) + ds_sup->x*(ds_x1-centerx);
 	vz = ds_svp->z + ds_svp->y*(centery-ds_y) + ds_svp->x*(ds_x1-centerx);
 
-	R_CalcTiltedLighting(iz);
+	CALC_SLOPE_LIGHT
 
 	dest = (UINT32 *)(ylookup[ds_y] + columnofs[ds_x1]);
 	source = ds_source;
@@ -929,10 +929,10 @@ void R_DrawTiltedTranslucentSpan_NPO2_32(void)
 	}
 }
 
-/**	\brief The R_DrawTiltedTranslucentWaterSpan_NPO2_32 function
+/**	\brief The R_DrawTiltedWaterSpan_NPO2_32 function
 	Like DrawTiltedTranslucentSpan, but for water
 */
-void R_DrawTiltedTranslucentWaterSpan_NPO2_32(void)
+void R_DrawTiltedWaterSpan_NPO2_32(void)
 {
 	// x1, x2 = ds_x1, ds_x2
 	int width = ds_x2 - ds_x1;
@@ -961,7 +961,7 @@ void R_DrawTiltedTranslucentWaterSpan_NPO2_32(void)
 	uz = ds_sup->z + ds_sup->y*(centery-ds_y) + ds_sup->x*(ds_x1-centerx);
 	vz = ds_svp->z + ds_svp->y*(centery-ds_y) + ds_svp->x*(ds_x1-centerx);
 
-	R_CalcTiltedLighting(iz);
+	CALC_SLOPE_LIGHT
 
 	dest = (UINT32 *)(ylookup[ds_y] + columnofs[ds_x1]);
 	dsrc = ((UINT32 *)screens[1]) + (ds_y+ds_bgofs)*vid.width + ds_x1;
@@ -1349,7 +1349,7 @@ void R_DrawTiltedSplat_NPO2_32(void)
 	uz = ds_sup->z + ds_sup->y*(centery-ds_y) + ds_sup->x*(ds_x1-centerx);
 	vz = ds_svp->z + ds_svp->y*(centery-ds_y) + ds_svp->x*(ds_x1-centerx);
 
-	R_CalcTiltedLighting(iz);
+	CALC_SLOPE_LIGHT
 
 	dest = (UINT32 *)(ylookup[ds_y] + columnofs[ds_x1]);
 	source = ds_source;
@@ -3252,7 +3252,7 @@ void R_DrawTranslucentSpan_NPO2_32(void)
 	}
 }
 
-void R_DrawTranslucentWaterSpan_NPO2_32(void)
+void R_DrawWaterSpan_NPO2_32(void)
 {
 	fixed_t xposition;
 	fixed_t yposition;

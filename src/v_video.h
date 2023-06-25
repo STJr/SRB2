@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2021 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -136,17 +136,23 @@ enum v_patchdrawfunc
 #define V_70TRANS            0x00070000
 #define V_80TRANS            0x00080000 // used to be V_8020TRANS
 #define V_90TRANS            0x00090000
-#define V_HUDTRANSHALF       0x000D0000
-#define V_HUDTRANS           0x000E0000 // draw the hud translucent
-#define V_HUDTRANSDOUBLE     0x000F0000
+#define V_HUDTRANSHALF       0x000A0000
+#define V_HUDTRANS           0x000B0000 // draw the hud translucent
+#define V_HUDTRANSDOUBLE     0x000C0000
 // Macros follow
 #define V_USERHUDTRANSHALF   ((10-(cv_translucenthud.value/2))<<V_ALPHASHIFT)
 #define V_USERHUDTRANS       ((10-cv_translucenthud.value)<<V_ALPHASHIFT)
 #define V_USERHUDTRANSDOUBLE ((10-min(cv_translucenthud.value*2, 10))<<V_ALPHASHIFT)
 
-#define V_AUTOFADEOUT        0x00100000 // used by CECHOs, automatic fade out when almost over
-#define V_RETURN8            0x00200000 // 8 pixel return instead of 12
-#define V_OFFSET             0x00400000 // account for offsets in patches
+// use bits 21-23 for blendmodes
+#define V_BLENDSHIFT         20
+#define V_BLENDMASK          0x00700000
+// preshifted blend flags minus 1 as effects don't distinguish between AST_COPY and AST_TRANSLUCENT
+#define V_ADD                ((AST_ADD-1)<<V_BLENDSHIFT) // Additive
+#define V_SUBTRACT           ((AST_SUBTRACT-1)<<V_BLENDSHIFT) // Subtractive
+#define V_REVERSESUBTRACT    ((AST_REVERSESUBTRACT-1)<<V_BLENDSHIFT) // Reverse subtractive
+#define V_MODULATE           ((AST_MODULATE-1)<<V_BLENDSHIFT) // Modulate
+
 #define V_ALLOWLOWERCASE     0x00800000 // (strings only) allow fonts that have lowercase letters to use them
 #define V_FLIP               0x00800000 // (patches only) Horizontal flip
 #define V_CENTERNAMETAG      0x00800000 // (nametag only) center nametag lines
@@ -156,8 +162,8 @@ enum v_patchdrawfunc
 #define V_SNAPTOLEFT         0x04000000 // for centering
 #define V_SNAPTORIGHT        0x08000000 // for centering
 
-#define V_WRAPX              0x10000000 // Don't clamp texture on X (for HW mode)
-#define V_WRAPY              0x20000000 // Don't clamp texture on Y (for HW mode)
+#define V_AUTOFADEOUT        0x10000000 // used by CECHOs, automatic fade out when almost over
+#define V_RETURN8            0x20000000 // 8 pixel return instead of 12
 
 #define V_NOSCALESTART       0x40000000 // don't scale x, y, start coords
 #define V_PERPLAYER          0x80000000 // automatically adjust coordinates/scaling for splitscreen mode
@@ -179,7 +185,7 @@ enum v_patchdrawfunc
 #define V_DrawSciencePatch(x,y,s,p,sc) V_DrawFixedPatch(x,y,sc,s,p,NULL)
 #define V_DrawFixedPatch(x,y,sc,s,p,c) V_DrawStretchyFixedPatch(x,y,sc,sc,s,p,c)
 void V_DrawStretchyFixedPatch(fixed_t x, fixed_t y, fixed_t pscale, fixed_t vscale, INT32 scrn, patch_t *patch, const UINT8 *colormap);
-void V_DrawCroppedPatch(fixed_t x, fixed_t y, fixed_t pscale, INT32 scrn, patch_t *patch, fixed_t sx, fixed_t sy, fixed_t w, fixed_t h);
+void V_DrawCroppedPatch(fixed_t x, fixed_t y, fixed_t pscale, fixed_t vscale, INT32 scrn, patch_t *patch, const UINT8 *colormap, fixed_t sx, fixed_t sy, fixed_t w, fixed_t h);
 
 void V_DrawContinueIcon(INT32 x, INT32 y, INT32 flags, INT32 skinnum, UINT16 skincolor);
 

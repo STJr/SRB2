@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2012-2016 by John "JTE" Muniz.
-// Copyright (C) 2012-2021 by Sonic Team Junior.
+// Copyright (C) 2012-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -13,6 +13,8 @@
 #include "r_defs.h"
 #include "d_player.h"
 #include "s_sound.h"
+#include "d_event.h"
+#include "lua_hudlib_drawlist.h"
 
 /*
 Do you know what an 'X Macro' is? Such a macro is called over each element of
@@ -39,6 +41,7 @@ automatically.
 	X (MobjMoveBlocked),/* P_XYMovement (when movement is blocked) */\
 	X (MapThingSpawn),/* P_SpawnMapThing */\
 	X (FollowMobj),/* P_PlayerAfterThink Smiles mobj-following */\
+	X (HurtMsg),/* imhurttin */\
 
 #define HOOK_LIST(X) \
 	X (NetVars),/* add to archive table (netsave) */\
@@ -54,7 +57,6 @@ automatically.
 	X (JumpSpinSpecial),/* P_DoJumpStuff (Spin button effect (mid-air)) */\
 	X (BotTiccmd),/* B_BuildTiccmd */\
 	X (PlayerMsg),/* chat messages */\
-	X (HurtMsg),/* imhurttin */\
 	X (PlayerSpawn),/* G_SpawnPlayer */\
 	X (ShieldSpawn),/* P_SpawnShieldOrb */\
 	X (ShieldSpecial),/* shield abilities */\
@@ -78,6 +80,13 @@ automatically.
 	X (LinedefExecute),\
 	X (ShouldJingleContinue),/* should jingle of the given music continue playing */\
 
+#define HUD_HOOK_LIST(X) \
+	X (game),\
+	X (scores),/* emblems/multiplayer list */\
+	X (title),/* titlescreen */\
+	X (titlecard),\
+	X (intermission),\
+
 /*
 I chose to access the hook enums through a macro as well. This could provide
 a hint to lookup the macro's definition instead of the enum's definition.
@@ -88,18 +97,26 @@ grepped and found in the lists above.
 
 #define   MOBJ_HOOK(name)   mobjhook_ ## name
 #define        HOOK(name)       hook_ ## name
+#define    HUD_HOOK(name)    hudhook_ ## name
 #define STRING_HOOK(name) stringhook_ ## name
 
-enum {   MOBJ_HOOK_LIST   (MOBJ_HOOK)    MOBJ_HOOK(MAX) };
-enum {        HOOK_LIST        (HOOK)         HOOK(MAX) };
-enum { STRING_HOOK_LIST (STRING_HOOK)  STRING_HOOK(MAX) };
+#define ENUM(X) enum { X ## _LIST (X)  X(MAX) }
+
+ENUM   (MOBJ_HOOK);
+ENUM        (HOOK);
+ENUM    (HUD_HOOK);
+ENUM (STRING_HOOK);
+
+#undef ENUM
 
 /* dead simple, LUA_HOOK(GameQuit) */
 #define LUA_HOOK(type) LUA_HookVoid(HOOK(type))
+#define LUA_HUDHOOK(type,drawlist) LUA_HookHUD(HUD_HOOK(type),(drawlist))
 
 extern boolean hook_cmd_running;
 
 void LUA_HookVoid(int hook);
+void LUA_HookHUD(int hook, huddrawlist_h drawlist);
 
 int  LUA_HookMobj(mobj_t *, int hook);
 int  LUA_Hook2Mobj(mobj_t *, mobj_t *, int hook);
@@ -107,7 +124,7 @@ void LUA_HookInt(INT32 integer, int hook);
 void LUA_HookBool(boolean value, int hook);
 int  LUA_HookPlayer(player_t *, int hook);
 int  LUA_HookTiccmd(player_t *, ticcmd_t *, int hook);
-int  LUA_HookKey(INT32 keycode, int hook); // Hooks for key events
+int  LUA_HookKey(event_t *event, int hook); // Hooks for key events
 
 void LUA_HookThinkFrame(void);
 int  LUA_HookMobjLineCollide(mobj_t *, line_t *);
@@ -115,6 +132,7 @@ int  LUA_HookTouchSpecial(mobj_t *special, mobj_t *toucher);
 int  LUA_HookShouldDamage(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 damage, UINT8 damagetype);
 int  LUA_HookMobjDamage(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 damage, UINT8 damagetype);
 int  LUA_HookMobjDeath(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damagetype);
+int  LUA_HookMobjMoveBlocked(mobj_t *, mobj_t *, line_t *);
 int  LUA_HookBotAI(mobj_t *sonic, mobj_t *tails, ticcmd_t *cmd);
 void LUA_HookLinedefExecute(line_t *, mobj_t *, sector_t *);
 int  LUA_HookPlayerMsg(int source, int target, int flags, char *msg);

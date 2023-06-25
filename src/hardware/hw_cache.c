@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2021 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -989,45 +989,18 @@ GLMapTexture_t *HWR_GetTexture(INT32 tex)
 
 static void HWR_CacheFlat(GLMipmap_t *grMipmap, lumpnum_t flatlumpnum)
 {
-	size_t size, pflatsize;
+	size_t size = W_LumpLength(flatlumpnum);
+	UINT16 pflatsize = R_GetFlatSize(size);
 
 	// setup the texture info
 	grMipmap->format = GL_TEXFMT_P_8;
 	grMipmap->flags = TF_WRAPXY|TF_CHROMAKEYED;
 
-	size = W_LumpLength(flatlumpnum);
-
-	switch (size)
-	{
-		case 4194304: // 2048x2048 lump
-			pflatsize = 2048;
-			break;
-		case 1048576: // 1024x1024 lump
-			pflatsize = 1024;
-			break;
-		case 262144:// 512x512 lump
-			pflatsize = 512;
-			break;
-		case 65536: // 256x256 lump
-			pflatsize = 256;
-			break;
-		case 16384: // 128x128 lump
-			pflatsize = 128;
-			break;
-		case 1024: // 32x32 lump
-			pflatsize = 32;
-			break;
-		default: // 64x64 lump
-			pflatsize = 64;
-			break;
-	}
-
-	grMipmap->width  = (UINT16)pflatsize;
-	grMipmap->height = (UINT16)pflatsize;
+	grMipmap->width = pflatsize;
+	grMipmap->height = pflatsize;
 
 	// the flat raw data needn't be converted with palettized textures
-	W_ReadLump(flatlumpnum, Z_Malloc(W_LumpLength(flatlumpnum),
-		PU_HWRCACHE, &grMipmap->data));
+	W_ReadLump(flatlumpnum, Z_Malloc(size, PU_HWRCACHE, &grMipmap->data));
 }
 
 static void HWR_CacheTextureAsFlat(GLMipmap_t *grMipmap, INT32 texturenum)

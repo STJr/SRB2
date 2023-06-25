@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2021 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -11,6 +11,7 @@
 /// \brief Floor splats
 
 #include "r_draw.h"
+#include "r_fps.h"
 #include "r_main.h"
 #include "r_splats.h"
 #include "r_bsp.h"
@@ -160,7 +161,6 @@ void R_DrawFloorSplat(vissprite_t *spr)
 	fixed_t xscale, yscale;
 	fixed_t xoffset, yoffset;
 	fixed_t leftoffset, topoffset;
-	pslope_t *slope = NULL;
 	INT32 i;
 
 	boolean hflip = (spr->xiscale < 0);
@@ -203,7 +203,7 @@ void R_DrawFloorSplat(vissprite_t *spr)
 	if (spr->rotateflags & SRF_3D || renderflags & RF_NOSPLATBILLBOARD)
 		splatangle = mobj->angle;
 	else
-		splatangle = spr->viewangle;
+		splatangle = spr->viewpoint.angle;
 
 	if (!(spr->flags & VIS_ROTATED))
 		splatangle += mobj->rollangle;
@@ -232,8 +232,8 @@ void R_DrawFloorSplat(vissprite_t *spr)
 
 	splat.x = x;
 	splat.y = y;
-	splat.z = mobj->z;
-	splat.tilted = false;
+	splat.z = spr->pz;
+	splat.slope = NULL;
 
 	// Set positions
 
@@ -253,9 +253,9 @@ void R_DrawFloorSplat(vissprite_t *spr)
 	splat.verts[3].x = w - xoffset;
 	splat.verts[3].y = -h + yoffset;
 
-	angle = -splat.angle;
-	ca = FINECOSINE(angle>>ANGLETOFINESHIFT);
-	sa = FINESINE(angle>>ANGLETOFINESHIFT);
+	angle = -splat.angle>>ANGLETOFINESHIFT;
+	ca = FINECOSINE(angle);
+	sa = FINESINE(angle);
 
 	// Rotate
 	for (i = 0; i < 4; i++)
@@ -270,47 +270,21 @@ void R_DrawFloorSplat(vissprite_t *spr)
 
 		// The slope that was defined for the sprite.
 		if (renderflags & RF_SLOPESPLAT)
-			slope = mobj->floorspriteslope;
+			splat.slope = mobj->floorspriteslope;
 
 		if (standingslope && (renderflags & RF_OBJECTSLOPESPLAT))
-			slope = standingslope;
-
-		// Set splat as tilted
-		splat.tilted = (slope != NULL);
-	}
-
-	if (splat.tilted)
-	{
-		pslope_t *s = &splat.slope;
-
-		s->o.x = slope->o.x;
-		s->o.y = slope->o.y;
-		s->o.z = slope->o.z;
-
-		s->d.x = slope->d.x;
-		s->d.y = slope->d.y;
-
-		s->normal.x = slope->normal.x;
-		s->normal.y = slope->normal.y;
-		s->normal.z = slope->normal.z;
-
-		s->zdelta = slope->zdelta;
-		s->zangle = slope->zangle;
-		s->xydirection = slope->xydirection;
-
-		s->next = NULL;
-		s->flags = 0;
+			splat.slope = standingslope;
 	}
 
 	// Translate
 	for (i = 0; i < 4; i++)
 	{
-		tr_x = rotated[i].x + x;
-		tr_y = rotated[i].y + y;
+		tr_x = rotated[i].x + mobj->x;
+		tr_y = rotated[i].y + mobj->y;
 
-		if (slope)
+		if (splat.slope)
 		{
-			rot_z = P_GetSlopeZAt(slope, tr_x, tr_y);
+			rot_z = P_GetSlopeZAt(splat.slope, tr_x, tr_y);
 			splat.verts[i].z = rot_z;
 		}
 		else
@@ -320,18 +294,23 @@ void R_DrawFloorSplat(vissprite_t *spr)
 		splat.verts[i].y = tr_y;
 	}
 
+	angle = spr->viewpoint.angle >> ANGLETOFINESHIFT;
+	ca = FINECOSINE(angle);
+	sa = FINESINE(angle);
+
+	// Project
 	for (i = 0; i < 4; i++)
 	{
 		v3d = &splat.verts[i];
 
 		// transform the origin point
-		tr_x = v3d->x - viewx;
-		tr_y = v3d->y - viewy;
+		tr_x = v3d->x - spr->viewpoint.x;
+		tr_y = v3d->y - spr->viewpoint.y;
 
 		// rotation around vertical y axis
-		rot_x = FixedMul(tr_x, viewsin) - FixedMul(tr_y, viewcos);
-		rot_y = FixedMul(tr_x, viewcos) + FixedMul(tr_y, viewsin);
-		rot_z = v3d->z - viewz;
+		rot_x = FixedMul(tr_x - (mobj->x - x), sa) - FixedMul(tr_y - (mobj->y - y), ca);
+		rot_y = FixedMul(tr_x - (mobj->x - x), ca) + FixedMul(tr_y - (mobj->y - y), sa);
+		rot_z = v3d->z - spr->viewpoint.z;
 
 		if (rot_y < FRACUNIT)
 			return;
@@ -428,35 +407,40 @@ static void R_RasterizeFloorSplat(floorsplat_t *pSplat, vector2_t *verts, visspr
 	ds_source = (UINT8 *)pSplat->pic;
 	ds_flatwidth = pSplat->width;
 	ds_flatheight = pSplat->height;
+	ds_powersoftwo = false;
 
 	if (R_CheckPowersOfTwo())
-		R_CheckFlatLength(ds_flatwidth * ds_flatheight);
+	{
+		R_SetFlatVars(ds_flatwidth * ds_flatheight);
+		ds_powersoftwo = true;
+	}
 
-	if (pSplat->tilted)
+	if (pSplat->slope)
 	{
 		R_SetTiltedSpan(0);
-		R_SetScaledSlopePlane(&pSplat->slope, viewx, viewy, viewz, pSplat->xscale, pSplat->yscale, -pSplat->verts[0].x, pSplat->verts[0].y, vis->viewangle, pSplat->angle);
+		R_SetScaledSlopePlane(pSplat->slope, vis->viewpoint.x, vis->viewpoint.y, vis->viewpoint.z, pSplat->xscale, pSplat->yscale, -pSplat->verts[0].x, pSplat->verts[0].y, vis->viewpoint.angle, pSplat->angle);
 		R_CalculateSlopeVectors();
 		spanfunctype = SPAN_SPRITE_TILTED;
 	}
 	else
 	{
-		planeheight = abs(pSplat->z - viewz);
+		planeheight = abs(pSplat->z - vis->viewpoint.z);
 
 		if (pSplat->angle)
 		{
-			// Add the view offset, rotated by the plane angle.
-			fixed_t a = -pSplat->verts[0].x + viewx;
-			fixed_t b = -pSplat->verts[0].y + viewy;
-			angle_t angle = (pSplat->angle >> ANGLETOFINESHIFT);
-			offsetx = FixedMul(a, FINECOSINE(angle)) - FixedMul(b,FINESINE(angle));
-			offsety = -FixedMul(a, FINESINE(angle)) - FixedMul(b,FINECOSINE(angle));
 			memset(cachedheight, 0, sizeof(cachedheight));
+
+			// Add the view offset, rotated by the plane angle.
+			fixed_t a = -pSplat->verts[0].x + vis->viewpoint.x;
+			fixed_t b = -pSplat->verts[0].y + vis->viewpoint.y;
+			angle_t angle = (pSplat->angle >> ANGLETOFINESHIFT);
+			offsetx = FixedMul(a, FINECOSINE(angle)) - FixedMul(b, FINESINE(angle));
+			offsety = -FixedMul(a, FINESINE(angle)) - FixedMul(b, FINECOSINE(angle));
 		}
 		else
 		{
-			offsetx = viewx - pSplat->verts[0].x;
-			offsety = pSplat->verts[0].y - viewy;
+			offsetx = vis->viewpoint.x - pSplat->verts[0].x;
+			offsety = pSplat->verts[0].y - vis->viewpoint.y;
 		}
 	}
 
@@ -526,7 +510,7 @@ static void R_RasterizeFloorSplat(floorsplat_t *pSplat, vector2_t *verts, visspr
 
 	if (translucent)
 	{
-		if (pSplat->tilted)
+		if (pSplat->slope)
 			spanfunctype = span_translu_sprite_tilted;
 		else
 			spanfunctype = span_translu_sprite;
@@ -566,7 +550,7 @@ static void R_RasterizeFloorSplat(floorsplat_t *pSplat, vector2_t *verts, visspr
 			continue;
 
 		for (i = x1; i <= x2; i++)
-			cliptab[i] = (y >= mfloorclip[i]);
+			cliptab[i] = (y >= mfloorclip[i] || y <= mceilingclip[i]);
 
 		// clip left
 		while (cliptab[x1])
@@ -591,12 +575,12 @@ static void R_RasterizeFloorSplat(floorsplat_t *pSplat, vector2_t *verts, visspr
 		if (x2 < x1)
 			continue;
 
-		if (!pSplat->tilted)
+		if (!pSplat->slope)
 		{
 			fixed_t xstep, ystep;
 			fixed_t distance, span;
 
-			angle_t angle = (vis->viewangle + pSplat->angle)>>ANGLETOFINESHIFT;
+			angle_t angle = (vis->viewpoint.angle + pSplat->angle)>>ANGLETOFINESHIFT;
 			angle_t planecos = FINECOSINE(angle);
 			angle_t planesin = FINESINE(angle);
 
@@ -640,7 +624,7 @@ static void R_RasterizeFloorSplat(floorsplat_t *pSplat, vector2_t *verts, visspr
 		rastertab[y].maxx = INT32_MIN;
 	}
 
-	if (pSplat->angle && !pSplat->tilted)
+	if (pSplat->angle && !pSplat->slope)
 		memset(cachedheight, 0, sizeof(cachedheight));
 }
 

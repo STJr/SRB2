@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2021 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -82,6 +82,7 @@ boolean R_ThingIsPaperSprite (mobj_t *thing);
 boolean R_ThingIsFloorSprite (mobj_t *thing);
 
 boolean R_ThingIsFullBright (mobj_t *thing);
+boolean R_ThingIsSemiBright (mobj_t *thing);
 boolean R_ThingIsFullDark (mobj_t *thing);
 
 // --------------
@@ -99,7 +100,7 @@ typedef struct
 	sector_t* viewsector;
 } maskcount_t;
 
-void R_DrawMasked(maskcount_t* masks, UINT8 nummasks);
+void R_DrawMasked(maskcount_t* masks, INT32 nummasks);
 
 // ----------
 // VISSPRITES
@@ -125,14 +126,15 @@ typedef enum
 	VIS_PRECIP      = 1,
 	VIS_LINKDRAW    = 1<<1,
 	VIS_FULLBRIGHT  = 1<<2,
-	VIS_FULLDARK    = 1<<3,
-	VIS_VFLIP       = 1<<4,
-	VIS_SCALED      = 1<<5,
-	VIS_ROTATED     = 1<<6,
-	VIS_TRANSLUCENT = 1<<7,
-	VIS_SHADOW      = 1<<8,
-	VIS_SHEARED     = 1<<9,
-	VIS_FLOORSPRITE = 1<<10,
+	VIS_SEMIBRIGHT  = 1<<3,
+	VIS_FULLDARK    = 1<<4,
+	VIS_VFLIP       = 1<<5,
+	VIS_SCALED      = 1<<6,
+	VIS_ROTATED     = 1<<7,
+	VIS_TRANSLUCENT = 1<<8,
+	VIS_SHADOW      = 1<<9,
+	VIS_SHEARED     = 1<<10,
+	VIS_FLOORSPRITE = 1<<11,
 } visspriteflag_e;
 
 // A vissprite_t is a thing that will be drawn during a refresh,
@@ -157,14 +159,20 @@ typedef struct vissprite_s
 	fixed_t startfrac; // horizontal position of x1
 	fixed_t xscale, scale; // projected horizontal and vertical scales
 	fixed_t thingscale; // the object's scale
-	fixed_t sortscale; // sortscale only differs from scale for paper sprites, floor sprites, and MF2_LINKDRAW
+	fixed_t sortscale; // sortscale only differs from scale for paper sprites and floor sprites
 	fixed_t sortsplat; // the sortscale from behind the floor sprite
+	fixed_t linkscale; // the sortscale for MF2_LINKDRAW sprites
 	fixed_t scalestep; // only for paper sprites, 0 otherwise
 	fixed_t paperoffset, paperdistance; // for paper sprites, offset/dist relative to the angle
 	fixed_t xiscale; // negative if flipped
 
-	angle_t centerangle; // for paper sprites
-	angle_t viewangle; // for floor sprites, the viewpoint's current angle
+	angle_t centerangle; // for paper sprites / splats
+
+	// for floor sprites
+	struct {
+		fixed_t x, y, z; // the viewpoint's current position
+		angle_t angle; // the viewpoint's current angle
+	} viewpoint;
 
 	struct {
 		fixed_t tan; // The amount to shear the sprite vertically per row
@@ -187,9 +195,10 @@ typedef struct vissprite_s
 
 	extracolormap_t *extra_colormap; // global colormaps
 
-	// Precalculated top and bottom screen coords for the sprite.
 	fixed_t thingheight; // The actual height of the thing (for 3D floors)
 	sector_t *sector; // The sector containing the thing.
+
+	// Precalculated top and bottom screen coords for the sprite.
 	INT16 sz, szt;
 
 	spritecut_e cut;
@@ -203,9 +212,11 @@ typedef struct vissprite_s
 
 	fixed_t shadowscale;
 
+	skincolornum_t color;
+
 	INT16 clipbot[MAXVIDWIDTH], cliptop[MAXVIDWIDTH];
 
-	INT32 dispoffset; // copy of info->dispoffset, affects ordering but not drawing
+	INT32 dispoffset; // copy of mobj->dispoffset, affects ordering but not drawing
 } vissprite_t;
 
 extern UINT32 visspritecount;

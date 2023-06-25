@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2021 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -110,7 +110,7 @@ void R_DrawTiltedSpan_NPO2_8(void)
 	uz = ds_sup->z + ds_sup->y*(centery-ds_y) + ds_sup->x*(ds_x1-centerx);
 	vz = ds_svp->z + ds_svp->y*(centery-ds_y) + ds_svp->x*(ds_x1-centerx);
 
-	R_CalcTiltedLighting(iz);
+	CALC_SLOPE_LIGHT
 
 	dest = ylookup[ds_y] + columnofs[ds_x1];
 	source = ds_source;
@@ -297,7 +297,7 @@ void R_DrawTiltedTranslucentSpan_NPO2_8(void)
 	uz = ds_sup->z + ds_sup->y*(centery-ds_y) + ds_sup->x*(ds_x1-centerx);
 	vz = ds_svp->z + ds_svp->y*(centery-ds_y) + ds_svp->x*(ds_x1-centerx);
 
-	R_CalcTiltedLighting(iz);
+	CALC_SLOPE_LIGHT
 
 	dest = ylookup[ds_y] + columnofs[ds_x1];
 	source = ds_source;
@@ -424,7 +424,7 @@ void R_DrawTiltedTranslucentSpan_NPO2_8(void)
 
 void R_DrawTiltedAlphaSpan_NPO2_8(void)
 {
-
+	// TODO
 }
 
 void R_DrawTiltedSplat_NPO2_8(void)
@@ -453,7 +453,7 @@ void R_DrawTiltedSplat_NPO2_8(void)
 	uz = ds_sup->z + ds_sup->y*(centery-ds_y) + ds_sup->x*(ds_x1-centerx);
 	vz = ds_svp->z + ds_svp->y*(centery-ds_y) + ds_svp->x*(ds_x1-centerx);
 
-	R_CalcTiltedLighting(iz);
+	CALC_SLOPE_LIGHT
 
 	dest = ylookup[ds_y] + columnofs[ds_x1];
 	source = ds_source;
@@ -557,7 +557,6 @@ void R_DrawTiltedSplat_NPO2_8(void)
 			for (; width != 0; width--)
 			{
 				colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
-				val = source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)];
 				// Lactozilla: Non-powers-of-two
 				{
 					fixed_t x = (((fixed_t)u) >> FRACBITS);
@@ -723,7 +722,7 @@ void R_DrawTranslucentSplat_NPO2_8(void)
 
 void R_DrawAlphaSplat_NPO2_8(void)
 {
-
+	// TODO
 }
 
 /**	\brief The R_DrawFloorSprite_NPO2_8 function
@@ -868,7 +867,7 @@ void R_DrawTranslucentFloorSprite_NPO2_8(void)
 
 void R_DrawAlphaFloorSprite_NPO2_8(void)
 {
-
+	// TODO
 }
 
 /**	\brief The R_DrawTiltedFloorSprite_NPO2_8 function
@@ -892,6 +891,9 @@ void R_DrawTiltedFloorSprite_NPO2_8(void)
 	double izstep, uzstep, vzstep;
 	double endz, endu, endv;
 	UINT32 stepu, stepv;
+
+	struct libdivide_u32_t x_divider = libdivide_u32_gen(ds_flatwidth);
+	struct libdivide_u32_t y_divider = libdivide_u32_gen(ds_flatheight);
 
 	iz = ds_szp->z + ds_szp->y*(centery-ds_y) + ds_szp->x*(ds_x1-centerx);
 	uz = ds_sup->z + ds_sup->y*(centery-ds_y) + ds_sup->x*(ds_x1-centerx);
@@ -933,12 +935,13 @@ void R_DrawTiltedFloorSprite_NPO2_8(void)
 
 			// Carefully align all of my Friends.
 			if (x < 0)
-				x = ds_flatwidth - ((UINT32)(ds_flatwidth - x) % ds_flatwidth);
+				x += (libdivide_u32_do((UINT32)(-x-1), &x_divider) + 1) * ds_flatwidth;
+			else
+				x -= libdivide_u32_do((UINT32)x, &x_divider) * ds_flatwidth;
 			if (y < 0)
-				y = ds_flatheight - ((UINT32)(ds_flatheight - y) % ds_flatheight);
-
-			x %= ds_flatwidth;
-			y %= ds_flatheight;
+				y += (libdivide_u32_do((UINT32)(-y-1), &y_divider) + 1) * ds_flatheight;
+			else
+				y -= libdivide_u32_do((UINT32)y, &y_divider) * ds_flatheight;
 
 			val = source[((y * ds_flatwidth) + x)];
 			if (val & 0xFF00)
@@ -965,12 +968,13 @@ void R_DrawTiltedFloorSprite_NPO2_8(void)
 
 				// Carefully align all of my Friends.
 				if (x < 0)
-					x = ds_flatwidth - ((UINT32)(ds_flatwidth - x) % ds_flatwidth);
+					x += (libdivide_u32_do((UINT32)(-x-1), &x_divider) + 1) * ds_flatwidth;
+				else
+					x -= libdivide_u32_do((UINT32)x, &x_divider) * ds_flatwidth;
 				if (y < 0)
-					y = ds_flatheight - ((UINT32)(ds_flatheight - y) % ds_flatheight);
-
-				x %= ds_flatwidth;
-				y %= ds_flatheight;
+					y += (libdivide_u32_do((UINT32)(-y-1), &y_divider) + 1) * ds_flatheight;
+				else
+					y -= libdivide_u32_do((UINT32)y, &y_divider) * ds_flatheight;
 
 				val = source[((y * ds_flatwidth) + x)];
 				if (val & 0xFF00)
@@ -1001,12 +1005,13 @@ void R_DrawTiltedFloorSprite_NPO2_8(void)
 
 				// Carefully align all of my Friends.
 				if (x < 0)
-					x = ds_flatwidth - ((UINT32)(ds_flatwidth - x) % ds_flatwidth);
+					x += (libdivide_u32_do((UINT32)(-x-1), &x_divider) + 1) * ds_flatwidth;
+				else
+					x -= libdivide_u32_do((UINT32)x, &x_divider) * ds_flatwidth;
 				if (y < 0)
-					y = ds_flatheight - ((UINT32)(ds_flatheight - y) % ds_flatheight);
-
-				x %= ds_flatwidth;
-				y %= ds_flatheight;
+					y += (libdivide_u32_do((UINT32)(-y-1), &y_divider) + 1) * ds_flatheight;
+				else
+					y -= libdivide_u32_do((UINT32)y, &y_divider) * ds_flatheight;
 
 				val = source[((y * ds_flatwidth) + x)];
 				if (val & 0xFF00)
@@ -1042,6 +1047,9 @@ void R_DrawTiltedTranslucentFloorSprite_NPO2_8(void)
 	double endz, endu, endv;
 	UINT32 stepu, stepv;
 
+	struct libdivide_u32_t x_divider = libdivide_u32_gen(ds_flatwidth);
+	struct libdivide_u32_t y_divider = libdivide_u32_gen(ds_flatheight);
+
 	iz = ds_szp->z + ds_szp->y*(centery-ds_y) + ds_szp->x*(ds_x1-centerx);
 	uz = ds_sup->z + ds_sup->y*(centery-ds_y) + ds_sup->x*(ds_x1-centerx);
 	vz = ds_svp->z + ds_svp->y*(centery-ds_y) + ds_svp->x*(ds_x1-centerx);
@@ -1082,12 +1090,13 @@ void R_DrawTiltedTranslucentFloorSprite_NPO2_8(void)
 
 			// Carefully align all of my Friends.
 			if (x < 0)
-				x = ds_flatwidth - ((UINT32)(ds_flatwidth - x) % ds_flatwidth);
+				x += (libdivide_u32_do((UINT32)(-x-1), &x_divider) + 1) * ds_flatwidth;
+			else
+				x -= libdivide_u32_do((UINT32)x, &x_divider) * ds_flatwidth;
 			if (y < 0)
-				y = ds_flatheight - ((UINT32)(ds_flatheight - y) % ds_flatheight);
-
-			x %= ds_flatwidth;
-			y %= ds_flatheight;
+				y += (libdivide_u32_do((UINT32)(-y-1), &y_divider) + 1) * ds_flatheight;
+			else
+				y -= libdivide_u32_do((UINT32)y, &y_divider) * ds_flatheight;
 
 			val = source[((y * ds_flatwidth) + x)];
 			if (val & 0xFF00)
@@ -1114,12 +1123,13 @@ void R_DrawTiltedTranslucentFloorSprite_NPO2_8(void)
 
 				// Carefully align all of my Friends.
 				if (x < 0)
-					x = ds_flatwidth - ((UINT32)(ds_flatwidth - x) % ds_flatwidth);
+					x += (libdivide_u32_do((UINT32)(-x-1), &x_divider) + 1) * ds_flatwidth;
+				else
+					x -= libdivide_u32_do((UINT32)x, &x_divider) * ds_flatwidth;
 				if (y < 0)
-					y = ds_flatheight - ((UINT32)(ds_flatheight - y) % ds_flatheight);
-
-				x %= ds_flatwidth;
-				y %= ds_flatheight;
+					y += (libdivide_u32_do((UINT32)(-y-1), &y_divider) + 1) * ds_flatheight;
+				else
+					y -= libdivide_u32_do((UINT32)y, &y_divider) * ds_flatheight;
 
 				val = source[((y * ds_flatwidth) + x)];
 				if (val & 0xFF00)
@@ -1150,12 +1160,13 @@ void R_DrawTiltedTranslucentFloorSprite_NPO2_8(void)
 
 				// Carefully align all of my Friends.
 				if (x < 0)
-					x = ds_flatwidth - ((UINT32)(ds_flatwidth - x) % ds_flatwidth);
+					x += (libdivide_u32_do((UINT32)(-x-1), &x_divider) + 1) * ds_flatwidth;
+				else
+					x -= libdivide_u32_do((UINT32)x, &x_divider) * ds_flatwidth;
 				if (y < 0)
-					y = ds_flatheight - ((UINT32)(ds_flatheight - y) % ds_flatheight);
-
-				x %= ds_flatwidth;
-				y %= ds_flatheight;
+					y += (libdivide_u32_do((UINT32)(-y-1), &y_divider) + 1) * ds_flatheight;
+				else
+					y -= libdivide_u32_do((UINT32)y, &y_divider) * ds_flatheight;
 
 				val = source[((y * ds_flatwidth) + x)];
 				if (val & 0xFF00)
@@ -1171,7 +1182,7 @@ void R_DrawTiltedTranslucentFloorSprite_NPO2_8(void)
 
 void R_DrawTiltedAlphaFloorSprite_NPO2_8(void)
 {
-
+	// TODO
 }
 
 /**	\brief The R_DrawTranslucentSpan_NPO2_8 function
@@ -1243,10 +1254,10 @@ void R_DrawTranslucentSpan_NPO2_8(void)
 
 void R_DrawAlphaSpan_NPO2_8(void)
 {
-
+	// TODO
 }
 
-void R_DrawTranslucentWaterSpan_NPO2_8(void)
+void R_DrawWaterSpan_NPO2_8(void)
 {
 	fixed_t xposition;
 	fixed_t yposition;
@@ -1311,13 +1322,13 @@ void R_DrawTranslucentWaterSpan_NPO2_8(void)
 
 void R_DrawAlphaWaterSpan_NPO2_8(void)
 {
-
+	// TODO
 }
 
-/**	\brief The R_DrawTiltedTranslucentWaterSpan_NPO2_8 function
+/**	\brief The R_DrawTiltedWaterSpan_NPO2_8 function
 	Like DrawTiltedTranslucentSpan_NPO2, but for water
 */
-void R_DrawTiltedTranslucentWaterSpan_NPO2_8(void)
+void R_DrawTiltedWaterSpan_NPO2_8(void)
 {
 	// x1, x2 = ds_x1, ds_x2
 	int width = ds_x2 - ds_x1;
@@ -1342,7 +1353,7 @@ void R_DrawTiltedTranslucentWaterSpan_NPO2_8(void)
 	uz = ds_sup->z + ds_sup->y*(centery-ds_y) + ds_sup->x*(ds_x1-centerx);
 	vz = ds_svp->z + ds_svp->y*(centery-ds_y) + ds_svp->x*(ds_x1-centerx);
 
-	R_CalcTiltedLighting(iz);
+	CALC_SLOPE_LIGHT
 
 	dest = ylookup[ds_y] + columnofs[ds_x1];
 	dsrc = screens[1] + (ds_y+ds_bgofs)*vid.width + ds_x1;
@@ -1470,5 +1481,5 @@ void R_DrawTiltedTranslucentWaterSpan_NPO2_8(void)
 
 void R_DrawTiltedAlphaWaterSpan_NPO2_8(void)
 {
-
+	// TODO
 }

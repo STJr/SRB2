@@ -790,6 +790,30 @@ void R_DrawTranslucentColumn_32(void)
 	}
 }
 
+// See R_DrawDropShadowColumn_8
+void R_DrawDropShadowColumn_32(void)
+{
+	register INT32 count;
+	register UINT32 *dest;
+
+	count = dc_yh - dc_yl + 1;
+
+	if (count <= 0) // Zero length, column does not exceed a pixel.
+		return;
+
+	dest = &topleft_u32[dc_yl*vid.width + dc_x];
+
+	while ((count -= 2) >= 0) // texture height is a power of 2
+	{
+		*dest = R_BlendModeMix(0x00000000, *dest, dc_alpha);
+		dest += vid.width;
+		*dest = R_BlendModeMix(0x00000000, *dest, dc_alpha);
+		dest += vid.width;
+	}
+	if (count & 1)
+		*dest = R_BlendModeMix(0x00000000, *dest, dc_alpha);
+}
+
 /**	\brief The R_DrawTranslatedTranslucentColumn_32 function
 	Spiffy function. Not only does it colormap a sprite, but does translucency as well.
 	Uber-kudos to Cyan Helkaraxe
@@ -1247,7 +1271,7 @@ void R_DrawTiltedSpan_32(void)
 	uz = ds_sup->z + ds_sup->y*(centery-ds_y) + ds_sup->x*(ds_x1-centerx);
 	vz = ds_svp->z + ds_svp->y*(centery-ds_y) + ds_svp->x*(ds_x1-centerx);
 
-	R_CalcTiltedLighting(iz);
+	CALC_SLOPE_LIGHT
 
 	dest = (UINT32 *)(ylookup[ds_y] + columnofs[ds_x1]);
 	source = ds_source;
@@ -1487,7 +1511,7 @@ void R_DrawTiltedTranslucentSpan_32(void)
 	uz = ds_sup->z + ds_sup->y*(centery-ds_y) + ds_sup->x*(ds_x1-centerx);
 	vz = ds_svp->z + ds_svp->y*(centery-ds_y) + ds_svp->x*(ds_x1-centerx);
 
-	R_CalcTiltedLighting(iz);
+	CALC_SLOPE_LIGHT
 
 	dest = (UINT32 *)(ylookup[ds_y] + columnofs[ds_x1]);
 	source = ds_source;
@@ -1699,10 +1723,10 @@ void R_DrawTiltedTranslucentSpan_32(void)
 	}
 }
 
-/**	\brief The R_DrawTiltedTranslucentWaterSpan_32 function
+/**	\brief The R_DrawTiltedWaterSpan_32 function
 	Like DrawTiltedTranslucentSpan, but for water
 */
-void R_DrawTiltedTranslucentWaterSpan_32(void)
+void R_DrawTiltedWaterSpan_32(void)
 {
 	// x1, x2 = ds_x1, ds_x2
 	int width = ds_x2 - ds_x1;
@@ -1728,7 +1752,7 @@ void R_DrawTiltedTranslucentWaterSpan_32(void)
 	uz = ds_sup->z + ds_sup->y*(centery-ds_y) + ds_sup->x*(ds_x1-centerx);
 	vz = ds_svp->z + ds_svp->y*(centery-ds_y) + ds_svp->x*(ds_x1-centerx);
 
-	R_CalcTiltedLighting(iz);
+	CALC_SLOPE_LIGHT
 
 	dest = (UINT32 *)(ylookup[ds_y] + columnofs[ds_x1]);
 	dsrc = ((UINT32 *)screens[1]) + (ds_y+ds_bgofs)*vid.width + ds_x1;
@@ -1969,7 +1993,7 @@ void R_DrawTiltedSplat_32(void)
 	uz = ds_sup->z + ds_sup->y*(centery-ds_y) + ds_sup->x*(ds_x1-centerx);
 	vz = ds_svp->z + ds_svp->y*(centery-ds_y) + ds_svp->x*(ds_x1-centerx);
 
-	R_CalcTiltedLighting(iz);
+	CALC_SLOPE_LIGHT
 
 	dest = (UINT32 *)(ylookup[ds_y] + columnofs[ds_x1]);
 
@@ -3647,7 +3671,7 @@ void R_DrawTranslucentSpan_32(void)
 	}
 }
 
-void R_DrawTranslucentWaterSpan_32(void)
+void R_DrawWaterSpan_32(void)
 {
 	UINT32 xposition;
 	UINT32 yposition;
@@ -3877,6 +3901,11 @@ void R_DrawFogSpan_32(void)
 	}
 }
 
+void R_DrawTiltedFogSpan_32(void)
+{
+	// TODO
+}
+
 /**	\brief The R_DrawFogColumn_32 function
 	Fog wall.
 */
@@ -3940,7 +3969,7 @@ void R_DrawShadowedColumn_32(void)
 	{
 		// If the height of the light is above the column, get the colormap
 		// anyway because the lighting of the top should be affected.
-		solid = dc_lightlist[i].flags & FF_CUTSOLIDS;
+		solid = dc_lightlist[i].flags & FOF_CUTSOLIDS;
 
 		height = dc_lightlist[i].height >> LIGHTSCALESHIFT;
 		if (solid)
@@ -3988,4 +4017,34 @@ void R_DrawShadowedColumn_32(void)
 	dc_yh = realyh;
 	if (dc_yl <= realyh)
 		(colfuncs[BASEDRAWFUNC])();		// R_DrawColumn_32 for the appropriate architecture
+}
+
+void R_DrawSolidColorSpan_32(void)
+{
+	// TODO
+}
+
+void R_DrawTiltedSolidColorSpan_32(void)
+{
+	// TODO
+}
+
+void R_DrawTranslucentSolidColorSpan_32(void)
+{
+	// TODO
+}
+
+void R_DrawWaterSolidColorSpan_32(void)
+{
+	// TODO
+}
+
+void R_DrawTiltedTranslucentSolidColorSpan_32(void)
+{
+	// TODO
+}
+
+void R_DrawTiltedWaterSolidColorSpan_32(void)
+{
+	// TODO
 }

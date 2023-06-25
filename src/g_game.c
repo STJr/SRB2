@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2021 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -19,6 +19,7 @@
 #include "f_finale.h"
 #include "p_setup.h"
 #include "p_saveg.h"
+#include "i_time.h"
 #include "i_system.h"
 #include "am_map.h"
 #include "m_random.h"
@@ -45,6 +46,8 @@
 #include "lua_hook.h"
 #include "b_bot.h"
 #include "m_cond.h" // condition sets
+#include "lua_script.h"
+#include "r_fps.h" // frame interpolation/uncapped
 
 #include "lua_hud.h"
 
@@ -93,6 +96,7 @@ SINT8 startinglivesbalance[maxgameovers+1] = {3, 5, 7, 9, 12, 15, 20, 25, 30, 40
 UINT16 mainwads = 0;
 boolean modifiedgame; // Set if homebrew PWAD stuff has been added.
 boolean savemoddata = false;
+boolean usedCheats = false; // Set when a gamedata-preventing cheat command is used.
 UINT8 paused;
 UINT8 modeattacking = ATTACKING_NONE;
 boolean disableSpeedAdjust = false;
@@ -181,18 +185,6 @@ INT32 tokenbits; // Used for setting token bits
 // Old Special Stage
 INT32 sstimer; // Time allotted in the special stage
 
-tic_t totalplaytime;
-boolean gamedataloaded = false;
-
-// Time attack data for levels
-// These are dynamically allocated for space reasons now
-recorddata_t *mainrecords[NUMMAPS]   = {NULL};
-nightsdata_t *nightsrecords[NUMMAPS] = {NULL};
-UINT8 mapvisited[NUMMAPS];
-
-// Temporary holding place for nights data for the current map
-nightsdata_t ntemprecords;
-
 UINT32 bluescore, redscore; // CTF and Team Match team scores
 
 // ring count... for PERFECT!
@@ -223,6 +215,7 @@ UINT8 ammoremovaltics = 2*TICRATE;
 UINT8 use1upSound = 0;
 UINT8 maxXtraLife = 2; // Max extra lives from rings
 UINT8 useContinues = 0; // Set to 1 to enable continues outside of no-save scenarioes
+UINT8 shareEmblems = 0; // Set to 1 to share all picked up emblems in multiplayer
 
 UINT8 introtoplay;
 UINT8 creditscutscene;
@@ -247,11 +240,6 @@ INT16 scramblecount; //for CTF team scramble
 INT32 cheats; //for multiplayer cheat commands
 
 tic_t hidetime;
-
-// Grading
-UINT32 timesBeaten;
-UINT32 timesBeatenWithEmeralds;
-UINT32 timesBeatenUltimate;
 
 typedef struct joystickvector2_s
 {
@@ -345,8 +333,8 @@ consvar_t cv_analog[2] = {
 	CVAR_INIT ("sessionanalog2", "Off", CV_CALL|CV_NOSHOWHELP, CV_OnOff, Analog2_OnChange),
 };
 consvar_t cv_useranalog[2] = {
-	CVAR_INIT ("configanalog", "Off", CV_SAVE|CV_CALL|CV_NOSHOWHELP, CV_OnOff, UserAnalog_OnChange),
-	CVAR_INIT ("configanalog2", "Off", CV_SAVE|CV_CALL|CV_NOSHOWHELP, CV_OnOff, UserAnalog2_OnChange),
+	CVAR_INIT ("configanalog", "On", CV_SAVE|CV_CALL|CV_NOSHOWHELP, CV_OnOff, UserAnalog_OnChange),
+	CVAR_INIT ("configanalog2", "On", CV_SAVE|CV_CALL|CV_NOSHOWHELP, CV_OnOff, UserAnalog2_OnChange),
 };
 
 // deez New User eXperiences
@@ -361,36 +349,36 @@ consvar_t cv_autobrake2 = CVAR_INIT ("autobrake2", "On", CV_SAVE|CV_CALL, CV_OnO
 // hi here's some new controls
 static CV_PossibleValue_t zerotoone_cons_t[] = {{0, "MIN"}, {FRACUNIT, "MAX"}, {0, NULL}};
 consvar_t cv_cam_shiftfacing[2] = {
-	CVAR_INIT ("cam_shiftfacingchar", "0.33", CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL),
-	CVAR_INIT ("cam2_shiftfacingchar", "0.33", CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL),
+	CVAR_INIT ("cam_shiftfacingchar", "0.375", CV_FLOAT|CV_SAVE|CV_ALLOWLUA, zerotoone_cons_t, NULL),
+	CVAR_INIT ("cam2_shiftfacingchar", "0.375", CV_FLOAT|CV_SAVE|CV_ALLOWLUA, zerotoone_cons_t, NULL),
 };
 consvar_t cv_cam_turnfacing[2] = {
-	CVAR_INIT ("cam_turnfacingchar", "0.25", CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL),
-	CVAR_INIT ("cam2_turnfacingchar", "0.25", CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL),
+	CVAR_INIT ("cam_turnfacingchar", "0.25", CV_FLOAT|CV_SAVE|CV_ALLOWLUA, zerotoone_cons_t, NULL),
+	CVAR_INIT ("cam2_turnfacingchar", "0.25", CV_FLOAT|CV_SAVE|CV_ALLOWLUA, zerotoone_cons_t, NULL),
 };
 consvar_t cv_cam_turnfacingability[2] = {
-	CVAR_INIT ("cam_turnfacingability", "0.125", CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL),
-	CVAR_INIT ("cam2_turnfacingability", "0.125", CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL),
+	CVAR_INIT ("cam_turnfacingability", "0.125", CV_FLOAT|CV_SAVE|CV_ALLOWLUA, zerotoone_cons_t, NULL),
+	CVAR_INIT ("cam2_turnfacingability", "0.125", CV_FLOAT|CV_SAVE|CV_ALLOWLUA, zerotoone_cons_t, NULL),
 };
 consvar_t cv_cam_turnfacingspindash[2] = {
-	CVAR_INIT ("cam_turnfacingspindash", "0.5", CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL),
-	CVAR_INIT ("cam2_turnfacingspindash", "0.5", CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL),
+	CVAR_INIT ("cam_turnfacingspindash", "0.25", CV_FLOAT|CV_SAVE|CV_ALLOWLUA, zerotoone_cons_t, NULL),
+	CVAR_INIT ("cam2_turnfacingspindash", "0.25", CV_FLOAT|CV_SAVE|CV_ALLOWLUA, zerotoone_cons_t, NULL),
 };
 consvar_t cv_cam_turnfacinginput[2] = {
-	CVAR_INIT ("cam_turnfacinginput", "0.25", CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL),
-	CVAR_INIT ("cam2_turnfacinginput", "0.25", CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL),
+	CVAR_INIT ("cam_turnfacinginput", "0.375", CV_FLOAT|CV_SAVE|CV_ALLOWLUA, zerotoone_cons_t, NULL),
+	CVAR_INIT ("cam2_turnfacinginput", "0.375", CV_FLOAT|CV_SAVE|CV_ALLOWLUA, zerotoone_cons_t, NULL),
 };
 
 static CV_PossibleValue_t centertoggle_cons_t[] = {{0, "Hold"}, {1, "Toggle"}, {2, "Sticky Hold"}, {0, NULL}};
 consvar_t cv_cam_centertoggle[2] = {
-	CVAR_INIT ("cam_centertoggle", "Hold", CV_SAVE, centertoggle_cons_t, NULL),
-	CVAR_INIT ("cam2_centertoggle", "Hold", CV_SAVE, centertoggle_cons_t, NULL),
+	CVAR_INIT ("cam_centertoggle", "Hold", CV_SAVE|CV_ALLOWLUA, centertoggle_cons_t, NULL),
+	CVAR_INIT ("cam2_centertoggle", "Hold", CV_SAVE|CV_ALLOWLUA, centertoggle_cons_t, NULL),
 };
 
 static CV_PossibleValue_t lockedinput_cons_t[] = {{0, "Strafe"}, {1, "Turn"}, {0, NULL}};
 consvar_t cv_cam_lockedinput[2] = {
-	CVAR_INIT ("cam_lockedinput", "Strafe", CV_SAVE, lockedinput_cons_t, NULL),
-	CVAR_INIT ("cam2_lockedinput", "Strafe", CV_SAVE, lockedinput_cons_t, NULL),
+	CVAR_INIT ("cam_lockedinput", "Strafe", CV_SAVE|CV_ALLOWLUA, lockedinput_cons_t, NULL),
+	CVAR_INIT ("cam2_lockedinput", "Strafe", CV_SAVE|CV_ALLOWLUA, lockedinput_cons_t, NULL),
 };
 
 static CV_PossibleValue_t lockedassist_cons_t[] = {
@@ -402,28 +390,28 @@ static CV_PossibleValue_t lockedassist_cons_t[] = {
 	{0, NULL}
 };
 consvar_t cv_cam_lockonboss[2] = {
-	CVAR_INIT ("cam_lockaimassist", "Bosses", CV_SAVE, lockedassist_cons_t, NULL),
-	CVAR_INIT ("cam2_lockaimassist", "Bosses", CV_SAVE, lockedassist_cons_t, NULL),
+	CVAR_INIT ("cam_lockaimassist", "Full", CV_SAVE|CV_ALLOWLUA, lockedassist_cons_t, NULL),
+	CVAR_INIT ("cam2_lockaimassist", "Full", CV_SAVE|CV_ALLOWLUA, lockedassist_cons_t, NULL),
 };
 
-consvar_t cv_turnaxis = CVAR_INIT ("joyaxis_turn", "X-Rudder", CV_SAVE, joyaxis_cons_t, NULL);
 consvar_t cv_moveaxis = CVAR_INIT ("joyaxis_move", "Y-Axis", CV_SAVE, joyaxis_cons_t, NULL);
 consvar_t cv_sideaxis = CVAR_INIT ("joyaxis_side", "X-Axis", CV_SAVE, joyaxis_cons_t, NULL);
-consvar_t cv_lookaxis = CVAR_INIT ("joyaxis_look", "Y-Rudder-", CV_SAVE, joyaxis_cons_t, NULL);
+consvar_t cv_lookaxis = CVAR_INIT ("joyaxis_look", "X-Rudder-", CV_SAVE, joyaxis_cons_t, NULL);
+consvar_t cv_turnaxis = CVAR_INIT ("joyaxis_turn", "Z-Axis", CV_SAVE, joyaxis_cons_t, NULL);
 consvar_t cv_jumpaxis = CVAR_INIT ("joyaxis_jump", "None", CV_SAVE, joyaxis_cons_t, NULL);
 consvar_t cv_spinaxis = CVAR_INIT ("joyaxis_spin", "None", CV_SAVE, joyaxis_cons_t, NULL);
-consvar_t cv_fireaxis = CVAR_INIT ("joyaxis_fire", "Z-Axis-", CV_SAVE, joyaxis_cons_t, NULL);
+consvar_t cv_fireaxis = CVAR_INIT ("joyaxis_fire", "Z-Rudder", CV_SAVE, joyaxis_cons_t, NULL);
 consvar_t cv_firenaxis = CVAR_INIT ("joyaxis_firenormal", "Z-Axis", CV_SAVE, joyaxis_cons_t, NULL);
 consvar_t cv_deadzone = CVAR_INIT ("joy_deadzone", "0.125", CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL);
 consvar_t cv_digitaldeadzone = CVAR_INIT ("joy_digdeadzone", "0.25", CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL);
 
-consvar_t cv_turnaxis2 = CVAR_INIT ("joyaxis2_turn", "X-Rudder", CV_SAVE, joyaxis_cons_t, NULL);
 consvar_t cv_moveaxis2 = CVAR_INIT ("joyaxis2_move", "Y-Axis", CV_SAVE, joyaxis_cons_t, NULL);
 consvar_t cv_sideaxis2 = CVAR_INIT ("joyaxis2_side", "X-Axis", CV_SAVE, joyaxis_cons_t, NULL);
-consvar_t cv_lookaxis2 = CVAR_INIT ("joyaxis2_look", "Y-Rudder-", CV_SAVE, joyaxis_cons_t, NULL);
+consvar_t cv_lookaxis2 = CVAR_INIT ("joyaxis2_look", "X-Rudder-", CV_SAVE, joyaxis_cons_t, NULL);
+consvar_t cv_turnaxis2 = CVAR_INIT ("joyaxis2_turn", "Z-Axis", CV_SAVE, joyaxis_cons_t, NULL);
 consvar_t cv_jumpaxis2 = CVAR_INIT ("joyaxis2_jump", "None", CV_SAVE, joyaxis_cons_t, NULL);
 consvar_t cv_spinaxis2 = CVAR_INIT ("joyaxis2_spin", "None", CV_SAVE, joyaxis_cons_t, NULL);
-consvar_t cv_fireaxis2 = CVAR_INIT ("joyaxis2_fire", "Z-Axis-", CV_SAVE, joyaxis_cons_t, NULL);
+consvar_t cv_fireaxis2 = CVAR_INIT ("joyaxis2_fire", "Z-Rudder", CV_SAVE, joyaxis_cons_t, NULL);
 consvar_t cv_firenaxis2 = CVAR_INIT ("joyaxis2_firenormal", "Z-Axis", CV_SAVE, joyaxis_cons_t, NULL);
 consvar_t cv_deadzone2 = CVAR_INIT ("joy_deadzone2", "0.125", CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL);
 consvar_t cv_digitaldeadzone2 = CVAR_INIT ("joy_digdeadzone2", "0.25", CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL);
@@ -448,86 +436,86 @@ INT16 rw_maximums[NUM_WEAPONS] =
 };
 
 // Allocation for time and nights data
-void G_AllocMainRecordData(INT16 i)
+void G_AllocMainRecordData(INT16 i, gamedata_t *data)
 {
-	if (!mainrecords[i])
-		mainrecords[i] = Z_Malloc(sizeof(recorddata_t), PU_STATIC, NULL);
-	memset(mainrecords[i], 0, sizeof(recorddata_t));
+	if (!data->mainrecords[i])
+		data->mainrecords[i] = Z_Malloc(sizeof(recorddata_t), PU_STATIC, NULL);
+	memset(data->mainrecords[i], 0, sizeof(recorddata_t));
 }
 
-void G_AllocNightsRecordData(INT16 i)
+void G_AllocNightsRecordData(INT16 i, gamedata_t *data)
 {
-	if (!nightsrecords[i])
-		nightsrecords[i] = Z_Malloc(sizeof(nightsdata_t), PU_STATIC, NULL);
-	memset(nightsrecords[i], 0, sizeof(nightsdata_t));
+	if (!data->nightsrecords[i])
+		data->nightsrecords[i] = Z_Malloc(sizeof(nightsdata_t), PU_STATIC, NULL);
+	memset(data->nightsrecords[i], 0, sizeof(nightsdata_t));
 }
 
 // MAKE SURE YOU SAVE DATA BEFORE CALLING THIS
-void G_ClearRecords(void)
+void G_ClearRecords(gamedata_t *data)
 {
 	INT16 i;
 	for (i = 0; i < NUMMAPS; ++i)
 	{
-		if (mainrecords[i])
+		if (data->mainrecords[i])
 		{
-			Z_Free(mainrecords[i]);
-			mainrecords[i] = NULL;
+			Z_Free(data->mainrecords[i]);
+			data->mainrecords[i] = NULL;
 		}
-		if (nightsrecords[i])
+		if (data->nightsrecords[i])
 		{
-			Z_Free(nightsrecords[i]);
-			nightsrecords[i] = NULL;
+			Z_Free(data->nightsrecords[i]);
+			data->nightsrecords[i] = NULL;
 		}
 	}
 }
 
 // For easy retrieval of records
-UINT32 G_GetBestScore(INT16 map)
+UINT32 G_GetBestScore(INT16 map, gamedata_t *data)
 {
-	if (!mainrecords[map-1])
+	if (!data->mainrecords[map-1])
 		return 0;
 
-	return mainrecords[map-1]->score;
+	return data->mainrecords[map-1]->score;
 }
 
-tic_t G_GetBestTime(INT16 map)
+tic_t G_GetBestTime(INT16 map, gamedata_t *data)
 {
-	if (!mainrecords[map-1] || mainrecords[map-1]->time <= 0)
+	if (!data->mainrecords[map-1] || data->mainrecords[map-1]->time <= 0)
 		return (tic_t)UINT32_MAX;
 
-	return mainrecords[map-1]->time;
+	return data->mainrecords[map-1]->time;
 }
 
-UINT16 G_GetBestRings(INT16 map)
+UINT16 G_GetBestRings(INT16 map, gamedata_t *data)
 {
-	if (!mainrecords[map-1])
+	if (!data->mainrecords[map-1])
 		return 0;
 
-	return mainrecords[map-1]->rings;
+	return data->mainrecords[map-1]->rings;
 }
 
-UINT32 G_GetBestNightsScore(INT16 map, UINT8 mare)
+UINT32 G_GetBestNightsScore(INT16 map, UINT8 mare, gamedata_t *data)
 {
-	if (!nightsrecords[map-1])
+	if (!data->nightsrecords[map-1])
 		return 0;
 
-	return nightsrecords[map-1]->score[mare];
+	return data->nightsrecords[map-1]->score[mare];
 }
 
-tic_t G_GetBestNightsTime(INT16 map, UINT8 mare)
+tic_t G_GetBestNightsTime(INT16 map, UINT8 mare, gamedata_t *data)
 {
-	if (!nightsrecords[map-1] || nightsrecords[map-1]->time[mare] <= 0)
+	if (!data->nightsrecords[map-1] || data->nightsrecords[map-1]->time[mare] <= 0)
 		return (tic_t)UINT32_MAX;
 
-	return nightsrecords[map-1]->time[mare];
+	return data->nightsrecords[map-1]->time[mare];
 }
 
-UINT8 G_GetBestNightsGrade(INT16 map, UINT8 mare)
+UINT8 G_GetBestNightsGrade(INT16 map, UINT8 mare, gamedata_t *data)
 {
-	if (!nightsrecords[map-1])
+	if (!data->nightsrecords[map-1])
 		return 0;
 
-	return nightsrecords[map-1]->grade[mare];
+	return data->nightsrecords[map-1]->grade[mare];
 }
 
 // For easy adding of NiGHTS records
@@ -549,7 +537,7 @@ void G_AddTempNightsRecords(UINT32 pscore, tic_t ptime, UINT8 mare)
 // Update replay files/data, etc. for Record Attack
 // See G_SetNightsRecords for NiGHTS Attack.
 //
-static void G_UpdateRecordReplays(void)
+static void G_UpdateRecordReplays(gamedata_t *data)
 {
 	const size_t glen = strlen(srb2home)+1+strlen("replay")+1+strlen(timeattackfolder)+1+strlen("MAPXX")+1;
 	char *gpath;
@@ -557,17 +545,17 @@ static void G_UpdateRecordReplays(void)
 	UINT8 earnedEmblems;
 
 	// Record new best time
-	if (!mainrecords[gamemap-1])
-		G_AllocMainRecordData(gamemap-1);
+	if (!data->mainrecords[gamemap-1])
+		G_AllocMainRecordData(gamemap-1, data);
 
-	if (players[consoleplayer].score > mainrecords[gamemap-1]->score)
-		mainrecords[gamemap-1]->score = players[consoleplayer].score;
+	if (players[consoleplayer].score > data->mainrecords[gamemap-1]->score)
+		data->mainrecords[gamemap-1]->score = players[consoleplayer].score;
 
-	if ((mainrecords[gamemap-1]->time == 0) || (players[consoleplayer].realtime < mainrecords[gamemap-1]->time))
-		mainrecords[gamemap-1]->time = players[consoleplayer].realtime;
+	if ((data->mainrecords[gamemap-1]->time == 0) || (players[consoleplayer].realtime < data->mainrecords[gamemap-1]->time))
+		data->mainrecords[gamemap-1]->time = players[consoleplayer].realtime;
 
-	if ((UINT16)(players[consoleplayer].rings) > mainrecords[gamemap-1]->rings)
-		mainrecords[gamemap-1]->rings = (UINT16)(players[consoleplayer].rings);
+	if ((UINT16)(players[consoleplayer].rings) > data->mainrecords[gamemap-1]->rings)
+		data->mainrecords[gamemap-1]->rings = (UINT16)(players[consoleplayer].rings);
 
 	// Save demo!
 	bestdemo[255] = '\0';
@@ -623,14 +611,14 @@ static void G_UpdateRecordReplays(void)
 	free(gpath);
 
 	// Check emblems when level data is updated
-	if ((earnedEmblems = M_CheckLevelEmblems()))
+	if ((earnedEmblems = M_CheckLevelEmblems(data)))
 		CONS_Printf(M_GetText("\x82" "Earned %hu emblem%s for Record Attack records.\n"), (UINT16)earnedEmblems, earnedEmblems > 1 ? "s" : "");
 
 	// Update timeattack menu's replay availability.
 	Nextmap_OnChange();
 }
 
-void G_SetNightsRecords(void)
+void G_SetNightsRecords(gamedata_t *data)
 {
 	INT32 i;
 	UINT32 totalscore = 0;
@@ -671,9 +659,9 @@ void G_SetNightsRecords(void)
 	{
 		nightsdata_t *maprecords;
 
-		if (!nightsrecords[gamemap-1])
-			G_AllocNightsRecordData(gamemap-1);
-		maprecords = nightsrecords[gamemap-1];
+		if (!data->nightsrecords[gamemap-1])
+			G_AllocNightsRecordData(gamemap-1, data);
+		maprecords = data->nightsrecords[gamemap-1];
 
 		if (maprecords->nummares != ntemprecords.nummares)
 			maprecords->nummares = ntemprecords.nummares;
@@ -735,7 +723,7 @@ void G_SetNightsRecords(void)
 	}
 	free(gpath);
 
-	if ((earnedEmblems = M_CheckLevelEmblems()))
+	if ((earnedEmblems = M_CheckLevelEmblems(data)))
 		CONS_Printf(M_GetText("\x82" "Earned %hu emblem%s for NiGHTS records.\n"), (UINT16)earnedEmblems, earnedEmblems > 1 ? "s" : "");
 
 	// If the mare count changed, this will update the score display
@@ -752,7 +740,24 @@ void G_SetGameModified(boolean silent)
 	savemoddata = false;
 
 	if (!silent)
-		CONS_Alert(CONS_NOTICE, M_GetText("Game must be restarted to record statistics.\n"));
+		CONS_Alert(CONS_NOTICE, M_GetText("Game must be restarted to play Record Attack.\n"));
+
+	// If in record attack recording, cancel it.
+	if (modeattacking)
+		M_EndModeAttackRun();
+	else if (marathonmode)
+		Command_ExitGame_f();
+}
+
+void G_SetUsedCheats(boolean silent)
+{
+	if (usedCheats)
+		return;
+
+	usedCheats = true;
+
+	if (!silent)
+		CONS_Alert(CONS_NOTICE, M_GetText("Game must be restarted to save progress.\n"));
 
 	// If in record attack recording, cancel it.
 	if (modeattacking)
@@ -1071,7 +1076,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 	boolean turnleft, turnright, strafelkey, straferkey, movefkey, movebkey, mouseaiming, analogjoystickmove, gamepadjoystickmove, thisjoyaiming;
 	boolean strafeisturn; // Simple controls only
 	player_t *player = &players[ssplayer == 2 ? secondarydisplayplayer : consoleplayer];
-	camera_t *thiscam = ((ssplayer == 1 || player->bot == 2) ? &camera : &camera2);
+	camera_t *thiscam = ((ssplayer == 1 || player->bot == BOT_2PHUMAN) ? &camera : &camera2);
 	angle_t *myangle = (ssplayer == 1 ? &localangle : &localangle2);
 	INT32 *myaiming = (ssplayer == 1 ? &localaiming : &localaiming2);
 
@@ -1139,13 +1144,13 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 		return;
 	}
 
-	turnright = PLAYERINPUTDOWN(ssplayer, gc_turnright);
-	turnleft = PLAYERINPUTDOWN(ssplayer, gc_turnleft);
+	turnright = PLAYERINPUTDOWN(ssplayer, GC_TURNRIGHT);
+	turnleft = PLAYERINPUTDOWN(ssplayer, GC_TURNLEFT);
 
-	straferkey = PLAYERINPUTDOWN(ssplayer, gc_straferight);
-	strafelkey = PLAYERINPUTDOWN(ssplayer, gc_strafeleft);
-	movefkey = PLAYERINPUTDOWN(ssplayer, gc_forward);
-	movebkey = PLAYERINPUTDOWN(ssplayer, gc_backward);
+	straferkey = PLAYERINPUTDOWN(ssplayer, GC_STRAFERIGHT);
+	strafelkey = PLAYERINPUTDOWN(ssplayer, GC_STRAFELEFT);
+	movefkey = PLAYERINPUTDOWN(ssplayer, GC_FORWARD);
+	movebkey = PLAYERINPUTDOWN(ssplayer, GC_BACKWARD);
 
 	if (strafeisturn)
 	{
@@ -1154,7 +1159,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 		straferkey = strafelkey = false;
 	}
 
-	mouseaiming = (PLAYERINPUTDOWN(ssplayer, gc_mouseaiming)) ^
+	mouseaiming = (PLAYERINPUTDOWN(ssplayer, GC_MOUSEAIMING)) ^
 		((chasecam && !player->spectator) ? chasefreelook : alwaysfreelook);
 	analogjoystickmove = usejoystick && !Joystick.bGamepadStyle;
 	gamepadjoystickmove = usejoystick && Joystick.bGamepadStyle;
@@ -1270,11 +1275,11 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 	// forward with key or button
 	if (movefkey || (gamepadjoystickmove && movejoystickvector.yaxis < 0)
 		|| ((player->powers[pw_carry] == CR_NIGHTSMODE)
-			&& (PLAYERINPUTDOWN(ssplayer, gc_lookup) || (gamepadjoystickmove && lookjoystickvector.yaxis > 0))))
+			&& (PLAYERINPUTDOWN(ssplayer, GC_LOOKUP) || (gamepadjoystickmove && lookjoystickvector.yaxis > 0))))
 		forward = forwardmove[speed];
 	if (movebkey || (gamepadjoystickmove && movejoystickvector.yaxis > 0)
 		|| ((player->powers[pw_carry] == CR_NIGHTSMODE)
-			&& (PLAYERINPUTDOWN(ssplayer, gc_lookdown) || (gamepadjoystickmove && lookjoystickvector.yaxis < 0))))
+			&& (PLAYERINPUTDOWN(ssplayer, GC_LOOKDOWN) || (gamepadjoystickmove && lookjoystickvector.yaxis < 0))))
 		forward -= forwardmove[speed];
 
 	if (analogjoystickmove && movejoystickvector.yaxis != 0)
@@ -1287,9 +1292,9 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 	if (strafelkey)
 		side -= sidemove[speed];
 
-	if (PLAYERINPUTDOWN(ssplayer, gc_weaponnext))
+	if (PLAYERINPUTDOWN(ssplayer, GC_WEAPONNEXT))
 		cmd->buttons |= BT_WEAPONNEXT; // Next Weapon
-	if (PLAYERINPUTDOWN(ssplayer, gc_weaponprev))
+	if (PLAYERINPUTDOWN(ssplayer, GC_WEAPONPREV))
 		cmd->buttons |= BT_WEAPONPREV; // Previous Weapon
 
 #if NUM_WEAPONS > 10
@@ -1298,7 +1303,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 	//use the four avaliable bits to determine the weapon.
 	cmd->buttons &= ~BT_WEAPONMASK;
 	for (i = 0; i < NUM_WEAPONS; ++i)
-		if (PLAYERINPUTDOWN(ssplayer, gc_wepslot1 + i))
+		if (PLAYERINPUTDOWN(ssplayer, GC_WEPSLOT1 + i))
 		{
 			cmd->buttons |= (UINT16)(i + 1);
 			break;
@@ -1306,34 +1311,34 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 
 	// fire with any button/key
 	axis = PlayerJoyAxis(ssplayer, JA_FIRE);
-	if (PLAYERINPUTDOWN(ssplayer, gc_fire) || (usejoystick && axis > 0))
+	if (PLAYERINPUTDOWN(ssplayer, GC_FIRE) || (usejoystick && axis > 0))
 		cmd->buttons |= BT_ATTACK;
 
 	// fire normal with any button/key
 	axis = PlayerJoyAxis(ssplayer, JA_FIRENORMAL);
-	if (PLAYERINPUTDOWN(ssplayer, gc_firenormal) || (usejoystick && axis > 0))
+	if (PLAYERINPUTDOWN(ssplayer, GC_FIRENORMAL) || (usejoystick && axis > 0))
 		cmd->buttons |= BT_FIRENORMAL;
 
-	if (PLAYERINPUTDOWN(ssplayer, gc_tossflag))
+	if (PLAYERINPUTDOWN(ssplayer, GC_TOSSFLAG))
 		cmd->buttons |= BT_TOSSFLAG;
 
 	// Lua scriptable buttons
-	if (PLAYERINPUTDOWN(ssplayer, gc_custom1))
+	if (PLAYERINPUTDOWN(ssplayer, GC_CUSTOM1))
 		cmd->buttons |= BT_CUSTOM1;
-	if (PLAYERINPUTDOWN(ssplayer, gc_custom2))
+	if (PLAYERINPUTDOWN(ssplayer, GC_CUSTOM2))
 		cmd->buttons |= BT_CUSTOM2;
-	if (PLAYERINPUTDOWN(ssplayer, gc_custom3))
+	if (PLAYERINPUTDOWN(ssplayer, GC_CUSTOM3))
 		cmd->buttons |= BT_CUSTOM3;
 
 	// use with any button/key
 	axis = PlayerJoyAxis(ssplayer, JA_SPIN);
-	if (PLAYERINPUTDOWN(ssplayer, gc_spin) || (usejoystick && axis > 0))
+	if (PLAYERINPUTDOWN(ssplayer, GC_SPIN) || (usejoystick && axis > 0))
 		cmd->buttons |= BT_SPIN;
 
 	// Centerview can be a toggle in simple mode!
 	{
 		static boolean last_centerviewdown[2], centerviewhold[2]; // detect taps for toggle behavior
-		boolean down = PLAYERINPUTDOWN(ssplayer, gc_centerview);
+		boolean down = PLAYERINPUTDOWN(ssplayer, GC_CENTERVIEW);
 
 		if (!(controlstyle == CS_SIMPLE && cv_cam_centertoggle[forplayer].value))
 			centerviewdown = down;
@@ -1380,7 +1385,6 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 		if (
 			P_MobjWasRemoved(ticcmd_ztargetfocus[forplayer]) ||
 			!ticcmd_ztargetfocus[forplayer]->health ||
-			(ticcmd_ztargetfocus[forplayer]->flags2 & MF2_FRET) ||
 			(ticcmd_ztargetfocus[forplayer]->type == MT_EGGMOBILE3 && !ticcmd_ztargetfocus[forplayer]->movecount) // Sea Egg is moving around underground and shouldn't be tracked
 		)
 			P_SetTarget(&ticcmd_ztargetfocus[forplayer], NULL);
@@ -1410,7 +1414,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 			newtarget = P_SpawnMobj(ticcmd_ztargetfocus[forplayer]->x, ticcmd_ztargetfocus[forplayer]->y, ticcmd_ztargetfocus[forplayer]->z, MT_LOCKON); // positioning, flip handled in P_SceneryThinker
 			P_SetTarget(&newtarget->target, ticcmd_ztargetfocus[forplayer]);
 
-			if (P_AproxDistance(
+			if (player->mo && P_AproxDistance(
 				player->mo->x - ticcmd_ztargetfocus[forplayer]->x,
 				player->mo->y - ticcmd_ztargetfocus[forplayer]->y
 			) > 50*player->mo->scale)
@@ -1432,7 +1436,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 	if (ticcmd_centerviewdown[forplayer] && controlstyle == CS_SIMPLE)
 		controlstyle = CS_LEGACY;
 
-	if (PLAYERINPUTDOWN(ssplayer, gc_camreset))
+	if (PLAYERINPUTDOWN(ssplayer, GC_CAMRESET))
 	{
 		if (thiscam->chase && !resetdown[forplayer])
 			P_ResetCamera(&players[ssplayer == 1 ? displayplayer : secondarydisplayplayer], thiscam);
@@ -1445,7 +1449,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 
 	// jump button
 	axis = PlayerJoyAxis(ssplayer, JA_JUMP);
-	if (PLAYERINPUTDOWN(ssplayer, gc_jump) || (usejoystick && axis > 0))
+	if (PLAYERINPUTDOWN(ssplayer, GC_JUMP) || (usejoystick && axis > 0))
 		cmd->buttons |= BT_JUMP;
 
 	// player aiming shit, ahhhh...
@@ -1475,12 +1479,12 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 
 		if (!(player->powers[pw_carry] == CR_NIGHTSMODE))
 		{
-			if (PLAYERINPUTDOWN(ssplayer, gc_lookup) || (gamepadjoystickmove && lookjoystickvector.yaxis < 0))
+			if (PLAYERINPUTDOWN(ssplayer, GC_LOOKUP) || (gamepadjoystickmove && lookjoystickvector.yaxis < 0))
 			{
 				*myaiming += KB_LOOKSPEED * screen_invert;
 				keyboard_look[forplayer] = true;
 			}
-			else if (PLAYERINPUTDOWN(ssplayer, gc_lookdown) || (gamepadjoystickmove && lookjoystickvector.yaxis > 0))
+			else if (PLAYERINPUTDOWN(ssplayer, GC_LOOKDOWN) || (gamepadjoystickmove && lookjoystickvector.yaxis > 0))
 			{
 				*myaiming -= KB_LOOKSPEED * screen_invert;
 				keyboard_look[forplayer] = true;
@@ -1545,21 +1549,16 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 	cmd->forwardmove = (SINT8)(cmd->forwardmove + forward);
 	cmd->sidemove = (SINT8)(cmd->sidemove + side);
 
-	if (player->bot == 1) { // Tailsbot for P2
-		if (!player->powers[pw_tailsfly] && (cmd->forwardmove || cmd->sidemove || cmd->buttons))
-		{
-			player->bot = 2; // A player-controlled bot. Returns to AI when it respawns.
-			CV_SetValue(&cv_analog[1], true);
-		}
-		else
-		{
-			G_CopyTiccmd(cmd,  I_BaseTiccmd2(), 1); // empty, or external driver
-			B_BuildTiccmd(player, cmd);
-		}
-		B_HandleFlightIndicator(player);
+	// Note: Majority of botstuffs are handled in G_Ticker now.
+	if (player->bot == BOT_2PAI
+		&& !player->powers[pw_tailsfly]
+		&& (cmd->forwardmove || cmd->sidemove || cmd->buttons))
+	{
+		player->bot = BOT_2PHUMAN; // A player-controlled bot. Returns to AI when it respawns.
+		CV_SetValue(&cv_analog[1], true);
 	}
-	else if (player->bot == 2)
-		// Fix offset angle for P2-controlled Tailsbot when P2's controls are set to non-Legacy
+
+	if (player->bot == BOT_2PHUMAN)
 		cmd->angleturn = (INT16)((localangle - *myangle) >> 16);
 
 	*myangle += (cmd->angleturn<<16);
@@ -1907,7 +1906,10 @@ void G_PreLevelTitleCard(void)
 	{
 		// draw loop
 		while (!((nowtime = I_GetTime()) - lasttime))
-			I_Sleep();
+		{
+			I_Sleep(cv_sleep.value);
+			I_UpdateTime(cv_timescale.value);
+		}
 		lasttime = nowtime;
 
 		ST_runTitleCard();
@@ -1958,6 +1960,85 @@ INT32 pausedelay = 0;
 boolean pausebreakkey = false;
 static INT32 camtoggledelay, camtoggledelay2 = 0;
 
+static boolean ViewpointSwitchResponder(event_t *ev)
+{
+	// ViewpointSwitch Lua hook.
+	UINT8 canSwitchView = 0;
+
+	INT32 direction = 0;
+	if (ev->key == KEY_F12 || ev->key == gamecontrol[GC_VIEWPOINTNEXT][0] || ev->key == gamecontrol[GC_VIEWPOINTNEXT][1])
+		direction = 1;
+	if (ev->key == gamecontrol[GC_VIEWPOINTPREV][0] || ev->key == gamecontrol[GC_VIEWPOINTPREV][1])
+		direction = -1;
+	// This enabled reverse-iterating with shift+F12, sadly I had to
+	// disable this in case your shift key is bound to a control =((
+	//if (shiftdown)
+	//	direction = -direction;
+
+	// allow spy mode changes even during the demo
+	if (!(gamestate == GS_LEVEL && ev->type == ev_keydown && direction != 0))
+		return false;
+
+	if (splitscreen || !netgame)
+	{
+		displayplayer = consoleplayer;
+		return false;
+	}
+
+	// spy mode
+	do
+	{
+		// Wrap in both directions
+		displayplayer += direction;
+		displayplayer = (displayplayer + MAXPLAYERS) % MAXPLAYERS;
+
+		if (!playeringame[displayplayer])
+			continue;
+
+		// Call ViewpointSwitch hooks here.
+		canSwitchView = LUA_HookViewpointSwitch(&players[consoleplayer], &players[displayplayer], false);
+		if (canSwitchView == 1) // Set viewpoint to this player
+			break;
+		else if (canSwitchView == 2) // Skip this player
+			continue;
+
+		if (players[displayplayer].spectator)
+			continue;
+
+		if (G_GametypeHasTeams())
+		{
+			if (players[consoleplayer].ctfteam
+				&& players[displayplayer].ctfteam != players[consoleplayer].ctfteam)
+				continue;
+		}
+		else if (gametyperules & GTR_HIDEFROZEN)
+		{
+			if (players[consoleplayer].pflags & PF_TAGIT)
+				continue;
+		}
+		// Other Tag-based gametypes?
+		else if (G_TagGametype())
+		{
+			if (!players[consoleplayer].spectator
+				&& (players[consoleplayer].pflags & PF_TAGIT) != (players[displayplayer].pflags & PF_TAGIT))
+				continue;
+		}
+		else if (G_GametypeHasSpectators() && G_RingSlingerGametype())
+		{
+			if (!players[consoleplayer].spectator)
+				continue;
+		}
+
+		break;
+	} while (displayplayer != consoleplayer);
+
+	// change statusbar also if playing back demo
+	if (singledemo)
+		ST_changeDemoView();
+
+	return true;
+}
+
 //
 // G_Responder
 // Get info needed to make ticcmd_ts for the players.
@@ -1968,7 +2049,7 @@ boolean G_Responder(event_t *ev)
 	if (gameaction == ga_nothing && !singledemo &&
 		((demoplayback && !modeattacking && !titledemo) || gamestate == GS_TITLESCREEN))
 	{
-		if (ev->type == ev_keydown && ev->data1 != 301 && !(gamestate == GS_TITLESCREEN && finalecount < TICRATE))
+		if (ev->type == ev_keydown && ev->key != 301 && !(gamestate == GS_TITLESCREEN && finalecount < TICRATE))
 		{
 			M_StartControlPanel();
 			return true;
@@ -2042,74 +2123,8 @@ boolean G_Responder(event_t *ev)
 		if (HU_Responder(ev))
 			return true; // chat ate the event
 
-	// allow spy mode changes even during the demo
-	if (gamestate == GS_LEVEL && ev->type == ev_keydown
-		&& (ev->data1 == KEY_F12 || ev->data1 == gamecontrol[gc_viewpoint][0] || ev->data1 == gamecontrol[gc_viewpoint][1]))
-	{
-		// ViewpointSwitch Lua hook.
-		UINT8 canSwitchView = 0;
-
-		if (splitscreen || !netgame)
-			displayplayer = consoleplayer;
-		else
-		{
-			// spy mode
-			do
-			{
-				displayplayer++;
-				if (displayplayer == MAXPLAYERS)
-					displayplayer = 0;
-
-				if (!playeringame[displayplayer])
-					continue;
-
-				// Call ViewpointSwitch hooks here.
-				canSwitchView = LUA_HookViewpointSwitch(&players[consoleplayer], &players[displayplayer], false);
-				if (canSwitchView == 1) // Set viewpoint to this player
-					break;
-				else if (canSwitchView == 2) // Skip this player
-					continue;
-
-				if (players[displayplayer].spectator)
-					continue;
-
-				if (G_GametypeHasTeams())
-				{
-					if (players[consoleplayer].ctfteam
-					 && players[displayplayer].ctfteam != players[consoleplayer].ctfteam)
-						continue;
-				}
-				else if (gametyperules & GTR_HIDEFROZEN)
-				{
-					if (players[consoleplayer].pflags & PF_TAGIT)
-						continue;
-				}
-				// Other Tag-based gametypes?
-				else if (G_TagGametype())
-				{
-					if (!players[consoleplayer].spectator
-					 && (players[consoleplayer].pflags & PF_TAGIT) != (players[displayplayer].pflags & PF_TAGIT))
-						continue;
-				}
-				else if (G_GametypeHasSpectators() && G_RingSlingerGametype())
-				{
-					if (!players[consoleplayer].spectator)
-						continue;
-				}
-
-				break;
-			} while (displayplayer != consoleplayer);
-
-			// change statusbar also if playing back demo
-			if (singledemo)
-				ST_changeDemoView();
-
-			// tell who's the view
-			CONS_Printf(M_GetText("Viewpoint: %s\n"), player_names[displayplayer]);
-
-			return true;
-		}
-	}
+	if (ViewpointSwitchResponder(ev))
+		return true;
 
 	// update keys current state
 	G_MapEventsToControls(ev);
@@ -2117,13 +2132,13 @@ boolean G_Responder(event_t *ev)
 	switch (ev->type)
 	{
 		case ev_keydown:
-			if (ev->data1 == gamecontrol[gc_pause][0]
-				|| ev->data1 == gamecontrol[gc_pause][1]
-				|| ev->data1 == KEY_PAUSE)
+			if (ev->key == gamecontrol[GC_PAUSE][0]
+				|| ev->key == gamecontrol[GC_PAUSE][1]
+				|| ev->key == KEY_PAUSE)
 			{
 				if (modeattacking && !demoplayback && (gamestate == GS_LEVEL))
 				{
-					pausebreakkey = (ev->data1 == KEY_PAUSE);
+					pausebreakkey = (ev->key == KEY_PAUSE);
 					if (menuactive || pausedelay < 0 || leveltime < 2)
 						return true;
 
@@ -2148,8 +2163,8 @@ boolean G_Responder(event_t *ev)
 					}
 				}
 			}
-			if (ev->data1 == gamecontrol[gc_camtoggle][0]
-				|| ev->data1 == gamecontrol[gc_camtoggle][1])
+			if (ev->key == gamecontrol[GC_CAMTOGGLE][0]
+				|| ev->key == gamecontrol[GC_CAMTOGGLE][1])
 			{
 				if (!camtoggledelay)
 				{
@@ -2157,8 +2172,8 @@ boolean G_Responder(event_t *ev)
 					CV_SetValue(&cv_chasecam, cv_chasecam.value ? 0 : 1);
 				}
 			}
-			if (ev->data1 == gamecontrolbis[gc_camtoggle][0]
-				|| ev->data1 == gamecontrolbis[gc_camtoggle][1])
+			if (ev->key == gamecontrolbis[GC_CAMTOGGLE][0]
+				|| ev->key == gamecontrolbis[GC_CAMTOGGLE][1])
 			{
 				if (!camtoggledelay2)
 				{
@@ -2194,8 +2209,20 @@ boolean G_Responder(event_t *ev)
 //
 boolean G_LuaResponder(event_t *ev)
 {
-	return (ev->type == ev_keydown && LUA_HookKey(ev->data1, HOOK(KeyDown))) ||
-		(ev->type == ev_keyup && LUA_HookKey(ev->data1, HOOK(KeyUp)));
+	boolean cancelled = false;
+
+	if (ev->type == ev_keydown)
+	{
+		cancelled = LUA_HookKey(ev, HOOK(KeyDown));
+		LUA_InvalidateUserdata(ev);
+	}
+	else if (ev->type == ev_keyup)
+	{
+		cancelled = LUA_HookKey(ev, HOOK(KeyUp));
+		LUA_InvalidateUserdata(ev);
+	}
+
+	return cancelled;
 }
 
 //
@@ -2206,6 +2233,23 @@ void G_Ticker(boolean run)
 {
 	UINT32 i;
 	INT32 buf;
+
+	// Bot players queued for removal
+	for (i = MAXPLAYERS-1; i != UINT32_MAX; i--)
+	{
+		if (playeringame[i] && players[i].removing)
+		{
+			CL_RemovePlayer(i, i);
+			if (netgame)
+			{
+				char kickmsg[256];
+
+				strcpy(kickmsg, M_GetText("\x82*Bot %s has been removed"));
+				strcpy(kickmsg, va(kickmsg, player_names[i], i));
+				HU_AddChatText(kickmsg, false);
+			}
+		}
+	}
 
 	// see also SCR_DisplayMarathonInfo
 	if ((marathonmode & (MA_INIT|MA_INGAME)) == MA_INGAME && gamestate == GS_LEVEL)
@@ -2287,30 +2331,44 @@ void G_Ticker(boolean run)
 
 	buf = gametic % BACKUPTICS;
 
+	// Generate ticcmds for bots FIRST, then copy received ticcmds for players.
+	// This emulates pre-2.2.10 behaviour where the bot referenced their leader's last copied ticcmd,
+	// which is desirable because P_PlayerThink can override inputs (e.g. while PF_STASIS is applied or in a waterslide),
+	// and the bot AI needs to respect that.
+#define ISHUMAN (players[i].bot == BOT_NONE || players[i].bot == BOT_2PHUMAN)
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
-		if (playeringame[i])
+		if (playeringame[i] && !ISHUMAN) // Less work is required if we're building a bot ticcmd.
 		{
-			INT16 received;
+			players[i].lastbuttons = players[i].cmd.buttons; // Save last frame's button readings
+			B_BuildTiccmd(&players[i], &players[i].cmd);
 
+			// Since bot TicCmd is pre-determined for both the client and server, the latency and packet checks are simplified.
+			players[i].cmd.latency = 0;
+			P_SetPlayerAngle(&players[i], players[i].cmd.angleturn << 16);
+		}
+	}
+
+	for (i = 0; i < MAXPLAYERS; i++)
+	{
+		if (playeringame[i] && ISHUMAN)
+		{
+			players[i].lastbuttons = players[i].cmd.buttons; // Save last frame's button readings
 			G_CopyTiccmd(&players[i].cmd, &netcmds[buf][i], 1);
 
-			received = (players[i].cmd.angleturn & TICCMD_RECEIVED);
+			// Use the leveltime sent in the player's ticcmd to determine control lag
+			players[i].cmd.latency = min(((leveltime & 0xFF) - players[i].cmd.latency) & 0xFF, MAXPREDICTTICS-1);
 
+			// Do angle adjustments.
 			players[i].angleturn += players[i].cmd.angleturn - players[i].oldrelangleturn;
 			players[i].oldrelangleturn = players[i].cmd.angleturn;
 			if (P_ControlStyle(&players[i]) == CS_LMAOGALOG)
 				P_ForceLocalAngle(&players[i], players[i].angleturn << 16);
 			else
-				players[i].cmd.angleturn = players[i].angleturn;
-
-			players[i].cmd.angleturn &= ~TICCMD_RECEIVED;
-			players[i].cmd.angleturn |= received;
-
-			// Use the leveltime sent in the player's ticcmd to determine control lag
-			players[i].cmd.latency = min(((leveltime & 0xFF) - players[i].cmd.latency) & 0xFF, MAXPREDICTTICS-1);
+				players[i].cmd.angleturn = (players[i].angleturn & ~TICCMD_RECEIVED) | (players[i].cmd.angleturn & TICCMD_RECEIVED);
 		}
 	}
+#undef ISHUMAN
 
 	// do main actions
 	switch (gamestate)
@@ -2323,6 +2381,7 @@ void G_Ticker(boolean run)
 			F_TextPromptTicker();
 			AM_Ticker();
 			HU_Ticker();
+
 			break;
 
 		case GS_INTERMISSION:
@@ -2332,7 +2391,8 @@ void G_Ticker(boolean run)
 			break;
 
 		case GS_TIMEATTACK:
-			F_MenuPresTicker(run);
+			if (run)
+				F_MenuPresTicker();
 			break;
 
 		case GS_INTRO:
@@ -2375,10 +2435,13 @@ void G_Ticker(boolean run)
 			break;
 
 		case GS_TITLESCREEN:
-			if (titlemapinaction) P_Ticker(run); // then intentionally fall through
+			if (titlemapinaction)
+				P_Ticker(run);
+				// then intentionally fall through
 			/* FALLTHRU */
 		case GS_WAITINGPLAYERS:
-			F_MenuPresTicker(run);
+			if (run)
+				F_MenuPresTicker();
 			F_TitleScreenTicker(run);
 			break;
 
@@ -2494,6 +2557,7 @@ void G_PlayerReborn(INT32 player, boolean betweenmaps)
 	tic_t quittime;
 	boolean spectator;
 	boolean outofcoop;
+	boolean removing;
 	INT16 bot;
 	SINT8 pity;
 	INT16 rings;
@@ -2510,6 +2574,7 @@ void G_PlayerReborn(INT32 player, boolean betweenmaps)
 	quittime = players[player].quittime;
 	spectator = players[player].spectator;
 	outofcoop = players[player].outofcoop;
+	removing = players[player].removing;
 	pflags = (players[player].pflags & (PF_FLIPCAM|PF_ANALOGMODE|PF_DIRECTIONCHAR|PF_AUTOBRAKE|PF_TAGIT|PF_GAMETYPEOVER));
 	playerangleturn = players[player].angleturn;
 	oldrelangleturn = players[player].oldrelangleturn;
@@ -2586,6 +2651,7 @@ void G_PlayerReborn(INT32 player, boolean betweenmaps)
 	p->quittime = quittime;
 	p->spectator = spectator;
 	p->outofcoop = outofcoop;
+	p->removing = removing;
 	p->angleturn = playerangleturn;
 	p->oldrelangleturn = oldrelangleturn;
 
@@ -2630,8 +2696,10 @@ void G_PlayerReborn(INT32 player, boolean betweenmaps)
 	p->totalring = totalring;
 
 	p->mare = mare;
-	if (bot)
-		p->bot = 1; // reset to AI-controlled
+	if (bot == BOT_2PHUMAN)
+		p->bot = BOT_2PAI; // reset to AI-controlled
+	else
+		p->bot = bot;
 	p->pity = pity;
 	p->rings = rings;
 	p->spheres = spheres;
@@ -2757,6 +2825,16 @@ void G_MovePlayerToSpawnOrStarpost(INT32 playernum)
 		P_MovePlayerToStarpost(playernum);
 	else
 		P_MovePlayerToSpawn(playernum, G_FindMapStart(playernum));
+
+	R_ResetMobjInterpolationState(players[playernum].mo);
+
+	if (players[playernum].bot) // don't reset the camera for bots
+		return;
+
+	if (playernum == consoleplayer)
+		P_ResetCamera(&players[playernum], &camera);
+	else if (playernum == secondarydisplayplayer)
+		P_ResetCamera(&players[playernum], &camera2);
 }
 
 mapthing_t *G_FindCTFStart(INT32 playernum)
@@ -2977,7 +3055,8 @@ void G_DoReborn(INT32 playernum)
 	// Make sure objectplace is OFF when you first start the level!
 	OP_ResetObjectplace();
 
-	if (player->bot && playernum != consoleplayer)
+	// Tailsbot
+	if (player->bot == BOT_2PAI || player->bot == BOT_2PHUMAN)
 	{ // Bots respawn next to their master.
 		mobj_t *oldmo = NULL;
 
@@ -2994,6 +3073,28 @@ void G_DoReborn(INT32 playernum)
 			G_ChangePlayerReferences(oldmo, players[playernum].mo);
 
 		return;
+	}
+
+	// Additional players (e.g. independent bots) in Single Player
+	if (playernum != consoleplayer && !(netgame || multiplayer))
+	{
+		mobj_t *oldmo = NULL;
+		// Do nothing if out of lives
+		if (player->lives <= 0)
+			return;
+
+		// Otherwise do respawn, starting by removing the player object
+		if (player->mo)
+		{
+			oldmo = player->mo;
+			P_RemoveMobj(player->mo);
+		}
+		// Do spawning
+		G_SpawnPlayer(playernum);
+		if (oldmo)
+			G_ChangePlayerReferences(oldmo, players[playernum].mo);
+
+		return; //Exit function to avoid proccing other SP related mechanics
 	}
 
 	if (countdowntimeup || (!(netgame || multiplayer) && (gametyperules & GTR_CAMPAIGN)))
@@ -3054,6 +3155,9 @@ void G_DoReborn(INT32 playernum)
 
 	if (resetlevel)
 	{
+		// Don't give completion emblems for reloading the level...
+		stagefailed = true;
+
 		// reload the level from scratch
 		if (countdowntimeup)
 		{
@@ -3176,7 +3280,7 @@ void G_AddPlayer(INT32 playernum)
 			if (!playeringame[i])
 				continue;
 
-			if (players[i].bot) // ignore dumb, stupid tails
+			if (players[i].bot == BOT_2PAI || players[i].bot == BOT_2PHUMAN) // ignore dumb, stupid tails
 				continue;
 
 			countplayers++;
@@ -3723,7 +3827,7 @@ static INT16 RandMap(UINT32 tolflags, INT16 pprevmap)
 	for (ix = 0; ix < NUMMAPS; ix++)
 		if (mapheaderinfo[ix] && (mapheaderinfo[ix]->typeoflevel & tolflags) == tolflags
 		 && ix != pprevmap // Don't pick the same map.
-		 && (dedicated || !M_MapLocked(ix+1)) // Don't pick locked maps.
+		 && (dedicated || !M_MapLocked(ix+1, serverGamedata)) // Don't pick locked maps.
 		)
 			okmaps[numokmaps++] = ix;
 
@@ -3740,41 +3844,52 @@ static INT16 RandMap(UINT32 tolflags, INT16 pprevmap)
 //
 // G_UpdateVisited
 //
-static void G_UpdateVisited(void)
+static void G_UpdateVisited(gamedata_t *data, boolean silent)
 {
 	boolean spec = G_IsSpecialStage(gamemap);
 	// Update visitation flags?
-	if ((!modifiedgame || savemoddata) // Not modified
-		&& !multiplayer && !demoplayback && (gametype == GT_COOP) // SP/RA/NiGHTS mode
+	if (!demoplayback
+		&& G_CoopGametype() // Campaign mode
 		&& !stagefailed) // Did not fail the stage
 	{
 		UINT8 earnedEmblems;
 
 		// Update visitation flags
-		mapvisited[gamemap-1] |= MV_BEATEN;
+		data->mapvisited[gamemap-1] |= MV_BEATEN;
+
 		// eh, what the hell
 		if (ultimatemode)
-			mapvisited[gamemap-1] |= MV_ULTIMATE;
+			data->mapvisited[gamemap-1] |= MV_ULTIMATE;
+
 		// may seem incorrect but IS possible in what the main game uses as mp special stages, and nummaprings will be -1 in NiGHTS
 		if (nummaprings > 0 && players[consoleplayer].rings >= nummaprings)
 		{
-			mapvisited[gamemap-1] |= MV_PERFECT;
+			data->mapvisited[gamemap-1] |= MV_PERFECT;
 			if (modeattacking)
-				mapvisited[gamemap-1] |= MV_PERFECTRA;
+				data->mapvisited[gamemap-1] |= MV_PERFECTRA;
 		}
+
 		if (!spec)
 		{
 			// not available to special stages because they can only really be done in one order in an unmodified game, so impossible for first six and trivial for seventh
 			if (ALL7EMERALDS(emeralds))
-				mapvisited[gamemap-1] |= MV_ALLEMERALDS;
+				data->mapvisited[gamemap-1] |= MV_ALLEMERALDS;
 		}
 
-		if (modeattacking == ATTACKING_RECORD)
-			G_UpdateRecordReplays();
-		else if (modeattacking == ATTACKING_NIGHTS)
-			G_SetNightsRecords();
+		if (silent)
+		{
+			if (modeattacking)
+				M_CheckLevelEmblems(data);
+		}
+		else
+		{
+			if (modeattacking == ATTACKING_RECORD)
+				G_UpdateRecordReplays(data);
+			else if (modeattacking == ATTACKING_NIGHTS)
+				G_SetNightsRecords(data);
+		}
 
-		if ((earnedEmblems = M_CompletionEmblems()))
+		if ((earnedEmblems = M_CompletionEmblems(data)) && !silent)
 			CONS_Printf(M_GetText("\x82" "Earned %hu emblem%s for level completion.\n"), (UINT16)earnedEmblems, earnedEmblems > 1 ? "s" : "");
 	}
 }
@@ -3813,14 +3928,18 @@ static void G_HandleSaveLevel(void)
 					remove(liveeventbackup);
 				cursaveslot = 0;
 			}
-			else if ((!modifiedgame || savemoddata) && !(netgame || multiplayer || ultimatemode || demorecording || metalrecording || modeattacking))
+			else if (!usedCheats && !(netgame || multiplayer || ultimatemode || demorecording || metalrecording || modeattacking))
+			{
 				G_SaveGame((UINT32)cursaveslot, spstage_start);
+			}
 		}
 	}
 	// and doing THIS here means you don't lose your progress if you close the game mid-intermission
 	else if (!(ultimatemode || netgame || multiplayer || demoplayback || demorecording || metalrecording || modeattacking)
-		&& (!modifiedgame || savemoddata) && cursaveslot > 0 && CanSaveLevel(lastmap+1))
+		&& !usedCheats && cursaveslot > 0 && CanSaveLevel(lastmap+1))
+	{
 		G_SaveGame((UINT32)cursaveslot, lastmap+1); // not nextmap+1 to route around special stages
+	}
 }
 
 //
@@ -3842,6 +3961,9 @@ static void G_DoCompleted(void)
 		G_StopMetalDemo();
 	if (metalrecording)
 		G_StopMetalRecording(false);
+
+	G_SetGamestate(GS_NULL);
+	wipegamestate = GS_NULL;
 
 	for (i = 0; i < MAXPLAYERS; i++)
 		if (playeringame[i])
@@ -3970,7 +4092,8 @@ static void G_DoCompleted(void)
 
 	if ((skipstats && !modeattacking) || (modeattacking && stagefailed) || (intertype == int_none))
 	{
-		G_UpdateVisited();
+		G_UpdateVisited(serverGamedata, true);
+		G_UpdateVisited(clientGamedata, false);
 		G_HandleSaveLevel();
 		G_AfterIntermission();
 	}
@@ -3979,7 +4102,8 @@ static void G_DoCompleted(void)
 		G_SetGamestate(GS_INTERMISSION);
 		Y_StartIntermission();
 		Y_LoadIntermissionData();
-		G_UpdateVisited();
+		G_UpdateVisited(serverGamedata, true);
+		G_UpdateVisited(clientGamedata, false);
 		G_HandleSaveLevel();
 	}
 }
@@ -4007,7 +4131,7 @@ void G_AfterIntermission(void)
 		&& stagefailed == false)
 	{
 		// Start a custom cutscene.
-		F_StartCustomCutscene(mapheaderinfo[gamemap-1]->cutscenenum-1, false, false);
+		F_StartCustomCutscene(mapheaderinfo[gamemap-1]->cutscenenum-1, false, false, false);
 	}
 	else
 	{
@@ -4093,8 +4217,10 @@ static void G_DoContinued(void)
 	tokenlist = 0;
 	token = 0;
 
-	if (!(netgame || multiplayer || demoplayback || demorecording || metalrecording || modeattacking) && (!modifiedgame || savemoddata) && cursaveslot > 0)
+	if (!(netgame || multiplayer || demoplayback || demorecording || metalrecording || modeattacking) && !usedCheats && cursaveslot > 0)
+	{
 		G_SaveGameOver((UINT32)cursaveslot, true);
+	}
 
 	// Reset # of lives
 	pl->lives = (ultimatemode) ? 1 : startinglivesbalance[numgameovers];
@@ -4159,13 +4285,17 @@ void G_LoadGameSettings(void)
 	S_InitRuntimeSounds();
 }
 
+#define GAMEDATA_ID 0x86E4A27C // Change every major version, as usual
+#define COMPAT_GAMEDATA_ID 0xFCAFE211 // Can be removed entirely for 2.3
+
 // G_LoadGameData
 // Loads the main data file, which stores information such as emblems found, etc.
-void G_LoadGameData(void)
+void G_LoadGameData(gamedata_t *data)
 {
 	size_t length;
 	INT32 i, j;
-	UINT8 modded = false;
+
+	UINT32 versionID;
 	UINT8 rtemp;
 
 	//For records
@@ -4176,34 +4306,45 @@ void G_LoadGameData(void)
 	UINT8 recmares;
 	INT32 curmare;
 
+	// Stop saving, until we successfully load it again.
+	data->loaded = false;
+
 	// Clear things so previously read gamedata doesn't transfer
 	// to new gamedata
-	G_ClearRecords(); // main and nights records
-	M_ClearSecrets(); // emblems, unlocks, maps visited, etc
-	totalplaytime = 0; // total play time (separate from all)
+	G_ClearRecords(data); // main and nights records
+	M_ClearSecrets(data); // emblems, unlocks, maps visited, etc
+	data->totalplaytime = 0; // total play time (separate from all)
 
 	if (M_CheckParm("-nodata"))
-		return; // Don't load.
-
-	// Allow saving of gamedata beyond this point
-	gamedataloaded = true;
-
-	if (M_CheckParm("-gamedata") && M_IsNextParm())
 	{
-		strlcpy(gamedatafilename, M_GetNextParm(), sizeof gamedatafilename);
+		// Don't load at all.
+		return;
 	}
 
 	if (M_CheckParm("-resetdata"))
-		return; // Don't load (essentially, reset).
+	{
+		// Don't load, but do save. (essentially, reset)
+		data->loaded = true;
+		return; 
+	}
 
 	length = FIL_ReadFile(va(pandf, srb2home, gamedatafilename), &savebuffer);
-	if (!length) // Aw, no game data. Their loss!
+	if (!length)
+	{
+		// No gamedata. We can save a new one.
+		data->loaded = true;
 		return;
+	}
 
 	save_p = savebuffer;
 
 	// Version check
-	if (READUINT32(save_p) != 0xFCAFE211)
+	versionID = READUINT32(save_p);
+	if (versionID != GAMEDATA_ID
+#ifdef COMPAT_GAMEDATA_ID // backwards compat behavior
+		&& versionID != COMPAT_GAMEDATA_ID
+#endif
+		)
 	{
 		const char *gdfolder = "the SRB2 folder";
 		if (strcmp(srb2home,"."))
@@ -4214,19 +4355,41 @@ void G_LoadGameData(void)
 		I_Error("Game data is from another version of SRB2.\nDelete %s(maybe in %s) and try again.", gamedatafilename, gdfolder);
 	}
 
-	totalplaytime = READUINT32(save_p);
+	data->totalplaytime = READUINT32(save_p);
 
-	modded = READUINT8(save_p);
+#ifdef COMPAT_GAMEDATA_ID
+	if (versionID == COMPAT_GAMEDATA_ID)
+	{
+		// We'll temporarily use the old condition when loading an older file.
+		// The proper mod-specific hash will get saved in afterwards.
+		boolean modded = READUINT8(save_p);
 
-	// Aha! Someone's been screwing with the save file!
-	if ((modded && !savemoddata))
-		goto datacorrupt;
-	else if (modded != true && modded != false)
-		goto datacorrupt;
+		if (modded && !savemoddata)
+		{
+			goto datacorrupt;
+		}
+		else if (modded != true && modded != false)
+		{
+			goto datacorrupt;
+		}
+	}
+	else
+#endif
+	{
+		// Quick & dirty hash for what mod this save file is for.
+		UINT32 modID = READUINT32(save_p);
+		UINT32 expectedID = quickncasehash(timeattackfolder, sizeof timeattackfolder);
+
+		if (modID != expectedID)
+		{
+			// Aha! Someone's been screwing with the save file!
+			goto datacorrupt;
+		}
+	}
 
 	// TODO put another cipher on these things? meh, I don't care...
 	for (i = 0; i < NUMMAPS; i++)
-		if ((mapvisited[i] = READUINT8(save_p)) > MV_MAX)
+		if ((data->mapvisited[i] = READUINT8(save_p)) > MV_MAX)
 			goto datacorrupt;
 
 	// To save space, use one bit per collected/achieved/unlocked flag
@@ -4234,34 +4397,34 @@ void G_LoadGameData(void)
 	{
 		rtemp = READUINT8(save_p);
 		for (j = 0; j < 8 && j+i < MAXEMBLEMS; ++j)
-			emblemlocations[j+i].collected = ((rtemp >> j) & 1);
+			data->collected[j+i] = ((rtemp >> j) & 1);
 		i += j;
 	}
 	for (i = 0; i < MAXEXTRAEMBLEMS;)
 	{
 		rtemp = READUINT8(save_p);
 		for (j = 0; j < 8 && j+i < MAXEXTRAEMBLEMS; ++j)
-			extraemblems[j+i].collected = ((rtemp >> j) & 1);
+			data->extraCollected[j+i] = ((rtemp >> j) & 1);
 		i += j;
 	}
 	for (i = 0; i < MAXUNLOCKABLES;)
 	{
 		rtemp = READUINT8(save_p);
 		for (j = 0; j < 8 && j+i < MAXUNLOCKABLES; ++j)
-			unlockables[j+i].unlocked = ((rtemp >> j) & 1);
+			data->unlocked[j+i] = ((rtemp >> j) & 1);
 		i += j;
 	}
 	for (i = 0; i < MAXCONDITIONSETS;)
 	{
 		rtemp = READUINT8(save_p);
 		for (j = 0; j < 8 && j+i < MAXCONDITIONSETS; ++j)
-			conditionSets[j+i].achieved = ((rtemp >> j) & 1);
+			data->achieved[j+i] = ((rtemp >> j) & 1);
 		i += j;
 	}
 
-	timesBeaten = READUINT32(save_p);
-	timesBeatenWithEmeralds = READUINT32(save_p);
-	timesBeatenUltimate = READUINT32(save_p);
+	data->timesBeaten = READUINT32(save_p);
+	data->timesBeatenWithEmeralds = READUINT32(save_p);
+	data->timesBeatenUltimate = READUINT32(save_p);
 
 	// Main records
 	for (i = 0; i < NUMMAPS; ++i)
@@ -4276,10 +4439,10 @@ void G_LoadGameData(void)
 
 		if (recscore || rectime || recrings)
 		{
-			G_AllocMainRecordData((INT16)i);
-			mainrecords[i]->score = recscore;
-			mainrecords[i]->time = rectime;
-			mainrecords[i]->rings = recrings;
+			G_AllocMainRecordData((INT16)i, data);
+			data->mainrecords[i]->score = recscore;
+			data->mainrecords[i]->time = rectime;
+			data->mainrecords[i]->rings = recrings;
 		}
 	}
 
@@ -4289,27 +4452,36 @@ void G_LoadGameData(void)
 		if ((recmares = READUINT8(save_p)) == 0)
 			continue;
 
-		G_AllocNightsRecordData((INT16)i);
+		G_AllocNightsRecordData((INT16)i, data);
 
 		for (curmare = 0; curmare < (recmares+1); ++curmare)
 		{
-			nightsrecords[i]->score[curmare] = READUINT32(save_p);
-			nightsrecords[i]->grade[curmare] = READUINT8(save_p);
-			nightsrecords[i]->time[curmare] = (tic_t)READUINT32(save_p);
+			data->nightsrecords[i]->score[curmare] = READUINT32(save_p);
+			data->nightsrecords[i]->grade[curmare] = READUINT8(save_p);
+			data->nightsrecords[i]->time[curmare] = (tic_t)READUINT32(save_p);
 
-			if (nightsrecords[i]->grade[curmare] > GRADE_S)
+			if (data->nightsrecords[i]->grade[curmare] > GRADE_S)
+			{
 				goto datacorrupt;
+			}
 		}
 
-		nightsrecords[i]->nummares = recmares;
+		data->nightsrecords[i]->nummares = recmares;
 	}
 
 	// done
 	Z_Free(savebuffer);
 	save_p = NULL;
 
+	// Don't consider loaded until it's a success!
+	// It used to do this much earlier, but this would cause the gamedata to
+	// save over itself when it I_Errors from the corruption landing point below,
+	// which can accidentally delete players' legitimate data if the code ever has any tiny mistakes!
+	data->loaded = true;
+
 	// Silent update unlockables in case they're out of sync with conditions
-	M_SilentUpdateUnlockablesAndEmblems();
+	M_SilentUpdateUnlockablesAndEmblems(data);
+	M_SilentUpdateSkinAvailabilites();
 
 	return;
 
@@ -4329,7 +4501,7 @@ void G_LoadGameData(void)
 
 // G_SaveGameData
 // Saves the main data file, which stores information such as emblems found, etc.
-void G_SaveGameData(void)
+void G_SaveGameData(gamedata_t *data)
 {
 	size_t length;
 	INT32 i, j;
@@ -4337,7 +4509,7 @@ void G_SaveGameData(void)
 
 	INT32 curmare;
 
-	if (!gamedataloaded)
+	if (!data->loaded)
 		return; // If never loaded (-nodata), don't save
 
 	save_p = savebuffer = (UINT8 *)malloc(GAMEDATASIZE);
@@ -4347,7 +4519,7 @@ void G_SaveGameData(void)
 		return;
 	}
 
-	if (modifiedgame && !savemoddata)
+	if (usedCheats)
 	{
 		free(savebuffer);
 		save_p = savebuffer = NULL;
@@ -4355,23 +4527,22 @@ void G_SaveGameData(void)
 	}
 
 	// Version test
-	WRITEUINT32(save_p, 0xFCAFE211);
+	WRITEUINT32(save_p, GAMEDATA_ID);
 
-	WRITEUINT32(save_p, totalplaytime);
+	WRITEUINT32(save_p, data->totalplaytime);
 
-	btemp = (UINT8)(savemoddata || modifiedgame);
-	WRITEUINT8(save_p, btemp);
+	WRITEUINT32(save_p, quickncasehash(timeattackfolder, sizeof timeattackfolder));
 
 	// TODO put another cipher on these things? meh, I don't care...
 	for (i = 0; i < NUMMAPS; i++)
-		WRITEUINT8(save_p, (mapvisited[i] & MV_MAX));
+		WRITEUINT8(save_p, (data->mapvisited[i] & MV_MAX));
 
 	// To save space, use one bit per collected/achieved/unlocked flag
 	for (i = 0; i < MAXEMBLEMS;)
 	{
 		btemp = 0;
 		for (j = 0; j < 8 && j+i < MAXEMBLEMS; ++j)
-			btemp |= (emblemlocations[j+i].collected << j);
+			btemp |= (data->collected[j+i] << j);
 		WRITEUINT8(save_p, btemp);
 		i += j;
 	}
@@ -4379,7 +4550,7 @@ void G_SaveGameData(void)
 	{
 		btemp = 0;
 		for (j = 0; j < 8 && j+i < MAXEXTRAEMBLEMS; ++j)
-			btemp |= (extraemblems[j+i].collected << j);
+			btemp |= (data->extraCollected[j+i] << j);
 		WRITEUINT8(save_p, btemp);
 		i += j;
 	}
@@ -4387,7 +4558,7 @@ void G_SaveGameData(void)
 	{
 		btemp = 0;
 		for (j = 0; j < 8 && j+i < MAXUNLOCKABLES; ++j)
-			btemp |= (unlockables[j+i].unlocked << j);
+			btemp |= (data->unlocked[j+i] << j);
 		WRITEUINT8(save_p, btemp);
 		i += j;
 	}
@@ -4395,23 +4566,23 @@ void G_SaveGameData(void)
 	{
 		btemp = 0;
 		for (j = 0; j < 8 && j+i < MAXCONDITIONSETS; ++j)
-			btemp |= (conditionSets[j+i].achieved << j);
+			btemp |= (data->achieved[j+i] << j);
 		WRITEUINT8(save_p, btemp);
 		i += j;
 	}
 
-	WRITEUINT32(save_p, timesBeaten);
-	WRITEUINT32(save_p, timesBeatenWithEmeralds);
-	WRITEUINT32(save_p, timesBeatenUltimate);
+	WRITEUINT32(save_p, data->timesBeaten);
+	WRITEUINT32(save_p, data->timesBeatenWithEmeralds);
+	WRITEUINT32(save_p, data->timesBeatenUltimate);
 
 	// Main records
 	for (i = 0; i < NUMMAPS; i++)
 	{
-		if (mainrecords[i])
+		if (data->mainrecords[i])
 		{
-			WRITEUINT32(save_p, mainrecords[i]->score);
-			WRITEUINT32(save_p, mainrecords[i]->time);
-			WRITEUINT16(save_p, mainrecords[i]->rings);
+			WRITEUINT32(save_p, data->mainrecords[i]->score);
+			WRITEUINT32(save_p, data->mainrecords[i]->time);
+			WRITEUINT16(save_p, data->mainrecords[i]->rings);
 		}
 		else
 		{
@@ -4425,19 +4596,19 @@ void G_SaveGameData(void)
 	// NiGHTS records
 	for (i = 0; i < NUMMAPS; i++)
 	{
-		if (!nightsrecords[i] || !nightsrecords[i]->nummares)
+		if (!data->nightsrecords[i] || !data->nightsrecords[i]->nummares)
 		{
 			WRITEUINT8(save_p, 0);
 			continue;
 		}
 
-		WRITEUINT8(save_p, nightsrecords[i]->nummares);
+		WRITEUINT8(save_p, data->nightsrecords[i]->nummares);
 
-		for (curmare = 0; curmare < (nightsrecords[i]->nummares + 1); ++curmare)
+		for (curmare = 0; curmare < (data->nightsrecords[i]->nummares + 1); ++curmare)
 		{
-			WRITEUINT32(save_p, nightsrecords[i]->score[curmare]);
-			WRITEUINT8(save_p, nightsrecords[i]->grade[curmare]);
-			WRITEUINT32(save_p, nightsrecords[i]->time[curmare]);
+			WRITEUINT32(save_p, data->nightsrecords[i]->score[curmare]);
+			WRITEUINT8(save_p, data->nightsrecords[i]->grade[curmare]);
+			WRITEUINT32(save_p, data->nightsrecords[i]->time[curmare]);
 		}
 	}
 
@@ -4857,7 +5028,7 @@ void G_InitNew(UINT8 pultmode, const char *mapname, boolean resetplayer, boolean
 	imcontinuing = false;
 
 	if ((gametyperules & GTR_CUTSCENES) && !skipprecutscene && mapheaderinfo[gamemap-1]->precutscenenum && !modeattacking && !(marathonmode & MA_NOCUTSCENES)) // Start a custom cutscene.
-		F_StartCustomCutscene(mapheaderinfo[gamemap-1]->precutscenenum-1, true, resetplayer);
+		F_StartCustomCutscene(mapheaderinfo[gamemap-1]->precutscenenum-1, true, resetplayer, FLS);
 	else
 		G_DoLoadLevel(resetplayer);
 
@@ -5240,4 +5411,3 @@ INT32 G_TicsToMilliseconds(tic_t tics)
 {
 	return (INT32)((tics%TICRATE) * (1000.00f/TICRATE));
 }
-

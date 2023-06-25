@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2021 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -18,6 +18,7 @@
 
 #include "doomdef.h"
 #include "g_game.h"
+#include "i_time.h"
 #include "i_net.h"
 #include "i_system.h"
 #include "m_argv.h"
@@ -614,7 +615,10 @@ void Net_WaitAllAckReceived(UINT32 timeout)
 	while (timeout > I_GetTime() && !Net_AllAcksReceived())
 	{
 		while (tictac == I_GetTime())
-			I_Sleep();
+		{
+			I_Sleep(cv_sleep.value);
+			I_UpdateTime(cv_timescale.value);
+		}
 		tictac = I_GetTime();
 		HGetPacket();
 		Net_AckTicker();
@@ -815,6 +819,8 @@ static const char *packettypename[NUMPACKETTYPE] =
 	"CLIENTJOIN",
 	"NODETIMEOUT",
 	"LOGIN",
+	"TELLFILESNEEDED",
+	"MOREFILESNEEDED",
 	"PING"
 };
 
@@ -1142,8 +1148,9 @@ boolean HGetPacket(void)
 		if (netbuffer->checksum != NetbufferChecksum())
 		{
 			DEBFILE("Bad packet checksum\n");
-			//Net_CloseConnection(nodejustjoined ? (doomcom->remotenode | FORCECLOSE) : doomcom->remotenode);
-			Net_CloseConnection(doomcom->remotenode);
+			// Do not disconnect or anything, just ignore the packet.
+			// Bad checksums with UDP tend to happen very scarcely
+			// so they are not normally an issue.
 			continue;
 		}
 
@@ -1200,26 +1207,32 @@ static void Internal_FreeNodenum(INT32 nodenum)
 	(void)nodenum;
 }
 
+char *I_NetSplitAddress(char *host, char **port)
+{
+	boolean v4 = (strchr(host, '.') != NULL);
+
+	host = strtok(host, v4 ? ":" : "[]");
+
+	if (port)
+		*port = strtok(NULL, ":");
+
+	return host;
+}
+
 SINT8 I_NetMakeNode(const char *hostname)
 {
 	SINT8 newnode = -1;
 	if (I_NetMakeNodewPort)
 	{
 		char *localhostname = strdup(hostname);
-		char  *t = localhostname;
-		const char *port;
+		char *port;
 		if (!localhostname)
 			return newnode;
+
 		// retrieve portnum from address!
-		strtok(localhostname, ":");
-		port = strtok(NULL, ":");
+		hostname = I_NetSplitAddress(localhostname, &port);
 
-		// remove the port in the hostname as we've it already
-		while ((*t != ':') && (*t != '\0'))
-			t++;
-		*t = '\0';
-
-		newnode = I_NetMakeNodewPort(localhostname, port);
+		newnode = I_NetMakeNodewPort(hostname, port);
 		free(localhostname);
 	}
 	return newnode;

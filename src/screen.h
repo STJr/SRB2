@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2021 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -129,6 +129,7 @@ enum
 	COLUMN_MULTIPATCH,
 	COLUMN_MULTIPATCH_TRANSTAB, COLUMN_MULTIPATCH_ALPHA,
 	COLUMN_FOG,
+	COLUMN_DROP_SHADOW,
 
 	COLUMN_MAX
 };
@@ -160,6 +161,14 @@ enum
 	SPAN_WATER_TILTED_TRANSTAB, SPAN_WATER_TILTED_ALPHA,
 
 	SPAN_FOG,
+	SPAN_FOG_TILTED,
+
+	SPAN_SOLIDCOLOR,
+	SPAN_SOLIDCOLOR_TILTED,
+	SPAN_SOLIDCOLOR_TRANSTAB, SPAN_SOLIDCOLOR_ALPHA,
+	SPAN_WATER_SOLIDCOLOR_TRANSTAB, SPAN_WATER_SOLIDCOLOR_ALPHA,
+	SPAN_TILTED_SOLIDCOLOR_TRANSTAB, SPAN_TILTED_SOLIDCOLOR_ALPHA,
+	SPAN_WATER_TILTED_SOLIDCOLOR_TRANSTAB, SPAN_WATER_TILTED_SOLIDCOLOR_ALPHA,
 
 	SPAN_MAX
 };
@@ -175,10 +184,14 @@ extern void (*spanfuncs_npo2[SPAN_MAX])(void);
 extern INT32 span_translu;
 extern INT32 span_translu_tilted;
 extern INT32 span_translu_splat;
+extern INT32 span_translu_solidcolor;
+extern INT32 span_translu_tilted_solidcolor;
 extern INT32 span_translu_sprite;
 extern INT32 span_translu_sprite_tilted;
-extern INT32 span_translu_water;
-extern INT32 span_translu_water_tilted;
+extern INT32 span_water;
+extern INT32 span_water_tilted;
+extern INT32 span_water_solidcolor;
+extern INT32 span_water_tilted_solidcolor;
 
 // -----
 // CPUID
@@ -198,6 +211,8 @@ extern viddef_t vid;
 extern INT32 setmodeneeded; // mode number to set if needed, or 0
 extern INT32 setrenderneeded;
 
+extern double averageFPS;
+
 void SCR_ChangeRenderer(void);
 
 extern CV_PossibleValue_t cv_renderer_t[];
@@ -208,6 +223,7 @@ extern UINT8 *scr_borderpatch; // patch used to fill the view borders
 extern consvar_t cv_scr_width, cv_scr_height, cv_scr_depth, cv_renderview, cv_renderer, cv_fullscreen;
 // wait for page flipping to end or not
 extern consvar_t cv_vidwait;
+extern consvar_t cv_timescale;
 
 // Initialize the screen
 void SCR_Startup(void);
@@ -229,6 +245,8 @@ void SCR_CheckDefaultMode(void);
 
 // Set the mode number which is saved in the config
 void SCR_SetDefaultMode(void);
+
+void SCR_CalculateFPS(void);
 
 FUNCMATH boolean SCR_IsAspectCorrect(INT32 width, INT32 height);
 

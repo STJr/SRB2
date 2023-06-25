@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2021 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -74,20 +74,27 @@ typedef struct gl_vissprite_s
 	float spritexscale, spriteyscale;
 	float spritexoffset, spriteyoffset;
 
+	skincolornum_t color;
+
 	UINT32 renderflags;
 	UINT8 rotateflags;
 
 	boolean flip, vflip;
 	boolean precip; // Tails 08-25-2002
 	boolean rotated;
-	UINT8 translucency;       //alpha level 0-255
+	boolean translucent;
+
+	angle_t angle; // for splats
 
 	//Hurdler: 25/04/2000: now support colormap in hardware mode
 	UINT8 *colormap;
-	INT32 dispoffset; // copy of info->dispoffset, affects ordering but not drawing
+	INT32 dispoffset; // copy of mobj->dispoffset, affects ordering but not drawing
 
 	patch_t *gpatch;
 	mobj_t *mobj; // NOTE: This is a precipmobj_t if precip is true !!! Watch out.
+
+	INT32 blendmode;
+	INT32 alpha;
 } gl_vissprite_t;
 
 // --------

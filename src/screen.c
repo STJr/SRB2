@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2021 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -15,6 +15,7 @@
 #include "screen.h"
 #include "console.h"
 #include "am_map.h"
+#include "i_time.h"
 #include "i_system.h"
 #include "i_video.h"
 #include "r_local.h"
@@ -33,12 +34,15 @@
 #include "s_sound.h" // ditto
 #include "g_game.h" // ditto
 #include "p_local.h" // P_AutoPause()
+
 #ifdef HWRENDER
 #include "hardware/hw_main.h"
 #include "hardware/hw_light.h"
 #include "hardware/hw_model.h"
 #endif
 
+// SRB2Kart
+#include "r_fps.h" // R_GetFramerateCap
 
 #if defined (USEASM) && !defined (NORUSEASM)//&& (!defined (_MSC_VER) || (_MSC_VER <= 1200))
 #define RUSEASM //MSC.NET can't patch itself
@@ -61,10 +65,14 @@ void (*spanfuncs_npo2[SPAN_MAX])(void);
 INT32 span_translu;
 INT32 span_translu_tilted;
 INT32 span_translu_splat;
+INT32 span_translu_solidcolor;
+INT32 span_translu_tilted_solidcolor;
 INT32 span_translu_sprite;
 INT32 span_translu_sprite_tilted;
-INT32 span_translu_water;
-INT32 span_translu_water_tilted;
+INT32 span_water;
+INT32 span_water_tilted;
+INT32 span_water_solidcolor;
+INT32 span_water_tilted_solidcolor;
 
 // ------------------
 // global video state
@@ -79,6 +87,7 @@ static CV_PossibleValue_t scr_depth_cons_t[] = {{8, "8 bits"}, {16, "16 bits"}, 
 consvar_t cv_scr_width = CVAR_INIT ("scr_width", "1280", CV_SAVE, CV_Unsigned, NULL);
 consvar_t cv_scr_height = CVAR_INIT ("scr_height", "800", CV_SAVE, CV_Unsigned, NULL);
 consvar_t cv_scr_depth = CVAR_INIT ("scr_depth", "16 bits", CV_SAVE, scr_depth_cons_t, NULL);
+
 consvar_t cv_renderview = CVAR_INIT ("renderview", "On", 0, CV_OnOff, NULL);
 
 CV_PossibleValue_t cv_renderer_t[] = {
@@ -90,7 +99,7 @@ CV_PossibleValue_t cv_renderer_t[] = {
 	{0, NULL}
 };
 
-consvar_t cv_renderer = CVAR_INIT ("renderer", "Software", CV_SAVE|CV_NOLUA|CV_CALL, cv_renderer_t, SCR_ChangeRenderer);
+consvar_t cv_renderer = CVAR_INIT ("renderer", "Software", CV_SAVE|CV_CALL, cv_renderer_t, SCR_ChangeRenderer);
 
 static void SCR_ChangeFullscreen(void);
 
@@ -129,16 +138,16 @@ void SCR_SetDrawFuncs(void)
 
 #define COLFUNC8(type, func) colfuncs[COLUMN_##type] = R_Draw##func##Column_8
 		COLFUNCLIST8(COLFUNC8);
+		COLFUNCLIST8_NOTEXTURE(COLFUNC8);
 #undef COLFUNC8
 
 #define SPANFUNC8(type, func) spanfuncs[SPAN_##type] = R_Draw##func##_8
 		SPANFUNCLIST8(SPANFUNC8);
-		SPANFUNC8(FOG, FogSpan);
+		SPANFUNCLIST8_NOTEXTURE(SPANFUNC8);
 #undef SPANFUNC8
 
 #define SPANFUNC8(type, func) spanfuncs_npo2[SPAN_##type] = R_Draw##func##_NPO2_8
 		SPANFUNCLIST8(SPANFUNC8);
-		spanfuncs_npo2[SPAN_FOG] = NULL; // Not needed
 #undef SPANFUNC8
 
 #ifdef RUSEASM
@@ -147,16 +156,12 @@ void SCR_SetDrawFuncs(void)
 			if (R_MMX)
 			{
 				colfuncs[BASEDRAWFUNC] = R_DrawColumn_8_MMX;
-				//colfuncs[COLUMN_SHADE] = R_DrawShadeColumn_8_ASM;
-				//colfuncs[COLUMN_TRANSLUCENT] = R_DrawTranslucentColumn_8_ASM;
 				colfuncs[COLUMN_MULTIPATCH] = R_Draw2sMultiPatchColumn_8_MMX;
 				spanfuncs[BASEDRAWFUNC] = R_DrawSpan_8_MMX;
 			}
 			else
 			{
 				colfuncs[BASEDRAWFUNC] = R_DrawColumn_8_ASM;
-				//colfuncs[COLUMN_SHADE] = R_DrawShadeColumn_8_ASM;
-				//colfuncs[COLUMN_TRANSLUCENT] = R_DrawTranslucentColumn_8_ASM;
 				colfuncs[COLUMN_MULTIPATCH] = R_Draw2sMultiPatchColumn_8_ASM;
 			}
 		}
@@ -173,25 +178,21 @@ void SCR_SetDrawFuncs(void)
 
 #define COLFUNC32(type, func) colfuncs[COLUMN_##type] = R_Draw##func##Column_32
 		COLFUNCLIST32(COLFUNC32);
+		COLFUNCLIST32_NOTEXTURE(COLFUNC32);
 #undef COLFUNC32
 
 #define SPANFUNC32(type, func) spanfuncs[SPAN_##type] = R_Draw##func##_32
 		SPANFUNCLIST32(SPANFUNC32);
-		SPANFUNC32(FOG, FogSpan);
+		SPANFUNCLIST32_NOTEXTURE(SPANFUNC32);
 #undef SPANFUNC32
 
 #define SPANFUNC32(type, func) spanfuncs_npo2[SPAN_##type] = R_Draw##func##_NPO2_32
 		SPANFUNCLIST32(SPANFUNC32);
-		spanfuncs_npo2[SPAN_FOG] = NULL; // Not needed
 #undef SPANFUNC8
 	}
 #endif
 	else
 		I_Error("unknown bytes per pixel mode %d\n", vid.bpp);
-/*
-	if (SCR_IsAspectCorrect(vid.width, vid.height))
-		CONS_Alert(CONS_WARNING, M_GetText("Resolution is not aspect-correct!\nUse a multiple of %dx%d\n"), BASEVIDWIDTH, BASEVIDHEIGHT);
-*/
 }
 
 #undef SPANFUNCLIST
@@ -212,10 +213,14 @@ void SCR_SetSoftwareTranslucency(void)
 		span_translu = SPAN_TRANSTAB;
 		span_translu_tilted = SPAN_TILTED_TRANSTAB;
 		span_translu_splat = SPAN_SPLAT_TRANSTAB;
+		span_translu_solidcolor = SPAN_SOLIDCOLOR_TRANSTAB;
+		span_translu_tilted_solidcolor = SPAN_TILTED_SOLIDCOLOR_TRANSTAB;
 		span_translu_sprite = SPAN_SPRITE_TRANSTAB;
 		span_translu_sprite_tilted = SPAN_SPRITE_TILTED_TRANSTAB;
-		span_translu_water = SPAN_WATER_TRANSTAB;
-		span_translu_water_tilted = SPAN_WATER_TILTED_TRANSTAB;
+		span_water = SPAN_WATER_TRANSTAB;
+		span_water_tilted = SPAN_WATER_TILTED_TRANSTAB;
+		span_water_solidcolor = SPAN_WATER_SOLIDCOLOR_TRANSTAB;
+		span_water_tilted_solidcolor = SPAN_WATER_TILTED_SOLIDCOLOR_TRANSTAB;
 	}
 	else
 	{
@@ -226,10 +231,14 @@ void SCR_SetSoftwareTranslucency(void)
 		span_translu = SPAN_ALPHA;
 		span_translu_tilted = SPAN_TILTED_ALPHA;
 		span_translu_splat = SPAN_SPLAT_ALPHA;
+		span_translu_solidcolor = SPAN_SOLIDCOLOR_ALPHA;
+		span_translu_tilted_solidcolor = SPAN_TILTED_SOLIDCOLOR_ALPHA;
 		span_translu_sprite = SPAN_SPRITE_ALPHA;
 		span_translu_sprite_tilted = SPAN_SPRITE_TILTED_ALPHA;
-		span_translu_water = SPAN_WATER_ALPHA;
-		span_translu_water_tilted = SPAN_WATER_TILTED_ALPHA;
+		span_water = SPAN_WATER_ALPHA;
+		span_water_tilted = SPAN_WATER_TILTED_ALPHA;
+		span_water_solidcolor = SPAN_WATER_SOLIDCOLOR_ALPHA;
+		span_water_tilted_solidcolor = SPAN_WATER_TILTED_SOLIDCOLOR_ALPHA;
 	}
 }
 
@@ -426,7 +435,6 @@ void SCR_SetDefaultMode(void)
 	// remember the default screen size
 	CV_SetValue(&cv_scr_width, vid.width);
 	CV_SetValue(&cv_scr_height, vid.height);
-	CV_SetValue(&cv_scr_depth, vid.bpp*8);
 }
 
 // Change fullscreen on/off according to cv_fullscreen
@@ -482,46 +490,117 @@ boolean SCR_IsAspectCorrect(INT32 width, INT32 height)
 	 );
 }
 
-// XMOD FPS display
-// moved out of os-specific code for consistency
-static boolean fpsgraph[TICRATE];
-static tic_t lasttic;
+double averageFPS = 0.0f;
+
+#define USE_FPS_SAMPLES
+
+#ifdef USE_FPS_SAMPLES
+#define FPS_SAMPLE_RATE (0.05) // How often to update FPS samples, in seconds
+#define NUM_FPS_SAMPLES (16) // Number of samples to store
+
+static double fps_samples[NUM_FPS_SAMPLES];
+static double updateElapsed = 0.0;
+#endif
+
+static boolean fps_init = false;
+static precise_t fps_enter = 0;
+
+void SCR_CalculateFPS(void)
+{
+	precise_t fps_finish = 0;
+
+	double frameElapsed = 0.0;
+
+	if (fps_init == false)
+	{
+		fps_enter = I_GetPreciseTime();
+		fps_init = true;
+	}
+
+	fps_finish = I_GetPreciseTime();
+	frameElapsed = (double)((INT64)(fps_finish - fps_enter)) / I_GetPrecisePrecision();
+	fps_enter = fps_finish;
+
+#ifdef USE_FPS_SAMPLES
+	updateElapsed += frameElapsed;
+
+	if (updateElapsed >= FPS_SAMPLE_RATE)
+	{
+		static int sampleIndex = 0;
+		int i;
+
+		fps_samples[sampleIndex] = frameElapsed;
+
+		sampleIndex++;
+		if (sampleIndex >= NUM_FPS_SAMPLES)
+			sampleIndex = 0;
+
+		averageFPS = 0.0;
+		for (i = 0; i < NUM_FPS_SAMPLES; i++)
+		{
+			averageFPS += fps_samples[i];
+		}
+
+		if (averageFPS > 0.0)
+		{
+			averageFPS = 1.0 / (averageFPS / NUM_FPS_SAMPLES);
+		}
+	}
+
+	while (updateElapsed >= FPS_SAMPLE_RATE)
+	{
+		updateElapsed -= FPS_SAMPLE_RATE;
+	}
+#else
+	// Direct, unsampled counter.
+	averageFPS = 1.0 / frameElapsed;
+#endif
+}
 
 void SCR_DisplayTicRate(void)
 {
-	tic_t i;
-	tic_t ontic = I_GetTime();
-	tic_t totaltics = 0;
 	INT32 ticcntcolor = 0;
 	const INT32 h = vid.height-(8*vid.dupy);
+	UINT32 cap = R_GetFramerateCap();
+	double fps = round(averageFPS);
 
 	if (gamestate == GS_NULL)
 		return;
 
-	for (i = lasttic + 1; i < TICRATE+lasttic && i < ontic; ++i)
-		fpsgraph[i % TICRATE] = false;
-
-	fpsgraph[ontic % TICRATE] = true;
-
-	for (i = 0;i < TICRATE;++i)
-		if (fpsgraph[i])
-			++totaltics;
-
-	if (totaltics <= TICRATE/2) ticcntcolor = V_REDMAP;
-	else if (totaltics == TICRATE) ticcntcolor = V_GREENMAP;
-
-	if (cv_ticrate.value == 2) // compact counter
-		V_DrawString(vid.width-(16*vid.dupx), h,
-			ticcntcolor|V_NOSCALESTART|V_USERHUDTRANS, va("%02d", totaltics));
-	else if (cv_ticrate.value == 1) // full counter
+	if (cap > 0)
 	{
-		V_DrawString(vid.width-(72*vid.dupx), h,
-			V_YELLOWMAP|V_NOSCALESTART|V_USERHUDTRANS, "FPS:");
-		V_DrawString(vid.width-(40*vid.dupx), h,
-			ticcntcolor|V_NOSCALESTART|V_USERHUDTRANS, va("%02d/%02u", totaltics, TICRATE));
+		if (fps <= cap / 2.0) ticcntcolor = V_REDMAP;
+		else if (fps <= cap * 0.90) ticcntcolor = V_YELLOWMAP;
+		else ticcntcolor = V_GREENMAP;
+	}
+	else
+	{
+		ticcntcolor = V_GREENMAP;
 	}
 
-	lasttic = ontic;
+	if (cv_ticrate.value == 2) // compact counter
+	{
+		V_DrawRightAlignedString(vid.width, h,
+			ticcntcolor|V_NOSCALESTART|V_USERHUDTRANS, va("%04.2f", averageFPS)); // use averageFPS directly
+	}
+	else if (cv_ticrate.value == 1) // full counter
+	{
+		const char *drawnstr;
+		INT32 width;
+
+		// The highest assignable cap is < 1000, so 3 characters is fine.
+		if (cap > 0)
+			drawnstr = va("%3.0f/%3u", fps, cap);
+		else
+			drawnstr = va("%4.2f", averageFPS);
+
+		width = V_StringWidth(drawnstr, V_NOSCALESTART);
+
+		V_DrawString(vid.width - ((7 * 8 * vid.dupx) + V_StringWidth("FPS: ", V_NOSCALESTART)), h,
+			V_YELLOWMAP|V_NOSCALESTART|V_USERHUDTRANS, "FPS:");
+		V_DrawString(vid.width - width, h,
+			ticcntcolor|V_NOSCALESTART|V_USERHUDTRANS, drawnstr);
+	}
 }
 
 void SCR_DisplayLocalPing(void)
@@ -575,7 +654,13 @@ void SCR_ClosedCaptions(void)
 		y = basey-((i + 2)*10);
 
 		if (closedcaptions[i].b)
-			y -= (closedcaptions[i].b--)*vid.dupy;
+		{
+			y -= closedcaptions[i].b * vid.dupy;
+			if (renderisnewtic)
+			{
+				closedcaptions[i].b--;
+			}
+		}
 
 		if (closedcaptions[i].t < CAPTIONFADETICS)
 			flags |= (((CAPTIONFADETICS-closedcaptions[i].t)/2)*V_10TRANS);

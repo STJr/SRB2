@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2021 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -23,6 +23,7 @@
 #include "p_saveg.h"
 #include "i_video.h"
 #include "r_data.h"
+#include "r_fps.h"
 #include "r_textures.h"
 #include "r_things.h"
 #include "r_skins.h"
@@ -47,6 +48,7 @@ UINT8 *save_p;
 #define ARCHIVEBLOCK_POBJS    0x7F928546
 #define ARCHIVEBLOCK_THINKERS 0x7F37037C
 #define ARCHIVEBLOCK_SPECIALS 0x7F228378
+#define ARCHIVEBLOCK_EMBLEMS  0x7F4A5445
 
 // Note: This cannot be bigger
 // than an UINT16
@@ -193,6 +195,19 @@ static void P_NetArchivePlayers(void)
 		WRITEUINT8(save_p, players[i].homing);
 		WRITEUINT32(save_p, players[i].dashmode);
 		WRITEUINT32(save_p, players[i].skidtime);
+
+		//////////
+		// Bots //
+		//////////
+		WRITEUINT8(save_p, players[i].bot);
+		WRITEUINT8(save_p, players[i].botmem.lastForward);
+		WRITEUINT8(save_p, players[i].botmem.lastBlocked);
+		WRITEUINT8(save_p, players[i].botmem.catchup_tics);
+		WRITEUINT8(save_p, players[i].botmem.thinkstate);
+		WRITEUINT8(save_p, players[i].removing);
+
+		WRITEUINT8(save_p, players[i].blocked);
+		WRITEUINT16(save_p, players[i].lastbuttons);
 
 		////////////////////////////
 		// Conveyor Belt Movement //
@@ -407,6 +422,20 @@ static void P_NetUnArchivePlayers(void)
 		players[i].homing = READUINT8(save_p); // Are you homing?
 		players[i].dashmode = READUINT32(save_p); // counter for dashmode ability
 		players[i].skidtime = READUINT32(save_p); // Skid timer
+
+		//////////
+		// Bots //
+		//////////
+		players[i].bot = READUINT8(save_p);
+
+		players[i].botmem.lastForward = READUINT8(save_p);
+		players[i].botmem.lastBlocked = READUINT8(save_p);
+		players[i].botmem.catchup_tics = READUINT8(save_p);
+		players[i].botmem.thinkstate = READUINT8(save_p);
+		players[i].removing = READUINT8(save_p);
+
+		players[i].blocked = READUINT8(save_p);
+		players[i].lastbuttons = READUINT16(save_p);
 
 		////////////////////////////
 		// Conveyor Belt Movement //
@@ -829,6 +858,17 @@ static void P_NetUnArchiveWaypoints(void)
 #define SD_TAGLIST   0x01
 #define SD_COLORMAP  0x02
 #define SD_CRUMBLESTATE 0x04
+#define SD_FLOORLIGHT 0x08
+#define SD_CEILLIGHT 0x10
+#define SD_FLAG      0x20
+#define SD_SPECIALFLAG 0x40
+#define SD_DIFF4     0x80
+
+//diff4 flags
+#define SD_DAMAGETYPE 0x01
+#define SD_TRIGGERTAG 0x02
+#define SD_TRIGGERER 0x04
+#define SD_GRAVITY   0x08
 
 #define LD_FLAG     0x01
 #define LD_SPECIAL  0x02
@@ -883,7 +923,7 @@ static boolean CheckFFloorDiff(const sector_t *ss)
 
 	for (rover = ss->ffloors; rover; rover = rover->next)
 	{
-		if (rover->flags != rover->spawnflags
+		if (rover->fofflags != rover->spawnflags
 		|| rover->alpha != rover->spawnalpha)
 			{
 				return true; // we found an FOF that changed!
@@ -903,7 +943,7 @@ static void ArchiveFFloors(const sector_t *ss)
 	for (rover = ss->ffloors; rover; rover = rover->next)
 	{
 		fflr_diff = 0; // reset diff flags
-		if (rover->flags != rover->spawnflags)
+		if (rover->fofflags != rover->spawnflags)
 			fflr_diff |= FD_FLAGS;
 		if (rover->alpha != rover->spawnalpha)
 			fflr_diff |= FD_ALPHA;
@@ -913,7 +953,7 @@ static void ArchiveFFloors(const sector_t *ss)
 			WRITEUINT16(save_p, j); // save ffloor "number"
 			WRITEUINT8(save_p, fflr_diff);
 			if (fflr_diff & FD_FLAGS)
-				WRITEUINT32(save_p, rover->flags);
+				WRITEUINT32(save_p, rover->fofflags);
 			if (fflr_diff & FD_ALPHA)
 				WRITEINT16(save_p, rover->alpha);
 		}
@@ -951,7 +991,7 @@ static void UnArchiveFFloors(const sector_t *ss)
 		fflr_diff = READUINT8(save_p);
 
 		if (fflr_diff & FD_FLAGS)
-			rover->flags = READUINT32(save_p);
+			rover->fofflags = READUINT32(save_p);
 		if (fflr_diff & FD_ALPHA)
 			rover->alpha = READINT16(save_p);
 
@@ -967,11 +1007,11 @@ static void ArchiveSectors(void)
 	size_t i, j;
 	const sector_t *ss = sectors;
 	const sector_t *spawnss = spawnsectors;
-	UINT8 diff, diff2, diff3;
+	UINT8 diff, diff2, diff3, diff4;
 
 	for (i = 0; i < numsectors; i++, ss++, spawnss++)
 	{
-		diff = diff2 = diff3 = 0;
+		diff = diff2 = diff3 = diff4 = 0;
 		if (ss->floorheight != spawnss->floorheight)
 			diff |= SD_FLOORHT;
 		if (ss->ceilingheight != spawnss->ceilingheight)
@@ -1010,8 +1050,28 @@ static void ArchiveSectors(void)
 		if (ss->crumblestate)
 			diff3 |= SD_CRUMBLESTATE;
 
+		if (ss->floorlightlevel != spawnss->floorlightlevel || ss->floorlightabsolute != spawnss->floorlightabsolute)
+			diff3 |= SD_FLOORLIGHT;
+		if (ss->ceilinglightlevel != spawnss->ceilinglightlevel || ss->ceilinglightabsolute != spawnss->ceilinglightabsolute)
+			diff3 |= SD_CEILLIGHT;
+		if (ss->flags != spawnss->flags)
+			diff3 |= SD_FLAG;
+		if (ss->specialflags != spawnss->specialflags)
+			diff3 |= SD_SPECIALFLAG;
+		if (ss->damagetype != spawnss->damagetype)
+			diff4 |= SD_DAMAGETYPE;
+		if (ss->triggertag != spawnss->triggertag)
+			diff4 |= SD_TRIGGERTAG;
+		if (ss->triggerer != spawnss->triggerer)
+			diff4 |= SD_TRIGGERER;
+		if (ss->gravity != spawnss->gravity)
+			diff4 |= SD_GRAVITY;
+
 		if (ss->ffloors && CheckFFloorDiff(ss))
 			diff |= SD_FFLOORS;
+
+		if (diff4)
+			diff3 |= SD_DIFF4;
 
 		if (diff3)
 			diff2 |= SD_DIFF3;
@@ -1027,6 +1087,8 @@ static void ArchiveSectors(void)
 				WRITEUINT8(save_p, diff2);
 			if (diff2 & SD_DIFF3)
 				WRITEUINT8(save_p, diff3);
+			if (diff3 & SD_DIFF4)
+				WRITEUINT8(save_p, diff4);
 			if (diff & SD_FLOORHT)
 				WRITEFIXED(save_p, ss->floorheight);
 			if (diff & SD_CEILHT)
@@ -1063,6 +1125,28 @@ static void ArchiveSectors(void)
 					// returns existing index if already added, or appends to net_colormaps and returns new index
 			if (diff3 & SD_CRUMBLESTATE)
 				WRITEINT32(save_p, ss->crumblestate);
+			if (diff3 & SD_FLOORLIGHT)
+			{
+				WRITEINT16(save_p, ss->floorlightlevel);
+				WRITEUINT8(save_p, ss->floorlightabsolute);
+			}
+			if (diff3 & SD_CEILLIGHT)
+			{
+				WRITEINT16(save_p, ss->ceilinglightlevel);
+				WRITEUINT8(save_p, ss->ceilinglightabsolute);
+			}
+			if (diff3 & SD_FLAG)
+				WRITEUINT32(save_p, ss->flags);
+			if (diff3 & SD_SPECIALFLAG)
+				WRITEUINT32(save_p, ss->specialflags);
+			if (diff4 & SD_DAMAGETYPE)
+				WRITEUINT8(save_p, ss->damagetype);
+			if (diff4 & SD_TRIGGERTAG)
+				WRITEINT16(save_p, ss->triggertag);
+			if (diff4 & SD_TRIGGERER)
+				WRITEUINT8(save_p, ss->triggerer);
+			if (diff4 & SD_GRAVITY)
+				WRITEFIXED(save_p, ss->gravity);
 			if (diff & SD_FFLOORS)
 				ArchiveFFloors(ss);
 		}
@@ -1074,7 +1158,7 @@ static void ArchiveSectors(void)
 static void UnArchiveSectors(void)
 {
 	UINT16 i, j;
-	UINT8 diff, diff2, diff3;
+	UINT8 diff, diff2, diff3, diff4;
 	for (;;)
 	{
 		i = READUINT16(save_p);
@@ -1094,6 +1178,10 @@ static void UnArchiveSectors(void)
 			diff3 = READUINT8(save_p);
 		else
 			diff3 = 0;
+		if (diff3 & SD_DIFF4)
+			diff4 = READUINT8(save_p);
+		else
+			diff4 = 0;
 
 		if (diff & SD_FLOORHT)
 			sectors[i].floorheight = READFIXED(save_p);
@@ -1154,6 +1242,31 @@ static void UnArchiveSectors(void)
 			sectors[i].extra_colormap = GetNetColormapFromList(READUINT32(save_p));
 		if (diff3 & SD_CRUMBLESTATE)
 			sectors[i].crumblestate = READINT32(save_p);
+		if (diff3 & SD_FLOORLIGHT)
+		{
+			sectors[i].floorlightlevel = READINT16(save_p);
+			sectors[i].floorlightabsolute = READUINT8(save_p);
+		}
+		if (diff3 & SD_CEILLIGHT)
+		{
+			sectors[i].ceilinglightlevel = READINT16(save_p);
+			sectors[i].ceilinglightabsolute = READUINT8(save_p);
+		}
+		if (diff3 & SD_FLAG)
+		{
+			sectors[i].flags = READUINT32(save_p);
+			CheckForReverseGravity |= (sectors[i].flags & MSF_GRAVITYFLIP);
+		}
+		if (diff3 & SD_SPECIALFLAG)
+			sectors[i].specialflags = READUINT32(save_p);
+		if (diff4 & SD_DAMAGETYPE)
+			sectors[i].damagetype = READUINT8(save_p);
+		if (diff4 & SD_TRIGGERTAG)
+			sectors[i].triggertag = READINT16(save_p);
+		if (diff4 & SD_TRIGGERER)
+			sectors[i].triggerer = READUINT8(save_p);
+		if (diff4 & SD_GRAVITY)
+			sectors[i].gravity = READFIXED(save_p);
 
 		if (diff & SD_FFLOORS)
 			UnArchiveFFloors(&sectors[i]);
@@ -1466,6 +1579,7 @@ typedef enum
 	MD2_SPRITEXOFFSET = 1<<21,
 	MD2_SPRITEYOFFSET = 1<<22,
 	MD2_FLOORSPRITESLOPE = 1<<23,
+	MD2_DISPOFFSET = 1<<24
 } mobj_diff2_t;
 
 typedef enum
@@ -1583,7 +1697,7 @@ static void SaveMobjThinker(const thinker_t *th, const UINT8 type)
 	diff2 = 0;
 
 	// not the default but the most probable
-	if (mobj->momx != 0 || mobj->momy != 0 || mobj->momz != 0)
+	if (mobj->momx != 0 || mobj->momy != 0 || mobj->momz != 0 || mobj->pmomz !=0)
 		diff |= MD_MOM;
 	if (mobj->radius != mobj->info->radius)
 		diff |= MD_RADIUS;
@@ -1700,6 +1814,8 @@ static void SaveMobjThinker(const thinker_t *th, const UINT8 type)
 		|| (slope->normal.z != FRACUNIT))
 			diff2 |= MD2_FLOORSPRITESLOPE;
 	}
+	if (mobj->dispoffset != mobj->info->dispoffset)
+		diff2 |= MD2_DISPOFFSET;
 
 	if (diff2 != 0)
 		diff |= MD_MORE;
@@ -1758,6 +1874,7 @@ static void SaveMobjThinker(const thinker_t *th, const UINT8 type)
 		WRITEFIXED(save_p, mobj->momx);
 		WRITEFIXED(save_p, mobj->momy);
 		WRITEFIXED(save_p, mobj->momz);
+		WRITEFIXED(save_p, mobj->pmomz);
 	}
 	if (diff & MD_RADIUS)
 		WRITEFIXED(save_p, mobj->radius);
@@ -1874,6 +1991,8 @@ static void SaveMobjThinker(const thinker_t *th, const UINT8 type)
 		WRITEFIXED(save_p, slope->normal.y);
 		WRITEFIXED(save_p, slope->normal.z);
 	}
+	if (diff2 & MD2_DISPOFFSET)
+		WRITEINT32(save_p, mobj->dispoffset);
 
 	WRITEUINT32(save_p, mobj->mobjnum);
 }
@@ -1964,7 +2083,6 @@ static void SaveEachTimeThinker(const thinker_t *th, const UINT8 type)
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
 		WRITECHAR(save_p, ht->playersInArea[i]);
-		WRITECHAR(save_p, ht->playersOnArea[i]);
 	}
 	WRITECHAR(save_p, ht->triggerOnExit);
 }
@@ -1992,14 +2110,12 @@ static void SaveCeilingThinker(const thinker_t *th, const UINT8 type)
 	WRITEFIXED(save_p, ht->bottomheight);
 	WRITEFIXED(save_p, ht->topheight);
 	WRITEFIXED(save_p, ht->speed);
-	WRITEFIXED(save_p, ht->oldspeed);
 	WRITEFIXED(save_p, ht->delay);
 	WRITEFIXED(save_p, ht->delaytimer);
 	WRITEUINT8(save_p, ht->crush);
 	WRITEINT32(save_p, ht->texture);
 	WRITEINT32(save_p, ht->direction);
-	WRITEINT32(save_p, ht->tag);
-	WRITEINT32(save_p, ht->olddirection);
+	WRITEINT16(save_p, ht->tag);
 	WRITEFIXED(save_p, ht->origspeed);
 	WRITEFIXED(save_p, ht->sourceline);
 }
@@ -2018,6 +2134,8 @@ static void SaveFloormoveThinker(const thinker_t *th, const UINT8 type)
 	WRITEFIXED(save_p, ht->origspeed);
 	WRITEFIXED(save_p, ht->delay);
 	WRITEFIXED(save_p, ht->delaytimer);
+	WRITEINT16(save_p, ht->tag);
+	WRITEFIXED(save_p, ht->sourceline);
 }
 
 static void SaveLightflashThinker(const thinker_t *th, const UINT8 type)
@@ -2035,8 +2153,8 @@ static void SaveStrobeThinker(const thinker_t *th, const UINT8 type)
 	WRITEUINT8(save_p, type);
 	WRITEUINT32(save_p, SaveSector(ht->sector));
 	WRITEINT32(save_p, ht->count);
-	WRITEINT32(save_p, ht->minlight);
-	WRITEINT32(save_p, ht->maxlight);
+	WRITEINT16(save_p, ht->minlight);
+	WRITEINT16(save_p, ht->maxlight);
 	WRITEINT32(save_p, ht->darktime);
 	WRITEINT32(save_p, ht->brighttime);
 }
@@ -2046,10 +2164,10 @@ static void SaveGlowThinker(const thinker_t *th, const UINT8 type)
 	const glow_t *ht = (const void *)th;
 	WRITEUINT8(save_p, type);
 	WRITEUINT32(save_p, SaveSector(ht->sector));
-	WRITEINT32(save_p, ht->minlight);
-	WRITEINT32(save_p, ht->maxlight);
-	WRITEINT32(save_p, ht->direction);
-	WRITEINT32(save_p, ht->speed);
+	WRITEINT16(save_p, ht->minlight);
+	WRITEINT16(save_p, ht->maxlight);
+	WRITEINT16(save_p, ht->direction);
+	WRITEINT16(save_p, ht->speed);
 }
 
 static inline void SaveFireflickerThinker(const thinker_t *th, const UINT8 type)
@@ -2059,8 +2177,8 @@ static inline void SaveFireflickerThinker(const thinker_t *th, const UINT8 type)
 	WRITEUINT32(save_p, SaveSector(ht->sector));
 	WRITEINT32(save_p, ht->count);
 	WRITEINT32(save_p, ht->resetcount);
-	WRITEINT32(save_p, ht->maxlight);
-	WRITEINT32(save_p, ht->minlight);
+	WRITEINT16(save_p, ht->maxlight);
+	WRITEINT16(save_p, ht->minlight);
 }
 
 static void SaveElevatorThinker(const thinker_t *th, const UINT8 type)
@@ -2134,13 +2252,9 @@ static inline void SavePusherThinker(const thinker_t *th, const UINT8 type)
 	const pusher_t *ht = (const void *)th;
 	WRITEUINT8(save_p, type);
 	WRITEUINT8(save_p, ht->type);
-	WRITEINT32(save_p, ht->x_mag);
-	WRITEINT32(save_p, ht->y_mag);
-	WRITEINT32(save_p, ht->magnitude);
-	WRITEINT32(save_p, ht->radius);
-	WRITEINT32(save_p, ht->x);
-	WRITEINT32(save_p, ht->y);
-	WRITEINT32(save_p, ht->z);
+	WRITEFIXED(save_p, ht->x_mag);
+	WRITEFIXED(save_p, ht->y_mag);
+	WRITEFIXED(save_p, ht->z_mag);
 	WRITEINT32(save_p, ht->affectee);
 	WRITEUINT8(save_p, ht->roverpusher);
 	WRITEINT32(save_p, ht->referrer);
@@ -2238,18 +2352,30 @@ static void SavePlaneDisplaceThinker(const thinker_t *th, const UINT8 type)
 	WRITEUINT8(save_p, ht->type);
 }
 
-static inline void SaveDynamicSlopeThinker(const thinker_t *th, const UINT8 type)
+static inline void SaveDynamicLineSlopeThinker(const thinker_t *th, const UINT8 type)
 {
-	const dynplanethink_t* ht = (const void*)th;
+	const dynlineplanethink_t* ht = (const void*)th;
 
 	WRITEUINT8(save_p, type);
 	WRITEUINT8(save_p, ht->type);
 	WRITEUINT32(save_p, SaveSlope(ht->slope));
 	WRITEUINT32(save_p, SaveLine(ht->sourceline));
 	WRITEFIXED(save_p, ht->extent);
+}
 
-	WRITEMEM(save_p, ht->tags, sizeof(ht->tags));
-    WRITEMEM(save_p, ht->vex, sizeof(ht->vex));
+static inline void SaveDynamicVertexSlopeThinker(const thinker_t *th, const UINT8 type)
+{
+	size_t i;
+	const dynvertexplanethink_t* ht = (const void*)th;
+
+	WRITEUINT8(save_p, type);
+	WRITEUINT32(save_p, SaveSlope(ht->slope));
+	for (i = 0; i < 3; i++)
+		WRITEUINT32(save_p, SaveSector(ht->secs[i]));
+	WRITEMEM(save_p, ht->vex, sizeof(ht->vex));
+	WRITEMEM(save_p, ht->origsecheights, sizeof(ht->origsecheights));
+	WRITEMEM(save_p, ht->origvecheights, sizeof(ht->origvecheights));
+	WRITEUINT8(save_p, ht->relative);
 }
 
 static inline void SavePolyrotatetThinker(const thinker_t *th, const UINT8 type)
@@ -2574,12 +2700,12 @@ static void P_NetArchiveThinkers(void)
 			}
 			else if (th->function.acp1 == (actionf_p1)T_DynamicSlopeLine)
 			{
-				SaveDynamicSlopeThinker(th, tc_dynslopeline);
+				SaveDynamicLineSlopeThinker(th, tc_dynslopeline);
 				continue;
 			}
 			else if (th->function.acp1 == (actionf_p1)T_DynamicSlopeVert)
 			{
-				SaveDynamicSlopeThinker(th, tc_dynslopevert);
+				SaveDynamicVertexSlopeThinker(th, tc_dynslopevert);
 				continue;
 			}
 #ifdef PARANOIA
@@ -2694,7 +2820,7 @@ static thinker_t* LoadMobjThinker(actionf_p1 thinker)
 	{
 		UINT16 spawnpointnum = READUINT16(save_p);
 
-		if (mapthings[spawnpointnum].type == 1705 || mapthings[spawnpointnum].type == 1713) // NiGHTS Hoop special case
+		if (mapthings[spawnpointnum].type == 1713) // NiGHTS Hoop special case
 		{
 			P_SpawnHoop(&mapthings[spawnpointnum]);
 			return NULL;
@@ -2756,6 +2882,7 @@ static thinker_t* LoadMobjThinker(actionf_p1 thinker)
 		mobj->momx = READFIXED(save_p);
 		mobj->momy = READFIXED(save_p);
 		mobj->momz = READFIXED(save_p);
+		mobj->pmomz = READFIXED(save_p);
 	} // otherwise they're zero, and the memset took care of it
 
 	if (diff & MD_RADIUS)
@@ -2924,6 +3051,10 @@ static thinker_t* LoadMobjThinker(actionf_p1 thinker)
 		slope->normal.y = READFIXED(save_p);
 		slope->normal.z = READFIXED(save_p);
 	}
+	if (diff2 & MD2_DISPOFFSET)
+		mobj->dispoffset = READINT32(save_p);
+	else
+		mobj->dispoffset = mobj->info->dispoffset;
 
 	if (diff & MD_REDFLAG)
 	{
@@ -2949,7 +3080,21 @@ static thinker_t* LoadMobjThinker(actionf_p1 thinker)
 			mobj->player->viewz = mobj->player->mo->z + mobj->player->viewheight;
 	}
 
+	if (mobj->type == MT_SKYBOX && mobj->spawnpoint)
+	{
+		mtag_t tag = Tag_FGet(&mobj->spawnpoint->tags);
+		if (tag >= 0 && tag <= 15)
+		{
+			if (mobj->spawnpoint->args[0])
+				skyboxcenterpnts[tag] = mobj;
+			else
+				skyboxviewpnts[tag] = mobj;
+		}
+	}
+
 	mobj->info = (mobjinfo_t *)next; // temporarily, set when leave this function
+
+	R_AddMobjInterpolator(mobj);
 
 	return &mobj->thinker;
 }
@@ -3072,7 +3217,6 @@ static thinker_t* LoadEachTimeThinker(actionf_p1 thinker)
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
 		ht->playersInArea[i] = READCHAR(save_p);
-		ht->playersOnArea[i] = READCHAR(save_p);
 	}
 	ht->triggerOnExit = READCHAR(save_p);
 	return &ht->thinker;
@@ -3102,14 +3246,12 @@ static thinker_t* LoadCeilingThinker(actionf_p1 thinker)
 	ht->bottomheight = READFIXED(save_p);
 	ht->topheight = READFIXED(save_p);
 	ht->speed = READFIXED(save_p);
-	ht->oldspeed = READFIXED(save_p);
 	ht->delay = READFIXED(save_p);
 	ht->delaytimer = READFIXED(save_p);
 	ht->crush = READUINT8(save_p);
 	ht->texture = READINT32(save_p);
 	ht->direction = READINT32(save_p);
-	ht->tag = READINT32(save_p);
-	ht->olddirection = READINT32(save_p);
+	ht->tag = READINT16(save_p);
 	ht->origspeed = READFIXED(save_p);
 	ht->sourceline = READFIXED(save_p);
 	if (ht->sector)
@@ -3131,6 +3273,8 @@ static thinker_t* LoadFloormoveThinker(actionf_p1 thinker)
 	ht->origspeed = READFIXED(save_p);
 	ht->delay = READFIXED(save_p);
 	ht->delaytimer = READFIXED(save_p);
+	ht->tag = READINT16(save_p);
+	ht->sourceline = READFIXED(save_p);
 	if (ht->sector)
 		ht->sector->floordata = ht;
 	return &ht->thinker;
@@ -3154,8 +3298,8 @@ static thinker_t* LoadStrobeThinker(actionf_p1 thinker)
 	ht->thinker.function.acp1 = thinker;
 	ht->sector = LoadSector(READUINT32(save_p));
 	ht->count = READINT32(save_p);
-	ht->minlight = READINT32(save_p);
-	ht->maxlight = READINT32(save_p);
+	ht->minlight = READINT16(save_p);
+	ht->maxlight = READINT16(save_p);
 	ht->darktime = READINT32(save_p);
 	ht->brighttime = READINT32(save_p);
 	if (ht->sector)
@@ -3168,10 +3312,10 @@ static thinker_t* LoadGlowThinker(actionf_p1 thinker)
 	glow_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
 	ht->thinker.function.acp1 = thinker;
 	ht->sector = LoadSector(READUINT32(save_p));
-	ht->minlight = READINT32(save_p);
-	ht->maxlight = READINT32(save_p);
-	ht->direction = READINT32(save_p);
-	ht->speed = READINT32(save_p);
+	ht->minlight = READINT16(save_p);
+	ht->maxlight = READINT16(save_p);
+	ht->direction = READINT16(save_p);
+	ht->speed = READINT16(save_p);
 	if (ht->sector)
 		ht->sector->lightingdata = ht;
 	return &ht->thinker;
@@ -3184,8 +3328,8 @@ static thinker_t* LoadFireflickerThinker(actionf_p1 thinker)
 	ht->sector = LoadSector(READUINT32(save_p));
 	ht->count = READINT32(save_p);
 	ht->resetcount = READINT32(save_p);
-	ht->maxlight = READINT32(save_p);
-	ht->minlight = READINT32(save_p);
+	ht->maxlight = READINT16(save_p);
+	ht->minlight = READINT16(save_p);
 	if (ht->sector)
 		ht->sector->lightingdata = ht;
 	return &ht->thinker;
@@ -3277,19 +3421,14 @@ static thinker_t* LoadPusherThinker(actionf_p1 thinker)
 	pusher_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
 	ht->thinker.function.acp1 = thinker;
 	ht->type = READUINT8(save_p);
-	ht->x_mag = READINT32(save_p);
-	ht->y_mag = READINT32(save_p);
-	ht->magnitude = READINT32(save_p);
-	ht->radius = READINT32(save_p);
-	ht->x = READINT32(save_p);
-	ht->y = READINT32(save_p);
-	ht->z = READINT32(save_p);
+	ht->x_mag = READFIXED(save_p);
+	ht->y_mag = READFIXED(save_p);
+	ht->z_mag = READFIXED(save_p);
 	ht->affectee = READINT32(save_p);
 	ht->roverpusher = READUINT8(save_p);
 	ht->referrer = READINT32(save_p);
 	ht->exclusive = READINT32(save_p);
 	ht->slider = READINT32(save_p);
-	ht->source = P_GetPushThing(ht->affectee);
 	return &ht->thinker;
 }
 
@@ -3413,17 +3552,31 @@ static inline thinker_t* LoadPlaneDisplaceThinker(actionf_p1 thinker)
 	return &ht->thinker;
 }
 
-static inline thinker_t* LoadDynamicSlopeThinker(actionf_p1 thinker)
+static inline thinker_t* LoadDynamicLineSlopeThinker(actionf_p1 thinker)
 {
-	dynplanethink_t* ht = Z_Malloc(sizeof(*ht), PU_LEVSPEC, NULL);
+	dynlineplanethink_t* ht = Z_Malloc(sizeof(*ht), PU_LEVSPEC, NULL);
 	ht->thinker.function.acp1 = thinker;
 
 	ht->type = READUINT8(save_p);
 	ht->slope = LoadSlope(READUINT32(save_p));
 	ht->sourceline = LoadLine(READUINT32(save_p));
 	ht->extent = READFIXED(save_p);
-	READMEM(save_p, ht->tags, sizeof(ht->tags));
+	return &ht->thinker;
+}
+
+static inline thinker_t* LoadDynamicVertexSlopeThinker(actionf_p1 thinker)
+{
+	size_t i;
+	dynvertexplanethink_t* ht = Z_Malloc(sizeof(*ht), PU_LEVSPEC, NULL);
+	ht->thinker.function.acp1 = thinker;
+
+	ht->slope = LoadSlope(READUINT32(save_p));
+	for (i = 0; i < 3; i++)
+		ht->secs[i] = LoadSector(READUINT32(save_p));
 	READMEM(save_p, ht->vex, sizeof(ht->vex));
+	READMEM(save_p, ht->origsecheights, sizeof(ht->origsecheights));
+	READMEM(save_p, ht->origvecheights, sizeof(ht->origvecheights));
+	ht->relative = READUINT8(save_p);
 	return &ht->thinker;
 }
 
@@ -3560,10 +3713,14 @@ static void P_NetUnArchiveThinkers(void)
 		{
 			next = currentthinker->next;
 
-			if (currentthinker->function.acp1 == (actionf_p1)P_MobjThinker)
+			if (currentthinker->function.acp1 == (actionf_p1)P_MobjThinker || currentthinker->function.acp1 == (actionf_p1)P_NullPrecipThinker)
 				P_RemoveSavegameMobj((mobj_t *)currentthinker); // item isn't saved, don't remove it
 			else
+			{
+				(next->prev = currentthinker->prev)->next = next;
+				R_DestroyLevelInterpolators(currentthinker);
 				Z_Free(currentthinker);
+			}
 		}
 	}
 
@@ -3736,11 +3893,11 @@ static void P_NetUnArchiveThinkers(void)
 					break;
 
 				case tc_dynslopeline:
-					th = LoadDynamicSlopeThinker((actionf_p1)T_DynamicSlopeLine);
+					th = LoadDynamicLineSlopeThinker((actionf_p1)T_DynamicSlopeLine);
 					break;
 
 				case tc_dynslopevert:
-					th = LoadDynamicSlopeThinker((actionf_p1)T_DynamicSlopeVert);
+					th = LoadDynamicVertexSlopeThinker((actionf_p1)T_DynamicSlopeVert);
 					break;
 
 				case tc_scroll:
@@ -3764,6 +3921,10 @@ static void P_NetUnArchiveThinkers(void)
 
 		CONS_Debug(DBG_NETPLAY, "%u thinkers loaded in list %d\n", numloaded, i);
 	}
+
+	// Set each skyboxmo to the first skybox (or NULL)
+	skyboxmo[0] = skyboxviewpnts[0];
+	skyboxmo[1] = skyboxcenterpnts[0];
 
 	if (restoreNum)
 	{
@@ -4190,6 +4351,8 @@ static void P_NetArchiveMisc(boolean resending)
 
 	WRITEUINT32(save_p, hidetime);
 
+	WRITEUINT32(save_p, unlocktriggers);
+
 	// Is it paused?
 	if (paused)
 		WRITEUINT8(save_p, 0x2f);
@@ -4288,11 +4451,231 @@ static inline boolean P_NetUnArchiveMisc(boolean reloading)
 
 	hidetime = READUINT32(save_p);
 
+	unlocktriggers = READUINT32(save_p);
+
 	// Is it paused?
 	if (READUINT8(save_p) == 0x2f)
 		paused = true;
 
 	return true;
+}
+
+
+static inline void P_NetArchiveEmblems(void)
+{
+	gamedata_t *data = serverGamedata;
+	INT32 i, j;
+	UINT8 btemp;
+	INT32 curmare;
+
+	WRITEUINT32(save_p, ARCHIVEBLOCK_EMBLEMS);
+
+	// These should be synchronized before savegame loading by the wad files being the same anyway,
+	// but just in case, for now, we'll leave them here for testing. It would be very bad if they mismatch.
+	WRITEUINT8(save_p, (UINT8)savemoddata);
+	WRITEINT32(save_p, numemblems);
+	WRITEINT32(save_p, numextraemblems);
+
+	// The rest of this is lifted straight from G_SaveGameData in g_game.c
+	// TODO: Optimize this to only send information about emblems, unlocks, etc. which actually exist
+	//       There is no need to go all the way up to MAXEMBLEMS when wads are guaranteed to be the same.
+
+	WRITEUINT32(save_p, data->totalplaytime);
+
+	// TODO put another cipher on these things? meh, I don't care...
+	for (i = 0; i < NUMMAPS; i++)
+		WRITEUINT8(save_p, (data->mapvisited[i] & MV_MAX));
+
+	// To save space, use one bit per collected/achieved/unlocked flag
+	for (i = 0; i < MAXEMBLEMS;)
+	{
+		btemp = 0;
+		for (j = 0; j < 8 && j+i < MAXEMBLEMS; ++j)
+			btemp |= (data->collected[j+i] << j);
+		WRITEUINT8(save_p, btemp);
+		i += j;
+	}
+	for (i = 0; i < MAXEXTRAEMBLEMS;)
+	{
+		btemp = 0;
+		for (j = 0; j < 8 && j+i < MAXEXTRAEMBLEMS; ++j)
+			btemp |= (data->extraCollected[j+i] << j);
+		WRITEUINT8(save_p, btemp);
+		i += j;
+	}
+	for (i = 0; i < MAXUNLOCKABLES;)
+	{
+		btemp = 0;
+		for (j = 0; j < 8 && j+i < MAXUNLOCKABLES; ++j)
+			btemp |= (data->unlocked[j+i] << j);
+		WRITEUINT8(save_p, btemp);
+		i += j;
+	}
+	for (i = 0; i < MAXCONDITIONSETS;)
+	{
+		btemp = 0;
+		for (j = 0; j < 8 && j+i < MAXCONDITIONSETS; ++j)
+			btemp |= (data->achieved[j+i] << j);
+		WRITEUINT8(save_p, btemp);
+		i += j;
+	}
+
+	WRITEUINT32(save_p, data->timesBeaten);
+	WRITEUINT32(save_p, data->timesBeatenWithEmeralds);
+	WRITEUINT32(save_p, data->timesBeatenUltimate);
+
+	// Main records
+	for (i = 0; i < NUMMAPS; i++)
+	{
+		if (data->mainrecords[i])
+		{
+			WRITEUINT32(save_p, data->mainrecords[i]->score);
+			WRITEUINT32(save_p, data->mainrecords[i]->time);
+			WRITEUINT16(save_p, data->mainrecords[i]->rings);
+		}
+		else
+		{
+			WRITEUINT32(save_p, 0);
+			WRITEUINT32(save_p, 0);
+			WRITEUINT16(save_p, 0);
+		}
+	}
+
+	// NiGHTS records
+	for (i = 0; i < NUMMAPS; i++)
+	{
+		if (!data->nightsrecords[i] || !data->nightsrecords[i]->nummares)
+		{
+			WRITEUINT8(save_p, 0);
+			continue;
+		}
+
+		WRITEUINT8(save_p, data->nightsrecords[i]->nummares);
+
+		for (curmare = 0; curmare < (data->nightsrecords[i]->nummares + 1); ++curmare)
+		{
+			WRITEUINT32(save_p, data->nightsrecords[i]->score[curmare]);
+			WRITEUINT8(save_p, data->nightsrecords[i]->grade[curmare]);
+			WRITEUINT32(save_p, data->nightsrecords[i]->time[curmare]);
+		}
+	}
+}
+
+static inline void P_NetUnArchiveEmblems(void)
+{
+	gamedata_t *data = serverGamedata;
+	INT32 i, j;
+	UINT8 rtemp;
+	UINT32 recscore;
+	tic_t rectime;
+	UINT16 recrings;
+	UINT8 recmares;
+	INT32 curmare;
+
+	if (READUINT32(save_p) != ARCHIVEBLOCK_EMBLEMS)
+		I_Error("Bad $$$.sav at archive block Emblems");
+
+	savemoddata = (boolean)READUINT8(save_p); // this one is actually necessary because savemoddata stays false otherwise for some reason.
+
+	if (numemblems != READINT32(save_p))
+		I_Error("numemblems mismatch");
+	if (numextraemblems != READINT32(save_p))
+		I_Error("numextraemblems mismatch");
+
+	// This shouldn't happen, but if something really fucked up happens and you transfer
+	// the SERVER player's gamedata over your own CLIENT gamedata,
+	// then this prevents it from being saved over yours.
+	data->loaded = false;
+
+	M_ClearSecrets(data);
+	G_ClearRecords(data);
+
+	// The rest of this is lifted straight from G_LoadGameData in g_game.c
+	// TODO: Optimize this to only read information about emblems, unlocks, etc. which actually exist
+	//       There is no need to go all the way up to MAXEMBLEMS when wads are guaranteed to be the same.
+
+	data->totalplaytime = READUINT32(save_p);
+
+	// TODO put another cipher on these things? meh, I don't care...
+	for (i = 0; i < NUMMAPS; i++)
+		if ((data->mapvisited[i] = READUINT8(save_p)) > MV_MAX)
+			I_Error("Bad $$$.sav dearchiving Emblems");
+
+	// To save space, use one bit per collected/achieved/unlocked flag
+	for (i = 0; i < MAXEMBLEMS;)
+	{
+		rtemp = READUINT8(save_p);
+		for (j = 0; j < 8 && j+i < MAXEMBLEMS; ++j)
+			data->collected[j+i] = ((rtemp >> j) & 1);
+		i += j;
+	}
+	for (i = 0; i < MAXEXTRAEMBLEMS;)
+	{
+		rtemp = READUINT8(save_p);
+		for (j = 0; j < 8 && j+i < MAXEXTRAEMBLEMS; ++j)
+			data->extraCollected[j+i] = ((rtemp >> j) & 1);
+		i += j;
+	}
+	for (i = 0; i < MAXUNLOCKABLES;)
+	{
+		rtemp = READUINT8(save_p);
+		for (j = 0; j < 8 && j+i < MAXUNLOCKABLES; ++j)
+			data->unlocked[j+i] = ((rtemp >> j) & 1);
+		i += j;
+	}
+	for (i = 0; i < MAXCONDITIONSETS;)
+	{
+		rtemp = READUINT8(save_p);
+		for (j = 0; j < 8 && j+i < MAXCONDITIONSETS; ++j)
+			data->achieved[j+i] = ((rtemp >> j) & 1);
+		i += j;
+	}
+
+	data->timesBeaten = READUINT32(save_p);
+	data->timesBeatenWithEmeralds = READUINT32(save_p);
+	data->timesBeatenUltimate = READUINT32(save_p);
+
+	// Main records
+	for (i = 0; i < NUMMAPS; ++i)
+	{
+		recscore = READUINT32(save_p);
+		rectime  = (tic_t)READUINT32(save_p);
+		recrings = READUINT16(save_p);
+
+		if (recrings > 10000 || recscore > MAXSCORE)
+			I_Error("Bad $$$.sav dearchiving Emblems");
+
+		if (recscore || rectime || recrings)
+		{
+			G_AllocMainRecordData((INT16)i, data);
+			data->mainrecords[i]->score = recscore;
+			data->mainrecords[i]->time = rectime;
+			data->mainrecords[i]->rings = recrings;
+		}
+	}
+
+	// Nights records
+	for (i = 0; i < NUMMAPS; ++i)
+	{
+		if ((recmares = READUINT8(save_p)) == 0)
+			continue;
+
+		G_AllocNightsRecordData((INT16)i, data);
+
+		for (curmare = 0; curmare < (recmares+1); ++curmare)
+		{
+			data->nightsrecords[i]->score[curmare] = READUINT32(save_p);
+			data->nightsrecords[i]->grade[curmare] = READUINT8(save_p);
+			data->nightsrecords[i]->time[curmare] = (tic_t)READUINT32(save_p);
+
+			if (data->nightsrecords[i]->grade[curmare] > GRADE_S)
+			{
+				I_Error("Bad $$$.sav dearchiving Emblems");
+			}
+		}
+
+		data->nightsrecords[i]->nummares = recmares;
+	}
 }
 
 static inline void P_ArchiveLuabanksAndConsistency(void)
@@ -4358,6 +4741,7 @@ void P_SaveNetGame(boolean resending)
 
 	CV_SaveNetVars(&save_p);
 	P_NetArchiveMisc(resending);
+	P_NetArchiveEmblems();
 
 	// Assign the mobjnumber for pointer tracking
 	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
@@ -4410,6 +4794,7 @@ boolean P_LoadNetGame(boolean reloading)
 	CV_LoadNetVars(&save_p);
 	if (!P_NetUnArchiveMisc(reloading))
 		return false;
+	P_NetUnArchiveEmblems();
 	P_NetUnArchivePlayers();
 	if (gamestate == GS_LEVEL)
 	{

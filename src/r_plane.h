@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2021 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -69,7 +69,6 @@ extern fixed_t cachedheight[MAXVIDHEIGHT];
 extern fixed_t cacheddistance[MAXVIDHEIGHT];
 extern fixed_t cachedxstep[MAXVIDHEIGHT];
 extern fixed_t cachedystep[MAXVIDHEIGHT];
-extern fixed_t basexscale, baseyscale;
 
 extern fixed_t *yslope;
 
@@ -88,9 +87,6 @@ visplane_t *R_FindPlane(fixed_t height, INT32 picnum, INT32 lightlevel, fixed_t 
 visplane_t *R_CheckPlane(visplane_t *pl, INT32 start, INT32 stop);
 void R_ExpandPlane(visplane_t *pl, INT32 start, INT32 stop);
 void R_PlaneBounds(visplane_t *plane);
-
-void R_CheckFlatLength(size_t size);
-boolean R_CheckPowersOfTwo(void);
 
 // Draws a single visplane.
 void R_DrawSinglePlane(visplane_t *pl);

@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2021 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -75,7 +75,7 @@ extern fixed_t ds_xfrac, ds_yfrac, ds_xstep, ds_ystep;
 extern INT32 ds_waterofs, ds_bgofs;
 
 extern UINT16 ds_flatwidth, ds_flatheight;
-extern boolean ds_powersoftwo;
+extern boolean ds_powersoftwo, ds_solidcolor;
 
 extern UINT8 *ds_source;
 extern UINT8 *ds_transmap;
@@ -195,8 +195,11 @@ void R_DrawViewBorder(void);
 	X(MAPPED_ALPHA, TranslatedAlpha); \
 	X(MULTIPATCH, 2sMultiPatch); \
 	X(MULTIPATCH_TRANSTAB, 2sMultiPatchTranslucent); \
-	X(MULTIPATCH_ALPHA, 2sMultiPatchAlpha); \
-	X(FOG, Fog)
+	X(MULTIPATCH_ALPHA, 2sMultiPatchAlpha)
+
+#define COLFUNCLIST8_NOTEXTURE(X) \
+	X(FOG, Fog); \
+	X(DROP_SHADOW, DropShadow)
 
 #define SPANFUNCLIST8(X) \
 	X(TRANSTAB, TranslucentSpan); \
@@ -214,10 +217,24 @@ void R_DrawViewBorder(void);
 	X(SPRITE_TILTED, TiltedFloorSprite); \
 	X(SPRITE_TILTED_TRANSTAB, TiltedTranslucentFloorSprite); \
 	X(SPRITE_TILTED_ALPHA, TiltedAlphaFloorSprite); \
-	X(WATER_TRANSTAB, TranslucentWaterSpan); \
+	X(WATER_TRANSTAB, WaterSpan); \
 	X(WATER_ALPHA, AlphaWaterSpan); \
-	X(WATER_TILTED_TRANSTAB, TiltedTranslucentWaterSpan); \
+	X(WATER_TILTED_TRANSTAB, TiltedWaterSpan); \
 	X(WATER_TILTED_ALPHA, TiltedAlphaWaterSpan)
+
+#define SPANFUNCLIST8_NOTEXTURE(X) \
+	X(FOG, FogSpan); \
+	X(FOG_TILTED, TiltedFogSpan); \
+	X(SOLIDCOLOR, SolidColorSpan); \
+	X(SOLIDCOLOR_TILTED, TiltedSolidColorSpan); \
+	X(SOLIDCOLOR_TRANSTAB, TransSolidColorSpan); \
+	X(SOLIDCOLOR_ALPHA, AlphaSolidColorSpan); \
+	X(WATER_SOLIDCOLOR_TRANSTAB, WaterSolidColorSpan); \
+	X(WATER_SOLIDCOLOR_ALPHA, AlphaWaterSolidColorSpan); \
+	X(TILTED_SOLIDCOLOR_TRANSTAB, TiltedTransSolidColorSpan); \
+	X(TILTED_SOLIDCOLOR_ALPHA, TiltedAlphaSolidColorSpan); \
+	X(WATER_TILTED_SOLIDCOLOR_TRANSTAB, TiltedWaterSolidColorSpan); \
+	X(WATER_TILTED_SOLIDCOLOR_ALPHA, TiltedAlphaWaterSolidColorSpan)
 
 #define COLFUNCLIST32(X) \
 	X(ALPHA, Translucent); \
@@ -226,8 +243,11 @@ void R_DrawViewBorder(void);
 	X(LIGHTLIST, Shadowed); \
 	X(MAPPED_ALPHA, TranslatedTranslucent); \
 	X(MULTIPATCH, 2sMultiPatch); \
-	X(MULTIPATCH_ALPHA, 2sMultiPatchTranslucent); \
-	X(FOG, Fog)
+	X(MULTIPATCH_ALPHA, 2sMultiPatchTranslucent)
+
+#define COLFUNCLIST32_NOTEXTURE(X) \
+	X(FOG, Fog); \
+	X(DROP_SHADOW, DropShadow)
 
 #define SPANFUNCLIST32(X) \
 	X(ALPHA, TranslucentSpan); \
@@ -240,9 +260,18 @@ void R_DrawViewBorder(void);
 	X(SPRITE_ALPHA, TranslucentFloorSprite); \
 	X(SPRITE_TILTED, TiltedFloorSprite); \
 	X(SPRITE_TILTED_ALPHA, TiltedTranslucentFloorSprite); \
-	X(WATER_TRANSTAB, TranslucentWaterSpan); \
-	X(WATER_ALPHA, TranslucentWaterSpan); \
-	X(WATER_TILTED_ALPHA, TiltedTranslucentWaterSpan)
+	X(WATER_ALPHA, WaterSpan); \
+	X(WATER_TILTED_ALPHA, TiltedWaterSpan)
+
+#define SPANFUNCLIST32_NOTEXTURE(X) \
+	X(FOG, FogSpan); \
+	X(FOG_TILTED, TiltedFogSpan); \
+	X(SOLIDCOLOR, SolidColorSpan); \
+	X(SOLIDCOLOR_TILTED, TiltedSolidColorSpan); \
+	X(SOLIDCOLOR_ALPHA, TranslucentSolidColorSpan); \
+	X(WATER_SOLIDCOLOR_ALPHA, WaterSolidColorSpan); \
+	X(TILTED_SOLIDCOLOR_ALPHA, TiltedTranslucentSolidColorSpan); \
+	X(WATER_TILTED_SOLIDCOLOR_ALPHA, TiltedWaterSolidColorSpan)
 
 // -----------------
 // 8bpp DRAWING CODE
@@ -252,12 +281,14 @@ void R_DrawColumn_8(void);
 
 #define COLFUNC8(type, func) void R_Draw##func##Column_8(void)
 	COLFUNCLIST8(COLFUNC8);
+	COLFUNCLIST8_NOTEXTURE(COLFUNC8);
 #undef COLFUNC8
 
 void R_DrawSpan_8(void);
 
 #define SPANFUNC8(type, func) void R_Draw##func##_8(void)
 	SPANFUNCLIST8(SPANFUNC8);
+	SPANFUNCLIST8_NOTEXTURE(SPANFUNC8);
 #undef SPANFUNC8
 
 void R_DrawSpan_NPO2_8(void);
@@ -265,8 +296,6 @@ void R_DrawSpan_NPO2_8(void);
 #define SPANFUNC8(type, func) void R_Draw##func##_NPO2_8(void)
 	SPANFUNCLIST8(SPANFUNC8);
 #undef SPANFUNC8
-
-void R_DrawFogSpan_8(void);
 
 #define PLANELIGHTFLOAT (BASEVIDWIDTH * BASEVIDWIDTH / vid.width / zeroheight / 21.0f * FIXED_TO_FLOAT(fovtan))
 #define SPANSIZE 16
@@ -304,12 +333,14 @@ void R_DrawColumn_32(void);
 
 #define COLFUNC32(type, func) void R_Draw##func##Column_32(void)
 	COLFUNCLIST32(COLFUNC32);
+	COLFUNCLIST32_NOTEXTURE(COLFUNC32);
 #undef COLFUNC32
 
 void R_DrawSpan_32(void);
 
 #define SPANFUNC32(type, func) void R_Draw##func##_32(void)
 	SPANFUNCLIST32(SPANFUNC32);
+	SPANFUNCLIST32_NOTEXTURE(SPANFUNC32);
 #undef SPANFUNC32
 
 void R_DrawSpan_NPO2_32(void);
@@ -317,8 +348,6 @@ void R_DrawSpan_NPO2_32(void);
 #define SPANFUNC32(type, func) void R_Draw##func##_NPO2_32(void)
 	SPANFUNCLIST32(SPANFUNC32);
 #undef SPANFUNC32
-
-void R_DrawFogSpan_32(void);
 
 // ----------
 // COLOR MATH

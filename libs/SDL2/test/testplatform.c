@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 1997-2019 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2022 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -381,6 +381,7 @@ TestCPUInfo(SDL_bool verbose)
         SDL_Log("AVX %s\n", SDL_HasAVX()? "detected" : "not detected");
         SDL_Log("AVX2 %s\n", SDL_HasAVX2()? "detected" : "not detected");
         SDL_Log("AVX-512F %s\n", SDL_HasAVX512F()? "detected" : "not detected");
+        SDL_Log("ARM SIMD %s\n", SDL_HasARMSIMD()? "detected" : "not detected");
         SDL_Log("NEON %s\n", SDL_HasNEON()? "detected" : "not detected");
         SDL_Log("System RAM %d MB\n", SDL_GetSystemRAM());
     }

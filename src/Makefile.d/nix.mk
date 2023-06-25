@@ -18,7 +18,7 @@ opts+=-I/usr/X11R6/include
 libs+=-L/usr/X11R6/lib
 endif
 
-SDL=1
+SDL?=1
 
 # In common usage.
 ifdef LINUX
