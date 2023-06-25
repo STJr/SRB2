@@ -96,6 +96,8 @@ extern mobj_t *r_viewmobj;
 extern consvar_t cv_allowmlook;
 extern consvar_t cv_maxportals;
 
+extern consvar_t cv_tccolormaps;
+
 extern angle_t clipangle;
 extern angle_t doubleclipangle;
 

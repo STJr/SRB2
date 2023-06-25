@@ -180,6 +180,10 @@ consvar_t cv_homremoval = CVAR_INIT ("homremoval", "No", CV_SAVE, homremoval_con
 
 consvar_t cv_maxportals = CVAR_INIT ("maxportals", "2", CV_SAVE, maxportals_cons_t, NULL);
 
+#ifdef TRUECOLOR
+consvar_t cv_tccolormaps = CVAR_INIT ("tc_colormaps", "Off", CV_SAVE, CV_OnOff, NULL);
+#endif
+
 consvar_t cv_renderstats = CVAR_INIT ("renderstats", "Off", 0, CV_OnOff, NULL);
 
 void SplitScreen_OnChange(void)
@@ -1474,8 +1478,8 @@ void R_RenderPlayerView(player_t *player)
 	}
 
 #ifdef TRUECOLOR
-	tc_colormaps = false;
-	tc_spritecolormaps = truecolor;
+	tc_colormaps = truecolor && cv_tccolormaps.value;
+	tc_spritecolormaps = tc_colormaps;
 #endif
 
 	R_SetupFrame(player);
@@ -1658,6 +1662,8 @@ void R_RegisterEngineStuff(void)
 	CV_RegisterVar(&cv_translucenthud);
 
 	CV_RegisterVar(&cv_maxportals);
+
+	CV_RegisterVar(&cv_tccolormaps);
 
 	CV_RegisterVar(&cv_movebob);
 
