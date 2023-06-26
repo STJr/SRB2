@@ -1144,6 +1144,8 @@ void R_SetupFrame(player_t *player)
 	if (viewworld == NULL)
 		return;
 
+	R_SetViewMobj(player);
+
 	camera_t *thiscam = r_viewcam;
 	boolean chasecam = R_ViewpointHasChasecam(player);
 

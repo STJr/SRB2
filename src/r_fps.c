@@ -191,7 +191,7 @@ void R_InterpolateView(fixed_t frac)
 	// this is gonna create some interesting visual errors for long distance teleports...
 	// might want to recalculate the view sector every frame instead...
 	viewplayer = newview->player;
-	viewsector = R_PointInSubsector(viewx, viewy)->sector;
+	viewsector = R_PointInWorldSubsector(viewworld, viewx, viewy)->sector;
 
 	// well, this ain't pretty
 	if (newview == &sky1view_new || newview == &sky2view_new)
@@ -309,7 +309,7 @@ void R_InterpolateMobjState(mobj_t *mobj, fixed_t frac, interpmobjstate_t *out)
 	out->spritexoffset = mobj->spritexoffset;
 	out->spriteyoffset = mobj->spriteyoffset;
 
-	out->subsector = R_PointInSubsector(out->x, out->y);
+	out->subsector = R_PointInWorldSubsector(viewworld, out->x, out->y);
 
 	if (mobj->player)
 	{
@@ -347,7 +347,7 @@ void R_InterpolatePrecipMobjState(precipmobj_t *mobj, fixed_t frac, interpmobjst
 	out->spritexoffset = R_LerpFixed(mobj->old_spritexoffset, mobj->spritexoffset, frac);
 	out->spriteyoffset = R_LerpFixed(mobj->old_spriteyoffset, mobj->spriteyoffset, frac);
 
-	out->subsector = R_PointInSubsector(out->x, out->y);
+	out->subsector = R_PointInWorldSubsector(viewworld, out->x, out->y);
 
 	out->angle = R_LerpAngle(mobj->old_angle, mobj->angle, frac);
 }
