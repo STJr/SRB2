@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -74,6 +74,7 @@ extern SINT8 startinglivesbalance[maxgameovers+1];
 extern boolean modifiedgame;
 extern UINT16 mainwads;
 extern boolean savemoddata; // This mod saves time/emblem data.
+extern boolean usedCheats;
 extern boolean disableSpeedAdjust; // Don't alter the duration of player states if true
 extern boolean imcontinuing; // Temporary flag while continuing
 extern boolean metalrecording;
@@ -129,8 +130,6 @@ extern INT32 postimgparam2;
 
 extern INT32 viewwindowx, viewwindowy;
 extern INT32 viewwidth, scaledviewwidth;
-
-extern boolean gamedataloaded;
 
 // Player taking events, and displaying.
 extern INT32 consoleplayer;
@@ -336,9 +335,9 @@ typedef struct
 	fixed_t gravity;        ///< Map-wide gravity.
 
 	// Title card.
-	char ltzzpatch[8];      ///< Zig zag patch.
-	char ltzztext[8];       ///< Zig zag text.
-	char ltactdiamond[8];   ///< Act diamond.
+	char ltzzpatch[9];      ///< Zig zag patch.
+	char ltzztext[9];       ///< Zig zag text.
+	char ltactdiamond[9];   ///< Act diamond.
 
 	// Freed animals stuff.
 	UINT8 numFlickies;     ///< Internal. For freed flicky support.
@@ -493,9 +492,7 @@ typedef struct
 extern tolinfo_t TYPEOFLEVEL[NUMTOLNAMES];
 extern UINT32 lastcustomtol;
 
-extern tic_t totalplaytime;
-
-extern UINT8 stagefailed;
+extern boolean stagefailed;
 
 // Emeralds stored as bits to throw savegame hackers off.
 extern UINT16 emeralds;
@@ -512,52 +509,6 @@ extern UINT16 emeralds;
 extern INT32 luabanks[NUM_LUABANKS];
 
 extern INT32 nummaprings; //keep track of spawned rings/coins
-
-/** Time attack information, currently a very small structure.
-  */
-typedef struct
-{
-	tic_t time;   ///< Time in which the level was finished.
-	UINT32 score; ///< Score when the level was finished.
-	UINT16 rings; ///< Rings when the level was finished.
-} recorddata_t;
-
-/** Setup for one NiGHTS map.
-  * These are dynamically allocated because I am insane
-  */
-#define GRADE_F 0
-#define GRADE_E 1
-#define GRADE_D 2
-#define GRADE_C 3
-#define GRADE_B 4
-#define GRADE_A 5
-#define GRADE_S 6
-
-typedef struct
-{
-	// 8 mares, 1 overall (0)
-	UINT8	nummares;
-	UINT32	score[9];
-	UINT8	grade[9];
-	tic_t	time[9];
-} nightsdata_t;
-
-extern nightsdata_t *nightsrecords[NUMMAPS];
-extern recorddata_t *mainrecords[NUMMAPS];
-
-// mapvisited is now a set of flags that says what we've done in the map.
-#define MV_VISITED      1
-#define MV_BEATEN       2
-#define MV_ALLEMERALDS  4
-#define MV_ULTIMATE     8
-#define MV_PERFECT     16
-#define MV_PERFECTRA   32
-#define MV_MAX         63 // used in gamedata check, update whenever MV's are added
-#define MV_MP         128
-extern UINT8 mapvisited[NUMMAPS];
-
-// Temporary holding place for nights data for the current map
-extern nightsdata_t ntemprecords;
 
 extern UINT32 token; ///< Number of tokens collected in a level
 extern UINT32 tokenlist; ///< List of tokens collected
@@ -591,8 +542,11 @@ extern UINT8 useBlackRock;
 
 extern UINT8 use1upSound;
 extern UINT8 maxXtraLife; // Max extra lives from rings
+
 extern UINT8 useContinues;
 #define continuesInSession (!multiplayer && (ultimatemode || (useContinues && !marathonmode) || (!modeattacking && !(cursaveslot > 0))))
+
+extern UINT8 shareEmblems;
 
 extern mobj_t *hunt1, *hunt2, *hunt3; // Emerald hunt locations
 
@@ -613,10 +567,6 @@ extern INT16 scramblecount; //for CTF team scramble
 extern INT32 cheats;
 
 extern tic_t hidetime;
-
-extern UINT32 timesBeaten; // # of times the game has been beaten.
-extern UINT32 timesBeatenWithEmeralds;
-extern UINT32 timesBeatenUltimate;
 
 // ===========================
 // Internal parameters, fixed.

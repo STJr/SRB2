@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -100,9 +100,11 @@
 #include <sys/stat.h>
 #include <ctype.h>
 
-#if defined (_WIN32) || defined (__DJGPP__)
+#ifdef _WIN32
 #include <io.h>
 #endif
+
+FILE *fopenfile(const char*, const char*);
 
 //#define NOMD5
 
@@ -112,7 +114,7 @@
 //#define PARANOIA // do some tests that never fail but maybe
 // turn this on by make etc.. DEBUGMODE = 1 or use the Debug profile in the VC++ projects
 //#endif
-#if defined (_WIN32) || (defined (__unix__) && !defined (MSDOS)) || defined(__APPLE__) || defined (UNIXCOMMON) || defined (macintosh)
+#if defined (_WIN32) || defined (__unix__) || defined(__APPLE__) || defined (UNIXCOMMON) || defined (macintosh)
 #define LOGMESSAGES // write message in log.txt
 #endif
 
@@ -127,6 +129,7 @@ extern char logfilename[1024];
 //#define DEVELOP // Disable this for release builds to remove excessive cheat commands and enable MD5 checking and stuff, all in one go. :3
 #ifdef DEVELOP
 #define VERSIONSTRING "Development EXE"
+#define VERSIONSTRING_RC "Development EXE" "\0"
 // most interface strings are ignored in development mode.
 // we use comprevision and compbranch instead.
 // VERSIONSTRING_RC is for the resource-definition script used by windows builds
@@ -150,6 +153,9 @@ extern char logfilename[1024];
 // Does this version require an added patch file?
 // Comment or uncomment this as necessary.
 #define USE_PATCH_DTA
+
+// Enforce a limit of loaded WAD files.
+//#define ENFORCE_WAD_LIMIT
 
 // Use .kart extension addons
 //#define USE_KART
@@ -401,7 +407,7 @@ extern skincolor_t skincolors[MAXSKINCOLORS];
 // WARNING MUST be a power of 2
 #define ITEMQUESIZE 1024
 
-// Special linedef executor tag numbers!
+// Special linedef executor tag numbers! Binary map format only (UDMF has other ways of doing these things).
 enum {
 	LE_PINCHPHASE      =    -2, // A boss entered pinch phase (and, in most cases, is preparing their pinch phase attack!)
 	LE_ALLBOSSESDEAD   =    -3, // All bosses in the map are dead (Egg capsule raise)
@@ -419,7 +425,7 @@ enum {
 };
 
 // Name of local directory for config files and savegames
-#if (((defined (__unix__) && !defined (MSDOS)) || defined (UNIXCOMMON)) && !defined (__CYGWIN__)) && !defined (__APPLE__)
+#if (defined (__unix__) || defined (UNIXCOMMON)) && !defined (__CYGWIN__) && !defined (__APPLE__)
 #define DEFAULTDIR ".srb2"
 #else
 #define DEFAULTDIR "srb2"
@@ -483,8 +489,11 @@ extern void *(*M_Memcpy)(void* dest, const void* src, size_t n) FUNCNONNULL;
 char *va(const char *format, ...) FUNCPRINTF;
 char *M_GetToken(const char *inputString);
 void M_UnGetToken(void);
-UINT32 M_GetTokenPos(void);
-void M_SetTokenPos(UINT32 newPos);
+void M_TokenizerOpen(const char *inputString);
+void M_TokenizerClose(void);
+const char *M_TokenizerRead(UINT32 i);
+UINT32 M_TokenizerGetEndPos(void);
+void M_TokenizerSetEndPos(UINT32 newPos);
 char *sizeu1(size_t num);
 char *sizeu2(size_t num);
 char *sizeu3(size_t num);
@@ -529,6 +538,22 @@ extern boolean capslock;
 
 // i_system.c, replace getchar() once the keyboard has been appropriated
 INT32 I_GetKey(void);
+
+/* http://www.cse.yorku.ca/~oz/hash.html */
+static inline
+UINT32 quickncasehash (const char *p, size_t n)
+{
+	size_t i = 0;
+	UINT32 x = 5381;
+
+	while (i < n && p[i])
+	{
+		x = (x * 33) ^ tolower(p[i]);
+		i++;
+	}
+
+	return x;
+}
 
 #ifndef min // Double-Check with WATTCP-32's cdefs.h
 #define min(x, y) (((x) < (y)) ? (x) : (y))
@@ -607,10 +632,6 @@ extern const char *compdate, *comptime, *comprevision, *compbranch;
 
 /// Experimental tweaks to analog mode. (Needs a lot of work before it's ready for primetime.)
 //#define REDSANALOG
-
-/// Backwards compatibility with musicslots.
-/// \note	You should leave this enabled unless you're working with a future SRB2 version.
-#define MUSICSLOT_COMPATIBILITY
 
 /// Experimental attempts at preventing MF_PAPERCOLLISION objects from getting stuck in walls.
 //#define PAPER_COLLISIONCORRECTION

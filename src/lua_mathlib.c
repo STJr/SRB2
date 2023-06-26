@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2012-2016 by John "JTE" Muniz.
-// Copyright (C) 2012-2020 by Sonic Team Junior.
+// Copyright (C) 2012-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -16,6 +16,7 @@
 #include "p_local.h"
 #include "doomstat.h" // for ALL7EMERALDS
 #include "r_main.h" // for R_PointToDist2
+#include "m_easing.h"
 
 #include "lua_script.h"
 #include "lua_libs.h"
@@ -84,6 +85,18 @@ static int lib_finetangent(lua_State *L)
 	// HACK: add ANGLE_90 to make tan() in Lua start at 0 like it should
 	// use & 4095 instead of & FINEMASK (8191), so it doesn't go out of the array's bounds
 	lua_pushfixed(L, FINETANGENT(((luaL_checkangle(L, 1)+ANGLE_90)>>ANGLETOFINESHIFT) & 4095));
+	return 1;
+}
+
+static int lib_fixedasin(lua_State *L)
+{
+	lua_pushangle(L, -FixedAcos(luaL_checkfixed(L, 1)) + ANGLE_90);
+	return 1;
+}
+
+static int lib_fixedacos(lua_State *L)
+{
+	lua_pushangle(L, FixedAcos(luaL_checkfixed(L, 1)));
 	return 1;
 }
 
@@ -185,13 +198,15 @@ static int lib_coloropposite(lua_State *L)
 	return 2;
 }
 
-static luaL_Reg lib[] = {
+static luaL_Reg lib_math[] = {
 	{"abs", lib_abs},
 	{"min", lib_min},
 	{"max", lib_max},
 	{"sin", lib_finesine},
 	{"cos", lib_finecosine},
 	{"tan", lib_finetangent},
+	{"asin", lib_fixedasin},
+	{"acos", lib_fixedacos},
 	{"FixedAngle", lib_fixedangle},
 	{"fixangle"  , lib_fixedangle},
 	{"AngleFixed", lib_anglefixed},
@@ -223,9 +238,123 @@ static luaL_Reg lib[] = {
 	{NULL, NULL}
 };
 
+//
+// Easing functions
+//
+
+#define EASINGFUNC(easetype) \
+{ \
+	fixed_t start = 0; \
+	fixed_t end = FRACUNIT; \
+	fixed_t t = luaL_checkfixed(L, 1); \
+	int n = lua_gettop(L); \
+	if (n == 2) \
+		end = luaL_checkfixed(L, 2); \
+	else if (n >= 3) \
+	{ \
+		start = luaL_checkfixed(L, 2); \
+		end = luaL_checkfixed(L, 3); \
+	} \
+	lua_pushfixed(L, (Easing_ ## easetype)(t, start, end)); \
+	return 1; \
+} \
+
+static int lib_easelinear(lua_State *L) { EASINGFUNC(Linear) }
+
+static int lib_easeinsine(lua_State *L) { EASINGFUNC(InSine) }
+static int lib_easeoutsine(lua_State *L) { EASINGFUNC(OutSine) }
+static int lib_easeinoutsine(lua_State *L) { EASINGFUNC(InOutSine) }
+
+static int lib_easeinquad(lua_State *L) { EASINGFUNC(InQuad) }
+static int lib_easeoutquad(lua_State *L) { EASINGFUNC(OutQuad) }
+static int lib_easeinoutquad(lua_State *L) { EASINGFUNC(InOutQuad) }
+
+static int lib_easeincubic(lua_State *L) { EASINGFUNC(InCubic) }
+static int lib_easeoutcubic(lua_State *L) { EASINGFUNC(OutCubic) }
+static int lib_easeinoutcubic(lua_State *L) { EASINGFUNC(InOutCubic) }
+
+static int lib_easeinquart(lua_State *L) { EASINGFUNC(InQuart) }
+static int lib_easeoutquart(lua_State *L) { EASINGFUNC(OutQuart) }
+static int lib_easeinoutquart(lua_State *L) { EASINGFUNC(InOutQuart) }
+
+static int lib_easeinquint(lua_State *L) { EASINGFUNC(InQuint) }
+static int lib_easeoutquint(lua_State *L) { EASINGFUNC(OutQuint) }
+static int lib_easeinoutquint(lua_State *L) { EASINGFUNC(InOutQuint) }
+
+static int lib_easeinexpo(lua_State *L) { EASINGFUNC(InExpo) }
+static int lib_easeoutexpo(lua_State *L) { EASINGFUNC(OutExpo) }
+static int lib_easeinoutexpo(lua_State *L) { EASINGFUNC(InOutExpo) }
+
+#undef EASINGFUNC
+
+#define EASINGFUNC(easetype) \
+{ \
+	boolean useparam = false; \
+	fixed_t param = 0; \
+	fixed_t start = 0; \
+	fixed_t end = FRACUNIT; \
+	fixed_t t = luaL_checkfixed(L, 1); \
+	int n = lua_gettop(L); \
+	if (n == 2) \
+		end = luaL_checkfixed(L, 2); \
+	else if (n >= 3) \
+	{ \
+		start = (fixed_t)luaL_optinteger(L, 2, start); \
+		end = (fixed_t)luaL_optinteger(L, 3, end); \
+		if ((n >= 4) && (useparam = (!lua_isnil(L, 4)))) \
+			param = luaL_checkfixed(L, 4); \
+	} \
+	if (useparam) \
+		lua_pushfixed(L, (Easing_ ## easetype ## Parameterized)(t, start, end, param)); \
+	else \
+		lua_pushfixed(L, (Easing_ ## easetype)(t, start, end)); \
+	return 1; \
+} \
+
+static int lib_easeinback(lua_State *L) { EASINGFUNC(InBack) }
+static int lib_easeoutback(lua_State *L) { EASINGFUNC(OutBack) }
+static int lib_easeinoutback(lua_State *L) { EASINGFUNC(InOutBack) }
+
+#undef EASINGFUNC
+
+static luaL_Reg lib_ease[] = {
+	{"linear", lib_easelinear},
+
+	{"insine", lib_easeinsine},
+	{"outsine", lib_easeoutsine},
+	{"inoutsine", lib_easeinoutsine},
+
+	{"inquad", lib_easeinquad},
+	{"outquad", lib_easeoutquad},
+	{"inoutquad", lib_easeinoutquad},
+
+	{"incubic", lib_easeincubic},
+	{"outcubic", lib_easeoutcubic},
+	{"inoutcubic", lib_easeinoutcubic},
+
+	{"inquart", lib_easeinquart},
+	{"outquart", lib_easeoutquart},
+	{"inoutquart", lib_easeinoutquart},
+
+	{"inquint", lib_easeinquint},
+	{"outquint", lib_easeoutquint},
+	{"inoutquint", lib_easeinoutquint},
+
+	{"inexpo", lib_easeinexpo},
+	{"outexpo", lib_easeoutexpo},
+	{"inoutexpo", lib_easeinoutexpo},
+
+	{"inback", lib_easeinback},
+	{"outback", lib_easeoutback},
+	{"inoutback", lib_easeinoutback},
+
+	{NULL, NULL}
+};
+
 int LUA_MathLib(lua_State *L)
 {
 	lua_pushvalue(L, LUA_GLOBALSINDEX);
-	luaL_register(L, NULL, lib);
+	luaL_register(L, NULL, lib_math);
+	luaL_register(L, "ease", lib_ease);
 	return 0;
 }

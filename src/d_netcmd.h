@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -45,7 +45,7 @@ extern consvar_t cv_joyscale2;
 // splitscreen with second mouse
 extern consvar_t cv_mouse2port;
 extern consvar_t cv_usemouse2;
-#if (defined (__unix__) && !defined (MSDOS)) || defined (UNIXCOMMON)
+#if defined (__unix__) || defined (__APPLE__) || defined (UNIXCOMMON)
 extern consvar_t cv_mouse2opt;
 #endif
 
@@ -73,6 +73,7 @@ extern consvar_t cv_teamscramble;
 extern consvar_t cv_scrambleonchange;
 
 extern consvar_t cv_netstat;
+extern consvar_t cv_nettimeout;
 
 extern consvar_t cv_countdowntime;
 extern consvar_t cv_runscripts;
@@ -110,6 +111,8 @@ extern consvar_t cv_skipmapcheck;
 extern consvar_t cv_sleep;
 
 extern consvar_t cv_perfstats;
+extern consvar_t cv_ps_samplesize;
+extern consvar_t cv_ps_descriptor;
 
 extern char timedemo_name[256];
 extern boolean timedemo_csv;
@@ -128,22 +131,23 @@ typedef enum
 	XD_MAP,         // 6
 	XD_EXITLEVEL,   // 7
 	XD_ADDFILE,     // 8
-	XD_PAUSE,       // 9
-	XD_ADDPLAYER,   // 10
-	XD_TEAMCHANGE,  // 11
-	XD_CLEARSCORES, // 12
-	XD_SWITCHWORLD, // 13
-	XD_VERIFIED,    // 14
-	XD_RANDOMSEED,  // 15
-	XD_RUNSOC,      // 16
-	XD_REQADDFILE,  // 17
-	XD_DELFILE,     // 18 - replace next time we add an XD
-	XD_SETMOTD,     // 19
-	XD_SUICIDE,     // 20
-	XD_DEMOTED,     // 21
-	XD_LUACMD,      // 22
-	XD_LUAVAR,      // 23
-	XD_LUAFILE,     // 24
+	XD_ADDFOLDER,   // 9
+	XD_PAUSE,       // 10
+	XD_ADDPLAYER,   // 11
+	XD_TEAMCHANGE,  // 12
+	XD_CLEARSCORES, // 13
+	XD_SWITCHWORLD, // 14
+	XD_VERIFIED,    // 15
+	XD_RANDOMSEED,  // 16
+	XD_RUNSOC,      // 17
+	XD_REQADDFILE,  // 18
+	XD_REQADDFOLDER,// 19
+	XD_SETMOTD,     // 20
+	XD_SUICIDE,     // 21
+	XD_DEMOTED,     // 22
+	XD_LUACMD,      // 23
+	XD_LUAVAR,      // 24
+	XD_LUAFILE,     // 25
 	MAXNETXCMD
 } netxcmd_t;
 

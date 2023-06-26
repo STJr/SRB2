@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -420,7 +420,7 @@ void V_SetPalette(INT32 palettenum)
 #ifdef HWRENDER
 	if (rendermode == render_opengl)
 		HWR_SetPalette(&pLocalPalette[palettenum*256]);
-#if (defined (__unix__) && !defined (MSDOS)) || defined (UNIXCOMMON) || defined (HAVE_SDL)
+#if defined (__unix__) || defined (UNIXCOMMON) || defined (HAVE_SDL)
 	else
 #endif
 #endif
@@ -434,7 +434,7 @@ void V_SetPaletteLump(const char *pal)
 #ifdef HWRENDER
 	if (rendermode == render_opengl)
 		HWR_SetPalette(pLocalPalette);
-#if (defined (__unix__) && !defined (MSDOS)) || defined (UNIXCOMMON) || defined (HAVE_SDL)
+#if defined (__unix__) || defined (UNIXCOMMON) || defined (HAVE_SDL)
 	else
 #endif
 #endif
@@ -457,7 +457,8 @@ void VID_BlitLinearScreen_ASM(const UINT8 *srcptr, UINT8 *destptr, INT32 width, 
 
 static void CV_constextsize_OnChange(void)
 {
-	con_recalc = true;
+	if (!con_refresh)
+		con_recalc = true;
 }
 
 
@@ -512,7 +513,8 @@ static inline UINT8 transmappedpdraw(const UINT8 *dest, const UINT8 *source, fix
 void V_DrawStretchyFixedPatch(fixed_t x, fixed_t y, fixed_t pscale, fixed_t vscale, INT32 scrn, patch_t *patch, const UINT8 *colormap)
 {
 	UINT8 (*patchdrawfunc)(const UINT8*, const UINT8*, fixed_t);
-	UINT32 alphalevel = 0;
+	UINT32 alphalevel = ((scrn & V_ALPHAMASK) >> V_ALPHASHIFT);
+	UINT32 blendmode = ((scrn & V_BLENDMASK) >> V_BLENDSHIFT);
 
 	fixed_t col, ofs, colfrac, rowfrac, fdup, vdup;
 	INT32 dupx, dupy;
@@ -539,21 +541,21 @@ void V_DrawStretchyFixedPatch(fixed_t x, fixed_t y, fixed_t pscale, fixed_t vsca
 	patchdrawfunc = standardpdraw;
 
 	v_translevel = NULL;
-	if ((alphalevel = ((scrn & V_ALPHAMASK) >> V_ALPHASHIFT)))
+	if (alphalevel || blendmode)
 	{
-		if (alphalevel == 13)
+		if (alphalevel == 10) // V_HUDTRANSHALF
 			alphalevel = hudminusalpha[st_translucency];
-		else if (alphalevel == 14)
+		else if (alphalevel == 11) // V_HUDTRANS
 			alphalevel = 10 - st_translucency;
-		else if (alphalevel == 15)
+		else if (alphalevel == 12) // V_HUDTRANSDOUBLE
 			alphalevel = hudplusalpha[st_translucency];
 
 		if (alphalevel >= 10)
 			return; // invis
 
-		if (alphalevel)
+		if (alphalevel || blendmode)
 		{
-			v_translevel = R_GetTranslucencyTable(alphalevel);
+			v_translevel = R_GetBlendTable(blendmode+1, alphalevel);
 			patchdrawfunc = translucentpdraw;
 		}
 	}
@@ -592,10 +594,6 @@ void V_DrawStretchyFixedPatch(fixed_t x, fixed_t y, fixed_t pscale, fixed_t vsca
 	colfrac = FixedDiv(FRACUNIT, fdup);
 	rowfrac = FixedDiv(FRACUNIT, vdup);
 
-	// So it turns out offsets aren't scaled in V_NOSCALESTART unless V_OFFSET is applied ...poo, that's terrible
-	// For now let's just at least give V_OFFSET the ability to support V_FLIP
-	// I'll probably make a better fix for 2.2 where I don't have to worry about breaking existing support for stuff
-	// -- Monster Iestyn 29/10/18
 	{
 		fixed_t offsetx = 0, offsety = 0;
 
@@ -606,14 +604,7 @@ void V_DrawStretchyFixedPatch(fixed_t x, fixed_t y, fixed_t pscale, fixed_t vsca
 			offsetx = FixedMul(patch->leftoffset<<FRACBITS, pscale);
 
 		// top offset
-		// TODO: make some kind of vertical version of V_FLIP, maybe by deprecating V_OFFSET in future?!?
 		offsety = FixedMul(patch->topoffset<<FRACBITS, vscale);
-
-		if ((scrn & (V_NOSCALESTART|V_OFFSET)) == (V_NOSCALESTART|V_OFFSET)) // Multiply by dupx/dupy for crosshairs
-		{
-			offsetx = FixedMul(offsetx, dupx<<FRACBITS);
-			offsety = FixedMul(offsety, dupy<<FRACBITS);
-		}
 
 		// Subtract the offsets from x/y positions
 		x -= offsetx;
@@ -810,13 +801,14 @@ void V_DrawStretchyFixedPatch(fixed_t x, fixed_t y, fixed_t pscale, fixed_t vsca
 }
 
 // Draws a patch cropped and scaled to arbitrary size.
-void V_DrawCroppedPatch(fixed_t x, fixed_t y, fixed_t pscale, INT32 scrn, patch_t *patch, fixed_t sx, fixed_t sy, fixed_t w, fixed_t h)
+void V_DrawCroppedPatch(fixed_t x, fixed_t y, fixed_t pscale, fixed_t vscale, INT32 scrn, patch_t *patch, const UINT8 *colormap, fixed_t sx, fixed_t sy, fixed_t w, fixed_t h)
 {
 	UINT8 (*patchdrawfunc)(const UINT8*, const UINT8*, fixed_t);
-	UINT32 alphalevel = 0;
+	UINT32 alphalevel = ((scrn & V_ALPHAMASK) >> V_ALPHASHIFT);
+	UINT32 blendmode = ((scrn & V_BLENDMASK) >> V_BLENDSHIFT);
 	// boolean flip = false;
 
-	fixed_t col, ofs, colfrac, rowfrac, fdup;
+	fixed_t col, ofs, colfrac, rowfrac, fdup, vdup;
 	INT32 dupx, dupy;
 	const column_t *column;
 	UINT8 *desttop, *dest;
@@ -831,7 +823,7 @@ void V_DrawCroppedPatch(fixed_t x, fixed_t y, fixed_t pscale, INT32 scrn, patch_
 	//if (rendermode != render_soft && !con_startup)		// Not this again
 	if (rendermode == render_opengl)
 	{
-		HWR_DrawCroppedPatch(patch,x,y,pscale,scrn,sx,sy,w,h);
+		HWR_DrawCroppedPatch(patch,x,y,pscale,vscale,scrn,colormap,sx,sy,w,h);
 		return;
 	}
 #endif
@@ -839,50 +831,75 @@ void V_DrawCroppedPatch(fixed_t x, fixed_t y, fixed_t pscale, INT32 scrn, patch_
 	patchdrawfunc = standardpdraw;
 
 	v_translevel = NULL;
-	if ((alphalevel = ((scrn & V_ALPHAMASK) >> V_ALPHASHIFT)))
+	if (alphalevel || blendmode)
 	{
-		if (alphalevel == 13)
+		if (alphalevel == 10) // V_HUDTRANSHALF
 			alphalevel = hudminusalpha[st_translucency];
-		else if (alphalevel == 14)
+		else if (alphalevel == 11) // V_HUDTRANS
 			alphalevel = 10 - st_translucency;
-		else if (alphalevel == 15)
+		else if (alphalevel == 12) // V_HUDTRANSDOUBLE
 			alphalevel = hudplusalpha[st_translucency];
 
 		if (alphalevel >= 10)
 			return; // invis
 
-		if (alphalevel)
+		if (alphalevel || blendmode)
 		{
-			v_translevel = R_GetTranslucencyTable(alphalevel);
+			v_translevel = R_GetBlendTable(blendmode+1, alphalevel);
 			patchdrawfunc = translucentpdraw;
 		}
 	}
 
-	// only use one dup, to avoid stretching (har har)
-	dupx = dupy = (vid.dupx < vid.dupy ? vid.dupx : vid.dupy);
-	fdup = FixedMul(dupx<<FRACBITS, pscale);
-	colfrac = FixedDiv(FRACUNIT, fdup);
-	rowfrac = FixedDiv(FRACUNIT, fdup);
+	v_colormap = NULL;
+	if (colormap)
+	{
+		v_colormap = colormap;
+		patchdrawfunc = (v_translevel) ? transmappedpdraw : mappedpdraw;
+	}
 
-	y -= FixedMul(patch->topoffset<<FRACBITS, pscale);
+	dupx = vid.dupx;
+	dupy = vid.dupy;
+	if (scrn & V_SCALEPATCHMASK) switch ((scrn & V_SCALEPATCHMASK) >> V_SCALEPATCHSHIFT)
+	{
+		case 1: // V_NOSCALEPATCH
+			dupx = dupy = 1;
+			break;
+		case 2: // V_SMALLSCALEPATCH
+			dupx = vid.smalldupx;
+			dupy = vid.smalldupy;
+			break;
+		case 3: // V_MEDSCALEPATCH
+			dupx = vid.meddupx;
+			dupy = vid.meddupy;
+			break;
+		default:
+			break;
+	}
+
+	// only use one dup, to avoid stretching (har har)
+	dupx = dupy = (dupx < dupy ? dupx : dupy);
+	fdup = vdup = FixedMul(dupx<<FRACBITS, pscale);
+	if (vscale != pscale)
+		vdup = FixedMul(dupx<<FRACBITS, vscale);
+	colfrac = FixedDiv(FRACUNIT, fdup);
+	rowfrac = FixedDiv(FRACUNIT, vdup);
+
 	x -= FixedMul(patch->leftoffset<<FRACBITS, pscale);
+	y -= FixedMul(patch->topoffset<<FRACBITS, vscale);
 
 	if (splitscreen && (scrn & V_PERPLAYER))
 	{
 		fixed_t adjusty = ((scrn & V_NOSCALESTART) ? vid.height : BASEVIDHEIGHT)<<(FRACBITS-1);
-		fdup >>= 1;
+		vdup >>= 1;
 		rowfrac <<= 1;
 		y >>= 1;
-		sy >>= 1;
-		h >>= 1;
 #ifdef QUADS
 		if (splitscreen > 1) // 3 or 4 players
 		{
 			fixed_t adjustx = ((scrn & V_NOSCALESTART) ? vid.height : BASEVIDHEIGHT)<<(FRACBITS-1));
+			fdup >>= 1;
 			colfrac <<= 1;
 			x >>= 1;
-			sx >>= 1;
-			w >>= 1;
 			if (stplyr == &players[displayplayer])
 			{
 				if (!(scrn & (V_SNAPTOTOP|V_SNAPTOBOTTOM)))
@@ -898,7 +915,6 @@ void V_DrawCroppedPatch(fixed_t x, fixed_t y, fixed_t pscale, INT32 scrn, patch_
 				if (!(scrn & (V_SNAPTOLEFT|V_SNAPTORIGHT)))
 					perplayershuffle |= 8;
 				x += adjustx;
-				sx += adjustx;
 				scrn &= ~V_SNAPTOBOTTOM|V_SNAPTOLEFT;
 			}
 			else if (stplyr == &players[thirddisplayplayer])
@@ -908,7 +924,6 @@ void V_DrawCroppedPatch(fixed_t x, fixed_t y, fixed_t pscale, INT32 scrn, patch_
 				if (!(scrn & (V_SNAPTOLEFT|V_SNAPTORIGHT)))
 					perplayershuffle |= 4;
 				y += adjusty;
-				sy += adjusty;
 				scrn &= ~V_SNAPTOTOP|V_SNAPTORIGHT;
 			}
 			else //if (stplyr == &players[fourthdisplayplayer])
@@ -918,9 +933,7 @@ void V_DrawCroppedPatch(fixed_t x, fixed_t y, fixed_t pscale, INT32 scrn, patch_
 				if (!(scrn & (V_SNAPTOLEFT|V_SNAPTORIGHT)))
 					perplayershuffle |= 8;
 				x += adjustx;
-				sx += adjustx;
 				y += adjusty;
-				sy += adjusty;
 				scrn &= ~V_SNAPTOTOP|V_SNAPTOLEFT;
 			}
 		}
@@ -939,7 +952,6 @@ void V_DrawCroppedPatch(fixed_t x, fixed_t y, fixed_t pscale, INT32 scrn, patch_
 				if (!(scrn & (V_SNAPTOTOP|V_SNAPTOBOTTOM)))
 					perplayershuffle |= 2;
 				y += adjusty;
-				sy += adjusty;
 				scrn &= ~V_SNAPTOTOP;
 			}
 		}
@@ -952,7 +964,8 @@ void V_DrawCroppedPatch(fixed_t x, fixed_t y, fixed_t pscale, INT32 scrn, patch_
 
 	deststop = desttop + vid.rowbytes * vid.height;
 
-	if (scrn & V_NOSCALESTART) {
+	if (scrn & V_NOSCALESTART)
+	{
 		x >>= FRACBITS;
 		y >>= FRACBITS;
 		desttop += (y*vid.width) + x;
@@ -1000,7 +1013,38 @@ void V_DrawCroppedPatch(fixed_t x, fixed_t y, fixed_t pscale, INT32 scrn, patch_
 		desttop += (y*vid.width) + x;
 	}
 
-	for (col = sx<<FRACBITS; (col>>FRACBITS) < patch->width && ((col>>FRACBITS) - sx) < w; col += colfrac, ++x, desttop++)
+	// Auto-crop at splitscreen borders!
+	if (splitscreen && (scrn & V_PERPLAYER))
+	{
+#ifdef QUADS
+		if (splitscreen > 1) // 3 or 4 players
+		{
+			#error Auto-cropping doesnt take quadscreen into account! Fix it!
+			// Hint: For player 1/2, copy player 1's code below. For player 3/4, copy player 2's code below
+			// For player 1/3 and 2/4, hijack the X wrap prevention lines? That's probably easiest
+		}
+		else
+#endif
+		// 2 players
+		{
+			if (stplyr == &players[displayplayer]) // Player 1's screen, crop at the bottom
+			{
+				// Just put a big old stop sign halfway through the screen
+				deststop -= vid.rowbytes * (vid.height>>1);
+			}
+			else //if (stplyr == &players[secondarydisplayplayer]) // Player 2's screen, crop at the top
+			{
+				if (y < (vid.height>>1)) // If the top is above the border
+				{
+					sy += ((vid.height>>1) - y) * rowfrac; // Start further down on the patch
+					h -= ((vid.height>>1) - y) * rowfrac; // Draw less downwards from the start
+					desttop += ((vid.height>>1) - y) * vid.width; // Start drawing at the border
+				}
+			}
+		}
+	}
+
+	for (col = sx; (col>>FRACBITS) < patch->width && (col - sx) < w; col += colfrac, ++x, desttop++)
 	{
 		INT32 topdelta, prevdelta = -1;
 		if (x < 0) // don't draw off the left of the screen (WRAP PREVENTION)
@@ -1017,15 +1061,15 @@ void V_DrawCroppedPatch(fixed_t x, fixed_t y, fixed_t pscale, INT32 scrn, patch_
 			prevdelta = topdelta;
 			source = (const UINT8 *)(column) + 3;
 			dest = desttop;
-			if (topdelta-sy > 0)
+			if ((topdelta<<FRACBITS)-sy > 0)
 			{
-				dest += FixedInt(FixedMul((topdelta-sy)<<FRACBITS,fdup))*vid.width;
+				dest += FixedInt(FixedMul((topdelta<<FRACBITS)-sy,vdup))*vid.width;
 				ofs = 0;
 			}
 			else
-				ofs = (sy-topdelta)<<FRACBITS;
+				ofs = sy-(topdelta<<FRACBITS);
 
-			for (; dest < deststop && (ofs>>FRACBITS) < column->length && (((ofs>>FRACBITS) - sy) + topdelta) < h; ofs += rowfrac)
+			for (; dest < deststop && (ofs>>FRACBITS) < column->length && ((ofs - sy) + (topdelta<<FRACBITS)) < h; ofs += rowfrac)
 			{
 				if (dest >= screens[scrn&V_PARAMMASK]) // don't draw off the top of the screen (CRASH PREVENTION)
 					*dest = patchdrawfunc(dest, source, ofs);
@@ -1360,11 +1404,11 @@ void V_DrawFillConsoleMap(INT32 x, INT32 y, INT32 w, INT32 h, INT32 c)
 
 	if ((alphalevel = ((c & V_ALPHAMASK) >> V_ALPHASHIFT)))
 	{
-		if (alphalevel == 13)
+		if (alphalevel == 10) // V_HUDTRANSHALF
 			alphalevel = hudminusalpha[st_translucency];
-		else if (alphalevel == 14)
+		else if (alphalevel == 11) // V_HUDTRANS
 			alphalevel = 10 - st_translucency;
-		else if (alphalevel == 15)
+		else if (alphalevel == 12) // V_HUDTRANSDOUBLE
 			alphalevel = hudplusalpha[st_translucency];
 
 		if (alphalevel >= 10)
@@ -1706,7 +1750,7 @@ void V_DrawFlatFill(INT32 x, INT32 y, INT32 w, INT32 h, lumpnum_t flatnum)
 	fixed_t dx, dy, xfrac, yfrac;
 	const UINT8 *src, *deststop;
 	UINT8 *flat, *dest;
-	size_t size, lflatsize, flatshift;
+	size_t lflatsize, flatshift;
 
 #ifdef HWRENDER
 	if (rendermode == render_opengl)
@@ -1716,39 +1760,8 @@ void V_DrawFlatFill(INT32 x, INT32 y, INT32 w, INT32 h, lumpnum_t flatnum)
 	}
 #endif
 
-	size = W_LumpLength(flatnum);
-
-	switch (size)
-	{
-		case 4194304: // 2048x2048 lump
-			lflatsize = 2048;
-			flatshift = 10;
-			break;
-		case 1048576: // 1024x1024 lump
-			lflatsize = 1024;
-			flatshift = 9;
-			break;
-		case 262144:// 512x512 lump
-			lflatsize = 512;
-			flatshift = 8;
-			break;
-		case 65536: // 256x256 lump
-			lflatsize = 256;
-			flatshift = 7;
-			break;
-		case 16384: // 128x128 lump
-			lflatsize = 128;
-			flatshift = 7;
-			break;
-		case 1024: // 32x32 lump
-			lflatsize = 32;
-			flatshift = 5;
-			break;
-		default: // 64x64 lump
-			lflatsize = 64;
-			flatshift = 6;
-			break;
-	}
+	lflatsize = R_GetFlatSize(W_LumpLength(flatnum));
+	flatshift = R_GetFlatBits(lflatsize);
 
 	flat = W_CacheLumpNum(flatnum, PU_CACHE);
 
@@ -3564,7 +3577,8 @@ void V_DoPostProcessor(INT32 view, postimg_t type, INT32 param)
 		UINT8 *tmpscr = screens[4];
 		UINT8 *srcscr = screens[0];
 		INT32 y;
-		angle_t disStart = (leveltime * 128) & FINEMASK; // in 0 to FINEANGLE
+		// Set disStart to a range from 0 to FINEANGLE, incrementing by 128 per tic
+		angle_t disStart = (((leveltime-1)*128) + (rendertimefrac / (FRACUNIT/128))) & FINEMASK;
 		INT32 newpix;
 		INT32 sine;
 		//UINT8 *transme = R_GetTranslucencyTable(tr_trans50);
@@ -3687,8 +3701,11 @@ Unoptimized version
 			heatindex[view] %= height;
 		}
 
-		heatindex[view]++;
-		heatindex[view] %= vid.height;
+		if (renderisnewtic) // This isn't interpolated... but how do you interpolate a one-pixel shift?
+		{
+			heatindex[view]++;
+			heatindex[view] %= vid.height;
+		}
 
 		VID_BlitLinearScreen(tmpscr+vid.width*vid.bpp*yoffset, screens[0]+vid.width*vid.bpp*yoffset,
 				vid.width*vid.bpp, height, vid.width*vid.bpp, vid.width);

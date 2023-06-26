@@ -459,7 +459,7 @@ msgid ""
 msgstr ""
 
 #: d_clisrv.c:1889
-msgid "has been kicked (Go away)\n"
+msgid "has been kicked (No reason given)\n"
 msgstr ""
 
 #: d_clisrv.c:1893
@@ -467,7 +467,7 @@ msgid "left the game (Broke ping limit)\n"
 msgstr ""
 
 #: d_clisrv.c:1897
-msgid "left the game (Consistency failure)\n"
+msgid "left the game (Synch failure)\n"
 msgstr ""
 
 #: d_clisrv.c:1903
@@ -494,7 +494,7 @@ msgid "left the game\n"
 msgstr ""
 
 #: d_clisrv.c:1923
-msgid "has been banned (Don't come back)\n"
+msgid "has been banned (No reason given)\n"
 msgstr ""
 
 #: d_clisrv.c:1927

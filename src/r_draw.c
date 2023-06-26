@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -25,6 +25,7 @@
 #include "w_wad.h"
 #include "z_zone.h"
 #include "console.h" // Until buffering gets finished
+#include "libdivide.h" // used by NPO2 tilted span functions
 
 #ifdef HWRENDER
 #include "hardware/hw_main.h"
@@ -105,7 +106,7 @@ fixed_t ds_xfrac, ds_yfrac, ds_xstep, ds_ystep;
 INT32 ds_waterofs, ds_bgofs;
 
 UINT16 ds_flatwidth, ds_flatheight;
-boolean ds_powersoftwo;
+boolean ds_powersoftwo, ds_solidcolor;
 
 UINT8 *ds_source; // points to the start of a flat
 UINT8 *ds_transmap; // one of the translucency tables
@@ -173,14 +174,12 @@ static INT32 CacheIndexToSkin(INT32 ttc)
 
 CV_PossibleValue_t Color_cons_t[MAXSKINCOLORS+1];
 
-#define TRANSTAB_AMTMUL10 (256.0f / 10.0f)
-
 /** \brief Initializes the translucency tables used by the Software renderer.
 */
 void R_InitTranslucencyTables(void)
 {
-	// Load here the transparency lookup tables 'TINTTAB'
-	// NOTE: the TINTTAB resource MUST BE aligned on 64k for the asm
+	// Load here the transparency lookup tables 'TRANSx0'
+	// NOTE: the TRANSx0 resources MUST BE aligned on 64k for the asm
 	// optimised code (in other words, transtables pointer low word is 0)
 	transtables = Z_MallocAlign(NUMTRANSTABLES*0x10000, PU_STATIC,
 		NULL, 16);
@@ -198,42 +197,14 @@ void R_InitTranslucencyTables(void)
 	R_GenerateBlendTables();
 }
 
-void R_GenerateBlendTables(void)
-{
-	INT32 i;
-
-	for (i = 0; i < NUMBLENDMAPS; i++)
-	{
-		if (i == blendtab_modulate)
-			continue;
-		blendtables[i] = Z_MallocAlign((NUMTRANSTABLES + 1) * 0x10000, PU_STATIC, NULL, 16);
-	}
-
-	for (i = 0; i <= 9; i++)
-	{
-		const size_t offs = (0x10000 * i);
-		const UINT8 alpha = TRANSTAB_AMTMUL10 * i;
-
-		R_GenerateTranslucencyTable(blendtables[blendtab_add] + offs, AST_ADD, alpha);
-		R_GenerateTranslucencyTable(blendtables[blendtab_subtract] + offs, AST_SUBTRACT, alpha);
-		R_GenerateTranslucencyTable(blendtables[blendtab_reversesubtract] + offs, AST_REVERSESUBTRACT, alpha);
-	}
-
-	// Modulation blending only requires a single table
-	blendtables[blendtab_modulate] = Z_MallocAlign(0x10000, PU_STATIC, NULL, 16);
-	R_GenerateTranslucencyTable(blendtables[blendtab_modulate], AST_MODULATE, 0);
-}
-
 static colorlookup_t transtab_lut;
 
-void R_GenerateTranslucencyTable(UINT8 *table, int style, UINT8 blendamt)
+static void BlendTab_Translucent(UINT8 *table, int style, UINT8 blendamt)
 {
 	INT16 bg, fg;
 
 	if (table == NULL)
-		I_Error("R_GenerateTranslucencyTable: input table was NULL!");
-
-	InitColorLUT(&transtab_lut, pMasterPalette, false);
+		I_Error("BlendTab_Translucent: input table was NULL!");
 
 	for (bg = 0; bg < 0xFF; bg++)
 	{
@@ -243,12 +214,126 @@ void R_GenerateTranslucencyTable(UINT8 *table, int style, UINT8 blendamt)
 			RGBA_t frontrgba = V_GetMasterColor(fg);
 			RGBA_t result;
 
-			result.rgba = ASTBlendPixel(backrgba, frontrgba, style, blendamt);
+			result.rgba = ASTBlendPixel(backrgba, frontrgba, style, 0xFF);
+			result.rgba = ASTBlendPixel(result, frontrgba, AST_TRANSLUCENT, blendamt);
+
 			table[((bg * 0x100) + fg)] = GetColorLUT(&transtab_lut, result.s.red, result.s.green, result.s.blue);
 		}
 	}
 }
 
+static void BlendTab_Subtractive(UINT8 *table, int style, UINT8 blendamt)
+{
+	INT16 bg, fg;
+
+	if (table == NULL)
+		I_Error("BlendTab_Subtractive: input table was NULL!");
+
+	if (blendamt == 0xFF)
+	{
+		memset(table, GetColorLUT(&transtab_lut, 0, 0, 0), 0x10000);
+		return;
+	}
+
+	for (bg = 0; bg < 0xFF; bg++)
+	{
+		for (fg = 0; fg < 0xFF; fg++)
+		{
+			RGBA_t backrgba = V_GetMasterColor(bg);
+			RGBA_t frontrgba = V_GetMasterColor(fg);
+			RGBA_t result;
+
+			result.rgba = ASTBlendPixel(backrgba, frontrgba, style, 0xFF);
+			result.s.red = max(0, result.s.red - blendamt);
+			result.s.green = max(0, result.s.green - blendamt);
+			result.s.blue = max(0, result.s.blue - blendamt);
+
+			//probably incorrect, but does look better at lower opacity...
+			//result.rgba = ASTBlendPixel(result, frontrgba, AST_TRANSLUCENT, blendamt);
+
+			table[((bg * 0x100) + fg)] = GetColorLUT(&transtab_lut, result.s.red, result.s.green, result.s.blue);
+		}
+	}
+}
+
+static void BlendTab_Modulative(UINT8 *table)
+{
+	INT16 bg, fg;
+
+	if (table == NULL)
+		I_Error("BlendTab_Modulative: input table was NULL!");
+
+	for (bg = 0; bg < 0xFF; bg++)
+	{
+		for (fg = 0; fg < 0xFF; fg++)
+		{
+			RGBA_t backrgba = V_GetMasterColor(bg);
+			RGBA_t frontrgba = V_GetMasterColor(fg);
+			RGBA_t result;
+			result.rgba = ASTBlendPixel(backrgba, frontrgba, AST_MODULATE, 0);
+			table[((bg * 0x100) + fg)] = GetColorLUT(&transtab_lut, result.s.red, result.s.green, result.s.blue);
+		}
+	}
+}
+
+static INT32 BlendTab_Count[NUMBLENDMAPS] =
+{
+	NUMTRANSTABLES+1, // blendtab_add
+	NUMTRANSTABLES+1, // blendtab_subtract
+	NUMTRANSTABLES+1, // blendtab_reversesubtract
+	1                 // blendtab_modulate
+};
+
+static INT32 BlendTab_FromStyle[] =
+{
+	0,                        // AST_COPY
+	0,                        // AST_TRANSLUCENT
+	blendtab_add,             // AST_ADD
+	blendtab_subtract,        // AST_SUBTRACT
+	blendtab_reversesubtract, // AST_REVERSESUBTRACT
+	blendtab_modulate,        // AST_MODULATE
+	0                         // AST_OVERLAY
+};
+
+static void BlendTab_GenerateMaps(INT32 tab, INT32 style, void (*genfunc)(UINT8 *, int, UINT8))
+{
+	INT32 i = 0, num = BlendTab_Count[tab];
+	const float amtmul = (256.0f / (float)(NUMTRANSTABLES + 1));
+	for (; i < num; i++)
+	{
+		const size_t offs = (0x10000 * i);
+		const UINT16 alpha = min(amtmul * i, 0xFF);
+		genfunc(blendtables[tab] + offs, style, alpha);
+	}
+}
+
+void R_GenerateBlendTables(void)
+{
+	INT32 i;
+
+	for (i = 0; i < NUMBLENDMAPS; i++)
+		blendtables[i] = Z_MallocAlign(BlendTab_Count[i] * 0x10000, PU_STATIC, NULL, 16);
+
+	InitColorLUT(&transtab_lut, pMasterPalette, false);
+
+	// Additive
+	BlendTab_GenerateMaps(blendtab_add, AST_ADD, BlendTab_Translucent);
+
+	// Subtractive
+#if 1
+	BlendTab_GenerateMaps(blendtab_subtract, AST_SUBTRACT, BlendTab_Subtractive);
+#else
+	BlendTab_GenerateMaps(blendtab_subtract, AST_SUBTRACT, BlendTab_Translucent);
+#endif
+
+	// Reverse subtractive
+	BlendTab_GenerateMaps(blendtab_reversesubtract, AST_REVERSESUBTRACT, BlendTab_Translucent);
+
+	// Modulative blending only requires a single table
+	BlendTab_Modulative(blendtables[blendtab_modulate]);
+}
+
+#define ClipBlendLevel(style, trans) max(min((trans), BlendTab_Count[BlendTab_FromStyle[style]]-1), 0)
 #define ClipTransLevel(trans) max(min((trans), NUMTRANSMAPS-2), 0)
 
 UINT8 *R_GetTranslucencyTable(INT32 alphalevel)
@@ -258,7 +343,12 @@ UINT8 *R_GetTranslucencyTable(INT32 alphalevel)
 
 UINT8 *R_GetBlendTable(int style, INT32 alphalevel)
 {
-	size_t offs = (ClipTransLevel(alphalevel) << FF_TRANSSHIFT);
+	size_t offs;
+
+	if (style <= AST_COPY || style >= AST_OVERLAY)
+		return NULL;
+
+	offs = (ClipBlendLevel(style, alphalevel) << FF_TRANSSHIFT);
 
 	// Lactozilla: Returns the equivalent to AST_TRANSLUCENT
 	// if no alpha style matches any of the blend tables.
@@ -281,6 +371,14 @@ UINT8 *R_GetBlendTable(int style, INT32 alphalevel)
 		return transtables + (ClipTransLevel(alphalevel) << FF_TRANSSHIFT);
 	else
 		return NULL;
+}
+
+boolean R_BlendLevelVisible(INT32 blendmode, INT32 alphalevel)
+{
+	if (blendmode <= AST_COPY || blendmode == AST_SUBTRACT || blendmode == AST_MODULATE || blendmode >= AST_OVERLAY)
+		return true;
+
+	return (alphalevel < BlendTab_Count[BlendTab_FromStyle[blendmode]]);
 }
 
 // Define for getting accurate color brightness readings according to how the human eye sees them.
@@ -387,8 +485,12 @@ static void R_GenerateTranslationColormap(UINT8 *dest_colormap, INT32 skinnum, U
 		// White!
 		if (skinnum == TC_BOSS)
 		{
+			UINT8 *originalColormap = R_GetTranslationColormap(TC_DEFAULT, (skincolornum_t)color, GTC_CACHE);
 			for (i = 0; i < 16; i++)
+			{
+				dest_colormap[DEFAULT_STARTTRANSCOLOR + i] = originalColormap[DEFAULT_STARTTRANSCOLOR + i];
 				dest_colormap[31-i] = i;
+			}
 		}
 		else if (skinnum == TC_METALSONIC)
 		{
@@ -783,6 +885,39 @@ void R_DrawViewBorder(void)
 		vid.width, vid.width);
 }
 #endif
+
+// R_CalcTiltedLighting
+// Exactly what it says on the tin. I wish I wasn't too lazy to explain things properly.
+static INT32 tiltlighting[MAXVIDWIDTH];
+
+static void R_CalcTiltedLighting(fixed_t start, fixed_t end)
+{
+	// ZDoom uses a different lighting setup to us, and I couldn't figure out how to adapt their version
+	// of this function. Here's my own.
+	INT32 left = ds_x1, right = ds_x2;
+	fixed_t step = (end-start)/(ds_x2-ds_x1+1);
+	INT32 i;
+
+	// I wanna do some optimizing by checking for out-of-range segments on either side to fill in all at once,
+	// but I'm too bad at coding to not crash the game trying to do that. I guess this is fast enough for now...
+
+	for (i = left; i <= right; i++) {
+		tiltlighting[i] = (start += step) >> FRACBITS;
+		if (tiltlighting[i] < 0)
+			tiltlighting[i] = 0;
+		else if (tiltlighting[i] >= MAXLIGHTSCALE)
+			tiltlighting[i] = MAXLIGHTSCALE-1;
+	}
+}
+
+// Lighting is simple. It's just linear interpolation from start to end
+#define CALC_SLOPE_LIGHT { \
+	float planelightfloat = PLANELIGHTFLOAT; \
+	float lightstart, lightend; \
+	lightend = (iz + ds_szp->x*width) * planelightfloat; \
+	lightstart = iz * planelightfloat; \
+	R_CalcTiltedLighting(FloatToFixed(lightstart), FloatToFixed(lightend)); \
+}
 
 // ==========================================================================
 //                   INCLUDE 8bpp DRAWING CODE HERE

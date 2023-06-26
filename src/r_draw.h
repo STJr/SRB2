@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -61,7 +61,7 @@ extern fixed_t ds_xfrac, ds_yfrac, ds_xstep, ds_ystep;
 extern INT32 ds_waterofs, ds_bgofs;
 
 extern UINT16 ds_flatwidth, ds_flatheight;
-extern boolean ds_powersoftwo;
+extern boolean ds_powersoftwo, ds_solidcolor;
 
 extern UINT8 *ds_source;
 extern UINT8 *ds_transmap;
@@ -140,10 +140,11 @@ extern UINT8 *blendtables[NUMBLENDMAPS];
 
 void R_InitTranslucencyTables(void);
 void R_GenerateBlendTables(void);
-void R_GenerateTranslucencyTable(UINT8 *table, int style, UINT8 blendamt);
 
 UINT8 *R_GetTranslucencyTable(INT32 alphalevel);
 UINT8 *R_GetBlendTable(int style, INT32 alphalevel);
+
+boolean R_BlendLevelVisible(INT32 blendmode, INT32 alphalevel);
 
 // Color ramp modification should force a recache
 extern UINT8 skincolor_modified[];
@@ -169,6 +170,7 @@ void R_DrawViewBorder(void);
 void R_DrawColumn_8(void);
 void R_DrawShadeColumn_8(void);
 void R_DrawTranslucentColumn_8(void);
+void R_DrawDropShadowColumn_8(void);
 void R_DrawTranslatedColumn_8(void);
 void R_DrawTranslatedTranslucentColumn_8(void);
 void R_Draw2sMultiPatchColumn_8(void);
@@ -176,7 +178,7 @@ void R_Draw2sMultiPatchTranslucentColumn_8(void);
 void R_DrawFogColumn_8(void);
 void R_DrawColumnShadowed_8(void);
 
-#define PLANELIGHTFLOAT (BASEVIDWIDTH * BASEVIDWIDTH / vid.width / (zeroheight - FIXED_TO_FLOAT(viewz)) / 21.0f * FIXED_TO_FLOAT(fovtan))
+#define PLANELIGHTFLOAT (BASEVIDWIDTH * BASEVIDWIDTH / vid.width / zeroheight / 21.0f * FIXED_TO_FLOAT(fovtan))
 
 void R_DrawSpan_8(void);
 void R_DrawTranslucentSpan_8(void);
@@ -192,13 +194,11 @@ void R_DrawTranslucentFloorSprite_8(void);
 void R_DrawTiltedFloorSprite_8(void);
 void R_DrawTiltedTranslucentFloorSprite_8(void);
 
-void R_CalcTiltedLighting(fixed_t start, fixed_t end);
-extern INT32 tiltlighting[MAXVIDWIDTH];
-
-void R_DrawTranslucentWaterSpan_8(void);
-void R_DrawTiltedTranslucentWaterSpan_8(void);
+void R_DrawWaterSpan_8(void);
+void R_DrawTiltedWaterSpan_8(void);
 
 void R_DrawFogSpan_8(void);
+void R_DrawTiltedFogSpan_8(void);
 
 // Lactozilla: Non-powers-of-two
 void R_DrawSpan_NPO2_8(void);
@@ -215,8 +215,15 @@ void R_DrawTranslucentFloorSprite_NPO2_8(void);
 void R_DrawTiltedFloorSprite_NPO2_8(void);
 void R_DrawTiltedTranslucentFloorSprite_NPO2_8(void);
 
-void R_DrawTranslucentWaterSpan_NPO2_8(void);
-void R_DrawTiltedTranslucentWaterSpan_NPO2_8(void);
+void R_DrawWaterSpan_NPO2_8(void);
+void R_DrawTiltedWaterSpan_NPO2_8(void);
+
+void R_DrawSolidColorSpan_8(void);
+void R_DrawTransSolidColorSpan_8(void);
+void R_DrawTiltedSolidColorSpan_8(void);
+void R_DrawTiltedTransSolidColorSpan_8(void);
+void R_DrawWaterSolidColorSpan_8(void);
+void R_DrawTiltedWaterSolidColorSpan_8(void);
 
 #ifdef USEASM
 void ASMCALL R_DrawColumn_8_ASM(void);

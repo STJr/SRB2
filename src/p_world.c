@@ -1,7 +1,6 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
-// Copyright (C) 2020 by Sonic Team Junior.
-// Copyright (C) 2020-2021 by Jaime Ita Passos.
+// Copyright (C) 2020-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -34,6 +33,8 @@
 #include "s_sound.h"
 #include "w_wad.h"
 #include "z_zone.h"
+
+#include "i_video.h"
 
 #include "lua_script.h"
 #include "lua_hook.h"
@@ -423,7 +424,7 @@ void P_UnloadWorldList(void)
 
 #ifdef HWRENDER
 	// Free GPU textures before freeing patches.
-	if (vid.glstate == VID_GL_LIBRARY_LOADED)
+	if (rendermode == render_opengl && (vid.glstate == VID_GL_LIBRARY_LOADED))
 		HWR_ClearAllTextures();
 #endif
 

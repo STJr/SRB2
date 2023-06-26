@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -216,28 +216,28 @@ enum EPolyFlags
 	PF_Masked           = 0x00000001,   // Poly is alpha scaled and 0 alpha pixels are discarded (holes in texture)
 	PF_Translucent      = 0x00000002,   // Poly is transparent, alpha = level of transparency
 	PF_Environment      = 0x00000004,   // Poly should be drawn environment mapped. (Hurdler: used for text drawing)
-	PF_Additive         = 0x00000008,   // Additive color blending
-	PF_AdditiveSource   = 0x00000010,   // Source blending factor is additive. This is the opposite of regular additive blending.
-	PF_Subtractive      = 0x00000020,   // Subtractive color blending
-	PF_ReverseSubtract  = 0x00000040,   // Reverse subtract, used in wall splats (decals)
-	PF_Multiplicative   = 0x00000080,   // Multiplicative color blending
+	PF_Additive         = 0x00000008,   // Source blending factor is additive.
+	PF_Subtractive      = 0x00000010,   // Subtractive color blending
+	PF_ReverseSubtract  = 0x00000020,   // Reverse subtract, used in wall splats (decals)
+	PF_Multiplicative   = 0x00000040,   // Multiplicative color blending
 	PF_Fog              = 0x20000000,   // Fog blocks
 	PF_NoAlphaTest      = 0x40000000,   // Disables alpha testing
-	PF_Blending         = (PF_Masked|PF_Translucent|PF_Environment|PF_Additive|PF_AdditiveSource|PF_Subtractive|PF_ReverseSubtract|PF_Multiplicative|PF_Fog) & ~PF_NoAlphaTest,
+	PF_Blending         = (PF_Masked|PF_Translucent|PF_Environment|PF_Additive|PF_Subtractive|PF_ReverseSubtract|PF_Multiplicative|PF_Fog) & ~PF_NoAlphaTest,
 
 	// other flag bits
 	PF_Occlude          = 0x00000100,   // Updates the depth buffer
 	PF_NoDepthTest      = 0x00000200,   // Disables the depth test mode
 	PF_Invisible        = 0x00000400,   // Disables write to color buffer
 	PF_Decal            = 0x00000800,   // Enables polygon offset
-	PF_Modulated        = 0x00001000,   // Modulation (multiply output with constant ARGB)
+	PF_Modulated        = 0x00001000,   // Modulation (multiply output with constant RGBA)
 	                                    // When set, pass the color constant into the FSurfaceInfo -> PolyColor
 	PF_NoTexture        = 0x00002000,   // Disables texturing
 	PF_Corona           = 0x00004000,   // Tells the renderer we are drawing a corona
-	PF_Ripple           = 0x00008000,   // Water effect shader
+	PF_ColorMapped      = 0x00008000,   // Surface has "tint" and "fade" colors, which are sent as uniforms to a shader.
 	PF_RemoveYWrap      = 0x00010000,   // Forces clamp texture on Y
 	PF_ForceWrapX       = 0x00020000,   // Forces repeat texture on X
-	PF_ForceWrapY       = 0x00040000    // Forces repeat texture on Y
+	PF_ForceWrapY       = 0x00040000,   // Forces repeat texture on Y
+	PF_Ripple           = 0x00100000    // Water ripple effect. The current backend doesn't use it for anything.
 };
 
 
@@ -266,7 +266,6 @@ struct FTextureInfo
 };
 typedef struct FTextureInfo FTextureInfo;
 
-// jimita 14032019
 struct FLightInfo
 {
 	FUINT			light_level;
@@ -282,7 +281,7 @@ struct FSurfaceInfo
 	RGBA_t			PolyColor;
 	RGBA_t			TintColor;
 	RGBA_t			FadeColor;
-	FLightInfo		LightInfo;	// jimita 14032019
+	FLightInfo		LightInfo;
 };
 typedef struct FSurfaceInfo FSurfaceInfo;
 

@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -31,17 +31,7 @@
 #include <stdint.h>
 #endif
 
-#define UINT8 unsigned __int8
 #define SINT8 signed __int8
-
-#define UINT16 unsigned __int16
-#define INT16 __int16
-
-#define INT32 __int32
-#define UINT32 unsigned __int32
-
-#define INT64  __int64
-#define UINT64 unsigned __int64
 
 typedef long ssize_t;
 
@@ -54,17 +44,6 @@ typedef long ssize_t;
 		#define PDWORD_PTR PDWORD
 	#endif
 #endif
-#elif defined (__DJGPP__)
-#define UINT8 unsigned char
-#define SINT8 signed char
-
-#define UINT16 unsigned short int
-#define INT16 signed short int
-
-#define INT32 signed long
-#define UINT32 unsigned long
-#define INT64  signed long long
-#define UINT64 unsigned long long
 #else
 #define __STDC_LIMIT_MACROS
 #include <stdint.h>
@@ -108,7 +87,7 @@ typedef long ssize_t;
 	#define strncasecmp             strnicmp
 	#define strcasecmp              strcmpi
 #endif
-#if (defined (__unix__) && !defined (MSDOS)) || defined(__APPLE__) || defined (UNIXCOMMON)
+#if defined (__unix__) || defined (__APPLE__) || defined (UNIXCOMMON)
 	#undef stricmp
 	#define stricmp(x,y) strcasecmp(x,y)
 	#undef strnicmp
@@ -117,6 +96,9 @@ typedef long ssize_t;
 
 char *strcasestr(const char *in, const char *what);
 #define stristr strcasestr
+
+int startswith (const char *base, const char *tag);
+int endswith (const char *base, const char *tag);
 
 #if defined (macintosh) //|| defined (__APPLE__) //skip all boolean/Boolean crap
 	#define true 1
@@ -136,7 +118,7 @@ char *strcasestr(const char *in, const char *what);
 	#endif
 #endif //macintosh
 
-#if defined (PC_DOS) || defined (_WIN32) || defined (__HAIKU__)
+#if defined (_WIN32) || defined (__HAIKU__)
 #define HAVE_DOSSTR_FUNCS
 #endif
 
@@ -367,6 +349,8 @@ typedef UINT32 tic_t;
 #define UINT2RGBA(a) (UINT32)((a&0xff)<<24)|((a&0xff00)<<8)|((a&0xff0000)>>8)|(((UINT32)a&0xff000000)>>24)
 #endif
 
+#define TOSTR(x) #x
+
 /* preprocessor dumb and needs second macro to expand input */
 #define WSTRING2(s) L ## s
 #define WSTRING(s) WSTRING2 (s)
@@ -401,8 +385,6 @@ unset_bit_array (bitarray_t * const array, const int value)
 	array[value >> 3] &= ~(1<<(value & 7));
 }
 
-#ifdef HAVE_SDL
 typedef UINT64 precise_t;
-#endif
 
 #endif //__DOOMTYPE__

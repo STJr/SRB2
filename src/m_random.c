@@ -3,7 +3,7 @@
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
 // Copyright (C) 2012-2016 by Matthew "Kaito Sinclaire" Walsh.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -14,12 +14,11 @@
 
 #include "doomdef.h"
 #include "doomtype.h"
-#include "doomstat.h" // totalplaytime
 
 #include "m_random.h"
 #include "m_fixed.h"
 
-
+#include "m_cond.h" // totalplaytime
 
 // ---------------------------
 // RNG functions (not synched)
@@ -60,7 +59,7 @@ UINT8 M_RandomByte(void)
   */
 INT32 M_RandomKey(INT32 a)
 {
-	return (INT32)((rand()/((unsigned)RAND_MAX+1.0f))*a);
+	return (INT32)((rand()/((float)RAND_MAX+1.0f))*a);
 }
 
 /** Provides a random integer in a given range.
@@ -73,7 +72,7 @@ INT32 M_RandomKey(INT32 a)
   */
 INT32 M_RandomRange(INT32 a, INT32 b)
 {
-	return (INT32)((rand()/((unsigned)RAND_MAX+1.0f))*(b-a+1))+a;
+	return (INT32)((rand()/((float)RAND_MAX+1.0f))*(b-a+1))+a;
 }
 
 
@@ -252,5 +251,5 @@ void P_SetRandSeedD(const char *rfile, INT32 rline, UINT32 seed)
   */
 UINT32 M_RandomizedSeed(void)
 {
-	return ((totalplaytime & 0xFFFF) << 16)|M_RandomFixed();
+	return ((serverGamedata->totalplaytime & 0xFFFF) << 16) | M_RandomFixed();
 }
