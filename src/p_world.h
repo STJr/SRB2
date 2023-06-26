@@ -26,10 +26,9 @@
 #define NUMWAYPOINTSEQUENCES 256
 
 //
-// Lactozilla: A "world" is the environment that players interact with.
-// A "map" is what defines how the world is built (what you edit in a level editor.)
-// And you could say that a "level" both describes metadata about that "map" (level headers), and contains a world.
-// (This is my terminology anyway, "map" and "level" are usually interchangeable.)
+// A "world" is the environment that players interact with
+// A "map" is what defines how the world is built (what you edit in a level editor)
+// And a "level" both describes metadata (level headers), and contains many worlds
 //
 typedef struct
 {
@@ -47,6 +46,9 @@ typedef struct
 	line_t *lines;
 	side_t *sides;
 	mapthing_t *mapthings;
+
+	extrasubsector_t *extrasubsectors;
+	size_t numextrasubsectors;
 
 	sector_t *spawnsectors;
 	line_t *spawnlines;
@@ -126,6 +128,8 @@ typedef struct
 	void **interpolated_mobjs;
 	size_t interpolated_mobjs_len;
 	size_t interpolated_mobjs_capacity;
+
+	boolean interpolated_level_this_frame;
 } world_t;
 
 extern world_t *world;

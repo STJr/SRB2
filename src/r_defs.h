@@ -714,6 +714,35 @@ typedef struct
 	UINT16 children[2];
 } node_t;
 
+// a vertex of a Doom 'plane' polygon
+typedef struct
+{
+	float x;
+	float y;
+	float z;
+} polyvertex_t;
+
+#ifdef _MSC_VER
+#pragma warning(disable :  4200)
+#endif
+
+// a convex 'plane' polygon, clockwise order
+typedef struct
+{
+	INT32 numpts;
+	polyvertex_t pts[0];
+} poly_t;
+
+#ifdef _MSC_VER
+#pragma warning(default :  4200)
+#endif
+
+// holds extra info for 3D render, for each subsector in subsectors[]
+typedef struct
+{
+	poly_t *planepoly;  // the generated convex polygon
+} extrasubsector_t;
+
 #if defined(_MSC_VER)
 #pragma pack(1)
 #endif

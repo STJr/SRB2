@@ -556,6 +556,8 @@ void R_ClearLevelInterpolatorState(thinker_t *thinker)
 void R_ApplyLevelInterpolators(void *wptr, fixed_t frac)
 {
 	world_t *w = (world_t *)wptr;
+	if (w->interpolated_level_this_frame)
+		return;
 
 	size_t i, ii;
 
@@ -608,6 +610,8 @@ void R_ApplyLevelInterpolators(void *wptr, fixed_t frac)
 			break;
 		}
 	}
+
+	w->interpolated_level_this_frame = true;
 }
 
 static void R_RestoreLevelInterpolatorsForWorld(world_t *w)
@@ -753,17 +757,24 @@ void R_InitMobjInterpolators(void)
 	world->interpolated_mobjs_capacity = 0;
 }
 
-void R_UpdateMobjInterpolators(void)
+void R_UpdateMobjInterpolators(void *wptr)
+{
+	world_t *w = (world_t *)wptr;
+
+	for (size_t i = 0; i < w->interpolated_mobjs_len; i++)
+	{
+		mobj_t *mobj = w->interpolated_mobjs[i];
+		if (!P_MobjWasRemoved(mobj))
+			R_ResetMobjInterpolationState(mobj);
+	}
+}
+
+void R_UpdateAllMobjInterpolators(void)
 {
 	for (INT32 wi = 0; wi < numworlds; wi++)
 	{
 		world_t *w = worldlist[wi];
-		for (size_t i = 0; i < w->interpolated_mobjs_len; i++)
-		{
-			mobj_t *mobj = w->interpolated_mobjs[i];
-			if (!P_MobjWasRemoved(mobj))
-				R_ResetMobjInterpolationState(mobj);
-		}
+		R_UpdateMobjInterpolators(w);
 	}
 }
 

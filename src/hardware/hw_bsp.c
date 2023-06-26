@@ -23,17 +23,15 @@
 #include "../i_video.h"
 #include "../w_wad.h"
 #include "../p_setup.h" // levelfadecol
+#include "../p_world.h"
 
 // --------------------------------------------------------------------------
 // This is global data for planes rendering
 // --------------------------------------------------------------------------
 
-extrasubsector_t *extrasubsectors = NULL;
-
 // newsubsectors are subsectors without segs, added for the plane polygons
 #define NEWSUBSECTORS 50
 static size_t totsubsectors;
-size_t addsubsector;
 
 typedef struct
 {
@@ -45,120 +43,23 @@ typedef struct
 //                                    FLOOR & CEILING CONVEX POLYS GENERATION
 // ==========================================================================
 
-//debug counters
-static INT32 nobackpoly = 0;
-static INT32 skipcut = 0;
-static INT32 totalsubsecpolys = 0;
-
-// --------------------------------------------------------------------------
-// Polygon fast alloc / free
-// --------------------------------------------------------------------------
-//hurdler: quick fix for those who wants to play with larger wad
-
-#define ZPLANALLOC
-#ifndef ZPLANALLOC
-//#define POLYPOOLSIZE 1024000 // may be much over what is needed
-/// \todo check out how much is used
-static size_t POLYPOOLSIZE = 1024000;
-
-static UINT8 *gl_polypool = NULL;
-static UINT8 *gl_ppcurrent;
-static size_t gl_ppfree;
-#endif
-
-// only between levels, clear poly pool
-static void HWR_ClearPolys(void)
-{
-#ifndef ZPLANALLOC
-	gl_ppcurrent = gl_polypool;
-	gl_ppfree = POLYPOOLSIZE;
-#endif
-}
-
-// allocate  pool for fast alloc of polys
-void HWR_InitPolyPool(void)
-{
-#ifndef ZPLANALLOC
-	INT32 pnum;
-
-	//hurdler: quick fix for those who wants to play with larger wad
-	if ((pnum = M_CheckParm("-polypoolsize")))
-		POLYPOOLSIZE = atoi(myargv[pnum+1])*1024; // (in kb)
-
-	CONS_Debug(DBG_RENDER, "HWR_InitPolyPool(): allocating %d bytes\n", POLYPOOLSIZE);
-	gl_polypool = malloc(POLYPOOLSIZE);
-	if (!gl_polypool)
-		I_Error("HWR_InitPolyPool(): couldn't malloc polypool\n");
-	HWR_ClearPolys();
-#endif
-}
-
-void HWR_FreePolyPool(void)
-{
-#ifndef ZPLANALLOC
-	if (gl_polypool)
-		free(gl_polypool);
-	gl_polypool = NULL;
-#endif
-}
-
 static poly_t *HWR_AllocPoly(INT32 numpts)
 {
-	poly_t *p;
 	size_t size = sizeof (poly_t) + sizeof (polyvertex_t) * numpts;
-#ifdef ZPLANALLOC
-	p = Z_Malloc(size, PU_HWRPLANE, NULL);
-#else
-#ifdef PARANOIA
-	if (!gl_polypool)
-		I_Error("Used gl_polypool without init!\n");
-	if (!gl_ppcurrent)
-		I_Error("gl_ppcurrent == NULL!\n");
-#endif
-
-	if (gl_ppfree < size)
-		I_Error("HWR_AllocPoly(): no more memory %u bytes left, %u bytes needed\n\n%s\n",
-		        gl_ppfree, size, "You can try the param -polypoolsize 2048 (or higher if needed)");
-
-	p = (poly_t *)gl_ppcurrent;
-	gl_ppcurrent += size;
-	gl_ppfree -= size;
-#endif
+	poly_t *p = Z_Malloc(size, PU_HWRPLANE, NULL);
 	p->numpts = numpts;
 	return p;
 }
 
 static polyvertex_t *HWR_AllocVertex(void)
 {
-	polyvertex_t *p;
-	size_t size = sizeof (polyvertex_t);
-#ifdef ZPLANALLOC
-	p = Z_Malloc(size, PU_HWRPLANE, NULL);
-#else
-	if (gl_ppfree < size)
-		I_Error("HWR_AllocVertex(): no more memory %u bytes left, %u bytes needed\n\n%s\n",
-		        gl_ppfree, size, "You can try the param -polypoolsize 2048 (or higher if needed)");
-
-	p = (polyvertex_t *)gl_ppcurrent;
-	gl_ppcurrent += size;
-	gl_ppfree -= size;
-#endif
-	return p;
+	return Z_Malloc(sizeof (polyvertex_t), PU_HWRPLANE, NULL);
 }
 
-/// \todo polygons should be freed in reverse order for efficiency,
-/// for now don't free because it doesn't free in reverse order
 static void HWR_FreePoly(poly_t *poly)
 {
-#ifdef ZPLANALLOC
 	Z_Free(poly);
-#else
-	const size_t size = sizeof (poly_t) + sizeof (polyvertex_t) * poly->numpts;
-	memset(poly, 0x00, size);
-	//mempoly -= polysize;
-#endif
 }
-
 
 // Return interception along bsp line,
 // with the polygon segment
@@ -532,9 +433,6 @@ static poly_t *CutOutSubsecPoly(seg_t *lseg, INT32 count, poly_t *poly)
 			// only when the cut is not needed it seems (when the cut
 			// line is aligned to one of the borders of the poly, and
 			// only some times..)
-			else
-				skipcut++;
-			//    I_Error("CutOutPoly: only one point for split line (%d %d) %d", ps, pe, debugpos);
 		}
 	}
 	return poly;
@@ -551,16 +449,15 @@ static inline void HWR_SubsecPoly(INT32 num, poly_t *poly)
 	subsector_t *sub;
 	seg_t *lseg;
 
-	sub = &subsectors[num];
+	sub = &world->subsectors[num];
 	count = sub->numlines;
-	lseg = &segs[sub->firstline];
+	lseg = &world->segs[sub->firstline];
 
 	if (poly)
 	{
 		poly = CutOutSubsecPoly (lseg,count,poly);
-		totalsubsecpolys++;
 		//extra data for this subsector
-		extrasubsectors[num].planepoly = poly;
+		world->extrasubsectors[num].planepoly = poly;
 	}
 }
 
@@ -627,13 +524,13 @@ static void WalkBSPNode(INT32 bspnum, poly_t *poly, UINT16 *leafnode, fixed_t *b
 			if (poly && poly->numpts > 2)
 			{
 				CONS_Debug(DBG_RENDER, "Adding a new subsector\n");
-				if (addsubsector == numsubsectors + NEWSUBSECTORS)
+				if (world->numextrasubsectors == numsubsectors + NEWSUBSECTORS)
 					I_Error("WalkBSPNode: not enough addsubsectors\n");
-				else if (addsubsector > 0x7fff)
+				else if (world->numextrasubsectors > 0x7fff)
 					I_Error("WalkBSPNode: addsubsector > 0x7fff\n");
-				*leafnode = (UINT16)((UINT16)addsubsector | NF_SUBSECTOR);
-				extrasubsectors[addsubsector].planepoly = poly;
-				addsubsector++;
+				*leafnode = (UINT16)((UINT16)world->numextrasubsectors | NF_SUBSECTOR);
+				world->extrasubsectors[world->numextrasubsectors].planepoly = poly;
+				world->numextrasubsectors++;
 			}
 
 			//add subsectors without segs here?
@@ -653,7 +550,7 @@ static void WalkBSPNode(INT32 bspnum, poly_t *poly, UINT16 *leafnode, fixed_t *b
 #endif
 		}
 		M_ClearBox(bbox);
-		poly = extrasubsectors[bspnum & ~NF_SUBSECTOR].planepoly;
+		poly = world->extrasubsectors[bspnum & ~NF_SUBSECTOR].planepoly;
 
 		for (i = 0, pt = poly->pts; i < poly->numpts; i++,pt++)
 			M_AddToBox(bbox, FLOAT_TO_FIXED(pt->x), FLOAT_TO_FIXED(pt->y));
@@ -665,10 +562,6 @@ static void WalkBSPNode(INT32 bspnum, poly_t *poly, UINT16 *leafnode, fixed_t *b
 	SearchDivline(bsp, &fdivline);
 	SplitPoly(&fdivline, poly, &frontpoly, &backpoly);
 	poly = NULL;
-
-	//debug
-	if (!backpoly)
-		nobackpoly++;
 
 	// Recursively divide front space.
 	if (frontpoly)
@@ -696,11 +589,10 @@ static void WalkBSPNode(INT32 bspnum, poly_t *poly, UINT16 *leafnode, fixed_t *b
 }
 
 // FIXME: use Z_Malloc() STATIC ?
-void HWR_FreeExtraSubsectors(void)
+void HWR_FreeExtraSubsectors(extrasubsector_t *sub)
 {
-	if (extrasubsectors)
-		free(extrasubsectors);
-	extrasubsectors = NULL;
+	if (sub)
+		free(sub);
 }
 
 #define MAXDIST 1.5f
@@ -774,7 +666,7 @@ static void SearchSegInBSP(INT32 bspnum,polyvertex_t *p,poly_t *poly)
 		if (bspnum != -1)
 		{
 			bspnum &= ~NF_SUBSECTOR;
-			q = extrasubsectors[bspnum].planepoly;
+			q = world->extrasubsectors[bspnum].planepoly;
 			if (poly == q || !q)
 				return;
 			for (j = 0; j < q->numpts; j++)
@@ -795,7 +687,7 @@ static void SearchSegInBSP(INT32 bspnum,polyvertex_t *p,poly_t *poly)
 					for (n = k+1; n < newpoly->numpts; n++)
 						newpoly->pts[n] = q->pts[n-1];
 					numsplitpoly++;
-					extrasubsectors[bspnum].planepoly =
+					world->extrasubsectors[bspnum].planepoly =
 						newpoly;
 					HWR_FreePoly(q);
 					return;
@@ -840,9 +732,9 @@ static INT32 SolveTProblem(void)
 
 	numsplitpoly = 0;
 
-	for (l = 0; l < addsubsector; l++)
+	for (l = 0; l < world->numextrasubsectors; l++)
 	{
-		p = extrasubsectors[l].planepoly;
+		p = world->extrasubsectors[l].planepoly;
 		if (p)
 			for (i = 0; i < p->numpts; i++)
 				SearchSegInBSP((INT32)numnodes-1, &p->pts[i], p);
@@ -870,9 +762,9 @@ static void AdjustSegs(void)
 
 	for (i = 0; i < numsubsectors; i++)
 	{
-		count = subsectors[i].numlines;
-		lseg = &segs[subsectors[i].firstline];
-		p = extrasubsectors[i].planepoly;
+		count = world->subsectors[i].numlines;
+		lseg = &world->segs[world->subsectors[i].firstline];
+		p = world->extrasubsectors[i].planepoly;
 		//if (!p)
 			//continue;
 		for (; count--; lseg++)
@@ -955,40 +847,28 @@ void HWR_CreatePlanePolygons(INT32 bspnum)
 {
 	poly_t *rootp;
 	polyvertex_t *rootpv;
-	size_t i;
 	fixed_t rootbbox[4];
 
 	CONS_Debug(DBG_RENDER, "Creating polygons, please wait...\n");
+
 #ifdef HWR_LOADING_SCREEN
 	ls_count = ls_percent = 0; // reset the loading status
 	CON_Drawer(); //let the user know what we are doing
 	I_FinishUpdate(); // page flip or blit buffer
 #endif
 
-	HWR_ClearPolys();
-
 	// find min/max boundaries of map
-	//CONS_Debug(DBG_RENDER, "Looking for boundaries of map...\n");
 	M_ClearBox(rootbbox);
-	for (i = 0;i < numvertexes; i++)
-		M_AddToBox(rootbbox, vertexes[i].x, vertexes[i].y);
+	for (size_t i = 0; i < world->numvertexes; i++)
+		M_AddToBox(rootbbox, world->vertexes[i].x, world->vertexes[i].y);
 
-	//CONS_Debug(DBG_RENDER, "Generating subsector polygons... %d subsectors\n", numsubsectors);
-
-	HWR_FreeExtraSubsectors();
 	// allocate extra data for each subsector present in map
-	totsubsectors = numsubsectors + NEWSUBSECTORS;
-	extrasubsectors = calloc(totsubsectors, sizeof (*extrasubsectors));
-	if (extrasubsectors == NULL)
+	totsubsectors = world->numsubsectors + NEWSUBSECTORS;
+	world->extrasubsectors = calloc(totsubsectors, sizeof (*world->extrasubsectors));
+	if (world->extrasubsectors == NULL)
 		I_Error("couldn't malloc extrasubsectors totsubsectors %s\n", sizeu1(totsubsectors));
 
-	// allocate table for back to front drawing of subsectors
-	/*gl_drawsubsectors = (INT16 *)malloc(sizeof (*gl_drawsubsectors) * totsubsectors);
-	if (!gl_drawsubsectors)
-		I_Error("couldn't malloc gl_drawsubsectors\n");*/
-
-	// number of the first new subsector that might be added
-	addsubsector = numsubsectors;
+	world->numextrasubsectors = world->numsubsectors; // number of the first new subsector that might be added
 
 	// construct the initial convex poly that encloses the full map
 	rootp = HWR_AllocPoly(4);
@@ -1007,20 +887,10 @@ void HWR_CreatePlanePolygons(INT32 bspnum)
 	rootpv->y = FIXED_TO_FLOAT(rootbbox[BOXBOTTOM]);  //ll
 	rootpv++;
 
-	WalkBSPNode(bspnum, rootp, NULL,rootbbox);
+	WalkBSPNode(bspnum, rootp, NULL, rootbbox);
 
-	i = SolveTProblem();
-	//CONS_Debug(DBG_RENDER, "%d point divides a polygon line\n",i);
+	SolveTProblem();
 	AdjustSegs();
-
-	//debug debug..
-	//if (nobackpoly)
-	//    CONS_Debug(DBG_RENDER, "no back polygon %u times\n",nobackpoly);
-	//"(should happen only with the deep water trick)"
-	//if (skipcut)
-	//    CONS_Debug(DBG_RENDER, "%u cuts were skipped because of only one point\n",skipcut);
-
-	//CONS_Debug(DBG_RENDER, "done: %u total subsector convex polygons\n", totalsubsecpolys);
 }
 
 #endif //HWRENDER

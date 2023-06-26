@@ -28,35 +28,6 @@
 // structures
 // -----------
 
-// a vertex of a Doom 'plane' polygon
-typedef struct
-{
-	float x;
-	float y;
-	float z;
-} polyvertex_t;
-
-#ifdef _MSC_VER
-#pragma warning(disable :  4200)
-#endif
-
-// a convex 'plane' polygon, clockwise order
-typedef struct
-{
-	INT32 numpts;
-	polyvertex_t pts[0];
-} poly_t;
-
-#ifdef _MSC_VER
-#pragma warning(default :  4200)
-#endif
-
-// holds extra info for 3D render, for each subsector in subsectors[]
-typedef struct
-{
-	poly_t *planepoly;  // the generated convex polygon
-} extrasubsector_t;
-
 // needed for sprite rendering
 // equivalent of the software renderer's vissprites
 typedef struct gl_vissprite_s
@@ -97,13 +68,7 @@ typedef struct gl_vissprite_s
 // --------
 // hw_bsp.c
 // --------
-extern extrasubsector_t *extrasubsectors;
-extern size_t addsubsector;
-
-void HWR_InitPolyPool(void);
-void HWR_FreePolyPool(void);
-
-void HWR_FreeExtraSubsectors(void);
+void HWR_FreeExtraSubsectors(extrasubsector_t *sub);
 
 // --------
 // hw_cache.c

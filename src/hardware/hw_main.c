@@ -50,7 +50,6 @@
 
 #define R_FAKEFLOORS
 #define HWPRECIP
-//#define POLYSKY
 
 // ==========================================================================
 // the hardware driver object
@@ -101,10 +100,6 @@ static angle_t gl_xtoviewangle[MAXVIDWIDTH+1];
 // uncomment to remove the plane rendering
 #define DOPLANES
 //#define DOWALLS
-
-// test of drawing sky by polygons like in software with visplane, unfortunately
-// this doesn't work since we must have z for pixel and z for texture (not like now with z = oow)
-//#define POLYSKY
 
 // test change fov when looking up/down but bsp projection messup :(
 //#define NOCRAPPYMLOOK
@@ -639,51 +634,6 @@ static void HWR_RenderPlane(subsector_t *subsector, extrasubsector_t *xsub, bool
 	HWR_PlaneLighting(planeVerts, nrPlaneVerts);
 #endif
 }
-
-#ifdef POLYSKY
-// this don't draw anything it only update the z-buffer so there isn't problem with
-// wall/things upper that sky (map12)
-static void HWR_RenderSkyPlane(extrasubsector_t *xsub, fixed_t fixedheight)
-{
-	polyvertex_t *pv;
-	float height; //constant y for all points on the convex flat polygon
-	FOutVector *v3d;
-	INT32 nrPlaneVerts;   //verts original define of convex flat polygon
-	INT32 i;
-
-	// no convex poly were generated for this subsector
-	if (!xsub->planepoly)
-		return;
-
-	height = FIXED_TO_FLOAT(fixedheight);
-
-	pv  = xsub->planepoly->pts;
-	nrPlaneVerts = xsub->planepoly->numpts;
-
-	if (nrPlaneVerts < 3) // not even a triangle?
-		return;
-
-	if (nrPlaneVerts > MAXPLANEVERTICES) // FIXME: exceeds plVerts size
-	{
-		CONS_Debug(DBG_RENDER, "polygon size of %d exceeds max value of %d vertices\n", nrPlaneVerts, MAXPLANEVERTICES);
-		return;
-	}
-
-	// transform
-	v3d = planeVerts;
-	for (i = 0; i < nrPlaneVerts; i++,v3d++,pv++)
-	{
-		v3d->s = 0.0f;
-		v3d->t = 0.0f;
-		v3d->x = pv->x;
-		v3d->y = height;
-		v3d->z = pv->y;
-	}
-
-	HWD.pfnDrawPolygon(NULL, planeVerts, nrPlaneVerts, PF_Invisible|PF_NoTexture|PF_Occlude);
-}
-#endif //polysky
-
 #endif //doplanes
 
 FBITFIELD HWR_GetBlendModeFlag(INT32 style)
@@ -2903,14 +2853,9 @@ static void HWR_Subsector(size_t num)
 	ffloor_t *rover;
 
 #ifdef PARANOIA //no risk while developing, enough debugging nights!
-	if (num >= addsubsector)
+	if (num >= world->numextrasubsectors)
 		I_Error("HWR_Subsector: ss %s with numss = %s, addss = %s\n",
-			sizeu1(num), sizeu2(numsubsectors), sizeu3(addsubsector));
-
-	/*if (num >= numsubsectors)
-		I_Error("HWR_Subsector: ss %i with numss = %i",
-		        num,
-		        numsubsectors);*/
+			sizeu1(num), sizeu2(numsubsectors), sizeu3(world->numextrasubsectors));
 #endif
 
 	if (num < numsubsectors)
@@ -3005,18 +2950,12 @@ static void HWR_Subsector(size_t num)
 			if (sub->validcount != validcount)
 			{
 				HWR_GetLevelFlat(&viewworld->flats[gl_frontsector->floorpic]);
-				HWR_RenderPlane(sub, &extrasubsectors[num], false,
+				HWR_RenderPlane(sub, &world->extrasubsectors[num], false,
 					// Hack to make things continue to work around slopes.
 					locFloorHeight == cullFloorHeight ? locFloorHeight : gl_frontsector->floorheight,
 					// We now return you to your regularly scheduled rendering.
 					PF_Occlude, floorlightlevel, &viewworld->flats[gl_frontsector->floorpic], NULL, 255, floorcolormap);
 			}
-		}
-		else
-		{
-#ifdef POLYSKY
-			HWR_RenderSkyPlane(&extrasubsectors[num], locFloorHeight);
-#endif
 		}
 	}
 
@@ -3027,26 +2966,18 @@ static void HWR_Subsector(size_t num)
 			if (sub->validcount != validcount)
 			{
 				HWR_GetLevelFlat(&viewworld->flats[gl_frontsector->ceilingpic]);
-				HWR_RenderPlane(sub, &extrasubsectors[num], true,
+				HWR_RenderPlane(sub, &world->extrasubsectors[num], true,
 					// Hack to make things continue to work around slopes.
 					locCeilingHeight == cullCeilingHeight ? locCeilingHeight : gl_frontsector->ceilingheight,
 					// We now return you to your regularly scheduled rendering.
 					PF_Occlude, ceilinglightlevel, &viewworld->flats[gl_frontsector->ceilingpic], NULL, 255, ceilingcolormap);
 			}
 		}
-		else
-		{
-#ifdef POLYSKY
-			HWR_RenderSkyPlane(&extrasubsectors[num], locCeilingHeight);
-#endif
-		}
 	}
 
-#ifndef POLYSKY
 	// Moved here because before, when above the ceiling and the floor does not have the sky flat, it doesn't draw the sky
 	if (gl_frontsector->ceilingpic == viewworld->skyflatnum || gl_frontsector->floorpic == viewworld->skyflatnum)
 		drawsky = true;
-#endif
 
 #ifdef R_FAKEFLOORS
 	if (gl_frontsector->ffloors)
@@ -3078,9 +3009,9 @@ static void HWR_Subsector(size_t num)
 					light = R_GetPlaneLight(gl_frontsector, centerHeight, dup_viewz < cullHeight ? true : false);
 					alpha = HWR_FogBlockAlpha(*gl_frontsector->lightlist[light].lightlevel, rover->master->frontsector->extra_colormap);
 
-					HWR_AddTransparentFloor(0,
-					                       &extrasubsectors[num],
-										   false,
+					HWR_AddTransparentFloor(NULL,
+					                       &world->extrasubsectors[num],
+					                       false,
 					                       *rover->bottomheight,
 					                       *gl_frontsector->lightlist[light].lightlevel,
 					                       alpha, rover->master->frontsector, PF_Fog|PF_NoTexture,
@@ -3090,9 +3021,9 @@ static void HWR_Subsector(size_t num)
 				{
 					light = R_GetPlaneLight(gl_frontsector, centerHeight, dup_viewz < cullHeight ? true : false);
 
-					HWR_AddTransparentFloor(&world->flats[*rover->bottompic],
-					                       &extrasubsectors[num],
-										   false,
+					HWR_AddTransparentFloor(&viewworld->flats[*rover->bottompic],
+					                       &world->extrasubsectors[num],
+					                       false,
 					                       *rover->bottomheight,
 					                       *gl_frontsector->lightlist[light].lightlevel,
 					                       rover->alpha-1 > 255 ? 255 : rover->alpha-1, rover->master->frontsector,
@@ -3101,9 +3032,9 @@ static void HWR_Subsector(size_t num)
 				}
 				else
 				{
-					HWR_GetLevelFlat(&world->flats[*rover->bottompic]);
+					HWR_GetLevelFlat(&viewworld->flats[*rover->bottompic]);
 					light = R_GetPlaneLight(gl_frontsector, centerHeight, dup_viewz < cullHeight ? true : false);
-					HWR_RenderPlane(sub, &extrasubsectors[num], false, *rover->bottomheight, HWR_RippleBlend(gl_frontsector, rover, false)|PF_Occlude, *gl_frontsector->lightlist[light].lightlevel, &world->flats[*rover->bottompic],
+					HWR_RenderPlane(sub, &world->extrasubsectors[num], false, *rover->bottomheight, HWR_RippleBlend(gl_frontsector, rover, false)|PF_Occlude, *gl_frontsector->lightlist[light].lightlevel, &viewworld->flats[*rover->bottompic],
 					                rover->master->frontsector, 255, *gl_frontsector->lightlist[light].extra_colormap);
 				}
 			}
@@ -3124,21 +3055,21 @@ static void HWR_Subsector(size_t num)
 					light = R_GetPlaneLight(gl_frontsector, centerHeight, dup_viewz < cullHeight ? true : false);
 					alpha = HWR_FogBlockAlpha(*gl_frontsector->lightlist[light].lightlevel, rover->master->frontsector->extra_colormap);
 
-					HWR_AddTransparentFloor(0,
-					                       &extrasubsectors[num],
-										   true,
+					HWR_AddTransparentFloor(NULL,
+					                       &world->extrasubsectors[num],
+					                       true,
 					                       *rover->topheight,
 					                       *gl_frontsector->lightlist[light].lightlevel,
 					                       alpha, rover->master->frontsector, PF_Fog|PF_NoTexture,
-										   true, rover->master->frontsector->extra_colormap);
+					                       true, rover->master->frontsector->extra_colormap);
 				}
 				else if ((rover->fofflags & FOF_TRANSLUCENT && !(rover->fofflags & FOF_SPLAT)) || rover->blend)
 				{
 					light = R_GetPlaneLight(gl_frontsector, centerHeight, dup_viewz < cullHeight ? true : false);
 
-					HWR_AddTransparentFloor(&world->flats[*rover->toppic],
-					                        &extrasubsectors[num],
-											true,
+					HWR_AddTransparentFloor(&viewworld->flats[*rover->toppic],
+					                        &world->extrasubsectors[num],
+					                        true,
 					                        *rover->topheight,
 					                        *gl_frontsector->lightlist[light].lightlevel,
 					                        rover->alpha-1 > 255 ? 255 : rover->alpha-1, rover->master->frontsector,
@@ -3147,9 +3078,9 @@ static void HWR_Subsector(size_t num)
 				}
 				else
 				{
-					HWR_GetLevelFlat(&world->flats[*rover->toppic]);
+					HWR_GetLevelFlat(&viewworld->flats[*rover->toppic]);
 					light = R_GetPlaneLight(gl_frontsector, centerHeight, dup_viewz < cullHeight ? true : false);
-					HWR_RenderPlane(sub, &extrasubsectors[num], true, *rover->topheight, HWR_RippleBlend(gl_frontsector, rover, false)|PF_Occlude, *gl_frontsector->lightlist[light].lightlevel, &world->flats[*rover->toppic],
+					HWR_RenderPlane(sub, &world->extrasubsectors[num], true, *rover->topheight, HWR_RippleBlend(gl_frontsector, rover, false)|PF_Occlude, *gl_frontsector->lightlist[light].lightlevel, &viewworld->flats[*rover->toppic],
 					                  rover->master->frontsector, 255, *gl_frontsector->lightlist[light].extra_colormap);
 				}
 			}
@@ -3249,33 +3180,6 @@ fixed_t *hwbbox;
 
 static void HWR_RenderBSPNode(INT32 bspnum)
 {
-	/*//GZDoom code
-	if(bspnum == -1)
-	{
-		HWR_Subsector(subsectors);
-		return;
-	}
-	while(!((size_t)bspnum&(~NF_SUBSECTOR))) // Keep going until found a subsector
-	{
-		node_t *bsp = &nodes[bspnum];
-
-		// Decide which side the view point is on
-		INT32 side = R_PointOnSide(dup_viewx, dup_viewy, bsp);
-
-		// Recursively divide front space (toward the viewer)
-		HWR_RenderBSPNode(bsp->children[side]);
-
-		// Possibly divide back space (away from viewer)
-		side ^= 1;
-
-		if (!HWR_CheckBBox(bsp->bbox[side]))
-			return;
-
-		bspnum = bsp->children[side];
-	}
-
-	HWR_Subsector(bspnum-1);
-*/
 	node_t *bsp = &nodes[bspnum];
 
 	// Decide which side the view point is on
@@ -3288,12 +3192,10 @@ static void HWR_RenderBSPNode(INT32 bspnum)
 	{
 		if (bspnum == -1)
 		{
-			//*(gl_drawsubsector_p++) = 0;
 			HWR_Subsector(0);
 		}
 		else
 		{
-			//*(gl_drawsubsector_p++) = bspnum&(~NF_SUBSECTOR);
 			HWR_Subsector(bspnum&(~NF_SUBSECTOR));
 		}
 		return;
@@ -3316,28 +3218,6 @@ static void HWR_RenderBSPNode(INT32 bspnum)
 		HWR_RenderBSPNode(bsp->children[side^1]);
 	}
 }
-
-/*
-//
-// Clear 'stack' of subsectors to draw
-//
-static void HWR_ClearDrawSubsectors(void)
-{
-	gl_drawsubsector_p = gl_drawsubsectors;
-}
-
-//
-// Draw subsectors pushed on the drawsubsectors 'stack', back to front
-//
-static void HWR_RenderSubsectors(void)
-{
-	while (gl_drawsubsector_p > gl_drawsubsectors)
-	{
-		HWR_RenderBSPNode(
-		lastsubsec->nextsubsec = bspnum & (~NF_SUBSECTOR);
-	}
-}
-*/
 
 // ==========================================================================
 //                                                              FROM R_MAIN.C
@@ -6189,7 +6069,7 @@ void HWR_RenderPlayerView(INT32 viewnumber, player_t *player)
 	const float fpov = FIXED_TO_FLOAT(cv_fov.value+player->fovadd);
 	postimg_t *type;
 
-	const boolean skybox = (world->skyboxmo[0] && cv_skybox.value); // True if there's a skybox object and skyboxes are on
+	const boolean skybox = viewworld->skyboxmo[0] && cv_skybox.value; // True if there's a skybox object and skyboxes are on
 
 	FRGBAFloat ClearColor;
 
@@ -6418,7 +6298,8 @@ void HWR_LoadLevel(void)
 	HWR_ResetLights();
 #endif
 
-	HWR_CreatePlanePolygons((INT32)numnodes - 1);
+	if (world->extrasubsectors == NULL)
+		HWR_CreatePlanePolygons((INT32)world->numnodes - 1);
 
 	// Build the sky dome
 	HWR_ClearSkyDome();
@@ -6537,7 +6418,6 @@ void HWR_Startup(void)
 	{
 		CONS_Printf("HWR_Startup()...\n");
 
-		HWR_InitPolyPool();
 		HWR_AddSessionCommands();
 		HWR_InitMapTextures();
 		HWR_InitModels();
@@ -6587,8 +6467,6 @@ void HWR_Switch(void)
 void HWR_Shutdown(void)
 {
 	CONS_Printf("HWR_Shutdown()\n");
-	HWR_FreeExtraSubsectors();
-	HWR_FreePolyPool();
 	HWR_FreeMapTextures();
 	HWD.pfnFlushScreenTextures();
 }

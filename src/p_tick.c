@@ -762,7 +762,7 @@ void P_Ticker(boolean run)
 		if (OP_FreezeObjectplace())
 		{
 			P_MapStart();
-			R_UpdateMobjInterpolators();
+			R_UpdateMobjInterpolators(world);
 			OP_ObjectplaceMovement(&players[0]);
 			P_MoveChaseCamera(&players[0], &camera, false);
 			R_UpdateViewInterpolation();
@@ -788,7 +788,7 @@ void P_Ticker(boolean run)
 
 	if (run)
 	{
-		R_UpdateMobjInterpolators();
+		R_UpdateMobjInterpolators(world);
 
 		if (demorecording)
 			G_WriteDemoTiccmd(&players[consoleplayer].cmd, 0);
@@ -962,8 +962,6 @@ void P_Ticker(boolean run)
 	}
 
 	P_MapEnd();
-
-//	Z_CheckMemCleanup();
 }
 
 // Abbreviated ticker for pre-loading, calls thinkers and assorted things
@@ -981,7 +979,7 @@ void P_PreTicker(INT32 frames)
 	{
 		P_MapStart();
 
-		R_UpdateMobjInterpolators();
+		R_UpdateMobjInterpolators(world);
 
 		RunLuaHookForWorld(HOOK(PreThinkFrame));
 

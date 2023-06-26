@@ -155,7 +155,8 @@ void R_InitMobjInterpolators(void);
 void R_AddMobjInterpolator(mobj_t *mobj);
 // Remove the interpolation state for the given mobj
 void R_RemoveMobjInterpolator(mobj_t *mobj);
-void R_UpdateMobjInterpolators(void);
+void R_UpdateMobjInterpolators(void *wptr);
+void R_UpdateAllMobjInterpolators(void);
 void R_ResetMobjInterpolationState(mobj_t *mobj);
 void R_ResetPrecipitationMobjInterpolationState(precipmobj_t *mobj);
 

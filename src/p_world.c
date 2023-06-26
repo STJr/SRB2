@@ -253,11 +253,6 @@ void P_SwitchWorld(player_t *player, world_t *w)
 	boolean local = ((INT32)playernum == consoleplayer);
 	boolean resetplayer = (player->powers[pw_carry] != CR_PLAYER);
 
-#if 0
-	if (w == player->world)
-		return;
-#endif
-
 	if (!playeringame[playernum] || !player->mo || P_MobjWasRemoved(player->mo))
 		return;
 
@@ -303,6 +298,11 @@ void P_SwitchWorld(player_t *player, world_t *w)
 	if (resetplayer)
 		P_ResetPlayer(player);
 	P_MapEnd();
+
+#ifdef HWRENDER
+	if (rendermode == render_opengl)
+		HWR_LoadLevel();
+#endif
 }
 
 void Command_Switchworld_f(void)
@@ -367,6 +367,12 @@ void P_UnloadWorld(world_t *w)
 
 	LUA_InvalidateLevel(w);
 	P_UnloadSectorAttachments(w->sectors, w->numsectors);
+
+	if (world->extrasubsectors)
+	{
+		HWR_FreeExtraSubsectors(world->extrasubsectors);
+		world->extrasubsectors = NULL;
+	}
 }
 
 //

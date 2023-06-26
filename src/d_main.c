@@ -298,6 +298,31 @@ gamestate_t wipegamestate = GS_LEVEL;
 INT16 wipetypepre = -1;
 INT16 wipetypepost = -1;
 
+static void D_RenderView(UINT32 viewnum)
+{
+	player_t *player = viewnum == 1 ? &players[secondarydisplayplayer] : &players[displayplayer];
+
+	R_PrepareViewWorld(player);
+
+	if (viewworld == NULL)
+		return;
+
+	R_ApplyLevelInterpolators(viewworld, R_UsingFrameInterpolation() ? rendertimefrac : FRACUNIT);
+
+	if (player->mo || player->playerstate == PST_DEAD)
+	{
+		R_SetViewNum(viewnum);
+
+#ifdef HWRENDER
+		if (rendermode != render_soft)
+			HWR_RenderPlayerView(viewnum, player);
+		else
+#endif
+		if (rendermode != render_none)
+			R_RenderPlayerView(player);
+	}
+}
+
 static void D_Display(void)
 {
 	boolean forcerefresh = false;
@@ -478,42 +503,17 @@ static void D_Display(void)
 
 			if (!automapactive && !dedicated && cv_renderview.value)
 			{
-				R_ApplyLevelInterpolators(players[displayplayer].world, R_UsingFrameInterpolation() ? rendertimefrac : FRACUNIT);
 				PS_START_TIMING(ps_rendercalltime);
-				if (players[displayplayer].mo || players[displayplayer].playerstate == PST_DEAD)
-				{
-					topleft = screens[0] + viewwindowy*vid.width + viewwindowx;
-					objectsdrawn = 0;
-	#ifdef HWRENDER
-					if (rendermode != render_soft)
-						HWR_RenderPlayerView(0, &players[displayplayer]);
-					else
-	#endif
-					if (rendermode != render_none)
-						R_RenderPlayerView(&players[displayplayer]);
-				}
+				objectsdrawn = 0;
+
+				D_RenderView(0);
 
 				// render the second screen
-				if (splitscreen && players[secondarydisplayplayer].mo)
-				{
-	#ifdef HWRENDER
-					if (rendermode != render_soft)
-						HWR_RenderPlayerView(1, &players[secondarydisplayplayer]);
-					else
-	#endif
-					if (rendermode != render_none)
-					{
-						viewwindowy = vid.height / 2;
-						M_Memcpy(ylookup, ylookup2, viewheight*sizeof (ylookup[0]));
+				if (splitscreen)
+					D_RenderView(1);
 
-						topleft = screens[0] + viewwindowy*vid.width + viewwindowx;
-
-						R_RenderPlayerView(&players[secondarydisplayplayer]);
-
-						viewwindowy = 0;
-						M_Memcpy(ylookup, ylookup1, viewheight*sizeof (ylookup[0]));
-					}
-				}
+				for (INT32 wi = 0; wi < numworlds; wi++)
+					worldlist[wi]->interpolated_level_this_frame = false;
 
 				// Image postprocessing effect
 				if (rendermode == render_soft)

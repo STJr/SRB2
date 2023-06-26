@@ -7853,9 +7853,6 @@ boolean P_LoadLevel(player_t *player, boolean addworld, boolean fromnetsave, boo
 #ifdef HWRENDER // not win32 only 19990829 by Kin
 	gl_maploaded = false;
 
-	// Lactozilla: Free extrasubsectors regardless of renderer.
-	HWR_FreeExtraSubsectors();
-
 	// Create plane polygons.
 	if (rendermode == render_opengl)
 		HWR_LoadLevel();
@@ -7941,7 +7938,7 @@ boolean P_LoadLevel(player_t *player, boolean addworld, boolean fromnetsave, boo
 
 	R_ResetViewInterpolation(0);
 	R_ResetViewInterpolation(0);
-	R_UpdateMobjInterpolators();
+	R_UpdateMobjInterpolators(world);
 
 	// Title card!
 	G_StartTitleCard();

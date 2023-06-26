@@ -1472,19 +1472,30 @@ static void Mask_Post (maskcount_t* m)
 	m->vissprites[1] = visspritecount;
 }
 
-// ================
-// R_RenderView
-// ================
+void R_SetViewNum(UINT32 viewnum)
+{
+	if (rendermode != render_soft)
+		return;
 
-//                     FAB NOTE FOR WIN32 PORT !! I'm not finished already,
-// but I suspect network may have problems with the video buffer being locked
-// for all duration of rendering, and being released only once at the end..
-// I mean, there is a win16lock() or something that lasts all the rendering,
-// so maybe we should release screen lock before each netupdate below..?
+	switch (viewnum)
+	{
+	case 0:
+		viewwindowy = 0;
+		M_Memcpy(ylookup, ylookup1, viewheight*sizeof (ylookup[0]));
+		break;
+	case 1:
+		viewwindowy = vid.height / 2;
+		M_Memcpy(ylookup, ylookup2, viewheight*sizeof (ylookup[0]));
+		break;
+	}
 
-void R_RenderPlayerView(player_t *player)
+	topleft = screens[0] + viewwindowy*vid.width + viewwindowx;
+}
+
+void R_PrepareViewWorld(player_t *player)
 {
 	viewworld = NULL;
+
 	R_SetViewMobj(player);
 
 	if (r_viewmobj)
@@ -1494,8 +1505,14 @@ void R_RenderPlayerView(player_t *player)
 	else if (localworld && !splitscreen) // Yes?
 		P_SetViewWorld(localworld);
 	else
-		return;
+		viewworld = worldlist[0];
+}
 
+// ================
+// R_RenderView
+// ================
+void R_RenderPlayerView(player_t *player)
+{
 	INT32			nummasks	= 1;
 	maskcount_t*	masks		= malloc(sizeof(maskcount_t));
 
