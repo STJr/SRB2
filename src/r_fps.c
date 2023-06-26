@@ -89,10 +89,6 @@ viewvars_t *newview = &p1view_new;
 
 enum viewcontext_e viewcontext = VIEWCONTEXT_PLAYER1;
 
-static levelinterpolator_t **levelinterpolators;
-static size_t levelinterpolators_len;
-static size_t levelinterpolators_size;
-
 
 static fixed_t R_LerpFixed(fixed_t from, fixed_t to, fixed_t frac)
 {
@@ -358,28 +354,28 @@ void R_InterpolatePrecipMobjState(precipmobj_t *mobj, fixed_t frac, interpmobjst
 
 static void AddInterpolator(levelinterpolator_t* interpolator)
 {
-	if (levelinterpolators_len >= levelinterpolators_size)
+	if (world->interpolators_len >= world->interpolators_size)
 	{
-		if (levelinterpolators_size == 0)
+		if (world->interpolators_size == 0)
 		{
-			levelinterpolators_size = 128;
+			world->interpolators_size = 128;
 		}
 		else
 		{
-			levelinterpolators_size *= 2;
+			world->interpolators_size *= 2;
 		}
 
-		levelinterpolators = Z_ReallocAlign(
-			(void*) levelinterpolators,
-			sizeof(levelinterpolator_t*) * levelinterpolators_size,
+		world->interpolators = Z_ReallocAlign(
+			(void*) world->interpolators,
+			sizeof(levelinterpolator_t*) * world->interpolators_size,
 			PU_LEVEL,
 			NULL,
 			sizeof(levelinterpolator_t*) * 8
 		);
 	}
 
-	levelinterpolators[levelinterpolators_len] = interpolator;
-	levelinterpolators_len += 1;
+	world->interpolators[world->interpolators_len] = interpolator;
+	world->interpolators_len += 1;
 }
 
 static levelinterpolator_t *CreateInterpolator(levelinterpolator_type_e type, thinker_t *thinker)
@@ -473,9 +469,9 @@ void R_CreateInterpolator_DynSlope(thinker_t *thinker, pslope_t *slope)
 
 void R_InitializeLevelInterpolators(void)
 {
-	levelinterpolators_len = 0;
-	levelinterpolators_size = 0;
-	levelinterpolators = NULL;
+	world->interpolators_len = 0;
+	world->interpolators_size = 0;
+	world->interpolators = NULL;
 }
 
 static void UpdateLevelInterpolatorState(levelinterpolator_t *interp)
@@ -527,13 +523,16 @@ static void UpdateLevelInterpolatorState(levelinterpolator_t *interp)
 
 void R_UpdateLevelInterpolators(void)
 {
-	size_t i;
-
-	for (i = 0; i < levelinterpolators_len; i++)
+	for (INT32 i = 0; i < numworlds; i++)
 	{
-		levelinterpolator_t *interp = levelinterpolators[i];
+		world_t *w = worldlist[i];
 
-		UpdateLevelInterpolatorState(interp);
+		for (size_t j = 0; j < w->interpolators_len; j++)
+		{
+			levelinterpolator_t *interp = w->interpolators[j];
+
+			UpdateLevelInterpolatorState(interp);
+		}
 	}
 }
 
@@ -541,9 +540,9 @@ void R_ClearLevelInterpolatorState(thinker_t *thinker)
 {
 	size_t i;
 
-	for (i = 0; i < levelinterpolators_len; i++)
+	for (i = 0; i < world->interpolators_len; i++)
 	{
-		levelinterpolator_t *interp = levelinterpolators[i];
+		levelinterpolator_t *interp = world->interpolators[i];
 
 		if (interp->thinker == thinker)
 		{
@@ -554,13 +553,15 @@ void R_ClearLevelInterpolatorState(thinker_t *thinker)
 	}
 }
 
-void R_ApplyLevelInterpolators(fixed_t frac)
+void R_ApplyLevelInterpolators(void *wptr, fixed_t frac)
 {
+	world_t *w = (world_t *)wptr;
+
 	size_t i, ii;
 
-	for (i = 0; i < levelinterpolators_len; i++)
+	for (i = 0; i < w->interpolators_len; i++)
 	{
-		levelinterpolator_t *interp = levelinterpolators[i];
+		levelinterpolator_t *interp = (levelinterpolator_t*)w->interpolators[i];
 
 		switch (interp->type)
 		{
@@ -609,13 +610,13 @@ void R_ApplyLevelInterpolators(fixed_t frac)
 	}
 }
 
-void R_RestoreLevelInterpolators(void)
+static void R_RestoreLevelInterpolatorsForWorld(world_t *w)
 {
 	size_t i, ii;
 
-	for (i = 0; i < levelinterpolators_len; i++)
+	for (i = 0; i < w->interpolators_len; i++)
 	{
-		levelinterpolator_t *interp = levelinterpolators[i];
+		levelinterpolator_t *interp = w->interpolators[i];
 
 		switch (interp->type)
 		{
@@ -664,19 +665,28 @@ void R_RestoreLevelInterpolators(void)
 	}
 }
 
+void R_RestoreLevelInterpolators(void)
+{
+	for (INT32 wi = 0; wi < numworlds; wi++)
+	{
+		world_t *w = worldlist[wi];
+		R_RestoreLevelInterpolatorsForWorld(w);
+	}
+}
+
 void R_DestroyLevelInterpolators(thinker_t *thinker)
 {
 	size_t i;
 
-	for (i = 0; i < levelinterpolators_len; i++)
+	for (i = 0; i < world->interpolators_len; i++)
 	{
-		levelinterpolator_t *interp = levelinterpolators[i];
+		levelinterpolator_t *interp = world->interpolators[i];
 
 		if (interp->thinker == thinker)
 		{
 			// Swap the tail of the level interpolators to this spot
-			levelinterpolators[i] = levelinterpolators[levelinterpolators_len - 1];
-			levelinterpolators_len -= 1;
+			world->interpolators[i] = world->interpolators[world->interpolators_len - 1];
+			world->interpolators_len -= 1;
 
 			Z_Free(interp);
 			i -= 1;
@@ -684,36 +694,32 @@ void R_DestroyLevelInterpolators(thinker_t *thinker)
 	}
 }
 
-static mobj_t **interpolated_mobjs = NULL;
-static size_t interpolated_mobjs_len = 0;
-static size_t interpolated_mobjs_capacity = 0;
-
 // NOTE: This will NOT check that the mobj has already been added, for perf
 // reasons.
 void R_AddMobjInterpolator(mobj_t *mobj)
 {
-	if (interpolated_mobjs_len >= interpolated_mobjs_capacity)
+	if (world->interpolated_mobjs_len >= world->interpolated_mobjs_capacity)
 	{
-		if (interpolated_mobjs_capacity == 0)
+		if (world->interpolated_mobjs_capacity == 0)
 		{
-			interpolated_mobjs_capacity = 256;
+			world->interpolated_mobjs_capacity = 256;
 		}
 		else
 		{
-			interpolated_mobjs_capacity *= 2;
+			world->interpolated_mobjs_capacity *= 2;
 		}
 
-		interpolated_mobjs = Z_ReallocAlign(
-			interpolated_mobjs,
-			sizeof(mobj_t *) * interpolated_mobjs_capacity,
+		world->interpolated_mobjs = Z_ReallocAlign(
+			world->interpolated_mobjs,
+			sizeof(mobj_t *) * world->interpolated_mobjs_capacity,
 			PU_LEVEL,
 			NULL,
 			64
 		);
 	}
 
-	interpolated_mobjs[interpolated_mobjs_len] = mobj;
-	interpolated_mobjs_len += 1;
+	world->interpolated_mobjs[world->interpolated_mobjs_len] = mobj;
+	world->interpolated_mobjs_len++;
 
 	R_ResetMobjInterpolationState(mobj);
 	mobj->resetinterp = true;
@@ -723,16 +729,16 @@ void R_RemoveMobjInterpolator(mobj_t *mobj)
 {
 	size_t i;
 
-	if (interpolated_mobjs_len == 0) return;
+	if (world->interpolated_mobjs_len == 0) return;
 
-	for (i = 0; i < interpolated_mobjs_len; i++)
+	for (i = 0; i < world->interpolated_mobjs_len; i++)
 	{
-		if (interpolated_mobjs[i] == mobj)
+		if (world->interpolated_mobjs[i] == mobj)
 		{
-			interpolated_mobjs[i] = interpolated_mobjs[
-				interpolated_mobjs_len - 1
+			world->interpolated_mobjs[i] = world->interpolated_mobjs[
+				world->interpolated_mobjs_len - 1
 			];
-			interpolated_mobjs_len -= 1;
+			world->interpolated_mobjs_len--;
 			return;
 		}
 	}
@@ -741,20 +747,23 @@ void R_RemoveMobjInterpolator(mobj_t *mobj)
 void R_InitMobjInterpolators(void)
 {
 	// apparently it's not acceptable to free something already unallocated
-	// Z_Free(interpolated_mobjs);
-	interpolated_mobjs = NULL;
-	interpolated_mobjs_len = 0;
-	interpolated_mobjs_capacity = 0;
+	// Z_Free(world->interpolated_mobjs);
+	world->interpolated_mobjs = NULL;
+	world->interpolated_mobjs_len = 0;
+	world->interpolated_mobjs_capacity = 0;
 }
 
 void R_UpdateMobjInterpolators(void)
 {
-	size_t i;
-	for (i = 0; i < interpolated_mobjs_len; i++)
+	for (INT32 wi = 0; wi < numworlds; wi++)
 	{
-		mobj_t *mobj = interpolated_mobjs[i];
-		if (!P_MobjWasRemoved(mobj))
-			R_ResetMobjInterpolationState(mobj);
+		world_t *w = worldlist[wi];
+		for (size_t i = 0; i < w->interpolated_mobjs_len; i++)
+		{
+			mobj_t *mobj = w->interpolated_mobjs[i];
+			if (!P_MobjWasRemoved(mobj))
+				R_ResetMobjInterpolationState(mobj);
+		}
 	}
 }
 

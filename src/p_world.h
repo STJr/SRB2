@@ -118,6 +118,14 @@ typedef struct
 	taggroup_t* tags_sectors[MAXTAGS + 1];
 	taggroup_t* tags_lines[MAXTAGS + 1];
 	taggroup_t* tags_mapthings[MAXTAGS + 1];
+
+	void **interpolators;
+	size_t interpolators_len;
+	size_t interpolators_size;
+
+	void **interpolated_mobjs;
+	size_t interpolated_mobjs_len;
+	size_t interpolated_mobjs_capacity;
 } world_t;
 
 extern world_t *world;

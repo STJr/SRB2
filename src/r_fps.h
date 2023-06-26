@@ -143,7 +143,7 @@ void R_UpdateLevelInterpolators(void);
 // Clear states for all level interpolators for the thinker
 void R_ClearLevelInterpolatorState(thinker_t *thinker);
 // Apply level interpolators to the actual game state
-void R_ApplyLevelInterpolators(fixed_t frac);
+void R_ApplyLevelInterpolators(void *wptr, fixed_t frac);
 // Restore level interpolators to the real game state
 void R_RestoreLevelInterpolators(void);
 // Destroy interpolators associated with a thinker

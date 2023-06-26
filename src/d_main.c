@@ -478,7 +478,7 @@ static void D_Display(void)
 
 			if (!automapactive && !dedicated && cv_renderview.value)
 			{
-				R_ApplyLevelInterpolators(R_UsingFrameInterpolation() ? rendertimefrac : FRACUNIT);
+				R_ApplyLevelInterpolators(players[displayplayer].world, R_UsingFrameInterpolation() ? rendertimefrac : FRACUNIT);
 				PS_START_TIMING(ps_rendercalltime);
 				if (players[displayplayer].mo || players[displayplayer].playerstate == PST_DEAD)
 				{
