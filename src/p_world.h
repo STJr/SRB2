@@ -133,6 +133,8 @@ typedef struct
 	size_t interpolated_mobjs_capacity;
 
 	boolean interpolated_level_this_frame;
+
+	void *sky_dome;
 } world_t;
 
 extern world_t *world;

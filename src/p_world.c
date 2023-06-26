@@ -373,6 +373,9 @@ void P_UnloadWorld(world_t *w)
 		HWR_FreeExtraSubsectors(world->extrasubsectors);
 		world->extrasubsectors = NULL;
 	}
+
+	if (world->sky_dome)
+		HWR_FreeSkyDome(world->sky_dome);
 }
 
 //

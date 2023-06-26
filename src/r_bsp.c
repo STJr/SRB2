@@ -873,7 +873,7 @@ static void R_Subsector(size_t num)
 		{
 			for (rover = frontsector->ffloors; rover; rover = rover->next)
 			{
-				sector_t *controlSec = &sectors[rover->secnum];
+				sector_t *controlSec = &viewworld->sectors[rover->secnum];
 
 				if (controlSec->moved == true)
 				{
