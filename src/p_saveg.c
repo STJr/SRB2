@@ -3088,8 +3088,6 @@ static thinker_t* LoadMobjThinker(actionf_p1 thinker)
 
 	mobj->info = (mobjinfo_t *)next; // temporarily, set when leave this function
 
-	R_AddMobjInterpolator(mobj);
-
 	return &mobj->thinker;
 }
 
@@ -3712,7 +3710,7 @@ static void P_NetUnArchiveThinkers(void)
 			else
 			{
 				(next->prev = currentthinker->prev)->next = next;
-				R_DestroyLevelInterpolators(currentthinker);
+				R_DestroyLevelInterpolators(unarchiveworld, currentthinker);
 				Z_Free(currentthinker);
 			}
 		}
@@ -4871,6 +4869,8 @@ static void RelinkWorldsToEntities(void)
 				I_Error("RelinkWorldsToEntities: Mobj type %d has a world mismatch (mobj: %d, set: %d)", mo->type, mo->worldnum, i);
 
 			mo->world = worldlist[mo->worldnum];
+
+			R_AddMobjInterpolator(mo);
 		}
 	}
 
@@ -4892,7 +4892,10 @@ static void RelinkWorldsToEntities(void)
 		w = worldlist[player->worldnum];
 		player->world = w;
 		if (player->mo)
+		{
 			player->mo->world = w;
+			R_AddMobjInterpolator(player->mo);
+		}
 	}
 }
 

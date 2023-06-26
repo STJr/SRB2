@@ -525,7 +525,7 @@ void T_ContinuousFalling(continuousfall_t *faller)
 		faller->sector->ceilingheight = faller->ceilingstartheight;
 		faller->sector->floorheight = faller->floorstartheight;
 
-		R_ClearLevelInterpolatorState(&faller->thinker);
+		R_ClearLevelInterpolatorState(world, &faller->thinker);
 	}
 
 	P_CheckSector(faller->sector, false); // you might think this is irrelevant. you would be wrong

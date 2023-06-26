@@ -262,7 +262,7 @@ void P_RemoveThinkerDelayed(thinker_t *thinker)
 	* thinker->prev->next = thinker->next */
 	(next->prev = currentthinker = thinker->prev)->next = next;
 
-	R_DestroyLevelInterpolators(thinker);
+	R_DestroyLevelInterpolators(world, thinker);
 	Z_Free(thinker);
 }
 
@@ -762,7 +762,7 @@ void P_Ticker(boolean run)
 		if (OP_FreezeObjectplace())
 		{
 			P_MapStart();
-			R_UpdateMobjInterpolators(world);
+			R_UpdateAllMobjInterpolators();
 			OP_ObjectplaceMovement(&players[0]);
 			P_MoveChaseCamera(&players[0], &camera, false);
 			R_UpdateViewInterpolation();
@@ -788,7 +788,7 @@ void P_Ticker(boolean run)
 
 	if (run)
 	{
-		R_UpdateMobjInterpolators(world);
+		R_UpdateAllMobjInterpolators();
 
 		if (demorecording)
 			G_WriteDemoTiccmd(&players[consoleplayer].cmd, 0);
@@ -935,8 +935,8 @@ void P_Ticker(boolean run)
 		if (rendermode != render_none)
 		{
 			player_t *player1 = &players[displayplayer];
-			world_t *world1 = (world_t*)player1->world;
-			if (player1->mo && world1 && world1->skyboxmo[0] && cv_skybox.value)
+			R_PrepareViewWorld(player1);
+			if (player1->mo && viewworld && viewworld->skyboxmo[0] && cv_skybox.value)
 			{
 				R_SkyboxFrame(player1);
 			}
@@ -948,8 +948,8 @@ void P_Ticker(boolean run)
 			if (splitscreen)
 			{
 				player_t *player2 = &players[secondarydisplayplayer];
-				world_t *world2 = (world_t*)player2->world;
-				if (player2->mo && world2 && world2->skyboxmo[0] && cv_skybox.value)
+				R_PrepareViewWorld(player2);
+				if (player2->mo && viewworld && viewworld->skyboxmo[0] && cv_skybox.value)
 				{
 					R_SkyboxFrame(player2);
 				}
@@ -979,7 +979,7 @@ void P_PreTicker(INT32 frames)
 	{
 		P_MapStart();
 
-		R_UpdateMobjInterpolators(world);
+		R_UpdateAllMobjInterpolators();
 
 		RunLuaHookForWorld(HOOK(PreThinkFrame));
 

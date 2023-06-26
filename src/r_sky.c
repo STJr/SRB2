@@ -32,10 +32,6 @@
 */
 INT32 levelskynum;
 
-/**	\brief the lump number of the sky texture
-*/
-INT32 skytexture;
-
 /**	\brief the horizon line in a 256x128 sky texture
 */
 INT32 skytexturemid;
@@ -56,7 +52,7 @@ fixed_t skyscale;
 void R_SetupSkyDraw(void)
 {
 	// the horizon line in a 256x128 sky texture
-	skytexturemid = (textures[skytexture]->height/2)<<FRACBITS;
+	skytexturemid = (textures[viewworld->skytexture]->height/2)<<FRACBITS;
 	R_SetSkyScale();
 }
 

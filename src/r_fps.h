@@ -137,17 +137,17 @@ void R_CreateInterpolator_Polyobj(thinker_t *thinker, polyobj_t *polyobj);
 void R_CreateInterpolator_DynSlope(thinker_t *thinker, pslope_t *slope);
 
 // Initialize level interpolators after a level change
-void R_InitializeLevelInterpolators(void);
+void R_InitializeLevelInterpolators(void *wptr);
 // Update level interpolators, storing the previous and current states.
 void R_UpdateLevelInterpolators(void);
 // Clear states for all level interpolators for the thinker
-void R_ClearLevelInterpolatorState(thinker_t *thinker);
+void R_ClearLevelInterpolatorState(void *wptr, thinker_t *thinker);
 // Apply level interpolators to the actual game state
 void R_ApplyLevelInterpolators(void *wptr, fixed_t frac);
 // Restore level interpolators to the real game state
-void R_RestoreLevelInterpolators(void);
+void R_RestoreLevelInterpolators(void *wptr);
 // Destroy interpolators associated with a thinker
-void R_DestroyLevelInterpolators(thinker_t *thinker);
+void R_DestroyLevelInterpolators(void *wptr, thinker_t *thinker);
 
 // Initialize internal mobj interpolator list (e.g. during level loading)
 void R_InitMobjInterpolators(void);

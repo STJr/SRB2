@@ -27,7 +27,7 @@
 /// \brief The sky map is 256*128*4 maps.
 #define ANGLETOSKYSHIFT 22
 
-extern INT32 skytexture, skytexturemid;
+extern INT32 skytexturemid;
 extern fixed_t skyscale;
 
 extern INT32 levelskynum;

@@ -513,7 +513,10 @@ static void D_Display(void)
 					D_RenderView(1);
 
 				for (INT32 wi = 0; wi < numworlds; wi++)
+				{
+					R_RestoreLevelInterpolators(worldlist[wi]);
 					worldlist[wi]->interpolated_level_this_frame = false;
+				}
 
 				// Image postprocessing effect
 				if (rendermode == render_soft)
@@ -527,7 +530,6 @@ static void D_Display(void)
 						V_DoPostProcessor(1, postimgtype2, postimgparam2);
 				}
 				PS_STOP_TIMING(ps_rendercalltime);
-				R_RestoreLevelInterpolators();
 			}
 
 			if (lastdraw)

@@ -70,6 +70,9 @@ typedef struct
 	INT32 skynum; // used for keeping track of the current sky
 	UINT8 weather;
 
+	// the texture number of the sky texture
+	INT32 skytexture;
+
 	// Needed to store the number of the dummy sky flat.
 	// Used for rendering, as well as tracking projectiles etc.
 	INT32 skyflatnum;

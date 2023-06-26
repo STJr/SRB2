@@ -467,11 +467,12 @@ void R_CreateInterpolator_DynSlope(thinker_t *thinker, pslope_t *slope)
 	interp->dynslope.oldzdelta = interp->dynslope.bakzdelta = slope->zdelta;
 }
 
-void R_InitializeLevelInterpolators(void)
+void R_InitializeLevelInterpolators(void *wptr)
 {
-	world->interpolators_len = 0;
-	world->interpolators_size = 0;
-	world->interpolators = NULL;
+	world_t *w = (world_t *)wptr;
+	w->interpolators_len = 0;
+	w->interpolators_size = 0;
+	w->interpolators = NULL;
 }
 
 static void UpdateLevelInterpolatorState(levelinterpolator_t *interp)
@@ -536,13 +537,14 @@ void R_UpdateLevelInterpolators(void)
 	}
 }
 
-void R_ClearLevelInterpolatorState(thinker_t *thinker)
+void R_ClearLevelInterpolatorState(void *wptr, thinker_t *thinker)
 {
+	world_t *w = (world_t *)wptr;
 	size_t i;
 
-	for (i = 0; i < world->interpolators_len; i++)
+	for (i = 0; i < w->interpolators_len; i++)
 	{
-		levelinterpolator_t *interp = world->interpolators[i];
+		levelinterpolator_t *interp = w->interpolators[i];
 
 		if (interp->thinker == thinker)
 		{
@@ -614,8 +616,9 @@ void R_ApplyLevelInterpolators(void *wptr, fixed_t frac)
 	w->interpolated_level_this_frame = true;
 }
 
-static void R_RestoreLevelInterpolatorsForWorld(world_t *w)
+void R_RestoreLevelInterpolators(void *wptr)
 {
+	world_t *w = (world_t *)wptr;
 	size_t i, ii;
 
 	for (i = 0; i < w->interpolators_len; i++)
@@ -669,31 +672,22 @@ static void R_RestoreLevelInterpolatorsForWorld(world_t *w)
 	}
 }
 
-void R_RestoreLevelInterpolators(void)
+void R_DestroyLevelInterpolators(void *wptr, thinker_t *thinker)
 {
-	for (INT32 wi = 0; wi < numworlds; wi++)
-	{
-		world_t *w = worldlist[wi];
-		R_RestoreLevelInterpolatorsForWorld(w);
-	}
-}
+	world_t *w = (world_t *)wptr;
 
-void R_DestroyLevelInterpolators(thinker_t *thinker)
-{
-	size_t i;
-
-	for (i = 0; i < world->interpolators_len; i++)
+	for (size_t i = 0; i < w->interpolators_len; i++)
 	{
-		levelinterpolator_t *interp = world->interpolators[i];
+		levelinterpolator_t *interp = w->interpolators[i];
 
 		if (interp->thinker == thinker)
 		{
 			// Swap the tail of the level interpolators to this spot
-			world->interpolators[i] = world->interpolators[world->interpolators_len - 1];
-			world->interpolators_len -= 1;
+			w->interpolators[i] = w->interpolators[w->interpolators_len - 1];
+			w->interpolators_len--;
 
 			Z_Free(interp);
-			i -= 1;
+			i--;
 		}
 	}
 }
@@ -702,28 +696,32 @@ void R_DestroyLevelInterpolators(thinker_t *thinker)
 // reasons.
 void R_AddMobjInterpolator(mobj_t *mobj)
 {
-	if (world->interpolated_mobjs_len >= world->interpolated_mobjs_capacity)
+	world_t *w = (world_t *)mobj->world;
+	if (!w)
+		return;
+
+	if (w->interpolated_mobjs_len >= w->interpolated_mobjs_capacity)
 	{
-		if (world->interpolated_mobjs_capacity == 0)
+		if (w->interpolated_mobjs_capacity == 0)
 		{
-			world->interpolated_mobjs_capacity = 256;
+			w->interpolated_mobjs_capacity = 256;
 		}
 		else
 		{
-			world->interpolated_mobjs_capacity *= 2;
+			w->interpolated_mobjs_capacity *= 2;
 		}
 
-		world->interpolated_mobjs = Z_ReallocAlign(
-			world->interpolated_mobjs,
-			sizeof(mobj_t *) * world->interpolated_mobjs_capacity,
+		w->interpolated_mobjs = Z_ReallocAlign(
+			w->interpolated_mobjs,
+			sizeof(mobj_t *) * w->interpolated_mobjs_capacity,
 			PU_LEVEL,
 			NULL,
 			64
 		);
 	}
 
-	world->interpolated_mobjs[world->interpolated_mobjs_len] = mobj;
-	world->interpolated_mobjs_len++;
+	w->interpolated_mobjs[w->interpolated_mobjs_len] = mobj;
+	w->interpolated_mobjs_len++;
 
 	R_ResetMobjInterpolationState(mobj);
 	mobj->resetinterp = true;
@@ -731,18 +729,20 @@ void R_AddMobjInterpolator(mobj_t *mobj)
 
 void R_RemoveMobjInterpolator(mobj_t *mobj)
 {
-	size_t i;
+	world_t *w = (world_t *)mobj->world;
+	if (!w)
+		return;
 
-	if (world->interpolated_mobjs_len == 0) return;
+	if (w->interpolated_mobjs_len == 0) return;
 
-	for (i = 0; i < world->interpolated_mobjs_len; i++)
+	for (size_t i = 0; i < w->interpolated_mobjs_len; i++)
 	{
-		if (world->interpolated_mobjs[i] == mobj)
+		if (w->interpolated_mobjs[i] == mobj)
 		{
-			world->interpolated_mobjs[i] = world->interpolated_mobjs[
-				world->interpolated_mobjs_len - 1
+			w->interpolated_mobjs[i] = w->interpolated_mobjs[
+				w->interpolated_mobjs_len - 1
 			];
-			world->interpolated_mobjs_len--;
+			w->interpolated_mobjs_len--;
 			return;
 		}
 	}
@@ -774,7 +774,10 @@ void R_UpdateAllMobjInterpolators(void)
 	for (INT32 wi = 0; wi < numworlds; wi++)
 	{
 		world_t *w = worldlist[wi];
-		R_UpdateMobjInterpolators(w);
+
+		// Don't care about updating if nobody is there
+		if (w->players)
+			R_UpdateMobjInterpolators(w);
 	}
 }
 

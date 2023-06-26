@@ -1141,6 +1141,9 @@ static boolean R_SetViewMobj(player_t *player)
 //
 void R_SetupFrame(player_t *player)
 {
+	if (viewworld == NULL)
+		return;
+
 	camera_t *thiscam = r_viewcam;
 	boolean chasecam = R_ViewpointHasChasecam(player);
 
@@ -1211,14 +1214,18 @@ void R_SetupFrame(player_t *player)
 			newview->sector = R_PointInWorldSubsector(viewworld, newview->x, newview->y)->sector;
 	}
 
-	// newview->sin = FINESINE(viewangle>>ANGLETOFINESHIFT);
-	// newview->cos = FINECOSINE(viewangle>>ANGLETOFINESHIFT);
-
 	R_InterpolateView(R_UsingFrameInterpolation() ? rendertimefrac : FRACUNIT);
+
+	// scale up the old skies, if needed
+	if (!dedicated)
+		R_SetupSkyDraw();
 }
 
 void R_SkyboxFrame(player_t *player)
 {
+	if (viewworld == NULL)
+		return;
+
 	camera_t *thiscam = r_viewcam;
 
 	if (splitscreen && player == &players[secondarydisplayplayer]
@@ -1353,10 +1360,11 @@ void R_SkyboxFrame(player_t *player)
 	else
 		newview->sector = R_PointInWorldSubsector(viewworld, newview->x, newview->y)->sector;
 
-	// newview->sin = FINESINE(viewangle>>ANGLETOFINESHIFT);
-	// newview->cos = FINECOSINE(viewangle>>ANGLETOFINESHIFT);
-
 	R_InterpolateView(R_UsingFrameInterpolation() ? rendertimefrac : FRACUNIT);
+
+	// scale up the old skies, if needed
+	if (!dedicated)
+		R_SetupSkyDraw();
 }
 
 boolean R_ViewpointHasChasecam(player_t *player)
@@ -1380,7 +1388,7 @@ boolean R_ViewpointHasChasecam(player_t *player)
 		chasecam = true; // force chasecam on
 	else if (player->spectator) // no spectator chasecam
 		chasecam = false; // force chasecam off
-		
+
 	if (chasecam && !thiscam->chase)
 	{
 		P_ResetCamera(player, thiscam);
@@ -1391,7 +1399,7 @@ boolean R_ViewpointHasChasecam(player_t *player)
 		P_ResetCamera(player, thiscam);
 		thiscam->chase = false;
 	}
-	
+
 	if (isplayer2)
 	{
 		R_SetViewContext(VIEWCONTEXT_PLAYER2);

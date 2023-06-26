@@ -5569,7 +5569,7 @@ void HWR_BuildSkyDome(void)
 
 	gl_sky_t *sky = &gl_sky;
 	gl_skyvertex_t *vertex_p;
-	texture_t *texture = textures[texturetranslation[skytexture]];
+	texture_t *texture = textures[texturetranslation[viewworld->skytexture]];
 
 	sky->detail = 16;
 	col_count *= sky->detail;
@@ -5588,7 +5588,7 @@ void HWR_BuildSkyDome(void)
 	if (!sky->data)
 		sky->data = malloc(sky->vertex_count * sizeof(sky->data[0]));
 
-	sky->texture = texturetranslation[skytexture];
+	sky->texture = texturetranslation[viewworld->skytexture];
 	sky->width = texture->width;
 	sky->height = texture->height;
 
@@ -5674,9 +5674,9 @@ static void HWR_DrawSkyBackground(player_t *player)
 		}
 		dometransform.splitscreen = splitscreen;
 
-		HWR_GetTexture(texturetranslation[skytexture]);
+		HWR_GetTexture(texturetranslation[viewworld->skytexture]);
 
-		if (gl_sky.texture != texturetranslation[skytexture])
+		if (gl_sky.texture != texturetranslation[viewworld->skytexture])
 		{
 			HWR_ClearSkyDome();
 			HWR_BuildSkyDome();
@@ -5694,7 +5694,7 @@ static void HWR_DrawSkyBackground(player_t *player)
 		float aspectratio;
 		float angleturn;
 
-		HWR_GetTexture(texturetranslation[skytexture]);
+		HWR_GetTexture(texturetranslation[viewworld->skytexture]);
 		aspectratio = (float)vid.width/(float)vid.height;
 
 		//Hurdler: the sky is the only texture who need 4.0f instead of 1.0
@@ -5721,7 +5721,7 @@ static void HWR_DrawSkyBackground(player_t *player)
 
 		angle = (dup_viewangle + gl_xtoviewangle[0]);
 
-		dimensionmultiply = ((float)textures[texturetranslation[skytexture]]->width/256.0f);
+		dimensionmultiply = ((float)textures[texturetranslation[viewworld->skytexture]]->width/256.0f);
 
 		v[0].s = v[3].s = (-1.0f * angle) / (((float)ANGLE_90-1.0f)*dimensionmultiply); // left
 		v[2].s = v[1].s = v[0].s + (1.0f/dimensionmultiply); // right (or left + 1.0f)
@@ -5729,7 +5729,7 @@ static void HWR_DrawSkyBackground(player_t *player)
 
 		// Y
 		angle = aimingangle;
-		dimensionmultiply = ((float)textures[texturetranslation[skytexture]]->height/(128.0f*aspectratio));
+		dimensionmultiply = ((float)textures[texturetranslation[viewworld->skytexture]]->height/(128.0f*aspectratio));
 
 		if (splitscreen)
 		{

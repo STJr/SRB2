@@ -6886,10 +6886,6 @@ static void P_InitLevelSky(INT32 skynum, player_t *player)
 
 	P_SetupWorldSky(skynum, world);
 	levelskynum = skynum;
-
-	// scale up the old skies, if needed
-	if (!dedicated)
-		R_SetupSkyDraw();
 }
 
 /** Sets up a sky texture to use for the level.
@@ -6903,26 +6899,18 @@ void P_SetupLevelSky(INT32 skynum, boolean global)
 	// Global change
 	if (global)
 		P_SetupWorldSky(skynum, world);
-
-	// scale up the old skies, if needed
-	if (!dedicated)
-		R_SetupSkyDraw();
 }
 
 void P_SetupWorldSky(INT32 skynum, world_t *w)
 {
 	w->skynum = skynum;
-
-	// scale up the old skies, if needed
-	if (!dedicated)
-		R_SetupSkyDraw();
 }
 
 void P_SetupSkyTexture(INT32 skynum)
 {
 	char skytexname[12];
 	sprintf(skytexname, "SKY%d", skynum);
-	skytexture = R_TextureNumForName(skytexname);
+	world->skytexture = R_TextureNumForName(skytexname);
 }
 
 static const char *maplumpname;
@@ -7784,7 +7772,7 @@ boolean P_LoadLevel(player_t *player, boolean addworld, boolean fromnetsave, boo
 	if (!addworld || player == &players[consoleplayer])
 		localworld = world;
 
-	R_InitializeLevelInterpolators();
+	R_InitializeLevelInterpolators(world);
 
 	P_InitThinkers();
 	R_InitMobjInterpolators();

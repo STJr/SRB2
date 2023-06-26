@@ -29,6 +29,7 @@
 #include "r_draw.h"
 #include "r_sky.h"
 #include "r_patch.h"
+#include "r_fps.h"
 
 #include "s_sound.h"
 #include "w_wad.h"
@@ -158,7 +159,10 @@ void P_DetachPlayerWorld(player_t *player)
 
 	player->world = NULL;
 	if (player->mo && !P_MobjWasRemoved(player->mo))
+	{
+		R_RemoveMobjInterpolator(player->mo);
 		player->mo->world = NULL;
+	}
 }
 
 //
@@ -170,7 +174,10 @@ void P_SwitchPlayerWorld(player_t *player, world_t *newworld)
 
 	player->world = newworld;
 	if (player->mo && !P_MobjWasRemoved(player->mo))
+	{
 		player->mo->world = newworld;
+		R_AddMobjInterpolator(player->mo);
+	}
 
 	newworld->players++;
 }
@@ -267,26 +274,19 @@ void P_SwitchWorld(player_t *player, world_t *w)
 
 	P_SwitchPlayerWorld(player, w);
 
-	if (!splitscreen)
-	{
-		P_SetWorld(w);
-		if (local)
-			P_InitSpecials();
-	}
+	P_SetWorld(w);
+	if (local || splitscreen)
+		P_InitSpecials();
 
 	P_UnsetThingPosition(player->mo);
-	P_MoveThinkerToWorld(w, THINK_MAIN, (thinker_t *)(player->mo));
+	P_MoveThinkerToWorld(w, THINK_MOBJ, (thinker_t *)(player->mo));
 	G_MovePlayerToSpawnOrStarpost(playernum);
 
-	if (local)
+	if (local && !splitscreen)
 	{
 		localworld = world;
 		S_Start();
-		if (!dedicated)
-		{
-			P_SetupSkyTexture(w->skynum);
-			R_SetupSkyDraw();
-		}
+		P_SetupSkyTexture(w->skynum);
 	}
 
 	if (player == &players[displayplayer])
