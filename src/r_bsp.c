@@ -709,7 +709,7 @@ static void R_AddPolyobjs(subsector_t *sub)
 		R_BuildPolyBSP(sub);
 
 	minibsp = sub->BSP;
-	nodecount = minibsp->numnodes-1;
+	nodecount = minibsp->numnodes - 1;
 
 	if (nodecount == 0)
 		R_Subsector(0);
@@ -830,7 +830,7 @@ void R_Subsector(size_t num)
 
 		sub = &subsectors[num];
 
-		// Render the polyobjs in the subsector first
+		// Render the minibsp instead
 		if (sub->polynodes)
 		{
 			R_AddPolyobjs(sub);
@@ -995,23 +995,19 @@ void R_Subsector(size_t num)
 	}
 
 	// Polyobjects have planes, too!
-	if (minibsp && sub->polynodes)
-	{
-		polynode_t *pn = sub->polynodes;
-		polynodes = pn;
+	polynodes = sub->polynodes;
 
-		for (; pn != NULL; pn = pn->pnext)
+	if (minibsp && polynodes)
+	{
+		polynode_t *pn = polynodes;
+
+		for (; pn != NULL && numffloors < MAXFFLOORS; pn = pn->pnext)
 		{
 			polyobj_t *po = pn->poly;
-			sector_t *polysec;
-
-			if (numffloors >= MAXFFLOORS)
-				break;
-
 			if (!(po->flags & POF_RENDERPLANES)) // Don't draw planes
 				continue;
 
-			polysec = po->lines[0]->backsector;
+			sector_t *polysec = po->lines[0]->backsector;
 			ffloor[numffloors].plane = NULL;
 
 			if (polysec->floorheight <= ceilingcenterz

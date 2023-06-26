@@ -2593,27 +2593,14 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 				}
 			}
 
-			numbackffloors = i;
-		}
-
-		if (polynodes && numbackffloors < MAXFFLOORS)
-		{
-			polynode_t *pn = polynodes;
-
-			for (; pn != NULL; pn = pn->pnext)
+			polyobj_t *po = curline->polyseg;
+			if (po && po->flags & POF_RENDERPLANES)
 			{
-				polyobj_t *po = pn->poly;
-				sector_t *polysec;
+				sector_t *polysec = po->lines[0]->backsector;
 
-				if (!(po->flags & POF_RENDERPLANES)) // Don't draw planes
-					continue;
-
-				i = 0;
 				while (i < numffloors && ffloor[i].polyobj != po) i++;
 
-				polysec = po->lines[0]->backsector;
-
-				if (polysec->floorheight <= frontsector->ceilingheight &&
+				if (i < MAXFFLOORS && polysec->floorheight <= frontsector->ceilingheight &&
 					polysec->floorheight >= frontsector->floorheight &&
 					(viewz < polysec->floorheight))
 				{
@@ -2624,10 +2611,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 					i++;
 				}
 
-				if (i >= MAXFFLOORS)
-					break;
-
-				if (polysec->ceilingheight >= frontsector->floorheight &&
+				if (i < MAXFFLOORS && polysec->ceilingheight >= frontsector->floorheight &&
 					polysec->ceilingheight <= frontsector->ceilingheight &&
 					(viewz > polysec->ceilingheight))
 				{
@@ -2637,13 +2621,10 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 					ffloor[i].b_frac = (centeryfrac >> 4) - FixedMul(ffloor[i].b_pos, rw_scale);
 					i++;
 				}
-
-				if (i >= MAXFFLOORS)
-					break;
 			}
-
-			numbackffloors = i;
 		}
+
+		numbackffloors = i;
 	}
 
 	for (i = 0; i < numffloors; i++)
