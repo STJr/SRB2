@@ -1540,7 +1540,7 @@ static boolean SV_SendServerConfig(INT32 node)
 }
 
 #ifndef NONET
-#define SAVEGAMESIZE (2048*1024) //(768*1024)
+#define SAVEGAMESIZE (8192*1024) // was (768*1024)
 
 static boolean SV_ResendingSavegameToAnyone(void)
 {

@@ -71,11 +71,10 @@ world_t *P_InitWorld(void)
 //
 world_t *P_InitNewWorld(void)
 {
-	world_t *w;
-
 	worldlist = Z_Realloc(worldlist, (numworlds + 1) * sizeof(void *), PU_STATIC, NULL);
 	worldlist[numworlds] = P_InitWorld();
-	w = worldlist[numworlds];
+
+	world_t *w = worldlist[numworlds];
 
 	if (!numworlds)
 		baseworld = w;
@@ -380,14 +379,19 @@ void P_UnloadWorld(world_t *w)
 	LUA_InvalidateLevel(w);
 	P_UnloadSectorAttachments(w->sectors, w->numsectors);
 
-	if (world->extrasubsectors)
+	if (w->extrasubsectors)
 	{
-		HWR_FreeExtraSubsectors(world->extrasubsectors);
-		world->extrasubsectors = NULL;
+		HWR_FreeExtraSubsectors(w->extrasubsectors);
+		w->extrasubsectors = NULL;
 	}
 
-	if (world->sky_dome)
-		HWR_FreeSkyDome(world->sky_dome);
+	if (w->sky_dome)
+		HWR_FreeSkyDome(w->sky_dome);
+
+	Z_Free(w->thlist);
+	Z_Free(w);
+
+	// TODO: Actually free world data here!
 }
 
 //
@@ -396,17 +400,6 @@ void P_UnloadWorld(world_t *w)
 void P_UnloadWorldList(void)
 {
 	INT32 i;
-
-	if (numworlds > 1)
-		P_UnloadSectorAttachments(sectors, numsectors);
-	else
-	{
-		for (i = 0; i < numworlds; i++)
-		{
-			if (worldlist[i])
-				P_UnloadWorld(worldlist[i]);
-		}
-	}
 
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
@@ -421,21 +414,16 @@ void P_UnloadWorldList(void)
 		}
 	}
 
-	if (numworlds > 1)
+	for (i = 0; i < numworlds; i++)
 	{
-		for (i = 0; i < numworlds; i++)
-		{
-			world_t *w = worldlist[i];
+		world_t *w = worldlist[i];
+		if (w == NULL)
+			continue;
 
-			if (w == NULL)
-				continue;
-
-			Z_Free(w->thlist);
-			Z_Free(w);
-		}
-
-		Z_Free(worldlist);
+		P_UnloadWorld(w);
 	}
+
+	Z_Free(worldlist);
 
 	worldlist = NULL;
 	numworlds = 0;

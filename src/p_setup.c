@@ -6879,7 +6879,7 @@ static boolean P_LoadMapFromFile(void)
 // LEVEL INITIALIZATION FUNCTIONS
 //
 
-static void P_InitLevelSky(INT32 skynum, player_t *player)
+static void P_InitLevelSky(INT32 skynum)
 {
 	P_SetupSkyTexture(skynum);
 	P_SetupWorldSky(skynum, world);
@@ -7012,20 +7012,12 @@ static void P_InitLevelSettings(mapheader_t *mapheader, player_t *player, boolea
 	if (!addworld)
 		countdown = countdown2 = exitfadestarted = 0;
 
-	if (!addworld || fromnetsave)
+	if (!addworld)
 	{
 		for (i = 0; i < MAXPLAYERS; i++)
-		{
-			if (fromnetsave)
-			{
-				players[i].followmobj = NULL;
-				players[i].mo = NULL;
-			}
-			else
-				P_InitPlayerSettings(i, canresetlives);
-		}
+			P_InitPlayerSettings(i, canresetlives);
 	}
-	else if (player)
+	else if (player && !fromnetsave)
 	{
 		P_DetachPlayerWorld(player);
 		P_InitPlayerSettings((INT32)(player - players), canresetlives);
@@ -7739,7 +7731,7 @@ boolean P_LoadLevel(player_t *player, boolean addworld, boolean fromnetsave, boo
 		S_ChangeMusicEx(mapmusname, mapmusflags, true, mapmusposition, 0, 0);
 	}
 
-	if (player && (!titlemapinaction))
+	if (player && !titlemapinaction && !fromnetsave)
 		P_UnloadWorldPlayer(player);
 
 	// Initialize the world
@@ -7804,7 +7796,7 @@ boolean P_LoadLevel(player_t *player, boolean addworld, boolean fromnetsave, boo
 	CON_SetupBackColormap();
 
 	// SRB2 determines the sky texture to be used depending on the map header.
-	P_InitLevelSky(worldmapheader->skynum, player);
+	P_InitLevelSky(worldmapheader->skynum);
 
 	P_ResetSpawnpoints();
 

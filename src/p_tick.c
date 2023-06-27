@@ -209,13 +209,13 @@ static void P_AddThinkerIntoWorld(world_t *w, const thinklistnum_t n, thinker_t 
 	thinker->next = &w->thlist[n];
 	thinker->prev = w->thlist[n].prev;
 	w->thlist[n].prev = thinker;
-
-	thinker->references = 0;    // killough 11/98: init reference counter to 0
 }
 
 void P_AddThinker(const thinklistnum_t n, thinker_t *thinker)
 {
 	P_AddThinkerIntoWorld(world, n, thinker);
+
+	thinker->references = 0;    // killough 11/98: init reference counter to 0
 }
 
 //
@@ -293,6 +293,7 @@ void P_MoveThinkerToWorld(world_t *w, const thinklistnum_t n, thinker_t *thinker
 	I_Assert(n < NUM_THINKERLISTS);
 #endif
 
+	// Remove this thinker from its thinkerlist
 	next = thinker->next;
 	(next->prev = currentthinker = thinker->prev)->next = next;
 
@@ -315,7 +316,7 @@ mobj_t *P_SetTarget(mobj_t **mop, mobj_t *targ)
 {
 	if (*mop)              // If there was a target already, decrease its refcount
 		(*mop)->thinker.references--;
-if ((*mop = targ) != NULL) // Set new target and if non-NULL, increase its counter
+	if ((*mop = targ) != NULL) // Set new target and if non-NULL, increase its counter
 		targ->thinker.references++;
 	return targ;
 }

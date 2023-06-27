@@ -134,7 +134,6 @@ static void P_NetArchivePlayers(void)
 {
 	INT32 i, j;
 	UINT16 flags;
-//	size_t q;
 
 	WRITEUINT32(save_p, ARCHIVEBLOCK_PLAYERS);
 
@@ -3061,7 +3060,7 @@ static thinker_t* LoadMobjThinker(actionf_p1 thinker)
 
 	mobj->mobjnum = READUINT32(save_p);
 
-	// Lactozilla: Unarchive world number
+	// Unarchive world number
 	mobj->worldnum = READUINT32(save_p);
 	if (mobj->worldnum == 0xFFFFFFFF)
 		I_Error("Unknown world");
@@ -3723,7 +3722,10 @@ static void P_NetUnArchiveThinkers(void)
 	// clear sector thinker pointers so they don't point to non-existant thinkers for all of eternity
 	for (i = 0; i < numsectors; i++)
 	{
-		sectors[i].floordata = sectors[i].ceilingdata = sectors[i].lightingdata = sectors[i].fadecolormapdata = NULL;
+		unarchiveworld->sectors[i].floordata = NULL;
+		unarchiveworld->sectors[i].ceilingdata = NULL;
+		unarchiveworld->sectors[i].lightingdata = NULL;
+		unarchiveworld->sectors[i].fadecolormapdata = NULL;
 	}
 
 	// read in saved thinkers
@@ -4374,6 +4376,9 @@ static inline boolean P_NetUnArchiveMisc(boolean reloading)
 	if(!mapheaderinfo[gamemap-1])
 		P_AllocMapHeader(gamemap-1);
 
+	curmapheader = nextmapheader = mapheaderinfo[gamemap-1];
+	worldmapheader = curmapheader;
+
 	// tell the sound code to reset the music since we're skipping what
 	// normally sets this flag
 	mapmusflags |= MUSIC_RELOADRESET;
@@ -4758,8 +4763,6 @@ static void P_NetArchiveWorlds(void)
 
 void P_SaveNetGame(boolean resending)
 {
-	thinker_t *th;
-	mobj_t *mobj;
 	INT32 i;
 
 	CV_SaveNetVars(&save_p);
@@ -4772,12 +4775,12 @@ void P_SaveNetGame(boolean resending)
 		world_t *w = worldlist[i];
 		INT32 mobjnum = 1; // don't start from 0, it'd be confused with a blank pointer otherwise
 
-		for (th = w->thlist[THINK_MOBJ].next; th != &w->thlist[THINK_MOBJ]; th = th->next)
+		for (thinker_t *th = w->thlist[THINK_MOBJ].next; th != &w->thlist[THINK_MOBJ]; th = th->next)
 		{
 			if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
 				continue;
 
-			mobj = (mobj_t *)th;
+			mobj_t *mobj = (mobj_t *)th;
 			if (mobj->type == MT_HOOP || mobj->type == MT_HOOPCOLLIDE || mobj->type == MT_HOOPCENTER)
 				continue;
 			mobj->mobjnum = mobjnum++;
@@ -4785,19 +4788,16 @@ void P_SaveNetGame(boolean resending)
 		}
 	}
 
-	// Lactozilla: Assign world numbers to players
+	// Assign world numbers to players
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
-		player_t *player;
-		INT32 w;
-
 		if (!playeringame[i])
 			continue;
 
-		player = &players[i];
+		player_t *player = &players[i];
 		player->worldnum = -1;
 
-		for (w = 0; w < numworlds; w++)
+		for (INT32 w = 0; w < numworlds; w++)
 		{
 			if (P_GetPlayerWorld(player) == worldlist[w])
 			{
@@ -4902,39 +4902,42 @@ static void RelinkWorldsToEntities(void)
 
 static void SetUnArchiveWorld(world_t *w)
 {
-	unarchiveworld = world = baseworld = localworld = w;
+	P_SetWorld(w);
+
+	unarchiveworld = baseworld = localworld = world;
 }
 
 static void P_NetUnArchiveWorlds(boolean reloading)
 {
 	player_t *player = &players[consoleplayer];
-	INT32 worldcount, i;
 
 	if (READUINT32(save_p) != ARCHIVEBLOCK_WORLD)
 		I_Error("Bad $$$.sav at archive block World");
 
-	worldcount = READINT32(save_p);
+	INT32 worldcount = READINT32(save_p);
 
 	// initialize colormap vars because paranoia
 	ClearNetColormaps();
 
-	// Unarchive the first world
-	gamemap = READINT16(save_p);
-	SetUnArchiveWorld(worldlist[0]);
-	UnArchiveWorld();
-
-	for (i = 1; i < worldcount; i++)
+	// Unarchive each world
+	for (INT32 i = 0; i < worldcount; i++)
 	{
 		gamemap = READINT16(save_p);
-		if (!P_LoadLevel(player, true, true, reloading))
-			I_Error("P_NetUnArchiveWorlds: failed loading world");
+
+		// Don't load the first world (because it already is loaded at this point)
+		if (i != 0)
+		{
+			if (!P_LoadLevel(player, true, true, reloading))
+				I_Error("P_NetUnArchiveWorlds: failed loading world");
+		}
+
 		SetUnArchiveWorld(worldlist[i]);
 		UnArchiveWorld();
 	}
 
-	gamemap = worldlist[0]->gamemap;
-	curmapheader = nextmapheader = mapheaderinfo[gamemap-1];
-	worldmapheader = curmapheader;
+	P_SetWorld(worldlist[0]);
+	baseworld = localworld = worldlist[0];
+	curmapheader = nextmapheader = worldmapheader;
 
 	P_NetUnArchiveColormaps();
 	RelinkWorldsToEntities();
