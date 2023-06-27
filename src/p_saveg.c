@@ -3717,7 +3717,7 @@ static void P_NetUnArchiveThinkers(void)
 
 	// we don't want the removed mobjs to come back
 	unarchiveworld->iquetail = unarchiveworld->iquehead = 0;
-	P_InitThinkers();
+	P_InitThinkers(unarchiveworld);
 
 	// clear sector thinker pointers so they don't point to non-existant thinkers for all of eternity
 	for (i = 0; i < numsectors; i++)
@@ -4400,7 +4400,7 @@ static inline boolean P_NetUnArchiveMisc(boolean reloading)
 
 	tokenlist = READUINT32(save_p);
 
-	if (!P_LoadLevel(&players[consoleplayer], false, true, reloading))
+	if (!P_LoadLevel(true, reloading))
 	{
 		CONS_Alert(CONS_ERROR, M_GetText("Can't load the level!\n"));
 		return false;
@@ -4927,7 +4927,7 @@ static void P_NetUnArchiveWorlds(boolean reloading)
 		// Don't load the first world (because it already is loaded at this point)
 		if (i != 0)
 		{
-			if (!P_LoadLevel(player, true, true, reloading))
+			if (!P_LoadWorld(true))
 				I_Error("P_NetUnArchiveWorlds: failed loading world");
 		}
 

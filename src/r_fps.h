@@ -150,7 +150,7 @@ void R_RestoreLevelInterpolators(void *wptr);
 void R_DestroyLevelInterpolators(void *wptr, thinker_t *thinker);
 
 // Initialize internal mobj interpolator list (e.g. during level loading)
-void R_InitMobjInterpolators(void);
+void R_InitMobjInterpolators(void *wptr);
 // Add interpolation state for the given mobj
 void R_AddMobjInterpolator(mobj_t *mobj);
 // Remove the interpolation state for the given mobj

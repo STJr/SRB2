@@ -36,6 +36,7 @@ typedef struct
 	thinker_t *thlist;
 
 	INT32 players;
+	boolean loading;
 
 	size_t numvertexes, numsegs, numsectors, numsubsectors, numnodes, numlines, numsides, nummapthings;
 	vertex_t *vertexes;
@@ -64,6 +65,8 @@ typedef struct
 	INT32 numshields;
 
 	mobj_t *overlaycap;
+
+	actioncache_t actioncachehead;
 
 	mapheader_t *header;
 
@@ -167,6 +170,10 @@ void P_SetWorld(world_t *w);
 
 void P_RoamIntoWorld(player_t *player, INT32 mapnum);
 void P_SwitchWorld(player_t *player, world_t *w);
+
+void P_InitCachedActions(world_t *w);
+void P_RunCachedActions(world_t *w);
+void P_AddCachedAction(world_t *w, mobj_t *mobj, INT32 statenum);
 
 world_t *P_GetPlayerWorld(player_t *player);
 

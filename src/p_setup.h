@@ -21,10 +21,7 @@
 // map md5, sent to players via PT_SERVERINFO
 extern unsigned char mapmd5[16];
 
-extern boolean levelloading;
 extern UINT8 levelfadecol;
-
-extern lumpnum_t lastloadedmaplumpnum; // for comparative savegame
 
 /* for levelflat type */
 enum
@@ -83,6 +80,14 @@ INT32 P_AddLevelFlat(const char *flatname, levelflat_t *levelflat);
 INT32 P_AddLevelFlatRuntime(const char *flatname);
 INT32 P_CheckLevelFlat(const char *flatname);
 
+typedef struct actioncache_s
+{
+	struct actioncache_s *next;
+	struct actioncache_s *prev;
+	struct mobj_s *mobj;
+	INT32 statenum;
+} actioncache_t;
+
 extern size_t nummapthings;
 extern mapthing_t *mapthings;
 
@@ -92,10 +97,8 @@ void P_SetupSkyTexture(INT32 skynum);
 void P_ScanThings(INT16 mapnum, INT16 wadnum, INT16 lumpnum);
 #endif
 void P_RespawnThings(void);
-boolean P_LoadLevel(player_t *player, boolean addworld, boolean fromnetsave, boolean reloadinggamestate);
-#ifdef HWRENDER
-void HWR_LoadLevel(void);
-#endif
+boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate);
+boolean P_LoadWorld(boolean fromnetsave);
 
 boolean P_AddWadFile(const char *wadfilename);
 boolean P_AddFolder(const char *folderpath);

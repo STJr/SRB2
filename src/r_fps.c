@@ -748,13 +748,12 @@ void R_RemoveMobjInterpolator(mobj_t *mobj)
 	}
 }
 
-void R_InitMobjInterpolators(void)
+void R_InitMobjInterpolators(void *wptr)
 {
-	// apparently it's not acceptable to free something already unallocated
-	// Z_Free(world->interpolated_mobjs);
-	world->interpolated_mobjs = NULL;
-	world->interpolated_mobjs_len = 0;
-	world->interpolated_mobjs_capacity = 0;
+	world_t *w = (world_t *)wptr;
+	w->interpolated_mobjs = NULL;
+	w->interpolated_mobjs_len = 0;
+	w->interpolated_mobjs_capacity = 0;
 }
 
 void R_UpdateMobjInterpolators(void *wptr)

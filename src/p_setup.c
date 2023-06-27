@@ -115,7 +115,6 @@ side_t *spawnsides;
 INT32 numstarposts;
 UINT16 bossdisabled;
 boolean stoppedclock;
-boolean levelloading;
 UINT8 levelfadecol;
 
 // BLOCKMAP
@@ -6832,9 +6831,9 @@ static void P_MakeMapMD5(virtres_t *virt, void *dest)
 	M_Memcpy(dest, &resmd5, 16);
 }
 
-static boolean P_LoadMapFromFile(void)
+static boolean P_LoadMapFromFile(lumpnum_t maplumpnum)
 {
-	virtres_t *virt = vres_GetMap(lastloadedmaplumpnum);
+	virtres_t *virt = vres_GetMap(maplumpnum);
 	virtlump_t *textmap = vres_Find(virt, "TEXTMAP");
 	size_t i;
 	udmf = textmap != NULL;
@@ -6911,9 +6910,6 @@ void P_SetupSkyTexture(INT32 skynum)
 	world->skytexture = R_TextureNumForName(skytexname);
 }
 
-static const char *maplumpname;
-lumpnum_t lastloadedmaplumpnum; // for comparative savegame
-
 //
 // Some player initialization for map start.
 //
@@ -6986,7 +6982,7 @@ static void P_InitWorldSettings(mapheader_t *mapheader)
 	stagefailed = G_IsSpecialStage(gamemap);
 }
 
-static void P_InitLevelSettings(mapheader_t *mapheader, player_t *player, boolean addworld, boolean fromnetsave)
+static void P_InitLevelSettings(mapheader_t *mapheader, boolean addworld)
 {
 	INT32 i;
 	boolean canresetlives = true;
@@ -7010,17 +7006,11 @@ static void P_InitLevelSettings(mapheader_t *mapheader, player_t *player, boolea
 	}
 
 	if (!addworld)
+	{
 		countdown = countdown2 = exitfadestarted = 0;
 
-	if (!addworld)
-	{
 		for (i = 0; i < MAXPLAYERS; i++)
 			P_InitPlayerSettings(i, canresetlives);
-	}
-	else if (player && !fromnetsave)
-	{
-		P_DetachPlayerWorld(player);
-		P_InitPlayerSettings((INT32)(player - players), canresetlives);
 	}
 
 	if (botingame)
@@ -7051,7 +7041,7 @@ void P_RespawnThings(void)
 		P_RemoveMobj((mobj_t *)think);
 	}
 
-	P_InitLevelSettings(worldmapheader, NULL, false, false);
+	P_InitLevelSettings(worldmapheader, false);
 
 	localaiming = 0;
 	localaiming2 = 0;
@@ -7531,7 +7521,7 @@ static void P_WriteLetter(void)
 	Z_Free(buf);
 }
 
-static void P_InitGametype(player_t *player, boolean addworld)
+static void P_InitGametype(boolean addworld)
 {
 	UINT8 i;
 
@@ -7552,8 +7542,6 @@ static void P_InitGametype(player_t *player, boolean addworld)
 			leveltime = maxstarposttime;
 		}
 	}
-	else
-		P_InitPlayer((INT32)(player - players));
 
 	P_WriteLetter();
 
@@ -7571,20 +7559,170 @@ static void P_InitGametype(player_t *player, boolean addworld)
 			: nextmapheader->numlaps);
 }
 
+static world_t *P_InitWorldFromMap(INT16 mapnumber, mapheader_t *mapheader, boolean addworld, boolean fromnetsave)
+{
+	world_t *curworld = world;
+	world_t *w = P_InitNewWorld();
+
+	w->loading = true;
+
+	P_SetWorld(w);
+
+	if (!addworld && !fromnetsave)
+	{
+		for (INT32 i = 0; i < MAXPLAYERS; i++)
+		{
+			if (!playeringame[i])
+				continue;
+
+			player_t *p = &players[i];
+			p->world = NULL;
+			P_SwitchPlayerWorld(p, w);
+		}
+
+		w->players = D_NumPlayers();
+	}
+
+	R_InitializeLevelInterpolators(w);
+	P_InitThinkers(w);
+	R_InitMobjInterpolators(w);
+
+	// internal game map
+	const char *maplumpname = G_BuildMapName(mapnumber);
+	lumpnum_t maplumpnum = W_CheckNumForMap(maplumpname);
+	if (maplumpnum == LUMPERROR)
+	{
+		P_SetWorld(curworld);
+		return NULL;
+	}
+
+	R_ReInitColormaps(mapheader->palette);
+
+	// Init Boom colormaps.
+	if (!addworld)
+		R_ClearColormaps();
+
+	// SRB2 determines the sky texture to be used depending on the map header.
+	P_InitLevelSky(mapheader->skynum);
+
+	P_ResetSpawnpoints();
+
+	P_ResetWaypoints();
+
+	P_MapStart(); // tmthing can be used starting from this point
+
+	P_InitSlopes();
+
+	if (!P_LoadMapFromFile(maplumpnum))
+		return false;
+
+	// init anything that P_SpawnSlopes/P_SpawnMapThings needs to know
+	P_InitSpecials();
+
+	// actually do that now
+	P_SpawnSlopes(fromnetsave);
+	P_SpawnMapThings(!fromnetsave);
+
+	// Init skybox objects
+	w->skyboxmo[0] = w->skyboxviewpnts[0];
+	w->skyboxmo[1] = w->skyboxcenterpnts[0];
+
+	// Count Co-Op starts
+	for (w->numcoopstarts = 0; w->numcoopstarts < MAXPLAYERS; w->numcoopstarts++)
+		if (!w->playerstarts[w->numcoopstarts])
+			break;
+
+	// set up world state
+	P_SpawnSpecials(fromnetsave);
+
+	//  ugly hack for P_NetUnArchiveMisc (and P_LoadNetGame)
+	if (!fromnetsave)
+		P_SpawnPrecipitation();
+
+#ifdef HWRENDER
+	if (rendermode == render_opengl && world->extrasubsectors == NULL)
+		HWR_CreatePlanePolygons((INT32)world->numnodes - 1);
+#endif
+
+	// oh god I hope this helps
+	// (addendum: apparently it does!
+	//  none of this needs to be done because it's not the beginning of the map when
+	//  a netgame save is being loaded, and could actively be harmful by messing with
+	//  the client's view of the data.)
+	if (!fromnetsave)
+		P_InitGametype(addworld);
+
+	// clear special respawning que
+	w->iquehead = w->iquetail = 0;
+
+	if (precache || dedicated)
+		R_PrecacheLevel();
+
+	if (!demoplayback)
+	{
+		clientGamedata->mapvisited[mapnumber-1] |= MV_VISITED;
+		serverGamedata->mapvisited[mapnumber-1] |= MV_VISITED;
+	}
+
+	w->loading = false;
+
+	P_RunCachedActions(w);
+
+	P_MapEnd(); // tmthing is no longer needed from this point onwards
+
+	P_SetWorld(curworld);
+
+	return w;
+}
+
+static void P_DoLevelProgression(void)
+{
+	// Took me 3 hours to figure out why my progression kept on getting overwritten with the titlemap...
+	if (titlemapinaction)
+		return;
+
+	if (!lastmaploaded) // Start a new game?
+	{
+		// I'd love to do this in the menu code instead of here, but everything's a mess and I can't guarantee saving proper player struct info before the first act's started. You could probably refactor it, but it'd be a lot of effort. Easier to just work off known good code. ~toast 22/06/2020
+		if (!(ultimatemode || netgame || multiplayer || demoplayback || demorecording || metalrecording || modeattacking || marathonmode)
+			&& !usedCheats && cursaveslot > 0)
+		{
+			G_SaveGame((UINT32)cursaveslot, gamemap);
+		}
+		// If you're looking for saving sp file progression (distinct from G_SaveGameOver), check G_DoCompleted.
+	}
+	lastmaploaded = gamemap; // HAS to be set after saving!!
+}
+
+static void P_FinishMapLoad(boolean fromnetsave)
+{
+	if (!fromnetsave) // uglier hack
+	{
+		// to make a newly loaded level start on the second frame.
+		INT32 buf = gametic % BACKUPTICS;
+		for (INT32 	i = 0; i < MAXPLAYERS; i++)
+		{
+			if (playeringame[i])
+				G_CopyTiccmd(&players[i].cmd, &netcmds[buf][i], 1);
+		}
+		P_PreTicker(2);
+		P_MapStart(); // just in case MapLoad modifies tmthing
+		LUA_HookInt(gamemap, HOOK(MapLoad));
+		P_MapEnd(); // just in case MapLoad modifies tmthing
+	}
+}
+
 /** Loads a level from a lump or external wad.
   *
   * \param fromnetsave If true, skip some stuff because we're loading a netgame snapshot.
   * \todo Clean up, refactor, split up; get rid of the bloat.
   */
-boolean P_LoadLevel(player_t *player, boolean addworld, boolean fromnetsave, boolean reloadinggamestate)
+boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate)
 {
 	// use gamemap to get map number.
 	// 99% of the things already did, so.
 	// Map header should always be in place at this point
-	INT32 i, ranspecialwipe = 0;
-	boolean runforself = (!addworld || (addworld && player == &players[consoleplayer]));
-
-	levelloading = true;
+	INT32 ranspecialwipe = 0;
 
 	// This is needed. Don't touch.
 	maptol = nextmapheader->typeoflevel;
@@ -7615,7 +7753,7 @@ boolean P_LoadLevel(player_t *player, boolean addworld, boolean fromnetsave, boo
 	if (cv_runscripts.value && nextmapheader->scriptname[0] != '#')
 		P_RunLevelScript(nextmapheader->scriptname);
 
-	P_InitLevelSettings(nextmapheader, player, addworld, fromnetsave);
+	P_InitLevelSettings(nextmapheader, false);
 
 	postimgtype = postimgtype2 = postimg_none;
 
@@ -7647,127 +7785,80 @@ boolean P_LoadLevel(player_t *player, boolean addworld, boolean fromnetsave, boo
 	players[consoleplayer].viewz = 1;
 
 	// Cancel all d_main.c fadeouts (keep fade in though).
-	if (addworld || reloadinggamestate)
+	if (reloadinggamestate)
 		wipegamestate = gamestate; // Don't fade if reloading the gamestate
 	else
 		wipegamestate = FORCEWIPEOFF;
 	wipestyleflags = 0;
 
-	if (!addworld)
+	// Special stage & record attack retry fade to white
+	// This is handled BEFORE sounds are stopped.
+	if (G_GetModeAttackRetryFlag())
 	{
-		// Special stage & record attack retry fade to white
-		// This is handled BEFORE sounds are stopped.
-		if (G_GetModeAttackRetryFlag())
+		if (modeattacking && !demoplayback)
 		{
-			if (modeattacking && !demoplayback)
-			{
-				ranspecialwipe = 2;
-				wipestyleflags |= (WSF_FADEOUT|WSF_TOWHITE);
-			}
-			G_ClearModeAttackRetryFlag();
+			ranspecialwipe = 2;
+			wipestyleflags |= (WSF_FADEOUT|WSF_TOWHITE);
 		}
-		else if (rendermode != render_none && G_IsSpecialStage(gamemap))
-		{
-			P_RunSpecialStageWipe();
-			ranspecialwipe = 1;
-		}
-
-		// Make sure all sounds are stopped before Z_FreeTags.
-		S_StopSounds();
-		S_ClearSfx();
-
-		// Fade out music here. Deduct 2 tics so the fade volume actually reaches 0.
-		// But don't halt the music! S_Start will take care of that. This dodges a MIDI crash bug.
-		if (!(reloadinggamestate || titlemapinaction) && (S_ShouldResetMusic(nextmapheader) ||
-			strnicmp(S_MusicName(),
-				(mapmusflags & MUSIC_RELOADRESET) ? nextmapheader->musname : mapmusname, 7)))
-		{
-			S_FadeMusic(0, FixedMul(
-				FixedDiv((F_GetWipeLength(wipedefs[wipe_level_toblack])-2)*NEWTICRATERATIO, NEWTICRATE), MUSICRATE));
-		}
-
-		// Let's fade to black here
-		// But only if we didn't do the special stage wipe
-		if (rendermode != render_none && !(ranspecialwipe || reloadinggamestate))
-			P_RunLevelWipe();
-
-		if (!(reloadinggamestate || titlemapinaction))
-		{
-			if (ranspecialwipe == 2)
-			{
-				pausedelay = -3; // preticker plus one
-				S_StartSound(NULL, sfx_s3k73);
-			}
-
-			// Print "SPEEDING OFF TO [ZONE] [ACT 1]..."
-			if (rendermode != render_none)
-			{
-				// Don't include these in the fade!
-				char tx[64];
-				V_DrawSmallString(1, 191, V_ALLOWLOWERCASE|V_TRANSLUCENT|V_SNAPTOLEFT|V_SNAPTOBOTTOM, M_GetText("Speeding off to..."));
-				snprintf(tx, 63, "%s%s%s",
-					nextmapheader->lvlttl,
-					(nextmapheader->levelflags & LF_NOZONE) ? "" : " Zone",
-					(nextmapheader->actnum > 0) ? va(" %d",nextmapheader->actnum) : "");
-				V_DrawSmallString(1, 195, V_ALLOWLOWERCASE|V_TRANSLUCENT|V_SNAPTOLEFT|V_SNAPTOBOTTOM, tx);
-				I_UpdateNoVsync();
-			}
-
-			// As oddly named as this is, this handles music only.
-			// We should be fine starting it here.
-			// Don't do this during titlemap, because the menu code handles music by itself.
-			S_Start(nextmapheader);
-
-			levelfadecol = (ranspecialwipe) ? 0 : 31;
-
-			// Close text prompt before freeing the old level
-			F_EndTextPrompt(false, true);
-		}
+		G_ClearModeAttackRetryFlag();
 	}
-	else
+	else if (rendermode != render_none && G_IsSpecialStage(gamemap))
 	{
-		S_SetMapMusic(nextmapheader);
-		S_StopMusic();
-		S_ChangeMusicEx(mapmusname, mapmusflags, true, mapmusposition, 0, 0);
+		P_RunSpecialStageWipe();
+		ranspecialwipe = 1;
 	}
 
-	if (player && !titlemapinaction && !fromnetsave)
-		P_UnloadWorldPlayer(player);
+	// Make sure all sounds are stopped before Z_FreeTags.
+	S_StopSounds();
+	S_ClearSfx();
 
-	// Initialize the world
-	world = P_InitNewWorld();
-	thlist = world->thlist;
-
-	if (!fromnetsave)
+	// Fade out music here. Deduct 2 tics so the fade volume actually reaches 0.
+	// But don't halt the music! S_Start will take care of that. This dodges a MIDI crash bug.
+	if (!(reloadinggamestate || titlemapinaction) && (S_ShouldResetMusic(nextmapheader) ||
+		strnicmp(S_MusicName(),
+			(mapmusflags & MUSIC_RELOADRESET) ? nextmapheader->musname : mapmusname, 7)))
 	{
-		if (addworld)
-			P_SwitchPlayerWorld(player, world);
-		else
-		{
-			for (i = 0; i < MAXPLAYERS; i++)
-			{
-				player_t *p;
-
-				if (!playeringame[i])
-					continue;
-
-				p = &players[i];
-				p->world = NULL;
-				P_SwitchPlayerWorld(p, world);
-			}
-
-			world->players = D_NumPlayers();
-		}
+		S_FadeMusic(0, FixedMul(
+			FixedDiv((F_GetWipeLength(wipedefs[wipe_level_toblack])-2)*NEWTICRATERATIO, NEWTICRATE), MUSICRATE));
 	}
 
-	if (!addworld || player == &players[consoleplayer])
-		localworld = world;
+	// Let's fade to black here
+	// But only if we didn't do the special stage wipe
+	if (rendermode != render_none && !(ranspecialwipe || reloadinggamestate))
+		P_RunLevelWipe();
 
-	R_InitializeLevelInterpolators(world);
+	if (!(reloadinggamestate || titlemapinaction))
+	{
+		if (ranspecialwipe == 2)
+		{
+			pausedelay = -3; // preticker plus one
+			S_StartSound(NULL, sfx_s3k73);
+		}
 
-	P_InitThinkers();
-	R_InitMobjInterpolators();
-	P_InitCachedActions();
+		// Print "SPEEDING OFF TO [ZONE] [ACT 1]..."
+		if (rendermode != render_none)
+		{
+			// Don't include these in the fade!
+			char tx[64];
+			V_DrawSmallString(1, 191, V_ALLOWLOWERCASE|V_TRANSLUCENT|V_SNAPTOLEFT|V_SNAPTOBOTTOM, M_GetText("Speeding off to..."));
+			snprintf(tx, 63, "%s%s%s",
+				nextmapheader->lvlttl,
+				(nextmapheader->levelflags & LF_NOZONE) ? "" : " Zone",
+				(nextmapheader->actnum > 0) ? va(" %d",nextmapheader->actnum) : "");
+			V_DrawSmallString(1, 195, V_ALLOWLOWERCASE|V_TRANSLUCENT|V_SNAPTOLEFT|V_SNAPTOBOTTOM, tx);
+			I_UpdateNoVsync();
+		}
+
+		// As oddly named as this is, this handles music only.
+		// We should be fine starting it here.
+		// Don't do this during titlemap, because the menu code handles music by itself.
+		S_Start(nextmapheader);
+
+		levelfadecol = (ranspecialwipe) ? 0 : 31;
+
+		// Close text prompt before freeing the old level
+		F_EndTextPrompt(false, true);
+	}
 
 	if (!fromnetsave && savedata.lives > 0)
 	{
@@ -7781,139 +7872,33 @@ boolean P_LoadLevel(player_t *player, boolean addworld, boolean fromnetsave, boo
 		savedata.lives = 0;
 	}
 
-	// internal game map
-	maplumpname = G_BuildMapName(gamemap);
-	lastloadedmaplumpnum = W_CheckNumForMap(maplumpname);
-	if (lastloadedmaplumpnum == LUMPERROR)
-		I_Error("Map %s not found.\n", maplumpname);
-
-	R_ReInitColormaps(worldmapheader->palette);
-	if (!addworld)
-	{
-		// Init Boom colormaps.
-		R_ClearColormaps();
-	}
 	CON_SetupBackColormap();
-
-	// SRB2 determines the sky texture to be used depending on the map header.
-	P_InitLevelSky(worldmapheader->skynum);
-
-	P_ResetSpawnpoints();
-
-	P_ResetWaypoints();
-
-	P_MapStart(); // tmthing can be used starting from this point
-
-	P_InitSlopes();
-
-	if (!P_LoadMapFromFile())
-		return false;
-
-	// init anything that P_SpawnSlopes/P_LoadThings needs to know
-	P_InitSpecials();
 
 	// Defaults in case levels don't have them set.
 	sstimer = worldmapheader->sstimer*TICRATE + 6;
 	ssspheres = worldmapheader->ssspheres;
 
-	P_SpawnSlopes(fromnetsave);
+	world_t *w = P_InitWorldFromMap(gamemap, worldmapheader, false, fromnetsave);
+	if (w == NULL)
+		I_Error("Map %s not found.\n", G_BuildMapName(gamemap));
 
-	P_SpawnMapThings(!fromnetsave);
-	world->skyboxmo[0] = world->skyboxviewpnts[0];
-	world->skyboxmo[1] = world->skyboxcenterpnts[0];
-
-	for (world->numcoopstarts = 0; world->numcoopstarts < MAXPLAYERS; world->numcoopstarts++)
-		if (!world->playerstarts[world->numcoopstarts])
-			break;
-
-	// set up world state
-	P_SpawnSpecials(fromnetsave);
-
-	//  ugly hack for P_NetUnArchiveMisc (and P_LoadNetGame)
-	if (!fromnetsave && runforself)
-		P_SpawnPrecipitation();
-
-#ifdef HWRENDER // not win32 only 19990829 by Kin
-	gl_maploaded = false;
-
-	// Create plane polygons.
-	if (rendermode == render_opengl)
-		HWR_LoadLevel();
-#endif
-
-	// oh god I hope this helps
-	// (addendum: apparently it does!
-	//  none of this needs to be done because it's not the beginning of the map when
-	//  a netgame save is being loaded, and could actively be harmful by messing with
-	//  the client's view of the data.)
-	if (!fromnetsave)
-		P_InitGametype(player, addworld);
-
-	if (runforself && !reloadinggamestate)
+	if (!reloadinggamestate)
 	{
 		P_InitCamera();
 		localaiming = 0;
 		localaiming2 = 0;
 	}
 
-	// clear special respawning que
-	world->iquehead = world->iquetail = 0;
-
 	// Remove the loading shit from the screen
-	if (rendermode != render_none && !(titlemapinaction || reloadinggamestate) && runforself)
+	if (rendermode != render_none && !(titlemapinaction || reloadinggamestate))
 		F_WipeColorFill(levelfadecol);
-
-	if (precache || dedicated)
-		R_PrecacheLevel();
 
 	nextmapoverride = 0;
 	skipstats = 0;
 
-	if (!demoplayback)
-	{
-		clientGamedata->mapvisited[gamemap-1] |= MV_VISITED;
-		serverGamedata->mapvisited[gamemap-1] |= MV_VISITED;
-	}
+	P_DoLevelProgression();
 
-	levelloading = false;
-
-	P_RunCachedActions();
-
-	P_MapEnd(); // tmthing is no longer needed from this point onwards
-
-	// Took me 3 hours to figure out why my progression kept on getting overwritten with the titlemap...
-	if (!titlemapinaction)
-	{
-		if (!lastmaploaded) // Start a new game?
-		{
-			// I'd love to do this in the menu code instead of here, but everything's a mess and I can't guarantee saving proper player struct info before the first act's started. You could probably refactor it, but it'd be a lot of effort. Easier to just work off known good code. ~toast 22/06/2020
-			if (!(ultimatemode || netgame || multiplayer || demoplayback || demorecording || metalrecording || modeattacking || marathonmode)
-				&& !usedCheats && cursaveslot > 0)
-			{
-				G_SaveGame((UINT32)cursaveslot, gamemap);
-			}
-			// If you're looking for saving sp file progression (distinct from G_SaveGameOver), check G_DoCompleted.
-		}
-		lastmaploaded = gamemap; // HAS to be set after saving!!
-	}
-
-	if (!fromnetsave) // uglier hack
-	{ // to make a newly loaded level start on the second frame.
-		INT32 buf = gametic % BACKUPTICS;
-		for (i = 0; i < MAXPLAYERS; i++)
-		{
-			if (playeringame[i])
-				G_CopyTiccmd(&players[i].cmd, &netcmds[buf][i], 1);
-		}
-		P_PreTicker(2);
-		P_MapStart(); // just in case MapLoad modifies tmthing
-		LUA_HookInt(gamemap, HOOK(MapLoad));
-		P_MapEnd(); // just in case MapLoad modifies tmthing
-	}
-
-	// Done here
-	if (addworld)
-		return true;
+	P_FinishMapLoad(fromnetsave);
 
 	// No render mode or reloading gamestate, stop here.
 	if (rendermode == render_none || reloadinggamestate)
@@ -7937,6 +7922,36 @@ boolean P_LoadLevel(player_t *player, boolean addworld, boolean fromnetsave, boo
 
 	return true;
 }
+
+boolean P_LoadWorld(boolean fromnetsave)
+{
+	// Initialize sector node list.
+	P_Initsecnode();
+
+	if (nextmapheader->runsoc[0] != '#')
+		P_RunSOC(nextmapheader->runsoc);
+
+	if (cv_runscripts.value && nextmapheader->scriptname[0] != '#')
+		P_RunLevelScript(nextmapheader->scriptname);
+
+	P_InitLevelSettings(nextmapheader, true);
+
+	// Don't cause a wipe here
+	if (wipegamestate != gamestate)
+	{
+		wipegamestate = gamestate;
+		wipestyleflags = 0;
+	}
+
+	world_t *w = P_InitWorldFromMap(gamemap, worldmapheader, true, fromnetsave);
+	if (w == NULL)
+		I_Error("Map %s not found.\n", G_BuildMapName(gamemap));
+
+	P_FinishMapLoad(fromnetsave);
+
+	return true;
+}
+
 
 //
 // P_RunSOC

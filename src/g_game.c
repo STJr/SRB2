@@ -1839,13 +1839,17 @@ void G_DoLoadLevel(player_t *player, boolean addworld, boolean resetplayer)
 
 		P_UnloadWorldList();
 	}
-	else if (resetplayer)
-		player->playerstate = PST_REBORN;
 
 	// Setup the level.
-	if (!P_LoadLevel(player, addworld, false, false)) // this never returns false?
+	boolean success;
+	if (addworld)
+		success = P_LoadWorld(false);
+	else
+		success = P_LoadLevel(false, false); // this never returns false? (yes it can)
+
+	// fail so reset game stuff
+	if (!success)
 	{
-		// fail so reset game stuff
 		Command_ExitGame_f();
 		return;
 	}
@@ -1877,14 +1881,16 @@ void G_DoLoadLevel(player_t *player, boolean addworld, boolean resetplayer)
 			G_ResetCamera(1);
 	}
 
-	if (player == &players[consoleplayer])
+	if (!addworld && player == &players[consoleplayer])
 	{
 		G_ResetCamera(consoleplayer);
 
 		// clear hud messages remains (usually from game startup)
 		CON_ClearHUD();
 	}
-	else if (addworld && !splitscreen) // change world back to yours
+
+	// change world back to yours, for consistency
+	if (addworld)
 		P_SetWorld(localworld);
 }
 
@@ -5026,13 +5032,7 @@ void G_InitNew(player_t *player,
 		numgameovers = tokenlist = token = sstimer = redscore = bluescore = lastmap = 0;
 		countdown = countdown2 = exitfadestarted = 0;
 
-		if (addworld)
-		{
-			P_DetachPlayerWorld(player);
-			P_UnloadWorldPlayer(player);
-			G_ResetPlayer(player, pultmode, FLS);
-		}
-		else
+		if (!addworld)
 		{
 			for (i = 0; i < MAXPLAYERS; i++)
 				G_ResetPlayer(&players[i], pultmode, FLS);
@@ -5082,11 +5082,8 @@ void G_InitNew(player_t *player,
 	else
 		G_DoLoadLevel(player, addworld, resetplayer);
 
-	if (addworld && player != &players[consoleplayer])
-		return;
-
 	// current world is hopefully the newly loaded world at this point
-	if (netgame)
+	if (netgame && !addworld)
 	{
 		char *title = G_BuildMapTitle(gamemap);
 

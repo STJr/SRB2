@@ -472,20 +472,6 @@ typedef struct precipmobj_s
 	INT32 flags; // flags from mobjinfo tables
 } precipmobj_t;
 
-typedef struct actioncache_s
-{
-	struct actioncache_s *next;
-	struct actioncache_s *prev;
-	struct mobj_s *mobj;
-	INT32 statenum;
-} actioncache_t;
-
-extern actioncache_t actioncachehead;
-
-void P_InitCachedActions(void);
-void P_RunCachedActions(void);
-void P_AddCachedAction(mobj_t *mobj, INT32 statenum);
-
 // check mobj against water content, before movement code
 void P_MobjCheckWater(mobj_t *mobj);
 

@@ -132,7 +132,6 @@ ps_metric_t ps_hw_batchsorttime = {0};
 ps_metric_t ps_hw_batchdrawtime = {0};
 
 boolean gl_init = false;
-boolean gl_maploaded = false;
 boolean gl_sessioncommandsadded = false;
 boolean gl_shadersavailable = true;
 
@@ -5548,23 +5547,6 @@ void HWR_RenderPlayerView(INT32 viewnumber, player_t *player)
 	HWD.pfnGClipRect(0, 0, vid.width, vid.height, NZCLIP_PLANE);
 }
 
-void HWR_LoadLevel(void)
-{
-#ifdef ALAM_LIGHTING
-	// BP: reset light between levels (we draw preview frame lights on current frame)
-	HWR_ResetLights();
-#endif
-
-	if (world->extrasubsectors == NULL)
-		HWR_CreatePlanePolygons((INT32)world->numnodes - 1);
-
-	// Build the sky dome
-	HWR_ClearSkyDome(world);
-	HWR_BuildSkyDome(world);
-
-	gl_maploaded = true;
-}
-
 // ==========================================================================
 //                                                         3D ENGINE COMMANDS
 // ==========================================================================
@@ -5705,13 +5687,6 @@ void HWR_Switch(void)
 	// Load textures
 	if (!gl_maptexturesloaded)
 		HWR_LoadMapTextures(numtextures);
-
-	// Create plane polygons
-	if (!gl_maploaded && (gamestate == GS_LEVEL || (gamestate == GS_TITLESCREEN && titlemapinaction)))
-	{
-		HWR_ClearAllTextures();
-		HWR_LoadLevel();
-	}
 }
 
 // --------------------------------------------------------------------------

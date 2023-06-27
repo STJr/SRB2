@@ -59,10 +59,11 @@ world_t *P_InitWorld(void)
 {
 	world_t *w = Z_Calloc(sizeof(world_t), PU_STATIC, NULL);
 	w->gamemap = gamemap;
-	if (!mapheaderinfo[w->gamemap-1])
-		P_AllocMapHeader(w->gamemap-1);
-	w->header = mapheaderinfo[w->gamemap-1];
+	if (!mapheaderinfo[gamemap-1])
+		P_AllocMapHeader(gamemap-1);
+	w->header = mapheaderinfo[gamemap-1];
 	w->thlist = Z_Calloc(sizeof(thinker_t) * NUM_THINKERLISTS, PU_STATIC, NULL);
+	P_InitCachedActions(w);
 	return w;
 }
 
@@ -309,11 +310,6 @@ void P_SwitchWorld(player_t *player, world_t *w)
 		P_ResetPlayer(player);
 	P_MapEnd();
 
-#ifdef HWRENDER
-	if (rendermode == render_opengl)
-		HWR_LoadLevel();
-#endif
-
 	if (local || splitscreen)
 	{
 		S_SetMapMusic(worldmapheader);
@@ -495,4 +491,41 @@ void P_RemoveMobjConnections(mobj_t *mobj, world_t *w)
 world_t *P_GetMobjWorld(mobj_t *mobj)
 {
 	return (world_t *)mobj->world;
+}
+
+void P_InitCachedActions(world_t *w)
+{
+	actioncache_t *head = &w->actioncachehead;
+
+	memset(head, 0x00, sizeof(actioncache_t));
+
+	w->actioncachehead.prev = w->actioncachehead.next = head;
+}
+
+void P_RunCachedActions(world_t *w)
+{
+	actioncache_t *ac;
+	actioncache_t *next;
+
+	for (ac = w->actioncachehead.next; ac != &w->actioncachehead; ac = next)
+	{
+		var1 = states[ac->statenum].var1;
+		var2 = states[ac->statenum].var2;
+		astate = &states[ac->statenum];
+		if (ac->mobj && !P_MobjWasRemoved(ac->mobj)) // just in case...
+			states[ac->statenum].action.acp1(ac->mobj);
+		next = ac->next;
+		Z_Free(ac);
+	}
+}
+
+void P_AddCachedAction(world_t *w, mobj_t *mobj, INT32 statenum)
+{
+	actioncache_t *newaction = Z_Calloc(sizeof(actioncache_t), PU_LEVEL, NULL);
+	newaction->mobj = mobj;
+	newaction->statenum = statenum;
+	w->actioncachehead.prev->next = newaction;
+	newaction->next = &w->actioncachehead;
+	newaction->prev = w->actioncachehead.prev;
+	w->actioncachehead.prev = newaction;
 }

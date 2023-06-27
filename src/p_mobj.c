@@ -19,6 +19,7 @@
 #include "hu_stuff.h"
 #include "p_local.h"
 #include "p_setup.h"
+#include "p_world.h"
 #include "r_fps.h"
 #include "r_main.h"
 #include "r_skins.h"
@@ -39,41 +40,6 @@
 
 static CV_PossibleValue_t CV_BobSpeed[] = {{0, "MIN"}, {4*FRACUNIT, "MAX"}, {0, NULL}};
 consvar_t cv_movebob = CVAR_INIT ("movebob", "1.0", CV_FLOAT|CV_SAVE, CV_BobSpeed, NULL);
-
-actioncache_t actioncachehead;
-
-void P_InitCachedActions(void)
-{
-	actioncachehead.prev = actioncachehead.next = &actioncachehead;
-}
-
-void P_RunCachedActions(void)
-{
-	actioncache_t *ac;
-	actioncache_t *next;
-
-	for (ac = actioncachehead.next; ac != &actioncachehead; ac = next)
-	{
-		var1 = states[ac->statenum].var1;
-		var2 = states[ac->statenum].var2;
-		astate = &states[ac->statenum];
-		if (ac->mobj && !P_MobjWasRemoved(ac->mobj)) // just in case...
-			states[ac->statenum].action.acp1(ac->mobj);
-		next = ac->next;
-		Z_Free(ac);
-	}
-}
-
-void P_AddCachedAction(mobj_t *mobj, INT32 statenum)
-{
-	actioncache_t *newaction = Z_Calloc(sizeof(actioncache_t), PU_LEVEL, NULL);
-	newaction->mobj = mobj;
-	newaction->statenum = statenum;
-	actioncachehead.prev->next = newaction;
-	newaction->next = &actioncachehead;
-	newaction->prev = actioncachehead.prev;
-	actioncachehead.prev = newaction;
-}
 
 //
 // P_SetupStateAnimation
@@ -10977,13 +10943,13 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 	// Call action functions when the state is set
 	if (st->action.acp1 && (mobj->flags & MF_RUNSPAWNFUNC))
 	{
-		if (levelloading)
+		if (world->loading)
 		{
 			// Cache actions in a linked list
 			// with function pointer, and
 			// var1 & var2, which will be executed
 			// when the level finishes loading.
-			P_AddCachedAction(mobj, mobj->info->spawnstate);
+			P_AddCachedAction(world, mobj, mobj->info->spawnstate);
 		}
 		else
 		{

@@ -191,10 +191,9 @@ void Command_CountMobjs_f(void)
 //
 // P_InitThinkers
 //
-void P_InitThinkers(void)
+void P_InitThinkers(world_t *w)
 {
-	UINT8 i;
-	for (i = 0; i < NUM_THINKERLISTS; i++)
+	for (UINT8 i = 0; i < NUM_THINKERLISTS; i++)
 		thlist[i].prev = thlist[i].next = &thlist[i];
 }
 

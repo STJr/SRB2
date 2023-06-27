@@ -72,9 +72,10 @@ typedef enum
 	THINK_PRECIP,
 	NUM_THINKERLISTS
 } thinklistnum_t; /**< Thinker lists. */
-extern thinker_t *thlist;
 
-void P_InitThinkers(void);
+extern thinker_t *thlist; // the current thinker list
+
+void P_InitThinkers(world_t *w);
 void P_AddThinker(const thinklistnum_t n, thinker_t *thinker);
 void P_RemoveThinker(thinker_t *thinker);
 void P_MoveThinkerToWorld(world_t *w, const thinklistnum_t n, thinker_t *thinker);
