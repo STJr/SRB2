@@ -164,10 +164,12 @@ mobj_t *blueflag;
 mapthing_t *rflagpoint;
 mapthing_t *bflagpoint;
 
-struct quake quake;
-
 // Map Header Information
 mapheader_t* mapheaderinfo[NUMMAPS] = {NULL};
+
+mapheader_t* curmapheader = NULL;
+mapheader_t* nextmapheader = NULL;
+mapheader_t* worldmapheader = NULL;
 
 static boolean exitgame = false;
 static boolean retrying = false;
@@ -221,14 +223,7 @@ UINT8 introtoplay;
 UINT8 creditscutscene;
 UINT8 useBlackRock = 1;
 
-// Emerald locations
-mobj_t *hunt1;
-mobj_t *hunt2;
-mobj_t *hunt3;
-
 UINT32 countdown, countdown2; // for racing
-
-fixed_t gravity;
 
 INT16 autobalance; //for CTF team balance
 INT16 teamscramble; //for CTF team scramble
@@ -1855,7 +1850,7 @@ void G_DoLoadLevel(player_t *player, boolean addworld, boolean resetplayer)
 		return;
 	}
 
-	P_FindEmerald();
+	P_FindEmerald(world);
 
 	displayplayer = consoleplayer; // view the guy you are playing
 	if (!splitscreen && !botingame)
@@ -1965,7 +1960,7 @@ boolean G_IsTitleCardAvailable(void)
 	else if (titlecardforreload)
 		titleflag = LF_NOTITLECARDRESPAWN;
 
-	if (mapheaderinfo[gamemap-1]->levelflags & titleflag)
+	if (worldmapheader->levelflags & titleflag)
 		return false;
 
 	// The current gametype doesn't have a title card.
@@ -1973,7 +1968,7 @@ boolean G_IsTitleCardAvailable(void)
 		return false;
 
 	// The current level has no name.
-	if (!mapheaderinfo[gamemap-1]->lvlttl[0])
+	if (!worldmapheader->lvlttl[0])
 		return false;
 
 	// The title card is available.
@@ -2654,7 +2649,7 @@ void G_PlayerReborn(INT32 player, boolean betweenmaps)
 
 	if (betweenmaps || !G_IsSpecialStage(gamemap))
 	{
-		rings = (ultimatemode ? 0 : mapheaderinfo[gamemap-1]->startrings);
+		rings = (ultimatemode ? 0 : curmapheader->startrings);
 		spheres = 0;
 	}
 	else
@@ -2769,23 +2764,23 @@ void G_PlayerReborn(INT32 player, boolean betweenmaps)
 	{
 		if (mapmusflags & MUSIC_RELOADRESET)
 		{
-			strncpy(mapmusname, mapheaderinfo[gamemap-1]->musname, 7);
+			strncpy(mapmusname, worldmapheader->musname, 7);
 			mapmusname[6] = 0;
-			mapmusflags = (mapheaderinfo[gamemap-1]->mustrack & MUSIC_TRACKMASK);
-			mapmusposition = mapheaderinfo[gamemap-1]->muspos;
+			mapmusflags = (worldmapheader->mustrack & MUSIC_TRACKMASK);
+			mapmusposition = worldmapheader->muspos;
 		}
 
 		// This is in S_Start, but this was not here previously.
-		// if (RESETMUSIC)
+		// if (S_ShouldResetMusic(worldmapheader))
 		// 	S_StopMusic();
 		S_ChangeMusicEx(mapmusname, mapmusflags, true, mapmusposition, 0, 0);
 	}
 
 	if (gametyperules & GTR_EMERALDHUNT)
-		P_FindEmerald(); // scan for emeralds to hunt for
+		P_FindEmerald(p->world); // scan for emeralds to hunt for
 
 	// If NiGHTS, find lowest mare to start with.
-	p->mare = P_FindLowestMare();
+	p->mare = P_FindLowestMare(p->world);
 
 	CONS_Debug(DBG_NIGHTS, M_GetText("Current mare is %d\n"), p->mare);
 
@@ -3202,7 +3197,7 @@ void G_DoReborn(INT32 playernum)
 				players[i].starpostnum = 0;
 			}
 		}
-		if (!countdowntimeup && (mapheaderinfo[gamemap-1]->levelflags & LF_NORELOAD) && !(marathonmode & MA_INIT))
+		if (!countdowntimeup && (curmapheader->levelflags & LF_NORELOAD) && !(marathonmode & MA_INIT))
 		{
 			P_RespawnThings();
 
@@ -3983,11 +3978,11 @@ void G_SetNextMap(boolean usespec, boolean inspec)
 	// nextmap is 0-based, unlike gamemap
 	if (nextmapoverride != 0)
 		nextmap = (INT16)(nextmapoverride-1);
-	else if (marathonmode && mapheaderinfo[gamemap-1]->marathonnext)
-		nextmap = (INT16)(mapheaderinfo[gamemap-1]->marathonnext-1);
+	else if (marathonmode && curmapheader->marathonnext)
+		nextmap = (INT16)(curmapheader->marathonnext-1);
 	else
 	{
-		nextmap = (INT16)(mapheaderinfo[gamemap-1]->nextlevel-1);
+		nextmap = (INT16)(curmapheader->nextlevel-1);
 		if (marathonmode && nextmap == spmarathon_start-1)
 			nextmap = 1100-1; // No infinite loop for you
 	}
@@ -4161,14 +4156,14 @@ void G_AfterIntermission(void)
 
 	HU_ClearCEcho();
 
-	if ((gametyperules & GTR_CUTSCENES) && mapheaderinfo[gamemap-1]->cutscenenum
+	if ((gametyperules & GTR_CUTSCENES) && curmapheader->cutscenenum
 		&& !modeattacking
 		&& skipstats <= 1
 		&& (gamecomplete || !(marathonmode & MA_NOCUTSCENES))
 		&& stagefailed == false)
 	{
 		// Start a custom cutscene.
-		F_StartCustomCutscene(mapheaderinfo[gamemap-1]->cutscenenum-1, false, false, false);
+		F_StartCustomCutscene(curmapheader->cutscenenum-1, false, false, false);
 	}
 	else
 	{
@@ -5068,7 +5063,12 @@ void G_InitNew(player_t *player,
 	if(!mapheaderinfo[gamemap-1])
 		P_AllocMapHeader(gamemap-1);
 
-	maptol = mapheaderinfo[gamemap-1]->typeoflevel;
+	nextmapheader = mapheaderinfo[gamemap-1];
+	maptol = curmapheader->typeoflevel;
+
+	if (!addworld)
+		curmapheader = nextmapheader;
+	worldmapheader = nextmapheader;
 
 	// Don't carry over custom music change to another map.
 	mapmusflags |= MUSIC_RELOADRESET;
@@ -5077,14 +5077,15 @@ void G_InitNew(player_t *player,
 	automapactive = false;
 	imcontinuing = false;
 
-	if ((gametyperules & GTR_CUTSCENES) && !skipprecutscene && mapheaderinfo[gamemap-1]->precutscenenum && !modeattacking && !(marathonmode & MA_NOCUTSCENES)) // Start a custom cutscene.
-		F_StartCustomCutscene(mapheaderinfo[gamemap-1]->precutscenenum-1, true, resetplayer, FLS);
+	if (!addworld && ((gametyperules & GTR_CUTSCENES) && !skipprecutscene && nextmapheader->precutscenenum && !modeattacking && !(marathonmode & MA_NOCUTSCENES))) // Start a custom cutscene.
+		F_StartCustomCutscene(nextmapheader->precutscenenum-1, true, resetplayer, FLS);
 	else
 		G_DoLoadLevel(player, addworld, resetplayer);
 
 	if (addworld && player != &players[consoleplayer])
 		return;
 
+	// current world is hopefully the newly loaded world at this point
 	if (netgame)
 	{
 		char *title = G_BuildMapTitle(gamemap);

@@ -739,7 +739,7 @@ static void ST_drawTime(void)
 			// right now before the island blows up with you on it!"
 			// "Blows up??" *awkward silence* "I've got to get outta
 			// here and find Amy and Tails right away!"
-			else if (mapheaderinfo[gamemap-1]->countdown)
+			else if (worldmapheader->countdown)
 			{
 				tics = countdowntimer;
 				downwards = true;
@@ -1232,15 +1232,15 @@ static void ST_cacheLevelTitle(void)
 #define SETPATCH(default, warning, custom, idx) \
 { \
 	lumpnum_t patlumpnum = LUMPERROR; \
-	if (mapheaderinfo[gamemap-1]->custom[0] != '\0') \
+	if (worldmapheader->custom[0] != '\0') \
 	{ \
-		patlumpnum = W_CheckNumForName(mapheaderinfo[gamemap-1]->custom); \
+		patlumpnum = W_CheckNumForName(worldmapheader->custom); \
 		if (patlumpnum != LUMPERROR) \
 			lt_patches[idx] = (patch_t *)W_CachePatchNum(patlumpnum, PU_HUDGFX); \
 	} \
 	if (patlumpnum == LUMPERROR) \
 	{ \
-		if (!(mapheaderinfo[gamemap-1]->levelflags & LF_WARNINGTITLE)) \
+		if (!(worldmapheader->levelflags & LF_WARNINGTITLE)) \
 			lt_patches[idx] = (patch_t *)W_CachePatchName(default, PU_HUDGFX); \
 		else \
 			lt_patches[idx] = (patch_t *)W_CachePatchName(warning, PU_HUDGFX); \
@@ -1343,9 +1343,9 @@ void ST_runTitleCard(void)
 //
 void ST_drawTitleCard(void)
 {
-	char *lvlttl = mapheaderinfo[gamemap-1]->lvlttl;
-	char *subttl = mapheaderinfo[gamemap-1]->subttl;
-	UINT8 actnum = mapheaderinfo[gamemap-1]->actnum;
+	char *lvlttl = worldmapheader->lvlttl;
+	char *subttl = worldmapheader->subttl;
+	UINT8 actnum = worldmapheader->actnum;
 	INT32 lvlttlxpos, ttlnumxpos, zonexpos;
 	INT32 subttlxpos = BASEVIDWIDTH/2;
 	INT32 ttlscroll = FixedInt(lt_scroll);
@@ -1412,7 +1412,7 @@ void ST_drawTitleCard(void)
 	}
 
 	V_DrawLevelTitle(lvlttlxpos - ttlscroll, 80, V_PERPLAYER, lvlttl);
-	if (!(mapheaderinfo[gamemap-1]->levelflags & LF_NOZONE))
+	if (!(worldmapheader->levelflags & LF_NOZONE))
 		V_DrawLevelTitle(zonexpos + ttlscroll, 104, V_PERPLAYER, M_GetText("Zone"));
 	V_DrawCenteredString(subttlxpos - ttlscroll, 135, V_PERPLAYER|V_ALLOWLOWERCASE, subttl);
 
@@ -2558,20 +2558,21 @@ static INT32 ST_drawEmeraldHuntIcon(mobj_t *hunt, patch_t **patches, INT32 offse
 static void ST_doHuntIconsAndSound(void)
 {
 	INT32 interval = 0, newinterval = 0;
+	mobj_t **hunt = world->emerald_hunt_locations;
 
-	if (hunt1 && hunt1->health)
-		interval = ST_drawEmeraldHuntIcon(hunt1, hunthoming, -20);
+	if (hunt[0] && hunt[0]->health)
+		interval = ST_drawEmeraldHuntIcon(hunt[0], hunthoming, -20);
 
-	if (hunt2 && hunt2->health)
+	if (hunt[1] && hunt[1]->health)
 	{
-		newinterval = ST_drawEmeraldHuntIcon(hunt2, hunthoming, 0);
+		newinterval = ST_drawEmeraldHuntIcon(hunt[1], hunthoming, 0);
 		if (newinterval && (!interval || newinterval < interval))
 			interval = newinterval;
 	}
 
-	if (hunt3 && hunt3->health)
+	if (hunt[2] && hunt[2]->health)
 	{
-		newinterval = ST_drawEmeraldHuntIcon(hunt3, hunthoming, 20);
+		newinterval = ST_drawEmeraldHuntIcon(hunt[2], hunthoming, 20);
 		if (newinterval && (!interval || newinterval < interval))
 			interval = newinterval;
 	}
@@ -2671,7 +2672,7 @@ static void ST_overlayDrawer(void)
 	// Check for a valid level title
 	// If the HUD is enabled
 	// And, if Lua is running, if the HUD library has the stage title enabled
-	if (G_IsTitleCardAvailable() && *mapheaderinfo[gamemap-1]->lvlttl != '\0' && !(hu_showscores && (netgame || multiplayer)))
+	if (G_IsTitleCardAvailable() && *worldmapheader->lvlttl != '\0' && !(hu_showscores && (netgame || multiplayer)))
 	{
 		stagetitle = true;
 		ST_preDrawTitleCard();

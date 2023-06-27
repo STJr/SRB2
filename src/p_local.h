@@ -208,8 +208,8 @@ boolean P_SuperReady(player_t *player);
 void P_DoJump(player_t *player, boolean soundandstate);
 #define P_AnalogMove(player) (P_ControlStyle(player) == CS_LMAOGALOG)
 boolean P_TransferToNextMare(player_t *player);
-UINT8 P_FindLowestMare(void);
-void P_FindEmerald(void);
+UINT8 P_FindLowestMare(world_t *w);
+void P_FindEmerald(world_t *w);
 void P_TransferToAxis(player_t *player, INT32 axisnum);
 boolean P_PlayerMoving(INT32 pnum);
 void P_SpawnThokMobj(player_t *player);
@@ -276,7 +276,7 @@ extern consvar_t cv_gravity, cv_movebob;
 
 mobjtype_t P_GetMobjtype(UINT16 mthingtype);
 
-void P_RespawnSpecials(void);
+void P_RespawnSpecials(world_t *w);
 
 mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type);
 
@@ -288,8 +288,8 @@ boolean P_MobjWasRemoved(mobj_t *th);
 void P_RemoveSavegameMobj(mobj_t *th);
 boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state);
 boolean P_SetMobjState(mobj_t *mobj, statenum_t state);
-void P_RunShields(void);
-void P_RunOverlays(void);
+void P_RunShields(world_t *w);
+void P_RunOverlays(world_t *w);
 void P_HandleMinecartSegments(mobj_t *mobj);
 void P_MobjThinker(mobj_t *mobj);
 boolean P_RailThinker(mobj_t *mobj);
@@ -301,17 +301,17 @@ fixed_t P_MobjFloorZ(mobj_t *mobj, sector_t *sector, sector_t *boundsec, fixed_t
 fixed_t P_MobjCeilingZ(mobj_t *mobj, sector_t *sector, sector_t *boundsec, fixed_t x, fixed_t y, line_t *line, boolean lowest, boolean perfect);
 #define P_GetFloorZ(mobj, sector, x, y, line) P_MobjFloorZ(mobj, sector, NULL, x, y, line, false, false)
 #define P_GetCeilingZ(mobj, sector, x, y, line) P_MobjCeilingZ(mobj, sector, NULL, x, y, line, true, false)
-#define P_GetFOFTopZ(mobj, sector, fof, x, y, line) P_MobjCeilingZ(mobj, sectors + fof->secnum, sector, x, y, line, false, false)
-#define P_GetFOFBottomZ(mobj, sector, fof, x, y, line) P_MobjFloorZ(mobj, sectors + fof->secnum, sector, x, y, line, true, false)
+#define P_GetFOFTopZ(mobj, sector, fof, x, y, line) P_MobjCeilingZ(mobj, P_GetMobjWorld(mobj)->sectors + fof->secnum, sector, x, y, line, false, false)
+#define P_GetFOFBottomZ(mobj, sector, fof, x, y, line) P_MobjFloorZ(mobj, P_GetMobjWorld(mobj)->sectors + fof->secnum, sector, x, y, line, true, false)
 #define P_GetSpecialBottomZ(mobj, src, bound) P_MobjFloorZ(mobj, src, bound, mobj->x, mobj->y, NULL, src != bound, true)
 #define P_GetSpecialTopZ(mobj, src, bound) P_MobjCeilingZ(mobj, src, bound, mobj->x, mobj->y, NULL, src == bound, true)
 
-fixed_t P_CameraFloorZ(camera_t *mobj, sector_t *sector, sector_t *boundsec, fixed_t x, fixed_t y, line_t *line, boolean lowest, boolean perfect);
-fixed_t P_CameraCeilingZ(camera_t *mobj, sector_t *sector, sector_t *boundsec, fixed_t x, fixed_t y, line_t *line, boolean lowest, boolean perfect);
-#define P_CameraGetFloorZ(mobj, sector, x, y, line) P_CameraFloorZ(mobj, sector, NULL, x, y, line, false, false)
-#define P_CameraGetCeilingZ(mobj, sector, x, y, line) P_CameraCeilingZ(mobj, sector, NULL, x, y, line, true, false)
-#define P_CameraGetFOFTopZ(mobj, sector, fof, x, y, line) P_CameraCeilingZ(mobj, sectors + fof->secnum, sector, x, y, line, false, false)
-#define P_CameraGetFOFBottomZ(mobj, sector, fof, x, y, line) P_CameraFloorZ(mobj, sectors + fof->secnum, sector, x, y, line, true, false)
+fixed_t P_CameraFloorZ(camera_t *cam, sector_t *sector, sector_t *boundsec, fixed_t x, fixed_t y, line_t *line, boolean lowest, boolean perfect);
+fixed_t P_CameraCeilingZ(camera_t *cam, sector_t *sector, sector_t *boundsec, fixed_t x, fixed_t y, line_t *line, boolean lowest, boolean perfect);
+#define P_CameraGetFloorZ(cam, sector, x, y, line) P_CameraFloorZ(cam, sector, NULL, x, y, line, false, false)
+#define P_CameraGetCeilingZ(cam, sector, x, y, line) P_CameraCeilingZ(cam, sector, NULL, x, y, line, true, false)
+#define P_CameraGetFOFTopZ(cam, sector, fof, x, y, line) P_CameraCeilingZ(cam, P_GetCameraWorld(cam)->sectors + fof->secnum, sector, x, y, line, false, false)
+#define P_CameraGetFOFBottomZ(cam, sector, fof, x, y, line) P_CameraFloorZ(cam, P_GetCameraWorld(cam)->sectors + fof->secnum, sector, x, y, line, true, false)
 
 boolean P_InsideANonSolidFFloor(mobj_t *mobj, ffloor_t *rover);
 boolean P_CheckDeathPitCollide(mobj_t *mo);
@@ -334,6 +334,8 @@ FUNCMATH boolean P_WeaponOrPanel(mobjtype_t type);
 
 void P_CalcChasePostImg(player_t *player, camera_t *thiscam);
 boolean P_CameraThinker(player_t *player, camera_t *thiscam, boolean resetcalled);
+
+world_t *P_GetCameraWorld(camera_t *cam);
 
 void P_Attract(mobj_t *source, mobj_t *enemy, boolean nightsgrab);
 mobj_t *P_GetClosestAxis(mobj_t *source);

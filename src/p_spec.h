@@ -485,12 +485,13 @@ void P_SetupLevelFlatAnims(void);
 
 // at map load
 void P_InitSpecials(void);
+void P_InitLocalSpecials(void);
 void P_ApplyFlatAlignment(sector_t* sector, angle_t flatangle, fixed_t xoffs, fixed_t yoffs, boolean floor, boolean ceiling);
 fixed_t P_GetSectorGravityFactor(sector_t *sec);
 void P_SpawnSpecials(boolean fromnetsave);
 
 // every tic
-void P_UpdateSpecials(void);
+void P_UpdateSpecials(world_t *w);
 sector_t *P_MobjTouchingSectorSpecial(mobj_t *mo, INT32 section, INT32 number);
 sector_t *P_ThingOnSpecial3DFloor(mobj_t *mo);
 sector_t *P_MobjTouchingSectorSpecialFlag(mobj_t *mo, sectorspecialflags_t flag);

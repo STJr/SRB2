@@ -248,8 +248,8 @@ void Y_LoadIntermissionData(void)
 
 
 			// grab an interscreen if appropriate
-			if (mapheaderinfo[gamemap-1]->interscreen[0] != '#')
-				interpic = W_CachePatchName(mapheaderinfo[gamemap-1]->interscreen, PU_PATCH);
+			if (worldmapheader->interscreen[0] != '#')
+				interpic = W_CachePatchName(worldmapheader->interscreen, PU_PATCH);
 			else // no interscreen? use default background
 				bgpatch = W_CachePatchName("INTERSCR", PU_PATCH);
 			break;
@@ -263,8 +263,8 @@ void Y_LoadIntermissionData(void)
 			data.spec.pcontinues = W_CachePatchName("YB_CONTI", PU_PATCH);
 
 			// grab an interscreen if appropriate
-			if (mapheaderinfo[gamemap-1]->interscreen[0] != '#')
-				interpic = W_CachePatchName(mapheaderinfo[gamemap-1]->interscreen, PU_PATCH);
+			if (worldmapheader->interscreen[0] != '#')
+				interpic = W_CachePatchName(worldmapheader->interscreen, PU_PATCH);
 			else // no interscreen? use default background
 				bgtile = W_CachePatchName("SPECTILE", PU_PATCH);
 			break;
@@ -1043,15 +1043,15 @@ void Y_Ticker(void)
 
 		if (!intertic) // first time only
 		{
-			if (mapheaderinfo[gamemap-1]->musinterfadeout
+			if (worldmapheader->musinterfadeout
 #ifdef _WIN32
 				// can't fade midi due to win32 volume hack
 				&& S_MusicType() != MU_MID
 #endif
 			)
-				S_FadeOutStopMusic(mapheaderinfo[gamemap-1]->musinterfadeout);
-			else if (mapheaderinfo[gamemap-1]->musintername[0] && S_MusicExists(mapheaderinfo[gamemap-1]->musintername, !midi_disabled, !digital_disabled))
-				S_ChangeMusicInternal(mapheaderinfo[gamemap-1]->musintername, false); // don't loop it
+				S_FadeOutStopMusic(worldmapheader->musinterfadeout);
+			else if (worldmapheader->musintername[0] && S_MusicExists(worldmapheader->musintername, !midi_disabled, !digital_disabled))
+				S_ChangeMusicInternal(worldmapheader->musintername, false); // don't loop it
 			else
 				S_ChangeMusicInternal("_clear", false); // don't loop it
 			tallydonetic = -1;
@@ -1120,15 +1120,15 @@ void Y_Ticker(void)
 
 		if (!intertic) // first time only
 		{
-			if (mapheaderinfo[gamemap-1]->musinterfadeout
+			if (worldmapheader->musinterfadeout
 #ifdef _WIN32
 				// can't fade midi due to win32 volume hack
 				&& S_MusicType() != MU_MID
 #endif
 			)
-				S_FadeOutStopMusic(mapheaderinfo[gamemap-1]->musinterfadeout);
-			else if (mapheaderinfo[gamemap-1]->musintername[0] && S_MusicExists(mapheaderinfo[gamemap-1]->musintername, !midi_disabled, !digital_disabled))
-				S_ChangeMusicInternal(mapheaderinfo[gamemap-1]->musintername, false); // don't loop it
+				S_FadeOutStopMusic(worldmapheader->musinterfadeout);
+			else if (worldmapheader->musintername[0] && S_MusicExists(worldmapheader->musintername, !midi_disabled, !digital_disabled))
+				S_ChangeMusicInternal(worldmapheader->musintername, false); // don't loop it
 			else
 				S_ChangeMusicInternal("_clear", false); // don't loop it
 			tallydonetic = -1;
@@ -1348,10 +1348,10 @@ void Y_StartIntermission(void)
 			data.coop.tics = players[consoleplayer].realtime;
 
 			// get act number
-			data.coop.actnum = mapheaderinfo[gamemap-1]->actnum;
+			data.coop.actnum = worldmapheader->actnum;
 
 			// grab an interscreen if appropriate
-			if (mapheaderinfo[gamemap-1]->interscreen[0] != '#')
+			if (worldmapheader->interscreen[0] != '#')
 			{
 				useinterpic = true;
 				usebuffer = false;
@@ -1369,9 +1369,9 @@ void Y_StartIntermission(void)
 			// set up the "got through act" message according to skin name
 			if (stagefailed)
 			{
-				strcpy(data.coop.passed1, mapheaderinfo[gamemap-1]->lvlttl);
+				strcpy(data.coop.passed1, worldmapheader->lvlttl);
 
-				if (mapheaderinfo[gamemap-1]->levelflags & LF_NOZONE)
+				if (worldmapheader->levelflags & LF_NOZONE)
 				{
 					data.spec.passed2[0] = '\0';
 				}
@@ -1386,25 +1386,25 @@ void Y_StartIntermission(void)
 				if (strlen(skins[players[consoleplayer].skin].realname) > 13)
 				{
 					strcpy(data.coop.passed1, "you got");
-					strcpy(data.coop.passed2, (mapheaderinfo[gamemap-1]->actnum) ? "through act" : "through the act");
+					strcpy(data.coop.passed2, (worldmapheader->actnum) ? "through act" : "through the act");
 				}
 				// long enough that "X GOT" won't fit so use "X PASSED THE ACT"
 				else if (strlen(skins[players[consoleplayer].skin].realname) > 8)
 				{
 					strcpy(data.coop.passed1, skins[players[consoleplayer].skin].realname);
-					strcpy(data.coop.passed2, (mapheaderinfo[gamemap-1]->actnum) ? "passed act" : "passed the act");
+					strcpy(data.coop.passed2, (worldmapheader->actnum) ? "passed act" : "passed the act");
 				}
 				// length is okay for normal use
 				else
 				{
 					snprintf(data.coop.passed1, sizeof data.coop.passed1, "%s got",
 						skins[players[consoleplayer].skin].realname);
-					strcpy(data.coop.passed2, (mapheaderinfo[gamemap-1]->actnum) ? "through act" : "through the act");
+					strcpy(data.coop.passed2, (worldmapheader->actnum) ? "through act" : "through the act");
 				}
 			}
 
 			// set X positions
-			if (mapheaderinfo[gamemap-1]->actnum)
+			if (worldmapheader->actnum)
 			{
 				data.coop.passedx1 = 62 + (176 - V_LevelNameWidth(data.coop.passed1))/2;
 				data.coop.passedx2 = 62 + (176 - V_LevelNameWidth(data.coop.passed2))/2;
@@ -1418,7 +1418,7 @@ void Y_StartIntermission(void)
 			// at the start of intermission, and precalculating it would preclude mods
 			// changing the font to one of a slightly different width.
 
-			if ((stagefailed) && !(mapheaderinfo[gamemap-1]->levelflags & LF_NOZONE))
+			if ((stagefailed) && !(worldmapheader->levelflags & LF_NOZONE))
 			{
 				// Bit of a hack, offset so that the "Zone" text is right aligned like title cards.
 				data.coop.passedx2 = (data.coop.passedx1 + V_LevelNameWidth(data.coop.passed1)) - V_LevelNameWidth(data.coop.passed2);
@@ -1433,7 +1433,7 @@ void Y_StartIntermission(void)
 			Y_AwardSpecialStageBonus();
 
 			// grab an interscreen if appropriate
-			if (mapheaderinfo[gamemap-1]->interscreen[0] != '#')
+			if (worldmapheader->interscreen[0] != '#')
 				useinterpic = true;
 			else
 				useinterpic = false;

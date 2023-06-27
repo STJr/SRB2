@@ -18,6 +18,7 @@
 #include "sounds.h"
 #include "m_fixed.h"
 #include "command.h"
+#include "doomstat.h"
 #include "tables.h" // angle_t
 
 #ifdef HAVE_OPENMPT
@@ -37,11 +38,7 @@ extern consvar_t cv_resetmusicbyheader;
 
 extern consvar_t cv_1upsound;
 
-#define RESETMUSIC (!modeattacking && \
-	(cv_resetmusicbyheader.value ? \
-		(mapheaderinfo[gamemap-1]->musforcereset != -1 ? mapheaderinfo[gamemap-1]->musforcereset : cv_resetmusic.value) \
-		: cv_resetmusic.value) \
-	)
+INT32 S_ShouldResetMusic(mapheader_t *mapheader);
 
 extern consvar_t cv_gamedigimusic;
 extern consvar_t cv_gamemidimusic;
@@ -125,8 +122,10 @@ void S_InitSfxChannels(INT32 sfxVolume);
 //
 void S_StopSounds(void);
 void S_ClearSfx(void);
-void S_StartEx(boolean reset);
-#define S_Start() S_StartEx(false)
+void S_SetMapMusic(mapheader_t *mapheader);
+void S_PlayMapMusic(mapheader_t *mapheader, boolean reset);
+void S_StartEx(mapheader_t *mapheader, boolean reset);
+#define S_Start(mapheader) S_StartEx(mapheader, false)
 
 //
 // Basically a W_GetNumForName that adds "ds" at the beginning of the string. Returns a lumpnum.

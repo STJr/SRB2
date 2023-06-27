@@ -696,7 +696,7 @@ void R_DestroyLevelInterpolators(void *wptr, thinker_t *thinker)
 // reasons.
 void R_AddMobjInterpolator(mobj_t *mobj)
 {
-	world_t *w = (world_t *)mobj->world;
+	world_t *w = P_GetMobjWorld(mobj);
 	if (!w)
 		return;
 
@@ -729,7 +729,7 @@ void R_AddMobjInterpolator(mobj_t *mobj)
 
 void R_RemoveMobjInterpolator(mobj_t *mobj)
 {
-	world_t *w = (world_t *)mobj->world;
+	world_t *w = P_GetMobjWorld(mobj);
 	if (!w)
 		return;
 

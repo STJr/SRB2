@@ -1385,6 +1385,14 @@ fixed_t P_CameraCeilingZ(camera_t *mobj, sector_t *sector, sector_t *boundsec, f
 	} else // Well, that makes it easy. Just get the ceiling height
 		return sector->ceilingheight;
 }
+
+world_t *P_GetCameraWorld(camera_t *cam)
+{
+	if (cam->subsector == NULL)
+		return NULL;
+	return (world_t *)cam->subsector->sector->world;
+}
+
 static void P_PlayerFlip(mobj_t *mo)
 {
 	if (!mo->player)
@@ -1463,7 +1471,7 @@ fixed_t P_GetMobjGravity(mobj_t *mo)
 	if (!gravsector) // If there is no 3D floor gravity, check sector's gravity
 		gravsector = mo->subsector->sector;
 
-	gravityadd = -FixedMul(gravity, P_GetSectorGravityFactor(gravsector));
+	gravityadd = -FixedMul(world->gravity, P_GetSectorGravityFactor(gravsector));
 
 	if ((gravsector->flags & MSF_GRAVITYFLIP) && gravityadd > 0)
 	{
@@ -3238,8 +3246,8 @@ void P_MobjCheckWater(mobj_t *mobj)
 		 || ((rover->fofflags & FOF_BLOCKOTHERS) && !mobj->player)))
 			continue;
 
-		topheight = P_GetSpecialTopZ(mobj, sectors + rover->secnum, sector);
-		bottomheight = P_GetSpecialBottomZ(mobj, sectors + rover->secnum, sector);
+		topheight = P_GetSpecialTopZ(mobj, P_GetMobjWorld(mobj)->sectors + rover->secnum, sector);
+		bottomheight = P_GetSpecialBottomZ(mobj, P_GetMobjWorld(mobj)->sectors + rover->secnum, sector);
 
 		if (mobj->eflags & MFE_VERTICALFLIP)
 		{
@@ -3760,12 +3768,12 @@ static void P_CheckCrumblingPlatforms(mobj_t *mobj)
 
 			if (mobj->eflags & MFE_VERTICALFLIP)
 			{
-				if (P_GetSpecialBottomZ(mobj, sectors + rover->secnum, node->m_sector) != mobj->z + mobj->height)
+				if (P_GetSpecialBottomZ(mobj, P_GetMobjWorld(mobj)->sectors + rover->secnum, node->m_sector) != mobj->z + mobj->height)
 					continue;
 			}
 			else
 			{
-				if (P_GetSpecialTopZ(mobj, sectors + rover->secnum, node->m_sector) != mobj->z)
+				if (P_GetSpecialTopZ(mobj, P_GetMobjWorld(mobj)->sectors + rover->secnum, node->m_sector) != mobj->z)
 					continue;
 			}
 
@@ -5354,7 +5362,7 @@ static void P_Boss7Thinker(mobj_t *mobj)
 		dist = P_AproxDistance(hitspot->x - mobj->x, hitspot->y - mobj->y);
 
 		horizontal = dist / airtime;
-		vertical = (gravity*airtime)/2;
+		vertical = (world->gravity*airtime)/2;
 
 		mobj->momx = FixedMul(horizontal, FINECOSINE(an));
 		mobj->momy = FixedMul(horizontal, FINESINE(an));
@@ -5482,7 +5490,7 @@ static void P_Boss9Thinker(mobj_t *mobj)
 	{
 		P_InstaThrust(mobj, mobj->angle, -4*FRACUNIT);
 		P_TryMove(mobj, mobj->x+mobj->momx, mobj->y+mobj->momy, true);
-		mobj->momz -= gravity;
+		mobj->momz -= world->gravity;
 		if (mobj->z < mobj->watertop || mobj->z < (mobj->floorz + 16*FRACUNIT))
 		{
 			mobj->watertop = mobj->floorz + 32*FRACUNIT;
@@ -6758,19 +6766,16 @@ static boolean P_ShieldLook(mobj_t *thing, shieldtype_t shield)
 	return true;
 }
 
-void P_RunShields(void)
+void P_RunShields(world_t *w)
 {
-	INT32 i;
-
-	// run shields
-	for (i = 0; i < world->numshields; i++)
+	for (INT32 i = 0; i < w->numshields; i++)
 	{
-		if (!P_MobjWasRemoved(world->shields[i]))
-			P_ShieldLook(world->shields[i], world->shields[i]->threshold);
-		P_SetTarget(&world->shields[i], NULL);
+		if (!P_MobjWasRemoved(w->shields[i]))
+			P_ShieldLook(w->shields[i], w->shields[i]->threshold);
+		P_SetTarget(&w->shields[i], NULL);
 	}
 
-	world->numshields = 0;
+	w->numshields = 0;
 }
 
 static boolean P_AddShield(mobj_t *thing)
@@ -6807,13 +6812,13 @@ static boolean P_AddShield(mobj_t *thing)
 	return true;
 }
 
-void P_RunOverlays(void)
+void P_RunOverlays(world_t *w)
 {
 	// run overlays
 	mobj_t *mo, *next = NULL;
 	fixed_t destx,desty,zoffs;
 
-	for (mo = world->overlaycap; mo; mo = next)
+	for (mo = w->overlaycap; mo; mo = next)
 	{
 		I_Assert(!P_MobjWasRemoved(mo));
 
@@ -6878,7 +6883,7 @@ void P_RunOverlays(void)
 			P_SetThingPosition(mo);
 		P_CheckPosition(mo, mo->x, mo->y);
 	}
-	P_SetTarget(&world->overlaycap, NULL);
+	P_SetTarget(&w->overlaycap, NULL);
 }
 
 // Called only when MT_OVERLAY thinks.
@@ -11456,7 +11461,7 @@ mobjtype_t P_GetMobjtype(UINT16 mthingtype)
 //
 // P_RespawnSpecials
 //
-void P_RespawnSpecials(void)
+void P_RespawnSpecials(world_t *w)
 {
 	mapthing_t *mthing = NULL;
 
@@ -11471,15 +11476,15 @@ void P_RespawnSpecials(void)
 		return;
 
 	// nothing left to respawn?
-	if (world->iquehead == world->iquetail)
+	if (w->iquehead == w->iquetail)
 		return;
 
 	// the first item in the queue is the first to respawn
 	// wait at least 30 seconds
-	if (leveltime - world->itemrespawntime[world->iquetail] < (tic_t)cv_itemrespawntime.value*TICRATE)
+	if (leveltime - w->itemrespawntime[w->iquetail] < (tic_t)cv_itemrespawntime.value*TICRATE)
 		return;
 
-	mthing = world->itemrespawnque[world->iquetail];
+	mthing = w->itemrespawnque[w->iquetail];
 
 #ifdef PARANOIA
 	if (!mthing)
@@ -11490,7 +11495,7 @@ void P_RespawnSpecials(void)
 		P_SpawnMapThing(mthing);
 
 	// pull it from the que
-	world->iquetail = (world->iquetail+1)&(ITEMQUESIZE-1);
+	w->iquetail = (w->iquetail+1)&(ITEMQUESIZE-1);
 }
 
 //

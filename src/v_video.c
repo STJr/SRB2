@@ -399,7 +399,7 @@ const char *R_GetPalname(UINT16 num)
 const char *GetPalette(void)
 {
 	if (gamestate == GS_LEVEL)
-		return R_GetPalname(mapheaderinfo[gamemap-1]->palette);
+		return R_GetPalname(worldmapheader->palette);
 	return "PLAYPAL";
 }
 

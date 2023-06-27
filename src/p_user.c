@@ -419,7 +419,7 @@ void P_ResetScore(player_t *player)
 //
 // Returns the lowest open mare available
 //
-UINT8 P_FindLowestMare(void)
+UINT8 P_FindLowestMare(world_t *w)
 {
 	thinker_t *th;
 	mobj_t *mo2;
@@ -430,7 +430,7 @@ UINT8 P_FindLowestMare(void)
 
 	// scan the thinkers
 	// to find the egg capsule with the lowest mare
-	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
+	for (th = w->thlist[THINK_MOBJ].next; th != &w->thlist[THINK_MOBJ]; th = th->next)
 	{
 		if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
 			continue;
@@ -469,7 +469,7 @@ boolean P_TransferToNextMare(player_t *player)
 	mobj_t *mo2;
 	mobj_t *closestaxis = NULL;
 	INT32 lowestaxisnum = -1;
-	UINT8 mare = P_FindLowestMare();
+	UINT8 mare = P_FindLowestMare(P_GetPlayerWorld(player));
 	fixed_t dist1, dist2 = 0;
 
 	if (mare == 255)
@@ -726,7 +726,7 @@ static void P_DeNightserizePlayer(player_t *player)
 			P_DamageMobj(player->mo, NULL, NULL, 1, DMG_INSTAKILL);
 
 			// Reset music to beginning if MIXNIGHTSCOUNTDOWN
-			if ((mapheaderinfo[gamemap-1]->levelflags & LF_MIXNIGHTSCOUNTDOWN)
+			if ((worldmapheader->levelflags & LF_MIXNIGHTSCOUNTDOWN)
 #ifdef _WIN32
 				&& S_MusicType() != MU_MID
 #endif
@@ -742,7 +742,7 @@ static void P_DeNightserizePlayer(player_t *player)
 	player->oldscale = 0;
 
 	// Restore from drowning music
-	if ((mapheaderinfo[gamemap-1]->levelflags & LF_MIXNIGHTSCOUNTDOWN)
+	if ((worldmapheader->levelflags & LF_MIXNIGHTSCOUNTDOWN)
 #ifdef _WIN32
 		&& S_MusicType() != MU_MID
 #endif
@@ -755,7 +755,7 @@ static void P_DeNightserizePlayer(player_t *player)
 		// Reset the music if you did not destroy all the capsules, because you failed.
 		// Why make the all-capsules exception: because it's your reward for nearly finishing the level!
 		// (unless the player auto-loses upon denightserizing; for death case, see above.)
-		if (P_FindLowestMare() != UINT8_MAX || G_IsSpecialStage(gamemap))
+		if (P_FindLowestMare(P_GetPlayerWorld(player)) != UINT8_MAX || G_IsSpecialStage(gamemap))
 			S_SetMusicPosition(0);
 	}
 	else
@@ -813,7 +813,7 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 	player->bonustime = false;
 
 	// Restore from drowning music
-	if (mapheaderinfo[gamemap-1]->levelflags & LF_MIXNIGHTSCOUNTDOWN)
+	if (worldmapheader->levelflags & LF_MIXNIGHTSCOUNTDOWN)
 	{
 		S_StopSoundByNum(sfx_timeup);
 		S_StopFadingMusic();
@@ -1331,7 +1331,7 @@ void P_GiveCoopLives(player_t *player, INT32 numlives, boolean sound)
 void P_DoSuperTransformation(player_t *player, boolean giverings)
 {
 	player->powers[pw_super] = 1;
-	if (!(mapheaderinfo[gamemap-1]->levelflags & LF_NOSSMUSIC) && P_IsLocalPlayer(player))
+	if (!(worldmapheader->levelflags & LF_NOSSMUSIC) && P_IsLocalPlayer(player))
 		P_PlayJingle(player, JT_SUPER);
 
 	S_StartSound(NULL, sfx_supert); //let all players hear it -mattw_cfi
@@ -1345,7 +1345,7 @@ void P_DoSuperTransformation(player_t *player, boolean giverings)
 		player->rings = 50;
 
 	// Just in case.
-	if (!(mapheaderinfo[gamemap-1]->levelflags & LF_NOSSMUSIC))
+	if (!(worldmapheader->levelflags & LF_NOSSMUSIC))
 	{
 		player->powers[pw_extralife] = 0;
 		player->powers[pw_invulnerability] = 0;
@@ -1371,7 +1371,7 @@ void P_AddPlayerScore(player_t *player, UINT32 amount)
 		player = player->botleader;
 
 	// NiGHTS does it different!
-	if (gamestate == GS_LEVEL && mapheaderinfo[gamemap-1]->typeoflevel & TOL_NIGHTS)
+	if (gamestate == GS_LEVEL && worldmapheader->typeoflevel & TOL_NIGHTS)
 	{
 		if ((netgame || multiplayer) && G_IsSpecialStage(gamemap))
 		{ // Pseudo-shared score for multiplayer special stages.
@@ -1581,7 +1581,7 @@ boolean P_EvaluateMusicStatus(UINT16 status, const char *musname)
 				break;
 
 			case JT_SUPER:  // Super Sonic
-				result = (players[i].powers[pw_super] && !(mapheaderinfo[gamemap-1]->levelflags & LF_NOSSMUSIC));
+				result = (players[i].powers[pw_super] && !(worldmapheader->levelflags & LF_NOSSMUSIC));
 				break;
 
 			case JT_GOVER: // Game Over
@@ -1630,7 +1630,7 @@ void P_RestoreMusic(player_t *player)
 		return;
 
 	// Super
-	else if (player->powers[pw_super] && !(mapheaderinfo[gamemap-1]->levelflags & LF_NOSSMUSIC)
+	else if (player->powers[pw_super] && !(worldmapheader->levelflags & LF_NOSSMUSIC)
 		&& !S_RecallMusic(JT_SUPER, false))
 		P_PlayJingle(player, JT_SUPER);
 
@@ -1648,7 +1648,7 @@ void P_RestoreMusic(player_t *player)
 	{
 		strlcpy(S_sfx[sfx_None].caption, "Speed shoes", 12);
 		S_StartCaption(sfx_None, -1, player->powers[pw_sneakers]);
-		if (mapheaderinfo[gamemap-1]->levelflags & LF_SPEEDMUSIC)
+		if (worldmapheader->levelflags & LF_SPEEDMUSIC)
 		{
 			S_SpeedMusic(1.4f);
 			if (!S_RecallMusic(JT_MASTER, true))
@@ -3017,7 +3017,7 @@ static void P_CheckInvincibilityTimer(player_t *player)
 			P_SpawnShieldOrb(player);
 		}
 
-		if (!player->powers[pw_super] || (mapheaderinfo[gamemap-1]->levelflags & LF_NOSSMUSIC))
+		if (!player->powers[pw_super] || (worldmapheader->levelflags & LF_NOSSMUSIC))
 			P_RestoreMusic(player);
 	}
 }
@@ -5579,7 +5579,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 			{
 				fixed_t potentialmomz;
 				if (player->charability == CA_SLOWFALL)
-					potentialmomz = FixedMul(gravity, -4*player->mo->scale);
+					potentialmomz = FixedMul(world->gravity, -4*player->mo->scale);
 				else
 					potentialmomz = ((player->speed < 10*player->mo->scale)
 					? (player->speed - 10*player->mo->scale)/5
@@ -7098,7 +7098,7 @@ static void P_NiGHTSMovement(player_t *player)
 	}
 	else if (P_IsLocalPlayer(player) && player->nightstime == 10*TICRATE)
 	{
-		if (mapheaderinfo[gamemap-1]->levelflags & LF_MIXNIGHTSCOUNTDOWN)
+		if (worldmapheader->levelflags & LF_MIXNIGHTSCOUNTDOWN)
 		{
 			S_FadeMusic(0, 10*MUSICRATE);
 			S_StartSound(NULL, sfx_timeup); // that creepy "out of time" music from NiGHTS.
@@ -9044,10 +9044,10 @@ void P_Earthquake(mobj_t *inflictor, mobj_t *source, fixed_t radius)
 
 	if (inflictor->player && P_IsLocalPlayer(inflictor->player))
 	{
-		quake.epicenter = NULL;
-		quake.intensity = 8*inflictor->scale;
-		quake.time = 8;
-		quake.radius = scaledradius;
+		world->quake.epicenter = NULL;
+		world->quake.intensity = 8*inflictor->scale;
+		world->quake.time = 8;
+		world->quake.radius = scaledradius;
 	}
 
 	P_RadiusAttack(inflictor, source, radius, 0, false);
@@ -9326,12 +9326,13 @@ boolean P_HomingAttack(mobj_t *source, mobj_t *enemy) // Home in on your target
 }
 
 // Search for emeralds
-void P_FindEmerald(void)
+void P_FindEmerald(world_t *w)
 {
 	thinker_t *th;
 	mobj_t *mo2;
 
-	hunt1 = hunt2 = hunt3 = NULL;
+	for (unsigned i = 0; i < NUM_EMERALD_HUNT_LOCATIONS; i++)
+		w->emerald_hunt_locations[i] = NULL;
 
 	// scan the remaining thinkers
 	// to find all emeralds
@@ -9343,12 +9344,11 @@ void P_FindEmerald(void)
 		mo2 = (mobj_t *)th;
 		if (mo2->type == MT_EMERHUNT)
 		{
-			if (!hunt1)
-				hunt1 = mo2;
-			else if (!hunt2)
-				hunt2 = mo2;
-			else if (!hunt3)
-				hunt3 = mo2;
+			for (unsigned i = 0; i < NUM_EMERALD_HUNT_LOCATIONS; i++)
+			{
+				if (w->emerald_hunt_locations[i] == NULL)
+					P_SetTarget(&w->emerald_hunt_locations[i], mo2);
+			}
 		}
 	}
 	return;
@@ -9476,7 +9476,7 @@ static void P_PlayerSetRaceRealTime(player_t *player)
 
 			for (i = 0; i < numworlds; i++)
 			{
-				if (player->world == worldlist[i])
+				if (P_GetPlayerWorld(player) == worldlist[i])
 					break;
 			}
 
@@ -11043,7 +11043,7 @@ static void P_MinecartThink(player_t *player)
 					minecart->eflags &= ~MFE_ONGROUND;
 				minecart->z += P_MobjFlip(minecart);
 				if (sidelock)
-					P_ParabolicMove(minecart, sidelock->x, sidelock->y, sidelock->z, gravity, max(currentSpeed, 10 * FRACUNIT));
+					P_ParabolicMove(minecart, sidelock->x, sidelock->y, sidelock->z, world->gravity, max(currentSpeed, 10 * FRACUNIT));
 				else
 					minecart->momz = 10 * FRACUNIT;
 
@@ -11618,7 +11618,7 @@ void P_PlayerThink(player_t *player)
 	// so we can fade music
 	if (!exitfadestarted &&
 		player->exiting > 0 && player->exiting <= 1*TICRATE &&
-		(!multiplayer || G_CoopGametype() ? !mapheaderinfo[gamemap-1]->musinterfadeout : true) &&
+		(!multiplayer || G_CoopGametype() ? !worldmapheader->musinterfadeout : true) &&
 			// don't fade if we're fading during intermission. follows Y_StartIntermission intertype = int_coop
 		((gametyperules & GTR_RACE) ? countdown2 == 0 : true) && // don't fade on timeout
 		player->lives > 0 && // don't fade on game over (competition)

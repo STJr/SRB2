@@ -4716,10 +4716,10 @@ static void M_DrawPauseMenu(void)
 		// Draw any and all emblems at the top.
 		M_DrawMapEmblems(gamemap, 272, 28, true);
 
-		if (mapheaderinfo[gamemap-1]->actnum != 0)
-			V_DrawString(40, 28, V_YELLOWMAP, va("%s %d", mapheaderinfo[gamemap-1]->lvlttl, mapheaderinfo[gamemap-1]->actnum));
+		if (curmapheader->actnum != 0)
+			V_DrawString(40, 28, V_YELLOWMAP, va("%s %d", curmapheader->lvlttl, curmapheader->actnum));
 		else
-			V_DrawString(40, 28, V_YELLOWMAP, mapheaderinfo[gamemap-1]->lvlttl);
+			V_DrawString(40, 28, V_YELLOWMAP, curmapheader->lvlttl);
 
 		// Set up the detail boxes.
 		{

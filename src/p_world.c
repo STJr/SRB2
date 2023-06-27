@@ -59,6 +59,9 @@ world_t *P_InitWorld(void)
 {
 	world_t *w = Z_Calloc(sizeof(world_t), PU_STATIC, NULL);
 	w->gamemap = gamemap;
+	if (!mapheaderinfo[w->gamemap-1])
+		P_AllocMapHeader(w->gamemap-1);
+	w->header = mapheaderinfo[w->gamemap-1];
 	w->thlist = Z_Calloc(sizeof(thinker_t) * NUM_THINKERLISTS, PU_STATIC, NULL);
 	return w;
 }
@@ -144,9 +147,18 @@ void P_SetWorld(world_t *w)
 
 	P_SetGameWorld(w);
 
+	worldmapheader = w->header;
+
 	thlist = w->thlist;
 	gamemap = w->gamemap;
-	gravity = w->gravity;
+}
+
+//
+// Gets a player's current world.
+//
+world_t *P_GetPlayerWorld(player_t *player)
+{
+	return (world_t *)player->world;
 }
 
 //
@@ -154,8 +166,8 @@ void P_SetWorld(world_t *w)
 //
 void P_DetachPlayerWorld(player_t *player)
 {
-	if (player->world != NULL)
-		((world_t *)player->world)->players--;
+	if (P_GetPlayerWorld(player) != NULL)
+		P_GetPlayerWorld(player)->players--;
 
 	player->world = NULL;
 	if (player->mo && !P_MobjWasRemoved(player->mo))
@@ -199,7 +211,7 @@ void P_RoamIntoWorld(player_t *player, INT32 mapnum)
 		}
 	}
 
-	if (w == player->world)
+	if (w == P_GetPlayerWorld(player))
 		return;
 	else if (w)
 		P_SwitchWorld(player, w);
@@ -263,8 +275,8 @@ void P_SwitchWorld(player_t *player, world_t *w)
 	if (!playeringame[playernum] || !player->mo || P_MobjWasRemoved(player->mo))
 		return;
 
-	if (player->world)
-		P_RemoveMobjConnections(player->mo, player->world);
+	if (P_GetPlayerWorld(player))
+		P_RemoveMobjConnections(player->mo, P_GetPlayerWorld(player));
 
 	if (player->followmobj)
 	{
@@ -275,19 +287,18 @@ void P_SwitchWorld(player_t *player, world_t *w)
 	P_SwitchPlayerWorld(player, w);
 
 	P_SetWorld(w);
+
 	if (local || splitscreen)
-		P_InitSpecials();
+		P_InitLocalSpecials();
 
 	P_UnsetThingPosition(player->mo);
 	P_MoveThinkerToWorld(w, THINK_MOBJ, (thinker_t *)(player->mo));
 	G_MovePlayerToSpawnOrStarpost(playernum);
 
 	if (local && !splitscreen)
-	{
 		localworld = world;
-		S_Start();
-		P_SetupSkyTexture(w->skynum);
-	}
+
+	P_SetupSkyTexture(w->skynum);
 
 	if (player == &players[displayplayer])
 		P_ResetCamera(player, (splitscreen && playernum == 1) ? &camera2 : &camera);
@@ -303,6 +314,13 @@ void P_SwitchWorld(player_t *player, world_t *w)
 	if (rendermode == render_opengl)
 		HWR_LoadLevel();
 #endif
+
+	if (local || splitscreen)
+	{
+		S_SetMapMusic(worldmapheader);
+		S_StopMusic();
+		S_ChangeMusicEx(mapmusname, mapmusflags, true, mapmusposition, 0, 0);
+	}
 }
 
 void Command_Switchworld_f(void)
@@ -328,18 +346,12 @@ void Command_Switchworld_f(void)
 
 void Command_Listworlds_f(void)
 {
-	INT32 worldnum;
-	world_t *w;
-
-    for (worldnum = 0; worldnum < numworlds; worldnum++)
+    for (INT32 i = 0; i < numworlds; i++)
 	{
-		w = worldlist[worldnum];
-
-		CONS_Printf("World %d (%p)\n", worldnum, w);
-		CONS_Printf("Gamemap: %d\n", w->gamemap);
-		CONS_Printf("vt %d sg %d sc %d ss %d nd %d ld %d sd %d mt %d\n",
-			w->numvertexes, w->numsegs, w->numsectors, w->numsubsectors, w->numnodes, w->numlines, w->numsides, w->nummapthings);
-		CONS_Printf("Player count: %d\n", w->players);
+		world_t *w = worldlist[i];
+		CONS_Printf("World %d\n", i);
+		CONS_Printf("  Gamemap: %d\n", w->gamemap);
+		CONS_Printf("  Player count: %d\n", w->players);
 	}
 }
 
@@ -466,7 +478,7 @@ void P_UnloadWorldPlayer(player_t *player)
 
 boolean P_MobjIsConnected(mobj_t *mobj1, mobj_t *mobj2)
 {
-	return (mobj2 && !P_MobjWasRemoved(mobj2) && mobj1->world == mobj2->world);
+	return mobj2 && !P_MobjWasRemoved(mobj2) && P_GetMobjWorld(mobj1) == P_GetMobjWorld(mobj2);
 }
 
 void P_RemoveMobjConnections(mobj_t *mobj, world_t *w)
@@ -490,4 +502,9 @@ void P_RemoveMobjConnections(mobj_t *mobj, world_t *w)
 		if (check->hprev == mobj)
 			P_SetTarget(&mobj->hprev, NULL);
 	}
+}
+
+world_t *P_GetMobjWorld(mobj_t *mobj)
+{
+	return (world_t *)mobj->world;
 }

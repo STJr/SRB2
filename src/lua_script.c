@@ -383,7 +383,7 @@ int LUA_PushGlobals(lua_State *L, const char *word)
 		lua_pushinteger(L, emeralds);
 		return 1;
 	} else if (fastcmp(word,"gravity")) {
-		lua_pushinteger(L, gravity);
+		lua_pushinteger(L, world->gravity);
 		return 1;
 	} else if (fastcmp(word,"VERSION")) {
 		lua_pushinteger(L, VERSION);
@@ -441,7 +441,7 @@ int LUA_CheckGlobals(lua_State *L, const char *word)
 	else if (fastcmp(word, "token"))
 		token = (UINT32)luaL_checkinteger(L, 2);
 	else if (fastcmp(word, "gravity"))
-		gravity = (fixed_t)luaL_checkinteger(L, 2);
+		world->gravity = (fixed_t)luaL_checkinteger(L, 2);
 	else if (fastcmp(word, "stoppedclock"))
 		stoppedclock = luaL_checkboolean(L, 2);
 	else if (fastcmp(word, "displayplayer"))

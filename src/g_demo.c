@@ -1868,6 +1868,8 @@ void G_DoPlayDemo(char *defdemoname)
 	}
 	demo_p += 4; // "PLAY"
 	gamemap = READINT16(demo_p);
+	curmapheader = nextmapheader = mapheaderinfo[gamemap-1];
+	worldmapheader = curmapheader;
 	demo_p += 16; // mapmd5
 
 	demoflags = READUINT8(demo_p);

@@ -244,9 +244,6 @@ sector_t *R_FakeFlat(sector_t *sec, sector_t *tempsec, INT32 *floorlightlevel,
 		*ceilinglightlevel = sec->ceilinglightsec == -1 ?
 			(sec->ceilinglightabsolute ? sec->ceilinglightlevel : max(0, min(255, sec->lightlevel + sec->ceilinglightlevel))) : viewworld->sectors[sec->ceilinglightsec].lightlevel;
 
-	// if (sec->midmap != -1)
-	//	mapnum = sec->midmap;
-	// In original colormap code, this block did not run if sec->midmap was set
 	if (!sec->extra_colormap && sec->heightsec != -1)
 	{
 		const sector_t *s = &viewworld->sectors[sec->heightsec];
@@ -1073,18 +1070,18 @@ static void R_Subsector(size_t num)
 		}
 	}
 
-   // killough 9/18/98: Fix underwater slowdown, by passing real sector
-   // instead of fake one. Improve sprite lighting by basing sprite
-   // lightlevels on floor & ceiling lightlevels in the surrounding area.
-   //
-   // 10/98 killough:
-   //
-   // NOTE: TeamTNT fixed this bug incorrectly, messing up sprite lighting!!!
-   // That is part of the 242 effect!!!  If you simply pass sub->sector to
-   // the old code you will not get correct lighting for underwater sprites!!!
-   // Either you must pass the fake sector and handle validcount here, on the
-   // real sector, or you must account for the lighting in some other way,
-   // like passing it as an argument.
+	// killough 9/18/98: Fix underwater slowdown, by passing real sector
+	// instead of fake one. Improve sprite lighting by basing sprite
+	// lightlevels on floor & ceiling lightlevels in the surrounding area.
+	//
+	// 10/98 killough:
+	//
+	// NOTE: TeamTNT fixed this bug incorrectly, messing up sprite lighting!!!
+	// That is part of the 242 effect!!!  If you simply pass sub->sector to
+	// the old code you will not get correct lighting for underwater sprites!!!
+	// Either you must pass the fake sector and handle validcount here, on the
+	// real sector, or you must account for the lighting in some other way,
+	// like passing it as an argument.
 	R_AddSprites(sub->sector, (floorlightlevel+ceilinglightlevel)/2);
 
 	firstseg = NULL;

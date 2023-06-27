@@ -4164,6 +4164,9 @@ static inline void P_NetArchiveSpecials(void)
 	// Sky number
 	WRITEINT32(save_p, archiveworld->skynum);
 
+	// Gravity
+	WRITEFIXED(save_p, archiveworld->gravity);
+
 	// Current global weather type
 	WRITEUINT8(save_p, archiveworld->weather);
 
@@ -4196,6 +4199,7 @@ static void P_NetUnArchiveSpecials(void)
 	P_SetupLevelSky(j, false); // Don't call P_SetupWorldSky from there
 	P_SetupWorldSky(j, unarchiveworld);
 
+	unarchiveworld->gravity = READFIXED(save_p);
 	unarchiveworld->weather = READUINT8(save_p);
 
 	if (world->weather)
@@ -4250,7 +4254,8 @@ static inline void P_UnArchiveSPGame(INT16 mapoverride)
 	if(!mapheaderinfo[gamemap-1])
 		P_AllocMapHeader(gamemap-1);
 
-	//lastmapsaved = gamemap;
+	curmapheader = nextmapheader = mapheaderinfo[gamemap-1];
+	worldmapheader = curmapheader;
 	lastmaploaded = gamemap;
 
 	tokenlist = 0;
@@ -4336,8 +4341,6 @@ static void P_NetArchiveMisc(boolean resending)
 
 	WRITEUINT32(save_p, countdown);
 	WRITEUINT32(save_p, countdown2);
-
-	WRITEFIXED(save_p, baseworld->gravity);
 
 	WRITEUINT32(save_p, countdowntimer);
 	WRITEUINT8(save_p, countdowntimeup);
@@ -4437,8 +4440,6 @@ static inline boolean P_NetUnArchiveMisc(boolean reloading)
 
 	countdown = READUINT32(save_p);
 	countdown2 = READUINT32(save_p);
-
-	gravity = READFIXED(save_p);
 
 	countdowntimer = (tic_t)READUINT32(save_p);
 	countdowntimeup = (boolean)READUINT8(save_p);
@@ -4798,7 +4799,7 @@ void P_SaveNetGame(boolean resending)
 
 		for (w = 0; w < numworlds; w++)
 		{
-			if (player->world == worldlist[w])
+			if (P_GetPlayerWorld(player) == worldlist[w])
 			{
 				player->worldnum = w;
 				break;
@@ -4930,6 +4931,10 @@ static void P_NetUnArchiveWorlds(boolean reloading)
 		SetUnArchiveWorld(worldlist[i]);
 		UnArchiveWorld();
 	}
+
+	gamemap = worldlist[0]->gamemap;
+	curmapheader = nextmapheader = mapheaderinfo[gamemap-1];
+	worldmapheader = curmapheader;
 
 	P_NetUnArchiveColormaps();
 	RelinkWorldsToEntities();

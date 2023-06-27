@@ -2380,9 +2380,6 @@ void R_AddSprites(sector_t *sec, INT32 lightlevel)
 	INT32 lightnum;
 	fixed_t limit_dist, hoop_limit_dist;
 
-	if (rendermode != render_soft)
-		return;
-
 	// BSP is traversed by subsector.
 	// A sector might have been split into several
 	//  subsectors during BSP building.

@@ -1391,11 +1391,11 @@ static boolean P_CheckNightsTriggerLine(line_t *triggerline, mobj_t *actor)
 	if (specialtype == 323)
 	{
 		// run only when no mares are found
-		if (donomares && P_FindLowestMare() != UINT8_MAX)
+		if (donomares && P_FindLowestMare(world) != UINT8_MAX)
 			return false;
 
 		// run only if there is a mare present
-		if (!donomares && P_FindLowestMare() == UINT8_MAX)
+		if (!donomares && P_FindLowestMare(world) == UINT8_MAX)
 			return false;
 
 		// run only if player is nightserizing from non-nights
@@ -1505,7 +1505,7 @@ static boolean P_CheckPlayerMareOld(line_t *triggerline)
 	if (!(maptol & TOL_NIGHTS))
 		return false;
 
-	mare = P_FindLowestMare();
+	mare = P_FindLowestMare(world);
 
 	if (triggerline->flags & ML_NOCLIMB)
 		return mare <= targetmare;
@@ -1524,7 +1524,7 @@ static boolean P_CheckPlayerMare(line_t *triggerline)
 	if (!(maptol & TOL_NIGHTS))
 		return false;
 
-	mare = P_FindLowestMare();
+	mare = P_FindLowestMare(world);
 
 	switch (triggerline->args[2])
 	{
@@ -2009,10 +2009,10 @@ static void P_PlaySFX(INT32 sfxnum, mobj_t *mo, sector_t *callsec, INT16 tag, te
 					if (!Tag_Find(&rover->master->frontsector->tags, tag))
 						continue;
 
-					if (camobj->z > P_GetSpecialTopZ(camobj, sectors + rover->secnum, camobj->subsector->sector))
+					if (camobj->z > P_GetSpecialTopZ(camobj, P_GetMobjWorld(camobj)->sectors + rover->secnum, camobj->subsector->sector))
 						continue;
 
-					if (camobj->z + camobj->height < P_GetSpecialBottomZ(camobj, sectors + rover->secnum, camobj->subsector->sector))
+					if (camobj->z + camobj->height < P_GetSpecialBottomZ(camobj, P_GetMobjWorld(camobj)->sectors + rover->secnum, camobj->subsector->sector))
 						continue;
 
 					foundit = true;
@@ -3000,17 +3000,17 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 
 		case 444: // Earthquake camera
 		{
-			quake.intensity = line->args[1] << FRACBITS;
-			quake.radius = line->args[2] << FRACBITS;
-			quake.time = line->args[0];
+			world->quake.intensity = line->args[1] << FRACBITS;
+			world->quake.radius = line->args[2] << FRACBITS;
+			world->quake.time = line->args[0];
 
-			quake.epicenter = NULL; /// \todo
+			world->quake.epicenter = NULL; /// \todo
 
 			// reasonable defaults.
-			if (!quake.intensity)
-				quake.intensity = 8<<FRACBITS;
-			if (!quake.radius)
-				quake.radius = 512<<FRACBITS;
+			if (!world->quake.intensity)
+				world->quake.intensity = 8<<FRACBITS;
+			if (!world->quake.radius)
+				world->quake.radius = 512<<FRACBITS;
 			break;
 		}
 
@@ -3968,8 +3968,8 @@ boolean P_IsFlagAtBase(mobjtype_t flag)
 				if (!(rover->master->frontsector->specialflags & specialflag))
 					continue;
 
-				if (!(mo->z <= P_GetSpecialTopZ(mo, sectors + rover->secnum, mo->subsector->sector)
-					&& mo->z >= P_GetSpecialBottomZ(mo, sectors + rover->secnum, mo->subsector->sector)))
+				if (!(mo->z <= P_GetSpecialTopZ(mo, P_GetMobjWorld(mo)->sectors + rover->secnum, mo->subsector->sector)
+					&& mo->z >= P_GetSpecialBottomZ(mo, P_GetMobjWorld(mo)->sectors + rover->secnum, mo->subsector->sector)))
 					continue;
 
 				return true;
@@ -3993,8 +3993,8 @@ boolean P_IsMobjTouchingSectorPlane(mobj_t *mo, sector_t *sec)
 
 boolean P_IsMobjTouching3DFloor(mobj_t *mo, ffloor_t *ffloor, sector_t *sec)
 {
-	fixed_t topheight = P_GetSpecialTopZ(mo, sectors + ffloor->secnum, sec);
-	fixed_t bottomheight = P_GetSpecialBottomZ(mo, sectors + ffloor->secnum, sec);
+	fixed_t topheight = P_GetSpecialTopZ(mo, P_GetMobjWorld(mo)->sectors + ffloor->secnum, sec);
+	fixed_t bottomheight = P_GetSpecialBottomZ(mo, P_GetMobjWorld(mo)->sectors + ffloor->secnum, sec);
 
 	if (((ffloor->fofflags & FOF_BLOCKPLAYER) && mo->player)
 		|| ((ffloor->fofflags & FOF_BLOCKOTHERS) && !mo->player))
@@ -5385,7 +5385,7 @@ void P_CheckMobjTrigger(mobj_t *mobj, boolean pushable)
   *
   * \sa P_CheckTimeLimit, P_CheckPointLimit
   */
-void P_UpdateSpecials(void)
+void P_UpdateSpecials(world_t *w)
 {
 	anim_t *anim;
 	INT32 i;
@@ -5415,8 +5415,8 @@ void P_UpdateSpecials(void)
 	/// \todo do not check the non-animate flat.. link the animated ones?
 	/// \note its faster than the original anywaysince it animates only
 	///    flats used in the level, and there's usually very few of them
-	foundflats = world->flats;
-	for (j = 0; j < world->numflats; j++, foundflats++)
+	foundflats = w->flats;
+	for (j = 0; j < w->numflats; j++, foundflats++)
 	{
 		if (foundflats->speed) // it is an animated flat
 		{
@@ -6085,32 +6085,33 @@ static void P_RunLevelLoadExecutors(void)
 void P_InitSpecials(void)
 {
 	// Set the default gravity. Custom gravity overrides this setting.
-	world->gravity = gravity = mapheaderinfo[gamemap-1]->gravity;
+	world->gravity = worldmapheader->gravity;
 
-	// Defaults in case levels don't have them set.
-	sstimer = mapheaderinfo[gamemap-1]->sstimer*TICRATE + 6;
-	ssspheres = mapheaderinfo[gamemap-1]->ssspheres;
+	// Set globalweather
+	world->weather = worldmapheader->weather;
 
+	P_InitLocalSpecials();
+}
+
+void P_InitLocalSpecials(void)
+{
 	if (numworlds < 2)
 		CheckForBustableBlocks = CheckForBouncySector = CheckForQuicksand = CheckForMarioBlocks = CheckForFloatBob = CheckForReverseGravity = false;
 
 	// Set curWeather
-	switch (mapheaderinfo[gamemap-1]->weather)
+	switch (worldmapheader->weather)
 	{
 		case PRECIP_SNOW: // snow
 		case PRECIP_RAIN: // rain
 		case PRECIP_STORM: // storm
 		case PRECIP_STORM_NORAIN: // storm w/o rain
 		case PRECIP_STORM_NOSTRIKES: // storm w/o lightning
-			curWeather = mapheaderinfo[gamemap-1]->weather;
+			curWeather = worldmapheader->weather;
 			break;
 		default: // blank/none
 			curWeather = PRECIP_NONE;
 			break;
 	}
-
-	// Set globalweather
-	world->weather = mapheaderinfo[gamemap-1]->weather;
 }
 
 void P_ApplyFlatAlignment(sector_t *sector, angle_t flatangle, fixed_t xoffs, fixed_t yoffs, boolean floor, boolean ceiling)
@@ -6247,7 +6248,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 				break;
 
 			case 11: // Custom global gravity!
-				world->gravity = gravity = sector->floorheight/1000;
+				world->gravity = sector->floorheight/1000;
 				break;
 		}
 	}

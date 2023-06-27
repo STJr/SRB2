@@ -1163,7 +1163,7 @@ UINT8 CanChangeSkin(INT32 playernum)
 		return true;
 
 	// Force skin in effect.
-	if ((cv_forceskin.value != -1) || (mapheaderinfo[gamemap-1] && mapheaderinfo[gamemap-1]->forcecharacter[0] != '\0'))
+	if ((cv_forceskin.value != -1) || (worldmapheader && worldmapheader->forcecharacter[0] != '\0'))
 		return false;
 
 	// Can change skin in intermission and whatnot.
@@ -2200,10 +2200,8 @@ static void Got_Switchworld(UINT8 **cp, INT32 playernum)
 
 	if (nodetach) // Don't detach from the current world, if any
 	{
-#if 1
 		if (player->world)
-			((world_t *)player->world)->players--;
-#endif
+			P_GetPlayerWorld(player)->players--;
 		player->world = NULL;
 	}
 
@@ -4385,7 +4383,8 @@ static void Gravity_OnChange(void)
 
 	if (!CV_IsSetToDefault(&cv_gravity))
 		G_SetUsedCheats(false);
-	gravity = cv_gravity.value;
+	if (world)
+		world->gravity = cv_gravity.value;
 }
 
 static void SoundTest_OnChange(void)
@@ -4578,10 +4577,10 @@ static void Command_Showmap_f(void)
 {
 	if (gamestate == GS_LEVEL)
 	{
-		if (mapheaderinfo[gamemap-1]->actnum)
-			CONS_Printf("%s (%d): %s %d\n", G_BuildMapName(gamemap), gamemap, mapheaderinfo[gamemap-1]->lvlttl, mapheaderinfo[gamemap-1]->actnum);
+		if (worldmapheader->actnum)
+			CONS_Printf("%s (%d): %s %d\n", G_BuildMapName(gamemap), gamemap, worldmapheader->lvlttl, worldmapheader->actnum);
 		else
-			CONS_Printf("%s (%d): %s\n", G_BuildMapName(gamemap), gamemap, mapheaderinfo[gamemap-1]->lvlttl);
+			CONS_Printf("%s (%d): %s\n", G_BuildMapName(gamemap), gamemap, worldmapheader->lvlttl);
 	}
 	else
 		CONS_Printf(M_GetText("You must be in a level to use this.\n"));

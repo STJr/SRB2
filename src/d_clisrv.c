@@ -1394,9 +1394,9 @@ static void SV_SendServerInfo(INT32 node, tic_t servertime)
 
 	memset(netbuffer->u.serverinfo.maptitle, 0, sizeof netbuffer->u.serverinfo.maptitle);
 
-	if (mapheaderinfo[gamemap-1] && *mapheaderinfo[gamemap-1]->lvlttl)
+	if (worldmapheader && *worldmapheader->lvlttl)
 	{
-		char *read = mapheaderinfo[gamemap-1]->lvlttl, *writ = netbuffer->u.serverinfo.maptitle;
+		char *read = worldmapheader->lvlttl, *writ = netbuffer->u.serverinfo.maptitle;
 		while (writ < (netbuffer->u.serverinfo.maptitle+32) && *read != '\0')
 		{
 			if (!(*read & 0x80))
@@ -1407,18 +1407,18 @@ static void SV_SendServerInfo(INT32 node, tic_t servertime)
 			read++;
 		}
 		*writ = '\0';
-		//strncpy(netbuffer->u.serverinfo.maptitle, (char *)mapheaderinfo[gamemap-1]->lvlttl, 33);
+		//strncpy(netbuffer->u.serverinfo.maptitle, (char *)worldmapheader->lvlttl, 33);
 	}
 	else
 		strncpy(netbuffer->u.serverinfo.maptitle, "UNKNOWN", 32);
 
-	if (mapheaderinfo[gamemap-1] && !(mapheaderinfo[gamemap-1]->levelflags & LF_NOZONE))
+	if (worldmapheader && !(worldmapheader->levelflags & LF_NOZONE))
 		netbuffer->u.serverinfo.iszone = 1;
 	else
 		netbuffer->u.serverinfo.iszone = 0;
 
-	if (mapheaderinfo[gamemap-1])
-		netbuffer->u.serverinfo.actnum = mapheaderinfo[gamemap-1]->actnum;
+	if (worldmapheader)
+		netbuffer->u.serverinfo.actnum = worldmapheader->actnum;
 
 	p = PutFileNeeded(0);
 
@@ -1706,12 +1706,12 @@ static void CL_LoadReceivedSavegame(boolean reloading)
 	// load a base level
 	if (P_LoadNetGame(reloading))
 	{
-		const UINT8 actnum = mapheaderinfo[gamemap-1]->actnum;
+		const UINT8 actnum = worldmapheader->actnum;
 		CONS_Printf(M_GetText("Map is now \"%s"), G_BuildMapName(gamemap));
-		if (strcmp(mapheaderinfo[gamemap-1]->lvlttl, ""))
+		if (strcmp(worldmapheader->lvlttl, ""))
 		{
-			CONS_Printf(": %s", mapheaderinfo[gamemap-1]->lvlttl);
-			if (!(mapheaderinfo[gamemap-1]->levelflags & LF_NOZONE))
+			CONS_Printf(": %s", worldmapheader->lvlttl);
+			if (!(worldmapheader->levelflags & LF_NOZONE))
 				CONS_Printf(M_GetText(" Zone"));
 			if (actnum > 0)
 				CONS_Printf(" %2d", actnum);

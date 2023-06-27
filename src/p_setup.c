@@ -6881,9 +6881,7 @@ static boolean P_LoadMapFromFile(void)
 
 static void P_InitLevelSky(INT32 skynum, player_t *player)
 {
-	if (player == &players[consoleplayer])
-		P_SetupSkyTexture(skynum);
-
+	P_SetupSkyTexture(skynum);
 	P_SetupWorldSky(skynum, world);
 	levelskynum = skynum;
 }
@@ -6940,7 +6938,7 @@ static void P_InitPlayerSettings(INT32 i, boolean canresetlives)
 	players[i].pflags &= ~(PF_GAMETYPEOVER);
 }
 
-static void P_InitWorldSettings(void)
+static void P_InitWorldSettings(mapheader_t *mapheader)
 {
 	leveltime = 0;
 
@@ -6953,17 +6951,14 @@ static void P_InitWorldSettings(void)
 	if ((netgame || multiplayer) && !G_IsSpecialStage(gamemap))
 		nummaprings = -1;
 	else
-		nummaprings = mapheaderinfo[gamemap-1]->startrings;
-
-	// emerald hunt
-	hunt1 = hunt2 = hunt3 = NULL;
+		nummaprings = mapheader->startrings;
 
 	// map time limit
-	if (mapheaderinfo[gamemap-1]->countdown)
+	if (mapheader->countdown)
 	{
 		INT32 i;
 		tic_t maxtime = 0;
-		countdowntimer = mapheaderinfo[gamemap-1]->countdown * TICRATE;
+		countdowntimer = mapheader->countdown * TICRATE;
 		for (i = 0; i < MAXPLAYERS; i++)
 		{
 			if (!playeringame[i])
@@ -6991,19 +6986,16 @@ static void P_InitWorldSettings(void)
 	stagefailed = G_IsSpecialStage(gamemap);
 }
 
-static void P_InitLevelSettings(player_t *player, boolean addworld, boolean fromnetsave)
+static void P_InitLevelSettings(mapheader_t *mapheader, player_t *player, boolean addworld, boolean fromnetsave)
 {
 	INT32 i;
 	boolean canresetlives = true;
 
 	if (!addworld)
-		P_InitWorldSettings();
+		P_InitWorldSettings(mapheader);
 
 	// Reset temporary record data
 	memset(&ntemprecords, 0, sizeof(nightsdata_t));
-
-	// earthquake camera
-	memset(&quake,0,sizeof(struct quake));
 
 	if ((netgame || multiplayer) && G_GametypeUsesCoopStarposts() && cv_coopstarposts.value == 2)
 	{
@@ -7067,7 +7059,7 @@ void P_RespawnThings(void)
 		P_RemoveMobj((mobj_t *)think);
 	}
 
-	P_InitLevelSettings(NULL, false, false);
+	P_InitLevelSettings(worldmapheader, NULL, false, false);
 
 	localaiming = 0;
 	localaiming2 = 0;
@@ -7081,7 +7073,7 @@ void P_RespawnThings(void)
 
 static void P_RunLevelScript(const char *scriptname)
 {
-	if (!(mapheaderinfo[gamemap-1]->levelflags & LF_SCRIPTISFILE))
+	if (!(worldmapheader->levelflags & LF_SCRIPTISFILE))
 	{
 		lumpnum_t lumpnum;
 		char newname[9];
@@ -7414,9 +7406,9 @@ static void P_RunSpecialStageWipe(void)
 	S_StartSound(NULL, sfx_s3kaf);
 
 	// Fade music! Time it to S3KAF: 0.25 seconds is snappy.
-	if (RESETMUSIC ||
+	if (S_ShouldResetMusic(nextmapheader) ||
 		strnicmp(S_MusicName(),
-		(mapmusflags & MUSIC_RELOADRESET) ? mapheaderinfo[gamemap - 1]->musname : mapmusname, 7))
+		(mapmusflags & MUSIC_RELOADRESET) ? nextmapheader->musname : mapmusname, 7))
 		S_FadeOutStopMusic(MUSICRATE/4); //FixedMul(FixedDiv(F_GetWipeLength(wipedefs[wipe_speclevel_towhite])*NEWTICRATERATIO, NEWTICRATE), MUSICRATE)
 
 	F_WipeStartScreen();
@@ -7584,7 +7576,7 @@ static void P_InitGametype(player_t *player, boolean addworld)
 		CV_StealthSetValue(&cv_numlaps,
 		(cv_basenumlaps.value)
 			? cv_basenumlaps.value
-			: mapheaderinfo[gamemap - 1]->numlaps);
+			: nextmapheader->numlaps);
 }
 
 /** Loads a level from a lump or external wad.
@@ -7603,7 +7595,7 @@ boolean P_LoadLevel(player_t *player, boolean addworld, boolean fromnetsave, boo
 	levelloading = true;
 
 	// This is needed. Don't touch.
-	maptol = mapheaderinfo[gamemap-1]->typeoflevel;
+	maptol = nextmapheader->typeoflevel;
 	gametyperules = gametypedefaultrules[gametype];
 
 	CON_Drawer(); // let the user know what we are going to do
@@ -7625,18 +7617,18 @@ boolean P_LoadLevel(player_t *player, boolean addworld, boolean fromnetsave, boo
 	// Clear CECHO messages
 	HU_ClearCEcho();
 
-	if (mapheaderinfo[gamemap-1]->runsoc[0] != '#')
-		P_RunSOC(mapheaderinfo[gamemap-1]->runsoc);
+	if (nextmapheader->runsoc[0] != '#')
+		P_RunSOC(nextmapheader->runsoc);
 
-	if (cv_runscripts.value && mapheaderinfo[gamemap-1]->scriptname[0] != '#')
-		P_RunLevelScript(mapheaderinfo[gamemap-1]->scriptname);
+	if (cv_runscripts.value && nextmapheader->scriptname[0] != '#')
+		P_RunLevelScript(nextmapheader->scriptname);
 
-	P_InitLevelSettings(player, addworld, fromnetsave);
+	P_InitLevelSettings(nextmapheader, player, addworld, fromnetsave);
 
 	postimgtype = postimgtype2 = postimg_none;
 
-	if (mapheaderinfo[gamemap-1]->forcecharacter[0] != '\0')
-		P_ForceCharacter(mapheaderinfo[gamemap-1]->forcecharacter);
+	if (nextmapheader->forcecharacter[0] != '\0')
+		P_ForceCharacter(nextmapheader->forcecharacter);
 
 	if (!dedicated)
 	{
@@ -7694,9 +7686,9 @@ boolean P_LoadLevel(player_t *player, boolean addworld, boolean fromnetsave, boo
 
 		// Fade out music here. Deduct 2 tics so the fade volume actually reaches 0.
 		// But don't halt the music! S_Start will take care of that. This dodges a MIDI crash bug.
-		if (!(reloadinggamestate || titlemapinaction) && (RESETMUSIC ||
+		if (!(reloadinggamestate || titlemapinaction) && (S_ShouldResetMusic(nextmapheader) ||
 			strnicmp(S_MusicName(),
-				(mapmusflags & MUSIC_RELOADRESET) ? mapheaderinfo[gamemap-1]->musname : mapmusname, 7)))
+				(mapmusflags & MUSIC_RELOADRESET) ? nextmapheader->musname : mapmusname, 7)))
 		{
 			S_FadeMusic(0, FixedMul(
 				FixedDiv((F_GetWipeLength(wipedefs[wipe_level_toblack])-2)*NEWTICRATERATIO, NEWTICRATE), MUSICRATE));
@@ -7722,9 +7714,9 @@ boolean P_LoadLevel(player_t *player, boolean addworld, boolean fromnetsave, boo
 				char tx[64];
 				V_DrawSmallString(1, 191, V_ALLOWLOWERCASE|V_TRANSLUCENT|V_SNAPTOLEFT|V_SNAPTOBOTTOM, M_GetText("Speeding off to..."));
 				snprintf(tx, 63, "%s%s%s",
-					mapheaderinfo[gamemap-1]->lvlttl,
-					(mapheaderinfo[gamemap-1]->levelflags & LF_NOZONE) ? "" : " Zone",
-					(mapheaderinfo[gamemap-1]->actnum > 0) ? va(" %d",mapheaderinfo[gamemap-1]->actnum) : "");
+					nextmapheader->lvlttl,
+					(nextmapheader->levelflags & LF_NOZONE) ? "" : " Zone",
+					(nextmapheader->actnum > 0) ? va(" %d",nextmapheader->actnum) : "");
 				V_DrawSmallString(1, 195, V_ALLOWLOWERCASE|V_TRANSLUCENT|V_SNAPTOLEFT|V_SNAPTOBOTTOM, tx);
 				I_UpdateNoVsync();
 			}
@@ -7732,7 +7724,7 @@ boolean P_LoadLevel(player_t *player, boolean addworld, boolean fromnetsave, boo
 			// As oddly named as this is, this handles music only.
 			// We should be fine starting it here.
 			// Don't do this during titlemap, because the menu code handles music by itself.
-			S_Start();
+			S_Start(nextmapheader);
 
 			levelfadecol = (ranspecialwipe) ? 0 : 31;
 
@@ -7740,10 +7732,17 @@ boolean P_LoadLevel(player_t *player, boolean addworld, boolean fromnetsave, boo
 			F_EndTextPrompt(false, true);
 		}
 	}
+	else
+	{
+		S_SetMapMusic(nextmapheader);
+		S_StopMusic();
+		S_ChangeMusicEx(mapmusname, mapmusflags, true, mapmusposition, 0, 0);
+	}
 
 	if (player && (!titlemapinaction))
 		P_UnloadWorldPlayer(player);
 
+	// Initialize the world
 	world = P_InitNewWorld();
 	thlist = world->thlist;
 
@@ -7796,7 +7795,7 @@ boolean P_LoadLevel(player_t *player, boolean addworld, boolean fromnetsave, boo
 	if (lastloadedmaplumpnum == LUMPERROR)
 		I_Error("Map %s not found.\n", maplumpname);
 
-	R_ReInitColormaps(mapheaderinfo[gamemap-1]->palette);
+	R_ReInitColormaps(worldmapheader->palette);
 	if (!addworld)
 	{
 		// Init Boom colormaps.
@@ -7805,7 +7804,7 @@ boolean P_LoadLevel(player_t *player, boolean addworld, boolean fromnetsave, boo
 	CON_SetupBackColormap();
 
 	// SRB2 determines the sky texture to be used depending on the map header.
-	P_InitLevelSky(mapheaderinfo[gamemap-1]->skynum, player);
+	P_InitLevelSky(worldmapheader->skynum, player);
 
 	P_ResetSpawnpoints();
 
@@ -7820,6 +7819,10 @@ boolean P_LoadLevel(player_t *player, boolean addworld, boolean fromnetsave, boo
 
 	// init anything that P_SpawnSlopes/P_LoadThings needs to know
 	P_InitSpecials();
+
+	// Defaults in case levels don't have them set.
+	sstimer = worldmapheader->sstimer*TICRATE + 6;
+	ssspheres = worldmapheader->ssspheres;
 
 	P_SpawnSlopes(fromnetsave);
 
@@ -7916,12 +7919,12 @@ boolean P_LoadLevel(player_t *player, boolean addworld, boolean fromnetsave, boo
 		P_MapEnd(); // just in case MapLoad modifies tmthing
 	}
 
-	// No render mode or reloading gamestate, stop here.
-	if (rendermode == render_none || reloadinggamestate)
+	// Done here
+	if (addworld)
 		return true;
 
-	//if (!runforself || (addworld && splitscreen))
-	if (addworld)
+	// No render mode or reloading gamestate, stop here.
+	if (rendermode == render_none || reloadinggamestate)
 		return true;
 
 	R_ResetViewInterpolation(0);

@@ -396,23 +396,18 @@ boolean P_CheckSight(mobj_t *t1, mobj_t *t2)
 	s1 = t1->subsector->sector;
 	s2 = t2->subsector->sector;
 
-	// Check in REJECT table.
-	if (s1->world == s2->world
-	&& t1->world == t2->world
-	&& t1->world == s1->world
-	&& t2->world == s2->world)
-	{
-		world_t *w = s1->world;
-		size_t pnum = (s1-w->sectors)*w->numsectors + (s2-w->sectors);
+	world_t *w = P_GetMobjWorld(t1);
 
-		if (w->rejectmatrix != NULL)
-		{
-			if (w->rejectmatrix[pnum>>3] & (1 << (pnum&7))) // can't possibly be connected
-				return false;
-		}
-	}
-	else
+	// Cannot possibly be seen if the worlds don't match
+	if (w != P_GetMobjWorld(t2))
 		return false;
+	else if (w->rejectmatrix != NULL)
+	{
+		// Check in REJECT table.
+		size_t pnum = (s1-w->sectors)*w->numsectors + (s2-w->sectors);
+		if (w->rejectmatrix[pnum>>3] & (1 << (pnum&7))) // can't possibly be connected
+			return false;
+	}
 
 	// killough 11/98: shortcut for melee situations
 	// same subsector? obviously visible

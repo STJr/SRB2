@@ -65,6 +65,8 @@ typedef struct
 
 	mobj_t *overlaycap;
 
+	mapheader_t *header;
+
 	fixed_t gravity;
 
 	INT32 skynum; // used for keeping track of the current sky
@@ -97,6 +99,12 @@ typedef struct
 	tic_t itemrespawntime[ITEMQUESIZE];
 	size_t iquehead, iquetail;
 
+	struct quake quake;
+
+	// Emerald locations
+	mobj_t *emerald_hunt_locations[NUM_EMERALD_HUNT_LOCATIONS];
+
+	// All that boring blockmap stuff
 	UINT8 *rejectmatrix; // for fast sight rejection
 	INT32 *blockmaplump; // offsets in blockmap are from here
 	INT32 *blockmap; // Big blockmap
@@ -160,12 +168,15 @@ void P_SetWorld(world_t *w);
 void P_RoamIntoWorld(player_t *player, INT32 mapnum);
 void P_SwitchWorld(player_t *player, world_t *w);
 
+world_t *P_GetPlayerWorld(player_t *player);
+
 void P_DetachPlayerWorld(player_t *player);
 void P_SwitchPlayerWorld(player_t *player, world_t *newworld);
 
 boolean P_TransferCarriedPlayers(player_t *player, world_t *w);
 boolean P_MobjIsConnected(mobj_t *mobj1, mobj_t *mobj2);
 void P_RemoveMobjConnections(mobj_t *mobj, world_t *w);
+world_t *P_GetMobjWorld(mobj_t *mobj);
 
 void Command_Switchworld_f(void);
 void Command_Listworlds_f(void);

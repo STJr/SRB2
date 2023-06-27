@@ -388,6 +388,10 @@ typedef struct
 
 extern mapheader_t* mapheaderinfo[NUMMAPS];
 
+extern mapheader_t* curmapheader;
+extern mapheader_t* nextmapheader;
+extern mapheader_t* worldmapheader;
+
 // Gametypes
 #define NUMGAMETYPEFREESLOTS 128
 enum GameType
@@ -548,13 +552,11 @@ extern UINT8 useContinues;
 
 extern UINT8 shareEmblems;
 
-extern mobj_t *hunt1, *hunt2, *hunt3; // Emerald hunt locations
+#define NUM_EMERALD_HUNT_LOCATIONS 3
 
 // For racing
 extern UINT32 countdown;
 extern UINT32 countdown2;
-
-extern fixed_t gravity;
 
 //for CTF balancing
 extern INT16 autobalance;

@@ -2431,7 +2431,9 @@ void F_StartTitleScreen(void)
 
 		P_UnloadWorldList();
 
-		maptol = mapheaderinfo[gamemap-1]->typeoflevel;
+		curmapheader = nextmapheader = mapheaderinfo[gamemap-1];
+		worldmapheader = curmapheader;
+		maptol = curmapheader->typeoflevel;
 
 		G_DoLoadLevel(&players[displayplayer], false, true);
 		if (!titlemap)
@@ -2477,6 +2479,8 @@ void F_StartTitleScreen(void)
 		gamemap = 1; // g_game.c
 		if (!mapheaderinfo[gamemap-1])
 			P_AllocMapHeader(gamemap-1);
+		curmapheader = nextmapheader = mapheaderinfo[gamemap-1];
+		worldmapheader = curmapheader;
 		CON_ClearHUD();
 	}
 

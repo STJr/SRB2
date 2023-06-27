@@ -5371,6 +5371,14 @@ void HWR_RenderPlayerView(INT32 viewnumber, player_t *player)
 	if (viewnumber == 0) // Only do it if it's the first screen being rendered
 		HWD.pfnClearBuffer(true, false, &ClearColor); // Clear the Color Buffer, stops HOMs. Also seems to fix the skybox issue on Intel GPUs.
 
+	// Uh, double check? I don't know, I'm not paid for this.
+	if (viewworld->extrasubsectors == NULL)
+		HWR_CreatePlanePolygons((INT32)viewworld->numnodes - 1);
+
+	// Same
+	if (viewworld->sky_dome == NULL)
+		HWR_BuildSkyDome(viewworld);
+
 	PS_START_TIMING(ps_hw_skyboxtime);
 	if (skybox && drawsky) // If there's a skybox and we should be drawing the sky, draw the skybox
 		HWR_RenderSkyboxView(viewnumber, player); // This is drawn before everything else so it is placed behind

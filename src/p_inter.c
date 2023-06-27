@@ -725,18 +725,24 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			break;
 
 		// Emerald Hunt
-		case MT_EMERHUNT:
+		case MT_EMERHUNT: {
+			unsigned remaining_emeralds = 0;
+
 			if (player->bot && player->bot != BOT_MPAI)
 				return;
 
-			if (hunt1 == special)
-				hunt1 = NULL;
-			else if (hunt2 == special)
-				hunt2 = NULL;
-			else if (hunt3 == special)
-				hunt3 = NULL;
+			for (i = 0; i < NUM_EMERALD_HUNT_LOCATIONS; i++)
+			{
+				if (world->emerald_hunt_locations[i])
+				{
+					if (world->emerald_hunt_locations[i] == special)
+						P_SetTarget(&world->emerald_hunt_locations[i], NULL);
+					else
+						remaining_emeralds++;
+				}
+			}
 
-			if (!hunt1 && !hunt2 && !hunt3)
+			if (!remaining_emeralds)
 			{
 				for (i = 0; i < MAXPLAYERS; i++)
 				{
@@ -748,7 +754,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				//S_StartSound(NULL, sfx_lvpass);
 			}
 			break;
-
+		}
 		// Collectible emeralds
 		case MT_EMERALD1:
 		case MT_EMERALD2:
@@ -1678,9 +1684,9 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				P_SetObjectMomZ(toucher, FixedDiv(69*FRACUNIT,10*FRACUNIT), false);
 			if (P_IsLocalPlayer(player))
 			{
-				quake.intensity = 9*FRACUNIT;
-				quake.time = TICRATE/2;
-				quake.epicenter = NULL;
+				world->quake.intensity = 9*FRACUNIT;
+				world->quake.time = TICRATE/2;
+				world->quake.epicenter = NULL;
 			}
 
 #if 0 // camera redirection - deemed unnecessary
@@ -3149,7 +3155,7 @@ static void P_NiGHTSDamage(mobj_t *target, mobj_t *source)
 		if (oldnightstime > 10*TICRATE
 			&& player->nightstime < 10*TICRATE)
 		{
-			if ((mapheaderinfo[gamemap-1]->levelflags & LF_MIXNIGHTSCOUNTDOWN)
+			if ((worldmapheader->levelflags & LF_MIXNIGHTSCOUNTDOWN)
 #ifdef _WIN32
 				// win32 MIDI volume hack means we cannot fade down the music
 				&& S_MusicType() != MU_MID
@@ -3605,7 +3611,7 @@ void P_SpecialStageDamage(player_t *player, mobj_t *inflictor, mobj_t *source)
 	if (oldnightstime > 10*TICRATE
 		&& player->nightstime < 10*TICRATE)
 	{
-		if (mapheaderinfo[gamemap-1]->levelflags & LF_MIXNIGHTSCOUNTDOWN)
+		if (worldmapheader->levelflags & LF_MIXNIGHTSCOUNTDOWN)
 		{
 			S_FadeMusic(0, 10*MUSICRATE);
 			S_StartSound(NULL, sfx_timeup); // that creepy "out of time" music from NiGHTS.

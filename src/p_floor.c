@@ -689,7 +689,7 @@ void T_BounceCheese(bouncecheese_t *bouncer)
 		}
 		else if (bouncer->sector->ceilingheight > bouncer->ceilingwasheight) // Up
 		{
-			bouncer->speed += gravity;
+			bouncer->speed += world->gravity;
 		}
 
 		if (abs(bouncer->speed) < 2*FRACUNIT
@@ -838,7 +838,7 @@ void T_StartCrumble(crumble_t *crumble)
 		// Only fall like this if it isn't meant to float on water
 		if (!(crumble->flags & CF_FLOATBOB))
 		{
-			crumble->speed += gravity; // Gain more and more speed
+			crumble->speed += world->gravity; // Gain more and more speed
 
 			if ((!(crumble->flags & CF_REVERSE) && crumble->sector->ceilingheight >= -16384*FRACUNIT)
 				|| ((crumble->flags & CF_REVERSE) && crumble->sector->ceilingheight <= 16384*FRACUNIT))

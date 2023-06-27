@@ -1783,6 +1783,20 @@ boolean S_MusicExists(const char *mname, boolean checkMIDI, boolean checkDigi)
 	);
 }
 
+INT32 S_ShouldResetMusic(mapheader_t *mapheader)
+{
+	if (modeattacking)
+		return 0;
+
+	if (cv_resetmusicbyheader.value)
+	{
+		if (mapheader->musforcereset != -1)
+			return mapheader->musforcereset;
+	}
+
+	return cv_resetmusic.value;
+}
+
 /// ------------------------
 /// Music Effects
 /// ------------------------
@@ -2424,25 +2438,32 @@ boolean S_FadeOutStopMusic(UINT32 ms)
 /// Init & Others
 /// ------------------------
 
+void S_SetMapMusic(mapheader_t *mapheader)
+{
+	strncpy(mapmusname, mapheader->musname, 7);
+	mapmusname[6] = 0;
+	mapmusflags = (mapheader->mustrack & MUSIC_TRACKMASK);
+	mapmusposition = mapheader->muspos;
+}
+
+void S_PlayMapMusic(mapheader_t *mapheader, boolean reset)
+{
+	if (mapmusflags & MUSIC_RELOADRESET)
+		S_SetMapMusic(mapheader);
+
+	if (S_ShouldResetMusic(mapheader) || reset)
+		S_StopMusic();
+	S_ChangeMusicEx(mapmusname, mapmusflags, true, mapmusposition, 0, 0);
+}
+
 //
 // Per level startup code.
 // Kills playing sounds at start of level,
 //  determines music if any, changes music.
 //
-void S_StartEx(boolean reset)
+void S_StartEx(mapheader_t *mapheader, boolean reset)
 {
-	if (mapmusflags & MUSIC_RELOADRESET)
-	{
-		strncpy(mapmusname, mapheaderinfo[gamemap-1]->musname, 7);
-		mapmusname[6] = 0;
-		mapmusflags = (mapheaderinfo[gamemap-1]->mustrack & MUSIC_TRACKMASK);
-		mapmusposition = mapheaderinfo[gamemap-1]->muspos;
-	}
-
-	if (RESETMUSIC || reset)
-		S_StopMusic();
-	S_ChangeMusicEx(mapmusname, mapmusflags, true, mapmusposition, 0, 0);
-
+	S_PlayMapMusic(mapheader, reset);
 	S_ResetMusicStack();
 	music_stack_noposition = false;
 	music_stack_fadeout = 0;
@@ -2483,8 +2504,8 @@ static void Command_Tunes_f(void)
 	}
 	else if (!strcasecmp(tunearg, "-default"))
 	{
-		tunearg = mapheaderinfo[gamemap-1]->musname;
-		track = mapheaderinfo[gamemap-1]->mustrack;
+		tunearg = worldmapheader->musname;
+		track = worldmapheader->mustrack;
 	}
 
 	if (strlen(tunearg) > 6) // This is automatic -- just show the error just in case

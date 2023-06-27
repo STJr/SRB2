@@ -2577,15 +2577,15 @@ static int lib_pStartQuake(lua_State *L)
 			q_epicenter.z = 0;
 		lua_pop(L, 1);
 
-		quake.epicenter = &q_epicenter;
+		world->quake.epicenter = &q_epicenter;
 	}
 	else
-		quake.epicenter = NULL;
-	quake.radius = luaL_optinteger(L, 4, 512*FRACUNIT);
+		world->quake.epicenter = NULL;
+	world->quake.radius = luaL_optinteger(L, 4, 512*FRACUNIT);
 
 	// These things are actually used in 2.1.
-	quake.intensity = q_intensity;
-	quake.time = q_time;
+	world->quake.intensity = q_intensity;
+	world->quake.time = q_time;
 	return 0;
 }
 

@@ -756,7 +756,7 @@ boolean P_LookForPlayers(mobj_t *actor, boolean allaround, boolean tracer, fixed
 		if (player->quittime)
 			continue; // Ignore uncontrolled bodies
 
-		if (player->world != actor->world)
+		if (P_GetPlayerWorld(player) != actor->world)
 			continue; // Different world
 
 		if (dist > 0
@@ -1664,10 +1664,10 @@ static void P_ParabolicMove(mobj_t *actor, fixed_t x, fixed_t y, fixed_t z, fixe
 	actor->momx = FixedMul(FixedDiv(x, dh), speed);
 	actor->momy = FixedMul(FixedDiv(y, dh), speed);
 
-	if (!gravity)
+	if (!world->gravity)
 		return;
 
-	dh = FixedDiv(FixedMul(dh, gravity), speed);
+	dh = FixedDiv(FixedMul(dh, world->gravity), speed);
 	actor->momz = (dh>>1) + FixedDiv(z, dh<<1);
 }
 
@@ -2731,7 +2731,7 @@ void A_LobShot(mobj_t *actor)
 	dist = P_AproxDistance(actor->target->x - shot->x, actor->target->y - shot->y);
 
 	horizontal = dist / airtime;
-	vertical = FixedMul((gravity*airtime)/2, shot->scale);
+	vertical = FixedMul((world->gravity*airtime)/2, shot->scale);
 
 	shot->momx = FixedMul(horizontal, FINECOSINE(an));
 	shot->momy = FixedMul(horizontal, FINESINE(an));
@@ -2753,7 +2753,7 @@ void A_LobShot(mobj_t *actor)
 			CONS_Debug(DBG_GAMELOGIC, "orig: %d\n", (orig)>>FRACBITS);
 
 			horizontal = dist / airtime;
-			vertical = (gravity*airtime)/2;
+			vertical = (world->gravity*airtime)/2;
 		}
 		dist -= orig;
 		shot->momx = FixedMul(horizontal, FINECOSINE(an));
@@ -3967,26 +3967,26 @@ static void P_DoBossVictory(mobj_t *mo)
 			EV_DoElevator(LE_CAPSULE2, NULL, elevateHighest);
 		}
 
-		if (mapheaderinfo[gamemap-1]->muspostbossname[0] &&
-			S_MusicExists(mapheaderinfo[gamemap-1]->muspostbossname, !midi_disabled, !digital_disabled))
+		if (worldmapheader->muspostbossname[0] &&
+			S_MusicExists(worldmapheader->muspostbossname, !midi_disabled, !digital_disabled))
 		{
 			// Touching the egg trap button calls P_DoPlayerExit, which calls P_RestoreMusic.
 			// So just park ourselves in the mapmus variables.
 			// But don't change the mapmus variables if they were modified from their level header values (e.g., TUNES).
-			boolean changed = strnicmp(mapheaderinfo[gamemap-1]->musname, S_MusicName(), 7);
-			if (!strnicmp(mapheaderinfo[gamemap-1]->musname, mapmusname, 7))
+			boolean changed = strnicmp(worldmapheader->musname, S_MusicName(), 7);
+			if (!strnicmp(worldmapheader->musname, mapmusname, 7))
 			{
-				strncpy(mapmusname, mapheaderinfo[gamemap-1]->muspostbossname, 7);
+				strncpy(mapmusname, worldmapheader->muspostbossname, 7);
 				mapmusname[6] = 0;
-				mapmusflags = (mapheaderinfo[gamemap-1]->muspostbosstrack & MUSIC_TRACKMASK) | MUSIC_RELOADRESET;
-				mapmusposition = mapheaderinfo[gamemap-1]->muspostbosspos;
+				mapmusflags = (worldmapheader->muspostbosstrack & MUSIC_TRACKMASK) | MUSIC_RELOADRESET;
+				mapmusposition = worldmapheader->muspostbosspos;
 			}
 
 			// don't change if we're in another tune
 			// but in case we're in jingle, use our parked mapmus variables so the correct track restores
 			if (!changed)
 				S_ChangeMusicEx(mapmusname, mapmusflags, true, mapmusposition, (1*MUSICRATE)+(MUSICRATE/2),
-					mapheaderinfo[gamemap-1]->muspostbossfadein);
+					worldmapheader->muspostbossfadein);
 		}
 	}
 }
@@ -4412,7 +4412,7 @@ void A_SuperSneakers(mobj_t *actor)
 
 	if (P_IsLocalPlayer(player) && !player->powers[pw_super])
 	{
-		if (S_SpeedMusic(0.0f) && (mapheaderinfo[gamemap-1]->levelflags & LF_SPEEDMUSIC))
+		if (S_SpeedMusic(0.0f) && (worldmapheader->levelflags & LF_SPEEDMUSIC))
 			S_SpeedMusic(1.4f);
 		else
 			P_PlayJingle(player, JT_SHOES);
@@ -11591,7 +11591,7 @@ void A_BrakLobShot(mobj_t *actor)
 		return; // Don't even bother if we've got nothing to aim at.
 
 	// Look up actor's current gravity situation
-	g = FixedMul(gravity, P_GetSectorGravityFactor(actor->subsector->sector));
+	g = FixedMul(world->gravity, P_GetSectorGravityFactor(actor->subsector->sector));
 
 	// Look up distance between actor and its target
 	x = P_AproxDistance(actor->target->x - actor->x, actor->target->y - actor->y);
@@ -11706,7 +11706,7 @@ void A_NapalmScatter(mobj_t *actor)
 		airtime = 16<<FRACBITS;
 
 	// Look up actor's current gravity situation
-	g = FixedMul(gravity, P_GetSectorGravityFactor(actor->subsector->sector));
+	g = FixedMul(world->gravity, P_GetSectorGravityFactor(actor->subsector->sector));
 
 	// vy = (g*(airtime-1))/2
 	vy = FixedMul(g,(airtime-(1<<FRACBITS)))>>1;
@@ -11761,12 +11761,12 @@ mobj_t *P_InternalFlickySpawn(mobj_t *actor, mobjtype_t flickytype, fixed_t momz
 
 	if (!flickytype)
 	{
-		if (!mapheaderinfo[gamemap-1] || !mapheaderinfo[gamemap-1]->numFlickies) // No mapheader, no shoes, no service.
+		if (!worldmapheader || !worldmapheader->numFlickies) // No mapheader, no shoes, no service.
 			return NULL;
 		else
 		{
-			INT32 prandom = P_RandomKey(mapheaderinfo[gamemap-1]->numFlickies);
-			flickytype = mapheaderinfo[gamemap-1]->flickies[prandom];
+			INT32 prandom = P_RandomKey(worldmapheader->numFlickies);
+			flickytype = worldmapheader->flickies[prandom];
 		}
 	}
 
@@ -12416,7 +12416,7 @@ void A_Boss5Jump(mobj_t *actor)
 		return; // Don't even bother if we've got nothing to aim at.
 
 	// Look up actor's current gravity situation
-	g = FixedMul(gravity, P_GetSectorGravityFactor(actor->subsector->sector));
+	g = FixedMul(world->gravity, P_GetSectorGravityFactor(actor->subsector->sector));
 
 	// Look up distance between actor and its tracer
 	x = P_AproxDistance(actor->tracer->x - actor->x, actor->tracer->y - actor->y);
@@ -12519,10 +12519,10 @@ void A_MineExplode(mobj_t *actor)
 	A_Scream(actor);
 	actor->flags = MF_NOGRAVITY|MF_NOCLIP;
 
-	quake.epicenter = NULL;
-	quake.radius = 512*FRACUNIT;
-	quake.intensity = 8*FRACUNIT;
-	quake.time = TICRATE/3;
+	world->quake.epicenter = NULL;
+	world->quake.radius = 512*FRACUNIT;
+	world->quake.intensity = 8*FRACUNIT;
+	world->quake.time = TICRATE/3;
 
 	P_RadiusAttack(actor, actor->tracer, 192*FRACUNIT, DMG_CANHURTSELF, true);
 	P_MobjCheckWater(actor);
@@ -13505,14 +13505,14 @@ void A_Boss5BombExplode(mobj_t *actor)
 	P_DustRing(locvar1, 6, actor->x, actor->y, actor->z+actor->height/2, 3*actor->radius, FRACUNIT, FRACUNIT, actor->scale);
 	//P_StartQuake(9*actor->scale, TICRATE/6, {actor->x, actor->y, actor->z}, 20*actor->radius);
 	// the above does not exist, so we set the quake values directly instead
-	quake.intensity = 9*actor->scale;
-	quake.time = TICRATE/6;
+	world->quake.intensity = 9*actor->scale;
+	world->quake.time = TICRATE/6;
 	// the following quake values have no effect atm? ah well, may as well set them anyway
 	{
 		mappoint_t q_epicenter = {actor->x, actor->y, actor->z};
-		quake.epicenter = &q_epicenter;
+		world->quake.epicenter = &q_epicenter;
 	}
-	quake.radius = 20*actor->radius;
+	world->quake.radius = 20*actor->radius;
 }
 
 static mobj_t *dustdevil;
@@ -13785,10 +13785,10 @@ void A_TNTExplode(mobj_t *actor)
 	epicenter.x = actor->x;
 	epicenter.y = actor->y;
 	epicenter.z = actor->z;
-	quake.intensity = 9*FRACUNIT;
-	quake.time = TICRATE/6;
-	quake.epicenter = &epicenter;
-	quake.radius = 512*FRACUNIT;
+	world->quake.intensity = 9*FRACUNIT;
+	world->quake.time = TICRATE/6;
+	world->quake.epicenter = &epicenter;
+	world->quake.radius = 512*FRACUNIT;
 
 	if (locvar1)
 	{

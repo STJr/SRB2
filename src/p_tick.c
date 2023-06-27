@@ -361,18 +361,9 @@ static inline void P_RunThinkers(void)
 
 static inline void P_RunWorldThinkers(void)
 {
-	INT32 i;
-
 	PS_START_TIMING(ps_thinkertime);
 
-	if (!(netgame || multiplayer) || (numworlds < 2))
-	{
-		P_RunThinkers();
-		PS_STOP_TIMING(ps_thinkertime);
-		return;
-	}
-
-	for (i = 0; i < numworlds; i++)
+	for (INT32 i = 0; i < numworlds; i++)
 	{
 		world_t *w = worldlist[i];
 
@@ -519,7 +510,7 @@ static inline void P_DoSpecialStageStuff(void)
 		players[i].powers[pw_underwater] = players[i].powers[pw_spacetime] = 0;
 	}
 
-	//if (sstimer < 15*TICRATE+6 && sstimer > 7 && (mapheaderinfo[gamemap-1]->levelflags & LF_SPEEDMUSIC))
+	//if (sstimer < 15*TICRATE+6 && sstimer > 7 && (worldmapheader->levelflags & LF_SPEEDMUSIC))
 		//S_SpeedMusic(1.4f);
 
 	if (sstimer && !objectplacing)
@@ -637,65 +628,27 @@ static inline void P_DoCTFStuff(void)
 
 static inline void P_RunWorldSpecials(void)
 {
-	INT32 i;
-
-	if (!(netgame || multiplayer) || (numworlds < 2))
-	{
-		P_RunShields();
-		P_RunOverlays();
-		P_UpdateSpecials();
-		P_RespawnSpecials();
-		return;
-	}
-
-	for (i = 0; i < numworlds; i++)
+	for (INT32 i = 0; i < numworlds; i++)
 	{
 		world_t *w = worldlist[i];
 
 		if (!w->players)
 			continue;
 
+		// Just in case.
 		P_SetWorld(w);
 
-		P_RunShields();
-		P_RunOverlays();
-		P_UpdateSpecials();
-		P_RespawnSpecials();
+		P_RunShields(w);
+		P_RunOverlays(w);
+		P_UpdateSpecials(w);
+		P_RespawnSpecials(w);
+		P_PrecipitationEffects(w); // Lightning, rain sounds, etc.
 	}
 }
 
-static inline void P_WorldPrecipitationEffects(void)
+static void RunLuaHook(int hook)
 {
-	INT32 i;
-
-	if (!(netgame || multiplayer) || (numworlds < 2))
-	{
-		P_PrecipitationEffects(baseworld);
-		return;
-	}
-
-	for (i = 0; i < numworlds; i++)
-	{
-		world_t *w = worldlist[i];
-
-		if (!w->players)
-			continue;
-
-		P_PrecipitationEffects(w);
-	}
-}
-
-static inline void RunLuaHookForWorld(int hook)
-{
-	INT32 i;
-
-	if (!(netgame || multiplayer) || (numworlds < 2))
-	{
-		LUA_HookVoid(hook);
-		return;
-	}
-
-	for (i = 0; i < numworlds; i++)
+	for (INT32 i = 0; i < numworlds; i++)
 	{
 		world_t *w = worldlist[i];
 
@@ -708,17 +661,9 @@ static inline void RunLuaHookForWorld(int hook)
 	}
 }
 
-static inline void RunLuaThinkFrameForWorld(void)
+static inline void RunLuaThinkFrame(void)
 {
-	INT32 i;
-
-	if (!(netgame || multiplayer) || (numworlds < 2))
-	{
-		LUA_HookThinkFrame();
-		return;
-	}
-
-	for (i = 0; i < numworlds; i++)
+	for (INT32 i = 0; i < numworlds; i++)
 	{
 		world_t *w = worldlist[i];
 
@@ -729,6 +674,21 @@ static inline void RunLuaThinkFrameForWorld(void)
 
 		LUA_HookThinkFrame();
 	}
+}
+
+static void P_WorldPostUpdate(world_t *w)
+{
+	if (w->quake.time)
+	{
+		fixed_t ir = w->quake.intensity>>1;
+		/// \todo Calculate distance from epicenter if set and modulate the intensity accordingly based on radius.
+		w->quake.x = M_RandomRange(-ir,ir);
+		w->quake.y = M_RandomRange(-ir,ir);
+		w->quake.z = M_RandomRange(-ir,ir);
+		--w->quake.time;
+	}
+	else
+		w->quake.x = w->quake.y = w->quake.z = 0;
 }
 
 //
@@ -737,6 +697,8 @@ static inline void RunLuaThinkFrameForWorld(void)
 void P_Ticker(boolean run)
 {
 	INT32 i;
+
+	P_SetWorld(localworld);
 
 	// Increment jointime and quittime even if paused
 	for (i = 0; i < MAXPLAYERS; i++)
@@ -815,7 +777,7 @@ void P_Ticker(boolean run)
 				player_t *player = &players[i];
 
 				if (numworlds > 1 && !titlemapinaction && !player->bot)
-					P_SetWorld(player->world);
+					P_SetWorld(P_GetPlayerWorld(player));
 
 				P_PlayerThink(player);
 			}
@@ -846,21 +808,18 @@ void P_Ticker(boolean run)
 				player_t *player = &players[i];
 
 				if (numworlds > 1 && !titlemapinaction && !player->bot)
-					P_SetWorld(player->world);
+					P_SetWorld(P_GetPlayerWorld(player));
 
 				P_PlayerAfterThink(player);
 			}
 
 		PS_START_TIMING(ps_lua_thinkframe_time);
-		RunLuaThinkFrameForWorld();
+		RunLuaThinkFrame();
 		PS_STOP_TIMING(ps_lua_thinkframe_time);
 	}
 
 	// Run shield positioning
 	P_RunWorldSpecials();
-
-	// Lightning, rain sounds, etc.
-	P_WorldPrecipitationEffects();
 
 	if (run)
 		leveltime++;
@@ -898,17 +857,16 @@ void P_Ticker(boolean run)
 		if (countdown2)
 			countdown2--;
 
-		if (quake.time)
+		for (i = 0; i < numworlds; i++)
 		{
-			fixed_t ir = quake.intensity>>1;
-			/// \todo Calculate distance from epicenter if set and modulate the intensity accordingly based on radius.
-			quake.x = M_RandomRange(-ir,ir);
-			quake.y = M_RandomRange(-ir,ir);
-			quake.z = M_RandomRange(-ir,ir);
-			--quake.time;
+			world_t *w = worldlist[i];
+
+			if (!w->players)
+				continue;
+
+			P_SetWorld(w);
+			P_WorldPostUpdate(w);
 		}
-		else
-			quake.x = quake.y = quake.z = 0;
 
 		if (metalplayback)
 			G_ReadMetalTic(metalplayback);
@@ -921,7 +879,7 @@ void P_Ticker(boolean run)
 		if (modeattacking)
 			G_GhostTicker();
 
-		RunLuaHookForWorld(HOOK(PostThinkFrame));
+		RunLuaHook(HOOK(PostThinkFrame));
 	}
 
 	if (run)
@@ -962,6 +920,8 @@ void P_Ticker(boolean run)
 	}
 
 	P_MapEnd();
+
+	P_SetWorld(localworld);
 }
 
 // Abbreviated ticker for pre-loading, calls thinkers and assorted things
@@ -981,7 +941,7 @@ void P_PreTicker(INT32 frames)
 
 		R_UpdateAllMobjInterpolators();
 
-		RunLuaHookForWorld(HOOK(PreThinkFrame));
+		RunLuaHook(HOOK(PreThinkFrame));
 
 		for (i = 0; i < MAXPLAYERS; i++)
 			if (playeringame[i] && players[i].mo && !P_MobjWasRemoved(players[i].mo))
@@ -999,7 +959,7 @@ void P_PreTicker(INT32 frames)
 				players[i].cmd.angleturn = players[i].angleturn;
 
 				if (numworlds > 1 && !titlemapinaction && !player->bot)
-					P_SetWorld(player->world);
+					P_SetWorld(P_GetPlayerWorld(player));
 				P_PlayerThink(player);
 
 				memcpy(&players[i].cmd, &temptic, sizeof(ticcmd_t));
@@ -1014,17 +974,17 @@ void P_PreTicker(INT32 frames)
 				player_t *player = &players[i];
 
 				if (numworlds > 1 && !titlemapinaction && !player->bot)
-					P_SetWorld(player->world);
+					P_SetWorld(P_GetPlayerWorld(player));
 
 				P_PlayerAfterThink(&players[i]);
 			}
 
-		RunLuaThinkFrameForWorld();
+		RunLuaThinkFrame();
 
 		// Run shield positioning
 		P_RunWorldSpecials();
 
-		RunLuaHookForWorld(HOOK(PostThinkFrame));
+		RunLuaHook(HOOK(PostThinkFrame));
 
 		R_UpdateLevelInterpolators();
 		R_UpdateViewInterpolation();

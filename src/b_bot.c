@@ -529,6 +529,10 @@ boolean B_CheckRespawn(player_t *player)
 		return false;
 	}
 
+	// Not even in the same world?
+	if (P_GetMobjWorld(sonic) != P_GetMobjWorld(tails))
+		return true;
+
 	// If you can't see Sonic, I guess we should?
 	if (!P_CheckSight(sonic, tails) && P_AproxDistance(P_AproxDistance(tails->x-sonic->x, tails->y-sonic->y), tails->z-sonic->z) > FixedMul(1024*FRACUNIT, tails->scale))
 		return true;

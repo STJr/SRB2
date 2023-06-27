@@ -275,7 +275,7 @@ void Portal_AddSkybox (const visplane_t* plane)
 	portal->viewz = viewworld->skyboxmo[0]->z;
 	portal->viewangle = viewangle + viewworld->skyboxmo[0]->angle;
 
-	mh = mapheaderinfo[gamemap-1];
+	mh = viewworld->header;
 
 	// If a relative viewpoint exists, offset the viewpoint.
 	if (viewworld->skyboxmo[1])

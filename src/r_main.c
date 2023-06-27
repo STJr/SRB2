@@ -1187,7 +1187,7 @@ void R_SetupFrame(player_t *player)
 			}
 		}
 	}
-	newview->z += quake.z;
+	newview->z += viewworld->quake.z;
 
 	newview->player = player;
 
@@ -1195,8 +1195,8 @@ void R_SetupFrame(player_t *player)
 	{
 		newview->x = thiscam->x;
 		newview->y = thiscam->y;
-		newview->x += quake.x;
-		newview->y += quake.y;
+		newview->x += viewworld->quake.x;
+		newview->y += viewworld->quake.y;
 
 		if (thiscam->subsector)
 			newview->sector = thiscam->subsector->sector;
@@ -1207,8 +1207,8 @@ void R_SetupFrame(player_t *player)
 	{
 		newview->x = r_viewmobj->x;
 		newview->y = r_viewmobj->y;
-		newview->x += quake.x;
-		newview->y += quake.y;
+		newview->x += viewworld->quake.x;
+		newview->y += viewworld->quake.y;
 
 		if (r_viewmobj->subsector)
 			newview->sector = r_viewmobj->subsector->sector;
@@ -1286,9 +1286,9 @@ void R_SkyboxFrame(player_t *player)
 	newview->y = r_viewmobj->y;
 	newview->z = r_viewmobj->z; // 26/04/17: use actual Z position instead of spawnpoint angle!
 
-	if (mapheaderinfo[gamemap-1])
+	if (viewworld->header)
 	{
-		mapheader_t *mh = mapheaderinfo[gamemap-1];
+		mapheader_t *mh = viewworld->header;
 		vector3_t campos = {0,0,0}; // Position of player's actual view point
 
 		if (player->awayviewtics) {
@@ -1307,9 +1307,9 @@ void R_SkyboxFrame(player_t *player)
 
 		// Earthquake effects should be scaled in the skybox
 		// (if an axis isn't used, the skybox won't shake in that direction)
-		campos.x += quake.x;
-		campos.y += quake.y;
-		campos.z += quake.z;
+		campos.x += viewworld->quake.x;
+		campos.y += viewworld->quake.y;
+		campos.z += viewworld->quake.z;
 
 		if (viewworld->skyboxmo[1]) // Is there a viewpoint?
 		{
@@ -1509,9 +1509,9 @@ void R_PrepareViewWorld(player_t *player)
 	R_SetViewMobj(player);
 
 	if (r_viewmobj)
-		P_SetViewWorld(r_viewmobj->world);
-	else if (player->world)
-		P_SetViewWorld(player->world);
+		P_SetViewWorld(P_GetMobjWorld(r_viewmobj));
+	else if (P_GetPlayerWorld(player))
+		P_SetViewWorld(P_GetPlayerWorld(player));
 	else if (localworld && !splitscreen) // Yes?
 		P_SetViewWorld(localworld);
 	else
