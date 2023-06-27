@@ -166,6 +166,12 @@ enum side_e {
 	side_valid = 0,
 	side_textureoffset,
 	side_rowoffset,
+	side_offsetx_top,
+	side_offsety_top,
+	side_offsetx_mid,
+	side_offsety_mid,
+	side_offsetx_bot,
+	side_offsety_bot,
 	side_toptexture,
 	side_bottomtexture,
 	side_midtexture,
@@ -180,6 +186,12 @@ static const char *const side_opt[] = {
 	"valid",
 	"textureoffset",
 	"rowoffset",
+	"offsetx_top",
+	"offsety_top",
+	"offsetx_mid",
+	"offsety_mid",
+	"offsetx_bot",
+	"offsety_bot",
 	"toptexture",
 	"bottomtexture",
 	"midtexture",
@@ -1097,6 +1109,24 @@ static int side_get(lua_State *L)
 	case side_rowoffset:
 		lua_pushfixed(L, side->rowoffset);
 		return 1;
+	case side_offsetx_top:
+		lua_pushfixed(L, side->offsetx_top);
+		return 1;
+	case side_offsety_top:
+		lua_pushfixed(L, side->offsety_top);
+		return 1;
+	case side_offsetx_mid:
+		lua_pushfixed(L, side->offsetx_mid);
+		return 1;
+	case side_offsety_mid:
+		lua_pushfixed(L, side->offsety_mid);
+		return 1;
+	case side_offsetx_bot:
+		lua_pushfixed(L, side->offsetx_bot);
+		return 1;
+	case side_offsety_bot:
+		lua_pushfixed(L, side->offsety_bot);
+		return 1;
 	case side_toptexture:
 		lua_pushinteger(L, side->toptexture);
 		return 1;
@@ -1153,6 +1183,24 @@ static int side_set(lua_State *L)
 		break;
 	case side_rowoffset:
 		side->rowoffset = luaL_checkfixed(L, 3);
+		break;
+	case side_offsetx_top:
+		side->offsetx_top = luaL_checkfixed(L, 3);
+		break;
+	case side_offsety_top:
+		side->offsety_top = luaL_checkfixed(L, 3);
+		break;
+	case side_offsetx_mid:
+		side->offsetx_mid = luaL_checkfixed(L, 3);
+		break;
+	case side_offsety_mid:
+		side->offsety_mid = luaL_checkfixed(L, 3);
+		break;
+	case side_offsetx_bot:
+		side->offsetx_bot = luaL_checkfixed(L, 3);
+		break;
+	case side_offsety_bot:
+		side->offsety_bot = luaL_checkfixed(L, 3);
 		break;
 	case side_toptexture:
 		side->toptexture = luaL_checkinteger(L, 3);
