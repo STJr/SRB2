@@ -1788,7 +1788,7 @@ INT32 S_ShouldResetMusic(mapheader_t *mapheader)
 	if (modeattacking)
 		return 0;
 
-	if (cv_resetmusicbyheader.value)
+	if (cv_resetmusicbyheader.value && mapheader)
 	{
 		if (mapheader->musforcereset != -1)
 			return mapheader->musforcereset;

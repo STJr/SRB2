@@ -209,7 +209,7 @@ void ClearAdminPlayers(void);
 void RemoveAdminPlayer(INT32 playernum);
 void ItemFinder_OnChange(void);
 void D_SetPassword(const char *pw);
-void SendWorldSwitch(INT32 worldnum, boolean nodetach);
+void SendWorldSwitch(INT32 worldnum, void *location, boolean nodetach);
 
 // used for the player setup menu
 UINT8 CanChangeSkin(INT32 playernum);

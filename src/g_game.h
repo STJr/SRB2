@@ -166,10 +166,11 @@ void G_FreeMapSearch(mapsearchfreq_t *freq, INT32 freqc);
 INT32 G_FindMapByNameOrCode(const char *query, char **foundmapnamep);
 
 // XMOD spawning
-mapthing_t *G_FindCTFStart(INT32 playernum);
-mapthing_t *G_FindMatchStart(INT32 playernum);
-mapthing_t *G_FindCoopStart(INT32 playernum);
-mapthing_t *G_FindMapStart(INT32 playernum);
+mapthing_t *G_FindCTFStart(void *wptr, INT32 playernum);
+mapthing_t *G_FindMatchStart(void *wptr, INT32 playernum);
+mapthing_t *G_FindCoopStart(void *wptr, INT32 playernum);
+mapthing_t *G_FindMapStart(void *wptr, INT32 playernum);
+mapthing_t *G_GetMapStartForPlayerNum(void *wptr, INT32 playernum);
 void G_MovePlayerToSpawnOrStarpost(INT32 playernum);
 void G_SpawnPlayer(INT32 playernum);
 

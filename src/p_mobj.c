@@ -11472,7 +11472,10 @@ void P_RespawnSpecials(world_t *w)
 void P_SpawnPlayer(INT32 playernum)
 {
 	player_t *p = &players[playernum];
-	mobj_t *mobj;
+	world_t *curworld = world;
+
+	// We're going to spawn the player in the world THEY are in
+	P_SetWorld(P_GetPlayerWorld(p));
 
 	if (p->playerstate == PST_REBORN)
 		G_PlayerReborn(playernum, false);
@@ -11540,7 +11543,7 @@ void P_SpawnPlayer(INT32 playernum)
 	if ((netgame || multiplayer) && ((gametyperules & GTR_SPAWNINVUL) || leveltime) && !p->spectator && !(maptol & TOL_NIGHTS))
 		p->powers[pw_flashing] = flashingtics-1; // Babysitting deterrent
 
-	mobj = P_SpawnMobj(0, 0, 0, MT_PLAYER);
+	mobj_t *mobj = P_SpawnMobj(0, 0, 0, MT_PLAYER);
 	mobj->world = p->world;
 	(mobj->player = p)->mo = mobj;
 
@@ -11605,6 +11608,9 @@ void P_SpawnPlayer(INT32 playernum)
 
 	// Spawn with a pity shield if necessary.
 	P_DoPityCheck(p);
+
+	// Restore the current world
+	P_SetWorld(curworld);
 }
 
 void P_AfterPlayerSpawn(INT32 playernum)

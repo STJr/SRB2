@@ -194,7 +194,7 @@ void Command_CountMobjs_f(void)
 void P_InitThinkers(world_t *w)
 {
 	for (UINT8 i = 0; i < NUM_THINKERLISTS; i++)
-		thlist[i].prev = thlist[i].next = &thlist[i];
+		w->thlist[i].prev = w->thlist[i].next = &w->thlist[i];
 }
 
 // Adds a new thinker at the end of the list.

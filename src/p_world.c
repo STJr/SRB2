@@ -25,6 +25,7 @@
 #include "p_spec.h"
 #include "p_world.h"
 
+#include "r_main.h" // R_PointInSubsector
 #include "r_data.h"
 #include "r_draw.h"
 #include "r_sky.h"
@@ -166,10 +167,12 @@ world_t *P_GetPlayerWorld(player_t *player)
 //
 void P_DetachPlayerWorld(player_t *player)
 {
-	if (P_GetPlayerWorld(player) != NULL)
-		P_GetPlayerWorld(player)->players--;
+	world_t *w = P_GetPlayerWorld(player);
+	if (w != NULL)
+		w->players--;
 
 	player->world = NULL;
+
 	if (player->mo && !P_MobjWasRemoved(player->mo))
 	{
 		R_RemoveMobjInterpolator(player->mo);
@@ -185,6 +188,7 @@ void P_SwitchPlayerWorld(player_t *player, world_t *newworld)
 	P_DetachPlayerWorld(player);
 
 	player->world = newworld;
+
 	if (player->mo && !P_MobjWasRemoved(player->mo))
 	{
 		player->mo->world = newworld;
@@ -214,7 +218,7 @@ void P_RoamIntoWorld(player_t *player, INT32 mapnum)
 	if (w == P_GetPlayerWorld(player))
 		return;
 	else if (w)
-		P_SwitchWorld(player, w);
+		P_SwitchWorld(player, w, NULL);
 	else
 		D_MapChange(mapnum, gametype, true, false, false, 0, false, false);
 }
@@ -222,17 +226,13 @@ void P_RoamIntoWorld(player_t *player, INT32 mapnum)
 boolean P_TransferCarriedPlayers(player_t *player, world_t *w)
 {
 	boolean anycarried = false;
-	INT32 i;
 
-	// Lactozilla: Transfer carried players
-	for (i = 0; i < MAXPLAYERS; i++)
+	for (INT32 i = 0; i < MAXPLAYERS; i++)
 	{
-		player_t *carry;
-
 		if (!playeringame[i])
 			continue;
 
-		carry = &players[i];
+		player_t *carry = &players[i];
 		if (carry == player)
 			continue;
 
@@ -242,19 +242,18 @@ boolean P_TransferCarriedPlayers(player_t *player, world_t *w)
 		{
 			mobj_t *tails = player->mo;
 
-			P_SwitchWorld(carry, w);
+			location_t location;
+			location.x = tails->x;
+			location.y = tails->y;
+			if (carry->mo->eflags & MFE_VERTICALFLIP)
+				location.z = tails->z + tails->height + 12*carry->mo->scale;
+			else
+				location.z = tails->z - carry->mo->height - 12*carry->mo->scale;
+			location.angle = tails->angle;
+
+			P_SwitchWorld(carry, w, &location);
 
 			tails->z += tails->height*3*P_MobjFlip(tails);
-
-			// Set player position
-			P_UnsetThingPosition(carry->mo);
-			carry->mo->x = tails->x;
-			carry->mo->y = tails->y;
-			if (carry->mo->eflags & MFE_VERTICALFLIP)
-				carry->mo->z = tails->z + tails->height + 12*carry->mo->scale;
-			else
-				carry->mo->z = tails->z - carry->mo->height - 12*carry->mo->scale;
-			P_SetThingPosition(carry->mo);
 
 			anycarried = true;
 		}
@@ -263,17 +262,51 @@ boolean P_TransferCarriedPlayers(player_t *player, world_t *w)
 	return anycarried;
 }
 
+void P_MovePlayerToLocation(player_t *player, location_t *location)
+{
+	mobj_t *mobj = player->mo;
+	I_Assert(mobj != NULL);
+
+	mobj->x = location->x;
+	mobj->y = location->y;
+	P_SetThingPosition(mobj);
+
+	sector_t *sector = R_PointInWorldSubsector(location->world ? location->world : mobj->world, mobj->x, mobj->y)->sector;
+	fixed_t floor = P_GetSectorFloorZAt(sector, mobj->x, mobj->y);
+	fixed_t ceiling = P_GetSectorCeilingZAt(sector, mobj->x, mobj->y);
+
+	fixed_t z = location->z;
+	if (z <= floor)
+	{
+		mobj->eflags |= MFE_ONGROUND;
+		z = floor;
+	}
+
+	mobj->floorz = floor;
+	mobj->ceilingz = ceiling;
+
+	mobj->z = z;
+
+	mobj->angle = location->angle;
+
+	P_AfterPlayerSpawn((size_t)(player - players));
+}
+
 //
 // Switches a player to a world.
 //
-void P_SwitchWorld(player_t *player, world_t *w)
+void P_SwitchWorld(player_t *player, world_t *w, location_t *location)
 {
 	size_t playernum = (size_t)(player - players);
-	boolean local = ((INT32)playernum == consoleplayer);
-	boolean resetplayer = (player->powers[pw_carry] != CR_PLAYER);
+	boolean local = (INT32)playernum == consoleplayer;
+	boolean resetplayer = player->powers[pw_carry] != CR_PLAYER;
 
 	if (!playeringame[playernum] || !player->mo || P_MobjWasRemoved(player->mo))
 		return;
+
+	world_t *curworld = world;
+
+	P_MapStart();
 
 	if (P_GetPlayerWorld(player))
 		P_RemoveMobjConnections(player->mo, P_GetPlayerWorld(player));
@@ -293,7 +326,14 @@ void P_SwitchWorld(player_t *player, world_t *w)
 
 	P_UnsetThingPosition(player->mo);
 	P_MoveThinkerToWorld(w, THINK_MOBJ, (thinker_t *)(player->mo));
-	G_MovePlayerToSpawnOrStarpost(playernum);
+
+	if (!location)
+		G_MovePlayerToSpawnOrStarpost(playernum);
+	else
+	{
+		location->world = w;
+		P_MovePlayerToLocation(player, location);
+	}
 
 	if (local && !splitscreen)
 		localworld = world;
@@ -308,6 +348,7 @@ void P_SwitchWorld(player_t *player, world_t *w)
 
 	if (resetplayer)
 		P_ResetPlayer(player);
+
 	P_MapEnd();
 
 	if (local || splitscreen)
@@ -316,27 +357,71 @@ void P_SwitchWorld(player_t *player, world_t *w)
 		S_StopMusic();
 		S_ChangeMusicEx(mapmusname, mapmusflags, true, mapmusposition, 0, 0);
 	}
+
+	// Ensure consistency
+	if (!local)
+		P_SetWorld(curworld);
 }
 
 void Command_Switchworld_f(void)
 {
-	INT32 worldnum;
-	world_t *w;
-
-    if (COM_Argc() < 2)
+	if (COM_Argc() < 2)
 		return;
 
-	worldnum = (INT32)atoi(COM_Argv(1));
+	INT32 worldnum = (INT32)atoi(COM_Argv(1));
 	if (worldnum < 0 || worldnum >= numworlds)
 		return;
 
-	w = worldlist[worldnum];
-	CONS_Printf("Switching to world %d (%p)\n", worldnum, w);
+	CONS_Printf("Switching to world %d\n", worldnum);
+
+	player_t *player = &players[consoleplayer];
+	world_t *w = worldlist[worldnum];
+	location_t *coords_to_move_to = NULL;
+
+	// where u at
+	location_t location;
+	location.x = player->mo->x;
+	location.y = player->mo->y;
+	location.z = player->mo->z;
+	location.angle = player->mo->angle;
+
+	boolean use_args = false;
+
+	INT32 i = COM_CheckParm("-x");
+	if (i)
+	{
+		location.x = atoi(COM_Argv(i + 1))<<FRACBITS;
+		use_args = true;
+	}
+
+	i = COM_CheckParm("-y");
+	if (i)
+	{
+		location.y = atoi(COM_Argv(i + 1))<<FRACBITS;
+		use_args = true;
+	}
+
+	subsector_t *ss = R_PointInWorldSubsector(player->world, location.x, location.y);
+	i = COM_CheckParm("-z");
+	if (i)
+	{
+		location.z = atoi(COM_Argv(i + 1))<<FRACBITS;
+		use_args = true;
+	}
+	else if (use_args)
+		location.z = (player->mo->eflags & MFE_VERTICALFLIP) ? ss->sector->ceilingheight : ss->sector->floorheight;
+
+	i = COM_CheckParm("-ang");
+	if (i)
+		location.angle = FixedAngle(atoi(COM_Argv(i + 1))<<FRACBITS);
+
+	if (use_args)
+		coords_to_move_to = &location;
 
 	if (netgame)
-		SendWorldSwitch(worldnum, false);
+		SendWorldSwitch(worldnum, coords_to_move_to, false);
 	else
-		P_SwitchWorld(&players[consoleplayer], w);
+		P_SwitchWorld(&players[consoleplayer], w, coords_to_move_to);
 }
 
 void Command_Listworlds_f(void)

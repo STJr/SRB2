@@ -156,6 +156,13 @@ extern world_t *viewworld;
 extern world_t **worldlist;
 extern INT32 numworlds;
 
+typedef struct
+{
+	world_t *world;
+	fixed_t x, y, z;
+	angle_t angle;
+} location_t;
+
 world_t *P_InitWorld(void);
 world_t *P_InitNewWorld(void);
 
@@ -169,7 +176,8 @@ void P_SetViewWorld(world_t *w);
 void P_SetWorld(world_t *w);
 
 void P_RoamIntoWorld(player_t *player, INT32 mapnum);
-void P_SwitchWorld(player_t *player, world_t *w);
+void P_SwitchWorld(player_t *player, world_t *w, location_t *location);
+void P_MovePlayerToLocation(player_t *player, location_t *location);
 
 void P_InitCachedActions(world_t *w);
 void P_RunCachedActions(world_t *w);

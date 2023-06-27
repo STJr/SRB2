@@ -4907,10 +4907,8 @@ static void SetUnArchiveWorld(world_t *w)
 	unarchiveworld = baseworld = localworld = world;
 }
 
-static void P_NetUnArchiveWorlds(boolean reloading)
+static void P_NetUnArchiveWorlds(void)
 {
-	player_t *player = &players[consoleplayer];
-
 	if (READUINT32(save_p) != ARCHIVEBLOCK_WORLD)
 		I_Error("Bad $$$.sav at archive block World");
 
@@ -4945,7 +4943,7 @@ static void P_NetUnArchiveWorlds(boolean reloading)
 	// Send a command to switch this player to the first world
 	// For every other client, the player is on that world, but not for the joiner
 	if (worldcount > 1)
-		SendWorldSwitch(0, true);
+		SendWorldSwitch(0, NULL, true);
 }
 
 boolean P_LoadNetGame(boolean reloading)
@@ -4956,7 +4954,7 @@ boolean P_LoadNetGame(boolean reloading)
 	P_NetUnArchiveEmblems();
 	P_NetUnArchivePlayers();
 	if (gamestate == GS_LEVEL)
-		P_NetUnArchiveWorlds(reloading);
+		P_NetUnArchiveWorlds();
 	LUA_UnArchive();
 
 	// This is stupid and hacky, but maybe it'll work!

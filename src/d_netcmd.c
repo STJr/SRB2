@@ -2172,13 +2172,35 @@ static void Got_Mapcmd(UINT8 **cp, INT32 playernum)
 	demo_start = true;
 }
 
-void SendWorldSwitch(INT32 worldnum, boolean nodetach)
+void SendWorldSwitch(INT32 worldnum, void *location, boolean nodetach)
 {
-	UINT8 buf[sizeof(INT32) + sizeof(UINT8)];
+	UINT8 buf[sizeof(INT32) + sizeof(UINT8) + (sizeof(fixed_t) * 3) + sizeof(angle_t)];
 	UINT8 *p = buf;
+	UINT8 flags = 0;
+
+	if (location != NULL)
+		flags |= 1;
+	if (nodetach)
+		flags |= 2;
 
 	WRITEINT32(p, worldnum);
-	WRITEUINT8(p, nodetach ? 1 : 0);
+	WRITEUINT8(p, flags);
+
+	if (flags & 1)
+	{
+		location_t *loc = (location_t *)location;
+		WRITEFIXED(p, loc->x);
+		WRITEFIXED(p, loc->y);
+		WRITEFIXED(p, loc->z);
+		WRITEANGLE(p, loc->angle);
+	}
+	else
+	{
+		WRITEFIXED(p, 0);
+		WRITEFIXED(p, 0);
+		WRITEFIXED(p, 0);
+		WRITEANGLE(p, 0);
+	}
 
 	SendNetXCmd(XD_SWITCHWORLD, buf, sizeof(buf));
 }
@@ -2188,9 +2210,15 @@ static void Got_Switchworld(UINT8 **cp, INT32 playernum)
 	player_t *player = &players[playernum];
 
 	INT32 worldnum = READINT32(*cp);
-	UINT8 nodetach = READUINT8(*cp);
+	UINT8 flags = READUINT8(*cp);
 
-	if (worldnum > numworlds)
+	location_t location;
+	location.x = READFIXED(*cp);
+	location.y = READFIXED(*cp);
+	location.z = READFIXED(*cp);
+	location.angle = READANGLE(*cp);
+
+	if (worldnum >= numworlds)
 	{
 		CONS_Alert(CONS_WARNING, M_GetText("Illegal world switch command received from %s\n"), player_names[playernum]);
 		if (server)
@@ -2198,14 +2226,23 @@ static void Got_Switchworld(UINT8 **cp, INT32 playernum)
 		return;
 	}
 
-	if (nodetach) // Don't detach from the current world, if any
+	// Don't detach from the current world, if any
+	if (flags & 2)
 	{
-		if (player->world)
-			P_GetPlayerWorld(player)->players--;
+		world_t *w = player->world;
+		if (w != NULL)
+			w->players--;
 		player->world = NULL;
 	}
 
-	P_SwitchWorld(player, worldlist[worldnum]);
+	if (flags & 1)
+	{
+		P_SwitchWorld(player, worldlist[worldnum], &location);
+	}
+	else
+	{
+		P_SwitchWorld(player, worldlist[worldnum], NULL);
+	}
 }
 
 static void Command_Pause(void)

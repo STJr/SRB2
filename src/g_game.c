@@ -2250,6 +2250,61 @@ boolean G_LuaResponder(event_t *ev)
 	return cancelled;
 }
 
+static void G_DoMarathonModeRetry(void)
+{
+	player_t *p = &players[consoleplayer];
+	marathonmode |= MA_INIT;
+	marathontime = 0;
+
+	numgameovers = tokenlist = token = 0;
+	countdown = countdown2 = exitfadestarted = 0;
+
+	p->playerstate = PST_REBORN;
+	p->starpostx = p->starposty = p->starpostz = 0;
+
+	p->lives = startinglivesbalance[0];
+	p->continues = 1;
+
+	p->score = 0;
+
+	// The latter two should clear by themselves, but just in case
+	p->pflags &= ~(PF_TAGIT|PF_GAMETYPEOVER|PF_FULLSTASIS);
+
+	// Clear cheatcodes too, just in case.
+	p->pflags &= ~(PF_GODMODE|PF_NOCLIP|PF_INVIS);
+
+	p->xtralife = 0;
+
+	// Reset unlockable triggers
+	unlocktriggers = 0;
+
+	emeralds = 0;
+
+	memset(&luabanks, 0, sizeof(luabanks));
+}
+
+static void G_DoSingleplayerRetry(void)
+{
+	G_ClearRetryFlag();
+
+	if (modeattacking)
+	{
+		pausedelay = INT32_MIN;
+		M_ModeAttackRetry(0);
+	}
+	else
+	{
+		// Costs a life to retry ... unless the player in question is dead already, or you haven't even touched the first starpost in marathon run.
+		if (marathonmode && gamemap == spmarathon_start && !players[consoleplayer].starposttime)
+			G_DoMarathonModeRetry();
+		else if (G_GametypeUsesLives() && players[consoleplayer].playerstate == PST_LIVE && players[consoleplayer].lives != INFLIVES)
+			players[consoleplayer].lives -= 1;
+
+		P_SetWorld(P_GetPlayerWorld(&players[consoleplayer]));
+		G_DoReborn(consoleplayer);
+	}
+}
+
 //
 // G_Ticker
 // Make ticcmd_ts for the players.
@@ -2286,59 +2341,19 @@ void G_Ticker(boolean run)
 	{
 		// Or, alternatively, retry.
 		if (!(netgame || multiplayer) && G_GetRetryFlag())
-		{
-			G_ClearRetryFlag();
-
-			if (modeattacking)
-			{
-				pausedelay = INT32_MIN;
-				M_ModeAttackRetry(0);
-			}
-			else
-			{
-				// Costs a life to retry ... unless the player in question is dead already, or you haven't even touched the first starpost in marathon run.
-				if (marathonmode && gamemap == spmarathon_start && !players[consoleplayer].starposttime)
-				{
-					player_t *p = &players[consoleplayer];
-					marathonmode |= MA_INIT;
-					marathontime = 0;
-
-					numgameovers = tokenlist = token = 0;
-					countdown = countdown2 = exitfadestarted = 0;
-
-					p->playerstate = PST_REBORN;
-					p->starpostx = p->starposty = p->starpostz = 0;
-
-					p->lives = startinglivesbalance[0];
-					p->continues = 1;
-
-					p->score = 0;
-
-					// The latter two should clear by themselves, but just in case
-					p->pflags &= ~(PF_TAGIT|PF_GAMETYPEOVER|PF_FULLSTASIS);
-
-					// Clear cheatcodes too, just in case.
-					p->pflags &= ~(PF_GODMODE|PF_NOCLIP|PF_INVIS);
-
-					p->xtralife = 0;
-
-					// Reset unlockable triggers
-					unlocktriggers = 0;
-
-					emeralds = 0;
-
-					memset(&luabanks, 0, sizeof(luabanks));
-				}
-				else if (G_GametypeUsesLives() && players[consoleplayer].playerstate == PST_LIVE && players[consoleplayer].lives != INFLIVES)
-					players[consoleplayer].lives -= 1;
-
-				G_DoReborn(consoleplayer);
-			}
-		}
+			G_DoSingleplayerRetry();
 
 		for (i = 0; i < MAXPLAYERS; i++)
 			if (playeringame[i] && players[i].playerstate == PST_REBORN)
+			{
+				// We have to actually be in that player's world.
+				P_SetWorld(P_GetPlayerWorld(&players[i]));
 				G_DoReborn(i);
+			}
+
+		// Restore the world
+		if (world != localworld)
+			P_SetWorld(localworld);
 	}
 	P_MapEnd();
 
@@ -2826,10 +2841,11 @@ static boolean G_CheckSpot(INT32 playernum, mapthing_t *mthing)
 	x = mthing->x << FRACBITS;
 	y = mthing->y << FRACBITS;
 
-	if (!P_CheckPosition(players[playernum].mo, x, y))
-		return false;
+	mobj_t *ptmthing = tmthing;
+	boolean success = P_CheckPosition(players[playernum].mo, x, y);
+	P_SetTarget(&tmthing, ptmthing);
 
-	return true;
+	return success;
 }
 
 //
@@ -2853,7 +2869,7 @@ void G_MovePlayerToSpawnOrStarpost(INT32 playernum)
 	if (players[playernum].starposttime)
 		P_MovePlayerToStarpost(playernum);
 	else
-		P_MovePlayerToSpawn(playernum, G_FindMapStart(playernum));
+		P_MovePlayerToSpawn(playernum, G_FindMapStart(players[playernum].world, playernum));
 
 	R_ResetMobjInterpolationState(players[playernum].mo);
 
@@ -2866,20 +2882,21 @@ void G_MovePlayerToSpawnOrStarpost(INT32 playernum)
 		P_ResetCamera(&players[playernum], &camera2);
 }
 
-mapthing_t *G_FindCTFStart(INT32 playernum)
+mapthing_t *G_FindCTFStart(void *wptr, INT32 playernum)
 {
-	INT32 i,j;
+	INT32 i, j;
+	world_t *w = (world_t *)wptr;
 
-	if (!world->numredctfstarts && !world->numbluectfstarts) //why even bother, eh?
+	if (!w->numredctfstarts && !w->numbluectfstarts) //why even bother, eh?
 	{
 		if ((gametyperules & GTR_TEAMFLAGS) && (playernum == consoleplayer || (splitscreen && playernum == secondarydisplayplayer)))
 			CONS_Alert(CONS_WARNING, M_GetText("No CTF starts in this map!\n"));
 		return NULL;
 	}
 
-	if ((!players[playernum].ctfteam && world->numredctfstarts && (!world->numbluectfstarts || P_RandomChance(FRACUNIT/2))) || players[playernum].ctfteam == 1) //red
+	if ((!players[playernum].ctfteam && w->numredctfstarts && (!w->numbluectfstarts || P_RandomChance(FRACUNIT/2))) || players[playernum].ctfteam == 1) //red
 	{
-		if (!world->numredctfstarts)
+		if (!w->numredctfstarts)
 		{
 			if (playernum == consoleplayer || (splitscreen && playernum == secondarydisplayplayer))
 				CONS_Alert(CONS_WARNING, M_GetText("No Red Team starts in this map!\n"));
@@ -2888,9 +2905,9 @@ mapthing_t *G_FindCTFStart(INT32 playernum)
 
 		for (j = 0; j < 32; j++)
 		{
-			i = P_RandomKey(world->numredctfstarts);
-			if (G_CheckSpot(playernum, world->redctfstarts[i]))
-				return world->redctfstarts[i];
+			i = P_RandomKey(w->numredctfstarts);
+			if (G_CheckSpot(playernum, w->redctfstarts[i]))
+				return w->redctfstarts[i];
 		}
 
 		if (playernum == consoleplayer || (splitscreen && playernum == secondarydisplayplayer))
@@ -2899,7 +2916,7 @@ mapthing_t *G_FindCTFStart(INT32 playernum)
 	}
 	else if (!players[playernum].ctfteam || players[playernum].ctfteam == 2) //blue
 	{
-		if (!world->numbluectfstarts)
+		if (!w->numbluectfstarts)
 		{
 			if (playernum == consoleplayer || (splitscreen && playernum == secondarydisplayplayer))
 				CONS_Alert(CONS_WARNING, M_GetText("No Blue Team starts in this map!\n"));
@@ -2908,9 +2925,9 @@ mapthing_t *G_FindCTFStart(INT32 playernum)
 
 		for (j = 0; j < 32; j++)
 		{
-			i = P_RandomKey(world->numbluectfstarts);
-			if (G_CheckSpot(playernum, world->bluectfstarts[i]))
-				return world->bluectfstarts[i];
+			i = P_RandomKey(w->numbluectfstarts);
+			if (G_CheckSpot(playernum, w->bluectfstarts[i]))
+				return w->bluectfstarts[i];
 		}
 		if (playernum == consoleplayer || (splitscreen && playernum == secondarydisplayplayer))
 			CONS_Alert(CONS_WARNING, M_GetText("Could not spawn at any Blue Team starts!\n"));
@@ -2920,17 +2937,18 @@ mapthing_t *G_FindCTFStart(INT32 playernum)
 	return NULL;
 }
 
-mapthing_t *G_FindMatchStart(INT32 playernum)
+mapthing_t *G_FindMatchStart(void *wptr, INT32 playernum)
 {
 	INT32 i, j;
+	world_t *w = (world_t *)wptr;
 
-	if (world->numdmstarts)
+	if (w->numdmstarts)
 	{
 		for (j = 0; j < 64; j++)
 		{
-			i = P_RandomKey(world->numdmstarts);
-			if (G_CheckSpot(playernum, world->deathmatchstarts[i]))
-				return world->deathmatchstarts[i];
+			i = P_RandomKey(w->numdmstarts);
+			if (G_CheckSpot(playernum, w->deathmatchstarts[i]))
+				return w->deathmatchstarts[i];
 		}
 		if (playernum == consoleplayer || (splitscreen && playernum == secondarydisplayplayer))
 			CONS_Alert(CONS_WARNING, M_GetText("Could not spawn at any Deathmatch starts!\n"));
@@ -2942,17 +2960,19 @@ mapthing_t *G_FindMatchStart(INT32 playernum)
 	return NULL;
 }
 
-mapthing_t *G_FindCoopStart(INT32 playernum)
+mapthing_t *G_FindCoopStart(void *wptr, INT32 playernum)
 {
-	if (world->numcoopstarts)
+	world_t *w = (world_t *)wptr;
+
+	if (w->numcoopstarts)
 	{
 		//if there's 6 players in a map with 3 player starts, this spawns them 1/2/3/1/2/3.
-		if (G_CheckSpot(playernum, world->playerstarts[playernum % world->numcoopstarts]))
-			return world->playerstarts[playernum % world->numcoopstarts];
+		if (G_CheckSpot(playernum, w->playerstarts[playernum % w->numcoopstarts]))
+			return w->playerstarts[playernum % w->numcoopstarts];
 
 		//Don't bother checking to see if the player 1 start is open.
 		//Just spawn there.
-		return world->playerstarts[0];
+		return w->playerstarts[0];
 	}
 
 	if (playernum == consoleplayer || (splitscreen && playernum == secondarydisplayplayer))
@@ -2961,31 +2981,29 @@ mapthing_t *G_FindCoopStart(INT32 playernum)
 }
 
 // Find a Co-op start, or fallback into other types of starts.
-static inline mapthing_t *G_FindCoopStartOrFallback(INT32 playernum)
+static mapthing_t *G_FindCoopStartOrFallback(world_t *w, INT32 playernum)
 {
 	mapthing_t *spawnpoint = NULL;
-	if (!(spawnpoint = G_FindCoopStart(playernum)) // find a Co-op start
-	&& !(spawnpoint = G_FindMatchStart(playernum))) // find a DM start
-		spawnpoint = G_FindCTFStart(playernum); // fallback
+	if (!(spawnpoint = G_FindCoopStart(w, playernum)) // find a Co-op start
+	&& !(spawnpoint = G_FindMatchStart(w, playernum))) // find a DM start
+		spawnpoint = G_FindCTFStart(w, playernum); // fallback
 	return spawnpoint;
 }
 
 // Find a Match start, or fallback into other types of starts.
-static inline mapthing_t *G_FindMatchStartOrFallback(INT32 playernum)
+static mapthing_t *G_FindMatchStartOrFallback(world_t *w, INT32 playernum)
 {
 	mapthing_t *spawnpoint = NULL;
-	if (!(spawnpoint = G_FindMatchStart(playernum)) // find a DM start
-	&& !(spawnpoint = G_FindCTFStart(playernum))) // find a CTF start
-		spawnpoint = G_FindCoopStart(playernum); // fallback
+	if (!(spawnpoint = G_FindMatchStart(w, playernum)) // find a DM start
+	&& !(spawnpoint = G_FindCTFStart(w, playernum))) // find a CTF start
+		spawnpoint = G_FindCoopStart(w, playernum); // fallback
 	return spawnpoint;
 }
 
-mapthing_t *G_FindMapStart(INT32 playernum)
+mapthing_t *G_GetMapStartForPlayerNum(void *wptr, INT32 playernum)
 {
+	world_t *w = (world_t *)wptr;
 	mapthing_t *spawnpoint;
-
-	if (!playeringame[playernum])
-		return NULL;
 
 	// -- Spectators --
 	// Order in platform gametypes: Coop->DM->CTF
@@ -2995,38 +3013,49 @@ mapthing_t *G_FindMapStart(INT32 playernum)
 		// In platform gametypes, spawn in Co-op starts first
 		// Overriden by GTR_DEATHMATCHSTARTS.
 		if (G_PlatformGametype() && !(gametyperules & GTR_DEATHMATCHSTARTS))
-			spawnpoint = G_FindCoopStartOrFallback(playernum);
+			spawnpoint = G_FindCoopStartOrFallback(w, playernum);
 		else
-			spawnpoint = G_FindMatchStartOrFallback(playernum);
+			spawnpoint = G_FindMatchStartOrFallback(w, playernum);
 	}
 
 	// -- CTF --
 	// Order: CTF->DM->Coop
 	else if ((gametyperules & (GTR_TEAMFLAGS|GTR_TEAMS)) && players[playernum].ctfteam)
 	{
-		if (!(spawnpoint = G_FindCTFStart(playernum)) // find a CTF start
-		&& !(spawnpoint = G_FindMatchStart(playernum))) // find a DM start
-			spawnpoint = G_FindCoopStart(playernum); // fallback
+		if (!(spawnpoint = G_FindCTFStart(w, playernum)) // find a CTF start
+		&& !(spawnpoint = G_FindMatchStart(w, playernum))) // find a DM start
+			spawnpoint = G_FindCoopStart(w, playernum); // fallback
 	}
 
 	// -- DM/Tag/CTF-spectator/etc --
 	// Order: DM->CTF->Coop
 	else if (G_TagGametype() ? (!(players[playernum].pflags & PF_TAGIT)) : (gametyperules & GTR_DEATHMATCHSTARTS))
-		spawnpoint = G_FindMatchStartOrFallback(playernum);
+		spawnpoint = G_FindMatchStartOrFallback(w, playernum);
 
 	// -- Other game modes --
 	// Order: Coop->DM->CTF
 	else
-		spawnpoint = G_FindCoopStartOrFallback(playernum);
+		spawnpoint = G_FindCoopStartOrFallback(w, playernum);
+
+	return spawnpoint;
+}
+
+mapthing_t *G_FindMapStart(void *wptr, INT32 playernum)
+{
+	if (!playeringame[playernum])
+		return NULL;
+
+	world_t *w = (world_t *)wptr;
+	mapthing_t *spawnpoint = G_GetMapStartForPlayerNum(w, playernum);
 
 	//No spawns found. ANYWHERE.
 	if (!spawnpoint)
 	{
-		if (nummapthings)
+		if (w->nummapthings)
 		{
 			if (playernum == consoleplayer || (splitscreen && playernum == secondarydisplayplayer))
 				CONS_Alert(CONS_ERROR, M_GetText("No player spawns found, spawning at the first mapthing!\n"));
-			spawnpoint = &mapthings[0];
+			spawnpoint = &w->mapthings[0];
 		}
 		else
 		{
@@ -3068,6 +3097,7 @@ void G_ChangePlayerReferences(mobj_t *oldmo, mobj_t *newmo)
 
 //
 // G_DoReborn
+// This assumes the correct world is set and won't modify it
 //
 void G_DoReborn(INT32 playernum)
 {
@@ -5064,10 +5094,13 @@ void G_InitNew(player_t *player,
 		P_AllocMapHeader(gamemap-1);
 
 	nextmapheader = mapheaderinfo[gamemap-1];
-	maptol = curmapheader->typeoflevel;
 
 	if (!addworld)
+	{
 		curmapheader = nextmapheader;
+		maptol = nextmapheader->typeoflevel;
+	}
+
 	worldmapheader = nextmapheader;
 
 	// Don't carry over custom music change to another map.
