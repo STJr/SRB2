@@ -1146,18 +1146,20 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 		// check TOP TEXTURE
 		if ((worldhighslope < worldtopslope || worldhigh < worldtop) && gl_toptexture)
 		{
+			fixed_t texheight = FixedDiv(textureheight[gl_toptexture], gl_sidedef->scaley_top);
+
 			// PEGGING
 			if (gl_linedef->flags & ML_DONTPEGTOP)
 				texturevpeg = 0;
 			else if (gl_linedef->flags & ML_SKEWTD)
-				texturevpeg = worldhigh + textureheight[gl_toptexture] - worldtop;
+				texturevpeg = worldhigh + texheight - worldtop;
 			else
-				texturevpeg = gl_backsector->ceilingheight + textureheight[gl_toptexture] - gl_frontsector->ceilingheight;
+				texturevpeg = gl_backsector->ceilingheight + texheight - gl_frontsector->ceilingheight;
 
 			texturevpeg += gl_sidedef->rowoffset + gl_sidedef->offsety_top;
 
 			// This is so that it doesn't overflow and screw up the wall, it doesn't need to go higher than the texture's height anyway
-			texturevpeg %= textureheight[gl_toptexture];
+			texturevpeg %= texheight;
 
 			grTex = HWR_GetTexture(gl_toptexture);
 			xscale = FIXED_TO_FLOAT(gl_sidedef->scalex_top) * grTex->scaleX;
@@ -1219,7 +1221,7 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 			texturevpeg += gl_sidedef->rowoffset + gl_sidedef->offsety_bot;
 
 			// This is so that it doesn't overflow and screw up the wall, it doesn't need to go higher than the texture's height anyway
-			texturevpeg %= textureheight[gl_bottomtexture];
+			texturevpeg %= FixedDiv(textureheight[gl_bottomtexture], gl_sidedef->scaley_bot);
 
 			grTex = HWR_GetTexture(gl_bottomtexture);
 			xscale = FIXED_TO_FLOAT(gl_sidedef->scalex_bot) * grTex->scaleX;
