@@ -2429,13 +2429,13 @@ void F_StartTitleScreen(void)
 		if (!mapheaderinfo[gamemap-1])
 			P_AllocMapHeader(gamemap-1);
 
-		P_UnloadWorldList();
+		World_UnloadAll();
 
 		curmapheader = nextmapheader = mapheaderinfo[gamemap-1];
 		worldmapheader = curmapheader;
 		maptol = curmapheader->typeoflevel;
 
-		G_DoLoadLevel(&players[displayplayer], false, true);
+		G_DoLoadLevel(true);
 		if (!titlemap)
 			return;
 
@@ -3904,7 +3904,7 @@ void F_EndCutScene(void)
 	if (runningprecutscene)
 	{
 		if (server)
-			D_MapChange(gamemap, gametype, false, ultimatemode, precutresetplayer, 0, true, precutFLS);
+			D_MapChange(gamemap, gametype, ultimatemode, precutresetplayer, 0, true, precutFLS);
 	}
 	else
 	{

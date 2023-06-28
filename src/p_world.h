@@ -163,12 +163,10 @@ typedef struct
 	angle_t angle;
 } location_t;
 
-world_t *P_InitWorld(void);
-world_t *P_InitNewWorld(void);
-
-void P_UnloadWorld(world_t *w);
-void P_UnloadWorldList(void);
-void P_UnloadWorldPlayer(player_t *player);
+world_t *World_Create(INT16 mapnum);
+world_t *World_PushNew(INT16 mapnum);
+void World_Delete(world_t *w);
+void World_UnloadAll(void);
 
 void P_SetGameWorld(world_t *w);
 void P_SetViewWorld(world_t *w);

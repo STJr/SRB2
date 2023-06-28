@@ -7562,7 +7562,7 @@ static void P_InitGametype(boolean addworld)
 static world_t *P_InitWorldFromMap(INT16 mapnumber, mapheader_t *mapheader, boolean addworld, boolean fromnetsave)
 {
 	world_t *curworld = world;
-	world_t *w = P_InitNewWorld();
+	world_t *w = World_PushNew(mapnumber);
 
 	w->loading = true;
 
@@ -7614,7 +7614,7 @@ static world_t *P_InitWorldFromMap(INT16 mapnumber, mapheader_t *mapheader, bool
 	P_InitSlopes();
 
 	if (!P_LoadMapFromFile(maplumpnum))
-		return false;
+		return NULL;
 
 	// init anything that P_SpawnSlopes/P_SpawnMapThings needs to know
 	P_InitSpecials();
@@ -7923,7 +7923,7 @@ boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate)
 	return true;
 }
 
-boolean P_LoadWorld(boolean fromnetsave)
+boolean P_LoadWorld(INT16 mapnum, boolean fromnetsave)
 {
 	// Initialize sector node list.
 	P_Initsecnode();
@@ -7943,11 +7943,13 @@ boolean P_LoadWorld(boolean fromnetsave)
 		wipestyleflags = 0;
 	}
 
-	world_t *w = P_InitWorldFromMap(gamemap, worldmapheader, true, fromnetsave);
+	world_t *w = P_InitWorldFromMap(mapnum, worldmapheader, true, fromnetsave);
 	if (w == NULL)
-		I_Error("Map %s not found.\n", G_BuildMapName(gamemap));
+		return false;
 
 	P_FinishMapLoad(fromnetsave);
+
+	P_FindEmerald(world);
 
 	return true;
 }

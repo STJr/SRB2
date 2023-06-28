@@ -136,9 +136,7 @@ extern INT32 localaiming, localaiming2; // should be an angle_t but signed
 void G_ChangePlayerReferences(mobj_t *oldmo, mobj_t *newmo);
 void G_DoReborn(INT32 playernum);
 void G_PlayerReborn(INT32 player, boolean betweenmaps);
-void G_InitNew(player_t *player,
-	const char *mapname, boolean addworld,
-	UINT8 pultmode, boolean resetplayer, boolean skipprecutscene, boolean FLS);
+void G_InitNew(const char *mapname, UINT8 pultmode, boolean resetplayer, boolean skipprecutscene, boolean FLS);
 char *G_BuildMapTitle(INT32 mapnum);
 
 struct searchdim
@@ -176,9 +174,11 @@ void G_SpawnPlayer(INT32 playernum);
 
 // Can be called by the startup code or M_Responder.
 // A normal game starts at map 1, but a warp test can start elsewhere
-void G_DeferedInitNew(boolean pultmode, const char *mapname, INT32 pickedchar,
-	boolean SSSG, boolean FLS);
-void G_DoLoadLevel(player_t *player, boolean addworld, boolean resetplayer);
+void G_DeferedInitNew(boolean pultmode, const char *mapname, INT32 pickedchar,boolean SSSG, boolean FLS);
+void G_DoLoadLevel(boolean resetplayer);
+
+boolean G_LoadWorld(const char *mapname);
+
 void G_StartTitleCard(void);
 void G_PreLevelTitleCard(void);
 boolean G_IsTitleCardAvailable(void);

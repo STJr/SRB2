@@ -54,15 +54,15 @@ world_t **worldlist = NULL;
 INT32 numworlds = 0;
 
 //
-// Initializes a world.
+// Creates a world.
 //
-world_t *P_InitWorld(void)
+world_t *World_Create(INT16 mapnum)
 {
 	world_t *w = Z_Calloc(sizeof(world_t), PU_STATIC, NULL);
-	w->gamemap = gamemap;
-	if (!mapheaderinfo[gamemap-1])
-		P_AllocMapHeader(gamemap-1);
-	w->header = mapheaderinfo[gamemap-1];
+	w->gamemap = mapnum;
+	if (!mapheaderinfo[mapnum-1])
+		P_AllocMapHeader(mapnum-1);
+	w->header = mapheaderinfo[mapnum-1];
 	w->thlist = Z_Calloc(sizeof(thinker_t) * NUM_THINKERLISTS, PU_STATIC, NULL);
 	P_InitCachedActions(w);
 	return w;
@@ -71,10 +71,10 @@ world_t *P_InitWorld(void)
 //
 // Initializes a new world, inserting it into the world list.
 //
-world_t *P_InitNewWorld(void)
+world_t *World_PushNew(INT16 mapnum)
 {
 	worldlist = Z_Realloc(worldlist, (numworlds + 1) * sizeof(void *), PU_STATIC, NULL);
-	worldlist[numworlds] = P_InitWorld();
+	worldlist[numworlds] = World_Create(mapnum);
 
 	world_t *w = worldlist[numworlds];
 
@@ -173,7 +173,7 @@ void P_DetachPlayerWorld(player_t *player)
 
 	player->world = NULL;
 
-	if (player->mo && !P_MobjWasRemoved(player->mo))
+	if (player->mo && !P_MobjWasRemoved(player->mo) && player->mo->world != NULL)
 	{
 		R_RemoveMobjInterpolator(player->mo);
 		player->mo->world = NULL;
@@ -189,7 +189,7 @@ void P_SwitchPlayerWorld(player_t *player, world_t *newworld)
 
 	player->world = newworld;
 
-	if (player->mo && !P_MobjWasRemoved(player->mo))
+	if (player->mo && !P_MobjWasRemoved(player->mo) && player->mo->world == NULL)
 	{
 		player->mo->world = newworld;
 		R_AddMobjInterpolator(player->mo);
@@ -220,7 +220,7 @@ void P_RoamIntoWorld(player_t *player, INT32 mapnum)
 	else if (w)
 		P_SwitchWorld(player, w, NULL);
 	else
-		D_MapChange(mapnum, gametype, true, false, false, 0, false, false);
+		D_AddWorld(mapnum);
 }
 
 boolean P_TransferCarriedPlayers(player_t *player, world_t *w)
@@ -452,7 +452,7 @@ static void P_UnloadSectorAttachments(sector_t *s, size_t ns)
 //
 // Unloads a world.
 //
-void P_UnloadWorld(world_t *w)
+void World_Delete(world_t *w)
 {
 	if (w == NULL)
 		return;
@@ -478,7 +478,7 @@ void P_UnloadWorld(world_t *w)
 //
 // Unloads all worlds.
 //
-void P_UnloadWorldList(void)
+void World_UnloadAll(void)
 {
 	INT32 i;
 
@@ -501,7 +501,7 @@ void P_UnloadWorldList(void)
 		if (w == NULL)
 			continue;
 
-		P_UnloadWorld(w);
+		World_Delete(w);
 	}
 
 	Z_Free(worldlist);
@@ -523,26 +523,6 @@ void P_UnloadWorldList(void)
 	Z_FreeTags(PU_LEVEL, PU_PURGELEVEL - 1);
 
 	world = localworld = viewworld = NULL;
-}
-
-//
-// Unloads a player.
-//
-void P_UnloadWorldPlayer(player_t *player)
-{
-	P_DetachPlayerWorld(player);
-
-	if (player->followmobj)
-	{
-		P_RemoveMobj(player->followmobj);
-		P_SetTarget(&player->followmobj, NULL);
-	}
-
-	if (player->mo)
-	{
-		P_RemoveMobj(player->mo);
-		P_SetTarget(&player->mo, NULL);
-	}
 }
 
 boolean P_MobjIsConnected(mobj_t *mobj1, mobj_t *mobj2)

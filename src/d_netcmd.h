@@ -130,24 +130,25 @@ typedef enum
 	XD_SAY,         // 5
 	XD_MAP,         // 6
 	XD_EXITLEVEL,   // 7
-	XD_ADDFILE,     // 8
-	XD_ADDFOLDER,   // 9
-	XD_PAUSE,       // 10
-	XD_ADDPLAYER,   // 11
-	XD_TEAMCHANGE,  // 12
-	XD_CLEARSCORES, // 13
-	XD_SWITCHWORLD, // 14
-	XD_VERIFIED,    // 15
-	XD_RANDOMSEED,  // 16
-	XD_RUNSOC,      // 17
-	XD_REQADDFILE,  // 18
-	XD_REQADDFOLDER,// 19
-	XD_SETMOTD,     // 20
-	XD_SUICIDE,     // 21
-	XD_DEMOTED,     // 22
-	XD_LUACMD,      // 23
-	XD_LUAVAR,      // 24
-	XD_LUAFILE,     // 25
+	XD_NEWWORLD,    // 8
+	XD_SWITCHWORLD, // 9
+	XD_ADDFILE,     // 10
+	XD_ADDFOLDER,   // 11
+	XD_PAUSE,       // 12
+	XD_ADDPLAYER,   // 13
+	XD_TEAMCHANGE,  // 14
+	XD_CLEARSCORES, // 15
+	XD_VERIFIED,    // 16
+	XD_RANDOMSEED,  // 17
+	XD_RUNSOC,      // 18
+	XD_REQADDFILE,  // 19
+	XD_REQADDFOLDER,// 20
+	XD_SETMOTD,     // 21
+	XD_SUICIDE,     // 22
+	XD_DEMOTED,     // 23
+	XD_LUACMD,      // 24
+	XD_LUAVAR,      // 25
+	XD_LUAFILE,     // 26
 	MAXNETXCMD
 } netxcmd_t;
 
@@ -202,7 +203,8 @@ void D_SendPlayerConfig(void);
 void Command_ExitGame_f(void);
 void Command_Retry_f(void);
 void D_GameTypeChanged(INT32 lastgametype); // not a real _OnChange function anymore
-void D_MapChange(INT32 pmapnum, INT32 pgametype, boolean addworld, boolean pultmode, boolean presetplayers, INT32 pdelay, boolean pskipprecutscene, boolean pfromlevelselect);
+void D_MapChange(INT32 pmapnum, INT32 pgametype, boolean pultmode, boolean presetplayers, INT32 pdelay, boolean pskipprecutscene, boolean pfromlevelselect);
+void D_AddWorld(INT32 pmapnum);
 boolean IsPlayerAdmin(INT32 playernum);
 void SetAdminPlayer(INT32 playernum);
 void ClearAdminPlayers(void);

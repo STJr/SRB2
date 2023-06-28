@@ -64,6 +64,7 @@
 static void Got_NameAndColor(UINT8 **cp, INT32 playernum);
 static void Got_WeaponPref(UINT8 **cp, INT32 playernum);
 static void Got_Mapcmd(UINT8 **cp, INT32 playernum);
+static void Got_Newworld(UINT8 **cp, INT32 playernum);
 static void Got_ExitLevelcmd(UINT8 **cp, INT32 playernum);
 static void Got_Switchworld(UINT8 **cp, INT32 playernum);
 static void Got_RequestAddfilecmd(UINT8 **cp, INT32 playernum);
@@ -454,6 +455,7 @@ void D_RegisterServerCommands(void)
 	RegisterNetXCmd(XD_NAMEANDCOLOR, Got_NameAndColor);
 	RegisterNetXCmd(XD_WEAPONPREF, Got_WeaponPref);
 	RegisterNetXCmd(XD_MAP, Got_Mapcmd);
+	RegisterNetXCmd(XD_NEWWORLD, Got_Newworld);
 	RegisterNetXCmd(XD_EXITLEVEL, Got_ExitLevelcmd);
 	RegisterNetXCmd(XD_SWITCHWORLD, Got_Switchworld);
 	RegisterNetXCmd(XD_ADDFILE, Got_Addfilecmd);
@@ -1748,7 +1750,6 @@ boolean mapchangepending = false;
   *
   * \param mapnum          Map number to change to.
   * \param gametype        Gametype to switch to.
-  * \param addworld        Loads a separate world.
   * \param pultmode        Is this 'Ultimate Mode'?
   * \param resetplayers    1 to reset player scores and lives and such, 0 not to.
   * \param delay           Determines how the function will be executed: 0 to do
@@ -1758,7 +1759,7 @@ boolean mapchangepending = false;
   * \sa D_GameTypeChanged, Command_Map_f
   * \author Graue <graue@oceanbase.org>
   */
-void D_MapChange(INT32 mapnum, INT32 newgametype, boolean addworld, boolean pultmode, boolean resetplayers, INT32 delay, boolean skipprecutscene, boolean FLS)
+void D_MapChange(INT32 mapnum, INT32 newgametype, boolean pultmode, boolean resetplayers, INT32 delay, boolean skipprecutscene, boolean FLS)
 {
 	static char buf[2+MAX_WADPATH+1+4];
 	static char *buf_p = buf;
@@ -1809,8 +1810,6 @@ void D_MapChange(INT32 mapnum, INT32 newgametype, boolean addworld, boolean pult
 			flags |= 1<<2;
 		if (FLS)
 			flags |= 1<<3;
-		if (addworld)
-			flags |= 1<<4;
 		WRITEUINT8(buf_p, flags);
 
 		// new gametype value
@@ -1827,7 +1826,7 @@ void D_MapChange(INT32 mapnum, INT32 newgametype, boolean addworld, boolean pult
 
 		// spawn the server if needed
 		// reset players if there is a new one
-		if (!IsPlayerAdmin(consoleplayer) && !addworld)
+		if (!IsPlayerAdmin(consoleplayer))
 		{
 			if (SV_SpawnServer())
 				buf[0] &= ~(1<<1);
@@ -1840,6 +1839,22 @@ void D_MapChange(INT32 mapnum, INT32 newgametype, boolean addworld, boolean pult
 			WRITEUINT32(buf_p, M_RandomizedSeed()); // random seed
 		SendNetXCmd(XD_MAP, buf, buf_p - buf);
 	}
+}
+
+// Sends a command to add a new world.
+// It's as simple as that.
+void D_AddWorld(INT32 mapnum)
+{
+	char buf[MAX_WADPATH+1];
+	char *buf_p = buf;
+
+	CONS_Debug(DBG_GAMELOGIC, "Map change: mapnum=%d\n", mapnum);
+
+	I_Assert(W_CheckNumForName(mapname) != LUMPERROR);
+
+	WRITESTRINGN(buf_p, G_BuildMapName(mapnum), MAX_WADPATH);
+
+	SendNetXCmd(XD_NEWWORLD, buf, buf_p - buf);
 }
 
 static char *
@@ -2069,7 +2084,10 @@ static void Command_Map_f(void)
 	}
 	tutorialmode = false; // warping takes us out of tutorial mode
 
-	D_MapChange(newmapnum, newgametype, addworld, false, newresetplayers, 0, false, fromlevelselect);
+	if (addworld)
+		D_AddWorld(newmapnum);
+	else
+		D_MapChange(newmapnum, newgametype, false, newresetplayers, 0, false, fromlevelselect);
 
 	Z_Free(realmapname);
 }
@@ -2083,8 +2101,6 @@ static void Command_Map_f(void)
   */
 static void Got_Mapcmd(UINT8 **cp, INT32 playernum)
 {
-	player_t *player;
-	boolean addworld;
 	char mapname[MAX_WADPATH+1];
 	UINT8 flags;
 	INT32 resetplayer = 1, lastgametype;
@@ -2093,17 +2109,13 @@ static void Got_Mapcmd(UINT8 **cp, INT32 playernum)
 
 	flags = READUINT8(*cp);
 
-	addworld = ((flags & (1<<4)) != 0);
-
-	if (!addworld && playernum != serverplayer && !IsPlayerAdmin(playernum))
+	if (playernum != serverplayer && !IsPlayerAdmin(playernum))
 	{
 		CONS_Alert(CONS_WARNING, M_GetText("Illegal map change received from %s\n"), player_names[playernum]);
 		if (server)
 			SendKick(playernum, KICK_MSG_CON_FAIL | KICK_MSG_KEEP_BODY);
 		return;
 	}
-
-	player = &players[playernum];
 
 	if (chmappending)
 		chmappending--;
@@ -2136,8 +2148,7 @@ static void Got_Mapcmd(UINT8 **cp, INT32 playernum)
 	{
 		DEBFILE(va("Warping to %s [resetplayer=%d lastgametype=%d gametype=%d cpnd=%d]\n",
 			mapname, resetplayer, lastgametype, gametype, chmappending));
-		if (!addworld)
-			CONS_Printf(M_GetText("Speeding off to level...\n"));
+		CONS_Printf(M_GetText("Speeding off to level...\n"));
 	}
 
 	if (demoplayback && !timingdemo)
@@ -2159,7 +2170,7 @@ static void Got_Mapcmd(UINT8 **cp, INT32 playernum)
 	mapnumber = M_MapNumber(mapname[3], mapname[4]);
 	LUA_HookInt(mapnumber, HOOK(MapChange));
 
-	G_InitNew(player, mapname, addworld, ultimatemode, resetplayer, skipprecutscene, FLS);
+	G_InitNew(mapname, ultimatemode, resetplayer, skipprecutscene, FLS);
 	if (demoplayback && !timingdemo)
 		precache = true;
 	if (timingdemo)
@@ -2170,6 +2181,24 @@ static void Got_Mapcmd(UINT8 **cp, INT32 playernum)
 	if (demorecording) // Okay, level loaded, character spawned and skinned,
 		G_BeginRecording(); // I AM NOW READY TO RECORD.
 	demo_start = true;
+}
+
+/** Receives a new world command and creates a new one.
+  *
+  * \param cp        Data buffer.
+  * \param playernum Player number responsible for the message.
+  * \sa D_MapChange
+  */
+static void Got_Newworld(UINT8 **cp, INT32 playernum)
+{
+	(void)playernum;
+
+	char mapname[MAX_WADPATH+1];
+	READSTRINGN(*cp, mapname, MAX_WADPATH);
+
+	DEBFILE(va("Adding world with map %s\n", mapname));
+
+	G_LoadWorld(mapname);
 }
 
 void SendWorldSwitch(INT32 worldnum, void *location, boolean nodetach)

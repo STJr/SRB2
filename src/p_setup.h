@@ -98,7 +98,7 @@ void P_ScanThings(INT16 mapnum, INT16 wadnum, INT16 lumpnum);
 #endif
 void P_RespawnThings(void);
 boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate);
-boolean P_LoadWorld(boolean fromnetsave);
+boolean P_LoadWorld(INT16 mapnum, boolean fromnetsave);
 
 boolean P_AddWadFile(const char *wadfilename);
 boolean P_AddFolder(const char *folderpath);

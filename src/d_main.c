@@ -1721,7 +1721,7 @@ void D_SRB2Main(void)
 				I_Error("You need to unlock this level before you can warp to it!\n");
 			else
 			{
-				D_MapChange(pstartmap, gametype, false, ultimatemode, true, 0, false, false);
+				D_MapChange(pstartmap, gametype, ultimatemode, true, 0, false, false);
 			}
 		}
 	}

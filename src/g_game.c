@@ -1794,7 +1794,7 @@ static void G_ResetCamera(INT32 playernum)
 //
 // G_DoLoadLevel
 //
-void G_DoLoadLevel(player_t *player, boolean addworld, boolean resetplayer)
+void G_DoLoadLevel(boolean resetplayer)
 {
 	INT32 i;
 
@@ -1826,29 +1826,18 @@ void G_DoLoadLevel(player_t *player, boolean addworld, boolean resetplayer)
 		titlemapinaction = TITLEMAP_OFF;
 
 	G_SetGamestate(GS_LEVEL);
-	if (player == &players[consoleplayer])
-		I_UpdateMouseGrab();
+	I_UpdateMouseGrab();
 
-	if (!addworld)
+	for (i = 0; i < MAXPLAYERS; i++)
 	{
-		for (i = 0; i < MAXPLAYERS; i++)
-		{
-			if (resetplayer || (playeringame[i] && players[i].playerstate == PST_DEAD))
-				players[i].playerstate = PST_REBORN;
-		}
-
-		P_UnloadWorldList();
+		if (resetplayer || (playeringame[i] && players[i].playerstate == PST_DEAD))
+			players[i].playerstate = PST_REBORN;
 	}
 
-	// Setup the level.
-	boolean success;
-	if (addworld)
-		success = P_LoadWorld(false);
-	else
-		success = P_LoadLevel(false, false); // this never returns false? (yes it can)
+	World_UnloadAll();
 
-	// fail so reset game stuff
-	if (!success)
+	// Setup the level.
+	if (!P_LoadLevel(false, false)) // this never returns false? (yes it can)
 	{
 		Command_ExitGame_f();
 		return;
@@ -1865,33 +1854,23 @@ void G_DoLoadLevel(player_t *player, boolean addworld, boolean resetplayer)
 	Z_CheckHeap(-2);
 #endif
 
-	if (!addworld)
+	// clear cmd building stuff
+	memset(gamekeydown, 0, sizeof (gamekeydown));
+	for (i = 0;i < JOYAXISSET; i++)
 	{
-		// clear cmd building stuff
-		memset(gamekeydown, 0, sizeof (gamekeydown));
-		for (i = 0;i < JOYAXISSET; i++)
-		{
-			joyxmove[i] = joyymove[i] = 0;
-			joy2xmove[i] = joy2ymove[i] = 0;
-		}
-		G_SetMouseDeltas(0, 0, 1);
-		G_SetMouseDeltas(0, 0, 2);
-
-		if (splitscreen)
-			G_ResetCamera(1);
+		joyxmove[i] = joyymove[i] = 0;
+		joy2xmove[i] = joy2ymove[i] = 0;
 	}
+	G_SetMouseDeltas(0, 0, 1);
+	G_SetMouseDeltas(0, 0, 2);
 
-	if (!addworld && player == &players[consoleplayer])
-	{
-		G_ResetCamera(consoleplayer);
+	if (splitscreen)
+		G_ResetCamera(1);
 
-		// clear hud messages remains (usually from game startup)
-		CON_ClearHUD();
-	}
+	G_ResetCamera(consoleplayer);
 
-	// change world back to yours, for consistency
-	if (addworld)
-		P_SetWorld(localworld);
+	// clear hud messages remains (usually from game startup)
+	CON_ClearHUD();
 }
 
 //
@@ -2753,9 +2732,6 @@ void G_PlayerReborn(INT32 player, boolean betweenmaps)
 	p->playerstate = PST_LIVE;
 	p->panim = PA_IDLE; // standing animation
 
-	if (p->world)
-		((world_t *)p->world)->players++;
-
 	//if ((netgame || multiplayer) && !p->spectator) -- moved into P_SpawnPlayer to account for forced changes there
 		//p->powers[pw_flashing] = flashingtics-1; // Babysitting deterrent
 
@@ -3292,7 +3268,7 @@ void G_DoReborn(INT32 playernum)
 		{
 			LUA_HookInt(gamemap, HOOK(MapChange));
 			titlecardforreload = true;
-			G_DoLoadLevel(&players[consoleplayer], false, true);
+			G_DoLoadLevel(true);
 			titlecardforreload = false;
 			if (metalrecording)
 				G_BeginMetal();
@@ -3360,8 +3336,11 @@ void G_AddPlayer(INT32 playernum)
 		}
 	}
 
-	if (worldlist) // Assume the player is on the first world
-		p->world = worldlist[0];
+	p->world = NULL;
+
+	// Let's just place the player in the first world
+	if (worldlist)
+		P_SwitchPlayerWorld(p, worldlist[0]);
 
 	p->playerstate = PST_REBORN;
 
@@ -4227,10 +4206,10 @@ static void G_DoWorldDone(void)
 	{
 		if (gametyperules & GTR_CAMPAIGN)
 			// don't reset player between maps
-			D_MapChange(nextmap+1, gametype, false, ultimatemode, false, 0, false, false);
+			D_MapChange(nextmap+1, gametype, ultimatemode, false, 0, false, false);
 		else
 			// resetplayer in match/chaos/tag/CTF/race for more equality
-			D_MapChange(nextmap+1, gametype, false, ultimatemode, true, 0, false, false);
+			D_MapChange(nextmap+1, gametype, ultimatemode, true, 0, false, false);
 	}
 
 	gameaction = ga_nothing;
@@ -4293,7 +4272,7 @@ static void G_DoContinued(void)
 	// Reset # of lives
 	pl->lives = (ultimatemode) ? 1 : startinglivesbalance[numgameovers];
 
-	D_MapChange(gamemap, gametype, false, ultimatemode, false, 0, false, false);
+	D_MapChange(gamemap, gametype, ultimatemode, false, 0, false, false);
 
 	gameaction = ga_nothing;
 }
@@ -4999,7 +4978,7 @@ void G_DeferedInitNew(boolean pultmode, const char *mapname, INT32 pickedchar, b
 	CV_StealthSetValue(&cv_playercolor, color);
 
 	if (mapname)
-		D_MapChange(M_MapNumber(mapname[3], mapname[4]), gametype, false, pultmode, true, 1, false, FLS);
+		D_MapChange(M_MapNumber(mapname[3], mapname[4]), gametype, pultmode, true, 1, false, FLS);
 }
 
 static void G_ResetPlayer(player_t *player, boolean pultmode, boolean FLS)
@@ -5036,9 +5015,7 @@ static void G_ResetPlayer(player_t *player, boolean pultmode, boolean FLS)
 // This is the map command interpretation something like Command_Map_f
 //
 // called at: map cmd execution, doloadgame, doplaydemo
-void G_InitNew(player_t *player,
-	const char *mapname, boolean addworld,
-	UINT8 pultmode, boolean resetplayer, boolean skipprecutscene, boolean FLS)
+void G_InitNew(const char *mapname, UINT8 pultmode, boolean resetplayer, boolean skipprecutscene, boolean FLS)
 {
 	INT32 i;
 
@@ -5062,11 +5039,8 @@ void G_InitNew(player_t *player,
 		numgameovers = tokenlist = token = sstimer = redscore = bluescore = lastmap = 0;
 		countdown = countdown2 = exitfadestarted = 0;
 
-		if (!addworld)
-		{
-			for (i = 0; i < MAXPLAYERS; i++)
-				G_ResetPlayer(&players[i], pultmode, FLS);
-		}
+		for (i = 0; i < MAXPLAYERS; i++)
+			G_ResetPlayer(&players[i], pultmode, FLS);
 
 		// Reset unlockable triggers
 		unlocktriggers = 0;
@@ -5093,15 +5067,8 @@ void G_InitNew(player_t *player,
 	if(!mapheaderinfo[gamemap-1])
 		P_AllocMapHeader(gamemap-1);
 
-	nextmapheader = mapheaderinfo[gamemap-1];
-
-	if (!addworld)
-	{
-		curmapheader = nextmapheader;
-		maptol = nextmapheader->typeoflevel;
-	}
-
-	worldmapheader = nextmapheader;
+	curmapheader = worldmapheader = nextmapheader = mapheaderinfo[gamemap-1];
+	maptol = nextmapheader->typeoflevel;
 
 	// Don't carry over custom music change to another map.
 	mapmusflags |= MUSIC_RELOADRESET;
@@ -5110,13 +5077,12 @@ void G_InitNew(player_t *player,
 	automapactive = false;
 	imcontinuing = false;
 
-	if (!addworld && ((gametyperules & GTR_CUTSCENES) && !skipprecutscene && nextmapheader->precutscenenum && !modeattacking && !(marathonmode & MA_NOCUTSCENES))) // Start a custom cutscene.
+	if ((gametyperules & GTR_CUTSCENES) && !skipprecutscene && nextmapheader->precutscenenum && !modeattacking && !(marathonmode & MA_NOCUTSCENES)) // Start a custom cutscene.
 		F_StartCustomCutscene(nextmapheader->precutscenenum-1, true, resetplayer, FLS);
 	else
-		G_DoLoadLevel(player, addworld, resetplayer);
+		G_DoLoadLevel(resetplayer);
 
-	// current world is hopefully the newly loaded world at this point
-	if (netgame && !addworld)
+	if (netgame)
 	{
 		char *title = G_BuildMapTitle(gamemap);
 
@@ -5130,6 +5096,42 @@ void G_InitNew(player_t *player,
 	}
 }
 
+boolean G_LoadWorld(const char *mapname)
+{
+	// Check if the map is actually valid.
+	if (W_CheckNumForName(mapname) == LUMPERROR)
+	{
+		CONS_Alert(CONS_ERROR, "G_LoadWorld: Internal game map '%s' not found\n", mapname);
+		return false;
+	}
+
+	INT16 mapnum = (INT16)M_MapNumber(mapname[3], mapname[4]); // get xx out of MAPxx
+
+	LUA_HookInt(mapnum, HOOK(MapChange));
+
+	// gamemap changed; we assume that its map header is always valid,
+	// so make it so
+	if(!mapheaderinfo[mapnum-1])
+		P_AllocMapHeader(mapnum-1);
+
+	nextmapheader = mapheaderinfo[mapnum-1];
+	worldmapheader = nextmapheader;
+
+	if (!P_LoadWorld(mapnum, false))
+	{
+		CONS_Alert(CONS_ERROR, "G_LoadWorld: Could not load map '%s'\n", mapname);
+		return false;
+	}
+
+#ifdef PARANOIA
+	Z_CheckHeap(-2);
+#endif
+
+	// change world back to yours, for consistency
+	P_SetWorld(localworld);
+
+	return true;
+}
 
 char *G_BuildMapTitle(INT32 mapnum)
 {

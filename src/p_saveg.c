@@ -4365,7 +4365,7 @@ static inline boolean P_NetUnArchiveMisc(boolean reloading)
 	if (READUINT32(save_p) != ARCHIVEBLOCK_MISC)
 		I_Error("Bad $$$.sav at archive block Misc");
 
-	P_UnloadWorldList();
+	World_UnloadAll();
 	if (reloading)
 		gametic = READUINT32(save_p);
 
@@ -4920,12 +4920,12 @@ static void P_NetUnArchiveWorlds(void)
 	// Unarchive each world
 	for (INT32 i = 0; i < worldcount; i++)
 	{
-		gamemap = READINT16(save_p);
+		INT16 mapnum = READINT16(save_p);
 
 		// Don't load the first world (because it already is loaded at this point)
 		if (i != 0)
 		{
-			if (!P_LoadWorld(true))
+			if (!P_LoadWorld(mapnum, true))
 				I_Error("P_NetUnArchiveWorlds: failed loading world");
 		}
 

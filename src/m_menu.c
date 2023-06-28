@@ -11594,7 +11594,7 @@ static void M_StartServer(INT32 choice)
 
 	if (!StartSplitScreenGame)
 	{
-		D_MapChange(cv_nextmap.value, cv_newgametype.value, false, false, 1, 1, false, false);
+		D_MapChange(cv_nextmap.value, cv_newgametype.value, false, 1, 1, false, false);
 		COM_BufAddText("dummyconsvar 1\n");
 	}
 	else // split screen
@@ -11606,7 +11606,7 @@ static void M_StartServer(INT32 choice)
 			splitscreen = true;
 			SplitScreen_OnChange();
 		}
-		D_MapChange(cv_nextmap.value, cv_newgametype.value, false, false, 1, 1, false, false);
+		D_MapChange(cv_nextmap.value, cv_newgametype.value, false, 1, 1, false, false);
 	}
 
 	M_ClearMenus(true);

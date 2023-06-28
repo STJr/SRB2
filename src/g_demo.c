@@ -1985,7 +1985,7 @@ void G_DoPlayDemo(char *defdemoname)
 	memset(playeringame,0,sizeof(playeringame));
 	playeringame[0] = true;
 	P_SetRandSeed(randseed);
-	G_InitNew(&players[0], G_BuildMapName(gamemap), false, false, true, true, false);
+	G_InitNew(G_BuildMapName(gamemap), false, true, true, false);
 
 	// Set color
 	players[0].skincolor = skins[players[0].skin].prefcolor;
