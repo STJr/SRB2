@@ -1848,7 +1848,7 @@ void D_AddWorld(INT32 mapnum)
 	char buf[MAX_WADPATH+1];
 	char *buf_p = buf;
 
-	CONS_Debug(DBG_GAMELOGIC, "Map change: mapnum=%d\n", mapnum);
+	CONS_Debug(DBG_GAMELOGIC, "New world: mapnum=%d\n", mapnum);
 
 	I_Assert(W_CheckNumForName(mapname) != LUMPERROR);
 

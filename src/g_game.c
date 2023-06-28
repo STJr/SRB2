@@ -5107,28 +5107,31 @@ boolean G_LoadWorld(const char *mapname)
 
 	INT16 mapnum = (INT16)M_MapNumber(mapname[3], mapname[4]); // get xx out of MAPxx
 
-	LUA_HookInt(mapnum, HOOK(MapChange));
-
 	// gamemap changed; we assume that its map header is always valid,
 	// so make it so
 	if(!mapheaderinfo[mapnum-1])
 		P_AllocMapHeader(mapnum-1);
 
+	LUA_HookInt(mapnum, HOOK(MapChange));
+
 	nextmapheader = mapheaderinfo[mapnum-1];
 	worldmapheader = nextmapheader;
 
+	world_t *curworld = world;
+
 	if (!P_LoadWorld(mapnum, false))
 	{
+		P_SetWorld(curworld); // Change world back to the previous one
 		CONS_Alert(CONS_ERROR, "G_LoadWorld: Could not load map '%s'\n", mapname);
 		return false;
 	}
 
+	// Change world back to the previous one
+	P_SetWorld(curworld);
+
 #ifdef PARANOIA
 	Z_CheckHeap(-2);
 #endif
-
-	// change world back to yours, for consistency
-	P_SetWorld(localworld);
 
 	return true;
 }
