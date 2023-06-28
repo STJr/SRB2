@@ -2326,9 +2326,9 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 		topyscale = sidedef->scaley_top;
 		midyscale = sidedef->scaley_mid;
 		botyscale = sidedef->scaley_bot;
-		rw_offset_top = FixedMul(rw_offset + curline->offset, topxscale) + sidedef->textureoffset + sidedef->offsetx_top;
-		rw_offset_mid = FixedMul(rw_offset + curline->offset, midxscale) + sidedef->textureoffset + sidedef->offsetx_mid;
-		rw_offset_bot = FixedMul(rw_offset + curline->offset, botxscale) + sidedef->textureoffset + sidedef->offsetx_bot;
+		rw_offset_top = FixedMul(rw_offset + curline->offset + sidedef->textureoffset + sidedef->offsetx_top, topxscale);
+		rw_offset_mid = FixedMul(rw_offset + curline->offset + sidedef->textureoffset + sidedef->offsetx_mid, midxscale);
+		rw_offset_bot = FixedMul(rw_offset + curline->offset + sidedef->textureoffset + sidedef->offsetx_bot, botxscale);
 		rw_distance_scalex_top = FixedMul(rw_distance, topxscale);
 		rw_distance_scalex_mid = FixedMul(rw_distance, midxscale);
 		rw_distance_scalex_bot = FixedMul(rw_distance, botxscale);
