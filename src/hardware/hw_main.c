@@ -1658,8 +1658,8 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 					}
 
 					grTex = HWR_GetTexture(texnum);
-					xscale = FIXED_TO_FLOAT(gl_sidedef->scalex_mid) * grTex->scaleX;
-					yscale = FIXED_TO_FLOAT(gl_sidedef->scaley_mid) * grTex->scaleY;
+					xscale = FIXED_TO_FLOAT(sides[rover->master->sidenum[0]].scalex_mid) * grTex->scaleX;
+					yscale = FIXED_TO_FLOAT(sides[rover->master->sidenum[0]].scaley_mid) * grTex->scaleY;
 
 					if (!slopeskew) // no skewing
 					{
@@ -1796,8 +1796,8 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 				else
 				{
 					grTex = HWR_GetTexture(texnum);
-					xscale = FIXED_TO_FLOAT(gl_sidedef->scalex_mid) * grTex->scaleX;
-					yscale = FIXED_TO_FLOAT(gl_sidedef->scaley_mid) * grTex->scaleY;
+					xscale = FIXED_TO_FLOAT(sides[rover->master->sidenum[0]].scalex_mid) * grTex->scaleX;
+					yscale = FIXED_TO_FLOAT(sides[rover->master->sidenum[0]].scaley_mid) * grTex->scaleY;
 
 					if (newline)
 					{
