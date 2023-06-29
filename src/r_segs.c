@@ -1466,7 +1466,7 @@ static void R_RenderSegLoop (void)
 		{
 			// save texturecol
 			//  for backdrawing of masked mid texture
-			maskedtexturecol[rw_x] = (INT16)(texturecolumn + (rw_offset_mid>>FRACBITS));
+			maskedtexturecol[rw_x] = (INT16)texturecolumn_mid;
 
 			if (maskedtextureheight != NULL) {
 				maskedtextureheight[rw_x] = (curline->linedef->flags & ML_MIDPEG) ?
