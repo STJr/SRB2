@@ -1272,6 +1272,7 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 		if (gl_midtexture && HWR_BlendMidtextureSurface(&Surf))
 		{
 			sector_t *front, *back;
+			fixed_t texheight = FixedDiv(textureheight[gl_midtexture], gl_sidedef->scaley_mid);
 			INT32 repeats;
 
 			if (gl_linedef->frontsector->heightsec != -1)
@@ -1300,8 +1301,8 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 				else
 					low = back->floorheight;
 
-				repeats = (high - low) / textureheight[gl_midtexture];
-				if ((high - low) % textureheight[gl_midtexture])
+				repeats = (high - low) / texheight;
+				if ((high - low) % texheight)
 					repeats++; // tile an extra time to fill the gap -- Monster Iestyn
 			}
 			else
@@ -1324,7 +1325,7 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 				popenbottom = popenbottomslope = back->floorheight;
 			}
 			else
-            {
+			{
 				popentop = min(worldtop, worldhigh);
 				popenbottom = max(worldbottom, worldlow);
 				popentopslope = min(worldtopslope, worldhighslope);
@@ -1332,7 +1333,7 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 			}
 
 			// Find the wall's coordinates
-			fixed_t midtexheight = textureheight[gl_midtexture] * repeats;
+			fixed_t midtexheight = texheight * repeats;
 
 			// Texture is not skewed
 			if (gl_linedef->flags & ML_NOSKEW)
