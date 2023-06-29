@@ -689,11 +689,12 @@ static int lib_pSpawnLockOn(lua_State *L)
 		return LUA_ErrInvalid(L, "player_t");
 	if (state >= NUMSTATES)
 		return luaL_error(L, "state %d out of range (0 - %d)", state, NUMSTATES-1);
-	if (P_IsLocalPlayer(player)) // Only display it on your own view.
+	if (P_IsLocalPlayer(player)) // Only display it on your own view. Don't display it for spectators
 	{
 		mobj_t *visual = P_SpawnMobj(lockon->x, lockon->y, lockon->z, MT_LOCKON); // positioning, flip handled in P_SceneryThinker
 		P_SetTarget(&visual->target, lockon);
 		visual->flags2 |= MF2_DONTDRAW;
+		visual->drawonlyforplayer = player; // Hide it from the other player in splitscreen, and yourself when spectating
 		P_SetMobjStateNF(visual, state);
 	}
 	return 0;
