@@ -1092,34 +1092,12 @@ subsector_t *R_PointInSubsectorOrNull(fixed_t x, fixed_t y)
 void R_SetupFrame(player_t *player)
 {
 	camera_t *thiscam;
-	boolean chasecam = false;
-
-	if (splitscreen && player == &players[secondarydisplayplayer]
-		&& player != &players[consoleplayer])
-	{
+	boolean chasecam = R_ViewpointHasChasecam(player);
+	
+	if (splitscreen && player == &players[secondarydisplayplayer] && player != &players[consoleplayer])
 		thiscam = &camera2;
-		chasecam = (cv_chasecam2.value != 0);
-		R_SetViewContext(VIEWCONTEXT_PLAYER2);
-	}
 	else
-	{
 		thiscam = &camera;
-		chasecam = (cv_chasecam.value != 0);
-		R_SetViewContext(VIEWCONTEXT_PLAYER1);
-	}
-
-	if (player->climbing || (player->powers[pw_carry] == CR_NIGHTSMODE) || player->playerstate == PST_DEAD || gamestate == GS_TITLESCREEN || tutorialmode)
-		chasecam = true; // force chasecam on
-	else if (player->spectator) // no spectator chasecam
-		chasecam = false; // force chasecam off
-
-	if (chasecam && !thiscam->chase)
-	{
-		P_ResetCamera(player, thiscam);
-		thiscam->chase = true;
-	}
-	else if (!chasecam)
-		thiscam->chase = false;
 
 	newview->sky = false;
 
@@ -1348,11 +1326,37 @@ boolean R_ViewpointHasChasecam(player_t *player)
 {
 	camera_t *thiscam;
 	boolean chasecam = false;
+	boolean isplayer2 = (splitscreen && player == &players[secondarydisplayplayer] && player != &players[consoleplayer]);
 
-	if (splitscreen && player == &players[secondarydisplayplayer] && player != &players[consoleplayer])
+	if (isplayer2)
 	{
 		thiscam = &camera2;
 		chasecam = (cv_chasecam2.value != 0);
+	}
+	else
+	{
+		thiscam = &camera;
+		chasecam = (cv_chasecam.value != 0);
+	}
+
+	if (player->climbing || (player->powers[pw_carry] == CR_NIGHTSMODE) || player->playerstate == PST_DEAD || gamestate == GS_TITLESCREEN || tutorialmode)
+		chasecam = true; // force chasecam on
+	else if (player->spectator) // no spectator chasecam
+		chasecam = false; // force chasecam off
+		
+	if (chasecam && !thiscam->chase)
+	{
+		P_ResetCamera(player, thiscam);
+		thiscam->chase = true;
+	}
+	else if (!chasecam && thiscam->chase)
+	{
+		P_ResetCamera(player, thiscam);
+		thiscam->chase = false;
+	}
+	
+	if (isplayer2)
+	{
 		R_SetViewContext(VIEWCONTEXT_PLAYER2);
 		if (thiscam->reset)
 		{
@@ -1362,8 +1366,6 @@ boolean R_ViewpointHasChasecam(player_t *player)
 	}
 	else
 	{
-		thiscam = &camera;
-		chasecam = (cv_chasecam.value != 0);
 		R_SetViewContext(VIEWCONTEXT_PLAYER1);
 		if (thiscam->reset)
 		{
@@ -1371,11 +1373,6 @@ boolean R_ViewpointHasChasecam(player_t *player)
 			thiscam->reset = false;
 		}
 	}
-
-	if (player->climbing || (player->powers[pw_carry] == CR_NIGHTSMODE) || player->playerstate == PST_DEAD || gamestate == GS_TITLESCREEN || tutorialmode)
-		chasecam = true; // force chasecam on
-	else if (player->spectator) // no spectator chasecam
-		chasecam = false; // force chasecam off
 
 	return chasecam;
 }

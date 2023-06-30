@@ -2352,7 +2352,7 @@ void I_Quit(void)
 #ifndef NONET
 	D_SaveBan(); // save the ban list
 #endif
-	G_SaveGameData(); // Tails 12-08-2002
+	G_SaveGameData(clientGamedata); // Tails 12-08-2002
 	//added:16-02-98: when recording a demo, should exit using 'q' key,
 	//        but sometimes we forget and use 'F10'.. so save here too.
 
@@ -2436,7 +2436,7 @@ void I_Error(const char *error, ...)
 		if (errorcount == 8)
 		{
 			M_SaveConfig(NULL);
-			G_SaveGameData();
+			G_SaveGameData(clientGamedata);
 		}
 		if (errorcount > 20)
 		{
@@ -2469,7 +2469,7 @@ void I_Error(const char *error, ...)
 #ifndef NONET
 	D_SaveBan(); // save the ban list
 #endif
-	G_SaveGameData(); // Tails 12-08-2002
+	G_SaveGameData(clientGamedata); // Tails 12-08-2002
 
 	// Shutdown. Here might be other errors.
 	if (demorecording)

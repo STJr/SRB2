@@ -47,6 +47,7 @@ UINT8 *save_p;
 #define ARCHIVEBLOCK_POBJS    0x7F928546
 #define ARCHIVEBLOCK_THINKERS 0x7F37037C
 #define ARCHIVEBLOCK_SPECIALS 0x7F228378
+#define ARCHIVEBLOCK_EMBLEMS  0x7F4A5445
 
 // Note: This cannot be bigger
 // than an UINT16
@@ -4339,6 +4340,8 @@ static void P_NetArchiveMisc(boolean resending)
 
 	WRITEUINT32(save_p, hidetime);
 
+	WRITEUINT32(save_p, unlocktriggers);
+
 	// Is it paused?
 	if (paused)
 		WRITEUINT8(save_p, 0x2f);
@@ -4437,11 +4440,231 @@ static inline boolean P_NetUnArchiveMisc(boolean reloading)
 
 	hidetime = READUINT32(save_p);
 
+	unlocktriggers = READUINT32(save_p);
+
 	// Is it paused?
 	if (READUINT8(save_p) == 0x2f)
 		paused = true;
 
 	return true;
+}
+
+
+static inline void P_NetArchiveEmblems(void)
+{
+	gamedata_t *data = serverGamedata;
+	INT32 i, j;
+	UINT8 btemp;
+	INT32 curmare;
+
+	WRITEUINT32(save_p, ARCHIVEBLOCK_EMBLEMS);
+
+	// These should be synchronized before savegame loading by the wad files being the same anyway,
+	// but just in case, for now, we'll leave them here for testing. It would be very bad if they mismatch.
+	WRITEUINT8(save_p, (UINT8)savemoddata);
+	WRITEINT32(save_p, numemblems);
+	WRITEINT32(save_p, numextraemblems);
+
+	// The rest of this is lifted straight from G_SaveGameData in g_game.c
+	// TODO: Optimize this to only send information about emblems, unlocks, etc. which actually exist
+	//       There is no need to go all the way up to MAXEMBLEMS when wads are guaranteed to be the same.
+
+	WRITEUINT32(save_p, data->totalplaytime);
+
+	// TODO put another cipher on these things? meh, I don't care...
+	for (i = 0; i < NUMMAPS; i++)
+		WRITEUINT8(save_p, (data->mapvisited[i] & MV_MAX));
+
+	// To save space, use one bit per collected/achieved/unlocked flag
+	for (i = 0; i < MAXEMBLEMS;)
+	{
+		btemp = 0;
+		for (j = 0; j < 8 && j+i < MAXEMBLEMS; ++j)
+			btemp |= (data->collected[j+i] << j);
+		WRITEUINT8(save_p, btemp);
+		i += j;
+	}
+	for (i = 0; i < MAXEXTRAEMBLEMS;)
+	{
+		btemp = 0;
+		for (j = 0; j < 8 && j+i < MAXEXTRAEMBLEMS; ++j)
+			btemp |= (data->extraCollected[j+i] << j);
+		WRITEUINT8(save_p, btemp);
+		i += j;
+	}
+	for (i = 0; i < MAXUNLOCKABLES;)
+	{
+		btemp = 0;
+		for (j = 0; j < 8 && j+i < MAXUNLOCKABLES; ++j)
+			btemp |= (data->unlocked[j+i] << j);
+		WRITEUINT8(save_p, btemp);
+		i += j;
+	}
+	for (i = 0; i < MAXCONDITIONSETS;)
+	{
+		btemp = 0;
+		for (j = 0; j < 8 && j+i < MAXCONDITIONSETS; ++j)
+			btemp |= (data->achieved[j+i] << j);
+		WRITEUINT8(save_p, btemp);
+		i += j;
+	}
+
+	WRITEUINT32(save_p, data->timesBeaten);
+	WRITEUINT32(save_p, data->timesBeatenWithEmeralds);
+	WRITEUINT32(save_p, data->timesBeatenUltimate);
+
+	// Main records
+	for (i = 0; i < NUMMAPS; i++)
+	{
+		if (data->mainrecords[i])
+		{
+			WRITEUINT32(save_p, data->mainrecords[i]->score);
+			WRITEUINT32(save_p, data->mainrecords[i]->time);
+			WRITEUINT16(save_p, data->mainrecords[i]->rings);
+		}
+		else
+		{
+			WRITEUINT32(save_p, 0);
+			WRITEUINT32(save_p, 0);
+			WRITEUINT16(save_p, 0);
+		}
+	}
+
+	// NiGHTS records
+	for (i = 0; i < NUMMAPS; i++)
+	{
+		if (!data->nightsrecords[i] || !data->nightsrecords[i]->nummares)
+		{
+			WRITEUINT8(save_p, 0);
+			continue;
+		}
+
+		WRITEUINT8(save_p, data->nightsrecords[i]->nummares);
+
+		for (curmare = 0; curmare < (data->nightsrecords[i]->nummares + 1); ++curmare)
+		{
+			WRITEUINT32(save_p, data->nightsrecords[i]->score[curmare]);
+			WRITEUINT8(save_p, data->nightsrecords[i]->grade[curmare]);
+			WRITEUINT32(save_p, data->nightsrecords[i]->time[curmare]);
+		}
+	}
+}
+
+static inline void P_NetUnArchiveEmblems(void)
+{
+	gamedata_t *data = serverGamedata;
+	INT32 i, j;
+	UINT8 rtemp;
+	UINT32 recscore;
+	tic_t rectime;
+	UINT16 recrings;
+	UINT8 recmares;
+	INT32 curmare;
+
+	if (READUINT32(save_p) != ARCHIVEBLOCK_EMBLEMS)
+		I_Error("Bad $$$.sav at archive block Emblems");
+
+	savemoddata = (boolean)READUINT8(save_p); // this one is actually necessary because savemoddata stays false otherwise for some reason.
+
+	if (numemblems != READINT32(save_p))
+		I_Error("numemblems mismatch");
+	if (numextraemblems != READINT32(save_p))
+		I_Error("numextraemblems mismatch");
+
+	// This shouldn't happen, but if something really fucked up happens and you transfer
+	// the SERVER player's gamedata over your own CLIENT gamedata,
+	// then this prevents it from being saved over yours.
+	data->loaded = false;
+
+	M_ClearSecrets(data);
+	G_ClearRecords(data);
+
+	// The rest of this is lifted straight from G_LoadGameData in g_game.c
+	// TODO: Optimize this to only read information about emblems, unlocks, etc. which actually exist
+	//       There is no need to go all the way up to MAXEMBLEMS when wads are guaranteed to be the same.
+
+	data->totalplaytime = READUINT32(save_p);
+
+	// TODO put another cipher on these things? meh, I don't care...
+	for (i = 0; i < NUMMAPS; i++)
+		if ((data->mapvisited[i] = READUINT8(save_p)) > MV_MAX)
+			I_Error("Bad $$$.sav dearchiving Emblems");
+
+	// To save space, use one bit per collected/achieved/unlocked flag
+	for (i = 0; i < MAXEMBLEMS;)
+	{
+		rtemp = READUINT8(save_p);
+		for (j = 0; j < 8 && j+i < MAXEMBLEMS; ++j)
+			data->collected[j+i] = ((rtemp >> j) & 1);
+		i += j;
+	}
+	for (i = 0; i < MAXEXTRAEMBLEMS;)
+	{
+		rtemp = READUINT8(save_p);
+		for (j = 0; j < 8 && j+i < MAXEXTRAEMBLEMS; ++j)
+			data->extraCollected[j+i] = ((rtemp >> j) & 1);
+		i += j;
+	}
+	for (i = 0; i < MAXUNLOCKABLES;)
+	{
+		rtemp = READUINT8(save_p);
+		for (j = 0; j < 8 && j+i < MAXUNLOCKABLES; ++j)
+			data->unlocked[j+i] = ((rtemp >> j) & 1);
+		i += j;
+	}
+	for (i = 0; i < MAXCONDITIONSETS;)
+	{
+		rtemp = READUINT8(save_p);
+		for (j = 0; j < 8 && j+i < MAXCONDITIONSETS; ++j)
+			data->achieved[j+i] = ((rtemp >> j) & 1);
+		i += j;
+	}
+
+	data->timesBeaten = READUINT32(save_p);
+	data->timesBeatenWithEmeralds = READUINT32(save_p);
+	data->timesBeatenUltimate = READUINT32(save_p);
+
+	// Main records
+	for (i = 0; i < NUMMAPS; ++i)
+	{
+		recscore = READUINT32(save_p);
+		rectime  = (tic_t)READUINT32(save_p);
+		recrings = READUINT16(save_p);
+
+		if (recrings > 10000 || recscore > MAXSCORE)
+			I_Error("Bad $$$.sav dearchiving Emblems");
+
+		if (recscore || rectime || recrings)
+		{
+			G_AllocMainRecordData((INT16)i, data);
+			data->mainrecords[i]->score = recscore;
+			data->mainrecords[i]->time = rectime;
+			data->mainrecords[i]->rings = recrings;
+		}
+	}
+
+	// Nights records
+	for (i = 0; i < NUMMAPS; ++i)
+	{
+		if ((recmares = READUINT8(save_p)) == 0)
+			continue;
+
+		G_AllocNightsRecordData((INT16)i, data);
+
+		for (curmare = 0; curmare < (recmares+1); ++curmare)
+		{
+			data->nightsrecords[i]->score[curmare] = READUINT32(save_p);
+			data->nightsrecords[i]->grade[curmare] = READUINT8(save_p);
+			data->nightsrecords[i]->time[curmare] = (tic_t)READUINT32(save_p);
+
+			if (data->nightsrecords[i]->grade[curmare] > GRADE_S)
+			{
+				I_Error("Bad $$$.sav dearchiving Emblems");
+			}
+		}
+
+		data->nightsrecords[i]->nummares = recmares;
+	}
 }
 
 static inline void P_ArchiveLuabanksAndConsistency(void)
@@ -4507,6 +4730,7 @@ void P_SaveNetGame(boolean resending)
 
 	CV_SaveNetVars(&save_p);
 	P_NetArchiveMisc(resending);
+	P_NetArchiveEmblems();
 
 	// Assign the mobjnumber for pointer tracking
 	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
@@ -4559,6 +4783,7 @@ boolean P_LoadNetGame(boolean reloading)
 	CV_LoadNetVars(&save_p);
 	if (!P_NetUnArchiveMisc(reloading))
 		return false;
+	P_NetUnArchiveEmblems();
 	P_NetUnArchivePlayers();
 	if (gamestate == GS_LEVEL)
 	{

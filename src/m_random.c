@@ -14,12 +14,11 @@
 
 #include "doomdef.h"
 #include "doomtype.h"
-#include "doomstat.h" // totalplaytime
 
 #include "m_random.h"
 #include "m_fixed.h"
 
-
+#include "m_cond.h" // totalplaytime
 
 // ---------------------------
 // RNG functions (not synched)
@@ -252,5 +251,5 @@ void P_SetRandSeedD(const char *rfile, INT32 rline, UINT32 seed)
   */
 UINT32 M_RandomizedSeed(void)
 {
-	return ((totalplaytime & 0xFFFF) << 16)|M_RandomFixed();
+	return ((serverGamedata->totalplaytime & 0xFFFF) << 16) | M_RandomFixed();
 }

@@ -194,7 +194,7 @@ UINT32 R_GetSkinAvailabilities(void)
 			return 0;
 		}
 
-		if (unlockables[i].unlocked)
+		if (clientGamedata->unlocked[i])
 		{
 			response |= (1 << unlockShift);
 		}
@@ -242,11 +242,12 @@ boolean R_SkinUsable(INT32 playernum, INT32 skinnum)
 		// Force 3.
 		return true;
 	}
+
 	if (playernum != -1 && players[playernum].bot)
-    {
-        //Force 4.
-        return true;
-    }
+	{
+		// Force 4.
+		return true;
+	}
 
 	// We will now check if this skin is supposed to be locked or not.
 
@@ -284,7 +285,7 @@ boolean R_SkinUsable(INT32 playernum, INT32 skinnum)
 	else
 	{
 		// We want to check our global unlockables.
-		return (unlockables[unlockID].unlocked);
+		return (clientGamedata->unlocked[unlockID]);
 	}
 }
 
