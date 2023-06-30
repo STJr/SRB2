@@ -559,6 +559,10 @@ typedef struct
 	// add this to the calculated texture top
 	fixed_t rowoffset;
 
+	// per-texture offsets for UDMF
+	fixed_t offsetx_top, offsetx_mid, offsetx_bot;
+	fixed_t offsety_top, offsety_mid, offsety_bot;
+
 	// Texture indices.
 	// We do not maintain names here.
 	INT32 toptexture, bottomtexture, midtexture;

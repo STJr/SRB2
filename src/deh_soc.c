@@ -45,6 +45,7 @@
 #include "dehacked.h"
 #include "deh_soc.h"
 #include "deh_lua.h" // included due to some LUA_SetLuaAction hack smh
+// also used for LUA_UpdateSprName
 #include "deh_tables.h"
 
 // Loops through every constant and operation in word and performs its calculations, returning the final value.
@@ -439,6 +440,8 @@ void readfreeslots(MYFILE *f)
 					strncpy(sprnames[i],word,4);
 					//sprnames[i][4] = 0;
 					used_spr[(i-SPR_FIRSTFREESLOT)/8] |= 1<<(i%8); // Okay, this sprite slot has been named now.
+					// Lua needs to update the value in _G if it exists
+					LUA_UpdateSprName(word, i);
 					break;
 				}
 			}
@@ -3839,6 +3842,10 @@ void readmaincfg(MYFILE *f)
 			{
 				useContinues = (UINT8)(value || word2[0] == 'T' || word2[0] == 'Y');
 			}
+			else if (fastcmp(word, "SHAREEMBLEMS"))
+			{
+				shareEmblems = (UINT8)(value || word2[0] == 'T' || word2[0] == 'Y');
+			}
 
 			else if (fastcmp(word, "GAMEDATA"))
 			{
@@ -3849,7 +3856,7 @@ void readmaincfg(MYFILE *f)
 				if (!GoodDataFileName(word2))
 					I_Error("Maincfg: bad data file name '%s'\n", word2);
 
-				G_SaveGameData();
+				G_SaveGameData(clientGamedata);
 				strlcpy(gamedatafilename, word2, sizeof (gamedatafilename));
 				strlwr(gamedatafilename);
 				savemoddata = true;

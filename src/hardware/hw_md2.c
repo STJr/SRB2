@@ -1660,7 +1660,7 @@ boolean HWR_DrawModel(gl_vissprite_t *spr)
 #endif
 
 		// SRB2CBTODO: MD2 scaling support
-		finalscale *= FIXED_TO_FLOAT(spr->mobj->scale);
+		finalscale *= FIXED_TO_FLOAT(interp.scale);
 
 		p.flip = atransform.flip;
 #ifdef USE_FTRANSFORM_MIRROR

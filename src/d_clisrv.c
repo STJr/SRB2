@@ -1318,9 +1318,9 @@ static boolean CL_SendJoin(void)
 
 static INT32 FindRejoinerNum(SINT8 node)
 {
-	char strippednodeaddress[64];
+	char addressbuffer[64];
 	const char *nodeaddress;
-	char *port;
+	const char *strippednodeaddress;
 	INT32 i;
 
 	// Make sure there is no dead dress before proceeding to the stripping
@@ -1331,10 +1331,8 @@ static INT32 FindRejoinerNum(SINT8 node)
 		return -1;
 
 	// Strip the address of its port
-	strcpy(strippednodeaddress, nodeaddress);
-	port = strchr(strippednodeaddress, ':');
-	if (port)
-		*port = '\0';
+	strcpy(addressbuffer, nodeaddress);
+	strippednodeaddress = I_NetSplitAddress(addressbuffer, NULL);
 
 	// Check if any player matches the stripped address
 	for (i = 0; i < MAXPLAYERS; i++)
@@ -2487,7 +2485,7 @@ static boolean CL_ServerConnectionTicker(const char *tmpsave, tic_t *oldtic, tic
 		{
 			if (!snake)
 			{
-				F_MenuPresTicker(true); // title sky
+				F_MenuPresTicker(); // title sky
 				F_TitleScreenTicker(true);
 				F_TitleScreenDrawer();
 			}
@@ -3645,6 +3643,9 @@ void SV_ResetServer(void)
 
 	CV_RevertNetVars();
 
+	// Ensure synched when creating a new server
+	M_CopyGameData(serverGamedata, clientGamedata);
+
 	DEBFILE("\n-=-=-=-=-=-=-= Server Reset =-=-=-=-=-=-=-\n\n");
 }
 
@@ -3768,14 +3769,13 @@ static void Got_AddPlayer(UINT8 **p, INT32 playernum)
 
 		if (server && I_GetNodeAddress)
 		{
+			char addressbuffer[64];
 			const char *address = I_GetNodeAddress(node);
-			char *port = NULL;
 			if (address) // MI: fix msvcrt.dll!_mbscat crash?
 			{
-				strcpy(playeraddress[newplayernum], address);
-				port = strchr(playeraddress[newplayernum], ':');
-				if (port)
-					*port = '\0';
+				strcpy(addressbuffer, address);
+				strcpy(playeraddress[newplayernum],
+						I_NetSplitAddress(addressbuffer, NULL));
 			}
 		}
 	}

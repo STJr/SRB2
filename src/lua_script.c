@@ -306,6 +306,18 @@ int LUA_PushGlobals(lua_State *L, const char *word)
 		lua_pushinteger(L, ammoremovaltics);
 		return 1;
 	// end timers
+	} else if (fastcmp(word,"use1upSound")) {
+		lua_pushinteger(L, use1upSound);
+		return 1;
+	} else if (fastcmp(word,"maxXtraLife")) {
+		lua_pushinteger(L, maxXtraLife);
+		return 1;
+	} else if (fastcmp(word,"useContinues")) {
+		lua_pushinteger(L, useContinues);
+		return 1;
+	} else if (fastcmp(word,"shareEmblems")) {
+		lua_pushinteger(L, shareEmblems);
+		return 1;
 	} else if (fastcmp(word,"gametype")) {
 		lua_pushinteger(L, gametype);
 		return 1;
@@ -698,20 +710,23 @@ void LUA_DumpFile(const char *filename)
 
 fixed_t LUA_EvalMath(const char *word)
 {
-	lua_State *L = NULL;
+	static lua_State *L = NULL;
 	char buf[1024], *b;
 	const char *p;
 	fixed_t res = 0;
 
-	// make a new state so SOC can't interefere with scripts
-	// allocate state
-	L = lua_newstate(LUA_Alloc, NULL);
-	lua_atpanic(L, LUA_Panic);
+	if (!L)
+	{
+		// make a new state so SOC can't interefere with scripts
+		// allocate state
+		L = lua_newstate(LUA_Alloc, NULL);
+		lua_atpanic(L, LUA_Panic);
 
-	// open only enum lib
-	lua_pushcfunction(L, LUA_EnumLib);
-	lua_pushboolean(L, true);
-	lua_call(L, 1, 0);
+		// open only enum lib
+		lua_pushcfunction(L, LUA_EnumLib);
+		lua_pushboolean(L, true);
+		lua_call(L, 1, 0);
+	}
 
 	// change ^ into ^^ for Lua.
 	strcpy(buf, "return ");
@@ -736,8 +751,6 @@ fixed_t LUA_EvalMath(const char *word)
 	else
 		res = lua_tointeger(L, -1);
 
-	// clean up and return.
-	lua_close(L);
 	return res;
 }
 
@@ -1716,15 +1729,37 @@ void LUA_UnArchive(void)
 }
 
 // For mobj_t, player_t, etc. to take custom variables.
-int Lua_optoption(lua_State *L, int narg,
-	const char *def, const char *const lst[])
+int Lua_optoption(lua_State *L, int narg, int def, int list_ref)
 {
-	const char *name = (def) ? luaL_optstring(L, narg, def) :  luaL_checkstring(L, narg);
-	int i;
-	for (i=0; lst[i]; i++)
-		if (fastcmp(lst[i], name))
-			return i;
+	if (lua_isnoneornil(L, narg))
+		return def;
+
+	I_Assert(lua_checkstack(L, 2));
+	luaL_checkstring(L, narg);
+
+	lua_rawgeti(L, LUA_REGISTRYINDEX, list_ref);
+	I_Assert(lua_istable(L, -1));
+	lua_pushvalue(L, narg);
+	lua_rawget(L, -2);
+
+	if (lua_isnumber(L, -1))
+		return lua_tointeger(L, -1);
 	return -1;
+}
+
+int Lua_CreateFieldTable(lua_State *L, const char *const lst[])
+{
+	int i;
+
+	lua_newtable(L);
+	for (i = 0; lst[i] != NULL; i++)
+	{
+		lua_pushstring(L, lst[i]);
+		lua_pushinteger(L, i);
+		lua_settable(L, -3);
+	}
+
+	return luaL_ref(L, LUA_REGISTRYINDEX);
 }
 
 void LUA_PushTaggableObjectArray
