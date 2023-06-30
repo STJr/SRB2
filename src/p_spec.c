@@ -1795,9 +1795,7 @@ boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller
 			{ // Unlockable triggers required
 				INT32 trigid = triggerline->args[1];
 
-				if (netgame || multiplayer)
-					return false;
-				else if (trigid < 0 || trigid > 31) // limited by 32 bit variable
+				if (trigid < 0 || trigid > 31) // limited by 32 bit variable
 				{
 					CONS_Debug(DBG_GAMELOGIC, "Unlockable trigger (sidedef %hu): bad trigger ID %d\n", triggerline->sidenum[0], trigid);
 					return false;
@@ -1810,14 +1808,12 @@ boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller
 			{ // An unlockable itself must be unlocked!
 				INT32 unlockid = triggerline->args[1];
 
-				if (netgame || multiplayer)
-					return false;
-				else if (unlockid < 0 || unlockid >= MAXUNLOCKABLES) // limited by unlockable count
+				if (unlockid < 0 || unlockid >= MAXUNLOCKABLES) // limited by unlockable count
 				{
 					CONS_Debug(DBG_GAMELOGIC, "Unlockable check (sidedef %hu): bad unlockable ID %d\n", triggerline->sidenum[0], unlockid);
 					return false;
 				}
-				else if (!(unlockables[unlockid-1].unlocked))
+				else if (!(serverGamedata->unlocked[unlockid-1]))
 					return false;
 			}
 			break;
@@ -2942,7 +2938,6 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			break;
 
 		case 441: // Trigger unlockable
-			if (!(netgame || multiplayer))
 			{
 				INT32 trigid = line->args[0];
 
@@ -2953,10 +2948,12 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 					unlocktriggers |= 1 << trigid;
 
 					// Unlocked something?
-					if (M_UpdateUnlockablesAndExtraEmblems())
+					M_SilentUpdateUnlockablesAndEmblems(serverGamedata);
+
+					if (M_UpdateUnlockablesAndExtraEmblems(clientGamedata))
 					{
 						S_StartSound(NULL, sfx_s3k68);
-						G_SaveGameData(); // only save if unlocked something
+						G_SaveGameData(clientGamedata); // only save if unlocked something
 					}
 				}
 			}

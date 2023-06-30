@@ -876,7 +876,7 @@ static void P_SpawnMapThings(boolean spawnemblems)
 	size_t i;
 	mapthing_t *mt;
 
-        // Spawn axis points first so they are at the front of the list for fast searching.
+	// Spawn axis points first so they are at the front of the list for fast searching.
 	for (i = 0, mt = mapthings; i < nummapthings; i++, mt++)
 	{
 		switch (mt->type)
@@ -1239,6 +1239,9 @@ static void P_LoadSidedefs(UINT8 *data)
 			sd->textureoffset = textureoffset << FRACBITS;
 		}
 		sd->rowoffset = SHORT(msd->rowoffset)<<FRACBITS;
+
+		sd->offsetx_top = sd->offsetx_mid = sd->offsetx_bot = 0;
+		sd->offsety_top = sd->offsety_mid = sd->offsety_bot = 0;
 
 		P_SetSidedefSector(i, SHORT(msd->sector));
 
@@ -1777,6 +1780,18 @@ static void ParseTextmapSidedefParameter(UINT32 i, const char *param, const char
 		sides[i].textureoffset = atol(val)<<FRACBITS;
 	else if (fastcmp(param, "offsety"))
 		sides[i].rowoffset = atol(val)<<FRACBITS;
+	else if (fastcmp(param, "offsetx_top"))
+		sides[i].offsetx_top = atol(val) << FRACBITS;
+	else if (fastcmp(param, "offsetx_mid"))
+		sides[i].offsetx_mid = atol(val) << FRACBITS;
+	else if (fastcmp(param, "offsetx_bottom"))
+		sides[i].offsetx_bot = atol(val) << FRACBITS;
+	else if (fastcmp(param, "offsety_top"))
+		sides[i].offsety_top = atol(val) << FRACBITS;
+	else if (fastcmp(param, "offsety_mid"))
+		sides[i].offsety_mid = atol(val) << FRACBITS;
+	else if (fastcmp(param, "offsety_bottom"))
+		sides[i].offsety_bot = atol(val) << FRACBITS;
 	else if (fastcmp(param, "texturetop"))
 		sides[i].toptexture = R_TextureNumForName(val);
 	else if (fastcmp(param, "texturebottom"))
@@ -2461,6 +2476,18 @@ static void P_WriteTextmap(void)
 			fprintf(f, "offsetx = %d;\n", wsides[i].textureoffset >> FRACBITS);
 		if (wsides[i].rowoffset != 0)
 			fprintf(f, "offsety = %d;\n", wsides[i].rowoffset >> FRACBITS);
+		if (wsides[i].offsetx_top != 0)
+			fprintf(f, "offsetx_top = %d;\n", wsides[i].offsetx_top >> FRACBITS);
+		if (wsides[i].offsety_top != 0)
+			fprintf(f, "offsety_top = %d;\n", wsides[i].offsety_top >> FRACBITS);
+		if (wsides[i].offsetx_mid != 0)
+			fprintf(f, "offsetx_mid = %d;\n", wsides[i].offsetx_mid >> FRACBITS);
+		if (wsides[i].offsety_mid != 0)
+			fprintf(f, "offsety_mid = %d;\n", wsides[i].offsety_mid >> FRACBITS);
+		if (wsides[i].offsetx_bot != 0)
+			fprintf(f, "offsetx_bottom = %d;\n", wsides[i].offsetx_bot >> FRACBITS);
+		if (wsides[i].offsety_bot != 0)
+			fprintf(f, "offsety_bottom = %d;\n", wsides[i].offsety_bot >> FRACBITS);
 		if (wsides[i].toptexture > 0 && wsides[i].toptexture < numtextures)
 			fprintf(f, "texturetop = \"%.*s\";\n", 8, textures[wsides[i].toptexture]->name);
 		if (wsides[i].bottomtexture > 0 && wsides[i].bottomtexture < numtextures)
@@ -2828,6 +2855,8 @@ static void P_LoadTextmap(void)
 		// Defaults.
 		sd->textureoffset = 0;
 		sd->rowoffset = 0;
+		sd->offsetx_top = sd->offsetx_mid = sd->offsetx_bot = 0;
+		sd->offsety_top = sd->offsety_mid = sd->offsety_bot = 0;
 		sd->toptexture = R_TextureNumForName("-");
 		sd->midtexture = R_TextureNumForName("-");
 		sd->bottomtexture = R_TextureNumForName("-");
@@ -7460,7 +7489,7 @@ static void P_WriteLetter(void)
 {
 	char *buf, *b;
 
-	if (!unlockables[28].unlocked) // pandora's box
+	if (!serverGamedata->unlocked[28]) // pandora's box
 		return;
 
 	if (modeattacking)
@@ -7804,10 +7833,11 @@ boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate)
 	nextmapoverride = 0;
 	skipstats = 0;
 
-	if (!(netgame || multiplayer || demoplayback))
-		mapvisited[gamemap-1] |= MV_VISITED;
-	else if (netgame || multiplayer)
-		mapvisited[gamemap-1] |= MV_MP; // you want to record that you've been there this session, but not permanently
+	if (!demoplayback)
+	{
+		clientGamedata->mapvisited[gamemap-1] |= MV_VISITED;
+		serverGamedata->mapvisited[gamemap-1] |= MV_VISITED;
+	}
 
 	levelloading = false;
 
