@@ -2204,6 +2204,8 @@ static int lib_pTouchSpecialThing(lua_State *L)
 	INLEVEL
 	if (!special || !toucher)
 		return LUA_ErrInvalid(L, "mobj_t");
+	if (!toucher->player)
+		return luaL_error(L, "P_TouchSpecialThing requires a valid toucher.player.");
 	P_TouchSpecialThing(special, toucher, heightcheck);
 	return 0;
 }
