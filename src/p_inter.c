@@ -255,42 +255,19 @@ void P_DoNightsScore(player_t *player)
 		player->linktimer = nightslinktics;
 	}
 
-	if (player->linkcount < 10)
-	{
-		if (player->bonustime)
-		{
-			P_AddPlayerScore(player, player->linkcount*20);
-			P_SetMobjState(dummymo, dummymo->info->xdeathstate+player->linkcount-1);
-		}
-		else
-		{
-			P_AddPlayerScore(player, player->linkcount*10);
-			P_SetMobjState(dummymo, dummymo->info->spawnstate+player->linkcount-1);
-		}
-	}
-	else
-	{
-		if (player->bonustime)
-		{
-			P_AddPlayerScore(player, 200);
-			P_SetMobjState(dummymo, dummymo->info->xdeathstate+9);
-		}
-		else
-		{
-			P_AddPlayerScore(player, 100);
-			P_SetMobjState(dummymo, dummymo->info->spawnstate+9);
-		}
-	}
+	// Award 10-100 score, doubled if bonus time is active
+	P_AddPlayerScore(player, min(player->linkcount,10)*(player->bonustime ? 20 : 10));
+	P_SetMobjState(dummymo, (player->bonustime ? dummymo->info->xdeathstate : dummymo->info->spawnstate) + min(player->linkcount,10)-1);
 
-	// Hoops are the only things that should add to your drill meter
-	//player->drillmeter += TICRATE;
+	// Make objects slowly rise & scale up
 	dummymo->momz = FRACUNIT;
 	dummymo->fuse = 3*TICRATE;
-
-	// What?! NO, don't use the camera! Scale up instead!
-	//P_InstaThrust(dummymo, R_PointToAngle2(dummymo->x, dummymo->y, camera.x, camera.y), 3*FRACUNIT);
 	dummymo->scalespeed = FRACUNIT/25;
 	dummymo->destscale = 2*FRACUNIT;
+
+	// Add extra values used for color variety
+	dummymo->extravalue1 = player->linkcount-1;
+	dummymo->extravalue2 = ((player->linkcount-1 >= 300) ? (player->linkcount-1 >= 600) ? 2 : 1 : 0);
 }
 
 //

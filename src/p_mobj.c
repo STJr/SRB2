@@ -9603,7 +9603,7 @@ static boolean P_MobjRegularThink(mobj_t *mobj)
 	case MT_BOSSFLYPOINT:
 		return false;
 	case MT_NIGHTSCORE:
-		mobj->color = (UINT16)(leveltime % SKINCOLOR_WHITE);
+		mobj->color = linkColor[mobj->extravalue2][(leveltime + mobj->extravalue1) % NUMLINKCOLORS];
 		break;
 	case MT_JETFUME1:
 		if (!P_JetFume1Think(mobj))

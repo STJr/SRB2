@@ -389,6 +389,7 @@ static void M_DrawRoomMenu(void);
 #endif
 static void M_DrawJoystick(void);
 static void M_DrawSetupMultiPlayerMenu(void);
+static void M_DrawColorRamp(INT32 x, INT32 y, INT32 w, INT32 h, skincolor_t color);
 
 // Handling functions
 static boolean M_ExitPandorasBox(void);
@@ -8520,7 +8521,7 @@ static void M_DrawLoadGameData(void)
 					if (charskin->prefoppositecolor)
 					{
 						col = charskin->prefoppositecolor;
-						col = skincolors[col].ramp[skincolors[skincolors[col].invcolor].invshade];
+						col = skincolors[col].ramp[skincolors[charskin->prefcolor].invshade];
 					}
 					else
 					{
@@ -11998,6 +11999,8 @@ static void M_HandleConnectIP(INT32 choice)
 static fixed_t    multi_tics;
 static UINT8      multi_frame;
 static UINT8      multi_spr2;
+static boolean    multi_paused;
+static boolean    multi_invcolor;
 
 // this is set before entering the MultiPlayer setup menu,
 // for either player 1 or 2
@@ -12010,6 +12013,7 @@ static consvar_t   *setupm_cvdefaultskin;
 static consvar_t   *setupm_cvdefaultcolor;
 static INT32        setupm_fakeskin;
 static menucolor_t *setupm_fakecolor;
+static boolean      colorgrid;
 
 static void M_DrawSetupMultiPlayerMenu(void)
 {
@@ -12059,12 +12063,12 @@ static void M_DrawSetupMultiPlayerMenu(void)
 			'\x1D' | V_YELLOWMAP, false);
 	}
 
-	x = BASEVIDWIDTH/2;
+	x = colorgrid ? 92 : BASEVIDWIDTH/2;
 	y += 11;
 
 	// anim the player in the box
 	multi_tics -= renderdeltatics;
-	while (multi_tics <= 0)
+	while (!multi_paused && multi_tics <= 0)
 	{
 		multi_frame++;
 		multi_tics += 4*FRACUNIT;
@@ -12073,7 +12077,8 @@ static void M_DrawSetupMultiPlayerMenu(void)
 #define charw 74
 
 	// draw box around character
-	V_DrawFill(x-(charw/2), y, charw, 84, 159);
+	V_DrawFill(x-(charw/2), y, charw, 84,
+		multi_invcolor ?skincolors[skincolors[setupm_fakecolor->color].invcolor].ramp[skincolors[setupm_fakecolor->color].invshade] : 159);
 
 	sprdef = &skins[setupm_fakeskin].sprites[multi_spr2];
 
@@ -12116,61 +12121,121 @@ faildraw:
 #undef chary
 
 colordraw:
-	x = MP_PlayerSetupDef.x;
-	y += 75;
-
-	M_DrawLevelPlatterHeader(y - (lsheadingheight - 12), "Color", true, false);
-	if (itemOn == 2)
-		cursory = y;
-
-	// draw color string
-	V_DrawRightAlignedString(BASEVIDWIDTH - x, y,
-	             ((MP_PlayerSetupMenu[2].status & IT_TYPE) == IT_SPACE ? V_TRANSLUCENT : 0)|(itemOn == 2 ? V_YELLOWMAP : 0)|V_ALLOWLOWERCASE,
-	             skincolors[setupm_fakecolor->color].name);
-
-	if (itemOn == 2 && (MP_PlayerSetupMenu[2].status & IT_TYPE) != IT_SPACE)
-	{
-		V_DrawCharacter(BASEVIDWIDTH - x - 10 - V_StringWidth(skincolors[setupm_fakecolor->color].name, V_ALLOWLOWERCASE) - (skullAnimCounter/5), y,
-			'\x1C' | V_YELLOWMAP, false);
-		V_DrawCharacter(BASEVIDWIDTH - x + 2 + (skullAnimCounter/5), y,
-			'\x1D' | V_YELLOWMAP, false);
-	}
-
-	y += 11;
 
 #define indexwidth 8
+
+	if (colorgrid) // Draw color grid & skip the later options
+	{
+		UINT16 pos;
+		INT16 cx = 96, cy = 66;
+		INT16 i, j;
+		INT32 w = indexwidth; // Width of a singular color block
+		boolean stoprow = false;
+		menucolor_t *mc; // Last accessed color
+
+		x = 132;
+		y = 66;
+		pos = min(max(0, 16*((M_GetColorIndex(setupm_fakecolor->color)-1)/16) - 64), 16*(M_GetColorIndex(menucolortail->color)/16-1) - 128);
+		mc = M_GetColorFromIndex(pos);
+
+		// Draw grid
+		V_DrawFill(x-2, y-2, 132, 132, 159);
+		for (j = 0; j < 8; j++)
+		{
+			for (i = 0; i < 16; i++)
+			{
+				if (skincolors[mc->color].accessible && !stoprow)
+				{
+					M_DrawColorRamp(x + i*w, y + j*16, w, 1, skincolors[mc->color]);
+					if (mc->color == setupm_fakecolor->color) // store current color position
+						{
+							cx = x + i*w;
+							cy = y + j*16;
+						}
+				}
+				mc = mc->next;
+				while (!skincolors[mc->color].accessible && !stoprow) // Find accessible color after this one
+				{
+					mc = mc->next;
+					if (mc == menucolortail) stoprow = true;
+				}
+			}
+		}
+
+		// Draw arrows, if needed
+		if (pos > 0)
+			V_DrawCharacter(264, y - (skullAnimCounter/5), '\x1A' | V_YELLOWMAP, false);
+		if (!stoprow)
+			V_DrawCharacter(264, y+120 + (skullAnimCounter/5), '\x1B' | V_YELLOWMAP, false);
+
+		// Draw cursor & current skincolor
+		V_DrawFill(cx - 2, cy - 2, 12, 20, 0);
+		V_DrawFill(cx - 1, cy - 1, 11, 19, 31);
+		V_DrawFill(    cx,     cy,  9, 17, 0);
+		M_DrawColorRamp(cx, cy, w, 1, skincolors[setupm_fakecolor->color]);
+
+		// Draw color string (with background)
+		V_DrawFill(55, 148,  74, 1, 73);
+		V_DrawFill(55, 149,  74, 1, 26);
+		M_DrawColorRamp(55, 150, 74, 1, skincolors[setupm_fakecolor->color]);
+		V_DrawRightAlignedString(x-2,166,
+								 ((MP_PlayerSetupMenu[2].status & IT_TYPE) == IT_SPACE ? V_TRANSLUCENT : 0)|(itemOn == 2 ? V_YELLOWMAP : 0)|V_ALLOWLOWERCASE,
+								 skincolors[setupm_fakecolor->color].name);
+
+		return; // Don't draw anything after this
+	}
+	else // Draw color strip & the rest of the menu options
 	{
 		const INT32 numcolors = (282-charw)/(2*indexwidth); // Number of colors per side
 		INT32 w = indexwidth; // Width of a singular color block
 		menucolor_t *mc = setupm_fakecolor->prev; // Last accessed color
-		UINT8 h;
 		INT16 i;
+
+		x = MP_PlayerSetupDef.x;
+		y += 75;
+
+		// Draw color header & string
+		M_DrawLevelPlatterHeader(y - (lsheadingheight - 12), "Color...", true, false);
+		V_DrawRightAlignedString(BASEVIDWIDTH - x, y,
+								 ((MP_PlayerSetupMenu[2].status & IT_TYPE) == IT_SPACE ? V_TRANSLUCENT : 0)|(itemOn == 2 ? V_YELLOWMAP : 0)|V_ALLOWLOWERCASE,
+								 skincolors[setupm_fakecolor->color].name);
+
+		// Draw horizontal arrows
+		if (itemOn == 2)
+		{
+			cursory = y;
+			if ((MP_PlayerSetupMenu[2].status & IT_TYPE) != IT_SPACE)
+			{
+				V_DrawCharacter(BASEVIDWIDTH - x - 10 - V_StringWidth(skincolors[setupm_fakecolor->color].name, V_ALLOWLOWERCASE) - (skullAnimCounter/5), y,
+					'\x1C' | V_YELLOWMAP, false);
+				V_DrawCharacter(BASEVIDWIDTH - x + 2 + (skullAnimCounter/5), y,
+					'\x1D' | V_YELLOWMAP, false);
+			}
+		}
 
 		// Draw color in the middle
 		x += numcolors*w;
-		for (h = 0; h < 16; h++)
-			V_DrawFill(x, y+h, charw, 1, skincolors[setupm_fakecolor->color].ramp[h]);
+		y += 11;
+		M_DrawColorRamp(x, y, charw, 1, skincolors[setupm_fakecolor->color]);
 
-		//Draw colors from middle to left
-		for (i=0; i<numcolors; i++) {
+		// Draw colors from middle to left
+		for (i = 0; i < numcolors; i++)
+		{
 			x -= w;
-			// Find accessible color before this one
-			while (!skincolors[mc->color].accessible)
+			while (!skincolors[mc->color].accessible) // Find accessible color before this one
 				mc = mc->prev;
-			for (h = 0; h < 16; h++)
-				V_DrawFill(x, y+h, w, 1, skincolors[mc->color].ramp[h]);
+			M_DrawColorRamp(x, y, w, 1, skincolors[mc->color]);
 			mc = mc->prev;
 		}
 
 		// Draw colors from middle to right
 		mc = setupm_fakecolor->next;
 		x += numcolors*w + charw;
-		for (i=0; i<numcolors; i++) {
-			// Find accessible color after this one
-			while (!skincolors[mc->color].accessible)
+		for (i = 0; i < numcolors; i++)
+		{
+			while (!skincolors[mc->color].accessible) // Find accessible color after this one
 				mc = mc->next;
-			for (h = 0; h < 16; h++)
-				V_DrawFill(x, y+h, w, 1, skincolors[mc->color].ramp[h]);
+			M_DrawColorRamp(x, y, w, 1, skincolors[mc->color]);
 			x += w;
 			mc = mc->next;
 		}
@@ -12195,6 +12260,13 @@ colordraw:
 		W_CachePatchName("M_CURSOR", PU_PATCH));
 }
 
+static void M_DrawColorRamp(INT32 x, INT32 y, INT32 w, INT32 h, skincolor_t color)
+{
+	UINT8 i;
+	for (i = 0; i < 16; i++)
+		V_DrawFill(x, y+(i*h), w, h, color.ramp[i]);
+}
+
 // Handle 1P/2P MP Setup
 static void M_HandleSetupMultiPlayer(INT32 choice)
 {
@@ -12205,13 +12277,25 @@ static void M_HandleSetupMultiPlayer(INT32 choice)
 	switch (choice)
 	{
 		case KEY_DOWNARROW:
-			M_NextOpt();
-			S_StartSound(NULL,sfx_menu1); // Tails
-			break;
-
 		case KEY_UPARROW:
-			M_PrevOpt();
-			S_StartSound(NULL,sfx_menu1); // Tails
+			{
+				UINT8 i;
+				if (itemOn == 2 && colorgrid)
+				{
+					for (i = 0; i < 16; i++)
+					{
+						setupm_fakecolor = (choice == KEY_UPARROW) ? setupm_fakecolor->prev : setupm_fakecolor->next;
+						while (!skincolors[setupm_fakecolor->color].accessible) // skip inaccessible colors
+							setupm_fakecolor = (choice == KEY_UPARROW) ? setupm_fakecolor->prev : setupm_fakecolor->next;
+					}
+				}
+				else if (choice == KEY_UPARROW)
+					M_PrevOpt();
+				else
+					M_NextOpt();
+
+				S_StartSound(NULL,sfx_menu1);
+			}
 			break;
 
 		case KEY_LEFTARROW:
@@ -12246,6 +12330,13 @@ static void M_HandleSetupMultiPlayer(INT32 choice)
 				COM_BufAddText (va("%s %d\n",setupm_cvdefaultcolor->name,setupm_fakecolor->color));
 				break;
 			}
+			else if (itemOn == 2)
+			{
+				if (!colorgrid)
+					S_StartSound(NULL,sfx_menu1);
+				colorgrid = !colorgrid;
+				break;
+			}
 			/* FALLTHRU */
 		case KEY_RIGHTARROW:
 			if (itemOn == 1)       //player skin
@@ -12268,8 +12359,28 @@ static void M_HandleSetupMultiPlayer(INT32 choice)
 			}
 			break;
 
+		case KEY_PGUP:
+		case KEY_PGDN:
+			{
+				UINT8 i;
+				if (itemOn == 2) // player color
+				{
+					S_StartSound(NULL,sfx_menu1);
+					for (i = 0; i < (colorgrid ? 64 : 13); i++) // or (282-charw)/(2*indexwidth)
+					{
+						setupm_fakecolor = (choice == KEY_PGUP) ? setupm_fakecolor->prev : setupm_fakecolor->next;
+						while (!skincolors[setupm_fakecolor->color].accessible) // skip inaccessible colors
+							setupm_fakecolor = (choice == KEY_PGUP) ? setupm_fakecolor->prev : setupm_fakecolor->next;
+					}
+				}
+			}
+			break;
+
 		case KEY_ESCAPE:
-			exitmenu = true;
+			if (itemOn == 2 && colorgrid)
+				colorgrid = false;
+			else
+				exitmenu = true;
 			break;
 
 		case KEY_BACKSPACE:
@@ -12298,6 +12409,14 @@ static void M_HandleSetupMultiPlayer(INT32 choice)
 				S_StartSound(NULL,sfx_menu1); // Tails
 				setupm_name[0] = 0;
 			}
+			break;
+
+		case KEY_PAUSE:
+			multi_paused = !multi_paused;
+			break;
+
+		case KEY_INS:
+			multi_invcolor = !multi_invcolor;
 			break;
 
 		default:
@@ -12339,6 +12458,7 @@ static void M_SetupMultiPlayer(INT32 choice)
 
 	multi_frame = 0;
 	multi_tics = 4*FRACUNIT;
+
 	strcpy(setupm_name, cv_playername.string);
 
 	// set for player 1
@@ -12383,6 +12503,7 @@ static void M_SetupMultiPlayer2(INT32 choice)
 
 	multi_frame = 0;
 	multi_tics = 4*FRACUNIT;
+	
 	strcpy (setupm_name, cv_playername2.string);
 
 	// set for splitscreen secondary player
@@ -12577,6 +12698,42 @@ UINT16 M_GetColorAfter(UINT16 color) {
 		if (look==menucolortail)
 			return 0;
 	}
+}
+
+UINT16 M_GetColorIndex(UINT16 color) {
+	menucolor_t *look;
+	UINT16 i = 0;
+
+	if (color >= numskincolors) {
+		CONS_Printf("M_GetColorIndex: color %d does not exist.\n",color);
+		return 0;
+	}
+
+	for (look=menucolorhead;;look=look->next) {
+		if (look->color == color)
+			return i;
+		if (look==menucolortail)
+			return 0;
+		i++;
+	}
+}
+
+menucolor_t* M_GetColorFromIndex(UINT16 index) {
+	menucolor_t *look = menucolorhead;
+	UINT16 i = 0;
+
+	if (index >= numskincolors) {
+		CONS_Printf("M_GetColorIndex: index %d does not exist.\n",index);
+		return 0;
+	}
+
+	for (i = 0; i <= index; i++) {
+		if (look==menucolortail)
+			return menucolorhead;
+		look=look->next;
+	}
+
+	return look;
 }
 
 void M_InitPlayerSetupColors(void) {

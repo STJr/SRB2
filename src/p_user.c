@@ -2984,7 +2984,7 @@ static void P_CheckInvincibilityTimer(player_t *player)
 		return;
 
 	if (mariomode && !player->powers[pw_super])
-		player->mo->color = (UINT16)(SKINCOLOR_RUBY + (leveltime % (numskincolors - SKINCOLOR_RUBY))); // Passes through all saturated colours
+		player->mo->color = (UINT16)(SKINCOLOR_RUBY + (leveltime % (FIRSTSUPERCOLOR - SKINCOLOR_RUBY))); // Passes through all saturated colours
 	else if (leveltime % (TICRATE/7) == 0)
 	{
 		mobj_t *sparkle = P_SpawnMobj(player->mo->x, player->mo->y, player->mo->z, MT_IVSP);
