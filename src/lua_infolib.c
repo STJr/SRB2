@@ -1168,7 +1168,7 @@ static int mobjinfo_fields_ref = LUA_NOREF;
 static int mobjinfo_get(lua_State *L)
 {
 	mobjinfo_t *info = *((mobjinfo_t **)luaL_checkudata(L, 1, META_MOBJINFO));
-	enum mobjinfo_e field = luaL_checkoption(L, 2, mobjinfo_opt[0], mobjinfo_opt);
+	enum mobjinfo_e field = Lua_optoption(L, 2, mobjinfo_doomednum, mobjinfo_fields_ref);
 
 	I_Assert(info != NULL);
 	I_Assert(info >= mobjinfo);
