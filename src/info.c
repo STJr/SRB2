@@ -21632,7 +21632,7 @@ skincolor_t skincolors[MAXSKINCOLORS] = {
 	{"Goldenrod",  {   0,   80,   81,   81,   83,   73,   73,   64,   65,   66,   67,   68,   69,   62,   44,   45}, SKINCOLOR_MAJESTY,    8,  V_YELLOWMAP,  true}, // SKINCOLOR_GOLDENROD
 	{"Yellow",     {0x52, 0x53, 0x49, 0x49, 0x4a, 0x4a, 0x4b, 0x4b, 0x4b, 0x4c, 0x4d, 0x4d, 0x4e, 0x4e, 0x4f, 0xed}, SKINCOLOR_CORNFLOWER, 8,  V_YELLOWMAP,  true}, // SKINCOLOR_YELLOW
 	{"Olive",      {0x4b, 0x4b, 0x4c, 0x4c, 0x4d, 0x4e, 0xe7, 0xe7, 0xe9, 0xc5, 0xc5, 0xc6, 0xc6, 0xc7, 0xc7, 0xfd}, SKINCOLOR_DUSK,       3,  V_YELLOWMAP,  true}, // SKINCOLOR_OLIVE
-	{"Kiwi",       {  88,   89,  188,  189,  189,   76,   76,   67,   67,   68,   69,   70,   45,   46,   47,   47}, SKINCOLOR_MARINE,     9,  V_PERIDOTMAP, true}, // SKINCOLOR_KIWI
+	{"Pear",       {  88,   89,  188,  189,  189,   76,   76,   67,   67,   68,   69,   70,   45,   46,   47,   47}, SKINCOLOR_MARINE,     9,  V_PERIDOTMAP, true}, // SKINCOLOR_PEAR
 	{"Lemon",      {   0,   80,   81,   83,   73,   73,   74,   74,   76,   76,  191,  191,   79,   79,  110,  111}, SKINCOLOR_FUCHSIA,    8,  V_YELLOWMAP,  true}, // SKINCOLOR_LEMON
 	{"Lime",       {0x50, 0x51, 0x52, 0x53, 0x48, 0xbc, 0xbd, 0xbe, 0xbe, 0xbf, 0x6a, 0x6b, 0x6c, 0x6d, 0x6e, 0x6f}, SKINCOLOR_MAGENTA,    9,  V_PERIDOTMAP, true}, // SKINCOLOR_LIME
 	{"Peridot",    {0x58, 0x58, 0xbc, 0xbc, 0xbd, 0xbd, 0xbe, 0xbe, 0xbe, 0xbf, 0x5e, 0x5e, 0x5f, 0x5f, 0x77, 0x77}, SKINCOLOR_COBALT,     2,  V_PERIDOTMAP, true}, // SKINCOLOR_PERIDOT
@@ -21656,7 +21656,7 @@ skincolor_t skincolors[MAXSKINCOLORS] = {
 	{"Turquoise",  {  0,   120,  121,  122,  123,  141,  141,  135,  136,  136,  150,  153,  155,  157,  159,  253}, SKINCOLOR_SANGRIA,    12, V_SKYMAP,     true}, // SKINCOLOR_TURQUOISE
 	{"Aquamarine", {   0,  120,  121,  131,  132,  133,  134,  134,  135,  135,  149,  149,  172,  173,  174,  175}, SKINCOLOR_GARNET,     8,  V_SKYMAP,     true}, // SKINCOLOR_AQUAMARINE
 	{"Sky",        {0x80, 0x80, 0x81, 0x82, 0x83, 0x83, 0x84, 0x85, 0x85, 0x86, 0x87, 0x88, 0x89, 0x89, 0x8a, 0x8b}, SKINCOLOR_SANDY,      1,  V_SKYMAP,     true}, // SKINCOLOR_SKY
-	{"Marine",     { 144,  146,  147,  147,  148,  135,  136,  136,  137,  137,  127,  118,  119,  111,  111,  111}, SKINCOLOR_KIWI,       13, V_SKYMAP,     true}, // SKINCOLOR_MARINE
+	{"Marine",     { 144,  146,  147,  147,  148,  135,  136,  136,  137,  137,  127,  118,  119,  111,  111,  111}, SKINCOLOR_PEAR,       13, V_SKYMAP,     true}, // SKINCOLOR_MARINE
 	{"Cerulean",   {0x85, 0x86, 0x87, 0x88, 0x88, 0x89, 0x89, 0x89, 0x8a, 0x8a, 0xfd, 0xfd, 0xfd, 0x1f, 0x1f, 0x1f}, SKINCOLOR_NEON,       4,  V_SKYMAP,     true}, // SKINCOLOR_CERULEAN
 	{"Dream",      {  80,  208,  200,  200,  146,  146,  133,  134,  135,  136,  137,  138,  139,  139,  254,  254}, SKINCOLOR_FOUNDATION, 9,  V_SKYMAP,     true}, // SKINCOLOR_DREAM
 	{"Icy",        {0x00, 0x00, 0x00, 0x00, 0x80, 0x81, 0x83, 0x83, 0x86, 0x87, 0x95, 0x95, 0xad, 0xad, 0xae, 0xaf}, SKINCOLOR_CRIMSON,    0,  V_SKYMAP,     true}, // SKINCOLOR_ICY
