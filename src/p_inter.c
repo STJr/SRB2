@@ -498,23 +498,20 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			if (special->type == MT_PTERABYTE && special->target == player->mo && special->extravalue1 == 1)
 				return; // Can't hurt a Pterabyte if it's trying to pick you up
 
-			if ((P_MobjFlip(toucher)*toucher->momz < 0) && (elementalpierce != 1))
+			if ((P_MobjFlip(toucher)*toucher->momz < 0) && (elementalpierce != 1) && (!(player->powers[pw_strong] & STR_HEAVY)))
 			{
-				if (!(player->charability2 == CA2_MELEE && player->panim == PA_ABILITY2))
+				fixed_t setmomz = -toucher->momz; // Store this, momz get changed by P_DoJump within P_DoBubbleBounce
+				
+				if (elementalpierce == 2) // Reset bubblewrap, part 1
+					P_DoBubbleBounce(player);
+				toucher->momz = setmomz;
+				if (elementalpierce == 2) // Reset bubblewrap, part 2
 				{
-					fixed_t setmomz = -toucher->momz; // Store this, momz get changed by P_DoJump within P_DoBubbleBounce
-
-					if (elementalpierce == 2) // Reset bubblewrap, part 1
-						P_DoBubbleBounce(player);
-					toucher->momz = setmomz;
-					if (elementalpierce == 2) // Reset bubblewrap, part 2
-					{
-						boolean underwater = toucher->eflags & MFE_UNDERWATER;
-
-						if (underwater)
-							toucher->momz /= 2;
-						toucher->momz -= (toucher->momz/(underwater ? 8 : 4)); // Cap the height!
-					}
+					boolean underwater = toucher->eflags & MFE_UNDERWATER;
+							
+					if (underwater)
+						toucher->momz /= 2;
+					toucher->momz -= (toucher->momz/(underwater ? 8 : 4)); // Cap the height!
 				}
 			}
 			if (player->pflags & PF_BOUNCING)
@@ -533,8 +530,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 					toucher->momx = 7*toucher->momx>>3;
 					toucher->momy = 7*toucher->momy>>3;
 				}
-				else if (player->dashmode >= DASHMODE_THRESHOLD && (player->charflags & (SF_DASHMODE|SF_MACHINE)) == (SF_DASHMODE|SF_MACHINE)
-					&& player->panim == PA_DASH)
+				else if ((player->powers[pw_strong] & STR_DASH) && player->panim == PA_DASH)
 					P_DoPlayerPain(player, special, special);
 			}
 			P_DamageMobj(special, toucher, toucher, 1, 0);
@@ -3303,7 +3299,7 @@ static boolean P_PlayerHitsPlayer(mobj_t *target, mobj_t *inflictor, mobj_t *sou
 		return false;
 
 	// Add pity.
-	if (!player->powers[pw_flashing] && !player->powers[pw_invulnerability] && !player->powers[pw_super]
+	if (!player->powers[pw_flashing] && !player->powers[pw_invulnerability] && !player->powers[pw_super] && !(player->powers[pw_strong] & STR_GUARD)
 	&& source->player->score > player->score)
 		player->pity++;
 
@@ -3775,7 +3771,7 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 			}
 			return false;
 		}
-		else if (player->powers[pw_invulnerability] || player->powers[pw_flashing] || player->powers[pw_super]) // ignore bouncing & such in invulnerability
+		else if (player->powers[pw_invulnerability] || player->powers[pw_flashing] || player->powers[pw_super] || (player->powers[pw_strong] & STR_GUARD)) // ignore bouncing & such in invulnerability
 		{
 			if (force
 			|| (inflictor && inflictor->flags & MF_MISSILE && inflictor->flags2 & MF2_SUPERFIRE)) // Super Sonic is stunned!
