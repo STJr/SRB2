@@ -988,6 +988,8 @@ void P_DoPlayerPain(player_t *player, mobj_t *source, mobj_t *inflictor)
 	if (player->powers[pw_carry] == CR_ROPEHANG)
 		P_SetTarget(&player->mo->tracer, NULL);
 
+	player->powers[pw_strong] = STR_NONE;
+
 	{
 		angle_t ang;
 		fixed_t fallbackspeed;
@@ -1105,6 +1107,7 @@ void P_ResetPlayer(player_t *player)
 boolean P_PlayerCanDamage(player_t *player, mobj_t *thing)
 {
 	fixed_t bottomheight, topheight;
+	boolean allatk = ((player->powers[pw_strong] & STR_PUNCH) && (player->powers[pw_strong] & STR_TAIL) && (player->powers[pw_strong] & STR_STOMP) && (player->powers[pw_strong] & STR_UPPER));
 
 	if (!player->mo || player->spectator || !thing || P_MobjWasRemoved(thing))
 		return false;
@@ -1129,20 +1132,31 @@ boolean P_PlayerCanDamage(player_t *player, mobj_t *thing)
 
 	// Jumping.
 	if ((player->pflags & PF_JUMPED)
-	&& (!(player->pflags & PF_NOJUMPDAMAGE)
-		|| (player->charability == CA_TWINSPIN && player->panim == PA_ABILITY)))
+	&& (!(player->pflags & PF_NOJUMPDAMAGE)))
 		return true;
 
 	// Spinning.
 	if (player->pflags & PF_SPINNING)
 		return true;
 
-	if (player->dashmode >= DASHMODE_THRESHOLD && (player->charflags & (SF_DASHMODE|SF_MACHINE)) == (SF_DASHMODE|SF_MACHINE))
+	// Shield stomp.
+	if (((player->powers[pw_shield] & SH_NOSTACK) == SH_ELEMENTAL || (player->powers[pw_shield] & SH_NOSTACK) == SH_BUBBLEWRAP) && (player->pflags & PF_SHIELDABILITY))
+		return true;
+
+	// pw_strong checks below here
+
+	// Omnidirectional attacks.
+	if (allatk || (player->powers[pw_strong] & STR_DASH))
 		return true;
 
 	// From the front.
-	if (((player->pflags & PF_GLIDING) || (player->charability2 == CA2_MELEE && player->panim == PA_ABILITY2))
+	if ((player->powers[pw_strong] & STR_PUNCH)
 	&& (player->drawangle - R_PointToAngle2(player->mo->x - player->mo->momx, player->mo->y - player->mo->momy, thing->x, thing->y) +  + ANGLE_90) < ANGLE_180)
+		return true;
+
+	// From the back.
+	if ((player->powers[pw_strong] & STR_TAIL)
+	&& (player->drawangle - R_PointToAngle2(player->mo->x - player->mo->momx, player->mo->y - player->mo->momy, thing->x, thing->y) +  + ANGLE_90) >= ANGLE_180)
 		return true;
 
 	// From the top/bottom.
@@ -1158,18 +1172,14 @@ boolean P_PlayerCanDamage(player_t *player, mobj_t *thing)
 
 	if (P_MobjFlip(player->mo)*(bottomheight - (thing->z + thing->height/2)) > 0)
 	{
-		if ((player->charflags & SF_STOMPDAMAGE || player->pflags & PF_BOUNCING) && (P_MobjFlip(player->mo)*(player->mo->momz - thing->momz) < 0))
+		if ((player->charflags & SF_STOMPDAMAGE || player->powers[pw_strong] & STR_STOMP) && (P_MobjFlip(player->mo)*(player->mo->momz - thing->momz) < 0))
 			return true;
 	}
 	else if (P_MobjFlip(player->mo)*(topheight - (thing->z + thing->height/2)) < 0)
 	{
-		if (player->charability == CA_FLY && player->panim == PA_ABILITY && !(player->mo->eflags & MFE_UNDERWATER) && (P_MobjFlip(player->mo)*(player->mo->momz - thing->momz) > 0))
+		if ((player->powers[pw_strong] & STR_UPPER) && (player->mo->sprite2 != SPR2_SWIM) && (P_MobjFlip(player->mo)*(player->mo->momz - thing->momz) > 0))
 			return true;
 	}
-
-	// Shield stomp.
-	if (((player->powers[pw_shield] & SH_NOSTACK) == SH_ELEMENTAL || (player->powers[pw_shield] & SH_NOSTACK) == SH_BUBBLEWRAP) && (player->pflags & PF_SHIELDABILITY))
-		return true;
 
 	return false;
 }
@@ -2324,6 +2334,7 @@ boolean P_PlayerHitFloor(player_t *player, boolean dorollstuff)
 					player->mo->tics = (player->mo->movefactor == FRACUNIT) ? TICRATE/2 : (FixedDiv(35<<(FRACBITS-1), FixedSqrt(player->mo->movefactor)))>>FRACBITS;
 					S_StartSound(player->mo, sfx_s3k8b);
 					player->pflags |= PF_FULLSTASIS;
+					player->powers[pw_strong] = STR_MELEE;
 
 					// hearticles
 					if (type)
@@ -2513,15 +2524,11 @@ static boolean P_PlayerCanBust(player_t *player, ffloor_t *rover)
 			return true;
 
 		// Passive wall breaking
-		if (player->charflags & SF_CANBUSTWALLS)
+		if (player->charflags & SF_CANBUSTWALLS || player->powers[pw_strong] & (STR_WALL|STR_FLOOR|STR_CEILING|STR_DASH))
 			return true;
 
 		// Super
 		if (player->powers[pw_super])
-			return true;
-
-		// Dashmode
-		if ((player->charflags & (SF_DASHMODE|SF_MACHINE)) == (SF_DASHMODE|SF_MACHINE) && player->dashmode >= DASHMODE_THRESHOLD)
 			return true;
 
 		// NiGHTS drill
@@ -2534,21 +2541,11 @@ static boolean P_PlayerCanBust(player_t *player, ffloor_t *rover)
 
 		/* FALLTHRU */
 	case BT_STRONG: // Requires a "strong ability"
-		if (player->charflags & SF_CANBUSTWALLS)
-			return true;
-
-		if (player->pflags & PF_BOUNCING)
-			return true;
-
-		if (player->charability == CA_TWINSPIN && player->panim == PA_ABILITY)
-			return true;
-
-		if (player->charability2 == CA2_MELEE && player->panim == PA_ABILITY2)
+		if (player->charflags & SF_CANBUSTWALLS || player->powers[pw_strong] & (STR_WALL|STR_FLOOR|STR_CEILING))
 			return true;
 
 		break;
 	}
-
 	return false;
 }
 
@@ -2564,7 +2561,7 @@ static void P_CheckBustableBlocks(player_t *player)
 	oldx = player->mo->x;
 	oldy = player->mo->y;
 
-	if (!(player->pflags & PF_BOUNCING)) // Bouncers only get to break downwards, not sideways
+	if (!((player->powers[pw_strong] & (STR_FLOOR|STR_CEILING)) && (!(player->powers[pw_strong] & STR_WALL)) && (!(player->charflags & SF_CANBUSTWALLS)))) // Don't break sideways without wall powers
 	{
 		P_UnsetThingPosition(player->mo);
 		player->mo->x += player->mo->momx;
@@ -2591,8 +2588,24 @@ static void P_CheckBustableBlocks(player_t *player)
 			topheight = P_GetFOFTopZ(player->mo, node->m_sector, rover, player->mo->x, player->mo->y, NULL);
 			bottomheight = P_GetFOFBottomZ(player->mo, node->m_sector, rover, player->mo->x, player->mo->y, NULL);
 
-			if (((player->charability == CA_TWINSPIN) && (player->panim == PA_ABILITY))
-			|| ((P_MobjFlip(player->mo)*player->mo->momz < 0) && (player->pflags & PF_BOUNCING || ((player->charability2 == CA2_MELEE) && (player->panim == PA_ABILITY2)))))
+			// Height checks
+			if (player->mo->eflags & MFE_VERTICALFLIP)
+			{
+				if ((player->powers[pw_strong] & STR_FLOOR) && (!(player->powers[pw_strong] & STR_CEILING)) && player->mo->z > topheight)
+					continue;
+
+				if ((player->powers[pw_strong] & STR_CEILING) && (!(player->powers[pw_strong] & STR_FLOOR)) && player->mo->z + player->mo->height < bottomheight)
+					continue;
+			}
+			else
+			{
+				if ((player->powers[pw_strong] & STR_FLOOR) && (!(player->powers[pw_strong] & STR_CEILING)) && player->mo->z < bottomheight)
+					continue;
+
+				if ((player->powers[pw_strong] & STR_CEILING) && (!(player->powers[pw_strong] & STR_FLOOR)) && player->mo->z + player->mo->height > topheight)
+					continue;
+			}
+			if (player->powers[pw_strong] & (STR_FLOOR|STR_CEILING))
 			{
 				topheight -= player->mo->momz;
 				bottomheight -= player->mo->momz;
@@ -2660,7 +2673,7 @@ static void P_CheckBustableBlocks(player_t *player)
 		}
 	}
 bustupdone:
-	if (!(player->pflags & PF_BOUNCING))
+	if (!((player->powers[pw_strong] & (STR_FLOOR|STR_CEILING)) && (!(player->powers[pw_strong] & STR_WALL)) && (!(player->charflags & SF_CANBUSTWALLS))))
 	{
 		P_UnsetThingPosition(player->mo);
 		player->mo->x = oldx;
@@ -4690,6 +4703,7 @@ static void P_DoSpinAbility(player_t *player, ticcmd_t *cmd)
 						player->mo->momx += player->cmomx;
 						player->mo->momy += player->cmomy;
 						P_SetPlayerMobjState(player->mo, S_PLAY_MELEE);
+						player->powers[pw_strong] = STR_MELEE;
 						S_StartSound(player->mo, sfx_s3k42);
 					}
 					player->pflags |= PF_SPINDOWN;
@@ -4937,6 +4951,7 @@ static void P_DoTwinSpin(player_t *player)
 	S_StartSound(player->mo, sfx_s3k42);
 	player->mo->frame = 0;
 	P_SetPlayerMobjState(player->mo, S_PLAY_TWINSPIN);
+	player->powers[pw_strong] = STR_TWINSPIN;
 }
 
 //
@@ -5300,6 +5315,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 							player->pflags |= PF_THOKKED;
 						else
 							player->pflags |= (PF_THOKKED|PF_CANCARRY);
+						player->powers[pw_strong] = STR_FLY;
 					}
 					break;
 				case CA_GLIDEANDCLIMB:
@@ -5326,7 +5342,8 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 						P_SetPlayerMobjState(player->mo, S_PLAY_GLIDE);
 						if (playerspeed < glidespeed)
 							P_Thrust(player->mo, player->mo->angle, glidespeed - playerspeed);
-						player->pflags &= ~(PF_SPINNING|PF_STARTDASH);
+						player->pflags &= ~(PF_JUMPED|PF_SPINNING|PF_STARTDASH);
+						player->powers[pw_strong] = STR_GLIDE;
 					}
 					break;
 				case CA_DOUBLEJUMP: // Double-Jump
@@ -5383,6 +5400,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 						P_SetPlayerMobjState(player->mo, S_PLAY_BOUNCE);
 						player->pflags &= ~(PF_JUMPED|PF_NOJUMPDAMAGE);
 						player->pflags |= PF_THOKKED|PF_BOUNCING;
+						player->powers[pw_strong] = STR_BOUNCE;
 						player->mo->momx >>= 1;
 						player->mo->momy >>= 1;
 						player->mo->momz >>= 1;
@@ -12070,6 +12088,16 @@ void P_PlayerThink(player_t *player)
 	else
 		player->powers[pw_ignorelatch] = 0;
 
+	if (player->powers[pw_strong] & STR_ANIM)
+	{
+		if (!(player->stronganim))
+			player->stronganim = player->panim;
+		else if (player->panim != player->stronganim)
+			player->powers[pw_strong] = STR_NONE; 
+	}	
+	else if (player->stronganim)
+		player->stronganim = 0;
+			
 	//pw_super acts as a timer now
 	if (player->powers[pw_super]
 	&& (player->mo->state < &states[S_PLAY_SUPER_TRANS1]
@@ -12164,6 +12192,8 @@ void P_PlayerThink(player_t *player)
 			{
 				player->normalspeed = skins[player->skin].normalspeed; // Reset to default if not capable of entering dash mode.
 				player->jumpfactor = skins[player->skin].jumpfactor;
+				if (player->powers[pw_strong] & STR_DASH)
+					player->powers[pw_strong] = STR_NONE;
 			}
 		}
 		else if (P_IsObjectOnGround(player->mo)) // Activate dash mode if we're on the ground.
@@ -12173,6 +12203,9 @@ void P_PlayerThink(player_t *player)
 
 			if (player->jumpfactor < FixedMul(skins[player->skin].jumpfactor, 5*FRACUNIT/4)) // Boost jump height.
 				player->jumpfactor += FRACUNIT/300;
+
+			if ((player->charflags & SF_MACHINE) && (!(player->powers[pw_strong] == STR_METAL))) 
+					player->powers[pw_strong] = STR_METAL;
 		}
 
 		if (player->normalspeed >= skins[player->skin].normalspeed*2)
@@ -12190,6 +12223,8 @@ void P_PlayerThink(player_t *player)
 			player->normalspeed = skins[player->skin].normalspeed;
 			player->jumpfactor = skins[player->skin].jumpfactor;
 			S_StartSound(player->mo, sfx_kc65);
+			if (player->powers[pw_strong] & STR_DASH)
+				player->powers[pw_strong] = STR_NONE;
 		}
 		dashmode = 0;
 	}

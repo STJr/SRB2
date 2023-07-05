@@ -152,10 +152,8 @@ boolean P_DoSpring(mobj_t *spring, mobj_t *object)
 	{
 		if (spring->info->painchance == 3)
 			;
-		else if (object->player->charability == CA_TWINSPIN && object->player->panim == PA_ABILITY)
+		else if (object->player->powers[pw_strong] & STR_SPRING)
 			strong = 1;
-		else if (object->player->charability2 == CA2_MELEE && object->player->panim == PA_ABILITY2)
-			strong = 2;
 	}
 
 	if (spring->info->painchance == -1) // Pinball bumper mode.
@@ -455,7 +453,8 @@ springstate:
 
 		if (strong)
 		{
-			P_TwinSpinRejuvenate(object->player, (strong == 1 ? object->player->thokitem : object->player->revitem));
+			if (object->player->charability == CA_TWINSPIN || object->player->charability2 == CA2_MELEE)
+				P_TwinSpinRejuvenate(object->player, (object->player->charability == CA_TWINSPIN ? object->player->thokitem : object->player->revitem));
 			S_StartSound(object, sfx_sprong); // strong spring. sprong.
 		}
 	}
@@ -796,43 +795,25 @@ static boolean PIT_CheckThing(mobj_t *thing)
 		return true;
 	}
 
-	// SF_DASHMODE users destroy spikes and monitors, CA_TWINSPIN users and CA2_MELEE users destroy spikes.
-	if ((tmthing->player)
-		&& ((((tmthing->player->charflags & (SF_DASHMODE|SF_MACHINE)) == (SF_DASHMODE|SF_MACHINE)) && (tmthing->player->dashmode >= DASHMODE_THRESHOLD)
-		&& (thing->flags & (MF_MONITOR)
-		|| (thing->type == MT_SPIKE
-		|| thing->type == MT_WALLSPIKE)))
-	|| ((((tmthing->player->charability == CA_TWINSPIN) && (tmthing->player->panim == PA_ABILITY))
-	|| (tmthing->player->charability2 == CA2_MELEE && tmthing->player->panim == PA_ABILITY2))
-		&& (thing->type == MT_SPIKE
-		|| thing->type == MT_WALLSPIKE))))
+	// STR_SPIKE users destroy spikes
+	if ((tmthing->player) && ((tmthing->player->powers[pw_strong] & STR_SPIKE) && (thing->type == MT_SPIKE || thing->type == MT_WALLSPIKE)))
 	{
-		if ((thing->flags & (MF_MONITOR)) && (thing->health <= 0 || !(thing->flags & MF_SHOOTABLE)))
-			return true;
-		blockdist = thing->radius + tmthing->radius;
-		if (abs(thing->x - tmx) >= blockdist || abs(thing->y - tmy) >= blockdist)
-			return true; // didn't hit it
-		// see if it went over / under
-		if (tmthing->z > thing->z + thing->height)
-			return true; // overhead
-		if (tmthing->z + tmthing->height < thing->z)
-			return true; // underneath
-		if (thing->type == MT_SPIKE
-		|| thing->type == MT_WALLSPIKE)
-		{
-			mobj_t *iter;
-			if (thing->flags & MF_SOLID)
-				S_StartSound(tmthing, thing->info->deathsound);
-			for (iter = thing->subsector->sector->thinglist; iter; iter = iter->snext)
-				if (iter->type == thing->type && iter->health > 0 && iter->flags & MF_SOLID && (iter == thing || P_AproxDistance(P_AproxDistance(thing->x - iter->x, thing->y - iter->y), thing->z - iter->z) < 56*thing->scale))//FixedMul(56*FRACUNIT, thing->scale))
-					P_KillMobj(iter, tmthing, tmthing, 0);
-			return true;
-		}
-		else
-		{
-			if (P_DamageMobj(thing, tmthing, tmthing, 1, 0))
-				return true;
-		}
+		mobj_t *iter;
+        	blockdist = thing->radius + tmthing->radius;
+        	if (abs(thing->x - tmx) >= blockdist || abs(thing->y - tmy) >= blockdist)
+            		return true; // didn't hit it
+        	// see if it went over / under
+        	if (tmthing->z > thing->z + thing->height)
+            		return true; // overhead
+        	if (tmthing->z + tmthing->height < thing->z)
+            		return true; // underneath
+
+		if (thing->flags & MF_SOLID)
+			S_StartSound(tmthing, thing->info->deathsound);
+		for (iter = thing->subsector->sector->thinglist; iter; iter = iter->snext)
+			if (iter->type == thing->type && iter->health > 0 && iter->flags & MF_SOLID && (iter == thing || P_AproxDistance(P_AproxDistance(thing->x - iter->x, thing->y - iter->y), thing->z - iter->z) < 56*thing->scale))//FixedMul(56*FRACUNIT, thing->scale))
+				P_KillMobj(iter, tmthing, tmthing, 0);
+		return true;
 	}
 
 	// vectorise metal - done in a special case as at this point neither has the right flags for touching
@@ -1687,25 +1668,22 @@ static boolean PIT_CheckThing(mobj_t *thing)
 				// Going down? Then bounce back up.
 				if (P_DamageMobj(thing, tmthing, tmthing, 1, 0) // break the monitor
 				&& (flipval*(*momz) < 0) // monitor is on the floor and you're going down, or on the ceiling and you're going up
-				&& (elementalpierce != 1)) // you're not piercing through the monitor...
+				&& (elementalpierce != 1) && (!(player->powers[pw_strong] & STR_HEAVY))) // you're not piercing through the monitor...
 				{
-					if (!(player->charability2 == CA2_MELEE && player->panim == PA_ABILITY2))
+					fixed_t setmomz = -*momz; // Store this, momz get changed by P_DoJump within P_DoBubbleBounce
+
+					if (elementalpierce == 2) // Reset bubblewrap, part 1
+						P_DoBubbleBounce(player);
+					*momz = setmomz; // Therefore, you should be thrust in the opposite direction, vertically.
+					if (player->charability == CA_TWINSPIN && player->panim == PA_ABILITY)
+						P_TwinSpinRejuvenate(player, player->thokitem);
+					if (elementalpierce == 2) // Reset bubblewrap, part 2
 					{
-						fixed_t setmomz = -*momz; // Store this, momz get changed by P_DoJump within P_DoBubbleBounce
+						boolean underwater = tmthing->eflags & MFE_UNDERWATER;
 
-						if (elementalpierce == 2) // Reset bubblewrap, part 1
-							P_DoBubbleBounce(player);
-						*momz = setmomz; // Therefore, you should be thrust in the opposite direction, vertically.
-						if (player->charability == CA_TWINSPIN && player->panim == PA_ABILITY)
-							P_TwinSpinRejuvenate(player, player->thokitem);
-						if (elementalpierce == 2) // Reset bubblewrap, part 2
-						{
-							boolean underwater = tmthing->eflags & MFE_UNDERWATER;
-
-							if (underwater)
-								*momz /= 2;
-							*momz -= (*momz/(underwater ? 8 : 4)); // Cap the height!
-						}
+						if (underwater)
+							*momz /= 2;
+						*momz -= (*momz/(underwater ? 8 : 4)); // Cap the height!
 					}
 				}
 				if (!(elementalpierce == 1 && thing->flags & MF_GRENADEBOUNCE)) // prevent gold monitor clipthrough.
