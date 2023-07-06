@@ -10581,6 +10581,8 @@ static fixed_t P_DefaultMobjShadowScale (mobj_t *thing)
 
 			if (thing->flags & (MF_ENEMY|MF_BOSS))
 				return FRACUNIT;
+			else if (P_WeaponOrPanel(thing->type))
+				return 2*FRACUNIT/3;
 			else
 				return 0;
 	}
