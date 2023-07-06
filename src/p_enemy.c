@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2022 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -1405,6 +1405,9 @@ void A_StatueBurst(mobj_t *actor)
 	if (LUA_CallAction(A_STATUEBURST, actor))
 		return;
 
+	// make statue intangible upon spawning so you can't stand above the created object for 40 tics
+	actor->flags &= ~MF_SOLID;
+
 	if (!locvar1 || !(new = P_SpawnMobjFromMobj(actor, 0, 0, 0, locvar1)))
 		return;
 
@@ -1568,6 +1571,8 @@ void A_PointyThink(mobj_t *actor)
 	// Okay, we found the closest player. Let's move based on his movement.
 	P_SetTarget(&actor->target, player->mo);
 	A_FaceTarget(actor);
+	if (P_MobjWasRemoved(actor))
+		return;
 
 	if (P_AproxDistance(player->mo->x - actor->x, player->mo->y - actor->y) < P_AproxDistance(player->mo->x + player->mo->momx - actor->x, player->mo->y + player->mo->momy - actor->y))
 		sign = -1; // Player is moving away
@@ -1584,6 +1589,10 @@ void A_PointyThink(mobj_t *actor)
 	}
 
 	if (!actor->tracer) // For some reason we do not have spike balls...
+		return;
+
+	// Catch case where actor lastlook is -1 (which segfaults the following blocks)
+	if (actor->lastlook < 0)
 		return;
 
 	// Position spike balls relative to the value of 'lastlook'.
@@ -1683,6 +1692,8 @@ void A_HoodFire(mobj_t *actor)
 	}
 
 	A_FaceTarget(actor);
+	if (P_MobjWasRemoved(actor))
+		return;
 
 	if (!(arrow = P_SpawnMissile(actor, actor->target, (mobjtype_t)locvar1)))
 		return;
@@ -2224,7 +2235,7 @@ void A_CrushclawLaunch(mobj_t *actor)
 		}
 	}
 
-	if (!actor->target)
+	if (P_MobjWasRemoved(actor->target))
 		return;
 
 	{
@@ -2263,6 +2274,8 @@ void A_VultureVtol(mobj_t *actor)
 	actor->flags |= MF_FLOAT;
 
 	A_FaceTarget(actor);
+	if (P_MobjWasRemoved(actor))
+		return;
 
 	S_StopSound(actor);
 
@@ -2361,6 +2374,9 @@ void A_VultureHover(mobj_t *actor)
 	P_VultureHoverParticle(actor);
 
 	A_FaceTarget(actor);
+	if (P_MobjWasRemoved(actor))
+		return;
+
 	targetz = actor->target->z + actor->target->height / 2;
 	for (i = -1; i <= 1; i++)
 	{
@@ -2668,7 +2684,7 @@ void A_LobShot(mobj_t *actor)
 	fixed_t z;
 	fixed_t dist;
 	fixed_t vertical, horizontal;
-	fixed_t airtime = var2 & 65535;
+	fixed_t airtime = max(1, var2 & 65535);
 
 	if (LUA_CallAction(A_LOBSHOT, actor))
 		return;
@@ -2677,6 +2693,8 @@ void A_LobShot(mobj_t *actor)
 		return;
 
 	A_FaceTarget(actor);
+	if (P_MobjWasRemoved(actor))
+		return;
 
 	if (actor->eflags & MFE_VERTICALFLIP)
 	{
@@ -2772,6 +2790,8 @@ void A_FireShot(mobj_t *actor)
 		return;
 
 	A_FaceTarget(actor);
+	if (P_MobjWasRemoved(actor))
+		return;
 
 	if (actor->eflags & MFE_VERTICALFLIP)
 		z = actor->z + actor->height - FixedMul(48*FRACUNIT + locvar2*FRACUNIT, actor->scale);
@@ -2810,6 +2830,8 @@ void A_SuperFireShot(mobj_t *actor)
 		return;
 
 	A_FaceTarget(actor);
+	if (P_MobjWasRemoved(actor))
+		return;
 
 	if (actor->eflags & MFE_VERTICALFLIP)
 		z = actor->z + actor->height - FixedMul(48*FRACUNIT + locvar2*FRACUNIT, actor->scale);
@@ -2857,6 +2879,8 @@ void A_BossFireShot(mobj_t *actor)
 		return;
 
 	A_FaceTarget(actor);
+	if (P_MobjWasRemoved(actor))
+		return;
 
 	switch (locvar2)
 	{
@@ -2944,6 +2968,8 @@ void A_Boss7FireMissiles(mobj_t *actor)
 	}
 
 	A_FaceTarget(actor);
+	if (P_MobjWasRemoved(actor))
+		return;
 
 	S_StartSound(NULL, locvar2);
 
@@ -3328,6 +3354,8 @@ void A_SkullAttack(mobj_t *actor)
 	if (actor->info->activesound)
 		S_StartSound(actor, actor->info->activesound);
 	A_FaceTarget(actor);
+	if (P_MobjWasRemoved(actor))
+		return;
 
 	dist = P_AproxDistance(dest->x - actor->x, dest->y - actor->y);
 
@@ -3439,6 +3467,9 @@ void A_BossZoom(mobj_t *actor)
 	if (actor->info->attacksound)
 		S_StartAttackSound(actor, actor->info->attacksound);
 	A_FaceTarget(actor);
+	if (P_MobjWasRemoved(actor))
+		return;
+
 	an = actor->angle >> ANGLETOFINESHIFT;
 	actor->momx = FixedMul(FixedMul(actor->info->speed*5*FRACUNIT, actor->scale), FINECOSINE(an));
 	actor->momy = FixedMul(FixedMul(actor->info->speed*5*FRACUNIT, actor->scale), FINESINE(an));
@@ -4856,12 +4887,12 @@ void A_FishJump(mobj_t *actor)
 		else
 		{
 			if (actor->spawnpoint && actor->spawnpoint->args[0])
-				jumpval = actor->spawnpoint->args[0];
+				jumpval = actor->spawnpoint->args[0] << (FRACBITS - 2);
 			else
-				jumpval = 44;
+				jumpval = 44 << (FRACBITS - 2);
 		}
 
-		actor->momz = FixedMul(jumpval << (FRACBITS - 2), actor->scale);
+		actor->momz = FixedMul(jumpval, actor->scale);
 		P_SetMobjStateNF(actor, actor->info->seestate);
 	}
 
@@ -5290,7 +5321,7 @@ void A_SignPlayer(mobj_t *actor)
 
 	actor->tracer->color = signcolor;
 	if (signcolor && signcolor < numskincolors)
-		signframe += (15 - skincolors[skincolors[signcolor].invcolor].invshade);
+		signframe += (15 - skincolors[facecolor].invshade);
 	actor->tracer->frame = signframe;
 }
 
@@ -5536,6 +5567,9 @@ void A_JetgShoot(mobj_t *actor)
 		return;
 
 	A_FaceTarget(actor);
+	if (P_MobjWasRemoved(actor))
+		return;
+
 	P_SpawnMissile(actor, actor->target, (mobjtype_t)actor->info->raisestate);
 
 	if (ultimatemode)
@@ -5570,6 +5604,9 @@ void A_ShootBullet(mobj_t *actor)
 		return;
 
 	A_FaceTarget(actor);
+	if (P_MobjWasRemoved(actor))
+		return;
+
 	P_SpawnMissile(actor, actor->target, (mobjtype_t)actor->info->raisestate);
 
 	if (actor->info->attacksound)
@@ -7428,6 +7465,8 @@ void A_Boss7Chase(mobj_t *actor)
 		&& (actor->target->player->powers[pw_carry] == CR_GENERIC))
 	{
 		A_FaceTarget(actor);
+		if (P_MobjWasRemoved(actor))
+			return;
 		P_SetMobjState(actor, S_BLACKEGG_SHOOT1);
 		actor->movecount = TICRATE + P_RandomByte()/2;
 		return;
@@ -7445,6 +7484,8 @@ void A_Boss7Chase(mobj_t *actor)
 				if (actor->z < 1056*FRACUNIT)
 				{
 					A_FaceTarget(actor);
+					if (P_MobjWasRemoved(actor))
+						return;
 					P_SetMobjState(actor, actor->info->xdeathstate);
 					actor->movecount = 7*TICRATE + P_RandomByte();
 					break;
@@ -7453,6 +7494,8 @@ void A_Boss7Chase(mobj_t *actor)
 				/* FALLTHRU */
 			case 1: // Chaingun Goop
 				A_FaceTarget(actor);
+				if (P_MobjWasRemoved(actor))
+					return;
 				P_SetMobjState(actor, S_BLACKEGG_SHOOT1);
 
 				if (actor->health > actor->info->damage)
@@ -7462,6 +7505,8 @@ void A_Boss7Chase(mobj_t *actor)
 				break;
 			case 2: // Homing Missile
 				A_FaceTarget(actor);
+				if (P_MobjWasRemoved(actor))
+					return;
 				P_SetMobjState(actor, actor->info->missilestate);
 				S_StartSound(0, sfx_beflap);
 				break;
@@ -8179,6 +8224,9 @@ void A_Boss3Path(mobj_t *actor)
 		P_SetTarget(&actor->target, actor->tracer->target);
 		var1 = 0, var2 = 0;
 		A_FaceTarget(actor);
+		if (P_MobjWasRemoved(actor))
+			return;
+
 		if (actor->tracer->state == &states[actor->tracer->info->missilestate])
 			P_SetMobjState(actor, actor->info->missilestate);
 		return;
@@ -9853,6 +9901,8 @@ void A_SplitShot(mobj_t *actor)
 		return;
 
 	A_FaceTarget(actor);
+	if (P_MobjWasRemoved(actor))
+		return;
 	{
 		const angle_t an = (actor->angle + ANGLE_90) >> ANGLETOFINESHIFT;
 		const fixed_t fasin = FINESINE(an);
@@ -9916,6 +9966,9 @@ void A_MultiShot(mobj_t *actor)
 
 	if (actor->target)
 		A_FaceTarget(actor);
+
+	if (P_MobjWasRemoved(actor))
+		return;
 
 	if(loc1lw > 90)
 		ad = FixedMul(90*FRACUNIT, actor->scale);
@@ -11061,6 +11114,8 @@ void A_VileTarget(mobj_t *actor)
 		return;
 
 	A_FaceTarget(actor);
+	if (P_MobjWasRemoved(actor))
+		return;
 
 	// Determine object to spawn
 	if (locvar1 <= 0 || locvar1 >= NUMMOBJTYPES)
@@ -11148,6 +11203,8 @@ void A_VileAttack(mobj_t *actor)
 		return;
 
 	A_FaceTarget(actor);
+	if (P_MobjWasRemoved(actor))
+		return;
 
 	if (locvar1 <= 0 || locvar1 >= NUMSFX)
 		soundtoplay = sfx_brakrx;
@@ -11466,6 +11523,8 @@ void A_BrakFireShot(mobj_t *actor)
 		return;
 
 	A_FaceTarget(actor);
+	if (P_MobjWasRemoved(actor))
+		return;
 
 	x = actor->x
 		+ P_ReturnThrustX(actor, actor->angle, FixedMul(64*FRACUNIT, actor->scale))
@@ -11583,6 +11642,9 @@ void A_BrakLobShot(mobj_t *actor)
 
 	// Okay, complicated math done. Let's fire our object already, sheesh.
 	A_FaceTarget(actor);
+	if (P_MobjWasRemoved(actor))
+		return;
+
 	if (locvar1 <= 0 || locvar1 >= NUMMOBJTYPES)
 		typeOfShot = MT_CANNONBALL;
 	else typeOfShot = (mobjtype_t)locvar1;
@@ -12667,6 +12729,8 @@ void A_WhoCaresIfYourSonIsABee(mobj_t *actor)
 		return;
 
 	A_FaceTarget(actor);
+	if (P_MobjWasRemoved(actor))
+		return;
 
 	if (actor->extravalue1)
 		actor->extravalue1--;
@@ -13455,6 +13519,9 @@ static boolean PIT_DustDevilLaunch(mobj_t *thing)
 	player_t *player = thing->player;
 
 	if (!player)
+		return true;
+
+	if (player->spectator)
 		return true;
 
 	if (player->powers[pw_carry] != CR_DUSTDEVIL && (player->powers[pw_ignorelatch] & (1<<15)))

@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2022 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -47,6 +47,9 @@
 #include "lua_libs.h"
 #include "md5.h"
 #include "m_perfstats.h"
+
+// aaaaaa
+#include "i_joy.h"
 
 #ifndef NONET
 // cl loading screen
@@ -650,6 +653,22 @@ static UINT8 Snake_GetOppositeDir(UINT8 dir)
 		return 12 + 5 - dir;
 }
 
+event_t *snakejoyevents[MAXEVENTS];
+UINT16 joyeventcount = 0;
+
+// I'm screaming the hack is clean - ashi
+static boolean Snake_Joy_Grabber(event_t *ev)
+{
+	if (ev->type == ev_joystick  && ev->key == 0)
+	{
+		snakejoyevents[joyeventcount] = ev;
+		joyeventcount++;
+		return true;
+	}
+	else
+		return false;
+}
+
 static void Snake_FindFreeSlot(UINT8 *freex, UINT8 *freey, UINT8 headx, UINT8 heady)
 {
 	UINT8 x, y;
@@ -676,6 +695,9 @@ static void Snake_Handle(void)
 	UINT8 x, y;
 	UINT8 oldx, oldy;
 	UINT16 i;
+	UINT16 j;
+	UINT16 joystate = 0;
+	static INT32 pjoyx = 0, pjoyy = 0;
 
 	// Handle retry
 	if (snake->gameover && (PLAYER1INPUTDOWN(GC_JUMP) || gamekeydown[KEY_ENTER]))
@@ -704,23 +726,58 @@ static void Snake_Handle(void)
 	oldx = snake->snakex[1];
 	oldy = snake->snakey[1];
 
+	// process the input events in here dear lord
+	for (j = 0; j < joyeventcount; j++)
+	{
+		event_t *ev = snakejoyevents[j];
+		const INT32 jdeadzone = (JOYAXISRANGE * cv_digitaldeadzone.value) / FRACUNIT;
+		if (ev->y != INT32_MAX)
+		{
+			if (Joystick.bGamepadStyle || abs(ev->y) > jdeadzone)
+			{
+				if (ev->y < 0 && pjoyy >= 0)
+					joystate = 1;
+				else if (ev->y > 0 && pjoyy <= 0)
+					joystate = 2;
+				pjoyy = ev->y;
+			}
+			else
+				pjoyy = 0;
+		}
+
+		if (ev->x != INT32_MAX)
+		{
+			if (Joystick.bGamepadStyle || abs(ev->x) > jdeadzone)
+			{
+				if (ev->x < 0 && pjoyx >= 0)
+					joystate = 3;
+				else if (ev->x > 0 && pjoyx <= 0)
+					joystate = 4;
+				pjoyx = ev->x;
+			}
+			else
+				pjoyx = 0;
+		}
+	}
+	joyeventcount = 0;
+
 	// Update direction
-	if (gamekeydown[KEY_LEFTARROW])
+	if (PLAYER1INPUTDOWN(GC_STRAFELEFT) || gamekeydown[KEY_LEFTARROW] || joystate == 3)
 	{
 		if (snake->snakelength < 2 || x <= oldx)
 			snake->snakedir[0] = 1;
 	}
-	else if (gamekeydown[KEY_RIGHTARROW])
+	else if (PLAYER1INPUTDOWN(GC_STRAFERIGHT) || gamekeydown[KEY_RIGHTARROW] || joystate == 4)
 	{
 		if (snake->snakelength < 2 || x >= oldx)
 			snake->snakedir[0] = 2;
 	}
-	else if (gamekeydown[KEY_UPARROW])
+	else if (PLAYER1INPUTDOWN(GC_FORWARD) || gamekeydown[KEY_UPARROW] || joystate == 1)
 	{
 		if (snake->snakelength < 2 || y <= oldy)
 			snake->snakedir[0] = 3;
 	}
-	else if (gamekeydown[KEY_DOWNARROW])
+	else if (PLAYER1INPUTDOWN(GC_BACKWARD) || gamekeydown[KEY_DOWNARROW] || joystate == 2)
 	{
 		if (snake->snakelength < 2 || y >= oldy)
 			snake->snakedir[0] = 4;
@@ -1261,9 +1318,9 @@ static boolean CL_SendJoin(void)
 
 static INT32 FindRejoinerNum(SINT8 node)
 {
-	char strippednodeaddress[64];
+	char addressbuffer[64];
 	const char *nodeaddress;
-	char *port;
+	const char *strippednodeaddress;
 	INT32 i;
 
 	// Make sure there is no dead dress before proceeding to the stripping
@@ -1274,10 +1331,8 @@ static INT32 FindRejoinerNum(SINT8 node)
 		return -1;
 
 	// Strip the address of its port
-	strcpy(strippednodeaddress, nodeaddress);
-	port = strchr(strippednodeaddress, ':');
-	if (port)
-		*port = '\0';
+	strcpy(addressbuffer, nodeaddress);
+	strippednodeaddress = I_NetSplitAddress(addressbuffer, NULL);
 
 	// Check if any player matches the stripped address
 	for (i = 0; i < MAXPLAYERS; i++)
@@ -1320,8 +1375,9 @@ static void SV_SendServerInfo(INT32 node, tic_t servertime)
 	netbuffer->u.serverinfo.time = (tic_t)LONG(servertime);
 	netbuffer->u.serverinfo.leveltime = (tic_t)LONG(leveltime);
 
-	netbuffer->u.serverinfo.numberofplayer = (UINT8)D_NumPlayers();
-	netbuffer->u.serverinfo.maxplayer = (UINT8)cv_maxplayers.value;
+	// Exclude bots from both counts
+	netbuffer->u.serverinfo.numberofplayer = (UINT8)(D_NumPlayers() - D_NumBots());
+	netbuffer->u.serverinfo.maxplayer = (UINT8)(cv_maxplayers.value - D_NumBots());
 
 	netbuffer->u.serverinfo.refusereason = GetRefuseReason(node);
 
@@ -1448,6 +1504,7 @@ static boolean SV_SendServerConfig(INT32 node)
 	netbuffer->u.servercfg.gamestate = (UINT8)gamestate;
 	netbuffer->u.servercfg.gametype = (UINT8)gametype;
 	netbuffer->u.servercfg.modifiedgame = (UINT8)modifiedgame;
+	netbuffer->u.servercfg.usedCheats = (UINT8)usedCheats;
 
 	memcpy(netbuffer->u.servercfg.server_context, server_context, 8);
 
@@ -1934,7 +1991,7 @@ static void M_ConfirmConnect(event_t *ev)
 #ifndef NONET
 	if (ev->type == ev_keydown)
 	{
-		if (ev->key == ' ' || ev->key == 'y' || ev->key == KEY_ENTER)
+		if (ev->key == ' ' || ev->key == 'y' || ev->key == KEY_ENTER || ev->key == KEY_JOY1)
 		{
 			if (totalfilesrequestednum > 0)
 			{
@@ -1949,7 +2006,7 @@ static void M_ConfirmConnect(event_t *ev)
 
 			M_ClearMenus(true);
 		}
-		else if (ev->key == 'n' || ev->key == KEY_ESCAPE)
+		else if (ev->key == 'n' || ev->key == KEY_ESCAPE || ev->key == KEY_JOY1 + 3)
 		{
 			cl_mode = CL_ABORTED;
 			M_ClearMenus(true);
@@ -1964,6 +2021,7 @@ static boolean CL_FinishedFileList(void)
 {
 	INT32 i;
 	char *downloadsize = NULL;
+
 	//CONS_Printf(M_GetText("Checking files...\n"));
 	i = CL_CheckFiles();
 	if (i == 4) // still checking ...
@@ -2379,8 +2437,14 @@ static boolean CL_ServerConnectionTicker(const char *tmpsave, tic_t *oldtic, tic
 			D_ProcessEvents(); //needed for menu system to receive inputs
 		else
 		{
+			// my hand has been forced and I am dearly sorry for this awful hack :vomit:
 			for (; eventtail != eventhead; eventtail = (eventtail+1) & (MAXEVENTS-1))
-				G_MapEventsToControls(&events[eventtail]);
+			{
+#ifndef NONET
+				if (!Snake_Joy_Grabber(&events[eventtail]))
+#endif
+					G_MapEventsToControls(&events[eventtail]);
+			}
 		}
 
 		if (gamekeydown[KEY_ESCAPE] || gamekeydown[KEY_JOY1+1] || cl_mode == CL_ABORTED)
@@ -2421,7 +2485,7 @@ static boolean CL_ServerConnectionTicker(const char *tmpsave, tic_t *oldtic, tic
 		{
 			if (!snake)
 			{
-				F_MenuPresTicker(true); // title sky
+				F_MenuPresTicker(); // title sky
 				F_TitleScreenTicker(true);
 				F_TitleScreenDrawer();
 			}
@@ -3442,10 +3506,10 @@ static void Got_KickCmd(UINT8 **p, INT32 playernum)
 static CV_PossibleValue_t netticbuffer_cons_t[] = {{0, "MIN"}, {3, "MAX"}, {0, NULL}};
 consvar_t cv_netticbuffer = CVAR_INIT ("netticbuffer", "1", CV_SAVE, netticbuffer_cons_t, NULL);
 
-consvar_t cv_allownewplayer = CVAR_INIT ("allowjoin", "On", CV_SAVE|CV_NETVAR, CV_OnOff, NULL);
+consvar_t cv_allownewplayer = CVAR_INIT ("allowjoin", "On", CV_SAVE|CV_NETVAR|CV_ALLOWLUA, CV_OnOff, NULL);
 consvar_t cv_joinnextround = CVAR_INIT ("joinnextround", "Off", CV_SAVE|CV_NETVAR, CV_OnOff, NULL); /// \todo not done
 static CV_PossibleValue_t maxplayers_cons_t[] = {{2, "MIN"}, {32, "MAX"}, {0, NULL}};
-consvar_t cv_maxplayers = CVAR_INIT ("maxplayers", "8", CV_SAVE|CV_NETVAR, maxplayers_cons_t, NULL);
+consvar_t cv_maxplayers = CVAR_INIT ("maxplayers", "8", CV_SAVE|CV_NETVAR|CV_ALLOWLUA, maxplayers_cons_t, NULL);
 static CV_PossibleValue_t joindelay_cons_t[] = {{1, "MIN"}, {3600, "MAX"}, {0, "Off"}, {0, NULL}};
 consvar_t cv_joindelay = CVAR_INIT ("joindelay", "10", CV_SAVE|CV_NETVAR, joindelay_cons_t, NULL);
 static CV_PossibleValue_t rejointimeout_cons_t[] = {{1, "MIN"}, {60 * FRACUNIT, "MAX"}, {0, "Off"}, {0, NULL}};
@@ -3456,7 +3520,7 @@ consvar_t cv_resynchattempts = CVAR_INIT ("resynchattempts", "10", CV_SAVE|CV_NE
 consvar_t cv_blamecfail = CVAR_INIT ("blamecfail", "Off", CV_SAVE|CV_NETVAR, CV_OnOff, NULL);
 
 // max file size to send to a player (in kilobytes)
-static CV_PossibleValue_t maxsend_cons_t[] = {{0, "MIN"}, {51200, "MAX"}, {0, NULL}};
+static CV_PossibleValue_t maxsend_cons_t[] = {{0, "MIN"}, {204800, "MAX"}, {0, NULL}};
 consvar_t cv_maxsend = CVAR_INIT ("maxsend", "4096", CV_SAVE|CV_NETVAR, maxsend_cons_t, NULL);
 consvar_t cv_noticedownload = CVAR_INIT ("noticedownload", "Off", CV_SAVE|CV_NETVAR, CV_OnOff, NULL);
 
@@ -3473,22 +3537,22 @@ void D_ClientServerInit(void)
 		VERSION/100, VERSION%100, SUBVERSION));
 
 #ifndef NONET
-	COM_AddCommand("getplayernum", Command_GetPlayerNum);
-	COM_AddCommand("kick", Command_Kick);
-	COM_AddCommand("ban", Command_Ban);
-	COM_AddCommand("banip", Command_BanIP);
-	COM_AddCommand("clearbans", Command_ClearBans);
-	COM_AddCommand("showbanlist", Command_ShowBan);
-	COM_AddCommand("reloadbans", Command_ReloadBan);
-	COM_AddCommand("connect", Command_connect);
-	COM_AddCommand("nodes", Command_Nodes);
-	COM_AddCommand("resendgamestate", Command_ResendGamestate);
+	COM_AddCommand("getplayernum", Command_GetPlayerNum, COM_LUA);
+	COM_AddCommand("kick", Command_Kick, COM_LUA);
+	COM_AddCommand("ban", Command_Ban, COM_LUA);
+	COM_AddCommand("banip", Command_BanIP, COM_LUA);
+	COM_AddCommand("clearbans", Command_ClearBans, COM_LUA);
+	COM_AddCommand("showbanlist", Command_ShowBan, COM_LUA);
+	COM_AddCommand("reloadbans", Command_ReloadBan, COM_LUA);
+	COM_AddCommand("connect", Command_connect, COM_LUA);
+	COM_AddCommand("nodes", Command_Nodes, COM_LUA);
+	COM_AddCommand("resendgamestate", Command_ResendGamestate, COM_LUA);
 #ifdef PACKETDROP
-	COM_AddCommand("drop", Command_Drop);
-	COM_AddCommand("droprate", Command_Droprate);
+	COM_AddCommand("drop", Command_Drop, COM_LUA);
+	COM_AddCommand("droprate", Command_Droprate, COM_LUA);
 #endif
 #ifdef _DEBUG
-	COM_AddCommand("numnodes", Command_Numnodes);
+	COM_AddCommand("numnodes", Command_Numnodes, COM_LUA);
 #endif
 #endif
 
@@ -3578,6 +3642,9 @@ void SV_ResetServer(void)
 	memset(server_context, '-', 8);
 
 	CV_RevertNetVars();
+
+	// Ensure synched when creating a new server
+	M_CopyGameData(serverGamedata, clientGamedata);
 
 	DEBFILE("\n-=-=-=-=-=-=-= Server Reset =-=-=-=-=-=-=-\n\n");
 }
@@ -3702,14 +3769,13 @@ static void Got_AddPlayer(UINT8 **p, INT32 playernum)
 
 		if (server && I_GetNodeAddress)
 		{
+			char addressbuffer[64];
 			const char *address = I_GetNodeAddress(node);
-			char *port = NULL;
 			if (address) // MI: fix msvcrt.dll!_mbscat crash?
 			{
-				strcpy(playeraddress[newplayernum], address);
-				port = strchr(playeraddress[newplayernum], ':');
-				if (port)
-					*port = '\0';
+				strcpy(addressbuffer, address);
+				strcpy(playeraddress[newplayernum],
+						I_NetSplitAddress(addressbuffer, NULL));
 			}
 		}
 	}
@@ -4013,7 +4079,7 @@ ConnectionRefused (SINT8 node, INT32 rejoinernum)
 		{
 			return va(
 					"Maximum players reached: %d",
-					cv_maxplayers.value);
+					cv_maxplayers.value - D_NumBots());
 		}
 	}
 
@@ -4341,6 +4407,8 @@ static void HandlePacketFromAwayNode(SINT8 node)
 				maketic = gametic = neededtic = (tic_t)LONG(netbuffer->u.servercfg.gametic);
 				G_SetGametype(netbuffer->u.servercfg.gametype);
 				modifiedgame = netbuffer->u.servercfg.modifiedgame;
+				if (netbuffer->u.servercfg.usedCheats)
+					G_SetUsedCheats(true);
 				memcpy(server_context, netbuffer->u.servercfg.server_context, 8);
 			}
 
@@ -5541,6 +5609,19 @@ INT32 D_NumPlayers(void)
 	INT32 num = 0, ix;
 	for (ix = 0; ix < MAXPLAYERS; ix++)
 		if (playeringame[ix])
+			num++;
+	return num;
+}
+
+/** Similar to the above, but counts only bots.
+  * Purpose is to remove bots from both the player count and the
+  * max player count on the server view
+*/
+INT32 D_NumBots(void)
+{
+	INT32 num = 0, ix;
+	for (ix = 0; ix < MAXPLAYERS; ix++)
+		if (playeringame[ix] && players[ix].bot)
 			num++;
 	return num;
 }

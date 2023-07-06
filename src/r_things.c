@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2022 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -1324,6 +1324,8 @@ static void R_ProjectDropShadow(mobj_t *thing, vissprite_t *vis, fixed_t scale, 
 	if (trans >= 9) return;
 
 	scalemul = FixedMul(FRACUNIT - floordiff/640, scale);
+	if ((thing->scale != thing->old_scale) && (thing->scale >= FRACUNIT/1024)) // Interpolate shadows when scaling mobjs
+		scalemul = FixedMul(scalemul, FixedDiv(interp.scale, thing->scale));
 
 	patch = W_CachePatchName("DSHADOW", PU_SPRITE);
 	xscale = FixedDiv(projection, tz);
@@ -1477,7 +1479,7 @@ static void R_ProjectSprite(mobj_t *thing)
 	fixed_t paperoffset = 0, paperdistance = 0;
 	angle_t centerangle = 0;
 
-	INT32 dispoffset = thing->info->dispoffset;
+	INT32 dispoffset = thing->dispoffset;
 
 	//SoM: 3/17/2000
 	fixed_t gz = 0, gzt = 0;
@@ -1785,7 +1787,11 @@ static void R_ProjectSprite(mobj_t *thing)
 
 		range++; // fencepost problem
 
-		scalestep = ((yscale2 - yscale)/range) ?: 1;
+		// Compatibility with MSVC - SSNTails
+		scalestep = ((yscale2 - yscale) / range);
+		if (!scalestep)
+			scalestep = 1;
+
 		xscale = FixedDiv(range<<FRACBITS, abs(offset2));
 
 		// The following two are alternate sorting methods which might be more applicable in some circumstances. TODO - maybe enable via MF2?
@@ -1915,7 +1921,7 @@ static void R_ProjectSprite(mobj_t *thing)
 		if (shadoweffects)
 		{
 			mobj_t *caster = thing->target;
-			interpmobjstate_t casterinterp = {};
+			interpmobjstate_t casterinterp = { 0 }; // MSVC compatibility - SSNTails
 
 			if (R_UsingFrameInterpolation() && !paused)
 			{

@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2022 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -40,7 +40,7 @@ extern UINT8 keyboard_started;
 
 	\return	free memory in the system
 */
-UINT32 I_GetFreeMem(UINT32 *total);
+size_t I_GetFreeMem(size_t *total);
 
 /**	\brief	Returns precise time value for performance measurement. The precise
             time should be a monotonically increasing counter, and will wrap.

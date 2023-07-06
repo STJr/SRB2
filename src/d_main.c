@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2022 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -1224,7 +1224,7 @@ void D_SRB2Main(void)
 	// Print GPL notice for our console users (Linux)
 	CONS_Printf(
 	"\n\nSonic Robo Blast 2\n"
-	"Copyright (C) 1998-2022 by Sonic Team Junior\n\n"
+	"Copyright (C) 1998-2023 by Sonic Team Junior\n\n"
 	"This program comes with ABSOLUTELY NO WARRANTY.\n\n"
 	"This is free software, and you are welcome to redistribute it\n"
 	"and/or modify it under the terms of the GNU General Public License\n"
@@ -1350,6 +1350,9 @@ void D_SRB2Main(void)
 	CONS_Printf("Z_Init(): Init zone memory allocation daemon. \n");
 	Z_Init();
 
+	clientGamedata = M_NewGameDataStruct();
+	serverGamedata = M_NewGameDataStruct();
+
 	// Do this up here so that WADs loaded through the command line can use ExecCfg
 	COM_Init();
 
@@ -1473,7 +1476,15 @@ void D_SRB2Main(void)
 	//--------------------------------------------------------- CONFIG.CFG
 	M_FirstLoadConfig(); // WARNING : this do a "COM_BufExecute()"
 
-	G_LoadGameData();
+	if (M_CheckParm("-gamedata") && M_IsNextParm())
+	{
+		// Moved from G_LoadGameData itself, as it would cause some crazy
+		// confusion issues when loading mods.
+		strlcpy(gamedatafilename, M_GetNextParm(), sizeof gamedatafilename);
+	}
+
+	G_LoadGameData(clientGamedata);
+	M_CopyGameData(serverGamedata, clientGamedata);
 
 #if defined (__unix__) || defined (UNIXCOMMON) || defined (HAVE_SDL)
 	VID_PrepareModeList(); // Regenerate Modelist according to cv_fullscreen
@@ -1500,7 +1511,7 @@ void D_SRB2Main(void)
 		else
 		{
 			if (!M_CheckParm("-server"))
-				G_SetGameModified(true);
+				G_SetUsedCheats(true);
 			autostart = true;
 		}
 	}
@@ -1704,7 +1715,7 @@ void D_SRB2Main(void)
 			// ... unless you're in a dedicated server.  Yes, technically this means you can view any level by
 			// running a dedicated server and joining it yourself, but that's better than making dedicated server's
 			// lives hell.
-			else if (!dedicated && M_MapLocked(pstartmap))
+			else if (!dedicated && M_MapLocked(pstartmap, serverGamedata))
 				I_Error("You need to unlock this level before you can warp to it!\n");
 			else
 			{
@@ -1776,4 +1787,86 @@ const char *D_Home(void)
 #endif// _WIN32
 	if (usehome) return userhome;
 	else return NULL;
+}
+
+static boolean check_top_dir(const char **path, const char *top)
+{
+	// empty string does NOT match
+	if (!strcmp(top, ""))
+		return false;
+
+	if (!startswith(*path, top))
+		return false;
+
+	*path += strlen(top);
+
+	// if it doesn't already end with a path separator,
+	// check if a separator follows
+	if (!endswith(top, PATHSEP))
+	{
+		if (startswith(*path, PATHSEP))
+			*path += strlen(PATHSEP);
+		else
+			return false;
+	}
+
+	return true;
+}
+
+static int cmp_strlen_desc(const void *a, const void *b)
+{
+	return ((int)strlen(*(const char*const*)b) - (int)strlen(*(const char*const*)a));
+}
+
+boolean D_IsPathAllowed(const char *path)
+{
+	const char *paths[] = {
+		srb2home,
+		srb2path,
+		cv_addons_folder.string
+	};
+
+	const size_t n_paths = sizeof paths / sizeof *paths;
+
+	size_t i;
+
+	// Sort folder paths by longest to shortest so
+	// overlapping paths work. E.g.:
+	// Path 1: /home/james/.srb2/addons
+	// Path 2: /home/james/.srb2
+	qsort(paths, n_paths, sizeof *paths, cmp_strlen_desc);
+
+	// These paths are allowed to be absolute
+	// path is offset so ".." can be checked only in the
+	// rest of the path
+	for (i = 0; i < n_paths; ++i)
+	{
+		if (check_top_dir(&path, paths[i]))
+			break;
+	}
+
+	// Only if none of the presets matched
+	if (i == n_paths)
+	{
+		// Cannot be an absolute path
+		if (M_IsPathAbsolute(path))
+			return false;
+	}
+
+	// Cannot traverse upwards
+	if (strstr(path, ".."))
+		return false;
+
+	return true;
+}
+
+boolean D_CheckPathAllowed(const char *path, const char *why)
+{
+	if (!D_IsPathAllowed(path))
+	{
+		CONS_Alert(CONS_WARNING, "%s: %s, location is not allowed\n", why, path);
+		return false;
+	}
+
+	return true;
 }

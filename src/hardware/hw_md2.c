@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2022 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -1660,7 +1660,7 @@ boolean HWR_DrawModel(gl_vissprite_t *spr)
 #endif
 
 		// SRB2CBTODO: MD2 scaling support
-		finalscale *= FIXED_TO_FLOAT(spr->mobj->scale);
+		finalscale *= FIXED_TO_FLOAT(interp.scale);
 
 		p.flip = atransform.flip;
 #ifdef USE_FTRANSFORM_MIRROR

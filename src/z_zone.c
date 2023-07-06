@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2006      by Graue.
-// Copyright (C) 2006-2022 by Sonic Team Junior.
+// Copyright (C) 2006-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -106,20 +106,20 @@ static void Command_Memdump_f(void);
   */
 void Z_Init(void)
 {
-	UINT32 total, memfree;
+	size_t total, memfree;
 
 	memset(&head, 0x00, sizeof(head));
 
 	head.next = head.prev = &head;
 
 	memfree = I_GetFreeMem(&total)>>20;
-	CONS_Printf("System memory: %uMB - Free: %uMB\n", total>>20, memfree);
+	CONS_Printf("System memory: %sMB - Free: %sMB\n", sizeu1(total>>20), sizeu2(memfree));
 
 	// Note: This allocates memory. Watch out.
-	COM_AddCommand("memfree", Command_Memfree_f);
+	COM_AddCommand("memfree", Command_Memfree_f, COM_LUA);
 
 #ifdef ZDEBUG
-	COM_AddCommand("memdump", Command_Memdump_f);
+	COM_AddCommand("memdump", Command_Memdump_f, COM_LUA);
 #endif
 }
 
@@ -791,7 +791,7 @@ size_t Z_TagsUsage(INT32 lowtag, INT32 hightag)
   */
 static void Command_Memfree_f(void)
 {
-	UINT32 freebytes, totalbytes;
+	size_t freebytes, totalbytes;
 
 	Z_CheckHeap(-1);
 	CONS_Printf("\x82%s", M_GetText("Memory Info\n"));
@@ -824,8 +824,8 @@ static void Command_Memfree_f(void)
 
 	CONS_Printf("\x82%s", M_GetText("System Memory Info\n"));
 	freebytes = I_GetFreeMem(&totalbytes);
-	CONS_Printf(M_GetText("    Total physical memory: %7u KB\n"), totalbytes>>10);
-	CONS_Printf(M_GetText("Available physical memory: %7u KB\n"), freebytes>>10);
+	CONS_Printf(M_GetText("    Total physical memory: %s KB\n"), sizeu1(totalbytes>>10));
+	CONS_Printf(M_GetText("Available physical memory: %s KB\n"), sizeu1(freebytes>>10));
 }
 
 #ifdef ZDEBUG

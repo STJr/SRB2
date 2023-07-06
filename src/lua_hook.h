@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2012-2016 by John "JTE" Muniz.
-// Copyright (C) 2012-2022 by Sonic Team Junior.
+// Copyright (C) 2012-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -41,6 +41,7 @@ automatically.
 	X (MobjMoveBlocked),/* P_XYMovement (when movement is blocked) */\
 	X (MapThingSpawn),/* P_SpawnMapThing */\
 	X (FollowMobj),/* P_PlayerAfterThink Smiles mobj-following */\
+	X (HurtMsg),/* imhurttin */\
 
 #define HOOK_LIST(X) \
 	X (NetVars),/* add to archive table (netsave) */\
@@ -56,7 +57,6 @@ automatically.
 	X (JumpSpinSpecial),/* P_DoJumpStuff (Spin button effect (mid-air)) */\
 	X (BotTiccmd),/* B_BuildTiccmd */\
 	X (PlayerMsg),/* chat messages */\
-	X (HurtMsg),/* imhurttin */\
 	X (PlayerSpawn),/* G_SpawnPlayer */\
 	X (ShieldSpawn),/* P_SpawnShieldOrb */\
 	X (ShieldSpecial),/* shield abilities */\

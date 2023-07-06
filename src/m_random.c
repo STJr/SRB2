@@ -3,7 +3,7 @@
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
 // Copyright (C) 2012-2016 by Matthew "Kaito Sinclaire" Walsh.
-// Copyright (C) 1999-2022 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -14,12 +14,11 @@
 
 #include "doomdef.h"
 #include "doomtype.h"
-#include "doomstat.h" // totalplaytime
 
 #include "m_random.h"
 #include "m_fixed.h"
 
-
+#include "m_cond.h" // totalplaytime
 
 // ---------------------------
 // RNG functions (not synched)
@@ -252,5 +251,5 @@ void P_SetRandSeedD(const char *rfile, INT32 rline, UINT32 seed)
   */
 UINT32 M_RandomizedSeed(void)
 {
-	return ((totalplaytime & 0xFFFF) << 16)|M_RandomFixed();
+	return ((serverGamedata->totalplaytime & 0xFFFF) << 16) | M_RandomFixed();
 }
