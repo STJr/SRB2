@@ -328,7 +328,7 @@ static void line_SpawnViaLine(const int linenum, const boolean spawnthinker)
 
 	if(!frontfloor && !backfloor && !frontceil && !backceil)
 	{
-		CONS_Printf("line_SpawnViaLine: Slope special with nothing to do.\n");
+		CONS_Printf("line_SpawnViaLine: Unused slope special with nothing to do on line number %i\n", linenum);
 		return;
 	}
 
