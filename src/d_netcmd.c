@@ -4609,6 +4609,7 @@ void Command_ExitGame_f(void)
 	botskin = 0;
 	cv_debug = 0;
 	emeralds = 0;
+	automapactive = false;
 	memset(&luabanks, 0, sizeof(luabanks));
 
 	if (dirmenu)
