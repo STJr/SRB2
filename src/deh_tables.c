@@ -4773,6 +4773,7 @@ const char *const POWERS_LIST[] = {
 
 const char *const HUDITEMS_LIST[] = {
 	"LIVES",
+	"INPUT",
 
 	"RINGS",
 	"RINGSNUM",
