@@ -1493,8 +1493,8 @@ void G_BeginRecording(void)
 	WRITEUINT8(demo_p,player->acceleration);
 	WRITEFIXED(demo_p,player->height);
 	WRITEFIXED(demo_p,player->spinheight);
-	WRITEUINT8(demo_p,player->camerascale>>FRACBITS);
-	WRITEUINT8(demo_p,player->shieldscale>>FRACBITS);
+	WRITEFIXED(demo_p,player->camerascale);
+	WRITEFIXED(demo_p,player->shieldscale);
 
 	// Trying to convert it back to % causes demo desync due to precision loss.
 	// Don't do it.
@@ -1923,8 +1923,8 @@ void G_DoPlayDemo(char *defdemoname)
 	acceleration = READUINT8(demo_p);
 	height = (demoversion < 0x000e) ? (fixed_t)READUINT8(demo_p)<<FRACBITS : READFIXED(demo_p);
 	spinheight = (demoversion < 0x000e) ? (fixed_t)READUINT8(demo_p)<<FRACBITS : READFIXED(demo_p);
-	camerascale = (fixed_t)READUINT8(demo_p)<<FRACBITS;
-	shieldscale = (fixed_t)READUINT8(demo_p)<<FRACBITS;
+	camerascale = READFIXED(demo_p);
+	shieldscale = READFIXED(demo_p);
 	jumpfactor = READFIXED(demo_p);
 	followitem = READUINT32(demo_p);
 
