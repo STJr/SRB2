@@ -462,11 +462,10 @@ double averageFPS = 0.0f;
 #define USE_FPS_SAMPLES
 
 #ifdef USE_FPS_SAMPLES
-#define FPS_SAMPLE_RATE (0.05) // How often to update FPS samples, in seconds
-#define NUM_FPS_SAMPLES (16) // Number of samples to store
+#define NUM_FPS_SAMPLES (32) // Number of samples to store
 
 static double fps_samples[NUM_FPS_SAMPLES];
-static double updateElapsed = 0.0;
+static int fps_index;
 #endif
 
 static boolean fps_init = false;
@@ -475,6 +474,7 @@ static precise_t fps_enter = 0;
 void SCR_CalculateFPS(void)
 {
 	precise_t fps_finish = 0;
+	int i;
 
 	double frameElapsed = 0.0;
 
@@ -489,35 +489,13 @@ void SCR_CalculateFPS(void)
 	fps_enter = fps_finish;
 
 #ifdef USE_FPS_SAMPLES
-	updateElapsed += frameElapsed;
+	fps_samples[fps_index] = frameElapsed / NUM_FPS_SAMPLES;
+	fps_index = (fps_index + 1) % NUM_FPS_SAMPLES;
 
-	if (updateElapsed >= FPS_SAMPLE_RATE)
-	{
-		static int sampleIndex = 0;
-		int i;
-
-		fps_samples[sampleIndex] = frameElapsed;
-
-		sampleIndex++;
-		if (sampleIndex >= NUM_FPS_SAMPLES)
-			sampleIndex = 0;
-
-		averageFPS = 0.0;
-		for (i = 0; i < NUM_FPS_SAMPLES; i++)
-		{
-			averageFPS += fps_samples[i];
-		}
-
-		if (averageFPS > 0.0)
-		{
-			averageFPS = 1.0 / (averageFPS / NUM_FPS_SAMPLES);
-		}
-	}
-
-	while (updateElapsed >= FPS_SAMPLE_RATE)
-	{
-		updateElapsed -= FPS_SAMPLE_RATE;
-	}
+	averageFPS = 0.0;
+	for (i = 0; i < NUM_FPS_SAMPLES; i++)
+		averageFPS += fps_samples[i];
+	averageFPS = 1.0 / averageFPS;
 #else
 	// Direct, unsampled counter.
 	averageFPS = 1.0 / frameElapsed;
