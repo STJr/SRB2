@@ -7194,7 +7194,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		sfx_cgot,       // deathsound
 		EMERALD1,       // speed
 		16*FRACUNIT,    // radius
-		32*FRACUNIT,    // height
+		24*FRACUNIT,    // height
 		0,              // display offset
 		16,             // mass
 		0,              // damage
@@ -7220,7 +7220,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		sfx_cgot,       // deathsound
 		EMERALD2,       // speed
 		16*FRACUNIT,    // radius
-		32*FRACUNIT,    // height
+		24*FRACUNIT,    // height
 		0,              // display offset
 		16,             // mass
 		0,              // damage
@@ -7246,7 +7246,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		sfx_cgot,       // deathsound
 		EMERALD3,       // speed
 		16*FRACUNIT,    // radius
-		32*FRACUNIT,    // height
+		24*FRACUNIT,    // height
 		0,              // display offset
 		16,             // mass
 		0,              // damage
@@ -7272,7 +7272,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		sfx_cgot,       // deathsound
 		EMERALD4,       // speed
 		16*FRACUNIT,    // radius
-		32*FRACUNIT,    // height
+		24*FRACUNIT,    // height
 		0,              // display offset
 		16,             // mass
 		0,              // damage
@@ -7298,7 +7298,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		sfx_cgot,       // deathsound
 		EMERALD5,       // speed
 		16*FRACUNIT,    // radius
-		32*FRACUNIT,    // height
+		24*FRACUNIT,    // height
 		0,              // display offset
 		16,             // mass
 		0,              // damage
@@ -7324,7 +7324,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		sfx_cgot,       // deathsound
 		EMERALD6,       // speed
 		16*FRACUNIT,    // radius
-		32*FRACUNIT,    // height
+		24*FRACUNIT,    // height
 		0,              // display offset
 		16,             // mass
 		0,              // damage
@@ -7350,7 +7350,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		sfx_cgot,       // deathsound
 		EMERALD7,       // speed
 		16*FRACUNIT,    // radius
-		32*FRACUNIT,    // height
+		24*FRACUNIT,    // height
 		0,              // display offset
 		16,             // mass
 		0,              // damage
@@ -18344,7 +18344,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL,         // xdeathstate
 		sfx_itemup,     // deathsound
 		60*FRACUNIT,    // speed
-		24*FRACUNIT,    // radius
+		16*FRACUNIT,    // radius
 		24*FRACUNIT,    // height
 		0,              // display offset
 		pw_bouncering,  // mass
@@ -18371,7 +18371,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL,         // xdeathstate
 		sfx_itemup,     // deathsound
 		60*FRACUNIT,    // speed
-		24*FRACUNIT,    // radius
+		16*FRACUNIT,    // radius
 		24*FRACUNIT,    // height
 		0,              // display offset
 		pw_railring,    // mass
@@ -18425,7 +18425,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL,         // xdeathstate
 		sfx_itemup,     // deathsound
 		60*FRACUNIT,    // speed
-		24*FRACUNIT,    // radius
+		16*FRACUNIT,    // radius
 		24*FRACUNIT,    // height
 		0,              // display offset
 		pw_automaticring, // mass
@@ -18452,7 +18452,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL,         // xdeathstate
 		sfx_itemup,     // deathsound
 		60*FRACUNIT,    // speed
-		24*FRACUNIT,    // radius
+		16*FRACUNIT,    // radius
 		24*FRACUNIT,    // height
 		0,              // display offset
 		pw_explosionring, // mass
@@ -18479,7 +18479,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL,         // xdeathstate
 		sfx_itemup,     // deathsound
 		60*FRACUNIT,    // speed
-		24*FRACUNIT,    // radius
+		16*FRACUNIT,    // radius
 		24*FRACUNIT,    // height
 		0,              // display offset
 		pw_scatterring, // mass
@@ -18506,7 +18506,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL,         // xdeathstate
 		sfx_itemup,     // deathsound
 		60*FRACUNIT,    // speed
-		24*FRACUNIT,    // radius
+		16*FRACUNIT,    // radius
 		24*FRACUNIT,    // height
 		0,              // display offset
 		pw_grenadering, // mass
@@ -18535,7 +18535,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		sfx_ncitem,     // deathsound
 		60*FRACUNIT,    // speed
 		24*FRACUNIT,    // radius
-		24*FRACUNIT,    // height
+		40*FRACUNIT,    // height
 		0,              // display offset
 		pw_bouncering,  // mass
 		2*TICRATE,      // damage
@@ -18562,7 +18562,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		sfx_ncitem,     // deathsound
 		60*FRACUNIT,    // speed
 		24*FRACUNIT,    // radius
-		24*FRACUNIT,    // height
+		40*FRACUNIT,    // height
 		0,              // display offset
 		pw_railring,    // mass
 		2*TICRATE,      // damage
@@ -18589,7 +18589,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		sfx_ncitem,     // deathsound
 		60*FRACUNIT,    // speed
 		24*FRACUNIT,    // radius
-		24*FRACUNIT,    // height
+		40*FRACUNIT,    // height
 		0,              // display offset
 		pw_automaticring, // mass
 		2*TICRATE,      // damage
@@ -18616,7 +18616,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		sfx_ncitem,     // deathsound
 		60*FRACUNIT,    // speed
 		24*FRACUNIT,    // radius
-		24*FRACUNIT,    // height
+		40*FRACUNIT,    // height
 		0,              // display offset
 		pw_explosionring, // mass
 		2*TICRATE,      // damage
@@ -18643,7 +18643,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		sfx_ncitem,     // deathsound
 		60*FRACUNIT,    // speed
 		24*FRACUNIT,    // radius
-		24*FRACUNIT,    // height
+		40*FRACUNIT,    // height
 		0,              // display offset
 		pw_scatterring, // mass
 		2*TICRATE,      // damage
@@ -18670,7 +18670,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		sfx_ncitem,     // deathsound
 		60*FRACUNIT,    // speed
 		24*FRACUNIT,    // radius
-		24*FRACUNIT,    // height
+		40*FRACUNIT,    // height
 		0,              // display offset
 		pw_grenadering, // mass
 		2*TICRATE,      // damage

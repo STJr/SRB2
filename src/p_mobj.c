@@ -10541,6 +10541,29 @@ static fixed_t P_DefaultMobjShadowScale (mobj_t *thing)
 		case MT_REDFLAG:
 		case MT_BLUEFLAG:
 
+		case MT_BOUNCERING:
+		case MT_AUTOMATICRING:
+		case MT_INFINITYRING:
+		case MT_RAILRING:
+		case MT_EXPLOSIONRING:
+		case MT_SCATTERRING:
+		case MT_GRENADERING:
+		
+		case MT_BOUNCEPICKUP:
+		case MT_RAILPICKUP:
+		case MT_AUTOPICKUP:
+		case MT_EXPLODEPICKUP:
+		case MT_SCATTERPICKUP:
+		case MT_GRENADEPICKUP:
+		
+		case MT_REDRING:
+		case MT_THROWNBOUNCE:
+		case MT_THROWNINFINITY:
+		case MT_THROWNAUTOMATIC:
+		case MT_THROWNSCATTER:
+		case MT_THROWNEXPLOSION:
+		case MT_THROWNGRENADE:
+
 		case MT_EMBLEM:
 
 		case MT_TOKEN:
@@ -10581,8 +10604,6 @@ static fixed_t P_DefaultMobjShadowScale (mobj_t *thing)
 
 			if (thing->flags & (MF_ENEMY|MF_BOSS))
 				return FRACUNIT;
-			else if (P_WeaponOrPanel(thing->type))
-				return 2*FRACUNIT/3;
 			else
 				return 0;
 	}
