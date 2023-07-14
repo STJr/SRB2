@@ -101,10 +101,10 @@ void *Z_CallocAlign(size_t size, INT32 tag, void *user, INT32 alignbits) FUNCALL
 void *Z_ReallocAlign(void *ptr, size_t size, INT32 tag, void *user, INT32 alignbits) FUNCALLOC(2);
 #endif
 
-// Alloc with no alignment
-#define Z_Malloc(s,t,u)    Z_MallocAlign(s, t, u, 0)
-#define Z_Calloc(s,t,u)    Z_CallocAlign(s, t, u, 0)
-#define Z_Realloc(p,s,t,u) Z_ReallocAlign(p, s, t, u, 0)
+// Alloc with standard alignment
+#define Z_Malloc(s,t,u)    Z_MallocAlign(s, t, u, sizeof(void *))
+#define Z_Calloc(s,t,u)    Z_CallocAlign(s, t, u, sizeof(void *))
+#define Z_Realloc(p,s,t,u) Z_ReallocAlign(p, s, t, u, sizeof(void *))
 
 // Free all memory by tag
 // these don't give line numbers for ZDEBUG currently though

@@ -972,7 +972,7 @@ UINT16 W_InitFile(const char *filename, boolean mainfile, boolean startup)
 	// add the wadfile
 	//
 	CONS_Printf(M_GetText("Added file %s (%u lumps)\n"), filename, numlumps);
-	wadfiles = Z_Realloc(wadfiles, sizeof(wadfile_t) * (numwadfiles + 1), PU_STATIC, NULL);
+	wadfiles = Z_Realloc(wadfiles, sizeof(wadfile_t *) * (numwadfiles + 1), PU_STATIC, NULL);
 	wadfiles[numwadfiles] = wadfile;
 	numwadfiles++; // must come BEFORE W_LoadDehackedLumps, so any addfile called by COM_BufInsertText called by Lua doesn't overwrite what we just loaded
 
