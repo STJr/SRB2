@@ -287,7 +287,8 @@ void *Z_Malloc2(size_t size, INT32 tag, void *user, INT32 alignbits,
 void *Z_MallocAlign(size_t size, INT32 tag, void *user, INT32 alignbits)
 #endif
 {
-	size_t extrabytes = (1<<alignbits) - 1;
+	I_Assert(alignbits >= 0 && alignbits < (INT32)(sizeof(size_t) * 8));
+	size_t extrabytes = ((size_t)1<<alignbits) - 1;
 	size_t padsize = 0;
 	memblock_t *block;
 	void *ptr;
