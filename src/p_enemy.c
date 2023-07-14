@@ -3938,7 +3938,7 @@ static void P_DoBossVictory(mobj_t *mo)
 	}
 
 	// victory!
-	if (mo->spawnpoint)
+	if (mo->spawnpoint && mo->spawnpoint->args[3])
 		P_LinedefExecute(mo->spawnpoint->args[3], mo, NULL);
 
 	if (stoppedclock && modeattacking) // if you're just time attacking, skip making the capsule appear since you don't need to step on it anyways.
@@ -4157,7 +4157,7 @@ void A_BossDeath(mobj_t *mo)
 	if (LUA_CallAction(A_BOSSDEATH, mo))
 		return;
 
-	if (mo->spawnpoint)
+	if (mo->spawnpoint && mo->spawnpoint->args[2])
 		P_LinedefExecute(mo->spawnpoint->args[2], mo, NULL);
 	mo->health = 0;
 
@@ -7138,7 +7138,7 @@ void A_Boss1Chase(mobj_t *actor)
 		}
 		else
 		{
-			if (actor->spawnpoint)
+			if (actor->spawnpoint && actor->spawnpoint->args[4])
 				P_LinedefExecute(actor->spawnpoint->args[4], actor, NULL);
 			P_SetMobjState(actor, actor->info->raisestate);
 		}
