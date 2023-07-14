@@ -4532,9 +4532,9 @@ static int CompareVisSprites(const void *p1, const void *p2)
 	int linkdraw1;
 	int linkdraw2;
 
-	// bbox doesn't need to be sorted
+	// draw bbox after everything else
 	if (spr1->bbox || spr2->bbox)
-		return 0;
+		return (spr1->bbox - spr2->bbox);
 
 	// check for precip first, because then sprX->mobj is actually a precipmobj_t and does not have flags2 or tracer
 	linkdraw1 = !spr1->precip && (spr1->mobj->flags2 & MF2_LINKDRAW) && spr1->mobj->tracer;
