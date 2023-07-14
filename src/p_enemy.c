@@ -4886,7 +4886,9 @@ void A_FishJump(mobj_t *actor)
 			jumpval = locvar1;
 		else
 		{
-			if (actor->spawnpoint && actor->spawnpoint->args[0])
+			if (!udmf && actor->angle)
+				jumpval = AngleFixed(actor->angle)>>2;
+			else if (actor->spawnpoint && actor->spawnpoint->args[0])
 				jumpval = actor->spawnpoint->args[0] << (FRACBITS - 2);
 			else
 				jumpval = 44 << (FRACBITS - 2);
