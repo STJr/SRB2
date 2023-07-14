@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2022 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -510,6 +510,8 @@ void P_ClearStarPost(INT32 postnum);
 void P_ResetStarposts(void);
 
 boolean P_CanPickupItem(player_t *player, boolean weapon);
+boolean P_CanPickupEmblem(player_t *player, INT32 emblemID);
+boolean P_EmblemWasCollected(INT32 emblemID);
 void P_DoNightsScore(player_t *player);
 void P_DoMatchSuper(player_t *player);
 

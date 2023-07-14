@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2022 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -993,7 +993,7 @@ static void setcontrol(INT32 (*gc)[2])
 {
 	INT32 numctrl;
 	const char *namectrl;
-	INT32 keynum, keynum1, keynum2;
+	INT32 keynum, keynum1, keynum2 = 0;
 	INT32 player = ((void*)gc == (void*)&gamecontrolbis ? 1 : 0);
 	boolean nestedoverride = false;
 
@@ -1009,7 +1009,8 @@ static void setcontrol(INT32 (*gc)[2])
 		return;
 	}
 	keynum1 = G_KeyNameToNum(COM_Argv(2));
-	keynum2 = G_KeyNameToNum(COM_Argv(3));
+	if (COM_Argc() > 3)
+		keynum2 = G_KeyNameToNum(COM_Argv(3));
 	keynum = G_FilterKeyByVersion(numctrl, 0, player, &keynum1, &keynum2, &nestedoverride);
 
 	if (keynum >= 0)

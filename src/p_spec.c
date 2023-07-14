@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2022 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -1795,9 +1795,7 @@ boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller
 			{ // Unlockable triggers required
 				INT32 trigid = triggerline->args[1];
 
-				if ((modifiedgame && !savemoddata) || (netgame || multiplayer))
-					return false;
-				else if (trigid < 0 || trigid > 31) // limited by 32 bit variable
+				if (trigid < 0 || trigid > 31) // limited by 32 bit variable
 				{
 					CONS_Debug(DBG_GAMELOGIC, "Unlockable trigger (sidedef %hu): bad trigger ID %d\n", triggerline->sidenum[0], trigid);
 					return false;
@@ -1810,14 +1808,12 @@ boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller
 			{ // An unlockable itself must be unlocked!
 				INT32 unlockid = triggerline->args[1];
 
-				if ((modifiedgame && !savemoddata) || (netgame || multiplayer))
-					return false;
-				else if (unlockid < 0 || unlockid >= MAXUNLOCKABLES) // limited by unlockable count
+				if (unlockid < 0 || unlockid >= MAXUNLOCKABLES) // limited by unlockable count
 				{
 					CONS_Debug(DBG_GAMELOGIC, "Unlockable check (sidedef %hu): bad unlockable ID %d\n", triggerline->sidenum[0], unlockid);
 					return false;
 				}
-				else if (!(unlockables[unlockid-1].unlocked))
+				else if (!(serverGamedata->unlocked[unlockid-1]))
 					return false;
 			}
 			break;
@@ -2786,6 +2782,8 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 				mo->flags2 &= ~MF2_OBJECTFLIP;
 			else
 				mo->flags2 |= MF2_OBJECTFLIP;
+			if (line->args[2])
+				mo->eflags |= MFE_VERTICALFLIP;
 			if (bot)
 				bot->flags2 = (bot->flags2 & ~MF2_OBJECTFLIP) | (mo->flags2 & MF2_OBJECTFLIP);
 			break;
@@ -2935,7 +2933,6 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			break;
 
 		case 441: // Trigger unlockable
-			if ((!modifiedgame || savemoddata) && !(netgame || multiplayer))
 			{
 				INT32 trigid = line->args[0];
 
@@ -2946,10 +2943,12 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 					unlocktriggers |= 1 << trigid;
 
 					// Unlocked something?
-					if (M_UpdateUnlockablesAndExtraEmblems())
+					M_SilentUpdateUnlockablesAndEmblems(serverGamedata);
+
+					if (M_UpdateUnlockablesAndExtraEmblems(clientGamedata))
 					{
 						S_StartSound(NULL, sfx_s3k68);
-						G_SaveGameData(); // only save if unlocked something
+						G_SaveGameData(clientGamedata); // only save if unlocked something
 					}
 				}
 			}
@@ -6878,71 +6877,6 @@ void P_SpawnSpecials(boolean fromnetsave)
 							}
 						}
 					}
-				}
-				break;
-
-			case 260: // GZDoom-like 3D Floor.
-				{
-					UINT8 dtype = lines[i].args[1] & 3;
-					UINT8 dflags1 = lines[i].args[1] - dtype;
-					UINT8 dflags2 = lines[i].args[2];
-					UINT8 dopacity = lines[i].args[3];
-					boolean isfog = false;
-
-					if (dtype == 0)
-						dtype = 1;
-
-					ffloorflags = FOF_EXISTS;
-
-					if (dflags2 & 1) ffloorflags |= FOF_NOSHADE; // Disable light effects (Means no shadowcast)
-					if (dflags2 & 2) ffloorflags |= FOF_DOUBLESHADOW; // Restrict light inside (Means doubleshadow)
-					if (dflags2 & 4) isfog = true; // Fog effect (Explicitly render like a fog block)
-
-					if (dflags1 & 4) ffloorflags |= FOF_BOTHPLANES|FOF_ALLSIDES; // Render-inside
-					if (dflags1 & 16) ffloorflags |= FOF_INVERTSIDES|FOF_INVERTPLANES; // Invert visibility rules
-
-					// Fog block
-					if (isfog)
-						ffloorflags |= FOF_RENDERALL|FOF_CUTEXTRA|FOF_CUTSPRITES|FOF_BOTHPLANES|FOF_EXTRA|FOF_FOG|FOF_INVERTPLANES|FOF_ALLSIDES|FOF_INVERTSIDES;
-					else
-					{
-						ffloorflags |= FOF_RENDERALL;
-
-						// Solid
-						if (dtype == 1)
-							ffloorflags |= FOF_SOLID|FOF_CUTLEVEL;
-						// Water
-						else if (dtype == 2)
-							ffloorflags |= FOF_SWIMMABLE|FOF_CUTEXTRA|FOF_CUTSPRITES|FOF_EXTRA|FOF_RIPPLE;
-						// Intangible
-						else if (dtype == 3)
-							ffloorflags |= FOF_CUTEXTRA|FOF_CUTSPRITES|FOF_EXTRA;
-					}
-
-					// Non-opaque
-					if (dopacity < 255)
-					{
-						// Invisible
-						if (dopacity == 0)
-						{
-							// True invisible
-							if (ffloorflags & FOF_NOSHADE)
-								ffloorflags &= ~(FOF_RENDERALL|FOF_CUTEXTRA|FOF_CUTSPRITES|FOF_EXTRA|FOF_BOTHPLANES|FOF_ALLSIDES|FOF_CUTLEVEL);
-							// Shadow block
-							else
-							{
-								ffloorflags |= FOF_CUTSPRITES;
-								ffloorflags &= ~(FOF_RENDERALL|FOF_CUTEXTRA|FOF_EXTRA|FOF_BOTHPLANES|FOF_ALLSIDES|FOF_CUTLEVEL);
-							}
-						}
-						else
-						{
-							ffloorflags |= FOF_TRANSLUCENT|FOF_CUTEXTRA|FOF_EXTRA;
-							ffloorflags &= ~FOF_CUTLEVEL;
-						}
-					}
-
-					P_AddFakeFloorsByLine(i, dopacity, TMB_TRANSLUCENT, ffloorflags, secthinkers);
 				}
 				break;
 

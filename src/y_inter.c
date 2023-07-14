@@ -1,6 +1,6 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
-// Copyright (C) 2004-2022 by Sonic Team Junior.
+// Copyright (C) 2004-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -1092,12 +1092,14 @@ void Y_Ticker(void)
 			S_StartSound(NULL, (gottoken ? sfx_token : sfx_chchng)); // cha-ching!
 
 			// Update when done with tally
-			if ((!modifiedgame || savemoddata) && !(netgame || multiplayer) && !demoplayback)
+			if (!demoplayback)
 			{
-				if (M_UpdateUnlockablesAndExtraEmblems())
+				M_SilentUpdateUnlockablesAndEmblems(serverGamedata);
+
+				if (M_UpdateUnlockablesAndExtraEmblems(clientGamedata))
 					S_StartSound(NULL, sfx_s3k68);
 
-				G_SaveGameData();
+				G_SaveGameData(clientGamedata);
 			}
 		}
 		else if (!(intertic & 1))
@@ -1133,13 +1135,18 @@ void Y_Ticker(void)
 		}
 
 		// emerald bounce
-		if (intertic <= 1)
+		if (dedicated || !LUA_HudEnabled(hud_intermissionemeralds))
+		{
+			// dedicated servers don't need this, especially since it crashes when stagefailed
+			// also skip this if Lua disabled intermission emeralds, so it doesn't play sounds
+		}
+		else if (intertic <= 1)
 		{
 			data.spec.emeraldbounces = 0;
 			data.spec.emeraldmomy = 20;
 			data.spec.emeraldy = -40;
 		}
-		else
+		else if (P_GetNextEmerald() < 7)
 		{
 			if (!stagefailed)
 			{
@@ -1223,12 +1230,14 @@ void Y_Ticker(void)
 			S_StartSound(NULL, (gottoken ? sfx_token : sfx_chchng)); // cha-ching!
 
 			// Update when done with tally
-			if ((!modifiedgame || savemoddata) && !(netgame || multiplayer) && !demoplayback)
+			if (!demoplayback)
 			{
-				if (M_UpdateUnlockablesAndExtraEmblems())
+				M_SilentUpdateUnlockablesAndEmblems(serverGamedata);
+
+				if (M_UpdateUnlockablesAndExtraEmblems(clientGamedata))
 					S_StartSound(NULL, sfx_s3k68);
 
-				G_SaveGameData();
+				G_SaveGameData(clientGamedata);
 			}
 		}
 		else if (!(intertic & 1))

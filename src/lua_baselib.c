@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2012-2016 by John "JTE" Muniz.
-// Copyright (C) 2012-2022 by Sonic Team Junior.
+// Copyright (C) 2012-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -874,6 +874,7 @@ static int lib_pGetClosestAxis(lua_State *L)
 
 static int lib_pSpawnParaloop(lua_State *L)
 {
+	mobj_t *ptmthing = tmthing;
 	fixed_t x = luaL_checkfixed(L, 1);
 	fixed_t y = luaL_checkfixed(L, 2);
 	fixed_t z = luaL_checkfixed(L, 3);
@@ -890,6 +891,7 @@ static int lib_pSpawnParaloop(lua_State *L)
 	if (nstate >= NUMSTATES)
 		return luaL_error(L, "state %d out of range (0 - %d)", nstate, NUMSTATES-1);
 	P_SpawnParaloop(x, y, z, radius, number, type, nstate, rotangle, spawncenter);
+	P_SetTarget(&tmthing, ptmthing);
 	return 0;
 }
 
@@ -3541,7 +3543,6 @@ static int lib_gAddPlayer(lua_State *L)
 		return 1;
 	}
 
-
 	newplayernum = i;
 
 	CL_ClearPlayer(newplayernum);
@@ -3552,9 +3553,6 @@ static int lib_gAddPlayer(lua_State *L)
 
 	newplayer->jointime = 0;
 	newplayer->quittime = 0;
-
-	// Set the bot name (defaults to Bot #)
-	strcpy(player_names[newplayernum], va("Bot %d", botcount));
 
 	// Read the skin argument (defaults to Sonic)
 	if (!lua_isnoneornil(L, 1))
@@ -3567,7 +3565,10 @@ static int lib_gAddPlayer(lua_State *L)
 	if (!lua_isnoneornil(L, 2))
 		newplayer->skincolor = R_GetColorByName(luaL_checkstring(L, 2));
 	else
-		newplayer->skincolor = skins[newplayer->skin].prefcolor;
+		newplayer->skincolor = skins[skinnum].prefcolor;
+
+	// Set the bot default name as the skin
+	strcpy(player_names[newplayernum], skins[skinnum].realname);
 
 	// Read the bot name, if given
 	if (!lua_isnoneornil(L, 3))
@@ -3583,14 +3584,19 @@ static int lib_gAddPlayer(lua_State *L)
 	// Set the skin (can't do this until AFTER bot type is set!)
 	SetPlayerSkinByNum(newplayernum, skinnum);
 
-
 	if (netgame)
 	{
 		char joinmsg[256];
 
+		// Truncate bot name
+		player_names[newplayernum][sizeof(*player_names) - 8] = '\0'; // The length of colored [BOT] + 1
+
 		strcpy(joinmsg, M_GetText("\x82*Bot %s has joined the game (player %d)"));
 		strcpy(joinmsg, va(joinmsg, player_names[newplayernum], newplayernum));
 		HU_AddChatText(joinmsg, false);
+
+		// Append blue [BOT] tag at the end
+		strlcat(player_names[newplayernum], "\x84[BOT]\x80", sizeof(*player_names));
 	}
 
 	LUA_PushUserdata(L, newplayer, META_PLAYER);
@@ -3623,6 +3629,16 @@ static int lib_gRemovePlayer(lua_State *L)
 	return LUA_ErrInvalid(L, "player_t");
 }
 
+
+static int lib_gSetUsedCheats(lua_State *L)
+{
+	// Let large-scale level packs using Lua be able to add cheat commands.
+	boolean silent = lua_optboolean(L, 1);
+	//NOHUD
+	//INLEVEL
+	G_SetUsedCheats(silent);
+	return 0;
+}
 
 static int Lcheckmapnumber (lua_State *L, int idx, const char *fun)
 {
@@ -4226,6 +4242,7 @@ static luaL_Reg lib[] = {
 	{"G_AddGametype", lib_gAddGametype},
 	{"G_AddPlayer", lib_gAddPlayer},
 	{"G_RemovePlayer", lib_gRemovePlayer},
+	{"G_SetUsedCheats", lib_gSetUsedCheats},
 	{"G_BuildMapName",lib_gBuildMapName},
 	{"G_BuildMapTitle",lib_gBuildMapTitle},
 	{"G_FindMap",lib_gFindMap},

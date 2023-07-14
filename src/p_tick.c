@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2022 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -675,7 +675,10 @@ void P_Ticker(boolean run)
 
 	// Keep track of how long they've been playing!
 	if (!demoplayback) // Don't increment if a demo is playing.
-		totalplaytime++;
+	{
+		clientGamedata->totalplaytime++;
+		serverGamedata->totalplaytime++;
+	}
 
 	if (!(maptol & TOL_NIGHTS) && G_IsSpecialStage(gamemap))
 		P_DoSpecialStageStuff();

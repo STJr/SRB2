@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2007-2016 by John "JTE" Muniz.
-// Copyright (C) 2011-2022 by Sonic Team Junior.
+// Copyright (C) 2011-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -118,7 +118,7 @@ static void B_BuildTailsTiccmd(mobj_t *sonic, mobj_t *tails, ticcmd_t *cmd)
 		return;
 	}
 
-	// Adapted from CobaltBW's tails_AI.wad
+	// Adapted from clairebun's tails_AI.wad
 
 	// Check water
 	if (water)

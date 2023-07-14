@@ -1,6 +1,6 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
-// Copyright (C) 1998-2022 by Sonic Team Junior.
+// Copyright (C) 1998-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -1030,6 +1030,12 @@ EXPORT void HWRAPI(LoadCustomShader) (int number, char *code, size_t size, boole
 EXPORT void HWRAPI(SetShader) (int type)
 {
 #ifdef GL_SHADERS
+	if (type == SHADER_NONE)
+	{
+		UnSetShader();
+		return;
+	}
+
 	if (gl_allowshaders != HWD_SHADEROPTION_OFF)
 	{
 		gl_shader_t *shader = gl_shaderstate.current;
@@ -2290,7 +2296,7 @@ EXPORT void HWRAPI(DrawPolygon) (FSurfaceInfo *pSurf, FOutVector *pOutVerts, FUI
 
 	pglVertexPointer(3, GL_FLOAT, sizeof(FOutVector), &pOutVerts[0].x);
 	pglTexCoordPointer(2, GL_FLOAT, sizeof(FOutVector), &pOutVerts[0].s);
-	pglDrawArrays(GL_TRIANGLE_FAN, 0, iNumPts);
+	pglDrawArrays(PolyFlags & PF_WireFrame ? GL_LINES : GL_TRIANGLE_FAN, 0, iNumPts);
 
 	if (PolyFlags & PF_RemoveYWrap)
 		pglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);

@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2022 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -201,6 +201,7 @@ extern UINT8 *scr_borderpatch; // patch used to fill the view borders
 
 extern consvar_t cv_scr_width, cv_scr_height, cv_scr_width_w, cv_scr_height_w, cv_scr_depth, cv_fullscreen;
 extern consvar_t cv_renderview, cv_renderer;
+extern consvar_t cv_renderhitbox, cv_renderhitboxinterpolation, cv_renderhitboxgldepth;
 // wait for page flipping to end or not
 extern consvar_t cv_vidwait;
 extern consvar_t cv_timescale;

@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2022 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -136,6 +136,7 @@ typedef struct
 // Predefined shader types
 enum
 {
+	SHADER_NONE = -1,
 	SHADER_DEFAULT = 0,
 
 	SHADER_FLOOR,
@@ -237,7 +238,8 @@ enum EPolyFlags
 	PF_RemoveYWrap      = 0x00010000,   // Forces clamp texture on Y
 	PF_ForceWrapX       = 0x00020000,   // Forces repeat texture on X
 	PF_ForceWrapY       = 0x00040000,   // Forces repeat texture on Y
-	PF_Ripple           = 0x00100000    // Water ripple effect. The current backend doesn't use it for anything.
+	PF_Ripple           = 0x00100000,   // Water ripple effect. The current backend doesn't use it for anything.
+	PF_WireFrame        = 0x00200000,   // Draws vertices as lines instead of triangles
 };
 
 

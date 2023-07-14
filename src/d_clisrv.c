@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2022 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -1318,9 +1318,9 @@ static boolean CL_SendJoin(void)
 
 static INT32 FindRejoinerNum(SINT8 node)
 {
-	char strippednodeaddress[64];
+	char addressbuffer[64];
 	const char *nodeaddress;
-	char *port;
+	const char *strippednodeaddress;
 	INT32 i;
 
 	// Make sure there is no dead dress before proceeding to the stripping
@@ -1331,10 +1331,8 @@ static INT32 FindRejoinerNum(SINT8 node)
 		return -1;
 
 	// Strip the address of its port
-	strcpy(strippednodeaddress, nodeaddress);
-	port = strchr(strippednodeaddress, ':');
-	if (port)
-		*port = '\0';
+	strcpy(addressbuffer, nodeaddress);
+	strippednodeaddress = I_NetSplitAddress(addressbuffer, NULL);
 
 	// Check if any player matches the stripped address
 	for (i = 0; i < MAXPLAYERS; i++)
@@ -1377,8 +1375,9 @@ static void SV_SendServerInfo(INT32 node, tic_t servertime)
 	netbuffer->u.serverinfo.time = (tic_t)LONG(servertime);
 	netbuffer->u.serverinfo.leveltime = (tic_t)LONG(leveltime);
 
-	netbuffer->u.serverinfo.numberofplayer = (UINT8)D_NumPlayers();
-	netbuffer->u.serverinfo.maxplayer = (UINT8)cv_maxplayers.value;
+	// Exclude bots from both counts
+	netbuffer->u.serverinfo.numberofplayer = (UINT8)(D_NumPlayers() - D_NumBots());
+	netbuffer->u.serverinfo.maxplayer = (UINT8)(cv_maxplayers.value - D_NumBots());
 
 	netbuffer->u.serverinfo.refusereason = GetRefuseReason(node);
 
@@ -1505,6 +1504,7 @@ static boolean SV_SendServerConfig(INT32 node)
 	netbuffer->u.servercfg.gamestate = (UINT8)gamestate;
 	netbuffer->u.servercfg.gametype = (UINT8)gametype;
 	netbuffer->u.servercfg.modifiedgame = (UINT8)modifiedgame;
+	netbuffer->u.servercfg.usedCheats = (UINT8)usedCheats;
 
 	memcpy(netbuffer->u.servercfg.server_context, server_context, 8);
 
@@ -2485,7 +2485,7 @@ static boolean CL_ServerConnectionTicker(const char *tmpsave, tic_t *oldtic, tic
 		{
 			if (!snake)
 			{
-				F_MenuPresTicker(true); // title sky
+				F_MenuPresTicker(); // title sky
 				F_TitleScreenTicker(true);
 				F_TitleScreenDrawer();
 			}
@@ -3506,10 +3506,10 @@ static void Got_KickCmd(UINT8 **p, INT32 playernum)
 static CV_PossibleValue_t netticbuffer_cons_t[] = {{0, "MIN"}, {3, "MAX"}, {0, NULL}};
 consvar_t cv_netticbuffer = CVAR_INIT ("netticbuffer", "1", CV_SAVE, netticbuffer_cons_t, NULL);
 
-consvar_t cv_allownewplayer = CVAR_INIT ("allowjoin", "On", CV_SAVE|CV_NETVAR, CV_OnOff, NULL);
+consvar_t cv_allownewplayer = CVAR_INIT ("allowjoin", "On", CV_SAVE|CV_NETVAR|CV_ALLOWLUA, CV_OnOff, NULL);
 consvar_t cv_joinnextround = CVAR_INIT ("joinnextround", "Off", CV_SAVE|CV_NETVAR, CV_OnOff, NULL); /// \todo not done
 static CV_PossibleValue_t maxplayers_cons_t[] = {{2, "MIN"}, {32, "MAX"}, {0, NULL}};
-consvar_t cv_maxplayers = CVAR_INIT ("maxplayers", "8", CV_SAVE|CV_NETVAR, maxplayers_cons_t, NULL);
+consvar_t cv_maxplayers = CVAR_INIT ("maxplayers", "8", CV_SAVE|CV_NETVAR|CV_ALLOWLUA, maxplayers_cons_t, NULL);
 static CV_PossibleValue_t joindelay_cons_t[] = {{1, "MIN"}, {3600, "MAX"}, {0, "Off"}, {0, NULL}};
 consvar_t cv_joindelay = CVAR_INIT ("joindelay", "10", CV_SAVE|CV_NETVAR, joindelay_cons_t, NULL);
 static CV_PossibleValue_t rejointimeout_cons_t[] = {{1, "MIN"}, {60 * FRACUNIT, "MAX"}, {0, "Off"}, {0, NULL}};
@@ -3537,22 +3537,22 @@ void D_ClientServerInit(void)
 		VERSION/100, VERSION%100, SUBVERSION));
 
 #ifndef NONET
-	COM_AddCommand("getplayernum", Command_GetPlayerNum);
-	COM_AddCommand("kick", Command_Kick);
-	COM_AddCommand("ban", Command_Ban);
-	COM_AddCommand("banip", Command_BanIP);
-	COM_AddCommand("clearbans", Command_ClearBans);
-	COM_AddCommand("showbanlist", Command_ShowBan);
-	COM_AddCommand("reloadbans", Command_ReloadBan);
-	COM_AddCommand("connect", Command_connect);
-	COM_AddCommand("nodes", Command_Nodes);
-	COM_AddCommand("resendgamestate", Command_ResendGamestate);
+	COM_AddCommand("getplayernum", Command_GetPlayerNum, COM_LUA);
+	COM_AddCommand("kick", Command_Kick, COM_LUA);
+	COM_AddCommand("ban", Command_Ban, COM_LUA);
+	COM_AddCommand("banip", Command_BanIP, COM_LUA);
+	COM_AddCommand("clearbans", Command_ClearBans, COM_LUA);
+	COM_AddCommand("showbanlist", Command_ShowBan, COM_LUA);
+	COM_AddCommand("reloadbans", Command_ReloadBan, COM_LUA);
+	COM_AddCommand("connect", Command_connect, COM_LUA);
+	COM_AddCommand("nodes", Command_Nodes, COM_LUA);
+	COM_AddCommand("resendgamestate", Command_ResendGamestate, COM_LUA);
 #ifdef PACKETDROP
-	COM_AddCommand("drop", Command_Drop);
-	COM_AddCommand("droprate", Command_Droprate);
+	COM_AddCommand("drop", Command_Drop, COM_LUA);
+	COM_AddCommand("droprate", Command_Droprate, COM_LUA);
 #endif
 #ifdef _DEBUG
-	COM_AddCommand("numnodes", Command_Numnodes);
+	COM_AddCommand("numnodes", Command_Numnodes, COM_LUA);
 #endif
 #endif
 
@@ -3642,6 +3642,9 @@ void SV_ResetServer(void)
 	memset(server_context, '-', 8);
 
 	CV_RevertNetVars();
+
+	// Ensure synched when creating a new server
+	M_CopyGameData(serverGamedata, clientGamedata);
 
 	DEBFILE("\n-=-=-=-=-=-=-= Server Reset =-=-=-=-=-=-=-\n\n");
 }
@@ -3766,14 +3769,13 @@ static void Got_AddPlayer(UINT8 **p, INT32 playernum)
 
 		if (server && I_GetNodeAddress)
 		{
+			char addressbuffer[64];
 			const char *address = I_GetNodeAddress(node);
-			char *port = NULL;
 			if (address) // MI: fix msvcrt.dll!_mbscat crash?
 			{
-				strcpy(playeraddress[newplayernum], address);
-				port = strchr(playeraddress[newplayernum], ':');
-				if (port)
-					*port = '\0';
+				strcpy(addressbuffer, address);
+				strcpy(playeraddress[newplayernum],
+						I_NetSplitAddress(addressbuffer, NULL));
 			}
 		}
 	}
@@ -4077,7 +4079,7 @@ ConnectionRefused (SINT8 node, INT32 rejoinernum)
 		{
 			return va(
 					"Maximum players reached: %d",
-					cv_maxplayers.value);
+					cv_maxplayers.value - D_NumBots());
 		}
 	}
 
@@ -4405,6 +4407,8 @@ static void HandlePacketFromAwayNode(SINT8 node)
 				maketic = gametic = neededtic = (tic_t)LONG(netbuffer->u.servercfg.gametic);
 				G_SetGametype(netbuffer->u.servercfg.gametype);
 				modifiedgame = netbuffer->u.servercfg.modifiedgame;
+				if (netbuffer->u.servercfg.usedCheats)
+					G_SetUsedCheats(true);
 				memcpy(server_context, netbuffer->u.servercfg.server_context, 8);
 			}
 
@@ -5605,6 +5609,19 @@ INT32 D_NumPlayers(void)
 	INT32 num = 0, ix;
 	for (ix = 0; ix < MAXPLAYERS; ix++)
 		if (playeringame[ix])
+			num++;
+	return num;
+}
+
+/** Similar to the above, but counts only bots.
+  * Purpose is to remove bots from both the player count and the
+  * max player count on the server view
+*/
+INT32 D_NumBots(void)
+{
+	INT32 num = 0, ix;
+	for (ix = 0; ix < MAXPLAYERS; ix++)
+		if (playeringame[ix] && players[ix].bot)
 			num++;
 	return num;
 }

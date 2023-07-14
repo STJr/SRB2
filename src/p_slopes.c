@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2004      by Stephen McGranahan
-// Copyright (C) 2015-2022 by Sonic Team Junior.
+// Copyright (C) 2015-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -328,7 +328,7 @@ static void line_SpawnViaLine(const int linenum, const boolean spawnthinker)
 
 	if(!frontfloor && !backfloor && !frontceil && !backceil)
 	{
-		CONS_Printf("line_SpawnViaLine: Slope special with nothing to do.\n");
+		CONS_Printf("line_SpawnViaLine: Unused slope special with nothing to do on line number %i\n", linenum);
 		return;
 	}
 
@@ -869,7 +869,7 @@ fixed_t P_GetWallTransferMomZ(mobj_t *mo, pslope_t *slope)
 	vector3_t slopemom, axis;
 	angle_t ang;
 
-	if (mo->standingslope->flags & SL_NOPHYSICS)
+	if (slope->flags & SL_NOPHYSICS)
 		return 0;
 
 	// If there's physics, time for launching.

@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2022 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -1035,7 +1035,7 @@ UINT16 W_InitFolder(const char *path, boolean mainfile, boolean startup)
 		return W_InitFileError(path, startup);
 	}
 
-	important = 0; /// \todo Implement a W_VerifyFolder.
+	important = 1; /// \todo Implement a W_VerifyFolder.
 
 	// Remove path delimiters.
 	p = path + (strlen(path) - 1);
