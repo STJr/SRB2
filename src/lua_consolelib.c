@@ -357,7 +357,7 @@ static int lib_cvRegisterVar(lua_State *L)
 			if (lua_islightuserdata(L, 4))
 			{
 				CV_PossibleValue_t *pv = lua_touserdata(L, 4);
-				if (pv == CV_OnOff || pv == CV_YesNo || pv == CV_Unsigned || pv == CV_Natural)
+				if (pv == CV_OnOff || pv == CV_YesNo || pv == CV_Unsigned || pv == CV_Natural || pv == CV_TrueFalse)
 					cvar->PossibleValue = pv;
 				else
 					FIELDERROR("PossibleValue", "CV_PossibleValue_t expected, got unrecognised pointer")
@@ -652,6 +652,8 @@ int LUA_ConsoleLib(lua_State *L)
 	lua_setglobal(L, "CV_Unsigned");
 	lua_pushlightuserdata(L, CV_Natural);
 	lua_setglobal(L, "CV_Natural");
+	lua_pushlightuserdata(L, CV_TrueFalse);
+	lua_setglobal(L, "CV_TrueFalse");
 
 	// Set global functions
 	lua_pushvalue(L, LUA_GLOBALSINDEX);
