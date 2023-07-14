@@ -190,7 +190,8 @@ UINT32 R_GetSkinAvailabilities(void)
 			// This crash is impossible to trigger as is,
 			// but it could happen if MAXUNLOCKABLES is ever made higher than 32,
 			// and someone makes a mod that has 33+ unlockable characters. :V
-			I_Error("Too many unlockable characters\n");
+			// 2022/03/15: MAXUNLOCKABLES is now higher than 32
+			I_Error("Too many unlockable characters! (maximum is 32)\n");
 			return 0;
 		}
 

@@ -4309,6 +4309,12 @@ void G_LoadGameData(gamedata_t *data)
 	// Stop saving, until we successfully load it again.
 	data->loaded = false;
 
+	// Backwards compat stuff
+	INT32 max_emblems = MAXEMBLEMS;
+	INT32 max_extraemblems = MAXEXTRAEMBLEMS;
+	INT32 max_unlockables = MAXUNLOCKABLES;
+	INT32 max_conditionsets = MAXCONDITIONSETS;
+
 	// Clear things so previously read gamedata doesn't transfer
 	// to new gamedata
 	G_ClearRecords(data); // main and nights records
@@ -4325,7 +4331,7 @@ void G_LoadGameData(gamedata_t *data)
 	{
 		// Don't load, but do save. (essentially, reset)
 		data->loaded = true;
-		return; 
+		return;
 	}
 
 	length = FIL_ReadFile(va(pandf, srb2home, gamedatafilename), &savebuffer);
@@ -4354,6 +4360,14 @@ void G_LoadGameData(gamedata_t *data)
 		save_p = NULL;
 		I_Error("Game data is from another version of SRB2.\nDelete %s(maybe in %s) and try again.", gamedatafilename, gdfolder);
 	}
+
+#ifdef COMPAT_GAMEDATA_ID // Account for lower MAXUNLOCKABLES and MAXEXTRAEMBLEMS from older versions
+	if (versionID == COMPAT_GAMEDATA_ID)
+	{
+		max_extraemblems = 16;
+		max_unlockables = 32;
+	}
+#endif
 
 	data->totalplaytime = READUINT32(save_p);
 
@@ -4393,31 +4407,31 @@ void G_LoadGameData(gamedata_t *data)
 			goto datacorrupt;
 
 	// To save space, use one bit per collected/achieved/unlocked flag
-	for (i = 0; i < MAXEMBLEMS;)
+	for (i = 0; i < max_emblems;)
 	{
 		rtemp = READUINT8(save_p);
-		for (j = 0; j < 8 && j+i < MAXEMBLEMS; ++j)
+		for (j = 0; j < 8 && j+i < max_emblems; ++j)
 			data->collected[j+i] = ((rtemp >> j) & 1);
 		i += j;
 	}
-	for (i = 0; i < MAXEXTRAEMBLEMS;)
+	for (i = 0; i < max_extraemblems;)
 	{
 		rtemp = READUINT8(save_p);
-		for (j = 0; j < 8 && j+i < MAXEXTRAEMBLEMS; ++j)
+		for (j = 0; j < 8 && j+i < max_extraemblems; ++j)
 			data->extraCollected[j+i] = ((rtemp >> j) & 1);
 		i += j;
 	}
-	for (i = 0; i < MAXUNLOCKABLES;)
+	for (i = 0; i < max_unlockables;)
 	{
 		rtemp = READUINT8(save_p);
-		for (j = 0; j < 8 && j+i < MAXUNLOCKABLES; ++j)
+		for (j = 0; j < 8 && j+i < max_unlockables; ++j)
 			data->unlocked[j+i] = ((rtemp >> j) & 1);
 		i += j;
 	}
-	for (i = 0; i < MAXCONDITIONSETS;)
+	for (i = 0; i < max_conditionsets;)
 	{
 		rtemp = READUINT8(save_p);
-		for (j = 0; j < 8 && j+i < MAXCONDITIONSETS; ++j)
+		for (j = 0; j < 8 && j+i < max_conditionsets; ++j)
 			data->achieved[j+i] = ((rtemp >> j) & 1);
 		i += j;
 	}
