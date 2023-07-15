@@ -1363,7 +1363,7 @@ void R_SkyboxFrame(player_t *player)
 			newview->z += campos.z * -mh->skybox_scalez;
 	}
 
-	if (r_viewmobj->subsector)
+	if (!P_MobjWasRemoved(r_viewmobj) && r_viewmobj->subsector)
 		newview->sector = r_viewmobj->subsector->sector;
 	else
 		newview->sector = R_PointInSubsector(newview->x, newview->y)->sector;

@@ -1926,7 +1926,7 @@ static void ST_drawNiGHTSHUD(void)
 		total_ringcount = stplyr->spheres;
 	}
 
-	if (stplyr->capsule)
+	if (!P_MobjWasRemoved(stplyr->capsule))
 	{
 		INT32 amount;
 		const INT32 length = 88;

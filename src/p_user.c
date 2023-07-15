@@ -11101,7 +11101,8 @@ static void P_MinecartThink(player_t *player)
 	fa = (minecart->angle >> ANGLETOFINESHIFT) & FINEMASK;
 	if (!P_TryMove(minecart, minecart->x + FINECOSINE(fa), minecart->y + FINESINE(fa), true))
 	{
-		P_KillMobj(minecart, NULL, NULL, 0);
+		if (!P_MobjWasRemoved(minecart))
+			P_KillMobj(minecart, NULL, NULL, 0);
 		return;
 	}
 
@@ -12455,7 +12456,7 @@ void P_PlayerThink(player_t *player)
 			player->texttimer = 4*TICRATE;
 			player->textvar = 2; // GET n RINGS!
 
-			if (player->capsule && player->capsule->health != player->capsule->spawnpoint->angle)
+			if (!P_MobjWasRemoved(player->capsule) && player->capsule->health != player->capsule->spawnpoint->angle)
 				player->textvar++; // GET n MORE RINGS!
 		}
 	}
