@@ -681,6 +681,17 @@ static void COM_ExecuteString(char *ptext)
 //                            SCRIPT COMMANDS
 // =========================================================================
 
+static void print_alias(void)
+{
+	cmdalias_t *a;
+
+	CONS_Printf("\x82""Current alias commands:\n");
+	for (a = com_alias; a; a = a->next)
+	{
+		CONS_Printf("%s : %s", a->name, a->value);
+	}
+}
+
 /** Creates a command name that replaces another command.
   */
 static void COM_Alias_f(void)
@@ -692,6 +703,7 @@ static void COM_Alias_f(void)
 	if (COM_Argc() < 3)
 	{
 		CONS_Printf(M_GetText("alias <name> <command>: create a shortcut command that executes other command(s)\n"));
+		print_alias();
 		return;
 	}
 
