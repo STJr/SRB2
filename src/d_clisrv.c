@@ -1293,6 +1293,7 @@ static boolean CL_AskFileList(INT32 firstfile)
 static boolean CL_SendJoin(void)
 {
 	UINT8 localplayers = 1;
+	char const *player2name;
 	if (netgame)
 		CONS_Printf(M_GetText("Sending join request...\n"));
 	netbuffer->packettype = PT_CLIENTJOIN;
@@ -1309,9 +1310,11 @@ static boolean CL_SendJoin(void)
 	CleanupPlayerName(consoleplayer, cv_playername.zstring);
 	if (splitscreen)
 		CleanupPlayerName(1, cv_playername2.zstring);/* 1 is a HACK? oh no */
+	// Avoid empty string on bots to avoid softlocking in singleplayer
+	player2name = botingame ? "a" : cv_playername2.zstring;
 
 	strncpy(netbuffer->u.clientcfg.names[0], cv_playername.zstring, MAXPLAYERNAME);
-	strncpy(netbuffer->u.clientcfg.names[1], cv_playername2.zstring, MAXPLAYERNAME);
+	strncpy(netbuffer->u.clientcfg.names[1], player2name, MAXPLAYERNAME);
 
 	return HSendPacket(servernode, true, 0, sizeof (clientconfig_pak));
 }
