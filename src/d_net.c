@@ -869,6 +869,9 @@ static void DebugPrintpacket(const char *header)
 				(UINT32)ExpandTics(netbuffer->u.clientpak.client_tic, doomcom->remotenode),
 				(UINT32)ExpandTics (netbuffer->u.clientpak.resendfrom, doomcom->remotenode));
 			break;
+		case PT_BASICKEEPALIVE:
+			fprintf(debugfile, "    wipetime\n");
+			break;
 		case PT_TEXTCMD:
 		case PT_TEXTCMD2:
 			fprintf(debugfile, "    length %d\n    ", netbuffer->u.textcmd[0]);
