@@ -1311,7 +1311,10 @@ static boolean CL_SendJoin(void)
 	if (splitscreen)
 		CleanupPlayerName(1, cv_playername2.zstring);/* 1 is a HACK? oh no */
 	// Avoid empty string on bots to avoid softlocking in singleplayer
-	player2name = botingame ? "a" : cv_playername2.zstring;
+	if (botingame)
+		player2name = strcmp(cv_playername.zstring, "Tails") == 0 ? "Tail" : "Tails";
+	else
+		player2name = cv_playername2.zstring;
 
 	strncpy(netbuffer->u.clientcfg.names[0], cv_playername.zstring, MAXPLAYERNAME);
 	strncpy(netbuffer->u.clientcfg.names[1], player2name, MAXPLAYERNAME);
