@@ -501,7 +501,19 @@ static int setglobals(lua_State *L)
 
 		actionnum = LUA_GetActionNumByName(name);
 		if (actionnum < NUMACTIONS)
-			actionsoverridden[actionnum] = true;
+		{
+			int i;
+
+			for (i = MAX_ACTION_RECURSION-1; i > 0; i--)
+			{
+				// Move other references deeper.
+				actionsoverridden[actionnum][i] = actionsoverridden[actionnum][i - 1];
+			}
+
+			// Add the new reference.
+			lua_pushvalue(L, 2);
+			actionsoverridden[actionnum][0] = luaL_ref(L, LUA_REGISTRYINDEX);
+		}
 
 		Z_Free(name);
 		return 0;

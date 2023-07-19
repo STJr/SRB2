@@ -18,6 +18,7 @@
 #include "d_think.h"
 #include "sounds.h"
 #include "m_fixed.h"
+#include "dehacked.h" // MAX_ACTION_RECURSION
 
 // deh_tables.c now has lists for the more named enums! PLEASE keep them up to date!
 // For great modding!!
@@ -564,7 +565,7 @@ void A_DragonWing();
 void A_DragonSegment();
 void A_ChangeHeight();
 
-extern boolean actionsoverridden[NUMACTIONS];
+extern int actionsoverridden[NUMACTIONS][MAX_ACTION_RECURSION];
 
 // ratio of states to sprites to mobj types is roughly 6 : 1 : 1
 #define NUMMOBJFREESLOTS 512
