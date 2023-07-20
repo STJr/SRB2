@@ -3205,10 +3205,17 @@ static nodetype_t P_GetNodetype(const virtres_t *virt, UINT8 **nodedata)
 	nodetype_t nodetype = NT_UNSUPPORTED;
 	char signature[4 + 1];
 
+	*nodedata = NULL;
+
 	if (udmf)
 	{
-		*nodedata = vres_Find(virt, "ZNODES")->data;
-		supported[NT_XGLN] = supported[NT_XGL3] = true;
+		virtlump_t *virtznodes = vres_Find(virt, "ZNODES");
+
+		if (virtznodes && virtznodes->size)
+		{
+			*nodedata = virtznodes->data;
+			supported[NT_XGLN] = supported[NT_XGL3] = true;
+		}
 	}
 	else
 	{
@@ -3217,22 +3224,37 @@ static nodetype_t P_GetNodetype(const virtres_t *virt, UINT8 **nodedata)
 
 		if (virtsegs && virtsegs->size)
 		{
-			*nodedata = vres_Find(virt, "NODES")->data;
-			return NT_DOOM; // Traditional map format BSP tree.
-		}
-
-		virtssectors = vres_Find(virt, "SSECTORS");
-
-		if (virtssectors && virtssectors->size)
-		{ // Possibly GL nodes: NODES ignored, SSECTORS takes precedence as nodes lump, (It is confusing yeah) and has a signature.
-			*nodedata = virtssectors->data;
-			supported[NT_XGLN] = supported[NT_ZGLN] = supported[NT_XGL3] = true;
+			virtlump_t *virtnodes = vres_Find(virt, "NODES");
+			if (virtnodes && virtnodes->size)
+			{
+				*nodedata = virtnodes->data;
+				return NT_DOOM; // Traditional map format BSP tree.
+			}
 		}
 		else
-		{ // Possibly ZDoom extended nodes: SSECTORS is empty, NODES has a signature.
-			*nodedata = vres_Find(virt, "NODES")->data;
-			supported[NT_XNOD] = supported[NT_ZNOD] = true;
+		{
+			virtssectors = vres_Find(virt, "SSECTORS");
+
+			if (virtssectors && virtssectors->size)
+			{ // Possibly GL nodes: NODES ignored, SSECTORS takes precedence as nodes lump, (It is confusing yeah) and has a signature.
+				*nodedata = virtssectors->data;
+				supported[NT_XGLN] = supported[NT_ZGLN] = supported[NT_XGL3] = true;
+			}
+			else
+			{ // Possibly ZDoom extended nodes: SSECTORS is empty, NODES has a signature.
+				virtlump_t *virtnodes = vres_Find(virt, "NODES");
+				if (virtnodes && virtnodes->size)
+				{
+					*nodedata = virtnodes->data;
+					supported[NT_XNOD] = supported[NT_ZNOD] = true;
+				}
+			}
 		}
+	}
+
+	if (*nodedata == NULL)
+	{
+		I_Error("Level has no nodes (does your map have at least 2 sectors?)");
 	}
 
 	M_Memcpy(signature, *nodedata, 4);
