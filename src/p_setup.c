@@ -1283,7 +1283,7 @@ static void P_WriteSfx(INT32 constant, char **target)
 		return;
 
 	P_WriteDuplicateText(
-		va("sfx_%s", S_sfx[constant].name),
+		va("SFX_%s", S_sfx[constant].name),
 		target
 	);
 }
