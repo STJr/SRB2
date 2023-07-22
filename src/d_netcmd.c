@@ -49,7 +49,7 @@
 #include "m_anigif.h"
 #include "md5.h"
 #include "m_perfstats.h"
-#include "hardware/u_list.h" // TODO: this should be a standard utility class
+#include "u_list.h"
 
 #ifdef NETGAME_DEVMODE
 #define CV_RESTRICT CV_NETVAR
