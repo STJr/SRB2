@@ -1594,6 +1594,7 @@ static void R_ProjectSprite(mobj_t *thing)
 #ifdef ROTSPRITE
 	patch_t *rotsprite = NULL;
 	INT32 rollangle = 0;
+	angle_t spriterotangle = 0;
 #endif
 
 	// uncapped/interpolation
@@ -1743,17 +1744,19 @@ static void R_ProjectSprite(mobj_t *thing)
 	patch = W_CachePatchNum(sprframe->lumppat[rot], PU_SPRITE);
 
 #ifdef ROTSPRITE
-	if (thing->rollangle
+	spriterotangle = R_SpriteRotationAngle(&interp);
+
+	if (spriterotangle != 0
 	&& !(splat && !(thing->renderflags & RF_NOSPLATROLLANGLE)))
 	{
 		if (papersprite && ang >= ANGLE_180)
 		{
 			// Makes Software act much more sane like OpenGL
-			rollangle = R_GetRollAngle(InvAngle(thing->rollangle));
+			rollangle = R_GetRollAngle(InvAngle(spriterotangle));
 		}
 		else
 		{
-			rollangle = R_GetRollAngle(thing->rollangle);
+			rollangle = R_GetRollAngle(spriterotangle);
 		}
 
 		rotsprite = Patch_GetRotatedSprite(sprframe, (thing->frame & FF_FRAMEMASK), rot, flip, false, sprinfo, rollangle);

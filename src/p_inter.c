@@ -3117,7 +3117,7 @@ static void P_NiGHTSDamage(mobj_t *target, mobj_t *source)
 		P_SetPlayerMobjState(target, S_PLAY_NIGHTS_STUN);
 		S_StartSound(target, sfx_nghurt);
 
-		player->mo->rollangle = 0;
+		player->mo->spriteroll = 0;
 
 		if (oldnightstime > 10*TICRATE
 			&& player->nightstime < 10*TICRATE)

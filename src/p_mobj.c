@@ -1551,6 +1551,31 @@ void P_CheckGravity(mobj_t *mo, boolean affect)
 	}
 }
 
+//
+// P_SetPitchRollFromSlope
+//
+void P_SetPitchRollFromSlope(mobj_t *mo, pslope_t *slope)
+{
+#if 0
+	if (slope)
+	{
+		fixed_t tempz = slope->normal.z;
+		fixed_t tempy = slope->normal.y;
+		fixed_t tempx = slope->normal.x;
+
+		mo->pitch = R_PointToAngle2(0, 0, FixedSqrt(FixedMul(tempy, tempy) + FixedMul(tempz, tempz)), tempx);
+		mo->roll = R_PointToAngle2(0, 0, tempz, tempy);
+	}
+	else
+	{
+		mo->pitch = mo->roll = 0;
+	}
+#else
+	(void)mo;
+	(void)slope;
+#endif
+}
+
 #define STOPSPEED (FRACUNIT)
 
 //
@@ -1985,6 +2010,7 @@ void P_XYMovement(mobj_t *mo)
 			// Now compare the Zs of the different quantizations
 			if (oldangle-newangle > ANG30 && oldangle-newangle < ANGLE_180) { // Allow for a bit of sticking - this value can be adjusted later
 				mo->standingslope = oldslope;
+				P_SetPitchRollFromSlope(mo, mo->standingslope);
 				P_SlopeLaunch(mo);
 
 				//CONS_Printf("launched off of slope - ");
@@ -2557,6 +2583,7 @@ boolean P_ZMovement(mobj_t *mo)
 		if (((mo->eflags & MFE_VERTICALFLIP) ? tmceilingslope : tmfloorslope) && (mo->type != MT_STEAM))
 		{
 			mo->standingslope = (mo->eflags & MFE_VERTICALFLIP) ? tmceilingslope : tmfloorslope;
+			P_SetPitchRollFromSlope(mo, mo->standingslope);
 			P_ReverseQuantizeMomentumToSlope(&mom, mo->standingslope);
 		}
 
@@ -9846,9 +9873,9 @@ static boolean P_MobjRegularThink(mobj_t *mobj)
 		break;
 	case MT_MINUS:
 		if (P_IsObjectOnGround(mobj))
-			mobj->rollangle = 0;
+			mobj->spriteroll = 0;
 		else
-			mobj->rollangle = R_PointToAngle2(0, 0, P_MobjFlip(mobj)*mobj->momz, (mobj->scale << 1) - min(abs(mobj->momz), mobj->scale << 1));
+			mobj->spriteroll = R_PointToAngle2(0, 0, P_MobjFlip(mobj)*mobj->momz, (mobj->scale << 1) - min(abs(mobj->momz), mobj->scale << 1));
 		break;
 	case MT_PUSH:
 		P_PointPushThink(mobj);
@@ -14144,6 +14171,13 @@ mobj_t *P_SpawnMobjFromMobj(mobj_t *mobj, fixed_t xofs, fixed_t yofs, fixed_t zo
 		newmobj->old_angle2 = mobj->old_angle2;
 		newmobj->old_angle = mobj->old_angle;
 	}
+
+	newmobj->old_pitch2 = mobj->old_pitch2;
+	newmobj->old_pitch = mobj->old_pitch;
+	newmobj->old_roll2 = mobj->old_roll2;
+	newmobj->old_roll = mobj->old_roll;
+	newmobj->old_spriteroll2 = mobj->old_spriteroll2;
+	newmobj->old_spriteroll = mobj->old_spriteroll;
 
 	newmobj->old_scale2 = mobj->old_scale2;
 	newmobj->old_scale = mobj->old_scale;

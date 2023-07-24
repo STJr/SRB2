@@ -294,6 +294,9 @@ void R_InterpolateMobjState(mobj_t *mobj, fixed_t frac, interpmobjstate_t *out)
 		out->scale = mobj->scale;
 		out->subsector = mobj->subsector;
 		out->angle = mobj->player ? mobj->player->drawangle : mobj->angle;
+		out->pitch = mobj->pitch;
+		out->roll = mobj->roll;
+		out->spriteroll = mobj->spriteroll;
 		out->spritexscale = mobj->spritexscale;
 		out->spriteyscale = mobj->spriteyscale;
 		out->spritexoffset = mobj->spritexoffset;
@@ -323,6 +326,10 @@ void R_InterpolateMobjState(mobj_t *mobj, fixed_t frac, interpmobjstate_t *out)
 	{
 		out->angle = mobj->resetinterp ? mobj->angle : R_LerpAngle(mobj->old_angle, mobj->angle, frac);
 	}
+
+	out->pitch = mobj->resetinterp ? mobj->pitch : R_LerpAngle(mobj->old_pitch, mobj->pitch, frac);
+	out->roll = mobj->resetinterp ? mobj->roll : R_LerpAngle(mobj->old_roll, mobj->roll, frac);
+	out->spriteroll = mobj->resetinterp ? mobj->spriteroll : R_LerpAngle(mobj->old_spriteroll, mobj->spriteroll, frac);
 }
 
 void R_InterpolatePrecipMobjState(precipmobj_t *mobj, fixed_t frac, interpmobjstate_t *out)
@@ -335,6 +342,9 @@ void R_InterpolatePrecipMobjState(precipmobj_t *mobj, fixed_t frac, interpmobjst
 		out->scale = FRACUNIT;
 		out->subsector = mobj->subsector;
 		out->angle = mobj->angle;
+		out->pitch = mobj->angle;
+		out->roll = mobj->roll;
+		out->spriteroll = mobj->spriteroll;
 		out->spritexscale = mobj->spritexscale;
 		out->spriteyscale = mobj->spriteyscale;
 		out->spritexoffset = mobj->spritexoffset;
@@ -354,6 +364,9 @@ void R_InterpolatePrecipMobjState(precipmobj_t *mobj, fixed_t frac, interpmobjst
 	out->subsector = R_PointInSubsector(out->x, out->y);
 
 	out->angle = R_LerpAngle(mobj->old_angle, mobj->angle, frac);
+	out->pitch = R_LerpAngle(mobj->old_pitch, mobj->pitch, frac);
+	out->roll = R_LerpAngle(mobj->old_roll, mobj->roll, frac);
+	out->spriteroll = R_LerpAngle(mobj->old_spriteroll, mobj->spriteroll, frac);
 }
 
 static void AddInterpolator(levelinterpolator_t* interpolator)
@@ -766,6 +779,7 @@ void R_ResetMobjInterpolationState(mobj_t *mobj)
 	mobj->old_angle2 = mobj->old_angle;
 	mobj->old_pitch2 = mobj->old_pitch;
 	mobj->old_roll2 = mobj->old_roll;
+	mobj->old_spriteroll2 = mobj->old_spriteroll;
 	mobj->old_scale2 = mobj->old_scale;
 	mobj->old_x = mobj->x;
 	mobj->old_y = mobj->y;
@@ -773,6 +787,7 @@ void R_ResetMobjInterpolationState(mobj_t *mobj)
 	mobj->old_angle = mobj->angle;
 	mobj->old_pitch = mobj->pitch;
 	mobj->old_roll = mobj->roll;
+	mobj->old_spriteroll = mobj->spriteroll;
 	mobj->old_scale = mobj->scale;
 	mobj->old_spritexscale = mobj->spritexscale;
 	mobj->old_spriteyscale = mobj->spriteyscale;
@@ -801,10 +816,14 @@ void R_ResetPrecipitationMobjInterpolationState(precipmobj_t *mobj)
 	mobj->old_angle2 = mobj->old_angle;
 	mobj->old_pitch2 = mobj->old_pitch;
 	mobj->old_roll2 = mobj->old_roll;
+	mobj->old_spriteroll2 = mobj->old_spriteroll;
 	mobj->old_x = mobj->x;
 	mobj->old_y = mobj->y;
 	mobj->old_z = mobj->z;
 	mobj->old_angle = mobj->angle;
+	mobj->old_pitch = mobj->pitch;
+	mobj->old_roll = mobj->roll;
+	mobj->old_spriteroll = mobj->spriteroll;
 	mobj->old_spritexscale = mobj->spritexscale;
 	mobj->old_spriteyscale = mobj->spriteyscale;
 	mobj->old_spritexoffset = mobj->spritexoffset;

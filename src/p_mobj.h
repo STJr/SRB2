@@ -292,7 +292,7 @@ typedef struct mobj_s
 	angle_t angle, pitch, roll; // orientation
 	angle_t old_angle, old_pitch, old_roll; // orientation interpolation
 	angle_t old_angle2, old_pitch2, old_roll2;
-	angle_t rollangle;
+	angle_t spriteroll, old_spriteroll, old_spriteroll2;
 	spritenum_t sprite; // used to find patch_t and flip value
 	UINT32 frame; // frame number, plus bits see p_pspr.h
 	UINT8 sprite2; // player sprites
@@ -429,7 +429,7 @@ typedef struct precipmobj_s
 	angle_t angle, pitch, roll; // orientation
 	angle_t old_angle, old_pitch, old_roll; // orientation interpolation
 	angle_t old_angle2, old_pitch2, old_roll2;
-	angle_t rollangle;
+	angle_t spriteroll, old_spriteroll, old_spriteroll2;
 	spritenum_t sprite; // used to find patch_t and flip value
 	UINT32 frame; // frame number, plus bits see p_pspr.h
 	UINT8 sprite2; // player sprites
