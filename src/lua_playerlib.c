@@ -222,6 +222,7 @@ enum player_e
 	player_blocked,
 	player_jointime,
 	player_quittime,
+	player_ping,
 #ifdef HWRENDER
 	player_fovadd,
 #endif
@@ -368,6 +369,7 @@ static const char *const player_opt[] = {
 	"blocked",
 	"jointime",
 	"quittime",
+	"ping",
 #ifdef HWRENDER
 	"fovadd",
 #endif
@@ -818,6 +820,9 @@ static int player_get(lua_State *L)
 		break;
 	case player_quittime:
 		lua_pushinteger(L, plr->quittime);
+		break;
+	case player_ping:
+		lua_pushinteger(L, playerpingtable[plr - players]);
 		break;
 #ifdef HWRENDER
 	case player_fovadd:
