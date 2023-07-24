@@ -1314,17 +1314,17 @@ static menuitem_t OP_VideoOptionsMenu[] =
 	{IT_STRING | IT_CALL,  NULL, "Set Resolution...",       M_VideoModeMenu,          6},
 
 #if defined (__unix__) || defined (UNIXCOMMON) || defined (HAVE_SDL)
-	{IT_STRING|IT_CVAR,      NULL, "Fullscreen",             &cv_fullscreen,         11},
+	{IT_STRING|IT_CVAR,      NULL, "Fullscreen (F11)",          &cv_fullscreen,      11},
 #endif
 	{IT_STRING | IT_CVAR, NULL, "Vertical Sync",                &cv_vidwait,         16},
 #ifdef HWRENDER
-	{IT_STRING | IT_CVAR, NULL, "Renderer",                     &cv_renderer,        21},
+	{IT_STRING | IT_CVAR, NULL, "Renderer (F10)",               &cv_renderer,        21},
 #else
-	{IT_TRANSTEXT | IT_PAIR, "Renderer", "Software",            &cv_renderer,           21},
+	{IT_TRANSTEXT | IT_PAIR, "Renderer", "Software",            &cv_renderer,        21},
 #endif
 
 	{IT_HEADER, NULL, "Color Profile", NULL, 30},
-	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "Brightness (F11)", &cv_globalgamma,36},
+	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "Brightness", &cv_globalgamma,36},
 	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "Saturation", &cv_globalsaturation, 41},
 	{IT_SUBMENU|IT_STRING, NULL, "Advanced Settings...",     &OP_ColorOptionsDef,  46},
 
@@ -2139,7 +2139,7 @@ static void M_VideoOptions(INT32 choice)
 	{
 		OP_VideoOptionsMenu[op_video_renderer].status = (IT_STRING | IT_CVAR);
 		OP_VideoOptionsMenu[op_video_renderer].patch = NULL;
-		OP_VideoOptionsMenu[op_video_renderer].text = "Renderer";
+		OP_VideoOptionsMenu[op_video_renderer].text = "Renderer (F10)";
 	}
 #endif
 
@@ -3379,12 +3379,12 @@ boolean M_Responder(event_t *ev)
 			// Screenshots on F8 now handled elsewhere
 			// Same with Moviemode on F9
 
-			case KEY_F10: // Quit SRB2
-				M_QuitSRB2(0);
+			case KEY_F10: // Renderer toggle, also processed inside menus
+				CV_AddValue(&cv_renderer, 1);
 				return true;
 
-			case KEY_F11: // Gamma Level
-				CV_AddValue(&cv_globalgamma, 1);
+			case KEY_F11: // Fullscreen toggle, also processed inside menus
+				CV_SetValue(&cv_fullscreen, !cv_fullscreen.value);
 				return true;
 
 			// Spymode on F12 handled in game logic
@@ -3564,6 +3564,14 @@ boolean M_Responder(event_t *ev)
 			//if (currentMenu->prevMenu)
 			//	M_SetupNextMenu(currentMenu->prevMenu);
 			return false;
+
+		case KEY_F10: // Renderer toggle, also processed outside menus
+			CV_AddValue(&cv_renderer, 1);
+			return true;
+
+		case KEY_F11: // Fullscreen toggle, also processed outside menus
+			CV_SetValue(&cv_fullscreen, !cv_fullscreen.value);
+			return true;
 
 		default:
 			CON_Responder(ev);
@@ -4194,15 +4202,6 @@ static void M_DrawSaveLoadBorder(INT32 x,INT32 y)
 	V_DrawScaledPatch (x,y+7,0,W_CachePatchName("M_LSRGHT",PU_PATCH));
 }
 #endif
-
-// horizontally centered text
-static void M_CentreText(INT32 y, const char *string)
-{
-	INT32 x;
-	//added : 02-02-98 : centre on 320, because V_DrawString centers on vid.width...
-	x = (BASEVIDWIDTH - V_StringWidth(string, V_OLDSPACING))>>1;
-	V_DrawString(x,y,V_OLDSPACING,string);
-}
 
 //
 // M_DrawMapEmblems
@@ -13106,12 +13105,12 @@ static void M_DrawControl(void)
 	if (tutorialmode && tutorialgcs)
 	{
 		if ((gametic / TICRATE) % 2)
-			M_CentreText(30, "\202EXIT THE TUTORIAL TO CHANGE THE CONTROLS");
+			V_DrawCenteredString(BASEVIDWIDTH/2, 30, 0, "\202EXIT THE TUTORIAL TO CHANGE THE CONTROLS");
 		else
-			M_CentreText(30, "EXIT THE TUTORIAL TO CHANGE THE CONTROLS");
+			V_DrawCenteredString(BASEVIDWIDTH/2, 30, 0, "EXIT THE TUTORIAL TO CHANGE THE CONTROLS");
 	}
 	else
-		M_CentreText(30,
+		V_DrawCenteredString(BASEVIDWIDTH/2, 30, 0,
 		    (setupcontrols_secondaryplayer ? "SET CONTROLS FOR SECONDARY PLAYER" :
 		                                     "PRESS ENTER TO CHANGE, BACKSPACE TO CLEAR"));
 
@@ -13476,11 +13475,11 @@ static void M_DrawVideoMode(void)
 	// draw title
 	M_DrawMenuTitle();
 
-	V_DrawCenteredString(BASEVIDWIDTH/2, OP_VideoModeDef.y,
-		V_YELLOWMAP, "Choose mode, reselect to change default");
+	V_DrawCenteredString(BASEVIDWIDTH/2, OP_VideoModeDef.y, V_YELLOWMAP, "Choose mode, reselect to change default");
+	V_DrawCenteredString(BASEVIDWIDTH/2, OP_VideoModeDef.y+8, V_YELLOWMAP, "Press F11 to toggle fullscreen");
 
 	row = 41;
-	col = OP_VideoModeDef.y + 14;
+	col = OP_VideoModeDef.y + 24;
 	for (i = 0; i < vidm_nummodes; i++)
 	{
 		if (i == vidm_selected)
@@ -13493,7 +13492,7 @@ static void M_DrawVideoMode(void)
 		if ((i % vidm_column_size) == (vidm_column_size-1))
 		{
 			row += 7*13;
-			col = OP_VideoModeDef.y + 14;
+			col = OP_VideoModeDef.y + 24;
 		}
 	}
 
@@ -13501,28 +13500,34 @@ static void M_DrawVideoMode(void)
 	{
 		INT32 testtime = (vidm_testingmode/TICRATE) + 1;
 
-		M_CentreText(OP_VideoModeDef.y + 116,
+		V_DrawCenteredString(BASEVIDWIDTH/2, OP_VideoModeDef.y + 116, 0,
 			va("Previewing mode %c%dx%d",
 				(SCR_IsAspectCorrect(vid.width, vid.height)) ? 0x83 : 0x80,
 				vid.width, vid.height));
-		M_CentreText(OP_VideoModeDef.y + 138,
+		V_DrawCenteredString(BASEVIDWIDTH/2, OP_VideoModeDef.y + 138, 0,
 			"Press ENTER again to keep this mode");
-		M_CentreText(OP_VideoModeDef.y + 150,
+		V_DrawCenteredString(BASEVIDWIDTH/2, OP_VideoModeDef.y + 150, 0,
 			va("Wait %d second%s", testtime, (testtime > 1) ? "s" : ""));
-		M_CentreText(OP_VideoModeDef.y + 158,
+		V_DrawCenteredString(BASEVIDWIDTH/2, OP_VideoModeDef.y + 158, 0,
 			"or press ESC to return");
-
 	}
 	else
 	{
-		M_CentreText(OP_VideoModeDef.y + 116,
+		V_DrawFill(60, OP_VideoModeDef.y + 98, 200, 12, 159);
+		V_DrawFill(60, OP_VideoModeDef.y + 114, 200, 20, 159);
+
+		V_DrawCenteredString(BASEVIDWIDTH/2, OP_VideoModeDef.y + 100, 0,
 			va("Current mode is %c%dx%d",
 				(SCR_IsAspectCorrect(vid.width, vid.height)) ? 0x83 : 0x80,
 				vid.width, vid.height));
-		M_CentreText(OP_VideoModeDef.y + 124,
+		V_DrawCenteredString(BASEVIDWIDTH/2, OP_VideoModeDef.y + 116, (cv_fullscreen.value ? 0 : V_TRANSLUCENT),
 			va("Default mode is %c%dx%d",
-				(SCR_IsAspectCorrect(cv_scr_width.value, cv_scr_height.value)) ? 0x83 : 0x80,
+				(SCR_IsAspectCorrect(cv_scr_width.value, cv_scr_height.value)) ? 0x83 : (!(VID_GetModeForSize(cv_scr_width.value, cv_scr_height.value)+1) ? 0x85 : 0x80),
 				cv_scr_width.value, cv_scr_height.value));
+		V_DrawCenteredString(BASEVIDWIDTH/2, OP_VideoModeDef.y + 124, (cv_fullscreen.value ? V_TRANSLUCENT : 0),
+			va("Windowed mode is %c%dx%d",
+				(SCR_IsAspectCorrect(cv_scr_width_w.value, cv_scr_height_w.value)) ? 0x83 : (!(VID_GetModeForSize(cv_scr_width_w.value, cv_scr_height_w.value)+1) ? 0x85 : 0x80),
+				cv_scr_width_w.value, cv_scr_height_w.value));
 
 		V_DrawCenteredString(BASEVIDWIDTH/2, OP_VideoModeDef.y + 138,
 			V_GREENMAP, "Green modes are recommended.");
@@ -13534,7 +13539,7 @@ static void M_DrawVideoMode(void)
 
 	// Draw the cursor for the VidMode menu
 	i = 41 - 10 + ((vidm_selected / vidm_column_size)*7*13);
-	j = OP_VideoModeDef.y + 14 + ((vidm_selected % vidm_column_size)*8);
+	j = OP_VideoModeDef.y + 24 + ((vidm_selected % vidm_column_size)*8);
 
 	V_DrawScaledPatch(i - 8, j, 0,
 		W_CachePatchName("M_CURSOR", PU_PATCH));
@@ -13717,11 +13722,14 @@ static void M_HandleVideoMode(INT32 ch)
 			break;
 
 		case KEY_ENTER:
-			S_StartSound(NULL, sfx_menu1);
 			if (vid.modenum == modedescs[vidm_selected].modenum)
+			{
+				S_StartSound(NULL, sfx_strpst);
 				SCR_SetDefaultMode();
+			}
 			else
 			{
+				S_StartSound(NULL, sfx_menu1);
 				vidm_testingmode = 15*TICRATE;
 				vidm_previousmode = vid.modenum;
 				if (!setmodeneeded) // in case the previous setmode was not finished
@@ -13734,6 +13742,27 @@ static void M_HandleVideoMode(INT32 ch)
 				M_SetupNextMenu(currentMenu->prevMenu);
 			else
 				M_ClearMenus(true);
+			break;
+
+		case KEY_BACKSPACE:
+			S_StartSound(NULL, sfx_menu1);
+			CV_Set(&cv_scr_width, cv_scr_width.defaultvalue);
+			CV_Set(&cv_scr_height, cv_scr_height.defaultvalue);
+			CV_Set(&cv_scr_width_w, cv_scr_width_w.defaultvalue);
+			CV_Set(&cv_scr_height_w, cv_scr_height_w.defaultvalue);
+			if (cv_fullscreen.value)
+				setmodeneeded = VID_GetModeForSize(cv_scr_width.value, cv_scr_height.value)+1;
+			else
+				setmodeneeded = VID_GetModeForSize(cv_scr_width_w.value, cv_scr_height_w.value)+1;
+			break;
+
+		case KEY_F10: // Renderer toggle, also processed inside menus
+			CV_AddValue(&cv_renderer, 1);
+			break;
+
+		case KEY_F11:
+			S_StartSound(NULL, sfx_menu1);
+			CV_SetValue(&cv_fullscreen, !cv_fullscreen.value);
 			break;
 
 		default:
