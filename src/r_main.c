@@ -941,6 +941,11 @@ void R_ExecuteSetViewSize(void)
 	if (splitscreen == 1) // Splitscreen FOV should be adjusted to maintain expected vertical view
 		fovtan = 17*fovtan/10;
 
+	// Adjust field of view to the aspect ratio
+	fixed_t resmul = FixedDiv(vid.width * FRACUNIT, vid.height * FRACUNIT);
+	if (resmul > FRACUNIT)
+		fovtan = FixedMul(fovtan, resmul);
+
 	projection = projectiony = FixedDiv(centerxfrac, fovtan);
 
 	R_InitViewBuffer(scaledviewwidth, viewheight);
