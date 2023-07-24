@@ -2657,10 +2657,13 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 				// This is not revoked until overwritten; awayviewtics is ignored
 				if (titlemapinaction)
 					titlemapcameraref = altview;
-				else
-				{
+				else if (!mo->player->awayviewtics || mo->player->awayviewmobj != altview) {
 					P_SetTarget(&mo->player->awayviewmobj, altview);
-					mo->player->awayviewtics = line->args[1];
+					
+					if (mo->player == &players[displayplayer])
+						P_ResetCamera(mo->player, &camera); // reset p1 camera on p1 getting an awayviewmobj
+					else if (splitscreen && mo->player == &players[secondarydisplayplayer])
+						P_ResetCamera(mo->player, &camera2);  // reset p2 camera on p2 getting an awayviewmobj
 				}
 
 				aim = udmf ? altview->spawnpoint->pitch : line->args[2];
@@ -2670,8 +2673,10 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 				aim <<= 8;
 				if (titlemapinaction)
 					titlemapcameraref->cusval = (angle_t)aim;
-				else
+				else {
 					mo->player->awayviewaiming = (angle_t)aim;
+					mo->player->awayviewtics = line->args[1];
+				}
 			}
 			break;
 
