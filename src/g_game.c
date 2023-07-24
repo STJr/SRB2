@@ -4372,6 +4372,17 @@ void G_LoadGameData(gamedata_t *data)
 		{
 			goto datacorrupt;
 		}
+
+		// make a backup of the old data
+		char currentfilename[64];
+		char backupfilename[69];
+		char bak[5];
+
+		strcpy(bak, ".bak");
+		strcpy(currentfilename, gamedatafilename);
+		STRBUFCPY(backupfilename, strcat(currentfilename, bak));
+
+		FIL_WriteFile(va(pandf, srb2home, backupfilename), savebuffer, length);
 	}
 	else
 #endif
