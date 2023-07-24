@@ -681,25 +681,58 @@ static void COM_ExecuteString(char *ptext)
 //                            SCRIPT COMMANDS
 // =========================================================================
 
+static void print_alias(void)
+{
+	cmdalias_t *a;
+
+	CONS_Printf("\x82""Current alias commands:\n");
+	for (a = com_alias; a; a = a->next)
+	{
+		CONS_Printf("%s : %s", a->name, a->value);
+	}
+}
+
+static void add_alias(char *newname, char *newcmd)
+{
+	cmdalias_t *a;
+
+	// Check for existing aliases first
+	for (a = com_alias; a; a = a->next)
+	{
+		if (!stricmp(newname, a->name))
+		{
+			Z_Free(a->value); // Free old cmd 
+			a->value = newcmd;
+			return;
+		}
+	}
+
+	// No alias found, add it instead
+	a = ZZ_Alloc(sizeof *a);
+	a->next = com_alias;
+	com_alias = a;
+
+	a->name = newname;
+	a->value = newcmd;
+}
+
 /** Creates a command name that replaces another command.
   */
 static void COM_Alias_f(void)
 {
-	cmdalias_t *a;
+	char *name;
+	char *zcmd;
 	char cmd[1024];
 	size_t i, c;
 
 	if (COM_Argc() < 3)
 	{
 		CONS_Printf(M_GetText("alias <name> <command>: create a shortcut command that executes other command(s)\n"));
+		print_alias();
 		return;
 	}
 
-	a = ZZ_Alloc(sizeof *a);
-	a->next = com_alias;
-	com_alias = a;
-
-	a->name = Z_StrDup(COM_Argv(1));
+	name = Z_StrDup(COM_Argv(1));
 
 	// copy the rest of the command line
 	cmd[0] = 0; // start out with a null string
@@ -711,8 +744,8 @@ static void COM_Alias_f(void)
 			strcat(cmd, " ");
 	}
 	strcat(cmd, "\n");
-
-	a->value = Z_StrDup(cmd);
+	zcmd = Z_StrDup(cmd);
+	add_alias(name, zcmd);
 }
 
 /** Prints a line of text to the console.
