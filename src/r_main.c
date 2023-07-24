@@ -1016,8 +1016,6 @@ void R_Init(void)
 	//I_OutputMsg("\nR_InitData");
 	R_InitData();
 
-	//I_OutputMsg("\nR_InitViewBorder");
-	R_InitViewBorder();
 	R_SetViewSize(); // setsizeneeded is set true
 
 	//I_OutputMsg("\nR_InitPlanes");

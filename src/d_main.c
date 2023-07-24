@@ -325,7 +325,7 @@ static void D_Display(void)
 	// 4. The frame is ready to be drawn!
 
 	// Check for change of renderer or screen size (video mode)
-	if ((setrenderneeded || setmodeneeded) && !wipe)
+	if (vid.change.set && !wipe)
 		SCR_SetMode(); // change video mode
 
 	// Recalc the screen
@@ -405,13 +405,11 @@ static void D_Display(void)
 		case GS_LEVEL:
 			if (!gametic)
 				break;
-			HU_Erase();
 			AM_Drawer();
 			break;
 
 		case GS_INTERMISSION:
 			Y_IntermissionDrawer();
-			HU_Erase();
 			HU_Drawer();
 			break;
 
@@ -426,13 +424,11 @@ static void D_Display(void)
 
 		case GS_ENDING:
 			F_EndingDrawer();
-			HU_Erase();
 			HU_Drawer();
 			break;
 
 		case GS_CUTSCENE:
 			F_CutsceneDrawer();
-			HU_Erase();
 			HU_Drawer();
 			break;
 
@@ -442,7 +438,6 @@ static void D_Display(void)
 
 		case GS_EVALUATION:
 			F_GameEvaluationDrawer();
-			HU_Erase();
 			HU_Drawer();
 			break;
 
@@ -452,7 +447,6 @@ static void D_Display(void)
 
 		case GS_CREDITS:
 			F_CreditDrawer();
-			HU_Erase();
 			HU_Drawer();
 			break;
 

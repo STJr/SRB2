@@ -413,7 +413,7 @@ extern gtdesc_t gametypedesc[NUMGAMETYPES];
 // mode descriptions for video mode menu
 typedef struct
 {
-	INT32 modenum; // video mode number in the vidmodes list
+	INT32 width, height;
 	const char *desc;  // XXXxYYY
 	UINT8 goodratio; // aspect correct if 1
 } modedesc_t;

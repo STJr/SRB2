@@ -73,20 +73,9 @@ INT32 VID_NumModes(void);
 */
 INT32 VID_GetModeForSize(INT32 w, INT32 h);
 
-
-/**	\brief	The VID_SetMode function
-
-	Set the video mode right now,
-	the video mode change is delayed until the start of the next refresh
-	by setting the setmodeneeded to a value >0
-	setup a video mode, this is to be called from the menu
-
-
-	\param	modenum	video mode to set to
-
-	\return	current video mode
+/**	\brief Changes the current resolution
 */
-INT32 VID_SetMode(INT32 modenum);
+void VID_SetSize(INT32 width, INT32 height);
 
 /**	\brief Checks the render state
 	\return	true if the renderer changed

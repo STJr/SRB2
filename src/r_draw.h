@@ -81,25 +81,6 @@ extern UINT32 nflatyshift;
 extern UINT32 nflatshiftup;
 extern UINT32 nflatmask;
 
-/// \brief Top border
-#define BRDR_T 0
-/// \brief Bottom border
-#define BRDR_B 1
-/// \brief Left border
-#define BRDR_L 2
-/// \brief Right border
-#define BRDR_R 3
-/// \brief Topleft border
-#define BRDR_TL 4
-/// \brief Topright border
-#define BRDR_TR 5
-/// \brief Bottomleft border
-#define BRDR_BL 6
-/// \brief Bottomright border
-#define BRDR_BR 7
-
-extern lumpnum_t viewborderlump[8];
-
 // ------------------------------------------------
 // r_draw.c COMMON ROUTINES FOR BOTH 8bpp and 16bpp
 // ------------------------------------------------
@@ -150,16 +131,7 @@ boolean R_BlendLevelVisible(INT32 blendmode, INT32 alphalevel);
 extern UINT8 skincolor_modified[];
 
 void R_InitViewBuffer(INT32 width, INT32 height);
-void R_InitViewBorder(void);
 void R_VideoErase(size_t ofs, INT32 count);
-
-// Rendering function.
-#if 0
-void R_FillBackScreen(void);
-
-// If the view size is not full screen, draws a border around it.
-void R_DrawViewBorder(void);
-#endif
 
 #define TRANSPARENTPIXEL 255
 

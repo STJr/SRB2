@@ -35,9 +35,10 @@ INT32 VID_GetModeForSize(INT32 w, INT32 h)
 
 void VID_PrepareModeList(void){}
 
-INT32 VID_SetMode(INT32 modenum)
+void VID_SetSize(INT32 width, INT32 height)
 {
-	(void)modenum;
+	(void)width;
+	(void)height;
 	return 0;
 }
 

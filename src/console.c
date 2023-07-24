@@ -76,7 +76,6 @@ static UINT8  con_hudlines;             // number of console heads up message li
 static UINT32 con_hudtime[MAXHUDLINES]; // remaining time of display for hud msg lines
 
        INT32 con_clearlines;      // top screen lines to refresh when view reduced
-       boolean con_hudupdate;   // when messages scroll, we need a backgrnd refresh
 
 // console text output
 static char *con_line;          // console text output current line
@@ -1348,9 +1347,6 @@ static void CON_Linefeed(void)
 
 	con_line = &con_buffer[(con_cy%con_totallines)*con_width];
 	memset(con_line, ' ', con_width);
-
-	// make sure the view borders are refreshed if hud messages scroll
-	con_hudupdate = true; // see HU_Erase()
 }
 
 // Outputs text into the console text buffer
@@ -1579,13 +1575,6 @@ void CONS_Debug(INT32 debugflags, const char *fmt, ...)
 //
 void CONS_Error(const char *msg)
 {
-#if defined(RPC_NO_WINDOWS_H) && defined(_WINDOWS)
-	if (!graphics_started)
-	{
-		MessageBoxA(vid.WndParent, msg, "SRB2 Warning", MB_OK);
-		return;
-	}
-#endif
 	CONS_Printf("\x82%s", msg); // write error msg in different colour
 	CONS_Printf(M_GetText("Press ENTER to continue\n"));
 
@@ -1809,7 +1798,6 @@ static void CON_DrawConsole(void)
 
 	//FIXME: refresh borders only when console bg is translucent
 	con_clearlines = con_curlines; // clear console draw from view borders
-	con_hudupdate = true; // always refresh while console is on
 
 	// draw console background
 	if (cons_backpic.value || con_forcepic)

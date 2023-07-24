@@ -87,9 +87,6 @@
 #include "ogl_sdl.h"
 #endif
 
-// maximum number of windowed modes (see windowedModes[][])
-#define MAXWINMODES (18)
-
 rendermode_t rendermode = render_soft;
 rendermode_t chosenrendermode = render_none; // set by command line arguments
 
@@ -161,29 +158,6 @@ static void Impl_InitOpenGL(void);
 static void Impl_SetWindowIcon(void);
 static SDL_Surface *icoSurface = NULL;
 #endif
-
-// windowed video modes from which to choose from.
-static INT32 windowedModes[MAXWINMODES][2] =
-{
-	{1920,1200}, // 1.60,6.00
-	{1920,1080}, // 1.66
-	{1680,1050}, // 1.60,5.25
-	{1600,1200}, // 1.33
-	{1600, 900}, // 1.66
-	{1366, 768}, // 1.66
-	{1440, 900}, // 1.60,4.50
-	{1280,1024}, // 1.33?
-	{1280, 960}, // 1.33,4.00
-	{1280, 800}, // 1.60,4.00
-	{1280, 720}, // 1.66
-	{1152, 864}, // 1.33,3.60
-	{1024, 768}, // 1.33,3.20
-	{ 800, 600}, // 1.33,2.50
-	{ 640, 480}, // 1.33,2.00
-	{ 640, 400}, // 1.60,2.00
-	{ 320, 240}, // 1.33,1.00
-	{ 320, 200}, // 1.60,1.00
-};
 
 static char vidModeName[MAXWINMODES][32];
 static const char *fallback_resolution_name = "Fallback";
@@ -644,7 +618,14 @@ static void VID_Command_Mode_f (void)
 		CONS_Printf(M_GetText("Video mode not present\n"));
 	else
 	{
-		setmodeneeded = modenum + 1; // request vid mode change
+		if (modenum < 0)
+			modenum = 0;
+		if (modenum >= MAXWINMODES)
+			modenum = MAXWINMODES-1;
+
+		vid.change.width = windowedModes[modenum][0];
+		vid.change.height = windowedModes[modenum][1];
+		vid.change.set = VID_RESOLUTION_CHANGED;
 	}
 }
 
@@ -690,6 +671,7 @@ static void Impl_HandleWindowEvent(SDL_WindowEvent evt)
 		case SDL_WINDOWEVENT_MAXIMIZED:
 			break;
 		case SDL_WINDOWEVENT_SIZE_CHANGED:
+			SCR_SetWindowSize(evt.data1, evt.data2);
 			break;
 	}
 
@@ -1386,10 +1368,10 @@ void VID_CheckGLLoaded(rendermode_t oldrender)
 		rendermode = oldrender;
 		if (chosenrendermode == render_opengl) // fallback to software
 			rendermode = render_soft;
-		if (setrenderneeded)
+		if (vid.change.renderer != -1)
 		{
 			CV_StealthSetValue(&cv_renderer, oldrender);
-			setrenderneeded = 0;
+			vid.change.renderer = 0;
 		}
 	}
 #endif
@@ -1408,9 +1390,9 @@ boolean VID_CheckRenderer(void)
 	if (dedicated)
 		return 0;
 
-	if (setrenderneeded)
+	if (vid.change.renderer != -1)
 	{
-		rendermode = setrenderneeded;
+		rendermode = vid.change.renderer;
 		rendererchanged = true;
 
 #ifdef HWRENDER
@@ -1426,12 +1408,10 @@ boolean VID_CheckRenderer(void)
 		}
 #endif
 
-		setrenderneeded = 0;
+		vid.change.renderer = -1;
 	}
 
-	SDL_bool center = setmodeneeded ? SDL_TRUE : SDL_FALSE;
-
-	if (SDLSetMode(vid.width, vid.height, USE_FULLSCREEN, center) == SDL_FALSE)
+	if (SDLSetMode(vid.width, vid.height, USE_FULLSCREEN, vid.change.set != VID_RESOLUTION_RESIZED_WINDOW) == SDL_FALSE)
 	{
 		if (!graphics_started)
 		{
@@ -1497,30 +1477,24 @@ void VID_GetNativeResolution(INT32 *width, INT32 *height)
 }
 #endif
 
-INT32 VID_SetMode(INT32 modeNum)
+void VID_SetSize(INT32 width, INT32 height)
 {
 	SDLdoUngrabMouse();
 
 	vid.recalc = true;
-	vid.bpp = 1;
 
-	if (modeNum < 0)
-		modeNum = 0;
-	if (modeNum >= MAXWINMODES)
-		modeNum = MAXWINMODES-1;
-
-	vid.width = windowedModes[modeNum][0];
-	vid.height = windowedModes[modeNum][1];
-	vid.modenum = modeNum;
+	if (width > 0 && height > 0 && SCR_IsValidResolution(width, height))
+	{
+		vid.width = width;
+		vid.height = height;
+	}
 
 	VID_CheckRenderer();
-
-	return SDL_TRUE;
 }
 
 static SDL_bool Impl_CreateWindow(SDL_bool fullscreen)
 {
-	int flags = 0;
+	int flags = SDL_WINDOW_RESIZABLE;
 
 	if (window != NULL)
 		return SDL_TRUE;
@@ -1551,6 +1525,8 @@ static SDL_bool Impl_CreateWindow(SDL_bool fullscreen)
 		VIDEO_INIT_ERROR("Couldn't create window: %s");
 		return SDL_FALSE;
 	}
+
+	SDL_SetWindowMinimumSize(window, BASEVIDWIDTH, BASEVIDHEIGHT);
 
 #ifdef USE_WINDOW_ICON
 	Impl_SetWindowIcon();
@@ -1750,14 +1726,9 @@ void I_StartupGraphics(void)
 	vid.recalc = true;
 	vid.direct = NULL;
 	vid.bpp = 1;
-	vid.WndParent = NULL;
 
 	// Create window
-	// Default size for startup
-	vid.width = BASEVIDWIDTH;
-	vid.height = BASEVIDHEIGHT;
-
-	VID_SetMode(VID_GetModeForSize(vid.width, vid.height));
+	VID_SetSize(BASEVIDWIDTH, BASEVIDHEIGHT);
 
 #ifdef HAVE_TTF
 	I_ShutdownTTF();
@@ -1827,10 +1798,10 @@ static void Impl_InitOpenGL(void)
 		vid.glstate = VID_GL_LIBRARY_ERROR;
 
 		CV_StealthSet(&cv_renderer, "Software");
+
 		rendermode = render_soft;
 
-		if (setrenderneeded)
-			setrenderneeded = 0;
+		vid.change.renderer = -1;
 	}
 #endif
 }

@@ -22,7 +22,7 @@
 #include "hw_drv.h"
 
 #include "../m_misc.h" //FIL_WriteFile()
-#include "../r_draw.h" //viewborderlump
+#include "../r_draw.h"
 #include "../r_main.h"
 #include "../w_wad.h"
 #include "../z_zone.h"
@@ -1004,136 +1004,6 @@ void HWR_DrawTutorialBack(UINT32 color, INT32 boxheight)
 
 	HWD.pfnDrawPolygon(&Surf, v, 4, PF_NoTexture|PF_Modulated|PF_Translucent|PF_NoDepthTest);
 }
-
-
-// ==========================================================================
-//                                                             R_DRAW.C STUFF
-// ==========================================================================
-
-// ------------------
-// HWR_DrawViewBorder
-// Fill the space around the view window with a Doom flat texture, draw the
-// beveled edges.
-// 'clearlines' is useful to clear the heads up messages, when the view
-// window is reduced, it doesn't refresh all the view borders.
-// ------------------
-void HWR_DrawViewBorder(INT32 clearlines)
-{
-	INT32 x, y;
-	INT32 top, side;
-	INT32 baseviewwidth, baseviewheight;
-	INT32 basewindowx, basewindowy;
-	patch_t *patch;
-
-//    if (gl_viewwidth == vid.width)
-//        return;
-
-	if (!clearlines)
-		clearlines = BASEVIDHEIGHT; // refresh all
-
-	// calc view size based on original game resolution
-	baseviewwidth =  FixedInt(FixedDiv(FLOAT_TO_FIXED(gl_viewwidth), vid.fdupx)); //(cv_viewsize.value * BASEVIDWIDTH/10)&~7;
-	baseviewheight = FixedInt(FixedDiv(FLOAT_TO_FIXED(gl_viewheight), vid.fdupy));
-	top = FixedInt(FixedDiv(FLOAT_TO_FIXED(gl_baseviewwindowy), vid.fdupy));
-	side = FixedInt(FixedDiv(FLOAT_TO_FIXED(gl_viewwindowx), vid.fdupx));
-
-	// top
-	HWR_DrawFlatFill(0, 0,
-		BASEVIDWIDTH, (top < clearlines ? top : clearlines),
-		st_borderpatchnum);
-
-	// left
-	if (top < clearlines)
-		HWR_DrawFlatFill(0, top, side,
-			(clearlines-top < baseviewheight ? clearlines-top : baseviewheight),
-			st_borderpatchnum);
-
-	// right
-	if (top < clearlines)
-		HWR_DrawFlatFill(side + baseviewwidth, top, side,
-			(clearlines-top < baseviewheight ? clearlines-top : baseviewheight),
-			st_borderpatchnum);
-
-	// bottom
-	if (top + baseviewheight < clearlines)
-		HWR_DrawFlatFill(0, top + baseviewheight,
-			BASEVIDWIDTH, BASEVIDHEIGHT, st_borderpatchnum);
-
-	//
-	// draw the view borders
-	//
-
-	basewindowx = (BASEVIDWIDTH - baseviewwidth)>>1;
-	if (baseviewwidth == BASEVIDWIDTH)
-		basewindowy = 0;
-	else
-		basewindowy = top;
-
-	// top edge
-	if (clearlines > basewindowy - 8)
-	{
-		patch = W_CachePatchNum(viewborderlump[BRDR_T], PU_PATCH);
-		for (x = 0; x < baseviewwidth; x += 8)
-			HWR_DrawPatch(patch, basewindowx + x, basewindowy - 8,
-				0);
-	}
-
-	// bottom edge
-	if (clearlines > basewindowy + baseviewheight)
-	{
-		patch = W_CachePatchNum(viewborderlump[BRDR_B], PU_PATCH);
-		for (x = 0; x < baseviewwidth; x += 8)
-			HWR_DrawPatch(patch, basewindowx + x,
-				basewindowy + baseviewheight, 0);
-	}
-
-	// left edge
-	if (clearlines > basewindowy)
-	{
-		patch = W_CachePatchNum(viewborderlump[BRDR_L], PU_PATCH);
-		for (y = 0; y < baseviewheight && basewindowy + y < clearlines;
-			y += 8)
-		{
-			HWR_DrawPatch(patch, basewindowx - 8, basewindowy + y,
-				0);
-		}
-	}
-
-	// right edge
-	if (clearlines > basewindowy)
-	{
-		patch = W_CachePatchNum(viewborderlump[BRDR_R], PU_PATCH);
-		for (y = 0; y < baseviewheight && basewindowy+y < clearlines;
-			y += 8)
-		{
-			HWR_DrawPatch(patch, basewindowx + baseviewwidth,
-				basewindowy + y, 0);
-		}
-	}
-
-	// Draw beveled corners.
-	if (clearlines > basewindowy - 8)
-		HWR_DrawPatch(W_CachePatchNum(viewborderlump[BRDR_TL],
-				PU_PATCH),
-			basewindowx - 8, basewindowy - 8, 0);
-
-	if (clearlines > basewindowy - 8)
-		HWR_DrawPatch(W_CachePatchNum(viewborderlump[BRDR_TR],
-				PU_PATCH),
-			basewindowx + baseviewwidth, basewindowy - 8, 0);
-
-	if (clearlines > basewindowy+baseviewheight)
-		HWR_DrawPatch(W_CachePatchNum(viewborderlump[BRDR_BL],
-				PU_PATCH),
-			basewindowx - 8, basewindowy + baseviewheight, 0);
-
-	if (clearlines > basewindowy + baseviewheight)
-		HWR_DrawPatch(W_CachePatchNum(viewborderlump[BRDR_BR],
-				PU_PATCH),
-			basewindowx + baseviewwidth,
-			basewindowy + baseviewheight, 0);
-}
-
 
 // ==========================================================================
 //                                                     AM_MAP.C DRAWING STUFF
