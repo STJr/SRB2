@@ -1108,8 +1108,24 @@ static int line_get(lua_State *L)
 		LUA_PushUserdata(L, line->polyobj, META_POLYOBJ);
 		return 1;
 	case line_text:
-		lua_pushstring(L, line->text);
-		return 1;
+		{
+			if (udmf)
+			{
+				LUA_Deprecated(L, "(linedef_t).text", "(linedef_t).stringargs");
+				lua_pushnil(L);
+				return 1;
+			}
+
+			if (line->special == 331 || line->special == 443)
+			{
+				// See P_ProcessLinedefsAfterSidedefs, P_ConvertBinaryLinedefTypes
+				lua_pushstring(L, line->stringargs[0]);
+			}
+			else
+				lua_pushnil(L);
+
+			return 1;
+		}
 	case line_callcount:
 		lua_pushinteger(L, line->callcount);
 		return 1;
@@ -1225,8 +1241,19 @@ static int side_get(lua_State *L)
 		lua_pushinteger(L, side->repeatcnt);
 		return 1;
 	case side_text:
-		lua_pushstring(L, side->text);
-		return 1;
+		{
+			if (udmf)
+			{
+				LUA_Deprecated(L, "(sidedef_t).text", "(sidedef_t).line.stringargs");
+				lua_pushnil(L);
+				return 1;
+			}
+
+			boolean isfrontside = side->line->sidenum[0] == side-sides;
+
+			lua_pushstring(L, side->line->stringargs[isfrontside ? 0 : 1]);
+			return 1;
+		}
 	}
 	return 0;
 }
