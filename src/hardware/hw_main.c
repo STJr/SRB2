@@ -5399,17 +5399,15 @@ void HWR_SetViewSize(void)
 
 float HWR_GetFOV(player_t *player)
 {
-	fixed_t pfov = cv_fov.value;
-	float fov;
+	float fov = FixedToFloat(R_GetFOV() + player->fovadd);
 
-	if (player)
-		pfov += player->fovadd;
-
-	fov = FixedToFloat(pfov);
-
-	float resmul = (float)vid.width / (float)vid.height;
-	if (resmul > 1.0)
-		fov = atan(tan(fov * M_PI / 360) * resmul) * 360 / M_PI;
+	// Adjust field of view to the aspect ratio
+	if (cv_fovadjust.value)
+	{
+		fixed_t ftan = FloatToFixed(tan(fov * M_PI / 360));
+		ftan = R_AdjustFOV(ftan);
+		fov = atan(FixedToFloat(ftan)) * 360 / M_PI;
+	}
 
 	return fov;
 }
@@ -5453,12 +5451,13 @@ static void HWR_SetShaderState(void)
 // ==========================================================================
 // Same as rendering the player view, but from the skybox object
 // ==========================================================================
-void HWR_RenderSkyboxView(INT32 viewnumber, player_t *player)
+static void HWR_RenderSkyboxView(player_t *player)
 {
+	INT32 viewnumber = splitscreen && player == &players[secondarydisplayplayer] ? 1 : 0;
 	const float fpov = HWR_GetFOV(player);
 	postimg_t *type;
 
-	if (splitscreen && player == &players[secondarydisplayplayer])
+	if (viewnumber == 1)
 		type = &postimgtype2;
 	else
 		type = &postimgtype;
@@ -5612,8 +5611,9 @@ void HWR_RenderSkyboxView(INT32 viewnumber, player_t *player)
 // ==========================================================================
 //
 // ==========================================================================
-void HWR_RenderPlayerView(INT32 viewnumber, player_t *player)
+void HWR_RenderPlayerView(player_t *player)
 {
+	INT32 viewnumber = splitscreen && player == &players[secondarydisplayplayer] ? 1 : 0;
 	const float fpov = HWR_GetFOV(player);
 	postimg_t *type;
 
@@ -5621,7 +5621,7 @@ void HWR_RenderPlayerView(INT32 viewnumber, player_t *player)
 
 	FRGBAFloat ClearColor;
 
-	if (splitscreen && player == &players[secondarydisplayplayer])
+	if (viewnumber == 1)
 		type = &postimgtype2;
 	else
 		type = &postimgtype;
@@ -5639,7 +5639,7 @@ void HWR_RenderPlayerView(INT32 viewnumber, player_t *player)
 
 	PS_START_TIMING(ps_hw_skyboxtime);
 	if (skybox && drawsky) // If there's a skybox and we should be drawing the sky, draw the skybox
-		HWR_RenderSkyboxView(viewnumber, player); // This is drawn before everything else so it is placed behind
+		HWR_RenderSkyboxView(player); // This is drawn before everything else so it is placed behind
 	PS_STOP_TIMING(ps_hw_skyboxtime);
 
 	{

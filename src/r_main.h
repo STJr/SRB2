@@ -117,7 +117,7 @@ extern consvar_t cv_shadow;
 extern consvar_t cv_ffloorclip;
 extern consvar_t cv_translucency;
 extern consvar_t cv_drawdist, cv_drawdist_nights, cv_drawdist_precip;
-extern consvar_t cv_fov;
+extern consvar_t cv_fov, cv_fovadjust;
 extern consvar_t cv_skybox;
 extern consvar_t cv_tailspickup;
 
@@ -136,6 +136,9 @@ void R_ExecuteSetViewSize(void);
 
 void R_SetupFrame(player_t *player);
 void R_SkyboxFrame(player_t *player);
+
+fixed_t R_GetFOV(void);
+fixed_t R_AdjustFOV(fixed_t ftan);
 
 boolean R_ViewpointHasChasecam(player_t *player);
 boolean R_IsViewpointThirdPerson(player_t *player, boolean skybox);

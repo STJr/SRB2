@@ -374,7 +374,9 @@ static boolean SCR_SetSize(INT32 width, INT32 height)
 		vid.change.width = width;
 		vid.change.height = height;
 		vid.change.renderer = -1;
+		return true;
 	}
+	return false;
 }
 
 void SCR_ChangeResolution(INT32 width, INT32 height)

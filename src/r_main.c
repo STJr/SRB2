@@ -168,6 +168,7 @@ consvar_t cv_drawdist_nights = CVAR_INIT ("drawdist_nights", "2048", CV_SAVE, dr
 consvar_t cv_drawdist_precip = CVAR_INIT ("drawdist_precip", "1024", CV_SAVE, drawdist_precip_cons_t, NULL);
 //consvar_t cv_precipdensity = CVAR_INIT ("precipdensity", "Moderate", CV_SAVE, precipdensity_cons_t, NULL);
 consvar_t cv_fov = CVAR_INIT ("fov", "90", CV_FLOAT|CV_CALL, fov_cons_t, Fov_OnChange);
+consvar_t cv_fovadjust = CVAR_INIT ("fovadjust", "On", CV_SAVE|CV_CALL, CV_OnOff, Fov_OnChange);
 
 // Okay, whoever said homremoval causes a performance hit should be shot.
 consvar_t cv_homremoval = CVAR_INIT ("homremoval", "No", CV_SAVE, homremoval_cons_t, NULL);
@@ -215,10 +216,6 @@ void SplitScreen_OnChange(void)
 }
 static void Fov_OnChange(void)
 {
-	// Shouldn't be needed with render parity?
-	//if ((netgame || multiplayer) && !cv_debug && cv_fov.value != 90*FRACUNIT)
-	//	CV_Set(&cv_fov, cv_fov.defaultvalue);
-
 	R_SetViewSize();
 }
 
@@ -940,15 +937,15 @@ void R_ExecuteSetViewSize(void)
 	centerxfrac = centerx<<FRACBITS;
 	centeryfrac = centery<<FRACBITS;
 
-	fov = FixedAngle(cv_fov.value/2) + ANGLE_90;
+	fov = FixedAngle(R_GetFOV()/2) + ANGLE_90;
 	fovtan = FixedMul(FINETANGENT(fov >> ANGLETOFINESHIFT), viewmorph.zoomneeded);
+
 	if (splitscreen == 1) // Splitscreen FOV should be adjusted to maintain expected vertical view
 		fovtan = 17*fovtan/10;
 
 	// Adjust field of view to the aspect ratio
-	fixed_t resmul = FixedDiv(vid.width * FRACUNIT, vid.height * FRACUNIT);
-	if (resmul > FRACUNIT)
-		fovtan = FixedMul(fovtan, resmul);
+	if (cv_fovadjust.value)
+		fovtan = R_AdjustFOV(fovtan);
 
 	projection = projectiony = FixedDiv(centerxfrac, fovtan);
 
@@ -1040,6 +1037,25 @@ void R_Init(void)
 	R_InitDrawNodes();
 
 	framecount = 0;
+}
+
+fixed_t R_GetFOV(void)
+{
+	return cv_fov.value;
+}
+
+fixed_t R_AdjustFOV(fixed_t ftan)
+{
+	fixed_t aspect = FixedDiv(vid.width, vid.height);
+	fixed_t baseaspect = FixedDiv(FRACUNIT, FixedDiv(BASEVIDWIDTH, BASEVIDHEIGHT));
+
+	// (vid.width / vid.height) * (1.0 / (BASEVIDWIDTH / BASEVIDHEIGHT))
+	fixed_t resmul = FixedMul(aspect, baseaspect);
+
+	if (resmul > FRACUNIT)
+		return FixedMul(ftan, resmul);
+
+	return ftan;
 }
 
 //
@@ -1601,6 +1617,7 @@ void R_RegisterEngineStuff(void)
 	CV_RegisterVar(&cv_drawdist);
 	CV_RegisterVar(&cv_drawdist_nights);
 	CV_RegisterVar(&cv_drawdist_precip);
+	CV_RegisterVar(&cv_fovadjust);
 	CV_RegisterVar(&cv_fov);
 
 	CV_RegisterVar(&cv_chasecam);
