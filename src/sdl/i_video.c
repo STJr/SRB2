@@ -604,29 +604,62 @@ static void VID_Command_ModeList_f(void)
 
 static void VID_Command_Mode_f (void)
 {
-	INT32 modenum;
-
-	if (COM_Argc()!= 2)
+	if (COM_Argc() != 2)
 	{
-		CONS_Printf(M_GetText("vid_mode <modenum> : set video mode, current video mode %i\n"), vid.modenum);
+		CONS_Printf(M_GetText("vid_mode <modenum>: set video mode\n"));
 		return;
 	}
 
-	modenum = atoi(COM_Argv(1));
-
-	if (modenum >= VID_NumModes())
+	INT32 modenum = atoi(COM_Argv(1));
+	if (modenum >= MAXWINMODES)
 		CONS_Printf(M_GetText("Video mode not present\n"));
 	else
 	{
 		if (modenum < 0)
 			modenum = 0;
-		if (modenum >= MAXWINMODES)
-			modenum = MAXWINMODES-1;
 
 		vid.change.width = windowedModes[modenum][0];
 		vid.change.height = windowedModes[modenum][1];
 		vid.change.set = VID_RESOLUTION_CHANGED;
 	}
+}
+
+static void VID_Command_Width_f (void)
+{
+	if (COM_Argc() != 2)
+	{
+		CONS_Printf(M_GetText("vid_width <width>: set window width\n"));
+		return;
+	}
+
+	INT32 width = atoi(COM_Argv(1));
+
+	if (!SCR_IsValidResolution(width, vid.height))
+	{
+		CONS_Alert(CONS_WARNING, "Invalid width given\n");
+		return;
+	}
+
+	SCR_SetWindowSize(width, vid.height);
+}
+
+static void VID_Command_Height_f (void)
+{
+	if (COM_Argc() != 2)
+	{
+		CONS_Printf(M_GetText("vid_height <height>: set window height\n"));
+		return;
+	}
+
+	INT32 height = atoi(COM_Argv(1));
+
+	if (!SCR_IsValidResolution(vid.width, height))
+	{
+		CONS_Alert(CONS_WARNING, "Invalid height given\n");
+		return;
+	}
+
+	SCR_SetWindowSize(vid.width, height);
 }
 
 static void Impl_SetFocused(boolean focused)
@@ -1644,6 +1677,8 @@ void I_StartupGraphics(void)
 	COM_AddCommand ("vid_info", VID_Command_Info_f, COM_LUA);
 	COM_AddCommand ("vid_modelist", VID_Command_ModeList_f, COM_LUA);
 	COM_AddCommand ("vid_mode", VID_Command_Mode_f, 0);
+	COM_AddCommand ("vid_width", VID_Command_Width_f, 0);
+	COM_AddCommand ("vid_height", VID_Command_Height_f, 0);
 	CV_RegisterVar (&cv_vidwait);
 	CV_RegisterVar (&cv_stretch);
 	CV_RegisterVar (&cv_alwaysgrabmouse);
