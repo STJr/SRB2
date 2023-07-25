@@ -1416,7 +1416,7 @@ void G_BeginRecording(void)
 	player_t *player = &players[consoleplayer];
 
 	char *filename;
-	UINT8 totalfiles;
+	UINT16 totalfiles;
 	UINT8 *m;
 
 	if (demo_p)
@@ -1459,7 +1459,7 @@ void G_BeginRecording(void)
 		}
 	}
 
-	WRITEUINT8(m, totalfiles);
+	WRITEUINT16(m, totalfiles);
 
 	switch ((demoflags & DF_ATTACKMASK)>>DF_ATTACKSHIFT)
 	{
@@ -1618,15 +1618,15 @@ void G_BeginMetal(void)
 
 static void G_LoadDemoExtraFiles(UINT8 **pp)
 {
-	UINT8 totalfiles;
+	UINT16 totalfiles;
 	char filename[MAX_WADPATH];
 	UINT8 md5sum[16];
 	filestatus_t ncs;
 	boolean toomany = false;
 	boolean alreadyloaded;
-	UINT8 i, j;
+	UINT16 i, j;
 
-	totalfiles = READUINT8((*pp));
+	totalfiles = READUINT16((*pp));
 	for (i = 0; i < totalfiles; ++i)
 	{
 		if (toomany)
@@ -1687,8 +1687,8 @@ static void G_LoadDemoExtraFiles(UINT8 **pp)
 
 static void G_SkipDemoExtraFiles(UINT8 **pp)
 {
-	UINT8 totalfiles;
-	UINT8 i;
+	UINT16 totalfiles;
+	UINT16 i;
 
 	if (demoversion < 0x0010)
 	{
@@ -1696,7 +1696,7 @@ static void G_SkipDemoExtraFiles(UINT8 **pp)
 		return;
 	}
 
-	totalfiles = READUINT8((*pp));
+	totalfiles = READUINT16((*pp));
 	for (i = 0; i < totalfiles; ++i)
 	{
 		SKIPSTRING((*pp));// file name
@@ -1708,12 +1708,12 @@ static void G_SkipDemoExtraFiles(UINT8 **pp)
 // Enabling quick prevents filesystem checks to see if needed files are available to load.
 static UINT8 G_CheckDemoExtraFiles(UINT8 **pp, boolean quick)
 {
-	UINT8 totalfiles, filesloaded, nmusfilecount;
+	UINT16 totalfiles, filesloaded, nmusfilecount;
 	char filename[MAX_WADPATH];
 	UINT8 md5sum[16];
 	boolean toomany = false;
 	boolean alreadyloaded;
-	UINT8 i, j;
+	UINT16 i, j;
 	UINT8 error = DFILE_ERROR_NONE;
 
 	if (demoversion < 0x0010)
@@ -1722,7 +1722,7 @@ static UINT8 G_CheckDemoExtraFiles(UINT8 **pp, boolean quick)
 		return DFILE_ERROR_NONE;
 	}
 
-	totalfiles = READUINT8((*pp));
+	totalfiles = READUINT16((*pp));
 	filesloaded = 0;
 	for (i = 0; i < totalfiles; ++i)
 	{
