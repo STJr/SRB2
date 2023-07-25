@@ -516,13 +516,17 @@ void SCR_ChangeRenderer(void)
 		return;
 	}
 
-	if (rendermode == render_opengl && (vid.glstate == VID_GL_LIBRARY_LOADED)) // Clear these out before switching to software
+	// Clear these out before switching to software
+	if (rendermode == render_opengl && vid.glstate == VID_GL_LIBRARY_LOADED)
 		HWR_ClearAllTextures();
 #endif
 
 	// Set the new render mode
 	vid.change.renderer = cv_renderer.value;
-	vid.change.set = VID_RESOLUTION_CHANGED;
+
+	// Don't reposition the window
+	if (vid.change.set == VID_RESOLUTION_UNCHANGED)
+		vid.change.set = VID_RESOLUTION_RESIZED_WINDOW;
 }
 
 boolean SCR_IsAspectCorrect(INT32 width, INT32 height)
