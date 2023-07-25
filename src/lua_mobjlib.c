@@ -1043,11 +1043,13 @@ static int mapthing_set(lua_State *L)
 			mt->z = (INT16)luaL_checkinteger(L, 3);
 			break;
 		case mapthing_extrainfo:
+		{
 			INT32 extrainfo = luaL_checkinteger(L, 3);
 			if (extrainfo & ~15)
 				return luaL_error(L, "mapthing_t extrainfo set %d out of range (%d - %d)", extrainfo, 0, 15);
 			mt->extrainfo = (UINT8)extrainfo;
 			break;
+		}
 		case mapthing_tag:
 			Tag_FSet(&mt->tags, (INT16)luaL_checkinteger(L, 3));
 			break;

@@ -2822,6 +2822,7 @@ static int mapheaderinfo_get(lua_State *L)
 		break;
 	// TODO add support for reading numGradedMares and grades
 	default:
+	{
 		// Read custom vars now
 		// (note: don't include the "LUA." in your lua scripts!)
 		UINT8 j = 0;
@@ -2831,6 +2832,7 @@ static int mapheaderinfo_get(lua_State *L)
 			lua_pushstring(L, header->customopts[j].value);
 		else
 			lua_pushnil(L);
+	}
 	}
 	return 1;
 }
