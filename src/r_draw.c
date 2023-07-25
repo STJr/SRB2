@@ -724,6 +724,7 @@ void R_InitViewBuffer(INT32 width, INT32 height)
 	tiltlighting = Z_Realloc(tiltlighting, sizeof(*tiltlighting) * viewwidth, PU_STATIC, NULL);
 
 	R_AllocSegMemory();
+	R_AllocClipSegMemory();
 	R_AllocPlaneMemory();
 	R_AllocFloorSpriteTables();
 	R_AllocVisSpriteMemory();

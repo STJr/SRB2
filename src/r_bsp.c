@@ -48,11 +48,22 @@ void R_ClearDrawSegs(void)
 }
 
 // Fix from boom.
-#define MAXSEGS (MAXVIDWIDTH/2+1)
+static UINT32 maxsegs;
 
 // newend is one past the last valid seg
 static cliprange_t *newend;
-static cliprange_t solidsegs[MAXSEGS];
+static cliprange_t *solidsegs;
+
+void R_AllocClipSegMemory(void)
+{
+	UINT32 newendpos = newend - solidsegs;
+
+	maxsegs = max(BASEVIDWIDTH/2+1, viewwidth/2+1);
+
+	solidsegs = Z_Realloc(solidsegs, sizeof(*solidsegs) * maxsegs, PU_STATIC, NULL);
+
+	newend = solidsegs + newendpos;
+}
 
 //
 // R_ClipSolidWallSegment
@@ -79,7 +90,7 @@ static void R_ClipSolidWallSegment(INT32 first, INT32 last)
 			next = newend;
 			newend++;
 			// NO MORE CRASHING!
-			if (newend - solidsegs > MAXSEGS)
+			if (newend - solidsegs > maxsegs)
 				I_Error("R_ClipSolidWallSegment: Solid Segs overflow!\n");
 
 			while (next != start)
@@ -134,7 +145,7 @@ crunch:
 	newend = start + 1;
 
 	// NO MORE CRASHING!
-	if (newend - solidsegs > MAXSEGS)
+	if (newend - solidsegs > maxsegs)
 		I_Error("R_ClipSolidWallSegment: Solid Segs overflow!\n");
 }
 

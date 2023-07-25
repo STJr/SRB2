@@ -37,6 +37,7 @@ extern INT32 doorclosed;
 // BSP?
 void R_ClearClipSegs(void);
 void R_PortalClearClipSegs(INT32 start, INT32 end);
+void R_AllocClipSegMemory(void);
 void R_ClearDrawSegs(void);
 void R_RenderBSPNode(INT32 bspnum);
 
