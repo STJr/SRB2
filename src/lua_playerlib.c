@@ -1297,6 +1297,7 @@ static int player_set(lua_State *L)
 		break;
 	}
 	case player_awayviewtics:
+	{
 		INT32 tics = (INT32)luaL_checkinteger(L, 3);
 		if (tics && !plr->awayviewmobj) // awayviewtics must ALWAYS have an awayviewmobj set!!
 			P_SetTarget(&plr->awayviewmobj, plr->mo); // but since the script might set awayviewmobj immediately AFTER setting awayviewtics, use player mobj as filler for now.
@@ -1308,6 +1309,7 @@ static int player_set(lua_State *L)
 		}
 		plr->awayviewtics = tics;
 		break;
+	}
 	case player_awayviewaiming:
 		plr->awayviewaiming = luaL_checkangle(L, 3);
 		break;
