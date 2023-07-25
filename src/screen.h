@@ -172,6 +172,7 @@ extern double averageFPS;
 
 void SCR_ChangeResolution(INT32 width, INT32 height);
 void SCR_SetWindowSize(INT32 width, INT32 height);
+void SCR_SetSizeNoRestore(INT32 width, INT32 height);
 void SCR_ChangeRenderer(void);
 
 boolean SCR_IsValidResolution(INT32 width, INT32 height);

@@ -701,14 +701,9 @@ static void Impl_HandleWindowEvent(SDL_WindowEvent evt)
 			kbfocus = SDL_FALSE;
 			mousefocus = SDL_FALSE;
 			break;
-		case SDL_WINDOWEVENT_MAXIMIZED:
-			break;
 		case SDL_WINDOWEVENT_SIZE_CHANGED:
 			if ((SDL_GetWindowFlags(window) & SDL_WINDOW_FULLSCREEN_DESKTOP) == 0)
-			{
-				SCR_SetWindowSize(evt.data1, evt.data2);
-				SCR_SetDefaultMode(evt.data1, evt.data2);
-			}
+				SCR_SetSizeNoRestore(evt.data1, evt.data2);
 			break;
 	}
 
@@ -1527,6 +1522,19 @@ void VID_SetSize(INT32 width, INT32 height)
 	}
 
 	VID_CheckRenderer();
+}
+
+boolean VID_IsMaximized(void)
+{
+	if (window)
+		return SDL_GetWindowFlags(window) & SDL_WINDOW_MAXIMIZED;
+	return false;
+}
+
+void VID_RestoreWindow(void)
+{
+	if (window)
+		SDL_RestoreWindow(window);
 }
 
 static SDL_bool Impl_CreateWindow(SDL_bool fullscreen)

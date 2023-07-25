@@ -97,8 +97,12 @@ void VID_CheckGLLoaded(rendermode_t oldrender);
 	\return	name of video mode
 */
 const char *VID_GetModeName(INT32 modenum);
+
 void VID_PrepareModeList(void); /// note hack for SDL
 
+boolean VID_IsMaximized(void);
+
+void VID_RestoreWindow(void);
 
 /**	\brief can video system do fullscreen
 */

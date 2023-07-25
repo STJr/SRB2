@@ -367,26 +367,42 @@ boolean SCR_IsValidResolution(INT32 width, INT32 height)
 	return true;
 }
 
-void SCR_ChangeResolution(INT32 width, INT32 height)
+static boolean SCR_SetSize(INT32 width, INT32 height)
 {
 	if (SCR_IsValidResolution(width, height))
 	{
 		vid.change.width = width;
 		vid.change.height = height;
 		vid.change.renderer = -1;
+	}
+}
+
+void SCR_ChangeResolution(INT32 width, INT32 height)
+{
+	if (SCR_SetSize(width, height))
+	{
+		if (VID_IsMaximized())
+			VID_RestoreWindow();
+
 		vid.change.set = VID_RESOLUTION_CHANGED;
 	}
 }
 
 void SCR_SetWindowSize(INT32 width, INT32 height)
 {
-	if (SCR_IsValidResolution(width, height))
+	if (SCR_SetSize(width, height))
 	{
-		vid.change.width = width;
-		vid.change.height = height;
-		vid.change.renderer = -1;
+		if (VID_IsMaximized())
+			VID_RestoreWindow();
+
 		vid.change.set = VID_RESOLUTION_RESIZED_WINDOW;
 	}
+}
+
+void SCR_SetSizeNoRestore(INT32 width, INT32 height)
+{
+	if (SCR_SetSize(width, height))
+		vid.change.set = VID_RESOLUTION_RESIZED_WINDOW;
 }
 
 // Check for screen cmd-line parms: to force a resolution.
