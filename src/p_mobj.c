@@ -6882,6 +6882,7 @@ void P_RunOverlays(void)
 		mo->eflags = (mo->eflags & ~MFE_VERTICALFLIP) | (mo->target->eflags & MFE_VERTICALFLIP);
 		mo->scale = mo->destscale = mo->target->scale;
 		mo->angle = (mo->target->player ? mo->target->player->drawangle : mo->target->angle) + mo->movedir;
+		P_SetTarget(&mo->dontdrawforviewmobj, mo->target->dontdrawforviewmobj); // Hide the overlay from the view that its target is hidden from - But don't copy drawonlyforplayer!
 
 		if (!(mo->state->frame & FF_ANIMATE))
 			zoffs = FixedMul(((signed)mo->state->var2)*FRACUNIT, mo->scale);
@@ -7950,11 +7951,6 @@ static void P_MobjSceneryThink(mobj_t *mobj)
 			P_RemoveMobj(mobj);
 			return;
 		}
-
-		if (!camera.chase)
-			mobj->flags2 |= MF2_DONTDRAW;
-		else
-			mobj->flags2 &= ~MF2_DONTDRAW;
 
 		P_UnsetThingPosition(mobj);
 		{

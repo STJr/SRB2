@@ -3322,9 +3322,14 @@ void R_ClipSprites(drawseg_t* dsstart, portal_t* portal)
 boolean R_ThingVisible (mobj_t *thing)
 {
 	return (!(
-				thing->sprite == SPR_NULL ||
-				( thing->flags2 & (MF2_DONTDRAW) ) ||
-				(r_viewmobj && (thing == r_viewmobj || (r_viewmobj->player && r_viewmobj->player->followmobj == thing)))
+		(thing->sprite == SPR_NULL) || // Don't draw null-sprites
+		(thing->flags2 & MF2_DONTDRAW) || // Don't draw MF2_LINKDRAW objects
+		(thing->drawonlyforplayer && thing->drawonlyforplayer != viewplayer) || // Don't draw other players' personal objects
+		(r_viewmobj && (
+		  (r_viewmobj == thing) || // Don't draw first-person players or awayviewmobj objects
+		  (r_viewmobj->player && r_viewmobj->player->followmobj == thing) || // Don't draw first-person players' followmobj
+		  (r_viewmobj == thing->dontdrawforviewmobj) // Don't draw objects that are hidden for the current view
+		))
 	));
 }
 
