@@ -467,7 +467,8 @@ UINT8 M_SecretUnlocked(INT32 type, gamedata_t *data)
 
 UINT8 M_MapLocked(INT32 mapnum, gamedata_t *data)
 {
-	if (!mapheaderinfo[mapnum-1] || mapheaderinfo[mapnum-1]->unlockrequired < 0)
+	if (!mapheaderinfo[mapnum-1] || mapheaderinfo[mapnum-1]->unlockrequired < 0
+	|| cv_debug || devparm)
 	{
 		return false;
 	}

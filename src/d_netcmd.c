@@ -1905,7 +1905,7 @@ static void Command_Map_f(void)
 		return;
 	}
 
-	option_force    =   COM_CheckPartialParm("-f");
+	option_force    =   COM_CheckPartialParm("-f") || (cv_debug || devparm);
 	option_gametype =   COM_CheckPartialParm("-g");
 	newresetplayers = ! COM_CheckParm("-noresetplayers");
 
@@ -1913,7 +1913,8 @@ static void Command_Map_f(void)
 		!( netgame || multiplayer ) &&
 		!( usedCheats );
 
-	if (wouldSetCheats && !option_force)
+	if (wouldSetCheats && !option_force
+	&& !M_SecretUnlocked(SECRET_LEVELSELECT, serverGamedata))
 	{
 		/* May want to be more descriptive? */
 		CONS_Printf(M_GetText("Sorry, level change disabled in single player.\n"));
@@ -1967,7 +1968,7 @@ static void Command_Map_f(void)
 		return;
 	}
 
-	if (wouldSetCheats && option_force)
+	if (wouldSetCheats)
 	{
 		G_SetUsedCheats(false);
 	}
