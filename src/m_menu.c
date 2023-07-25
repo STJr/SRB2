@@ -13442,11 +13442,11 @@ static void M_DrawVideoMode(void)
 				vid.width, vid.height));
 		V_DrawCenteredString(BASEVIDWIDTH/2, OP_VideoModeDef.y + 116, (cv_fullscreen.value ? 0 : V_TRANSLUCENT),
 			va("Default mode is %c%dx%d",
-				(SCR_IsAspectCorrect(cv_scr_width.value, cv_scr_height.value)) ? 0x83 : 0x80,
+				(SCR_IsAspectCorrect(cv_scr_width.value, cv_scr_height.value)) ? 0x83 : (!SCR_IsValidResolution(cv_scr_width.value, cv_scr_height.value) ? 0x85 : 0x80),
 				cv_scr_width.value, cv_scr_height.value));
 		V_DrawCenteredString(BASEVIDWIDTH/2, OP_VideoModeDef.y + 124, (cv_fullscreen.value ? V_TRANSLUCENT : 0),
 			va("Windowed mode is %c%dx%d",
-				(SCR_IsAspectCorrect(cv_scr_width_w.value, cv_scr_height_w.value)) ? 0x83 : 0x80,
+				(SCR_IsAspectCorrect(cv_scr_width_w.value, cv_scr_height_w.value)) ? 0x83 : (!SCR_IsValidResolution(cv_scr_width_w.value, cv_scr_height_w.value) ? 0x85 : 0x80),
 				cv_scr_width_w.value, cv_scr_height_w.value));
 
 		V_DrawCenteredString(BASEVIDWIDTH/2, OP_VideoModeDef.y + 138,
