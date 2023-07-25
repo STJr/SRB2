@@ -99,10 +99,6 @@ consvar_t cv_vidwait = CVAR_INIT ("vid_wait", "On", CV_SAVE | CV_CALL, CV_OnOff,
 static consvar_t cv_stretch = CVAR_INIT ("stretch", "Off", CV_SAVE|CV_NOSHOWHELP, CV_OnOff, NULL);
 static consvar_t cv_alwaysgrabmouse = CVAR_INIT ("alwaysgrabmouse", "Off", CV_SAVE, CV_OnOff, NULL);
 
-#if defined(__ANDROID__)
-static void Impl_SetColorBufferDepth(INT32 red, INT32 green, INT32 blue, INT32 alpha);
-#endif
-
 UINT8 graphics_started = 0; // Is used in console.c and screen.c
 
 // To disable fullscreen at startup; is set in VID_PrepareModeList
@@ -150,7 +146,7 @@ static void Impl_SetupSoftwareBuffer(void);
 
 static void Impl_InitOpenGL(void);
 
-#if !defined(__ANDROID__) && defined(HAVE_IMAGE)
+#if defined(HAVE_IMAGE)
 #define USE_WINDOW_ICON
 #endif
 
@@ -269,13 +265,11 @@ static void Impl_VideoSetupSurfaces(int width, int height)
 	int bpp = 16;
 	int sw_texture_format = SDL_PIXELFORMAT_ABGR8888;
 
-#if !defined(__ANDROID__)
 	if (!usesdl2soft)
 	{
 		sw_texture_format = SDL_PIXELFORMAT_RGB565;
 	}
 	else
-#endif
 	{
 		bpp = 32;
 		sw_texture_format = SDL_PIXELFORMAT_RGBA8888;
@@ -1559,10 +1553,6 @@ static SDL_bool Impl_CreateWindow(SDL_bool fullscreen)
 	SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
 #endif
 
-#if defined(__ANDROID__)
-	Impl_SetColorBufferDepth(8, 8, 8, 8);
-#endif
-
 	// Create a window
 	window = SDL_CreateWindow("SRB2 "VERSIONSTRING, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, realwidth, realheight, flags);
 	if (window == NULL)
@@ -1616,39 +1606,6 @@ static void Impl_VideoSetupBuffer(void)
 	}
 }
 
-#ifdef HAVE_GLES
-static void Impl_InitGLESDriver(void)
-{
-	const char *driver_name = NULL;
-	int version_major, version_minor;
-
-#ifdef HAVE_GLES2
-	driver_name = "opengles2";
-	version_major = 2;
-	version_minor = 0;
-#else
-	driver_name = "opengles";
-	version_major = 1;
-	version_minor = 1;
-#endif
-
-	SDL_SetHint(SDL_HINT_RENDER_DRIVER, driver_name);
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, version_major);
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, version_minor);
-}
-#endif
-
-#if defined(__ANDROID__)
-static void Impl_SetColorBufferDepth(INT32 red, INT32 green, INT32 blue, INT32 alpha)
-{
-	SDL_GL_SetAttribute(SDL_GL_RED_SIZE, red);
-	SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, green);
-	SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, blue);
-	SDL_GL_SetAttribute(SDL_GL_ALPHA_SIZE, alpha);
-}
-#endif
-
 static void Impl_InitVideoSubSystem(void)
 {
 	if (video_init)
@@ -1659,14 +1616,6 @@ static void Impl_InitVideoSubSystem(void)
 		CONS_Printf(M_GetText("Couldn't initialize SDL's Video System: %s\n"), SDL_GetError());
 		return;
 	}
-
-#ifdef HAVE_GLES
-	Impl_InitGLESDriver();
-#endif
-
-#ifdef MOBILE_PLATFORM
-	SDL_SetHint(SDL_HINT_ORIENTATIONS, "LandscapeLeft LandscapeRight");
-#endif
 
 	video_init = true;
 }
@@ -1693,8 +1642,6 @@ void I_StartupGraphics(void)
 	disable_mouse = M_CheckParm("-nomouse");
 	disable_fullscreen = M_CheckParm("-win") ? 1 : 0;
 
-	// [REDACTED] was also initializing the microphone here for some reason
-	// (should really be in system init instead)
 	keyboard_started = true;
 
 	// If it wasn't already initialized
@@ -1889,10 +1836,8 @@ void I_ShutdownGraphics(void)
 	I_OutputMsg("shut down\n");
 
 #ifdef HWRENDER
-#ifndef HAVE_GLES
 	if (GLUhandle)
 		hwClose(GLUhandle);
-#endif
 	if (sdlglcontext)
 	{
 		SDL_GL_DeleteContext(sdlglcontext);
