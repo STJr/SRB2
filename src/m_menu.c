@@ -13655,7 +13655,7 @@ static void M_HandleVideoMode(INT32 ch)
 				vidm_previousheight = vid.height;
 
 				if (!vid.change.set) // in case the previous setmode was not finished
-					SCR_SetWindowSize(modedescs[vidm_selected].width, modedescs[vidm_selected].height);
+					SCR_ChangeResolution(modedescs[vidm_selected].width, modedescs[vidm_selected].height);
 			}
 			break;
 
@@ -13673,9 +13673,9 @@ static void M_HandleVideoMode(INT32 ch)
 			CV_Set(&cv_scr_width_w, cv_scr_width_w.defaultvalue);
 			CV_Set(&cv_scr_height_w, cv_scr_height_w.defaultvalue);
 			if (cv_fullscreen.value)
-				SCR_SetWindowSize(cv_scr_width.value, cv_scr_height.value);
+				SCR_ChangeResolution(cv_scr_width.value, cv_scr_height.value);
 			else
-				SCR_SetWindowSize(cv_scr_width_w.value, cv_scr_height_w.value);
+				SCR_ChangeResolution(cv_scr_width_w.value, cv_scr_height_w.value);
 			break;
 
 		case KEY_F10: // Renderer toggle, also processed inside menus
