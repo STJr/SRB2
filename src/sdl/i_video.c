@@ -416,8 +416,10 @@ static UINT32 VID_GetRefreshRate(void)
 
 static void Impl_SetDefaultWindowSizes(void)
 {
-	INT32 native_width, native_height;
+	static char *default_width = NULL;
+	static char *default_height = NULL;
 
+	INT32 native_width, native_height;
 	if (!VID_GetNativeResolution(&native_width, &native_height))
 		return;
 
@@ -439,6 +441,12 @@ static void Impl_SetDefaultWindowSizes(void)
 	}
 
 	strcpy(buffer2, result);
+
+	free(default_width);
+	free(default_height);
+
+	default_width = buffer1;
+	default_height = buffer2;
 
 	cv_scr_width.defaultvalue = buffer1;
 	cv_scr_height.defaultvalue = buffer2;
@@ -735,6 +743,9 @@ static void Impl_HandleWindowEvent(SDL_WindowEvent evt)
 				SCR_SetSizeNoRestore(evt.data1, evt.data2);
 				SCR_SetDefaultMode(evt.data1, evt.data2);
 			}
+			break;
+		case SDL_WINDOWEVENT_DISPLAY_CHANGED:
+			Impl_SetDefaultWindowSizes();
 			break;
 	}
 
