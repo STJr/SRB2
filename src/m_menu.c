@@ -1302,70 +1302,67 @@ static menuitem_t OP_Camera2ExtendedOptionsMenu[] =
 enum
 {
 	op_video_resolution = 1,
-#if defined (__unix__) || defined (UNIXCOMMON) || defined (HAVE_SDL)
-	op_video_fullscreen,
-#endif
-	op_video_vsync,
-	op_video_renderer,
+	op_video_renderer = 5,
 };
 
 static menuitem_t OP_VideoOptionsMenu[] =
 {
 	{IT_HEADER, NULL, "Screen", NULL, 0},
-	{IT_STRING | IT_CALL,  NULL, "Set Resolution...",       M_VideoModeMenu,          6},
+	{IT_STRING | IT_CALL, NULL, "Set Resolution...",  M_VideoModeMenu,    6},  // op_video_resolution
+	{IT_STRING | IT_CVAR, NULL, "Fullscreen (F11)",   &cv_fullscreen,     11},
+	{IT_STRING | IT_CVAR, NULL, "Vertical Sync",      &cv_vidwait,        16},
 
-#if defined (__unix__) || defined (UNIXCOMMON) || defined (HAVE_SDL)
-	{IT_STRING|IT_CVAR,      NULL, "Fullscreen (F11)",          &cv_fullscreen,      11},
-#endif
-	{IT_STRING | IT_CVAR, NULL, "Vertical Sync",                &cv_vidwait,         16},
+	{IT_HEADER, NULL, "Renderer", NULL, 25},
 #ifdef HWRENDER
-	{IT_STRING | IT_CVAR, NULL, "Renderer (F10)",               &cv_renderer,        21},
+	{IT_STRING | IT_CVAR, NULL, "Renderer (F10)",    &cv_renderer,        31}, // op_video_renderer
 #else
-	{IT_TRANSTEXT | IT_PAIR, "Renderer", "Software",            &cv_renderer,        21},
+	{IT_TRANSTEXT | IT_PAIR, "Renderer", "Software", &cv_renderer,        31},
 #endif
-
-	{IT_HEADER, NULL, "Color Profile", NULL, 30},
-	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "Brightness", &cv_globalgamma,36},
-	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "Saturation", &cv_globalsaturation, 41},
-	{IT_SUBMENU|IT_STRING, NULL, "Advanced Settings...",     &OP_ColorOptionsDef,  46},
-
-	{IT_HEADER, NULL, "Heads-Up Display", NULL, 55},
-	{IT_STRING | IT_CVAR, NULL, "Show HUD",                  &cv_showhud,          61},
-	{IT_STRING | IT_CVAR | IT_CV_SLIDER,
-	                      NULL, "HUD Transparency",          &cv_translucenthud,   66},
-	{IT_STRING | IT_CVAR, NULL, "Score/Time/Rings",          &cv_timetic,          71},
-	{IT_STRING | IT_CVAR, NULL, "Show Powerups",             &cv_powerupdisplay,   76},
-	{IT_STRING | IT_CVAR, NULL, "Local ping display",		&cv_showping,			81}, // shows ping next to framerate if we want to.
-	{IT_STRING | IT_CVAR, NULL, "Show player names",         &cv_seenames,         86},
-
-	{IT_HEADER, NULL, "Console", NULL, 95},
-	{IT_STRING | IT_CVAR, NULL, "Background color",          &cons_backcolor,      101},
-	{IT_STRING | IT_CVAR, NULL, "Text Size",                 &cv_constextsize,    106},
-
-	{IT_HEADER, NULL, "Chat", NULL, 115},
-	{IT_STRING | IT_CVAR, NULL, "Chat Mode",            		 	 &cv_consolechat,  121},
-	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "Chat Box Width",    &cv_chatwidth,     126},
-	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "Chat Box Height",   &cv_chatheight,    131},
-	{IT_STRING | IT_CVAR, NULL, "Message Fadeout Time",              &cv_chattime,    136},
-	{IT_STRING | IT_CVAR, NULL, "Chat Notifications",           	 &cv_chatnotifications,  141},
-	{IT_STRING | IT_CVAR, NULL, "Spam Protection",           		 &cv_chatspamprotection,  146},
-	{IT_STRING | IT_CVAR, NULL, "Chat background tint",           	 &cv_chatbacktint,  151},
-
-	{IT_HEADER, NULL, "Level", NULL, 160},
-	{IT_STRING | IT_CVAR, NULL, "Draw Distance",             &cv_drawdist,        166},
-	{IT_STRING | IT_CVAR, NULL, "Weather Draw Dist.",        &cv_drawdist_precip, 171},
-	{IT_STRING | IT_CVAR, NULL, "NiGHTS Hoop Draw Dist.",    &cv_drawdist_nights, 176},
-
-	{IT_HEADER, NULL, "Diagnostic", NULL, 184},
-	{IT_STRING | IT_CVAR, NULL, "Show FPS",                  &cv_ticrate,         190},
-	{IT_STRING | IT_CVAR, NULL, "Clear Before Redraw",       &cv_homremoval,      195},
-	{IT_STRING | IT_CVAR, NULL, "Show \"FOCUS LOST\"",       &cv_showfocuslost,   200},
-
+	{IT_STRING | IT_CVAR
+	 | IT_CV_FLOATSLIDER, NULL, "Field of view",     &cv_fov,             36},
+	{IT_STRING | IT_CVAR, NULL, "FPS Cap",           &cv_fpscap,          41},
 #ifdef HWRENDER
-	{IT_HEADER, NULL, "Renderer", NULL, 208},
-	{IT_CALL | IT_STRING, NULL, "OpenGL Options...",         M_OpenGLOptionsMenu, 214},
-	{IT_STRING | IT_CVAR, NULL, "FPS Cap",                   &cv_fpscap,          219},
+	{IT_CALL | IT_STRING, NULL, "OpenGL Options...", M_OpenGLOptionsMenu, 46},
+#else
+	{IT_TRANSTEXT,        NULL, "OpenGL Options...", NULL, 46},
 #endif
+
+	{IT_HEADER, NULL, "Color Profile", NULL, 55},
+	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "Brightness", &cv_globalgamma,      61},
+	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "Saturation", &cv_globalsaturation, 66},
+	{IT_SUBMENU|IT_STRING, NULL, "Advanced Settings...",     &OP_ColorOptionsDef,  71},
+
+	{IT_HEADER, NULL, "Heads-Up Display", NULL, 80},
+	{IT_STRING | IT_CVAR, NULL, "Show HUD",           &cv_showhud,        86},
+	{IT_STRING | IT_CVAR | IT_CV_SLIDER,
+	                      NULL, "HUD Transparency",   &cv_translucenthud, 91},
+	{IT_STRING | IT_CVAR, NULL, "Score/Time/Rings",   &cv_timetic,        96},
+	{IT_STRING | IT_CVAR, NULL, "Show Powerups",      &cv_powerupdisplay, 101},
+	{IT_STRING | IT_CVAR, NULL, "Local ping display", &cv_showping,       106}, // shows ping next to framerate if we want to.
+	{IT_STRING | IT_CVAR, NULL, "Show player names",  &cv_seenames,       111},
+
+	{IT_HEADER, NULL, "Console", NULL, 120},
+	{IT_STRING | IT_CVAR, NULL, "Background color", &cons_backcolor,  126},
+	{IT_STRING | IT_CVAR, NULL, "Text Size",        &cv_constextsize, 131},
+
+	{IT_HEADER, NULL, "Chat", NULL, 140},
+	{IT_STRING | IT_CVAR, NULL, "Chat Mode",                      &cv_consolechat,        146},
+	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "Chat Box Width",  &cv_chatwidth,          151},
+	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "Chat Box Height", &cv_chatheight,         156},
+	{IT_STRING | IT_CVAR, NULL, "Message Fadeout Time",           &cv_chattime,           161},
+	{IT_STRING | IT_CVAR, NULL, "Chat Notifications",             &cv_chatnotifications,  166},
+	{IT_STRING | IT_CVAR, NULL, "Spam Protection",                &cv_chatspamprotection, 171},
+	{IT_STRING | IT_CVAR, NULL, "Chat background tint",           &cv_chatbacktint,       176},
+
+	{IT_HEADER, NULL, "Level", NULL, 185},
+	{IT_STRING | IT_CVAR, NULL, "Draw Distance",          &cv_drawdist,        191},
+	{IT_STRING | IT_CVAR, NULL, "Weather Draw Dist.",     &cv_drawdist_precip, 196},
+	{IT_STRING | IT_CVAR, NULL, "NiGHTS Hoop Draw Dist.", &cv_drawdist_nights, 201},
+
+	{IT_HEADER, NULL, "Diagnostic", NULL, 210},
+	{IT_STRING | IT_CVAR, NULL, "Show FPS",            &cv_ticrate,         216},
+	{IT_STRING | IT_CVAR, NULL, "Clear Before Redraw", &cv_homremoval,      221},
+	{IT_STRING | IT_CVAR, NULL, "Show \"FOCUS LOST\"", &cv_showfocuslost,   226},
 };
 
 static menuitem_t OP_VideoModeMenu[] =
@@ -1425,17 +1422,13 @@ static menuitem_t OP_OpenGLOptionsMenu[] =
 	{IT_HEADER, NULL, "General", NULL, 51},
 	{IT_STRING|IT_CVAR,         NULL, "Shaders",             &cv_glshaders,            63},
 	{IT_STRING|IT_CVAR,         NULL, "Lack of perspective", &cv_glshearing,           73},
-	{IT_STRING|IT_CVAR,         NULL, "Field of view",       &cv_fov,                  83},
 
-	{IT_HEADER, NULL, "Miscellaneous", NULL, 102},
-	{IT_STRING|IT_CVAR,         NULL, "Bit depth",           &cv_scr_depth,           114},
-	{IT_STRING|IT_CVAR,         NULL, "Texture filter",      &cv_glfiltermode,        124},
-	{IT_STRING|IT_CVAR,         NULL, "Anisotropic",         &cv_glanisotropicmode,   134},
+	{IT_HEADER, NULL, "Miscellaneous", NULL, 92},
+	{IT_STRING|IT_CVAR,         NULL, "Bit depth",           &cv_scr_depth,           104},
+	{IT_STRING|IT_CVAR,         NULL, "Texture filter",      &cv_glfiltermode,        114},
+	{IT_STRING|IT_CVAR,         NULL, "Anisotropic",         &cv_glanisotropicmode,   124},
 #ifdef ALAM_LIGHTING
-	{IT_SUBMENU|IT_STRING,      NULL, "Lighting...",         &OP_OpenGLLightingDef,   144},
-#endif
-#if defined (_WINDOWS) && (!(defined (__unix__) || defined (UNIXCOMMON) || defined (HAVE_SDL)))
-	{IT_STRING|IT_CVAR,         NULL, "Fullscreen",          &cv_fullscreen,          154},
+	{IT_SUBMENU|IT_STRING,      NULL, "Lighting...",         &OP_OpenGLLightingDef,   134},
 #endif
 };
 
