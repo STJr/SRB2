@@ -43,4 +43,6 @@ typedef struct floorsplat_s
 
 void R_DrawFloorSplat(vissprite_t *spr);
 
+void R_AllocFloorSpriteTables(void);
+
 #endif /*__R_SPLATS_H__*/

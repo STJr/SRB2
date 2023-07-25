@@ -39,6 +39,7 @@
 //SoM: 3/23/2000: Use Boom visplane hashing.
 
 visplane_t *visplanes[MAXVISPLANES];
+static UINT16 numvisplanes;
 static visplane_t *freetail;
 static visplane_t **freehead = &freetail;
 
@@ -62,14 +63,14 @@ INT16 *openings, *lastopening; /// \todo free leak
 //  floorclip starts out SCREENHEIGHT
 //  ceilingclip starts out -1
 //
-INT16 floorclip[MAXVIDWIDTH], ceilingclip[MAXVIDWIDTH];
-fixed_t frontscale[MAXVIDWIDTH];
+INT16 *floorclip, *ceilingclip;
+fixed_t *frontscale;
 
 //
 // spanstart holds the start of a plane span
 // initialized to 0 at start
 //
-static INT32 spanstart[MAXVIDHEIGHT];
+static INT32 *spanstart;
 
 //
 // texture mapping
@@ -84,24 +85,75 @@ static fixed_t planeheight;
 //                (this is to calculate yslopes only when really needed)
 //                (when mouselookin', yslope is moving into yslopetab)
 //                Check R_SetupFrame, R_SetViewSize for more...
-fixed_t yslopetab[MAXVIDHEIGHT*16];
+fixed_t *yslopetab;
 fixed_t *yslope;
 
-fixed_t cachedheight[MAXVIDHEIGHT];
-fixed_t cacheddistance[MAXVIDHEIGHT];
-fixed_t cachedxstep[MAXVIDHEIGHT];
-fixed_t cachedystep[MAXVIDHEIGHT];
+fixed_t *cachedheight;
+fixed_t *cacheddistance;
+fixed_t *cachedxstep;
+fixed_t *cachedystep;
 
 static fixed_t xoffs, yoffs;
 static floatv3_t ds_slope_origin, ds_slope_u, ds_slope_v;
 
-//
-// R_InitPlanes
-// Only at game startup.
-//
-void R_InitPlanes(void)
+static INT16 *ffloor_f_clip;
+static INT16 *ffloor_c_clip;
+
+UINT16 *visplanes_top[MAXVISPLANES];
+UINT16 *visplanes_bottom[MAXVISPLANES];
+
+static void R_AllocVisplaneTables(unsigned i)
 {
-	// FIXME: unused
+	// leave pads for [minx-1]/[maxx+1]
+	visplanes_top[i] = Z_Realloc(visplanes_top[i], sizeof(UINT16) * (viewwidth + 2), PU_STATIC, NULL);
+	visplanes_bottom[i] = Z_Realloc(visplanes_bottom[i], sizeof(UINT16) * (viewwidth + 2), PU_STATIC, NULL);
+}
+
+void R_AllocPlaneMemory(void)
+{
+	// Alloc visplane top/bottom bounds
+	visplane_t *check;
+
+	for (unsigned i = 0; i < MAXVISPLANES; i++)
+	{
+		if (visplanes_top[i] || visplanes_bottom[i])
+			R_AllocVisplaneTables(i);
+
+		if ((check = visplanes[i]))
+		{
+			check->top = visplanes_top[check->id] + 1;
+			check->bottom = visplanes_bottom[check->id] + 1;
+		}
+	}
+
+	// Need to do it for "freed" visplanes too
+	check = freetail;
+
+	while (check)
+	{
+		check->top = visplanes_top[check->id] + 1;
+		check->bottom = visplanes_bottom[check->id] + 1;
+		check = check->next;
+	}
+
+	// Alloc ffloor clip tables
+	ffloor_f_clip = Z_Realloc(ffloor_f_clip, sizeof(*ffloor_f_clip) * (viewwidth * MAXFFLOORS), PU_STATIC, NULL);
+	ffloor_c_clip = Z_Realloc(ffloor_c_clip, sizeof(*ffloor_c_clip) * (viewwidth * MAXFFLOORS), PU_STATIC, NULL);
+
+	for (unsigned i = 0; i < MAXFFLOORS; i++)
+	{
+		ffloor[i].f_clip = ffloor_f_clip + (i * viewwidth);
+		ffloor[i].c_clip = ffloor_c_clip + (i * viewwidth);
+	}
+
+	yslopetab = Z_Realloc(yslopetab, sizeof(*yslopetab) * (viewheight * 16), PU_STATIC, NULL);
+
+	cachedheight = Z_Realloc(cachedheight, sizeof(*cachedheight) * viewheight, PU_STATIC, NULL);
+	cacheddistance = Z_Realloc(cacheddistance, sizeof(*cacheddistance) * viewheight, PU_STATIC, NULL);
+	cachedxstep = Z_Realloc(cachedxstep, sizeof(*cachedxstep) * viewheight, PU_STATIC, NULL);
+	cachedystep = Z_Realloc(cachedystep, sizeof(*cachedystep) * viewheight, PU_STATIC, NULL);
+
+	spanstart = Z_Realloc(spanstart, sizeof(*spanstart) * viewheight, PU_STATIC, NULL);
 }
 
 //
@@ -369,7 +421,7 @@ void R_ClearPlanes(void)
 	lastopening = openings;
 
 	// texture calculation
-	memset(cachedheight, 0, sizeof (cachedheight));
+	memset(cachedheight, 0, sizeof(*cachedheight) * viewheight);
 }
 
 static visplane_t *new_visplane(unsigned hash)
@@ -377,8 +429,10 @@ static visplane_t *new_visplane(unsigned hash)
 	visplane_t *check = freetail;
 	if (!check)
 	{
-		check = malloc(sizeof (*check));
+		check = calloc(1, sizeof (*check));
 		if (check == NULL) I_Error("%s: Out of memory", "new_visplane"); // FIXME: ugly
+		check->id = numvisplanes++;
+		R_AllocVisplaneTables(check->id);
 	}
 	else
 	{
@@ -486,8 +540,11 @@ visplane_t *R_FindPlane(fixed_t height, INT32 picnum, INT32 lightlevel,
 	check->polyobj = polyobj;
 	check->slope = slope;
 
-	memset(check->top, 0xff, sizeof (check->top));
-	memset(check->bottom, 0x00, sizeof (check->bottom));
+	check->top = visplanes_top[check->id] + 1;
+	check->bottom = visplanes_bottom[check->id] + 1;
+
+	memset(check->top, 0xff, sizeof(*check->top) * viewwidth);
+	memset(check->bottom, 0x00, sizeof(*check->bottom) * viewwidth);
 
 	return check;
 }
@@ -542,8 +599,7 @@ visplane_t *R_CheckPlane(visplane_t *pl, INT32 start, INT32 stop)
 		}
 		else
 		{
-			unsigned hash =
-				visplane_hash(pl->picnum, pl->lightlevel, pl->height);
+			unsigned hash = visplane_hash(pl->picnum, pl->lightlevel, pl->height);
 			new_pl = new_visplane(hash);
 		}
 
@@ -564,8 +620,10 @@ visplane_t *R_CheckPlane(visplane_t *pl, INT32 start, INT32 stop)
 		pl = new_pl;
 		pl->minx = start;
 		pl->maxx = stop;
-		memset(pl->top, 0xff, sizeof pl->top);
-		memset(pl->bottom, 0x00, sizeof pl->bottom);
+		pl->top = visplanes_top[pl->id] + 1;
+		pl->bottom = visplanes_bottom[pl->id] + 1;
+		memset(pl->top, 0xff, sizeof(*pl->top) * viewwidth);
+		memset(pl->bottom, 0x00, sizeof(*pl->bottom) * viewwidth);
 	}
 	return pl;
 }
@@ -1009,7 +1067,7 @@ void R_DrawSinglePlane(visplane_t *pl)
 		// Don't mess with angle on slopes! We'll handle this ourselves later
 		if (!pl->slope && viewangle != pl->viewangle+pl->plangle)
 		{
-			memset(cachedheight, 0, sizeof (cachedheight));
+			memset(cachedheight, 0, sizeof(*cachedheight) * viewheight);
 			viewangle = pl->viewangle+pl->plangle;
 		}
 

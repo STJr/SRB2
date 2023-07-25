@@ -63,8 +63,8 @@ typedef struct
 static lighttable_t **spritelights;
 
 // constant arrays used for psprite clipping and initializing clipping
-INT16 negonearray[MAXVIDWIDTH];
-INT16 screenheightarray[MAXVIDWIDTH];
+INT16 *negonearray;
+INT16 *screenheightarray;
 
 spriteinfo_t spriteinfo[NUMSPRITES];
 
@@ -513,9 +513,6 @@ void R_InitSprites(void)
 	float fa;
 #endif
 
-	for (i = 0; i < MAXVIDWIDTH; i++)
-		negonearray[i] = -1;
-
 #ifdef ROTSPRITE
 	for (angle = 1; angle < ROTANGLES; angle++)
 	{
@@ -574,6 +571,34 @@ void R_ClearSprites(void)
 	visspritecount = clippedvissprites = 0;
 }
 
+static INT16 *vissprite_clipbot[MAXVISSPRITES >> VISSPRITECHUNKBITS];
+static INT16 *vissprite_cliptop[MAXVISSPRITES >> VISSPRITECHUNKBITS];
+
+static void R_AllocVisSpriteChunkMemory(UINT32 chunk)
+{
+	vissprite_clipbot[chunk] = Z_Realloc(vissprite_clipbot[chunk], sizeof(INT16) * (VISSPRITESPERCHUNK * viewwidth), PU_STATIC, NULL);
+	vissprite_cliptop[chunk] = Z_Realloc(vissprite_cliptop[chunk], sizeof(INT16) * (VISSPRITESPERCHUNK * viewwidth), PU_STATIC, NULL);
+
+	for (unsigned i = 0; i < VISSPRITESPERCHUNK; i++)
+	{
+		vissprite_t *sprite = visspritechunks[chunk] + i;
+
+		sprite->clipbot = vissprite_clipbot[chunk] + (viewwidth * i);
+		sprite->cliptop = vissprite_cliptop[chunk] + (viewwidth * i);
+	}
+}
+
+void R_AllocVisSpriteMemory(void)
+{
+	unsigned numchunks = MAXVISSPRITES >> VISSPRITECHUNKBITS;
+
+	for (unsigned i = 0; i < numchunks; i++)
+	{
+		if (visspritechunks[i])
+			R_AllocVisSpriteChunkMemory(i);
+	}
+}
+
 //
 // R_NewVisSprite
 //
@@ -581,13 +606,16 @@ static vissprite_t overflowsprite;
 
 static vissprite_t *R_GetVisSprite(UINT32 num)
 {
-		UINT32 chunk = num >> VISSPRITECHUNKBITS;
+	UINT32 chunk = num >> VISSPRITECHUNKBITS;
 
-		// Allocate chunk if necessary
-		if (!visspritechunks[chunk])
-			Z_Malloc(sizeof(vissprite_t) * VISSPRITESPERCHUNK, PU_LEVEL, &visspritechunks[chunk]);
+	// Allocate chunk if necessary
+	if (!visspritechunks[chunk])
+	{
+		Z_Malloc(sizeof(vissprite_t) * VISSPRITESPERCHUNK, PU_LEVEL, &visspritechunks[chunk]);
+		R_AllocVisSpriteChunkMemory(chunk);
+	}
 
-		return visspritechunks[chunk] + (num & VISSPRITEINDEXMASK);
+	return visspritechunks[chunk] + (num & VISSPRITEINDEXMASK);
 }
 
 static vissprite_t *R_NewVisSprite(void)

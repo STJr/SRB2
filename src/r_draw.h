@@ -19,10 +19,10 @@
 // -------------------------------
 // COMMON STUFF FOR 8bpp AND 16bpp
 // -------------------------------
-extern UINT8 *ylookup[MAXVIDHEIGHT*4];
-extern UINT8 *ylookup1[MAXVIDHEIGHT*4];
-extern UINT8 *ylookup2[MAXVIDHEIGHT*4];
-extern INT32 columnofs[MAXVIDWIDTH*4];
+extern UINT8 **ylookup;
+extern UINT8 **ylookup1;
+extern UINT8 **ylookup2;
+extern INT32 *columnofs;
 extern UINT8 *topleft;
 
 // -------------------------

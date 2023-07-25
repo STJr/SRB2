@@ -18,6 +18,7 @@
 #include "doomdef.h"
 #include "doomstat.h"
 #include "r_local.h"
+#include "r_splats.h"
 #include "st_stuff.h" // need ST_HEIGHT
 #include "i_video.h"
 #include "v_video.h"
@@ -37,24 +38,24 @@
 
 /**	\brief view info
 */
-INT32 viewwidth, scaledviewwidth, viewheight, viewwindowx, viewwindowy;
+INT32 viewwidth, viewheight, viewwindowx, viewwindowy;
 
 /**	\brief pointer to the start of each line of the screen,
 */
-UINT8 *ylookup[MAXVIDHEIGHT*4];
+UINT8 **ylookup;
 
 /**	\brief pointer to the start of each line of the screen, for view1 (splitscreen)
 */
-UINT8 *ylookup1[MAXVIDHEIGHT*4];
+UINT8 **ylookup1;
 
 /**	\brief pointer to the start of each line of the screen, for view2 (splitscreen)
 */
-UINT8 *ylookup2[MAXVIDHEIGHT*4];
+UINT8 **ylookup2;
 
 /**	\brief  x byte offset for columns inside the viewwindow,
 	so the first column starts at (SCRWIDTH - VIEWWIDTH)/2
 */
-INT32 columnofs[MAXVIDWIDTH*4];
+INT32 *columnofs;
 
 UINT8 *topleft;
 
@@ -120,6 +121,9 @@ float focallengthf, zeroheight;
 */
 
 UINT32 nflatxshift, nflatyshift, nflatshiftup, nflatmask;
+
+// For, uh, tilted lighting, duh.
+static INT32 *tiltlighting;
 
 // =========================================================================
 //                   TRANSLATION COLORMAP CODE
@@ -701,6 +705,29 @@ void R_InitViewBuffer(INT32 width, INT32 height)
 	if (bytesperpixel < 1 || bytesperpixel > 4)
 		I_Error("R_InitViewBuffer: wrong bytesperpixel value %d\n", bytesperpixel);
 
+	negonearray = Z_Realloc(negonearray, sizeof(*negonearray) * viewwidth, PU_STATIC, NULL);
+	screenheightarray = Z_Realloc(screenheightarray, sizeof(*screenheightarray) * viewwidth, PU_STATIC, NULL);
+
+	floorclip = Z_Realloc(floorclip, sizeof(*floorclip) * viewwidth, PU_STATIC, NULL);
+	ceilingclip = Z_Realloc(ceilingclip, sizeof(*ceilingclip) * viewwidth, PU_STATIC, NULL);
+
+	frontscale = Z_Realloc(frontscale, sizeof(*frontscale) * viewwidth, PU_STATIC, NULL);
+
+	ylookup1 = Z_Realloc(ylookup1, sizeof(*ylookup1) * (viewheight * 4), PU_STATIC, NULL);
+	ylookup2 = Z_Realloc(ylookup2, sizeof(*ylookup2) * (viewheight * 4), PU_STATIC, NULL);
+	ylookup = ylookup1;
+
+	columnofs = Z_Realloc(columnofs, sizeof(*columnofs) * (viewwidth * 4), PU_STATIC, NULL);
+
+	xtoviewangle = Z_Realloc(xtoviewangle, sizeof(*xtoviewangle) * (viewwidth + 1), PU_STATIC, NULL);
+
+	tiltlighting = Z_Realloc(tiltlighting, sizeof(*tiltlighting) * viewwidth, PU_STATIC, NULL);
+
+	R_AllocSegMemory();
+	R_AllocPlaneMemory();
+	R_AllocFloorSpriteTables();
+	R_AllocVisSpriteMemory();
+
 	// Handle resize, e.g. smaller view windows with border and/or status bar.
 	viewwindowx = (vid.width - width) >> 1;
 
@@ -717,7 +744,7 @@ void R_InitViewBuffer(INT32 width, INT32 height)
 	// Precalculate all row offsets.
 	for (i = 0; i < height; i++)
 	{
-		ylookup[i] = ylookup1[i] = screens[0] + (i+viewwindowy)*vid.width*bytesperpixel;
+		ylookup1[i] = screens[0] + (i+viewwindowy)*vid.width*bytesperpixel;
 		ylookup2[i] = screens[0] + (i+(vid.height>>1))*vid.width*bytesperpixel; // for splitscreen
 	}
 }
@@ -745,8 +772,6 @@ void R_VideoErase(size_t ofs, INT32 count)
 
 // R_CalcTiltedLighting
 // Exactly what it says on the tin. I wish I wasn't too lazy to explain things properly.
-static INT32 tiltlighting[MAXVIDWIDTH];
-
 static void R_CalcTiltedLighting(fixed_t start, fixed_t end)
 {
 	// ZDoom uses a different lighting setup to us, and I couldn't figure out how to adapt their version

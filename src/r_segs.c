@@ -1512,6 +1512,33 @@ static INT64 R_CalcSegDist(seg_t* seg, INT64 x2, INT64 y2)
 	}
 }
 
+static size_t maxdrawsegs = 0;
+
+static fixed_t *frontscaletable = NULL;
+static fixed_t *maskedheighttable = NULL;
+
+void R_AllocSegMemory(void)
+{
+	if (!maxdrawsegs)
+		return;
+
+	frontscaletable = Z_Realloc(frontscaletable, sizeof(*frontscaletable) * (maxdrawsegs * viewwidth), PU_STATIC, NULL);
+	maskedheighttable = Z_Realloc(maskedheighttable, sizeof(*maskedheighttable) * (maxdrawsegs * viewwidth), PU_STATIC, NULL);
+
+	drawseg_t *lastseg = drawsegs + maxdrawsegs;
+
+	fixed_t *frontscale_p = frontscaletable;
+	fixed_t *maskedheight_p = maskedheighttable;
+
+	for (drawseg_t *ds = drawsegs; ds < lastseg; ds++)
+	{
+		ds->frontscale = frontscale_p;
+		ds->maskedtextureheight = maskedheight_p;
+		frontscale_p += viewwidth;
+		maskedheight_p += viewwidth;
+	}
+}
+
 //
 // R_StoreWallRange
 // A wall segment will be drawn
@@ -1530,7 +1557,6 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 	INT32 range;
 	vertex_t segleft, segright;
 	fixed_t ceilingfrontslide, floorfrontslide, ceilingbackslide, floorbackslide;
-	static size_t maxdrawsegs = 0;
 
 	maskedtextureheight = NULL;
 	//initialize segleft and segright
@@ -1552,6 +1578,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 		curdrawsegs = drawsegs + curpos;
 		if (firstseg)
 			firstseg = drawsegs + (size_t)firstseg;
+		R_AllocSegMemory();
 	}
 
 	sidedef = curline->sidedef;

@@ -498,14 +498,14 @@ static void D_Display(void)
 					if (rendermode != render_none)
 					{
 						viewwindowy = vid.height / 2;
-						M_Memcpy(ylookup, ylookup2, viewheight*sizeof (ylookup[0]));
+						ylookup = ylookup2;
 
 						topleft = screens[0] + viewwindowy*vid.width + viewwindowx;
 
 						R_RenderPlayerView(&players[secondarydisplayplayer]);
 
 						viewwindowy = 0;
-						M_Memcpy(ylookup, ylookup1, viewheight*sizeof (ylookup[0]));
+						ylookup = ylookup1;
 					}
 				}
 

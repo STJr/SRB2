@@ -130,7 +130,7 @@ extern postimg_t postimgtype2;
 extern INT32 postimgparam2;
 
 extern INT32 viewwindowx, viewwindowy;
-extern INT32 viewwidth, scaledviewwidth;
+extern INT32 viewwidth;
 
 // Player taking events, and displaying.
 extern INT32 consoleplayer;
