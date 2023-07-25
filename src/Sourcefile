@@ -83,6 +83,7 @@ i_tcp.c
 lzf.c
 vid_copy.s
 b_bot.c
+u_list.c
 lua_script.c
 lua_baselib.c
 lua_mathlib.c
