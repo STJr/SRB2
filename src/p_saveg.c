@@ -179,6 +179,7 @@ static void P_NetArchivePlayers(void)
 		WRITEINT32(save_p, players[i].skin);
 		WRITEUINT32(save_p, players[i].availabilities);
 		WRITEUINT32(save_p, players[i].score);
+		WRITEUINT32(save_p, players[i].recordscore);
 		WRITEFIXED(save_p, players[i].dashspeed);
 		WRITESINT8(save_p, players[i].lives);
 		WRITESINT8(save_p, players[i].continues);
@@ -407,6 +408,7 @@ static void P_NetUnArchivePlayers(void)
 		players[i].skin = READINT32(save_p);
 		players[i].availabilities = READUINT32(save_p);
 		players[i].score = READUINT32(save_p);
+		players[i].recordscore = READUINT32(save_p);
 		players[i].dashspeed = READFIXED(save_p); // dashing speed
 		players[i].lives = READSINT8(save_p);
 		players[i].continues = READSINT8(save_p); // continues that player has acquired
@@ -4346,8 +4348,6 @@ static void P_NetArchiveMisc(boolean resending)
 
 	WRITEUINT32(save_p, hidetime);
 
-	WRITEUINT32(save_p, unlocktriggers);
-
 	// Is it paused?
 	if (paused)
 		WRITEUINT8(save_p, 0x2f);
@@ -4446,15 +4446,12 @@ static inline boolean P_NetUnArchiveMisc(boolean reloading)
 
 	hidetime = READUINT32(save_p);
 
-	unlocktriggers = READUINT32(save_p);
-
 	// Is it paused?
 	if (READUINT8(save_p) == 0x2f)
 		paused = true;
 
 	return true;
 }
-
 
 static inline void P_NetArchiveEmblems(void)
 {
@@ -4554,6 +4551,27 @@ static inline void P_NetArchiveEmblems(void)
 			WRITEUINT32(save_p, data->nightsrecords[i]->time[curmare]);
 		}
 	}
+
+	// Mid-map stuff
+	WRITEUINT32(save_p, unlocktriggers);
+
+	for (i = 0; i < MAXPLAYERS; i++)
+	{
+		if (!ntemprecords[i].nummares)
+		{
+			WRITEUINT8(save_p, 0);
+			continue;
+		}
+
+		WRITEUINT8(save_p, ntemprecords[i].nummares);
+
+		for (curmare = 0; curmare < (ntemprecords[i].nummares + 1); ++curmare)
+		{
+			WRITEUINT32(save_p, ntemprecords[i].score[curmare]);
+			WRITEUINT8(save_p, ntemprecords[i].grade[curmare]);
+			WRITEUINT32(save_p, ntemprecords[i].time[curmare]);
+		}
+	}
 }
 
 static inline void P_NetUnArchiveEmblems(void)
@@ -4573,9 +4591,9 @@ static inline void P_NetUnArchiveEmblems(void)
 	savemoddata = (boolean)READUINT8(save_p); // this one is actually necessary because savemoddata stays false otherwise for some reason.
 
 	if (numemblems != READINT32(save_p))
-		I_Error("numemblems mismatch");
+		I_Error("Bad $$$.sav dearchiving Emblems (numemblems mismatch)");
 	if (numextraemblems != READINT32(save_p))
-		I_Error("numextraemblems mismatch");
+		I_Error("Bad $$$.sav dearchiving Emblems (numextraemblems mismatch)");
 
 	// This shouldn't happen, but if something really fucked up happens and you transfer
 	// the SERVER player's gamedata over your own CLIENT gamedata,
@@ -4594,7 +4612,7 @@ static inline void P_NetUnArchiveEmblems(void)
 	// TODO put another cipher on these things? meh, I don't care...
 	for (i = 0; i < NUMMAPS; i++)
 		if ((data->mapvisited[i] = READUINT8(save_p)) > MV_MAX)
-			I_Error("Bad $$$.sav dearchiving Emblems");
+			I_Error("Bad $$$.sav dearchiving Emblems (invalid visit flags)");
 
 	// To save space, use one bit per collected/achieved/unlocked flag
 	for (i = 0; i < MAXEMBLEMS;)
@@ -4638,7 +4656,7 @@ static inline void P_NetUnArchiveEmblems(void)
 		recrings = READUINT16(save_p);
 
 		if (recrings > 10000 || recscore > MAXSCORE)
-			I_Error("Bad $$$.sav dearchiving Emblems");
+			I_Error("Bad $$$.sav dearchiving Emblems (invalid score)");
 
 		if (recscore || rectime || recrings)
 		{
@@ -4665,11 +4683,34 @@ static inline void P_NetUnArchiveEmblems(void)
 
 			if (data->nightsrecords[i]->grade[curmare] > GRADE_S)
 			{
-				I_Error("Bad $$$.sav dearchiving Emblems");
+				I_Error("Bad $$$.sav dearchiving Emblems (invalid grade)");
 			}
 		}
 
 		data->nightsrecords[i]->nummares = recmares;
+	}
+
+	// Mid-map stuff
+	unlocktriggers = READUINT32(save_p);
+
+	for (i = 0; i < MAXPLAYERS; ++i)
+	{
+		if ((recmares = READUINT8(save_p)) == 0)
+			continue;
+
+		for (curmare = 0; curmare < (recmares+1); ++curmare)
+		{
+			ntemprecords[i].score[curmare] = READUINT32(save_p);
+			ntemprecords[i].grade[curmare] = READUINT8(save_p);
+			ntemprecords[i].time[curmare] = (tic_t)READUINT32(save_p);
+
+			if (ntemprecords[i].grade[curmare] > GRADE_S)
+			{
+				I_Error("Bad $$$.sav dearchiving Emblems (invalid temp grade)");
+			}
+		}
+
+		ntemprecords[i].nummares = recmares;
 	}
 }
 

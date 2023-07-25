@@ -45,7 +45,7 @@ INT32 numemblems = 0;
 INT32 numextraemblems = 0;
 
 // Temporary holding place for nights data for the current map
-nightsdata_t ntemprecords;
+nightsdata_t ntemprecords[MAXPLAYERS];
 
 // Create a new gamedata_t, for start-up
 gamedata_t *M_NewGameDataStruct(void)

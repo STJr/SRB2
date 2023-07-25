@@ -882,8 +882,7 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 			}
 
 			// Add score to leaderboards now
-			if (!(netgame||multiplayer) && P_IsLocalPlayer(&players[i]))
-				G_AddTempNightsRecords(players[i].marescore, leveltime - player->marebegunat, players[i].mare + 1);
+			G_AddTempNightsRecords(player, players[i].marescore, leveltime - player->marebegunat, players[i].mare + 1);
 
 			// transfer scores anyway
 			players[i].totalmarescore += players[i].marescore;
@@ -909,8 +908,7 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 		player->finishedrings = (INT16)(player->rings);
 
 		// Add score to temp leaderboards
-		if (!(netgame||multiplayer) && P_IsLocalPlayer(player))
-			G_AddTempNightsRecords(player->marescore, leveltime - player->marebegunat, (UINT8)(oldmare + 1));
+		G_AddTempNightsRecords(player, player->marescore, leveltime - player->marebegunat, (UINT8)(oldmare + 1));
 
 		// Starting a new mare, transfer scores
 		player->totalmarescore += player->marescore;
@@ -1439,6 +1437,10 @@ void P_AddPlayerScore(player_t *player, UINT32 amount)
 	player->score += amount;
 	if (player->score > MAXSCORE)
 		player->score = MAXSCORE;
+
+	player->recordscore += amount;
+	if (player->recordscore > MAXSCORE)
+		player->recordscore = MAXSCORE;
 
 	// check for extra lives every 50000 pts
 	if (!ultimatemode && !modeattacking && player->score > oldscore && player->score % 50000 < amount && (gametyperules & GTR_LIVES))
@@ -11736,7 +11738,7 @@ void P_PlayerThink(player_t *player)
 	if (player->spectator)
 	{
 		if (!(gametyperules & GTR_CAMPAIGN))
-			player->score = 0;
+			player->score = player->recordscore = 0;
 	}
 	else if ((netgame || multiplayer) && player->lives <= 0 && !G_CoopGametype())
 	{
