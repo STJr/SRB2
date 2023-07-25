@@ -3500,10 +3500,10 @@ boolean M_Responder(event_t *ev)
 #ifndef DEVELOP
 					// TODO: Replays are scary, so I left the remaining instances of this alone.
 					// It'd be nice to get rid of this once and for all though!
-					if (((currentMenu->menuitems[itemOn].status & IT_CALLTYPE) & IT_CALL_NOTMODIFIED) && (modifiedgame && !savemoddata) && !usedCheats)
+					if (((currentMenu->menuitems[itemOn].status & IT_CALLTYPE) & IT_CALL_NOTMODIFIED) && usedCheats)
 					{
 						S_StartSound(NULL, sfx_skid);
-						M_StartMessage(M_GetText("This cannot be done in a modified game.\n\n(Press a key)\n"), NULL, MM_NOTHING);
+						M_StartMessage(M_GetText("This cannot be done in a cheated game.\n\n(Press a key)\n"), NULL, MM_NOTHING);
 						return true;
 					}
 #endif
@@ -10449,13 +10449,23 @@ static void M_ChooseTimeAttack(INT32 choice)
 	G_DeferedInitNew(false, G_BuildMapName(cv_nextmap.value), (UINT8)(cv_chooseskin.value-1), false, false);
 }
 
+static char ra_demoname[1024];
+
+static void M_StartTimeAttackReplay(INT32 choice)
+{
+	if (choice == 'y' || choice == KEY_ENTER)
+	{
+		M_ClearMenus(true);
+		modeattacking = ATTACKING_RECORD; // set modeattacking before G_DoPlayDemo so the map loader knows
+		G_DoPlayDemo(ra_demoname);
+	}
+}
+
 // Player has selected the "REPLAY" from the time attack screen
 static void M_ReplayTimeAttack(INT32 choice)
 {
 	const char *which;
-	char *demoname;
-	M_ClearMenus(true);
-	modeattacking = ATTACKING_RECORD; // set modeattacking before G_DoPlayDemo so the map loader knows
+	UINT8 error = DFILE_ERROR_NONE;
 
 	if (currentMenu == &SP_ReplayDef)
 	{
@@ -10475,11 +10485,15 @@ static void M_ReplayTimeAttack(INT32 choice)
 			break;
 		case 4: // guest
 			// srb2/replay/main/map01-guest.lmp
-			G_DoPlayDemo(va("%s"PATHSEP"replay"PATHSEP"%s"PATHSEP"%s-guest.lmp", srb2home, timeattackfolder, G_BuildMapName(cv_nextmap.value)));
-			return;
+			snprintf(ra_demoname, 1024, "%s"PATHSEP"replay"PATHSEP"%s"PATHSEP"%s-guest.lmp", srb2home, timeattackfolder, G_BuildMapName(cv_nextmap.value));
+			break;
 		}
-		// srb2/replay/main/map01-sonic-time-best.lmp
-		G_DoPlayDemo(va("%s"PATHSEP"replay"PATHSEP"%s"PATHSEP"%s-%s-%s.lmp", srb2home, timeattackfolder, G_BuildMapName(cv_nextmap.value), skins[cv_chooseskin.value-1].name, which));
+
+		if (choice != 4)
+		{
+			// srb2/replay/main/map01-sonic-time-best.lmp
+			snprintf(ra_demoname, 1024, "%s"PATHSEP"replay"PATHSEP"%s"PATHSEP"%s-%s-%s.lmp", srb2home, timeattackfolder, G_BuildMapName(cv_nextmap.value), skins[cv_chooseskin.value-1].name, which);
+		}
 	}
 	else if (currentMenu == &SP_NightsReplayDef)
 	{
@@ -10495,19 +10509,66 @@ static void M_ReplayTimeAttack(INT32 choice)
 			which = "last";
 			break;
 		case 3: // guest
-			G_DoPlayDemo(va("%s"PATHSEP"replay"PATHSEP"%s"PATHSEP"%s-guest.lmp", srb2home, timeattackfolder, G_BuildMapName(cv_nextmap.value)));
-			return;
+			snprintf(ra_demoname, 1024, "%s"PATHSEP"replay"PATHSEP"%s"PATHSEP"%s-guest.lmp", srb2home, timeattackfolder, G_BuildMapName(cv_nextmap.value));
+			break;
 		}
 
-		demoname = va("%s"PATHSEP"replay"PATHSEP"%s"PATHSEP"%s-%s-%s.lmp", srb2home, timeattackfolder, G_BuildMapName(cv_nextmap.value), skins[cv_chooseskin.value-1].name, which);
+		if (choice != 3)
+		{
+			snprintf(ra_demoname, 1024, "%s"PATHSEP"replay"PATHSEP"%s"PATHSEP"%s-%s-%s.lmp", srb2home, timeattackfolder, G_BuildMapName(cv_nextmap.value), skins[cv_chooseskin.value-1].name, which);
 
 #ifdef OLDNREPLAYNAME // Check for old style named NiGHTS replay if a new style replay doesn't exist.
-		if (!FIL_FileExists(demoname))
-			demoname = va("%s"PATHSEP"replay"PATHSEP"%s"PATHSEP"%s-%s.lmp", srb2home, timeattackfolder, G_BuildMapName(cv_nextmap.value), which);
+			if (!FIL_FileExists(ra_demoname))
+			{
+				snprintf(ra_demoname, 1024, "%s"PATHSEP"replay"PATHSEP"%s"PATHSEP"%s-%s.lmp", srb2home, timeattackfolder, G_BuildMapName(cv_nextmap.value), which);
+			}
 #endif
-
-		G_DoPlayDemo(demoname);
+		}
 	}
+
+	demofileoverride = DFILE_OVERRIDE_NONE;
+	error = G_CheckDemoForError(ra_demoname);
+
+	if (error)
+	{
+		S_StartSound(NULL, sfx_skid);
+
+		switch (error)
+		{
+			case DFILE_ERROR_NOTDEMO:
+				M_StartMessage(M_GetText("An error occurred loading this replay.\n\n(Press a key)\n"), NULL, MM_NOTHING);
+				break;
+
+			case DFILE_ERROR_NOTLOADED:
+				demofileoverride = DFILE_OVERRIDE_LOAD;
+				M_StartMessage(M_GetText("Add-ons for this replay\nhave not been loaded.\n\nAttempt to load files?\n\n(Press 'Y' to confirm)\n"), M_StartTimeAttackReplay, MM_YESNO);
+				break;
+
+			case DFILE_ERROR_OUTOFORDER:
+				demofileoverride = DFILE_OVERRIDE_SKIP;
+				M_StartMessage(M_GetText("Add-ons for this replay\nwere loaded out of order.\n\nAttempt to playback anyway?\n\n(Press 'Y' to confirm)\n"), M_StartTimeAttackReplay, MM_YESNO);
+				break;
+
+			case DFILE_ERROR_INCOMPLETEOUTOFORDER:
+				demofileoverride = DFILE_OVERRIDE_LOAD;
+				M_StartMessage(M_GetText("Add-ons for this replay\nhave not been loaded,\nand some are in the wrong order.\n\nAttempt to load files?\n\n(Press 'Y' to confirm)\n"), M_StartTimeAttackReplay, MM_YESNO);
+				break;
+
+			case DFILE_ERROR_CANNOTLOAD:
+				demofileoverride = DFILE_OVERRIDE_SKIP;
+				M_StartMessage(M_GetText("Add-ons for this replay\ncould not be loaded.\n\nAttempt to playback anyway?\n\n(Press 'Y' to confirm)\n"), M_StartTimeAttackReplay, MM_YESNO);
+				break;
+
+			case DFILE_ERROR_EXTRAFILES:
+				demofileoverride = DFILE_OVERRIDE_SKIP;
+				M_StartMessage(M_GetText("You have more files loaded\nthan the replay does.\n\nAttempt to playback anyway?\n\n(Press 'Y' to confirm)\n"), M_StartTimeAttackReplay, MM_YESNO);
+				break;
+		}
+
+		return;
+	}
+
+	M_StartTimeAttackReplay(KEY_ENTER);
 }
 
 static void M_EraseGuest(INT32 choice)

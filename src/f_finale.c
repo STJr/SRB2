@@ -3509,6 +3509,7 @@ void F_TitleScreenTicker(boolean run)
 		}
 
 		titledemo = true;
+		demofileoverride = DFILE_OVERRIDE_NONE;
 		G_DoPlayDemo(dname);
 	}
 }
