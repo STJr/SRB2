@@ -671,7 +671,11 @@ static void Impl_HandleWindowEvent(SDL_WindowEvent evt)
 		case SDL_WINDOWEVENT_MAXIMIZED:
 			break;
 		case SDL_WINDOWEVENT_SIZE_CHANGED:
-			SCR_SetWindowSize(evt.data1, evt.data2);
+			if ((SDL_GetWindowFlags(window) & SDL_WINDOW_FULLSCREEN_DESKTOP) == 0)
+			{
+				SCR_SetWindowSize(evt.data1, evt.data2);
+				SCR_SetDefaultMode(evt.data1, evt.data2);
+			}
 			break;
 	}
 

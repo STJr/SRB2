@@ -202,8 +202,8 @@ void SCR_Recalc(void);
 // Check parms once at startup
 void SCR_CheckDefaultMode(void);
 
-// Set the mode number which is saved in the config
-void SCR_SetDefaultMode(void);
+// Set the resolution which is saved in the config
+void SCR_SetDefaultMode(INT32 width, INT32 height);
 
 void SCR_CalculateFPS(void);
 

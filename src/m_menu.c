@@ -13645,7 +13645,7 @@ static void M_HandleVideoMode(INT32 ch)
 			if (vid.width == modedescs[vidm_selected].width && vid.height == modedescs[vidm_selected].height)
 			{
 				S_StartSound(NULL, sfx_strpst);
-				SCR_SetDefaultMode();
+				SCR_SetDefaultMode(vid.width, vid.height);
 			}
 			else
 			{

@@ -456,10 +456,10 @@ void SCR_CheckDefaultMode(void)
 }
 
 // sets the modenum as the new default video mode to be saved in the config file
-void SCR_SetDefaultMode(void)
+void SCR_SetDefaultMode(INT32 width, INT32 height)
 {
-	CV_SetValue(cv_fullscreen.value ? &cv_scr_width : &cv_scr_width_w, vid.width);
-	CV_SetValue(cv_fullscreen.value ? &cv_scr_height : &cv_scr_height_w, vid.height);
+	CV_SetValue(cv_fullscreen.value ? &cv_scr_width : &cv_scr_width_w, width);
+	CV_SetValue(cv_fullscreen.value ? &cv_scr_height : &cv_scr_height_w, height);
 }
 
 // Change fullscreen on/off according to cv_fullscreen
