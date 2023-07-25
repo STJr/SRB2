@@ -100,9 +100,17 @@ const char *VID_GetModeName(INT32 modenum);
 
 void VID_PrepareModeList(void); /// note hack for SDL
 
+/**	\brief Returns true if the window is maximized, and false if not
+*/
 boolean VID_IsMaximized(void);
 
+/**	\brief Restores the window
+*/
 void VID_RestoreWindow(void);
+
+/**	\brief Gets the current display's size; returns true if it succeeded, and false if not
+*/
+boolean VID_GetNativeResolution(INT32 *width, INT32 *height);
 
 /**	\brief can video system do fullscreen
 */

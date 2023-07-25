@@ -146,6 +146,8 @@ static void Impl_SetupSoftwareBuffer(void);
 
 static void Impl_InitOpenGL(void);
 
+static void Impl_SetDefaultWindowSizes(void);
+
 #if defined(HAVE_IMAGE)
 #define USE_WINDOW_ICON
 #endif
@@ -360,6 +362,8 @@ static SDL_bool SDLSetMode(INT32 width, INT32 height, SDL_bool fullscreen, SDL_b
 		SDL_SetWindowSize(window, width, height);
 		if (fullscreen)
 			SDL_SetWindowFullscreen(window, fullscreen_type);
+
+		Impl_SetDefaultWindowSizes();
 	}
 
 	if (Impl_RenderContextReset() == SDL_FALSE)
@@ -408,6 +412,36 @@ static UINT32 VID_GetRefreshRate(void)
 	}
 
 	return m.refresh_rate;
+}
+
+static void Impl_SetDefaultWindowSizes(void)
+{
+	INT32 native_width, native_height;
+
+	if (!VID_GetNativeResolution(&native_width, &native_height))
+		return;
+
+	char *result, *buffer1, *buffer2;
+
+	result = va("%d", native_width);
+	buffer1 = malloc(strlen(result) + 1);
+	if (!buffer1)
+		return;
+
+	strcpy(buffer1, result);
+
+	result = va("%d", native_height);
+	buffer2 = malloc(strlen(result) + 1);
+	if (!buffer2)
+	{
+		free(buffer1);
+		return;
+	}
+
+	strcpy(buffer2, result);
+
+	cv_scr_width.defaultvalue = buffer1;
+	cv_scr_height.defaultvalue = buffer2;
 }
 
 static INT32 Impl_SDL_Scancode_To_Keycode(SDL_Scancode code)
@@ -1473,38 +1507,45 @@ boolean VID_CheckRenderer(void)
 	return rendererchanged;
 }
 
-#if 0
-static void Impl_GetCurrentDisplayMode(INT32 *width, INT32 *height)
+static boolean Impl_GetCurrentDisplayMode(INT32 *width, INT32 *height)
 {
 	int i = SDL_GetWindowDisplayIndex(window);
+	if (i < 0)
+		return false;
+
 	SDL_DisplayMode resolution;
 
-	if (i < 0)
-		return;
-
-	if (!SDL_GetCurrentDisplayMode(i, &resolution))
+	if (SDL_GetCurrentDisplayMode(i, &resolution) == 0)
 	{
 		if ((*width) == 0)
 			(*width) = (INT32)(resolution.w);
 		if ((*height) == 0)
 			(*height) = (INT32)(resolution.h);
+		return true;
 	}
+
+	return false;
 }
 
-void VID_GetNativeResolution(INT32 *width, INT32 *height)
+boolean VID_GetNativeResolution(INT32 *width, INT32 *height)
 {
 	INT32 w = 0, h = 0;
 
-	if (!w || !h)
-		Impl_GetCurrentDisplayMode(&w, &h);
+	boolean success = Impl_GetCurrentDisplayMode(&w, &h);
 
-	if (!w) w = BASEVIDWIDTH;
-	if (!h) h = BASEVIDHEIGHT;
+	if (!success)
+	{
+		w = BASEVIDWIDTH;
+		h = BASEVIDHEIGHT;
+	}
 
-	if (width) *width = w;
-	if (height) *height = h;
+	if (width)
+		*width = w;
+	if (height)
+		*height = h;
+
+	return success;
 }
-#endif
 
 void VID_SetSize(INT32 width, INT32 height)
 {
