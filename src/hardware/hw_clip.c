@@ -320,18 +320,14 @@ void gld_clipper_Clear(void)
 
 #define RMUL (1.6f/1.333333f)
 
-angle_t gld_FrustumAngle(angle_t tiltangle)
+angle_t gld_FrustumAngle(float render_fov, angle_t tiltangle)
 {
 	double floatangle;
 	angle_t a1;
 
 	float tilt = (float)fabs(((double)(int)tiltangle) / ANG1);
 
-	// NEWCLIP TODO: SRB2CBTODO: make a global render_fov for this function
-
-	float render_fov = FIXED_TO_FLOAT(cv_fov.value);
-	float render_fovratio = (float)BASEVIDWIDTH / (float)BASEVIDHEIGHT; // SRB2CBTODO: NEWCLIPTODO: Is this right?
-	float render_multiplier = 64.0f / render_fovratio / RMUL;
+	float render_multiplier = 48.0f / RMUL;
 
 	if (tilt > 90.0f)
 	{
