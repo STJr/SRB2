@@ -1444,7 +1444,7 @@ void G_BeginRecording(void)
 
 	// file list
 	m = demo_p;/* file count */
-	demo_p += 1;
+	demo_p += 2;
 
 	totalfiles = 0;
 	for (i = mainwads; ++i < numwadfiles; )

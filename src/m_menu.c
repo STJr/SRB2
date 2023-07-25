@@ -10545,23 +10545,35 @@ static void M_ReplayTimeAttack(INT32 choice)
 				break;
 
 			case DFILE_ERROR_OUTOFORDER:
+				/*
 				demofileoverride = DFILE_OVERRIDE_SKIP;
 				M_StartMessage(M_GetText("Add-ons for this replay\nwere loaded out of order.\n\nAttempt to playback anyway?\n\n(Press 'Y' to confirm)\n"), M_StartTimeAttackReplay, MM_YESNO);
+				*/
+				M_StartMessage(M_GetText("Add-ons for this replay\nwere loaded out of order.\n\n(Press a key)\n"), NULL, MM_NOTHING);
 				break;
 
 			case DFILE_ERROR_INCOMPLETEOUTOFORDER:
+				/*
 				demofileoverride = DFILE_OVERRIDE_LOAD;
 				M_StartMessage(M_GetText("Add-ons for this replay\nhave not been loaded,\nand some are in the wrong order.\n\nAttempt to load files?\n\n(Press 'Y' to confirm)\n"), M_StartTimeAttackReplay, MM_YESNO);
+				*/
+				M_StartMessage(M_GetText("Add-ons for this replay\nhave not been loaded,\nand some are in the wrong order.\n\n(Press a key)\n"), NULL, MM_NOTHING);
 				break;
 
 			case DFILE_ERROR_CANNOTLOAD:
+				/*
 				demofileoverride = DFILE_OVERRIDE_SKIP;
 				M_StartMessage(M_GetText("Add-ons for this replay\ncould not be loaded.\n\nAttempt to playback anyway?\n\n(Press 'Y' to confirm)\n"), M_StartTimeAttackReplay, MM_YESNO);
+				*/
+				M_StartMessage(M_GetText("Add-ons for this replay\ncould not be loaded.\n\n(Press a key)\n"), NULL, MM_NOTHING);
 				break;
 
 			case DFILE_ERROR_EXTRAFILES:
+				/*
 				demofileoverride = DFILE_OVERRIDE_SKIP;
 				M_StartMessage(M_GetText("You have more files loaded\nthan the replay does.\n\nAttempt to playback anyway?\n\n(Press 'Y' to confirm)\n"), M_StartTimeAttackReplay, MM_YESNO);
+				*/
+				M_StartMessage(M_GetText("You have more files loaded\nthan the replay does.\n\n(Press a key)\n"), NULL, MM_NOTHING);
 				break;
 		}
 
