@@ -2547,7 +2547,6 @@ void G_PlayerReborn(INT32 player, boolean betweenmaps)
 {
 	player_t *p;
 	INT32 score;
-	INT32 recordscore;
 	INT32 lives;
 	INT32 continues;
 	fixed_t camerascale;

@@ -895,7 +895,7 @@ typedef struct
 
 typedef enum
 {
-	ok,
+	planeok,
 	crushed,
 	pastdest
 } result_e;
