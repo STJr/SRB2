@@ -222,7 +222,6 @@ typedef struct vissprite_s
 extern UINT32 visspritecount;
 
 void R_ClipSprites(drawseg_t* dsstart, portal_t* portal);
-void R_ClipVisSprite(vissprite_t *spr, INT32 x1, INT32 x2, drawseg_t* dsstart, portal_t* portal);
 
 boolean R_SpriteIsFlashing(vissprite_t *vis);
 
