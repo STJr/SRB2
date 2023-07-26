@@ -1480,9 +1480,7 @@ void D_SRB2Main(void)
 	G_LoadGameData(clientGamedata);
 	M_CopyGameData(serverGamedata, clientGamedata);
 
-#if defined (__unix__) || defined (UNIXCOMMON) || defined (HAVE_SDL)
-	VID_PrepareModeList(); // Regenerate Modelist according to cv_fullscreen
-#endif
+	allow_fullscreen = true;
 
 	// set user default mode or mode set at cmdline
 	SCR_CheckDefaultMode();

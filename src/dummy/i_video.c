@@ -21,20 +21,6 @@ void I_SetPalette(RGBA_t *palette)
 	(void)palette;
 }
 
-INT32 VID_NumModes(void)
-{
-	return 0;
-}
-
-INT32 VID_GetModeForSize(INT32 w, INT32 h)
-{
-	(void)w;
-	(void)h;
-	return 0;
-}
-
-void VID_PrepareModeList(void){}
-
 void VID_SetSize(INT32 width, INT32 height)
 {
 	(void)width;
@@ -50,12 +36,6 @@ boolean VID_CheckRenderer(void)
 void VID_CheckGLLoaded(rendermode_t oldrender)
 {
 	(void)oldrender;
-}
-
-const char *VID_GetModeName(INT32 modenum)
-{
-	(void)modenum;
-	return NULL;
 }
 
 void I_UpdateNoBlit(void){}

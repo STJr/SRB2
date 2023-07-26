@@ -101,8 +101,9 @@ static consvar_t cv_alwaysgrabmouse = CVAR_INIT ("alwaysgrabmouse", "Off", CV_SA
 
 UINT8 graphics_started = 0; // Is used in console.c and screen.c
 
-// To disable fullscreen at startup; is set in VID_PrepareModeList
+// To disable fullscreen at startup
 boolean allow_fullscreen = false;
+
 static SDL_bool disable_fullscreen = SDL_FALSE;
 
 #define USE_FULLSCREEN (disable_fullscreen||!allow_fullscreen)?0:cv_fullscreen.value
@@ -156,9 +157,6 @@ static void Impl_SetDefaultWindowSizes(void);
 static void Impl_SetWindowIcon(void);
 static SDL_Surface *icoSurface = NULL;
 #endif
-
-static char vidModeName[MAXWINMODES][32];
-static const char *fallback_resolution_name = "Fallback";
 
 #define VIDEO_INIT_ERROR(str) { \
 	if (!graphics_started) \
@@ -598,7 +596,7 @@ void I_SetMouseGrab(boolean grab)
 
 static void VID_Command_NumModes_f (void)
 {
-	CONS_Printf(M_GetText("%d video mode(s) available(s)\n"), VID_NumModes());
+	CONS_Printf(M_GetText("%d video mode(s) available(s)\n"), MAXWINMODES);
 }
 
 // SDL2 doesn't have SDL_GetVideoSurface or a lot of the SDL_Surface flags that SDL 1.2 had
@@ -1393,43 +1391,6 @@ void I_SetPalette(RGBA_t *palette)
 	//if (vidSurface) SDL_SetPaletteColors(vidSurface->format->palette, localPalette, 0, 256);
 	// Fury -- SDL2 vidSurface is a 32-bit surface buffer copied to the texture. It's not palletized, like bufSurface.
 	if (bufSurface) SDL_SetPaletteColors(bufSurface->format->palette, localPalette, 0, 256);
-}
-
-// return number of fullscreen + X11 modes
-INT32 VID_NumModes(void)
-{
-	return MAXWINMODES;
-}
-
-const char *VID_GetModeName(INT32 modeNum)
-{
-	if (modeNum == -1)
-		return fallback_resolution_name;
-	else if (modeNum > MAXWINMODES)
-		return NULL;
-
-	snprintf(&vidModeName[modeNum][0], 32, "%dx%d", windowedModes[modeNum][0], windowedModes[modeNum][1]);
-
-	return &vidModeName[modeNum][0];
-}
-
-INT32 VID_GetModeForSize(INT32 w, INT32 h)
-{
-	int i;
-	for (i = 0; i < MAXWINMODES; i++)
-	{
-		if (windowedModes[i][0] == w && windowedModes[i][1] == h)
-		{
-			return i;
-		}
-	}
-	return -1;
-}
-
-void VID_PrepareModeList(void)
-{
-	// Under SDL2, we just use the windowed modes list, and scale in windowed fullscreen.
-	allow_fullscreen = true;
 }
 
 void VID_CheckGLLoaded(rendermode_t oldrender)

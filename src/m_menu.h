@@ -414,7 +414,7 @@ extern gtdesc_t gametypedesc[NUMGAMETYPES];
 typedef struct
 {
 	INT32 width, height;
-	const char *desc;  // XXXxYYY
+	char desc[12]; // XXXXXxYYYYY
 	UINT8 goodratio; // aspect correct if 1
 } modedesc_t;
 

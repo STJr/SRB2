@@ -13322,46 +13322,36 @@ static modedesc_t modedescs[MAXMODEDESCS];
 
 static void M_VideoModeMenu(INT32 choice)
 {
-	INT32 i;
-
 	(void)choice;
 
 	memset(modedescs, 0, sizeof(modedescs));
 
-#if defined (__unix__) || defined (UNIXCOMMON) || defined (HAVE_SDL)
-	VID_PrepareModeList(); // FIXME: hack
-#endif
-
 	vidm_nummodes = 0;
 	vidm_selected = 0;
 
-	INT32 nummodes = VID_NumModes();
-
-	for (i = 0; i < nummodes && vidm_nummodes < MAXMODEDESCS; i++)
+	for (INT32 i = 0; i < MAXWINMODES && vidm_nummodes < MAXMODEDESCS; i++)
 	{
-		const char *desc = VID_GetModeName(i);
-		if (desc)
-		{
-			// Pull out the width and height
-			INT32 width, height;
-			sscanf(desc, "%u%*c%u", &width, &height);
+		modedesc_t *desc = &modedescs[vidm_nummodes];
 
-			modedescs[vidm_nummodes].width = width;
-			modedescs[vidm_nummodes].height = height;
-			modedescs[vidm_nummodes].desc = desc;
+		INT32 width = windowedModes[i][0];
+		INT32 height = windowedModes[i][1];
 
-			if (width == vid.width && height == vid.height)
-				vidm_selected = vidm_nummodes;
+		desc->width = width;
+		desc->height = height;
 
-			// Show multiples of 320x200 as green.
-			if (SCR_IsAspectCorrect(width, height))
-				modedescs[vidm_nummodes].goodratio = 1;
+		snprintf(desc->desc, sizeof desc->desc, "%dx%d", width, height);
 
-			vidm_nummodes++;
-		}
+		if (width == vid.width && height == vid.height)
+			vidm_selected = vidm_nummodes;
+
+		// Show multiples of 320x200 as green.
+		if (SCR_IsAspectCorrect(width, height))
+			desc->goodratio = 1;
+
+		vidm_nummodes++;
 	}
 
-	vidm_column_size = (vidm_nummodes+2) / 3;
+	vidm_column_size = (vidm_nummodes + 2) / 3;
 
 	M_SetupNextMenu(&OP_VideoModeDef);
 }

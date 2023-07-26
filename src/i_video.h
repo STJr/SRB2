@@ -60,19 +60,6 @@ void I_ShutdownGraphics(void);
 */
 void I_SetPalette(RGBA_t *palette);
 
-/**	\brief return the number of video modes
-*/
-INT32 VID_NumModes(void);
-
-/**	\brief	The VID_GetModeForSize function
-
-	\param	w	width
-	\param	h	height
-
-	\return	vidmode closest to w : h
-*/
-INT32 VID_GetModeForSize(INT32 w, INT32 h);
-
 /**	\brief Changes the current resolution
 */
 void VID_SetSize(INT32 width, INT32 height);
@@ -89,16 +76,6 @@ void VID_StartupOpenGL(void);
 /**	\brief Checks if OpenGL loaded
 */
 void VID_CheckGLLoaded(rendermode_t oldrender);
-
-/**	\brief	The VID_GetModeName function
-
-	\param	modenum	video mode number
-
-	\return	name of video mode
-*/
-const char *VID_GetModeName(INT32 modenum);
-
-void VID_PrepareModeList(void); /// note hack for SDL
 
 /**	\brief Returns true if the window is maximized, and false if not
 */

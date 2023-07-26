@@ -489,8 +489,6 @@ void SCR_ChangeFullscreen(void)
 
 	if (graphics_started)
 	{
-		VID_PrepareModeList();
-
 		INT32 width, height;
 
 		if (cv_fullscreen.value)
@@ -552,6 +550,33 @@ boolean SCR_IsAspectCorrect(INT32 width, INT32 height)
 	 && height % BASEVIDHEIGHT == 0
 	 && width / BASEVIDWIDTH == height / BASEVIDHEIGHT
 	 );
+}
+
+const char *SCR_GetModeName(INT32 modeNum)
+{
+	static char vidModeName[MAXWINMODES][32];
+
+	if (modeNum == -1)
+		return "Fallback";
+	else if (modeNum > MAXWINMODES)
+		return NULL;
+
+	snprintf(&vidModeName[modeNum][0], 32, "%dx%d", windowedModes[modeNum][0], windowedModes[modeNum][1]);
+
+	return &vidModeName[modeNum][0];
+}
+
+INT32 SCR_GetModeForSize(INT32 w, INT32 h)
+{
+	int i;
+	for (i = 0; i < MAXWINMODES; i++)
+	{
+		if (windowedModes[i][0] == w && windowedModes[i][1] == h)
+		{
+			return i;
+		}
+	}
+	return -1;
 }
 
 double averageFPS = 0.0f;

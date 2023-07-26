@@ -72,16 +72,16 @@ typedef struct viddef_s
 
 enum
 {
-	VID_RESOLUTION_UNCHANGED = 0,
-	VID_RESOLUTION_CHANGED = 1,
-	VID_RESOLUTION_RESIZED_WINDOW = 2
+	VID_RESOLUTION_UNCHANGED,
+	VID_RESOLUTION_CHANGED,
+	VID_RESOLUTION_RESIZED_WINDOW
 };
 
 enum
 {
-	VID_GL_LIBRARY_NOTLOADED  = 0,
-	VID_GL_LIBRARY_LOADED     = 1,
-	VID_GL_LIBRARY_ERROR      = -1
+	VID_GL_LIBRARY_NOTLOADED,
+	VID_GL_LIBRARY_LOADED,
+	VID_GL_LIBRARY_ERROR
 };
 
 #define MAXWINMODES 18
@@ -170,6 +170,9 @@ void SCR_ChangeResolution(INT32 width, INT32 height);
 void SCR_SetWindowSize(INT32 width, INT32 height);
 void SCR_SetSizeNoRestore(INT32 width, INT32 height);
 void SCR_ChangeRenderer(void);
+
+const char *SCR_GetModeName(INT32 modeNum);
+INT32 SCR_GetModeForSize(INT32 w, INT32 h);
 
 boolean SCR_IsValidResolution(INT32 width, INT32 height);
 
