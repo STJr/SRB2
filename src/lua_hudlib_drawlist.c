@@ -177,9 +177,18 @@ static const char *CopyString(huddrawlist_h list, const char* str)
 	lenstr = strlen(str);
 	if (list->strbuf_capacity <= list->strbuf_len + lenstr + 1)
 	{
+		const char *old_offset = list->strbuf;
+		size_t i;
 		if (list->strbuf_capacity == 0) list->strbuf_capacity = 256;
 		else list->strbuf_capacity *= 2;
 		list->strbuf = (char*) Z_Realloc(list->strbuf, sizeof(char) * list->strbuf_capacity, PU_STATIC, NULL);
+
+		// align the string pointers to make sure old pointers don't point towards invalid addresses
+		// this is necessary since Z_ReallocAlign might actually move the string buffer in memory
+		for (i = 0; i < list->items_len; i++)
+		{
+			list->items[i].str += list->strbuf - old_offset;
+		}
 	}
 	const char *result = (const char *) &list->strbuf[list->strbuf_len];
 	strncpy(&list->strbuf[list->strbuf_len], str, lenstr + 1);
