@@ -2065,6 +2065,9 @@ static void Y_AwardCoopBonuses(void)
 			players[i].score += localbonuses[j].points;
 			if (players[i].score > MAXSCORE)
 				players[i].score = MAXSCORE;
+			players[i].recordscore += localbonuses[j].points;
+			if (players[i].recordscore > MAXSCORE)
+				players[i].recordscore = MAXSCORE;
 		}
 
 		ptlives = min(
@@ -2121,6 +2124,10 @@ static void Y_AwardSpecialStageBonus(void)
 		players[i].score += localbonuses[1].points;
 		if (players[i].score > MAXSCORE)
 			players[i].score = MAXSCORE;
+		players[i].recordscore += localbonuses[0].points;
+		players[i].recordscore += localbonuses[1].points;
+		if (players[i].recordscore > MAXSCORE)
+			players[i].recordscore = MAXSCORE;
 
 		// grant extra lives right away since tally is faked
 		ptlives = min(
