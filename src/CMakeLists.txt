@@ -293,7 +293,9 @@ if(SRB2_CONFIG_PROFILEMODE AND "${CMAKE_C_COMPILER_ID}" STREQUAL "GNU")
 endif()
 
 add_subdirectory(sdl)
-add_subdirectory(tests)
+if(SRB2_CONFIG_ENABLE_TESTS)
+	add_subdirectory(tests)
+endif()
 
 # strip debug symbols into separate file when using gcc.
 # to be consistent with Makefile, don't generate for OS X.
