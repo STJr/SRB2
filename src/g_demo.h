@@ -38,6 +38,7 @@ extern demo_file_override_e demofileoverride;
 // Quit after playing a demo from cmdline.
 extern boolean singledemo;
 extern boolean demo_start;
+extern boolean demo_forwardmove_rng;
 extern boolean demosynced;
 
 extern mobj_t *metalplayback;

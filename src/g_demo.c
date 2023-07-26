@@ -58,6 +58,7 @@ static UINT8 demoflags;
 static UINT16 demoversion;
 boolean singledemo; // quit after playing a demo from cmdline
 boolean demo_start; // don't start playing demo right away
+boolean demo_forwardmove_rng; // old demo backwards compatibility
 boolean demosynced = true; // console warning message
 
 boolean metalrecording; // recording as metal sonic
@@ -2028,6 +2029,7 @@ void G_DoPlayDemo(char *defdemoname)
 	version = READUINT8(demo_p);
 	subversion = READUINT8(demo_p);
 	demoversion = READUINT16(demo_p);
+	demo_forwardmove_rng = (demoversion < 0x0010);
 	switch(demoversion)
 	{
 	case 0x000f:
@@ -2339,6 +2341,7 @@ UINT8 G_CheckDemoForError(char *defdemoname)
 	demo_p++; // version
 	demo_p++; // subversion
 	demoversion = READUINT16(demo_p);
+	demo_forwardmove_rng = (demoversion < 0x0010);
 	switch(demoversion)
 	{
 	case 0x000d:

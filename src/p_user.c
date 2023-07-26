@@ -11623,9 +11623,12 @@ void P_PlayerThink(player_t *player)
 
 	cmd = &player->cmd;
 
-	// Add some extra randomization.
-	if (cmd->forwardmove)
-		P_RandomFixed();
+	if (demoplayback && demo_forwardmove_rng)
+	{
+		// Smelly demo backwards compatibility
+		if (cmd->forwardmove)
+			P_RandomFixed();
+	}
 
 #ifdef PARANOIA
 	if (player->playerstate == PST_REBORN)
