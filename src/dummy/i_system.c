@@ -180,6 +180,11 @@ const char *I_ClipboardPaste(void)
 	return NULL;
 }
 
+size_t I_GetRandomBytes(char *destination, size_t amount)
+{
+	return 0;
+}
+
 void I_RegisterSysCommands(void) {}
 
 void I_GetCursorPosition(INT32 *x, INT32 *y)

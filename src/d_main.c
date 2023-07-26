@@ -70,6 +70,7 @@
 #include "filesrch.h" // refreshdirmenu
 #include "g_input.h" // tutorial mode control scheming
 #include "m_perfstats.h"
+#include "m_random.h"
 
 #ifdef CMAKECONFIG
 #include "config.h"
@@ -1334,11 +1335,12 @@ void D_SRB2Main(void)
 	snprintf(addonsdir, sizeof addonsdir, "%s%s%s", srb2home, PATHSEP, "addons");
 	I_mkdir(addonsdir, 0755);
 
-	// rand() needs seeded regardless of password
-	srand((unsigned int)time(NULL));
-	rand();
-	rand();
-	rand();
+	// seed M_Random because it is necessary; seed P_Random for scripts that
+	// might want to use random numbers immediately at start
+	if (!M_RandomSeedFromOS())
+		M_RandomSeed((UINT32)time(NULL)); // less good but serviceable
+
+	P_SetRandSeed(M_RandomizedSeed());
 
 	if (M_CheckParm("-password") && M_IsNextParm())
 		D_SetPassword(M_GetNextParm());
