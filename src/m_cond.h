@@ -181,7 +181,7 @@ typedef struct
 #define MV_MAX         63 // used in gamedata check, update whenever MV's are added
 
 // Temporary holding place for nights data for the current map
-extern nightsdata_t ntemprecords;
+extern nightsdata_t ntemprecords[MAXPLAYERS];
 
 // GAMEDATA STRUCTURE
 // Everything that would get saved in gamedata.dat

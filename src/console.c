@@ -75,8 +75,6 @@ static INT32 con_curlines;  // vid lines currently used by console
 static UINT8  con_hudlines;             // number of console heads up message lines
 static UINT32 con_hudtime[MAXHUDLINES]; // remaining time of display for hud msg lines
 
-       INT32 con_clearlines;      // top screen lines to refresh when view reduced
-
 // console text output
 static char *con_line;          // console text output current line
 static size_t con_cx;           // cursor position in current line
@@ -1728,9 +1726,6 @@ static void CON_DrawHudlines(void)
 		//V_DrawCharacter(x, y, (p[c]&0xff) | cv_constextsize.value | V_NOSCALESTART, true);
 		y += charheight;
 	}
-
-	// top screen lines that might need clearing when view is reduced
-	con_clearlines = y; // this is handled by HU_Erase();
 }
 
 // Lactozilla: Draws the console's background picture.
@@ -1795,9 +1790,6 @@ static void CON_DrawConsole(void)
 
 	if (con_curlines <= 0)
 		return;
-
-	//FIXME: refresh borders only when console bg is translucent
-	con_clearlines = con_curlines; // clear console draw from view borders
 
 	// draw console background
 	if (cons_backpic.value || con_forcepic)
@@ -1875,7 +1867,7 @@ void CON_Drawer(void)
 		CON_DrawConsole();
 	else if (gamestate == GS_LEVEL
 	|| gamestate == GS_INTERMISSION || gamestate == GS_ENDING || gamestate == GS_CUTSCENE
-	|| gamestate == GS_CREDITS || gamestate == GS_EVALUATION)
+	|| gamestate == GS_CREDITS || gamestate == GS_EVALUATION || gamestate == GS_WAITINGPLAYERS)
 		CON_DrawHudlines();
 
 	Unlock_state();

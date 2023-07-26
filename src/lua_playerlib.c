@@ -114,6 +114,7 @@ enum player_e
 	player_skin,
 	player_availabilities,
 	player_score,
+	player_recordscore,
 	player_dashspeed,
 	player_normalspeed,
 	player_runspeed,
@@ -222,6 +223,7 @@ enum player_e
 	player_blocked,
 	player_jointime,
 	player_quittime,
+	player_ping,
 #ifdef HWRENDER
 	player_fovadd,
 #endif
@@ -260,6 +262,7 @@ static const char *const player_opt[] = {
 	"skin",
 	"availabilities",
 	"score",
+	"recordscore",
 	"dashspeed",
 	"normalspeed",
 	"runspeed",
@@ -368,6 +371,7 @@ static const char *const player_opt[] = {
 	"blocked",
 	"jointime",
 	"quittime",
+	"ping",
 #ifdef HWRENDER
 	"fovadd",
 #endif
@@ -494,6 +498,9 @@ static int player_get(lua_State *L)
 		break;
 	case player_score:
 		lua_pushinteger(L, plr->score);
+		break;
+	case player_recordscore:
+		lua_pushinteger(L, plr->recordscore);
 		break;
 	case player_dashspeed:
 		lua_pushfixed(L, plr->dashspeed);
@@ -819,6 +826,9 @@ static int player_get(lua_State *L)
 	case player_quittime:
 		lua_pushinteger(L, plr->quittime);
 		break;
+	case player_ping:
+		lua_pushinteger(L, playerpingtable[plr - players]);
+		break;
 #ifdef HWRENDER
 	case player_fovadd:
 		lua_pushfixed(L, plr->fovadd);
@@ -956,6 +966,9 @@ static int player_set(lua_State *L)
 		return NOSET;
 	case player_score:
 		plr->score = (UINT32)luaL_checkinteger(L, 3);
+		break;
+	case player_recordscore:
+		plr->recordscore = (UINT32)luaL_checkinteger(L, 3);
 		break;
 	case player_dashspeed:
 		plr->dashspeed = luaL_checkfixed(L, 3);
@@ -1292,6 +1305,7 @@ static int player_set(lua_State *L)
 		break;
 	}
 	case player_awayviewtics:
+	{
 		INT32 tics = (INT32)luaL_checkinteger(L, 3);
 		if (tics && !plr->awayviewmobj) // awayviewtics must ALWAYS have an awayviewmobj set!!
 			P_SetTarget(&plr->awayviewmobj, plr->mo); // but since the script might set awayviewmobj immediately AFTER setting awayviewtics, use player mobj as filler for now.
@@ -1303,6 +1317,7 @@ static int player_set(lua_State *L)
 		}
 		plr->awayviewtics = tics;
 		break;
+	}
 	case player_awayviewaiming:
 		plr->awayviewaiming = luaL_checkangle(L, 3);
 		break;

@@ -7039,7 +7039,7 @@ static void P_InitLevelSettings(void)
 	stagefailed = G_IsSpecialStage(gamemap);
 
 	// Reset temporary record data
-	memset(&ntemprecords, 0, sizeof(nightsdata_t));
+	memset(&ntemprecords, 0, sizeof(ntemprecords));
 
 	// earthquake camera
 	memset(&quake,0,sizeof(struct quake));
@@ -7490,6 +7490,7 @@ static void P_RunSpecialStageWipe(void)
 		lastwipetic = nowtime;
 		if (moviemode) // make sure we save frames for the white hold too
 			M_SaveFrame();
+		NetKeepAlive(); // Prevent timeout
 	}
 }
 

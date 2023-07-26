@@ -334,6 +334,8 @@ typedef struct mobj_s
 	// Player and mobj sprites in multiplayer modes are modified
 	//  using an internal color lookup table for re-indexing.
 	UINT16 color; // This replaces MF_TRANSLATION. Use 0 for default (no translation).
+	struct player_s *drawonlyforplayer; // If set, hides the mobj for everyone except this player and their spectators
+	struct mobj_s *dontdrawforviewmobj; // If set, hides the mobj if dontdrawforviewmobj is the current camera (first-person player or awayviewmobj)
 
 	// Interaction info, by BLOCKMAP.
 	// Links in blocks (if needed).

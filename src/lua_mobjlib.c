@@ -44,6 +44,8 @@ enum mobj_e {
 	mobj_spritexoffset,
 	mobj_spriteyoffset,
 	mobj_floorspriteslope,
+	mobj_drawonlyforplayer,
+	mobj_dontdrawforviewmobj,
 	mobj_touching_sectorlist,
 	mobj_subsector,
 	mobj_floorz,
@@ -122,6 +124,8 @@ static const char *const mobj_opt[] = {
 	"spritexoffset",
 	"spriteyoffset",
 	"floorspriteslope",
+	"drawonlyforplayer",
+	"dontdrawforviewmobj",
 	"touching_sectorlist",
 	"subsector",
 	"floorz",
@@ -261,6 +265,17 @@ static int mobj_get(lua_State *L)
 		break;
 	case mobj_floorspriteslope:
 		LUA_PushUserdata(L, mo->floorspriteslope, META_SLOPE);
+		break;
+	case mobj_drawonlyforplayer:
+		LUA_PushUserdata(L, mo->drawonlyforplayer, META_PLAYER);
+		break;
+	case mobj_dontdrawforviewmobj:
+		if (mo->dontdrawforviewmobj && P_MobjWasRemoved(mo->dontdrawforviewmobj))
+		{ // don't put invalid mobj back into Lua.
+			P_SetTarget(&mo->dontdrawforviewmobj, NULL);
+			return 0;
+		}
+		LUA_PushUserdata(L, mo->dontdrawforviewmobj, META_MOBJ);
 		break;
 	case mobj_touching_sectorlist:
 		return UNIMPLEMENTED;
@@ -551,6 +566,24 @@ static int mobj_set(lua_State *L)
 		break;
 	case mobj_floorspriteslope:
 		return NOSET;
+	case mobj_drawonlyforplayer:
+		if (lua_isnil(L, 3))
+			mo->drawonlyforplayer = NULL;
+		else
+		{
+			player_t *drawonlyforplayer = *((player_t **)luaL_checkudata(L, 3, META_PLAYER));
+			mo->drawonlyforplayer = drawonlyforplayer;
+		}
+		break;
+	case mobj_dontdrawforviewmobj:
+		if (lua_isnil(L, 3))
+			P_SetTarget(&mo->dontdrawforviewmobj, NULL);
+		else
+		{
+			mobj_t *dontdrawforviewmobj = *((mobj_t **)luaL_checkudata(L, 3, META_MOBJ));
+			P_SetTarget(&mo->dontdrawforviewmobj, dontdrawforviewmobj);
+		}
+		break;
 	case mobj_touching_sectorlist:
 		return UNIMPLEMENTED;
 	case mobj_subsector:
@@ -1043,11 +1076,13 @@ static int mapthing_set(lua_State *L)
 			mt->z = (INT16)luaL_checkinteger(L, 3);
 			break;
 		case mapthing_extrainfo:
+		{
 			INT32 extrainfo = luaL_checkinteger(L, 3);
 			if (extrainfo & ~15)
 				return luaL_error(L, "mapthing_t extrainfo set %d out of range (%d - %d)", extrainfo, 0, 15);
 			mt->extrainfo = (UINT8)extrainfo;
 			break;
+		}
 		case mapthing_tag:
 			Tag_FSet(&mt->tags, (INT16)luaL_checkinteger(L, 3));
 			break;

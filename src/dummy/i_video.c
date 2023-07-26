@@ -38,6 +38,8 @@ void VID_CheckGLLoaded(rendermode_t oldrender)
 	(void)oldrender;
 }
 
+UINT32 I_GetRefreshRate(void) { return 35; }
+
 void I_UpdateNoBlit(void){}
 
 void I_FinishUpdate(void){}

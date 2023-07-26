@@ -1256,8 +1256,6 @@ static int libd_RandomKey(lua_State *L)
 	INT32 a = (INT32)luaL_checkinteger(L, 1);
 
 	HUDONLY
-	if (a > 65536)
-		LUA_UsageWarning(L, "v.RandomKey: range > 65536 is undefined behavior");
 	lua_pushinteger(L, M_RandomKey(a));
 	return 1;
 }
@@ -1268,13 +1266,6 @@ static int libd_RandomRange(lua_State *L)
 	INT32 b = (INT32)luaL_checkinteger(L, 2);
 
 	HUDONLY
-	if (b < a) {
-		INT32 c = a;
-		a = b;
-		b = c;
-	}
-	if ((b-a+1) > 65536)
-		LUA_UsageWarning(L, "v.RandomRange: range > 65536 is undefined behavior");
 	lua_pushinteger(L, M_RandomRange(a, b));
 	return 1;
 }

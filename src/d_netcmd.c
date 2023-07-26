@@ -49,7 +49,7 @@
 #include "m_anigif.h"
 #include "md5.h"
 #include "m_perfstats.h"
-#include "hardware/u_list.h" // TODO: this should be a standard utility class
+#include "u_list.h"
 
 #ifdef NETGAME_DEVMODE
 #define CV_RESTRICT CV_NETVAR
@@ -599,6 +599,7 @@ void D_RegisterServerCommands(void)
 	CV_RegisterVar(&cv_joinnextround);
 	CV_RegisterVar(&cv_showjoinaddress);
 	CV_RegisterVar(&cv_blamecfail);
+	CV_RegisterVar(&cv_dedicatedidletime);
 #endif
 
 	COM_AddCommand("ping", Command_Ping_f, COM_LUA);
@@ -1642,9 +1643,14 @@ static void Command_Playdemo_f(void)
 {
 	char name[256];
 
-	if (COM_Argc() != 2)
+	if (COM_Argc() < 2)
 	{
-		CONS_Printf(M_GetText("playdemo <demoname>: playback a demo\n"));
+		CONS_Printf("playdemo <demoname> [-addfiles / -force]:\n");
+		CONS_Printf(M_GetText(
+					"Play back a demo file. The full path from your SRB2 directory must be given.\n\n"
+
+					"* With \"-addfiles\", any required files are added from a list contained within the demo file.\n"
+					"* With \"-force\", the demo is played even if the necessary files have not been added.\n"));
 		return;
 	}
 
@@ -1665,6 +1671,16 @@ static void Command_Playdemo_f(void)
 	// dont add .lmp so internal game demos can be played
 
 	CONS_Printf(M_GetText("Playing back demo '%s'.\n"), name);
+
+	demofileoverride = DFILE_OVERRIDE_NONE;
+	if (strcmp(COM_Argv(2), "-addfiles") == 0)
+	{
+		demofileoverride = DFILE_OVERRIDE_LOAD;
+	}
+	else if (strcmp(COM_Argv(2), "-force") == 0)
+	{
+		demofileoverride = DFILE_OVERRIDE_SKIP;
+	}
 
 	// Internal if no extension, external if one exists
 	// If external, convert the file name to a path in SRB2's home directory
@@ -2176,7 +2192,7 @@ static void Command_Pause(void)
 
 	if (cv_pause.value || server || (IsPlayerAdmin(consoleplayer)))
 	{
-		if (modeattacking || !(gamestate == GS_LEVEL || gamestate == GS_INTERMISSION) || (marathonmode && gamestate == GS_INTERMISSION))
+		if (modeattacking || !(gamestate == GS_LEVEL || gamestate == GS_INTERMISSION || gamestate == GS_WAITINGPLAYERS) || (marathonmode && gamestate == GS_INTERMISSION))
 		{
 			CONS_Printf(M_GetText("You can't pause here.\n"));
 			return;
@@ -2339,7 +2355,7 @@ static void Got_Clearscores(UINT8 **cp, INT32 playernum)
 	}
 
 	for (i = 0; i < MAXPLAYERS; i++)
-		players[i].score = 0;
+		players[i].score = players[i].recordscore = 0;
 
 	CONS_Printf(M_GetText("Scores have been reset by the server.\n"));
 }

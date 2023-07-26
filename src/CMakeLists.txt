@@ -1,9 +1,13 @@
+include(clang-tidy-default)
+
 add_executable(SRB2SDL2 MACOSX_BUNDLE WIN32)
 
 if("${CMAKE_COMPILER_IS_GNUCC}" AND "${CMAKE_SYSTEM_NAME}" MATCHES "Windows" AND NOT "${SRB2_CONFIG_SYSTEM_LIBRARIES}" AND NOT "${SRB2_CONFIG_SHARED_INTERNAL_LIBRARIES}")
 	# On MinGW with internal libraries, link the standard library statically
 	target_link_options(SRB2SDL2 PRIVATE "-static")
 endif()
+
+target_compile_features(SRB2SDL2 PRIVATE c_std_11 cxx_std_17)
 
 # Core sources
 target_sourcefile(c)
@@ -289,6 +293,9 @@ if(SRB2_CONFIG_PROFILEMODE AND "${CMAKE_C_COMPILER_ID}" STREQUAL "GNU")
 endif()
 
 add_subdirectory(sdl)
+if(SRB2_CONFIG_ENABLE_TESTS)
+	add_subdirectory(tests)
+endif()
 
 # strip debug symbols into separate file when using gcc.
 # to be consistent with Makefile, don't generate for OS X.
@@ -328,4 +335,12 @@ if("${CMAKE_SYSTEM_NAME}" STREQUAL Windows AND NOT "${SRB2_CONFIG_INTERNAL_LIBRA
 		COMMAND_EXPAND_LISTS
 		COMMENT "Copying runtime DLLs"
 	)
+endif()
+
+# Setup clang-tidy
+if(SRB2_CONFIG_ENABLE_CLANG_TIDY_C)
+	target_set_default_clang_tidy(SRB2SDL2 C "-*,clang-analyzer-*,-clang-analyzer-cplusplus-*")
+endif()
+if(SRB2_CONFIG_ENABLE_CLANG_TIDY_CXX)
+	target_set_default_clang_tidy(SRB2SDL2 CXX "-*,clang-analyzer-*,modernize-*")
 endif()
