@@ -80,6 +80,33 @@ static spriteframe_t sprtemp[64];
 static size_t maxframe;
 static const char *spritename;
 
+//
+// Clipping against drawsegs optimization, from prboom-plus
+//
+// TODO: This should be done with proper subsector pass through
+// sprites which would ideally remove the need to do it at all.
+// Unfortunately, SRB2's drawing loop has lots of annoying
+// changes from Doom for portals, which make it hard to implement.
+
+typedef struct drawseg_xrange_item_s
+{
+	INT16 x1, x2;
+	drawseg_t *user;
+} drawseg_xrange_item_t;
+
+typedef struct drawsegs_xrange_s
+{
+	drawseg_xrange_item_t *items;
+	INT32 count;
+} drawsegs_xrange_t;
+
+#define DS_RANGES_COUNT 3
+static drawsegs_xrange_t drawsegs_xranges[DS_RANGES_COUNT];
+
+static drawseg_xrange_item_t *drawsegs_xrange;
+static size_t drawsegs_xrange_size = 0;
+static INT32 drawsegs_xrange_count = 0;
+
 // ==========================================================================
 //
 // Sprite loading routines: support sprites in pwad, dehacked sprite renaming,
@@ -3136,7 +3163,7 @@ static void R_HeightSecClip(vissprite_t *spr, INT32 x1, INT32 x2)
 
 // R_ClipVisSprite
 // Clips vissprites without drawing, so that portals can work. -Red
-void R_ClipVisSprite(vissprite_t *spr, INT32 x1, INT32 x2, drawseg_t* dsstart, portal_t* portal)
+static void R_ClipVisSprite(vissprite_t *spr, INT32 x1, INT32 x2, portal_t* portal)
 {
 	drawseg_t *ds;
 	INT32		x;
@@ -3156,21 +3183,23 @@ void R_ClipVisSprite(vissprite_t *spr, INT32 x1, INT32 x2, drawseg_t* dsstart, p
 	// Pointer check was originally nonportable
 	// and buggy, by going past LEFT end of array:
 
-	//    for (ds = ds_p-1; ds >= drawsegs; ds--)    old buggy code
-	for (ds = ds_p; ds-- > dsstart;)
+	// e6y: optimization
+	if (drawsegs_xrange_size)
 	{
-		// determine if the drawseg obscures the sprite
-		if (ds->x1 > x2 ||
-			ds->x2 < x1 ||
-			(!ds->silhouette
-			 && !ds->maskedtexturecol))
-		{
-			// does not cover sprite
-			continue;
-		}
+		const drawseg_xrange_item_t *last = &drawsegs_xrange[drawsegs_xrange_count - 1];
+		drawseg_xrange_item_t *curr = &drawsegs_xrange[-1];
 
-		if (ds->portalpass != 66)
+		while (++curr <= last)
 		{
+			// determine if the drawseg obscures the sprite
+			if (curr->x1 > x2 || curr->x2 < x1)
+			{
+				// does not cover sprite
+				continue;
+			}
+
+			ds = curr->user;
+
 			if (ds->portalpass > 0 && ds->portalpass <= portalrender)
 				continue; // is a portal
 
@@ -3195,43 +3224,43 @@ void R_ClipVisSprite(vissprite_t *spr, INT32 x1, INT32 x2, drawseg_t* dsstart, p
 				// seg is behind sprite
 				continue;
 			}
-		}
 
-		r1 = ds->x1 < x1 ? x1 : ds->x1;
-		r2 = ds->x2 > x2 ? x2 : ds->x2;
+			r1 = ds->x1 < x1 ? x1 : ds->x1;
+			r2 = ds->x2 > x2 ? x2 : ds->x2;
 
-		// clip this piece of the sprite
-		silhouette = ds->silhouette;
+			// clip this piece of the sprite
+			silhouette = ds->silhouette;
 
-		if (spr->gz >= ds->bsilheight)
-			silhouette &= ~SIL_BOTTOM;
+			if (spr->gz >= ds->bsilheight)
+				silhouette &= ~SIL_BOTTOM;
 
-		if (spr->gzt <= ds->tsilheight)
-			silhouette &= ~SIL_TOP;
+			if (spr->gzt <= ds->tsilheight)
+				silhouette &= ~SIL_TOP;
 
-		if (silhouette == SIL_BOTTOM)
-		{
-			// bottom sil
-			for (x = r1; x <= r2; x++)
-				if (spr->clipbot[x] == -2)
-					spr->clipbot[x] = ds->sprbottomclip[x];
-		}
-		else if (silhouette == SIL_TOP)
-		{
-			// top sil
-			for (x = r1; x <= r2; x++)
-				if (spr->cliptop[x] == -2)
-					spr->cliptop[x] = ds->sprtopclip[x];
-		}
-		else if (silhouette == (SIL_TOP|SIL_BOTTOM))
-		{
-			// both
-			for (x = r1; x <= r2; x++)
+			if (silhouette == SIL_BOTTOM)
 			{
-				if (spr->clipbot[x] == -2)
-					spr->clipbot[x] = ds->sprbottomclip[x];
-				if (spr->cliptop[x] == -2)
-					spr->cliptop[x] = ds->sprtopclip[x];
+				// bottom sil
+				for (x = r1; x <= r2; x++)
+					if (spr->clipbot[x] == -2)
+						spr->clipbot[x] = ds->sprbottomclip[x];
+			}
+			else if (silhouette == SIL_TOP)
+			{
+				// top sil
+				for (x = r1; x <= r2; x++)
+					if (spr->cliptop[x] == -2)
+						spr->cliptop[x] = ds->sprtopclip[x];
+			}
+			else if (silhouette == (SIL_TOP|SIL_BOTTOM))
+			{
+				// both
+				for (x = r1; x <= r2; x++)
+				{
+					if (spr->clipbot[x] == -2)
+						spr->clipbot[x] = ds->sprbottomclip[x];
+					if (spr->cliptop[x] == -2)
+						spr->cliptop[x] = ds->sprtopclip[x];
+				}
 			}
 		}
 	}
@@ -3305,16 +3334,93 @@ void R_ClipVisSprite(vissprite_t *spr, INT32 x1, INT32 x2, drawseg_t* dsstart, p
 
 void R_ClipSprites(drawseg_t* dsstart, portal_t* portal)
 {
+	const size_t maxdrawsegs = ds_p - drawsegs;
+	const INT32 cx = viewwidth / 2;
+	drawseg_t* ds;
+	INT32 i;
+
+	// e6y
+	// Reducing of cache misses in the following R_DrawSprite()
+	// Makes sense for scenes with huge amount of drawsegs.
+	// ~12% of speed improvement on epic.wad map05
+	for (i = 0; i < DS_RANGES_COUNT; i++)
+	{
+		drawsegs_xranges[i].count = 0;
+	}
+
+	if (visspritecount - clippedvissprites <= 0)
+	{
+		return;
+	}
+
+	if (drawsegs_xrange_size < maxdrawsegs)
+	{
+		drawsegs_xrange_size = 2 * maxdrawsegs;
+
+		for (i = 0; i < DS_RANGES_COUNT; i++)
+		{
+			drawsegs_xranges[i].items = Z_Realloc(
+				drawsegs_xranges[i].items,
+				drawsegs_xrange_size * sizeof(drawsegs_xranges[i].items[0]),
+				PU_STATIC, NULL
+			);
+		}
+	}
+
+	for (ds = ds_p; ds-- > dsstart;)
+	{
+		if (ds->silhouette || ds->maskedtexturecol)
+		{
+			drawsegs_xranges[0].items[drawsegs_xranges[0].count].x1 = ds->x1;
+			drawsegs_xranges[0].items[drawsegs_xranges[0].count].x2 = ds->x2;
+			drawsegs_xranges[0].items[drawsegs_xranges[0].count].user = ds;
+
+			// e6y: ~13% of speed improvement on sunder.wad map10
+			if (ds->x1 < cx)
+			{
+				drawsegs_xranges[1].items[drawsegs_xranges[1].count] =
+					drawsegs_xranges[0].items[drawsegs_xranges[0].count];
+				drawsegs_xranges[1].count++;
+			}
+
+			if (ds->x2 >= cx)
+			{
+				drawsegs_xranges[2].items[drawsegs_xranges[2].count] =
+					drawsegs_xranges[0].items[drawsegs_xranges[0].count];
+				drawsegs_xranges[2].count++;
+			}
+
+			drawsegs_xranges[0].count++;
+		}
+	}
+
 	for (; clippedvissprites < visspritecount; clippedvissprites++)
 	{
 		vissprite_t *spr = R_GetVisSprite(clippedvissprites);
 
-		if (!(spr->cut & SC_BBOX)) // Do not clip bounding boxes
+		if (spr->cut & SC_BBOX)
+			continue;
+
+		INT32 x1 = (spr->cut & SC_SPLAT) ? 0 : spr->x1;
+		INT32 x2 = (spr->cut & SC_SPLAT) ? viewwidth : spr->x2;
+
+		if (x2 < cx)
 		{
-			INT32 x1 = (spr->cut & SC_SPLAT) ? 0 : spr->x1;
-			INT32 x2 = (spr->cut & SC_SPLAT) ? viewwidth : spr->x2;
-			R_ClipVisSprite(spr, x1, x2, dsstart, portal);
+			drawsegs_xrange = drawsegs_xranges[1].items;
+			drawsegs_xrange_count = drawsegs_xranges[1].count;
 		}
+		else if (x1 >= cx)
+		{
+			drawsegs_xrange = drawsegs_xranges[2].items;
+			drawsegs_xrange_count = drawsegs_xranges[2].count;
+		}
+		else
+		{
+			drawsegs_xrange = drawsegs_xranges[0].items;
+			drawsegs_xrange_count = drawsegs_xranges[0].count;
+		}
+
+		R_ClipVisSprite(spr, x1, x2, portal);
 	}
 }
 
