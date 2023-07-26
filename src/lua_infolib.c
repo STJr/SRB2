@@ -1750,7 +1750,7 @@ static int lib_setSkinColor(lua_State *L)
 		else if (i == 6 || (str && fastcmp(str,"accessible"))) {
 			boolean v = lua_toboolean(L, 3);
 			if (cnum < FIRSTSUPERCOLOR && v != skincolors[cnum].accessible)
-				return luaL_error(L, "skincolors[] index %d is a standard color; accessibility changes are prohibited.", cnum);
+				CONS_Alert(CONS_WARNING, "skincolors[] index %d is a standard color; accessibility changes are prohibited.", cnum);
 			else
 				info->accessible = v;
 		}
@@ -1845,7 +1845,7 @@ static int skincolor_set(lua_State *L)
 	else if (fastcmp(field,"accessible")) {
 		boolean v = lua_toboolean(L, 3);
 		if (cnum < FIRSTSUPERCOLOR && v != skincolors[cnum].accessible)
-			return luaL_error(L, "skincolors[] index %d is a standard color; accessibility changes are prohibited.", cnum);
+			CONS_Alert(CONS_WARNING, "skincolors[] index %d is a standard color; accessibility changes are prohibited.", cnum);
 		else
 			info->accessible = v;
 	} else
