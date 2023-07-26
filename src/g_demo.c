@@ -1509,18 +1509,18 @@ void G_BeginRecording(void)
 	// Stats
 	WRITEUINT8(demo_p,player->charability);
 	WRITEUINT8(demo_p,player->charability2);
-	WRITEUINT8(demo_p,player->actionspd>>FRACBITS);
-	WRITEUINT8(demo_p,player->mindash>>FRACBITS);
-	WRITEUINT8(demo_p,player->maxdash>>FRACBITS);
-	WRITEUINT8(demo_p,player->normalspeed>>FRACBITS);
-	WRITEUINT8(demo_p,player->runspeed>>FRACBITS);
+	WRITEFIXED(demo_p,player->actionspd);
+	WRITEFIXED(demo_p,player->mindash);
+	WRITEFIXED(demo_p,player->maxdash);
+	WRITEFIXED(demo_p,player->normalspeed);
+	WRITEFIXED(demo_p,player->runspeed);
 	WRITEUINT8(demo_p,player->thrustfactor);
 	WRITEUINT8(demo_p,player->accelstart);
 	WRITEUINT8(demo_p,player->acceleration);
 	WRITEFIXED(demo_p,player->height);
 	WRITEFIXED(demo_p,player->spinheight);
-	WRITEUINT8(demo_p,player->camerascale>>FRACBITS);
-	WRITEUINT8(demo_p,player->shieldscale>>FRACBITS);
+	WRITEFIXED(demo_p,player->camerascale);
+	WRITEFIXED(demo_p,player->shieldscale);
 
 	// Trying to convert it back to % causes demo desync due to precision loss.
 	// Don't do it.
@@ -1884,7 +1884,8 @@ UINT8 G_CmpDemoTime(char *oldname, char *newname)
 	switch(oldversion) // demoversion
 	{
 	case DEMOVERSION: // latest always supported
-	case 0x000e: // The previous demoversions also supported
+	case 0x000f: // The previous demoversions also supported 
+	case 0x000e:
 	case 0x000d: // all that changed between then and now was longer color name
 	case 0x000c:
 		break;
@@ -2029,6 +2030,7 @@ void G_DoPlayDemo(char *defdemoname)
 	demoversion = READUINT16(demo_p);
 	switch(demoversion)
 	{
+	case 0x000f:
 	case 0x000d:
 	case 0x000e:
 	case DEMOVERSION: // latest always supported
@@ -2178,18 +2180,18 @@ void G_DoPlayDemo(char *defdemoname)
 
 	charability = READUINT8(demo_p);
 	charability2 = READUINT8(demo_p);
-	actionspd = (fixed_t)READUINT8(demo_p)<<FRACBITS;
-	mindash = (fixed_t)READUINT8(demo_p)<<FRACBITS;
-	maxdash = (fixed_t)READUINT8(demo_p)<<FRACBITS;
-	normalspeed = (fixed_t)READUINT8(demo_p)<<FRACBITS;
-	runspeed = (fixed_t)READUINT8(demo_p)<<FRACBITS;
+	actionspd = (demoversion < 0x0010) ? (fixed_t)READUINT8(demo_p)<<FRACBITS : READFIXED(demo_p);
+	mindash = (demoversion < 0x0010) ? (fixed_t)READUINT8(demo_p)<<FRACBITS : READFIXED(demo_p);
+	maxdash = (demoversion < 0x0010) ? (fixed_t)READUINT8(demo_p)<<FRACBITS : READFIXED(demo_p);
+	normalspeed = (demoversion < 0x0010) ? (fixed_t)READUINT8(demo_p)<<FRACBITS : READFIXED(demo_p);
+	runspeed = (demoversion < 0x0010) ? (fixed_t)READUINT8(demo_p)<<FRACBITS : READFIXED(demo_p);
 	thrustfactor = READUINT8(demo_p);
 	accelstart = READUINT8(demo_p);
 	acceleration = READUINT8(demo_p);
 	height = (demoversion < 0x000e) ? (fixed_t)READUINT8(demo_p)<<FRACBITS : READFIXED(demo_p);
 	spinheight = (demoversion < 0x000e) ? (fixed_t)READUINT8(demo_p)<<FRACBITS : READFIXED(demo_p);
-	camerascale = (fixed_t)READUINT8(demo_p)<<FRACBITS;
-	shieldscale = (fixed_t)READUINT8(demo_p)<<FRACBITS;
+	camerascale = (demoversion < 0x0010) ? (fixed_t)READUINT8(demo_p)<<FRACBITS : READFIXED(demo_p);
+	shieldscale = (demoversion < 0x0010) ? (fixed_t)READUINT8(demo_p)<<FRACBITS : READFIXED(demo_p);
 	jumpfactor = READFIXED(demo_p);
 	followitem = READUINT32(demo_p);
 
@@ -2435,6 +2437,7 @@ void G_AddGhost(char *defdemoname)
 	ghostversion = READUINT16(p);
 	switch(ghostversion)
 	{
+	case 0x000f:
 	case 0x000d:
 	case 0x000e:
 	case DEMOVERSION: // latest always supported
@@ -2514,17 +2517,12 @@ void G_AddGhost(char *defdemoname)
 	// Ghosts do not have a player structure to put this in.
 	p++; // charability
 	p++; // charability2
-	p++; // actionspd
-	p++; // mindash
-	p++; // maxdash
-	p++; // normalspeed
-	p++; // runspeed
+	p += (ghostversion < 0x0010) ? 5 : 5 * sizeof(fixed_t); // actionspd, mindash, maxdash, normalspeed, and runspeed
 	p++; // thrustfactor
 	p++; // accelstart
 	p++; // acceleration
 	p += (ghostversion < 0x000e) ? 2 : 2 * sizeof(fixed_t); // height and spinheight
-	p++; // camerascale
-	p++; // shieldscale
+	p += (ghostversion < 0x0010) ? 2 : 2 * sizeof(fixed_t); // camerascale and shieldscale
 	p += 4; // jumpfactor
 	p += 4; // followitem
 
@@ -2700,6 +2698,7 @@ void G_DoPlayMetal(void)
 	switch(metalversion)
 	{
 	case DEMOVERSION: // latest always supported
+	case 0x000f:
 	case 0x000e: // There are checks wheter the momentum is from older demo versions or not
 	case 0x000d: // all that changed between then and now was longer color name
 	case 0x000c:
