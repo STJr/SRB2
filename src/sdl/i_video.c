@@ -299,7 +299,6 @@ static void Impl_SetupSoftwareBuffer(void)
 	size_t size;
 
 	vid.rowbytes = vid.width * vid.bpp;
-	vid.direct = NULL;
 
 	free(vid.buffer);
 
@@ -1773,7 +1772,6 @@ void I_StartupGraphics(void)
 	// Fury: we do window initialization after GL setup to allow
 	// SDL_GL_LoadLibrary to work well on Windows
 	vid.recalc = true;
-	vid.direct = NULL;
 	vid.bpp = 1;
 
 	// Create window

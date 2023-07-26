@@ -45,15 +45,16 @@
 // global video state
 typedef struct viddef_s
 {
-	INT32 modenum; // vidmode num indexes videomodes list
-
 	UINT8 *buffer; // invisible screens buffer
 	size_t rowbytes; // bytes per scanline of the VIDEO mode
 	INT32 width; // PIXELS per scanline
 	INT32 height;
 	INT32 recalc; // if true, recalc vid-based stuff
-	UINT8 *direct; // linear frame buffer, or vga base mem.
+
 	INT32 dupx, dupy; // scale 1, 2, 3 value for menus & overlays
+	UINT8 smalldupx, smalldupy; // factor for a little bit of scaling
+	UINT8 meddupx, meddupy; // factor for moderate, but not full, scaling
+
 	INT32 fdupx, fdupy; // same as dupx, dupy, but exact value when aspect ratio isn't 320/200
 	INT32 bpp; // BYTES per pixel: 1 = 256color, 2 = highcolor
 
@@ -64,13 +65,8 @@ typedef struct viddef_s
 		UINT8 set;
 	} change;
 
-	// for Win32 version
-	UINT8 smalldupx, smalldupy; // factor for a little bit of scaling
-	UINT8 meddupx, meddupy; // factor for moderate, but not full, scaling
 #ifdef HWRENDER
-	INT32/*fixed_t*/ fsmalldupx, fsmalldupy;
-	INT32/*fixed_t*/ fmeddupx, fmeddupy;
-	INT32 glstate;
+	UINT8 glstate;
 #endif
 } viddef_t;
 

@@ -62,67 +62,6 @@ static UINT8 softwaretranstogl[11]    = {  0, 25, 51, 76,102,127,153,178,204,229
 static UINT8 softwaretranstogl_hi[11] = {  0, 51,102,153,204,255,255,255,255,255,255};
 static UINT8 softwaretranstogl_lo[11] = {  0, 12, 24, 36, 48, 60, 71, 83, 95,111,127};
 
-//
-// -----------------+
-// HWR_DrawPatch    : Draw a 'tile' graphic
-// Notes            : x,y : positions relative to the original Doom resolution
-//                  : textes(console+score) + menus + status bar
-// -----------------+
-void HWR_DrawPatch(patch_t *gpatch, INT32 x, INT32 y, INT32 option)
-{
-	FOutVector v[4];
-	FBITFIELD flags;
-	GLPatch_t *hwrPatch;
-
-//  3--2
-//  | /|
-//  |/ |
-//  0--1
-	float sdupx = FIXED_TO_FLOAT(vid.fdupx)*2.0f;
-	float sdupy = FIXED_TO_FLOAT(vid.fdupy)*2.0f;
-	float pdupx = FIXED_TO_FLOAT(vid.fdupx)*2.0f;
-	float pdupy = FIXED_TO_FLOAT(vid.fdupy)*2.0f;
-
-	// make patch ready in hardware cache
-	HWR_GetPatch(gpatch);
-	hwrPatch = ((GLPatch_t *)gpatch->hardware);
-
-	switch (option & V_SCALEPATCHMASK)
-	{
-	case V_NOSCALEPATCH:
-		pdupx = pdupy = 2.0f;
-		break;
-	case V_SMALLSCALEPATCH:
-		pdupx = 2.0f * FIXED_TO_FLOAT(vid.fsmalldupx);
-		pdupy = 2.0f * FIXED_TO_FLOAT(vid.fsmalldupy);
-		break;
-	case V_MEDSCALEPATCH:
-		pdupx = 2.0f * FIXED_TO_FLOAT(vid.fmeddupx);
-		pdupy = 2.0f * FIXED_TO_FLOAT(vid.fmeddupy);
-		break;
-	}
-
-	if (option & V_NOSCALESTART)
-		sdupx = sdupy = 2.0f;
-
-	v[0].x = v[3].x = (x*sdupx-(gpatch->leftoffset)*pdupx)/vid.width - 1;
-	v[2].x = v[1].x = (x*sdupx+(gpatch->width-gpatch->leftoffset)*pdupx)/vid.width - 1;
-	v[0].y = v[1].y = 1-(y*sdupy-(gpatch->topoffset)*pdupy)/vid.height;
-	v[2].y = v[3].y = 1-(y*sdupy+(gpatch->height-gpatch->topoffset)*pdupy)/vid.height;
-
-	v[0].z = v[1].z = v[2].z = v[3].z = 1.0f;
-
-	v[0].s = v[3].s = 0.0f;
-	v[2].s = v[1].s = hwrPatch->max_s;
-	v[0].t = v[1].t = 0.0f;
-	v[2].t = v[3].t = hwrPatch->max_t;
-
-	flags = PF_Translucent|PF_NoDepthTest;
-
-	// clip it since it is used for bunny scroll in doom I
-	HWD.pfnDrawPolygon(NULL, v, 4, flags);
-}
-
 void HWR_DrawStretchyFixedPatch(patch_t *gpatch, fixed_t x, fixed_t y, fixed_t pscale, fixed_t vscale, INT32 option, const UINT8 *colormap)
 {
 	FOutVector v[4];

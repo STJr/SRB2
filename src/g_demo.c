@@ -2475,7 +2475,7 @@ static void G_StopTimingDemo(void)
 	{
 		FILE *f;
 		const char *csvpath = va("%s"PATHSEP"%s", srb2home, "timedemo.csv");
-		const char *header = "id,demoname,seconds,avgfps,leveltime,demotime,framecount,ticrate,rendermode,vidmode,vidwidth,vidheight,procbits\n";
+		const char *header = "id,demoname,seconds,avgfps,leveltime,demotime,framecount,ticrate,rendermode,vidwidth,vidheight,procbits\n";
 		const char *rowformat = "\"%s\",\"%s\",%f,%f,%u,%d,%u,%u,%u,%u,%u,%u,%u\n";
 		boolean headerrow = !FIL_FileExists(csvpath);
 		UINT8 procbits = 0;
@@ -2493,7 +2493,7 @@ static void G_StopTimingDemo(void)
 			if (headerrow)
 				fputs(header, f);
 			fprintf(f, rowformat,
-				timedemo_csv_id,timedemo_name,f1/TICRATE,f2/f1,leveltime,demotime,(UINT32)framecount,TICRATE,rendermode,vid.modenum,vid.width,vid.height,procbits);
+				timedemo_csv_id,timedemo_name,f1/TICRATE,f2/f1,leveltime,demotime,(UINT32)framecount,TICRATE,rendermode,vid.width,vid.height,procbits);
 			fclose(f);
 			CONS_Printf("Timedemo results saved to '%s'\n", csvpath);
 		}
@@ -2502,7 +2502,7 @@ static void G_StopTimingDemo(void)
 			// Just print the CSV output to console
 			CON_LogMessage(header);
 			CONS_Printf(rowformat,
-				timedemo_csv_id,timedemo_name,f1/TICRATE,f2/f1,leveltime,demotime,(UINT32)framecount,TICRATE,rendermode,vid.modenum,vid.width,vid.height,procbits);
+				timedemo_csv_id,timedemo_name,f1/TICRATE,f2/f1,leveltime,demotime,(UINT32)framecount,TICRATE,rendermode,vid.width,vid.height,procbits);
 		}
 	}
 

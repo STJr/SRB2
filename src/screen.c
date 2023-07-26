@@ -309,8 +309,6 @@ void SCR_Startup(void)
 		return;
 	}
 
-	vid.modenum = 0;
-
 	V_Init();
 	V_Recalc();
 
@@ -473,7 +471,7 @@ void SCR_CheckDefaultMode(void)
 	}
 }
 
-// sets the modenum as the new default video mode to be saved in the config file
+// sets the resolution as the new default to be saved in the config file
 void SCR_SetDefaultMode(INT32 width, INT32 height)
 {
 	CV_SetValue(cv_fullscreen.value ? &cv_scr_width : &cv_scr_width_w, width);
