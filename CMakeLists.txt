@@ -84,7 +84,7 @@ if(SRB2_CONFIG_ENABLE_TESTS)
 	# https://github.com/catchorg/Catch2
 	CPMAddPackage(
 		NAME Catch2
-		VERSION 3.1.1
+		VERSION 3.4.0
 		GITHUB_REPOSITORY catchorg/Catch2
 		OPTIONS
 			"CATCH_INSTALL_DOCS OFF"
