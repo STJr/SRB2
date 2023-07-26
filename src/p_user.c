@@ -11623,6 +11623,13 @@ void P_PlayerThink(player_t *player)
 
 	cmd = &player->cmd;
 
+	if (demoplayback && demo_forwardmove_rng)
+	{
+		// Smelly demo backwards compatibility
+		if (cmd->forwardmove)
+			P_RandomFixed();
+	}
+
 #ifdef PARANOIA
 	if (player->playerstate == PST_REBORN)
 		I_Error("player %s is in PST_REBORN\n", sizeu1(playeri));
