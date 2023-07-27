@@ -1,8 +1,8 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
-// Copyright (C) 2020-2023 by James R.
+// Copyright (C) 1999-2022 by Sonic Team Junior.
+// Copyright (C) 2020-2022 by James R.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -33,7 +33,7 @@ typedef union
 typedef struct
 {
 	msg_header_t header;
-	char ip[sizeof "ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff"];
+	char ip[16];
 	char port[8];
 	char name[32];
 	INT32 room;

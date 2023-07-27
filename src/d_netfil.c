@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2022 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -498,7 +498,7 @@ INT32 CL_CheckFiles(void)
 		CONS_Debug(DBG_NETPLAY, "searching for '%s' ", fileneeded[i].filename);
 
 		// Check in already loaded files
-		for (j = mainwads; j < numwadfiles; j++)
+		for (j = mainwads; wadfiles[j]; j++)
 		{
 			nameonly(strcpy(wadfilename, wadfiles[j]->filename));
 			if (!stricmp(wadfilename, fileneeded[i].filename) &&
