@@ -127,6 +127,8 @@ void S_StopSounds(void);
 void S_ClearSfx(void);
 void S_PlayMapMusic(boolean reset);
 
+boolean S_CheckDeletedMusic(void);
+
 //
 // Basically a W_GetNumForName that adds "ds" at the beginning of the string. Returns a lumpnum.
 //

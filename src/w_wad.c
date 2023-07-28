@@ -1259,6 +1259,9 @@ void W_UnloadWadFile(UINT16 num)
 
 	W_ClearCachedData();
 
+	if (is_important)
+		S_StopMusic();
+
 	W_UnloadFile(wadfiles[num]);
 
 	wadfiles[num] = NULL;
@@ -1272,9 +1275,12 @@ void W_UnloadWadFile(UINT16 num)
 		HU_LoadGraphics();
 		ST_LoadGraphics();
 		ST_ReloadSkinFaceGraphics();
-		S_PlayMapMusic(true);
+		if (S_CheckDeletedMusic())
+			S_PlayMapMusic(true);
 		return;
 	}
+
+	S_CheckDeletedMusic();
 
 	D_ReloadFiles();
 
@@ -1286,10 +1292,9 @@ void W_UnloadWadFile(UINT16 num)
 
 void W_ClearCachedData(void)
 {
-	// Stop all sounds, stop current music
+	// Stop all sounds
 	S_StopSounds();
 	S_ClearSfx();
-	S_StopMusic();
 
 	// Unload HUD graphics
 	ST_UnloadGraphics();
