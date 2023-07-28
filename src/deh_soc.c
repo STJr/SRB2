@@ -162,32 +162,6 @@ void clear_conditionsets(void)
 		M_ClearConditionSet(i+1);
 }
 
-void clear_levels(void)
-{
-	INT16 i;
-
-	// This is potentially dangerous but if we're resetting these headers,
-	// we may as well try to save some memory, right?
-	for (i = 0; i < NUMMAPS; ++i)
-	{
-		if (!mapheaderinfo[i] || i == (tutorialmap-1))
-			continue;
-
-		// Custom map header info
-		// (no need to set num to 0, we're freeing the entire header shortly)
-		Z_Free(mapheaderinfo[i]->customopts);
-
-		P_DeleteFlickies(i);
-		P_DeleteGrades(i);
-
-		Z_Free(mapheaderinfo[i]);
-		mapheaderinfo[i] = NULL;
-	}
-
-	// Realloc the one for the current gamemap as a safeguard
-	P_AllocMapHeader(gamemap-1);
-}
-
 static boolean findFreeSlot(INT32 *num)
 {
 	// Send the character select entry to a free slot.

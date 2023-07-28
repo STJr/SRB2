@@ -41,8 +41,8 @@ extraemblem_t extraemblems[MAXEXTRAEMBLEMS];
 unlockable_t unlockables[MAXUNLOCKABLES];
 
 // Number of emblems and extra emblems
-INT32 numemblems = 0;
-INT32 numextraemblems = 0;
+INT32 numemblems;
+INT32 numextraemblems;
 
 // Temporary holding place for nights data for the current map
 nightsdata_t ntemprecords[MAXPLAYERS];

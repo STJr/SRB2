@@ -69,6 +69,7 @@ static void Got_RequestAddfilecmd(UINT8 **cp, INT32 playernum);
 static void Got_RequestAddfoldercmd(UINT8 **cp, INT32 playernum);
 static void Got_Addfilecmd(UINT8 **cp, INT32 playernum);
 static void Got_Addfoldercmd(UINT8 **cp, INT32 playernum);
+static void Got_Delfilecmd(UINT8 **cp, INT32 playernum);
 static void Got_Pause(UINT8 **cp, INT32 playernum);
 static void Got_Suicide(UINT8 **cp, INT32 playernum);
 static void Got_RandomSeed(UINT8 **cp, INT32 playernum);
@@ -121,10 +122,13 @@ static void Command_ResetCamera_f(void);
 
 static void Command_Addfile(void);
 static void Command_Addfolder(void);
+static void Command_Delfile(void);
 static void Command_ListWADS_f(void);
 static void Command_RunSOC(void);
 static void Command_Pause(void);
 static void Command_Suicide(void);
+
+static void Command_Restartgame(void);
 
 static void Command_Version_f(void);
 #ifdef UPDATE_ALERT
@@ -421,6 +425,7 @@ const char *netxcmdnames[MAXNETXCMD - 1] =
 	"RUNSOC",
 	"REQADDFILE",
 	"REQADDFOLDER",
+	"DELFILE",
 	"SETMOTD",
 	"SUICIDE",
 	"LUACMD",
@@ -457,6 +462,7 @@ void D_RegisterServerCommands(void)
 	RegisterNetXCmd(XD_ADDFOLDER, Got_Addfoldercmd);
 	RegisterNetXCmd(XD_REQADDFILE, Got_RequestAddfilecmd);
 	RegisterNetXCmd(XD_REQADDFOLDER, Got_RequestAddfoldercmd);
+	RegisterNetXCmd(XD_DELFILE, Got_Delfilecmd);
 	RegisterNetXCmd(XD_PAUSE, Got_Pause);
 	RegisterNetXCmd(XD_SUICIDE, Got_Suicide);
 	RegisterNetXCmd(XD_RUNSOC, Got_RunSOCcmd);
@@ -489,11 +495,14 @@ void D_RegisterServerCommands(void)
 
 	COM_AddCommand("addfolder", Command_Addfolder, COM_LUA);
 	COM_AddCommand("addfile", Command_Addfile, COM_LUA);
+	COM_AddCommand("delfile", Command_Delfile, COM_LUA);
 	COM_AddCommand("listwad", Command_ListWADS_f, COM_LUA);
 
 	COM_AddCommand("runsoc", Command_RunSOC, COM_LUA);
 	COM_AddCommand("pause", Command_Pause, COM_LUA);
 	COM_AddCommand("suicide", Command_Suicide, COM_LUA);
+
+	COM_AddCommand("restartgame", Command_Restartgame, 0);
 
 	COM_AddCommand("gametype", Command_ShowGametype_f, COM_LUA);
 	COM_AddCommand("version", Command_Version_f, COM_LUA);
@@ -3470,7 +3479,7 @@ static void Command_Addfile(void)
 
 			for (i = 0; i < numwadfiles; i++)
 			{
-				if (wadfiles[i]->type == RET_FOLDER)
+				if (!W_IsFilePresent(i) || wadfiles[i]->type == RET_FOLDER)
 					continue;
 
 				if (!memcmp(wadfiles[i]->md5sum, md5sum, 16))
@@ -3595,7 +3604,7 @@ static void Command_Addfolder(void)
 		// Check if the folder is already added.
 		for (i = 0; i < numwadfiles; i++)
 		{
-			if (wadfiles[i]->type != RET_FOLDER)
+			if (!W_IsFilePresent(i) || wadfiles[i]->type != RET_FOLDER)
 				continue;
 
 			if (samepaths(wadfiles[i]->path, fullpath) > 0)
@@ -3616,6 +3625,101 @@ static void Command_Addfolder(void)
 		else
 			SendNetXCmd(XD_ADDFOLDER, buf, buf_p - buf);
 	}
+}
+
+/** Removes an added pwad at runtime.
+  */
+static void Command_Delfile(void)
+{
+	const char *fn, *p;
+	char buf[256];
+	char *buf_p = buf;
+	INT32 i;
+	UINT16 found = UINT16_MAX;
+
+	if (netgame && !(server || IsPlayerAdmin(consoleplayer)))
+	{
+		CONS_Printf(M_GetText("Only the server or a remote admin can use this.\n"));
+		return;
+	}
+
+	if (numwadfiles <= mainwads)
+	{
+		CONS_Printf(M_GetText("No additional WADs are loaded.\n"));
+		return;
+	}
+
+	if (COM_Argc() != 2)
+	{
+		CONS_Printf(M_GetText("delfile <wadfile.wad>: delete wad file\n"));
+		return;
+	}
+	else
+		fn = COM_Argv(1);
+
+	// Disallow non-printing characters and semicolons.
+	for (i = 0; fn[i] != '\0'; i++)
+		if (!isprint(fn[i]) || fn[i] == ';')
+			return;
+
+	p = fn+strlen(fn);
+	while(--p >= fn)
+		if (*p == '\\' || *p == '/' || *p == ':')
+			break;
+	++p;
+
+	// Delete file on your client if it isn't important.
+	for (i = 0; i < numwadfiles; i++)
+	{
+		if (!W_IsFilePresent(i))
+			continue;
+
+		char *wadname = va("%s", wadfiles[i]->filename);
+		nameonly(wadname);
+		if (!stricmp(wadname, p))
+		{
+			// found the file we want to delete
+			found = i;
+
+			// WADs added at game setup (srb2.pk3, zones.pk3, etc.)
+			if (i <= mainwads)
+			{
+				CONS_Alert(CONS_ERROR, M_GetText("Can't delete %s\n"), p);
+				return;
+			}
+			else
+			{
+				if (!wadfiles[i]->important)
+				{
+					P_DelWadFile(i);
+					return;
+				}
+				else
+					break;
+			}
+		}
+	}
+
+	if (found == UINT16_MAX)
+	{
+		CONS_Alert(CONS_ERROR, M_GetText("File %s is not added\n"), p);
+		return;
+	}
+
+	// Delete file on your client if you aren't in a netgame.
+	if (!(netgame || multiplayer))
+	{
+		P_DelWadFile(i);
+		return;
+	}
+
+	WRITESTRINGN(buf_p,p,240);
+	SendNetXCmd(XD_DELFILE, buf, buf_p - buf);
+}
+
+static void Command_Restartgame(void)
+{
+	D_RestartGame();
 }
 
 static void Got_RequestAddfilecmd(UINT8 **cp, INT32 playernum)
@@ -3823,6 +3927,48 @@ static void Got_Addfoldercmd(UINT8 **cp, INT32 playernum)
 	G_SetGameModified(true);
 }
 
+static void Got_Delfilecmd(UINT8 **cp, INT32 playernum)
+{
+	char filename[241];
+	size_t i;
+	boolean found = false;
+
+	READSTRINGN(*cp, filename, 240);
+
+	if (playernum != serverplayer)
+	{
+		CONS_Alert(CONS_WARNING, M_GetText("Illegal delfile command received from %s\n"), player_names[playernum]);
+		if (server)
+			SendKick(playernum, KICK_MSG_CON_FAIL | KICK_MSG_KEEP_BODY);
+		return;
+	}
+
+	for (i = 0; i < numwadfiles; i++)
+	{
+		if (!W_IsFilePresent(i))
+			continue;
+
+		char *wadname = va("%s", wadfiles[i]->filename);
+		if (!stricmp(wadname, filename))
+		{
+			// found the file we want to delete
+			found = true;
+
+			// WADs added at game setup (srb2.pk3, zones.pk3, etc.)
+			if (i <= mainwads)
+				CONS_Alert(CONS_ERROR, M_GetText("Can't delete %s\n"), filename);
+			else
+			{
+				P_DelWadFile(i);
+				break;
+			}
+		}
+	}
+
+	if (!found)
+		CONS_Alert(CONS_ERROR, M_GetText("File %s is not added\n"), filename);
+}
+
 static void Command_ListWADS_f(void)
 {
 	INT32 i = numwadfiles;
@@ -3836,6 +3982,8 @@ static void Command_ListWADS_f(void)
 
 	for (i--; i >= 0; i--)
 	{
+		if (!W_IsFilePresent(i))
+			continue;
 		nameonly(tempname = va("%s", wadfiles[i]->filename));
 		if (!i)
 			CONS_Printf("\x82 IWAD\x80: %s\n", tempname);

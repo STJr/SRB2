@@ -37,6 +37,9 @@
 #define luaL_checkangle(L, i) ((angle_t)luaL_checkinteger(L, i))
 #define lua_pushangle(L, a) lua_pushinteger(L, a)
 
+void LUA_ClearState(void);
+void LUA_Shutdown(void);
+
 #ifdef _DEBUG
 void LUA_ClearExtVars(void);
 #endif

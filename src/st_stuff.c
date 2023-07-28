@@ -167,6 +167,8 @@ hudinfo_t hudinfo[NUMHUDITEMS] =
 	{ 288, 176, V_SNAPTORIGHT|V_SNAPTOBOTTOM}, // HUD_POWERUPS
 };
 
+static hudinfo_t basehudinfo[NUMHUDITEMS];
+
 static huddrawlist_h luahuddrawlist_game[2];
 static huddrawlist_h luahuddrawlist_titlecard;
 
@@ -395,6 +397,12 @@ void ST_ReloadSkinFaceGraphics(void)
 		ST_LoadFaceGraphics(i);
 }
 
+void ST_UnLoadFaceGraphics(INT32 skinnum)
+{
+	W_UnlockCachedPatch(faceprefix[skinnum]);
+	W_UnlockCachedPatch(superprefix[skinnum]);
+}
+
 static inline void ST_InitData(void)
 {
 	// 'link' the statusbar display to a player, which could be
@@ -446,6 +454,13 @@ void ST_Init(void)
 	luahuddrawlist_game[0] = LUA_HUD_CreateDrawList();
 	luahuddrawlist_game[1] = LUA_HUD_CreateDrawList();
 	luahuddrawlist_titlecard = LUA_HUD_CreateDrawList();
+
+	memcpy(basehudinfo, hudinfo, sizeof(hudinfo));
+}
+
+void ST_RestoreHudInfo(void)
+{
+	memcpy(hudinfo, basehudinfo, sizeof(hudinfo));
 }
 
 // change the status bar too, when pressing F12 while viewing a demo.

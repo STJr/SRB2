@@ -7008,11 +7008,11 @@ customshaderxlat_t shaderxlat[] =
 
 void HWR_LoadAllCustomShaders(void)
 {
-	INT32 i;
-
-	// read every custom shader
-	for (i = 0; i < numwadfiles; i++)
-		HWR_LoadCustomShadersFromFile(i, W_FileHasFolders(wadfiles[i]));
+	for (INT32 i = 0; i < numwadfiles; i++)
+	{
+		if (W_IsFilePresent(i))
+			HWR_LoadCustomShadersFromFile(i, W_FileHasFolders(wadfiles[i]));
+	}
 }
 
 void HWR_LoadCustomShadersFromFile(UINT16 wadnum, boolean PK3)

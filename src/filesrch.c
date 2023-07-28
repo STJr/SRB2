@@ -1140,6 +1140,9 @@ boolean preparefilemenu(boolean samedepth)
 
 					for (i = 0; i < numwadfiles; i++)
 					{
+						if (!W_IsFilePresent(i))
+							continue;
+
 						if (!filenamebuf[i][0])
 						{
 							strncpy(filenamebuf[i], wadfiles[i]->filename, MAX_WADPATH);

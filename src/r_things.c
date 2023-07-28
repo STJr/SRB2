@@ -566,7 +566,10 @@ void R_InitSprites(void)
 
 	// find sprites in each -file added pwad
 	for (i = 0; i < numwadfiles; i++)
-		R_AddSpriteDefs((UINT16)i);
+	{
+		if (W_IsFilePresent(i))
+			R_AddSpriteDefs((UINT16)i);
+	}
 
 	//
 	// now check for skins
@@ -576,20 +579,13 @@ void R_InitSprites(void)
 	R_InitSkins();
 	for (i = 0; i < numwadfiles; i++)
 	{
+		if (!W_IsFilePresent(i))
+			continue;
 		R_AddSkins((UINT16)i, true);
 		R_PatchSkins((UINT16)i, true);
 		R_LoadSpriteInfoLumps(i, wadfiles[i]->numlumps);
 	}
 	ST_ReloadSkinFaceGraphics();
-
-	//
-	// check if all sprites have frames
-	//
-	/*
-	for (i = 0; i < numsprites; i++)
-		if (sprites[i].numframes < 1)
-			CONS_Debug(DBG_SETUP, "R_InitSprites: sprite %s has no frames at all\n", sprnames[i]);
-	*/
 }
 
 //

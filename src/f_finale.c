@@ -2354,7 +2354,7 @@ else if (strlen(name) <= 6) \
 else \
 	arr[0] = 0;
 
-static void F_CacheTitleScreen(void)
+void F_CacheTitleScreen(void)
 {
 	switch(curttmode)
 	{

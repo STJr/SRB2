@@ -19,6 +19,7 @@
 #include "w_wad.h"
 #include "z_zone.h"
 #include "m_misc.h"
+#include "m_menu.h"
 #include "info.h" // spr2names
 #include "i_video.h" // rendermode
 #include "i_system.h"
@@ -944,6 +945,46 @@ next_token:
 #undef HUDNAMEWRITE
 #undef SYMBOLCONVERT
 
+void R_DelSkins(void)
+{
+	size_t i, j;
+
+	for (i = 0; i < MAXSKINS; i++)
+	{
+		if (!skins[i].name[0])
+		{
+			numskins--;
+			continue;
+		}
+
+		ST_UnLoadFaceGraphics(i);
+
+		for (j = 0; j < 32; j++)
+		{
+			if (!stricmp(skins[i].name, description[j].skinname))
+			{
+				memset(description[j].skinname, 0, SKINNAMESIZE*2+2);
+				break;
+			}
+		}
+
+		for (j = 0; j < MAXPLAYERS; j++)
+		{
+			if (playeringame[j])
+			{
+				player_t *player = &players[j];
+				skin_t *skin = player->mo->skin;
+				if (!stricmp(skins[i].name, skin->name))
+					SetPlayerSkinByNum(j, 0);
+			}
+		}
+
+		numskins--;
+	}
+
+	M_InitCharacterTables();
+}
+
 static UINT16 W_CheckForEitherSkinMarkerInPwad(UINT16 wadid, UINT16 startlump)
 {
 	UINT16 i;
@@ -1083,7 +1124,8 @@ void R_RefreshSprite2(void)
 
 	for (i = 0; i < numwadfiles; i++)
 	{
-		R_RefreshSprite2ForWad(i, old_spr2);
+		if (W_IsFilePresent(i))
+			R_RefreshSprite2ForWad(i, old_spr2);
 	}
 
 	// Update previous value.

@@ -1676,9 +1676,11 @@ void S_LoadMusicDefs(UINT16 wadnum)
 //
 void S_InitMusicDefs(void)
 {
-	UINT16 i;
-	for (i = 0; i < numwadfiles; i++)
-		S_LoadMusicDefs(i);
+	for (UINT16 i = 0; i < numwadfiles; i++)
+	{
+		if (W_IsFilePresent(i))
+			S_LoadMusicDefs(i);
+	}
 }
 
 musicdef_t **soundtestdefs = NULL;

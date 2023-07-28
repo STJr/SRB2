@@ -243,6 +243,12 @@ boolean G_GetModeAttackRetryFlag(void);
 void G_LoadGameData(gamedata_t *data);
 void G_LoadGameSettings(void);
 
+void G_SetDefaultSaveNames(void);
+void G_SetDefaultDataStrings(void);
+
+void G_InitialState(void);
+void G_AfterFileDeletion(void);
+
 void G_SetGameModified(boolean silent);
 void G_SetUsedCheats(boolean silent);
 

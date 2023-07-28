@@ -141,12 +141,13 @@ typedef enum
 	XD_RUNSOC,      // 16
 	XD_REQADDFILE,  // 17
 	XD_REQADDFOLDER,// 18
-	XD_SETMOTD,     // 19
-	XD_SUICIDE,     // 20
-	XD_DEMOTED,     // 21
-	XD_LUACMD,      // 22
-	XD_LUAVAR,      // 23
-	XD_LUAFILE,     // 24
+	XD_DELFILE,     // 19
+	XD_SETMOTD,     // 20
+	XD_SUICIDE,     // 21
+	XD_DEMOTED,     // 22
+	XD_LUACMD,      // 23
+	XD_LUAVAR,      // 24
+	XD_LUAFILE,     // 25
 	MAXNETXCMD
 } netxcmd_t;
 

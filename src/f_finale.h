@@ -41,6 +41,7 @@ void F_GameEndDrawer(void);
 void F_IntroDrawer(void);
 void F_TitleScreenDrawer(void);
 void F_SkyScroll(const char *patchname);
+void F_CacheTitleScreen(void);
 
 void F_GameEvaluationDrawer(void);
 void F_StartGameEvaluation(void);
@@ -102,7 +103,6 @@ extern INT16 tty;
 extern INT16 ttloop;
 extern UINT16 tttics;
 extern boolean ttavailable[6];
-
 
 typedef enum
 {

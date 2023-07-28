@@ -169,6 +169,9 @@ void P_InitPicAnims(void)
 	{
 		UINT16 animdefsLumpNum;
 
+		if (!W_IsFilePresent(w))
+			continue;
+
 		// Find ANIMDEFS lump in the WAD
 		animdefsLumpNum = W_CheckNumForNamePwad("ANIMDEFS", w, 0);
 

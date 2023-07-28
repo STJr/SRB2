@@ -79,7 +79,8 @@
 #endif
 
 #ifdef HWRENDER
-#include "hardware/hw_main.h" // 3D View Rendering
+#include "hardware/hw_main.h"
+#include "hardware/hw_glob.h"
 #endif
 
 #ifdef _WINDOWS
@@ -132,6 +133,9 @@ menucolor_t *menucolorhead, *menucolortail;
 
 char savegamename[256];
 char liveeventbackup[256];
+
+char basesavegamename[256];
+char baseliveeventbackup[256];
 
 char srb2home[256] = ".";
 char srb2path[256] = ".";
@@ -1333,6 +1337,9 @@ void D_SRB2Main(void)
 
 			snprintf(luafiledir, sizeof luafiledir, "%s" PATHSEP "luafiles", userhome);
 #endif // DEFAULTDIR
+
+			strcpy(basesavegamename, savegamename);
+			strcpy(baseliveeventbackup, liveeventbackup);
 		}
 
 		configfile[sizeof configfile - 1] = '\0';
@@ -1749,6 +1756,86 @@ void D_SRB2Main(void)
 		if (!P_LoadLevel(false, false))
 			I_Quit(); // fail so reset game stuff
 	}
+}
+
+// Reload all files.
+void D_ReloadFiles(void)
+{
+	// Set the initial state
+	G_InitialState();
+
+	// Free textures
+	R_FlushTextureCache();
+
+	numtextures = 0;
+
+	// Unload the level
+	P_UnloadLevel();
+
+	// Free patches
+	Patch_FreeTag(PU_PATCH);
+	Patch_FreeTag(PU_PATCH_LOWPRIORITY);
+	Patch_FreeTag(PU_PATCH_ROTATED);
+	Patch_FreeTag(PU_SPRITE);
+	Patch_FreeTag(PU_HUDGFX);
+
+	// Load SOC and Lua.
+	for (INT32 i = 0; i < numwadfiles; i++)
+	{
+		if (W_IsFilePresent(i))
+			W_LoadFileScripts(i, i < mainwads);
+	}
+
+	// Reload textures and sprites.
+	R_LoadTextures();
+	R_InitSprites();
+	R_ReInitColormaps(0);
+
+	// Reload ANIMATED / ANIMDEFS
+	P_InitPicAnims();
+
+	// Flush and reload HUD graphics
+	ST_UnloadGraphics();
+	HU_LoadGraphics();
+	ST_LoadGraphics();
+	ST_ReloadSkinFaceGraphics();
+}
+
+void D_RestartGame(void)
+{
+	if (netgame)
+	{
+		CONS_Printf(M_GetText("You can't restart the game while in a netgame.\n"));
+		return;
+	}
+
+	// Save the current configuration file, and the gamedata.
+	D_SaveUserPrefs();
+
+	// We're deleting some files
+	while (numwadfiles > mainwads + 1) // don't delete music.dta
+	{
+		W_UnloadFile(wadfiles[numwadfiles - 1]);
+		wadfiles[numwadfiles - 1] = NULL;
+		numwadfiles--;
+	}
+
+	// Put everything back on its place
+	D_ReloadFiles();
+
+	// Load the default game data.
+	G_LoadGameData(clientGamedata);
+	M_CopyGameData(serverGamedata, clientGamedata);
+
+	// Done. Start the intro.
+	F_StartIntro();
+}
+
+// Save the current configuration file, and the gamedata.
+void D_SaveUserPrefs(void)
+{
+	M_SaveConfig(NULL);
+	G_SaveGameData(clientGamedata);
 }
 
 const char *D_Home(void)

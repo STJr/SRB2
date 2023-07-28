@@ -152,6 +152,7 @@ static void add_string_hook(lua_State *L, int type)
 		lua_pushstring(L, string);
 		get_table(L);
 		add_hook_to_table(L, 1 + lua_objlen(L, -1));
+		Z_Free(string);
 	}
 	else
 		add_hook_to_table(L, ++hook->numGeneric);
@@ -258,6 +259,49 @@ int lib_hudadd(lua_State *L)
 	add_hook_ref(L, 1);
 
 	return 0;
+}
+
+static void free_hook(hook_t *hook)
+{
+	Z_Free(hook->ids);
+	hook->ids = NULL;
+	hook->numHooks = 0;
+}
+
+static void free_all_hooks(void)
+{
+	// Free hookIds
+	for (size_t i = 0; i < HOOK(MAX); i++)
+		free_hook(&hookIds[i]);
+
+	// Free hudHookIds
+	for (size_t i = 0; i < HUD_HOOK(MAX); i++)
+		free_hook(&hudHookIds[i]);
+
+	// Free mobjHookIds
+	for (size_t i = 0; i < NUMMOBJTYPES; i++)
+	{
+		for (size_t j = 0; j < MOBJ_HOOK(MAX); j++)
+			free_hook(&mobjHookIds[i][j]);
+	}
+
+	// Free stringHooks
+	for (size_t i = 0; i < STRING_HOOK(MAX); i++)
+	{
+		stringHooks[i].numGeneric = 0;
+		stringHooks[i].ref = 0;
+	}
+
+	Z_Free(hookRefs);
+	Z_Free(hooksErrored);
+
+	hookRefs = NULL;
+	hooksErrored = NULL;
+}
+
+void LUA_ClearHooks(void)
+{
+	free_all_hooks();
 }
 
 typedef struct Hook_State Hook_State;

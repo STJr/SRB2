@@ -178,7 +178,7 @@ static void DEH_LoadDehackedFile(MYFILE *f, boolean mainfile)
 	INT32 i;
 
 	if (!deh_loaded)
-		initfreeslots();
+		DEH_Init();
 
 	deh_num_warning = 0;
 
@@ -559,10 +559,10 @@ static void DEH_LoadDehackedFile(MYFILE *f, boolean mainfile)
 					}
 
 					if (clearall || fastcmp(word2, "CONDITIONSETS"))
-						clear_conditionsets();
+						P_ClearConditionSets();
 
 					if (clearall || fastcmp(word2, "LEVELS"))
-						clear_levels();
+						P_ClearLevels();
 				}
 				else
 					deh_warning("Unknown word: %s", word);
@@ -594,14 +594,12 @@ static void DEH_LoadDehackedFile(MYFILE *f, boolean mainfile)
 	}
 
 	dbg_line = -1;
+
 	if (deh_num_warning)
 	{
 		CONS_Printf(M_GetText("%d warning%s in the SOC lump\n"), deh_num_warning, deh_num_warning == 1 ? "" : "s");
-		if (devparm) {
+		if (devparm)
 			I_Error("%s%s",va(M_GetText("%d warning%s in the SOC lump\n"), deh_num_warning, deh_num_warning == 1 ? "" : "s"), M_GetText("See log.txt for details.\n"));
-			//while (!I_GetKey())
-				//I_OsPolling();
-		}
 	}
 
 	deh_loaded = true;
@@ -626,4 +624,15 @@ void DEH_LoadDehackedLumpPwad(UINT16 wad, UINT16 lump, boolean mainfile)
 void DEH_LoadDehackedLump(lumpnum_t lumpnum)
 {
 	DEH_LoadDehackedLumpPwad(WADFILENUM(lumpnum),LUMPNUM(lumpnum), false);
+}
+
+void DEH_Init(void)
+{
+	deh_loaded = false;
+
+	memset(FREE_STATES,0,sizeof(char *) * NUMSTATEFREESLOTS);
+	memset(FREE_MOBJS,0,sizeof(char *) * NUMMOBJFREESLOTS);
+	memset(FREE_SKINCOLORS,0,sizeof(char *) * NUMCOLORFREESLOTS);
+	memset(used_spr,0,sizeof(UINT8) * ((NUMSPRITEFREESLOTS / 8) + 1));
+	memset(actionsoverridden, LUA_REFNIL, sizeof(actionsoverridden));
 }

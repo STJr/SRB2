@@ -152,9 +152,11 @@ typedef struct
 // =========================================================================
 
 void W_Shutdown(void);
+void W_UnloadFile(wadfile_t *wadfile);
 
 // Opens a WAD file. Returns the FILE * handle for the file, or NULL if not found or could not be opened
 FILE *W_OpenWadFile(const char **filename, boolean useerrors);
+
 // Load and add a wadfile to the active wad files, returns numbers of lumps, INT16_MAX on error
 UINT16 W_InitFile(const char *filename, boolean mainfile, boolean startup);
 // Adds a folder as a file
@@ -167,6 +169,15 @@ void W_InitMultipleFiles(addfilelist_t *list);
 
 INT32 W_IsPathToFolderValid(const char *path);
 char *W_GetFullFolderPath(const char *path);
+
+// Checks if a file exists in the specified slot.
+boolean W_IsFilePresent(UINT16 wadnum);
+
+// Loads all SOC and Lua scripts from a file.
+void W_LoadFileScripts(UINT16 wadfilenum, boolean mainfile);
+
+// Unloads a file.
+void W_UnloadWadFile(UINT16 num);
 
 const char *W_CheckNameForNumPwad(UINT16 wad, UINT16 lump);
 const char *W_CheckNameForNum(lumpnum_t lumpnum);

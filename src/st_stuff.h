@@ -35,6 +35,8 @@ void ST_Start(void);
 // Called by startup code.
 void ST_Init(void);
 
+void ST_RestoreHudInfo(void);
+
 // Called by G_Responder() when pressing F12 while viewing a demo.
 void ST_changeDemoView(void);
 
@@ -44,6 +46,7 @@ void ST_LoadGraphics(void);
 // face load graphics, called when skin changes
 void ST_LoadFaceGraphics(INT32 playernum);
 void ST_ReloadSkinFaceGraphics(void);
+void ST_UnLoadFaceGraphics(INT32 skinnum);
 
 void ST_doPaletteStuff(void);
 

@@ -339,7 +339,7 @@ void P_DeleteFlickies(INT16 i)
   * \param i Map number to clear header for.
   * \sa P_ClearMapHeaderInfo
   */
-static void P_ClearSingleMapHeaderInfo(INT16 i)
+void P_ClearSingleMapHeaderInfo(INT16 i)
 {
 	const INT16 num = (INT16)(i-1);
 	mapheaderinfo[num]->lvlttl[0] = '\0';
@@ -411,6 +411,43 @@ void P_AllocMapHeader(INT16 i)
 		mapheaderinfo[i]->grades = NULL;
 	}
 	P_ClearSingleMapHeaderInfo(i + 1);
+}
+
+/** Clears condition sets.
+  */
+void P_ClearConditionSets(void)
+{
+	UINT8 i;
+	for (i = 0; i < MAXCONDITIONSETS; ++i)
+		M_ClearConditionSet(i+1);
+}
+
+/** Clears levels headers.
+  */
+void P_ClearLevels(void)
+{
+	INT16 i;
+
+	// This is potentially dangerous but if we're resetting these headers,
+	// we may as well try to save some memory, right?
+	for (i = 0; i < NUMMAPS; ++i)
+	{
+		if (!mapheaderinfo[i] || i == (tutorialmap-1))
+			continue;
+
+		// Custom map header info
+		// (no need to set num to 0, we're freeing the entire header shortly)
+		Z_Free(mapheaderinfo[i]->customopts);
+
+		P_DeleteFlickies(i);
+		P_DeleteGrades(i);
+
+		Z_Free(mapheaderinfo[i]);
+		mapheaderinfo[i] = NULL;
+	}
+
+	// Realloc the one for the current gamemap as a safeguard
+	P_AllocMapHeader(gamemap-1);
 }
 
 /** NiGHTS Grades are a special structure,
@@ -7618,6 +7655,55 @@ static void P_InitGametype(void)
 			: mapheaderinfo[gamemap - 1]->numlaps);
 }
 
+void P_UnloadLevel(void)
+{
+	LUA_InvalidateLevel();
+
+	if (sectors)
+	{
+		for (sector_t *ss = sectors; sectors+numsectors != ss; ss++)
+		{
+			Z_Free(ss->attached);
+			Z_Free(ss->attachedsolid);
+		}
+	}
+
+	// Clear pointers that would be left dangling by the purge
+	R_FlushTranslationColormapCache();
+
+#ifdef HWRENDER
+	// Free GPU textures before freeing patches.
+	if (rendermode == render_opengl && (vid.glstate == VID_GL_LIBRARY_LOADED))
+		HWR_ClearAllTextures();
+#endif
+
+	R_InitializeLevelInterpolators();
+
+	P_InitThinkers();
+	R_InitMobjInterpolators();
+	P_InitCachedActions();
+
+	segs = NULL;
+	sectors = NULL;
+	subsectors = NULL;
+	nodes = NULL;
+	lines = NULL;
+	sides = NULL;
+	mapthings = NULL;
+	spawnsectors = NULL;
+	spawnlines = NULL;
+	spawnsides = NULL;
+
+	numvertexes = 0;
+	numsegs = 0;
+	numsectors = 0;
+	numsubsectors = 0;
+	numnodes = 0;
+	numlines = 0;
+	numsides = 0;
+	nummapthings = 0;
+}
+
 /** Loads a level from a lump or external wad.
   *
   * \param fromnetsave If true, skip some stuff because we're loading a netgame snapshot.
@@ -7629,7 +7715,7 @@ boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate)
 	// 99% of the things already did, so.
 	// Map header should always be in place at this point
 	INT32 i, ranspecialwipe = 0;
-	sector_t *ss;
+
 	levelloading = true;
 
 	// This is needed. Don't touch.
@@ -7768,32 +7854,11 @@ boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate)
 	// Close text prompt before freeing the old level
 	F_EndTextPrompt(false, true);
 
-	LUA_InvalidateLevel();
-
-	for (ss = sectors; sectors+numsectors != ss; ss++)
-	{
-		Z_Free(ss->attached);
-		Z_Free(ss->attachedsolid);
-	}
-
-	// Clear pointers that would be left dangling by the purge
-	R_FlushTranslationColormapCache();
-
-#ifdef HWRENDER
-	// Free GPU textures before freeing patches.
-	if (rendermode == render_opengl && (vid.glstate == VID_GL_LIBRARY_LOADED))
-		HWR_ClearAllTextures();
-#endif
+	P_UnloadLevel();
 
 	Patch_FreeTag(PU_PATCH_LOWPRIORITY);
 	Patch_FreeTag(PU_PATCH_ROTATED);
 	Z_FreeTags(PU_LEVEL, PU_PURGELEVEL - 1);
-
-	R_InitializeLevelInterpolators();
-
-	P_InitThinkers();
-	R_InitMobjInterpolators();
-	P_InitCachedActions();
 
 	if (!fromnetsave && savedata.lives > 0)
 	{
@@ -8254,4 +8319,12 @@ boolean P_AddFolder(const char *folderpath)
 {
 	return D_CheckPathAllowed(folderpath, "tried to add folder") &&
 		P_LoadAddon(W_InitFolder(folderpath, false, false));
+}
+
+boolean P_DelWadFile(const UINT16 wadnum)
+{
+	if (wadnum == 0)		// can't delete the IWAD
+		return false;
+	W_UnloadWadFile(wadnum);
+	return true;
 }

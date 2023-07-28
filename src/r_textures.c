@@ -1071,7 +1071,8 @@ void R_LoadTextures(void)
 
 	for (w = 0; w < numwadfiles; w++)
 	{
-		newtextures += R_CountTextures((UINT16)w);
+		if (W_IsFilePresent(w))
+			newtextures += R_CountTextures((UINT16)w);
 	}
 
 	// If no textures found by this point, bomb out
@@ -1082,7 +1083,8 @@ void R_LoadTextures(void)
 
 	for (i = 0, w = 0; w < numwadfiles; w++)
 	{
-		i = R_DefineTextures(i, w);
+		if (W_IsFilePresent(w))
+			i = R_DefineTextures(i, w);
 	}
 
 	R_FinishLoadingTextures(newtextures);
@@ -1574,6 +1576,8 @@ lumpnum_t R_GetFlatNumForName(const char *name)
 	// Scan wad files backwards so patched flats take preference.
 	for (i = numwadfiles - 1; i >= 0; i--)
 	{
+		if (!W_IsFilePresent(i))
+			continue;
 		switch (wadfiles[i]->type)
 		{
 		case RET_WAD:

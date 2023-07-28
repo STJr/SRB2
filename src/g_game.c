@@ -45,11 +45,15 @@
 #include "v_video.h"
 #include "lua_hook.h"
 #include "b_bot.h"
+#include "deh_soc.h"
 #include "m_cond.h" // condition sets
-#include "lua_script.h"
 #include "r_fps.h" // frame interpolation/uncapped
-
+#include "lua_script.h"
 #include "lua_hud.h"
+
+#ifdef HWRENDER
+#include "hardware/hw_glob.h"
+#endif
 
 gameaction_t gameaction;
 gamestate_t gamestate = GS_NULL;
@@ -65,9 +69,13 @@ JoyType_t Joystick2;
 // 1024 bytes is plenty for a savegame
 #define SAVEGAMESIZE (1024)
 
-char gamedatafilename[64] = "gamedata.dat";
-char timeattackfolder[64] = "main";
-char customversionstring[32] = "\0";
+#define DEFAULTGAMEDATAFILENAME "gamedata.dat"
+#define DEFAULTTIMEATTACKFOLDER "main"
+#define DEFAULTCUSTOMVERSIONSTR "\0"
+
+char gamedatafilename[64] = DEFAULTGAMEDATAFILENAME;
+char timeattackfolder[64] = DEFAULTTIMEATTACKFOLDER;
+char customversionstring[32] = DEFAULTCUSTOMVERSIONSTR;
 
 static void G_DoCompleted(void);
 static void G_DoStartContinue(void);
@@ -99,15 +107,15 @@ boolean savemoddata = false;
 boolean usedCheats = false; // Set when a gamedata-preventing cheat command is used.
 UINT8 paused;
 UINT8 modeattacking = ATTACKING_NONE;
-boolean disableSpeedAdjust = false;
+boolean disableSpeedAdjust;
 boolean imcontinuing = false;
 boolean runemeraldmanager = false;
-UINT16 emeraldspawndelay = 60*TICRATE;
+UINT16 emeraldspawndelay;
 
 // menu demo things
-UINT8  numDemos      = 0;
-UINT32 demoDelayTime = 15*TICRATE;
-UINT32 demoIdleTime  = 3*TICRATE;
+UINT8  numDemos;
+UINT32 demoDelayTime;
+UINT32 demoIdleTime;
 
 boolean netgame; // only true if packets are broadcast
 boolean multiplayer;
@@ -128,8 +136,8 @@ tic_t timeinmap; // Ticker for time spent in level (used for levelcard display)
 INT16 spstage_start, spmarathon_start;
 INT16 sstage_start, sstage_end, smpstage_start, smpstage_end;
 
-INT16 titlemap = 0;
-boolean hidetitlepics = false;
+INT16 titlemap;
+boolean hidetitlepics;
 INT16 bootmap; //bootmap for loading a map on startup
 
 INT16 tutorialmap = 0; // map to load for tutorial
@@ -140,12 +148,12 @@ INT32 tutorialfreelook = 0; // store cv_alwaysfreelook user value
 INT32 tutorialmousemove = 0; // store cv_mousemove user value
 INT32 tutorialanalog = 0; // store cv_analog[0] user value
 
-boolean looptitle = false;
+boolean looptitle;
 
-UINT16 skincolor_redteam = SKINCOLOR_RED;
-UINT16 skincolor_blueteam = SKINCOLOR_BLUE;
-UINT16 skincolor_redring = SKINCOLOR_SALMON;
-UINT16 skincolor_bluering = SKINCOLOR_CORNFLOWER;
+UINT16 skincolor_redteam;
+UINT16 skincolor_blueteam;
+UINT16 skincolor_redring;
+UINT16 skincolor_bluering;
 
 tic_t countdowntimer = 0;
 boolean countdowntimeup = false;
@@ -199,23 +207,23 @@ boolean CheckForFloatBob;
 boolean CheckForReverseGravity;
 
 // Powerup durations
-UINT16 invulntics = 20*TICRATE;
-UINT16 sneakertics = 20*TICRATE;
-UINT16 flashingtics = 3*TICRATE;
-UINT16 tailsflytics = 8*TICRATE;
-UINT16 underwatertics = 30*TICRATE;
-UINT16 spacetimetics = 11*TICRATE + (TICRATE/2);
-UINT16 extralifetics = 4*TICRATE;
-UINT16 nightslinktics = 2*TICRATE;
+UINT16 invulntics;
+UINT16 sneakertics;
+UINT16 flashingtics;
+UINT16 tailsflytics;
+UINT16 underwatertics;
+UINT16 spacetimetics;
+UINT16 extralifetics;
+UINT16 nightslinktics;
 
-INT32 gameovertics = 11*TICRATE;
+INT32 gameovertics;
 
-UINT8 ammoremovaltics = 2*TICRATE;
+UINT8 ammoremovaltics;
 
-UINT8 use1upSound = 0;
-UINT8 maxXtraLife = 2; // Max extra lives from rings
-UINT8 useContinues = 0; // Set to 1 to enable continues outside of no-save scenarioes
-UINT8 shareEmblems = 0; // Set to 1 to share all picked up emblems in multiplayer
+UINT8 use1upSound;
+UINT8 maxXtraLife; // Max extra lives from rings
+UINT8 useContinues; // Set to 1 to enable continues outside of no-save scenarioes
+UINT8 shareEmblems; // Set to 1 to share all picked up emblems in multiplayer
 
 UINT8 introtoplay;
 UINT8 creditscutscene;
@@ -4328,6 +4336,106 @@ void G_EndGame(void)
 	D_StartTitle();
 }
 
+// Set the game to its initial state.
+void G_InitialState(void)
+{
+	// Delete all skins.
+	R_DelSkins();
+
+	// Stop all sound effects.
+	S_StopSounds();
+	S_ClearSfx();
+
+	for (INT32 i = 0; i < NUMSFX; i++)
+	{
+		if (S_sfx[i].lumpnum != LUMPERROR)
+		{
+			S_RemoveSoundFx(i);
+			I_FreeSfx(&S_sfx[i]);
+		}
+	}
+
+	// delete Lua-added console commands and variables
+	COM_RemoveLuaCommands();
+
+	// Clear the Lua state
+	LUA_Shutdown();
+
+	// Clear unlockables and emblems
+	clear_emblems();
+	clear_unlockables();
+	clear_conditionsets();
+
+	numemblems = 0;
+	numextraemblems = 0;
+
+	// Clear condition sets and level headers
+	P_ClearConditionSets();
+	P_ClearLevels();
+
+	// reload default editable variables
+	G_LoadGameSettings();
+	G_SetDefaultSaveNames();
+	G_SetDefaultDataStrings();
+
+	// clear game data stuff
+	modifiedgame = false;
+	savemoddata = false;
+	usedCheats = false;
+
+	G_ClearRecords(clientGamedata);
+	M_ClearSecrets(clientGamedata);
+
+	ST_RestoreHudInfo();
+
+	DEH_Init();
+
+	P_ResetData(0xFF);
+}
+
+// Restarts or exits the level after file deletion.
+void G_AfterFileDeletion(void)
+{
+	// Load the default game data.
+	G_LoadGameData(clientGamedata);
+	M_CopyGameData(serverGamedata, clientGamedata);
+
+	if (!Playing())
+	{
+		if (gamestate == GS_TITLESCREEN)
+			F_CacheTitleScreen();
+		return;
+	}
+
+	// reset the map
+	if (gamestate == GS_LEVEL || gamestate == GS_INTERMISSION)
+	{
+		ST_Start();
+		// load MAP01 if the current map doesn't exist anymore
+		if (W_CheckNumForName(G_BuildMapName(gamemap)) == LUMPERROR)
+			gamemap = 1;
+		// same deal for nextmap
+		if (W_CheckNumForName(G_BuildMapName(nextmap+1)) == LUMPERROR)
+			nextmap = 0;
+		// ...and nextmapoverride
+		if (W_CheckNumForName(G_BuildMapName(nextmapoverride)) == LUMPERROR)
+			nextmapoverride = 1;
+		if (gamestate == GS_INTERMISSION)
+		{
+			Y_EndIntermission();
+			G_AfterIntermission();
+		}
+		else
+			G_DoLoadLevel(true);
+		return;
+	}
+
+	if (!(netgame || splitscreen))
+		F_StartIntro();
+	else if (server)
+		SendNetXCmd(XD_EXITLEVEL, NULL, 0);
+}
+
 //
 // G_LoadGameSettings
 //
@@ -4342,8 +4450,63 @@ void G_LoadGameSettings(void)
 	smpstage_start = 60;
 	smpstage_end = 66; // 7 multiplayer special stages too
 
+	emeraldspawndelay = 60*TICRATE;
+	disableSpeedAdjust = false;
+
+	// menu demo things
+	numDemos = 0;
+	demoDelayTime = 15*TICRATE;
+	demoIdleTime = 3*TICRATE;
+
+	// team modes skincolors
+	skincolor_redteam = SKINCOLOR_RED;
+	skincolor_blueteam = SKINCOLOR_BLUE;
+	skincolor_redring = SKINCOLOR_SALMON;
+	skincolor_bluering = SKINCOLOR_CORNFLOWER;
+
+	// Powerup durations
+	invulntics = 20*TICRATE;
+	sneakertics = 20*TICRATE;
+	flashingtics = 3*TICRATE;
+	tailsflytics = 8*TICRATE;
+	underwatertics = 30*TICRATE;
+	spacetimetics = 11*TICRATE + (TICRATE/2);
+	extralifetics = 4*TICRATE;
+	nightslinktics = 2*TICRATE;
+
+	gameovertics = 11*TICRATE;
+	ammoremovaltics = 2*TICRATE;
+
+	startchar = 0;
+	use1upSound = 0;
+	maxXtraLife = 2; // Max extra lives from rings
+	useContinues = 0;
+	shareEmblems = 0;
+
+	titlemap = 0;
+	titlescrollxspeed = 20;
+	titlescrollyspeed = 0;
+	ttmode = TTMODE_OLD;
+
+	hidetitlepics = false;
+	looptitle = false;
+	introtoplay = 0;
+
 	// initialize free sfx slots for skin sounds
 	S_InitRuntimeSounds();
+}
+
+void G_SetDefaultSaveNames(void)
+{
+	strcpy(savegamename, basesavegamename);
+	strcpy(liveeventbackup, baseliveeventbackup);
+}
+
+void G_SetDefaultDataStrings(void)
+{
+	strcpy(gamedatafilename, DEFAULTGAMEDATAFILENAME);
+	strcpy(timeattackfolder, DEFAULTTIMEATTACKFOLDER);
+	strcpy(customversionstring, DEFAULTCUSTOMVERSIONSTR);
 }
 
 #define GAMEDATA_ID 0x86E4A27C // Change every major version, as usual
@@ -4708,7 +4871,7 @@ void G_SaveGameData(gamedata_t *data)
 #define VERSIONSIZE 16
 
 //
-// G_InitFromSavegame
+// G_LoadGame
 // Can be called by the startup code or the menu task.
 //
 void G_LoadGame(UINT32 slot, INT16 mapoverride)

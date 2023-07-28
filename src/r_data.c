@@ -232,6 +232,9 @@ static void R_InitExtraColormaps(void)
 
 	for (cfile = clump = 0; cfile < numwadfiles; cfile++, clump = 0)
 	{
+		if (!W_IsFilePresent(cfile))
+			continue;
+
 		startnum = W_CheckNumForNamePwad("C_START", cfile, clump);
 		if (startnum == INT16_MAX)
 			continue;
