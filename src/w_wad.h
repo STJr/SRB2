@@ -182,6 +182,9 @@ void W_UnloadWadFile(UINT16 num);
 // Unloads all addons.
 void W_UnloadAddons(boolean remove_all_addons);
 
+// Call before W_UnloadAddons or W_UnloadWadFile
+void W_ClearCachedData(void);
+
 const char *W_CheckNameForNumPwad(UINT16 wad, UINT16 lump);
 const char *W_CheckNameForNum(lumpnum_t lumpnum);
 

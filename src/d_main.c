@@ -1761,6 +1761,8 @@ void D_SRB2Main(void)
 // Reload all files.
 void D_ReloadFiles(void)
 {
+	game_reloading = true;
+
 	// Set the initial state
 	G_InitialState();
 
@@ -1777,7 +1779,6 @@ void D_ReloadFiles(void)
 	Patch_FreeTag(PU_PATCH_LOWPRIORITY);
 	Patch_FreeTag(PU_PATCH_ROTATED);
 	Patch_FreeTag(PU_SPRITE);
-	Patch_FreeTag(PU_HUDGFX);
 
 	// Load SOC and Lua.
 	for (INT32 i = 0; i < numwadfiles; i++)
@@ -1795,23 +1796,18 @@ void D_ReloadFiles(void)
 	P_InitPicAnims();
 
 	// Flush and reload HUD graphics
-	ST_UnloadGraphics();
 	HU_LoadGraphics();
 	ST_LoadGraphics();
 	ST_ReloadSkinFaceGraphics();
+
+	game_reloading = false;
 }
 
 void D_RestartGame(boolean remove_all_addons)
 {
-	// Remove all addons
+	W_ClearCachedData();
 	W_UnloadAddons(remove_all_addons);
-
-	// Reload all files
-	game_reloading = true;
-
 	D_ReloadFiles();
-
-	game_reloading = false;
 }
 
 const char *D_Home(void)

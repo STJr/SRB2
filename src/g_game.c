@@ -4349,15 +4349,13 @@ void G_InitialState(void)
 	// Delete all skins.
 	R_DelSkins();
 
-	// Stop all sound effects.
-	S_StopSounds();
-	S_ClearSfx();
-
-	for (INT32 i = 0; i < NUMSFX; i++)
+	// Clear all added sound effects.
+	for (INT32 i = sfx_freeslot0; i <= sfx_lastskinsoundslot; i++)
 	{
 		if (S_sfx[i].lumpnum != LUMPERROR)
 		{
-			S_RemoveSoundFx(i);
+			S_sfx[i].lumpnum = LUMPERROR;
+			S_sfx[i].priority = 0;
 			I_FreeSfx(&S_sfx[i]);
 		}
 	}

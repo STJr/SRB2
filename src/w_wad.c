@@ -64,6 +64,8 @@
 #include "i_time.h"
 #include "i_system.h"
 #include "i_video.h" // rendermode
+#include "st_stuff.h"
+#include "hu_stuff.h"
 #include "md5.h"
 #include "lua_script.h"
 #ifdef SCANTHINGS
@@ -1237,11 +1239,25 @@ void W_LoadFileScripts(UINT16 wadfilenum, boolean mainfile)
 	}
 }
 
-/** Unloads a file.
-  */
 void W_UnloadWadFile(UINT16 num)
 {
-	G_SaveGameData(clientGamedata);
+	boolean is_important = wadfiles[num]->important;
+
+	if (is_important)
+		G_SaveGameData(clientGamedata);
+
+	// Clear all added sound effects for this file
+	for (INT32 i = sfx_freeslot0; i <= sfx_lastskinsoundslot; i++)
+	{
+		if (S_sfx[i].lumpnum != LUMPERROR && WADFILENUM(S_sfx[i].lumpnum) == num)
+		{
+			S_sfx[i].lumpnum = LUMPERROR;
+			S_sfx[i].priority = 0;
+			I_FreeSfx(&S_sfx[i]);
+		}
+	}
+
+	W_ClearCachedData();
 
 	W_UnloadFile(wadfiles[num]);
 
@@ -1251,16 +1267,32 @@ void W_UnloadWadFile(UINT16 num)
 	for (UINT16 i = num; i < numwadfiles; i++)
 		wadfiles[i] = wadfiles[i + 1];
 
-	game_reloading = true;
+	if (!is_important)
+	{
+		HU_LoadGraphics();
+		ST_LoadGraphics();
+		ST_ReloadSkinFaceGraphics();
+		S_PlayMapMusic(true);
+		return;
+	}
 
 	D_ReloadFiles();
 
 	G_LoadGameData(clientGamedata);
 	M_CopyGameData(serverGamedata, clientGamedata);
 
-	game_reloading = false;
-
 	G_AfterFileDeletion();
+}
+
+void W_ClearCachedData(void)
+{
+	// Stop all sounds, stop current music
+	S_StopSounds();
+	S_ClearSfx();
+	S_StopMusic();
+
+	// Unload HUD graphics
+	ST_UnloadGraphics();
 }
 
 void W_UnloadAddons(boolean remove_all_addons)

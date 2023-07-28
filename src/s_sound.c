@@ -2431,7 +2431,7 @@ boolean S_FadeOutStopMusic(UINT32 ms)
 // Kills playing sounds at start of level,
 //  determines music if any, changes music.
 //
-void S_StartEx(boolean reset)
+void S_PlayMapMusic(boolean reset)
 {
 	if (mapmusflags & MUSIC_RELOADRESET)
 	{

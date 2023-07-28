@@ -3884,8 +3884,6 @@ static void Got_AddPlayer(UINT8 **p, INT32 playernum)
 
 			// wake up the status bar
 			ST_Start();
-			// wake up the heads up text
-			HU_Start();
 
 			if (camera.chase && !splitscreenplayer)
 				P_ResetCamera(newplayer, &camera);

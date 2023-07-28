@@ -915,7 +915,7 @@ void S_RemoveSoundFx(sfxenum_t id)
 		&& S_sfx[id].priority != 0)
 	{
 		S_sfx[id].lumpnum = LUMPERROR;
-		I_FreeSfx(&S_sfx[id]);
 		S_sfx[id].priority = 0;
+		I_FreeSfx(&S_sfx[id]);
 	}
 }

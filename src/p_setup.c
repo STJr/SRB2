@@ -7846,7 +7846,7 @@ boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate)
 		// As oddly named as this is, this handles music only.
 		// We should be fine starting it here.
 		// Don't do this during titlemap, because the menu code handles music by itself.
-		S_Start();
+		S_PlayMapMusic(false);
 	}
 
 	levelfadecol = (ranspecialwipe) ? 0 : 31;

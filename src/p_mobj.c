@@ -11676,8 +11676,6 @@ void P_AfterPlayerSpawn(INT32 playernum)
 	{
 		// wake up the status bar
 		ST_Start();
-		// wake up the heads up text
-		HU_Start();
 	}
 
 	p->drawangle = mobj->angle;

@@ -403,16 +403,6 @@ void ST_UnLoadFaceGraphics(INT32 skinnum)
 	W_UnlockCachedPatch(superprefix[skinnum]);
 }
 
-static inline void ST_InitData(void)
-{
-	// 'link' the statusbar display to a player, which could be
-	// another player than consoleplayer, for example, when you
-	// change the view in a multiplayer demo with F12.
-	stplyr = &players[displayplayer];
-
-	st_palette = -1;
-}
-
 static inline void ST_Stop(void)
 {
 	if (st_stopped)
@@ -428,7 +418,12 @@ void ST_Start(void)
 	if (!st_stopped)
 		ST_Stop();
 
-	ST_InitData();
+	// 'link' the statusbar display to a player, which could be
+	// another player than consoleplayer, for example, when you
+	// change the view in a multiplayer demo with F12.
+	stplyr = &players[displayplayer];
+
+	st_palette = -1;
 	st_stopped = false;
 }
 
