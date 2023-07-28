@@ -9,7 +9,6 @@
 			"cacheVariables": {
 				"CMAKE_C_FLAGS": "-fdiagnostics-color",
 				"CMAKE_CXX_FLAGS": "-fdiagnostics-color",
-				"SRB2_CONFIG_DEV_BUILD": "ON",
 				"CMAKE_BUILD_TYPE": "RelWithDebInfo"
 			}
 		},
