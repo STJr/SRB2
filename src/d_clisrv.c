@@ -2007,7 +2007,12 @@ static void M_ConfirmAddonWarning(event_t *ev)
 
 	if (ev->key == ' ' || ev->key == 'y' || ev->key == KEY_ENTER || ev->key == KEY_JOY1)
 	{
+		G_SaveGameData(clientGamedata);
+
 		D_RestartGame(false);
+
+		G_LoadGameData(clientGamedata);
+		M_CopyGameData(serverGamedata, clientGamedata);
 
 		F_ReloadTitleScreenGraphics();
 
@@ -3692,6 +3697,13 @@ void SV_ResetServer(void)
 
 	// Ensure synched when creating a new server
 	M_CopyGameData(serverGamedata, clientGamedata);
+
+	if (serverGamedataBackup)
+	{
+		G_ClearRecords(serverGamedataBackup);
+		Z_Free(serverGamedataBackup);
+		serverGamedataBackup = NULL;
+	}
 
 	DEBFILE("\n-=-=-=-=-=-=-= Server Reset =-=-=-=-=-=-=-\n\n");
 }

@@ -218,6 +218,7 @@ typedef struct
 
 extern gamedata_t *clientGamedata;
 extern gamedata_t *serverGamedata;
+extern gamedata_t *serverGamedataBackup;
 
 extern conditionset_t conditionSets[MAXCONDITIONSETS];
 extern emblem_t emblemlocations[MAXEMBLEMS];

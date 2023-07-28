@@ -23,6 +23,7 @@
 
 gamedata_t *clientGamedata; // Our gamedata
 gamedata_t *serverGamedata; // Server's gamedata
+gamedata_t *serverGamedataBackup; // Saved state of the server's gamedata
 
 // Map triggers for linedef executors
 // 32 triggers, one bit each

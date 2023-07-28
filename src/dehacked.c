@@ -575,7 +575,12 @@ static void DEH_LoadDehackedFile(MYFILE *f, boolean mainfile)
 	} // end while
 
 	if (gamedataadded)
+	{
 		G_LoadGameData(clientGamedata);
+
+		serverGamedataBackup = M_NewGameDataStruct();
+		M_CopyGameData(serverGamedataBackup, serverGamedata);
+	}
 
 	if (gamestate == GS_TITLESCREEN)
 	{

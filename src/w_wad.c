@@ -1241,13 +1241,8 @@ void W_LoadFileScripts(UINT16 wadfilenum, boolean mainfile)
   */
 void W_UnloadWadFile(UINT16 num)
 {
-	char wadname[MAX_WADPATH];
-	nameonly(strcpy(wadname, wadfiles[num]->filename));
+	G_SaveGameData(clientGamedata);
 
-	// Save the current configuration file, and the gamedata.
-	D_SaveUserPrefs();
-
-	// Delete the file
 	W_UnloadFile(wadfiles[num]);
 
 	wadfiles[num] = NULL;
@@ -1258,10 +1253,8 @@ void W_UnloadWadFile(UINT16 num)
 
 	game_reloading = true;
 
-	// Set the initial state and reload files.
 	D_ReloadFiles();
 
-	// Load the default game data.
 	G_LoadGameData(clientGamedata);
 	M_CopyGameData(serverGamedata, clientGamedata);
 

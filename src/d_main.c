@@ -1803,9 +1803,6 @@ void D_ReloadFiles(void)
 
 void D_RestartGame(boolean remove_all_addons)
 {
-	// Save the current configuration file, and the gamedata
-	D_SaveUserPrefs();
-
 	// Remove all addons
 	W_UnloadAddons(remove_all_addons);
 
@@ -1814,18 +1811,7 @@ void D_RestartGame(boolean remove_all_addons)
 
 	D_ReloadFiles();
 
-	// Load the default game data
-	G_LoadGameData(clientGamedata);
-	M_CopyGameData(serverGamedata, clientGamedata);
-
 	game_reloading = false;
-}
-
-// Save the current configuration file, and the gamedata.
-void D_SaveUserPrefs(void)
-{
-	M_SaveConfig(NULL);
-	G_SaveGameData(clientGamedata);
 }
 
 const char *D_Home(void)

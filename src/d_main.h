@@ -37,15 +37,8 @@ void D_SRB2Loop(void) FUNCNORETURN;
 // If not overrided by user input, calls D_AdvanceDemo.
 //
 void D_SRB2Main(void);
-
-// Restart the game
 void D_RestartGame(boolean remove_all_addons);
-
-// Set the initial state and reload files.
 void D_ReloadFiles(void);
-
-// Save the current configuration file, and the gamedata.
-void D_SaveUserPrefs(void);
 
 // Called by IO functions when input is detected.
 void D_PostEvent(const event_t *ev);

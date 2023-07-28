@@ -3747,7 +3747,20 @@ static void Got_Unloadaddonscmd(UINT8 **cp, INT32 playernum)
 		return;
 	}
 
+	G_SaveGameData(clientGamedata);
+
 	D_RestartGame(false);
+
+	G_LoadGameData(clientGamedata);
+
+	if (serverGamedataBackup)
+	{
+		M_CopyGameData(serverGamedata, serverGamedataBackup);
+
+		G_ClearRecords(serverGamedataBackup);
+		Z_Free(serverGamedataBackup);
+		serverGamedataBackup = NULL;
+	}
 
 	G_AfterFileDeletion();
 }
