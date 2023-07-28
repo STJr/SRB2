@@ -804,7 +804,7 @@ void G_SetUsedCheats(boolean silent)
 
 boolean G_MapFileExists(INT16 map)
 {
-	return W_CheckNumForName(G_BuildMapName(gamemap)) != LUMPERROR;
+	return W_CheckNumForName(G_BuildMapName(map)) != LUMPERROR;
 }
 
 /** Builds an original game map name from a map number.
