@@ -518,7 +518,9 @@ void R_AddSpriteDefs(UINT16 wadnum)
 	}
 
 	nameonly(strcpy(wadname, wadfiles[wadnum]->filename));
-	CONS_Printf(M_GetText("%s added %d frames in %s sprites\n"), wadname, end-start, sizeu1(addsprites));
+
+	if (!game_reloading)
+		CONS_Printf(M_GetText("%s added %d frames in %s sprites\n"), wadname, end-start, sizeu1(addsprites));
 }
 
 //

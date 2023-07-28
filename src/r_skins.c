@@ -968,17 +968,6 @@ void R_DelSkins(void)
 			}
 		}
 
-		for (j = 0; j < MAXPLAYERS; j++)
-		{
-			if (playeringame[j])
-			{
-				player_t *player = &players[j];
-				skin_t *skin = player->mo->skin;
-				if (!stricmp(skins[i].name, skin->name))
-					SetPlayerSkinByNum(j, 0);
-			}
-		}
-
 		numskins--;
 	}
 

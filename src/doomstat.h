@@ -155,6 +155,8 @@ extern INT32 tutorialanalog; // store cv_analog[0] user value
 
 extern boolean looptitle;
 
+extern boolean game_reloading;
+
 // CTF colors.
 extern UINT16 skincolor_redteam, skincolor_blueteam, skincolor_redring, skincolor_bluering;
 

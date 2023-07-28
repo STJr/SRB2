@@ -150,6 +150,8 @@ INT32 tutorialanalog = 0; // store cv_analog[0] user value
 
 boolean looptitle;
 
+boolean game_reloading;
+
 UINT16 skincolor_redteam;
 UINT16 skincolor_blueteam;
 UINT16 skincolor_redring;
@@ -4401,9 +4403,11 @@ void G_InitialState(void)
 // Restarts or exits the level after file deletion.
 void G_AfterFileDeletion(void)
 {
-	// Load the default game data.
-	G_LoadGameData(clientGamedata);
-	M_CopyGameData(serverGamedata, clientGamedata);
+	for (INT32 i = 0; i < MAXPLAYERS; i++)
+	{
+		if (!playeringame[i] && players[i].skin >= numskins)
+			SetPlayerSkinByNum(i, -1);
+	}
 
 	if (!Playing())
 	{
@@ -4417,15 +4421,15 @@ void G_AfterFileDeletion(void)
 	{
 		ST_Start();
 
-		// load MAP01 if the current map doesn't exist anymore
+		// Load map 1 if the current map doesn't exist anymore
 		if (!G_MapFileExists(gamemap))
 			gamemap = 1;
 
-		// same deal for nextmap
+		// Do the same for nextmap
 		if (nextmap != 0 && !G_MapFileExists(nextmap + 1))
 			nextmap = 0;
 
-		// and nextmapoverride
+		// and nextmapoverride, too
 		if (nextmapoverride != 0 && !G_MapFileExists(nextmapoverride + 1))
 			nextmapoverride = 1;
 
@@ -4441,8 +4445,11 @@ void G_AfterFileDeletion(void)
 
 	if (!(netgame || splitscreen))
 		F_StartIntro();
-	else if (server)
-		SendNetXCmd(XD_EXITLEVEL, NULL, 0);
+	else
+	{
+		// If not on a level, this ends the current cutscene or whatever.
+		G_ExitLevel();
+	}
 }
 
 //

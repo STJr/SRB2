@@ -70,6 +70,7 @@ static void Got_RequestAddfoldercmd(UINT8 **cp, INT32 playernum);
 static void Got_Addfilecmd(UINT8 **cp, INT32 playernum);
 static void Got_Addfoldercmd(UINT8 **cp, INT32 playernum);
 static void Got_Delfilecmd(UINT8 **cp, INT32 playernum);
+static void Got_Unloadaddonscmd(UINT8 **cp, INT32 playernum);
 static void Got_Pause(UINT8 **cp, INT32 playernum);
 static void Got_Suicide(UINT8 **cp, INT32 playernum);
 static void Got_RandomSeed(UINT8 **cp, INT32 playernum);
@@ -128,7 +129,7 @@ static void Command_RunSOC(void);
 static void Command_Pause(void);
 static void Command_Suicide(void);
 
-static void Command_Restartgame(void);
+static void Command_Unloadaddons(void);
 
 static void Command_Version_f(void);
 #ifdef UPDATE_ALERT
@@ -463,6 +464,7 @@ void D_RegisterServerCommands(void)
 	RegisterNetXCmd(XD_REQADDFILE, Got_RequestAddfilecmd);
 	RegisterNetXCmd(XD_REQADDFOLDER, Got_RequestAddfoldercmd);
 	RegisterNetXCmd(XD_DELFILE, Got_Delfilecmd);
+	RegisterNetXCmd(XD_UNLOADADDONS, Got_Unloadaddonscmd);
 	RegisterNetXCmd(XD_PAUSE, Got_Pause);
 	RegisterNetXCmd(XD_SUICIDE, Got_Suicide);
 	RegisterNetXCmd(XD_RUNSOC, Got_RunSOCcmd);
@@ -502,7 +504,7 @@ void D_RegisterServerCommands(void)
 	COM_AddCommand("pause", Command_Pause, COM_LUA);
 	COM_AddCommand("suicide", Command_Suicide, COM_LUA);
 
-	COM_AddCommand("restartgame", Command_Restartgame, 0);
+	COM_AddCommand("unloadaddons", Command_Unloadaddons, 0);
 
 	COM_AddCommand("gametype", Command_ShowGametype_f, COM_LUA);
 	COM_AddCommand("version", Command_Version_f, COM_LUA);
@@ -3717,17 +3719,37 @@ static void Command_Delfile(void)
 	SendNetXCmd(XD_DELFILE, buf, buf_p - buf);
 }
 
-static void Command_Restartgame(void)
+static void Command_Unloadaddons(void)
 {
 	if (netgame)
 	{
-		CONS_Printf(M_GetText("You can't restart the game while in a netgame.\n"));
+		if (!(server || (IsPlayerAdmin(consoleplayer))))
+			CONS_Printf(M_GetText("Only the server or a remote admin can use this.\n"));
+		else
+			SendNetXCmd(XD_UNLOADADDONS, NULL, 0);
 		return;
 	}
 
 	D_RestartGame(true);
 
 	F_StartIntro();
+}
+
+static void Got_Unloadaddonscmd(UINT8 **cp, INT32 playernum)
+{
+	(void)cp;
+
+	if (playernum != serverplayer && !IsPlayerAdmin(playernum))
+	{
+		CONS_Alert(CONS_WARNING, M_GetText("Illegal unloadaddons command received from %s\n"), player_names[playernum]);
+		if (server)
+			SendKick(playernum, KICK_MSG_CON_FAIL | KICK_MSG_KEEP_BODY);
+		return;
+	}
+
+	D_RestartGame(false);
+
+	G_AfterFileDeletion();
 }
 
 static void Got_RequestAddfilecmd(UINT8 **cp, INT32 playernum)

@@ -1809,12 +1809,16 @@ void D_RestartGame(boolean remove_all_addons)
 	// Remove all addons
 	W_UnloadAddons(remove_all_addons);
 
-	// Put everything back on its place
+	// Reload all files
+	game_reloading = true;
+
 	D_ReloadFiles();
 
 	// Load the default game data
 	G_LoadGameData(clientGamedata);
 	M_CopyGameData(serverGamedata, clientGamedata);
+
+	game_reloading = false;
 }
 
 // Save the current configuration file, and the gamedata.

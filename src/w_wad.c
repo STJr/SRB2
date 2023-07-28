@@ -251,7 +251,8 @@ static void W_LoadDehackedLumpsPK3(UINT16 wadnum, boolean mainfile)
 			char *name = malloc(length + 1);
 			sprintf(name, "%s|%s", wadfiles[wadnum]->filename, lump_p->fullname);
 			name[length] = '\0';
-			CONS_Printf(M_GetText("Loading SOC from %s\n"), name);
+			if (!game_reloading)
+				CONS_Printf(M_GetText("Loading SOC from %s\n"), name);
 			DEH_LoadDehackedLumpPwad(wadnum, posStart, mainfile);
 			free(name);
 		}
@@ -281,18 +282,21 @@ static void W_LoadDehackedLumps(UINT16 wadnum, boolean mainfile)
 				sprintf(name, "%s|%s", wadfiles[wadnum]->filename, lump_p->fullname);
 				name[length] = '\0';
 
-				CONS_Printf(M_GetText("Loading SOC from %s\n"), name);
+				if (!game_reloading)
+					CONS_Printf(M_GetText("Loading SOC from %s\n"), name);
 				DEH_LoadDehackedLumpPwad(wadnum, lump, mainfile);
 				free(name);
 			}
 			else if (memcmp(lump_p->name,"MAINCFG",8)==0) // Check for MAINCFG
 			{
-				CONS_Printf(M_GetText("Loading main config from %s\n"), wadfiles[wadnum]->filename);
+				if (!game_reloading)
+					CONS_Printf(M_GetText("Loading main config from %s\n"), wadfiles[wadnum]->filename);
 				DEH_LoadDehackedLumpPwad(wadnum, lump, mainfile);
 			}
 			else if (memcmp(lump_p->name,"OBJCTCFG",8)==0) // Check for OBJCTCFG
 			{
-				CONS_Printf(M_GetText("Loading object config from %s\n"), wadfiles[wadnum]->filename);
+				if (!game_reloading)
+					CONS_Printf(M_GetText("Loading object config from %s\n"), wadfiles[wadnum]->filename);
 				DEH_LoadDehackedLumpPwad(wadnum, lump, mainfile);
 			}
 	}
@@ -1221,7 +1225,8 @@ void W_LoadFileScripts(UINT16 wadfilenum, boolean mainfile)
 			W_LoadDehackedLumpsPK3(wadfilenum, mainfile);
 			break;
 		case RET_SOC:
-			CONS_Printf(M_GetText("Loading SOC from %s\n"), wadfile->filename);
+			if (!game_reloading)
+				CONS_Printf(M_GetText("Loading SOC from %s\n"), wadfile->filename);
 			DEH_LoadDehackedLumpPwad(wadfilenum, 0, mainfile);
 			break;
 		case RET_LUA:
@@ -1251,8 +1256,17 @@ void W_UnloadWadFile(UINT16 num)
 	for (UINT16 i = num; i < numwadfiles; i++)
 		wadfiles[i] = wadfiles[i + 1];
 
+	game_reloading = true;
+
 	// Set the initial state and reload files.
 	D_ReloadFiles();
+
+	// Load the default game data.
+	G_LoadGameData(clientGamedata);
+	M_CopyGameData(serverGamedata, clientGamedata);
+
+	game_reloading = false;
+
 	G_AfterFileDeletion();
 }
 
