@@ -19,6 +19,10 @@
 #cmakedefine SRB2_COMP_UNCOMMITTED
 #ifdef SRB2_COMP_UNCOMMITTED
 #define COMPVERSION_UNCOMMITTED
+#endif
+
+#define CMAKE_BUILD_TYPE         "${CMAKE_BUILD_TYPE}"
+#cmakedefine01 SRB2_COMP_OPTIMIZED
 
 #endif
 
@@ -40,4 +44,6 @@
 #define ASSET_HASH_PLAYER_DTA "2e7aaae8a6b1b77d90ffe7606ceadb6c"
 #ifdef USE_PATCH_DTA
 #define ASSET_HASH_PATCH_PK3  "2e69558bce3b9610624549a75e29e19b"
+#endif
+
 #endif

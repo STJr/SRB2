@@ -71,6 +71,13 @@
 #include "g_input.h" // tutorial mode control scheming
 #include "m_perfstats.h"
 #include "m_random.h"
+#include "command.h"
+
+#ifdef CMAKECONFIG
+#include "config.h"
+#else
+#include "config.h.in"
+#endif
 
 #ifdef HWRENDER
 #include "hardware/hw_main.h" // 3D View Rendering
@@ -1373,7 +1380,7 @@ void D_SRB2Main(void)
 	// Do this up here so that WADs loaded through the command line can use ExecCfg
 	COM_Init();
 
-	COM_AddCommand("assert", Command_assert);
+	COM_AddCommand("assert", Command_assert, COM_LUA);
 
 	// Add any files specified on the command line with
 	// "-file <file>" or "-folder <folder>" to the add-on list
