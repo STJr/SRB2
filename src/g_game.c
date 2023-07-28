@@ -4407,8 +4407,8 @@ void G_AfterFileDeletion(void)
 
 	if (!Playing())
 	{
-		if (gamestate == GS_TITLESCREEN)
-			F_CacheTitleScreen();
+		if (gamestate == GS_TITLESCREEN || gamestate == GS_WAITINGPLAYERS)
+			F_ReloadTitleScreenGraphics();
 		return;
 	}
 

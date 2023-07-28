@@ -1256,6 +1256,29 @@ void W_UnloadWadFile(UINT16 num)
 	G_AfterFileDeletion();
 }
 
+void W_UnloadAddons(boolean remove_all_addons)
+{
+	for (UINT16 i = mainwads + 1; i < numwadfiles;)
+	{
+		if (wadfiles[i])
+		{
+			if (!remove_all_addons && !wadfiles[i]->important)
+			{
+				i++;
+				continue;
+			}
+
+			W_UnloadFile(wadfiles[i]);
+			wadfiles[i] = NULL;
+		}
+
+		numwadfiles--;
+
+		for (UINT16 j = i; j < numwadfiles; j++)
+			wadfiles[j] = wadfiles[j + 1];
+	}
+}
+
 /** Make sure a lump number is valid.
   * Compiles away to nothing if PARANOIA is not defined.
   */

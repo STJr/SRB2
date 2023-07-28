@@ -42,6 +42,7 @@ void F_IntroDrawer(void);
 void F_TitleScreenDrawer(void);
 void F_SkyScroll(const char *patchname);
 void F_CacheTitleScreen(void);
+void F_ReloadTitleScreenGraphics(void);
 
 void F_GameEvaluationDrawer(void);
 void F_StartGameEvaluation(void);

@@ -3719,7 +3719,15 @@ static void Command_Delfile(void)
 
 static void Command_Restartgame(void)
 {
-	D_RestartGame();
+	if (netgame)
+	{
+		CONS_Printf(M_GetText("You can't restart the game while in a netgame.\n"));
+		return;
+	}
+
+	D_RestartGame(true);
+
+	F_StartIntro();
 }
 
 static void Got_RequestAddfilecmd(UINT8 **cp, INT32 playernum)

@@ -1994,92 +1994,149 @@ void CL_UpdateServerList(boolean internetsearch, INT32 room)
 
 #endif // ifndef NONET
 
-static void M_ConfirmConnect(event_t *ev)
+static void CL_LoadFiles(void)
+{
+	cl_mode = CL_LOADFILES;
+}
+
+static void M_ConfirmAddonWarning(event_t *ev)
 {
 #ifndef NONET
-	if (ev->type == ev_keydown)
-	{
-		if (ev->key == ' ' || ev->key == 'y' || ev->key == KEY_ENTER || ev->key == KEY_JOY1)
-		{
-			if (totalfilesrequestednum > 0)
-			{
-				if (CL_SendFileRequest())
-				{
-					cl_mode = CL_DOWNLOADFILES;
-					Snake_Initialise();
-				}
-			}
-			else
-				cl_mode = CL_LOADFILES;
+	if (ev->type != ev_keydown)
+		return;
 
-			M_ClearMenus(true);
-		}
-		else if (ev->key == 'n' || ev->key == KEY_ESCAPE || ev->key == KEY_JOY1 + 3)
-		{
-			cl_mode = CL_ABORTED;
-			M_ClearMenus(true);
-		}
+	if (ev->key == ' ' || ev->key == 'y' || ev->key == KEY_ENTER || ev->key == KEY_JOY1)
+	{
+		D_RestartGame(false);
+
+		F_ReloadTitleScreenGraphics();
+
+		M_StopMessage(0);
+		menuactive = false;
+		stopstopmessage = true;
+
+		cl_mode = CL_CHECKFILES;
+	}
+	else if (ev->key == 'n' || ev->key == KEY_ESCAPE || ev->key == KEY_JOY1 + 3)
+	{
+		cl_mode = CL_ABORTED;
+		M_ClearMenus(true);
 	}
 #else
 	(void)ev;
 #endif
 }
 
-static boolean CL_FinishedFileList(void)
+static void M_ConfirmConnect(event_t *ev)
 {
-	INT32 i;
+#ifndef NONET
+	if (ev->type != ev_keydown)
+		return;
+
+	if (ev->key == ' ' || ev->key == 'y' || ev->key == KEY_ENTER || ev->key == KEY_JOY1)
+	{
+		if (totalfilesrequestednum > 0)
+		{
+			if (CL_SendFileRequest())
+			{
+				cl_mode = CL_DOWNLOADFILES;
+				Snake_Initialise();
+			}
+		}
+		else
+			CL_LoadFiles();
+
+		M_ClearMenus(true);
+	}
+	else if (ev->key == 'n' || ev->key == KEY_ESCAPE || ev->key == KEY_JOY1 + 3)
+	{
+		cl_mode = CL_ABORTED;
+		M_ClearMenus(true);
+	}
+#else
+	(void)ev;
+#endif
+}
+
+static void M_ShowFileConsentMessage(void)
+{
+#ifndef NONET
 	char *downloadsize = NULL;
 
-	//CONS_Printf(M_GetText("Checking files...\n"));
-	i = CL_CheckFiles();
+	if (totalfilesrequestedsize>>20 >= 100)
+		downloadsize = Z_StrDup(va("%uM",totalfilesrequestedsize>>20));
+	else
+		downloadsize = Z_StrDup(va("%uK",totalfilesrequestedsize>>10));
+
+	if (serverisfull)
+		M_StartMessage(va(M_GetText(
+			"This server is full!\n"
+			"Download of %s additional content\nis required to join.\n"
+			"\n"
+			"You may download, load server addons,\nand wait for a slot.\n"
+			"\n"
+			"Press ENTER to continue\nor ESC to cancel.\n"
+		), downloadsize), M_ConfirmConnect, MM_EVENTHANDLER);
+	else
+		M_StartMessage(va(M_GetText(
+			"Download of %s additional content\nis required to join.\n"
+			"\n"
+			"Press ENTER to continue\nor ESC to cancel.\n"
+		), downloadsize), M_ConfirmConnect, MM_EVENTHANDLER);
+
+	Z_Free(downloadsize);
+#endif
+}
+
+static boolean CL_FinishedFileList(void)
+{
+	INT32 i = CL_CheckFiles();
 	if (i == 4) // still checking ...
 	{
 		return true;
 	}
-	else if (i == 3) // too many files
+	else if (i == 3 || i == 2) // too many files, or the wrong addons are loaded
 	{
-		D_QuitNetGame();
-		CL_Reset();
-		D_StartTitle();
-		M_StartMessage(M_GetText(
-			"You have too many WAD files loaded\n"
-			"to add ones the server is using.\n"
-			"Please restart SRB2 before connecting.\n\n"
-			"Press ESC\n"
-		), NULL, MM_NOTHING);
-		return false;
-	}
-	else if (i == 2) // cannot join for some reason
-	{
-		D_QuitNetGame();
-		CL_Reset();
-		D_StartTitle();
-		M_StartMessage(M_GetText(
-			"You have the wrong addons loaded.\n\n"
-			"To play on this server, restart\n"
-			"the game and don't load any addons.\n"
-			"SRB2 will automatically add\n"
-			"everything you need when you join.\n\n"
-			"Press ESC\n"
-		), NULL, MM_NOTHING);
-		return false;
+		const char *message;
+		if (i == 3)
+		{
+			message = M_GetText(
+				"You have too many addons loaded\n"
+				"to add ones the server is using.\n\n"
+				"To play on this server, the game\n"
+				"will unload your current\n"
+				"addons before you join.\n\n"
+				"Press ENTER to continue\nor ESC to cancel\n"
+			);
+		}
+		else
+		{
+			message = M_GetText(
+				"You have the wrong addons loaded.\n\n"
+				"To play on this server, the game\n"
+				"will unload your current\n"
+				"addons before you join.\n\n"
+				"Press ENTER to continue\nor ESC to cancel\n"
+			);
+		}
+		M_StartMessage(message, M_ConfirmAddonWarning, MM_EVENTHANDLER);
+		cl_mode = CL_CONFIRMCONNECT;
+		curfadevalue = 0;
 	}
 	else if (i == 1)
 	{
 		if (serverisfull)
 		{
 			M_StartMessage(M_GetText(
-				"This server is full!\n"
-				"\n"
-				"You may load server addons (if any), and wait for a slot.\n"
-				"\n"
-				"Press ENTER to continue\nor ESC to cancel.\n\n"
+				"This server is full!\n\n"
+				"You may load server addons (if any), and wait for a slot.\n\n"
+				"Press ENTER to continue\nor ESC to cancel\n"
 			), M_ConfirmConnect, MM_EVENTHANDLER);
 			cl_mode = CL_CONFIRMCONNECT;
 			curfadevalue = 0;
 		}
 		else
-			cl_mode = CL_LOADFILES;
+			CL_LoadFiles();
 	}
 	else
 	{
@@ -2118,29 +2175,9 @@ static boolean CL_FinishedFileList(void)
 				totalfilesrequestedsize += fileneeded[i].totalsize;
 			}
 
-		if (totalfilesrequestedsize>>20 >= 100)
-			downloadsize = Z_StrDup(va("%uM",totalfilesrequestedsize>>20));
-		else
-			downloadsize = Z_StrDup(va("%uK",totalfilesrequestedsize>>10));
+		M_ShowFileConsentMessage();
 #endif
 
-		if (serverisfull)
-			M_StartMessage(va(M_GetText(
-				"This server is full!\n"
-				"Download of %s additional content\nis required to join.\n"
-				"\n"
-				"You may download, load server addons,\nand wait for a slot.\n"
-				"\n"
-				"Press ENTER to continue\nor ESC to cancel.\n"
-			), downloadsize), M_ConfirmConnect, MM_EVENTHANDLER);
-		else
-			M_StartMessage(va(M_GetText(
-				"Download of %s additional content\nis required to join.\n"
-				"\n"
-				"Press ENTER to continue\nor ESC to cancel.\n"
-			), downloadsize), M_ConfirmConnect, MM_EVENTHANDLER);
-
-		Z_Free(downloadsize);
 		cl_mode = CL_CONFIRMCONNECT;
 		curfadevalue = 0;
 	}
@@ -2364,7 +2401,7 @@ static boolean CL_ServerConnectionTicker(const char *tmpsave, tic_t *oldtic, tic
 			}
 #endif
 
-			cl_mode = CL_LOADFILES;
+			CL_LoadFiles();
 			break;
 		case CL_LOADFILES:
 			if (CL_LoadServerFiles())

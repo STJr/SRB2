@@ -1801,34 +1801,20 @@ void D_ReloadFiles(void)
 	ST_ReloadSkinFaceGraphics();
 }
 
-void D_RestartGame(void)
+void D_RestartGame(boolean remove_all_addons)
 {
-	if (netgame)
-	{
-		CONS_Printf(M_GetText("You can't restart the game while in a netgame.\n"));
-		return;
-	}
-
-	// Save the current configuration file, and the gamedata.
+	// Save the current configuration file, and the gamedata
 	D_SaveUserPrefs();
 
-	// We're deleting some files
-	while (numwadfiles > mainwads + 1) // don't delete music.dta
-	{
-		W_UnloadFile(wadfiles[numwadfiles - 1]);
-		wadfiles[numwadfiles - 1] = NULL;
-		numwadfiles--;
-	}
+	// Remove all addons
+	W_UnloadAddons(remove_all_addons);
 
 	// Put everything back on its place
 	D_ReloadFiles();
 
-	// Load the default game data.
+	// Load the default game data
 	G_LoadGameData(clientGamedata);
 	M_CopyGameData(serverGamedata, clientGamedata);
-
-	// Done. Start the intro.
-	F_StartIntro();
 }
 
 // Save the current configuration file, and the gamedata.

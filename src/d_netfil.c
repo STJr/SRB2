@@ -456,7 +456,6 @@ INT32 CL_CheckFiles(void)
 
 	// Modified game handling -- check for an identical file list
 	// must be identical in files loaded AND in order
-	// Return 2 on failure -- disconnect from server
 	if (modifiedgame)
 	{
 		CONS_Debug(DBG_NETPLAY, "game is modified; only doing basic checks\n");

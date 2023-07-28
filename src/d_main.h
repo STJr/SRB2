@@ -39,7 +39,7 @@ void D_SRB2Loop(void) FUNCNORETURN;
 void D_SRB2Main(void);
 
 // Restart the game
-void D_RestartGame(void);
+void D_RestartGame(boolean remove_all_addons);
 
 // Set the initial state and reload files.
 void D_ReloadFiles(void);

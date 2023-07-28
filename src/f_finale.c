@@ -2630,6 +2630,17 @@ static void F_FigureActiveTtScale(void)
 		F_LoadAlacroixGraphics(activettscale);
 }
 
+void F_ReloadTitleScreenGraphics(void)
+{
+	if (curttmode == TTMODE_ALACROIX)
+	{
+		activettscale = 0;
+		F_FigureActiveTtScale();
+	}
+	else
+		F_CacheTitleScreen();
+}
+
 // (no longer) De-Demo'd Title Screen
 void F_TitleScreenDrawer(void)
 {

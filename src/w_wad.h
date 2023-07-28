@@ -179,6 +179,9 @@ void W_LoadFileScripts(UINT16 wadfilenum, boolean mainfile);
 // Unloads a file.
 void W_UnloadWadFile(UINT16 num);
 
+// Unloads all addons.
+void W_UnloadAddons(boolean remove_all_addons);
+
 const char *W_CheckNameForNumPwad(UINT16 wad, UINT16 lump);
 const char *W_CheckNameForNum(lumpnum_t lumpnum);
 
