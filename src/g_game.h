@@ -110,6 +110,8 @@ INT32 Joy2Axis(joyaxis_e axissel);
 #define MAXPLMOVE (50)
 #define SLOWTURNTICS (6)
 
+boolean G_MapFileExists(INT16 map);
+
 // build an internal map name MAPxx from map number
 const char *G_BuildMapName(INT32 map);
 

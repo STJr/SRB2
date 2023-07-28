@@ -802,6 +802,11 @@ void G_SetUsedCheats(boolean silent)
 		Command_ExitGame_f();
 }
 
+boolean G_MapFileExists(INT16 map)
+{
+	return W_CheckNumForName(G_BuildMapName(gamemap)) != LUMPERROR;
+}
+
 /** Builds an original game map name from a map number.
   * The complexity is due to MAPA0-MAPZZ.
   *
@@ -1847,7 +1852,7 @@ void G_DoLoadLevel(boolean resetplayer)
 	// cleanup
 	if (titlemapinaction == TITLEMAP_LOADING)
 	{
-		if (W_CheckNumForName(G_BuildMapName(gamemap)) == LUMPERROR)
+		if (!G_MapFileExists(gamemap))
 		{
 			titlemap = 0; // let's not infinite recursion ok
 			Command_ExitGame_f();
@@ -4091,7 +4096,7 @@ static void G_DoCompleted(void)
 					cm = nextmap; //Start the loop again so that the error checking below is executed.
 
 					//Make sure the map actually exists before you try to go to it!
-					if ((W_CheckNumForName(G_BuildMapName(cm + 1)) == LUMPERROR))
+					if (!G_MapFileExists(cm + 1))
 					{
 						CONS_Alert(CONS_ERROR, M_GetText("Next map given (MAP %d) doesn't exist! Reverting to MAP01.\n"), cm+1);
 						cm = 0;
@@ -4411,15 +4416,19 @@ void G_AfterFileDeletion(void)
 	if (gamestate == GS_LEVEL || gamestate == GS_INTERMISSION)
 	{
 		ST_Start();
+
 		// load MAP01 if the current map doesn't exist anymore
-		if (W_CheckNumForName(G_BuildMapName(gamemap)) == LUMPERROR)
+		if (!G_MapFileExists(gamemap))
 			gamemap = 1;
+
 		// same deal for nextmap
-		if (W_CheckNumForName(G_BuildMapName(nextmap+1)) == LUMPERROR)
+		if (nextmap != 0 && !G_MapFileExists(nextmap + 1))
 			nextmap = 0;
-		// ...and nextmapoverride
-		if (W_CheckNumForName(G_BuildMapName(nextmapoverride)) == LUMPERROR)
+
+		// and nextmapoverride
+		if (nextmapoverride != 0 && !G_MapFileExists(nextmapoverride + 1))
 			nextmapoverride = 1;
+
 		if (gamestate == GS_INTERMISSION)
 		{
 			Y_EndIntermission();

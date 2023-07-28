@@ -1237,19 +1237,19 @@ void W_LoadFileScripts(UINT16 wadfilenum, boolean mainfile)
 void W_UnloadWadFile(UINT16 num)
 {
 	char wadname[MAX_WADPATH];
-
-	if (num == numwadfiles-1)
-		numwadfiles--;
-
 	nameonly(strcpy(wadname, wadfiles[num]->filename));
-	CONS_Printf(M_GetText("Removing file %s...\n"), wadname);
 
 	// Save the current configuration file, and the gamedata.
 	D_SaveUserPrefs();
 
 	// Delete the file
 	W_UnloadFile(wadfiles[num]);
+
 	wadfiles[num] = NULL;
+	numwadfiles--;
+
+	for (UINT16 i = num; i < numwadfiles; i++)
+		wadfiles[i] = wadfiles[i + 1];
 
 	// Set the initial state and reload files.
 	D_ReloadFiles();
