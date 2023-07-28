@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2021 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -11,6 +11,7 @@
 /// \brief Floor splats
 
 #include "r_draw.h"
+#include "r_fps.h"
 #include "r_main.h"
 #include "r_splats.h"
 #include "r_bsp.h"
@@ -190,7 +191,7 @@ void R_DrawFloorSplat(vissprite_t *spr)
 		splatangle = spr->viewpoint.angle;
 
 	if (!(spr->cut & SC_ISROTATED))
-		splatangle += mobj->rollangle;
+		splatangle += mobj->spriteroll;
 
 	splat.angle = -splatangle;
 	splat.angle += ANGLE_90;
@@ -216,7 +217,7 @@ void R_DrawFloorSplat(vissprite_t *spr)
 
 	splat.x = x;
 	splat.y = y;
-	splat.z = mobj->z;
+	splat.z = spr->pz;
 	splat.slope = NULL;
 
 	// Set positions
@@ -263,8 +264,8 @@ void R_DrawFloorSplat(vissprite_t *spr)
 	// Translate
 	for (i = 0; i < 4; i++)
 	{
-		tr_x = rotated[i].x + x;
-		tr_y = rotated[i].y + y;
+		tr_x = rotated[i].x + mobj->x;
+		tr_y = rotated[i].y + mobj->y;
 
 		if (splat.slope)
 		{
@@ -292,8 +293,8 @@ void R_DrawFloorSplat(vissprite_t *spr)
 		tr_y = v3d->y - spr->viewpoint.y;
 
 		// rotation around vertical y axis
-		rot_x = FixedMul(tr_x, sa) - FixedMul(tr_y, ca);
-		rot_y = FixedMul(tr_x, ca) + FixedMul(tr_y, sa);
+		rot_x = FixedMul(tr_x - (mobj->x - x), sa) - FixedMul(tr_y - (mobj->y - y), ca);
+		rot_y = FixedMul(tr_x - (mobj->x - x), ca) + FixedMul(tr_y - (mobj->y - y), sa);
 		rot_z = v3d->z - spr->viewpoint.z;
 
 		if (rot_y < FRACUNIT)
@@ -390,9 +391,13 @@ static void R_RasterizeFloorSplat(floorsplat_t *pSplat, vector2_t *verts, visspr
 	ds_source = (UINT8 *)pSplat->pic;
 	ds_flatwidth = pSplat->width;
 	ds_flatheight = pSplat->height;
+	ds_powersoftwo = false;
 
 	if (R_CheckPowersOfTwo())
-		R_CheckFlatLength(ds_flatwidth * ds_flatheight);
+	{
+		R_SetFlatVars(ds_flatwidth * ds_flatheight);
+		ds_powersoftwo = true;
+	}
 
 	if (pSplat->slope)
 	{
@@ -482,7 +487,7 @@ static void R_RasterizeFloorSplat(floorsplat_t *pSplat, vector2_t *verts, visspr
 			continue;
 
 		for (i = x1; i <= x2; i++)
-			cliptab[i] = (y >= mfloorclip[i]);
+			cliptab[i] = (y >= mfloorclip[i] || y <= mceilingclip[i]);
 
 		// clip left
 		while (cliptab[x1])

@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2004      by Stephen McGranahan
-// Copyright (C) 2015-2021 by Sonic Team Junior.
+// Copyright (C) 2015-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -44,7 +44,8 @@ typedef enum
 typedef enum
 {
 	TMSL_NOPHYSICS = 1,
-	TMSL_DYNAMIC = 2,
+	TMSL_DYNAMIC   = 1<<1,
+	TMSL_COPY      = 1<<2,
 } textmapslopeflags_t;
 
 void P_LinkSlopeThinkers (void);
@@ -95,26 +96,29 @@ typedef enum {
 	DP_FRONTCEIL,
 	DP_BACKFLOOR,
 	DP_BACKCEIL,
-	DP_VERTEX
 } dynplanetype_t;
 
 /// Permit slopes to be dynamically altered through a thinker.
 typedef struct
 {
 	thinker_t thinker;
-
-	pslope_t* slope;
+	pslope_t *slope;
 	dynplanetype_t type;
-
-	// Used by line slopes.
-	line_t* sourceline;
+	line_t *sourceline;
 	fixed_t extent;
+} dynlineplanethink_t;
 
-	// Used by mapthing vertex slopes.
-	INT16 tags[3];
+typedef struct
+{
+	thinker_t thinker;
+	pslope_t *slope;
+	sector_t *secs[3];
 	vector3_t vex[3];
-} dynplanethink_t;
+	fixed_t origsecheights[3];
+	fixed_t origvecheights[3];
+	UINT8 relative;
+} dynvertexplanethink_t;
 
-void T_DynamicSlopeLine (dynplanethink_t* th);
-void T_DynamicSlopeVert (dynplanethink_t* th);
+void T_DynamicSlopeLine (dynlineplanethink_t* th);
+void T_DynamicSlopeVert (dynvertexplanethink_t* th);
 #endif // #ifndef P_SLOPES_H__

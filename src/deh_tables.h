@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2021 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -30,6 +30,7 @@ extern UINT8 used_spr[(NUMSPRITEFREESLOTS / 8) + 1]; // Bitwise flag for sprite 
 	memset(FREE_MOBJS,0,sizeof(char *) * NUMMOBJFREESLOTS);\
 	memset(FREE_SKINCOLORS,0,sizeof(char *) * NUMCOLORFREESLOTS);\
 	memset(used_spr,0,sizeof(UINT8) * ((NUMSPRITEFREESLOTS / 8) + 1));\
+	memset(actionsoverridden, LUA_REFNIL, sizeof(actionsoverridden));\
 }
 
 struct flickytypes_s {
@@ -64,7 +65,11 @@ extern const char *const MOBJEFLAG_LIST[];
 extern const char *const MAPTHINGFLAG_LIST[4];
 extern const char *const PLAYERFLAG_LIST[];
 extern const char *const GAMETYPERULE_LIST[];
-extern const char *const ML_LIST[16]; // Linedef flags
+extern const char *const ML_LIST[]; // Linedef flags
+extern const char *const MSF_LIST[]; // Sector flags
+extern const char *const SSF_LIST[]; // Sector special flags
+extern const char *const SD_LIST[]; // Sector damagetype
+extern const char *const TO_LIST[]; // Sector triggerer
 extern const char *COLOR_ENUMS[];
 extern const char *const POWERS_LIST[];
 extern const char *const HUDITEMS_LIST[];

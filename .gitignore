@@ -21,3 +21,5 @@ Win32_LIB_ASM_Release
 /assets/debian
 /make
 /bin
+/build
+/build/*

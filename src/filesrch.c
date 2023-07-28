@@ -39,6 +39,7 @@
 
 #define SUFFIX	"*"
 #define	SLASH	"\\"
+#define	S_ISREG(m)	(((m) & S_IFMT) == S_IFREG)
 #define	S_ISDIR(m)	(((m) & S_IFMT) == S_IFDIR)
 
 #ifndef INVALID_FILE_ATTRIBUTES
@@ -307,6 +308,39 @@ closedir (DIR * dirp)
 }
 #endif
 
+// fopen but it REALLY only works on regular files
+// Turns out, on linux, anyway, you can fopen directories
+// in read mode. (It's supposed to fail in write mode
+// though!!)
+FILE *fopenfile(const char *path, const char *mode)
+{
+	FILE *h = fopen(path, mode);
+
+	if (h != NULL)
+	{
+		struct stat st;
+		int eno;
+
+		if (fstat(fileno(h), &st) == -1)
+		{
+			eno = errno;
+		}
+		else if (!S_ISREG(st.st_mode))
+		{
+			eno = EACCES; // set some kinda error
+		}
+		else
+		{
+			return h; // ok
+		}
+
+		fclose(h);
+		errno = eno;
+	}
+
+	return NULL;
+}
+
 static CV_PossibleValue_t addons_cons_t[] = {{0, "Default"},
 #if 1
 												{1, "HOME"}, {2, "SRB2"},
@@ -337,9 +371,6 @@ size_t sizedirmenu, sizecoredirmenu; // ditto
 size_t dir_on[menudepth];
 UINT8 refreshdirmenu = 0;
 char *refreshdirname = NULL;
-
-size_t packetsizetally = 0;
-size_t mainwadstally = 0;
 
 #define dirpathlen 1024
 #define maxdirdepth 48
@@ -715,9 +746,9 @@ lumpinfo_t *getdirectoryfiles(const char *path, UINT16 *nlmp, UINT16 *nfolders)
 	// Close any open directories and return if something went wrong.
 	if (failure)
 	{
+		for (; depthleft < maxdirdepth; closedir(dirhandle[depthleft++]));
 		free(dirpathindex);
 		free(dirhandle);
-		for (; depthleft < maxdirdepth; closedir(dirhandle[depthleft++]));
 		return NULL;
 	}
 
@@ -800,6 +831,7 @@ lumpinfo_t *getdirectoryfiles(const char *path, UINT16 *nlmp, UINT16 *nfolders)
 		// The complete name of the file, with its extension,
 		// excluding the path of the directory where it resides.
 		lump_p->fullname = Z_StrDup(fullname);
+		lump_p->hash = quickncasehash(lump_p->name, 8);
 
 		lump_p++;
 		i++;
@@ -830,7 +862,7 @@ char exttable[NUM_EXT_TABLE][7] = { // maximum extension length (currently 4) pl
 #endif
 	"\5.pk3", "\5.soc", "\5.lua"}; // addfile
 
-char filenamebuf[MAX_WADFILES][MAX_WADPATH];
+static char (*filenamebuf)[MAX_WADPATH];
 
 static boolean filemenucmp(char *haystack, char *needle)
 {
@@ -1102,6 +1134,10 @@ boolean preparefilemenu(boolean samedepth)
 				if (ext >= EXT_LOADSTART)
 				{
 					size_t i;
+
+					if (filenamebuf == NULL)
+						filenamebuf = calloc(sizeof(char) * MAX_WADPATH, numwadfiles);
+
 					for (i = 0; i < numwadfiles; i++)
 					{
 						if (!filenamebuf[i][0])
@@ -1149,6 +1185,12 @@ boolean preparefilemenu(boolean samedepth)
 			else
 				coredirmenu[numfolders + pos++] = temp;
 		}
+	}
+
+	if (filenamebuf)
+	{
+		free(filenamebuf);
+		filenamebuf = NULL;
 	}
 
 	closedir(dirhandle);

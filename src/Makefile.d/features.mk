@@ -39,7 +39,7 @@ $(eval $(call Configure,PNG,$(PNG_CONFIG) \
 	$(if $(PNG_STATIC),--static),,--ldflags))
 endif
 ifdef LINUX
-opts+=-D_LARGFILE64_SOURCE
+opts+=-D_LARGEFILE64_SOURCE
 endif
 opts+=-DHAVE_PNG
 sources+=apng.c

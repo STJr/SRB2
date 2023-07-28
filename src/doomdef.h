@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2021 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -104,6 +104,8 @@
 #include <io.h>
 #endif
 
+FILE *fopenfile(const char*, const char*);
+
 //#define NOMD5
 
 // Uncheck this to compile debugging code
@@ -151,6 +153,9 @@ extern char logfilename[1024];
 // Does this version require an added patch file?
 // Comment or uncomment this as necessary.
 #define USE_PATCH_DTA
+
+// Enforce a limit of loaded WAD files.
+//#define ENFORCE_WAD_LIMIT
 
 // Use .kart extension addons
 //#define USE_KART
@@ -256,66 +261,111 @@ typedef enum
 	// Desaturated
 	SKINCOLOR_AETHER,
 	SKINCOLOR_SLATE,
+	SKINCOLOR_METEORITE,
+	SKINCOLOR_MERCURY,
 	SKINCOLOR_BLUEBELL,
 	SKINCOLOR_PINK,
+	SKINCOLOR_ROSEWOOD,
 	SKINCOLOR_YOGURT,
+	SKINCOLOR_LATTE,
 	SKINCOLOR_BROWN,
+	SKINCOLOR_BOULDER,
 	SKINCOLOR_BRONZE,
+	SKINCOLOR_SEPIA,
+	SKINCOLOR_ECRU,
 	SKINCOLOR_TAN,
 	SKINCOLOR_BEIGE,
+	SKINCOLOR_ROSEBUSH,
 	SKINCOLOR_MOSS,
 	SKINCOLOR_AZURE,
+	SKINCOLOR_EGGPLANT,
 	SKINCOLOR_LAVENDER,
 
 	// Viv's vivid colours (toast 21/07/17)
+	// Tweaks & additions (Lach, sphere, Alice, MotorRoach 26/10/22)
 	SKINCOLOR_RUBY,
+	SKINCOLOR_CHERRY,
 	SKINCOLOR_SALMON,
+	SKINCOLOR_PEPPER,
 	SKINCOLOR_RED,
 	SKINCOLOR_CRIMSON,
 	SKINCOLOR_FLAME,
+	SKINCOLOR_GARNET,
 	SKINCOLOR_KETCHUP,
 	SKINCOLOR_PEACHY,
 	SKINCOLOR_QUAIL,
+	SKINCOLOR_FOUNDATION,
 	SKINCOLOR_SUNSET,
 	SKINCOLOR_COPPER,
 	SKINCOLOR_APRICOT,
 	SKINCOLOR_ORANGE,
+	SKINCOLOR_PUMPKIN,
 	SKINCOLOR_RUST,
 	SKINCOLOR_GOLD,
+	SKINCOLOR_TOPAZ,
 	SKINCOLOR_SANDY,
+	SKINCOLOR_GOLDENROD,
 	SKINCOLOR_YELLOW,
 	SKINCOLOR_OLIVE,
+	SKINCOLOR_PEAR,
+	SKINCOLOR_LEMON,
 	SKINCOLOR_LIME,
 	SKINCOLOR_PERIDOT,
 	SKINCOLOR_APPLE,
+	SKINCOLOR_CHARTREUSE,
 	SKINCOLOR_GREEN,
 	SKINCOLOR_FOREST,
-	SKINCOLOR_EMERALD,
+	SKINCOLOR_SHAMROCK,
+	SKINCOLOR_JADE,
+	SKINCOLOR_HEADLIGHT,
 	SKINCOLOR_MINT,
+	SKINCOLOR_MASTER,
+	SKINCOLOR_EMERALD,
+	SKINCOLOR_BOTTLE,
 	SKINCOLOR_SEAFOAM,
+	SKINCOLOR_ISLAND,
 	SKINCOLOR_AQUA,
 	SKINCOLOR_TEAL,
 	SKINCOLOR_WAVE,
 	SKINCOLOR_CYAN,
+	SKINCOLOR_TURQUOISE,
+	SKINCOLOR_AQUAMARINE,
 	SKINCOLOR_SKY,
+	SKINCOLOR_MARINE,
 	SKINCOLOR_CERULEAN,
+	SKINCOLOR_DREAM,
 	SKINCOLOR_ICY,
+	SKINCOLOR_DAYBREAK,
 	SKINCOLOR_SAPPHIRE, // sweet mother, i cannot weave – slender aphrodite has overcome me with longing for a girl
+	SKINCOLOR_ARCTIC,
 	SKINCOLOR_CORNFLOWER,
 	SKINCOLOR_BLUE,
 	SKINCOLOR_COBALT,
+	SKINCOLOR_MIDNIGHT,
+	SKINCOLOR_GALAXY,
 	SKINCOLOR_VAPOR,
 	SKINCOLOR_DUSK,
+	SKINCOLOR_MAJESTY,
 	SKINCOLOR_PASTEL,
 	SKINCOLOR_PURPLE,
+	SKINCOLOR_NOBLE,
+	SKINCOLOR_FUCHSIA,
 	SKINCOLOR_BUBBLEGUM,
+	SKINCOLOR_CRYSTAL,
 	SKINCOLOR_MAGENTA,
 	SKINCOLOR_NEON,
 	SKINCOLOR_VIOLET,
+	SKINCOLOR_ROYAL,
 	SKINCOLOR_LILAC,
+	SKINCOLOR_MAUVE,
+	SKINCOLOR_EVENTIDE,
 	SKINCOLOR_PLUM,
 	SKINCOLOR_RASPBERRY,
+	SKINCOLOR_TAFFY,
 	SKINCOLOR_ROSY,
+	SKINCOLOR_FANCY,
+	SKINCOLOR_SANGRIA,
+	SKINCOLOR_VOLCANIC,
 
 	FIRSTSUPERCOLOR,
 
@@ -398,7 +448,7 @@ extern skincolor_t skincolors[MAXSKINCOLORS];
 
 #define PUSHACCEL (2*FRACUNIT) // Acceleration for MF2_SLIDEPUSH items.
 
-// Special linedef executor tag numbers!
+// Special linedef executor tag numbers! Binary map format only (UDMF has other ways of doing these things).
 enum {
 	LE_PINCHPHASE      =    -2, // A boss entered pinch phase (and, in most cases, is preparing their pinch phase attack!)
 	LE_ALLBOSSESDEAD   =    -3, // All bosses in the map are dead (Egg capsule raise)
@@ -480,8 +530,11 @@ extern void *(*M_Memcpy)(void* dest, const void* src, size_t n) FUNCNONNULL;
 char *va(const char *format, ...) FUNCPRINTF;
 char *M_GetToken(const char *inputString);
 void M_UnGetToken(void);
-UINT32 M_GetTokenPos(void);
-void M_SetTokenPos(UINT32 newPos);
+void M_TokenizerOpen(const char *inputString);
+void M_TokenizerClose(void);
+const char *M_TokenizerRead(UINT32 i);
+UINT32 M_TokenizerGetEndPos(void);
+void M_TokenizerSetEndPos(UINT32 newPos);
 char *sizeu1(size_t num);
 char *sizeu2(size_t num);
 char *sizeu3(size_t num);
@@ -526,6 +579,22 @@ extern boolean capslock;
 
 // i_system.c, replace getchar() once the keyboard has been appropriated
 INT32 I_GetKey(void);
+
+/* http://www.cse.yorku.ca/~oz/hash.html */
+static inline
+UINT32 quickncasehash (const char *p, size_t n)
+{
+	size_t i = 0;
+	UINT32 x = 5381;
+
+	while (i < n && p[i])
+	{
+		x = (x * 33) ^ tolower(p[i]);
+		i++;
+	}
+
+	return x;
+}
 
 #ifndef min // Double-Check with WATTCP-32's cdefs.h
 #define min(x, y) (((x) < (y)) ? (x) : (y))
