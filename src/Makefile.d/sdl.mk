@@ -56,13 +56,6 @@ SDL_LDFLAGS?=$(shell $(SDL_CONFIG) \
 $(eval $(call Propogate_flags,SDL))
 endif
 
-# use the x86 asm code
-ifndef CYGWIN32
-ifndef NOASM
-USEASM=1
-endif
-endif
-
 ifdef MINGW
 ifndef NOSDLMAIN
 SDLMAIN=1

@@ -3893,11 +3893,6 @@ static void Command_Version_f(void)
 	else // 16-bit? 128-bit?
 		CONS_Printf("Bits Unknown ");
 
-	// No ASM?
-#ifdef NOASM
-	CONS_Printf("\x85" "NOASM " "\x80");
-#endif
-
 	// Debug build
 #ifdef _DEBUG
 	CONS_Printf("\x85" "DEBUG " "\x80");
