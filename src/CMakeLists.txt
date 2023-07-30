@@ -87,7 +87,6 @@ add_executable(SRB2SDL2 MACOSX_BUNDLE WIN32
 	http-mserv.c
 	i_tcp.c
 	lzf.c
-	vid_copy.s
 	b_bot.c
 	u_list.c
 	lua_script.c
