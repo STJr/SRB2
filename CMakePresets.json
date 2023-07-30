@@ -1,10 +1,9 @@
 {
-	"version": 2,
+	"version": 3,
 	"configurePresets": [
 		{
 			"name": "default",
-			"description": "Build using Ninja",
-			"generator": "Ninja",
+			"description": "Build using default generator",
 			"binaryDir": "build",
 			"cacheVariables": {
 				"CMAKE_C_FLAGS": "-fdiagnostics-color",
