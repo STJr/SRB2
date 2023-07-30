@@ -538,8 +538,6 @@ void *Picture_GetPatchPixel(
 	INT32 x, INT32 y,
 	pictureflags_t flags)
 {
-	fixed_t ofs;
-	column_t *column;
 	INT32 inbpp = Picture_FormatBPP(informat);
 	softwarepatch_t *doompatch = (softwarepatch_t *)patch;
 	boolean isdoompatch = Picture_IsDoomPatchFormat(informat);
@@ -550,30 +548,30 @@ void *Picture_GetPatchPixel(
 
 	width = (isdoompatch ? SHORT(doompatch->width) : patch->width);
 
-	if (x >= 0 && x < width)
+	if (x < 0 || x >= width)
+		return NULL;
+
+	INT32 colx = (flags & PICFLAGS_XFLIP) ? (width-1)-x : x;
+	UINT8 *s8 = NULL;
+	UINT16 *s16 = NULL;
+	UINT32 *s32 = NULL;
+
+	if (isdoompatch)
 	{
-		INT32 colx = (flags & PICFLAGS_XFLIP) ? (width-1)-x : x;
-		INT32 topdelta, prevdelta = -1;
-		INT32 colofs = (isdoompatch ? LONG(doompatch->columnofs[colx]) : patch->columnofs[colx]);
+		INT32 prevdelta = -1;
+		INT32 colofs = LONG(doompatch->columnofs[colx]);
 
 		// Column offsets are pointers, so no casting is required.
-		if (isdoompatch)
-			column = (column_t *)((UINT8 *)doompatch + colofs);
-		else
-			column = (column_t *)((UINT8 *)patch->columns + colofs);
+		doompost_t *column = (doompost_t *)((UINT8 *)doompatch + colofs);
 
 		while (column->topdelta != 0xff)
 		{
-			UINT8 *s8 = NULL;
-			UINT16 *s16 = NULL;
-			UINT32 *s32 = NULL;
-
-			topdelta = column->topdelta;
+			INT32 topdelta = column->topdelta;
 			if (topdelta <= prevdelta)
 				topdelta += prevdelta;
 			prevdelta = topdelta;
 
-			ofs = (y - topdelta);
+			size_t ofs = y - topdelta;
 
 			if (y >= topdelta && ofs < column->length)
 			{
@@ -592,12 +590,38 @@ void *Picture_GetPatchPixel(
 			}
 
 			if (inbpp == PICDEPTH_32BPP)
-				column = (column_t *)((UINT32 *)column + column->length);
+				column = (doompost_t *)((UINT32 *)column + column->length);
 			else if (inbpp == PICDEPTH_16BPP)
-				column = (column_t *)((UINT16 *)column + column->length);
+				column = (doompost_t *)((UINT16 *)column + column->length);
 			else
-				column = (column_t *)((UINT8 *)column + column->length);
-			column = (column_t *)((UINT8 *)column + 4);
+				column = (doompost_t *)((UINT8 *)column + column->length);
+			column = (doompost_t *)((UINT8 *)column + 4);
+		}
+	}
+	else
+	{
+		column_t *column = &patch->columns[colx];
+		for (size_t i = 0; i < column->num_posts; i++)
+		{
+			post_t *post = &column->posts[i];
+
+			size_t ofs = y - post->topdelta;
+
+			if (y >= (INT32)post->topdelta && ofs < post->length)
+			{
+				s8 = column->pixels + post->data_offset;
+				switch (inbpp)
+				{
+					case PICDEPTH_32BPP:
+						s32 = (UINT32 *)s8;
+						return &s32[ofs];
+					case PICDEPTH_16BPP:
+						s16 = (UINT16 *)s8;
+						return &s16[ofs];
+					default: // PICDEPTH_8BPP
+						return &s8[ofs];
+				}
+			}
 		}
 	}
 
@@ -738,29 +762,25 @@ boolean Picture_CheckIfDoomPatch(softwarepatch_t *patch, size_t size)
 
 /** Converts a texture to a flat.
   *
-  * \param trickytex The texture number.
+  * \param texnum The texture number.
   * \return The converted flat.
   */
-void *Picture_TextureToFlat(size_t trickytex)
+void *Picture_TextureToFlat(size_t texnum)
 {
 	texture_t *texture;
-	size_t tex;
 
 	UINT8 *converted;
 	size_t flatsize;
-	fixed_t col, ofs;
-	column_t *column;
 	UINT8 *desttop, *dest, *deststop;
 	UINT8 *source;
 
-	if (trickytex >= (unsigned)numtextures)
+	if (texnum >= (unsigned)numtextures)
 		I_Error("Picture_TextureToFlat: invalid texture number!");
 
 	// Check the texture cache
 	// If the texture's not there, it'll be generated right now
-	tex = trickytex;
-	texture = textures[tex];
-	R_CheckTextureCache(tex);
+	texture = textures[texnum];
+	R_CheckTextureCache(texnum);
 
 	// Allocate the flat
 	flatsize = (texture->width * texture->height);
@@ -770,41 +790,37 @@ void *Picture_TextureToFlat(size_t trickytex)
 	// Now we're gonna write to it
 	desttop = converted;
 	deststop = desttop + flatsize;
-	for (col = 0; col < texture->width; col++, desttop++)
+
+	if (!texture->holes)
 	{
-		// no post_t info
-		if (!texture->holes)
+		for (size_t col = 0; col < (size_t)texture->width; col++, desttop++)
 		{
-			column = (column_t *)(R_GetColumn(tex, col));
-			source = (UINT8 *)(column);
+			source = R_GetColumn(texnum, col)->pixels;
 			dest = desttop;
-			for (ofs = 0; dest < deststop && ofs < texture->height; ofs++)
+			for (size_t ofs = 0; dest < deststop && ofs < (size_t)texture->height; ofs++)
 			{
 				if (source[ofs] != TRANSPARENTPIXEL)
 					*dest = source[ofs];
 				dest += texture->width;
 			}
 		}
-		else
+	}
+	else
+	{
+		for (size_t col = 0; col < (size_t)texture->width; col++, desttop++)
 		{
-			INT32 topdelta, prevdelta = -1;
-			column = (column_t *)((UINT8 *)R_GetColumn(tex, col) - 3);
-			while (column->topdelta != 0xff)
+			column_t *column = (column_t *)R_GetColumn(texnum, col);
+			for (size_t i = 0; i < column->num_posts; i++)
 			{
-				topdelta = column->topdelta;
-				if (topdelta <= prevdelta)
-					topdelta += prevdelta;
-				prevdelta = topdelta;
-
-				dest = desttop + (topdelta * texture->width);
-				source = (UINT8 *)column + 3;
-				for (ofs = 0; dest < deststop && ofs < column->length; ofs++)
+				post_t *post = &column->posts[i];
+				dest = desttop + (post->topdelta * texture->width);
+				source = column->pixels + post->data_offset;
+				for (size_t ofs = 0; dest < deststop && ofs < post->length; ofs++)
 				{
 					if (source[ofs] != TRANSPARENTPIXEL)
 						*dest = source[ofs];
 					dest += texture->width;
 				}
-				column = (column_t *)((UINT8 *)column + column->length + 4);
 			}
 		}
 	}

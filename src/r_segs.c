@@ -86,10 +86,7 @@ static fixed_t *maskedtextureheight = NULL;
 
 static void R_Render2sidedMultiPatchColumn(column_t *column)
 {
-	INT32 topscreen, bottomscreen;
-
-	topscreen = sprtopscreen; // + spryscale*column->topdelta;  topdelta is 0 for the wall
-	bottomscreen = topscreen + spryscale * lengthcol;
+	INT32 bottomscreen = sprtopscreen + spryscale * lengthcol;
 
 	dc_yl = (sprtopscreen+FRACUNIT-1)>>FRACBITS;
 	dc_yh = (bottomscreen-1)>>FRACBITS;
@@ -110,7 +107,7 @@ static void R_Render2sidedMultiPatchColumn(column_t *column)
 
 	if (dc_yl <= dc_yh && dc_yh < vid.height && dc_yh > 0)
 	{
-		dc_source = (UINT8 *)column + 3;
+		dc_source = column->pixels;
 
 		if (colfunc == colfuncs[BASEDRAWFUNC])
 			(colfuncs[COLDRAWFUNC_TWOSMULTIPATCH])();
@@ -382,7 +379,7 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 					dc_iscale = 0xffffffffu / (unsigned)spryscale;
 
 					// draw the texture
-					col = (column_t *)((UINT8 *)R_GetColumn(texnum, maskedtexturecol[dc_x]) - 3);
+					col = R_GetColumn(texnum, maskedtexturecol[dc_x]);
 
 					for (i = 0; i < dc_numlights; i++)
 					{
@@ -457,7 +454,7 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 				dc_iscale = 0xffffffffu / (unsigned)spryscale;
 
 				// draw the texture
-				col = (column_t *)((UINT8 *)R_GetColumn(texnum, maskedtexturecol[dc_x]) - 3);
+				col = R_GetColumn(texnum, maskedtexturecol[dc_x]);
 
 #if 0 // Disabling this allows inside edges to render below the planes, for until the clipping is fixed to work right when POs are near the camera. -Red
 				if (curline->dontrenderme && curline->polyseg && (curline->polyseg->flags & POF_RENDERPLANES))
@@ -897,7 +894,7 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 			dc_iscale = 0xffffffffu / (unsigned)spryscale;
 
 			// Get data for the column
-			col = (column_t *)((UINT8 *)R_GetColumn(texnum,maskedtexturecol[dc_x]) - 3);
+			col = R_GetColumn(texnum,maskedtexturecol[dc_x]);
 
 			// SoM: New code does not rely on R_DrawColumnShadowed_8 which
 			// will (hopefully) put less strain on the stack.
@@ -1336,7 +1333,7 @@ static void R_RenderSegLoop (void)
 				dc_yl = yl;
 				dc_yh = yh;
 				dc_texturemid = rw_midtexturemid;
-				dc_source = R_GetColumn(midtexture,texturecolumn + (rw_offset_mid>>FRACBITS));
+				dc_source = R_GetColumn(midtexture,texturecolumn + (rw_offset_mid>>FRACBITS))->pixels;
 				dc_texheight = textureheight[midtexture]>>FRACBITS;
 
 				//profile stuff ---------------------------------------------------------
@@ -1397,7 +1394,7 @@ static void R_RenderSegLoop (void)
 						dc_yl = yl;
 						dc_yh = mid;
 						dc_texturemid = rw_toptexturemid;
-						dc_source = R_GetColumn(toptexture,texturecolumn + (rw_offset_top>>FRACBITS));
+						dc_source = R_GetColumn(toptexture,texturecolumn + (rw_offset_top>>FRACBITS))->pixels;
 						dc_texheight = textureheight[toptexture]>>FRACBITS;
 						colfunc();
 						ceilingclip[rw_x] = (INT16)mid;
@@ -1433,8 +1430,7 @@ static void R_RenderSegLoop (void)
 						dc_yl = mid;
 						dc_yh = yh;
 						dc_texturemid = rw_bottomtexturemid;
-						dc_source = R_GetColumn(bottomtexture,
-							texturecolumn + (rw_offset_bot>>FRACBITS));
+						dc_source = R_GetColumn(bottomtexture, texturecolumn + (rw_offset_bot>>FRACBITS))->pixels;
 						dc_texheight = textureheight[bottomtexture]>>FRACBITS;
 						colfunc();
 						floorclip[rw_x] = (INT16)mid;

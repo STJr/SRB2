@@ -54,6 +54,109 @@ static void HWR_DrawColumnInCache(const column_t *patchcol, UINT8 *block, GLMipm
 	fixed_t yfrac, position, count;
 	UINT8 *dest;
 	const UINT8 *source;
+	INT32 originy = 0;
+
+	// for writing a pixel to dest
+	RGBA_t colortemp;
+	UINT8 alpha;
+	UINT8 texel;
+	UINT16 texelu16;
+
+	(void)patchheight; // This parameter is unused
+
+	if (originPatch) // originPatch can be NULL here, unlike in the software version
+		originy = originPatch->originy;
+
+	for (size_t i = 0; i < patchcol->num_posts; i++)
+	{
+		post_t *post = &patchcol->posts[i];
+		source = patchcol->pixels + post->data_offset;
+		count  = ((post->length * scale_y) + (FRACUNIT/2)) >> FRACBITS;
+		position = originy + post->topdelta;
+
+		yfrac = 0;
+		if (position < 0)
+		{
+			yfrac = -position<<FRACBITS;
+			count += (((position * scale_y) + (FRACUNIT/2)) >> FRACBITS);
+			position = 0;
+		}
+
+		position = ((position * scale_y) + (FRACUNIT/2)) >> FRACBITS;
+
+		if (position < 0)
+			position = 0;
+
+		if (position + count >= pblockheight)
+			count = pblockheight - position;
+
+		dest = block + (position*blockmodulo);
+		while (count > 0)
+		{
+			count--;
+
+			texel = source[yfrac>>FRACBITS];
+			alpha = 0xFF;
+			// Make pixel transparent if chroma keyed
+			if ((mipmap->flags & TF_CHROMAKEYED) && (texel == HWR_PATCHES_CHROMAKEY_COLORINDEX))
+				alpha = 0x00;
+
+			if (mipmap->colormap)
+				texel = mipmap->colormap->data[texel];
+
+			switch (bpp)
+			{
+				case 2:
+					if ((originPatch != NULL) && (originPatch->style != AST_COPY))
+						texel = ASTBlendPaletteIndexes(*(dest+1), texel, originPatch->style, originPatch->alpha);
+					texelu16 = (UINT16)((alpha<<8) | texel);
+					memcpy(dest, &texelu16, sizeof(UINT16));
+					break;
+				case 3:
+					colortemp = V_GetColor(texel);
+					if ((originPatch != NULL) && (originPatch->style != AST_COPY))
+					{
+						RGBA_t rgbatexel;
+						rgbatexel.rgba = *(UINT32 *)dest;
+						colortemp.rgba = ASTBlendTexturePixel(rgbatexel, colortemp, originPatch->style, originPatch->alpha);
+					}
+					memcpy(dest, &colortemp, sizeof(RGBA_t)-sizeof(UINT8));
+					break;
+				case 4:
+					colortemp = V_GetColor(texel);
+					colortemp.s.alpha = alpha;
+					if ((originPatch != NULL) && (originPatch->style != AST_COPY))
+					{
+						RGBA_t rgbatexel;
+						rgbatexel.rgba = *(UINT32 *)dest;
+						colortemp.rgba = ASTBlendTexturePixel(rgbatexel, colortemp, originPatch->style, originPatch->alpha);
+					}
+					memcpy(dest, &colortemp, sizeof(RGBA_t));
+					break;
+				// default is 1
+				default:
+					if ((originPatch != NULL) && (originPatch->style != AST_COPY))
+						*dest = ASTBlendPaletteIndexes(*dest, texel, originPatch->style, originPatch->alpha);
+					else
+						*dest = texel;
+					break;
+			}
+
+			dest += blockmodulo;
+			yfrac += yfracstep;
+		}
+	}
+}
+
+static void HWR_DrawPostsInCache(const doompost_t *patchcol, UINT8 *block, GLMipmap_t *mipmap,
+								INT32 pblockheight, INT32 blockmodulo,
+								fixed_t yfracstep, fixed_t scale_y,
+								texpatch_t *originPatch, INT32 patchheight,
+								INT32 bpp)
+{
+	fixed_t yfrac, position, count;
+	UINT8 *dest;
+	const UINT8 *source;
 	INT32 topdelta, prevdelta = -1;
 	INT32 originy = 0;
 
@@ -106,57 +209,55 @@ static void HWR_DrawColumnInCache(const column_t *patchcol, UINT8 *block, GLMipm
 			if ((mipmap->flags & TF_CHROMAKEYED) && (texel == HWR_PATCHES_CHROMAKEY_COLORINDEX))
 				alpha = 0x00;
 
-			//Hurdler: 25/04/2000: now support colormap in hardware mode
 			if (mipmap->colormap)
 				texel = mipmap->colormap->data[texel];
 
-			// hope compiler will get this switch out of the loops (dreams...)
-			// gcc do it ! but vcc not ! (why don't use cygwin gcc for win32 ?)
-			// Alam: SRB2 uses Mingw, HUGS
 			switch (bpp)
 			{
-				case 2 : // uhhhhhhhh..........
-						 if ((originPatch != NULL) && (originPatch->style != AST_COPY))
-							 texel = ASTBlendPaletteIndexes(*(dest+1), texel, originPatch->style, originPatch->alpha);
-						 texelu16 = (UINT16)((alpha<<8) | texel);
-						 memcpy(dest, &texelu16, sizeof(UINT16));
-						 break;
-				case 3 : colortemp = V_GetColor(texel);
-						 if ((originPatch != NULL) && (originPatch->style != AST_COPY))
-						 {
-							 RGBA_t rgbatexel;
-							 rgbatexel.rgba = *(UINT32 *)dest;
-							 colortemp.rgba = ASTBlendTexturePixel(rgbatexel, colortemp, originPatch->style, originPatch->alpha);
-						 }
-						 memcpy(dest, &colortemp, sizeof(RGBA_t)-sizeof(UINT8));
-						 break;
-				case 4 : colortemp = V_GetColor(texel);
-						 colortemp.s.alpha = alpha;
-						 if ((originPatch != NULL) && (originPatch->style != AST_COPY))
-						 {
-							 RGBA_t rgbatexel;
-							 rgbatexel.rgba = *(UINT32 *)dest;
-							 colortemp.rgba = ASTBlendTexturePixel(rgbatexel, colortemp, originPatch->style, originPatch->alpha);
-						 }
-						 memcpy(dest, &colortemp, sizeof(RGBA_t));
-						 break;
+				case 2:
+					if ((originPatch != NULL) && (originPatch->style != AST_COPY))
+						texel = ASTBlendPaletteIndexes(*(dest+1), texel, originPatch->style, originPatch->alpha);
+					texelu16 = (UINT16)((alpha<<8) | texel);
+					memcpy(dest, &texelu16, sizeof(UINT16));
+					break;
+				case 3:
+					colortemp = V_GetColor(texel);
+					if ((originPatch != NULL) && (originPatch->style != AST_COPY))
+					{
+						RGBA_t rgbatexel;
+						rgbatexel.rgba = *(UINT32 *)dest;
+						colortemp.rgba = ASTBlendTexturePixel(rgbatexel, colortemp, originPatch->style, originPatch->alpha);
+					}
+					memcpy(dest, &colortemp, sizeof(RGBA_t)-sizeof(UINT8));
+					break;
+				case 4:
+					colortemp = V_GetColor(texel);
+					colortemp.s.alpha = alpha;
+					if ((originPatch != NULL) && (originPatch->style != AST_COPY))
+					{
+						RGBA_t rgbatexel;
+						rgbatexel.rgba = *(UINT32 *)dest;
+						colortemp.rgba = ASTBlendTexturePixel(rgbatexel, colortemp, originPatch->style, originPatch->alpha);
+					}
+					memcpy(dest, &colortemp, sizeof(RGBA_t));
+					break;
 				// default is 1
 				default:
-						 if ((originPatch != NULL) && (originPatch->style != AST_COPY))
-							 *dest = ASTBlendPaletteIndexes(*dest, texel, originPatch->style, originPatch->alpha);
-						 else
-							 *dest = texel;
-						 break;
+					if ((originPatch != NULL) && (originPatch->style != AST_COPY))
+						*dest = ASTBlendPaletteIndexes(*dest, texel, originPatch->style, originPatch->alpha);
+					else
+						*dest = texel;
+					break;
 			}
 
 			dest += blockmodulo;
 			yfrac += yfracstep;
 		}
-		patchcol = (const column_t *)((const UINT8 *)patchcol + patchcol->length + 4);
+		patchcol = (const doompost_t *)((const UINT8 *)patchcol + patchcol->length + 4);
 	}
 }
 
-static void HWR_DrawFlippedColumnInCache(const column_t *patchcol, UINT8 *block, GLMipmap_t *mipmap,
+static void HWR_DrawFlippedPostsInCache(const doompost_t *patchcol, UINT8 *block, GLMipmap_t *mipmap,
 								INT32 pblockheight, INT32 blockmodulo,
 								fixed_t yfracstep, fixed_t scale_y,
 								texpatch_t *originPatch, INT32 patchheight,
@@ -216,56 +317,53 @@ static void HWR_DrawFlippedColumnInCache(const column_t *patchcol, UINT8 *block,
 			if ((mipmap->flags & TF_CHROMAKEYED) && (texel == HWR_PATCHES_CHROMAKEY_COLORINDEX))
 				alpha = 0x00;
 
-			//Hurdler: 25/04/2000: now support colormap in hardware mode
 			if (mipmap->colormap)
 				texel = mipmap->colormap->data[texel];
 
-			// hope compiler will get this switch out of the loops (dreams...)
-			// gcc do it ! but vcc not ! (why don't use cygwin gcc for win32 ?)
-			// Alam: SRB2 uses Mingw, HUGS
 			switch (bpp)
 			{
-				case 2 : // uhhhhhhhh..........
-						 if ((originPatch != NULL) && (originPatch->style != AST_COPY))
-							 texel = ASTBlendPaletteIndexes(*(dest+1), texel, originPatch->style, originPatch->alpha);
-						 texelu16 = (UINT16)((alpha<<8) | texel);
-						 memcpy(dest, &texelu16, sizeof(UINT16));
-						 break;
-				case 3 : colortemp = V_GetColor(texel);
-						 if ((originPatch != NULL) && (originPatch->style != AST_COPY))
-						 {
-							 RGBA_t rgbatexel;
-							 rgbatexel.rgba = *(UINT32 *)dest;
-							 colortemp.rgba = ASTBlendTexturePixel(rgbatexel, colortemp, originPatch->style, originPatch->alpha);
-						 }
-						 memcpy(dest, &colortemp, sizeof(RGBA_t)-sizeof(UINT8));
-						 break;
-				case 4 : colortemp = V_GetColor(texel);
-						 colortemp.s.alpha = alpha;
-						 if ((originPatch != NULL) && (originPatch->style != AST_COPY))
-						 {
-							 RGBA_t rgbatexel;
-							 rgbatexel.rgba = *(UINT32 *)dest;
-							 colortemp.rgba = ASTBlendTexturePixel(rgbatexel, colortemp, originPatch->style, originPatch->alpha);
-						 }
-						 memcpy(dest, &colortemp, sizeof(RGBA_t));
-						 break;
+				case 2:
+					if ((originPatch != NULL) && (originPatch->style != AST_COPY))
+						texel = ASTBlendPaletteIndexes(*(dest+1), texel, originPatch->style, originPatch->alpha);
+					texelu16 = (UINT16)((alpha<<8) | texel);
+					memcpy(dest, &texelu16, sizeof(UINT16));
+					break;
+				case 3:
+					colortemp = V_GetColor(texel);
+					if ((originPatch != NULL) && (originPatch->style != AST_COPY))
+					{
+						RGBA_t rgbatexel;
+						rgbatexel.rgba = *(UINT32 *)dest;
+						colortemp.rgba = ASTBlendTexturePixel(rgbatexel, colortemp, originPatch->style, originPatch->alpha);
+					}
+					memcpy(dest, &colortemp, sizeof(RGBA_t)-sizeof(UINT8));
+					break;
+				case 4:
+					colortemp = V_GetColor(texel);
+					colortemp.s.alpha = alpha;
+					if ((originPatch != NULL) && (originPatch->style != AST_COPY))
+					{
+						RGBA_t rgbatexel;
+						rgbatexel.rgba = *(UINT32 *)dest;
+						colortemp.rgba = ASTBlendTexturePixel(rgbatexel, colortemp, originPatch->style, originPatch->alpha);
+					}
+					memcpy(dest, &colortemp, sizeof(RGBA_t));
+					break;
 				// default is 1
 				default:
-						 if ((originPatch != NULL) && (originPatch->style != AST_COPY))
-							 *dest = ASTBlendPaletteIndexes(*dest, texel, originPatch->style, originPatch->alpha);
-						 else
-							 *dest = texel;
-						 break;
+					if ((originPatch != NULL) && (originPatch->style != AST_COPY))
+						*dest = ASTBlendPaletteIndexes(*dest, texel, originPatch->style, originPatch->alpha);
+					else
+						*dest = texel;
+					break;
 			}
 
 			dest += blockmodulo;
 			yfrac -= yfracstep;
 		}
-		patchcol = (const column_t *)((const UINT8 *)patchcol + patchcol->length + 4);
+		patchcol = (const doompost_t *)((const UINT8 *)patchcol + patchcol->length + 4);
 	}
 }
-
 
 // Simplified patch caching function
 // for use by sprites and other patches that are not part of a wall texture
@@ -307,7 +405,7 @@ static void HWR_DrawPatchInCache(GLMipmap_t *mipmap,
 	// Draw each column to the block cache
 	for (; ncols--; block += bpp, xfrac += xfracstep)
 	{
-		patchcol = (const column_t *)((const UINT8 *)realpatch->columns + (realpatch->columnofs[xfrac>>FRACBITS]));
+		patchcol = &realpatch->columns[xfrac>>FRACBITS];
 
 		HWR_DrawColumnInCache(patchcol, block, mipmap,
 								pblockheight, blockmodulo,
@@ -327,13 +425,13 @@ static void HWR_DrawTexturePatchInCache(GLMipmap_t *mipmap,
 	INT32 col, ncols;
 	fixed_t xfrac, xfracstep;
 	fixed_t yfracstep, scale_y;
-	const column_t *patchcol;
+	const doompost_t *patchcol;
 	UINT8 *block = mipmap->data;
 	INT32 bpp;
 	INT32 blockmodulo;
 	INT32 width, height;
 	// Column drawing function pointer.
-	static void (*ColumnDrawerPointer)(const column_t *patchcol, UINT8 *block, GLMipmap_t *mipmap,
+	static void (*ColumnDrawerPointer)(const doompost_t *patchcol, UINT8 *block, GLMipmap_t *mipmap,
 								INT32 pblockheight, INT32 blockmodulo,
 								fixed_t yfracstep, fixed_t scale_y,
 								texpatch_t *originPatch, INT32 patchheight,
@@ -342,7 +440,7 @@ static void HWR_DrawTexturePatchInCache(GLMipmap_t *mipmap,
 	if (texture->width <= 0 || texture->height <= 0)
 		return;
 
-	ColumnDrawerPointer = (patch->flip & 2) ? HWR_DrawFlippedColumnInCache : HWR_DrawColumnInCache;
+	ColumnDrawerPointer = (patch->flip & 2) ? HWR_DrawFlippedPostsInCache : HWR_DrawPostsInCache;
 
 	x1 = patch->originx;
 	width = SHORT(realpatch->width);
@@ -372,14 +470,6 @@ static void HWR_DrawTexturePatchInCache(GLMipmap_t *mipmap,
 	col = x * pblockwidth / texture->width;
 	ncols = ((x2 - x) * pblockwidth) / texture->width;
 
-/*
-	CONS_Debug(DBG_RENDER, "patch %dx%d texture %dx%d block %dx%d\n",
-															width, height,
-															texture->width,          texture->height,
-															pblockwidth,             pblockheight);
-	CONS_Debug(DBG_RENDER, "      col %d ncols %d x %d\n", col, ncols, x);
-*/
-
 	// source advance
 	xfrac = 0;
 	if (x1 < 0)
@@ -401,9 +491,9 @@ static void HWR_DrawTexturePatchInCache(GLMipmap_t *mipmap,
 	for (block += col*bpp; ncols--; block += bpp, xfrac += xfracstep)
 	{
 		if (patch->flip & 1)
-			patchcol = (const column_t *)((const UINT8 *)realpatch + LONG(realpatch->columnofs[(width-1)-(xfrac>>FRACBITS)]));
+			patchcol = (const doompost_t *)((const UINT8 *)realpatch + LONG(realpatch->columnofs[(width-1)-(xfrac>>FRACBITS)]));
 		else
-			patchcol = (const column_t *)((const UINT8 *)realpatch + LONG(realpatch->columnofs[xfrac>>FRACBITS]));
+			patchcol = (const doompost_t *)((const UINT8 *)realpatch + LONG(realpatch->columnofs[xfrac>>FRACBITS]));
 
 		ColumnDrawerPointer(patchcol, block, mipmap,
 								pblockheight, blockmodulo,

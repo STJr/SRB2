@@ -131,6 +131,7 @@ void HWR_DrawStretchyFixedPatch(patch_t *gpatch, fixed_t x, fixed_t y, fixed_t p
 	float cy = FIXED_TO_FLOAT(y);
 	UINT8 alphalevel = ((option & V_ALPHAMASK) >> V_ALPHASHIFT);
 	UINT8 blendmode = ((option & V_BLENDMASK) >> V_BLENDSHIFT);
+	UINT8 opacity = 0xFF;
 	GLPatch_t *hwrPatch;
 
 //  3--2
@@ -148,6 +149,14 @@ void HWR_DrawStretchyFixedPatch(patch_t *gpatch, fixed_t x, fixed_t y, fixed_t p
 		HWR_GetMappedPatch(gpatch, colormap);
 
 	hwrPatch = ((GLPatch_t *)gpatch->hardware);
+
+	if (alphalevel)
+	{
+		if (alphalevel == 10) opacity = softwaretranstogl_lo[st_translucency]; // V_HUDTRANSHALF
+		else if (alphalevel == 11) opacity = softwaretranstogl[st_translucency]; // V_HUDTRANS
+		else if (alphalevel == 12) opacity = softwaretranstogl_hi[st_translucency]; // V_HUDTRANSDOUBLE
+		else opacity = softwaretranstogl[10-alphalevel];
+	}
 
 	dupx = (float)vid.dupx;
 	dupy = (float)vid.dupy;
@@ -269,13 +278,13 @@ void HWR_DrawStretchyFixedPatch(patch_t *gpatch, fixed_t x, fixed_t y, fixed_t p
 			// if it's meant to cover the whole screen, black out the rest (ONLY IF TOP LEFT ISN'T TRANSPARENT)
 			// cx and cy are possibly *slightly* off from float maths
 			// This is done before here compared to software because we directly alter cx and cy to centre
-			if (cx >= -0.1f && cx <= 0.1f && gpatch->width == BASEVIDWIDTH && cy >= -0.1f && cy <= 0.1f && gpatch->height == BASEVIDHEIGHT)
+			if (opacity == 0xFF && cx >= -0.1f && cx <= 0.1f && gpatch->width == BASEVIDWIDTH && cy >= -0.1f && cy <= 0.1f && gpatch->height == BASEVIDHEIGHT)
 			{
-				const column_t *column = (const column_t *)((const UINT8 *)(gpatch->columns) + (gpatch->columnofs[0]));
-				if (!column->topdelta)
+				const column_t *column = &gpatch->columns[0];
+				if (column->num_posts && !column->posts[0].topdelta)
 				{
-					const UINT8 *source = (const UINT8 *)(column) + 3;
-					HWR_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, (column->topdelta == 0xff ? 31 : source[0]));
+					const UINT8 *source = column->pixels;
+					HWR_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, source[0]);
 				}
 			}
 			// centre screen
@@ -353,11 +362,7 @@ void HWR_DrawStretchyFixedPatch(patch_t *gpatch, fixed_t x, fixed_t y, fixed_t p
 	{
 		FSurfaceInfo Surf;
 		Surf.PolyColor.s.red = Surf.PolyColor.s.green = Surf.PolyColor.s.blue = 0xff;
-
-		if (alphalevel == 10) Surf.PolyColor.s.alpha = softwaretranstogl_lo[st_translucency]; // V_HUDTRANSHALF
-		else if (alphalevel == 11) Surf.PolyColor.s.alpha = softwaretranstogl[st_translucency]; // V_HUDTRANS
-		else if (alphalevel == 12) Surf.PolyColor.s.alpha = softwaretranstogl_hi[st_translucency]; // V_HUDTRANSDOUBLE
-		else Surf.PolyColor.s.alpha = softwaretranstogl[10-alphalevel];
+		Surf.PolyColor.s.alpha = opacity;
 		flags |= PF_Modulated;
 		HWD.pfnDrawPolygon(&Surf, v, 4, flags);
 	}

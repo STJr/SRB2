@@ -72,7 +72,7 @@ extern texture_t **textures;
 extern INT32 *texturewidth;
 extern fixed_t *textureheight; // needed for texture pegging
 
-extern UINT32 **texturecolumnofs; // column offset lookup table for each texture
+extern column_t **texturecolumns; // columns for each texture
 extern UINT8 **texturecache; // graphics data for each generated full-size texture
 
 // Load TEXTURES definitions, create lookup tables
@@ -89,7 +89,7 @@ void R_ClearTextureNumCache(boolean btell);
 
 // Retrieve texture data.
 void *R_GetLevelFlat(levelflat_t *levelflat);
-UINT8 *R_GetColumn(fixed_t tex, INT32 col);
+column_t *R_GetColumn(fixed_t tex, INT32 col);
 void *R_GetFlat(lumpnum_t flatnum);
 
 boolean R_CheckPowersOfTwo(void);

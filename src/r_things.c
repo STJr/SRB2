@@ -639,23 +639,14 @@ fixed_t windowtop = 0, windowbottom = 0;
 
 void R_DrawMaskedColumn(column_t *column)
 {
-	INT32 topscreen;
-	INT32 bottomscreen;
-	fixed_t basetexturemid;
-	INT32 topdelta, prevdelta = 0;
+	fixed_t basetexturemid = dc_texturemid;
 
-	basetexturemid = dc_texturemid;
-
-	for (; column->topdelta != 0xff ;)
+	for (size_t i = 0; i < column->num_posts; i++)
 	{
-		// calculate unclipped screen coordinates
-		// for post
-		topdelta = column->topdelta;
-		if (topdelta <= prevdelta)
-			topdelta += prevdelta;
-		prevdelta = topdelta;
-		topscreen = sprtopscreen + spryscale*topdelta;
-		bottomscreen = topscreen + spryscale*column->length;
+		post_t *post = &column->posts[i];
+
+		INT32 topscreen = sprtopscreen + spryscale*post->topdelta;
+		INT32 bottomscreen = topscreen + spryscale*post->length;
 
 		dc_yl = (topscreen+FRACUNIT-1)>>FRACBITS;
 		dc_yh = (bottomscreen-1)>>FRACBITS;
@@ -679,8 +670,8 @@ void R_DrawMaskedColumn(column_t *column)
 
 		if (dc_yl <= dc_yh && dc_yh > 0)
 		{
-			dc_source = (UINT8 *)column + 3;
-			dc_texturemid = basetexturemid - (topdelta<<FRACBITS);
+			dc_source = column->pixels + post->data_offset;
+			dc_texturemid = basetexturemid - (post->topdelta<<FRACBITS);
 
 			// Drawn by R_DrawColumn.
 			// This stuff is a likely cause of the splitscreen water crash bug.
@@ -693,7 +684,6 @@ void R_DrawMaskedColumn(column_t *column)
 				I_Error("R_DrawMaskedColumn: Invalid ylookup for dc_yl %d", dc_yl);
 #endif
 		}
-		column = (column_t *)((UINT8 *)column + column->length + 4);
 	}
 
 	dc_texturemid = basetexturemid;
@@ -706,21 +696,15 @@ void R_DrawFlippedMaskedColumn(column_t *column)
 	INT32 topscreen;
 	INT32 bottomscreen;
 	fixed_t basetexturemid = dc_texturemid;
-	INT32 topdelta, prevdelta = -1;
 	UINT8 *d,*s;
 
-	for (; column->topdelta != 0xff ;)
+	for (size_t i = 0; i < column->num_posts; i++)
 	{
-		// calculate unclipped screen coordinates
-		// for post
-		topdelta = column->topdelta;
-		if (topdelta <= prevdelta)
-			topdelta += prevdelta;
-		prevdelta = topdelta;
-		topdelta = lengthcol-column->length-topdelta;
+		post_t *post = &column->posts[i];
+		INT32 topdelta = lengthcol-post->length-post->topdelta;
 		topscreen = sprtopscreen + spryscale*topdelta;
-		bottomscreen = sprbotscreen == INT32_MAX ? topscreen + spryscale*column->length
-		                                      : sprbotscreen + spryscale*column->length;
+		bottomscreen = sprbotscreen == INT32_MAX ? topscreen + spryscale*post->length
+		                                      : sprbotscreen + spryscale*post->length;
 
 		dc_yl = (topscreen+FRACUNIT-1)>>FRACBITS;
 		dc_yh = (bottomscreen-1)>>FRACBITS;
@@ -744,8 +728,8 @@ void R_DrawFlippedMaskedColumn(column_t *column)
 
 		if (dc_yl <= dc_yh && dc_yh > 0)
 		{
-			dc_source = ZZ_Alloc(column->length);
-			for (s = (UINT8 *)column+2+column->length, d = dc_source; d < dc_source+column->length; --s)
+			dc_source = ZZ_Alloc(post->length);
+			for (s = column->pixels+post->data_offset+post->length, d = dc_source; d < dc_source+post->length; --s)
 				*d++ = *s;
 			dc_texturemid = basetexturemid - (topdelta<<FRACBITS);
 
@@ -758,7 +742,6 @@ void R_DrawFlippedMaskedColumn(column_t *column)
 #endif
 			Z_Free(dc_source);
 		}
-		column = (column_t *)((UINT8 *)column + column->length + 4);
 	}
 
 	dc_texturemid = basetexturemid;
@@ -950,7 +933,7 @@ static void R_DrawVisSprite(vissprite_t *vis)
 			sprtopscreen = (centeryfrac - FixedMul(dc_texturemid, spryscale));
 			dc_iscale = (0xffffffffu / (unsigned)spryscale);
 
-			column = (column_t *)((UINT8 *)patch->columns + (patch->columnofs[texturecolumn]));
+			column = &patch->columns[texturecolumn];
 
 			localcolfunc (column);
 		}
@@ -968,9 +951,9 @@ static void R_DrawVisSprite(vissprite_t *vis)
 			texturecolumn = frac>>FRACBITS;
 			if (texturecolumn < 0 || texturecolumn >= pwidth)
 				I_Error("R_DrawSpriteRange: bad texturecolumn at %d from end", vis->x2 - dc_x);
-			column = (column_t *)((UINT8 *)patch->columns + (patch->columnofs[texturecolumn]));
+			column = &patch->columns[texturecolumn];
 #else
-			column = (column_t *)((UINT8 *)patch->columns + (patch->columnofs[frac>>FRACBITS]));
+			column = &patch->columns[frac>>FRACBITS];
 #endif
 
 			sprtopscreen = (centeryfrac - FixedMul(dc_texturemid, spryscale));
@@ -990,9 +973,9 @@ static void R_DrawVisSprite(vissprite_t *vis)
 			texturecolumn = frac>>FRACBITS;
 			if (texturecolumn < 0 || texturecolumn >= pwidth)
 				I_Error("R_DrawSpriteRange: bad texturecolumn at %d from end", vis->x2 - dc_x);
-			column = (column_t *)((UINT8 *)patch->columns + (patch->columnofs[texturecolumn]));
+			column = &patch->columns[texturecolumn];
 #else
-			column = (column_t *)((UINT8 *)patch->columns + (patch->columnofs[frac>>FRACBITS]));
+			column = &patch->columns[frac>>FRACBITS];
 #endif
 			localcolfunc (column);
 		}
@@ -1057,9 +1040,9 @@ static void R_DrawPrecipitationVisSprite(vissprite_t *vis)
 		if (texturecolumn < 0 || texturecolumn >= patch->width)
 			I_Error("R_DrawPrecipitationSpriteRange: bad texturecolumn");
 
-		column = (column_t *)((UINT8 *)patch->columns + (patch->columnofs[texturecolumn]));
+		column = &patch->columns[texturecolumn];
 #else
-		column = (column_t *)((UINT8 *)patch->columns + (patch->columnofs[frac>>FRACBITS]));
+		column = &patch->columns[frac>>FRACBITS];
 #endif
 		R_DrawMaskedColumn(column);
 	}

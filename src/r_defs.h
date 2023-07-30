@@ -719,14 +719,26 @@ typedef struct
 {
 	UINT8 topdelta; // -1 is the last post in a column
 	UINT8 length;   // length data bytes follows
-} ATTRPACK post_t;
+} ATTRPACK doompost_t;
 
 #if defined(_MSC_VER)
 #pragma pack()
 #endif
 
-// column_t is a list of 0 or more post_t, (UINT8)-1 terminated
-typedef post_t column_t;
+typedef struct
+{
+	size_t topdelta;
+	size_t length;
+	size_t data_offset;
+} post_t;
+
+// column_t is a list of 0 or more post_t
+typedef struct
+{
+	size_t num_posts;
+	post_t *posts;
+	UINT8 *pixels;
+} column_t;
 
 //
 // OTHER TYPES
@@ -800,8 +812,9 @@ typedef struct
 	INT16 width, height;
 	INT16 leftoffset, topoffset;
 
-	INT32 *columnofs; // Column offsets. This is relative to patch->columns
-	UINT8 *columns; // Software column data
+	UINT8 *pixels;
+	column_t *columns;
+	post_t *posts;
 
 	void *hardware; // OpenGL patch, allocated whenever necessary
 	void *flats[4]; // The patch as flats

@@ -516,7 +516,7 @@ void V_DrawStretchyFixedPatch(fixed_t x, fixed_t y, fixed_t pscale, fixed_t vsca
 
 	fixed_t col, ofs, colfrac, rowfrac, fdup, vdup;
 	INT32 dupx, dupy;
-	const column_t *column;
+	column_t *column;
 	UINT8 *desttop, *dest, *deststart, *destend;
 	const UINT8 *source, *deststop;
 	fixed_t pwidth; // patch width
@@ -703,12 +703,12 @@ void V_DrawStretchyFixedPatch(fixed_t x, fixed_t y, fixed_t pscale, fixed_t vsca
 		if (!(scrn & V_SCALEPATCHMASK))
 		{
 			// if it's meant to cover the whole screen, black out the rest (ONLY IF TOP LEFT ISN'T TRANSPARENT)
-			if (x == 0 && patch->width == BASEVIDWIDTH && y == 0 && patch->height == BASEVIDHEIGHT)
+			if (!v_translevel && x == 0 && patch->width == BASEVIDWIDTH && y == 0 && patch->height == BASEVIDHEIGHT)
 			{
-				column = (const column_t *)((const UINT8 *)(patch->columns) + (patch->columnofs[0]));
-				if (!column->topdelta)
+				column = &patch->columns[0];
+				if (column->num_posts && !column->posts[0].topdelta)
 				{
-					source = (const UINT8 *)(column) + 3;
+					source = column->pixels;
 					V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, source[0]);
 				}
 			}
@@ -758,7 +758,6 @@ void V_DrawStretchyFixedPatch(fixed_t x, fixed_t y, fixed_t pscale, fixed_t vsca
 
 	for (col = 0; (col>>FRACBITS) < patch->width; col += colfrac, ++offx, desttop++)
 	{
-		INT32 topdelta, prevdelta = -1;
 		if (scrn & V_FLIP) // offx is measured from right edge instead of left
 		{
 			if (x+pwidth-offx < 0) // don't draw off the left of the screen (WRAP PREVENTION)
@@ -773,27 +772,24 @@ void V_DrawStretchyFixedPatch(fixed_t x, fixed_t y, fixed_t pscale, fixed_t vsca
 			if (x+offx >= vid.width) // don't draw off the right of the screen (WRAP PREVENTION)
 				break;
 		}
-		column = (const column_t *)((const UINT8 *)(patch->columns) + (patch->columnofs[col>>FRACBITS]));
 
-		while (column->topdelta != 0xff)
+		column = &patch->columns[col>>FRACBITS];
+
+		for (size_t i = 0; i < column->num_posts; i++)
 		{
-			topdelta = column->topdelta;
-			if (topdelta <= prevdelta)
-				topdelta += prevdelta;
-			prevdelta = topdelta;
-			source = (const UINT8 *)(column) + 3;
+			post_t *post = &column->posts[i];
+			source = column->pixels + post->data_offset;
 			dest = desttop;
 			if (scrn & V_FLIP)
 				dest = deststart + (destend - desttop);
-			dest += FixedInt(FixedMul(topdelta<<FRACBITS,vdup))*vid.width;
+			dest += FixedInt(FixedMul(post->topdelta<<FRACBITS,vdup))*vid.width;
 
-			for (ofs = 0; dest < deststop && (ofs>>FRACBITS) < column->length; ofs += rowfrac)
+			for (ofs = 0; dest < deststop && (size_t)(ofs>>FRACBITS) < post->length; ofs += rowfrac)
 			{
 				if (dest >= screens[scrn&V_PARAMMASK]) // don't draw off the top of the screen (CRASH PREVENTION)
 					*dest = patchdrawfunc(dest, source, ofs);
 				dest += vid.width;
 			}
-			column = (const column_t *)((const UINT8 *)column + column->length + 4);
 		}
 	}
 }
@@ -808,7 +804,7 @@ void V_DrawCroppedPatch(fixed_t x, fixed_t y, fixed_t pscale, fixed_t vscale, IN
 
 	fixed_t col, ofs, colfrac, rowfrac, fdup, vdup;
 	INT32 dupx, dupy;
-	const column_t *column;
+	column_t *column;
 	UINT8 *desttop, *dest;
 	const UINT8 *source, *deststop;
 
@@ -1044,20 +1040,18 @@ void V_DrawCroppedPatch(fixed_t x, fixed_t y, fixed_t pscale, fixed_t vscale, IN
 
 	for (col = sx; (col>>FRACBITS) < patch->width && (col - sx) < w; col += colfrac, ++x, desttop++)
 	{
-		INT32 topdelta, prevdelta = -1;
 		if (x < 0) // don't draw off the left of the screen (WRAP PREVENTION)
 			continue;
 		if (x >= vid.width) // don't draw off the right of the screen (WRAP PREVENTION)
 			break;
-		column = (const column_t *)((const UINT8 *)(patch->columns) + (patch->columnofs[col>>FRACBITS]));
 
-		while (column->topdelta != 0xff)
+		column = &patch->columns[col>>FRACBITS];
+
+		for (size_t i = 0; i < column->num_posts; i++)
 		{
-			topdelta = column->topdelta;
-			if (topdelta <= prevdelta)
-				topdelta += prevdelta;
-			prevdelta = topdelta;
-			source = (const UINT8 *)(column) + 3;
+			post_t *post = &column->posts[i];
+			INT32 topdelta = post->topdelta;
+			source = column->pixels + post->data_offset;
 			dest = desttop;
 			if ((topdelta<<FRACBITS)-sy > 0)
 			{
@@ -1067,13 +1061,12 @@ void V_DrawCroppedPatch(fixed_t x, fixed_t y, fixed_t pscale, fixed_t vscale, IN
 			else
 				ofs = sy-(topdelta<<FRACBITS);
 
-			for (; dest < deststop && (ofs>>FRACBITS) < column->length && ((ofs - sy) + (topdelta<<FRACBITS)) < h; ofs += rowfrac)
+			for (; dest < deststop && (size_t)(ofs>>FRACBITS) < post->length && ((ofs - sy) + (topdelta<<FRACBITS)) < h; ofs += rowfrac)
 			{
 				if (dest >= screens[scrn&V_PARAMMASK]) // don't draw off the top of the screen (CRASH PREVENTION)
 					*dest = patchdrawfunc(dest, source, ofs);
 				dest += vid.width;
 			}
-			column = (const column_t *)((const UINT8 *)column + column->length + 4);
 		}
 	}
 }
