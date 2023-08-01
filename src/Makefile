@@ -391,3 +391,5 @@ ifdef WINDOWSHELL
 else
 	@:
 endif
+
+$(warning The handwritten GNU Makefile for SRB2 is deprecated, and may be removed in the future. Please consider switching to CMake.)
