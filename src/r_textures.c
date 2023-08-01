@@ -498,10 +498,6 @@ column_t *R_GetColumn(fixed_t tex, INT32 col)
 	else
 		col &= (width - 1);
 
-	UINT8 *data = texturecache[tex];
-	if (!data)
-		R_GenerateTexture(tex);
-
 	return &texturecolumns[tex][col];
 }
 

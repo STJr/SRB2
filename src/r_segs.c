@@ -1095,6 +1095,13 @@ static void R_RenderSegLoop (void)
 	INT32     bottom;
 	INT32     i;
 
+	if (midtexture)
+		R_CheckTextureCache(midtexture);
+	if (toptexture)
+		R_CheckTextureCache(toptexture);
+	if (bottomtexture)
+		R_CheckTextureCache(bottomtexture);
+
 	for (; rw_x < rw_stopx; rw_x++)
 	{
 		// mark floor / ceiling areas
@@ -1333,7 +1340,7 @@ static void R_RenderSegLoop (void)
 				dc_yl = yl;
 				dc_yh = yh;
 				dc_texturemid = rw_midtexturemid;
-				dc_source = R_GetColumn(midtexture,texturecolumn + (rw_offset_mid>>FRACBITS))->pixels;
+				dc_source = R_GetColumn(midtexture, texturecolumn + (rw_offset_mid>>FRACBITS))->pixels;
 				dc_texheight = textureheight[midtexture]>>FRACBITS;
 
 				//profile stuff ---------------------------------------------------------
@@ -1394,7 +1401,7 @@ static void R_RenderSegLoop (void)
 						dc_yl = yl;
 						dc_yh = mid;
 						dc_texturemid = rw_toptexturemid;
-						dc_source = R_GetColumn(toptexture,texturecolumn + (rw_offset_top>>FRACBITS))->pixels;
+						dc_source = R_GetColumn(toptexture, texturecolumn + (rw_offset_top>>FRACBITS))->pixels;
 						dc_texheight = textureheight[toptexture]>>FRACBITS;
 						colfunc();
 						ceilingclip[rw_x] = (INT16)mid;

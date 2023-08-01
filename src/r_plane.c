@@ -641,35 +641,31 @@ void R_DrawPlanes(void)
 //
 static void R_DrawSkyPlane(visplane_t *pl)
 {
-	INT32 x;
-	INT32 angle;
+	INT32 texture = texturetranslation[skytexture];
 
 	// Reset column drawer function (note: couldn't we just call walldrawerfunc directly?)
 	// (that is, unless we'll need to switch drawers in future for some reason)
 	colfunc = colfuncs[BASEDRAWFUNC];
 
-	// use correct aspect ratio scale
 	dc_iscale = skyscale;
 
-	// Sky is always drawn full bright,
-	//  i.e. colormaps[0] is used.
-	// Because of this hack, sky is not affected
-	//  by sector colormaps (INVUL inverse mapping is not implemented in SRB2 so is irrelevant).
 	dc_colormap = colormaps;
 	dc_texturemid = skytexturemid;
-	dc_texheight = textureheight[skytexture]
-		>>FRACBITS;
-	for (x = pl->minx; x <= pl->maxx; x++)
+	dc_texheight = textureheight[texture]>>FRACBITS;
+
+	R_CheckTextureCache(texture);
+
+	for (INT32 x = pl->minx; x <= pl->maxx; x++)
 	{
 		dc_yl = pl->top[x];
 		dc_yh = pl->bottom[x];
 
 		if (dc_yl <= dc_yh)
 		{
-			angle = (pl->viewangle + xtoviewangle[x])>>ANGLETOSKYSHIFT;
+			INT32 angle = (pl->viewangle + xtoviewangle[x])>>ANGLETOSKYSHIFT;
 			dc_iscale = FixedMul(skyscale, FINECOSINE(xtoviewangle[x]>>ANGLETOFINESHIFT));
 			dc_x = x;
-			dc_source = R_GetColumn(texturetranslation[skytexture], -angle)->pixels; // get negative of angle for each column to display sky correct way round! --Monster Iestyn 27/01/18
+			dc_source = R_GetColumn(texture, -angle)->pixels; // get negative of angle for each column to display sky correct way round! --Monster Iestyn 27/01/18
 			colfunc();
 		}
 	}
