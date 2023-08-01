@@ -225,6 +225,18 @@ int LUA_PushGlobals(lua_State *L, const char *word)
 	} else if (fastcmp(word,"pointlimit")) {
 		lua_pushinteger(L, cv_pointlimit.value);
 		return 1;
+	} else if (fastcmp(word, "redflag")) {
+		LUA_PushUserdata(L, redflag, META_MOBJ);
+		return 1;
+	} else if (fastcmp(word, "blueflag")) {
+		LUA_PushUserdata(L, blueflag, META_MOBJ);
+		return 1;
+	} else if (fastcmp(word, "rflagpoint")) {
+		LUA_PushUserdata(L, rflagpoint, META_MAPTHING);
+		return 1;
+	} else if (fastcmp(word, "bflagpoint")) {
+		LUA_PushUserdata(L, bflagpoint, META_MAPTHING);
+		return 1;
 	// begin map vars
 	} else if (fastcmp(word,"spstage_start")) {
 		lua_pushinteger(L, spstage_start);
