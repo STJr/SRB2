@@ -7112,8 +7112,22 @@ static void M_LevelSelectWarp(INT32 choice)
 	fromlevelselect = true;
 
 	if (currentMenu == &SP_LevelSelectDef || currentMenu == &SP_PauseLevelSelectDef)
-		G_LoadGame((UINT32)cursaveslot, startmap); // reload from SP save data: this is needed to keep score/lives/continues from reverting to defaults
-	else
+	{
+		if (cursaveslot > 0) // do we have a save slot to load?
+			G_LoadGame((UINT32)cursaveslot, startmap); // reload from SP save data: this is needed to keep score/lives/continues from reverting to defaults
+		else // no save slot, start new game but keep the current skin
+		{
+			M_ClearMenus(true);
+
+			G_DeferedInitNew(false, G_BuildMapName(startmap), cv_skin.value, false, fromlevelselect); // Not sure about using cv_skin here, but it seems fine in testing.
+			COM_BufAddText("dummyconsvar 1\n"); // G_DeferedInitNew doesn't do this
+
+			if (levelselect.rows)
+				Z_Free(levelselect.rows);
+			levelselect.rows = NULL;
+		}
+	}
+	else // start new game
 	{
 		cursaveslot = 0;
 		M_SetupChoosePlayer(0);
