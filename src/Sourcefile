@@ -74,7 +74,6 @@ sounds.c
 w_wad.c
 filesrch.c
 lzf.c
-vid_copy.s
 b_bot.c
 u_list.c
 snake.c

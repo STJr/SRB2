@@ -113,7 +113,7 @@ void M_AddRawCondition(UINT8 set, UINT8 id, conditiontype_t c, INT32 r, INT16 x1
 	condition_t *cond;
 	UINT32 num, wnum;
 
-	I_Assert(set && set <= MAXCONDITIONSETS);
+	I_Assert(set < MAXCONDITIONSETS);
 
 	wnum = conditionSets[set - 1].numconditions;
 	num = ++conditionSets[set - 1].numconditions;

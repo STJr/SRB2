@@ -2144,12 +2144,6 @@ static void Got_Mapcmd(UINT8 **cp, INT32 playernum)
 	if (demoplayback && !timingdemo)
 		precache = false;
 
-	if (resetplayer && !FLS)
-	{
-		emeralds = 0;
-		memset(&luabanks, 0, sizeof(luabanks));
-	}
-
 	if (modeattacking)
 	{
 		SetPlayerSkinByNum(0, cv_chooseskin.value-1);
@@ -3857,7 +3851,7 @@ static void Command_ListWADS_f(void)
 static void Command_Version_f(void)
 {
 #ifdef DEVELOP
-	CONS_Printf("Sonic Robo Blast 2 %s-%s (%s %s) ", compbranch, comprevision, compdate, comptime);
+	CONS_Printf("Sonic Robo Blast 2 %s %s %s (%s %s) ", compbranch, comprevision, compnote, compdate, comptime);
 #else
 	CONS_Printf("Sonic Robo Blast 2 %s (%s %s %s %s) ", VERSIONSTRING, compdate, comptime, comprevision, compbranch);
 #endif
@@ -3890,11 +3884,6 @@ static void Command_Version_f(void)
 		CONS_Printf("64-bit ");
 	else // 16-bit? 128-bit?
 		CONS_Printf("Bits Unknown ");
-
-	// No ASM?
-#ifdef NOASM
-	CONS_Printf("\x85" "NOASM " "\x80");
-#endif
 
 	// Debug build
 #ifdef _DEBUG

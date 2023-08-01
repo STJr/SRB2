@@ -4551,6 +4551,7 @@ const char *const MSF_LIST[] = {
 const char *const SSF_LIST[] = {
 	"OUTERSPACE",
 	"DOUBLESTEPUP",
+	"NOSTEPDOWN",
 	"WINDCURRENT",
 	"CONVEYOR",
 	"SPEEDPAD",
@@ -4567,6 +4568,8 @@ const char *const SSF_LIST[] = {
 	"ZOOMTUBEEND",
 	"FINISHLINE",
 	"ROPEHANG",
+	"JUMPFLIP",
+	"GRAVITYOVERRIDE",
 	NULL
 };
 

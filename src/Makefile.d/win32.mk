@@ -17,8 +17,6 @@ sources+=win32/Srb2win.rc
 opts+=-DSTDC_HEADERS
 libs+=-ladvapi32 -lkernel32 -lmsvcrt -luser32
 
-nasm_format:=win32
-
 SDL?=1
 
 ifndef NOHW

@@ -7063,9 +7063,6 @@ static void M_DestroyRobots(INT32 choice)
 
 static void M_LevelSelectWarp(INT32 choice)
 {
-	boolean fromloadgame = (currentMenu == &SP_LevelSelectDef);
-	boolean frompause = (currentMenu == &SP_PauseLevelSelectDef);
-
 	(void)choice;
 
 	if (W_CheckNumForName(G_BuildMapName(cv_nextmap.value)) == LUMPERROR)
@@ -7077,25 +7074,12 @@ static void M_LevelSelectWarp(INT32 choice)
 	startmap = (INT16)(cv_nextmap.value);
 	fromlevelselect = true;
 
-	if (fromloadgame)
-		G_LoadGame((UINT32)cursaveslot, startmap);
+	if (currentMenu == &SP_LevelSelectDef || currentMenu == &SP_PauseLevelSelectDef)
+		G_LoadGame((UINT32)cursaveslot, startmap); // reload from SP save data: this is needed to keep score/lives/continues from reverting to defaults
 	else
 	{
 		cursaveslot = 0;
-
-		if (frompause)
-		{
-			M_ClearMenus(true);
-
-			G_DeferedInitNew(false, G_BuildMapName(startmap), cv_skin.value, false, fromlevelselect); // Not sure about using cv_skin here, but it seems fine in testing.
-			COM_BufAddText("dummyconsvar 1\n"); // G_DeferedInitNew doesn't do this
-
-			if (levelselect.rows)
-				Z_Free(levelselect.rows);
-			levelselect.rows = NULL;
-		}
-		else
-			M_SetupChoosePlayer(0);
+		M_SetupChoosePlayer(0);
 	}
 }
 

@@ -7797,18 +7797,6 @@ boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate)
 	R_InitMobjInterpolators();
 	P_InitCachedActions();
 
-	if (!fromnetsave && savedata.lives > 0)
-	{
-		numgameovers = savedata.numgameovers;
-		players[consoleplayer].continues = savedata.continues;
-		players[consoleplayer].lives = savedata.lives;
-		players[consoleplayer].score = savedata.score;
-		if ((botingame = ((botskin = savedata.botskin) != 0)))
-			botcolor = skins[botskin-1].prefcolor;
-		emeralds = savedata.emeralds;
-		savedata.lives = 0;
-	}
-
 	// internal game map
 	maplumpname = G_BuildMapName(gamemap);
 	lastloadedmaplumpnum = W_CheckNumForMap(maplumpname);

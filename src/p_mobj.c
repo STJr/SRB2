@@ -11182,12 +11182,6 @@ void P_RemoveMobj(mobj_t *mobj)
 
 	P_SetTarget(&mobj->hnext, P_SetTarget(&mobj->hprev, NULL));
 
-	// DBG: set everything in mobj_t to 0xFF instead of leaving it. debug memory error.
-#ifdef SCRAMBLE_REMOVED
-	// Invalidate mobj_t data to cause crashes if accessed!
-	memset((UINT8 *)mobj + sizeof(thinker_t), 0xff, sizeof(mobj_t) - sizeof(thinker_t));
-#endif
-
 	R_RemoveMobjInterpolator(mobj);
 
 	// free block
@@ -11206,6 +11200,17 @@ void P_RemoveMobj(mobj_t *mobj)
 	}
 
 	P_RemoveThinker((thinker_t *)mobj);
+
+#ifdef PARANOIA
+	// Saved to avoid being scrambled like below...
+	mobj->thinker.debug_mobjtype = mobj->type;
+#endif
+
+	// DBG: set everything in mobj_t to 0xFF instead of leaving it. debug memory error.
+#ifdef SCRAMBLE_REMOVED
+	// Invalidate mobj_t data to cause crashes if accessed!
+	memset((UINT8 *)mobj + sizeof(thinker_t), 0xff, sizeof(mobj_t) - sizeof(thinker_t));
+#endif
 }
 
 // This does not need to be added to Lua.

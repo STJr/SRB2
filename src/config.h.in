@@ -11,8 +11,18 @@
 
 #ifdef CMAKECONFIG
 
-#define SRB2_COMP_REVISION    "${SRB2_COMP_REVISION}"
-#define SRB2_COMP_BRANCH      "${SRB2_COMP_BRANCH}"
+#define SRB2_COMP_REVISION       "${SRB2_COMP_REVISION}"
+#define SRB2_COMP_BRANCH         "${SRB2_COMP_BRANCH}"
+#define SRB2_COMP_NOTE           "${SRB2_COMP_NOTE}"
+// This is done with configure_file instead of defines in order to avoid
+// recompiling the whole target whenever the working directory state changes
+#cmakedefine SRB2_COMP_UNCOMMITTED
+#ifdef SRB2_COMP_UNCOMMITTED
+#define COMPVERSION_UNCOMMITTED
+#endif
+
+#define CMAKE_BUILD_TYPE         "${CMAKE_BUILD_TYPE}"
+#cmakedefine01 SRB2_COMP_OPTIMIZED
 
 #endif
 

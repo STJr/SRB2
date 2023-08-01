@@ -225,18 +225,6 @@ void R_DrawTiltedTransSolidColorSpan_8(void);
 void R_DrawWaterSolidColorSpan_8(void);
 void R_DrawTiltedWaterSolidColorSpan_8(void);
 
-#ifdef USEASM
-void ASMCALL R_DrawColumn_8_ASM(void);
-void ASMCALL R_DrawShadeColumn_8_ASM(void);
-void ASMCALL R_DrawTranslucentColumn_8_ASM(void);
-void ASMCALL R_Draw2sMultiPatchColumn_8_ASM(void);
-
-void ASMCALL R_DrawColumn_8_MMX(void);
-
-void ASMCALL R_Draw2sMultiPatchColumn_8_MMX(void);
-void ASMCALL R_DrawSpan_8_MMX(void);
-#endif
-
 // ------------------
 // 16bpp DRAWING CODE
 // ------------------
