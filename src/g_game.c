@@ -5048,6 +5048,12 @@ void G_InitNew(UINT8 pultmode, const char *mapname, boolean resetplayer, boolean
 		numgameovers = tokenlist = token = sstimer = redscore = bluescore = lastmap = 0;
 		countdown = countdown2 = exitfadestarted = 0;
 
+		if (!FLS)
+		{
+			emeralds = 0;
+			memset(&luabanks, 0, sizeof(luabanks));
+		}
+
 		for (i = 0; i < MAXPLAYERS; i++)
 		{
 			players[i].playerstate = PST_REBORN;
@@ -5055,6 +5061,7 @@ void G_InitNew(UINT8 pultmode, const char *mapname, boolean resetplayer, boolean
 			players[i].starpostx = players[i].starposty = players[i].starpostz = 0;
 			players[i].recordscore = 0;
 
+			// default lives, continues and score
 			if (netgame || multiplayer)
 			{
 				if (!FLS || (players[i].lives < 1))
@@ -5113,6 +5120,19 @@ void G_InitNew(UINT8 pultmode, const char *mapname, boolean resetplayer, boolean
 	ultimatemode = pultmode;
 	automapactive = false;
 	imcontinuing = false;
+
+	// fetch saved data if available
+	if (savedata.lives > 0)
+	{
+		numgameovers = savedata.numgameovers;
+		players[consoleplayer].continues = savedata.continues;
+		players[consoleplayer].lives = savedata.lives;
+		players[consoleplayer].score = savedata.score;
+		if ((botingame = ((botskin = savedata.botskin) != 0)))
+			botcolor = skins[botskin-1].prefcolor;
+		emeralds = savedata.emeralds;
+		savedata.lives = 0;
+	}
 
 	if ((gametyperules & GTR_CUTSCENES) && !skipprecutscene && mapheaderinfo[gamemap-1]->precutscenenum && !modeattacking && !(marathonmode & MA_NOCUTSCENES)) // Start a custom cutscene.
 		F_StartCustomCutscene(mapheaderinfo[gamemap-1]->precutscenenum-1, true, resetplayer, FLS);

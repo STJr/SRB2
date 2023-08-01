@@ -2146,12 +2146,6 @@ static void Got_Mapcmd(UINT8 **cp, INT32 playernum)
 	if (demoplayback && !timingdemo)
 		precache = false;
 
-	if (resetplayer && !FLS)
-	{
-		emeralds = 0;
-		memset(&luabanks, 0, sizeof(luabanks));
-	}
-
 	if (modeattacking)
 	{
 		SetPlayerSkinByNum(0, cv_chooseskin.value-1);
