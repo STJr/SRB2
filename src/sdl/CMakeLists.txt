@@ -1,12 +1,17 @@
 # Declare SDL2 interface sources
 
-target_sources(SRB2SDL2 PRIVATE mixer_sound.c)
-
-target_sourcefile(c)
-
-target_sources(SRB2SDL2 PRIVATE ogl_sdl.c)
-
-target_sources(SRB2SDL2 PRIVATE i_threads.c)
+target_sources(SRB2SDL2 PRIVATE
+	mixer_sound.c
+	ogl_sdl.c
+	i_threads.c
+	i_net.c
+	i_system.c
+	i_main.c
+	i_video.c
+	dosstr.c
+	endtxt.c
+	hwsym_sdl.c
+)
 
 if("${CMAKE_SYSTEM_NAME}" MATCHES Windows)
 	target_sources(SRB2SDL2 PRIVATE

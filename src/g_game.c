@@ -4266,7 +4266,7 @@ static void G_DoContinued(void)
 {
 	player_t *pl = &players[consoleplayer];
 	I_Assert(!netgame && !multiplayer);
-	I_Assert(pl->continues > 0);
+	//I_Assert(pl->continues > 0);
 
 	if (pl->continues)
 		pl->continues--;

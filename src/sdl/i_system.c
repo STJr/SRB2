@@ -23,12 +23,6 @@
 /// \file
 /// \brief SRB2 system stuff for SDL
 
-#ifdef CMAKECONFIG
-#include "config.h"
-#else
-#include "../config.h.in"
-#endif
-
 #include <signal.h>
 
 #ifdef _WIN32
@@ -2362,7 +2356,10 @@ INT32 I_StartupSystem(void)
 #endif
 	I_StartupConsole();
 #ifdef NEWSIGNALHANDLER
-	I_Fork();
+	// This is useful when debugging. It lets GDB attach to
+	// the correct process easily.
+	if (!M_CheckParm("-nofork"))
+		I_Fork();
 #endif
 	I_RegisterSignals();
 	I_OutputMsg("Compiled for SDL version: %d.%d.%d\n",
@@ -2648,9 +2645,10 @@ void I_ShutdownSystem(void)
 {
 	INT32 c;
 
-#ifndef NEWSIGNALHANDLER
-	I_ShutdownConsole();
+#ifdef NEWSIGNALHANDLER
+	if (M_CheckParm("-nofork"))
 #endif
+		I_ShutdownConsole();
 
 	for (c = MAX_QUIT_FUNCS-1; c >= 0; c--)
 		if (quit_funcs[c])
