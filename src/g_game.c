@@ -2523,7 +2523,6 @@ static inline void G_PlayerFinishLevel(INT32 player)
 
 	memset(p->powers, 0, sizeof (p->powers));
 	p->ringweapons = 0;
-	p->recordscore = 0;
 
 	p->mo->flags2 &= ~MF2_SHADOW; // cancel invisibility
 	P_FlashPal(p, 0, 0); // Resets
