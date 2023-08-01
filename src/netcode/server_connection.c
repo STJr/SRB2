@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2022 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -39,10 +39,10 @@ char playeraddress[MAXPLAYERS][64];
 
 consvar_t cv_showjoinaddress = CVAR_INIT ("showjoinaddress", "Off", CV_SAVE|CV_NETVAR, CV_OnOff, NULL);
 
-consvar_t cv_allownewplayer = CVAR_INIT ("allowjoin", "On", CV_SAVE|CV_NETVAR, CV_OnOff, NULL);
+consvar_t cv_allownewplayer = CVAR_INIT ("allowjoin", "On", CV_SAVE|CV_NETVAR|CV_ALLOWLUA, CV_OnOff, NULL);
 
 static CV_PossibleValue_t maxplayers_cons_t[] = {{2, "MIN"}, {32, "MAX"}, {0, NULL}};
-consvar_t cv_maxplayers = CVAR_INIT ("maxplayers", "8", CV_SAVE|CV_NETVAR, maxplayers_cons_t, NULL);
+consvar_t cv_maxplayers = CVAR_INIT ("maxplayers", "8", CV_SAVE|CV_NETVAR|CV_ALLOWLUA, maxplayers_cons_t, NULL);
 
 static CV_PossibleValue_t joindelay_cons_t[] = {{1, "MIN"}, {3600, "MAX"}, {0, "Off"}, {0, NULL}};
 consvar_t cv_joindelay = CVAR_INIT ("joindelay", "10", CV_SAVE|CV_NETVAR, joindelay_cons_t, NULL);
@@ -52,9 +52,9 @@ consvar_t cv_rejointimeout = CVAR_INIT ("rejointimeout", "2", CV_SAVE|CV_NETVAR|
 
 static INT32 FindRejoinerNum(SINT8 node)
 {
-	char strippednodeaddress[64];
+	char addressbuffer[64];
 	const char *nodeaddress;
-	char *port;
+	const char *strippednodeaddress;
 
 	// Make sure there is no dead dress before proceeding to the stripping
 	if (!I_GetNodeAddress)
@@ -64,10 +64,8 @@ static INT32 FindRejoinerNum(SINT8 node)
 		return -1;
 
 	// Strip the address of its port
-	strcpy(strippednodeaddress, nodeaddress);
-	port = strchr(strippednodeaddress, ':');
-	if (port)
-		*port = '\0';
+	strcpy(addressbuffer, nodeaddress);
+	strippednodeaddress = I_NetSplitAddress(addressbuffer, NULL);
 
 	// Check if any player matches the stripped address
 	for (INT32 i = 0; i < MAXPLAYERS; i++)
@@ -110,8 +108,9 @@ static void SV_SendServerInfo(INT32 node, tic_t servertime)
 	netbuffer->u.serverinfo.time = (tic_t)LONG(servertime);
 	netbuffer->u.serverinfo.leveltime = (tic_t)LONG(leveltime);
 
-	netbuffer->u.serverinfo.numberofplayer = (UINT8)D_NumPlayers();
-	netbuffer->u.serverinfo.maxplayer = (UINT8)cv_maxplayers.value;
+	// Exclude bots from both counts
+	netbuffer->u.serverinfo.numberofplayer = (UINT8)(D_NumPlayers() - D_NumBots());
+	netbuffer->u.serverinfo.maxplayer = (UINT8)(cv_maxplayers.value - D_NumBots());
 
 	netbuffer->u.serverinfo.refusereason = GetRefuseReason(node);
 
@@ -237,6 +236,7 @@ static boolean SV_SendServerConfig(INT32 node)
 	netbuffer->u.servercfg.gamestate = (UINT8)gamestate;
 	netbuffer->u.servercfg.gametype = (UINT8)gametype;
 	netbuffer->u.servercfg.modifiedgame = (UINT8)modifiedgame;
+	netbuffer->u.servercfg.usedCheats = (UINT8)usedCheats;
 
 	memcpy(netbuffer->u.servercfg.server_context, server_context, 8);
 

@@ -321,22 +321,18 @@ void SV_WriteNetCommandsForTic(tic_t tic, UINT8 **buf)
 	}
 }
 
-void CL_CopyNetCommandsFromServerPacket(tic_t tic)
+void CL_CopyNetCommandsFromServerPacket(tic_t tic, UINT8 **buf)
 {
-	servertics_pak *packet = &netbuffer->u.serverpak;
-	UINT8 *cmds = (UINT8*)&packet->cmds[packet->numslots * packet->numtics];
-	UINT8 numcmds;
-
-	numcmds = *cmds++;
+	UINT8 numcmds = *(*buf)++;
 
 	for (UINT32 i = 0; i < numcmds; i++)
 	{
-		INT32 playernum = *cmds++; // playernum
-		size_t size = cmds[0]+1;
+		INT32 playernum = *(*buf)++; // playernum
+		size_t size = (*buf)[0]+1;
 
 		if (tic >= gametic) // Don't copy old net commands
-			M_Memcpy(D_GetTextcmd(tic, playernum), cmds, size);
-		cmds += size;
+			M_Memcpy(D_GetTextcmd(tic, playernum), *buf, size);
+		*buf += size;
 	}
 }
 

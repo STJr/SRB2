@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2022 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -17,11 +17,12 @@
 #include "../d_main.h"
 #include "../f_finale.h"
 #include "../g_game.h"
-#include "../i_gamepad.h"
+#include "../g_input.h"
 #include "i_net.h"
 #include "../i_system.h"
 #include "../i_time.h"
 #include "../i_video.h"
+#include "../keys.h"
 #include "../m_menu.h"
 #include "../m_misc.h"
 #include "../snake.h"
@@ -233,6 +234,7 @@ static boolean CL_AskFileList(INT32 firstfile)
 boolean CL_SendJoin(void)
 {
 	UINT8 localplayers = 1;
+	char const *player2name;
 	if (netgame)
 		CONS_Printf(M_GetText("Sending join request...\n"));
 	netbuffer->packettype = PT_CLIENTJOIN;
@@ -250,8 +252,14 @@ boolean CL_SendJoin(void)
 	if (splitscreen)
 		CleanupPlayerName(1, cv_playername2.zstring); // 1 is a HACK? oh no
 
+	// Avoid empty string on bots to avoid softlocking in singleplayer
+	if (botingame)
+		player2name = strcmp(cv_playername.zstring, "Tails") == 0 ? "Tail" : "Tails";
+	else
+		player2name = cv_playername2.zstring;
+
 	strncpy(netbuffer->u.clientcfg.names[0], cv_playername.zstring, MAXPLAYERNAME);
-	strncpy(netbuffer->u.clientcfg.names[1], cv_playername2.zstring, MAXPLAYERNAME);
+	strncpy(netbuffer->u.clientcfg.names[1], player2name, MAXPLAYERNAME);
 
 	return HSendPacket(servernode, true, 0, sizeof (clientconfig_pak));
 }
@@ -470,9 +478,9 @@ void CL_UpdateServerList(boolean internetsearch, INT32 room)
 
 static void M_ConfirmConnect(event_t *ev)
 {
-	if (ev->type == ev_keydown || ev->type == ev_gamepad_down)
+	if (ev->type == ev_keydown)
 	{
-		if ((ev->type == ev_keydown && (ev->key == ' ' || ev->key == 'y' || ev->key == KEY_ENTER)) || (ev->type == ev_gamepad_down && ev->which == 0 && ev->key == GAMEPAD_BUTTON_A))
+		if (ev->key == ' ' || ev->key == 'y' || ev->key == KEY_ENTER || ev->key == KEY_JOY1)
 		{
 			if (totalfilesrequestednum > 0)
 			{
@@ -487,7 +495,7 @@ static void M_ConfirmConnect(event_t *ev)
 
 			M_ClearMenus(true);
 		}
-		else if ((ev->type == ev_keydown && (ev->key == 'n' || ev->key == KEY_ESCAPE)) || (ev->type == ev_gamepad_down && ev->which == 0 && ev->key == GAMEPAD_BUTTON_B))
+		else if (ev->key == 'n' || ev->key == KEY_ESCAPE || ev->key == KEY_JOY1 + 3)
 		{
 			cl_mode = CL_ABORTED;
 			M_ClearMenus(true);
@@ -663,7 +671,7 @@ static const char * InvalidServerReason (serverinfo_pak *info)
 		case REFUSE_SLOTS_FULL:
 			return va(
 					"Maximum players reached: %d\n" EOT,
-					info->maxplayer);
+					info->maxplayer - D_NumBots());
 		default:
 			if (info->refusereason)
 			{
@@ -893,11 +901,12 @@ static boolean CL_ServerConnectionTicker(const char *tmpsave, tic_t *oldtic, tic
 			// my hand has been forced and I am dearly sorry for this awful hack :vomit:
 			for (; eventtail != eventhead; eventtail = (eventtail+1) & (MAXEVENTS-1))
 			{
-				G_MapEventsToControls(&events[eventtail]);
+				if (!Snake_JoyGrabber(snake, &events[eventtail]))
+					G_MapEventsToControls(&events[eventtail]);
 			}
 		}
 
-		if (gamekeydown[KEY_ESCAPE] || gamepads[0].buttons[GAMEPAD_BUTTON_B] || cl_mode == CL_ABORTED)
+		if (gamekeydown[KEY_ESCAPE] || gamekeydown[KEY_JOY1+1] || cl_mode == CL_ABORTED)
 		{
 			CONS_Printf(M_GetText("Network game synchronization aborted.\n"));
 			M_StartMessage(M_GetText("Network game synchronization aborted.\n\nPress ESC\n"), NULL, MM_NOTHING);
@@ -922,7 +931,7 @@ static boolean CL_ServerConnectionTicker(const char *tmpsave, tic_t *oldtic, tic
 		{
 			if (!snake)
 			{
-				F_MenuPresTicker(true); // title sky
+				F_MenuPresTicker(); // title sky
 				F_TitleScreenTicker(true);
 				F_TitleScreenDrawer();
 			}
@@ -1019,6 +1028,9 @@ void CL_ConnectToServer(void)
 		}
 	}
 	while (!(cl_mode == CL_CONNECTED && (client || (server && nodewaited <= pnumnodes))));
+
+	if (netgame)
+		F_StartWaitingPlayers();
 
 	DEBFILE(va("Synchronisation Finished\n"));
 
@@ -1136,6 +1148,8 @@ void PT_ServerCFG(SINT8 node)
 		maketic = gametic = neededtic = (tic_t)LONG(netbuffer->u.servercfg.gametic);
 		G_SetGametype(netbuffer->u.servercfg.gametype);
 		modifiedgame = netbuffer->u.servercfg.modifiedgame;
+		if (netbuffer->u.servercfg.usedCheats)
+			G_SetUsedCheats(true);
 		memcpy(server_context, netbuffer->u.servercfg.server_context, 8);
 	}
 

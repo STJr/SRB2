@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2022 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -760,6 +760,8 @@ static const char *packettypename[NUMPACKETTYPE] =
 	"ASKLUAFILE",
 	"HASLUAFILE",
 
+	"PT_BASICKEEPALIVE",
+
 	"FILEFRAGMENT",
 	"FILEACK",
 	"FILERECEIVED",
@@ -817,6 +819,9 @@ static void DebugPrintpacket(const char *header)
 			fprintf(debugfile, "    tic %4u resendfrom %u\n",
 				(UINT32)ExpandTics(netbuffer->u.clientpak.client_tic, doomcom->remotenode),
 				(UINT32)ExpandTics (netbuffer->u.clientpak.resendfrom, doomcom->remotenode));
+			break;
+		case PT_BASICKEEPALIVE:
+			fprintf(debugfile, "    wipetime\n");
 			break;
 		case PT_TEXTCMD:
 		case PT_TEXTCMD2:
@@ -1140,26 +1145,32 @@ static void Internal_FreeNodenum(INT32 nodenum)
 	(void)nodenum;
 }
 
+char *I_NetSplitAddress(char *host, char **port)
+{
+	boolean v4 = (strchr(host, '.') != NULL);
+
+	host = strtok(host, v4 ? ":" : "[]");
+
+	if (port)
+		*port = strtok(NULL, ":");
+
+	return host;
+}
+
 SINT8 I_NetMakeNode(const char *hostname)
 {
 	SINT8 newnode = -1;
 	if (I_NetMakeNodewPort)
 	{
 		char *localhostname = strdup(hostname);
-		char  *t = localhostname;
-		const char *port;
+		char *port;
 		if (!localhostname)
 			return newnode;
+
 		// retrieve portnum from address!
-		strtok(localhostname, ":");
-		port = strtok(NULL, ":");
+		hostname = I_NetSplitAddress(localhostname, &port);
 
-		// remove the port in the hostname as we've it already
-		while ((*t != ':') && (*t != '\0'))
-			t++;
-		*t = '\0';
-
-		newnode = I_NetMakeNodewPort(localhostname, port);
+		newnode = I_NetMakeNodewPort(hostname, port);
 		free(localhostname);
 	}
 	return newnode;

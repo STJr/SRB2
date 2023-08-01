@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2022 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -33,10 +33,14 @@ extern consvar_t cv_defaultskin2;
 
 extern consvar_t cv_seenames, cv_allowseenames;
 extern consvar_t cv_usemouse;
-extern consvar_t cv_usegamepad[2];
-extern consvar_t cv_gamepad_scale[2];
-extern consvar_t cv_gamepad_rumble[2];
-extern consvar_t cv_gamepad_autopause;
+extern consvar_t cv_usejoystick;
+extern consvar_t cv_usejoystick2;
+#ifdef LJOYSTICK
+extern consvar_t cv_joyport;
+extern consvar_t cv_joyport2;
+#endif
+extern consvar_t cv_joyscale;
+extern consvar_t cv_joyscale2;
 
 // splitscreen with second mouse
 extern consvar_t cv_mouse2port;

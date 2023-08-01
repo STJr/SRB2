@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2022 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -71,6 +71,8 @@ typedef enum
 	PT_SENDINGLUAFILE, // Server telling a client Lua needs to open a file
 	PT_ASKLUAFILE,     // Client telling the server they don't have the file
 	PT_HASLUAFILE,     // Client telling the server they have the file
+
+	PT_BASICKEEPALIVE, // Keep the network alive during wipes, as tics aren't advanced and NetUpdate isn't called
 
 	// Add non-PT_CANFAIL packet types here to avoid breaking MS compatibility.
 
@@ -143,6 +145,7 @@ typedef struct
 
 	UINT8 gametype;
 	UINT8 modifiedgame;
+	UINT8 usedCheats;
 
 	char server_context[8]; // Unique context id, generated at server startup.
 } ATTRPACK serverconfig_pak;

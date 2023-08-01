@@ -39,7 +39,7 @@
 #include "v_video.h"
 #include "lua_hook.h"
 #include "md5.h" // demo checksums
-#include "d_netfil.h" // G_CheckDemoExtraFiles
+#include "netcode/d_netfil.h" // G_CheckDemoExtraFiles
 
 boolean timingdemo; // if true, exit with report on completion
 boolean nodrawers; // for comparative timing purposes
@@ -1885,7 +1885,7 @@ UINT8 G_CmpDemoTime(char *oldname, char *newname)
 	switch(oldversion) // demoversion
 	{
 	case DEMOVERSION: // latest always supported
-	case 0x000f: // The previous demoversions also supported 
+	case 0x000f: // The previous demoversions also supported
 	case 0x000e:
 	case 0x000d: // all that changed between then and now was longer color name
 	case 0x000c:

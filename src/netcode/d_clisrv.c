@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2022 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -25,8 +25,6 @@
 #include "../st_stuff.h"
 #include "../hu_stuff.h"
 #include "../keys.h"
-#include "../g_input.h"
-#include "../i_gamepad.h"
 #include "../m_menu.h"
 #include "../console.h"
 #include "d_netfil.h"
@@ -34,7 +32,6 @@
 #include "../p_saveg.h"
 #include "../z_zone.h"
 #include "../p_local.h"
-#include "../p_haptic.h"
 #include "../m_misc.h"
 #include "../am_map.h"
 #include "../m_random.h"
@@ -103,6 +100,8 @@ boolean acceptnewnode = true;
 
 UINT16 software_MAXPACKETLENGTH;
 
+static tic_t gametime = 0;
+
 static CV_PossibleValue_t netticbuffer_cons_t[] = {{0, "MIN"}, {3, "MAX"}, {0, NULL}};
 consvar_t cv_netticbuffer = CVAR_INIT ("netticbuffer", "1", CV_SAVE, netticbuffer_cons_t, NULL);
 
@@ -113,6 +112,8 @@ consvar_t cv_blamecfail = CVAR_INIT ("blamecfail", "Off", CV_SAVE|CV_NETVAR, CV_
 
 static CV_PossibleValue_t playbackspeed_cons_t[] = {{1, "MIN"}, {10, "MAX"}, {0, NULL}};
 consvar_t cv_playbackspeed = CVAR_INIT ("playbackspeed", "1", 0, playbackspeed_cons_t, NULL);
+
+consvar_t cv_dedicatedidletime = CVAR_INIT ("dedicatedidletime", "10", CV_SAVE, CV_Unsigned, NULL);
 
 void ResetNode(INT32 node)
 {
@@ -210,14 +211,13 @@ static void Got_AddPlayer(UINT8 **p, INT32 playernum)
 
 		if (server && I_GetNodeAddress)
 		{
+			char addressbuffer[64];
 			const char *address = I_GetNodeAddress(node);
-			char *port = NULL;
 			if (address) // MI: fix msvcrt.dll!_mbscat crash?
 			{
-				strcpy(playeraddress[newplayernum], address);
-				port = strchr(playeraddress[newplayernum], ':');
-				if (port)
-					*port = '\0';
+				strcpy(addressbuffer, address);
+				strcpy(playeraddress[newplayernum],
+						I_NetSplitAddress(addressbuffer, NULL));
 			}
 		}
 	}
@@ -744,6 +744,9 @@ void SV_ResetServer(void)
 
 	CV_RevertNetVars();
 
+	// Ensure synched when creating a new server
+	M_CopyGameData(serverGamedata, clientGamedata);
+
 	DEBFILE("\n-=-=-=-=-=-=-= Server Reset =-=-=-=-=-=-=-\n\n");
 }
 
@@ -997,6 +1000,45 @@ static void PT_Ping(SINT8 node, INT32 netconsole)
 	}
 }
 
+static void PT_BasicKeepAlive(SINT8 node, INT32 netconsole)
+{
+	if (client)
+		return;
+
+	// This should probably still timeout though, as the node should always have a player 1 number
+	if (netconsole == -1)
+		return;
+
+	// If a client sends this it should mean they are done receiving the savegame
+	netnodes[node].sendingsavegame = false;
+
+	// As long as clients send keep alives, the server can keep running, so reset the timeout
+	/// \todo Use a separate cvar for that kind of timeout?
+	netnodes[node].freezetimeout = I_GetTime() + connectiontimeout;
+	return;
+}
+
+// Confusing, but this DOESN'T send PT_NODEKEEPALIVE, it sends PT_BASICKEEPALIVE
+// Used during wipes to tell the server that a node is still connected
+static void CL_SendClientKeepAlive(void)
+{
+	netbuffer->packettype = PT_BASICKEEPALIVE;
+
+	HSendPacket(servernode, false, 0, 0);
+}
+
+static void SV_SendServerKeepAlive(void)
+{
+	for (INT32 n = 1; n < MAXNETNODES; n++)
+	{
+		if (netnodes[n].ingame)
+		{
+			netbuffer->packettype = PT_BASICKEEPALIVE;
+			HSendPacket(n, false, 0, 0);
+		}
+	}
+}
+
 /** Handles a packet received from a node that isn't in game
   *
   * \param node The packet sender
@@ -1052,6 +1094,7 @@ static void HandlePacketFromPlayer(SINT8 node)
 		netconsole = 0;
 	else
 		netconsole = netnodes[node].player;
+
 #ifdef PARANOIA
 	if (netconsole >= MAXPLAYERS)
 		I_Error("bad table nodetoplayer: node %d player %d", doomcom->remotenode, netconsole);
@@ -1068,6 +1111,7 @@ static void HandlePacketFromPlayer(SINT8 node)
 		case PT_NODEKEEPALIVEMIS:
 			PT_ClientCmd(node, netconsole);
 			break;
+		case PT_BASICKEEPALIVE     : PT_BasicKeepAlive     (node, netconsole); break;
 		case PT_TEXTCMD            : PT_TextCmd            (node, netconsole); break;
 		case PT_TEXTCMD2           : PT_TextCmd            (node, netconsole); break;
 		case PT_LOGIN              : PT_Login              (node, netconsole); break;
@@ -1209,28 +1253,8 @@ boolean TryRunTics(tic_t realtics)
 	}
 }
 
-void NetUpdate(void)
+static void UpdatePingTable(void)
 {
-	static tic_t gametime = 0;
-	static tic_t resptime = 0;
-	tic_t nowtime;
-	INT32 realtics;
-
-	nowtime = I_GetTime();
-	realtics = nowtime - gametime;
-
-	if (realtics <= 0) // nothing new to update
-		return;
-	if (realtics > 5)
-	{
-		if (server)
-			realtics = 1;
-		else
-			realtics = 5;
-	}
-
-	gametime = nowtime;
-
 	if (server)
 	{
 		if (netgame && !(gametime % 35)) // update once per second.
@@ -1241,6 +1265,149 @@ void NetUpdate(void)
 				realpingtable[i] += G_TicsToMilliseconds(GetLag(playernode[i]));
 		pingmeasurecount++;
 	}
+}
+
+// Handle timeouts to prevent definitive freezes from happenning
+static void HandleNodeTimeouts(void)
+{
+	if (server)
+	{
+		for (INT32 i = 1; i < MAXNETNODES; i++)
+			if (netnodes[i].ingame && netnodes[i].freezetimeout < I_GetTime())
+				Net_ConnectionTimeout(i);
+
+		// In case the cvar value was lowered
+		if (joindelay)
+			joindelay = min(joindelay - 1, 3 * (tic_t)cv_joindelay.value * TICRATE);
+	}
+}
+
+// Keep the network alive while not advancing tics!
+void NetKeepAlive(void)
+{
+	tic_t nowtime;
+	INT32 realtics;
+
+	nowtime = I_GetTime();
+	realtics = nowtime - gametime;
+
+	// return if there's no time passed since the last call
+	if (realtics <= 0) // nothing new to update
+		return;
+
+	UpdatePingTable();
+
+	GetPackets();
+
+#ifdef MASTERSERVER
+	MasterClient_Ticker();
+#endif
+
+	if (client)
+	{
+		// send keep alive
+		CL_SendClientKeepAlive();
+		// No need to check for resynch because we aren't running any tics
+	}
+	else
+	{
+		SV_SendServerKeepAlive();
+	}
+
+	// No else because no tics are being run and we can't resynch during this
+
+	Net_AckTicker();
+	HandleNodeTimeouts();
+	FileSendTicker();
+}
+
+void NetUpdate(void)
+{
+	static tic_t resptime = 0;
+	tic_t nowtime;
+	INT32 realtics;
+
+	nowtime = I_GetTime();
+	realtics = nowtime - gametime;
+
+	if (realtics <= 0) // nothing new to update
+		return;
+
+	if (realtics > 5)
+	{
+		if (server)
+			realtics = 1;
+		else
+			realtics = 5;
+	}
+
+	if (server && dedicated && gamestate == GS_LEVEL)
+ 	{
+		const tic_t dedicatedidletime = cv_dedicatedidletime.value * TICRATE;
+		static tic_t dedicatedidletimeprev = 0;
+		static tic_t dedicatedidle = 0;
+
+		if (dedicatedidletime > 0)
+		{
+			INT32 i;
+
+			for (i = 1; i < MAXNETNODES; ++i)
+				if (netnodes[i].ingame)
+				{
+					if (dedicatedidle >= dedicatedidletime)
+					{
+						CONS_Printf("DEDICATED: Awakening from idle (Node %d detected...)\n", i);
+						dedicatedidle = 0;
+					}
+					break;
+				}
+
+			if (i == MAXNETNODES)
+			{
+				if (leveltime == 2)
+				{
+					// On next tick...
+					dedicatedidle = dedicatedidletime-1;
+				}
+				else if (dedicatedidle >= dedicatedidletime)
+				{
+					if (D_GetExistingTextcmd(gametic, 0) || D_GetExistingTextcmd(gametic+1, 0))
+					{
+						CONS_Printf("DEDICATED: Awakening from idle (Netxcmd detected...)\n");
+						dedicatedidle = 0;
+					}
+					else
+					{
+						realtics = 0;
+					}
+				}
+				else if ((dedicatedidle += realtics) >= dedicatedidletime)
+				{
+					const char *idlereason = "at round start";
+					if (leveltime > 3)
+						idlereason = va("for %d seconds", dedicatedidle/TICRATE);
+
+					CONS_Printf("DEDICATED: No nodes %s, idling...\n", idlereason);
+					realtics = 0;
+					dedicatedidle = dedicatedidletime;
+				}
+			}
+		}
+		else
+		{
+			if (dedicatedidletimeprev > 0 && dedicatedidle >= dedicatedidletimeprev)
+			{
+				CONS_Printf("DEDICATED: Awakening from idle (Idle disabled...)\n");
+			}
+			dedicatedidle = 0;
+		}
+
+		dedicatedidletimeprev = dedicatedidletime;
+ 	}
+
+	gametime = nowtime;
+
+	UpdatePingTable();
 
 	if (client)
 		maketic = neededtic;
@@ -1270,17 +1437,18 @@ void NetUpdate(void)
 	}
 	else
 	{
-		if (!demoplayback)
+		if (!demoplayback && realtics > 0)
 		{
 			hu_redownloadinggamestate = false;
 
 			firstticstosend = gametic;
 			for (INT32 i = 0; i < MAXNETNODES; i++)
-				if (netnodes[i].ingame && netnodes[i].tic < firstticstosend)
+				if (netnodes[i].ingame)
 				{
-					firstticstosend = netnodes[i].tic;
+					if (netnodes[i].tic < firstticstosend)
+						firstticstosend = netnodes[i].tic;
 
-					if (maketic + 1 >= netnodes[i].tic + BACKUPTICS)
+					if (maketic + realtics >= netnodes[i].tic + BACKUPTICS - TICRATE)
 						Net_ConnectionTimeout(i);
 				}
 
@@ -1302,20 +1470,10 @@ void NetUpdate(void)
 	}
 
 	Net_AckTicker();
-
-	// Handle timeouts to prevent definitive freezes from happenning
-	if (server)
-	{
-		for (INT32 i = 1; i < MAXNETNODES; i++)
-			if (netnodes[i].ingame && netnodes[i].freezetimeout < I_GetTime())
-				Net_ConnectionTimeout(i);
-
-		// In case the cvar value was lowered
-		if (joindelay)
-			joindelay = min(joindelay - 1, 3 * (tic_t)cv_joindelay.value * TICRATE);
-	}
+	HandleNodeTimeouts();
 
 	nowtime /= NEWTICRATERATIO;
+
 	if (nowtime > resptime)
 	{
 		resptime = nowtime;
@@ -1338,22 +1496,22 @@ void D_ClientServerInit(void)
 	DEBFILE(va("- - -== SRB2 v%d.%.2d.%d "VERSIONSTRING" debugfile ==- - -\n",
 		VERSION/100, VERSION%100, SUBVERSION));
 
-	COM_AddCommand("getplayernum", Command_GetPlayerNum);
-	COM_AddCommand("kick", Command_Kick);
-	COM_AddCommand("ban", Command_Ban);
-	COM_AddCommand("banip", Command_BanIP);
-	COM_AddCommand("clearbans", Command_ClearBans);
-	COM_AddCommand("showbanlist", Command_ShowBan);
-	COM_AddCommand("reloadbans", Command_ReloadBan);
-	COM_AddCommand("connect", Command_connect);
-	COM_AddCommand("nodes", Command_Nodes);
-	COM_AddCommand("resendgamestate", Command_ResendGamestate);
+	COM_AddCommand("getplayernum", Command_GetPlayerNum, COM_LUA);
+	COM_AddCommand("kick", Command_Kick, COM_LUA);
+	COM_AddCommand("ban", Command_Ban, COM_LUA);
+	COM_AddCommand("banip", Command_BanIP, COM_LUA);
+	COM_AddCommand("clearbans", Command_ClearBans, COM_LUA);
+	COM_AddCommand("showbanlist", Command_ShowBan, COM_LUA);
+	COM_AddCommand("reloadbans", Command_ReloadBan, COM_LUA);
+	COM_AddCommand("connect", Command_connect, COM_LUA);
+	COM_AddCommand("nodes", Command_Nodes, COM_LUA);
+	COM_AddCommand("resendgamestate", Command_ResendGamestate, COM_LUA);
 #ifdef PACKETDROP
-	COM_AddCommand("drop", Command_Drop);
-	COM_AddCommand("droprate", Command_Droprate);
+	COM_AddCommand("drop", Command_Drop, COM_LUA);
+	COM_AddCommand("droprate", Command_Droprate, COM_LUA);
 #endif
 #ifdef _DEBUG
-	COM_AddCommand("numnodes", Command_Numnodes);
+	COM_AddCommand("numnodes", Command_Numnodes, COM_LUA);
 #endif
 
 	RegisterNetXCmd(XD_KICK, Got_KickCmd);
@@ -1421,6 +1579,20 @@ INT32 D_NumPlayers(void)
 			num++;
 	return num;
 }
+
+/** Similar to the above, but counts only bots.
+  * Purpose is to remove bots from both the player count and the
+  * max player count on the server view
+*/
+INT32 D_NumBots(void)
+{
+	INT32 num = 0, ix;
+	for (ix = 0; ix < MAXPLAYERS; ix++)
+		if (playeringame[ix] && players[ix].bot)
+			num++;
+	return num;
+}
+
 
 //
 // Consistancy

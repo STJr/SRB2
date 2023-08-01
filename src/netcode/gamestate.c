@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2022 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -29,7 +29,6 @@
 #include "../lua_script.h"
 #include "../lzf.h"
 #include "../m_misc.h"
-#include "../p_haptic.h"
 #include "../p_local.h"
 #include "../p_saveg.h"
 #include "../r_main.h"
@@ -199,8 +198,6 @@ void CL_LoadReceivedSavegame(boolean reloading)
 	titlemapinaction = TITLEMAP_OFF;
 	titledemo = false;
 	automapactive = false;
-
-	P_StopRumble(NULL);
 
 	// load a base level
 	if (P_LoadNetGame(reloading))

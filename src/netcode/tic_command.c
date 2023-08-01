@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2022 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -100,9 +100,9 @@ void D_ResetTiccmds(void)
 }
 
 // Check ticcmd for "speed hacks"
-static void CheckTiccmdHacks(INT32 playernum)
+static void CheckTiccmdHacks(INT32 playernum, tic_t tic)
 {
-	ticcmd_t *cmd = &netcmds[maketic%BACKUPTICS][playernum];
+	ticcmd_t *cmd = &netcmds[tic%BACKUPTICS][playernum];
 	if (cmd->forwardmove > MAXPLMOVE || cmd->forwardmove < -MAXPLMOVE
 		|| cmd->sidemove > MAXPLMOVE || cmd->sidemove < -MAXPLMOVE)
 	{
@@ -177,31 +177,43 @@ void PT_ClientCmd(SINT8 nodenum, INT32 netconsole)
 	// Update the nettics
 	node->tic = realend;
 
-	// Don't do anything for packets of type NODEKEEPALIVE?
-	if (netconsole == -1 || netbuffer->packettype == PT_NODEKEEPALIVE
-		|| netbuffer->packettype == PT_NODEKEEPALIVEMIS)
+	// This should probably still timeout though, as the node should always have a player 1 number
+	if (netconsole == -1)
 		return;
 
 	// As long as clients send valid ticcmds, the server can keep running, so reset the timeout
 	/// \todo Use a separate cvar for that kind of timeout?
 	node->freezetimeout = I_GetTime() + connectiontimeout;
 
+	// Don't do anything for packets of type NODEKEEPALIVE?
+	// Sryder 2018/07/01: Update the freezetimeout still!
+	if (netbuffer->packettype == PT_NODEKEEPALIVE
+		|| netbuffer->packettype == PT_NODEKEEPALIVEMIS)
+		return;
+
+	// If we've alredy received a ticcmd for this tic, just submit it for the next one.
+	tic_t faketic = maketic;
+	if ((!!(netcmds[maketic % BACKUPTICS][netconsole].angleturn & TICCMD_RECEIVED))
+		&& (maketic - firstticstosend < BACKUPTICS - 1))
+		faketic++;
+
 	// Copy ticcmd
-	G_MoveTiccmd(&netcmds[maketic%BACKUPTICS][netconsole], &netbuffer->u.clientpak.cmd, 1);
+	G_MoveTiccmd(&netcmds[faketic%BACKUPTICS][netconsole], &netbuffer->u.clientpak.cmd, 1);
 
 	// Splitscreen cmd
 	if ((netbuffer->packettype == PT_CLIENT2CMD || netbuffer->packettype == PT_CLIENT2MIS)
 		&& node->player2 >= 0)
-		G_MoveTiccmd(&netcmds[maketic%BACKUPTICS][(UINT8)node->player2],
+		G_MoveTiccmd(&netcmds[faketic%BACKUPTICS][(UINT8)node->player2],
 			&netbuffer->u.client2pak.cmd2, 1);
 
-	CheckTiccmdHacks(netconsole);
+	CheckTiccmdHacks(netconsole, faketic);
 	CheckConsistancy(nodenum, realstart);
 }
 
 void PT_ServerTics(SINT8 node, INT32 netconsole)
 {
 	tic_t realend, realstart;
+	servertics_pak *packet = &netbuffer->u.serverpak;
 
 	if (!netnodes[node].ingame)
 	{
@@ -223,15 +235,16 @@ void PT_ServerTics(SINT8 node, INT32 netconsole)
 		return;
 	}
 
-	realstart = netbuffer->u.serverpak.starttic;
-	realend = realstart + netbuffer->u.serverpak.numtics;
+	realstart = packet->starttic;
+	realend = realstart + packet->numtics;
 
 	realend = min(realend, gametic + CLIENTBACKUPTICS);
 	cl_packetmissed = realstart > neededtic;
 
 	if (realstart <= neededtic && realend > neededtic)
 	{
-		UINT8 *pak = (UINT8 *)&netbuffer->u.serverpak.cmds;
+		UINT8 *pak = (UINT8 *)&packet->cmds;
+		UINT8 *txtpak = (UINT8 *)&packet->cmds[packet->numslots * packet->numtics];
 
 		for (tic_t i = realstart; i < realend; i++)
 		{
@@ -240,9 +253,9 @@ void PT_ServerTics(SINT8 node, INT32 netconsole)
 
 			// copy the tics
 			pak = G_ScpyTiccmd(netcmds[i%BACKUPTICS], pak,
-				netbuffer->u.serverpak.numslots*sizeof (ticcmd_t));
+				packet->numslots*sizeof (ticcmd_t));
 
-			CL_CopyNetCommandsFromServerPacket(i);
+			CL_CopyNetCommandsFromServerPacket(i, &txtpak);
 		}
 
 		neededtic = realend;
@@ -257,35 +270,39 @@ void PT_ServerTics(SINT8 node, INT32 netconsole)
 void CL_SendClientCmd(void)
 {
 	size_t packetsize = 0;
+	boolean mis = false;
 
 	netbuffer->packettype = PT_CLIENTCMD;
 
 	if (cl_packetmissed)
-		netbuffer->packettype++;
+	{
+		netbuffer->packettype = PT_CLIENTMIS;
+		mis = true;
+	}
+
 	netbuffer->u.clientpak.resendfrom = (UINT8)(neededtic & UINT8_MAX);
 	netbuffer->u.clientpak.client_tic = (UINT8)(gametic & UINT8_MAX);
 
 	if (gamestate == GS_WAITINGPLAYERS)
 	{
 		// Send PT_NODEKEEPALIVE packet
-		netbuffer->packettype += 4;
+		netbuffer->packettype = (mis ? PT_NODEKEEPALIVEMIS : PT_NODEKEEPALIVE);
 		packetsize = sizeof (clientcmd_pak) - sizeof (ticcmd_t) - sizeof (INT16);
 		HSendPacket(servernode, false, 0, packetsize);
 	}
 	else if (gamestate != GS_NULL && (addedtogame || dedicated))
 	{
+		packetsize = sizeof (clientcmd_pak);
 		G_MoveTiccmd(&netbuffer->u.clientpak.cmd, &localcmds, 1);
 		netbuffer->u.clientpak.consistancy = SHORT(consistancy[gametic%BACKUPTICS]);
 
 		// Send a special packet with 2 cmd for splitscreen
 		if (splitscreen || botingame)
 		{
-			netbuffer->packettype += 2;
-			G_MoveTiccmd(&netbuffer->u.client2pak.cmd2, &localcmds2, 1);
+			netbuffer->packettype = (mis ? PT_CLIENT2MIS : PT_CLIENT2CMD);
 			packetsize = sizeof (client2cmd_pak);
+			G_MoveTiccmd(&netbuffer->u.client2pak.cmd2, &localcmds2, 1);
 		}
-		else
-			packetsize = sizeof (clientcmd_pak);
 
 		HSendPacket(servernode, false, 0, packetsize);
 	}
@@ -346,7 +363,7 @@ void SV_SendTics(void)
 	for (INT32 n = 1; n < MAXNETNODES; n++)
 		if (netnodes[n].ingame)
 		{
-			netnode_t *node = netnodes[n];
+			netnode_t *node = &netnodes[n];
 
 			// assert node->supposedtic>=node->tic
 			realfirsttic = node->supposedtic;
@@ -408,7 +425,7 @@ void Local_Maketic(INT32 realtics)
 	                   // and G_MapEventsToControls
 	if (!dedicated)
 		rendergametic = gametic;
-	// translate inputs (keyboard/mouse/gamepad) into game controls
+	// translate inputs (keyboard/mouse/joystick) into game controls
 	G_BuildTiccmd(&localcmds, realtics, 1);
 	if (splitscreen || botingame)
 		G_BuildTiccmd(&localcmds2, realtics, 2);

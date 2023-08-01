@@ -11,6 +11,8 @@
 
 #include "snake.h"
 #include "g_input.h"
+#include "g_game.h"
+#include "i_joy.h"
 #include "m_random.h"
 #include "s_sound.h"
 #include "screen.h"
@@ -67,6 +69,9 @@ typedef struct snake_s
 	enum bonustype_s bonustype;
 	UINT8 bonusx;
 	UINT8 bonusy;
+
+	event_t *joyevents[MAXEVENTS];
+	UINT16 joyeventcount;
 } snake_t;
 
 static const char *bonuspatches[] = {
@@ -113,6 +118,8 @@ static void Initialise(snake_t *snake)
 	snake->appley = M_RandomKey(NUM_BLOCKS_Y);
 
 	snake->bonustype = BONUS_NONE;
+
+	snake->joyeventcount = 0;
 }
 
 static UINT8 GetOppositeDir(UINT8 dir)
@@ -160,18 +167,19 @@ void Snake_Update(void *opaque)
 	UINT8 oldx, oldy;
 	UINT16 i;
 	UINT16 joystate = 0;
+	static INT32 pjoyx = 0, pjoyy = 0;
 
 	snake_t *snake = opaque;
 
 	// Handle retry
-	if (snake->gameover && (G_PlayerInputDown(0, GC_JUMP) || gamekeydown[KEY_ENTER]))
+	if (snake->gameover && (PLAYER1INPUTDOWN(GC_JUMP) || gamekeydown[KEY_ENTER]))
 	{
 		Initialise(snake);
 		snake->pausepressed = true; // Avoid accidental pause on respawn
 	}
 
 	// Handle pause
-	if (G_PlayerInputDown(0, GC_PAUSE) || gamekeydown[KEY_ENTER])
+	if (PLAYER1INPUTDOWN(GC_PAUSE) || gamekeydown[KEY_ENTER])
 	{
 		if (!snake->pausepressed)
 			snake->paused = !snake->paused;
@@ -190,23 +198,58 @@ void Snake_Update(void *opaque)
 	oldx = snake->snakex[1];
 	oldy = snake->snakey[1];
 
+	// Process the input events in here dear lord
+	for (UINT16 j = 0; j < snake->joyeventcount; j++)
+	{
+		event_t *ev = snake->joyevents[j];
+		const INT32 jdeadzone = (JOYAXISRANGE * cv_digitaldeadzone.value) / FRACUNIT;
+		if (ev->y != INT32_MAX)
+		{
+			if (Joystick.bGamepadStyle || abs(ev->y) > jdeadzone)
+			{
+				if (ev->y < 0 && pjoyy >= 0)
+					joystate = 1;
+				else if (ev->y > 0 && pjoyy <= 0)
+					joystate = 2;
+				pjoyy = ev->y;
+			}
+			else
+				pjoyy = 0;
+		}
+
+		if (ev->x != INT32_MAX)
+		{
+			if (Joystick.bGamepadStyle || abs(ev->x) > jdeadzone)
+			{
+				if (ev->x < 0 && pjoyx >= 0)
+					joystate = 3;
+				else if (ev->x > 0 && pjoyx <= 0)
+					joystate = 4;
+				pjoyx = ev->x;
+			}
+			else
+				pjoyx = 0;
+		}
+	}
+	snake->joyeventcount = 0;
+
 	// Update direction
-	if (G_PlayerInputDown(0, GC_STRAFELEFT) || gamekeydown[KEY_LEFTARROW] || joystate == 3)
+	if (PLAYER1INPUTDOWN(GC_STRAFELEFT) || gamekeydown[KEY_LEFTARROW] || joystate == 3)
 	{
 		if (snake->snakelength < 2 || x <= oldx)
 			snake->snakedir[0] = 1;
 	}
-	else if (G_PlayerInputDown(0, GC_STRAFERIGHT) || gamekeydown[KEY_RIGHTARROW] || joystate == 4)
+	else if (PLAYER1INPUTDOWN(GC_STRAFERIGHT) || gamekeydown[KEY_RIGHTARROW] || joystate == 4)
 	{
 		if (snake->snakelength < 2 || x >= oldx)
 			snake->snakedir[0] = 2;
 	}
-	else if (G_PlayerInputDown(0, GC_FORWARD) || gamekeydown[KEY_UPARROW] || joystate == 1)
+	else if (PLAYER1INPUTDOWN(GC_FORWARD) || gamekeydown[KEY_UPARROW] || joystate == 1)
 	{
 		if (snake->snakelength < 2 || y <= oldy)
 			snake->snakedir[0] = 3;
 	}
-	else if (G_PlayerInputDown(0, GC_BACKWARD) || gamekeydown[KEY_DOWNARROW] || joystate == 2)
+	else if (PLAYER1INPUTDOWN(GC_BACKWARD) || gamekeydown[KEY_DOWNARROW] || joystate == 2)
 	{
 		if (snake->snakelength < 2 || y >= oldy)
 			snake->snakedir[0] = 4;
@@ -532,4 +575,19 @@ void Snake_Free(void **opaque)
 		free(opaque);
 		*opaque = NULL;
 	}
+}
+
+// I'm screaming the hack is clean - ashi
+boolean Snake_JoyGrabber(void *opaque, event_t *ev)
+{
+	snake_t *snake = opaque;
+
+	if (ev->type == ev_joystick  && ev->key == 0)
+	{
+		snake->joyevents[snake->joyeventcount] = ev;
+		snake->joyeventcount++;
+		return true;
+	}
+	else
+		return false;
 }
