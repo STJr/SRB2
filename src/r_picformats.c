@@ -754,7 +754,7 @@ void *Picture_TextureToFlat(size_t texnum)
 	R_CheckTextureCache(texnum);
 
 	// Allocate the flat
-	flatsize = (texture->width * texture->height);
+	flatsize = texture->width * texture->height;
 	converted = Z_Malloc(flatsize, PU_STATIC, NULL);
 	memset(converted, TRANSPARENTPIXEL, flatsize);
 

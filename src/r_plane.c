@@ -978,30 +978,21 @@ void R_DrawSinglePlane(visplane_t *pl)
 	{
 		levelflat_t *levelflat = &levelflats[pl->picnum];
 
-		/* :james: */
-		switch (levelflat->type)
+		// Get the texture
+		ds_source = (UINT8 *)R_GetFlat(levelflat);
+		if (ds_source == NULL)
+			return;
+
+		texture_t *texture = textures[R_GetTextureNumForFlat(levelflat)];
+		ds_flatwidth = texture->width;
+		ds_flatheight = texture->height;
+
+		if (R_CheckSolidColorFlat())
+			ds_solidcolor = true;
+		else if (R_CheckPowersOfTwo())
 		{
-			case LEVELFLAT_NONE:
-				return;
-			case LEVELFLAT_FLAT:
-				ds_source = (UINT8 *)R_GetFlat(levelflat->u.flat.lumpnum);
-				R_SetFlatVars(W_LumpLength(levelflat->u.flat.lumpnum));
-				if (R_CheckSolidColorFlat())
-					ds_solidcolor = true;
-				else
-					ds_powersoftwo = true;
-				break;
-			default:
-				ds_source = (UINT8 *)R_GetLevelFlat(levelflat);
-				if (!ds_source)
-					return;
-				else if (R_CheckSolidColorFlat())
-					ds_solidcolor = true;
-				else if (R_CheckPowersOfTwo())
-				{
-					R_SetFlatVars(ds_flatwidth * ds_flatheight);
-					ds_powersoftwo = true;
-				}
+			R_SetFlatVars(ds_flatwidth * ds_flatheight);
+			ds_powersoftwo = true;
 		}
 
 		// Don't mess with angle on slopes! We'll handle this ourselves later

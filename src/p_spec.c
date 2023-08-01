@@ -152,7 +152,6 @@ void P_ParseAnimationDefintion(SINT8 istexture);
   *
   * Issues an error if any animation cycles are invalid.
   *
-  * \sa P_FindAnimatedFlat, P_SetupLevelFlatAnims
   * \author Steven McGranahan (original), Shadow Hog (had to rewrite it to handle multiple WADs), JTE (had to rewrite it to handle multiple WADs _correctly_)
   */
 void P_InitPicAnims(void)
@@ -205,11 +204,11 @@ void P_InitPicAnims(void)
 		}
 		else
 		{
-			if ((W_CheckNumForName(animdefs[i].startname)) == LUMPERROR)
+			if (R_CheckFlatNumForName(animdefs[i].startname) == -1)
 				continue;
 
-			lastanim->picnum = R_GetFlatNumForName(animdefs[i].endname);
-			lastanim->basepic = R_GetFlatNumForName(animdefs[i].startname);
+			lastanim->picnum = R_CheckFlatNumForName(animdefs[i].endname);
+			lastanim->basepic = R_CheckFlatNumForName(animdefs[i].startname);
 		}
 
 		lastanim->istexture = animdefs[i].istexture;
@@ -437,82 +436,13 @@ void P_ParseAnimationDefintion(SINT8 istexture)
 	animdefs[i].speed = animSpeed;
 	Z_Free(animdefsToken);
 
-#ifdef WALLFLATS
-	// hehe... uhh.....
+	// Add it as a texture too
 	if (!istexture)
 	{
 		GrowAnimDefs();
 		M_Memcpy(&animdefs[maxanims-1], &animdefs[i], sizeof(animdef_t));
 		animdefs[maxanims-1].istexture = 1;
 	}
-#endif
-}
-
-/** Checks for flats in levelflats that are part of a flat animation sequence
-  * and sets them up for animation.
-  *
-  * \param animnum Index into ::anims to find flats for.
-  * \sa P_SetupLevelFlatAnims
-  */
-static inline void P_FindAnimatedFlat(INT32 animnum)
-{
-	size_t i;
-	lumpnum_t startflatnum, endflatnum;
-	levelflat_t *foundflats;
-
-	foundflats = levelflats;
-	startflatnum = anims[animnum].basepic;
-	endflatnum = anims[animnum].picnum;
-
-	// note: high word of lumpnum is the wad number
-	if ((startflatnum>>16) != (endflatnum>>16))
-		I_Error("AnimatedFlat start %s not in same wad as end %s\n",
-			animdefs[animnum].startname, animdefs[animnum].endname);
-
-	//
-	// now search through the levelflats if this anim flat sequence is used
-	//
-	for (i = 0; i < numlevelflats; i++, foundflats++)
-	{
-		// is that levelflat from the flat anim sequence ?
-		if ((anims[animnum].istexture) && (foundflats->type == LEVELFLAT_TEXTURE)
-			&& ((UINT16)foundflats->u.texture.num >= startflatnum && (UINT16)foundflats->u.texture.num <= endflatnum))
-		{
-			foundflats->u.texture.basenum = startflatnum;
-			foundflats->animseq = foundflats->u.texture.num - startflatnum;
-			foundflats->numpics = endflatnum - startflatnum + 1;
-			foundflats->speed = anims[animnum].speed;
-
-			CONS_Debug(DBG_SETUP, "animflat: #%03d name:%.8s animseq:%d numpics:%d speed:%d\n",
-					atoi(sizeu1(i)), foundflats->name, foundflats->animseq,
-					foundflats->numpics,foundflats->speed);
-		}
-		else if ((!anims[animnum].istexture) && (foundflats->type == LEVELFLAT_FLAT)
-			&& (foundflats->u.flat.lumpnum >= startflatnum && foundflats->u.flat.lumpnum <= endflatnum))
-		{
-			foundflats->u.flat.baselumpnum = startflatnum;
-			foundflats->animseq = foundflats->u.flat.lumpnum - startflatnum;
-			foundflats->numpics = endflatnum - startflatnum + 1;
-			foundflats->speed = anims[animnum].speed;
-
-			CONS_Debug(DBG_SETUP, "animflat: #%03d name:%.8s animseq:%d numpics:%d speed:%d\n",
-					atoi(sizeu1(i)), foundflats->name, foundflats->animseq,
-					foundflats->numpics,foundflats->speed);
-		}
-	}
-}
-
-/** Sets up all flats used in a level.
-  *
-  * \sa P_InitPicAnims, P_FindAnimatedFlat
-  */
-void P_SetupLevelFlatAnims(void)
-{
-	INT32 i;
-
-	// the original game flat anim sequences
-	for (i = 0; anims[i].istexture != -1; i++)
-		P_FindAnimatedFlat(i);
 }
 
 //
@@ -5392,13 +5322,6 @@ void P_CheckMobjTrigger(mobj_t *mobj, boolean pushable)
   */
 void P_UpdateSpecials(void)
 {
-	anim_t *anim;
-	INT32 i;
-	INT32 pic;
-	size_t j;
-
-	levelflat_t *foundflats; // for flat animation
-
 	// LEVEL TIMER
 	P_CheckTimeLimit();
 
@@ -5406,37 +5329,19 @@ void P_UpdateSpecials(void)
 	P_CheckPointLimit();
 
 	// ANIMATE TEXTURES
-	for (anim = anims; anim < lastanim; anim++)
+	for (anim_t *anim = anims; anim < lastanim; anim++)
 	{
-		for (i = 0; i < anim->numpics; i++)
+		for (INT32 i = 0; i < anim->numpics; i++)
 		{
-			pic = anim->basepic + ((leveltime/anim->speed + i) % anim->numpics);
+			INT32 pic = anim->basepic + ((leveltime/anim->speed + i) % anim->numpics);
 			if (anim->istexture)
 				texturetranslation[anim->basepic+i] = pic;
-		}
-	}
-
-	// ANIMATE FLATS
-	/// \todo do not check the non-animate flat.. link the animated ones?
-	/// \note its faster than the original anywaysince it animates only
-	///    flats used in the level, and there's usually very few of them
-	foundflats = levelflats;
-	for (j = 0; j < numlevelflats; j++, foundflats++)
-	{
-		if (foundflats->speed) // it is an animated flat
-		{
-			// update the levelflat texture number
-			if ((foundflats->type == LEVELFLAT_TEXTURE) && (foundflats->u.texture.basenum != -1))
-				foundflats->u.texture.num = foundflats->u.texture.basenum + ((leveltime/foundflats->speed + foundflats->animseq) % foundflats->numpics);
-			// update the levelflat lump number
-			else if ((foundflats->type == LEVELFLAT_FLAT) && (foundflats->u.flat.baselumpnum != LUMPERROR))
-				foundflats->u.flat.lumpnum = foundflats->u.flat.baselumpnum + ((leveltime/foundflats->speed + foundflats->animseq) % foundflats->numpics);
 		}
 	}
 }
 
 //
-// Floor over floors (FOFs), 3Dfloors, 3Dblocks, fake floors (ffloors), rovers, or whatever you want to call them
+// 3D floors
 //
 
 /** Gets the ID number for a 3Dfloor in its target sector.

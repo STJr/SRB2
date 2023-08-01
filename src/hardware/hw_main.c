@@ -373,9 +373,6 @@ static void HWR_RenderPlane(subsector_t *subsector, extrasubsector_t *xsub, bool
 	float height; // constant y for all points on the convex flat polygon
 	float flatxref, flatyref, anglef = 0.0f;
 	float fflatwidth = 64.0f, fflatheight = 64.0f;
-	UINT16 flatflag = 63;
-
-	boolean texflat = false;
 
 	float tempxsow, tempytow;
 	float scrollx = 0.0f, scrolly = 0.0f;
@@ -427,33 +424,16 @@ static void HWR_RenderPlane(subsector_t *subsector, extrasubsector_t *xsub, bool
 	// set texture for polygon
 	if (levelflat != NULL)
 	{
-		if (levelflat->type == LEVELFLAT_FLAT)
-		{
-			size_t len = W_LumpLength(levelflat->u.flat.lumpnum);
-			flatflag = R_GetFlatSize(len) - 1;
-			fflatwidth = fflatheight = (float)(flatflag + 1);
-		}
-		else
-		{
-			if (levelflat->type == LEVELFLAT_TEXTURE)
-			{
-				fflatwidth = textures[levelflat->u.texture.num]->width;
-				fflatheight = textures[levelflat->u.texture.num]->height;
-			}
-			else if (levelflat->type == LEVELFLAT_PATCH || levelflat->type == LEVELFLAT_PNG)
-			{
-				fflatwidth = levelflat->width;
-				fflatheight = levelflat->height;
-			}
-			texflat = true;
-		}
+		texture_t *texture = textures[R_GetTextureNumForFlat(levelflat)];
+		fflatwidth = texture->width;
+		fflatheight = texture->height;
 	}
 	else // set no texture
 		HWR_SetCurrentTexture(NULL);
 
 	// reference point for flat texture coord for each vertex around the polygon
-	flatxref = (float)(((fixed_t)pv->x & (~flatflag)) / fflatwidth);
-	flatyref = (float)(((fixed_t)pv->y & (~flatflag)) / fflatheight);
+	flatxref = 0.0;
+	flatyref = 0.0;
 
 	// transform
 	if (FOFsector != NULL)
@@ -487,30 +467,13 @@ static void HWR_RenderPlane(subsector_t *subsector, extrasubsector_t *xsub, bool
 		}
 	}
 
-	if (angle) // Only needs to be done if there's an altered angle
-	{
-		tempxsow = flatxref;
-		tempytow = flatyref;
-
-		anglef = ANG2RAD(InvAngle(angle));
-
-		flatxref = (tempxsow * cos(anglef)) - (tempytow * sin(anglef));
-		flatyref = (tempxsow * sin(anglef)) + (tempytow * cos(anglef));
-	}
+	anglef = ANG2RAD(InvAngle(angle));
 
 #define SETUP3DVERT(vert, vx, vy) {\
-		/* Hurdler: add scrolling texture on floor/ceiling */\
-		if (texflat)\
-		{\
-			vert->s = (float)((vx) / fflatwidth) + scrollx;\
-			vert->t = -(float)((vy) / fflatheight) + scrolly;\
-		}\
-		else\
-		{\
-			vert->s = (float)(((vx) / fflatwidth) - flatxref + scrollx);\
-			vert->t = (float)(flatyref - ((vy) / fflatheight) + scrolly);\
-		}\
-\
+		/* Hurdler: add scrolling texture on floor/ceiling */ \
+		vert->s = (float)(((vx) / fflatwidth) - flatxref + scrollx);\
+		vert->t = (float)(flatyref - ((vy) / fflatheight) + scrolly);\
+ \
 		/* Need to rotate before translate */\
 		if (angle) /* Only needs to be done if there's an altered angle */\
 		{\
@@ -2652,9 +2615,6 @@ static void HWR_RenderPolyObjectPlane(polyobj_t *polysector, boolean isceiling, 
 	float height = FIXED_TO_FLOAT(fixedheight); // constant y for all points on the convex flat polygon
 	float flatxref, flatyref;
 	float fflatwidth = 64.0f, fflatheight = 64.0f;
-	UINT16 flatflag = 63;
-
-	boolean texflat = false;
 
 	float scrollx = 0.0f, scrolly = 0.0f;
 	float tempxsow, tempytow, anglef = 0.0f;
@@ -2682,36 +2642,16 @@ static void HWR_RenderPolyObjectPlane(polyobj_t *polysector, boolean isceiling, 
 	// set texture for polygon
 	if (levelflat != NULL)
 	{
-		if (levelflat->type == LEVELFLAT_FLAT)
-		{
-			size_t len = W_LumpLength(levelflat->u.flat.lumpnum);
-			flatflag = R_GetFlatSize(len) - 1;
-			fflatwidth = fflatheight = (float)(flatflag + 1);
-		}
-		else
-		{
-			if (levelflat->type == LEVELFLAT_TEXTURE)
-			{
-				fflatwidth = textures[levelflat->u.texture.num]->width;
-				fflatheight = textures[levelflat->u.texture.num]->height;
-			}
-			else if (levelflat->type == LEVELFLAT_PATCH || levelflat->type == LEVELFLAT_PNG)
-			{
-				fflatwidth = levelflat->width;
-				fflatheight = levelflat->height;
-			}
-			texflat = true;
-		}
+		texture_t *texture = textures[R_GetTextureNumForFlat(levelflat)];
+		fflatwidth = texture->width;
+		fflatheight = texture->height;
 	}
 	else // set no texture
 		HWR_SetCurrentTexture(NULL);
 
 	// reference point for flat texture coord for each vertex around the polygon
-	flatxref = FIXED_TO_FLOAT(polysector->origVerts[0].x);
-	flatyref = FIXED_TO_FLOAT(polysector->origVerts[0].y);
-
-	flatxref = (float)(((fixed_t)flatxref & (~flatflag)) / fflatwidth);
-	flatyref = (float)(((fixed_t)flatyref & (~flatflag)) / fflatheight);
+	flatxref = 0.0;
+	flatyref = 0.0;
 
 	// transform
 	v3d = planeVerts;
@@ -2747,37 +2687,20 @@ static void HWR_RenderPolyObjectPlane(polyobj_t *polysector, boolean isceiling, 
 		}
 	}
 
-	if (angle) // Only needs to be done if there's an altered angle
-	{
-		tempxsow = flatxref;
-		tempytow = flatyref;
-
-		anglef = ANG2RAD(InvAngle(angle));
-
-		flatxref = (tempxsow * cos(anglef)) - (tempytow * sin(anglef));
-		flatyref = (tempxsow * sin(anglef)) + (tempytow * cos(anglef));
-	}
-
 	for (i = 0; i < (INT32)nrPlaneVerts; i++,v3d++)
 	{
 		// Go from the polysector's original vertex locations
 		// Means the flat is offset based on the original vertex locations
-		if (texflat)
-		{
-			v3d->s = (float)(FIXED_TO_FLOAT(polysector->origVerts[i].x) / fflatwidth) + scrollx;
-			v3d->t = -(float)(FIXED_TO_FLOAT(polysector->origVerts[i].y) / fflatheight) + scrolly;
-		}
-		else
-		{
-			v3d->s = (float)((FIXED_TO_FLOAT(polysector->origVerts[i].x) / fflatwidth) - flatxref + scrollx);
-			v3d->t = (float)(flatyref - (FIXED_TO_FLOAT(polysector->origVerts[i].y) / fflatheight) + scrolly);
-		}
+		v3d->s = (float)((FIXED_TO_FLOAT(polysector->origVerts[i].x) / fflatwidth) - flatxref + scrollx);
+		v3d->t = (float)(flatyref - (FIXED_TO_FLOAT(polysector->origVerts[i].y) / fflatheight) + scrolly);
 
 		// Need to rotate before translate
 		if (angle) // Only needs to be done if there's an altered angle
 		{
 			tempxsow = v3d->s;
 			tempytow = v3d->t;
+
+			anglef = ANG2RAD(InvAngle(angle));
 
 			v3d->s = (tempxsow * cos(anglef)) - (tempytow * sin(anglef));
 			v3d->t = (tempxsow * sin(anglef)) + (tempytow * cos(anglef));

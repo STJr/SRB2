@@ -701,9 +701,6 @@ extern const char *compdate, *comptime, *comprevision, *compbranch;
 #define NO_PNG_LUMPS
 #endif
 
-/// Render flats on walls
-#define WALLFLATS
-
 /// Maintain compatibility with older 2.2 demos
 #define OLD22DEMOCOMPAT
 
