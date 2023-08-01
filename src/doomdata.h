@@ -211,6 +211,7 @@ typedef struct
 	UINT8 extrainfo;
 	taglist_t tags;
 	fixed_t scale;
+	fixed_t spritexscale, spriteyscale;
 	INT32 args[NUMMAPTHINGARGS];
 	char *stringargs[NUMMAPTHINGSTRINGARGS];
 	struct mobj_s *mobj;

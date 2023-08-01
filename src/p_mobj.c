@@ -13327,6 +13327,9 @@ static mobj_t *P_SpawnMobjFromMapThing(mapthing_t *mthing, fixed_t x, fixed_t y,
 	P_SetScale(mobj, FixedMul(mobj->scale, mthing->scale));
 	mobj->destscale = FixedMul(mobj->destscale, mthing->scale);
 
+	mobj->spritexscale = mthing->spritexscale;
+	mobj->spriteyscale = mthing->spriteyscale;
+
 	if (!P_SetupSpawnedMapThing(mthing, mobj, &doangle))
 		return mobj;
 
