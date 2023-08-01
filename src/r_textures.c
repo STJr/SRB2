@@ -78,24 +78,20 @@ static INT32 tidcachelen = 0;
 // R_DrawColumnInCache
 // Clip and draw a column from a patch into a cached post.
 //
-static inline void R_DrawColumnInCache(doompost_t *patch, UINT8 *cache, texpatch_t *originPatch, INT32 cacheheight, INT32 patchheight)
+static inline void R_DrawColumnInCache(column_t *column, UINT8 *cache, texpatch_t *originPatch, INT32 cacheheight, INT32 patchheight)
 {
 	INT32 count, position;
 	UINT8 *source;
-	INT32 topdelta, prevdelta = -1;
 	INT32 originy = originPatch->originy;
 
 	(void)patchheight; // This parameter is unused
 
-	while (patch->topdelta != 0xff)
+	for (size_t i = 0; i < column->num_posts; i++)
 	{
-		topdelta = patch->topdelta;
-		if (topdelta <= prevdelta)
-			topdelta += prevdelta;
-		prevdelta = topdelta;
-		source = (UINT8 *)patch + 3;
-		count = patch->length;
-		position = originy + topdelta;
+		post_t *post = &column->posts[i];
+		source = column->pixels + post->data_offset;
+		count = post->length;
+		position = originy + post->topdelta;
 
 		if (position < 0)
 		{
@@ -109,8 +105,6 @@ static inline void R_DrawColumnInCache(doompost_t *patch, UINT8 *cache, texpatch
 
 		if (count > 0)
 			M_Memcpy(cache + position, source, count);
-
-		patch = (doompost_t *)((UINT8 *)patch + patch->length + 4);
 	}
 }
 
@@ -118,22 +112,19 @@ static inline void R_DrawColumnInCache(doompost_t *patch, UINT8 *cache, texpatch
 // R_DrawFlippedColumnInCache
 // Similar to R_DrawColumnInCache; it draws the column inverted, however.
 //
-static inline void R_DrawFlippedColumnInCache(doompost_t *patch, UINT8 *cache, texpatch_t *originPatch, INT32 cacheheight, INT32 patchheight)
+static inline void R_DrawFlippedColumnInCache(column_t *column, UINT8 *cache, texpatch_t *originPatch, INT32 cacheheight, INT32 patchheight)
 {
 	INT32 count, position;
 	UINT8 *source, *dest;
-	INT32 topdelta, prevdelta = -1;
 	INT32 originy = originPatch->originy;
+	INT32 topdelta;
 
-	while (patch->topdelta != 0xff)
+	for (size_t i = 0; i < column->num_posts; i++)
 	{
-		topdelta = patch->topdelta;
-		if (topdelta <= prevdelta)
-			topdelta += prevdelta;
-		prevdelta = topdelta;
-		topdelta = patchheight-patch->length-topdelta;
-		source = (UINT8 *)patch + 2 + patch->length; // patch + 3 + (patch->length-1)
-		count = patch->length;
+		post_t *post = &column->posts[i];
+		topdelta = patchheight - post->length - post->topdelta;
+		source = column->pixels + post->data_offset + post->length;
+		count = post->length;
 		position = originy + topdelta;
 
 		if (position < 0)
@@ -152,33 +143,27 @@ static inline void R_DrawFlippedColumnInCache(doompost_t *patch, UINT8 *cache, t
 			for (; dest < cache + position + count; --source)
 				*dest++ = *source;
 		}
-
-		patch = (doompost_t *)((UINT8 *)patch + patch->length + 4);
 	}
 }
 
 //
 // R_DrawBlendColumnInCache
-// Draws a translucent column into the cache, applying a half-cooked equation to get a proper translucency value (Needs code in R_GenerateTexture()).
+// Draws a translucent column into the cache.
 //
-static inline void R_DrawBlendColumnInCache(doompost_t *patch, UINT8 *cache, texpatch_t *originPatch, INT32 cacheheight, INT32 patchheight)
+static inline void R_DrawBlendColumnInCache(column_t *column, UINT8 *cache, texpatch_t *originPatch, INT32 cacheheight, INT32 patchheight)
 {
 	INT32 count, position;
 	UINT8 *source, *dest;
-	INT32 topdelta, prevdelta = -1;
 	INT32 originy = originPatch->originy;
 
 	(void)patchheight; // This parameter is unused
 
-	while (patch->topdelta != 0xff)
+	for (size_t i = 0; i < column->num_posts; i++)
 	{
-		topdelta = patch->topdelta;
-		if (topdelta <= prevdelta)
-			topdelta += prevdelta;
-		prevdelta = topdelta;
-		source = (UINT8 *)patch + 3;
-		count = patch->length;
-		position = originy + topdelta;
+		post_t *post = &column->posts[i];
+		source = column->pixels + post->data_offset;
+		count = post->length;
+		position = originy + post->topdelta;
 
 		if (position < 0)
 		{
@@ -197,8 +182,6 @@ static inline void R_DrawBlendColumnInCache(doompost_t *patch, UINT8 *cache, tex
 				if (*source != 0xFF)
 					*dest = ASTBlendPaletteIndexes(*dest, *source, originPatch->style, originPatch->alpha);
 		}
-
-		patch = (doompost_t *)((UINT8 *)patch + patch->length + 4);
 	}
 }
 
@@ -206,22 +189,19 @@ static inline void R_DrawBlendColumnInCache(doompost_t *patch, UINT8 *cache, tex
 // R_DrawBlendFlippedColumnInCache
 // Similar to the one above except that the column is inverted.
 //
-static inline void R_DrawBlendFlippedColumnInCache(doompost_t *patch, UINT8 *cache, texpatch_t *originPatch, INT32 cacheheight, INT32 patchheight)
+static inline void R_DrawBlendFlippedColumnInCache(column_t *column, UINT8 *cache, texpatch_t *originPatch, INT32 cacheheight, INT32 patchheight)
 {
 	INT32 count, position;
 	UINT8 *source, *dest;
-	INT32 topdelta, prevdelta = -1;
 	INT32 originy = originPatch->originy;
+	INT32 topdelta;
 
-	while (patch->topdelta != 0xff)
+	for (size_t i = 0; i < column->num_posts; i++)
 	{
-		topdelta = patch->topdelta;
-		if (topdelta <= prevdelta)
-			topdelta += prevdelta;
-		prevdelta = topdelta;
-		topdelta = patchheight-patch->length-topdelta;
-		source = (UINT8 *)patch + 2 + patch->length; // patch + 3 + (patch->length-1)
-		count = patch->length;
+		post_t *post = &column->posts[i];
+		topdelta = patchheight - post->length - post->topdelta;
+		source = column->pixels + post->data_offset + post->length;
+		count = post->length;
 		position = originy + topdelta;
 
 		if (position < 0)
@@ -241,8 +221,6 @@ static inline void R_DrawBlendFlippedColumnInCache(doompost_t *patch, UINT8 *cac
 				if (*source != 0xFF)
 					*dest = ASTBlendPaletteIndexes(*dest, *source, originPatch->style, originPatch->alpha);
 		}
-
-		patch = (doompost_t *)((UINT8 *)patch + patch->length + 4);
 	}
 }
 
@@ -380,7 +358,7 @@ UINT8 *R_GenerateTexture(size_t texnum)
 	// Composite the columns together.
 	for (i = 0, patch = texture->patches; i < texture->patchcount; i++, patch++)
 	{
-		static void (*columnDrawer)(doompost_t *, UINT8 *, texpatch_t *, INT32, INT32); // Column drawing function pointer.
+		static void (*columnDrawer)(column_t *, UINT8 *, texpatch_t *, INT32, INT32); // Column drawing function pointer.
 		if (patch->style != AST_COPY)
 			columnDrawer = (patch->flip & 2) ? R_DrawBlendFlippedColumnInCache : R_DrawBlendColumnInCache;
 		else
@@ -388,42 +366,36 @@ UINT8 *R_GenerateTexture(size_t texnum)
 
 		UINT16 wadnum = patch->wad;
 		lumpnum_t lumpnum = patch->lump;
-		size_t lumplength = W_LumpLengthPwad(wadnum, lumpnum);
 		UINT8 *pdata = W_CacheLumpNumPwad(wadnum, lumpnum, PU_CACHE);
-		softwarepatch_t *realpatch = (softwarepatch_t *)pdata;
-		boolean dealloc = true;
+		patch_t *realpatch = NULL;
 
 #ifndef NO_PNG_LUMPS
-		if (Picture_IsLumpPNG((UINT8 *)realpatch, lumplength))
-			realpatch = (softwarepatch_t *)Picture_PNGConvert((UINT8 *)realpatch, PICFMT_DOOMPATCH, NULL, NULL, NULL, NULL, lumplength, NULL, 0);
+		size_t lumplength = W_LumpLengthPwad(wadnum, lumpnum);
+		if (Picture_IsLumpPNG(pdata, lumplength))
+			realpatch = (patch_t *)Picture_PNGConvert(pdata, PICFMT_PATCH, NULL, NULL, NULL, NULL, lumplength, NULL, 0);
 		else
 #endif
 #ifdef WALLFLATS
 		if (texture->type == TEXTURETYPE_FLAT)
-			realpatch = (softwarepatch_t *)Picture_Convert(PICFMT_FLAT, pdata, PICFMT_DOOMPATCH, 0, NULL, texture->width, texture->height, 0, 0, 0);
+			realpatch = (patch_t *)Picture_Convert(PICFMT_FLAT, pdata, PICFMT_PATCH, 0, NULL, texture->width, texture->height, 0, 0, 0);
 		else
 #endif
-		{
-			(void)lumplength;
-			dealloc = false;
-		}
+			realpatch = (patch_t *)Picture_Convert(PICFMT_DOOMPATCH, pdata, PICFMT_PATCH, 0, NULL, 0, 0, 0, 0, 0);
 
 		x1 = patch->originx;
-		width = SHORT(realpatch->width);
-		height = SHORT(realpatch->height);
+		width = realpatch->width;
+		height = realpatch->height;
 		x2 = x1 + width;
 
 		if (x1 > texture->width || x2 < 0)
 		{
-			if (dealloc)
-				Z_Free(realpatch);
+			Patch_Free(realpatch);
 			continue; // patch not located within texture's x bounds, ignore
 		}
 
 		if (patch->originy > texture->height || (patch->originy + height) < 0)
 		{
-			if (dealloc)
-				Z_Free(realpatch);
+			Patch_Free(realpatch);
 			continue; // patch not located within texture's y bounds, ignore
 		}
 
@@ -442,17 +414,16 @@ UINT8 *R_GenerateTexture(size_t texnum)
 
 		for (; x < x2; x++)
 		{
-			doompost_t *patchcol;
+			column_t *patchcol;
 			if (patch->flip & 1)
-				patchcol = (doompost_t *)((UINT8 *)realpatch + LONG(realpatch->columnofs[(x1+width-1)-x]));
+				patchcol = &realpatch->columns[(x1+width-1)-x];
 			else
-				patchcol = (doompost_t *)((UINT8 *)realpatch + LONG(realpatch->columnofs[x-x1]));
+				patchcol = &realpatch->columns[x-x1];
 
 			columnDrawer(patchcol, columns[x].pixels, patch, texture->height, height);
 		}
 
-		if (dealloc)
-			Z_Free(realpatch);
+		Patch_Free(realpatch);
 	}
 
 done:

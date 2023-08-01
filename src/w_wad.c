@@ -2056,12 +2056,16 @@ void *W_CacheSoftwarePatchNumPwad(UINT16 wad, UINT16 lump, INT32 tag)
 
 #ifndef NO_PNG_LUMPS
 		if (Picture_IsLumpPNG((UINT8 *)lumpdata, len))
-			ptr = Picture_PNGConvert((UINT8 *)lumpdata, PICFMT_DOOMPATCH, NULL, NULL, NULL, NULL, len, &len, 0);
+		{
+			ptr = Picture_PNGConvert((UINT8 *)lumpdata, PICFMT_PATCH, NULL, NULL, NULL, NULL, len, &len, 0);
+			Z_ChangeTag(ptr, tag);
+			Z_SetUser(ptr, &lumpcache[lump]);
+			return lumpcache[lump];
+		}
 #endif
 
 		dest = Z_Calloc(sizeof(patch_t), tag, &lumpcache[lump]);
 		Patch_Create(ptr, len, dest);
-
 		Z_Free(ptr);
 	}
 	else

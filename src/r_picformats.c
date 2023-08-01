@@ -51,8 +51,6 @@
 #endif
 #endif
 
-static unsigned char imgbuf[1<<26];
-
 #ifdef PICTURE_PNG_USELOOKUP
 static colorlookup_t png_colorlookup;
 #endif
@@ -116,13 +114,9 @@ void *Picture_PatchConvert(
 	INT16 inwidth, INT16 inheight, INT16 inleftoffset, INT16 intopoffset,
 	pictureflags_t flags)
 {
-	INT16 x, y;
-	UINT8 *img;
-	UINT8 *imgptr = imgbuf;
-	UINT8 *colpointers, *startofspan;
-	size_t size = 0;
-	patch_t *inpatch = NULL;
+	INT32 outbpp = Picture_FormatBPP(outformat);
 	INT32 inbpp = Picture_FormatBPP(informat);
+	patch_t *inpatch = NULL;
 
 	(void)insize; // ignore
 
@@ -130,16 +124,17 @@ void *Picture_PatchConvert(
 		I_Error("Picture_PatchConvert: input format was PICFMT_NONE!");
 	else if (outformat == PICFMT_NONE)
 		I_Error("Picture_PatchConvert: output format was PICFMT_NONE!");
+	else if (Picture_IsDoomPatchFormat(outformat))
+		I_Error("Picture_PatchConvert: cannot convert to Doom patch!");
 	else if (informat == outformat)
 		I_Error("Picture_PatchConvert: input and output formats were the same!");
 
 	if (inbpp == PICDEPTH_NONE)
-		I_Error("Picture_PatchConvert: unknown input bits per pixel?!");
-	if (Picture_FormatBPP(outformat) == PICDEPTH_NONE)
-		I_Error("Picture_PatchConvert: unknown output bits per pixel?!");
+		I_Error("Picture_PatchConvert: unknown input bits per pixel!");
+	if (outbpp == PICDEPTH_NONE)
+		I_Error("Picture_PatchConvert: unknown output bits per pixel!");
 
-	// If it's a patch, you can just figure out
-	// the dimensions from the header.
+	// If it's a patch, we can just figure out the dimensions from the header.
 	if (Picture_IsPatchFormat(informat))
 	{
 		inpatch = (patch_t *)picture;
@@ -160,28 +155,40 @@ void *Picture_PatchConvert(
 		}
 	}
 
-	// Write image size and offset
-	WRITEINT16(imgptr, inwidth);
-	WRITEINT16(imgptr, inheight);
-	WRITEINT16(imgptr, inleftoffset);
-	WRITEINT16(imgptr, intopoffset);
+	patch_t *out = Z_Calloc(sizeof(patch_t), PU_PATCH, NULL);
 
-	// Leave placeholder to column pointers
-	colpointers = imgptr;
-	imgptr += inwidth*4;
+	out->width = inwidth;
+	out->height = inheight;
+	out->leftoffset = inleftoffset;
+	out->topoffset = intopoffset;
+
+	size_t max_pixels = out->width * out->height;
+	size_t num_posts = 0;
+
+	out->columns = Z_Calloc(sizeof(column_t) * out->width, PU_PATCH_DATA, NULL);
+	out->pixels = Z_Calloc(max_pixels * (outbpp / 8), PU_PATCH_DATA, NULL);
+	out->posts = NULL;
+
+	UINT8 *imgptr = out->pixels;
+
+	size_t *column_posts = Z_Calloc(sizeof(size_t) * inwidth, PU_STATIC, NULL);
 
 	// Write columns
-	for (x = 0; x < inwidth; x++)
+	for (INT16 x = 0; x < inwidth; x++)
 	{
-		int lastStartY = 0;
-		int spanSize = 0;
-		startofspan = NULL;
+		post_t *post;
+		size_t post_data_offset = 0;
+		boolean was_opaque = false;
 
-		// Write column pointer
-		WRITEINT32(colpointers, imgptr - imgbuf);
+		column_t *column = &out->columns[x];
+		column->pixels = imgptr;
+		column->posts = NULL;
+		column->num_posts = 0;
+
+		column_posts[x] = (size_t)-1;
 
 		// Write pixels
-		for (y = 0; y < inheight; y++)
+		for (INT16 y = 0; y < inheight; y++)
 		{
 			void *input = NULL;
 			boolean opaque = false;
@@ -231,57 +238,32 @@ void *Picture_PatchConvert(
 					if (px == TRANSPARENTPIXEL)
 						alpha = 0;
 				}
-				opaque = (alpha > 1);
+
+				opaque = alpha > 1;
 			}
 
 			// End span if we have a transparent pixel
 			if (!opaque)
 			{
-				if (startofspan)
-					WRITEUINT8(imgptr, 0);
-				startofspan = NULL;
+				was_opaque = false;
 				continue;
 			}
 
-			// Start new column if we need to
-			if (!startofspan || spanSize == 255)
+			if (!was_opaque)
 			{
-				int writeY = y;
+				num_posts++;
 
-				// If we reached the span size limit, finish the previous span
-				if (startofspan)
-					WRITEUINT8(imgptr, 0);
-
-				if (y > 254)
-				{
-					// Make sure we're aligned to 254
-					if (lastStartY < 254)
-					{
-						WRITEUINT8(imgptr, 254);
-						WRITEUINT8(imgptr, 0);
-						imgptr += 2;
-						lastStartY = 254;
-					}
-
-					// Write stopgap empty spans if needed
-					writeY = y - lastStartY;
-
-					while (writeY > 254)
-					{
-						WRITEUINT8(imgptr, 254);
-						WRITEUINT8(imgptr, 0);
-						imgptr += 2;
-						writeY -= 254;
-					}
-				}
-
-				startofspan = imgptr;
-				WRITEUINT8(imgptr, writeY);
-				imgptr += 2;
-				spanSize = 0;
-
-				lastStartY = y;
+				out->posts = Z_Realloc(out->posts, sizeof(post_t) * num_posts, PU_PATCH_DATA, NULL);
+				post = &out->posts[num_posts - 1];
+				post->topdelta = (size_t)y;
+				post->length = 0;
+				post->data_offset = post_data_offset;
+				if (column_posts[x] == (size_t)-1)
+					column_posts[x] = num_posts - 1;
+				column->num_posts++;
 			}
+
+			was_opaque = true;
 
 			// Write the pixel
 			switch (outformat)
@@ -291,18 +273,18 @@ void *Picture_PatchConvert(
 				{
 					if (inbpp == PICDEPTH_32BPP)
 					{
-						RGBA_t out = *(RGBA_t *)input;
-						WRITEUINT32(imgptr, out.rgba);
+						RGBA_t px = *(RGBA_t *)input;
+						WRITEUINT32(imgptr, px.rgba);
 					}
 					else if (inbpp == PICDEPTH_16BPP)
 					{
-						RGBA_t out = pMasterPalette[*((UINT16 *)input) & 0xFF];
-						WRITEUINT32(imgptr, out.rgba);
+						RGBA_t px = pMasterPalette[*((UINT16 *)input) & 0xFF];
+						WRITEUINT32(imgptr, px.rgba);
 					}
 					else // PICFMT_PATCH
 					{
-						RGBA_t out = pMasterPalette[*((UINT8 *)input) & 0xFF];
-						WRITEUINT32(imgptr, out.rgba);
+						RGBA_t px = pMasterPalette[*((UINT8 *)input) & 0xFF];
+						WRITEUINT32(imgptr, px.rgba);
 					}
 					break;
 				}
@@ -311,8 +293,8 @@ void *Picture_PatchConvert(
 					if (inbpp == PICDEPTH_32BPP)
 					{
 						RGBA_t in = *(RGBA_t *)input;
-						UINT8 out = NearestColor(in.s.red, in.s.green, in.s.blue);
-						WRITEUINT16(imgptr, (0xFF00 | out));
+						UINT8 px = NearestColor(in.s.red, in.s.green, in.s.blue);
+						WRITEUINT16(imgptr, (0xFF00 | px));
 					}
 					else if (inbpp == PICDEPTH_16BPP)
 						WRITEUINT16(imgptr, *(UINT16 *)input);
@@ -324,13 +306,13 @@ void *Picture_PatchConvert(
 					if (inbpp == PICDEPTH_32BPP)
 					{
 						RGBA_t in = *(RGBA_t *)input;
-						UINT8 out = NearestColor(in.s.red, in.s.green, in.s.blue);
-						WRITEUINT8(imgptr, out);
+						UINT8 px = NearestColor(in.s.red, in.s.green, in.s.blue);
+						WRITEUINT8(imgptr, px);
 					}
 					else if (inbpp == PICDEPTH_16BPP)
 					{
-						UINT16 out = *(UINT16 *)input;
-						WRITEUINT8(imgptr, (out & 0xFF));
+						UINT16 px = *(UINT16 *)input;
+						WRITEUINT8(imgptr, (px & 0xFF));
 					}
 					else // PICFMT_PATCH
 						WRITEUINT8(imgptr, *(UINT8 *)input);
@@ -338,40 +320,29 @@ void *Picture_PatchConvert(
 				}
 			}
 
-			spanSize++;
-			startofspan[1] = spanSize;
+			post->length++;
+			post_data_offset += imgptr - column->pixels;
 		}
-
-		if (startofspan)
-			WRITEUINT8(imgptr, 0);
-
-		WRITEUINT8(imgptr, 0xFF);
 	}
 
-	size = imgptr-imgbuf;
-	img = Z_Malloc(size, PU_STATIC, NULL);
-	memcpy(img, imgbuf, size);
+	UINT8 *old_pixels = out->pixels;
+	size_t total_pixels = imgptr - out->pixels;
+	if (total_pixels != max_pixels)
+		out->pixels = Z_Realloc(out->pixels, total_pixels, PU_PATCH_DATA, NULL);
 
-	if (Picture_IsInternalPatchFormat(outformat))
+	for (INT16 x = 0; x < inwidth; x++)
 	{
-		patch_t *converted = Patch_Create((softwarepatch_t *)img, size, NULL);
-
-#ifdef HWRENDER
-		Patch_CreateGL(converted);
-#endif
-
-		Z_Free(img);
-
-		if (outsize != NULL)
-			*outsize = sizeof(patch_t);
-		return converted;
+		column_t *column = &out->columns[x];
+		column->posts = &out->posts[column_posts[x]];
+		column->pixels = out->pixels + (column->pixels - old_pixels);
 	}
-	else
-	{
-		if (outsize != NULL)
-			*outsize = size;
-		return img;
-	}
+
+	Z_Free(column_posts);
+
+	if (outsize != NULL)
+		*outsize = sizeof(patch_t);
+
+	return (void *)out;
 }
 
 /** Converts a picture to a flat.

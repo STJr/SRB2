@@ -148,7 +148,7 @@ static void HWR_DrawColumnInCache(const column_t *patchcol, UINT8 *block, GLMipm
 	}
 }
 
-static void HWR_DrawPostsInCache(const doompost_t *patchcol, UINT8 *block, GLMipmap_t *mipmap,
+static void HWR_DrawFlippedColumnInCache(const column_t *patchcol, UINT8 *block, GLMipmap_t *mipmap,
 								INT32 pblockheight, INT32 blockmodulo,
 								fixed_t yfracstep, fixed_t scale_y,
 								texpatch_t *originPatch, INT32 patchheight,
@@ -157,116 +157,7 @@ static void HWR_DrawPostsInCache(const doompost_t *patchcol, UINT8 *block, GLMip
 	fixed_t yfrac, position, count;
 	UINT8 *dest;
 	const UINT8 *source;
-	INT32 topdelta, prevdelta = -1;
-	INT32 originy = 0;
-
-	// for writing a pixel to dest
-	RGBA_t colortemp;
-	UINT8 alpha;
-	UINT8 texel;
-	UINT16 texelu16;
-
-	(void)patchheight; // This parameter is unused
-
-	if (originPatch) // originPatch can be NULL here, unlike in the software version
-		originy = originPatch->originy;
-
-	while (patchcol->topdelta != 0xff)
-	{
-		topdelta = patchcol->topdelta;
-		if (topdelta <= prevdelta)
-			topdelta += prevdelta;
-		prevdelta = topdelta;
-		source = (const UINT8 *)patchcol + 3;
-		count  = ((patchcol->length * scale_y) + (FRACUNIT/2)) >> FRACBITS;
-		position = originy + topdelta;
-
-		yfrac = 0;
-		//yfracstep = (patchcol->length << FRACBITS) / count;
-		if (position < 0)
-		{
-			yfrac = -position<<FRACBITS;
-			count += (((position * scale_y) + (FRACUNIT/2)) >> FRACBITS);
-			position = 0;
-		}
-
-		position = ((position * scale_y) + (FRACUNIT/2)) >> FRACBITS;
-
-		if (position < 0)
-			position = 0;
-
-		if (position + count >= pblockheight)
-			count = pblockheight - position;
-
-		dest = block + (position*blockmodulo);
-		while (count > 0)
-		{
-			count--;
-
-			texel = source[yfrac>>FRACBITS];
-			alpha = 0xFF;
-			// Make pixel transparent if chroma keyed
-			if ((mipmap->flags & TF_CHROMAKEYED) && (texel == HWR_PATCHES_CHROMAKEY_COLORINDEX))
-				alpha = 0x00;
-
-			if (mipmap->colormap)
-				texel = mipmap->colormap->data[texel];
-
-			switch (bpp)
-			{
-				case 2:
-					if ((originPatch != NULL) && (originPatch->style != AST_COPY))
-						texel = ASTBlendPaletteIndexes(*(dest+1), texel, originPatch->style, originPatch->alpha);
-					texelu16 = (UINT16)((alpha<<8) | texel);
-					memcpy(dest, &texelu16, sizeof(UINT16));
-					break;
-				case 3:
-					colortemp = V_GetColor(texel);
-					if ((originPatch != NULL) && (originPatch->style != AST_COPY))
-					{
-						RGBA_t rgbatexel;
-						rgbatexel.rgba = *(UINT32 *)dest;
-						colortemp.rgba = ASTBlendTexturePixel(rgbatexel, colortemp, originPatch->style, originPatch->alpha);
-					}
-					memcpy(dest, &colortemp, sizeof(RGBA_t)-sizeof(UINT8));
-					break;
-				case 4:
-					colortemp = V_GetColor(texel);
-					colortemp.s.alpha = alpha;
-					if ((originPatch != NULL) && (originPatch->style != AST_COPY))
-					{
-						RGBA_t rgbatexel;
-						rgbatexel.rgba = *(UINT32 *)dest;
-						colortemp.rgba = ASTBlendTexturePixel(rgbatexel, colortemp, originPatch->style, originPatch->alpha);
-					}
-					memcpy(dest, &colortemp, sizeof(RGBA_t));
-					break;
-				// default is 1
-				default:
-					if ((originPatch != NULL) && (originPatch->style != AST_COPY))
-						*dest = ASTBlendPaletteIndexes(*dest, texel, originPatch->style, originPatch->alpha);
-					else
-						*dest = texel;
-					break;
-			}
-
-			dest += blockmodulo;
-			yfrac += yfracstep;
-		}
-		patchcol = (const doompost_t *)((const UINT8 *)patchcol + patchcol->length + 4);
-	}
-}
-
-static void HWR_DrawFlippedPostsInCache(const doompost_t *patchcol, UINT8 *block, GLMipmap_t *mipmap,
-								INT32 pblockheight, INT32 blockmodulo,
-								fixed_t yfracstep, fixed_t scale_y,
-								texpatch_t *originPatch, INT32 patchheight,
-								INT32 bpp)
-{
-	fixed_t yfrac, position, count;
-	UINT8 *dest;
-	const UINT8 *source;
-	INT32 topdelta, prevdelta = -1;
+	INT32 topdelta;
 	INT32 originy = 0;
 
 	// for writing a pixel to dest
@@ -278,18 +169,15 @@ static void HWR_DrawFlippedPostsInCache(const doompost_t *patchcol, UINT8 *block
 	if (originPatch) // originPatch can be NULL here, unlike in the software version
 		originy = originPatch->originy;
 
-	while (patchcol->topdelta != 0xff)
+	for (size_t i = 0; i < patchcol->num_posts; i++)
 	{
-		topdelta = patchcol->topdelta;
-		if (topdelta <= prevdelta)
-			topdelta += prevdelta;
-		prevdelta = topdelta;
-		topdelta = patchheight-patchcol->length-topdelta;
-		source = (const UINT8 *)patchcol + 3;
-		count  = ((patchcol->length * scale_y) + (FRACUNIT/2)) >> FRACBITS;
+		post_t *post = &patchcol->posts[i];
+		source = patchcol->pixels + post->data_offset;
+		topdelta = patchheight-post->length-post->topdelta;
+		count  = ((post->length * scale_y) + (FRACUNIT/2)) >> FRACBITS;
 		position = originy + topdelta;
 
-		yfrac = (patchcol->length-1) << FRACBITS;
+		yfrac = (post->length-1) << FRACBITS;
 
 		if (position < 0)
 		{
@@ -361,7 +249,6 @@ static void HWR_DrawFlippedPostsInCache(const doompost_t *patchcol, UINT8 *block
 			dest += blockmodulo;
 			yfrac -= yfracstep;
 		}
-		patchcol = (const doompost_t *)((const UINT8 *)patchcol + patchcol->length + 4);
 	}
 }
 
@@ -419,19 +306,19 @@ static void HWR_DrawPatchInCache(GLMipmap_t *mipmap,
 static void HWR_DrawTexturePatchInCache(GLMipmap_t *mipmap,
 	INT32 pblockwidth, INT32 pblockheight,
 	texture_t *texture, texpatch_t *patch,
-	const softwarepatch_t *realpatch)
+	const patch_t *realpatch)
 {
 	INT32 x, x1, x2;
 	INT32 col, ncols;
 	fixed_t xfrac, xfracstep;
 	fixed_t yfracstep, scale_y;
-	const doompost_t *patchcol;
+	const column_t *patchcol;
 	UINT8 *block = mipmap->data;
 	INT32 bpp;
 	INT32 blockmodulo;
 	INT32 width, height;
 	// Column drawing function pointer.
-	static void (*ColumnDrawerPointer)(const doompost_t *patchcol, UINT8 *block, GLMipmap_t *mipmap,
+	static void (*ColumnDrawerPointer)(const column_t *patchcol, UINT8 *block, GLMipmap_t *mipmap,
 								INT32 pblockheight, INT32 blockmodulo,
 								fixed_t yfracstep, fixed_t scale_y,
 								texpatch_t *originPatch, INT32 patchheight,
@@ -440,11 +327,11 @@ static void HWR_DrawTexturePatchInCache(GLMipmap_t *mipmap,
 	if (texture->width <= 0 || texture->height <= 0)
 		return;
 
-	ColumnDrawerPointer = (patch->flip & 2) ? HWR_DrawFlippedPostsInCache : HWR_DrawPostsInCache;
+	ColumnDrawerPointer = (patch->flip & 2) ? HWR_DrawFlippedColumnInCache : HWR_DrawColumnInCache;
 
 	x1 = patch->originx;
-	width = SHORT(realpatch->width);
-	height = SHORT(realpatch->height);
+	width = realpatch->width;
+	height = realpatch->height;
 	x2 = x1 + width;
 
 	if (x1 > texture->width || x2 < 0)
@@ -491,9 +378,9 @@ static void HWR_DrawTexturePatchInCache(GLMipmap_t *mipmap,
 	for (block += col*bpp; ncols--; block += bpp, xfrac += xfracstep)
 	{
 		if (patch->flip & 1)
-			patchcol = (const doompost_t *)((const UINT8 *)realpatch + LONG(realpatch->columnofs[(width-1)-(xfrac>>FRACBITS)]));
+			patchcol = &realpatch->columns[(width-1)-(xfrac>>FRACBITS)];
 		else
-			patchcol = (const doompost_t *)((const UINT8 *)realpatch + LONG(realpatch->columnofs[xfrac>>FRACBITS]));
+			patchcol = &realpatch->columns[xfrac>>FRACBITS];
 
 		ColumnDrawerPointer(patchcol, block, mipmap,
 								pblockheight, blockmodulo,
@@ -537,8 +424,6 @@ static void HWR_GenerateTexture(INT32 texnum, GLMapTexture_t *grtex)
 	UINT8 *block;
 	texture_t *texture;
 	texpatch_t *patch;
-	softwarepatch_t *realpatch;
-	UINT8 *pdata;
 	INT32 blockwidth, blockheight, blocksize;
 
 	INT32 i;
@@ -590,30 +475,25 @@ static void HWR_GenerateTexture(INT32 texnum, GLMapTexture_t *grtex)
 	// Composite the columns together.
 	for (i = 0, patch = texture->patches; i < texture->patchcount; i++, patch++)
 	{
-		boolean dealloc = true;
-		size_t lumplength = W_LumpLengthPwad(patch->wad, patch->lump);
-		pdata = W_CacheLumpNumPwad(patch->wad, patch->lump, PU_CACHE);
-		realpatch = (softwarepatch_t *)pdata;
+		UINT8 *pdata = W_CacheLumpNumPwad(patch->wad, patch->lump, PU_CACHE);
+		patch_t *realpatch = NULL;
 
 #ifndef NO_PNG_LUMPS
-		if (Picture_IsLumpPNG((UINT8 *)realpatch, lumplength))
-			realpatch = (softwarepatch_t *)Picture_PNGConvert(pdata, PICFMT_DOOMPATCH, NULL, NULL, NULL, NULL, lumplength, NULL, 0);
+		size_t lumplength = W_LumpLengthPwad(patch->wad, patch->lump);
+		if (Picture_IsLumpPNG(pdata, lumplength))
+			realpatch = (patch_t *)Picture_PNGConvert(pdata, PICFMT_PATCH, NULL, NULL, NULL, NULL, lumplength, NULL, 0);
 		else
 #endif
 #ifdef WALLFLATS
 		if (texture->type == TEXTURETYPE_FLAT)
-			realpatch = (softwarepatch_t *)Picture_Convert(PICFMT_FLAT, pdata, PICFMT_DOOMPATCH, 0, NULL, texture->width, texture->height, 0, 0, 0);
+			realpatch = (patch_t *)Picture_Convert(PICFMT_FLAT, pdata, PICFMT_PATCH, 0, NULL, texture->width, texture->height, 0, 0, 0);
 		else
 #endif
-		{
-			(void)lumplength;
-			dealloc = false;
-		}
+			realpatch = (patch_t *)Picture_Convert(PICFMT_DOOMPATCH, pdata, PICFMT_PATCH, 0, NULL, 0, 0, 0, 0, 0);
 
 		HWR_DrawTexturePatchInCache(&grtex->mipmap, blockwidth, blockheight, texture, patch, realpatch);
 
-		if (dealloc)
-			Z_Unlock(realpatch);
+		Patch_Free(realpatch);
 	}
 	//Hurdler: not efficient at all but I don't remember exactly how HWR_DrawPatchInCache works :(
 	if (format2bpp(grtex->mipmap.format)==4)
