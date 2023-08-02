@@ -2044,7 +2044,7 @@ static void Y_AwardCoopBonuses(void)
 	y_bonus_t localbonuses[4];
 
 	// set score/total first
-	data.coop.total = 0;
+	data.coop.total = players[consoleplayer].recordscore;
 	data.coop.score = players[consoleplayer].score;
 	data.coop.gotperfbonus = -1;
 	memset(data.coop.bonuses, 0, sizeof(data.coop.bonuses));
