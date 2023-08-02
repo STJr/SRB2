@@ -829,7 +829,7 @@ static boolean P_LookForShield(mobj_t *actor)
 			continue;
 
 		if ((player->powers[pw_shield] & SH_PROTECTELECTRIC)
-			&& (P_AproxDistance(P_AproxDistance(actor->x-player->mo->x, actor->y-player->mo->y), actor->z-player->mo->z) < FixedMul(RING_DIST, player->mo->scale)))
+			&& (R_PointToDist2(0, 0, R_PointToDist2(0, 0, actor->x-player->mo->x, actor->y-player->mo->y), actor->z-player->mo->z) < FixedMul(RING_DIST, player->mo->scale)))
 		{
 			P_SetTarget(&actor->tracer, player->mo);
 
