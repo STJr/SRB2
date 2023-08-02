@@ -2561,11 +2561,13 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 				// Change the music and apply position/fade operations
 				else
 				{
-					if (!line->stringargs[0])
-						break;
-
-					strncpy(mapmusname, line->stringargs[0], 7);
-					mapmusname[6] = 0;
+					if (!line->stringargs[0] || !strcmp(line->stringargs[0], "-"))
+						strcpy(mapmusname, "");
+					else
+					{
+						strncpy(mapmusname, line->stringargs[0], 7);
+						mapmusname[6] = 0;
+					}
 
 					mapmusflags = tracknum & MUSIC_TRACKMASK;
 					if (!(line->args[0] & TMM_NORELOAD))
