@@ -225,6 +225,18 @@ int LUA_PushGlobals(lua_State *L, const char *word)
 	} else if (fastcmp(word,"pointlimit")) {
 		lua_pushinteger(L, cv_pointlimit.value);
 		return 1;
+	} else if (fastcmp(word, "redflag")) {
+		LUA_PushUserdata(L, redflag, META_MOBJ);
+		return 1;
+	} else if (fastcmp(word, "blueflag")) {
+		LUA_PushUserdata(L, blueflag, META_MOBJ);
+		return 1;
+	} else if (fastcmp(word, "rflagpoint")) {
+		LUA_PushUserdata(L, rflagpoint, META_MAPTHING);
+		return 1;
+	} else if (fastcmp(word, "bflagpoint")) {
+		LUA_PushUserdata(L, bflagpoint, META_MAPTHING);
+		return 1;
 	// begin map vars
 	} else if (fastcmp(word,"spstage_start")) {
 		lua_pushinteger(L, spstage_start);
@@ -977,6 +989,7 @@ enum
 	ARCH_MAPHEADER,
 	ARCH_SKINCOLOR,
 	ARCH_MOUSE,
+	ARCH_SKIN,
 
 	ARCH_TEND=0xFF,
 };
@@ -1005,6 +1018,7 @@ static const struct {
 	{META_MAPHEADER,   ARCH_MAPHEADER},
 	{META_SKINCOLOR,   ARCH_SKINCOLOR},
 	{META_MOUSE,    ARCH_MOUSE},
+	{META_SKIN,     ARCH_SKIN},
 	{NULL,          ARCH_NULL}
 };
 
@@ -1326,6 +1340,13 @@ static UINT8 ArchiveValue(int TABLESINDEX, int myindex)
 			WRITEUINT8(save_p, m == &mouse ? 1 : 2);
 			break;
 		}
+		case ARCH_SKIN:
+		{
+			skin_t *skin = *((skin_t **)lua_touserdata(gL, myindex));
+			WRITEUINT8(save_p, ARCH_SKIN);
+			WRITEUINT8(save_p, skin - skins); // UINT8 because MAXSKINS is only 32
+			break;
+		}
 		default:
 			WRITEUINT8(save_p, ARCH_NULL);
 			return 2;
@@ -1571,6 +1592,9 @@ static UINT8 UnArchiveValue(int TABLESINDEX)
 		break;
 	case ARCH_MOUSE:
 		LUA_PushUserdata(gL, READUINT16(save_p) == 1 ? &mouse : &mouse2, META_MOUSE);
+		break;
+	case ARCH_SKIN:
+		LUA_PushUserdata(gL, &skins[READUINT8(save_p)], META_SKIN);
 		break;
 	case ARCH_TEND:
 		return 1;
