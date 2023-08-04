@@ -692,9 +692,26 @@ extracolormap_t *R_ColormapForName(char *name)
 //
 static double deltas[256][3], map[256][3];
 
-static int RoundUp(double number);
+static colorlookup_t lighttable_lut;
+
+static UINT8 LightTableNearest(UINT8 r, UINT8 g, UINT8 b)
+{
+	return NearestColor(r, g, b);
+}
+
+static UINT8 LightTableNearest_LUT(UINT8 r, UINT8 g, UINT8 b)
+{
+	return GetColorLUT(&lighttable_lut, r, g, b);
+}
 
 lighttable_t *R_CreateLightTable(extracolormap_t *extra_colormap)
+{
+	extra_colormap->colormap = Z_MallocAlign((256 * 34) + 10, PU_LEVEL, NULL, 8);
+	R_GenerateLightTable(extra_colormap, false);
+	return extra_colormap->colormap;
+}
+
+void R_GenerateLightTable(extracolormap_t *extra_colormap, boolean uselookup)
 {
 	double cmaskr, cmaskg, cmaskb, cdestr, cdestg, cdestb;
 	double maskamt = 0, othermask = 0;
@@ -711,7 +728,6 @@ lighttable_t *R_CreateLightTable(extracolormap_t *extra_colormap)
 	UINT8 fadestart = extra_colormap->fadestart,
 		fadedist = extra_colormap->fadeend - extra_colormap->fadestart;
 
-	lighttable_t *lighttable = NULL;
 	size_t i;
 
 	/////////////////////
@@ -753,6 +769,16 @@ lighttable_t *R_CreateLightTable(extracolormap_t *extra_colormap)
 		int p;
 		char *colormap_p;
 
+		UINT8 (*NearestColorFunc)(UINT8, UINT8, UINT8);
+
+		if (uselookup)
+		{
+			InitColorLUT(&lighttable_lut, pMasterPalette, false);
+			NearestColorFunc = LightTableNearest_LUT;
+		}
+		else
+			NearestColorFunc = LightTableNearest;
+
 		// Initialise the map and delta arrays
 		// map[i] stores an RGB color (as double) for index i,
 		//  which is then converted to SRB2's palette later
@@ -783,8 +809,7 @@ lighttable_t *R_CreateLightTable(extracolormap_t *extra_colormap)
 
 		// Now allocate memory for the actual colormap array itself!
 		// aligned on 8 bit for asm code
-		colormap_p = Z_MallocAlign((256 * 34) + 10, PU_LEVEL, NULL, 8);
-		lighttable = (UINT8 *)colormap_p;
+		colormap_p = (char *)extra_colormap->colormap;
 
 		// Calculate the palette index for each palette index, for each light level
 		// (as well as the two unused colormap lines we inherited from Doom)
@@ -792,9 +817,9 @@ lighttable_t *R_CreateLightTable(extracolormap_t *extra_colormap)
 		{
 			for (i = 0; i < 256; i++)
 			{
-				*colormap_p = NearestColor((UINT8)RoundUp(map[i][0]),
-					(UINT8)RoundUp(map[i][1]),
-					(UINT8)RoundUp(map[i][2]));
+				*colormap_p = NearestColorFunc((UINT8)M_RoundUp(map[i][0]),
+					(UINT8)M_RoundUp(map[i][1]),
+					(UINT8)M_RoundUp(map[i][2]));
 				colormap_p++;
 
 				if ((UINT32)p < fadestart)
@@ -818,8 +843,6 @@ lighttable_t *R_CreateLightTable(extracolormap_t *extra_colormap)
 			}
 		}
 	}
-
-	return lighttable;
 }
 
 extracolormap_t *R_CreateColormapFromLinedef(char *p1, char *p2, char *p3)
@@ -1131,20 +1154,6 @@ UINT8 NearestPaletteColor(UINT8 r, UINT8 g, UINT8 b, RGBA_t *palette)
 	}
 
 	return (UINT8)bestcolor;
-}
-
-// Rounds off floating numbers and checks for 0 - 255 bounds
-static int RoundUp(double number)
-{
-	if (number > 255.0l)
-		return 255;
-	if (number < 0.0l)
-		return 0;
-
-	if ((int)number <= (int)(number - 0.5f))
-		return (int)number + 1;
-
-	return (int)number;
 }
 
 #ifdef EXTRACOLORMAPLUMPS

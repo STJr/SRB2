@@ -213,6 +213,7 @@ static const struct {
 	{META_HUDINFO,      "hudinfo_t"},
 	{META_PATCH,        "patch_t"},
 	{META_COLORMAP,     "colormap"},
+	{META_EXTRACOLORMAP,"extracolormap_t"},
 	{META_CAMERA,       "camera_t"},
 
 	{META_ACTION,       "action"},
@@ -1925,6 +1926,26 @@ static int lib_pCeilingzAtPos(lua_State *L)
 	//HUDSAFE
 	INLEVEL
 	lua_pushfixed(L, P_CeilingzAtPos(x, y, z, height));
+	return 1;
+}
+
+static int lib_pGetSectorColormapAt(lua_State *L)
+{
+	sector_t *sector = NULL;
+	if (!lua_isnone(L, 1) && lua_isuserdata(L, 1))
+		sector = *((sector_t **)luaL_checkudata(L, 1, META_SECTOR));
+	fixed_t x = luaL_checkfixed(L, 2);
+	fixed_t y = luaL_checkfixed(L, 3);
+	fixed_t z = luaL_checkfixed(L, 4);
+	INLEVEL
+	if (!sector)
+		return LUA_ErrInvalid(L, "sector_t");
+	extracolormap_t *exc;
+	if (sector)
+		exc = P_GetColormapFromSectorAt(sector, x, y, z);
+	else
+		exc = P_GetSectorColormapAt(x, y, z);
+	LUA_PushUserdata(L, exc, META_EXTRACOLORMAP);
 	return 1;
 }
 
@@ -4151,6 +4172,7 @@ static luaL_Reg lib[] = {
 	{"P_RadiusAttack",lib_pRadiusAttack},
 	{"P_FloorzAtPos",lib_pFloorzAtPos},
 	{"P_CeilingzAtPos",lib_pCeilingzAtPos},
+	{"P_GetSectorColormapAt",lib_pGetSectorColormapAt},
 	{"P_DoSpring",lib_pDoSpring},
 	{"P_TryCameraMove", lib_pTryCameraMove},
 	{"P_TeleportCameraMove", lib_pTeleportCameraMove},
