@@ -186,8 +186,8 @@ void HWR_Lighting(FSurfaceInfo *Surface, INT32 light_level, extracolormap_t *col
 	RGBA_t poly_color, tint_color, fade_color;
 
 	poly_color.rgba = 0xFFFFFFFF;
-	tint_color.rgba = (colormap != NULL) ? (UINT32)colormap->rgba : GL_DEFAULTMIX;
-	fade_color.rgba = (colormap != NULL) ? (UINT32)colormap->fadergba : GL_DEFAULTFOG;
+	tint_color.rgba = (colormap != NULL) ? (UINT32)colormap->rgba : 0x00000000;
+	fade_color.rgba = (colormap != NULL) ? (UINT32)colormap->fadergba : 0xFF000000;
 
 	// Crappy backup coloring if you can't do shaders
 	if (!HWR_UseShader())
@@ -201,7 +201,7 @@ void HWR_Lighting(FSurfaceInfo *Surface, INT32 light_level, extracolormap_t *col
 		blue = (float)poly_color.s.blue;
 
 		// 48 is just an arbritrary value that looked relatively okay.
-		tint_alpha = (float)(sqrt(tint_color.s.alpha) * 48) / 255.0f;
+		tint_alpha = (float)(sqrt((float)tint_color.s.alpha / 10.2) * 48) / 255.0f;
 
 		// 8 is roughly the brightness of the "close" color in Software, and 16 the brightness of the "far" color.
 		// 8 is too bright for dark levels, and 16 is too dark for bright levels.
@@ -242,7 +242,7 @@ UINT8 HWR_FogBlockAlpha(INT32 light, extracolormap_t *colormap) // Let's see if 
 	RGBA_t realcolor, surfcolor;
 	INT32 alpha;
 
-	realcolor.rgba = (colormap != NULL) ? colormap->rgba : GL_DEFAULTMIX;
+	realcolor.rgba = (colormap != NULL) ? colormap->rgba : 0x00000000;
 
 	if (cv_glshaders.value && gl_shadersavailable)
 	{

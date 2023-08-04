@@ -155,10 +155,6 @@ static const char *const extracolormap_opt[] = {
 	"colormap",
 	NULL};
 
-#define ALPHA_SCALE_FACTOR 102 // (255 / 25) * 10
-#define SCALE_ALPHA_UP(alpha) (((alpha) * ALPHA_SCALE_FACTOR) / 10)
-#define SCALE_ALPHA_DOWN(alpha) (((alpha) * 10) / ALPHA_SCALE_FACTOR)
-
 static int extracolormap_get(lua_State *L)
 {
 	extracolormap_t *exc = *((extracolormap_t **)luaL_checkudata(L, 1, META_EXTRACOLORMAP));
@@ -176,13 +172,13 @@ static int extracolormap_get(lua_State *L)
 		lua_pushinteger(L, R_GetRgbaB(exc->rgba));
 		break;
 	case extracolormap_a:
-		lua_pushinteger(L, SCALE_ALPHA_UP(R_GetRgbaA(exc->rgba)));
+		lua_pushinteger(L, R_GetRgbaA(exc->rgba));
 		break;
 	case extracolormap_rgba:
 		lua_pushinteger(L, R_GetRgbaR(exc->rgba));
 		lua_pushinteger(L, R_GetRgbaG(exc->rgba));
 		lua_pushinteger(L, R_GetRgbaB(exc->rgba));
-		lua_pushinteger(L, SCALE_ALPHA_UP(R_GetRgbaA(exc->rgba)));
+		lua_pushinteger(L, R_GetRgbaA(exc->rgba));
 		return 4;
 	case extracolormap_fade_r:
 		lua_pushinteger(L, R_GetRgbaR(exc->fadergba));
@@ -194,13 +190,13 @@ static int extracolormap_get(lua_State *L)
 		lua_pushinteger(L, R_GetRgbaB(exc->fadergba));
 		break;
 	case extracolormap_fade_a:
-		lua_pushinteger(L, SCALE_ALPHA_UP(R_GetRgbaA(exc->fadergba)));
+		lua_pushinteger(L, R_GetRgbaA(exc->fadergba));
 		break;
 	case extracolormap_fade_rgba:
 		lua_pushinteger(L, R_GetRgbaR(exc->fadergba));
 		lua_pushinteger(L, R_GetRgbaG(exc->fadergba));
 		lua_pushinteger(L, R_GetRgbaB(exc->fadergba));
-		lua_pushinteger(L, SCALE_ALPHA_UP(R_GetRgbaA(exc->fadergba)));
+		lua_pushinteger(L, R_GetRgbaA(exc->fadergba));
 		return 4;
 	case extracolormap_fade_start:
 		lua_pushinteger(L, exc->fadestart);
@@ -217,8 +213,6 @@ static int extracolormap_get(lua_State *L)
 
 static void GetExtraColormapRGBA(lua_State *L, UINT8 *rgba)
 {
-	rgba[3] = SCALE_ALPHA_UP(rgba[3]);
-
 	if (lua_type(L, 3) == LUA_TSTRING)
 	{
 		const char *str = lua_tostring(L, 3);
@@ -228,8 +222,6 @@ static void GetExtraColormapRGBA(lua_State *L, UINT8 *rgba)
 	}
 	else
 		GetRGBAColorsFromTable(L, 3, rgba, true);
-
-	rgba[3] = SCALE_ALPHA_DOWN(rgba[3]);
 }
 
 static int extracolormap_set(lua_State *L)
@@ -266,7 +258,7 @@ static int extracolormap_set(lua_State *L)
 		exc->rgba = R_PutRgbaRGBA(r, g, val, a);
 		break;
 	case extracolormap_a:
-		exc->rgba = R_PutRgbaRGBA(r, g, b, SCALE_ALPHA_DOWN(val));
+		exc->rgba = R_PutRgbaRGBA(r, g, b, val);
 		break;
 	case extracolormap_rgba:
 		rgba[0] = r;
@@ -286,7 +278,7 @@ static int extracolormap_set(lua_State *L)
 		exc->fadergba = R_PutRgbaRGBA(fr, fg, val, fa);
 		break;
 	case extracolormap_fade_a:
-		exc->fadergba = R_PutRgbaRGBA(fr, fg, fb, SCALE_ALPHA_DOWN(val));
+		exc->fadergba = R_PutRgbaRGBA(fr, fg, fb, val);
 		break;
 	case extracolormap_fade_rgba:
 		rgba[0] = fr;
