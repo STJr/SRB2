@@ -40,23 +40,6 @@
 */
 INT32 viewwidth, viewheight, viewwindowx, viewwindowy;
 
-/**	\brief pointer to the start of each line of the screen,
-*/
-UINT8 **ylookup;
-
-/**	\brief pointer to the start of each line of the screen, for view1 (splitscreen)
-*/
-UINT8 **ylookup1;
-
-/**	\brief pointer to the start of each line of the screen, for view2 (splitscreen)
-*/
-UINT8 **ylookup2;
-
-/**	\brief  x byte offset for columns inside the viewwindow,
-	so the first column starts at (SCRWIDTH - VIEWWIDTH)/2
-*/
-INT32 *columnofs;
-
 UINT8 *topleft;
 
 // =========================================================================
@@ -67,8 +50,6 @@ lighttable_t *dc_colormap;
 INT32 dc_x = 0, dc_yl = 0, dc_yh = 0;
 
 fixed_t dc_iscale, dc_texturemid;
-UINT8 dc_hires; // under MSVC boolean is a byte, while on other systems, it a bit,
-               // soo lets make it a byte on all system for the ASM code
 UINT8 *dc_source;
 
 // -----------------------
@@ -669,16 +650,6 @@ UINT16 R_GetSuperColorByName(const char *name)
 	return color;
 }
 
-// ==========================================================================
-//               COMMON DRAWER FOR 8 AND 16 BIT COLOR MODES
-// ==========================================================================
-
-// in a perfect world, all routines would be compatible for either mode,
-// and optimised enough
-//
-// in reality, the few routines that can work for either mode, are
-// put here
-
 /**	\brief	The R_InitViewBuffer function
 
 	Creates lookup tables for getting the framebuffer address
@@ -692,17 +663,8 @@ UINT16 R_GetSuperColorByName(const char *name)
 
 */
 
-void R_InitViewBuffer(INT32 width, INT32 height)
+static void R_AllocViewMemory(void)
 {
-	INT32 i, bytesperpixel = vid.bpp;
-
-	if (width > MAXVIDWIDTH)
-		width = MAXVIDWIDTH;
-	if (height > MAXVIDHEIGHT)
-		height = MAXVIDHEIGHT;
-	if (bytesperpixel < 1 || bytesperpixel > 4)
-		I_Error("R_InitViewBuffer: wrong bytesperpixel value %d\n", bytesperpixel);
-
 	negonearray = Z_Realloc(negonearray, sizeof(*negonearray) * viewwidth, PU_STATIC, NULL);
 	screenheightarray = Z_Realloc(screenheightarray, sizeof(*screenheightarray) * viewwidth, PU_STATIC, NULL);
 
@@ -710,12 +672,6 @@ void R_InitViewBuffer(INT32 width, INT32 height)
 	ceilingclip = Z_Realloc(ceilingclip, sizeof(*ceilingclip) * viewwidth, PU_STATIC, NULL);
 
 	frontscale = Z_Realloc(frontscale, sizeof(*frontscale) * viewwidth, PU_STATIC, NULL);
-
-	ylookup1 = Z_Realloc(ylookup1, sizeof(*ylookup1) * (viewheight * 4), PU_STATIC, NULL);
-	ylookup2 = Z_Realloc(ylookup2, sizeof(*ylookup2) * (viewheight * 4), PU_STATIC, NULL);
-	ylookup = ylookup1;
-
-	columnofs = Z_Realloc(columnofs, sizeof(*columnofs) * (viewwidth * 4), PU_STATIC, NULL);
 
 	xtoviewangle = Z_Realloc(xtoviewangle, sizeof(*xtoviewangle) * (viewwidth + 1), PU_STATIC, NULL);
 
@@ -726,26 +682,29 @@ void R_InitViewBuffer(INT32 width, INT32 height)
 	R_AllocPlaneMemory();
 	R_AllocFloorSpriteTables();
 	R_AllocVisSpriteMemory();
+}
+
+void R_InitViewBuffer(INT32 width, INT32 height)
+{
+	INT32 bytesperpixel = vid.bpp;
+
+	if (width > MAXVIDWIDTH)
+		width = MAXVIDWIDTH;
+	if (height > MAXVIDHEIGHT)
+		height = MAXVIDHEIGHT;
+	if (bytesperpixel < 1 || bytesperpixel > 4)
+		I_Error("R_InitViewBuffer: wrong bytesperpixel value %d\n", bytesperpixel);
+
+	R_AllocViewMemory();
 
 	// Handle resize, e.g. smaller view windows with border and/or status bar.
 	viewwindowx = (vid.width - width) >> 1;
-
-	// Column offset for those columns of the view window, but relative to the entire screen
-	for (i = 0; i < width; i++)
-		columnofs[i] = (viewwindowx + i) * bytesperpixel;
 
 	// Same with base row offset.
 	if (width == vid.width)
 		viewwindowy = 0;
 	else
 		viewwindowy = (vid.height - height) >> 1;
-
-	// Precalculate all row offsets.
-	for (i = 0; i < height; i++)
-	{
-		ylookup1[i] = screens[0] + (i+viewwindowy)*vid.width*bytesperpixel;
-		ylookup2[i] = screens[0] + (i+(vid.height>>1))*vid.width*bytesperpixel; // for splitscreen
-	}
 }
 
 /**	\brief	The R_VideoErase function

@@ -46,7 +46,7 @@ void R_DrawSpan_NPO2_8 (void)
 
 	source = ds_source;
 	colormap = ds_colormap;
-	dest = ylookup[ds_y] + columnofs[ds_x1];
+	dest = &topleft[ds_y*vid.width + ds_x1];
 
 	if (dest+8 > deststop)
 		return;
@@ -121,9 +121,8 @@ void R_DrawTiltedSpan_NPO2_8(void)
 	uz = ds_sup->z + ds_sup->y*(centery-ds_y) + ds_sup->x*(ds_x1-centerx);
 	vz = ds_svp->z + ds_svp->y*(centery-ds_y) + ds_svp->x*(ds_x1-centerx);
 
-	dest = ylookup[ds_y] + columnofs[ds_x1];
+	dest = &topleft[ds_y*vid.width + ds_x1];
 	source = ds_source;
-	//colormap = ds_colormap;
 
 #if 0	// The "perfect" reference version of this routine. Pretty slow.
 		// Use it only to see how things are supposed to look.
@@ -311,9 +310,8 @@ void R_DrawTiltedTranslucentSpan_NPO2_8(void)
 	uz = ds_sup->z + ds_sup->y*(centery-ds_y) + ds_sup->x*(ds_x1-centerx);
 	vz = ds_svp->z + ds_svp->y*(centery-ds_y) + ds_svp->x*(ds_x1-centerx);
 
-	dest = ylookup[ds_y] + columnofs[ds_x1];
+	dest = &topleft[ds_y*vid.width + ds_x1];
 	source = ds_source;
-	//colormap = ds_colormap;
 
 #if 0	// The "perfect" reference version of this routine. Pretty slow.
 		// Use it only to see how things are supposed to look.
@@ -499,9 +497,8 @@ void R_DrawTiltedSplat_NPO2_8(void)
 	uz = ds_sup->z + ds_sup->y*(centery-ds_y) + ds_sup->x*(ds_x1-centerx);
 	vz = ds_svp->z + ds_svp->y*(centery-ds_y) + ds_svp->x*(ds_x1-centerx);
 
-	dest = ylookup[ds_y] + columnofs[ds_x1];
+	dest = &topleft[ds_y*vid.width + ds_x1];
 	source = ds_source;
-	//colormap = ds_colormap;
 
 #if 0	// The "perfect" reference version of this routine. Pretty slow.
 		// Use it only to see how things are supposed to look.
@@ -693,7 +690,7 @@ void R_DrawSplat_NPO2_8 (void)
 
 	source = ds_source;
 	colormap = ds_colormap;
-	dest = ylookup[ds_y] + columnofs[ds_x1];
+	dest = &topleft[ds_y*vid.width + ds_x1];
 
 	fixedwidth = ds_flatwidth << FRACBITS;
 	fixedheight = ds_flatheight << FRACBITS;
@@ -761,7 +758,7 @@ void R_DrawTranslucentSplat_NPO2_8 (void)
 
 	source = ds_source;
 	colormap = ds_colormap;
-	dest = ylookup[ds_y] + columnofs[ds_x1];
+	dest = &topleft[ds_y*vid.width + ds_x1];
 
 	fixedwidth = ds_flatwidth << FRACBITS;
 	fixedheight = ds_flatheight << FRACBITS;
@@ -831,7 +828,7 @@ void R_DrawFloorSprite_NPO2_8 (void)
 	source = (UINT16 *)ds_source;
 	colormap = ds_colormap;
 	translation = ds_translation;
-	dest = ylookup[ds_y] + columnofs[ds_x1];
+	dest = &topleft[ds_y*vid.width + ds_x1];
 
 	fixedwidth = ds_flatwidth << FRACBITS;
 	fixedheight = ds_flatheight << FRACBITS;
@@ -901,7 +898,7 @@ void R_DrawTranslucentFloorSprite_NPO2_8 (void)
 	source = (UINT16 *)ds_source;
 	colormap = ds_colormap;
 	translation = ds_translation;
-	dest = ylookup[ds_y] + columnofs[ds_x1];
+	dest = &topleft[ds_y*vid.width + ds_x1];
 
 	fixedwidth = ds_flatwidth << FRACBITS;
 	fixedheight = ds_flatheight << FRACBITS;
@@ -974,7 +971,7 @@ void R_DrawTiltedFloorSprite_NPO2_8(void)
 	uz = ds_sup->z + ds_sup->y*(centery-ds_y) + ds_sup->x*(ds_x1-centerx);
 	vz = ds_svp->z + ds_svp->y*(centery-ds_y) + ds_svp->x*(ds_x1-centerx);
 
-	dest = ylookup[ds_y] + columnofs[ds_x1];
+	dest = &topleft[ds_y*vid.width + ds_x1];
 	source = (UINT16 *)ds_source;
 	colormap = ds_colormap;
 	translation = ds_translation;
@@ -1130,7 +1127,7 @@ void R_DrawTiltedTranslucentFloorSprite_NPO2_8(void)
 	uz = ds_sup->z + ds_sup->y*(centery-ds_y) + ds_sup->x*(ds_x1-centerx);
 	vz = ds_svp->z + ds_svp->y*(centery-ds_y) + ds_svp->x*(ds_x1-centerx);
 
-	dest = ylookup[ds_y] + columnofs[ds_x1];
+	dest = &topleft[ds_y*vid.width + ds_x1];
 	source = (UINT16 *)ds_source;
 	colormap = ds_colormap;
 	translation = ds_translation;
@@ -1281,7 +1278,7 @@ void R_DrawTranslucentSpan_NPO2_8 (void)
 
 	source = ds_source;
 	colormap = ds_colormap;
-	dest = ylookup[ds_y] + columnofs[ds_x1];
+	dest = &topleft[ds_y*vid.width + ds_x1];
 
 	fixedwidth = ds_flatwidth << FRACBITS;
 	fixedheight = ds_flatheight << FRACBITS;
@@ -1345,7 +1342,7 @@ void R_DrawWaterSpan_NPO2_8(void)
 
 	source = ds_source;
 	colormap = ds_colormap;
-	dest = ylookup[ds_y] + columnofs[ds_x1];
+	dest = &topleft[ds_y*vid.width + ds_x1];
 	dsrc = screens[1] + (ds_y+ds_bgofs)*vid.width + ds_x1;
 
 	fixedwidth = ds_flatwidth << FRACBITS;
@@ -1418,10 +1415,9 @@ void R_DrawTiltedWaterSpan_NPO2_8(void)
 	uz = ds_sup->z + ds_sup->y*(centery-ds_y) + ds_sup->x*(ds_x1-centerx);
 	vz = ds_svp->z + ds_svp->y*(centery-ds_y) + ds_svp->x*(ds_x1-centerx);
 
-	dest = ylookup[ds_y] + columnofs[ds_x1];
+	dest = &topleft[ds_y*vid.width + ds_x1];
 	dsrc = screens[1] + (ds_y+ds_bgofs)*vid.width + ds_x1;
 	source = ds_source;
-	//colormap = ds_colormap;
 
 #if 0	// The "perfect" reference version of this routine. Pretty slow.
 		// Use it only to see how things are supposed to look.
