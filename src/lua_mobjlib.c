@@ -925,6 +925,8 @@ enum mapthing_e {
 	mapthing_type,
 	mapthing_options,
 	mapthing_scale,
+	mapthing_spritexscale,
+	mapthing_spriteyscale,
 	mapthing_z,
 	mapthing_extrainfo,
 	mapthing_tag,
@@ -944,6 +946,8 @@ const char *const mapthing_opt[] = {
 	"type",
 	"options",
 	"scale",
+	"spritexscale",
+	"spriteyscale",
 	"z",
 	"extrainfo",
 	"tag",
@@ -999,7 +1003,13 @@ static int mapthing_get(lua_State *L)
 			lua_pushinteger(L, mt->options);
 			break;
 		case mapthing_scale:
-			lua_pushinteger(L, mt->scale);
+			lua_pushfixed(L, mt->scale);
+			break;
+		case mapthing_spritexscale:
+			lua_pushfixed(L, mt->spritexscale);
+			break;
+		case mapthing_spriteyscale:
+			lua_pushfixed(L, mt->spriteyscale);
 			break;
 		case mapthing_z:
 			lua_pushinteger(L, mt->z);
@@ -1071,6 +1081,12 @@ static int mapthing_set(lua_State *L)
 			break;
 		case mapthing_scale:
 			mt->scale = luaL_checkfixed(L, 3);
+			break;
+		case mapthing_spritexscale:
+			mt->spritexscale = luaL_checkfixed(L, 3);
+			break;
+		case mapthing_spriteyscale:
+			mt->spriteyscale = luaL_checkfixed(L, 3);
 			break;
 		case mapthing_z:
 			mt->z = (INT16)luaL_checkinteger(L, 3);
