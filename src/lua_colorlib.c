@@ -124,32 +124,32 @@ static UINT8 ParseHTMLColor(const char *str, UINT8 *rgba, size_t numc)
 /////////////////////////
 
 enum extracolormap_e {
-	extracolormap_r = 0,
-	extracolormap_g,
-	extracolormap_b,
-	extracolormap_a,
-	extracolormap_rgba,
-	extracolormap_fade_r,
-	extracolormap_fade_g,
-	extracolormap_fade_b,
-	extracolormap_fade_a,
-	extracolormap_fade_rgba,
+	extracolormap_red = 0,
+	extracolormap_green,
+	extracolormap_blue,
+	extracolormap_alpha,
+	extracolormap_color,
+	extracolormap_fade_red,
+	extracolormap_fade_green,
+	extracolormap_fade_blue,
+	extracolormap_fade_alpha,
+	extracolormap_fade_color,
 	extracolormap_fade_start,
 	extracolormap_fade_end,
 	extracolormap_colormap
 };
 
 static const char *const extracolormap_opt[] = {
-	"r",
-	"g",
-	"b",
-	"a",
-	"rgba",
-	"fade_r",
-	"fade_g",
-	"fade_b",
-	"fade_a",
-	"fade_rgba",
+	"red",
+	"green",
+	"blue",
+	"alpha",
+	"color",
+	"fade_red",
+	"fade_green",
+	"fade_blue",
+	"fade_alpha",
+	"fade_color",
 	"fade_start",
 	"fade_end",
 	"colormap",
@@ -162,37 +162,37 @@ static int extracolormap_get(lua_State *L)
 
 	switch (field)
 	{
-	case extracolormap_r:
+	case extracolormap_red:
 		lua_pushinteger(L, R_GetRgbaR(exc->rgba));
 		break;
-	case extracolormap_g:
+	case extracolormap_green:
 		lua_pushinteger(L, R_GetRgbaG(exc->rgba));
 		break;
-	case extracolormap_b:
+	case extracolormap_blue:
 		lua_pushinteger(L, R_GetRgbaB(exc->rgba));
 		break;
-	case extracolormap_a:
+	case extracolormap_alpha:
 		lua_pushinteger(L, R_GetRgbaA(exc->rgba));
 		break;
-	case extracolormap_rgba:
+	case extracolormap_color:
 		lua_pushinteger(L, R_GetRgbaR(exc->rgba));
 		lua_pushinteger(L, R_GetRgbaG(exc->rgba));
 		lua_pushinteger(L, R_GetRgbaB(exc->rgba));
 		lua_pushinteger(L, R_GetRgbaA(exc->rgba));
 		return 4;
-	case extracolormap_fade_r:
+	case extracolormap_fade_red:
 		lua_pushinteger(L, R_GetRgbaR(exc->fadergba));
 		break;
-	case extracolormap_fade_g:
+	case extracolormap_fade_green:
 		lua_pushinteger(L, R_GetRgbaG(exc->fadergba));
 		break;
-	case extracolormap_fade_b:
+	case extracolormap_fade_blue:
 		lua_pushinteger(L, R_GetRgbaB(exc->fadergba));
 		break;
-	case extracolormap_fade_a:
+	case extracolormap_fade_alpha:
 		lua_pushinteger(L, R_GetRgbaA(exc->fadergba));
 		break;
-	case extracolormap_fade_rgba:
+	case extracolormap_fade_color:
 		lua_pushinteger(L, R_GetRgbaR(exc->fadergba));
 		lua_pushinteger(L, R_GetRgbaG(exc->fadergba));
 		lua_pushinteger(L, R_GetRgbaB(exc->fadergba));
@@ -205,6 +205,9 @@ static int extracolormap_get(lua_State *L)
 		lua_pushinteger(L, exc->fadeend);
 		break;
 	case extracolormap_colormap:
+		// I'm not sure if making the colormap available makes sense.
+		// It's a read-only field, only used by one of the renderers, and
+		// the only way to manipulate it is by modifying the other fields.
 		LUA_PushUserdata(L, exc->colormap, META_LIGHTTABLE);
 		break;
 	}
@@ -266,19 +269,19 @@ static int extracolormap_set(lua_State *L)
 
 	switch(field)
 	{
-	case extracolormap_r:
+	case extracolormap_red:
 		exc->rgba = R_PutRgbaRGBA(val, g, b, a);
 		break;
-	case extracolormap_g:
+	case extracolormap_green:
 		exc->rgba = R_PutRgbaRGBA(r, val, b, a);
 		break;
-	case extracolormap_b:
+	case extracolormap_blue:
 		exc->rgba = R_PutRgbaRGBA(r, g, val, a);
 		break;
-	case extracolormap_a:
+	case extracolormap_alpha:
 		exc->rgba = R_PutRgbaRGBA(r, g, b, val);
 		break;
-	case extracolormap_rgba:
+	case extracolormap_color:
 		rgba[0] = r;
 		rgba[1] = g;
 		rgba[2] = b;
@@ -286,19 +289,19 @@ static int extracolormap_set(lua_State *L)
 		GetExtraColormapRGBA(L, rgba);
 		exc->rgba = R_PutRgbaRGBA(rgba[0], rgba[1], rgba[2], rgba[3]);
 		break;
-	case extracolormap_fade_r:
+	case extracolormap_fade_red:
 		exc->fadergba = R_PutRgbaRGBA(val, fg, fb, fa);
 		break;
-	case extracolormap_fade_g:
+	case extracolormap_fade_green:
 		exc->fadergba = R_PutRgbaRGBA(fr, val, fb, fa);
 		break;
-	case extracolormap_fade_b:
+	case extracolormap_fade_blue:
 		exc->fadergba = R_PutRgbaRGBA(fr, fg, val, fa);
 		break;
-	case extracolormap_fade_a:
+	case extracolormap_fade_alpha:
 		exc->fadergba = R_PutRgbaRGBA(fr, fg, fb, val);
 		break;
-	case extracolormap_fade_rgba:
+	case extracolormap_fade_color:
 		rgba[0] = fr;
 		rgba[1] = fg;
 		rgba[2] = fb;
