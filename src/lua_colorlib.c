@@ -209,7 +209,7 @@ static int extracolormap_get(lua_State *L)
 		lua_pushinteger(L, exc->fadeend);
 		break;
 	case extracolormap_colormap:
-		LUA_PushUserdata(L, exc->colormap, META_COLORMAP);
+		LUA_PushUserdata(L, exc->colormap, META_LIGHTTABLE);
 		break;
 	}
 	return 1;
@@ -321,6 +321,29 @@ static int extracolormap_set(lua_State *L)
 	return 0;
 }
 
+static int lighttable_get(lua_State *L)
+{
+	void **userdata;
+
+	lighttable_t *table = *((lighttable_t **)luaL_checkudata(L, 1, META_LIGHTTABLE));
+	UINT32 row = luaL_checkinteger(L, 2);
+	if (row < 1 || row > 34)
+		return luaL_error(L, "lighttable row %d out of range (1 - %d)", row, 34);
+
+	userdata = lua_newuserdata(L, sizeof(void *));
+	*userdata = &table[256 * (row - 1)];
+	luaL_getmetatable(L, META_COLORMAP);
+	lua_setmetatable(L, -2);
+
+	return 1;
+}
+
+static int lighttable_len(lua_State *L)
+{
+	lua_pushinteger(L, NUM_PALETTE_ENTRIES);
+	return 1;
+}
+
 int LUA_ColorLib(lua_State *L)
 {
 	luaL_newmetatable(L, META_EXTRACOLORMAP);
@@ -329,6 +352,14 @@ int LUA_ColorLib(lua_State *L)
 
 		lua_pushcfunction(L, extracolormap_set);
 		lua_setfield(L, -2, "__newindex");
+	lua_pop(L, 1);
+
+	luaL_newmetatable(L, META_LIGHTTABLE);
+		lua_pushcfunction(L, lighttable_get);
+		lua_setfield(L, -2, "__index");
+
+		lua_pushcfunction(L, lighttable_len);
+		lua_setfield(L, -2, "__len");
 	lua_pop(L, 1);
 
 	return 0;

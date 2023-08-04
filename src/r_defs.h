@@ -53,6 +53,9 @@ typedef struct
 // Could even use more than 32 levels.
 typedef UINT8 lighttable_t;
 
+#define NUM_PALETTE_ENTRIES 256
+#define DEFAULT_STARTTRANSCOLOR 96
+
 #define CMF_FADEFULLBRIGHTSPRITES  1
 #define CMF_FOG 4
 
