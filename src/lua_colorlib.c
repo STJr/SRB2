@@ -422,7 +422,7 @@ static int lib_colorPackRgba(lua_State *L)
 	return 1;
 }
 
-static int lib_colorUnpackRgba(lua_State *L)
+static int lib_colorUnpackRgb(lua_State *L)
 {
 	UINT8 rgba[4];
 
@@ -445,7 +445,7 @@ static luaL_Reg color_lib[] = {
 	{"rgbToHex", lib_colorRgbToHex},
 	{"packRgb", lib_colorPackRgb},
 	{"packRgba", lib_colorPackRgba},
-	{"unpackRgba", lib_colorUnpackRgba},
+	{"unpackRgb", lib_colorUnpackRgb},
 	{NULL, NULL}
 };
 
