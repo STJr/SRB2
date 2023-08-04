@@ -199,41 +199,6 @@ static int lib_colorRgbToPalette(lua_State *L)
 	return 1;
 }
 
-static void GetHSLFromTable(lua_State *L, UINT32 index, UINT8 *hsl)
-{
-	lua_pushnil(L);
-
-	while (lua_next(L, index)) {
-		lua_Integer i = 0;
-		const char *field = NULL;
-		if (lua_isnumber(L, -2))
-			i = lua_tointeger(L, -2);
-		else
-			field = luaL_checkstring(L, -2);
-
-#define CHECKFIELD(p, c) (i == p || (field && fastcmp(field, c)))
-#define HSLSET(p, c) { \
-			INT32 val = luaL_checkinteger(L, -1); \
-			if (val < 0 || val > 255) \
-				luaL_error(L, c " %d out of range (0 - 255)", val); \
-			hsl[p] = (UINT8)val; \
-		}
-
-		if (CHECKFIELD(1, "h")) {
-			HSLSET(0, "hue");
-		} else if (CHECKFIELD(2, "s")) {
-			HSLSET(1, "saturation");
-		} else if (CHECKFIELD(3, "l")) {
-			HSLSET(2, "lightness");
-		}
-
-#undef CHECKFIELD
-#undef HSLSET
-
-		lua_pop(L, 1);
-	}
-}
-
 #define SCALE_UINT8_TO_FIXED(val) FixedDiv(val * FRACUNIT, 255 * FRACUNIT)
 #define SCALE_FIXED_TO_UINT8(val) FixedRound(FixedMul(val, 255 * FRACUNIT)) / FRACUNIT
 
@@ -262,26 +227,15 @@ static int lib_colorHslToRgb(lua_State *L)
 {
 	fixed_t h, s, l;
 
-	if (lua_istable(L, 1))
-	{
-		UINT8 hsl[3] = { 0, 0, 0 };
-		GetHSLFromTable(L, 1, hsl);
-		h = hsl[0];
-		s = hsl[1];
-		l = hsl[2];
-	}
-	else
-	{
 #define GETHSL(c, i, desc) \
-		c = luaL_checkinteger(L, i); \
-		if (c < 0 || c > 255) \
-			luaL_error(L, desc " %d out of range (0 - 255)", c)
+	c = luaL_checkinteger(L, i); \
+	if (c < 0 || c > 255) \
+		luaL_error(L, desc " %d out of range (0 - 255)", c)
 
-		GETHSL(h, 1, "hue");
-		GETHSL(s, 2, "saturation");
-		GETHSL(l, 3, "value");
+	GETHSL(h, 1, "hue");
+	GETHSL(s, 2, "saturation");
+	GETHSL(l, 3, "value");
 #undef GETHSL
-	}
 
 	if (!s)
 	{
