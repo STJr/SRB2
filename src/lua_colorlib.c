@@ -17,48 +17,6 @@
 #include "lua_script.h"
 #include "lua_libs.h"
 
-static UINT8 GetRGBAColorsFromTable(lua_State *L, UINT32 index, UINT8 *rgba, boolean useAlpha)
-{
-	UINT8 num = 0;
-
-	lua_pushnil(L);
-
-	while (lua_next(L, index)) {
-		lua_Integer i = 0;
-		const char *field = NULL;
-		if (lua_isnumber(L, -2))
-			i = lua_tointeger(L, -2);
-		else
-			field = luaL_checkstring(L, -2);
-
-#define CHECKFIELD(p, c) (i == p || (field && fastcmp(field, c)))
-#define RGBASET(p, c) { \
-			INT32 color = luaL_checkinteger(L, -1); \
-			if (color < 0 || color > 255) \
-				luaL_error(L, c " channel %d out of range (0 - 255)", color); \
-			rgba[p] = (UINT8)color; \
-			num++; \
-		}
-
-		if (CHECKFIELD(1, "r")) {
-			RGBASET(0, "red color");
-		} else if (CHECKFIELD(2, "g")) {
-			RGBASET(1, "green color");
-		} else if (CHECKFIELD(3, "b")) {
-			RGBASET(2, "blue color");
-		} else if (useAlpha && CHECKFIELD(4, "a")) {
-			RGBASET(3, "alpha");
-		}
-
-#undef CHECKFIELD
-#undef RGBASET
-
-		lua_pop(L, 1);
-	}
-
-	return num;
-}
-
 #define IS_HEX_CHAR(x) ((x >= '0' && x <= '9') || (x >= 'a' && x <= 'f') || (x >= 'A' && x <= 'F'))
 #define ARE_HEX_CHARS(str, i) IS_HEX_CHAR(str[i]) && IS_HEX_CHAR(str[i + 1])
 
@@ -205,29 +163,24 @@ static int extracolormap_get(lua_State *L)
 		lua_pushinteger(L, exc->fadeend);
 		break;
 	case extracolormap_colormap:
-		// I'm not sure if making the colormap available makes sense.
-		// It's a read-only field, only used by one of the renderers, and
-		// the only way to manipulate it is by modifying the other fields.
 		LUA_PushUserdata(L, exc->colormap, META_LIGHTTABLE);
 		break;
 	}
 	return 1;
 }
 
-static void GetExtraColormapRGBA(lua_State *L, UINT8 *rgba)
+static void GetExtraColormapRGBA(lua_State *L, UINT8 *rgba, int arg)
 {
-	if (lua_type(L, 3) == LUA_TSTRING)
+	if (lua_type(L, arg) == LUA_TSTRING)
 	{
-		const char *str = lua_tostring(L, 3);
+		const char *str = lua_tostring(L, arg);
 		UINT8 parsed = ParseHTMLColor(str, rgba, 4);
 		if (!parsed)
 			luaL_error(L, "Malformed HTML color '%s'", str);
 	}
-	else if (lua_type(L, 3) == LUA_TTABLE)
-		GetRGBAColorsFromTable(L, 3, rgba, true);
 	else
 	{
-		UINT32 colors = lua_tointeger(L, 3);
+		UINT32 colors = lua_tointeger(L, arg);
 		if (colors > 0xFFFFFF)
 		{
 			rgba[0] = (colors >> 24) & 0xFF;
@@ -286,7 +239,7 @@ static int extracolormap_set(lua_State *L)
 		rgba[1] = g;
 		rgba[2] = b;
 		rgba[3] = a;
-		GetExtraColormapRGBA(L, rgba);
+		GetExtraColormapRGBA(L, rgba, 3);
 		exc->rgba = R_PutRgbaRGBA(rgba[0], rgba[1], rgba[2], rgba[3]);
 		break;
 	case extracolormap_fade_red:
@@ -306,7 +259,7 @@ static int extracolormap_set(lua_State *L)
 		rgba[1] = fg;
 		rgba[2] = fb;
 		rgba[3] = fa;
-		GetExtraColormapRGBA(L, rgba);
+		GetExtraColormapRGBA(L, rgba, 3);
 		exc->fadergba = R_PutRgbaRGBA(rgba[0], rgba[1], rgba[2], rgba[3]);
 		break;
 	case extracolormap_fade_start:
