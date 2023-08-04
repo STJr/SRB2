@@ -220,8 +220,26 @@ static void GetExtraColormapRGBA(lua_State *L, UINT8 *rgba)
 		if (!parsed)
 			luaL_error(L, "Malformed HTML color '%s'", str);
 	}
-	else
+	else if (lua_type(L, 3) == LUA_TTABLE)
 		GetRGBAColorsFromTable(L, 3, rgba, true);
+	else
+	{
+		UINT32 colors = lua_tointeger(L, 3);
+		if (colors > 0xFFFFFF)
+		{
+			rgba[0] = (colors >> 24) & 0xFF;
+			rgba[1] = (colors >> 16) & 0xFF;
+			rgba[2] = (colors >> 8) & 0xFF;
+			rgba[3] = colors & 0xFF;
+		}
+		else
+		{
+			rgba[0] = (colors >> 16) & 0xFF;
+			rgba[1] = (colors >> 8) & 0xFF;
+			rgba[2] = colors & 0xFF;
+			rgba[3] = 0xFF;
+		}
+	}
 }
 
 static int extracolormap_set(lua_State *L)
