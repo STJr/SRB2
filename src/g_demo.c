@@ -2375,7 +2375,7 @@ UINT8 G_CheckDemoForError(char *defdemoname)
 
 	demo_p++; // demoflags
 
-	return G_CheckDemoExtraFiles(&demo_p, our_demo_version);
+	return G_CheckDemoExtraFiles(&demo_p, true, our_demo_version);
 }
 
 void G_AddGhost(char *defdemoname)
