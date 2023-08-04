@@ -9287,7 +9287,7 @@ mobj_t *P_LookForEnemies(player_t *player, boolean nonenemies, boolean bullet)
 
 		{
 			fixed_t zdist = (player->mo->z + player->mo->height/2) - (mo->z + mo->height/2);
-			dist = P_AproxDistance(player->mo->x-mo->x, player->mo->y-mo->y);
+			dist = R_PointToDist2(0, 0, player->mo->x-mo->x, player->mo->y-mo->y);
 			if (bullet)
 			{
 				if ((R_PointToAngle2(0, 0, dist, zdist) + span) > span*2)
@@ -9304,7 +9304,7 @@ mobj_t *P_LookForEnemies(player_t *player, boolean nonenemies, boolean bullet)
 					continue;
 			}
 
-			dist = P_AproxDistance(dist, zdist);
+			dist = R_PointToDist2(0, 0, dist, zdist);
 			if (dist > maxdist)
 				continue; // out of range
 		}

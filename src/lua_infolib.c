@@ -508,8 +508,6 @@ static int pivotlist_get(lua_State *L)
 	const char *field = luaL_checkstring(L, 2);
 	UINT8 frame;
 
-	I_Assert(framepivot != NULL);
-
 	frame = R_Char2Frame(field[0]);
 	if (frame == 255)
 		luaL_error(L, "invalid frame %s", field);
@@ -538,8 +536,6 @@ static int pivotlist_set(lua_State *L)
 		return luaL_error(L, "Do not alter spriteframepivot_t in HUD rendering code!");
 	if (hook_cmd_running)
 		return luaL_error(L, "Do not alter spriteframepivot_t in CMD building code!");
-
-	I_Assert(pivotlist != NULL);
 
 	frame = R_Char2Frame(field[0]);
 	if (frame == 255)

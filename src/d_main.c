@@ -71,6 +71,7 @@
 #include "g_input.h" // tutorial mode control scheming
 #include "m_perfstats.h"
 #include "m_random.h"
+#include "command.h"
 
 #ifdef CMAKECONFIG
 #include "config.h"
@@ -1209,6 +1210,15 @@ D_ConvertVersionNumbers (void)
 #endif
 }
 
+static void Command_assert(void)
+{
+#if !defined(NDEBUG) || defined(PARANOIA)
+	CONS_Printf("Yes, assertions are enabled.\n");
+#else
+	CONS_Printf("No, assertions are NOT enabled.\n");
+#endif
+}
+
 //
 // D_SRB2Main
 //
@@ -1221,6 +1231,11 @@ void D_SRB2Main(void)
 
 	/* break the version string into version numbers, for netplay */
 	D_ConvertVersionNumbers();
+
+	if (!strcmp(compbranch, ""))
+	{
+		compbranch = "detached HEAD";
+	}
 
 	// Print GPL notice for our console users (Linux)
 	CONS_Printf(
@@ -1357,6 +1372,8 @@ void D_SRB2Main(void)
 
 	// Do this up here so that WADs loaded through the command line can use ExecCfg
 	COM_Init();
+
+	COM_AddCommand("assert", Command_assert, COM_LUA);
 
 	// Add any files specified on the command line with
 	// "-file <file>" or "-folder <folder>" to the add-on list

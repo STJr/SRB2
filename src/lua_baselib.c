@@ -2456,7 +2456,7 @@ static int lib_pFadeLight(lua_State *L)
 static int lib_pIsFlagAtBase(lua_State *L)
 {
 	mobjtype_t flag = luaL_checkinteger(L, 1);
-	NOHUD
+	//HUDSAFE
 	INLEVEL
 	if (flag >= NUMMOBJTYPES)
 		return luaL_error(L, "mobj type %d out of range (0 - %d)", flag, NUMMOBJTYPES-1);
