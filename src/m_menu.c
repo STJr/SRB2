@@ -465,7 +465,6 @@ consvar_t cv_ghost_guest     = CVAR_INIT ("ghost_guest",     "Show", CV_SAVE, gh
 //Console variables used solely in the menu system.
 //todo: add a way to use non-console variables in the menu
 //      or make these consvars legitimate like color or skin.
-static CV_PossibleValue_t dummyteam_cons_t[] = {{0, "Spectator"}, {1, "Red"}, {2, "Blue"}, {0, NULL}};
 static CV_PossibleValue_t dummyscramble_cons_t[] = {{0, "Random"}, {1, "Points"}, {0, NULL}};
 static CV_PossibleValue_t ringlimit_cons_t[] = {{0, "MIN"}, {9999, "MAX"}, {0, NULL}};
 static CV_PossibleValue_t liveslimit_cons_t[] = {{1, "MIN"}, {99, "MAX"}, {-1, "Infinite"}, {0, NULL}};
@@ -473,6 +472,8 @@ static CV_PossibleValue_t contlimit_cons_t[] = {{0, "MIN"}, {99, "MAX"}, {0, NUL
 static CV_PossibleValue_t dummymares_cons_t[] = {
 	{-1, "END"}, {0,"Overall"}, {1,"Mare 1"}, {2,"Mare 2"}, {3,"Mare 3"}, {4,"Mare 4"}, {5,"Mare 5"}, {6,"Mare 6"}, {7,"Mare 7"}, {8,"Mare 8"}, {0,NULL}
 };
+
+CV_PossibleValue_t dummyteam_cons_t[MAXTEAMS + 1];
 
 static consvar_t cv_dummyteam = CVAR_INIT ("dummyteam", "Spectator", CV_HIDEN, dummyteam_cons_t, NULL);
 static consvar_t cv_dummyscramble = CVAR_INIT ("dummyscramble", "Random", CV_HIDEN, dummyscramble_cons_t, NULL);

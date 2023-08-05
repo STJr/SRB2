@@ -1453,23 +1453,20 @@ void P_AddPlayerScore(player_t *player, UINT32 amount)
 	// In team match, all awarded points are incremented to the team's running score.
 	if ((gametyperules & (GTR_TEAMS|GTR_TEAMFLAGS)) == GTR_TEAMS)
 	{
-		if (player->ctfteam == 1)
-			redscore += amount;
-		else if (player->ctfteam == 2)
-			bluescore += amount;
+		teamscores[player->ctfteam] += amount;
 	}
 }
 
 // Steals from every enemy's score.
 void P_StealPlayerScore(player_t *player, UINT32 amount)
 {
-	boolean teams = G_GametypeHasTeams();
+	boolean hasTeams = G_GametypeHasTeams();
 	UINT32 stolen = 0;
 	int i;
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
 		if (&players[i] == player
-		|| (teams && players[i].ctfteam == player->ctfteam))
+		|| (hasTeams && players[i].ctfteam == player->ctfteam))
 			continue;
 		if (players[i].score >= amount)
 		{
@@ -1487,10 +1484,7 @@ void P_StealPlayerScore(player_t *player, UINT32 amount)
 		// In team match, all stolen points are removed from the enemy team's running score.
 		if ((gametyperules & (GTR_TEAMS|GTR_TEAMFLAGS)) == GTR_TEAMS)
 		{
-			if (player->ctfteam == 1)
-				bluescore -= amount;
-			else if (player->ctfteam == 2)
-				redscore -= amount;
+			teamscores[player->ctfteam] -= amount;
 		}
 		P_AddPlayerScore(player, stolen);
 	}
@@ -3155,7 +3149,7 @@ static void P_DoPlayerHeadSigns(player_t *player)
 			}
 		}
 	}
-	else if ((gametyperules & GTR_TEAMFLAGS) && (player->gotflag & (GF_REDFLAG|GF_BLUEFLAG))) // If you have the flag (duh).
+	else if ((gametyperules & GTR_TEAMFLAGS) && player->gotflag) // If you have the flag (duh).
 	{
 		// Spawn a got-flag message over the head of the player that has it
 		// (but not on your own screen if you have the flag, unless you're spectating).
@@ -10520,29 +10514,26 @@ boolean P_SpectatorJoinGame(player_t *player)
 	else if (G_GametypeHasTeams())
 	{
 		INT32 changeto = 0;
-		INT32 z, numplayersred = 0, numplayersblue = 0;
+		INT32 z, numplayers[MAXTEAMS];
 
 		//find a team by num players, score, or random if all else fails.
 		for (z = 0; z < MAXPLAYERS; ++z)
 			if (playeringame[z])
 			{
-				if (players[z].ctfteam == 1)
-					++numplayersred;
-				else if (players[z].ctfteam == 2)
-					++numplayersblue;
+				numplayers[players[z].ctfteam]++;
 			}
 		// for z
 
-		if (numplayersblue > numplayersred)
-			changeto = 1;
-		else if (numplayersred > numplayersblue)
-			changeto = 2;
-		else if (bluescore > redscore)
-			changeto = 1;
-		else if (redscore > bluescore)
-			changeto = 2;
+		if (numplayers[TEAM_BLUE] > numplayers[TEAM_RED])
+			changeto = TEAM_RED;
+		else if (numplayers[TEAM_RED] > numplayers[TEAM_BLUE])
+			changeto = TEAM_BLUE;
+		else if (teamscores[TEAM_BLUE] > teamscores[TEAM_RED])
+			changeto = TEAM_RED;
+		else if (teamscores[TEAM_RED] > teamscores[TEAM_BLUE])
+			changeto = TEAM_BLUE;
 		else
-			changeto = (P_RandomFixed() & 1) + 1;
+			changeto = (P_RandomFixed() & 1) + TEAM_RED;
 
 		if (!LUA_HookTeamSwitch(player, changeto, true, false, false))
 			return false;
@@ -10565,10 +10556,8 @@ boolean P_SpectatorJoinGame(player_t *player)
 			displayplayer = consoleplayer;
 		}
 
-		if (changeto == 1)
-			CONS_Printf(M_GetText("%s switched to the %c%s%c.\n"), player_names[player-players], '\x85', M_GetText("Red team"), '\x80');
-		else if (changeto == 2)
-			CONS_Printf(M_GetText("%s switched to the %c%s%c.\n"), player_names[player-players], '\x84', M_GetText("Blue team"), '\x80');
+		if (changeto != 0)
+			CONS_Printf(M_GetText("%s switched to %s%s%c.\n"), player_names[player-players], GetChatColorForSkincolor(G_GetTeamColor(changeto)), G_GetTeamName(changeto), '\x80');;
 
 		return true; // no more player->mo, cannot continue.
 	}

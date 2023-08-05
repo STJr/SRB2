@@ -1105,7 +1105,7 @@ static int player_set(lua_State *L)
 		plr->laps = (UINT8)luaL_checkinteger(L, 3);
 		break;
 	case player_ctfteam:
-		plr->ctfteam = (INT32)luaL_checkinteger(L, 3);
+		plr->ctfteam = (INT32)luaL_checkinteger(L, 3) % MAXTEAMS;
 		break;
 	case player_gotflag:
 		plr->gotflag = (UINT16)luaL_checkinteger(L, 3);

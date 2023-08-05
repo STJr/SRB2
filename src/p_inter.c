@@ -30,7 +30,7 @@
 #include "f_finale.h"
 
 // CTF player names
-#define CTFTEAMCODE(pl) pl->ctfteam ? (pl->ctfteam == 1 ? "\x85" : "\x84") : ""
+#define CTFTEAMCODE(pl) pl->ctfteam ? GetChatColorForSkincolor(G_GetTeamColor(pl->ctfteam)) : ""
 #define CTFTEAMENDCODE(pl) pl->ctfteam ? "\x80" : ""
 
 void P_ForceFeed(const player_t *player, INT32 attack, INT32 fade, tic_t duration, INT32 period)
@@ -561,11 +561,11 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 // Rings, coins, spheres, weapon panels, etc //
 // ***************************************** //
 		case MT_REDTEAMRING:
-			if (player->ctfteam != 1)
+			if (player->ctfteam != TEAM_RED)
 				return;
 			/* FALLTHRU */
 		case MT_BLUETEAMRING: // Yes, I'm lazy. Oh well, deal with it.
-			if (special->type == MT_BLUETEAMRING && player->ctfteam != 2)
+			if (special->type == MT_BLUETEAMRING && player->ctfteam != TEAM_BLUE)
 				return;
 			/* FALLTHRU */
 		case MT_RING:
@@ -846,23 +846,16 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				return;
 //			if (special->momz > 0)
 //				return;
+			if (special->info->mass < numteams)
 			{
-				UINT8 flagteam = (special->type == MT_REDFLAG) ? 1 : 2;
-				sectorspecialflags_t specialflag = (special->type == MT_REDFLAG) ? SSF_REDTEAMBASE : SSF_BLUETEAMBASE;
+				UINT8 flagteam = special->info->mass;
+				sectorspecialflags_t specialflag = flagteam == TEAM_RED ? SSF_REDTEAMBASE : SSF_BLUETEAMBASE;
 				const char *flagtext;
-				char flagcolor;
+				const char *flagcolor;
 				char plname[MAXPLAYERNAME+4];
 
-				if (special->type == MT_REDFLAG)
-				{
-					flagtext = M_GetText("Red flag");
-					flagcolor = '\x85';
-				}
-				else
-				{
-					flagtext = M_GetText("Blue flag");
-					flagcolor = '\x84';
-				}
+				flagtext = G_GetTeamFlagName(flagteam);
+				flagcolor = GetChatColorForSkincolor(G_GetTeamColor(flagteam));
 				snprintf(plname, sizeof(plname), "%s%s%s",
 						 CTFTEAMCODE(player),
 						 player_names[player - players],
@@ -880,7 +873,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 
 						if (!P_PlayerTouchingSectorSpecialFlag(player, specialflag))
 						{
-							CONS_Printf(M_GetText("%s returned the %c%s%c to base.\n"), plname, flagcolor, flagtext, 0x80);
+							CONS_Printf(M_GetText("%s returned the %s%s%c to base.\n"), plname, flagcolor, flagtext, 0x80);
 
 							// The fuse code plays this sound effect
 							//if (players[consoleplayer].ctfteam == player->ctfteam)
@@ -890,15 +883,12 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				}
 				else if (player->ctfteam) // Player is on the other team (and not a spectator)
 				{
-					UINT16 flagflag   = (special->type == MT_REDFLAG) ? GF_REDFLAG : GF_BLUEFLAG;
-					mobj_t **flagmobj = (special->type == MT_REDFLAG) ? &redflag : &blueflag;
-
 					if (player->powers[pw_super])
 						return;
 
-					player->gotflag |= flagflag;
-					CONS_Printf(M_GetText("%s picked up the %c%s%c!\n"), plname, flagcolor, flagtext, 0x80);
-					(*flagmobj) = NULL;
+					player->gotflag |= teams[flagteam].flag;
+					CONS_Printf(M_GetText("%s picked up the %s%s%c!\n"), plname, flagcolor, flagtext, 0x80);
+					flagmobjs[flagteam] = NULL;
 					// code for dealing with abilities is handled elsewhere now
 					break;
 				}
@@ -2293,7 +2283,7 @@ void P_CheckTimeLimit(void)
 			else
 			{
 				//In team match and CTF, determining a tie is much simpler. =P
-				if (redscore == bluescore)
+				if (teamscores[TEAM_RED] == teamscores[TEAM_BLUE])
 					return;
 			}
 		}
@@ -2328,7 +2318,7 @@ void P_CheckPointLimit(void)
 	if (G_GametypeHasTeams())
 	{
 		// Just check both teams
-		if ((UINT32)cv_pointlimit.value <= redscore || (UINT32)cv_pointlimit.value <= bluescore)
+		if ((UINT32)cv_pointlimit.value <= teamscores[TEAM_RED] || (UINT32)cv_pointlimit.value <= teamscores[TEAM_BLUE])
 		{
 			if (server)
 				SendNetXCmd(XD_EXITLEVEL, NULL, 0);
@@ -3336,7 +3326,7 @@ static void P_KillPlayer(player_t *player, mobj_t *source, INT32 damage)
 		player->mo->flags2 &= ~MF2_DONTDRAW;
 
 	P_SetPlayerMobjState(player->mo, player->mo->info->deathstate);
-	if ((gametyperules & GTR_TEAMFLAGS) && (player->gotflag & (GF_REDFLAG|GF_BLUEFLAG)))
+	if ((gametyperules & GTR_TEAMFLAGS) && player->gotflag)
 	{
 		P_PlayerFlagBurst(player, false);
 		if (source && source->player)
@@ -3461,7 +3451,7 @@ static void P_ShieldDamage(player_t *player, mobj_t *inflictor, mobj_t *source, 
 	else
 		S_StartSound (player->mo, sfx_shldls); // Ba-Dum! Shield loss.
 
-	if ((gametyperules & GTR_TEAMFLAGS) && (player->gotflag & (GF_REDFLAG|GF_BLUEFLAG)))
+	if ((gametyperules & GTR_TEAMFLAGS) && player->gotflag)
 	{
 		P_PlayerFlagBurst(player, false);
 		if (source && source->player)
@@ -3495,7 +3485,7 @@ static void P_RingDamage(player_t *player, mobj_t *inflictor, mobj_t *source, IN
 			P_AddPlayerScore(source->player, 50);
 	}
 
-	if ((gametyperules & GTR_TEAMFLAGS) && (player->gotflag & (GF_REDFLAG|GF_BLUEFLAG)))
+	if ((gametyperules & GTR_TEAMFLAGS) && player->gotflag)
 	{
 		P_PlayerFlagBurst(player, false);
 		if (source && source->player)
@@ -3572,7 +3562,7 @@ void P_SpecialStageDamage(player_t *player, mobj_t *inflictor, mobj_t *source)
 
 	P_DoPlayerPain(player, inflictor, source);
 
-	if ((gametyperules & GTR_TEAMFLAGS) && player->gotflag & (GF_REDFLAG|GF_BLUEFLAG))
+	if ((gametyperules & GTR_TEAMFLAGS) && player->gotflag)
 		P_PlayerFlagBurst(player, false);
 
 	if (oldnightstime > 10*TICRATE
@@ -3660,10 +3650,10 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 	if (!force)
 	{
 		// Special case for team ring boxes
-		if (target->type == MT_RING_REDBOX && !(source->player->ctfteam == 1))
+		if (target->type == MT_RING_REDBOX && !(source->player->ctfteam == TEAM_RED))
 			return false;
 
-		if (target->type == MT_RING_BLUEBOX && !(source->player->ctfteam == 2))
+		if (target->type == MT_RING_BLUEBOX && !(source->player->ctfteam == TEAM_BLUE))
 			return false;
 	}
 
@@ -4382,85 +4372,68 @@ void P_PlayerEmeraldBurst(player_t *player, boolean toss)
   */
 void P_PlayerFlagBurst(player_t *player, boolean toss)
 {
-	mobj_t *flag;
-	mobjtype_t type;
-
-	if (!(player->gotflag & (GF_REDFLAG|GF_BLUEFLAG)))
+	if (!player->gotflag)
 		return;
 
-	if (player->gotflag & GF_REDFLAG)
-		type = MT_REDFLAG;
-	else
-		type = MT_BLUEFLAG;
-
-	flag = P_SpawnMobj(player->mo->x, player->mo->y, player->mo->z, type);
-
-	if (player->mo->eflags & MFE_VERTICALFLIP)
+	for (UINT8 team = TEAM_RED; team < numteams; team++)
 	{
-		flag->z += player->mo->height - flag->height;
-		flag->flags2 |= MF2_OBJECTFLIP;
-	}
+		UINT32 flagflag = 1 << (team - 1);
+		if (!(player->gotflag & flagflag))
+			continue;
 
-	if (toss)
-		P_InstaThrust(flag, player->mo->angle, FixedMul(6*FRACUNIT, player->mo->scale));
-	else
-	{
-		angle_t fa = P_RandomByte()*FINEANGLES/256;
-		flag->momx = FixedMul(FINECOSINE(fa), FixedMul(6*FRACUNIT, player->mo->scale));
-		if (!(twodlevel || (player->mo->flags2 & MF2_TWOD)))
-			flag->momy = FixedMul(FINESINE(fa), FixedMul(6*FRACUNIT, player->mo->scale));
-	}
+		mobj_t *flag = P_SpawnMobj(player->mo->x, player->mo->y, player->mo->z, teams[team].flag_mobj_type);
 
-	flag->momz = FixedMul(8*FRACUNIT, player->mo->scale);
-	if (player->mo->eflags & MFE_VERTICALFLIP)
-		flag->momz = -flag->momz;
-
-	if (type == MT_REDFLAG)
-		flag->spawnpoint = rflagpoint;
-	else
-		flag->spawnpoint = bflagpoint;
-
-	flag->fuse = cv_flagtime.value * TICRATE;
-	P_SetTarget(&flag->target, player->mo);
-
-	// Flag text
-	{
-		char plname[MAXPLAYERNAME+4];
-		const char *flagtext;
-		char flagcolor;
-
-		snprintf(plname, sizeof(plname), "%s%s%s",
-				 CTFTEAMCODE(player),
-				 player_names[player - players],
-				 CTFTEAMENDCODE(player));
-
-		if (type == MT_REDFLAG)
+		if (player->mo->eflags & MFE_VERTICALFLIP)
 		{
-			flagtext = M_GetText("Red flag");
-			flagcolor = '\x85';
-		}
-		else
-		{
-			flagtext = M_GetText("Blue flag");
-			flagcolor = '\x84';
+			flag->z += player->mo->height - flag->height;
+			flag->flags2 |= MF2_OBJECTFLIP;
 		}
 
 		if (toss)
-			CONS_Printf(M_GetText("%s tossed the %c%s%c.\n"), plname, flagcolor, flagtext, 0x80);
+			P_InstaThrust(flag, player->mo->angle, FixedMul(6*FRACUNIT, player->mo->scale));
 		else
-			CONS_Printf(M_GetText("%s dropped the %c%s%c.\n"), plname, flagcolor, flagtext, 0x80);
+		{
+			angle_t fa = P_RandomByte()*FINEANGLES/256;
+			flag->momx = FixedMul(FINECOSINE(fa), FixedMul(6*FRACUNIT, player->mo->scale));
+			if (!(twodlevel || (player->mo->flags2 & MF2_TWOD)))
+				flag->momy = FixedMul(FINESINE(fa), FixedMul(6*FRACUNIT, player->mo->scale));
+		}
+
+		flag->momz = FixedMul(8*FRACUNIT, player->mo->scale);
+		if (player->mo->eflags & MFE_VERTICALFLIP)
+			flag->momz = -flag->momz;
+
+		flag->spawnpoint = flagpoints[team];
+
+		flag->fuse = cv_flagtime.value * TICRATE;
+		P_SetTarget(&flag->target, player->mo);
+
+		// Flag text
+		{
+			char plname[MAXPLAYERNAME+4];
+			const char *flagtext;
+			const char *flagcolor;
+
+			snprintf(plname, sizeof(plname), "%s%s%s",
+					 CTFTEAMCODE(player),
+					 player_names[player - players],
+					 CTFTEAMENDCODE(player));
+
+			flagtext = G_GetTeamFlagName(team);
+			flagcolor = GetChatColorForSkincolor(G_GetTeamColor(team));
+
+			if (toss)
+				CONS_Printf(M_GetText("%s tossed the %s%s%c.\n"), plname, flagcolor, flagtext, 0x80);
+			else
+				CONS_Printf(M_GetText("%s dropped the %s%s%c.\n"), plname, flagcolor, flagtext, 0x80);
+		}
+
+		// Pointers set for displaying time value and for consistency restoration.
+		flagmobjs[team] = flag;
 	}
 
 	player->gotflag = 0;
 
-	// Pointers set for displaying time value and for consistency restoration.
-	if (type == MT_REDFLAG)
-		redflag = flag;
-	else
-		blueflag = flag;
-
 	if (toss)
 		player->tossdelay = 2*TICRATE;
-
-	return;
 }

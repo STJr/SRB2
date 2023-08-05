@@ -773,15 +773,15 @@ void Command_CauseCfail_f(void)
 	// CTF consistency test
 	if (gametyperules & GTR_TEAMFLAGS)
 	{
-		if (blueflag) {
-			P_RemoveMobj(blueflag);
-			blueflag = NULL;
+		if (flagmobjs[TEAM_BLUE]) {
+			P_RemoveMobj(flagmobjs[TEAM_BLUE]);
+			flagmobjs[TEAM_BLUE] = NULL;
 		}
-		if (redflag)
+		if (flagmobjs[TEAM_RED])
 		{
-			redflag->x = 423423;
-			redflag->y = 666;
-			redflag->z = 123311;
+			flagmobjs[TEAM_RED]->x = 423423;
+			flagmobjs[TEAM_RED]->y = 666;
+			flagmobjs[TEAM_RED]->z = 123311;
 		}
 	}
 }

@@ -632,6 +632,46 @@ static void Command_CSay_f(void)
 }
 static tic_t stop_spamming[MAXPLAYERS];
 
+const char *GetChatColorForSkincolor(UINT16 skincolor)
+{
+	UINT16 chatcolor = skincolors[skincolor].chatcolor;
+
+	if (!chatcolor || chatcolor%0x1000 || chatcolor>V_INVERTMAP)
+		return "\x80";
+	else if (chatcolor == V_MAGENTAMAP)
+		return "\x81";
+	else if (chatcolor == V_YELLOWMAP)
+		return "\x82";
+	else if (chatcolor == V_GREENMAP)
+		return "\x83";
+	else if (chatcolor == V_BLUEMAP)
+		return "\x84";
+	else if (chatcolor == V_REDMAP)
+		return "\x85";
+	else if (chatcolor == V_GRAYMAP)
+		return "\x86";
+	else if (chatcolor == V_ORANGEMAP)
+		return "\x87";
+	else if (chatcolor == V_SKYMAP)
+		return "\x88";
+	else if (chatcolor == V_PURPLEMAP)
+		return "\x89";
+	else if (chatcolor == V_AQUAMAP)
+		return "\x8a";
+	else if (chatcolor == V_PERIDOTMAP)
+		return "\x8b";
+	else if (chatcolor == V_AZUREMAP)
+		return "\x8c";
+	else if (chatcolor == V_BROWNMAP)
+		return "\x8d";
+	else if (chatcolor == V_ROSYMAP)
+		return "\x8e";
+	else if (chatcolor == V_INVERTMAP)
+		return "\x8f";
+
+	return "\x80";
+}
+
 /** Receives a message, processing an ::XD_SAY command.
   * \sa DoSayCommand
   * \author Graue <graue@oceanbase.org>
@@ -740,6 +780,7 @@ static void Got_Saycmd(UINT8 **p, INT32 playernum)
 	{
 		const char *prefix = "", *cstart = "", *cend = "", *adminchar = "\x82~\x83", *remotechar = "\x82@\x83", *fmt2, *textcolor = "\x80";
 		char *tempchar = NULL;
+		char *tempteam = NULL;
 
 		// player is a spectator?
         if (players[playernum].spectator)
@@ -749,54 +790,13 @@ static void Got_Saycmd(UINT8 **p, INT32 playernum)
 		}
 		else if (target == -1) // say team
 		{
-			if (players[playernum].ctfteam == 1) // red
-			{
-				cstart = "\x85";
-				textcolor = "\x85";
-			}
-			else // blue
-			{
-				cstart = "\x84";
-				textcolor = "\x84";
-			}
+			cstart = GetChatColorForSkincolor(G_GetTeamColor(players[playernum].ctfteam));
+			textcolor = cstart;
 		}
 		else
-        {
-			UINT16 chatcolor = skincolors[players[playernum].skincolor].chatcolor;
-
-			if (!chatcolor || chatcolor%0x1000 || chatcolor>V_INVERTMAP)
-				cstart = "\x80";
-			else if (chatcolor == V_MAGENTAMAP)
-				cstart = "\x81";
-			else if (chatcolor == V_YELLOWMAP)
-				cstart = "\x82";
-			else if (chatcolor == V_GREENMAP)
-				cstart = "\x83";
-			else if (chatcolor == V_BLUEMAP)
-				cstart = "\x84";
-			else if (chatcolor == V_REDMAP)
-				cstart = "\x85";
-			else if (chatcolor == V_GRAYMAP)
-				cstart = "\x86";
-			else if (chatcolor == V_ORANGEMAP)
-				cstart = "\x87";
-			else if (chatcolor == V_SKYMAP)
-				cstart = "\x88";
-			else if (chatcolor == V_PURPLEMAP)
-				cstart = "\x89";
-			else if (chatcolor == V_AQUAMAP)
-				cstart = "\x8a";
-			else if (chatcolor == V_PERIDOTMAP)
-				cstart = "\x8b";
-			else if (chatcolor == V_AZUREMAP)
-				cstart = "\x8c";
-			else if (chatcolor == V_BROWNMAP)
-				cstart = "\x8d";
-			else if (chatcolor == V_ROSYMAP)
-				cstart = "\x8e";
-			else if (chatcolor == V_INVERTMAP)
-				cstart = "\x8f";
-        }
+		{
+			cstart = GetChatColorForSkincolor(players[playernum].skincolor);
+		}
 		prefix = cstart;
 
 		// Give admins and remote admins their symbols.
@@ -840,10 +840,11 @@ static void Got_Saycmd(UINT8 **p, INT32 playernum)
 			fmt2 = "%s<%s%s%s>\x80 %s%s";
 		else // To your team
 		{
-			if (players[playernum].ctfteam == 1) // red
-				prefix = "\x85[TEAM]";
-			else if (players[playernum].ctfteam == 2) // blue
-				prefix = "\x84[TEAM]";
+			if (players[playernum].ctfteam != 0)
+			{
+				tempteam = Z_StrDup(va("%s[TEAM]", GetChatColorForSkincolor(G_GetTeamColor(players[playernum].ctfteam))));
+				prefix = tempteam;
+			}
 			else
 				prefix = "\x83"; // makes sure this doesn't implode if you sayteam on non-team gamemodes
 
@@ -854,6 +855,8 @@ static void Got_Saycmd(UINT8 **p, INT32 playernum)
 
 		if (tempchar)
 			Z_Free(tempchar);
+		if (tempteam)
+			Z_Free(tempteam);
 	}
 #ifdef _DEBUG
 	// I just want to point out while I'm here that because the data is still
@@ -1588,12 +1591,6 @@ static void HU_DrawChat(void)
 	if (teamtalk)
 	{
 		talk = ttalk;
-#if 0
-		if (players[consoleplayer].ctfteam == 1)
-			t = 0x500;  // Red
-		else if (players[consoleplayer].ctfteam == 2)
-			t = 0x400; // Blue
-#endif
 	}
 
 	if (CHAT_MUTE)
@@ -1753,12 +1750,6 @@ static void HU_DrawChat_Old(void)
 	if (teamtalk)
 	{
 		talk = ttalk;
-#if 0
-		if (players[consoleplayer].ctfteam == 1)
-			t = 0x500;  // Red
-		else if (players[consoleplayer].ctfteam == 2)
-			t = 0x400; // Blue
-#endif
 	}
 
 	while (talk[i])
@@ -2335,13 +2326,13 @@ static void HU_Draw32TeamTabRankings(playersort_t *tab, INT32 whiteplayer)
 		greycheck = greycheckdef;
 		supercheck = supercheckdef;
 
-		if (tab[i].color == skincolor_redteam) //red
+		if (tab[i].team == TEAM_RED) //red
 		{
 			redplayers++;
 			x = 14 + (BASEVIDWIDTH/2);
 			y = (redplayers * 9) + 20;
 		}
-		else if (tab[i].color == skincolor_blueteam) //blue
+		else if (tab[i].team == TEAM_BLUE) //blue
 		{
 			blueplayers++;
 			x = 14;
@@ -2423,7 +2414,7 @@ void HU_DrawTeamTabRankings(playersort_t *tab, INT32 whiteplayer)
 		if (players[tab[i].num].spectator)
 			continue; //ignore them.
 
-		if (tab[i].color == skincolor_redteam) //red
+		if (tab[i].team == TEAM_RED) //red
 		{
 			if (redplayers++ > 8)
 			{
@@ -2431,7 +2422,7 @@ void HU_DrawTeamTabRankings(playersort_t *tab, INT32 whiteplayer)
 				break; // don't make more loops than we need to.
 			}
 		}
-		else if (tab[i].color == skincolor_blueteam) //blue
+		else if (tab[i].team == TEAM_BLUE) //blue
 		{
 			if (blueplayers++ > 8)
 			{
@@ -2462,14 +2453,14 @@ void HU_DrawTeamTabRankings(playersort_t *tab, INT32 whiteplayer)
 		if (players[tab[i].num].spectator)
 			continue; //ignore them.
 
-		if (tab[i].color == skincolor_redteam) //red
+		if (tab[i].team == TEAM_RED) //red
 		{
 			if (redplayers++ > 8)
 				continue;
 			x = 32 + (BASEVIDWIDTH/2);
 			y = (redplayers * 16) + 16;
 		}
-		else if (tab[i].color == skincolor_blueteam) //blue
+		else if (tab[i].team == TEAM_BLUE) //blue
 		{
 			if (blueplayers++ > 8)
 				continue;
@@ -2913,6 +2904,7 @@ static void HU_DrawRankings(void)
 						tab[scorelines].count = players[i].laps+1;
 						tab[scorelines].num = i;
 						tab[scorelines].color = players[i].skincolor;
+						tab[scorelines].team = players[i].ctfteam;
 						tab[scorelines].name = player_names[i];
 					}
 				}
@@ -2923,6 +2915,7 @@ static void HU_DrawRankings(void)
 						tab[scorelines].count = players[i].realtime;
 						tab[scorelines].num = i;
 						tab[scorelines].color = players[i].skincolor;
+						tab[scorelines].team = players[i].ctfteam;
 						tab[scorelines].name = player_names[i];
 					}
 				}
@@ -2937,6 +2930,7 @@ static void HU_DrawRankings(void)
 					tab[scorelines].num = i;
 					tab[scorelines].color = players[i].skincolor;
 					tab[scorelines].name = player_names[i];
+					tab[scorelines].team = players[i].ctfteam;
 					tab[scorelines].emeralds = players[i].powers[pw_emeralds];
 				}
 			}
@@ -2948,6 +2942,7 @@ static void HU_DrawRankings(void)
 					tab[scorelines].num = i;
 					tab[scorelines].color = players[i].skincolor;
 					tab[scorelines].name = player_names[i];
+					tab[scorelines].team = players[i].ctfteam;
 					tab[scorelines].emeralds = players[i].powers[pw_emeralds];
 				}
 			}

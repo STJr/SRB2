@@ -3637,19 +3637,19 @@ void readmaincfg(MYFILE *f)
 			}
 			else if (fastcmp(word, "REDTEAM"))
 			{
-				skincolor_redteam = (UINT16)get_number(word2);
+				teams[TEAM_RED].color = (UINT16)get_number(word2);
 			}
 			else if (fastcmp(word, "BLUETEAM"))
 			{
-				skincolor_blueteam = (UINT16)get_number(word2);
+				teams[TEAM_BLUE].color = (UINT16)get_number(word2);
 			}
 			else if (fastcmp(word, "REDRING"))
 			{
-				skincolor_redring = (UINT16)get_number(word2);
+				teams[TEAM_RED].missile_color = (UINT16)get_number(word2);
 			}
 			else if (fastcmp(word, "BLUERING"))
 			{
-				skincolor_bluering = (UINT16)get_number(word2);
+				teams[TEAM_BLUE].missile_color = (UINT16)get_number(word2);
 			}
 			else if (fastcmp(word, "INVULNTICS"))
 			{

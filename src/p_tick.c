@@ -462,11 +462,11 @@ static void P_DoAutobalanceTeams(void)
 	{
 		if (playeringame[i] && players[i].ctfteam)
 		{
-			if (players[i].ctfteam == 1)
+			if (players[i].ctfteam == TEAM_RED)
 			{
 				if (!players[i].gotflag)
 				{
-					redarray[red] = i; //store the player's node.
+					redarray[red] = i; //store the player's number.
 					red++;
 				}
 				else
@@ -476,7 +476,7 @@ static void P_DoAutobalanceTeams(void)
 			{
 				if (!players[i].gotflag)
 				{
-					bluearray[blue] = i; //store the player's node.
+					bluearray[blue] = i; //store the player's number.
 					blue++;
 				}
 				else
@@ -493,7 +493,7 @@ static void P_DoAutobalanceTeams(void)
 		if (totalred > totalblue)
 		{
 			i = M_RandomKey(red);
-			NetPacket.packet.newteam = 2;
+			NetPacket.packet.newteam = TEAM_BLUE;
 			NetPacket.packet.playernum = redarray[i];
 			NetPacket.packet.verification = true;
 			NetPacket.packet.autobalance = true;
@@ -501,10 +501,10 @@ static void P_DoAutobalanceTeams(void)
 			usvalue  = SHORT(NetPacket.value.l|NetPacket.value.b);
 			SendNetXCmd(XD_TEAMCHANGE, &usvalue, sizeof(usvalue));
 		}
-		else //if (totalblue > totalred)
+		else
 		{
 			i = M_RandomKey(blue);
-			NetPacket.packet.newteam = 1;
+			NetPacket.packet.newteam = TEAM_RED;
 			NetPacket.packet.playernum = bluearray[i];
 			NetPacket.packet.verification = true;
 			NetPacket.packet.autobalance = true;

@@ -1783,7 +1783,7 @@ void P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller)
 			// Only red/blue team members can activate this.
 			if (!(actor && actor->player))
 				return;
-			if (actor->player->ctfteam != ((triggerline->args[1] == TMT_RED) ? 1 : 2))
+			if (actor->player->ctfteam != ((triggerline->args[1] == TMT_RED) ? TEAM_RED : TEAM_BLUE))
 				return;
 			break;
 		case 314:
@@ -4635,7 +4635,7 @@ static void P_ProcessExitSector(player_t *player, mtag_t sectag)
 		skipstats = 1;
 }
 
-static void P_ProcessTeamBase(player_t *player, boolean redteam)
+static void P_ProcessTeamBase(player_t *player, UINT8 team)
 {
 	mobj_t *mo;
 
@@ -4645,36 +4645,36 @@ static void P_ProcessTeamBase(player_t *player, boolean redteam)
 	if (!P_IsObjectOnGround(player->mo))
 		return;
 
-	if (player->ctfteam != (redteam ? 1 : 2))
+	if (player->ctfteam != team)
 		return;
 
-	if (!(player->gotflag & (redteam ? GF_BLUEFLAG : GF_REDFLAG)))
+	UINT8 otherteam = team == TEAM_RED ? TEAM_BLUE : TEAM_RED;
+	UINT32 teamflag = teams[otherteam].flag;
+
+	if (!(player->gotflag & teamflag))
 		return;
 
 	// Make sure the team still has their own
 	// flag at their base so they can score.
-	if (!P_IsFlagAtBase(redteam ? MT_REDFLAG : MT_BLUEFLAG))
+	if (!P_IsFlagAtBase(teams[team].flag_mobj_type))
 		return;
 
 	HU_SetCEchoFlags(V_AUTOFADEOUT|V_ALLOWLOWERCASE);
 	HU_SetCEchoDuration(5);
-	HU_DoCEcho(va(M_GetText("%s%s\200\\CAPTURED THE %s%s FLAG\200.\\\\\\\\"), redteam ? "\205" : "\204", player_names[player-players], redteam ? "\204" : "\205", redteam ? "BLUE" : "RED"));
+	HU_DoCEcho(va(M_GetText("%s%s\200\\CAPTURED THE %s%s FLAG\200.\\\\\\\\"), GetChatColorForSkincolor(G_GetTeamColor(team)), player_names[player-players], GetChatColorForSkincolor(teams[otherteam].color), G_GetTeamName(otherteam)));
 
-	if (splitscreen || players[consoleplayer].ctfteam == (redteam ? 1 : 2))
+	if (splitscreen || players[consoleplayer].ctfteam == team)
 		S_StartSound(NULL, sfx_flgcap);
-	else if (players[consoleplayer].ctfteam == (redteam ? 2 : 1))
+	else if (players[consoleplayer].ctfteam != team)
 		S_StartSound(NULL, sfx_lose);
 
-	mo = P_SpawnMobj(player->mo->x,player->mo->y,player->mo->z, redteam ? MT_BLUEFLAG : MT_REDFLAG);
-	player->gotflag &= ~(redteam ? GF_BLUEFLAG : GF_REDFLAG);
+	mo = P_SpawnMobj(player->mo->x,player->mo->y,player->mo->z, teams[otherteam].flag_mobj_type);
+	player->gotflag &= ~teamflag;
 	mo->flags &= ~MF_SPECIAL;
 	mo->fuse = TICRATE;
-	mo->spawnpoint = redteam ? bflagpoint : rflagpoint;
+	mo->spawnpoint = flagpoints[team];
 	mo->flags2 |= MF2_JUSTATTACKED;
-	if (redteam)
-		redscore += 1;
-	else
-		bluescore += 1;
+	teamscores[team]++;
 	P_AddPlayerScore(player, 250);
 }
 
@@ -4997,9 +4997,9 @@ static void P_EvaluateSpecialFlags(player_t *player, sector_t *sector, sector_t 
 	if ((sector->specialflags & SSF_SPECIALSTAGEPIT) && isTouching)
 		P_ProcessSpecialStagePit(player);
 	if ((sector->specialflags & SSF_REDTEAMBASE) && isTouching)
-		P_ProcessTeamBase(player, true);
+		P_ProcessTeamBase(player, TEAM_RED);
 	if ((sector->specialflags & SSF_BLUETEAMBASE) && isTouching)
-		P_ProcessTeamBase(player, false);
+		P_ProcessTeamBase(player, TEAM_BLUE);
 	if (sector->specialflags & SSF_FAN)
 	{
 		player->mo->momz += mobjinfo[MT_FAN].mass/4;

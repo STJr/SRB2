@@ -1756,9 +1756,9 @@ static void SaveMobjThinker(const thinker_t *th, const UINT8 type)
 	if (mobj->scalespeed != FRACUNIT/12)
 		diff2 |= MD2_SCALESPEED;
 
-	if (mobj == redflag)
+	if (mobj == flagmobjs[TEAM_RED])
 		diff |= MD_REDFLAG;
-	if (mobj == blueflag)
+	if (mobj == flagmobjs[TEAM_BLUE])
 		diff |= MD_BLUEFLAG;
 
 	if (mobj->cusval)
@@ -3065,13 +3065,13 @@ static thinker_t* LoadMobjThinker(actionf_p1 thinker)
 
 	if (diff & MD_REDFLAG)
 	{
-		redflag = mobj;
-		rflagpoint = mobj->spawnpoint;
+		flagmobjs[TEAM_RED] = mobj;
+		flagpoints[TEAM_RED] = mobj->spawnpoint;
 	}
 	if (diff & MD_BLUEFLAG)
 	{
-		blueflag = mobj;
-		bflagpoint = mobj->spawnpoint;
+		flagmobjs[TEAM_BLUE] = mobj;
+		flagpoints[TEAM_BLUE] = mobj->spawnpoint;
 	}
 
 	// set sprev, snext, bprev, bnext, subsector
@@ -4337,13 +4337,15 @@ static void P_NetArchiveMisc(boolean resending)
 
 	WRITEUINT32(save_p, token);
 	WRITEINT32(save_p, sstimer);
-	WRITEUINT32(save_p, bluescore);
-	WRITEUINT32(save_p, redscore);
 
-	WRITEUINT16(save_p, skincolor_redteam);
-	WRITEUINT16(save_p, skincolor_blueteam);
-	WRITEUINT16(save_p, skincolor_redring);
-	WRITEUINT16(save_p, skincolor_bluering);
+	WRITEUINT8(save_p, teamsingame);
+	for (i = 0; i < MAXTEAMS; i++)
+	{
+		WRITEUINT32(save_p, teamscores[i]);
+		WRITEUINT16(save_p, teams[i].color);
+		WRITEUINT16(save_p, teams[i].weapon_color);
+		WRITEUINT16(save_p, teams[i].missile_color);
+	}
 
 	WRITEINT32(save_p, modulothing);
 
@@ -4435,13 +4437,15 @@ static inline boolean P_NetUnArchiveMisc(boolean reloading)
 
 	token = READUINT32(save_p);
 	sstimer = READINT32(save_p);
-	bluescore = READUINT32(save_p);
-	redscore = READUINT32(save_p);
 
-	skincolor_redteam = READUINT16(save_p);
-	skincolor_blueteam = READUINT16(save_p);
-	skincolor_redring = READUINT16(save_p);
-	skincolor_bluering = READUINT16(save_p);
+	teamsingame = READUINT8(save_p);
+	for (i = 0; i < MAXTEAMS; i++)
+	{
+		teamscores[i] = READUINT32(save_p);
+		teams[i].color = READUINT16(save_p);
+		teams[i].weapon_color = READUINT16(save_p);
+		teams[i].missile_color = READUINT16(save_p);
+	}
 
 	modulothing = READINT32(save_p);
 

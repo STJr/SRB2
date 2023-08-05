@@ -10025,31 +10025,19 @@ static void P_FlagFuseThink(mobj_t *mobj)
 		flagmo->flags2 |= MF2_OBJECTFLIP;
 	}
 
-	if (mobj->type == MT_REDFLAG)
+	UINT8 team = mobj->info->mass;
+	if (team < numteams)
 	{
 		if (!(mobj->flags2 & MF2_JUSTATTACKED))
-			CONS_Printf(M_GetText("The \205Red flag\200 has returned to base.\n"));
+			CONS_Printf(M_GetText("The %s%s\200 has returned to base.\n"), GetChatColorForSkincolor(G_GetTeamColor(team)), G_GetTeamFlagName(team));
 
 		// Assumedly in splitscreen players will be on opposing teams
-		if (players[consoleplayer].ctfteam == 1 || splitscreen)
+		if (players[consoleplayer].ctfteam == team || splitscreen)
 			S_StartSound(NULL, sfx_hoop1);
-		else if (players[consoleplayer].ctfteam == 2)
+		else if (players[consoleplayer].ctfteam != 0)
 			S_StartSound(NULL, sfx_hoop3);
 
-		redflag = flagmo;
-	}
-	else // MT_BLUEFLAG
-	{
-		if (!(mobj->flags2 & MF2_JUSTATTACKED))
-			CONS_Printf(M_GetText("The \204Blue flag\200 has returned to base.\n"));
-
-		// Assumedly in splitscreen players will be on opposing teams
-		if (players[consoleplayer].ctfteam == 2 || splitscreen)
-			S_StartSound(NULL, sfx_hoop1);
-		else if (players[consoleplayer].ctfteam == 1)
-			S_StartSound(NULL, sfx_hoop3);
-
-		blueflag = flagmo;
+		flagmobjs[team] = flagmo;
 	}
 }
 
@@ -10881,7 +10869,7 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 			}
 			break;
 		case MT_REDRING: // Make MT_REDRING red by default
-			mobj->color = skincolor_redring;
+			mobj->color = G_GetTeamMissileColor(TEAM_RED);
 			break;
 		case MT_SMALLBUBBLE: // Bubbles eventually dissipate, in case they get caught somewhere.
 		case MT_MEDIUMBUBBLE:
@@ -10898,10 +10886,10 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 			 mobj->lastlook = mobj->extravalue2 = -1;
 			break;
 		case MT_REDTEAMRING:
-			mobj->color = skincolor_redteam;
+			mobj->color = G_GetTeamWeaponColor(TEAM_RED);
 			break;
 		case MT_BLUETEAMRING:
-			mobj->color = skincolor_blueteam;
+			mobj->color = G_GetTeamWeaponColor(TEAM_BLUE);
 			break;
 		case MT_RING:
 		case MT_COIN:
@@ -11561,16 +11549,17 @@ void P_SpawnPlayer(INT32 playernum)
 				UINT16 usvalue;
 				NetPacket.value.l = NetPacket.value.b = 0;
 
+				UINT8 newteam = (playernum % (MAXTEAMS - 1)) + 1;
+
 				// Spawn as a spectator,
 				// yes even in splitscreen mode
 				p->spectator = true;
-				if (playernum&1) p->skincolor = skincolor_redteam;
-				else             p->skincolor = skincolor_blueteam;
+				p->skincolor = teams[newteam].color;
 
 				// but immediately send a team change packet.
 				NetPacket.packet.playernum = playernum;
 				NetPacket.packet.verification = true;
-				NetPacket.packet.newteam = !(playernum&1) + 1;
+				NetPacket.packet.newteam = newteam;
 
 				usvalue = SHORT(NetPacket.value.l|NetPacket.value.b);
 				SendNetXCmd(XD_TEAMCHANGE, &usvalue, sizeof(usvalue));
@@ -11588,10 +11577,8 @@ void P_SpawnPlayer(INT32 playernum)
 
 		// Fix team colors.
 		// This code isn't being done right somewhere else. Oh well.
-		if (p->ctfteam == 1)
-			p->skincolor = skincolor_redteam;
-		else if (p->ctfteam == 2)
-			p->skincolor = skincolor_blueteam;
+		if (p->ctfteam != 0)
+			p->skincolor = G_GetTeamColor(p->ctfteam);
 	}
 
 	if ((netgame || multiplayer) && ((gametyperules & GTR_SPAWNINVUL) || leveltime) && !p->spectator && !(maptol & TOL_NIGHTS))
@@ -12072,9 +12059,12 @@ static boolean P_AllowMobjSpawn(mapthing_t* mthing, mobjtype_t i)
 		if (i == MT_BLUEFLAG || i == MT_REDFLAG)
 			return false; // No flags in non-CTF modes!
 	}
-	else
+	else if (i == MT_BLUEFLAG || i == MT_REDFLAG)
 	{
-		if ((i == MT_BLUEFLAG && blueflag) || (i == MT_REDFLAG && redflag))
+		UINT8 team = mobjinfo[i].mass;
+		if (team >= numteams)
+			return false;
+		else if (flagmobjs[team])
 		{
 			CONS_Alert(CONS_ERROR, M_GetText("Only one flag per team allowed in CTF!\n"));
 			return false;
@@ -13176,12 +13166,12 @@ static boolean P_SetupSpawnedMapThing(mapthing_t *mthing, mobj_t *mobj, boolean 
 		}
 		break;
 	case MT_REDFLAG:
-		redflag = mobj;
-		rflagpoint = mobj->spawnpoint;
+		flagmobjs[TEAM_RED] = mobj;
+		flagpoints[TEAM_RED] = mobj->spawnpoint;
 		break;
 	case MT_BLUEFLAG:
-		blueflag = mobj;
-		bflagpoint = mobj->spawnpoint;
+		flagmobjs[TEAM_BLUE] = mobj;
+		flagpoints[TEAM_BLUE] = mobj->spawnpoint;
 		break;
 	case MT_NIGHTSSTAR:
 		if (maptol & TOL_XMAS)
@@ -14032,10 +14022,8 @@ void P_ColorTeamMissile(mobj_t *missile, player_t *source)
 {
 	if (G_GametypeHasTeams())
 	{
-		if (source->ctfteam == 2)
-			missile->color = skincolor_bluering;
-		else if (source->ctfteam == 1)
-			missile->color = skincolor_redring;
+		if (source->ctfteam != 0)
+			missile->color = G_GetTeamMissileColor(source->ctfteam);
 	}
 	/*
 	else
