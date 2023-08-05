@@ -390,7 +390,16 @@ enum {
 	TEAM_NONE,
 	TEAM_RED,
 	TEAM_BLUE,
-	MAXTEAMS = 4
+	TEAM_PLAYING = 1,
+	MAXTEAMS = 16
+};
+
+enum {
+	TEAM_ICON,
+	TEAM_ICON_FLAG,
+	TEAM_ICON_GOT_FLAG,
+	TEAM_ICON_MISSING_FLAG,
+	TEAM_ICON_MAX
 };
 
 typedef struct
@@ -402,6 +411,7 @@ typedef struct
 	UINT16 color;
 	UINT16 weapon_color;
 	UINT16 missile_color;
+	char *icons[TEAM_ICON_MAX];
 } team_t;
 
 extern team_t teams[MAXTEAMS];
@@ -484,6 +494,8 @@ typedef struct
 	INT16 rankings_type;
 	INT32 pointlimit;
 	INT32 timelimit;
+	UINT8 numteams;
+	UINT8 teams[MAXTEAMS];
 } gametype_t;
 
 extern gametype_t gametypes[NUMGAMETYPES];

@@ -441,15 +441,17 @@ static void P_DoAutobalanceTeams(void)
 {
 	changeteam_union NetPacket;
 	UINT16 usvalue;
-	INT32 i=0;
-	INT32 red=0, blue=0;
-	INT32 redarray[MAXPLAYERS], bluearray[MAXPLAYERS];
-	INT32 redflagcarrier = 0, blueflagcarrier = 0;
-	INT32 totalred = 0, totalblue = 0;
+	INT32 i;
+	INT32 count[MAXTEAMS];
+	INT32 array[MAXTEAMS][MAXPLAYERS];
+	INT32 flagcarrier[MAXTEAMS];
+	INT32 total[MAXTEAMS];
 
 	NetPacket.value.l = NetPacket.value.b = 0;
-	memset(redarray, 0, sizeof(redarray));
-	memset(bluearray, 0, sizeof(bluearray));
+	memset(count, 0, sizeof(count));
+	memset(array, 0, sizeof(array));
+	memset(flagcarrier, 0, sizeof(flagcarrier));
+	memset(total, 0, sizeof(total));
 
 	// Only do it if we have enough room in the net buffer to send it.
 	// Otherwise, come back next time and try again.
@@ -462,39 +464,28 @@ static void P_DoAutobalanceTeams(void)
 	{
 		if (playeringame[i] && players[i].ctfteam)
 		{
-			if (players[i].ctfteam == TEAM_RED)
+			UINT8 team = players[i].ctfteam;
+			if (!players[i].gotflag)
 			{
-				if (!players[i].gotflag)
-				{
-					redarray[red] = i; //store the player's number.
-					red++;
-				}
-				else
-					redflagcarrier++;
+				array[team][count[team]] = i;
+				count[team]++;
 			}
 			else
-			{
-				if (!players[i].gotflag)
-				{
-					bluearray[blue] = i; //store the player's number.
-					blue++;
-				}
-				else
-					blueflagcarrier++;
-			}
+				flagcarrier[team]++;
 		}
 	}
 
-	totalred = red + redflagcarrier;
-	totalblue = blue + blueflagcarrier;
+	for (i = 0; i < teamsingame; i++)
+		total[i] = count[i] + flagcarrier[i];
 
-	if ((abs(totalred - totalblue) > max(1, (totalred + totalblue) / 8)))
+	// TODO
+	if ((abs(total[G_GetTeam(1)] - total[G_GetTeam(2)]) > max(1, (total[G_GetTeam(1)] + total[G_GetTeam(2)]) / 8)))
 	{
-		if (totalred > totalblue)
+		if (total[G_GetTeam(1)] > total[G_GetTeam(2)])
 		{
-			i = M_RandomKey(red);
-			NetPacket.packet.newteam = TEAM_BLUE;
-			NetPacket.packet.playernum = redarray[i];
+			i = M_RandomKey(count[G_GetTeam(1)]);
+			NetPacket.packet.newteam = 2;
+			NetPacket.packet.playernum = array[1][i];
 			NetPacket.packet.verification = true;
 			NetPacket.packet.autobalance = true;
 
@@ -503,9 +494,9 @@ static void P_DoAutobalanceTeams(void)
 		}
 		else
 		{
-			i = M_RandomKey(blue);
-			NetPacket.packet.newteam = TEAM_RED;
-			NetPacket.packet.playernum = bluearray[i];
+			i = M_RandomKey(count[G_GetTeam(2)]);
+			NetPacket.packet.newteam = 1;
+			NetPacket.packet.playernum = array[2][i];
 			NetPacket.packet.verification = true;
 			NetPacket.packet.autobalance = true;
 

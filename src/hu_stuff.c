@@ -83,10 +83,7 @@ static boolean headsupactive = false;
 boolean hu_showscores; // draw rankings
 static char hu_tick;
 
-patch_t *rflagico;
-patch_t *bflagico;
-patch_t *rmatcico;
-patch_t *bmatcico;
+patch_t *teamicons[MAXTEAMS][TEAM_ICON_MAX];
 patch_t *tagico;
 patch_t *tallminus;
 patch_t *tallinfin;
@@ -2353,23 +2350,21 @@ static void HU_Draw32TeamTabRankings(playersort_t *tab, INT32 whiteplayer)
 
 		if (gametyperules & GTR_TEAMFLAGS)
 		{
-			if (players[tab[i].num].gotflag & GF_REDFLAG) // Red
-				V_DrawFixedPatch((x-10)*FRACUNIT, (y)*FRACUNIT, FRACUNIT/4, 0, rflagico, 0);
-			else if (players[tab[i].num].gotflag & GF_BLUEFLAG) // Blue
-				V_DrawFixedPatch((x-10)*FRACUNIT, (y)*FRACUNIT, FRACUNIT/4, 0, bflagico, 0);
+			UINT8 teamlist[MAXTEAMS];
+			UINT8 teamcount = G_GetTeamListFromTeamFlags(teamlist, players[tab[i].num].gotflag);
+			if (teamcount > 0)
+				V_DrawFixedPatch((x-10)*FRACUNIT, (y)*FRACUNIT, FRACUNIT/4, 0, ST_GetTeamIconImage(teamlist[0], TEAM_ICON_FLAG), 0);
 		}
 
 		// Draw emeralds
 		if (players[tab[i].num].powers[pw_invulnerability] && (players[tab[i].num].powers[pw_invulnerability] == players[tab[i].num].powers[pw_sneakers]) && ((leveltime/7) & 1))
 		{
 			HU_Draw32Emeralds(x+60, y+2, 255);
-			//HU_DrawEmeralds(x-12,y+2,255);
 		}
 		else if (!players[tab[i].num].powers[pw_super]
 			|| ((leveltime/7) & 1))
 		{
 			HU_Draw32Emeralds(x+60, y+2, tab[i].emeralds);
-			//HU_DrawEmeralds(x-12,y+2,tab[i].emeralds);
 		}
 
 		if (supercheck)
@@ -2482,10 +2477,10 @@ void HU_DrawTeamTabRankings(playersort_t *tab, INT32 whiteplayer)
 
 		if (gametyperules & GTR_TEAMFLAGS)
 		{
-			if (players[tab[i].num].gotflag & GF_REDFLAG) // Red
-				V_DrawSmallScaledPatch(x-28, y-4, 0, rflagico);
-			else if (players[tab[i].num].gotflag & GF_BLUEFLAG) // Blue
-				V_DrawSmallScaledPatch(x-28, y-4, 0, bflagico);
+			UINT8 teamlist[MAXTEAMS];
+			UINT8 teamcount = G_GetTeamListFromTeamFlags(teamlist, players[tab[i].num].gotflag);
+			if (teamcount > 0)
+				V_DrawSmallScaledPatch(x-28, y-4, 0, ST_GetTeamIconImage(teamlist[0], TEAM_ICON_FLAG));
 		}
 
 		// Draw emeralds
@@ -2515,8 +2510,6 @@ void HU_DrawTeamTabRankings(playersort_t *tab, INT32 whiteplayer)
 		{
 			if (tab[i].num != serverplayer)
 				HU_drawPing(x+ 113, y, players[tab[i].num].quittime ? UINT32_MAX : playerpingtable[tab[i].num], false, 0);
-			//else
-			//	V_DrawSmallString(x+ 94, y+4, V_YELLOWMAP, "SERVER");
 		}
 	}
 }
