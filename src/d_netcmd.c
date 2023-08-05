@@ -1902,8 +1902,8 @@ static void Command_Map_f(void)
 	size_t option_gametype;
 	const char *gametypename;
 	boolean newresetplayers;
-
-	boolean wouldSetCheats;
+	boolean prevent_cheat;
+	boolean set_cheated;
 
 	INT32 newmapnum;
 
@@ -1924,21 +1924,33 @@ static void Command_Map_f(void)
 	option_gametype =   COM_CheckPartialParm("-g");
 	newresetplayers = ! COM_CheckParm("-noresetplayers");
 
-	wouldSetCheats =
-		!( netgame || multiplayer ) &&
-		!( usedCheats );
+	prevent_cheat = !( usedCheats ) && !( option_force || cv_debug );
 
-	if (wouldSetCheats && !option_force)
+	if (!( netgame || multiplayer ))
 	{
-		/* May want to be more descriptive? */
-		CONS_Printf(M_GetText("Sorry, level change disabled in single player.\n"));
-		return;
+		if (prevent_cheat)
+		{
+			/* May want to be more descriptive? */
+			CONS_Printf(M_GetText("Cheats must be enabled to level change in single player.\n"));
+			return;
+		}
+		else
+		{
+			set_cheated = true;
+		}
 	}
 
-	if (!newresetplayers && !cv_debug)
+	if (!newresetplayers)
 	{
-		CONS_Printf(M_GetText("DEVMODE must be enabled.\n"));
-		return;
+		if (prevent_cheat)
+		{
+			CONS_Printf(M_GetText("Cheats must be enabled to use -noresetplayers.\n"));
+			return;
+		}
+		else
+		{
+			set_cheated = true;
+		}
 	}
 
 	if (option_gametype)
@@ -1946,7 +1958,7 @@ static void Command_Map_f(void)
 		if (!multiplayer)
 		{
 			CONS_Printf(M_GetText(
-						"You can't switch gametypes in single player!\n"));
+				"You can't switch gametypes in single player!\n"));
 			return;
 		}
 		else if (COM_Argc() < option_gametype + 2)/* no argument after? */
@@ -1959,7 +1971,9 @@ static void Command_Map_f(void)
 	}
 
 	if (!( first_option = COM_FirstOption() ))
+	{
 		first_option = COM_Argc();
+	}
 
 	if (first_option < 2)
 	{
@@ -1980,11 +1994,6 @@ static void Command_Map_f(void)
 		CONS_Alert(CONS_ERROR, M_GetText("Could not find any map described as '%s'.\n"), mapname);
 		Z_Free(mapname);
 		return;
-	}
-
-	if (wouldSetCheats && option_force)
-	{
-		G_SetUsedCheats(false);
 	}
 
 	// new gametype value
@@ -2028,15 +2037,13 @@ static void Command_Map_f(void)
 	}
 
 	// don't use a gametype the map doesn't support
-	if (cv_debug || option_force || cv_skipmapcheck.value)
-		fromlevelselect = false; // The player wants us to trek on anyway.  Do so.
 	// G_TOLFlag handles both multiplayer gametype and ignores it for !multiplayer
-	else
+	if (!(
+			mapheaderinfo[newmapnum-1] &&
+			mapheaderinfo[newmapnum-1]->typeoflevel & G_TOLFlag(newgametype)
+	))
 	{
-		if (!(
-					mapheaderinfo[newmapnum-1] &&
-					mapheaderinfo[newmapnum-1]->typeoflevel & G_TOLFlag(newgametype)
-		))
+		if (prevent_cheat && !cv_skipmapcheck.value)
 		{
 			CONS_Alert(CONS_WARNING, M_GetText("%s (%s) doesn't support %s mode!\n(Use -force to override)\n"), realmapname, G_BuildMapName(newmapnum),
 				(multiplayer ? gametype_cons_t[newgametype].strvalue : "Single Player"));
@@ -2046,23 +2053,33 @@ static void Command_Map_f(void)
 		}
 		else
 		{
-			fromlevelselect =
-				( netgame || multiplayer ) &&
-				newgametype == gametype    &&
-				gametypedefaultrules[newgametype] & GTR_CAMPAIGN;
+			// The player wants us to trek on anyway.  Do so.
+			fromlevelselect = false;
+			set_cheated = ((gametypedefaultrules[newgametype] & GTR_CAMPAIGN) == GTR_CAMPAIGN);
 		}
+	}
+	else
+	{
+		fromlevelselect =
+			( netgame || multiplayer ) &&
+			newgametype == gametype    &&
+			(gametypedefaultrules[newgametype] & GTR_CAMPAIGN);
 	}
 
 	// Prevent warping to locked levels
-	// ... unless you're in a dedicated server.  Yes, technically this means you can view any level by
-	// running a dedicated server and joining it yourself, but that's better than making dedicated server's
-	// lives hell.
-	if (!dedicated && M_MapLocked(newmapnum, serverGamedata))
+	if (M_CampaignWarpIsCheat(newgametype, newmapnum, serverGamedata))
 	{
-		CONS_Alert(CONS_NOTICE, M_GetText("You need to unlock this level before you can warp to it!\n"));
-		Z_Free(realmapname);
-		Z_Free(mapname);
-		return;
+		if (prevent_cheat)
+		{
+			CONS_Alert(CONS_NOTICE, M_GetText("Cheats must be enabled to warp to a locked level!\n"));
+			Z_Free(realmapname);
+			Z_Free(mapname);
+			return;
+		}
+		else
+		{
+			set_cheated = true;
+		}
 	}
 
 	// Ultimate Mode only in SP via menu
@@ -2078,6 +2095,11 @@ static void Command_Map_f(void)
 		CV_SetValue(&cv_analog[0], tutorialanalog);
 	}
 	tutorialmode = false; // warping takes us out of tutorial mode
+
+	if (set_cheated && !usedCheats)
+	{
+		G_SetUsedCheats(false);
+	}
 
 	D_MapChange(newmapnum, newgametype, false, newresetplayers, 0, false, fromlevelselect);
 
