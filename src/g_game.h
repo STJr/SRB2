@@ -194,6 +194,7 @@ void G_SaveGameOver(UINT32 slot, boolean modifylives);
 void G_SetGametype(INT16 gametype);
 void G_InitGametypes(void);
 INT16 G_AddGametype(void);
+void G_UpdateTeamSelection(void);
 void G_AddGametypeConstant(INT16 gtype, const char *newgtconst);
 void G_UpdateGametypeSelections(void);
 void G_AddTOL(UINT32 newtol, const char *tolname);
@@ -221,6 +222,12 @@ void G_Continue(void);
 void G_UseContinue(void);
 void G_AfterIntermission(void);
 void G_EndGame(void); // moved from y_inter.c/h and renamed
+
+const char *G_GetTeamName(UINT8 team);
+const char *G_GetTeamFlagName(UINT8 team);
+UINT16 G_GetTeamColor(UINT8 team);
+UINT16 G_GetTeamWeaponColor(UINT8 team);
+UINT16 G_GetTeamMissileColor(UINT8 team);
 
 void G_Ticker(boolean run);
 boolean G_Responder(event_t *ev);

@@ -2805,3 +2805,18 @@ boolean M_IsStringEmpty(const char *s)
 
 	return true;
 }
+
+// Returns true if the string only contains digits.
+boolean M_StringOnlyHasDigits(const char *s)
+{
+	if (M_IsStringEmpty(s))
+		return false;
+
+	while (*s)
+	{
+		if (!isdigit(*s++))
+			return false;
+	}
+
+	return true;
+}

@@ -1691,7 +1691,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 		}
 		// Monitor?
 		else if (thing->flags & MF_MONITOR
-		&& !((thing->type == MT_RING_REDBOX && tmthing->player->ctfteam != 1) || (thing->type == MT_RING_BLUEBOX && tmthing->player->ctfteam != 2))
+		&& !((thing->type == MT_RING_REDBOX && tmthing->player->ctfteam != TEAM_RED) || (thing->type == MT_RING_BLUEBOX && tmthing->player->ctfteam != TEAM_BLUE))
 		&& (!(thing->flags & MF_SOLID) || P_PlayerCanDamage(tmthing->player, thing)))
 		{
 			if (thing->z - thing->scale <= tmthing->z + tmthing->height

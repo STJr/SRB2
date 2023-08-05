@@ -146,11 +146,6 @@ INT32 tutorialanalog = 0; // store cv_analog[0] user value
 
 boolean looptitle = false;
 
-UINT16 skincolor_redteam = SKINCOLOR_RED;
-UINT16 skincolor_blueteam = SKINCOLOR_BLUE;
-UINT16 skincolor_redring = SKINCOLOR_SALMON;
-UINT16 skincolor_bluering = SKINCOLOR_CORNFLOWER;
-
 tic_t countdowntimer = 0;
 boolean countdowntimeup = false;
 boolean exitfadestarted = false;
@@ -163,11 +158,9 @@ UINT8 skipstats;
 INT16 nextgametype = -1;
 
 // Pointers to each CTF flag
-mobj_t *redflag;
-mobj_t *blueflag;
+mobj_t *flagmobjs[MAXTEAMS];
 // Pointers to CTF spawn location
-mapthing_t *rflagpoint;
-mapthing_t *bflagpoint;
+mapthing_t *flagpoints[MAXTEAMS];
 
 struct quake quake;
 
@@ -190,7 +183,10 @@ INT32 tokenbits; // Used for setting token bits
 // Old Special Stage
 INT32 sstimer; // Time allotted in the special stage
 
-UINT32 bluescore, redscore; // CTF and Team Match team scores
+UINT8 numteams;
+UINT8 teamsingame;
+
+UINT32 teamscores[MAXTEAMS]; // CTF and Team Match team scores
 
 // ring count... for PERFECT!
 INT32 nummaprings = 0;
@@ -2869,7 +2865,7 @@ mapthing_t *G_FindCTFStart(INT32 playernum)
 		return NULL;
 	}
 
-	if ((!players[playernum].ctfteam && numredctfstarts && (!numbluectfstarts || P_RandomChance(FRACUNIT/2))) || players[playernum].ctfteam == 1) //red
+	if ((!players[playernum].ctfteam && numredctfstarts && (!numbluectfstarts || P_RandomChance(FRACUNIT/2))) || players[playernum].ctfteam == TEAM_RED) //red
 	{
 		if (!numredctfstarts)
 		{
@@ -2889,7 +2885,7 @@ mapthing_t *G_FindCTFStart(INT32 playernum)
 			CONS_Alert(CONS_WARNING, M_GetText("Could not spawn at any Red Team starts!\n"));
 		return NULL;
 	}
-	else if (!players[playernum].ctfteam || players[playernum].ctfteam == 2) //blue
+	else if (!players[playernum].ctfteam || players[playernum].ctfteam == TEAM_BLUE) //blue
 	{
 		if (!numbluectfstarts)
 		{
@@ -3499,6 +3495,44 @@ gametype_t gametypes[NUMGAMETYPES] = {
 	},
 };
 
+team_t teams[MAXTEAMS] = {
+	// TEAM_NONE
+	{ },
+	// TEAM_RED
+	{
+		.color = SKINCOLOR_RED,
+		.weapon_color = SKINCOLOR_RED,
+		.missile_color = SKINCOLOR_SALMON,
+		.flag = GF_REDFLAG,
+		.flag_mobj_type = MT_REDFLAG,
+	},
+	// TEAM_BLUE
+	{
+		.color = SKINCOLOR_BLUE,
+		.weapon_color = SKINCOLOR_BLUE,
+		.missile_color = SKINCOLOR_CORNFLOWER,
+		.flag = GF_BLUEFLAG,
+		.flag_mobj_type = MT_BLUEFLAG,
+	}
+};
+
+static void G_InitTeams(void)
+{
+	numteams = 3;
+	teamsingame = numteams;
+
+	teams[TEAM_NONE].name = Z_StrDup("None");
+	teams[TEAM_NONE].flag_name = Z_StrDup("Thingmabob");
+
+	teams[TEAM_RED].name = Z_StrDup("Red");
+	teams[TEAM_RED].flag_name = Z_StrDup("Red Flag");
+
+	teams[TEAM_BLUE].name = Z_StrDup("Blue");
+	teams[TEAM_BLUE].flag_name = Z_StrDup("Blue Flag");
+
+	G_UpdateTeamSelection();
+}
+
 void G_InitGametypes(void)
 {
 	for (unsigned i = 0; i <= GT_CTF; i++)
@@ -3506,6 +3540,25 @@ void G_InitGametypes(void)
 		gametypes[i].name = Z_StrDup(Gametype_Names[i]);
 		gametypes[i].constant_name = Z_StrDup(Gametype_ConstantNames[i]);
 	}
+
+	G_InitTeams();
+}
+
+void G_UpdateTeamSelection(void)
+{
+	UINT8 i;
+
+	dummyteam_cons_t[0].value = 0;
+	dummyteam_cons_t[0].strvalue = "Spectator";
+
+	for (i = 1; i <= teamsingame; i++)
+	{
+		dummyteam_cons_t[i].value = i;
+		dummyteam_cons_t[i].strvalue = teams[i].name;
+	}
+
+	dummyteam_cons_t[i].value = 0;
+	dummyteam_cons_t[i].strvalue = NULL;
 }
 
 //
@@ -3800,6 +3853,46 @@ UINT32 G_TOLFlag(INT32 pgametype)
 		return TOL_SP;
 
 	return gametypes[pgametype].typeoflevel;
+}
+
+const char *G_GetTeamName(UINT8 team)
+{
+	if (team >= numteams)
+		return "Unknown";
+
+	return teams[team].name;
+}
+
+const char *G_GetTeamFlagName(UINT8 team)
+{
+	if (team >= numteams)
+		return "";
+
+	return teams[team].flag_name;
+}
+
+UINT16 G_GetTeamColor(UINT8 team)
+{
+	if (team >= numteams)
+		return SKINCOLOR_NONE;
+
+	return teams[team].color;
+}
+
+UINT16 G_GetTeamWeaponColor(UINT8 team)
+{
+	if (team >= numteams)
+		return SKINCOLOR_NONE;
+
+	return teams[team].weapon_color;
+}
+
+UINT16 G_GetTeamMissileColor(UINT8 team)
+{
+	if (team >= numteams)
+		return SKINCOLOR_NONE;
+
+	return teams[team].missile_color;
 }
 
 /** Select a random map with the given typeoflevel flags.
@@ -5012,8 +5105,10 @@ void G_InitNew(UINT8 pultmode, const char *mapname, boolean resetplayer, boolean
 	if (resetplayer)
 	{
 		// Clear a bunch of variables
-		numgameovers = tokenlist = token = sstimer = redscore = bluescore = lastmap = 0;
+		numgameovers = tokenlist = token = sstimer = lastmap = 0;
 		countdown = countdown2 = exitfadestarted = 0;
+
+		memset(teamscores, 0, sizeof(teamscores));
 
 		if (!FLS)
 		{

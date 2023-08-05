@@ -7123,7 +7123,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		24*FRACUNIT,    // radius
 		64*FRACUNIT,    // height
 		0,              // display offset
-		16,             // mass
+		TEAM_RED,       // mass
 		0,              // damage
 		sfx_None,       // activesound
 		MF_SPECIAL,     // flags
@@ -7150,7 +7150,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		24*FRACUNIT,    // radius
 		64*FRACUNIT,    // height
 		0,              // display offset
-		16,             // mass
+		TEAM_BLUE,      // mass
 		0,              // damage
 		sfx_None,       // activesound
 		MF_SPECIAL,     // flags

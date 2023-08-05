@@ -214,10 +214,10 @@ int LUA_PushGlobals(lua_State *L, const char *word)
 		lua_pushboolean(L, paused);
 		return 1;
 	} else if (fastcmp(word,"bluescore")) {
-		lua_pushinteger(L, bluescore);
+		lua_pushinteger(L, teamscores[TEAM_BLUE]);
 		return 1;
 	} else if (fastcmp(word,"redscore")) {
-		lua_pushinteger(L, redscore);
+		lua_pushinteger(L, teamscores[TEAM_RED]);
 		return 1;
 	} else if (fastcmp(word,"timelimit")) {
 		lua_pushinteger(L, cv_timelimit.value);
@@ -226,16 +226,16 @@ int LUA_PushGlobals(lua_State *L, const char *word)
 		lua_pushinteger(L, cv_pointlimit.value);
 		return 1;
 	} else if (fastcmp(word, "redflag")) {
-		LUA_PushUserdata(L, redflag, META_MOBJ);
+		LUA_PushUserdata(L, flagmobjs[TEAM_RED], META_MOBJ);
 		return 1;
 	} else if (fastcmp(word, "blueflag")) {
-		LUA_PushUserdata(L, blueflag, META_MOBJ);
+		LUA_PushUserdata(L, flagmobjs[TEAM_BLUE], META_MOBJ);
 		return 1;
 	} else if (fastcmp(word, "rflagpoint")) {
-		LUA_PushUserdata(L, rflagpoint, META_MAPTHING);
+		LUA_PushUserdata(L, flagpoints[TEAM_RED], META_MAPTHING);
 		return 1;
 	} else if (fastcmp(word, "bflagpoint")) {
-		LUA_PushUserdata(L, bflagpoint, META_MAPTHING);
+		LUA_PushUserdata(L, flagpoints[TEAM_BLUE], META_MAPTHING);
 		return 1;
 	// begin map vars
 	} else if (fastcmp(word,"spstage_start")) {
@@ -274,16 +274,16 @@ int LUA_PushGlobals(lua_State *L, const char *word)
 	// end map vars
 	// begin CTF colors
 	} else if (fastcmp(word,"skincolor_redteam")) {
-		lua_pushinteger(L, skincolor_redteam);
+		lua_pushinteger(L, G_GetTeamColor(TEAM_RED));
 		return 1;
 	} else if (fastcmp(word,"skincolor_blueteam")) {
-		lua_pushinteger(L, skincolor_blueteam);
+		lua_pushinteger(L, G_GetTeamColor(TEAM_BLUE));
 		return 1;
 	} else if (fastcmp(word,"skincolor_redring")) {
-		lua_pushinteger(L, skincolor_redring);
+		lua_pushinteger(L, G_GetTeamMissileColor(TEAM_RED));
 		return 1;
 	} else if (fastcmp(word,"skincolor_bluering")) {
-		lua_pushinteger(L, skincolor_bluering);
+		lua_pushinteger(L, G_GetTeamMissileColor(TEAM_BLUE));
 		return 1;
 	// end CTF colors
 	// begin timers
@@ -439,17 +439,17 @@ int LUA_PushGlobals(lua_State *L, const char *word)
 int LUA_CheckGlobals(lua_State *L, const char *word)
 {
 	if (fastcmp(word, "redscore"))
-		redscore = (UINT32)luaL_checkinteger(L, 2);
+		teamscores[TEAM_RED] = (UINT32)luaL_checkinteger(L, 2);
 	else if (fastcmp(word, "bluescore"))
-		bluescore = (UINT32)luaL_checkinteger(L, 2);
+		teamscores[TEAM_BLUE] = (UINT32)luaL_checkinteger(L, 2);
 	else if (fastcmp(word, "skincolor_redteam"))
-		skincolor_redteam = (UINT16)luaL_checkinteger(L, 2);
+		teams[TEAM_RED].color = (UINT16)luaL_checkinteger(L, 2);
 	else if (fastcmp(word, "skincolor_blueteam"))
-		skincolor_blueteam = (UINT16)luaL_checkinteger(L, 2);
+		teams[TEAM_BLUE].color = (UINT16)luaL_checkinteger(L, 2);
 	else if (fastcmp(word, "skincolor_redring"))
-		skincolor_redring = (UINT16)luaL_checkinteger(L, 2);
+		teams[TEAM_RED].missile_color = (UINT16)luaL_checkinteger(L, 2);
 	else if (fastcmp(word, "skincolor_bluering"))
-		skincolor_bluering = (UINT16)luaL_checkinteger(L, 2);
+		teams[TEAM_BLUE].missile_color = (UINT16)luaL_checkinteger(L, 2);
 	else if (fastcmp(word, "emeralds"))
 		emeralds = (UINT16)luaL_checkinteger(L, 2);
 	else if (fastcmp(word, "token"))

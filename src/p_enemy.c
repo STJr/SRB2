@@ -824,8 +824,8 @@ static boolean P_LookForShield(mobj_t *actor)
 			continue; // dead
 
 		//When in CTF, don't pull rings that you cannot pick up.
-		if ((actor->type == MT_REDTEAMRING && player->ctfteam != 1) ||
-			(actor->type == MT_BLUETEAMRING && player->ctfteam != 2))
+		if ((actor->type == MT_REDTEAMRING && player->ctfteam != TEAM_RED) ||
+			(actor->type == MT_BLUETEAMRING && player->ctfteam != TEAM_BLUE))
 			continue;
 
 		if ((player->powers[pw_shield] & SH_PROTECTELECTRIC)
@@ -6632,8 +6632,8 @@ void A_OldRingExplode(mobj_t *actor) {
 		{
 			if (!(gametyperules & GTR_TEAMS))
 				mo->color = actor->target->color; //copy color
-			else if (actor->target->player->ctfteam == 2)
-				mo->color = skincolor_bluering;
+			else if (actor->target->player->ctfteam == TEAM_BLUE)
+				mo->color = G_GetTeamMissileColor(TEAM_BLUE);
 		}
 	}
 
@@ -6648,8 +6648,8 @@ void A_OldRingExplode(mobj_t *actor) {
 	{
 		if (!(gametyperules & GTR_TEAMS))
 			mo->color = actor->target->color; //copy color
-		else if (actor->target->player->ctfteam == 2)
-			mo->color = skincolor_bluering;
+		else if (actor->target->player->ctfteam == TEAM_BLUE)
+			mo->color = G_GetTeamMissileColor(TEAM_BLUE);
 	}
 
 	mo = P_SpawnMobjFromMobj(actor, 0, 0, 0, locvar1);
@@ -6663,8 +6663,8 @@ void A_OldRingExplode(mobj_t *actor) {
 	{
 		if (!(gametyperules & GTR_TEAMS))
 			mo->color = actor->target->color; //copy color
-		else if (actor->target->player->ctfteam == 2)
-			mo->color = skincolor_bluering;
+		else if (actor->target->player->ctfteam == TEAM_BLUE)
+			mo->color = G_GetTeamMissileColor(TEAM_BLUE);
 	}
 }
 

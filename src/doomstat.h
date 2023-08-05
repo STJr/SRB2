@@ -154,9 +154,6 @@ extern INT32 tutorialanalog; // store cv_analog[0] user value
 
 extern boolean looptitle;
 
-// CTF colors.
-extern UINT16 skincolor_redteam, skincolor_blueteam, skincolor_redring, skincolor_bluering;
-
 extern tic_t countdowntimer;
 extern boolean countdowntimeup;
 extern boolean exitfadestarted;
@@ -254,10 +251,11 @@ extern UINT32 ssspheres; //  Total # of spheres in a level
 
 // Fun extra stuff
 extern INT16 lastmap; // Last level you were at (returning from special stages).
-extern mobj_t *redflag, *blueflag; // Pointers to physical flags
-extern mapthing_t *rflagpoint, *bflagpoint; // Pointers to the flag spawn locations
-#define GF_REDFLAG 1
-#define GF_BLUEFLAG 2
+
+enum {
+	GF_REDFLAG = 1,
+	GF_BLUEFLAG = 2
+};
 
 // A single point in space.
 typedef struct
@@ -388,6 +386,27 @@ typedef struct
 #define LF2_WIDEICON      32 ///< If you're in a circumstance where it fits, use a wide map icon
 
 extern mapheader_t* mapheaderinfo[NUMMAPS];
+
+enum {
+	TEAM_NONE,
+	TEAM_RED,
+	TEAM_BLUE,
+	MAXTEAMS = 4
+};
+
+typedef struct
+{
+	char *name;
+	char *flag_name;
+	UINT8 flag;
+	UINT32 flag_mobj_type;
+	UINT16 color;
+	UINT16 weapon_color;
+	UINT16 missile_color;
+} team_t;
+
+extern team_t teams[MAXTEAMS];
+extern UINT8 numteams;
 
 #define NUMGAMETYPEFREESLOTS 128
 
@@ -531,8 +550,10 @@ extern UINT32 tokenlist; ///< List of tokens collected
 extern boolean gottoken; ///< Did you get a token? Used for end of act
 extern INT32 tokenbits; ///< Used for setting token bits
 extern INT32 sstimer; ///< Time allotted in the special stage
-extern UINT32 bluescore; ///< Blue Team Scores
-extern UINT32 redscore;  ///< Red Team Scores
+extern UINT8 teamsingame; ///< Current teams in game
+extern UINT32 teamscores[MAXTEAMS]; ///< Team scores
+extern mobj_t *flagmobjs[MAXTEAMS]; // Pointers to physical flags
+extern mapthing_t *flagpoints[MAXTEAMS]; // Pointers to the flag spawn locations
 
 // Eliminates unnecessary searching.
 extern boolean CheckForBustableBlocks;

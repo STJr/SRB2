@@ -56,6 +56,7 @@ typedef struct
 	INT32 num;
 	INT32 color;
 	INT32 emeralds;
+	UINT8 team;
 	const char *name;
 } playersort_t;
 
@@ -120,6 +121,8 @@ void HU_DrawDualTabRankings(INT32 x, INT32 y, playersort_t *tab, INT32 scoreline
 void HU_DrawEmeralds(INT32 x, INT32 y, INT32 pemeralds);
 
 INT32 HU_CreateTeamScoresTbl(playersort_t *tab, UINT32 dmtotals[]);
+
+const char *GetChatColorForSkincolor(UINT16 skincolor);
 
 // CECHO interface.
 void HU_ClearCEcho(void);

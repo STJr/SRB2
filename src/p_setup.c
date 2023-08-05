@@ -7058,8 +7058,11 @@ static void P_InitLevelSettings(void)
 	countdowntimeup = false;
 
 	// clear ctf pointers
-	redflag = blueflag = NULL;
-	rflagpoint = bflagpoint = NULL;
+	for (i = 0; i < MAXTEAMS; i++)
+	{
+		flagmobjs[i] = NULL;
+		flagpoints[i] = NULL;
+	}
 
 	// circuit, race and competition stuff
 	circuitmap = false;

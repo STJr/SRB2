@@ -891,13 +891,9 @@ static void ST_drawLivesArea(void)
 		}
 		else if (G_GametypeHasTeams())
 		{
-			if (stplyr->ctfteam == 1)
+			if (stplyr->ctfteam != 0)
 			{
-				v_colmap = V_REDMAP;
-			}
-			else if (stplyr->ctfteam == 2)
-			{
-				v_colmap = V_BLUEMAP;
+				v_colmap = skincolors[G_GetTeamColor(stplyr->ctfteam)].chatcolor;
 			}
 		}
 
@@ -982,13 +978,9 @@ static void ST_drawLivesArea(void)
 			}
 			else if (G_GametypeHasTeams())
 			{
-				if (stplyr->ctfteam == 1)
+				if (stplyr->ctfteam != 0)
 				{
-					V_DrawRightAlignedString(hudinfo[HUD_LIVES].x+58, hudinfo[HUD_LIVES].y+8, V_HUDTRANS|hudinfo[HUD_LIVES].f|V_PERPLAYER, "RED");
-				}
-				else if (stplyr->ctfteam == 2)
-				{
-					V_DrawRightAlignedString(hudinfo[HUD_LIVES].x+58, hudinfo[HUD_LIVES].y+8, V_HUDTRANS|hudinfo[HUD_LIVES].f|V_PERPLAYER, "BLUE");
+					V_DrawRightAlignedString(hudinfo[HUD_LIVES].x+58, hudinfo[HUD_LIVES].y+8, V_HUDTRANS|hudinfo[HUD_LIVES].f|V_PERPLAYER, G_GetTeamName(stplyr->ctfteam));
 				}
 			}
 		}
@@ -2467,20 +2459,20 @@ static void ST_drawTeamHUD(void)
 
 		// Display a countdown timer showing how much time left until the flag returns to base.
 		{
-			if (blueflag && blueflag->fuse > 1 && LUA_HudEnabled(hud_teamscores))
-				V_DrawCenteredString(BASEVIDWIDTH/2 - SEP, 8, V_YELLOWMAP|V_HUDTRANS|V_PERPLAYER|V_SNAPTOTOP, va("%u", (blueflag->fuse / TICRATE)));
+			if (flagmobjs[TEAM_BLUE] && flagmobjs[TEAM_BLUE]->fuse > 1 && LUA_HudEnabled(hud_teamscores))
+				V_DrawCenteredString(BASEVIDWIDTH/2 - SEP, 8, V_YELLOWMAP|V_HUDTRANS|V_PERPLAYER|V_SNAPTOTOP, va("%u", (flagmobjs[TEAM_BLUE]->fuse / TICRATE)));
 
-			if (redflag && redflag->fuse > 1 && LUA_HudEnabled(hud_teamscores))
-				V_DrawCenteredString(BASEVIDWIDTH/2 + SEP, 8, V_YELLOWMAP|V_HUDTRANS|V_PERPLAYER|V_SNAPTOTOP, va("%u", (redflag->fuse / TICRATE)));
+			if (flagmobjs[TEAM_RED] && flagmobjs[TEAM_RED]->fuse > 1 && LUA_HudEnabled(hud_teamscores))
+				V_DrawCenteredString(BASEVIDWIDTH/2 + SEP, 8, V_YELLOWMAP|V_HUDTRANS|V_PERPLAYER|V_SNAPTOTOP, va("%u", (flagmobjs[TEAM_RED]->fuse / TICRATE)));
 		}
 	}
 
 num:
 	if (LUA_HudEnabled(hud_teamscores))
-		V_DrawCenteredString(BASEVIDWIDTH/2 - SEP, 16, V_HUDTRANS|V_PERPLAYER|V_SNAPTOTOP, va("%u", bluescore));
+		V_DrawCenteredString(BASEVIDWIDTH/2 - SEP, 16, V_HUDTRANS|V_PERPLAYER|V_SNAPTOTOP, va("%u", teamscores[TEAM_BLUE]));
 
 	if (LUA_HudEnabled(hud_teamscores))
-		V_DrawCenteredString(BASEVIDWIDTH/2 + SEP, 16, V_HUDTRANS|V_PERPLAYER|V_SNAPTOTOP, va("%u", redscore));
+		V_DrawCenteredString(BASEVIDWIDTH/2 + SEP, 16, V_HUDTRANS|V_PERPLAYER|V_SNAPTOTOP, va("%u", teamscores[TEAM_RED]));
 
 #undef SEP
 }
@@ -2840,7 +2832,7 @@ void ST_Drawer(void)
 				break;
 			case 2: // Team
 				if (G_GametypeHasTeams())
-					c = (seenplayer->ctfteam == 1) ? V_REDMAP : V_BLUEMAP;
+					c = skincolors[G_GetTeamColor(seenplayer->ctfteam)].chatcolor;
 				break;
 			case 3: // Ally/Foe
 			default:

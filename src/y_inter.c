@@ -820,10 +820,10 @@ void Y_IntermissionDrawer(void)
 
 		// Show the team flags and the team score at the top instead of "RESULTS"
 		V_DrawSmallScaledPatch(128 - (data.match.blueflag->width / 4), 2, 0, data.match.blueflag);
-		V_DrawCenteredString(128, 16, 0, va("%u", bluescore));
+		V_DrawCenteredString(128, 16, 0, va("%u", teamscores[TEAM_BLUE]));
 
 		V_DrawSmallScaledPatch(192 - (data.match.redflag->width / 4), 2, 0, data.match.redflag);
-		V_DrawCenteredString(192, 16, 0, va("%u", redscore));
+		V_DrawCenteredString(192, 16, 0, va("%u", teamscores[TEAM_RED]));
 
 		// draw the level name
 		V_DrawCenteredString(BASEVIDWIDTH/2, 24, 0, data.match.levelstring);
