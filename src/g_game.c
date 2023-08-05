@@ -2137,7 +2137,7 @@ boolean G_Responder(event_t *ev)
 			if (! netgame)
 				F_StartGameEvaluation();
 			else if (server || IsPlayerAdmin(consoleplayer))
-				SendNetXCmd(XD_EXITLEVEL, NULL, 0);
+				D_SendExitLevel(false);
 			return true;
 		}
 	}

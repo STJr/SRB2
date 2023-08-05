@@ -4577,25 +4577,37 @@ static void Command_Mapmd5_f(void)
 		CONS_Printf(M_GetText("You must be in a level to use this.\n"));
 }
 
+void D_SendExitLevel(boolean cheat)
+{
+	UINT8 buf[8];
+	UINT8 *buf_p = buf;
+
+	WRITEUINT8(buf_p, cheat);
+
+	SendNetXCmd(XD_EXITLEVEL, &buf, buf_p - buf);
+}
+
 static void Command_ExitLevel_f(void)
 {
-	if (!(netgame || (multiplayer && gametype != GT_COOP)) && !cv_debug)
-		CONS_Printf(M_GetText("This only works in a netgame.\n"));
-	else if (!(server || (IsPlayerAdmin(consoleplayer))))
+	if (!(server || (IsPlayerAdmin(consoleplayer))))
 		CONS_Printf(M_GetText("Only the server or a remote admin can use this.\n"));
 	else if (( gamestate != GS_LEVEL && gamestate != GS_CREDITS ) || demoplayback)
 		CONS_Printf(M_GetText("You must be in a level to use this.\n"));
 	else
-		SendNetXCmd(XD_EXITLEVEL, NULL, 0);
+		D_SendExitLevel(true);
 }
 
 static void Got_ExitLevelcmd(UINT8 **cp, INT32 playernum)
 {
-	(void)cp;
+	boolean cheat = false;
+
+	cheat = (boolean)READUINT8(*cp);
 
 	// Ignore duplicate XD_EXITLEVEL commands.
 	if (gameaction == ga_completed)
+	{
 		return;
+	}
 
 	if (playernum != serverplayer && !IsPlayerAdmin(playernum))
 	{
@@ -4603,6 +4615,11 @@ static void Got_ExitLevelcmd(UINT8 **cp, INT32 playernum)
 		if (server)
 			SendKick(playernum, KICK_MSG_CON_FAIL | KICK_MSG_KEEP_BODY);
 		return;
+	}
+
+	if (cheat == true)
+	{
+		G_SetUsedCheats(false);
 	}
 
 	G_ExitLevel();
