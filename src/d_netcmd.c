@@ -4617,7 +4617,7 @@ static void Got_ExitLevelcmd(UINT8 **cp, INT32 playernum)
 		return;
 	}
 
-	if (cheat == true)
+	if (G_CoopGametype() && cheat)
 	{
 		G_SetUsedCheats(false);
 	}
