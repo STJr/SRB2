@@ -2002,6 +2002,7 @@ static int gametype_set(lua_State *L)
 	case gametype_name:
 		Z_Free(gt->name);
 		gt->name = Z_StrDup(luaL_checkstring(L, 3));
+		G_UpdateGametypeSelections();
 		break;
 	case gametype_rules:
 		gt->rules = luaL_checkinteger(L, 3);

@@ -3557,11 +3557,6 @@ void G_AddGametypeConstant(INT16 gtype, const char *newgtconst)
 	gametypes[gtype].constant_name = gtconst;
 }
 
-//
-// G_UpdateGametypeSelections
-//
-// Updates gametype_cons_t.
-//
 void G_UpdateGametypeSelections(void)
 {
 	INT32 i;
