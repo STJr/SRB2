@@ -4340,12 +4340,7 @@ static void P_NetArchiveMisc(boolean resending)
 
 	WRITEUINT8(save_p, teamsingame);
 	for (i = 0; i < MAXTEAMS; i++)
-	{
 		WRITEUINT32(save_p, teamscores[i]);
-		WRITEUINT16(save_p, teams[i].color);
-		WRITEUINT16(save_p, teams[i].weapon_color);
-		WRITEUINT16(save_p, teams[i].missile_color);
-	}
 
 	WRITEINT32(save_p, modulothing);
 
@@ -4440,12 +4435,7 @@ static inline boolean P_NetUnArchiveMisc(boolean reloading)
 
 	teamsingame = READUINT8(save_p);
 	for (i = 0; i < MAXTEAMS; i++)
-	{
 		teamscores[i] = READUINT32(save_p);
-		teams[i].color = READUINT16(save_p);
-		teams[i].weapon_color = READUINT16(save_p);
-		teams[i].missile_color = READUINT16(save_p);
-	}
 
 	modulothing = READINT32(save_p);
 

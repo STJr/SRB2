@@ -473,6 +473,16 @@ void readfreeslots(MYFILE *f)
 						break;
 					}
 			}
+			else if (fastcmp(type, "TEAM"))
+			{
+				for (i = 0; i < MAXTEAMS; i++)
+					if (!teamnames[i]) {
+						teamnames[i] = Z_Malloc(strlen(word)+1, PU_STATIC, NULL);
+						strcpy(teamnames[i],word);
+						numteams++;
+						break;
+					}
+			}
 			else if (fastcmp(type, "SPR2"))
 			{
 				// Search if we already have an SPR2 by that name...
@@ -1139,14 +1149,19 @@ void readgametype(MYFILE *f, INT32 num)
 	INT32 i, j;
 
 	char *gtname = gametypes[num].name;
-	char gtconst[32];
+	char gtconst[MAXLINELEN];
 	char gtdescription[441];
+
+	UINT8 teamcount = 0;
+	UINT8 teamlist[MAXTEAMS];
 
 	UINT8 newgtleftcolor, newgtrightcolor;
 	boolean has_desc_colors[2] = { false, false };
 
 	memset(gtconst, 0, sizeof(gtconst));
 	memset(gtdescription, 0, sizeof(gtconst));
+
+	strcpy(gtdescription, "???");
 
 	do
 	{
@@ -1307,6 +1322,35 @@ void readgametype(MYFILE *f, INT32 num)
 					gametypes[num].typeoflevel = tol;
 				}
 			}
+			// Teams
+			else if (fastcmp(word, "TEAMLIST"))
+			{
+				tmp = strtok(word2,",");
+				do {
+					if (teamcount == MAXTEAMS)
+					{
+						deh_warning("readgametype %s: too many teams\n", gtname);
+						break;
+					}
+					UINT8 team_id = TEAM_NONE;
+					for (i = 1; i < MAXTEAMS; i++)
+					{
+						if (!teamnames[i])
+							break;
+						if (fasticmp(tmp, teamnames[i]))
+						{
+							team_id = i;
+							break;
+						}
+					}
+					if (team_id == TEAM_NONE)
+						deh_warning("readgametype %s: unknown team %s\n", gtname, tmp);
+					else
+					{
+						teamlist[teamcount++] = team_id;
+					}
+				} while((tmp = strtok(NULL,",")) != NULL);
+			}
 			// This SOC probably provided gametype rules as words, instead of using the RULES keyword.
 			// (For example, "NOSPECTATORSPAWN = TRUE")
 			else
@@ -1338,6 +1382,11 @@ void readgametype(MYFILE *f, INT32 num)
 		G_SetGametypeDescriptionLeftColor(num, newgtleftcolor);
 	if (has_desc_colors[1])
 		G_SetGametypeDescriptionRightColor(num, newgtrightcolor);
+
+	// Copy the teams
+	gametypes[num].teams.num = teamcount;
+	if (teamcount)
+		memcpy(gametypes[num].teams.list, teamlist, sizeof(teamlist[0]) * teamcount);
 
 	// Write the constant name.
 	if (gametypes[num].constant_name == NULL)
