@@ -156,6 +156,8 @@ static const struct {
 	{META_SKINCOLOR,    "skincolor_t"},
 	{META_COLORRAMP,    "skincolor_t.ramp"},
 	{META_GAMETYPE,     "gametype_t"},
+	{META_TEAM,         "team_t"},
+	{META_TEAMLIST,     "teamlist_t"},
 	{META_SPRITEINFO,   "spriteinfo_t"},
 	{META_PIVOTLIST,    "spriteframepivot_t[]"},
 	{META_FRAMEPIVOT,   "spriteframepivot_t"},
@@ -3402,7 +3404,6 @@ static int lib_sResumeMusic(lua_State *L)
 // G_GAME
 ////////////
 
-// Copypasted from lib_cvRegisterVar :]
 static int lib_gAddGametype(lua_State *L)
 {
 	const char *k;
@@ -3420,6 +3421,8 @@ static int lib_gAddGametype(lua_State *L)
 	UINT8 newgtrightcolor = 0;
 	INT16 newgtrankingstype = -1;
 	int newgtinttype = 0;
+	UINT8 teamcount = 0;
+	UINT8 teamlist[MAXTEAMS];
 
 	luaL_checktype(L, 1, LUA_TTABLE);
 	lua_settop(L, 1); // Clear out all other possible arguments, leaving only the first one.
@@ -3445,7 +3448,6 @@ static int lib_gAddGametype(lua_State *L)
 		else if (lua_isstring(L, 2))
 			k = lua_tostring(L, 2);
 
-		// Sorry, no gametype rules as key names.
 		if (i == 1 || (k && fasticmp(k, "name"))) {
 			if (!lua_isstring(L, 3))
 				TYPEERROR("name", LUA_TSTRING)
@@ -3490,6 +3492,36 @@ static int lib_gAddGametype(lua_State *L)
 			if (!lua_isnumber(L, 3))
 				TYPEERROR("headerrightcolor", LUA_TNUMBER)
 			newgtrightcolor = (UINT8)lua_tointeger(L, 3);
+		} else if (i == 12 || (k && fasticmp(k, "teams"))) {
+			if (lua_istable(L, 3))
+			{
+				lua_pushnil(L);
+
+				while (lua_next(L, 3)) {
+					lua_Integer idx = luaL_checkinteger(L, -2) - 1;
+					if (idx >= 0 && idx < MAXTEAMS)
+					{
+						int team_index = luaL_checkinteger(L, -1);
+						if (team_index < 0 || team_index >= numteams)
+							luaL_error(L, "team index %d out of range (0 - %d)", team_index, numteams-1);
+
+						teamlist[idx] = (UINT8)team_index;
+
+						if ((lua_Integer)teamcount < idx + 1)
+							teamcount = (UINT8)idx + 1;
+					}
+
+					lua_pop(L, 1);
+				}
+			}
+			else if (lua_isuserdata(L, 3))
+			{
+				teamlist_t *tl = *((teamlist_t **)luaL_checkudata(L, 3, META_TEAMLIST));
+				teamcount = tl->num;
+				memcpy(teamlist, tl->list, sizeof(teamlist[0]) * teamcount);
+			}
+			else
+				TYPEERROR("teams", LUA_TTABLE)
 		// Key name specified
 		} else if ((!i) && (k && fasticmp(k, "headercolor"))) {
 			if (!lua_isnumber(L, 3))
@@ -3514,8 +3546,7 @@ static int lib_gAddGametype(lua_State *L)
 	// Add the new gametype
 	newgtidx = G_AddGametype(newgtrules);
 	G_AddGametypeTOL(newgtidx, newgttol);
-	G_SetGametypeDescription(newgtidx, NULL, newgtleftcolor, newgtrightcolor);
-	strncpy(gametypedesc[newgtidx].notes, gtdescription, 441);
+	G_SetGametypeDescription(newgtidx, gtdescription, newgtleftcolor, newgtrightcolor);
 
 	// Not covered by G_AddGametype alone.
 	if (newgtrankingstype == -1)
@@ -3524,6 +3555,11 @@ static int lib_gAddGametype(lua_State *L)
 	gametypes[newgtidx].intermission_type = newgtinttype;
 	gametypes[newgtidx].pointlimit = newgtpointlimit;
 	gametypes[newgtidx].timelimit = newgttimelimit;
+
+	// Copy the teams
+	gametypes[newgtidx].teams.num = teamcount;
+	if (teamcount)
+		memcpy(gametypes[newgtidx].teams.list, teamlist, sizeof(teamlist[0]) * teamcount);
 
 	// Write the new gametype name.
 	gametypes[newgtidx].name = gtname;

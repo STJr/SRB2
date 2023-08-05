@@ -2282,8 +2282,20 @@ void P_CheckTimeLimit(void)
 			}
 			else
 			{
-				//In team match and CTF, determining a tie is much simpler. =P
-				if (teamscores[TEAM_RED] == teamscores[TEAM_BLUE])
+				boolean is_tied = true;
+				UINT32 lastscore = teamscores[G_GetTeam(1)];
+
+				for (UINT8 j = 2; j < teamsingame; j++)
+				{
+					if (teamscores[G_GetTeam(j)] != lastscore)
+					{
+						is_tied = false;
+						break;
+					}
+					lastscore = teamscores[G_GetTeam(j)];
+				}
+
+				if (is_tied)
 					return;
 			}
 		}
@@ -2303,7 +2315,8 @@ void P_CheckTimeLimit(void)
   */
 void P_CheckPointLimit(void)
 {
-	INT32 i;
+	if (!server)
+		return;
 
 	if (!cv_pointlimit.value)
 		return;
@@ -2314,27 +2327,28 @@ void P_CheckPointLimit(void)
 	if (!(gametyperules & GTR_POINTLIMIT))
 		return;
 
-	// pointlimit is nonzero, check if it's been reached by this player
 	if (G_GametypeHasTeams())
 	{
-		// Just check both teams
-		if ((UINT32)cv_pointlimit.value <= teamscores[TEAM_RED] || (UINT32)cv_pointlimit.value <= teamscores[TEAM_BLUE])
+		for (UINT8 i = 1; i < teamsingame; i++)
 		{
-			if (server)
+			if (teamscores[G_GetTeam(i)] >= (UINT32)cv_pointlimit.value)
+			{
 				SendNetXCmd(XD_EXITLEVEL, NULL, 0);
+				return;
+			}
 		}
 	}
 	else
 	{
-		for (i = 0; i < MAXPLAYERS; i++)
+		// pointlimit is nonzero, check if it's been reached by this player
+		for (INT32 i = 0; i < MAXPLAYERS; i++)
 		{
 			if (!playeringame[i] || players[i].spectator)
 				continue;
 
 			if ((UINT32)cv_pointlimit.value <= players[i].score)
 			{
-				if (server)
-					SendNetXCmd(XD_EXITLEVEL, NULL, 0);
+				SendNetXCmd(XD_EXITLEVEL, NULL, 0);
 				return;
 			}
 		}

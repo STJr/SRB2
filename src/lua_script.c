@@ -214,10 +214,10 @@ int LUA_PushGlobals(lua_State *L, const char *word)
 		lua_pushboolean(L, paused);
 		return 1;
 	} else if (fastcmp(word,"bluescore")) {
-		lua_pushinteger(L, teamscores[TEAM_BLUE]);
+		lua_pushinteger(L, teamscores[G_GetTeam(2)]);
 		return 1;
 	} else if (fastcmp(word,"redscore")) {
-		lua_pushinteger(L, teamscores[TEAM_RED]);
+		lua_pushinteger(L, teamscores[G_GetTeam(1)]);
 		return 1;
 	} else if (fastcmp(word,"timelimit")) {
 		lua_pushinteger(L, cv_timelimit.value);
@@ -226,16 +226,16 @@ int LUA_PushGlobals(lua_State *L, const char *word)
 		lua_pushinteger(L, cv_pointlimit.value);
 		return 1;
 	} else if (fastcmp(word, "redflag")) {
-		LUA_PushUserdata(L, flagmobjs[TEAM_RED], META_MOBJ);
+		LUA_PushUserdata(L, flagmobjs[G_GetTeam(1)], META_MOBJ);
 		return 1;
 	} else if (fastcmp(word, "blueflag")) {
-		LUA_PushUserdata(L, flagmobjs[TEAM_BLUE], META_MOBJ);
+		LUA_PushUserdata(L, flagmobjs[G_GetTeam(2)], META_MOBJ);
 		return 1;
 	} else if (fastcmp(word, "rflagpoint")) {
-		LUA_PushUserdata(L, flagpoints[TEAM_RED], META_MAPTHING);
+		LUA_PushUserdata(L, flagpoints[G_GetTeam(1)], META_MAPTHING);
 		return 1;
 	} else if (fastcmp(word, "bflagpoint")) {
-		LUA_PushUserdata(L, flagpoints[TEAM_BLUE], META_MAPTHING);
+		LUA_PushUserdata(L, flagpoints[G_GetTeam(2)], META_MAPTHING);
 		return 1;
 	// begin map vars
 	} else if (fastcmp(word,"spstage_start")) {
@@ -270,6 +270,12 @@ int LUA_PushGlobals(lua_State *L, const char *word)
 		return 1;
 	} else if (fastcmp(word,"tutorialmode")) {
 		lua_pushboolean(L, tutorialmode);
+		return 1;
+	} else if (fastcmp(word,"numteams")) {
+		lua_pushinteger(L, max(numteams - 1, 0));
+		return 1;
+	} else if (fastcmp(word,"teamsingame")) {
+		lua_pushinteger(L, max(teamsingame - 1, 0));
 		return 1;
 	// end map vars
 	// begin CTF colors
@@ -991,6 +997,7 @@ enum
 	ARCH_MOUSE,
 	ARCH_SKIN,
 	ARCH_GAMETYPE,
+	ARCH_TEAM,
 
 	ARCH_TEND=0xFF,
 };
@@ -1021,6 +1028,7 @@ static const struct {
 	{META_MOUSE,    ARCH_MOUSE},
 	{META_SKIN,     ARCH_SKIN},
 	{META_GAMETYPE, ARCH_GAMETYPE},
+	{META_TEAM,     ARCH_TEAM},
 	{NULL,          ARCH_NULL}
 };
 
@@ -1356,6 +1364,13 @@ static UINT8 ArchiveValue(int TABLESINDEX, int myindex)
 			WRITEUINT8(save_p, gt - gametypes);
 			break;
 		}
+		case ARCH_TEAM:
+		{
+			team_t *team = *((team_t **)lua_touserdata(gL, myindex));
+			WRITEUINT8(save_p, ARCH_TEAM);
+			WRITEUINT8(save_p, team - teams);
+			break;
+		}
 		default:
 			WRITEUINT8(save_p, ARCH_NULL);
 			return 2;
@@ -1607,6 +1622,9 @@ static UINT8 UnArchiveValue(int TABLESINDEX)
 		break;
 	case ARCH_GAMETYPE:
 		LUA_PushUserdata(gL, &gametypes[READUINT8(save_p)], META_GAMETYPE);
+		break;
+	case ARCH_TEAM:
+		LUA_PushUserdata(gL, &teams[READUINT8(save_p)], META_TEAM);
 		break;
 	case ARCH_TEND:
 		return 1;

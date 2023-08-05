@@ -473,6 +473,16 @@ void readfreeslots(MYFILE *f)
 						break;
 					}
 			}
+			else if (fastcmp(type, "TEAM"))
+			{
+				for (i = 0; i < MAXTEAMS; i++)
+					if (!teamnames[i]) {
+						teamnames[i] = Z_Malloc(strlen(word)+1, PU_STATIC, NULL);
+						strcpy(teamnames[i],word);
+						numteams++;
+						break;
+					}
+			}
 			else if (fastcmp(type, "SPR2"))
 			{
 				// Search if we already have an SPR2 by that name...
@@ -1149,10 +1159,14 @@ void readgametype(MYFILE *f, char *gtname)
 	int newgtinttype = 0;
 	char gtdescription[441];
 	char gtconst[MAXLINELEN];
+	UINT8 teamcount = 0;
+	UINT8 teamlist[MAXTEAMS];
 
 	// Empty strings.
 	gtdescription[0] = '\0';
 	gtconst[0] = '\0';
+
+	strcpy(gtdescription, "???");
 
 	do
 	{
@@ -1278,10 +1292,37 @@ void readgametype(MYFILE *f, char *gtname)
 					newgttol = tol;
 				}
 			}
-			// The SOC probably provided gametype rules as words,
-			// instead of using the RULES keyword.
-			// Like for example "NOSPECTATORSPAWN = TRUE".
-			// This is completely valid, and looks better anyway.
+			// Teams
+			else if (fastcmp(word, "TEAMLIST"))
+			{
+				tmp = strtok(word2,",");
+				do {
+					if (teamcount == MAXTEAMS)
+					{
+						deh_warning("readgametype %s: too many teams\n", gtname);
+						break;
+					}
+					UINT8 team_id = TEAM_NONE;
+					for (i = 1; i < MAXTEAMS; i++)
+					{
+						if (!teamnames[i])
+							break;
+						if (fasticmp(tmp, teamnames[i]))
+						{
+							team_id = i;
+							break;
+						}
+					}
+					if (team_id == TEAM_NONE)
+						deh_warning("readgametype %s: unknown team %s\n", gtname, tmp);
+					else
+					{
+						teamlist[teamcount++] = team_id;
+					}
+				} while((tmp = strtok(NULL,",")) != NULL);
+			}
+			// This SOC probably provided gametype rules as words, instead of using the RULES keyword.
+			// (For example, "NOSPECTATORSPAWN = TRUE")
 			else
 			{
 				UINT32 wordgt = 0;
@@ -1322,6 +1363,11 @@ void readgametype(MYFILE *f, char *gtname)
 	gametypes[newgtidx].intermission_type = newgtinttype;
 	gametypes[newgtidx].pointlimit = newgtpointlimit;
 	gametypes[newgtidx].timelimit = newgttimelimit;
+
+	// Copy the teams
+	gametypes[newgtidx].teams.num = teamcount;
+	if (teamcount)
+		memcpy(gametypes[newgtidx].teams.list, teamlist, sizeof(teamlist[0]) * teamcount);
 
 	// Write the new gametype name.
 	gametypes[newgtidx].name = Z_StrDup(gtname);

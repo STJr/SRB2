@@ -231,6 +231,8 @@ UINT16 G_GetTeamWeaponColor(UINT8 team);
 UINT16 G_GetTeamMissileColor(UINT8 team);
 const char *G_GetTeamIcon(UINT8 team, UINT8 icon_type);
 boolean G_HasTeamIcon(UINT8 team, UINT8 icon_type);
+void G_SetTeamIcon(UINT8 team, UINT8 icon_type, const char *icon);
+void G_FreeTeamData(UINT8 team);
 
 void G_Ticker(boolean run);
 boolean G_Responder(event_t *ev);

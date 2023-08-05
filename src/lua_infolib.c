@@ -1930,7 +1930,8 @@ enum gametype_e
 	gametype_intermission_type,
 	gametype_rankings_type,
 	gametype_pointlimit,
-	gametype_timelimit
+	gametype_timelimit,
+	gametype_teams
 };
 
 const char *const gametype_opt[] = {
@@ -1941,6 +1942,7 @@ const char *const gametype_opt[] = {
 	"rankings_type",
 	"point_limit",
 	"time_limit",
+	"teams",
 	NULL,
 };
 
@@ -1977,6 +1979,11 @@ static int gametype_get(lua_State *L)
 	case gametype_timelimit:
 		lua_pushinteger(L, gt->timelimit);
 		break;
+	case gametype_teams:
+		LUA_PushUserdata(L, &gt->teams, META_TEAMLIST);
+		break;
+	default:
+		return luaL_error(L, LUA_QL("gametype_t") " has no field named " LUA_QS, gametype_opt[field]);
 	}
 	return 1;
 }
@@ -1986,6 +1993,8 @@ static int gametype_set(lua_State *L)
 	gametype_t *gt = *((gametype_t **)luaL_checkudata(L, 1, META_GAMETYPE));
 	enum gametype_e field = Lua_optoption(L, 2, -1, gametype_fields_ref);
 
+	if (!lua_lumploading)
+		return luaL_error(L, "Do not alter gametype data from within a hook or coroutine!");
 	if (hud_running)
 		return luaL_error(L, "Do not alter gametype data in HUD rendering code!");
 	if (hook_cmd_running)
@@ -1993,6 +2002,8 @@ static int gametype_set(lua_State *L)
 
 	I_Assert(gt != NULL);
 	I_Assert(gt >= gametypes);
+
+	INT16 gametype_id = gt - gametypes;
 
 	switch (field)
 	{
@@ -2019,6 +2030,52 @@ static int gametype_set(lua_State *L)
 	case gametype_timelimit:
 		gt->timelimit = luaL_checkinteger(L, 3);
 		break;
+	case gametype_teams:
+		if (lua_istable(L, 3))
+		{
+			gt->teams.num = 0;
+			memset(gt->teams.list, TEAM_NONE, sizeof(gt->teams.list));
+
+			lua_pushnil(L);
+
+			while (lua_next(L, 3)) {
+				lua_Integer i = luaL_checkinteger(L, -2) - 1;
+				if (i >= 0 && i < MAXTEAMS)
+				{
+					int team_index = luaL_checkinteger(L, -1);
+					if (team_index < 0 || team_index >= numteams)
+						luaL_error(L, "team index %d out of range (0 - %d)", team_index, numteams-1);
+
+					gt->teams.list[i] = (UINT8)team_index;
+
+					if ((lua_Integer)gt->teams.num < i + 1)
+						gt->teams.num = (UINT8)i + 1;
+				}
+
+				lua_pop(L, 1);
+			}
+
+			if (gametype == gametype_id)
+			{
+				teamsingame = gt->teams.num;
+				G_UpdateTeamSelection();
+			}
+		}
+		else
+		{
+			teamlist_t *teamlist = *((teamlist_t **)luaL_checkudata(L, 3, META_TEAMLIST));
+
+			memcpy(&gt->teams, teamlist, sizeof(teamlist_t));
+
+			if (gametype == gametype_id)
+			{
+				teamsingame = gt->teams.num;
+				G_UpdateTeamSelection();
+			}
+		}
+		break;
+	default:
+		return luaL_error(L, LUA_QL("gametype_t") " has no field named " LUA_QS, gametype_opt[field]);
 	}
 	return 0;
 }
@@ -2032,6 +2089,313 @@ static int gametype_num(lua_State *L)
 
 	lua_pushinteger(L, gt-gametypes);
 	return 1;
+}
+
+///////////
+// TEAMS //
+///////////
+
+enum team_e
+{
+	team_name,
+	team_flag_name,
+	team_flag,
+	team_flag_mobj_type,
+	team_color,
+	team_weapon_color,
+	team_missile_color,
+	team_icon,
+	team_icon_flag,
+	team_icon_got_flag,
+	team_icon_missing_flag
+};
+
+const char *const team_opt[] = {
+	"name",
+	"flag_name",
+	"flag",
+	"flag_mobj_type",
+	"color",
+	"weapon_color",
+	"missile_color",
+	"icon",
+	"flag_icon",
+	"captured_flag_icon",
+	"missing_flag_icon",
+	NULL,
+};
+
+static int team_fields_ref = LUA_NOREF;
+
+static int lib_getTeams(lua_State *L)
+{
+	INT16 i;
+	lua_remove(L, 1);
+
+	i = luaL_checkinteger(L, 1);
+	if (i < 0 || i >= numteams)
+		return luaL_error(L, "teams[] index %d out of range (0 - %d)", i, numteams-1);
+	LUA_PushUserdata(L, &teams[i], META_GAMETYPE);
+	return 1;
+}
+
+static int set_team_field(lua_State *L, team_t *team, enum team_e field)
+{
+	switch (field)
+	{
+	case team_name:
+		Z_Free(team->name);
+		team->name = Z_StrDup(luaL_checkstring(L, 3));
+		G_UpdateTeamSelection();
+		break;
+	case team_flag_name:
+		Z_Free(team->flag_name);
+		team->flag_name = Z_StrDup(luaL_checkstring(L, 3));
+		break;
+	case team_flag:
+		team->flag = (UINT16)luaL_checkinteger(L, 3);
+		break;
+	case team_flag_mobj_type:
+	{
+		mobjtype_t type = luaL_checkinteger(L, 3);
+		if (type >= NUMMOBJTYPES)
+		{
+			luaL_error(L, "mobj type %d out of range (0 - %d)", type, NUMMOBJTYPES-1);
+			return 0;
+		}
+		team->flag_mobj_type = type;
+		break;
+	}
+	case team_color:
+	{
+		UINT16 newcolor = (UINT16)luaL_checkinteger(L, 3);
+		if (newcolor >= numskincolors)
+		{
+			luaL_error(L, "skincolor %d out of range (0 - %d).", newcolor, numskincolors-1);
+			return 0;
+		}
+		team->color = newcolor;
+		break;
+	}
+	case team_weapon_color:
+	{
+		UINT16 newcolor = (UINT16)luaL_checkinteger(L, 3);
+		if (newcolor >= numskincolors)
+		{
+			luaL_error(L, "skincolor %d out of range (0 - %d).", newcolor, numskincolors-1);
+			return 0;
+		}
+		team->weapon_color = newcolor;
+		break;
+	}
+	case team_missile_color:
+	{
+		UINT16 newcolor = (UINT16)luaL_checkinteger(L, 3);
+		if (newcolor >= numskincolors)
+		{
+			luaL_error(L, "skincolor %d out of range (0 - %d).", newcolor, numskincolors-1);
+			return 0;
+		}
+		team->missile_color = newcolor;
+		break;
+	}
+	case team_icon:
+		G_SetTeamIcon(team - teams, TEAM_ICON, luaL_checkstring(L, 3));
+		ST_LoadTeamIcons();
+		break;
+	case team_icon_flag:
+		G_SetTeamIcon(team - teams, TEAM_ICON_FLAG, luaL_checkstring(L, 3));
+		ST_LoadTeamIcons();
+		break;
+	case team_icon_got_flag:
+		G_SetTeamIcon(team - teams, TEAM_ICON_GOT_FLAG, luaL_checkstring(L, 3));
+		ST_LoadTeamIcons();
+		break;
+	case team_icon_missing_flag:
+		G_SetTeamIcon(team - teams, TEAM_ICON_MISSING_FLAG, luaL_checkstring(L, 3));
+		ST_LoadTeamIcons();
+		break;
+	default:
+		return -1;
+	}
+	return 1;
+}
+
+static int lib_setTeams(lua_State *L)
+{
+	UINT32 teamnum;
+	team_t *team;
+	lua_remove(L, 1);
+	{
+		teamnum = luaL_checkinteger(L, 1);
+		if (teamnum >= numteams)
+			return luaL_error(L, "teams[] index %d out of range (0 - %d)", teamnum, numteams-1);
+		team = &teams[teamnum];
+	}
+	luaL_checktype(L, 2, LUA_TTABLE);
+	lua_remove(L, 1);
+	lua_settop(L, 1);
+
+	if (hud_running)
+		return luaL_error(L, "Do not alter team data in HUD rendering code!");
+	if (hook_cmd_running)
+		return luaL_error(L, "Do not alter team data in CMD building code!");
+
+	G_FreeTeamData(teamnum);
+
+	memset(team, 0, sizeof(team_t));
+
+	lua_pushnil(L);
+	while (lua_next(L, 1)) {
+		const char *str = luaL_checkstring(L, 2);
+		int field = -1;
+
+		for (int i = 0; team_opt[i]; i++) {
+			if (fastcmp(str, team_opt[i]))
+			{
+				field = i;
+				break;
+			}
+		}
+
+		if (field != -1)
+			set_team_field(L, team, field);
+		else
+			luaL_error(L, LUA_QL("team_t") " has no field named " LUA_QS, str);
+
+		lua_pop(L, 1);
+	}
+	return 0;
+}
+
+// #teams -> numteams
+static int lib_teamslen(lua_State *L)
+{
+	lua_pushinteger(L, numteams);
+	return 1;
+}
+
+static int team_get(lua_State *L)
+{
+	team_t *team = *((team_t **)luaL_checkudata(L, 1, META_GAMETYPE));
+	enum team_e field = Lua_optoption(L, 2, team_name, team_fields_ref);
+
+	I_Assert(team != NULL);
+	I_Assert(team >= teams);
+
+	switch (field)
+	{
+	case team_name:
+		lua_pushstring(L, team->name);
+		break;
+	case team_flag_name:
+		lua_pushstring(L, team->flag_name);
+		break;
+	case team_flag:
+		lua_pushinteger(L, team->flag);
+		break;
+	case team_flag_mobj_type:
+		lua_pushinteger(L, team->flag_mobj_type);
+		break;
+	case team_color:
+		lua_pushinteger(L, team->color);
+		break;
+	case team_weapon_color:
+		lua_pushinteger(L, team->weapon_color);
+		break;
+	case team_missile_color:
+		lua_pushinteger(L, team->missile_color);
+		break;
+	case team_icon:
+		if (G_HasTeamIcon(team - teams, TEAM_ICON))
+			lua_pushstring(L, G_GetTeamIcon(team - teams, TEAM_ICON));
+		else
+			lua_pushnil(L);
+		break;
+	case team_icon_flag:
+		if (G_HasTeamIcon(team - teams, TEAM_ICON_FLAG))
+			lua_pushstring(L, G_GetTeamIcon(team - teams, TEAM_ICON_FLAG));
+		else
+			lua_pushnil(L);
+		break;
+	case team_icon_got_flag:
+		if (G_HasTeamIcon(team - teams, TEAM_ICON_GOT_FLAG))
+			lua_pushstring(L, G_GetTeamIcon(team - teams, TEAM_ICON_GOT_FLAG));
+		else
+			lua_pushnil(L);
+		break;
+	case team_icon_missing_flag:
+		if (G_HasTeamIcon(team - teams, TEAM_ICON_MISSING_FLAG))
+			lua_pushstring(L, G_GetTeamIcon(team - teams, TEAM_ICON_MISSING_FLAG));
+		else
+			lua_pushnil(L);
+		break;
+	default:
+		return luaL_error(L, LUA_QL("team_t") " has no field named " LUA_QS, lua_tostring(L, 2));
+	}
+	return 1;
+}
+
+static int team_set(lua_State *L)
+{
+	team_t *team = *((team_t **)luaL_checkudata(L, 1, META_GAMETYPE));
+	enum team_e field = Lua_optoption(L, 2, -1, team_fields_ref);
+
+	if (!lua_lumploading)
+		return luaL_error(L, "Do not alter team data from within a hook or coroutine!");
+	if (hud_running)
+		return luaL_error(L, "Do not alter team data in HUD rendering code!");
+	if (hook_cmd_running)
+		return luaL_error(L, "Do not alter team data in CMD building code!");
+
+	I_Assert(team != NULL);
+	I_Assert(team >= teams);
+
+	if (set_team_field(L, team, field) < 0)
+		return luaL_error(L, LUA_QL("team_t") " has no field named " LUA_QS, lua_tostring(L, 2));
+
+	return 0;
+}
+
+static int team_num(lua_State *L)
+{
+	team_t *team = *((team_t **)luaL_checkudata(L, 1, META_GAMETYPE));
+
+	I_Assert(team != NULL);
+	I_Assert(team >= teams);
+
+	lua_pushinteger(L, team-teams);
+	return 1;
+}
+
+static int teamlist_len(lua_State *L)
+{
+	teamlist_t *teamlist = *((teamlist_t **)luaL_checkudata(L, 1, META_TEAMLIST));
+	lua_pushinteger(L, teamlist->num);
+	return 1;
+}
+
+static int teamlist_get(lua_State *L)
+{
+	teamlist_t *teamlist = *((teamlist_t **)luaL_checkudata(L, 1, META_TEAMLIST));
+	int i = luaL_checkinteger(L, 2);
+	if (i < 0 || i > teamlist->num)
+		return luaL_error(L, "list index %d out of range (1 - %d)", i, teamlist->num);
+	lua_pushinteger(L, teamlist->list[i - 1]);
+	return 1;
+}
+
+static int teamlist_set(lua_State *L)
+{
+	teamlist_t *teamlist = *((teamlist_t **)luaL_checkudata(L, 1, META_TEAMLIST));
+	int i = luaL_checkinteger(L, 2);
+	if (i < 0 || i > teamlist->num)
+		return luaL_error(L, "list index %d out of range (1 - %d)", i, teamlist->num);
+	int team = luaL_checkinteger(L, 3);
+	if (team < 0 || team >= numteams)
+		return luaL_error(L, "team index %d out of range (0 - %d)", i, numteams - 1);
+	teamlist->list[i - 1] = (UINT8)team;
+	return 0;
 }
 
 //////////////////////////////
@@ -2085,6 +2449,30 @@ int LUA_InfoLib(lua_State *L)
 	lua_pop(L, 1);
 
 	gametype_fields_ref = Lua_CreateFieldTable(L, gametype_opt);
+
+	luaL_newmetatable(L, META_TEAM);
+		lua_pushcfunction(L, team_get);
+		lua_setfield(L, -2, "__index");
+
+		lua_pushcfunction(L, team_set);
+		lua_setfield(L, -2, "__newindex");
+
+		lua_pushcfunction(L, team_num);
+		lua_setfield(L, -2, "__len");
+	lua_pop(L, 1);
+
+	team_fields_ref = Lua_CreateFieldTable(L, team_opt);
+
+	luaL_newmetatable(L, META_TEAMLIST);
+		lua_pushcfunction(L, teamlist_get);
+		lua_setfield(L, -2, "__index");
+
+		lua_pushcfunction(L, teamlist_set);
+		lua_setfield(L, -2, "__newindex");
+
+		lua_pushcfunction(L, teamlist_len);
+		lua_setfield(L, -2, "__len");
+	lua_pop(L, 1);
 
 	luaL_newmetatable(L, META_SKINCOLOR);
 		lua_pushcfunction(L, skincolor_get);
@@ -2261,6 +2649,19 @@ int LUA_InfoLib(lua_State *L)
 			lua_setfield(L, -2, "__len");
 		lua_setmetatable(L, -2);
 	lua_setglobal(L, "gametypes");
+
+	lua_newuserdata(L, 0);
+		lua_createtable(L, 0, 2);
+			lua_pushcfunction(L, lib_getTeams);
+			lua_setfield(L, -2, "__index");
+
+			lua_pushcfunction(L, lib_setTeams);
+			lua_setfield(L, -2, "__newindex");
+
+			lua_pushcfunction(L, lib_teamslen);
+			lua_setfield(L, -2, "__len");
+		lua_setmetatable(L, -2);
+	lua_setglobal(L, "teams");
 
 	luaL_newmetatable(L, META_LUABANKS);
 		lua_pushcfunction(L, lib_getluabanks);

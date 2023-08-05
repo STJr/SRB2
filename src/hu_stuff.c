@@ -2323,13 +2323,13 @@ static void HU_Draw32TeamTabRankings(playersort_t *tab, INT32 whiteplayer)
 		greycheck = greycheckdef;
 		supercheck = supercheckdef;
 
-		if (tab[i].team == TEAM_RED) //red
+		if (tab[i].team == G_GetTeam(1)) //red
 		{
 			redplayers++;
 			x = 14 + (BASEVIDWIDTH/2);
 			y = (redplayers * 9) + 20;
 		}
-		else if (tab[i].team == TEAM_BLUE) //blue
+		else if (tab[i].team == G_GetTeam(2)) //blue
 		{
 			blueplayers++;
 			x = 14;
@@ -2409,7 +2409,7 @@ void HU_DrawTeamTabRankings(playersort_t *tab, INT32 whiteplayer)
 		if (players[tab[i].num].spectator)
 			continue; //ignore them.
 
-		if (tab[i].team == TEAM_RED) //red
+		if (tab[i].team == G_GetTeam(1)) //red
 		{
 			if (redplayers++ > 8)
 			{
@@ -2417,7 +2417,7 @@ void HU_DrawTeamTabRankings(playersort_t *tab, INT32 whiteplayer)
 				break; // don't make more loops than we need to.
 			}
 		}
-		else if (tab[i].team == TEAM_BLUE) //blue
+		else if (tab[i].team == G_GetTeam(2)) //blue
 		{
 			if (blueplayers++ > 8)
 			{
@@ -2448,14 +2448,14 @@ void HU_DrawTeamTabRankings(playersort_t *tab, INT32 whiteplayer)
 		if (players[tab[i].num].spectator)
 			continue; //ignore them.
 
-		if (tab[i].team == TEAM_RED) //red
+		if (tab[i].team == G_GetTeam(1)) //red
 		{
 			if (redplayers++ > 8)
 				continue;
 			x = 32 + (BASEVIDWIDTH/2);
 			y = (redplayers * 16) + 16;
 		}
-		else if (tab[i].team == TEAM_BLUE) //blue
+		else if (tab[i].team == G_GetTeam(2)) //blue
 		{
 			if (blueplayers++ > 8)
 				continue;

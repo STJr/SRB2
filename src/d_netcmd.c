@@ -4262,7 +4262,7 @@ void D_GameTypeChanged(INT32 lastgametype)
 	// When swapping to a gametype that supports spectators,
 	// make everyone a spectator initially.
 	// Averted with GTR_NOSPECTATORSPAWN.
-	if (!splitscreen && (G_GametypeHasSpectators()))
+	if (!splitscreen && G_GametypeHasSpectators())
 	{
 		INT32 i;
 		for (i = 0; i < MAXPLAYERS; i++)

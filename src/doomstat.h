@@ -406,7 +406,7 @@ typedef struct
 {
 	char *name;
 	char *flag_name;
-	UINT8 flag;
+	UINT16 flag;
 	UINT32 flag_mobj_type;
 	UINT16 color;
 	UINT16 weapon_color;
@@ -416,6 +416,8 @@ typedef struct
 
 extern team_t teams[MAXTEAMS];
 extern UINT8 numteams;
+
+extern char *teamnames[MAXTEAMS];
 
 #define NUMGAMETYPEFREESLOTS 128
 
@@ -486,6 +488,12 @@ enum
 
 typedef struct
 {
+	UINT8 num;
+	UINT8 list[MAXTEAMS];
+} teamlist_t;
+
+typedef struct
+{
 	char *name;
 	char *constant_name;
 	UINT32 rules;
@@ -494,8 +502,7 @@ typedef struct
 	INT16 rankings_type;
 	INT32 pointlimit;
 	INT32 timelimit;
-	UINT8 numteams;
-	UINT8 teams[MAXTEAMS];
+	teamlist_t teams;
 } gametype_t;
 
 extern gametype_t gametypes[NUMGAMETYPES];

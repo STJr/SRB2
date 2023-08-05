@@ -473,7 +473,7 @@ static CV_PossibleValue_t dummymares_cons_t[] = {
 	{-1, "END"}, {0,"Overall"}, {1,"Mare 1"}, {2,"Mare 2"}, {3,"Mare 3"}, {4,"Mare 4"}, {5,"Mare 5"}, {6,"Mare 6"}, {7,"Mare 7"}, {8,"Mare 8"}, {0,NULL}
 };
 
-CV_PossibleValue_t dummyteam_cons_t[MAXTEAMS + 1];
+CV_PossibleValue_t dummyteam_cons_t[MAXTEAMS + 2];
 
 consvar_t cv_dummyteam = CVAR_INIT ("dummyteam", "Spectator", CV_HIDEN, dummyteam_cons_t, NULL);
 
@@ -6992,18 +6992,7 @@ static void M_ConfirmTeamChange(INT32 choice)
 
 	M_ClearMenus(true);
 
-	switch (cv_dummyteam.value)
-	{
-		case 0:
-			COM_ImmedExecute("changeteam spectator");
-			break;
-		case 1:
-			COM_ImmedExecute("changeteam red");
-			break;
-		case 2:
-			COM_ImmedExecute("changeteam blue");
-			break;
-	}
+	COM_ImmedExecute(va("changeteam %d", cv_dummyteam.value));
 }
 
 static void M_Options(INT32 choice)

@@ -3465,8 +3465,10 @@ gametype_t gametypes[NUMGAMETYPES] = {
 		// default settings for match: timelimit 10 mins, no pointlimit
 		.timelimit = 10,
 		.pointlimit = 0,
-		.numteams = 2,
-		.teams = { TEAM_RED, TEAM_BLUE }
+		.teams = {
+			.num = 2,
+			.list = { TEAM_RED, TEAM_BLUE }
+		}
 	},
 	// GT_TAG
 	{
@@ -3499,8 +3501,10 @@ gametype_t gametypes[NUMGAMETYPES] = {
 		// default settings for CTF: no timelimit, pointlimit 5
 		.timelimit = 0,
 		.pointlimit = 5,
-		.numteams = 2,
-		.teams = { TEAM_RED, TEAM_BLUE }
+		.teams = {
+			.num = 2,
+			.list = { TEAM_RED, TEAM_BLUE }
+		}
 	},
 };
 
@@ -3525,6 +3529,8 @@ team_t teams[MAXTEAMS] = {
 	}
 };
 
+char *teamnames[MAXTEAMS];
+
 static void G_InitTeams(void)
 {
 	numteams = 3;
@@ -3532,6 +3538,7 @@ static void G_InitTeams(void)
 
 	teams[TEAM_NONE].name = Z_StrDup("None");
 	teams[TEAM_NONE].flag_name = Z_StrDup("Thingmabob");
+	teamnames[TEAM_NONE] = Z_StrDup("NONE");
 
 	teams[TEAM_RED].name = Z_StrDup("Red");
 	teams[TEAM_RED].flag_name = Z_StrDup("Red Flag");
@@ -3539,6 +3546,7 @@ static void G_InitTeams(void)
 	teams[TEAM_RED].icons[TEAM_ICON_FLAG] = Z_StrDup("RFLAGICO");
 	teams[TEAM_RED].icons[TEAM_ICON_GOT_FLAG] = Z_StrDup("GOTRFLAG");
 	teams[TEAM_RED].icons[TEAM_ICON_MISSING_FLAG] = Z_StrDup("NONICON2");
+	teamnames[TEAM_RED] = Z_StrDup("RED");
 
 	teams[TEAM_BLUE].name = Z_StrDup("Blue");
 	teams[TEAM_BLUE].flag_name = Z_StrDup("Blue Flag");
@@ -3546,6 +3554,7 @@ static void G_InitTeams(void)
 	teams[TEAM_BLUE].icons[TEAM_ICON_FLAG] = Z_StrDup("BFLAGICO");
 	teams[TEAM_BLUE].icons[TEAM_ICON_GOT_FLAG] = Z_StrDup("GOTBFLAG");
 	teams[TEAM_BLUE].icons[TEAM_ICON_MISSING_FLAG] = Z_StrDup("NONICON");
+	teamnames[TEAM_BLUE] = Z_StrDup("BLUE");
 
 	G_UpdateTeamSelection();
 }
@@ -3572,11 +3581,20 @@ void G_UpdateTeamSelection(void)
 		i++;
 	}
 
-	for (UINT8 j = 1; j < teamsingame; j++, i++)
+	if (G_GametypeHasTeams())
 	{
-		UINT8 team = G_GetTeam(j);
-		dummyteam_cons_t[i].value = team;
-		dummyteam_cons_t[i].strvalue = teams[team].name;
+		for (UINT8 j = 1; j < teamsingame; j++, i++)
+		{
+			UINT8 team = G_GetTeam(j);
+			dummyteam_cons_t[i].value = team;
+			dummyteam_cons_t[i].strvalue = teams[team].name;
+		}
+	}
+	else
+	{
+		dummyteam_cons_t[i].value = 1;
+		dummyteam_cons_t[i].strvalue = "Playing";
+		i++;
 	}
 
 	dummyteam_cons_t[i].value = 0;
@@ -3584,6 +3602,7 @@ void G_UpdateTeamSelection(void)
 
 	cv_dummyteam.defaultvalue = dummyteam_cons_t[0].strvalue;
 	cv_dummyteam.value = 0;
+	cv_dummyteam.string = cv_dummyteam.defaultvalue;
 }
 
 //
@@ -3595,9 +3614,9 @@ void G_SetGametype(INT16 gtype)
 	gametyperules = gametypes[gametype].rules;
 
 	if (G_GametypeHasTeams())
-		teamsingame = gametypes[gametype].numteams + 1;
+		teamsingame = gametypes[gametype].teams.num + 1;
 	else
-		teamsingame = 3;
+		teamsingame = 0;
 
 	G_UpdateTeamSelection();
 }
@@ -3804,7 +3823,10 @@ boolean G_GametypeUsesCoopStarposts(void)
 //
 boolean G_GametypeHasTeams(void)
 {
-	return (gametyperules & GTR_TEAMS);
+	if (gametyperules & GTR_TEAMS)
+		return gametypes[gametype].teams.num > 0;
+
+	return false;
 }
 
 //
@@ -3885,10 +3907,10 @@ UINT32 G_TOLFlag(INT32 pgametype)
 
 UINT8 G_GetGametypeTeam(UINT8 gtype, UINT8 team)
 {
-	if (team == TEAM_NONE || team >= gametypes[gtype].numteams + 1)
+	if (team == TEAM_NONE || team >= gametypes[gtype].teams.num + 1)
 		return TEAM_NONE;
 
-	return gametypes[gtype].teams[team - 1] % MAXTEAMS;
+	return gametypes[gtype].teams.list[team - 1] % MAXTEAMS;
 }
 
 UINT8 G_GetTeam(UINT8 team)
@@ -3980,6 +4002,39 @@ boolean G_HasTeamIcon(UINT8 team, UINT8 icon_type)
 		return false;
 
 	return true;
+}
+
+void G_SetTeamIcon(UINT8 team, UINT8 icon_type, const char *icon)
+{
+	if (team >= numteams || icon_type >= TEAM_ICON_MAX)
+		return;
+
+	Z_Free(teams[team].icons[icon_type]);
+	teams[team].icons[icon_type] = NULL;
+	if (icon)
+		teams[team].icons[icon_type] = Z_StrDup(icon);
+}
+
+void G_FreeTeamData(UINT8 team)
+{
+	if (team >= numteams)
+		return;
+
+	team_t *team_ptr = &teams[team];
+
+	if (team_ptr->name)
+		Z_Free(team_ptr->name);
+	if (team_ptr->flag_name)
+		Z_Free(team_ptr->flag_name);
+
+	for (UINT8 i = 0; i < TEAM_ICON_MAX; i++)
+	{
+		Z_Free(team_ptr->icons[i]);
+		team_ptr->icons[i] = NULL;
+	}
+
+	team_ptr->name = NULL;
+	team_ptr->flag_name = NULL;
 }
 
 /** Select a random map with the given typeoflevel flags.
