@@ -3949,7 +3949,7 @@ boolean P_IsFlagAtBase(mobjtype_t flag)
 {
 	thinker_t *think;
 	mobj_t *mo;
-	sectorspecialflags_t specialflag = (flag == MT_REDFLAG) ? SSF_REDTEAMBASE : SSF_BLUETEAMBASE;
+	sectorspecialflags_t specialflag = (flag == teams[TEAM_RED].flag_mobj_type) ? SSF_REDTEAMBASE : SSF_BLUETEAMBASE;
 
 	for (think = thlist[THINK_MOBJ].next; think != &thlist[THINK_MOBJ]; think = think->next)
 	{
@@ -4661,7 +4661,7 @@ static void P_ProcessTeamBase(player_t *player, UINT8 team)
 
 	HU_SetCEchoFlags(V_AUTOFADEOUT|V_ALLOWLOWERCASE);
 	HU_SetCEchoDuration(5);
-	HU_DoCEcho(va(M_GetText("%s%s\200\\CAPTURED THE %s%s FLAG\200.\\\\\\\\"), GetChatColorForSkincolor(G_GetTeamColor(team)), player_names[player-players], GetChatColorForSkincolor(teams[otherteam].color), G_GetTeamName(otherteam)));
+	HU_DoCEcho(va(M_GetText("%s%s\200\\captured the %s%s\200.\\\\\\\\"), GetChatColorForSkincolor(G_GetTeamColor(team)), player_names[player-players], GetChatColorForSkincolor(G_GetTeamColor(otherteam)), G_GetTeamFlagName(otherteam)));
 
 	if (splitscreen || players[consoleplayer].ctfteam == team)
 		S_StartSound(NULL, sfx_flgcap);
