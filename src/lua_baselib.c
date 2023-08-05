@@ -155,6 +155,7 @@ static const struct {
 	{META_SFXINFO,      "sfxinfo_t"},
 	{META_SKINCOLOR,    "skincolor_t"},
 	{META_COLORRAMP,    "skincolor_t.ramp"},
+	{META_GAMETYPE,     "gametype_t"},
 	{META_SPRITEINFO,   "spriteinfo_t"},
 	{META_PIVOTLIST,    "spriteframepivot_t[]"},
 	{META_FRAMEPIVOT,   "spriteframepivot_t"},
@@ -3550,8 +3551,8 @@ static int lib_gAddGametype(lua_State *L)
 	const char *k;
 	lua_Integer i;
 
-	const char *gtname = NULL;
-	const char *gtconst = NULL;
+	char *gtname = NULL;
+	char *gtconst = NULL;
 	const char *gtdescription = NULL;
 	INT16 newgtidx = 0;
 	UINT32 newgtrules = 0;

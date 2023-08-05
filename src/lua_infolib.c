@@ -1902,6 +1902,140 @@ static int colorramp_len(lua_State *L)
 	return 1;
 }
 
+///////////////
+// GAMETYPES //
+///////////////
+
+static int lib_getGametypes(lua_State *L)
+{
+	INT16 i;
+	lua_remove(L, 1);
+
+	i = luaL_checkinteger(L, 1);
+	if (i < 0 || i >= gametypecount)
+		return luaL_error(L, "gametypes[] index %d out of range (0 - %d)", i, gametypecount-1);
+	LUA_PushUserdata(L, &gametypes[i], META_GAMETYPE);
+	return 1;
+}
+
+// #gametypes -> gametypecount
+static int lib_gametypeslen(lua_State *L)
+{
+	lua_pushinteger(L, gametypecount);
+	return 1;
+}
+
+enum gametype_e
+{
+	gametype_name,
+	gametype_rules,
+	gametype_typeoflevel,
+	gametype_intermission_type,
+	gametype_rankings_type,
+	gametype_pointlimit,
+	gametype_timelimit
+};
+
+const char *const gametype_opt[] = {
+	"name",
+	"rules",
+	"type_of_level",
+	"intermission_type",
+	"rankings_type",
+	"point_limit",
+	"time_limit",
+	NULL,
+};
+
+static int gametype_fields_ref = LUA_NOREF;
+
+static int gametype_get(lua_State *L)
+{
+	gametype_t *gt = *((gametype_t **)luaL_checkudata(L, 1, META_GAMETYPE));
+	enum gametype_e field = Lua_optoption(L, 2, gametype_name, gametype_fields_ref);
+
+	I_Assert(gt != NULL);
+	I_Assert(gt >= gametypes);
+
+	switch (field)
+	{
+	case gametype_name:
+		lua_pushstring(L, gt->name);
+		break;
+	case gametype_rules:
+		lua_pushinteger(L, gt->rules);
+		break;
+	case gametype_typeoflevel:
+		lua_pushinteger(L, gt->typeoflevel);
+		break;
+	case gametype_intermission_type:
+		lua_pushinteger(L, gt->intermission_type);
+		break;
+	case gametype_rankings_type:
+		lua_pushinteger(L, gt->rankings_type);
+		break;
+	case gametype_pointlimit:
+		lua_pushinteger(L, gt->pointlimit);
+		break;
+	case gametype_timelimit:
+		lua_pushinteger(L, gt->timelimit);
+		break;
+	}
+	return 1;
+}
+
+static int gametype_set(lua_State *L)
+{
+	gametype_t *gt = *((gametype_t **)luaL_checkudata(L, 1, META_GAMETYPE));
+	enum gametype_e field = Lua_optoption(L, 2, -1, gametype_fields_ref);
+
+	if (hud_running)
+		return luaL_error(L, "Do not alter gametype data in HUD rendering code!");
+	if (hook_cmd_running)
+		return luaL_error(L, "Do not alter gametype data in CMD building code!");
+
+	I_Assert(gt != NULL);
+	I_Assert(gt >= gametypes);
+
+	switch (field)
+	{
+	case gametype_name:
+		Z_Free(gt->name);
+		gt->name = Z_StrDup(luaL_checkstring(L, 3));
+		break;
+	case gametype_rules:
+		gt->rules = luaL_checkinteger(L, 3);
+		break;
+	case gametype_typeoflevel:
+		gt->typeoflevel = luaL_checkinteger(L, 3);
+		break;
+	case gametype_intermission_type:
+		gt->intermission_type = luaL_checkinteger(L, 3);
+		break;
+	case gametype_rankings_type:
+		gt->rankings_type = luaL_checkinteger(L, 3);
+		break;
+	case gametype_pointlimit:
+		gt->pointlimit = luaL_checkinteger(L, 3);
+		break;
+	case gametype_timelimit:
+		gt->timelimit = luaL_checkinteger(L, 3);
+		break;
+	}
+	return 0;
+}
+
+static int gametype_num(lua_State *L)
+{
+	gametype_t *gt = *((gametype_t **)luaL_checkudata(L, 1, META_GAMETYPE));
+
+	I_Assert(gt != NULL);
+	I_Assert(gt >= gametypes);
+
+	lua_pushinteger(L, gt-gametypes);
+	return 1;
+}
+
 //////////////////////////////
 //
 // Now push all these functions into the Lua state!
@@ -1919,6 +2053,7 @@ int LUA_InfoLib(lua_State *L)
 
 	LUA_RegisterUserdataMetatable(L, META_STATE, state_get, state_set, state_num);
 	LUA_RegisterUserdataMetatable(L, META_MOBJINFO, mobjinfo_get, mobjinfo_set, mobjinfo_num);
+	LUA_RegisterUserdataMetatable(L, META_GAMETYPE, gametype_get, gametype_set, gametype_num);
 	LUA_RegisterUserdataMetatable(L, META_SKINCOLOR, skincolor_get, skincolor_set, skincolor_num);
 	LUA_RegisterUserdataMetatable(L, META_COLORRAMP, colorramp_get, colorramp_set, colorramp_len);
 	LUA_RegisterUserdataMetatable(L, META_SFXINFO, sfxinfo_get, sfxinfo_set, sfxinfo_num);
@@ -1934,6 +2069,7 @@ int LUA_InfoLib(lua_State *L)
 	LUA_RegisterGlobalUserdata(L, "spr2defaults", lib_getSpr2default, lib_setSpr2default, lib_spr2namelen);
 	LUA_RegisterGlobalUserdata(L, "states", lib_getState, lib_setState, lib_statelen);
 	LUA_RegisterGlobalUserdata(L, "mobjinfo", lib_getMobjInfo, lib_setMobjInfo, lib_mobjinfolen);
+	LUA_RegisterGlobalUserdata(L, "gametypes", lib_getGametypes, NULL, lib_gametypeslen);
 	LUA_RegisterGlobalUserdata(L, "skincolors", lib_getSkinColor, lib_setSkinColor, lib_skincolorslen);
 	LUA_RegisterGlobalUserdata(L, "spriteinfo", lib_getSpriteInfo, lib_setSpriteInfo, lib_spriteinfolen);
 	LUA_RegisterGlobalUserdata(L, "sfxinfo", lib_getSfxInfo, lib_setSfxInfo, lib_sfxlen);

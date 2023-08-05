@@ -389,8 +389,9 @@ typedef struct
 
 extern mapheader_t* mapheaderinfo[NUMMAPS];
 
-// Gametypes
 #define NUMGAMETYPEFREESLOTS 128
+
+// Gametypes
 enum GameType
 {
 	GT_COOP = 0, // also used in single player
@@ -457,8 +458,8 @@ enum
 
 typedef struct
 {
-	const char *name;
-	const char *constant_name;
+	char *name;
+	char *constant_name;
 	UINT32 rules;
 	UINT32 typeoflevel;
 	UINT8 intermission_type;

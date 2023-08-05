@@ -991,6 +991,7 @@ enum
 	ARCH_SKINCOLOR,
 	ARCH_MOUSE,
 	ARCH_SKIN,
+	ARCH_GAMETYPE,
 
 	ARCH_TEND=0xFF,
 };
@@ -1020,6 +1021,7 @@ static const struct {
 	{META_SKINCOLOR,   ARCH_SKINCOLOR},
 	{META_MOUSE,    ARCH_MOUSE},
 	{META_SKIN,     ARCH_SKIN},
+	{META_GAMETYPE, ARCH_GAMETYPE},
 	{NULL,          ARCH_NULL}
 };
 
@@ -1348,6 +1350,13 @@ static UINT8 ArchiveValue(int TABLESINDEX, int myindex)
 			WRITEUINT8(save_p, skin - skins); // UINT8 because MAXSKINS is only 32
 			break;
 		}
+		case ARCH_GAMETYPE:
+		{
+			gametype_t *gt = *((gametype_t **)lua_touserdata(gL, myindex));
+			WRITEUINT8(save_p, ARCH_GAMETYPE);
+			WRITEUINT8(save_p, gt - gametypes);
+			break;
+		}
 		default:
 			WRITEUINT8(save_p, ARCH_NULL);
 			return 2;
@@ -1596,6 +1605,9 @@ static UINT8 UnArchiveValue(int TABLESINDEX)
 		break;
 	case ARCH_SKIN:
 		LUA_PushUserdata(gL, &skins[READUINT8(save_p)], META_SKIN);
+		break;
+	case ARCH_GAMETYPE:
+		LUA_PushUserdata(gL, &gametypes[READUINT8(save_p)], META_GAMETYPE);
 		break;
 	case ARCH_TEND:
 		return 1;
