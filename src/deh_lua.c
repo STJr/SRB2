@@ -308,8 +308,8 @@ static int ScanConstants(lua_State *L, boolean mathlib, const char *word)
 	}
 	else if (fastncmp("GT_", word, 3)) {
 		p = word;
-		for (i = 0; Gametype_ConstantNames[i]; i++)
-			if (fastcmp(p, Gametype_ConstantNames[i])) {
+		for (i = 0; i < gametypecount; i++)
+			if (fastcmp(p, gametypes[i].constant_name)) {
 				CacheAndPushConstant(L, word, i);
 				return 1;
 			}

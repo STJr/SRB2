@@ -497,7 +497,7 @@ UINT8 M_CampaignWarpIsCheat(INT32 gt, INT32 mapnum, gamedata_t *data)
 		return true;
 	}
 
-	if ((gametypedefaultrules[gt] & GTR_CAMPAIGN) == 0)
+	if ((gametypes[gt].rules & GTR_CAMPAIGN) == 0)
 	{
 		// Not a campaign, do whatever you want.
 		return false;

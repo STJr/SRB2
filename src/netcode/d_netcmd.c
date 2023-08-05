@@ -326,10 +326,6 @@ consvar_t cv_numlaps = CVAR_INIT ("numlaps", "4", CV_NETVAR|CV_CALL|CV_NOINIT|CV
 static CV_PossibleValue_t basenumlaps_cons_t[] = {{1, "MIN"}, {50, "MAX"}, {0, "Map default"}, {0, NULL}};
 consvar_t cv_basenumlaps = CVAR_INIT ("basenumlaps", "Map default", CV_SAVE|CV_NETVAR|CV_CALL|CV_CHEAT|CV_ALLOWLUA, basenumlaps_cons_t, BaseNumLaps_OnChange);
 
-// Point and time limits for every gametype
-INT32 pointlimits[NUMGAMETYPES];
-INT32 timelimits[NUMGAMETYPES];
-
 // log elemental hazards -- not a netvar, is local to current player
 consvar_t cv_hazardlog = CVAR_INIT ("hazardlog", "Yes", 0, CV_YesNo, NULL);
 
@@ -442,15 +438,7 @@ const char *netxcmdnames[MAXNETXCMD - 1] =
   */
 void D_RegisterServerCommands(void)
 {
-	INT32 i;
-
-	for (i = 0; i < NUMGAMETYPES; i++)
-	{
-		gametype_cons_t[i].value = i;
-		gametype_cons_t[i].strvalue = Gametype_Names[i];
-	}
-	gametype_cons_t[NUMGAMETYPES].value = 0;
-	gametype_cons_t[NUMGAMETYPES].strvalue = NULL;
+	G_UpdateGametypeSelections();
 
 	RegisterNetXCmd(XD_NAMEANDCOLOR, Got_NameAndColor);
 	RegisterNetXCmd(XD_WEAPONPREF, Got_WeaponPref);
@@ -1708,7 +1696,7 @@ void D_MapChange(INT32 mapnum, INT32 newgametype, boolean pultmode, boolean rese
 	}
 	CONS_Debug(DBG_GAMELOGIC, "Map change: mapnum=%d gametype=%d ultmode=%d resetplayers=%d delay=%d skipprecutscene=%d\n",
 	           mapnum, newgametype, pultmode, resetplayers, delay, skipprecutscene);
-	if ((netgame || multiplayer) && !((gametype == newgametype) && (gametypedefaultrules[newgametype] & GTR_CAMPAIGN)))
+	if ((netgame || multiplayer) && !((gametype == newgametype) && (gametypes[newgametype].rules & GTR_CAMPAIGN)))
 		FLS = false;
 
 	if (delay != 2)
@@ -1956,7 +1944,7 @@ static void Command_Map_f(void)
 		{
 			// The player wants us to trek on anyway.  Do so.
 			fromlevelselect = false;
-			set_cheated = ((gametypedefaultrules[newgametype] & GTR_CAMPAIGN) == GTR_CAMPAIGN);
+			set_cheated = ((gametypes[newgametype].rules & GTR_CAMPAIGN) == GTR_CAMPAIGN);
 		}
 	}
 	else
@@ -1964,7 +1952,7 @@ static void Command_Map_f(void)
 		fromlevelselect =
 			( netgame || multiplayer ) &&
 			newgametype == gametype    &&
-			(gametypedefaultrules[newgametype] & GTR_CAMPAIGN);
+			(gametypes[newgametype].rules & GTR_CAMPAIGN);
 	}
 
 	// Prevent warping to locked levels
@@ -3834,7 +3822,7 @@ static void Command_ShowGametype_f(void)
 
 	// get name string for current gametype
 	if (gametype >= 0 && gametype < gametypecount)
-		gametypestr = Gametype_Names[gametype];
+		gametypestr = gametypes[gametype].name;
 
 	if (gametypestr)
 		CONS_Printf(M_GetText("Current gametype is %s\n"), gametypestr);
@@ -4096,9 +4084,9 @@ void D_GameTypeChanged(INT32 lastgametype)
 		const char *oldgt = NULL, *newgt = NULL;
 
 		if (lastgametype >= 0 && lastgametype < gametypecount)
-			oldgt = Gametype_Names[lastgametype];
+			oldgt = gametypes[lastgametype].name;
 		if (gametype >= 0 && lastgametype < gametypecount)
-			newgt = Gametype_Names[gametype];
+			newgt = gametypes[gametype].name;
 
 		if (oldgt && newgt)
 			CONS_Printf(M_GetText("Gametype was changed from %s to %s\n"), oldgt, newgt);
@@ -4112,55 +4100,13 @@ void D_GameTypeChanged(INT32 lastgametype)
 		else if (!cv_itemrespawn.changed || lastgametype == GT_COMPETITION)
 			CV_SetValue(&cv_itemrespawn, 1);
 
-		switch (gametype)
+		if (!cv_timelimit.changed && !cv_pointlimit.changed) // user hasn't changed limits
 		{
-			case GT_COOP:
-				if (!cv_itemrespawntime.changed)
-					CV_Set(&cv_itemrespawntime, cv_itemrespawntime.defaultvalue); // respawn normally
-				break;
-			case GT_MATCH:
-			case GT_TEAMMATCH:
-				if (!cv_timelimit.changed && !cv_pointlimit.changed) // user hasn't changed limits
-				{
-					// default settings for match: timelimit 10 mins, no pointlimit
-					CV_SetValue(&cv_pointlimit, 0);
-					CV_SetValue(&cv_timelimit, 10);
-				}
-				if (!cv_itemrespawntime.changed)
-					CV_Set(&cv_itemrespawntime, cv_itemrespawntime.defaultvalue); // respawn normally
-				break;
-			case GT_TAG:
-			case GT_HIDEANDSEEK:
-				if (!cv_timelimit.changed && !cv_pointlimit.changed) // user hasn't changed limits
-				{
-					// default settings for tag: 5 mins, no pointlimit
-					// Note that tag mode also uses an alternate timing mechanism in tandem with timelimit.
-					CV_SetValue(&cv_timelimit, 5);
-					CV_SetValue(&cv_pointlimit, 0);
-				}
-				if (!cv_itemrespawntime.changed)
-					CV_Set(&cv_itemrespawntime, cv_itemrespawntime.defaultvalue); // respawn normally
-				break;
-			case GT_CTF:
-				if (!cv_timelimit.changed && !cv_pointlimit.changed) // user hasn't changed limits
-				{
-					// default settings for CTF: no timelimit, pointlimit 5
-					CV_SetValue(&cv_timelimit, 0);
-					CV_SetValue(&cv_pointlimit, 5);
-				}
-				if (!cv_itemrespawntime.changed)
-					CV_Set(&cv_itemrespawntime, cv_itemrespawntime.defaultvalue); // respawn normally
-				break;
-			default:
-				if (!cv_timelimit.changed && !cv_pointlimit.changed) // user hasn't changed limits
-				{
-					CV_SetValue(&cv_timelimit, timelimits[gametype]);
-					CV_SetValue(&cv_pointlimit, pointlimits[gametype]);
-				}
-				if (!cv_itemrespawntime.changed)
-					CV_Set(&cv_itemrespawntime, cv_itemrespawntime.defaultvalue); // respawn normally
-				break;
+			CV_SetValue(&cv_timelimit, gametypes[gametype].timelimit);
+			CV_SetValue(&cv_pointlimit, gametypes[gametype].pointlimit);
 		}
+		if (!cv_itemrespawntime.changed)
+			CV_Set(&cv_itemrespawntime, cv_itemrespawntime.defaultvalue); // respawn normally
 	}
 	else if (!multiplayer && !netgame)
 	{

@@ -98,7 +98,6 @@ extern boolean multiplayer;
 
 extern INT16 gametype;
 extern UINT32 gametyperules;
-extern INT16 gametypecount;
 
 extern boolean splitscreen;
 extern boolean circuitmap; // Does this level have 'circuit mode'?
@@ -410,7 +409,7 @@ enum GameType
 	GT_LASTFREESLOT = GT_FIRSTFREESLOT + NUMGAMETYPEFREESLOTS - 1,
 	NUMGAMETYPES
 };
-// If you alter this list, update deh_tables.c, MISC_ChangeGameTypeMenu in m_menu.c, and Gametype_Names in g_game.c
+// If you alter this list, update deh_tables.c, MISC_ChangeGameTypeMenu in m_menu.c, and gametypes in g_game.c
 
 // Gametype rules
 enum GameTypeRules
@@ -449,13 +448,27 @@ enum GameTypeRules
 	GTR_CUTSCENES        = 1<<31, // Play cutscenes, ending, credits, and evaluation
 };
 
-// String names for gametypes
-extern const char *Gametype_Names[NUMGAMETYPES];
-extern const char *Gametype_ConstantNames[NUMGAMETYPES];
+enum
+{
+	RANKINGS_DEFAULT,
+	RANKINGS_COMPETITION,
+	RANKINGS_RACE
+};
 
-// Point and time limits for every gametype
-extern INT32 pointlimits[NUMGAMETYPES];
-extern INT32 timelimits[NUMGAMETYPES];
+typedef struct
+{
+	const char *name;
+	const char *constant_name;
+	UINT32 rules;
+	UINT32 typeoflevel;
+	UINT8 intermission_type;
+	INT16 rankings_type;
+	INT32 pointlimit;
+	INT32 timelimit;
+} gametype_t;
+
+extern gametype_t gametypes[NUMGAMETYPES];
+extern INT16 gametypecount;
 
 // TypeOfLevel things
 enum TypeOfLevel

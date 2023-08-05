@@ -3392,84 +3392,117 @@ void G_ExitLevel(void)
 	}
 }
 
-// See also the enum GameType in doomstat.h
-const char *Gametype_Names[NUMGAMETYPES] =
-{
-	"Co-op", // GT_COOP
-	"Competition", // GT_COMPETITION
-	"Race", // GT_RACE
-
-	"Match", // GT_MATCH
-	"Team Match", // GT_TEAMMATCH
-
-	"Tag", // GT_TAG
-	"Hide & Seek", // GT_HIDEANDSEEK
-
-	"CTF" // GT_CTF
-};
-
-// For dehacked
-const char *Gametype_ConstantNames[NUMGAMETYPES] =
-{
-	"GT_COOP", // GT_COOP
-	"GT_COMPETITION", // GT_COMPETITION
-	"GT_RACE", // GT_RACE
-
-	"GT_MATCH", // GT_MATCH
-	"GT_TEAMMATCH", // GT_TEAMMATCH
-
-	"GT_TAG", // GT_TAG
-	"GT_HIDEANDSEEK", // GT_HIDEANDSEEK
-
-	"GT_CTF" // GT_CTF
-};
-
-// Gametype rules
-UINT32 gametypedefaultrules[NUMGAMETYPES] =
-{
-	// Co-op
-	GTR_CAMPAIGN|GTR_LIVES|GTR_FRIENDLY|GTR_SPAWNENEMIES|GTR_ALLOWEXIT|GTR_EMERALDHUNT|GTR_EMERALDTOKENS|GTR_SPECIALSTAGES|GTR_CUTSCENES,
-	// Competition
-	GTR_RACE|GTR_LIVES|GTR_SPAWNENEMIES|GTR_EMERALDTOKENS|GTR_SPAWNINVUL|GTR_ALLOWEXIT,
-	// Race
-	GTR_RACE|GTR_SPAWNENEMIES|GTR_SPAWNINVUL|GTR_ALLOWEXIT,
-
-	// Match
-	GTR_RINGSLINGER|GTR_FIRSTPERSON|GTR_SPECTATORS|GTR_POINTLIMIT|GTR_TIMELIMIT|GTR_OVERTIME|GTR_POWERSTONES|GTR_DEATHMATCHSTARTS|GTR_SPAWNINVUL|GTR_RESPAWNDELAY|GTR_PITYSHIELD|GTR_DEATHPENALTY,
-	// Team Match
-	GTR_RINGSLINGER|GTR_FIRSTPERSON|GTR_SPECTATORS|GTR_TEAMS|GTR_POINTLIMIT|GTR_TIMELIMIT|GTR_OVERTIME|GTR_DEATHMATCHSTARTS|GTR_SPAWNINVUL|GTR_RESPAWNDELAY|GTR_PITYSHIELD,
-
-	// Tag
-	GTR_RINGSLINGER|GTR_FIRSTPERSON|GTR_TAG|GTR_SPECTATORS|GTR_POINTLIMIT|GTR_TIMELIMIT|GTR_OVERTIME|GTR_STARTCOUNTDOWN|GTR_BLINDFOLDED|GTR_DEATHMATCHSTARTS|GTR_SPAWNINVUL|GTR_RESPAWNDELAY,
-	// Hide and Seek
-	GTR_RINGSLINGER|GTR_FIRSTPERSON|GTR_TAG|GTR_SPECTATORS|GTR_POINTLIMIT|GTR_TIMELIMIT|GTR_OVERTIME|GTR_STARTCOUNTDOWN|GTR_HIDEFROZEN|GTR_BLINDFOLDED|GTR_DEATHMATCHSTARTS|GTR_SPAWNINVUL|GTR_RESPAWNDELAY,
-
-	// CTF
-	GTR_RINGSLINGER|GTR_FIRSTPERSON|GTR_SPECTATORS|GTR_TEAMS|GTR_TEAMFLAGS|GTR_POINTLIMIT|GTR_TIMELIMIT|GTR_OVERTIME|GTR_POWERSTONES|GTR_DEATHMATCHSTARTS|GTR_SPAWNINVUL|GTR_RESPAWNDELAY|GTR_PITYSHIELD,
+gametype_t gametypes[NUMGAMETYPES] = {
+	// GT_COOP
+	{
+		.name = "Co-op",
+		.constant_name = "GT_COOP",
+		.rules = GTR_CAMPAIGN|GTR_LIVES|GTR_FRIENDLY|GTR_SPAWNENEMIES|GTR_ALLOWEXIT|GTR_EMERALDHUNT|GTR_EMERALDTOKENS|GTR_SPECIALSTAGES|GTR_CUTSCENES,
+		.typeoflevel = TOL_COOP,
+		.intermission_type = int_coop,
+		.rankings_type = RANKINGS_DEFAULT,
+	},
+	// GT_COMPETITION
+	{
+		.name = "Competition",
+		.constant_name = "GT_COMPETITION",
+		.rules = GTR_RACE|GTR_LIVES|GTR_SPAWNENEMIES|GTR_EMERALDTOKENS|GTR_SPAWNINVUL|GTR_ALLOWEXIT,
+		.typeoflevel = TOL_COMPETITION,
+		.intermission_type = int_comp,
+		.rankings_type = RANKINGS_COMPETITION,
+	},
+	// GT_RACE
+	{
+		.name = "Race",
+		.constant_name = "GT_RACE",
+		.rules = GTR_RACE|GTR_SPAWNENEMIES|GTR_SPAWNINVUL|GTR_ALLOWEXIT,
+		.typeoflevel = TOL_RACE,
+		.intermission_type = int_race,
+		.rankings_type = RANKINGS_RACE,
+	},
+	// GT_MATCH
+	{
+		.name = "Match",
+		.constant_name = "GT_MATCH",
+		.rules = GTR_RINGSLINGER|GTR_FIRSTPERSON|GTR_SPECTATORS|GTR_POINTLIMIT|GTR_TIMELIMIT|GTR_OVERTIME|GTR_POWERSTONES|GTR_DEATHMATCHSTARTS|GTR_SPAWNINVUL|GTR_RESPAWNDELAY|GTR_PITYSHIELD|GTR_DEATHPENALTY,
+		.typeoflevel = TOL_MATCH,
+		.intermission_type = int_match,
+		.rankings_type = RANKINGS_DEFAULT,
+		// default settings for match: timelimit 10 mins, no pointlimit
+		.timelimit = 10,
+		.pointlimit = 0
+	},
+	// GT_TEAMMATCH
+	{
+		.name = "Team Match",
+		.constant_name = "GT_TEAMMATCH",
+		.rules = GTR_RINGSLINGER|GTR_FIRSTPERSON|GTR_SPECTATORS|GTR_TEAMS|GTR_POINTLIMIT|GTR_TIMELIMIT|GTR_OVERTIME|GTR_DEATHMATCHSTARTS|GTR_SPAWNINVUL|GTR_RESPAWNDELAY|GTR_PITYSHIELD,
+		.typeoflevel = TOL_MATCH,
+		.intermission_type = int_teammatch,
+		.rankings_type = RANKINGS_DEFAULT,
+		// default settings for match: timelimit 10 mins, no pointlimit
+		.timelimit = 10,
+		.pointlimit = 0
+	},
+	// GT_TAG
+	{
+		.name = "Tag",
+		.constant_name = "GT_TAG",
+		.rules = GTR_RINGSLINGER|GTR_FIRSTPERSON|GTR_TAG|GTR_SPECTATORS|GTR_POINTLIMIT|GTR_TIMELIMIT|GTR_OVERTIME|GTR_STARTCOUNTDOWN|GTR_BLINDFOLDED|GTR_DEATHMATCHSTARTS|GTR_SPAWNINVUL|GTR_RESPAWNDELAY,
+		.typeoflevel = TOL_TAG,
+		.intermission_type = int_match,
+		.rankings_type = RANKINGS_DEFAULT,
+		// default settings for tag: 5 mins, no pointlimit
+		// Note that tag mode also uses an alternate timing mechanism in tandem with timelimit.
+		.timelimit = 5,
+		.pointlimit = 0
+	},
+	// GT_HIDEANDSEEK
+	{
+		.name = "Hide & Seek",
+		.constant_name = "GT_HIDEANDSEEK",
+		.rules = GTR_RINGSLINGER|GTR_FIRSTPERSON|GTR_TAG|GTR_SPECTATORS|GTR_POINTLIMIT|GTR_TIMELIMIT|GTR_OVERTIME|GTR_STARTCOUNTDOWN|GTR_HIDEFROZEN|GTR_BLINDFOLDED|GTR_DEATHMATCHSTARTS|GTR_SPAWNINVUL|GTR_RESPAWNDELAY,
+		.typeoflevel = TOL_TAG,
+		.intermission_type = int_match,
+		.rankings_type = RANKINGS_DEFAULT,
+		// default settings for tag: 5 mins, no pointlimit
+		// Note that tag mode also uses an alternate timing mechanism in tandem with timelimit.
+		.timelimit = 5,
+		.pointlimit = 0
+	},
+	// GT_CTF
+	{
+		.name = "CTF",
+		.constant_name = "GT_CTF",
+		.rules = GTR_RINGSLINGER|GTR_FIRSTPERSON|GTR_SPECTATORS|GTR_TEAMS|GTR_TEAMFLAGS|GTR_POINTLIMIT|GTR_TIMELIMIT|GTR_OVERTIME|GTR_POWERSTONES|GTR_DEATHMATCHSTARTS|GTR_SPAWNINVUL|GTR_RESPAWNDELAY|GTR_PITYSHIELD,
+		.typeoflevel = TOL_CTF,
+		.intermission_type = int_ctf,
+		.rankings_type = RANKINGS_DEFAULT,
+		// default settings for CTF: no timelimit, pointlimit 5
+		.timelimit = 0,
+		.pointlimit = 5
+	},
 };
 
 //
-// Sets a new gametype.
+// Sets a new gametype, also setting gametype rules accordingly.
 //
 void G_SetGametype(INT16 gtype)
 {
 	gametype = gtype;
-	gametyperules = gametypedefaultrules[gametype];
+	gametyperules = gametypes[gametype].rules;
 }
 
 //
-// G_AddGametype
-//
-// Add a gametype. Returns the new gametype number.
+// Adds a gametype. Returns the new gametype number.
 //
 INT16 G_AddGametype(UINT32 rules)
 {
 	INT16 newgtype = gametypecount;
 	gametypecount++;
 
-	// Set gametype rules.
-	gametypedefaultrules[newgtype] = rules;
-	Gametype_Names[newgtype] = "???";
+	gametypes[newgtype].name = "???";
+	gametypes[newgtype].rules = rules;
 
 	// Update gametype_cons_t accordingly.
 	G_UpdateGametypeSelections();
@@ -3477,78 +3510,27 @@ INT16 G_AddGametype(UINT32 rules)
 	return newgtype;
 }
 
-//
-// G_AddGametypeConstant
-//
-// Self-explanatory. Filters out "bad" characters.
-//
 void G_AddGametypeConstant(INT16 gtype, const char *newgtconst)
 {
-	size_t r = 0; // read
-	size_t w = 0; // write
 	char *gtconst = Z_Calloc(strlen(newgtconst) + 4, PU_STATIC, NULL);
 	char *tmpconst = Z_Calloc(strlen(newgtconst) + 1, PU_STATIC, NULL);
 
-	// Copy the gametype name.
 	strcpy(tmpconst, newgtconst);
-
-	// Make uppercase.
 	strupr(tmpconst);
-
-	// Prepare to write the new constant string now.
 	strcpy(gtconst, "GT_");
 
-	// Remove characters that will not be allowed in the constant string.
-	for (; r < strlen(tmpconst); r++)
+	size_t w = strlen(gtconst);
+
+	for (size_t r = 0; r < strlen(tmpconst); r++)
 	{
-		boolean writechar = true;
 		char rc = tmpconst[r];
-		switch (rc)
-		{
-			// Space, at sign and question mark
-			case ' ':
-			case '@':
-			case '?':
-			// Used for operations
-			case '+':
-			case '-':
-			case '*':
-			case '/':
-			case '%':
-			case '^':
-			case '&':
-			case '!':
-			// Part of Lua's syntax
-			case '#':
-			case '=':
-			case '~':
-			case '<':
-			case '>':
-			case '(':
-			case ')':
-			case '{':
-			case '}':
-			case '[':
-			case ']':
-			case ':':
-			case ';':
-			case ',':
-			case '.':
-				writechar = false;
-				break;
-		}
-		if (writechar)
-		{
-			gtconst[3 + w] = rc;
-			w++;
-		}
+		if (isalpha(rc) || isdigit(rc))
+			gtconst[w++] = rc;
 	}
 
-	// Free the temporary string.
 	Z_Free(tmpconst);
 
-	// Finally, set the constant string.
-	Gametype_ConstantNames[gtype] = gtconst;
+	gametypes[gtype].constant_name = gtconst;
 }
 
 //
@@ -3562,7 +3544,7 @@ void G_UpdateGametypeSelections(void)
 	for (i = 0; i < gametypecount; i++)
 	{
 		gametype_cons_t[i].value = i;
-		gametype_cons_t[i].strvalue = Gametype_Names[i];
+		gametype_cons_t[i].strvalue = gametypes[i].name;
 	}
 	gametype_cons_t[NUMGAMETYPES].value = 0;
 	gametype_cons_t[NUMGAMETYPES].strvalue = NULL;
@@ -3581,38 +3563,6 @@ void G_SetGametypeDescription(INT16 gtype, char *descriptiontext, UINT8 leftcolo
 	gametypedesc[gtype].col[0] = leftcolor;
 	gametypedesc[gtype].col[1] = rightcolor;
 }
-
-// Gametype rankings
-INT16 gametyperankings[NUMGAMETYPES] =
-{
-	GT_COOP,
-	GT_COMPETITION,
-	GT_RACE,
-
-	GT_MATCH,
-	GT_TEAMMATCH,
-
-	GT_TAG,
-	GT_HIDEANDSEEK,
-
-	GT_CTF,
-};
-
-// Gametype to TOL (Type Of Level)
-UINT32 gametypetol[NUMGAMETYPES] =
-{
-	TOL_COOP, // Co-op
-	TOL_COMPETITION, // Competition
-	TOL_RACE, // Race
-
-	TOL_MATCH, // Match
-	TOL_MATCH, // Team Match
-
-	TOL_TAG, // Tag
-	TOL_TAG, // Hide and Seek
-
-	TOL_CTF, // CTF
-};
 
 tolinfo_t TYPEOFLEVEL[NUMTOLNAMES] = {
 	{"SOLO",TOL_SP},
@@ -3667,7 +3617,7 @@ void G_AddTOL(UINT32 newtol, const char *tolname)
 //
 void G_AddGametypeTOL(INT16 gtype, UINT32 newtol)
 {
-	gametypetol[gtype] = newtol;
+	gametypes[gtype].typeoflevel = newtol;
 }
 
 //
@@ -3680,7 +3630,7 @@ INT32 G_GetGametypeByName(const char *gametypestr)
 	INT32 i;
 
 	for (i = 0; i < gametypecount; i++)
-		if (!stricmp(gametypestr, Gametype_Names[i]))
+		if (!stricmp(gametypestr, gametypes[i].name))
 			return i;
 
 	return -1; // unknown gametype
@@ -3826,7 +3776,8 @@ UINT32 G_TOLFlag(INT32 pgametype)
 {
 	if (!multiplayer)
 		return TOL_SP;
-	return gametypetol[pgametype];
+
+	return gametypes[pgametype].typeoflevel;
 }
 
 /** Select a random map with the given typeoflevel flags.

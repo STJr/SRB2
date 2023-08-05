@@ -164,7 +164,6 @@ static INT32 tallydonetic = -1;
 static INT32 endtic = -1;
 
 intertype_t intertype = int_none;
-intertype_t intermissiontypes[NUMGAMETYPES];
 
 static huddrawlist_h luahuddrawlist_intermission;
 
@@ -1274,25 +1273,10 @@ void Y_Ticker(void)
 //
 void Y_DetermineIntermissionType(void)
 {
-	// set to int_none initially
-	intertype = int_none;
+	intertype = gametypes[gametype].intermission_type;
 
-	if (intermissiontypes[gametype] != int_none)
-		intertype = intermissiontypes[gametype];
-	else if (gametype == GT_COOP)
-		intertype = (G_IsSpecialStage(gamemap)) ? int_spec : int_coop;
-	else if (gametype == GT_TEAMMATCH)
-		intertype = int_teammatch;
-	else if (gametype == GT_MATCH
-	 || gametype == GT_TAG
-	 || gametype == GT_HIDEANDSEEK)
-		intertype = int_match;
-	else if (gametype == GT_RACE)
-		intertype = int_race;
-	else if (gametype == GT_COMPETITION)
-		intertype = int_comp;
-	else if (gametype == GT_CTF)
-		intertype = int_ctf;
+	if (intertype == int_coop && G_IsSpecialStage(gamemap))
+		intertype = int_spec;
 }
 
 //
