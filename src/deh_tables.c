@@ -5317,6 +5317,11 @@ struct int_const_s const INT_CONST[] = {
 	{"int_race",int_race},
 	{"int_comp",int_comp},
 
+	// Ranking types
+	{"RANKINGS_DEFAULT",RANKINGS_DEFAULT},
+	{"RANKINGS_COMPETITION",RANKINGS_COMPETITION},
+	{"RANKINGS_RACE",RANKINGS_RACE},
+
 	// Jingles (jingletype_t)
 	{"JT_NONE",JT_NONE},
 	{"JT_OTHER",JT_OTHER},
