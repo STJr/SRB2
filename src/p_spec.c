@@ -4672,7 +4672,7 @@ static void P_ProcessTeamBase(player_t *player, UINT8 team)
 	player->gotflag &= ~teamflag;
 	mo->flags &= ~MF_SPECIAL;
 	mo->fuse = TICRATE;
-	mo->spawnpoint = flagpoints[team];
+	mo->spawnpoint = flagpoints[otherteam];
 	mo->flags2 |= MF2_JUSTATTACKED;
 	teamscores[team]++;
 	P_AddPlayerScore(player, 250);
