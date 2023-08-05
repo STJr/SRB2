@@ -2269,9 +2269,9 @@ static void Got_Clearscores(UINT8 **cp, INT32 playernum)
 
 static UINT8 GetTeamByName(const char *name)
 {
-	for (UINT8 i = TEAM_RED; i < teamsingame; i++)
+	for (UINT8 i = 1; i < teamsingame; i++)
 	{
-		if (!stricmp(name, G_GetTeamName(i)))
+		if (!stricmp(name, G_GetTeamName(G_GetTeam(i))))
 			return i;
 	}
 	return MAXTEAMS;
@@ -2312,7 +2312,11 @@ static void Command_Teamchange_f(void)
 		{
 			UINT8 newteam = MAXTEAMS;
 			if (M_StringOnlyHasDigits(COM_Argv(1)))
+			{
 				newteam = atoi(COM_Argv(1));
+				if (newteam >= teamsingame)
+					newteam = MAXTEAMS;
+			}
 			else
 				newteam = GetTeamByName(COM_Argv(1));
 			if (newteam != MAXTEAMS)
@@ -2326,7 +2330,7 @@ static void Command_Teamchange_f(void)
 		if (!strcasecmp(COM_Argv(1), "spectator") || !strcasecmp(COM_Argv(1), "0"))
 			NetPacket.packet.newteam = 0;
 		else if (!strcasecmp(COM_Argv(1), "playing") || !strcasecmp(COM_Argv(1), "1"))
-			NetPacket.packet.newteam = MAXTEAMS;
+			NetPacket.packet.newteam = 3;
 		else
 			error = true;
 	}
@@ -2359,7 +2363,7 @@ static void Command_Teamchange_f(void)
 	else if (G_GametypeHasSpectators())
 	{
 		if ((players[consoleplayer].spectator && !NetPacket.packet.newteam) ||
-			(!players[consoleplayer].spectator && NetPacket.packet.newteam == MAXTEAMS))
+			(!players[consoleplayer].spectator && NetPacket.packet.newteam == 3))
 			error = true;
 	}
 #ifdef PARANOIA
@@ -2424,7 +2428,11 @@ static void Command_Teamchange2_f(void)
 		{
 			UINT8 newteam = MAXTEAMS;
 			if (M_StringOnlyHasDigits(COM_Argv(1)))
+			{
 				newteam = atoi(COM_Argv(1));
+				if (newteam >= teamsingame)
+					newteam = MAXTEAMS;
+			}
 			else
 				newteam = GetTeamByName(COM_Argv(1));
 			if (newteam != MAXTEAMS)
@@ -2438,7 +2446,7 @@ static void Command_Teamchange2_f(void)
 		if (!strcasecmp(COM_Argv(1), "spectator") || !strcasecmp(COM_Argv(1), "0"))
 			NetPacket.packet.newteam = 0;
 		else if (!strcasecmp(COM_Argv(1), "playing") || !strcasecmp(COM_Argv(1), "1"))
-			NetPacket.packet.newteam = MAXTEAMS;
+			NetPacket.packet.newteam = 3;
 		else
 			error = true;
 	}
@@ -2543,7 +2551,7 @@ static void Command_ServerTeamChange_f(void)
 		else if (!strcasecmp(COM_Argv(2), "notit") || !strcasecmp(COM_Argv(2), "2"))
 			NetPacket.packet.newteam = 2;
 		else if (!strcasecmp(COM_Argv(2), "playing") || !strcasecmp(COM_Argv(2), "3"))
-			NetPacket.packet.newteam = MAXTEAMS;
+			NetPacket.packet.newteam = 3;
 		else if (!strcasecmp(COM_Argv(2), "spectator") || !strcasecmp(COM_Argv(2), "0"))
 			NetPacket.packet.newteam = 0;
 		else
@@ -2557,7 +2565,11 @@ static void Command_ServerTeamChange_f(void)
 		{
 			UINT8 newteam = MAXTEAMS;
 			if (M_StringOnlyHasDigits(COM_Argv(1)))
+			{
 				newteam = atoi(COM_Argv(1));
+				if (newteam >= teamsingame)
+					newteam = MAXTEAMS;
+			}
 			else
 				newteam = GetTeamByName(COM_Argv(1));
 			if (newteam != MAXTEAMS)
@@ -2571,7 +2583,7 @@ static void Command_ServerTeamChange_f(void)
 		if (!strcasecmp(COM_Argv(2), "spectator") || !strcasecmp(COM_Argv(2), "0"))
 			NetPacket.packet.newteam = 0;
 		else if (!strcasecmp(COM_Argv(2), "playing") || !strcasecmp(COM_Argv(2), "1"))
-			NetPacket.packet.newteam = MAXTEAMS;
+			NetPacket.packet.newteam = 3;
 		else
 			error = true;
 	}
@@ -2682,7 +2694,7 @@ static void Got_Teamchange(UINT8 **cp, INT32 playernum)
 		if (((players[playernum].pflags & PF_TAGIT) && NetPacket.packet.newteam == 1) ||
 			(!(players[playernum].pflags & PF_TAGIT) && NetPacket.packet.newteam == 2) ||
 			(players[playernum].spectator && NetPacket.packet.newteam == 0) ||
-			(!players[playernum].spectator && NetPacket.packet.newteam == MAXTEAMS))
+			(!players[playernum].spectator && NetPacket.packet.newteam == 3))
 			return;
 	}
 	else if (G_GametypeHasTeams())
@@ -2694,7 +2706,7 @@ static void Got_Teamchange(UINT8 **cp, INT32 playernum)
 	else if (G_GametypeHasSpectators())
 	{
 		if ((players[playernum].spectator && !NetPacket.packet.newteam) ||
-			(!players[playernum].spectator && NetPacket.packet.newteam == MAXTEAMS))
+			(!players[playernum].spectator && NetPacket.packet.newteam == 3))
 			return;
 	}
 	else
@@ -2708,8 +2720,23 @@ static void Got_Teamchange(UINT8 **cp, INT32 playernum)
 		return;
 	}
 
-	// Don't switch team, just go away, please, go awaayyyy, aaauuauugghhhghgh
-	if (!LUA_HookTeamSwitch(&players[playernum], NetPacket.packet.newteam, players[playernum].spectator, NetPacket.packet.autobalance, NetPacket.packet.scrambled))
+	UINT8 ctfteam = NetPacket.packet.newteam;
+
+	if (G_GametypeHasTeams())
+	{
+		ctfteam = G_GetTeam(ctfteam);
+	}
+	else if (G_TagGametype() || G_GametypeHasSpectators())
+	{
+		if (ctfteam == 3)
+			ctfteam = TEAM_PLAYING;
+		else
+			ctfteam = 0;
+	}
+	else
+		ctfteam = 0;
+
+	if (!LUA_HookTeamSwitch(&players[playernum], ctfteam, players[playernum].spectator, NetPacket.packet.autobalance, NetPacket.packet.scrambled))
 		return;
 
 	//no status changes after hidetime
@@ -2757,7 +2784,7 @@ static void Got_Teamchange(UINT8 **cp, INT32 playernum)
 		break; //Otherwise, you don't need special permissions.
 	}
 
-	if (server && ((NetPacket.packet.newteam < 0 || NetPacket.packet.newteam > 3) || error))
+	if (server && ((NetPacket.packet.newteam < 0 || NetPacket.packet.newteam > MAXTEAMS) || error))
 	{
 		CONS_Alert(CONS_WARNING, M_GetText("Illegal team change received from player %s\n"), player_names[playernum]);
 		SendKick(playernum, KICK_MSG_CON_FAIL | KICK_MSG_KEEP_BODY);
@@ -2812,15 +2839,14 @@ static void Got_Teamchange(UINT8 **cp, INT32 playernum)
 	}
 	else if (G_GametypeHasTeams())
 	{
-		UINT8 team = NetPacket.packet.newteam % MAXTEAMS;
-		if (!team)
+		if (!ctfteam)
 		{
 			players[playernum].ctfteam = 0;
 			players[playernum].spectator = true;
 		}
 		else
 		{
-			players[playernum].ctfteam = team;
+			players[playernum].ctfteam = ctfteam;
 			players[playernum].spectator = false;
 		}
 	}
@@ -2833,20 +2859,23 @@ static void Got_Teamchange(UINT8 **cp, INT32 playernum)
 	}
 
 	if (NetPacket.packet.autobalance)
-		CONS_Printf(M_GetText("%s was autobalanced to %s%s%c.\n"), player_names[playernum], GetChatColorForSkincolor(G_GetTeamColor(NetPacket.packet.newteam)), G_GetTeamName(NetPacket.packet.newteam), '\x80');
+		CONS_Printf(M_GetText("%s was autobalanced to %s%s%c.\n"), player_names[playernum], GetChatColorForSkincolor(G_GetTeamColor(ctfteam)), G_GetTeamName(ctfteam), '\x80');
 	else if (NetPacket.packet.scrambled)
-		CONS_Printf(M_GetText("%s was scrambled to %s%s%c.\n"), player_names[playernum], GetChatColorForSkincolor(G_GetTeamColor(NetPacket.packet.newteam)), G_GetTeamName(NetPacket.packet.newteam), '\x80');
-	else if (NetPacket.packet.newteam == MAXTEAMS)
-		CONS_Printf(M_GetText("%s entered the game.\n"), player_names[playernum]);
-	else if (G_TagGametype() && NetPacket.packet.newteam != 0)
+		CONS_Printf(M_GetText("%s was scrambled to %s%s%c.\n"), player_names[playernum], GetChatColorForSkincolor(G_GetTeamColor(ctfteam)), G_GetTeamName(ctfteam), '\x80');
+	else if (NetPacket.packet.newteam != 0)
 	{
-		if (NetPacket.packet.newteam == 1)
-			CONS_Printf(M_GetText("%s is now IT!\n"), player_names[playernum]);
-		else if (NetPacket.packet.newteam == 2)
-			CONS_Printf(M_GetText("%s is no longer IT!\n"), player_names[playernum]);
+		if (G_TagGametype())
+		{
+			if (NetPacket.packet.newteam == 1)
+				CONS_Printf(M_GetText("%s is now IT!\n"), player_names[playernum]);
+			else if (NetPacket.packet.newteam == 2)
+				CONS_Printf(M_GetText("%s is no longer IT!\n"), player_names[playernum]);
+		}
+		else if (G_GametypeHasTeams())
+			CONS_Printf(M_GetText("%s switched to %s%s%c.\n"), player_names[playernum], GetChatColorForSkincolor(G_GetTeamColor(ctfteam)), G_GetTeamName(ctfteam), '\x80');
+		else
+			CONS_Printf(M_GetText("%s entered the game.\n"), player_names[playernum]);
 	}
-	else if (G_GametypeHasTeams() && NetPacket.packet.newteam != 0)
-		CONS_Printf(M_GetText("%s switched to %s%s%c.\n"), player_names[playernum], GetChatColorForSkincolor(G_GetTeamColor(NetPacket.packet.newteam)), G_GetTeamName(NetPacket.packet.newteam), '\x80');
 	else
 		CONS_Printf(M_GetText("%s became a spectator.\n"), player_names[playernum]);
 
@@ -4322,6 +4351,7 @@ retryscramble:
 	// Randomly place players on teams.
 	if (cv_teamscramble.value == 1)
 	{
+		// TODO
 		maxcomposition = playercount / 2;
 
 		// Now randomly assign players to teams.
@@ -4374,7 +4404,7 @@ retryscramble:
 		{
 			if (repick)
 			{
-				newteam = (INT16)((M_RandomByte() % 2) + TEAM_RED);
+				newteam = (INT16)((M_RandomByte() % 2) + 1);
 				repick = false;
 			}
 			else if (i != 2) // Mystic's secret sauce - ABBA is better than ABAB, so team B doesn't get worse players all around

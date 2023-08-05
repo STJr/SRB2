@@ -223,11 +223,17 @@ void G_UseContinue(void);
 void G_AfterIntermission(void);
 void G_EndGame(void); // moved from y_inter.c/h and renamed
 
+UINT8 G_GetGametypeTeam(UINT8 gtype, UINT8 team);
+UINT8 G_GetTeam(UINT8 team);
+UINT8 G_GetTeamFromTeamFlag(UINT32 flag);
+UINT8 G_GetTeamListFromTeamFlags(UINT8 *teamlist, UINT32 flags);
 const char *G_GetTeamName(UINT8 team);
 const char *G_GetTeamFlagName(UINT8 team);
 UINT16 G_GetTeamColor(UINT8 team);
 UINT16 G_GetTeamWeaponColor(UINT8 team);
 UINT16 G_GetTeamMissileColor(UINT8 team);
+const char *G_GetTeamIcon(UINT8 team, UINT8 icon_type);
+boolean G_HasTeamIcon(UINT8 team, UINT8 icon_type);
 
 void G_Ticker(boolean run);
 boolean G_Responder(event_t *ev);

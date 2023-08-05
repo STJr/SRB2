@@ -3459,7 +3459,9 @@ gametype_t gametypes[NUMGAMETYPES] = {
 		.rankings_type = RANKINGS_DEFAULT,
 		// default settings for match: timelimit 10 mins, no pointlimit
 		.timelimit = 10,
-		.pointlimit = 0
+		.pointlimit = 0,
+		.numteams = 2,
+		.teams = { TEAM_RED, TEAM_BLUE }
 	},
 	// GT_TAG
 	{
@@ -3491,7 +3493,9 @@ gametype_t gametypes[NUMGAMETYPES] = {
 		.rankings_type = RANKINGS_DEFAULT,
 		// default settings for CTF: no timelimit, pointlimit 5
 		.timelimit = 0,
-		.pointlimit = 5
+		.pointlimit = 5,
+		.numteams = 2,
+		.teams = { TEAM_RED, TEAM_BLUE }
 	},
 };
 
@@ -3526,9 +3530,17 @@ static void G_InitTeams(void)
 
 	teams[TEAM_RED].name = Z_StrDup("Red");
 	teams[TEAM_RED].flag_name = Z_StrDup("Red Flag");
+	teams[TEAM_RED].icons[TEAM_ICON] = Z_StrDup("RMATCICO");
+	teams[TEAM_RED].icons[TEAM_ICON_FLAG] = Z_StrDup("RFLAGICO");
+	teams[TEAM_RED].icons[TEAM_ICON_GOT_FLAG] = Z_StrDup("GOTRFLAG");
+	teams[TEAM_RED].icons[TEAM_ICON_MISSING_FLAG] = Z_StrDup("NONICON2");
 
 	teams[TEAM_BLUE].name = Z_StrDup("Blue");
 	teams[TEAM_BLUE].flag_name = Z_StrDup("Blue Flag");
+	teams[TEAM_BLUE].icons[TEAM_ICON] = Z_StrDup("BMATCICO");
+	teams[TEAM_BLUE].icons[TEAM_ICON_FLAG] = Z_StrDup("BFLAGICO");
+	teams[TEAM_BLUE].icons[TEAM_ICON_GOT_FLAG] = Z_StrDup("GOTBFLAG");
+	teams[TEAM_BLUE].icons[TEAM_ICON_MISSING_FLAG] = Z_StrDup("NONICON");
 
 	G_UpdateTeamSelection();
 }
@@ -3546,19 +3558,27 @@ void G_InitGametypes(void)
 
 void G_UpdateTeamSelection(void)
 {
-	UINT8 i;
+	UINT8 i = 0;
 
-	dummyteam_cons_t[0].value = 0;
-	dummyteam_cons_t[0].strvalue = "Spectator";
-
-	for (i = 1; i <= teamsingame; i++)
+	if (G_GametypeHasSpectators())
 	{
-		dummyteam_cons_t[i].value = i;
-		dummyteam_cons_t[i].strvalue = teams[i].name;
+		dummyteam_cons_t[0].value = 0;
+		dummyteam_cons_t[0].strvalue = "Spectator";
+		i++;
+	}
+
+	for (UINT8 j = 1; j < teamsingame; j++, i++)
+	{
+		UINT8 team = G_GetTeam(j);
+		dummyteam_cons_t[i].value = team;
+		dummyteam_cons_t[i].strvalue = teams[team].name;
 	}
 
 	dummyteam_cons_t[i].value = 0;
 	dummyteam_cons_t[i].strvalue = NULL;
+
+	cv_dummyteam.defaultvalue = dummyteam_cons_t[0].strvalue;
+	cv_dummyteam.value = 0;
 }
 
 //
@@ -3568,6 +3588,13 @@ void G_SetGametype(INT16 gtype)
 {
 	gametype = gtype;
 	gametyperules = gametypes[gametype].rules;
+
+	if (G_GametypeHasTeams())
+		teamsingame = gametypes[gametype].numteams + 1;
+	else
+		teamsingame = 3;
+
+	G_UpdateTeamSelection();
 }
 
 //
@@ -3855,6 +3882,49 @@ UINT32 G_TOLFlag(INT32 pgametype)
 	return gametypes[pgametype].typeoflevel;
 }
 
+UINT8 G_GetGametypeTeam(UINT8 gtype, UINT8 team)
+{
+	if (team == TEAM_NONE || team >= gametypes[gtype].numteams + 1)
+		return TEAM_NONE;
+
+	return gametypes[gtype].teams[team - 1] % MAXTEAMS;
+}
+
+UINT8 G_GetTeam(UINT8 team)
+{
+	return G_GetGametypeTeam(gametype, team);
+}
+
+UINT8 G_GetTeamFromTeamFlag(UINT32 flag)
+{
+	for (UINT16 i = 1; i < teamsingame; i++)
+	{
+		UINT32 otherflag = 1 << (i - 1);
+		if (flag == otherflag)
+			return i;
+	}
+
+	return TEAM_NONE;
+}
+
+UINT8 G_GetTeamListFromTeamFlags(UINT8 *teamlist, UINT32 flags)
+{
+	UINT8 count = 0;
+
+	for (UINT16 i = 1; i < teamsingame; i++)
+	{
+		UINT32 otherflag = 1 << (i - 1);
+		if ((flags & otherflag) != 0)
+		{
+			teamlist[count++] = i;
+			if (count == MAXTEAMS)
+				break;
+		}
+	}
+
+	return count;
+}
+
 const char *G_GetTeamName(UINT8 team)
 {
 	if (team >= numteams)
@@ -3893,6 +3963,22 @@ UINT16 G_GetTeamMissileColor(UINT8 team)
 		return SKINCOLOR_NONE;
 
 	return teams[team].missile_color;
+}
+
+const char *G_GetTeamIcon(UINT8 team, UINT8 icon_type)
+{
+	if (team >= numteams || icon_type >= TEAM_ICON_MAX || !teams[team].icons[icon_type])
+		return NULL;
+
+	return teams[team].icons[icon_type];
+}
+
+boolean G_HasTeamIcon(UINT8 team, UINT8 icon_type)
+{
+	if (team >= numteams || icon_type >= TEAM_ICON_MAX || !teams[team].icons[icon_type])
+		return false;
+
+	return true;
 }
 
 /** Select a random map with the given typeoflevel flags.

@@ -41,6 +41,8 @@ void ST_changeDemoView(void);
 void ST_UnloadGraphics(void);
 void ST_LoadGraphics(void);
 
+void ST_LoadTeamIcons(void);
+
 // face load graphics, called when skin changes
 void ST_LoadFaceGraphics(INT32 playernum);
 void ST_ReloadSkinFaceGraphics(void);
@@ -60,6 +62,9 @@ extern tic_t lt_exitticker, lt_endtime;
 
 // return if player a is in the same team as player b
 boolean ST_SameTeam(player_t *a, player_t *b);
+
+patch_t *ST_GetTeamIconImage(UINT8 team, UINT8 icon_type);
+patch_t *ST_GetCurrentTeamIconImage(UINT8 team, UINT8 icon_type);
 
 //--------------------
 // status bar overlay

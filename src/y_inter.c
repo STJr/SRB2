@@ -271,16 +271,10 @@ void Y_LoadIntermissionData(void)
 		case int_ctf:
 		case int_teammatch:
 		{
-			if (!rflagico) //prevent a crash if we haven't cached our team graphics yet
-			{
-				rflagico = W_CachePatchName("RFLAGICO", PU_HUDGFX);
-				bflagico = W_CachePatchName("BFLAGICO", PU_HUDGFX);
-				rmatcico = W_CachePatchName("RMATCICO", PU_HUDGFX);
-				bmatcico = W_CachePatchName("BMATCICO", PU_HUDGFX);
-			}
+			ST_LoadTeamIcons();
 
-			data.match.redflag = (intertype == int_ctf) ? rflagico : rmatcico;
-			data.match.blueflag = (intertype == int_ctf) ? bflagico : bmatcico;
+			data.match.redflag = (intertype == int_ctf) ? ST_GetCurrentTeamIconImage(1, TEAM_ICON_FLAG) : ST_GetCurrentTeamIconImage(1, TEAM_ICON);
+			data.match.blueflag = (intertype == int_ctf) ? ST_GetCurrentTeamIconImage(2, TEAM_ICON_FLAG) : ST_GetCurrentTeamIconImage(2, TEAM_ICON);
 		}
 		/* FALLTHRU */
 		case int_match:

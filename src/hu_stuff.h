@@ -14,6 +14,7 @@
 #ifndef __HU_STUFF_H__
 #define __HU_STUFF_H__
 
+#include "doomstat.h"
 #include "d_event.h"
 #include "w_wad.h"
 #include "r_defs.h"
@@ -88,10 +89,7 @@ extern patch_t *ntb_font[NT_FONTSIZE];
 extern patch_t *nto_font[NT_FONTSIZE];
 extern patch_t *ttlnum[10];
 extern patch_t *emeraldpics[3][8];
-extern patch_t *rflagico;
-extern patch_t *bflagico;
-extern patch_t *rmatcico;
-extern patch_t *bmatcico;
+extern patch_t *teamicons[MAXTEAMS][TEAM_ICON_MAX];
 extern patch_t *tagico;
 extern patch_t *tallminus;
 extern patch_t *tallinfin;

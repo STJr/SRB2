@@ -106,8 +106,6 @@ static patch_t *thundershield;
 static patch_t *invincibility;
 static patch_t *sneakers;
 static patch_t *gravboots;
-static patch_t *nonicon;
-static patch_t *nonicon2;
 static patch_t *nightopianhelper;
 static patch_t *linkfreeze;
 static patch_t *superparaloop;
@@ -131,8 +129,6 @@ static patch_t *capsulefill;
 patch_t *ngradeletters[7];
 static patch_t *minus5sec;
 static patch_t *minicaps;
-static patch_t *gotrflag;
-static patch_t *gotbflag;
 static patch_t *fnshico;
 
 static boolean facefreed[MAXPLAYERS];
@@ -318,11 +314,9 @@ void ST_LoadGraphics(void)
 	gravboots = W_CachePatchName("TVGVICON", PU_HUDGFX);
 
 	tagico = W_CachePatchName("TAGICO", PU_HUDGFX);
-	gotrflag = W_CachePatchName("GOTRFLAG", PU_HUDGFX);
-	gotbflag = W_CachePatchName("GOTBFLAG", PU_HUDGFX);
 	fnshico = W_CachePatchName("FNSHICO", PU_HUDGFX);
-	nonicon = W_CachePatchName("NONICON", PU_HUDGFX);
-	nonicon2 = W_CachePatchName("NONICON2", PU_HUDGFX);
+
+	ST_LoadTeamIcons();
 
 	// NiGHTS HUD things
 	nightopianhelper = W_CachePatchName("NHLPICON", PU_HUDGFX);
@@ -363,6 +357,28 @@ void ST_LoadGraphics(void)
 
 	for (i = 0; i < 7; ++i)
 		ngradeletters[i] = W_CachePatchName(va("GRADE%d", i), PU_HUDGFX);
+}
+
+void ST_LoadTeamIcons(void)
+{
+	for (UINT8 i = 0; i < numteams; i++)
+	{
+		for (UINT8 j = 0; j < TEAM_ICON_MAX; j++)
+			teamicons[i][j] = W_CachePatchName(G_HasTeamIcon(i, j) ? G_GetTeamIcon(i, j) : "MISSING", PU_HUDGFX);
+	}
+}
+
+patch_t *ST_GetTeamIconImage(UINT8 team, UINT8 icon_type)
+{
+	if (team >= numteams || icon_type >= TEAM_ICON_MAX || !teamicons[team][icon_type])
+		return W_CachePatchName("MISSING", PU_PATCH);
+
+	return teamicons[team][icon_type];
+}
+
+patch_t *ST_GetCurrentTeamIconImage(UINT8 team, UINT8 icon_type)
+{
+	return ST_GetTeamIconImage(G_GetTeam(team), icon_type);
 }
 
 // made separate so that skins code can reload custom face graphics
@@ -1578,11 +1594,12 @@ static void ST_drawPowerupHUD(void)
 // CTF flags
 // ---------
 
-	// YOU have a flag. Display a monitor-like icon for it.
+	// YOU have a flag. Display an icon for it.
 	if (stplyr->gotflag)
 	{
+		// TODO
 		flagoffs[q] = ICONSEP;
-		p = (stplyr->gotflag & GF_REDFLAG) ? gotrflag : gotbflag;
+		p = ST_GetCurrentTeamIconImage(G_GetTeamFromTeamFlag(stplyr->gotflag), TEAM_ICON_GOT_FLAG);
 		V_DrawSmallScaledPatch(offs, hudinfo[HUD_POWERUPS].y, V_PERPLAYER|hudinfo[HUD_POWERUPS].f|V_HUDTRANS, p);
 	}
 	else if (flagoffs[q])
@@ -2415,23 +2432,24 @@ static void ST_drawTeamHUD(void)
 	if (F_GetPromptHideHud(0)) // y base is 0
 		return;
 
-	rflagico = W_CachePatchName("RFLAGICO", PU_HUDGFX);
-	bflagico = W_CachePatchName("BFLAGICO", PU_HUDGFX);
-	rmatcico = W_CachePatchName("RMATCICO", PU_HUDGFX);
-	bmatcico = W_CachePatchName("BMATCICO", PU_HUDGFX);
-
 	if (LUA_HudEnabled(hud_teamscores))
 	{
+		patch_t *bmatcico = NULL;
+		patch_t *rmatcico = NULL;
+
 		if (gametyperules & GTR_TEAMFLAGS)
 		{
-			V_DrawSmallScaledPatch(BASEVIDWIDTH/2 - SEP - (bflagico->width / 4), 4, V_HUDTRANS|V_PERPLAYER|V_SNAPTOTOP, bflagico);
-			V_DrawSmallScaledPatch(BASEVIDWIDTH/2 + SEP - (rflagico->width / 4), 4, V_HUDTRANS|V_PERPLAYER|V_SNAPTOTOP, rflagico);
+			bmatcico = ST_GetCurrentTeamIconImage(1, TEAM_ICON_FLAG);
+			rmatcico = ST_GetCurrentTeamIconImage(2, TEAM_ICON_FLAG);
 		}
 		else
 		{
-			V_DrawSmallScaledPatch(BASEVIDWIDTH/2 - SEP - (bmatcico->width / 4), 4, V_HUDTRANS|V_PERPLAYER|V_SNAPTOTOP, bmatcico);
-			V_DrawSmallScaledPatch(BASEVIDWIDTH/2 + SEP - (rmatcico->width / 4), 4, V_HUDTRANS|V_PERPLAYER|V_SNAPTOTOP, rmatcico);
+			bmatcico = ST_GetCurrentTeamIconImage(1, TEAM_ICON);
+			rmatcico = ST_GetCurrentTeamIconImage(2, TEAM_ICON);
 		}
+
+		V_DrawSmallScaledPatch(BASEVIDWIDTH/2 - SEP - (bmatcico->width / 4), 4, V_HUDTRANS|V_PERPLAYER|V_SNAPTOTOP, bmatcico);
+		V_DrawSmallScaledPatch(BASEVIDWIDTH/2 + SEP - (rmatcico->width / 4), 4, V_HUDTRANS|V_PERPLAYER|V_SNAPTOTOP, rmatcico);
 	}
 
 	if (!(gametyperules & GTR_TEAMFLAGS))
@@ -2439,40 +2457,47 @@ static void ST_drawTeamHUD(void)
 	{
 		INT32 i;
 		UINT16 whichflag = 0;
+		UINT16 allflags = 0;
+
+		for (i = 1; i < teamsingame; i++)
+			allflags |= teams[G_GetTeam(i)].flag;
 
 		// Show which flags aren't at base.
 		for (i = 0; i < MAXPLAYERS; i++)
 		{
+			patch_t *rmissing = ST_GetCurrentTeamIconImage(1, TEAM_ICON_MISSING_FLAG);
+			patch_t *bmissing = ST_GetCurrentTeamIconImage(2, TEAM_ICON_MISSING_FLAG);
+
 			// Blue flag isn't at base
-			if (players[i].gotflag & GF_BLUEFLAG && LUA_HudEnabled(hud_teamscores))
-				V_DrawScaledPatch(BASEVIDWIDTH/2 - SEP - (nonicon->width / 2), 0, V_HUDTRANS|V_PERPLAYER|V_SNAPTOTOP, nonicon);
+			if (players[i].gotflag & teams[G_GetTeam(2)].flag && LUA_HudEnabled(hud_teamscores))
+				V_DrawScaledPatch(BASEVIDWIDTH/2 - SEP - (bmissing->width / 2), 0, V_HUDTRANS|V_PERPLAYER|V_SNAPTOTOP, bmissing);
 
 			// Red flag isn't at base
-			if (players[i].gotflag & GF_REDFLAG && LUA_HudEnabled(hud_teamscores))
-				V_DrawScaledPatch(BASEVIDWIDTH/2 + SEP - (nonicon2->width / 2), 0, V_HUDTRANS|V_PERPLAYER|V_SNAPTOTOP, nonicon2);
+			if (players[i].gotflag & teams[G_GetTeam(1)].flag && LUA_HudEnabled(hud_teamscores))
+				V_DrawScaledPatch(BASEVIDWIDTH/2 + SEP - (rmissing->width / 2), 0, V_HUDTRANS|V_PERPLAYER|V_SNAPTOTOP, rmissing);
 
 			whichflag |= players[i].gotflag;
 
-			if ((whichflag & (GF_REDFLAG|GF_BLUEFLAG)) == (GF_REDFLAG|GF_BLUEFLAG))
+			if (whichflag == allflags)
 				break; // both flags were found, let's stop early
 		}
 
 		// Display a countdown timer showing how much time left until the flag returns to base.
 		{
-			if (flagmobjs[TEAM_BLUE] && flagmobjs[TEAM_BLUE]->fuse > 1 && LUA_HudEnabled(hud_teamscores))
-				V_DrawCenteredString(BASEVIDWIDTH/2 - SEP, 8, V_YELLOWMAP|V_HUDTRANS|V_PERPLAYER|V_SNAPTOTOP, va("%u", (flagmobjs[TEAM_BLUE]->fuse / TICRATE)));
+			if (flagmobjs[G_GetTeam(2)] && flagmobjs[G_GetTeam(2)]->fuse > 1 && LUA_HudEnabled(hud_teamscores))
+				V_DrawCenteredString(BASEVIDWIDTH/2 - SEP, 8, V_YELLOWMAP|V_HUDTRANS|V_PERPLAYER|V_SNAPTOTOP, va("%u", (flagmobjs[G_GetTeam(2)]->fuse / TICRATE)));
 
-			if (flagmobjs[TEAM_RED] && flagmobjs[TEAM_RED]->fuse > 1 && LUA_HudEnabled(hud_teamscores))
-				V_DrawCenteredString(BASEVIDWIDTH/2 + SEP, 8, V_YELLOWMAP|V_HUDTRANS|V_PERPLAYER|V_SNAPTOTOP, va("%u", (flagmobjs[TEAM_RED]->fuse / TICRATE)));
+			if (flagmobjs[G_GetTeam(1)] && flagmobjs[G_GetTeam(1)]->fuse > 1 && LUA_HudEnabled(hud_teamscores))
+				V_DrawCenteredString(BASEVIDWIDTH/2 + SEP, 8, V_YELLOWMAP|V_HUDTRANS|V_PERPLAYER|V_SNAPTOTOP, va("%u", (flagmobjs[G_GetTeam(1)]->fuse / TICRATE)));
 		}
 	}
 
 num:
 	if (LUA_HudEnabled(hud_teamscores))
-		V_DrawCenteredString(BASEVIDWIDTH/2 - SEP, 16, V_HUDTRANS|V_PERPLAYER|V_SNAPTOTOP, va("%u", teamscores[TEAM_BLUE]));
-
-	if (LUA_HudEnabled(hud_teamscores))
-		V_DrawCenteredString(BASEVIDWIDTH/2 + SEP, 16, V_HUDTRANS|V_PERPLAYER|V_SNAPTOTOP, va("%u", teamscores[TEAM_RED]));
+	{
+		V_DrawCenteredString(BASEVIDWIDTH/2 - SEP, 16, V_HUDTRANS|V_PERPLAYER|V_SNAPTOTOP, va("%u", teamscores[G_GetTeam(2)]));
+		V_DrawCenteredString(BASEVIDWIDTH/2 + SEP, 16, V_HUDTRANS|V_PERPLAYER|V_SNAPTOTOP, va("%u", teamscores[G_GetTeam(1)]));
+	}
 
 #undef SEP
 }

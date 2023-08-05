@@ -3184,10 +3184,7 @@ static void P_DoPlayerHeadSigns(player_t *player)
 				sign->eflags |= MFE_VERTICALFLIP;
 			}
 
-			if (player->gotflag & GF_REDFLAG)
-				sign->frame = 1|FF_FULLBRIGHT;
-			else //if (player->gotflag & GF_BLUEFLAG)
-				sign->frame = 2|FF_FULLBRIGHT;
+			sign->frame = G_GetTeamFromTeamFlag(player->gotflag) | FF_FULLBRIGHT;
 		}
 	}
 
@@ -8683,7 +8680,7 @@ void P_MovePlayer(player_t *player)
 	// Toss a flag
 	if (G_GametypeHasTeams() && (cmd->buttons & BT_TOSSFLAG) && !(player->powers[pw_super]) && !(player->tossdelay))
 	{
-		if (!(player->gotflag & (GF_REDFLAG|GF_BLUEFLAG)))
+		if (!player->gotflag)
 			P_PlayerEmeraldBurst(player, true); // Toss emeralds
 		else
 			P_PlayerFlagBurst(player, true);
@@ -10502,7 +10499,44 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 	}
 
 	return (x == thiscam->x && y == thiscam->y && z == thiscam->z && angle == thiscam->aiming);
+}
 
+static UINT8 P_GetWorstPerformingTeam(void)
+{
+	INT32 numplayers[MAXTEAMS];
+	INT32 leastscore = TEAM_NONE;
+	INT32 leastplayers = TEAM_NONE;
+
+	for (INT32 i = 0; i < MAXPLAYERS; i++)
+	{
+		if (playeringame[i])
+			numplayers[players[i].ctfteam]++;
+	}
+
+	for (INT32 i = 1; i < teamsingame; i++)
+	{
+		UINT8 team = G_GetTeam(i);
+		UINT8 compareto = leastscore == TEAM_NONE ? G_GetTeam(1) : leastscore;
+
+		if (teamscores[team] < teamscores[compareto])
+		{
+			leastscore = i;
+		}
+
+		compareto = leastplayers == TEAM_NONE ? G_GetTeam(1) : leastplayers;
+
+		if (numplayers[team] < numplayers[compareto])
+		{
+			leastplayers = i;
+		}
+	}
+
+	if (leastplayers != TEAM_NONE)
+		return leastplayers;
+	else if (leastscore != TEAM_NONE)
+		return leastscore;
+
+	return G_GetTeam(P_RandomRange(1, teamsingame - 1));
 }
 
 boolean P_SpectatorJoinGame(player_t *player)
@@ -10519,27 +10553,7 @@ boolean P_SpectatorJoinGame(player_t *player)
 	// Partial code reproduction from p_tick.c autobalance code.
 	else if (G_GametypeHasTeams())
 	{
-		INT32 changeto = 0;
-		INT32 z, numplayers[MAXTEAMS];
-
-		//find a team by num players, score, or random if all else fails.
-		for (z = 0; z < MAXPLAYERS; ++z)
-			if (playeringame[z])
-			{
-				numplayers[players[z].ctfteam]++;
-			}
-		// for z
-
-		if (numplayers[TEAM_BLUE] > numplayers[TEAM_RED])
-			changeto = TEAM_RED;
-		else if (numplayers[TEAM_RED] > numplayers[TEAM_BLUE])
-			changeto = TEAM_BLUE;
-		else if (teamscores[TEAM_BLUE] > teamscores[TEAM_RED])
-			changeto = TEAM_RED;
-		else if (teamscores[TEAM_RED] > teamscores[TEAM_BLUE])
-			changeto = TEAM_BLUE;
-		else
-			changeto = (P_RandomFixed() & 1) + TEAM_RED;
+		UINT8 changeto = P_GetWorstPerformingTeam();
 
 		if (!LUA_HookTeamSwitch(player, changeto, true, false, false))
 			return false;
@@ -10574,7 +10588,7 @@ boolean P_SpectatorJoinGame(player_t *player)
 		// respawn in place and sit there for the rest of the round.
 		if (!((gametyperules & GTR_HIDEFROZEN) && leveltime > (hidetime * TICRATE)))
 		{
-			if (!LUA_HookTeamSwitch(player, 3, true, false, false))
+			if (!LUA_HookTeamSwitch(player, TEAM_PLAYING, true, false, false))
 				return false;
 			if (player->mo)
 			{
