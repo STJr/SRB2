@@ -1324,12 +1324,12 @@ void readgametype(MYFILE *f, char *gtname)
 	gametypes[newgtidx].timelimit = newgttimelimit;
 
 	// Write the new gametype name.
-	gametypes[newgtidx].name = Z_StrDup((const char *)gtname);
+	gametypes[newgtidx].name = Z_StrDup(gtname);
 
 	// Write the constant name.
 	if (gtconst[0] == '\0')
 		strncpy(gtconst, gtname, MAXLINELEN);
-	G_AddGametypeConstant(newgtidx, (const char *)gtconst);
+	G_AddGametypeConstant(newgtidx, gtconst);
 
 	// Update gametype_cons_t accordingly.
 	G_UpdateGametypeSelections();

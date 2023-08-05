@@ -191,6 +191,7 @@ void G_SaveGame(UINT32 slot, INT16 mapnum);
 void G_SaveGameOver(UINT32 slot, boolean modifylives);
 
 void G_SetGametype(INT16 gametype);
+void G_InitGametypes(void);
 INT16 G_AddGametype(UINT32 rules);
 void G_AddGametypeConstant(INT16 gtype, const char *newgtconst);
 void G_UpdateGametypeSelections(void);

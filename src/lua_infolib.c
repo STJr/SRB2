@@ -1899,6 +1899,140 @@ static int colorramp_len(lua_State *L)
 	return 1;
 }
 
+///////////////
+// GAMETYPES //
+///////////////
+
+static int lib_getGametypes(lua_State *L)
+{
+	INT16 i;
+	lua_remove(L, 1);
+
+	i = luaL_checkinteger(L, 1);
+	if (i < 0 || i >= gametypecount)
+		return luaL_error(L, "gametypes[] index %d out of range (0 - %d)", i, gametypecount-1);
+	LUA_PushUserdata(L, &gametypes[i], META_GAMETYPE);
+	return 1;
+}
+
+// #gametypes -> gametypecount
+static int lib_gametypeslen(lua_State *L)
+{
+	lua_pushinteger(L, gametypecount);
+	return 1;
+}
+
+enum gametype_e
+{
+	gametype_name,
+	gametype_rules,
+	gametype_typeoflevel,
+	gametype_intermission_type,
+	gametype_rankings_type,
+	gametype_pointlimit,
+	gametype_timelimit
+};
+
+const char *const gametype_opt[] = {
+	"name",
+	"rules",
+	"type_of_level",
+	"intermission_type",
+	"rankings_type",
+	"point_limit",
+	"time_limit",
+	NULL,
+};
+
+static int gametype_fields_ref = LUA_NOREF;
+
+static int gametype_get(lua_State *L)
+{
+	gametype_t *gt = *((gametype_t **)luaL_checkudata(L, 1, META_GAMETYPE));
+	enum gametype_e field = Lua_optoption(L, 2, gametype_name, gametype_fields_ref);
+
+	I_Assert(gt != NULL);
+	I_Assert(gt >= gametypes);
+
+	switch (field)
+	{
+	case gametype_name:
+		lua_pushstring(L, gt->name);
+		break;
+	case gametype_rules:
+		lua_pushinteger(L, gt->rules);
+		break;
+	case gametype_typeoflevel:
+		lua_pushinteger(L, gt->typeoflevel);
+		break;
+	case gametype_intermission_type:
+		lua_pushinteger(L, gt->intermission_type);
+		break;
+	case gametype_rankings_type:
+		lua_pushinteger(L, gt->rankings_type);
+		break;
+	case gametype_pointlimit:
+		lua_pushinteger(L, gt->pointlimit);
+		break;
+	case gametype_timelimit:
+		lua_pushinteger(L, gt->timelimit);
+		break;
+	}
+	return 1;
+}
+
+static int gametype_set(lua_State *L)
+{
+	gametype_t *gt = *((gametype_t **)luaL_checkudata(L, 1, META_GAMETYPE));
+	enum gametype_e field = Lua_optoption(L, 2, -1, gametype_fields_ref);
+
+	if (hud_running)
+		return luaL_error(L, "Do not alter gametype data in HUD rendering code!");
+	if (hook_cmd_running)
+		return luaL_error(L, "Do not alter gametype data in CMD building code!");
+
+	I_Assert(gt != NULL);
+	I_Assert(gt >= gametypes);
+
+	switch (field)
+	{
+	case gametype_name:
+		Z_Free(gt->name);
+		gt->name = Z_StrDup(luaL_checkstring(L, 3));
+		break;
+	case gametype_rules:
+		gt->rules = luaL_checkinteger(L, 3);
+		break;
+	case gametype_typeoflevel:
+		gt->typeoflevel = luaL_checkinteger(L, 3);
+		break;
+	case gametype_intermission_type:
+		gt->intermission_type = luaL_checkinteger(L, 3);
+		break;
+	case gametype_rankings_type:
+		gt->rankings_type = luaL_checkinteger(L, 3);
+		break;
+	case gametype_pointlimit:
+		gt->pointlimit = luaL_checkinteger(L, 3);
+		break;
+	case gametype_timelimit:
+		gt->timelimit = luaL_checkinteger(L, 3);
+		break;
+	}
+	return 0;
+}
+
+static int gametype_num(lua_State *L)
+{
+	gametype_t *gt = *((gametype_t **)luaL_checkudata(L, 1, META_GAMETYPE));
+
+	I_Assert(gt != NULL);
+	I_Assert(gt >= gametypes);
+
+	lua_pushinteger(L, gt-gametypes);
+	return 1;
+}
+
 //////////////////////////////
 //
 // Now push all these functions into the Lua state!
@@ -1937,6 +2071,19 @@ int LUA_InfoLib(lua_State *L)
 	lua_pop(L, 1);
 
 	mobjinfo_fields_ref = Lua_CreateFieldTable(L, mobjinfo_opt);
+
+	luaL_newmetatable(L, META_GAMETYPE);
+		lua_pushcfunction(L, gametype_get);
+		lua_setfield(L, -2, "__index");
+
+		lua_pushcfunction(L, gametype_set);
+		lua_setfield(L, -2, "__newindex");
+
+		lua_pushcfunction(L, gametype_num);
+		lua_setfield(L, -2, "__len");
+	lua_pop(L, 1);
+
+	gametype_fields_ref = Lua_CreateFieldTable(L, gametype_opt);
 
 	luaL_newmetatable(L, META_SKINCOLOR);
 		lua_pushcfunction(L, skincolor_get);
@@ -2103,6 +2250,16 @@ int LUA_InfoLib(lua_State *L)
 			lua_setfield(L, -2, "__len");
 		lua_setmetatable(L, -2);
 	lua_setglobal(L, "spriteinfo");
+
+	lua_newuserdata(L, 0);
+		lua_createtable(L, 0, 2);
+			lua_pushcfunction(L, lib_getGametypes);
+			lua_setfield(L, -2, "__index");
+
+			lua_pushcfunction(L, lib_gametypeslen);
+			lua_setfield(L, -2, "__len");
+		lua_setmetatable(L, -2);
+	lua_setglobal(L, "gametypes");
 
 	luaL_newmetatable(L, META_LUABANKS);
 		lua_pushcfunction(L, lib_getluabanks);

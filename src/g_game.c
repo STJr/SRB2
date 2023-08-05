@@ -3404,11 +3404,40 @@ void G_ExitLevel(void)
 	}
 }
 
+// See also the enum GameType in doomstat.h
+static const char *Gametype_Names[NUMGAMETYPES] =
+{
+	"Co-op", // GT_COOP
+	"Competition", // GT_COMPETITION
+	"Race", // GT_RACE
+
+	"Match", // GT_MATCH
+	"Team Match", // GT_TEAMMATCH
+
+	"Tag", // GT_TAG
+	"Hide & Seek", // GT_HIDEANDSEEK
+
+	"CTF" // GT_CTF
+};
+
+static const char *Gametype_ConstantNames[NUMGAMETYPES] =
+{
+	"GT_COOP", // GT_COOP
+	"GT_COMPETITION", // GT_COMPETITION
+	"GT_RACE", // GT_RACE
+
+	"GT_MATCH", // GT_MATCH
+	"GT_TEAMMATCH", // GT_TEAMMATCH
+
+	"GT_TAG", // GT_TAG
+	"GT_HIDEANDSEEK", // GT_HIDEANDSEEK
+
+	"GT_CTF" // GT_CTF
+};
+
 gametype_t gametypes[NUMGAMETYPES] = {
 	// GT_COOP
 	{
-		.name = "Co-op",
-		.constant_name = "GT_COOP",
 		.rules = GTR_CAMPAIGN|GTR_LIVES|GTR_FRIENDLY|GTR_SPAWNENEMIES|GTR_ALLOWEXIT|GTR_EMERALDHUNT|GTR_EMERALDTOKENS|GTR_SPECIALSTAGES|GTR_CUTSCENES,
 		.typeoflevel = TOL_COOP,
 		.intermission_type = int_coop,
@@ -3416,8 +3445,6 @@ gametype_t gametypes[NUMGAMETYPES] = {
 	},
 	// GT_COMPETITION
 	{
-		.name = "Competition",
-		.constant_name = "GT_COMPETITION",
 		.rules = GTR_RACE|GTR_LIVES|GTR_SPAWNENEMIES|GTR_EMERALDTOKENS|GTR_SPAWNINVUL|GTR_ALLOWEXIT,
 		.typeoflevel = TOL_COMPETITION,
 		.intermission_type = int_comp,
@@ -3425,8 +3452,6 @@ gametype_t gametypes[NUMGAMETYPES] = {
 	},
 	// GT_RACE
 	{
-		.name = "Race",
-		.constant_name = "GT_RACE",
 		.rules = GTR_RACE|GTR_SPAWNENEMIES|GTR_SPAWNINVUL|GTR_ALLOWEXIT,
 		.typeoflevel = TOL_RACE,
 		.intermission_type = int_race,
@@ -3434,8 +3459,6 @@ gametype_t gametypes[NUMGAMETYPES] = {
 	},
 	// GT_MATCH
 	{
-		.name = "Match",
-		.constant_name = "GT_MATCH",
 		.rules = GTR_RINGSLINGER|GTR_FIRSTPERSON|GTR_SPECTATORS|GTR_POINTLIMIT|GTR_TIMELIMIT|GTR_OVERTIME|GTR_POWERSTONES|GTR_DEATHMATCHSTARTS|GTR_SPAWNINVUL|GTR_RESPAWNDELAY|GTR_PITYSHIELD|GTR_DEATHPENALTY,
 		.typeoflevel = TOL_MATCH,
 		.intermission_type = int_match,
@@ -3446,8 +3469,6 @@ gametype_t gametypes[NUMGAMETYPES] = {
 	},
 	// GT_TEAMMATCH
 	{
-		.name = "Team Match",
-		.constant_name = "GT_TEAMMATCH",
 		.rules = GTR_RINGSLINGER|GTR_FIRSTPERSON|GTR_SPECTATORS|GTR_TEAMS|GTR_POINTLIMIT|GTR_TIMELIMIT|GTR_OVERTIME|GTR_DEATHMATCHSTARTS|GTR_SPAWNINVUL|GTR_RESPAWNDELAY|GTR_PITYSHIELD,
 		.typeoflevel = TOL_MATCH,
 		.intermission_type = int_teammatch,
@@ -3458,8 +3479,6 @@ gametype_t gametypes[NUMGAMETYPES] = {
 	},
 	// GT_TAG
 	{
-		.name = "Tag",
-		.constant_name = "GT_TAG",
 		.rules = GTR_RINGSLINGER|GTR_FIRSTPERSON|GTR_TAG|GTR_SPECTATORS|GTR_POINTLIMIT|GTR_TIMELIMIT|GTR_OVERTIME|GTR_STARTCOUNTDOWN|GTR_BLINDFOLDED|GTR_DEATHMATCHSTARTS|GTR_SPAWNINVUL|GTR_RESPAWNDELAY,
 		.typeoflevel = TOL_TAG,
 		.intermission_type = int_match,
@@ -3471,8 +3490,6 @@ gametype_t gametypes[NUMGAMETYPES] = {
 	},
 	// GT_HIDEANDSEEK
 	{
-		.name = "Hide & Seek",
-		.constant_name = "GT_HIDEANDSEEK",
 		.rules = GTR_RINGSLINGER|GTR_FIRSTPERSON|GTR_TAG|GTR_SPECTATORS|GTR_POINTLIMIT|GTR_TIMELIMIT|GTR_OVERTIME|GTR_STARTCOUNTDOWN|GTR_HIDEFROZEN|GTR_BLINDFOLDED|GTR_DEATHMATCHSTARTS|GTR_SPAWNINVUL|GTR_RESPAWNDELAY,
 		.typeoflevel = TOL_TAG,
 		.intermission_type = int_match,
@@ -3484,8 +3501,6 @@ gametype_t gametypes[NUMGAMETYPES] = {
 	},
 	// GT_CTF
 	{
-		.name = "CTF",
-		.constant_name = "GT_CTF",
 		.rules = GTR_RINGSLINGER|GTR_FIRSTPERSON|GTR_SPECTATORS|GTR_TEAMS|GTR_TEAMFLAGS|GTR_POINTLIMIT|GTR_TIMELIMIT|GTR_OVERTIME|GTR_POWERSTONES|GTR_DEATHMATCHSTARTS|GTR_SPAWNINVUL|GTR_RESPAWNDELAY|GTR_PITYSHIELD,
 		.typeoflevel = TOL_CTF,
 		.intermission_type = int_ctf,
@@ -3495,6 +3510,15 @@ gametype_t gametypes[NUMGAMETYPES] = {
 		.pointlimit = 5
 	},
 };
+
+void G_InitGametypes(void)
+{
+	for (unsigned i = 0; i <= GT_CTF; i++)
+	{
+		gametypes[i].name = Z_StrDup(Gametype_Names[i]);
+		gametypes[i].constant_name = Z_StrDup(Gametype_ConstantNames[i]);
+	}
+}
 
 //
 // Sets a new gametype, also setting gametype rules accordingly.
@@ -3513,7 +3537,7 @@ INT16 G_AddGametype(UINT32 rules)
 	INT16 newgtype = gametypecount;
 	gametypecount++;
 
-	gametypes[newgtype].name = "???";
+	gametypes[newgtype].name = Z_StrDup("???");
 	gametypes[newgtype].rules = rules;
 
 	// Update gametype_cons_t accordingly.
