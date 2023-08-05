@@ -998,8 +998,7 @@ void Y_Ticker(void)
 	if (paused || P_AutoPause())
 		return;
 
-	LUA_HookBool(intertype == int_spec && stagefailed,
-			HOOK(IntermissionThinker));
+	LUA_HookBool(stagefailed, HOOK(IntermissionThinker));
 
 	intertic++;
 
