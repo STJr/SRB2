@@ -1318,13 +1318,13 @@ void readgametype(MYFILE *f, char *gtname)
 	// Not covered by G_AddGametype alone.
 	if (newgtrankingstype == -1)
 		newgtrankingstype = newgtidx;
-	gametyperankings[newgtidx] = newgtrankingstype;
-	intermissiontypes[newgtidx] = newgtinttype;
-	pointlimits[newgtidx] = newgtpointlimit;
-	timelimits[newgtidx] = newgttimelimit;
+	gametypes[newgtidx].rankings_type = newgtrankingstype;
+	gametypes[newgtidx].intermission_type = newgtinttype;
+	gametypes[newgtidx].pointlimit = newgtpointlimit;
+	gametypes[newgtidx].timelimit = newgttimelimit;
 
 	// Write the new gametype name.
-	Gametype_Names[newgtidx] = Z_StrDup((const char *)gtname);
+	gametypes[newgtidx].name = Z_StrDup((const char *)gtname);
 
 	// Write the constant name.
 	if (gtconst[0] == '\0')
@@ -1334,7 +1334,7 @@ void readgametype(MYFILE *f, char *gtname)
 	// Update gametype_cons_t accordingly.
 	G_UpdateGametypeSelections();
 
-	CONS_Printf("Added gametype %s\n", Gametype_Names[newgtidx]);
+	CONS_Printf("Added gametype %s\n", gametypes[newgtidx].name);
 }
 
 void readlevelheader(MYFILE *f, INT32 num)
@@ -4220,34 +4220,6 @@ menutype_t get_menutype(const char *word)
 	deh_warning("Couldn't find menutype named 'MN_%s'",word);
 	return MN_NONE;
 }
-
-/*static INT16 get_gametype(const char *word)
-{ // Returns the value of GT_ enumerations
-	INT16 i;
-	if (*word >= '0' && *word <= '9')
-		return atoi(word);
-	if (fastncmp("GT_",word,3))
-		word += 3; // take off the GT_
-	for (i = 0; i < NUMGAMETYPES; i++)
-		if (fastcmp(word, Gametype_ConstantNames[i]+3))
-			return i;
-	deh_warning("Couldn't find gametype named 'GT_%s'",word);
-	return GT_COOP;
-}
-
-static powertype_t get_power(const char *word)
-{ // Returns the value of pw_ enumerations
-	powertype_t i;
-	if (*word >= '0' && *word <= '9')
-		return atoi(word);
-	if (fastncmp("PW_",word,3))
-		word += 3; // take off the pw_
-	for (i = 0; i < NUMPOWERS; i++)
-		if (fastcmp(word, POWERS_LIST[i]))
-			return i;
-	deh_warning("Couldn't find power named 'pw_%s'",word);
-	return pw_invulnerability;
-}*/
 
 /// \todo Make ANY of this completely over-the-top math craziness obey the order of operations.
 static fixed_t op_mul(fixed_t a, fixed_t b) { return a*b; }

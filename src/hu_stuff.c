@@ -1905,7 +1905,7 @@ static void HU_drawGametype(void)
 	if (gametype < 0 || gametype >= gametypecount)
 		return; // not a valid gametype???
 
-	strvalue = Gametype_Names[gametype];
+	strvalue = gametypes[gametype].name;
 
 	if (splitscreen)
 		V_DrawString(4, 184, 0, strvalue);
@@ -2188,7 +2188,7 @@ void HU_DrawTabRankings(INT32 x, INT32 y, playersort_t *tab, INT32 scorelines, I
 
 	for (i = 0; i < scorelines; i++)
 	{
-		if (players[tab[i].num].spectator && gametyperankings[gametype] != GT_COOP)
+		if (players[tab[i].num].spectator && !G_GametypeUsesCoopLives())
 			continue; //ignore them.
 
 		greycheck = greycheckdef;
@@ -2265,7 +2265,7 @@ void HU_DrawTabRankings(INT32 x, INT32 y, playersort_t *tab, INT32 scorelines, I
 		if (players[tab[i].num].exiting || (players[tab[i].num].pflags & PF_FINISHED))
 			V_DrawSmallScaledPatch(x - exiticon->width/2 - 1, y-3, 0, exiticon);
 
-		if (gametyperankings[gametype] == GT_RACE)
+		if (gametypes[gametype].rankings_type == RANKINGS_RACE)
 		{
 			if (circuitmap)
 			{
@@ -2546,7 +2546,7 @@ void HU_DrawDualTabRankings(INT32 x, INT32 y, playersort_t *tab, INT32 scoreline
 
 	for (i = 0; i < scorelines; i++)
 	{
-		if (players[tab[i].num].spectator && gametyperankings[gametype] != GT_COOP)
+		if (players[tab[i].num].spectator && !G_GametypeUsesCoopLives())
 			continue; //ignore them.
 
 		greycheck = greycheckdef;
@@ -2613,7 +2613,7 @@ void HU_DrawDualTabRankings(INT32 x, INT32 y, playersort_t *tab, INT32 scoreline
 		}
 
 		// All data drawn with thin string for space.
-		if (gametyperankings[gametype] == GT_RACE)
+		if (gametypes[gametype].rankings_type == RANKINGS_RACE)
 		{
 			if (circuitmap)
 			{
@@ -2653,7 +2653,7 @@ static void HU_Draw32TabRankings(INT32 x, INT32 y, playersort_t *tab, INT32 scor
 
 	for (i = 0; i < scorelines; i++)
 	{
-		if (players[tab[i].num].spectator && gametyperankings[gametype] != GT_COOP)
+		if (players[tab[i].num].spectator && !G_GametypeUsesCoopLives())
 			continue; //ignore them.
 
 		greycheck = greycheckdef;
@@ -2724,7 +2724,7 @@ static void HU_Draw32TabRankings(INT32 x, INT32 y, playersort_t *tab, INT32 scor
 		}
 
 		// All data drawn with thin string for space.
-		if (gametyperankings[gametype] == GT_RACE)
+		if (gametypes[gametype].rankings_type == RANKINGS_RACE)
 		{
 			if (circuitmap)
 			{
@@ -2884,7 +2884,7 @@ static void HU_DrawRankings(void)
 		tab[i].num = -1;
 		tab[i].name = 0;
 
-		if (gametyperankings[gametype] == GT_RACE && !circuitmap)
+		if (gametypes[gametype].rankings_type == RANKINGS_RACE && !circuitmap)
 			tab[i].count = INT32_MAX;
 	}
 
@@ -2904,7 +2904,7 @@ static void HU_DrawRankings(void)
 			if (!G_PlatformGametype() && players[i].spectator)
 				continue;
 
-			if (gametyperankings[gametype] == GT_RACE)
+			if (gametypes[gametype].rankings_type == RANKINGS_RACE)
 			{
 				if (circuitmap)
 				{
@@ -2927,7 +2927,7 @@ static void HU_DrawRankings(void)
 					}
 				}
 			}
-			else if (gametyperankings[gametype] == GT_COMPETITION)
+			else if (gametypes[gametype].rankings_type == RANKINGS_COMPETITION)
 			{
 				// todo put something more fitting for the gametype here, such as current
 				// number of categories led

@@ -3519,13 +3519,13 @@ static int lib_gAddGametype(lua_State *L)
 	// Not covered by G_AddGametype alone.
 	if (newgtrankingstype == -1)
 		newgtrankingstype = newgtidx;
-	gametyperankings[newgtidx] = newgtrankingstype;
-	intermissiontypes[newgtidx] = newgtinttype;
-	pointlimits[newgtidx] = newgtpointlimit;
-	timelimits[newgtidx] = newgttimelimit;
+	gametypes[newgtidx].rankings_type = newgtrankingstype;
+	gametypes[newgtidx].intermission_type = newgtinttype;
+	gametypes[newgtidx].pointlimit = newgtpointlimit;
+	gametypes[newgtidx].timelimit = newgttimelimit;
 
 	// Write the new gametype name.
-	Gametype_Names[newgtidx] = gtname;
+	gametypes[newgtidx].name = gtname;
 
 	// Write the constant name.
 	if (gtconst == NULL)
@@ -3536,7 +3536,7 @@ static int lib_gAddGametype(lua_State *L)
 	G_UpdateGametypeSelections();
 
 	// done
-	CONS_Printf("Added gametype %s\n", Gametype_Names[newgtidx]);
+	CONS_Printf("Added gametype %s\n", gametypes[newgtidx].name);
 	return 0;
 }
 

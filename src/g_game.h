@@ -190,10 +190,6 @@ void G_SaveGame(UINT32 slot, INT16 mapnum);
 
 void G_SaveGameOver(UINT32 slot, boolean modifylives);
 
-extern UINT32 gametypedefaultrules[NUMGAMETYPES];
-extern UINT32 gametypetol[NUMGAMETYPES];
-extern INT16 gametyperankings[NUMGAMETYPES];
-
 void G_SetGametype(INT16 gametype);
 INT16 G_AddGametype(UINT32 rules);
 void G_AddGametypeConstant(INT16 gtype, const char *newgtconst);
