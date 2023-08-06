@@ -2389,7 +2389,7 @@ static int teamlist_set(lua_State *L)
 	if (i <= 0 || i > teamlist->num)
 		return luaL_error(L, "array index %d out of range (1 - %d)", i, teamlist->num);
 	if (team < 0 || team >= numteams)
-		return luaL_error(L, "team index %d out of range (0 - %d)", i, numteams - 1);
+		return luaL_error(L, "team index %d out of range (0 - %d)", team, numteams - 1);
 	teamlist->list[i - 1] = (UINT8)team;
 	return 0;
 }

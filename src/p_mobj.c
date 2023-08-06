@@ -10038,7 +10038,7 @@ static void P_FlagFuseThink(mobj_t *mobj)
 		else if (players[consoleplayer].ctfteam != 0)
 			S_StartSound(NULL, sfx_hoop3);
 
-		flagmobjs[team] = flagmo;
+		P_SetTarget(&flagmobjs[team], flagmo);
 	}
 }
 
@@ -12086,7 +12086,7 @@ static boolean P_AllowMobjSpawn(mapthing_t* mthing, mobjtype_t i)
 		UINT8 team = mobjinfo[i].mass;
 		if (team >= numteams)
 			return false;
-		else if (flagmobjs[team])
+		else if (flagmobjs[team] && !P_MobjWasRemoved(flagmobjs[team]))
 		{
 			CONS_Alert(CONS_ERROR, M_GetText("Only one flag per team allowed in CTF!\n"));
 			return false;
@@ -13188,11 +13188,11 @@ static boolean P_SetupSpawnedMapThing(mapthing_t *mthing, mobj_t *mobj, boolean 
 		}
 		break;
 	case MT_REDFLAG:
-		flagmobjs[TEAM_RED] = mobj;
+		P_SetTarget(&flagmobjs[TEAM_RED], mobj);
 		flagpoints[TEAM_RED] = mobj->spawnpoint;
 		break;
 	case MT_BLUEFLAG:
-		flagmobjs[TEAM_BLUE] = mobj;
+		P_SetTarget(&flagmobjs[TEAM_BLUE], mobj);
 		flagpoints[TEAM_BLUE] = mobj->spawnpoint;
 		break;
 	case MT_NIGHTSSTAR:
@@ -14201,4 +14201,20 @@ mobj_t *P_SpawnMobjFromMobj(mobj_t *mobj, fixed_t xofs, fixed_t yofs, fixed_t zo
 	newmobj->old_spriteyoffset = mobj->old_spriteyoffset;
 
 	return newmobj;
+}
+
+mobj_t *P_GetTeamFlag(UINT8 team)
+{
+	if (team >= teamsingame || P_MobjWasRemoved(flagmobjs[team]))
+		return NULL;
+
+	return flagmobjs[team];
+}
+
+mapthing_t *P_GetTeamFlagMapthing(UINT8 team)
+{
+	if (team >= teamsingame)
+		return NULL;
+
+	return flagpoints[team];
 }

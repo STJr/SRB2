@@ -7060,7 +7060,7 @@ static void P_InitLevelSettings(void)
 	// clear ctf pointers
 	for (i = 0; i < MAXTEAMS; i++)
 	{
-		flagmobjs[i] = NULL;
+		P_SetTarget(&flagmobjs[i], NULL);
 		flagpoints[i] = NULL;
 	}
 

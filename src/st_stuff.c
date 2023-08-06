@@ -2483,12 +2483,15 @@ static void ST_drawTeamHUD(void)
 		}
 
 		// Display a countdown timer showing how much time left until the flag returns to base.
+		if (LUA_HudEnabled(hud_teamscores))
 		{
-			if (flagmobjs[G_GetTeam(2)] && flagmobjs[G_GetTeam(2)]->fuse > 1 && LUA_HudEnabled(hud_teamscores))
-				V_DrawCenteredString(BASEVIDWIDTH/2 - SEP, 8, V_YELLOWMAP|V_HUDTRANS|V_PERPLAYER|V_SNAPTOTOP, va("%u", (flagmobjs[G_GetTeam(2)]->fuse / TICRATE)));
+			mobj_t *flagmobj = flagmobjs[G_GetTeam(2)];
+			if (flagmobj && !P_MobjWasRemoved(flagmobj) && flagmobj->fuse > 1)
+				V_DrawCenteredString(BASEVIDWIDTH/2 - SEP, 8, V_YELLOWMAP|V_HUDTRANS|V_PERPLAYER|V_SNAPTOTOP, va("%u", (flagmobj->fuse / TICRATE)));
 
-			if (flagmobjs[G_GetTeam(1)] && flagmobjs[G_GetTeam(1)]->fuse > 1 && LUA_HudEnabled(hud_teamscores))
-				V_DrawCenteredString(BASEVIDWIDTH/2 + SEP, 8, V_YELLOWMAP|V_HUDTRANS|V_PERPLAYER|V_SNAPTOTOP, va("%u", (flagmobjs[G_GetTeam(1)]->fuse / TICRATE)));
+			flagmobj = flagmobjs[G_GetTeam(1)];
+			if (flagmobj && !P_MobjWasRemoved(flagmobj) && flagmobj->fuse > 1)
+				V_DrawCenteredString(BASEVIDWIDTH/2 + SEP, 8, V_YELLOWMAP|V_HUDTRANS|V_PERPLAYER|V_SNAPTOTOP, va("%u", (flagmobj->fuse / TICRATE)));
 		}
 	}
 

@@ -3065,12 +3065,12 @@ static thinker_t* LoadMobjThinker(actionf_p1 thinker)
 
 	if (diff & MD_REDFLAG)
 	{
-		flagmobjs[TEAM_RED] = mobj;
+		P_SetTarget(&flagmobjs[TEAM_RED], mobj);
 		flagpoints[TEAM_RED] = mobj->spawnpoint;
 	}
 	if (diff & MD_BLUEFLAG)
 	{
-		flagmobjs[TEAM_BLUE] = mobj;
+		P_SetTarget(&flagmobjs[TEAM_BLUE], mobj);
 		flagpoints[TEAM_BLUE] = mobj->spawnpoint;
 	}
 
