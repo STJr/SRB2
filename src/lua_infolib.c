@@ -2241,9 +2241,7 @@ static int lib_setTeams(lua_State *L)
 	if (hook_cmd_running)
 		return luaL_error(L, "Do not alter team data in CMD building code!");
 
-	G_FreeTeamData(teamnum);
-
-	memset(team, 0, sizeof(team_t));
+	G_InitTeam(teamnum);
 
 	lua_pushnil(L);
 	while (lua_next(L, 1)) {

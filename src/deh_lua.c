@@ -140,6 +140,7 @@ static inline int lib_freeslot(lua_State *L)
 			teamnames[i] = Z_Malloc(strlen(word)+1, PU_STATIC, NULL);
 			strcpy(teamnames[i],word);
 			lua_pushinteger(L, i);
+			G_InitTeam(i);
 			numteams++;
 			r++;
 			break;

@@ -479,6 +479,7 @@ void readfreeslots(MYFILE *f)
 				{
 					teamnames[numteams] = Z_Malloc(strlen(word)+1, PU_STATIC, NULL);
 					strcpy(teamnames[numteams],word);
+					G_InitTeam(numteams);
 					numteams++;
 				}
 			}

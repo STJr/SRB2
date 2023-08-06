@@ -2342,7 +2342,8 @@ static UINT8 GetTeamByName(const char *name)
 {
 	for (UINT8 i = 1; i < teamsingame; i++)
 	{
-		if (!stricmp(name, G_GetTeamName(G_GetTeam(i))))
+		const char *team_name = teams[G_GetTeam(i)].name;
+		if (team_name && !stricmp(name, team_name))
 			return i;
 	}
 	return MAXTEAMS;
