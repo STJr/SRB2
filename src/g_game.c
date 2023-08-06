@@ -3917,6 +3917,13 @@ UINT32 G_TOLFlag(INT32 pgametype)
 	return gametypes[pgametype].typeoflevel;
 }
 
+void G_InitTeam(UINT8 team)
+{
+	G_FreeTeamData(team);
+
+	memset(&teams[team], 0, sizeof(team_t));
+}
+
 UINT8 G_GetGametypeTeam(UINT8 gtype, UINT8 team)
 {
 	if (team == TEAM_NONE || team >= gametypes[gtype].teams.num + 1)
@@ -3962,7 +3969,7 @@ UINT8 G_GetTeamListFromTeamFlags(UINT8 *teamlist, UINT32 flags)
 
 const char *G_GetTeamName(UINT8 team)
 {
-	if (team >= numteams)
+	if (team >= numteams || !teams[team].name)
 		return "Unknown";
 
 	return teams[team].name;
@@ -3970,7 +3977,7 @@ const char *G_GetTeamName(UINT8 team)
 
 const char *G_GetTeamFlagName(UINT8 team)
 {
-	if (team >= numteams)
+	if (team >= numteams || !teams[team].flag_name)
 		return "";
 
 	return teams[team].flag_name;
