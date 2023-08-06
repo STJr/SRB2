@@ -336,6 +336,9 @@ SINT8 P_MobjFlip(mobj_t *mobj);
 fixed_t P_GetMobjGravity(mobj_t *mo);
 FUNCMATH boolean P_WeaponOrPanel(mobjtype_t type);
 
+mobj_t *P_GetTeamFlag(UINT8 team);
+mapthing_t *P_GetTeamFlagMapthing(UINT8 team);
+
 void P_CalcChasePostImg(player_t *player, camera_t *thiscam);
 boolean P_CameraThinker(player_t *player, camera_t *thiscam, boolean resetcalled);
 

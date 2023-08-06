@@ -852,6 +852,28 @@ static int lib_pWeaponOrPanel(lua_State *L)
 	return 1;
 }
 
+static int lib_pGetTeamFlag(lua_State *L)
+{
+	int team = luaL_checkinteger(L, 1);
+	if (team < 0 || team >= numteams)
+		return luaL_error(L, "team index %d out of range (0 - %d)", team, numteams - 1);
+	NOHUD
+	INLEVEL
+	LUA_PushUserdata(L, P_GetTeamFlag(team), META_MOBJ);
+	return 1;
+}
+
+static int lib_pGetTeamFlagMapthing(lua_State *L)
+{
+	int team = luaL_checkinteger(L, 1);
+	if (team < 0 || team >= numteams)
+		return luaL_error(L, "team index %d out of range (0 - %d)", team, numteams - 1);
+	NOHUD
+	INLEVEL
+	LUA_PushUserdata(L, P_GetTeamFlagMapthing(team), META_MAPTHING);
+	return 1;
+}
+
 static int lib_pFlashPal(lua_State *L)
 {
 	player_t *pl = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
@@ -4114,6 +4136,8 @@ static luaL_Reg lib[] = {
 	{"P_MobjFlip",lib_pMobjFlip},
 	{"P_GetMobjGravity",lib_pGetMobjGravity},
 	{"P_WeaponOrPanel",lib_pWeaponOrPanel},
+	{"P_GetTeamFlag",lib_pGetTeamFlag},
+	{"P_GetTeamFlagMapthing",lib_pGetTeamFlagMapthing},
 	{"P_FlashPal",lib_pFlashPal},
 	{"P_GetClosestAxis",lib_pGetClosestAxis},
 	{"P_SpawnParaloop",lib_pSpawnParaloop},

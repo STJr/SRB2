@@ -888,7 +888,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 
 					player->gotflag |= teams[flagteam].flag;
 					CONS_Printf(M_GetText("%s picked up the %s%s%c!\n"), plname, flagcolor, flagtext, 0x80);
-					flagmobjs[flagteam] = NULL;
+					P_SetTarget(&flagmobjs[flagteam], NULL);
 					// code for dealing with abilities is handled elsewhere now
 					break;
 				}
@@ -4443,7 +4443,7 @@ void P_PlayerFlagBurst(player_t *player, boolean toss)
 		}
 
 		// Pointers set for displaying time value and for consistency restoration.
-		flagmobjs[team] = flag;
+		P_SetTarget(&flagmobjs[team], flag);
 	}
 
 	player->gotflag = 0;
