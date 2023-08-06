@@ -10512,7 +10512,6 @@ boolean P_SpectatorJoinGame(player_t *player)
 
 	// Team changing in Team Match and CTF
 	// Pressing fire assigns you to a team that needs players if allowed.
-	// Partial code reproduction from p_tick.c autobalance code.
 	else if (G_GametypeHasTeams())
 	{
 		UINT8 changeto = G_GetMostDisadvantagedTeam();

@@ -487,24 +487,20 @@ static void P_DoAutobalanceTeams(void)
 		{
 			i = M_RandomKey(count[G_GetTeam(1)]);
 			NetPacket.packet.newteam = 2;
-			NetPacket.packet.playernum = array[1][i];
-			NetPacket.packet.verification = true;
-			NetPacket.packet.autobalance = true;
-
-			usvalue  = SHORT(NetPacket.value.l|NetPacket.value.b);
-			SendNetXCmd(XD_TEAMCHANGE, &usvalue, sizeof(usvalue));
+			NetPacket.packet.playernum = array[G_GetTeam(1)][i];
 		}
 		else
 		{
 			i = M_RandomKey(count[G_GetTeam(2)]);
 			NetPacket.packet.newteam = 1;
-			NetPacket.packet.playernum = array[2][i];
-			NetPacket.packet.verification = true;
-			NetPacket.packet.autobalance = true;
-
-			usvalue  = SHORT(NetPacket.value.l|NetPacket.value.b);
-			SendNetXCmd(XD_TEAMCHANGE, &usvalue, sizeof(usvalue));
+			NetPacket.packet.playernum = array[G_GetTeam(2)][i];
 		}
+
+		NetPacket.packet.verification = true;
+		NetPacket.packet.autobalance = true;
+
+		usvalue = SHORT(NetPacket.value.l|NetPacket.value.b);
+		SendNetXCmd(XD_TEAMCHANGE, &usvalue, sizeof(usvalue));
 	}
 }
 
@@ -653,7 +649,7 @@ static inline void P_DoTagStuff(void)
 	}
 }
 
-static inline void P_DoCTFStuff(void)
+static inline void P_DoTeamGametypeStuff(void)
 {
 	// Automatic team balance for CTF and team match
 	if (leveltime % (TICRATE * 5) == 0) //only check once per five seconds for the sake of CPU conservation.
@@ -805,7 +801,7 @@ void P_Ticker(boolean run)
 		P_DoTagStuff();
 
 	if (G_GametypeHasTeams())
-		P_DoCTFStuff();
+		P_DoTeamGametypeStuff();
 
 	if (run)
 	{
