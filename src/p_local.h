@@ -338,6 +338,7 @@ FUNCMATH boolean P_WeaponOrPanel(mobjtype_t type);
 
 mobj_t *P_GetTeamFlag(UINT8 team);
 mapthing_t *P_GetTeamFlagMapthing(UINT8 team);
+mobj_t *P_SpawnTeamFlag(UINT8 team, fixed_t x, fixed_t y, fixed_t z);
 
 void P_CalcChasePostImg(player_t *player, camera_t *thiscam);
 boolean P_CameraThinker(player_t *player, camera_t *thiscam, boolean resetcalled);

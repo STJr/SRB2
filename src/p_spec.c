@@ -4668,12 +4668,15 @@ static void P_ProcessTeamBase(player_t *player, UINT8 team)
 	else if (players[consoleplayer].ctfteam != team)
 		S_StartSound(NULL, sfx_lose);
 
-	mo = P_SpawnMobj(player->mo->x,player->mo->y,player->mo->z, teams[otherteam].flag_mobj_type);
+	mo = P_SpawnTeamFlag(otherteam, player->mo->x, player->mo->y, player->mo->z);
+	if (mo)
+	{
+		mo->flags &= ~MF_SPECIAL;
+		mo->fuse = TICRATE;
+		mo->spawnpoint = flagpoints[otherteam];
+		mo->flags2 |= MF2_JUSTATTACKED;
+	}
 	player->gotflag &= ~teamflag;
-	mo->flags &= ~MF_SPECIAL;
-	mo->fuse = TICRATE;
-	mo->spawnpoint = flagpoints[otherteam];
-	mo->flags2 |= MF2_JUSTATTACKED;
 	teamscores[team]++;
 	P_AddPlayerScore(player, 250);
 }
