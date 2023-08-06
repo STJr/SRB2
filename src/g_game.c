@@ -2814,10 +2814,11 @@ static boolean G_CheckSpot(INT32 playernum, mapthing_t *mthing)
 	x = mthing->x << FRACBITS;
 	y = mthing->y << FRACBITS;
 
-	if (!P_CheckPosition(players[playernum].mo, x, y))
-		return false;
+	mobj_t *ptmthing = tmthing;
+	boolean success = P_CheckPosition(players[playernum].mo, x, y);
+	P_SetTarget(&tmthing, ptmthing);
 
-	return true;
+	return success;
 }
 
 //
