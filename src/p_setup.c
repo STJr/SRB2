@@ -5467,7 +5467,7 @@ static void P_ConvertBinaryLinedefTypes(void)
 			break;
 		case 442: //Change object type state
 			lines[i].args[0] = tag;
-			lines[i].args[3] = (lines[i].sidenum[1] == 0xffff) ? 1 : 0;
+			lines[i].args[1] = (lines[i].sidenum[1] == 0xffff) ? 1 : 0;
 			break;
 		case 443: //Call Lua function
 			if (lines[i].stringargs[0] == NULL)
