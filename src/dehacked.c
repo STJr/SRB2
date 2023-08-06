@@ -172,9 +172,9 @@ static void ignorelines(MYFILE *f)
 static void DEH_LoadDehackedFile(MYFILE *f, boolean mainfile)
 {
 	char *s = Z_Malloc(MAXLINELEN, PU_STATIC, NULL);
-	char textline[MAXLINELEN];
 	char *word;
 	char *word2;
+	char word2lwr[MAXLINELEN];
 	INT32 i;
 
 	if (!deh_loaded)
@@ -189,7 +189,6 @@ static void DEH_LoadDehackedFile(MYFILE *f, boolean mainfile)
 	while (!myfeof(f))
 	{
 		myfgets(s, MAXLINELEN, f);
-		memcpy(textline, s, MAXLINELEN);
 		if (s[0] == '\n' || s[0] == '#')
 			continue;
 
@@ -216,10 +215,14 @@ static void DEH_LoadDehackedFile(MYFILE *f, boolean mainfile)
 				continue;
 			}
 			word2 = strtok(NULL, " ");
+			word2lwr[0] = '\0';
 			if (word2) {
+				strcpy(word2lwr, word2);
 				strupr(word2);
 				if (word2[strlen(word2) - 1] == '\n')
 					word2[strlen(word2) - 1] = '\0';
+				if (word2lwr[strlen(word2lwr) - 1] == '\n')
+					word2lwr[strlen(word2lwr) - 1] = '\0';
 				i = atoi(word2);
 			}
 			else
@@ -381,32 +384,60 @@ static void DEH_LoadDehackedFile(MYFILE *f, boolean mainfile)
 				}
 				else if (fastcmp(word, "GAMETYPE"))
 				{
-					// Get the gametype name from textline
-					// instead of word2, so that gametype names
-					// aren't allcaps
-					INT32 c;
-					for (c = 0; c < MAXLINELEN; c++)
+					char *gtname = NULL;
+					if (word2lwr[0])
 					{
-						if (textline[c] == '\0')
-							break;
-						if (textline[c] == ' ')
+						gtname = word2lwr;
+
+						for (size_t j = 0; j < strlen(gtname); j++)
 						{
-							char *gtname = (textline+c+1);
-							if (gtname)
+							if (gtname[j] == '\0')
+								break;
+							if (gtname[j] < 32 || gtname[j] == '\n')
 							{
-								// remove funny characters
-								INT32 j;
-								for (j = 0; j < (MAXLINELEN - c); j++)
-								{
-									if (gtname[j] == '\0')
-										break;
-									if (gtname[j] < 32)
-										gtname[j] = '\0';
-								}
-								readgametype(f, gtname);
+								gtname[j] = '\0';
+								break;
 							}
-							break;
 						}
+					}
+
+					if (!gtname || !strlen(gtname))
+					{
+						deh_warning("Invalid gametype name");
+						ignorelines(f);
+					}
+					else
+					{
+						INT32 gametype_id = G_GetGametypeByName(gtname);
+						if (gametype_id == -1)
+						{
+							if (!strncmp(gtname, "GT_", 3))
+								gametype_id = get_gametype(gtname + 3);
+							else if (gametypecount != NUMGAMETYPEFREESLOTS)
+							{
+								gametype_id = G_AddGametype();
+								CONS_Printf("Added gametype %s\n", gtname);
+							}
+							else
+								deh_warning("Ran out of free gametype slots");
+						}
+
+						if (gametype_id != -1)
+							readgametype(f, gametype_id);
+						else
+							ignorelines(f);
+					}
+				}
+				else if (fastcmp(word, "TEAM"))
+				{
+					if (i == 0 && word2[0] != '0') // If word2 isn't a number
+						i = get_team(word2); // find a team by name
+					if (i >= 0 && i < MAXTEAMS)
+						readteam(f, i);
+					else
+					{
+						deh_warning("Team %d out of range (0 - %d)", i, MAXTEAMS);
+						ignorelines(f);
 					}
 				}
 				else if (fastcmp(word, "CUTSCENE"))

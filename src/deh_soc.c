@@ -475,13 +475,12 @@ void readfreeslots(MYFILE *f)
 			}
 			else if (fastcmp(type, "TEAM"))
 			{
-				for (i = 0; i < MAXTEAMS; i++)
-					if (!teamnames[i]) {
-						teamnames[i] = Z_Malloc(strlen(word)+1, PU_STATIC, NULL);
-						strcpy(teamnames[i],word);
-						numteams++;
-						break;
-					}
+				if (numteams < MAXTEAMS)
+				{
+					teamnames[numteams] = Z_Malloc(strlen(word)+1, PU_STATIC, NULL);
+					strcpy(teamnames[numteams],word);
+					numteams++;
+				}
 			}
 			else if (fastcmp(type, "SPR2"))
 			{
@@ -1139,8 +1138,7 @@ void readsprite2(MYFILE *f, INT32 num)
 	Z_Free(s);
 }
 
-// copypasted from readPlayer :]
-void readgametype(MYFILE *f, char *gtname)
+void readgametype(MYFILE *f, INT32 num)
 {
 	char *s = Z_Malloc(MAXLINELEN, PU_STATIC, NULL);
 	char *word;
@@ -1148,25 +1146,20 @@ void readgametype(MYFILE *f, char *gtname)
 	char *tmp;
 	INT32 i, j;
 
-	INT16 newgtidx = 0;
-	UINT32 newgtrules = 0;
-	UINT32 newgttol = 0;
-	INT32 newgtpointlimit = 0;
-	INT32 newgttimelimit = 0;
-	UINT8 newgtleftcolor = 0;
-	UINT8 newgtrightcolor = 0;
-	INT16 newgtrankingstype = -1;
-	int newgtinttype = 0;
+	char *gtname = gametypes[num].name;
+	char gtconst[32];
 	char gtdescription[441];
-	char gtconst[MAXLINELEN];
-	UINT8 teamcount = 0;
+
+	UINT8 newgtleftcolor, newgtrightcolor;
+	boolean has_desc_colors[2] = { false, false };
+
+	UINT8 teamcount = gametypes[num].teams.num;
 	UINT8 teamlist[MAXTEAMS];
+	boolean has_teams = false;
 
-	// Empty strings.
-	gtdescription[0] = '\0';
-	gtconst[0] = '\0';
-
-	strcpy(gtdescription, "???");
+	memset(gtconst, 0, sizeof(gtconst));
+	memset(gtdescription, 0, sizeof(gtconst));
+	memcpy(teamlist, gametypes[num].teams.list, sizeof(teamlist[0]) * teamcount);
 
 	do
 	{
@@ -1225,6 +1218,212 @@ void readgametype(MYFILE *f, char *gtname)
 			if (word2)
 			{
 				if (!word2lwr)
+					word2lwr = Z_Calloc(MAXLINELEN, PU_STATIC, NULL);
+				strlcpy(word2lwr, word2, MAXLINELEN);
+				strupr(word2);
+			}
+			else
+				break;
+
+			if (word2[strlen(word2)-1] == '\n')
+				word2[strlen(word2)-1] = '\0';
+			if (word2lwr[strlen(word2lwr)-1] == '\n')
+				word2lwr[strlen(word2lwr)-1] = '\0';
+			i = atoi(word2);
+
+			// Name
+			if (fastcmp(word, "NAME"))
+			{
+				Z_Free(gametypes[num].name);
+				gametypes[num].name = Z_StrDup(word2lwr);
+			}
+			// Game type rules
+			else if (fastcmp(word, "RULES"))
+			{
+				// GTR_
+				gametypes[num].rules = (UINT32)get_number(word2);
+			}
+			// Identifier
+			else if (fastcmp(word, "IDENTIFIER"))
+			{
+				// GT_
+				strncpy(gtconst, word2, MAXLINELEN);
+			}
+			// Point and time limits
+			else if (fastcmp(word, "DEFAULTPOINTLIMIT"))
+				gametypes[num].pointlimit = (INT32)i;
+			else if (fastcmp(word, "DEFAULTTIMELIMIT"))
+				gametypes[num].timelimit = (INT32)i;
+			// Level platter
+			else if (fastcmp(word, "HEADERCOLOR") || fastcmp(word, "HEADERCOLOUR"))
+			{
+				INT32 color = (INT32)i;
+				if (color >= 0 && color <= 255)
+				{
+					newgtleftcolor = newgtrightcolor = (UINT8)color;
+					has_desc_colors[0] = has_desc_colors[1] = true;
+				}
+				else
+					deh_warning("readgametype %d: Level platter header color %d out of range (0 - 255)", num, i);
+			}
+			else if (fastcmp(word, "HEADERLEFTCOLOR") || fastcmp(word, "HEADERLEFTCOLOUR"))
+			{
+				INT32 color = (INT32)i;
+				if (color >= 0 && color <= 255)
+				{
+					newgtleftcolor = (UINT8)color;
+					has_desc_colors[0] = true;
+				}
+				else
+					deh_warning("readgametype %d: Level platter header left color %d out of range (0 - 255)", num, i);
+			}
+			else if (fastcmp(word, "HEADERRIGHTCOLOR") || fastcmp(word, "HEADERRIGHTCOLOUR"))
+			{
+				INT32 color = (INT32)i;
+				if (color >= 0 && color < 255)
+				{
+					newgtrightcolor = (UINT8)color;
+					has_desc_colors[1] = true;
+				}
+				else
+					deh_warning("readgametype %d: Level platter header right color %d out of range (0 - 255)", num, i);
+			}
+			// Rankings type
+			else if (fastcmp(word, "RANKINGTYPE"))
+			{
+				// Case insensitive
+				gametypes[num].rankings_type = (int)get_number(word2);
+			}
+			// Intermission type
+			else if (fastcmp(word, "INTERMISSIONTYPE"))
+			{
+				// Case sensitive
+				gametypes[num].intermission_type = (int)get_number(word2lwr);
+			}
+			// Type of level
+			else if (fastcmp(word, "TYPEOFLEVEL"))
+			{
+				if (i) // it's just a number
+					gametypes[num].typeoflevel = (UINT32)i;
+				else
+				{
+					UINT32 tol = 0;
+					tmp = strtok(word2,",");
+					do {
+						for (i = 0; TYPEOFLEVEL[i].name; i++)
+							if (fasticmp(tmp, TYPEOFLEVEL[i].name))
+								break;
+						if (!TYPEOFLEVEL[i].name)
+							deh_warning("readgametype %d: unknown typeoflevel flag %s\n", num, tmp);
+						tol |= TYPEOFLEVEL[i].flag;
+					} while((tmp = strtok(NULL,",")) != NULL);
+					gametypes[num].typeoflevel = tol;
+				}
+			}
+			// Teams
+			else if (fastcmp(word, "TEAMLIST"))
+			{
+				tmp = strtok(word2,",");
+				do {
+					if (teamcount == MAXTEAMS)
+					{
+						deh_warning("readgametype %d: too many teams\n", num);
+						break;
+					}
+					char *tmp2 = Z_StrDup(tmp);
+					strupr(tmp2);
+					UINT8 team_id = get_team(tmp2);
+					if (team_id != TEAM_NONE)
+					{
+						teamlist[teamcount++] = team_id;
+						has_teams = true;
+					}
+					else
+						deh_warning("readgametype %d: unknown team %s\n", num, tmp);
+					Z_Free(tmp2);
+				} while((tmp = strtok(NULL,",")) != NULL);
+			}
+			// This SOC probably provided gametype rules as words, instead of using the RULES keyword.
+			// (For example, "NOSPECTATORSPAWN = TRUE")
+			else
+			{
+				UINT32 wordgt = 0;
+				for (j = 0; GAMETYPERULE_LIST[j]; j++)
+					if (fastcmp(word, GAMETYPERULE_LIST[j])) {
+						wordgt |= (1<<j);
+						if (word2[0] == 'T' || word2[0] == 'Y')
+							gametypes[num].rules |= wordgt;
+						else if (word2[0] == 'F' || word2[0] == 'N')
+							gametypes[num].rules &= ~wordgt;
+						break;
+					}
+				if (!wordgt)
+					deh_warning("readgametype %d: unknown word '%s'", num, word);
+			}
+		}
+	} while (!myfeof(f)); // finish when the line is empty
+
+	// Free strings.
+	Z_Free(s);
+	if (word2lwr)
+		Z_Free(word2lwr);
+
+	if (gtdescription[0])
+		G_SetGametypeDescription(num, gtdescription);
+	if (has_desc_colors[0])
+		G_SetGametypeDescriptionLeftColor(num, newgtleftcolor);
+	if (has_desc_colors[1])
+		G_SetGametypeDescriptionRightColor(num, newgtrightcolor);
+
+	// Copy the teams
+	if (has_teams)
+	{
+		gametypes[num].teams.num = teamcount;
+		if (teamcount)
+			memcpy(gametypes[num].teams.list, teamlist, sizeof(teamlist[0]) * teamcount);
+	}
+
+	// Write the constant name.
+	if (gametypes[num].constant_name == NULL)
+	{
+		if (gtconst[0] == '\0')
+			G_AddGametypeConstant(num, gtname);
+		else
+			G_AddGametypeConstant(num, gtconst);
+	}
+	else if (gtconst[0] != '\0')
+		G_AddGametypeConstant(num, gtconst);
+
+	// Update gametype_cons_t accordingly.
+	G_UpdateGametypeSelections();
+}
+
+void readteam(MYFILE *f, INT32 num)
+{
+	char *s = Z_Malloc(MAXLINELEN, PU_STATIC, NULL);
+	char *word;
+	char *word2, *word2lwr = NULL;
+	INT32 i;
+
+	team_t *team = &teams[num];
+
+	do
+	{
+		if (myfgets(s, MAXLINELEN, f))
+		{
+			if (s[0] == '\n')
+				break;
+
+			word = strtok(s, " ");
+			if (word)
+				strupr(word);
+			else
+				break;
+
+			word2 = strtok(NULL, " = ");
+			if (word2)
+			{
+				if (!word2lwr)
 					word2lwr = Z_Malloc(MAXLINELEN, PU_STATIC, NULL);
 				strcpy(word2lwr, word2);
 				strupr(word2);
@@ -1236,105 +1435,83 @@ void readgametype(MYFILE *f, char *gtname)
 				word2[strlen(word2)-1] = '\0';
 			i = atoi(word2);
 
-			// Game type rules
-			if (fastcmp(word, "RULES"))
+			if (fastcmp(word, "NAME"))
 			{
-				// GTR_
-				newgtrules = (UINT32)get_number(word2);
+				Z_Free(team->name);
+				team->name = Z_StrDup(word2lwr);
 			}
-			// Identifier
-			else if (fastcmp(word, "IDENTIFIER"))
+			else if (fastcmp(word, "FLAGNAME"))
 			{
-				// GT_
-				strncpy(gtconst, word2, MAXLINELEN);
+				Z_Free(team->flag_name);
+				team->flag_name = Z_StrDup(word2lwr);
 			}
-			// Point and time limits
-			else if (fastcmp(word, "DEFAULTPOINTLIMIT"))
-				newgtpointlimit = (INT32)i;
-			else if (fastcmp(word, "DEFAULTTIMELIMIT"))
-				newgttimelimit = (INT32)i;
-			// Level platter
-			else if (fastcmp(word, "HEADERCOLOR") || fastcmp(word, "HEADERCOLOUR"))
-				newgtleftcolor = newgtrightcolor = (UINT8)get_number(word2);
-			else if (fastcmp(word, "HEADERLEFTCOLOR") || fastcmp(word, "HEADERLEFTCOLOUR"))
-				newgtleftcolor = (UINT8)get_number(word2);
-			else if (fastcmp(word, "HEADERRIGHTCOLOR") || fastcmp(word, "HEADERRIGHTCOLOUR"))
-				newgtrightcolor = (UINT8)get_number(word2);
-			// Rankings type
-			else if (fastcmp(word, "RANKINGTYPE"))
+			else if (fastcmp(word, "FLAG"))
 			{
-				// Case insensitive
-				newgtrankingstype = (int)get_number(word2);
+				team->flag = (UINT16)get_number(word2);
 			}
-			// Intermission type
-			else if (fastcmp(word, "INTERMISSIONTYPE"))
+			else if (fastcmp(word, "FLAGTYPE"))
 			{
-				// Case sensitive
-				newgtinttype = (int)get_number(word2lwr);
-			}
-			// Type of level
-			else if (fastcmp(word, "TYPEOFLEVEL"))
-			{
-				if (i) // it's just a number
-					newgttol = (UINT32)i;
+				if (i == 0 && word2[0] != '0') // If word2 isn't a number
+					i = get_mobjtype(word2); // find a thing by name
+				if (i < NUMMOBJTYPES && i > 0)
+					team->flag_mobj_type = i;
 				else
 				{
-					UINT32 tol = 0;
-					tmp = strtok(word2,",");
-					do {
-						for (i = 0; TYPEOFLEVEL[i].name; i++)
-							if (fasticmp(tmp, TYPEOFLEVEL[i].name))
-								break;
-						if (!TYPEOFLEVEL[i].name)
-							deh_warning("readgametype %s: unknown typeoflevel flag %s\n", gtname, tmp);
-						tol |= TYPEOFLEVEL[i].flag;
-					} while((tmp = strtok(NULL,",")) != NULL);
-					newgttol = tol;
+					deh_warning("readteam %d: Thing %d out of range (1 - %d)", num, i, NUMMOBJTYPES-1);
 				}
 			}
-			// Teams
-			else if (fastcmp(word, "TEAMLIST"))
+			else if (fastcmp(word, "COLOR"))
 			{
-				tmp = strtok(word2,",");
-				do {
-					if (teamcount == MAXTEAMS)
-					{
-						deh_warning("readgametype %s: too many teams\n", gtname);
-						break;
-					}
-					UINT8 team_id = TEAM_NONE;
-					for (i = 1; i < MAXTEAMS; i++)
-					{
-						if (!teamnames[i])
-							break;
-						if (fasticmp(tmp, teamnames[i]))
-						{
-							team_id = i;
-							break;
-						}
-					}
-					if (team_id == TEAM_NONE)
-						deh_warning("readgametype %s: unknown team %s\n", gtname, tmp);
-					else
-					{
-						teamlist[teamcount++] = team_id;
-					}
-				} while((tmp = strtok(NULL,",")) != NULL);
+				if (i == 0 && word2[0] != '0') // If word2 isn't a number
+					i = get_skincolor(word2); // find a skincolor by name
+				if (i && i < numskincolors)
+					team->color = i;
+				else
+				{
+					deh_warning("readteam %d: Color %d out of range (1 - %d)", num, i, numskincolors-1);
+				}
 			}
-			// This SOC probably provided gametype rules as words, instead of using the RULES keyword.
-			// (For example, "NOSPECTATORSPAWN = TRUE")
+			else if (fastcmp(word, "WEAPONCOLOR"))
+			{
+				if (i == 0 && word2[0] != '0') // If word2 isn't a number
+					i = get_skincolor(word2); // find a skincolor by name
+				if (i && i < numskincolors)
+					team->weapon_color = i;
+				else
+				{
+					deh_warning("readteam %d: Weapon color %d out of range (1 - %d)", num, i, numskincolors-1);
+				}
+			}
+			else if (fastcmp(word, "MISSILECOLOR"))
+			{
+				if (i == 0 && word2[0] != '0') // If word2 isn't a number
+					i = get_skincolor(word2); // find a skincolor by name
+				if (i && i < numskincolors)
+					team->missile_color = i;
+				else
+				{
+					deh_warning("readteam %d: Missile color %d out of range (1 - %d)", num, i, numskincolors-1);
+				}
+			}
+			else if (fastcmp(word, "ICON"))
+			{
+				G_SetTeamIcon(num, TEAM_ICON, word2lwr);
+			}
+			else if (fastcmp(word, "FLAGICON"))
+			{
+				G_SetTeamIcon(num, TEAM_ICON_FLAG, word2lwr);
+			}
+			else if (fastcmp(word, "GOTFLAGICON"))
+			{
+				G_SetTeamIcon(num, TEAM_ICON_GOT_FLAG, word2lwr);
+			}
+			else if (fastcmp(word, "MISSINGFLAGICON"))
+			{
+				G_SetTeamIcon(num, TEAM_ICON_MISSING_FLAG, word2lwr);
+			}
 			else
 			{
-				UINT32 wordgt = 0;
-				for (j = 0; GAMETYPERULE_LIST[j]; j++)
-					if (fastcmp(word, GAMETYPERULE_LIST[j])) {
-						wordgt |= (1<<j);
-						if (i || word2[0] == 'T' || word2[0] == 'Y')
-							newgtrules |= wordgt;
-						break;
-					}
-				if (!wordgt)
-					deh_warning("readgametype %s: unknown word '%s'", gtname, word);
+				deh_warning("readteam %d: unknown word '%s'", num, word);
 			}
 		}
 	} while (!myfeof(f)); // finish when the line is empty
@@ -1344,43 +1521,8 @@ void readgametype(MYFILE *f, char *gtname)
 	if (word2lwr)
 		Z_Free(word2lwr);
 
-	// Ran out of gametype slots
-	if (gametypecount == NUMGAMETYPEFREESLOTS)
-	{
-		CONS_Alert(CONS_WARNING, "Ran out of free gametype slots!\n");
-		return;
-	}
-
-	// Add the new gametype
-	newgtidx = G_AddGametype(newgtrules);
-	G_AddGametypeTOL(newgtidx, newgttol);
-	G_SetGametypeDescription(newgtidx, gtdescription, newgtleftcolor, newgtrightcolor);
-
-	// Not covered by G_AddGametype alone.
-	if (newgtrankingstype == -1)
-		newgtrankingstype = newgtidx;
-	gametypes[newgtidx].rankings_type = newgtrankingstype;
-	gametypes[newgtidx].intermission_type = newgtinttype;
-	gametypes[newgtidx].pointlimit = newgtpointlimit;
-	gametypes[newgtidx].timelimit = newgttimelimit;
-
-	// Copy the teams
-	gametypes[newgtidx].teams.num = teamcount;
-	if (teamcount)
-		memcpy(gametypes[newgtidx].teams.list, teamlist, sizeof(teamlist[0]) * teamcount);
-
-	// Write the new gametype name.
-	gametypes[newgtidx].name = Z_StrDup(gtname);
-
-	// Write the constant name.
-	if (gtconst[0] == '\0')
-		strncpy(gtconst, gtname, MAXLINELEN);
-	G_AddGametypeConstant(newgtidx, gtconst);
-
-	// Update gametype_cons_t accordingly.
-	G_UpdateGametypeSelections();
-
-	CONS_Printf("Added gametype %s\n", gametypes[newgtidx].name);
+	ST_LoadTeamIcons();
+	G_UpdateTeamSelection();
 }
 
 void readlevelheader(MYFILE *f, INT32 num)
@@ -4193,6 +4335,38 @@ skincolornum_t get_skincolor(const char *word)
 			return i;
 	deh_warning("Couldn't find skincolor named 'SKINCOLOR_%s'",word);
 	return SKINCOLOR_GREEN;
+}
+
+INT16 get_gametype(const char *word)
+{
+	INT16 i;
+	if (*word >= '0' && *word <= '9')
+		return atoi(word);
+	if (fastncmp("GT_",word,3))
+		word += 3; // take off the GT_
+	for (i = 0; i < gametypecount; i++)
+	{
+		if (fastcmp(word, gametypes[i].constant_name + 3))
+			return i;
+	}
+	deh_warning("Couldn't find gametype named 'GT_%s'",word);
+	return GT_COOP;
+}
+
+UINT8 get_team(const char *word)
+{
+	UINT8 i;
+	if (*word >= '0' && *word <= '9')
+		return atoi(word);
+	if (fastncmp("TEAM_",word,5))
+		word += 5; // take off the TEAM_
+	for (i = 0; i < numteams; i++)
+	{
+		if (fastcmp(word, teamnames[i]))
+			return i;
+	}
+	deh_warning("Couldn't find team named 'TEAM_%s'",word);
+	return TEAM_NONE;
 }
 
 spritenum_t get_sprite(const char *word)

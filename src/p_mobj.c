@@ -11573,7 +11573,12 @@ void P_SpawnPlayer(INT32 playernum)
 	{
 		// Fix stupid non spectator spectators.
 		if (!p->spectator && !p->ctfteam)
-			p->spectator = true;
+		{
+			if (G_GametypeHasSpectators())
+				p->spectator = true;
+			else
+				p->ctfteam = 1;
+		}
 
 		// Fix team colors.
 		// This code isn't being done right somewhere else. Oh well.

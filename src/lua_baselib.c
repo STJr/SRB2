@@ -3411,15 +3411,14 @@ static int lib_gAddGametype(lua_State *L)
 
 	char *gtname = NULL;
 	char *gtconst = NULL;
-	const char *gtdescription = NULL;
-	INT16 newgtidx = 0;
+	char *gtdescription = NULL;
 	UINT32 newgtrules = 0;
 	UINT32 newgttol = 0;
 	INT32 newgtpointlimit = 0;
 	INT32 newgttimelimit = 0;
-	UINT8 newgtleftcolor = 0;
-	UINT8 newgtrightcolor = 0;
-	INT16 newgtrankingstype = -1;
+	UINT8 newgtleftcolor = 54;
+	UINT8 newgtrightcolor = 54;
+	INT16 newgtrankingstype = RANKINGS_DEFAULT;
 	int newgtinttype = 0;
 	UINT8 teamcount = 0;
 	UINT8 teamlist[MAXTEAMS];
@@ -3540,40 +3539,52 @@ static int lib_gAddGametype(lua_State *L)
 	// Set defaults
 	if (gtname == NULL)
 		gtname = Z_StrDup("Unnamed gametype");
-	if (gtdescription == NULL)
-		gtdescription = Z_StrDup("???");
+
+	if (G_GetGametypeByName(gtname) != -1)
+	{
+		luaL_error(L, "gametype %s already exists", gtname);
+		Z_Free(gtname);
+		Z_Free(gtconst);
+		Z_Free(gtdescription);
+		return 0;
+	}
 
 	// Add the new gametype
-	newgtidx = G_AddGametype(newgtrules);
-	G_AddGametypeTOL(newgtidx, newgttol);
-	G_SetGametypeDescription(newgtidx, gtdescription, newgtleftcolor, newgtrightcolor);
+	INT16 gtype = G_AddGametype();
 
-	// Not covered by G_AddGametype alone.
-	if (newgtrankingstype == -1)
-		newgtrankingstype = newgtidx;
-	gametypes[newgtidx].rankings_type = newgtrankingstype;
-	gametypes[newgtidx].intermission_type = newgtinttype;
-	gametypes[newgtidx].pointlimit = newgtpointlimit;
-	gametypes[newgtidx].timelimit = newgttimelimit;
+	gametype_t *gt = &gametypes[gtype];
+
+	gt->name = gtname;
+
+	if (gtconst)
+		G_AddGametypeConstant(gtype, gtconst);
+	else
+		G_AddGametypeConstant(gtype, gtname);
+
+	if (gtdescription)
+		G_SetGametypeDescription(gtype, gtdescription);
+	G_SetGametypeDescriptionLeftColor(gtype, newgtleftcolor);
+	G_SetGametypeDescriptionRightColor(gtype, newgtrightcolor);
+
+	gt->rules = newgtrules;
+	gt->typeoflevel = newgttol;
+	gt->rankings_type = newgtrankingstype;
+	gt->intermission_type = newgtinttype;
+	gt->pointlimit = newgtpointlimit;
+	gt->timelimit = newgttimelimit;
 
 	// Copy the teams
-	gametypes[newgtidx].teams.num = teamcount;
+	gt->teams.num = teamcount;
 	if (teamcount)
-		memcpy(gametypes[newgtidx].teams.list, teamlist, sizeof(teamlist[0]) * teamcount);
+		memcpy(gt->teams.list, teamlist, sizeof(teamlist[0]) * teamcount);
 
-	// Write the new gametype name.
-	gametypes[newgtidx].name = gtname;
-
-	// Write the constant name.
-	if (gtconst == NULL)
-		gtconst = gtname;
-	G_AddGametypeConstant(newgtidx, gtconst);
-
-	// Update gametype_cons_t accordingly.
 	G_UpdateGametypeSelections();
 
-	// done
-	CONS_Printf("Added gametype %s\n", gametypes[newgtidx].name);
+	CONS_Printf("Added gametype %s\n", gt->name);
+
+	Z_Free(gtconst);
+	Z_Free(gtdescription);
+
 	return 0;
 }
 

@@ -2360,7 +2360,12 @@ static void Command_Teamchange_f(void)
 	if (COM_Argc() <= 1)
 	{
 		if (G_GametypeHasTeams())
-			CONS_Printf(M_GetText("changeteam <team>: switch to a new team (%s)\n"), "team name or spectator");
+		{
+			if (G_GametypeHasSpectators())
+				CONS_Printf(M_GetText("changeteam <team>: switch to a new team (%s)\n"), "team name or spectator");
+			else
+				CONS_Printf(M_GetText("changeteam <team>: switch to a new team (%s)\n"), "team name");
+		}
 		else if (G_GametypeHasSpectators())
 			CONS_Printf(M_GetText("changeteam <team>: switch to a new team (%s)\n"), "spectator or playing");
 		else
@@ -2370,7 +2375,7 @@ static void Command_Teamchange_f(void)
 
 	if (G_GametypeHasTeams())
 	{
-		if (!strcasecmp(COM_Argv(1), "spectator") || !strcasecmp(COM_Argv(1), "0"))
+		if (G_GametypeHasSpectators() && (!strcasecmp(COM_Argv(1), "spectator") || !strcasecmp(COM_Argv(1), "0")))
 			NetPacket.packet.newteam = 0;
 		else
 		{
@@ -2378,7 +2383,7 @@ static void Command_Teamchange_f(void)
 			if (M_StringOnlyHasDigits(COM_Argv(1)))
 			{
 				newteam = atoi(COM_Argv(1));
-				if (newteam >= teamsingame)
+				if (newteam == TEAM_NONE || newteam >= teamsingame)
 					newteam = MAXTEAMS;
 			}
 			else
@@ -2407,7 +2412,12 @@ static void Command_Teamchange_f(void)
 	if (error)
 	{
 		if (G_GametypeHasTeams())
-			CONS_Printf(M_GetText("changeteam <team>: switch to a new team (%s)\n"), "team name or spectator");
+		{
+			if (G_GametypeHasSpectators())
+				CONS_Printf(M_GetText("changeteam <team>: switch to a new team (%s)\n"), "team name or spectator");
+			else
+				CONS_Printf(M_GetText("changeteam <team>: switch to a new team (%s)\n"), "team name");
+		}
 		else if (G_GametypeHasSpectators())
 			CONS_Printf(M_GetText("changeteam <team>: switch to a new team (%s)\n"), "spectator or playing");
 		return;
@@ -2466,9 +2476,14 @@ static void Command_Teamchange2_f(void)
 	if (COM_Argc() <= 1)
 	{
 		if (G_GametypeHasTeams())
-			CONS_Printf(M_GetText("changeteam <team>: switch to a new team (%s)\n"), "team name or spectator");
+		{
+			if (G_GametypeHasSpectators())
+				CONS_Printf(M_GetText("changeteam2 <team>: switch to a new team (%s)\n"), "team name or spectator");
+			else
+				CONS_Printf(M_GetText("changeteam2 <team>: switch to a new team (%s)\n"), "team name");
+		}
 		else if (G_GametypeHasSpectators())
-			CONS_Printf(M_GetText("changeteam <team>: switch to a new team (%s)\n"), "spectator or playing");
+			CONS_Printf(M_GetText("changeteam2 <team>: switch to a new team (%s)\n"), "spectator or playing");
 		else
 			CONS_Alert(CONS_NOTICE, M_GetText("This command cannot be used in this gametype.\n"));
 		return;
@@ -2476,7 +2491,7 @@ static void Command_Teamchange2_f(void)
 
 	if (G_GametypeHasTeams())
 	{
-		if (!strcasecmp(COM_Argv(1), "spectator") || !strcasecmp(COM_Argv(1), "0"))
+		if (G_GametypeHasSpectators() && (!strcasecmp(COM_Argv(1), "spectator") || !strcasecmp(COM_Argv(1), "0")))
 			NetPacket.packet.newteam = 0;
 		else
 		{
@@ -2484,7 +2499,7 @@ static void Command_Teamchange2_f(void)
 			if (M_StringOnlyHasDigits(COM_Argv(1)))
 			{
 				newteam = atoi(COM_Argv(1));
-				if (newteam >= teamsingame)
+				if (newteam == TEAM_NONE || newteam >= teamsingame)
 					newteam = MAXTEAMS;
 			}
 			else
@@ -2514,7 +2529,12 @@ static void Command_Teamchange2_f(void)
 	if (error)
 	{
 		if (G_GametypeHasTeams())
-			CONS_Printf(M_GetText("changeteam2 <team>: switch to a new team (%s)\n"), "team name or spectator");
+		{
+			if (G_GametypeHasSpectators())
+				CONS_Printf(M_GetText("changeteam2 <team>: switch to a new team (%s)\n"), "team name or spectator");
+			else
+				CONS_Printf(M_GetText("changeteam2 <team>: switch to a new team (%s)\n"), "team name");
+		}
 		else if (G_GametypeHasSpectators())
 			CONS_Printf(M_GetText("changeteam2 <team>: switch to a new team (%s)\n"), "spectator or playing");
 		return;
@@ -2581,7 +2601,12 @@ static void Command_ServerTeamChange_f(void)
 		if (G_TagGametype())
 			CONS_Printf(M_GetText("serverchangeteam <playernum> <team>: switch player to a new team (%s)\n"), "it, notit, playing, or spectator");
 		else if (G_GametypeHasTeams())
-			CONS_Printf(M_GetText("serverchangeteam <playernum> <team>: switch player to a new team (%s)\n"), "team name or spectator");
+		{
+			if (G_GametypeHasSpectators())
+				CONS_Printf(M_GetText("serverchangeteam <playernum> <team>: switch player to a new team (%s)\n"), "team name or spectator");
+			else
+				CONS_Printf(M_GetText("serverchangeteam <playernum> <team>: switch player to a new team (%s)\n"), "team name");
+		}
 		else if (G_GametypeHasSpectators())
 			CONS_Printf(M_GetText("serverchangeteam <playernum> <team>: switch player to a new team (%s)\n"), "spectator or playing");
 		else
@@ -2604,7 +2629,7 @@ static void Command_ServerTeamChange_f(void)
 	}
 	else if (G_GametypeHasTeams())
 	{
-		if (!strcasecmp(COM_Argv(1), "spectator") || !strcasecmp(COM_Argv(1), "0"))
+		if (G_GametypeHasSpectators() && (!strcasecmp(COM_Argv(1), "spectator") || !strcasecmp(COM_Argv(1), "0")))
 			NetPacket.packet.newteam = 0;
 		else
 		{
@@ -2612,7 +2637,7 @@ static void Command_ServerTeamChange_f(void)
 			if (M_StringOnlyHasDigits(COM_Argv(1)))
 			{
 				newteam = atoi(COM_Argv(1));
-				if (newteam >= teamsingame)
+				if (newteam == TEAM_NONE || newteam >= teamsingame)
 					newteam = MAXTEAMS;
 			}
 			else
@@ -2643,7 +2668,12 @@ static void Command_ServerTeamChange_f(void)
 		if (G_TagGametype())
 			CONS_Printf(M_GetText("serverchangeteam <playernum> <team>: switch player to a new team (%s)\n"), "it, notit, playing, or spectator");
 		else if (G_GametypeHasTeams())
-			CONS_Printf(M_GetText("serverchangeteam <playernum> <team>: switch player to a new team (%s)\n"), "team name or spectator");
+		{
+			if (G_GametypeHasSpectators())
+				CONS_Printf(M_GetText("serverchangeteam <playernum> <team>: switch player to a new team (%s)\n"), "team name or spectator");
+			else
+				CONS_Printf(M_GetText("serverchangeteam <playernum> <team>: switch player to a new team (%s)\n"), "team name");
+		}
 		else if (G_GametypeHasSpectators())
 			CONS_Printf(M_GetText("serverchangeteam <playernum> <team>: switch player to a new team (%s)\n"), "spectator or playing");
 		return;

@@ -3597,11 +3597,23 @@ void G_UpdateTeamSelection(void)
 		i++;
 	}
 
+	// If no selections were added, somehow, we add at least two fallbacks.
+	if (i == 0)
+	{
+		dummyteam_cons_t[i].value = 0;
+		dummyteam_cons_t[i].strvalue = "Spectator";
+		i++;
+
+		dummyteam_cons_t[i].value = 1;
+		dummyteam_cons_t[i].strvalue = "Playing";
+		i++;
+	}
+
 	dummyteam_cons_t[i].value = 0;
 	dummyteam_cons_t[i].strvalue = NULL;
 
 	cv_dummyteam.defaultvalue = dummyteam_cons_t[0].strvalue;
-	cv_dummyteam.value = 0;
+	cv_dummyteam.value = dummyteam_cons_t[0].value;
 	cv_dummyteam.string = cv_dummyteam.defaultvalue;
 }
 
@@ -3624,15 +3636,17 @@ void G_SetGametype(INT16 gtype)
 //
 // Adds a gametype. Returns the new gametype number.
 //
-INT16 G_AddGametype(UINT32 rules)
+INT16 G_AddGametype(void)
 {
 	INT16 newgtype = gametypecount;
 	gametypecount++;
 
 	gametypes[newgtype].name = Z_StrDup("???");
-	gametypes[newgtype].rules = rules;
+	gametypes[newgtype].rules = 0;
 
-	G_UpdateGametypeSelections();
+	G_SetGametypeDescription(newgtype, "???");
+	G_SetGametypeDescriptionLeftColor(newgtype, 54);
+	G_SetGametypeDescriptionRightColor(newgtype, 54);
 
 	return newgtype;
 }
@@ -3670,20 +3684,32 @@ void G_UpdateGametypeSelections(void)
 	}
 	gametype_cons_t[NUMGAMETYPES].value = 0;
 	gametype_cons_t[NUMGAMETYPES].strvalue = NULL;
+
+	cv_newgametype.defaultvalue = gametype_cons_t[0].strvalue;
+
+	if (cv_newgametype.string && G_GetGametypeByName(cv_newgametype.string) == -1)
+	{
+		cv_newgametype.value = 0;
+		cv_newgametype.string = gametype_cons_t[0].strvalue;
+	}
 }
 
-//
-// G_SetGametypeDescription
-//
-// Set a description for the specified gametype.
-// (Level platter)
-//
-void G_SetGametypeDescription(INT16 gtype, char *descriptiontext, UINT8 leftcolor, UINT8 rightcolor)
+void G_SetGametypeDescription(INT16 gtype, const char *descriptiontext)
 {
-	if (descriptiontext != NULL)
-		strncpy(gametypedesc[gtype].notes, descriptiontext, 441);
-	gametypedesc[gtype].col[0] = leftcolor;
-	gametypedesc[gtype].col[1] = rightcolor;
+	if (descriptiontext)
+		strlcpy(gametypedesc[gtype].notes, descriptiontext, sizeof gametypedesc[gtype].notes);
+	else
+		memset(gametypedesc[gtype].notes, 0, sizeof gametypedesc[gtype].notes);
+}
+
+void G_SetGametypeDescriptionLeftColor(INT16 gtype, UINT8 color)
+{
+	gametypedesc[gtype].col[0] = color;
+}
+
+void G_SetGametypeDescriptionRightColor(INT16 gtype, UINT8 color)
+{
+	gametypedesc[gtype].col[1] = color;
 }
 
 tolinfo_t TYPEOFLEVEL[NUMTOLNAMES] = {
@@ -3730,16 +3756,6 @@ void G_AddTOL(UINT32 newtol, const char *tolname)
 
 	TYPEOFLEVEL[i].name = Z_StrDup(tolname);
 	TYPEOFLEVEL[i].flag = newtol;
-}
-
-//
-// G_AddGametypeTOL
-//
-// Assigns a type of level to a gametype.
-//
-void G_AddGametypeTOL(INT16 gtype, UINT32 newtol)
-{
-	gametypes[gtype].typeoflevel = newtol;
 }
 
 //
