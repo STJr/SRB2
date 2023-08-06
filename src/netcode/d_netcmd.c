@@ -2280,7 +2280,12 @@ static void Command_Teamchange_f(void)
 	if (COM_Argc() <= 1)
 	{
 		if (G_GametypeHasTeams())
-			CONS_Printf(M_GetText("changeteam <team>: switch to a new team (%s)\n"), "red, blue or spectator");
+		{
+			if (G_GametypeHasSpectators())
+				CONS_Printf(M_GetText("changeteam <team>: switch to a new team (%s)\n"), "red, blue or spectator");
+			else
+				CONS_Printf(M_GetText("changeteam <team>: switch to a new team (%s)\n"), "red or blue");
+		}
 		else if (G_GametypeHasSpectators())
 			CONS_Printf(M_GetText("changeteam <team>: switch to a new team (%s)\n"), "spectator or playing");
 		else
@@ -2294,7 +2299,7 @@ static void Command_Teamchange_f(void)
 			NetPacket.packet.newteam = 1;
 		else if (!strcasecmp(COM_Argv(1), "blue") || !strcasecmp(COM_Argv(1), "2"))
 			NetPacket.packet.newteam = 2;
-		else if (!strcasecmp(COM_Argv(1), "spectator") || !strcasecmp(COM_Argv(1), "0"))
+		else if (G_GametypeHasSpectators() && (!strcasecmp(COM_Argv(1), "spectator") || !strcasecmp(COM_Argv(1), "0")))
 			NetPacket.packet.newteam = 0;
 		else
 			error = true;
@@ -2317,7 +2322,12 @@ static void Command_Teamchange_f(void)
 	if (error)
 	{
 		if (G_GametypeHasTeams())
-			CONS_Printf(M_GetText("changeteam <team>: switch to a new team (%s)\n"), "red, blue or spectator");
+		{
+			if (G_GametypeHasSpectators())
+				CONS_Printf(M_GetText("changeteam <team>: switch to a new team (%s)\n"), "red, blue or spectator");
+			else
+				CONS_Printf(M_GetText("changeteam <team>: switch to a new team (%s)\n"), "red or blue");
+		}
 		else if (G_GametypeHasSpectators())
 			CONS_Printf(M_GetText("changeteam <team>: switch to a new team (%s)\n"), "spectator or playing");
 		return;
@@ -2376,9 +2386,14 @@ static void Command_Teamchange2_f(void)
 	if (COM_Argc() <= 1)
 	{
 		if (G_GametypeHasTeams())
-			CONS_Printf(M_GetText("changeteam <team>: switch to a new team (%s)\n"), "red, blue or spectator");
+		{
+			if (G_GametypeHasSpectators())
+				CONS_Printf(M_GetText("changeteam2 <team>: switch to a new team (%s)\n"), "red, blue or spectator");
+			else
+				CONS_Printf(M_GetText("changeteam2 <team>: switch to a new team (%s)\n"), "red or blue");
+		}
 		else if (G_GametypeHasSpectators())
-			CONS_Printf(M_GetText("changeteam <team>: switch to a new team (%s)\n"), "spectator or playing");
+			CONS_Printf(M_GetText("changeteam2 <team>: switch to a new team (%s)\n"), "spectator or playing");
 		else
 			CONS_Alert(CONS_NOTICE, M_GetText("This command cannot be used in this gametype.\n"));
 		return;
@@ -2390,7 +2405,7 @@ static void Command_Teamchange2_f(void)
 			NetPacket.packet.newteam = 1;
 		else if (!strcasecmp(COM_Argv(1), "blue") || !strcasecmp(COM_Argv(1), "2"))
 			NetPacket.packet.newteam = 2;
-		else if (!strcasecmp(COM_Argv(1), "spectator") || !strcasecmp(COM_Argv(1), "0"))
+		else if (G_GametypeHasSpectators() && (!strcasecmp(COM_Argv(1), "spectator") || !strcasecmp(COM_Argv(1), "0")))
 			NetPacket.packet.newteam = 0;
 		else
 			error = true;
@@ -2414,7 +2429,12 @@ static void Command_Teamchange2_f(void)
 	if (error)
 	{
 		if (G_GametypeHasTeams())
-			CONS_Printf(M_GetText("changeteam2 <team>: switch to a new team (%s)\n"), "red, blue or spectator");
+		{
+			if (G_GametypeHasSpectators())
+				CONS_Printf(M_GetText("changeteam2 <team>: switch to a new team (%s)\n"), "red, blue or spectator");
+			else
+				CONS_Printf(M_GetText("changeteam2 <team>: switch to a new team (%s)\n"), "red or blue");
+		}
 		else if (G_GametypeHasSpectators())
 			CONS_Printf(M_GetText("changeteam2 <team>: switch to a new team (%s)\n"), "spectator or playing");
 		return;
@@ -2481,7 +2501,12 @@ static void Command_ServerTeamChange_f(void)
 		if (G_TagGametype())
 			CONS_Printf(M_GetText("serverchangeteam <playernum> <team>: switch player to a new team (%s)\n"), "it, notit, playing, or spectator");
 		else if (G_GametypeHasTeams())
-			CONS_Printf(M_GetText("serverchangeteam <playernum> <team>: switch player to a new team (%s)\n"), "red, blue or spectator");
+		{
+			if (G_GametypeHasSpectators())
+				CONS_Printf(M_GetText("serverchangeteam <playernum> <team>: switch player to a new team (%s)\n"), "red, blue or spectator");
+			else
+				CONS_Printf(M_GetText("serverchangeteam <playernum> <team>: switch player to a new team (%s)\n"), "red or blue");
+		}
 		else if (G_GametypeHasSpectators())
 			CONS_Printf(M_GetText("serverchangeteam <playernum> <team>: switch player to a new team (%s)\n"), "spectator or playing");
 		else
@@ -2508,7 +2533,7 @@ static void Command_ServerTeamChange_f(void)
 			NetPacket.packet.newteam = 1;
 		else if (!strcasecmp(COM_Argv(2), "blue") || !strcasecmp(COM_Argv(2), "2"))
 			NetPacket.packet.newteam = 2;
-		else if (!strcasecmp(COM_Argv(2), "spectator") || !strcasecmp(COM_Argv(2), "0"))
+		else if (G_GametypeHasSpectators() && (!strcasecmp(COM_Argv(1), "spectator") || !strcasecmp(COM_Argv(1), "0")))
 			NetPacket.packet.newteam = 0;
 		else
 			error = true;
@@ -2533,7 +2558,12 @@ static void Command_ServerTeamChange_f(void)
 		if (G_TagGametype())
 			CONS_Printf(M_GetText("serverchangeteam <playernum> <team>: switch player to a new team (%s)\n"), "it, notit, playing, or spectator");
 		else if (G_GametypeHasTeams())
-			CONS_Printf(M_GetText("serverchangeteam <playernum> <team>: switch player to a new team (%s)\n"), "red, blue or spectator");
+		{
+			if (G_GametypeHasSpectators())
+				CONS_Printf(M_GetText("serverchangeteam <playernum> <team>: switch player to a new team (%s)\n"), "red, blue or spectator");
+			else
+				CONS_Printf(M_GetText("serverchangeteam <playernum> <team>: switch player to a new team (%s)\n"), "red or blue");
+		}
 		else if (G_GametypeHasSpectators())
 			CONS_Printf(M_GetText("serverchangeteam <playernum> <team>: switch player to a new team (%s)\n"), "spectator or playing");
 		return;

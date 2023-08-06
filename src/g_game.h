@@ -193,12 +193,14 @@ void G_SaveGameOver(UINT32 slot, boolean modifylives);
 
 void G_SetGametype(INT16 gametype);
 void G_InitGametypes(void);
-INT16 G_AddGametype(UINT32 rules);
+INT16 G_AddGametype(void);
 void G_AddGametypeConstant(INT16 gtype, const char *newgtconst);
 void G_UpdateGametypeSelections(void);
 void G_AddTOL(UINT32 newtol, const char *tolname);
-void G_AddGametypeTOL(INT16 gtype, UINT32 newtol);
-void G_SetGametypeDescription(INT16 gtype, char *descriptiontext, UINT8 leftcolor, UINT8 rightcolor);
+
+void G_SetGametypeDescription(INT16 gtype, const char *descriptiontext);
+void G_SetGametypeDescriptionLeftColor(INT16 gtype, UINT8 color);
+void G_SetGametypeDescriptionRightColor(INT16 gtype, UINT8 color);
 
 INT32 G_GetGametypeByName(const char *gametypestr);
 boolean G_IsSpecialStage(INT32 mapnum);

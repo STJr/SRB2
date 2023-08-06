@@ -11607,7 +11607,12 @@ void P_SpawnPlayer(INT32 playernum)
 	{
 		// Fix stupid non spectator spectators.
 		if (!p->spectator && !p->ctfteam)
-			p->spectator = true;
+		{
+			if (G_GametypeHasSpectators())
+				p->spectator = true;
+			else
+				p->ctfteam = 1;
+		}
 	}
 
 	if ((netgame || multiplayer) && ((gametyperules & GTR_SPAWNINVUL) || leveltime) && !p->spectator && !(maptol & TOL_NIGHTS))
