@@ -4048,6 +4048,134 @@ void G_FreeTeamData(UINT8 team)
 	team_ptr->flag_name = NULL;
 }
 
+static boolean G_AreTeamScoresTied(void)
+{
+	for (UINT8 i = 1; i < teamsingame - 1; i++)
+	{
+		if (teamscores[G_GetTeam(i)] != teamscores[G_GetTeam(i + 1)])
+			return false;
+	}
+
+	return true;
+}
+
+static boolean G_AreTeamPlayerCountsTied(void)
+{
+	INT32 numplayers[MAXTEAMS];
+
+	for (INT32 i = 0; i < MAXPLAYERS; i++)
+	{
+		if (playeringame[i])
+			numplayers[players[i].ctfteam]++;
+	}
+
+	for (UINT8 i = 1; i < teamsingame - 1; i++)
+	{
+		if (numplayers[G_GetTeam(i)] != numplayers[G_GetTeam(i + 1)])
+			return false;
+	}
+
+	return true;
+}
+
+UINT8 G_GetBestPerformingTeam(void)
+{
+	if (teamsingame < 2 || G_AreTeamScoresTied())
+		return TEAM_NONE;
+
+	UINT8 mostscore = TEAM_NONE;
+
+	for (UINT8 i = 1; i < teamsingame; i++)
+	{
+		UINT8 team = G_GetTeam(i);
+		if (mostscore == TEAM_NONE || teamscores[team] > teamscores[mostscore])
+			mostscore = team;
+	}
+
+	return mostscore;
+}
+
+UINT8 G_GetWorstPerformingTeam(void)
+{
+	if (teamsingame < 2 || G_AreTeamScoresTied())
+		return TEAM_NONE;
+
+	UINT8 leastscore = TEAM_NONE;
+
+	for (UINT8 i = 1; i < teamsingame; i++)
+	{
+		UINT8 team = G_GetTeam(i);
+		if (leastscore == TEAM_NONE || teamscores[team] < teamscores[leastscore])
+			leastscore = team;
+	}
+
+	return leastscore;
+}
+
+UINT8 G_GetMostAdvantagedTeam(void)
+{
+	if (teamsingame < 2)
+		return TEAM_NONE;
+
+	INT32 numplayers[MAXTEAMS];
+	UINT8 mostscore = TEAM_NONE;
+	UINT8 mostplayers = TEAM_NONE;
+
+	for (INT32 i = 0; i < MAXPLAYERS; i++)
+	{
+		if (playeringame[i])
+			numplayers[players[i].ctfteam]++;
+	}
+
+	for (UINT8 i = 1; i < teamsingame; i++)
+	{
+		UINT8 team = G_GetTeam(i);
+		if (mostscore == TEAM_NONE || teamscores[team] > teamscores[mostscore])
+			mostscore = team;
+		if (mostplayers == TEAM_NONE || numplayers[team] > numplayers[mostplayers])
+			mostplayers = team;
+	}
+
+	if (mostplayers != TEAM_NONE && !G_AreTeamPlayerCountsTied())
+		return mostplayers;
+	else if (mostscore != TEAM_NONE && !G_AreTeamScoresTied())
+		return mostscore;
+
+	return TEAM_NONE;
+}
+
+UINT8 G_GetMostDisadvantagedTeam(void)
+{
+	if (teamsingame < 2)
+		return TEAM_NONE;
+
+	INT32 numplayers[MAXTEAMS];
+	UINT8 leastscore = TEAM_NONE;
+	UINT8 leastplayers = TEAM_NONE;
+
+	for (INT32 i = 0; i < MAXPLAYERS; i++)
+	{
+		if (playeringame[i])
+			numplayers[players[i].ctfteam]++;
+	}
+
+	for (UINT8 i = 1; i < teamsingame; i++)
+	{
+		UINT8 team = G_GetTeam(i);
+		if (leastscore == TEAM_NONE || teamscores[team] < teamscores[leastscore])
+			leastscore = team;
+		if (leastplayers == TEAM_NONE || numplayers[team] < numplayers[leastplayers])
+			leastplayers = team;
+	}
+
+	if (leastplayers != TEAM_NONE && !G_AreTeamPlayerCountsTied())
+		return leastplayers;
+	else if (leastscore != TEAM_NONE && !G_AreTeamScoresTied())
+		return leastscore;
+
+	return TEAM_NONE;
+}
+
 /** Select a random map with the given typeoflevel flags.
   * If no map has those flags, this arbitrarily gives you map 1.
   * \param tolflags The typeoflevel flags to insist on. Other bits may

@@ -237,6 +237,11 @@ boolean G_HasTeamIcon(UINT8 team, UINT8 icon_type);
 void G_SetTeamIcon(UINT8 team, UINT8 icon_type, const char *icon);
 void G_FreeTeamData(UINT8 team);
 
+UINT8 G_GetBestPerformingTeam(void);
+UINT8 G_GetWorstPerformingTeam(void);
+UINT8 G_GetMostAdvantagedTeam(void);
+UINT8 G_GetMostDisadvantagedTeam(void);
+
 void G_Ticker(boolean run);
 boolean G_Responder(event_t *ev);
 boolean G_LuaResponder(event_t *ev);
