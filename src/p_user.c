@@ -10495,44 +10495,6 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 	return (x == thiscam->x && y == thiscam->y && z == thiscam->z && angle == thiscam->aiming);
 }
 
-static UINT8 P_GetWorstPerformingTeam(void)
-{
-	INT32 numplayers[MAXTEAMS];
-	INT32 leastscore = TEAM_NONE;
-	INT32 leastplayers = TEAM_NONE;
-
-	for (INT32 i = 0; i < MAXPLAYERS; i++)
-	{
-		if (playeringame[i])
-			numplayers[players[i].ctfteam]++;
-	}
-
-	for (INT32 i = 1; i < teamsingame; i++)
-	{
-		UINT8 team = G_GetTeam(i);
-		UINT8 compareto = leastscore == TEAM_NONE ? G_GetTeam(1) : leastscore;
-
-		if (teamscores[team] < teamscores[compareto])
-		{
-			leastscore = i;
-		}
-
-		compareto = leastplayers == TEAM_NONE ? G_GetTeam(1) : leastplayers;
-
-		if (numplayers[team] < numplayers[compareto])
-		{
-			leastplayers = i;
-		}
-	}
-
-	if (leastplayers != TEAM_NONE)
-		return leastplayers;
-	else if (leastscore != TEAM_NONE)
-		return leastscore;
-
-	return G_GetTeam(P_RandomRange(1, teamsingame - 1));
-}
-
 boolean P_SpectatorJoinGame(player_t *player)
 {
 	if (!G_CoopGametype() && !cv_allowteamchange.value)
@@ -10547,7 +10509,9 @@ boolean P_SpectatorJoinGame(player_t *player)
 	// Partial code reproduction from p_tick.c autobalance code.
 	else if (G_GametypeHasTeams())
 	{
-		UINT8 changeto = P_GetWorstPerformingTeam();
+		UINT8 changeto = G_GetMostDisadvantagedTeam();
+		if (changeto == TEAM_NONE)
+			changeto = G_GetTeam(P_RandomRange(1, teamsingame - 1));
 
 		if (!LUA_HookTeamSwitch(player, changeto, true, false, false))
 			return false;

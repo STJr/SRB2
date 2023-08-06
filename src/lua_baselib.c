@@ -4031,6 +4031,30 @@ static int lib_gCompetitionGametype(lua_State *L)
 	return 1;
 }
 
+static int lib_gGetBestPerformingTeam(lua_State *L)
+{
+	lua_pushinteger(L, G_GetBestPerformingTeam());
+	return 1;
+}
+
+static int lib_gGetWorstPerformingTeam(lua_State *L)
+{
+	lua_pushinteger(L, G_GetWorstPerformingTeam());
+	return 1;
+}
+
+static int lib_gGetMostAdvantagedTeam(lua_State *L)
+{
+	lua_pushinteger(L, G_GetMostAdvantagedTeam());
+	return 1;
+}
+
+static int lib_gGetMostDisadvantagedTeam(lua_State *L)
+{
+	lua_pushinteger(L, G_GetMostDisadvantagedTeam());
+	return 1;
+}
+
 static int lib_gTicsToHours(lua_State *L)
 {
 	tic_t rtic = luaL_checkinteger(L, 1);
@@ -4357,6 +4381,10 @@ static luaL_Reg lib[] = {
 	{"G_CoopGametype",lib_gCoopGametype},
 	{"G_TagGametype",lib_gTagGametype},
 	{"G_CompetitionGametype",lib_gCompetitionGametype},
+	{"G_GetBestPerformingTeam",lib_gGetBestPerformingTeam},
+	{"G_GetWorstPerformingTeam",lib_gGetWorstPerformingTeam},
+	{"G_GetMostAdvantagedTeam",lib_gGetMostAdvantagedTeam},
+	{"G_GetMostDisadvantagedTeam",lib_gGetMostDisadvantagedTeam},
 	{"G_TicsToHours",lib_gTicsToHours},
 	{"G_TicsToMinutes",lib_gTicsToMinutes},
 	{"G_TicsToSeconds",lib_gTicsToSeconds},
