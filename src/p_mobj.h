@@ -250,9 +250,11 @@ typedef enum
 	// Forces an object to NOT use super sprites with SPR_PLAY.
 	MFE_FORCENOSUPER		= 1<<13,
 	// Makes an object use super sprites where they wouldn't have otherwise and vice-versa
-	MFE_REVERSESUPER		= MFE_FORCESUPER|MFE_FORCENOSUPER
+	MFE_REVERSESUPER		= MFE_FORCESUPER|MFE_FORCENOSUPER,
+	// Object is a team flag
+	MFE_TEAMFLAG            = 1<<14,
 
-	// free: to and including 1<<15
+	// free: 1<<15
 } mobjeflag_t;
 
 //

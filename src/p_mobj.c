@@ -45,6 +45,10 @@ actioncache_t actioncachehead;
 
 static mobj_t *overlaycap = NULL;
 
+#define MAXHUNTEMERALDS 64
+mapthing_t *huntemeralds[MAXHUNTEMERALDS];
+INT32 numhuntemeralds;
+
 void P_InitCachedActions(void)
 {
 	actioncachehead.prev = actioncachehead.next = &actioncachehead;
@@ -2430,15 +2434,6 @@ boolean P_ZMovement(mobj_t *mo)
 				return false;
 			}
 			break;
-		case MT_REDFLAG:
-		case MT_BLUEFLAG:
-			// Remove from death pits.  DON'T FUCKING DESPAWN IT DAMMIT
-			if (P_CheckDeathPitCollide(mo))
-			{
-				mo->fuse = 1;
-				return false;
-			}
-			break;
 
 		case MT_RING: // Ignore still rings
 		case MT_COIN:
@@ -2499,6 +2494,12 @@ boolean P_ZMovement(mobj_t *mo)
 			}
 			break;
 		default:
+			// Respawn flags whenever they hit a death pit
+			if (mo->eflags & MFE_TEAMFLAG && P_CheckDeathPitCollide(mo))
+			{
+				mo->fuse = 1;
+				return false;
+			}
 			break;
 	}
 
@@ -2795,7 +2796,7 @@ boolean P_ZMovement(mobj_t *mo)
 				mo->momz = -mo->momz;
 			else
 			// Flags bounce
-			if (mo->type == MT_REDFLAG || mo->type == MT_BLUEFLAG)
+			if (mo->eflags & MFE_TEAMFLAG)
 			{
 				if (maptol & TOL_NIGHTS)
 					mo->momz = -FixedDiv(mo->momz, 10*FRACUNIT);
@@ -9763,11 +9764,6 @@ static boolean P_MobjRegularThink(mobj_t *mobj)
 		if (!P_TurretThink(mobj))
 			return false;
 		break;
-	case MT_BLUEFLAG:
-	case MT_REDFLAG:
-		if (P_MobjTouchingSectorSpecialFlag(mobj, SSF_RETURNFLAG))
-			mobj->fuse = 1; // Return to base.
-		break;
 	case MT_SPINDUST: // Spindash dust
 		mobj->momx = FixedMul(mobj->momx, (3*FRACUNIT)/4); // originally 50000
 		mobj->momy = FixedMul(mobj->momy, (3*FRACUNIT)/4); // same
@@ -9895,6 +9891,13 @@ static boolean P_MobjRegularThink(mobj_t *mobj)
 		}
 		/* FALLTHRU */
 	default:
+		// Return team flags to base whenever they touch sectors that return team flags
+		if (mobj->eflags & MFE_TEAMFLAG)
+		{
+			if (P_MobjTouchingSectorSpecialFlag(mobj, SSF_RETURNFLAG))
+				mobj->fuse = 1; // Return to base.
+		}
+
 		// check mobj against possible water content, before movement code
 		P_MobjCheckWater(mobj);
 
@@ -10059,6 +10062,12 @@ static boolean P_FuseThink(mobj_t *mobj)
 		P_MonitorFuseThink(mobj);
 		return false;
 	}
+	else if (mobj->eflags & MFE_TEAMFLAG)
+	{
+		P_FlagFuseThink(mobj);
+		P_RemoveMobj(mobj);
+		return false;
+	}
 	else switch (mobj->type)
 	{
 		// gargoyle and snowman handled in P_PushableThinker, not here
@@ -10069,11 +10078,6 @@ static boolean P_FuseThink(mobj_t *mobj)
 	case MT_LHRT:
 		P_KillMobj(mobj, NULL, NULL, 0);
 		break;
-	case MT_BLUEFLAG:
-	case MT_REDFLAG:
-		P_FlagFuseThink(mobj);
-		P_RemoveMobj(mobj);
-		return false;
 	case MT_FANG:
 		if (mobj->flags2 & MF2_SLIDEPUSH)
 		{
@@ -10551,8 +10555,6 @@ static fixed_t P_DefaultMobjShadowScale (mobj_t *thing)
 
 		case MT_REDTEAMRING:
 		case MT_BLUETEAMRING:
-		case MT_REDFLAG:
-		case MT_BLUEFLAG:
 
 		case MT_BOUNCERING:
 		case MT_AUTOMATICRING:
@@ -10614,8 +10616,9 @@ static fixed_t P_DefaultMobjShadowScale (mobj_t *thing)
 			return FRACUNIT;
 
 		default:
-
-			if (thing->flags & (MF_ENEMY|MF_BOSS))
+			if (thing->eflags & MFE_TEAMFLAG)
+				return 2*FRACUNIT/3;
+			else if (thing->flags & (MF_ENEMY|MF_BOSS))
 				return FRACUNIT;
 			else
 				return 0;
@@ -11845,10 +11848,6 @@ void P_MovePlayerToStarpost(INT32 playernum)
 		leveltime = p->starposttime;
 }
 
-#define MAXHUNTEMERALDS 64
-mapthing_t *huntemeralds[MAXHUNTEMERALDS];
-INT32 numhuntemeralds;
-
 fixed_t P_GetMobjSpawnHeight(const mobjtype_t mobjtype, const fixed_t x, const fixed_t y, const fixed_t dz, const fixed_t offset, const boolean flip, const fixed_t scale, const boolean absolutez)
 {
 	const subsector_t *ss = R_PointInSubsector(x, y);
@@ -11979,7 +11978,8 @@ static boolean P_SpawnNonMobjMapThing(mapthing_t *mthing)
 		return true;
 	}
 	else if (metalrecording && mthing->type == mobjinfo[MT_METALSONIC_RACE].doomednum)
-	{ // If recording, you ARE Metal Sonic. Do not spawn it, do not save normal spawnpoints.
+	{
+		// If recording, you ARE Metal Sonic. Do not spawn it, do not save normal spawnpoints.
 		playerstarts[0] = mthing;
 		return true;
 	}
@@ -12078,13 +12078,13 @@ static boolean P_AllowMobjSpawn(mapthing_t* mthing, mobjtype_t i)
 
 	if (!(gametyperules & GTR_TEAMFLAGS)) // CTF specific things
 	{
-		if (i == MT_BLUEFLAG || i == MT_REDFLAG)
+		if (i == MT_BLUEFLAG || i == MT_REDFLAG || i == MT_TEAMFLAG)
 			return false; // No flags in non-CTF modes!
 	}
-	else if (i == MT_BLUEFLAG || i == MT_REDFLAG)
+	else if (i == MT_BLUEFLAG || i == MT_REDFLAG || i == MT_TEAMFLAG)
 	{
-		UINT8 team = mobjinfo[i].mass;
-		if (team >= numteams)
+		UINT8 team = i == MT_TEAMFLAG ? mthing->args[0] : mobjinfo[i].mass;
+		if (team == TEAM_NONE || team >= numteams)
 			return false;
 		else if (flagmobjs[team] && !P_MobjWasRemoved(flagmobjs[team]))
 		{
@@ -12169,6 +12169,14 @@ static mobjtype_t P_GetMobjtypeSubstitute(mapthing_t *mthing, mobjtype_t i)
 
 		if (i == MT_BLUESPHERE)
 			return MT_NIGHTSCHIP;
+	}
+
+	if (i == MT_TEAMFLAG)
+	{
+		INT32 team = mthing->args[0];
+		if (team == TEAM_NONE || team >= numteams)
+			return MT_NULL;
+		return teams[team].flag_mobj_type;
 	}
 
 	if (!(gametyperules & GTR_TEAMS))
@@ -13188,12 +13196,11 @@ static boolean P_SetupSpawnedMapThing(mapthing_t *mthing, mobj_t *mobj, boolean 
 		}
 		break;
 	case MT_REDFLAG:
-		P_SetTarget(&flagmobjs[TEAM_RED], mobj);
-		flagpoints[TEAM_RED] = mobj->spawnpoint;
-		break;
 	case MT_BLUEFLAG:
-		P_SetTarget(&flagmobjs[TEAM_BLUE], mobj);
-		flagpoints[TEAM_BLUE] = mobj->spawnpoint;
+		mobj->extravalue1 = G_GetTeam(mobj->info->mass);
+		/* FALLTHRU */
+	case MT_TEAMFLAG:
+		mobj->eflags |= MFE_TEAMFLAG;
 		break;
 	case MT_NIGHTSSTAR:
 		if (maptol & TOL_XMAS)
@@ -13311,6 +13318,19 @@ static boolean P_SetupSpawnedMapThing(mapthing_t *mthing, mobj_t *mobj, boolean 
 	{
 		mobj->threshold = mobj->info->seesound;
 		mobj->health = mobj->info->spawnhealth;
+	}
+	// Team flag
+	if (mobj->eflags & MFE_TEAMFLAG)
+	{
+		if (mobj->extravalue1 == 0)
+			mobj->extravalue1 = mthing->args[0];
+
+		INT32 team = mobj->extravalue1;
+		if (team > TEAM_NONE && team < numteams)
+		{
+			P_SetTarget(&flagmobjs[team], mobj);
+			flagpoints[team] = mobj->spawnpoint;
+		}
 	}
 
 	return true;
@@ -14119,6 +14139,38 @@ mobj_t *P_SPMAngle(mobj_t *source, mobjtype_t type, angle_t angle, UINT8 allowai
 	return slope ? th : NULL;
 }
 
+mobj_t *P_SpawnTeamFlag(UINT8 team, fixed_t x, fixed_t y, fixed_t z)
+{
+	if (team == TEAM_NONE || team >= numteams || teams[team].flag_mobj_type == 0)
+		return NULL;
+
+	mobj_t *flag = P_SpawnMobj(x, y, z, teams[team].flag_mobj_type);
+
+	if (flag)
+	{
+		flag->eflags |= MFE_TEAMFLAG;
+		flag->extravalue1 = team;
+	}
+
+	return flag;
+}
+
+mobj_t *P_GetTeamFlag(UINT8 team)
+{
+	if (team >= teamsingame || P_MobjWasRemoved(flagmobjs[team]))
+		return NULL;
+
+	return flagmobjs[team];
+}
+
+mapthing_t *P_GetTeamFlagMapthing(UINT8 team)
+{
+	if (team >= teamsingame)
+		return NULL;
+
+	return flagpoints[team];
+}
+
 //
 // P_FlashPal
 // Flashes a player's palette.  ARMAGEDDON BLASTS!
@@ -14201,20 +14253,4 @@ mobj_t *P_SpawnMobjFromMobj(mobj_t *mobj, fixed_t xofs, fixed_t yofs, fixed_t zo
 	newmobj->old_spriteyoffset = mobj->old_spriteyoffset;
 
 	return newmobj;
-}
-
-mobj_t *P_GetTeamFlag(UINT8 team)
-{
-	if (team >= teamsingame || P_MobjWasRemoved(flagmobjs[team]))
-		return NULL;
-
-	return flagmobjs[team];
-}
-
-mapthing_t *P_GetTeamFlagMapthing(UINT8 team)
-{
-	if (team >= teamsingame)
-		return NULL;
-
-	return flagpoints[team];
 }

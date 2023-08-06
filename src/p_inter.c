@@ -553,6 +553,60 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 		P_DamageMobj(toucher, special, special, 1, DMG_FIRE);
 		return;
 	}
+	// CTF Flags
+	else if (special->eflags & MFE_TEAMFLAG)
+	{
+		if (player->bot && player->bot != BOT_MPAI)
+			return;
+		if (player->powers[pw_flashing] || player->tossdelay)
+			return;
+		if (!special->spawnpoint)
+			return;
+		if (special->fuse == 1)
+			return;
+		if (special->extravalue1 > TEAM_NONE && special->extravalue1 < numteams)
+		{
+			UINT8 flagteam = special->extravalue1;
+			sectorspecialflags_t specialflag = flagteam == TEAM_RED ? SSF_REDTEAMBASE : SSF_BLUETEAMBASE;
+			const char *flagtext;
+			const char *flagcolor;
+			char plname[MAXPLAYERNAME+4];
+
+			flagtext = G_GetTeamFlagName(flagteam);
+			flagcolor = GetChatColorForSkincolor(G_GetTeamColor(flagteam));
+			snprintf(plname, sizeof(plname), "%s%s%s",
+					 CTFTEAMCODE(player),
+					 player_names[player - players],
+					 CTFTEAMENDCODE(player));
+
+			if (player->ctfteam == flagteam) // Player is on the same team as the flag
+			{
+				// Ignore height, only check x/y for now
+				// avoids stupid problems with some flags constantly returning
+				if (special->x>>FRACBITS != special->spawnpoint->x
+				    || special->y>>FRACBITS != special->spawnpoint->y)
+				{
+					special->fuse = 1;
+					special->flags2 |= MF2_JUSTATTACKED;
+
+					if (!P_PlayerTouchingSectorSpecialFlag(player, specialflag))
+						CONS_Printf(M_GetText("%s returned the %s%s%c to base.\n"), plname, flagcolor, flagtext, 0x80);
+				}
+				return;
+			}
+			else if (player->ctfteam) // Player is on the other team (and not a spectator)
+			{
+				if (player->powers[pw_super])
+					return;
+
+				player->gotflag |= teams[flagteam].flag;
+				CONS_Printf(M_GetText("%s picked up the %s%s%c!\n"), plname, flagcolor, flagtext, 0x80);
+				P_SetTarget(&flagmobjs[flagteam], NULL);
+			}
+		}
+		else
+			return;
+	}
 	else
 	{
 	// We now identify by object type, not sprite! Tails 04-11-2001
@@ -833,68 +887,6 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 					return;
 				}
 			}
-
-		// CTF Flags
-		case MT_REDFLAG:
-		case MT_BLUEFLAG:
-			if (player->bot && player->bot != BOT_MPAI)
-				return;
-			if (player->powers[pw_flashing] || player->tossdelay)
-				return;
-			if (!special->spawnpoint)
-				return;
-			if (special->fuse == 1)
-				return;
-//			if (special->momz > 0)
-//				return;
-			if (special->info->mass < numteams)
-			{
-				UINT8 flagteam = special->info->mass;
-				sectorspecialflags_t specialflag = flagteam == TEAM_RED ? SSF_REDTEAMBASE : SSF_BLUETEAMBASE;
-				const char *flagtext;
-				const char *flagcolor;
-				char plname[MAXPLAYERNAME+4];
-
-				flagtext = G_GetTeamFlagName(flagteam);
-				flagcolor = GetChatColorForSkincolor(G_GetTeamColor(flagteam));
-				snprintf(plname, sizeof(plname), "%s%s%s",
-						 CTFTEAMCODE(player),
-						 player_names[player - players],
-						 CTFTEAMENDCODE(player));
-
-				if (player->ctfteam == flagteam) // Player is on the same team as the flag
-				{
-					// Ignore height, only check x/y for now
-					// avoids stupid problems with some flags constantly returning
-					if (special->x>>FRACBITS != special->spawnpoint->x
-					    || special->y>>FRACBITS != special->spawnpoint->y)
-					{
-						special->fuse = 1;
-						special->flags2 |= MF2_JUSTATTACKED;
-
-						if (!P_PlayerTouchingSectorSpecialFlag(player, specialflag))
-						{
-							CONS_Printf(M_GetText("%s returned the %s%s%c to base.\n"), plname, flagcolor, flagtext, 0x80);
-
-							// The fuse code plays this sound effect
-							//if (players[consoleplayer].ctfteam == player->ctfteam)
-							//	S_StartSound(NULL, sfx_hoop1);
-						}
-					}
-				}
-				else if (player->ctfteam) // Player is on the other team (and not a spectator)
-				{
-					if (player->powers[pw_super])
-						return;
-
-					player->gotflag |= teams[flagteam].flag;
-					CONS_Printf(M_GetText("%s picked up the %s%s%c!\n"), plname, flagcolor, flagtext, 0x80);
-					P_SetTarget(&flagmobjs[flagteam], NULL);
-					// code for dealing with abilities is handled elsewhere now
-					break;
-				}
-			}
-			return;
 
 // ********************************** //
 // NiGHTS gameplay items and powerups //
@@ -4392,13 +4384,16 @@ void P_PlayerFlagBurst(player_t *player, boolean toss)
 	if (!player->gotflag)
 		return;
 
-	for (UINT8 team = TEAM_RED; team < numteams; team++)
+	for (UINT8 i = 1; i < numteams; i++)
 	{
+		UINT8 team = G_GetTeam(i);
 		UINT32 flagflag = 1 << (team - 1);
 		if (!(player->gotflag & flagflag))
 			continue;
 
-		mobj_t *flag = P_SpawnMobj(player->mo->x, player->mo->y, player->mo->z, teams[team].flag_mobj_type);
+		mobj_t *flag = P_SpawnTeamFlag(team, player->mo->x, player->mo->y, player->mo->z);
+		if (flag == NULL)
+			continue;
 
 		if (player->mo->eflags & MFE_VERTICALFLIP)
 		{

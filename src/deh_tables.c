@@ -3697,6 +3697,7 @@ const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for sanity t
 	"MT_TOKEN", // Special Stage token for special stage
 	"MT_REDFLAG", // Red CTF Flag
 	"MT_BLUEFLAG", // Blue CTF Flag
+	"MT_TEAMFLAG", // Team flag
 	"MT_EMBLEM",
 	"MT_EMERALD1",
 	"MT_EMERALD2",
@@ -4415,6 +4416,7 @@ const char *const MOBJEFLAG_LIST[] = {
 	"TRACERANGLE", // Compute and trigger on mobj angle relative to tracer
 	"FORCESUPER", // Forces an object to use super sprites with SPR_PLAY.
 	"FORCENOSUPER", // Forces an object to NOT use super sprites with SPR_PLAY.
+	"TEAMFLAG", // Object is a team flag
 	NULL
 };
 
