@@ -219,6 +219,9 @@ int LUA_PushGlobals(lua_State *L, const char *word)
 	} else if (fastcmp(word,"redscore")) {
 		lua_pushinteger(L, teamscores[G_GetTeam(1)]);
 		return 1;
+	} else if (fastcmp(word,"teamscores")) {
+		LUA_PushUserdata(L, teamscores, META_TEAMSCORES);
+		return 1;
 	} else if (fastcmp(word,"timelimit")) {
 		lua_pushinteger(L, cv_timelimit.value);
 		return 1;
@@ -998,6 +1001,7 @@ enum
 	ARCH_SKIN,
 	ARCH_GAMETYPE,
 	ARCH_TEAM,
+	ARCH_TEAMSCORES,
 
 	ARCH_TEND=0xFF,
 };
@@ -1029,6 +1033,7 @@ static const struct {
 	{META_SKIN,     ARCH_SKIN},
 	{META_GAMETYPE, ARCH_GAMETYPE},
 	{META_TEAM,     ARCH_TEAM},
+	{META_TEAMSCORES, ARCH_TEAMSCORES},
 	{NULL,          ARCH_NULL}
 };
 
@@ -1371,6 +1376,11 @@ static UINT8 ArchiveValue(int TABLESINDEX, int myindex)
 			WRITEUINT8(save_p, team - teams);
 			break;
 		}
+		case ARCH_TEAMSCORES:
+		{
+			WRITEUINT8(save_p, ARCH_TEAMSCORES);
+			break;
+		}
 		default:
 			WRITEUINT8(save_p, ARCH_NULL);
 			return 2;
@@ -1625,6 +1635,9 @@ static UINT8 UnArchiveValue(int TABLESINDEX)
 		break;
 	case ARCH_TEAM:
 		LUA_PushUserdata(gL, &teams[READUINT8(save_p)], META_TEAM);
+		break;
+	case ARCH_TEAMSCORES:
+		LUA_PushUserdata(gL, teamscores, META_TEAMSCORES);
 		break;
 	case ARCH_TEND:
 		return 1;

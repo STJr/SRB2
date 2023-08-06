@@ -2368,19 +2368,12 @@ static int team_num(lua_State *L)
 	return 1;
 }
 
-static int teamlist_len(lua_State *L)
-{
-	teamlist_t *teamlist = *((teamlist_t **)luaL_checkudata(L, 1, META_TEAMLIST));
-	lua_pushinteger(L, teamlist->num);
-	return 1;
-}
-
 static int teamlist_get(lua_State *L)
 {
 	teamlist_t *teamlist = *((teamlist_t **)luaL_checkudata(L, 1, META_TEAMLIST));
 	int i = luaL_checkinteger(L, 2);
-	if (i < 0 || i > teamlist->num)
-		return luaL_error(L, "list index %d out of range (1 - %d)", i, teamlist->num);
+	if (i <= 0 || i > teamlist->num)
+		return luaL_error(L, "array index %d out of range (1 - %d)", i, teamlist->num);
 	lua_pushinteger(L, teamlist->list[i - 1]);
 	return 1;
 }
@@ -2389,13 +2382,47 @@ static int teamlist_set(lua_State *L)
 {
 	teamlist_t *teamlist = *((teamlist_t **)luaL_checkudata(L, 1, META_TEAMLIST));
 	int i = luaL_checkinteger(L, 2);
-	if (i < 0 || i > teamlist->num)
-		return luaL_error(L, "list index %d out of range (1 - %d)", i, teamlist->num);
 	int team = luaL_checkinteger(L, 3);
+	if (i <= 0 || i > teamlist->num)
+		return luaL_error(L, "array index %d out of range (1 - %d)", i, teamlist->num);
 	if (team < 0 || team >= numteams)
 		return luaL_error(L, "team index %d out of range (0 - %d)", i, numteams - 1);
 	teamlist->list[i - 1] = (UINT8)team;
 	return 0;
+}
+
+static int teamlist_len(lua_State *L)
+{
+	teamlist_t *teamlist = *((teamlist_t **)luaL_checkudata(L, 1, META_TEAMLIST));
+	lua_pushinteger(L, teamlist->num);
+	return 1;
+}
+
+static int teamscores_get(lua_State *L)
+{
+	UINT32 *scoreslist = *((UINT32 **)luaL_checkudata(L, 1, META_TEAMSCORES));
+	int i = luaL_checkinteger(L, 2);
+	if (i < 0 || i >= numteams)
+		return luaL_error(L, "array index %d out of range (0 - %d)", i, numteams - 1);
+	lua_pushinteger(L, scoreslist[i]);
+	return 1;
+}
+
+static int teamscores_set(lua_State *L)
+{
+	UINT32 *scoreslist = *((UINT32 **)luaL_checkudata(L, 1, META_TEAMSCORES));
+	int i = luaL_checkinteger(L, 2);
+	UINT32 score = (UINT32)luaL_checkinteger(L, 3);
+	if (i < 0 || i >= numteams)
+		return luaL_error(L, "array index %d out of range (0 - %d)", i, numteams - 1);
+	scoreslist[i] = score;
+	return 0;
+}
+
+static int teamscores_len(lua_State *L)
+{
+	lua_pushinteger(L, numteams);
+	return 1;
 }
 
 //////////////////////////////
@@ -2471,6 +2498,17 @@ int LUA_InfoLib(lua_State *L)
 		lua_setfield(L, -2, "__newindex");
 
 		lua_pushcfunction(L, teamlist_len);
+		lua_setfield(L, -2, "__len");
+	lua_pop(L, 1);
+
+	luaL_newmetatable(L, META_TEAMSCORES);
+		lua_pushcfunction(L, teamscores_get);
+		lua_setfield(L, -2, "__index");
+
+		lua_pushcfunction(L, teamscores_set);
+		lua_setfield(L, -2, "__newindex");
+
+		lua_pushcfunction(L, teamscores_len);
 		lua_setfield(L, -2, "__len");
 	lua_pop(L, 1);
 
