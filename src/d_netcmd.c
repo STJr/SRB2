@@ -2120,11 +2120,13 @@ static void Got_Mapcmd(UINT8 **cp, INT32 playernum)
 
 	lastgametype = gametype;
 	gametype = READUINT8(*cp);
-	G_SetGametype(gametype); // I fear putting that macro as an argument
 
 	if (gametype < 0 || gametype >= gametypecount)
 		gametype = lastgametype;
-	else if (gametype != lastgametype)
+	else
+		G_SetGametype(gametype);
+
+	if (gametype != lastgametype)
 		D_GameTypeChanged(lastgametype); // emulate consvar_t behavior for gametype
 
 	skipprecutscene = ((flags & (1<<2)) != 0);
@@ -4252,9 +4254,6 @@ void D_GameTypeChanged(INT32 lastgametype)
 	else if (!multiplayer && !netgame)
 	{
 		G_SetGametype(GT_COOP);
-		// These shouldn't matter anymore
-		//CV_Set(&cv_itemrespawntime, cv_itemrespawntime.defaultvalue);
-		//CV_SetValue(&cv_itemrespawn, 0);
 	}
 
 	// reset timelimit and pointlimit in race/coop, prevent stupid cheats
