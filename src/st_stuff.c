@@ -2439,13 +2439,13 @@ static void ST_drawTeamHUD(void)
 
 		if (gametyperules & GTR_TEAMFLAGS)
 		{
-			bmatcico = ST_GetCurrentTeamIconImage(1, TEAM_ICON_FLAG);
-			rmatcico = ST_GetCurrentTeamIconImage(2, TEAM_ICON_FLAG);
+			rmatcico = ST_GetCurrentTeamIconImage(1, TEAM_ICON_FLAG);
+			bmatcico = ST_GetCurrentTeamIconImage(2, TEAM_ICON_FLAG);
 		}
 		else
 		{
-			bmatcico = ST_GetCurrentTeamIconImage(1, TEAM_ICON);
-			rmatcico = ST_GetCurrentTeamIconImage(2, TEAM_ICON);
+			rmatcico = ST_GetCurrentTeamIconImage(1, TEAM_ICON);
+			bmatcico = ST_GetCurrentTeamIconImage(2, TEAM_ICON);
 		}
 
 		V_DrawSmallScaledPatch(BASEVIDWIDTH/2 - SEP - (bmatcico->width / 4), 4, V_HUDTRANS|V_PERPLAYER|V_SNAPTOTOP, bmatcico);
