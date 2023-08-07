@@ -3935,6 +3935,8 @@ void G_InitTeam(UINT8 team)
 	G_FreeTeamData(team);
 
 	memset(&teams[team], 0, sizeof(team_t));
+
+	teams[team].flag = 1 << (team - 1);
 }
 
 UINT8 G_AddTeam(const char *name)
