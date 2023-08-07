@@ -1233,15 +1233,6 @@ static void SendNameAndColor(void)
 
 	p = buf;
 
-	// normal player colors
-	if (G_GametypeHasTeams())
-	{
-		if (players[consoleplayer].ctfteam == 1 && cv_playercolor.value != skincolor_redteam)
-			CV_StealthSetValue(&cv_playercolor, skincolor_redteam);
-		else if (players[consoleplayer].ctfteam == 2 && cv_playercolor.value != skincolor_blueteam)
-			CV_StealthSetValue(&cv_playercolor, skincolor_blueteam);
-	}
-
 	// don't allow inaccessible colors
 	if (!skincolors[cv_playercolor.value].accessible)
 	{
@@ -1367,16 +1358,6 @@ static void SendNameAndColor2(void)
 	else // HACK
 		secondplaya = 1;
 
-	// normal player colors
-	if (G_GametypeHasTeams())
-	{
-		if (players[secondplaya].ctfteam == 1 && cv_playercolor2.value != skincolor_redteam)
-			CV_StealthSetValue(&cv_playercolor2, skincolor_redteam);
-		else if (players[secondplaya].ctfteam == 2 && cv_playercolor2.value != skincolor_blueteam)
-			CV_StealthSetValue(&cv_playercolor2, skincolor_blueteam);
-	}
-
-	// don't allow inaccessible colors
 	if (!skincolors[cv_playercolor2.value].accessible)
 	{
 		if (players[secondplaya].skincolor && skincolors[players[secondplaya].skincolor].accessible)
@@ -1498,7 +1479,7 @@ static void Got_NameAndColor(UINT8 **cp, INT32 playernum)
 	// set color
 	p->skincolor = color % numskincolors;
 	if (p->mo)
-		p->mo->color = (UINT16)p->skincolor;
+		p->mo->color = P_GetPlayerColor(p);
 
 	// normal player colors
 	if (server && (p != &players[consoleplayer] && p != &players[secondarydisplayplayer]))
@@ -1506,15 +1487,6 @@ static void Got_NameAndColor(UINT8 **cp, INT32 playernum)
 		boolean kick = false;
 		UINT32 unlockShift = 0;
 		UINT32 i;
-
-		// team colors
-		if (G_GametypeHasTeams())
-		{
-			if (p->ctfteam == 1 && p->skincolor != skincolor_redteam)
-				kick = true;
-			else if (p->ctfteam == 2 && p->skincolor != skincolor_blueteam)
-				kick = true;
-		}
 
 		// don't allow inaccessible colors
 		if (skincolors[p->skincolor].accessible == false)
@@ -2902,17 +2874,6 @@ static void Got_Teamchange(UINT8 **cp, INT32 playernum)
 		if (displayplayer != consoleplayer) // You're already viewing yourself. No big deal.
 			LUA_HookViewpointSwitch(&players[consoleplayer], &players[consoleplayer], true);
 		displayplayer = consoleplayer;
-	}
-
-	if (G_GametypeHasTeams())
-	{
-		if (NetPacket.packet.newteam)
-		{
-			if (playernum == consoleplayer) //CTF and Team Match colors.
-				CV_SetValue(&cv_playercolor, NetPacket.packet.newteam + 5);
-			else if (playernum == secondarydisplayplayer)
-				CV_SetValue(&cv_playercolor2, NetPacket.packet.newteam + 5);
-		}
 	}
 
 	// In tag, check to see if you still have a game.

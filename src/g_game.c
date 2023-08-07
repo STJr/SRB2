@@ -2748,25 +2748,6 @@ void G_PlayerReborn(INT32 player, boolean betweenmaps)
 	//if ((netgame || multiplayer) && !p->spectator) -- moved into P_SpawnPlayer to account for forced changes there
 		//p->powers[pw_flashing] = flashingtics-1; // Babysitting deterrent
 
-	// Check to make sure their color didn't change somehow...
-	if (G_GametypeHasTeams())
-	{
-		if (p->ctfteam == 1 && p->skincolor != skincolor_redteam)
-		{
-			if (p == &players[consoleplayer])
-				CV_SetValue(&cv_playercolor, skincolor_redteam);
-			else if (p == &players[secondarydisplayplayer])
-				CV_SetValue(&cv_playercolor2, skincolor_redteam);
-		}
-		else if (p->ctfteam == 2 && p->skincolor != skincolor_blueteam)
-		{
-			if (p == &players[consoleplayer])
-				CV_SetValue(&cv_playercolor, skincolor_blueteam);
-			else if (p == &players[secondarydisplayplayer])
-				CV_SetValue(&cv_playercolor2, skincolor_blueteam);
-		}
-	}
-
 	if (betweenmaps)
 		return;
 

@@ -686,7 +686,7 @@ static void P_DeNightserizePlayer(player_t *player)
 
 	player->mo->skin = &skins[player->skin];
 	player->followitem = skins[player->skin].followitem;
-	player->mo->color = player->skincolor;
+	player->mo->color = P_GetPlayerColor(player);
 	G_GhostAddColor(GHC_RETURNSKIN);
 
 	// Restore aiming angle
@@ -3029,7 +3029,7 @@ static void P_CheckInvincibilityTimer(player_t *player)
 				}
 				else
 				{
-					player->mo->color = player->skincolor;
+					player->mo->color = P_GetPlayerColor(player);
 					G_GhostAddColor(GHC_NORMAL);
 				}
 			}
@@ -4302,7 +4302,7 @@ static void P_DoSuperStuff(player_t *player)
 			}
 			else
 			{
-				player->mo->color = player->skincolor;
+				player->mo->color = P_GetPlayerColor(player);
 				G_GhostAddColor(GHC_NORMAL);
 			}
 
@@ -4352,7 +4352,7 @@ static void P_DoSuperStuff(player_t *player)
 			}
 			else
 			{
-				player->mo->color = player->skincolor;
+				player->mo->color = P_GetPlayerColor(player);
 				G_GhostAddColor(GHC_NORMAL);
 			}
 
@@ -13112,4 +13112,17 @@ boolean P_PlayerShouldUseSpinHeight(player_t *player)
 		|| ((player->charflags & (SF_DASHMODE|SF_MACHINE)) == (SF_DASHMODE|SF_MACHINE)
 			&& player->dashmode >= DASHMODE_THRESHOLD && player->mo->state-states == S_PLAY_DASH)
 		|| JUMPCURLED(player));
+}
+
+UINT16 P_GetPlayerColor(player_t *player)
+{
+	if (G_GametypeHasTeams() && player->ctfteam)
+	{
+		if (player->ctfteam == 1)
+			return skincolor_redteam;
+		else if (player->ctfteam == 2)
+			return skincolor_blueteam;
+	}
+
+	return player->skincolor;
 }
