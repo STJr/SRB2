@@ -1818,7 +1818,7 @@ static void ParseTextmapSectorParameter(UINT32 i, const char *param, const char 
 		{
 			if (fastcmp(val, teamnames[j][1]))
 			{
-				sectors[j].teambase = j;
+				sectors[i].teambase = j;
 				break;
 			}
 		}
