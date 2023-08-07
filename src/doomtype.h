@@ -122,9 +122,13 @@ int endswith (const char *base, const char *tag);
 #define HAVE_DOSSTR_FUNCS
 #endif
 
-// glibc 2.38: added strlcpy and strlcat to _DEFAULT_SOURCE
-#if defined (__APPLE__) || __GLIBC__ > 2 || (__GLIBC__ == 2 && __GLIBC_MINOR__ >= 38)
-#define HAVE_STRLCPY
+#if defined (__APPLE__)
+	#define SRB2_HAVE_STRLCPY
+#elif defined (__GLIBC_PREREQ)
+	// glibc 2.38: added strlcpy and strlcat to _DEFAULT_SOURCE
+	#if __GLIBC_PREREQ(2, 38)
+		#define SRB2_HAVE_STRLCPY
+	#endif
 #endif
 
 #ifndef HAVE_DOSSTR_FUNCS
@@ -134,7 +138,7 @@ int strlwr(char *n); // from dosstr.c
 
 #include <stddef.h> // for size_t
 
-#ifndef HAVE_STRLCPY
+#ifndef SRB2_HAVE_STRLCPY
 size_t strlcat(char *dst, const char *src, size_t siz);
 size_t strlcpy(char *dst, const char *src, size_t siz);
 #endif
