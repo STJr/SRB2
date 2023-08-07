@@ -3512,6 +3512,7 @@ team_t teams[MAXTEAMS] = {
 		.color = SKINCOLOR_RED,
 		.weapon_color = SKINCOLOR_RED,
 		.missile_color = SKINCOLOR_SALMON,
+		.weapon_mobj_type = MT_BLUETEAMRING,
 		.flag = GF_REDFLAG,
 		.flag_mobj_type = MT_REDFLAG,
 	},
@@ -3520,6 +3521,7 @@ team_t teams[MAXTEAMS] = {
 		.color = SKINCOLOR_BLUE,
 		.weapon_color = SKINCOLOR_BLUE,
 		.missile_color = SKINCOLOR_CORNFLOWER,
+		.weapon_mobj_type = MT_REDTEAMRING,
 		.flag = GF_BLUEFLAG,
 		.flag_mobj_type = MT_BLUEFLAG,
 	}
@@ -3936,6 +3938,8 @@ void G_InitTeam(UINT8 team)
 
 	memset(&teams[team], 0, sizeof(team_t));
 
+	teams[team].weapon_mobj_type = MT_RING;
+	teams[team].missile_mobj_type = MT_REDRING;
 	teams[team].flag = 1 << (team - 1);
 }
 
@@ -4011,6 +4015,22 @@ const char *G_GetTeamFlagName(UINT8 team)
 		return "";
 
 	return teams[team].flag_name;
+}
+
+UINT32 G_GetTeamWeaponMobjtype(UINT8 team)
+{
+	if (team >= numteams || !teams[team].weapon_mobj_type)
+		return MT_RING;
+
+	return teams[team].weapon_mobj_type;
+}
+
+UINT32 G_GetTeamMissileMobjtype(UINT8 team)
+{
+	if (team >= numteams || !teams[team].missile_mobj_type)
+		return MT_REDRING;
+
+	return teams[team].missile_mobj_type;
 }
 
 UINT16 G_GetTeamColor(UINT8 team)

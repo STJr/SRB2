@@ -10914,10 +10914,10 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 			 mobj->lastlook = mobj->extravalue2 = -1;
 			break;
 		case MT_REDTEAMRING:
-			mobj->color = G_GetTeamWeaponColor(TEAM_RED);
+			mobj->color = G_GetTeamWeaponColor(G_GetTeam(TEAM_RED));
 			break;
 		case MT_BLUETEAMRING:
-			mobj->color = G_GetTeamWeaponColor(TEAM_BLUE);
+			mobj->color = G_GetTeamWeaponColor(G_GetTeam(TEAM_BLUE));
 			break;
 		case MT_RING:
 		case MT_COIN:
@@ -12186,7 +12186,14 @@ static mobjtype_t P_GetMobjtypeSubstitute(mapthing_t *mthing, mobjtype_t i)
 		return teams[team].flag_mobj_type;
 	}
 
-	if (!(gametyperules & GTR_TEAMS))
+	if (gametyperules & GTR_TEAMS)
+	{
+		if (i == MT_REDTEAMRING)
+			i = G_GetTeamWeaponMobjtype(G_GetTeam(TEAM_RED));
+		else if (i == MT_BLUETEAMRING)
+			i = G_GetTeamWeaponMobjtype(G_GetTeam(TEAM_BLUE));
+	}
+	else
 	{
 		if (i == MT_BLUETEAMRING || i == MT_REDTEAMRING)
 			return MT_RING;

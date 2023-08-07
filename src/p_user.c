@@ -4221,7 +4221,14 @@ firenormal:
 				return;
 			P_SetWeaponDelay(player, TICRATE/4);
 
-			mo = P_SpawnPlayerMissile(player->mo, MT_REDRING, 0);
+			mobjtype_t missile_type;
+
+			if (G_GametypeHasTeams())
+				missile_type = G_GetTeamMissileMobjtype(player->ctfteam);
+			else
+				missile_type = MT_REDRING;
+
+			mo = P_SpawnPlayerMissile(player->mo, missile_type, 0);
 
 			if (mo)
 				P_ColorTeamMissile(mo, player);

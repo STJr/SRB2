@@ -2104,6 +2104,8 @@ enum team_e
 	team_flag_name,
 	team_flag,
 	team_flag_mobj_type,
+	team_weapon_mobj_type,
+	team_missile_mobj_type,
 	team_color,
 	team_weapon_color,
 	team_missile_color,
@@ -2118,6 +2120,8 @@ const char *const team_opt[] = {
 	"flag_name",
 	"flag",
 	"flag_mobj_type",
+	"weapon_mobj_type",
+	"missile_mobj_type",
 	"color",
 	"weapon_color",
 	"missile_color",
@@ -2167,6 +2171,28 @@ static int set_team_field(lua_State *L, team_t *team, enum team_e field)
 			return 0;
 		}
 		team->flag_mobj_type = type;
+		break;
+	}
+	case team_weapon_mobj_type:
+	{
+		mobjtype_t type = luaL_checkinteger(L, 3);
+		if (type >= NUMMOBJTYPES)
+		{
+			luaL_error(L, "mobj type %d out of range (0 - %d)", type, NUMMOBJTYPES-1);
+			return 0;
+		}
+		team->weapon_mobj_type = type;
+		break;
+	}
+	case team_missile_mobj_type:
+	{
+		mobjtype_t type = luaL_checkinteger(L, 3);
+		if (type >= NUMMOBJTYPES)
+		{
+			luaL_error(L, "mobj type %d out of range (0 - %d)", type, NUMMOBJTYPES-1);
+			return 0;
+		}
+		team->missile_mobj_type = type;
 		break;
 	}
 	case team_color:
@@ -2297,6 +2323,12 @@ static int team_get(lua_State *L)
 		break;
 	case team_flag_mobj_type:
 		lua_pushinteger(L, team->flag_mobj_type);
+		break;
+	case team_weapon_mobj_type:
+		lua_pushinteger(L, team->weapon_mobj_type);
+		break;
+	case team_missile_mobj_type:
+		lua_pushinteger(L, team->missile_mobj_type);
 		break;
 	case team_color:
 		lua_pushinteger(L, team->color);

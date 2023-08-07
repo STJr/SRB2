@@ -1457,6 +1457,28 @@ void readteam(MYFILE *f, INT32 num)
 					deh_warning("readteam %d: Thing %d out of range (1 - %d)", num, i, NUMMOBJTYPES-1);
 				}
 			}
+			else if (fastcmp(word, "WEAPON"))
+			{
+				if (i == 0 && word2[0] != '0') // If word2 isn't a number
+					i = get_mobjtype(word2); // find a thing by name
+				if (i < NUMMOBJTYPES && i > 0)
+					team->weapon_mobj_type = i;
+				else
+				{
+					deh_warning("readteam %d: Thing %d out of range (1 - %d)", num, i, NUMMOBJTYPES-1);
+				}
+			}
+			else if (fastcmp(word, "MISSILE"))
+			{
+				if (i == 0 && word2[0] != '0') // If word2 isn't a number
+					i = get_mobjtype(word2); // find a thing by name
+				if (i < NUMMOBJTYPES && i > 0)
+					team->missile_mobj_type = i;
+				else
+				{
+					deh_warning("readteam %d: Thing %d out of range (1 - %d)", num, i, NUMMOBJTYPES-1);
+				}
+			}
 			else if (fastcmp(word, "COLOR"))
 			{
 				if (i == 0 && word2[0] != '0') // If word2 isn't a number
