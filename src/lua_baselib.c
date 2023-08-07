@@ -3849,7 +3849,7 @@ static int lib_gSetCustomExitVars(lua_State *L)
 	{
 		nextmapoverride = (INT16)luaL_optinteger(L, 1, 0);
 		skipstats = (INT16)luaL_optinteger(L, 2, 0);
-		nextgametype = (INT16)luaL_optinteger(L, 3, 0);
+		nextgametype = (INT16)luaL_optinteger(L, 3, -1);
 	}
 
 	return 0;
