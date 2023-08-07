@@ -12066,7 +12066,7 @@ static boolean P_AllowMobjSpawn(mapthing_t* mthing, mobjtype_t i)
 	}
 	else if (i == MT_BLUEFLAG || i == MT_REDFLAG || i == MT_TEAMFLAG)
 	{
-		UINT8 team = i == MT_TEAMFLAG ? mthing->args[0] : mobjinfo[i].mass;
+		UINT8 team = i == MT_TEAMFLAG ? mthing->args[0] : G_GetTeam(mobjinfo[i].mass);
 		if (team == TEAM_NONE || team >= numteams)
 			return false;
 		else if (flagmobjs[team] && !P_MobjWasRemoved(flagmobjs[team]))
@@ -12157,6 +12157,13 @@ static mobjtype_t P_GetMobjtypeSubstitute(mapthing_t *mthing, mobjtype_t i)
 	if (i == MT_TEAMFLAG)
 	{
 		INT32 team = mthing->args[0];
+		if (team == TEAM_NONE || team >= numteams)
+			return MT_NULL;
+		return teams[team].flag_mobj_type;
+	}
+	else if (i == MT_BLUEFLAG || i == MT_REDFLAG)
+	{
+		INT32 team = G_GetTeam(mobjinfo[i].mass);
 		if (team == TEAM_NONE || team >= numteams)
 			return MT_NULL;
 		return teams[team].flag_mobj_type;

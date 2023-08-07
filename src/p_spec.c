@@ -3947,7 +3947,7 @@ void P_SetupSignExit(player_t *player)
 //
 boolean P_TeamHasFlagAtBase(UINT8 team)
 {
-	if (team == TEAM_NONE || team >= teamsingame)
+	if (team == TEAM_NONE || team >= numteams)
 		return false;
 
 	thinker_t *think;
@@ -4739,7 +4739,7 @@ static void P_ProcessExitSector(player_t *player, mtag_t sectag)
 
 static void P_ProcessTeamBase(player_t *player, UINT8 team)
 {
-	if (team == TEAM_NONE || team >= teamsingame)
+	if (team == TEAM_NONE || team >= numteams)
 		return;
 
 	if (!(gametyperules & GTR_TEAMFLAGS))
@@ -4795,14 +4795,14 @@ static void P_ProcessTeamBase(player_t *player, UINT8 team)
 	if (totalcaptured == 1)
 	{
 		UINT8 otherteam = teamscaptured[0];
-		HU_DoCEcho(va(M_GetText("%s%s\200\\captured the %s%s\200.\\\\\\\\"), GetChatColorForSkincolor(G_GetTeamColor(team)), player_names[player-players], GetChatColorForSkincolor(G_GetTeamColor(otherteam)), G_GetTeamFlagName(otherteam)));
+		HU_DoCEcho(va(M_GetText("%s%s\200\\captured the %s%s\200.\\\\\\\\"), GetChatColorForSkincolor(G_GetTeamColor(player->ctfteam)), player_names[player-players], GetChatColorForSkincolor(G_GetTeamColor(otherteam)), G_GetTeamFlagName(otherteam)));
 	}
 	else
 	{
 		char *buffer = NULL;
 		size_t buffer_size = 0;
 
-		const char *text = va(M_GetText("%s%s\200 captured the:\\"), GetChatColorForSkincolor(G_GetTeamColor(team)), player_names[player-players]);
+		const char *text = va(M_GetText("%s%s\200 captured the:\\"), GetChatColorForSkincolor(G_GetTeamColor(player->ctfteam)), player_names[player-players]);
 		buffer_size += strlen(text) + 1;
 		buffer = Z_Realloc(buffer, buffer_size, PU_STATIC, NULL);
 		strcpy(buffer, text);
