@@ -1221,13 +1221,6 @@ static void SendNameAndColor(void)
 
 	p = buf;
 
-	// normal player colors
-	if (G_GametypeHasTeams())
-	{
-		if (players[consoleplayer].ctfteam != 0 && cv_playercolor.value != G_GetTeamColor(players[consoleplayer].ctfteam))
-			CV_StealthSetValue(&cv_playercolor, G_GetTeamColor(players[consoleplayer].ctfteam));
-	}
-
 	// don't allow inaccessible colors
 	if (!skincolors[cv_playercolor.value].accessible)
 	{
@@ -1353,13 +1346,6 @@ static void SendNameAndColor2(void)
 	else // HACK
 		secondplaya = 1;
 
-	// normal player colors
-	if (G_GametypeHasTeams())
-	{
-		if (players[secondplaya].ctfteam != 0 && cv_playercolor2.value != G_GetTeamColor(players[secondplaya].ctfteam))
-			CV_StealthSetValue(&cv_playercolor2, G_GetTeamColor(players[secondplaya].ctfteam));
-	}
-
 	// don't allow inaccessible colors
 	if (!skincolors[cv_playercolor2.value].accessible)
 	{
@@ -1482,7 +1468,7 @@ static void Got_NameAndColor(UINT8 **cp, INT32 playernum)
 	// set color
 	p->skincolor = color % numskincolors;
 	if (p->mo)
-		p->mo->color = (UINT16)p->skincolor;
+		p->mo->color = P_GetPlayerColor(p);
 
 	// normal player colors
 	if (server && (p != &players[consoleplayer] && p != &players[secondarydisplayplayer]))
@@ -1490,13 +1476,6 @@ static void Got_NameAndColor(UINT8 **cp, INT32 playernum)
 		boolean kick = false;
 		UINT32 unlockShift = 0;
 		UINT32 i;
-
-		// team colors
-		if (G_GametypeHasTeams())
-		{
-			if (p->ctfteam != 0 && p->skincolor != G_GetTeamColor(p->ctfteam))
-				kick = true;
-		}
 
 		// don't allow inaccessible colors
 		if (skincolors[p->skincolor].accessible == false)
@@ -2960,17 +2939,6 @@ static void Got_Teamchange(UINT8 **cp, INT32 playernum)
 		if (displayplayer != consoleplayer) // You're already viewing yourself. No big deal.
 			LUA_HookViewpointSwitch(&players[consoleplayer], &players[consoleplayer], true);
 		displayplayer = consoleplayer;
-	}
-
-	if (G_GametypeHasTeams())
-	{
-		if (players[playernum].ctfteam)
-		{
-			if (playernum == consoleplayer) //CTF and Team Match colors.
-				CV_SetValue(&cv_playercolor, G_GetTeamColor(players[playernum].ctfteam));
-			else if (playernum == secondarydisplayplayer)
-				CV_SetValue(&cv_playercolor2, G_GetTeamColor(players[playernum].ctfteam));
-		}
 	}
 
 	// In tag, check to see if you still have a game.

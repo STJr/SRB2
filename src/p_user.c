@@ -686,7 +686,7 @@ static void P_DeNightserizePlayer(player_t *player)
 
 	player->mo->skin = &skins[player->skin];
 	player->followitem = skins[player->skin].followitem;
-	player->mo->color = player->skincolor;
+	player->mo->color = P_GetPlayerColor(player);
 	G_GhostAddColor(GHC_RETURNSKIN);
 
 	// Restore aiming angle
@@ -3023,7 +3023,7 @@ static void P_CheckInvincibilityTimer(player_t *player)
 				}
 				else
 				{
-					player->mo->color = player->skincolor;
+					player->mo->color = P_GetPlayerColor(player);
 					G_GhostAddColor(GHC_NORMAL);
 				}
 			}
@@ -4300,7 +4300,7 @@ static void P_DoSuperStuff(player_t *player)
 			}
 			else
 			{
-				player->mo->color = player->skincolor;
+				player->mo->color = P_GetPlayerColor(player);
 				G_GhostAddColor(GHC_NORMAL);
 			}
 
@@ -4350,7 +4350,7 @@ static void P_DoSuperStuff(player_t *player)
 			}
 			else
 			{
-				player->mo->color = player->skincolor;
+				player->mo->color = P_GetPlayerColor(player);
 				G_GhostAddColor(GHC_NORMAL);
 			}
 
@@ -13093,4 +13093,16 @@ boolean P_PlayerHasTeamFlag(player_t *player, UINT8 team)
 		return false;
 
 	return player->gotflag & teams[team].flag;
+}
+
+UINT16 P_GetPlayerColor(player_t *player)
+{
+	if (G_GametypeHasTeams() && player->ctfteam)
+	{
+		UINT16 skincolor = G_GetTeamColor(player->ctfteam);
+		if (skincolor != SKINCOLOR_NONE)
+			return skincolor;
+	}
+
+	return player->skincolor;
 }

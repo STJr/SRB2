@@ -11557,7 +11557,6 @@ void P_SpawnPlayer(INT32 playernum)
 				// Spawn as a spectator,
 				// yes even in splitscreen mode
 				p->spectator = true;
-				p->skincolor = teams[newteam].color;
 
 				// but immediately send a team change packet.
 				NetPacket.packet.playernum = playernum;
@@ -11582,11 +11581,6 @@ void P_SpawnPlayer(INT32 playernum)
 			else
 				p->ctfteam = 1;
 		}
-
-		// Fix team colors.
-		// This code isn't being done right somewhere else. Oh well.
-		if (p->ctfteam != 0)
-			p->skincolor = G_GetTeamColor(p->ctfteam);
 	}
 
 	if ((netgame || multiplayer) && ((gametyperules & GTR_SPAWNINVUL) || leveltime) && !p->spectator && !(maptol & TOL_NIGHTS))
@@ -11598,7 +11592,7 @@ void P_SpawnPlayer(INT32 playernum)
 	mobj->angle = 0;
 
 	// set color translations for player sprites
-	mobj->color = p->skincolor;
+	mobj->color = P_GetPlayerColor(p);
 
 	// set 'spritedef' override in mobj for player skins.. (see ProjectSprite)
 	// (usefulness: when body mobj is detached from player (who respawns),
