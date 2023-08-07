@@ -3512,7 +3512,7 @@ team_t teams[MAXTEAMS] = {
 		.color = SKINCOLOR_RED,
 		.weapon_color = SKINCOLOR_RED,
 		.missile_color = SKINCOLOR_SALMON,
-		.weapon_mobj_type = MT_BLUETEAMRING,
+		.weapon_mobj_type = MT_REDTEAMRING,
 		.flag = GF_REDFLAG,
 		.flag_mobj_type = MT_REDFLAG,
 	},
