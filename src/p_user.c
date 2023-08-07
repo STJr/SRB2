@@ -13086,3 +13086,11 @@ boolean P_PlayerShouldUseSpinHeight(player_t *player)
 			&& player->dashmode >= DASHMODE_THRESHOLD && player->mo->state-states == S_PLAY_DASH)
 		|| JUMPCURLED(player));
 }
+
+boolean P_PlayerHasTeamFlag(player_t *player, UINT8 team)
+{
+	if (!G_GametypeHasTeams() || team >= numteams)
+		return false;
+
+	return player->gotflag & teams[team].flag;
+}

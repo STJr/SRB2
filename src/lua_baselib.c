@@ -845,7 +845,6 @@ static int lib_pGetMobjGravity(lua_State *L)
 static int lib_pWeaponOrPanel(lua_State *L)
 {
 	mobjtype_t type = luaL_checkinteger(L, 1);
-	//HUDSAFE
 	if (type >= NUMMOBJTYPES)
 		return luaL_error(L, "mobj type %d out of range (0 - %d)", type, NUMMOBJTYPES-1);
 	lua_pushboolean(L, P_WeaponOrPanel(type));
@@ -855,9 +854,8 @@ static int lib_pWeaponOrPanel(lua_State *L)
 static int lib_pGetTeamFlag(lua_State *L)
 {
 	int team = luaL_checkinteger(L, 1);
-	if (team < 0 || team >= numteams)
-		return luaL_error(L, "team index %d out of range (0 - %d)", team, numteams - 1);
-	NOHUD
+	if (team <= 0 || team >= numteams)
+		return luaL_error(L, "team index %d out of range (1 - %d)", team, numteams - 1);
 	INLEVEL
 	LUA_PushUserdata(L, P_GetTeamFlag(team), META_MOBJ);
 	return 1;
@@ -866,9 +864,8 @@ static int lib_pGetTeamFlag(lua_State *L)
 static int lib_pGetTeamFlagMapthing(lua_State *L)
 {
 	int team = luaL_checkinteger(L, 1);
-	if (team < 0 || team >= numteams)
-		return luaL_error(L, "team index %d out of range (0 - %d)", team, numteams - 1);
-	NOHUD
+	if (team <= 0 || team >= numteams)
+		return luaL_error(L, "team index %d out of range (1 - %d)", team, numteams - 1);
 	INLEVEL
 	LUA_PushUserdata(L, P_GetTeamFlagMapthing(team), META_MAPTHING);
 	return 1;
@@ -1762,6 +1759,19 @@ static int lib_pPlayerShouldUseSpinHeight(lua_State *L)
 	return 1;
 }
 
+static int lib_pPlayerHasTeamFlag(lua_State *L)
+{
+	player_t *player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
+	INT32 team = (INT32)luaL_checkinteger(L, 2);
+	INLEVEL
+	if (!player)
+		return LUA_ErrInvalid(L, "player_t");
+	if (team <= 0 || team >= numteams)
+		luaL_error(L, "team index %d out of range (1 - %d)", team, numteams-1);
+	lua_pushboolean(L, P_PlayerHasTeamFlag(player, team));
+	return 1;
+}
+
 // P_MAP
 ///////////
 
@@ -2347,8 +2357,8 @@ static int lib_pMobjTouchingTeamBase(lua_State *L)
 	INLEVEL
 	if (!mo)
 		return LUA_ErrInvalid(L, "mobj_t");
-	if (team <= 0 || team >= teamsingame)
-		luaL_error(L, "team index %d out of range (1 - %d)", team, teamsingame-1);
+	if (team <= 0 || team >= numteams)
+		luaL_error(L, "team index %d out of range (1 - %d)", team, numteams-1);
 	LUA_PushUserdata(L, P_MobjTouchingTeamBase(mo, team), META_SECTOR);
 	return 1;
 }
@@ -2514,8 +2524,8 @@ static int lib_pTeamHasFlagAtBase(lua_State *L)
 {
 	INT32 team = luaL_checkinteger(L, 1);
 	INLEVEL
-	if (team <= 0 || team >= teamsingame)
-		luaL_error(L, "team index %d out of range (1 - %d)", team, teamsingame-1);
+	if (team <= 0 || team >= numteams)
+		luaL_error(L, "team index %d out of range (1 - %d)", team, numteams-1);
 	lua_pushboolean(L, P_TeamHasFlagAtBase(team));
 	return 1;
 }
@@ -3554,8 +3564,8 @@ static int lib_gAddGametype(lua_State *L)
 					if (idx >= 0 && idx < MAXTEAMS)
 					{
 						int team_index = luaL_checkinteger(L, -1);
-						if (team_index < 0 || team_index >= numteams)
-							luaL_error(L, "team index %d out of range (0 - %d)", team_index, numteams-1);
+						if (team_index <= 0 || team_index >= numteams)
+							luaL_error(L, "team index %d out of range (1 - %d)", team_index, numteams-1);
 
 						teamlist[idx] = (UINT8)team_index;
 
@@ -4265,6 +4275,7 @@ static luaL_Reg lib[] = {
 	{"P_SwitchShield",lib_pSwitchShield},
 	{"P_PlayerCanEnterSpinGaps",lib_pPlayerCanEnterSpinGaps},
 	{"P_PlayerShouldUseSpinHeight",lib_pPlayerShouldUseSpinHeight},
+	{"P_PlayerHasTeamFlag",lib_pPlayerHasTeamFlag},
 
 	// p_map
 	{"P_CheckPosition",lib_pCheckPosition},
