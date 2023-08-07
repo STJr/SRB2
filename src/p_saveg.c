@@ -867,6 +867,7 @@ static void P_NetUnArchiveWaypoints(void)
 #define SD_TRIGGERTAG 0x02
 #define SD_TRIGGERER 0x04
 #define SD_GRAVITY   0x08
+#define SD_TEAMBASE  0x10
 
 #define LD_FLAG     0x01
 #define LD_SPECIAL  0x02
@@ -1064,6 +1065,8 @@ static void ArchiveSectors(void)
 			diff4 |= SD_TRIGGERER;
 		if (ss->gravity != spawnss->gravity)
 			diff4 |= SD_GRAVITY;
+		if (ss->teambase != spawnss->teambase)
+			diff4 |= SD_TEAMBASE;
 
 		if (ss->ffloors && CheckFFloorDiff(ss))
 			diff |= SD_FFLOORS;
@@ -1145,6 +1148,8 @@ static void ArchiveSectors(void)
 				WRITEUINT8(save_p, ss->triggerer);
 			if (diff4 & SD_GRAVITY)
 				WRITEFIXED(save_p, ss->gravity);
+			if (diff4 & SD_TEAMBASE)
+				WRITEUINT8(save_p, ss->teambase);
 			if (diff & SD_FFLOORS)
 				ArchiveFFloors(ss);
 		}
@@ -1265,6 +1270,8 @@ static void UnArchiveSectors(void)
 			sectors[i].triggerer = READUINT8(save_p);
 		if (diff4 & SD_GRAVITY)
 			sectors[i].gravity = READFIXED(save_p);
+		if (diff4 & SD_TEAMBASE)
+			sectors[i].teambase = READUINT8(save_p);
 
 		if (diff & SD_FFLOORS)
 			UnArchiveFFloors(&sectors[i]);

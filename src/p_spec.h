@@ -506,6 +506,8 @@ sector_t *P_FindPlayerTrigger(player_t *player, line_t *sourceline);
 boolean P_IsPlayerValid(size_t playernum);
 boolean P_CanPlayerTrigger(size_t playernum);
 void P_ProcessSpecialSector(player_t *player, sector_t *sector, sector_t *roversector);
+sector_t *P_MobjTouchingTeamBase(mobj_t *mo, UINT8 team);
+sector_t *P_PlayerTouchingTeamBase(player_t *player, UINT8 team);
 
 fixed_t P_FindLowestFloorSurrounding(sector_t *sec);
 fixed_t P_FindHighestFloorSurrounding(sector_t *sec);
@@ -519,7 +521,7 @@ fixed_t P_FindHighestCeilingSurrounding(sector_t *sec);
 INT32 P_FindMinSurroundingLight(sector_t *sector, INT32 max);
 
 void P_SetupSignExit(player_t *player);
-boolean P_IsFlagAtBase(mobjtype_t flag);
+boolean P_TeamHasFlagAtBase(UINT8 team);
 
 boolean P_IsMobjTouchingSectorPlane(mobj_t *mo, sector_t *sec);
 boolean P_IsMobjTouching3DFloor(mobj_t *mo, ffloor_t *ffloor, sector_t *sec);

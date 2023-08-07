@@ -1811,9 +1811,28 @@ static void ParseTextmapSectorParameter(UINT32 i, const char *param, const char 
 	else if (fastcmp(param, "returnflag") && fastcmp("true", val))
 		sectors[i].specialflags |= SSF_RETURNFLAG;
 	else if (fastcmp(param, "redteambase") && fastcmp("true", val))
+	{
 		sectors[i].specialflags |= SSF_REDTEAMBASE;
+		sectors[i].teambase = G_GetTeam(TEAM_RED);
+	}
 	else if (fastcmp(param, "blueteambase") && fastcmp("true", val))
+	{
 		sectors[i].specialflags |= SSF_BLUETEAMBASE;
+		sectors[i].teambase = G_GetTeam(TEAM_BLUE);
+	}
+	else if (fastcmp(param, "teambase"))
+	{
+		sectors[i].teambase = TEAM_NONE;
+
+		for (UINT8 j = 0; j < numteams; j++)
+		{
+			if (fastcmp(val, teamnames[j]))
+			{
+				sectors[j].teambase = j;
+				break;
+			}
+		}
+	}
 	else if (fastcmp(param, "fan") && fastcmp("true", val))
 		sectors[i].specialflags |= SSF_FAN;
 	else if (fastcmp(param, "supertransform") && fastcmp("true", val))
@@ -2723,6 +2742,22 @@ static void P_WriteTextmap(void)
 			fprintf(f, "redteambase = true;\n");
 		if (wsectors[i].specialflags & SSF_BLUETEAMBASE)
 			fprintf(f, "blueteambase = true;\n");
+		if (wsectors[i].teambase != TEAM_NONE && (wsectors[i].specialflags & (SSF_REDTEAMBASE | SSF_BLUETEAMBASE)) == 0)
+		{
+			// We DON'T write the teambase if the sector has (SSF_REDTEAMBASE | SSF_BLUETEAMBASE) because
+			// these flags get the team bases for the current gametype's team 1 and team 2, rather than the
+			// actual teams TEAM_RED and TEAM_BLUE.
+			UINT8 team = wsectors[i].teambase;
+			if (team != TEAM_NONE && team < numteams)
+			{
+				char *teambase = Z_StrDup(teamnames[team]);
+				strlwr(teambase);
+				fprintf(f, "teambase = \"%s\";\n", teambase);
+				Z_Free(teambase);
+			}
+			else
+				fprintf(f, "teambase = \"%s\";\n", "unknown");
+		}
 		if (wsectors[i].specialflags & SSF_FAN)
 			fprintf(f, "fan = true;\n");
 		if (wsectors[i].specialflags & SSF_SUPERTRANSFORM)
@@ -6218,9 +6253,11 @@ static void P_ConvertBinarySectorTypes(void)
 				break;
 			case 3: //Red team base
 				sectors[i].specialflags |= SSF_REDTEAMBASE;
+				sectors[i].teambase = G_GetTeam(TEAM_RED);
 				break;
 			case 4: //Blue team base
 				sectors[i].specialflags |= SSF_BLUETEAMBASE;
+				sectors[i].teambase = G_GetTeam(TEAM_BLUE);
 				break;
 			case 5: //Fan sector
 				sectors[i].specialflags |= SSF_FAN;

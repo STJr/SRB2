@@ -467,6 +467,7 @@ typedef struct sector_s
 	sectorflags_t flags;
 	sectorspecialflags_t specialflags;
 	UINT8 damagetype;
+	UINT8 teambase;
 
 	// Linedef executor triggering
 	mtag_t triggertag; // tag to call upon triggering

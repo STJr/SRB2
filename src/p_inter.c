@@ -567,7 +567,6 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 		if (special->extravalue1 > TEAM_NONE && special->extravalue1 < numteams)
 		{
 			UINT8 flagteam = special->extravalue1;
-			sectorspecialflags_t specialflag = flagteam == TEAM_RED ? SSF_REDTEAMBASE : SSF_BLUETEAMBASE;
 			const char *flagtext;
 			const char *flagcolor;
 			char plname[MAXPLAYERNAME+4];
@@ -589,7 +588,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 					special->fuse = 1;
 					special->flags2 |= MF2_JUSTATTACKED;
 
-					if (!P_PlayerTouchingSectorSpecialFlag(player, specialflag))
+					if (!P_PlayerTouchingTeamBase(player, flagteam))
 						CONS_Printf(M_GetText("%s returned the %s%s%c to base.\n"), plname, flagcolor, flagtext, 0x80);
 				}
 				return;
@@ -4384,14 +4383,28 @@ void P_PlayerFlagBurst(player_t *player, boolean toss)
 	if (!player->gotflag)
 		return;
 
-	for (UINT8 i = 1; i < numteams; i++)
+	UINT8 totalcaptured = 0;
+	UINT8 teamscaptured[MAXTEAMS];
+
+	memset(teamscaptured, 0, sizeof(teamscaptured));
+
+	for (UINT8 i = 1; i < teamsingame; i++)
 	{
-		UINT8 team = G_GetTeam(i);
-		UINT32 flagflag = 1 << (team - 1);
-		if (!(player->gotflag & flagflag))
+		UINT8 otherteam = G_GetTeam(i);
+		UINT32 flagflag = teams[otherteam].flag;
+		if (!(player->gotflag & flagflag) || otherteam == player->ctfteam)
+			continue;
+		if (teams[otherteam].flag_mobj_type == 0)
 			continue;
 
-		mobj_t *flag = P_SpawnTeamFlag(team, player->mo->x, player->mo->y, player->mo->z);
+		teamscaptured[totalcaptured++] = otherteam;
+	}
+
+	for (UINT8 i = 0; i < totalcaptured; i++)
+	{
+		UINT8 otherteam = teamscaptured[i];
+
+		mobj_t *flag = P_SpawnTeamFlag(otherteam, player->mo->x, player->mo->y, player->mo->z);
 		if (flag == NULL)
 			continue;
 
@@ -4405,7 +4418,12 @@ void P_PlayerFlagBurst(player_t *player, boolean toss)
 			P_InstaThrust(flag, player->mo->angle, FixedMul(6*FRACUNIT, player->mo->scale));
 		else
 		{
-			angle_t fa = P_RandomByte()*FINEANGLES/256;
+			angle_t fa;
+			if (totalcaptured == 1)
+				fa = P_RandomByte()*FINEANGLES/256;
+			else
+				fa = ((255 / totalcaptured) * i) * FINEANGLES/256;
+
 			flag->momx = FixedMul(FINECOSINE(fa), FixedMul(6*FRACUNIT, player->mo->scale));
 			if (!(twodlevel || (player->mo->flags2 & MF2_TWOD)))
 				flag->momy = FixedMul(FINESINE(fa), FixedMul(6*FRACUNIT, player->mo->scale));
@@ -4415,36 +4433,33 @@ void P_PlayerFlagBurst(player_t *player, boolean toss)
 		if (player->mo->eflags & MFE_VERTICALFLIP)
 			flag->momz = -flag->momz;
 
-		flag->spawnpoint = flagpoints[team];
+		flag->spawnpoint = flagpoints[otherteam];
 
 		flag->fuse = cv_flagtime.value * TICRATE;
 		P_SetTarget(&flag->target, player->mo);
 
+		// Take out the flag from the player
+		player->gotflag &= ~teams[otherteam].flag;
+
 		// Flag text
-		{
-			char plname[MAXPLAYERNAME+4];
-			const char *flagtext;
-			const char *flagcolor;
+		char plname[MAXPLAYERNAME+4];
 
-			snprintf(plname, sizeof(plname), "%s%s%s",
-					 CTFTEAMCODE(player),
-					 player_names[player - players],
-					 CTFTEAMENDCODE(player));
+		snprintf(plname, sizeof(plname), "%s%s%s",
+				 CTFTEAMCODE(player),
+				 player_names[player - players],
+				 CTFTEAMENDCODE(player));
 
-			flagtext = G_GetTeamFlagName(team);
-			flagcolor = GetChatColorForSkincolor(G_GetTeamColor(team));
+		const char *flagtext = G_GetTeamFlagName(otherteam);
+		const char *flagcolor = GetChatColorForSkincolor(G_GetTeamColor(otherteam));
 
-			if (toss)
-				CONS_Printf(M_GetText("%s tossed the %s%s%c.\n"), plname, flagcolor, flagtext, 0x80);
-			else
-				CONS_Printf(M_GetText("%s dropped the %s%s%c.\n"), plname, flagcolor, flagtext, 0x80);
-		}
+		if (toss)
+			CONS_Printf(M_GetText("%s tossed the %s%s%c.\n"), plname, flagcolor, flagtext, 0x80);
+		else
+			CONS_Printf(M_GetText("%s dropped the %s%s%c.\n"), plname, flagcolor, flagtext, 0x80);
 
 		// Pointers set for displaying time value and for consistency restoration.
-		P_SetTarget(&flagmobjs[team], flag);
+		P_SetTarget(&flagmobjs[otherteam], flag);
 	}
-
-	player->gotflag = 0;
 
 	if (toss)
 		player->tossdelay = 2*TICRATE;
