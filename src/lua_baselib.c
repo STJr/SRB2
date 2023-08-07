@@ -2340,6 +2340,19 @@ static int lib_pPlayerTouchingSectorSpecialFlag(lua_State *L)
 	return 1;
 }
 
+static int lib_pMobjTouchingTeamBase(lua_State *L)
+{
+	mobj_t *mo = *((mobj_t**)luaL_checkudata(L, 1, META_MOBJ));
+	INT32 team = (INT32)luaL_checkinteger(L, 2);
+	INLEVEL
+	if (!mo)
+		return LUA_ErrInvalid(L, "mobj_t");
+	if (team <= 0 || team >= teamsingame)
+		luaL_error(L, "team index %d out of range (1 - %d)", team, teamsingame-1);
+	LUA_PushUserdata(L, P_MobjTouchingTeamBase(mo, team), META_SECTOR);
+	return 1;
+}
+
 static int lib_pFindLowestFloorSurrounding(lua_State *L)
 {
 	sector_t *sector = *((sector_t **)luaL_checkudata(L, 1, META_SECTOR));
@@ -2481,11 +2494,29 @@ static int lib_pFadeLight(lua_State *L)
 static int lib_pIsFlagAtBase(lua_State *L)
 {
 	mobjtype_t flag = luaL_checkinteger(L, 1);
-	//HUDSAFE
 	INLEVEL
 	if (flag >= NUMMOBJTYPES)
 		return luaL_error(L, "mobj type %d out of range (0 - %d)", flag, NUMMOBJTYPES-1);
-	lua_pushboolean(L, P_IsFlagAtBase(flag));
+	for (UINT8 i = 1; i < teamsingame; i++)
+	{
+		UINT8 team = G_GetTeam(i);
+		if (teams[team].flag_mobj_type == flag)
+		{
+			lua_pushboolean(L, P_TeamHasFlagAtBase(team));
+			return 1;
+		}
+	}
+	lua_pushboolean(L, false);
+	return 1;
+}
+
+static int lib_pTeamHasFlagAtBase(lua_State *L)
+{
+	INT32 team = luaL_checkinteger(L, 1);
+	INLEVEL
+	if (team <= 0 || team >= teamsingame)
+		luaL_error(L, "team index %d out of range (1 - %d)", team, teamsingame-1);
+	lua_pushboolean(L, P_TeamHasFlagAtBase(team));
 	return 1;
 }
 
@@ -4281,6 +4312,7 @@ static luaL_Reg lib[] = {
 	{"P_MobjTouchingSectorSpecialFlag",lib_pMobjTouchingSectorSpecialFlag},
 	{"P_PlayerTouchingSectorSpecial",lib_pPlayerTouchingSectorSpecial},
 	{"P_PlayerTouchingSectorSpecialFlag",lib_pPlayerTouchingSectorSpecialFlag},
+	{"P_MobjTouchingTeamBase",lib_pMobjTouchingTeamBase},
 	{"P_FindLowestFloorSurrounding",lib_pFindLowestFloorSurrounding},
 	{"P_FindHighestFloorSurrounding",lib_pFindHighestFloorSurrounding},
 	{"P_FindNextHighestFloor",lib_pFindNextHighestFloor},
@@ -4293,6 +4325,7 @@ static luaL_Reg lib[] = {
 	{"P_SpawnLightningFlash",lib_pSpawnLightningFlash},
 	{"P_FadeLight",lib_pFadeLight},
 	{"P_IsFlagAtBase",lib_pIsFlagAtBase},
+	{"P_TeamHasFlagAtBase",lib_pTeamHasFlagAtBase},
 	{"P_SetupLevelSky",lib_pSetupLevelSky},
 	{"P_SetSkyboxMobj",lib_pSetSkyboxMobj},
 	{"P_StartQuake",lib_pStartQuake},

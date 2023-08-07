@@ -3941,15 +3941,18 @@ void P_SetupSignExit(player_t *player)
 }
 
 //
-// P_IsFlagAtBase
+// P_TeamHasFlagAtBase
 //
-// Checks to see if a flag is at its base.
+// Checks to see if a team has its flag at its base.
 //
-boolean P_IsFlagAtBase(mobjtype_t flag)
+boolean P_TeamHasFlagAtBase(UINT8 team)
 {
+	if (team == TEAM_NONE || team >= teamsingame)
+		return false;
+
 	thinker_t *think;
 	mobj_t *mo;
-	sectorspecialflags_t specialflag = (flag == teams[TEAM_RED].flag_mobj_type) ? SSF_REDTEAMBASE : SSF_BLUETEAMBASE;
+	mobjtype_t flag = teams[team].flag_mobj_type;
 
 	for (think = thlist[THINK_MOBJ].next; think != &thlist[THINK_MOBJ]; think = think->next)
 	{
@@ -3961,7 +3964,7 @@ boolean P_IsFlagAtBase(mobjtype_t flag)
 		if (mo->type != flag)
 			continue;
 
-		if (mo->subsector->sector->specialflags & specialflag)
+		if (mo->subsector->sector->teambase == team)
 			return true;
 		else if (mo->subsector->sector->ffloors) // Check the 3D floors
 		{
@@ -3972,7 +3975,7 @@ boolean P_IsFlagAtBase(mobjtype_t flag)
 				if (!(rover->fofflags & FOF_EXISTS))
 					continue;
 
-				if (!(rover->master->frontsector->specialflags & specialflag))
+				if (rover->master->frontsector->teambase != team)
 					continue;
 
 				if (!(mo->z <= P_GetSpecialTopZ(mo, sectors + rover->secnum, mo->subsector->sector)
@@ -4238,6 +4241,97 @@ sector_t *P_MobjTouchingSectorSpecialFlag(mobj_t *mo, sectorspecialflags_t flag)
 	return NULL;
 }
 
+static sector_t *P_MobjTouching3DFloorTeamBase(mobj_t *mo, sector_t *sector, UINT8 team)
+{
+	ffloor_t *rover;
+
+	for (rover = sector->ffloors; rover; rover = rover->next)
+	{
+		if (rover->master->frontsector->teambase != team)
+			continue;
+
+		if (!(rover->fofflags & FOF_EXISTS))
+			continue;
+
+		if (!P_IsMobjTouching3DFloor(mo, rover, sector))
+			continue;
+
+		// This FOF has the special we're looking for, but are we allowed to touch it?
+		if (sector == mo->subsector->sector
+			|| (rover->master->frontsector->flags & MSF_TRIGGERSPECIAL_TOUCH))
+			return rover->master->frontsector;
+	}
+
+	return NULL;
+}
+
+static sector_t *P_MobjTouchingPolyobjTeamBase(mobj_t *mo, UINT8 team)
+{
+	polyobj_t *po;
+	sector_t *polysec;
+	boolean touching = false;
+	boolean inside = false;
+
+	for (po = mo->subsector->polyList; po; po = (polyobj_t *)(po->link.next))
+	{
+		if (po->flags & POF_NOSPECIALS)
+			continue;
+
+		polysec = po->lines[0]->backsector;
+
+		if (polysec->teambase != team)
+			continue;
+
+		touching = (polysec->flags & MSF_TRIGGERSPECIAL_TOUCH) && P_MobjTouchingPolyobj(po, mo);
+		inside = P_MobjInsidePolyobj(po, mo);
+
+		if (!(inside || touching))
+			continue;
+
+		if (!P_IsMobjTouchingPolyobj(mo, po, polysec))
+			continue;
+
+		return polysec;
+	}
+
+	return NULL;
+}
+
+sector_t *P_MobjTouchingTeamBase(mobj_t *mo, UINT8 team)
+{
+	msecnode_t *node;
+	sector_t *result;
+
+	result = P_MobjTouching3DFloorTeamBase(mo, mo->subsector->sector, team);
+	if (result)
+		return result;
+
+	result = P_MobjTouchingPolyobjTeamBase(mo, team);
+	if (result)
+		return result;
+
+	if (mo->subsector->sector->teambase == team)
+		return mo->subsector->sector;
+
+	for (node = mo->touching_sectorlist; node; node = node->m_sectorlist_next)
+	{
+		if (node->m_sector == mo->subsector->sector) // Don't duplicate
+			continue;
+
+		result = P_MobjTouching3DFloorTeamBase(mo, node->m_sector, team);
+		if (result)
+			return result;
+
+		if (!(node->m_sector->flags & MSF_TRIGGERSPECIAL_TOUCH))
+			continue;
+
+		if (node->m_sector->teambase == team)
+			return node->m_sector;
+	}
+
+	return NULL;
+}
+
 //
 // P_PlayerTouchingSectorSpecial
 //
@@ -4263,6 +4357,14 @@ sector_t *P_PlayerTouchingSectorSpecialFlag(player_t *player, sectorspecialflags
 		return NULL;
 
 	return P_MobjTouchingSectorSpecialFlag(player->mo, flag);
+}
+
+sector_t *P_PlayerTouchingTeamBase(player_t *player, UINT8 base)
+{
+	if (!player->mo)
+		return NULL;
+
+	return P_MobjTouchingTeamBase(player->mo, base);
 }
 
 static sector_t *P_CheckPlayer3DFloorTrigger(player_t *player, sector_t *sector, line_t *sourceline)
@@ -4637,48 +4739,90 @@ static void P_ProcessExitSector(player_t *player, mtag_t sectag)
 
 static void P_ProcessTeamBase(player_t *player, UINT8 team)
 {
-	mobj_t *mo;
+	if (team == TEAM_NONE || team >= teamsingame)
+		return;
 
 	if (!(gametyperules & GTR_TEAMFLAGS))
+		return;
+
+	// Make sure the team still has their own flag at their base so they can score.
+	if (!P_TeamHasFlagAtBase(team))
 		return;
 
 	if (!P_IsObjectOnGround(player->mo))
 		return;
 
-	if (player->ctfteam != team)
+	if (!player->gotflag || player->ctfteam != team)
 		return;
 
-	UINT8 otherteam = team == TEAM_RED ? TEAM_BLUE : TEAM_RED;
-	UINT32 teamflag = teams[otherteam].flag;
+	UINT8 totalcaptured = 0;
+	UINT8 teamscaptured[MAXTEAMS];
 
-	if (!(player->gotflag & teamflag))
-		return;
+	memset(teamscaptured, 0, sizeof(teamscaptured));
 
-	// Make sure the team still has their own
-	// flag at their base so they can score.
-	if (!P_IsFlagAtBase(teams[team].flag_mobj_type))
-		return;
+	for (UINT8 i = 1; i < teamsingame; i++)
+	{
+		UINT8 otherteam = G_GetTeam(i);
+		UINT32 flagflag = teams[otherteam].flag;
+		if (!(player->gotflag & flagflag) || otherteam == player->ctfteam)
+			continue;
+
+		teamscaptured[totalcaptured++] = otherteam;
+		teamscores[team]++;
+
+		player->gotflag &= ~flagflag;
+
+		P_AddPlayerScore(player, 250);
+
+		if (splitscreen || players[consoleplayer].ctfteam == team)
+			S_StartSound(NULL, sfx_flgcap);
+		else if (players[consoleplayer].ctfteam != team)
+			S_StartSound(NULL, sfx_lose);
+
+		mobj_t *mo = P_SpawnTeamFlag(otherteam, player->mo->x, player->mo->y, player->mo->z);
+		if (mo)
+		{
+			mo->flags &= ~MF_SPECIAL;
+			mo->fuse = TICRATE;
+			mo->spawnpoint = flagpoints[otherteam];
+			mo->flags2 |= MF2_JUSTATTACKED;
+		}
+	}
 
 	HU_SetCEchoFlags(V_AUTOFADEOUT|V_ALLOWLOWERCASE);
 	HU_SetCEchoDuration(5);
-	HU_DoCEcho(va(M_GetText("%s%s\200\\captured the %s%s\200.\\\\\\\\"), GetChatColorForSkincolor(G_GetTeamColor(team)), player_names[player-players], GetChatColorForSkincolor(G_GetTeamColor(otherteam)), G_GetTeamFlagName(otherteam)));
 
-	if (splitscreen || players[consoleplayer].ctfteam == team)
-		S_StartSound(NULL, sfx_flgcap);
-	else if (players[consoleplayer].ctfteam != team)
-		S_StartSound(NULL, sfx_lose);
-
-	mo = P_SpawnTeamFlag(otherteam, player->mo->x, player->mo->y, player->mo->z);
-	if (mo)
+	if (totalcaptured == 1)
 	{
-		mo->flags &= ~MF_SPECIAL;
-		mo->fuse = TICRATE;
-		mo->spawnpoint = flagpoints[otherteam];
-		mo->flags2 |= MF2_JUSTATTACKED;
+		UINT8 otherteam = teamscaptured[0];
+		HU_DoCEcho(va(M_GetText("%s%s\200\\captured the %s%s\200.\\\\\\\\"), GetChatColorForSkincolor(G_GetTeamColor(team)), player_names[player-players], GetChatColorForSkincolor(G_GetTeamColor(otherteam)), G_GetTeamFlagName(otherteam)));
 	}
-	player->gotflag &= ~teamflag;
-	teamscores[team]++;
-	P_AddPlayerScore(player, 250);
+	else
+	{
+		char *buffer = NULL;
+		size_t buffer_size = 0;
+
+		const char *text = va(M_GetText("%s%s\200 captured the:\\"), GetChatColorForSkincolor(G_GetTeamColor(team)), player_names[player-players]);
+		buffer_size += strlen(text) + 1;
+		buffer = Z_Realloc(buffer, buffer_size, PU_STATIC, NULL);
+		strcpy(buffer, text);
+
+		for (UINT8 i = 0; i < totalcaptured; i++)
+		{
+			UINT8 otherteam = teamscaptured[i];
+
+			text = va(M_GetText("%s%s\200\\"), GetChatColorForSkincolor(G_GetTeamColor(otherteam)), G_GetTeamFlagName(otherteam));
+
+			buffer_size += strlen(text) + 1;
+			buffer = Z_Realloc(buffer, buffer_size, PU_STATIC, NULL);
+
+			strcat(buffer, text);
+		}
+
+		HU_DoCEcho(buffer);
+
+		Z_Free(buffer);
+	}
 }
 
 static void P_ProcessZoomTube(player_t *player, mtag_t sectag, boolean end)
@@ -4999,10 +5143,8 @@ static void P_EvaluateSpecialFlags(player_t *player, sector_t *sector, sector_t 
 		P_ProcessExitSector(player, sectag);
 	if ((sector->specialflags & SSF_SPECIALSTAGEPIT) && isTouching)
 		P_ProcessSpecialStagePit(player);
-	if ((sector->specialflags & SSF_REDTEAMBASE) && isTouching)
-		P_ProcessTeamBase(player, TEAM_RED);
-	if ((sector->specialflags & SSF_BLUETEAMBASE) && isTouching)
-		P_ProcessTeamBase(player, TEAM_BLUE);
+	if ((sector->teambase != TEAM_NONE) && isTouching)
+		P_ProcessTeamBase(player, sector->teambase);
 	if (sector->specialflags & SSF_FAN)
 	{
 		player->mo->momz += mobjinfo[MT_FAN].mass/4;

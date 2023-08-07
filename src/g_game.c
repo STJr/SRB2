@@ -3947,7 +3947,7 @@ UINT8 G_GetTeamFromTeamFlag(UINT32 flag)
 {
 	for (UINT16 i = 1; i < teamsingame; i++)
 	{
-		UINT32 otherflag = 1 << (i - 1);
+		UINT32 otherflag = teams[G_GetTeam(i)].flag;
 		if (flag == otherflag)
 			return i;
 	}
@@ -3961,7 +3961,7 @@ UINT8 G_GetTeamListFromTeamFlags(UINT8 *teamlist, UINT32 flags)
 
 	for (UINT16 i = 1; i < teamsingame; i++)
 	{
-		UINT32 otherflag = 1 << (i - 1);
+		UINT32 otherflag = teams[G_GetTeam(i)].flag;
 		if ((flags & otherflag) != 0)
 		{
 			teamlist[count++] = i;
