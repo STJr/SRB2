@@ -2046,8 +2046,8 @@ static int gametype_set(lua_State *L)
 				if (i >= 0 && i < MAXTEAMS)
 				{
 					int team_index = luaL_checkinteger(L, -1);
-					if (team_index < 0 || team_index >= numteams)
-						luaL_error(L, "team index %d out of range (0 - %d)", team_index, numteams-1);
+					if (team_index <= 0 || team_index >= numteams)
+						luaL_error(L, "team index %d out of range (1 - %d)", team_index, numteams-1);
 
 					gt->teams.list[i] = (UINT8)team_index;
 
@@ -2418,8 +2418,8 @@ static int teamlist_set(lua_State *L)
 	int team = luaL_checkinteger(L, 3);
 	if (i <= 0 || i > teamlist->num)
 		return luaL_error(L, "array index %d out of range (1 - %d)", i, teamlist->num);
-	if (team < 0 || team >= numteams)
-		return luaL_error(L, "team index %d out of range (0 - %d)", team, numteams - 1);
+	if (team <= 0 || team >= numteams)
+		return luaL_error(L, "team index %d out of range (1 - %d)", team, numteams - 1);
 	teamlist->list[i - 1] = (UINT8)team;
 	return 0;
 }

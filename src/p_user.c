@@ -13097,6 +13097,14 @@ boolean P_PlayerShouldUseSpinHeight(player_t *player)
 		|| JUMPCURLED(player));
 }
 
+boolean P_PlayerHasTeamFlag(player_t *player, UINT8 team)
+{
+	if (!G_GametypeHasTeams() || team >= numteams)
+		return false;
+
+	return player->gotflag & teams[team].flag;
+}
+
 UINT16 P_GetPlayerColor(player_t *player)
 {
 	if (G_GametypeHasTeams() && player->ctfteam)
