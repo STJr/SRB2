@@ -3531,7 +3531,19 @@ team_t teams[MAXTEAMS] = {
 	}
 };
 
-char *teamnames[MAXTEAMS];
+char *teamnames[MAXTEAMS][2];
+
+static void G_SetTeamName(UINT8 i, const char *name)
+{
+	Z_Free(teamnames[i][0]);
+	Z_Free(teamnames[i][1]);
+
+	teamnames[i][0] = Z_StrDup(name);
+	teamnames[i][1] = Z_StrDup(name);
+
+	strupr(teamnames[i][0]);
+	strlwr(teamnames[i][1]);
+}
 
 static void G_InitTeams(void)
 {
@@ -3540,7 +3552,6 @@ static void G_InitTeams(void)
 
 	teams[TEAM_NONE].name = Z_StrDup("None");
 	teams[TEAM_NONE].flag_name = Z_StrDup("Thingmabob");
-	teamnames[TEAM_NONE] = Z_StrDup("NONE");
 
 	teams[TEAM_RED].name = Z_StrDup("Red");
 	teams[TEAM_RED].flag_name = Z_StrDup("Red Flag");
@@ -3548,7 +3559,6 @@ static void G_InitTeams(void)
 	teams[TEAM_RED].icons[TEAM_ICON_FLAG] = Z_StrDup("RFLAGICO");
 	teams[TEAM_RED].icons[TEAM_ICON_GOT_FLAG] = Z_StrDup("GOTRFLAG");
 	teams[TEAM_RED].icons[TEAM_ICON_MISSING_FLAG] = Z_StrDup("NONICON2");
-	teamnames[TEAM_RED] = Z_StrDup("RED");
 
 	teams[TEAM_BLUE].name = Z_StrDup("Blue");
 	teams[TEAM_BLUE].flag_name = Z_StrDup("Blue Flag");
@@ -3556,7 +3566,10 @@ static void G_InitTeams(void)
 	teams[TEAM_BLUE].icons[TEAM_ICON_FLAG] = Z_StrDup("BFLAGICO");
 	teams[TEAM_BLUE].icons[TEAM_ICON_GOT_FLAG] = Z_StrDup("GOTBFLAG");
 	teams[TEAM_BLUE].icons[TEAM_ICON_MISSING_FLAG] = Z_StrDup("NONICON");
-	teamnames[TEAM_BLUE] = Z_StrDup("BLUE");
+
+	G_SetTeamName(TEAM_NONE, "NONE");
+	G_SetTeamName(TEAM_RED, "RED");
+	G_SetTeamName(TEAM_BLUE, "BLUE");
 
 	G_UpdateTeamSelection();
 }
@@ -3928,6 +3941,21 @@ void G_InitTeam(UINT8 team)
 	G_FreeTeamData(team);
 
 	memset(&teams[team], 0, sizeof(team_t));
+}
+
+UINT8 G_AddTeam(const char *name)
+{
+	if (numteams == MAXTEAMS)
+		return MAXTEAMS;
+
+	UINT8 i = numteams;
+
+	G_InitTeam(i);
+	G_SetTeamName(i, name);
+
+	numteams++;
+
+	return i;
 }
 
 UINT8 G_GetGametypeTeam(UINT8 gtype, UINT8 team)

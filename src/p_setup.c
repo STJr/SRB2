@@ -1816,7 +1816,7 @@ static void ParseTextmapSectorParameter(UINT32 i, const char *param, const char 
 
 		for (UINT8 j = 0; j < numteams; j++)
 		{
-			if (fastcmp(val, teamnames[j]))
+			if (fastcmp(val, teamnames[j][1]))
 			{
 				sectors[j].teambase = j;
 				break;
@@ -2737,12 +2737,7 @@ static void P_WriteTextmap(void)
 			// actual teams TEAM_RED and TEAM_BLUE.
 			UINT8 team = wsectors[i].teambase;
 			if (team != TEAM_NONE && team < numteams)
-			{
-				char *teambase = Z_StrDup(teamnames[team]);
-				strlwr(teambase);
-				fprintf(f, "teambase = \"%s\";\n", teambase);
-				Z_Free(teambase);
-			}
+				fprintf(f, "teambase = \"%s\";\n", teamnames[team][1]);
 			else
 				fprintf(f, "teambase = \"%s\";\n", "unknown");
 		}

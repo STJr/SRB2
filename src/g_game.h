@@ -223,6 +223,7 @@ void G_AfterIntermission(void);
 void G_EndGame(void); // moved from y_inter.c/h and renamed
 
 void G_InitTeam(UINT8 team);
+UINT8 G_AddTeam(const char *name);
 UINT8 G_GetGametypeTeam(UINT8 gtype, UINT8 team);
 UINT8 G_GetTeam(UINT8 team);
 UINT8 G_GetTeamFromTeamFlag(UINT32 flag);

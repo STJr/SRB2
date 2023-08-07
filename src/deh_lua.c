@@ -133,15 +133,11 @@ static inline int lib_freeslot(lua_State *L)
 		}
 		else if (fastcmp(type, "TEAM"))
 		{
-			if (numteams == MAXTEAMS)
+			UINT8 i = G_AddTeam(word);
+			if (i == MAXTEAMS)
 				CONS_Alert(CONS_WARNING, "Ran out of free team slots!\n");
-			UINT8 i = numteams;
 			CONS_Printf("Team TEAM_%s allocated.\n",word);
-			teamnames[i] = Z_Malloc(strlen(word)+1, PU_STATIC, NULL);
-			strcpy(teamnames[i],word);
 			lua_pushinteger(L, i);
-			G_InitTeam(i);
-			numteams++;
 			r++;
 			break;
 		}
@@ -578,7 +574,7 @@ static int ScanConstants(lua_State *L, boolean mathlib, const char *word)
 		p = word+5;
 		for (i = 0; i < numteams; i++)
 		{
-			if (fastcmp(p, teamnames[i])) {
+			if (fastcmp(p, teamnames[i][0])) {
 				CacheAndPushConstant(L, word, i);
 				return 1;
 			}

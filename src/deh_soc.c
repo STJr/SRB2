@@ -475,13 +475,7 @@ void readfreeslots(MYFILE *f)
 			}
 			else if (fastcmp(type, "TEAM"))
 			{
-				if (numteams < MAXTEAMS)
-				{
-					teamnames[numteams] = Z_Malloc(strlen(word)+1, PU_STATIC, NULL);
-					strcpy(teamnames[numteams],word);
-					G_InitTeam(numteams);
-					numteams++;
-				}
+				G_AddTeam(word);
 			}
 			else if (fastcmp(type, "SPR2"))
 			{
@@ -4363,7 +4357,7 @@ UINT8 get_team(const char *word)
 		word += 5; // take off the TEAM_
 	for (i = 0; i < numteams; i++)
 	{
-		if (fastcmp(word, teamnames[i]))
+		if (fastcmp(word, teamnames[i][0]))
 			return i;
 	}
 	deh_warning("Couldn't find team named 'TEAM_%s'",word);

@@ -418,7 +418,7 @@ typedef struct
 extern team_t teams[MAXTEAMS];
 extern UINT8 numteams;
 
-extern char *teamnames[MAXTEAMS];
+extern char *teamnames[MAXTEAMS][2];
 
 #define NUMGAMETYPEFREESLOTS 128
 
