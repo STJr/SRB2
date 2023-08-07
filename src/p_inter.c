@@ -333,6 +333,18 @@ void P_DoMatchSuper(player_t *player)
 			}
 }
 
+static void P_CollectRing(player_t *player, mobj_t *special)
+{
+	if (!(P_CanPickupItem(player, false)) && !(special->flags2 & MF2_NIGHTSPULL))
+		return;
+
+	special->momx = special->momy = special->momz = 0;
+	P_GivePlayerRings(player, 1);
+
+	if ((maptol & TOL_NIGHTS) && special->type != MT_FLINGRING && special->type != MT_FLINGCOIN)
+		P_DoNightsScore(player);
+}
+
 /** Takes action based on a ::MF_SPECIAL thing touched by a player.
   * Actually, this just checks a few things (heights, toucher->player, no
   * objectplace, no dead or disappearing things)
@@ -614,26 +626,21 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 // Rings, coins, spheres, weapon panels, etc //
 // ***************************************** //
 		case MT_REDTEAMRING:
-			if (player->ctfteam != TEAM_RED)
+			if (player->ctfteam != G_GetTeam(TEAM_RED))
 				return;
-			/* FALLTHRU */
-		case MT_BLUETEAMRING: // Yes, I'm lazy. Oh well, deal with it.
-			if (special->type == MT_BLUETEAMRING && player->ctfteam != TEAM_BLUE)
+			P_CollectRing(player, special);
+			break;
+		case MT_BLUETEAMRING:
+			if (player->ctfteam != G_GetTeam(TEAM_BLUE))
 				return;
-			/* FALLTHRU */
+			P_CollectRing(player, special);
+			break;
 		case MT_RING:
 		case MT_FLINGRING:
 		case MT_COIN:
 		case MT_FLINGCOIN:
 		case MT_NIGHTSSTAR:
-			if (!(P_CanPickupItem(player, false)) && !(special->flags2 & MF2_NIGHTSPULL))
-				return;
-
-			special->momx = special->momy = special->momz = 0;
-			P_GivePlayerRings(player, 1);
-
-			if ((maptol & TOL_NIGHTS) && special->type != MT_FLINGRING && special->type != MT_FLINGCOIN)
-				P_DoNightsScore(player);
+			P_CollectRing(player, special);
 			break;
 		case MT_BLUESPHERE:
 		case MT_FLINGBLUESPHERE:

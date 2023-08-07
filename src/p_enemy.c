@@ -824,8 +824,8 @@ static boolean P_LookForShield(mobj_t *actor)
 			continue; // dead
 
 		//When in CTF, don't pull rings that you cannot pick up.
-		if ((actor->type == MT_REDTEAMRING && player->ctfteam != TEAM_RED) ||
-			(actor->type == MT_BLUETEAMRING && player->ctfteam != TEAM_BLUE))
+		if ((actor->type == MT_REDTEAMRING && player->ctfteam != G_GetTeam(TEAM_RED)) ||
+			(actor->type == MT_BLUETEAMRING && player->ctfteam != G_GetTeam(TEAM_BLUE)))
 			continue;
 
 		if ((player->powers[pw_shield] & SH_PROTECTELECTRIC)

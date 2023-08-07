@@ -406,12 +406,14 @@ enum {
 typedef struct
 {
 	char *name;
+	UINT16 color;
+	UINT32 weapon_mobj_type;
+	UINT32 missile_mobj_type;
+	UINT16 weapon_color;
+	UINT16 missile_color;
 	char *flag_name;
 	UINT16 flag;
 	UINT32 flag_mobj_type;
-	UINT16 color;
-	UINT16 weapon_color;
-	UINT16 missile_color;
 	char *icons[TEAM_ICON_MAX];
 } team_t;
 
