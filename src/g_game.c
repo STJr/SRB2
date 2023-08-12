@@ -2834,7 +2834,7 @@ void G_SpawnPlayer(INT32 playernum)
 
 	P_SpawnPlayer(playernum);
 	G_MovePlayerToSpawnOrStarpost(playernum);
-	LUA_HookPlayer(&players[playernum], HOOK(PlayerSpawn)); // Lua hook for player spawning :)
+	LUA_HookPlayer(&players[playernum], HOOK(PlayerSpawn));
 }
 
 void G_MovePlayerToSpawnOrStarpost(INT32 playernum)
@@ -2855,57 +2855,55 @@ void G_MovePlayerToSpawnOrStarpost(INT32 playernum)
 		P_ResetCamera(&players[playernum], &camera2);
 }
 
-mapthing_t *G_FindCTFStart(INT32 playernum)
+enum
 {
-	INT32 i,j;
+	PLAYER_START_TYPE_COOP,
+	PLAYER_START_TYPE_MATCH,
+	PLAYER_START_TYPE_TEAM
+};
 
-	if (!numredctfstarts && !numbluectfstarts) //why even bother, eh?
+static boolean G_AreCoopStartsAvailable(void)
+{
+	return numcoopstarts != 0;
+}
+
+static boolean G_AreMatchStartsAvailable(void)
+{
+	return numdmstarts != 0;
+}
+
+static boolean G_AreTeamStartsAvailable(UINT8 team)
+{
+	if (team >= numteams)
+		return false;
+
+	return numteamstarts[team] != 0;
+}
+
+static boolean G_AreTeamStartsAvailableForPlayer(INT32 playernum)
+{
+	UINT8 team = players[playernum].ctfteam;
+	if (team != TEAM_NONE && team < numteams)
+		return G_AreTeamStartsAvailable(team);
+	return G_AreMatchStartsAvailable();
+}
+
+mapthing_t *G_FindTeamStart(INT32 playernum)
+{
+	UINT8 team = players[playernum].ctfteam;
+	if (team == TEAM_NONE || team >= numteams)
+		return G_FindMatchStart(playernum);
+
+	if (G_AreTeamStartsAvailable(team))
 	{
-		if ((gametyperules & GTR_TEAMFLAGS) && (playernum == consoleplayer || (splitscreen && playernum == secondarydisplayplayer)))
-			CONS_Alert(CONS_WARNING, M_GetText("No CTF starts in this map!\n"));
-		return NULL;
+		for (INT32 j = 0; j < MAXPLAYERS; j++)
+		{
+			INT32 i = P_RandomKey(numteamstarts[team]);
+			if (G_CheckSpot(playernum, teamstarts[team][i]))
+				return teamstarts[team][i];
+		}
 	}
 
-	if ((!players[playernum].ctfteam && numredctfstarts && (!numbluectfstarts || P_RandomChance(FRACUNIT/2))) || players[playernum].ctfteam == TEAM_RED) //red
-	{
-		if (!numredctfstarts)
-		{
-			if (playernum == consoleplayer || (splitscreen && playernum == secondarydisplayplayer))
-				CONS_Alert(CONS_WARNING, M_GetText("No Red Team starts in this map!\n"));
-			return NULL;
-		}
-
-		for (j = 0; j < 32; j++)
-		{
-			i = P_RandomKey(numredctfstarts);
-			if (G_CheckSpot(playernum, redctfstarts[i]))
-				return redctfstarts[i];
-		}
-
-		if (playernum == consoleplayer || (splitscreen && playernum == secondarydisplayplayer))
-			CONS_Alert(CONS_WARNING, M_GetText("Could not spawn at any Red Team starts!\n"));
-		return NULL;
-	}
-	else if (!players[playernum].ctfteam || players[playernum].ctfteam == TEAM_BLUE) //blue
-	{
-		if (!numbluectfstarts)
-		{
-			if (playernum == consoleplayer || (splitscreen && playernum == secondarydisplayplayer))
-				CONS_Alert(CONS_WARNING, M_GetText("No Blue Team starts in this map!\n"));
-			return NULL;
-		}
-
-		for (j = 0; j < 32; j++)
-		{
-			i = P_RandomKey(numbluectfstarts);
-			if (G_CheckSpot(playernum, bluectfstarts[i]))
-				return bluectfstarts[i];
-		}
-		if (playernum == consoleplayer || (splitscreen && playernum == secondarydisplayplayer))
-			CONS_Alert(CONS_WARNING, M_GetText("Could not spawn at any Blue Team starts!\n"));
-		return NULL;
-	}
-	//should never be reached but it gets stuff to shut up
 	return NULL;
 }
 
@@ -2913,7 +2911,7 @@ mapthing_t *G_FindMatchStart(INT32 playernum)
 {
 	INT32 i, j;
 
-	if (numdmstarts)
+	if (G_AreMatchStartsAvailable())
 	{
 		for (j = 0; j < 64; j++)
 		{
@@ -2921,19 +2919,14 @@ mapthing_t *G_FindMatchStart(INT32 playernum)
 			if (G_CheckSpot(playernum, deathmatchstarts[i]))
 				return deathmatchstarts[i];
 		}
-		if (playernum == consoleplayer || (splitscreen && playernum == secondarydisplayplayer))
-			CONS_Alert(CONS_WARNING, M_GetText("Could not spawn at any Deathmatch starts!\n"));
-		return NULL;
 	}
 
-	if (playernum == consoleplayer || (splitscreen && playernum == secondarydisplayplayer))
-		CONS_Alert(CONS_WARNING, M_GetText("No Deathmatch starts in this map!\n"));
 	return NULL;
 }
 
 mapthing_t *G_FindCoopStart(INT32 playernum)
 {
-	if (numcoopstarts)
+	if (G_AreCoopStartsAvailable())
 	{
 		//if there's 6 players in a map with 3 player starts, this spawns them 1/2/3/1/2/3.
 		if (G_CheckSpot(playernum, playerstarts[playernum % numcoopstarts]))
@@ -2944,82 +2937,208 @@ mapthing_t *G_FindCoopStart(INT32 playernum)
 		return playerstarts[0];
 	}
 
-	if (playernum == consoleplayer || (splitscreen && playernum == secondarydisplayplayer))
-		CONS_Alert(CONS_WARNING, M_GetText("No Co-op starts in this map!\n"));
 	return NULL;
 }
 
-// Find a Co-op start, or fallback into other types of starts.
-static inline mapthing_t *G_FindCoopStartOrFallback(INT32 playernum)
+static mapthing_t *G_FindBestStart(INT32 playernum, INT32 type)
 {
-	mapthing_t *spawnpoint = NULL;
-	if (!(spawnpoint = G_FindCoopStart(playernum)) // find a Co-op start
-	&& !(spawnpoint = G_FindMatchStart(playernum))) // find a DM start
-		spawnpoint = G_FindCTFStart(playernum); // fallback
+	switch (type)
+	{
+	case PLAYER_START_TYPE_COOP:
+		return G_FindCoopStart(playernum);
+	case PLAYER_START_TYPE_MATCH:
+		return G_FindMatchStart(playernum);
+	case PLAYER_START_TYPE_TEAM:
+		return G_FindTeamStart(playernum);
+	}
+	return NULL;
+}
+
+static mapthing_t *G_FindBestStartInOrder(INT32 playernum, INT32 *order, UINT8 numtries)
+{
+	for (unsigned i = 0; i < numtries; i++)
+	{
+		mapthing_t *spawnpoint = G_FindBestStart(playernum, order[i]);
+		if (spawnpoint)
+			return spawnpoint;
+	}
+
+	return NULL;
+}
+
+// Gets a Co-op start, or returns NULL if none was found.
+// If no Co-op start was found, it looks for a Match start, and then a team start.
+static mapthing_t *G_FindBestCoopStart(INT32 playernum)
+{
+	INT32 order[] = {
+		PLAYER_START_TYPE_COOP,
+		PLAYER_START_TYPE_MATCH,
+		PLAYER_START_TYPE_TEAM
+	};
+	return G_FindBestStartInOrder(playernum, order, sizeof(order) / sizeof(order[0]));
+}
+
+// Gets a Match start, or returns NULL if none was found.
+// If no Match start was found, it looks for a team start, and then a Co-op start.
+static mapthing_t *G_FindBestMatchStart(INT32 playernum)
+{
+	INT32 order[] = {
+		PLAYER_START_TYPE_MATCH,
+		PLAYER_START_TYPE_TEAM,
+		PLAYER_START_TYPE_COOP
+	};
+	return G_FindBestStartInOrder(playernum, order, sizeof(order) / sizeof(order[0]));
+}
+
+// Gets a team start, or returns NULL if none was found.
+// If no team start was found, it looks for a Match start, and then a Co-op start.
+static mapthing_t *G_FindBestTeamStart(INT32 playernum)
+{
+	INT32 order[] = {
+		PLAYER_START_TYPE_TEAM,
+		PLAYER_START_TYPE_MATCH,
+		PLAYER_START_TYPE_COOP
+	};
+	return G_FindBestStartInOrder(playernum, order, sizeof(order) / sizeof(order[0]));
+}
+
+// Gets a Co-op start, or shows a warning to the player if none was found.
+// If no Co-op start was found, it looks for a Match start, and then a team start.
+static mapthing_t *G_GetCoopStartForSpawning(INT32 playernum)
+{
+	player_t *player = &players[playernum];
+	mapthing_t *spawnpoint = G_FindBestCoopStart(playernum);
+
+	if (P_IsLocalPlayer(player))
+	{
+		boolean has_starts = G_AreCoopStartsAvailable();
+		if (spawnpoint && !has_starts)
+			CONS_Alert(CONS_WARNING, M_GetText("No Co-Op starts in this map!\n"));
+		else if (spawnpoint == NULL && has_starts) // This never happens, but in case it does, this will display a warning.
+			CONS_Alert(CONS_WARNING, M_GetText("Could not spawn at any Co-Op starts!\n"));
+	}
+
 	return spawnpoint;
 }
 
-// Find a Match start, or fallback into other types of starts.
-static inline mapthing_t *G_FindMatchStartOrFallback(INT32 playernum)
+// Gets a Match start, or shows a warning to the player if none was found.
+// If no Match start was found, it looks for a team start, and then a Co-op start.
+static mapthing_t *G_GetMatchStartForSpawning(INT32 playernum)
 {
-	mapthing_t *spawnpoint = NULL;
-	if (!(spawnpoint = G_FindMatchStart(playernum)) // find a DM start
-	&& !(spawnpoint = G_FindCTFStart(playernum))) // find a CTF start
-		spawnpoint = G_FindCoopStart(playernum); // fallback
+	player_t *player = &players[playernum];
+	mapthing_t *spawnpoint = G_FindBestMatchStart(playernum);
+
+	if (P_IsLocalPlayer(player))
+	{
+		boolean has_starts = G_AreMatchStartsAvailable();
+		if (spawnpoint && !has_starts)
+			CONS_Alert(CONS_WARNING, M_GetText("No Deathmatch starts in this map!\n"));
+		else if (spawnpoint == NULL && has_starts)
+			CONS_Alert(CONS_WARNING, M_GetText("Could not spawn at any Deathmatch starts!\n"));
+	}
+
+	return spawnpoint;
+}
+
+// Gets a team start, or shows a warning to the player if none was found.
+// If no team start was found, it looks for a Match start, and then a Co-op start.
+static mapthing_t *G_GetTeamStartForSpawning(INT32 playernum)
+{
+	player_t *player = &players[playernum];
+	mapthing_t *spawnpoint = G_FindBestTeamStart(playernum);
+
+	if (P_IsLocalPlayer(player))
+	{
+		boolean has_starts = G_AreTeamStartsAvailableForPlayer(playernum);
+		if (spawnpoint && !has_starts)
+		{
+			if (player->ctfteam)
+				CONS_Alert(CONS_WARNING, M_GetText("No %s starts in this map!\n"), G_GetTeamName(player->ctfteam));
+			else
+				CONS_Alert(CONS_WARNING, M_GetText("No team starts in this map!\n"));
+		}
+		else if (spawnpoint == NULL && has_starts)
+		{
+			if (player->ctfteam)
+				CONS_Alert(CONS_WARNING, M_GetText("Could not spawn at any %s starts!\n"), G_GetTeamName(player->ctfteam));
+			else
+				CONS_Alert(CONS_WARNING, M_GetText("Could not spawn at any team starts!\n"));
+		}
+	}
+
 	return spawnpoint;
 }
 
 mapthing_t *G_FindMapStart(INT32 playernum)
 {
-	mapthing_t *spawnpoint;
-
 	if (!playeringame[playernum])
 		return NULL;
 
+	player_t *player = &players[playernum];
+	mapthing_t *spawnpoint = NULL;
+
 	// -- Spectators --
 	// Order in platform gametypes: Coop->DM->CTF
-	// And, with deathmatch starts: DM->CTF->Coop
-	if (players[playernum].spectator)
+	// Otherwise: DM->CTF->Coop
+	if (player->spectator)
 	{
 		// In platform gametypes, spawn in Co-op starts first
 		// Overriden by GTR_DEATHMATCHSTARTS.
 		if (G_PlatformGametype() && !(gametyperules & GTR_DEATHMATCHSTARTS))
-			spawnpoint = G_FindCoopStartOrFallback(playernum);
+			spawnpoint = G_GetCoopStartForSpawning(playernum);
 		else
-			spawnpoint = G_FindMatchStartOrFallback(playernum);
+			spawnpoint = G_GetMatchStartForSpawning(playernum);
 	}
 
 	// -- CTF --
 	// Order: CTF->DM->Coop
-	else if ((gametyperules & (GTR_TEAMFLAGS|GTR_TEAMS)) && players[playernum].ctfteam)
+	else if (gametyperules & GTR_TEAMFLAGS)
 	{
-		if (!(spawnpoint = G_FindCTFStart(playernum)) // find a CTF start
-		&& !(spawnpoint = G_FindMatchStart(playernum))) // find a DM start
-			spawnpoint = G_FindCoopStart(playernum); // fallback
+		if (player->ctfteam)
+			spawnpoint = G_GetTeamStartForSpawning(playernum);
+		else
+			spawnpoint = G_GetMatchStartForSpawning(playernum);
 	}
 
-	// -- DM/Tag/CTF-spectator/etc --
+	// -- DM/Tag/etc --
 	// Order: DM->CTF->Coop
-	else if (G_TagGametype() ? (!(players[playernum].pflags & PF_TAGIT)) : (gametyperules & GTR_DEATHMATCHSTARTS))
-		spawnpoint = G_FindMatchStartOrFallback(playernum);
+	else if (gametyperules & GTR_DEATHMATCHSTARTS)
+	{
+		// If the current gametype has teams, but isn't CTF, then this looks for a team start first
+		// If the player is not in a team, then this just gets a match start.
+		if (G_GametypeHasTeams() && player->ctfteam > TEAM_NONE && player->ctfteam < numteams)
+		{
+			spawnpoint = G_FindTeamStart(playernum);
+
+			// If no spawn point was found, but team starts are available, this means there is no good location
+			// for the player to spawn at. In that situation, we display a message telling the player so.
+			if (spawnpoint == NULL && G_AreTeamStartsAvailable(player->ctfteam) && P_IsLocalPlayer(player))
+				CONS_Alert(CONS_WARNING, M_GetText("Could not spawn at any %s starts!\n"), G_GetTeamName(player->ctfteam));
+		}
+
+		// If that failed, no warning is shown. Instead, this will look for a match start, which may
+		// then display a warning if no suitable map starts were found.
+		if (spawnpoint == NULL)
+			spawnpoint = G_GetMatchStartForSpawning(playernum);
+	}
 
 	// -- Other game modes --
 	// Order: Coop->DM->CTF
 	else
-		spawnpoint = G_FindCoopStartOrFallback(playernum);
+		spawnpoint = G_GetCoopStartForSpawning(playernum);
 
 	//No spawns found. ANYWHERE.
 	if (!spawnpoint)
 	{
 		if (nummapthings)
 		{
-			if (playernum == consoleplayer || (splitscreen && playernum == secondarydisplayplayer))
+			if (P_IsLocalPlayer(player))
 				CONS_Alert(CONS_ERROR, M_GetText("No player spawns found, spawning at the first mapthing!\n"));
 			spawnpoint = &mapthings[0];
 		}
 		else
 		{
-			if (playernum == consoleplayer || (splitscreen && playernum == secondarydisplayplayer))
+			if (P_IsLocalPlayer(player))
 				CONS_Alert(CONS_ERROR, M_GetText("No player spawns found, spawning at the origin!\n"));
 		}
 	}

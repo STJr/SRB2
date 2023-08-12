@@ -147,12 +147,11 @@ mobj_t **blocklinks;
 UINT8 *rejectmatrix;
 
 // Maintain single and multi player starting spots.
-INT32 numdmstarts, numcoopstarts, numredctfstarts, numbluectfstarts;
+INT32 numdmstarts, numcoopstarts, numteamstarts[MAXTEAMS];
 
 mapthing_t *deathmatchstarts[MAX_DM_STARTS];
 mapthing_t *playerstarts[MAXPLAYERS];
-mapthing_t *bluectfstarts[MAXPLAYERS];
-mapthing_t *redctfstarts[MAXPLAYERS];
+mapthing_t *teamstarts[MAXTEAMS][MAXPLAYERS];
 
 // Maintain waypoints
 mobj_t *waypoints[NUMWAYPOINTSEQUENCES][WAYPOINTSEQUENCESIZE];
@@ -7238,16 +7237,24 @@ static void P_ForceCharacter(const char *forcecharskin)
 
 static void P_ResetSpawnpoints(void)
 {
-	UINT8 i;
+	UINT8 i, j;
 
-	numdmstarts = numredctfstarts = numbluectfstarts = 0;
+	numdmstarts = 0;
 
 	// reset the player starts
 	for (i = 0; i < MAXPLAYERS; i++)
-		playerstarts[i] = bluectfstarts[i] = redctfstarts[i] = NULL;
+		playerstarts[i] = NULL;
 
 	for (i = 0; i < MAX_DM_STARTS; i++)
 		deathmatchstarts[i] = NULL;
+
+	for (i = 0; i < MAXTEAMS; i++)
+	{
+		numteamstarts[i] = 0;
+
+		for (j = 0; j < MAXPLAYERS; j++)
+			teamstarts[i][j] = NULL;
+	}
 
 	for (i = 0; i < 2; i++)
 		skyboxmo[i] = NULL;

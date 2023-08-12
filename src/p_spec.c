@@ -1783,7 +1783,7 @@ void P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller)
 			// Only red/blue team members can activate this.
 			if (!(actor && actor->player))
 				return;
-			if (actor->player->ctfteam != ((triggerline->args[1] == TMT_RED) ? TEAM_RED : TEAM_BLUE))
+			if (actor->player->ctfteam != ((triggerline->args[1] == TMT_RED) ? G_GetTeam(TEAM_RED) : G_GetTeam(TEAM_BLUE)))
 				return;
 			break;
 		case 314:

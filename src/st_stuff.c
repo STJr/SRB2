@@ -907,7 +907,7 @@ static void ST_drawLivesArea(void)
 		}
 		else if (G_GametypeHasTeams())
 		{
-			if (stplyr->ctfteam != 0)
+			if (stplyr->ctfteam > TEAM_NONE && stplyr->ctfteam < numteams)
 			{
 				v_colmap = skincolors[G_GetTeamColor(stplyr->ctfteam)].chatcolor;
 			}
@@ -994,7 +994,7 @@ static void ST_drawLivesArea(void)
 			}
 			else if (G_GametypeHasTeams())
 			{
-				if (stplyr->ctfteam != 0)
+				if (stplyr->ctfteam > TEAM_NONE && stplyr->ctfteam < numteams)
 				{
 					V_DrawRightAlignedString(hudinfo[HUD_LIVES].x+58, hudinfo[HUD_LIVES].y+8, V_HUDTRANS|hudinfo[HUD_LIVES].f|V_PERPLAYER, G_GetTeamName(stplyr->ctfteam));
 				}
