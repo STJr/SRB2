@@ -228,6 +228,7 @@ UINT8 G_GetGametypeTeam(UINT8 gtype, UINT8 team);
 UINT8 G_GetTeam(UINT8 team);
 UINT8 G_GetTeamFromTeamFlag(UINT32 flag);
 UINT8 G_GetTeamListFromTeamFlags(UINT8 *teamlist, UINT32 flags);
+UINT8 G_GetTeamByName(const char *name);
 const char *G_GetTeamName(UINT8 team);
 const char *G_GetTeamFlagName(UINT8 team);
 UINT32 G_GetTeamWeaponMobjtype(UINT8 team);

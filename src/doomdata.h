@@ -217,6 +217,8 @@ typedef struct
 	struct mobj_s *mobj;
 } mapthing_t;
 
+#define THING_TYPE_CTF_TEAM_FLAG 324
+
 #define ZSHIFT 4
 
 #define NUMMAPS 1035

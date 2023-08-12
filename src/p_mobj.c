@@ -10012,6 +10012,10 @@ static void P_FlagFuseThink(mobj_t *mobj)
 	if (!mobj->spawnpoint)
 		return;
 
+	UINT8 team = mobj->extravalue1;
+	if (team == TEAM_NONE || team >= numteams)
+		return;
+
 	x = mobj->spawnpoint->x << FRACBITS;
 	y = mobj->spawnpoint->y << FRACBITS;
 	z = mobj->spawnpoint->z << FRACBITS;
@@ -10020,7 +10024,11 @@ static void P_FlagFuseThink(mobj_t *mobj)
 		z = ss->sector->ceilingheight - mobjinfo[mobj->type].height - z;
 	else
 		z = ss->sector->floorheight + z;
-	flagmo = P_SpawnMobj(x, y, z, mobj->type);
+
+	flagmo = P_SpawnTeamFlag(team, x, y, z);
+	if (flagmo == NULL)
+		return;
+
 	flagmo->spawnpoint = mobj->spawnpoint;
 	if (mobj->spawnpoint->options & MTF_OBJECTFLIP)
 	{
@@ -10028,20 +10036,16 @@ static void P_FlagFuseThink(mobj_t *mobj)
 		flagmo->flags2 |= MF2_OBJECTFLIP;
 	}
 
-	UINT8 team = mobj->info->mass;
-	if (team < numteams)
-	{
-		if (!(mobj->flags2 & MF2_JUSTATTACKED))
-			CONS_Printf(M_GetText("The %s%s\200 has returned to base.\n"), GetChatColorForSkincolor(G_GetTeamColor(team)), G_GetTeamFlagName(team));
+	if (!(mobj->flags2 & MF2_JUSTATTACKED))
+		CONS_Printf(M_GetText("The %s%s\200 has returned to base.\n"), GetChatColorForSkincolor(G_GetTeamColor(team)), G_GetTeamFlagName(team));
 
-		// Assumedly in splitscreen players will be on opposing teams
-		if (players[consoleplayer].ctfteam == team || splitscreen)
-			S_StartSound(NULL, sfx_hoop1);
-		else if (players[consoleplayer].ctfteam != 0)
-			S_StartSound(NULL, sfx_hoop3);
+	// Assumedly in splitscreen players will be on opposing teams
+	if (players[consoleplayer].ctfteam == team || splitscreen)
+		S_StartSound(NULL, sfx_hoop1);
+	else if (players[consoleplayer].ctfteam != 0)
+		S_StartSound(NULL, sfx_hoop3);
 
-		P_SetTarget(&flagmobjs[team], flagmo);
-	}
+	P_SetTarget(&flagmobjs[team], flagmo);
 }
 
 static boolean P_FuseThink(mobj_t *mobj)
@@ -10587,7 +10591,6 @@ static fixed_t P_DefaultMobjShadowScale (mobj_t *thing)
 		case MT_FLICKY_16:
 		case MT_SECRETFLICKY_01:
 		case MT_SECRETFLICKY_02:
-
 			return FRACUNIT;
 
 		default:
@@ -11472,6 +11475,24 @@ mobjtype_t P_GetMobjtype(UINT16 mthingtype)
 	return MT_UNKNOWN;
 }
 
+static mobjtype_t P_GetMobjtypeFromMapthing(mapthing_t *mthing)
+{
+	if (mthing->type == THING_TYPE_CTF_TEAM_FLAG) // CTF team flag
+	{
+		UINT8 team = G_GetTeamByName(mthing->stringargs[0]);
+		if (team == TEAM_NONE || team >= numteams)
+			return MT_UNKNOWN;
+		else
+		{
+			mobjtype_t type = teams[team].flag_mobj_type;
+			if (type == MT_NULL || type >= NUMMOBJTYPES)
+				return MT_UNKNOWN;
+		}
+	}
+
+	return P_GetMobjtype(mthing->type);
+}
+
 //
 // P_RespawnSpecials
 //
@@ -12055,12 +12076,12 @@ static boolean P_AllowMobjSpawn(mapthing_t* mthing, mobjtype_t i)
 
 	if (!(gametyperules & GTR_TEAMFLAGS)) // CTF specific things
 	{
-		if (i == MT_BLUEFLAG || i == MT_REDFLAG || i == MT_TEAMFLAG)
+		if (i == MT_BLUEFLAG || i == MT_REDFLAG || mthing->type == THING_TYPE_CTF_TEAM_FLAG)
 			return false; // No flags in non-CTF modes!
 	}
-	else if (i == MT_BLUEFLAG || i == MT_REDFLAG || i == MT_TEAMFLAG)
+	else if (i == MT_BLUEFLAG || i == MT_REDFLAG || mthing->type == THING_TYPE_CTF_TEAM_FLAG)
 	{
-		UINT8 team = i == MT_TEAMFLAG ? mthing->args[0] : G_GetTeam(mobjinfo[i].mass);
+		UINT8 team = mthing->type == THING_TYPE_CTF_TEAM_FLAG ? G_GetTeamByName(mthing->stringargs[0]) : G_GetTeam(mobjinfo[i].mass);
 		if (team == TEAM_NONE || team >= numteams)
 			return false;
 		else if (flagmobjs[team] && !P_MobjWasRemoved(flagmobjs[team]))
@@ -12148,14 +12169,7 @@ static mobjtype_t P_GetMobjtypeSubstitute(mapthing_t *mthing, mobjtype_t i)
 			return MT_NIGHTSCHIP;
 	}
 
-	if (i == MT_TEAMFLAG)
-	{
-		INT32 team = mthing->args[0];
-		if (team == TEAM_NONE || team >= numteams)
-			return MT_NULL;
-		return teams[team].flag_mobj_type;
-	}
-	else if (i == MT_BLUEFLAG || i == MT_REDFLAG)
+	if (i == MT_BLUEFLAG || i == MT_REDFLAG)
 	{
 		INT32 team = G_GetTeam(mobjinfo[i].mass);
 		if (team == TEAM_NONE || team >= numteams)
@@ -13189,8 +13203,6 @@ static boolean P_SetupSpawnedMapThing(mapthing_t *mthing, mobj_t *mobj, boolean 
 	case MT_REDFLAG:
 	case MT_BLUEFLAG:
 		mobj->extravalue1 = G_GetTeam(mobj->info->mass);
-		/* FALLTHRU */
-	case MT_TEAMFLAG:
 		mobj->eflags |= MFE_TEAMFLAG;
 		break;
 	case MT_NIGHTSSTAR:
@@ -13248,6 +13260,9 @@ static boolean P_SetupSpawnedMapThing(mapthing_t *mthing, mobj_t *mobj, boolean 
 	default:
 		break;
 	}
+
+	if (mthing->type == THING_TYPE_CTF_TEAM_FLAG)
+		mobj->eflags |= MFE_TEAMFLAG;
 
 	if (mobj->flags & MF_BOSS)
 	{
@@ -13406,7 +13421,7 @@ mobj_t *P_SpawnMapThing(mapthing_t *mthing)
 	if (!objectplacing && P_SpawnNonMobjMapThing(mthing))
 		return mobj;
 
-	i = P_GetMobjtype(mthing->type);
+	i = P_GetMobjtypeFromMapthing(mthing);
 	if (i == MT_UNKNOWN)
 		CONS_Alert(CONS_WARNING, M_GetText("Unknown thing type %d placed at (%d, %d)\n"), mthing->type, mthing->x, mthing->y);
 
