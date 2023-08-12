@@ -4001,6 +4001,20 @@ UINT8 G_GetTeamListFromTeamFlags(UINT8 *teamlist, UINT32 flags)
 	return count;
 }
 
+UINT8 G_GetTeamByName(const char *name)
+{
+	if (name != NULL)
+	{
+		for (UINT8 i = 0; i < numteams; i++)
+		{
+			if (!strcmp(name, teamnames[i][1]))
+				return i;
+		}
+	}
+
+	return MAXTEAMS;
+}
+
 const char *G_GetTeamName(UINT8 team)
 {
 	if (team >= numteams || !teams[team].name)

@@ -3697,7 +3697,6 @@ const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for sanity t
 	"MT_TOKEN", // Special Stage token for special stage
 	"MT_REDFLAG", // Red CTF Flag
 	"MT_BLUEFLAG", // Blue CTF Flag
-	"MT_TEAMFLAG", // Team flag
 	"MT_EMBLEM",
 	"MT_EMERALD1",
 	"MT_EMERALD2",
