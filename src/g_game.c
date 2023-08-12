@@ -2891,10 +2891,7 @@ static boolean G_AreTeamStartsAvailableForPlayer(INT32 playernum)
 mapthing_t *G_FindTeamStart(INT32 playernum)
 {
 	UINT8 team = players[playernum].ctfteam;
-	if (team == TEAM_NONE || team >= numteams)
-		return G_FindMatchStart(playernum);
-
-	if (G_AreTeamStartsAvailable(team))
+	if (team != TEAM_NONE && G_AreTeamStartsAvailable(team))
 	{
 		for (INT32 j = 0; j < MAXPLAYERS; j++)
 		{
@@ -2946,10 +2943,12 @@ static mapthing_t *G_FindBestStart(INT32 playernum, INT32 type)
 	{
 	case PLAYER_START_TYPE_COOP:
 		return G_FindCoopStart(playernum);
+	case PLAYER_START_TYPE_TEAM:
+		if (players[playernum].ctfteam > TEAM_NONE && players[playernum].ctfteam < numteams)
+			return G_FindTeamStart(playernum);
+		/* FALLTHRU */
 	case PLAYER_START_TYPE_MATCH:
 		return G_FindMatchStart(playernum);
-	case PLAYER_START_TYPE_TEAM:
-		return G_FindTeamStart(playernum);
 	}
 	return NULL;
 }
@@ -3078,8 +3077,8 @@ mapthing_t *G_FindMapStart(INT32 playernum)
 	mapthing_t *spawnpoint = NULL;
 
 	// -- Spectators --
-	// Order in platform gametypes: Coop->DM->CTF
-	// Otherwise: DM->CTF->Coop
+	// Order in platform gametypes: Coop->DM->Team
+	// Otherwise: DM->Team->Coop
 	if (player->spectator)
 	{
 		// In platform gametypes, spawn in Co-op starts first
@@ -3091,17 +3090,17 @@ mapthing_t *G_FindMapStart(INT32 playernum)
 	}
 
 	// -- CTF --
-	// Order: CTF->DM->Coop
-	else if (gametyperules & GTR_TEAMFLAGS)
+	// Order: Team->DM->Coop
+	else if (gametyperules & GTR_TEAMFLAGS && G_GametypeHasTeams())
 	{
-		if (player->ctfteam)
+		if (player->ctfteam > TEAM_NONE && player->ctfteam < numteams)
 			spawnpoint = G_GetTeamStartForSpawning(playernum);
 		else
 			spawnpoint = G_GetMatchStartForSpawning(playernum);
 	}
 
 	// -- DM/Tag/etc --
-	// Order: DM->CTF->Coop
+	// Order: DM->Team->Coop
 	else if (gametyperules & GTR_DEATHMATCHSTARTS)
 	{
 		// If the current gametype has teams, but isn't CTF, then this looks for a team start first
@@ -3110,20 +3109,20 @@ mapthing_t *G_FindMapStart(INT32 playernum)
 		{
 			spawnpoint = G_FindTeamStart(playernum);
 
-			// If no spawn point was found, but team starts are available, this means there is no good location
+			// If no spawn point was returned, but team starts are available, this means there is no good location
 			// for the player to spawn at. In that situation, we display a message telling the player so.
 			if (spawnpoint == NULL && G_AreTeamStartsAvailable(player->ctfteam) && P_IsLocalPlayer(player))
 				CONS_Alert(CONS_WARNING, M_GetText("Could not spawn at any %s starts!\n"), G_GetTeamName(player->ctfteam));
 		}
 
 		// If that failed, no warning is shown. Instead, this will look for a match start, which may
-		// then display a warning if no suitable map starts were found.
+		// then display a warning if no suitable map start was found.
 		if (spawnpoint == NULL)
 			spawnpoint = G_GetMatchStartForSpawning(playernum);
 	}
 
 	// -- Other game modes --
-	// Order: Coop->DM->CTF
+	// Order: Coop->DM->Team
 	else
 		spawnpoint = G_GetCoopStartForSpawning(playernum);
 
@@ -3144,6 +3143,52 @@ mapthing_t *G_FindMapStart(INT32 playernum)
 	}
 
 	return spawnpoint;
+}
+
+mapthing_t *G_FindBestPlayerStart(INT32 playernum)
+{
+	if (!playeringame[playernum])
+		return NULL;
+
+	player_t *player = &players[playernum];
+
+	// Spectator
+	if (player->spectator)
+	{
+		if (G_PlatformGametype() && !(gametyperules & GTR_DEATHMATCHSTARTS))
+			return G_FindCoopStart(playernum);
+		else
+			return G_FindMatchStart(playernum);
+	}
+	// CTF
+	else if (gametyperules & GTR_TEAMFLAGS && G_GametypeHasTeams())
+	{
+		mapthing_t *mapthing = NULL;
+
+		if (player->ctfteam > TEAM_NONE && player->ctfteam < numteams)
+			mapthing = G_FindTeamStart(playernum);
+
+		if (mapthing)
+			return mapthing;
+		else
+			return G_FindMatchStart(playernum);
+	}
+	// Gametypes that use match starts
+	else if (gametyperules & GTR_DEATHMATCHSTARTS)
+	{
+		mapthing_t *mapthing = NULL;
+
+		if (G_GametypeHasTeams() && player->ctfteam > TEAM_NONE && player->ctfteam < numteams)
+			mapthing = G_FindTeamStart(playernum);
+
+		if (mapthing)
+			return mapthing;
+		else
+			return G_FindMatchStart(playernum);
+	}
+
+	// Everything else (just uses Co-Op)
+	return G_FindCoopStart(playernum);
 }
 
 // Go back through all the projectiles and remove all references to the old
