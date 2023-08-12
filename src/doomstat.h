@@ -638,8 +638,7 @@ extern tic_t gametic;
 
 // Player spawn spots.
 extern mapthing_t *playerstarts[MAXPLAYERS]; // Cooperative
-extern mapthing_t *bluectfstarts[MAXPLAYERS]; // CTF
-extern mapthing_t *redctfstarts[MAXPLAYERS]; // CTF
+extern mapthing_t *teamstarts[MAXTEAMS][MAXPLAYERS]; // CTF
 
 #define WAYPOINTSEQUENCESIZE 256
 #define NUMWAYPOINTSEQUENCES 256

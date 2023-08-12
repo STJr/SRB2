@@ -10042,7 +10042,7 @@ static void P_FlagFuseThink(mobj_t *mobj)
 	// Assumedly in splitscreen players will be on opposing teams
 	if (players[consoleplayer].ctfteam == team || splitscreen)
 		S_StartSound(NULL, sfx_hoop1);
-	else if (players[consoleplayer].ctfteam != 0)
+	else if (players[consoleplayer].ctfteam > TEAM_NONE && players[consoleplayer].ctfteam < numteams)
 		S_StartSound(NULL, sfx_hoop3);
 
 	P_SetTarget(&flagmobjs[team], flagmo);
@@ -11933,6 +11933,17 @@ fixed_t P_GetMapThingSpawnHeight(const mobjtype_t mobjtype, const mapthing_t* mt
 	return P_GetMobjSpawnHeight(mobjtype, x, y, dz, offset, flip, mthing->scale);
 }
 
+static void P_SetTeamStart(UINT8 team, mapthing_t *mthing)
+{
+	if (team != TEAM_NONE && team < numteams && numteamstarts[team] < MAXPLAYERS)
+	{
+		teamstarts[team][numteamstarts[team]] = mthing;
+		numteamstarts[team]++;
+		numteamstarts[0]++;
+		mthing->type = 0;
+	}
+}
+
 static boolean P_SpawnNonMobjMapThing(mapthing_t *mthing)
 {
 #if MAXPLAYERS > 32
@@ -11957,22 +11968,12 @@ static boolean P_SpawnNonMobjMapThing(mapthing_t *mthing)
 	}
 	else if (mthing->type == 34) // Red CTF starts
 	{
-		if (numredctfstarts < MAXPLAYERS)
-		{
-			redctfstarts[numredctfstarts] = mthing;
-			mthing->type = 0;
-			numredctfstarts++;
-		}
+		P_SetTeamStart(G_GetTeam(TEAM_RED), mthing);
 		return true;
 	}
 	else if (mthing->type == 35) // Blue CTF starts
 	{
-		if (numbluectfstarts < MAXPLAYERS)
-		{
-			bluectfstarts[numbluectfstarts] = mthing;
-			mthing->type = 0;
-			numbluectfstarts++;
-		}
+		P_SetTeamStart(G_GetTeam(TEAM_BLUE), mthing);
 		return true;
 	}
 	else if (metalrecording && mthing->type == mobjinfo[MT_METALSONIC_RACE].doomednum)
@@ -14068,15 +14069,8 @@ mobj_t *P_SpawnMissile(mobj_t *source, mobj_t *dest, mobjtype_t type)
 //
 void P_ColorTeamMissile(mobj_t *missile, player_t *source)
 {
-	if (G_GametypeHasTeams())
-	{
-		if (source->ctfteam != 0)
-			missile->color = G_GetTeamMissileColor(source->ctfteam);
-	}
-	/*
-	else
-		missile->color = player->mo->color; //copy color
-	*/
+	if (G_GametypeHasTeams() && source->ctfteam > TEAM_NONE && source->ctfteam < numteams)
+		missile->color = G_GetTeamMissileColor(source->ctfteam);
 }
 
 //

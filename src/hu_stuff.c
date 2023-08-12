@@ -837,7 +837,7 @@ static void Got_Saycmd(UINT8 **p, INT32 playernum)
 			fmt2 = "%s<%s%s%s>\x80 %s%s";
 		else // To your team
 		{
-			if (players[playernum].ctfteam != 0)
+			if (players[playernum].ctfteam > TEAM_NONE && players[playernum].ctfteam < numteams)
 			{
 				tempteam = Z_StrDup(va("%s[TEAM]", GetChatColorForSkincolor(G_GetTeamColor(players[playernum].ctfteam))));
 				prefix = tempteam;
