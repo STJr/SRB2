@@ -4096,6 +4096,50 @@ static int lib_gGetMostDisadvantagedTeam(lua_State *L)
 	return 1;
 }
 
+static int lib_gFindPlayerStart(lua_State *L)
+{
+	player_t *plr = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
+	INLEVEL
+	if (!plr)
+		return LUA_ErrInvalid(L, "player_t");
+	mapthing_t *mapthing = G_FindBestPlayerStart(plr - players);
+	if (mapthing)
+		LUA_PushUserdata(L, mapthing, META_MAPTHING);
+	else
+		lua_pushnil(L);
+	return 1;
+}
+
+static int lib_gFindMatchStart(lua_State *L)
+{
+	player_t *plr = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
+	INLEVEL
+	if (!plr)
+		return LUA_ErrInvalid(L, "player_t");
+	mapthing_t *mapthing = G_FindMatchStart(plr - players);
+	if (mapthing)
+		LUA_PushUserdata(L, mapthing, META_MAPTHING);
+	else
+		lua_pushnil(L);
+	return 1;
+}
+
+static int lib_gFindTeamStart(lua_State *L)
+{
+	player_t *plr = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
+	INLEVEL
+	if (!plr)
+		return LUA_ErrInvalid(L, "player_t");
+	mapthing_t *mapthing = NULL;
+	if (plr->ctfteam > TEAM_NONE && plr->ctfteam < numteams)
+		mapthing = G_FindTeamStart(plr - players);
+	if (mapthing)
+		LUA_PushUserdata(L, mapthing, META_MAPTHING);
+	else
+		lua_pushnil(L);
+	return 1;
+}
+
 static int lib_gTicsToHours(lua_State *L)
 {
 	tic_t rtic = luaL_checkinteger(L, 1);
@@ -4429,6 +4473,9 @@ static luaL_Reg lib[] = {
 	{"G_GetWorstPerformingTeam",lib_gGetWorstPerformingTeam},
 	{"G_GetMostAdvantagedTeam",lib_gGetMostAdvantagedTeam},
 	{"G_GetMostDisadvantagedTeam",lib_gGetMostDisadvantagedTeam},
+	{"G_FindPlayerStart",lib_gFindPlayerStart},
+	{"G_FindMatchStart",lib_gFindMatchStart},
+	{"G_FindTeamStart",lib_gFindTeamStart},
 	{"G_TicsToHours",lib_gTicsToHours},
 	{"G_TicsToMinutes",lib_gTicsToMinutes},
 	{"G_TicsToSeconds",lib_gTicsToSeconds},
