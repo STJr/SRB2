@@ -7062,7 +7062,7 @@ void A_RecyclePowers(mobj_t *actor)
 		players[recv_pl].ringweapons = weapons[send_pl];
 		players[recv_pl].currentweapon = weaponheld[send_pl];
 
-		if (((players[recv_pl].powers[pw_shield] & SH_NOSTACK) == SH_PINK) && (players[recv_pl].revitem == MT_LHRT || players[recv_pl].spinitem == MT_LHRT || players[recv_pl].thokitem == MT_LHRT)) // Healers can't keep their buff.
+		if (((players[recv_pl].powers[pw_shield] & SH_NOSTACK) == SH_PINK) && P_IsPlayerHealer(&players[recv_pl])) // Healers can't keep their buff.
 			players[recv_pl].powers[pw_shield] &= SH_STACK;
 
 		P_SpawnShieldOrb(&players[recv_pl]);

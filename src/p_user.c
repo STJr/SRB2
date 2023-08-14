@@ -1950,6 +1950,32 @@ void P_SetPower(player_t *player, powertype_t power, UINT16 value)
 		P_SpawnShieldOrb(player);
 }
 
+boolean P_IsPlayerHealer(player_t *player)
+{
+	return player->revitem == MT_LHRT || player->spinitem == MT_LHRT || player->thokitem == MT_LHRT;
+}
+
+boolean P_IsHealerProjectile(player_t *healer, mobj_t *projectile)
+{
+	(void)healer;
+	return projectile->type == MT_LHRT;
+}
+
+boolean P_CanHealPlayer(player_t *player, player_t *healer, mobj_t *projectile)
+{
+	return P_IsHealerProjectile(healer, projectile) && !(player->powers[pw_shield] & SH_NOSTACK);
+}
+
+void P_DoPlayerHeal(player_t *player)
+{
+	// Healers do not get to heal other healers.
+	if (P_IsPlayerHealer(player))
+		return;
+
+	P_SwitchShield(player, SH_PINK);
+	S_StartSound(player->mo, mobjinfo[MT_PITY_ICON].seesound);
+}
+
 //
 // P_SpawnGhostMobj
 //

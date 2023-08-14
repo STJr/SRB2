@@ -3142,6 +3142,8 @@ static void P_NiGHTSDamage(mobj_t *target, mobj_t *source)
 static boolean P_TagDamage(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 damage, UINT8 damagetype)
 {
 	player_t *player = target->player;
+	player_t *other_player = source->player; // Player is assumed to exist
+
 	(void)damage; //unused parm
 
 	// If flashing or invulnerable, ignore the tag,
@@ -3154,31 +3156,19 @@ static boolean P_TagDamage(mobj_t *target, mobj_t *inflictor, mobj_t *source, IN
 
 	// Ignore IT players shooting each other, unless friendlyfire is on.
 	if ((player->pflags & PF_TAGIT && !((cv_friendlyfire.value || (gametyperules & GTR_FRIENDLYFIRE) || (damagetype & DMG_CANHURTSELF)) &&
-		source && source->player && source->player->pflags & PF_TAGIT)))
+		other_player->pflags & PF_TAGIT)))
 	{
-		if (inflictor->type == MT_LHRT && !(player->powers[pw_shield] & SH_NOSTACK))
-		{
-			if (player->revitem != MT_LHRT && player->spinitem != MT_LHRT && player->thokitem != MT_LHRT) // Healers do not get to heal other healers.
-			{
-				P_SwitchShield(player, SH_PINK);
-				S_StartSound(target, mobjinfo[MT_PITY_ICON].seesound);
-			}
-		}
+		if (P_CanHealPlayer(player, other_player, inflictor))
+			P_DoPlayerHeal(player);
 		return false;
 	}
 
 	// Don't allow players on the same team to hurt one another,
 	// unless cv_friendlyfire is on.
-	if (!(cv_friendlyfire.value || (gametyperules & GTR_FRIENDLYFIRE) || (damagetype & DMG_CANHURTSELF)) && (player->pflags & PF_TAGIT) == (source->player->pflags & PF_TAGIT))
+	if (!(cv_friendlyfire.value || (gametyperules & GTR_FRIENDLYFIRE) || (damagetype & DMG_CANHURTSELF)) && (player->pflags & PF_TAGIT) == (other_player->pflags & PF_TAGIT))
 	{
-		if (inflictor->type == MT_LHRT && !(player->powers[pw_shield] & SH_NOSTACK))
-		{
-			if (player->revitem != MT_LHRT && player->spinitem != MT_LHRT && player->thokitem != MT_LHRT) // Healers do not get to heal other healers.
-			{
-				P_SwitchShield(player, SH_PINK);
-				S_StartSound(target, mobjinfo[MT_PITY_ICON].seesound);
-			}
-		}
+		if (P_CanHealPlayer(player, other_player, inflictor))
+			P_DoPlayerHeal(player);
 		else if (!(inflictor->flags & MF_FIRE))
 			P_GivePlayerRings(player, 1);
 		if (inflictor->flags2 & MF2_BOUNCERING)
@@ -3190,9 +3180,9 @@ static boolean P_TagDamage(mobj_t *target, mobj_t *inflictor, mobj_t *source, IN
 		return false;
 
 	// The tag occurs so long as you aren't shooting another tagger with friendlyfire on.
-	if (source->player->pflags & PF_TAGIT && !(player->pflags & PF_TAGIT))
+	if (other_player->pflags & PF_TAGIT && !(player->pflags & PF_TAGIT))
 	{
-		P_AddPlayerScore(source->player, 100); //award points to tagger.
+		P_AddPlayerScore(other_player, 100); //award points to tagger.
 		P_HitDeathMessages(player, inflictor, source, 0);
 
 		if (!(gametyperules & GTR_HIDEFROZEN)) //survivor
@@ -3246,24 +3236,20 @@ static boolean P_TagDamage(mobj_t *target, mobj_t *inflictor, mobj_t *source, IN
 static boolean P_PlayerHitsPlayer(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 damage, UINT8 damagetype)
 {
 	player_t *player = target->player;
+	player_t *other_player = source->player; // Player is assumed to exist
 
 	if (!(damagetype & DMG_CANHURTSELF))
 	{
-		// You can't kill yourself, idiot...
+		// Can't hurt yourself (or other players in Co-Op) without DMG_CANHURTSELF
 		if (source == target)
 			return false;
 
-		// In COOP/RACE, you can't hurt other players unless cv_friendlyfire is on
+		// In Co-Op/Race, you can't hurt other players unless cv_friendlyfire is on
 		if (!(cv_friendlyfire.value || (gametyperules & GTR_FRIENDLYFIRE)) && (gametyperules & GTR_FRIENDLY))
 		{
-			if ((gametyperules & GTR_FRIENDLY) && inflictor->type == MT_LHRT && !(player->powers[pw_shield] & SH_NOSTACK)) // co-op only
-			{
-				if (player->revitem != MT_LHRT && player->spinitem != MT_LHRT && player->thokitem != MT_LHRT) // Healers do not get to heal other healers.
-				{
-					P_SwitchShield(player, SH_PINK);
-					S_StartSound(target, mobjinfo[MT_PITY_ICON].seesound);
-				}
-			}
+			// co-op only
+			if ((gametyperules & GTR_FRIENDLY) && P_CanHealPlayer(player, other_player, inflictor))
+				P_DoPlayerHeal(player);
 			return false;
 		}
 	}
@@ -3277,16 +3263,10 @@ static boolean P_PlayerHitsPlayer(mobj_t *target, mobj_t *inflictor, mobj_t *sou
 	{
 		// Don't allow players on the same team to hurt one another,
 		// unless cv_friendlyfire is on.
-		if (!(cv_friendlyfire.value || (gametyperules & GTR_FRIENDLYFIRE)) && target->player->ctfteam == source->player->ctfteam)
+		if (!(cv_friendlyfire.value || (gametyperules & GTR_FRIENDLYFIRE)) && target->player->ctfteam == other_player->ctfteam)
 		{
-			if (inflictor->type == MT_LHRT && !(player->powers[pw_shield] & SH_NOSTACK))
-			{
-				if (player->revitem != MT_LHRT && player->spinitem != MT_LHRT && player->thokitem != MT_LHRT) // Healers do not get to heal other healers.
-				{
-					P_SwitchShield(player, SH_PINK);
-					S_StartSound(target, mobjinfo[MT_PITY_ICON].seesound);
-				}
-			}
+			if (P_CanHealPlayer(player, other_player, inflictor))
+				P_DoPlayerHeal(player);
 			else if (!(inflictor->flags & MF_FIRE))
 				P_GivePlayerRings(target->player, 1);
 			if (inflictor->flags2 & MF2_BOUNCERING)
@@ -3539,16 +3519,12 @@ void P_SpecialStageDamage(player_t *player, mobj_t *inflictor, mobj_t *source)
 	if (player->powers[pw_invulnerability] || player->powers[pw_flashing] || player->powers[pw_super])
 		return;
 
-	if (!cv_friendlyfire.value && source && source->player)
+	player_t *other_player = (source && source->player) ? source->player : NULL;
+
+	if (!cv_friendlyfire.value && other_player)
 	{
-		if (inflictor->type == MT_LHRT && !(player->powers[pw_shield] & SH_NOSTACK))
-		{
-			if (player->revitem != MT_LHRT && player->spinitem != MT_LHRT && player->thokitem != MT_LHRT) // Healers do not get to heal other healers.
-			{
-				P_SwitchShield(player, SH_PINK);
-				S_StartSound(player->mo, mobjinfo[MT_PITY_ICON].seesound);
-			}
-		}
+		if (P_CanHealPlayer(player, other_player, inflictor))
+			P_DoPlayerHeal(player);
 
 		if (source->player->ctfteam == player->ctfteam)
 			return;
