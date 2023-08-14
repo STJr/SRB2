@@ -333,16 +333,18 @@ void P_DoMatchSuper(player_t *player)
 			}
 }
 
-static void P_CollectRing(player_t *player, mobj_t *special)
+static boolean P_CollectRing(player_t *player, mobj_t *special)
 {
 	if (!(P_CanPickupItem(player, false)) && !(special->flags2 & MF2_NIGHTSPULL))
-		return;
+		return false;
 
 	special->momx = special->momy = special->momz = 0;
 	P_GivePlayerRings(player, 1);
 
 	if ((maptol & TOL_NIGHTS) && special->type != MT_FLINGRING && special->type != MT_FLINGCOIN)
 		P_DoNightsScore(player);
+
+	return true;
 }
 
 /** Takes action based on a ::MF_SPECIAL thing touched by a player.
@@ -636,7 +638,8 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 		case MT_NIGHTSSTAR:
 		case MT_REDTEAMRING:
 		case MT_BLUETEAMRING:
-			P_CollectRing(player, special);
+			if (!P_CollectRing(player, special))
+				return;
 			break;
 		case MT_BLUESPHERE:
 		case MT_FLINGBLUESPHERE:
