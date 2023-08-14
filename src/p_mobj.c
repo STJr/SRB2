@@ -11747,51 +11747,46 @@ void P_AfterPlayerSpawn(INT32 playernum)
 }
 
 // spawn it at a playerspawn mapthing
-void P_MovePlayerToSpawn(INT32 playernum, mapthing_t *mthing)
+void P_MovePlayerToSpawn(INT32 playernum, spawnpoint_t *spawnpoint)
 {
-	fixed_t x = 0, y = 0;
-	angle_t angle = 0;
-
-	fixed_t z;
-	sector_t *sector;
-	fixed_t floor, ceiling, ceilingspawn;
+	fixed_t x, y, z;
+	angle_t angle;
 
 	player_t *p = &players[playernum];
 	mobj_t *mobj = p->mo;
 	I_Assert(mobj != NULL);
 
-	if (mthing)
+	if (spawnpoint)
 	{
-		x = mthing->x << FRACBITS;
-		y = mthing->y << FRACBITS;
-		angle = FixedAngle(mthing->angle<<FRACBITS);
+		x = spawnpoint->x;
+		y = spawnpoint->y;
+		angle = spawnpoint->angle;
 	}
-	//spawn at the origin as a desperation move if there is no mapthing
+	else
+	{
+		// Spawn at the origin as a desperation move if there is no spawnpoint
+		x = 0;
+		y = 0;
+		angle = 0;
+	}
 
 	// set Z height
-	sector = R_PointInSubsector(x, y)->sector;
+	sector_t *sector = R_PointInSubsector(x, y)->sector;
+	fixed_t floor = P_GetSectorFloorZAt(sector, x, y);
+	fixed_t ceiling = P_GetSectorCeilingZAt(sector, x, y);
+	fixed_t ceilingspawn = ceiling - mobjinfo[MT_PLAYER].height;
 
-	floor   = P_GetSectorFloorZAt  (sector, x, y);
-	ceiling = P_GetSectorCeilingZAt(sector, x, y);
-	ceilingspawn = ceiling - mobjinfo[MT_PLAYER].height;
-
-	if (mthing)
+	if (spawnpoint)
 	{
-		fixed_t offset = mthing->z << FRACBITS;
+		z = spawnpoint->z;
 
-		// Setting the spawnpoint's args[0] will make the player start on the ceiling
-		// Objectflip inverts
-		if (!!(mthing->args[0]) ^ !!(mthing->options & MTF_OBJECTFLIP))
-			z = ceilingspawn - offset;
-		else
-			z = floor + offset;
-
-		if (mthing->options & MTF_OBJECTFLIP) // flip the player!
+		if (spawnpoint->spawn_flipped) // flip the player!
 		{
 			mobj->eflags |= MFE_VERTICALFLIP;
 			mobj->flags2 |= MF2_OBJECTFLIP;
 		}
-		if (mthing->args[0])
+
+		if (spawnpoint->spawn_on_ceiling)
 			P_SetPlayerMobjState(mobj, S_PLAY_FALL);
 		else if (metalrecording)
 			P_SetPlayerMobjState(mobj, S_PLAY_WAIT);
@@ -11876,6 +11871,40 @@ void P_MovePlayerToStarpost(INT32 playernum)
 
 	if (!(netgame || multiplayer))
 		leveltime = p->starposttime;
+}
+
+spawnpoint_t *P_MakeSpawnPointFromMapthing(mapthing_t *mthing)
+{
+	spawnpoint_t *spawnpoint = Z_Malloc(sizeof(spawnpoint_t), PU_STATIC, NULL);
+	spawnpoint->x = mthing->x << FRACBITS;
+	spawnpoint->y = mthing->y << FRACBITS;
+	spawnpoint->angle = FixedAngle(mthing->angle<<FRACBITS);
+
+	// Setting the spawnpoint's args[0] will make the player start on the ceiling
+	// Objectflip inverts
+	spawnpoint->spawn_on_ceiling = mthing->args[0];
+	spawnpoint->spawn_flipped = mthing->options & MTF_OBJECTFLIP;
+
+	P_SetAbsoluteSpawnPointHeight(spawnpoint, mthing->z << FRACBITS);
+
+	return spawnpoint;
+}
+
+void P_SetAbsoluteSpawnPointHeight(spawnpoint_t *spawnpoint, fixed_t offset)
+{
+	sector_t *sector = R_PointInSubsector(spawnpoint->x, spawnpoint->y)->sector;
+	fixed_t floor = P_GetSectorFloorZAt(sector, spawnpoint->x, spawnpoint->y);
+	fixed_t ceilingspawn = P_GetSectorCeilingZAt(sector, spawnpoint->x, spawnpoint->y) - mobjinfo[MT_PLAYER].height;
+
+	if (!!(spawnpoint->spawn_on_ceiling) ^ !!(spawnpoint->spawn_flipped))
+		spawnpoint->z = ceilingspawn - offset;
+	else
+		spawnpoint->z = floor + offset;
+
+	if (spawnpoint->z < floor)
+		spawnpoint->z = floor;
+	else if (spawnpoint->z > ceilingspawn)
+		spawnpoint->z = ceilingspawn;
 }
 
 fixed_t P_GetMobjSpawnHeight(const mobjtype_t mobjtype, const fixed_t x, const fixed_t y, const fixed_t dz, const fixed_t offset, const boolean flip, const fixed_t scale, const boolean absolutez)

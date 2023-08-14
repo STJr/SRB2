@@ -264,7 +264,12 @@ typedef struct Hook_State Hook_State;
 typedef void (*Hook_Callback)(Hook_State *);
 
 struct Hook_State {
-	INT32        status;/* return status to calling function */
+	union {
+		int      type_int;
+		fixed_t  type_fixed;
+		boolean  type_bool;
+		void   * type_void_pointer;
+	} status;/* return status to calling function */
 	void       * userdata;
 	int          hook_type;
 	mobjtype_t   mobj_type;/* >0 if mobj hook */
@@ -313,7 +318,7 @@ static boolean init_hook_type
 		const char * string,
 		int          nonzero
 ){
-	hook->status = status;
+	hook->status.type_int = status;
 
 	if (nonzero)
 	{
@@ -531,13 +536,13 @@ static int call_hooks
 static void res_true(Hook_State *hook)
 {
 	if (lua_toboolean(gL, -1))
-		hook->status = true;
+		hook->status.type_bool = true;
 }
 
 static void res_false(Hook_State *hook)
 {
 	if (!lua_isnil(gL, -1) && !lua_toboolean(gL, -1))
-		hook->status = false;
+		hook->status.type_bool = false;
 }
 
 static void res_force(Hook_State *hook)
@@ -545,9 +550,9 @@ static void res_force(Hook_State *hook)
 	if (!lua_isnil(gL, -1))
 	{
 		if (lua_toboolean(gL, -1))
-			hook->status = 1; // Force yes
+			hook->status.type_int = 1; // Force yes
 		else
-			hook->status = 2; // Force no
+			hook->status.type_int = 2; // Force no
 	}
 }
 
@@ -563,7 +568,7 @@ int LUA_HookMobj(mobj_t *mobj, int hook_type)
 		LUA_PushUserdata(gL, mobj, META_MOBJ);
 		call_hooks(&hook, 1, res_true);
 	}
-	return hook.status;
+	return hook.status.type_int;
 }
 
 int LUA_Hook2Mobj(mobj_t *t1, mobj_t *t2, int hook_type)
@@ -575,7 +580,7 @@ int LUA_Hook2Mobj(mobj_t *t1, mobj_t *t2, int hook_type)
 		LUA_PushUserdata(gL, t2, META_MOBJ);
 		call_hooks(&hook, 1, res_force);
 	}
-	return hook.status;
+	return hook.status.type_int;
 }
 
 void LUA_HookVoid(int type)
@@ -613,7 +618,7 @@ int LUA_HookPlayer(player_t *player, int hook_type)
 		LUA_PushUserdata(gL, player, META_PLAYER);
 		call_hooks(&hook, 1, res_true);
 	}
-	return hook.status;
+	return hook.status.type_int;
 }
 
 int LUA_HookTiccmd(player_t *player, ticcmd_t *cmd, int hook_type)
@@ -632,7 +637,7 @@ int LUA_HookTiccmd(player_t *player, ticcmd_t *cmd, int hook_type)
 		if (hook_type == HOOK(PlayerCmd))
 			hook_cmd_running = false;
 	}
-	return hook.status;
+	return hook.status.type_int;
 }
 
 int LUA_HookKey(event_t *event, int hook_type)
@@ -643,7 +648,7 @@ int LUA_HookKey(event_t *event, int hook_type)
 		LUA_PushUserdata(gL, event, META_KEYEVENT);
 		call_hooks(&hook, 1, res_true);
 	}
-	return hook.status;
+	return hook.status.type_int;
 }
 
 void LUA_HookHUD(int hook_type, huddrawlist_h list)
@@ -723,7 +728,7 @@ int LUA_HookMobjLineCollide(mobj_t *mobj, line_t *line)
 		LUA_PushUserdata(gL, line, META_LINE);
 		call_hooks(&hook, 1, res_force);
 	}
-	return hook.status;
+	return hook.status.type_int;
 }
 
 int LUA_HookTouchSpecial(mobj_t *special, mobj_t *toucher)
@@ -735,7 +740,7 @@ int LUA_HookTouchSpecial(mobj_t *special, mobj_t *toucher)
 		LUA_PushUserdata(gL, toucher, META_MOBJ);
 		call_hooks(&hook, 1, res_true);
 	}
-	return hook.status;
+	return hook.status.type_int;
 }
 
 static int damage_hook
@@ -759,7 +764,7 @@ static int damage_hook
 		lua_pushinteger(gL, damagetype);
 		call_hooks(&hook, 1, results_handler);
 	}
-	return hook.status;
+	return hook.status.type_int;
 }
 
 int LUA_HookShouldDamage(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 damage, UINT8 damagetype)
@@ -790,7 +795,7 @@ int LUA_HookMobjMoveBlocked(mobj_t *t1, mobj_t *t2, line_t *line)
 		LUA_PushUserdata(gL, line, META_LINE);
 		call_hooks(&hook, 1, res_true);
 	}
-	return hook.status;
+	return hook.status.type_int;
 }
 
 typedef struct {
@@ -843,7 +848,7 @@ static void res_botai(Hook_State *hook)
 	B_KeysToTiccmd(botai->tails, botai->cmd,
 			k[0],k[1],k[2],k[3],k[4],k[5],k[6],k[7]);
 
-	hook->status = true;
+	hook->status.type_bool = true;
 }
 
 int LUA_HookBotAI(mobj_t *sonic, mobj_t *tails, ticcmd_t *cmd)
@@ -866,7 +871,7 @@ int LUA_HookBotAI(mobj_t *sonic, mobj_t *tails, ticcmd_t *cmd)
 		call_hooks(&hook, 8, res_botai);
 	}
 
-	return hook.status;
+	return hook.status.type_int;
 }
 
 void LUA_HookLinedefExecute(line_t *line, mobj_t *mo, sector_t *sector)
@@ -904,7 +909,7 @@ int LUA_HookPlayerMsg(int source, int target, int flags, char *msg)
 		lua_pushstring(gL, msg); // msg
 		call_hooks(&hook, 1, res_true);
 	}
-	return hook.status;
+	return hook.status.type_int;
 }
 
 int LUA_HookHurtMsg(player_t *player, mobj_t *inflictor, mobj_t *source, UINT8 damagetype)
@@ -918,7 +923,7 @@ int LUA_HookHurtMsg(player_t *player, mobj_t *inflictor, mobj_t *source, UINT8 d
 		lua_pushinteger(gL, damagetype);
 		call_hooks(&hook, 1, res_true);
 	}
-	return hook.status;
+	return hook.status.type_int;
 }
 
 void LUA_HookNetArchive(lua_CFunction archFunc)
@@ -960,7 +965,7 @@ int LUA_HookMapThingSpawn(mobj_t *mobj, mapthing_t *mthing)
 		LUA_PushUserdata(gL, mthing, META_MAPTHING);
 		call_hooks(&hook, 1, res_true);
 	}
-	return hook.status;
+	return hook.status.type_int;
 }
 
 int LUA_HookFollowMobj(player_t *player, mobj_t *mobj)
@@ -972,7 +977,7 @@ int LUA_HookFollowMobj(player_t *player, mobj_t *mobj)
 		LUA_PushUserdata(gL, mobj, META_MOBJ);
 		call_hooks(&hook, 1, res_true);
 	}
-	return hook.status;
+	return hook.status.type_int;
 }
 
 int LUA_HookPlayerCanDamage(player_t *player, mobj_t *mobj)
@@ -984,7 +989,7 @@ int LUA_HookPlayerCanDamage(player_t *player, mobj_t *mobj)
 		LUA_PushUserdata(gL, mobj, META_MOBJ);
 		call_hooks(&hook, 1, res_force);
 	}
-	return hook.status;
+	return hook.status.type_int;
 }
 
 void LUA_HookPlayerQuit(player_t *plr, kickreason_t reason)
@@ -1010,7 +1015,7 @@ int LUA_HookTeamSwitch(player_t *player, int newteam, boolean fromspectators, bo
 		lua_pushboolean(gL, tryingscramble);
 		call_hooks(&hook, 1, res_false);
 	}
-	return hook.status;
+	return hook.status.type_int;
 }
 
 int LUA_HookViewpointSwitch(player_t *player, player_t *newdisplayplayer, boolean forced)
@@ -1026,7 +1031,7 @@ int LUA_HookViewpointSwitch(player_t *player, player_t *newdisplayplayer, boolea
 		call_hooks(&hook, 1, res_force);
 		hud_running = false;
 	}
-	return hook.status;
+	return hook.status.type_int;
 }
 
 int LUA_HookSeenPlayer(player_t *player, player_t *seenfriend)
@@ -1041,7 +1046,7 @@ int LUA_HookSeenPlayer(player_t *player, player_t *seenfriend)
 		call_hooks(&hook, 1, res_false);
 		hud_running = false;
 	}
-	return hook.status;
+	return hook.status.type_int;
 }
 
 int LUA_HookShouldJingleContinue(player_t *player, const char *musname)
@@ -1057,7 +1062,7 @@ int LUA_HookShouldJingleContinue(player_t *player, const char *musname)
 		call_hooks(&hook, 1, res_true);
 		hud_running = false;
 	}
-	return hook.status;
+	return hook.status.type_int;
 }
 
 boolean hook_cmd_running = false;
@@ -1090,7 +1095,7 @@ static void res_musicchange(Hook_State *hook)
 	if (lua_isstring(gL, -6))
 		update_music_name(musicchange);
 	else if (lua_isboolean(gL, -6) && lua_toboolean(gL, -6))
-		hook->status = true;
+		hook->status.type_bool = true;
 
 	// output 2: mflags override
 	if (lua_isnumber(gL, -5))
@@ -1145,7 +1150,7 @@ int LUA_HookMusicChange(const char *oldname, struct MusicChange *param)
 		lua_settop(gL, 0);
 	}
 
-	return hook.status;
+	return hook.status.type_int;
 }
 
 static void res_playerheight(Hook_State *hook)
@@ -1157,7 +1162,7 @@ static void res_playerheight(Hook_State *hook)
 		// when an object's height is set to a negative number directly with lua, it's forced to 0 instead.
 		// here, I think it's better to ignore negatives so that they don't replace any results of previous hooks!
 		if (returnedheight >= 0)
-			hook->status = returnedheight;
+			hook->status.type_fixed = returnedheight;
 	}
 }
 
@@ -1169,7 +1174,105 @@ fixed_t LUA_HookPlayerHeight(player_t *player)
 		LUA_PushUserdata(gL, player, META_PLAYER);
 		call_hooks(&hook, 1, res_playerheight);
 	}
-	return hook.status;
+	return hook.status.type_fixed;
+}
+
+static void res_playerrespawn(Hook_State *hook)
+{
+	hook->status.type_void_pointer = NULL;
+
+	if (!lua_isnil(gL, -1))
+	{
+		if (!lua_istable(gL, -1))
+		{
+			CONS_Alert(CONS_WARNING, "table expected in \"PlayerRespawn\" hook, got %s\n", luaL_typename(gL, -1));
+			return;
+		}
+
+		fixed_t height_offset = 0;
+		boolean has_z = false;
+		spawnpoint_t spawnpoint;
+		memset(&spawnpoint, 0, sizeof(spawnpoint));
+
+		lua_pushnil(gL);
+		while (lua_next(gL, -2))
+		{
+			lua_pushvalue(gL, -2);
+
+			const char *key = NULL;
+			if (lua_isstring(gL, -1))
+				key = lua_tostring(gL, -1);
+
+#define TYPEERROR(f, t) \
+	CONS_Alert(CONS_WARNING, \
+		"bad value for \"%s\" in table returned by \"PlayerRespawn\" hook (%s expected, got %s)\n", \
+		f, lua_typename(gL, t), luaL_typename(gL, -2))
+
+#define GETNUMBER(r,f) \
+			if (!strcmp(key, f)) \
+			{ \
+				if (!lua_isnumber(gL, -2)) \
+					TYPEERROR(f, LUA_TNUMBER); \
+				else \
+					r = lua_tonumber(gL, -2); \
+			}
+#define GETNUMBEROPT(r,f,opt) \
+			if (!strcmp(key, f)) \
+			{ \
+				if (!lua_isnumber(gL, -2)) \
+					TYPEERROR(f, LUA_TNUMBER); \
+				else \
+					r = lua_tonumber(gL, -2); \
+				opt = true; \
+			}
+#define GETBOOLEAN(r,f) \
+			if (!strcmp(key, f)) \
+			{ \
+				if (!lua_isboolean(gL, -2)) \
+					TYPEERROR(f, LUA_TBOOLEAN); \
+				else \
+					r = lua_toboolean(gL, -2); \
+			}
+
+			if (key)
+			{
+				GETNUMBER(spawnpoint.x, "x");
+				GETNUMBER(spawnpoint.y, "y");
+				GETNUMBEROPT(spawnpoint.z, "z", has_z);
+				GETNUMBER(height_offset, "height");
+				GETNUMBER(spawnpoint.angle, "angle");
+				GETBOOLEAN(spawnpoint.spawn_on_ceiling, "spawn_on_ceiling");
+				GETBOOLEAN(spawnpoint.spawn_flipped, "spawn_flipped");
+			}
+
+#undef GETNUMBER
+#undef GETNUMBEROPT
+#undef GETBOOLEAN
+#undef TYPEERROR
+
+			lua_pop(gL, 2);
+		}
+
+		if (!has_z)
+			P_SetAbsoluteSpawnPointHeight(&spawnpoint, height_offset);
+		else
+			spawnpoint.z += height_offset;
+
+		spawnpoint_t *result = Z_Calloc(sizeof(spawnpoint_t), PU_STATIC, NULL);
+		memcpy(result, &spawnpoint, sizeof(spawnpoint_t));
+		hook->status.type_void_pointer = result;
+	}
+}
+
+spawnpoint_t *LUA_HookPlayerRespawn(player_t *player)
+{
+	Hook_State hook;
+	if (prepare_hook(&hook, -1, HOOK(PlayerRespawn)))
+	{
+		LUA_PushUserdata(gL, player, META_PLAYER);
+		call_hooks(&hook, 1, res_playerrespawn);
+	}
+	return (spawnpoint_t *)hook.status.type_void_pointer;
 }
 
 int LUA_HookPlayerCanEnterSpinGaps(player_t *player)
@@ -1180,5 +1283,5 @@ int LUA_HookPlayerCanEnterSpinGaps(player_t *player)
 		LUA_PushUserdata(gL, player, META_PLAYER);
 		call_hooks(&hook, 1, res_force);
 	}
-	return hook.status;
+	return hook.status.type_int;
 }

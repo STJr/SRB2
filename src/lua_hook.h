@@ -72,6 +72,7 @@ automatically.
 	X (MusicChange),\
 	X (PlayerHeight),/* override player height */\
 	X (PlayerCanEnterSpinGaps),\
+	X (PlayerRespawn),\
 	X (KeyDown),\
 	X (KeyUp),\
 
@@ -148,4 +149,5 @@ int  LUA_HookShouldJingleContinue(player_t *, const char *musname);
 int  LUA_HookPlayerCmd(player_t *, ticcmd_t *);
 int  LUA_HookMusicChange(const char *oldname, struct MusicChange *);
 fixed_t LUA_HookPlayerHeight(player_t *player);
+spawnpoint_t *LUA_HookPlayerRespawn(player_t *player);
 int  LUA_HookPlayerCanEnterSpinGaps(player_t *player);
