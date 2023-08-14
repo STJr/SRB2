@@ -413,6 +413,10 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 	if (LUA_HookTouchSpecial(special, toucher) || P_MobjWasRemoved(special))
 		return;
 
+	// Don't collide with items meant for opposing teams
+	if (special->eflags & MFE_TEAMITEM && player->ctfteam != special->extravalue1)
+		return;
+
 	// 0 = none, 1 = elemental pierce, 2 = bubble bounce
 	elementalpierce = (((player->powers[pw_shield] & SH_NOSTACK) == SH_ELEMENTAL || (player->powers[pw_shield] & SH_NOSTACK) == SH_BUBBLEWRAP) && (player->pflags & PF_SHIELDABILITY)
 	? (((player->powers[pw_shield] & SH_NOSTACK) == SH_ELEMENTAL) ? 1 : 2)
@@ -625,21 +629,13 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 // ***************************************** //
 // Rings, coins, spheres, weapon panels, etc //
 // ***************************************** //
-		case MT_REDTEAMRING:
-			if (player->ctfteam != G_GetTeam(TEAM_RED))
-				return;
-			P_CollectRing(player, special);
-			break;
-		case MT_BLUETEAMRING:
-			if (player->ctfteam != G_GetTeam(TEAM_BLUE))
-				return;
-			P_CollectRing(player, special);
-			break;
 		case MT_RING:
 		case MT_FLINGRING:
 		case MT_COIN:
 		case MT_FLINGCOIN:
 		case MT_NIGHTSSTAR:
+		case MT_REDTEAMRING:
+		case MT_BLUETEAMRING:
 			P_CollectRing(player, special);
 			break;
 		case MT_BLUESPHERE:
@@ -3659,14 +3655,19 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 	if (target->flags2 & MF2_SKULLFLY)
 		target->momx = target->momy = target->momz = 0;
 
-	if (!force)
+	// Don't damage items meant for opposing teams
+	if (target->eflags & MFE_TEAMITEM && !force)
 	{
-		// Special case for team ring boxes
-		if (target->type == MT_RING_REDBOX && !(source->player->ctfteam == TEAM_RED))
+		if (source && source->player)
+		{
+			if (source->player->ctfteam != target->extravalue1)
+				return false;
+		}
+		else
+		{
+			// If the originator of the attack is not a player, then the item cannot be damaged.
 			return false;
-
-		if (target->type == MT_RING_BLUEBOX && !(source->player->ctfteam == TEAM_BLUE))
-			return false;
+		}
 	}
 
 	if (target->flags & (MF_ENEMY|MF_BOSS))
