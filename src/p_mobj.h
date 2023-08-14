@@ -225,8 +225,7 @@ typedef enum
 	// The mobj stands in a sector with water, and touches the surface
 	// this bit is set once and for all at the start of mobjthinker
 	MFE_TOUCHWATER			= 1<<2,
-	// The mobj stands in a sector with water, and his waist is BELOW the water surface
-	// (for player, allows swimming up/down)
+	// The mobj stands in a sector with water, and its waist is BELOW the water surface
 	MFE_UNDERWATER			= 1<<3,
 	// used for ramp sectors
 	MFE_JUSTSTEPPEDDOWN		= 1<<4,
@@ -251,10 +250,10 @@ typedef enum
 	MFE_FORCENOSUPER		= 1<<13,
 	// Makes an object use super sprites where they wouldn't have otherwise and vice-versa
 	MFE_REVERSESUPER		= MFE_FORCESUPER|MFE_FORCENOSUPER,
+	// Object is a team item - only players belonging to the same team as the item can collide with them
+	MFE_TEAMITEM            = 1<<14,
 	// Object is a team flag
-	MFE_TEAMFLAG            = 1<<14,
-
-	// free: 1<<15
+	MFE_TEAMFLAG            = 1<<15
 } mobjeflag_t;
 
 //

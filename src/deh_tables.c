@@ -4415,6 +4415,7 @@ const char *const MOBJEFLAG_LIST[] = {
 	"TRACERANGLE", // Compute and trigger on mobj angle relative to tracer
 	"FORCESUPER", // Forces an object to use super sprites with SPR_PLAY.
 	"FORCENOSUPER", // Forces an object to NOT use super sprites with SPR_PLAY.
+	"TEAMITEM", // Object is a team item
 	"TEAMFLAG", // Object is a team flag
 	NULL
 };

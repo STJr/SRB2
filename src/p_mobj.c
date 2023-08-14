@@ -10559,6 +10559,8 @@ static fixed_t P_DefaultMobjShadowScale (mobj_t *thing)
 
 		case MT_REDTEAMRING:
 		case MT_BLUETEAMRING:
+		case MT_REDFLAG:
+		case MT_BLUEFLAG:
 
 		case MT_BOUNCERING:
 		case MT_AUTOMATICRING:
@@ -10619,9 +10621,7 @@ static fixed_t P_DefaultMobjShadowScale (mobj_t *thing)
 			return FRACUNIT;
 
 		default:
-			if (thing->eflags & MFE_TEAMFLAG)
-				return 2*FRACUNIT/3;
-			else if (thing->flags & (MF_ENEMY|MF_BOSS))
+			if (thing->flags & (MF_ENEMY|MF_BOSS))
 				return FRACUNIT;
 			else
 				return 0;
@@ -10917,10 +10917,18 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 			 mobj->lastlook = mobj->extravalue2 = -1;
 			break;
 		case MT_REDTEAMRING:
-			mobj->color = G_GetTeamWeaponColor(G_GetTeam(TEAM_RED));
+		case MT_RING_REDBOX:
+			mobj->extravalue1 = G_GetTeam(TEAM_RED);
+			mobj->eflags |= MFE_TEAMITEM;
+			if (mobj->type == MT_REDTEAMRING)
+				mobj->color = G_GetTeamWeaponColor(mobj->extravalue1);
 			break;
 		case MT_BLUETEAMRING:
-			mobj->color = G_GetTeamWeaponColor(G_GetTeam(TEAM_BLUE));
+		case MT_RING_BLUEBOX:
+			mobj->extravalue1 = G_GetTeam(TEAM_BLUE);
+			mobj->eflags |= MFE_TEAMITEM;
+			if (mobj->type == MT_BLUETEAMRING)
+				mobj->color = G_GetTeamWeaponColor(mobj->extravalue1);
 			break;
 		case MT_RING:
 		case MT_COIN:
@@ -13283,6 +13291,9 @@ static boolean P_SetupSpawnedMapThing(mapthing_t *mthing, mobj_t *mobj, boolean 
 		break;
 	}
 
+	// Team flags don't have MFE_TEAMITEM, because other players must be able to collide with them.
+	// If team flags had MFE_TEAMITEM, then players belonging to opposing teams would not be able to
+	// capture the flags.
 	if (mthing->type == THING_TYPE_CTF_TEAM_FLAG)
 		mobj->eflags |= MFE_TEAMFLAG;
 
