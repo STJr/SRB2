@@ -2979,7 +2979,11 @@ void G_CountPlayerStarts(void)
 
 boolean G_IsSpawnPointThingType(UINT16 mthingtype)
 {
-	return mthingtype >= 1 && mthingtype <= 35;
+	return (mthingtype >= THING_TYPE_SPAWNPOINT_COOP_START && mthingtype <= THING_TYPE_SPAWNPOINT_COOP_END)
+	|| mthingtype == THING_TYPE_SPAWNPOINT_MATCH
+	|| mthingtype == THING_TYPE_SPAWNPOINT_RED_TEAM
+	|| mthingtype == THING_TYPE_SPAWNPOINT_BLUE_TEAM
+	|| mthingtype == THING_TYPE_SPAWNPOINT_TEAM;
 }
 
 static boolean G_AreTeamStartsAvailableForPlayer(INT32 playernum)

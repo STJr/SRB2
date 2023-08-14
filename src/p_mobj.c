@@ -11937,42 +11937,50 @@ fixed_t P_GetMapThingSpawnHeight(const mobjtype_t mobjtype, const mapthing_t* mt
 
 static boolean P_SpawnNonMobjMapThing(mapthing_t *mthing)
 {
-#if MAXPLAYERS > 32
+#if ((THING_TYPE_SPAWNPOINT_COOP_END - THING_TYPE_SPAWNPOINT_COOP_START) + 1) > MAXPLAYERS
 	You should think about modifying the deathmatch starts to take full advantage of this!
 #endif
-	if (mthing->type <= MAXPLAYERS) // Player starts
+
+	UINT16 type = mthing->type;
+
+	if (type >= THING_TYPE_SPAWNPOINT_COOP_START && type <= THING_TYPE_SPAWNPOINT_COOP_END) // Player starts
 	{
 		// save spots for respawning in network games
 		if (!metalrecording)
-			G_AddPlayerStart(mthing->type - 1, mthing);
+			G_AddPlayerStart(type - THING_TYPE_SPAWNPOINT_COOP_START, mthing);
 		return true;
 	}
-	else if (mthing->type == 33) // Match starts
+	else if (type == THING_TYPE_SPAWNPOINT_MATCH) // Match starts
 	{
 		G_AddMatchPlayerStart(mthing);
 		return true;
 	}
-	else if (mthing->type == 34) // Red CTF starts
+	else if (type == THING_TYPE_SPAWNPOINT_RED_TEAM) // Red Team starts
 	{
 		G_AddTeamPlayerStart(G_GetTeam(TEAM_RED), mthing);
 		return true;
 	}
-	else if (mthing->type == 35) // Blue CTF starts
+	else if (type == THING_TYPE_SPAWNPOINT_BLUE_TEAM) // Blue Team starts
 	{
 		G_AddTeamPlayerStart(G_GetTeam(TEAM_BLUE), mthing);
 		return true;
 	}
-	else if (metalrecording && mthing->type == mobjinfo[MT_METALSONIC_RACE].doomednum)
+	else if (type == THING_TYPE_SPAWNPOINT_TEAM) // Team starts
+	{
+		G_AddTeamPlayerStart(G_GetTeamByName(mthing->stringargs[0]), mthing);
+		return true;
+	}
+	else if (metalrecording && type == mobjinfo[MT_METALSONIC_RACE].doomednum)
 	{
 		// If recording, you ARE Metal Sonic. Do not spawn it, do not save normal spawnpoints.
 		G_AddPlayerStart(0, mthing);
 		return true;
 	}
-	else if (mthing->type == 750 // Slope vertex point (formerly chaos spawn)
-		     || (mthing->type >= 600 && mthing->type <= 611) // Special placement patterns
-		     || mthing->type == 1713) // Hoops
+	else if (type == 750 // Slope vertex point (formerly chaos spawn)
+		     || (type >= 600 && type <= 611) // Special placement patterns
+		     || type == 1713) // Hoops
 		return true; // These are handled elsewhere.
-	else if (mthing->type == mobjinfo[MT_EMERHUNT].doomednum)
+	else if (type == mobjinfo[MT_EMERHUNT].doomednum)
 	{
 		// Emerald Hunt is Coop only. Don't spawn the emerald yet, but save the spawnpoint for later.
 		if ((gametyperules & GTR_EMERALDHUNT) && numhuntemeralds < MAXHUNTEMERALDS)
