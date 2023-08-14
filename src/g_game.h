@@ -179,11 +179,13 @@ void G_AddMatchPlayerStart(mapthing_t *mthing);
 void G_AddTeamPlayerStart(UINT8 team, mapthing_t *mthing);
 void G_CountPlayerStarts(void);
 
-mapthing_t *G_FindMapStart(INT32 playernum);
 mapthing_t *G_FindBestPlayerStart(INT32 playernum);
 mapthing_t *G_FindCoopStart(INT32 playernum);
 mapthing_t *G_FindMatchStart(INT32 playernum);
 mapthing_t *G_FindTeamStart(INT32 playernum);
+
+spawnpoint_t *G_FindSpawnPoint(INT32 playernum);
+
 void G_MovePlayerToSpawnOrStarpost(INT32 playernum);
 void G_SpawnPlayer(INT32 playernum);
 

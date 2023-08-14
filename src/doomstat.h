@@ -637,6 +637,14 @@ extern tic_t gametic;
 
 #define localgametic leveltime
 
+typedef struct
+{
+	fixed_t x, y, z;
+	angle_t angle;
+	boolean spawn_on_ceiling;
+	boolean spawn_flipped;
+} spawnpoint_t;
+
 enum
 {
 	PLAYER_START_TYPE_COOP,

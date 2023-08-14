@@ -15,6 +15,7 @@
 #define __P_LOCAL__
 
 #include "command.h"
+#include "doomstat.h"
 #include "d_player.h"
 #include "d_think.h"
 #include "m_fixed.h"
@@ -125,6 +126,15 @@ void CV_UpdateCam2Dist(void);
 
 extern fixed_t t_cam_dist, t_cam_height, t_cam_rotate;
 extern fixed_t t_cam2_dist, t_cam2_height, t_cam2_rotate;
+
+// Player spawn points
+void P_SpawnPlayer(INT32 playernum);
+void P_MovePlayerToSpawn(INT32 playernum, spawnpoint_t *mthing);
+void P_MovePlayerToStarpost(INT32 playernum);
+void P_AfterPlayerSpawn(INT32 playernum);
+
+spawnpoint_t *P_MakeSpawnPointFromMapthing(mapthing_t *mthing);
+void P_SetAbsoluteSpawnPointHeight(spawnpoint_t *spawnpoint, fixed_t offset);
 
 INT32 P_GetPlayerControlDirection(player_t *player);
 void P_AddPlayerScore(player_t *player, UINT32 amount);
