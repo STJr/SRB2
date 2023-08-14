@@ -634,14 +634,33 @@ extern tic_t hidetime;
 //  WAD, partly set at startup time.
 
 extern tic_t gametic;
+
 #define localgametic leveltime
 
+enum
+{
+	PLAYER_START_TYPE_COOP,
+	PLAYER_START_TYPE_MATCH,
+	PLAYER_START_TYPE_TEAM
+};
+
+typedef struct
+{
+	size_t count;
+	size_t capacity;
+	mapthing_t **list;
+} playerstarts_t;
+
+#define MAX_DM_STARTS 64
+
 // Player spawn spots.
-extern mapthing_t *playerstarts[MAXPLAYERS]; // Cooperative
-extern mapthing_t *teamstarts[MAXTEAMS][MAXPLAYERS]; // CTF
+extern playerstarts_t playerstarts;
+extern playerstarts_t deathmatchstarts;
+extern playerstarts_t teamstarts[MAXTEAMS];
 
 #define WAYPOINTSEQUENCESIZE 256
 #define NUMWAYPOINTSEQUENCES 256
+
 extern mobj_t *waypoints[NUMWAYPOINTSEQUENCES][WAYPOINTSEQUENCESIZE];
 extern UINT16 numwaypoints[NUMWAYPOINTSEQUENCES];
 

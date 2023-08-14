@@ -146,13 +146,6 @@ mobj_t **blocklinks;
 //
 UINT8 *rejectmatrix;
 
-// Maintain single and multi player starting spots.
-INT32 numdmstarts, numcoopstarts, numteamstarts[MAXTEAMS];
-
-mapthing_t *deathmatchstarts[MAX_DM_STARTS];
-mapthing_t *playerstarts[MAXPLAYERS];
-mapthing_t *teamstarts[MAXTEAMS][MAXPLAYERS];
-
 // Maintain waypoints
 mobj_t *waypoints[NUMWAYPOINTSEQUENCES][WAYPOINTSEQUENCESIZE];
 UINT16 numwaypoints[NUMWAYPOINTSEQUENCES];
@@ -873,7 +866,7 @@ static void P_SpawnEmeraldHunt(void)
 	}
 }
 
-static void P_SpawnMapThings(boolean spawnemblems)
+static void P_SpawnMapThings(boolean respawning, boolean fromnetsave)
 {
 	size_t i;
 	mapthing_t *mt;
@@ -898,22 +891,31 @@ static void P_SpawnMapThings(boolean spawnemblems)
 
 	for (i = 0, mt = mapthings; i < nummapthings; i++, mt++)
 	{
-		if (mt->type == 1700 // MT_AXIS
-			|| mt->type == 1701 // MT_AXISTRANSFER
-			|| mt->type == 1702) // MT_AXISTRANSFERLINE
+		UINT16 type = mt->type;
+
+		if (type == 1700 // MT_AXIS
+			|| type == 1701 // MT_AXISTRANSFER
+			|| type == 1702) // MT_AXISTRANSFERLINE
 			continue; // These were already spawned
 
-		if (!spawnemblems && mt->type == mobjinfo[MT_EMBLEM].doomednum)
+		if (fromnetsave && type == mobjinfo[MT_EMBLEM].doomednum)
 			continue;
 
 		mt->mobj = NULL;
 
-		if (mt->type >= 600 && mt->type <= 611) // item patterns
+		if (type >= 600 && type <= 611) // item patterns
 			P_SpawnItemPattern(mt, false);
-		else if (mt->type == 1713) // hoops
+		else if (type == 1713) // hoops
 			P_SpawnHoop(mt);
 		else // Everything else
+		{
+			// Don't respawn player starts if the game is either respawning all things,
+			// or if the game is loading a savegame.
+			if (G_IsSpawnPointThingType(mt->type) && (respawning || fromnetsave))
+				continue;
+
 			P_SpawnMapThing(mt);
+		}
 	}
 
 	// random emeralds for hunt
@@ -7178,7 +7180,7 @@ void P_RespawnThings(void)
 	localaiming = 0;
 	localaiming2 = 0;
 
-	P_SpawnMapThings(true);
+	P_SpawnMapThings(true, false);
 
 	// restore skybox viewpoint/centerpoint if necessary, set them to defaults if we can't do that
 	skyboxmo[0] = skyboxviewpnts[(viewid >= 0) ? viewid : 0];
@@ -7237,24 +7239,9 @@ static void P_ForceCharacter(const char *forcecharskin)
 
 static void P_ResetSpawnpoints(void)
 {
-	UINT8 i, j;
+	UINT8 i;
 
-	numdmstarts = 0;
-
-	// reset the player starts
-	for (i = 0; i < MAXPLAYERS; i++)
-		playerstarts[i] = NULL;
-
-	for (i = 0; i < MAX_DM_STARTS; i++)
-		deathmatchstarts[i] = NULL;
-
-	for (i = 0; i < MAXTEAMS; i++)
-	{
-		numteamstarts[i] = 0;
-
-		for (j = 0; j < MAXPLAYERS; j++)
-			teamstarts[i][j] = NULL;
-	}
+	G_InitSpawnPoints();
 
 	for (i = 0; i < 2; i++)
 		skyboxmo[i] = NULL;
@@ -7441,12 +7428,7 @@ static void P_SetupCamera(void)
 	}
 	else
 	{
-		mapthing_t *thing;
-
-		if (gametyperules & GTR_DEATHMATCHSTARTS)
-			thing = deathmatchstarts[0];
-		else
-			thing = playerstarts[0];
+		mapthing_t *thing = G_GetInitialSpawnPoint();
 
 		if (thing)
 		{
@@ -7883,13 +7865,12 @@ boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate)
 
 	P_SpawnSlopes(fromnetsave);
 
-	P_SpawnMapThings(!fromnetsave);
+	P_SpawnMapThings(false, fromnetsave);
 	skyboxmo[0] = skyboxviewpnts[0];
 	skyboxmo[1] = skyboxcenterpnts[0];
 
-	for (numcoopstarts = 0; numcoopstarts < MAXPLAYERS; numcoopstarts++)
-		if (!playerstarts[numcoopstarts])
-			break;
+	if (!fromnetsave)
+		G_CountPlayerStarts();
 
 	// set up world state
 	P_SpawnSpecials(fromnetsave);

@@ -2530,7 +2530,7 @@ void G_AddGhost(char *defdemoname)
 	ghosts = gh;
 
 	gh->version = ghostversion;
-	mthing = playerstarts[0];
+	mthing = G_GetPlayerStart(0);
 	I_Assert(mthing);
 	{ // A bit more complex than P_SpawnPlayer because ghosts aren't solid and won't just push themselves out of the ceiling.
 		fixed_t z,f,c;

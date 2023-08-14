@@ -4300,6 +4300,101 @@ static inline void P_UnArchiveSPGame(INT16 mapoverride)
 	playeringame[consoleplayer] = true;
 }
 
+static void ArchiveSpawnPoints(void)
+{
+	// Write player starts
+	WRITEUINT8(save_p, playerstarts.capacity);
+	for (size_t i = 0; i < playerstarts.capacity; i++)
+	{
+		if (playerstarts.list[i] == NULL)
+			WRITEUINT16(save_p, 0xFFFF);
+		else
+		{
+			size_t mapthingnum = playerstarts.list[i] - mapthings;
+			WRITEUINT16(save_p, mapthingnum);
+		}
+	}
+
+	// Write Match starts
+	WRITEUINT8(save_p, deathmatchstarts.count);
+	for (size_t i = 0; i < deathmatchstarts.count; i++)
+	{
+		size_t mapthingnum = deathmatchstarts.list[i] - mapthings;
+		WRITEUINT16(save_p, mapthingnum);
+	}
+
+	// Write team starts
+	for (UINT8 team = 1; team < numteams; team++)
+	{
+		WRITEUINT8(save_p, teamstarts[team].count);
+		for (size_t i = 0; i < teamstarts[team].count; i++)
+		{
+			size_t mapthingnum = teamstarts[team].list[i] - mapthings;
+			WRITEUINT16(save_p, mapthingnum);
+		}
+	}
+}
+
+static boolean ReadPlayerStarts(playerstarts_t *starts)
+{
+	size_t count = (size_t)READUINT8(save_p);
+
+	for (size_t i = 0; i < count; i++)
+	{
+		UINT16 mapthingnum = READUINT16(save_p);
+		if (mapthingnum < nummapthings)
+			G_AddSpawnPointToList(starts, &mapthings[mapthingnum]);
+		else
+		{
+			CONS_Alert(CONS_ERROR, "Player start %d has invalid map thing number %d\n", (int)i, mapthingnum);
+			return false;
+		}
+	}
+
+	return true;
+}
+
+static boolean RestoreSpawnPoints(void)
+{
+	// Read player starts
+	playerstarts.capacity = READUINT8(save_p);
+
+	for (size_t i = 0; i < playerstarts.capacity; i++)
+	{
+		UINT16 mapthingnum = READUINT16(save_p);
+		if (mapthingnum == 0xFFFF)
+			G_AddPlayerStart(i, NULL);
+		else if (mapthingnum < nummapthings)
+			G_AddPlayerStart(i, &mapthings[mapthingnum]);
+		else
+		{
+			CONS_Alert(CONS_ERROR, "Player start %d has invalid map thing number %d\n", (int)i, mapthingnum);
+			return false;
+		}
+	}
+
+	G_CountPlayerStarts();
+
+	// Read Match starts
+	if (!ReadPlayerStarts(&deathmatchstarts))
+	{
+		CONS_Alert(CONS_ERROR, "Failed to read Match player starts\n");
+		return false;
+	}
+
+	// Read team starts
+	for (UINT8 team = 1; team < numteams; team++)
+	{
+		if (!ReadPlayerStarts(&teamstarts[team]))
+		{
+			CONS_Alert(CONS_ERROR, "Failed to read team %d player starts\n", team);
+			return false;
+		}
+	}
+
+	return true;
+}
+
 static void P_NetArchiveMisc(boolean resending)
 {
 	INT32 i;
@@ -4348,6 +4443,8 @@ static void P_NetArchiveMisc(boolean resending)
 	WRITEUINT8(save_p, teamsingame);
 	for (i = 0; i < MAXTEAMS; i++)
 		WRITEUINT32(save_p, teamscores[i]);
+
+	ArchiveSpawnPoints();
 
 	WRITEINT32(save_p, modulothing);
 
@@ -4443,6 +4540,9 @@ static inline boolean P_NetUnArchiveMisc(boolean reloading)
 	teamsingame = READUINT8(save_p);
 	for (i = 0; i < MAXTEAMS; i++)
 		teamscores[i] = READUINT32(save_p);
+
+	if (!RestoreSpawnPoints())
+		I_Error("Savegame corrupted");
 
 	modulothing = READINT32(save_p);
 

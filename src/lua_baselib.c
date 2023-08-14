@@ -158,6 +158,8 @@ static const struct {
 	{META_GAMETYPE,     "gametype_t"},
 	{META_TEAM,         "team_t"},
 	{META_TEAMLIST,     "teamlist_t"},
+	{META_TEAMSCORES,   "teamscores"},
+	{META_PLAYERSTARTS, "playerstarts"},
 	{META_SPRITEINFO,   "spriteinfo_t"},
 	{META_PIVOTLIST,    "spriteframepivot_t[]"},
 	{META_FRAMEPIVOT,   "spriteframepivot_t"},

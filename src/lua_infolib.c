@@ -1913,7 +1913,7 @@ static int lib_getGametypes(lua_State *L)
 
 	i = luaL_checkinteger(L, 1);
 	if (i < 0 || i >= gametypecount)
-		return luaL_error(L, "gametypes[] index %d out of range (0 - %d)", i, gametypecount-1);
+		return luaL_error(L, "gametypes[] index %d out of range (0 - %d)", i, gametypecount - 1);
 	LUA_PushUserdata(L, &gametypes[i], META_GAMETYPE);
 	return 1;
 }
@@ -2141,7 +2141,7 @@ static int lib_getTeams(lua_State *L)
 
 	i = luaL_checkinteger(L, 1);
 	if (i < 0 || i >= numteams)
-		return luaL_error(L, "teams[] index %d out of range (0 - %d)", i, numteams-1);
+		return luaL_error(L, "teams[] index %d out of range (0 - %d)", i, max(0, (int)numteams - 1));
 	LUA_PushUserdata(L, &teams[i], META_GAMETYPE);
 	return 1;
 }
@@ -2258,7 +2258,7 @@ static int lib_setTeams(lua_State *L)
 	{
 		teamnum = luaL_checkinteger(L, 1);
 		if (teamnum >= numteams)
-			return luaL_error(L, "teams[] index %d out of range (0 - %d)", teamnum, numteams-1);
+			return luaL_error(L, "teams[] index %d out of range (0 - %d)", teamnum, max(0, (int)numteams - 1));
 		team = &teams[teamnum];
 	}
 	luaL_checktype(L, 2, LUA_TTABLE);
@@ -2458,6 +2458,61 @@ static int teamscores_len(lua_State *L)
 	return 1;
 }
 
+///////////////////
+// PLAYER STARTS //
+///////////////////
+
+static int playerstarts_get(lua_State *L)
+{
+	playerstarts_t *starts = *((playerstarts_t **)luaL_checkudata(L, 1, META_PLAYERSTARTS));
+	int i = luaL_checkinteger(L, 2);
+	if (i < 0 || i >= (signed)starts->count)
+		return luaL_error(L, "player start index %d out of range (0 - %d)", i, max(0, (int)starts->count - 1));
+	LUA_PushUserdata(L, starts->list[i], META_MAPTHING);
+	return 1;
+}
+
+static int playerstarts_set(lua_State *L)
+{
+	playerstarts_t *starts = *((playerstarts_t **)luaL_checkudata(L, 1, META_PLAYERSTARTS));
+	int i = luaL_checkinteger(L, 2);
+	mapthing_t *mthing = *((mapthing_t **)luaL_checkudata(L, 3, META_MAPTHING));
+	if (i < 0 || i >= (signed)starts->count)
+		return luaL_error(L, "player start index %d out of range (0 - %d)", i, max(0, (int)starts->count - 1));
+	if (!mthing)
+		return LUA_ErrInvalid(L, "mapthing_t");
+	starts->list[i] = mthing;
+	return 0;
+}
+
+static int playerstarts_len(lua_State *L)
+{
+	playerstarts_t *starts = *((playerstarts_t **)luaL_checkudata(L, 1, META_PLAYERSTARTS));
+	lua_pushinteger(L, starts->count);
+	return 1;
+}
+
+static int lib_getTeamstarts(lua_State *L)
+{
+	int i;
+	lua_remove(L, 1);
+
+	i = luaL_checkinteger(L, 1);
+	if (i <= 0 || i >= numteams)
+		return luaL_error(L, "team index %d out of range (1 - %d)", i, numteams - 1);
+
+	LUA_PushUserdata(L, &teamstarts[i], META_PLAYERSTARTS);
+
+	return 1;
+}
+
+// #teamstarts -> MAXTEAMS
+static int lib_teamstartslen(lua_State *L)
+{
+	lua_pushinteger(L, MAXTEAMS);
+	return 1;
+}
+
 //////////////////////////////
 //
 // Now push all these functions into the Lua state!
@@ -2479,6 +2534,7 @@ int LUA_InfoLib(lua_State *L)
 	LUA_RegisterUserdataMetatable(L, META_TEAM, team_get, team_set, team_num);
 	LUA_RegisterUserdataMetatable(L, META_TEAMLIST, teamlist_get, teamlist_set, teamlist_len);
 	LUA_RegisterUserdataMetatable(L, META_TEAMSCORES, teamscores_get, teamscores_set, teamscores_len);
+	LUA_RegisterUserdataMetatable(L, META_PLAYERSTARTS, playerstarts_get, playerstarts_set, playerstarts_len);
 	LUA_RegisterUserdataMetatable(L, META_SKINCOLOR, skincolor_get, skincolor_set, skincolor_num);
 	LUA_RegisterUserdataMetatable(L, META_COLORRAMP, colorramp_get, colorramp_set, colorramp_len);
 	LUA_RegisterUserdataMetatable(L, META_SFXINFO, sfxinfo_get, sfxinfo_set, sfxinfo_num);
@@ -2497,6 +2553,7 @@ int LUA_InfoLib(lua_State *L)
 	LUA_RegisterGlobalUserdata(L, "mobjinfo", lib_getMobjInfo, lib_setMobjInfo, lib_mobjinfolen);
 	LUA_RegisterGlobalUserdata(L, "gametypes", lib_getGametypes, NULL, lib_gametypeslen);
 	LUA_RegisterGlobalUserdata(L, "teams", lib_getTeams, lib_setTeams, lib_teamslen);
+	LUA_RegisterGlobalUserdata(L, "teamstarts", lib_getTeamstarts, NULL, lib_teamstartslen);
 	LUA_RegisterGlobalUserdata(L, "skincolors", lib_getSkinColor, lib_setSkinColor, lib_skincolorslen);
 	LUA_RegisterGlobalUserdata(L, "spriteinfo", lib_getSpriteInfo, lib_setSpriteInfo, lib_spriteinfolen);
 	LUA_RegisterGlobalUserdata(L, "sfxinfo", lib_getSfxInfo, lib_setSfxInfo, lib_sfxlen);

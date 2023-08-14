@@ -45,6 +45,8 @@ actioncache_t actioncachehead;
 
 static mobj_t *overlaycap = NULL;
 
+static mobj_t *P_RespawnMapThing(mapthing_t *mthing);
+
 #define MAXHUNTEMERALDS 64
 mapthing_t *huntemeralds[MAXHUNTEMERALDS];
 INT32 numhuntemeralds;
@@ -11560,7 +11562,7 @@ void P_RespawnSpecials(void)
 #endif
 
 	if (mthing)
-		P_SpawnMapThing(mthing);
+		P_RespawnMapThing(mthing);
 
 	// pull it from the que
 	iquetail = (iquetail+1)&(ITEMQUESIZE-1);
@@ -11963,17 +11965,6 @@ fixed_t P_GetMapThingSpawnHeight(const mobjtype_t mobjtype, const mapthing_t* mt
 	return P_GetMobjSpawnHeight(mobjtype, x, y, dz, offset, flip, mthing->scale, absolutez);
 }
 
-static void P_SetTeamStart(UINT8 team, mapthing_t *mthing)
-{
-	if (team != TEAM_NONE && team < numteams && numteamstarts[team] < MAXPLAYERS)
-	{
-		teamstarts[team][numteamstarts[team]] = mthing;
-		numteamstarts[team]++;
-		numteamstarts[0]++;
-		mthing->type = 0;
-	}
-}
-
 static boolean P_SpawnNonMobjMapThing(mapthing_t *mthing)
 {
 #if MAXPLAYERS > 32
@@ -11983,33 +11974,28 @@ static boolean P_SpawnNonMobjMapThing(mapthing_t *mthing)
 	{
 		// save spots for respawning in network games
 		if (!metalrecording)
-			playerstarts[mthing->type - 1] = mthing;
+			G_AddPlayerStart(mthing->type - 1, mthing);
 		return true;
 	}
 	else if (mthing->type == 33) // Match starts
 	{
-		if (numdmstarts < MAX_DM_STARTS)
-		{
-			deathmatchstarts[numdmstarts] = mthing;
-			mthing->type = 0;
-			numdmstarts++;
-		}
+		G_AddMatchPlayerStart(mthing);
 		return true;
 	}
 	else if (mthing->type == 34) // Red CTF starts
 	{
-		P_SetTeamStart(G_GetTeam(TEAM_RED), mthing);
+		G_AddTeamPlayerStart(G_GetTeam(TEAM_RED), mthing);
 		return true;
 	}
 	else if (mthing->type == 35) // Blue CTF starts
 	{
-		P_SetTeamStart(G_GetTeam(TEAM_BLUE), mthing);
+		G_AddTeamPlayerStart(G_GetTeam(TEAM_BLUE), mthing);
 		return true;
 	}
 	else if (metalrecording && mthing->type == mobjinfo[MT_METALSONIC_RACE].doomednum)
 	{
 		// If recording, you ARE Metal Sonic. Do not spawn it, do not save normal spawnpoints.
-		playerstarts[0] = mthing;
+		G_AddPlayerStart(0, mthing);
 		return true;
 	}
 	else if (mthing->type == 750 // Slope vertex point (formerly chaos spawn)
@@ -13435,11 +13421,6 @@ static mobj_t *P_SpawnMobjFromMapThing(mapthing_t *mthing, fixed_t x, fixed_t y,
 	return mobj;
 }
 
-//
-// P_SpawnMapThing
-// The fields of the mapthing should
-// already be in host byte order.
-//
 mobj_t *P_SpawnMapThing(mapthing_t *mthing)
 {
 	mobjtype_t i;
@@ -13474,6 +13455,14 @@ mobj_t *P_SpawnMapThing(mapthing_t *mthing)
 	y = mthing->y << FRACBITS;
 	z = P_GetMapThingSpawnHeight(i, mthing, x, y);
 	return P_SpawnMobjFromMapThing(mthing, x, y, z, i);
+}
+
+static mobj_t *P_RespawnMapThing(mapthing_t *mthing)
+{
+	if (G_IsSpawnPointThingType(mthing->type))
+		return NULL;
+
+	return P_SpawnMapThing(mthing);
 }
 
 void P_SpawnHoop(mapthing_t *mthing)
