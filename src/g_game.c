@@ -153,10 +153,13 @@ INT16 nextmapoverride;
 UINT8 skipstats;
 INT16 nextgametype = -1;
 
-// Pointers to each CTF flag
-mobj_t *flagmobjs[MAXTEAMS];
-// Pointers to CTF spawn location
-mapthing_t *flagpoints[MAXTEAMS];
+// Maintain single and multi player starting spots.
+playerstarts_t playerstarts;
+playerstarts_t deathmatchstarts;
+playerstarts_t teamstarts[MAXTEAMS];
+
+mobj_t *flagmobjs[MAXTEAMS]; // Pointers to each CTF flag
+mapthing_t *flagpoints[MAXTEAMS]; // Pointers to CTF flag spawn locations
 
 struct quake quake;
 
@@ -2849,29 +2852,134 @@ void G_MovePlayerToSpawnOrStarpost(INT32 playernum)
 		P_ResetCamera(&players[playernum], &camera2);
 }
 
-enum
-{
-	PLAYER_START_TYPE_COOP,
-	PLAYER_START_TYPE_MATCH,
-	PLAYER_START_TYPE_TEAM
-};
-
 static boolean G_AreCoopStartsAvailable(void)
 {
-	return numcoopstarts != 0;
+	return playerstarts.count != 0;
 }
 
 static boolean G_AreMatchStartsAvailable(void)
 {
-	return numdmstarts != 0;
+	return deathmatchstarts.count != 0;
 }
 
 static boolean G_AreTeamStartsAvailable(UINT8 team)
 {
-	if (team >= numteams)
+	if (team == TEAM_NONE || team >= numteams)
 		return false;
 
-	return numteamstarts[team] != 0;
+	return teamstarts[team].count != 0;
+}
+
+mapthing_t *G_GetPlayerStart(INT32 i)
+{
+	if (i < 0 || i >= (signed)playerstarts.count || playerstarts.list == NULL)
+		return NULL;
+
+	return playerstarts.list[i];
+}
+
+mapthing_t *G_GetMatchPlayerStart(INT32 i)
+{
+	if (i < 0 || i >= (signed)deathmatchstarts.count || deathmatchstarts.list == NULL)
+		return NULL;
+
+	return deathmatchstarts.list[i];
+}
+
+mapthing_t *G_GetTeamPlayerStart(UINT8 team, INT32 i)
+{
+	if (team == TEAM_NONE || team >= numteams)
+		return NULL;
+
+	if (i < 0 || i >= (signed)teamstarts[team].count || teamstarts[team].list == NULL)
+		return NULL;
+
+	return teamstarts[team].list[i];
+}
+
+mapthing_t *G_GetInitialSpawnPoint(void)
+{
+	if (gametyperules & GTR_DEATHMATCHSTARTS)
+		return G_GetMatchPlayerStart(0);
+	else
+		return G_GetPlayerStart(0);
+}
+
+void G_InitSpawnPointList(playerstarts_t *starts, size_t capacity)
+{
+	Z_Free(starts->list);
+	starts->list = NULL;
+	starts->capacity = capacity;
+	starts->count = 0;
+}
+
+void G_AddSpawnPointToList(playerstarts_t *starts, mapthing_t *mthing)
+{
+	if (starts->list == NULL || starts->count == starts->capacity)
+	{
+		if (starts->capacity == 0 || starts->list != NULL)
+			starts->capacity += 16;
+
+		if (starts->list != NULL)
+			starts->list = Z_Realloc(starts->list, sizeof(mapthing_t *) * starts->capacity, PU_STATIC, NULL);
+		else
+			starts->list = Z_Calloc(sizeof(mapthing_t *) * starts->capacity, PU_STATIC, NULL);
+	}
+
+	starts->list[starts->count++] = mthing;
+}
+
+void G_InitSpawnPoints(void)
+{
+	G_InitSpawnPointList(&playerstarts, MAXPLAYERS);
+	G_InitSpawnPointList(&deathmatchstarts, MAX_DM_STARTS);
+
+	for (UINT8 i = 1; i < MAXTEAMS; i++)
+		G_InitSpawnPointList(&teamstarts[i], MAXPLAYERS);
+}
+
+void G_AddPlayerStart(int index, mapthing_t *mthing)
+{
+	if (playerstarts.list == NULL)
+	{
+		if (playerstarts.capacity == 0)
+			playerstarts.capacity = MAXPLAYERS;
+
+		playerstarts.list = Z_Calloc(sizeof(mapthing_t *) * playerstarts.capacity, PU_STATIC, NULL);
+	}
+
+	if (index >= 0 && index < (signed)playerstarts.capacity)
+		playerstarts.list[index] = mthing;
+}
+
+void G_AddMatchPlayerStart(mapthing_t *mthing)
+{
+	G_AddSpawnPointToList(&deathmatchstarts, mthing);
+}
+
+void G_AddTeamPlayerStart(UINT8 team, mapthing_t *mthing)
+{
+	if (team == TEAM_NONE || team >= numteams)
+		return;
+
+	G_AddSpawnPointToList(&teamstarts[team], mthing);
+}
+
+void G_CountPlayerStarts(void)
+{
+	playerstarts.count = 0;
+
+	if (playerstarts.list == NULL)
+		return;
+
+	for (; playerstarts.count < playerstarts.capacity; playerstarts.count++)
+		if (!playerstarts.list[playerstarts.count])
+			break;
+}
+
+boolean G_IsSpawnPointThingType(UINT16 mthingtype)
+{
+	return mthingtype >= 1 && mthingtype <= 35;
 }
 
 static boolean G_AreTeamStartsAvailableForPlayer(INT32 playernum)
@@ -2885,13 +2993,14 @@ static boolean G_AreTeamStartsAvailableForPlayer(INT32 playernum)
 mapthing_t *G_FindTeamStart(INT32 playernum)
 {
 	UINT8 team = players[playernum].ctfteam;
+
 	if (team != TEAM_NONE && G_AreTeamStartsAvailable(team))
 	{
 		for (INT32 j = 0; j < MAXPLAYERS; j++)
 		{
-			INT32 i = P_RandomKey(numteamstarts[team]);
-			if (G_CheckSpot(playernum, teamstarts[team][i]))
-				return teamstarts[team][i];
+			INT32 i = P_RandomKey(teamstarts[team].count);
+			if (G_CheckSpot(playernum, teamstarts[team].list[i]))
+				return teamstarts[team].list[i];
 		}
 	}
 
@@ -2900,15 +3009,13 @@ mapthing_t *G_FindTeamStart(INT32 playernum)
 
 mapthing_t *G_FindMatchStart(INT32 playernum)
 {
-	INT32 i, j;
-
 	if (G_AreMatchStartsAvailable())
 	{
-		for (j = 0; j < 64; j++)
+		for (INT32 j = 0; j < 64; j++)
 		{
-			i = P_RandomKey(numdmstarts);
-			if (G_CheckSpot(playernum, deathmatchstarts[i]))
-				return deathmatchstarts[i];
+			INT32 i = P_RandomKey(deathmatchstarts.count);
+			if (G_CheckSpot(playernum, deathmatchstarts.list[i]))
+				return deathmatchstarts.list[i];
 		}
 	}
 
@@ -2919,13 +3026,14 @@ mapthing_t *G_FindCoopStart(INT32 playernum)
 {
 	if (G_AreCoopStartsAvailable())
 	{
-		//if there's 6 players in a map with 3 player starts, this spawns them 1/2/3/1/2/3.
-		if (G_CheckSpot(playernum, playerstarts[playernum % numcoopstarts]))
-			return playerstarts[playernum % numcoopstarts];
+		// if there's 6 players in a map with 3 player starts, this spawns them 1/2/3/1/2/3.
+		mapthing_t *spawnpoint = G_GetPlayerStart(playernum % playerstarts.count);
+		if (G_CheckSpot(playernum, spawnpoint))
+			return spawnpoint;
 
-		//Don't bother checking to see if the player 1 start is open.
-		//Just spawn there.
-		return playerstarts[0];
+		// Don't bother checking to see if the player 1 start is open.
+		// Just spawn there.
+		return G_GetPlayerStart(0);
 	}
 
 	return NULL;

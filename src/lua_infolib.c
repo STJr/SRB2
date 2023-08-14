@@ -1910,7 +1910,7 @@ static int lib_getGametypes(lua_State *L)
 
 	i = luaL_checkinteger(L, 1);
 	if (i < 0 || i >= gametypecount)
-		return luaL_error(L, "gametypes[] index %d out of range (0 - %d)", i, gametypecount-1);
+		return luaL_error(L, "gametypes[] index %d out of range (0 - %d)", i, gametypecount - 1);
 	LUA_PushUserdata(L, &gametypes[i], META_GAMETYPE);
 	return 1;
 }
@@ -2138,7 +2138,7 @@ static int lib_getTeams(lua_State *L)
 
 	i = luaL_checkinteger(L, 1);
 	if (i < 0 || i >= numteams)
-		return luaL_error(L, "teams[] index %d out of range (0 - %d)", i, numteams-1);
+		return luaL_error(L, "teams[] index %d out of range (0 - %d)", i, max(0, (int)numteams - 1));
 	LUA_PushUserdata(L, &teams[i], META_GAMETYPE);
 	return 1;
 }
@@ -2255,7 +2255,7 @@ static int lib_setTeams(lua_State *L)
 	{
 		teamnum = luaL_checkinteger(L, 1);
 		if (teamnum >= numteams)
-			return luaL_error(L, "teams[] index %d out of range (0 - %d)", teamnum, numteams-1);
+			return luaL_error(L, "teams[] index %d out of range (0 - %d)", teamnum, max(0, (int)numteams - 1));
 		team = &teams[teamnum];
 	}
 	luaL_checktype(L, 2, LUA_TTABLE);
@@ -2433,7 +2433,7 @@ static int teamscores_get(lua_State *L)
 	UINT32 *scoreslist = *((UINT32 **)luaL_checkudata(L, 1, META_TEAMSCORES));
 	int i = luaL_checkinteger(L, 2);
 	if (i < 0 || i >= numteams)
-		return luaL_error(L, "array index %d out of range (0 - %d)", i, numteams - 1);
+		return luaL_error(L, "array index %d out of range (0 - %d)", i, max(0, (int)numteams - 1));
 	lua_pushinteger(L, scoreslist[i]);
 	return 1;
 }
@@ -2444,7 +2444,7 @@ static int teamscores_set(lua_State *L)
 	int i = luaL_checkinteger(L, 2);
 	UINT32 score = (UINT32)luaL_checkinteger(L, 3);
 	if (i < 0 || i >= numteams)
-		return luaL_error(L, "array index %d out of range (0 - %d)", i, numteams - 1);
+		return luaL_error(L, "array index %d out of range (0 - %d)", i, max(0, (int)numteams - 1));
 	scoreslist[i] = score;
 	return 0;
 }
@@ -2452,6 +2452,61 @@ static int teamscores_set(lua_State *L)
 static int teamscores_len(lua_State *L)
 {
 	lua_pushinteger(L, numteams);
+	return 1;
+}
+
+///////////////////
+// PLAYER STARTS //
+///////////////////
+
+static int playerstarts_get(lua_State *L)
+{
+	playerstarts_t *starts = *((playerstarts_t **)luaL_checkudata(L, 1, META_PLAYERSTARTS));
+	int i = luaL_checkinteger(L, 2);
+	if (i < 0 || i >= (signed)starts->count)
+		return luaL_error(L, "player start index %d out of range (0 - %d)", i, max(0, (int)starts->count - 1));
+	LUA_PushUserdata(L, starts->list[i], META_MAPTHING);
+	return 1;
+}
+
+static int playerstarts_set(lua_State *L)
+{
+	playerstarts_t *starts = *((playerstarts_t **)luaL_checkudata(L, 1, META_PLAYERSTARTS));
+	int i = luaL_checkinteger(L, 2);
+	mapthing_t *mthing = *((mapthing_t **)luaL_checkudata(L, 3, META_MAPTHING));
+	if (i < 0 || i >= (signed)starts->count)
+		return luaL_error(L, "player start index %d out of range (0 - %d)", i, max(0, (int)starts->count - 1));
+	if (!mthing)
+		return LUA_ErrInvalid(L, "mapthing_t");
+	starts->list[i] = mthing;
+	return 0;
+}
+
+static int playerstarts_len(lua_State *L)
+{
+	playerstarts_t *starts = *((playerstarts_t **)luaL_checkudata(L, 1, META_PLAYERSTARTS));
+	lua_pushinteger(L, starts->count);
+	return 1;
+}
+
+static int lib_getTeamstarts(lua_State *L)
+{
+	int i;
+	lua_remove(L, 1);
+
+	i = luaL_checkinteger(L, 1);
+	if (i <= 0 || i >= numteams)
+		return luaL_error(L, "team index %d out of range (1 - %d)", i, numteams - 1);
+
+	LUA_PushUserdata(L, &teamstarts[i], META_PLAYERSTARTS);
+
+	return 1;
+}
+
+// #teamstarts -> MAXTEAMS
+static int lib_teamstartslen(lua_State *L)
+{
+	lua_pushinteger(L, MAXTEAMS);
 	return 1;
 }
 
@@ -2539,6 +2594,17 @@ int LUA_InfoLib(lua_State *L)
 		lua_setfield(L, -2, "__newindex");
 
 		lua_pushcfunction(L, teamscores_len);
+		lua_setfield(L, -2, "__len");
+	lua_pop(L, 1);
+
+	luaL_newmetatable(L, META_PLAYERSTARTS);
+		lua_pushcfunction(L, playerstarts_get);
+		lua_setfield(L, -2, "__index");
+
+		lua_pushcfunction(L, playerstarts_set);
+		lua_setfield(L, -2, "__newindex");
+
+		lua_pushcfunction(L, playerstarts_len);
 		lua_setfield(L, -2, "__len");
 	lua_pop(L, 1);
 
@@ -2730,6 +2796,16 @@ int LUA_InfoLib(lua_State *L)
 			lua_setfield(L, -2, "__len");
 		lua_setmetatable(L, -2);
 	lua_setglobal(L, "teams");
+
+	lua_newuserdata(L, 0);
+		lua_createtable(L, 0, 2);
+			lua_pushcfunction(L, lib_getTeamstarts);
+			lua_setfield(L, -2, "__index");
+
+			lua_pushcfunction(L, lib_teamstartslen);
+			lua_setfield(L, -2, "__len");
+		lua_setmetatable(L, -2);
+	lua_setglobal(L, "teamstarts");
 
 	luaL_newmetatable(L, META_LUABANKS);
 		lua_pushcfunction(L, lib_getluabanks);

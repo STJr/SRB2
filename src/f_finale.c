@@ -2441,13 +2441,8 @@ void F_StartTitleScreen(void)
 
 		players[displayplayer].playerstate = PST_DEAD; // Don't spawn the player in dummy (I'm still a filthy cheater)
 
-		// Set Default Position
-		if (playerstarts[0])
-			startpos = playerstarts[0];
-		else if (deathmatchstarts[0])
-			startpos = deathmatchstarts[0];
-		else
-			startpos = NULL;
+		// Set initial camera position
+		startpos = G_GetInitialSpawnPoint();
 
 		if (startpos)
 		{

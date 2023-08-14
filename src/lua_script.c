@@ -213,6 +213,12 @@ int LUA_PushGlobals(lua_State *L, const char *word)
 	} else if (fastcmp(word,"paused")) {
 		lua_pushboolean(L, paused);
 		return 1;
+	} else if (fastcmp(word, "playerstarts")) {
+		LUA_PushUserdata(L, &playerstarts, META_PLAYERSTARTS);
+		return 1;
+	} else if (fastcmp(word, "matchstarts")) {
+		LUA_PushUserdata(L, &deathmatchstarts, META_PLAYERSTARTS);
+		return 1;
 	} else if (fastcmp(word,"bluescore")) {
 		lua_pushinteger(L, teamscores[G_GetTeam(2)]);
 		return 1;

@@ -513,13 +513,14 @@ void Command_Teleport_f(void)
 			mapthing_t *mt;
 			fixed_t offset;
 
-			if (starpostpath >= numcoopstarts)
+			int numstarts = (signed)playerstarts.count;
+			if (starpostpath >= numstarts)
 			{
-				CONS_Alert(CONS_NOTICE, M_GetText("Player %d spawnpoint not found (%d max).\n"), starpostpath+1, numcoopstarts-1);
+				CONS_Alert(CONS_NOTICE, M_GetText("Player %d spawnpoint not found (%d max).\n"), starpostpath+1, numstarts-1);
 				return;
 			}
 
-			mt = playerstarts[starpostpath]; // Given above check, should never be NULL.
+			mt = G_GetPlayerStart(starpostpath); // Given above check, should never be NULL.
 			intx = mt->x<<FRACBITS;
 			inty = mt->y<<FRACBITS;
 			offset = mt->z<<FRACBITS;

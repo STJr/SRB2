@@ -164,6 +164,21 @@ void G_FreeMapSearch(mapsearchfreq_t *freq, INT32 freqc);
 /* Match map name by search + 2 digit map code or map number. */
 INT32 G_FindMapByNameOrCode(const char *query, char **foundmapnamep);
 
+void G_InitSpawnPointList(playerstarts_t *starts, size_t capacity);
+void G_AddSpawnPointToList(playerstarts_t *starts, mapthing_t *mthing);
+boolean G_IsSpawnPointThingType(UINT16 mthingtype);
+mapthing_t *G_GetInitialSpawnPoint(void);
+
+mapthing_t *G_GetPlayerStart(INT32 i);
+mapthing_t *G_GetMatchPlayerStart(INT32 i);
+mapthing_t *G_GetTeamPlayerStart(UINT8 team, INT32 i);
+
+void G_InitSpawnPoints(void);
+void G_AddPlayerStart(int index, mapthing_t *mthing);
+void G_AddMatchPlayerStart(mapthing_t *mthing);
+void G_AddTeamPlayerStart(UINT8 team, mapthing_t *mthing);
+void G_CountPlayerStarts(void);
+
 mapthing_t *G_FindMapStart(INT32 playernum);
 mapthing_t *G_FindBestPlayerStart(INT32 playernum);
 mapthing_t *G_FindCoopStart(INT32 playernum);
