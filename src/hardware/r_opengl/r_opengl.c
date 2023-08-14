@@ -1200,7 +1200,9 @@ static void GLProject(GLfloat objX, GLfloat objY, GLfloat objZ,
 // -----------------+
 void SetModelView(GLint w, GLint h)
 {
-//	GL_DBG_Printf("SetModelView(): %dx%d\n", (int)w, (int)h);
+	GLint maxtexsize = 0;
+
+	//GL_DBG_Printf("SetModelView(): %dx%d\n", (int)w, (int)h);
 
 	// The screen textures need to be flushed if the width or height change so that they be remade for the correct size
 	if (screen_width != w || screen_height != h)
@@ -1209,10 +1211,20 @@ void SetModelView(GLint w, GLint h)
 	screen_width = w;
 	screen_height = h;
 	texsize = 512;
-	// Use a power of two texture, dammit
-	while (texsize < screen_width || texsize < screen_height)
+	while (texsize < w || texsize < h)
 	{
-		texsize *= 2;
+		texsize *= 2; // Use a power of two texture, dammit
+	}
+
+	pglGetIntegerv(GL_MAX_TEXTURE_SIZE, &maxtexsize); // Get the maximum supported texture size
+	if (texsize > maxtexsize && maxtexsize > 0)
+	{
+		// The desired screen texture resolution is too big for the player's GPU!
+		CONS_Alert(CONS_WARNING, "Tried to make a screen texture for a %dx%d game resolution, but your GPU only supports up to %dx%d! Please switch to the software renderer or lower your game resolution.\n", w, h, maxtexsize, maxtexsize);
+
+		// For now, let's just pray that clamping it to the maximum supported size "works"
+		// There'll be a stretchy "border" artefact, but it's better than failing to make the screen textures
+		texsize = maxtexsize;
 	}
 
 	pglViewport(0, 0, w, h);
