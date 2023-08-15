@@ -318,6 +318,8 @@ static boolean init_hook_type
 		const char * string,
 		int          nonzero
 ){
+	memset(&hook->status, 0, sizeof(hook->status));
+
 	hook->status.type_int = status;
 
 	if (nonzero)
@@ -1322,7 +1324,7 @@ static void res_playerspawnpoint(Hook_State *hook)
 spawnpoint_t *LUA_HookPlayerSpawnPoint(player_t *player)
 {
 	Hook_State hook;
-	if (prepare_hook(&hook, -1, HOOK(PlayerSpawnPoint)))
+	if (prepare_hook(&hook, 0, HOOK(PlayerSpawnPoint)))
 	{
 		LUA_PushUserdata(gL, player, META_PLAYER);
 		call_hooks(&hook, 8, res_playerspawnpoint);
