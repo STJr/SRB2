@@ -1190,8 +1190,11 @@ static void res_playerrespawn(Hook_State *hook)
 	fixed_t height_offset = 0;
 	boolean has_z = false;
 
-	spawnpoint_t spawnpoint;
-	memset(&spawnpoint, 0, sizeof(spawnpoint));
+	spawnpoint_t spawnpoint = {
+		.x = 0, .y = 0, .z = 0,
+		.angle = 0, .scale = FRACUNIT,
+		.spawn_on_ceiling = false, .spawn_flipped = false
+	};
 
 	if (lua_istable(gL, -a))
 	{
@@ -1239,8 +1242,9 @@ static void res_playerrespawn(Hook_State *hook)
 				GETNUMBEROPT(spawnpoint.z, "z", has_z);
 				GETNUMBER(height_offset, "height");
 				GETNUMBER(spawnpoint.angle, "angle");
-				GETBOOLEAN(spawnpoint.spawn_on_ceiling, "spawn_on_ceiling");
 				GETBOOLEAN(spawnpoint.spawn_flipped, "spawn_flipped");
+				GETBOOLEAN(spawnpoint.spawn_on_ceiling, "spawn_on_ceiling");
+				GETNUMBER(spawnpoint.scale, "scale");
 			}
 
 #undef GETNUMBER
@@ -1296,6 +1300,7 @@ static void res_playerrespawn(Hook_State *hook)
 		GETBOOLEAN(spawnpoint.spawn_flipped, "spawn_flipped", -a + 4);
 		GETBOOLEAN(spawnpoint.spawn_on_ceiling, "spawn_on_ceiling", -a + 5);
 		GETBOOLEAN(height_is_relative, "height_is_relative", -a + 6);
+		GETNUMBER(spawnpoint.scale, "scale", -a + 7);
 
 		if (!height_is_relative)
 			spawnpoint.z = height_offset;
@@ -1320,7 +1325,7 @@ spawnpoint_t *LUA_HookPlayerRespawn(player_t *player)
 	if (prepare_hook(&hook, -1, HOOK(PlayerRespawn)))
 	{
 		LUA_PushUserdata(gL, player, META_PLAYER);
-		call_hooks(&hook, 7, res_playerrespawn);
+		call_hooks(&hook, 8, res_playerrespawn);
 	}
 	return (spawnpoint_t *)hook.status.type_void_pointer;
 }

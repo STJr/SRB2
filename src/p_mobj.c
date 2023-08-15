@@ -11751,6 +11751,7 @@ void P_MovePlayerToSpawn(INT32 playernum, spawnpoint_t *spawnpoint)
 {
 	fixed_t x, y, z;
 	angle_t angle;
+	fixed_t scale;
 
 	player_t *p = &players[playernum];
 	mobj_t *mobj = p->mo;
@@ -11761,6 +11762,7 @@ void P_MovePlayerToSpawn(INT32 playernum, spawnpoint_t *spawnpoint)
 		x = spawnpoint->x;
 		y = spawnpoint->y;
 		angle = spawnpoint->angle;
+		scale = spawnpoint->scale;
 	}
 	else
 	{
@@ -11768,13 +11770,18 @@ void P_MovePlayerToSpawn(INT32 playernum, spawnpoint_t *spawnpoint)
 		x = 0;
 		y = 0;
 		angle = 0;
+		scale = FRACUNIT;
 	}
+
+	// Set scale
+	P_SetScale(mobj, scale);
+	mobj->destscale = scale;
 
 	// set Z height
 	sector_t *sector = R_PointInSubsector(x, y)->sector;
 	fixed_t floor = P_GetSectorFloorZAt(sector, x, y);
 	fixed_t ceiling = P_GetSectorCeilingZAt(sector, x, y);
-	fixed_t ceilingspawn = ceiling - mobjinfo[MT_PLAYER].height;
+	fixed_t ceilingspawn = ceiling - FixedMul(mobjinfo[MT_PLAYER].height, scale);
 
 	if (spawnpoint)
 	{
@@ -11879,6 +11886,7 @@ spawnpoint_t *P_MakeSpawnPointFromMapthing(mapthing_t *mthing)
 	spawnpoint->x = mthing->x << FRACBITS;
 	spawnpoint->y = mthing->y << FRACBITS;
 	spawnpoint->angle = FixedAngle(mthing->angle<<FRACBITS);
+	spawnpoint->scale = FRACUNIT;
 
 	// Setting the spawnpoint's args[0] will make the player start on the ceiling
 	// Objectflip inverts
