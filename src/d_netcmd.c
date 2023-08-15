@@ -1230,17 +1230,13 @@ static void SetSkinLocal(INT32 skinnum)
 	{
 		// Starring Metal Sonic as themselves, obviously.
 		SetPlayerSkinByNum(consoleplayer, 5);
+		return;
 	}
-	else if (splitscreen)
-	{
-		INT32 foundskin = R_SkinAvailable(cv_skin.string);
-		if (foundskin != -1 && R_SkinUsable(consoleplayer, foundskin))
-			SetPlayerSkinByNum(consoleplayer, foundskin);
-		else
-			SetPlayerSkinByNum(consoleplayer, GetPlayerDefaultSkin(consoleplayer));
-	}
-	else
+
+	if (skinnum != -1 && R_SkinUsable(consoleplayer, skinnum))
 		SetPlayerSkinByNum(consoleplayer, skinnum);
+	else
+		SetPlayerSkinByNum(consoleplayer, GetPlayerDefaultSkin(consoleplayer));
 }
 
 static void SetColorLocal(void)
@@ -1294,7 +1290,11 @@ static void SendNameAndColor(void)
 		strcpy(player_names[consoleplayer], cv_playername.zstring);
 
 		SetColorLocal();
-		SetSkinLocal(pickedchar);
+
+		if (splitscreen)
+			SetSkinLocal(R_SkinAvailable(cv_skin.string));
+		else
+			SetSkinLocal(pickedchar);
 		return;
 	}
 

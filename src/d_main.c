@@ -981,6 +981,7 @@ void D_StartTitle(void)
 	emeralds = 0;
 	memset(&luabanks, 0, sizeof(luabanks));
 	lastmaploaded = 0;
+	pickedchar = R_SkinAvailable(cv_defaultskin.string);
 
 	// In case someone exits out at the same time they start a time attack run,
 	// reset modeattacking
@@ -1625,6 +1626,8 @@ void D_SRB2Main(void)
 		G_RecordDemo(M_GetNextParm());
 		autostart = true;
 	}
+
+	pickedchar = R_SkinAvailable(cv_defaultskin.string);
 
 	// user settings come before "+" parameters.
 	if (dedicated)
