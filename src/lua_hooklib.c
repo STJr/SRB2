@@ -1177,7 +1177,7 @@ fixed_t LUA_HookPlayerHeight(player_t *player)
 	return hook.status.type_fixed;
 }
 
-static void res_playerrespawn(Hook_State *hook)
+static void res_playerspawnpoint(Hook_State *hook)
 {
 	hook->status.type_void_pointer = NULL;
 
@@ -1210,7 +1210,7 @@ static void res_playerrespawn(Hook_State *hook)
 
 #define TYPEERROR(f,t) \
 	CONS_Alert(CONS_WARNING, \
-		"bad value for \"%s\" in table returned by \"PlayerRespawn\" hook (%s expected, got %s)\n", \
+		"bad value for \"%s\" in table returned by \"PlayerSpawnPoint\" hook (%s expected, got %s)\n", \
 		f, lua_typename(gL, t), luaL_typename(gL, -2))
 #define GETNUMBER(r,f) \
 	if (!strcmp(key, f)) { \
@@ -1266,7 +1266,7 @@ static void res_playerrespawn(Hook_State *hook)
 	{
 #define TYPEERROR(f,t,i) \
 	CONS_Alert(CONS_WARNING, \
-		"bad value for \"%s\" returned by \"PlayerRespawn\" hook (%s expected, got %s)\n", \
+		"bad value for \"%s\" returned by \"PlayerSpawnPoint\" hook (%s expected, got %s)\n", \
 		f, lua_typename(gL, t), luaL_typename(gL, i))
 #define GETNUMBER(r,f,i) \
 	if (!lua_isnil(gL, i)) { \
@@ -1319,13 +1319,13 @@ static void res_playerrespawn(Hook_State *hook)
 	hook->status.type_void_pointer = result;
 }
 
-spawnpoint_t *LUA_HookPlayerRespawn(player_t *player)
+spawnpoint_t *LUA_HookPlayerSpawnPoint(player_t *player)
 {
 	Hook_State hook;
-	if (prepare_hook(&hook, -1, HOOK(PlayerRespawn)))
+	if (prepare_hook(&hook, -1, HOOK(PlayerSpawnPoint)))
 	{
 		LUA_PushUserdata(gL, player, META_PLAYER);
-		call_hooks(&hook, 8, res_playerrespawn);
+		call_hooks(&hook, 8, res_playerspawnpoint);
 	}
 	return (spawnpoint_t *)hook.status.type_void_pointer;
 }

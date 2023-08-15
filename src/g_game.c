@@ -2836,7 +2836,7 @@ void G_SpawnPlayer(INT32 playernum)
 
 void G_MovePlayerToSpawnOrStarpost(INT32 playernum)
 {
-	spawnpoint_t *spawnpoint = LUA_HookPlayerRespawn(&players[playernum]);
+	spawnpoint_t *spawnpoint = LUA_HookPlayerSpawnPoint(&players[playernum]);
 
 	if (spawnpoint == NULL)
 	{
