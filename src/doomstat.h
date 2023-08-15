@@ -641,6 +641,7 @@ typedef struct
 {
 	fixed_t x, y, z;
 	angle_t angle;
+	fixed_t scale;
 	boolean spawn_on_ceiling;
 	boolean spawn_flipped;
 } spawnpoint_t;
