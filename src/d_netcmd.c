@@ -1224,27 +1224,27 @@ static void ForceAllSkins(INT32 forcedskin)
 
 static INT32 snacpending = 0, snac2pending = 0, chmappending = 0;
 
-static void SetSkinLocal(INT32 skinnum)
+static void SetSkinLocal(INT32 playernum, INT32 skinnum)
 {
-	if (metalrecording)
+	if (metalrecording && playernum == consoleplayer)
 	{
 		// Starring Metal Sonic as themselves, obviously.
-		SetPlayerSkinByNum(consoleplayer, 5);
+		SetPlayerSkinByNum(playernum, 5);
 		return;
 	}
 
-	if (skinnum != -1 && R_SkinUsable(consoleplayer, skinnum))
-		SetPlayerSkinByNum(consoleplayer, skinnum);
+	if (skinnum != -1 && R_SkinUsable(playernum, skinnum))
+		SetPlayerSkinByNum(playernum, skinnum);
 	else
-		SetPlayerSkinByNum(consoleplayer, GetPlayerDefaultSkin(consoleplayer));
+		SetPlayerSkinByNum(playernum, GetPlayerDefaultSkin(playernum));
 }
 
-static void SetColorLocal(void)
+static void SetColorLocal(INT32 playernum, UINT16 color)
 {
-	players[consoleplayer].skincolor = cv_playercolor.value;
+	players[playernum].skincolor = color;
 
-	if (players[consoleplayer].mo && !players[consoleplayer].powers[pw_dye])
-		players[consoleplayer].mo->color = P_GetPlayerColor(&players[consoleplayer]);
+	if (players[playernum].mo && !players[playernum].powers[pw_dye])
+		players[playernum].mo->color = P_GetPlayerColor(&players[playernum]);
 }
 
 // name, color, or skin has changed
@@ -1289,12 +1289,12 @@ static void SendNameAndColor(void)
 		CleanupPlayerName(consoleplayer, cv_playername.zstring);
 		strcpy(player_names[consoleplayer], cv_playername.zstring);
 
-		SetColorLocal();
+		SetColorLocal(consoleplayer, cv_playercolor.value);
 
 		if (splitscreen)
-			SetSkinLocal(R_SkinAvailable(cv_skin.string));
+			SetSkinLocal(consoleplayer, R_SkinAvailable(cv_skin.string));
 		else
-			SetSkinLocal(pickedchar);
+			SetSkinLocal(consoleplayer, pickedchar);
 		return;
 	}
 
@@ -1369,40 +1369,25 @@ static void SendNameAndColor2(void)
 
 	if (botingame)
 	{
-		players[secondplaya].skincolor = botcolor;
-		if (players[secondplaya].mo && !players[secondplaya].powers[pw_dye])
-			players[secondplaya].mo->color = players[secondplaya].skincolor;
-
+		SetColorLocal(secondplaya, botcolor);
 		SetPlayerSkinByNum(secondplaya, botskin-1);
 		return;
 	}
 	else if (!netgame)
 	{
 		// If you're not in a netgame, merely update the skin, color, and name.
-		INT32 foundskin;
-
 		CleanupPlayerName(secondplaya, cv_playername2.zstring);
 		strcpy(player_names[secondplaya], cv_playername2.zstring);
 
-		// don't use secondarydisplayplayer: the second player must be 1
-		players[secondplaya].skincolor = cv_playercolor2.value;
-		if (players[secondplaya].mo && !players[secondplaya].powers[pw_dye])
-			players[secondplaya].mo->color = P_GetPlayerColor(&players[secondplaya]);
+		SetColorLocal(secondplaya, cv_playercolor2.value);
 
-		if (cv_forceskin.value >= 0 && multiplayer) // Server wants everyone to use the same player
+		if (cv_forceskin.value >= 0)
 		{
-			const INT32 forcedskin = cv_forceskin.value;
-
-			SetPlayerSkinByNum(secondplaya, forcedskin);
-			CV_StealthSet(&cv_skin2, skins[forcedskin].name);
+			SetSkinLocal(secondplaya, cv_forceskin.value);
+			CV_StealthSet(&cv_skin2, skins[cv_forceskin.value].name);
 		}
-		else if ((foundskin = R_SkinAvailable(cv_skin2.string)) != -1 && R_SkinUsable(secondplaya, foundskin))
-			SetPlayerSkin(secondplaya, cv_skin2.string);
-		else if (splitscreen)
-		{
-			// will always be same as current
-			SetPlayerSkin(secondplaya, cv_skin2.string);
-		}
+		else
+			SetSkinLocal(secondplaya, R_SkinAvailable(cv_skin2.string));
 		return;
 	}
 
@@ -4756,8 +4741,8 @@ static void Skin_OnChange(void)
 			return;
 		}
 
-		// Just do this here if devmode is enabled
-		SetSkinLocal(R_SkinAvailable(cv_skin.string));
+		// Just do it here if devmode is enabled
+		SetSkinLocal(consoleplayer, R_SkinAvailable(cv_skin.string));
 		return;
 	}
 
@@ -4806,7 +4791,7 @@ static void Color_OnChange(void)
 		{
 			// Just do it here if devmode is enabled
 			if (cv_debug || devparm)
-				SetColorLocal();
+				SetColorLocal(consoleplayer, cv_playercolor.value);
 			return;
 		}
 
