@@ -346,10 +346,6 @@ static void SetSkin(player_t *player, INT32 skinnum)
 
 	if (!(cv_debug || devparm) && !(netgame || multiplayer || demoplayback))
 	{
-		if (player == &players[consoleplayer])
-			CV_StealthSetValue(&cv_playercolor, skin->prefcolor);
-		else if (player == &players[secondarydisplayplayer])
-			CV_StealthSetValue(&cv_playercolor2, skin->prefcolor);
 		player->skincolor = newcolor = skin->prefcolor;
 		if (player->bot && botingame)
 		{

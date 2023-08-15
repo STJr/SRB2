@@ -7179,19 +7179,13 @@ static void P_ForceCharacter(const char *forcecharskin)
 		{
 			SetPlayerSkin(secondarydisplayplayer, forcecharskin);
 			if ((unsigned)cv_playercolor2.value != skins[players[secondarydisplayplayer].skin].prefcolor)
-			{
-				CV_StealthSetValue(&cv_playercolor2, skins[players[secondarydisplayplayer].skin].prefcolor);
 				players[secondarydisplayplayer].skincolor = skins[players[secondarydisplayplayer].skin].prefcolor;
-			}
 		}
 
 		SetPlayerSkin(consoleplayer, forcecharskin);
 		// normal player colors in single player
 		if ((unsigned)cv_playercolor.value != skins[players[consoleplayer].skin].prefcolor)
-		{
-			CV_StealthSetValue(&cv_playercolor, skins[players[consoleplayer].skin].prefcolor);
 			players[consoleplayer].skincolor = skins[players[consoleplayer].skin].prefcolor;
-		}
 	}
 }
 

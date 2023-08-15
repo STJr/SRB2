@@ -55,6 +55,8 @@ gameaction_t gameaction;
 gamestate_t gamestate = GS_NULL;
 UINT8 ultimatemode = false;
 
+INT32 pickedchar;
+
 boolean botingame;
 UINT8 botskin;
 UINT16 botcolor;
@@ -4770,12 +4772,9 @@ void G_LoadGame(UINT32 slot, INT16 mapoverride)
 	Z_Free(savebuffer);
 	save_p = savebuffer = NULL;
 
-//	gameaction = ga_nothing;
-//	G_SetGamestate(GS_LEVEL);
 	displayplayer = consoleplayer;
 	multiplayer = splitscreen = false;
 
-//	G_DeferedInitNew(sk_medium, G_BuildMapName(1), 0, 0, 1);
 	if (setsizeneeded)
 		R_ExecuteSetViewSize();
 
@@ -4968,9 +4967,9 @@ cleanup:
 // Can be called by the startup code or the menu task,
 // consoleplayer, displayplayer, playeringame[] should be set.
 //
-void G_DeferedInitNew(boolean pultmode, const char *mapname, INT32 pickedchar, boolean SSSG, boolean FLS)
+void G_DeferedInitNew(boolean pultmode, const char *mapname, INT32 character, boolean SSSG, boolean FLS)
 {
-	UINT16 color = skins[pickedchar].prefcolor;
+	pickedchar = character;
 	paused = false;
 
 	if (demoplayback)
@@ -4991,10 +4990,7 @@ void G_DeferedInitNew(boolean pultmode, const char *mapname, INT32 pickedchar, b
 		SplitScreen_OnChange();
 	}
 
-	color = skins[pickedchar].prefcolor;
-	SetPlayerSkinByNum(consoleplayer, pickedchar);
-	CV_StealthSet(&cv_skin, skins[pickedchar].name);
-	CV_StealthSetValue(&cv_playercolor, color);
+	SetPlayerSkinByNum(consoleplayer, character);
 
 	if (mapname)
 		D_MapChange(M_MapNumber(mapname[3], mapname[4]), gametype, pultmode, true, 1, false, FLS);

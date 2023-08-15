@@ -1274,25 +1274,22 @@ static void SendNameAndColor(void)
 			players[consoleplayer].mo->color = P_GetPlayerColor(&players[consoleplayer]);
 
 		if (metalrecording)
-		{ // Starring Metal Sonic as themselves, obviously.
-			SetPlayerSkinByNum(consoleplayer, 5);
-			CV_StealthSet(&cv_skin, skins[5].name);
-		}
-		else if ((foundskin = R_SkinAvailable(cv_skin.string)) != -1 && R_SkinUsable(consoleplayer, foundskin))
 		{
-			cv_skin.value = foundskin;
-
-			SetPlayerSkin(consoleplayer, cv_skin.string);
-			CV_StealthSet(&cv_skin, skins[cv_skin.value].name);
+			// Starring Metal Sonic as themselves, obviously.
+			SetPlayerSkinByNum(consoleplayer, 5);
+		}
+		else if (splitscreen)
+		{
+			if ((foundskin = R_SkinAvailable(cv_skin.string)) != -1 && R_SkinUsable(consoleplayer, foundskin))
+				SetPlayerSkin(consoleplayer, cv_skin.string);
+			else
+			{
+				// will always be same as current
+				SetPlayerSkin(consoleplayer, cv_skin.string);
+			}
 		}
 		else
-		{
-			cv_skin.value = players[consoleplayer].skin;
-			CV_StealthSet(&cv_skin, skins[players[consoleplayer].skin].name);
-			// will always be same as current
-			SetPlayerSkin(consoleplayer, cv_skin.string);
-		}
-
+			SetPlayerSkinByNum(consoleplayer, pickedchar);
 		return;
 	}
 
@@ -1365,7 +1362,6 @@ static void SendNameAndColor2(void)
 	if (!Playing())
 		return;
 
-	// If you're not in a netgame, merely update the skin, color, and name.
 	if (botingame)
 	{
 		players[secondplaya].skincolor = botcolor;
@@ -1377,6 +1373,7 @@ static void SendNameAndColor2(void)
 	}
 	else if (!netgame)
 	{
+		// If you're not in a netgame, merely update the skin, color, and name.
 		INT32 foundskin;
 
 		CleanupPlayerName(secondplaya, cv_playername2.zstring);
@@ -1387,7 +1384,7 @@ static void SendNameAndColor2(void)
 		if (players[secondplaya].mo && !players[secondplaya].powers[pw_dye])
 			players[secondplaya].mo->color = P_GetPlayerColor(&players[secondplaya]);
 
-		if (cv_forceskin.value >= 0 && (netgame || multiplayer)) // Server wants everyone to use the same player
+		if (cv_forceskin.value >= 0 && multiplayer) // Server wants everyone to use the same player
 		{
 			const INT32 forcedskin = cv_forceskin.value;
 
@@ -1395,16 +1392,9 @@ static void SendNameAndColor2(void)
 			CV_StealthSet(&cv_skin2, skins[forcedskin].name);
 		}
 		else if ((foundskin = R_SkinAvailable(cv_skin2.string)) != -1 && R_SkinUsable(secondplaya, foundskin))
-		{
-			cv_skin2.value = foundskin;
-
 			SetPlayerSkin(secondplaya, cv_skin2.string);
-			CV_StealthSet(&cv_skin2, skins[cv_skin2.value].name);
-		}
-		else
+		else if (splitscreen)
 		{
-			cv_skin2.value = players[secondplaya].skin;
-			CV_StealthSet(&cv_skin2, skins[players[secondplaya].skin].name);
 			// will always be same as current
 			SetPlayerSkin(secondplaya, cv_skin2.string);
 		}
@@ -2094,7 +2084,6 @@ static void Got_Mapcmd(UINT8 **cp, INT32 playernum)
 	{
 		SetPlayerSkinByNum(0, cv_chooseskin.value-1);
 		players[0].skincolor = skins[players[0].skin].prefcolor;
-		CV_StealthSetValue(&cv_playercolor, players[0].skincolor);
 	}
 
 	mapnumber = M_MapNumber(mapname[3], mapname[4]);
