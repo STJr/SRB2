@@ -1288,8 +1288,13 @@ static void SendNameAndColor(void)
 				SetPlayerSkin(consoleplayer, cv_skin.string);
 			}
 		}
-		else
+		else if (pickedchar != -1)
+		{
 			SetPlayerSkinByNum(consoleplayer, pickedchar);
+			pickedchar = -1;
+		}
+		else
+			SetPlayerSkin(consoleplayer, cv_skin.string);
 		return;
 	}
 
