@@ -1224,6 +1224,33 @@ static void ForceAllSkins(INT32 forcedskin)
 
 static INT32 snacpending = 0, snac2pending = 0, chmappending = 0;
 
+static void SetSkinLocal(INT32 skinnum)
+{
+	if (metalrecording)
+	{
+		// Starring Metal Sonic as themselves, obviously.
+		SetPlayerSkinByNum(consoleplayer, 5);
+	}
+	else if (splitscreen)
+	{
+		INT32 foundskin = R_SkinAvailable(cv_skin.string);
+		if (foundskin != -1 && R_SkinUsable(consoleplayer, foundskin))
+			SetPlayerSkinByNum(consoleplayer, foundskin);
+		else
+			SetPlayerSkinByNum(consoleplayer, GetPlayerDefaultSkin(consoleplayer));
+	}
+	else
+		SetPlayerSkinByNum(consoleplayer, skinnum);
+}
+
+static void SetColorLocal(void)
+{
+	players[consoleplayer].skincolor = cv_playercolor.value;
+
+	if (players[consoleplayer].mo && !players[consoleplayer].powers[pw_dye])
+		players[consoleplayer].mo->color = P_GetPlayerColor(&players[consoleplayer]);
+}
+
 // name, color, or skin has changed
 //
 static void SendNameAndColor(void)
@@ -1263,38 +1290,11 @@ static void SendNameAndColor(void)
 	// If you're not in a netgame, merely update the skin, color, and name.
 	if (!netgame)
 	{
-		INT32 foundskin;
-
 		CleanupPlayerName(consoleplayer, cv_playername.zstring);
 		strcpy(player_names[consoleplayer], cv_playername.zstring);
 
-		players[consoleplayer].skincolor = cv_playercolor.value;
-
-		if (players[consoleplayer].mo && !players[consoleplayer].powers[pw_dye])
-			players[consoleplayer].mo->color = P_GetPlayerColor(&players[consoleplayer]);
-
-		if (metalrecording)
-		{
-			// Starring Metal Sonic as themselves, obviously.
-			SetPlayerSkinByNum(consoleplayer, 5);
-		}
-		else if (splitscreen)
-		{
-			if ((foundskin = R_SkinAvailable(cv_skin.string)) != -1 && R_SkinUsable(consoleplayer, foundskin))
-				SetPlayerSkin(consoleplayer, cv_skin.string);
-			else
-			{
-				// will always be same as current
-				SetPlayerSkin(consoleplayer, cv_skin.string);
-			}
-		}
-		else if (pickedchar != -1)
-		{
-			SetPlayerSkinByNum(consoleplayer, pickedchar);
-			pickedchar = -1;
-		}
-		else
-			SetPlayerSkin(consoleplayer, cv_skin.string);
+		SetColorLocal();
+		SetSkinLocal(pickedchar);
 		return;
 	}
 
@@ -4747,10 +4747,17 @@ static void Skin_OnChange(void)
 	if (!Playing())
 		return; // do whatever you want
 
-	if (!(cv_debug || devparm) && !(multiplayer || netgame) // In single player.
-		&& (gamestate != GS_WAITINGPLAYERS)) // allows command line -warp x +skin y
+	if (!(multiplayer || netgame)) // In single player.
 	{
-		CV_StealthSet(&cv_skin, skins[players[consoleplayer].skin].name);
+		if (!(cv_debug || devparm)
+		&& (gamestate != GS_WAITINGPLAYERS)) // allows command line -warp x +skin y
+		{
+			CV_StealthSet(&cv_skin, skins[players[consoleplayer].skin].name);
+			return;
+		}
+
+		// Just do this here if devmode is enabled
+		SetSkinLocal(R_SkinAvailable(cv_skin.string));
 		return;
 	}
 
@@ -4788,15 +4795,18 @@ static void Skin2_OnChange(void)
   */
 static void Color_OnChange(void)
 {
-	if (!Playing()) {
+	if (!Playing())
+	{
 		if (!cv_playercolor.value || !skincolors[cv_playercolor.value].accessible)
 			CV_StealthSetValue(&cv_playercolor, lastgoodcolor);
 	}
 	else
 	{
-		if (!(cv_debug || devparm) && !(multiplayer || netgame)) // In single player.
+		if (!(multiplayer || netgame)) // In single player.
 		{
-			CV_StealthSet(&cv_skin, skins[players[consoleplayer].skin].name);
+			// Just do it here if devmode is enabled
+			if (cv_debug || devparm)
+				SetColorLocal();
 			return;
 		}
 

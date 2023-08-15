@@ -1626,14 +1626,6 @@ void D_SRB2Main(void)
 		autostart = true;
 	}
 
-	// Set default singleplayer skin
-	if (!dedicated)
-	{
-		pickedchar = R_SkinAvailable(cv_defaultskin.string);
-		if (pickedchar == -1)
-			pickedchar = 0;
-	}
-
 	// user settings come before "+" parameters.
 	if (dedicated)
 		COM_ImmedExecute(va("exec \"%s"PATHSEP"adedserv.cfg\"\n", srb2home));
