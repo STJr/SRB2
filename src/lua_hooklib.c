@@ -1181,19 +1181,21 @@ static void res_playerrespawn(Hook_State *hook)
 {
 	hook->status.type_void_pointer = NULL;
 
-	if (!lua_isnil(gL, -1))
+	int a = hook->results;
+
+	if (lua_isnil(gL, -a))
+		return;
+
+	boolean height_is_relative = false;
+	fixed_t height_offset = 0;
+	boolean has_z = false;
+
+	spawnpoint_t spawnpoint;
+	memset(&spawnpoint, 0, sizeof(spawnpoint));
+
+	if (lua_istable(gL, -a))
 	{
-		if (!lua_istable(gL, -1))
-		{
-			CONS_Alert(CONS_WARNING, "table expected in \"PlayerRespawn\" hook, got %s\n", luaL_typename(gL, -1));
-			return;
-		}
-
-		fixed_t height_offset = 0;
-		boolean has_z = false;
-		spawnpoint_t spawnpoint;
-		memset(&spawnpoint, 0, sizeof(spawnpoint));
-
+		lua_pushvalue(gL, -a);
 		lua_pushnil(gL);
 		while (lua_next(gL, -2))
 		{
@@ -1203,36 +1205,32 @@ static void res_playerrespawn(Hook_State *hook)
 			if (lua_isstring(gL, -1))
 				key = lua_tostring(gL, -1);
 
-#define TYPEERROR(f, t) \
+#define TYPEERROR(f,t) \
 	CONS_Alert(CONS_WARNING, \
 		"bad value for \"%s\" in table returned by \"PlayerRespawn\" hook (%s expected, got %s)\n", \
 		f, lua_typename(gL, t), luaL_typename(gL, -2))
-
 #define GETNUMBER(r,f) \
-			if (!strcmp(key, f)) \
-			{ \
-				if (!lua_isnumber(gL, -2)) \
-					TYPEERROR(f, LUA_TNUMBER); \
-				else \
-					r = lua_tonumber(gL, -2); \
-			}
+	if (!strcmp(key, f)) { \
+		if (!lua_isnumber(gL, -2)) \
+			TYPEERROR(f, LUA_TNUMBER); \
+		else \
+			r = lua_tonumber(gL, -2); \
+	}
 #define GETNUMBEROPT(r,f,opt) \
-			if (!strcmp(key, f)) \
-			{ \
-				if (!lua_isnumber(gL, -2)) \
-					TYPEERROR(f, LUA_TNUMBER); \
-				else \
-					r = lua_tonumber(gL, -2); \
-				opt = true; \
-			}
+	if (!strcmp(key, f)) { \
+		if (!lua_isnumber(gL, -2)) \
+			TYPEERROR(f, LUA_TNUMBER); \
+		else \
+			r = lua_tonumber(gL, -2); \
+		opt = true; \
+	}
 #define GETBOOLEAN(r,f) \
-			if (!strcmp(key, f)) \
-			{ \
-				if (!lua_isboolean(gL, -2)) \
-					TYPEERROR(f, LUA_TBOOLEAN); \
-				else \
-					r = lua_toboolean(gL, -2); \
-			}
+	if (!strcmp(key, f)) { \
+		if (!lua_isboolean(gL, -2)) \
+			TYPEERROR(f, LUA_TBOOLEAN); \
+		else \
+			r = lua_toboolean(gL, -2); \
+	}
 
 			if (key)
 			{
@@ -1253,15 +1251,67 @@ static void res_playerrespawn(Hook_State *hook)
 			lua_pop(gL, 2);
 		}
 
+		lua_pop(gL, 1);
+
 		if (!has_z)
-			P_SetAbsoluteSpawnPointHeight(&spawnpoint, height_offset);
+			height_is_relative = true;
 		else
 			spawnpoint.z += height_offset;
-
-		spawnpoint_t *result = Z_Calloc(sizeof(spawnpoint_t), PU_STATIC, NULL);
-		memcpy(result, &spawnpoint, sizeof(spawnpoint_t));
-		hook->status.type_void_pointer = result;
 	}
+	else
+	{
+#define TYPEERROR(f,t,i) \
+	CONS_Alert(CONS_WARNING, \
+		"bad value for \"%s\" returned by \"PlayerRespawn\" hook (%s expected, got %s)\n", \
+		f, lua_typename(gL, t), luaL_typename(gL, i))
+#define GETNUMBER(r,f,i) \
+	if (!lua_isnil(gL, i)) { \
+		if (!lua_isnumber(gL, i)) \
+			TYPEERROR(f, LUA_TNUMBER, i); \
+		else \
+			r = lua_tonumber(gL, i); \
+	}
+#define GETNUMBEROPT(r,f,opt,i) \
+	if (!lua_isnil(gL, i)) { \
+		if (!lua_isnumber(gL, i)) \
+			TYPEERROR(f, LUA_TNUMBER, i); \
+		else \
+			r = lua_tonumber(gL, i); \
+		opt = true; \
+	}
+#define GETBOOLEAN(r,f,i) \
+	if (!lua_isnil(gL, i)) { \
+		if (!lua_isboolean(gL, i)) \
+			TYPEERROR(f, LUA_TBOOLEAN, i); \
+		else \
+			r = lua_toboolean(gL, i); \
+	}
+
+		GETNUMBER(spawnpoint.x, "x", -a + 0);
+		GETNUMBER(spawnpoint.y, "y", -a + 1);
+		GETNUMBEROPT(height_offset, "z", has_z, -a + 2);
+		if (!has_z)
+			height_is_relative = true;
+		GETNUMBER(spawnpoint.angle, "angle", -a + 3);
+		GETBOOLEAN(spawnpoint.spawn_flipped, "spawn_flipped", -a + 4);
+		GETBOOLEAN(spawnpoint.spawn_on_ceiling, "spawn_on_ceiling", -a + 5);
+		GETBOOLEAN(height_is_relative, "height_is_relative", -a + 6);
+
+		if (!height_is_relative)
+			spawnpoint.z = height_offset;
+
+#undef GETNUMBER
+#undef GETNUMBEROPT
+#undef GETBOOLEAN
+#undef TYPEERROR
+	}
+
+	if (height_is_relative)
+		P_SetAbsoluteSpawnPointHeight(&spawnpoint, height_offset);
+
+	spawnpoint_t *result = Z_Calloc(sizeof(spawnpoint_t), PU_STATIC, NULL);
+	memcpy(result, &spawnpoint, sizeof(spawnpoint_t));
+	hook->status.type_void_pointer = result;
 }
 
 spawnpoint_t *LUA_HookPlayerRespawn(player_t *player)
@@ -1270,7 +1320,7 @@ spawnpoint_t *LUA_HookPlayerRespawn(player_t *player)
 	if (prepare_hook(&hook, -1, HOOK(PlayerRespawn)))
 	{
 		LUA_PushUserdata(gL, player, META_PLAYER);
-		call_hooks(&hook, 1, res_playerrespawn);
+		call_hooks(&hook, 7, res_playerrespawn);
 	}
 	return (spawnpoint_t *)hook.status.type_void_pointer;
 }
