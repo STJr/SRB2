@@ -1271,7 +1271,7 @@ static void SendNameAndColor(void)
 		players[consoleplayer].skincolor = cv_playercolor.value;
 
 		if (players[consoleplayer].mo && !players[consoleplayer].powers[pw_dye])
-			players[consoleplayer].mo->color = players[consoleplayer].skincolor;
+			players[consoleplayer].mo->color = P_GetPlayerColor(&players[consoleplayer]);
 
 		if (metalrecording)
 		{ // Starring Metal Sonic as themselves, obviously.
@@ -1280,24 +1280,10 @@ static void SendNameAndColor(void)
 		}
 		else if ((foundskin = R_SkinAvailable(cv_skin.string)) != -1 && R_SkinUsable(consoleplayer, foundskin))
 		{
-			//boolean notsame;
-
 			cv_skin.value = foundskin;
-
-			//notsame = (cv_skin.value != players[consoleplayer].skin);
 
 			SetPlayerSkin(consoleplayer, cv_skin.string);
 			CV_StealthSet(&cv_skin, skins[cv_skin.value].name);
-
-			/*if (notsame)
-			{
-				CV_StealthSetValue(&cv_playercolor, skins[cv_skin.value].prefcolor);
-
-				players[consoleplayer].skincolor = cv_playercolor.value % numskincolors;
-
-				if (players[consoleplayer].mo)
-					players[consoleplayer].mo->color = (UINT16)players[consoleplayer].skincolor;
-			}*/
 		}
 		else
 		{
@@ -1399,7 +1385,7 @@ static void SendNameAndColor2(void)
 		// don't use secondarydisplayplayer: the second player must be 1
 		players[secondplaya].skincolor = cv_playercolor2.value;
 		if (players[secondplaya].mo && !players[secondplaya].powers[pw_dye])
-			players[secondplaya].mo->color = players[secondplaya].skincolor;
+			players[secondplaya].mo->color = P_GetPlayerColor(&players[secondplaya]);
 
 		if (cv_forceskin.value >= 0 && (netgame || multiplayer)) // Server wants everyone to use the same player
 		{
@@ -1410,24 +1396,10 @@ static void SendNameAndColor2(void)
 		}
 		else if ((foundskin = R_SkinAvailable(cv_skin2.string)) != -1 && R_SkinUsable(secondplaya, foundskin))
 		{
-			//boolean notsame;
-
 			cv_skin2.value = foundskin;
-
-			//notsame = (cv_skin2.value != players[secondplaya].skin);
 
 			SetPlayerSkin(secondplaya, cv_skin2.string);
 			CV_StealthSet(&cv_skin2, skins[cv_skin2.value].name);
-
-			/*if (notsame)
-			{
-				CV_StealthSetValue(&cv_playercolor2, skins[players[secondplaya].skin].prefcolor);
-
-				players[secondplaya].skincolor = cv_playercolor2.value % numskincolors;
-
-				if (players[secondplaya].mo)
-					players[secondplaya].mo->color = players[secondplaya].skincolor;
-			}*/
 		}
 		else
 		{
