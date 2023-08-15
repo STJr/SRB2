@@ -225,6 +225,7 @@ consvar_t cv_seenames = CVAR_INIT ("seenames", "Ally/Foe", CV_SAVE|CV_ALLOWLUA, 
 consvar_t cv_allowseenames = CVAR_INIT ("allowseenames", "Yes", CV_SAVE|CV_NETVAR|CV_ALLOWLUA, CV_YesNo, NULL);
 
 // names
+static char *lastskinnames[2];
 consvar_t cv_playername = CVAR_INIT ("name", "Sonic", CV_SAVE|CV_CALL|CV_NOINIT, NULL, Name_OnChange);
 consvar_t cv_playername2 = CVAR_INIT ("name2", "Tails", CV_SAVE|CV_CALL|CV_NOINIT, NULL, Name2_OnChange);
 // player colors
@@ -1203,22 +1204,10 @@ UINT8 CanChangeSkin(INT32 playernum)
 
 static void ForceAllSkins(INT32 forcedskin)
 {
-	INT32 i;
-	for (i = 0; i < MAXPLAYERS; ++i)
+	for (INT32 i = 0; i < MAXPLAYERS; ++i)
 	{
-		if (!playeringame[i])
-			continue;
-
-		SetPlayerSkinByNum(i, forcedskin);
-
-		// If it's me (or my brother), set appropriate skin value in cv_skin/cv_skin2
-		if (!dedicated) // But don't do this for dedicated servers, of course.
-		{
-			if (i == consoleplayer)
-				CV_StealthSet(&cv_skin, skins[forcedskin].name);
-			else if (i == secondarydisplayplayer)
-				CV_StealthSet(&cv_skin2, skins[forcedskin].name);
-		}
+		if (playeringame[i])
+			SetPlayerSkinByNum(i, forcedskin);
 	}
 }
 
@@ -1311,10 +1300,6 @@ static void SendNameAndColor(void)
 	else // Cleanup name if changing it
 		CleanupPlayerName(consoleplayer, cv_playername.zstring);
 
-	// Don't change skin if the server doesn't want you to.
-	if (!CanChangeSkin(consoleplayer))
-		CV_StealthSet(&cv_skin, skins[players[consoleplayer].skin].name);
-
 	// check if player has the skin loaded (cv_skin may have
 	// the name of a skin that was available in the previous game)
 	cv_skin.value = R_SkinAvailable(cv_skin.string);
@@ -1382,10 +1367,7 @@ static void SendNameAndColor2(void)
 		SetColorLocal(secondplaya, cv_playercolor2.value);
 
 		if (cv_forceskin.value >= 0)
-		{
 			SetSkinLocal(secondplaya, cv_forceskin.value);
-			CV_StealthSet(&cv_skin2, skins[cv_forceskin.value].name);
-		}
 		else
 			SetSkinLocal(secondplaya, R_SkinAvailable(cv_skin2.string));
 		return;
@@ -1480,16 +1462,9 @@ static void Got_NameAndColor(UINT8 **cp, INT32 playernum)
 	}
 
 	// set skin
-	if (cv_forceskin.value >= 0 && (netgame || multiplayer)) // Server wants everyone to use the same player
-	{
-		const INT32 forcedskin = cv_forceskin.value;
+	INT32 forcedskin = R_GetForcedSkin(playernum);
+	if (forcedskin != -1 && (netgame || multiplayer)) // Server wants everyone to use the same player (or the level is forcing one.)
 		SetPlayerSkinByNum(playernum, forcedskin);
-
-		if (playernum == consoleplayer)
-			CV_StealthSet(&cv_skin, skins[forcedskin].name);
-		else if (playernum == secondarydisplayplayer)
-			CV_StealthSet(&cv_skin2, skins[forcedskin].name);
-	}
 	else
 		SetPlayerSkinByNum(playernum, skin);
 }
@@ -4691,7 +4666,10 @@ static void ForceSkin_OnChange(void)
 		return;
 
 	if (cv_forceskin.value < 0)
+	{
 		CONS_Printf("The server has lifted the forced skin restrictions.\n");
+		D_SendPlayerConfig();
+	}
 	else
 	{
 		CONS_Printf("The server is restricting all players to skin \"%s\".\n",skins[cv_forceskin.value].name);
@@ -4709,7 +4687,6 @@ static void Name_OnChange(void)
 	}
 	else
 		SendNameAndColor();
-
 }
 
 static void Name2_OnChange(void)
@@ -4732,6 +4709,9 @@ static void Skin_OnChange(void)
 	if (!Playing())
 		return; // do whatever you want
 
+	if (lastskinnames[0] == NULL)
+		lastskinnames[0] = Z_StrDup(cv_skin.string);
+
 	if (!(multiplayer || netgame)) // In single player.
 	{
 		if (!(cv_debug || devparm)
@@ -4747,11 +4727,15 @@ static void Skin_OnChange(void)
 	}
 
 	if (CanChangeSkin(consoleplayer) && !P_PlayerMoving(consoleplayer))
+	{
 		SendNameAndColor();
+		Z_Free(lastskinnames[0]);
+		lastskinnames[0] = Z_StrDup(cv_skin.string);
+	}
 	else
 	{
 		CONS_Alert(CONS_NOTICE, M_GetText("You can't change your skin at the moment.\n"));
-		CV_StealthSet(&cv_skin, skins[players[consoleplayer].skin].name);
+		CV_StealthSet(&cv_skin, lastskinnames[0]);
 	}
 }
 
@@ -4765,12 +4749,19 @@ static void Skin2_OnChange(void)
 	if (!Playing() || !splitscreen)
 		return; // do whatever you want
 
+	if (lastskinnames[1] == NULL)
+		lastskinnames[1] = Z_StrDup(cv_skin2.string);
+
 	if (CanChangeSkin(secondarydisplayplayer) && !P_PlayerMoving(secondarydisplayplayer))
+	{
 		SendNameAndColor2();
+		Z_Free(lastskinnames[1]);
+		lastskinnames[1] = Z_StrDup(cv_skin.string);
+	}
 	else
 	{
 		CONS_Alert(CONS_NOTICE, M_GetText("You can't change your skin at the moment.\n"));
-		CV_StealthSet(&cv_skin2, skins[players[secondarydisplayplayer].skin].name);
+		CV_StealthSet(&cv_skin2, lastskinnames[1]);
 	}
 }
 

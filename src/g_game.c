@@ -5070,6 +5070,10 @@ void G_InitNew(UINT8 pultmode, const char *mapname, boolean resetplayer, boolean
 			CV_StealthSetValue(&cv_itemfinder, 0);
 	}
 
+	// Restore each player's skin if it was previously forced to be a specific one
+	// (Looks a bit silly, but it works.)
+	boolean reset_skin = netgame && mapheaderinfo[gamemap-1] && mapheaderinfo[gamemap-1]->forcecharacter[0] != '\0';
+
 	// internal game map
 	// well this check is useless because it is done before (d_netcmd.c::command_map_f)
 	// but in case of for demos....
@@ -5096,6 +5100,9 @@ void G_InitNew(UINT8 pultmode, const char *mapname, boolean resetplayer, boolean
 	ultimatemode = pultmode;
 	automapactive = false;
 	imcontinuing = false;
+
+	if (reset_skin)
+		D_SendPlayerConfig();
 
 	// fetch saved data if available
 	if (savedata.lives > 0)
