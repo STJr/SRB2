@@ -9228,7 +9228,7 @@ static void P_DragonbomberThink(mobj_t *mobj)
 		else
 		{
 			fixed_t vspeed = FixedMul(mobj->info->speed >> 3, mobj->scale);
-			fixed_t z = mobj->target->z + (mobj->height >> 1) + (mobj->flags & MFE_VERTICALFLIP ? -128*mobj->scale : 128*mobj->scale + mobj->target->height);
+			fixed_t z = mobj->target->z + (mobj->height >> 1) + (mobj->eflags & MFE_VERTICALFLIP ? -128*mobj->scale : (128*mobj->scale + mobj->target->height));
 			angle_t diff = R_PointToAngle2(mobj->x, mobj->y, mobj->target->x, mobj->target->y) - mobj->angle;
 			if (diff > ANGLE_180)
 				mobj->angle -= DRAGONTURNSPEED;

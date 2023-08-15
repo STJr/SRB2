@@ -2005,7 +2005,7 @@ mobj_t *P_SpawnGhostMobj(mobj_t *mobj)
 	ghost->standingslope = mobj->standingslope;
 
 	if (mobj->flags2 & MF2_OBJECTFLIP)
-		ghost->flags |= MF2_OBJECTFLIP;
+		ghost->flags2 |= MF2_OBJECTFLIP;
 
 	if (mobj->player && mobj->player->followmobj)
 	{
@@ -11507,7 +11507,7 @@ static void P_DoMetalJetFume(player_t *player, mobj_t *fume)
 	}
 
 	fume->movecount = dashmode; // keeps track of previous dashmode value so we know whether Metal is entering or leaving it
-	fume->eflags = (fume->flags2 & ~MF2_OBJECTFLIP) | (mo->flags2 & MF2_OBJECTFLIP); // Make sure to flip in reverse gravity!
+	fume->flags2 = (fume->flags2 & ~MF2_OBJECTFLIP) | (mo->flags2 & MF2_OBJECTFLIP); // Make sure to flip in reverse gravity!
 	fume->eflags = (fume->eflags & ~MFE_VERTICALFLIP) | (mo->eflags & MFE_VERTICALFLIP); // Make sure to flip in reverse gravity!
 
 	// Finally, set its position
