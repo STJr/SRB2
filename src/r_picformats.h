@@ -42,8 +42,9 @@ typedef enum
 
 typedef enum
 {
-	PICFLAGS_XFLIP = 1,
-	PICFLAGS_YFLIP = 1<<1
+	PICFLAGS_XFLIP                = 1,
+	PICFLAGS_YFLIP                = 1<<1,
+	PICFLAGS_USE_TRANSPARENTPIXEL = 1<<2
 } pictureflags_t;
 
 enum
@@ -62,13 +63,13 @@ void *Picture_Convert(
 
 void *Picture_PatchConvert(
 	pictureformat_t informat, void *picture, pictureformat_t outformat,
-	size_t insize, size_t *outsize,
-	INT16 inwidth, INT16 inheight, INT16 inleftoffset, INT16 intopoffset,
+	size_t *outsize,
+	INT32 inwidth, INT32 inheight, INT32 inleftoffset, INT32 intopoffset,
 	pictureflags_t flags);
 void *Picture_FlatConvert(
 	pictureformat_t informat, void *picture, pictureformat_t outformat,
-	size_t insize, size_t *outsize,
-	INT16 inwidth, INT16 inheight, INT16 inleftoffset, INT16 intopoffset,
+	size_t *outsize,
+	INT32 inwidth, INT32 inheight,
 	pictureflags_t flags);
 void *Picture_GetPatchPixel(
 	patch_t *patch, pictureformat_t informat,

@@ -24,13 +24,11 @@
 // Assumes a PU_PATCH zone memory tag and no user, but can always be set later
 //
 
-patch_t *Patch_Create(softwarepatch_t *source, size_t srcsize, void *dest)
+patch_t *Patch_Create(softwarepatch_t *source, void *dest)
 {
 	patch_t *patch = (dest == NULL) ? Z_Calloc(sizeof(patch_t), PU_PATCH, NULL) : (patch_t *)(dest);
 	if (!source)
 		return patch;
-
-	(void)srcsize;
 
 	patch->width      = SHORT(source->width);
 	patch->height     = SHORT(source->height);

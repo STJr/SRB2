@@ -367,6 +367,7 @@ UINT8 *R_GenerateTexture(size_t texnum)
 		lumpnum_t lumpnum = patch->lump;
 		UINT8 *pdata = W_CacheLumpNumPwad(wadnum, lumpnum, PU_CACHE);
 		patch_t *realpatch = NULL;
+		boolean free_patch = true;
 
 #ifndef NO_PNG_LUMPS
 		size_t lumplength = W_LumpLengthPwad(wadnum, lumpnum);
@@ -377,7 +378,16 @@ UINT8 *R_GenerateTexture(size_t texnum)
 		if (texture->type == TEXTURETYPE_FLAT)
 			realpatch = (patch_t *)Picture_Convert(PICFMT_FLAT, pdata, PICFMT_PATCH, 0, NULL, texture->width, texture->height, 0, 0, 0);
 		else
-			realpatch = (patch_t *)Picture_Convert(PICFMT_DOOMPATCH, pdata, PICFMT_PATCH, 0, NULL, 0, 0, 0, 0, 0);
+		{
+			// If this patch has already been loaded, we just use it from the cache.
+			realpatch = W_GetCachedPatchNumPwad(wadnum, lumpnum);
+
+			// Otherwise, we convert it here.
+			if (realpatch == NULL)
+				realpatch = Patch_Create((softwarepatch_t *)pdata, NULL);
+			else
+				free_patch = false;
+		}
 
 		x1 = patch->originx;
 		width = realpatch->width;
@@ -386,13 +396,15 @@ UINT8 *R_GenerateTexture(size_t texnum)
 
 		if (x1 > texture->width || x2 < 0)
 		{
-			Patch_Free(realpatch);
+			if (free_patch)
+				Patch_Free(realpatch);
 			continue; // patch not located within texture's x bounds, ignore
 		}
 
 		if (patch->originy > texture->height || (patch->originy + height) < 0)
 		{
-			Patch_Free(realpatch);
+			if (free_patch)
+				Patch_Free(realpatch);
 			continue; // patch not located within texture's y bounds, ignore
 		}
 
@@ -417,10 +429,12 @@ UINT8 *R_GenerateTexture(size_t texnum)
 			else
 				patchcol = &realpatch->columns[x-x1];
 
-			columnDrawer(patchcol, columns[x].pixels, patch, texture->height, height);
+			if (patchcol->num_posts > 0)
+				columnDrawer(patchcol, columns[x].pixels, patch, texture->height, height);
 		}
 
-		Patch_Free(realpatch);
+		if (free_patch)
+			Patch_Free(realpatch);
 	}
 
 done:

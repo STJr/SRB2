@@ -210,15 +210,15 @@ void *W_CacheLumpNumForce(lumpnum_t lumpnum, INT32 tag);
 
 boolean W_IsLumpCached(lumpnum_t lump, void *ptr);
 boolean W_IsPatchCached(lumpnum_t lump, void *ptr);
+boolean W_IsPatchCachedPwad(UINT16 wad, UINT16 lump, void *ptr);
 
 void *W_CacheLumpName(const char *name, INT32 tag);
 void *W_CachePatchName(const char *name, INT32 tag);
 void *W_CachePatchLongName(const char *name, INT32 tag);
 
-// Returns either a Software patch, or an OpenGL patch.
-// Performs any necessary conversions from PNG images.
 void *W_CachePatchNumPwad(UINT16 wad, UINT16 lump, INT32 tag);
 void *W_CachePatchNum(lumpnum_t lumpnum, INT32 tag);
+void *W_GetCachedPatchNumPwad(UINT16 wad, UINT16 lump);
 
 // Returns a Software patch.
 // Performs any necessary conversions from PNG images.

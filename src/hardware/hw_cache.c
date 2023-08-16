@@ -477,6 +477,7 @@ static void HWR_GenerateTexture(INT32 texnum, GLMapTexture_t *grtex)
 	{
 		UINT8 *pdata = W_CacheLumpNumPwad(patch->wad, patch->lump, PU_CACHE);
 		patch_t *realpatch = NULL;
+		boolean free_patch = true;
 
 #ifndef NO_PNG_LUMPS
 		size_t lumplength = W_LumpLengthPwad(patch->wad, patch->lump);
@@ -487,11 +488,21 @@ static void HWR_GenerateTexture(INT32 texnum, GLMapTexture_t *grtex)
 		if (texture->type == TEXTURETYPE_FLAT)
 			realpatch = (patch_t *)Picture_Convert(PICFMT_FLAT, pdata, PICFMT_PATCH, 0, NULL, texture->width, texture->height, 0, 0, 0);
 		else
-			realpatch = (patch_t *)Picture_Convert(PICFMT_DOOMPATCH, pdata, PICFMT_PATCH, 0, NULL, 0, 0, 0, 0, 0);
+		{
+			// If this patch has already been loaded, we just use it from the cache.
+			realpatch = W_GetCachedPatchNumPwad(patch->wad, patch->lump);
+
+			// Otherwise, we convert it here.
+			if (realpatch == NULL)
+				realpatch = Patch_Create((softwarepatch_t *)pdata, NULL);
+			else
+				free_patch = false;
+		}
 
 		HWR_DrawTexturePatchInCache(&grtex->mipmap, blockwidth, blockheight, texture, patch, realpatch);
 
-		Patch_Free(realpatch);
+		if (free_patch)
+			Patch_Free(realpatch);
 	}
 	//Hurdler: not efficient at all but I don't remember exactly how HWR_DrawPatchInCache works :(
 	if (format2bpp(grtex->mipmap.format)==4)
@@ -1096,7 +1107,7 @@ patch_t *HWR_GetCachedGLPatchPwad(UINT16 wadnum, UINT16 lumpnum)
 	if (!lumpcache[lumpnum])
 	{
 		void *ptr = Z_Calloc(sizeof(patch_t), PU_PATCH, &lumpcache[lumpnum]);
-		Patch_Create(NULL, 0, ptr);
+		Patch_Create(NULL, ptr);
 		Patch_AllocateHardwarePatch(ptr);
 	}
 	return (patch_t *)(lumpcache[lumpnum]);

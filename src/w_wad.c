@@ -1987,8 +1987,7 @@ boolean W_IsLumpCached(lumpnum_t lumpnum, void *ptr)
 // If a patch is already cached return true, otherwise
 // return false.
 //
-// no outside code uses the PWAD form, for now
-static boolean W_IsPatchCachedPWAD(UINT16 wad, UINT16 lump, void *ptr)
+boolean W_IsPatchCachedPwad(UINT16 wad, UINT16 lump, void *ptr)
 {
 	void *lcache;
 
@@ -2010,7 +2009,7 @@ static boolean W_IsPatchCachedPWAD(UINT16 wad, UINT16 lump, void *ptr)
 
 boolean W_IsPatchCached(lumpnum_t lumpnum, void *ptr)
 {
-	return W_IsPatchCachedPWAD(WADFILENUM(lumpnum),LUMPNUM(lumpnum), ptr);
+	return W_IsPatchCachedPwad(WADFILENUM(lumpnum),LUMPNUM(lumpnum), ptr);
 }
 
 // ==========================================================================
@@ -2065,7 +2064,7 @@ void *W_CacheSoftwarePatchNumPwad(UINT16 wad, UINT16 lump, INT32 tag)
 #endif
 
 		dest = Z_Calloc(sizeof(patch_t), tag, &lumpcache[lump]);
-		Patch_Create(ptr, len, dest);
+		Patch_Create(ptr, dest);
 		Z_Free(ptr);
 	}
 	else
@@ -2103,6 +2102,14 @@ void *W_CachePatchNumPwad(UINT16 wad, UINT16 lump, INT32 tag)
 void *W_CachePatchNum(lumpnum_t lumpnum, INT32 tag)
 {
 	return W_CachePatchNumPwad(WADFILENUM(lumpnum),LUMPNUM(lumpnum),tag);
+}
+
+void *W_GetCachedPatchNumPwad(UINT16 wad, UINT16 lump)
+{
+	if (!TestValidLump(wad, lump))
+		return NULL;
+
+	return wadfiles[wad]->patchcache[lump];
 }
 
 void W_UnlockCachedPatch(void *patch)

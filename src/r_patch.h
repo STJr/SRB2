@@ -18,7 +18,7 @@
 #include "doomdef.h"
 
 // Patch functions
-patch_t *Patch_Create(softwarepatch_t *source, size_t srcsize, void *dest);
+patch_t *Patch_Create(softwarepatch_t *source, void *dest);
 void Patch_CalcDataSizes(softwarepatch_t *source, size_t *total_pixels, size_t *total_posts);
 void Patch_MakeColumns(softwarepatch_t *source, size_t num_columns, UINT8 *pixels, column_t *columns, post_t *posts, boolean flip);
 void Patch_Free(patch_t *patch);

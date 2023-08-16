@@ -377,7 +377,7 @@ static void md2_loadTexture(md2_t *model)
 			Z_Free(grPatch->mipmap->data);
 	}
 	else
-		model->grpatch = patch = Patch_Create(NULL, 0, NULL);
+		model->grpatch = patch = Patch_Create(NULL, NULL);
 
 	if (!patch->hardware)
 		Patch_AllocateHardwarePatch(patch);
@@ -442,7 +442,7 @@ static void md2_loadBlendTexture(md2_t *model)
 			Z_Free(grPatch->mipmap->data);
 	}
 	else
-		model->blendgrpatch = patch = Patch_Create(NULL, 0, NULL);
+		model->blendgrpatch = patch = Patch_Create(NULL, NULL);
 
 	if (!patch->hardware)
 		Patch_AllocateHardwarePatch(patch);
