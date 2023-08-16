@@ -475,12 +475,14 @@ static void HWR_GenerateTexture(INT32 texnum, GLMapTexture_t *grtex)
 	// Composite the columns together.
 	for (i = 0, patch = texture->patches; i < texture->patchcount; i++, patch++)
 	{
-		UINT8 *pdata = W_CacheLumpNumPwad(patch->wad, patch->lump, PU_CACHE);
+		UINT16 wadnum = patch->wad;
+		lumpnum_t lumpnum = patch->lump;
+		UINT8 *pdata = W_CacheLumpNumPwad(wadnum, lumpnum, PU_CACHE);
 		patch_t *realpatch = NULL;
 		boolean free_patch = true;
 
 #ifndef NO_PNG_LUMPS
-		size_t lumplength = W_LumpLengthPwad(patch->wad, patch->lump);
+		size_t lumplength = W_LumpLengthPwad(wadnum, lumpnum);
 		if (Picture_IsLumpPNG(pdata, lumplength))
 			realpatch = (patch_t *)Picture_PNGConvert(pdata, PICFMT_PATCH, NULL, NULL, NULL, NULL, lumplength, NULL, 0);
 		else
@@ -490,13 +492,12 @@ static void HWR_GenerateTexture(INT32 texnum, GLMapTexture_t *grtex)
 		else
 		{
 			// If this patch has already been loaded, we just use it from the cache.
-			realpatch = W_GetCachedPatchNumPwad(patch->wad, patch->lump);
+			realpatch = W_GetCachedPatchNumPwad(wadnum, lumpnum);
+			free_patch = false;
 
-			// Otherwise, we convert it here.
+			// Otherwise, we load it here.
 			if (realpatch == NULL)
-				realpatch = Patch_Create((softwarepatch_t *)pdata, NULL);
-			else
-				free_patch = false;
+				realpatch = W_CachePatchNumPwad(wadnum, lumpnum, PU_PATCH);
 		}
 
 		HWR_DrawTexturePatchInCache(&grtex->mipmap, blockwidth, blockheight, texture, patch, realpatch);

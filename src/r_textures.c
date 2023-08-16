@@ -381,12 +381,11 @@ UINT8 *R_GenerateTexture(size_t texnum)
 		{
 			// If this patch has already been loaded, we just use it from the cache.
 			realpatch = W_GetCachedPatchNumPwad(wadnum, lumpnum);
+			free_patch = false;
 
-			// Otherwise, we convert it here.
+			// Otherwise, we load it here.
 			if (realpatch == NULL)
-				realpatch = Patch_Create((softwarepatch_t *)pdata, NULL);
-			else
-				free_patch = false;
+				realpatch = W_CachePatchNumPwad(wadnum, lumpnum, PU_PATCH);
 		}
 
 		x1 = patch->originx;
