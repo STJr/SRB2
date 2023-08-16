@@ -8,7 +8,7 @@ UINT8 graphics_started = 0;
 
 UINT8 keyboard_started = 0;
 
-UINT32 I_GetFreeMem(UINT32 *total)
+size_t I_GetFreeMem(size_t *total)
 {
 	*total = 0;
 	return 0;
@@ -178,6 +178,11 @@ INT32 I_ClipboardCopy(const char *data, size_t size)
 const char *I_ClipboardPaste(void)
 {
 	return NULL;
+}
+
+size_t I_GetRandomBytes(char *destination, size_t amount)
+{
+	return 0;
 }
 
 void I_RegisterSysCommands(void) {}

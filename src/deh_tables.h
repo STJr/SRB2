@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2022 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -30,6 +30,7 @@ extern UINT8 used_spr[(NUMSPRITEFREESLOTS / 8) + 1]; // Bitwise flag for sprite 
 	memset(FREE_MOBJS,0,sizeof(char *) * NUMMOBJFREESLOTS);\
 	memset(FREE_SKINCOLORS,0,sizeof(char *) * NUMCOLORFREESLOTS);\
 	memset(used_spr,0,sizeof(UINT8) * ((NUMSPRITEFREESLOTS / 8) + 1));\
+	memset(actionsoverridden, LUA_REFNIL, sizeof(actionsoverridden));\
 }
 
 struct flickytypes_s {

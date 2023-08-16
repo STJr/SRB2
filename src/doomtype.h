@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2022 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -16,6 +16,10 @@
 
 #ifndef __DOOMTYPE__
 #define __DOOMTYPE__
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #ifdef _WIN32
 //#define WIN32_LEAN_AND_MEAN
@@ -78,7 +82,9 @@ typedef long ssize_t;
 #endif
 	#define strncasecmp             strnicmp
 	#define strcasecmp              stricmp
+#ifndef __cplusplus
 	#define inline                  __inline
+#endif
 #elif defined (__WATCOMC__)
 	#include <dos.h>
 	#include <sys\types.h>
@@ -94,26 +100,14 @@ typedef long ssize_t;
 	#define strnicmp(x,y,n) strncasecmp(x,y,n)
 #endif
 
-char *strcasestr(const char *in, const char *what);
+char *nongnu_strcasestr(const char *in, const char *what);
+#ifndef _GNU_SOURCE
+#define strcasestr nongnu_strcasestr
+#endif
 #define stristr strcasestr
 
-#if defined (macintosh) //|| defined (__APPLE__) //skip all boolean/Boolean crap
-	#define true 1
-	#define false 0
-	#define min(x,y) (((x)<(y)) ? (x) : (y))
-	#define max(x,y) (((x)>(y)) ? (x) : (y))
-
-#ifdef macintosh
-	#define stricmp strcmp
-	#define strnicmp strncmp
-#endif
-
-	#define boolean INT32
-
-	#ifndef O_BINARY
-	#define O_BINARY 0
-	#endif
-#endif //macintosh
+int startswith (const char *base, const char *tag);
+int endswith (const char *base, const char *tag);
 
 #if defined (_WIN32) || defined (__HAIKU__)
 #define HAVE_DOSSTR_FUNCS
@@ -141,22 +135,24 @@ size_t strlcpy(char *dst, const char *src, size_t siz);
 
 /* Boolean type definition */
 
-// \note __BYTEBOOL__ used to be set above if "macintosh" was defined,
-// if macintosh's version of boolean type isn't needed anymore, then isn't this macro pointless now?
-#ifndef __BYTEBOOL__
-	#define __BYTEBOOL__
+// Note: C++ bool and C99/C11 _Bool are NOT compatible.
+// Historically, boolean was win32 BOOL on Windows. For equivalence, it's now
+// int32_t. "true" and "false" are only declared for C code; in C++, conversion
+// between "bool" and "int32_t" takes over.
+#ifndef _WIN32
+typedef int32_t boolean;
+#else
+#define boolean BOOL
+#endif
 
-	//faB: clean that up !!
-	#if defined( _MSC_VER)  && (_MSC_VER >= 1800) // MSVC 2013 and forward
-		#include "stdbool.h"
-	#elif defined (_WIN32)
-		#define false   FALSE           // use windows types
-		#define true    TRUE
-		#define boolean BOOL
-	#else
-		typedef enum {false, true} boolean;
-	#endif
-#endif // __BYTEBOOL__
+#ifndef __cplusplus
+#ifndef _WIN32
+enum {false = 0, true = 1};
+#else
+#define false FALSE
+#define true TRUE
+#endif
+#endif
 
 /* 7.18.2.1  Limits of exact-width integer types */
 
@@ -383,5 +379,9 @@ unset_bit_array (bitarray_t * const array, const int value)
 }
 
 typedef UINT64 precise_t;
+
+#ifdef __cplusplus
+} // extern "C"
+#endif
 
 #endif //__DOOMTYPE__

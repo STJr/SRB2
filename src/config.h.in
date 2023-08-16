@@ -11,8 +11,18 @@
 
 #ifdef CMAKECONFIG
 
-#define SRB2_COMP_REVISION    "${SRB2_COMP_REVISION}"
-#define SRB2_COMP_BRANCH      "${SRB2_COMP_BRANCH}"
+#define SRB2_COMP_REVISION       "${SRB2_COMP_REVISION}"
+#define SRB2_COMP_BRANCH         "${SRB2_COMP_BRANCH}"
+#define SRB2_COMP_NOTE           "${SRB2_COMP_NOTE}"
+// This is done with configure_file instead of defines in order to avoid
+// recompiling the whole target whenever the working directory state changes
+#cmakedefine SRB2_COMP_UNCOMMITTED
+#ifdef SRB2_COMP_UNCOMMITTED
+#define COMPVERSION_UNCOMMITTED
+#endif
+
+#define CMAKE_BUILD_TYPE         "${CMAKE_BUILD_TYPE}"
+#cmakedefine01 SRB2_COMP_OPTIMIZED
 
 #endif
 
@@ -27,12 +37,13 @@
  * Last updated 2020 / 10 / 02 - v2.2.8 - patch.pk3
  * Last updated 2021 / 05 / 06 - v2.2.9 - patch.pk3 & zones.pk3
  * Last updated 2022 / 03 / 06 - v2.2.10 - main assets
+ * Last updated 2023 / 05 / 02 - v2.2.11 - patch.pk3 & zones.pk3
  */
 #define ASSET_HASH_SRB2_PK3   "ad911f29a28a18968ee5b2d11c2acb39"
-#define ASSET_HASH_ZONES_PK3  "86ae55cae4e0a93ceda868635706a093"
+#define ASSET_HASH_ZONES_PK3  "1c8adf8d079ecb87d00081f158acf3c7"
 #define ASSET_HASH_PLAYER_DTA "2e7aaae8a6b1b77d90ffe7606ceadb6c"
 #ifdef USE_PATCH_DTA
-#define ASSET_HASH_PATCH_PK3  "7d467a883f7887b3c311798ee2f56b6a"
+#define ASSET_HASH_PATCH_PK3  "2e69558bce3b9610624549a75e29e19b"
 #endif
 
 #endif

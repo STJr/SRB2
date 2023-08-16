@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2022 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -11,6 +11,7 @@
 /// \brief Floor splats
 
 #include "r_draw.h"
+#include "r_fps.h"
 #include "r_main.h"
 #include "r_splats.h"
 #include "r_bsp.h"
@@ -30,20 +31,8 @@ static void prepare_rastertab(void);
 
 static void R_RasterizeFloorSplat(floorsplat_t *pSplat, vector2_t *verts, vissprite_t *vis);
 
-#ifdef USEASM
-void ASMCALL rasterize_segment_tex_asm(INT32 x1, INT32 y1, INT32 x2, INT32 y2, INT32 tv1, INT32 tv2, INT32 tc, INT32 dir);
-#endif
-
 static void rasterize_segment_tex(INT32 x1, INT32 y1, INT32 x2, INT32 y2, INT32 tv1, INT32 tv2, INT32 tc, INT32 dir)
 {
-#ifdef USEASM
-	if (R_ASM)
-	{
-		rasterize_segment_tex_asm(x1, y1, x2, y2, tv1, tv2, tc, dir);
-		return;
-	}
-	else
-#endif
 	{
 		fixed_t xs, xe, count;
 		fixed_t dx0, dx1;
@@ -185,12 +174,12 @@ void R_DrawFloorSplat(vissprite_t *spr)
 		splat.scale = FixedMul(splat.scale, ((skin_t *)mobj->skin)->highresscale);
 
 	if (spr->rotateflags & SRF_3D || renderflags & RF_NOSPLATBILLBOARD)
-		splatangle = spr->centerangle;
+		splatangle = mobj->angle;
 	else
 		splatangle = spr->viewpoint.angle;
 
 	if (!(spr->cut & SC_ISROTATED))
-		splatangle += mobj->rollangle;
+		splatangle += mobj->spriteroll;
 
 	splat.angle = -splatangle;
 	splat.angle += ANGLE_90;
@@ -209,8 +198,8 @@ void R_DrawFloorSplat(vissprite_t *spr)
 	xoffset = FixedMul(leftoffset, splat.xscale);
 	yoffset = FixedMul(topoffset, splat.yscale);
 
-	x = spr->gx;
-	y = spr->gy;
+	x = mobj->x;
+	y = mobj->y;
 	w = (splat.width * splat.xscale);
 	h = (splat.height * splat.yscale);
 
@@ -263,8 +252,8 @@ void R_DrawFloorSplat(vissprite_t *spr)
 	// Translate
 	for (i = 0; i < 4; i++)
 	{
-		tr_x = rotated[i].x + x;
-		tr_y = rotated[i].y + y;
+		tr_x = rotated[i].x + mobj->x;
+		tr_y = rotated[i].y + mobj->y;
 
 		if (splat.slope)
 		{
@@ -292,8 +281,8 @@ void R_DrawFloorSplat(vissprite_t *spr)
 		tr_y = v3d->y - spr->viewpoint.y;
 
 		// rotation around vertical y axis
-		rot_x = FixedMul(tr_x, sa) - FixedMul(tr_y, ca);
-		rot_y = FixedMul(tr_x, ca) + FixedMul(tr_y, sa);
+		rot_x = FixedMul(tr_x - (mobj->x - x), sa) - FixedMul(tr_y - (mobj->y - y), ca);
+		rot_y = FixedMul(tr_x - (mobj->x - x), ca) + FixedMul(tr_y - (mobj->y - y), sa);
 		rot_z = v3d->z - spr->viewpoint.z;
 
 		if (rot_y < FRACUNIT)
