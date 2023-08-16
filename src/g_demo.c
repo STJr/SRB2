@@ -1617,7 +1617,7 @@ void G_BeginMetal(void)
 	oldmetal.angle = mo->angle>>24;
 }
 
-static void G_LoadDemoExtraFiles(UINT8 **pp)
+static void G_LoadDemoExtraFiles(UINT8 **pp, UINT16 this_demo_version)
 {
 	UINT16 totalfiles;
 	char filename[MAX_WADPATH];
@@ -1626,6 +1626,12 @@ static void G_LoadDemoExtraFiles(UINT8 **pp)
 	boolean toomany = false;
 	boolean alreadyloaded;
 	UINT16 i, j;
+
+	if (this_demo_version < 0x0010)
+	{
+		// demo has no file list
+		return;
+	}
 
 	totalfiles = READUINT16((*pp));
 	for (i = 0; i < totalfiles; ++i)
@@ -1686,12 +1692,12 @@ static void G_LoadDemoExtraFiles(UINT8 **pp)
 	}
 }
 
-static void G_SkipDemoExtraFiles(UINT8 **pp)
+static void G_SkipDemoExtraFiles(UINT8 **pp, UINT16 this_demo_version)
 {
 	UINT16 totalfiles;
 	UINT16 i;
 
-	if (demoversion < 0x0010)
+	if (this_demo_version < 0x0010)
 	{
 		// demo has no file list
 		return;
@@ -1707,7 +1713,7 @@ static void G_SkipDemoExtraFiles(UINT8 **pp)
 
 // G_CheckDemoExtraFiles: checks if our loaded WAD list matches the demo's.
 // Enabling quick prevents filesystem checks to see if needed files are available to load.
-static UINT8 G_CheckDemoExtraFiles(UINT8 **pp, boolean quick)
+static UINT8 G_CheckDemoExtraFiles(UINT8 **pp, boolean quick, UINT16 this_demo_version)
 {
 	UINT16 totalfiles, filesloaded, nmusfilecount;
 	char filename[MAX_WADPATH];
@@ -1717,7 +1723,7 @@ static UINT8 G_CheckDemoExtraFiles(UINT8 **pp, boolean quick)
 	UINT16 i, j;
 	UINT8 error = DFILE_ERROR_NONE;
 
-	if (demoversion < 0x0010)
+	if (this_demo_version < 0x0010)
 	{
 		// demo has no file list
 		return DFILE_ERROR_NONE;
@@ -1816,10 +1822,9 @@ UINT8 G_CmpDemoTime(char *oldname, char *newname)
 	UINT8 *buffer,*p;
 	UINT8 flags;
 	UINT32 oldtime, newtime, oldscore, newscore;
-	UINT16 oldrings, newrings, oldversion;
+	UINT16 oldrings, newrings, oldversion, newversion;
 	size_t bufsize ATTRUNUSED;
 	UINT8 c;
-	UINT16 s ATTRUNUSED;
 	UINT8 aflags = 0;
 
 	// load the new file
@@ -1835,15 +1840,15 @@ UINT8 G_CmpDemoTime(char *oldname, char *newname)
 	I_Assert(c == VERSION);
 	c = READUINT8(p); // SUBVERSION
 	I_Assert(c == SUBVERSION);
-	s = READUINT16(p);
-	I_Assert(s >= 0x000c);
+	newversion = READUINT16(p);
+	I_Assert(newversion == DEMOVERSION);
 	p += 16; // demo checksum
 	I_Assert(!memcmp(p, "PLAY", 4));
 	p += 4; // PLAY
 	p += 2; // gamemap
 	p += 16; // map md5
 	flags = READUINT8(p); // demoflags
-	G_SkipDemoExtraFiles(&p);
+	G_SkipDemoExtraFiles(&p, newversion);
 	aflags = flags & (DF_RECORDATTACK|DF_NIGHTSATTACK);
 	I_Assert(aflags);
 	if (flags & DF_RECORDATTACK)
@@ -1909,7 +1914,7 @@ UINT8 G_CmpDemoTime(char *oldname, char *newname)
 		p += 2; // gamemap
 	p += 16; // mapmd5
 	flags = READUINT8(p);
-	G_SkipDemoExtraFiles(&p);
+	G_SkipDemoExtraFiles(&p, oldversion);
 	if (!(flags & aflags))
 	{
 		CONS_Alert(CONS_NOTICE, M_GetText("File '%s' not from same game mode. It will be overwritten.\n"), oldname);
@@ -2074,26 +2079,22 @@ void G_DoPlayDemo(char *defdemoname)
 
 	demoflags = READUINT8(demo_p);
 
-	if (demoversion < 0x0010)
-	{
-		; // Don't do anything with files.
-	}
-	else if (titledemo)
+	if (titledemo)
 	{
 		// Titledemos should always play and ought to always be compatible with whatever wadlist is running.
-		G_SkipDemoExtraFiles(&demo_p);
+		G_SkipDemoExtraFiles(&demo_p, demoversion);
 	}
 	else if (demofileoverride == DFILE_OVERRIDE_LOAD)
 	{
-		G_LoadDemoExtraFiles(&demo_p);
+		G_LoadDemoExtraFiles(&demo_p, demoversion);
 	}
 	else if (demofileoverride == DFILE_OVERRIDE_SKIP)
 	{
-		G_SkipDemoExtraFiles(&demo_p);
+		G_SkipDemoExtraFiles(&demo_p, demoversion);
 	}
 	else
 	{
-		UINT8 error = G_CheckDemoExtraFiles(&demo_p, false);
+		UINT8 error = G_CheckDemoExtraFiles(&demo_p, false, demoversion);
 
 		if (error)
 		{
@@ -2302,6 +2303,13 @@ UINT8 G_CheckDemoForError(char *defdemoname)
 {
 	lumpnum_t l;
 	char *n,*pdemoname;
+	UINT16 our_demo_version;
+
+	if (titledemo)
+	{
+		// Don't do anything with files for these.
+		return DFILE_ERROR_NONE;
+	}
 
 	n = defdemoname+strlen(defdemoname);
 	while (*n != '/' && *n != '\\' && n != defdemoname)
@@ -2340,9 +2348,8 @@ UINT8 G_CheckDemoForError(char *defdemoname)
 
 	demo_p++; // version
 	demo_p++; // subversion
-	demoversion = READUINT16(demo_p);
-	demo_forwardmove_rng = (demoversion < 0x0010);
-	switch(demoversion)
+	our_demo_version = READUINT16(demo_p);
+	switch(our_demo_version)
 	{
 	case 0x000d:
 	case 0x000e:
@@ -2368,17 +2375,7 @@ UINT8 G_CheckDemoForError(char *defdemoname)
 
 	demo_p++; // demoflags
 
-	// Don't do anything with files.
-	if (demoversion < 0x0010)
-	{
-		return DFILE_ERROR_NONE;
-	}
-	else if (titledemo)
-	{
-		return DFILE_ERROR_NONE;
-	}
-
-	return G_CheckDemoExtraFiles(&demo_p, true);
+	return G_CheckDemoExtraFiles(&demo_p, true, our_demo_version);
 }
 
 void G_AddGhost(char *defdemoname)
@@ -2487,7 +2484,7 @@ void G_AddGhost(char *defdemoname)
 		return;
 	}
 
-	G_SkipDemoExtraFiles(&p); // Don't wanna modify the file list for ghosts.
+	G_SkipDemoExtraFiles(&p, ghostversion); // Don't wanna modify the file list for ghosts.
 
 	switch ((flags & DF_ATTACKMASK)>>DF_ATTACKSHIFT)
 	{

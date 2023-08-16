@@ -1487,7 +1487,6 @@ void LUA_SetHudHook(int hook, huddrawlist_h list)
 			break;
 
 		case HUD_HOOK(intermission):
-			lua_pushboolean(gL, intertype == int_spec &&
-					stagefailed);
+			lua_pushboolean(gL, stagefailed);
 	}
 }

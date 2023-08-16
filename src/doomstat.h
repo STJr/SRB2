@@ -249,6 +249,7 @@ extern textprompt_t *textprompts[MAX_PROMPTS];
 // For the Custom Exit linedef.
 extern INT16 nextmapoverride;
 extern UINT8 skipstats;
+extern INT16 nextgametype;
 
 extern UINT32 ssspheres; //  Total # of spheres in a level
 

@@ -156,6 +156,7 @@ textprompt_t *textprompts[MAX_PROMPTS];
 
 INT16 nextmapoverride;
 UINT8 skipstats;
+INT16 nextgametype = -1;
 
 // Pointers to each CTF flag
 mobj_t *redflag;
@@ -2137,7 +2138,7 @@ boolean G_Responder(event_t *ev)
 			if (! netgame)
 				F_StartGameEvaluation();
 			else if (server || IsPlayerAdmin(consoleplayer))
-				SendNetXCmd(XD_EXITLEVEL, NULL, 0);
+				D_SendExitLevel(false);
 			return true;
 		}
 	}
@@ -2523,7 +2524,6 @@ static inline void G_PlayerFinishLevel(INT32 player)
 
 	memset(p->powers, 0, sizeof (p->powers));
 	p->ringweapons = 0;
-	p->recordscore = 0;
 
 	p->mo->flags2 &= ~MF2_SHADOW; // cancel invisibility
 	P_FlashPal(p, 0, 0); // Resets
@@ -3462,9 +3462,7 @@ UINT32 gametypedefaultrules[NUMGAMETYPES] =
 };
 
 //
-// G_SetGametype
-//
-// Set a new gametype, also setting gametype rules accordingly. Yay!
+// Sets a new gametype.
 //
 void G_SetGametype(INT16 gtype)
 {
@@ -3862,7 +3860,7 @@ static INT16 RandMap(UINT32 tolflags, INT16 pprevmap)
 	for (ix = 0; ix < NUMMAPS; ix++)
 		if (mapheaderinfo[ix] && (mapheaderinfo[ix]->typeoflevel & tolflags) == tolflags
 		 && ix != pprevmap // Don't pick the same map.
-		 && (dedicated || !M_MapLocked(ix+1, serverGamedata)) // Don't pick locked maps.
+		 && (!M_MapLocked(ix+1, serverGamedata)) // Don't pick locked maps.
 		)
 			okmaps[numokmaps++] = ix;
 
@@ -4054,6 +4052,13 @@ static void G_DoCompleted(void)
 			nextmap = 1100-1; // No infinite loop for you
 	}
 
+	INT16 gametype_to_use;
+
+	if (nextgametype >= 0 && nextgametype < gametypecount)
+		gametype_to_use = nextgametype;
+	else
+		gametype_to_use = gametype;
+
 	// If nextmap is actually going to get used, make sure it points to
 	// a map of the proper gametype -- skip levels that don't support
 	// the current gametype. (Helps avoid playing boss levels in Race,
@@ -4062,8 +4067,8 @@ static void G_DoCompleted(void)
 	{
 		if (nextmap >= 0 && nextmap < NUMMAPS)
 		{
-			register INT16 cm = nextmap;
-			UINT32 tolflag = G_TOLFlag(gametype);
+			INT16 cm = nextmap;
+			UINT32 tolflag = G_TOLFlag(gametype_to_use);
 			UINT8 visitedmap[(NUMMAPS+7)/8];
 
 			memset(visitedmap, 0, sizeof (visitedmap));
@@ -4143,7 +4148,7 @@ static void G_DoCompleted(void)
 		if (cv_advancemap.value == 0) // Stay on same map.
 			nextmap = prevmap;
 		else if (cv_advancemap.value == 2) // Go to random map.
-			nextmap = RandMap(G_TOLFlag(gametype), prevmap);
+			nextmap = RandMap(G_TOLFlag(gametype_to_use), prevmap);
 	}
 
 	// We are committed to this map now.
@@ -4152,7 +4157,6 @@ static void G_DoCompleted(void)
 	if (nextmap < NUMMAPS && !mapheaderinfo[nextmap])
 		P_AllocMapHeader(nextmap);
 
-	// If the current gametype has no intermission screen set, then don't start it.
 	Y_DetermineIntermissionType();
 
 	if ((skipstats && !modeattacking) || (modeattacking && stagefailed) || (intertype == int_none))
@@ -4218,12 +4222,21 @@ static void G_DoWorldDone(void)
 {
 	if (server)
 	{
+		INT16 gametype_to_use;
+
+		if (nextgametype >= 0 && nextgametype < gametypecount)
+			gametype_to_use = nextgametype;
+		else
+			gametype_to_use = gametype;
+
 		if (gametyperules & GTR_CAMPAIGN)
 			// don't reset player between maps
-			D_MapChange(nextmap+1, gametype, ultimatemode, false, 0, false, false);
+			D_MapChange(nextmap+1, gametype_to_use, ultimatemode, false, 0, false, false);
 		else
 			// resetplayer in match/chaos/tag/CTF/race for more equality
-			D_MapChange(nextmap+1, gametype, ultimatemode, true, 0, false, false);
+			D_MapChange(nextmap+1, gametype_to_use, ultimatemode, true, 0, false, false);
+
+		nextgametype = -1;
 	}
 
 	gameaction = ga_nothing;
@@ -4266,7 +4279,7 @@ static void G_DoContinued(void)
 {
 	player_t *pl = &players[consoleplayer];
 	I_Assert(!netgame && !multiplayer);
-	I_Assert(pl->continues > 0);
+	//I_Assert(pl->continues > 0);
 
 	if (pl->continues)
 		pl->continues--;
@@ -5048,6 +5061,12 @@ void G_InitNew(UINT8 pultmode, const char *mapname, boolean resetplayer, boolean
 		numgameovers = tokenlist = token = sstimer = redscore = bluescore = lastmap = 0;
 		countdown = countdown2 = exitfadestarted = 0;
 
+		if (!FLS)
+		{
+			emeralds = 0;
+			memset(&luabanks, 0, sizeof(luabanks));
+		}
+
 		for (i = 0; i < MAXPLAYERS; i++)
 		{
 			players[i].playerstate = PST_REBORN;
@@ -5055,6 +5074,7 @@ void G_InitNew(UINT8 pultmode, const char *mapname, boolean resetplayer, boolean
 			players[i].starpostx = players[i].starposty = players[i].starpostz = 0;
 			players[i].recordscore = 0;
 
+			// default lives, continues and score
 			if (netgame || multiplayer)
 			{
 				if (!FLS || (players[i].lives < 1))
@@ -5113,6 +5133,19 @@ void G_InitNew(UINT8 pultmode, const char *mapname, boolean resetplayer, boolean
 	ultimatemode = pultmode;
 	automapactive = false;
 	imcontinuing = false;
+
+	// fetch saved data if available
+	if (savedata.lives > 0)
+	{
+		numgameovers = savedata.numgameovers;
+		players[consoleplayer].continues = savedata.continues;
+		players[consoleplayer].lives = savedata.lives;
+		players[consoleplayer].score = savedata.score;
+		if ((botingame = ((botskin = savedata.botskin) != 0)))
+			botcolor = skins[botskin-1].prefcolor;
+		emeralds = savedata.emeralds;
+		savedata.lives = 0;
+	}
 
 	if ((gametyperules & GTR_CUTSCENES) && !skipprecutscene && mapheaderinfo[gamemap-1]->precutscenenum && !modeattacking && !(marathonmode & MA_NOCUTSCENES)) // Start a custom cutscene.
 		F_StartCustomCutscene(mapheaderinfo[gamemap-1]->precutscenenum-1, true, resetplayer, FLS);
