@@ -5378,7 +5378,10 @@ static void HWR_ProjectSprite(mobj_t *thing)
 
 		if (vflip)
 		{
-			gz = FIXED_TO_FLOAT(interp.z + thing->height) - (FIXED_TO_FLOAT(spr_topoffset) * this_yscale);
+			if (thing->scale != thing->old_scale) // Interpolate heights in reverse gravity when scaling mobjs
+				gz = FIXED_TO_FLOAT(interp.z + FixedMul(thing->height, FixedDiv(interp.scale, thing->scale))) - (FIXED_TO_FLOAT(spr_topoffset) * this_yscale);
+			else
+				gz = FIXED_TO_FLOAT(interp.z + thing->height) - (FIXED_TO_FLOAT(spr_topoffset) * this_yscale);
 			gzt = gz + (FIXED_TO_FLOAT(spr_height) * this_yscale);
 		}
 		else

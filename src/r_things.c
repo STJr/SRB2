@@ -2114,7 +2114,11 @@ static void R_ProjectSprite(mobj_t *thing)
 			// When vertical flipped, draw sprites from the top down, at least as far as offsets are concerned.
 			// sprite height - sprite topoffset is the proper inverse of the vertical offset, of course.
 			// remember gz and gzt should be seperated by sprite height, not thing height - thing height can be shorter than the sprite itself sometimes!
-			gz = interp.z + oldthing->height - FixedMul(spr_topoffset, FixedMul(spriteyscale, this_scale));
+
+			if (oldthing->scale != oldthing->old_scale) // Interpolate heights in reverse gravity when scaling mobjs
+				gz = interp.z + FixedMul(oldthing->height, FixedDiv(interp.scale, oldthing->scale)) - FixedMul(spr_topoffset, FixedMul(spriteyscale, this_scale));
+			else
+				gz = interp.z + oldthing->height - FixedMul(spr_topoffset, FixedMul(spriteyscale, this_scale));
 			gzt = gz + FixedMul(spr_height, FixedMul(spriteyscale, this_scale));
 		}
 		else
