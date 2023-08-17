@@ -6565,10 +6565,10 @@ void P_SpawnSpecials(boolean fromnetsave)
 				//Cutting options
 				if (ffloorflags & FOF_RENDERALL)
 				{
-					//If inside is visible, cut inner walls
-					if ((lines[i].args[1] < 255) || (lines[i].args[3] & TMFA_SPLAT) || (lines[i].args[4] & TMFT_VISIBLEFROMINSIDE))
+					//If inside is visible from the outside, cut inner walls
+					if (lines[i].args[1] < 255 || (lines[i].args[3] & TMFA_SPLAT))
 						ffloorflags |= FOF_CUTEXTRA|FOF_EXTRA;
-					else
+					else if (!(lines[i].args[3] & TMFT_VISIBLEFROMINSIDE))
 						ffloorflags |= FOF_CUTLEVEL;
 				}
 
@@ -6624,20 +6624,19 @@ void P_SpawnSpecials(boolean fromnetsave)
 				if (lines[i].args[4] & TMFC_SPLAT)
 					ffloorflags |= FOF_SPLAT;
 
-				//If inside is visible, cut inner walls
-				if (lines[i].args[1] < 0xff || (lines[i].args[3] & TMFT_VISIBLEFROMINSIDE) || (lines[i].args[4] & TMFC_SPLAT))
+				//If inside is visible from the outside, cut inner walls
+				if (lines[i].args[1] < 255 || (lines[i].args[4] & TMFC_SPLAT))
 					ffloorflags |= FOF_CUTEXTRA|FOF_EXTRA;
-				else
-					ffloorflags |= FOF_CUTLEVEL;
-
-				//If player can enter it, render insides
-				if (lines[i].args[3] & TMFT_VISIBLEFROMINSIDE)
+				//If player can view it from the inside, render insides
+				else if (lines[i].args[3] & TMFT_VISIBLEFROMINSIDE)
 				{
 					if (ffloorflags & FOF_RENDERPLANES)
 						ffloorflags |= FOF_BOTHPLANES;
 					if (ffloorflags & FOF_RENDERSIDES)
 						ffloorflags |= FOF_ALLSIDES;
 				}
+				else
+					ffloorflags |= FOF_CUTLEVEL;
 
 				P_AddFakeFloorsByLine(i, lines[i].args[1], lines[i].args[2], ffloorflags, secthinkers);
 				if (lines[i].args[4] & TMFC_AIRBOB)
@@ -6688,10 +6687,10 @@ void P_SpawnSpecials(boolean fromnetsave)
 				//Cutting options
 				if (ffloorflags & FOF_RENDERALL)
 				{
-					//If inside is visible, cut inner walls
-					if ((lines[i].args[1] < 255) || (lines[i].args[3] & TMFA_SPLAT) || (lines[i].args[4] & TMFT_VISIBLEFROMINSIDE))
+					//If inside is visible from the outside, cut inner walls
+					if (lines[i].args[1] < 255 || (lines[i].args[3] & TMFA_SPLAT))
 						ffloorflags |= FOF_CUTEXTRA|FOF_EXTRA;
-					else
+					else if (!(lines[i].args[3] & TMFT_VISIBLEFROMINSIDE))
 						ffloorflags |= FOF_CUTLEVEL;
 				}
 
