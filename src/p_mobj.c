@@ -12617,7 +12617,7 @@ static boolean P_SetupNiGHTSDrone(mapthing_t *mthing, mobj_t *mobj)
 	dronemangoaldiff = max(mobjinfo[MT_NIGHTSDRONE_MAN].height - mobjinfo[MT_NIGHTSDRONE_GOAL].height, 0);
 
 	if (flip && mobj->height != oldheight)
-		P_MoveOrigin(mobj, mobj->x, mobj->y, mobj->z - (mobj->height - oldheight));
+		P_SetOrigin(mobj, mobj->x, mobj->y, mobj->z - (mobj->height - oldheight));
 
 	if (!flip)
 	{
