@@ -3196,7 +3196,7 @@ boolean M_Responder(event_t *ev)
 	|| gamestate == GS_CREDITS || gamestate == GS_EVALUATION || gamestate == GS_GAMEEND)
 		return false;
 
-	if (gamestate == GS_TITLESCREEN && finalecount < TICRATE)
+	if (gamestate == GS_TITLESCREEN && finalecount < TICRATE && cv_tutorialprompt.value)
 		return false;
 
 	if (CON_Ready() && gamestate != GS_WAITINGPLAYERS)
