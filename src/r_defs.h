@@ -757,12 +757,12 @@ typedef struct drawseg_s
 	// Pointers to lists for sprite clipping, all three adjusted so [x1] is first value.
 	INT16 *sprtopclip;
 	INT16 *sprbottomclip;
-	INT16 *maskedtexturecol;
+	fixed_t *maskedtexturecol;
 
 	struct visplane_s *ffloorplanes[MAXFFLOORS];
 	INT32 numffloorplanes;
 	struct ffloor_s *thicksides[MAXFFLOORS];
-	INT16 *thicksidecol;
+	fixed_t *thicksidecol;
 	INT32 numthicksides;
 	fixed_t frontscale[MAXVIDWIDTH];
 

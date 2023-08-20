@@ -1479,6 +1479,7 @@ void R_RenderPlayerView(player_t *player)
 		R_ClearClipSegs();
 	}
 	R_ClearDrawSegs();
+	R_ClearSegTables();
 	R_ClearSprites();
 	Portal_InitList();
 
