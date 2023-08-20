@@ -2033,6 +2033,8 @@ static void ParseTextmapThingParameter(UINT32 i, const char *param, const char *
 	// Flags
 	else if (fastcmp(param, "flip") && fastcmp("true", val))
 		mapthings[i].options |= MTF_OBJECTFLIP;
+	else if (fastcmp(param, "absolutez") && fastcmp("true", val))
+		mapthings[i].options |= MTF_ABSOLUTEZ;
 
 	else if (fastncmp(param, "stringarg", 9) && strlen(param) > 9)
 	{
@@ -6781,7 +6783,6 @@ static void P_ConvertBinaryThingTypes(void)
 			break;
 		case 1704: //NiGHTS bumper
 			mapthings[i].pitch = 30 * (((mapthings[i].options & 15) + 9) % 12);
-			mapthings[i].options &= ~0xF;
 			break;
 		case 1705: //Hoop
 		case 1713: //Hoop (Customizable)
@@ -6790,7 +6791,6 @@ static void P_ConvertBinaryThingTypes(void)
 			mapthings[i].angle = (mapthings[i].extrainfo == 1) ? oldangle - 90  : ((oldangle >> 8)*360)/256;
 			mapthings[i].pitch = (mapthings[i].extrainfo == 1) ? oldangle / 360 : ((oldangle & 255)*360)/256;
 			mapthings[i].args[0] = (mapthings[i].type == 1705) ? 96 : (mapthings[i].options & 0xF)*16 + 32;
-			mapthings[i].options &= ~0xF;
 			mapthings[i].type = 1713;
 			break;
 		}
@@ -6818,6 +6818,9 @@ static void P_ConvertBinaryThingTypes(void)
 		default:
 			break;
 		}
+		
+		// Clear binary thing height hacks, to prevent interfering with UDMF-only flags
+		mapthings[i].options &= 0xF;
 	}
 }
 
