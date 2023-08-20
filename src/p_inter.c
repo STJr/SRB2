@@ -1144,7 +1144,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 					if (!(mo2->type == MT_RING || mo2->type == MT_COIN
 						|| mo2->type == MT_BLUESPHERE || mo2->type == MT_BOMBSPHERE
 						|| mo2->type == MT_NIGHTSCHIP || mo2->type == MT_NIGHTSSTAR
-						|| ((mo2->type == MT_EMBLEM) && (mo2->reactiontime & GE_NIGHTSPULL))))
+						|| ((mo2->type == MT_EMBLEM) && (mo2->reactiontime & GE_NIGHTSPULL) && P_CanPickupEmblem(player, mo2->health - 1) && !P_EmblemWasCollected(mo2->health - 1))))
 						continue;
 
 					// Yay! The thing's in reach! Pull it in!
