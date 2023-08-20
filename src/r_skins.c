@@ -113,6 +113,7 @@ static void Sk_SetDefaultValue(skin_t *skin)
 
 	strcpy(skin->realname, "Someone");
 	strcpy(skin->hudname, "???");
+	strcpy(skin->supername, "Someone super");
 
 	skin->starttranscolor = 96;
 	skin->prefcolor = SKINCOLOR_GREEN;
@@ -682,7 +683,7 @@ void R_AddSkins(UINT16 wadnum, boolean mainfile)
 	char *value;
 	size_t size;
 	skin_t *skin;
-	boolean hudname, realname;
+	boolean hudname, realname, supername;
 
 	//
 	// search for all skin markers in pwad
@@ -712,7 +713,7 @@ void R_AddSkins(UINT16 wadnum, boolean mainfile)
 		skin = &skins[numskins];
 		Sk_SetDefaultValue(skin);
 		skin->wadnum = wadnum;
-		hudname = realname = false;
+		hudname = realname = supername = false;
 		// parse
 		stoken = strtok (buf2, "\r\n= ");
 		while (stoken)
@@ -755,7 +756,7 @@ void R_AddSkins(UINT16 wadnum, boolean mainfile)
 					Z_Free(value2);
 				}
 
-				// copy to hudname and fullname as a default.
+				// copy to hudname, realname, and supername as a default.
 				if (!realname)
 				{
 					STRBUFCPY(skin->realname, skin->name);
@@ -771,6 +772,19 @@ void R_AddSkins(UINT16 wadnum, boolean mainfile)
 					strupr(skin->hudname);
 					SYMBOLCONVERT(skin->hudname)
 				}
+				else if (!supername)
+				{
+					char super[7], someone[SKINNAMESIZE+1];
+					strcpy(super, "Super ");
+					strcpy(someone, skin->realname);
+					STRBUFCPY(skin->supername, strcat(super, someone));
+				}
+			}
+			else if (!stricmp(stoken, "supername"))
+			{ // Super name (eg. "Super Knuckles")
+				supername = true;
+				STRBUFCPY(skin->supername, value);
+				SYMBOLCONVERT(skin->supername)
 			}
 			else if (!stricmp(stoken, "realname"))
 			{ // Display name (eg. "Knuckles")
@@ -779,6 +793,13 @@ void R_AddSkins(UINT16 wadnum, boolean mainfile)
 				SYMBOLCONVERT(skin->realname)
 				if (!hudname)
 					HUDNAMEWRITE(skin->realname);
+				if (!supername) //copy over default to capitalise the name
+				{
+					char super[7], someone[SKINNAMESIZE+1];
+					strcpy(super, "Super ");
+					strcpy(someone, skin->realname);
+					STRBUFCPY(skin->supername, strcat(super, someone));
+				}
 			}
 			else if (!stricmp(stoken, "hudname"))
 			{ // Life icon name (eg. "K.T.E")
@@ -831,7 +852,7 @@ void R_PatchSkins(UINT16 wadnum, boolean mainfile)
 	char *value;
 	size_t size;
 	skin_t *skin;
-	boolean noskincomplain, realname, hudname;
+	boolean noskincomplain, realname, hudname, supername;
 
 	//
 	// search for all skin patch markers in pwad
@@ -855,7 +876,7 @@ void R_PatchSkins(UINT16 wadnum, boolean mainfile)
 		buf2[size] = '\0';
 
 		skin = NULL;
-		noskincomplain = realname = hudname = false;
+		noskincomplain = realname = hudname = supername = false;
 
 		/*
 		Parse. Has more phases than the parser in R_AddSkins because it needs to have the patching name first (no default skin name is acceptible for patching, unlike skin creation)
@@ -894,13 +915,26 @@ void R_PatchSkins(UINT16 wadnum, boolean mainfile)
 			else // Get the properties!
 			{
 				// Some of these can't go in R_ProcessPatchableFields because they have side effects for future lines.
-				if (!stricmp(stoken, "realname"))
+				if (!stricmp(stoken, "supername"))
+				{ // Super name (eg. "Super Knuckles")
+					supername = true;
+					STRBUFCPY(skin->supername, value);
+					SYMBOLCONVERT(skin->supername)
+				}
+				else if (!stricmp(stoken, "realname"))
 				{ // Display name (eg. "Knuckles")
 					realname = true;
 					STRBUFCPY(skin->realname, value);
 					SYMBOLCONVERT(skin->realname)
 					if (!hudname)
 						HUDNAMEWRITE(skin->realname);
+					if (!supername) //copy over default to capitalise the name
+					{
+						char super[7], someone[SKINNAMESIZE+1];
+						strcpy(super, "Super ");
+						strcpy(someone, skin->realname);
+						STRBUFCPY(skin->supername, strcat(super, someone));
+					}
 				}
 				else if (!stricmp(stoken, "hudname"))
 				{ // Life icon name (eg. "K.T.E")
