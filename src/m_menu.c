@@ -12506,22 +12506,7 @@ static void M_HandleSetupMultiPlayer(INT32 choice)
 			}
 			else if (itemOn == 2) // player color
 			{
-				if (colorgrid)
-				{
-					UINT16 index = M_GetColorGridIndex(setupm_fakecolor->color);
-					INT32 x = M_GridIndexToX(index);
-					INT32 y = M_GridIndexToY(index);
-
-					x--;
-
-					index = M_GridPosToGridIndex(x, y);
-					setupm_fakecolor = M_GridIndexToMenuColor(index);
-				}
-				else
-				{
-					setupm_fakecolor = setupm_fakecolor->prev;
-				}
-
+				setupm_fakecolor = setupm_fakecolor->prev;
 				S_StartSound(NULL,sfx_menu1); // Tails
 			}
 			break;
@@ -12561,22 +12546,7 @@ static void M_HandleSetupMultiPlayer(INT32 choice)
 			}
 			else if (itemOn == 2) // player color
 			{
-				if (colorgrid)
-				{
-					UINT16 index = M_GetColorGridIndex(setupm_fakecolor->color);
-					INT32 x = M_GridIndexToX(index);
-					INT32 y = M_GridIndexToY(index);
-
-					x++;
-
-					index = M_GridPosToGridIndex(x, y);
-					setupm_fakecolor = M_GridIndexToMenuColor(index);
-				}
-				else
-				{
-					setupm_fakecolor = setupm_fakecolor->next;
-				}
-
+				setupm_fakecolor = setupm_fakecolor->next;
 				S_StartSound(NULL,sfx_menu1); // Tails
 			}
 			break;
