@@ -12183,21 +12183,36 @@ colordraw:
 		{
 			for (i = 0; i < 16; i++)
 			{
-				if (skincolors[mc->color].accessible && !stoprow)
+				if (skincolors[mc->color].accessible)
 				{
 					M_DrawColorRamp(x + i*w, y + j*16, w, 1, skincolors[mc->color]);
-					if (mc->color == setupm_fakecolor->color) // store current color position
-						{
-							cx = x + i*w;
-							cy = y + j*16;
-						}
+
+					if (mc == setupm_fakecolor) // store current color position
+					{
+						cx = x + i*w;
+						cy = y + j*16;
+					}
 				}
-				mc = mc->next;
-				while (!skincolors[mc->color].accessible && !stoprow) // Find accessible color after this one
+
+				if (stoprow)
+				{
+					break;
+				}
+
+				// Find accessible color after this one
+				do
 				{
 					mc = mc->next;
-					if (mc == menucolortail) stoprow = true;
-				}
+					if (mc == menucolortail)
+					{
+						stoprow = true;
+					}
+				} while (!skincolors[mc->color].accessible && !stoprow);
+			}
+
+			if (stoprow)
+			{
+				break;
 			}
 		}
 
