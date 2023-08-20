@@ -528,7 +528,7 @@ UINT8 M_CampaignWarpIsCheat(INT32 gt, INT32 mapnum, gamedata_t *data)
 	}
 
 	// It's only a cheat if you've never been there.
-	return (!(data->mapvisited[mapnum]));
+	return (!(data->mapvisited[mapnum-1]));
 }
 
 INT32 M_CountEmblems(gamedata_t *data)

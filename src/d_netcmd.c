@@ -1925,6 +1925,7 @@ static void Command_Map_f(void)
 	newresetplayers = ! COM_CheckParm("-noresetplayers");
 
 	prevent_cheat = !( usedCheats ) && !( option_force || cv_debug );
+	set_cheated = false;
 
 	if (!( netgame || multiplayer ))
 	{
