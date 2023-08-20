@@ -1593,7 +1593,6 @@ boolean VID_CheckRenderer(void)
 			else if (vid.glstate == VID_GL_LIBRARY_ERROR)
 				rendererchanged = false;
 		}
-		else
 #endif
 
 		if (!contextcreated)
