@@ -6566,7 +6566,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 					//If inside is visible from the outside, cut inner walls
 					if (lines[i].args[1] < 255 || (lines[i].args[3] & TMFA_SPLAT))
 						ffloorflags |= FOF_CUTEXTRA|FOF_EXTRA;
-					else if (!(lines[i].args[3] & TMFT_VISIBLEFROMINSIDE))
+					else if (!(lines[i].args[4] & TMFT_VISIBLEFROMINSIDE))
 						ffloorflags |= FOF_CUTLEVEL;
 				}
 
@@ -6688,7 +6688,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 					//If inside is visible from the outside, cut inner walls
 					if (lines[i].args[1] < 255 || (lines[i].args[3] & TMFA_SPLAT))
 						ffloorflags |= FOF_CUTEXTRA|FOF_EXTRA;
-					else if (!(lines[i].args[3] & TMFT_VISIBLEFROMINSIDE))
+					else if (!(lines[i].args[4] & TMFT_VISIBLEFROMINSIDE))
 						ffloorflags |= FOF_CUTLEVEL;
 				}
 
