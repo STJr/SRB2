@@ -6783,6 +6783,7 @@ static void P_ConvertBinaryThingTypes(void)
 			break;
 		case 1704: //NiGHTS bumper
 			mapthings[i].pitch = 30 * (((mapthings[i].options & 15) + 9) % 12);
+			mapthings[i].options &= ~0xF;
 			break;
 		case 1705: //Hoop
 		case 1713: //Hoop (Customizable)
@@ -6791,6 +6792,7 @@ static void P_ConvertBinaryThingTypes(void)
 			mapthings[i].angle = (mapthings[i].extrainfo == 1) ? oldangle - 90  : ((oldangle >> 8)*360)/256;
 			mapthings[i].pitch = (mapthings[i].extrainfo == 1) ? oldangle / 360 : ((oldangle & 255)*360)/256;
 			mapthings[i].args[0] = (mapthings[i].type == 1705) ? 96 : (mapthings[i].options & 0xF)*16 + 32;
+			mapthings[i].options &= ~0xF;
 			mapthings[i].type = 1713;
 			break;
 		}
