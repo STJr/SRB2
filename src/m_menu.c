@@ -12302,16 +12302,23 @@ colordraw:
 		boolean stoprow = false;
 		menucolor_t *mc; // Last accessed color
 
+		const UINT16 grid_len = M_ColorGridLen();
+		const UINT16 grid_end_y = M_GridIndexToY(grid_len - 1);
+
+		INT32 grid_select = M_GetColorGridIndex(setupm_fakecolor->color);
+		INT32 grid_select_y = M_GridIndexToY(grid_select);
+
 		x = 132;
 		y = 66;
-		pos = min(max(0, 16*((M_GetColorIndex(setupm_fakecolor->color)-1)/16) - 64), 16*(M_GetColorIndex(menucolortail->color)/16-1) - 128);
-		mc = M_GetColorFromIndex(pos);
+
+		pos = M_GridPosToGridIndex(0, max(0, min(grid_select_y - 3, grid_end_y - 7)));
+		mc = M_GridIndexToMenuColor(pos);
 
 		// Draw grid
 		V_DrawFill(x-2, y-2, 132, 132, 159);
 		for (j = 0; j < 8; j++)
 		{
-			for (i = 0; i < 16; i++)
+			for (i = 0; i < COLOR_GRID_ROW_SIZE; i++)
 			{
 				if (skincolors[mc->color].accessible)
 				{
