@@ -120,6 +120,8 @@ UINT8 hu_redownloadinggamestate = 0;
 // true when a player is connecting or disconnecting so that the gameplay has stopped in its tracks
 boolean hu_stopped = false;
 
+consvar_t cv_dedicatedidletime = CVAR_INIT ("dedicatedidletime", "10", CV_SAVE, CV_Unsigned, NULL);
+
 UINT8 adminpassmd5[16];
 boolean adminpasswordset = false;
 
@@ -1293,6 +1295,7 @@ static boolean CL_AskFileList(INT32 firstfile)
 static boolean CL_SendJoin(void)
 {
 	UINT8 localplayers = 1;
+	char const *player2name;
 	if (netgame)
 		CONS_Printf(M_GetText("Sending join request...\n"));
 	netbuffer->packettype = PT_CLIENTJOIN;
@@ -1309,18 +1312,23 @@ static boolean CL_SendJoin(void)
 	CleanupPlayerName(consoleplayer, cv_playername.zstring);
 	if (splitscreen)
 		CleanupPlayerName(1, cv_playername2.zstring);/* 1 is a HACK? oh no */
+	// Avoid empty string on bots to avoid softlocking in singleplayer
+	if (botingame)
+		player2name = strcmp(cv_playername.zstring, "Tails") == 0 ? "Tail" : "Tails";
+	else
+		player2name = cv_playername2.zstring;
 
 	strncpy(netbuffer->u.clientcfg.names[0], cv_playername.zstring, MAXPLAYERNAME);
-	strncpy(netbuffer->u.clientcfg.names[1], cv_playername2.zstring, MAXPLAYERNAME);
+	strncpy(netbuffer->u.clientcfg.names[1], player2name, MAXPLAYERNAME);
 
 	return HSendPacket(servernode, true, 0, sizeof (clientconfig_pak));
 }
 
 static INT32 FindRejoinerNum(SINT8 node)
 {
-	char strippednodeaddress[64];
+	char addressbuffer[64];
 	const char *nodeaddress;
-	char *port;
+	const char *strippednodeaddress;
 	INT32 i;
 
 	// Make sure there is no dead dress before proceeding to the stripping
@@ -1331,10 +1339,8 @@ static INT32 FindRejoinerNum(SINT8 node)
 		return -1;
 
 	// Strip the address of its port
-	strcpy(strippednodeaddress, nodeaddress);
-	port = strchr(strippednodeaddress, ':');
-	if (port)
-		*port = '\0';
+	strcpy(addressbuffer, nodeaddress);
+	strippednodeaddress = I_NetSplitAddress(addressbuffer, NULL);
 
 	// Check if any player matches the stripped address
 	for (i = 0; i < MAXPLAYERS; i++)
@@ -1506,6 +1512,7 @@ static boolean SV_SendServerConfig(INT32 node)
 	netbuffer->u.servercfg.gamestate = (UINT8)gamestate;
 	netbuffer->u.servercfg.gametype = (UINT8)gametype;
 	netbuffer->u.servercfg.modifiedgame = (UINT8)modifiedgame;
+	netbuffer->u.servercfg.usedCheats = (UINT8)usedCheats;
 
 	memcpy(netbuffer->u.servercfg.server_context, server_context, 8);
 
@@ -2486,7 +2493,7 @@ static boolean CL_ServerConnectionTicker(const char *tmpsave, tic_t *oldtic, tic
 		{
 			if (!snake)
 			{
-				F_MenuPresTicker(true); // title sky
+				F_MenuPresTicker(); // title sky
 				F_TitleScreenTicker(true);
 				F_TitleScreenDrawer();
 			}
@@ -2601,6 +2608,8 @@ static void CL_ConnectToServer(void)
 	}
 	while (!(cl_mode == CL_CONNECTED && (client || (server && nodewaited <= pnumnodes))));
 
+	if (netgame)
+		F_StartWaitingPlayers();
 	DEBFILE(va("Synchronisation Finished\n"));
 
 	displayplayer = consoleplayer;
@@ -3644,6 +3653,9 @@ void SV_ResetServer(void)
 
 	CV_RevertNetVars();
 
+	// Ensure synched when creating a new server
+	M_CopyGameData(serverGamedata, clientGamedata);
+
 	DEBFILE("\n-=-=-=-=-=-=-= Server Reset =-=-=-=-=-=-=-\n\n");
 }
 
@@ -3767,14 +3779,13 @@ static void Got_AddPlayer(UINT8 **p, INT32 playernum)
 
 		if (server && I_GetNodeAddress)
 		{
+			char addressbuffer[64];
 			const char *address = I_GetNodeAddress(node);
-			char *port = NULL;
 			if (address) // MI: fix msvcrt.dll!_mbscat crash?
 			{
-				strcpy(playeraddress[newplayernum], address);
-				port = strchr(playeraddress[newplayernum], ':');
-				if (port)
-					*port = '\0';
+				strcpy(addressbuffer, address);
+				strcpy(playeraddress[newplayernum],
+						I_NetSplitAddress(addressbuffer, NULL));
 			}
 		}
 	}
@@ -4406,6 +4417,8 @@ static void HandlePacketFromAwayNode(SINT8 node)
 				maketic = gametic = neededtic = (tic_t)LONG(netbuffer->u.servercfg.gametic);
 				G_SetGametype(netbuffer->u.servercfg.gametype);
 				modifiedgame = netbuffer->u.servercfg.modifiedgame;
+				if (netbuffer->u.servercfg.usedCheats)
+					G_SetUsedCheats(true);
 				memcpy(server_context, netbuffer->u.servercfg.server_context, 8);
 			}
 
@@ -4515,6 +4528,7 @@ static void HandlePacketFromPlayer(SINT8 node)
 		netconsole = 0;
 	else
 		netconsole = nodetoplayer[node];
+
 #ifdef PARANOIA
 	if (netconsole >= MAXPLAYERS)
 		I_Error("bad table nodetoplayer: node %d player %d", doomcom->remotenode, netconsole);
@@ -4553,21 +4567,32 @@ static void HandlePacketFromPlayer(SINT8 node)
 			// Update the nettics
 			nettics[node] = realend;
 
-			// Don't do anything for packets of type NODEKEEPALIVE?
-			if (netconsole == -1 || netbuffer->packettype == PT_NODEKEEPALIVE
-				|| netbuffer->packettype == PT_NODEKEEPALIVEMIS)
+			// This should probably still timeout though, as the node should always have a player 1 number
+			if (netconsole == -1)
 				break;
 
 			// As long as clients send valid ticcmds, the server can keep running, so reset the timeout
 			/// \todo Use a separate cvar for that kind of timeout?
 			freezetimeout[node] = I_GetTime() + connectiontimeout;
 
+			// Don't do anything for packets of type NODEKEEPALIVE?
+			// Sryder 2018/07/01: Update the freezetimeout still!
+			if (netbuffer->packettype == PT_NODEKEEPALIVE
+				|| netbuffer->packettype == PT_NODEKEEPALIVEMIS)
+				break;
+
+			// If we've alredy received a ticcmd for this tic, just submit it for the next one.
+			tic_t faketic = maketic;
+			if ((!!(netcmds[maketic % BACKUPTICS][netconsole].angleturn & TICCMD_RECEIVED))
+				&& (maketic - firstticstosend < BACKUPTICS - 1))
+				faketic++;
+
 			// Copy ticcmd
-			G_MoveTiccmd(&netcmds[maketic%BACKUPTICS][netconsole], &netbuffer->u.clientpak.cmd, 1);
+			G_MoveTiccmd(&netcmds[faketic%BACKUPTICS][netconsole], &netbuffer->u.clientpak.cmd, 1);
 
 			// Check ticcmd for "speed hacks"
-			if (netcmds[maketic%BACKUPTICS][netconsole].forwardmove > MAXPLMOVE || netcmds[maketic%BACKUPTICS][netconsole].forwardmove < -MAXPLMOVE
-				|| netcmds[maketic%BACKUPTICS][netconsole].sidemove > MAXPLMOVE || netcmds[maketic%BACKUPTICS][netconsole].sidemove < -MAXPLMOVE)
+			if (netcmds[faketic%BACKUPTICS][netconsole].forwardmove > MAXPLMOVE || netcmds[faketic%BACKUPTICS][netconsole].forwardmove < -MAXPLMOVE
+				|| netcmds[faketic%BACKUPTICS][netconsole].sidemove > MAXPLMOVE || netcmds[faketic%BACKUPTICS][netconsole].sidemove < -MAXPLMOVE)
 			{
 				CONS_Alert(CONS_WARNING, M_GetText("Illegal movement value received from node %d\n"), netconsole);
 				//D_Clearticcmd(k);
@@ -4579,8 +4604,9 @@ static void HandlePacketFromPlayer(SINT8 node)
 			// Splitscreen cmd
 			if ((netbuffer->packettype == PT_CLIENT2CMD || netbuffer->packettype == PT_CLIENT2MIS)
 				&& nodetoplayer2[node] >= 0)
-				G_MoveTiccmd(&netcmds[maketic%BACKUPTICS][(UINT8)nodetoplayer2[node]],
+				G_MoveTiccmd(&netcmds[faketic%BACKUPTICS][(UINT8)nodetoplayer2[node]],
 					&netbuffer->u.client2pak.cmd2, 1);
+
 
 			// Check player consistancy during the level
 			if (realstart <= gametic && realstart + BACKUPTICS - 1 > gametic && gamestate == GS_LEVEL
@@ -4617,6 +4643,21 @@ static void HandlePacketFromPlayer(SINT8 node)
 					break;
 				}
 			}
+			break;
+		case PT_BASICKEEPALIVE:
+			if (client)
+				break;
+
+			// This should probably still timeout though, as the node should always have a player 1 number
+			if (netconsole == -1)
+				break;
+
+			// If a client sends this it should mean they are done receiving the savegame
+			sendingsavegame[node] = false;
+
+			// As long as clients send keep alives, the server can keep running, so reset the timeout
+			/// \todo Use a separate cvar for that kind of timeout?
+			freezetimeout[node] = I_GetTime() + connectiontimeout;
 			break;
 		case PT_TEXTCMD2: // splitscreen special
 			netconsole = nodetoplayer2[node];
@@ -5044,39 +5085,66 @@ static INT16 Consistancy(void)
 	return (INT16)(ret & 0xFFFF);
 }
 
+// confusing, but this DOESN'T send PT_NODEKEEPALIVE, it sends PT_BASICKEEPALIVE
+// used during wipes to tell the server that a node is still connected
+static void CL_SendClientKeepAlive(void)
+{
+	netbuffer->packettype = PT_BASICKEEPALIVE;
+
+	HSendPacket(servernode, false, 0, 0);
+}
+
+static void SV_SendServerKeepAlive(void)
+{
+	INT32 n;
+
+	for (n = 1; n < MAXNETNODES; n++)
+	{
+		if (nodeingame[n])
+		{
+			netbuffer->packettype = PT_BASICKEEPALIVE;
+			HSendPacket(n, false, 0, 0);
+		}
+	}
+}
+
 // send the client packet to the server
 static void CL_SendClientCmd(void)
 {
 	size_t packetsize = 0;
+	boolean mis = false;
 
 	netbuffer->packettype = PT_CLIENTCMD;
 
 	if (cl_packetmissed)
-		netbuffer->packettype++;
+	{
+		netbuffer->packettype = PT_CLIENTMIS;
+		mis = true;
+	}
+
 	netbuffer->u.clientpak.resendfrom = (UINT8)(neededtic & UINT8_MAX);
 	netbuffer->u.clientpak.client_tic = (UINT8)(gametic & UINT8_MAX);
 
 	if (gamestate == GS_WAITINGPLAYERS)
 	{
 		// Send PT_NODEKEEPALIVE packet
-		netbuffer->packettype += 4;
+		netbuffer->packettype = (mis ? PT_NODEKEEPALIVEMIS : PT_NODEKEEPALIVE);
 		packetsize = sizeof (clientcmd_pak) - sizeof (ticcmd_t) - sizeof (INT16);
 		HSendPacket(servernode, false, 0, packetsize);
 	}
 	else if (gamestate != GS_NULL && (addedtogame || dedicated))
 	{
+		packetsize = sizeof (clientcmd_pak);
 		G_MoveTiccmd(&netbuffer->u.clientpak.cmd, &localcmds, 1);
 		netbuffer->u.clientpak.consistancy = SHORT(consistancy[gametic%BACKUPTICS]);
 
 		// Send a special packet with 2 cmd for splitscreen
 		if (splitscreen || botingame)
 		{
-			netbuffer->packettype += 2;
-			G_MoveTiccmd(&netbuffer->u.client2pak.cmd2, &localcmds2, 1);
+			netbuffer->packettype = (mis ? PT_CLIENT2MIS : PT_CLIENT2CMD);
 			packetsize = sizeof (client2cmd_pak);
+			G_MoveTiccmd(&netbuffer->u.client2pak.cmd2, &localcmds2, 1);
 		}
-		else
-			packetsize = sizeof (clientcmd_pak);
 
 		HSendPacket(servernode, false, 0, packetsize);
 	}
@@ -5087,7 +5155,7 @@ static void CL_SendClientCmd(void)
 		if (localtextcmd[0])
 		{
 			netbuffer->packettype = PT_TEXTCMD;
-			M_Memcpy(netbuffer->u.textcmd,localtextcmd, localtextcmd[0]+1);
+			M_Memcpy(netbuffer->u.textcmd, localtextcmd, localtextcmd[0]+1);
 			// All extra data have been sent
 			if (HSendPacket(servernode, true, 0, localtextcmd[0]+1)) // Send can fail...
 				localtextcmd[0] = 0;
@@ -5467,28 +5535,11 @@ static inline void PingUpdate(void)
 	pingmeasurecount = 1; //Reset count
 }
 
-void NetUpdate(void)
+static tic_t gametime = 0;
+
+static void UpdatePingTable(void)
 {
-	static tic_t gametime = 0;
-	static tic_t resptime = 0;
-	tic_t nowtime;
 	INT32 i;
-	INT32 realtics;
-
-	nowtime = I_GetTime();
-	realtics = nowtime - gametime;
-
-	if (realtics <= 0) // nothing new to update
-		return;
-	if (realtics > 5)
-	{
-		if (server)
-			realtics = 1;
-		else
-			realtics = 5;
-	}
-
-	gametime = nowtime;
 
 	if (server)
 	{
@@ -5500,6 +5551,150 @@ void NetUpdate(void)
 				realpingtable[i] += G_TicsToMilliseconds(GetLag(playernode[i]));
 		pingmeasurecount++;
 	}
+}
+
+// Handle timeouts to prevent definitive freezes from happenning
+static void HandleNodeTimeouts(void)
+{
+	INT32 i;
+
+	if (server)
+	{
+		for (i = 1; i < MAXNETNODES; i++)
+			if (nodeingame[i] && freezetimeout[i] < I_GetTime())
+				Net_ConnectionTimeout(i);
+
+		// In case the cvar value was lowered
+		if (joindelay)
+			joindelay = min(joindelay - 1, 3 * (tic_t)cv_joindelay.value * TICRATE);
+	}
+}
+
+// Keep the network alive while not advancing tics!
+void NetKeepAlive(void)
+{
+	tic_t nowtime;
+	INT32 realtics;
+
+	nowtime = I_GetTime();
+	realtics = nowtime - gametime;
+
+	// return if there's no time passed since the last call
+	if (realtics <= 0) // nothing new to update
+		return;
+
+	UpdatePingTable();
+
+	GetPackets();
+
+#ifdef MASTERSERVER
+	MasterClient_Ticker();
+#endif
+
+	if (client)
+	{
+		// send keep alive
+		CL_SendClientKeepAlive();
+		// No need to check for resynch because we aren't running any tics
+	}
+	else
+	{
+		SV_SendServerKeepAlive();
+	}
+
+	// No else because no tics are being run and we can't resynch during this
+
+	Net_AckTicker();
+	HandleNodeTimeouts();
+	FileSendTicker();
+}
+
+void NetUpdate(void)
+{
+	static tic_t resptime = 0;
+	tic_t nowtime;
+	INT32 i;
+	INT32 realtics;
+
+	nowtime = I_GetTime();
+	realtics = nowtime - gametime;
+
+	if (realtics <= 0) // nothing new to update
+		return;
+
+	if (realtics > 5)
+	{
+		if (server)
+			realtics = 1;
+		else
+			realtics = 5;
+	}
+
+	if (server && dedicated && gamestate == GS_LEVEL)
+	{
+		const tic_t dedicatedidletime = cv_dedicatedidletime.value * TICRATE;
+		static tic_t dedicatedidletimeprev = 0;
+		static tic_t dedicatedidle = 0;
+
+		if (dedicatedidletime > 0)
+		{
+			for (i = 1; i < MAXNETNODES; ++i)
+				if (nodeingame[i])
+				{
+					if (dedicatedidle >= dedicatedidletime)
+					{
+						CONS_Printf("DEDICATED: Awakening from idle (Node %d detected...)\n", i);
+						dedicatedidle = 0;
+					}
+					break;
+				}
+
+			if (i == MAXNETNODES)
+			{
+				if (leveltime == 2)
+				{
+					// On next tick...
+					dedicatedidle = dedicatedidletime-1;
+				}
+				else if (dedicatedidle >= dedicatedidletime)
+				{
+					if (D_GetExistingTextcmd(gametic, 0) || D_GetExistingTextcmd(gametic+1, 0))
+					{
+						CONS_Printf("DEDICATED: Awakening from idle (Netxcmd detected...)\n");
+						dedicatedidle = 0;
+					}
+					else
+					{
+						realtics = 0;
+					}
+				}
+				else if ((dedicatedidle += realtics) >= dedicatedidletime)
+				{
+					const char *idlereason = "at round start";
+					if (leveltime > 3)
+						idlereason = va("for %d seconds", dedicatedidle/TICRATE);
+
+					CONS_Printf("DEDICATED: No nodes %s, idling...\n", idlereason);
+					realtics = 0;
+					dedicatedidle = dedicatedidletime;
+				}
+			}
+		}
+		else
+		{
+			if (dedicatedidletimeprev > 0 && dedicatedidle >= dedicatedidletimeprev)
+			{
+				CONS_Printf("DEDICATED: Awakening from idle (Idle disabled...)\n");
+			}
+			dedicatedidle = 0;
+		}
+
+		dedicatedidletimeprev = dedicatedidletime;
+	}
+
+	gametime = nowtime;
+
+	UpdatePingTable();
 
 	if (client)
 		maketic = neededtic;
@@ -5531,24 +5726,25 @@ void NetUpdate(void)
 	}
 	else
 	{
-		if (!demoplayback)
+		if (!demoplayback && realtics > 0)
 		{
 			INT32 counts;
 
 			hu_redownloadinggamestate = false;
 
-			firstticstosend = gametic;
-			for (i = 0; i < MAXNETNODES; i++)
-				if (nodeingame[i] && nettics[i] < firstticstosend)
-				{
-					firstticstosend = nettics[i];
-
-					if (maketic + 1 >= nettics[i] + BACKUPTICS)
-						Net_ConnectionTimeout(i);
-				}
-
 			// Don't erase tics not acknowledged
 			counts = realtics;
+
+			firstticstosend = gametic;
+			for (i = 0; i < MAXNETNODES; i++)
+			{
+				if (!nodeingame[i])
+					continue;
+				if (nettics[i] < firstticstosend)
+					firstticstosend = nettics[i];
+				if (maketic + counts >= nettics[i] + (BACKUPTICS - TICRATE))
+					Net_ConnectionTimeout(i);
+			}
 
 			if (maketic + counts >= firstticstosend + BACKUPTICS)
 				counts = firstticstosend+BACKUPTICS-maketic-1;
@@ -5566,20 +5762,10 @@ void NetUpdate(void)
 	}
 
 	Net_AckTicker();
-
-	// Handle timeouts to prevent definitive freezes from happenning
-	if (server)
-	{
-		for (i = 1; i < MAXNETNODES; i++)
-			if (nodeingame[i] && freezetimeout[i] < I_GetTime())
-				Net_ConnectionTimeout(i);
-
-		// In case the cvar value was lowered
-		if (joindelay)
-			joindelay = min(joindelay - 1, 3 * (tic_t)cv_joindelay.value * TICRATE);
-	}
+	HandleNodeTimeouts();
 
 	nowtime /= NEWTICRATERATIO;
+
 	if (nowtime > resptime)
 	{
 		resptime = nowtime;

@@ -249,6 +249,38 @@ typedef enum
 	CR_FAN
 } carrytype_t; // pw_carry
 
+typedef enum
+{
+	STR_NONE = 0, // All strong powers can stack onto each other
+
+	// Attack powers
+	STR_ANIM = 0x1, // remove powers when leaving current animation
+	STR_PUNCH = 0x2, // frontal attack (knuckles glide)
+	STR_TAIL = 0x4, // rear attack
+	STR_STOMP = 0x8, // falling onto object (fang bounce)
+	STR_UPPER = 0x10, // moving upwards into object (tails fly)
+	STR_GUARD = 0x20, //protect against damage
+	STR_HEAVY = 0x40, // ignore vertical rebound
+	STR_DASH = 0x80, // special type for machine dashmode, automatically removes your powers when leaving dashmode
+
+	// Environment powers
+	STR_WALL = 0x100, // fof busting
+	STR_FLOOR = 0x200,
+	STR_CEILING = 0x400,
+	STR_SPRING = 0x800, // power up hit springs
+	STR_SPIKE = 0x1000, // break spikes
+
+	// Shortcuts
+	STR_ATTACK = STR_PUNCH|STR_TAIL|STR_STOMP|STR_UPPER,
+	STR_BUST = STR_WALL|STR_FLOOR|STR_CEILING,
+	STR_FLY = STR_ANIM|STR_UPPER,
+	STR_GLIDE = STR_ANIM|STR_PUNCH,
+	STR_TWINSPIN = STR_ANIM|STR_ATTACK|STR_BUST|STR_SPRING|STR_SPIKE,
+	STR_MELEE = STR_ANIM|STR_PUNCH|STR_HEAVY|STR_WALL|STR_FLOOR|STR_SPRING|STR_SPIKE,
+	STR_BOUNCE = STR_ANIM|STR_STOMP|STR_FLOOR,
+	STR_METAL = STR_DASH|STR_SPIKE
+} strongtype_t; // pw_strong
+
 // Player powers. (don't edit this comment)
 typedef enum
 {
@@ -292,6 +324,8 @@ typedef enum
 	pw_justlaunched, // Launched off a slope this tic (0=none, 1=standard launch, 2=half-pipe launch)
 
 	pw_ignorelatch, // Don't grab onto CR_GENERIC, add 32768 (powers[pw_ignorelatch] & 1<<15) to avoid ALL not-NiGHTS CR_ types
+
+	pw_strong, // Additional properties for powerful attacks
 
 	NUMPOWERS
 } powertype_t;
@@ -407,6 +441,7 @@ typedef struct player_s
 
 	// playing animation.
 	panim_t panim;
+	UINT8 stronganim;
 
 	// For screen flashing (bright).
 	UINT16 flashcount;
@@ -418,7 +453,8 @@ typedef struct player_s
 	INT32 skin;
 	UINT32 availabilities;
 
-	UINT32 score; // player score
+	UINT32 score; // player score (total)
+	UINT32 recordscore; // player score (per life / map)
 	fixed_t dashspeed; // dashing speed
 
 	fixed_t normalspeed; // Normal ground

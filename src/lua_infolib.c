@@ -66,7 +66,7 @@ const char *const sfxinfo_wopt[] = {
 	"caption",
 	NULL};
 
-boolean actionsoverridden[NUMACTIONS] = {false};
+int actionsoverridden[NUMACTIONS][MAX_ACTION_RECURSION];
 
 //
 // Sprite Names
@@ -319,7 +319,7 @@ static int PopPivotSubTable(spriteframepivot_t *pivot, lua_State *L, int stk, in
 				else if (ikey == 2 || (key && fastcmp(key, "y")))
 					pivot[idx].y = (INT32)value;
 				else if (ikey == 3 || (key && fastcmp(key, "rotaxis")))
-					pivot[idx].rotaxis = (UINT8)value;
+					LUA_UsageWarning(L, "\"rotaxis\" is deprecated and will be removed.")
 				else if (ikey == -1 && (key != NULL))
 					FIELDERROR("pivot key", va("invalid option %s", key));
 				okcool = 1;
@@ -508,8 +508,6 @@ static int pivotlist_get(lua_State *L)
 	const char *field = luaL_checkstring(L, 2);
 	UINT8 frame;
 
-	I_Assert(framepivot != NULL);
-
 	frame = R_Char2Frame(field[0]);
 	if (frame == 255)
 		luaL_error(L, "invalid frame %s", field);
@@ -538,8 +536,6 @@ static int pivotlist_set(lua_State *L)
 		return luaL_error(L, "Do not alter spriteframepivot_t in HUD rendering code!");
 	if (hook_cmd_running)
 		return luaL_error(L, "Do not alter spriteframepivot_t in CMD building code!");
-
-	I_Assert(pivotlist != NULL);
 
 	frame = R_Char2Frame(field[0]);
 	if (frame == 255)
@@ -576,7 +572,10 @@ static int framepivot_get(lua_State *L)
 	else if (fastcmp("y", field))
 		lua_pushinteger(L, framepivot->y);
 	else if (fastcmp("rotaxis", field))
-		lua_pushinteger(L, (UINT8)framepivot->rotaxis);
+	{
+		LUA_UsageWarning(L, "\"rotaxis\" is deprecated and will be removed.");
+		lua_pushinteger(L, 0);
+	}
 	else
 		return luaL_error(L, va("Field %s does not exist in spriteframepivot_t", field));
 
@@ -602,7 +601,7 @@ static int framepivot_set(lua_State *L)
 	else if (fastcmp("y", field))
 		framepivot->y = luaL_checkinteger(L, 3);
 	else if (fastcmp("rotaxis", field))
-		framepivot->rotaxis = luaL_checkinteger(L, 3);
+		LUA_UsageWarning(L, "\"rotaxis\" is deprecated and will be removed.")
 	else
 		return luaL_error(L, va("Field %s does not exist in spriteframepivot_t", field));
 
@@ -645,8 +644,8 @@ static void A_Lua(mobj_t *actor)
 		if (lua_rawequal(gL, -1, -4))
 		{
 			found = true;
-			superactions[superstack] = lua_tostring(gL, -2); // "A_ACTION"
-			++superstack;
+			luaactions[luaactionstack] = lua_tostring(gL, -2); // "A_ACTION"
+			++luaactionstack;
 			lua_pop(gL, 2); // pop the name and function
 			break;
 		}
@@ -661,8 +660,8 @@ static void A_Lua(mobj_t *actor)
 
 	if (found)
 	{
-		--superstack;
-		superactions[superstack] = NULL;
+		--luaactionstack;
+		luaactions[luaactionstack] = NULL;
 	}
 }
 
@@ -812,22 +811,54 @@ boolean LUA_SetLuaAction(void *stv, const char *action)
 	return true; // action successfully set.
 }
 
+static UINT8 superstack[NUMACTIONS];
 boolean LUA_CallAction(enum actionnum actionnum, mobj_t *actor)
 {
 	I_Assert(actor != NULL);
 
-	if (!actionsoverridden[actionnum]) // The action is not overriden,
-		return false; // action not called.
+	if (actionsoverridden[actionnum][0] == LUA_REFNIL)
+	{
+		// The action was not overridden at all,
+		// so just call the hardcoded version.
+		return false;
+	}
 
-	if (superstack && fasticmp(actionpointers[actionnum].name, superactions[superstack-1])) // the action is calling itself,
-		return false; // let it call the hardcoded function instead.
+	if (luaactionstack && fasticmp(actionpointers[actionnum].name, luaactions[luaactionstack-1]))
+	{
+		// The action is calling itself,
+		// so look up the next Lua reference in its stack.
 
+		// 0 is just the reference to the one we're calling,
+		// so we increment here.
+		superstack[actionnum]++;
+
+		if (superstack[actionnum] >= MAX_ACTION_RECURSION)
+		{
+			CONS_Alert(CONS_WARNING, "Max Lua super recursion reached! Cool it on calling super!\n");
+			superstack[actionnum] = 0;
+			return false;
+		}
+	}
+
+	if (actionsoverridden[actionnum][superstack[actionnum]] == LUA_REFNIL)
+	{
+		// No Lua reference beyond this point.
+		// Let it call the hardcoded function instead.
+
+		if (superstack[actionnum])
+		{
+			// Decrement super stack
+			superstack[actionnum]--;
+		}
+
+		return false;
+	}
+
+	// Push error function
 	lua_pushcfunction(gL, LUA_GetErrorMessage);
 
-	// grab function by uppercase name.
-	lua_getfield(gL, LUA_REGISTRYINDEX, LREG_ACTIONS);
-	lua_getfield(gL, -1, actionpointers[actionnum].name);
-	lua_remove(gL, -2); // pop LREG_ACTIONS
+	// Push function by reference.
+	lua_getref(gL, actionsoverridden[actionnum][superstack[actionnum]]);
 
 	if (lua_isnil(gL, -1)) // no match
 	{
@@ -835,7 +866,7 @@ boolean LUA_CallAction(enum actionnum actionnum, mobj_t *actor)
 		return false; // action not called.
 	}
 
-	if (superstack == MAXRECURSION)
+	if (luaactionstack >= MAX_ACTION_RECURSION)
 	{
 		CONS_Alert(CONS_WARNING, "Max Lua Action recursion reached! Cool it on the calling A_Action functions from inside A_Action functions!\n");
 		lua_pop(gL, 2); // pop function and error handler
@@ -849,14 +880,20 @@ boolean LUA_CallAction(enum actionnum actionnum, mobj_t *actor)
 	lua_pushinteger(gL, var1);
 	lua_pushinteger(gL, var2);
 
-	superactions[superstack] = actionpointers[actionnum].name;
-	++superstack;
+	luaactions[luaactionstack] = actionpointers[actionnum].name;
+	++luaactionstack;
 
 	LUA_Call(gL, 3, 0, -(2 + 3));
 	lua_pop(gL, -1); // Error handler
 
-	--superstack;
-	superactions[superstack] = NULL;
+	if (superstack[actionnum])
+	{
+		// Decrement super stack
+		superstack[actionnum]--;
+	}
+
+	--luaactionstack;
+	luaactions[luaactionstack] = NULL;
 	return true; // action successfully called.
 }
 
@@ -1106,75 +1143,161 @@ static int lib_mobjinfolen(lua_State *L)
 	return 1;
 }
 
+enum mobjinfo_e
+{
+	mobjinfo_doomednum,
+	mobjinfo_spawnstate,
+	mobjinfo_spawnhealth,
+	mobjinfo_seestate,
+	mobjinfo_seesound,
+	mobjinfo_reactiontime,
+	mobjinfo_attacksound,
+	mobjinfo_painstate,
+	mobjinfo_painchance,
+	mobjinfo_painsound,
+	mobjinfo_meleestate,
+	mobjinfo_missilestate,
+	mobjinfo_deathstate,
+	mobjinfo_xdeathstate,
+	mobjinfo_deathsound,
+	mobjinfo_speed,
+	mobjinfo_radius,
+	mobjinfo_height,
+	mobjinfo_dispoffset,
+	mobjinfo_mass,
+	mobjinfo_damage,
+	mobjinfo_activesound,
+	mobjinfo_flags,
+	mobjinfo_raisestate,
+};
+
+const char *const mobjinfo_opt[] = {
+	"doomednum",
+	"spawnstate",
+	"spawnhealth",
+	"seestate",
+	"seesound",
+	"reactiontime",
+	"attacksound",
+	"painstate",
+	"painchance",
+	"painsound",
+	"meleestate",
+	"missilestate",
+	"deathstate",
+	"xdeathstate",
+	"deathsound",
+	"speed",
+	"radius",
+	"height",
+	"dispoffset",
+	"mass",
+	"damage",
+	"activesound",
+	"flags",
+	"raisestate",
+	NULL,
+};
+
+static int mobjinfo_fields_ref = LUA_NOREF;
+
 // mobjinfo_t *, field -> number
 static int mobjinfo_get(lua_State *L)
 {
 	mobjinfo_t *info = *((mobjinfo_t **)luaL_checkudata(L, 1, META_MOBJINFO));
-	const char *field = luaL_checkstring(L, 2);
+	enum mobjinfo_e field = Lua_optoption(L, 2, mobjinfo_doomednum, mobjinfo_fields_ref);
 
 	I_Assert(info != NULL);
 	I_Assert(info >= mobjinfo);
 
-	if (fastcmp(field,"doomednum"))
+	switch (field)
+	{
+	case mobjinfo_doomednum:
 		lua_pushinteger(L, info->doomednum);
-	else if (fastcmp(field,"spawnstate"))
+		break;
+	case mobjinfo_spawnstate:
 		lua_pushinteger(L, info->spawnstate);
-	else if (fastcmp(field,"spawnhealth"))
+		break;
+	case mobjinfo_spawnhealth:
 		lua_pushinteger(L, info->spawnhealth);
-	else if (fastcmp(field,"seestate"))
+		break;
+	case mobjinfo_seestate:
 		lua_pushinteger(L, info->seestate);
-	else if (fastcmp(field,"seesound"))
+		break;
+	case mobjinfo_seesound:
 		lua_pushinteger(L, info->seesound);
-	else if (fastcmp(field,"reactiontime"))
+		break;
+	case mobjinfo_reactiontime:
 		lua_pushinteger(L, info->reactiontime);
-	else if (fastcmp(field,"attacksound"))
+		break;
+	case mobjinfo_attacksound:
 		lua_pushinteger(L, info->attacksound);
-	else if (fastcmp(field,"painstate"))
+		break;
+	case mobjinfo_painstate:
 		lua_pushinteger(L, info->painstate);
-	else if (fastcmp(field,"painchance"))
+		break;
+	case mobjinfo_painchance:
 		lua_pushinteger(L, info->painchance);
-	else if (fastcmp(field,"painsound"))
+		break;
+	case mobjinfo_painsound:
 		lua_pushinteger(L, info->painsound);
-	else if (fastcmp(field,"meleestate"))
+		break;
+	case mobjinfo_meleestate:
 		lua_pushinteger(L, info->meleestate);
-	else if (fastcmp(field,"missilestate"))
+		break;
+	case mobjinfo_missilestate:
 		lua_pushinteger(L, info->missilestate);
-	else if (fastcmp(field,"deathstate"))
+		break;
+	case mobjinfo_deathstate:
 		lua_pushinteger(L, info->deathstate);
-	else if (fastcmp(field,"xdeathstate"))
+		break;
+	case mobjinfo_xdeathstate:
 		lua_pushinteger(L, info->xdeathstate);
-	else if (fastcmp(field,"deathsound"))
+		break;
+	case mobjinfo_deathsound:
 		lua_pushinteger(L, info->deathsound);
-	else if (fastcmp(field,"speed"))
+		break;
+	case mobjinfo_speed:
 		lua_pushinteger(L, info->speed); // sometimes it's fixed_t, sometimes it's not...
-	else if (fastcmp(field,"radius"))
+		break;
+	case mobjinfo_radius:
 		lua_pushfixed(L, info->radius);
-	else if (fastcmp(field,"height"))
+		break;
+	case mobjinfo_height:
 		lua_pushfixed(L, info->height);
-	else if (fastcmp(field,"dispoffset"))
+		break;
+	case mobjinfo_dispoffset:
 		lua_pushinteger(L, info->dispoffset);
-	else if (fastcmp(field,"mass"))
+		break;
+	case mobjinfo_mass:
 		lua_pushinteger(L, info->mass);
-	else if (fastcmp(field,"damage"))
+		break;
+	case mobjinfo_damage:
 		lua_pushinteger(L, info->damage);
-	else if (fastcmp(field,"activesound"))
+		break;
+	case mobjinfo_activesound:
 		lua_pushinteger(L, info->activesound);
-	else if (fastcmp(field,"flags"))
+		break;
+	case mobjinfo_flags:
 		lua_pushinteger(L, info->flags);
-	else if (fastcmp(field,"raisestate"))
+		break;
+	case mobjinfo_raisestate:
 		lua_pushinteger(L, info->raisestate);
-	else {
+		break;
+	default:
 		lua_getfield(L, LUA_REGISTRYINDEX, LREG_EXTVARS);
 		I_Assert(lua_istable(L, -1));
 		lua_pushlightuserdata(L, info);
 		lua_rawget(L, -2);
 		if (!lua_istable(L, -1)) { // no extra values table
-			CONS_Debug(DBG_LUA, M_GetText("'%s' has no field named '%s'; returning nil.\n"), "mobjinfo_t", field);
+			CONS_Debug(DBG_LUA, M_GetText("'%s' has no field named '%s'; returning nil.\n"), "mobjinfo_t", lua_tostring(L, 2));
 			return 0;
 		}
-		lua_getfield(L, -1, field);
+		lua_pushvalue(L, 2); // field name
+		lua_gettable(L, -2);
 		if (lua_isnil(L, -1)) // no value for this field
-			CONS_Debug(DBG_LUA, M_GetText("'%s' has no field named '%s'; returning nil.\n"), "mobjinfo_t", field);
+			CONS_Debug(DBG_LUA, M_GetText("'%s' has no field named '%s'; returning nil.\n"), "mobjinfo_t", lua_tostring(L, 2));
+		break;
 	}
 	return 1;
 }
@@ -1183,7 +1306,7 @@ static int mobjinfo_get(lua_State *L)
 static int mobjinfo_set(lua_State *L)
 {
 	mobjinfo_t *info = *((mobjinfo_t **)luaL_checkudata(L, 1, META_MOBJINFO));
-	const char *field = luaL_checkstring(L, 2);
+	enum mobjinfo_e field = Lua_optoption(L, 2, -1, mobjinfo_fields_ref);
 
 	if (hud_running)
 		return luaL_error(L, "Do not alter mobjinfo in HUD rendering code!");
@@ -1193,55 +1316,81 @@ static int mobjinfo_set(lua_State *L)
 	I_Assert(info != NULL);
 	I_Assert(info >= mobjinfo);
 
-	if (fastcmp(field,"doomednum"))
+	switch (field)
+	{
+	case mobjinfo_doomednum:
 		info->doomednum = (INT32)luaL_checkinteger(L, 3);
-	else if (fastcmp(field,"spawnstate"))
+		break;
+	case mobjinfo_spawnstate:
 		info->spawnstate = luaL_checkinteger(L, 3);
-	else if (fastcmp(field,"spawnhealth"))
+		break;
+	case mobjinfo_spawnhealth:
 		info->spawnhealth = (INT32)luaL_checkinteger(L, 3);
-	else if (fastcmp(field,"seestate"))
+		break;
+	case mobjinfo_seestate:
 		info->seestate = luaL_checkinteger(L, 3);
-	else if (fastcmp(field,"seesound"))
+		break;
+	case mobjinfo_seesound:
 		info->seesound = luaL_checkinteger(L, 3);
-	else if (fastcmp(field,"reactiontime"))
+		break;
+	case mobjinfo_reactiontime:
 		info->reactiontime = (INT32)luaL_checkinteger(L, 3);
-	else if (fastcmp(field,"attacksound"))
+		break;
+	case mobjinfo_attacksound:
 		info->attacksound = luaL_checkinteger(L, 3);
-	else if (fastcmp(field,"painstate"))
+		break;
+	case mobjinfo_painstate:
 		info->painstate = luaL_checkinteger(L, 3);
-	else if (fastcmp(field,"painchance"))
+		break;
+	case mobjinfo_painchance:
 		info->painchance = (INT32)luaL_checkinteger(L, 3);
-	else if (fastcmp(field,"painsound"))
+		break;
+	case mobjinfo_painsound:
 		info->painsound = luaL_checkinteger(L, 3);
-	else if (fastcmp(field,"meleestate"))
+		break;
+	case mobjinfo_meleestate:
 		info->meleestate = luaL_checkinteger(L, 3);
-	else if (fastcmp(field,"missilestate"))
+		break;
+	case mobjinfo_missilestate:
 		info->missilestate = luaL_checkinteger(L, 3);
-	else if (fastcmp(field,"deathstate"))
+		break;
+	case mobjinfo_deathstate:
 		info->deathstate = luaL_checkinteger(L, 3);
-	else if (fastcmp(field,"xdeathstate"))
+		break;
+	case mobjinfo_xdeathstate:
 		info->xdeathstate = luaL_checkinteger(L, 3);
-	else if (fastcmp(field,"deathsound"))
+		break;
+	case mobjinfo_deathsound:
 		info->deathsound = luaL_checkinteger(L, 3);
-	else if (fastcmp(field,"speed"))
+		break;
+	case mobjinfo_speed:
 		info->speed = luaL_checkfixed(L, 3);
-	else if (fastcmp(field,"radius"))
+		break;
+	case mobjinfo_radius:
 		info->radius = luaL_checkfixed(L, 3);
-	else if (fastcmp(field,"height"))
+		break;
+	case mobjinfo_height:
 		info->height = luaL_checkfixed(L, 3);
-	else if (fastcmp(field,"dispoffset"))
+		break;
+	case mobjinfo_dispoffset:
 		info->dispoffset = (INT32)luaL_checkinteger(L, 3);
-	else if (fastcmp(field,"mass"))
+		break;
+	case mobjinfo_mass:
 		info->mass = (INT32)luaL_checkinteger(L, 3);
-	else if (fastcmp(field,"damage"))
+		break;
+	case mobjinfo_damage:
 		info->damage = (INT32)luaL_checkinteger(L, 3);
-	else if (fastcmp(field,"activesound"))
+		break;
+	case mobjinfo_activesound:
 		info->activesound = luaL_checkinteger(L, 3);
-	else if (fastcmp(field,"flags"))
+		break;
+	case mobjinfo_flags:
 		info->flags = (INT32)luaL_checkinteger(L, 3);
-	else if (fastcmp(field,"raisestate"))
+		break;
+	case mobjinfo_raisestate:
 		info->raisestate = luaL_checkinteger(L, 3);
-	else {
+		break;
+	default:
 		lua_getfield(L, LUA_REGISTRYINDEX, LREG_EXTVARS);
 		I_Assert(lua_istable(L, -1));
 		lua_pushlightuserdata(L, info);
@@ -1249,18 +1398,17 @@ static int mobjinfo_set(lua_State *L)
 		if (lua_isnil(L, -1)) {
 			// This index doesn't have a table for extra values yet, let's make one.
 			lua_pop(L, 1);
-			CONS_Debug(DBG_LUA, M_GetText("'%s' has no field named '%s'; adding it as Lua data.\n"), "mobjinfo_t", field);
+			CONS_Debug(DBG_LUA, M_GetText("'%s' has no field named '%s'; adding it as Lua data.\n"), "mobjinfo_t", lua_tostring(L, 2));
 			lua_newtable(L);
 			lua_pushlightuserdata(L, info);
 			lua_pushvalue(L, -2); // ext value table
 			lua_rawset(L, -4); // LREG_EXTVARS table
 		}
+		lua_pushvalue(L, 2); // key
 		lua_pushvalue(L, 3); // value to store
-		lua_setfield(L, -2, field);
+		lua_settable(L, -3);
 		lua_pop(L, 2);
 	}
-	//else
-		//return luaL_error(L, LUA_QL("mobjinfo_t") " has no field named " LUA_QS, field);
 	return 0;
 }
 
@@ -1598,7 +1746,7 @@ static int lib_setSkinColor(lua_State *L)
 		else if (i == 6 || (str && fastcmp(str,"accessible"))) {
 			boolean v = lua_toboolean(L, 3);
 			if (cnum < FIRSTSUPERCOLOR && v != skincolors[cnum].accessible)
-				return luaL_error(L, "skincolors[] index %d is a standard color; accessibility changes are prohibited.", cnum);
+				CONS_Alert(CONS_WARNING, "skincolors[] index %d is a standard color; accessibility changes are prohibited.", cnum);
 			else
 				info->accessible = v;
 		}
@@ -1693,7 +1841,7 @@ static int skincolor_set(lua_State *L)
 	else if (fastcmp(field,"accessible")) {
 		boolean v = lua_toboolean(L, 3);
 		if (cnum < FIRSTSUPERCOLOR && v != skincolors[cnum].accessible)
-			return luaL_error(L, "skincolors[] index %d is a standard color; accessibility changes are prohibited.", cnum);
+			CONS_Alert(CONS_WARNING, "skincolors[] index %d is a standard color; accessibility changes are prohibited.", cnum);
 		else
 			info->accessible = v;
 	} else
@@ -1787,6 +1935,8 @@ int LUA_InfoLib(lua_State *L)
 		lua_pushcfunction(L, mobjinfo_num);
 		lua_setfield(L, -2, "__len");
 	lua_pop(L, 1);
+
+	mobjinfo_fields_ref = Lua_CreateFieldTable(L, mobjinfo_opt);
 
 	luaL_newmetatable(L, META_SKINCOLOR);
 		lua_pushcfunction(L, skincolor_get);

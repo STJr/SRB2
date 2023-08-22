@@ -49,7 +49,7 @@
 #include "m_anigif.h"
 #include "md5.h"
 #include "m_perfstats.h"
-#include "hardware/u_list.h" // TODO: this should be a standard utility class
+#include "u_list.h"
 
 #ifdef NETGAME_DEVMODE
 #define CV_RESTRICT CV_NETVAR
@@ -599,6 +599,7 @@ void D_RegisterServerCommands(void)
 	CV_RegisterVar(&cv_joinnextround);
 	CV_RegisterVar(&cv_showjoinaddress);
 	CV_RegisterVar(&cv_blamecfail);
+	CV_RegisterVar(&cv_dedicatedidletime);
 #endif
 
 	COM_AddCommand("ping", Command_Ping_f, COM_LUA);
@@ -612,6 +613,10 @@ void D_RegisterServerCommands(void)
 	CV_RegisterVar(&cv_showping);
 
 	CV_RegisterVar(&cv_allowseenames);
+
+	// Other filesrch.c consvars are defined in D_RegisterClientCommands
+	CV_RegisterVar(&cv_addons_option);
+	CV_RegisterVar(&cv_addons_folder);
 
 	CV_RegisterVar(&cv_dummyconsvar);
 }
@@ -796,8 +801,8 @@ void D_RegisterClientCommands(void)
 	CV_RegisterVar(&cv_digitaldeadzone2);
 
 	// filesrch.c
-	CV_RegisterVar(&cv_addons_option);
-	CV_RegisterVar(&cv_addons_folder);
+	//CV_RegisterVar(&cv_addons_option); // These two are now defined
+	//CV_RegisterVar(&cv_addons_folder); // in D_RegisterServerCommands
 	CV_RegisterVar(&cv_addons_md5);
 	CV_RegisterVar(&cv_addons_showall);
 	CV_RegisterVar(&cv_addons_search_type);
@@ -871,10 +876,15 @@ void D_RegisterClientCommands(void)
 	// screen.c
 	CV_RegisterVar(&cv_fullscreen);
 	CV_RegisterVar(&cv_renderview);
+	CV_RegisterVar(&cv_renderhitboxinterpolation);
+	CV_RegisterVar(&cv_renderhitboxgldepth);
+	CV_RegisterVar(&cv_renderhitbox);
 	CV_RegisterVar(&cv_renderer);
 	CV_RegisterVar(&cv_scr_depth);
 	CV_RegisterVar(&cv_scr_width);
 	CV_RegisterVar(&cv_scr_height);
+	CV_RegisterVar(&cv_scr_width_w);
+	CV_RegisterVar(&cv_scr_height_w);
 
 	CV_RegisterVar(&cv_soundtest);
 
@@ -1635,9 +1645,14 @@ static void Command_Playdemo_f(void)
 {
 	char name[256];
 
-	if (COM_Argc() != 2)
+	if (COM_Argc() < 2)
 	{
-		CONS_Printf(M_GetText("playdemo <demoname>: playback a demo\n"));
+		CONS_Printf("playdemo <demoname> [-addfiles / -force]:\n");
+		CONS_Printf(M_GetText(
+					"Play back a demo file. The full path from your SRB2 directory must be given.\n\n"
+
+					"* With \"-addfiles\", any required files are added from a list contained within the demo file.\n"
+					"* With \"-force\", the demo is played even if the necessary files have not been added.\n"));
 		return;
 	}
 
@@ -1658,6 +1673,16 @@ static void Command_Playdemo_f(void)
 	// dont add .lmp so internal game demos can be played
 
 	CONS_Printf(M_GetText("Playing back demo '%s'.\n"), name);
+
+	demofileoverride = DFILE_OVERRIDE_NONE;
+	if (strcmp(COM_Argv(2), "-addfiles") == 0)
+	{
+		demofileoverride = DFILE_OVERRIDE_LOAD;
+	}
+	else if (strcmp(COM_Argv(2), "-force") == 0)
+	{
+		demofileoverride = DFILE_OVERRIDE_SKIP;
+	}
 
 	// Internal if no extension, external if one exists
 	// If external, convert the file name to a path in SRB2's home directory
@@ -1879,8 +1904,8 @@ static void Command_Map_f(void)
 	size_t option_gametype;
 	const char *gametypename;
 	boolean newresetplayers;
-
-	boolean mustmodifygame;
+	boolean prevent_cheat;
+	boolean set_cheated;
 
 	INT32 newmapnum;
 
@@ -1901,21 +1926,34 @@ static void Command_Map_f(void)
 	option_gametype =   COM_CheckPartialParm("-g");
 	newresetplayers = ! COM_CheckParm("-noresetplayers");
 
-	mustmodifygame =
-		!( netgame     || multiplayer ) &&
-		(!modifiedgame || savemoddata );
+	prevent_cheat = !( usedCheats ) && !( option_force || cv_debug );
+	set_cheated = false;
 
-	if (mustmodifygame && !option_force)
+	if (!( netgame || multiplayer ))
 	{
-		/* May want to be more descriptive? */
-		CONS_Printf(M_GetText("Sorry, level change disabled in single player.\n"));
-		return;
+		if (prevent_cheat)
+		{
+			/* May want to be more descriptive? */
+			CONS_Printf(M_GetText("Cheats must be enabled to level change in single player.\n"));
+			return;
+		}
+		else
+		{
+			set_cheated = true;
+		}
 	}
 
-	if (!newresetplayers && !cv_debug)
+	if (!newresetplayers)
 	{
-		CONS_Printf(M_GetText("DEVMODE must be enabled.\n"));
-		return;
+		if (prevent_cheat)
+		{
+			CONS_Printf(M_GetText("Cheats must be enabled to use -noresetplayers.\n"));
+			return;
+		}
+		else
+		{
+			set_cheated = true;
+		}
 	}
 
 	if (option_gametype)
@@ -1923,7 +1961,7 @@ static void Command_Map_f(void)
 		if (!multiplayer)
 		{
 			CONS_Printf(M_GetText(
-						"You can't switch gametypes in single player!\n"));
+				"You can't switch gametypes in single player!\n"));
 			return;
 		}
 		else if (COM_Argc() < option_gametype + 2)/* no argument after? */
@@ -1936,7 +1974,9 @@ static void Command_Map_f(void)
 	}
 
 	if (!( first_option = COM_FirstOption() ))
+	{
 		first_option = COM_Argc();
+	}
 
 	if (first_option < 2)
 	{
@@ -1957,11 +1997,6 @@ static void Command_Map_f(void)
 		CONS_Alert(CONS_ERROR, M_GetText("Could not find any map described as '%s'.\n"), mapname);
 		Z_Free(mapname);
 		return;
-	}
-
-	if (mustmodifygame && option_force)
-	{
-		G_SetGameModified(false);
 	}
 
 	// new gametype value
@@ -2005,15 +2040,13 @@ static void Command_Map_f(void)
 	}
 
 	// don't use a gametype the map doesn't support
-	if (cv_debug || option_force || cv_skipmapcheck.value)
-		fromlevelselect = false; // The player wants us to trek on anyway.  Do so.
 	// G_TOLFlag handles both multiplayer gametype and ignores it for !multiplayer
-	else
+	if (!(
+			mapheaderinfo[newmapnum-1] &&
+			mapheaderinfo[newmapnum-1]->typeoflevel & G_TOLFlag(newgametype)
+	))
 	{
-		if (!(
-					mapheaderinfo[newmapnum-1] &&
-					mapheaderinfo[newmapnum-1]->typeoflevel & G_TOLFlag(newgametype)
-		))
+		if (prevent_cheat && !cv_skipmapcheck.value)
 		{
 			CONS_Alert(CONS_WARNING, M_GetText("%s (%s) doesn't support %s mode!\n(Use -force to override)\n"), realmapname, G_BuildMapName(newmapnum),
 				(multiplayer ? gametype_cons_t[newgametype].strvalue : "Single Player"));
@@ -2023,23 +2056,33 @@ static void Command_Map_f(void)
 		}
 		else
 		{
-			fromlevelselect =
-				( netgame || multiplayer ) &&
-				newgametype == gametype    &&
-				gametypedefaultrules[newgametype] & GTR_CAMPAIGN;
+			// The player wants us to trek on anyway.  Do so.
+			fromlevelselect = false;
+			set_cheated = ((gametypedefaultrules[newgametype] & GTR_CAMPAIGN) == GTR_CAMPAIGN);
 		}
+	}
+	else
+	{
+		fromlevelselect =
+			( netgame || multiplayer ) &&
+			newgametype == gametype    &&
+			(gametypedefaultrules[newgametype] & GTR_CAMPAIGN);
 	}
 
 	// Prevent warping to locked levels
-	// ... unless you're in a dedicated server.  Yes, technically this means you can view any level by
-	// running a dedicated server and joining it yourself, but that's better than making dedicated server's
-	// lives hell.
-	if (!dedicated && M_MapLocked(newmapnum))
+	if (M_CampaignWarpIsCheat(newgametype, newmapnum, serverGamedata))
 	{
-		CONS_Alert(CONS_NOTICE, M_GetText("You need to unlock this level before you can warp to it!\n"));
-		Z_Free(realmapname);
-		Z_Free(mapname);
-		return;
+		if (prevent_cheat)
+		{
+			CONS_Alert(CONS_NOTICE, M_GetText("Cheats must be enabled to warp to a locked level!\n"));
+			Z_Free(realmapname);
+			Z_Free(mapname);
+			return;
+		}
+		else
+		{
+			set_cheated = true;
+		}
 	}
 
 	// Ultimate Mode only in SP via menu
@@ -2055,6 +2098,11 @@ static void Command_Map_f(void)
 		CV_SetValue(&cv_analog[0], tutorialanalog);
 	}
 	tutorialmode = false; // warping takes us out of tutorial mode
+
+	if (set_cheated && !usedCheats)
+	{
+		G_SetUsedCheats(false);
+	}
 
 	D_MapChange(newmapnum, newgametype, false, newresetplayers, 0, false, fromlevelselect);
 
@@ -2097,11 +2145,13 @@ static void Got_Mapcmd(UINT8 **cp, INT32 playernum)
 
 	lastgametype = gametype;
 	gametype = READUINT8(*cp);
-	G_SetGametype(gametype); // I fear putting that macro as an argument
 
 	if (gametype < 0 || gametype >= gametypecount)
 		gametype = lastgametype;
-	else if (gametype != lastgametype)
+	else
+		G_SetGametype(gametype);
+
+	if (gametype != lastgametype)
 		D_GameTypeChanged(lastgametype); // emulate consvar_t behavior for gametype
 
 	skipprecutscene = ((flags & (1<<2)) != 0);
@@ -2122,12 +2172,6 @@ static void Got_Mapcmd(UINT8 **cp, INT32 playernum)
 
 	if (demoplayback && !timingdemo)
 		precache = false;
-
-	if (resetplayer && !FLS)
-	{
-		emeralds = 0;
-		memset(&luabanks, 0, sizeof(luabanks));
-	}
 
 	if (modeattacking)
 	{
@@ -2169,7 +2213,7 @@ static void Command_Pause(void)
 
 	if (cv_pause.value || server || (IsPlayerAdmin(consoleplayer)))
 	{
-		if (modeattacking || !(gamestate == GS_LEVEL || gamestate == GS_INTERMISSION) || (marathonmode && gamestate == GS_INTERMISSION))
+		if (modeattacking || !(gamestate == GS_LEVEL || gamestate == GS_INTERMISSION || gamestate == GS_WAITINGPLAYERS) || (marathonmode && gamestate == GS_INTERMISSION))
 		{
 			CONS_Printf(M_GetText("You can't pause here.\n"));
 			return;
@@ -2332,7 +2376,7 @@ static void Got_Clearscores(UINT8 **cp, INT32 playernum)
 	}
 
 	for (i = 0; i < MAXPLAYERS; i++)
-		players[i].score = 0;
+		players[i].score = players[i].recordscore = 0;
 
 	CONS_Printf(M_GetText("Scores have been reset by the server.\n"));
 }
@@ -3836,7 +3880,7 @@ static void Command_ListWADS_f(void)
 static void Command_Version_f(void)
 {
 #ifdef DEVELOP
-	CONS_Printf("Sonic Robo Blast 2 %s-%s (%s %s) ", compbranch, comprevision, compdate, comptime);
+	CONS_Printf("Sonic Robo Blast 2 %s %s %s (%s %s) ", compbranch, comprevision, compnote, compdate, comptime);
 #else
 	CONS_Printf("Sonic Robo Blast 2 %s (%s %s %s %s) ", VERSIONSTRING, compdate, comptime, comprevision, compbranch);
 #endif
@@ -3869,11 +3913,6 @@ static void Command_Version_f(void)
 		CONS_Printf("64-bit ");
 	else // 16-bit? 128-bit?
 		CONS_Printf("Bits Unknown ");
-
-	// No ASM?
-#ifdef NOASM
-	CONS_Printf("\x85" "NOASM " "\x80");
-#endif
 
 	// Debug build
 #ifdef _DEBUG
@@ -3943,15 +3982,9 @@ void ItemFinder_OnChange(void)
 	if (!cv_itemfinder.value)
 		return; // it's fine.
 
-	if (!M_SecretUnlocked(SECRET_ITEMFINDER))
+	if (!M_SecretUnlocked(SECRET_ITEMFINDER, clientGamedata))
 	{
 		CONS_Printf(M_GetText("You haven't earned this yet.\n"));
-		CV_StealthSetValue(&cv_itemfinder, 0);
-		return;
-	}
-	else if (netgame || multiplayer)
-	{
-		CONS_Printf(M_GetText("This only works in single player.\n"));
 		CV_StealthSetValue(&cv_itemfinder, 0);
 		return;
 	}
@@ -4246,9 +4279,6 @@ void D_GameTypeChanged(INT32 lastgametype)
 	else if (!multiplayer && !netgame)
 	{
 		G_SetGametype(GT_COOP);
-		// These shouldn't matter anymore
-		//CV_Set(&cv_itemrespawntime, cv_itemrespawntime.defaultvalue);
-		//CV_SetValue(&cv_itemrespawn, 0);
 	}
 
 	// reset timelimit and pointlimit in race/coop, prevent stupid cheats
@@ -4303,7 +4333,7 @@ void D_GameTypeChanged(INT32 lastgametype)
 
 static void Ringslinger_OnChange(void)
 {
-	if (!M_SecretUnlocked(SECRET_PANDORA) && !netgame && cv_ringslinger.value && !cv_debug)
+	if (!M_SecretUnlocked(SECRET_PANDORA, serverGamedata) && !netgame && cv_ringslinger.value && !cv_debug)
 	{
 		CONS_Printf(M_GetText("You haven't earned this yet.\n"));
 		CV_StealthSetValue(&cv_ringslinger, 0);
@@ -4311,12 +4341,12 @@ static void Ringslinger_OnChange(void)
 	}
 
 	if (cv_ringslinger.value) // Only if it's been turned on
-		G_SetGameModified(multiplayer);
+		G_SetUsedCheats(false);
 }
 
 static void Gravity_OnChange(void)
 {
-	if (!M_SecretUnlocked(SECRET_PANDORA) && !netgame && !cv_debug
+	if (!M_SecretUnlocked(SECRET_PANDORA, serverGamedata) && !netgame && !cv_debug
 		&& strcmp(cv_gravity.string, cv_gravity.defaultvalue))
 	{
 		CONS_Printf(M_GetText("You haven't earned this yet.\n"));
@@ -4332,7 +4362,7 @@ static void Gravity_OnChange(void)
 #endif
 
 	if (!CV_IsSetToDefault(&cv_gravity))
-		G_SetGameModified(multiplayer);
+		G_SetUsedCheats(false);
 	gravity = cv_gravity.value;
 }
 
@@ -4549,25 +4579,37 @@ static void Command_Mapmd5_f(void)
 		CONS_Printf(M_GetText("You must be in a level to use this.\n"));
 }
 
+void D_SendExitLevel(boolean cheat)
+{
+	UINT8 buf[8];
+	UINT8 *buf_p = buf;
+
+	WRITEUINT8(buf_p, cheat);
+
+	SendNetXCmd(XD_EXITLEVEL, &buf, buf_p - buf);
+}
+
 static void Command_ExitLevel_f(void)
 {
-	if (!(netgame || (multiplayer && gametype != GT_COOP)) && !cv_debug)
-		CONS_Printf(M_GetText("This only works in a netgame.\n"));
-	else if (!(server || (IsPlayerAdmin(consoleplayer))))
+	if (!(server || (IsPlayerAdmin(consoleplayer))))
 		CONS_Printf(M_GetText("Only the server or a remote admin can use this.\n"));
 	else if (( gamestate != GS_LEVEL && gamestate != GS_CREDITS ) || demoplayback)
 		CONS_Printf(M_GetText("You must be in a level to use this.\n"));
 	else
-		SendNetXCmd(XD_EXITLEVEL, NULL, 0);
+		D_SendExitLevel(true);
 }
 
 static void Got_ExitLevelcmd(UINT8 **cp, INT32 playernum)
 {
-	(void)cp;
+	boolean cheat = false;
+
+	cheat = (boolean)READUINT8(*cp);
 
 	// Ignore duplicate XD_EXITLEVEL commands.
 	if (gameaction == ga_completed)
+	{
 		return;
+	}
 
 	if (playernum != serverplayer && !IsPlayerAdmin(playernum))
 	{
@@ -4575,6 +4617,11 @@ static void Got_ExitLevelcmd(UINT8 **cp, INT32 playernum)
 		if (server)
 			SendKick(playernum, KICK_MSG_CON_FAIL | KICK_MSG_KEEP_BODY);
 		return;
+	}
+
+	if (G_CoopGametype() && cheat)
+	{
+		G_SetUsedCheats(false);
 	}
 
 	G_ExitLevel();
@@ -4613,6 +4660,7 @@ void Command_ExitGame_f(void)
 	botskin = 0;
 	cv_debug = 0;
 	emeralds = 0;
+	automapactive = false;
 	memset(&luabanks, 0, sizeof(luabanks));
 
 	if (dirmenu)
@@ -4648,7 +4696,7 @@ static void Fishcake_OnChange(void)
 	// so don't make modifiedgame always on!
 	if (cv_debug)
 	{
-		G_SetGameModified(multiplayer);
+		G_SetUsedCheats(false);
 	}
 
 	else if (cv_debug != cv_fishcake.value)
@@ -4665,11 +4713,11 @@ static void Fishcake_OnChange(void)
 static void Command_Isgamemodified_f(void)
 {
 	if (savemoddata)
-		CONS_Printf(M_GetText("modifiedgame is true, but you can save emblem and time data in this mod.\n"));
+		CONS_Printf(M_GetText("modifiedgame is true, but you can save time data in this mod.\n"));
 	else if (modifiedgame)
-		CONS_Printf(M_GetText("modifiedgame is true, extras will not be unlocked\n"));
+		CONS_Printf(M_GetText("modifiedgame is true, time data can't be saved\n"));
 	else
-		CONS_Printf(M_GetText("modifiedgame is false, you can unlock extras\n"));
+		CONS_Printf(M_GetText("modifiedgame is false, you can save time data\n"));
 }
 
 static void Command_Cheats_f(void)

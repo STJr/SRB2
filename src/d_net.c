@@ -869,6 +869,9 @@ static void DebugPrintpacket(const char *header)
 				(UINT32)ExpandTics(netbuffer->u.clientpak.client_tic, doomcom->remotenode),
 				(UINT32)ExpandTics (netbuffer->u.clientpak.resendfrom, doomcom->remotenode));
 			break;
+		case PT_BASICKEEPALIVE:
+			fprintf(debugfile, "    wipetime\n");
+			break;
 		case PT_TEXTCMD:
 		case PT_TEXTCMD2:
 			fprintf(debugfile, "    length %d\n    ", netbuffer->u.textcmd[0]);
@@ -1207,26 +1210,32 @@ static void Internal_FreeNodenum(INT32 nodenum)
 	(void)nodenum;
 }
 
+char *I_NetSplitAddress(char *host, char **port)
+{
+	boolean v4 = (strchr(host, '.') != NULL);
+
+	host = strtok(host, v4 ? ":" : "[]");
+
+	if (port)
+		*port = strtok(NULL, ":");
+
+	return host;
+}
+
 SINT8 I_NetMakeNode(const char *hostname)
 {
 	SINT8 newnode = -1;
 	if (I_NetMakeNodewPort)
 	{
 		char *localhostname = strdup(hostname);
-		char  *t = localhostname;
-		const char *port;
+		char *port;
 		if (!localhostname)
 			return newnode;
+
 		// retrieve portnum from address!
-		strtok(localhostname, ":");
-		port = strtok(NULL, ":");
+		hostname = I_NetSplitAddress(localhostname, &port);
 
-		// remove the port in the hostname as we've it already
-		while ((*t != ':') && (*t != '\0'))
-			t++;
-		*t = '\0';
-
-		newnode = I_NetMakeNodewPort(localhostname, port);
+		newnode = I_NetMakeNodewPort(hostname, port);
 		free(localhostname);
 	}
 	return newnode;
