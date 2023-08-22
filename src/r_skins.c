@@ -772,12 +772,12 @@ void R_AddSkins(UINT16 wadnum, boolean mainfile)
 					strupr(skin->hudname);
 					SYMBOLCONVERT(skin->hudname)
 				}
-				else if (!supername)
+				if (!supername)
 				{
-					char super[7], someone[SKINNAMESIZE+1];
-					strcpy(super, "Super ");
-					strcpy(someone, skin->realname);
-					STRBUFCPY(skin->supername, strcat(super, someone));
+					char superstring[SKINNAMESIZE+7];
+					strcpy(superstring, "Super ");
+					strlcat(superstring, skin->name, sizeof(superstring));
+					STRBUFCPY(skin->supername, superstring);
 				}
 			}
 			else if (!stricmp(stoken, "supername"))
@@ -795,10 +795,10 @@ void R_AddSkins(UINT16 wadnum, boolean mainfile)
 					HUDNAMEWRITE(skin->realname);
 				if (!supername) //copy over default to capitalise the name
 				{
-					char super[7], someone[SKINNAMESIZE+1];
-					strcpy(super, "Super ");
-					strcpy(someone, skin->realname);
-					STRBUFCPY(skin->supername, strcat(super, someone));
+					char superstring[SKINNAMESIZE+7];
+					strcpy(superstring, "Super ");
+					strlcat(superstring, skin->realname, sizeof(superstring));
+					STRBUFCPY(skin->supername, superstring);
 				}
 			}
 			else if (!stricmp(stoken, "hudname"))
@@ -930,10 +930,10 @@ void R_PatchSkins(UINT16 wadnum, boolean mainfile)
 						HUDNAMEWRITE(skin->realname);
 					if (!supername) //copy over default to capitalise the name
 					{
-						char super[7], someone[SKINNAMESIZE+1];
-						strcpy(super, "Super ");
-						strcpy(someone, skin->realname);
-						STRBUFCPY(skin->supername, strcat(super, someone));
+						char superstring[SKINNAMESIZE+7];
+						strcpy(superstring, "Super ");
+						strlcat(superstring, skin->realname, sizeof(superstring));
+						STRBUFCPY(skin->supername, superstring);
 					}
 				}
 				else if (!stricmp(stoken, "hudname"))
