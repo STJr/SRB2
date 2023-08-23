@@ -521,6 +521,7 @@ INT32 P_FindMinSurroundingLight(sector_t *sector, INT32 max);
 void P_SetupSignExit(player_t *player);
 boolean P_IsFlagAtBase(mobjtype_t flag);
 
+boolean P_SectorHasPortal(sector_t *sector);
 boolean P_SectorHasFloorPortal(sector_t *sector);
 boolean P_SectorHasCeilingPortal(sector_t *sector);
 boolean P_CompareSectorPortals(sectorportal_t *a, sectorportal_t *b);

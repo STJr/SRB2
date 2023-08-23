@@ -357,6 +357,11 @@ sector_t *R_FakeFlat(sector_t *sec, sector_t *tempsec, INT32 *floorlightlevel,
 
 boolean R_IsEmptyLine(seg_t *line, sector_t *front, sector_t *back)
 {
+	if (P_SectorHasPortal(front) && !P_SectorHasPortal(back))
+		return false;
+	else if (!P_SectorHasPortal(front) && P_SectorHasPortal(back))
+		return false;
+
 	return (
 		!line->polyseg &&
 		back->ceilingpic == front->ceilingpic
@@ -578,7 +583,6 @@ static void R_AddLine(seg_t *line)
 	// Reject empty lines used for triggers and special events.
 	// Identical floor and ceiling on both sides, identical light levels on both sides,
 	// and no middle texture.
-
 	if (R_IsEmptyLine(line, frontsector, backsector))
 		return;
 
@@ -915,6 +919,7 @@ static void R_Subsector(size_t num)
 
 	if (P_GetSectorFloorZAt(frontsector, viewx, viewy) < viewz
 		|| frontsector->floorpic == skyflatnum
+		|| P_SectorHasFloorPortal(frontsector)
 		|| (frontsector->heightsec != -1 && sectors[frontsector->heightsec].ceilingpic == skyflatnum))
 	{
 		floorplane = R_FindPlane(frontsector, frontsector->floorheight, frontsector->floorpic, floorlightlevel,
@@ -925,6 +930,7 @@ static void R_Subsector(size_t num)
 
 	if (P_GetSectorCeilingZAt(frontsector, viewx, viewy) > viewz
 		|| frontsector->ceilingpic == skyflatnum
+		|| P_SectorHasCeilingPortal(frontsector)
 		|| (frontsector->heightsec != -1 && sectors[frontsector->heightsec].floorpic == skyflatnum))
 	{
 		ceilingplane = R_FindPlane(frontsector, frontsector->ceilingheight, frontsector->ceilingpic,

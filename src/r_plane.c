@@ -451,7 +451,7 @@ visplane_t *R_FindPlane(sector_t *sector, fixed_t height, INT32 picnum, INT32 li
 				&& check->plangle == plangle
 				&& check->slope == slope
 				&& check->polyobj == polyobj
-				&& check->portalsector == portalsector)
+				&& P_CompareSectorPortals(check->portalsector, portalsector))
 			{
 				return check;
 			}

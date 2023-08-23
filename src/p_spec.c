@@ -6203,6 +6203,11 @@ static boolean P_IsSectorPortalValid(sectorportal_t *secportal)
 	}
 }
 
+boolean P_SectorHasPortal(sector_t *sector)
+{
+	return P_SectorHasFloorPortal(sector) || P_SectorHasCeilingPortal(sector);
+}
+
 boolean P_SectorHasFloorPortal(sector_t *sector)
 {
 	return P_IsSectorPortalValid(&sector->portal_floor);
@@ -6215,7 +6220,11 @@ boolean P_SectorHasCeilingPortal(sector_t *sector)
 
 boolean P_CompareSectorPortals(sectorportal_t *a, sectorportal_t *b)
 {
-	if (a->type != b->type)
+	if (a == NULL && b == NULL)
+		return true;
+	else if (!a || !b)
+		return false;
+	else if (a->type != b->type)
 		return false;
 
 	switch (a->type)
