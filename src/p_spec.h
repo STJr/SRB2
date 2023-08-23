@@ -21,6 +21,10 @@ extern mobj_t *skyboxmo[2]; // current skybox mobjs: 0 = viewpoint, 1 = centerpo
 extern mobj_t *skyboxviewpnts[16]; // array of MT_SKYBOX viewpoint mobjs
 extern mobj_t *skyboxcenterpnts[16]; // array of MT_SKYBOX centerpoint mobjs
 
+extern size_t secportalcount;
+extern size_t secportalcapacity;
+extern sectorportal_t *secportals;
+
 // Amount (dx, dy) vector linedef is shifted right to get scroll amount
 #define SCROLL_SHIFT 5
 
@@ -520,6 +524,12 @@ INT32 P_FindMinSurroundingLight(sector_t *sector, INT32 max);
 
 void P_SetupSignExit(player_t *player);
 boolean P_IsFlagAtBase(mobjtype_t flag);
+
+void P_InitSectorPortals(void);
+UINT32 P_NewSectorPortal(void);
+
+sectorportal_t *P_SectorGetFloorPortal(sector_t *sector);
+sectorportal_t *P_SectorGetCeilingPortal(sector_t *sector);
 
 boolean P_SectorHasPortal(sector_t *sector);
 boolean P_SectorHasFloorPortal(sector_t *sector);

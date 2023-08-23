@@ -1893,7 +1893,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 			|| backsector->floorlightsec != frontsector->floorlightsec
 			//SoM: 4/3/2000: Check for colormaps
 			|| frontsector->extra_colormap != backsector->extra_colormap
-			|| !P_CompareSectorPortals(&frontsector->portal_floor, &backsector->portal_floor)
+			|| !P_CompareSectorPortals(P_SectorGetFloorPortal(frontsector), P_SectorGetFloorPortal(backsector))
 			|| (frontsector->ffloors != backsector->ffloors && !Tag_Compare(&frontsector->tags, &backsector->tags)))
 		{
 			markfloor = true;
@@ -1927,7 +1927,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 			|| backsector->ceilinglightsec != frontsector->ceilinglightsec
 			//SoM: 4/3/2000: Check for colormaps
 			|| frontsector->extra_colormap != backsector->extra_colormap
-			|| !P_CompareSectorPortals(&frontsector->portal_ceiling, &backsector->portal_ceiling)
+			|| !P_CompareSectorPortals(P_SectorGetCeilingPortal(frontsector), P_SectorGetCeilingPortal(backsector))
 			|| (frontsector->ffloors != backsector->ffloors && !Tag_Compare(&frontsector->tags, &backsector->tags)))
 		{
 			markceiling = true;

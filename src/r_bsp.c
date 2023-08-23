@@ -923,7 +923,7 @@ static void R_Subsector(size_t num)
 		|| (frontsector->heightsec != -1 && sectors[frontsector->heightsec].ceilingpic == skyflatnum))
 	{
 		floorplane = R_FindPlane(frontsector, frontsector->floorheight, frontsector->floorpic, floorlightlevel,
-			frontsector->floorxoffset, frontsector->flooryoffset, frontsector->floorangle, floorcolormap, NULL, NULL, frontsector->f_slope, P_SectorHasFloorPortal(frontsector) ? &frontsector->portal_floor : NULL);
+			frontsector->floorxoffset, frontsector->flooryoffset, frontsector->floorangle, floorcolormap, NULL, NULL, frontsector->f_slope, P_SectorGetFloorPortal(frontsector));
 	}
 	else
 		floorplane = NULL;
@@ -935,7 +935,7 @@ static void R_Subsector(size_t num)
 	{
 		ceilingplane = R_FindPlane(frontsector, frontsector->ceilingheight, frontsector->ceilingpic,
 			ceilinglightlevel, frontsector->ceilingxoffset, frontsector->ceilingyoffset, frontsector->ceilingangle,
-			ceilingcolormap, NULL, NULL, frontsector->c_slope, P_SectorHasCeilingPortal(frontsector) ? &frontsector->portal_ceiling : NULL);
+			ceilingcolormap, NULL, NULL, frontsector->c_slope, P_SectorGetCeilingPortal(frontsector));
 	}
 	else
 		ceilingplane = NULL;

@@ -210,12 +210,11 @@ typedef enum
 
 typedef enum
 {
-	SECPORTAL_NONE,
 	SECPORTAL_LINE,
 	SECPORTAL_OBJECT,
 	SECPORTAL_SKYBOX,
 	SECPORTAL_FLOOR,
-	SECPORTAL_CEILING,
+	SECPORTAL_CEILING
 } secportaltype_e;
 
 typedef struct sectorportal_s
@@ -519,8 +518,8 @@ typedef struct sector_s
 	extracolormap_t *spawn_extra_colormap;
 
 	// portals
-	sectorportal_t portal_floor;
-	sectorportal_t portal_ceiling;
+	UINT32 portal_floor;
+	UINT32 portal_ceiling;
 } sector_t;
 
 //

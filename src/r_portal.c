@@ -315,8 +315,6 @@ void Portal_AddSkybox (const visplane_t* plane)
 }
 
 /** Creates a sector portal out of a visplane.
- *
- * Mostly the same as Portal_AddSkybox.
  */
 void Portal_AddSectorPortal (const visplane_t* plane)
 {
@@ -324,9 +322,8 @@ void Portal_AddSectorPortal (const visplane_t* plane)
 	fixed_t x, y, z, angle;
 	sectorportal_t *secportal = plane->portalsector;
 
-	if (secportal->type == SECPORTAL_NONE)
-		return;
-	else if (secportal->type == SECPORTAL_SKYBOX)
+	// Shortcut
+	if (secportal->type == SECPORTAL_SKYBOX)
 	{
 		Portal_AddSkybox(plane);
 		return;

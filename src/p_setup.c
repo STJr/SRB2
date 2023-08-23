@@ -978,11 +978,6 @@ static void P_LoadVertices(UINT8 *data)
 	}
 }
 
-static void InitializeSectorPortal(sectorportal_t *secportal)
-{
-	memset(secportal, 0, sizeof(*secportal));
-}
-
 static void P_InitializeSector(sector_t *ss)
 {
 	memset(&ss->soundorg, 0, sizeof(ss->soundorg));
@@ -996,8 +991,8 @@ static void P_InitializeSector(sector_t *ss)
 	ss->lightingdata = NULL;
 	ss->fadecolormapdata = NULL;
 
-	InitializeSectorPortal(&ss->portal_floor);
-	InitializeSectorPortal(&ss->portal_ceiling);
+	ss->portal_floor = UINT32_MAX;
+	ss->portal_ceiling = UINT32_MAX;
 
 	ss->heightsec = -1;
 	ss->camsec = -1;
@@ -7827,6 +7822,7 @@ boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate)
 	P_InitThinkers();
 	R_InitMobjInterpolators();
 	P_InitCachedActions();
+	P_InitSectorPortals();
 
 	// internal game map
 	maplumpname = G_BuildMapName(gamemap);
