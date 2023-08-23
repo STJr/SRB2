@@ -25,13 +25,15 @@ extern sector_t *frontsector;
 extern sector_t *backsector;
 extern boolean portalline; // is curline a portal seg?
 
-// drawsegs are allocated on the fly... see r_segs.c
-
 extern INT32 checkcoord[12][4];
 
 extern drawseg_t *curdrawsegs;
 extern drawseg_t *drawsegs;
 extern drawseg_t *ds_p;
+
+extern boolean bothceilingssky;
+extern boolean bothfloorssky;
+
 extern INT32 doorclosed;
 
 // BSP?

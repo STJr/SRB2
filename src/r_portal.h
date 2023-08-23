@@ -44,7 +44,6 @@ typedef struct portal_s
 extern portal_t* portal_base;
 extern portal_t* portal_cap;
 extern UINT8 portalrender;
-extern UINT8 floorportalrender;
 
 extern line_t *portalclipline;
 extern sector_t *portalcullsector;

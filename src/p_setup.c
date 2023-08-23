@@ -980,9 +980,9 @@ static void P_LoadVertices(UINT8 *data)
 
 static void InitializeSectorPortal(sectorportal_t *secportal)
 {
-	secportal->target = NULL;
-	secportal->viewpoint.x = secportal->viewpoint.y = secportal->viewpoint.z = 0;
-	secportal->viewpoint.angle = 0;
+	secportal->exists = false;
+	secportal->target.x = secportal->target.y = secportal->target.z = 0;
+	secportal->target.angle = 0;
 }
 
 static void P_InitializeSector(sector_t *ss)
@@ -998,8 +998,8 @@ static void P_InitializeSector(sector_t *ss)
 	ss->lightingdata = NULL;
 	ss->fadecolormapdata = NULL;
 
-	InitializeSectorPortal(&ss->portal_plane_floor);
-	InitializeSectorPortal(&ss->portal_plane_ceiling);
+	InitializeSectorPortal(&ss->portal_floor);
+	InitializeSectorPortal(&ss->portal_ceiling);
 
 	ss->heightsec = -1;
 	ss->camsec = -1;

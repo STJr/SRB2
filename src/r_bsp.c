@@ -36,6 +36,9 @@ drawseg_t *curdrawsegs = NULL; /**< This is used to handle multiple lists for ma
 drawseg_t *drawsegs = NULL;
 drawseg_t *ds_p = NULL;
 
+boolean bothceilingssky = false; // turned on if both back and front ceilings are sky
+boolean bothfloorssky = false; // likewise, but for floors
+
 // indicates doors closed wrt automap bugfix:
 INT32 doorclosed;
 
@@ -391,7 +394,6 @@ static void R_AddLine(seg_t *line)
 	INT32 x1, x2;
 	angle_t angle1, angle2, span, tspan;
 	static sector_t tempsec;
-	boolean bothceilingssky = false, bothfloorssky = false;
 
 	portalline = false;
 
@@ -481,10 +483,17 @@ static void R_AddLine(seg_t *line)
 	backsector = R_FakeFlat(backsector, &tempsec, NULL, NULL, true);
 
 	doorclosed = 0;
+	bothceilingssky = bothfloorssky = false;
 
-	if (backsector->ceilingpic == skyflatnum && frontsector->ceilingpic == skyflatnum)
+	// hack to allow height changes in outdoor areas
+	// This is what gets rid of the upper textures if there should be sky
+	if (backsector->ceilingpic == skyflatnum && frontsector->ceilingpic == skyflatnum
+	&& !(backsector->portal_ceiling.exists || frontsector->portal_ceiling.exists))
 		bothceilingssky = true;
-	if (backsector->floorpic == skyflatnum && frontsector->floorpic == skyflatnum)
+
+	// likewise, but for floors and upper textures
+	if (backsector->floorpic == skyflatnum && frontsector->floorpic == skyflatnum
+	&& !(backsector->portal_floor.exists || frontsector->portal_floor.exists))
 		bothfloorssky = true;
 
 	if (bothceilingssky && bothfloorssky) // everything's sky? let's save us a bit of time then
@@ -909,7 +918,7 @@ static void R_Subsector(size_t num)
 		|| (frontsector->heightsec != -1 && sectors[frontsector->heightsec].ceilingpic == skyflatnum))
 	{
 		floorplane = R_FindPlane(frontsector, frontsector->floorheight, frontsector->floorpic, floorlightlevel,
-			frontsector->floorxoffset, frontsector->flooryoffset, frontsector->floorangle, floorcolormap, NULL, NULL, frontsector->f_slope, frontsector->portal_plane_floor.target != NULL ? &frontsector->portal_plane_floor : NULL);
+			frontsector->floorxoffset, frontsector->flooryoffset, frontsector->floorangle, floorcolormap, NULL, NULL, frontsector->f_slope, frontsector->portal_floor.exists ? &frontsector->portal_floor : NULL);
 	}
 	else
 		floorplane = NULL;
@@ -920,7 +929,7 @@ static void R_Subsector(size_t num)
 	{
 		ceilingplane = R_FindPlane(frontsector, frontsector->ceilingheight, frontsector->ceilingpic,
 			ceilinglightlevel, frontsector->ceilingxoffset, frontsector->ceilingyoffset, frontsector->ceilingangle,
-			ceilingcolormap, NULL, NULL, frontsector->c_slope, frontsector->portal_plane_ceiling.target != NULL ? &frontsector->portal_plane_ceiling : NULL);
+			ceilingcolormap, NULL, NULL, frontsector->c_slope, frontsector->portal_ceiling.exists ? &frontsector->portal_ceiling : NULL);
 	}
 	else
 		ceilingplane = NULL;

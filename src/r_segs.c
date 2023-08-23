@@ -1787,8 +1787,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 	else
 	{
 		// two sided line
-		boolean bothceilingssky = false; // turned on if both back and front ceilings are sky
-		boolean bothfloorssky = false; // likewise, but for floors
+		bothceilingssky = bothfloorssky = false;
 
 		SLOPEPARAMS(backsector->c_slope, worldhigh, worldhighslope, backsector->ceilingheight)
 		SLOPEPARAMS(backsector->f_slope, worldlow,  worldlowslope,  backsector->floorheight)
@@ -1796,21 +1795,6 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 		worldhighslope -= viewz;
 		worldlow -= viewz;
 		worldlowslope -= viewz;
-
-		// hack to allow height changes in outdoor areas
-		// This is what gets rid of the upper textures if there should be sky
-		if (frontsector->ceilingpic == skyflatnum
-			&& backsector->ceilingpic == skyflatnum)
-		{
-			bothceilingssky = true;
-		}
-
-		// likewise, but for floors and upper textures
-		if (frontsector->floorpic == skyflatnum
-			&& backsector->floorpic == skyflatnum)
-		{
-			bothfloorssky = true;
-		}
 
 		ds_p->sprtopclip = ds_p->sprbottomclip = NULL;
 		ds_p->silhouette = 0;
@@ -1909,6 +1893,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 			|| backsector->floorlightsec != frontsector->floorlightsec
 			//SoM: 4/3/2000: Check for colormaps
 			|| frontsector->extra_colormap != backsector->extra_colormap
+			|| !P_CompareSectorPortals(&frontsector->portal_floor, &backsector->portal_floor)
 			|| (frontsector->ffloors != backsector->ffloors && !Tag_Compare(&frontsector->tags, &backsector->tags)))
 		{
 			markfloor = true;
@@ -1942,6 +1927,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 			|| backsector->ceilinglightsec != frontsector->ceilinglightsec
 			//SoM: 4/3/2000: Check for colormaps
 			|| frontsector->extra_colormap != backsector->extra_colormap
+			|| !P_CompareSectorPortals(&frontsector->portal_ceiling, &backsector->portal_ceiling)
 			|| (frontsector->ffloors != backsector->ffloors && !Tag_Compare(&frontsector->tags, &backsector->tags)))
 		{
 				markceiling = true;

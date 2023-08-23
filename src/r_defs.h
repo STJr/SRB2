@@ -210,11 +210,11 @@ typedef enum
 
 typedef struct sectorportal_s
 {
-	struct sector_s *target;
+	boolean exists;
 	struct {
 		fixed_t x, y, z;
 		angle_t angle;
-	} viewpoint;
+	} target;
 } sectorportal_t;
 
 typedef struct ffloor_s
@@ -505,8 +505,8 @@ typedef struct sector_s
 	extracolormap_t *spawn_extra_colormap;
 
 	// portals
-	sectorportal_t portal_plane_floor;
-	sectorportal_t portal_plane_ceiling;
+	sectorportal_t portal_floor;
+	sectorportal_t portal_ceiling;
 } sector_t;
 
 //

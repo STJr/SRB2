@@ -22,7 +22,6 @@
 #include "r_sky.h"
 
 UINT8 portalrender;			/**< When rendering a portal, it establishes the depth of the current BSP traversal. */
-UINT8 floorportalrender;	/**< Same deal, but for floorportals. */
 
 // Linked list for portals.
 portal_t *portal_base, *portal_cap;
@@ -36,7 +35,6 @@ boolean portalline; // is curline a portal seg?
 void Portal_InitList (void)
 {
 	portalrender = 0;
-	floorportalrender = 0;
 	portal_base = portal_cap = NULL;
 }
 
@@ -317,7 +315,7 @@ void Portal_AddSectorPortal (const visplane_t* plane)
 {
 	INT16 start, end;
 	sector_t *source = plane->sector;
-	sectorportal_t *target = plane->portalsector;
+	sectorportal_t *secportal = plane->portalsector;
 
 	if (TrimVisplaneBounds(plane, &start, &end))
 		return;
@@ -329,18 +327,19 @@ void Portal_AddSectorPortal (const visplane_t* plane)
 	fixed_t refx = source->soundorg.x - viewx;
 	fixed_t refy = source->soundorg.y - viewy;
 
-	if (target->viewpoint.angle)
+	// Rotate the X/Y to match the target angle
+	if (secportal->target.angle)
 	{
 		fixed_t x = refx, y = refy;
-		angle_t ang = target->viewpoint.angle >> ANGLETOFINESHIFT;
+		angle_t ang = secportal->target.angle >> ANGLETOFINESHIFT;
 		refx = FixedMul(x, FINECOSINE(ang)) - FixedMul(y, FINESINE(ang));
 		refy = FixedMul(x, FINESINE(ang)) + FixedMul(y, FINECOSINE(ang));
 	}
 
-	portal->viewx = target->viewpoint.x - refx;
-	portal->viewy = target->viewpoint.y - refy;
-	portal->viewz = target->viewpoint.z + viewz;
-	portal->viewangle = target->viewpoint.angle + viewangle;
+	portal->viewx = secportal->target.x - refx;
+	portal->viewy = secportal->target.y - refy;
+	portal->viewz = secportal->target.z + viewz;
+	portal->viewangle = secportal->target.angle + viewangle;
 
 	portal->clipline = -1;
 }
@@ -358,21 +357,17 @@ void Portal_AddSkyboxPortals (void)
 		{
 			boolean added_portal = false;
 
-			// skybox portal
-			if (pl->picnum == skyflatnum)
-			{
-				if (cv_skybox.value && skyboxmo[0])
-				{
-					Portal_AddSkybox(pl);
-					added_portal = true;
-				}
-			}
-
-			// floor portal
-			if (pl->portalsector && pl->portalsector->target && floorportalrender < cv_maxportals.value)
+			// Render sector portal if recursiveness limit hasn't been reached
+			if (pl->portalsector && portalrender < cv_maxportals.value)
 			{
 				Portal_AddSectorPortal(pl);
-				floorportalrender++;
+				added_portal = true;
+			}
+
+			// Render skybox portal
+			if (!added_portal && pl->picnum == skyflatnum && cv_skybox.value && skyboxmo[0])
+			{
+				Portal_AddSkybox(pl);
 				added_portal = true;
 			}
 

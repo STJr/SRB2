@@ -521,6 +521,8 @@ INT32 P_FindMinSurroundingLight(sector_t *sector, INT32 max);
 void P_SetupSignExit(player_t *player);
 boolean P_IsFlagAtBase(mobjtype_t flag);
 
+boolean P_CompareSectorPortals(sectorportal_t *a, sectorportal_t *b);
+
 boolean P_IsMobjTouchingSectorPlane(mobj_t *mo, sector_t *sec);
 boolean P_IsMobjTouching3DFloor(mobj_t *mo, ffloor_t *ffloor, sector_t *sec);
 boolean P_IsMobjTouchingPolyobj(mobj_t *mo, polyobj_t *po, sector_t *polysec);

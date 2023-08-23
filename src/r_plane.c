@@ -441,8 +441,6 @@ visplane_t *R_FindPlane(sector_t *sector, fixed_t height, INT32 picnum, INT32 li
 		hash = visplane_hash(picnum, lightlevel, height);
 		for (check = visplanes[hash]; check; check = check->next)
 		{
-			if (polyobj != check->polyobj)
-				continue;
 			if (height == check->height && picnum == check->picnum
 				&& lightlevel == check->lightlevel
 				&& xoff == check->xoffs && yoff == check->yoffs
@@ -452,6 +450,7 @@ visplane_t *R_FindPlane(sector_t *sector, fixed_t height, INT32 picnum, INT32 li
 				&& check->viewangle == viewangle
 				&& check->plangle == plangle
 				&& check->slope == slope
+				&& check->polyobj == polyobj
 				&& check->portalsector == portalsector)
 			{
 				return check;
