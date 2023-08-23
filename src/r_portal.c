@@ -309,41 +309,38 @@ void Portal_AddSkybox (const visplane_t* plane)
 	portal->clipline = -1;
 }
 
-/** Creates a floor portal out of a visplane.
+/** Creates a sector portal out of a visplane.
  *
  * Mostly the same as Portal_AddSkybox.
  */
-void Portal_AddFloorPortal (const visplane_t* plane)
+void Portal_AddSectorPortal (const visplane_t* plane)
 {
 	INT16 start, end;
-	portal_t* portal;
-	sector_t *portalsector = plane->sector;
-	mobj_t *portalmobj = portalsector->portals[0];
-	mobj_t *refmobj = portalsector->portals[1];
-	fixed_t refx, refy;
+	sector_t *source = plane->sector;
+	sectorportal_t *target = plane->portalsector;
 
 	if (TrimVisplaneBounds(plane, &start, &end))
 		return;
 
-	portal = Portal_Add(start, end);
+	portal_t* portal = Portal_Add(start, end);
 
 	Portal_ClipVisplane(plane, portal);
 
-	if ((refmobj != NULL) && !(P_MobjWasRemoved(refmobj)))
+	fixed_t refx = source->soundorg.x - viewx;
+	fixed_t refy = source->soundorg.y - viewy;
+
+	if (target->viewpoint.angle)
 	{
-		refx = (refmobj->x - viewx);
-		refy = (refmobj->y - viewy);
-	}
-	else
-	{
-		refx = (portalsector->soundorg.x - viewx);
-		refy = (portalsector->soundorg.y - viewy);
+		fixed_t x = refx, y = refy;
+		angle_t ang = target->viewpoint.angle >> ANGLETOFINESHIFT;
+		refx = FixedMul(x, FINECOSINE(ang)) - FixedMul(y, FINESINE(ang));
+		refy = FixedMul(x, FINESINE(ang)) + FixedMul(y, FINECOSINE(ang));
 	}
 
-	portal->viewx = portalmobj->x - refx;
-	portal->viewy = portalmobj->y - refy;
-	portal->viewz = portalmobj->z + viewz;
-	portal->viewangle = viewangle + portalmobj->angle;
+	portal->viewx = target->viewpoint.x - refx;
+	portal->viewy = target->viewpoint.y - refy;
+	portal->viewz = target->viewpoint.z + viewz;
+	portal->viewangle = target->viewpoint.angle + viewangle;
 
 	portal->clipline = -1;
 }
@@ -354,16 +351,12 @@ void Portal_AddFloorPortal (const visplane_t* plane)
 void Portal_AddSkyboxPortals (void)
 {
 	visplane_t *pl;
-	INT32 i;
-	UINT16 count = 0;
 
-	for (i = 0; i < MAXVISPLANES; i++, pl++)
+	for (INT32 i = 0; i < MAXVISPLANES; i++, pl++)
 	{
 		for (pl = visplanes[i]; pl; pl = pl->next)
 		{
-			// true if added a portal for this visplane
-			boolean addedportal = false;
-			boolean floorportalpresent = (pl->sector->portals[0] != NULL && !P_MobjWasRemoved(pl->sector->portals[0]));
+			boolean added_portal = false;
 
 			// skybox portal
 			if (pl->picnum == skyflatnum)
@@ -371,29 +364,24 @@ void Portal_AddSkyboxPortals (void)
 				if (cv_skybox.value && skyboxmo[0])
 				{
 					Portal_AddSkybox(pl);
-					addedportal = true;
+					added_portal = true;
 				}
 			}
+
 			// floor portal
-			else if (floorportalpresent)
+			if (pl->portalsector && pl->portalsector->target && floorportalrender < cv_maxportals.value)
 			{
-				if (floorportalrender < cv_maxportals.value)
-				{
-					Portal_AddFloorPortal(pl);
-					floorportalrender++;
-					addedportal = true;
-				}
+				Portal_AddSectorPortal(pl);
+				floorportalrender++;
+				added_portal = true;
 			}
 
 			// don't render this visplane anymore
-			if (addedportal)
+			if (added_portal)
 			{
 				pl->minx = 0;
 				pl->maxx = -1;
-				count++;
 			}
 		}
 	}
-
-	CONS_Debug(DBG_RENDER, "Skybox portals: %d\n", count);
 }

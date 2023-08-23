@@ -12822,28 +12822,6 @@ static boolean P_SetupSpawnedMapThing(mapthing_t *mthing, mobj_t *mobj, boolean 
 			skyboxviewpnts[tag] = mobj;
 		break;
 	}
-	case MT_PORTALREFPOINT:
-		{
-			size_t i;
-			for (i = 0; i < numsectors; i++)
-			{
-				sector_t *targetsec = &sectors[i];
-				for (int j = 0; j < targetsec->tags.count; j++)
-				{
-					if ((mthing->extrainfo == targetsec->tags.tags[j]) && (GETSECSPECIAL(targetsec->special, 3) == 1))
-					{
-						// origin
-						if (targetsec == mobj->subsector->sector)
-							targetsec->portals[1] = mobj;
-							// target
-							else
-							targetsec->portals[0] = mobj;
-							break;
-					}
-				}
-			}
-		}
-		break;
 	case MT_EGGSTATUE:
 		if (mthing->args[1])
 		{

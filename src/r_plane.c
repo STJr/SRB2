@@ -392,7 +392,7 @@ static visplane_t *new_visplane(unsigned hash)
 //
 visplane_t *R_FindPlane(sector_t *sector, fixed_t height, INT32 picnum, INT32 lightlevel,
 	fixed_t xoff, fixed_t yoff, angle_t plangle, extracolormap_t *planecolormap,
-	ffloor_t *pfloor, polyobj_t *polyobj, pslope_t *slope)
+	ffloor_t *pfloor, polyobj_t *polyobj, pslope_t *slope, sectorportal_t *portalsector)
 {
 	visplane_t *check;
 	unsigned hash;
@@ -451,7 +451,8 @@ visplane_t *R_FindPlane(sector_t *sector, fixed_t height, INT32 picnum, INT32 li
 				&& check->viewx == viewx && check->viewy == viewy && check->viewz == viewz
 				&& check->viewangle == viewangle
 				&& check->plangle == plangle
-				&& check->slope == slope)
+				&& check->slope == slope
+				&& check->portalsector == portalsector)
 			{
 				return check;
 			}
@@ -479,6 +480,7 @@ visplane_t *R_FindPlane(sector_t *sector, fixed_t height, INT32 picnum, INT32 li
 	check->viewangle = viewangle;
 	check->plangle = plangle;
 	check->sector = sector;
+	check->portalsector = portalsector;
 	check->polyobj = polyobj;
 	check->slope = slope;
 
@@ -558,6 +560,7 @@ visplane_t *R_CheckPlane(visplane_t *pl, INT32 start, INT32 stop)
 		new_pl->sector = pl->sector;
 		new_pl->polyobj = pl->polyobj;
 		new_pl->slope = pl->slope;
+		new_pl->portalsector = pl->portalsector;
 		pl = new_pl;
 		pl->minx = start;
 		pl->maxx = stop;

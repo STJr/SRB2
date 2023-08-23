@@ -208,6 +208,15 @@ typedef enum
 	BT_STRONG,
 } busttype_e;
 
+typedef struct sectorportal_s
+{
+	struct sector_s *target;
+	struct {
+		fixed_t x, y, z;
+		angle_t angle;
+	} viewpoint;
+} sectorportal_t;
+
 typedef struct ffloor_s
 {
 	fixed_t *topheight;
@@ -495,8 +504,9 @@ typedef struct sector_s
 	// colormap structure
 	extracolormap_t *spawn_extra_colormap;
 
-	// floor portals
-	mobj_t *portals[2];
+	// portals
+	sectorportal_t portal_plane_floor;
+	sectorportal_t portal_plane_ceiling;
 } sector_t;
 
 //
