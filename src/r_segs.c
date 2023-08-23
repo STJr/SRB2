@@ -1487,6 +1487,9 @@ static void R_AllocClippingTables(size_t range)
 	openings = Z_Realloc(openings, numopenings * sizeof (*openings), PU_STATIC, NULL);
 	lastopening = openings + pos;
 
+	if (oldopenings == NULL)
+		return;
+
 	// borrowed fix from *cough* zdoom *cough*
 	// [RH] We also need to adjust the openings pointers that
 	//    were already stored in drawsegs.
@@ -1518,6 +1521,9 @@ static void R_AllocTextureColumnTables(size_t range)
 	texturecolumntablesize += range;
 	texturecolumntable = Z_Realloc(texturecolumntable, texturecolumntablesize * sizeof (*texturecolumntable), PU_STATIC, NULL);
 	curtexturecolumntable = texturecolumntable + pos;
+
+	if (oldtable == NULL)
+		return;
 
 	for (drawseg_t *ds = drawsegs; ds < ds_p; ds++)
 	{
