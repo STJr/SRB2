@@ -6186,12 +6186,12 @@ fixed_t P_GetSectorGravityFactor(sector_t *sec)
 		return sec->gravity;
 }
 
-static void SetSectorPortal(sectorportal_t *secportal, sector_t *target_sector, INT32 viewpoint_tag)
+static void SetSectorPortal(sectorportal_t *secportal, sector_t *target_sector, fixed_t default_z, INT32 viewpoint_tag)
 {
 	secportal->target = target_sector;
 	secportal->viewpoint.x = target_sector->soundorg.x;
 	secportal->viewpoint.y = target_sector->soundorg.y;
-	secportal->viewpoint.z = target_sector->ceilingheight;
+	secportal->viewpoint.z = default_z;
 	secportal->viewpoint.angle = 0;
 
 	if (viewpoint_tag <= 0)
@@ -6402,9 +6402,9 @@ void P_SpawnSpecials(boolean fromnetsave)
 						}
 
 						if (floor)
-							SetSectorPortal(&sectors[s1].portal_plane_floor, target_sector, lines[i].args[3]);
+							SetSectorPortal(&sectors[s1].portal_plane_floor, target_sector, target_sector->ceilingheight, lines[i].args[3]);
 						if (ceiling)
-							SetSectorPortal(&sectors[s1].portal_plane_ceiling, target_sector, lines[i].args[3]);
+							SetSectorPortal(&sectors[s1].portal_plane_ceiling, target_sector, target_sector->floorheight, lines[i].args[3]);
 					}
 				}
 				break;
