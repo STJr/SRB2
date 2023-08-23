@@ -5116,7 +5116,6 @@ typedef enum mobj_type
 
 	// Portal objects
 	MT_SKYBOX,
-	MT_PORTALREFPOINT,
 
 	// Debris
 	MT_SPARK, //spark

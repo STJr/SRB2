@@ -208,13 +208,27 @@ typedef enum
 	BT_STRONG,
 } busttype_e;
 
+typedef enum
+{
+	SECPORTAL_NONE,
+	SECPORTAL_LINE,
+	SECPORTAL_OBJECT,
+	SECPORTAL_SKYBOX,
+	SECPORTAL_FLOOR,
+	SECPORTAL_CEILING,
+} secportaltype_e;
+
 typedef struct sectorportal_s
 {
-	boolean exists;
-	struct {
-		fixed_t x, y, z;
-		angle_t angle;
-	} target;
+	secportaltype_e type;
+	union {
+		struct {
+			struct line_s *start;
+			struct line_s *dest;
+		} line;
+		struct sector_s *sector;
+		struct mobj_s *mobj;
+	};
 } sectorportal_t;
 
 typedef struct ffloor_s

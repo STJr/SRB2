@@ -141,30 +141,17 @@ void Portal_Remove (portal_t* portal)
 	Z_Free(portal);
 }
 
-/** Creates a portal out of two lines and a determined screen range.
- *
- * line1 determines the entrance, and line2 the exit.
- * x1 and x2 determine the screen's column bounds.
-
- * The view's offset from the entry line center is obtained,
- * and then rotated&translated to the exit line's center.
- * When the portal renders, it will create the illusion of
- * the two lines being seamed together.
- */
-void Portal_Add2Lines (const INT32 line1, const INT32 line2, const INT32 x1, const INT32 x2)
+static void Portal_GetViewpointForLine(portal_t *portal, line_t *start, line_t *dest)
 {
-	portal_t* portal = Portal_Add(x1, x2);
-
 	// Offset the portal view by the linedef centers
-	line_t* start	= &lines[line1];
-	line_t* dest	= &lines[line2];
-
 	angle_t dangle = R_PointToAngle2(0,0,dest->dx,dest->dy) - R_PointToAngle2(start->dx,start->dy,0,0);
 
 	fixed_t disttopoint;
 	angle_t angtopoint;
 
-	vertex_t dest_c, start_c;
+	struct {
+		fixed_t x, y;
+	} dest_c, start_c;
 
 	// looking glass center
 	start_c.x = (start->v1->x + start->v2->x) / 2;
@@ -182,6 +169,26 @@ void Portal_Add2Lines (const INT32 line1, const INT32 line2, const INT32 x1, con
 	portal->viewy = dest_c.y + FixedMul(FINESINE(angtopoint>>ANGLETOFINESHIFT), disttopoint);
 	portal->viewz = viewz + dest->frontsector->floorheight - start->frontsector->floorheight;
 	portal->viewangle = viewangle + dangle;
+}
+
+/** Creates a portal out of two lines and a determined screen range.
+ *
+ * line1 determines the entrance, and line2 the exit.
+ * x1 and x2 determine the screen's column bounds.
+
+ * The view's offset from the entry line center is obtained,
+ * and then rotated&translated to the exit line's center.
+ * When the portal renders, it will create the illusion of
+ * the two lines being seamed together.
+ */
+void Portal_Add2Lines (const INT32 line1, const INT32 line2, const INT32 x1, const INT32 x2)
+{
+	portal_t* portal = Portal_Add(x1, x2);
+
+	line_t* start	= &lines[line1];
+	line_t* dest	= &lines[line2];
+
+	Portal_GetViewpointForLine(portal, start, dest);
 
 	portal->clipline = line2;
 
@@ -314,8 +321,16 @@ void Portal_AddSkybox (const visplane_t* plane)
 void Portal_AddSectorPortal (const visplane_t* plane)
 {
 	INT16 start, end;
-	sector_t *source = plane->sector;
+	fixed_t x, y, z, angle;
 	sectorportal_t *secportal = plane->portalsector;
+
+	if (secportal->type == SECPORTAL_NONE)
+		return;
+	else if (secportal->type == SECPORTAL_SKYBOX)
+	{
+		Portal_AddSkybox(plane);
+		return;
+	}
 
 	if (TrimVisplaneBounds(plane, &start, &end))
 		return;
@@ -324,24 +339,53 @@ void Portal_AddSectorPortal (const visplane_t* plane)
 
 	Portal_ClipVisplane(plane, portal);
 
-	fixed_t refx = source->soundorg.x - viewx;
-	fixed_t refy = source->soundorg.y - viewy;
+	portal->clipline = -1;
 
-	// Rotate the X/Y to match the target angle
-	if (secportal->target.angle)
+	switch (secportal->type)
 	{
-		fixed_t x = refx, y = refy;
-		angle_t ang = secportal->target.angle >> ANGLETOFINESHIFT;
-		refx = FixedMul(x, FINECOSINE(ang)) - FixedMul(y, FINESINE(ang));
-		refy = FixedMul(x, FINESINE(ang)) + FixedMul(y, FINECOSINE(ang));
+	case SECPORTAL_LINE:
+		Portal_GetViewpointForLine(portal, secportal->line.start, secportal->line.dest);
+		return;
+	case SECPORTAL_OBJECT:
+		if (!secportal->mobj || P_MobjWasRemoved(secportal->mobj))
+			return;
+		x = secportal->mobj->x;
+		y = secportal->mobj->y;
+		z = secportal->mobj->z;
+		angle = secportal->mobj->angle;
+		break;
+	case SECPORTAL_FLOOR:
+		x = secportal->sector->soundorg.x;
+		y = secportal->sector->soundorg.y;
+		z = secportal->sector->floorheight;
+		angle = 0;
+		break;
+	case SECPORTAL_CEILING:
+		x = secportal->sector->soundorg.x;
+		y = secportal->sector->soundorg.y;
+		z = secportal->sector->ceilingheight;
+		angle = 0;
+		break;
+	default:
+		return;
 	}
 
-	portal->viewx = secportal->target.x - refx;
-	portal->viewy = secportal->target.y - refy;
-	portal->viewz = secportal->target.z + viewz;
-	portal->viewangle = secportal->target.angle + viewangle;
+	fixed_t refx = plane->sector->soundorg.x - viewx;
+	fixed_t refy = plane->sector->soundorg.y - viewy;
 
-	portal->clipline = -1;
+	// Rotate the X/Y to match the target angle
+	if (angle != 0)
+	{
+		fixed_t tr_x = refx, tr_y = refy;
+		angle_t ang = angle >> ANGLETOFINESHIFT;
+		refx = FixedMul(tr_x, FINECOSINE(ang)) - FixedMul(tr_y, FINESINE(ang));
+		refy = FixedMul(tr_x, FINESINE(ang)) + FixedMul(tr_y, FINECOSINE(ang));
+	}
+
+	portal->viewx = x - refx;
+	portal->viewy = y - refy;
+	portal->viewz = z + viewz;
+	portal->viewangle = angle + viewangle;
 }
 
 /** Creates portals for the currently existing sky visplanes.

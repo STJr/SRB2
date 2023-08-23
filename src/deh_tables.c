@@ -4285,7 +4285,6 @@ const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for sanity t
 
 	// Portal objects
 	"MT_SKYBOX",
-	"MT_PORTALREFPOINT",
 
 	// Debris
 	"MT_SPARK", //spark

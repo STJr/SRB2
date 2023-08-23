@@ -1930,7 +1930,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 			|| !P_CompareSectorPortals(&frontsector->portal_ceiling, &backsector->portal_ceiling)
 			|| (frontsector->ffloors != backsector->ffloors && !Tag_Compare(&frontsector->tags, &backsector->tags)))
 		{
-				markceiling = true;
+			markceiling = true;
 		}
 		else
 		{

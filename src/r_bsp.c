@@ -488,12 +488,12 @@ static void R_AddLine(seg_t *line)
 	// hack to allow height changes in outdoor areas
 	// This is what gets rid of the upper textures if there should be sky
 	if (backsector->ceilingpic == skyflatnum && frontsector->ceilingpic == skyflatnum
-	&& !(backsector->portal_ceiling.exists || frontsector->portal_ceiling.exists))
+	&& !(P_SectorHasCeilingPortal(backsector) || P_SectorHasCeilingPortal(frontsector)))
 		bothceilingssky = true;
 
 	// likewise, but for floors and upper textures
 	if (backsector->floorpic == skyflatnum && frontsector->floorpic == skyflatnum
-	&& !(backsector->portal_floor.exists || frontsector->portal_floor.exists))
+	&& !(P_SectorHasFloorPortal(backsector) || P_SectorHasFloorPortal(frontsector)))
 		bothfloorssky = true;
 
 	if (bothceilingssky && bothfloorssky) // everything's sky? let's save us a bit of time then
@@ -918,7 +918,7 @@ static void R_Subsector(size_t num)
 		|| (frontsector->heightsec != -1 && sectors[frontsector->heightsec].ceilingpic == skyflatnum))
 	{
 		floorplane = R_FindPlane(frontsector, frontsector->floorheight, frontsector->floorpic, floorlightlevel,
-			frontsector->floorxoffset, frontsector->flooryoffset, frontsector->floorangle, floorcolormap, NULL, NULL, frontsector->f_slope, frontsector->portal_floor.exists ? &frontsector->portal_floor : NULL);
+			frontsector->floorxoffset, frontsector->flooryoffset, frontsector->floorangle, floorcolormap, NULL, NULL, frontsector->f_slope, P_SectorHasFloorPortal(frontsector) ? &frontsector->portal_floor : NULL);
 	}
 	else
 		floorplane = NULL;
@@ -929,7 +929,7 @@ static void R_Subsector(size_t num)
 	{
 		ceilingplane = R_FindPlane(frontsector, frontsector->ceilingheight, frontsector->ceilingpic,
 			ceilinglightlevel, frontsector->ceilingxoffset, frontsector->ceilingyoffset, frontsector->ceilingangle,
-			ceilingcolormap, NULL, NULL, frontsector->c_slope, frontsector->portal_ceiling.exists ? &frontsector->portal_ceiling : NULL);
+			ceilingcolormap, NULL, NULL, frontsector->c_slope, P_SectorHasCeilingPortal(frontsector) ? &frontsector->portal_ceiling : NULL);
 	}
 	else
 		ceilingplane = NULL;

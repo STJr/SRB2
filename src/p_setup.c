@@ -980,9 +980,7 @@ static void P_LoadVertices(UINT8 *data)
 
 static void InitializeSectorPortal(sectorportal_t *secportal)
 {
-	secportal->exists = false;
-	secportal->target.x = secportal->target.y = secportal->target.z = 0;
-	secportal->target.angle = 0;
+	memset(secportal, 0, sizeof(*secportal));
 }
 
 static void P_InitializeSector(sector_t *ss)

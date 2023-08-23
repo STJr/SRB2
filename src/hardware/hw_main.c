@@ -2352,11 +2352,11 @@ static void HWR_AddLine(seg_t * line)
 		gl_backsector = R_FakeFlat(gl_backsector, &tempsec, NULL, NULL, true);
 
 		if (gl_backsector->ceilingpic == skyflatnum && gl_frontsector->ceilingpic == skyflatnum
-		&& !(gl_backsector->portal_ceiling.exists || gl_frontsector->portal_ceiling.exists))
+		&& !(P_SectorHasCeilingPortal(gl_backsector) || P_SectorHasCeilingPortal(gl_frontsector)))
 			bothceilingssky = true;
 
 		if (gl_backsector->floorpic == skyflatnum && gl_frontsector->floorpic == skyflatnum
-		&& !(gl_backsector->portal_floor.exists || gl_frontsector->portal_floor.exists))
+		&& !(P_SectorHasFloorPortal(gl_backsector) || P_SectorHasFloorPortal(gl_frontsector)))
 			bothfloorssky = true;
 
 		if (bothceilingssky && bothfloorssky) // everything's sky? let's save us a bit of time then
