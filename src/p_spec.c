@@ -7362,7 +7362,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 		int tag_to_copy = lines[i].args[3];
 
 		boolean floor, ceiling;
-		if (plane_type == TMP_BOTH)
+		if (plane_type == TMP_BOTH || plane_type == 3)
 			floor = ceiling = true;
 		else
 		{
