@@ -6625,13 +6625,13 @@ void P_SpawnSpecials(boolean fromnetsave)
 						{
 							sectorportal_t *floorportal = P_SectorGetFloorPortalOrCreate(target_sector);
 							floorportal->type = SECPORTAL_OBJECT;
-							floorportal->mobj = mobj;
+							P_SetTarget(&floorportal->mobj, mobj);
 						}
 						if (ceiling)
 						{
 							sectorportal_t *ceilportal = P_SectorGetCeilingPortalOrCreate(target_sector);
 							ceilportal->type = SECPORTAL_OBJECT;
-							ceilportal->mobj = mobj;
+							P_SetTarget(&ceilportal->mobj, mobj);
 						}
 					}
 				}
