@@ -263,30 +263,14 @@ static boolean TrimVisplaneBounds (const visplane_t* plane, INT16* start, INT16*
 	return false;
 }
 
-/** Creates a skybox portal out of a visplane.
- *
- * Applies the necessary offsets and rotation to give
- * a depth illusion to the skybox.
- */
-void Portal_AddSkybox (const visplane_t* plane)
+static void Portal_GetViewpointForSkybox(portal_t *portal)
 {
-	INT16 start, end;
-	mapheader_t *mh;
-	portal_t* portal;
-
-	if (TrimVisplaneBounds(plane, &start, &end))
-		return;
-
-	portal = Portal_Add(start, end);
-
-	Portal_ClipVisplane(plane, portal);
-
 	portal->viewx = skyboxmo[0]->x;
 	portal->viewy = skyboxmo[0]->y;
 	portal->viewz = skyboxmo[0]->z;
 	portal->viewangle = viewangle + skyboxmo[0]->angle;
 
-	mh = mapheaderinfo[gamemap-1];
+	mapheader_t *mh = mapheaderinfo[gamemap-1];
 
 	// If a relative viewpoint exists, offset the viewpoint.
 	if (skyboxmo[1])
@@ -313,37 +297,35 @@ void Portal_AddSkybox (const visplane_t* plane)
 		portal->viewz += viewz / mh->skybox_scalez;
 	else if (mh->skybox_scalez < 0)
 		portal->viewz += viewz * -mh->skybox_scalez;
-
-	portal->clipline = -1;
-	portal->is_horizon = false;
-	portal->horizon_sector = NULL;
 }
 
-/** Creates a sector portal out of a visplane.
+/** Creates a skybox portal out of a visplane.
+ *
+ * Applies the necessary offsets and rotation to give
+ * a depth illusion to the skybox.
  */
-void Portal_AddSectorPortal (const visplane_t* plane)
+void Portal_AddSkybox (const visplane_t* plane)
 {
 	INT16 start, end;
-	fixed_t x, y, z, angle;
-	sectorportal_t *secportal = plane->portalsector;
-
-	// Shortcut
-	if (secportal->type == SECPORTAL_SKYBOX)
-	{
-		Portal_AddSkybox(plane);
-		return;
-	}
+	portal_t* portal;
 
 	if (TrimVisplaneBounds(plane, &start, &end))
 		return;
 
-	portal_t* portal = Portal_Add(start, end);
+	portal = Portal_Add(start, end);
 
 	Portal_ClipVisplane(plane, portal);
 
 	portal->clipline = -1;
 	portal->is_horizon = false;
 	portal->horizon_sector = NULL;
+
+	Portal_GetViewpointForSkybox(portal);
+}
+
+static void Portal_GetViewpointForSecPortal(portal_t *portal, sectorportal_t *secportal, fixed_t origin_x, fixed_t origin_y)
+{
+	fixed_t x, y, z, angle;
 
 	switch (secportal->type)
 	{
@@ -374,8 +356,8 @@ void Portal_AddSectorPortal (const visplane_t* plane)
 	case SECPORTAL_HORIZON:
 		portal->is_horizon = true;
 		portal->horizon_sector = secportal->sector;
-		x = plane->sector->soundorg.x;
-		y = plane->sector->soundorg.y;
+		x = secportal->sector->soundorg.x;
+		y = secportal->sector->soundorg.y;
 		if (secportal->type == SECPORTAL_PLANE)
 			z = -viewz;
 		else
@@ -386,8 +368,8 @@ void Portal_AddSectorPortal (const visplane_t* plane)
 		return;
 	}
 
-	fixed_t refx = plane->sector->soundorg.x - viewx;
-	fixed_t refy = plane->sector->soundorg.y - viewy;
+	fixed_t refx = origin_x - viewx;
+	fixed_t refy = origin_y - viewy;
 
 	// Rotate the X/Y to match the target angle
 	if (angle != 0)
@@ -402,6 +384,70 @@ void Portal_AddSectorPortal (const visplane_t* plane)
 	portal->viewy = y - refy;
 	portal->viewz = z + viewz;
 	portal->viewangle = angle + viewangle;
+}
+
+/** Creates a sector portal out of a visplane.
+ */
+void Portal_AddSectorPortal (const visplane_t* plane)
+{
+	INT16 start, end;
+	sectorportal_t *secportal = plane->portalsector;
+
+	// Shortcut
+	if (secportal->type == SECPORTAL_SKYBOX)
+	{
+		Portal_AddSkybox(plane);
+		return;
+	}
+
+	if (TrimVisplaneBounds(plane, &start, &end))
+		return;
+
+	portal_t* portal = Portal_Add(start, end);
+
+	Portal_ClipVisplane(plane, portal);
+
+	portal->clipline = -1;
+	portal->is_horizon = false;
+	portal->horizon_sector = NULL;
+
+	Portal_GetViewpointForSecPortal(portal, secportal, plane->sector->soundorg.x, plane->sector->soundorg.y);
+}
+
+/** Creates a transferred sector portal.
+ */
+void Portal_AddTransferred (const INT32 linenum, UINT32 secportalnum, const INT32 x1, const INT32 x2)
+{
+	if (secportalnum >= secportalcount)
+		return;
+
+	sectorportal_t *secportal = &secportals[secportalnum];
+	if (!P_IsSectorPortalValid(secportal))
+		return;
+
+	portal_t* portal = Portal_Add(x1, x2);
+
+	portal->is_horizon = false;
+	portal->horizon_sector = NULL;
+
+	if (secportal->type == SECPORTAL_SKYBOX)
+		Portal_GetViewpointForSkybox(portal);
+	else
+	{
+		line_t *line = &lines[linenum];
+		fixed_t refx = (line->v1->x + line->v2->x) / 2;
+		fixed_t refy = (line->v1->y + line->v2->y) / 2;
+		Portal_GetViewpointForSecPortal(portal, secportal, refx, refy);
+	}
+
+	if (secportal->type == SECPORTAL_LINE)
+		portal->clipline = secportal->line.dest - lines;
+	else
+		portal->clipline = -1;
+
+	Portal_ClipRange(portal);
+
+	portalline = true;
 }
 
 /** Creates portals for the currently existing sky visplanes.

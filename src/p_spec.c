@@ -6214,7 +6214,7 @@ UINT32 P_NewSectorPortal(void)
 	return (UINT32)i;
 }
 
-static boolean P_IsSectorPortalValid(sectorportal_t *secportal)
+boolean P_IsSectorPortalValid(sectorportal_t *secportal)
 {
 	if (secportal == NULL)
 		return false;
@@ -6325,28 +6325,59 @@ static void P_DoPortalCopyFromLine(sector_t *dest_sector, int plane_type, int ta
 	}
 }
 
-static sectorportal_t *P_SectorGetFloorPortalOrCreate(sector_t *sector)
+static sectorportal_t *P_SectorGetFloorPortalOrCreate(sector_t *sector, UINT32 *result)
 {
-	sectorportal_t *secportal = P_SectorGetFloorPortal(sector);
-	if (secportal == NULL)
+	*result = sector->portal_floor;
+
+	if (*result >= secportalcount)
 	{
-		sector->portal_floor = P_NewSectorPortal();
-		return &secportals[sector->portal_floor];
+		*result = P_NewSectorPortal();
+		sector->portal_floor = *result;
 	}
 
-	return secportal;
+	return &secportals[sector->portal_floor];
 }
 
-static sectorportal_t *P_SectorGetCeilingPortalOrCreate(sector_t *sector)
+static sectorportal_t *P_SectorGetCeilingPortalOrCreate(sector_t *sector, UINT32 *result)
 {
-	sectorportal_t *secportal = P_SectorGetCeilingPortal(sector);
-	if (secportal == NULL)
+	*result = sector->portal_floor;
+
+	if (*result >= secportalcount)
 	{
-		sector->portal_ceiling = P_NewSectorPortal();
-		return &secportals[sector->portal_ceiling];
+		*result = P_NewSectorPortal();
+		sector->portal_ceiling = *result;
 	}
 
-	return secportal;
+	return &secportals[sector->portal_ceiling];
+}
+
+static void P_CopySectorPortalToLines(UINT32 portal_num, int sector_tag)
+{
+	for (size_t i = 0; i < numlines; i++)
+	{
+		if (lines[i].special != SPECIAL_SECTOR_SETPORTAL)
+			continue;
+
+		if (lines[i].args[1] != TMSECPORTAL_COPY_PORTAL_TO_LINE)
+			continue;
+
+		if (lines[i].args[3] != sector_tag)
+			continue;
+
+		if (lines[i].args[0] != 0)
+		{
+			INT32 linenum = -1;
+			TAG_ITER_LINES(lines[i].args[0], linenum)
+			{
+				lines[linenum].secportal = portal_num;
+			}
+		}
+		else
+		{
+			// Just transfer it to this line
+			lines[i].secportal = portal_num;
+		}
+	}
 }
 
 /** After the map has loaded, scans for specials that spawn 3Dfloors and
@@ -6514,7 +6545,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 					P_AddCameraScanner(&sectors[sec], &sectors[s], R_PointToAngle2(lines[i].v2->x, lines[i].v2->y, lines[i].v1->x, lines[i].v1->y));
 				break;
 
-			case 6: // Sector portal
+			case SPECIAL_SECTOR_SETPORTAL: // Sector portal
 			{
 				int target_sector_tag = lines[i].args[0];
 				int portal_type = lines[i].args[1];
@@ -6530,28 +6561,32 @@ void P_SpawnSpecials(boolean fromnetsave)
 					ceiling = plane_type == TMP_CEILING;
 				}
 
+				UINT32 portal_num = UINT32_MAX;
+
 				// Eternity's floor and horizon portal types
 				if (portal_type == TMSECPORTAL_PLANE || portal_type == TMSECPORTAL_HORIZON)
 				{
 					secportaltype_e type = portal_type == TMSECPORTAL_HORIZON ? SECPORTAL_HORIZON : SECPORTAL_PLANE;
 					if (floor)
 					{
-						sectorportal_t *floorportal = P_SectorGetFloorPortalOrCreate(lines[i].frontsector);
+						sectorportal_t *floorportal = P_SectorGetFloorPortalOrCreate(lines[i].frontsector, &portal_num);
 						floorportal->type = type;
 						floorportal->sector = lines[i].frontsector;
+						P_CopySectorPortalToLines(portal_num, target_sector_tag);
 					}
 					if (ceiling)
 					{
-						sectorportal_t *ceilportal = P_SectorGetCeilingPortalOrCreate(lines[i].frontsector);
+						sectorportal_t *ceilportal = P_SectorGetCeilingPortalOrCreate(lines[i].frontsector, &portal_num);
 						ceilportal->type = type;
 						ceilportal->sector = lines[i].frontsector;
+						P_CopySectorPortalToLines(portal_num, target_sector_tag);
 					}
 					break;
 				}
 
 				INT32 s1 = -1;
 
-				TAG_ITER_SECTORS(target_sector_tag, s1) // Target sector tag
+				TAG_ITER_SECTORS(target_sector_tag, s1)
 				{
 					sector_t *target_sector = &sectors[s1];
 
@@ -6561,7 +6596,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 						INT32 linenum = -1;
 						TAG_ITER_LINES(misc, linenum)
 						{
-							if (lines[linenum].special == 6
+							if (lines[linenum].special == SPECIAL_SECTOR_SETPORTAL
 							&& lines[linenum].args[0] == target_sector_tag
 							&& lines[linenum].args[1] == portal_type
 							&& lines[linenum].args[2] == plane_type
@@ -6569,17 +6604,19 @@ void P_SpawnSpecials(boolean fromnetsave)
 							{
 								if (floor)
 								{
-									sectorportal_t *floorportal = P_SectorGetFloorPortalOrCreate(target_sector);
+									sectorportal_t *floorportal = P_SectorGetFloorPortalOrCreate(target_sector, &portal_num);
 									floorportal->type = SECPORTAL_LINE;
 									floorportal->line.start = &lines[i];
 									floorportal->line.dest = &lines[linenum];
+									P_CopySectorPortalToLines(portal_num, target_sector_tag);
 								}
 								if (ceiling)
 								{
-									sectorportal_t *ceilportal = P_SectorGetCeilingPortalOrCreate(target_sector);
+									sectorportal_t *ceilportal = P_SectorGetCeilingPortalOrCreate(target_sector, &portal_num);
 									ceilportal->type = SECPORTAL_LINE;
 									ceilportal->line.start = &lines[i];
 									ceilportal->line.dest = &lines[linenum];
+									P_CopySectorPortalToLines(portal_num, target_sector_tag);
 								}
 							}
 						}
@@ -6589,13 +6626,15 @@ void P_SpawnSpecials(boolean fromnetsave)
 					{
 						if (floor)
 						{
-							sectorportal_t *floorportal = P_SectorGetFloorPortalOrCreate(target_sector);
+							sectorportal_t *floorportal = P_SectorGetFloorPortalOrCreate(target_sector, &portal_num);
 							floorportal->type = SECPORTAL_SKYBOX;
+							P_CopySectorPortalToLines(portal_num, target_sector_tag);
 						}
 						if (ceiling)
 						{
-							sectorportal_t *ceilportal = P_SectorGetCeilingPortalOrCreate(target_sector);
+							sectorportal_t *ceilportal = P_SectorGetCeilingPortalOrCreate(target_sector, &portal_num);
 							ceilportal->type = SECPORTAL_SKYBOX;
+							P_CopySectorPortalToLines(portal_num, target_sector_tag);
 						}
 					}
 					// Plane portal
@@ -6607,15 +6646,17 @@ void P_SpawnSpecials(boolean fromnetsave)
 							sector_t *view_sector = &sectors[s2];
 							if (floor)
 							{
-								sectorportal_t *floorportal = P_SectorGetFloorPortalOrCreate(target_sector);
+								sectorportal_t *floorportal = P_SectorGetFloorPortalOrCreate(target_sector, &portal_num);
 								floorportal->type = SECPORTAL_CEILING;
 								floorportal->sector = view_sector;
+								P_CopySectorPortalToLines(portal_num, target_sector_tag);
 							}
 							if (ceiling)
 							{
-								sectorportal_t *ceilportal = P_SectorGetCeilingPortalOrCreate(target_sector);
+								sectorportal_t *ceilportal = P_SectorGetCeilingPortalOrCreate(target_sector, &portal_num);
 								ceilportal->type = SECPORTAL_FLOOR;
 								ceilportal->sector = view_sector;
+								P_CopySectorPortalToLines(portal_num, target_sector_tag);
 							}
 						}
 					}
@@ -6627,15 +6668,17 @@ void P_SpawnSpecials(boolean fromnetsave)
 							break;
 						if (floor)
 						{
-							sectorportal_t *floorportal = P_SectorGetFloorPortalOrCreate(target_sector);
+							sectorportal_t *floorportal = P_SectorGetFloorPortalOrCreate(target_sector, &portal_num);
 							floorportal->type = SECPORTAL_OBJECT;
 							P_SetTarget(&floorportal->mobj, mobj);
+							P_CopySectorPortalToLines(portal_num, target_sector_tag);
 						}
 						if (ceiling)
 						{
-							sectorportal_t *ceilportal = P_SectorGetCeilingPortalOrCreate(target_sector);
+							sectorportal_t *ceilportal = P_SectorGetCeilingPortalOrCreate(target_sector, &portal_num);
 							ceilportal->type = SECPORTAL_OBJECT;
 							P_SetTarget(&ceilportal->mobj, mobj);
+							P_CopySectorPortalToLines(portal_num, target_sector_tag);
 						}
 					}
 				}
@@ -7448,7 +7491,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 	// Copy portals
 	for (i = 0; i < numlines; i++)
 	{
-		if (lines[i].special != 6)
+		if (lines[i].special != SPECIAL_SECTOR_SETPORTAL)
 			continue;
 
 		int portal_type = lines[i].args[1];
@@ -7470,7 +7513,6 @@ void P_SpawnSpecials(boolean fromnetsave)
 			TAG_ITER_SECTORS(target_sector_tag, s1)
 				P_DoPortalCopyFromLine(&sectors[s1], plane_type, tag_to_copy);
 		}
-		break;
 	}
 
 	if (!fromnetsave)

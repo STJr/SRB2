@@ -536,7 +536,9 @@ typedef enum
 	ST_NEGATIVE
 } slopetype_t;
 
-#define HORIZONSPECIAL 41
+#define SPECIAL_HORIZON_LINE 41
+
+#define SPECIAL_SECTOR_SETPORTAL 6
 
 #define NUMLINEARGS 10
 #define NUMLINESTRINGARGS 2
@@ -577,6 +579,8 @@ typedef struct line_s
 	polyobj_t *polyobj; // Belongs to a polyobject?
 
 	INT16 callcount; // no. of calls left before triggering, for the "X calls" linedef specials, defaults to 0
+
+	UINT32 secportal; // transferred sector portal
 } line_t;
 
 typedef struct

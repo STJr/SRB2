@@ -1108,6 +1108,7 @@ static void P_InitializeLinedef(line_t *ld)
 	ld->polyobj = NULL;
 
 	ld->callcount = 0;
+	ld->secportal = UINT32_MAX;
 
 	// cph 2006/09/30 - fix sidedef errors right away.
 	// cph 2002/07/20 - these errors are fatal if not fixed, so apply them

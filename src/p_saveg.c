@@ -886,6 +886,7 @@ static void P_NetUnArchiveWaypoints(void)
 #define LD_ARGS          0x10
 #define LD_STRINGARGS    0x20
 #define LD_EXECUTORDELAY 0x40
+#define LD_TRANSFPORTAL  0x80
 
 static boolean P_AreArgsEqual(const line_t *li, const line_t *spawnli)
 {
@@ -1312,6 +1313,9 @@ static void ArchiveLines(void)
 		if (li->executordelay != spawnli->executordelay)
 			diff2 |= LD_EXECUTORDELAY;
 
+		if (li->secportal != spawnli->secportal)
+			diff2 |= LD_TRANSFPORTAL;
+
 		if (li->sidenum[0] != 0xffff)
 		{
 			si = &sides[li->sidenum[0]];
@@ -1402,6 +1406,8 @@ static void ArchiveLines(void)
 			}
 			if (diff2 & LD_EXECUTORDELAY)
 				WRITEINT32(save_p, li->executordelay);
+			if (diff2 & LD_TRANSFPORTAL)
+				WRITEUINT32(save_p, li->secportal);
 		}
 	}
 	WRITEUINT16(save_p, 0xffff);
@@ -1486,7 +1492,8 @@ static void UnArchiveLines(void)
 		}
 		if (diff2 & LD_EXECUTORDELAY)
 			li->executordelay = READINT32(save_p);
-
+		if (diff2 & LD_TRANSFPORTAL)
+			li->secportal = READUINT32(save_p);
 	}
 }
 

@@ -483,9 +483,8 @@ typedef enum
 	TMSECPORTAL_SKYBOX = 2,
 	TMSECPORTAL_PLANE = 3,
 	TMSECPORTAL_HORIZON = 4,
-	// The two portal types below are unimplemented
 	TMSECPORTAL_COPY_PORTAL_TO_LINE = 5,
-	TMSECPORTAL_INTERACTIVE = 6,
+	TMSECPORTAL_INTERACTIVE = 6, // unimplemented
 	// The two portal types below are new to SRB2
 	TMSECPORTAL_SECTOR = 7,
 	TMSECPORTAL_OBJECT = 8
@@ -542,6 +541,8 @@ boolean P_IsFlagAtBase(mobjtype_t flag);
 
 void P_InitSectorPortals(void);
 UINT32 P_NewSectorPortal(void);
+
+boolean P_IsSectorPortalValid(sectorportal_t *secportal);
 
 sectorportal_t *P_SectorGetFloorPortal(sector_t *sector);
 sectorportal_t *P_SectorGetCeilingPortal(sector_t *sector);

@@ -458,7 +458,7 @@ static void R_AddLine(seg_t *line)
 		return;
 
 	backsector = line->backsector;
-	horizonline = line->linedef->special == HORIZONSPECIAL;
+	horizonline = line->linedef->special == SPECIAL_HORIZON_LINE;
 	bothceilingssky = bothfloorssky = false;
 
 	// Portal line
@@ -482,6 +482,15 @@ static void R_AddLine(seg_t *line)
 				Portal_Add2Lines(li1, li2, x1, x2);
 				goto clipsolid;
 			}
+		}
+	}
+	// Transferred portal
+	else if (line->linedef->secportal != UINT32_MAX && line->side == 0)
+	{
+		if (portalrender < cv_maxportals.value)
+		{
+			Portal_AddTransferred(line->linedef-lines, line->linedef->secportal, x1, x2);
+			goto clipsolid;
 		}
 	}
 
