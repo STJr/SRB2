@@ -216,7 +216,8 @@ typedef enum
 	SECPORTAL_HORIZON, // Eternity Engine's horizon portal type
 	SECPORTAL_OBJECT,  // Uses an object as the reference view
 	SECPORTAL_FLOOR,   // Uses a sector as the reference view; the view height is aligned with the sector's floor
-	SECPORTAL_CEILING  // Uses a sector as the reference view; the view height is aligned with the sector's ceiling
+	SECPORTAL_CEILING, // Uses a sector as the reference view; the view height is aligned with the sector's ceiling
+	SECPORTAL_NONE = 0xFF
 } secportaltype_e;
 
 typedef struct sectorportal_s

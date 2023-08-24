@@ -2927,64 +2927,16 @@ static void HWR_Subsector(size_t num)
 	}
 
 	//SoM: 4/7/2000: Test to make Boom water work in Hardware mode.
-	gl_frontsector = R_FakeFlat(gl_frontsector, &tempsec, &floorlightlevel,
-								&ceilinglightlevel, false);
-	//FIXME: Use floorlightlevel and ceilinglightlevel insted of lightlevel.
+	gl_frontsector = R_FakeFlat(gl_frontsector, &tempsec, &floorlightlevel, &ceilinglightlevel, false);
 
 	floorcolormap = ceilingcolormap = gl_frontsector->extra_colormap;
 
-	// ------------------------------------------------------------------------
-	// sector lighting, DISABLED because it's done in HWR_StoreWallRange
-	// ------------------------------------------------------------------------
-	/// \todo store a RGBA instead of just intensity, allow coloured sector lighting
-	//light = (FUBYTE)(sub->sector->lightlevel & 0xFF) / 255.0f;
-	//gl_cursectorlight.red   = light;
-	//gl_cursectorlight.green = light;
-	//gl_cursectorlight.blue  = light;
-	//gl_cursectorlight.alpha = light;
-
-// ----- end special tricks -----
 	cullFloorHeight   = P_GetSectorFloorZAt  (gl_frontsector, viewx, viewy);
 	cullCeilingHeight = P_GetSectorCeilingZAt(gl_frontsector, viewx, viewy);
 	locFloorHeight    = P_GetSectorFloorZAt  (gl_frontsector, gl_frontsector->soundorg.x, gl_frontsector->soundorg.y);
 	locCeilingHeight  = P_GetSectorCeilingZAt(gl_frontsector, gl_frontsector->soundorg.x, gl_frontsector->soundorg.y);
 
-	if (gl_frontsector->ffloors)
-	{
-		boolean anyMoved = gl_frontsector->moved;
-
-		if (anyMoved == false)
-		{
-			for (rover = gl_frontsector->ffloors; rover; rover = rover->next)
-			{
-				sector_t *controlSec = &sectors[rover->secnum];
-				if (controlSec->moved == true)
-				{
-					anyMoved = true;
-					break;
-				}
-			}
-		}
-
-		if (anyMoved == true)
-		{
-			gl_frontsector->numlights = sub->sector->numlights = 0;
-			R_Prep3DFloors(gl_frontsector);
-			sub->sector->lightlist = gl_frontsector->lightlist;
-			sub->sector->numlights = gl_frontsector->numlights;
-			sub->sector->moved = gl_frontsector->moved = false;
-		}
-
-		light = R_GetPlaneLight(gl_frontsector, locFloorHeight, false);
-		if (gl_frontsector->floorlightsec == -1 && !gl_frontsector->floorlightabsolute)
-			floorlightlevel = max(0, min(255, *gl_frontsector->lightlist[light].lightlevel + gl_frontsector->floorlightlevel));
-		floorcolormap = *gl_frontsector->lightlist[light].extra_colormap;
-
-		light = R_GetPlaneLight(gl_frontsector, locCeilingHeight, false);
-		if (gl_frontsector->ceilinglightsec == -1 && !gl_frontsector->ceilinglightabsolute)
-			ceilinglightlevel = max(0, min(255, *gl_frontsector->lightlist[light].lightlevel + gl_frontsector->ceilinglightlevel));
-		ceilingcolormap = *gl_frontsector->lightlist[light].extra_colormap;
-	}
+	R_CheckSectorLightLists(sub->sector, gl_frontsector, &floorlightlevel, &ceilinglightlevel, &floorcolormap, &ceilingcolormap);
 
 	sub->sector->extra_colormap = gl_frontsector->extra_colormap;
 

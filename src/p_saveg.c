@@ -41,20 +41,19 @@ UINT8 *save_p;
 
 // Block UINT32s to attempt to ensure that the correct data is
 // being sent and received
-#define ARCHIVEBLOCK_MISC     0x7FEEDEED
-#define ARCHIVEBLOCK_PLAYERS  0x7F448008
-#define ARCHIVEBLOCK_WORLD    0x7F8C08C0
-#define ARCHIVEBLOCK_POBJS    0x7F928546
-#define ARCHIVEBLOCK_THINKERS 0x7F37037C
-#define ARCHIVEBLOCK_SPECIALS 0x7F228378
-#define ARCHIVEBLOCK_EMBLEMS  0x7F4A5445
+#define ARCHIVEBLOCK_MISC       0x7FEEDEED
+#define ARCHIVEBLOCK_PLAYERS    0x7F448008
+#define ARCHIVEBLOCK_WORLD      0x7F8C08C0
+#define ARCHIVEBLOCK_POBJS      0x7F928546
+#define ARCHIVEBLOCK_THINKERS   0x7F37037C
+#define ARCHIVEBLOCK_SPECIALS   0x7F228378
+#define ARCHIVEBLOCK_EMBLEMS    0x7F4A5445
+#define ARCHIVEBLOCK_SECPORTALS 0x7FBE34C9
 
 // Note: This cannot be bigger
 // than an UINT16
 typedef enum
 {
-//	RFLAGPOINT = 0x01,
-//	BFLAGPOINT = 0x02,
 	CAPSULE    = 0x04,
 	AWAYVIEW   = 0x08,
 	FIRSTAXIS  = 0x10,
@@ -853,20 +852,22 @@ static void P_NetUnArchiveWaypoints(void)
 #define SD_DIFF3     0x80
 
 // diff3 flags
-#define SD_TAGLIST   0x01
-#define SD_COLORMAP  0x02
+#define SD_TAGLIST      0x01
+#define SD_COLORMAP     0x02
 #define SD_CRUMBLESTATE 0x04
-#define SD_FLOORLIGHT 0x08
-#define SD_CEILLIGHT 0x10
-#define SD_FLAG      0x20
-#define SD_SPECIALFLAG 0x40
-#define SD_DIFF4     0x80
+#define SD_FLOORLIGHT   0x08
+#define SD_CEILLIGHT    0x10
+#define SD_FLAG         0x20
+#define SD_SPECIALFLAG  0x40
+#define SD_DIFF4        0x80
 
 //diff4 flags
-#define SD_DAMAGETYPE 0x01
-#define SD_TRIGGERTAG 0x02
-#define SD_TRIGGERER 0x04
-#define SD_GRAVITY   0x08
+#define SD_DAMAGETYPE  0x01
+#define SD_TRIGGERTAG  0x02
+#define SD_TRIGGERER   0x04
+#define SD_GRAVITY     0x08
+#define SD_FLOORPORTAL 0x10
+#define SD_CEILPORTAL  0x20
 
 #define LD_FLAG     0x01
 #define LD_SPECIAL  0x02
@@ -1064,6 +1065,10 @@ static void ArchiveSectors(void)
 			diff4 |= SD_TRIGGERER;
 		if (ss->gravity != spawnss->gravity)
 			diff4 |= SD_GRAVITY;
+		if (ss->portal_floor != spawnss->portal_floor)
+			diff4 |= SD_FLOORPORTAL;
+		if (ss->portal_ceiling != spawnss->portal_ceiling)
+			diff4 |= SD_CEILPORTAL;
 
 		if (ss->ffloors && CheckFFloorDiff(ss))
 			diff |= SD_FFLOORS;
@@ -1145,6 +1150,10 @@ static void ArchiveSectors(void)
 				WRITEUINT8(save_p, ss->triggerer);
 			if (diff4 & SD_GRAVITY)
 				WRITEFIXED(save_p, ss->gravity);
+			if (diff4 & SD_FLOORPORTAL)
+				WRITEUINT32(save_p, ss->portal_floor);
+			if (diff4 & SD_CEILPORTAL)
+				WRITEUINT32(save_p, ss->portal_ceiling);
 			if (diff & SD_FFLOORS)
 				ArchiveFFloors(ss);
 		}
@@ -1265,6 +1274,10 @@ static void UnArchiveSectors(void)
 			sectors[i].triggerer = READUINT8(save_p);
 		if (diff4 & SD_GRAVITY)
 			sectors[i].gravity = READFIXED(save_p);
+		if (diff4 & SD_FLOORPORTAL)
+			sectors[i].portal_floor = READUINT32(save_p);
+		if (diff4 & SD_CEILPORTAL)
+			sectors[i].portal_ceiling = READUINT32(save_p);
 
 		if (diff & SD_FFLOORS)
 			UnArchiveFFloors(&sectors[i]);
@@ -4735,6 +4748,82 @@ static inline void P_NetUnArchiveEmblems(void)
 	}
 }
 
+static void P_NetArchiveSectorPortals(void)
+{
+	WRITEUINT32(save_p, ARCHIVEBLOCK_SECPORTALS);
+
+	WRITEUINT32(save_p, secportalcount);
+
+	for (size_t i = 0; i < secportalcount; i++)
+	{
+		UINT8 type = secportals[i].type;
+
+		WRITEUINT8(save_p, type);
+
+		switch (type)
+		{
+		case SECPORTAL_LINE:
+			WRITEUINT32(save_p, SaveLine(secportals[i].line.start));
+			WRITEUINT32(save_p, SaveLine(secportals[i].line.dest));
+			break;
+		case SECPORTAL_PLANE:
+		case SECPORTAL_HORIZON:
+		case SECPORTAL_FLOOR:
+		case SECPORTAL_CEILING:
+			WRITEUINT32(save_p, SaveSector(secportals[i].sector));
+			break;
+		case SECPORTAL_OBJECT:
+			if (secportals[i].mobj && !P_MobjWasRemoved(secportals[i].mobj))
+				SaveMobjnum(secportals[i].mobj);
+			else
+				WRITEUINT32(save_p, 0);
+			break;
+		default:
+			break;
+		}
+	}
+}
+
+static void P_NetUnArchiveSectorPortals(void)
+{
+	if (READUINT32(save_p) != ARCHIVEBLOCK_SECPORTALS)
+		I_Error("Bad $$$.sav at archive block Secportals");
+
+	Z_Free(secportals);
+	P_InitSectorPortals();
+
+	UINT32 count = READUINT32(save_p);
+
+	for (UINT32 i = 0; i < count; i++)
+	{
+		UINT32 id = P_NewSectorPortal();
+
+		sectorportal_t *secportal = &secportals[id];
+
+		secportal->type = READUINT8(save_p);
+
+		switch (secportal->type)
+		{
+		case SECPORTAL_LINE:
+			secportal->line.start = LoadLine(READUINT32(save_p));
+			secportal->line.dest = LoadLine(READUINT32(save_p));
+			break;
+		case SECPORTAL_PLANE:
+		case SECPORTAL_HORIZON:
+		case SECPORTAL_FLOOR:
+		case SECPORTAL_CEILING:
+			secportal->sector = LoadSector(READUINT32(save_p));
+			break;
+		case SECPORTAL_OBJECT:
+			id = READUINT32(save_p);
+			secportal->mobj = (id == 0) ? NULL : P_FindNewPosition(id);
+			break;
+		default:
+			break;
+		}
+	}
+}
+
 static inline void P_ArchiveLuabanksAndConsistency(void)
 {
 	UINT8 i, banksinuse = NUM_LUABANKS;
@@ -4821,6 +4910,7 @@ void P_SaveNetGame(boolean resending)
 		P_NetArchiveSpecials();
 		P_NetArchiveColormaps();
 		P_NetArchiveWaypoints();
+		P_NetArchiveSectorPortals();
 	}
 	LUA_Archive();
 
@@ -4861,6 +4951,7 @@ boolean P_LoadNetGame(boolean reloading)
 		P_NetUnArchiveSpecials();
 		P_NetUnArchiveColormaps();
 		P_NetUnArchiveWaypoints();
+		P_NetUnArchiveSectorPortals();
 		P_RelinkPointers();
 		P_FinishMobjs();
 	}

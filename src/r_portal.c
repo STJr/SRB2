@@ -373,7 +373,7 @@ void Portal_AddSectorPortal (const visplane_t* plane)
 	case SECPORTAL_PLANE:
 	case SECPORTAL_HORIZON:
 		portal->is_horizon = true;
-		portal->horizon_sector = plane->sector;
+		portal->horizon_sector = secportal->sector;
 		x = plane->sector->soundorg.x;
 		y = plane->sector->soundorg.y;
 		if (secportal->type == SECPORTAL_PLANE)

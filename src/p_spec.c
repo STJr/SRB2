@@ -6209,6 +6209,8 @@ UINT32 P_NewSectorPortal(void)
 		secportals = Z_Realloc(secportals, secportalcapacity * sizeof(sectorportal_t), PU_LEVEL, NULL);
 	}
 
+	secportals[i].type = SECPORTAL_NONE;
+
 	return (UINT32)i;
 }
 
@@ -6536,11 +6538,13 @@ void P_SpawnSpecials(boolean fromnetsave)
 					{
 						sectorportal_t *floorportal = P_SectorGetFloorPortalOrCreate(lines[i].frontsector);
 						floorportal->type = type;
+						floorportal->sector = lines[i].frontsector;
 					}
 					if (ceiling)
 					{
 						sectorportal_t *ceilportal = P_SectorGetCeilingPortalOrCreate(lines[i].frontsector);
 						ceilportal->type = type;
+						ceilportal->sector = lines[i].frontsector;
 					}
 					break;
 				}

@@ -847,51 +847,6 @@ static void R_AddPolyObjects(subsector_t *sub)
 
 drawseg_t *firstseg;
 
-static void R_CheckSectorLightLists(sector_t *sector, sector_t *fakeflat, INT32 *floorlightlevel, INT32 *ceilinglightlevel, extracolormap_t **floorcolormap, extracolormap_t **ceilingcolormap)
-{
-	// Check and prep all 3D floors. Set the sector floor/ceiling light levels and colormaps.
-	if (fakeflat->ffloors)
-	{
-		fixed_t floorcenterz   = P_GetSectorFloorZAt  (fakeflat, fakeflat->soundorg.x, fakeflat->soundorg.y);
-		fixed_t ceilingcenterz = P_GetSectorCeilingZAt(fakeflat, fakeflat->soundorg.x, fakeflat->soundorg.y);
-
-		boolean anyMoved = fakeflat->moved;
-
-		if (anyMoved == false)
-		{
-			for (ffloor_t *rover = fakeflat->ffloors; rover; rover = rover->next)
-			{
-				sector_t *controlSec = &sectors[rover->secnum];
-
-				if (controlSec->moved == true)
-				{
-					anyMoved = true;
-					break;
-				}
-			}
-		}
-
-		if (anyMoved == true)
-		{
-			fakeflat->numlights = sector->numlights = 0;
-			R_Prep3DFloors(fakeflat);
-			sector->lightlist = fakeflat->lightlist;
-			sector->numlights = fakeflat->numlights;
-			sector->moved = fakeflat->moved = false;
-		}
-
-		INT32 light = R_GetPlaneLight(fakeflat, floorcenterz, false);
-		if (fakeflat->floorlightsec == -1 && !fakeflat->floorlightabsolute)
-			*floorlightlevel = max(0, min(255, *fakeflat->lightlist[light].lightlevel + fakeflat->floorlightlevel));
-		*floorcolormap = *fakeflat->lightlist[light].extra_colormap;
-
-		light = R_GetPlaneLight(fakeflat, ceilingcenterz, false);
-		if (fakeflat->ceilinglightsec == -1 && !fakeflat->ceilinglightabsolute)
-			*ceilinglightlevel = max(0, min(255, *fakeflat->lightlist[light].lightlevel + fakeflat->ceilinglightlevel));
-		*ceilingcolormap = *fakeflat->lightlist[light].extra_colormap;
-	}
-}
-
 static void R_Subsector(size_t num)
 {
 	INT32 count, floorlightlevel, ceilinglightlevel, light;
@@ -1098,18 +1053,18 @@ static void R_Subsector(size_t num)
 		}
 	}
 
-   // killough 9/18/98: Fix underwater slowdown, by passing real sector
-   // instead of fake one. Improve sprite lighting by basing sprite
-   // lightlevels on floor & ceiling lightlevels in the surrounding area.
-   //
-   // 10/98 killough:
-   //
-   // NOTE: TeamTNT fixed this bug incorrectly, messing up sprite lighting!!!
-   // That is part of the 242 effect!!!  If you simply pass sub->sector to
-   // the old code you will not get correct lighting for underwater sprites!!!
-   // Either you must pass the fake sector and handle validcount here, on the
-   // real sector, or you must account for the lighting in some other way,
-   // like passing it as an argument.
+	// killough 9/18/98: Fix underwater slowdown, by passing real sector
+	// instead of fake one. Improve sprite lighting by basing sprite
+	// lightlevels on floor & ceiling lightlevels in the surrounding area.
+	//
+	// 10/98 killough:
+	//
+	// NOTE: TeamTNT fixed this bug incorrectly, messing up sprite lighting!!!
+	// That is part of the 242 effect!!!  If you simply pass sub->sector to
+	// the old code you will not get correct lighting for underwater sprites!!!
+	// Either you must pass the fake sector and handle validcount here, on the
+	// real sector, or you must account for the lighting in some other way,
+	// like passing it as an argument.
 	R_AddSprites(sub->sector, (floorlightlevel+ceilinglightlevel)/2);
 
 	firstseg = NULL;
@@ -1120,11 +1075,55 @@ static void R_Subsector(size_t num)
 
 	while (count--)
 	{
-//		CONS_Debug(DBG_GAMELOGIC, "Adding normal line %d...(%d)\n", line->linedef-lines, leveltime);
 		if (!line->glseg && !line->polyseg) // ignore segs that belong to polyobjects
 			R_AddLine(line);
 		line++;
 		curline = NULL; /* cph 2001/11/18 - must clear curline now we're done with it, so stuff doesn't try using it for other things */
+	}
+}
+
+void R_CheckSectorLightLists(sector_t *sector, sector_t *fakeflat, INT32 *floorlightlevel, INT32 *ceilinglightlevel, extracolormap_t **floorcolormap, extracolormap_t **ceilingcolormap)
+{
+	// Check and prep all 3D floors. Set the sector floor/ceiling light levels and colormaps.
+	if (fakeflat->ffloors)
+	{
+		fixed_t floorcenterz   = P_GetSectorFloorZAt  (fakeflat, fakeflat->soundorg.x, fakeflat->soundorg.y);
+		fixed_t ceilingcenterz = P_GetSectorCeilingZAt(fakeflat, fakeflat->soundorg.x, fakeflat->soundorg.y);
+
+		boolean anyMoved = fakeflat->moved;
+
+		if (anyMoved == false)
+		{
+			for (ffloor_t *rover = fakeflat->ffloors; rover; rover = rover->next)
+			{
+				sector_t *controlSec = &sectors[rover->secnum];
+
+				if (controlSec->moved == true)
+				{
+					anyMoved = true;
+					break;
+				}
+			}
+		}
+
+		if (anyMoved == true)
+		{
+			fakeflat->numlights = sector->numlights = 0;
+			R_Prep3DFloors(fakeflat);
+			sector->lightlist = fakeflat->lightlist;
+			sector->numlights = fakeflat->numlights;
+			sector->moved = fakeflat->moved = false;
+		}
+
+		INT32 light = R_GetPlaneLight(fakeflat, floorcenterz, false);
+		if (fakeflat->floorlightsec == -1 && !fakeflat->floorlightabsolute)
+			*floorlightlevel = max(0, min(255, *fakeflat->lightlist[light].lightlevel + fakeflat->floorlightlevel));
+		*floorcolormap = *fakeflat->lightlist[light].extra_colormap;
+
+		light = R_GetPlaneLight(fakeflat, ceilingcenterz, false);
+		if (fakeflat->ceilinglightsec == -1 && !fakeflat->ceilinglightabsolute)
+			*ceilinglightlevel = max(0, min(255, *fakeflat->lightlist[light].lightlevel + fakeflat->ceilinglightlevel));
+		*ceilingcolormap = *fakeflat->lightlist[light].extra_colormap;
 	}
 }
 
