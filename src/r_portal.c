@@ -16,6 +16,7 @@
 #include "r_main.h"
 #include "doomstat.h"
 #include "p_spec.h" // Skybox viewpoints
+#include "p_slopes.h" // P_GetSectorFloorZAt and P_GetSectorCeilingZAt
 #include "p_local.h"
 #include "z_zone.h"
 #include "r_things.h"
@@ -191,6 +192,8 @@ void Portal_Add2Lines (const INT32 line1, const INT32 line2, const INT32 x1, con
 	Portal_GetViewpointForLine(portal, start, dest);
 
 	portal->clipline = line2;
+	portal->is_horizon = false;
+	portal->horizon_sector = NULL;
 
 	Portal_ClipRange(portal);
 
@@ -312,6 +315,8 @@ void Portal_AddSkybox (const visplane_t* plane)
 		portal->viewz += viewz * -mh->skybox_scalez;
 
 	portal->clipline = -1;
+	portal->is_horizon = false;
+	portal->horizon_sector = NULL;
 }
 
 /** Creates a sector portal out of a visplane.
@@ -337,6 +342,8 @@ void Portal_AddSectorPortal (const visplane_t* plane)
 	Portal_ClipVisplane(plane, portal);
 
 	portal->clipline = -1;
+	portal->is_horizon = false;
+	portal->horizon_sector = NULL;
 
 	switch (secportal->type)
 	{
@@ -354,13 +361,25 @@ void Portal_AddSectorPortal (const visplane_t* plane)
 	case SECPORTAL_FLOOR:
 		x = secportal->sector->soundorg.x;
 		y = secportal->sector->soundorg.y;
-		z = secportal->sector->floorheight;
+		z = P_GetSectorFloorZAt(secportal->sector, x, y);
 		angle = 0;
 		break;
 	case SECPORTAL_CEILING:
 		x = secportal->sector->soundorg.x;
 		y = secportal->sector->soundorg.y;
-		z = secportal->sector->ceilingheight;
+		z = P_GetSectorCeilingZAt(secportal->sector, x, y);
+		angle = 0;
+		break;
+	case SECPORTAL_PLANE:
+	case SECPORTAL_HORIZON:
+		portal->is_horizon = true;
+		portal->horizon_sector = plane->sector;
+		x = plane->sector->soundorg.x;
+		y = plane->sector->soundorg.y;
+		if (secportal->type == SECPORTAL_PLANE)
+			z = -viewz;
+		else
+			z = 0;
 		angle = 0;
 		break;
 	default:

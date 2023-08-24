@@ -476,6 +476,21 @@ typedef enum
 	TMB_MODULATE        = 4,
 } textmapblendmodes_t;
 
+typedef enum
+{
+	TMSECPORTAL_NORMAL,
+	TMSECPORTAL_COPIED,
+	TMSECPORTAL_SKYBOX,
+	TMSECPORTAL_PLANE,
+	TMSECPORTAL_HORIZON,
+	// The two portal types below are unimplemented
+	TMSECPORTAL_COPY_PORTAL_TO_LINE,
+	TMSECPORTAL_INTERACTIVE,
+	// The two portal types below are new to SRB2
+	TMSECPORTAL_SECTOR,
+	TMSECPORTAL_OBJECT
+} textmapsecportaltype_t;
+
 // GETSECSPECIAL (specialval, section)
 //
 // Pulls out the special # from a particular section.

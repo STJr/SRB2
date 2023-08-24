@@ -39,6 +39,8 @@ drawseg_t *ds_p = NULL;
 boolean bothceilingssky = false; // turned on if both back and front ceilings are sky
 boolean bothfloorssky = false; // likewise, but for floors
 
+boolean horizonline = false;
+
 // indicates doors closed wrt automap bugfix:
 INT32 doorclosed;
 
@@ -456,6 +458,8 @@ static void R_AddLine(seg_t *line)
 		return;
 
 	backsector = line->backsector;
+	horizonline = line->linedef->special == HORIZONSPECIAL;
+	bothceilingssky = bothfloorssky = false;
 
 	// Portal line
 	if (line->linedef->special == 40 && line->side == 0)
@@ -488,7 +492,6 @@ static void R_AddLine(seg_t *line)
 	backsector = R_FakeFlat(backsector, &tempsec, NULL, NULL, true);
 
 	doorclosed = 0;
-	bothceilingssky = bothfloorssky = false;
 
 	// hack to allow height changes in outdoor areas
 	// This is what gets rid of the upper textures if there should be sky
@@ -844,6 +847,51 @@ static void R_AddPolyObjects(subsector_t *sub)
 
 drawseg_t *firstseg;
 
+static void R_CheckSectorLightLists(sector_t *sector, sector_t *fakeflat, INT32 *floorlightlevel, INT32 *ceilinglightlevel, extracolormap_t **floorcolormap, extracolormap_t **ceilingcolormap)
+{
+	// Check and prep all 3D floors. Set the sector floor/ceiling light levels and colormaps.
+	if (fakeflat->ffloors)
+	{
+		fixed_t floorcenterz   = P_GetSectorFloorZAt  (fakeflat, fakeflat->soundorg.x, fakeflat->soundorg.y);
+		fixed_t ceilingcenterz = P_GetSectorCeilingZAt(fakeflat, fakeflat->soundorg.x, fakeflat->soundorg.y);
+
+		boolean anyMoved = fakeflat->moved;
+
+		if (anyMoved == false)
+		{
+			for (ffloor_t *rover = fakeflat->ffloors; rover; rover = rover->next)
+			{
+				sector_t *controlSec = &sectors[rover->secnum];
+
+				if (controlSec->moved == true)
+				{
+					anyMoved = true;
+					break;
+				}
+			}
+		}
+
+		if (anyMoved == true)
+		{
+			fakeflat->numlights = sector->numlights = 0;
+			R_Prep3DFloors(fakeflat);
+			sector->lightlist = fakeflat->lightlist;
+			sector->numlights = fakeflat->numlights;
+			sector->moved = fakeflat->moved = false;
+		}
+
+		INT32 light = R_GetPlaneLight(fakeflat, floorcenterz, false);
+		if (fakeflat->floorlightsec == -1 && !fakeflat->floorlightabsolute)
+			*floorlightlevel = max(0, min(255, *fakeflat->lightlist[light].lightlevel + fakeflat->floorlightlevel));
+		*floorcolormap = *fakeflat->lightlist[light].extra_colormap;
+
+		light = R_GetPlaneLight(fakeflat, ceilingcenterz, false);
+		if (fakeflat->ceilinglightsec == -1 && !fakeflat->ceilinglightabsolute)
+			*ceilinglightlevel = max(0, min(255, *fakeflat->lightlist[light].lightlevel + fakeflat->ceilinglightlevel));
+		*ceilingcolormap = *fakeflat->lightlist[light].extra_colormap;
+	}
+}
+
 static void R_Subsector(size_t num)
 {
 	INT32 count, floorlightlevel, ceilinglightlevel, light;
@@ -877,43 +925,7 @@ static void R_Subsector(size_t num)
 	floorcenterz   = P_GetSectorFloorZAt  (frontsector, frontsector->soundorg.x, frontsector->soundorg.y);
 	ceilingcenterz = P_GetSectorCeilingZAt(frontsector, frontsector->soundorg.x, frontsector->soundorg.y);
 
-	// Check and prep all 3D floors. Set the sector floor/ceiling light levels and colormaps.
-	if (frontsector->ffloors)
-	{
-		boolean anyMoved = frontsector->moved;
-
-		if (anyMoved == false)
-		{
-			for (rover = frontsector->ffloors; rover; rover = rover->next)
-			{
-				sector_t *controlSec = &sectors[rover->secnum];
-
-				if (controlSec->moved == true)
-				{
-					anyMoved = true;
-					break;
-				}
-			}
-		}
-
-		if (anyMoved == true)
-		{
-			frontsector->numlights = sub->sector->numlights = 0;
-			R_Prep3DFloors(frontsector);
-			sub->sector->lightlist = frontsector->lightlist;
-			sub->sector->numlights = frontsector->numlights;
-			sub->sector->moved = frontsector->moved = false;
-		}
-
-		light = R_GetPlaneLight(frontsector, floorcenterz, false);
-		if (frontsector->floorlightsec == -1 && !frontsector->floorlightabsolute)
-			floorlightlevel = max(0, min(255, *frontsector->lightlist[light].lightlevel + frontsector->floorlightlevel));
-		floorcolormap = *frontsector->lightlist[light].extra_colormap;
-		light = R_GetPlaneLight(frontsector, ceilingcenterz, false);
-		if (frontsector->ceilinglightsec == -1 && !frontsector->ceilinglightabsolute)
-			ceilinglightlevel = max(0, min(255, *frontsector->lightlist[light].lightlevel + frontsector->ceilinglightlevel));
-		ceilingcolormap = *frontsector->lightlist[light].extra_colormap;
-	}
+	R_CheckSectorLightLists(sub->sector, frontsector, &floorlightlevel, &ceilinglightlevel, &floorcolormap, &ceilingcolormap);
 
 	sub->sector->extra_colormap = frontsector->extra_colormap;
 
@@ -1300,4 +1312,58 @@ void R_RenderBSPNode(INT32 bspnum)
 	}
 
 	R_Subsector(bspnum == -1 ? 0 : bspnum & ~NF_SUBSECTOR);
+}
+
+void R_RenderPortalHorizonLine(sector_t *sector)
+{
+	INT32 floorlightlevel, ceilinglightlevel;
+	static sector_t tempsec; // Deep water hack
+	extracolormap_t *floorcolormap;
+	extracolormap_t *ceilingcolormap;
+
+	frontsector = sector;
+	backsector = NULL;
+
+	// Deep water/fake ceiling effect.
+	frontsector = R_FakeFlat(frontsector, &tempsec, &floorlightlevel, &ceilinglightlevel, false);
+
+	floorcolormap = ceilingcolormap = frontsector->extra_colormap;
+
+	R_CheckSectorLightLists(sector, frontsector, &floorlightlevel, &ceilinglightlevel, &floorcolormap, &ceilingcolormap);
+
+	sector->extra_colormap = frontsector->extra_colormap;
+
+	if (P_GetSectorFloorZAt(frontsector, viewx, viewy) < viewz
+		|| frontsector->floorpic == skyflatnum
+		|| (frontsector->heightsec != -1 && sectors[frontsector->heightsec].ceilingpic == skyflatnum))
+	{
+		floorplane = R_FindPlane(frontsector, frontsector->floorheight, frontsector->floorpic, floorlightlevel,
+			frontsector->floorxoffset, frontsector->flooryoffset, frontsector->floorangle, floorcolormap, NULL, NULL, NULL, NULL);
+	}
+	else
+		floorplane = NULL;
+
+	if (P_GetSectorCeilingZAt(frontsector, viewx, viewy) > viewz
+		|| frontsector->ceilingpic == skyflatnum
+		|| (frontsector->heightsec != -1 && sectors[frontsector->heightsec].floorpic == skyflatnum))
+	{
+		ceilingplane = R_FindPlane(frontsector, frontsector->ceilingheight, frontsector->ceilingpic,
+			ceilinglightlevel, frontsector->ceilingxoffset, frontsector->ceilingyoffset, frontsector->ceilingangle,
+			ceilingcolormap, NULL, NULL, NULL, NULL);
+	}
+	else
+		ceilingplane = NULL;
+
+	numffloors = 0;
+	portalline = false;
+	doorclosed = 0;
+	bothceilingssky = bothfloorssky = false;
+	horizonline = true;
+
+	firstseg = NULL;
+	curline = &segs[0];
+
+	R_ClipSolidWallSegment(portalclipstart, portalclipend);
+
+	curline = NULL;
 }

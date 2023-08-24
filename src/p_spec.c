@@ -6227,6 +6227,9 @@ static boolean P_IsSectorPortalValid(sectorportal_t *secportal)
 		return secportal->mobj && !P_MobjWasRemoved(secportal->mobj);
 	case SECPORTAL_SKYBOX:
 		return skyboxmo[0] && !P_MobjWasRemoved(skyboxmo[0]);
+	case SECPORTAL_PLANE:
+	case SECPORTAL_HORIZON:
+		return true;
 	default:
 		return false;
 	}
@@ -6525,6 +6528,23 @@ void P_SpawnSpecials(boolean fromnetsave)
 					ceiling = plane_type == TMP_CEILING;
 				}
 
+				// Eternity's floor and horizon portal types
+				if (portal_type == TMSECPORTAL_PLANE || portal_type == TMSECPORTAL_HORIZON)
+				{
+					secportaltype_e type = portal_type == TMSECPORTAL_HORIZON ? SECPORTAL_HORIZON : SECPORTAL_PLANE;
+					if (floor)
+					{
+						sectorportal_t *floorportal = P_SectorGetFloorPortalOrCreate(lines[i].frontsector);
+						floorportal->type = type;
+					}
+					if (ceiling)
+					{
+						sectorportal_t *ceilportal = P_SectorGetCeilingPortalOrCreate(lines[i].frontsector);
+						ceilportal->type = type;
+					}
+					break;
+				}
+
 				INT32 s1 = -1;
 
 				TAG_ITER_SECTORS(target_sector_tag, s1) // Target sector tag
@@ -6532,7 +6552,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 					sector_t *target_sector = &sectors[s1];
 
 					// Line portal
-					if (portal_type == 0)
+					if (portal_type == TMSECPORTAL_NORMAL)
 					{
 						INT32 linenum = -1;
 						TAG_ITER_LINES(misc, linenum)
@@ -6561,7 +6581,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 						}
 					}
 					// Skybox portal
-					else if (portal_type == 2)
+					else if (portal_type == TMSECPORTAL_SKYBOX)
 					{
 						if (floor)
 						{
@@ -6575,7 +6595,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 						}
 					}
 					// Plane portal
-					else if (portal_type == 7)
+					else if (portal_type == TMSECPORTAL_SECTOR)
 					{
 						INT32 s2 = -1;
 						TAG_ITER_SECTORS(misc, s2) // Sector tag to make a portal to
@@ -6596,7 +6616,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 						}
 					}
 					// Use mobj as viewpoint
-					else if (portal_type == 8)
+					else if (portal_type == TMSECPORTAL_OBJECT)
 					{
 						mobj_t *mobj = P_GetMobjByTag(misc);
 						if (!mobj)
@@ -7428,7 +7448,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 			continue;
 
 		int portal_type = lines[i].args[1];
-		if (portal_type != 1)
+		if (portal_type != TMSECPORTAL_COPIED)
 			continue;
 
 		int target_sector_tag = lines[i].args[0];

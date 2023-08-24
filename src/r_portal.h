@@ -30,6 +30,10 @@ typedef struct portal_s
 	fixed_t viewz;
 	angle_t viewangle;
 
+	// For horizon portals
+	boolean is_horizon;
+	sector_t *horizon_sector;
+
 	UINT8 pass;			/**< Keeps track of the portal's recursion depth. */
 	INT32 clipline;		/**< Optional clipline for line-based portals. */
 

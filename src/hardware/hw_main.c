@@ -1117,8 +1117,6 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 		INT32 gl_toptexture = 0, gl_bottomtexture = 0;
 		fixed_t texturevpeg;
 
-		bothceilingssky = bothfloorssky = false;
-
 		SLOPEPARAMS(gl_backsector->c_slope, worldhigh, worldhighslope, gl_backsector->ceilingheight)
 		SLOPEPARAMS(gl_backsector->f_slope, worldlow,  worldlowslope,  gl_backsector->floorheight)
 
@@ -2339,6 +2337,7 @@ static void HWR_AddLine(seg_t * line)
 #endif
 
 	gl_backsector = line->backsector;
+	bothceilingssky = bothfloorssky = false;
 
 #ifdef NEWCLIP
 	if (!line->backsector)
@@ -2347,8 +2346,6 @@ static void HWR_AddLine(seg_t * line)
     }
     else
     {
-		bothceilingssky = bothfloorssky = false;
-
 		gl_backsector = R_FakeFlat(gl_backsector, &tempsec, NULL, NULL, true);
 
 		if (gl_backsector->ceilingpic == skyflatnum && gl_frontsector->ceilingpic == skyflatnum

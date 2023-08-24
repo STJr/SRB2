@@ -210,11 +210,13 @@ typedef enum
 
 typedef enum
 {
-	SECPORTAL_LINE,
-	SECPORTAL_OBJECT,
-	SECPORTAL_SKYBOX,
-	SECPORTAL_FLOOR,
-	SECPORTAL_CEILING
+	SECPORTAL_LINE,    // Works similar to a line portal
+	SECPORTAL_SKYBOX,  // Uses the skybox object as the reference view
+	SECPORTAL_PLANE,   // Eternity Engine's plane portal type
+	SECPORTAL_HORIZON, // Eternity Engine's horizon portal type
+	SECPORTAL_OBJECT,  // Uses an object as the reference view
+	SECPORTAL_FLOOR,   // Uses a sector as the reference view; the view height is aligned with the sector's floor
+	SECPORTAL_CEILING  // Uses a sector as the reference view; the view height is aligned with the sector's ceiling
 } secportaltype_e;
 
 typedef struct sectorportal_s

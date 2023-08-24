@@ -1547,9 +1547,18 @@ void R_RenderPlayerView(player_t *player)
 			Mask_Pre(&masks[nummasks - 1]);
 			curdrawsegs = ds_p;
 
-			// Render the BSP from the new viewpoint, and clip
-			// any sprites with the new clipsegs and window.
-			R_RenderBSPNode((INT32)numnodes - 1);
+			if (portal->is_horizon)
+			{
+				// If the portal is a plane or a horizon portal, then we just render a horizon line
+				R_RenderPortalHorizonLine(portal->horizon_sector);
+			}
+			else
+			{
+				// Render the BSP from the new viewpoint, and clip
+				// any sprites with the new clipsegs and window.
+				R_RenderBSPNode((INT32)numnodes - 1);
+			}
+
 			Mask_Post(&masks[nummasks - 1]);
 
 			R_ClipSprites(ds_p - (masks[nummasks - 1].drawsegs[1] - masks[nummasks - 1].drawsegs[0]), portal);

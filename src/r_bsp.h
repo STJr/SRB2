@@ -34,6 +34,8 @@ extern drawseg_t *ds_p;
 extern boolean bothceilingssky;
 extern boolean bothfloorssky;
 
+extern boolean horizonline;
+
 extern INT32 doorclosed;
 
 // BSP?
@@ -41,6 +43,7 @@ void R_ClearClipSegs(void);
 void R_PortalClearClipSegs(INT32 start, INT32 end);
 void R_ClearDrawSegs(void);
 void R_RenderBSPNode(INT32 bspnum);
+void R_RenderPortalHorizonLine(sector_t *sector);
 
 void R_SortPolyObjects(subsector_t *sub);
 
