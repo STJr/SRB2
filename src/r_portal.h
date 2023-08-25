@@ -34,6 +34,8 @@ typedef struct portal_s
 	boolean is_horizon;
 	sector_t *horizon_sector;
 
+	boolean is_skybox;
+
 	UINT8 pass;			/**< Keeps track of the portal's recursion depth. */
 	INT32 clipline;		/**< Optional clipline for line-based portals. */
 
@@ -63,5 +65,5 @@ void Portal_AddTransferred	(UINT32 secportalnum, const INT32 x1, const INT32 x2)
 void Portal_ClipRange (portal_t* portal);
 void Portal_ClipApply (const portal_t* portal);
 
-void Portal_AddSkyboxPortals (void);
+void Portal_AddPlanePortals (boolean add_skyboxes);
 #endif

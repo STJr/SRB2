@@ -192,6 +192,7 @@ void Portal_Add2Lines (const INT32 line1, const INT32 line2, const INT32 x1, con
 	Portal_GetViewpointForLine(portal, start, dest);
 
 	portal->clipline = line2;
+	portal->is_skybox = false;
 	portal->is_horizon = false;
 	portal->horizon_sector = NULL;
 
@@ -317,6 +318,7 @@ void Portal_AddSkybox (const visplane_t* plane)
 	Portal_ClipVisplane(plane, portal);
 
 	portal->clipline = -1;
+	portal->is_skybox = true;
 	portal->is_horizon = false;
 	portal->horizon_sector = NULL;
 
@@ -396,7 +398,8 @@ void Portal_AddSectorPortal (const visplane_t* plane)
 	// Shortcut
 	if (secportal->type == SECPORTAL_SKYBOX)
 	{
-		Portal_AddSkybox(plane);
+		if (skyboxmo[0])
+			Portal_AddSkybox(plane);
 		return;
 	}
 
@@ -409,6 +412,7 @@ void Portal_AddSectorPortal (const visplane_t* plane)
 
 	portal->clipline = -1;
 	portal->is_horizon = false;
+	portal->is_skybox = false;
 	portal->horizon_sector = NULL;
 
 	Portal_GetViewpointForSecPortal(portal, secportal);
@@ -426,7 +430,7 @@ void Portal_AddTransferred (UINT32 secportalnum, const INT32 x1, const INT32 x2)
 		return;
 
 	portal_t* portal = Portal_Add(x1, x2);
-
+	portal->is_skybox = false;
 	portal->is_horizon = false;
 	portal->horizon_sector = NULL;
 
@@ -445,10 +449,10 @@ void Portal_AddTransferred (UINT32 secportalnum, const INT32 x1, const INT32 x2)
 	portalline = true;
 }
 
-/** Creates portals for the currently existing sky visplanes.
+/** Creates portals for the currently existing portal visplanes.
  * The visplanes are also removed and cleared from the list.
  */
-void Portal_AddSkyboxPortals (void)
+void Portal_AddPlanePortals (boolean add_skyboxes)
 {
 	visplane_t *pl;
 
@@ -456,6 +460,9 @@ void Portal_AddSkyboxPortals (void)
 	{
 		for (pl = visplanes[i]; pl; pl = pl->next)
 		{
+			if (pl->minx >= pl->maxx)
+				continue;
+
 			boolean added_portal = false;
 
 			// Render sector portal if recursiveness limit hasn't been reached
@@ -466,7 +473,7 @@ void Portal_AddSkyboxPortals (void)
 			}
 
 			// Render skybox portal
-			if (!added_portal && pl->picnum == skyflatnum && cv_skybox.value && skyboxmo[0])
+			if (!added_portal && pl->picnum == skyflatnum && add_skyboxes && skyboxmo[0])
 			{
 				Portal_AddSkybox(pl);
 				added_portal = true;

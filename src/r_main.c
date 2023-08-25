@@ -1513,8 +1513,8 @@ void R_RenderPlayerView(player_t *player)
 	R_ClipSprites(drawsegs, NULL);
 	PS_STOP_TIMING(ps_sw_spritecliptime);
 
-	// Add skybox portals caused by sky visplanes.
-	Portal_AddSkyboxPortals();
+	// Add portals caused by visplanes.
+	Portal_AddPlanePortals(cv_skybox.value);
 
 	// Portal rendering. Hijacks the BSP traversal.
 	PS_START_TIMING(ps_sw_portaltime);
@@ -1558,6 +1558,9 @@ void R_RenderPlayerView(player_t *player)
 				// any sprites with the new clipsegs and window.
 				R_RenderBSPNode((INT32)numnodes - 1);
 			}
+
+			// Don't add skybox portals while IN a skybox portal, because that'll cause infinite recursion
+			Portal_AddPlanePortals(!portal->is_skybox);
 
 			Mask_Post(&masks[nummasks - 1]);
 
