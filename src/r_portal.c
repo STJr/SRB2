@@ -329,7 +329,8 @@ static boolean Portal_AddSkybox (const visplane_t* plane)
 
 static void Portal_GetViewpointForSecPortal(portal_t *portal, sectorportal_t *secportal)
 {
-	fixed_t x, y, z, angle;
+	fixed_t x, y, z;
+	angle_t angle;
 
 	switch (secportal->type)
 	{

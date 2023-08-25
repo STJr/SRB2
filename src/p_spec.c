@@ -6295,17 +6295,12 @@ boolean P_CompareSectorPortals(sectorportal_t *a, sectorportal_t *b)
 
 static mobj_t *P_GetMobjByTag(INT32 tag)
 {
-	for (thinker_t *th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
+	INT32 mtnum = -1;
+
+	TAG_ITER_THINGS(tag, mtnum)
 	{
-		if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
-			continue;
-
-		mobj_t *mo = (mobj_t *)th;
-
-		if (mo->spawnpoint == NULL)
-			continue;
-
-		if (Tag_Find(&mo->spawnpoint->tags, tag))
+		mobj_t *mo = mapthings[mtnum].mobj;
+		if (mo)
 			return mo;
 	}
 
