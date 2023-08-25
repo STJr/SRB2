@@ -4766,6 +4766,8 @@ static void P_NetArchiveSectorPortals(void)
 		UINT8 type = secportals[i].type;
 
 		WRITEUINT8(save_p, type);
+		WRITEFIXED(save_p, secportals[i].origin.x);
+		WRITEFIXED(save_p, secportals[i].origin.y);
 
 		switch (type)
 		{
@@ -4808,6 +4810,8 @@ static void P_NetUnArchiveSectorPortals(void)
 		sectorportal_t *secportal = &secportals[id];
 
 		secportal->type = READUINT8(save_p);
+		secportal->origin.x = READFIXED(save_p);
+		secportal->origin.y = READFIXED(save_p);
 
 		switch (secportal->type)
 		{

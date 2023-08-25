@@ -323,7 +323,7 @@ void Portal_AddSkybox (const visplane_t* plane)
 	Portal_GetViewpointForSkybox(portal);
 }
 
-static void Portal_GetViewpointForSecPortal(portal_t *portal, sectorportal_t *secportal, fixed_t origin_x, fixed_t origin_y)
+static void Portal_GetViewpointForSecPortal(portal_t *portal, sectorportal_t *secportal)
 {
 	fixed_t x, y, z, angle;
 
@@ -368,8 +368,8 @@ static void Portal_GetViewpointForSecPortal(portal_t *portal, sectorportal_t *se
 		return;
 	}
 
-	fixed_t refx = origin_x - viewx;
-	fixed_t refy = origin_y - viewy;
+	fixed_t refx = secportal->origin.x - viewx;
+	fixed_t refy = secportal->origin.y - viewy;
 
 	// Rotate the X/Y to match the target angle
 	if (angle != 0)
@@ -411,12 +411,12 @@ void Portal_AddSectorPortal (const visplane_t* plane)
 	portal->is_horizon = false;
 	portal->horizon_sector = NULL;
 
-	Portal_GetViewpointForSecPortal(portal, secportal, plane->sector->soundorg.x, plane->sector->soundorg.y);
+	Portal_GetViewpointForSecPortal(portal, secportal);
 }
 
 /** Creates a transferred sector portal.
  */
-void Portal_AddTransferred (const INT32 linenum, UINT32 secportalnum, const INT32 x1, const INT32 x2)
+void Portal_AddTransferred (UINT32 secportalnum, const INT32 x1, const INT32 x2)
 {
 	if (secportalnum >= secportalcount)
 		return;
@@ -433,12 +433,7 @@ void Portal_AddTransferred (const INT32 linenum, UINT32 secportalnum, const INT3
 	if (secportal->type == SECPORTAL_SKYBOX)
 		Portal_GetViewpointForSkybox(portal);
 	else
-	{
-		line_t *line = &lines[linenum];
-		fixed_t refx = (line->v1->x + line->v2->x) / 2;
-		fixed_t refy = (line->v1->y + line->v2->y) / 2;
-		Portal_GetViewpointForSecPortal(portal, secportal, refx, refy);
-	}
+		Portal_GetViewpointForSecPortal(portal, secportal);
 
 	if (secportal->type == SECPORTAL_LINE)
 		portal->clipline = secportal->line.dest - lines;

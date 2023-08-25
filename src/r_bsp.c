@@ -489,7 +489,7 @@ static void R_AddLine(seg_t *line)
 	{
 		if (portalrender < cv_maxportals.value)
 		{
-			Portal_AddTransferred(line->linedef-lines, line->linedef->secportal, x1, x2);
+			Portal_AddTransferred(line->linedef->secportal, x1, x2);
 			goto clipsolid;
 		}
 	}

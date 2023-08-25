@@ -6325,30 +6325,35 @@ static void P_DoPortalCopyFromLine(sector_t *dest_sector, int plane_type, int ta
 	}
 }
 
-static sectorportal_t *P_SectorGetFloorPortalOrCreate(sector_t *sector, UINT32 *result)
+static sectorportal_t *P_SectorGetPortalOrCreate(sector_t *sector, UINT32 *num, UINT32 *result)
 {
-	*result = sector->portal_floor;
+	sectorportal_t *secportal = NULL;
 
-	if (*result >= secportalcount)
+	if (*num >= secportalcount)
 	{
-		*result = P_NewSectorPortal();
-		sector->portal_floor = *result;
+		*num = P_NewSectorPortal();
+		secportal = &secportals[*num];
+		secportal->origin.x = sector->soundorg.x;
+		secportal->origin.y = sector->soundorg.y;
+		*result = *num;
+	}
+	else
+	{
+		*result = *num;
+		secportal = &secportals[*num];
 	}
 
-	return &secportals[sector->portal_floor];
+	return secportal;
+}
+
+static sectorportal_t *P_SectorGetFloorPortalOrCreate(sector_t *sector, UINT32 *result)
+{
+	return P_SectorGetPortalOrCreate(sector, &sector->portal_floor, result);
 }
 
 static sectorportal_t *P_SectorGetCeilingPortalOrCreate(sector_t *sector, UINT32 *result)
 {
-	*result = sector->portal_floor;
-
-	if (*result >= secportalcount)
-	{
-		*result = P_NewSectorPortal();
-		sector->portal_ceiling = *result;
-	}
-
-	return &secportals[sector->portal_ceiling];
+	return P_SectorGetPortalOrCreate(sector, &sector->portal_ceiling, result);
 }
 
 static void P_CopySectorPortalToLines(UINT32 portal_num, int sector_tag)
