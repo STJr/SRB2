@@ -1184,7 +1184,7 @@ fixed_t R_GetShadowZ(mobj_t *thing, pslope_t **shadowslope)
 		R_InterpolateMobjState(thing, FRACUNIT, &interp);
 	}
 
-	halfHeight = interp.z + (thing->height >> 1);
+	halfHeight = interp.z + (interp.height >> 1);
 	floorz = P_GetFloorZ(thing, interp.subsector->sector, interp.x, interp.y, NULL);
 	ceilingz = P_GetCeilingZ(thing, interp.subsector->sector, interp.x, interp.y, NULL);
 
@@ -1248,8 +1248,8 @@ fixed_t R_GetShadowZ(mobj_t *thing, pslope_t **shadowslope)
 		}
 	}
 
-	if (isflipped ? (ceilingz < groundz - (!groundslope ? 0 : FixedMul(abs(groundslope->zdelta), thing->radius*3/2)))
-		: (floorz > groundz + (!groundslope ? 0 : FixedMul(abs(groundslope->zdelta), thing->radius*3/2))))
+	if (isflipped ? (ceilingz < groundz - (!groundslope ? 0 : FixedMul(abs(groundslope->zdelta), interp.radius*3/2)))
+		: (floorz > groundz + (!groundslope ? 0 : FixedMul(abs(groundslope->zdelta), interp.radius*3/2))))
 	{
 		groundz = isflipped ? ceilingz : floorz;
 		groundslope = NULL;
@@ -1292,9 +1292,9 @@ static void R_SkewShadowSprite(
 	//CONS_Printf("Shadow is sloped by %d %d\n", xslope, zslope);
 
 	if (viewz < groundz)
-		*shadowyscale += FixedMul(FixedMul(thing->radius*2 / spriteheight, scalemul), zslope);
+		*shadowyscale += FixedMul(FixedMul(interp.radius*2 / spriteheight, scalemul), zslope);
 	else
-		*shadowyscale -= FixedMul(FixedMul(thing->radius*2 / spriteheight, scalemul), zslope);
+		*shadowyscale -= FixedMul(FixedMul(interp.radius*2 / spriteheight, scalemul), zslope);
 
 	*shadowyscale = abs((*shadowyscale));
 	*shadowskew = xslope;
@@ -1345,20 +1345,18 @@ static void R_ProjectDropShadow(mobj_t *thing, vissprite_t *vis, fixed_t scale, 
 			return;
 	}
 
-	floordiff = abs((isflipped ? thing->height : 0) + interp.z - groundz);
+	floordiff = abs((isflipped ? interp.height : 0) + interp.z - groundz);
 
 	trans = floordiff / (100*FRACUNIT) + 3;
 	if (trans >= 9) return;
 
 	scalemul = FixedMul(FRACUNIT - floordiff/640, scale);
-	if ((thing->scale != thing->old_scale) && (thing->scale >= FRACUNIT/1024)) // Interpolate shadows when scaling mobjs
-		scalemul = FixedMul(scalemul, FixedDiv(interp.scale, thing->scale));
 
 	patch = W_CachePatchName("DSHADOW", PU_SPRITE);
 	xscale = FixedDiv(projection, tz);
 	yscale = FixedDiv(projectiony, tz);
-	shadowxscale = FixedMul(thing->radius*2, scalemul);
-	shadowyscale = FixedMul(FixedMul(thing->radius*2, scalemul), FixedDiv(abs(groundz - viewz), tz));
+	shadowxscale = FixedMul(interp.radius*2, scalemul);
+	shadowyscale = FixedMul(FixedMul(interp.radius*2, scalemul), FixedDiv(abs(groundz - viewz), tz));
 	shadowyscale = min(shadowyscale, shadowxscale) / patch->height;
 	shadowxscale /= patch->width;
 	shadowskew = 0;
@@ -1484,8 +1482,8 @@ static void R_ProjectBoundingBox(mobj_t *thing, vissprite_t *vis)
 	// 0--2
 
 	// start in the (0) corner
-	gx = interp.x - thing->radius - viewx;
-	gy = interp.y - thing->radius - viewy;
+	gx = interp.x - interp.radius - viewx;
+	gy = interp.y - interp.radius - viewy;
 
 	tz = FixedMul(gx, viewcos) + FixedMul(gy, viewsin);
 
@@ -1507,14 +1505,14 @@ static void R_ProjectBoundingBox(mobj_t *thing, vissprite_t *vis)
 	box = R_NewVisSprite();
 	box->mobj = thing;
 	box->mobjflags = thing->flags;
-	box->thingheight = thing->height;
+	box->thingheight = interp.height;
 	box->cut = SC_BBOX;
 
 	box->gx = tx;
 	box->gy = tz;
 
-	box->scale = 2 * FixedMul(thing->radius, viewsin);
-	box->xscale = 2 * FixedMul(thing->radius, viewcos);
+	box->scale  = 2 * FixedMul(interp.radius, viewsin);
+	box->xscale = 2 * FixedMul(interp.radius, viewcos);
 
 	box->pz = interp.z;
 	box->pzt = box->pz + box->thingheight;
@@ -1563,6 +1561,7 @@ static void R_ProjectSprite(mobj_t *thing)
 	fixed_t tr_x, tr_y;
 	fixed_t tx, tz;
 	fixed_t xscale, yscale; //added : 02-02-98 : aaargll..if I were a math-guy!!!
+	fixed_t radius, height; // For drop shadows
 	fixed_t sortscale, sortsplat = 0;
 	fixed_t linkscale = 0;
 	fixed_t sort_x = 0, sort_y = 0, sort_z;
@@ -1638,6 +1637,8 @@ static void R_ProjectSprite(mobj_t *thing)
 	}
 
 	this_scale = interp.scale;
+	radius = interp.radius; // For drop shadows
+	height = interp.height; // Ditto
 
 	// transform the origin point
 	tr_x = interp.x - viewx;
@@ -1977,6 +1978,8 @@ static void R_ProjectSprite(mobj_t *thing)
 		{
 			R_InterpolateMobjState(thing, FRACUNIT, &tracer_interp);
 		}
+		radius = tracer_interp.radius; // For drop shadows
+		height = tracer_interp.height; // Ditto
 
 		tr_x = (tracer_interp.x + sort_x) - viewx;
 		tr_y = (tracer_interp.y + sort_y) - viewy;
@@ -2068,7 +2071,7 @@ static void R_ProjectSprite(mobj_t *thing)
 				if (abs(groundz-viewz)/tz > 4)
 					return; // Prevent stretchy shadows and possible crashes
 
-				floordiff = abs((isflipped ? caster->height : 0) + casterinterp.z - groundz);
+				floordiff = abs((isflipped ? casterinterp.height : 0) + casterinterp.z - groundz);
 				trans += ((floordiff / (100*FRACUNIT)) + 3);
 				shadowscale = FixedMul(FRACUNIT - floordiff/640, casterinterp.scale);
 			}
@@ -2083,8 +2086,8 @@ static void R_ProjectSprite(mobj_t *thing)
 
 		if (shadowdraw)
 		{
-			spritexscale = FixedMul(thing->radius * 2, FixedMul(shadowscale, spritexscale));
-			spriteyscale = FixedMul(thing->radius * 2, FixedMul(shadowscale, spriteyscale));
+			spritexscale = FixedMul(radius * 2, FixedMul(shadowscale, spritexscale));
+			spriteyscale = FixedMul(radius * 2, FixedMul(shadowscale, spriteyscale));
 			spriteyscale = FixedMul(spriteyscale, FixedDiv(abs(groundz - viewz), tz));
 			spriteyscale = min(spriteyscale, spritexscale) / patch->height;
 			spritexscale /= patch->width;
@@ -2099,7 +2102,7 @@ static void R_ProjectSprite(mobj_t *thing)
 		{
 			R_SkewShadowSprite(thing, thing->standingslope, groundz, patch->height, shadowscale, &spriteyscale, &sheartan);
 
-			gzt = (isflipped ? (interp.z + thing->height) : interp.z) + patch->height * spriteyscale / 2;
+			gzt = (isflipped ? (interp.z + height) : interp.z) + patch->height * spriteyscale / 2;
 			gz = gzt - patch->height * spriteyscale;
 
 			cut |= SC_SHEAR;
@@ -2114,11 +2117,7 @@ static void R_ProjectSprite(mobj_t *thing)
 			// When vertical flipped, draw sprites from the top down, at least as far as offsets are concerned.
 			// sprite height - sprite topoffset is the proper inverse of the vertical offset, of course.
 			// remember gz and gzt should be seperated by sprite height, not thing height - thing height can be shorter than the sprite itself sometimes!
-
-			if (oldthing->scale != oldthing->old_scale) // Interpolate heights in reverse gravity when scaling mobjs
-				gz = interp.z + FixedMul(oldthing->height, FixedDiv(interp.scale, oldthing->scale)) - FixedMul(spr_topoffset, FixedMul(spriteyscale, this_scale));
-			else
-				gz = interp.z + oldthing->height - FixedMul(spr_topoffset, FixedMul(spriteyscale, this_scale));
+			gz = interp.z + interp.height - FixedMul(spr_topoffset, FixedMul(spriteyscale, this_scale));
 			gzt = gz + FixedMul(spr_height, FixedMul(spriteyscale, this_scale));
 		}
 		else
@@ -2197,7 +2196,7 @@ static void R_ProjectSprite(mobj_t *thing)
 	vis->gy = interp.y;
 	vis->gz = gz;
 	vis->gzt = gzt;
-	vis->thingheight = thing->height;
+	vis->thingheight = height;
 	vis->pz = interp.z;
 	vis->pzt = vis->pz + vis->thingheight;
 	vis->texturemid = FixedDiv(gzt - viewz, spriteyscale);

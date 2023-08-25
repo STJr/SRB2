@@ -3595,7 +3595,7 @@ static void HWR_DrawDropShadow(mobj_t *thing, fixed_t scale)
 			return;
 	}
 
-	floordiff = abs((flip < 0 ? thing->height : 0) + interp.z - groundz);
+	floordiff = abs((flip < 0 ? interp.height : 0) + interp.z - groundz);
 
 	alpha = floordiff / (4*FRACUNIT) + 75;
 	if (alpha >= 255) return;
@@ -3606,9 +3606,7 @@ static void HWR_DrawDropShadow(mobj_t *thing, fixed_t scale)
 	HWR_GetPatch(gpatch);
 
 	scalemul = FixedMul(FRACUNIT - floordiff/640, scale);
-	scalemul = FixedMul(scalemul, (thing->radius*2) / gpatch->height);
-	if ((thing->scale != thing->old_scale) && (thing->scale >= FRACUNIT/1024)) // Interpolate shadows when scaling mobjs
-		scalemul = FixedMul(scalemul, FixedDiv(interp.scale, thing->scale));
+	scalemul = FixedMul(scalemul, (interp.radius*2) / gpatch->height);
 
 	fscale = FIXED_TO_FLOAT(scalemul);
 	fx = FIXED_TO_FLOAT(interp.x);
@@ -3720,7 +3718,7 @@ static void HWR_RotateSpritePolyToAim(gl_vissprite_t *spr, FOutVector *wallVerts
 
 		if (P_MobjFlip(spr->mobj) == -1)
 		{
-			basey = FIXED_TO_FLOAT(interp.z + spr->mobj->height);
+			basey = FIXED_TO_FLOAT(interp.z + interp.height);
 		}
 		else
 		{
@@ -5326,7 +5324,7 @@ static void HWR_ProjectSprite(mobj_t *thing)
 			}
 
 			groundz = R_GetShadowZ(thing, NULL);
-			floordiff = abs(((thing->eflags & MFE_VERTICALFLIP) ? caster->height : 0) + casterinterp.z - groundz);
+			floordiff = abs(((thing->eflags & MFE_VERTICALFLIP) ? casterinterp.height : 0) + casterinterp.z - groundz);
 
 			shadowheight = FIXED_TO_FLOAT(floordiff);
 			shadowscale = FIXED_TO_FLOAT(FixedMul(FRACUNIT - floordiff/640, casterinterp.scale));
@@ -5378,10 +5376,7 @@ static void HWR_ProjectSprite(mobj_t *thing)
 
 		if (vflip)
 		{
-			if (thing->scale != thing->old_scale) // Interpolate heights in reverse gravity when scaling mobjs
-				gz = FIXED_TO_FLOAT(interp.z + FixedMul(thing->height, FixedDiv(interp.scale, thing->scale))) - (FIXED_TO_FLOAT(spr_topoffset) * this_yscale);
-			else
-				gz = FIXED_TO_FLOAT(interp.z + thing->height) - (FIXED_TO_FLOAT(spr_topoffset) * this_yscale);
+			gz = FIXED_TO_FLOAT(interp.z + interp.height) - (FIXED_TO_FLOAT(spr_topoffset) * this_yscale);
 			gzt = gz + (FIXED_TO_FLOAT(spr_height) * this_yscale);
 		}
 		else
@@ -5687,7 +5682,6 @@ static void HWR_ProjectBoundingBox(mobj_t *thing)
 	gl_vissprite_t *vis;
 	float tr_x, tr_y;
 	float tz;
-	float rad;
 
 	if (!thing)
 		return;
@@ -5722,15 +5716,13 @@ static void HWR_ProjectBoundingBox(mobj_t *thing)
 	tr_x += gl_viewx;
 	tr_y += gl_viewy;
 
-	rad = FIXED_TO_FLOAT(thing->radius);
-
 	vis = HWR_NewVisSprite();
-	vis->x1 = tr_x - rad;
-	vis->x2 = tr_x + rad;
-	vis->z1 = tr_y - rad;
-	vis->z2 = tr_y + rad;
+	vis->x1 = tr_x - FIXED_TO_FLOAT(interp.radius);
+	vis->x2 = tr_x + FIXED_TO_FLOAT(interp.radius);
+	vis->z1 = tr_y - FIXED_TO_FLOAT(interp.radius);
+	vis->z2 = tr_y + FIXED_TO_FLOAT(interp.radius);
 	vis->gz = FIXED_TO_FLOAT(interp.z);
-	vis->gzt = vis->gz + FIXED_TO_FLOAT(thing->height);
+	vis->gzt = vis->gz + FIXED_TO_FLOAT(interp.height);
 	vis->mobj = thing;
 
 	vis->precip = false;
