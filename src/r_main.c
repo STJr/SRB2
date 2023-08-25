@@ -1559,7 +1559,7 @@ void R_RenderPlayerView(player_t *player)
 				R_RenderBSPNode((INT32)numnodes - 1);
 			}
 
-			// Don't add skybox portals while IN a skybox portal, because that'll cause infinite recursion
+			// Don't add skybox portals while already rendering a skybox view, because that'll cause an infinite loop
 			Portal_AddPlanePortals(cv_skybox.value && !portal->is_skybox);
 
 			Mask_Post(&masks[nummasks - 1]);
