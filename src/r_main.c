@@ -1560,7 +1560,7 @@ void R_RenderPlayerView(player_t *player)
 			}
 
 			// Don't add skybox portals while IN a skybox portal, because that'll cause infinite recursion
-			Portal_AddPlanePortals(!portal->is_skybox);
+			Portal_AddPlanePortals(cv_skybox.value && !portal->is_skybox);
 
 			Mask_Post(&masks[nummasks - 1]);
 

@@ -305,13 +305,13 @@ static void Portal_GetViewpointForSkybox(portal_t *portal)
  * Applies the necessary offsets and rotation to give
  * a depth illusion to the skybox.
  */
-void Portal_AddSkybox (const visplane_t* plane)
+static boolean Portal_AddSkybox (const visplane_t* plane)
 {
 	INT16 start, end;
 	portal_t* portal;
 
 	if (TrimVisplaneBounds(plane, &start, &end))
-		return;
+		return false;
 
 	portal = Portal_Add(start, end);
 
@@ -323,6 +323,8 @@ void Portal_AddSkybox (const visplane_t* plane)
 	portal->horizon_sector = NULL;
 
 	Portal_GetViewpointForSkybox(portal);
+
+	return true;
 }
 
 static void Portal_GetViewpointForSecPortal(portal_t *portal, sectorportal_t *secportal)
@@ -390,7 +392,7 @@ static void Portal_GetViewpointForSecPortal(portal_t *portal, sectorportal_t *se
 
 /** Creates a sector portal out of a visplane.
  */
-void Portal_AddSectorPortal (const visplane_t* plane)
+static boolean Portal_AddSectorPortal (const visplane_t* plane)
 {
 	INT16 start, end;
 	sectorportal_t *secportal = plane->portalsector;
@@ -398,13 +400,13 @@ void Portal_AddSectorPortal (const visplane_t* plane)
 	// Shortcut
 	if (secportal->type == SECPORTAL_SKYBOX)
 	{
-		if (skyboxmo[0])
-			Portal_AddSkybox(plane);
-		return;
+		if (cv_skybox.value && skyboxmo[0])
+			return Portal_AddSkybox(plane);
+		return false;
 	}
 
 	if (TrimVisplaneBounds(plane, &start, &end))
-		return;
+		return false;
 
 	portal_t* portal = Portal_Add(start, end);
 
@@ -416,6 +418,8 @@ void Portal_AddSectorPortal (const visplane_t* plane)
 	portal->horizon_sector = NULL;
 
 	Portal_GetViewpointForSecPortal(portal, secportal);
+
+	return true;
 }
 
 /** Creates a transferred sector portal.
@@ -467,17 +471,11 @@ void Portal_AddPlanePortals (boolean add_skyboxes)
 
 			// Render sector portal if recursiveness limit hasn't been reached
 			if (pl->portalsector && portalrender < cv_maxportals.value)
-			{
-				Portal_AddSectorPortal(pl);
-				added_portal = true;
-			}
+				added_portal = Portal_AddSectorPortal(pl);
 
 			// Render skybox portal
 			if (!added_portal && pl->picnum == skyflatnum && add_skyboxes && skyboxmo[0])
-			{
-				Portal_AddSkybox(pl);
-				added_portal = true;
-			}
+				added_portal = Portal_AddSkybox(pl);
 
 			// don't render this visplane anymore
 			if (added_portal)
