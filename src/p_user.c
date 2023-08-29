@@ -1855,6 +1855,7 @@ void P_SpawnShieldOrb(player_t *player)
 	{
 		ov = P_SpawnMobj(shieldobj->x, shieldobj->y, shieldobj->z, MT_OVERLAY);
 		P_SetTarget(&ov->target, shieldobj);
+		P_SetTarget(&ov->dontdrawforviewmobj, player->mo); // Hide the shield in first-person
 		P_SetMobjState(ov, shieldobj->info->seestate);
 		P_SetTarget(&shieldobj->tracer, ov);
 	}
@@ -1862,12 +1863,14 @@ void P_SpawnShieldOrb(player_t *player)
 	{
 		ov = P_SpawnMobj(shieldobj->x, shieldobj->y, shieldobj->z, MT_OVERLAY);
 		P_SetTarget(&ov->target, shieldobj);
+		P_SetTarget(&ov->dontdrawforviewmobj, player->mo); // Hide the shield in first-person
 		P_SetMobjState(ov, shieldobj->info->meleestate);
 	}
 	if (shieldobj->info->missilestate)
 	{
 		ov = P_SpawnMobj(shieldobj->x, shieldobj->y, shieldobj->z, MT_OVERLAY);
 		P_SetTarget(&ov->target, shieldobj);
+		P_SetTarget(&ov->dontdrawforviewmobj, player->mo); // Hide the shield in first-person
 		P_SetMobjState(ov, shieldobj->info->missilestate);
 	}
 	if (player->powers[pw_shield] & SH_FORCE)
