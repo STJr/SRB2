@@ -2012,7 +2012,7 @@ mobj_t *P_SpawnGhostMobj(mobj_t *mobj)
 		mobj_t *ghost2 = P_SpawnGhostMobj(mobj->player->followmobj);
 		P_SetTarget(&ghost2->tracer, ghost);
 		P_SetTarget(&ghost->tracer, ghost2);
-		P_SetTarget(&ghost2->dontdrawforviewmobj, mobj); // Hide the follow-ghost for the non-follow object
+		P_SetTarget(&ghost2->dontdrawforviewmobj, mobj); // Hide the follow-ghost for the non-follow target
 		ghost2->flags2 |= (mobj->player->followmobj->flags2 & MF2_LINKDRAW);
 	}
 
