@@ -630,7 +630,9 @@ static void Command_CSay_f(void)
 
 	DoSayCommand(0, 1, HU_CSAY);
 }
-static tic_t stop_spamming[MAXPLAYERS];
+
+static tic_t spam_tokens[MAXPLAYERS];
+static tic_t spam_tics[MAXPLAYERS];
 
 /** Receives a message, processing an ::XD_SAY command.
   * \sa DoSayCommand
@@ -682,14 +684,14 @@ static void Got_Saycmd(UINT8 **p, INT32 playernum)
 	// before we do anything, let's verify the guy isn't spamming, get this easier on us.
 
 	//if (stop_spamming[playernum] != 0 && cv_chatspamprotection.value && !(flags & HU_CSAY))
-	if (stop_spamming[playernum] != 0 && consoleplayer != playernum && cv_chatspamprotection.value && !(flags & HU_CSAY))
+	if (spam_tokens[playernum] <= 0 && cv_chatspamprotection.value && !(flags & HU_CSAY))
 	{
 		CONS_Debug(DBG_NETPLAY,"Received SAY cmd too quickly from Player %d (%s), assuming as spam and blocking message.\n", playernum+1, player_names[playernum]);
-		stop_spamming[playernum] = 4;
+		spam_tics[playernum] = 0;
 		spam_eatmsg = 1;
 	}
 	else
-		stop_spamming[playernum] = 4; // you can hold off for 4 tics, can you?
+		spam_tokens[playernum] -= 1;
 
 	// run the lua hook even if we were supposed to eat the msg, netgame consistency goes first.
 
@@ -871,6 +873,25 @@ static void Got_Saycmd(UINT8 **p, INT32 playernum)
 //
 void HU_Ticker(void)
 {
+	// do this server-side, too
+	if (netgame)
+	{
+		size_t i = 0;
+
+		// handle spam while we're at it:
+		for(; (i<MAXPLAYERS); i++)
+		{
+			if (spam_tokens[i] < (tic_t)cv_chatspamburst.value)
+			{
+				if (++spam_tics[i] >= (tic_t)cv_chatspamspeed.value)
+				{
+					spam_tokens[i]++;
+					spam_tics[i] = 0;
+				}
+			}
+		}
+	}
+
 	if (dedicated)
 		return;
 
@@ -893,13 +914,6 @@ void HU_Ticker(void)
 	if (netgame)
 	{
 		size_t i = 0;
-
-		// handle spam while we're at it:
-		for(; (i<MAXPLAYERS); i++)
-		{
-			if (stop_spamming[i] > 0)
-				stop_spamming[i]--;
-		}
 
 		// handle chat timers
 		for (i=0; (i<chat_nummsg_min); i++)
