@@ -800,8 +800,9 @@ static int sector_set(lua_State *L)
 	case sector_fslope: // f_slope
 	case sector_cslope: // c_slope
 	case sector_friction: // friction
-	default:
 		return luaL_error(L, "sector_t field " LUA_QS " cannot be set.", sector_opt[field]);
+	default:
+		return luaL_error(L, "sector_t has no field named " LUA_QS ".", lua_tostring(L, 2));
 	case sector_floorheight: { // floorheight
 		boolean flag;
 		mobj_t *ptmthing = tmthing;
@@ -1279,8 +1280,9 @@ static int side_set(lua_State *L)
 	case side_sector:
 	case side_special:
 	case side_text:
-	default:
 		return luaL_error(L, "side_t field " LUA_QS " cannot be set.", side_opt[field]);
+	default:
+		return luaL_error(L, "side_t has no field named " LUA_QS ".", lua_tostring(L, 2));
 	case side_textureoffset:
 		side->textureoffset = luaL_checkfixed(L, 3);
 		break;
@@ -2291,8 +2293,9 @@ static int ffloor_set(lua_State *L)
 	case ffloor_target: // target
 	case ffloor_next: // next
 	case ffloor_prev: // prev
-	default:
 		return luaL_error(L, "ffloor_t field " LUA_QS " cannot be set.", ffloor_opt[field]);
+	default:
+		return luaL_error(L, "ffloor_t has no field named " LUA_QS ".", lua_tostring(L, 2));
 	case ffloor_topheight: { // topheight
 		boolean flag;
 		fixed_t lastpos = *ffloor->topheight;
@@ -2426,8 +2429,9 @@ static int slope_set(lua_State *L)
 	case slope_d: // d
 	case slope_flags: // flags
 	case slope_normal: // normal
-	default:
 		return luaL_error(L, "pslope_t field " LUA_QS " cannot be set.", slope_opt[field]);
+	default:
+		return luaL_error(L, "pslope_t has no field named " LUA_QS ".", lua_tostring(L, 2));
 	case slope_o: { // o
 		luaL_checktype(L, 3, LUA_TTABLE);
 
