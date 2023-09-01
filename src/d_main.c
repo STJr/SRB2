@@ -297,8 +297,8 @@ void D_ProcessEvents(void)
 // added comment : there is a wipe eatch change of the gamestate
 gamestate_t wipegamestate = GS_LEVEL;
 // -1: Default; 0-n: Wipe index; INT16_MAX: do not wipe
-INT16 wipetypepre = -1;
-INT16 wipetypepost = -1;
+INT16 wipetypepre = INT16_MAX;
+INT16 wipetypepost = INT16_MAX;
 
 static void D_Display(void)
 {
