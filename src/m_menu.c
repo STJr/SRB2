@@ -12054,6 +12054,136 @@ static INT32        setupm_fakeskin;
 static menucolor_t *setupm_fakecolor;
 static boolean      colorgrid;
 
+#define COLOR_GRID_ROW_SIZE (16)
+
+static UINT16 M_GetColorGridIndex(UINT16 color)
+{
+	menucolor_t *look;
+	UINT16 i = 0;
+
+	if (!skincolors[color].accessible)
+	{
+		return 0;
+	}
+
+	for (look = menucolorhead; ; i++, look = look->next)
+	{
+		while (!skincolors[look->color].accessible) // skip inaccessible colors
+		{
+			if (look == menucolortail)
+			{
+				return 0;
+			}
+
+			look = look->next;
+		}
+
+		if (look->color == color)
+		{
+			return i;
+		}
+
+		if (look == menucolortail)
+		{
+			return 0;
+		}
+	}
+}
+
+static INT32 M_GridIndexToX(UINT16 index)
+{
+	return (index % COLOR_GRID_ROW_SIZE);
+}
+
+static INT32 M_GridIndexToY(UINT16 index)
+{
+	return (index / COLOR_GRID_ROW_SIZE);
+}
+
+static UINT16 M_ColorGridLen(void)
+{
+	menucolor_t *look;
+	UINT16 i = 0;
+
+	for (look = menucolorhead; ; i++)
+	{
+		do
+		{
+			if (look == menucolortail)
+			{
+				return i;
+			}
+
+			look = look->next;
+		}
+		while (!skincolors[look->color].accessible); // skip inaccessible colors
+	}
+}
+
+static UINT16 M_GridPosToGridIndex(INT32 x, INT32 y)
+{
+	const UINT16 grid_len = M_ColorGridLen();
+	const UINT16 grid_height = ((grid_len - 1) / COLOR_GRID_ROW_SIZE) + 1;
+	const UINT16 last_row_len = COLOR_GRID_ROW_SIZE - ((grid_height * COLOR_GRID_ROW_SIZE) - grid_len);
+
+	UINT16 row_len = COLOR_GRID_ROW_SIZE;
+	UINT16 new_index = 0;
+
+	while (y < 0)
+	{
+		y += grid_height;
+	}
+	y = (y % grid_height);
+
+	if (y >= grid_height-1 && last_row_len > 0)
+	{
+		row_len = last_row_len;
+	}
+
+	while (x < 0)
+	{
+		x += row_len;
+	}
+	x = (x % row_len);
+
+	new_index = (y * COLOR_GRID_ROW_SIZE) + x;
+	if (new_index >= grid_len)
+	{
+		new_index = grid_len - 1;
+	}
+
+	return new_index;
+}
+
+static menucolor_t *M_GridIndexToMenuColor(UINT16 index)
+{
+	menucolor_t *look = menucolorhead;
+	UINT16 i = 0;
+
+	for (look = menucolorhead; ; i++, look = look->next)
+	{
+		while (!skincolors[look->color].accessible) // skip inaccessible colors
+		{
+			if (look == menucolortail)
+			{
+				return menucolorhead;
+			}
+
+			look = look->next;
+		}
+
+		if (i == index)
+		{
+			return look;
+		}
+
+		if (look == menucolortail)
+		{
+			return menucolorhead;
+		}
+	}
+}
+
 static void M_DrawSetupMultiPlayerMenu(void)
 {
 	INT32 x, y, cursory = 0, flags = 0;
@@ -12172,32 +12302,54 @@ colordraw:
 		boolean stoprow = false;
 		menucolor_t *mc; // Last accessed color
 
+		const UINT16 grid_len = M_ColorGridLen();
+		const UINT16 grid_end_y = M_GridIndexToY(grid_len - 1);
+
+		INT32 grid_select = M_GetColorGridIndex(setupm_fakecolor->color);
+		INT32 grid_select_y = M_GridIndexToY(grid_select);
+
 		x = 132;
 		y = 66;
-		pos = min(max(0, 16*((M_GetColorIndex(setupm_fakecolor->color)-1)/16) - 64), 16*(M_GetColorIndex(menucolortail->color)/16-1) - 128);
-		mc = M_GetColorFromIndex(pos);
+
+		pos = M_GridPosToGridIndex(0, max(0, min(grid_select_y - 3, grid_end_y - 7)));
+		mc = M_GridIndexToMenuColor(pos);
 
 		// Draw grid
 		V_DrawFill(x-2, y-2, 132, 132, 159);
 		for (j = 0; j < 8; j++)
 		{
-			for (i = 0; i < 16; i++)
+			for (i = 0; i < COLOR_GRID_ROW_SIZE; i++)
 			{
-				if (skincolors[mc->color].accessible && !stoprow)
+				if (skincolors[mc->color].accessible)
 				{
 					M_DrawColorRamp(x + i*w, y + j*16, w, 1, skincolors[mc->color]);
-					if (mc->color == setupm_fakecolor->color) // store current color position
-						{
-							cx = x + i*w;
-							cy = y + j*16;
-						}
+
+					if (mc == setupm_fakecolor) // store current color position
+					{
+						cx = x + i*w;
+						cy = y + j*16;
+					}
 				}
-				mc = mc->next;
-				while (!skincolors[mc->color].accessible && !stoprow) // Find accessible color after this one
+
+				if (stoprow)
+				{
+					break;
+				}
+
+				// Find accessible color after this one
+				do
 				{
 					mc = mc->next;
-					if (mc == menucolortail) stoprow = true;
-				}
+					if (mc == menucolortail)
+					{
+						stoprow = true;
+					}
+				} while (!skincolors[mc->color].accessible && !stoprow);
+			}
+
+			if (stoprow)
+			{
+				break;
 			}
 		}
 
@@ -12318,15 +12470,16 @@ static void M_HandleSetupMultiPlayer(INT32 choice)
 		case KEY_DOWNARROW:
 		case KEY_UPARROW:
 			{
-				UINT8 i;
 				if (itemOn == 2 && colorgrid)
 				{
-					for (i = 0; i < 16; i++)
-					{
-						setupm_fakecolor = (choice == KEY_UPARROW) ? setupm_fakecolor->prev : setupm_fakecolor->next;
-						while (!skincolors[setupm_fakecolor->color].accessible) // skip inaccessible colors
-							setupm_fakecolor = (choice == KEY_UPARROW) ? setupm_fakecolor->prev : setupm_fakecolor->next;
-					}
+					UINT16 index = M_GetColorGridIndex(setupm_fakecolor->color);
+					INT32 x = M_GridIndexToX(index);
+					INT32 y = M_GridIndexToY(index);
+
+					y += (choice == KEY_UPARROW) ? -1 : 1;
+
+					index = M_GridPosToGridIndex(x, y);
+					setupm_fakecolor = M_GridIndexToMenuColor(index);
 				}
 				else if (choice == KEY_UPARROW)
 					M_PrevOpt();
@@ -12353,8 +12506,8 @@ static void M_HandleSetupMultiPlayer(INT32 choice)
 			}
 			else if (itemOn == 2) // player color
 			{
-				S_StartSound(NULL,sfx_menu1); // Tails
 				setupm_fakecolor = setupm_fakecolor->prev;
+				S_StartSound(NULL,sfx_menu1); // Tails
 			}
 			break;
 
@@ -12393,8 +12546,8 @@ static void M_HandleSetupMultiPlayer(INT32 choice)
 			}
 			else if (itemOn == 2) // player color
 			{
-				S_StartSound(NULL,sfx_menu1); // Tails
 				setupm_fakecolor = setupm_fakecolor->next;
+				S_StartSound(NULL,sfx_menu1); // Tails
 			}
 			break;
 
@@ -12404,13 +12557,28 @@ static void M_HandleSetupMultiPlayer(INT32 choice)
 				UINT8 i;
 				if (itemOn == 2) // player color
 				{
-					S_StartSound(NULL,sfx_menu1);
-					for (i = 0; i < (colorgrid ? 64 : 13); i++) // or (282-charw)/(2*indexwidth)
+					if (colorgrid)
 					{
-						setupm_fakecolor = (choice == KEY_PGUP) ? setupm_fakecolor->prev : setupm_fakecolor->next;
-						while (!skincolors[setupm_fakecolor->color].accessible) // skip inaccessible colors
-							setupm_fakecolor = (choice == KEY_PGUP) ? setupm_fakecolor->prev : setupm_fakecolor->next;
+						UINT16 index = M_GetColorGridIndex(setupm_fakecolor->color);
+						INT32 x = M_GridIndexToX(index);
+						INT32 y = M_GridIndexToY(index);
+
+						y += (choice == KEY_UPARROW) ? -4 : 4;
+
+						index = M_GridPosToGridIndex(x, y);
+						setupm_fakecolor = M_GridIndexToMenuColor(index);
 					}
+					else
+					{
+						for (i = 0; i < 13; i++) // or (282-charw)/(2*indexwidth)
+						{
+							setupm_fakecolor = (choice == KEY_PGUP) ? setupm_fakecolor->prev : setupm_fakecolor->next;
+							while (!skincolors[setupm_fakecolor->color].accessible) // skip inaccessible colors
+								setupm_fakecolor = (choice == KEY_PGUP) ? setupm_fakecolor->prev : setupm_fakecolor->next;
+						}
+					}
+
+					S_StartSound(NULL, sfx_menu1); // Tails
 				}
 			}
 			break;
@@ -12439,7 +12607,6 @@ static void M_HandleSetupMultiPlayer(INT32 choice)
 							break;
 				}
 			}
-			break;
 			break;
 
 		case KEY_DEL:

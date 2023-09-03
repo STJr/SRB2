@@ -35,8 +35,9 @@ typedef struct
 	UINT16 wadnum;
 	skinflags_t flags;
 
-	char realname[SKINNAMESIZE+1]; // Display name for level completion.
+	char realname[SKINNAMESIZE+1]; // Display name for level completion
 	char hudname[SKINNAMESIZE+1]; // HUD name to display (officially exactly 5 characters long)
+	char supername[SKINNAMESIZE+7]; // Super name to display when collecting all emeralds
 
 	UINT8 ability; // ability definition
 	UINT8 ability2; // secondary ability definition
