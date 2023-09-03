@@ -3194,9 +3194,11 @@ static boolean R_CheckSpriteVisible(vissprite_t *spr, INT32 x1, INT32 x2)
 	INT16 szt = spr->szt;
 
 	fixed_t texturemid, yscale, scalestep = spr->scalestep;
+	INT32 height;
 
 	if (scalestep)
 	{
+		height = spr->patch->height;
 		yscale = spr->scale;
 		scalestep = FixedMul(scalestep, spr->spriteyscale);
 
@@ -3210,8 +3212,10 @@ static boolean R_CheckSpriteVisible(vissprite_t *spr, INT32 x1, INT32 x2)
 	{
 		if (scalestep)
 		{
-			szt = (INT16)((centeryfrac - FixedMul(texturemid, yscale))>>FRACBITS);
-			sz = (INT16)((centeryfrac - FixedMul(texturemid, yscale))>>FRACBITS);
+			fixed_t top = centeryfrac - FixedMul(texturemid, yscale);
+			fixed_t bottom = top + (height * yscale);
+			szt = (INT16)(top >> FRACBITS);
+			sz = (INT16)(bottom >> FRACBITS);
 			yscale += scalestep;
 		}
 
