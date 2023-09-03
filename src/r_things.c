@@ -1021,16 +1021,8 @@ static void R_DrawPrecipitationVisSprite(vissprite_t *vis)
 
 	for (dc_x = vis->x1; dc_x <= vis->x2; dc_x++, frac += vis->xiscale)
 	{
-#ifdef RANGECHECK
-		texturecolumn = frac>>FRACBITS;
-
-		if (texturecolumn < 0 || texturecolumn >= patch->width)
-			I_Error("R_DrawPrecipitationSpriteRange: bad texturecolumn");
-
+		texturecolumn = (frac>>FRACBITS) & patch->width_mask;
 		column = &patch->columns[texturecolumn];
-#else
-		column = &patch->columns[frac>>FRACBITS];
-#endif
 		R_DrawMaskedColumn(column);
 	}
 
