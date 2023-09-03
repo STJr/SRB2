@@ -319,7 +319,7 @@ UINT8 *R_GenerateTexture(size_t texnum)
 
 			texturecolumns[texnum] = columns;
 
-			Patch_MakeColumns(realpatch, texture->width, pixels, columns, posts, texture->flip);
+			Patch_MakeColumns(realpatch, texture->width, texture->width, pixels, columns, posts, texture->flip);
 
 			goto done;
 		}

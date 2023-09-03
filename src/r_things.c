@@ -947,15 +947,8 @@ static void R_DrawVisSprite(vissprite_t *vis)
 		// Vertically sheared sprite
 		for (dc_x = vis->x1; dc_x <= vis->x2; dc_x++, frac += vis->xiscale, dc_texturemid -= vis->shear.tan)
 		{
-#ifdef RANGECHECK
-			texturecolumn = frac>>FRACBITS;
-			if (texturecolumn < 0 || texturecolumn >= pwidth)
-				I_Error("R_DrawSpriteRange: bad texturecolumn at %d from end", vis->x2 - dc_x);
+			texturecolumn = (frac>>FRACBITS) & patch->width_mask;
 			column = &patch->columns[texturecolumn];
-#else
-			column = &patch->columns[frac>>FRACBITS];
-#endif
-
 			sprtopscreen = (centeryfrac - FixedMul(dc_texturemid, spryscale));
 			localcolfunc (column);
 		}
@@ -969,14 +962,8 @@ static void R_DrawVisSprite(vissprite_t *vis)
 		// Non-paper drawing loop
 		for (dc_x = vis->x1; dc_x <= vis->x2; dc_x++, frac += vis->xiscale, sprtopscreen += vis->shear.tan)
 		{
-#ifdef RANGECHECK
-			texturecolumn = frac>>FRACBITS;
-			if (texturecolumn < 0 || texturecolumn >= pwidth)
-				I_Error("R_DrawSpriteRange: bad texturecolumn at %d from end", vis->x2 - dc_x);
+			texturecolumn = (frac>>FRACBITS) & patch->width_mask;
 			column = &patch->columns[texturecolumn];
-#else
-			column = &patch->columns[frac>>FRACBITS];
-#endif
 			localcolfunc (column);
 		}
 	}

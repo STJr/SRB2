@@ -40,11 +40,16 @@ patch_t *Patch_Create(softwarepatch_t *source, void *dest)
 
 	Patch_CalcDataSizes(source, &total_pixels, &total_posts);
 
-	patch->columns = Z_Calloc(sizeof(column_t) * patch->width, PU_PATCH_DATA, NULL);
+	patch->width_po2 = 1;
+	while (patch->width_po2 < patch->width)
+		patch->width_po2 <<= 1;
+	patch->width_mask = patch->width_po2 - 1;
+
+	patch->columns = Z_Calloc(sizeof(column_t) * patch->width_po2, PU_PATCH_DATA, NULL);
 	patch->posts = Z_Calloc(sizeof(post_t) * total_posts, PU_PATCH_DATA, NULL);
 	patch->pixels = Z_Calloc(sizeof(UINT8) * total_pixels, PU_PATCH_DATA, NULL);
 
-	Patch_MakeColumns(source, patch->width, patch->pixels, patch->columns, patch->posts, false);
+	Patch_MakeColumns(source, patch->width_po2, patch->width, patch->pixels, patch->columns, patch->posts, false);
 
 	return patch;
 }
@@ -63,7 +68,7 @@ void Patch_CalcDataSizes(softwarepatch_t *source, size_t *total_pixels, size_t *
 	}
 }
 
-void Patch_MakeColumns(softwarepatch_t *source, size_t num_columns, UINT8 *pixels, column_t *columns, post_t *posts, boolean flip)
+void Patch_MakeColumns(softwarepatch_t *source, size_t num_columns, INT16 width, UINT8 *pixels, column_t *columns, post_t *posts, boolean flip)
 {
 	column_t *column = flip ? columns + (num_columns - 1) : columns;
 
@@ -75,6 +80,9 @@ void Patch_MakeColumns(softwarepatch_t *source, size_t num_columns, UINT8 *pixel
 		column->pixels = pixels;
 		column->posts = posts;
 		column->num_posts = 0;
+
+		if (i >= (unsigned)width)
+			continue;
 
 		doompost_t *src_posts = (doompost_t*)((UINT8 *)source + LONG(source->columnofs[i]));
 
