@@ -735,7 +735,7 @@ typedef struct
 // column_t is a list of 0 or more post_t
 typedef struct
 {
-	size_t num_posts;
+	unsigned num_posts;
 	post_t *posts;
 	UINT8 *pixels;
 } column_t;

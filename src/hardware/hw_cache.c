@@ -67,7 +67,7 @@ static void HWR_DrawColumnInCache(const column_t *patchcol, UINT8 *block, GLMipm
 	if (originPatch) // originPatch can be NULL here, unlike in the software version
 		originy = originPatch->originy;
 
-	for (size_t i = 0; i < patchcol->num_posts; i++)
+	for (unsigned i = 0; i < patchcol->num_posts; i++)
 	{
 		post_t *post = &patchcol->posts[i];
 		source = patchcol->pixels + post->data_offset;
@@ -169,7 +169,7 @@ static void HWR_DrawFlippedColumnInCache(const column_t *patchcol, UINT8 *block,
 	if (originPatch) // originPatch can be NULL here, unlike in the software version
 		originy = originPatch->originy;
 
-	for (size_t i = 0; i < patchcol->num_posts; i++)
+	for (unsigned i = 0; i < patchcol->num_posts; i++)
 	{
 		post_t *post = &patchcol->posts[i];
 		source = patchcol->pixels + post->data_offset;

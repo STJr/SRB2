@@ -363,7 +363,7 @@ void *Picture_PatchConvert(
 	out->topoffset = intopoffset;
 
 	size_t max_pixels = out->width * out->height;
-	size_t num_posts = 0;
+	unsigned num_posts = 0;
 
 	out->columns = Z_Calloc(sizeof(column_t) * out->width, PU_PATCH_DATA, NULL);
 	out->pixels = Z_Calloc(max_pixels * (outbpp / 8), PU_PATCH_DATA, NULL);
@@ -371,7 +371,7 @@ void *Picture_PatchConvert(
 
 	UINT8 *imgptr = out->pixels;
 
-	size_t *column_posts = Z_Calloc(sizeof(size_t) * inwidth, PU_STATIC, NULL);
+	unsigned *column_posts = Z_Calloc(sizeof(unsigned) * inwidth, PU_STATIC, NULL);
 
 	// Write columns
 	for (INT32 x = 0; x < inwidth; x++)
@@ -385,7 +385,7 @@ void *Picture_PatchConvert(
 		column->posts = NULL;
 		column->num_posts = 0;
 
-		column_posts[x] = (size_t)-1;
+		column_posts[x] = (unsigned)-1;
 
 		// Write pixels
 		for (INT32 y = 0; y < inheight; y++)
@@ -415,7 +415,7 @@ void *Picture_PatchConvert(
 				post->topdelta = (size_t)y;
 				post->length = 0;
 				post->data_offset = post_data_offset;
-				if (column_posts[x] == (size_t)-1)
+				if (column_posts[x] == (unsigned)-1)
 					column_posts[x] = num_posts - 1;
 				column->num_posts++;
 			}
@@ -673,7 +673,7 @@ void *Picture_GetPatchPixel(
 	else
 	{
 		column_t *column = &patch->columns[colx];
-		for (size_t i = 0; i < column->num_posts; i++)
+		for (unsigned i = 0; i < column->num_posts; i++)
 		{
 			post_t *post = &column->posts[i];
 
@@ -882,7 +882,7 @@ void *Picture_TextureToFlat(size_t texnum)
 		for (size_t col = 0; col < (size_t)texture->width; col++, desttop++)
 		{
 			column_t *column = (column_t *)R_GetColumn(texnum, col);
-			for (size_t i = 0; i < column->num_posts; i++)
+			for (unsigned i = 0; i < column->num_posts; i++)
 			{
 				post_t *post = &column->posts[i];
 				dest = desttop + (post->topdelta * texture->width);

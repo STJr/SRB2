@@ -87,7 +87,7 @@ static inline void R_DrawColumnInCache(column_t *column, UINT8 *cache, texpatch_
 
 	(void)patchheight; // This parameter is unused
 
-	for (size_t i = 0; i < column->num_posts; i++)
+	for (unsigned i = 0; i < column->num_posts; i++)
 	{
 		post_t *post = &column->posts[i];
 		source = column->pixels + post->data_offset;
@@ -120,7 +120,7 @@ static inline void R_DrawFlippedColumnInCache(column_t *column, UINT8 *cache, te
 	INT32 originy = originPatch->originy;
 	INT32 topdelta;
 
-	for (size_t i = 0; i < column->num_posts; i++)
+	for (unsigned i = 0; i < column->num_posts; i++)
 	{
 		post_t *post = &column->posts[i];
 		topdelta = patchheight - post->length - post->topdelta;
@@ -159,7 +159,7 @@ static inline void R_DrawBlendColumnInCache(column_t *column, UINT8 *cache, texp
 
 	(void)patchheight; // This parameter is unused
 
-	for (size_t i = 0; i < column->num_posts; i++)
+	for (unsigned i = 0; i < column->num_posts; i++)
 	{
 		post_t *post = &column->posts[i];
 		source = column->pixels + post->data_offset;
@@ -197,7 +197,7 @@ static inline void R_DrawBlendFlippedColumnInCache(column_t *column, UINT8 *cach
 	INT32 originy = originPatch->originy;
 	INT32 topdelta;
 
-	for (size_t i = 0; i < column->num_posts; i++)
+	for (unsigned i = 0; i < column->num_posts; i++)
 	{
 		post_t *post = &column->posts[i];
 		topdelta = patchheight - post->length - post->topdelta;

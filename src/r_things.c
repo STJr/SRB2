@@ -641,7 +641,7 @@ void R_DrawMaskedColumn(column_t *column)
 {
 	fixed_t basetexturemid = dc_texturemid;
 
-	for (size_t i = 0; i < column->num_posts; i++)
+	for (unsigned i = 0; i < column->num_posts; i++)
 	{
 		post_t *post = &column->posts[i];
 
@@ -698,7 +698,7 @@ void R_DrawFlippedMaskedColumn(column_t *column)
 	fixed_t basetexturemid = dc_texturemid;
 	UINT8 *d,*s;
 
-	for (size_t i = 0; i < column->num_posts; i++)
+	for (unsigned i = 0; i < column->num_posts; i++)
 	{
 		post_t *post = &column->posts[i];
 		INT32 topdelta = lengthcol-post->length-post->topdelta;

@@ -765,7 +765,7 @@ void V_DrawStretchyFixedPatch(fixed_t x, fixed_t y, fixed_t pscale, fixed_t vsca
 
 		column = &patch->columns[col>>FRACBITS];
 
-		for (size_t i = 0; i < column->num_posts; i++)
+		for (unsigned i = 0; i < column->num_posts; i++)
 		{
 			post_t *post = &column->posts[i];
 			source = column->pixels + post->data_offset;
@@ -1037,7 +1037,7 @@ void V_DrawCroppedPatch(fixed_t x, fixed_t y, fixed_t pscale, fixed_t vscale, IN
 
 		column = &patch->columns[col>>FRACBITS];
 
-		for (size_t i = 0; i < column->num_posts; i++)
+		for (unsigned i = 0; i < column->num_posts; i++)
 		{
 			post_t *post = &column->posts[i];
 			INT32 topdelta = post->topdelta;
