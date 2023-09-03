@@ -3443,7 +3443,10 @@ void R_ClipSprites(drawseg_t* dsstart, portal_t* portal)
 		}
 
 		if (spr->cut & SC_BBOX)
+		{
+			numvisiblesprites++;
 			continue;
+		}
 
 		INT32 x1 = (spr->cut & SC_SPLAT) ? 0 : spr->x1;
 		INT32 x2 = (spr->cut & SC_SPLAT) ? viewwidth : spr->x2;
