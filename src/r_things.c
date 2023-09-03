@@ -2235,7 +2235,7 @@ static void R_ProjectSprite(mobj_t *thing)
 
 	vis->xscale = FixedMul(spritexscale, xscale); //SoM: 4/17/2000
 	vis->scale = FixedMul(spriteyscale, yscale); //<<detailshift;
-	vis->thingscale = interp.scale;
+	vis->thingscale = this_scale;
 
 	vis->spritexscale = spritexscale;
 	vis->spriteyscale = spriteyscale;
