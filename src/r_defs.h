@@ -727,8 +727,8 @@ typedef struct
 
 typedef struct
 {
-	size_t topdelta;
-	size_t length;
+	unsigned topdelta;
+	unsigned length;
 	size_t data_offset;
 } post_t;
 
