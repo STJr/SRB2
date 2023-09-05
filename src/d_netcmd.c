@@ -776,6 +776,8 @@ void D_RegisterClientCommands(void)
 	CV_RegisterVar(&cv_showfocuslost);
 	CV_RegisterVar(&cv_pauseifunfocused);
 
+	CV_RegisterVar(&cv_instantretry);
+
 	// g_input.c
 	CV_RegisterVar(&cv_sideaxis);
 	CV_RegisterVar(&cv_sideaxis2);
