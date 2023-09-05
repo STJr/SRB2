@@ -1855,6 +1855,7 @@ void P_SpawnShieldOrb(player_t *player)
 	{
 		ov = P_SpawnMobj(shieldobj->x, shieldobj->y, shieldobj->z, MT_OVERLAY);
 		P_SetTarget(&ov->target, shieldobj);
+		P_SetTarget(&ov->dontdrawforviewmobj, player->mo); // Hide the shield in first-person
 		P_SetMobjState(ov, shieldobj->info->seestate);
 		P_SetTarget(&shieldobj->tracer, ov);
 	}
@@ -1862,12 +1863,14 @@ void P_SpawnShieldOrb(player_t *player)
 	{
 		ov = P_SpawnMobj(shieldobj->x, shieldobj->y, shieldobj->z, MT_OVERLAY);
 		P_SetTarget(&ov->target, shieldobj);
+		P_SetTarget(&ov->dontdrawforviewmobj, player->mo); // Hide the shield in first-person
 		P_SetMobjState(ov, shieldobj->info->meleestate);
 	}
 	if (shieldobj->info->missilestate)
 	{
 		ov = P_SpawnMobj(shieldobj->x, shieldobj->y, shieldobj->z, MT_OVERLAY);
 		P_SetTarget(&ov->target, shieldobj);
+		P_SetTarget(&ov->dontdrawforviewmobj, player->mo); // Hide the shield in first-person
 		P_SetMobjState(ov, shieldobj->info->missilestate);
 	}
 	if (player->powers[pw_shield] & SH_FORCE)
@@ -2012,7 +2015,7 @@ mobj_t *P_SpawnGhostMobj(mobj_t *mobj)
 		mobj_t *ghost2 = P_SpawnGhostMobj(mobj->player->followmobj);
 		P_SetTarget(&ghost2->tracer, ghost);
 		P_SetTarget(&ghost->tracer, ghost2);
-		P_SetTarget(&ghost2->dontdrawforviewmobj, mobj); // Hide the follow-ghost for the non-follow object
+		P_SetTarget(&ghost2->dontdrawforviewmobj, mobj); // Hide the follow-ghost for the non-follow target
 		ghost2->flags2 |= (mobj->player->followmobj->flags2 & MF2_LINKDRAW);
 	}
 
