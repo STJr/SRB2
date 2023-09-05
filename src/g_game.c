@@ -2082,7 +2082,7 @@ boolean G_Responder(event_t *ev)
 	if (gameaction == ga_nothing && !singledemo &&
 		((demoplayback && !modeattacking && !titledemo) || gamestate == GS_TITLESCREEN))
 	{
-		if (ev->type == ev_keydown && ev->key != 301 && !(gamestate == GS_TITLESCREEN && finalecount < TICRATE))
+		if (ev->type == ev_keydown && ev->key != 301 && !(gamestate == GS_TITLESCREEN && finalecount < (cv_tutorialprompt.value ? TICRATE : 0)))
 		{
 			M_StartControlPanel();
 			return true;
