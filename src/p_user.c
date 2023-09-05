@@ -11867,7 +11867,7 @@ void P_PlayerThink(player_t *player)
 			mo2 = (mobj_t *)th;
 
 			if (!(mo2->type == MT_RING || mo2->type == MT_COIN
-				|| mo2->type == MT_BLUESPHERE || mo2->type == MT_BOMBSPHERE
+				|| mo2->type == MT_BLUESPHERE // || mo2->type == MT_BOMBSPHERE
 				|| mo2->type == MT_NIGHTSCHIP || mo2->type == MT_NIGHTSSTAR))
 				continue;
 
