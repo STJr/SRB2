@@ -314,7 +314,7 @@ static void R_RasterizeFloorSplat(floorsplat_t *pSplat, vector2_t *verts, visspr
 	fixed_t planeheight = 0;
 	fixed_t step;
 
-	int spanfunctype = SPANDRAWFUNC_SPRITE;
+	int spanfunctype;
 
 	prepare_rastertab();
 
@@ -379,9 +379,12 @@ static void R_RasterizeFloorSplat(floorsplat_t *pSplat, vector2_t *verts, visspr
 	ds_source = (UINT8 *)pSplat->pic;
 	ds_flatwidth = pSplat->width;
 	ds_flatheight = pSplat->height;
-	ds_powersoftwo = false;
 
-	if (R_CheckPowersOfTwo())
+	ds_powersoftwo = ds_solidcolor = false;
+
+	if (R_CheckSolidColorFlat())
+		ds_solidcolor = true;
+	else if (R_CheckPowersOfTwo())
 	{
 		R_SetFlatVars(ds_flatwidth * ds_flatheight);
 		ds_powersoftwo = true;
@@ -392,7 +395,6 @@ static void R_RasterizeFloorSplat(floorsplat_t *pSplat, vector2_t *verts, visspr
 		R_SetTiltedSpan(0);
 		R_SetScaledSlopePlane(pSplat->slope, vis->viewpoint.x, vis->viewpoint.y, vis->viewpoint.z, pSplat->xscale, pSplat->yscale, -pSplat->verts[0].x, pSplat->verts[0].y, vis->viewpoint.angle, pSplat->angle);
 		R_CalculateSlopeVectors();
-		spanfunctype = SPANDRAWFUNC_TILTEDSPRITE;
 	}
 	else
 	{
@@ -429,19 +431,55 @@ static void R_RasterizeFloorSplat(floorsplat_t *pSplat, vector2_t *verts, visspr
 			ds_colormap = &vis->extra_colormap->colormap[ds_colormap - colormaps];
 	}
 
-	if (vis->transmap)
-	{
-		ds_transmap = vis->transmap;
+	ds_transmap = vis->transmap;
 
+	// Determine which R_DrawWhatever to use
+
+	// Solid color
+	if (ds_solidcolor)
+	{
+		UINT16 px = *(UINT16 *)ds_source;
+
+		// Uh, it's not visible.
+		if (!(px & 0xFF00))
+			return;
+
+		// Pixel color is contained in the lower 8 bits (upper 8 are the opacity), so advance the pointer
+		ds_source++;
+
+		if (pSplat->slope)
+		{
+			if (ds_transmap)
+				spanfunctype = SPANDRAWFUNC_TILTEDTRANSSOLID;
+			else
+				spanfunctype = SPANDRAWFUNC_TILTEDSOLID;
+		}
+		else
+		{
+			if (ds_transmap)
+				spanfunctype = SPANDRAWFUNC_TRANSSOLID;
+			else
+				spanfunctype = SPANDRAWFUNC_SOLID;
+		}
+	}
+	// Transparent
+	else if (ds_transmap)
+	{
 		if (pSplat->slope)
 			spanfunctype = SPANDRAWFUNC_TILTEDTRANSSPRITE;
 		else
 			spanfunctype = SPANDRAWFUNC_TRANSSPRITE;
 	}
+	// Opaque
 	else
-		ds_transmap = NULL;
+	{
+		if (pSplat->slope)
+			spanfunctype = SPANDRAWFUNC_TILTEDSPRITE;
+		else
+			spanfunctype = SPANDRAWFUNC_SPRITE;
+	}
 
-	if (ds_powersoftwo)
+	if (ds_powersoftwo || ds_solidcolor)
 		spanfunc = spanfuncs[spanfunctype];
 	else
 		spanfunc = spanfuncs_npo2[spanfunctype];
