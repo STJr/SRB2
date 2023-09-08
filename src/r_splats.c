@@ -316,8 +316,6 @@ static void R_RasterizeFloorSplat(floorsplat_t *pSplat, vector2_t *verts, visspr
 
 	int spanfunctype;
 
-	prepare_rastertab();
-
 #define RASTERPARAMS(vnum1, vnum2, tv1, tv2, tc, dir) \
     x1 = verts[vnum1].x; \
     ry1 = verts[vnum1].y; \
@@ -367,15 +365,6 @@ static void R_RasterizeFloorSplat(floorsplat_t *pSplat, vector2_t *verts, visspr
     if (ry1 > maxy) \
         maxy = ry1;
 
-	// do segment a -> top of texture
-	RASTERPARAMS(3,2,0,pSplat->width-1,0,0);
-	// do segment b -> right side of texture
-	RASTERPARAMS(2,1,0,pSplat->width-1,pSplat->height-1,0);
-	// do segment c -> bottom of texture
-	RASTERPARAMS(1,0,pSplat->width-1,0,pSplat->height-1,0);
-	// do segment d -> left side of texture
-	RASTERPARAMS(0,3,pSplat->width-1,0,0,1);
-
 	ds_source = (UINT8 *)pSplat->pic;
 	ds_flatwidth = pSplat->width;
 	ds_flatheight = pSplat->height;
@@ -396,7 +385,7 @@ static void R_RasterizeFloorSplat(floorsplat_t *pSplat, vector2_t *verts, visspr
 		R_SetScaledSlopePlane(pSplat->slope, vis->viewpoint.x, vis->viewpoint.y, vis->viewpoint.z, pSplat->xscale, pSplat->yscale, -pSplat->verts[0].x, pSplat->verts[0].y, vis->viewpoint.angle, pSplat->angle);
 		R_CalculateSlopeVectors();
 	}
-	else
+	else if (!ds_solidcolor)
 	{
 		planeheight = abs(pSplat->z - vis->viewpoint.z);
 
@@ -484,6 +473,17 @@ static void R_RasterizeFloorSplat(floorsplat_t *pSplat, vector2_t *verts, visspr
 	else
 		spanfunc = spanfuncs_npo2[spanfunctype];
 
+	prepare_rastertab();
+
+	// do segment a -> top of texture
+	RASTERPARAMS(3,2,0,pSplat->width-1,0,0);
+	// do segment b -> right side of texture
+	RASTERPARAMS(2,1,0,pSplat->width-1,pSplat->height-1,0);
+	// do segment c -> bottom of texture
+	RASTERPARAMS(1,0,pSplat->width-1,0,pSplat->height-1,0);
+	// do segment d -> left side of texture
+	RASTERPARAMS(0,3,pSplat->width-1,0,0,1);
+
 	if (maxy >= vid.height)
 		maxy = vid.height-1;
 
@@ -538,7 +538,7 @@ static void R_RasterizeFloorSplat(floorsplat_t *pSplat, vector2_t *verts, visspr
 		if (x2 < x1)
 			continue;
 
-		if (!pSplat->slope)
+		if (!ds_solidcolor && !pSplat->slope)
 		{
 			fixed_t xstep, ystep;
 			fixed_t distance, span;
@@ -587,7 +587,7 @@ static void R_RasterizeFloorSplat(floorsplat_t *pSplat, vector2_t *verts, visspr
 		rastertab[y].maxx = INT32_MIN;
 	}
 
-	if (pSplat->angle && !pSplat->slope)
+	if (!ds_solidcolor && pSplat->angle && !pSplat->slope)
 		memset(cachedheight, 0, sizeof(cachedheight));
 }
 
