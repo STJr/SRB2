@@ -2649,7 +2649,7 @@ static boolean MIT_SetCurBackground(UINT32 menutype, INT32 level, INT32 *retval,
 		{
 			strncpy(curbgname, defaultname, 9);
 			curbgxspeed = (gamestate == GS_TIMEATTACK) ? 0 : titlescrollxspeed;
-			curbgyspeed = (gamestate == GS_TIMEATTACK) ? 0 : titlescrollyspeed;
+			curbgyspeed = (gamestate == GS_TIMEATTACK) ? 18 : titlescrollyspeed;
 		}
 	}
 	return false;
@@ -2843,8 +2843,8 @@ static void M_HandleMenuPresState(menu_t *newMenu)
 	curfadevalue = 16;
 	curhidepics = hidetitlepics;
 	curbgcolor = -1;
-	curbgxspeed = titlescrollxspeed;
-	curbgyspeed = titlescrollyspeed;
+	curbgxspeed = (gamestate == GS_TIMEATTACK) ? 0 : titlescrollxspeed;
+	curbgyspeed = (gamestate == GS_TIMEATTACK) ? 18 : titlescrollyspeed;
 	curbghide = (gamestate != GS_TIMEATTACK); // show in time attack, hide in other menus
 
 	curttmode = ttmode;
@@ -3196,7 +3196,7 @@ boolean M_Responder(event_t *ev)
 	|| gamestate == GS_CREDITS || gamestate == GS_EVALUATION || gamestate == GS_GAMEEND)
 		return false;
 
-	if (gamestate == GS_TITLESCREEN && finalecount < TICRATE)
+	if (gamestate == GS_TITLESCREEN && finalecount < (cv_tutorialprompt.value ? TICRATE : 0))
 		return false;
 
 	if (CON_Ready() && gamestate != GS_WAITINGPLAYERS)

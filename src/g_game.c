@@ -316,6 +316,8 @@ consvar_t cv_consolechat = CVAR_INIT ("chatmode", "Window", CV_SAVE, consolechat
 // Pause game upon window losing focus
 consvar_t cv_pauseifunfocused = CVAR_INIT ("pauseifunfocused", "Yes", CV_SAVE, CV_YesNo, NULL);
 
+consvar_t cv_instantretry = CVAR_INIT ("instantretry", "No", CV_SAVE, CV_YesNo, NULL);
+
 consvar_t cv_crosshair = CVAR_INIT ("crosshair", "Cross", CV_SAVE, crosshair_cons_t, NULL);
 consvar_t cv_crosshair2 = CVAR_INIT ("crosshair2", "Cross", CV_SAVE, crosshair_cons_t, NULL);
 consvar_t cv_invertmouse = CVAR_INIT ("invertmouse", "Off", CV_SAVE, CV_OnOff, NULL);
@@ -2080,7 +2082,7 @@ boolean G_Responder(event_t *ev)
 	if (gameaction == ga_nothing && !singledemo &&
 		((demoplayback && !modeattacking && !titledemo) || gamestate == GS_TITLESCREEN))
 	{
-		if (ev->type == ev_keydown && ev->key != 301 && !(gamestate == GS_TITLESCREEN && finalecount < TICRATE))
+		if (ev->type == ev_keydown && ev->key != 301 && !(gamestate == GS_TITLESCREEN && finalecount < (cv_tutorialprompt.value ? TICRATE : 0)))
 		{
 			M_StartControlPanel();
 			return true;
@@ -2173,9 +2175,9 @@ boolean G_Responder(event_t *ev)
 					if (menuactive || pausedelay < 0 || leveltime < 2)
 						return true;
 
-					if (pausedelay < 1+(NEWTICRATE/2))
+					if (!cv_instantretry.value && pausedelay < 1+(NEWTICRATE/2))
 						pausedelay = 1+(NEWTICRATE/2);
-					else if (++pausedelay > 1+(NEWTICRATE/2)+(NEWTICRATE/3))
+					else if (cv_instantretry.value || ++pausedelay > 1+(NEWTICRATE/2)+(NEWTICRATE/3))
 					{
 						G_SetModeAttackRetryFlag();
 						return true;
