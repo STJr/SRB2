@@ -268,6 +268,9 @@ boolean R_ThingBoundingBoxVisible(mobj_t *thing)
 {
 	INT32 cvmode = cv_renderhitbox.value;
 
+	if (multiplayer) // No hitboxes in multiplayer to avoid cheating
+		return false;
+
 	// Do not render bbox for these
 	switch (thing->type)
 	{
