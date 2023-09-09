@@ -315,7 +315,7 @@ static void write_backtrace(INT32 signal)
 	backtrace_symbols_fd(array, size, STDERR_FILENO);
 
 	CRASHLOG_WRITE("\n"); // Write another newline to the log so it looks nice :)
-
+	(void)junk;
 	close(fd);
 }
 #undef STDERR_WRITE
