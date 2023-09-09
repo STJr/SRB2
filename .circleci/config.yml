@@ -11,7 +11,7 @@ jobs:
           LIBGME_LDFLAGS: -lgme
           CCACHE_COMPRESS: true
           WFLAGS: -Wno-unsuffixed-float-constants
-          GCC49: true
+          GCC81: true
       #- image: ubuntu:trusty
       #  environment:
       #    CC: ccache gcc -m32
