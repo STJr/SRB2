@@ -524,7 +524,8 @@ void R_AddSpriteDefs(UINT16 wadnum)
 //
 // GAME FUNCTIONS
 //
-UINT32 visspritecount;
+UINT32 visspritecount, numvisiblesprites;
+
 static UINT32 clippedvissprites;
 static vissprite_t *visspritechunks[MAXVISSPRITES >> VISSPRITECHUNKBITS] = {NULL};
 
@@ -598,7 +599,7 @@ void R_InitSprites(void)
 //
 void R_ClearSprites(void)
 {
-	visspritecount = clippedvissprites = 0;
+	visspritecount = numvisiblesprites = clippedvissprites = 0;
 }
 
 //
@@ -896,7 +897,7 @@ static void R_DrawVisSprite(vissprite_t *vis)
 	frac = vis->startfrac;
 	windowtop = windowbottom = sprbotscreen = INT32_MAX;
 
-	if (!(vis->cut & SC_PRECIP) && vis->mobj->skin && ((skin_t *)vis->mobj->skin)->flags & SF_HIRES)
+	if (vis->cut & SC_SHADOW && vis->mobj->skin && ((skin_t *)vis->mobj->skin)->flags & SF_HIRES)
 		this_scale = FixedMul(this_scale, ((skin_t *)vis->mobj->skin)->highresscale);
 	if (this_scale <= 0)
 		this_scale = 1;
@@ -906,10 +907,10 @@ static void R_DrawVisSprite(vissprite_t *vis)
 		{
 			vis->scale = FixedMul(vis->scale, this_scale);
 			vis->scalestep = FixedMul(vis->scalestep, this_scale);
-			vis->xiscale = FixedDiv(vis->xiscale,this_scale);
+			vis->xiscale = FixedDiv(vis->xiscale, this_scale);
 			vis->cut |= SC_ISSCALED;
 		}
-		dc_texturemid = FixedDiv(dc_texturemid,this_scale);
+		dc_texturemid = FixedDiv(dc_texturemid, this_scale);
 	}
 
 	spryscale = vis->scale;
@@ -1193,7 +1194,7 @@ fixed_t R_GetShadowZ(mobj_t *thing, pslope_t **shadowslope)
 		R_InterpolateMobjState(thing, FRACUNIT, &interp);
 	}
 
-	halfHeight = interp.z + (thing->height >> 1);
+	halfHeight = interp.z + (interp.height >> 1);
 	floorz = P_GetFloorZ(thing, interp.subsector->sector, interp.x, interp.y, NULL);
 	ceilingz = P_GetCeilingZ(thing, interp.subsector->sector, interp.x, interp.y, NULL);
 
@@ -1257,8 +1258,8 @@ fixed_t R_GetShadowZ(mobj_t *thing, pslope_t **shadowslope)
 		}
 	}
 
-	if (isflipped ? (ceilingz < groundz - (!groundslope ? 0 : FixedMul(abs(groundslope->zdelta), thing->radius*3/2)))
-		: (floorz > groundz + (!groundslope ? 0 : FixedMul(abs(groundslope->zdelta), thing->radius*3/2))))
+	if (isflipped ? (ceilingz < groundz - (!groundslope ? 0 : FixedMul(abs(groundslope->zdelta), interp.radius*3/2)))
+		: (floorz > groundz + (!groundslope ? 0 : FixedMul(abs(groundslope->zdelta), interp.radius*3/2))))
 	{
 		groundz = isflipped ? ceilingz : floorz;
 		groundslope = NULL;
@@ -1301,9 +1302,9 @@ static void R_SkewShadowSprite(
 	//CONS_Printf("Shadow is sloped by %d %d\n", xslope, zslope);
 
 	if (viewz < groundz)
-		*shadowyscale += FixedMul(FixedMul(thing->radius*2 / spriteheight, scalemul), zslope);
+		*shadowyscale += FixedMul(FixedMul(interp.radius*2 / spriteheight, scalemul), zslope);
 	else
-		*shadowyscale -= FixedMul(FixedMul(thing->radius*2 / spriteheight, scalemul), zslope);
+		*shadowyscale -= FixedMul(FixedMul(interp.radius*2 / spriteheight, scalemul), zslope);
 
 	*shadowyscale = abs((*shadowyscale));
 	*shadowskew = xslope;
@@ -1354,20 +1355,18 @@ static void R_ProjectDropShadow(mobj_t *thing, vissprite_t *vis, fixed_t scale, 
 			return;
 	}
 
-	floordiff = abs((isflipped ? thing->height : 0) + interp.z - groundz);
+	floordiff = abs((isflipped ? interp.height : 0) + interp.z - groundz);
 
 	trans = floordiff / (100*FRACUNIT) + 3;
 	if (trans >= 9) return;
 
 	scalemul = FixedMul(FRACUNIT - floordiff/640, scale);
-	if ((thing->scale != thing->old_scale) && (thing->scale >= FRACUNIT/1024)) // Interpolate shadows when scaling mobjs
-		scalemul = FixedMul(scalemul, FixedDiv(interp.scale, thing->scale));
 
 	patch = W_CachePatchName("DSHADOW", PU_SPRITE);
 	xscale = FixedDiv(projection, tz);
 	yscale = FixedDiv(projectiony, tz);
-	shadowxscale = FixedMul(thing->radius*2, scalemul);
-	shadowyscale = FixedMul(FixedMul(thing->radius*2, scalemul), FixedDiv(abs(groundz - viewz), tz));
+	shadowxscale = FixedMul(interp.radius*2, scalemul);
+	shadowyscale = FixedMul(FixedMul(interp.radius*2, scalemul), FixedDiv(abs(groundz - viewz), tz));
 	shadowyscale = min(shadowyscale, shadowxscale) / patch->height;
 	shadowxscale /= patch->width;
 	shadowskew = 0;
@@ -1493,8 +1492,8 @@ static void R_ProjectBoundingBox(mobj_t *thing, vissprite_t *vis)
 	// 0--2
 
 	// start in the (0) corner
-	gx = interp.x - thing->radius - viewx;
-	gy = interp.y - thing->radius - viewy;
+	gx = interp.x - interp.radius - viewx;
+	gy = interp.y - interp.radius - viewy;
 
 	tz = FixedMul(gx, viewcos) + FixedMul(gy, viewsin);
 
@@ -1516,14 +1515,14 @@ static void R_ProjectBoundingBox(mobj_t *thing, vissprite_t *vis)
 	box = R_NewVisSprite();
 	box->mobj = thing;
 	box->mobjflags = thing->flags;
-	box->thingheight = thing->height;
+	box->thingheight = interp.height;
 	box->cut = SC_BBOX;
 
 	box->gx = tx;
 	box->gy = tz;
 
-	box->scale = 2 * FixedMul(thing->radius, viewsin);
-	box->xscale = 2 * FixedMul(thing->radius, viewcos);
+	box->scale  = 2 * FixedMul(interp.radius, viewsin);
+	box->xscale = 2 * FixedMul(interp.radius, viewcos);
 
 	box->pz = interp.z;
 	box->pzt = box->pz + box->thingheight;
@@ -1572,6 +1571,7 @@ static void R_ProjectSprite(mobj_t *thing)
 	fixed_t tr_x, tr_y;
 	fixed_t tx, tz;
 	fixed_t xscale, yscale; //added : 02-02-98 : aaargll..if I were a math-guy!!!
+	fixed_t radius, height; // For drop shadows
 	fixed_t sortscale, sortsplat = 0;
 	fixed_t linkscale = 0;
 	fixed_t sort_x = 0, sort_y = 0, sort_z;
@@ -1647,6 +1647,8 @@ static void R_ProjectSprite(mobj_t *thing)
 	}
 
 	this_scale = interp.scale;
+	radius = interp.radius; // For drop shadows
+	height = interp.height; // Ditto
 
 	// transform the origin point
 	tr_x = interp.x - viewx;
@@ -1767,9 +1769,6 @@ static void R_ProjectSprite(mobj_t *thing)
 
 	I_Assert(lump < max_spritelumps);
 
-	if (thing->skin && ((skin_t *)thing->skin)->flags & SF_HIRES)
-		this_scale = FixedMul(this_scale, ((skin_t *)thing->skin)->highresscale);
-
 	spr_width = spritecachedinfo[lump].width;
 	spr_height = spritecachedinfo[lump].height;
 	spr_offset = spritecachedinfo[lump].offset;
@@ -1819,6 +1818,14 @@ static void R_ProjectSprite(mobj_t *thing)
 	// calculate edges of the shape
 	spritexscale = interp.spritexscale;
 	spriteyscale = interp.spriteyscale;
+
+	if (thing->skin && ((skin_t *)thing->skin)->flags & SF_HIRES)
+	{
+		fixed_t highresscale = ((skin_t *)thing->skin)->highresscale;
+		spritexscale = FixedMul(spritexscale, highresscale);
+		spriteyscale = FixedMul(spriteyscale, highresscale);
+	}
+
 	if (spritexscale < 1 || spriteyscale < 1)
 		return;
 
@@ -1986,6 +1993,8 @@ static void R_ProjectSprite(mobj_t *thing)
 		{
 			R_InterpolateMobjState(thing, FRACUNIT, &tracer_interp);
 		}
+		radius = tracer_interp.radius; // For drop shadows
+		height = tracer_interp.height; // Ditto
 
 		tr_x = (tracer_interp.x + sort_x) - viewx;
 		tr_y = (tracer_interp.y + sort_y) - viewy;
@@ -2077,7 +2086,7 @@ static void R_ProjectSprite(mobj_t *thing)
 				if (abs(groundz-viewz)/tz > 4)
 					return; // Prevent stretchy shadows and possible crashes
 
-				floordiff = abs((isflipped ? caster->height : 0) + casterinterp.z - groundz);
+				floordiff = abs((isflipped ? casterinterp.height : 0) + casterinterp.z - groundz);
 				trans += ((floordiff / (100*FRACUNIT)) + 3);
 				shadowscale = FixedMul(FRACUNIT - floordiff/640, casterinterp.scale);
 			}
@@ -2092,8 +2101,8 @@ static void R_ProjectSprite(mobj_t *thing)
 
 		if (shadowdraw)
 		{
-			spritexscale = FixedMul(thing->radius * 2, FixedMul(shadowscale, spritexscale));
-			spriteyscale = FixedMul(thing->radius * 2, FixedMul(shadowscale, spriteyscale));
+			spritexscale = FixedMul(radius * 2, FixedMul(shadowscale, spritexscale));
+			spriteyscale = FixedMul(radius * 2, FixedMul(shadowscale, spriteyscale));
 			spriteyscale = FixedMul(spriteyscale, FixedDiv(abs(groundz - viewz), tz));
 			spriteyscale = min(spriteyscale, spritexscale) / patch->height;
 			spritexscale /= patch->width;
@@ -2108,7 +2117,7 @@ static void R_ProjectSprite(mobj_t *thing)
 		{
 			R_SkewShadowSprite(thing, thing->standingslope, groundz, patch->height, shadowscale, &spriteyscale, &sheartan);
 
-			gzt = (isflipped ? (interp.z + thing->height) : interp.z) + patch->height * spriteyscale / 2;
+			gzt = (isflipped ? (interp.z + height) : interp.z) + patch->height * spriteyscale / 2;
 			gz = gzt - patch->height * spriteyscale;
 
 			cut |= SC_SHEAR;
@@ -2123,11 +2132,7 @@ static void R_ProjectSprite(mobj_t *thing)
 			// When vertical flipped, draw sprites from the top down, at least as far as offsets are concerned.
 			// sprite height - sprite topoffset is the proper inverse of the vertical offset, of course.
 			// remember gz and gzt should be seperated by sprite height, not thing height - thing height can be shorter than the sprite itself sometimes!
-
-			if (oldthing->scale != oldthing->old_scale) // Interpolate heights in reverse gravity when scaling mobjs
-				gz = interp.z + FixedMul(oldthing->height, FixedDiv(interp.scale, oldthing->scale)) - FixedMul(spr_topoffset, FixedMul(spriteyscale, this_scale));
-			else
-				gz = interp.z + oldthing->height - FixedMul(spr_topoffset, FixedMul(spriteyscale, this_scale));
+			gz = interp.z + interp.height - FixedMul(spr_topoffset, FixedMul(spriteyscale, this_scale));
 			gzt = gz + FixedMul(spr_height, FixedMul(spriteyscale, this_scale));
 		}
 		else
@@ -2206,7 +2211,7 @@ static void R_ProjectSprite(mobj_t *thing)
 	vis->gy = interp.y;
 	vis->gz = gz;
 	vis->gzt = gzt;
-	vis->thingheight = thing->height;
+	vis->thingheight = height;
 	vis->pz = interp.z;
 	vis->pzt = vis->pz + vis->thingheight;
 	vis->texturemid = FixedDiv(gzt - viewz, spriteyscale);
@@ -2646,6 +2651,14 @@ static void R_SortVisSprites(vissprite_t* vsprsortedhead, UINT32 start, UINT32 e
 	// bundle linkdraw
 	for (ds = unsorted.prev; ds != &unsorted; ds = ds->prev)
 	{
+		// Remove this sprite if it was determined to not be visible
+		if (ds->cut & SC_NOTVISIBLE)
+		{
+			ds->next->prev = ds->prev;
+			ds->prev->next = ds->next;
+			continue;
+		}
+
 		if (!(ds->cut & SC_LINKDRAW))
 			continue;
 
@@ -2672,14 +2685,16 @@ static void R_SortVisSprites(vissprite_t* vsprsortedhead, UINT32 start, UINT32 e
 				continue;
 
 			// don't connect if the tracer's top is cut off, but lower than the link's top
-			if ((dsfirst->cut & SC_TOP)
-			&& dsfirst->szt > ds->szt)
+			if ((dsfirst->cut & SC_TOP) && dsfirst->szt > ds->szt)
 				continue;
 
 			// don't connect if the tracer's bottom is cut off, but higher than the link's bottom
-			if ((dsfirst->cut & SC_BOTTOM)
-			&& dsfirst->sz < ds->sz)
+			if ((dsfirst->cut & SC_BOTTOM) && dsfirst->sz < ds->sz)
 				continue;
+
+			// If the object isn't visible, then the bounding box isn't either
+			if (ds->cut & SC_BBOX && dsfirst->cut & SC_NOTVISIBLE)
+				ds->cut |= SC_NOTVISIBLE;
 
 			break;
 		}
@@ -2687,6 +2702,10 @@ static void R_SortVisSprites(vissprite_t* vsprsortedhead, UINT32 start, UINT32 e
 		// remove from chain
 		ds->next->prev = ds->prev;
 		ds->prev->next = ds->next;
+
+		if (ds->cut & SC_NOTVISIBLE)
+			continue;
+
 		linkedvissprites++;
 
 		if (dsfirst != &unsorted)
@@ -2738,12 +2757,15 @@ static void R_SortVisSprites(vissprite_t* vsprsortedhead, UINT32 start, UINT32 e
 				best = ds;
 			}
 		}
-		best->next->prev = best->prev;
-		best->prev->next = best->next;
-		best->next = vsprsortedhead;
-		best->prev = vsprsortedhead->prev;
-		vsprsortedhead->prev->next = best;
-		vsprsortedhead->prev = best;
+		if (best)
+		{
+			best->next->prev = best->prev;
+			best->prev->next = best->next;
+			best->next = vsprsortedhead;
+			best->prev = vsprsortedhead->prev;
+			vsprsortedhead->prev->next = best;
+			vsprsortedhead->prev = best;
+		}
 	}
 }
 
@@ -3174,6 +3196,44 @@ static void R_HeightSecClip(vissprite_t *spr, INT32 x1, INT32 x2)
 	}
 }
 
+static boolean R_CheckSpriteVisible(vissprite_t *spr, INT32 x1, INT32 x2)
+{
+	INT16 sz = spr->sz;
+	INT16 szt = spr->szt;
+
+	fixed_t texturemid, yscale, scalestep = spr->scalestep;
+	INT32 height;
+
+	if (scalestep)
+	{
+		height = spr->patch->height;
+		yscale = spr->scale;
+		scalestep = FixedMul(scalestep, spr->spriteyscale);
+
+		if (spr->thingscale != FRACUNIT)
+			texturemid = FixedDiv(spr->texturemid, max(spr->thingscale, 1));
+		else
+			texturemid = spr->texturemid;
+	}
+
+	for (INT32 x = x1; x <= x2; x++)
+	{
+		if (scalestep)
+		{
+			fixed_t top = centeryfrac - FixedMul(texturemid, yscale);
+			fixed_t bottom = top + (height * yscale);
+			szt = (INT16)(top >> FRACBITS);
+			sz = (INT16)(bottom >> FRACBITS);
+			yscale += scalestep;
+		}
+
+		if (spr->cliptop[x] < spr->clipbot[x] && sz > spr->cliptop[x] && szt < spr->clipbot[x])
+			return true;
+	}
+
+	return false;
+}
+
 // R_ClipVisSprite
 // Clips vissprites without drawing, so that portals can work. -Red
 static void R_ClipVisSprite(vissprite_t *spr, INT32 x1, INT32 x2, portal_t* portal)
@@ -3317,8 +3377,7 @@ static void R_ClipVisSprite(vissprite_t *spr, INT32 x1, INT32 x2, portal_t* port
 			spr->clipbot[x] = (INT16)viewheight;
 
 		if (spr->cliptop[x] == -2)
-			//Fab : 26-04-98: was -1, now clips against console bottom
-			spr->cliptop[x] = (INT16)con_clipviewtop;
+			spr->cliptop[x] = -1;
 	}
 
 	if (portal)
@@ -3342,6 +3401,14 @@ static void R_ClipVisSprite(vissprite_t *spr, INT32 x1, INT32 x2, portal_t* port
 			spr->clipbot[x] = -1;
 			spr->cliptop[x] = -1;
 		}
+	}
+
+	// Check if it'll be visible
+	// Not done for floorsprites.
+	if (cv_spriteclip.value && (spr->cut & SC_SPLAT) == 0)
+	{
+		if (!R_CheckSpriteVisible(spr, x1, x2))
+			spr->cut |= SC_NOTVISIBLE;
 	}
 }
 
@@ -3411,8 +3478,19 @@ void R_ClipSprites(drawseg_t* dsstart, portal_t* portal)
 	{
 		vissprite_t *spr = R_GetVisSprite(clippedvissprites);
 
-		if (spr->cut & SC_BBOX)
+		if (cv_spriteclip.value
+		&& (spr->szt > vid.height || spr->sz < 0)
+		&& !((spr->cut & SC_SPLAT) || spr->scalestep))
+		{
+			spr->cut |= SC_NOTVISIBLE;
 			continue;
+		}
+
+		if (spr->cut & SC_BBOX)
+		{
+			numvisiblesprites++;
+			continue;
+		}
 
 		INT32 x1 = (spr->cut & SC_SPLAT) ? 0 : spr->x1;
 		INT32 x2 = (spr->cut & SC_SPLAT) ? viewwidth : spr->x2;
@@ -3434,6 +3512,9 @@ void R_ClipSprites(drawseg_t* dsstart, portal_t* portal)
 		}
 
 		R_ClipVisSprite(spr, x1, x2, portal);
+
+		if ((spr->cut & SC_NOTVISIBLE) == 0)
+			numvisiblesprites++;
 	}
 }
 
