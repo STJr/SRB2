@@ -4709,12 +4709,14 @@ static void ForceSkin_OnChange(void)
 	if (cv_forceskin.value < 0)
 	{
 		CONS_Printf("The server has lifted the forced skin restrictions.\n");
-		D_SendPlayerConfig();
+		if (Playing())
+			D_SendPlayerConfig();
 	}
 	else
 	{
 		CONS_Printf("The server is restricting all players to skin \"%s\".\n",skins[cv_forceskin.value].name);
-		ForceAllSkins(cv_forceskin.value);
+		if (Playing())
+			ForceAllSkins(cv_forceskin.value);
 	}
 }
 
