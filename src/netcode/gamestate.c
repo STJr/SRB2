@@ -34,6 +34,9 @@
 #include "../r_main.h"
 #include "../tables.h"
 #include "../z_zone.h"
+#if defined (__GNUC__) || defined (__unix__)
+#include <unistd.h>
+#endif
 
 #define SAVEGAMESIZE (768*1024)
 

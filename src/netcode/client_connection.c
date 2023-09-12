@@ -32,6 +32,9 @@
 #include "../z_zone.h"
 #include "../doomtype.h"
 #include "../doomstat.h"
+#if defined (__GNUC__) || defined (__unix__)
+#include <unistd.h>
+#endif
 
 cl_mode_t cl_mode = CL_SEARCHING;
 static UINT16 cl_lastcheckedfilecount = 0;	// used for full file list
