@@ -62,7 +62,7 @@ extern const char *const MOBJTYPE_LIST[];
 extern const char *const MOBJFLAG_LIST[];
 extern const char *const MOBJFLAG2_LIST[]; // \tMF2_(\S+).*// (.+) --> \t"\1", // \2
 extern const char *const MOBJEFLAG_LIST[];
-extern const char *const MAPTHINGFLAG_LIST[4];
+extern const char *const MAPTHINGFLAG_LIST[];
 extern const char *const PLAYERFLAG_LIST[];
 extern const char *const GAMETYPERULE_LIST[];
 extern const char *const ML_LIST[]; // Linedef flags

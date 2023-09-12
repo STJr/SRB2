@@ -277,8 +277,8 @@ static int ScanConstants(lua_State *L, boolean mathlib, const char *word)
 	}
 	else if (fastncmp("MTF_", word, 4)) {
 		p = word+4;
-		for (i = 0; i < 4; i++)
-			if (MAPTHINGFLAG_LIST[i] && fastcmp(p, MAPTHINGFLAG_LIST[i])) {
+		for (i = 0; MAPTHINGFLAG_LIST[i]; i++)
+			if (fastcmp(p, MAPTHINGFLAG_LIST[i])) {
 				CacheAndPushConstant(L, word, ((lua_Integer)1<<i));
 				return 1;
 			}

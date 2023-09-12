@@ -41,16 +41,6 @@
 #include "hardware/hw_main.h"
 #endif
 
-//profile stuff ---------------------------------------------------------
-//#define TIMING
-#ifdef TIMING
-#include "p5prof.h"
-INT64 mycount;
-INT64 mytotal = 0;
-//unsigned long  nombre = 100000;
-#endif
-//profile stuff ---------------------------------------------------------
-
 // Fineangles in the SCREENWIDTH wide window.
 #define FIELDOFVIEW 2048
 
@@ -157,7 +147,8 @@ consvar_t cv_flipcam2 = CVAR_INIT ("flipcam2", "No", CV_SAVE|CV_CALL|CV_NOINIT, 
 
 consvar_t cv_shadow = CVAR_INIT ("shadow", "On", CV_SAVE, CV_OnOff, NULL);
 consvar_t cv_skybox = CVAR_INIT ("skybox", "On", CV_SAVE, CV_OnOff, NULL);
-consvar_t cv_ffloorclip = CVAR_INIT ("ffloorclip", "On", CV_SAVE, CV_OnOff, NULL);
+consvar_t cv_ffloorclip = CVAR_INIT ("r_ffloorclip", "On", CV_SAVE, CV_OnOff, NULL);
+consvar_t cv_spriteclip = CVAR_INIT ("r_spriteclip", "On", CV_SAVE, CV_OnOff, NULL);
 consvar_t cv_allowmlook = CVAR_INIT ("allowmlook", "Yes", CV_NETVAR|CV_ALLOWLUA, CV_YesNo, NULL);
 consvar_t cv_showhud = CVAR_INIT ("showhud", "Yes", CV_CALL|CV_ALLOWLUA,  CV_YesNo, R_SetViewSize);
 consvar_t cv_translucenthud = CVAR_INIT ("translucenthud", "10", CV_SAVE, translucenthud_cons_t, NULL);
@@ -1479,6 +1470,7 @@ void R_RenderPlayerView(player_t *player)
 		R_ClearClipSegs();
 	}
 	R_ClearDrawSegs();
+	R_ClearSegTables();
 	R_ClearSprites();
 	Portal_InitList();
 
@@ -1489,29 +1481,17 @@ void R_RenderPlayerView(player_t *player)
 
 	Mask_Pre(&masks[nummasks - 1]);
 	curdrawsegs = ds_p;
-//profile stuff ---------------------------------------------------------
-#ifdef TIMING
-	mytotal = 0;
-	ProfZeroTimer();
-#endif
 	ps_numbspcalls.value.i = ps_numpolyobjects.value.i = ps_numdrawnodes.value.i = 0;
 	PS_START_TIMING(ps_bsptime);
 	R_RenderBSPNode((INT32)numnodes - 1);
 	PS_STOP_TIMING(ps_bsptime);
-	ps_numsprites.value.i = visspritecount;
-#ifdef TIMING
-	RDMSR(0x10, &mycount);
-	mytotal += mycount; // 64bit add
-
-	CONS_Debug(DBG_RENDER, "RenderBSPNode: 0x%d %d\n", *((INT32 *)&mytotal + 1), (INT32)mytotal);
-#endif
-//profile stuff ---------------------------------------------------------
 	Mask_Post(&masks[nummasks - 1]);
 
 	PS_START_TIMING(ps_sw_spritecliptime);
 	R_ClipSprites(drawsegs, NULL);
 	PS_STOP_TIMING(ps_sw_spritecliptime);
 
+	ps_numsprites.value.i = numvisiblesprites;
 
 	// Add skybox portals caused by sky visplanes.
 	if (cv_skybox.value && skyboxmo[0])
@@ -1602,6 +1582,7 @@ void R_RegisterEngineStuff(void)
 	CV_RegisterVar(&cv_shadow);
 	CV_RegisterVar(&cv_skybox);
 	CV_RegisterVar(&cv_ffloorclip);
+	CV_RegisterVar(&cv_spriteclip);
 
 	CV_RegisterVar(&cv_cam_dist);
 	CV_RegisterVar(&cv_cam_still);
