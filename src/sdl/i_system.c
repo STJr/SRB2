@@ -406,8 +406,10 @@ static void I_ReportSignal(int num, int coredumped)
 
 	SDL_ShowMessageBox(&messageboxdata, &buttonid);
 
+#if SDL_VERSION_ATLEAST(2,0,14)
 	if (buttonid == 1)
 		SDL_OpenURL("https://www.srb2.org/discord");
+#endif
 }
 
 #ifndef NEWSIGNALHANDLER
