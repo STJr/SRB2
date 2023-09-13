@@ -2025,7 +2025,7 @@ void HU_Drawer(void)
 		V_DrawCenteredString(BASEVIDWIDTH/2, 180, V_YELLOWMAP | V_ALLOWLOWERCASE, resynch_text);
 	}
 
-	if (modeattacking && pausedelay > 0 && !pausebreakkey)
+	if (modeattacking && pausedelay > 0 && !(pausebreakkey || cv_instantretry.value))
 	{
 		INT32 strength = ((pausedelay - 1 - NEWTICRATE/2)*10)/(NEWTICRATE/3);
 		INT32 y = hudinfo[HUD_LIVES].y - 13;

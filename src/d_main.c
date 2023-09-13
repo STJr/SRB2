@@ -972,6 +972,7 @@ void D_StartTitle(void)
 	emeralds = 0;
 	memset(&luabanks, 0, sizeof(luabanks));
 	lastmaploaded = 0;
+	pickedchar = R_SkinAvailable(cv_defaultskin.string);
 
 	// In case someone exits out at the same time they start a time attack run,
 	// reset modeattacking
@@ -1615,6 +1616,8 @@ void D_SRB2Main(void)
 		autostart = true;
 	}
 
+	pickedchar = R_SkinAvailable(cv_defaultskin.string);
+
 	// user settings come before "+" parameters.
 	if (dedicated)
 		COM_ImmedExecute(va("exec \"%s"PATHSEP"adedserv.cfg\"\n", srb2home));
@@ -1726,14 +1729,15 @@ void D_SRB2Main(void)
 			// Prevent warping to nonexistent levels
 			if (W_CheckNumForName(G_BuildMapName(pstartmap)) == LUMPERROR)
 				I_Error("Could not warp to %s (map not found)\n", G_BuildMapName(pstartmap));
-			// Prevent warping to locked levels
-			// ... unless you're in a dedicated server.  Yes, technically this means you can view any level by
-			// running a dedicated server and joining it yourself, but that's better than making dedicated server's
-			// lives hell.
-			else if (!dedicated && M_MapLocked(pstartmap, serverGamedata))
-				I_Error("You need to unlock this level before you can warp to it!\n");
 			else
 			{
+				if (M_CampaignWarpIsCheat(gametype, pstartmap, serverGamedata))
+				{
+					// If you're warping via command line, you know what you're doing.
+					// No need to I_Error over this.
+					G_SetUsedCheats(false);
+				}
+
 				D_MapChange(pstartmap, gametype, ultimatemode, true, 0, false, false);
 			}
 		}

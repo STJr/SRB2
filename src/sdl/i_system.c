@@ -90,7 +90,7 @@ typedef LPVOID (WINAPI *p_MapViewOfFile) (HANDLE, DWORD, DWORD, DWORD, SIZE_T);
 #include <kvm.h>
 #endif
 #include <nlist.h>
-#include <sys/vmmeter.h>
+#include <sys/sysctl.h>
 #endif
 #endif
 
@@ -259,10 +259,10 @@ UINT8 keyboard_started = false;
 
 #ifdef UNIXBACKTRACE
 #define STDERR_WRITE(string) if (fd != -1) I_OutputMsg("%s", string)
-#define CRASHLOG_WRITE(string) if (fd != -1) write(fd, string, strlen(string))
+#define CRASHLOG_WRITE(string) if (fd != -1) junk = write(fd, string, strlen(string))
 #define CRASHLOG_STDERR_WRITE(string) \
 	if (fd != -1)\
-		write(fd, string, strlen(string));\
+		junk = write(fd, string, strlen(string));\
 	I_OutputMsg("%s", string)
 
 static void write_backtrace(INT32 signal)
@@ -271,6 +271,7 @@ static void write_backtrace(INT32 signal)
 	size_t size;
 	time_t rawtime;
 	struct tm timeinfo;
+	ssize_t junk;
 
 	enum { BT_SIZE = 1024, STR_SIZE = 32 };
 	void *array[BT_SIZE];
@@ -314,7 +315,7 @@ static void write_backtrace(INT32 signal)
 	backtrace_symbols_fd(array, size, STDERR_FILENO);
 
 	CRASHLOG_WRITE("\n"); // Write another newline to the log so it looks nice :)
-
+	(void)junk;
 	close(fd);
 }
 #undef STDERR_WRITE
@@ -325,8 +326,10 @@ static void write_backtrace(INT32 signal)
 static void I_ReportSignal(int num, int coredumped)
 {
 	//static char msg[] = "oh no! back to reality!\r\n";
-	const char *sigmsg, *sigttl;
+	const char *sigmsg, *signame;
 	char ttl[128];
+	char sigttl[512] = "Process killed by signal: ";
+	const char *reportmsg = "\n\nTo help us figure out the cause, you can visit our official Discord server\nwhere you will find more instructions on how to submit a crash report.\n\nSorry for the inconvenience!";
 
 	switch (num)
 	{
@@ -335,16 +338,16 @@ static void I_ReportSignal(int num, int coredumped)
 //		sigmsg = "SRB2 was interrupted prematurely by the user.";
 //		break;
 	case SIGILL:
-		sigmsg = "SRB2 has attempted to execute an illegal instruction and needs to close. %s";
-		sigttl = "SIGILL"; // illegal instruction - invalid function image
+		sigmsg = "SRB2 has attempted to execute an illegal instruction and needs to close.";
+		signame = "SIGILL"; // illegal instruction - invalid function image
 		break;
 	case SIGFPE:
-		sigmsg = "SRB2 has encountered a mathematical exception and needs to close. %s";
-		sigttl = "SIGFPE"; // mathematical exception
+		sigmsg = "SRB2 has encountered a mathematical exception and needs to close.";
+		signame = "SIGFPE"; // mathematical exception
 		break;
 	case SIGSEGV:
-		sigmsg = "SRB2 has attempted to access a memory location that it shouldn't and needs to close. %s";
-		sigttl = "SIGSEGV"; // segment violation
+		sigmsg = "SRB2 has attempted to access a memory location that it shouldn't and needs to close.";
+		signame = "SIGSEGV"; // segment violation
 		break;
 //	case SIGTERM:
 //		sigmsg = "SRB2 was terminated by a kill signal.";
@@ -355,34 +358,31 @@ static void I_ReportSignal(int num, int coredumped)
 //		sigttl = "SIGBREAK" // Ctrl-Break sequence
 //		break;
 	case SIGABRT:
-		sigmsg = "SRB2 was terminated by an abort signal. %s";
-		sigttl = "SIGABRT"; // abnormal termination triggered by abort call
+		sigmsg = "SRB2 was terminated by an abort signal.";
+		signame = "SIGABRT"; // abnormal termination triggered by abort call
 		break;
 	default:
-		sigmsg = "SRB2 was terminated by an unknown signal. %s";
+		sigmsg = "SRB2 was terminated by an unknown signal.";
 
 		sprintf(ttl, "number %d", num);
 		if (coredumped)
-			sigttl = 0;
+			signame = 0;
 		else
-			sigttl = ttl;
+			signame = ttl;
 	}
 
 	if (coredumped)
 	{
-		if (sigttl)
-			sprintf(ttl, "%s (core dumped)", sigttl);
+		if (signame)
+			sprintf(ttl, "%s (core dumped)", signame);
 		else
 			strcat(ttl, " (core dumped)");
 
-		sigttl = ttl;
+		signame = ttl;
 	}
 
-	sprintf(ttl, "Process killed by signal: %s", sigttl);
-
-	sigttl = ttl;
-
-	I_OutputMsg("\n%s\n\n", sigttl);
+	strcat(sigttl, signame);
+	I_OutputMsg("%s\n", sigttl);
 
 	if (M_CheckParm("-dedicated"))
 		return;
@@ -396,8 +396,7 @@ static void I_ReportSignal(int num, int coredumped)
 		SDL_MESSAGEBOX_ERROR, /* .flags */
 		NULL, /* .window */
 		sigttl, /* .title */
-		va(sigmsg,
-			"\n\nTo help us figure out the cause, you can visit our official Discord server\nwhere you will find more instructions on how to submit a crash report.\n\nSorry for the inconvenience!"), /* .message */
+		va("%s %s", sigmsg, reportmsg), /* .message */
 		SDL_arraysize(buttons), /* .numbuttons */
 		buttons, /* .buttons */
 		NULL /* .colorScheme */
@@ -407,8 +406,10 @@ static void I_ReportSignal(int num, int coredumped)
 
 	SDL_ShowMessageBox(&messageboxdata, &buttonid);
 
+#if SDL_VERSION_ATLEAST(2,0,14)
 	if (buttonid == 1)
 		SDL_OpenURL("https://www.srb2.org/discord");
+#endif
 }
 
 #ifndef NEWSIGNALHANDLER
@@ -3035,40 +3036,17 @@ static long get_entry(const char* name, const char* buf)
 size_t I_GetFreeMem(size_t *total)
 {
 #ifdef FREEBSD
-	struct vmmeter sum;
-	kvm_t *kd;
-	struct nlist namelist[] =
-	{
-#define X_SUM   0
-		{"_cnt"},
-		{NULL}
-	};
-	if ((kd = kvm_open(NULL, NULL, NULL, O_RDONLY, "kvm_open")) == NULL)
-	{
-		if (total)
-			*total = 0L;
-		return 0;
-	}
-	if (kvm_nlist(kd, namelist) != 0)
-	{
-		kvm_close (kd);
-		if (total)
-			*total = 0L;
-		return 0;
-	}
-	if (kvm_read(kd, namelist[X_SUM].n_value, &sum,
-		sizeof (sum)) != sizeof (sum))
-	{
-		kvm_close(kd);
-		if (total)
-			*total = 0L;
-		return 0;
-	}
-	kvm_close(kd);
+	u_int v_free_count, v_page_size, v_page_count;
+	size_t size = sizeof(v_free_count);
+	sysctlbyname("vm.stat.vm.v_free_count", &v_free_count, &size, NULL, 0);
+	size_t size = sizeof(v_page_size);
+	sysctlbyname("vm.stat.vm.v_page_size", &v_page_size, &size, NULL, 0);
+	size_t size = sizeof(v_page_count);
+	sysctlbyname("vm.stat.vm.v_page_count", &v_page_count, &size, NULL, 0);
 
 	if (total)
-		*total = sum.v_page_count * sum.v_page_size;
-	return sum.v_free_count * sum.v_page_size;
+		*total = v_page_count * v_page_size;
+	return v_free_count * v_page_size;
 #elif defined (SOLARIS)
 	/* Just guess */
 	if (total)

@@ -50,6 +50,7 @@
 #include "m_random.h"
 
 #include "dehacked.h" // for map headers
+#include "deh_tables.h" // FREE_SKINCOLORS
 #include "r_main.h"
 #include "m_cond.h" // for emblems
 
@@ -1266,12 +1267,19 @@ static void P_WriteDuplicateText(const char *text, char **target)
 
 static void P_WriteSkincolor(INT32 constant, char **target)
 {
+	const char *color_name;
+
 	if (constant <= SKINCOLOR_NONE
 	|| constant >= (INT32)numskincolors)
 		return;
 
+	if (constant >= SKINCOLOR_FIRSTFREESLOT)
+		color_name = FREE_SKINCOLORS[constant - SKINCOLOR_FIRSTFREESLOT];
+	else
+		color_name = COLOR_ENUMS[constant];
+
 	P_WriteDuplicateText(
-		va("SKINCOLOR_%s", skincolors[constant].name),
+		va("SKINCOLOR_%s", color_name),
 		target
 	);
 }
@@ -1510,6 +1518,7 @@ static void P_LoadThings(UINT8 *data)
 		mt->extrainfo = (UINT8)(mt->type >> 12);
 		Tag_FSet(&mt->tags, 0);
 		mt->scale = FRACUNIT;
+		mt->spritexscale = mt->spriteyscale = FRACUNIT;
 		memset(mt->args, 0, NUMMAPTHINGARGS*sizeof(*mt->args));
 		memset(mt->stringargs, 0x00, NUMMAPTHINGSTRINGARGS*sizeof(*mt->stringargs));
 		mt->pitch = mt->roll = 0;
@@ -2013,11 +2022,19 @@ static void ParseTextmapThingParameter(UINT32 i, const char *param, const char *
 		mapthings[i].roll = atol(val);
 	else if (fastcmp(param, "type"))
 		mapthings[i].type = atol(val);
-	else if (fastcmp(param, "scale") || fastcmp(param, "scalex") || fastcmp(param, "scaley"))
+	else if (fastcmp(param, "scale"))
+		mapthings[i].spritexscale = mapthings[i].spriteyscale = FLOAT_TO_FIXED(atof(val));
+	else if (fastcmp(param, "scalex"))
+		mapthings[i].spritexscale = FLOAT_TO_FIXED(atof(val));
+	else if (fastcmp(param, "scaley"))
+		mapthings[i].spriteyscale = FLOAT_TO_FIXED(atof(val));
+	else if (fastcmp(param, "mobjscale"))
 		mapthings[i].scale = FLOAT_TO_FIXED(atof(val));
 	// Flags
 	else if (fastcmp(param, "flip") && fastcmp("true", val))
 		mapthings[i].options |= MTF_OBJECTFLIP;
+	else if (fastcmp(param, "absolutez") && fastcmp("true", val))
+		mapthings[i].options |= MTF_ABSOLUTEZ;
 
 	else if (fastncmp(param, "stringarg", 9) && strlen(param) > 9)
 	{
@@ -2431,8 +2448,12 @@ static void P_WriteTextmap(void)
 			fprintf(f, "roll = %d;\n", wmapthings[i].roll);
 		if (wmapthings[i].type != 0)
 			fprintf(f, "type = %d;\n", wmapthings[i].type);
+		if (wmapthings[i].spritexscale != FRACUNIT)
+			fprintf(f, "scalex = %f;\n", FIXED_TO_FLOAT(wmapthings[i].spritexscale));
+		if (wmapthings[i].spriteyscale != FRACUNIT)
+			fprintf(f, "scaley = %f;\n", FIXED_TO_FLOAT(wmapthings[i].spriteyscale));
 		if (wmapthings[i].scale != FRACUNIT)
-			fprintf(f, "scale = %f;\n", FIXED_TO_FLOAT(wmapthings[i].scale));
+			fprintf(f, "mobjscale = %f;\n", FIXED_TO_FLOAT(wmapthings[i].scale));
 		if (wmapthings[i].options & MTF_OBJECTFLIP)
 			fprintf(f, "flip = true;\n");
 		for (j = 0; j < NUMMAPTHINGARGS; j++)
@@ -2978,6 +2999,7 @@ static void P_LoadTextmap(void)
 		mt->extrainfo = 0;
 		Tag_FSet(&mt->tags, 0);
 		mt->scale = FRACUNIT;
+		mt->spritexscale = mt->spriteyscale = FRACUNIT;
 		memset(mt->args, 0, NUMMAPTHINGARGS*sizeof(*mt->args));
 		memset(mt->stringargs, 0x00, NUMMAPTHINGSTRINGARGS*sizeof(*mt->stringargs));
 		mt->mobj = NULL;
@@ -5455,7 +5477,7 @@ static void P_ConvertBinaryLinedefTypes(void)
 			break;
 		case 442: //Change object type state
 			lines[i].args[0] = tag;
-			lines[i].args[3] = (lines[i].sidenum[1] == 0xffff) ? 1 : 0;
+			lines[i].args[1] = (lines[i].sidenum[1] == 0xffff) ? 1 : 0;
 			break;
 		case 443: //Call Lua function
 			if (lines[i].stringargs[0] == NULL)
@@ -6798,6 +6820,9 @@ static void P_ConvertBinaryThingTypes(void)
 		default:
 			break;
 		}
+		
+		// Clear binary thing height hacks, to prevent interfering with UDMF-only flags
+		mapthings[i].options &= 0xF;
 	}
 }
 
@@ -7149,37 +7174,23 @@ static void P_RunLevelScript(const char *scriptname)
 
 static void P_ForceCharacter(const char *forcecharskin)
 {
-	if (netgame)
-	{
-		char skincmd[33];
-		if (splitscreen)
-		{
-			sprintf(skincmd, "skin2 %s\n", forcecharskin);
-			CV_Set(&cv_skin2, forcecharskin);
-		}
+	// Don't do anything if the server is forcing a skin already.
+	if (netgame && cv_forceskin.value >= 0)
+		return;
 
-		sprintf(skincmd, "skin %s\n", forcecharskin);
-		COM_BufAddText(skincmd);
-	}
-	else
+	for (unsigned i = 0; i < MAXPLAYERS; i++)
 	{
-		if (splitscreen)
-		{
-			SetPlayerSkin(secondarydisplayplayer, forcecharskin);
-			if ((unsigned)cv_playercolor2.value != skins[players[secondarydisplayplayer].skin].prefcolor)
-			{
-				CV_StealthSetValue(&cv_playercolor2, skins[players[secondarydisplayplayer].skin].prefcolor);
-				players[secondarydisplayplayer].skincolor = skins[players[secondarydisplayplayer].skin].prefcolor;
-			}
-		}
+		if (!playeringame[i])
+			continue;
 
-		SetPlayerSkin(consoleplayer, forcecharskin);
-		// normal player colors in single player
-		if ((unsigned)cv_playercolor.value != skins[players[consoleplayer].skin].prefcolor)
-		{
-			CV_StealthSetValue(&cv_playercolor, skins[players[consoleplayer].skin].prefcolor);
-			players[consoleplayer].skincolor = skins[players[consoleplayer].skin].prefcolor;
-		}
+		INT32 skinnum = R_SkinAvailable(forcecharskin);
+		if (skinnum == -1 || !R_SkinUsable(i, skinnum))
+			continue;
+
+		SetPlayerSkinByNum(i, skinnum);
+
+		if (!netgame)
+			players[i].skincolor = skins[skinnum].prefcolor;
 	}
 }
 
@@ -8226,7 +8237,7 @@ static boolean P_LoadAddon(UINT16 numlumps)
 	{
 		CONS_Printf(M_GetText("Current map %d replaced by added file, ending the level to ensure consistency.\n"), gamemap);
 		if (server)
-			SendNetXCmd(XD_EXITLEVEL, NULL, 0);
+			D_SendExitLevel(false);
 	}
 
 	return true;
