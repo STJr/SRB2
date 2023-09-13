@@ -39,7 +39,7 @@
 //SoM: 3/23/2000: Use Boom visplane hashing.
 
 visplane_t *visplanes[MAXVISPLANES];
-static UINT16 numvisplanes;
+
 static visplane_t *freetail;
 static visplane_t **freehead = &freetail;
 
@@ -90,40 +90,35 @@ static floatv3_t ds_slope_origin, ds_slope_u, ds_slope_v;
 static INT16 *ffloor_f_clip;
 static INT16 *ffloor_c_clip;
 
-UINT16 *visplanes_top[MAXVISPLANES];
-UINT16 *visplanes_bottom[MAXVISPLANES];
-
-static void R_AllocVisplaneTables(unsigned i)
+static void R_ReallocPlaneBounds(visplane_t *pl)
 {
-	// leave pads for [minx-1]/[maxx+1]
-	visplanes_top[i] = Z_Realloc(visplanes_top[i], sizeof(UINT16) * (viewwidth + 2), PU_STATIC, NULL);
-	visplanes_bottom[i] = Z_Realloc(visplanes_bottom[i], sizeof(UINT16) * (viewwidth + 2), PU_STATIC, NULL);
+	pl->top_memory = Z_Realloc(pl->top_memory, sizeof(UINT16) * (viewwidth + 2), PU_STATIC, NULL);
+	pl->bottom_memory = Z_Realloc(pl->bottom_memory, sizeof(UINT16) * (viewwidth + 2), PU_STATIC, NULL);
+	pl->top = pl->top_memory + 1;
+	pl->bottom = pl->bottom_memory + 1;
 }
 
 void R_AllocPlaneMemory(void)
 {
-	// Alloc visplane top/bottom bounds
 	visplane_t *check;
 
+	// Alloc visplane top/bottom bounds
 	for (unsigned i = 0; i < MAXVISPLANES; i++)
 	{
-		if (visplanes_top[i] || visplanes_bottom[i])
-			R_AllocVisplaneTables(i);
+		check = visplanes[i];
 
-		if ((check = visplanes[i]))
+		while (check)
 		{
-			check->top = visplanes_top[check->id] + 1;
-			check->bottom = visplanes_bottom[check->id] + 1;
+			R_ReallocPlaneBounds(check);
+			check = check->next;
 		}
 	}
 
 	// Need to do it for "freed" visplanes too
 	check = freetail;
-
 	while (check)
 	{
-		check->top = visplanes_top[check->id] + 1;
-		check->bottom = visplanes_bottom[check->id] + 1;
+		R_ReallocPlaneBounds(check);
 		check = check->next;
 	}
 
@@ -396,9 +391,12 @@ static visplane_t *new_visplane(unsigned hash)
 	if (!check)
 	{
 		check = calloc(1, sizeof (*check));
-		if (check == NULL) I_Error("%s: Out of memory", "new_visplane"); // FIXME: ugly
-		check->id = numvisplanes++;
-		R_AllocVisplaneTables(check->id);
+		if (check == NULL)
+			I_Error("new_visplane: Out of memory");
+		check->top_memory = Z_Malloc(sizeof(UINT16) * (viewwidth + 2), PU_STATIC, NULL);
+		check->bottom_memory = Z_Malloc(sizeof(UINT16) * (viewwidth + 2), PU_STATIC, NULL);
+		check->top = check->top_memory + 1;
+		check->bottom = check->bottom_memory + 1;
 	}
 	else
 	{
@@ -506,9 +504,6 @@ visplane_t *R_FindPlane(fixed_t height, INT32 picnum, INT32 lightlevel,
 	check->polyobj = polyobj;
 	check->slope = slope;
 
-	check->top = visplanes_top[check->id] + 1;
-	check->bottom = visplanes_bottom[check->id] + 1;
-
 	memset(check->top, 0xff, sizeof(*check->top) * viewwidth);
 	memset(check->bottom, 0x00, sizeof(*check->bottom) * viewwidth);
 
@@ -586,8 +581,6 @@ visplane_t *R_CheckPlane(visplane_t *pl, INT32 start, INT32 stop)
 		pl = new_pl;
 		pl->minx = start;
 		pl->maxx = stop;
-		pl->top = visplanes_top[pl->id] + 1;
-		pl->bottom = visplanes_bottom[pl->id] + 1;
 		memset(pl->top, 0xff, sizeof(*pl->top) * viewwidth);
 		memset(pl->bottom, 0x00, sizeof(*pl->bottom) * viewwidth);
 	}

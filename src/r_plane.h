@@ -31,7 +31,6 @@
 typedef struct visplane_s
 {
 	struct visplane_s *next;
-	UINT16 id;
 
 	fixed_t height;
 	fixed_t viewx, viewy, viewz;
@@ -44,8 +43,9 @@ typedef struct visplane_s
 	// colormaps per sector
 	extracolormap_t *extra_colormap;
 
-	UINT16 *top;
-	UINT16 *bottom;
+	UINT16 *top, *top_memory;
+	UINT16 *bottom, *bottom_memory;
+
 	INT32 high, low; // R_PlaneBounds should set these.
 
 	fixed_t xoffs, yoffs; // Scrolling flats.
