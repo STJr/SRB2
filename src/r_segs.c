@@ -1029,17 +1029,7 @@ static boolean R_FFloorCanClip(visffloor_t *pfloor)
 #define HEIGHTBITS              12
 #define HEIGHTUNIT              (1<<HEIGHTBITS)
 
-
-//profile stuff ---------------------------------------------------------
-//#define TIMING
-#ifdef TIMING
-#include "p5prof.h"
-INT64 mycount;
-INT64 mytotal = 0;
-UINT32 nombre = 100000;
-//static   char runtest[10][80];
-#endif
-//profile stuff ---------------------------------------------------------
+static boolean didsolidcol; // True if at least one column was marked solid
 
 static void R_RenderSegLoop (void)
 {
@@ -1296,20 +1286,7 @@ static void R_RenderSegLoop (void)
 				dc_source = R_GetColumn(midtexture, itexturecolumn + (rw_offset_mid>>FRACBITS));
 				dc_texheight = textureheight[midtexture]>>FRACBITS;
 
-				//profile stuff ---------------------------------------------------------
-#ifdef TIMING
-				ProfZeroTimer();
-#endif
 				colfunc();
-#ifdef TIMING
-				RDMSR(0x10,&mycount);
-				mytotal += mycount;      //64bit add
-
-				if (nombre--==0)
-					I_Error("R_DrawColumn CPU Spy reports: 0x%d %d\n", *((INT32 *)&mytotal+1),
-						(INT32)mytotal);
-#endif
-				//profile stuff ---------------------------------------------------------
 
 				// dont draw anything more for this column, since
 				// a midtexture blocks the view
@@ -1405,10 +1382,15 @@ static void R_RenderSegLoop (void)
 				floorclip[rw_x] = bottomclip;
 		}
 
+		if ((markceiling || markfloor) && (floorclip[rw_x] <= ceilingclip[rw_x] + 1))
+		{
+			solidcol[rw_x] = 1;
+			didsolidcol = true;
+		}
+
 		if (maskedtexture || numthicksides)
 		{
-			// save texturecol
-			//  for backdrawing of masked mid texture
+			// save texturecol for backdrawing of masked mid texture
 			maskedtexturecol[rw_x] = texturecolumn + rw_offset_mid;
 
 			if (maskedtextureheight != NULL) {
@@ -1449,6 +1431,8 @@ static void R_RenderSegLoop (void)
 		topfrac += topstep;
 		bottomfrac += bottomstep;
 	}
+
+	colfunc = colfuncs[BASEDRAWFUNC];
 }
 
 // Uses precalculated seg->length
@@ -2749,13 +2733,29 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 	rw_tsilheight = &(ds_p->tsilheight);
 	rw_bsilheight = &(ds_p->bsilheight);
 
+	didsolidcol = false;
+
 	R_RenderSegLoop();
-	colfunc = colfuncs[BASEDRAWFUNC];
 
 	if (portalline) // if curline is a portal, set portalrender for drawseg
 		ds_p->portalpass = portalrender+1;
 	else
 		ds_p->portalpass = 0;
+
+	// cph - if a column was made solid by this wall, we _must_ save full clipping info
+	if (backsector && didsolidcol)
+	{
+		if (!(ds_p->silhouette & SIL_BOTTOM))
+		{
+			ds_p->silhouette |= SIL_BOTTOM;
+			ds_p->bsilheight = backsector->f_slope ? INT32_MAX : backsector->floorheight;
+		}
+		if (!(ds_p->silhouette & SIL_TOP))
+		{
+			ds_p->silhouette |= SIL_TOP;
+			ds_p->tsilheight = backsector->c_slope ? INT32_MIN : backsector->ceilingheight;
+		}
+	}
 
 	// save sprite clipping info
 	if (maskedtexture || (ds_p->silhouette & (SIL_TOP | SIL_BOTTOM)))
