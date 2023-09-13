@@ -1734,6 +1734,7 @@ void I_StartupGraphics(void)
 	// SDL_GL_LoadLibrary to work well on Windows
 	vid.recalc = true;
 	vid.bpp = 1;
+	vid.change.renderer = -1;
 
 	// Create window
 	VID_SetSize(BASEVIDWIDTH, BASEVIDHEIGHT);
