@@ -62,10 +62,6 @@ extern visplane_t *ceilingplane;
 // Visplane related.
 extern INT16 *floorclip, *ceilingclip;
 extern fixed_t *frontscale, *yslopetab;
-extern fixed_t *cachedheight;
-extern fixed_t *cacheddistance;
-extern fixed_t *cachedxstep;
-extern fixed_t *cachedystep;
 
 extern fixed_t *yslope;
 extern lighttable_t **planezlight;

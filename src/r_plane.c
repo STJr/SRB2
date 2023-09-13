@@ -84,11 +84,6 @@ static fixed_t planeheight;
 fixed_t *yslopetab;
 fixed_t *yslope;
 
-fixed_t *cachedheight;
-fixed_t *cacheddistance;
-fixed_t *cachedxstep;
-fixed_t *cachedystep;
-
 static fixed_t xoffs, yoffs;
 static floatv3_t ds_slope_origin, ds_slope_u, ds_slope_v;
 
@@ -143,11 +138,6 @@ void R_AllocPlaneMemory(void)
 	}
 
 	yslopetab = Z_Realloc(yslopetab, sizeof(*yslopetab) * (viewheight * 16), PU_STATIC, NULL);
-
-	cachedheight = Z_Realloc(cachedheight, sizeof(*cachedheight) * viewheight, PU_STATIC, NULL);
-	cacheddistance = Z_Realloc(cacheddistance, sizeof(*cacheddistance) * viewheight, PU_STATIC, NULL);
-	cachedxstep = Z_Realloc(cachedxstep, sizeof(*cachedxstep) * viewheight, PU_STATIC, NULL);
-	cachedystep = Z_Realloc(cachedystep, sizeof(*cachedystep) * viewheight, PU_STATIC, NULL);
 
 	spanstart = Z_Realloc(spanstart, sizeof(*spanstart) * viewheight, PU_STATIC, NULL);
 }
@@ -211,29 +201,18 @@ static void R_MapPlane(INT32 y, INT32 x1, INT32 x2)
 	planecos = FINECOSINE(angle);
 	planesin = FINESINE(angle);
 
-	if (planeheight != cachedheight[y])
+	// [RH] Notice that I dumped the caching scheme used by Doom.
+	// It did not offer any appreciable speedup.
+	distance = FixedMul(planeheight, yslope[y]);
+	span = abs(centery - y);
+
+	if (span) // Don't divide by zero
 	{
-		cachedheight[y] = planeheight;
-		cacheddistance[y] = distance = FixedMul(planeheight, yslope[y]);
-		span = abs(centery - y);
-
-		if (span) // Don't divide by zero
-		{
-			ds_xstep = FixedMul(planesin, planeheight) / span;
-			ds_ystep = FixedMul(planecos, planeheight) / span;
-		}
-		else
-			ds_xstep = ds_ystep = FRACUNIT;
-
-		cachedxstep[y] = ds_xstep;
-		cachedystep[y] = ds_ystep;
+		ds_xstep = FixedMul(planesin, planeheight) / span;
+		ds_ystep = FixedMul(planecos, planeheight) / span;
 	}
 	else
-	{
-		distance = cacheddistance[y];
-		ds_xstep = cachedxstep[y];
-		ds_ystep = cachedystep[y];
-	}
+		ds_xstep = ds_ystep = FRACUNIT;
 
 	// [RH] Instead of using the xtoviewangle array, I calculated the fractional values
 	// at the middle of the screen, then used the calculated ds_xstep and ds_ystep
@@ -327,11 +306,7 @@ static void R_MapFogPlane(INT32 y, INT32 x1, INT32 x2)
 	if (x1 >= vid.width)
 		x1 = vid.width - 1;
 
-	if (planeheight != cachedheight[y])
-		distance = FixedMul(planeheight, yslope[y]);
-	else
-		distance = cacheddistance[y];
-
+	distance = FixedMul(planeheight, yslope[y]);
 	pindex = distance >> LIGHTZSHIFT;
 	if (pindex >= MAXLIGHTZ)
 		pindex = MAXLIGHTZ - 1;
@@ -413,9 +388,6 @@ void R_ClearPlanes(void)
 	{
 		freehead = &(*freehead)->next;
 	}
-
-	// texture calculation
-	memset(cachedheight, 0, sizeof(*cachedheight) * viewheight);
 }
 
 static visplane_t *new_visplane(unsigned hash)
@@ -1056,13 +1028,6 @@ void R_DrawSinglePlane(visplane_t *pl)
 					R_SetFlatVars(ds_flatwidth * ds_flatheight);
 					ds_powersoftwo = true;
 				}
-		}
-
-		// Don't mess with angle on slopes! We'll handle this ourselves later
-		if (!pl->slope && viewangle != pl->viewangle+pl->plangle)
-		{
-			memset(cachedheight, 0, sizeof(*cachedheight) * viewheight);
-			viewangle = pl->viewangle+pl->plangle;
 		}
 
 		mapfunc = R_MapPlane;
