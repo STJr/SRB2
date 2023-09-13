@@ -306,6 +306,21 @@ INT32 R_SkinAvailable(const char *name)
 	return -1;
 }
 
+INT32 R_GetForcedSkin(INT32 playernum)
+{
+	if (netgame && cv_forceskin.value >= 0 && R_SkinUsable(playernum, cv_forceskin.value))
+		return cv_forceskin.value;
+
+	if (mapheaderinfo[gamemap-1] && mapheaderinfo[gamemap-1]->forcecharacter[0] != '\0')
+	{
+		INT32 skinnum = R_SkinAvailable(mapheaderinfo[gamemap-1]->forcecharacter);
+		if (skinnum != -1 && R_SkinUsable(playernum, skinnum))
+			return skinnum;
+	}
+
+	return -1;
+}
+
 // Auxillary function that actually sets the skin
 static void SetSkin(player_t *player, INT32 skinnum)
 {
@@ -347,10 +362,6 @@ static void SetSkin(player_t *player, INT32 skinnum)
 
 	if (!(cv_debug || devparm) && !(netgame || multiplayer || demoplayback))
 	{
-		if (player == &players[consoleplayer])
-			CV_StealthSetValue(&cv_playercolor, skin->prefcolor);
-		else if (player == &players[secondarydisplayplayer])
-			CV_StealthSetValue(&cv_playercolor2, skin->prefcolor);
 		player->skincolor = newcolor = skin->prefcolor;
 		if (player->bot && botingame)
 		{
