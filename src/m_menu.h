@@ -415,7 +415,6 @@ typedef struct
 {
 	INT32 width, height;
 	char desc[12]; // XXXXXxYYYYY
-	UINT8 goodratio; // aspect correct if 1
 } modedesc_t;
 
 // savegame struct for save game menu

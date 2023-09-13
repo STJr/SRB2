@@ -13557,7 +13557,7 @@ static void M_VideoModeMenu(INT32 choice)
 	memset(modedescs, 0, sizeof(modedescs));
 
 	vidm_nummodes = 0;
-	vidm_selected = 0;
+	vidm_selected = -1;
 
 	for (INT32 i = 0; i < MAXWINMODES && vidm_nummodes < MAXMODEDESCS; i++)
 	{
@@ -13574,11 +13574,17 @@ static void M_VideoModeMenu(INT32 choice)
 		if (width == vid.width && height == vid.height)
 			vidm_selected = vidm_nummodes;
 
-		// Show multiples of 320x200 as green.
-		if (SCR_IsAspectCorrect(width, height))
-			desc->goodratio = 1;
-
 		vidm_nummodes++;
+	}
+
+	// Find closest resolution in the list that matches the current one
+	if (vidm_selected < 0)
+	{
+		for (INT32 i = 0; i < vidm_nummodes; i++)
+		{
+			if (modedescs[i].width >= vid.width && modedescs[i].height >= vid.height)
+				vidm_selected = i;
+		}
 	}
 
 	vidm_column_size = (vidm_nummodes + 2) / 3;
@@ -13594,9 +13600,7 @@ static void M_DrawMainVideoMenu(void)
 		INT32 y = currentMenu->y+currentMenu->menuitems[1].alphaKey*2;
 		if (itemOn == 7)
 			y -= 10;
-		V_DrawRightAlignedString(BASEVIDWIDTH - currentMenu->x, y,
-		(SCR_IsAspectCorrect(vid.width, vid.height) ? V_GREENMAP : V_YELLOWMAP),
-			va("%dx%d", vid.width, vid.height));
+		V_DrawRightAlignedString(BASEVIDWIDTH - currentMenu->x, y, V_YELLOWMAP, va("%dx%d", vid.width, vid.height));
 	}
 }
 
@@ -13617,9 +13621,8 @@ static void M_DrawVideoMode(void)
 	{
 		if (i == vidm_selected)
 			V_DrawString(row, col, V_YELLOWMAP, modedescs[i].desc);
-		// Show multiples of 320x200 as green.
 		else
-			V_DrawString(row, col, (modedescs[i].goodratio) ? V_GREENMAP : 0, modedescs[i].desc);
+			V_DrawString(row, col, 0, modedescs[i].desc);
 
 		col += 8;
 		if ((i % vidm_column_size) == (vidm_column_size-1))
@@ -13634,11 +13637,9 @@ static void M_DrawVideoMode(void)
 		INT32 testtime = (vidm_testingmode/TICRATE) + 1;
 
 		V_DrawCenteredString(BASEVIDWIDTH/2, OP_VideoModeDef.y + 116, 0,
-			va("Previewing mode %c%dx%d",
-				(SCR_IsAspectCorrect(vid.width, vid.height)) ? 0x83 : 0x80,
-				vid.width, vid.height));
+			va("Previewing resolution %dx%d", vid.width, vid.height));
 		V_DrawCenteredString(BASEVIDWIDTH/2, OP_VideoModeDef.y + 138, 0,
-			"Press ENTER again to keep this mode");
+			"Press ENTER again to keep this resolution");
 		V_DrawCenteredString(BASEVIDWIDTH/2, OP_VideoModeDef.y + 150, 0,
 			va("Wait %d second%s", testtime, (testtime > 1) ? "s" : ""));
 		V_DrawCenteredString(BASEVIDWIDTH/2, OP_VideoModeDef.y + 158, 0,
@@ -13646,28 +13647,24 @@ static void M_DrawVideoMode(void)
 	}
 	else
 	{
-		V_DrawFill(60, OP_VideoModeDef.y + 98, 200, 12, 159);
-		V_DrawFill(60, OP_VideoModeDef.y + 114, 200, 20, 159);
+		INT32 y1 = OP_VideoModeDef.y + 120;
+		INT32 y2 = y1 + 12 + 4;
 
-		V_DrawCenteredString(BASEVIDWIDTH/2, OP_VideoModeDef.y + 100, 0,
-			va("Current mode is %c%dx%d",
-				(SCR_IsAspectCorrect(vid.width, vid.height)) ? 0x83 : 0x80,
-				vid.width, vid.height));
-		V_DrawCenteredString(BASEVIDWIDTH/2, OP_VideoModeDef.y + 116, (cv_fullscreen.value ? 0 : V_TRANSLUCENT),
-			va("Default mode is %c%dx%d",
-				(SCR_IsAspectCorrect(cv_scr_width.value, cv_scr_height.value)) ? 0x83 : (!SCR_IsValidResolution(cv_scr_width.value, cv_scr_height.value) ? 0x85 : 0x80),
+		INT32 width = 256;
+
+		V_DrawFill(BASEVIDWIDTH/2 - (width / 2), y1, width, 12, 159);
+		V_DrawFill(BASEVIDWIDTH/2 - (width / 2), y2, width, 20, 159);
+
+		V_DrawCenteredString(BASEVIDWIDTH/2, y1 + 2, 0,
+			va("Current resolution is %dx%d", vid.width, vid.height));
+		V_DrawCenteredString(BASEVIDWIDTH/2, y2 + 2, (cv_fullscreen.value ? 0 : V_TRANSLUCENT),
+			va("Default resolution is %c%dx%d",
+				!SCR_IsValidResolution(cv_scr_width.value, cv_scr_height.value) ? 0x85 : 0x80,
 				cv_scr_width.value, cv_scr_height.value));
-		V_DrawCenteredString(BASEVIDWIDTH/2, OP_VideoModeDef.y + 124, (cv_fullscreen.value ? V_TRANSLUCENT : 0),
-			va("Windowed mode is %c%dx%d",
-				(SCR_IsAspectCorrect(cv_scr_width_w.value, cv_scr_height_w.value)) ? 0x83 : (!SCR_IsValidResolution(cv_scr_width_w.value, cv_scr_height_w.value) ? 0x85 : 0x80),
+		V_DrawCenteredString(BASEVIDWIDTH/2, y2 + 2 + 8, (cv_fullscreen.value ? V_TRANSLUCENT : 0),
+			va("Windowed resolution is %c%dx%d",
+				!SCR_IsValidResolution(cv_scr_width_w.value, cv_scr_height_w.value) ? 0x85 : 0x80,
 				cv_scr_width_w.value, cv_scr_height_w.value));
-
-		V_DrawCenteredString(BASEVIDWIDTH/2, OP_VideoModeDef.y + 138,
-			V_GREENMAP, "Green modes are recommended.");
-		V_DrawCenteredString(BASEVIDWIDTH/2, OP_VideoModeDef.y + 146,
-			V_YELLOWMAP, "Other modes may have visual errors.");
-		V_DrawCenteredString(BASEVIDWIDTH/2, OP_VideoModeDef.y + 158,
-			V_YELLOWMAP, "Larger modes may have performance issues.");
 	}
 
 	// Draw the cursor for the VidMode menu
