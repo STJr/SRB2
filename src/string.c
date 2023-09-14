@@ -15,7 +15,7 @@
 #include <string.h>
 #include "doomdef.h"
 
-#if !defined (__APPLE__)
+#ifndef SRB2_HAVE_STRLCPY
 
 // Like the OpenBSD version, but it doesn't check for src not being a valid
 // C string.

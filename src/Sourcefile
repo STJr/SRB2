@@ -64,6 +64,7 @@ r_skins.c
 r_sky.c
 r_splats.c
 r_things.c
+r_bbox.c
 r_textures.c
 r_patch.c
 r_patchrotation.c
@@ -80,8 +81,8 @@ mserv.c
 http-mserv.c
 i_tcp.c
 lzf.c
-vid_copy.s
 b_bot.c
+u_list.c
 lua_script.c
 lua_baselib.c
 lua_mathlib.c

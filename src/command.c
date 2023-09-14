@@ -76,6 +76,7 @@ CV_PossibleValue_t CV_OnOff[] = {{0, "Off"}, {1, "On"}, {0, NULL}};
 CV_PossibleValue_t CV_YesNo[] = {{0, "No"}, {1, "Yes"}, {0, NULL}};
 CV_PossibleValue_t CV_Unsigned[] = {{0, "MIN"}, {999999999, "MAX"}, {0, NULL}};
 CV_PossibleValue_t CV_Natural[] = {{1, "MIN"}, {999999999, "MAX"}, {0, NULL}};
+CV_PossibleValue_t CV_TrueFalse[] = {{0, "False"}, {1, "True"}, {0, NULL}};
 
 // Filter consvars by EXECVERSION
 // First implementation is 26 (2.1.21), so earlier configs default at 25 (2.1.20)
@@ -680,25 +681,58 @@ static void COM_ExecuteString(char *ptext)
 //                            SCRIPT COMMANDS
 // =========================================================================
 
+static void print_alias(void)
+{
+	cmdalias_t *a;
+
+	CONS_Printf("\x82""Current alias commands:\n");
+	for (a = com_alias; a; a = a->next)
+	{
+		CONS_Printf("%s : %s", a->name, a->value);
+	}
+}
+
+static void add_alias(char *newname, char *newcmd)
+{
+	cmdalias_t *a;
+
+	// Check for existing aliases first
+	for (a = com_alias; a; a = a->next)
+	{
+		if (!stricmp(newname, a->name))
+		{
+			Z_Free(a->value); // Free old cmd 
+			a->value = newcmd;
+			return;
+		}
+	}
+
+	// No alias found, add it instead
+	a = ZZ_Alloc(sizeof *a);
+	a->next = com_alias;
+	com_alias = a;
+
+	a->name = newname;
+	a->value = newcmd;
+}
+
 /** Creates a command name that replaces another command.
   */
 static void COM_Alias_f(void)
 {
-	cmdalias_t *a;
+	char *name;
+	char *zcmd;
 	char cmd[1024];
 	size_t i, c;
 
 	if (COM_Argc() < 3)
 	{
 		CONS_Printf(M_GetText("alias <name> <command>: create a shortcut command that executes other command(s)\n"));
+		print_alias();
 		return;
 	}
 
-	a = ZZ_Alloc(sizeof *a);
-	a->next = com_alias;
-	com_alias = a;
-
-	a->name = Z_StrDup(COM_Argv(1));
+	name = Z_StrDup(COM_Argv(1));
 
 	// copy the rest of the command line
 	cmd[0] = 0; // start out with a null string
@@ -710,8 +744,8 @@ static void COM_Alias_f(void)
 			strcat(cmd, " ");
 	}
 	strcat(cmd, "\n");
-
-	a->value = Z_StrDup(cmd);
+	zcmd = Z_StrDup(cmd);
+	add_alias(name, zcmd);
 }
 
 /** Prints a line of text to the console.
@@ -863,9 +897,11 @@ static void COM_Help_f(void)
 			{
 				CONS_Printf(" Possible values:\n");
 				if (cvar->PossibleValue == CV_YesNo)
-					CONS_Printf("  Yes or No (On or Off, 1 or 0)\n");
+					CONS_Printf("  Yes or No (On or Off, True or False, 1 or 0)\n");
 				else if (cvar->PossibleValue == CV_OnOff)
-					CONS_Printf("  On or Off (Yes or No, 1 or 0)\n");
+					CONS_Printf("  On or Off (Yes or No, True or False, 1 or 0)\n");
+				else if (cvar->PossibleValue == CV_TrueFalse)
+					CONS_Printf("  True or False (On or Off, Yes or No, 1 or 0)\n");
 				else if (cvar->PossibleValue == Color_cons_t)
 				{
 					for (i = 1; i < numskincolors; ++i)
@@ -1016,7 +1052,7 @@ static void COM_Toggle_f(void)
 	if (CV_Immutable(cvar))
 		return;
 
-	if (!(cvar->PossibleValue == CV_YesNo || cvar->PossibleValue == CV_OnOff))
+	if (!(cvar->PossibleValue == CV_YesNo || cvar->PossibleValue == CV_OnOff || cvar->PossibleValue == CV_TrueFalse))
 	{
 		CONS_Alert(CONS_NOTICE, M_GetText("%s is not a boolean value\n"), COM_Argv(1));
 		return;
@@ -1507,12 +1543,12 @@ static void Setvalue(consvar_t *var, const char *valstr, boolean stealth)
 						goto found;
 			}
 			// Not found ... but wait, there's hope!
-			if (var->PossibleValue == CV_OnOff || var->PossibleValue == CV_YesNo)
+			if (var->PossibleValue == CV_OnOff || var->PossibleValue == CV_YesNo || var->PossibleValue == CV_TrueFalse)
 			{
 				overrideval = -1;
-				if (!stricmp(valstr, "on") || !stricmp(valstr, "yes"))
+				if (!stricmp(valstr, "on") || !stricmp(valstr, "yes") || !stricmp(valstr, "true"))
 					overrideval = 1;
-				else if (!stricmp(valstr, "off") || !stricmp(valstr, "no"))
+				else if (!stricmp(valstr, "off") || !stricmp(valstr, "no") || !stricmp(valstr, "false"))
 					overrideval = 0;
 
 				if (overrideval != -1)

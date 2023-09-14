@@ -1146,7 +1146,7 @@ static void HWR_GetBlendedTexture(patch_t *patch, patch_t *blendpatch, INT32 ski
 static boolean HWR_AllowModel(mobj_t *mobj)
 {
 	// Signpost overlay. Not needed.
-	if (mobj->state-states == S_PLAY_SIGN)
+	if (mobj->sprite2 == SPR2_SIGN || mobj->state-states == S_PLAY_SIGN)
 		return false;
 
 	// Otherwise, render the model.
@@ -1346,10 +1346,7 @@ boolean HWR_DrawModel(gl_vissprite_t *spr)
 		const UINT8 hflip = (UINT8)(!(spr->mobj->mirrored) != !R_ThingHorizontallyFlipped(spr->mobj));
 		spritedef_t *sprdef;
 		spriteframe_t *sprframe;
-		spriteinfo_t *sprinfo;
-		angle_t ang;
 		INT32 mod;
-		float finalscale;
 		interpmobjstate_t interp;
 
 		if (R_UsingFrameInterpolation() && !paused)
@@ -1388,12 +1385,10 @@ boolean HWR_DrawModel(gl_vissprite_t *spr)
 		{
 			md2 = &md2_playermodels[(skin_t*)spr->mobj->skin-skins];
 			md2->skin = (skin_t*)spr->mobj->skin-skins;
-			sprinfo = &((skin_t *)spr->mobj->skin)->sprinfo[spr->mobj->sprite2];
 		}
 		else
 		{
 			md2 = &md2_models[spr->mobj->sprite];
-			sprinfo = &spriteinfo[spr->mobj->sprite];
 		}
 
 		// texture loading before model init, so it knows if sprite graphics are used, which
@@ -1455,7 +1450,6 @@ boolean HWR_DrawModel(gl_vissprite_t *spr)
 		}
 
 		//HWD.pfnSetBlend(blend); // This seems to actually break translucency?
-		finalscale = md2->scale;
 		//Hurdler: arf, I don't like that implementation at all... too much crappy
 
 		if (gpatch && hwrPatch && hwrPatch->mipmap->format) // else if meant that if a texture couldn't be loaded, it would just end up using something else's texture
@@ -1591,7 +1585,7 @@ boolean HWR_DrawModel(gl_vissprite_t *spr)
 		p.y = FIXED_TO_FLOAT(interp.y)+md2->offset;
 
 		if (flip)
-			p.z = FIXED_TO_FLOAT(interp.z + spr->mobj->height);
+			p.z = FIXED_TO_FLOAT(interp.z + interp.height);
 		else
 			p.z = FIXED_TO_FLOAT(interp.z);
 
@@ -1614,61 +1608,56 @@ boolean HWR_DrawModel(gl_vissprite_t *spr)
 			p.angley = FIXED_TO_FLOAT(anglef);
 		}
 
-		p.rollangle = 0.0f;
-		p.rollflip = 1;
-		p.rotaxis = 0;
-		if (spr->mobj->rollangle)
 		{
-			fixed_t anglef = AngleFixed(spr->mobj->rollangle);
-			p.rollangle = FIXED_TO_FLOAT(anglef);
-			p.roll = true;
+			fixed_t anglef = AngleFixed(R_ModelRotationAngle(&interp));
 
-			// rotation pivot
-			p.centerx = FIXED_TO_FLOAT(spr->mobj->radius/2);
-			p.centery = FIXED_TO_FLOAT(spr->mobj->height/(flip ? -2 : 2));
+			p.rollangle = 0.0f;
 
-			// rotation axis
-			if (sprinfo->available)
-				p.rotaxis = (UINT8)(sprinfo->pivot[(spr->mobj->frame & FF_FRAMEMASK)].rotaxis);
+			if (anglef)
+			{
+				fixed_t camAngleDiff = AngleFixed(viewangle) - FLOAT_TO_FIXED(p.angley); // dumb reconversion back, I know
 
-			// for NiGHTS specifically but should work everywhere else
-			ang = R_PointToAngle (interp.x, interp.y) - interp.angle;
-			if ((sprframe->rotate & SRF_RIGHT) && (ang < ANGLE_180)) // See from right
-				p.rollflip = 1;
-			else if ((sprframe->rotate & SRF_LEFT) && (ang >= ANGLE_180)) // See from left
-				p.rollflip = -1;
+				p.rollangle = FIXED_TO_FLOAT(anglef);
+				p.roll = true;
 
-			if (flip)
-				p.rollflip *= -1;
+				// rotation pivot
+				p.centerx = FIXED_TO_FLOAT(interp.radius / 2);
+				p.centery = FIXED_TO_FLOAT(interp.height / 2);
+
+				// rotation axes relative to camera
+				p.rollx = FIXED_TO_FLOAT(FINECOSINE(FixedAngle(camAngleDiff) >> ANGLETOFINESHIFT));
+				p.rollz = FIXED_TO_FLOAT(FINESINE(FixedAngle(camAngleDiff) >> ANGLETOFINESHIFT));
+			}
 		}
 
-		p.anglex = 0.0f;
-
-#ifdef USE_FTRANSFORM_ANGLEZ
-		// Slope rotation from Kart
-		p.anglez = 0.0f;
-		if (spr->mobj->standingslope)
-		{
-			fixed_t tempz = spr->mobj->standingslope->normal.z;
-			fixed_t tempy = spr->mobj->standingslope->normal.y;
-			fixed_t tempx = spr->mobj->standingslope->normal.x;
-			fixed_t tempangle = AngleFixed(R_PointToAngle2(0, 0, FixedSqrt(FixedMul(tempy, tempy) + FixedMul(tempz, tempz)), tempx));
-			p.anglez = FIXED_TO_FLOAT(tempangle);
-			tempangle = -AngleFixed(R_PointToAngle2(0, 0, tempz, tempy));
-			p.anglex = FIXED_TO_FLOAT(tempangle);
-		}
+#if 0
+		p.anglez = FIXED_TO_FLOAT(AngleFixed(interp.pitch));
+		p.anglex = FIXED_TO_FLOAT(AngleFixed(interp.roll));
+#else
+		p.anglez = 0.f;
+		p.anglex = 0.f;
 #endif
-
-		// SRB2CBTODO: MD2 scaling support
-		finalscale *= FIXED_TO_FLOAT(interp.scale);
 
 		p.flip = atransform.flip;
-#ifdef USE_FTRANSFORM_MIRROR
-		p.mirror = atransform.mirror; // from Kart
-#endif
+		p.mirror = atransform.mirror;
 
 		HWD.pfnSetShader(SHADER_MODEL);	// model shader
-		HWD.pfnDrawModel(md2->model, frame, durs, tics, nextFrame, &p, finalscale, flip, hflip, &Surf);
+		{
+			float this_scale = FIXED_TO_FLOAT(interp.scale);
+
+			float xs = this_scale * FIXED_TO_FLOAT(interp.spritexscale);
+			float ys = this_scale * FIXED_TO_FLOAT(interp.spriteyscale);
+
+			float ox = xs * FIXED_TO_FLOAT(interp.spritexoffset);
+			float oy = ys * FIXED_TO_FLOAT(interp.spriteyoffset);
+
+			// offset perpendicular to the camera angle
+			p.x -= ox * gl_viewsin;
+			p.y += ox * gl_viewcos;
+			p.z += oy;
+
+			HWD.pfnDrawModel(md2->model, frame, durs, tics, nextFrame, &p, md2->scale * xs, md2->scale * ys, flip, hflip, &Surf);
+		}
 	}
 
 	return true;

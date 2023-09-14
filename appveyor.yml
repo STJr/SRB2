@@ -1,4 +1,4 @@
-version: 2.2.11.{branch}-{build}
+version: 2.2.13.{branch}-{build}
 os: MinGW
 
 environment:
@@ -7,8 +7,6 @@ environment:
  # c:\mingw-w64 i686 has gcc 6.3.0, so use c:\msys64 7.3.0 instead
  MINGW_SDK: c:\msys64\mingw32
  CFLAGS: -Wno-implicit-fallthrough
- NASM_ZIP: nasm-2.12.01
- NASM_URL: http://www.nasm.us/pub/nasm/releasebuilds/2.12.01/win64/nasm-2.12.01-win64.zip
  UPX_ZIP: upx391w
  UPX_URL: http://upx.sourceforge.net/download/upx391w.zip
  CCACHE_EXE: ccache.exe
@@ -40,17 +38,12 @@ environment:
  ASSET_CLEAN: 0
 
 cache:
-- nasm-2.12.01.zip
 - upx391w.zip
 - ccache.exe
 - C:\Users\appveyor\.ccache
 - C:\Users\appveyor\srb2_cache
 
 install:
-- if not exist "%NASM_ZIP%.zip" appveyor DownloadFile "%NASM_URL%" -FileName "%NASM_ZIP%.zip"
-- 7z x -y "%NASM_ZIP%.zip" -o%TMP% >null
-- robocopy /S /xx /ns /nc /nfl /ndl /np /njh /njs "%TMP%\%NASM_ZIP%" "%MINGW_SDK%\bin" nasm.exe || exit 0
-
 - if not exist "%UPX_ZIP%.zip" appveyor DownloadFile "%UPX_URL%" -FileName "%UPX_ZIP%.zip"
 - 7z x -y "%UPX_ZIP%.zip" -o%TMP% >null
 - robocopy /S /xx /ns /nc /nfl /ndl /np /njh /njs "%TMP%\%UPX_ZIP%" "%MINGW_SDK%\bin" upx.exe || exit 0
@@ -65,7 +58,6 @@ configuration:
 before_build:
 - set "Path=%MINGW_SDK%\bin;%Path%"
 - mingw32-make --version
-- nasm -v
 - if not [%NOUPX%] == [1] ( upx -V )
 - ccache -V
 - ccache -s

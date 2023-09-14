@@ -49,6 +49,8 @@ extern boolean promptactive;
 
 extern consvar_t cv_pauseifunfocused;
 
+extern consvar_t cv_instantretry;
+
 // used in game menu
 extern consvar_t cv_tutorialprompt;
 extern consvar_t cv_chatwidth, cv_chatnotifications, cv_chatheight, cv_chattime, cv_consolechat, cv_chatbacktint, cv_chatspamprotection, cv_compactscoreboard;
@@ -260,8 +262,7 @@ UINT32 G_GetBestNightsScore(INT16 map, UINT8 mare, gamedata_t *data);
 tic_t G_GetBestNightsTime(INT16 map, UINT8 mare, gamedata_t *data);
 UINT8 G_GetBestNightsGrade(INT16 map, UINT8 mare, gamedata_t *data);
 
-void G_AddTempNightsRecords(UINT32 pscore, tic_t ptime, UINT8 mare);
-void G_SetNightsRecords(gamedata_t *data);
+void G_AddTempNightsRecords(player_t *player, UINT32 pscore, tic_t ptime, UINT8 mare);
 
 FUNCMATH INT32 G_TicsToHours(tic_t tics);
 FUNCMATH INT32 G_TicsToMinutes(tic_t tics, boolean full);

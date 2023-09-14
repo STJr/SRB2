@@ -66,6 +66,7 @@ static void HWR_ProjectSprite(mobj_t *thing);
 #ifdef HWPRECIP
 static void HWR_ProjectPrecipitationSprite(precipmobj_t *thing);
 #endif
+static void HWR_ProjectBoundingBox(mobj_t *thing);
 
 void HWR_AddTransparentFloor(levelflat_t *levelflat, extrasubsector_t *xsub, boolean isceiling, fixed_t fixedheight, INT32 lightlevel, INT32 alpha, sector_t *FOFSector, FBITFIELD blend, boolean fogplane, extracolormap_t *planecolormap);
 void HWR_AddTransparentPolyobjectFloor(levelflat_t *levelflat, polyobj_t *polysector, boolean isceiling, fixed_t fixedheight,
@@ -139,7 +140,7 @@ static fixed_t dup_viewx, dup_viewy, dup_viewz;
 static angle_t dup_viewangle;
 
 static float gl_viewx, gl_viewy, gl_viewz;
-static float gl_viewsin, gl_viewcos;
+float gl_viewsin, gl_viewcos;
 
 // Maybe not necessary with the new T&L code (needs to be checked!)
 static float gl_viewludsin, gl_viewludcos; // look up down kik test
@@ -459,30 +460,30 @@ static void HWR_RenderPlane(subsector_t *subsector, extrasubsector_t *xsub, bool
 	{
 		if (!isceiling) // it's a floor
 		{
-			scrollx = FIXED_TO_FLOAT(FOFsector->floor_xoffs)/fflatwidth;
-			scrolly = FIXED_TO_FLOAT(FOFsector->floor_yoffs)/fflatheight;
-			angle = FOFsector->floorpic_angle;
+			scrollx = FIXED_TO_FLOAT(FOFsector->floorxoffset)/fflatwidth;
+			scrolly = FIXED_TO_FLOAT(FOFsector->flooryoffset)/fflatheight;
+			angle = FOFsector->floorangle;
 		}
 		else // it's a ceiling
 		{
-			scrollx = FIXED_TO_FLOAT(FOFsector->ceiling_xoffs)/fflatwidth;
-			scrolly = FIXED_TO_FLOAT(FOFsector->ceiling_yoffs)/fflatheight;
-			angle = FOFsector->ceilingpic_angle;
+			scrollx = FIXED_TO_FLOAT(FOFsector->ceilingxoffset)/fflatwidth;
+			scrolly = FIXED_TO_FLOAT(FOFsector->ceilingyoffset)/fflatheight;
+			angle = FOFsector->ceilingangle;
 		}
 	}
 	else if (gl_frontsector)
 	{
 		if (!isceiling) // it's a floor
 		{
-			scrollx = FIXED_TO_FLOAT(gl_frontsector->floor_xoffs)/fflatwidth;
-			scrolly = FIXED_TO_FLOAT(gl_frontsector->floor_yoffs)/fflatheight;
-			angle = gl_frontsector->floorpic_angle;
+			scrollx = FIXED_TO_FLOAT(gl_frontsector->floorxoffset)/fflatwidth;
+			scrolly = FIXED_TO_FLOAT(gl_frontsector->flooryoffset)/fflatheight;
+			angle = gl_frontsector->floorangle;
 		}
 		else // it's a ceiling
 		{
-			scrollx = FIXED_TO_FLOAT(gl_frontsector->ceiling_xoffs)/fflatwidth;
-			scrolly = FIXED_TO_FLOAT(gl_frontsector->ceiling_yoffs)/fflatheight;
-			angle = gl_frontsector->ceilingpic_angle;
+			scrollx = FIXED_TO_FLOAT(gl_frontsector->ceilingxoffset)/fflatwidth;
+			scrolly = FIXED_TO_FLOAT(gl_frontsector->ceilingyoffset)/fflatheight;
+			angle = gl_frontsector->ceilingangle;
 		}
 	}
 
@@ -1698,7 +1699,7 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 					if ((rover->fofflags & FOF_TRANSLUCENT && !(rover->fofflags & FOF_SPLAT)) || rover->blend)
 					{
 						blendmode = rover->blend ? HWR_GetBlendModeFlag(rover->blend) : PF_Translucent;
-						Surf.PolyColor.s.alpha = (UINT8)rover->alpha-1 > 255 ? 255 : rover->alpha-1;
+						Surf.PolyColor.s.alpha = max(0, min(rover->alpha, 255));
 					}
 
 					if (gl_frontsector->numlights)
@@ -1821,7 +1822,7 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 					if ((rover->fofflags & FOF_TRANSLUCENT && !(rover->fofflags & FOF_SPLAT)) || rover->blend)
 					{
 						blendmode = rover->blend ? HWR_GetBlendModeFlag(rover->blend) : PF_Translucent;
-						Surf.PolyColor.s.alpha = (UINT8)rover->alpha-1 > 255 ? 255 : rover->alpha-1;
+						Surf.PolyColor.s.alpha = max(0, min(rover->alpha, 255));
 					}
 
 					if (gl_backsector->numlights)
@@ -2719,30 +2720,30 @@ static void HWR_RenderPolyObjectPlane(polyobj_t *polysector, boolean isceiling, 
 	{
 		if (!isceiling) // it's a floor
 		{
-			scrollx = FIXED_TO_FLOAT(FOFsector->floor_xoffs)/fflatwidth;
-			scrolly = FIXED_TO_FLOAT(FOFsector->floor_yoffs)/fflatheight;
-			angle = FOFsector->floorpic_angle;
+			scrollx = FIXED_TO_FLOAT(FOFsector->floorxoffset)/fflatwidth;
+			scrolly = FIXED_TO_FLOAT(FOFsector->flooryoffset)/fflatheight;
+			angle = FOFsector->floorangle;
 		}
 		else // it's a ceiling
 		{
-			scrollx = FIXED_TO_FLOAT(FOFsector->ceiling_xoffs)/fflatwidth;
-			scrolly = FIXED_TO_FLOAT(FOFsector->ceiling_yoffs)/fflatheight;
-			angle = FOFsector->ceilingpic_angle;
+			scrollx = FIXED_TO_FLOAT(FOFsector->ceilingxoffset)/fflatwidth;
+			scrolly = FIXED_TO_FLOAT(FOFsector->ceilingyoffset)/fflatheight;
+			angle = FOFsector->ceilingangle;
 		}
 	}
 	else if (gl_frontsector)
 	{
 		if (!isceiling) // it's a floor
 		{
-			scrollx = FIXED_TO_FLOAT(gl_frontsector->floor_xoffs)/fflatwidth;
-			scrolly = FIXED_TO_FLOAT(gl_frontsector->floor_yoffs)/fflatheight;
-			angle = gl_frontsector->floorpic_angle;
+			scrollx = FIXED_TO_FLOAT(gl_frontsector->floorxoffset)/fflatwidth;
+			scrolly = FIXED_TO_FLOAT(gl_frontsector->flooryoffset)/fflatheight;
+			angle = gl_frontsector->floorangle;
 		}
 		else // it's a ceiling
 		{
-			scrollx = FIXED_TO_FLOAT(gl_frontsector->ceiling_xoffs)/fflatwidth;
-			scrolly = FIXED_TO_FLOAT(gl_frontsector->ceiling_yoffs)/fflatheight;
-			angle = gl_frontsector->ceilingpic_angle;
+			scrollx = FIXED_TO_FLOAT(gl_frontsector->ceilingxoffset)/fflatwidth;
+			scrolly = FIXED_TO_FLOAT(gl_frontsector->ceilingyoffset)/fflatheight;
+			angle = gl_frontsector->ceilingangle;
 		}
 	}
 
@@ -3094,7 +3095,7 @@ static void HWR_Subsector(size_t num)
 										   false,
 					                       *rover->bottomheight,
 					                       *gl_frontsector->lightlist[light].lightlevel,
-					                       rover->alpha-1 > 255 ? 255 : rover->alpha-1, rover->master->frontsector,
+					                       max(0, min(rover->alpha, 255)), rover->master->frontsector,
 					                       HWR_RippleBlend(gl_frontsector, rover, false) | (rover->blend ? HWR_GetBlendModeFlag(rover->blend) : PF_Translucent),
 					                       false, *gl_frontsector->lightlist[light].extra_colormap);
 				}
@@ -3140,7 +3141,7 @@ static void HWR_Subsector(size_t num)
 											true,
 					                        *rover->topheight,
 					                        *gl_frontsector->lightlist[light].lightlevel,
-					                        rover->alpha-1 > 255 ? 255 : rover->alpha-1, rover->master->frontsector,
+					                        max(0, min(rover->alpha, 255)), rover->master->frontsector,
 					                        HWR_RippleBlend(gl_frontsector, rover, false) | (rover->blend ? HWR_GetBlendModeFlag(rover->blend) : PF_Translucent),
 					                        false, *gl_frontsector->lightlist[light].extra_colormap);
 				}
@@ -3594,7 +3595,7 @@ static void HWR_DrawDropShadow(mobj_t *thing, fixed_t scale)
 			return;
 	}
 
-	floordiff = abs((flip < 0 ? thing->height : 0) + interp.z - groundz);
+	floordiff = abs((flip < 0 ? interp.height : 0) + interp.z - groundz);
 
 	alpha = floordiff / (4*FRACUNIT) + 75;
 	if (alpha >= 255) return;
@@ -3605,9 +3606,7 @@ static void HWR_DrawDropShadow(mobj_t *thing, fixed_t scale)
 	HWR_GetPatch(gpatch);
 
 	scalemul = FixedMul(FRACUNIT - floordiff/640, scale);
-	scalemul = FixedMul(scalemul, (thing->radius*2) / gpatch->height);
-	if ((thing->scale != thing->old_scale) && (thing->scale >= FRACUNIT/1024)) // Interpolate shadows when scaling mobjs
-		scalemul = FixedMul(scalemul, FixedDiv(interp.scale, thing->scale));
+	scalemul = FixedMul(scalemul, (interp.radius*2) / gpatch->height);
 
 	fscale = FIXED_TO_FLOAT(scalemul);
 	fx = FIXED_TO_FLOAT(interp.x);
@@ -3719,7 +3718,7 @@ static void HWR_RotateSpritePolyToAim(gl_vissprite_t *spr, FOutVector *wallVerts
 
 		if (P_MobjFlip(spr->mobj) == -1)
 		{
-			basey = FIXED_TO_FLOAT(interp.z + spr->mobj->height);
+			basey = FIXED_TO_FLOAT(interp.z + interp.height);
 		}
 		else
 		{
@@ -4038,6 +4037,54 @@ static void HWR_SplitSprite(gl_vissprite_t *spr)
 		HWR_LinkDrawHackAdd(wallVerts, spr);
 }
 
+static void HWR_DrawBoundingBox(gl_vissprite_t *vis)
+{
+	FOutVector v[24];
+	FSurfaceInfo Surf = {0};
+
+	//
+	// create a cube (side view)
+	//
+	//  5--4  3
+	//        |
+	//        |
+	//  0--1  2
+	//
+	// repeat this 4 times (overhead)
+	//
+	//
+	// 15    16  17    09
+	//    14 13  12 08
+	// 23 18  *--*  07 10
+	//        |  |
+	// 22 19  *--*  06 11
+	//    20 00  01 02
+	// 21    05  04    03
+	//
+
+	v[ 0].x = v[ 5].x = v[13].x = v[14].x = v[15].x = v[16].x =
+		v[18].x = v[19].x = v[20].x = v[21].x = v[22].x = v[23].x = vis->x1; // west
+
+	v[ 1].x = v[ 2].x = v[ 3].x = v[ 4].x = v[ 6].x = v[ 7].x =
+		v[ 8].x = v[ 9].x = v[10].x = v[11].x = v[12].x = v[17].x = vis->x2; // east
+
+	v[ 0].z = v[ 1].z = v[ 2].z = v[ 3].z = v[ 4].z = v[ 5].z =
+		v[ 6].z = v[11].z = v[19].z = v[20].z = v[21].z = v[22].z = vis->z1; // south
+
+	v[ 7].z = v[ 8].z = v[ 9].z = v[10].z = v[12].z = v[13].z =
+		v[14].z = v[15].z = v[16].z = v[17].z = v[18].z = v[23].z = vis->z2; // north
+
+	v[ 0].y = v[ 1].y = v[ 2].y = v[ 6].y = v[ 7].y = v[ 8].y =
+		v[12].y = v[13].y = v[14].y = v[18].y = v[19].y = v[20].y = vis->gz; // bottom
+
+	v[ 3].y = v[ 4].y = v[ 5].y = v[ 9].y = v[10].y = v[11].y =
+		v[15].y = v[16].y = v[17].y = v[21].y = v[22].y = v[23].y = vis->gzt; // top
+
+	Surf.PolyColor = V_GetColor(R_GetBoundingBoxColor(vis->mobj));
+	
+	HWR_ProcessPolygon(&Surf, v, 24, (cv_renderhitboxgldepth.value ? 0 : PF_NoDepthTest)|PF_Modulated|PF_NoTexture|PF_WireFrame, SHADER_NONE, false);
+}
+
 // -----------------+
 // HWR_DrawSprite   : Draw flat sprites
 //                  : (monsters, bonuses, weapons, lights, ...)
@@ -4109,7 +4156,7 @@ static void HWR_DrawSprite(gl_vissprite_t *spr)
 			angle = viewangle;
 
 		if (!spr->rotated)
-			angle += spr->mobj->rollangle;
+			angle += spr->mobj->spriteroll;
 
 		angle = -angle;
 		angle += ANGLE_90;
@@ -4482,9 +4529,16 @@ static int CompareVisSprites(const void *p1, const void *p2)
 	int transparency1;
 	int transparency2;
 
+	int linkdraw1;
+	int linkdraw2;
+
+	// draw bbox after everything else
+	if (spr1->bbox || spr2->bbox)
+		return (spr1->bbox - spr2->bbox);
+
 	// check for precip first, because then sprX->mobj is actually a precipmobj_t and does not have flags2 or tracer
-	int linkdraw1 = !spr1->precip && (spr1->mobj->flags2 & MF2_LINKDRAW) && spr1->mobj->tracer;
-	int linkdraw2 = !spr2->precip && (spr2->mobj->flags2 & MF2_LINKDRAW) && spr2->mobj->tracer;
+	linkdraw1 = !spr1->precip && (spr1->mobj->flags2 & MF2_LINKDRAW) && spr1->mobj->tracer;
+	linkdraw2 = !spr2->precip && (spr2->mobj->flags2 & MF2_LINKDRAW) && spr2->mobj->tracer;
 
 	// ^ is the XOR operation
 	// if comparing a linkdraw and non-linkdraw sprite or 2 linkdraw sprites with different tracers, then use
@@ -4854,6 +4908,9 @@ static void HWR_DrawSprites(void)
 	for (i = 0; i < gl_visspritecount; i++)
 	{
 		gl_vissprite_t *spr = gl_vsprorder[i];
+		if (spr->bbox)
+			HWR_DrawBoundingBox(spr);
+		else
 #ifdef HWPRECIP
 		if (spr->precip)
 			HWR_DrawPrecipitationSprite(spr);
@@ -4953,8 +5010,15 @@ static void HWR_AddSprites(sector_t *sec)
 	hoop_limit_dist = (fixed_t)(cv_drawdist_nights.value) << FRACBITS;
 	for (thing = sec->thinglist; thing; thing = thing->snext)
 	{
-		if (R_ThingVisibleWithinDist(thing, limit_dist, hoop_limit_dist))
-			HWR_ProjectSprite(thing);
+		if (R_ThingWithinDist(thing, limit_dist, hoop_limit_dist))
+		{
+			if (R_ThingVisible(thing))
+			{
+				HWR_ProjectSprite(thing);
+			}
+
+			HWR_ProjectBoundingBox(thing);
+		}
 	}
 
 #ifdef HWPRECIP
@@ -5012,6 +5076,7 @@ static void HWR_ProjectSprite(mobj_t *thing)
 #ifdef ROTSPRITE
 	patch_t *rotsprite = NULL;
 	INT32 rollangle = 0;
+	angle_t spriterotangle = 0;
 #endif
 
 	// uncapped/interpolation
@@ -5179,18 +5244,21 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	spr_topoffset = spritecachedinfo[lumpoff].topoffset;
 
 #ifdef ROTSPRITE
-	if (thing->rollangle
+	spriterotangle = R_SpriteRotationAngle(&interp);
+
+	if (spriterotangle != 0
 	&& !(splat && !(thing->renderflags & RF_NOSPLATROLLANGLE)))
 	{
 		if (papersprite)
 		{
 			// a positive rollangle should should pitch papersprites upwards relative to their facing angle
-			rollangle = R_GetRollAngle(InvAngle(thing->rollangle));
+			rollangle = R_GetRollAngle(InvAngle(spriterotangle));
 		}
 		else
 		{
-			rollangle = R_GetRollAngle(thing->rollangle);
+			rollangle = R_GetRollAngle(spriterotangle);
 		}
+
 		rotsprite = Patch_GetRotatedSprite(sprframe, (thing->frame & FF_FRAMEMASK), rot, flip, false, sprinfo, rollangle);
 
 		if (rotsprite != NULL)
@@ -5256,7 +5324,7 @@ static void HWR_ProjectSprite(mobj_t *thing)
 			}
 
 			groundz = R_GetShadowZ(thing, NULL);
-			floordiff = abs(((thing->eflags & MFE_VERTICALFLIP) ? caster->height : 0) + casterinterp.z - groundz);
+			floordiff = abs(((thing->eflags & MFE_VERTICALFLIP) ? casterinterp.height : 0) + casterinterp.z - groundz);
 
 			shadowheight = FIXED_TO_FLOAT(floordiff);
 			shadowscale = FIXED_TO_FLOAT(FixedMul(FRACUNIT - floordiff/640, casterinterp.scale));
@@ -5308,7 +5376,7 @@ static void HWR_ProjectSprite(mobj_t *thing)
 
 		if (vflip)
 		{
-			gz = FIXED_TO_FLOAT(interp.z + thing->height) - (FIXED_TO_FLOAT(spr_topoffset) * this_yscale);
+			gz = FIXED_TO_FLOAT(interp.z + interp.height) - (FIXED_TO_FLOAT(spr_topoffset) * this_yscale);
 			gzt = gz + (FIXED_TO_FLOAT(spr_height) * this_yscale);
 		}
 		else
@@ -5472,6 +5540,7 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	vis->vflip = vflip;
 
 	vis->precip = false;
+	vis->bbox = false;
 
 	vis->angle = interp.angle;
 }
@@ -5594,6 +5663,7 @@ static void HWR_ProjectPrecipitationSprite(precipmobj_t *thing)
 	vis->gz = vis->gzt - FIXED_TO_FLOAT(spritecachedinfo[lumpoff].height);
 
 	vis->precip = true;
+	vis->bbox = false;
 
 	// okay... this is a hack, but weather isn't networked, so it should be ok
 	if (!(thing->precipflags & PCF_THUNK))
@@ -5606,6 +5676,58 @@ static void HWR_ProjectPrecipitationSprite(precipmobj_t *thing)
 	}
 }
 #endif
+
+static void HWR_ProjectBoundingBox(mobj_t *thing)
+{
+	gl_vissprite_t *vis;
+	float tr_x, tr_y;
+	float tz;
+
+	if (!thing)
+		return;
+
+	if (!R_ThingBoundingBoxVisible(thing))
+		return;
+
+	// uncapped/interpolation
+	boolean interpolate = cv_renderhitboxinterpolation.value;
+	interpmobjstate_t interp = {0};
+
+	if (R_UsingFrameInterpolation() && !paused && interpolate)
+	{
+		R_InterpolateMobjState(thing, rendertimefrac, &interp);
+	}
+	else
+	{
+		R_InterpolateMobjState(thing, FRACUNIT, &interp);
+	}
+
+	// transform the origin point
+	tr_x = FIXED_TO_FLOAT(interp.x) - gl_viewx;
+	tr_y = FIXED_TO_FLOAT(interp.y) - gl_viewy;
+
+	// rotation around vertical axis
+	tz = (tr_x * gl_viewcos) + (tr_y * gl_viewsin);
+
+	// thing is behind view plane?
+	if (tz < ZCLIP_PLANE)
+		return;
+
+	tr_x += gl_viewx;
+	tr_y += gl_viewy;
+
+	vis = HWR_NewVisSprite();
+	vis->x1 = tr_x - FIXED_TO_FLOAT(interp.radius);
+	vis->x2 = tr_x + FIXED_TO_FLOAT(interp.radius);
+	vis->z1 = tr_y - FIXED_TO_FLOAT(interp.radius);
+	vis->z2 = tr_y + FIXED_TO_FLOAT(interp.radius);
+	vis->gz = FIXED_TO_FLOAT(interp.z);
+	vis->gzt = vis->gz + FIXED_TO_FLOAT(interp.height);
+	vis->mobj = thing;
+
+	vis->precip = false;
+	vis->bbox = true;
+}
 
 // ==========================================================================
 // Sky dome rendering, ported from PrBoom+
@@ -5790,6 +5912,8 @@ static void HWR_DrawSkyBackground(player_t *player)
 			fixed_t rol = AngleFixed(player->viewrollangle);
 			dometransform.rollangle = FIXED_TO_FLOAT(rol);
 			dometransform.roll = true;
+			dometransform.rollx = 1.0f;
+			dometransform.rollz = 0.0f;
 		}
 		dometransform.splitscreen = splitscreen;
 
@@ -6068,6 +6192,8 @@ void HWR_RenderSkyboxView(INT32 viewnumber, player_t *player)
 		fixed_t rol = AngleFixed(player->viewrollangle);
 		atransform.rollangle = FIXED_TO_FLOAT(rol);
 		atransform.roll = true;
+		atransform.rollx = 1.0f;
+		atransform.rollz = 0.0f;
 	}
 	atransform.splitscreen = splitscreen;
 
@@ -6282,6 +6408,8 @@ void HWR_RenderPlayerView(INT32 viewnumber, player_t *player)
 		fixed_t rol = AngleFixed(player->viewrollangle);
 		atransform.rollangle = FIXED_TO_FLOAT(rol);
 		atransform.roll = true;
+		atransform.rollx = 1.0f;
+		atransform.rollz = 0.0f;
 	}
 	atransform.splitscreen = splitscreen;
 
