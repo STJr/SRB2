@@ -4410,11 +4410,12 @@ const char *const MOBJEFLAG_LIST[] = {
 	NULL
 };
 
-const char *const MAPTHINGFLAG_LIST[4] = {
+const char *const MAPTHINGFLAG_LIST[] = {
 	"EXTRA", // Extra flag for objects.
 	"OBJECTFLIP", // Reverse gravity flag for objects.
 	"OBJECTSPECIAL", // Special flag used with certain objects.
-	"AMBUSH" // Deaf monsters/do not react to sound.
+	"AMBUSH", // Deaf monsters/do not react to sound.
+	"ABSOLUTEZ" // Absolute spawn height flag for objects.
 };
 
 const char *const PLAYERFLAG_LIST[] = {
@@ -4551,6 +4552,7 @@ const char *const MSF_LIST[] = {
 const char *const SSF_LIST[] = {
 	"OUTERSPACE",
 	"DOUBLESTEPUP",
+	"NOSTEPDOWN",
 	"WINDCURRENT",
 	"CONVEYOR",
 	"SPEEDPAD",
@@ -4567,6 +4569,8 @@ const char *const SSF_LIST[] = {
 	"ZOOMTUBEEND",
 	"FINISHLINE",
 	"ROPEHANG",
+	"JUMPFLIP",
+	"GRAVITYOVERRIDE",
 	NULL
 };
 
@@ -4610,8 +4614,7 @@ const char *COLOR_ENUMS[] = {
 	// Desaturated
 	"AETHER",     	// SKINCOLOR_AETHER,
 	"SLATE",     	// SKINCOLOR_SLATE,
-	"METEORITE",   	// SKINCOLOR_METEORITE,
-	"MERCURY",     	// SKINCOLOR_MERCURY,
+	"MOONSTONE",   	// SKINCOLOR_MOONSTONE,
 	"BLUEBELL",   	// SKINCOLOR_BLUEBELL,
 	"PINK",     	// SKINCOLOR_PINK,
 	"ROSEWOOD",   	// SKINCOLOR_ROSEWOOD,
@@ -4648,10 +4651,10 @@ const char *COLOR_ENUMS[] = {
 	"COPPER",     	// SKINCOLOR_COPPER,
 	"APRICOT",     	// SKINCOLOR_APRICOT,
 	"ORANGE",     	// SKINCOLOR_ORANGE,
-	"PUMPKIN",     	// SKINCOLOR_PUMPKIN,
 	"RUST",     	// SKINCOLOR_RUST,
-	"GOLD",     	// SKINCOLOR_GOLD,
+	"TANGERINE",   	// SKINCOLOR_TANGERINE,
 	"TOPAZ",     	// SKINCOLOR_TOPAZ,
+	"GOLD",     	// SKINCOLOR_GOLD,
 	"SANDY",     	// SKINCOLOR_SANDY,
 	"GOLDENROD",   	// SKINCOLOR_GOLDENROD,
 	"YELLOW",     	// SKINCOLOR_YELLOW,
@@ -4661,20 +4664,21 @@ const char *COLOR_ENUMS[] = {
 	"LIME",     	// SKINCOLOR_LIME,
 	"PERIDOT",     	// SKINCOLOR_PERIDOT,
 	"APPLE",     	// SKINCOLOR_APPLE,
+	"HEADLIGHT",	// SKINCOLOR_HEADLIGHT,
 	"CHARTREUSE",   // SKINCOLOR_CHARTREUSE,
 	"GREEN",     	// SKINCOLOR_GREEN,
 	"FOREST",     	// SKINCOLOR_FOREST,
 	"SHAMROCK",    	// SKINCOLOR_SHAMROCK,
 	"JADE",     	// SKINCOLOR_JADE,
-	"HEADLIGHT",	// SKINCOLOR_HEADLIGHT,
 	"MINT",     	// SKINCOLOR_MINT,
 	"MASTER",     	// SKINCOLOR_MASTER,
 	"EMERALD",     	// SKINCOLOR_EMERALD,
-	"BOTTLE",     	// SKINCOLOR_BOTTLE,
 	"SEAFOAM",     	// SKINCOLOR_SEAFOAM,
 	"ISLAND",     	// SKINCOLOR_ISLAND,
+	"BOTTLE",     	// SKINCOLOR_BOTTLE,
 	"AQUA",     	// SKINCOLOR_AQUA,
 	"TEAL",     	// SKINCOLOR_TEAL,
+	"OCEAN",     	// SKINCOLOR_OCEAN,
 	"WAVE",     	// SKINCOLOR_WAVE,
 	"CYAN",     	// SKINCOLOR_CYAN,
 	"TURQUOISE",    // SKINCOLOR_TURQUOISE,
@@ -4700,7 +4704,7 @@ const char *COLOR_ENUMS[] = {
 	"NOBLE",     	// SKINCOLOR_NOBLE,
 	"FUCHSIA",     	// SKINCOLOR_FUCHSIA,
 	"BUBBLEGUM",   	// SKINCOLOR_BUBBLEGUM,
-	"CRYSTAL",    	// SKINCOLOR_CRYSTAL,
+	"SIBERITE",   	// SKINCOLOR_SIBERITE,
 	"MAGENTA",     	// SKINCOLOR_MAGENTA,
 	"NEON",     	// SKINCOLOR_NEON,
 	"VIOLET",     	// SKINCOLOR_VIOLET,

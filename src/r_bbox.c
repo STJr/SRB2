@@ -34,7 +34,7 @@ static CV_PossibleValue_t renderhitbox_cons_t[] = {
 	{RENDERHITBOX_RINGS, "Rings"},
 	{0}};
 
-consvar_t cv_renderhitbox = CVAR_INIT ("renderhitbox", "Off", CV_CHEAT, renderhitbox_cons_t, NULL);
+consvar_t cv_renderhitbox = CVAR_INIT ("renderhitbox", "Off", CV_CHEAT|CV_NOTINNET, renderhitbox_cons_t, NULL);
 consvar_t cv_renderhitboxinterpolation = CVAR_INIT ("renderhitbox_interpolation", "On", CV_SAVE, CV_OnOff, NULL);
 consvar_t cv_renderhitboxgldepth = CVAR_INIT ("renderhitbox_gldepth", "Off", CV_SAVE, CV_OnOff, NULL);
 
@@ -129,9 +129,6 @@ draw_bbox_row
 	x1 = a->x;
 	x2 = b->x;
 
-	if (x2 >= viewwidth)
-		x2 = viewwidth - 1;
-
 	if (x1 == x2 || x1 >= viewwidth || x2 < 0)
 		return;
 
@@ -158,6 +155,9 @@ draw_bbox_row
 		y2 -= x1 * s2;
 		x1 = 0;
 	}
+
+	if (x2 >= viewwidth)
+		x2 = viewwidth - 1;
 
 	while (x1 < x2)
 	{
@@ -267,6 +267,9 @@ static boolean is_tangible (mobj_t *thing)
 boolean R_ThingBoundingBoxVisible(mobj_t *thing)
 {
 	INT32 cvmode = cv_renderhitbox.value;
+
+	if (multiplayer) // No hitboxes in multiplayer to avoid cheating
+		return false;
 
 	// Do not render bbox for these
 	switch (thing->type)

@@ -1102,6 +1102,8 @@ static mapthing_t *OP_CreateNewMapThing(player_t *player, UINT16 type, boolean c
 
 	mt->options = (mt->z << ZSHIFT) | (UINT16)cv_opflags.value;
 	mt->scale = player->mo->scale;
+	mt->spritexscale = player->mo->spritexscale;
+	mt->spriteyscale = player->mo->spriteyscale;
 	memset(mt->args, 0, NUMMAPTHINGARGS*sizeof(*mt->args));
 	memset(mt->stringargs, 0x00, NUMMAPTHINGSTRINGARGS*sizeof(*mt->stringargs));
 	mt->pitch = mt->roll = 0;

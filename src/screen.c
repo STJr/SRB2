@@ -44,10 +44,6 @@
 // SRB2Kart
 #include "r_fps.h" // R_GetFramerateCap
 
-#if defined (USEASM) && !defined (NORUSEASM)//&& (!defined (_MSC_VER) || (_MSC_VER <= 1200))
-#define RUSEASM //MSC.NET can't patch itself
-#endif
-
 // --------------------------------------------
 // assembly or c drawer routines for 8bpp/16bpp
 // --------------------------------------------
@@ -102,7 +98,6 @@ UINT8 *scr_borderpatch; // flat used to fill the reduced view borders set at ST_
 //  Short and Tall sky drawer, for the current color mode
 void (*walldrawerfunc)(void);
 
-boolean R_ASM = true;
 boolean R_486 = false;
 boolean R_586 = false;
 boolean R_MMX = false;
@@ -169,26 +164,6 @@ void SCR_SetDrawFuncs(void)
 		spanfuncs_npo2[SPANDRAWFUNC_WATER] = R_DrawWaterSpan_NPO2_8;
 		spanfuncs_npo2[SPANDRAWFUNC_TILTEDWATER] = R_DrawTiltedWaterSpan_NPO2_8;
 
-#ifdef RUSEASM
-		if (R_ASM)
-		{
-			if (R_MMX)
-			{
-				colfuncs[BASEDRAWFUNC] = R_DrawColumn_8_MMX;
-				//colfuncs[COLDRAWFUNC_SHADE] = R_DrawShadeColumn_8_ASM;
-				//colfuncs[COLDRAWFUNC_FUZZY] = R_DrawTranslucentColumn_8_ASM;
-				colfuncs[COLDRAWFUNC_TWOSMULTIPATCH] = R_Draw2sMultiPatchColumn_8_MMX;
-				spanfuncs[BASEDRAWFUNC] = R_DrawSpan_8_MMX;
-			}
-			else
-			{
-				colfuncs[BASEDRAWFUNC] = R_DrawColumn_8_ASM;
-				//colfuncs[COLDRAWFUNC_SHADE] = R_DrawShadeColumn_8_ASM;
-				//colfuncs[COLDRAWFUNC_FUZZY] = R_DrawTranslucentColumn_8_ASM;
-				colfuncs[COLDRAWFUNC_TWOSMULTIPATCH] = R_Draw2sMultiPatchColumn_8_ASM;
-			}
-		}
-#endif
 	}
 /*	else if (vid.bpp > 1)
 	{
@@ -271,8 +246,6 @@ void SCR_Startup(void)
 		CONS_Printf("CPU Info: 486: %i, 586: %i, MMX: %i, 3DNow: %i, MMXExt: %i, SSE2: %i\n", R_486, R_586, R_MMX, R_3DNow, R_MMXExt, R_SSE2);
 	}
 
-	if (M_CheckParm("-noASM"))
-		R_ASM = false;
 	if (M_CheckParm("-486"))
 		R_486 = true;
 	if (M_CheckParm("-586"))

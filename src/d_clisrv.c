@@ -1295,6 +1295,7 @@ static boolean CL_AskFileList(INT32 firstfile)
 static boolean CL_SendJoin(void)
 {
 	UINT8 localplayers = 1;
+	char const *player2name;
 	if (netgame)
 		CONS_Printf(M_GetText("Sending join request...\n"));
 	netbuffer->packettype = PT_CLIENTJOIN;
@@ -1311,9 +1312,14 @@ static boolean CL_SendJoin(void)
 	CleanupPlayerName(consoleplayer, cv_playername.zstring);
 	if (splitscreen)
 		CleanupPlayerName(1, cv_playername2.zstring);/* 1 is a HACK? oh no */
+	// Avoid empty string on bots to avoid softlocking in singleplayer
+	if (botingame)
+		player2name = strcmp(cv_playername.zstring, "Tails") == 0 ? "Tail" : "Tails";
+	else
+		player2name = cv_playername2.zstring;
 
 	strncpy(netbuffer->u.clientcfg.names[0], cv_playername.zstring, MAXPLAYERNAME);
-	strncpy(netbuffer->u.clientcfg.names[1], cv_playername2.zstring, MAXPLAYERNAME);
+	strncpy(netbuffer->u.clientcfg.names[1], player2name, MAXPLAYERNAME);
 
 	return HSendPacket(servernode, true, 0, sizeof (clientconfig_pak));
 }
@@ -4578,7 +4584,7 @@ static void HandlePacketFromPlayer(SINT8 node)
 			// If we've alredy received a ticcmd for this tic, just submit it for the next one.
 			tic_t faketic = maketic;
 			if ((!!(netcmds[maketic % BACKUPTICS][netconsole].angleturn & TICCMD_RECEIVED))
-				&& (maketic - firstticstosend < BACKUPTICS))
+				&& (maketic - firstticstosend < BACKUPTICS - 1))
 				faketic++;
 
 			// Copy ticcmd

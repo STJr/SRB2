@@ -3688,7 +3688,7 @@ boolean P_CameraThinker(player_t *player, camera_t *thiscam, boolean resetcalled
 			dummy.y = thiscam->y;
 			dummy.z = thiscam->z;
 			dummy.height = thiscam->height;
-			if (!resetcalled && !(player->pflags & PF_NOCLIP) && !P_CheckSight(&dummy, player->mo)) // TODO: "P_CheckCameraSight" instead.
+			if (!resetcalled && !(player->pflags & PF_NOCLIP || player->powers[pw_carry] == CR_NIGHTSMODE) && !P_CheckSight(&dummy, player->mo)) // TODO: "P_CheckCameraSight" instead.
 				P_ResetCamera(player, thiscam);
 			else
 			{
@@ -3719,7 +3719,7 @@ boolean P_CameraThinker(player_t *player, camera_t *thiscam, boolean resetcalled
 		// adjust height
 		thiscam->z += thiscam->momz + player->mo->pmomz;
 
-		if (!itsatwodlevel && !(player->pflags & PF_NOCLIP))
+		if (!itsatwodlevel && !(player->pflags & PF_NOCLIP || player->powers[pw_carry] == CR_NIGHTSMODE))
 		{
 			// clip movement
 			if (thiscam->z <= thiscam->floorz) // hit the floor
@@ -6882,7 +6882,6 @@ void P_RunOverlays(void)
 		mo->eflags = (mo->eflags & ~MFE_VERTICALFLIP) | (mo->target->eflags & MFE_VERTICALFLIP);
 		mo->scale = mo->destscale = mo->target->scale;
 		mo->angle = (mo->target->player ? mo->target->player->drawangle : mo->target->angle) + mo->movedir;
-		P_SetTarget(&mo->dontdrawforviewmobj, mo->target->dontdrawforviewmobj); // Hide the overlay from the view that its target is hidden from - But don't copy drawonlyforplayer!
 
 		if (!(mo->state->frame & FF_ANIMATE))
 			zoffs = FixedMul(((signed)mo->state->var2)*FRACUNIT, mo->scale);
@@ -9228,7 +9227,7 @@ static void P_DragonbomberThink(mobj_t *mobj)
 		else
 		{
 			fixed_t vspeed = FixedMul(mobj->info->speed >> 3, mobj->scale);
-			fixed_t z = mobj->target->z + (mobj->height >> 1) + (mobj->flags & MFE_VERTICALFLIP ? -128*mobj->scale : 128*mobj->scale + mobj->target->height);
+			fixed_t z = mobj->target->z + (mobj->height >> 1) + (mobj->eflags & MFE_VERTICALFLIP ? -128*mobj->scale : (128*mobj->scale + mobj->target->height));
 			angle_t diff = R_PointToAngle2(mobj->x, mobj->y, mobj->target->x, mobj->target->y) - mobj->angle;
 			if (diff > ANGLE_180)
 				mobj->angle -= DRAGONTURNSPEED;
@@ -10564,6 +10563,29 @@ static fixed_t P_DefaultMobjShadowScale (mobj_t *thing)
 		case MT_REDFLAG:
 		case MT_BLUEFLAG:
 
+		case MT_BOUNCERING:
+		case MT_AUTOMATICRING:
+		case MT_INFINITYRING:
+		case MT_RAILRING:
+		case MT_EXPLOSIONRING:
+		case MT_SCATTERRING:
+		case MT_GRENADERING:
+		
+		case MT_BOUNCEPICKUP:
+		case MT_RAILPICKUP:
+		case MT_AUTOPICKUP:
+		case MT_EXPLODEPICKUP:
+		case MT_SCATTERPICKUP:
+		case MT_GRENADEPICKUP:
+		
+		case MT_REDRING:
+		case MT_THROWNBOUNCE:
+		case MT_THROWNINFINITY:
+		case MT_THROWNAUTOMATIC:
+		case MT_THROWNSCATTER:
+		case MT_THROWNEXPLOSION:
+		case MT_THROWNGRENADE:
+
 		case MT_EMBLEM:
 
 		case MT_TOKEN:
@@ -11181,12 +11203,6 @@ void P_RemoveMobj(mobj_t *mobj)
 
 	P_SetTarget(&mobj->hnext, P_SetTarget(&mobj->hprev, NULL));
 
-	// DBG: set everything in mobj_t to 0xFF instead of leaving it. debug memory error.
-#ifdef SCRAMBLE_REMOVED
-	// Invalidate mobj_t data to cause crashes if accessed!
-	memset((UINT8 *)mobj + sizeof(thinker_t), 0xff, sizeof(mobj_t) - sizeof(thinker_t));
-#endif
-
 	R_RemoveMobjInterpolator(mobj);
 
 	// free block
@@ -11205,6 +11221,17 @@ void P_RemoveMobj(mobj_t *mobj)
 	}
 
 	P_RemoveThinker((thinker_t *)mobj);
+
+#ifdef PARANOIA
+	// Saved to avoid being scrambled like below...
+	mobj->thinker.debug_mobjtype = mobj->type;
+#endif
+
+	// DBG: set everything in mobj_t to 0xFF instead of leaving it. debug memory error.
+#ifdef SCRAMBLE_REMOVED
+	// Invalidate mobj_t data to cause crashes if accessed!
+	memset((UINT8 *)mobj + sizeof(thinker_t), 0xff, sizeof(mobj_t) - sizeof(thinker_t));
+#endif
 }
 
 // This does not need to be added to Lua.
@@ -11836,7 +11863,7 @@ void P_MovePlayerToStarpost(INT32 playernum)
 mapthing_t *huntemeralds[MAXHUNTEMERALDS];
 INT32 numhuntemeralds;
 
-fixed_t P_GetMobjSpawnHeight(const mobjtype_t mobjtype, const fixed_t x, const fixed_t y, const fixed_t dz, const fixed_t offset, const boolean flip, const fixed_t scale)
+fixed_t P_GetMobjSpawnHeight(const mobjtype_t mobjtype, const fixed_t x, const fixed_t y, const fixed_t dz, const fixed_t offset, const boolean flip, const fixed_t scale, const boolean absolutez)
 {
 	const subsector_t *ss = R_PointInSubsector(x, y);
 
@@ -11846,9 +11873,9 @@ fixed_t P_GetMobjSpawnHeight(const mobjtype_t mobjtype, const fixed_t x, const f
 
 	// Establish height.
 	if (flip)
-		return P_GetSectorCeilingZAt(ss->sector, x, y) - dz - FixedMul(scale, offset + mobjinfo[mobjtype].height);
+		return (absolutez ? dz : P_GetSectorCeilingZAt(ss->sector, x, y) - dz) - FixedMul(scale, offset + mobjinfo[mobjtype].height);
 	else
-		return P_GetSectorFloorZAt(ss->sector, x, y) + dz + FixedMul(scale, offset);
+		return (absolutez ? dz : P_GetSectorFloorZAt(ss->sector, x, y) + dz) + FixedMul(scale, offset);
 }
 
 fixed_t P_GetMapThingSpawnHeight(const mobjtype_t mobjtype, const mapthing_t* mthing, const fixed_t x, const fixed_t y)
@@ -11856,6 +11883,7 @@ fixed_t P_GetMapThingSpawnHeight(const mobjtype_t mobjtype, const mapthing_t* mt
 	fixed_t dz = mthing->z << FRACBITS; // Base offset from the floor.
 	fixed_t offset = 0; // Specific scaling object offset.
 	boolean flip = (!!(mobjinfo[mobjtype].flags & MF_SPAWNCEILING) ^ !!(mthing->options & MTF_OBJECTFLIP));
+	boolean absolutez = !!(mthing->options & MTF_ABSOLUTEZ);
 
 	switch (mobjtype)
 	{
@@ -11911,7 +11939,7 @@ fixed_t P_GetMapThingSpawnHeight(const mobjtype_t mobjtype, const mapthing_t* mt
 			offset += mthing->args[0] ? 0 : 24*FRACUNIT;
 	}
 
-	if (!(dz + offset)) // Snap to the surfaces when there's no offset set.
+	if (!(dz + offset) && !absolutez) // Snap to the surfaces when there's no offset set.
 	{
 		if (flip)
 			return ONCEILINGZ;
@@ -11919,7 +11947,7 @@ fixed_t P_GetMapThingSpawnHeight(const mobjtype_t mobjtype, const mapthing_t* mt
 			return ONFLOORZ;
 	}
 
-	return P_GetMobjSpawnHeight(mobjtype, x, y, dz, offset, flip, mthing->scale);
+	return P_GetMobjSpawnHeight(mobjtype, x, y, dz, offset, flip, mthing->scale, absolutez);
 }
 
 static boolean P_SpawnNonMobjMapThing(mapthing_t *mthing)
@@ -12588,7 +12616,7 @@ static boolean P_SetupNiGHTSDrone(mapthing_t *mthing, mobj_t *mobj)
 	dronemangoaldiff = max(mobjinfo[MT_NIGHTSDRONE_MAN].height - mobjinfo[MT_NIGHTSDRONE_GOAL].height, 0);
 
 	if (flip && mobj->height != oldheight)
-		P_MoveOrigin(mobj, mobj->x, mobj->y, mobj->z - (mobj->height - oldheight));
+		P_SetOrigin(mobj, mobj->x, mobj->y, mobj->z - (mobj->height - oldheight));
 
 	if (!flip)
 	{
@@ -13327,6 +13355,9 @@ static mobj_t *P_SpawnMobjFromMapThing(mapthing_t *mthing, fixed_t x, fixed_t y,
 	P_SetScale(mobj, FixedMul(mobj->scale, mthing->scale));
 	mobj->destscale = FixedMul(mobj->destscale, mthing->scale);
 
+	mobj->spritexscale = mthing->spritexscale;
+	mobj->spriteyscale = mthing->spriteyscale;
+
 	if (!P_SetupSpawnedMapThing(mthing, mobj, &doangle))
 		return mobj;
 
@@ -13413,7 +13444,7 @@ void P_SpawnHoop(mapthing_t *mthing)
 	vector4_t v, res;
 	fixed_t x = mthing->x << FRACBITS;
 	fixed_t y = mthing->y << FRACBITS;
-	fixed_t z = P_GetMobjSpawnHeight(MT_HOOP, x, y, mthing->z << FRACBITS, 0, false, mthing->scale);
+	fixed_t z = P_GetMobjSpawnHeight(MT_HOOP, x, y, mthing->z << FRACBITS, 0, false, mthing->scale, mthing->options & MTF_ABSOLUTEZ);
 
 	hoopcenter = P_SpawnMobj(x, y, z, MT_HOOPCENTER);
 	hoopcenter->spawnpoint = mthing;
@@ -13540,7 +13571,7 @@ static void P_SpawnItemRow(mapthing_t *mthing, mobjtype_t *itemtypes, UINT8 numi
 			itemtypes[r] = P_GetMobjtypeSubstitute(&dummything, itemtypes[r]);
 		}
 	}
-	z = P_GetMobjSpawnHeight(itemtypes[0], x, y, z, 0, mthing->options & MTF_OBJECTFLIP, mthing->scale);
+	z = P_GetMobjSpawnHeight(itemtypes[0], x, y, z, 0, mthing->options & MTF_OBJECTFLIP, mthing->scale, mthing->options & MTF_ABSOLUTEZ);
 
 	for (r = 0; r < numitems; r++)
 	{
@@ -13599,7 +13630,7 @@ static void P_SpawnItemCircle(mapthing_t *mthing, mobjtype_t *itemtypes, UINT8 n
 			itemtypes[i] = P_GetMobjtypeSubstitute(&dummything, itemtypes[i]);
 		}
 	}
-	z = P_GetMobjSpawnHeight(itemtypes[0], x, y, z, 0, false, mthing->scale);
+	z = P_GetMobjSpawnHeight(itemtypes[0], x, y, z, 0, false, mthing->scale, mthing->options & MTF_ABSOLUTEZ);
 
 	for (i = 0; i < numitems; i++)
 	{

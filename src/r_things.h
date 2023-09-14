@@ -123,21 +123,22 @@ typedef enum
 	SC_NONE       = 0,
 	SC_TOP        = 1,
 	SC_BOTTOM     = 1<<1,
+	SC_NOTVISIBLE = 1<<2,
 	// other flags
-	SC_PRECIP     = 1<<2,
-	SC_LINKDRAW   = 1<<3,
-	SC_FULLBRIGHT = 1<<4,
-	SC_SEMIBRIGHT = 1<<5,
-	SC_FULLDARK   = 1<<6,
-	SC_VFLIP      = 1<<7,
-	SC_ISSCALED   = 1<<8,
-	SC_ISROTATED  = 1<<9,
-	SC_SHADOW     = 1<<10,
-	SC_SHEAR      = 1<<11,
-	SC_SPLAT      = 1<<12,
-	SC_BBOX       = 1<<13,
+	SC_PRECIP     = 1<<3,
+	SC_LINKDRAW   = 1<<4,
+	SC_FULLBRIGHT = 1<<5,
+	SC_SEMIBRIGHT = 1<<6,
+	SC_FULLDARK   = 1<<7,
+	SC_VFLIP      = 1<<8,
+	SC_ISSCALED   = 1<<9,
+	SC_ISROTATED  = 1<<10,
+	SC_SHADOW     = 1<<11,
+	SC_SHEAR      = 1<<12,
+	SC_SPLAT      = 1<<13,
+	SC_BBOX       = 1<<14,
 	// masks
-	SC_CUTMASK    = SC_TOP|SC_BOTTOM,
+	SC_CUTMASK    = SC_TOP|SC_BOTTOM|SC_NOTVISIBLE,
 	SC_FLAGMASK   = ~SC_CUTMASK
 } spritecut_e;
 
@@ -219,10 +220,9 @@ typedef struct vissprite_s
 	INT32 dispoffset; // copy of mobj->dispoffset, affects ordering but not drawing
 } vissprite_t;
 
-extern UINT32 visspritecount;
+extern UINT32 visspritecount, numvisiblesprites;
 
 void R_ClipSprites(drawseg_t* dsstart, portal_t* portal);
-void R_ClipVisSprite(vissprite_t *spr, INT32 x1, INT32 x2, drawseg_t* dsstart, portal_t* portal);
 
 boolean R_SpriteIsFlashing(vissprite_t *vis);
 

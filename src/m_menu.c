@@ -2649,7 +2649,7 @@ static boolean MIT_SetCurBackground(UINT32 menutype, INT32 level, INT32 *retval,
 		{
 			strncpy(curbgname, defaultname, 9);
 			curbgxspeed = (gamestate == GS_TIMEATTACK) ? 0 : titlescrollxspeed;
-			curbgyspeed = (gamestate == GS_TIMEATTACK) ? 0 : titlescrollyspeed;
+			curbgyspeed = (gamestate == GS_TIMEATTACK) ? 18 : titlescrollyspeed;
 		}
 	}
 	return false;
@@ -2843,8 +2843,8 @@ static void M_HandleMenuPresState(menu_t *newMenu)
 	curfadevalue = 16;
 	curhidepics = hidetitlepics;
 	curbgcolor = -1;
-	curbgxspeed = titlescrollxspeed;
-	curbgyspeed = titlescrollyspeed;
+	curbgxspeed = (gamestate == GS_TIMEATTACK) ? 0 : titlescrollxspeed;
+	curbgyspeed = (gamestate == GS_TIMEATTACK) ? 18 : titlescrollyspeed;
 	curbghide = (gamestate != GS_TIMEATTACK); // show in time attack, hide in other menus
 
 	curttmode = ttmode;
@@ -3196,7 +3196,7 @@ boolean M_Responder(event_t *ev)
 	|| gamestate == GS_CREDITS || gamestate == GS_EVALUATION || gamestate == GS_GAMEEND)
 		return false;
 
-	if (gamestate == GS_TITLESCREEN && finalecount < TICRATE)
+	if (gamestate == GS_TITLESCREEN && finalecount < (cv_tutorialprompt.value ? TICRATE : 0))
 		return false;
 
 	if (CON_Ready() && gamestate != GS_WAITINGPLAYERS)
@@ -3500,10 +3500,10 @@ boolean M_Responder(event_t *ev)
 #ifndef DEVELOP
 					// TODO: Replays are scary, so I left the remaining instances of this alone.
 					// It'd be nice to get rid of this once and for all though!
-					if (((currentMenu->menuitems[itemOn].status & IT_CALLTYPE) & IT_CALL_NOTMODIFIED) && (modifiedgame && !savemoddata) && !usedCheats)
+					if (((currentMenu->menuitems[itemOn].status & IT_CALLTYPE) & IT_CALL_NOTMODIFIED) && usedCheats)
 					{
 						S_StartSound(NULL, sfx_skid);
-						M_StartMessage(M_GetText("This cannot be done in a modified game.\n\n(Press a key)\n"), NULL, MM_NOTHING);
+						M_StartMessage(M_GetText("This cannot be done in a cheated game.\n\n(Press a key)\n"), NULL, MM_NOTHING);
 						return true;
 					}
 #endif
@@ -7108,9 +7108,6 @@ static void M_DestroyRobots(INT32 choice)
 
 static void M_LevelSelectWarp(INT32 choice)
 {
-	boolean fromloadgame = (currentMenu == &SP_LevelSelectDef);
-	boolean frompause = (currentMenu == &SP_PauseLevelSelectDef);
-
 	(void)choice;
 
 	if (W_CheckNumForName(G_BuildMapName(cv_nextmap.value)) == LUMPERROR)
@@ -7122,13 +7119,11 @@ static void M_LevelSelectWarp(INT32 choice)
 	startmap = (INT16)(cv_nextmap.value);
 	fromlevelselect = true;
 
-	if (fromloadgame)
-		G_LoadGame((UINT32)cursaveslot, startmap);
-	else
+	if (currentMenu == &SP_LevelSelectDef || currentMenu == &SP_PauseLevelSelectDef)
 	{
-		cursaveslot = 0;
-
-		if (frompause)
+		if (cursaveslot > 0) // do we have a save slot to load?
+			G_LoadGame((UINT32)cursaveslot, startmap); // reload from SP save data: this is needed to keep score/lives/continues from reverting to defaults
+		else // no save slot, start new game but keep the current skin
 		{
 			M_ClearMenus(true);
 
@@ -7139,8 +7134,11 @@ static void M_LevelSelectWarp(INT32 choice)
 				Z_Free(levelselect.rows);
 			levelselect.rows = NULL;
 		}
-		else
-			M_SetupChoosePlayer(0);
+	}
+	else // start new game
+	{
+		cursaveslot = 0;
+		M_SetupChoosePlayer(0);
 	}
 }
 
@@ -10460,13 +10458,23 @@ static void M_ChooseTimeAttack(INT32 choice)
 	G_DeferedInitNew(false, G_BuildMapName(cv_nextmap.value), (UINT8)(cv_chooseskin.value-1), false, false);
 }
 
+static char ra_demoname[1024];
+
+static void M_StartTimeAttackReplay(INT32 choice)
+{
+	if (choice == 'y' || choice == KEY_ENTER)
+	{
+		M_ClearMenus(true);
+		modeattacking = ATTACKING_RECORD; // set modeattacking before G_DoPlayDemo so the map loader knows
+		G_DoPlayDemo(ra_demoname);
+	}
+}
+
 // Player has selected the "REPLAY" from the time attack screen
 static void M_ReplayTimeAttack(INT32 choice)
 {
 	const char *which;
-	char *demoname;
-	M_ClearMenus(true);
-	modeattacking = ATTACKING_RECORD; // set modeattacking before G_DoPlayDemo so the map loader knows
+	UINT8 error = DFILE_ERROR_NONE;
 
 	if (currentMenu == &SP_ReplayDef)
 	{
@@ -10486,11 +10494,15 @@ static void M_ReplayTimeAttack(INT32 choice)
 			break;
 		case 4: // guest
 			// srb2/replay/main/map01-guest.lmp
-			G_DoPlayDemo(va("%s"PATHSEP"replay"PATHSEP"%s"PATHSEP"%s-guest.lmp", srb2home, timeattackfolder, G_BuildMapName(cv_nextmap.value)));
-			return;
+			snprintf(ra_demoname, 1024, "%s"PATHSEP"replay"PATHSEP"%s"PATHSEP"%s-guest.lmp", srb2home, timeattackfolder, G_BuildMapName(cv_nextmap.value));
+			break;
 		}
-		// srb2/replay/main/map01-sonic-time-best.lmp
-		G_DoPlayDemo(va("%s"PATHSEP"replay"PATHSEP"%s"PATHSEP"%s-%s-%s.lmp", srb2home, timeattackfolder, G_BuildMapName(cv_nextmap.value), skins[cv_chooseskin.value-1].name, which));
+
+		if (choice != 4)
+		{
+			// srb2/replay/main/map01-sonic-time-best.lmp
+			snprintf(ra_demoname, 1024, "%s"PATHSEP"replay"PATHSEP"%s"PATHSEP"%s-%s-%s.lmp", srb2home, timeattackfolder, G_BuildMapName(cv_nextmap.value), skins[cv_chooseskin.value-1].name, which);
+		}
 	}
 	else if (currentMenu == &SP_NightsReplayDef)
 	{
@@ -10506,19 +10518,78 @@ static void M_ReplayTimeAttack(INT32 choice)
 			which = "last";
 			break;
 		case 3: // guest
-			G_DoPlayDemo(va("%s"PATHSEP"replay"PATHSEP"%s"PATHSEP"%s-guest.lmp", srb2home, timeattackfolder, G_BuildMapName(cv_nextmap.value)));
-			return;
+			snprintf(ra_demoname, 1024, "%s"PATHSEP"replay"PATHSEP"%s"PATHSEP"%s-guest.lmp", srb2home, timeattackfolder, G_BuildMapName(cv_nextmap.value));
+			break;
 		}
 
-		demoname = va("%s"PATHSEP"replay"PATHSEP"%s"PATHSEP"%s-%s-%s.lmp", srb2home, timeattackfolder, G_BuildMapName(cv_nextmap.value), skins[cv_chooseskin.value-1].name, which);
+		if (choice != 3)
+		{
+			snprintf(ra_demoname, 1024, "%s"PATHSEP"replay"PATHSEP"%s"PATHSEP"%s-%s-%s.lmp", srb2home, timeattackfolder, G_BuildMapName(cv_nextmap.value), skins[cv_chooseskin.value-1].name, which);
 
 #ifdef OLDNREPLAYNAME // Check for old style named NiGHTS replay if a new style replay doesn't exist.
-		if (!FIL_FileExists(demoname))
-			demoname = va("%s"PATHSEP"replay"PATHSEP"%s"PATHSEP"%s-%s.lmp", srb2home, timeattackfolder, G_BuildMapName(cv_nextmap.value), which);
+			if (!FIL_FileExists(ra_demoname))
+			{
+				snprintf(ra_demoname, 1024, "%s"PATHSEP"replay"PATHSEP"%s"PATHSEP"%s-%s.lmp", srb2home, timeattackfolder, G_BuildMapName(cv_nextmap.value), which);
+			}
 #endif
-
-		G_DoPlayDemo(demoname);
+		}
 	}
+
+	demofileoverride = DFILE_OVERRIDE_NONE;
+	error = G_CheckDemoForError(ra_demoname);
+
+	if (error)
+	{
+		S_StartSound(NULL, sfx_skid);
+
+		switch (error)
+		{
+			case DFILE_ERROR_NOTDEMO:
+				M_StartMessage(M_GetText("An error occurred loading this replay.\n\n(Press a key)\n"), NULL, MM_NOTHING);
+				break;
+
+			case DFILE_ERROR_NOTLOADED:
+				demofileoverride = DFILE_OVERRIDE_LOAD;
+				M_StartMessage(M_GetText("Add-ons for this replay\nhave not been loaded.\n\nAttempt to load files?\n\n(Press 'Y' to confirm)\n"), M_StartTimeAttackReplay, MM_YESNO);
+				break;
+
+			case DFILE_ERROR_OUTOFORDER:
+				/*
+				demofileoverride = DFILE_OVERRIDE_SKIP;
+				M_StartMessage(M_GetText("Add-ons for this replay\nwere loaded out of order.\n\nAttempt to playback anyway?\n\n(Press 'Y' to confirm)\n"), M_StartTimeAttackReplay, MM_YESNO);
+				*/
+				M_StartMessage(M_GetText("Add-ons for this replay\nwere loaded out of order.\n\n(Press a key)\n"), NULL, MM_NOTHING);
+				break;
+
+			case DFILE_ERROR_INCOMPLETEOUTOFORDER:
+				/*
+				demofileoverride = DFILE_OVERRIDE_LOAD;
+				M_StartMessage(M_GetText("Add-ons for this replay\nhave not been loaded,\nand some are in the wrong order.\n\nAttempt to load files?\n\n(Press 'Y' to confirm)\n"), M_StartTimeAttackReplay, MM_YESNO);
+				*/
+				M_StartMessage(M_GetText("Add-ons for this replay\nhave not been loaded,\nand some are in the wrong order.\n\n(Press a key)\n"), NULL, MM_NOTHING);
+				break;
+
+			case DFILE_ERROR_CANNOTLOAD:
+				/*
+				demofileoverride = DFILE_OVERRIDE_SKIP;
+				M_StartMessage(M_GetText("Add-ons for this replay\ncould not be loaded.\n\nAttempt to playback anyway?\n\n(Press 'Y' to confirm)\n"), M_StartTimeAttackReplay, MM_YESNO);
+				*/
+				M_StartMessage(M_GetText("Add-ons for this replay\ncould not be loaded.\n\n(Press a key)\n"), NULL, MM_NOTHING);
+				break;
+
+			case DFILE_ERROR_EXTRAFILES:
+				/*
+				demofileoverride = DFILE_OVERRIDE_SKIP;
+				M_StartMessage(M_GetText("You have more files loaded\nthan the replay does.\n\nAttempt to playback anyway?\n\n(Press 'Y' to confirm)\n"), M_StartTimeAttackReplay, MM_YESNO);
+				*/
+				M_StartMessage(M_GetText("You have more files loaded\nthan the replay does.\n\n(Press a key)\n"), NULL, MM_NOTHING);
+				break;
+		}
+
+		return;
+	}
+
+	M_StartTimeAttackReplay(KEY_ENTER);
 }
 
 static void M_EraseGuest(INT32 choice)
@@ -11994,6 +12065,136 @@ static INT32        setupm_fakeskin;
 static menucolor_t *setupm_fakecolor;
 static boolean      colorgrid;
 
+#define COLOR_GRID_ROW_SIZE (16)
+
+static UINT16 M_GetColorGridIndex(UINT16 color)
+{
+	menucolor_t *look;
+	UINT16 i = 0;
+
+	if (!skincolors[color].accessible)
+	{
+		return 0;
+	}
+
+	for (look = menucolorhead; ; i++, look = look->next)
+	{
+		while (!skincolors[look->color].accessible) // skip inaccessible colors
+		{
+			if (look == menucolortail)
+			{
+				return 0;
+			}
+
+			look = look->next;
+		}
+
+		if (look->color == color)
+		{
+			return i;
+		}
+
+		if (look == menucolortail)
+		{
+			return 0;
+		}
+	}
+}
+
+static INT32 M_GridIndexToX(UINT16 index)
+{
+	return (index % COLOR_GRID_ROW_SIZE);
+}
+
+static INT32 M_GridIndexToY(UINT16 index)
+{
+	return (index / COLOR_GRID_ROW_SIZE);
+}
+
+static UINT16 M_ColorGridLen(void)
+{
+	menucolor_t *look;
+	UINT16 i = 0;
+
+	for (look = menucolorhead; ; i++)
+	{
+		do
+		{
+			if (look == menucolortail)
+			{
+				return i;
+			}
+
+			look = look->next;
+		}
+		while (!skincolors[look->color].accessible); // skip inaccessible colors
+	}
+}
+
+static UINT16 M_GridPosToGridIndex(INT32 x, INT32 y)
+{
+	const UINT16 grid_len = M_ColorGridLen();
+	const UINT16 grid_height = ((grid_len - 1) / COLOR_GRID_ROW_SIZE) + 1;
+	const UINT16 last_row_len = COLOR_GRID_ROW_SIZE - ((grid_height * COLOR_GRID_ROW_SIZE) - grid_len);
+
+	UINT16 row_len = COLOR_GRID_ROW_SIZE;
+	UINT16 new_index = 0;
+
+	while (y < 0)
+	{
+		y += grid_height;
+	}
+	y = (y % grid_height);
+
+	if (y >= grid_height-1 && last_row_len > 0)
+	{
+		row_len = last_row_len;
+	}
+
+	while (x < 0)
+	{
+		x += row_len;
+	}
+	x = (x % row_len);
+
+	new_index = (y * COLOR_GRID_ROW_SIZE) + x;
+	if (new_index >= grid_len)
+	{
+		new_index = grid_len - 1;
+	}
+
+	return new_index;
+}
+
+static menucolor_t *M_GridIndexToMenuColor(UINT16 index)
+{
+	menucolor_t *look = menucolorhead;
+	UINT16 i = 0;
+
+	for (look = menucolorhead; ; i++, look = look->next)
+	{
+		while (!skincolors[look->color].accessible) // skip inaccessible colors
+		{
+			if (look == menucolortail)
+			{
+				return menucolorhead;
+			}
+
+			look = look->next;
+		}
+
+		if (i == index)
+		{
+			return look;
+		}
+
+		if (look == menucolortail)
+		{
+			return menucolorhead;
+		}
+	}
+}
+
 static void M_DrawSetupMultiPlayerMenu(void)
 {
 	INT32 x, y, cursory = 0, flags = 0;
@@ -12112,32 +12313,54 @@ colordraw:
 		boolean stoprow = false;
 		menucolor_t *mc; // Last accessed color
 
+		const UINT16 grid_len = M_ColorGridLen();
+		const UINT16 grid_end_y = M_GridIndexToY(grid_len - 1);
+
+		INT32 grid_select = M_GetColorGridIndex(setupm_fakecolor->color);
+		INT32 grid_select_y = M_GridIndexToY(grid_select);
+
 		x = 132;
 		y = 66;
-		pos = min(max(0, 16*((M_GetColorIndex(setupm_fakecolor->color)-1)/16) - 64), 16*(M_GetColorIndex(menucolortail->color)/16-1) - 128);
-		mc = M_GetColorFromIndex(pos);
+
+		pos = M_GridPosToGridIndex(0, max(0, min(grid_select_y - 3, grid_end_y - 7)));
+		mc = M_GridIndexToMenuColor(pos);
 
 		// Draw grid
 		V_DrawFill(x-2, y-2, 132, 132, 159);
 		for (j = 0; j < 8; j++)
 		{
-			for (i = 0; i < 16; i++)
+			for (i = 0; i < COLOR_GRID_ROW_SIZE; i++)
 			{
-				if (skincolors[mc->color].accessible && !stoprow)
+				if (skincolors[mc->color].accessible)
 				{
 					M_DrawColorRamp(x + i*w, y + j*16, w, 1, skincolors[mc->color]);
-					if (mc->color == setupm_fakecolor->color) // store current color position
-						{
-							cx = x + i*w;
-							cy = y + j*16;
-						}
+
+					if (mc == setupm_fakecolor) // store current color position
+					{
+						cx = x + i*w;
+						cy = y + j*16;
+					}
 				}
-				mc = mc->next;
-				while (!skincolors[mc->color].accessible && !stoprow) // Find accessible color after this one
+
+				if (stoprow)
+				{
+					break;
+				}
+
+				// Find accessible color after this one
+				do
 				{
 					mc = mc->next;
-					if (mc == menucolortail) stoprow = true;
-				}
+					if (mc == menucolortail)
+					{
+						stoprow = true;
+					}
+				} while (!skincolors[mc->color].accessible && !stoprow);
+			}
+
+			if (stoprow)
+			{
+				break;
 			}
 		}
 
@@ -12258,15 +12481,16 @@ static void M_HandleSetupMultiPlayer(INT32 choice)
 		case KEY_DOWNARROW:
 		case KEY_UPARROW:
 			{
-				UINT8 i;
 				if (itemOn == 2 && colorgrid)
 				{
-					for (i = 0; i < 16; i++)
-					{
-						setupm_fakecolor = (choice == KEY_UPARROW) ? setupm_fakecolor->prev : setupm_fakecolor->next;
-						while (!skincolors[setupm_fakecolor->color].accessible) // skip inaccessible colors
-							setupm_fakecolor = (choice == KEY_UPARROW) ? setupm_fakecolor->prev : setupm_fakecolor->next;
-					}
+					UINT16 index = M_GetColorGridIndex(setupm_fakecolor->color);
+					INT32 x = M_GridIndexToX(index);
+					INT32 y = M_GridIndexToY(index);
+
+					y += (choice == KEY_UPARROW) ? -1 : 1;
+
+					index = M_GridPosToGridIndex(x, y);
+					setupm_fakecolor = M_GridIndexToMenuColor(index);
 				}
 				else if (choice == KEY_UPARROW)
 					M_PrevOpt();
@@ -12293,8 +12517,8 @@ static void M_HandleSetupMultiPlayer(INT32 choice)
 			}
 			else if (itemOn == 2) // player color
 			{
-				S_StartSound(NULL,sfx_menu1); // Tails
 				setupm_fakecolor = setupm_fakecolor->prev;
+				S_StartSound(NULL,sfx_menu1); // Tails
 			}
 			break;
 
@@ -12333,8 +12557,8 @@ static void M_HandleSetupMultiPlayer(INT32 choice)
 			}
 			else if (itemOn == 2) // player color
 			{
-				S_StartSound(NULL,sfx_menu1); // Tails
 				setupm_fakecolor = setupm_fakecolor->next;
+				S_StartSound(NULL,sfx_menu1); // Tails
 			}
 			break;
 
@@ -12344,13 +12568,28 @@ static void M_HandleSetupMultiPlayer(INT32 choice)
 				UINT8 i;
 				if (itemOn == 2) // player color
 				{
-					S_StartSound(NULL,sfx_menu1);
-					for (i = 0; i < (colorgrid ? 64 : 13); i++) // or (282-charw)/(2*indexwidth)
+					if (colorgrid)
 					{
-						setupm_fakecolor = (choice == KEY_PGUP) ? setupm_fakecolor->prev : setupm_fakecolor->next;
-						while (!skincolors[setupm_fakecolor->color].accessible) // skip inaccessible colors
-							setupm_fakecolor = (choice == KEY_PGUP) ? setupm_fakecolor->prev : setupm_fakecolor->next;
+						UINT16 index = M_GetColorGridIndex(setupm_fakecolor->color);
+						INT32 x = M_GridIndexToX(index);
+						INT32 y = M_GridIndexToY(index);
+
+						y += (choice == KEY_UPARROW) ? -4 : 4;
+
+						index = M_GridPosToGridIndex(x, y);
+						setupm_fakecolor = M_GridIndexToMenuColor(index);
 					}
+					else
+					{
+						for (i = 0; i < 13; i++) // or (282-charw)/(2*indexwidth)
+						{
+							setupm_fakecolor = (choice == KEY_PGUP) ? setupm_fakecolor->prev : setupm_fakecolor->next;
+							while (!skincolors[setupm_fakecolor->color].accessible) // skip inaccessible colors
+								setupm_fakecolor = (choice == KEY_PGUP) ? setupm_fakecolor->prev : setupm_fakecolor->next;
+						}
+					}
+
+					S_StartSound(NULL, sfx_menu1); // Tails
 				}
 			}
 			break;
@@ -12379,7 +12618,6 @@ static void M_HandleSetupMultiPlayer(INT32 choice)
 							break;
 				}
 			}
-			break;
 			break;
 
 		case KEY_DEL:
