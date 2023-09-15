@@ -572,7 +572,7 @@ void Snake_Free(void **opaque)
 {
 	if (*opaque)
 	{
-		free(opaque);
+		free(*opaque);
 		*opaque = NULL;
 	}
 }
