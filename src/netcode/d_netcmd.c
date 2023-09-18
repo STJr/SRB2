@@ -12,44 +12,46 @@
 ///        commands are executed through the command buffer
 ///	       like console commands, other miscellaneous commands (at the end)
 
-#include "doomdef.h"
+#include "../doomdef.h"
 
-#include "console.h"
-#include "command.h"
-#include "i_time.h"
-#include "i_system.h"
-#include "g_game.h"
-#include "hu_stuff.h"
-#include "g_input.h"
-#include "m_menu.h"
-#include "r_local.h"
-#include "r_skins.h"
-#include "p_local.h"
-#include "p_setup.h"
-#include "s_sound.h"
-#include "i_sound.h"
-#include "m_misc.h"
-#include "am_map.h"
-#include "byteptr.h"
+#include "../console.h"
+#include "../command.h"
+#include "../i_time.h"
+#include "../i_system.h"
+#include "../g_game.h"
+#include "../hu_stuff.h"
+#include "../g_input.h"
+#include "../m_menu.h"
+#include "../r_local.h"
+#include "../r_skins.h"
+#include "../p_local.h"
+#include "../p_setup.h"
+#include "../s_sound.h"
+#include "../i_sound.h"
+#include "../m_misc.h"
+#include "../am_map.h"
+#include "../byteptr.h"
 #include "d_netfil.h"
-#include "p_spec.h"
-#include "m_cheat.h"
+#include "../p_spec.h"
+#include "../m_cheat.h"
 #include "d_clisrv.h"
+#include "server_connection.h"
+#include "net_command.h"
 #include "d_net.h"
-#include "v_video.h"
-#include "d_main.h"
-#include "m_random.h"
-#include "f_finale.h"
-#include "filesrch.h"
+#include "../v_video.h"
+#include "../d_main.h"
+#include "../m_random.h"
+#include "../f_finale.h"
+#include "../filesrch.h"
 #include "mserv.h"
-#include "z_zone.h"
-#include "lua_script.h"
-#include "lua_hook.h"
-#include "m_cond.h"
-#include "m_anigif.h"
-#include "md5.h"
-#include "m_perfstats.h"
-#include "u_list.h"
+#include "../z_zone.h"
+#include "../lua_script.h"
+#include "../lua_hook.h"
+#include "../m_cond.h"
+#include "../m_anigif.h"
+#include "../md5.h"
+#include "../m_perfstats.h"
+#include "../u_list.h"
 
 #ifdef NETGAME_DEVMODE
 #define CV_RESTRICT CV_NETVAR
@@ -595,13 +597,10 @@ void D_RegisterServerCommands(void)
 	CV_RegisterVar(&cv_maxsend);
 	CV_RegisterVar(&cv_noticedownload);
 	CV_RegisterVar(&cv_downloadspeed);
-#ifndef NONET
 	CV_RegisterVar(&cv_allownewplayer);
-	CV_RegisterVar(&cv_joinnextround);
 	CV_RegisterVar(&cv_showjoinaddress);
 	CV_RegisterVar(&cv_blamecfail);
 	CV_RegisterVar(&cv_dedicatedidletime);
-#endif
 
 	COM_AddCommand("ping", Command_Ping_f, COM_LUA);
 	CV_RegisterVar(&cv_nettimeout);
@@ -1742,8 +1741,7 @@ void D_MapChange(INT32 mapnum, INT32 newgametype, boolean pultmode, boolean rese
 		// reset players if there is a new one
 		if (!IsPlayerAdmin(consoleplayer))
 		{
-			if (SV_SpawnServer())
-				buf[0] &= ~(1<<1);
+			SV_SpawnServer();
 			if (!Playing()) // you failed to start a server somehow, so cancel the map change
 				return;
 		}

@@ -15,7 +15,7 @@
 #include "console.h"
 #include "d_main.h"
 #include "d_player.h"
-#include "d_clisrv.h"
+#include "netcode/d_clisrv.h"
 #include "p_setup.h"
 #include "i_time.h"
 #include "i_system.h"
@@ -39,7 +39,7 @@
 #include "v_video.h"
 #include "lua_hook.h"
 #include "md5.h" // demo checksums
-#include "d_netfil.h" // G_CheckDemoExtraFiles
+#include "netcode/d_netfil.h" // G_CheckDemoExtraFiles
 
 boolean timingdemo; // if true, exit with report on completion
 boolean nodrawers; // for comparative timing purposes
@@ -1894,7 +1894,7 @@ UINT8 G_CmpDemoTime(char *oldname, char *newname)
 	switch(oldversion) // demoversion
 	{
 	case DEMOVERSION: // latest always supported
-	case 0x000f: // The previous demoversions also supported 
+	case 0x000f: // The previous demoversions also supported
 	case 0x000e:
 	case 0x000d: // all that changed between then and now was longer color name
 	case 0x000c:
