@@ -572,7 +572,7 @@ static boolean CL_FinishedFileList(void)
 			CL_Reset();
 			D_StartTitle();
 			M_StartMessage(M_GetText(
-				"An error occured when trying to\n"
+				"An error occurred when trying to\n"
 				"download missing addons.\n"
 				"(This is almost always a problem\n"
 				"with the server, not your game.)\n\n"
