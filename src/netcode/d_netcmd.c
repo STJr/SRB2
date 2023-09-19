@@ -4490,6 +4490,13 @@ static void Command_ExitLevel_f(void)
 			INT32 i;
 			for (i = 0; i < MAXPLAYERS; i++)
 			{
+				if (!playeringame[i] || players[i].spectator || players[i].bot)
+					continue;
+				if (players[i].quittime > 30 * TICRATE)
+					continue;
+				if (players[i].lives <= 0)
+					continue;
+		
 				if ((players[i].pflags & PF_FINISHED) || players[i].exiting)
 				{
 					SendNetXCmd(XD_EXITLEVEL, NULL, 0);
