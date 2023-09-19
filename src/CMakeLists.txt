@@ -6,10 +6,6 @@ add_executable(SRB2SDL2 MACOSX_BUNDLE WIN32
 	config.h.in
 	string.c
 	d_main.c
-	d_clisrv.c
-	d_net.c
-	d_netfil.c
-	d_netcmd.c
 	dehacked.c
 	deh_soc.c
 	deh_lua.c
@@ -83,12 +79,10 @@ add_executable(SRB2SDL2 MACOSX_BUNDLE WIN32
 	sounds.c
 	w_wad.c
 	filesrch.c
-	mserv.c
-	http-mserv.c
-	i_tcp.c
 	lzf.c
 	b_bot.c
 	u_list.c
+	snake.c
 	lua_script.c
 	lua_baselib.c
 	lua_mathlib.c
@@ -149,6 +143,7 @@ set(SRB2_CONFIG_DEV_BUILD OFF CACHE BOOL
 	"Compile a development build of SRB2.")
 
 add_subdirectory(blua)
+add_subdirectory(netcode)
 
 # OS macros
 if (UNIX)
