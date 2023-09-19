@@ -4615,15 +4615,28 @@ static void Command_Cheats_f(void)
 			CV_ResetCheatNetVars();
 		return;
 	}
+	else if (COM_CheckParm("on"))
+	{
+		if (!(server || (IsPlayerAdmin(consoleplayer))))
+			CONS_Printf(M_GetText("Only the server or a remote admin can use this.\n"));
+		else
+			G_SetUsedCheats(false);
+		return;
+	}
+	
+	if (usedCheats)
+		CONS_Printf(M_GetText("Cheats are enabled, the game cannot be saved.\n"));
+	else
+		CONS_Printf(M_GetText("Cheats are disabled, the game can be saved.\n"));
 
 	if (CV_CheatsEnabled())
 	{
-		CONS_Printf(M_GetText("At least one CHEAT-marked variable has been changed -- Cheats are enabled.\n"));
+		CONS_Printf(M_GetText("At least one CHEAT-marked variable has been changed.\n"));
 		if (server || (IsPlayerAdmin(consoleplayer)))
 			CONS_Printf(M_GetText("Type CHEATS OFF to reset all cheat variables to default.\n"));
 	}
 	else
-		CONS_Printf(M_GetText("No CHEAT-marked variables are changed -- Cheats are disabled.\n"));
+		CONS_Printf(M_GetText("No CHEAT-marked variables are changed.\n"));
 }
 
 #ifdef _DEBUG
