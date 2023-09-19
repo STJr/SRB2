@@ -1659,11 +1659,12 @@ static int lib_pDoJump(lua_State *L)
 {
 	player_t *player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
 	boolean soundandstate = (boolean)lua_opttrueboolean(L, 2);
+	boolean allowflip = (boolean)lua_opttrueboolean(L, 3);
 	NOHUD
 	INLEVEL
 	if (!player)
 		return LUA_ErrInvalid(L, "player_t");
-	P_DoJump(player, soundandstate);
+	P_DoJump(player, soundandstate, allowflip);
 	return 0;
 }
 
