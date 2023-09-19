@@ -4464,37 +4464,55 @@ static void Command_Mapmd5_f(void)
 		CONS_Printf(M_GetText("You must be in a level to use this.\n"));
 }
 
-void D_SendExitLevel(boolean cheat)
-{
-	UINT8 buf[8];
-	UINT8 *buf_p = buf;
-
-	WRITEUINT8(buf_p, cheat);
-
-	SendNetXCmd(XD_EXITLEVEL, &buf, buf_p - buf);
-}
-
 static void Command_ExitLevel_f(void)
 {
 	if (!(server || (IsPlayerAdmin(consoleplayer))))
 		CONS_Printf(M_GetText("Only the server or a remote admin can use this.\n"));
 	else if (( gamestate != GS_LEVEL && gamestate != GS_CREDITS ) || demoplayback)
 		CONS_Printf(M_GetText("You must be in a level to use this.\n"));
+	else if (usedCheats)
+		SendNetXCmd(XD_EXITLEVEL, NULL, 0); // Does it matter if it's a cheat if we've used one already?
+	else if (!(splitscreen || multiplayer || cv_debug))
+		CONS_Printf(M_GetText("Cheats must be enabled to force a level exit in single player.\n"));
 	else
-		D_SendExitLevel(true);
+	{
+		if (G_IsSpecialStage(gamemap) // If you wanna give up that emerald then go right ahead!
+			|| gamestate == GS_CREDITS) // Somebody hasn't heard of the credits skip button...
+		{
+			SendNetXCmd(XD_EXITLEVEL, NULL, 0);
+			return;
+		}
+		
+		// Allow exiting without cheating if at least one player beat the level
+		// Consistent with just setting playersforexit to one
+		if (splitscreen || multiplayer)
+		{
+			INT32 i;
+			for (i = 0; i < MAXPLAYERS; i++)
+			{
+				if ((players[i].pflags & PF_FINISHED) || players[i].exiting)
+				{
+					SendNetXCmd(XD_EXITLEVEL, NULL, 0);
+					return;
+				}
+			}
+		}
+		
+		// Only consider it a cheat if we're not allowed to go to the next map
+		if (M_CampaignWarpIsCheat(gametype, G_GetNextMap(true, true) + 1, serverGamedata))
+			CONS_Alert(CONS_NOTICE, M_GetText("Cheats must be enabled to force exit to a locked level!\n"));
+		else
+			SendNetXCmd(XD_EXITLEVEL, NULL, 0);
+	}
 }
 
 static void Got_ExitLevelcmd(UINT8 **cp, INT32 playernum)
 {
-	boolean cheat = false;
-
-	cheat = (boolean)READUINT8(*cp);
+	(void)cp;
 
 	// Ignore duplicate XD_EXITLEVEL commands.
 	if (gameaction == ga_completed)
-	{
 		return;
-	}
 
 	if (playernum != serverplayer && !IsPlayerAdmin(playernum))
 	{
@@ -4502,11 +4520,6 @@ static void Got_ExitLevelcmd(UINT8 **cp, INT32 playernum)
 		if (server)
 			SendKick(playernum, KICK_MSG_CON_FAIL | KICK_MSG_KEEP_BODY);
 		return;
-	}
-
-	if (G_CoopGametype() && cheat)
-	{
-		G_SetUsedCheats(false);
 	}
 
 	G_ExitLevel();

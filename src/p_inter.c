@@ -2236,7 +2236,7 @@ void P_CheckTimeLimit(void)
 		}
 
 		if (server)
-			D_SendExitLevel(false);
+			SendNetXCmd(XD_EXITLEVEL, NULL, 0);
 	}
 
 	//Optional tie-breaker for Match/CTF
@@ -2299,11 +2299,11 @@ void P_CheckTimeLimit(void)
 			}
 		}
 		if (server)
-			D_SendExitLevel(false);
+			SendNetXCmd(XD_EXITLEVEL, NULL, 0);
 	}
 
 	if (server)
-		D_SendExitLevel(false);
+		SendNetXCmd(XD_EXITLEVEL, NULL, 0);
 }
 
 /** Checks if a player's score is over the pointlimit and the round should end.
@@ -2332,7 +2332,7 @@ void P_CheckPointLimit(void)
 		if ((UINT32)cv_pointlimit.value <= redscore || (UINT32)cv_pointlimit.value <= bluescore)
 		{
 			if (server)
-				D_SendExitLevel(false);
+				SendNetXCmd(XD_EXITLEVEL, NULL, 0);
 		}
 	}
 	else
@@ -2345,7 +2345,7 @@ void P_CheckPointLimit(void)
 			if ((UINT32)cv_pointlimit.value <= players[i].score)
 			{
 				if (server)
-					D_SendExitLevel(false);
+					SendNetXCmd(XD_EXITLEVEL, NULL, 0);
 				return;
 			}
 		}
@@ -2389,7 +2389,7 @@ void P_CheckSurvivors(void)
 		{
 			CONS_Printf(M_GetText("The IT player has left the game.\n"));
 			if (server)
-				D_SendExitLevel(false);
+				SendNetXCmd(XD_EXITLEVEL, NULL, 0);
 
 			return;
 		}
@@ -2409,7 +2409,7 @@ void P_CheckSurvivors(void)
 			{
 				CONS_Printf(M_GetText("All players have been tagged!\n"));
 				if (server)
-					D_SendExitLevel(false);
+					SendNetXCmd(XD_EXITLEVEL, NULL, 0);
 			}
 
 			return;
@@ -2421,7 +2421,7 @@ void P_CheckSurvivors(void)
 		{
 			CONS_Printf(M_GetText("There are no players able to become IT.\n"));
 			if (server)
-				D_SendExitLevel(false);
+				SendNetXCmd(XD_EXITLEVEL, NULL, 0);
 		}
 
 		return;
@@ -2433,7 +2433,7 @@ void P_CheckSurvivors(void)
 	{
 		CONS_Printf(M_GetText("All players have been tagged!\n"));
 		if (server)
-			D_SendExitLevel(false);
+			SendNetXCmd(XD_EXITLEVEL, NULL, 0);
 	}
 }
 
