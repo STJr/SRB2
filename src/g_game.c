@@ -3330,7 +3330,7 @@ void G_AddPlayer(INT32 playernum)
 		p->lives = cv_startinglives.value;
 
 	if ((countplayers && !notexiting) || G_IsSpecialStage(gamemap))
-		P_DoPlayerExit(p);
+		P_DoPlayerExit(p, false);
 }
 
 boolean G_EnoughPlayersFinished(void)
@@ -3863,12 +3863,13 @@ static INT16 RandMap(UINT32 tolflags, INT16 pprevmap)
 //
 // G_UpdateVisited
 //
-static void G_UpdateVisited(gamedata_t *data, player_t *player, boolean silent)
+static void G_UpdateVisited(gamedata_t *data, player_t *player, boolean global)
 {
 	// Update visitation flags?
 	if (!demoplayback
 		&& G_CoopGametype() // Campaign mode
-		&& !stagefailed) // Did not fail the stage
+		&& !stagefailed // Did not fail the stage
+		&& (global || player->pflags & PF_FINISHED)) // Actually beat the stage
 	{
 		UINT8 earnedEmblems;
 		UINT16 totalrings = 0;
@@ -3906,12 +3907,12 @@ static void G_UpdateVisited(gamedata_t *data, player_t *player, boolean silent)
 				data->mapvisited[gamemap-1] |= MV_ALLEMERALDS;
 		}
 
-		if ((earnedEmblems = M_CompletionEmblems(data)) && !silent)
+		if ((earnedEmblems = M_CompletionEmblems(data)) && !global)
 		{
 			CONS_Printf(M_GetText("\x82" "Earned %hu emblem%s for level completion.\n"), (UINT16)earnedEmblems, earnedEmblems > 1 ? "s" : "");
 		}
 
-		if (silent)
+		if (global)
 		{
 			M_CheckLevelEmblems(data);
 		}

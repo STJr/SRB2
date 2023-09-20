@@ -892,7 +892,7 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 			players[i].marescore = 0;
 
 			players[i].spheres = players[i].rings = 0;
-			P_DoPlayerExit(&players[i]);
+			P_DoPlayerExit(&players[i], true);
 		}
 	}
 	else if (oldmare != player->mare)
@@ -2188,7 +2188,7 @@ void P_DoPlayerFinish(player_t *player)
 // P_DoPlayerExit
 //
 // Player exits the map via sector trigger
-void P_DoPlayerExit(player_t *player)
+void P_DoPlayerExit(player_t *player, boolean finishedflag)
 {
 	if (player->exiting)
 		return;
@@ -2209,7 +2209,11 @@ void P_DoPlayerExit(player_t *player)
 			player->exiting = (14*TICRATE)/5 + 1;
 	}
 	else
+	{
 		player->exiting = (14*TICRATE)/5 + 2; // Accidental death safeguard???
+		if (finishedflag)
+			player->pflags |= PF_FINISHED; // Give PF_FINISHED as proof of a true finish
+	}
 
 	//player->pflags &= ~PF_GLIDING;
 	if (player->climbing)
@@ -11782,7 +11786,7 @@ void P_PlayerThink(player_t *player)
 		if (((gametyperules & GTR_FRIENDLY) && cv_exitmove.value) && !G_EnoughPlayersFinished())
 			player->exiting = 0;
 		else
-			P_DoPlayerExit(player);
+			P_DoPlayerExit(player, false);
 	}
 
 	// check water content, set stuff in mobj
@@ -11831,7 +11835,7 @@ void P_PlayerThink(player_t *player)
 	}
 
 	// Synchronizes the "real" amount of time spent in the level.
-	if (!player->exiting && !stoppedclock)
+	if (!player->exiting && !(player->pflags & PF_FINISHED) && !stoppedclock)
 	{
 		if (gametyperules & GTR_RACE)
 		{

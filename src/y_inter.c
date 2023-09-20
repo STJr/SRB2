@@ -2043,7 +2043,7 @@ static void Y_AwardCoopBonuses(void)
 	y_bonus_t localbonuses[4];
 
 	// set score/total first
-	data.coop.total = players[consoleplayer].recordscore;
+	data.coop.total = (players[consoleplayer].pflags & PF_FINISHED) ? players[consoleplayer].recordscore : 0;
 	data.coop.score = players[consoleplayer].score;
 	data.coop.gotperfbonus = -1;
 	memset(data.coop.bonuses, 0, sizeof(data.coop.bonuses));
@@ -2060,7 +2060,12 @@ static void Y_AwardCoopBonuses(void)
 
 		for (j = 0; j < 4; ++j) // Set bonuses
 		{
-			(bonuses_list[bonusnum][j])(&players[i], &localbonuses[j]);
+			//Set the bonus, but only if we actually finished
+			if (players[i].pflags & PF_FINISHED)
+				(bonuses_list[bonusnum][j])(&players[i], &localbonuses[j]);
+			else
+				Y_SetNullBonus(&players[i], &localbonuses[j]);
+			
 			players[i].score += localbonuses[j].points;
 			if (players[i].score > MAXSCORE)
 				players[i].score = MAXSCORE;

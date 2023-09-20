@@ -3662,7 +3662,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 					{
 						if (!playeringame[i])
 							continue;
-						P_DoPlayerExit(&players[i]);
+						P_DoPlayerExit(&players[i], true);
 					}
 				}
 			}
@@ -3716,7 +3716,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 					{
 						if (!playeringame[i])
 							continue;
-						P_DoPlayerExit(&players[i]);
+						P_DoPlayerExit(&players[i], true);
 					}
 				}
 			}
@@ -4477,7 +4477,7 @@ static void P_ProcessEggCapsule(player_t *player, sector_t *sector)
 	{
 		if (!playeringame[i])
 			continue;
-		P_DoPlayerExit(&players[i]);
+		P_DoPlayerExit(&players[i], true);
 	}
 }
 
@@ -4787,7 +4787,7 @@ static void P_ProcessFinishLine(player_t *player)
 			HU_DoCEcho("FINISHED!");
 		}
 
-		P_DoPlayerExit(player);
+		P_DoPlayerExit(player, true);
 	}
 }
 
