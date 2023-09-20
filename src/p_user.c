@@ -11160,7 +11160,7 @@ static void P_MinecartThink(player_t *player)
 					detright->drawonlyforplayer = player;
 				}
 				else
-					P_RemoveMobj(detleft);
+					P_RemoveMobj(detright);
 			}
 		}
 		else
