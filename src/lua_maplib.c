@@ -1072,7 +1072,7 @@ static int line_get(lua_State *L)
 		LUA_PushUserdata(L, &sides[line->sidenum[0]], META_SIDE);
 		return 1;
 	case line_backside: // backside
-		if (line->sidenum[1] == 0xffff)
+		if (line->sidenum[1] == NO_SIDEDEF)
 			return 0;
 		LUA_PushUserdata(L, &sides[line->sidenum[1]], META_SIDE);
 		return 1;

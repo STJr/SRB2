@@ -557,7 +557,7 @@ static inline sector_t *getSector(INT32 currentSector, INT32 line, INT32 side)
   */
 static inline boolean twoSided(INT32 sector, INT32 line)
 {
-	return (sectors[sector].lines[line])->sidenum[1] != 0xffff;
+	return (sectors[sector].lines[line])->sidenum[1] != NO_SIDEDEF;
 }
 #endif
 
@@ -2897,7 +2897,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			{
 				size_t linenum;
 				side_t *setfront = &sides[line->sidenum[0]];
-				side_t *setback = (line->args[3] && line->sidenum[1] != 0xffff) ? &sides[line->sidenum[1]] : setfront;
+				side_t *setback = (line->args[3] && line->sidenum[1] != NO_SIDEDEF) ? &sides[line->sidenum[1]] : setfront;
 				side_t *this;
 				boolean always = !(line->args[2]); // If args[2] is set: Only change mid texture if mid texture already exists on tagged lines, etc.
 
@@ -2919,7 +2919,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 					}
 
 					// Back side
-					if (line->args[1] != TMSD_FRONT && lines[linenum].sidenum[1] != 0xffff)
+					if (line->args[1] != TMSD_FRONT && lines[linenum].sidenum[1] != NO_SIDEDEF)
 					{
 						this = &sides[lines[linenum].sidenum[1]];
 						if (always || this->toptexture) this->toptexture = setback->toptexture;
@@ -3153,7 +3153,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 
 				if (line->args[2] & TMCF_RELATIVE)
 				{
-					extracolormap_t *target = (!udmf && (line->flags & ML_TFERLINE) && line->sidenum[1] != 0xFFFF) ?
+					extracolormap_t *target = (!udmf && (line->flags & ML_TFERLINE) && line->sidenum[1] != NO_SIDEDEF) ?
 						sides[line->sidenum[1]].colormap_data : sectors[secnum].extra_colormap; // use back colormap instead of target sector
 
 						extracolormap_t *exc = R_AddColormaps(
@@ -3482,7 +3482,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 				}
 
 				if (!udmf && (line->flags & ML_TFERLINE)) // use back colormap instead of target sector
-					sectors[secnum].extra_colormap = (line->sidenum[1] != 0xFFFF) ?
+					sectors[secnum].extra_colormap = (line->sidenum[1] != NO_SIDEDEF) ?
 					sides[line->sidenum[1]].colormap_data : NULL;
 
 				exc = sectors[secnum].extra_colormap;
@@ -7598,7 +7598,7 @@ static void P_SpawnScrollers(void)
 					{
 						if (l->args[1] != TMSD_BACK)
 							Add_Scroller(sc_side, l->args[2] << (FRACBITS - SCROLL_SHIFT), l->args[3] << (FRACBITS - SCROLL_SHIFT), control, lines[s].sidenum[0], accel, 0);
-						if (l->args[1] != TMSD_FRONT && lines[s].sidenum[1] != 0xffff)
+						if (l->args[1] != TMSD_FRONT && lines[s].sidenum[1] != NO_SIDEDEF)
 							Add_Scroller(sc_side, l->args[2] << (FRACBITS - SCROLL_SHIFT), l->args[3] << (FRACBITS - SCROLL_SHIFT), control, lines[s].sidenum[1], accel, 0);
 					}
 				break;
@@ -7609,7 +7609,7 @@ static void P_SpawnScrollers(void)
 					Add_Scroller(sc_side, -l->args[1] << FRACBITS, l->args[2] << FRACBITS, -1, l->sidenum[0], accel, 0);
 				if (l->args[0] != TMSD_FRONT)
 				{
-					if (l->sidenum[1] != 0xffff)
+					if (l->sidenum[1] != NO_SIDEDEF)
 						Add_Scroller(sc_side, -l->args[1] << FRACBITS, l->args[2] << FRACBITS, -1, l->sidenum[1], accel, 0);
 					else
 						CONS_Debug(DBG_GAMELOGIC, "Line special 500 (line #%s) missing back side!\n", sizeu1(i));

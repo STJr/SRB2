@@ -512,6 +512,8 @@ typedef enum
 #define NUMLINEARGS 10
 #define NUMLINESTRINGARGS 2
 
+#define NO_SIDEDEF 0xFFFFFFFF
+
 typedef struct line_s
 {
 	// Vertices, from v1 to v2.
@@ -529,7 +531,7 @@ typedef struct line_s
 	char *stringargs[NUMLINESTRINGARGS];
 
 	// Visual appearance: sidedefs.
-	UINT16 sidenum[2]; // sidenum[1] will be 0xffff if one-sided
+	UINT32 sidenum[2]; // sidenum[1] will be NO_SIDEDEF if one-sided
 	fixed_t alpha; // translucency
 	UINT8 blendmode; // blendmode
 	INT32 executordelay;
