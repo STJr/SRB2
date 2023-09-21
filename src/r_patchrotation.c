@@ -10,7 +10,7 @@
 /// \brief Patch rotation.
 
 #include "r_patchrotation.h"
-#include "r_things.h" // FEETADJUST
+#include "r_things.h" // FEETADJUST (todo: is this needed anymore? -- Monster Iestyn 21 Sep 2023 )
 #include "z_zone.h"
 #include "w_wad.h"
 #include "r_main.h" // R_PointToAngle
@@ -69,14 +69,12 @@ patch_t *Patch_GetRotatedSprite(
 	boolean flip,
 	void *info, INT32 rotationangle)
 {
-	rotsprite_t *rotsprite;
+	rotsprite_t *rotsprite = sprite->rotated[spriteangle];
 	spriteinfo_t *sprinfo = (spriteinfo_t *)info;
 	INT32 idx = rotationangle;
 
 	if (rotationangle < 1 || rotationangle >= ROTANGLES)
 		return NULL;
-
-	rotsprite = sprite->rotated[spriteangle];
 
 	if (rotsprite == NULL)
 	{
