@@ -351,7 +351,7 @@ boolean CL_CheckDownloadable(void)
 			CONS_Printf(M_GetText("All addons downloadable, but you have chosen to disable addon downloading.\n"));
 			break;
 		case 4:
-			CONS_Printf(M_GetText("One or more addons was added as a folder, which the server cannot send.\n"));
+			CONS_Printf(M_GetText("One or more addons were added as a folder, which the server cannot send.\n"));
 			break;
 	}
 	return false;
