@@ -12328,7 +12328,7 @@ void P_PlayerThink(player_t *player)
 			player->texttimer = 4*TICRATE;
 			player->textvar = 2; // GET n RINGS!
 
-			if (player->capsule && player->capsule->health != player->capsule->spawnpoint->angle)
+			if (player->capsule && player->capsule->health != player->capsule->spawnpoint->args[1])
 				player->textvar++; // GET n MORE RINGS!
 		}
 	}

@@ -1925,7 +1925,7 @@ static void ST_drawNiGHTSHUD(void)
 		INT32 amount;
 		const INT32 length = 88;
 
-		origamount = stplyr->capsule->spawnpoint->angle;
+		origamount = stplyr->capsule->spawnpoint->args[1];
 		I_Assert(origamount > 0); // should not happen now
 
 		ST_DrawTopLeftOverlayPatch(72, 8, nbracket);
