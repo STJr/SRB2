@@ -492,11 +492,8 @@ static void M_ConfirmAddonWarning(event_t *ev)
 
 	if (ev->key == ' ' || ev->key == 'y' || ev->key == KEY_ENTER || ev->key == KEY_JOY1)
 	{
-		G_SaveGameData(clientGamedata);
-
 		D_RestartGame(false);
 
-		G_LoadGameData(clientGamedata);
 		M_CopyGameData(serverGamedata, clientGamedata);
 
 		F_ReloadTitleScreenGraphics();

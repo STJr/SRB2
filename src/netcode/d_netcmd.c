@@ -3636,11 +3636,8 @@ static void Command_Unloadaddons(void)
 		return;
 	}
 
-	G_SaveGameData(clientGamedata);
-
 	D_RestartGame(true);
 
-	G_LoadGameData(clientGamedata);
 	M_CopyGameData(serverGamedata, clientGamedata);
 
 	F_StartIntro();
@@ -3658,11 +3655,7 @@ static void Got_Unloadaddonscmd(UINT8 **cp, INT32 playernum)
 		return;
 	}
 
-	G_SaveGameData(clientGamedata);
-
 	D_RestartGame(false);
-
-	G_LoadGameData(clientGamedata);
 
 	if (serverGamedataBackup)
 	{

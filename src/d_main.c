@@ -1826,9 +1826,13 @@ void D_ReloadFiles(void)
 
 void D_RestartGame(boolean remove_all_addons)
 {
+	G_SaveGameData(clientGamedata);
+
 	W_ClearCachedData();
 	W_UnloadAddons(remove_all_addons);
 	D_ReloadFiles();
+
+	G_LoadGameData(clientGamedata);
 }
 
 const char *D_Home(void)
