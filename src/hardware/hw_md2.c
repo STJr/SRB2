@@ -1146,7 +1146,7 @@ static void HWR_GetBlendedTexture(patch_t *patch, patch_t *blendpatch, INT32 ski
 static boolean HWR_AllowModel(mobj_t *mobj)
 {
 	// Signpost overlay. Not needed.
-	if (mobj->state-states == S_PLAY_SIGN)
+	if (mobj->sprite2 == SPR2_SIGN || mobj->state-states == S_PLAY_SIGN)
 		return false;
 
 	// Otherwise, render the model.
@@ -1585,7 +1585,7 @@ boolean HWR_DrawModel(gl_vissprite_t *spr)
 		p.y = FIXED_TO_FLOAT(interp.y)+md2->offset;
 
 		if (flip)
-			p.z = FIXED_TO_FLOAT(interp.z + spr->mobj->height);
+			p.z = FIXED_TO_FLOAT(interp.z + interp.height);
 		else
 			p.z = FIXED_TO_FLOAT(interp.z);
 
@@ -1621,8 +1621,8 @@ boolean HWR_DrawModel(gl_vissprite_t *spr)
 				p.roll = true;
 
 				// rotation pivot
-				p.centerx = FIXED_TO_FLOAT(spr->mobj->radius / 2);
-				p.centery = FIXED_TO_FLOAT(spr->mobj->height / 2);
+				p.centerx = FIXED_TO_FLOAT(interp.radius / 2);
+				p.centery = FIXED_TO_FLOAT(interp.height / 2);
 
 				// rotation axes relative to camera
 				p.rollx = FIXED_TO_FLOAT(FINECOSINE(FixedAngle(camAngleDiff) >> ANGLETOFINESHIFT));

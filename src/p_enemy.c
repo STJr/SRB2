@@ -829,7 +829,7 @@ static boolean P_LookForShield(mobj_t *actor)
 			continue;
 
 		if ((player->powers[pw_shield] & SH_PROTECTELECTRIC)
-			&& (P_AproxDistance(P_AproxDistance(actor->x-player->mo->x, actor->y-player->mo->y), actor->z-player->mo->z) < FixedMul(RING_DIST, player->mo->scale)))
+			&& (R_PointToDist2(0, 0, R_PointToDist2(0, 0, actor->x-player->mo->x, actor->y-player->mo->y), actor->z-player->mo->z) < FixedMul(RING_DIST, player->mo->scale)))
 		{
 			P_SetTarget(&actor->tracer, player->mo);
 
@@ -5248,7 +5248,7 @@ void A_SignPlayer(mobj_t *actor)
 			return;
 
 		skin = &skins[actor->target->player->skin];
-		facecolor = actor->target->player->skincolor;
+		facecolor = P_GetPlayerColor(actor->target->player);
 
 		if (signcolor)
 			;
@@ -9059,7 +9059,7 @@ void A_Dye(mobj_t *actor)
 	if (!color)
 	{
 		target->colorized = false;
-		target->color = target->player ? target->player->skincolor : SKINCOLOR_NONE;
+		target->color = target->player ? P_GetPlayerColor(target->player) : SKINCOLOR_NONE;
 	}
 	else if (!(target->player))
 	{

@@ -17,8 +17,6 @@ sources+=win32/Srb2win.rc
 opts+=-DSTDC_HEADERS
 libs+=-ladvapi32 -lkernel32 -lmsvcrt -luser32
 
-nasm_format:=win32
-
 SDL?=1
 
 ifndef NOHW
@@ -35,11 +33,9 @@ libs+=-lws2_32
 endif
 endif
 
-ifndef NONET
 ifndef MINGW64 # miniupnc is broken with MINGW64
 opts+=-I../libs -DSTATIC_MINIUPNPC
 libs+=-L../libs/miniupnpc/mingw$(32) -lws2_32 -liphlpapi
-endif
 endif
 
 ifndef MINGW64

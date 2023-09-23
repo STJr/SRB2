@@ -251,6 +251,7 @@ extern textprompt_t *textprompts[MAX_PROMPTS];
 // For the Custom Exit linedef.
 extern INT16 nextmapoverride;
 extern UINT8 skipstats;
+extern INT16 nextgametype;
 
 extern UINT32 ssspheres; //  Total # of spheres in a level
 
@@ -635,7 +636,7 @@ extern boolean singletics;
 // Netgame stuff
 // =============
 
-#include "d_clisrv.h"
+#include "netcode/d_clisrv.h"
 
 extern consvar_t cv_timetic; // display high resolution timer
 extern consvar_t cv_powerupdisplay; // display powerups

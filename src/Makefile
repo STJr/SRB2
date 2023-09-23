@@ -47,8 +47,6 @@
 # HAVE_MINIUPNPC=1 - Enable automated port forwarding.
 #                    Already enabled by default for 32-bit
 #                    Windows.
-# NOASM=1 - Disable hand optimized assembly code for the
-#           Software renderer.
 # NOPNG=1 - Disable PNG graphics support. (TODO: double
 #           check netplay compatible.)
 # NOCURL=1 - Disable libcurl--HTTP capability.
@@ -64,7 +62,6 @@
 #
 # Netplay incompatible
 # --------------------
-# NONET=1 - Disable online capability.
 # NOMD5=1 - Disable MD5 checksum (validation tool).
 # NOPOSTPROCESSING=1 - ?
 # MOBJCONSISTANCY=1 - ??
@@ -88,7 +85,6 @@
 #        executable.
 # WINDOWSHELL=1 - Use Windows commands.
 # PREFIX= - Prefix to many commands, for cross compiling.
-# YASM=1 - Use Yasm instead of NASM assembler.
 # STABS=1 - ?
 # ECHO=1 - Print out each command in the build process.
 # NOECHOFILENAMES=1 - Don't print out each that is being
@@ -148,22 +144,6 @@ OBJCOPY:=$(call Prefix,objcopy)
 OBJDUMP:=$(call Prefix,objdump)
 WINDRES:=$(call Prefix,windres)
 
-ifdef YASM
-NASM?=yasm
-else
-NASM?=nasm
-endif
-
-ifdef YASM
-ifdef STABS
-NASMOPTS?=-g stabs
-else
-NASMOPTS?=-g dwarf2
-endif
-else
-NASMOPTS?=-g
-endif
-
 GZIP?=gzip
 GZIP_OPTS?=-9 -f -n
 ifdef WINDOWSHELL
@@ -187,8 +167,6 @@ makedir:=../make
 opts:=-DCOMPVERSION -g
 libs:=
 
-nasm_format:=
-
 # This is a list of variables names, of which if defined,
 # also defines the name as a macro to the compiler.
 passthru_opts:=
@@ -208,6 +186,7 @@ objdir:=$(makedir)/objs
 sources+=\
 	$(call List,Sourcefile)\
 	$(call List,blua/Sourcefile)\
+	$(call List,netcode/Sourcefile)\
 
 depends:=$(basename $(filter %.c %.s,$(sources)))
 objects:=$(basename $(filter %.c %.s %.nas,$(sources)))
@@ -316,7 +295,6 @@ endif
 
 LD:=$(CC)
 cc:=$(cc) $(opts)
-nasm=$(NASM) $(NASMOPTS) -f $(nasm_format)
 ifdef UPX
 upx=$(UPX) $(UPX_OPTS)
 endif
@@ -393,7 +371,6 @@ $(objdir)/%.$(1) : %.$(2) | $$$$(@D)/
 endef
 
 $(eval $(call _recipe,o,c,$(cc) -c -o $$@ $$<))
-$(eval $(call _recipe,o,nas,$(nasm) -o $$@ $$<))
 $(eval $(call _recipe,o,s,$(cc) $(asflags) -c -o $$@ $$<))
 $(eval $(call _recipe,res,rc,$(windres) -i $$< -o $$@))
 
@@ -414,3 +391,5 @@ ifdef WINDOWSHELL
 else
 	@:
 endif
+
+#$(warning The handwritten GNU Makefile for SRB2 is deprecated, and may be removed in the future. Please consider switching to CMake.)

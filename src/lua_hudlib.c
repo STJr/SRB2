@@ -282,7 +282,6 @@ static int patch_get(lua_State *L)
 	patch_t *patch = *((patch_t **)luaL_checkudata(L, 1, META_PATCH));
 	enum patch field = Lua_optoption(L, 2, -1, patch_fields_ref);
 
-	// patches are invalidated when switching renderers
 	if (!patch) {
 		if (field == patch_valid) {
 			lua_pushboolean(L, 0);
@@ -436,7 +435,7 @@ static int camera_set(lua_State *L)
 		cam->momz = luaL_checkfixed(L, 3);
 		break;
 	default:
-		return luaL_error(L, LUA_QL("camera_t") " has no field named " LUA_QS, camera_opt[field]);
+		return luaL_error(L, LUA_QL("camera_t") " has no field named " LUA_QS ".", lua_tostring(L, 2));
 	}
 	return 0;
 }
@@ -1487,7 +1486,6 @@ void LUA_SetHudHook(int hook, huddrawlist_h list)
 			break;
 
 		case HUD_HOOK(intermission):
-			lua_pushboolean(gL, intertype == int_spec &&
-					stagefailed);
+			lua_pushboolean(gL, stagefailed);
 	}
 }

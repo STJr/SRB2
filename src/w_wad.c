@@ -51,8 +51,8 @@
 #include "filesrch.h"
 
 #include "d_main.h"
-#include "d_netfil.h"
-#include "d_clisrv.h"
+#include "netcode/d_netfil.h"
+#include "netcode/d_clisrv.h"
 #include "dehacked.h"
 #include "d_main.h"
 #include "g_game.h"

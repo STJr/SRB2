@@ -447,12 +447,6 @@ static void CV_palette_OnChange(void)
 	V_SetPalette(0);
 }
 
-#if defined (__GNUC__) && defined (__i386__) && !defined (NOASM) && !defined (__APPLE__) && !defined (NORUSEASM)
-void VID_BlitLinearScreen_ASM(const UINT8 *srcptr, UINT8 *destptr, INT32 width, INT32 height, size_t srcrowbytes,
-	size_t destrowbytes);
-#define HAVE_VIDCOPY
-#endif
-
 static void CV_constextsize_OnChange(void)
 {
 	if (!con_refresh)
@@ -466,9 +460,6 @@ static void CV_constextsize_OnChange(void)
 void VID_BlitLinearScreen(const UINT8 *srcptr, UINT8 *destptr, INT32 width, INT32 height, size_t srcrowbytes,
 	size_t destrowbytes)
 {
-#ifdef HAVE_VIDCOPY
-    VID_BlitLinearScreen_ASM(srcptr,destptr,width,height,srcrowbytes,destrowbytes);
-#else
 	if (srcrowbytes == destrowbytes)
 		M_Memcpy(destptr, srcptr, srcrowbytes * height);
 	else
@@ -481,7 +472,6 @@ void VID_BlitLinearScreen(const UINT8 *srcptr, UINT8 *destptr, INT32 width, INT3
 			srcptr += srcrowbytes;
 		}
 	}
-#endif
 }
 
 static UINT8 hudplusalpha[11]  = { 10,  8,  6,  4,  2,  0,  0,  0,  0,  0,  0};
