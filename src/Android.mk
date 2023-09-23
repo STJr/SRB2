@@ -8,11 +8,7 @@ LOCAL_SRC_FILES :=      am_map.c \
                         command.c \
                         comptime.c \
                         console.c \
-                        d_clisrv.c \
                         d_main.c \
-                        d_net.c \
-                        d_netcmd.c \
-                        d_netfil.c \
                         dehacked.c \
                         f_finale.c \
                         f_wipe.c \
@@ -20,7 +16,6 @@ LOCAL_SRC_FILES :=      am_map.c \
                         g_game.c \
                         g_input.c \
                         hu_stuff.c \
-                        i_tcp.c \
                         info.c \
                         lzf.c \
                         m_argv.c \
@@ -32,7 +27,6 @@ LOCAL_SRC_FILES :=      am_map.c \
                         m_queue.c \
                         m_random.c \
                         md5.c \
-                        mserv.c \
                         p_ceilng.c \
                         p_enemy.c \
                         p_fab.c \
@@ -61,6 +55,7 @@ LOCAL_SRC_FILES :=      am_map.c \
                         r_things.c \
                         s_sound.c \
                         screen.c \
+                        snake.c \
                         sounds.c \
                         st_stuff.c \
                         string.c \
