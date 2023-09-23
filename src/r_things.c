@@ -943,7 +943,7 @@ static void R_DrawVisSprite(vissprite_t *vis)
 			sprtopscreen = (centeryfrac - FixedMul(dc_texturemid, spryscale));
 			dc_iscale = (0xffffffffu / (unsigned)spryscale);
 
-			column = &patch->columns[texturecolumn];
+			column = Patch_GetColumn(patch, texturecolumn);
 
 			localcolfunc (column);
 		}
@@ -957,8 +957,8 @@ static void R_DrawVisSprite(vissprite_t *vis)
 		// Vertically sheared sprite
 		for (dc_x = vis->x1; dc_x <= vis->x2; dc_x++, frac += vis->xiscale, dc_texturemid -= vis->shear.tan)
 		{
-			texturecolumn = (frac>>FRACBITS) & patch->width_mask;
-			column = &patch->columns[texturecolumn];
+			texturecolumn = frac>>FRACBITS;
+			column = Patch_GetColumn(patch, texturecolumn);
 			sprtopscreen = (centeryfrac - FixedMul(dc_texturemid, spryscale));
 			localcolfunc (column);
 		}
@@ -972,8 +972,8 @@ static void R_DrawVisSprite(vissprite_t *vis)
 		// Non-paper drawing loop
 		for (dc_x = vis->x1; dc_x <= vis->x2; dc_x++, frac += vis->xiscale, sprtopscreen += vis->shear.tan)
 		{
-			texturecolumn = (frac>>FRACBITS) & patch->width_mask;
-			column = &patch->columns[texturecolumn];
+			texturecolumn = frac>>FRACBITS;
+			column = Patch_GetColumn(patch, texturecolumn);
 			localcolfunc (column);
 		}
 	}
@@ -1031,8 +1031,8 @@ static void R_DrawPrecipitationVisSprite(vissprite_t *vis)
 
 	for (dc_x = vis->x1; dc_x <= vis->x2; dc_x++, frac += vis->xiscale)
 	{
-		texturecolumn = (frac>>FRACBITS) & patch->width_mask;
-		column = &patch->columns[texturecolumn];
+		texturecolumn = frac>>FRACBITS;
+		column = Patch_GetColumn(patch, texturecolumn);
 		R_DrawMaskedColumn(column);
 	}
 

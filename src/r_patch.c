@@ -21,12 +21,19 @@
 
 //
 // Creates a patch.
-// Assumes a PU_PATCH zone memory tag and no user, but can always be set later
 //
 
-patch_t *Patch_Create(softwarepatch_t *source, void *dest)
+patch_t *Patch_Create(INT16 width, INT16 height)
 {
-	patch_t *patch = (dest == NULL) ? Z_Calloc(sizeof(patch_t), PU_PATCH, NULL) : (patch_t *)(dest);
+	patch_t *patch = Z_Calloc(sizeof(patch_t), PU_PATCH, NULL);
+	patch->width = width;
+	patch->height = height;
+	return patch;
+}
+
+patch_t *Patch_CreateFromDoomPatch(softwarepatch_t *source)
+{
+	patch_t *patch = Patch_Create(0, 0);
 	if (!source)
 		return patch;
 
@@ -40,16 +47,16 @@ patch_t *Patch_Create(softwarepatch_t *source, void *dest)
 
 	Patch_CalcDataSizes(source, &total_pixels, &total_posts);
 
-	patch->width_po2 = 1;
-	while (patch->width_po2 < patch->width)
-		patch->width_po2 <<= 1;
-	patch->width_mask = patch->width_po2 - 1;
+	int width_po2 = 1;
+	while (width_po2 < patch->width)
+		width_po2 <<= 1;
+	patch->width_mask = width_po2 - 1;
 
-	patch->columns = Z_Calloc(sizeof(column_t) * patch->width_po2, PU_PATCH_DATA, NULL);
+	patch->columns = Z_Calloc(sizeof(column_t) * patch->width, PU_PATCH_DATA, NULL);
 	patch->posts = Z_Calloc(sizeof(post_t) * total_posts, PU_PATCH_DATA, NULL);
 	patch->pixels = Z_Calloc(sizeof(UINT8) * total_pixels, PU_PATCH_DATA, NULL);
 
-	Patch_MakeColumns(source, patch->width_po2, patch->width, patch->pixels, patch->columns, patch->posts, false);
+	Patch_MakeColumns(source, patch->width, patch->width, patch->pixels, patch->columns, patch->posts, false);
 
 	return patch;
 }
@@ -114,6 +121,19 @@ void Patch_MakeColumns(softwarepatch_t *source, size_t num_columns, INT16 width,
 		else
 			column++;
 	}
+}
+
+column_t *Patch_GetColumn(patch_t *patch, unsigned column)
+{
+	if (column >= (unsigned)patch->width)
+	{
+		if (patch->width_mask + 1 == patch->width)
+			column &= patch->width_mask;
+		else
+			column %= patch->width;
+	}
+
+	return &patch->columns[column];
 }
 
 //

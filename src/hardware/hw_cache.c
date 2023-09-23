@@ -1107,8 +1107,8 @@ patch_t *HWR_GetCachedGLPatchPwad(UINT16 wadnum, UINT16 lumpnum)
 	lumpcache_t *lumpcache = wadfiles[wadnum]->patchcache;
 	if (!lumpcache[lumpnum])
 	{
-		void *ptr = Z_Calloc(sizeof(patch_t), PU_PATCH, &lumpcache[lumpnum]);
-		Patch_Create(NULL, ptr);
+		void *ptr = Patch_Create(0, 0);
+		Z_SetUser(ptr, &lumpcache[lumpnum]);
 		Patch_AllocateHardwarePatch(ptr);
 	}
 	return (patch_t *)(lumpcache[lumpnum]);

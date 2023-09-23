@@ -245,7 +245,7 @@ void *Picture_PatchConvert(
 	{
 		if (outsize != NULL)
 			*outsize = sizeof(patch_t);
-		return Patch_Create(picture, NULL);
+		return Patch_CreateFromDoomPatch(picture);
 	}
 
 	INT32 outbpp = Picture_FormatBPP(outformat);

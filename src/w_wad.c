@@ -2064,9 +2064,11 @@ void *W_CacheSoftwarePatchNumPwad(UINT16 wad, UINT16 lump, INT32 tag)
 		}
 #endif
 
-		dest = Z_Calloc(sizeof(patch_t), tag, &lumpcache[lump]);
-		Patch_Create(ptr, dest);
+		dest = Patch_CreateFromDoomPatch(ptr);
 		Z_Free(ptr);
+
+		Z_ChangeTag(dest, tag);
+		Z_SetUser(dest, &lumpcache[lump]);
 	}
 	else
 		Z_ChangeTag(lumpcache[lump], tag);
