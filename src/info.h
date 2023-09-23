@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2022 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -18,6 +18,7 @@
 #include "d_think.h"
 #include "sounds.h"
 #include "m_fixed.h"
+#include "dehacked.h" // MAX_ACTION_RECURSION
 
 // deh_tables.c now has lists for the more named enums! PLEASE keep them up to date!
 // For great modding!!
@@ -44,6 +45,8 @@ enum actionnum
 	A_FACETRACER,
 	A_SCREAM,
 	A_BOSSDEATH,
+	A_SETSHADOWSCALE,
+	A_SHADOWSCREAM,
 	A_CUSTOMPOWER,
 	A_GIVEWEAPON,
 	A_RINGBOX,
@@ -149,7 +152,9 @@ enum actionnum
 	A_BOSS3TAKEDAMAGE,
 	A_BOSS3PATH,
 	A_BOSS3SHOCKTHINK,
+	A_SHOCKWAVE,
 	A_LINEDEFEXECUTE,
+	A_LINEDEFEXECUTEFROMARG,
 	A_PLAYSEESOUND,
 	A_PLAYATTACKSOUND,
 	A_PLAYACTIVESOUND,
@@ -312,6 +317,8 @@ void A_FaceTarget();
 void A_FaceTracer();
 void A_Scream();
 void A_BossDeath();
+void A_SetShadowScale();
+void A_ShadowScream(); // MARIA!!!!!!
 void A_CustomPower(); // Use this for a custom power
 void A_GiveWeapon(); // Gives the player weapon(s)
 void A_RingBox(); // Obtained Ring Box Tails
@@ -410,7 +417,9 @@ void A_Boss1Spikeballs();
 void A_Boss3TakeDamage();
 void A_Boss3Path();
 void A_Boss3ShockThink();
+void A_Shockwave();
 void A_LinedefExecute();
+void A_LinedefExecuteFromArg();
 void A_PlaySeeSound();
 void A_PlayAttackSound();
 void A_PlayActiveSound();
@@ -558,7 +567,7 @@ void A_DragonWing();
 void A_DragonSegment();
 void A_ChangeHeight();
 
-extern boolean actionsoverridden[NUMACTIONS];
+extern int actionsoverridden[NUMACTIONS][MAX_ACTION_RECURSION];
 
 // ratio of states to sprites to mobj types is roughly 6 : 1 : 1
 #define NUMMOBJFREESLOTS 512
@@ -4995,17 +5004,7 @@ typedef enum mobj_type
 	MT_FINISHFLAG, // Finish flag
 
 	// Ambient Sounds
-	MT_AWATERA, // Ambient Water Sound 1
-	MT_AWATERB, // Ambient Water Sound 2
-	MT_AWATERC, // Ambient Water Sound 3
-	MT_AWATERD, // Ambient Water Sound 4
-	MT_AWATERE, // Ambient Water Sound 5
-	MT_AWATERF, // Ambient Water Sound 6
-	MT_AWATERG, // Ambient Water Sound 7
-	MT_AWATERH, // Ambient Water Sound 8
-	MT_RANDOMAMBIENT,
-	MT_RANDOMAMBIENT2,
-	MT_MACHINEAMBIENCE,
+	MT_AMBIENT,
 
 	MT_CORK,
 	MT_LHRT,
@@ -5109,7 +5108,6 @@ typedef enum mobj_type
 	MT_CRUMBLEOBJ, // Sound generator for crumbling platform
 	MT_TUBEWAYPOINT,
 	MT_PUSH,
-	MT_PULL,
 	MT_GHOST,
 	MT_OVERLAY,
 	MT_ANGLEMAN,

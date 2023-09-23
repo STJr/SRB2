@@ -3,7 +3,7 @@
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
 // Copyright (C) 2013-2016 by Matthew "Kaito Sinclaire" Walsh.
-// Copyright (C) 1999-2022 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -24,6 +24,7 @@
 #include "w_wad.h"
 #include "z_zone.h"
 
+#include "i_time.h"
 #include "i_system.h"
 #include "i_threads.h"
 #include "m_menu.h"
@@ -555,7 +556,10 @@ void F_RunWipe(UINT8 wipetype, boolean drawMenu)
 
 		// wait loop
 		while (!((nowtime = I_GetTime()) - lastwipetic))
-			I_Sleep();
+		{
+			I_Sleep(cv_sleep.value);
+			I_UpdateTime(cv_timescale.value);
+		}
 		lastwipetic = nowtime;
 
 		// Wipe styles
@@ -610,6 +614,8 @@ void F_RunWipe(UINT8 wipetype, boolean drawMenu)
 
 		if (moviemode)
 			M_SaveFrame();
+
+		NetKeepAlive(); // Update the network so we don't cause timeouts
 	}
 
 	WipeInAction = false;

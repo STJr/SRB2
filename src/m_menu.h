@@ -3,7 +3,7 @@
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
 // Copyright (C) 2011-2016 by Matthew "Kaito Sinclaire" Walsh.
-// Copyright (C) 1999-2022 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -389,9 +389,9 @@ typedef struct
 // level select platter
 typedef struct
 {
-	char header[22+5]; // mapheader_t lvltttl max length + " ZONE"
+	char header[22+5]; // mapheader_t lvlttl max length + " ZONE"
 	INT32 maplist[3];
-	char mapnames[3][17+1];
+	char mapnames[3][22]; // lvlttl max length
 	boolean mapavailable[4]; // mapavailable[3] == wide or not
 } levelselectrow_t;
 
@@ -482,6 +482,8 @@ void M_MoveColorBefore(UINT16 color, UINT16 targ);
 void M_MoveColorAfter(UINT16 color, UINT16 targ);
 UINT16 M_GetColorBefore(UINT16 color);
 UINT16 M_GetColorAfter(UINT16 color);
+UINT16 M_GetColorIndex(UINT16 color);
+menucolor_t* M_GetColorFromIndex(UINT16 index);
 void M_InitPlayerSetupColors(void);
 void M_FreePlayerSetupColors(void);
 

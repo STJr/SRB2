@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2012-2016 by John "JTE" Muniz.
-// Copyright (C) 2012-2022 by Sonic Team Junior.
+// Copyright (C) 2012-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -72,7 +72,7 @@ static boolean mobj_hook_available(int hook_type, mobjtype_t mobj_type)
 	return
 		(
 				mobjHookIds [MT_NULL] [hook_type].numHooks > 0 ||
-				mobjHookIds[mobj_type][hook_type].numHooks > 0
+				(mobj_type < NUMMOBJTYPES && mobjHookIds[mobj_type][hook_type].numHooks > 0)
 		);
 }
 
@@ -246,7 +246,6 @@ int LUA_HookLib(lua_State *L)
 }
 
 /* TODO: remove in next backwards incompatible release */
-#if MODID == 18
 int lib_hudadd(lua_State *L);/* yeah compiler */
 int lib_hudadd(lua_State *L)
 {
@@ -260,7 +259,6 @@ int lib_hudadd(lua_State *L)
 
 	return 0;
 }
-#endif
 
 typedef struct Hook_State Hook_State;
 typedef void (*Hook_Callback)(Hook_State *);
@@ -345,8 +343,11 @@ static boolean prepare_mobj_hook
 		Hook_State * hook,
 		int          default_status,
 		int          hook_type,
-		mobjtype_t   mobj_type
+		mobj_t     * primary_mobj
 ){
+	const mobjtype_t mobj_type =
+		primary_mobj ? primary_mobj->type : NUMMOBJTYPES;
+
 #ifdef PARANOIA
 	if (mobj_type == MT_NULL)
 		I_Error("MT_NULL has been passed to a mobj hook\n");
@@ -507,7 +508,9 @@ static int call_hooks
 	{
 		/* call generic mobj hooks first */
 		calls += call_mobj_type_hooks(hook, MT_NULL);
-		calls += call_mobj_type_hooks(hook, hook->mobj_type);
+
+		if (hook->mobj_type < NUMMOBJTYPES)
+			calls += call_mobj_type_hooks(hook, hook->mobj_type);
 
 		ps_lua_mobjhooks.value.i += calls;
 	}
@@ -555,7 +558,7 @@ static void res_force(Hook_State *hook)
 int LUA_HookMobj(mobj_t *mobj, int hook_type)
 {
 	Hook_State hook;
-	if (prepare_mobj_hook(&hook, false, hook_type, mobj->type))
+	if (prepare_mobj_hook(&hook, false, hook_type, mobj))
 	{
 		LUA_PushUserdata(gL, mobj, META_MOBJ);
 		call_hooks(&hook, 1, res_true);
@@ -566,7 +569,7 @@ int LUA_HookMobj(mobj_t *mobj, int hook_type)
 int LUA_Hook2Mobj(mobj_t *t1, mobj_t *t2, int hook_type)
 {
 	Hook_State hook;
-	if (prepare_mobj_hook(&hook, 0, hook_type, t1->type))
+	if (prepare_mobj_hook(&hook, 0, hook_type, t1))
 	{
 		LUA_PushUserdata(gL, t1, META_MOBJ);
 		LUA_PushUserdata(gL, t2, META_MOBJ);
@@ -643,7 +646,7 @@ int LUA_HookKey(event_t *event, int hook_type)
 	return hook.status;
 }
 
-void LUA_HookHUD(int hook_type)
+void LUA_HookHUD(int hook_type, huddrawlist_h list)
 {
 	const hook_t * map = &hudHookIds[hook_type];
 	Hook_State hook;
@@ -652,12 +655,15 @@ void LUA_HookHUD(int hook_type)
 		start_hook_stack();
 		begin_hook_values(&hook);
 
-		LUA_SetHudHook(hook_type);
+		LUA_SetHudHook(hook_type, list);
 
 		hud_running = true; // local hook
 		init_hook_call(&hook, 0, res_none);
 		call_mapped(&hook, map);
 		hud_running = false;
+
+		lua_pushnil(gL);
+		lua_setfield(gL, LUA_REGISTRYINDEX, "HUD_DRAW_LIST");
 	}
 }
 
@@ -711,7 +717,7 @@ void LUA_HookThinkFrame(void)
 int LUA_HookMobjLineCollide(mobj_t *mobj, line_t *line)
 {
 	Hook_State hook;
-	if (prepare_mobj_hook(&hook, 0, MOBJ_HOOK(MobjLineCollide), mobj->type))
+	if (prepare_mobj_hook(&hook, 0, MOBJ_HOOK(MobjLineCollide), mobj))
 	{
 		LUA_PushUserdata(gL, mobj, META_MOBJ);
 		LUA_PushUserdata(gL, line, META_LINE);
@@ -723,7 +729,7 @@ int LUA_HookMobjLineCollide(mobj_t *mobj, line_t *line)
 int LUA_HookTouchSpecial(mobj_t *special, mobj_t *toucher)
 {
 	Hook_State hook;
-	if (prepare_mobj_hook(&hook, false, MOBJ_HOOK(TouchSpecial), special->type))
+	if (prepare_mobj_hook(&hook, false, MOBJ_HOOK(TouchSpecial), special))
 	{
 		LUA_PushUserdata(gL, special, META_MOBJ);
 		LUA_PushUserdata(gL, toucher, META_MOBJ);
@@ -743,7 +749,7 @@ static int damage_hook
 		Hook_Callback results_handler
 ){
 	Hook_State hook;
-	if (prepare_mobj_hook(&hook, 0, hook_type, target->type))
+	if (prepare_mobj_hook(&hook, 0, hook_type, target))
 	{
 		LUA_PushUserdata(gL, target, META_MOBJ);
 		LUA_PushUserdata(gL, inflictor, META_MOBJ);
@@ -777,7 +783,7 @@ int LUA_HookMobjDeath(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 d
 int LUA_HookMobjMoveBlocked(mobj_t *t1, mobj_t *t2, line_t *line)
 {
 	Hook_State hook;
-	if (prepare_mobj_hook(&hook, 0, MOBJ_HOOK(MobjMoveBlocked), t1->type))
+	if (prepare_mobj_hook(&hook, 0, MOBJ_HOOK(MobjMoveBlocked), t1))
 	{
 		LUA_PushUserdata(gL, t1, META_MOBJ);
 		LUA_PushUserdata(gL, t2, META_MOBJ);
@@ -904,7 +910,7 @@ int LUA_HookPlayerMsg(int source, int target, int flags, char *msg)
 int LUA_HookHurtMsg(player_t *player, mobj_t *inflictor, mobj_t *source, UINT8 damagetype)
 {
 	Hook_State hook;
-	if (prepare_hook(&hook, false, HOOK(HurtMsg)))
+	if (prepare_mobj_hook(&hook, false, MOBJ_HOOK(HurtMsg), inflictor))
 	{
 		LUA_PushUserdata(gL, player, META_PLAYER);
 		LUA_PushUserdata(gL, inflictor, META_MOBJ);
@@ -948,7 +954,7 @@ void LUA_HookNetArchive(lua_CFunction archFunc)
 int LUA_HookMapThingSpawn(mobj_t *mobj, mapthing_t *mthing)
 {
 	Hook_State hook;
-	if (prepare_mobj_hook(&hook, false, MOBJ_HOOK(MapThingSpawn), mobj->type))
+	if (prepare_mobj_hook(&hook, false, MOBJ_HOOK(MapThingSpawn), mobj))
 	{
 		LUA_PushUserdata(gL, mobj, META_MOBJ);
 		LUA_PushUserdata(gL, mthing, META_MAPTHING);
@@ -960,7 +966,7 @@ int LUA_HookMapThingSpawn(mobj_t *mobj, mapthing_t *mthing)
 int LUA_HookFollowMobj(player_t *player, mobj_t *mobj)
 {
 	Hook_State hook;
-	if (prepare_mobj_hook(&hook, false, MOBJ_HOOK(FollowMobj), mobj->type))
+	if (prepare_mobj_hook(&hook, false, MOBJ_HOOK(FollowMobj), mobj))
 	{
 		LUA_PushUserdata(gL, player, META_PLAYER);
 		LUA_PushUserdata(gL, mobj, META_MOBJ);

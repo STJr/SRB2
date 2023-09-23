@@ -57,6 +57,8 @@ const char *VID_GetModeName(INT32 modenum)
 	return NULL;
 }
 
+UINT32 I_GetRefreshRate(void) { return 35; }
+
 void I_UpdateNoBlit(void){}
 
 void I_FinishUpdate(void){}

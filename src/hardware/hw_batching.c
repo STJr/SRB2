@@ -1,6 +1,6 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
-// Copyright (C) 2020-2022 by Sonic Team Junior.
+// Copyright (C) 2020-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -123,10 +123,9 @@ void HWR_ProcessPolygon(FSurfaceInfo *pSurf, FOutVector *pOutVerts, FUINT iNumPt
 	}
 	else
 	{
-        if (shader_target != -1)
-            HWD.pfnSetShader(HWR_GetShaderFromTarget(shader_target));
-        HWD.pfnDrawPolygon(pSurf, pOutVerts, iNumPts, PolyFlags);
-    }
+		HWD.pfnSetShader((shader_target != SHADER_NONE) ? HWR_GetShaderFromTarget(shader_target) : shader_target);
+		HWD.pfnDrawPolygon(pSurf, pOutVerts, iNumPts, PolyFlags);
+	}
 }
 
 static int comparePolygons(const void *p1, const void *p2)

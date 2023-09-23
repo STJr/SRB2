@@ -15,7 +15,7 @@
 #include "hw_md2load.h"
 #include "hw_md3load.h"
 #include "hw_md2.h"
-#include "u_list.h"
+#include "../u_list.h"
 #include <string.h>
 
 static float PI = (3.1415926535897932384626433832795f);

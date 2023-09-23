@@ -18,13 +18,6 @@ opts+=-DHWRENDER
 sources+=$(call List,hardware/Sourcefile)
 endif
 
-ifndef NOASM
-ifndef NONX86
-sources+=tmap.nas tmap_mmx.nas
-opts+=-DUSEASM
-endif
-endif
-
 ifndef NOMD5
 sources+=md5.c
 endif
@@ -39,7 +32,7 @@ $(eval $(call Configure,PNG,$(PNG_CONFIG) \
 	$(if $(PNG_STATIC),--static),,--ldflags))
 endif
 ifdef LINUX
-opts+=-D_LARGFILE64_SOURCE
+opts+=-D_LARGEFILE64_SOURCE
 endif
 opts+=-DHAVE_PNG
 sources+=apng.c
