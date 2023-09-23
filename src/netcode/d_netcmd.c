@@ -3636,7 +3636,12 @@ static void Command_Unloadaddons(void)
 		return;
 	}
 
+	G_SaveGameData(clientGamedata);
+
 	D_RestartGame(true);
+
+	G_LoadGameData(clientGamedata);
+	M_CopyGameData(serverGamedata, clientGamedata);
 
 	F_StartIntro();
 }
