@@ -124,7 +124,7 @@ static inline void R_DrawFlippedColumnInCache(column_t *column, UINT8 *cache, te
 	{
 		post_t *post = &column->posts[i];
 		topdelta = patchheight - post->length - post->topdelta;
-		source = column->pixels + post->data_offset + post->length;
+		source = column->pixels + post->data_offset + (post->length - 1);
 		count = post->length;
 		position = originy + topdelta;
 
@@ -201,7 +201,7 @@ static inline void R_DrawBlendFlippedColumnInCache(column_t *column, UINT8 *cach
 	{
 		post_t *post = &column->posts[i];
 		topdelta = patchheight - post->length - post->topdelta;
-		source = column->pixels + post->data_offset + post->length;
+		source = column->pixels + post->data_offset + (post->length - 1);
 		count = post->length;
 		position = originy + topdelta;
 
