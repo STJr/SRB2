@@ -37,6 +37,10 @@ void Patch_UpdatePixels(patch_t *patch,
 
 boolean Patch_NeedsUpdate(patch_t *patch);
 void Patch_DoDynamicUpdate(patch_t *patch);
+void Patch_MarkDirtyRect(patch_t *dpatch, INT16 left, INT16 top, INT16 right, INT16 bottom);
+
+void Patch_Clear(patch_t *patch);
+void Patch_ClearRect(patch_t *patch, INT16 x, INT16 y, INT16 width, INT16 height);
 
 bitarray_t *Patch_GetOpaqueRegions(patch_t *patch);
 

@@ -90,7 +90,8 @@ enum patch {
 	// Methods
 	patch_getPixel,
 	patch_setPixel,
-	patch_copy
+	patch_copy,
+	patch_clear
 };
 static const char *const patch_opt[] = {
 	"valid",
@@ -103,6 +104,7 @@ static const char *const patch_opt[] = {
 	"getPixel",
 	"setPixel",
 	"copy",
+	"clear",
 	NULL};
 
 static int patch_fields_ref = LUA_NOREF;
@@ -378,8 +380,17 @@ static int lib_patch_copy(lua_State *L)
 	int src_img_width = -1;
 	int src_img_height = -1;
 
+	patch_t *src_patch = NULL;
+
 	if (!lua_istable(L, 2))
-		return luaL_typerror(L, 2, "table");
+	{
+		src_patch = *((patch_t **)luaL_checkudata(L, 2, META_PATCH));
+		if (!src_patch)
+			return LUA_ErrInvalid(L, "patch_t");
+
+		src_img_width = src_patch->width;
+		src_img_height = src_patch->height;
+	}
 	else
 	{
 		src_img_width = luaL_optinteger(L, 3, patch->width);
@@ -387,17 +398,17 @@ static int lib_patch_copy(lua_State *L)
 
 		lua_remove(L, 3);
 		lua_remove(L, 3);
-	}
 
-	if (src_img_width <= 0)
-		return luaL_error(L, "invalid source image width");
-	if (src_img_height <= 0)
-		return luaL_error(L, "invalid source image height");
+		if (src_img_width <= 0)
+			return luaL_error(L, "invalid source image width");
+		if (src_img_height <= 0)
+			return luaL_error(L, "invalid source image height");
+	}
 
 	int sx = luaL_optinteger(L, 3, 0);
 	int sy = luaL_optinteger(L, 4, 0);
-	int sw = luaL_optinteger(L, 5, patch->width);
-	int sh = luaL_optinteger(L, 6, patch->height);
+	int sw = luaL_optinteger(L, 5, src_img_width);
+	int sh = luaL_optinteger(L, 6, src_img_height);
 	int dx = luaL_optinteger(L, 7, 0);
 	int dy = luaL_optinteger(L, 8, 0);
 	boolean copy_transparent = lua_optboolean(L, 9);
@@ -407,12 +418,12 @@ static int lib_patch_copy(lua_State *L)
 	if (sh <= 0)
 		return luaL_error(L, "invalid copy rect height");
 
-	size_t size = (unsigned)(src_img_width * src_img_height);
-
-	img_prepare_buffer(size);
-
 	if (lua_istable(L, 2))
 	{
+		size_t size = (unsigned)(src_img_width * src_img_height);
+
+		img_prepare_buffer(size);
+
 		if (lua_objlen(L, 2) + 1 != size)
 			return luaL_error(L, "invalid table length");
 
@@ -422,9 +433,27 @@ static int lib_patch_copy(lua_State *L)
 		img_get_pixels_from_table(L, size);
 
 		lua_pop(L, 2);
+
+		Patch_UpdatePixels(patch, patch_update_buffer, src_img_width, src_img_height, PICFMT_FLAT16, sx, sy, sw, sh, dx, dy, copy_transparent);
+	}
+	else
+	{
+		V_DrawIntoPatch(patch, src_patch, dx << FRACBITS, dy << FRACBITS, FRACUNIT, FRACUNIT, 0, NULL, sx << FRACBITS, sy << FRACBITS, sw << FRACBITS, sh << FRACBITS, copy_transparent);
 	}
 
-	Patch_UpdatePixels(patch, patch_update_buffer, src_img_width, src_img_height, PICFMT_FLAT16, sx, sy, sw, sh, dx, dy, copy_transparent);
+	return 0;
+}
+
+static int lib_patch_clear(lua_State *L)
+{
+	patch_t *patch = *((patch_t **)luaL_checkudata(L, 1, META_PATCH));
+	if (!patch)
+		return LUA_ErrInvalid(L, "patch_t");
+
+	if (patch->type != PATCH_TYPE_DYNAMIC)
+		return luaL_error(L, "cannot modify a static patch");
+
+	Patch_Clear(patch);
 
 	return 0;
 }
@@ -470,6 +499,9 @@ static int patch_get(lua_State *L)
 		break;
 	case patch_copy:
 		lua_pushcfunction(L, lib_patch_copy);
+		break;
+	case patch_clear:
+		lua_pushcfunction(L, lib_patch_clear);
 		break;
 	}
 	return 1;

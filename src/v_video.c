@@ -1064,6 +1064,152 @@ void V_DrawCroppedPatch(fixed_t x, fixed_t y, fixed_t pscale, fixed_t vscale, IN
 	}
 }
 
+void V_DrawIntoPatch(patch_t *dest_patch, patch_t *src_patch, fixed_t x, fixed_t y, fixed_t pscale, fixed_t vscale, INT32 flags, const UINT8 *colormap, fixed_t sx, fixed_t sy, fixed_t w, fixed_t h, boolean copy_transparent)
+{
+	if (dest_patch->type != PATCH_TYPE_DYNAMIC)
+		return;
+
+	dynamicpatch_t *dpatch = (dynamicpatch_t *)dest_patch;
+
+	if (Patch_NeedsUpdate(src_patch))
+		Patch_DoDynamicUpdate(src_patch);
+
+	if (src_patch->columns == NULL)
+		return;
+
+	if (sx < 0)
+	{
+		w += sx;
+		sx = 0;
+	}
+	if (sy < 0)
+	{
+		h += sy;
+		sy = 0;
+	}
+
+	if (sx >= src_patch->width << FRACBITS || w <= 0)
+		return;
+	if (sy >= src_patch->height << FRACBITS || h <= 0)
+		return;
+
+	UINT8 (*patchdrawfunc)(const UINT8*, const UINT8*, fixed_t) = standardpdraw;
+
+	v_translevel = NULL;
+	v_colormap = NULL;
+
+	UINT32 alphalevel = ((flags & V_ALPHAMASK) >> V_ALPHASHIFT);
+	UINT32 blendmode = ((flags & V_BLENDMASK) >> V_BLENDSHIFT);
+
+	if (alphalevel || blendmode)
+	{
+		if (alphalevel >= 10)
+			return; // invis
+
+		if (alphalevel || blendmode)
+		{
+			v_translevel = R_GetBlendTable(blendmode+1, alphalevel);
+			patchdrawfunc = translucentpdraw;
+		}
+	}
+
+	if (colormap)
+	{
+		v_colormap = colormap;
+		patchdrawfunc = v_translevel ? transmappedpdraw : mappedpdraw;
+	}
+
+	fixed_t fdup = pscale;
+	fixed_t vdup = vscale;
+	fixed_t colfrac = FixedDiv(FRACUNIT, fdup);
+	fixed_t rowfrac = FixedDiv(FRACUNIT, vdup);
+
+	fixed_t offsetx = 0, offsety = 0;
+
+	// left offset
+	if (flags & V_FLIP)
+		offsetx = FixedMul((src_patch->width - src_patch->leftoffset)<<FRACBITS, pscale) + 1;
+	else
+		offsetx = FixedMul(src_patch->leftoffset<<FRACBITS, pscale);
+
+	// top offset
+	offsety = FixedMul(src_patch->topoffset<<FRACBITS, vscale);
+
+	// Subtract the offsets from x/y positions
+	x -= offsetx;
+	y -= offsety;
+
+	x >>= FRACBITS;
+	y >>= FRACBITS;
+
+	fixed_t pwidth = src_patch->width;
+	if (pscale != FRACUNIT)
+		pwidth = (pwidth * pscale) >> FRACBITS;
+
+	int dest_x = x;
+
+	Patch_MarkDirtyRect(dest_patch, x, y, x + (w >> FRACBITS), y + (h >> FRACBITS));
+
+	if (copy_transparent)
+		Patch_ClearRect(dest_patch, x, y, w >> FRACBITS, h >> FRACBITS);
+
+	if (dest_patch->pixels == NULL)
+		dest_patch->pixels = Z_Calloc(dest_patch->width * dest_patch->height, PU_PATCH_DATA, NULL);
+
+	for (fixed_t col = sx; (col>>FRACBITS) < src_patch->width && (col - sx) < w; col += colfrac, dest_x++)
+	{
+		if (dest_x < 0)
+			continue;
+		else if (dest_x >= dest_patch->width)
+			break;
+
+		unsigned texturecolumn = col >> FRACBITS;
+		if (flags & V_FLIP)
+			texturecolumn = src_patch->width - 1 - texturecolumn;
+
+		column_t *column = &src_patch->columns[texturecolumn];
+
+		for (unsigned i = 0; i < column->num_posts; i++)
+		{
+			post_t *post = &column->posts[i];
+			INT32 topdelta = post->topdelta << FRACBITS;
+			UINT8 *source = column->pixels + post->data_offset;
+
+			int dest_y = y;
+
+			fixed_t ofs;
+			if (topdelta - sy > 0)
+			{
+				dest_y = y + FixedInt(FixedMul(topdelta - sy, vdup));
+				ofs = 0;
+			}
+			else
+				ofs = sy - topdelta;
+
+			for (; dest_y < dest_patch->height && (size_t)(ofs>>FRACBITS) < post->length && ((ofs - sy) + topdelta) < h; ofs += rowfrac, dest_y++)
+			{
+				if (dest_y < 0)
+					continue;
+
+				size_t position = (dest_x * dest_patch->height) + dest_y;
+				if (!in_bit_array(dpatch->pixels_opaque, position))
+				{
+					set_bit_array(dpatch->pixels_opaque, position);
+					dpatch->update_columns = true;
+				}
+
+				UINT8 *dest = &dest_patch->pixels[position];
+				*dest = patchdrawfunc(dest, source, ofs);
+
+				dpatch->is_dirty = true;
+			}
+
+			if (dest_y >= dest_patch->height)
+				break;
+		}
+	}
+}
+
 //
 // V_DrawContinueIcon
 // Draw a mini player!  If we can, that is.  Otherwise we draw a star.

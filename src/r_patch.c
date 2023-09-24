@@ -19,7 +19,7 @@
 #include "hardware/hw_glob.h"
 #endif
 
-static void Patch_MarkDirtyRect(dynamicpatch_t *dpatch, INT16 left, INT16 top, INT16 right, INT16 bottom);
+static boolean Patch_CheckDirtyRect(dynamicpatch_t *dpatch);
 static void Patch_ClearDirtyRect(dynamicpatch_t *dpatch);
 
 patch_t *Patch_Create(INT16 width, INT16 height)
@@ -51,8 +51,15 @@ patch_t *Patch_CreateDynamic(INT16 width, INT16 height)
 	return patch;
 }
 
-static void Patch_MarkDirtyRect(dynamicpatch_t *dpatch, INT16 left, INT16 top, INT16 right, INT16 bottom)
+void Patch_MarkDirtyRect(patch_t *patch, INT16 left, INT16 top, INT16 right, INT16 bottom)
 {
+	dynamicpatch_t *dpatch = (dynamicpatch_t*)patch;
+
+	left = max(0, left);
+	right = min(right, patch->width);
+	top = max(0, top);
+	bottom = min(bottom, patch->height);
+
 	if (left < dpatch->rect_dirty[0])
 		dpatch->rect_dirty[0] = left;
 	if (top < dpatch->rect_dirty[1])
@@ -61,6 +68,37 @@ static void Patch_MarkDirtyRect(dynamicpatch_t *dpatch, INT16 left, INT16 top, I
 		dpatch->rect_dirty[2] = right;
 	if (bottom > dpatch->rect_dirty[3])
 		dpatch->rect_dirty[3] = bottom;
+}
+
+static boolean Patch_CheckDirtyRect(dynamicpatch_t *dpatch)
+{
+	patch_t *patch = (patch_t*)dpatch;
+
+	// left
+	if (dpatch->rect_dirty[0] < 0
+	|| dpatch->rect_dirty[0] > patch->width
+	|| dpatch->rect_dirty[0] >= dpatch->rect_dirty[2]) // right
+		return false;
+
+	// top
+	if (dpatch->rect_dirty[1] < 0
+	|| dpatch->rect_dirty[1] > patch->height
+	|| dpatch->rect_dirty[1] >= dpatch->rect_dirty[3]) // bottom
+		return false;
+
+	// right
+	if (dpatch->rect_dirty[2] > patch->width
+	|| dpatch->rect_dirty[2] < 0
+	|| dpatch->rect_dirty[2] <= dpatch->rect_dirty[0]) // left
+		return false;
+
+	// bottom
+	if (dpatch->rect_dirty[3] > patch->height
+	|| dpatch->rect_dirty[3] < 0
+	|| dpatch->rect_dirty[3] <= dpatch->rect_dirty[1]) // top
+		return false;
+
+	return true;
 }
 
 static void Patch_ClearDirtyRect(dynamicpatch_t *dpatch)
@@ -80,6 +118,53 @@ static void Patch_InitDynamicColumns(patch_t *patch)
 	{
 		column_t *column = &patch->columns[x];
 		column->pixels = &patch->pixels[patch->height * x];
+	}
+}
+
+void Patch_Clear(patch_t *patch)
+{
+	if (patch->type != PATCH_TYPE_DYNAMIC)
+		return;
+
+	size_t total_pixels = patch->width * patch->height;
+
+	memset(patch->pixels, 0, total_pixels * sizeof(UINT8));
+
+	for (INT32 x = 0; x < patch->width; x++)
+		patch->columns[x].num_posts = 0;
+
+	dynamicpatch_t *dpatch = (dynamicpatch_t*)patch;
+
+	memset(dpatch->pixels_opaque, 0, BIT_ARRAY_SIZE(total_pixels));
+
+	dpatch->is_dirty = dpatch->update_columns = true;
+}
+
+void Patch_ClearRect(patch_t *patch, INT16 x, INT16 y, INT16 width, INT16 height)
+{
+	if (patch->type != PATCH_TYPE_DYNAMIC)
+		return;
+
+	dynamicpatch_t *dpatch = (dynamicpatch_t*)patch;
+
+	for (INT16 dy = y; dy < y + height; dy++)
+	{
+		if (dy < 0)
+			continue;
+		else if (dy >= patch->height)
+			break;
+
+		for (INT16 dx = x; dx < x + width; dx++)
+		{
+			if (dx < 0)
+				continue;
+			else if (dx >= patch->width)
+				break;
+
+			size_t position = (dx * patch->height) + dy;
+			unset_bit_array(dpatch->pixels_opaque, position);
+			dpatch->is_dirty = dpatch->update_columns = true;
+		}
 	}
 }
 
@@ -337,16 +422,18 @@ void Patch_SetPixel(patch_t *patch, void *pixel, pictureformat_t informat, INT32
 	{
 		// No pixel in this position, so columns need to be rebuilt
 		if (!in_bit_array(dpatch->pixels_opaque, position))
+		{
+			set_bit_array(dpatch->pixels_opaque, position);
 			dpatch->update_columns = true;
+		}
 
-		set_bit_array(dpatch->pixels_opaque, position);
 		writePixelFunc(&patch->pixels[position], pixel);
 
 		dpatch->is_dirty = true;
 	}
 
 	if (dpatch->is_dirty)
-		Patch_MarkDirtyRect(dpatch, x, y, x + 1, y + 1);
+		Patch_MarkDirtyRect(patch, x, y, x + 1, y + 1);
 }
 
 void Patch_UpdatePixels(patch_t *patch,
@@ -409,12 +496,7 @@ void Patch_UpdatePixels(patch_t *patch,
 
 	dynamicpatch_t *dpatch = (dynamicpatch_t *)patch;
 
-	INT32 dest_x1 = max(0, dx);
-	INT32 dest_x2 = min(dx + sw, patch->width);
-	INT32 dest_y1 = max(0, dy);
-	INT32 dest_y2 = min(dy + sh, patch->height);
-
-	Patch_MarkDirtyRect(dpatch, dest_x1, dest_y1, dest_x2, dest_y2);
+	Patch_MarkDirtyRect(patch, dx, dy, dx + sw, dy + sh);
 
 	for (INT32 x = dx; x < dx + sw; x++, sx++)
 	{
@@ -453,9 +535,15 @@ void Patch_UpdatePixels(patch_t *patch,
 			}
 			else
 			{
-				set_bit_array(dpatch->pixels_opaque, position);
+				if (!in_bit_array(dpatch->pixels_opaque, position))
+				{
+					set_bit_array(dpatch->pixels_opaque, position);
+					dpatch->update_columns = true;
+				}
+
 				writePixelFunc(&patch->pixels[position], input);
-				dpatch->update_columns = dpatch->is_dirty = true;
+
+				dpatch->is_dirty = true;
 			}
 		}
 	}
@@ -482,18 +570,21 @@ void Patch_DoDynamicUpdate(patch_t *patch)
 	if (patch->columns == NULL)
 		Patch_InitDynamicColumns(patch);
 
-	if (dpatch->update_columns)
+	if (Patch_CheckDirtyRect(dpatch))
 	{
-		for (INT32 x = dpatch->rect_dirty[0]; x < dpatch->rect_dirty[2]; x++)
-			Patch_RebuildColumn(&patch->columns[x], x, patch->height, dpatch->pixels_opaque);
+		if (dpatch->update_columns)
+		{
+			for (INT32 x = dpatch->rect_dirty[0]; x < dpatch->rect_dirty[2]; x++)
+				Patch_RebuildColumn(&patch->columns[x], x, patch->height, dpatch->pixels_opaque);
+		}
+
+#ifdef HWRENDER
+		if (patch->hardware)
+			HWR_UpdatePatchRegion(patch, dpatch->rect_dirty[0], dpatch->rect_dirty[1], dpatch->rect_dirty[2], dpatch->rect_dirty[3]);
+#endif
 	}
 
 	Patch_FreeMiscData(patch);
-
-#ifdef HWRENDER
-	if (patch->hardware)
-		HWR_UpdatePatchRegion(patch, dpatch->rect_dirty[0], dpatch->rect_dirty[1], dpatch->rect_dirty[2], dpatch->rect_dirty[3]);
-#endif
 
 	dpatch->is_dirty = false;
 	dpatch->update_columns = false;
