@@ -409,7 +409,7 @@ void *Picture_PatchConvert(
 
 				out->posts = Z_Realloc(out->posts, sizeof(post_t) * num_posts, PU_PATCH_DATA, NULL);
 				post = &out->posts[num_posts - 1];
-				post->topdelta = (size_t)y;
+				post->topdelta = (unsigned)y;
 				post->length = 0;
 				post->data_offset = post_data_offset;
 				if (column_posts[x] == (unsigned)-1)

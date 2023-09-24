@@ -141,6 +141,45 @@ void Patch_MakeColumns(softwarepatch_t *source, size_t num_columns, INT16 width,
 // Other functions
 //
 
+static void Patch_RebuildColumn(column_t *column, INT16 height, UINT8 *is_opaque)
+{
+	post_t *post;
+	boolean was_opaque = false;
+
+	unsigned post_count = column->num_posts;
+	column->num_posts = 0;
+
+	for (INT32 y = 0; y < height; y++)
+	{
+		// End span if we have a transparent pixel
+		if (!is_opaque[y])
+		{
+			was_opaque = false;
+			continue;
+		}
+
+		if (!was_opaque)
+		{
+			column->num_posts++;
+
+			if (column->num_posts > post_count)
+			{
+				column->posts = Z_Realloc(column->posts, sizeof(post_t) * column->num_posts, PU_PATCH_DATA, NULL);
+				post_count = column->num_posts;
+			}
+
+			post = &column->posts[column->num_posts - 1];
+			post->topdelta = (unsigned)y;
+			post->length = 0;
+			post->data_offset = post->topdelta;
+		}
+
+		was_opaque = true;
+
+		post->length++;
+	}
+}
+
 column_t *Patch_GetColumn(patch_t *patch, unsigned column)
 {
 	if (column >= (unsigned)patch->width)
@@ -179,25 +218,210 @@ void *Patch_GetPixel(patch_t *patch, INT32 x, INT32 y)
 
 void Patch_SetPixel(patch_t *patch, void *pixel, pictureformat_t informat, INT32 x, INT32 y, boolean transparent_overwrite)
 {
-	// Take a shortcut first
-	// TODO: Support erasing pixels as well.
-	if (Picture_FormatBPP(informat) == PICDEPTH_8BPP && !transparent_overwrite)
+	if (patch->type != PATCH_TYPE_DYNAMIC)
+		return;
+
+	if (x < 0 || x >= patch->width || y < 0 || y >= patch->height)
+		return;
+
+	INT32 inbpp = Picture_FormatBPP(informat);
+
+	boolean pixel_is_opaque = false;
+
+	if (pixel)
 	{
-		void *dest_pixel = Patch_GetPixel(patch, x, y);
-		if (dest_pixel != NULL)
+		if (inbpp == PICDEPTH_32BPP)
+			pixel_is_opaque = PicFmt_GetAlpha_32bpp(pixel, 0) > 0;
+		else if (inbpp == PICDEPTH_16BPP)
+			pixel_is_opaque = PicFmt_GetAlpha_16bpp(pixel, 0) > 0;
+		else if (inbpp == PICDEPTH_8BPP)
+			pixel_is_opaque = PicFmt_GetAlpha_8bpp(pixel, 0) > 0;
+	}
+
+	if (!pixel_is_opaque && !transparent_overwrite)
+		return;
+
+	void *(*writePixelFunc)(void *, void *) = NULL;
+	if (inbpp == PICDEPTH_32BPP)
+		writePixelFunc = PicFmt_WritePixel_i32o8;
+	else if (inbpp == PICDEPTH_16BPP)
+		writePixelFunc = PicFmt_WritePixel_i16o8;
+	else if (inbpp == PICDEPTH_8BPP)
+		writePixelFunc = PicFmt_WritePixel_i8o8;
+
+	column_t *column = NULL;
+
+	boolean did_update_column = false;
+
+	// If the patch is empty
+	if (!patch->columns)
+	{
+		if (!pixel_is_opaque)
 		{
-			UINT8 *dest_px = (UINT8 *)dest_pixel;
-			UINT8 src_px = *(UINT8 *)pixel;
-			*dest_px = src_px;
+			// If the pixel is transparent, do nothing
 			return;
+		}
+
+		if (patch->pixels == NULL)
+			patch->pixels = Z_Calloc(patch->width * patch->height, PU_PATCH_DATA, NULL);
+		if (patch->columns == NULL)
+			patch->columns = Z_Calloc(sizeof(column_t) * patch->width, PU_PATCH_DATA, NULL);
+
+		column = &patch->columns[x];
+		column->pixels = &patch->pixels[patch->height * x];
+	}
+	else
+	{
+		column = &patch->columns[x];
+		column->pixels = &patch->pixels[patch->height * x];
+
+		for (unsigned i = 0; i < column->num_posts; i++)
+		{
+			post_t *post = &column->posts[i];
+
+			int this_topdelta = (int)post->topdelta;
+			int next_topdelta;
+			if (i < column->num_posts - 1)
+				next_topdelta = column->posts[i + 1].topdelta;
+			else
+				next_topdelta = patch->height;
+
+			// Handle the case where this is the first post, and the pixel is before it
+			if (i == 0 && y < this_topdelta)
+			{
+				if (!pixel_is_opaque)
+				{
+					// If the pixel is transparent, ignore
+					continue;
+				}
+
+				column->posts = Z_Realloc(column->posts, sizeof(post_t) * (column->num_posts + 1), PU_PATCH_DATA, NULL);
+
+				memmove(&column->posts[1], &column->posts[0], column->num_posts * sizeof(post_t));
+
+				column->num_posts++;
+
+				post_t *dest_post = &column->posts[0];
+				dest_post->topdelta = (unsigned)y;
+				dest_post->length = 1;
+				dest_post->data_offset = dest_post->topdelta;
+
+				writePixelFunc(&column->pixels[dest_post->data_offset], pixel);
+
+				did_update_column = true;
+
+				break;
+			}
+			// Pixel is inside a post
+			else if (y >= this_topdelta && y < this_topdelta + (signed)post->length)
+			{
+				// Handle the case where the pixel needs to be removed
+				if (!pixel_is_opaque)
+				{
+					if (!transparent_overwrite)
+						continue;
+
+					int resulting_post_length = y - post->topdelta;
+					if ((resulting_post_length == (signed)post->length - 1 && i == column->num_posts - 1)
+					|| (resulting_post_length == 0))
+					{
+						if (resulting_post_length == 0)
+							post->topdelta++;
+						post->length--;
+						if (post->length == 0)
+						{
+							if (column->num_posts > 1 && i < column->num_posts - 1)
+								memmove(&column->posts[i], &column->posts[i + 1], (column->num_posts - i) * sizeof(post_t));
+							column->num_posts--;
+						}
+					}
+					else
+					{
+						column->num_posts++;
+						column->posts = Z_Realloc(column->posts, sizeof(post_t) * column->num_posts, PU_PATCH_DATA, NULL);
+
+						if (i != column->num_posts)
+							memmove(&column->posts[i + 1], &column->posts[i], ((column->num_posts - 1) - i) * sizeof(post_t));
+
+						column->posts[i + 1].length = column->posts[i].length - resulting_post_length - 1;
+						column->posts[i + 1].topdelta = y + 1;
+						column->posts[i + 1].data_offset = column->posts[i + 1].topdelta;
+						column->posts[i].length = resulting_post_length;
+					}
+				}
+				else
+					writePixelFunc(&column->pixels[post->data_offset + (y - post->topdelta)], pixel);
+
+				did_update_column = true;
+
+				break;
+			}
+			// After this post, but before the next one
+			else if (y >= this_topdelta + (signed)post->length && y < next_topdelta)
+			{
+				if (!pixel_is_opaque)
+				{
+					// If the pixel is transparent, ignore
+					continue;
+				}
+
+				post_t *dest_post = NULL;
+
+				column->posts = Z_Realloc(column->posts, sizeof(post_t) * (column->num_posts + 1), PU_PATCH_DATA, NULL);
+
+				if (i == column->num_posts - 1)
+					dest_post = &column->posts[column->num_posts];
+				else
+				{
+					memmove(&column->posts[i + 1], &column->posts[i], (column->num_posts - i) * sizeof(post_t));
+					dest_post = &column->posts[i];
+				}
+
+				column->num_posts++;
+
+				dest_post->topdelta = (unsigned)y;
+				dest_post->length = 1;
+				dest_post->data_offset = dest_post->topdelta;
+
+				writePixelFunc(&column->pixels[dest_post->data_offset], pixel);
+
+				did_update_column = true;
+
+				break;
+			}
 		}
 	}
 
-	Patch_Update(patch,
-		pixel, 1, 1, informat,
-		0, 0, 1, 1, // source
-		x, y, // dest
-		transparent_overwrite);
+	if (!did_update_column && column && column->num_posts == 0)
+	{
+		if (!pixel_is_opaque)
+		{
+			// If the pixel is transparent, do nothing
+			return;
+		}
+
+		column->num_posts = 1;
+		column->posts = Z_Realloc(column->posts, sizeof(post_t) * column->num_posts, PU_PATCH_DATA, NULL);
+
+		post_t *post = &column->posts[0];
+		post->topdelta = (unsigned)y;
+		post->length = 1;
+		post->data_offset = post->topdelta;
+
+		writePixelFunc(&column->pixels[post->data_offset], pixel);
+
+		did_update_column = true;
+	}
+
+	if (did_update_column)
+	{
+		Patch_FreeMiscData(patch);
+
+#ifdef HWRENDER
+		if (patch->hardware)
+			HWR_UpdatePatch(patch);
+#endif
+	}
 }
 
 void Patch_Update(patch_t *patch,
@@ -215,15 +439,9 @@ void Patch_Update(patch_t *patch,
 	boolean did_update = false;
 
 	if (patch->columns == NULL)
-	{
 		patch->columns = Z_Calloc(sizeof(column_t) * patch->width, PU_PATCH_DATA, NULL);
-		did_update = true;
-	}
 	if (patch->pixels == NULL)
-	{
 		patch->pixels = Z_Calloc(patch->width * patch->height, PU_PATCH_DATA, NULL);
-		did_update = true;
-	}
 
 	void *(*readPixelFunc)(void *, pictureformat_t, INT32, INT32, INT32, INT32, pictureflags_t) = NULL;
 	UINT8 (*getAlphaFunc)(void *, pictureflags_t) = NULL;
@@ -335,38 +553,7 @@ void Patch_Update(patch_t *patch,
 		if (!did_update_column)
 			continue;
 
-		post_t *post;
-		boolean was_opaque = false;
-
-		Z_Free(column->posts);
-
-		column->posts = NULL;
-		column->num_posts = 0;
-
-		for (INT32 y = 0; y < patch->height; y++)
-		{
-			// End span if we have a transparent pixel
-			if (!is_opaque[y])
-			{
-				was_opaque = false;
-				continue;
-			}
-
-			if (!was_opaque)
-			{
-				column->num_posts++;
-				column->posts = Z_Realloc(column->posts, sizeof(post_t) * column->num_posts, PU_PATCH_DATA, NULL);
-
-				post = &column->posts[column->num_posts - 1];
-				post->topdelta = (size_t)y;
-				post->length = 0;
-				post->data_offset = post->topdelta;
-			}
-
-			was_opaque = true;
-
-			post->length++;
-		}
+		Patch_RebuildColumn(column, patch->height, is_opaque);
 	}
 
 	if (did_update)
