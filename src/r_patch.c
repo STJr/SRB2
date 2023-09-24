@@ -235,7 +235,7 @@ column_t *Patch_GetColumn(patch_t *patch, unsigned column)
 
 void *Patch_GetPixel(patch_t *patch, INT32 x, INT32 y)
 {
-	if (x < 0 || x >= patch->width)
+	if (x < 0 || x >= patch->width || y < 0 || y >= patch->height)
 		return NULL;
 
 	if (Patch_NeedsUpdate(patch))
@@ -243,6 +243,17 @@ void *Patch_GetPixel(patch_t *patch, INT32 x, INT32 y)
 
 	if (patch->columns == NULL)
 		return NULL;
+
+	bitarray_t *pixels_opaque = Patch_GetOpaqueRegions(patch);
+	if (pixels_opaque)
+	{
+		size_t position = (x * patch->height) + y;
+
+		if (!in_bit_array(pixels_opaque, position))
+			return NULL;
+
+		return &patch->pixels[position];
+	}
 
 	column_t *column = &patch->columns[x];
 
