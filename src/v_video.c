@@ -1192,13 +1192,15 @@ void V_DrawIntoPatch(patch_t *dest_patch, patch_t *src_patch, fixed_t x, fixed_t
 					continue;
 
 				size_t position = (dest_x * dest_patch->height) + dest_y;
+				UINT8 *dest = &dest_patch->pixels[position];
+
 				if (!in_bit_array(dpatch->pixels_opaque, position))
 				{
 					set_bit_array(dpatch->pixels_opaque, position);
 					dpatch->update_columns = true;
+					*dest = 0;
 				}
 
-				UINT8 *dest = &dest_patch->pixels[position];
 				*dest = patchdrawfunc(dest, source, ofs);
 
 				dpatch->is_dirty = true;
