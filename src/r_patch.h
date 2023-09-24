@@ -29,11 +29,16 @@ patch_t *Patch_CreateDynamic(INT16 width, INT16 height);
 
 void *Patch_GetPixel(patch_t *patch, INT32 x, INT32 y);
 void Patch_SetPixel(patch_t *patch, void *pixel, pictureformat_t informat, INT32 x, INT32 y, boolean transparent_overwrite);
-void Patch_Update(patch_t *patch,
+void Patch_UpdatePixels(patch_t *patch,
 	void *pixels, INT32 src_img_width, INT32 src_img_height,
 	pictureformat_t informat,
 	INT32 sx, INT32 sy, INT32 sw, INT32 sh, INT32 dx, INT32 dy,
 	boolean transparent_overwrite);
+
+boolean Patch_NeedsUpdate(patch_t *patch);
+void Patch_DoDynamicUpdate(patch_t *patch);
+
+bitarray_t *Patch_GetOpaqueRegions(patch_t *patch);
 
 void Patch_Free(patch_t *patch);
 void Patch_FreeMiscData(patch_t *patch);

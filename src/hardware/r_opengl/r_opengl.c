@@ -1333,18 +1333,15 @@ void Flush(void)
 	while (TexCacheHead)
 	{
 		FTextureInfo *pTexInfo = TexCacheHead;
-		GLMipmap_t *texture = pTexInfo->texture;
+		TexCacheHead = pTexInfo->next;
 
 		if (pTexInfo->downloaded)
-		{
 			pglDeleteTextures(1, (GLuint *)&pTexInfo->downloaded);
-			pTexInfo->downloaded = 0;
-		}
 
+		GLMipmap_t *texture = pTexInfo->texture;
 		if (texture)
 			texture->downloaded = 0;
 
-		TexCacheHead = pTexInfo->next;
 		free(pTexInfo);
 	}
 
@@ -1746,9 +1743,9 @@ EXPORT void HWRAPI(SetBlend) (FBITFIELD PolyFlags)
 	CurrentPolyFlags = PolyFlags;
 }
 
-static void AllocTextureBuffer(GLMipmap_t *pTexInfo)
+static RGBA_t *AllocTextureBuffer(unsigned width, unsigned height)
 {
-	size_t size = pTexInfo->width * pTexInfo->height;
+	size_t size = width * height;
 	if (size > textureBufferSize)
 	{
 		textureBuffer = realloc(textureBuffer, size * sizeof(RGBA_t));
@@ -1756,116 +1753,143 @@ static void AllocTextureBuffer(GLMipmap_t *pTexInfo)
 			I_Error("AllocTextureBuffer: out of memory allocating %s bytes", sizeu1(size * sizeof(RGBA_t)));
 		textureBufferSize = size;
 	}
+	return textureBuffer;
 }
 
 // -----------------+
 // UpdateTexture    : Updates texture data.
 // -----------------+
-EXPORT void HWRAPI(UpdateTexture) (GLMipmap_t *pTexInfo)
+EXPORT void HWRAPI(UpdateTextureRegion) (GLMipmap_t *pTexInfo, INT32 x, INT32 y, INT32 width, INT32 height)
 {
-	// Upload a texture
-	GLuint num = pTexInfo->downloaded;
 	boolean update = true;
 
-	INT32 w = pTexInfo->width, h = pTexInfo->height;
-	INT32 i, j;
+	INT32 i, j, dy;
 
 	const GLubyte *pImgData = (const GLubyte *)pTexInfo->data;
 	const GLvoid *ptex = NULL;
-	RGBA_t *tex = NULL;
 
-	// Generate a new texture name.
-	if (!num)
+	// Generate a new texture ID if there is none
+	if (pTexInfo->downloaded == 0)
 	{
-		pglGenTextures(1, &num);
-		pTexInfo->downloaded = num;
+		GLuint id = 0;
+		pglGenTextures(1, &id);
+		pTexInfo->downloaded = id;
 		update = false;
 	}
 
-	//GL_DBG_Printf("UpdateTexture %d %x\n", (INT32)num, pImgData);
-
-	if ((pTexInfo->format == GL_TEXFMT_P_8) || (pTexInfo->format == GL_TEXFMT_AP_88))
+	if (pTexInfo->format == GL_TEXFMT_P_8 || pTexInfo->format == GL_TEXFMT_AP_88)
 	{
-		AllocTextureBuffer(pTexInfo);
-		ptex = tex = textureBuffer;
+		ptex = AllocTextureBuffer(width, height);
 
-		for (j = 0; j < h; j++)
+		for (j = y, dy = 0; j < y + height; j++, dy++)
 		{
-			for (i = 0; i < w; i++)
+			const GLubyte *src = &pImgData[pTexInfo->width*j+x];
+			RGBA_t *tex = &textureBuffer[width*dy];
+
+			for (i = x; i < x + width; i++)
 			{
-				if ((*pImgData == HWR_PATCHES_CHROMAKEY_COLORINDEX) &&
+				if ((*src == HWR_PATCHES_CHROMAKEY_COLORINDEX) &&
 					(pTexInfo->flags & TF_CHROMAKEYED))
 				{
-					tex[w*j+i].s.red   = 0;
-					tex[w*j+i].s.green = 0;
-					tex[w*j+i].s.blue  = 0;
-					tex[w*j+i].s.alpha = 0;
+					tex->s.red   = 0;
+					tex->s.green = 0;
+					tex->s.blue  = 0;
+					tex->s.alpha = 0;
 					pTexInfo->flags |= TF_TRANSPARENT; // there is a hole in it
 				}
 				else
 				{
-					tex[w*j+i].s.red   = myPaletteData[*pImgData].s.red;
-					tex[w*j+i].s.green = myPaletteData[*pImgData].s.green;
-					tex[w*j+i].s.blue  = myPaletteData[*pImgData].s.blue;
-					tex[w*j+i].s.alpha = myPaletteData[*pImgData].s.alpha;
+					tex->s.red   = myPaletteData[*src].s.red;
+					tex->s.green = myPaletteData[*src].s.green;
+					tex->s.blue  = myPaletteData[*src].s.blue;
+					tex->s.alpha = myPaletteData[*src].s.alpha;
 				}
 
-				pImgData++;
+				src++;
 
 				if (pTexInfo->format == GL_TEXFMT_AP_88)
 				{
 					if (!(pTexInfo->flags & TF_CHROMAKEYED))
-						tex[w*j+i].s.alpha = *pImgData;
-					pImgData++;
+						tex->s.alpha = *src;
+					src++;
 				}
+
+				tex++;
 			}
 		}
 	}
 	else if (pTexInfo->format == GL_TEXFMT_RGBA)
 	{
-		// Directly upload the texture data without any kind of conversion.
-		ptex = pImgData;
+		if (x == 0 && y == 0 && width == pTexInfo->width && height == pTexInfo->height)
+		{
+			// Directly upload the texture data without any kind of conversion.
+			ptex = pImgData;
+		}
+		else
+		{
+			RGBA_t *src_pixels = (RGBA_t *)pTexInfo->data;
+
+			ptex = AllocTextureBuffer(width, height);
+
+			for (j = y, dy = 0; j < y + height; j++, dy++)
+			{
+				RGBA_t *src = &src_pixels[pTexInfo->width*j+x];
+				RGBA_t *tex = &textureBuffer[width*dy];
+
+				for (i = x; i < x + width; i++)
+				{
+					*tex = *src;
+					tex++;
+					src++;
+				}
+			}
+		}
 	}
 	else if (pTexInfo->format == GL_TEXFMT_ALPHA_INTENSITY_88)
 	{
-		AllocTextureBuffer(pTexInfo);
-		ptex = tex = textureBuffer;
+		ptex = AllocTextureBuffer(width, height);
 
-		for (j = 0; j < h; j++)
+		for (j = y, dy = 0; j < y + height; j++, dy++)
 		{
-			for (i = 0; i < w; i++)
+			const GLubyte *src = &pImgData[pTexInfo->width*j+x];
+			RGBA_t *tex = &textureBuffer[width*dy];
+			for (i = x; i < x + width; i++)
 			{
-				tex[w*j+i].s.red   = *pImgData;
-				tex[w*j+i].s.green = *pImgData;
-				tex[w*j+i].s.blue  = *pImgData;
-				pImgData++;
-				tex[w*j+i].s.alpha = *pImgData;
-				pImgData++;
+				tex->s.red   = *src;
+				tex->s.green = *src;
+				tex->s.blue  = *src;
+				src++;
+				tex->s.alpha = *src;
+				src++;
+				tex++;
 			}
 		}
 	}
 	else if (pTexInfo->format == GL_TEXFMT_ALPHA_8) // Used for fade masks
 	{
-		AllocTextureBuffer(pTexInfo);
-		ptex = tex = textureBuffer;
+		ptex = AllocTextureBuffer(width, height);
 
-		for (j = 0; j < h; j++)
+		for (j = y, dy = 0; j < y + height; j++, dy++)
 		{
-			for (i = 0; i < w; i++)
+			const GLubyte *src = &pImgData[width*j+x];
+			RGBA_t *tex = &textureBuffer[width*dy];
+			for (i = x; i < x + width; i++)
 			{
-				tex[w*j+i].s.red   = 255; // 255 because the fade mask is modulated with the screen texture, so alpha affects it while the colours don't
-				tex[w*j+i].s.green = 255;
-				tex[w*j+i].s.blue  = 255;
-				tex[w*j+i].s.alpha = *pImgData;
-				pImgData++;
+				// 255 because the fade mask is modulated with the screen texture, so alpha affects it while the colours don't
+				tex->s.red   = 255;
+				tex->s.green = 255;
+				tex->s.blue  = 255;
+				tex->s.alpha = *src;
+				src++;
+				tex++;
 			}
 		}
 	}
 	else
 		GL_MSG_Warning("UpdateTexture: bad format %d\n", pTexInfo->format);
 
-	pglBindTexture(GL_TEXTURE_2D, num);
-	tex_downloaded = num;
+	pglBindTexture(GL_TEXTURE_2D, pTexInfo->downloaded);
+	tex_downloaded = pTexInfo->downloaded;
 
 	// disable texture filtering on any texture that has holes so there's no dumb borders or blending issues
 	if (pTexInfo->flags & TF_TRANSPARENT)
@@ -1881,64 +1905,60 @@ EXPORT void HWRAPI(UpdateTexture) (GLMipmap_t *pTexInfo)
 
 	if (pTexInfo->format == GL_TEXFMT_ALPHA_INTENSITY_88)
 	{
-		//pglTexImage2D(GL_TEXTURE_2D, 0, GL_ALPHA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, ptex);
 		if (MipMap)
 		{
-			pgluBuild2DMipmaps(GL_TEXTURE_2D, GL_LUMINANCE_ALPHA, w, h, GL_RGBA, GL_UNSIGNED_BYTE, ptex);
+			pgluBuild2DMipmaps(GL_TEXTURE_2D, GL_LUMINANCE_ALPHA, pTexInfo->width, pTexInfo->height, GL_RGBA, GL_UNSIGNED_BYTE, ptex);
 			pglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_LOD, 0);
 			if (pTexInfo->flags & TF_TRANSPARENT)
-				pglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LOD, 0); // No mippmaps on transparent stuff
+				pglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LOD, 0); // No mipmaps on transparent stuff
 			else
 				pglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LOD, 4);
-			//pglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_LINEAR_MIPMAP_LINEAR);
 		}
 		else
 		{
 			if (update)
-				pglTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, w, h, GL_RGBA, GL_UNSIGNED_BYTE, ptex);
+				pglTexSubImage2D(GL_TEXTURE_2D, 0, x, y, width, height, GL_RGBA, GL_UNSIGNED_BYTE, ptex);
 			else
-				pglTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE_ALPHA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, ptex);
+				pglTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE_ALPHA, pTexInfo->width, pTexInfo->height, 0, GL_RGBA, GL_UNSIGNED_BYTE, ptex);
 		}
 	}
 	else if (pTexInfo->format == GL_TEXFMT_ALPHA_8)
 	{
-		//pglTexImage2D(GL_TEXTURE_2D, 0, GL_ALPHA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, ptex);
 		if (MipMap)
 		{
-			pgluBuild2DMipmaps(GL_TEXTURE_2D, GL_ALPHA, w, h, GL_RGBA, GL_UNSIGNED_BYTE, ptex);
+			pgluBuild2DMipmaps(GL_TEXTURE_2D, GL_ALPHA, pTexInfo->width, pTexInfo->height, GL_RGBA, GL_UNSIGNED_BYTE, ptex);
 			pglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_LOD, 0);
 			if (pTexInfo->flags & TF_TRANSPARENT)
-				pglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LOD, 0); // No mippmaps on transparent stuff
+				pglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LOD, 0); // No mipmaps on transparent stuff
 			else
 				pglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LOD, 4);
-			//pglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_LINEAR_MIPMAP_LINEAR);
 		}
 		else
 		{
 			if (update)
-				pglTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, w, h, GL_RGBA, GL_UNSIGNED_BYTE, ptex);
+				pglTexSubImage2D(GL_TEXTURE_2D, 0, x, y, width, height, GL_RGBA, GL_UNSIGNED_BYTE, ptex);
 			else
-				pglTexImage2D(GL_TEXTURE_2D, 0, GL_ALPHA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, ptex);
+				pglTexImage2D(GL_TEXTURE_2D, 0, GL_ALPHA, pTexInfo->width, pTexInfo->height, 0, GL_RGBA, GL_UNSIGNED_BYTE, ptex);
 		}
 	}
 	else
 	{
 		if (MipMap)
 		{
-			pgluBuild2DMipmaps(GL_TEXTURE_2D, textureformatGL, w, h, GL_RGBA, GL_UNSIGNED_BYTE, ptex);
+			pgluBuild2DMipmaps(GL_TEXTURE_2D, textureformatGL, pTexInfo->width, pTexInfo->height, GL_RGBA, GL_UNSIGNED_BYTE, ptex);
 			// Control the mipmap level of detail
-			pglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_LOD, 0); // the lower the number, the higer the detail
+			pglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_LOD, 0); // the lower the number, the higher the detail
 			if (pTexInfo->flags & TF_TRANSPARENT)
-				pglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LOD, 0); // No mippmaps on transparent stuff
+				pglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LOD, 0); // No mipmaps on transparent stuff
 			else
 				pglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LOD, 5);
 		}
 		else
 		{
 			if (update)
-				pglTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, w, h, GL_RGBA, GL_UNSIGNED_BYTE, ptex);
+				pglTexSubImage2D(GL_TEXTURE_2D, 0, x, y, width, height, GL_RGBA, GL_UNSIGNED_BYTE, ptex);
 			else
-				pglTexImage2D(GL_TEXTURE_2D, 0, textureformatGL, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, ptex);
+				pglTexImage2D(GL_TEXTURE_2D, 0, textureformatGL, pTexInfo->width, pTexInfo->height, 0, GL_RGBA, GL_UNSIGNED_BYTE, ptex);
 		}
 	}
 
@@ -1954,6 +1974,11 @@ EXPORT void HWRAPI(UpdateTexture) (GLMipmap_t *pTexInfo)
 
 	if (maximumAnisotropy)
 		pglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, anisotropic_filter);
+}
+
+EXPORT void HWRAPI(UpdateTexture) (GLMipmap_t *pTexInfo)
+{
+	UpdateTextureRegion(pTexInfo, 0, 0, pTexInfo->width, pTexInfo->height);
 }
 
 // -----------------+

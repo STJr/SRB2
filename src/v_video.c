@@ -514,6 +514,9 @@ void V_DrawStretchyFixedPatch(fixed_t x, fixed_t y, fixed_t pscale, fixed_t vsca
 
 	UINT8 perplayershuffle = 0;
 
+	if (Patch_NeedsUpdate(patch))
+		Patch_DoDynamicUpdate(patch);
+
 	if (patch->columns == NULL || rendermode == render_none)
 		return;
 
@@ -797,6 +800,9 @@ void V_DrawCroppedPatch(fixed_t x, fixed_t y, fixed_t pscale, fixed_t vscale, IN
 	const UINT8 *source, *deststop;
 
 	UINT8 perplayershuffle = 0;
+
+	if (Patch_NeedsUpdate(patch))
+		Patch_DoDynamicUpdate(patch);
 
 	if (patch->columns == NULL || rendermode == render_none)
 		return;

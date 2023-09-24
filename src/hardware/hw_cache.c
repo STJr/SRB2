@@ -262,37 +262,29 @@ static void HWR_DrawPatchInCache(GLMipmap_t *mipmap,
 	INT32 pwidth, INT32 pheight,
 	const patch_t *realpatch)
 {
-	INT32 ncols;
-	fixed_t xfrac, xfracstep;
-	fixed_t yfracstep, scale_y;
-	const column_t *patchcol;
-	UINT8 *block = mipmap->data;
-	INT32 bpp;
-	INT32 blockmodulo;
-
 	if (pwidth <= 0 || pheight <= 0)
 		return;
 
-	ncols = pwidth;
-
 	// source advance
-	xfrac = 0;
-	xfracstep = FRACUNIT;
-	yfracstep = FRACUNIT;
-	scale_y   = FRACUNIT;
+	fixed_t xfrac = 0;
+	fixed_t xfracstep = FRACUNIT;
+	fixed_t yfracstep = FRACUNIT;
+	fixed_t scale_y   = FRACUNIT;
 
-	bpp = format2bpp(mipmap->format);
+	INT32 bpp = format2bpp(mipmap->format);
 
 	if (bpp < 1 || bpp > 4)
 		I_Error("HWR_DrawPatchInCache: no drawer defined for this bpp (%d)\n",bpp);
 
 	// NOTE: should this actually be pblockwidth*bpp?
-	blockmodulo = pblockwidth*bpp;
+	INT32 blockmodulo = pblockwidth*bpp;
 
 	// Draw each column to the block cache
-	for (; ncols--; block += bpp, xfrac += xfracstep)
+	UINT8 *block = mipmap->data;
+
+	for (int x = 0; x < pwidth; x++, block += bpp, xfrac += xfracstep)
 	{
-		patchcol = &realpatch->columns[xfrac>>FRACBITS];
+		const column_t *patchcol = &realpatch->columns[xfrac>>FRACBITS];
 
 		HWR_DrawColumnInCache(patchcol, block, mipmap,
 								pblockheight, blockmodulo,
@@ -542,7 +534,6 @@ void HWR_MakePatch (const patch_t *patch, GLPatch_t *grPatch, GLMipmap_t *grMipm
 	}
 
 	Z_Free(grMipmap->data);
-	grMipmap->data = NULL;
 
 	if (makebitmap)
 	{
@@ -576,8 +567,8 @@ void HWR_FreeTextureData(patch_t *patch)
 
 	if (vid.glstate == VID_GL_LIBRARY_LOADED)
 		HWD.pfnDeleteTexture(grPatch->mipmap);
-	if (grPatch->mipmap->data)
-		Z_Free(grPatch->mipmap->data);
+
+	Z_Free(grPatch->mipmap->data);
 }
 
 void HWR_FreeTexture(patch_t *patch)
@@ -641,8 +632,6 @@ void HWR_FreeTextureColormaps(patch_t *patch)
 			Z_Free(next->data);
 		if (next->colormap)
 			Z_Free(next->colormap);
-		next->data = NULL;
-		next->colormap = NULL;
 		HWD.pfnDeleteTexture(next);
 
 		// Free the old colormap mipmap from memory.
@@ -697,9 +686,7 @@ void HWR_InitMapTextures(void)
 static void FreeMapTexture(GLMapTexture_t *tex)
 {
 	HWD.pfnDeleteTexture(&tex->mipmap);
-	if (tex->mipmap.data)
-		Z_Free(tex->mipmap.data);
-	tex->mipmap.data = NULL;
+	Z_Free(tex->mipmap.data);
 }
 
 void HWR_FreeMapTextures(void)
@@ -897,6 +884,88 @@ static void HWR_UpdatePatchMipmap(patch_t *patch, GLMipmap_t *grMipmap)
 	Z_ChangeTag(grMipmap->data, PU_HWRCACHE_UNLOCKED);
 }
 
+static void HWR_UpdatePatchPixels(GLMipmap_t *mipmap, UINT8 *pixels, INT16 patchheight, bitarray_t *pixels_opaque, INT16 left, INT16 top, INT16 right, INT16 bottom)
+{
+	INT32 bpp = format2bpp(mipmap->format);
+	if (bpp < 1 || bpp > 4)
+		I_Error("HWR_UpdatePatchPixels: no drawer defined for this bpp (%d)\n",bpp);
+
+	UINT8 *dest_pixels = (UINT8*)mipmap->data;
+
+	for (INT16 y = top; y < bottom; y++)
+	{
+		UINT8 *dest = &dest_pixels[(y * (mipmap->width * bpp)) + (left * bpp)];
+
+		for (INT16 x = left; x < right; x++)
+		{
+			UINT8 texel = 0x00;
+			UINT8 alpha = 0x00;
+
+			size_t position = (x * patchheight) + y;
+
+			if (in_bit_array(pixels_opaque, position))
+			{
+				texel = pixels[position];
+				alpha = 0xFF;
+
+				// Make pixel transparent if chroma keyed
+				if ((mipmap->flags & TF_CHROMAKEYED) && texel == HWR_PATCHES_CHROMAKEY_COLORINDEX)
+					alpha = 0x00;
+			}
+
+			UINT16 texelu16;
+			RGBA_t colortemp;
+
+			switch (bpp)
+			{
+				case 2:
+					texelu16 = (UINT16)((alpha<<8) | texel);
+					memcpy(dest, &texelu16, sizeof(UINT16));
+					break;
+				case 3:
+					colortemp = V_GetColor(texel);
+					memcpy(dest, &colortemp, sizeof(RGBA_t)-sizeof(UINT8));
+					break;
+				case 4:
+					colortemp = V_GetColor(texel);
+					colortemp.s.alpha = alpha;
+					memcpy(dest, &colortemp, sizeof(RGBA_t));
+					break;
+				// default is 1
+				default:
+					*dest = texel;
+					break;
+			}
+
+			dest += bpp;
+		}
+	}
+}
+
+static void HWR_UpdateMipmapRegion(patch_t *patch, GLMipmap_t *grMipmap, INT16 left, INT16 top, INT16 right, INT16 bottom)
+{
+	GLPatch_t *grPatch = patch->hardware;
+
+	bitarray_t *pixels_opaque = Patch_GetOpaqueRegions(patch);
+
+	if (pixels_opaque == NULL || grMipmap->width == 0 || grMipmap->data == NULL)
+		HWR_MakePatch(patch, grPatch, grMipmap, true);
+	else
+		HWR_UpdatePatchPixels(grMipmap, patch->pixels, patch->height, pixels_opaque, left, top, right, bottom);
+
+	// If hardware does not have the texture, then call pfnSetTexture to upload it
+	// If it does have the texture, then call pfnUpdateTextureRegion to update it
+	if (!grMipmap->downloaded)
+		HWD.pfnSetTexture(grMipmap);
+	else
+		HWD.pfnUpdateTextureRegion(grMipmap, left, top, right - left, bottom - top);
+
+	HWR_SetCurrentTexture(grMipmap);
+
+	// The system-memory data can be purged now.
+	Z_ChangeTag(grMipmap->data, PU_HWRCACHE_UNLOCKED);
+}
+
 // -----------------+
 // HWR_GetPatch     : Downloads a patch to the hardware cache and make it ready for use
 // -----------------+
@@ -907,11 +976,12 @@ void HWR_GetPatch(patch_t *patch)
 	HWR_LoadPatchMipmap(patch, ((GLPatch_t *)patch->hardware)->mipmap);
 }
 
-void HWR_UpdatePatch(patch_t *patch)
+void HWR_UpdatePatchRegion(patch_t *patch, INT16 left, INT16 top, INT16 right, INT16 bottom)
 {
 	if (!patch->hardware)
 		Patch_CreateGL(patch);
-	HWR_UpdatePatchMipmap(patch, ((GLPatch_t *)patch->hardware)->mipmap);
+
+	HWR_UpdateMipmapRegion(patch, ((GLPatch_t *)patch->hardware)->mipmap, left, top, right, bottom);
 }
 
 // -------------------+

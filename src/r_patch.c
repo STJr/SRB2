@@ -19,13 +19,12 @@
 #include "hardware/hw_glob.h"
 #endif
 
-//
-// Creates a patch.
-//
+static void Patch_MarkDirtyRect(dynamicpatch_t *dpatch, INT16 left, INT16 top, INT16 right, INT16 bottom);
+static void Patch_ClearDirtyRect(dynamicpatch_t *dpatch);
 
 patch_t *Patch_Create(INT16 width, INT16 height)
 {
-	patch_t *patch = Z_Calloc(sizeof(patch_t), PU_PATCH, NULL);
+	patch_t *patch = Z_Calloc(sizeof(staticpatch_t), PU_PATCH, NULL);
 
 	patch->width = width;
 	patch->height = height;
@@ -36,18 +35,57 @@ patch_t *Patch_Create(INT16 width, INT16 height)
 
 patch_t *Patch_CreateDynamic(INT16 width, INT16 height)
 {
-	patch_t *patch = Z_Calloc(sizeof(patch_t), PU_PATCH, NULL);
+	patch_t *patch = Z_Calloc(sizeof(dynamicpatch_t), PU_PATCH, NULL);
 
 	patch->width = width;
 	patch->height = height;
 	patch->type = PATCH_TYPE_DYNAMIC;
 
+	dynamicpatch_t *dpatch = (dynamicpatch_t*)patch;
+	dpatch->pixels_opaque = Z_Calloc(BIT_ARRAY_SIZE(width * height), PU_PATCH_DATA, NULL);
+	dpatch->is_dirty = false;
+	dpatch->update_columns = false;
+
+	Patch_ClearDirtyRect(dpatch);
+
 	return patch;
+}
+
+static void Patch_MarkDirtyRect(dynamicpatch_t *dpatch, INT16 left, INT16 top, INT16 right, INT16 bottom)
+{
+	if (left < dpatch->rect_dirty[0])
+		dpatch->rect_dirty[0] = left;
+	if (top < dpatch->rect_dirty[1])
+		dpatch->rect_dirty[1] = top;
+	if (right > dpatch->rect_dirty[2])
+		dpatch->rect_dirty[2] = right;
+	if (bottom > dpatch->rect_dirty[3])
+		dpatch->rect_dirty[3] = bottom;
+}
+
+static void Patch_ClearDirtyRect(dynamicpatch_t *dpatch)
+{
+	dpatch->rect_dirty[0] = INT16_MAX;
+	dpatch->rect_dirty[1] = INT16_MAX;
+	dpatch->rect_dirty[2] = INT16_MIN;
+	dpatch->rect_dirty[3] = INT16_MIN;
+}
+
+static void Patch_InitDynamicColumns(patch_t *patch)
+{
+	if (patch->columns == NULL)
+		patch->columns = Z_Calloc(sizeof(column_t) * patch->width, PU_PATCH_DATA, NULL);
+
+	for (INT32 x = 0; x < patch->width; x++)
+	{
+		column_t *column = &patch->columns[x];
+		column->pixels = &patch->pixels[patch->height * x];
+	}
 }
 
 patch_t *Patch_CreateFromDoomPatch(softwarepatch_t *source)
 {
-	patch_t *patch = Patch_Create(0, 0);
+	patch_t *patch = (patch_t*)Patch_Create(0, 0);
 	if (!source)
 		return patch;
 
@@ -67,10 +105,12 @@ patch_t *Patch_CreateFromDoomPatch(softwarepatch_t *source)
 	patch->width_mask = width_po2 - 1;
 
 	patch->columns = Z_Calloc(sizeof(column_t) * patch->width, PU_PATCH_DATA, NULL);
-	patch->posts = Z_Calloc(sizeof(post_t) * total_posts, PU_PATCH_DATA, NULL);
 	patch->pixels = Z_Calloc(sizeof(UINT8) * total_pixels, PU_PATCH_DATA, NULL);
 
-	Patch_MakeColumns(source, patch->width, patch->width, patch->pixels, patch->columns, patch->posts, false);
+	staticpatch_t *spatch = (staticpatch_t*)patch;
+	spatch->posts = Z_Calloc(sizeof(post_t) * total_posts, PU_PATCH_DATA, NULL);
+
+	Patch_MakeColumns(source, patch->width, patch->width, patch->pixels, patch->columns, spatch->posts, false);
 
 	return patch;
 }
@@ -141,9 +181,9 @@ void Patch_MakeColumns(softwarepatch_t *source, size_t num_columns, INT16 width,
 // Other functions
 //
 
-static void Patch_RebuildColumn(column_t *column, INT16 height, UINT8 *is_opaque)
+static void Patch_RebuildColumn(column_t *column, INT32 x, INT16 height, bitarray_t *is_opaque)
 {
-	post_t *post;
+	post_t *post = NULL;
 	boolean was_opaque = false;
 
 	unsigned post_count = column->num_posts;
@@ -152,7 +192,7 @@ static void Patch_RebuildColumn(column_t *column, INT16 height, UINT8 *is_opaque
 	for (INT32 y = 0; y < height; y++)
 	{
 		// End span if we have a transparent pixel
-		if (!is_opaque[y])
+		if (!in_bit_array(is_opaque, (x * height) + y))
 		{
 			was_opaque = false;
 			continue;
@@ -195,7 +235,13 @@ column_t *Patch_GetColumn(patch_t *patch, unsigned column)
 
 void *Patch_GetPixel(patch_t *patch, INT32 x, INT32 y)
 {
-	if (x < 0 || x >= patch->width || patch->columns == NULL)
+	if (x < 0 || x >= patch->width)
+		return NULL;
+
+	if (Patch_NeedsUpdate(patch))
+		Patch_DoDynamicUpdate(patch);
+
+	if (patch->columns == NULL)
 		return NULL;
 
 	column_t *column = &patch->columns[x];
@@ -249,12 +295,8 @@ void Patch_SetPixel(patch_t *patch, void *pixel, pictureformat_t informat, INT32
 	else if (inbpp == PICDEPTH_8BPP)
 		writePixelFunc = PicFmt_WritePixel_i8o8;
 
-	column_t *column = NULL;
-
-	boolean did_update_column = false;
-
 	// If the patch is empty
-	if (!patch->columns)
+	if (!patch->pixels)
 	{
 		if (!pixel_is_opaque)
 		{
@@ -264,167 +306,39 @@ void Patch_SetPixel(patch_t *patch, void *pixel, pictureformat_t informat, INT32
 
 		if (patch->pixels == NULL)
 			patch->pixels = Z_Calloc(patch->width * patch->height, PU_PATCH_DATA, NULL);
-		if (patch->columns == NULL)
-			patch->columns = Z_Calloc(sizeof(column_t) * patch->width, PU_PATCH_DATA, NULL);
+	}
 
-		column = &patch->columns[x];
-		column->pixels = &patch->pixels[patch->height * x];
+	dynamicpatch_t *dpatch = (dynamicpatch_t *)patch;
+
+	size_t position = (x * patch->height) + y;
+
+	if (!pixel_is_opaque)
+	{
+		if (transparent_overwrite)
+		{
+			// No longer a pixel in this position, so columns need to be rebuilt
+			unset_bit_array(dpatch->pixels_opaque, position);
+			dpatch->update_columns = true;
+			dpatch->is_dirty = true;
+		}
 	}
 	else
 	{
-		column = &patch->columns[x];
-		column->pixels = &patch->pixels[patch->height * x];
+		// No pixel in this position, so columns need to be rebuilt
+		if (!in_bit_array(dpatch->pixels_opaque, position))
+			dpatch->update_columns = true;
 
-		for (unsigned i = 0; i < column->num_posts; i++)
-		{
-			post_t *post = &column->posts[i];
+		set_bit_array(dpatch->pixels_opaque, position);
+		writePixelFunc(&patch->pixels[position], pixel);
 
-			int this_topdelta = (int)post->topdelta;
-			int next_topdelta;
-			if (i < column->num_posts - 1)
-				next_topdelta = column->posts[i + 1].topdelta;
-			else
-				next_topdelta = patch->height;
-
-			// Handle the case where this is the first post, and the pixel is before it
-			if (i == 0 && y < this_topdelta)
-			{
-				if (!pixel_is_opaque)
-				{
-					// If the pixel is transparent, ignore
-					continue;
-				}
-
-				column->posts = Z_Realloc(column->posts, sizeof(post_t) * (column->num_posts + 1), PU_PATCH_DATA, NULL);
-
-				memmove(&column->posts[1], &column->posts[0], column->num_posts * sizeof(post_t));
-
-				column->num_posts++;
-
-				post_t *dest_post = &column->posts[0];
-				dest_post->topdelta = (unsigned)y;
-				dest_post->length = 1;
-				dest_post->data_offset = dest_post->topdelta;
-
-				writePixelFunc(&column->pixels[dest_post->data_offset], pixel);
-
-				did_update_column = true;
-
-				break;
-			}
-			// Pixel is inside a post
-			else if (y >= this_topdelta && y < this_topdelta + (signed)post->length)
-			{
-				// Handle the case where the pixel needs to be removed
-				if (!pixel_is_opaque)
-				{
-					if (!transparent_overwrite)
-						continue;
-
-					int resulting_post_length = y - post->topdelta;
-					if ((resulting_post_length == (signed)post->length - 1 && i == column->num_posts - 1)
-					|| (resulting_post_length == 0))
-					{
-						if (resulting_post_length == 0)
-							post->topdelta++;
-						post->length--;
-						if (post->length == 0)
-						{
-							if (column->num_posts > 1 && i < column->num_posts - 1)
-								memmove(&column->posts[i], &column->posts[i + 1], (column->num_posts - i) * sizeof(post_t));
-							column->num_posts--;
-						}
-					}
-					else
-					{
-						column->num_posts++;
-						column->posts = Z_Realloc(column->posts, sizeof(post_t) * column->num_posts, PU_PATCH_DATA, NULL);
-
-						if (i != column->num_posts)
-							memmove(&column->posts[i + 1], &column->posts[i], ((column->num_posts - 1) - i) * sizeof(post_t));
-
-						column->posts[i + 1].length = column->posts[i].length - resulting_post_length - 1;
-						column->posts[i + 1].topdelta = y + 1;
-						column->posts[i + 1].data_offset = column->posts[i + 1].topdelta;
-						column->posts[i].length = resulting_post_length;
-					}
-				}
-				else
-					writePixelFunc(&column->pixels[post->data_offset + (y - post->topdelta)], pixel);
-
-				did_update_column = true;
-
-				break;
-			}
-			// After this post, but before the next one
-			else if (y >= this_topdelta + (signed)post->length && y < next_topdelta)
-			{
-				if (!pixel_is_opaque)
-				{
-					// If the pixel is transparent, ignore
-					continue;
-				}
-
-				post_t *dest_post = NULL;
-
-				column->posts = Z_Realloc(column->posts, sizeof(post_t) * (column->num_posts + 1), PU_PATCH_DATA, NULL);
-
-				if (i == column->num_posts - 1)
-					dest_post = &column->posts[column->num_posts];
-				else
-				{
-					memmove(&column->posts[i + 1], &column->posts[i], (column->num_posts - i) * sizeof(post_t));
-					dest_post = &column->posts[i];
-				}
-
-				column->num_posts++;
-
-				dest_post->topdelta = (unsigned)y;
-				dest_post->length = 1;
-				dest_post->data_offset = dest_post->topdelta;
-
-				writePixelFunc(&column->pixels[dest_post->data_offset], pixel);
-
-				did_update_column = true;
-
-				break;
-			}
-		}
+		dpatch->is_dirty = true;
 	}
 
-	if (!did_update_column && column && column->num_posts == 0)
-	{
-		if (!pixel_is_opaque)
-		{
-			// If the pixel is transparent, do nothing
-			return;
-		}
-
-		column->num_posts = 1;
-		column->posts = Z_Realloc(column->posts, sizeof(post_t) * column->num_posts, PU_PATCH_DATA, NULL);
-
-		post_t *post = &column->posts[0];
-		post->topdelta = (unsigned)y;
-		post->length = 1;
-		post->data_offset = post->topdelta;
-
-		writePixelFunc(&column->pixels[post->data_offset], pixel);
-
-		did_update_column = true;
-	}
-
-	if (did_update_column)
-	{
-		Patch_FreeMiscData(patch);
-
-#ifdef HWRENDER
-		if (patch->hardware)
-			HWR_UpdatePatch(patch);
-#endif
-	}
+	if (dpatch->is_dirty)
+		Patch_MarkDirtyRect(dpatch, x, y, x + 1, y + 1);
 }
 
-void Patch_Update(patch_t *patch,
+void Patch_UpdatePixels(patch_t *patch,
 	void *pixels, INT32 src_img_width, INT32 src_img_height,
 	pictureformat_t informat,
 	INT32 sx, INT32 sy, INT32 sw, INT32 sh, INT32 dx, INT32 dy,
@@ -436,10 +350,6 @@ void Patch_Update(patch_t *patch,
 	if (src_img_width <= 0 || src_img_height <= 0 || sw <= 0 || sh <= 0)
 		return;
 
-	boolean did_update = false;
-
-	if (patch->columns == NULL)
-		patch->columns = Z_Calloc(sizeof(column_t) * patch->width, PU_PATCH_DATA, NULL);
 	if (patch->pixels == NULL)
 		patch->pixels = Z_Calloc(patch->width * patch->height, PU_PATCH_DATA, NULL);
 
@@ -467,54 +377,40 @@ void Patch_Update(patch_t *patch,
 		}
 	}
 
-	if (readPixelFunc == NULL)
-		I_Error("Patch_Update: unsupported input format");
-
-	INT32 inbpp = Picture_FormatBPP(informat);
-
-	if (inbpp == PICDEPTH_32BPP)
+	switch (Picture_FormatBPP(informat))
 	{
+	case PICDEPTH_32BPP:
 		getAlphaFunc = PicFmt_GetAlpha_32bpp;
 		writePixelFunc = PicFmt_WritePixel_i32o8;
-	}
-	else if (inbpp == PICDEPTH_16BPP)
-	{
+		break;
+	case PICDEPTH_16BPP:
 		getAlphaFunc = PicFmt_GetAlpha_16bpp;
 		writePixelFunc = PicFmt_WritePixel_i16o8;
-	}
-	else if (inbpp == PICDEPTH_8BPP)
-	{
+		break;
+	case PICDEPTH_8BPP:
 		getAlphaFunc = PicFmt_GetAlpha_8bpp;
 		writePixelFunc = PicFmt_WritePixel_i8o8;
+		break;
 	}
 
-	UINT8 *is_opaque = malloc(patch->height * sizeof(UINT8));
-	if (!is_opaque)
-	{
-		abort();
-		return;
-	}
+	if (readPixelFunc == NULL || writePixelFunc == NULL || getAlphaFunc == NULL)
+		I_Error("Patch_UpdatePixels: unsupported input format");
 
-	// Write columns
+	dynamicpatch_t *dpatch = (dynamicpatch_t *)patch;
+
+	INT32 dest_x1 = max(0, dx);
+	INT32 dest_x2 = min(dx + sw, patch->width);
+	INT32 dest_y1 = max(0, dy);
+	INT32 dest_y2 = min(dy + sh, patch->height);
+
+	Patch_MarkDirtyRect(dpatch, dest_x1, dest_y1, dest_x2, dest_y2);
+
 	for (INT32 x = dx; x < dx + sw; x++, sx++)
 	{
 		if (x < 0 || sx < 0)
 			continue;
 		else if (x >= patch->width || sx >= src_img_width)
 			break;
-
-		column_t *column = &patch->columns[x];
-		column->pixels = &patch->pixels[patch->height * x];
-
-		memset(is_opaque, 0, patch->height * sizeof(UINT8));
-
-		for (unsigned i = 0; i < column->num_posts; i++)
-		{
-			post_t *post = &column->posts[i];
-			memset(&is_opaque[post->topdelta], 1, post->length);
-		}
-
-		boolean did_update_column = false;
 
 		INT32 src_y = sy;
 
@@ -534,39 +430,73 @@ void Patch_Update(patch_t *patch,
 			if (input != NULL)
 				opaque = getAlphaFunc(input, 0) > 0;
 
+			size_t position = (x * patch->height) + y;
+
 			if (!opaque)
 			{
 				if (transparent_overwrite)
 				{
-					is_opaque[y] = false;
-					did_update = did_update_column = true;
+					unset_bit_array(dpatch->pixels_opaque, position);
+					dpatch->update_columns = dpatch->is_dirty = true;
 				}
 			}
 			else
 			{
-				did_update = did_update_column = true;
-				is_opaque[y] = true;
-				writePixelFunc(&column->pixels[y], input);
+				set_bit_array(dpatch->pixels_opaque, position);
+				writePixelFunc(&patch->pixels[position], input);
+				dpatch->update_columns = dpatch->is_dirty = true;
 			}
 		}
+	}
+}
 
-		if (!did_update_column)
-			continue;
+boolean Patch_NeedsUpdate(patch_t *patch)
+{
+	if (patch->type != PATCH_TYPE_DYNAMIC)
+		return false;
 
-		Patch_RebuildColumn(column, patch->height, is_opaque);
+	dynamicpatch_t *dpatch = (dynamicpatch_t *)patch;
+	return dpatch->is_dirty;
+}
+
+void Patch_DoDynamicUpdate(patch_t *patch)
+{
+	if (patch->type != PATCH_TYPE_DYNAMIC)
+		return;
+
+	dynamicpatch_t *dpatch = (dynamicpatch_t *)patch;
+	if (!dpatch->is_dirty)
+		return;
+
+	if (patch->columns == NULL)
+		Patch_InitDynamicColumns(patch);
+
+	if (dpatch->update_columns)
+	{
+		for (INT32 x = dpatch->rect_dirty[0]; x < dpatch->rect_dirty[2]; x++)
+			Patch_RebuildColumn(&patch->columns[x], x, patch->height, dpatch->pixels_opaque);
 	}
 
-	if (did_update)
-	{
-		Patch_FreeMiscData(patch);
+	Patch_FreeMiscData(patch);
 
 #ifdef HWRENDER
-		if (patch->hardware)
-			HWR_UpdatePatch(patch);
+	if (patch->hardware)
+		HWR_UpdatePatchRegion(patch, dpatch->rect_dirty[0], dpatch->rect_dirty[1], dpatch->rect_dirty[2], dpatch->rect_dirty[3]);
 #endif
-	}
 
-	free(is_opaque);
+	dpatch->is_dirty = false;
+	dpatch->update_columns = false;
+
+	Patch_ClearDirtyRect(dpatch);
+}
+
+bitarray_t *Patch_GetOpaqueRegions(patch_t *patch)
+{
+	if (patch->type != PATCH_TYPE_DYNAMIC)
+		return NULL;
+
+	dynamicpatch_t *dpatch = (dynamicpatch_t *)patch;
+	return dpatch->pixels_opaque;
 }
 
 //
@@ -606,18 +536,21 @@ static void Patch_FreeData(patch_t *patch)
 
 	Patch_FreeMiscData(patch);
 
-	if (patch->type == PATCH_TYPE_DYNAMIC)
+	if (patch->type == PATCH_TYPE_STATIC)
 	{
-		for (INT32 x = 0; x < patch->width; x++)
-			Z_Free(patch->columns[x].posts);
+		staticpatch_t *spatch = (staticpatch_t*)patch;
+		Z_Free(spatch->posts);
+	}
+	else if (patch->type == PATCH_TYPE_DYNAMIC)
+	{
+		dynamicpatch_t *dpatch = (dynamicpatch_t*)patch;
+		for (INT32 x = 0; x < dpatch->patch.width; x++)
+			Z_Free(dpatch->patch.columns[x].posts);
+		Z_Free(dpatch->pixels_opaque);
 	}
 
-	if (patch->pixels)
-		Z_Free(patch->pixels);
-	if (patch->columns)
-		Z_Free(patch->columns);
-	if (patch->posts)
-		Z_Free(patch->posts);
+	Z_Free(patch->pixels);
+	Z_Free(patch->columns);
 }
 
 void Patch_Free(patch_t *patch)

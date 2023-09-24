@@ -424,7 +424,7 @@ static int lib_patch_copy(lua_State *L)
 		lua_pop(L, 2);
 	}
 
-	Patch_Update(patch, patch_update_buffer, src_img_width, src_img_height, PICFMT_FLAT16, sx, sy, sw, sh, dx, dy, copy_transparent);
+	Patch_UpdatePixels(patch, patch_update_buffer, src_img_width, src_img_height, PICFMT_FLAT16, sx, sy, sw, sh, dx, dy, copy_transparent);
 
 	return 0;
 }

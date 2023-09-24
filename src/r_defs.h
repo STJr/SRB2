@@ -809,15 +809,14 @@ typedef struct
 //
 typedef struct
 {
+	UINT8 type;
+
 	INT16 width, height;
 	INT16 leftoffset, topoffset;
 	INT32 width_mask;
 
 	UINT8 *pixels;
 	column_t *columns;
-	post_t *posts;
-
-	UINT8 type;
 
 	void *hardware; // OpenGL patch, allocated whenever necessary
 	void *flats[4]; // The patch as flats
@@ -826,6 +825,25 @@ typedef struct
 	rotsprite_t *rotated; // Rotated patches
 #endif
 } patch_t;
+
+typedef struct
+{
+	patch_t patch;
+
+	post_t *posts;
+} staticpatch_t;
+
+typedef struct
+{
+	patch_t patch;
+
+	boolean is_dirty;
+	boolean update_columns;
+
+	INT16 rect_dirty[4]; // left, top, right, bottom
+
+	bitarray_t *pixels_opaque;
+} dynamicpatch_t;
 
 #if defined(_MSC_VER)
 #pragma pack(1)

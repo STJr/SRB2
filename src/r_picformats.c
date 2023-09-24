@@ -364,7 +364,6 @@ void *Picture_PatchConvert(
 
 	out->columns = Z_Calloc(sizeof(column_t) * out->width, PU_PATCH_DATA, NULL);
 	out->pixels = Z_Calloc(max_pixels * (outbpp / 8), PU_PATCH_DATA, NULL);
-	out->posts = NULL;
 
 	UINT8 *imgptr = out->pixels;
 
@@ -407,8 +406,9 @@ void *Picture_PatchConvert(
 			{
 				num_posts++;
 
-				out->posts = Z_Realloc(out->posts, sizeof(post_t) * num_posts, PU_PATCH_DATA, NULL);
-				post = &out->posts[num_posts - 1];
+				staticpatch_t *spatch = (staticpatch_t*)out;
+				spatch->posts = Z_Realloc(spatch->posts, sizeof(post_t) * num_posts, PU_PATCH_DATA, NULL);
+				post = &spatch->posts[num_posts - 1];
 				post->topdelta = (unsigned)y;
 				post->length = 0;
 				post->data_offset = post_data_offset;
@@ -437,7 +437,10 @@ void *Picture_PatchConvert(
 	{
 		column_t *column = &out->columns[x];
 		if (column->num_posts > 0)
-			column->posts = &out->posts[column_posts[x]];
+		{
+			staticpatch_t *spatch = (staticpatch_t*)out;
+			column->posts = &spatch->posts[column_posts[x]];
+		}
 		if (old_pixels != out->pixels)
 			column->pixels = out->pixels + (column->pixels - old_pixels);
 	}

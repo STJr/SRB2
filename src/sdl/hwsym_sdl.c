@@ -86,6 +86,7 @@ void *hwSym(const char *funcName,void *handle)
 	GETFUNC(ClearBuffer);
 	GETFUNC(SetTexture);
 	GETFUNC(UpdateTexture);
+	GETFUNC(UpdateTextureRegion);
 	GETFUNC(DeleteTexture);
 	GETFUNC(ReadRect);
 	GETFUNC(GClipRect);
