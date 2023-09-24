@@ -96,14 +96,14 @@ void *Picture_Convert(
 	return NULL;
 }
 
-static void *ReadPixelFunc_Patch(void *picture, pictureformat_t informat, INT32 x, INT32 y, INT32 inwidth, INT32 inheight, pictureflags_t flags)
+void *PicFmt_ReadPixel_Patch(void *picture, pictureformat_t informat, INT32 x, INT32 y, INT32 inwidth, INT32 inheight, pictureflags_t flags)
 {
 	(void)inwidth;
 	(void)inheight;
 	return Picture_GetPatchPixel((patch_t*)picture, informat, x, y, flags);
 }
 
-static void *ReadPixelFunc_Flat_8bpp(void *picture, pictureformat_t informat, INT32 x, INT32 y, INT32 inwidth, INT32 inheight, pictureflags_t flags)
+void *PicFmt_ReadPixel_Flat_8bpp(void *picture, pictureformat_t informat, INT32 x, INT32 y, INT32 inwidth, INT32 inheight, pictureflags_t flags)
 {
 	(void)informat;
 	(void)flags;
@@ -111,7 +111,7 @@ static void *ReadPixelFunc_Flat_8bpp(void *picture, pictureformat_t informat, IN
 	return (UINT8 *)picture + ((y * inwidth) + x);
 }
 
-static void *ReadPixelFunc_Flat_16bpp(void *picture, pictureformat_t informat, INT32 x, INT32 y, INT32 inwidth, INT32 inheight, pictureflags_t flags)
+void *PicFmt_ReadPixel_Flat_16bpp(void *picture, pictureformat_t informat, INT32 x, INT32 y, INT32 inwidth, INT32 inheight, pictureflags_t flags)
 {
 	(void)informat;
 	(void)flags;
@@ -119,7 +119,7 @@ static void *ReadPixelFunc_Flat_16bpp(void *picture, pictureformat_t informat, I
 	return (UINT16 *)picture + ((y * inwidth) + x);
 }
 
-static void *ReadPixelFunc_Flat_32bpp(void *picture, pictureformat_t informat, INT32 x, INT32 y, INT32 inwidth, INT32 inheight, pictureflags_t flags)
+void *PicFmt_ReadPixel_Flat_32bpp(void *picture, pictureformat_t informat, INT32 x, INT32 y, INT32 inwidth, INT32 inheight, pictureflags_t flags)
 {
 	(void)informat;
 	(void)flags;
@@ -127,21 +127,21 @@ static void *ReadPixelFunc_Flat_32bpp(void *picture, pictureformat_t informat, I
 	return (UINT32 *)picture + ((y * inwidth) + x);
 }
 
-static UINT8 GetAlphaFunc_32bpp(void *input, pictureflags_t flags)
+UINT8 PicFmt_GetAlpha_32bpp(void *input, pictureflags_t flags)
 {
 	(void)flags;
 	RGBA_t px = *(RGBA_t *)input;
 	return px.s.alpha;
 }
 
-static UINT8 GetAlphaFunc_16bpp(void *input, pictureflags_t flags)
+UINT8 PicFmt_GetAlpha_16bpp(void *input, pictureflags_t flags)
 {
 	(void)flags;
 	UINT16 px = *(UINT16 *)input;
 	return (px & 0xFF00) >> 8;
 }
 
-static UINT8 GetAlphaFunc_8bpp(void *input, pictureflags_t flags)
+UINT8 PicFmt_GetAlpha_8bpp(void *input, pictureflags_t flags)
 {
 	UINT8 px = *(UINT8 *)input;
 	if (px == TRANSPARENTPIXEL && (flags & PICFLAGS_USE_TRANSPARENTPIXEL))
@@ -151,7 +151,7 @@ static UINT8 GetAlphaFunc_8bpp(void *input, pictureflags_t flags)
 }
 
 // input 32bpp output 32bpp
-static void *WritePatchPixel_i32o32(void *ptr, void *input)
+void *PicFmt_WritePixel_i32o32(void *ptr, void *input)
 {
 	RGBA_t px = *(RGBA_t *)input;
 	WRITEUINT32(ptr, px.rgba);
@@ -159,7 +159,7 @@ static void *WritePatchPixel_i32o32(void *ptr, void *input)
 }
 
 // input 16bpp output 32bpp
-static void *WritePatchPixel_i16o32(void *ptr, void *input)
+void *PicFmt_WritePixel_i16o32(void *ptr, void *input)
 {
 	RGBA_t px = pMasterPalette[*((UINT16 *)input) & 0xFF];
 	WRITEUINT32(ptr, px.rgba);
@@ -167,7 +167,7 @@ static void *WritePatchPixel_i16o32(void *ptr, void *input)
 }
 
 // input 8bpp output 32bpp
-static void *WritePatchPixel_i8o32(void *ptr, void *input)
+void *PicFmt_WritePixel_i8o32(void *ptr, void *input)
 {
 	RGBA_t px = pMasterPalette[*((UINT8 *)input) & 0xFF];
 	WRITEUINT32(ptr, px.rgba);
@@ -175,7 +175,7 @@ static void *WritePatchPixel_i8o32(void *ptr, void *input)
 }
 
 // input 32bpp output 16bpp
-static void *WritePatchPixel_i32o16(void *ptr, void *input)
+void *PicFmt_WritePixel_i32o16(void *ptr, void *input)
 {
 	RGBA_t in = *(RGBA_t *)input;
 	UINT8 px = NearestColor(in.s.red, in.s.green, in.s.blue);
@@ -184,21 +184,21 @@ static void *WritePatchPixel_i32o16(void *ptr, void *input)
 }
 
 // input 16bpp output 16bpp
-static void *WritePatchPixel_i16o16(void *ptr, void *input)
+void *PicFmt_WritePixel_i16o16(void *ptr, void *input)
 {
 	WRITEUINT16(ptr, *(UINT16 *)input);
 	return ptr;
 }
 
 // input 8bpp output 16bpp
-static void *WritePatchPixel_i8o16(void *ptr, void *input)
+void *PicFmt_WritePixel_i8o16(void *ptr, void *input)
 {
 	WRITEUINT16(ptr, (0xFF00 | (*(UINT8 *)input)));
 	return ptr;
 }
 
 // input 32bpp output 8bpp
-static void *WritePatchPixel_i32o8(void *ptr, void *input)
+void *PicFmt_WritePixel_i32o8(void *ptr, void *input)
 {
 	RGBA_t in = *(RGBA_t *)input;
 	UINT8 px = NearestColor(in.s.red, in.s.green, in.s.blue);
@@ -207,7 +207,7 @@ static void *WritePatchPixel_i32o8(void *ptr, void *input)
 }
 
 // input 16bpp output 8bpp
-static void *WritePatchPixel_i16o8(void *ptr, void *input)
+void *PicFmt_WritePixel_i16o8(void *ptr, void *input)
 {
 	UINT16 px = *(UINT16 *)input;
 	WRITEUINT8(ptr, (px & 0xFF));
@@ -215,7 +215,7 @@ static void *WritePatchPixel_i16o8(void *ptr, void *input)
 }
 
 // input 8bpp output 8bpp
-static void *WritePatchPixel_i8o8(void *ptr, void *input)
+void *PicFmt_WritePixel_i8o8(void *ptr, void *input)
 {
 	WRITEUINT8(ptr, *(UINT8 *)input);
 	return ptr;
@@ -289,22 +289,22 @@ void *Picture_PatchConvert(
 
 	void *(*readPixelFunc)(void *, pictureformat_t, INT32, INT32, INT32, INT32, pictureflags_t) = NULL;
 	UINT8 (*getAlphaFunc)(void *, pictureflags_t) = NULL;
-	void *(*writePatchPixel)(void *, void *) = NULL;
+	void *(*writePixelFunc)(void *, void *) = NULL;
 
 	if (Picture_IsPatchFormat(informat))
-		readPixelFunc = ReadPixelFunc_Patch;
+		readPixelFunc = PicFmt_ReadPixel_Patch;
 	else if (Picture_IsFlatFormat(informat))
 	{
 		switch (informat)
 		{
 			case PICFMT_FLAT32:
-				readPixelFunc = ReadPixelFunc_Flat_32bpp;
+				readPixelFunc = PicFmt_ReadPixel_Flat_32bpp;
 				break;
 			case PICFMT_FLAT16:
-				readPixelFunc = ReadPixelFunc_Flat_16bpp;
+				readPixelFunc = PicFmt_ReadPixel_Flat_16bpp;
 				break;
 			case PICFMT_FLAT:
-				readPixelFunc = ReadPixelFunc_Flat_8bpp;
+				readPixelFunc = PicFmt_ReadPixel_Flat_8bpp;
 				break;
 			default:
 				I_Error("Picture_PatchConvert: unsupported flat input format!");
@@ -315,11 +315,11 @@ void *Picture_PatchConvert(
 		I_Error("Picture_PatchConvert: unsupported input format!");
 
 	if (inbpp == PICDEPTH_32BPP)
-		getAlphaFunc = GetAlphaFunc_32bpp;
+		getAlphaFunc = PicFmt_GetAlpha_32bpp;
 	else if (inbpp == PICDEPTH_16BPP)
-		getAlphaFunc = GetAlphaFunc_16bpp;
+		getAlphaFunc = PicFmt_GetAlpha_16bpp;
 	else if (inbpp == PICDEPTH_8BPP)
-		getAlphaFunc = GetAlphaFunc_8bpp;
+		getAlphaFunc = PicFmt_GetAlpha_8bpp;
 
 	switch (outformat)
 	{
@@ -327,38 +327,35 @@ void *Picture_PatchConvert(
 		case PICFMT_DOOMPATCH32:
 		{
 			if (inbpp == PICDEPTH_32BPP)
-				writePatchPixel = WritePatchPixel_i32o32;
+				writePixelFunc = PicFmt_WritePixel_i32o32;
 			else if (inbpp == PICDEPTH_16BPP)
-				writePatchPixel = WritePatchPixel_i16o32;
+				writePixelFunc = PicFmt_WritePixel_i16o32;
 			else // PICFMT_PATCH
-				writePatchPixel = WritePatchPixel_i8o32;
+				writePixelFunc = PicFmt_WritePixel_i8o32;
 			break;
 		}
 		case PICFMT_PATCH16:
 		case PICFMT_DOOMPATCH16:
 			if (inbpp == PICDEPTH_32BPP)
-				writePatchPixel = WritePatchPixel_i32o16;
+				writePixelFunc = PicFmt_WritePixel_i32o16;
 			else if (inbpp == PICDEPTH_16BPP)
-				writePatchPixel = WritePatchPixel_i16o16;
+				writePixelFunc = PicFmt_WritePixel_i16o16;
 			else // PICFMT_PATCH
-				writePatchPixel = WritePatchPixel_i8o16;
+				writePixelFunc = PicFmt_WritePixel_i8o16;
 			break;
 		default: // PICFMT_PATCH
 		{
 			if (inbpp == PICDEPTH_32BPP)
-				writePatchPixel = WritePatchPixel_i32o8;
+				writePixelFunc = PicFmt_WritePixel_i32o8;
 			else if (inbpp == PICDEPTH_16BPP)
-				writePatchPixel = WritePatchPixel_i16o8;
+				writePixelFunc = PicFmt_WritePixel_i16o8;
 			else // PICFMT_PATCH
-				writePatchPixel = WritePatchPixel_i8o8;
+				writePixelFunc = PicFmt_WritePixel_i8o8;
 			break;
 		}
 	}
 
-	patch_t *out = Z_Calloc(sizeof(patch_t), PU_PATCH, NULL);
-
-	out->width = inwidth;
-	out->height = inheight;
+	patch_t *out = Patch_Create(inwidth, inheight);
 	out->leftoffset = inleftoffset;
 	out->topoffset = intopoffset;
 
@@ -424,7 +421,7 @@ void *Picture_PatchConvert(
 
 			// Write the pixel
 			UINT8 *last_ptr = imgptr;
-			imgptr = writePatchPixel(last_ptr, input);
+			imgptr = writePixelFunc(last_ptr, input);
 
 			post->length++;
 			post_data_offset += imgptr - last_ptr;

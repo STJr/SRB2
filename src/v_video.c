@@ -514,11 +514,10 @@ void V_DrawStretchyFixedPatch(fixed_t x, fixed_t y, fixed_t pscale, fixed_t vsca
 
 	UINT8 perplayershuffle = 0;
 
-	if (rendermode == render_none)
+	if (patch->columns == NULL || rendermode == render_none)
 		return;
 
 #ifdef HWRENDER
-	//if (rendermode != render_soft && !con_startup)		// Why?
 	if (rendermode == render_opengl)
 	{
 		HWR_DrawStretchyFixedPatch(patch, x, y, pscale, vscale, scrn, colormap);
@@ -790,7 +789,6 @@ void V_DrawCroppedPatch(fixed_t x, fixed_t y, fixed_t pscale, fixed_t vscale, IN
 	UINT8 (*patchdrawfunc)(const UINT8*, const UINT8*, fixed_t);
 	UINT32 alphalevel = ((scrn & V_ALPHAMASK) >> V_ALPHASHIFT);
 	UINT32 blendmode = ((scrn & V_BLENDMASK) >> V_BLENDSHIFT);
-	// boolean flip = false;
 
 	fixed_t col, ofs, colfrac, rowfrac, fdup, vdup;
 	INT32 dupx, dupy;
@@ -800,11 +798,10 @@ void V_DrawCroppedPatch(fixed_t x, fixed_t y, fixed_t pscale, fixed_t vscale, IN
 
 	UINT8 perplayershuffle = 0;
 
-	if (rendermode == render_none)
+	if (patch->columns == NULL || rendermode == render_none)
 		return;
 
 #ifdef HWRENDER
-	//if (rendermode != render_soft && !con_startup)		// Not this again
 	if (rendermode == render_opengl)
 	{
 		HWR_DrawCroppedPatch(patch,x,y,pscale,vscale,scrn,colormap,sx,sy,w,h);

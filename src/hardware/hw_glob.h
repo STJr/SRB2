@@ -117,6 +117,7 @@ patch_t *HWR_GetCachedGLPatchPwad(UINT16 wad, UINT16 lump);
 patch_t *HWR_GetCachedGLPatch(lumpnum_t lumpnum);
 
 void HWR_GetPatch(patch_t *patch);
+void HWR_UpdatePatch(patch_t *patch);
 void HWR_GetMappedPatch(patch_t *patch, const UINT8 *colormap);
 void HWR_GetFadeMask(lumpnum_t fademasklumpnum);
 patch_t *HWR_GetPic(lumpnum_t lumpnum);

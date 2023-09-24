@@ -817,6 +817,8 @@ typedef struct
 	column_t *columns;
 	post_t *posts;
 
+	UINT8 type;
+
 	void *hardware; // OpenGL patch, allocated whenever necessary
 	void *flats[4]; // The patch as flats
 

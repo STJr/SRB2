@@ -907,6 +907,13 @@ void HWR_GetPatch(patch_t *patch)
 	HWR_LoadPatchMipmap(patch, ((GLPatch_t *)patch->hardware)->mipmap);
 }
 
+void HWR_UpdatePatch(patch_t *patch)
+{
+	if (!patch->hardware)
+		Patch_CreateGL(patch);
+	HWR_UpdatePatchMipmap(patch, ((GLPatch_t *)patch->hardware)->mipmap);
+}
+
 // -------------------+
 // HWR_GetMappedPatch : Same as HWR_GetPatch for sprite color
 // -------------------+

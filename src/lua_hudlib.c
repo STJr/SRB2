@@ -85,7 +85,12 @@ enum patch {
 	patch_width,
 	patch_height,
 	patch_leftoffset,
-	patch_topoffset
+	patch_topoffset,
+	patch_iseditable,
+	// Methods
+	patch_getPixel,
+	patch_setPixel,
+	patch_copy
 };
 static const char *const patch_opt[] = {
 	"valid",
@@ -93,6 +98,11 @@ static const char *const patch_opt[] = {
 	"height",
 	"leftoffset",
 	"topoffset",
+	"is_editable",
+	// Methods
+	"getPixel",
+	"setPixel",
+	"copy",
 	NULL};
 
 static int patch_fields_ref = LUA_NOREF;
@@ -277,6 +287,148 @@ static int colormap_get(lua_State *L)
 	return 1;
 }
 
+static int lib_patch_getPixel(lua_State *L)
+{
+	patch_t *patch = *((patch_t **)luaL_checkudata(L, 1, META_PATCH));
+	if (!patch)
+		return LUA_ErrInvalid(L, "patch_t");
+
+	int x = luaL_checkinteger(L, 2);
+	int y = luaL_checkinteger(L, 3);
+
+	void *pixel = Patch_GetPixel(patch, x, y);
+	if (pixel == NULL)
+		lua_pushnil(L);
+	else
+	{
+		UINT8 px = *(UINT8 *)pixel;
+		lua_pushinteger(L, px);
+	}
+
+	return 1;
+}
+
+static int lib_patch_setPixel(lua_State *L)
+{
+	patch_t *patch = *((patch_t **)luaL_checkudata(L, 1, META_PATCH));
+	if (!patch)
+		return LUA_ErrInvalid(L, "patch_t");
+
+	int x = luaL_checkinteger(L, 2);
+	int y = luaL_checkinteger(L, 3);
+	int color = luaL_checkinteger(L, 4);
+
+	UINT16 pixel = 0x0000;
+	if (color >= 0 && color <= 0xFF)
+		pixel = 0xFF00 | (UINT8)color;
+
+	Patch_SetPixel(patch, &pixel, PICFMT_FLAT16, x, y, true);
+
+	return 0;
+}
+
+static UINT16 *patch_update_buffer = NULL;
+static size_t patch_update_buffer_size = 0;
+
+static void img_prepare_buffer(size_t size)
+{
+	if (size > patch_update_buffer_size)
+	{
+		patch_update_buffer = Z_Realloc(patch_update_buffer, size * sizeof(UINT16), PU_STATIC, NULL);
+		patch_update_buffer_size = size;
+	}
+}
+
+static void img_get_pixels_from_table(lua_State *L, size_t size)
+{
+	memset(patch_update_buffer, 0, patch_update_buffer_size);
+
+	for (size_t i = 0; i < size; i++)
+	{
+		int pal_idx = -1;
+
+		if (lua_next(L, -2) != 0)
+		{
+			if (lua_isnumber(L,-1))
+			{
+				int value = luaL_checkinteger(L, -1);
+				if (value >= 0 && value <= 0xFF)
+					pal_idx = value;
+			}
+
+			lua_pop(L, 1);
+		}
+
+		if (pal_idx != -1)
+			patch_update_buffer[i] = 0xFF00 | (UINT8)pal_idx;
+		else
+			patch_update_buffer[i] = 0x0000;
+	}
+}
+
+static int lib_patch_copy(lua_State *L)
+{
+	patch_t *patch = *((patch_t **)luaL_checkudata(L, 1, META_PATCH));
+	if (!patch)
+		return LUA_ErrInvalid(L, "patch_t");
+
+	if (patch->type != PATCH_TYPE_DYNAMIC)
+		return luaL_error(L, "cannot modify a static patch");
+
+	int src_img_width = -1;
+	int src_img_height = -1;
+
+	if (!lua_istable(L, 2))
+		return luaL_typerror(L, 2, "table");
+	else
+	{
+		src_img_width = luaL_optinteger(L, 3, patch->width);
+		src_img_height = luaL_optinteger(L, 4, patch->height);
+
+		lua_remove(L, 3);
+		lua_remove(L, 3);
+	}
+
+	if (src_img_width <= 0)
+		return luaL_error(L, "invalid source image width");
+	if (src_img_height <= 0)
+		return luaL_error(L, "invalid source image height");
+
+	int sx = luaL_optinteger(L, 3, 0);
+	int sy = luaL_optinteger(L, 4, 0);
+	int sw = luaL_optinteger(L, 5, patch->width);
+	int sh = luaL_optinteger(L, 6, patch->height);
+	int dx = luaL_optinteger(L, 7, 0);
+	int dy = luaL_optinteger(L, 8, 0);
+	boolean copy_transparent = lua_optboolean(L, 9);
+
+	if (sw <= 0)
+		return luaL_error(L, "invalid copy rect width");
+	if (sh <= 0)
+		return luaL_error(L, "invalid copy rect height");
+
+	size_t size = (unsigned)(src_img_width * src_img_height);
+
+	img_prepare_buffer(size);
+
+	if (lua_istable(L, 2))
+	{
+		if (lua_objlen(L, 2) + 1 != size)
+			return luaL_error(L, "invalid table length");
+
+		lua_pushvalue(L, 2);
+		lua_pushnil(L);
+
+		img_get_pixels_from_table(L, size);
+
+		lua_pop(L, 2);
+	}
+
+	Patch_Update(patch, patch_update_buffer, src_img_width, src_img_height, PICFMT_FLAT16, sx, sy, sw, sh, dx, dy, copy_transparent);
+
+	return 0;
+}
+
 static int patch_get(lua_State *L)
 {
 	patch_t *patch = *((patch_t **)luaL_checkudata(L, 1, META_PATCH));
@@ -307,13 +459,53 @@ static int patch_get(lua_State *L)
 	case patch_topoffset:
 		lua_pushinteger(L, patch->topoffset);
 		break;
+	case patch_iseditable:
+		lua_pushboolean(L, patch->type == PATCH_TYPE_STATIC ? true : false);
+		break;
+	case patch_getPixel:
+		lua_pushcfunction(L, lib_patch_getPixel);
+		break;
+	case patch_setPixel:
+		lua_pushcfunction(L, lib_patch_setPixel);
+		break;
+	case patch_copy:
+		lua_pushcfunction(L, lib_patch_copy);
+		break;
 	}
 	return 1;
 }
 
 static int patch_set(lua_State *L)
 {
-	return luaL_error(L, LUA_QL("patch_t") " struct cannot be edited by Lua.");
+	patch_t *patch = *((patch_t **)luaL_checkudata(L, 1, META_PATCH));
+	if (!patch)
+		return LUA_ErrInvalid(L, "patch_t");
+
+	if (patch->type == PATCH_TYPE_STATIC)
+		return luaL_error(L, "cannot modify a static patch");
+
+	enum patch field = Lua_optoption(L, 2, -1, patch_fields_ref);
+	switch (field)
+	{
+	case patch_leftoffset:
+		patch->leftoffset = luaL_checkinteger(L, 3);
+		break;
+	case patch_topoffset:
+		patch->topoffset = luaL_checkinteger(L, 3);
+		break;
+	default:
+		return luaL_error(L, "cannot set " LUA_QL("patch_t") " field " LUA_QS ".", lua_tostring(L, 2));
+	}
+
+	return 0;
+}
+
+static int patch_gc(lua_State *L)
+{
+	patch_t *patch = *((patch_t **)luaL_checkudata(L, 1, META_PATCH));
+	if (patch->type == PATCH_TYPE_DYNAMIC)
+		Patch_Free(patch);
+	return 0;
 }
 
 static int camera_get(lua_State *L)
@@ -440,33 +632,39 @@ static int camera_set(lua_State *L)
 	return 0;
 }
 
-//
-// lib_draw
-//
-
-static int libd_patchExists(lua_State *L)
+// Image lib
+static int lib_image_create(lua_State *L)
 {
-	HUDONLY
+	int w = luaL_checkinteger(L, 1);
+	int h = luaL_checkinteger(L, 2);
+	if (w <= 0)
+		return luaL_error(L, "invalid image width %d", w);
+	if (h <= 0)
+		return luaL_error(L, "invalid image width %d", h);
+	LUA_PushUserdata(L, Patch_CreateDynamic(w, h), META_PATCH);
+	return 1;
+}
+
+static int lib_image_patchExists(lua_State *L)
+{
 	lua_pushboolean(L, W_LumpExists(luaL_checkstring(L, 1)));
 	return 1;
 }
 
-static int libd_cachePatch(lua_State *L)
+static int lib_image_getPatch(lua_State *L)
 {
-	HUDONLY
 	LUA_PushUserdata(L, W_CachePatchLongName(luaL_checkstring(L, 1), PU_PATCH), META_PATCH);
 	return 1;
 }
 
-// v.getSpritePatch(sprite, [frame, [angle, [rollangle]]])
-static int libd_getSpritePatch(lua_State *L)
+// image.getSpritePatch(sprite, [frame, [angle, [rollangle]]])
+static int lib_image_getSpritePatch(lua_State *L)
 {
 	UINT32 i; // sprite prefix
 	UINT32 frame = 0; // 'A'
 	UINT8 angle = 0;
 	spritedef_t *sprdef;
 	spriteframe_t *sprframe;
-	HUDONLY
 
 	if (lua_isnumber(L, 1)) // sprite number given, e.g. SPR_THOK
 	{
@@ -526,14 +724,14 @@ static int libd_getSpritePatch(lua_State *L)
 	}
 #endif
 
-	// push both the patch and it's "flip" value
+	// push both the patch and its "flip" value
 	LUA_PushUserdata(L, W_CachePatchNum(sprframe->lumppat[angle], PU_SPRITE), META_PATCH);
 	lua_pushboolean(L, (sprframe->flip & (1<<angle)) != 0);
 	return 2;
 }
 
-// v.getSprite2Patch(skin, sprite, [super?,] [frame, [angle, [rollangle]]])
-static int libd_getSprite2Patch(lua_State *L)
+// image.getSprite2Patch(skin, sprite, [super?,] [frame, [angle, [rollangle]]])
+static int lib_image_getSprite2Patch(lua_State *L)
 {
 	INT32 i; // skin number
 	playersprite_t j; // sprite2 prefix
@@ -542,7 +740,6 @@ static int libd_getSprite2Patch(lua_State *L)
 	spritedef_t *sprdef;
 	spriteframe_t *sprframe;
 	boolean super = false; // add FF_SPR2SUPER to sprite2 if true
-	HUDONLY
 
 	// get skin first!
 	if (lua_isnumber(L, 1)) // find skin by number
@@ -638,10 +835,49 @@ static int libd_getSprite2Patch(lua_State *L)
 	}
 #endif
 
-	// push both the patch and it's "flip" value
+	// push both the patch and its "flip" value
 	LUA_PushUserdata(L, W_CachePatchNum(sprframe->lumppat[angle], PU_SPRITE), META_PATCH);
 	lua_pushboolean(L, (sprframe->flip & (1<<angle)) != 0);
 	return 2;
+}
+
+static luaL_Reg lib_image[] = {
+	{"create", lib_image_create},
+	{"patchExists", lib_image_patchExists},
+	{"getPatch", lib_image_getPatch},
+	{"getSpritePatch", lib_image_getSpritePatch},
+	{"getSprite2Patch", lib_image_getSprite2Patch},
+	{NULL, NULL}
+};
+
+//
+// lib_draw
+//
+
+static int libd_patchExists(lua_State *L)
+{
+	HUDONLY
+	return lib_image_patchExists(L);
+}
+
+static int libd_cachePatch(lua_State *L)
+{
+	HUDONLY
+	return lib_image_getPatch(L);
+}
+
+// v.getSpritePatch(sprite, [frame, [angle, [rollangle]]])
+static int libd_getSpritePatch(lua_State *L)
+{
+	HUDONLY
+	return lib_image_getSpritePatch(L);
+}
+
+// v.getSprite2Patch(skin, sprite, [super?,] [frame, [angle, [rollangle]]])
+static int libd_getSprite2Patch(lua_State *L)
+{
+	HUDONLY
+	return lib_image_getSprite2Patch(L);
 }
 
 static int libd_draw(lua_State *L)
@@ -1436,6 +1672,9 @@ int LUA_HudLib(lua_State *L)
 
 		lua_pushcfunction(L, patch_set);
 		lua_setfield(L, -2, "__newindex");
+
+		lua_pushcfunction(L, patch_gc);
+		lua_setfield(L, -2, "__gc");
 	lua_pop(L,1);
 
 	patch_fields_ref = Lua_CreateFieldTable(L, patch_opt);
@@ -1451,6 +1690,9 @@ int LUA_HudLib(lua_State *L)
 	camera_fields_ref = Lua_CreateFieldTable(L, camera_opt);
 
 	luaL_register(L, "hud", lib_hud);
+
+	luaL_register(L, "image", lib_image);
+
 	return 0;
 }
 

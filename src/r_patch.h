@@ -17,13 +17,32 @@
 #include "r_fps.h"
 #include "doomdef.h"
 
+enum
+{
+	PATCH_TYPE_STATIC,
+	PATCH_TYPE_DYNAMIC
+};
+
 // Patch functions
 patch_t *Patch_Create(INT16 width, INT16 height);
+patch_t *Patch_CreateDynamic(INT16 width, INT16 height);
+
+void *Patch_GetPixel(patch_t *patch, INT32 x, INT32 y);
+void Patch_SetPixel(patch_t *patch, void *pixel, pictureformat_t informat, INT32 x, INT32 y, boolean transparent_overwrite);
+void Patch_Update(patch_t *patch,
+	void *pixels, INT32 src_img_width, INT32 src_img_height,
+	pictureformat_t informat,
+	INT32 sx, INT32 sy, INT32 sw, INT32 sh, INT32 dx, INT32 dy,
+	boolean transparent_overwrite);
+
+void Patch_Free(patch_t *patch);
+void Patch_FreeMiscData(patch_t *patch);
+
 patch_t *Patch_CreateFromDoomPatch(softwarepatch_t *source);
-column_t *Patch_GetColumn(patch_t *patch, unsigned column);
 void Patch_CalcDataSizes(softwarepatch_t *source, size_t *total_pixels, size_t *total_posts);
 void Patch_MakeColumns(softwarepatch_t *source, size_t num_columns, INT16 width, UINT8 *pixels, column_t *columns, post_t *posts, boolean flip);
-void Patch_Free(patch_t *patch);
+
+column_t *Patch_GetColumn(patch_t *patch, unsigned column);
 
 #define Patch_FreeTag(tagnum) Patch_FreeTags(tagnum, tagnum)
 void Patch_FreeTags(INT32 lowtag, INT32 hightag);

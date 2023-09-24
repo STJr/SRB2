@@ -85,6 +85,25 @@ boolean Picture_IsDoomPatchFormat(pictureformat_t format);
 boolean Picture_IsFlatFormat(pictureformat_t format);
 boolean Picture_CheckIfDoomPatch(softwarepatch_t *patch, size_t size);
 
+void *PicFmt_ReadPixel_Patch(void *picture, pictureformat_t informat, INT32 x, INT32 y, INT32 inwidth, INT32 inheight, pictureflags_t flags);
+void *PicFmt_ReadPixel_Flat_8bpp(void *picture, pictureformat_t informat, INT32 x, INT32 y, INT32 inwidth, INT32 inheight, pictureflags_t flags);
+void *PicFmt_ReadPixel_Flat_16bpp(void *picture, pictureformat_t informat, INT32 x, INT32 y, INT32 inwidth, INT32 inheight, pictureflags_t flags);
+void *PicFmt_ReadPixel_Flat_32bpp(void *picture, pictureformat_t informat, INT32 x, INT32 y, INT32 inwidth, INT32 inheight, pictureflags_t flags);
+
+void *PicFmt_WritePixel_i32o32(void *ptr, void *input);
+void *PicFmt_WritePixel_i16o32(void *ptr, void *input);
+void *PicFmt_WritePixel_i8o32(void *ptr, void *input);
+void *PicFmt_WritePixel_i32o16(void *ptr, void *input);
+void *PicFmt_WritePixel_i16o16(void *ptr, void *input);
+void *PicFmt_WritePixel_i8o16(void *ptr, void *input);
+void *PicFmt_WritePixel_i32o8(void *ptr, void *input);
+void *PicFmt_WritePixel_i16o8(void *ptr, void *input);
+void *PicFmt_WritePixel_i8o8(void *ptr, void *input);
+
+UINT8 PicFmt_GetAlpha_32bpp(void *input, pictureflags_t flags);
+UINT8 PicFmt_GetAlpha_16bpp(void *input, pictureflags_t flags);
+UINT8 PicFmt_GetAlpha_8bpp(void *input, pictureflags_t flags);
+
 // Structs
 typedef enum
 {
