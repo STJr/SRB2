@@ -261,6 +261,7 @@ static void P_NetArchivePlayers(void)
 		WRITEUINT8(save_p, players[i].marelap);
 		WRITEUINT8(save_p, players[i].marebonuslap);
 		WRITEUINT32(save_p, players[i].marebegunat);
+		WRITEUINT32(save_p, players[i].lastmaretime);
 		WRITEUINT32(save_p, players[i].startedtime);
 		WRITEUINT32(save_p, players[i].finishedtime);
 		WRITEUINT32(save_p, players[i].lapbegunat);
@@ -491,6 +492,7 @@ static void P_NetUnArchivePlayers(void)
 		players[i].marelap = READUINT8(save_p);
 		players[i].marebonuslap = READUINT8(save_p);
 		players[i].marebegunat = READUINT32(save_p);
+		players[i].lastmaretime = READUINT32(save_p);
 		players[i].startedtime = READUINT32(save_p);
 		players[i].finishedtime = READUINT32(save_p);
 		players[i].lapbegunat = READUINT32(save_p);
