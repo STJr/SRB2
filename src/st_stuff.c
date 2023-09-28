@@ -1734,10 +1734,10 @@ static void ST_drawNightsRecords(void)
 			if (stplyr->finishedtime)
 			{
 				tic_t maretime = stplyr->startedtime - stplyr->finishedtime;
-				V_DrawString(BASEVIDWIDTH/2 - 48, 140, aflag, "TIME:");
-				V_DrawString(BASEVIDWIDTH/2 - 48, 148, aflag, "BONUS:");
-				V_DrawRightAlignedString(BASEVIDWIDTH/2 + 48, 140, aflag, va("\x87%i:%02i\x80.%02i", G_TicsToMinutes(maretime,true), G_TicsToSeconds(maretime), G_TicsToCentiseconds(maretime)));
-				V_DrawRightAlignedString(BASEVIDWIDTH/2 + 48, 148, V_ORANGEMAP|aflag, va("%d", (stplyr->finishedtime/TICRATE) * 100));
+				V_DrawString(BASEVIDWIDTH/2 - 48, 140, V_YELLOWMAP|aflag, "TIME:");
+				V_DrawString(BASEVIDWIDTH/2 - 48, 148, V_YELLOWMAP|aflag, "BONUS:");
+				V_DrawRightAlignedString(BASEVIDWIDTH/2 + 48, 140, aflag, va("%i:%02i.%02i", G_TicsToMinutes(maretime,true), G_TicsToSeconds(maretime), G_TicsToCentiseconds(maretime)));
+				V_DrawRightAlignedString(BASEVIDWIDTH/2 + 48, 148, aflag, va("%d", (stplyr->finishedtime/TICRATE) * 100));
 			}
 			break;
 		}
@@ -1757,12 +1757,12 @@ static void ST_drawNightsRecords(void)
 		}
 		case NTV_BONUSTIMEEND: // End Bonus
 		{
-			V_DrawString(BASEVIDWIDTH/2 - 48, 132, aflag, "TIME:");
-			V_DrawString(BASEVIDWIDTH/2 - 48, 140, aflag, (G_IsSpecialStage(gamemap)) ? "SPHERES:" : "CHIPS:");
-			V_DrawString(BASEVIDWIDTH/2 - 48, 148, aflag, "BONUS:");
-			V_DrawRightAlignedString(BASEVIDWIDTH/2 + 48, 132, V_ORANGEMAP|aflag, va("%i:%02i.%02i", G_TicsToMinutes(stplyr->lastmaretime,true), G_TicsToSeconds(stplyr->lastmaretime), G_TicsToCentiseconds(stplyr->lastmaretime)));
-			V_DrawRightAlignedString(BASEVIDWIDTH/2 + 48, 140, V_ORANGEMAP|aflag, va("%d", stplyr->finishedspheres));
-			V_DrawRightAlignedString(BASEVIDWIDTH/2 + 48, 148, V_ORANGEMAP|aflag, va("%d", stplyr->finishedspheres * 50));
+			V_DrawString(BASEVIDWIDTH/2 - 48, 132, V_YELLOWMAP|aflag, "TIME:");
+			V_DrawString(BASEVIDWIDTH/2 - 48, 140, V_YELLOWMAP|aflag, (G_IsSpecialStage(gamemap)) ? "SPHERES:" : "CHIPS:");
+			V_DrawString(BASEVIDWIDTH/2 - 48, 148, V_YELLOWMAP|aflag, "BONUS:");
+			V_DrawRightAlignedString(BASEVIDWIDTH/2 + 48, 132, aflag, va("%i:%02i.%02i", G_TicsToMinutes(stplyr->lastmaretime,true), G_TicsToSeconds(stplyr->lastmaretime), G_TicsToCentiseconds(stplyr->lastmaretime)));
+			V_DrawRightAlignedString(BASEVIDWIDTH/2 + 48, 140, aflag, va("%d", stplyr->finishedspheres));
+			V_DrawRightAlignedString(BASEVIDWIDTH/2 + 48, 148, aflag, va("%d", stplyr->finishedspheres * 50));
 			ST_DrawNightsOverlayNum((BASEVIDWIDTH/2 + 48)<<FRACBITS, 160<<FRACBITS, FRACUNIT, aflag, stplyr->lastmarescore, nightsnum, SKINCOLOR_AZURE);
 
 			// If this is a multi-mare map, display the mare number.
@@ -1773,7 +1773,7 @@ static void ST_drawNightsRecords(void)
 			if (!(netgame || multiplayer) && G_GetBestNightsScore(gamemap, stplyr->lastmare + 1, clientGamedata) <= stplyr->lastmarescore)
 			{
 				if (stplyr->texttimer & 16)
-					V_DrawCenteredString(BASEVIDWIDTH/2, 184, V_YELLOWMAP|aflag, "* NEW RECORD *");
+					V_DrawCenteredString(BASEVIDWIDTH/2, 184, aflag, "\x85* \x82NEW RECORD \x85*\x80");
 			}
 
 			if (P_HasGrades(gamemap, stplyr->lastmare + 1))
