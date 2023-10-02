@@ -294,6 +294,7 @@ boolean R_ThingBoundingBoxVisible(mobj_t *thing)
 		case MT_BLUESPHERE:
 		case MT_NIGHTSSTAR:
 		case MT_NIGHTSCHIP:
+		case MT_COIN:
 			// Rings and similar objects are often placed
 			// in large amounts, so they are handled
 			// separately from other tangible objects.
