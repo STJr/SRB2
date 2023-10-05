@@ -2386,6 +2386,23 @@ boolean P_ZMovement(mobj_t *mo)
 				// Remove from death pits.  DON'T FUCKING DESPAWN IT DAMMIT
 				mo->fuse = 1;
 				return false;
+			case MT_BOUNCERING:
+			case MT_INFINITYRING:
+			case MT_AUTOMATICRING:
+			case MT_RAILRING:
+			case MT_EXPLOSIONRING:
+			case MT_SCATTERRING:
+			case MT_GRENADERING:
+			case MT_BOUNCEPICKUP:
+			case MT_RAILPICKUP:
+			case MT_AUTOPICKUP:
+			case MT_EXPLODEPICKUP:
+			case MT_SCATTERPICKUP:
+			case MT_GRENADEPICKUP:
+				//Don't remove respawning ringslinger collectables on death pits
+				if (!(mo->flags2 & MF2_DONTRESPAWN))
+					break;
+				/* FALLTHRU */
 			default:
 				if (mo->flags & MF_ENEMY || mo->flags & MF_BOSS || mo->type == MT_MINECART)
 				{
