@@ -15,7 +15,7 @@
 #include "console.h"
 #include "d_main.h"
 #include "d_player.h"
-#include "d_clisrv.h"
+#include "netcode/d_clisrv.h"
 #include "p_setup.h"
 #include "i_time.h"
 #include "i_system.h"
@@ -39,7 +39,7 @@
 #include "v_video.h"
 #include "lua_hook.h"
 #include "md5.h" // demo checksums
-#include "d_netfil.h" // G_CheckDemoExtraFiles
+#include "netcode/d_netfil.h" // G_CheckDemoExtraFiles
 
 boolean timingdemo; // if true, exit with report on completion
 boolean nodrawers; // for comparative timing purposes
@@ -1500,8 +1500,12 @@ void G_BeginRecording(void)
 	demo_p += 16;
 
 	// Color
-	for (i = 0; i < MAXCOLORNAME && cv_playercolor.string[i]; i++)
-		name[i] = cv_playercolor.string[i];
+	UINT16 skincolor = players[0].skincolor;
+	if (skincolor >= numskincolors)
+		skincolor = SKINCOLOR_NONE;
+	const char *skincolor_name = skincolors[skincolor].name;
+	for (i = 0; i < MAXCOLORNAME && skincolor_name[i]; i++)
+		name[i] = skincolor_name[i];
 	for (; i < MAXCOLORNAME; i++)
 		name[i] = '\0';
 	M_Memcpy(demo_p,name,MAXCOLORNAME);
@@ -1890,7 +1894,7 @@ UINT8 G_CmpDemoTime(char *oldname, char *newname)
 	switch(oldversion) // demoversion
 	{
 	case DEMOVERSION: // latest always supported
-	case 0x000f: // The previous demoversions also supported 
+	case 0x000f: // The previous demoversions also supported
 	case 0x000e:
 	case 0x000d: // all that changed between then and now was longer color name
 	case 0x000c:
@@ -2263,7 +2267,6 @@ void G_DoPlayDemo(char *defdemoname)
 			players[0].skincolor = i;
 			break;
 		}
-	CV_StealthSetValue(&cv_playercolor, players[0].skincolor);
 	if (players[0].mo)
 	{
 		players[0].mo->color = players[0].skincolor;

@@ -36,109 +36,100 @@
 	#include <ws2tcpip.h>
 #endif
 
-#include "doomdef.h"
+#include "../doomdef.h"
 
-#if defined (NOMD5) && !defined (NONET)
-	//#define NONET
+#ifdef USE_WINSOCK1
+	#include <winsock.h>
+#else
+	#ifndef USE_WINSOCK
+		#include <arpa/inet.h>
+		#ifdef __APPLE_CC__
+			#ifndef _BSD_SOCKLEN_T_
+				#define _BSD_SOCKLEN_T_
+			#endif //_BSD_SOCKLEN_T_
+		#endif //__APPLE_CC__
+		#include <sys/socket.h>
+		#include <netinet/in.h>
+		#include <netdb.h>
+		#include <sys/ioctl.h>
+	#endif //normal BSD API
+
+	#include <errno.h>
+	#include <time.h>
+
+	#if defined (__unix__) || defined (__APPLE__) || defined (UNIXCOMMON)
+		#include <sys/time.h>
+	#endif // UNIXCOMMON
 #endif
 
-#ifdef NONET
-	#undef HAVE_MINIUPNPC
-#else
-	#ifdef USE_WINSOCK1
-		#include <winsock.h>
-	#else
-		#ifndef USE_WINSOCK
-			#include <arpa/inet.h>
-			#ifdef __APPLE_CC__
-				#ifndef _BSD_SOCKLEN_T_
-					#define _BSD_SOCKLEN_T_
-				#endif //_BSD_SOCKLEN_T_
-			#endif //__APPLE_CC__
-			#include <sys/socket.h>
-			#include <netinet/in.h>
-			#include <netdb.h>
-			#include <sys/ioctl.h>
-		#endif //normal BSD API
-
-		#include <errno.h>
-		#include <time.h>
-
-		#if defined (__unix__) || defined (__APPLE__) || defined (UNIXCOMMON)
-			#include <sys/time.h>
-		#endif // UNIXCOMMON
+#ifdef USE_WINSOCK
+	// some undefined under win32
+	#undef errno
+	//#define errno WSAGetLastError() //Alam_GBC: this is the correct way, right?
+	#define errno h_errno // some very strange things happen when not using h_error?!?
+	#ifdef EWOULDBLOCK
+	#undef EWOULDBLOCK
 	#endif
-
-	#ifdef USE_WINSOCK
-		// some undefined under win32
-		#undef errno
-		//#define errno WSAGetLastError() //Alam_GBC: this is the correct way, right?
-		#define errno h_errno // some very strange things happen when not using h_error?!?
-		#ifdef EWOULDBLOCK
-		#undef EWOULDBLOCK
-		#endif
-		#define EWOULDBLOCK WSAEWOULDBLOCK
-		#ifdef EMSGSIZE
-		#undef EMSGSIZE
-		#endif
-		#define EMSGSIZE WSAEMSGSIZE
-		#ifdef ECONNREFUSED
-		#undef ECONNREFUSED
-		#endif
-		#define ECONNREFUSED WSAECONNREFUSED
-		#ifdef ETIMEDOUT
-		#undef ETIMEDOUT
-		#endif
-		#define ETIMEDOUT WSAETIMEDOUT
-		#ifndef IOC_VENDOR
-		#define IOC_VENDOR 0x18000000
-		#endif
-		#ifndef _WSAIOW
-		#define _WSAIOW(x,y) (IOC_IN|(x)|(y))
-		#endif
-		#ifndef SIO_UDP_CONNRESET
-		#define SIO_UDP_CONNRESET _WSAIOW(IOC_VENDOR,12)
-		#endif
-		#ifndef AI_ADDRCONFIG
-		#define AI_ADDRCONFIG 0x00000400
-		#endif
-		#ifndef STATUS_INVALID_PARAMETER
-		#define STATUS_INVALID_PARAMETER 0xC000000D
-		#endif
-	#endif // USE_WINSOCK
-
-	typedef union
-	{
-		struct sockaddr     any;
-		struct sockaddr_in  ip4;
-	#ifdef HAVE_IPV6
-		struct sockaddr_in6 ip6;
+	#define EWOULDBLOCK WSAEWOULDBLOCK
+	#ifdef EMSGSIZE
+	#undef EMSGSIZE
 	#endif
-	} mysockaddr_t;
+	#define EMSGSIZE WSAEMSGSIZE
+	#ifdef ECONNREFUSED
+	#undef ECONNREFUSED
+	#endif
+	#define ECONNREFUSED WSAECONNREFUSED
+	#ifdef ETIMEDOUT
+	#undef ETIMEDOUT
+	#endif
+	#define ETIMEDOUT WSAETIMEDOUT
+	#ifndef IOC_VENDOR
+	#define IOC_VENDOR 0x18000000
+	#endif
+	#ifndef _WSAIOW
+	#define _WSAIOW(x,y) (IOC_IN|(x)|(y))
+	#endif
+	#ifndef SIO_UDP_CONNRESET
+	#define SIO_UDP_CONNRESET _WSAIOW(IOC_VENDOR,12)
+	#endif
+	#ifndef AI_ADDRCONFIG
+	#define AI_ADDRCONFIG 0x00000400
+	#endif
+	#ifndef STATUS_INVALID_PARAMETER
+	#define STATUS_INVALID_PARAMETER 0xC000000D
+	#endif
+#endif // USE_WINSOCK
 
-	#ifdef HAVE_MINIUPNPC
-		#ifdef STATIC_MINIUPNPC
-			#define STATICLIB
-		#endif
-		#include "miniupnpc/miniwget.h"
-		#include "miniupnpc/miniupnpc.h"
-		#include "miniupnpc/upnpcommands.h"
-		#undef STATICLIB
-		static UINT8 UPNP_support = TRUE;
-	#endif // HAVE_MINIUPNC
+typedef union
+{
+	struct sockaddr     any;
+	struct sockaddr_in  ip4;
+#ifdef HAVE_IPV6
+	struct sockaddr_in6 ip6;
+#endif
+} mysockaddr_t;
 
-#endif // !NONET
+#ifdef HAVE_MINIUPNPC
+	#ifdef STATIC_MINIUPNPC
+		#define STATICLIB
+	#endif
+	#include "miniupnpc/miniwget.h"
+	#include "miniupnpc/miniupnpc.h"
+	#include "miniupnpc/upnpcommands.h"
+	#undef STATICLIB
+	static UINT8 UPNP_support = TRUE;
+#endif // HAVE_MINIUPNC
 
 #define MAXBANS 100
 
-#include "i_system.h"
+#include "../i_system.h"
 #include "i_net.h"
 #include "d_net.h"
 #include "d_netfil.h"
 #include "i_tcp.h"
-#include "m_argv.h"
+#include "../m_argv.h"
 
-#include "doomstat.h"
+#include "../doomstat.h"
 
 // win32
 #ifdef USE_WINSOCK
@@ -151,7 +142,7 @@
 #define SELECTTEST
 #define DEFAULTPORT "5029"
 
-#if defined (USE_WINSOCK) && !defined (NONET)
+#ifdef USE_WINSOCK
 	typedef SOCKET SOCKET_TYPE;
 	#define ERRSOCKET (SOCKET_ERROR)
 #else
@@ -163,22 +154,20 @@
 	#define ERRSOCKET (-1)
 #endif
 
-#ifndef NONET
-	// define socklen_t in DOS/Windows if it is not already defined
-	#ifdef USE_WINSOCK1
-		typedef int socklen_t;
-	#endif
-	static SOCKET_TYPE mysockets[MAXNETNODES+1] = {ERRSOCKET};
-	static size_t mysocketses = 0;
-	static int myfamily[MAXNETNODES+1] = {0};
-	static SOCKET_TYPE nodesocket[MAXNETNODES+1] = {ERRSOCKET};
-	static mysockaddr_t clientaddress[MAXNETNODES+1];
-	static mysockaddr_t broadcastaddress[MAXNETNODES+1];
-	static size_t broadcastaddresses = 0;
-	static boolean nodeconnected[MAXNETNODES+1];
-	static mysockaddr_t banned[MAXBANS];
-	static UINT8 bannedmask[MAXBANS];
+// define socklen_t in DOS/Windows if it is not already defined
+#ifdef USE_WINSOCK1
+	typedef int socklen_t;
 #endif
+static SOCKET_TYPE mysockets[MAXNETNODES+1] = {ERRSOCKET};
+static size_t mysocketses = 0;
+static int myfamily[MAXNETNODES+1] = {0};
+static SOCKET_TYPE nodesocket[MAXNETNODES+1] = {ERRSOCKET};
+static mysockaddr_t clientaddress[MAXNETNODES+1];
+static mysockaddr_t broadcastaddress[MAXNETNODES+1];
+static size_t broadcastaddresses = 0;
+static boolean nodeconnected[MAXNETNODES+1];
+static mysockaddr_t banned[MAXBANS];
+static UINT8 bannedmask[MAXBANS];
 
 static size_t numbans = 0;
 static boolean SOCK_bannednode[MAXNETNODES+1]; /// \note do we really need the +1?
@@ -187,7 +176,6 @@ static boolean init_tcp_driver = false;
 static const char *serverport_name = DEFAULTPORT;
 static const char *clientport_name;/* any port */
 
-#ifndef NONET
 #ifdef USE_WINSOCK
 // stupid microsoft makes things complicated
 static char *get_WSAErrorStr(int e)
@@ -387,47 +375,33 @@ static const char *SOCK_AddrToStr(mysockaddr_t *sk)
 #endif
 	return s;
 }
-#endif
 
 static const char *SOCK_GetNodeAddress(INT32 node)
 {
 	if (node == 0)
 		return "self";
-#ifdef NONET
-	return NULL;
-#else
 	if (!nodeconnected[node])
 		return NULL;
 	return SOCK_AddrToStr(&clientaddress[node]);
-#endif
 }
 
 static const char *SOCK_GetBanAddress(size_t ban)
 {
 	if (ban >= numbans)
 		return NULL;
-#ifdef NONET
-	return NULL;
-#else
 	return SOCK_AddrToStr(&banned[ban]);
-#endif
 }
 
 static const char *SOCK_GetBanMask(size_t ban)
 {
-#ifdef NONET
-	(void)ban;
-#else
 	static char s[16]; //255.255.255.255 netmask? no, just CDIR for only
 	if (ban >= numbans)
 		return NULL;
 	if (sprintf(s,"%d",bannedmask[ban]) > 0)
 		return s;
-#endif
 	return NULL;
 }
 
-#ifndef NONET
 static boolean SOCK_cmpaddr(mysockaddr_t *a, mysockaddr_t *b, UINT8 mask)
 {
 	UINT32 bitmask = INADDR_NONE;
@@ -455,24 +429,20 @@ static boolean SOCK_cmpaddr(mysockaddr_t *a, mysockaddr_t *b, UINT8 mask)
   */
 static void cleanupnodes(void)
 {
-	SINT8 j;
-
 	if (!Playing())
 		return;
 
 	// Why can't I start at zero?
-	for (j = 1; j < MAXNETNODES; j++)
-		if (!(nodeingame[j] || SendingFile(j)))
+	for (SINT8 j = 1; j < MAXNETNODES; j++)
+		if (!(netnodes[j].ingame || SendingFile(j)))
 			nodeconnected[j] = false;
 }
 
 static SINT8 getfreenode(void)
 {
-	SINT8 j;
-
 	cleanupnodes();
 
-	for (j = 0; j < MAXNETNODES; j++)
+	for (SINT8 j = 0; j < MAXNETNODES; j++)
 		if (!nodeconnected[j])
 		{
 			nodeconnected[j] = true;
@@ -485,8 +455,8 @@ static SINT8 getfreenode(void)
 	  *          downloading a needed wad, but it's better than not letting anyone join...
 	  */
 	/*I_Error("No more free nodes!!1!11!11!!1111\n");
-	for (j = 1; j < MAXNETNODES; j++)
-		if (!nodeingame[j])
+	for (SINT8 j = 1; j < MAXNETNODES; j++)
+		if (!netnodes[j].ingame)
 			return j;*/
 
 	return -1;
@@ -497,28 +467,27 @@ void Command_Numnodes(void)
 {
 	INT32 connected = 0;
 	INT32 ingame = 0;
-	INT32 i;
 
-	for (i = 1; i < MAXNETNODES; i++)
+	for (INT32 i = 1; i < MAXNETNODES; i++)
 	{
-		if (!(nodeconnected[i] || nodeingame[i]))
+		if (!(nodeconnected[i] || netnodes[i].ingame))
 			continue;
 
 		if (nodeconnected[i])
 			connected++;
-		if (nodeingame[i])
+		if (netnodes[i].ingame)
 			ingame++;
 
 		CONS_Printf("%2d - ", i);
-		if (nodetoplayer[i] != -1)
-			CONS_Printf("player %.2d", nodetoplayer[i]);
+		if (netnodes[i].player != -1)
+			CONS_Printf("player %.2d", netnodes[i].player);
 		else
 			CONS_Printf("         ");
 		if (nodeconnected[i])
 			CONS_Printf(" - connected");
 		else
 			CONS_Printf(" -          ");
-		if (nodeingame[i])
+		if (netnodes[i].ingame)
 			CONS_Printf(" - ingame");
 		else
 			CONS_Printf(" -       ");
@@ -531,19 +500,17 @@ void Command_Numnodes(void)
 				connected, ingame);
 }
 #endif
-#endif
 
-#ifndef NONET
 // Returns true if a packet was received from a new node, false in all other cases
 static boolean SOCK_Get(void)
 {
-	size_t i, n;
+	size_t i;
 	int j;
 	ssize_t c;
 	mysockaddr_t fromaddress;
 	socklen_t fromlen;
 
-	for (n = 0; n < mysocketses; n++)
+	for (size_t n = 0; n < mysocketses; n++)
 	{
 		fromlen = (socklen_t)sizeof(fromaddress);
 		c = recvfrom(mysockets[n], (char *)&doomcom->data, MAXPACKETLENGTH, 0,
@@ -596,20 +563,17 @@ static boolean SOCK_Get(void)
 	doomcom->remotenode = -1; // no packet
 	return false;
 }
-#endif
 
 // check if we can send (do not go over the buffer)
-#ifndef NONET
 
 static fd_set masterset;
 
 #ifdef SELECTTEST
 static boolean FD_CPY(fd_set *src, fd_set *dst, SOCKET_TYPE *fd, size_t len)
 {
-	size_t i;
 	boolean testset = false;
 	FD_ZERO(dst);
-	for (i = 0; i < len;i++)
+	for (size_t i = 0; i < len;i++)
 	{
 		if(fd[i] != (SOCKET_TYPE)ERRSOCKET &&
 		   FD_ISSET(fd[i], src) && !FD_ISSET(fd[i], dst)) // no checking for dups
@@ -649,9 +613,7 @@ static boolean SOCK_CanGet(void)
 	return false;
 }
 #endif
-#endif
 
-#ifndef NONET
 static inline ssize_t SOCK_SendToAddr(SOCKET_TYPE socket, mysockaddr_t *sockaddr)
 {
 	socklen_t d4 = (socklen_t)sizeof(struct sockaddr_in);
@@ -675,16 +637,15 @@ static inline ssize_t SOCK_SendToAddr(SOCKET_TYPE socket, mysockaddr_t *sockaddr
 static void SOCK_Send(void)
 {
 	ssize_t c = ERRSOCKET;
-	size_t i, j;
 
 	if (!nodeconnected[doomcom->remotenode])
 		return;
 
 	if (doomcom->remotenode == BROADCASTADDR)
 	{
-		for (i = 0; i < mysocketses; i++)
+		for (size_t i = 0; i < mysocketses; i++)
 		{
-			for (j = 0; j < broadcastaddresses; j++)
+			for (size_t j = 0; j < broadcastaddresses; j++)
 			{
 				if (myfamily[i] == broadcastaddress[j].any.sa_family)
 					SOCK_SendToAddr(mysockets[i], &broadcastaddress[j]);
@@ -694,7 +655,7 @@ static void SOCK_Send(void)
 	}
 	else if (nodesocket[doomcom->remotenode] == (SOCKET_TYPE)ERRSOCKET)
 	{
-		for (i = 0; i < mysocketses; i++)
+		for (size_t i = 0; i < mysocketses; i++)
 		{
 			if (myfamily[i] == clientaddress[doomcom->remotenode].any.sa_family)
 				SOCK_SendToAddr(mysockets[i], &clientaddress[doomcom->remotenode]);
@@ -714,9 +675,7 @@ static void SOCK_Send(void)
 				SOCK_GetNodeAddress(doomcom->remotenode), e, strerror(e));
 	}
 }
-#endif
 
-#ifndef NONET
 static void SOCK_FreeNodenum(INT32 numnode)
 {
 	// can't disconnect from self :)
@@ -731,12 +690,10 @@ static void SOCK_FreeNodenum(INT32 numnode)
 	// put invalid address
 	memset(&clientaddress[numnode], 0, sizeof (clientaddress[numnode]));
 }
-#endif
 
 //
 // UDPsocket
 //
-#ifndef NONET
 
 // allocate a socket
 static SOCKET_TYPE UDP_Bind(int family, struct sockaddr *addr, socklen_t addrlen)
@@ -1061,12 +1018,10 @@ static boolean UDP_Socket(void)
 
 	return true;
 }
-#endif
 
 boolean I_InitTcpDriver(void)
 {
 	boolean tcp_was_up = init_tcp_driver;
-#ifndef NONET
 	if (!init_tcp_driver)
 	{
 #ifdef USE_WINSOCK
@@ -1121,7 +1076,7 @@ boolean I_InitTcpDriver(void)
 #endif
 		init_tcp_driver = true;
 	}
-#endif
+
 	if (!tcp_was_up && init_tcp_driver)
 	{
 		I_AddExitFunc(I_ShutdownTcpDriver);
@@ -1135,11 +1090,9 @@ boolean I_InitTcpDriver(void)
 	return init_tcp_driver;
 }
 
-#ifndef NONET
 static void SOCK_CloseSocket(void)
 {
-	size_t i;
-	for (i=0; i < MAXNETNODES+1; i++)
+	for (size_t i=0; i < MAXNETNODES+1; i++)
 	{
 		if (mysockets[i] != (SOCKET_TYPE)ERRSOCKET
 		 && FD_ISSET(mysockets[i], &masterset))
@@ -1150,11 +1103,9 @@ static void SOCK_CloseSocket(void)
 		mysockets[i] = ERRSOCKET;
 	}
 }
-#endif
 
 void I_ShutdownTcpDriver(void)
 {
-#ifndef NONET
 	SOCK_CloseSocket();
 
 	CONS_Printf("I_ShutdownTcpDriver: ");
@@ -1164,10 +1115,8 @@ void I_ShutdownTcpDriver(void)
 #endif
 	CONS_Printf("shut down\n");
 	init_tcp_driver = false;
-#endif
 }
 
-#ifndef NONET
 static SINT8 SOCK_NetMakeNodewPort(const char *address, const char *port)
 {
 	SINT8 newnode = -1;
@@ -1223,17 +1172,13 @@ static SINT8 SOCK_NetMakeNodewPort(const char *address, const char *port)
 	I_freeaddrinfo(ai);
 	return newnode;
 }
-#endif
 
 static boolean SOCK_OpenSocket(void)
 {
-#ifndef NONET
-	size_t i;
-
 	memset(clientaddress, 0, sizeof (clientaddress));
 
 	nodeconnected[0] = true; // always connected to self
-	for (i = 1; i < MAXNETNODES; i++)
+	for (size_t i = 1; i < MAXNETNODES; i++)
 		nodeconnected[i] = false;
 	nodeconnected[BROADCASTADDR] = true;
 	I_NetSend = SOCK_Send;
@@ -1251,18 +1196,12 @@ static boolean SOCK_OpenSocket(void)
 	// build the socket but close it first
 	SOCK_CloseSocket();
 	return UDP_Socket();
-#else
-	return false;
-#endif
 }
 
 static boolean SOCK_Ban(INT32 node)
 {
 	if (node > MAXNETNODES)
 		return false;
-#ifdef NONET
-	return false;
-#else
 	if (numbans == MAXBANS)
 		return false;
 
@@ -1281,16 +1220,10 @@ static boolean SOCK_Ban(INT32 node)
 #endif
 	numbans++;
 	return true;
-#endif
 }
 
 static boolean SOCK_SetBanAddress(const char *address, const char *mask)
 {
-#ifdef NONET
-	(void)address;
-	(void)mask;
-	return false;
-#else
 	struct my_addrinfo *ai, *runp, hints;
 	int gaie;
 
@@ -1335,7 +1268,6 @@ static boolean SOCK_SetBanAddress(const char *address, const char *mask)
 	I_freeaddrinfo(ai);
 
 	return true;
-#endif
 }
 
 static void SOCK_ClearBans(void)
