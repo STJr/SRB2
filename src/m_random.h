@@ -3,6 +3,7 @@
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
 // Copyright (C) 2012-2016 by Matthew "Kaito Sinclaire" Walsh.
+// Copyright (C) 2022-2023 by tertu marybig.
 // Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
@@ -29,6 +30,8 @@ fixed_t M_RandomFixed(void);
 UINT8   M_RandomByte(void);
 INT32   M_RandomKey(INT32 a);
 INT32   M_RandomRange(INT32 a, INT32 b);
+boolean M_RandomSeedFromOS(void);
+void    M_RandomSeed(UINT32 a);
 
 // PRNG functions
 #ifdef DEBUGRANDOM

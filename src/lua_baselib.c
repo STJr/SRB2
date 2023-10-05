@@ -26,11 +26,11 @@
 #include "y_inter.h"
 #include "hu_stuff.h"	// HU_AddChatText
 #include "console.h"
-#include "d_netcmd.h" // IsPlayerAdmin
+#include "netcode/d_netcmd.h" // IsPlayerAdmin
 #include "m_menu.h" // Player Setup menu color stuff
 #include "m_misc.h" // M_MapNumber
 #include "b_bot.h" // B_UpdateBotleader
-#include "d_clisrv.h" // CL_RemovePlayer
+#include "netcode/d_clisrv.h" // CL_RemovePlayer
 #include "i_system.h" // I_GetPreciseTime, I_GetPrecisePrecision
 
 #include "lua_script.h"
@@ -689,11 +689,12 @@ static int lib_pSpawnLockOn(lua_State *L)
 		return LUA_ErrInvalid(L, "player_t");
 	if (state >= NUMSTATES)
 		return luaL_error(L, "state %d out of range (0 - %d)", state, NUMSTATES-1);
-	if (P_IsLocalPlayer(player)) // Only display it on your own view.
+	if (P_IsLocalPlayer(player)) // Only display it on your own view. Don't display it for spectators
 	{
 		mobj_t *visual = P_SpawnMobj(lockon->x, lockon->y, lockon->z, MT_LOCKON); // positioning, flip handled in P_SceneryThinker
 		P_SetTarget(&visual->target, lockon);
 		visual->flags2 |= MF2_DONTDRAW;
+		visual->drawonlyforplayer = player; // Hide it from the other player in splitscreen, and yourself when spectating
 		P_SetMobjStateNF(visual, state);
 	}
 	return 0;
@@ -1078,7 +1079,8 @@ static int lib_pZMovement(lua_State *L)
 	if (!actor)
 		return LUA_ErrInvalid(L, "mobj_t");
 	lua_pushboolean(L, P_ZMovement(actor));
-	P_CheckPosition(actor, actor->x, actor->y);
+	if (!P_MobjWasRemoved(actor))
+		P_CheckPosition(actor, actor->x, actor->y);
 	P_SetTarget(&tmthing, ptmthing);
 	return 1;
 }
@@ -1106,7 +1108,8 @@ static int lib_pSceneryZMovement(lua_State *L)
 	if (!actor)
 		return LUA_ErrInvalid(L, "mobj_t");
 	lua_pushboolean(L, P_SceneryZMovement(actor));
-	P_CheckPosition(actor, actor->x, actor->y);
+	if (!P_MobjWasRemoved(actor))
+		P_CheckPosition(actor, actor->x, actor->y);
 	P_SetTarget(&tmthing, ptmthing);
 	return 1;
 }
@@ -2453,7 +2456,7 @@ static int lib_pFadeLight(lua_State *L)
 static int lib_pIsFlagAtBase(lua_State *L)
 {
 	mobjtype_t flag = luaL_checkinteger(L, 1);
-	NOHUD
+	//HUDSAFE
 	INLEVEL
 	if (flag >= NUMMOBJTYPES)
 		return luaL_error(L, "mobj type %d out of range (0 - %d)", flag, NUMMOBJTYPES-1);
@@ -2843,6 +2846,22 @@ static int lib_rTextureNumForName(lua_State *L)
 	const char *name = luaL_checkstring(L, 1);
 	//HUDSAFE
 	lua_pushinteger(L, R_TextureNumForName(name));
+	return 1;
+}
+
+static int lib_rCheckTextureNameForNum(lua_State *L)
+{
+	INT32 num = (INT32)luaL_checkinteger(L, 1);
+	//HUDSAFE
+	lua_pushstring(L, R_CheckTextureNameForNum(num));
+	return 1;
+}
+
+static int lib_rTextureNameForNum(lua_State *L)
+{
+	INT32 num = (INT32)luaL_checkinteger(L, 1);
+	//HUDSAFE
+	lua_pushstring(L, R_TextureNameForNum(num));
 	return 1;
 }
 
@@ -3807,7 +3826,7 @@ static int lib_gDoReborn(lua_State *L)
 }
 
 // Another Lua function that doesn't actually exist!
-// Sets nextmapoverride & skipstats without instantly ending the level, for instances where other sources should be exiting the level, like normal signposts.
+// Sets nextmapoverride, skipstats and nextgametype without instantly ending the level, for instances where other sources should be exiting the level, like normal signposts.
 static int lib_gSetCustomExitVars(lua_State *L)
 {
 	int n = lua_gettop(L); // Num arguments
@@ -3816,18 +3835,21 @@ static int lib_gSetCustomExitVars(lua_State *L)
 
 	// LUA EXTENSION: Custom exit like support
 	// Supported:
-	//	G_SetCustomExitVars();			[reset to defaults]
-	//	G_SetCustomExitVars(int)		[nextmap override only]
-	//	G_SetCustomExitVars(nil, int)	[skipstats only]
-	//	G_SetCustomExitVars(int, int)	[both of the above]
+	//	G_SetCustomExitVars();               [reset to defaults]
+	//	G_SetCustomExitVars(int)             [nextmap override only]
+	//	G_SetCustomExitVars(nil, int)        [skipstats only]
+	//	G_SetCustomExitVars(int, int)        [both of the above]
+	//	G_SetCustomExitVars(int, int, int)   [nextmapoverride, skipstats and nextgametype]
 
 	nextmapoverride = 0;
 	skipstats = 0;
+	nextgametype = -1;
 
 	if (n >= 1)
 	{
 		nextmapoverride = (INT16)luaL_optinteger(L, 1, 0);
 		skipstats = (INT16)luaL_optinteger(L, 2, 0);
+		nextgametype = (INT16)luaL_optinteger(L, 3, -1);
 	}
 
 	return 0;
@@ -4203,6 +4225,8 @@ static luaL_Reg lib[] = {
 	// r_data
 	{"R_CheckTextureNumForName",lib_rCheckTextureNumForName},
 	{"R_TextureNumForName",lib_rTextureNumForName},
+	{"R_CheckTextureNameForNum", lib_rCheckTextureNameForNum},
+	{"R_TextureNameForNum", lib_rTextureNameForNum},
 
 	// r_draw
 	{"R_GetColorByName", lib_rGetColorByName},

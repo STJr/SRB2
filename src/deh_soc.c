@@ -34,7 +34,7 @@
 #include "r_sky.h"
 #include "fastcmp.h"
 #include "lua_script.h" // Reluctantly included for LUA_EvalMath
-#include "d_clisrv.h"
+#include "netcode/d_clisrv.h"
 
 #ifdef HWRENDER
 #include "hardware/hw_light.h"
@@ -912,7 +912,7 @@ static void readspriteframe(MYFILE *f, spriteinfo_t *sprinfo, UINT8 frame)
 			else if (fastcmp(word, "YPIVOT"))
 				sprinfo->pivot[frame].y = value;
 			else if (fastcmp(word, "ROTAXIS"))
-				sprinfo->pivot[frame].rotaxis = value;
+				deh_warning("SpriteInfo: ROTAXIS is deprecated and will be removed.");
 			else
 			{
 				f->curpos = lastline;

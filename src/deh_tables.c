@@ -198,6 +198,7 @@ actionpointer_t actionpointers[] =
 	{{A_Boss3TakeDamage},        "A_BOSS3TAKEDAMAGE"},
 	{{A_Boss3Path},              "A_BOSS3PATH"},
 	{{A_Boss3ShockThink},        "A_BOSS3SHOCKTHINK"},
+	{{A_Shockwave},              "A_SHOCKWAVE"},
 	{{A_LinedefExecute},         "A_LINEDEFEXECUTE"},
 	{{A_LinedefExecuteFromArg},  "A_LINEDEFEXECUTEFROMARG"},
 	{{A_PlaySeeSound},           "A_PLAYSEESOUND"},
@@ -4409,11 +4410,12 @@ const char *const MOBJEFLAG_LIST[] = {
 	NULL
 };
 
-const char *const MAPTHINGFLAG_LIST[4] = {
+const char *const MAPTHINGFLAG_LIST[] = {
 	"EXTRA", // Extra flag for objects.
 	"OBJECTFLIP", // Reverse gravity flag for objects.
 	"OBJECTSPECIAL", // Special flag used with certain objects.
-	"AMBUSH" // Deaf monsters/do not react to sound.
+	"AMBUSH", // Deaf monsters/do not react to sound.
+	"ABSOLUTEZ" // Absolute spawn height flag for objects.
 };
 
 const char *const PLAYERFLAG_LIST[] = {
@@ -4550,6 +4552,7 @@ const char *const MSF_LIST[] = {
 const char *const SSF_LIST[] = {
 	"OUTERSPACE",
 	"DOUBLESTEPUP",
+	"NOSTEPDOWN",
 	"WINDCURRENT",
 	"CONVEYOR",
 	"SPEEDPAD",
@@ -4566,6 +4569,8 @@ const char *const SSF_LIST[] = {
 	"ZOOMTUBEEND",
 	"FINISHLINE",
 	"ROPEHANG",
+	"JUMPFLIP",
+	"GRAVITYOVERRIDE",
 	NULL
 };
 
@@ -4609,8 +4614,7 @@ const char *COLOR_ENUMS[] = {
 	// Desaturated
 	"AETHER",     	// SKINCOLOR_AETHER,
 	"SLATE",     	// SKINCOLOR_SLATE,
-	"METEORITE",   	// SKINCOLOR_METEORITE,
-	"MERCURY",     	// SKINCOLOR_MERCURY,
+	"MOONSTONE",   	// SKINCOLOR_MOONSTONE,
 	"BLUEBELL",   	// SKINCOLOR_BLUEBELL,
 	"PINK",     	// SKINCOLOR_PINK,
 	"ROSEWOOD",   	// SKINCOLOR_ROSEWOOD,
@@ -4647,33 +4651,34 @@ const char *COLOR_ENUMS[] = {
 	"COPPER",     	// SKINCOLOR_COPPER,
 	"APRICOT",     	// SKINCOLOR_APRICOT,
 	"ORANGE",     	// SKINCOLOR_ORANGE,
-	"PUMPKIN",     	// SKINCOLOR_PUMPKIN,
 	"RUST",     	// SKINCOLOR_RUST,
-	"GOLD",     	// SKINCOLOR_GOLD,
+	"TANGERINE",   	// SKINCOLOR_TANGERINE,
 	"TOPAZ",     	// SKINCOLOR_TOPAZ,
+	"GOLD",     	// SKINCOLOR_GOLD,
 	"SANDY",     	// SKINCOLOR_SANDY,
 	"GOLDENROD",   	// SKINCOLOR_GOLDENROD,
 	"YELLOW",     	// SKINCOLOR_YELLOW,
 	"OLIVE",     	// SKINCOLOR_OLIVE,
-	"KIWI",     	// SKINCOLOR_KIWI,
+	"PEAR",     	// SKINCOLOR_PEAR,
 	"LEMON",     	// SKINCOLOR_LEMON,
 	"LIME",     	// SKINCOLOR_LIME,
 	"PERIDOT",     	// SKINCOLOR_PERIDOT,
 	"APPLE",     	// SKINCOLOR_APPLE,
+	"HEADLIGHT",	// SKINCOLOR_HEADLIGHT,
 	"CHARTREUSE",   // SKINCOLOR_CHARTREUSE,
 	"GREEN",     	// SKINCOLOR_GREEN,
 	"FOREST",     	// SKINCOLOR_FOREST,
 	"SHAMROCK",    	// SKINCOLOR_SHAMROCK,
 	"JADE",     	// SKINCOLOR_JADE,
-	"HEADLIGHT",	// SKINCOLOR_HEADLIGHT,
 	"MINT",     	// SKINCOLOR_MINT,
 	"MASTER",     	// SKINCOLOR_MASTER,
 	"EMERALD",     	// SKINCOLOR_EMERALD,
-	"BOTTLE",     	// SKINCOLOR_BOTTLE,
 	"SEAFOAM",     	// SKINCOLOR_SEAFOAM,
 	"ISLAND",     	// SKINCOLOR_ISLAND,
+	"BOTTLE",     	// SKINCOLOR_BOTTLE,
 	"AQUA",     	// SKINCOLOR_AQUA,
 	"TEAL",     	// SKINCOLOR_TEAL,
+	"OCEAN",     	// SKINCOLOR_OCEAN,
 	"WAVE",     	// SKINCOLOR_WAVE,
 	"CYAN",     	// SKINCOLOR_CYAN,
 	"TURQUOISE",    // SKINCOLOR_TURQUOISE,
@@ -4699,7 +4704,7 @@ const char *COLOR_ENUMS[] = {
 	"NOBLE",     	// SKINCOLOR_NOBLE,
 	"FUCHSIA",     	// SKINCOLOR_FUCHSIA,
 	"BUBBLEGUM",   	// SKINCOLOR_BUBBLEGUM,
-	"CRYSTAL",    	// SKINCOLOR_CRYSTAL,
+	"SIBERITE",   	// SKINCOLOR_SIBERITE,
 	"MAGENTA",     	// SKINCOLOR_MAGENTA,
 	"NEON",     	// SKINCOLOR_NEON,
 	"VIOLET",     	// SKINCOLOR_VIOLET,
@@ -4813,7 +4818,9 @@ const char *const POWERS_LIST[] = {
 
 	"JUSTLAUNCHED",
 
-	"IGNORELATCH"
+	"IGNORELATCH",
+
+	"STRONG"
 };
 
 const char *const HUDITEMS_LIST[] = {
@@ -4876,7 +4883,7 @@ const char *const MENUTYPES_LIST[] = {
 	"MP_SERVER",
 	"MP_CONNECT",
 	"MP_ROOM",
-	"MP_PLAYERSETUP", // MP_PlayerSetupDef shared with SPLITSCREEN if #defined NONET
+	"MP_PLAYERSETUP",
 	"MP_SERVER_OPTIONS",
 
 	// Options
@@ -5165,6 +5172,30 @@ struct int_const_s const INT_CONST[] = {
 	{"CR_PTERABYTE",CR_PTERABYTE},
 	{"CR_DUSTDEVIL",CR_DUSTDEVIL},
 	{"CR_FAN",CR_FAN},
+
+	// Strong powers
+	{"STR_NONE",STR_NONE},
+	{"STR_ANIM",STR_ANIM},
+	{"STR_PUNCH",STR_PUNCH},
+	{"STR_TAIL",STR_TAIL},
+	{"STR_STOMP",STR_STOMP},
+	{"STR_UPPER",STR_UPPER},
+	{"STR_GUARD",STR_GUARD},
+	{"STR_HEAVY",STR_HEAVY},
+	{"STR_DASH",STR_DASH},
+	{"STR_WALL",STR_WALL},
+	{"STR_FLOOR",STR_FLOOR},
+	{"STR_CEILING",STR_CEILING},
+	{"STR_SPRING",STR_SPRING},
+	{"STR_SPIKE",STR_SPIKE},
+	{"STR_ATTACK",STR_ATTACK},
+	{"STR_BUST",STR_BUST},
+	{"STR_FLY",STR_FLY},
+	{"STR_GLIDE",STR_GLIDE},
+	{"STR_TWINSPIN",STR_TWINSPIN},
+	{"STR_MELEE",STR_MELEE},
+	{"STR_BOUNCE",STR_BOUNCE},
+	{"STR_METAL",STR_METAL},
 
 	// Ring weapons (ringweapons_t)
 	// Useful for A_GiveWeapon

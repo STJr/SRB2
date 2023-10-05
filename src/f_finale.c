@@ -14,7 +14,7 @@
 #include "doomdef.h"
 #include "doomstat.h"
 #include "d_main.h"
-#include "d_netcmd.h"
+#include "netcode/d_netcmd.h"
 #include "f_finale.h"
 #include "g_game.h"
 #include "hu_stuff.h"
@@ -224,7 +224,6 @@ static INT32 cutscene_writeptr = 0;
 static INT32 cutscene_textcount = 0;
 static INT32 cutscene_textspeed = 0;
 static UINT8 cutscene_boostspeed = 0;
-static tic_t cutscene_lasttextwrite = 0;
 
 // STJR Intro
 char stjrintro[9] = "STJRI000";
@@ -240,11 +239,6 @@ static UINT8 F_WriteText(void)
 {
 	INT32 numtowrite = 1;
 	const char *c;
-	tic_t ltw = I_GetTime();
-
-	if (cutscene_lasttextwrite == ltw)
-		return 1; // singletics prevention
-	cutscene_lasttextwrite = ltw;
 
 	if (cutscene_boostspeed)
 	{
@@ -1068,12 +1062,14 @@ static const char *credits[] = {
 	"\"Golden\"",
 	"Vivian \"toaster\" Grannell",
 	"Julio \"Chaos Zero 64\" Guir",
+	"\"Hanicef\"",
 	"\"Hannu_Hanhi\"", // For many OpenGL performance improvements!
 	"Kepa \"Nev3r\" Iceta",
 	"Thomas \"Shadow Hog\" Igoe",
 	"Iestyn \"Monster Iestyn\" Jealous",
 	"\"Kaito Sinclaire\"",
 	"\"Kalaron\"", // Coded some of Sryder13's collection of OpenGL fixes, especially fog
+	"\"katsy\"",
 	"Ronald \"Furyhunter\" Kinard", // The SDL2 port
 	"\"Lat'\"", // SRB2-CHAT, the chat window from Kart
 	"\"LZA\"",
@@ -1096,6 +1092,7 @@ static const char *credits[] = {
 	"Ben \"Cue\" Woodford",
 	"Lachlan \"Lach\" Wright",
 	"Marco \"mazmazz\" Zafra",
+	"\"Zwip-Zwap Zapony\"",
 	"",
 	"\1Art",
 	"Victor \"VAdaPEGA\" Ara\x1Fjo", // Araújo -- sorry for our limited font! D:
@@ -1203,6 +1200,7 @@ static const char *credits[] = {
 	"FreeDoom Project", // Used some of the mancubus and rocket launcher sprites for Brak
 	"Kart Krew",
 	"Alex \"MistaED\" Fuller",
+	"Howard Drossin", // Virtual Sonic - Sonic & Knuckles Theme
 	"Pascal \"CodeImp\" vd Heiden", // Doom Builder developer
 	"Randi Heit (<!>)", // For their MSPaint <!> sprite that we nicked
 	"Simon \"sirjuddington\" Judd", // SLADE developer
@@ -1280,14 +1278,23 @@ void F_CreditDrawer(void)
 	UINT16 i;
 	INT16 zagpos = (timetonext - finalecount - animtimer) % 32;
 	fixed_t y = (80<<FRACBITS) - (animtimer<<FRACBITS>>1);
+	UINT8 colornum;
+	const UINT8 *colormap;
+
+	if (players[consoleplayer].skincolor)
+		colornum = players[consoleplayer].skincolor;
+	else
+		colornum = cv_playercolor.value;
+
+	colormap = R_GetTranslationColormap(TC_DEFAULT, colornum, GTC_CACHE);
 
 	V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
 
 	// Zig Zagz
-	V_DrawScaledPatch(-16,               zagpos,       V_SNAPTOLEFT,         W_CachePatchName("LTZIGZAG", PU_PATCH_LOWPRIORITY));
-	V_DrawScaledPatch(-16,               zagpos - 320, V_SNAPTOLEFT,         W_CachePatchName("LTZIGZAG", PU_PATCH_LOWPRIORITY));
-	V_DrawScaledPatch(BASEVIDWIDTH + 16, zagpos,       V_SNAPTORIGHT|V_FLIP, W_CachePatchName("LTZIGZAG", PU_PATCH_LOWPRIORITY));
-	V_DrawScaledPatch(BASEVIDWIDTH + 16, zagpos - 320, V_SNAPTORIGHT|V_FLIP, W_CachePatchName("LTZIGZAG", PU_PATCH_LOWPRIORITY));
+	V_DrawFixedPatch(-16*FRACUNIT, zagpos<<FRACBITS, FRACUNIT, V_SNAPTOLEFT, W_CachePatchName("LTZIGZAG", PU_PATCH_LOWPRIORITY), colormap);
+	V_DrawFixedPatch(-16*FRACUNIT, (zagpos - 320)<<FRACBITS, FRACUNIT, V_SNAPTOLEFT, W_CachePatchName("LTZIGZAG", PU_PATCH_LOWPRIORITY), colormap);
+	V_DrawFixedPatch((BASEVIDWIDTH + 16)*FRACUNIT, zagpos<<FRACBITS, FRACUNIT, V_SNAPTORIGHT|V_FLIP, W_CachePatchName("LTZIGZAG", PU_PATCH_LOWPRIORITY), colormap);
+	V_DrawFixedPatch((BASEVIDWIDTH + 16)*FRACUNIT, (zagpos - 320)<<FRACBITS, FRACUNIT, V_SNAPTORIGHT|V_FLIP, W_CachePatchName("LTZIGZAG", PU_PATCH_LOWPRIORITY), colormap);
 
 	// Draw background pictures first
 	for (i = 0; credits_pics[i].patch; i++)
@@ -1641,7 +1648,7 @@ void F_GameEvaluationTicker(void)
 		sparklloop = 0;
 	}
 
-	if (finalecount == 5*TICRATE)
+	if (G_CoopGametype() && !stagefailed && finalecount == 5*TICRATE)
 	{
 		serverGamedata->timesBeaten++;
 		clientGamedata->timesBeaten++;
@@ -2253,7 +2260,7 @@ void F_InitMenuPresValues(void)
 	curfadevalue = 16;
 	curbgcolor = -1;
 	curbgxspeed = (gamestate == GS_TIMEATTACK) ? 0 : titlescrollxspeed;
-	curbgyspeed = (gamestate == GS_TIMEATTACK) ? 22 : titlescrollyspeed;
+	curbgyspeed = (gamestate == GS_TIMEATTACK) ? 18 : titlescrollyspeed;
 	curbghide = (gamestate == GS_TIMEATTACK) ? false : true;
 
 	curhidepics = hidetitlepics;
@@ -3506,6 +3513,7 @@ void F_TitleScreenTicker(boolean run)
 		}
 
 		titledemo = true;
+		demofileoverride = DFILE_OVERRIDE_NONE;
 		G_DoPlayDemo(dname);
 	}
 }
@@ -4665,4 +4673,37 @@ void F_TextPromptTicker(void)
 		else
 			animtimer--;
 	}
+}
+
+// ================
+//  WAITINGPLAYERS
+// ================
+
+void F_StartWaitingPlayers(void)
+{
+	wipegamestate = GS_TITLESCREEN; // technically wiping from title screen
+	finalecount = 0;
+}
+
+void F_WaitingPlayersTicker(void)
+{
+	if (paused)
+		return;
+
+	finalecount++;
+
+	// dumb hack, only start the music on the 1st tick so if you instantly go into the map you aren't hearing a tic of music
+	if (finalecount == 2)
+		S_ChangeMusicInternal("_CHSEL", true);
+}
+
+void F_WaitingPlayersDrawer(void)
+{
+	const char *waittext1 = "You will join";
+	const char *waittext2 = "next level...";
+
+	V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
+
+	V_DrawCreditString((160 - (V_CreditStringWidth(waittext1)>>1))<<FRACBITS, 48<<FRACBITS, 0, waittext1);
+	V_DrawCreditString((160 - (V_CreditStringWidth(waittext2)>>1))<<FRACBITS, 64<<FRACBITS, 0, waittext2);
 }

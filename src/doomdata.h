@@ -62,6 +62,10 @@ enum
 #define MTF_AMBUSH 8
 
 // Do not use bit five or after, as they are used for object z-offsets.
+// Unless it's exclusive to UDMF.
+
+// Flag to use Z as absolute spawn height, ignoring the floor and ceiling.
+#define MTF_ABSOLUTEZ 16
 
 #if defined(_MSC_VER)
 #pragma pack(1)
@@ -211,6 +215,7 @@ typedef struct
 	UINT8 extrainfo;
 	taglist_t tags;
 	fixed_t scale;
+	fixed_t spritexscale, spriteyscale;
 	INT32 args[NUMMAPTHINGARGS];
 	char *stringargs[NUMMAPTHINGSTRINGARGS];
 	struct mobj_s *mobj;

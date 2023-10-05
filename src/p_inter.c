@@ -28,6 +28,7 @@
 #include "m_misc.h"
 #include "v_video.h" // video flags for CEchos
 #include "f_finale.h"
+#include "netcode/net_command.h"
 
 // CTF player names
 #define CTFTEAMCODE(pl) pl->ctfteam ? (pl->ctfteam == 1 ? "\x85" : "\x84") : ""
@@ -498,23 +499,20 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			if (special->type == MT_PTERABYTE && special->target == player->mo && special->extravalue1 == 1)
 				return; // Can't hurt a Pterabyte if it's trying to pick you up
 
-			if ((P_MobjFlip(toucher)*toucher->momz < 0) && (elementalpierce != 1))
+			if ((P_MobjFlip(toucher)*toucher->momz < 0) && (elementalpierce != 1) && (!(player->powers[pw_strong] & STR_HEAVY)))
 			{
-				if (!(player->charability2 == CA2_MELEE && player->panim == PA_ABILITY2))
+				fixed_t setmomz = -toucher->momz; // Store this, momz get changed by P_DoJump within P_DoBubbleBounce
+				
+				if (elementalpierce == 2) // Reset bubblewrap, part 1
+					P_DoBubbleBounce(player);
+				toucher->momz = setmomz;
+				if (elementalpierce == 2) // Reset bubblewrap, part 2
 				{
-					fixed_t setmomz = -toucher->momz; // Store this, momz get changed by P_DoJump within P_DoBubbleBounce
-
-					if (elementalpierce == 2) // Reset bubblewrap, part 1
-						P_DoBubbleBounce(player);
-					toucher->momz = setmomz;
-					if (elementalpierce == 2) // Reset bubblewrap, part 2
-					{
-						boolean underwater = toucher->eflags & MFE_UNDERWATER;
-
-						if (underwater)
-							toucher->momz /= 2;
-						toucher->momz -= (toucher->momz/(underwater ? 8 : 4)); // Cap the height!
-					}
+					boolean underwater = toucher->eflags & MFE_UNDERWATER;
+							
+					if (underwater)
+						toucher->momz /= 2;
+					toucher->momz -= (toucher->momz/(underwater ? 8 : 4)); // Cap the height!
 				}
 			}
 			if (player->pflags & PF_BOUNCING)
@@ -533,8 +531,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 					toucher->momx = 7*toucher->momx>>3;
 					toucher->momy = 7*toucher->momy>>3;
 				}
-				else if (player->dashmode >= DASHMODE_THRESHOLD && (player->charflags & (SF_DASHMODE|SF_MACHINE)) == (SF_DASHMODE|SF_MACHINE)
-					&& player->panim == PA_DASH)
+				else if ((player->powers[pw_strong] & STR_DASH) && player->panim == PA_DASH)
 					P_DoPlayerPain(player, special, special);
 			}
 			P_DamageMobj(special, toucher, toucher, 1, 0);
@@ -1148,7 +1145,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 					if (!(mo2->type == MT_RING || mo2->type == MT_COIN
 						|| mo2->type == MT_BLUESPHERE || mo2->type == MT_BOMBSPHERE
 						|| mo2->type == MT_NIGHTSCHIP || mo2->type == MT_NIGHTSSTAR
-						|| ((mo2->type == MT_EMBLEM) && (mo2->reactiontime & GE_NIGHTSPULL))))
+						|| ((mo2->type == MT_EMBLEM) && (mo2->reactiontime & GE_NIGHTSPULL) && P_CanPickupEmblem(player, mo2->health - 1) && !P_EmblemWasCollected(mo2->health - 1))))
 						continue;
 
 					// Yay! The thing's in reach! Pull it in!
@@ -2239,7 +2236,7 @@ void P_CheckTimeLimit(void)
 		}
 
 		if (server)
-			SendNetXCmd(XD_EXITLEVEL, NULL, 0);
+			D_SendExitLevel(false);
 	}
 
 	//Optional tie-breaker for Match/CTF
@@ -2302,11 +2299,11 @@ void P_CheckTimeLimit(void)
 			}
 		}
 		if (server)
-			SendNetXCmd(XD_EXITLEVEL, NULL, 0);
+			D_SendExitLevel(false);
 	}
 
 	if (server)
-		SendNetXCmd(XD_EXITLEVEL, NULL, 0);
+		D_SendExitLevel(false);
 }
 
 /** Checks if a player's score is over the pointlimit and the round should end.
@@ -2335,7 +2332,7 @@ void P_CheckPointLimit(void)
 		if ((UINT32)cv_pointlimit.value <= redscore || (UINT32)cv_pointlimit.value <= bluescore)
 		{
 			if (server)
-				SendNetXCmd(XD_EXITLEVEL, NULL, 0);
+				D_SendExitLevel(false);
 		}
 	}
 	else
@@ -2348,7 +2345,7 @@ void P_CheckPointLimit(void)
 			if ((UINT32)cv_pointlimit.value <= players[i].score)
 			{
 				if (server)
-					SendNetXCmd(XD_EXITLEVEL, NULL, 0);
+					D_SendExitLevel(false);
 				return;
 			}
 		}
@@ -2392,7 +2389,7 @@ void P_CheckSurvivors(void)
 		{
 			CONS_Printf(M_GetText("The IT player has left the game.\n"));
 			if (server)
-				SendNetXCmd(XD_EXITLEVEL, NULL, 0);
+				D_SendExitLevel(false);
 
 			return;
 		}
@@ -2412,7 +2409,7 @@ void P_CheckSurvivors(void)
 			{
 				CONS_Printf(M_GetText("All players have been tagged!\n"));
 				if (server)
-					SendNetXCmd(XD_EXITLEVEL, NULL, 0);
+					D_SendExitLevel(false);
 			}
 
 			return;
@@ -2424,7 +2421,7 @@ void P_CheckSurvivors(void)
 		{
 			CONS_Printf(M_GetText("There are no players able to become IT.\n"));
 			if (server)
-				SendNetXCmd(XD_EXITLEVEL, NULL, 0);
+				D_SendExitLevel(false);
 		}
 
 		return;
@@ -2436,7 +2433,7 @@ void P_CheckSurvivors(void)
 	{
 		CONS_Printf(M_GetText("All players have been tagged!\n"));
 		if (server)
-			SendNetXCmd(XD_EXITLEVEL, NULL, 0);
+			D_SendExitLevel(false);
 	}
 }
 
@@ -2634,7 +2631,7 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 			}
 		}
 
-		target->color = target->player->skincolor;
+		target->color = P_GetPlayerColor(target->player);
 		target->colorized = false;
 		G_GhostAddColor(GHC_NORMAL);
 
@@ -3121,7 +3118,7 @@ static void P_NiGHTSDamage(mobj_t *target, mobj_t *source)
 		P_SetPlayerMobjState(target, S_PLAY_NIGHTS_STUN);
 		S_StartSound(target, sfx_nghurt);
 
-		player->mo->rollangle = 0;
+		player->mo->spriteroll = 0;
 
 		if (oldnightstime > 10*TICRATE
 			&& player->nightstime < 10*TICRATE)
@@ -3303,7 +3300,7 @@ static boolean P_PlayerHitsPlayer(mobj_t *target, mobj_t *inflictor, mobj_t *sou
 		return false;
 
 	// Add pity.
-	if (!player->powers[pw_flashing] && !player->powers[pw_invulnerability] && !player->powers[pw_super]
+	if (!player->powers[pw_flashing] && !player->powers[pw_invulnerability] && !player->powers[pw_super] && !(player->powers[pw_strong] & STR_GUARD)
 	&& source->player->score > player->score)
 		player->pity++;
 
@@ -3327,7 +3324,7 @@ static void P_KillPlayer(player_t *player, mobj_t *source, INT32 damage)
 
 	// Get rid of shield
 	player->powers[pw_shield] = SH_NONE;
-	player->mo->color = player->skincolor;
+	player->mo->color = P_GetPlayerColor(player);
 
 	// Get rid of emeralds
 	player->powers[pw_emeralds] = 0;
@@ -3444,7 +3441,7 @@ void P_RemoveShield(player_t *player)
 	{ // Second layer shields
 		if (((player->powers[pw_shield] & SH_STACK) == SH_FIREFLOWER) && !(player->powers[pw_super] || (mariomode && player->powers[pw_invulnerability])))
 		{
-			player->mo->color = player->skincolor;
+			player->mo->color = P_GetPlayerColor(player);
 			G_GhostAddColor(GHC_NORMAL);
 		}
 		player->powers[pw_shield] = SH_NONE;
@@ -3775,7 +3772,7 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 			}
 			return false;
 		}
-		else if (player->powers[pw_invulnerability] || player->powers[pw_flashing] || player->powers[pw_super]) // ignore bouncing & such in invulnerability
+		else if (player->powers[pw_invulnerability] || player->powers[pw_flashing] || player->powers[pw_super] || (player->powers[pw_strong] & STR_GUARD)) // ignore bouncing & such in invulnerability
 		{
 			if (force
 			|| (inflictor && inflictor->flags & MF_MISSILE && inflictor->flags2 & MF2_SUPERFIRE)) // Super Sonic is stunned!

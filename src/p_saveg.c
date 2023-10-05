@@ -169,6 +169,7 @@ static void P_NetArchivePlayers(void)
 		WRITEUINT8(save_p, players[i].playerstate);
 		WRITEUINT32(save_p, players[i].pflags);
 		WRITEUINT8(save_p, players[i].panim);
+		WRITEUINT8(save_p, players[i].stronganim);
 		WRITEUINT8(save_p, players[i].spectator);
 
 		WRITEUINT16(save_p, players[i].flashpal);
@@ -178,6 +179,7 @@ static void P_NetArchivePlayers(void)
 		WRITEINT32(save_p, players[i].skin);
 		WRITEUINT32(save_p, players[i].availabilities);
 		WRITEUINT32(save_p, players[i].score);
+		WRITEUINT32(save_p, players[i].recordscore);
 		WRITEFIXED(save_p, players[i].dashspeed);
 		WRITESINT8(save_p, players[i].lives);
 		WRITESINT8(save_p, players[i].continues);
@@ -396,6 +398,7 @@ static void P_NetUnArchivePlayers(void)
 		players[i].playerstate = READUINT8(save_p);
 		players[i].pflags = READUINT32(save_p);
 		players[i].panim = READUINT8(save_p);
+		players[i].stronganim = READUINT8(save_p);
 		players[i].spectator = READUINT8(save_p);
 
 		players[i].flashpal = READUINT16(save_p);
@@ -405,6 +408,7 @@ static void P_NetUnArchivePlayers(void)
 		players[i].skin = READINT32(save_p);
 		players[i].availabilities = READUINT32(save_p);
 		players[i].score = READUINT32(save_p);
+		players[i].recordscore = READUINT32(save_p);
 		players[i].dashspeed = READFIXED(save_p); // dashing speed
 		players[i].lives = READSINT8(save_p);
 		players[i].continues = READSINT8(save_p); // continues that player has acquired
@@ -1023,17 +1027,17 @@ static void ArchiveSectors(void)
 		if (ss->special != spawnss->special)
 			diff |= SD_SPECIAL;
 
-		if (ss->floor_xoffs != spawnss->floor_xoffs)
+		if (ss->floorxoffset != spawnss->floorxoffset)
 			diff2 |= SD_FXOFFS;
-		if (ss->floor_yoffs != spawnss->floor_yoffs)
+		if (ss->flooryoffset != spawnss->flooryoffset)
 			diff2 |= SD_FYOFFS;
-		if (ss->ceiling_xoffs != spawnss->ceiling_xoffs)
+		if (ss->ceilingxoffset != spawnss->ceilingxoffset)
 			diff2 |= SD_CXOFFS;
-		if (ss->ceiling_yoffs != spawnss->ceiling_yoffs)
+		if (ss->ceilingyoffset != spawnss->ceilingyoffset)
 			diff2 |= SD_CYOFFS;
-		if (ss->floorpic_angle != spawnss->floorpic_angle)
+		if (ss->floorangle != spawnss->floorangle)
 			diff2 |= SD_FLOORANG;
-		if (ss->ceilingpic_angle != spawnss->ceilingpic_angle)
+		if (ss->ceilingangle != spawnss->ceilingangle)
 			diff2 |= SD_CEILANG;
 
 		if (!Tag_Compare(&ss->tags, &spawnss->tags))
@@ -1096,17 +1100,17 @@ static void ArchiveSectors(void)
 			if (diff & SD_SPECIAL)
 				WRITEINT16(save_p, ss->special);
 			if (diff2 & SD_FXOFFS)
-				WRITEFIXED(save_p, ss->floor_xoffs);
+				WRITEFIXED(save_p, ss->floorxoffset);
 			if (diff2 & SD_FYOFFS)
-				WRITEFIXED(save_p, ss->floor_yoffs);
+				WRITEFIXED(save_p, ss->flooryoffset);
 			if (diff2 & SD_CXOFFS)
-				WRITEFIXED(save_p, ss->ceiling_xoffs);
+				WRITEFIXED(save_p, ss->ceilingxoffset);
 			if (diff2 & SD_CYOFFS)
-				WRITEFIXED(save_p, ss->ceiling_yoffs);
+				WRITEFIXED(save_p, ss->ceilingyoffset);
 			if (diff2 & SD_FLOORANG)
-				WRITEANGLE(save_p, ss->floorpic_angle);
+				WRITEANGLE(save_p, ss->floorangle);
 			if (diff2 & SD_CEILANG)
-				WRITEANGLE(save_p, ss->ceilingpic_angle);
+				WRITEANGLE(save_p, ss->ceilingangle);
 			if (diff2 & SD_TAG)
 			{
 				WRITEUINT32(save_p, ss->tags.count);
@@ -1197,17 +1201,17 @@ static void UnArchiveSectors(void)
 			sectors[i].special = READINT16(save_p);
 
 		if (diff2 & SD_FXOFFS)
-			sectors[i].floor_xoffs = READFIXED(save_p);
+			sectors[i].floorxoffset = READFIXED(save_p);
 		if (diff2 & SD_FYOFFS)
-			sectors[i].floor_yoffs = READFIXED(save_p);
+			sectors[i].flooryoffset = READFIXED(save_p);
 		if (diff2 & SD_CXOFFS)
-			sectors[i].ceiling_xoffs = READFIXED(save_p);
+			sectors[i].ceilingxoffset = READFIXED(save_p);
 		if (diff2 & SD_CYOFFS)
-			sectors[i].ceiling_yoffs = READFIXED(save_p);
+			sectors[i].ceilingyoffset = READFIXED(save_p);
 		if (diff2 & SD_FLOORANG)
-			sectors[i].floorpic_angle  = READANGLE(save_p);
+			sectors[i].floorangle  = READANGLE(save_p);
 		if (diff2 & SD_CEILANG)
-			sectors[i].ceilingpic_angle = READANGLE(save_p);
+			sectors[i].ceilingangle = READANGLE(save_p);
 		if (diff2 & SD_TAG)
 		{
 			size_t ncount = READUINT32(save_p);
@@ -1549,30 +1553,32 @@ typedef enum
 
 typedef enum
 {
-	MD2_CUSVAL      = 1,
-	MD2_CVMEM       = 1<<1,
-	MD2_SKIN        = 1<<2,
-	MD2_COLOR       = 1<<3,
-	MD2_SCALESPEED  = 1<<4,
-	MD2_EXTVAL1     = 1<<5,
-	MD2_EXTVAL2     = 1<<6,
-	MD2_HNEXT       = 1<<7,
-	MD2_HPREV       = 1<<8,
-	MD2_FLOORROVER  = 1<<9,
-	MD2_CEILINGROVER = 1<<10,
-	MD2_SLOPE        = 1<<11,
-	MD2_COLORIZED    = 1<<12,
-	MD2_MIRRORED     = 1<<13,
-	MD2_ROLLANGLE    = 1<<14,
-	MD2_SHADOWSCALE  = 1<<15,
-	MD2_RENDERFLAGS  = 1<<16,
-	MD2_BLENDMODE    = 1<<17,
-	MD2_SPRITEXSCALE = 1<<18,
-	MD2_SPRITEYSCALE = 1<<19,
-	MD2_SPRITEXOFFSET = 1<<20,
-	MD2_SPRITEYOFFSET = 1<<21,
-	MD2_FLOORSPRITESLOPE = 1<<22,
-	MD2_DISPOFFSET = 1<<23
+	MD2_CUSVAL              = 1,
+	MD2_CVMEM               = 1<<1,
+	MD2_SKIN                = 1<<2,
+	MD2_COLOR               = 1<<3,
+	MD2_SCALESPEED          = 1<<4,
+	MD2_EXTVAL1             = 1<<5,
+	MD2_EXTVAL2             = 1<<6,
+	MD2_HNEXT               = 1<<7,
+	MD2_HPREV               = 1<<8,
+	MD2_FLOORROVER          = 1<<9,
+	MD2_CEILINGROVER        = 1<<10,
+	MD2_SLOPE               = 1<<11,
+	MD2_COLORIZED           = 1<<12,
+	MD2_MIRRORED            = 1<<13,
+	MD2_SPRITEROLL          = 1<<14,
+	MD2_SHADOWSCALE         = 1<<15,
+	MD2_RENDERFLAGS         = 1<<16,
+	MD2_BLENDMODE           = 1<<17,
+	MD2_SPRITEXSCALE        = 1<<18,
+	MD2_SPRITEYSCALE        = 1<<19,
+	MD2_SPRITEXOFFSET       = 1<<20,
+	MD2_SPRITEYOFFSET       = 1<<21,
+	MD2_FLOORSPRITESLOPE    = 1<<22,
+	MD2_DISPOFFSET          = 1<<23,
+	MD2_DRAWONLYFORPLAYER   = 1<<24,
+	MD2_DONTDRAWFORVIEWMOBJ = 1<<25
 } mobj_diff2_t;
 
 typedef enum
@@ -1781,8 +1787,8 @@ static void SaveMobjThinker(const thinker_t *th, const UINT8 type)
 		diff2 |= MD2_COLORIZED;
 	if (mobj->mirrored)
 		diff2 |= MD2_MIRRORED;
-	if (mobj->rollangle)
-		diff2 |= MD2_ROLLANGLE;
+	if (mobj->spriteroll)
+		diff2 |= MD2_SPRITEROLL;
 	if (mobj->shadowscale)
 		diff2 |= MD2_SHADOWSCALE;
 	if (mobj->renderflags)
@@ -1807,6 +1813,10 @@ static void SaveMobjThinker(const thinker_t *th, const UINT8 type)
 		|| (slope->normal.z != FRACUNIT))
 			diff2 |= MD2_FLOORSPRITESLOPE;
 	}
+	if (mobj->drawonlyforplayer)
+		diff2 |= MD2_DRAWONLYFORPLAYER;
+	if (mobj->dontdrawforviewmobj)
+		diff2 |= MD2_DONTDRAWFORVIEWMOBJ;
 	if (mobj->dispoffset != mobj->info->dispoffset)
 		diff2 |= MD2_DISPOFFSET;
 
@@ -1949,8 +1959,8 @@ static void SaveMobjThinker(const thinker_t *th, const UINT8 type)
 		WRITEUINT8(save_p, mobj->colorized);
 	if (diff2 & MD2_MIRRORED)
 		WRITEUINT8(save_p, mobj->mirrored);
-	if (diff2 & MD2_ROLLANGLE)
-		WRITEANGLE(save_p, mobj->rollangle);
+	if (diff2 & MD2_SPRITEROLL)
+		WRITEANGLE(save_p, mobj->spriteroll);
 	if (diff2 & MD2_SHADOWSCALE)
 		WRITEFIXED(save_p, mobj->shadowscale);
 	if (diff2 & MD2_RENDERFLAGS)
@@ -1984,6 +1994,10 @@ static void SaveMobjThinker(const thinker_t *th, const UINT8 type)
 		WRITEFIXED(save_p, slope->normal.y);
 		WRITEFIXED(save_p, slope->normal.z);
 	}
+	if (diff2 & MD2_DRAWONLYFORPLAYER)
+		WRITEUINT8(save_p, mobj->drawonlyforplayer-players);
+	if (diff2 & MD2_DONTDRAWFORVIEWMOBJ)
+		WRITEUINT32(save_p, mobj->dontdrawforviewmobj->mobjnum);
 	if (diff2 & MD2_DISPOFFSET)
 		WRITEINT32(save_p, mobj->dispoffset);
 
@@ -2702,8 +2716,8 @@ static void P_NetArchiveThinkers(void)
 				continue;
 			}
 #ifdef PARANOIA
-			else if (th->function.acp1 != (actionf_p1)P_RemoveThinkerDelayed) // wait garbage collection
-				I_Error("unknown thinker type %p", th->function.acp1);
+			else
+				I_Assert(th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed); // wait garbage collection
 #endif
 		}
 
@@ -2999,8 +3013,8 @@ static thinker_t* LoadMobjThinker(actionf_p1 thinker)
 		mobj->colorized = READUINT8(save_p);
 	if (diff2 & MD2_MIRRORED)
 		mobj->mirrored = READUINT8(save_p);
-	if (diff2 & MD2_ROLLANGLE)
-		mobj->rollangle = READANGLE(save_p);
+	if (diff2 & MD2_SPRITEROLL)
+		mobj->spriteroll = READANGLE(save_p);
 	if (diff2 & MD2_SHADOWSCALE)
 		mobj->shadowscale = READFIXED(save_p);
 	if (diff2 & MD2_RENDERFLAGS)
@@ -3040,6 +3054,10 @@ static thinker_t* LoadMobjThinker(actionf_p1 thinker)
 		slope->normal.y = READFIXED(save_p);
 		slope->normal.z = READFIXED(save_p);
 	}
+	if (diff2 & MD2_DRAWONLYFORPLAYER)
+		mobj->drawonlyforplayer = &players[READUINT8(save_p)];
+	if (diff2 & MD2_DONTDRAWFORVIEWMOBJ)
+		mobj->dontdrawforviewmobj = (mobj_t *)(size_t)READUINT32(save_p);
 	if (diff2 & MD2_DISPOFFSET)
 		mobj->dispoffset = READINT32(save_p);
 	else
@@ -4059,6 +4077,13 @@ static void P_RelinkPointers(void)
 		if (mobj->type == MT_HOOP || mobj->type == MT_HOOPCOLLIDE || mobj->type == MT_HOOPCENTER)
 			continue;
 
+		if (mobj->dontdrawforviewmobj)
+		{
+			temp = (UINT32)(size_t)mobj->dontdrawforviewmobj;
+			mobj->dontdrawforviewmobj = NULL;
+			if (!P_SetTarget(&mobj->dontdrawforviewmobj, P_FindNewPosition(temp)))
+				CONS_Debug(DBG_GAMELOGIC, "dontdrawforviewmobj not found on %d\n", mobj->type);
+		}
 		if (mobj->tracer)
 		{
 			temp = (UINT32)(size_t)mobj->tracer;
@@ -4277,7 +4302,11 @@ static void P_NetArchiveMisc(boolean resending)
 	if (resending)
 		WRITEUINT32(save_p, gametic);
 	WRITEINT16(save_p, gamemap);
-	WRITEINT16(save_p, gamestate);
+
+	if (gamestate != GS_LEVEL)
+		WRITEINT16(save_p, GS_WAITINGPLAYERS); // nice hack to put people back into waitingplayers
+	else
+		WRITEINT16(save_p, gamestate);
 	WRITEINT16(save_p, gametype);
 
 	{
@@ -4339,8 +4368,6 @@ static void P_NetArchiveMisc(boolean resending)
 	WRITEUINT8(save_p, countdowntimeup);
 
 	WRITEUINT32(save_p, hidetime);
-
-	WRITEUINT32(save_p, unlocktriggers);
 
 	// Is it paused?
 	if (paused)
@@ -4440,15 +4467,12 @@ static inline boolean P_NetUnArchiveMisc(boolean reloading)
 
 	hidetime = READUINT32(save_p);
 
-	unlocktriggers = READUINT32(save_p);
-
 	// Is it paused?
 	if (READUINT8(save_p) == 0x2f)
 		paused = true;
 
 	return true;
 }
-
 
 static inline void P_NetArchiveEmblems(void)
 {
@@ -4548,6 +4572,27 @@ static inline void P_NetArchiveEmblems(void)
 			WRITEUINT32(save_p, data->nightsrecords[i]->time[curmare]);
 		}
 	}
+
+	// Mid-map stuff
+	WRITEUINT32(save_p, unlocktriggers);
+
+	for (i = 0; i < MAXPLAYERS; i++)
+	{
+		if (!ntemprecords[i].nummares)
+		{
+			WRITEUINT8(save_p, 0);
+			continue;
+		}
+
+		WRITEUINT8(save_p, ntemprecords[i].nummares);
+
+		for (curmare = 0; curmare < (ntemprecords[i].nummares + 1); ++curmare)
+		{
+			WRITEUINT32(save_p, ntemprecords[i].score[curmare]);
+			WRITEUINT8(save_p, ntemprecords[i].grade[curmare]);
+			WRITEUINT32(save_p, ntemprecords[i].time[curmare]);
+		}
+	}
 }
 
 static inline void P_NetUnArchiveEmblems(void)
@@ -4567,9 +4612,9 @@ static inline void P_NetUnArchiveEmblems(void)
 	savemoddata = (boolean)READUINT8(save_p); // this one is actually necessary because savemoddata stays false otherwise for some reason.
 
 	if (numemblems != READINT32(save_p))
-		I_Error("numemblems mismatch");
+		I_Error("Bad $$$.sav dearchiving Emblems (numemblems mismatch)");
 	if (numextraemblems != READINT32(save_p))
-		I_Error("numextraemblems mismatch");
+		I_Error("Bad $$$.sav dearchiving Emblems (numextraemblems mismatch)");
 
 	// This shouldn't happen, but if something really fucked up happens and you transfer
 	// the SERVER player's gamedata over your own CLIENT gamedata,
@@ -4588,7 +4633,7 @@ static inline void P_NetUnArchiveEmblems(void)
 	// TODO put another cipher on these things? meh, I don't care...
 	for (i = 0; i < NUMMAPS; i++)
 		if ((data->mapvisited[i] = READUINT8(save_p)) > MV_MAX)
-			I_Error("Bad $$$.sav dearchiving Emblems");
+			I_Error("Bad $$$.sav dearchiving Emblems (invalid visit flags)");
 
 	// To save space, use one bit per collected/achieved/unlocked flag
 	for (i = 0; i < MAXEMBLEMS;)
@@ -4632,7 +4677,7 @@ static inline void P_NetUnArchiveEmblems(void)
 		recrings = READUINT16(save_p);
 
 		if (recrings > 10000 || recscore > MAXSCORE)
-			I_Error("Bad $$$.sav dearchiving Emblems");
+			I_Error("Bad $$$.sav dearchiving Emblems (invalid score)");
 
 		if (recscore || rectime || recrings)
 		{
@@ -4659,11 +4704,34 @@ static inline void P_NetUnArchiveEmblems(void)
 
 			if (data->nightsrecords[i]->grade[curmare] > GRADE_S)
 			{
-				I_Error("Bad $$$.sav dearchiving Emblems");
+				I_Error("Bad $$$.sav dearchiving Emblems (invalid grade)");
 			}
 		}
 
 		data->nightsrecords[i]->nummares = recmares;
+	}
+
+	// Mid-map stuff
+	unlocktriggers = READUINT32(save_p);
+
+	for (i = 0; i < MAXPLAYERS; ++i)
+	{
+		if ((recmares = READUINT8(save_p)) == 0)
+			continue;
+
+		for (curmare = 0; curmare < (recmares+1); ++curmare)
+		{
+			ntemprecords[i].score[curmare] = READUINT32(save_p);
+			ntemprecords[i].grade[curmare] = READUINT8(save_p);
+			ntemprecords[i].time[curmare] = (tic_t)READUINT32(save_p);
+
+			if (ntemprecords[i].grade[curmare] > GRADE_S)
+			{
+				I_Error("Bad $$$.sav dearchiving Emblems (invalid temp grade)");
+			}
+		}
+
+		ntemprecords[i].nummares = recmares;
 	}
 }
 
