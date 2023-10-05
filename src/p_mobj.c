@@ -9688,7 +9688,7 @@ static boolean P_MobjRegularThink(mobj_t *mobj)
 			mobj->frame |= (tr_trans50 << FF_TRANSSHIFT);
 		else
 			mobj->frame &= ~FF_TRANSMASK;
-		
+
 		if (mobj->flags2 & MF2_NIGHTSPULL)
 			P_NightsItemChase(mobj);
 		break;
