@@ -43,7 +43,6 @@ typedef struct netnode_s
 {
 	boolean ingame; // set false as nodes leave game
 	tic_t freezetimeout; // Until when can this node freeze the server before getting a timeout?
-	tic_t lastinput; // the last tic the player has made any input
 
 	SINT8 player;
 	SINT8 player2; // say the numplayer for this node if any (splitscreen)

@@ -1282,19 +1282,19 @@ static void IdleUpdate(void)
 
 	for (i = 1; i < MAXPLAYERS; i++)
 	{
-		if (cv_idletime.value && playeringame[i] && playernode[i] != UINT8_MAX && !players[i].quittime && !players[i].spectator && i != serverplayer)
+		if (cv_idletime.value && playeringame[i] && playernode[i] != UINT8_MAX && !players[i].quittime && !players[i].spectator && !IsPlayerAdmin(i))
 		{
 			if (players[i].cmd.forwardmove || players[i].cmd.sidemove || players[i].cmd.buttons)
-				netnodes[i].lastinput = gametime;
+				players[i].lastinputtime = gametime;
 
-			if (gametime - netnodes[i].lastinput > cv_idletime.value * TICRATE)
+			if (gametime - players[i].lastinputtime > (tic_t)cv_idletime.value * TICRATE * 60)
 			{
-				netnodes[i].lastinput = gametime;
+				players[i].lastinputtime = gametime;
 				SendKick(i, KICK_MSG_IDLE | KICK_MSG_KEEP_BODY);
 			}
 		}
 		else
-			netnodes[i].lastinput = gametime;
+			players[i].lastinputtime = gametime;
 	}
 }
 
