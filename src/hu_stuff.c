@@ -714,7 +714,7 @@ static void Got_Saycmd(UINT8 **p, INT32 playernum)
 	ptr = msg;
 	while (*ptr != '\0')
 	{
-		if (*ptr == '\r')
+		if (*ptr == '\r' || *ptr == '\n')
 			*ptr = ' ';
 
 		ptr++;
