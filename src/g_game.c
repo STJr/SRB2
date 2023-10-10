@@ -5379,9 +5379,9 @@ INT32 G_FindMapByNameOrCode(const char *mapname, char **realmapnamep)
 
 	if (mapnamelen == 1)
 	{
-		if (strcmp(mapname, "*") == 0) // current map
+		if (mapname[0] == '*') // current map
 			return gamemap;
-		else if (strcmp(mapname, "+") == 0 && mapheaderinfo[gamemap-1]) // next map
+		else if (mapname[0] == '+' && mapheaderinfo[gamemap-1]) // next map
 		{
 			newmapnum = mapheaderinfo[gamemap-1]->nextlevel;
 			if (newmapnum < 1 || newmapnum > NUMMAPS)
