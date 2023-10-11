@@ -26,7 +26,9 @@ build-native:       # This job runs in the build stage, which runs first.
   stage: build
   image: debian
   variables:
-    CCACHE_MAXSIZE: "30M"
+    CCACHE_MAXSIZE: "50M"
+    GIT_STRATEGY: clone
+    GIT_CLONE_PATH: $CI_BUILDS_DIR/$CI_CONCURRENT_ID/$CI_PROJECT_PATH
   cache:
     - key: ccache-$CI_PROJECT_PATH_SLUG-$CI_JOB_NAME_SLUG
       fallback_keys:
