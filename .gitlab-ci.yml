@@ -47,7 +47,9 @@ build-native:       # This job runs in the build stage, which runs first.
     - export CCACHE_BASEDIR="$PWD"
     - export CCACHE_DIR="$PWD/ccache"
     - export CCACHE_COMPILERCHECK=content
-    - echo -n Dir::Cache="$PWD/apt" | tee /etc/apt/apt.conf.d/99cache
+    - export APT_CACHE_DIR=`pwd`/apt-cache
+    - mkdir --parents --verbose $APT_CACHE_DIR/partial/
+    - echo dir::cache::archives="$APT_CACHE_DIR" | tee --append /etc/apt/apt.conf.d/99cache
     - apt-get update
     - apt-get install --no-install-recommends --yes ccache
     - ccache --zero-stats || true
