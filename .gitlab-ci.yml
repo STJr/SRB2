@@ -22,16 +22,16 @@ stages:          # List of stages for jobs, and their order of execution
   - build
 
 
-build-job:       # This job runs in the build stage, which runs first.
+build-native:       # This job runs in the build stage, which runs first.
   stage: build
   image: debian
   variables:
-    CCMaxSize: "10M"
+    CCACHE_MAXSIZE: "30M"
   cache:
-    - key: ccache-$CI_JOB_NAME_SLUG
+    - key: ccache-$CI_PROJECT_PATH_SLUG-$CI_JOB_NAME_SLUG
       fallback_keys:
-        - cache-$CI_DEFAULT_BRANCH
-        - cache-default
+        - cache-$CI_PROJECT_PATH_SLUG-$CI_DEFAULT_BRANCH
+        - cache-$CI_PROJECT_PATH_SLUG-default
       paths:
         - ccache
   artifacts:
@@ -44,19 +44,12 @@ build-job:       # This job runs in the build stage, which runs first.
     - export CCACHE_COMPILERCHECK=content
     - apt update
     - apt-get install --no-install-recommends --yes ccache
-    - ccache --max-size $CCMaxSize
     - ccache --zero-stats || true
     - ccache --show-stats || true
   after_script:
     - export CCACHE_DIR="$PWD/ccache"
     - ccache --show-stats
-
-
   script:
-    - pwd
-    - echo "$CI_JOB_NAME_SLUG"
-    - echo "$CCACHE_DIR"
-    - echo Are we running on DO? "$DigitalOceanDebianMirror"
     - apt-get install --no-install-recommends --yes build-essential libsdl2-mixer-dev libpng-dev libcurl4-openssl-dev libgme-dev git libopenmpt-dev gettext
     - make --directory=src
 
