@@ -38,7 +38,7 @@ build-native:       # This job runs in the build stage, which runs first.
         - ccache
     - key: apt
       paths:
-        - /var/cache/apt/
+        - apt
   artifacts:
     paths:
       - "bin/*"
@@ -47,6 +47,7 @@ build-native:       # This job runs in the build stage, which runs first.
     - export CCACHE_BASEDIR="$PWD"
     - export CCACHE_DIR="$PWD/ccache"
     - export CCACHE_COMPILERCHECK=content
+    - echo Dir::Cache="$PWD/apt" > /etc/apt/apt.conf.d/99cache
     - apt-get update
     - apt-get install --no-install-recommends --yes ccache
     - ccache --zero-stats || true
