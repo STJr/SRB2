@@ -29,7 +29,7 @@ build-job:       # This job runs in the build stage, which runs first.
 
   script:
     - "apt update"
-    - "apt-get install --no-install-recommends --yes make"
+    - "apt-get install --no-install-recommends --yes build-essential libsdl2-mixer-dev libpng-dev libcurl4-openssl-dev libgme-dev upx git libopenmpt-dev gettext"
     - "make --directory=src"
 
 
