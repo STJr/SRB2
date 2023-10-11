@@ -27,28 +27,37 @@ build-job:       # This job runs in the build stage, which runs first.
   image: debian
   variables:
     CCMaxSize: "10M"
-    CC: "ccache gcc"
-    CCACHE_DIR: "$CI_BUILDS_DIR/.cache/ccache"
   cache:
-    - key:
-        files:
-          - .cache/ccache/stats
+    - key: ccache-$CI_JOB_NAME_SLUG
+      fallback_keys:
+        - cache-$CI_DEFAULT_BRANCH
+        - cache-default
       paths:
-        - .cache/ccache/
+        - ccache
   artifacts:
     paths:
       - "bin/*"
+  before_script:
+    - export PATH="/usr/lib/ccache:$PATH"
+    - export CCACHE_BASEDIR="$PWD"
+    - export CCACHE_DIR="$PWD/ccache"
+    - export CCACHE_COMPILERCHECK=content
+    - ccache --max-size $CCMaxSize
+    - ccache --zero-stats || true
+    - ccache --show-stats || true
+  after_script:
+    - export CCACHE_DIR="$PWD/ccache"
+    - ccache --show-stats
+
 
   script:
-    - "export $CC"
-    - "export $CCACHE_DIR"
-    - "export $CI_BUILDS_DIR"
-    - "apt update"
-    - "apt-get install --no-install-recommends --yes build-essential libsdl2-mixer-dev libpng-dev libcurl4-openssl-dev libgme-dev git libopenmpt-dev gettext ccache"
-    - "ccache --max-size $CCMaxSize"
-    - "make --directory=src"
-    - "ccache --show-stats"
-    - "echo Are we running on DO? $DigitalOceanDebianMirror"
+    - pwd
+    - echo "$CI_JOB_NAME_SLUG"
+    - echo "$CCACHE_DIR"
+    - echo Are we running on DO? "$DigitalOceanDebianMirror"
+    - apt update
+    - apt-get install --no-install-recommends --yes build-essential libsdl2-mixer-dev libpng-dev libcurl4-openssl-dev libgme-dev git libopenmpt-dev gettext ccache
+    - make --directory=src
 
 
 
