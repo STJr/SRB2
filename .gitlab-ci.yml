@@ -28,7 +28,7 @@ build-job:       # This job runs in the build stage, which runs first.
         files:
           - .ccache/stats
       paths:
-        - .ccache
+        - .ccache/
   artifacts:
     paths:
       - "bin/*"
