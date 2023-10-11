@@ -16,6 +16,8 @@
 # This specific template is located at:
 # https://gitlab.com/gitlab-org/gitlab/-/blob/master/lib/gitlab/ci/templates/Getting-Started.gitlab-ci.yml
 
+
+
 stages:          # List of stages for jobs, and their order of execution
   - build
 
@@ -23,6 +25,9 @@ stages:          # List of stages for jobs, and their order of execution
 build-job:       # This job runs in the build stage, which runs first.
   stage: build
   image: debian
+  variables:
+    CCMaxSize: "10M"
+    CCC: "ccache gcc"
   cache:
     - key:
         files:
@@ -36,9 +41,10 @@ build-job:       # This job runs in the build stage, which runs first.
   script:
     - "apt update"
     - "apt-get install --no-install-recommends --yes build-essential libsdl2-mixer-dev libpng-dev libcurl4-openssl-dev libgme-dev git libopenmpt-dev gettext ccache"
-    - "ccache --max-size 10M"
-    - "CC=\"ccache gcc\" make --directory=src"
+    - "ccache --max-size $CCMaxSize"
+    - "CC=\"$CCC\" make --directory=src"
     - "ccache --show-stats"
+    - "echo Are we running on DO? $DigitalOceanDebianMirror"
 
 
 
