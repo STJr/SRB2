@@ -38,7 +38,7 @@ build-native:       # This job runs in the build stage, which runs first.
         - ccache
     - key: apt
       paths:
-        - apt
+        - apt-cache
   artifacts:
     paths:
       - "bin/*"
