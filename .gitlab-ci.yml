@@ -23,14 +23,15 @@ stages:          # List of stages for jobs, and their order of execution
 build-job:       # This job runs in the build stage, which runs first.
   stage: build
   image: debian
-  #artifacts:
-  #  paths:
-  #    - "*.bin"
+  artifacts:
+    paths:
+      - "bin/*"
 
   script:
+    - ""
     - "apt update"
-    - "apt-get install --no-install-recommends --yes build-essential libsdl2-mixer-dev libpng-dev libcurl4-openssl-dev libgme-dev git libopenmpt-dev gettext"
-    - "make --directory=src "
+    - "apt-get install --no-install-recommends --yes build-essential libsdl2-mixer-dev libpng-dev libcurl4-openssl-dev libgme-dev git libopenmpt-dev gettext ccache"
+    - "CC=\"ccache gcc\" make --directory=src "
 
 
 
