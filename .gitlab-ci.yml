@@ -27,7 +27,8 @@ build-job:       # This job runs in the build stage, which runs first.
   image: debian
   variables:
     CCMaxSize: "10M"
-    CCC: "ccache gcc"
+    CC: "ccache gcc"
+    CCACHE_DIR: "$CI_BUILDS_DIR/.cache/ccache"
   cache:
     - key:
         files:
@@ -39,10 +40,13 @@ build-job:       # This job runs in the build stage, which runs first.
       - "bin/*"
 
   script:
+    - "export $CC"
+    - "export $CCACHE_DIR"
+    - "export $CI_BUILDS_DIR"
     - "apt update"
     - "apt-get install --no-install-recommends --yes build-essential libsdl2-mixer-dev libpng-dev libcurl4-openssl-dev libgme-dev git libopenmpt-dev gettext ccache"
     - "ccache --max-size $CCMaxSize"
-    - "CC=\"$CCC\" make --directory=src"
+    - "make --directory=src"
     - "ccache --show-stats"
     - "echo Are we running on DO? $DigitalOceanDebianMirror"
 
