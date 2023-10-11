@@ -31,9 +31,9 @@ build-job:       # This job runs in the build stage, which runs first.
   cache:
     - key:
         files:
-          - .ccache/stats
+          - .cache/ccache/stats
       paths:
-        - .ccache/
+        - .cache/ccache/
   artifacts:
     paths:
       - "bin/*"
