@@ -24,7 +24,7 @@ stages:          # List of stages for jobs, and their order of execution
 
 build-native:       # This job runs in the build stage, which runs first.
   stage: build
-  image: debian-slim
+  image: debian:stable-slim
   variables:
     CCACHE_MAXSIZE: "50M"
     GIT_STRATEGY: clone
