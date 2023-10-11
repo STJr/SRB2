@@ -43,7 +43,7 @@ build-job:       # This job runs in the build stage, which runs first.
     - export CCACHE_DIR="$PWD/ccache"
     - export CCACHE_COMPILERCHECK=content
     - apt update
-    - apt-get install --no-install-recommends ccache
+    - apt-get install --no-install-recommends --yes ccache
     - ccache --max-size $CCMaxSize
     - ccache --zero-stats || true
     - ccache --show-stats || true
