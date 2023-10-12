@@ -21,6 +21,9 @@
 stages:          # List of stages for jobs, and their order of execution
   - build
 
+.default_Scripts: &ccache
+  export CCACHE_BASEDIR="$PWD";export CCACHE_DIR="$PWD/ccache";export CCACHE_COMPILERCHECK=content
+
 .job_template: &job_build # This job runs in the build stage, which runs first.
   stage: build
   image: debian:stable-slim
@@ -45,19 +48,12 @@ stages:          # List of stages for jobs, and their order of execution
     - mkdir --parents --verbose $APT_CACHE_DIR/partial/
     - apt-get --option dir::cache::archives="$APT_CACHE_DIR" install --no-install-recommends --yes build-essential libsdl2-mixer-dev libpng-dev libcurl4-openssl-dev libgme-dev git libopenmpt-dev gettext ccache mingw-w64
     - apt-get --option dir::cache::archives="$APT_CACHE_DIR" autoclean
-    - export CCACHE_BASEDIR="$PWD"
-    - export CCACHE_DIR="$PWD/ccache"
+    - *ccache
     - ccache --zero-stats || true
     - ccache --show-stats || true
   after_script:
-    - export CCACHE_BASEDIR="$PWD"
-    - export CCACHE_DIR="$PWD/ccache"
+    - *ccache
     - ccache --show-stats
-
-.default_Scripts: &ccache
-  - export CCACHE_BASEDIR="$PWD"
-  - export CCACHE_DIR="$PWD/ccache"
-  - export CCACHE_COMPILERCHECK=content
 
 build-x86_64-linux-gnu:
   <<: *job_build
