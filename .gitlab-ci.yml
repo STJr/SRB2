@@ -45,21 +45,24 @@ build-native:       # This job runs in the build stage, which runs first.
       - "bin/*"
     name: "Debian native"
   before_script:
-    - export PATH="/usr/lib/ccache:$PATH"
-    - export CCACHE_BASEDIR="$PWD"
-    - export CCACHE_DIR="$PWD/ccache"
-    - export CCACHE_COMPILERCHECK=content
     - export APT_CACHE_DIR=`pwd`/apt-cache
     - mkdir --parents --verbose $APT_CACHE_DIR/partial/
     - apt-get update
     - apt-get -o dir::cache::archives="$APT_CACHE_DIR" install --no-install-recommends --yes build-essential libsdl2-mixer-dev libpng-dev libcurl4-openssl-dev libgme-dev git libopenmpt-dev gettext ccache
     - apt-get autoclean
+    - export CCACHE_BASEDIR="$PWD"
+    - export CCACHE_DIR="$PWD/ccache"
     - ccache --zero-stats || true
     - ccache --show-stats || true
   after_script:
+    - export CCACHE_BASEDIR="$PWD"
     - export CCACHE_DIR="$PWD/ccache"
     - ccache --show-stats
   script:
+    - export CC="ccache gcc"
+    - export CCACHE_BASEDIR="$PWD"
+    - export CCACHE_DIR="$PWD/ccache"
+    - export CCACHE_COMPILERCHECK=content
     - make --directory=src
 
 
