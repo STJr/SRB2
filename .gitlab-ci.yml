@@ -36,7 +36,7 @@ build-native:       # This job runs in the build stage, which runs first.
         - cache-$CI_PROJECT_PATH_SLUG-default
       paths:
         - ccache
-    - key: apt
+    - key: apt-$CI_JOB_IMAGE
       paths:
         - apt-cache
   artifacts:
@@ -50,14 +50,14 @@ build-native:       # This job runs in the build stage, which runs first.
     - export APT_CACHE_DIR=`pwd`/apt-cache
     - mkdir --parents --verbose $APT_CACHE_DIR/partial/
     - apt-get update
-    - apt-get -o dir::cache::archives="$APT_CACHE_DIR" install --no-install-recommends --yes ccache
+    - pt-get -o dir::cache::archives="$APT_CACHE_DIR" install --no-install-recommends --yes build-essential libsdl2-mixer-dev libpng-dev libcurl4-openssl-dev libgme-dev git libopenmpt-dev gettext ccache
     - ccache --zero-stats || true
     - ccache --show-stats || true
   after_script:
     - export CCACHE_DIR="$PWD/ccache"
     - ccache --show-stats
+    - apt-get autoclean
   script:
-    - apt-get -o dir::cache::archives="$APT_CACHE_DIR" install --no-install-recommends --yes build-essential libsdl2-mixer-dev libpng-dev libcurl4-openssl-dev libgme-dev git libopenmpt-dev gettext
     - make --directory=src
 
 
