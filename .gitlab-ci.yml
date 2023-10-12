@@ -49,7 +49,7 @@ build-native:       # This job runs in the build stage, which runs first.
     - mkdir --parents --verbose $APT_CACHE_DIR/partial/
     - apt-get update
     - apt-get -o dir::cache::archives="$APT_CACHE_DIR" install --no-install-recommends --yes build-essential libsdl2-mixer-dev libpng-dev libcurl4-openssl-dev libgme-dev git libopenmpt-dev gettext ccache
-    - apt-get autoclean
+    - apt-get -o dir::cache::archives="$APT_CACHE_DIR" autoclean
     - export CCACHE_BASEDIR="$PWD"
     - export CCACHE_DIR="$PWD/ccache"
     - ccache --zero-stats || true
