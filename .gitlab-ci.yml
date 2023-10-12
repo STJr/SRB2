@@ -50,6 +50,7 @@ stages:          # List of stages for jobs, and their order of execution
   before_script:
     - dpkg --add-architecture i386
     - dpkg --add-architecture amd64
+    - dpkg --add-architecture arm64
     - apt-get update
     - *aptcache
     - apt-get --option dir::cache::archives="$APT_CACHE_DIR" install --no-install-recommends --yes make git ccache gcc
