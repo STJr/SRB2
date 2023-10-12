@@ -63,6 +63,6 @@ build-native:       # This job runs in the build stage, which runs first.
     - export CCACHE_DIR="$PWD/ccache"
     - export CCACHE_COMPILERCHECK=content
     - make --directory=src CCACHE=1
-    - make --directory=src CCACHE=1 MINGW64=1 PREFIX=x86_64-w64
+    - make --directory=src CCACHE=1 MINGW64=1 PREFIX=x86_64-w64-mingw32
 
 
