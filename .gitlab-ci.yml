@@ -46,7 +46,7 @@ stages:          # List of stages for jobs, and their order of execution
     - apt-get update
     - export APT_CACHE_DIR=`pwd`/apt-cache
     - mkdir --parents --verbose $APT_CACHE_DIR/partial/
-    - apt-get --option dir::cache::archives="$APT_CACHE_DIR" install --no-install-recommends --yes build-essential libsdl2-mixer-dev libpng-dev libcurl4-openssl-dev libgme-dev git libopenmpt-dev gettext ccache mingw-w64
+    - apt-get --option dir::cache::archives="$APT_CACHE_DIR" install --no-install-recommends --yes make git ccache
     - apt-get --option dir::cache::archives="$APT_CACHE_DIR" autoclean
     - *ccache
     - ccache --zero-stats || true
@@ -63,6 +63,8 @@ build-x86_64-linux-gnu:
     name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-x86-64"
   script:
     - *ccache
+    - apt-get --option dir::cache::archives="$APT_CACHE_DIR" install --no-install-recommends --yes libsdl2-mixer-dev libpng-dev libcurl4-openssl-dev libgme-dev libopenmpt-dev gcc
+    - apt-get --option dir::cache::archives="$APT_CACHE_DIR" autoclean
     - export CC="x86_64-linux-gnu-gcc"
     - make --directory=src CCACHE=1 LINUX64=1
 
@@ -74,6 +76,8 @@ build-i686-w64-mingw32:
     name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-Win32"
   script:
     - *ccache
+    - apt-get --option dir::cache::archives="$APT_CACHE_DIR" install --no-install-recommends --yes gcc-mingw-w64
+    - apt-get --option dir::cache::archives="$APT_CACHE_DIR" autoclean
     - make --directory=src CCACHE=1 MINGW=1 PREFIX=i686-w64-mingw32
 
 build-x86_64-w64-mingw32:
@@ -84,4 +88,6 @@ build-x86_64-w64-mingw32:
     name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-Win64"
   script:
     - *ccache
+    - apt-get --option dir::cache::archives="$APT_CACHE_DIR" install --no-install-recommends --yes gcc-mingw-w64-x86-64
+    - apt-get --option dir::cache::archives="$APT_CACHE_DIR" autoclean
     - make --directory=src CCACHE=1 MINGW64=1 PREFIX=x86_64-w64-mingw32
