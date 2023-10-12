@@ -21,8 +21,7 @@
 stages:          # List of stages for jobs, and their order of execution
   - build
 
-
-build-native:       # This job runs in the build stage, which runs first.
+.job_template: &job_build # This job runs in the build stage, which runs first.
   stage: build
   image: debian:stable-slim
   variables:
@@ -40,10 +39,6 @@ build-native:       # This job runs in the build stage, which runs first.
       paths:
         - apt-cache
       unprotect: true
-  artifacts:
-    paths:
-      - "bin/*"
-    name: "Debian native"
   before_script:
     - apt-get update
     - export APT_CACHE_DIR=`pwd`/apt-cache
@@ -58,11 +53,39 @@ build-native:       # This job runs in the build stage, which runs first.
     - export CCACHE_BASEDIR="$PWD"
     - export CCACHE_DIR="$PWD/ccache"
     - ccache --show-stats
+
+.default_Scripts: &ccache
+  - export CCACHE_BASEDIR="$PWD"
+  - export CCACHE_DIR="$PWD/ccache"
+  - export CCACHE_COMPILERCHECK=content
+
+build-x86_64-linux-gnu:
+  <<: *job_build
+  artifacts:
+    paths:
+      - "bin/lsdl2srb2*"
+    name: "x86-64"
   script:
-    - export CCACHE_BASEDIR="$PWD"
-    - export CCACHE_DIR="$PWD/ccache"
-    - export CCACHE_COMPILERCHECK=content
-    - make --directory=src CCACHE=1
+    - *ccache
+    - export CC="x86_64-linux-gnu-gcc
+    - make --directory=src CCACHE=1 LINUX64=1
+
+build-i686-w64-mingw32:
+  <<: *job_build
+  artifacts:
+    paths:
+      - "bin/srb2win.exe*"
+    name: "Win32"
+  script:
+    - *ccache
+    - make --directory=src CCACHE=1 MINGW=1 PREFIX=i686-w64-mingw32
+
+build-x86_64-w64-mingw32:
+  <<: *job_build
+  artifacts:
+    paths:
+      - "bin/srb2win64.exe*"
+    name: "Win64"
+  script:
+    - *ccache
     - make --directory=src CCACHE=1 MINGW64=1 PREFIX=x86_64-w64-mingw32
-
-
