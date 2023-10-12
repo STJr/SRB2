@@ -45,11 +45,13 @@ build-native:       # This job runs in the build stage, which runs first.
       - "bin/*"
     name: "Debian native"
   before_script:
+    - sed --expression="s/deb.debian.org/mirrors.digitalocean.com/g" /etc/apt/sources.list > /etc/apt/sources.list.d/debian.list
+    - rm --force /etc/apt/sources.list
+    - apt-get update
     - export APT_CACHE_DIR=`pwd`/apt-cache
     - mkdir --parents --verbose $APT_CACHE_DIR/partial/
-    - apt-get update
-    - apt-get -o dir::cache::archives="$APT_CACHE_DIR" install --no-install-recommends --yes build-essential libsdl2-mixer-dev libpng-dev libcurl4-openssl-dev libgme-dev git libopenmpt-dev gettext ccache
-    - apt-get -o dir::cache::archives="$APT_CACHE_DIR" autoclean
+    - apt-get --option dir::cache::archives="$APT_CACHE_DIR" install --no-install-recommends --yes build-essential libsdl2-mixer-dev libpng-dev libcurl4-openssl-dev libgme-dev git libopenmpt-dev gettext ccache
+    - apt-get --option dir::cache::archives="$APT_CACHE_DIR" autoclean
     - export CCACHE_BASEDIR="$PWD"
     - export CCACHE_DIR="$PWD/ccache"
     - ccache --zero-stats || true
