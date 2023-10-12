@@ -52,7 +52,7 @@ stages:          # List of stages for jobs, and their order of execution
     - dpkg --add-architecture amd64
     - apt-get update
     - *aptcache
-    - apt-get --option dir::cache::archives="$APT_CACHE_DIR" install --no-install-recommends --yes make git ccache
+    - apt-get --option dir::cache::archives="$APT_CACHE_DIR" install --no-install-recommends --yes make git ccache gcc
     - *ccache
     - ccache --zero-stats || true
     - ccache --show-stats || true
@@ -70,9 +70,10 @@ build-i686-linux-gnu:
     name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-i686"
   script:
     - *aptcache
-    - apt-get --option dir::cache::archives="$APT_CACHE_DIR" install --no-install-recommends --yes gcc-i686-linux-gnu
+    - apt-get --option dir::cache::archives="$APT_CACHE_DIR" install --no-install-recommends --yes gcc-i686-linux-gnu || true
     - apt-get --option dir::cache::archives="$APT_CACHE_DIR" install --no-install-recommends --yes libsdl2-mixer-dev:i386 libpng-dev:i386 libcurl4-openssl-dev:i386 libgme-dev:i386 libopenmpt-dev:i386 
     - export CC="i686-linux-gnu-gcc"
+    - export PKG_CONFIG_PATH=/usr/lib/i386-linux-gnu/pkgconfig
     - *ccache
     - make --directory=src CCACHE=1 LINUX=1
 
@@ -84,9 +85,10 @@ build-x86_64-linux-gnu:
     name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-x86-64"
   script:
     - *aptcache
-    - apt-get --option dir::cache::archives="$APT_CACHE_DIR" install --no-install-recommends --yes gcc-x86-64-linux-gnu
+    - apt-get --option dir::cache::archives="$APT_CACHE_DIR" install --no-install-recommends --yes gcc-x86-64-linux-gnu || true
     - apt-get --option dir::cache::archives="$APT_CACHE_DIR" install --no-install-recommends --yes libsdl2-mixer-dev:amd64 libpng-dev:amd64 libcurl4-openssl-dev:amd64 libgme-dev:amd64 libopenmpt-dev:amd64
     - export CC="x86_64-linux-gnu-gcc"
+    - export PKG_CONFIG_PATH=/usr/lib/x86_64-linux-gnu/pkgconfig
     - *ccache
     - make --directory=src CCACHE=1 LINUX64=1
 
