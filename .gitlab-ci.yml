@@ -60,7 +60,7 @@ build-x86_64-linux-gnu:
   artifacts:
     paths:
       - "bin/lsdl2srb2*"
-    name: "x86-64"
+    name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-x86-64"
   script:
     - *ccache
     - export CC="x86_64-linux-gnu-gcc"
@@ -71,7 +71,7 @@ build-i686-w64-mingw32:
   artifacts:
     paths:
       - "bin/srb2win.exe*"
-    name: "Win32"
+    name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-Win32"
   script:
     - *ccache
     - make --directory=src CCACHE=1 MINGW=1 PREFIX=i686-w64-mingw32
@@ -81,7 +81,7 @@ build-x86_64-w64-mingw32:
   artifacts:
     paths:
       - "bin/srb2win64.exe*"
-    name: "Win64"
+    name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-Win64"
   script:
     - *ccache
     - make --directory=src CCACHE=1 MINGW64=1 PREFIX=x86_64-w64-mingw32
