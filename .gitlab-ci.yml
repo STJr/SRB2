@@ -73,10 +73,12 @@ build-i686-linux-gnu:
     - *aptcache
     - apt-get --option dir::cache::archives="$APT_CACHE_DIR" install --no-install-recommends --yes gcc-i686-linux-gnu || true
     - apt-get --option dir::cache::archives="$APT_CACHE_DIR" install --no-install-recommends --yes libsdl2-mixer-dev:i386 libpng-dev:i386 libcurl4-openssl-dev:i386 libgme-dev:i386 libopenmpt-dev:i386 
-    - export CC="i686-linux-gnu-gcc"
+    - export CC=i686-linux-gnu-gcc
+    - export OBJCOPY=i686-linux-gnu-objcopy
+    - export OBJDUMP=i686-linux-gnu-objdump
     - export PKG_CONFIG_PATH=/usr/lib/i386-linux-gnu/pkgconfig
     - *ccache
-    - make --directory=src CCACHE=1 LINUX=1 OBJCOPY=i686-linux-gnu-objcopy OBJDUMP=i686-linux-gnu-objdump
+    - make --directory=src CCACHE=1 LINUX=1
 
 build-aarch64-linux-gnu:
   <<: *job_build
@@ -88,10 +90,12 @@ build-aarch64-linux-gnu:
     - *aptcache
     - apt-get --option dir::cache::archives="$APT_CACHE_DIR" install --no-install-recommends --yes gcc-aarch64-linux-gnu || true
     - apt-get --option dir::cache::archives="$APT_CACHE_DIR" install --no-install-recommends --yes libsdl2-mixer-dev:arm64 libpng-dev:arm64 libcurl4-openssl-dev:arm64 libgme-dev:arm64 libopenmpt-dev:arm64
-    - export CC="aarch64-linux-gnu-gcc"
+    - export CC=aarch64-linux-gnu-gcc
+    - export OBJCOPY=aarch64-linux-gnu-objcopy
+    - export OBJDUMP=aarch64-linux-gnu-objdump
     - export PKG_CONFIG_PATH=/usr/lib/aarch64-linux-gnu/pkgconfig
     - *ccache
-    - make --directory=src CCACHE=1 LINUX64=1 NONX86=1 OBJCOPY=aarch64-linux-gnu-objcopy OBJDUMP=aarch64-linux-gnu-objdump
+    - make --directory=src CCACHE=1 LINUX64=1 NONX86=1
 
 build-x86_64-linux-gnu:
   <<: *job_build
@@ -103,10 +107,12 @@ build-x86_64-linux-gnu:
     - *aptcache
     - apt-get --option dir::cache::archives="$APT_CACHE_DIR" install --no-install-recommends --yes gcc-x86-64-linux-gnu || true
     - apt-get --option dir::cache::archives="$APT_CACHE_DIR" install --no-install-recommends --yes libsdl2-mixer-dev:amd64 libpng-dev:amd64 libcurl4-openssl-dev:amd64 libgme-dev:amd64 libopenmpt-dev:amd64
-    - export CC="x86_64-linux-gnu-gcc"
+    - export CC=x86_64-linux-gnu-gcc
+    - export OBJCOPY=x86_64-linux-gnu-objcopy
+    - export OBJDUMP=x86_64-linux-gnu-objdump
     - export PKG_CONFIG_PATH=/usr/lib/x86_64-linux-gnu/pkgconfig
     - *ccache
-    - make --directory=src CCACHE=1 LINUX64=1 OBJCOPY=x86_64-linux-gnu-objcopy OBJDUMP=x86_64-linux-gnu-objdump
+    - make --directory=src CCACHE=1 LINUX64=1
 
 build-i686-w64-mingw32:
   <<: *job_build
