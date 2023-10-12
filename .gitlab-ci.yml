@@ -45,8 +45,6 @@ build-native:       # This job runs in the build stage, which runs first.
       - "bin/*"
     name: "Debian native"
   before_script:
-    - cat /etc/apt/sources.list.d/debian.sources
-    - if [ $DigitalOceanDebianMirror == "1" ]; then echo http://mirrors.digitalocean.com/debian | tee /etc/apt/mirrors/debian.list; fi || true
     - apt-get update
     - export APT_CACHE_DIR=`pwd`/apt-cache
     - mkdir --parents --verbose $APT_CACHE_DIR/partial/
