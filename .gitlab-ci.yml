@@ -45,8 +45,9 @@ build-native:       # This job runs in the build stage, which runs first.
       - "bin/*"
     name: "Debian native"
   before_script:
-    - sed --expression="s/deb.debian.org/mirrors.digitalocean.com/g" /etc/apt/sources.list > /etc/apt/sources.list.d/debian.list
-    - rm --force /etc/apt/sources.list
+    - ls --human-readable --all -l /etc/apt/sources.list*
+    - rem sed --expression="s/deb.debian.org/mirrors.digitalocean.com/g" /etc/apt/sources.list > /etc/apt/sources.list.d/debian.list
+    - rem rm --force /etc/apt/sources.list
     - apt-get update
     - export APT_CACHE_DIR=`pwd`/apt-cache
     - mkdir --parents --verbose $APT_CACHE_DIR/partial/
