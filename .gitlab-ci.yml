@@ -63,7 +63,7 @@ build-x86_64-linux-gnu:
     name: "x86-64"
   script:
     - *ccache
-    - export CC="x86_64-linux-gnu-gcc
+    - export CC="x86_64-linux-gnu-gcc"
     - make --directory=src CCACHE=1 LINUX64=1
 
 build-i686-w64-mingw32:
