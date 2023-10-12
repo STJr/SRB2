@@ -77,6 +77,21 @@ build-i686-linux-gnu:
     - *ccache
     - make --directory=src CCACHE=1 LINUX=1
 
+build-aarch64-linux-gnu:
+  <<: *job_build
+  artifacts:
+    paths:
+      - "bin/lsdl2srb2*"
+    name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-aarch64"
+  script:
+    - *aptcache
+    - apt-get --option dir::cache::archives="$APT_CACHE_DIR" install --no-install-recommends --yes gcc-aarch64-linux-gnu || true
+    - apt-get --option dir::cache::archives="$APT_CACHE_DIR" install --no-install-recommends --yes libsdl2-mixer-dev:arm64 libpng-dev:arm64 libcurl4-openssl-dev:arm64 libgme-dev:arm64 libopenmpt-dev:arm64
+    - export CC="aarch64-linux-gnu-gcc"
+    - export PKG_CONFIG_PATH=/usr/lib/aarch64-linux-gnu/pkgconfig
+    - *ccache
+    - make --directory=src CCACHE=1 LINUX64=1 NONX86=1
+
 build-x86_64-linux-gnu:
   <<: *job_build
   artifacts:
