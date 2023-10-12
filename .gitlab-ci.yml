@@ -76,7 +76,7 @@ build-i686-linux-gnu:
     - export CC="i686-linux-gnu-gcc"
     - export PKG_CONFIG_PATH=/usr/lib/i386-linux-gnu/pkgconfig
     - *ccache
-    - make --directory=src CCACHE=1 LINUX=1
+    - make --directory=src CCACHE=1 LINUX=1 OBJCOPY=i686-linux-gnu-objcopy OBJDUMP=i686-linux-gnu-objdump
 
 build-aarch64-linux-gnu:
   <<: *job_build
@@ -91,7 +91,7 @@ build-aarch64-linux-gnu:
     - export CC="aarch64-linux-gnu-gcc"
     - export PKG_CONFIG_PATH=/usr/lib/aarch64-linux-gnu/pkgconfig
     - *ccache
-    - make --directory=src CCACHE=1 LINUX64=1 NONX86=1
+    - make --directory=src CCACHE=1 LINUX64=1 NONX86=1 OBJCOPY=aarch64-linux-gnu-objcopy OBJDUMP=aarch64-linux-gnu-objdump
 
 build-x86_64-linux-gnu:
   <<: *job_build
@@ -106,7 +106,7 @@ build-x86_64-linux-gnu:
     - export CC="x86_64-linux-gnu-gcc"
     - export PKG_CONFIG_PATH=/usr/lib/x86_64-linux-gnu/pkgconfig
     - *ccache
-    - make --directory=src CCACHE=1 LINUX64=1
+    - make --directory=src CCACHE=1 LINUX64=1 OBJCOPY=x86_64-linux-gnu-objcopy OBJDUMP=x86_64-linux-gnu-objdump
 
 build-i686-w64-mingw32:
   <<: *job_build
