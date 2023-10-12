@@ -76,7 +76,7 @@ build-i686-w64-mingw32:
     name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-Win32"
   script:
     - *ccache
-    - apt-get --option dir::cache::archives="$APT_CACHE_DIR" install --no-install-recommends --yes gcc-mingw-w64-win32
+    - apt-get --option dir::cache::archives="$APT_CACHE_DIR" install --no-install-recommends --yes gcc-mingw-w64-i686-win32
     - apt-get --option dir::cache::archives="$APT_CACHE_DIR" autoclean
     - make --directory=src CCACHE=1 MINGW=1 PREFIX=i686-w64-mingw32
 
