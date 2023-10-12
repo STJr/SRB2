@@ -76,7 +76,7 @@ build-i686-w64-mingw32:
     name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-Win32"
   script:
     - *ccache
-    - apt-get --option dir::cache::archives="$APT_CACHE_DIR" install --no-install-recommends --yes gcc-mingw-w64
+    - apt-get --option dir::cache::archives="$APT_CACHE_DIR" install --no-install-recommends --yes gcc-mingw-w64-win32
     - apt-get --option dir::cache::archives="$APT_CACHE_DIR" autoclean
     - make --directory=src CCACHE=1 MINGW=1 PREFIX=i686-w64-mingw32
 
@@ -88,6 +88,6 @@ build-x86_64-w64-mingw32:
     name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-Win64"
   script:
     - *ccache
-    - apt-get --option dir::cache::archives="$APT_CACHE_DIR" install --no-install-recommends --yes gcc-mingw-w64-x86-64
+    - apt-get --option dir::cache::archives="$APT_CACHE_DIR" install --no-install-recommends --yes gcc-mingw-w64-x86-64-win32
     - apt-get --option dir::cache::archives="$APT_CACHE_DIR" autoclean
     - make --directory=src CCACHE=1 MINGW64=1 PREFIX=x86_64-w64-mingw32
