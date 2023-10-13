@@ -27,7 +27,6 @@ stages:          # List of stages for jobs, and their order of execution
 .aptcache_Scripts: &aptcache
   - export APT_CACHE_DIR=`pwd`/apt-cache
   - mkdir --parents --verbose $APT_CACHE_DIR/partial/
-  
 
 .job_template: &job_build # This job runs in the build stage, which runs first.
   stage: build
