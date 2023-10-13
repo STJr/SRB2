@@ -28,9 +28,11 @@ stages:          # List of stages for jobs, and their order of execution
   - export APT_CACHE_DIR=`pwd`/apt-cache
   - mkdir --parents --verbose $APT_CACHE_DIR/partial/
 
-.job_template: &job_build # This job runs in the build stage, which runs first.
-  stage: build
+default:
   image: debian:stable-slim
+
+.job_template: &job_build # This job runs in the build stage, which runs first.
+  stage: build  
   variables:
     CCACHE_MAXSIZE: "50M"
     GIT_STRATEGY: clone
@@ -136,3 +138,18 @@ build-x86_64-w64-mingw32:
     - apt-get --option dir::cache::archives="$APT_CACHE_DIR" install --no-install-recommends --yes gcc-mingw-w64-x86-64-win32
     - *ccache
     - make --directory=src CCACHE=1 MINGW64=1 PREFIX=x86_64-w64-mingw32
+
+build-testing:
+  <<: *job_build
+  image: debian:testing-slim
+  allow_failure: true
+  artifacts:
+    paths:
+      - "bin/lsdl2srb2*"
+    name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-testing"
+  script:
+    - *aptcache
+    - apt-get --option dir::cache::archives="$APT_CACHE_DIR" install --no-install-recommends --yes gcc
+    - apt-get --option dir::cache::archives="$APT_CACHE_DIR" install --no-install-recommends --yes libsdl2-mixer-dev libpng-dev libcurl4-openssl-dev libgme-dev libopenmpt-dev
+    - *ccache
+    - make --directory=src CCACHE=1 NONX86=1
