@@ -56,15 +56,18 @@ endif
 
 # This must have high to low order.
 gcc_versions:=\
-	102 101\
-	93 92 91\
-	84 83 82 81\
+	132 131\
+    123 122 121\
+    114 113 112 111\
+	105 104 103 102 101\
+	95 94 93 92 91\
+	85 84 83 82 81\
 	75 74 73 72 71\
 	64 63 62 61\
 	55 54 53 52 51\
 	49 48 47 46 45 44 43 42 41 40
 
-latest_gcc_version:=10.2
+latest_gcc_version:=13.2
 
 # Automatically set version flag, but not if one was
 # manually set. And don't bother if this is a clean only
