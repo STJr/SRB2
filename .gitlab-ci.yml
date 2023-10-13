@@ -71,7 +71,7 @@ build-i686-linux-gnu:
   script:
     - *aptcache
     - apt-get --option dir::cache::archives="$APT_CACHE_DIR" install --no-install-recommends --yes gcc-i686-linux-gnu || apt-get --option dir::cache::archives="$APT_CACHE_DIR" install --no-install-recommends --yes gcc
-    - apt-get --option dir::cache::archives="$APT_CACHE_DIR" install --no-install-recommends --yes libsdl2-mixer-dev:i386 libpng-dev:i386 libcurl4-openssl-dev:i386 libgme-dev:i386 libopenmpt-dev:i386 
+    - apt-get --option dir::cache::archives="$APT_CACHE_DIR" --option APT::Architecture="i386" install --no-install-recommends --yes libsdl2-mixer-dev libpng-dev libcurl4-openssl-dev libgme-dev libopenmpt-dev
     - export CC=i686-linux-gnu-gcc
     - export OBJCOPY=i686-linux-gnu-objcopy
     - export OBJDUMP=i686-linux-gnu-objdump
@@ -88,7 +88,7 @@ build-aarch64-linux-gnu:
   script:
     - *aptcache
     - apt-get --option dir::cache::archives="$APT_CACHE_DIR" install --no-install-recommends --yes gcc-aarch64-linux-gnu || apt-get --option dir::cache::archives="$APT_CACHE_DIR" install --no-install-recommends --yes gcc
-    - apt-get --option dir::cache::archives="$APT_CACHE_DIR" install --no-install-recommends --yes libsdl2-mixer-dev:arm64 libpng-dev:arm64 libcurl4-openssl-dev:arm64 libgme-dev:arm64 libopenmpt-dev:arm64
+    - apt-get --option dir::cache::archives="$APT_CACHE_DIR" --option APT::Architecture="arm64" install --no-install-recommends --yes libsdl2-mixer-dev libpng-dev libcurl4-openssl-dev libgme-dev libopenmpt-dev
     - export CC=aarch64-linux-gnu-gcc
     - export OBJCOPY=aarch64-linux-gnu-objcopy
     - export OBJDUMP=aarch64-linux-gnu-objdump
@@ -105,7 +105,7 @@ build-x86_64-linux-gnu:
   script:
     - *aptcache
     - apt-get --option dir::cache::archives="$APT_CACHE_DIR" install --no-install-recommends --yes gcc-x86-64-linux-gnu || apt-get --option dir::cache::archives="$APT_CACHE_DIR" install --no-install-recommends --yes gcc
-    - apt-get --option dir::cache::archives="$APT_CACHE_DIR" install --no-install-recommends --yes libsdl2-mixer-dev:amd64 libpng-dev:amd64 libcurl4-openssl-dev:amd64 libgme-dev:amd64 libopenmpt-dev:amd64
+    - apt-get --option dir::cache::archives="$APT_CACHE_DIR" --option APT::Architecture="amd64" install --no-install-recommends --yes libsdl2-mixer-dev libpng-dev libcurl4-openssl-dev libgme-dev libopenmpt-dev
     - export CC=x86_64-linux-gnu-gcc
     - export OBJCOPY=x86_64-linux-gnu-objcopy
     - export OBJDUMP=x86_64-linux-gnu-objdump
