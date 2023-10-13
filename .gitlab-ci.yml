@@ -54,6 +54,7 @@ default:
     - dpkg --add-architecture arm64
     - apt-get --quiet --quiet update
     - *aptcache
+    - apt-get --no-install-recommends --quiet --quiet --yes --option dir::cache::archives="$APT_CACHE_DIR" install apt-utils
     - apt-get --no-install-recommends --quiet --quiet --yes --option dir::cache::archives="$APT_CACHE_DIR" install make git ccache
     - *ccache
     - ccache --zero-stats || true
@@ -79,7 +80,7 @@ build-i686-linux-gnu:
     - export OBJDUMP=i686-linux-gnu-objdump
     - export PKG_CONFIG_PATH=/usr/lib/i386-linux-gnu/pkgconfig
     - *ccache
-    - make --directory=src CCACHE=1 LINUX=1
+    - make --directory=src --keep-going CCACHE=1 ERRORMODE=1 LINUX=1
 
 build-aarch64-linux-gnu:
   <<: *job_build
@@ -96,7 +97,7 @@ build-aarch64-linux-gnu:
     - export OBJDUMP=aarch64-linux-gnu-objdump
     - export PKG_CONFIG_PATH=/usr/lib/aarch64-linux-gnu/pkgconfig
     - *ccache
-    - make --directory=src CCACHE=1 LINUX64=1 NONX86=1
+    - make --directory=src --keep-going CCACHE=1 ERRORMODE=1 LINUX64=1 NONX86=1
 
 build-x86_64-linux-gnu:
   <<: *job_build
@@ -113,7 +114,7 @@ build-x86_64-linux-gnu:
     - export OBJDUMP=x86_64-linux-gnu-objdump
     - export PKG_CONFIG_PATH=/usr/lib/x86_64-linux-gnu/pkgconfig
     - *ccache
-    - make --directory=src CCACHE=1 LINUX64=1
+    - make --directory=src --keep-going CCACHE=1 ERRORMODE=1 LINUX64=1
 
 build-i686-w64-mingw32:
   <<: *job_build
@@ -125,7 +126,7 @@ build-i686-w64-mingw32:
     - *aptcache
     - apt-get --no-install-recommends --quiet --quiet --yes --option dir::cache::archives="$APT_CACHE_DIR" install gcc-mingw-w64-i686-win32
     - *ccache
-    - make --directory=src CCACHE=1 MINGW=1 PREFIX=i686-w64-mingw32
+    - make --directory=src --keep-going CCACHE=1 ERRORMODE=1 MINGW=1 PREFIX=i686-w64-mingw32
 
 build-x86_64-w64-mingw32:
   <<: *job_build
@@ -137,7 +138,7 @@ build-x86_64-w64-mingw32:
     - *aptcache
     - apt-get --no-install-recommends --quiet --quiet --yes --option dir::cache::archives="$APT_CACHE_DIR" install gcc-mingw-w64-x86-64-win32
     - *ccache
-    - make --directory=src CCACHE=1 MINGW64=1 PREFIX=x86_64-w64-mingw32
+    - make --directory=src --keep-going CCACHE=1 ERRORMODE=1 MINGW64=1 PREFIX=x86_64-w64-mingw32
 
 build-testing:
   <<: *job_build
@@ -152,4 +153,4 @@ build-testing:
     - apt-get --no-install-recommends --quiet --quiet --yes --option dir::cache::archives="$APT_CACHE_DIR" install gcc
     - apt-get --no-install-recommends --quiet --quiet --yes --option dir::cache::archives="$APT_CACHE_DIR" install libsdl2-mixer-dev libpng-dev libcurl4-openssl-dev libgme-dev libopenmpt-dev
     - *ccache
-    - make --directory=src CCACHE=1 NONX86=1
+    - make --directory=src --keep-going CCACHE=1 ERRORMODE=1 NONX86=1
