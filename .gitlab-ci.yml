@@ -66,6 +66,50 @@ default:
     - *ccache
     - ccache --show-stats
 
+build-testing:
+  <<: *job_build
+  image: debian:testing-slim
+  allow_failure: true
+  artifacts:
+    paths:
+      - "bin/lsdl2srb2*"
+    name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-testing"
+  script:
+    - *aptcache
+    - apt-get --no-install-recommends --quiet --quiet --yes --option dir::cache::archives="$APT_CACHE_DIR" install gcc
+    - apt-get --no-install-recommends --quiet --quiet --yes --option dir::cache::archives="$APT_CACHE_DIR" install libsdl2-mixer-dev libpng-dev libcurl4-openssl-dev libgme-dev libopenmpt-dev
+    - *ccache
+    - make --directory=src --keep-going CCACHE=1 ERRORMODE=1 NONX86=1 || make --directory=src --keep-going CCACHE=1 ERRORMODE=1 NONX86=1
+
+build-i686-w64-mingw32:
+  <<: *job_build
+  artifacts:
+    paths:
+      - "bin/srb2win.exe*"
+    name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-Win32"
+  script:
+    - *aptcache
+    - apt-get --no-install-recommends --quiet --quiet --yes --option dir::cache::archives="$APT_CACHE_DIR" install gcc-mingw-w64-i686-win32
+    - *ccache
+    - make --directory=src --keep-going CCACHE=1 ERRORMODE=1 MINGW=1 PREFIX=i686-w64-mingw32 || make --directory=src --keep-going CCACHE=1 ERRORMODE=1 MINGW=1 PREFIX=i686-w64-mingw32
+
+build-x86_64-linux-gnu:
+  <<: *job_build
+  artifacts:
+    paths:
+      - "bin/lsdl2srb2*"
+    name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-x86-64"
+  script:
+    - *aptcache
+    - apt-get --no-install-recommends --quiet --quiet --yes --option dir::cache::archives="$APT_CACHE_DIR" install gcc-x86-64-linux-gnu || apt-get --no-install-recommends --quiet --quiet --yes --option dir::cache::archives="$APT_CACHE_DIR" install gcc
+    - apt-get --no-install-recommends --quiet --quiet --yes --option dir::cache::archives="$APT_CACHE_DIR" install libsdl2-mixer-dev:amd64 libpng-dev:amd64 libcurl4-openssl-dev:amd64 libgme-dev:amd64 libopenmpt-dev:amd64
+    - export CC=x86_64-linux-gnu-gcc
+    - export OBJCOPY=x86_64-linux-gnu-objcopy
+    - export OBJDUMP=x86_64-linux-gnu-objdump
+    - export PKG_CONFIG_PATH=/usr/lib/x86_64-linux-gnu/pkgconfig
+    - *ccache
+    - make --directory=src --keep-going CCACHE=1 ERRORMODE=1 LINUX64=1 || make --directory=src --keep-going CCACHE=1 ERRORMODE=1 LINUX64=1
+
 build-i686-linux-gnu:
   <<: *job_build
   artifacts:
@@ -100,35 +144,6 @@ build-aarch64-linux-gnu:
     - *ccache
     - make --directory=src --keep-going CCACHE=1 ERRORMODE=1 LINUX64=1 NONX86=1 || make --directory=src --keep-going CCACHE=1 ERRORMODE=1 LINUX64=1 NONX86=1
 
-build-x86_64-linux-gnu:
-  <<: *job_build
-  artifacts:
-    paths:
-      - "bin/lsdl2srb2*"
-    name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-x86-64"
-  script:
-    - *aptcache
-    - apt-get --no-install-recommends --quiet --quiet --yes --option dir::cache::archives="$APT_CACHE_DIR" install gcc-x86-64-linux-gnu || apt-get --no-install-recommends --quiet --quiet --yes --option dir::cache::archives="$APT_CACHE_DIR" install gcc
-    - apt-get --no-install-recommends --quiet --quiet --yes --option dir::cache::archives="$APT_CACHE_DIR" install libsdl2-mixer-dev:amd64 libpng-dev:amd64 libcurl4-openssl-dev:amd64 libgme-dev:amd64 libopenmpt-dev:amd64
-    - export CC=x86_64-linux-gnu-gcc
-    - export OBJCOPY=x86_64-linux-gnu-objcopy
-    - export OBJDUMP=x86_64-linux-gnu-objdump
-    - export PKG_CONFIG_PATH=/usr/lib/x86_64-linux-gnu/pkgconfig
-    - *ccache
-    - make --directory=src --keep-going CCACHE=1 ERRORMODE=1 LINUX64=1 || make --directory=src --keep-going CCACHE=1 ERRORMODE=1 LINUX64=1
-
-build-i686-w64-mingw32:
-  <<: *job_build
-  artifacts:
-    paths:
-      - "bin/srb2win.exe*"
-    name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-Win32"
-  script:
-    - *aptcache
-    - apt-get --no-install-recommends --quiet --quiet --yes --option dir::cache::archives="$APT_CACHE_DIR" install gcc-mingw-w64-i686-win32
-    - *ccache
-    - make --directory=src --keep-going CCACHE=1 ERRORMODE=1 MINGW=1 PREFIX=i686-w64-mingw32 || make --directory=src --keep-going CCACHE=1 ERRORMODE=1 MINGW=1 PREFIX=i686-w64-mingw32
-
 build-x86_64-w64-mingw32:
   <<: *job_build
   artifacts:
@@ -140,18 +155,3 @@ build-x86_64-w64-mingw32:
     - apt-get --no-install-recommends --quiet --quiet --yes --option dir::cache::archives="$APT_CACHE_DIR" install gcc-mingw-w64-x86-64-win32
     - *ccache
     - make --directory=src --keep-going CCACHE=1 ERRORMODE=1 MINGW64=1 PREFIX=x86_64-w64-mingw32 || make --directory=src --keep-going CCACHE=1 ERRORMODE=1 MINGW64=1 PREFIX=x86_64-w64-mingw32
-
-build-testing:
-  <<: *job_build
-  image: debian:testing-slim
-  allow_failure: true
-  artifacts:
-    paths:
-      - "bin/lsdl2srb2*"
-    name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-testing"
-  script:
-    - *aptcache
-    - apt-get --no-install-recommends --quiet --quiet --yes --option dir::cache::archives="$APT_CACHE_DIR" install gcc
-    - apt-get --no-install-recommends --quiet --quiet --yes --option dir::cache::archives="$APT_CACHE_DIR" install libsdl2-mixer-dev libpng-dev libcurl4-openssl-dev libgme-dev libopenmpt-dev
-    - *ccache
-    - make --directory=src --keep-going CCACHE=1 ERRORMODE=1 NONX86=1 || make --directory=src --keep-going CCACHE=1 ERRORMODE=1 NONX86=1
