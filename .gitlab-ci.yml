@@ -71,7 +71,7 @@ build-i686-linux-gnu:
   script:
     - *aptcache
     - apt-get --option dir::cache::archives="$APT_CACHE_DIR" install --no-install-recommends --yes gcc-i686-linux-gnu || apt-get --option dir::cache::archives="$APT_CACHE_DIR" install --no-install-recommends --yes gcc
-    - apt-get --option dir::cache::archives="$APT_CACHE_DIR" install --no-install-recommends --yes libsdl2-mixer-dev:i386 libpng-dev:i386 libcurl4-openssl-dev:i386 libgme-dev:i386 libopenmpt-dev:i386 
+    - apt-get --option dir::cache::archives="$APT_CACHE_DIR" install --no-install-recommends --yes libsdl2-mixer-dev:i386 libpng-dev:i386 libcurl4-openssl-dev:i386 libgme-dev:i386 libopenmpt-dev:i386
     - export CC=i686-linux-gnu-gcc
     - export OBJCOPY=i686-linux-gnu-objcopy
     - export OBJDUMP=i686-linux-gnu-objdump
