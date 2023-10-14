@@ -47,6 +47,7 @@ default:
         - cache-$CI_PROJECT_PATH_SLUG-default
       paths:
         - ccache
+        - ccache_statslog
     - key: apt-$CI_JOB_IMAGE
       paths:
         - apt-cache
