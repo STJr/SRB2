@@ -48,7 +48,7 @@ default:
     - echo -e "\e[0Ksection_start:`date +%s`:apt_pre[collapsed=true]\r\e[0Kinstalling pre packages"
     - apt-get install apt-utils
     - echo -e "\e[0Ksection_end:`date +%s`:apt_pre\r\e[0K"
-    - echo -e "\e[0Ksection_start:`date +%s`:apt_common[collapsed=true]\r\e[0Kinstalling common packages "
+    - echo -e "\e[0Ksection_start:`date +%s`:apt_common[collapsed=true]\r\e[0Kinstalling common packages"
     - apt-get install make git ccache
     - echo -e "\e[0Ksection_end:`date +%s`:apt_common\r\e[0K"
     - *ccache
