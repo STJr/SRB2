@@ -90,7 +90,7 @@ build-i686-w64-mingw32:
     name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-Win32"
   script:
     - *aptcache
-    - echo -e "\e[0Ksection_start:`date +%s`:apt_toolchain[collapsed=true]\r\e[0Kinstalling toolchain packages
+    - echo -e "\e[0Ksection_start:`date +%s`:apt_toolchain[collapsed=true]\r\e[0Kinstalling toolchain packages"
     - apt-get install gcc-mingw-w64-i686-win32
     - echo -e "\e[0Ksection_end:`date +%s`:apt_toolchain\r\e[0K"
     - *ccache
@@ -106,7 +106,7 @@ build-x86_64-linux-gnu:
     name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-x86-64"
   script:
     - *aptcache
-    - echo -e "\e[0Ksection_start:`date +%s`:apt_toolchain[collapsed=true]\r\e[0Kinstalling toolchain packages
+    - echo -e "\e[0Ksection_start:`date +%s`:apt_toolchain[collapsed=true]\r\e[0Kinstalling toolchain packages"
     - apt-get install gcc-x86-64-linux-gnu || apt-get install gcc
     - echo -e "\e[0Ksection_end:`date +%s`:apt_toolchain\r\e[0K"
     - echo -e "\e[0Ksection_start:`date +%s`:apt_development[collapsed=true]\r\e[0Kinstalling development packages"
@@ -129,7 +129,7 @@ build-i686-linux-gnu:
     name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-i686"
   script:
     - *aptcache
-    - echo -e "\e[0Ksection_start:`date +%s`:apt_toolchain[collapsed=true]\r\e[0Kinstalling toolchain packages
+    - echo -e "\e[0Ksection_start:`date +%s`:apt_toolchain[collapsed=true]\r\e[0Kinstalling toolchain packages"
     - apt-get install gcc-i686-linux-gnu || apt-get install gcc
     - echo -e "\e[0Ksection_end:`date +%s`:apt_toolchain\r\e[0K"
     - echo -e "\e[0Ksection_start:`date +%s`:apt_development[collapsed=true]\r\e[0Kinstalling development packages"
@@ -152,7 +152,7 @@ build-aarch64-linux-gnu:
     name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-aarch64"
   script:
     - *aptcache
-    - echo -e "\e[0Ksection_start:`date +%s`:apt_toolchain[collapsed=true]\r\e[0Kinstalling toolchain packages
+    - echo -e "\e[0Ksection_start:`date +%s`:apt_toolchain[collapsed=true]\r\e[0Kinstalling toolchain packages"
     - apt-get install gcc-aarch64-linux-gnu || apt-get install gcc
     - echo -e "\e[0Ksection_end:`date +%s`:apt_toolchain\r\e[0K"
     - echo -e "\e[0Ksection_start:`date +%s`:apt_development[collapsed=true]\r\e[0Kinstalling development packages"
@@ -175,7 +175,7 @@ build-x86_64-w64-mingw32:
     name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-Win64"
   script:
     - *aptcache
-    - echo -e "\e[0Ksection_start:`date +%s`:apt_toolchain[collapsed=true]\r\e[0Kinstalling toolchain packages
+    - echo -e "\e[0Ksection_start:`date +%s`:apt_toolchain[collapsed=true]\r\e[0Kinstalling toolchain packages"
     - apt-get install gcc-mingw-w64-x86-64-win32
     - echo -e "\e[0Ksection_end:`date +%s`:apt_toolchain\r\e[0K"
     - *ccache
