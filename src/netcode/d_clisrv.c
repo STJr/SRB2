@@ -227,6 +227,7 @@ static void Got_AddPlayer(UINT8 **p, INT32 playernum)
 
 	newplayer->jointime = 0;
 	newplayer->quittime = 0;
+	newplayer->lastinputtime = 0;
 
 	READSTRINGN(*p, player_names[newplayernum], MAXPLAYERNAME);
 
@@ -1282,19 +1283,21 @@ static void IdleUpdate(void)
 
 	for (i = 1; i < MAXPLAYERS; i++)
 	{
-		if (cv_idletime.value && playeringame[i] && playernode[i] != UINT8_MAX && !players[i].quittime && !players[i].spectator && !IsPlayerAdmin(i))
+		if (cv_idletime.value && playeringame[i] && playernode[i] != UINT8_MAX && !players[i].quittime && !players[i].spectator && !players[i].bot && !IsPlayerAdmin(i) && i != serverplayer)
 		{
 			if (players[i].cmd.forwardmove || players[i].cmd.sidemove || players[i].cmd.buttons)
-				players[i].lastinputtime = gametime;
+				players[i].lastinputtime = 0;
+			else
+				players[i].lastinputtime++;
 
-			if (gametime - players[i].lastinputtime > (tic_t)cv_idletime.value * TICRATE * 60)
+			if (players[i].lastinputtime > (tic_t)cv_idletime.value * TICRATE * 60)
 			{
-				players[i].lastinputtime = gametime;
+				players[i].lastinputtime = 0;
 				SendKick(i, KICK_MSG_IDLE | KICK_MSG_KEEP_BODY);
 			}
 		}
 		else
-			players[i].lastinputtime = gametime;
+			players[i].lastinputtime = 0;
 	}
 }
 
