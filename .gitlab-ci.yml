@@ -92,8 +92,8 @@ build-x86_64-linux-gnu:
     name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-x86-64"
   script:
     - *aptcache
-    - apt-get install gcc-x86-64-linux-gnu || apt-get gcc
-    - apt-get libsdl2-mixer-dev:amd64 libpng-dev:amd64 libcurl4-openssl-dev:amd64 libgme-dev:amd64 libopenmpt-dev:amd64
+    - apt-get install gcc-x86-64-linux-gnu || apt-get install gcc
+    - apt-get install libsdl2-mixer-dev:amd64 libpng-dev:amd64 libcurl4-openssl-dev:amd64 libgme-dev:amd64 libopenmpt-dev:amd64
     - export CC=x86_64-linux-gnu-gcc
     - export OBJCOPY=x86_64-linux-gnu-objcopy
     - export OBJDUMP=x86_64-linux-gnu-objdump
@@ -109,7 +109,7 @@ build-i686-linux-gnu:
     name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-i686"
   script:
     - *aptcache
-    - apt-get gcc-i686-linux-gnu || apt-get install gcc
+    - apt-get install gcc-i686-linux-gnu || apt-get install gcc
     - apt-get install libsdl2-mixer-dev:i386 libpng-dev:i386 libcurl4-openssl-dev:i386 libgme-dev:i386 libopenmpt-dev:i386
     - export CC=i686-linux-gnu-gcc
     - export OBJCOPY=i686-linux-gnu-objcopy
