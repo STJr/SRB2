@@ -139,7 +139,7 @@ build-aarch64-linux-gnu:
     name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-aarch64"
   script:
     - *aptcache
-    - apt-get --no-install-recommends --quiet --quiet --yes --option dir::cache::archives="$APT_CACHE_DIR" install gcc-aarch64-linux-gnu || apt-get --no-install-recommend --quiet --quiet --yes --option dir::cache::archives="$APT_CACHE_DIR" install  gcc
+    - apt-get --no-install-recommends --quiet --quiet --yes --option dir::cache::archives="$APT_CACHE_DIR" install gcc-aarch64-linux-gnu || apt-get --no-install-recommend --quiet --quiet --yes --option dir::cache::archives="$APT_CACHE_DIR" install gcc
     - apt-get --no-install-recommends --quiet --quiet --yes --option dir::cache::archives="$APT_CACHE_DIR" install libsdl2-mixer-dev:arm64 libpng-dev:arm64 libcurl4-openssl-dev:arm64 libgme-dev:arm64 libopenmpt-dev:arm64
     - export CC=aarch64-linux-gnu-gcc
     - export OBJCOPY=aarch64-linux-gnu-objcopy
