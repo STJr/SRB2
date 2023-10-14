@@ -23,6 +23,7 @@ stages:          # List of stages for jobs, and their order of execution
   - export CCACHE_BASEDIR="$PWD"
   - export CCACHE_DIR="$PWD/ccache"
   - export CCACHE_COMPILERCHECK=content
+  - export CCACHE_STATSLOG=CCACHE_DIR="$PWD/ccache_statslog"
 
 .aptcache_Scripts: &aptcache
   - export APT_CACHE_DIR=`pwd`/apt-cache
@@ -35,7 +36,7 @@ default:
 .job_template: &job_build # This job runs in the build stage, which runs first.
   stage: build
   variables:
-    CCACHE_MAXSIZE: "50M"
+    CCACHE_MAXSIZE: 50M
     GIT_STRATEGY: clone
     GIT_CLONE_PATH: $CI_BUILDS_DIR/$CI_CONCURRENT_ID/$CI_PROJECT_PATH
   cache:
@@ -65,6 +66,7 @@ default:
     - apt-get --quiet --quiet --option dir::cache::archives="$APT_CACHE_DIR" autoclean
     - *ccache
     - ccache --show-stats
+    - ccache --show-log-stats || true
 
 build-testing:
   <<: *job_build
