@@ -23,7 +23,8 @@ stages:          # List of stages for jobs, and their order of execution
   - export CCACHE_BASEDIR="$PWD"
   - export CCACHE_DIR="$PWD/ccache"
   - export CCACHE_COMPILERCHECK=content
-  - export CCACHE_STATSLOG=CCACHE_DIR="$PWD/ccache_statslog"
+  - export CCACHE_STATS=true
+  - export CCACHE_STATSLOG="$PWD/ccache_statslog"
 
 .aptcache_Scripts: &aptcache
   - export APT_CACHE_DIR=`pwd`/apt-cache
