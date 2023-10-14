@@ -3732,7 +3732,7 @@ void P_SlideMove(mobj_t *mo)
 	vertex_t v1, v2; // fake vertexes
 	static line_t junk; // fake linedef
 
-	memset(&junk, 1, sizeof(junk));
+	memset(&junk, 0x00, sizeof(junk));
 
 	if (tmhitthing && mo->z + mo->height > tmhitthing->z && mo->z < tmhitthing->z + tmhitthing->height)
 	{
