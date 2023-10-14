@@ -63,6 +63,7 @@ default:
 
     - - echo -e "\e[0Ksection_start:`date +%s`:ccache_config[collapsed=true]\r\e[0KSetting up ccache config"
       - echo Adding ccache configution option
+      - mkdir --parents --verbose ~/.ccache
       - touch ~/.ccache/ccache.conf
       - echo base_dir = "$PWD"                  | tee ~/.ccache/ccache.conf
       - echo cache_dir = "$PWD/ccache"          | tee ~/.ccache/ccache.conf
