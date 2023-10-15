@@ -134,7 +134,7 @@ build-testing:
   artifacts:
     paths:
       - "bin/lsdl2srb2*"
-    name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-testing"
+    name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-testing-gcc"
 
   variables:
     CC: gcc
@@ -314,6 +314,42 @@ build-clang:
     paths:
       - "bin/lsdl2srb2*"
     name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-clang"
+
+  variables:
+    CC: clang
+    CFLAGS: -Wno-cast-align
+
+  script:
+    - - |
+       echo -e "\e[0Ksection_start:`date +%s`:apt_toolchain[collapsed=true]\r\e[0KInstalling toolchain packages"
+      - apt-get install clang
+      - |
+       echo -e "\e[0Ksection_end:`date +%s`:apt_toolchain\r\e[0K"
+
+    - - |
+       echo -e "\e[0Ksection_start:`date +%s`:apt_development[collapsed=true]\r\e[0KInstalling development packages"
+      - apt-get install libsdl2-mixer-dev libpng-dev libcurl4-openssl-dev libgme-dev libopenmpt-dev
+      - |
+       echo -e "\e[0Ksection_end:`date +%s`:apt_development\r\e[0K"
+
+    - - |
+       echo -e "\e[0Ksection_start:`date +%s`:make[collapsed=false]\r\e[0KCompiling SRB2"
+      - make --directory=src --keep-going CCACHE=1 ERRORMODE=1 NONX86=1 || make --directory=src --keep-going CCACHE=1 ERRORMODE=1 NONX86=1
+      - |
+       echo -e "\e[0Ksection_end:`date +%s`:make\r\e[0K"
+
+
+build-clang-testing:
+  <<: *job_build
+
+  image: debian:testing-slim
+
+  allow_failure: true
+
+  artifacts:
+    paths:
+      - "bin/lsdl2srb2*"
+    name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-testing-clang"
 
   variables:
     CC: clang
