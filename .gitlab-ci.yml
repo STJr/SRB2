@@ -9,7 +9,10 @@ default:
   variables:
     GIT_STRATEGY: clone
     GIT_CLONE_PATH: $CI_BUILDS_DIR/$CI_CONCURRENT_ID/$CI_PROJECT_PATH
-    DEBIAN_FRONTEND: noninteractive
+    DEBIAN_FRONTEND: "noninteractive"
+    DEBIAN_PRIORITY: "low"
+    DEBCONF_NOWARNINGS: "yes"
+    DEBCONF_NONINTERACTIVE_SEEN: "true"
     ERRORMODE: 1
   cache:
     - key: ccache-$CI_PROJECT_PATH_SLUG-$CI_JOB_NAME_SLUG
@@ -48,6 +51,10 @@ default:
     - - echo -e "\e[0Ksection_start:`date +%s`:apt_pre[collapsed=true]\r\e[0KInstalling pre packages"
       - apt-get install apt-utils
       - echo -e "\e[0Ksection_end:`date +%s`:apt_pre\r\e[0K"
+
+    - - echo -e "\e[0Ksection_start:`date +%s`:apt_upgrade[collapsed=true]\r\e[0KUpdating existing packages (dry-run)"
+      - apt-get upgrade --simulate
+      - echo -e "\e[0Ksection_end:`date +%s`:apt_upgraden\r\e[0K"
 
     - - echo -e "\e[0Ksection_start:`date +%s`:apt_common[collapsed=true]\r\e[0KInstalling common packages"
       - apt-get install make git ccache
