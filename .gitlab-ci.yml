@@ -101,10 +101,6 @@ build-testing:
   variables:
     CC: gcc
   script:
-    - - echo -e "\e[0Ksection_start:`date +%s`:debconf[collapsed=true]\r\e[0KSetup debconf's environment"
-      - *debconf
-      - echo -e "\e[0Ksection_end:`date +%s`:debconf\r\e[0K"
-
     - - echo -e "\e[0Ksection_start:`date +%s`:apt_toolchain[collapsed=true]\r\e[0KInstalling toolchain packages"
       - apt-get install gcc
       - echo -e "\e[0Ksection_end:`date +%s`:apt_toolchain\r\e[0K"
