@@ -486,7 +486,7 @@ void HWR_InitModels(void)
 	size_t i;
 	INT32 s;
 	FILE *f;
-	char name[24], filename[32];
+	char name[26], filename[32];
 	float scale, offset;
 	size_t prefixlen;
 
