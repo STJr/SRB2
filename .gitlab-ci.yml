@@ -128,13 +128,17 @@ variables:
 build-testing:
   <<: *job_build
   image: debian:testing-slim
+
   allow_failure: true
+
   artifacts:
     paths:
       - "bin/lsdl2srb2*"
     name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-testing"
+
   variables:
     CC: gcc
+
   script:
     - - |
        echo -e "\e[0Ksection_start:`date +%s`:apt_toolchain[collapsed=true]\r\e[0KInstalling toolchain packages"
@@ -156,12 +160,15 @@ build-testing:
 
 build-i686-w64-mingw32:
   <<: *job_build
+
   artifacts:
     paths:
       - "bin/srb2win.exe*"
     name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-Win32"
+
   variables:
     PREFIX: i686-w64-mingw32
+
   script:
     - - |
        echo -e "\e[0Ksection_start:`date +%s`:apt_toolchain[collapsed=true]\r\e[0KInstalling toolchain packages"
@@ -177,15 +184,18 @@ build-i686-w64-mingw32:
 
 build-x86_64-linux-gnu:
   <<: *job_build
+
   artifacts:
     paths:
       - "bin/lsdl2srb2*"
     name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-x86-64"
+
   variables:
     CC: x86_64-linux-gnu-gcc
     OBJCOPY: x86_64-linux-gnu-objcopy
     OBJDUMP: x86_64-linux-gnu-objdump
     PKG_CONFIG_PATH: /usr/lib/x86_64-linux-gnu/pkgconfig
+
   script:
     - - |
        echo -e "\e[0Ksection_start:`date +%s`:apt_toolchain[collapsed=true]\r\e[0KInstalling toolchain packages"
@@ -207,15 +217,18 @@ build-x86_64-linux-gnu:
 
 build-i686-linux-gnu:
   <<: *job_build
+
   artifacts:
     paths:
       - "bin/lsdl2srb2*"
     name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-i686"
+
   variables:
     CC: i686-linux-gnu-gcc
     OBJCOPY: i686-linux-gnu-objcopy
     OBJDUMP: i686-linux-gnu-objdump
     PKG_CONFIG_PATH: /usr/lib/i386-linux-gnu/pkgconfig
+
   script:
     - - |
        echo -e "\e[0Ksection_start:`date +%s`:apt_toolchain[collapsed=true]\r\e[0KInstalling toolchain packages"
@@ -237,15 +250,18 @@ build-i686-linux-gnu:
 
 build-aarch64-linux-gnu:
   <<: *job_build
+
   artifacts:
     paths:
       - "bin/lsdl2srb2*"
     name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-aarch64"
+
   variables:
     CC: aarch64-linux-gnu-gcc
     OBJCOPY: aarch64-linux-gnu-objcopy
     OBJDUMP: aarch64-linux-gnu-objdump
     PKG_CONFIG_PATH: /usr/lib/aarch64-linux-gnu/pkgconfig
+
   script:
     - - |
        echo -e "\e[0Ksection_start:`date +%s`:apt_toolchain[collapsed=true]\r\e[0KInstalling toolchain packages"
@@ -267,12 +283,15 @@ build-aarch64-linux-gnu:
 
 build-x86_64-w64-mingw32:
   <<: *job_build
+
   artifacts:
     paths:
       - "bin/srb2win64.exe*"
     name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-Win64"
+
   variables:
     PREFIX: x86_64-w64-mingw32
+
   script:
     - - |
        echo -e "\e[0Ksection_start:`date +%s`:apt_toolchain[collapsed=true]\r\e[0KInstalling toolchain packages"
@@ -285,3 +304,37 @@ build-x86_64-w64-mingw32:
       - make --directory=src --keep-going CCACHE=1 ERRORMODE=1 MINGW64=1 || make --directory=src --keep-going CCACHE=1 ERRORMODE=1 MINGW64=1
       - |
        echo -e "\e[0Ksection_end:`date +%s`:make\r\e[0K"
+
+build-clang:
+  <<: *job_build
+
+  allow_failure: true
+
+  artifacts:
+    paths:
+      - "bin/lsdl2srb2*"
+    name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-testing"
+
+  variables:
+    CC: clang
+    CFLAGS: -Wno-cast-align
+
+  script:
+    - - |
+       echo -e "\e[0Ksection_start:`date +%s`:apt_toolchain[collapsed=true]\r\e[0KInstalling toolchain packages"
+      - apt-get install clang
+      - |
+       echo -e "\e[0Ksection_end:`date +%s`:apt_toolchain\r\e[0K"
+
+    - - |
+       echo -e "\e[0Ksection_start:`date +%s`:apt_development[collapsed=true]\r\e[0KInstalling development packages"
+      - apt-get install libsdl2-mixer-dev libpng-dev libcurl4-openssl-dev libgme-dev libopenmpt-dev
+      - |
+       echo -e "\e[0Ksection_end:`date +%s`:apt_development\r\e[0K"
+
+    - - |
+       echo -e "\e[0Ksection_start:`date +%s`:make[collapsed=false]\r\e[0KCompiling SRB2"
+      - make --directory=src --keep-going CCACHE=1 ERRORMODE=1 NONX86=1 || make --directory=src --keep-going CCACHE=1 ERRORMODE=1 NONX86=1
+      - |
+       echo -e "\e[0Ksection_end:`date +%s`:make\r\e[0K"
+
