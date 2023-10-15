@@ -10,7 +10,6 @@ default:
     GIT_STRATEGY: clone
     GIT_CLONE_PATH: $CI_BUILDS_DIR/$CI_CONCURRENT_ID/$CI_PROJECT_PATH
     DEBIAN_FRONTEND: noninteractive
-    CCACHE: 1
     ERRORMODE: 1
   cache:
     - key: ccache-$CI_PROJECT_PATH_SLUG-$CI_JOB_NAME_SLUG
@@ -100,7 +99,7 @@ build-testing:
       - echo -e "\e[0Ksection_end:`date +%s`:apt_development\r\e[0K"
 
     - - echo -e "\e[0Ksection_start:`date +%s`:make[collapsed=false]\r\e[0KCompiling SRB2"
-      - make --directory=src --keep-going NONX86=1 || make --directory=src --keep-going NONX86=1
+      - make --directory=src --keep-going CCACHE=1 NONX86=1 || make --directory=src --keep-going CCACHE=1 NONX86=1
       - echo -e "\e[0Ksection_end:`date +%s`:make\r\e[0K"
 
 build-i686-w64-mingw32:
@@ -117,7 +116,7 @@ build-i686-w64-mingw32:
       - echo -e "\e[0Ksection_end:`date +%s`:apt_toolchain\r\e[0K"
 
     - - echo -e "\e[0Ksection_start:`date +%s`:make[collapsed=false]\r\e[0KCompiling SRB2"
-      - make --directory=src --keep-going MINGW=1 || make --directory=src --keep-going MINGW=1
+      - make --directory=src --keep-going CCACHE=1 MINGW=1 || make --directory=src --keep-going CCACHE=1 MINGW=1
       - echo -e "\e[0Ksection_end:`date +%s`:make\r\e[0K"
 
 build-x86_64-linux-gnu:
@@ -141,7 +140,7 @@ build-x86_64-linux-gnu:
       - echo -e "\e[0Ksection_end:`date +%s`:apt_development\r\e[0K"
 
     - - echo -e "\e[0Ksection_start:`date +%s`:make[collapsed=false]\r\e[0KCompiling SRB2"
-      - make --directory=src --keep-going LINUX64=1 || make --directory=src --keep-going LINUX64=1
+      - make --directory=src --keep-going CCACHE=1 LINUX64=1 || make --directory=src --keep-going CCACHE=1 LINUX64=1
       - echo -e "\e[0Ksection_end:`date +%s`:make\r\e[0K"
 
 build-i686-linux-gnu:
@@ -165,7 +164,7 @@ build-i686-linux-gnu:
       - echo -e "\e[0Ksection_end:`date +%s`:apt_development\r\e[0K"
 
     - - echo -e "\e[0Ksection_start:`date +%s`:make[collapsed=false]\r\e[0KCompiling SRB2"
-      - make --directory=src --keep-going LINUX=1 || make --directory=src --keep-going LINUX=1
+      - make --directory=src --keep-going CCACHE=1 LINUX=1 || make --directory=src --keep-going CCACHE=1 LINUX=1
       - echo -e "\e[0Ksection_end:`date +%s`:make\r\e[0K"
 
 build-aarch64-linux-gnu:
@@ -189,7 +188,7 @@ build-aarch64-linux-gnu:
       - echo -e "\e[0Ksection_end:`date +%s`:apt_development\r\e[0K"
 
     - - echo -e "\e[0Ksection_start:`date +%s`:make[collapsed=false]\r\e[0KCompiling SRB2"
-      - make --directory=src --keep-going LINUX64=1 NONX86=1 || make --directory=src --keep-going LINUX64=1 NONX86=1
+      - make --directory=src --keep-going CCACHE=1 LINUX64=1 NONX86=1 || make --directory=src --keep-going CCACHE=1 LINUX64=1 NONX86=1
       - echo -e "\e[0Ksection_end:`date +%s`:make\r\e[0K"
 
 build-x86_64-w64-mingw32:
@@ -206,5 +205,5 @@ build-x86_64-w64-mingw32:
       - echo -e "\e[0Ksection_end:`date +%s`:apt_toolchain\r\e[0K"
 
     - - echo -e "\e[0Ksection_start:`date +%s`:make[collapsed=false]\r\e[0KCompiling SRB2"
-      - make --directory=src --keep-going MINGW64=1 || make --directory=src --keep-going MINGW64=1
+      - make --directory=src --keep-going CCACHE=1 MINGW64=1 || make --directory=src --keep-going CCACHE=1 MINGW64=1
       - echo -e "\e[0Ksection_end:`date +%s`:make\r\e[0K"
