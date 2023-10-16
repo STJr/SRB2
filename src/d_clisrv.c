@@ -2743,7 +2743,6 @@ static void Command_ClearBans(void)
 static void Ban_Load_File(boolean warning)
 {
 	FILE *f;
-	size_t i;
 	const char *address, *mask;
 	char buffer[MAX_WADPATH];
 
@@ -2761,7 +2760,7 @@ static void Ban_Load_File(boolean warning)
 
 	Ban_Clear();
 
-	for (i=0; fgets(buffer, (int)sizeof(buffer), f); i++)
+	for (; fgets(buffer, (int)sizeof(buffer), f);)
 	{
 		address = strtok(buffer, " \t\r\n");
 		mask = strtok(NULL, " \t\r\n");
