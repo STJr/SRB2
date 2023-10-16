@@ -18,14 +18,15 @@ Documentation available here.
 #include <curl/curl.h>
 #endif
 
-#include "doomdef.h"
+#include "../doomdef.h"
 #include "d_clisrv.h"
-#include "command.h"
-#include "m_argv.h"
-#include "m_menu.h"
+#include "client_connection.h"
+#include "../command.h"
+#include "../m_argv.h"
+#include "../m_menu.h"
 #include "mserv.h"
 #include "i_tcp.h"/* for current_port */
-#include "i_threads.h"
+#include "../i_threads.h"
 
 /* reasonable default I guess?? */
 #define DEFAULT_BUFFER_SIZE (4096)
@@ -95,7 +96,7 @@ init_user_agent_once(void)
 {
 	if (hms_useragent[0] != '\0')
 		return;
-	
+
 	get_user_agent(hms_useragent, 512);
 }
 

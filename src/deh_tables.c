@@ -4883,7 +4883,7 @@ const char *const MENUTYPES_LIST[] = {
 	"MP_SERVER",
 	"MP_CONNECT",
 	"MP_ROOM",
-	"MP_PLAYERSETUP", // MP_PlayerSetupDef shared with SPLITSCREEN if #defined NONET
+	"MP_PLAYERSETUP",
 	"MP_SERVER_OPTIONS",
 
 	// Options

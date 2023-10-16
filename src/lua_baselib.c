@@ -26,11 +26,11 @@
 #include "y_inter.h"
 #include "hu_stuff.h"	// HU_AddChatText
 #include "console.h"
-#include "d_netcmd.h" // IsPlayerAdmin
+#include "netcode/d_netcmd.h" // IsPlayerAdmin
 #include "m_menu.h" // Player Setup menu color stuff
 #include "m_misc.h" // M_MapNumber
 #include "b_bot.h" // B_UpdateBotleader
-#include "d_clisrv.h" // CL_RemovePlayer
+#include "netcode/d_clisrv.h" // CL_RemovePlayer
 #include "i_system.h" // I_GetPreciseTime, I_GetPrecisePrecision
 
 #include "lua_script.h"
