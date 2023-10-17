@@ -34,7 +34,7 @@ variables:
       - export DEBIAN_PRIORITY="low"
       - export DEBCONF_NONINTERACTIVE_SEEN="true"
       - |
-          # debconf 
+          # debconf
           echo -e "\e[0Ksection_end:`date +%s`:debconf\r\e[0K"
     - - |
           # dpkg_aa
@@ -67,7 +67,7 @@ variables:
           # Dir::Cache::Archives
           echo Dir::Cache::Archives "$APT_CACHE_DIR"\; | tee --append /etc/apt/apt.conf.d/99build
       - |
-          # apt_conf 
+          # apt_conf
           echo -e "\e[0Ksection_end:`date +%s`:apt_conf\r\e[0K"
     - - |
           # apt_update
@@ -110,7 +110,7 @@ variables:
           # cache.conf
           echo Adding ccache configution option
       - |
-          # base_dir 
+          # base_dir
           echo base_dir = $PWD                  | tee --append ~/.ccache/ccache.conf
       - |
           # cache_dir
@@ -165,6 +165,7 @@ Debian testing GCC:
     paths:
       - "bin/"
       - "src/comptime.h"
+    expose_as: "Debian GCC testing"
     name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-testing-gcc"
 
   variables:
@@ -231,6 +232,7 @@ Debian stable:amd64:
     paths:
       - "bin/"
       - "src/comptime.h"
+    expose_as: "Debian amd64"
     name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-x86-64"
 
   variables:
@@ -271,6 +273,7 @@ Debian stable:i386:
     paths:
       - "bin/"
       - "src/comptime.h"
+    expose_as: "Debian i386"
     name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-i686"
 
   variables:
@@ -311,6 +314,7 @@ Debian stable:arm64:
     paths:
       - "bin/"
       - "src/comptime.h"
+    expose_as: "Debian arm64"
     name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-aarch64"
 
   variables:
@@ -383,7 +387,7 @@ Debian stable Clang:
     paths:
       - "bin/"
       - "src/comptime.h"
-    expose_as: "Debian with clang"
+    expose_as: "Debian Clang"
     name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-clang"
 
   variables:
@@ -412,9 +416,8 @@ Debian stable Clang:
           echo -e "\e[0Ksection_start:`date +%s`:make[collapsed=false]\r\e[0KCompiling SRB2"
       - make --directory=src --keep-going CCACHE=1 ERRORMODE=1 NONX86=1 || make --directory=src --keep-going CCACHE=1 ERRORMODE=1 NONX86=1
       - |
-          # make 
+          # make
           echo -e "\e[0Ksection_end:`date +%s`:make\r\e[0K"
-
 
 Debian testing Clang:
   extends: Debian stable Clang
@@ -425,7 +428,7 @@ Debian testing Clang:
     paths:
       - "bin/"
       - "src/comptime.h"
-    expose_as: "Debian testing with clang"
+    expose_as: "Debina Clang testing"
     name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-testing-clang"
 
   variables:
