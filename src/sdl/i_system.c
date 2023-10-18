@@ -2266,7 +2266,7 @@ void I_Sleep(UINT32 ms)
 }
 
 #ifdef NEWSIGNALHANDLER
-static void newsignalhandler_Warn(const char *pr)
+ATTRNORETURN static FUNCNORETURN void newsignalhandler_Warn(const char *pr)
 {
 	char text[128];
 

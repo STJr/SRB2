@@ -1,0 +1,436 @@
+default:
+  image: debian:stable-slim
+
+stages:          # List of stages for jobs, and their order of execution
+  - build
+
+variables:
+  GIT_STRATEGY: clone
+  GIT_CLONE_PATH: $CI_BUILDS_DIR/$CI_CONCURRENT_ID/$CI_PROJECT_PATH
+
+.job_template: &job_build # This job runs in the build stage, which runs first.
+
+  stage: build
+
+  cache:
+    - key: ccache-$CI_PROJECT_PATH_SLUG-$CI_JOB_NAME_SLUG
+      fallback_keys:
+        - cache-$CI_PROJECT_PATH_SLUG-$CI_DEFAULT_BRANCH
+        - cache-$CI_PROJECT_PATH_SLUG-default
+      paths:
+        - ccache
+        - ccache_statslog
+
+    - key: apt-$CI_JOB_IMAGE
+      paths:
+        - apt-cache
+      unprotect: true
+
+  before_script:
+    - - |
+         # debconf
+         echo -e "\e[0Ksection_start:`date +%s`:debconf[collapsed=true]\r\e[0KSetup debconf's environment"
+      - export DEBIAN_FRONTEND="noninteractive"
+      - export DEBIAN_PRIORITY="low"
+      - export DEBCONF_NONINTERACTIVE_SEEN="true"
+      - |
+          # debconf
+          echo -e "\e[0Ksection_end:`date +%s`:debconf\r\e[0K"
+    - - |
+          # dpkg_aa
+          echo -e "\e[0Ksection_start:`date +%s`:dpkg_aa[collapsed=true]\r\e[0KAdding architectures to dpkg"
+      - dpkg --add-architecture i386
+      - dpkg --add-architecture amd64
+      - dpkg --add-architecture arm64
+      - |
+          # dpkg_aa
+          echo -e "\e[0Ksection_end:`date +%s`:dpkg_aa\r\e[0K"
+    - - |
+          # apt_conf
+          echo -e "\e[0Ksection_start:`date +%s`:apt_conf[collapsed=true]\r\e[0KSetting up APT conf"
+      - export APT_CACHE_DIR=`pwd`/apt-cache
+      - mkdir --parents --verbose $APT_CACHE_DIR/partial/
+      - touch /etc/apt/apt.conf.d/99build
+      - |
+          # apt.conf
+          echo Adding options to apt.conf':'
+      - |
+          # APT::Install-Recommends
+          echo APT::Install-Recommends "false"\;       | tee --append /etc/apt/apt.conf.d/99build
+      - |
+          # quit
+          echo quiet "1"\;                             | tee --append /etc/apt/apt.conf.d/99build
+      - |
+          # APT::Get::Assume-Yes
+          echo APT::Get::Assume-Yes "true"\;           | tee --append /etc/apt/apt.conf.d/99build
+      - |
+          # Dir::Cache::Archives
+          echo Dir::Cache::Archives "$APT_CACHE_DIR"\; | tee --append /etc/apt/apt.conf.d/99build
+      - |
+          # apt_conf
+          echo -e "\e[0Ksection_end:`date +%s`:apt_conf\r\e[0K"
+    - - |
+          # apt_update
+          echo -e "\e[0Ksection_start:`date +%s`:apt_update[collapsed=true]\r\e[0KUpdating APT listing"
+      - apt-get update
+      - |
+          # apt_update
+          echo -e "\e[0Ksection_end:`date +%s`:apt_update\r\e[0K"
+
+    - - |
+          # apt_pre
+          echo -e "\e[0Ksection_start:`date +%s`:apt_pre[collapsed=true]\r\e[0KInstalling pre packages"
+      - apt-get install apt-utils
+      - |
+          # apt_pre
+          echo -e "\e[0Ksection_end:`date +%s`:apt_pre\r\e[0K"
+
+    - - |
+          # apt_upgrade
+          echo -e "\e[0Ksection_start:`date +%s`:apt_upgrade[collapsed=true]\r\e[0KUpdating existing packages"
+      - apt-get upgrade
+      - |
+          # apt_update
+          echo -e "\e[0Ksection_end:`date +%s`:apt_upgrade\r\e[0K"
+
+    - - |
+          # apt_common
+          echo -e "\e[0Ksection_start:`date +%s`:apt_common[collapsed=true]\r\e[0KInstalling common packages"
+      - apt-get install make git ccache
+      - |
+          # apt_common
+          echo -e "\e[0Ksection_end:`date +%s`:apt_common\r\e[0K"
+
+    - - |
+          # ccache_config
+          echo -e "\e[0Ksection_start:`date +%s`:ccache_config[collapsed=true]\r\e[0KSetting up ccache config"
+      - mkdir --parents --verbose ~/.ccache/
+      - touch ~/.ccache/ccache.conf
+      - |
+          # cache.conf
+          echo Adding ccache configution option
+      - |
+          # base_dir
+          echo base_dir = $PWD                  | tee --append ~/.ccache/ccache.conf
+      - |
+          # cache_dir
+          echo cache_dir = $PWD/ccache          | tee --append ~/.ccache/ccache.conf
+      - |
+          # compiler_check
+          echo compiler_check = content         | tee --append ~/.ccache/ccache.conf
+      - |
+          # stats_log
+          echo stats_log = $PWD/ccache_statslog | tee --append ~/.ccache/ccache.conf
+      - |
+          # max_size
+          echo max_size = 50M                   | tee --append ~/.ccache/ccache.conf
+      - |
+          # ccache_config
+          echo -e "\e[0Ksection_end:`date +%s`:ccache_config\r\e[0K"
+
+    - - |
+          # cache_reset
+          echo -e "\e[0Ksection_start:`date +%s`:ccache_reset[collapsed=true]\r\e[0KResetting ccache statistics"
+      - ccache --zero-stats
+      - ccache --show-stats
+      - |
+          # ccache_reset
+          echo -e "\e[0Ksection_end:`date +%s`:ccache_reset\r\e[0K"
+
+  after_script:
+    - - |
+           # apt_clean
+           echo -e "\e[0Ksection_start:`date +%s`:apt_clean[collapsed=true]\r\e[0KCleaning of unneeded APT packages"
+      - apt-get autoclean
+      - |
+          # apt_clean
+          echo -e "\e[0Ksection_end:`date +%s`:apt_clean\r\e[0K"
+
+    - - |
+          # ccache_stats
+          echo -e "\e[0Ksection_start:`date +%s`:ccache_stats[collapsed=true]\r\e[0Kccache statistics:"
+      - ccache --show-stats --verbose
+      - ccache --show-log-stats --verbose
+      - |
+          # ccahe_stats
+          echo -e "\e[0Ksection_end:`date +%s`:ccache_stats\r\e[0K"
+
+Debian testing GCC:
+  <<: *job_build
+  image: debian:testing-slim
+
+  allow_failure: true
+
+  artifacts:
+    paths:
+      - "bin/"
+      - "src/comptime.h"
+    expose_as: "Debian GCC testing"
+    name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-testing-gcc"
+
+  variables:
+    CC: gcc
+
+  script:
+    - - |
+          # apt_toolchain
+          echo -e "\e[0Ksection_start:`date +%s`:apt_toolchain[collapsed=true]\r\e[0KInstalling toolchain packages"
+      - apt-get install gcc
+      - |
+          # apt_toolchain
+          echo -e "\e[0Ksection_end:`date +%s`:apt_toolchain\r\e[0K"
+
+    - - |
+          # apt_development
+          echo -e "\e[0Ksection_start:`date +%s`:apt_development[collapsed=true]\r\e[0KInstalling development packages"
+      - apt-get install libsdl2-mixer-dev libpng-dev libcurl4-openssl-dev libgme-dev libopenmpt-dev
+      - |
+          # apt_development
+          echo -e "\e[0Ksection_end:`date +%s`:apt_development\r\e[0K"
+
+    - - |
+          # make
+          echo -e "\e[0Ksection_start:`date +%s`:make[collapsed=false]\r\e[0KCompiling SRB2"
+      - make --directory=src --keep-going CCACHE=1 ERRORMODE=1 NONX86=1 || make --directory=src --keep-going CCACHE=1 ERRORMODE=1 NONX86=1
+      - |
+          # make
+          echo -e "\e[0Ksection_end:`date +%s`:make\r\e[0K"
+
+Windows x86:
+  <<: *job_build
+
+  artifacts:
+    paths:
+      - "bin/"
+      - "src/comptime.h"
+    name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-Win32"
+
+  variables:
+    PREFIX: i686-w64-mingw32
+
+  script:
+    - - |
+          # apt_toolchain
+          echo -e "\e[0Ksection_start:`date +%s`:apt_toolchain[collapsed=true]\r\e[0KInstalling toolchain packages"
+      - apt-get install gcc-mingw-w64-i686-win32
+      - |
+          # apt_toolchain
+          echo -e "\e[0Ksection_end:`date +%s`:apt_toolchain\r\e[0K"
+
+    - - |
+          # make
+          echo -e "\e[0Ksection_start:`date +%s`:make[collapsed=false]\r\e[0KCompiling SRB2"
+      - make --directory=src --keep-going CCACHE=1 ERRORMODE=1 MINGW=1 || make --directory=src --keep-going CCACHE=1 ERRORMODE=1 MINGW=1
+      - |
+          # make
+          echo -e "\e[0Ksection_end:`date +%s`:make\r\e[0K"
+
+Debian stable:amd64:
+  <<: *job_build
+
+  artifacts:
+    paths:
+      - "bin/"
+      - "src/comptime.h"
+    expose_as: "Debian amd64"
+    name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-x86-64"
+
+  variables:
+    CC: x86_64-linux-gnu-gcc
+    OBJCOPY: x86_64-linux-gnu-objcopy
+    OBJDUMP: x86_64-linux-gnu-objdump
+    PKG_CONFIG_PATH: /usr/lib/x86_64-linux-gnu/pkgconfig
+
+  script:
+    - - |
+          # apt_toolchain
+          echo -e "\e[0Ksection_start:`date +%s`:apt_toolchain[collapsed=true]\r\e[0KInstalling toolchain packages"
+      - apt-get install gcc-x86-64-linux-gnu || apt-get install gcc
+      - |
+          # apt_toolchain
+          echo -e "\e[0Ksection_end:`date +%s`:apt_toolchain\r\e[0K"
+
+    - - |
+          # apt_development
+          echo -e "\e[0Ksection_start:`date +%s`:apt_development[collapsed=true]\r\e[0KInstalling development packages"
+      - apt-get install libsdl2-mixer-dev:amd64 libpng-dev:amd64 libcurl4-openssl-dev:amd64 libgme-dev:amd64 libopenmpt-dev:amd64
+      - |
+          # apt_development
+          echo -e "\e[0Ksection_end:`date +%s`:apt_development\r\e[0K"
+
+    - - |
+          # make
+          echo -e "\e[0Ksection_start:`date +%s`:make[collapsed=false]\r\e[0KCompiling SRB2"
+      - make --directory=src --keep-going CCACHE=1 ERRORMODE=1 LINUX64=1 || make --directory=src --keep-going CCACHE=1 ERRORMODE=1 LINUX64=1
+      - |
+          # make
+          echo -e "\e[0Ksection_end:`date +%s`:make\r\e[0K"
+
+Debian stable:i386:
+  <<: *job_build
+
+  artifacts:
+    paths:
+      - "bin/"
+      - "src/comptime.h"
+    expose_as: "Debian i386"
+    name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-i686"
+
+  variables:
+    CC: i686-linux-gnu-gcc
+    OBJCOPY: i686-linux-gnu-objcopy
+    OBJDUMP: i686-linux-gnu-objdump
+    PKG_CONFIG_PATH: /usr/lib/i386-linux-gnu/pkgconfig
+
+  script:
+    - - |
+          # apt_toolchain
+          echo -e "\e[0Ksection_start:`date +%s`:apt_toolchain[collapsed=true]\r\e[0KInstalling toolchain packages"
+      - apt-get install gcc-i686-linux-gnu || apt-get install gcc
+      - |
+          # apt_toolchain
+          echo -e "\e[0Ksection_end:`date +%s`:apt_toolchain\r\e[0K"
+
+    - - |
+          # apt_development
+          echo -e "\e[0Ksection_start:`date +%s`:apt_development[collapsed=true]\r\e[0KInstalling development packages"
+      - apt-get install libsdl2-mixer-dev:i386 libpng-dev:i386 libcurl4-openssl-dev:i386 libgme-dev:i386 libopenmpt-dev:i386
+      - |
+          # apt_development
+          echo -e "\e[0Ksection_end:`date +%s`:apt_development\r\e[0K"
+
+    - - |
+          # make
+          echo -e "\e[0Ksection_start:`date +%s`:make[collapsed=false]\r\e[0KCompiling SRB2"
+      - make --directory=src --keep-going CCACHE=1 ERRORMODE=1 LINUX=1 || make --directory=src --keep-going CCACHE=1 ERRORMODE=1 LINUX=1
+      - |
+          # make
+          echo -e "\e[0Ksection_end:`date +%s`:make\r\e[0K"
+
+Debian stable:arm64:
+  <<: *job_build
+
+  artifacts:
+    paths:
+      - "bin/"
+      - "src/comptime.h"
+    expose_as: "Debian arm64"
+    name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-aarch64"
+
+  variables:
+    CC: aarch64-linux-gnu-gcc
+    OBJCOPY: aarch64-linux-gnu-objcopy
+    OBJDUMP: aarch64-linux-gnu-objdump
+    PKG_CONFIG_PATH: /usr/lib/aarch64-linux-gnu/pkgconfig
+
+  script:
+    - - |
+          # apt_toolchain
+          echo -e "\e[0Ksection_start:`date +%s`:apt_toolchain[collapsed=true]\r\e[0KInstalling toolchain packages"
+      - apt-get install gcc-aarch64-linux-gnu || apt-get install gcc
+      - |
+          # apt_toolchain
+          echo -e "\e[0Ksection_end:`date +%s`:apt_toolchain\r\e[0K"
+
+    - - |
+          # apt_development
+          echo -e "\e[0Ksection_start:`date +%s`:apt_development[collapsed=true]\r\e[0KInstalling development packages"
+      - apt-get install libsdl2-mixer-dev:arm64 libpng-dev:arm64 libcurl4-openssl-dev:arm64 libgme-dev:arm64 libopenmpt-dev:arm64
+      - |
+          # apt_development
+          echo -e "\e[0Ksection_end:`date +%s`:apt_development\r\e[0K"
+
+    - - |
+          # make
+          echo -e "\e[0Ksection_start:`date +%s`:make[collapsed=false]\r\e[0KCompiling SRB2"
+      - make --directory=src --keep-going CCACHE=1 ERRORMODE=1 LINUX64=1 ERRORMODE=1 NONX86=1 || make --directory=src --keep-going CCACHE=1 ERRORMODE=1 LINUX64=1 NONX86=1
+      - |
+          # make
+          echo -e "\e[0Ksection_end:`date +%s`:make\r\e[0K"
+
+Windows x64:
+  <<: *job_build
+
+  artifacts:
+    paths:
+      - "bin/"
+      - "src/comptime.h"
+    expose_as: "Win64"
+    name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-Win64"
+
+  variables:
+    PREFIX: x86_64-w64-mingw32
+
+  script:
+    - - |
+          # apt_toolchain
+          echo -e "\e[0Ksection_start:`date +%s`:apt_toolchain[collapsed=true]\r\e[0KInstalling toolchain packages"
+      - apt-get install gcc-mingw-w64-x86-64-win32
+      - |
+          # apt_toolchain
+          echo -e "\e[0Ksection_end:`date +%s`:apt_toolchain\r\e[0K"
+
+    - - |
+          # make
+          echo -e "\e[0Ksection_start:`date +%s`:make[collapsed=false]\r\e[0KCompiling SRB2"
+      - make --directory=src --keep-going CCACHE=1 ERRORMODE=1 MINGW64=1 || make --directory=src --keep-going CCACHE=1 ERRORMODE=1 MINGW64=1
+      - |
+          # make
+          echo -e "\e[0Ksection_end:`date +%s`:make\r\e[0K"
+
+Debian stable Clang:
+  <<: *job_build
+
+  allow_failure: true
+
+  artifacts:
+    paths:
+      - "bin/"
+      - "src/comptime.h"
+    expose_as: "Debian Clang"
+    name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-clang"
+
+  variables:
+    CC: clang
+    CFLAGS: -Wno-cast-align
+
+  script:
+    - - |
+          # apt_toolchain
+          echo -e "\e[0Ksection_start:`date +%s`:apt_toolchain[collapsed=true]\r\e[0KInstalling toolchain packages"
+      - apt-get install clang
+      - |
+          # apt_toolchain
+          echo -e "\e[0Ksection_end:`date +%s`:apt_toolchain\r\e[0K"
+
+    - - |
+          # apt_development
+          echo -e "\e[0Ksection_start:`date +%s`:apt_development[collapsed=true]\r\e[0KInstalling development packages"
+      - apt-get install libsdl2-mixer-dev libpng-dev libcurl4-openssl-dev libgme-dev libopenmpt-dev
+      - |
+          # apt_development
+          echo -e "\e[0Ksection_end:`date +%s`:apt_development\r\e[0K"
+
+    - - |
+          # make
+          echo -e "\e[0Ksection_start:`date +%s`:make[collapsed=false]\r\e[0KCompiling SRB2"
+      - make --directory=src --keep-going CCACHE=1 ERRORMODE=1 NONX86=1 || make --directory=src --keep-going CCACHE=1 ERRORMODE=1 NONX86=1
+      - |
+          # make
+          echo -e "\e[0Ksection_end:`date +%s`:make\r\e[0K"
+
+Debian testing Clang:
+  extends: Debian stable Clang
+
+  image: debian:testing-slim
+
+  artifacts:
+    paths:
+      - "bin/"
+      - "src/comptime.h"
+    expose_as: "Debina Clang testing"
+    name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-testing-clang"
+
+  variables:
+    CC: clang
+    CFLAGS: -Wno-cast-align -Wno-deprecated-non-prototype
