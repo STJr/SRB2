@@ -1,16 +1,9 @@
-default:
-  image: debian:stable-slim
-
-stages:          # List of stages for jobs, and their order of execution
-  - build
-
 variables:
   GIT_STRATEGY: clone
   GIT_CLONE_PATH: $CI_BUILDS_DIR/$CI_CONCURRENT_ID/$CI_PROJECT_PATH
 
-.job_template: &job_build # This job runs in the build stage, which runs first.
-
-  stage: build
+default:
+  image: debian:stable-slim
 
   cache:
     - key: ccache-$CI_PROJECT_PATH_SLUG-$CI_JOB_NAME_SLUG
@@ -96,7 +89,7 @@ variables:
     - - |
           # apt_common
           echo -e "\e[0Ksection_start:`date +%s`:apt_common[collapsed=true]\r\e[0KInstalling common packages"
-      - apt-get install make git ccache
+      - apt-get install make git ccache nasm
       - |
           # apt_common
           echo -e "\e[0Ksection_end:`date +%s`:apt_common\r\e[0K"
@@ -137,6 +130,12 @@ variables:
           # ccache_reset
           echo -e "\e[0Ksection_end:`date +%s`:ccache_reset\r\e[0K"
 
+  artifacts:
+    paths:
+      - "bin/"
+      - "src/comptime.h"
+    name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-$CI_JOB_NAME_SLUG"
+
   after_script:
     - - |
            # apt_clean
@@ -155,21 +154,21 @@ variables:
           # ccahe_stats
           echo -e "\e[0Ksection_end:`date +%s`:ccache_stats\r\e[0K"
 
+stages:
+  - build
+
 Debian testing GCC:
-  <<: *job_build
+  stage: build
   image: debian:testing-slim
 
   allow_failure: true
 
   artifacts:
-    paths:
-      - "bin/"
-      - "src/comptime.h"
-    expose_as: "Debian GCC testing"
     name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-testing-gcc"
 
   variables:
     CC: gcc
+    LDFLAGS: -Wl,-fuse-ld=gold
 
   script:
     - - |
@@ -197,12 +196,13 @@ Debian testing GCC:
           echo -e "\e[0Ksection_end:`date +%s`:make\r\e[0K"
 
 Windows x86:
-  <<: *job_build
+  stage: build
 
   artifacts:
     paths:
       - "bin/"
       - "src/comptime.h"
+    expose_as: "Win32"
     name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-Win32"
 
   variables:
@@ -220,13 +220,13 @@ Windows x86:
     - - |
           # make
           echo -e "\e[0Ksection_start:`date +%s`:make[collapsed=false]\r\e[0KCompiling SRB2"
-      - make --directory=src --keep-going CCACHE=1 ERRORMODE=1 MINGW=1 || make --directory=src --keep-going CCACHE=1 ERRORMODE=1 MINGW=1
+      - make --directory=src --keep-going CCACHE=1 ERRORMODE=1 MINGW=1 SDL=1 || make --directory=src --keep-going CCACHE=1 ERRORMODE=1 MINGW=1 SDL=1
       - |
           # make
           echo -e "\e[0Ksection_end:`date +%s`:make\r\e[0K"
 
 Debian stable:amd64:
-  <<: *job_build
+  stage: build
 
   artifacts:
     paths:
@@ -237,6 +237,7 @@ Debian stable:amd64:
 
   variables:
     CC: x86_64-linux-gnu-gcc
+    LDFLAGS: -Wl,-fuse-ld=gold
     OBJCOPY: x86_64-linux-gnu-objcopy
     OBJDUMP: x86_64-linux-gnu-objdump
     PKG_CONFIG_PATH: /usr/lib/x86_64-linux-gnu/pkgconfig
@@ -267,7 +268,7 @@ Debian stable:amd64:
           echo -e "\e[0Ksection_end:`date +%s`:make\r\e[0K"
 
 Debian stable:i386:
-  <<: *job_build
+  stage: build
 
   artifacts:
     paths:
@@ -308,7 +309,7 @@ Debian stable:i386:
           echo -e "\e[0Ksection_end:`date +%s`:make\r\e[0K"
 
 Debian stable:arm64:
-  <<: *job_build
+  stage: build
 
   artifacts:
     paths:
@@ -319,6 +320,7 @@ Debian stable:arm64:
 
   variables:
     CC: aarch64-linux-gnu-gcc
+    LDFLAGS: -Wl,-fuse-ld=gold
     OBJCOPY: aarch64-linux-gnu-objcopy
     OBJDUMP: aarch64-linux-gnu-objdump
     PKG_CONFIG_PATH: /usr/lib/aarch64-linux-gnu/pkgconfig
@@ -349,7 +351,7 @@ Debian stable:arm64:
           echo -e "\e[0Ksection_end:`date +%s`:make\r\e[0K"
 
 Windows x64:
-  <<: *job_build
+  stage: build
 
   artifacts:
     paths:
@@ -373,26 +375,24 @@ Windows x64:
     - - |
           # make
           echo -e "\e[0Ksection_start:`date +%s`:make[collapsed=false]\r\e[0KCompiling SRB2"
-      - make --directory=src --keep-going CCACHE=1 ERRORMODE=1 MINGW64=1 || make --directory=src --keep-going CCACHE=1 ERRORMODE=1 MINGW64=1
+      - make --directory=src --keep-going CCACHE=1 ERRORMODE=1 MINGW64=1 SDL=1 || make --directory=src --keep-going CCACHE=1 ERRORMODE=1 MINGW64=1 SDL=1
       - |
           # make
           echo -e "\e[0Ksection_end:`date +%s`:make\r\e[0K"
 
 Debian stable Clang:
-  <<: *job_build
+  stage: build
 
   allow_failure: true
 
   artifacts:
-    paths:
-      - "bin/"
-      - "src/comptime.h"
-    expose_as: "Debian Clang"
     name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-clang"
 
   variables:
     CC: clang
+    WFLAGS: -Wno-cast-align
     CFLAGS: -Wno-cast-align
+    LDFLAGS: -Wl,-fuse-ld=gold
 
   script:
     - - |
@@ -425,12 +425,10 @@ Debian testing Clang:
   image: debian:testing-slim
 
   artifacts:
-    paths:
-      - "bin/"
-      - "src/comptime.h"
-    expose_as: "Debina Clang testing"
     name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-testing-clang"
 
   variables:
     CC: clang
+    WFLAGS: -Wno-cast-align -Wno-deprecated-non-prototype
     CFLAGS: -Wno-cast-align -Wno-deprecated-non-prototype
+    LDFLAGS: -Wl,-fuse-ld=gold
