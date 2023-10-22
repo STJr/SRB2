@@ -3,7 +3,7 @@
 #
 
 passthru_opts+=\
-	NONET NO_IPV6 NOHW NOMD5 NOPOSTPROCESSING\
+	NO_IPV6 NOHW NOMD5 NOPOSTPROCESSING\
 	MOBJCONSISTANCY PACKETDROP ZDEBUG\
 	HAVE_MINIUPNPC\
 
@@ -16,13 +16,6 @@ endif
 ifndef NOHW
 opts+=-DHWRENDER
 sources+=$(call List,hardware/Sourcefile)
-endif
-
-ifndef NOASM
-ifndef NONX86
-sources+=tmap.nas tmap_mmx.nas
-opts+=-DUSEASM
-endif
 endif
 
 ifndef NOMD5
@@ -46,12 +39,10 @@ sources+=apng.c
 endif
 endif
 
-ifndef NONET
 ifndef NOCURL
 CURLCONFIG?=curl-config
 $(eval $(call Configure,CURL,$(CURLCONFIG)))
 opts+=-DHAVE_CURL
-endif
 endif
 
 ifdef HAVE_MINIUPNPC

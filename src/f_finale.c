@@ -14,7 +14,7 @@
 #include "doomdef.h"
 #include "doomstat.h"
 #include "d_main.h"
-#include "d_netcmd.h"
+#include "netcode/d_netcmd.h"
 #include "f_finale.h"
 #include "g_game.h"
 #include "hu_stuff.h"
@@ -63,7 +63,6 @@ static tic_t stoptimer;
 static boolean keypressed = false;
 
 // (no longer) De-Demo'd Title Screen
-static INT32 menuanimtimer; // Title screen: background animation timing
 mobj_t *titlemapcameraref = NULL;
 
 // menu presentation state
@@ -75,6 +74,8 @@ INT32 curbgyspeed;
 boolean curbghide;
 boolean hidetitlemap;		// WARNING: set to false by M_SetupNextMenu and M_ClearMenus
 
+static fixed_t curbgx = 0;
+static fixed_t curbgy = 0;
 static UINT8  curDemo = 0;
 static UINT32 demoDelayLeft;
 static UINT32 demoIdleLeft;
@@ -223,7 +224,6 @@ static INT32 cutscene_writeptr = 0;
 static INT32 cutscene_textcount = 0;
 static INT32 cutscene_textspeed = 0;
 static UINT8 cutscene_boostspeed = 0;
-static tic_t cutscene_lasttextwrite = 0;
 
 // STJR Intro
 char stjrintro[9] = "STJRI000";
@@ -239,11 +239,6 @@ static UINT8 F_WriteText(void)
 {
 	INT32 numtowrite = 1;
 	const char *c;
-	tic_t ltw = I_GetTime();
-
-	if (cutscene_lasttextwrite == ltw)
-		return 1; // singletics prevention
-	cutscene_lasttextwrite = ltw;
 
 	if (cutscene_boostspeed)
 	{
@@ -337,7 +332,7 @@ static tic_t introscenetime[NUMINTROSCENES] =
 };
 
 // custom intros
-void F_StartCustomCutscene(INT32 cutscenenum, boolean precutscene, boolean resetplayer);
+void F_StartCustomCutscene(INT32 cutscenenum, boolean precutscene, boolean resetplayer, boolean FLS);
 
 void F_StartIntro(void)
 {
@@ -349,7 +344,7 @@ void F_StartIntro(void)
 		if (!cutscenes[introtoplay - 1])
 			D_StartTitle();
 		else
-			F_StartCustomCutscene(introtoplay - 1, false, false);
+			F_StartCustomCutscene(introtoplay - 1, false, false, false);
 		return;
 	}
 
@@ -1067,12 +1062,14 @@ static const char *credits[] = {
 	"\"Golden\"",
 	"Vivian \"toaster\" Grannell",
 	"Julio \"Chaos Zero 64\" Guir",
+	"\"Hanicef\"",
 	"\"Hannu_Hanhi\"", // For many OpenGL performance improvements!
 	"Kepa \"Nev3r\" Iceta",
 	"Thomas \"Shadow Hog\" Igoe",
 	"Iestyn \"Monster Iestyn\" Jealous",
 	"\"Kaito Sinclaire\"",
 	"\"Kalaron\"", // Coded some of Sryder13's collection of OpenGL fixes, especially fog
+	"\"katsy\"",
 	"Ronald \"Furyhunter\" Kinard", // The SDL2 port
 	"\"Lat'\"", // SRB2-CHAT, the chat window from Kart
 	"\"LZA\"",
@@ -1095,6 +1092,7 @@ static const char *credits[] = {
 	"Ben \"Cue\" Woodford",
 	"Lachlan \"Lach\" Wright",
 	"Marco \"mazmazz\" Zafra",
+	"\"Zwip-Zwap Zapony\"",
 	"",
 	"\1Art",
 	"Victor \"VAdaPEGA\" Ara\x1Fjo", // Araújo -- sorry for our limited font! D:
@@ -1202,6 +1200,7 @@ static const char *credits[] = {
 	"FreeDoom Project", // Used some of the mancubus and rocket launcher sprites for Brak
 	"Kart Krew",
 	"Alex \"MistaED\" Fuller",
+	"Howard Drossin", // Virtual Sonic - Sonic & Knuckles Theme
 	"Pascal \"CodeImp\" vd Heiden", // Doom Builder developer
 	"Randi Heit (<!>)", // For their MSPaint <!> sprite that we nicked
 	"Simon \"sirjuddington\" Judd", // SLADE developer
@@ -1257,7 +1256,7 @@ void F_StartCredits(void)
 
 	if (creditscutscene)
 	{
-		F_StartCustomCutscene(creditscutscene - 1, false, false);
+		F_StartCustomCutscene(creditscutscene - 1, false, false, false);
 		return;
 	}
 
@@ -1279,14 +1278,23 @@ void F_CreditDrawer(void)
 	UINT16 i;
 	INT16 zagpos = (timetonext - finalecount - animtimer) % 32;
 	fixed_t y = (80<<FRACBITS) - (animtimer<<FRACBITS>>1);
+	UINT8 colornum;
+	const UINT8 *colormap;
+
+	if (players[consoleplayer].skincolor)
+		colornum = players[consoleplayer].skincolor;
+	else
+		colornum = cv_playercolor.value;
+
+	colormap = R_GetTranslationColormap(TC_DEFAULT, colornum, GTC_CACHE);
 
 	V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
 
 	// Zig Zagz
-	V_DrawScaledPatch(-16,               zagpos,       V_SNAPTOLEFT,         W_CachePatchName("LTZIGZAG", PU_PATCH_LOWPRIORITY));
-	V_DrawScaledPatch(-16,               zagpos - 320, V_SNAPTOLEFT,         W_CachePatchName("LTZIGZAG", PU_PATCH_LOWPRIORITY));
-	V_DrawScaledPatch(BASEVIDWIDTH + 16, zagpos,       V_SNAPTORIGHT|V_FLIP, W_CachePatchName("LTZIGZAG", PU_PATCH_LOWPRIORITY));
-	V_DrawScaledPatch(BASEVIDWIDTH + 16, zagpos - 320, V_SNAPTORIGHT|V_FLIP, W_CachePatchName("LTZIGZAG", PU_PATCH_LOWPRIORITY));
+	V_DrawFixedPatch(-16*FRACUNIT, zagpos<<FRACBITS, FRACUNIT, V_SNAPTOLEFT, W_CachePatchName("LTZIGZAG", PU_PATCH_LOWPRIORITY), colormap);
+	V_DrawFixedPatch(-16*FRACUNIT, (zagpos - 320)<<FRACBITS, FRACUNIT, V_SNAPTOLEFT, W_CachePatchName("LTZIGZAG", PU_PATCH_LOWPRIORITY), colormap);
+	V_DrawFixedPatch((BASEVIDWIDTH + 16)*FRACUNIT, zagpos<<FRACBITS, FRACUNIT, V_SNAPTORIGHT|V_FLIP, W_CachePatchName("LTZIGZAG", PU_PATCH_LOWPRIORITY), colormap);
+	V_DrawFixedPatch((BASEVIDWIDTH + 16)*FRACUNIT, (zagpos - 320)<<FRACBITS, FRACUNIT, V_SNAPTORIGHT|V_FLIP, W_CachePatchName("LTZIGZAG", PU_PATCH_LOWPRIORITY), colormap);
 
 	// Draw background pictures first
 	for (i = 0; credits_pics[i].patch; i++)
@@ -1411,7 +1419,7 @@ boolean F_CreditResponder(event_t *event)
 			break;
 	}
 
-	if (!(timesBeaten) && !(netgame || multiplayer) && !cv_debug)
+	if (!(serverGamedata->timesBeaten) && !(netgame || multiplayer) && !cv_debug)
 		return false;
 
 	if (event->type != ev_keydown)
@@ -1573,27 +1581,19 @@ void F_GameEvaluationDrawer(void)
 #if 0 // the following looks like hot garbage the more unlockables we add, and we now have a lot of unlockables
 	if (finalecount >= 5*TICRATE)
 	{
+		INT32 startcoord = 32;
 		V_DrawString(8, 16, V_YELLOWMAP, "Unlocked:");
 
-		if (!(netgame) && (!modifiedgame || savemoddata))
+		for (i = 0; i < MAXUNLOCKABLES; i++)
 		{
-			INT32 startcoord = 32;
-
-			for (i = 0; i < MAXUNLOCKABLES; i++)
+			if (unlockables[i].conditionset && unlockables[i].conditionset < MAXCONDITIONSETS
+				&& unlockables[i].type && !unlockables[i].nocecho)
 			{
-				if (unlockables[i].conditionset && unlockables[i].conditionset < MAXCONDITIONSETS
-					&& unlockables[i].type && !unlockables[i].nocecho)
-				{
-					if (unlockables[i].unlocked)
-						V_DrawString(8, startcoord, 0, unlockables[i].name);
-					startcoord += 8;
-				}
+				if (clientGamedata->unlocked[i])
+					V_DrawString(8, startcoord, 0, unlockables[i].name);
+				startcoord += 8;
 			}
 		}
-		else if (netgame)
-			V_DrawString(8, 96, V_YELLOWMAP, "Multiplayer games\ncan't unlock\nextras!");
-		else
-			V_DrawString(8, 96, V_YELLOWMAP, "Modified games\ncan't unlock\nextras!");
 	}
 #endif
 
@@ -1648,37 +1648,29 @@ void F_GameEvaluationTicker(void)
 		sparklloop = 0;
 	}
 
-	if (finalecount == 5*TICRATE)
+	if (G_CoopGametype() && !stagefailed && finalecount == 5*TICRATE)
 	{
-		if (netgame || multiplayer) // modify this when we finally allow unlocking stuff in 2P
+		serverGamedata->timesBeaten++;
+		clientGamedata->timesBeaten++;
+
+		if (ALL7EMERALDS(emeralds))
 		{
-			HU_SetCEchoFlags(V_YELLOWMAP|V_RETURN8);
-			HU_SetCEchoDuration(6);
-			HU_DoCEcho("\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\Multiplayer games can't unlock extras!");
+			serverGamedata->timesBeatenWithEmeralds++;
+			clientGamedata->timesBeatenWithEmeralds++;
+		}
+
+		if (ultimatemode)
+		{
+			serverGamedata->timesBeatenUltimate++;
+			clientGamedata->timesBeatenUltimate++;
+		}
+
+		M_SilentUpdateUnlockablesAndEmblems(serverGamedata);
+
+		if (M_UpdateUnlockablesAndExtraEmblems(clientGamedata))
 			S_StartSound(NULL, sfx_s3k68);
-		}
-		else if (!modifiedgame || savemoddata)
-		{
-			++timesBeaten;
 
-			if (ALL7EMERALDS(emeralds))
-				++timesBeatenWithEmeralds;
-
-			if (ultimatemode)
-				++timesBeatenUltimate;
-
-			if (M_UpdateUnlockablesAndExtraEmblems())
-				S_StartSound(NULL, sfx_s3k68);
-
-			G_SaveGameData();
-		}
-		else
-		{
-			HU_SetCEchoFlags(V_YELLOWMAP|V_RETURN8);
-			HU_SetCEchoDuration(6);
-			HU_DoCEcho("\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\Modified games can't unlock extras!");
-			S_StartSound(NULL, sfx_s3k68);
-		}
+		G_SaveGameData(clientGamedata);
 	}
 }
 
@@ -2192,7 +2184,7 @@ void F_EndingDrawer(void)
 			//colset(linkmap,  164, 165, 169); -- the ideal purple colour to represent a clicked in-game link, but not worth it just for a soundtest-controlled secret
 			V_DrawCenteredString(BASEVIDWIDTH/2, 8, V_ALLOWLOWERCASE|(trans<<V_ALPHASHIFT), str);
 			V_DrawCharacter(32, BASEVIDHEIGHT-16, '>'|(trans<<V_ALPHASHIFT), false);
-			V_DrawString(40, ((finalecount == STOPPINGPOINT-(20+TICRATE)) ? 1 : 0)+BASEVIDHEIGHT-16, ((timesBeaten || finalecount >= STOPPINGPOINT-TICRATE) ? V_PURPLEMAP : V_BLUEMAP)|(trans<<V_ALPHASHIFT), " [S] ===>");
+			V_DrawString(40, ((finalecount == STOPPINGPOINT-(20+TICRATE)) ? 1 : 0)+BASEVIDHEIGHT-16, ((serverGamedata->timesBeaten || finalecount >= STOPPINGPOINT-TICRATE) ? V_PURPLEMAP : V_BLUEMAP)|(trans<<V_ALPHASHIFT), " [S] ===>");
 		}
 
 		if (finalecount > STOPPINGPOINT-(20+(2*TICRATE)))
@@ -2258,7 +2250,8 @@ void F_GameEndTicker(void)
 
 void F_InitMenuPresValues(void)
 {
-	menuanimtimer = 0;
+	curbgx = 0;
+	curbgy = 0;
 	prevMenuId = 0;
 	activeMenuId = MainDef.menuid;
 
@@ -2267,7 +2260,7 @@ void F_InitMenuPresValues(void)
 	curfadevalue = 16;
 	curbgcolor = -1;
 	curbgxspeed = (gamestate == GS_TIMEATTACK) ? 0 : titlescrollxspeed;
-	curbgyspeed = (gamestate == GS_TIMEATTACK) ? 22 : titlescrollyspeed;
+	curbgyspeed = (gamestate == GS_TIMEATTACK) ? 18 : titlescrollyspeed;
 	curbghide = (gamestate == GS_TIMEATTACK) ? false : true;
 
 	curhidepics = hidetitlepics;
@@ -2291,17 +2284,11 @@ void F_InitMenuPresValues(void)
 //
 // F_SkyScroll
 //
-void F_SkyScroll(INT32 scrollxspeed, INT32 scrollyspeed, const char *patchname)
+void F_SkyScroll(const char *patchname)
 {
-	INT32 xscrolled, x, xneg = (scrollxspeed > 0) - (scrollxspeed < 0), tilex;
-	INT32 yscrolled, y, yneg = (scrollyspeed > 0) - (scrollyspeed < 0), tiley;
-	boolean xispos = (scrollxspeed >= 0), yispos = (scrollyspeed >= 0);
+	INT32 x, basey = 0;
 	INT32 dupz = (vid.dupx < vid.dupy ? vid.dupx : vid.dupy);
-	INT16 patwidth, patheight;
-	INT32 pw, ph; // scaled by dupz
 	patch_t *pat;
-	INT32 i, j;
-	fixed_t fracmenuanimtimer, xscrolltimer, yscrolltimer;
 
 	if (rendermode == render_none)
 		return;
@@ -2312,43 +2299,34 @@ void F_SkyScroll(INT32 scrollxspeed, INT32 scrollyspeed, const char *patchname)
 		return;
 	}
 
-	if (!scrollxspeed && !scrollyspeed)
+	pat = W_CachePatchName(patchname, PU_PATCH_LOWPRIORITY);
+
+	if (!curbgxspeed && !curbgyspeed)
 	{
-		V_DrawPatchFill(W_CachePatchName(patchname, PU_PATCH_LOWPRIORITY));
+		V_DrawPatchFill(pat);
+		W_UnlockCachedPatch(pat);
 		return;
 	}
 
-	pat = W_CachePatchName(patchname, PU_PATCH_LOWPRIORITY);
+	// Modulo the background scrolling to prevent jumps from integer overflows
+	// We already load the background patch here, so we can modulo it here
+	// to avoid also having to load the patch in F_MenuPresTicker
+	curbgx %= pat->width  * 16;
+	curbgy %= pat->height * 16;
 
-	patwidth = pat->width;
-	patheight = pat->height;
-	pw = patwidth * dupz;
-	ph = patheight * dupz;
+	// Ooh, fancy frame interpolation
+	x     = ((curbgx*dupz) + FixedInt((rendertimefrac-FRACUNIT) * curbgxspeed*dupz)) / 16;
+	basey = ((curbgy*dupz) + FixedInt((rendertimefrac-FRACUNIT) * curbgyspeed*dupz)) / 16;
 
-	tilex = max(FixedCeil(FixedDiv(vid.width, pw)) >> FRACBITS, 1)+2; // one tile on both sides of center
-	tiley = max(FixedCeil(FixedDiv(vid.height, ph)) >> FRACBITS, 1)+2;
+	if (x     > 0) // Make sure that we don't leave the left or top sides empty
+		x     -= pat->width  * dupz;
+	if (basey > 0)
+		basey -= pat->height * dupz;
 
-	fracmenuanimtimer = (menuanimtimer * FRACUNIT) - (FRACUNIT - rendertimefrac);
-	xscrolltimer = ((fracmenuanimtimer*scrollxspeed)/16 + patwidth*xneg*FRACUNIT) % (patwidth * FRACUNIT);
-	yscrolltimer = ((fracmenuanimtimer*scrollyspeed)/16 + patheight*yneg*FRACUNIT) % (patheight * FRACUNIT);
-
-	// coordinate offsets
-	xscrolled = FixedInt(xscrolltimer * dupz);
-	yscrolled = FixedInt(yscrolltimer * dupz);
-
-	for (x = (xispos) ? -pw*(tilex-1)+pw : 0, i = 0;
-		i < tilex;
-		x += pw, i++)
+	for (; x < vid.width; x += pat->width * dupz)
 	{
-		for (y = (yispos) ? -ph*(tiley-1)+ph : 0, j = 0;
-			j < tiley;
-			y += ph, j++)
-		{
-			V_DrawScaledPatch(
-				(xispos) ? xscrolled - x : x + xscrolled,
-				(yispos) ? yscrolled - y : y + yscrolled,
-				V_NOSCALESTART, pat);
-		}
+		for (INT32 y = basey; y < vid.height; y += pat->height * dupz)
+			V_DrawScaledPatch(x, y, V_NOSCALESTART, pat);
 	}
 
 	W_UnlockCachedPatch(pat);
@@ -2671,7 +2649,7 @@ void F_TitleScreenDrawer(void)
 	if (curbgcolor >= 0)
 		V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, curbgcolor);
 	else if (!curbghide || !titlemapinaction || gamestate == GS_WAITINGPLAYERS)
-		F_SkyScroll(curbgxspeed, curbgyspeed, curbgname);
+		F_SkyScroll(curbgname);
 
 	// Don't draw outside of the title screen, or if the patch isn't there.
 	if (gamestate != GS_TITLESCREEN && gamestate != GS_WAITINGPLAYERS)
@@ -3426,10 +3404,10 @@ luahook:
 
 // separate animation timer for backgrounds, since we also count
 // during GS_TIMEATTACK
-void F_MenuPresTicker(boolean run)
+void F_MenuPresTicker(void)
 {
-	if (run)
-		menuanimtimer++;
+	curbgx += curbgxspeed;
+	curbgy += curbgyspeed;
 }
 
 // (no longer) De-Demo'd Title Screen
@@ -3535,6 +3513,7 @@ void F_TitleScreenTicker(boolean run)
 		}
 
 		titledemo = true;
+		demofileoverride = DFILE_OVERRIDE_NONE;
 		G_DoPlayDemo(dname);
 	}
 }
@@ -3859,7 +3838,7 @@ static INT32 scenenum, cutnum;
 static INT32 picxpos, picypos, picnum, pictime, picmode, numpics, pictoloop;
 static INT32 textxpos, textypos;
 static boolean cutsceneover = false;
-static boolean runningprecutscene = false, precutresetplayer = false;
+static boolean runningprecutscene = false, precutresetplayer = false, precutFLS = false;
 
 static void F_AdvanceToNextScene(void)
 {
@@ -3928,7 +3907,7 @@ void F_EndCutScene(void)
 	if (runningprecutscene)
 	{
 		if (server)
-			D_MapChange(gamemap, gametype, ultimatemode, precutresetplayer, 0, true, false);
+			D_MapChange(gamemap, gametype, ultimatemode, precutresetplayer, 0, true, precutFLS);
 	}
 	else
 	{
@@ -3943,7 +3922,7 @@ void F_EndCutScene(void)
 	}
 }
 
-void F_StartCustomCutscene(INT32 cutscenenum, boolean precutscene, boolean resetplayer)
+void F_StartCustomCutscene(INT32 cutscenenum, boolean precutscene, boolean resetplayer, boolean FLS)
 {
 	if (!cutscenes[cutscenenum])
 		return;
@@ -3962,6 +3941,7 @@ void F_StartCustomCutscene(INT32 cutscenenum, boolean precutscene, boolean reset
 	cutsceneover = false;
 	runningprecutscene = precutscene;
 	precutresetplayer = resetplayer;
+	precutFLS = FLS;
 
 	scenenum = picnum = 0;
 	cutnum = cutscenenum;
@@ -4693,4 +4673,37 @@ void F_TextPromptTicker(void)
 		else
 			animtimer--;
 	}
+}
+
+// ================
+//  WAITINGPLAYERS
+// ================
+
+void F_StartWaitingPlayers(void)
+{
+	wipegamestate = GS_TITLESCREEN; // technically wiping from title screen
+	finalecount = 0;
+}
+
+void F_WaitingPlayersTicker(void)
+{
+	if (paused)
+		return;
+
+	finalecount++;
+
+	// dumb hack, only start the music on the 1st tick so if you instantly go into the map you aren't hearing a tic of music
+	if (finalecount == 2)
+		S_ChangeMusicInternal("_CHSEL", true);
+}
+
+void F_WaitingPlayersDrawer(void)
+{
+	const char *waittext1 = "You will join";
+	const char *waittext2 = "next level...";
+
+	V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
+
+	V_DrawCreditString((160 - (V_CreditStringWidth(waittext1)>>1))<<FRACBITS, 48<<FRACBITS, 0, waittext1);
+	V_DrawCreditString((160 - (V_CreditStringWidth(waittext2)>>1))<<FRACBITS, 64<<FRACBITS, 0, waittext2);
 }

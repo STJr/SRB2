@@ -1,9 +1,5 @@
 string.c
 d_main.c
-d_clisrv.c
-d_net.c
-d_netfil.c
-d_netcmd.c
 dehacked.c
 deh_soc.c
 deh_lua.c
@@ -64,6 +60,7 @@ r_skins.c
 r_sky.c
 r_splats.c
 r_things.c
+r_bbox.c
 r_textures.c
 r_patch.c
 r_patchrotation.c
@@ -76,12 +73,10 @@ s_sound.c
 sounds.c
 w_wad.c
 filesrch.c
-mserv.c
-http-mserv.c
-i_tcp.c
 lzf.c
-vid_copy.s
 b_bot.c
+u_list.c
+snake.c
 lua_script.c
 lua_baselib.c
 lua_mathlib.c

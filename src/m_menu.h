@@ -20,7 +20,7 @@
 #include "command.h"
 #include "f_finale.h" // for ttmode_enum
 #include "i_threads.h"
-#include "mserv.h"
+#include "netcode/mserv.h"
 #include "r_things.h" // for SKINNAMESIZE
 
 // Compatibility with old-style named NiGHTS replay files.
@@ -74,7 +74,7 @@ typedef enum
 	MN_MP_SERVER,
 	MN_MP_CONNECT,
 	MN_MP_ROOM,
-	MN_MP_PLAYERSETUP, // MP_PlayerSetupDef shared with SPLITSCREEN if #defined NONET
+	MN_MP_PLAYERSETUP,
 	MN_MP_SERVER_OPTIONS,
 
 	// Options
@@ -482,6 +482,8 @@ void M_MoveColorBefore(UINT16 color, UINT16 targ);
 void M_MoveColorAfter(UINT16 color, UINT16 targ);
 UINT16 M_GetColorBefore(UINT16 color);
 UINT16 M_GetColorAfter(UINT16 color);
+UINT16 M_GetColorIndex(UINT16 color);
+menucolor_t* M_GetColorFromIndex(UINT16 index);
 void M_InitPlayerSetupColors(void);
 void M_FreePlayerSetupColors(void);
 

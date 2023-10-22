@@ -108,6 +108,7 @@ static UINT32 fading_timer;
 static UINT32 fading_duration;
 static INT32 fading_id;
 static void (*fading_callback)(void);
+static boolean fading_do_callback;
 static boolean fading_nocleanup;
 
 #ifdef HAVE_GME
@@ -213,7 +214,10 @@ static void var_cleanup(void)
 	// HACK: See music_loop, where we want the fade timing to proceed after a non-looping
 	// song has stopped playing
 	if (!fading_nocleanup)
+	{
 		fading_callback = NULL;
+		fading_do_callback = false;
+	}
 	else
 		fading_nocleanup = false; // use it once, set it back immediately
 
@@ -330,6 +334,13 @@ void I_ShutdownSound(void)
 
 void I_UpdateSound(void)
 {
+	if (fading_do_callback)
+	{
+		if (fading_callback)
+			(*fading_callback)();
+		fading_callback = NULL;
+		fading_do_callback = false;
+	}
 }
 
 /// ------------------------
@@ -654,9 +665,8 @@ static UINT32 get_adjusted_position(UINT32 position)
 
 static void do_fading_callback(void)
 {
-	if (fading_callback)
-		(*fading_callback)();
-	fading_callback = NULL;
+	// TODO: Should I use a mutex here or something?
+	fading_do_callback = true;
 }
 
 /// ------------------------

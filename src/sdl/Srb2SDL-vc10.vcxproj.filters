@@ -156,22 +156,10 @@
     <ClInclude Include="..\doomtype.h">
       <Filter>D_Doom</Filter>
     </ClInclude>
-    <ClInclude Include="..\d_clisrv.h">
-      <Filter>D_Doom</Filter>
-    </ClInclude>
     <ClInclude Include="..\d_event.h">
       <Filter>D_Doom</Filter>
     </ClInclude>
     <ClInclude Include="..\d_main.h">
-      <Filter>D_Doom</Filter>
-    </ClInclude>
-    <ClInclude Include="..\d_net.h">
-      <Filter>D_Doom</Filter>
-    </ClInclude>
-    <ClInclude Include="..\d_netcmd.h">
-      <Filter>D_Doom</Filter>
-    </ClInclude>
-    <ClInclude Include="..\d_netfil.h">
       <Filter>D_Doom</Filter>
     </ClInclude>
     <ClInclude Include="..\d_player.h">
@@ -279,9 +267,6 @@
     <ClInclude Include="..\filesrch.h">
       <Filter>I_Interface</Filter>
     </ClInclude>
-    <ClInclude Include="..\i_addrinfo.h">
-      <Filter>I_Interface</Filter>
-    </ClInclude>
     <ClInclude Include="..\i_joy.h">
       <Filter>I_Interface</Filter>
     </ClInclude>
@@ -304,12 +289,6 @@
       <Filter>I_Interface</Filter>
     </ClInclude>
     <ClInclude Include="..\keys.h">
-      <Filter>I_Interface</Filter>
-    </ClInclude>
-    <ClInclude Include="..\mserv.h">
-      <Filter>I_Interface</Filter>
-    </ClInclude>
-    <ClInclude Include="..\http-mserv.h">
       <Filter>I_Interface</Filter>
     </ClInclude>
     <ClInclude Include="..\lua_hook.h">
@@ -371,6 +350,54 @@
     </ClInclude>
     <ClInclude Include="..\m_swap.h">
       <Filter>M_Misc</Filter>
+    </ClInclude>
+    <ClInclude Include="..\netcode\client_connection.h">
+      <Filter>D_Doom</Filter>
+    </ClInclude>
+    <ClInclude Include="..\netcode\commands.h">
+      <Filter>D_Doom</Filter>
+    </ClInclude>
+    <ClInclude Include="..\netcode\d_clisrv.h">
+      <Filter>D_Doom</Filter>
+    </ClInclude>
+    <ClInclude Include="..\netcode\d_net.h">
+      <Filter>D_Doom</Filter>
+    </ClInclude>
+    <ClInclude Include="..\netcode\d_netcmd.h">
+      <Filter>D_Doom</Filter>
+    </ClInclude>
+    <ClInclude Include="..\netcode\d_netfil.h">
+      <Filter>D_Doom</Filter>
+    </ClInclude>
+    <ClInclude Include="..\netcode\gamestate.h">
+      <Filter>D_Doom</Filter>
+    </ClInclude>
+    <ClInclude Include="..\netcode\http-mserv.h">
+      <Filter>I_Interface</Filter>
+    </ClInclude>
+    <ClInclude Include="..\netcode\i_addrinfo.h">
+      <Filter>I_Interface</Filter>
+    </ClInclude>
+    <ClInclude Include="..\netcode\i_net.h">
+      <Filter>I_Interface</Filter>
+    </ClInclude>
+    <ClInclude Include="..\netcode\i_tcp.h">
+      <Filter>I_Interface</Filter>
+    </ClInclude>
+    <ClInclude Include="..\netcode\mserv.h">
+      <Filter>I_Interface</Filter>
+    </ClInclude>
+    <ClInclude Include="..\netcode\net_command.h">
+      <Filter>D_Doom</Filter>
+    </ClInclude>
+    <ClInclude Include="..\netcode\protocol.h">
+      <Filter>D_Doom</Filter>
+    </ClInclude>
+    <ClInclude Include="..\netcode\server_connection.h">
+      <Filter>D_Doom</Filter>
+    </ClInclude>
+    <ClInclude Include="..\netcode\tic_command.h">
+      <Filter>D_Doom</Filter>
     </ClInclude>
     <ClInclude Include="..\comptime.h">
       <Filter>O_Other</Filter>
@@ -464,6 +491,9 @@
     </ClInclude>
     <ClInclude Include="..\v_video.h">
       <Filter>R_Rend</Filter>
+    </ClInclude>
+    <ClInclude Include="..\snake.h">
+      <Filter>M_Misc</Filter>
     </ClInclude>
     <ClInclude Include="..\sounds.h">
       <Filter>S_Sounds</Filter>
@@ -639,19 +669,7 @@
     <ClCompile Include="..\deh_tables.c">
       <Filter>D_Doom</Filter>
     </ClCompile>
-    <ClCompile Include="..\d_clisrv.c">
-      <Filter>D_Doom</Filter>
-    </ClCompile>
     <ClCompile Include="..\d_main.c">
-      <Filter>D_Doom</Filter>
-    </ClCompile>
-    <ClCompile Include="..\d_net.c">
-      <Filter>D_Doom</Filter>
-    </ClCompile>
-    <ClCompile Include="..\d_netcmd.c">
-      <Filter>D_Doom</Filter>
-    </ClCompile>
-    <ClCompile Include="..\d_netfil.c">
       <Filter>D_Doom</Filter>
     </ClCompile>
     <ClCompile Include="..\z_zone.c">
@@ -732,16 +750,7 @@
     <ClCompile Include="..\filesrch.c">
       <Filter>I_Interface</Filter>
     </ClCompile>
-    <ClCompile Include="..\i_addrinfo.c">
-      <Filter>I_Interface</Filter>
-    </ClCompile>
     <ClCompile Include="..\i_tcp.c">
-      <Filter>I_Interface</Filter>
-    </ClCompile>
-    <ClCompile Include="..\mserv.c">
-      <Filter>I_Interface</Filter>
-    </ClCompile>
-    <ClCompile Include="..\http-mserv.c">
       <Filter>I_Interface</Filter>
     </ClCompile>
     <ClCompile Include="..\lua_baselib.c">
@@ -830,6 +839,48 @@
     </ClCompile>
     <ClCompile Include="..\m_random.c">
       <Filter>M_Misc</Filter>
+    </ClCompile>
+    <ClCompile Include="..\netcode\client_connection.c">
+      <Filter>D_Doom</Filter>
+    </ClCompile>
+    <ClCompile Include="..\netcode\commands.c">
+      <Filter>D_Doom</Filter>
+    </ClCompile>
+    <ClCompile Include="..\netcode\d_clisrv.c">
+      <Filter>D_Doom</Filter>
+    </ClCompile>
+    <ClCompile Include="..\netcode\d_net.c">
+      <Filter>D_Doom</Filter>
+    </ClCompile>
+    <ClCompile Include="..\netcode\d_netcmd.c">
+      <Filter>D_Doom</Filter>
+    </ClCompile>
+    <ClCompile Include="..\netcode\d_netfil.c">
+      <Filter>D_Doom</Filter>
+    </ClCompile>
+    <ClCompile Include="..\netcode\gamestate.c">
+      <Filter>D_Doom</Filter>
+    </ClCompile>
+    <ClCompile Include="..\netcode\http-mserv.c">
+      <Filter>I_Interface</Filter>
+    </ClCompile>
+    <ClCompile Include="..\netcode\i_addrinfo.c">
+      <Filter>I_Interface</Filter>
+    </ClCompile>
+    <ClCompile Include="..\netcode\i_tcp.c">
+      <Filter>I_Interface</Filter>
+    </ClCompile>
+    <ClCompile Include="..\netcode\mserv.c">
+      <Filter>I_Interface</Filter>
+    </ClCompile>
+    <ClCompile Include="..\netcode\net_command.c">
+      <Filter>D_Doom</Filter>
+    </ClCompile>
+    <ClCompile Include="..\netcode\server_connection.c">
+      <Filter>D_Doom</Filter>
+    </ClCompile>
+    <ClCompile Include="..\netcode\tic_command.c">
+      <Filter>D_Doom</Filter>
     </ClCompile>
     <ClCompile Include="..\string.c">
       <Filter>M_Misc</Filter>
@@ -953,6 +1004,9 @@
     </ClCompile>
     <ClCompile Include="..\v_video.c">
       <Filter>R_Rend</Filter>
+    </ClCompile>
+    <ClCompile Include="..\snake.c">
+      <Filter>M_Misc</Filter>
     </ClCompile>
     <ClCompile Include="..\sounds.c">
       <Filter>S_Sounds</Filter>
