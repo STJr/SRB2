@@ -88,6 +88,8 @@
 
 #include "taglist.h"
 
+#include "netcode/net_command.h"
+
 //
 // Map MD5, calculated on level load.
 // Sent to clients in PT_SERVERINFO.
