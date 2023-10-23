@@ -2752,6 +2752,7 @@ void M_SetMenuCurBackground(const char *defaultname)
 {
 	char name[9];
 	strncpy(name, defaultname, 8);
+	name[8] = '\0';
 	M_IterateMenuTree(MIT_SetCurBackground, &name);
 }
 
