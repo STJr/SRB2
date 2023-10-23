@@ -28,6 +28,7 @@
 #include "m_misc.h"
 #include "v_video.h" // video flags for CEchos
 #include "f_finale.h"
+#include "netcode/net_command.h"
 
 // CTF player names
 #define CTFTEAMCODE(pl) pl->ctfteam ? (pl->ctfteam == 1 ? "\x85" : "\x84") : ""
