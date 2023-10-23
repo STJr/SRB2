@@ -15,7 +15,7 @@
 #include "f_finale.h"
 #include "g_game.h"
 #include "hu_stuff.h"
-#include "i_net.h"
+#include "netcode/i_net.h"
 #include "i_video.h"
 #include "p_tick.h"
 #include "r_defs.h"
@@ -998,8 +998,7 @@ void Y_Ticker(void)
 	if (paused || P_AutoPause())
 		return;
 
-	LUA_HookBool(intertype == int_spec && stagefailed,
-			HOOK(IntermissionThinker));
+	LUA_HookBool(stagefailed, HOOK(IntermissionThinker));
 
 	intertic++;
 
@@ -1477,10 +1476,10 @@ void Y_StartIntermission(void)
 				if (players[consoleplayer].charflags & SF_SUPER)
 				{
 					strcpy(data.spec.passed3, "can now become");
-					snprintf(data.spec.passed4,
-						sizeof data.spec.passed4, "Super %s",
-						skins[players[consoleplayer].skin].realname);
-					data.spec.passed4[sizeof data.spec.passed4 - 1] = '\0';
+					if (strlen(skins[players[consoleplayer].skin].supername) > 20) //too long, use generic
+						strcpy(data.spec.passed4, "their super form");
+					else
+						strcpy(data.spec.passed4, skins[players[consoleplayer].skin].supername);
 				}
 			}
 			else
@@ -2044,7 +2043,7 @@ static void Y_AwardCoopBonuses(void)
 	y_bonus_t localbonuses[4];
 
 	// set score/total first
-	data.coop.total = 0;
+	data.coop.total = players[consoleplayer].recordscore;
 	data.coop.score = players[consoleplayer].score;
 	data.coop.gotperfbonus = -1;
 	memset(data.coop.bonuses, 0, sizeof(data.coop.bonuses));

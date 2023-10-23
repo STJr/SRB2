@@ -174,7 +174,7 @@ static huddrawlist_h luahuddrawlist_titlecard;
 skincolornum_t linkColor[3][NUMLINKCOLORS] = {
 {SKINCOLOR_SHAMROCK, SKINCOLOR_AQUA, SKINCOLOR_SKY, SKINCOLOR_BLUE, SKINCOLOR_PURPLE, SKINCOLOR_MAGENTA,
  SKINCOLOR_ROSY, SKINCOLOR_RED, SKINCOLOR_ORANGE, SKINCOLOR_GOLD, SKINCOLOR_YELLOW, SKINCOLOR_PERIDOT},
-{SKINCOLOR_EMERALD, SKINCOLOR_AQUAMARINE, SKINCOLOR_WAVE, SKINCOLOR_SAPPHIRE, SKINCOLOR_GALAXY, SKINCOLOR_CRYSTAL,
+{SKINCOLOR_EMERALD, SKINCOLOR_OCEAN, SKINCOLOR_AQUAMARINE, SKINCOLOR_SAPPHIRE, SKINCOLOR_GALAXY, SKINCOLOR_SIBERITE,
  SKINCOLOR_TAFFY, SKINCOLOR_RUBY, SKINCOLOR_GARNET, SKINCOLOR_TOPAZ, SKINCOLOR_LEMON, SKINCOLOR_LIME},
 {SKINCOLOR_ISLAND, SKINCOLOR_TURQUOISE, SKINCOLOR_DREAM, SKINCOLOR_DAYBREAK, SKINCOLOR_VAPOR, SKINCOLOR_FUCHSIA,
  SKINCOLOR_VIOLET, SKINCOLOR_EVENTIDE, SKINCOLOR_KETCHUP, SKINCOLOR_FOUNDATION, SKINCOLOR_HEADLIGHT, SKINCOLOR_CHARTREUSE}};
@@ -827,6 +827,8 @@ static void ST_drawLivesArea(void)
 	V_DrawSmallScaledPatch(hudinfo[HUD_LIVES].x, hudinfo[HUD_LIVES].y,
 		hudinfo[HUD_LIVES].f|V_PERPLAYER|V_HUDTRANS, livesback);
 
+	UINT16 facecolor = P_GetPlayerColor(stplyr);
+
 	// face
 	if (stplyr->spectator)
 	{
@@ -856,10 +858,10 @@ static void ST_drawLivesArea(void)
 			}
 		}
 	}
-	else if (stplyr->skincolor)
+	else if (facecolor)
 	{
 		// skincolor face
-		UINT8 *colormap = R_GetTranslationColormap(stplyr->skin, stplyr->skincolor, GTC_CACHE);
+		UINT8 *colormap = R_GetTranslationColormap(stplyr->skin, facecolor, GTC_CACHE);
 		V_DrawSmallMappedPatch(hudinfo[HUD_LIVES].x, hudinfo[HUD_LIVES].y,
 			hudinfo[HUD_LIVES].f|V_PERPLAYER|V_HUDTRANS, faceprefix[stplyr->skin], colormap);
 	}
@@ -1030,7 +1032,8 @@ static void ST_drawLivesArea(void)
 
 static void ST_drawInput(void)
 {
-	const INT32 accent = V_SNAPTOLEFT|V_SNAPTOBOTTOM|(stplyr->skincolor ? skincolors[stplyr->skincolor].ramp[4] : 0);
+	UINT16 color = P_GetPlayerColor(stplyr);
+	const INT32 accent = V_SNAPTOLEFT|V_SNAPTOBOTTOM|(color ? skincolors[color].ramp[4] : 0);
 	INT32 col;
 	UINT8 offs;
 
@@ -2512,6 +2515,8 @@ num:
 static INT32 ST_drawEmeraldHuntIcon(mobj_t *hunt, patch_t **patches, INT32 offset)
 {
 	INT32 interval, i;
+	if (stplyr->mo == NULL)
+		return 0;  // player just joined after spectating, can happen on custom gamemodes.
 	UINT32 dist = ((UINT32)P_AproxDistance(P_AproxDistance(stplyr->mo->x - hunt->x, stplyr->mo->y - hunt->y), stplyr->mo->z - hunt->z))>>FRACBITS;
 
 	if (dist < 128)

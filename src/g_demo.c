@@ -15,7 +15,7 @@
 #include "console.h"
 #include "d_main.h"
 #include "d_player.h"
-#include "d_clisrv.h"
+#include "netcode/d_clisrv.h"
 #include "p_setup.h"
 #include "i_time.h"
 #include "i_system.h"
@@ -39,7 +39,7 @@
 #include "v_video.h"
 #include "lua_hook.h"
 #include "md5.h" // demo checksums
-#include "d_netfil.h" // G_CheckDemoExtraFiles
+#include "netcode/d_netfil.h" // G_CheckDemoExtraFiles
 
 boolean timingdemo; // if true, exit with report on completion
 boolean nodrawers; // for comparative timing purposes
@@ -1500,8 +1500,12 @@ void G_BeginRecording(void)
 	demo_p += 16;
 
 	// Color
-	for (i = 0; i < MAXCOLORNAME && cv_playercolor.string[i]; i++)
-		name[i] = cv_playercolor.string[i];
+	UINT16 skincolor = players[0].skincolor;
+	if (skincolor >= numskincolors)
+		skincolor = SKINCOLOR_NONE;
+	const char *skincolor_name = skincolors[skincolor].name;
+	for (i = 0; i < MAXCOLORNAME && skincolor_name[i]; i++)
+		name[i] = skincolor_name[i];
 	for (; i < MAXCOLORNAME; i++)
 		name[i] = '\0';
 	M_Memcpy(demo_p,name,MAXCOLORNAME);
@@ -1617,7 +1621,7 @@ void G_BeginMetal(void)
 	oldmetal.angle = mo->angle>>24;
 }
 
-static void G_LoadDemoExtraFiles(UINT8 **pp)
+static void G_LoadDemoExtraFiles(UINT8 **pp, UINT16 this_demo_version)
 {
 	UINT16 totalfiles;
 	char filename[MAX_WADPATH];
@@ -1626,6 +1630,12 @@ static void G_LoadDemoExtraFiles(UINT8 **pp)
 	boolean toomany = false;
 	boolean alreadyloaded;
 	UINT16 i, j;
+
+	if (this_demo_version < 0x0010)
+	{
+		// demo has no file list
+		return;
+	}
 
 	totalfiles = READUINT16((*pp));
 	for (i = 0; i < totalfiles; ++i)
@@ -1686,12 +1696,12 @@ static void G_LoadDemoExtraFiles(UINT8 **pp)
 	}
 }
 
-static void G_SkipDemoExtraFiles(UINT8 **pp)
+static void G_SkipDemoExtraFiles(UINT8 **pp, UINT16 this_demo_version)
 {
 	UINT16 totalfiles;
 	UINT16 i;
 
-	if (demoversion < 0x0010)
+	if (this_demo_version < 0x0010)
 	{
 		// demo has no file list
 		return;
@@ -1707,7 +1717,7 @@ static void G_SkipDemoExtraFiles(UINT8 **pp)
 
 // G_CheckDemoExtraFiles: checks if our loaded WAD list matches the demo's.
 // Enabling quick prevents filesystem checks to see if needed files are available to load.
-static UINT8 G_CheckDemoExtraFiles(UINT8 **pp, boolean quick)
+static UINT8 G_CheckDemoExtraFiles(UINT8 **pp, boolean quick, UINT16 this_demo_version)
 {
 	UINT16 totalfiles, filesloaded, nmusfilecount;
 	char filename[MAX_WADPATH];
@@ -1717,7 +1727,7 @@ static UINT8 G_CheckDemoExtraFiles(UINT8 **pp, boolean quick)
 	UINT16 i, j;
 	UINT8 error = DFILE_ERROR_NONE;
 
-	if (demoversion < 0x0010)
+	if (this_demo_version < 0x0010)
 	{
 		// demo has no file list
 		return DFILE_ERROR_NONE;
@@ -1816,10 +1826,9 @@ UINT8 G_CmpDemoTime(char *oldname, char *newname)
 	UINT8 *buffer,*p;
 	UINT8 flags;
 	UINT32 oldtime, newtime, oldscore, newscore;
-	UINT16 oldrings, newrings, oldversion;
+	UINT16 oldrings, newrings, oldversion, newversion;
 	size_t bufsize ATTRUNUSED;
 	UINT8 c;
-	UINT16 s ATTRUNUSED;
 	UINT8 aflags = 0;
 
 	// load the new file
@@ -1835,15 +1844,15 @@ UINT8 G_CmpDemoTime(char *oldname, char *newname)
 	I_Assert(c == VERSION);
 	c = READUINT8(p); // SUBVERSION
 	I_Assert(c == SUBVERSION);
-	s = READUINT16(p);
-	I_Assert(s >= 0x000c);
+	newversion = READUINT16(p);
+	I_Assert(newversion == DEMOVERSION);
 	p += 16; // demo checksum
 	I_Assert(!memcmp(p, "PLAY", 4));
 	p += 4; // PLAY
 	p += 2; // gamemap
 	p += 16; // map md5
 	flags = READUINT8(p); // demoflags
-	G_SkipDemoExtraFiles(&p);
+	G_SkipDemoExtraFiles(&p, newversion);
 	aflags = flags & (DF_RECORDATTACK|DF_NIGHTSATTACK);
 	I_Assert(aflags);
 	if (flags & DF_RECORDATTACK)
@@ -1882,16 +1891,9 @@ UINT8 G_CmpDemoTime(char *oldname, char *newname)
 	p++; // VERSION
 	p++; // SUBVERSION
 	oldversion = READUINT16(p);
-	switch(oldversion) // demoversion
+	if (oldversion < 0x000c || oldversion > DEMOVERSION)
 	{
-	case DEMOVERSION: // latest always supported
-	case 0x000f: // The previous demoversions also supported 
-	case 0x000e:
-	case 0x000d: // all that changed between then and now was longer color name
-	case 0x000c:
-		break;
-	// too old, cannot support.
-	default:
+		// too old (or new), cannot support
 		CONS_Alert(CONS_NOTICE, M_GetText("File '%s' invalid format. It will be overwritten.\n"), oldname);
 		Z_Free(buffer);
 		return UINT8_MAX;
@@ -1909,7 +1911,7 @@ UINT8 G_CmpDemoTime(char *oldname, char *newname)
 		p += 2; // gamemap
 	p += 16; // mapmd5
 	flags = READUINT8(p);
-	G_SkipDemoExtraFiles(&p);
+	G_SkipDemoExtraFiles(&p, oldversion);
 	if (!(flags & aflags))
 	{
 		CONS_Alert(CONS_NOTICE, M_GetText("File '%s' not from same game mode. It will be overwritten.\n"), oldname);
@@ -1964,14 +1966,11 @@ void G_DoPlayDemo(char *defdemoname)
 	UINT8 i;
 	lumpnum_t l;
 	char skin[17],color[MAXCOLORNAME+1],*n,*pdemoname;
-	UINT8 version,subversion,charability,charability2,thrustfactor,accelstart,acceleration,cnamelen;
+	UINT8 version,subversion,charability,charability2,thrustfactor,accelstart,acceleration;
 	pflags_t pflags;
 	UINT32 randseed, followitem;
 	fixed_t camerascale,shieldscale,actionspd,mindash,maxdash,normalspeed,runspeed,jumpfactor,height,spinheight;
 	char msg[1024];
-#ifdef OLD22DEMOCOMPAT
-	boolean use_old_demo_vars = false;
-#endif
 
 	skin[16] = '\0';
 	color[MAXCOLORNAME] = '\0';
@@ -2030,23 +2029,13 @@ void G_DoPlayDemo(char *defdemoname)
 	subversion = READUINT8(demo_p);
 	demoversion = READUINT16(demo_p);
 	demo_forwardmove_rng = (demoversion < 0x0010);
-	switch(demoversion)
-	{
-	case 0x000f:
-	case 0x000d:
-	case 0x000e:
-	case DEMOVERSION: // latest always supported
-		cnamelen = MAXCOLORNAME;
-		break;
 #ifdef OLD22DEMOCOMPAT
-	// all that changed between then and now was longer color name
-	case 0x000c:
-		cnamelen = 16;
-		use_old_demo_vars = true;
-		break;
+	if (demoversion < 0x000c || demoversion > DEMOVERSION)
+#else
+	if (demoversion < 0x000d || demoversion > DEMOVERSION)
 #endif
-	// too old, cannot support.
-	default:
+	{
+		// too old (or new), cannot support
 		snprintf(msg, 1024, M_GetText("%s is an incompatible replay format and cannot be played.\n"), pdemoname);
 		CONS_Alert(CONS_ERROR, "%s", msg);
 		M_StartMessage(msg, NULL, MM_NOTHING);
@@ -2074,26 +2063,22 @@ void G_DoPlayDemo(char *defdemoname)
 
 	demoflags = READUINT8(demo_p);
 
-	if (demoversion < 0x0010)
-	{
-		; // Don't do anything with files.
-	}
-	else if (titledemo)
+	if (titledemo)
 	{
 		// Titledemos should always play and ought to always be compatible with whatever wadlist is running.
-		G_SkipDemoExtraFiles(&demo_p);
+		G_SkipDemoExtraFiles(&demo_p, demoversion);
 	}
 	else if (demofileoverride == DFILE_OVERRIDE_LOAD)
 	{
-		G_LoadDemoExtraFiles(&demo_p);
+		G_LoadDemoExtraFiles(&demo_p, demoversion);
 	}
 	else if (demofileoverride == DFILE_OVERRIDE_SKIP)
 	{
-		G_SkipDemoExtraFiles(&demo_p);
+		G_SkipDemoExtraFiles(&demo_p, demoversion);
 	}
 	else
 	{
-		UINT8 error = G_CheckDemoExtraFiles(&demo_p, false);
+		UINT8 error = G_CheckDemoExtraFiles(&demo_p, false, demoversion);
 
 		if (error)
 		{
@@ -2177,8 +2162,8 @@ void G_DoPlayDemo(char *defdemoname)
 	demo_p += 16;
 
 	// Color
-	M_Memcpy(color,demo_p,cnamelen);
-	demo_p += cnamelen;
+	M_Memcpy(color, demo_p, (demoversion < 0x000d) ? 16 : MAXCOLORNAME);
+	demo_p += (demoversion < 0x000d) ? 16 : MAXCOLORNAME;
 
 	charability = READUINT8(demo_p);
 	charability2 = READUINT8(demo_p);
@@ -2214,7 +2199,7 @@ void G_DoPlayDemo(char *defdemoname)
 
 	// net var data
 #ifdef OLD22DEMOCOMPAT
-	if (use_old_demo_vars)
+	if (demoversion < 0x000d)
 		CV_LoadOldDemoVars(&demo_p);
 	else
 #endif
@@ -2262,7 +2247,6 @@ void G_DoPlayDemo(char *defdemoname)
 			players[0].skincolor = i;
 			break;
 		}
-	CV_StealthSetValue(&cv_playercolor, players[0].skincolor);
 	if (players[0].mo)
 	{
 		players[0].mo->color = players[0].skincolor;
@@ -2302,6 +2286,13 @@ UINT8 G_CheckDemoForError(char *defdemoname)
 {
 	lumpnum_t l;
 	char *n,*pdemoname;
+	UINT16 our_demo_version;
+
+	if (titledemo)
+	{
+		// Don't do anything with files for these.
+		return DFILE_ERROR_NONE;
+	}
 
 	n = defdemoname+strlen(defdemoname);
 	while (*n != '/' && *n != '\\' && n != defdemoname)
@@ -2340,21 +2331,14 @@ UINT8 G_CheckDemoForError(char *defdemoname)
 
 	demo_p++; // version
 	demo_p++; // subversion
-	demoversion = READUINT16(demo_p);
-	demo_forwardmove_rng = (demoversion < 0x0010);
-	switch(demoversion)
-	{
-	case 0x000d:
-	case 0x000e:
-	case 0x000f:
-	case DEMOVERSION: // latest always supported
-		break;
+	our_demo_version = READUINT16(demo_p);
 #ifdef OLD22DEMOCOMPAT
-	case 0x000c:
-		break;
+	if (our_demo_version < 0x000c || our_demo_version > DEMOVERSION)
+#else
+	if (our_demo_version < 0x000d || our_demo_version > DEMOVERSION)
 #endif
-	// too old, cannot support.
-	default:
+	{
+		// too old (or new), cannot support
 		return DFILE_ERROR_NOTDEMO;
 	}
 	demo_p += 16; // demo checksum
@@ -2368,17 +2352,7 @@ UINT8 G_CheckDemoForError(char *defdemoname)
 
 	demo_p++; // demoflags
 
-	// Don't do anything with files.
-	if (demoversion < 0x0010)
-	{
-		return DFILE_ERROR_NONE;
-	}
-	else if (titledemo)
-	{
-		return DFILE_ERROR_NONE;
-	}
-
-	return G_CheckDemoExtraFiles(&demo_p, true);
+	return G_CheckDemoExtraFiles(&demo_p, true, our_demo_version);
 }
 
 void G_AddGhost(char *defdemoname)
@@ -2386,7 +2360,6 @@ void G_AddGhost(char *defdemoname)
 	INT32 i;
 	lumpnum_t l;
 	char name[17],skin[17],color[MAXCOLORNAME+1],*n,*pdemoname,md5[16];
-	UINT8 cnamelen;
 	demoghost *gh;
 	UINT8 flags, subversion;
 	UINT8 *buffer,*p;
@@ -2438,20 +2411,9 @@ void G_AddGhost(char *defdemoname)
 	p++; // VERSION
 	subversion = READUINT8(p); // SUBVERSION
 	ghostversion = READUINT16(p);
-	switch(ghostversion)
+	if (ghostversion < 0x000c || ghostversion > DEMOVERSION)
 	{
-	case 0x000f:
-	case 0x000d:
-	case 0x000e:
-	case DEMOVERSION: // latest always supported
-		cnamelen = MAXCOLORNAME;
-		break;
-	// all that changed between then and now was longer color name
-	case 0x000c:
-		cnamelen = 16;
-		break;
-	// too old, cannot support.
-	default:
+		// too old (or new), cannot support
 		CONS_Alert(CONS_NOTICE, M_GetText("Ghost %s: Demo version incompatible.\n"), pdemoname);
 		Z_Free(pdemoname);
 		Z_Free(buffer);
@@ -2487,7 +2449,7 @@ void G_AddGhost(char *defdemoname)
 		return;
 	}
 
-	G_SkipDemoExtraFiles(&p); // Don't wanna modify the file list for ghosts.
+	G_SkipDemoExtraFiles(&p, ghostversion); // Don't wanna modify the file list for ghosts.
 
 	switch ((flags & DF_ATTACKMASK)>>DF_ATTACKSHIFT)
 	{
@@ -2514,8 +2476,8 @@ void G_AddGhost(char *defdemoname)
 	p += 16;
 
 	// Color
-	M_Memcpy(color, p,cnamelen);
-	p += cnamelen;
+	M_Memcpy(color, p, (ghostversion < 0x000d) ? 16 : MAXCOLORNAME);
+	p += (ghostversion < 0x000d) ? 16 : MAXCOLORNAME;
 
 	// Ghosts do not have a player structure to put this in.
 	p++; // charability
@@ -2698,16 +2660,9 @@ void G_DoPlayMetal(void)
 	metal_p++; // VERSION
 	metal_p++; // SUBVERSION
 	metalversion = READUINT16(metal_p);
-	switch(metalversion)
+	if (metalversion < 0x000c || metalversion > DEMOVERSION)
 	{
-	case DEMOVERSION: // latest always supported
-	case 0x000f:
-	case 0x000e: // There are checks wheter the momentum is from older demo versions or not
-	case 0x000d: // all that changed between then and now was longer color name
-	case 0x000c:
-		break;
-	// too old, cannot support.
-	default:
+		// too old (or new), cannot support
 		CONS_Alert(CONS_WARNING, M_GetText("Failed to load bot recording for this map, format version incompatible.\n"));
 		Z_Free(metalbuffer);
 		return;
