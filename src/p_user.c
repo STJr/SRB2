@@ -17,7 +17,8 @@
 #include "doomdef.h"
 #include "i_system.h"
 #include "d_event.h"
-#include "d_net.h"
+#include "netcode/d_net.h"
+#include "netcode/net_command.h"
 #include "g_game.h"
 #include "p_local.h"
 #include "r_fps.h"
@@ -11159,7 +11160,7 @@ static void P_MinecartThink(player_t *player)
 					detright->drawonlyforplayer = player;
 				}
 				else
-					P_RemoveMobj(detleft);
+					P_RemoveMobj(detright);
 			}
 		}
 		else

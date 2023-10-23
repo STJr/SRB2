@@ -34,7 +34,7 @@
 #include "doomdef.h"
 #include "am_map.h"
 #include "console.h"
-#include "d_net.h"
+#include "netcode/d_net.h"
 #include "f_finale.h"
 #include "g_game.h"
 #include "hu_stuff.h"
@@ -56,11 +56,11 @@
 #include "w_wad.h"
 #include "z_zone.h"
 #include "d_main.h"
-#include "d_netfil.h"
+#include "netcode/d_netfil.h"
 #include "m_cheat.h"
 #include "y_inter.h"
 #include "p_local.h" // chasecam
-#include "mserv.h" // ms_RoomId
+#include "netcode/mserv.h" // ms_RoomId
 #include "m_misc.h" // screenshot functionality
 #include "deh_tables.h" // Dehacked list test
 #include "m_cond.h" // condition initialization
