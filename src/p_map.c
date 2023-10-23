@@ -3730,7 +3730,9 @@ void P_SlideMove(mobj_t *mo)
 
 	boolean papercol = false;
 	vertex_t v1, v2; // fake vertexes
-	line_t junk; // fake linedef
+	static line_t junk; // fake linedef
+
+	memset(&junk, 0x00, sizeof(junk));
 
 	if (tmhitthing && mo->z + mo->height > tmhitthing->z && mo->z < tmhitthing->z + tmhitthing->height)
 	{
