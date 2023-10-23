@@ -509,26 +509,26 @@ void P_LineOpening(line_t *linedef, mobj_t *mobj)
 				// on non-solid polyobjects should NEVER happen in the future
 				if (linedef->polyobj && (linedef->polyobj->flags & POF_TESTHEIGHT)) {
 					if (linedef->flags & ML_WRAPMIDTEX && !side->repeatcnt) { // "infinite" repeat
-						texbottom = back->floorheight + side->rowoffset;
-						textop = back->ceilingheight + side->rowoffset;
+						texbottom = back->floorheight + side->rowoffset + side->offsety_mid;
+						textop = back->ceilingheight + side->rowoffset + side->offsety_mid;
 					} else if (linedef->flags & ML_MIDTEX) {
-						texbottom = back->floorheight + side->rowoffset;
+						texbottom = back->floorheight + side->rowoffset + side->offsety_mid;
 						textop = texbottom + texheight*(side->repeatcnt+1);
 					} else {
-						textop = back->ceilingheight + side->rowoffset;
+						textop = back->ceilingheight + side->rowoffset + side->offsety_mid;
 						texbottom = textop - texheight*(side->repeatcnt+1);
 					}
 				} else
 #endif
 				{
 					if (linedef->flags & ML_WRAPMIDTEX && !side->repeatcnt) { // "infinite" repeat
-						texbottom = openbottom + side->rowoffset;
-						textop = opentop + side->rowoffset;
+						texbottom = openbottom + side->rowoffset + side->offsety_mid;
+						textop = opentop + side->rowoffset + side->offsety_mid;
 					} else if (linedef->flags & ML_MIDPEG) {
-						texbottom = openbottom + side->rowoffset;
+						texbottom = openbottom + side->rowoffset + side->offsety_mid;
 						textop = texbottom + texheight*(side->repeatcnt+1);
 					} else {
-						textop = opentop + side->rowoffset;
+						textop = opentop + side->rowoffset + side->offsety_mid;
 						texbottom = textop - texheight*(side->repeatcnt+1);
 					}
 				}
