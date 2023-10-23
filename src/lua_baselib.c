@@ -3545,7 +3545,7 @@ static int lib_gAddGametype(lua_State *L)
 // Partly lifted from Got_AddPlayer
 static int lib_gAddPlayer(lua_State *L)
 {
-	INT16 i, newplayernum, botcount = 1;
+	INT16 i, newplayernum;
 	player_t *newplayer;
 	SINT8 skinnum = 0, bot;
 
@@ -3553,10 +3553,8 @@ static int lib_gAddPlayer(lua_State *L)
 	{
 		if (!playeringame[i])
 			break;
-
-		if (players[i].bot)
-			botcount++; // How many of us are there already?
 	}
+
 	if (i >= MAXPLAYERS)
 	{
 		lua_pushnil(L);
