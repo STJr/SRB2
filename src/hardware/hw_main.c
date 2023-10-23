@@ -29,7 +29,7 @@
 #include "../r_patch.h"
 #include "../r_picformats.h"
 #include "../r_bsp.h"
-#include "../d_clisrv.h"
+#include "../netcode/d_clisrv.h"
 #include "../w_wad.h"
 #include "../z_zone.h"
 #include "../r_splats.h"
@@ -3595,7 +3595,7 @@ static void HWR_DrawDropShadow(mobj_t *thing, fixed_t scale)
 			return;
 	}
 
-	floordiff = abs((flip < 0 ? thing->height : 0) + interp.z - groundz);
+	floordiff = abs((flip < 0 ? interp.height : 0) + interp.z - groundz);
 
 	alpha = floordiff / (4*FRACUNIT) + 75;
 	if (alpha >= 255) return;
@@ -3606,9 +3606,7 @@ static void HWR_DrawDropShadow(mobj_t *thing, fixed_t scale)
 	HWR_GetPatch(gpatch);
 
 	scalemul = FixedMul(FRACUNIT - floordiff/640, scale);
-	scalemul = FixedMul(scalemul, (thing->radius*2) / gpatch->height);
-	if ((thing->scale != thing->old_scale) && (thing->scale >= FRACUNIT/1024)) // Interpolate shadows when scaling mobjs
-		scalemul = FixedMul(scalemul, FixedDiv(interp.scale, thing->scale));
+	scalemul = FixedMul(scalemul, (interp.radius*2) / gpatch->height);
 
 	fscale = FIXED_TO_FLOAT(scalemul);
 	fx = FIXED_TO_FLOAT(interp.x);
@@ -3720,7 +3718,7 @@ static void HWR_RotateSpritePolyToAim(gl_vissprite_t *spr, FOutVector *wallVerts
 
 		if (P_MobjFlip(spr->mobj) == -1)
 		{
-			basey = FIXED_TO_FLOAT(interp.z + spr->mobj->height);
+			basey = FIXED_TO_FLOAT(interp.z + interp.height);
 		}
 		else
 		{
@@ -4055,32 +4053,32 @@ static void HWR_DrawBoundingBox(gl_vissprite_t *vis)
 	// repeat this 4 times (overhead)
 	//
 	//
-	// 17    20  21    11
-	//    16 15  14 10
-	// 27 22  *--*  07 12
+	// 15    16  17    09
+	//    14 13  12 08
+	// 23 18  *--*  07 10
 	//        |  |
-	// 26 23  *--*  06 13
-	//    24 00  01 02
-	// 25    05  04    03
+	// 22 19  *--*  06 11
+	//    20 00  01 02
+	// 21    05  04    03
 	//
 
-	v[000].x = v[005].x = v[015].x = v[016].x = v[017].x = v[020].x =
-		v[022].x = v[023].x = v[024].x = v[025].x = v[026].x = v[027].x = vis->x1; // west
+	v[ 0].x = v[ 5].x = v[13].x = v[14].x = v[15].x = v[16].x =
+		v[18].x = v[19].x = v[20].x = v[21].x = v[22].x = v[23].x = vis->x1; // west
 
-	v[001].x = v[002].x = v[003].x = v[004].x = v[006].x = v[007].x =
-		v[010].x = v[011].x = v[012].x = v[013].x = v[014].x = v[021].x = vis->x2; // east
+	v[ 1].x = v[ 2].x = v[ 3].x = v[ 4].x = v[ 6].x = v[ 7].x =
+		v[ 8].x = v[ 9].x = v[10].x = v[11].x = v[12].x = v[17].x = vis->x2; // east
 
-	v[000].z = v[001].z = v[002].z = v[003].z = v[004].z = v[005].z =
-		v[006].z = v[013].z = v[023].z = v[024].z = v[025].z = v[026].z = vis->z1; // south
+	v[ 0].z = v[ 1].z = v[ 2].z = v[ 3].z = v[ 4].z = v[ 5].z =
+		v[ 6].z = v[11].z = v[19].z = v[20].z = v[21].z = v[22].z = vis->z1; // south
 
-	v[007].z = v[010].z = v[011].z = v[012].z = v[014].z = v[015].z =
-		v[016].z = v[017].z = v[020].z = v[021].z = v[022].z = v[027].z = vis->z2; // north
+	v[ 7].z = v[ 8].z = v[ 9].z = v[10].z = v[12].z = v[13].z =
+		v[14].z = v[15].z = v[16].z = v[17].z = v[18].z = v[23].z = vis->z2; // north
 
-	v[000].y = v[001].y = v[002].y = v[006].y = v[007].y = v[010].y =
-		v[014].y = v[015].y = v[016].y = v[022].y = v[023].y = v[024].y = vis->gz; // bottom
+	v[ 0].y = v[ 1].y = v[ 2].y = v[ 6].y = v[ 7].y = v[ 8].y =
+		v[12].y = v[13].y = v[14].y = v[18].y = v[19].y = v[20].y = vis->gz; // bottom
 
-	v[003].y = v[004].y = v[005].y = v[011].y = v[012].y = v[013].y =
-		v[017].y = v[020].y = v[021].y = v[025].y = v[026].y = v[027].y = vis->gzt; // top
+	v[ 3].y = v[ 4].y = v[ 5].y = v[ 9].y = v[10].y = v[11].y =
+		v[15].y = v[16].y = v[17].y = v[21].y = v[22].y = v[23].y = vis->gzt; // top
 
 	Surf.PolyColor = V_GetColor(R_GetBoundingBoxColor(vis->mobj));
 	
@@ -4143,14 +4141,11 @@ static void HWR_DrawSprite(gl_vissprite_t *spr)
 		float xscale, yscale;
 		float xoffset, yoffset;
 		float leftoffset, topoffset;
-		float scale = spr->scale;
 		float zoffset = (P_MobjFlip(spr->mobj) * 0.05f);
 		pslope_t *splatslope = NULL;
 		INT32 i;
 
 		renderflags_t renderflags = spr->renderflags;
-		if (renderflags & RF_SHADOWEFFECTS)
-			scale *= spr->shadowscale;
 
 		if (spr->rotateflags & SRF_3D || renderflags & RF_NOSPLATBILLBOARD)
 			angle = spr->mobj->angle;
@@ -5326,7 +5321,7 @@ static void HWR_ProjectSprite(mobj_t *thing)
 			}
 
 			groundz = R_GetShadowZ(thing, NULL);
-			floordiff = abs(((thing->eflags & MFE_VERTICALFLIP) ? caster->height : 0) + casterinterp.z - groundz);
+			floordiff = abs(((thing->eflags & MFE_VERTICALFLIP) ? casterinterp.height : 0) + casterinterp.z - groundz);
 
 			shadowheight = FIXED_TO_FLOAT(floordiff);
 			shadowscale = FIXED_TO_FLOAT(FixedMul(FRACUNIT - floordiff/640, casterinterp.scale));
@@ -5378,10 +5373,7 @@ static void HWR_ProjectSprite(mobj_t *thing)
 
 		if (vflip)
 		{
-			if (thing->scale != thing->old_scale) // Interpolate heights in reverse gravity when scaling mobjs
-				gz = FIXED_TO_FLOAT(interp.z + FixedMul(thing->height, FixedDiv(interp.scale, thing->scale))) - (FIXED_TO_FLOAT(spr_topoffset) * this_yscale);
-			else
-				gz = FIXED_TO_FLOAT(interp.z + thing->height) - (FIXED_TO_FLOAT(spr_topoffset) * this_yscale);
+			gz = FIXED_TO_FLOAT(interp.z + interp.height) - (FIXED_TO_FLOAT(spr_topoffset) * this_yscale);
 			gzt = gz + (FIXED_TO_FLOAT(spr_height) * this_yscale);
 		}
 		else
@@ -5687,7 +5679,6 @@ static void HWR_ProjectBoundingBox(mobj_t *thing)
 	gl_vissprite_t *vis;
 	float tr_x, tr_y;
 	float tz;
-	float rad;
 
 	if (!thing)
 		return;
@@ -5722,15 +5713,13 @@ static void HWR_ProjectBoundingBox(mobj_t *thing)
 	tr_x += gl_viewx;
 	tr_y += gl_viewy;
 
-	rad = FIXED_TO_FLOAT(thing->radius);
-
 	vis = HWR_NewVisSprite();
-	vis->x1 = tr_x - rad;
-	vis->x2 = tr_x + rad;
-	vis->z1 = tr_y - rad;
-	vis->z2 = tr_y + rad;
+	vis->x1 = tr_x - FIXED_TO_FLOAT(interp.radius);
+	vis->x2 = tr_x + FIXED_TO_FLOAT(interp.radius);
+	vis->z1 = tr_y - FIXED_TO_FLOAT(interp.radius);
+	vis->z2 = tr_y + FIXED_TO_FLOAT(interp.radius);
 	vis->gz = FIXED_TO_FLOAT(interp.z);
-	vis->gzt = vis->gz + FIXED_TO_FLOAT(thing->height);
+	vis->gzt = vis->gz + FIXED_TO_FLOAT(interp.height);
 	vis->mobj = thing;
 
 	vis->precip = false;
