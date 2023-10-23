@@ -96,7 +96,7 @@ void Ban_Load_File(boolean warning)
 
 	Ban_Clear();
 
-	for (size_t i=0; fgets(buffer, (int)sizeof(buffer), f); i++)
+	for (; fgets(buffer, (int)sizeof(buffer), f);)
 	{
 		address = strtok(buffer, " \t\r\n");
 		mask = strtok(NULL, " \t\r\n");
