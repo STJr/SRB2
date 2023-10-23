@@ -181,7 +181,7 @@ typedef struct
 #define MV_MAX         63 // used in gamedata check, update whenever MV's are added
 
 // Temporary holding place for nights data for the current map
-extern nightsdata_t ntemprecords;
+extern nightsdata_t ntemprecords[MAXPLAYERS];
 
 // GAMEDATA STRUCTURE
 // Everything that would get saved in gamedata.dat
@@ -252,6 +252,7 @@ void M_SilentUpdateSkinAvailabilites(void);
 UINT8 M_AnySecretUnlocked(gamedata_t *data);
 UINT8 M_SecretUnlocked(INT32 type, gamedata_t *data);
 UINT8 M_MapLocked(INT32 mapnum, gamedata_t *data);
+UINT8 M_CampaignWarpIsCheat(INT32 gt, INT32 mapnum, gamedata_t *data);
 INT32 M_CountEmblems(gamedata_t *data);
 
 // Emblem shit

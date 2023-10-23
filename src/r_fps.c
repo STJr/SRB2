@@ -292,8 +292,13 @@ void R_InterpolateMobjState(mobj_t *mobj, fixed_t frac, interpmobjstate_t *out)
 		out->y = mobj->y;
 		out->z = mobj->z;
 		out->scale = mobj->scale;
+		out->radius = mobj->radius;
+		out->height = mobj->height;
 		out->subsector = mobj->subsector;
 		out->angle = mobj->player ? mobj->player->drawangle : mobj->angle;
+		out->pitch = mobj->pitch;
+		out->roll = mobj->roll;
+		out->spriteroll = mobj->spriteroll;
 		out->spritexscale = mobj->spritexscale;
 		out->spriteyscale = mobj->spriteyscale;
 		out->spritexoffset = mobj->spritexoffset;
@@ -304,9 +309,21 @@ void R_InterpolateMobjState(mobj_t *mobj, fixed_t frac, interpmobjstate_t *out)
 	out->x = R_LerpFixed(mobj->old_x, mobj->x, frac);
 	out->y = R_LerpFixed(mobj->old_y, mobj->y, frac);
 	out->z = R_LerpFixed(mobj->old_z, mobj->z, frac);
-	out->scale = mobj->resetinterp ? mobj->scale : R_LerpFixed(mobj->old_scale, mobj->scale, frac);
 	out->spritexscale = mobj->resetinterp ? mobj->spritexscale : R_LerpFixed(mobj->old_spritexscale, mobj->spritexscale, frac);
 	out->spriteyscale = mobj->resetinterp ? mobj->spriteyscale : R_LerpFixed(mobj->old_spriteyscale, mobj->spriteyscale, frac);
+
+	if (mobj->scale == mobj->old_scale) // Tiny optimisation - scale is usually unchanging, so let's skip a lerp, two FixedMuls, and two FixedDivs
+	{
+		out->scale = mobj->scale;
+		out->radius = mobj->radius;
+		out->height = mobj->height;
+	}
+	else
+	{
+		out->scale = R_LerpFixed(mobj->old_scale, mobj->scale, frac);
+		out->radius = FixedMul(mobj->radius, FixedDiv(out->scale, mobj->scale));
+		out->height = FixedMul(mobj->height, FixedDiv(out->scale, mobj->scale));
+	}
 
 	// Sprite offsets are not interpolated until we have a way to interpolate them explicitly in Lua.
 	// It seems existing mods visually break more often than not if it is interpolated.
@@ -323,6 +340,10 @@ void R_InterpolateMobjState(mobj_t *mobj, fixed_t frac, interpmobjstate_t *out)
 	{
 		out->angle = mobj->resetinterp ? mobj->angle : R_LerpAngle(mobj->old_angle, mobj->angle, frac);
 	}
+
+	out->pitch = mobj->resetinterp ? mobj->pitch : R_LerpAngle(mobj->old_pitch, mobj->pitch, frac);
+	out->roll = mobj->resetinterp ? mobj->roll : R_LerpAngle(mobj->old_roll, mobj->roll, frac);
+	out->spriteroll = mobj->resetinterp ? mobj->spriteroll : R_LerpAngle(mobj->old_spriteroll, mobj->spriteroll, frac);
 }
 
 void R_InterpolatePrecipMobjState(precipmobj_t *mobj, fixed_t frac, interpmobjstate_t *out)
@@ -333,8 +354,13 @@ void R_InterpolatePrecipMobjState(precipmobj_t *mobj, fixed_t frac, interpmobjst
 		out->y = mobj->y;
 		out->z = mobj->z;
 		out->scale = FRACUNIT;
+		out->radius = mobj->radius;
+		out->height = mobj->height;
 		out->subsector = mobj->subsector;
 		out->angle = mobj->angle;
+		out->pitch = mobj->angle;
+		out->roll = mobj->roll;
+		out->spriteroll = mobj->spriteroll;
 		out->spritexscale = mobj->spritexscale;
 		out->spriteyscale = mobj->spriteyscale;
 		out->spritexoffset = mobj->spritexoffset;
@@ -346,6 +372,8 @@ void R_InterpolatePrecipMobjState(precipmobj_t *mobj, fixed_t frac, interpmobjst
 	out->y = R_LerpFixed(mobj->old_y, mobj->y, frac);
 	out->z = R_LerpFixed(mobj->old_z, mobj->z, frac);
 	out->scale = FRACUNIT;
+	out->radius = mobj->radius;
+	out->height = mobj->height;
 	out->spritexscale = R_LerpFixed(mobj->old_spritexscale, mobj->spritexscale, frac);
 	out->spriteyscale = R_LerpFixed(mobj->old_spriteyscale, mobj->spriteyscale, frac);
 	out->spritexoffset = R_LerpFixed(mobj->old_spritexoffset, mobj->spritexoffset, frac);
@@ -354,6 +382,9 @@ void R_InterpolatePrecipMobjState(precipmobj_t *mobj, fixed_t frac, interpmobjst
 	out->subsector = R_PointInSubsector(out->x, out->y);
 
 	out->angle = R_LerpAngle(mobj->old_angle, mobj->angle, frac);
+	out->pitch = R_LerpAngle(mobj->old_pitch, mobj->pitch, frac);
+	out->roll = R_LerpAngle(mobj->old_roll, mobj->roll, frac);
+	out->spriteroll = R_LerpAngle(mobj->old_spriteroll, mobj->spriteroll, frac);
 }
 
 static void AddInterpolator(levelinterpolator_t* interpolator)
@@ -417,13 +448,13 @@ void R_CreateInterpolator_SectorScroll(thinker_t *thinker, sector_t *sector, boo
 	interp->sectorscroll.ceiling = ceiling;
 	if (ceiling)
 	{
-		interp->sectorscroll.oldxoffs = interp->sectorscroll.bakxoffs = sector->ceiling_xoffs;
-		interp->sectorscroll.oldyoffs = interp->sectorscroll.bakyoffs = sector->ceiling_yoffs;
+		interp->sectorscroll.oldxoffs = interp->sectorscroll.bakxoffs = sector->ceilingxoffset;
+		interp->sectorscroll.oldyoffs = interp->sectorscroll.bakyoffs = sector->ceilingyoffset;
 	}
 	else
 	{
-		interp->sectorscroll.oldxoffs = interp->sectorscroll.bakxoffs = sector->floor_xoffs;
-		interp->sectorscroll.oldyoffs = interp->sectorscroll.bakyoffs = sector->floor_yoffs;
+		interp->sectorscroll.oldxoffs = interp->sectorscroll.bakxoffs = sector->floorxoffset;
+		interp->sectorscroll.oldyoffs = interp->sectorscroll.bakyoffs = sector->flooryoffset;
 	}
 }
 
@@ -486,9 +517,9 @@ static void UpdateLevelInterpolatorState(levelinterpolator_t *interp)
 		break;
 	case LVLINTERP_SectorScroll:
 		interp->sectorscroll.oldxoffs = interp->sectorscroll.bakxoffs;
-		interp->sectorscroll.bakxoffs = interp->sectorscroll.ceiling ? interp->sectorscroll.sector->ceiling_xoffs : interp->sectorscroll.sector->floor_xoffs;
+		interp->sectorscroll.bakxoffs = interp->sectorscroll.ceiling ? interp->sectorscroll.sector->ceilingxoffset : interp->sectorscroll.sector->floorxoffset;
 		interp->sectorscroll.oldyoffs = interp->sectorscroll.bakyoffs;
-		interp->sectorscroll.bakyoffs = interp->sectorscroll.ceiling ? interp->sectorscroll.sector->ceiling_yoffs : interp->sectorscroll.sector->floor_yoffs;
+		interp->sectorscroll.bakyoffs = interp->sectorscroll.ceiling ? interp->sectorscroll.sector->ceilingyoffset : interp->sectorscroll.sector->flooryoffset;
 		break;
 	case LVLINTERP_SideScroll:
 		interp->sidescroll.oldtextureoffset = interp->sidescroll.baktextureoffset;
@@ -574,13 +605,13 @@ void R_ApplyLevelInterpolators(fixed_t frac)
 		case LVLINTERP_SectorScroll:
 			if (interp->sectorscroll.ceiling)
 			{
-				interp->sectorscroll.sector->ceiling_xoffs = R_LerpFixed(interp->sectorscroll.oldxoffs, interp->sectorscroll.bakxoffs, frac);
-				interp->sectorscroll.sector->ceiling_yoffs = R_LerpFixed(interp->sectorscroll.oldyoffs, interp->sectorscroll.bakyoffs, frac);
+				interp->sectorscroll.sector->ceilingxoffset = R_LerpFixed(interp->sectorscroll.oldxoffs, interp->sectorscroll.bakxoffs, frac);
+				interp->sectorscroll.sector->ceilingyoffset = R_LerpFixed(interp->sectorscroll.oldyoffs, interp->sectorscroll.bakyoffs, frac);
 			}
 			else
 			{
-				interp->sectorscroll.sector->floor_xoffs = R_LerpFixed(interp->sectorscroll.oldxoffs, interp->sectorscroll.bakxoffs, frac);
-				interp->sectorscroll.sector->floor_yoffs = R_LerpFixed(interp->sectorscroll.oldyoffs, interp->sectorscroll.bakyoffs, frac);
+				interp->sectorscroll.sector->floorxoffset = R_LerpFixed(interp->sectorscroll.oldxoffs, interp->sectorscroll.bakxoffs, frac);
+				interp->sectorscroll.sector->flooryoffset = R_LerpFixed(interp->sectorscroll.oldyoffs, interp->sectorscroll.bakyoffs, frac);
 			}
 			break;
 		case LVLINTERP_SideScroll:
@@ -629,13 +660,13 @@ void R_RestoreLevelInterpolators(void)
 		case LVLINTERP_SectorScroll:
 			if (interp->sectorscroll.ceiling)
 			{
-				interp->sectorscroll.sector->ceiling_xoffs = interp->sectorscroll.bakxoffs;
-				interp->sectorscroll.sector->ceiling_yoffs = interp->sectorscroll.bakyoffs;
+				interp->sectorscroll.sector->ceilingxoffset = interp->sectorscroll.bakxoffs;
+				interp->sectorscroll.sector->ceilingyoffset = interp->sectorscroll.bakyoffs;
 			}
 			else
 			{
-				interp->sectorscroll.sector->floor_xoffs = interp->sectorscroll.bakxoffs;
-				interp->sectorscroll.sector->floor_yoffs = interp->sectorscroll.bakyoffs;
+				interp->sectorscroll.sector->floorxoffset = interp->sectorscroll.bakxoffs;
+				interp->sectorscroll.sector->flooryoffset = interp->sectorscroll.bakyoffs;
 			}
 			break;
 		case LVLINTERP_SideScroll:
@@ -766,6 +797,7 @@ void R_ResetMobjInterpolationState(mobj_t *mobj)
 	mobj->old_angle2 = mobj->old_angle;
 	mobj->old_pitch2 = mobj->old_pitch;
 	mobj->old_roll2 = mobj->old_roll;
+	mobj->old_spriteroll2 = mobj->old_spriteroll;
 	mobj->old_scale2 = mobj->old_scale;
 	mobj->old_x = mobj->x;
 	mobj->old_y = mobj->y;
@@ -773,6 +805,7 @@ void R_ResetMobjInterpolationState(mobj_t *mobj)
 	mobj->old_angle = mobj->angle;
 	mobj->old_pitch = mobj->pitch;
 	mobj->old_roll = mobj->roll;
+	mobj->old_spriteroll = mobj->spriteroll;
 	mobj->old_scale = mobj->scale;
 	mobj->old_spritexscale = mobj->spritexscale;
 	mobj->old_spriteyscale = mobj->spriteyscale;
@@ -801,10 +834,14 @@ void R_ResetPrecipitationMobjInterpolationState(precipmobj_t *mobj)
 	mobj->old_angle2 = mobj->old_angle;
 	mobj->old_pitch2 = mobj->old_pitch;
 	mobj->old_roll2 = mobj->old_roll;
+	mobj->old_spriteroll2 = mobj->old_spriteroll;
 	mobj->old_x = mobj->x;
 	mobj->old_y = mobj->y;
 	mobj->old_z = mobj->z;
 	mobj->old_angle = mobj->angle;
+	mobj->old_pitch = mobj->pitch;
+	mobj->old_roll = mobj->roll;
+	mobj->old_spriteroll = mobj->spriteroll;
 	mobj->old_spritexscale = mobj->spritexscale;
 	mobj->old_spriteyscale = mobj->spriteyscale;
 	mobj->old_spritexoffset = mobj->spritexoffset;

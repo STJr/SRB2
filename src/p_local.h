@@ -146,6 +146,7 @@ void P_ForceLocalAngle(player_t *player, angle_t angle);
 boolean P_PlayerFullbright(player_t *player);
 boolean P_PlayerCanEnterSpinGaps(player_t *player);
 boolean P_PlayerShouldUseSpinHeight(player_t *player);
+UINT16 P_GetPlayerColor(player_t *player);
 
 boolean P_IsObjectInGoop(mobj_t *mo);
 boolean P_IsObjectOnGround(mobj_t *mo);
@@ -537,5 +538,6 @@ void P_Thrust(mobj_t *mo, angle_t angle, fixed_t move);
 void P_DoSuperTransformation(player_t *player, boolean giverings);
 void P_ExplodeMissile(mobj_t *mo);
 void P_CheckGravity(mobj_t *mo, boolean affect);
+void P_SetPitchRollFromSlope(mobj_t *mo, pslope_t *slope);
 
 #endif // __P_LOCAL__

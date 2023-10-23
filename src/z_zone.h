@@ -15,6 +15,7 @@
 #define __Z_ZONE__
 
 #include <stdio.h>
+#include "doomdef.h"
 #include "doomtype.h"
 
 #ifdef __GNUC__ // __attribute__ ((X))

@@ -174,7 +174,7 @@ static huddrawlist_h luahuddrawlist_titlecard;
 skincolornum_t linkColor[3][NUMLINKCOLORS] = {
 {SKINCOLOR_SHAMROCK, SKINCOLOR_AQUA, SKINCOLOR_SKY, SKINCOLOR_BLUE, SKINCOLOR_PURPLE, SKINCOLOR_MAGENTA,
  SKINCOLOR_ROSY, SKINCOLOR_RED, SKINCOLOR_ORANGE, SKINCOLOR_GOLD, SKINCOLOR_YELLOW, SKINCOLOR_PERIDOT},
-{SKINCOLOR_EMERALD, SKINCOLOR_AQUAMARINE, SKINCOLOR_WAVE, SKINCOLOR_SAPPHIRE, SKINCOLOR_GALAXY, SKINCOLOR_CRYSTAL,
+{SKINCOLOR_EMERALD, SKINCOLOR_OCEAN, SKINCOLOR_AQUAMARINE, SKINCOLOR_SAPPHIRE, SKINCOLOR_GALAXY, SKINCOLOR_SIBERITE,
  SKINCOLOR_TAFFY, SKINCOLOR_RUBY, SKINCOLOR_GARNET, SKINCOLOR_TOPAZ, SKINCOLOR_LEMON, SKINCOLOR_LIME},
 {SKINCOLOR_ISLAND, SKINCOLOR_TURQUOISE, SKINCOLOR_DREAM, SKINCOLOR_DAYBREAK, SKINCOLOR_VAPOR, SKINCOLOR_FUCHSIA,
  SKINCOLOR_VIOLET, SKINCOLOR_EVENTIDE, SKINCOLOR_KETCHUP, SKINCOLOR_FOUNDATION, SKINCOLOR_HEADLIGHT, SKINCOLOR_CHARTREUSE}};
@@ -815,7 +815,7 @@ static inline void ST_drawRings(void)
 static void ST_drawLivesArea(void)
 {
 	INT32 v_colmap = V_YELLOWMAP, livescount;
-	boolean notgreyedout;
+	boolean notgreyedout = false;
 
 	if (!stplyr->skincolor)
 		return; // Just joined a server, skin isn't loaded yet!
@@ -826,6 +826,8 @@ static void ST_drawLivesArea(void)
 	// face background
 	V_DrawSmallScaledPatch(hudinfo[HUD_LIVES].x, hudinfo[HUD_LIVES].y,
 		hudinfo[HUD_LIVES].f|V_PERPLAYER|V_HUDTRANS, livesback);
+
+	UINT16 facecolor = P_GetPlayerColor(stplyr);
 
 	// face
 	if (stplyr->spectator)
@@ -856,10 +858,10 @@ static void ST_drawLivesArea(void)
 			}
 		}
 	}
-	else if (stplyr->skincolor)
+	else if (facecolor)
 	{
 		// skincolor face
-		UINT8 *colormap = R_GetTranslationColormap(stplyr->skin, stplyr->skincolor, GTC_CACHE);
+		UINT8 *colormap = R_GetTranslationColormap(stplyr->skin, facecolor, GTC_CACHE);
 		V_DrawSmallMappedPatch(hudinfo[HUD_LIVES].x, hudinfo[HUD_LIVES].y,
 			hudinfo[HUD_LIVES].f|V_PERPLAYER|V_HUDTRANS, faceprefix[stplyr->skin], colormap);
 	}
@@ -868,39 +870,36 @@ static void ST_drawLivesArea(void)
 	if (metalrecording)
 	{
 		if (((2*leveltime)/TICRATE) & 1)
+		{
 			V_DrawRightAlignedString(hudinfo[HUD_LIVES].x+58, hudinfo[HUD_LIVES].y+8,
 				hudinfo[HUD_LIVES].f|V_PERPLAYER|V_REDMAP|V_HUDTRANS, "REC");
+		}
 	}
 	// Spectator
 	else if (stplyr->spectator)
+	{
 		v_colmap = V_GRAYMAP;
-	// Tag
-	else if (gametyperules & GTR_TAG)
-	{
-		if (stplyr->pflags & PF_TAGIT)
-		{
-			V_DrawRightAlignedString(hudinfo[HUD_LIVES].x+58, hudinfo[HUD_LIVES].y+8, V_HUDTRANS|hudinfo[HUD_LIVES].f|V_PERPLAYER, "IT!");
-			v_colmap = V_ORANGEMAP;
-		}
 	}
-	// Team name
-	else if (G_GametypeHasTeams())
-	{
-		if (stplyr->ctfteam == 1)
-		{
-			V_DrawRightAlignedString(hudinfo[HUD_LIVES].x+58, hudinfo[HUD_LIVES].y+8, V_HUDTRANS|hudinfo[HUD_LIVES].f|V_PERPLAYER, "RED");
-			v_colmap = V_REDMAP;
-		}
-		else if (stplyr->ctfteam == 2)
-		{
-			V_DrawRightAlignedString(hudinfo[HUD_LIVES].x+58, hudinfo[HUD_LIVES].y+8, V_HUDTRANS|hudinfo[HUD_LIVES].f|V_PERPLAYER, "BLUE");
-			v_colmap = V_BLUEMAP;
-		}
-	}
-	// Lives number
 	else
 	{
-		boolean candrawlives = true;
+		boolean candrawlives = false;
+
+		// Set the player's name color.
+		if (G_TagGametype() && (stplyr->pflags & PF_TAGIT))
+		{
+			v_colmap = V_ORANGEMAP;
+		}
+		else if (G_GametypeHasTeams())
+		{
+			if (stplyr->ctfteam == 1)
+			{
+				v_colmap = V_REDMAP;
+			}
+			else if (stplyr->ctfteam == 2)
+			{
+				v_colmap = V_BLUEMAP;
+			}
+		}
 
 		// Co-op and Competition, normal life counter
 		if (G_GametypeUsesLives())
@@ -936,12 +935,15 @@ static void ST_drawLivesArea(void)
 				livescount = (((netgame || multiplayer) && G_GametypeUsesCoopLives() && cv_cooplives.value == 0) ? INFLIVES : stplyr->lives);
 				notgreyedout = true;
 			}
+
+			candrawlives = true;
 		}
 		// Infinity symbol (Race)
 		else if (G_PlatformGametype() && !(gametyperules & GTR_LIVES))
 		{
 			livescount = INFLIVES;
 			notgreyedout = true;
+			candrawlives = true;
 		}
 		// Otherwise nothing, sorry.
 		// Special Stages keep not showing lives,
@@ -950,8 +952,6 @@ static void ST_drawLivesArea(void)
 		// cannot show up because Special Stages
 		// still have the GTR_LIVES gametype rule
 		// by default.
-		else
-			candrawlives = false;
 
 		// Draw the lives counter here.
 		if (candrawlives)
@@ -959,8 +959,10 @@ static void ST_drawLivesArea(void)
 			// x
 			V_DrawScaledPatch(hudinfo[HUD_LIVES].x+22, hudinfo[HUD_LIVES].y+10, hudinfo[HUD_LIVES].f|V_PERPLAYER|V_HUDTRANS, stlivex);
 			if (livescount == INFLIVES)
+			{
 				V_DrawCharacter(hudinfo[HUD_LIVES].x+50, hudinfo[HUD_LIVES].y+8,
 					'\x16' | 0x80 | hudinfo[HUD_LIVES].f|V_PERPLAYER|V_HUDTRANS, false);
+			}
 			else
 			{
 				if (stplyr->playerstate == PST_DEAD && !(stplyr->spectator) && (livescount || stplyr->deadtimer < (TICRATE<<1)) && !(stplyr->pflags & PF_FINISHED))
@@ -969,6 +971,25 @@ static void ST_drawLivesArea(void)
 					livescount = 99;
 				V_DrawRightAlignedString(hudinfo[HUD_LIVES].x+58, hudinfo[HUD_LIVES].y+8,
 					hudinfo[HUD_LIVES].f|V_PERPLAYER|(notgreyedout ? V_HUDTRANS : V_HUDTRANSHALF), va("%d",livescount));
+			}
+		}
+		else
+		{
+			// Draw team name instead of lives, if possible.
+			if (G_TagGametype() && (stplyr->pflags & PF_TAGIT))
+			{
+				V_DrawRightAlignedString(hudinfo[HUD_LIVES].x+58, hudinfo[HUD_LIVES].y+8, V_HUDTRANS|hudinfo[HUD_LIVES].f|V_PERPLAYER, "IT!");
+			}
+			else if (G_GametypeHasTeams())
+			{
+				if (stplyr->ctfteam == 1)
+				{
+					V_DrawRightAlignedString(hudinfo[HUD_LIVES].x+58, hudinfo[HUD_LIVES].y+8, V_HUDTRANS|hudinfo[HUD_LIVES].f|V_PERPLAYER, "RED");
+				}
+				else if (stplyr->ctfteam == 2)
+				{
+					V_DrawRightAlignedString(hudinfo[HUD_LIVES].x+58, hudinfo[HUD_LIVES].y+8, V_HUDTRANS|hudinfo[HUD_LIVES].f|V_PERPLAYER, "BLUE");
+				}
 			}
 		}
 #undef ST_drawLivesX
@@ -1011,7 +1032,8 @@ static void ST_drawLivesArea(void)
 
 static void ST_drawInput(void)
 {
-	const INT32 accent = V_SNAPTOLEFT|V_SNAPTOBOTTOM|(stplyr->skincolor ? skincolors[stplyr->skincolor].ramp[4] : 0);
+	UINT16 color = P_GetPlayerColor(stplyr);
+	const INT32 accent = V_SNAPTOLEFT|V_SNAPTOBOTTOM|(color ? skincolors[color].ramp[4] : 0);
 	INT32 col;
 	UINT8 offs;
 
@@ -2493,6 +2515,8 @@ num:
 static INT32 ST_drawEmeraldHuntIcon(mobj_t *hunt, patch_t **patches, INT32 offset)
 {
 	INT32 interval, i;
+	if (stplyr->mo == NULL)
+		return 0;  // player just joined after spectating, can happen on custom gamemodes.
 	UINT32 dist = ((UINT32)P_AproxDistance(P_AproxDistance(stplyr->mo->x - hunt->x, stplyr->mo->y - hunt->y), stplyr->mo->z - hunt->z))>>FRACBITS;
 
 	if (dist < 128)

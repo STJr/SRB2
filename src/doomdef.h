@@ -56,7 +56,6 @@
 #endif
 
 #ifdef _WINDOWS
-#define NONET
 #if !defined (HWRENDER) && !defined (NOHW)
 #define HWRENDER
 #endif
@@ -107,6 +106,14 @@
 FILE *fopenfile(const char*, const char*);
 
 //#define NOMD5
+
+// If you don't disable ALL debug first, you get ALL debug enabled
+#if !defined (NDEBUG)
+#define PACKETDROP
+#define PARANOIA
+#define RANGECHECK
+#define ZDEBUG
+#endif
 
 // Uncheck this to compile debugging code
 //#define RANGECHECK
@@ -261,8 +268,7 @@ typedef enum
 	// Desaturated
 	SKINCOLOR_AETHER,
 	SKINCOLOR_SLATE,
-	SKINCOLOR_METEORITE,
-	SKINCOLOR_MERCURY,
+	SKINCOLOR_MOONSTONE,
 	SKINCOLOR_BLUEBELL,
 	SKINCOLOR_PINK,
 	SKINCOLOR_ROSEWOOD,
@@ -299,10 +305,10 @@ typedef enum
 	SKINCOLOR_COPPER,
 	SKINCOLOR_APRICOT,
 	SKINCOLOR_ORANGE,
-	SKINCOLOR_PUMPKIN,
 	SKINCOLOR_RUST,
-	SKINCOLOR_GOLD,
+	SKINCOLOR_TANGERINE,
 	SKINCOLOR_TOPAZ,
+	SKINCOLOR_GOLD,
 	SKINCOLOR_SANDY,
 	SKINCOLOR_GOLDENROD,
 	SKINCOLOR_YELLOW,
@@ -312,20 +318,21 @@ typedef enum
 	SKINCOLOR_LIME,
 	SKINCOLOR_PERIDOT,
 	SKINCOLOR_APPLE,
+	SKINCOLOR_HEADLIGHT,
 	SKINCOLOR_CHARTREUSE,
 	SKINCOLOR_GREEN,
 	SKINCOLOR_FOREST,
 	SKINCOLOR_SHAMROCK,
 	SKINCOLOR_JADE,
-	SKINCOLOR_HEADLIGHT,
 	SKINCOLOR_MINT,
 	SKINCOLOR_MASTER,
 	SKINCOLOR_EMERALD,
-	SKINCOLOR_BOTTLE,
 	SKINCOLOR_SEAFOAM,
 	SKINCOLOR_ISLAND,
+	SKINCOLOR_BOTTLE,
 	SKINCOLOR_AQUA,
 	SKINCOLOR_TEAL,
+	SKINCOLOR_OCEAN,
 	SKINCOLOR_WAVE,
 	SKINCOLOR_CYAN,
 	SKINCOLOR_TURQUOISE,
@@ -351,7 +358,7 @@ typedef enum
 	SKINCOLOR_NOBLE,
 	SKINCOLOR_FUCHSIA,
 	SKINCOLOR_BUBBLEGUM,
-	SKINCOLOR_CRYSTAL,
+	SKINCOLOR_SIBERITE,
 	SKINCOLOR_MAGENTA,
 	SKINCOLOR_NEON,
 	SKINCOLOR_VIOLET,
@@ -637,7 +644,16 @@ UINT32 quickncasehash (const char *p, size_t n)
 #define PUNCTUATION "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~"
 
 // Compile date and time and revision.
-extern const char *compdate, *comptime, *comprevision, *compbranch;
+extern const char
+	*compdate,
+	*comptime,
+	*comprevision,
+	*compbranch,
+	*compnote,
+	*comptype;
+extern int
+	compuncommitted,
+	compoptimized;
 
 // Disabled code and code under testing
 // None of these that are disabled in the normal build are guaranteed to work perfectly
@@ -707,7 +723,7 @@ extern const char *compdate, *comptime, *comprevision, *compbranch;
 /// Maintain compatibility with older 2.2 demos
 #define OLD22DEMOCOMPAT
 
-#if defined (HAVE_CURL) && ! defined (NONET)
+#ifdef HAVE_CURL
 #define MASTERSERVER
 #else
 #undef UPDATE_ALERT

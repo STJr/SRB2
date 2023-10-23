@@ -179,8 +179,6 @@ CV_PossibleValue_t Color_cons_t[MAXSKINCOLORS+1];
 void R_InitTranslucencyTables(void)
 {
 	// Load here the transparency lookup tables 'TRANSx0'
-	// NOTE: the TRANSx0 resources MUST BE aligned on 64k for the asm
-	// optimised code (in other words, transtables pointer low word is 0)
 	transtables = Z_MallocAlign(NUMTRANSTABLES*0x10000, PU_STATIC,
 		NULL, 16);
 

@@ -566,6 +566,7 @@ static void line_SpawnViaMapthingVertexes(const int linenum, const boolean spawn
 	case TMSP_BACKCEILING:
 		slopetoset = &line->backsector->c_slope;
 		side = &sides[line->sidenum[1]];
+		break;
 	default:
 		return;
 	}
@@ -899,6 +900,8 @@ void P_HandleSlopeLanding(mobj_t *thing, pslope_t *slope)
 		if (P_MobjFlip(thing)*(thing->momz) < 0) // falling, land on slope
 		{
 			thing->standingslope = slope;
+			P_SetPitchRollFromSlope(thing, slope);
+
 			if (!thing->player || !(thing->player->pflags & PF_BOUNCING))
 				thing->momz = -P_MobjFlip(thing);
 		}
@@ -915,6 +918,7 @@ void P_HandleSlopeLanding(mobj_t *thing, pslope_t *slope)
 		thing->momx = mom.x;
 		thing->momy = mom.y;
 		thing->standingslope = slope;
+		P_SetPitchRollFromSlope(thing, slope);
 		if (!thing->player || !(thing->player->pflags & PF_BOUNCING))
 			thing->momz = -P_MobjFlip(thing);
 	}

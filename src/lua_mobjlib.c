@@ -33,7 +33,8 @@ enum mobj_e {
 	mobj_angle,
 	mobj_pitch,
 	mobj_roll,
-	mobj_rollangle,
+	mobj_spriteroll,
+	mobj_rollangle, // backwards compat
 	mobj_sprite,
 	mobj_frame,
 	mobj_sprite2,
@@ -43,6 +44,8 @@ enum mobj_e {
 	mobj_spritexoffset,
 	mobj_spriteyoffset,
 	mobj_floorspriteslope,
+	mobj_drawonlyforplayer,
+	mobj_dontdrawforviewmobj,
 	mobj_touching_sectorlist,
 	mobj_subsector,
 	mobj_floorz,
@@ -110,7 +113,8 @@ static const char *const mobj_opt[] = {
 	"angle",
 	"pitch",
 	"roll",
-	"rollangle",
+	"spriteroll",
+	"rollangle", // backwards compat
 	"sprite",
 	"frame",
 	"sprite2",
@@ -120,6 +124,8 @@ static const char *const mobj_opt[] = {
 	"spritexoffset",
 	"spriteyoffset",
 	"floorspriteslope",
+	"drawonlyforplayer",
+	"dontdrawforviewmobj",
 	"touching_sectorlist",
 	"subsector",
 	"floorz",
@@ -229,8 +235,9 @@ static int mobj_get(lua_State *L)
 	case mobj_roll:
 		lua_pushangle(L, mo->roll);
 		break;
-	case mobj_rollangle:
-		lua_pushangle(L, mo->rollangle);
+	case mobj_spriteroll:
+	case mobj_rollangle: // backwards compat
+		lua_pushangle(L, mo->spriteroll);
 		break;
 	case mobj_sprite:
 		lua_pushinteger(L, mo->sprite);
@@ -258,6 +265,17 @@ static int mobj_get(lua_State *L)
 		break;
 	case mobj_floorspriteslope:
 		LUA_PushUserdata(L, mo->floorspriteslope, META_SLOPE);
+		break;
+	case mobj_drawonlyforplayer:
+		LUA_PushUserdata(L, mo->drawonlyforplayer, META_PLAYER);
+		break;
+	case mobj_dontdrawforviewmobj:
+		if (mo->dontdrawforviewmobj && P_MobjWasRemoved(mo->dontdrawforviewmobj))
+		{ // don't put invalid mobj back into Lua.
+			P_SetTarget(&mo->dontdrawforviewmobj, NULL);
+			return 0;
+		}
+		LUA_PushUserdata(L, mo->dontdrawforviewmobj, META_MOBJ);
 		break;
 	case mobj_touching_sectorlist:
 		return UNIMPLEMENTED;
@@ -518,8 +536,9 @@ static int mobj_set(lua_State *L)
 	case mobj_roll:
 		mo->roll = luaL_checkangle(L, 3);
 		break;
-	case mobj_rollangle:
-		mo->rollangle = luaL_checkangle(L, 3);
+	case mobj_spriteroll:
+	case mobj_rollangle: // backwards compat
+		mo->spriteroll = luaL_checkangle(L, 3);
 		break;
 	case mobj_sprite:
 		mo->sprite = luaL_checkinteger(L, 3);
@@ -547,6 +566,24 @@ static int mobj_set(lua_State *L)
 		break;
 	case mobj_floorspriteslope:
 		return NOSET;
+	case mobj_drawonlyforplayer:
+		if (lua_isnil(L, 3))
+			mo->drawonlyforplayer = NULL;
+		else
+		{
+			player_t *drawonlyforplayer = *((player_t **)luaL_checkudata(L, 3, META_PLAYER));
+			mo->drawonlyforplayer = drawonlyforplayer;
+		}
+		break;
+	case mobj_dontdrawforviewmobj:
+		if (lua_isnil(L, 3))
+			P_SetTarget(&mo->dontdrawforviewmobj, NULL);
+		else
+		{
+			mobj_t *dontdrawforviewmobj = *((mobj_t **)luaL_checkudata(L, 3, META_MOBJ));
+			P_SetTarget(&mo->dontdrawforviewmobj, dontdrawforviewmobj);
+		}
+		break;
 	case mobj_touching_sectorlist:
 		return UNIMPLEMENTED;
 	case mobj_subsector:
@@ -888,6 +925,8 @@ enum mapthing_e {
 	mapthing_type,
 	mapthing_options,
 	mapthing_scale,
+	mapthing_spritexscale,
+	mapthing_spriteyscale,
 	mapthing_z,
 	mapthing_extrainfo,
 	mapthing_tag,
@@ -907,6 +946,8 @@ const char *const mapthing_opt[] = {
 	"type",
 	"options",
 	"scale",
+	"spritexscale",
+	"spriteyscale",
 	"z",
 	"extrainfo",
 	"tag",
@@ -962,7 +1003,13 @@ static int mapthing_get(lua_State *L)
 			lua_pushinteger(L, mt->options);
 			break;
 		case mapthing_scale:
-			lua_pushinteger(L, mt->scale);
+			lua_pushfixed(L, mt->scale);
+			break;
+		case mapthing_spritexscale:
+			lua_pushfixed(L, mt->spritexscale);
+			break;
+		case mapthing_spriteyscale:
+			lua_pushfixed(L, mt->spriteyscale);
 			break;
 		case mapthing_z:
 			lua_pushinteger(L, mt->z);
@@ -1035,15 +1082,23 @@ static int mapthing_set(lua_State *L)
 		case mapthing_scale:
 			mt->scale = luaL_checkfixed(L, 3);
 			break;
+		case mapthing_spritexscale:
+			mt->spritexscale = luaL_checkfixed(L, 3);
+			break;
+		case mapthing_spriteyscale:
+			mt->spriteyscale = luaL_checkfixed(L, 3);
+			break;
 		case mapthing_z:
 			mt->z = (INT16)luaL_checkinteger(L, 3);
 			break;
 		case mapthing_extrainfo:
+		{
 			INT32 extrainfo = luaL_checkinteger(L, 3);
 			if (extrainfo & ~15)
 				return luaL_error(L, "mapthing_t extrainfo set %d out of range (%d - %d)", extrainfo, 0, 15);
 			mt->extrainfo = (UINT8)extrainfo;
 			break;
+		}
 		case mapthing_tag:
 			Tag_FSet(&mt->tags, (INT16)luaL_checkinteger(L, 3));
 			break;

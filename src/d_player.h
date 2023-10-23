@@ -453,7 +453,8 @@ typedef struct player_s
 	INT32 skin;
 	UINT32 availabilities;
 
-	UINT32 score; // player score
+	UINT32 score; // player score (total)
+	UINT32 recordscore; // player score (per life / map)
 	fixed_t dashspeed; // dashing speed
 
 	fixed_t normalspeed; // Normal ground
