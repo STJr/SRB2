@@ -672,6 +672,9 @@ void GeneratePolygonNormals(model_t *model, int ztag)
 
 			for (k = 0; k < mesh->numTriangles; k++)
 			{
+				/// TODO: normalize vectors
+				(void)vertices;
+				(void)polyNormals;
 //				Vector::Normal(vertices, polyNormals);
 				vertices += 3 * 3;
 				polyNormals++;
