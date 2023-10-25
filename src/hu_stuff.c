@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2022 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -19,7 +19,9 @@
 #include "m_cond.h" // emblems
 #include "m_misc.h" // word jumping
 
-#include "d_clisrv.h"
+#include "netcode/d_clisrv.h"
+#include "netcode/net_command.h"
+#include "netcode/gamestate.h"
 
 #include "g_game.h"
 #include "g_input.h"
@@ -48,6 +50,7 @@
 #endif
 
 #include "lua_hud.h"
+#include "lua_hudlib_drawlist.h"
 #include "lua_hook.h"
 
 // coords are scaled
@@ -166,18 +169,20 @@ static tic_t cechotimer = 0;
 static tic_t cechoduration = 5*TICRATE;
 static INT32 cechoflags = 0;
 
+static huddrawlist_h luahuddrawlist_scores;
+
 //======================================================================
 //                          HEADS UP INIT
 //======================================================================
 
-#ifndef NONET
+static tic_t resynch_ticker = 0;
+
 // just after
 static void Command_Say_f(void);
 static void Command_Sayto_f(void);
 static void Command_Sayteam_f(void);
 static void Command_CSay_f(void);
 static void Got_Saycmd(UINT8 **p, INT32 playernum);
-#endif
 
 void HU_LoadGraphics(void)
 {
@@ -322,16 +327,16 @@ void HU_LoadGraphics(void)
 //
 void HU_Init(void)
 {
-#ifndef NONET
-	COM_AddCommand("say", Command_Say_f);
-	COM_AddCommand("sayto", Command_Sayto_f);
-	COM_AddCommand("sayteam", Command_Sayteam_f);
-	COM_AddCommand("csay", Command_CSay_f);
+	COM_AddCommand("say", Command_Say_f, COM_LUA);
+	COM_AddCommand("sayto", Command_Sayto_f, COM_LUA);
+	COM_AddCommand("sayteam", Command_Sayteam_f, COM_LUA);
+	COM_AddCommand("csay", Command_CSay_f, COM_LUA);
 	RegisterNetXCmd(XD_SAY, Got_Saycmd);
-#endif
 
 	// set shift translation table
 	shiftxform = english_shiftxform;
+
+	luahuddrawlist_scores = LUA_HUD_CreateDrawList();
 }
 
 static inline void HU_Stop(void)
@@ -355,8 +360,6 @@ void HU_Start(void)
 //======================================================================
 //                            EXECUTION
 //======================================================================
-
-#ifndef NONET
 
 // EVERY CHANGE IN THIS SCRIPT IS LOL XD! BY VINCYTM
 
@@ -382,12 +385,12 @@ static INT16 addy = 0; // use this to make the messages scroll smoothly when one
 
 static void HU_removeChatText_Mini(void)
 {
-    // MPC: Don't create new arrays, just iterate through an existing one
+	// MPC: Don't create new arrays, just iterate through an existing one
 	size_t i;
-    for(i=0;i<chat_nummsg_min-1;i++) {
-        strcpy(chat_mini[i], chat_mini[i+1]);
-        chat_timers[i] = chat_timers[i+1];
-    }
+	for(i=0;i<chat_nummsg_min-1;i++) {
+		strcpy(chat_mini[i], chat_mini[i+1]);
+		chat_timers[i] = chat_timers[i+1];
+	}
 	chat_nummsg_min--; // lost 1 msg.
 
 	// use addy and make shit slide smoothly af.
@@ -400,16 +403,14 @@ static void HU_removeChatText_Log(void)
 {
 	// MPC: Don't create new arrays, just iterate through an existing one
 	size_t i;
-    for(i=0;i<chat_nummsg_log-1;i++) {
-        strcpy(chat_log[i], chat_log[i+1]);
-    }
-    chat_nummsg_log--; // lost 1 msg.
+	for(i=0;i<chat_nummsg_log-1;i++) {
+		strcpy(chat_log[i], chat_log[i+1]);
+	}
+	chat_nummsg_log--; // lost 1 msg.
 }
-#endif
 
 void HU_AddChatText(const char *text, boolean playsound)
 {
-#ifndef NONET
 	if (playsound && cv_consolechat.value != 2) // Don't play the sound if we're using hidden chat.
 		S_StartSound(NULL, sfx_radio);
 	// reguardless of our preferences, put all of this in the chat buffer in case we decide to change from oldchat mid-game.
@@ -431,13 +432,7 @@ void HU_AddChatText(const char *text, boolean playsound)
 		CONS_Printf("%s\n", text);
 	else			// if we aren't, still save the message to log.txt
 		CON_LogMessage(va("%s\n", text));
-#else
-	(void)playsound;
-	CONS_Printf("%s\n", text);
-#endif
 }
-
-#ifndef NONET
 
 /** Runs a say command, sending an ::XD_SAY message.
   * A say command consists of a signed 8-bit integer for the target, an
@@ -858,8 +853,6 @@ static void Got_Saycmd(UINT8 **p, INT32 playernum)
 #endif
 }
 
-#endif
-
 //
 //
 void HU_Ticker(void)
@@ -874,9 +867,40 @@ void HU_Ticker(void)
 		hu_showscores = !chat_on;
 	else
 		hu_showscores = false;
-}
 
-#ifndef NONET
+	if (chat_on)
+	{
+		// count down the scroll timer.
+		if (chat_scrolltime > 0)
+			chat_scrolltime--;
+	}
+
+	if (netgame)
+	{
+		size_t i = 0;
+
+		// handle spam while we're at it:
+		for(; (i<MAXPLAYERS); i++)
+		{
+			if (stop_spamming[i] > 0)
+				stop_spamming[i]--;
+		}
+
+		// handle chat timers
+		for (i=0; (i<chat_nummsg_min); i++)
+		{
+			if (chat_timers[i] > 0)
+				chat_timers[i]--;
+			else
+				HU_removeChatText_Mini();
+		}
+	}
+
+	if (cechotimer > 0) --cechotimer;
+
+	if (hu_redownloadinggamestate)
+		resynch_ticker++;
+}
 
 static boolean teamtalk = false;
 static boolean justscrolleddown;
@@ -985,8 +1009,6 @@ static void HU_sendChatMessage(void)
 	}
 }
 
-#endif
-
 void HU_clearChatChars(void)
 {
 	memset(w_chat, '\0', sizeof(w_chat));
@@ -1001,9 +1023,7 @@ void HU_clearChatChars(void)
 //
 boolean HU_Responder(event_t *ev)
 {
-#ifndef NONET
 	INT32 c=0;
-#endif
 
 	if (ev->type != ev_keydown)
 		return false;
@@ -1030,7 +1050,6 @@ boolean HU_Responder(event_t *ev)
 			return false;
 	}*/	//We don't actually care about that unless we get splitscreen netgames. :V
 
-#ifndef NONET
 	c = (INT32)ev->key;
 
 	if (!chat_on)
@@ -1102,7 +1121,7 @@ boolean HU_Responder(event_t *ev)
 			if (chatlen+pastelen > HU_MAXMSGLEN)
 				return true; // we can't paste this!!
 
-			memmove(&w_chat[c_input + pastelen], &w_chat[c_input], pastelen);
+			memmove(&w_chat[c_input + pastelen], &w_chat[c_input], (chatlen - c_input) + 1); // +1 for '\0'
 			memcpy(&w_chat[c_input], paste, pastelen); // copy all of that.
 			c_input += pastelen;
 			return true;
@@ -1180,7 +1199,6 @@ boolean HU_Responder(event_t *ev)
 
 		return true;
 	}
-#endif
 
 	return false;
 }
@@ -1189,8 +1207,6 @@ boolean HU_Responder(event_t *ev)
 //======================================================================
 //                         HEADS UP DRAWING
 //======================================================================
-
-#ifndef NONET
 
 // Precompile a wordwrapped string to any given width.
 // This is a muuuch better method than V_WORDWRAP.
@@ -1771,7 +1787,6 @@ static void HU_DrawChat_Old(void)
 	if (hu_tick < 4)
 		V_DrawCharacter(HU_INPUTX + c, y, '_' | cv_constextsize.value |V_NOSCALESTART|t, true);
 }
-#endif
 
 // Draw crosshairs at the exact center of the view.
 // In splitscreen, crosshairs are stretched vertically to compensate for V_PERPLAYER squishing them.
@@ -1854,8 +1869,6 @@ static void HU_DrawCEcho(void)
 		echoptr = line;
 		echoptr++;
 	}
-
-	--cechotimer;
 }
 
 static void HU_drawGametype(void)
@@ -1913,13 +1926,9 @@ static void HU_DrawDemoInfo(void)
 //
 void HU_Drawer(void)
 {
-#ifndef NONET
 	// draw chat string plus cursor
 	if (chat_on)
 	{
-		// count down the scroll timer.
-		if (chat_scrolltime > 0)
-			chat_scrolltime--;
 		if (!OLDCHAT)
 			HU_DrawChat();
 		else
@@ -1929,31 +1938,10 @@ void HU_Drawer(void)
 	{
 		typelines = 1;
 		chat_scrolltime = 0;
+
 		if (!OLDCHAT && cv_consolechat.value < 2 && netgame) // Don't display minimized chat if you set the mode to Window (Hidden)
 			HU_drawMiniChat(); // draw messages in a cool fashion.
 	}
-
-	if (netgame) // would handle that in hu_drawminichat, but it's actually kinda awkward when you're typing a lot of messages. (only handle that in netgames duh)
-	{
-		size_t i = 0;
-
-		// handle spam while we're at it:
-		for(; (i<MAXPLAYERS); i++)
-		{
-			if (stop_spamming[i] > 0)
-				stop_spamming[i]--;
-		}
-
-		// handle chat timers
-		for (i=0; (i<chat_nummsg_min); i++)
-		{
-			if (chat_timers[i] > 0)
-				chat_timers[i]--;
-			else
-				HU_removeChatText_Mini();
-		}
-	}
-#endif
 
 	if (cechotimer)
 		HU_DrawCEcho();
@@ -1979,7 +1967,13 @@ void HU_Drawer(void)
 		}
 		else
 			HU_DrawCoopOverlay();
-		LUA_HUDHOOK(scores);
+
+		if (renderisnewtic)
+		{
+			LUA_HUD_ClearDrawList(luahuddrawlist_scores);
+			LUA_HUDHOOK(scores, luahuddrawlist_scores);
+		}
+		LUA_HUD_DrawList(luahuddrawlist_scores);
 	}
 
 	if (gamestate != GS_LEVEL)
@@ -1992,12 +1986,9 @@ void HU_Drawer(void)
 	// draw desynch text
 	if (hu_redownloadinggamestate)
 	{
-		static UINT32 resynch_ticker = 0;
 		char resynch_text[14];
 		UINT32 i;
 
-		// Animate the dots
-		resynch_ticker++;
 		strcpy(resynch_text, "Resynching");
 		for (i = 0; i < (resynch_ticker / 16) % 4; i++)
 			strcat(resynch_text, ".");
@@ -2005,7 +1996,7 @@ void HU_Drawer(void)
 		V_DrawCenteredString(BASEVIDWIDTH/2, 180, V_YELLOWMAP | V_ALLOWLOWERCASE, resynch_text);
 	}
 
-	if (modeattacking && pausedelay > 0 && !pausebreakkey)
+	if (modeattacking && pausedelay > 0 && !(pausebreakkey || cv_instantretry.value))
 	{
 		INT32 strength = ((pausedelay - 1 - NEWTICRATE/2)*10)/(NEWTICRATE/3);
 		INT32 y = hudinfo[HUD_LIVES].y - 13;
@@ -2842,18 +2833,6 @@ static void HU_DrawRankings(void)
 			V_DrawCenteredString(256, 16, 0, va("%d", cv_pointlimit.value));
 		}
 	}
-	else if (gametyperankings[gametype] == GT_COOP)
-	{
-		INT32 totalscore = 0;
-		for (i = 0; i < MAXPLAYERS; i++)
-		{
-			if (playeringame[i])
-				totalscore += players[i].score;
-		}
-
-		V_DrawCenteredString(256, 8, 0, "TOTAL SCORE");
-		V_DrawCenteredString(256, 16, 0, va("%u", totalscore));
-	}
 	else
 	{
 		if (circuitmap)
@@ -2974,9 +2953,9 @@ static void HU_DrawCoopOverlay(void)
 		V_DrawSmallScaledPatch(148, 172, 0, tokenicon);
 	}
 
-	if (LUA_HudEnabled(hud_tabemblems) && (!modifiedgame || savemoddata))
+	if (LUA_HudEnabled(hud_tabemblems))
 	{
-		V_DrawString(160, 144, 0, va("- %d/%d", M_CountEmblems(), numemblems+numextraemblems));
+		V_DrawString(160, 144, 0, va("- %d/%d", M_CountEmblems(clientGamedata), numemblems+numextraemblems));
 		V_DrawScaledPatch(128, 144 - emblemicon->height/4, 0, emblemicon);
 	}
 
@@ -3007,6 +2986,15 @@ static void HU_DrawNetplayCoopOverlay(void)
 	{
 		V_DrawString(168, 10, 0, va("- %d", token));
 		V_DrawSmallScaledPatch(148, 6, 0, tokenicon);
+	}
+
+	if (G_CoopGametype() && LUA_HudEnabled(hud_tabemblems))
+	{
+		V_DrawCenteredString(256, 14, 0, "/");
+		V_DrawString(256 + 4, 14, 0, va("%d", numemblems + numextraemblems));
+		V_DrawRightAlignedString(256 - 4, 14, 0, va("%d", M_CountEmblems(clientGamedata)));
+
+		V_DrawSmallScaledPatch(256 - (emblemicon->width / 4), 6, 0, emblemicon);
 	}
 
 	if (!LUA_HudEnabled(hud_coopemeralds))

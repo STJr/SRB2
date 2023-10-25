@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2022 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -53,127 +53,35 @@ FUNCMATH FUNCINLINE static ATTRINLINE fixed_t FloatToFixed(float f)
 #define FIXED_TO_FLOAT(x) FixedToFloat(x) // (((float)(x)) / ((float)FRACUNIT))
 #define FLOAT_TO_FIXED(f) FloatToFixed(f) // (fixed_t)((f) * ((float)FRACUNIT))
 
+/**	\brief	The FixedMul function
 
-#if defined (__WATCOMC__) && FRACBITS == 16
-	#pragma aux FixedMul =  \
-		"imul ebx",         \
-		"shrd eax,edx,16"   \
-		parm    [eax] [ebx] \
-		value   [eax]       \
-		modify exact [eax edx]
+	\param	a	fixed_t number
+	\param	b	fixed_t number
 
-	#pragma aux FixedDiv2 = \
-		"cdq",              \
-		"shld edx,eax,16",  \
-		"sal eax,16",       \
-		"idiv ebx"          \
-		parm    [eax] [ebx] \
-		value   [eax]       \
-		modify exact [eax edx]
-#elif defined (__GNUC__) && defined (__i386__) && !defined (NOASM)
-	// i386 linux, cygwin or mingw
-	FUNCMATH FUNCINLINE static inline fixed_t FixedMul(fixed_t a, fixed_t b) // asm
-	{
-		fixed_t ret;
-		asm
-		(
-			 "imull %2;"           // a*b
-			 "shrdl %3,%%edx,%0;"  // shift logical right FRACBITS bits
-			:"=a" (ret)            // eax is always the result and the first operand (%0,%1)
-			:"0" (a), "r" (b)      // and %2 is what we use imull on with what in %1
-			, "I" (FRACBITS)       // %3 holds FRACBITS (normally 16)
-			:"cc", "%edx"         // edx and condition codes clobbered
-		);
-		return ret;
-	}
+	\return	a*b>>FRACBITS
 
-	FUNCMATH FUNCINLINE static inline fixed_t FixedDiv2(fixed_t a, fixed_t b)
-	{
-		fixed_t ret;
-		asm
-		(
-			  "movl  %1,%%edx;"    // these two instructions allow the next two to pair, on the Pentium processor.
-			  "sarl  $31,%%edx;"   // shift arithmetic right 31 on EDX
-			  "shldl %3,%1,%%edx;" // DP shift logical left FRACBITS on EDX
-			  "sall  %3,%0;"       // shift arithmetic left FRACBITS on EAX
-			  "idivl %2;"          // EDX/b = EAX
-			: "=a" (ret)
-			: "0" (a), "r" (b)
-			, "I" (FRACBITS)
-			: "%edx"
-		);
-		return ret;
-	}
-#elif defined (__GNUC__) && defined (__arm__) && !defined(__thumb__) && !defined(NOASM) //ARMv4 ASM
-	FUNCMATH FUNCINLINE static inline fixed_t FixedMul(fixed_t a, fixed_t b) // let abuse smull
-	{
-		fixed_t ret;
-		asm
-		(
-			  "smull %[lo], r1, %[a], %[b];"
-			  "mov %[lo], %[lo], lsr %3;"
-			  "orr %[lo], %[lo], r1, lsl %3;"
-			: [lo] "=&r" (ret) // rhi, rlo and rm must be distinct registers
-			: [a] "r" (a), [b] "r" (b)
-			, "i" (FRACBITS)
-			: "r1"
-		);
-		return ret;
-	}
+*/
+FUNCMATH FUNCINLINE static ATTRINLINE fixed_t FixedMul(fixed_t a, fixed_t b)
+{
+	// Need to cast to unsigned before shifting to avoid undefined behaviour
+	// for negative integers
+	return (fixed_t)(((UINT64)((INT64)a * b)) >> FRACBITS);
+}
 
-	#define __USE_C_FIXEDDIV__ // no double or asm div in ARM land
-#elif defined (__GNUC__) && defined (__ppc__) && !defined(NOASM) && 0 // WII: PPC CPU
-	FUNCMATH FUNCINLINE static inline fixed_t FixedMul(fixed_t a, fixed_t b) // asm
-	{
-		fixed_t ret, hi, lo;
-		asm
-		(
-			  "mullw %0, %2, %3;"
-			  "mulhw %1, %2, %3"
-			: "=r" (hi), "=r" (lo)
-			: "r" (a), "r" (b)
-			, "I" (FRACBITS)
-		);
-		ret = (INT64)((hi>>FRACBITS)+lo)<<FRACBITS;
-		return ret;
-	}
+/**	\brief	The FixedDiv2 function
 
-	#define __USE_C_FIXEDDIV__// Alam: I am lazy
-#elif defined (__GNUC__) && defined (__mips__) && !defined(NOASM) && 0 // PSP: MIPS CPU
-	FUNCMATH FUNCINLINE static inline fixed_t FixedMul(fixed_t a, fixed_t b) // asm
-	{
-		fixed_t ret;
-		asm
-		(
-			  "mult %3, %4;"    // a*b=h<32+l
-			: "=r" (ret), "=l" (a), "=h" (b) //todo: abuse shr opcode
-			: "0" (a), "r" (b)
-			, "I" (FRACBITS)
-			//: "+l", "+h"
-		);
-		ret = (INT64)((a>>FRACBITS)+b)<<FRACBITS;
-		return ret;
-	}
+	\param	a	fixed_t number
+	\param	b	fixed_t number
 
-	#define __USE_C_FIXEDDIV__ // no 64b asm div in MIPS land
-#elif defined (__GNUC__) && defined (__sh__) && 0 // DC: SH4 CPU
-#elif defined (__GNUC__) && defined (__m68k__) && 0 // DEAD: Motorola 6800 CPU
-#elif defined (_MSC_VER) && defined(USEASM) && FRACBITS == 16
-	// Microsoft Visual C++ (no asm inline)
-	fixed_t __cdecl FixedMul(fixed_t a, fixed_t b);
-	fixed_t __cdecl FixedDiv2(fixed_t a, fixed_t b);
-#else
-	#define __USE_C_FIXEDMUL__
-	#define __USE_C_FIXEDDIV__
-#endif
+	\return	a/b * FRACUNIT
 
-#ifdef __USE_C_FIXEDMUL__
-FUNCMATH fixed_t FixedMul(fixed_t a, fixed_t b);
-#endif
-
-#ifdef __USE_C_FIXEDDIV__
-FUNCMATH fixed_t FixedDiv2(fixed_t a, fixed_t b);
-#endif
+*/
+FUNCMATH FUNCINLINE static ATTRINLINE fixed_t FixedDiv2(fixed_t a, fixed_t b)
+{
+	// This does not check for division overflow or division by 0!
+	// That is the caller's responsibility.
+	return (fixed_t)(((INT64)a * FRACUNIT) / b);
+}
 
 /**	\brief	The FixedInt function
 
@@ -397,12 +305,39 @@ boolean FV3_PointInsideBox(const vector3_t *point, const vector3_t *box);
 
 typedef struct
 {
+	fixed_t x, y, z, a;
+} vector4_t;
+
+vector4_t *FV4_Load(vector4_t *vec, fixed_t x, fixed_t y, fixed_t z, fixed_t a);
+vector4_t *FV4_UnLoad(vector4_t *vec, fixed_t *x, fixed_t *y, fixed_t *z, fixed_t *a);
+vector4_t *FV4_Copy(vector4_t *a_o, const vector4_t *a_i);
+vector4_t *FV4_AddEx(const vector4_t *a_i, const vector4_t *a_c, vector4_t *a_o);
+vector4_t *FV4_Add(vector4_t *a_i, const vector4_t *a_c);
+vector4_t *FV4_SubEx(const vector4_t *a_i, const vector4_t *a_c, vector4_t *a_o);
+vector4_t *FV4_Sub(vector4_t *a_i, const vector4_t *a_c);
+vector4_t *FV4_MulEx(const vector4_t *a_i, fixed_t a_c, vector4_t *a_o);
+vector4_t *FV4_Mul(vector4_t *a_i, fixed_t a_c);
+vector4_t *FV4_DivideEx(const vector4_t *a_i, fixed_t a_c, vector4_t *a_o);
+vector4_t *FV4_Divide(vector4_t *a_i, fixed_t a_c);
+vector4_t *FV4_Midpoint(const vector4_t *a_1, const vector4_t *a_2, vector4_t *a_o);
+fixed_t FV4_Distance(const vector4_t *p1, const vector4_t *p2);
+fixed_t FV4_Magnitude(const vector4_t *a_normal);
+fixed_t FV4_NormalizeEx(const vector4_t *a_normal, vector4_t *a_o);
+fixed_t FV4_Normalize(vector4_t *a_normal);
+vector4_t *FV4_NegateEx(const vector4_t *a_1, vector4_t *a_o);
+vector4_t *FV4_Negate(vector4_t *a_1);
+boolean FV4_Equal(const vector4_t *a_1, const vector4_t *a_2);
+fixed_t FV4_Dot(const vector4_t *a_1, const vector4_t *a_2);
+
+typedef struct
+{
 	fixed_t m[16];
 } matrix_t;
 
 void FM_LoadIdentity(matrix_t* matrix);
 void FM_CreateObjectMatrix(matrix_t *matrix, fixed_t x, fixed_t y, fixed_t z, fixed_t anglex, fixed_t angley, fixed_t anglez, fixed_t upx, fixed_t upy, fixed_t upz, fixed_t radius);
-void FM_MultMatrixVec3(const matrix_t *matrix, const vector3_t *vec, vector3_t *out);
+const vector3_t *FM_MultMatrixVec3(const matrix_t *matrix, const vector3_t *vec, vector3_t *out);
+const vector4_t *FM_MultMatrixVec4(const matrix_t *matrix, const vector4_t *vec, vector4_t *out);
 void FM_MultMatrix(matrix_t *dest, const matrix_t *multme);
 void FM_Translate(matrix_t *dest, fixed_t x, fixed_t y, fixed_t z);
 void FM_Scale(matrix_t *dest, fixed_t x, fixed_t y, fixed_t z);

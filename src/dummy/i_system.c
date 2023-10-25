@@ -8,15 +8,15 @@ UINT8 graphics_started = 0;
 
 UINT8 keyboard_started = 0;
 
-UINT32 I_GetFreeMem(UINT32 *total)
+size_t I_GetFreeMem(size_t *total)
 {
 	*total = 0;
 	return 0;
 }
 
-tic_t I_GetTime(void)
+void I_Sleep(UINT32 ms)
 {
-	return 0;
+	(void)ms;
 }
 
 precise_t I_GetPreciseTime(void)
@@ -24,13 +24,10 @@ precise_t I_GetPreciseTime(void)
 	return 0;
 }
 
-int I_PreciseToMicros(precise_t d)
+UINT64 I_GetPrecisePrecision(void)
 {
-	(void)d;
-	return 0;
+	return 1000000;
 }
-
-void I_Sleep(void){}
 
 void I_GetEvent(void){}
 
@@ -188,7 +185,14 @@ const char *I_ClipboardPaste(void)
 	return NULL;
 }
 
-void I_RegisterSysCommands(void) {}
+size_t I_GetRandomBytes(char *destination, size_t amount)
+{
+	(void)destination;
+	(void)amount;
+	return 0;
+}
+
+void I_RegisterSysCommands(void){}
 
 void I_GetCursorPosition(INT32 *x, INT32 *y)
 {

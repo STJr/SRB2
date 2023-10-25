@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2022 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -34,7 +34,7 @@
 #include "r_sky.h"
 #include "fastcmp.h"
 #include "lua_script.h" // Reluctantly included for LUA_EvalMath
-#include "d_clisrv.h"
+#include "netcode/d_clisrv.h"
 
 #ifdef HWRENDER
 #include "hardware/hw_light.h"
@@ -45,6 +45,7 @@
 #include "dehacked.h"
 #include "deh_soc.h"
 #include "deh_lua.h" // included due to some LUA_SetLuaAction hack smh
+// also used for LUA_UpdateSprName
 #include "deh_tables.h"
 
 // Loops through every constant and operation in word and performs its calculations, returning the final value.
@@ -439,6 +440,8 @@ void readfreeslots(MYFILE *f)
 					strncpy(sprnames[i],word,4);
 					//sprnames[i][4] = 0;
 					used_spr[(i-SPR_FIRSTFREESLOT)/8] |= 1<<(i%8); // Okay, this sprite slot has been named now.
+					// Lua needs to update the value in _G if it exists
+					LUA_UpdateSprName(word, i);
 					break;
 				}
 			}
@@ -513,6 +516,8 @@ void readfreeslots(MYFILE *f)
 	} while (!myfeof(f)); // finish when the line is empty
 
 	Z_Free(s);
+
+	R_RefreshSprite2();
 }
 
 void readthing(MYFILE *f, INT32 num)
@@ -693,7 +698,8 @@ void readskincolor(MYFILE *f, INT32 num)
 			if (fastcmp(word, "NAME"))
 			{
 				size_t namesize = sizeof(skincolors[num].name);
-				char truncword[namesize];
+				char *truncword = malloc(namesize); // Follow C standard - SSNTails
+
 				UINT16 dupecheck;
 
 				deh_strlcpy(truncword, word2, namesize, va("Skincolor %d: name", num)); // truncate here to check for dupes
@@ -701,7 +707,7 @@ void readskincolor(MYFILE *f, INT32 num)
 				if (truncword[0] != '\0' && (!stricmp(truncword, skincolors[SKINCOLOR_NONE].name) || (dupecheck && dupecheck != num)))
 				{
 					size_t lastchar = strlen(truncword);
-					char oldword[lastchar+1];
+					char *oldword = malloc(lastchar + 1); // Follow C standard - SSNTails
 					char dupenum = '1';
 
 					strlcpy(oldword, truncword, lastchar+1);
@@ -726,9 +732,12 @@ void readskincolor(MYFILE *f, INT32 num)
 					}
 
 					deh_warning("Skincolor %d: name %s is a duplicate of another skincolor's name - renamed to %s", num, oldword, truncword);
+					free(oldword);
 				}
 
 				strlcpy(skincolors[num].name, truncword, namesize); // already truncated
+
+				free(truncword);
 			}
 			else if (fastcmp(word, "RAMP"))
 			{
@@ -903,7 +912,7 @@ static void readspriteframe(MYFILE *f, spriteinfo_t *sprinfo, UINT8 frame)
 			else if (fastcmp(word, "YPIVOT"))
 				sprinfo->pivot[frame].y = value;
 			else if (fastcmp(word, "ROTAXIS"))
-				sprinfo->pivot[frame].rotaxis = value;
+				deh_warning("SpriteInfo: ROTAXIS is deprecated and will be removed.");
 			else
 			{
 				f->curpos = lastline;
@@ -2687,10 +2696,10 @@ void readhuditem(MYFILE *f, INT32 num)
 			}
 			else if (fastcmp(word, "F"))
 			{
-				hudinfo[num].f = i;
+				hudinfo[num].f = get_number(word2);
 			}
 			else
-				deh_warning("Level header %d: unknown word '%s'", num, word);
+				deh_warning("HUD item %d: unknown word '%s'", num, word);
 		}
 	} while (!myfeof(f)); // finish when the line is empty
 
@@ -2759,13 +2768,13 @@ void readframe(MYFILE *f, INT32 num)
 			{
 				size_t z;
 				boolean found = false;
-				char actiontocompare[32];
+				size_t actionlen = strlen(word2) + 1;
+				char *actiontocompare = calloc(actionlen, 1);
 
-				memset(actiontocompare, 0x00, sizeof(actiontocompare));
-				strlcpy(actiontocompare, word2, sizeof (actiontocompare));
+				strcpy(actiontocompare, word2);
 				strupr(actiontocompare);
 
-				for (z = 0; z < 32; z++)
+				for (z = 0; z < actionlen; z++)
 				{
 					if (actiontocompare[z] == '\n' || actiontocompare[z] == '\r')
 					{
@@ -2798,6 +2807,8 @@ void readframe(MYFILE *f, INT32 num)
 
 				if (!found)
 					deh_warning("Unknown action %s", actiontocompare);
+
+				free(actiontocompare);
 			}
 			else
 				deh_warning("Frame %d: unknown word '%s'", num, word1);
@@ -2901,7 +2912,9 @@ static boolean GoodDataFileName(const char *s)
 	p = s + strlen(s) - strlen(tail);
 	if (p <= s) return false; // too short
 	if (!fasticmp(p, tail)) return false; // doesn't end in .dat
-	if (fasticmp(s, "gamedata.dat")) return false;
+
+	if (fasticmp(s, "gamedata.dat")) return false; // Don't overwrite default gamedata
+	if (fasticmp(s, "main.dat")) return false; // Don't overwrite default time attack replays
 
 	return true;
 }
@@ -3307,7 +3320,7 @@ static void readcondition(UINT8 set, UINT32 id, char *word2)
 		else
 			re = atoi(params[1]);
 
-		if (re < 0 || re >= NUMMAPS)
+		if (re <= 0 || re > NUMMAPS)
 		{
 			deh_warning("Level number %d out of range (1 - %d)", re, NUMMAPS);
 			return;
@@ -3327,7 +3340,7 @@ static void readcondition(UINT8 set, UINT32 id, char *word2)
 		else
 			x1 = (INT16)atoi(params[1]);
 
-		if (x1 < 0 || x1 >= NUMMAPS)
+		if (x1 <= 0 || x1 > NUMMAPS)
 		{
 			deh_warning("Level number %d out of range (1 - %d)", re, NUMMAPS);
 			return;
@@ -3362,7 +3375,7 @@ static void readcondition(UINT8 set, UINT32 id, char *word2)
 		else
 			x1 = (INT16)atoi(params[1]);
 
-		if (x1 < 0 || x1 >= NUMMAPS)
+		if (x1 <= 0 || x1 > NUMMAPS)
 		{
 			deh_warning("Level number %d out of range (1 - %d)", re, NUMMAPS);
 			return;
@@ -3829,6 +3842,10 @@ void readmaincfg(MYFILE *f)
 			{
 				useContinues = (UINT8)(value || word2[0] == 'T' || word2[0] == 'Y');
 			}
+			else if (fastcmp(word, "SHAREEMBLEMS"))
+			{
+				shareEmblems = (UINT8)(value || word2[0] == 'T' || word2[0] == 'Y');
+			}
 
 			else if (fastcmp(word, "GAMEDATA"))
 			{
@@ -3839,7 +3856,7 @@ void readmaincfg(MYFILE *f)
 				if (!GoodDataFileName(word2))
 					I_Error("Maincfg: bad data file name '%s'\n", word2);
 
-				G_SaveGameData();
+				G_SaveGameData(clientGamedata);
 				strlcpy(gamedatafilename, word2, sizeof (gamedatafilename));
 				strlwr(gamedatafilename);
 				savemoddata = true;

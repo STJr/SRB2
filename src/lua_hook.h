@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2012-2016 by John "JTE" Muniz.
-// Copyright (C) 2012-2022 by Sonic Team Junior.
+// Copyright (C) 2012-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -14,6 +14,7 @@
 #include "d_player.h"
 #include "s_sound.h"
 #include "d_event.h"
+#include "lua_hudlib_drawlist.h"
 
 /*
 Do you know what an 'X Macro' is? Such a macro is called over each element of
@@ -40,6 +41,7 @@ automatically.
 	X (MobjMoveBlocked),/* P_XYMovement (when movement is blocked) */\
 	X (MapThingSpawn),/* P_SpawnMapThing */\
 	X (FollowMobj),/* P_PlayerAfterThink Smiles mobj-following */\
+	X (HurtMsg),/* imhurttin */\
 
 #define HOOK_LIST(X) \
 	X (NetVars),/* add to archive table (netsave) */\
@@ -55,7 +57,6 @@ automatically.
 	X (JumpSpinSpecial),/* P_DoJumpStuff (Spin button effect (mid-air)) */\
 	X (BotTiccmd),/* B_BuildTiccmd */\
 	X (PlayerMsg),/* chat messages */\
-	X (HurtMsg),/* imhurttin */\
 	X (PlayerSpawn),/* G_SpawnPlayer */\
 	X (ShieldSpawn),/* P_SpawnShieldOrb */\
 	X (ShieldSpecial),/* shield abilities */\
@@ -110,12 +111,12 @@ ENUM (STRING_HOOK);
 
 /* dead simple, LUA_HOOK(GameQuit) */
 #define LUA_HOOK(type) LUA_HookVoid(HOOK(type))
-#define LUA_HUDHOOK(type) LUA_HookHUD(HUD_HOOK(type))
+#define LUA_HUDHOOK(type,drawlist) LUA_HookHUD(HUD_HOOK(type),(drawlist))
 
 extern boolean hook_cmd_running;
 
 void LUA_HookVoid(int hook);
-void LUA_HookHUD(int hook);
+void LUA_HookHUD(int hook, huddrawlist_h drawlist);
 
 int  LUA_HookMobj(mobj_t *, int hook);
 int  LUA_Hook2Mobj(mobj_t *, mobj_t *, int hook);
