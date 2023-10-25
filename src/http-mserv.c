@@ -159,7 +159,7 @@ HMS_connect (const char *format, ...)
 		return NULL;
 	}
 
-	if (cv_masterserver_token.string[0])
+	if (cv_masterserver_token.string && cv_masterserver_token.string[0])
 	{
 		quack_token = curl_easy_escape(curl, cv_masterserver_token.string, 0);
 		token_length = ( sizeof "?token="-1 )+ strlen(quack_token);

@@ -49,6 +49,10 @@ size_t I_GetFreeMem(size_t *total);
   */
 precise_t I_GetPreciseTime(void);
 
+/**	\brief	Fills a buffer with random data, returns amount of data obtained.
+  */
+size_t I_GetRandomBytes(char *destination, size_t count);
+
 /** \brief  Get the precision of precise_t in units per second. Invocations of
             this function for the program's duration MUST return the same value.
   */

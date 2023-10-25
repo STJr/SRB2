@@ -8,6 +8,5 @@ hw_cache.c
 hw_md2load.c
 hw_md3load.c
 hw_model.c
-u_list.c
 hw_batching.c
 r_opengl/r_opengl.c

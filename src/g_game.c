@@ -156,6 +156,7 @@ textprompt_t *textprompts[MAX_PROMPTS];
 
 INT16 nextmapoverride;
 UINT8 skipstats;
+INT16 nextgametype = -1;
 
 // Pointers to each CTF flag
 mobj_t *redflag;
@@ -314,6 +315,8 @@ consvar_t cv_consolechat = CVAR_INIT ("chatmode", "Window", CV_SAVE, consolechat
 
 // Pause game upon window losing focus
 consvar_t cv_pauseifunfocused = CVAR_INIT ("pauseifunfocused", "Yes", CV_SAVE, CV_YesNo, NULL);
+
+consvar_t cv_instantretry = CVAR_INIT ("instantretry", "No", CV_SAVE, CV_YesNo, NULL);
 
 consvar_t cv_crosshair = CVAR_INIT ("crosshair", "Cross", CV_SAVE, crosshair_cons_t, NULL);
 consvar_t cv_crosshair2 = CVAR_INIT ("crosshair2", "Cross", CV_SAVE, crosshair_cons_t, NULL);
@@ -519,140 +522,154 @@ UINT8 G_GetBestNightsGrade(INT16 map, UINT8 mare, gamedata_t *data)
 }
 
 // For easy adding of NiGHTS records
-void G_AddTempNightsRecords(UINT32 pscore, tic_t ptime, UINT8 mare)
+void G_AddTempNightsRecords(player_t *player, UINT32 pscore, tic_t ptime, UINT8 mare)
 {
-	ntemprecords.score[mare] = pscore;
-	ntemprecords.grade[mare] = P_GetGrade(pscore, gamemap, mare - 1);
-	ntemprecords.time[mare] = ptime;
+	const UINT8 playerID = player - players;
+
+	I_Assert(player != NULL);
+
+	ntemprecords[playerID].score[mare] = pscore;
+	ntemprecords[playerID].grade[mare] = P_GetGrade(pscore, gamemap, mare - 1);
+	ntemprecords[playerID].time[mare] = ptime;
 
 	// Update nummares
 	// Note that mare "0" is overall, mare "1" is the first real mare
-	if (ntemprecords.nummares < mare)
-		ntemprecords.nummares = mare;
+	if (ntemprecords[playerID].nummares < mare)
+		ntemprecords[playerID].nummares = mare;
 }
 
 //
-// G_UpdateRecordReplays
+// G_SetMainRecords
 //
 // Update replay files/data, etc. for Record Attack
 // See G_SetNightsRecords for NiGHTS Attack.
 //
-static void G_UpdateRecordReplays(gamedata_t *data)
+static void G_SetMainRecords(gamedata_t *data, player_t *player)
 {
-	const size_t glen = strlen(srb2home)+1+strlen("replay")+1+strlen(timeattackfolder)+1+strlen("MAPXX")+1;
-	char *gpath;
-	char lastdemo[256], bestdemo[256];
 	UINT8 earnedEmblems;
+
+	I_Assert(player != NULL);
 
 	// Record new best time
 	if (!data->mainrecords[gamemap-1])
 		G_AllocMainRecordData(gamemap-1, data);
 
-	if (players[consoleplayer].score > data->mainrecords[gamemap-1]->score)
-		data->mainrecords[gamemap-1]->score = players[consoleplayer].score;
+	if (player->recordscore > data->mainrecords[gamemap-1]->score)
+		data->mainrecords[gamemap-1]->score = player->recordscore;
 
-	if ((data->mainrecords[gamemap-1]->time == 0) || (players[consoleplayer].realtime < data->mainrecords[gamemap-1]->time))
-		data->mainrecords[gamemap-1]->time = players[consoleplayer].realtime;
+	if ((data->mainrecords[gamemap-1]->time == 0) || (player->realtime < data->mainrecords[gamemap-1]->time))
+		data->mainrecords[gamemap-1]->time = player->realtime;
 
-	if ((UINT16)(players[consoleplayer].rings) > data->mainrecords[gamemap-1]->rings)
-		data->mainrecords[gamemap-1]->rings = (UINT16)(players[consoleplayer].rings);
+	if ((UINT16)(player->rings) > data->mainrecords[gamemap-1]->rings)
+		data->mainrecords[gamemap-1]->rings = (UINT16)(player->rings);
 
-	// Save demo!
-	bestdemo[255] = '\0';
-	lastdemo[255] = '\0';
-	G_SetDemoTime(players[consoleplayer].realtime, players[consoleplayer].score, (UINT16)(players[consoleplayer].rings));
-	G_CheckDemoStatus();
-
-	I_mkdir(va("%s"PATHSEP"replay", srb2home), 0755);
-	I_mkdir(va("%s"PATHSEP"replay"PATHSEP"%s", srb2home, timeattackfolder), 0755);
-
-	if ((gpath = malloc(glen)) == NULL)
-		I_Error("Out of memory for replay filepath\n");
-
-	sprintf(gpath,"%s"PATHSEP"replay"PATHSEP"%s"PATHSEP"%s", srb2home, timeattackfolder, G_BuildMapName(gamemap));
-	snprintf(lastdemo, 255, "%s-%s-last.lmp", gpath, skins[cv_chooseskin.value-1].name);
-
-	if (FIL_FileExists(lastdemo))
+	if (modeattacking)
 	{
-		UINT8 *buf;
-		size_t len = FIL_ReadFile(lastdemo, &buf);
+		const size_t glen = strlen(srb2home)+1+strlen("replay")+1+strlen(timeattackfolder)+1+strlen("MAPXX")+1;
+		char *gpath;
+		char lastdemo[256], bestdemo[256];
 
-		snprintf(bestdemo, 255, "%s-%s-time-best.lmp", gpath, skins[cv_chooseskin.value-1].name);
-		if (!FIL_FileExists(bestdemo) || G_CmpDemoTime(bestdemo, lastdemo) & 1)
-		{ // Better time, save this demo.
-			if (FIL_FileExists(bestdemo))
-				remove(bestdemo);
-			FIL_WriteFile(bestdemo, buf, len);
-			CONS_Printf("\x83%s\x80 %s '%s'\n", M_GetText("NEW RECORD TIME!"), M_GetText("Saved replay as"), bestdemo);
+		// Save demo!
+		bestdemo[255] = '\0';
+		lastdemo[255] = '\0';
+		G_SetDemoTime(player->realtime, player->recordscore, (UINT16)(player->rings));
+		G_CheckDemoStatus();
+
+		I_mkdir(va("%s"PATHSEP"replay", srb2home), 0755);
+		I_mkdir(va("%s"PATHSEP"replay"PATHSEP"%s", srb2home, timeattackfolder), 0755);
+
+		if ((gpath = malloc(glen)) == NULL)
+			I_Error("Out of memory for replay filepath\n");
+
+		sprintf(gpath,"%s"PATHSEP"replay"PATHSEP"%s"PATHSEP"%s", srb2home, timeattackfolder, G_BuildMapName(gamemap));
+		snprintf(lastdemo, 255, "%s-%s-last.lmp", gpath, skins[cv_chooseskin.value-1].name);
+
+		if (FIL_FileExists(lastdemo))
+		{
+			UINT8 *buf;
+			size_t len = FIL_ReadFile(lastdemo, &buf);
+
+			snprintf(bestdemo, 255, "%s-%s-time-best.lmp", gpath, skins[cv_chooseskin.value-1].name);
+			if (!FIL_FileExists(bestdemo) || G_CmpDemoTime(bestdemo, lastdemo) & 1)
+			{ // Better time, save this demo.
+				if (FIL_FileExists(bestdemo))
+					remove(bestdemo);
+				FIL_WriteFile(bestdemo, buf, len);
+				CONS_Printf("\x83%s\x80 %s '%s'\n", M_GetText("NEW RECORD TIME!"), M_GetText("Saved replay as"), bestdemo);
+			}
+
+			snprintf(bestdemo, 255, "%s-%s-score-best.lmp", gpath, skins[cv_chooseskin.value-1].name);
+			if (!FIL_FileExists(bestdemo) || (G_CmpDemoTime(bestdemo, lastdemo) & (1<<1)))
+			{ // Better score, save this demo.
+				if (FIL_FileExists(bestdemo))
+					remove(bestdemo);
+				FIL_WriteFile(bestdemo, buf, len);
+				CONS_Printf("\x83%s\x80 %s '%s'\n", M_GetText("NEW HIGH SCORE!"), M_GetText("Saved replay as"), bestdemo);
+			}
+
+			snprintf(bestdemo, 255, "%s-%s-rings-best.lmp", gpath, skins[cv_chooseskin.value-1].name);
+			if (!FIL_FileExists(bestdemo) || (G_CmpDemoTime(bestdemo, lastdemo) & (1<<2)))
+			{ // Better rings, save this demo.
+				if (FIL_FileExists(bestdemo))
+					remove(bestdemo);
+				FIL_WriteFile(bestdemo, buf, len);
+				CONS_Printf("\x83%s\x80 %s '%s'\n", M_GetText("NEW MOST RINGS!"), M_GetText("Saved replay as"), bestdemo);
+			}
+
+			//CONS_Printf("%s '%s'\n", M_GetText("Saved replay as"), lastdemo);
+
+			Z_Free(buf);
 		}
-
-		snprintf(bestdemo, 255, "%s-%s-score-best.lmp", gpath, skins[cv_chooseskin.value-1].name);
-		if (!FIL_FileExists(bestdemo) || (G_CmpDemoTime(bestdemo, lastdemo) & (1<<1)))
-		{ // Better score, save this demo.
-			if (FIL_FileExists(bestdemo))
-				remove(bestdemo);
-			FIL_WriteFile(bestdemo, buf, len);
-			CONS_Printf("\x83%s\x80 %s '%s'\n", M_GetText("NEW HIGH SCORE!"), M_GetText("Saved replay as"), bestdemo);
-		}
-
-		snprintf(bestdemo, 255, "%s-%s-rings-best.lmp", gpath, skins[cv_chooseskin.value-1].name);
-		if (!FIL_FileExists(bestdemo) || (G_CmpDemoTime(bestdemo, lastdemo) & (1<<2)))
-		{ // Better rings, save this demo.
-			if (FIL_FileExists(bestdemo))
-				remove(bestdemo);
-			FIL_WriteFile(bestdemo, buf, len);
-			CONS_Printf("\x83%s\x80 %s '%s'\n", M_GetText("NEW MOST RINGS!"), M_GetText("Saved replay as"), bestdemo);
-		}
-
-		//CONS_Printf("%s '%s'\n", M_GetText("Saved replay as"), lastdemo);
-
-		Z_Free(buf);
+		free(gpath);
 	}
-	free(gpath);
 
 	// Check emblems when level data is updated
 	if ((earnedEmblems = M_CheckLevelEmblems(data)))
+	{
 		CONS_Printf(M_GetText("\x82" "Earned %hu emblem%s for Record Attack records.\n"), (UINT16)earnedEmblems, earnedEmblems > 1 ? "s" : "");
+	}
 
 	// Update timeattack menu's replay availability.
 	Nextmap_OnChange();
 }
 
-void G_SetNightsRecords(gamedata_t *data)
+static void G_SetNightsRecords(gamedata_t *data, player_t *player)
 {
-	INT32 i;
+	nightsdata_t *const ntemprecord = &ntemprecords[player - players];
 	UINT32 totalscore = 0;
 	tic_t totaltime = 0;
+	INT32 i;
+
 	UINT8 earnedEmblems;
 
-	const size_t glen = strlen(srb2home)+1+strlen("replay")+1+strlen(timeattackfolder)+1+strlen("MAPXX")+1;
-	char *gpath;
-	char lastdemo[256], bestdemo[256];
-
-	if (!ntemprecords.nummares)
+	if (!ntemprecord->nummares)
+	{
 		return;
+	}
 
 	// Set overall
 	{
 		UINT8 totalrank = 0, realrank = 0;
 
-		for (i = 1; i <= ntemprecords.nummares; ++i)
+		for (i = 1; i <= ntemprecord->nummares; ++i)
 		{
-			totalscore += ntemprecords.score[i];
-			totalrank += ntemprecords.grade[i];
-			totaltime += ntemprecords.time[i];
+			totalscore += ntemprecord->score[i];
+			totalrank += ntemprecord->grade[i];
+			totaltime += ntemprecord->time[i];
 		}
 
 		// Determine overall grade
-		realrank = (UINT8)((FixedDiv((fixed_t)totalrank << FRACBITS, ntemprecords.nummares << FRACBITS) + (FRACUNIT/2)) >> FRACBITS);
+		realrank = (UINT8)((FixedDiv((fixed_t)totalrank << FRACBITS, ntemprecord->nummares << FRACBITS) + (FRACUNIT/2)) >> FRACBITS);
 
 		// You need ALL rainbow As to get a rainbow A overall
-		if (realrank == GRADE_S && (totalrank / ntemprecords.nummares) != GRADE_S)
+		if (realrank == GRADE_S && (totalrank / ntemprecord->nummares) != GRADE_S)
+		{
 			realrank = GRADE_A;
+		}
 
-		ntemprecords.score[0] = totalscore;
-		ntemprecords.grade[0] = realrank;
-		ntemprecords.time[0] = totaltime;
+		ntemprecord->score[0] = totalscore;
+		ntemprecord->grade[0] = realrank;
+		ntemprecord->time[0] = totaltime;
 	}
 
 	// Now take all temp records and put them in the actual records
@@ -660,71 +677,85 @@ void G_SetNightsRecords(gamedata_t *data)
 		nightsdata_t *maprecords;
 
 		if (!data->nightsrecords[gamemap-1])
+		{
 			G_AllocNightsRecordData(gamemap-1, data);
+		}
+
 		maprecords = data->nightsrecords[gamemap-1];
 
-		if (maprecords->nummares != ntemprecords.nummares)
-			maprecords->nummares = ntemprecords.nummares;
-
-		for (i = 0; i < ntemprecords.nummares + 1; ++i)
+		if (maprecords->nummares != ntemprecord->nummares)
 		{
-			if (maprecords->score[i] < ntemprecords.score[i])
-				maprecords->score[i] = ntemprecords.score[i];
-			if (maprecords->grade[i] < ntemprecords.grade[i])
-				maprecords->grade[i] = ntemprecords.grade[i];
-			if (!maprecords->time[i] || maprecords->time[i] > ntemprecords.time[i])
-				maprecords->time[i] = ntemprecords.time[i];
+			maprecords->nummares = ntemprecord->nummares;
+		}
+
+		for (i = 0; i < ntemprecord->nummares + 1; ++i)
+		{
+			if (maprecords->score[i] < ntemprecord->score[i])
+				maprecords->score[i] = ntemprecord->score[i];
+			if (maprecords->grade[i] < ntemprecord->grade[i])
+				maprecords->grade[i] = ntemprecord->grade[i];
+			if (!maprecords->time[i] || maprecords->time[i] > ntemprecord->time[i])
+				maprecords->time[i] = ntemprecord->time[i];
 		}
 	}
 
-	memset(&ntemprecords, 0, sizeof(nightsdata_t));
+	memset(&ntemprecords[player - players], 0, sizeof(nightsdata_t));
 
-	// Save demo!
-	bestdemo[255] = '\0';
-	lastdemo[255] = '\0';
-	G_SetDemoTime(totaltime, totalscore, 0);
-	G_CheckDemoStatus();
-
-	I_mkdir(va("%s"PATHSEP"replay", srb2home), 0755);
-	I_mkdir(va("%s"PATHSEP"replay"PATHSEP"%s", srb2home, timeattackfolder), 0755);
-
-	if ((gpath = malloc(glen)) == NULL)
-		I_Error("Out of memory for replay filepath\n");
-
-	sprintf(gpath,"%s"PATHSEP"replay"PATHSEP"%s"PATHSEP"%s", srb2home, timeattackfolder, G_BuildMapName(gamemap));
-	snprintf(lastdemo, 255, "%s-%s-last.lmp", gpath, skins[cv_chooseskin.value-1].name);
-
-	if (FIL_FileExists(lastdemo))
+	if (modeattacking)
 	{
-		UINT8 *buf;
-		size_t len = FIL_ReadFile(lastdemo, &buf);
+		const size_t glen = strlen(srb2home)+1+strlen("replay")+1+strlen(timeattackfolder)+1+strlen("MAPXX")+1;
+		char *gpath;
+		char lastdemo[256], bestdemo[256];
 
-		snprintf(bestdemo, 255, "%s-%s-time-best.lmp", gpath, skins[cv_chooseskin.value-1].name);;
-		if (!FIL_FileExists(bestdemo) || G_CmpDemoTime(bestdemo, lastdemo) & 1)
-		{ // Better time, save this demo.
-			if (FIL_FileExists(bestdemo))
-				remove(bestdemo);
-			FIL_WriteFile(bestdemo, buf, len);
-			CONS_Printf("\x83%s\x80 %s '%s'\n", M_GetText("NEW RECORD TIME!"), M_GetText("Saved replay as"), bestdemo);
+		// Save demo!
+		bestdemo[255] = '\0';
+		lastdemo[255] = '\0';
+		G_SetDemoTime(totaltime, totalscore, 0);
+		G_CheckDemoStatus();
+
+		I_mkdir(va("%s"PATHSEP"replay", srb2home), 0755);
+		I_mkdir(va("%s"PATHSEP"replay"PATHSEP"%s", srb2home, timeattackfolder), 0755);
+
+		if ((gpath = malloc(glen)) == NULL)
+			I_Error("Out of memory for replay filepath\n");
+
+		sprintf(gpath,"%s"PATHSEP"replay"PATHSEP"%s"PATHSEP"%s", srb2home, timeattackfolder, G_BuildMapName(gamemap));
+		snprintf(lastdemo, 255, "%s-%s-last.lmp", gpath, skins[cv_chooseskin.value-1].name);
+
+		if (FIL_FileExists(lastdemo))
+		{
+			UINT8 *buf;
+			size_t len = FIL_ReadFile(lastdemo, &buf);
+
+			snprintf(bestdemo, 255, "%s-%s-time-best.lmp", gpath, skins[cv_chooseskin.value-1].name);;
+			if (!FIL_FileExists(bestdemo) || G_CmpDemoTime(bestdemo, lastdemo) & 1)
+			{ // Better time, save this demo.
+				if (FIL_FileExists(bestdemo))
+					remove(bestdemo);
+				FIL_WriteFile(bestdemo, buf, len);
+				CONS_Printf("\x83%s\x80 %s '%s'\n", M_GetText("NEW RECORD TIME!"), M_GetText("Saved replay as"), bestdemo);
+			}
+
+			snprintf(bestdemo, 255, "%s-%s-score-best.lmp", gpath, skins[cv_chooseskin.value-1].name);
+			if (!FIL_FileExists(bestdemo) || (G_CmpDemoTime(bestdemo, lastdemo) & (1<<1)))
+			{ // Better score, save this demo.
+				if (FIL_FileExists(bestdemo))
+					remove(bestdemo);
+				FIL_WriteFile(bestdemo, buf, len);
+				CONS_Printf("\x83%s\x80 %s '%s'\n", M_GetText("NEW HIGH SCORE!"), M_GetText("Saved replay as"), bestdemo);
+			}
+
+			//CONS_Printf("%s '%s'\n", M_GetText("Saved replay as"), lastdemo);
+
+			Z_Free(buf);
 		}
-
-		snprintf(bestdemo, 255, "%s-%s-score-best.lmp", gpath, skins[cv_chooseskin.value-1].name);
-		if (!FIL_FileExists(bestdemo) || (G_CmpDemoTime(bestdemo, lastdemo) & (1<<1)))
-		{ // Better score, save this demo.
-			if (FIL_FileExists(bestdemo))
-				remove(bestdemo);
-			FIL_WriteFile(bestdemo, buf, len);
-			CONS_Printf("\x83%s\x80 %s '%s'\n", M_GetText("NEW HIGH SCORE!"), M_GetText("Saved replay as"), bestdemo);
-		}
-
-		//CONS_Printf("%s '%s'\n", M_GetText("Saved replay as"), lastdemo);
-
-		Z_Free(buf);
+		free(gpath);
 	}
-	free(gpath);
 
 	if ((earnedEmblems = M_CheckLevelEmblems(data)))
+	{
 		CONS_Printf(M_GetText("\x82" "Earned %hu emblem%s for NiGHTS records.\n"), (UINT16)earnedEmblems, earnedEmblems > 1 ? "s" : "");
+	}
 
 	// If the mare count changed, this will update the score display
 	Nextmap_OnChange();
@@ -1413,6 +1444,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 			// I assume this is netgame-safe because gunslinger spawns this for only the local player...... *sweats intensely*
 			newtarget = P_SpawnMobj(ticcmd_ztargetfocus[forplayer]->x, ticcmd_ztargetfocus[forplayer]->y, ticcmd_ztargetfocus[forplayer]->z, MT_LOCKON); // positioning, flip handled in P_SceneryThinker
 			P_SetTarget(&newtarget->target, ticcmd_ztargetfocus[forplayer]);
+			newtarget->drawonlyforplayer = player; // Hide it from the other player in splitscreen, and yourself when spectating
 
 			if (player->mo && P_AproxDistance(
 				player->mo->x - ticcmd_ztargetfocus[forplayer]->x,
@@ -1915,6 +1947,7 @@ void G_PreLevelTitleCard(void)
 		ST_runTitleCard();
 		ST_preLevelTitleCardDrawer();
 		I_FinishUpdate(); // page flip or blit buffer
+		NetKeepAlive(); // Prevent timeouts
 
 		if (moviemode)
 			M_SaveFrame();
@@ -2049,7 +2082,7 @@ boolean G_Responder(event_t *ev)
 	if (gameaction == ga_nothing && !singledemo &&
 		((demoplayback && !modeattacking && !titledemo) || gamestate == GS_TITLESCREEN))
 	{
-		if (ev->type == ev_keydown && ev->key != 301 && !(gamestate == GS_TITLESCREEN && finalecount < TICRATE))
+		if (ev->type == ev_keydown && ev->key != 301 && !(gamestate == GS_TITLESCREEN && finalecount < (cv_tutorialprompt.value ? TICRATE : 0)))
 		{
 			M_StartControlPanel();
 			return true;
@@ -2107,7 +2140,7 @@ boolean G_Responder(event_t *ev)
 			if (! netgame)
 				F_StartGameEvaluation();
 			else if (server || IsPlayerAdmin(consoleplayer))
-				SendNetXCmd(XD_EXITLEVEL, NULL, 0);
+				D_SendExitLevel(false);
 			return true;
 		}
 	}
@@ -2142,9 +2175,9 @@ boolean G_Responder(event_t *ev)
 					if (menuactive || pausedelay < 0 || leveltime < 2)
 						return true;
 
-					if (pausedelay < 1+(NEWTICRATE/2))
+					if (!cv_instantretry.value && pausedelay < 1+(NEWTICRATE/2))
 						pausedelay = 1+(NEWTICRATE/2);
-					else if (++pausedelay > 1+(NEWTICRATE/2)+(NEWTICRATE/3))
+					else if (cv_instantretry.value || ++pausedelay > 1+(NEWTICRATE/2)+(NEWTICRATE/3))
 					{
 						G_SetModeAttackRetryFlag();
 						return true;
@@ -2287,7 +2320,7 @@ void G_Ticker(boolean run)
 					p->lives = startinglivesbalance[0];
 					p->continues = 1;
 
-					p->score = 0;
+					p->score = p->recordscore = 0;
 
 					// The latter two should clear by themselves, but just in case
 					p->pflags &= ~(PF_TAGIT|PF_GAMETYPEOVER|PF_FULLSTASIS);
@@ -2437,12 +2470,15 @@ void G_Ticker(boolean run)
 		case GS_TITLESCREEN:
 			if (titlemapinaction)
 				P_Ticker(run);
-				// then intentionally fall through
-			/* FALLTHRU */
-		case GS_WAITINGPLAYERS:
 			if (run)
 				F_MenuPresTicker();
 			F_TitleScreenTicker(run);
+			break;
+
+		case GS_WAITINGPLAYERS:
+			if (netgame)
+				F_WaitingPlayersTicker();
+			HU_Ticker();
 			break;
 
 		case GS_DEDICATEDSERVER:
@@ -3160,6 +3196,7 @@ void G_DoReborn(INT32 playernum)
 			{
 				if (!playeringame[i])
 					continue;
+				players[i].recordscore = 0;
 				players[i].starpostscale = 0;
 				players[i].starpostangle = 0;
 				players[i].starposttime = 0;
@@ -3422,9 +3459,7 @@ UINT32 gametypedefaultrules[NUMGAMETYPES] =
 };
 
 //
-// G_SetGametype
-//
-// Set a new gametype, also setting gametype rules accordingly. Yay!
+// Sets a new gametype.
 //
 void G_SetGametype(INT16 gtype)
 {
@@ -3822,7 +3857,7 @@ static INT16 RandMap(UINT32 tolflags, INT16 pprevmap)
 	for (ix = 0; ix < NUMMAPS; ix++)
 		if (mapheaderinfo[ix] && (mapheaderinfo[ix]->typeoflevel & tolflags) == tolflags
 		 && ix != pprevmap // Don't pick the same map.
-		 && (dedicated || !M_MapLocked(ix+1, serverGamedata)) // Don't pick locked maps.
+		 && (!M_MapLocked(ix+1, serverGamedata)) // Don't pick locked maps.
 		)
 			okmaps[numokmaps++] = ix;
 
@@ -3839,15 +3874,16 @@ static INT16 RandMap(UINT32 tolflags, INT16 pprevmap)
 //
 // G_UpdateVisited
 //
-static void G_UpdateVisited(gamedata_t *data, boolean silent)
+static void G_UpdateVisited(gamedata_t *data, player_t *player, boolean silent)
 {
-	boolean spec = G_IsSpecialStage(gamemap);
 	// Update visitation flags?
 	if (!demoplayback
 		&& G_CoopGametype() // Campaign mode
 		&& !stagefailed) // Did not fail the stage
 	{
 		UINT8 earnedEmblems;
+		UINT16 totalrings = 0;
+		INT32 i;
 
 		// Update visitation flags
 		data->mapvisited[gamemap-1] |= MV_BEATEN;
@@ -3856,36 +3892,62 @@ static void G_UpdateVisited(gamedata_t *data, boolean silent)
 		if (ultimatemode)
 			data->mapvisited[gamemap-1] |= MV_ULTIMATE;
 
+		for (i = 0; i < MAXPLAYERS; i++)
+		{
+			if (!playeringame[i])
+			{
+				continue;
+			}
+
+			totalrings += players[i].rings;
+		}
+
 		// may seem incorrect but IS possible in what the main game uses as mp special stages, and nummaprings will be -1 in NiGHTS
-		if (nummaprings > 0 && players[consoleplayer].rings >= nummaprings)
+		if (nummaprings > 0 && totalrings >= nummaprings)
 		{
 			data->mapvisited[gamemap-1] |= MV_PERFECT;
 			if (modeattacking)
 				data->mapvisited[gamemap-1] |= MV_PERFECTRA;
 		}
 
-		if (!spec)
+		if (!G_IsSpecialStage(gamemap))
 		{
 			// not available to special stages because they can only really be done in one order in an unmodified game, so impossible for first six and trivial for seventh
 			if (ALL7EMERALDS(emeralds))
 				data->mapvisited[gamemap-1] |= MV_ALLEMERALDS;
 		}
 
+		if ((earnedEmblems = M_CompletionEmblems(data)) && !silent)
+		{
+			CONS_Printf(M_GetText("\x82" "Earned %hu emblem%s for level completion.\n"), (UINT16)earnedEmblems, earnedEmblems > 1 ? "s" : "");
+		}
+
 		if (silent)
 		{
-			if (modeattacking)
-				M_CheckLevelEmblems(data);
+			M_CheckLevelEmblems(data);
 		}
 		else
 		{
-			if (modeattacking == ATTACKING_RECORD)
-				G_UpdateRecordReplays(data);
-			else if (modeattacking == ATTACKING_NIGHTS)
-				G_SetNightsRecords(data);
+			if (mapheaderinfo[gamemap-1]->menuflags & LF2_RECORDATTACK)
+				G_SetMainRecords(data, player);
+			else if (mapheaderinfo[gamemap-1]->menuflags & LF2_NIGHTSATTACK)
+				G_SetNightsRecords(data, player);
 		}
+	}
+}
 
-		if ((earnedEmblems = M_CompletionEmblems(data)) && !silent)
-			CONS_Printf(M_GetText("\x82" "Earned %hu emblem%s for level completion.\n"), (UINT16)earnedEmblems, earnedEmblems > 1 ? "s" : "");
+static void G_UpdateAllVisited(void)
+{
+	// Update server
+	G_UpdateVisited(serverGamedata, &players[serverplayer], true);
+
+	// Update client
+	G_UpdateVisited(clientGamedata, &players[consoleplayer], false);
+
+	if (splitscreen)
+	{
+		// Allow P2 to get emblems too, why not :)
+		G_UpdateVisited(clientGamedata, &players[secondarydisplayplayer], false);
 	}
 }
 
@@ -3909,6 +3971,9 @@ static boolean CanSaveLevel(INT32 mapnum)
 
 static void G_HandleSaveLevel(void)
 {
+	// Update records & emblems
+	G_UpdateAllVisited();
+
 	// do this before running the intermission or custom cutscene, mostly for the sake of marathon mode but it also massively reduces redundant file save events in f_finale.c
 	if (nextmap >= 1100-1)
 	{
@@ -3984,6 +4049,13 @@ static void G_DoCompleted(void)
 			nextmap = 1100-1; // No infinite loop for you
 	}
 
+	INT16 gametype_to_use;
+
+	if (nextgametype >= 0 && nextgametype < gametypecount)
+		gametype_to_use = nextgametype;
+	else
+		gametype_to_use = gametype;
+
 	// If nextmap is actually going to get used, make sure it points to
 	// a map of the proper gametype -- skip levels that don't support
 	// the current gametype. (Helps avoid playing boss levels in Race,
@@ -3992,8 +4064,8 @@ static void G_DoCompleted(void)
 	{
 		if (nextmap >= 0 && nextmap < NUMMAPS)
 		{
-			register INT16 cm = nextmap;
-			UINT32 tolflag = G_TOLFlag(gametype);
+			INT16 cm = nextmap;
+			UINT32 tolflag = G_TOLFlag(gametype_to_use);
 			UINT8 visitedmap[(NUMMAPS+7)/8];
 
 			memset(visitedmap, 0, sizeof (visitedmap));
@@ -4048,7 +4120,7 @@ static void G_DoCompleted(void)
 	{
 		token--;
 
-		if (!nextmapoverride)
+//		if (!nextmapoverride) // Having a token should pull the player into the special stage before going to the overridden map (Issue #933)
 			for (i = 0; i < 7; i++)
 				if (!(emeralds & (1<<i)))
 				{
@@ -4073,7 +4145,7 @@ static void G_DoCompleted(void)
 		if (cv_advancemap.value == 0) // Stay on same map.
 			nextmap = prevmap;
 		else if (cv_advancemap.value == 2) // Go to random map.
-			nextmap = RandMap(G_TOLFlag(gametype), prevmap);
+			nextmap = RandMap(G_TOLFlag(gametype_to_use), prevmap);
 	}
 
 	// We are committed to this map now.
@@ -4082,13 +4154,10 @@ static void G_DoCompleted(void)
 	if (nextmap < NUMMAPS && !mapheaderinfo[nextmap])
 		P_AllocMapHeader(nextmap);
 
-	// If the current gametype has no intermission screen set, then don't start it.
 	Y_DetermineIntermissionType();
 
 	if ((skipstats && !modeattacking) || (modeattacking && stagefailed) || (intertype == int_none))
 	{
-		G_UpdateVisited(serverGamedata, true);
-		G_UpdateVisited(clientGamedata, false);
 		G_HandleSaveLevel();
 		G_AfterIntermission();
 	}
@@ -4097,8 +4166,6 @@ static void G_DoCompleted(void)
 		G_SetGamestate(GS_INTERMISSION);
 		Y_StartIntermission();
 		Y_LoadIntermissionData();
-		G_UpdateVisited(serverGamedata, true);
-		G_UpdateVisited(clientGamedata, false);
 		G_HandleSaveLevel();
 	}
 }
@@ -4152,12 +4219,21 @@ static void G_DoWorldDone(void)
 {
 	if (server)
 	{
+		INT16 gametype_to_use;
+
+		if (nextgametype >= 0 && nextgametype < gametypecount)
+			gametype_to_use = nextgametype;
+		else
+			gametype_to_use = gametype;
+
 		if (gametyperules & GTR_CAMPAIGN)
 			// don't reset player between maps
-			D_MapChange(nextmap+1, gametype, ultimatemode, false, 0, false, false);
+			D_MapChange(nextmap+1, gametype_to_use, ultimatemode, false, 0, false, false);
 		else
 			// resetplayer in match/chaos/tag/CTF/race for more equality
-			D_MapChange(nextmap+1, gametype, ultimatemode, true, 0, false, false);
+			D_MapChange(nextmap+1, gametype_to_use, ultimatemode, true, 0, false, false);
+
+		nextgametype = -1;
 	}
 
 	gameaction = ga_nothing;
@@ -4200,7 +4276,7 @@ static void G_DoContinued(void)
 {
 	player_t *pl = &players[consoleplayer];
 	I_Assert(!netgame && !multiplayer);
-	I_Assert(pl->continues > 0);
+	//I_Assert(pl->continues > 0);
 
 	if (pl->continues)
 		pl->continues--;
@@ -4304,6 +4380,12 @@ void G_LoadGameData(gamedata_t *data)
 	// Stop saving, until we successfully load it again.
 	data->loaded = false;
 
+	// Backwards compat stuff
+	INT32 max_emblems = MAXEMBLEMS;
+	INT32 max_extraemblems = MAXEXTRAEMBLEMS;
+	INT32 max_unlockables = MAXUNLOCKABLES;
+	INT32 max_conditionsets = MAXCONDITIONSETS;
+
 	// Clear things so previously read gamedata doesn't transfer
 	// to new gamedata
 	G_ClearRecords(data); // main and nights records
@@ -4320,7 +4402,7 @@ void G_LoadGameData(gamedata_t *data)
 	{
 		// Don't load, but do save. (essentially, reset)
 		data->loaded = true;
-		return; 
+		return;
 	}
 
 	length = FIL_ReadFile(va(pandf, srb2home, gamedatafilename), &savebuffer);
@@ -4350,6 +4432,14 @@ void G_LoadGameData(gamedata_t *data)
 		I_Error("Game data is from another version of SRB2.\nDelete %s(maybe in %s) and try again.", gamedatafilename, gdfolder);
 	}
 
+#ifdef COMPAT_GAMEDATA_ID // Account for lower MAXUNLOCKABLES and MAXEXTRAEMBLEMS from older versions
+	if (versionID == COMPAT_GAMEDATA_ID)
+	{
+		max_extraemblems = 16;
+		max_unlockables = 32;
+	}
+#endif
+
 	data->totalplaytime = READUINT32(save_p);
 
 #ifdef COMPAT_GAMEDATA_ID
@@ -4367,6 +4457,17 @@ void G_LoadGameData(gamedata_t *data)
 		{
 			goto datacorrupt;
 		}
+
+		// make a backup of the old data
+		char currentfilename[64];
+		char backupfilename[69];
+		char bak[5];
+
+		strcpy(bak, ".bak");
+		strcpy(currentfilename, gamedatafilename);
+		STRBUFCPY(backupfilename, strcat(currentfilename, bak));
+
+		FIL_WriteFile(va(pandf, srb2home, backupfilename), savebuffer, length);
 	}
 	else
 #endif
@@ -4388,31 +4489,31 @@ void G_LoadGameData(gamedata_t *data)
 			goto datacorrupt;
 
 	// To save space, use one bit per collected/achieved/unlocked flag
-	for (i = 0; i < MAXEMBLEMS;)
+	for (i = 0; i < max_emblems;)
 	{
 		rtemp = READUINT8(save_p);
-		for (j = 0; j < 8 && j+i < MAXEMBLEMS; ++j)
+		for (j = 0; j < 8 && j+i < max_emblems; ++j)
 			data->collected[j+i] = ((rtemp >> j) & 1);
 		i += j;
 	}
-	for (i = 0; i < MAXEXTRAEMBLEMS;)
+	for (i = 0; i < max_extraemblems;)
 	{
 		rtemp = READUINT8(save_p);
-		for (j = 0; j < 8 && j+i < MAXEXTRAEMBLEMS; ++j)
+		for (j = 0; j < 8 && j+i < max_extraemblems; ++j)
 			data->extraCollected[j+i] = ((rtemp >> j) & 1);
 		i += j;
 	}
-	for (i = 0; i < MAXUNLOCKABLES;)
+	for (i = 0; i < max_unlockables;)
 	{
 		rtemp = READUINT8(save_p);
-		for (j = 0; j < 8 && j+i < MAXUNLOCKABLES; ++j)
+		for (j = 0; j < 8 && j+i < max_unlockables; ++j)
 			data->unlocked[j+i] = ((rtemp >> j) & 1);
 		i += j;
 	}
-	for (i = 0; i < MAXCONDITIONSETS;)
+	for (i = 0; i < max_conditionsets;)
 	{
 		rtemp = READUINT8(save_p);
-		for (j = 0; j < 8 && j+i < MAXCONDITIONSETS; ++j)
+		for (j = 0; j < 8 && j+i < max_conditionsets; ++j)
 			data->achieved[j+i] = ((rtemp >> j) & 1);
 		i += j;
 	}
@@ -4957,12 +5058,20 @@ void G_InitNew(UINT8 pultmode, const char *mapname, boolean resetplayer, boolean
 		numgameovers = tokenlist = token = sstimer = redscore = bluescore = lastmap = 0;
 		countdown = countdown2 = exitfadestarted = 0;
 
+		if (!FLS)
+		{
+			emeralds = 0;
+			memset(&luabanks, 0, sizeof(luabanks));
+		}
+
 		for (i = 0; i < MAXPLAYERS; i++)
 		{
 			players[i].playerstate = PST_REBORN;
 			players[i].starpostscale = players[i].starpostangle = players[i].starpostnum = players[i].starposttime = 0;
 			players[i].starpostx = players[i].starposty = players[i].starpostz = 0;
+			players[i].recordscore = 0;
 
+			// default lives, continues and score
 			if (netgame || multiplayer)
 			{
 				if (!FLS || (players[i].lives < 1))
@@ -5021,6 +5130,19 @@ void G_InitNew(UINT8 pultmode, const char *mapname, boolean resetplayer, boolean
 	ultimatemode = pultmode;
 	automapactive = false;
 	imcontinuing = false;
+
+	// fetch saved data if available
+	if (savedata.lives > 0)
+	{
+		numgameovers = savedata.numgameovers;
+		players[consoleplayer].continues = savedata.continues;
+		players[consoleplayer].lives = savedata.lives;
+		players[consoleplayer].score = savedata.score;
+		if ((botingame = ((botskin = savedata.botskin) != 0)))
+			botcolor = skins[botskin-1].prefcolor;
+		emeralds = savedata.emeralds;
+		savedata.lives = 0;
+	}
 
 	if ((gametyperules & GTR_CUTSCENES) && !skipprecutscene && mapheaderinfo[gamemap-1]->precutscenenum && !modeattacking && !(marathonmode & MA_NOCUTSCENES)) // Start a custom cutscene.
 		F_StartCustomCutscene(mapheaderinfo[gamemap-1]->precutscenenum-1, true, resetplayer, FLS);

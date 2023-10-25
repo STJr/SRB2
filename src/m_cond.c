@@ -45,7 +45,7 @@ INT32 numemblems = 0;
 INT32 numextraemblems = 0;
 
 // Temporary holding place for nights data for the current map
-nightsdata_t ntemprecords;
+nightsdata_t ntemprecords[MAXPLAYERS];
 
 // Create a new gamedata_t, for start-up
 gamedata_t *M_NewGameDataStruct(void)
@@ -113,7 +113,7 @@ void M_AddRawCondition(UINT8 set, UINT8 id, conditiontype_t c, INT32 r, INT16 x1
 	condition_t *cond;
 	UINT32 num, wnum;
 
-	I_Assert(set && set <= MAXCONDITIONSETS);
+	I_Assert(set < MAXCONDITIONSETS);
 
 	wnum = conditionSets[set - 1].numconditions;
 	num = ++conditionSets[set - 1].numconditions;
@@ -467,6 +467,15 @@ UINT8 M_SecretUnlocked(INT32 type, gamedata_t *data)
 
 UINT8 M_MapLocked(INT32 mapnum, gamedata_t *data)
 {
+	if (dedicated)
+	{
+		// If you're in a dedicated server, every level is unlocked.
+		// Yes, technically this means you can view any level by
+		// running a dedicated server and joining it yourself, but
+		// that's better than making dedicated server's lives hell.
+		return false;
+	}
+
 	if (!mapheaderinfo[mapnum-1] || mapheaderinfo[mapnum-1]->unlockrequired < 0)
 	{
 		return false;
@@ -478,6 +487,48 @@ UINT8 M_MapLocked(INT32 mapnum, gamedata_t *data)
 	}
 
 	return false;
+}
+
+UINT8 M_CampaignWarpIsCheat(INT32 gt, INT32 mapnum, gamedata_t *data)
+{
+	if (M_MapLocked(mapnum, data) == true)
+	{
+		// Warping to locked maps is definitely always a cheat
+		return true;
+	}
+
+	if ((gametypedefaultrules[gt] & GTR_CAMPAIGN) == 0)
+	{
+		// Not a campaign, do whatever you want.
+		return false;
+	}
+
+	if (G_IsSpecialStage(mapnum))
+	{
+		// Warping to special stages is a cheat
+		return true;
+	}
+
+	if (mapheaderinfo[mapnum-1]->menuflags & LF2_HIDEINMENU)
+	{
+		// You're never allowed to warp to this level.
+		return true;
+	}
+
+	if (mapheaderinfo[mapnum-1]->menuflags & LF2_NOVISITNEEDED)
+	{
+		// You're always allowed to warp to this level.
+		return false;
+	}
+
+	if (mapnum == spstage_start)
+	{
+		// Warping to the first level is never a cheat
+		return false;
+	}
+
+	// It's only a cheat if you've never been there.
+	return (!(data->mapvisited[mapnum-1]));
 }
 
 INT32 M_CountEmblems(gamedata_t *data)
