@@ -1,6 +1,6 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
-// Copyright (C) 2021 by Sonic Team Junior.
+// Copyright (C) 2021-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -19,6 +19,8 @@
 #include "lua_script.h"
 #include "lua_libs.h"
 
+boolean mousegrabbedbylua = true;
+
 ///////////////
 // FUNCTIONS //
 ///////////////
@@ -26,8 +28,8 @@
 static int lib_gameControlDown(lua_State *L)
 {
 	int i = luaL_checkinteger(L, 1);
-	if (i < 0 || i >= num_gamecontrols)
-		return luaL_error(L, "gc_* constant %d out of range (0 - %d)", i, num_gamecontrols-1);
+	if (i < 0 || i >= NUM_GAMECONTROLS)
+		return luaL_error(L, "GC_* constant %d out of range (0 - %d)", i, NUM_GAMECONTROLS-1);
 	lua_pushinteger(L, PLAYER1INPUTDOWN(i));
 	return 1;
 }
@@ -35,8 +37,8 @@ static int lib_gameControlDown(lua_State *L)
 static int lib_gameControl2Down(lua_State *L)
 {
 	int i = luaL_checkinteger(L, 1);
-	if (i < 0 || i >= num_gamecontrols)
-		return luaL_error(L, "gc_* constant %d out of range (0 - %d)", i, num_gamecontrols-1);
+	if (i < 0 || i >= NUM_GAMECONTROLS)
+		return luaL_error(L, "GC_* constant %d out of range (0 - %d)", i, NUM_GAMECONTROLS-1);
 	lua_pushinteger(L, PLAYER2INPUTDOWN(i));
 	return 1;
 }
@@ -44,8 +46,8 @@ static int lib_gameControl2Down(lua_State *L)
 static int lib_gameControlToKeyNum(lua_State *L)
 {
 	int i = luaL_checkinteger(L, 1);
-	if (i < 0 || i >= num_gamecontrols)
-		return luaL_error(L, "gc_* constant %d out of range (0 - %d)", i, num_gamecontrols-1);
+	if (i < 0 || i >= NUM_GAMECONTROLS)
+		return luaL_error(L, "GC_* constant %d out of range (0 - %d)", i, NUM_GAMECONTROLS-1);
 	lua_pushinteger(L, gamecontrol[i][0]);
 	lua_pushinteger(L, gamecontrol[i][1]);
 	return 2;
@@ -54,8 +56,8 @@ static int lib_gameControlToKeyNum(lua_State *L)
 static int lib_gameControl2ToKeyNum(lua_State *L)
 {
 	int i = luaL_checkinteger(L, 1);
-	if (i < 0 || i >= num_gamecontrols)
-		return luaL_error(L, "gc_* constant %d out of range (0 - %d)", i, num_gamecontrols-1);
+	if (i < 0 || i >= NUM_GAMECONTROLS)
+		return luaL_error(L, "GC_* constant %d out of range (0 - %d)", i, NUM_GAMECONTROLS-1);
 	lua_pushinteger(L, gamecontrolbis[i][0]);
 	lua_pushinteger(L, gamecontrolbis[i][1]);
 	return 2;
@@ -75,17 +77,17 @@ static int lib_joy2Axis(lua_State *L)
 	return 1;
 }
 
-static int lib_keyNumToString(lua_State *L)
+static int lib_keyNumToName(lua_State *L)
 {
 	int i = luaL_checkinteger(L, 1);
-	lua_pushstring(L, G_KeyNumToString(i));
+	lua_pushstring(L, G_KeyNumToName(i));
 	return 1;
 }
 
-static int lib_keyStringToNum(lua_State *L)
+static int lib_keyNameToNum(lua_State *L)
 {
 	const char *str = luaL_checkstring(L, 1);
-	lua_pushinteger(L, G_KeyStringToNum(str));
+	lua_pushinteger(L, G_KeyNameToNum(str));
 	return 1;
 }
 
@@ -106,14 +108,14 @@ static int lib_shiftKeyNum(lua_State *L)
 
 static int lib_getMouseGrab(lua_State *L)
 {
-	lua_pushboolean(L, I_GetMouseGrab());
+	lua_pushboolean(L, mousegrabbedbylua);
 	return 1;
 }
 
 static int lib_setMouseGrab(lua_State *L)
 {
-	boolean grab = luaL_checkboolean(L, 1);
-	I_SetMouseGrab(grab);
+	mousegrabbedbylua = luaL_checkboolean(L, 1);
+	I_UpdateMouseGrab();
 	return 0;
 }
 
@@ -127,19 +129,19 @@ static int lib_getCursorPosition(lua_State *L)
 }
 
 static luaL_Reg lib[] = {
-	{"G_GameControlDown", lib_gameControlDown},
-	{"G_GameControl2Down", lib_gameControl2Down},
-	{"G_GameControlToKeyNum", lib_gameControlToKeyNum},
-	{"G_GameControl2ToKeyNum", lib_gameControl2ToKeyNum},
-	{"G_JoyAxis", lib_joyAxis},
-	{"G_Joy2Axis", lib_joy2Axis},
-	{"G_KeyNumToString", lib_keyNumToString},
-	{"G_KeyStringToNum", lib_keyStringToNum},
-	{"HU_KeyNumPrintable", lib_keyNumPrintable},
-	{"HU_ShiftKeyNum", lib_shiftKeyNum},
-	{"I_GetMouseGrab", lib_getMouseGrab},
-	{"I_SetMouseGrab", lib_setMouseGrab},
-	{"I_GetCursorPosition", lib_getCursorPosition},
+	{"gameControlDown", lib_gameControlDown},
+	{"gameControl2Down", lib_gameControl2Down},
+	{"gameControlToKeyNum", lib_gameControlToKeyNum},
+	{"gameControl2ToKeyNum", lib_gameControl2ToKeyNum},
+	{"joyAxis", lib_joyAxis},
+	{"joy2Axis", lib_joy2Axis},
+	{"keyNumToName", lib_keyNumToName},
+	{"keyNameToNum", lib_keyNameToNum},
+	{"keyNumPrintable", lib_keyNumPrintable},
+	{"shiftKeyNum", lib_shiftKeyNum},
+	{"getMouseGrab", lib_getMouseGrab},
+	{"setMouseGrab", lib_setMouseGrab},
+	{"getCursorPosition", lib_getCursorPosition},
 	{NULL, NULL}
 };
 
@@ -169,6 +171,29 @@ static int lib_setGameKeyDown(lua_State *L)
 static int lib_lenGameKeyDown(lua_State *L)
 {
 	lua_pushinteger(L, NUMINPUTS);
+	return 1;
+}
+
+///////////////
+// KEY EVENT //
+///////////////
+
+static int keyevent_get(lua_State *L)
+{
+	event_t *event = *((event_t **)luaL_checkudata(L, 1, META_KEYEVENT));
+	const char *field = luaL_checkstring(L, 2);
+
+	I_Assert(event != NULL);
+
+	if (fastcmp(field,"name"))
+		lua_pushstring(L, G_KeyNumToName(event->key));
+	else if (fastcmp(field,"num"))
+		lua_pushinteger(L, event->key);
+	else if (fastcmp(field,"repeated"))
+		lua_pushboolean(L, event->repeated);
+	else
+		return luaL_error(L, "keyevent_t has no field named %s", field);
+
 	return 1;
 }
 
@@ -227,6 +252,11 @@ int LUA_InputLib(lua_State *L)
 		lua_setmetatable(L, -2);
 	lua_setglobal(L, "gamekeydown");
 
+	luaL_newmetatable(L, META_KEYEVENT);
+		lua_pushcfunction(L, keyevent_get);
+		lua_setfield(L, -2, "__index");
+	lua_pop(L, 1);
+
 	luaL_newmetatable(L, META_MOUSE);
 		lua_pushcfunction(L, mouse_get);
 		lua_setfield(L, -2, "__index");
@@ -235,8 +265,6 @@ int LUA_InputLib(lua_State *L)
 		lua_setfield(L, -2, "__len");
 	lua_pop(L, 1);
 
-	// Set global functions
-	lua_pushvalue(L, LUA_GLOBALSINDEX);
-	luaL_register(L, NULL, lib);
+	luaL_register(L, "input", lib);
 	return 0;
 }
