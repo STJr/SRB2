@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2021 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -80,17 +80,6 @@ INT32 axtoi(const char *hexStg);
 
 const char *GetRevisionString(void);
 
-// Vector/matrix math
-typedef fixed_t TVector[4];
-typedef fixed_t TMatrix[4][4];
-
-TVector *VectorMatrixMultiply(TVector v, TMatrix m);
-TMatrix *RotateXMatrix(angle_t rad);
-#if 0
-TMatrix *RotateYMatrix(angle_t rad);
-#endif
-TMatrix *RotateZMatrix(angle_t rad);
-
 // s1 = s2+s3+s1 (1024 lenghtmax)
 void strcatbf(char *s1, const char *s2, const char *s3);
 
@@ -116,6 +105,9 @@ Return dot and then the fractional part of a float, without
 trailing zeros, or "" if the fractional part is zero.
 */
 const char * M_Ftrim (double);
+
+// Returns true if the string is empty.
+boolean M_IsStringEmpty(const char *s);
 
 // counting bits, for weapon ammo code, usually
 FUNCMATH UINT8 M_CountBits(UINT32 num, UINT8 size);
