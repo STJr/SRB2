@@ -10,7 +10,11 @@
 /// \file  m_cond.h
 /// \brief Unlockable condition system for SRB2 version 2.1
 
+#ifndef __M_COND__
+#define __M_COND__
+
 #include "doomdef.h"
+#include "doomdata.h"
 
 // --------
 // Typedefs
@@ -61,8 +65,6 @@ typedef struct
 {
 	UINT32 numconditions;   /// <- number of conditions.
 	condition_t *condition; /// <- All conditionals to be checked.
-	UINT8 achieved;         /// <- Whether this conditional has been achieved already or not.
-	                        ///    (Conditional checking is skipped if true -- it's assumed you can't relock an unlockable)
 } conditionset_t;
 
 // Emblem information
@@ -94,7 +96,6 @@ typedef struct
 	INT32 var;       ///< If needed, specifies information on the target amount to achieve (or target skin)
 	char *stringVar; ///< String version
 	char hint[110];  ///< Hint for emblem hints menu
-	UINT8 collected; ///< Do you have this emblem?
 } emblem_t;
 typedef struct
 {
@@ -104,7 +105,6 @@ typedef struct
 	UINT8 showconditionset; ///< Condition set that shows this emblem.
 	UINT8 sprite;           ///< emblem sprite to use, 0 - 25
 	UINT16 color;           ///< skincolor to use
-	UINT8 collected;        ///< Do you have this emblem?
 } extraemblem_t;
 
 // Unlockable information
@@ -120,7 +120,6 @@ typedef struct
 	char *stringVar;
 	UINT8 nocecho;
 	UINT8 nochecklist;
-	UINT8 unlocked;
 } unlockable_t;
 
 #define SECRET_NONE         -6 // Does nil.  Use with levels locked by UnlockRequired
@@ -140,8 +139,85 @@ typedef struct
 // you seriously need to get a life.
 #define MAXCONDITIONSETS 128
 #define MAXEMBLEMS       512
-#define MAXEXTRAEMBLEMS   16
-#define MAXUNLOCKABLES    32
+#define MAXEXTRAEMBLEMS   48
+#define MAXUNLOCKABLES    80
+
+/** Time attack information, currently a very small structure.
+  */
+typedef struct
+{
+	tic_t time;   ///< Time in which the level was finished.
+	UINT32 score; ///< Score when the level was finished.
+	UINT16 rings; ///< Rings when the level was finished.
+} recorddata_t;
+
+/** Setup for one NiGHTS map.
+  * These are dynamically allocated because I am insane
+  */
+#define GRADE_F 0
+#define GRADE_E 1
+#define GRADE_D 2
+#define GRADE_C 3
+#define GRADE_B 4
+#define GRADE_A 5
+#define GRADE_S 6
+
+typedef struct
+{
+	// 8 mares, 1 overall (0)
+	UINT8	nummares;
+	UINT32	score[9];
+	UINT8	grade[9];
+	tic_t	time[9];
+} nightsdata_t;
+
+// mapvisited is now a set of flags that says what we've done in the map.
+#define MV_VISITED      1
+#define MV_BEATEN       2
+#define MV_ALLEMERALDS  4
+#define MV_ULTIMATE     8
+#define MV_PERFECT     16
+#define MV_PERFECTRA   32
+#define MV_MAX         63 // used in gamedata check, update whenever MV's are added
+
+// Temporary holding place for nights data for the current map
+extern nightsdata_t ntemprecords[MAXPLAYERS];
+
+// GAMEDATA STRUCTURE
+// Everything that would get saved in gamedata.dat
+typedef struct
+{
+	// WHENEVER OR NOT WE'RE READY TO SAVE
+	boolean loaded;
+
+	// CONDITION SETS ACHIEVED
+	boolean achieved[MAXCONDITIONSETS];
+
+	// EMBLEMS COLLECTED
+	boolean collected[MAXEMBLEMS];
+
+	// EXTRA EMBLEMS COLLECTED
+	boolean extraCollected[MAXEXTRAEMBLEMS];
+
+	// UNLOCKABLES UNLOCKED
+	boolean unlocked[MAXUNLOCKABLES];
+
+	// TIME ATTACK DATA
+	recorddata_t *mainrecords[NUMMAPS];
+	nightsdata_t *nightsrecords[NUMMAPS];
+	UINT8 mapvisited[NUMMAPS];
+
+	// # OF TIMES THE GAME HAS BEEN BEATEN
+	UINT32 timesBeaten;
+	UINT32 timesBeatenWithEmeralds;
+	UINT32 timesBeatenUltimate;
+
+	// PLAY TIME
+	UINT32 totalplaytime;
+} gamedata_t;
+
+extern gamedata_t *clientGamedata;
+extern gamedata_t *serverGamedata;
 
 extern conditionset_t conditionSets[MAXCONDITIONSETS];
 extern emblem_t emblemlocations[MAXEMBLEMS];
@@ -153,25 +229,31 @@ extern INT32 numextraemblems;
 
 extern UINT32 unlocktriggers;
 
+gamedata_t *M_NewGameDataStruct(void);
+void M_CopyGameData(gamedata_t *dest, gamedata_t *src);
+
 // Condition set setup
 void M_AddRawCondition(UINT8 set, UINT8 id, conditiontype_t c, INT32 r, INT16 x1, INT16 x2);
 
 // Clearing secrets
 void M_ClearConditionSet(UINT8 set);
-void M_ClearSecrets(void);
+void M_ClearSecrets(gamedata_t *data);
 
 // Updating conditions and unlockables
-void M_CheckUnlockConditions(void);
-UINT8 M_UpdateUnlockablesAndExtraEmblems(void);
-void M_SilentUpdateUnlockablesAndEmblems(void);
-UINT8 M_CheckLevelEmblems(void);
-UINT8 M_CompletionEmblems(void);
+void M_CheckUnlockConditions(gamedata_t *data);
+UINT8 M_UpdateUnlockablesAndExtraEmblems(gamedata_t *data);
+void M_SilentUpdateUnlockablesAndEmblems(gamedata_t *data);
+UINT8 M_CheckLevelEmblems(gamedata_t *data);
+UINT8 M_CompletionEmblems(gamedata_t *data);
+
+void M_SilentUpdateSkinAvailabilites(void);
 
 // Checking unlockable status
-UINT8 M_AnySecretUnlocked(void);
-UINT8 M_SecretUnlocked(INT32 type);
-UINT8 M_MapLocked(INT32 mapnum);
-INT32 M_CountEmblems(void);
+UINT8 M_AnySecretUnlocked(gamedata_t *data);
+UINT8 M_SecretUnlocked(INT32 type, gamedata_t *data);
+UINT8 M_MapLocked(INT32 mapnum, gamedata_t *data);
+UINT8 M_CampaignWarpIsCheat(INT32 gt, INT32 mapnum, gamedata_t *data);
+INT32 M_CountEmblems(gamedata_t *data);
 
 // Emblem shit
 emblem_t *M_GetLevelEmblems(INT32 mapnum);
@@ -183,12 +265,14 @@ const char *M_GetExtraEmblemPatch(extraemblem_t *em, boolean big);
 // If you're looking to compare stats for unlocks or what not, use these
 // They stop checking upon reaching the target number so they
 // should be (theoretically?) slightly faster.
-UINT8 M_GotEnoughEmblems(INT32 number);
-UINT8 M_GotHighEnoughScore(INT32 tscore);
-UINT8 M_GotLowEnoughTime(INT32 tictime);
-UINT8 M_GotHighEnoughRings(INT32 trings);
+UINT8 M_GotEnoughEmblems(INT32 number, gamedata_t *data);
+UINT8 M_GotHighEnoughScore(INT32 tscore, gamedata_t *data);
+UINT8 M_GotLowEnoughTime(INT32 tictime, gamedata_t *data);
+UINT8 M_GotHighEnoughRings(INT32 trings, gamedata_t *data);
 
 INT32 M_UnlockableSkinNum(unlockable_t *unlock);
 INT32 M_EmblemSkinNum(emblem_t *emblem);
 
-#define M_Achieved(a) ((a) >= MAXCONDITIONSETS || conditionSets[a].achieved)
+#define M_Achieved(a, data) ((a) >= MAXCONDITIONSETS || data->achieved[a])
+
+#endif

@@ -104,6 +104,10 @@ INT32 R_TextureNumForName(const char *name);
 INT32 R_CheckTextureNumForName(const char *name);
 lumpnum_t R_GetFlatNumForName(const char *name);
 
+// Returns the texture name for the texture number (in case you ever needed it)
+const char *R_CheckTextureNameForNum(INT32 num);
+const char *R_TextureNameForNum(INT32 num);
+
 extern INT32 numtextures;
 
 #endif
