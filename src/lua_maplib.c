@@ -1243,6 +1243,9 @@ static int side_get(lua_State *L)
 		return 1;
 	case side_text:
 		{
+			boolean isfrontside;
+			size_t sidei = side-sides;
+
 			if (udmf)
 			{
 				LUA_Deprecated(L, "(sidedef_t).text", "(sidedef_t).line.stringargs");
@@ -1250,7 +1253,7 @@ static int side_get(lua_State *L)
 				return 1;
 			}
 
-			boolean isfrontside = side->line->sidenum[0] == side-sides;
+			isfrontside = side->line->sidenum[0] == sidei;
 
 			lua_pushstring(L, side->line->stringargs[isfrontside ? 0 : 1]);
 			return 1;
