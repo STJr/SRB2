@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2022 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -17,6 +17,11 @@
 
 #define SPANSIZE 16
 #define INVSPAN 0.0625f
+
+#if defined(__GNUC__) || defined(__clang__) // Suppress intentional libdivide compiler warnings - Also added to libdivide.h
+    #pragma GCC diagnostic push
+    #pragma GCC diagnostic ignored "-Waggregate-return"
+#endif
 
 /**	\brief The R_DrawSpan_NPO2_8 function
 	Draws the actual span.
@@ -1572,3 +1577,7 @@ void R_DrawTiltedWaterSpan_NPO2_8(void)
 	}
 #endif
 }
+
+#if defined(__GNUC__) || defined(__clang__) // Stop suppressing intentional libdivide compiler warnings
+    #pragma GCC diagnostic pop
+#endif

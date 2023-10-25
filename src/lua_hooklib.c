@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2012-2016 by John "JTE" Muniz.
-// Copyright (C) 2012-2022 by Sonic Team Junior.
+// Copyright (C) 2012-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -24,7 +24,7 @@
 #include "lua_hud.h" // hud_running errors
 
 #include "m_perfstats.h"
-#include "d_netcmd.h" // for cv_perfstats
+#include "netcode/d_netcmd.h" // for cv_perfstats
 #include "i_system.h" // I_GetPreciseTime
 
 /* =========================================================================

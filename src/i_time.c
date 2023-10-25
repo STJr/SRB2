@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2022 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -17,7 +17,7 @@
 
 #include "command.h"
 #include "doomtype.h"
-#include "d_netcmd.h"
+#include "netcode/d_netcmd.h"
 #include "m_fixed.h"
 #include "i_system.h"
 
@@ -43,18 +43,20 @@ tic_t I_GetTime(void)
 
 void I_InitializeTime(void)
 {
-	g_time.time = 0;
-	g_time.timefrac = 0;
-
-	enterprecise = 0;
-	oldenterprecise = 0;
-	tictimer = 0.0;
-
 	CV_RegisterVar(&cv_timescale);
 
 	// I_StartupTimer is preserved for potential subsystems that need to setup
 	// timing information for I_GetPreciseTime and sleeping
 	I_StartupTimer();
+
+	g_time.time = 0;
+	g_time.timefrac = 0;
+
+	enterprecise = I_GetPreciseTime();
+	oldenterprecise = enterprecise;
+	entertic = 0;
+	oldentertics = 0;
+	tictimer = 0.0;
 }
 
 void I_UpdateTime(fixed_t timescale)
