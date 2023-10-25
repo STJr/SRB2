@@ -199,7 +199,9 @@ extern CV_PossibleValue_t cv_renderer_t[];
 extern INT32 scr_bpp;
 extern UINT8 *scr_borderpatch; // patch used to fill the view borders
 
-extern consvar_t cv_scr_width, cv_scr_height, cv_scr_depth, cv_renderview, cv_renderer, cv_fullscreen;
+extern consvar_t cv_scr_width, cv_scr_height, cv_scr_width_w, cv_scr_height_w, cv_scr_depth, cv_fullscreen;
+extern consvar_t cv_renderview, cv_renderer;
+extern consvar_t cv_renderhitbox, cv_renderhitboxinterpolation, cv_renderhitboxgldepth;
 // wait for page flipping to end or not
 extern consvar_t cv_vidwait;
 extern consvar_t cv_timescale;
