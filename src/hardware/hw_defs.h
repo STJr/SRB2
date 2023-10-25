@@ -93,33 +93,22 @@ typedef struct FVector
 //Hurdler: Transform (coords + angles)
 //BP: transform order : scale(rotation_x(rotation_y(translation(v))))
 
-// Kart features
-//#define USE_FTRANSFORM_ANGLEZ
-//#define USE_FTRANSFORM_MIRROR
-
 // Vanilla features
 #define USE_MODEL_NEXTFRAME
 
 typedef struct
 {
 	FLOAT       x,y,z;           // position
-#ifdef USE_FTRANSFORM_ANGLEZ
 	FLOAT       anglex,angley,anglez;   // aimingangle / viewangle
-#else
-	FLOAT       anglex,angley;   // aimingangle / viewangle
-#endif
 	FLOAT       scalex,scaley,scalez;
 	FLOAT       fovxangle, fovyangle;
 	UINT8       splitscreen;
 	boolean     flip;            // screenflip
 	boolean     roll;
-	SINT8       rollflip;
 	FLOAT       rollangle; // done to not override USE_FTRANSFORM_ANGLEZ
-	UINT8       rotaxis;
 	FLOAT       centerx, centery;
-#ifdef USE_FTRANSFORM_MIRROR
+	FLOAT       rollx, rollz;
 	boolean     mirror;          // SRB2Kart: Encore Mode
-#endif
 	boolean     shearing;        // 14042019
 	float       viewaiming;      // 17052019
 } FTransform;
@@ -136,6 +125,7 @@ typedef struct
 // Predefined shader types
 enum
 {
+	SHADER_NONE = -1,
 	SHADER_DEFAULT = 0,
 
 	SHADER_FLOOR,
@@ -237,7 +227,8 @@ enum EPolyFlags
 	PF_RemoveYWrap      = 0x00010000,   // Forces clamp texture on Y
 	PF_ForceWrapX       = 0x00020000,   // Forces repeat texture on X
 	PF_ForceWrapY       = 0x00040000,   // Forces repeat texture on Y
-	PF_Ripple           = 0x00100000    // Water ripple effect. The current backend doesn't use it for anything.
+	PF_Ripple           = 0x00100000,   // Water ripple effect. The current backend doesn't use it for anything.
+	PF_WireFrame        = 0x00200000,   // Draws vertices as lines instead of triangles
 };
 
 

@@ -19,7 +19,7 @@
 #include "r_local.h"
 #include "p_local.h"
 #include "p_setup.h"
-#include "d_net.h"
+#include "netcode/d_net.h"
 
 #include "m_cheat.h"
 #include "m_menu.h"
@@ -79,9 +79,9 @@ static UINT8 cheatf_warp(void)
 
 	// Temporarily unlock stuff.
 	G_SetUsedCheats(false);
-	unlockables[31].unlocked = true; // credits
-	unlockables[30].unlocked = true; // sound test
-	unlockables[28].unlocked = true; // level select
+	clientGamedata->unlocked[31] = true; // credits
+	clientGamedata->unlocked[30] = true; // sound test
+	clientGamedata->unlocked[28] = true; // level select
 
 	// Refresh secrets menu existing.
 	M_ClearMenus(true);
@@ -102,7 +102,7 @@ static UINT8 cheatf_devmode(void)
 	// Just unlock all the things and turn on -debug and console devmode.
 	G_SetUsedCheats(false);
 	for (i = 0; i < MAXUNLOCKABLES; i++)
-		unlockables[i].unlocked = true;
+		clientGamedata->unlocked[i] = true;
 	devparm = true;
 	cv_debug |= 0x8000;
 
@@ -238,7 +238,7 @@ boolean cht_Responder(event_t *ev)
 }
 
 // Console cheat commands rely on these a lot...
-#define REQUIRE_PANDORA if (!M_SecretUnlocked(SECRET_PANDORA) && !cv_debug)\
+#define REQUIRE_PANDORA if (!M_SecretUnlocked(SECRET_PANDORA, serverGamedata) && !cv_debug)\
 { CONS_Printf(M_GetText("You haven't earned this yet.\n")); return; }
 
 #define REQUIRE_DEVMODE if (!cv_debug)\
@@ -1102,6 +1102,8 @@ static mapthing_t *OP_CreateNewMapThing(player_t *player, UINT16 type, boolean c
 
 	mt->options = (mt->z << ZSHIFT) | (UINT16)cv_opflags.value;
 	mt->scale = player->mo->scale;
+	mt->spritexscale = player->mo->spritexscale;
+	mt->spriteyscale = player->mo->spriteyscale;
 	memset(mt->args, 0, NUMMAPTHINGARGS*sizeof(*mt->args));
 	memset(mt->stringargs, 0x00, NUMMAPTHINGSTRINGARGS*sizeof(*mt->stringargs));
 	mt->pitch = mt->roll = 0;

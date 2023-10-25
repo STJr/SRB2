@@ -1,9 +1,9 @@
 version: 2
 jobs:
   build:
-    working_directory: /root/SRB2
+    working_directory: /home/circleci/SRB2
     docker:
-      - image: debian:stretch
+      - image: cimg/base:current
         environment:
           CC: ccache gcc -m32
           PKG_CONFIG_LIBDIR: /usr/lib/i386-linux-gnu/pkgconfig
@@ -11,7 +11,7 @@ jobs:
           LIBGME_LDFLAGS: -lgme
           CCACHE_COMPRESS: true
           WFLAGS: -Wno-unsuffixed-float-constants
-          GCC49: true
+          GCC81: true
       #- image: ubuntu:trusty
       #  environment:
       #    CC: ccache gcc -m32
@@ -25,39 +25,42 @@ jobs:
     steps:
       - run:
           name: Add i386 arch
-          command: dpkg --add-architecture i386
+          command: sudo dpkg --add-architecture i386
       - run:
           name: Add STJr PPA
           command: |
-            apt-get -qq update
-            apt-get -qq -y install dirmngr
-            apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 0B1702D71499D9C25F986507F240F4449D3B0EC6
-            echo "deb http://ppa.launchpad.net/stjr/srb2/ubuntu trusty main" >> /etc/apt/sources.list
+            sudo apt-get -qq update
+            sudo apt-get -qq -y install dirmngr
+            sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 0B1702D71499D9C25F986507F240F4449D3B0EC6
+            echo "deb http://ppa.launchpad.net/stjr/srb2/ubuntu trusty main" | sudo tee -a /etc/apt/sources.list
       - run:
           name: Make APT cache folder
-          command: mkdir -p /root/.cache/apt/archives/partial
+          command: mkdir -p /home/circleci/.cache/apt/archives/partial
       - run:
           name: Make APT cache usage by _apt
-          command: chown -Rv _apt:root /root/.cache/apt/archives/partial
+          command: sudo chown -Rv _apt:root /home/circleci/.cache/apt/archives/partial
       - run:
           name: Update APT listing
-          command: apt-get -qq update
+          command: sudo apt-get -qq update
       - run:
           name: Support S3 upload
-          command: apt-get -qq -y install ca-certificates
+          command: sudo apt-get -qq -y install ca-certificates
       - restore_cache:
           keys:
             - v1-SRB2-APT
       - run:
-          name: Install SDK
-          command: apt-get -o Dir::Cache="/root/.cache/apt" -qq -y --no-install-recommends install git build-essential nasm libpng-dev:i386 libsdl2-mixer-dev:i386 libgme-dev:i386 libcurl4-openssl-dev:i386 libopenmpt-dev:i386 gettext ccache wget gcc-multilib upx openssh-client
+         name: Uninstall amd64 SDK
+         command: sudo apt-get -o Dir::Cache="/home/circleci/.cache/apt" -qq -y --no-install-recommends remove libcurl4-openssl-dev:amd64
+      - run:
+          name: Install i386 SDK
+          command: sudo apt-get -o Dir::Cache="/home/circleci/.cache/apt" -qq -y --no-install-recommends install git build-essential libpng-dev:i386 libsdl2-mixer-dev:i386 libgme-dev:i386 libcurl4-openssl-dev:i386 libopenmpt-dev:i386 gettext ccache wget gcc-multilib upx openssh-client
       - run:
           name: make md5sum
-          command: find /root/.cache/apt/archives -type f -print0 | sort -z | xargs -r0 md5sum > /root/.cache/apt_archives.md5
+          command: sudo find /home/circleci/.cache/apt/archives -type f -print0 | sort -z | sudo xargs -r0 md5sum > /home/circleci/.cache/apt_archives.md5
       - save_cache:
-          key: v1-SRB2-APT-{{ checksum "/root/.cache/apt_archives.md5" }}
+          key: v1-SRB2-APT-{{ checksum "/home/circleci/.cache/apt_archives.md5" }}
           paths:
-            - /root/.cache/apt
+            - /home/circleci/.cache/apt
       - checkout
       - run:
           name: Compile without network support
@@ -78,9 +81,9 @@ jobs:
           name: Compile
           command: make -C src LINUX=1 ERRORMODE=1 -k -j4
       - store_artifacts:
-          path: /root/SRB2/bin/
+          path: /home/circleci/SRB2/bin/
           destination: bin
       - save_cache:
           key: v1-SRB2-{{ .Branch }}-{{ checksum "make/linux/SDL.deps" }}
           paths:
-            - /root/.ccache
+            - /home/circleci/.ccache
