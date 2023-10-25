@@ -15,7 +15,7 @@
 
 #include "d_net.h"
 #include "d_clisrv.h"
-#include "w_wad.h"
+#include "../w_wad.h"
 
 typedef enum
 {
@@ -70,13 +70,13 @@ extern INT32 fileneedednum;
 extern fileneeded_t *fileneeded;
 extern char downloaddir[512];
 
-#ifndef NONET
 extern INT32 lastfilenum;
 extern INT32 downloadcompletednum;
 extern UINT32 downloadcompletedsize;
 extern INT32 totalfilesrequestednum;
 extern UINT32 totalfilesrequestedsize;
-#endif
+
+extern consvar_t cv_maxsend, cv_noticedownload, cv_downloadspeed;
 
 void AllocFileNeeded(INT32 size);
 void FreeFileNeeded(void);
@@ -90,16 +90,16 @@ void AddRamToSendQueue(INT32 node, void *data, size_t size, freemethod_t freemet
 	UINT8 fileid);
 
 void FileSendTicker(void);
-void PT_FileAck(void);
-void PT_FileReceived(void);
+void PT_FileAck(SINT8 node);
+void PT_FileReceived(SINT8 node);
 boolean SendingFile(INT32 node);
 
 void FileReceiveTicker(void);
-void PT_FileFragment(void);
+void PT_FileFragment(SINT8 node, INT32 netconsole);
 
 boolean CL_CheckDownloadable(void);
 boolean CL_SendFileRequest(void);
-boolean PT_RequestFile(INT32 node);
+void PT_RequestFile(SINT8 node);
 
 typedef enum
 {
