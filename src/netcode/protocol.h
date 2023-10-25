@@ -7,19 +7,15 @@
 // terms of the GNU General Public License, version 2.
 // See the 'LICENSE' file for more details.
 //-----------------------------------------------------------------------------
-/// \file  d_clisrv.h
-/// \brief high level networking stuff
+/// \file  protocol.h
+/// \brief Data exchanged through the network
 
-#ifndef __D_CLISRV__
-#define __D_CLISRV__
+#ifndef __PROTOCOL__
+#define __PROTOCOL__
 
-#include "d_ticcmd.h"
 #include "d_net.h"
-#include "d_netcmd.h"
-#include "d_net.h"
-#include "tables.h"
-#include "d_player.h"
-#include "mserv.h"
+#include "../d_ticcmd.h"
+#include "../doomdef.h"
 
 /*
 The 'packet version' is used to distinguish packet
@@ -38,10 +34,9 @@ therein, increment this number.
 //  one that defines the actual packets to
 //  be transmitted.
 
-// Networking and tick handling related.
 #define BACKUPTICS 1024
-#define CLIENTBACKUPTICS 32
 #define MAXTEXTCMD 256
+
 //
 // Packet structure
 //
@@ -77,7 +72,7 @@ typedef enum
 	PT_ASKLUAFILE,     // Client telling the server they don't have the file
 	PT_HASLUAFILE,     // Client telling the server they have the file
 
-	PT_BASICKEEPALIVE,// Keep the network alive during wipes, as tics aren't advanced and NetUpdate isn't called
+	PT_BASICKEEPALIVE, // Keep the network alive during wipes, as tics aren't advanced and NetUpdate isn't called
 
 	// Add non-PT_CANFAIL packet types here to avoid breaking MS compatibility.
 
@@ -92,7 +87,6 @@ typedef enum
 	PT_TEXTCMD,       // Extra text commands from the client.
 	PT_TEXTCMD2,      // Splitscreen text commands.
 	PT_CLIENTJOIN,    // Client wants to join; used in start game.
-	PT_NODETIMEOUT,   // Packet sent to self if the connection times out.
 
 	PT_LOGIN,         // Login attempt from the client.
 
@@ -102,14 +96,6 @@ typedef enum
 	PT_PING,          // Packet sent to tell clients the other client's latency to server.
 	NUMPACKETTYPE
 } packettype_t;
-
-#ifdef PACKETDROP
-void Command_Drop(void);
-void Command_Droprate(void);
-#endif
-#ifdef _DEBUG
-void Command_Numnodes(void);
-#endif
 
 #if defined(_MSC_VER)
 #pragma pack(1)
@@ -139,13 +125,12 @@ typedef struct
 #endif
 
 // Server to client packet
-// this packet is too large
 typedef struct
 {
 	tic_t starttic;
 	UINT8 numtics;
 	UINT8 numslots; // "Slots filled": Highest player number in use plus one.
-	ticcmd_t cmds[45]; // Normally [BACKUPTIC][MAXPLAYERS] but too large
+	ticcmd_t cmds[45];
 } ATTRPACK servertics_pak;
 
 typedef struct
@@ -215,6 +200,7 @@ enum {
 
 #define MAXSERVERNAME 32
 #define MAXFILENEEDED 915
+
 // This packet is too large
 typedef struct
 {
@@ -275,7 +261,7 @@ typedef struct
 	UINT8 data; // Color is first four bits, hasflag, isit and issuper have one bit each, the last is unused.
 	UINT32 score;
 	UINT16 timeinserver; // In seconds.
-} ATTRPACK plrinfo;
+} ATTRPACK plrinfo_pak;
 
 // Shortest player information for join during intermission.
 typedef struct
@@ -286,7 +272,7 @@ typedef struct
 	UINT32 pflags;
 	UINT32 score;
 	UINT8 ctfteam;
-} ATTRPACK plrconfig;
+} ATTRPACK plrconfig_pak;
 
 typedef struct
 {
@@ -309,25 +295,25 @@ typedef struct
 	UINT8 reserved; // Padding
 	union
 	{
-		clientcmd_pak clientpak;            //         144 bytes
-		client2cmd_pak client2pak;          //         200 bytes
-		servertics_pak serverpak;           //      132495 bytes (more around 360, no?)
-		serverconfig_pak servercfg;         //         773 bytes
-		UINT8 textcmd[MAXTEXTCMD+1];        //       66049 bytes (wut??? 64k??? More like 257 bytes...)
-		filetx_pak filetxpak;               //         139 bytes
+		clientcmd_pak clientpak;
+		client2cmd_pak client2pak;
+		servertics_pak serverpak;
+		serverconfig_pak servercfg;
+		UINT8 textcmd[MAXTEXTCMD+1];
+		filetx_pak filetxpak;
 		fileack_pak fileack;
 		UINT8 filereceived;
-		clientconfig_pak clientcfg;         //         136 bytes
+		clientconfig_pak clientcfg;
 		UINT8 md5sum[16];
-		serverinfo_pak serverinfo;          //        1024 bytes
-		serverrefuse_pak serverrefuse;      //       65025 bytes (somehow I feel like those values are garbage...)
-		askinfo_pak askinfo;                //          61 bytes
-		msaskinfo_pak msaskinfo;            //          22 bytes
-		plrinfo playerinfo[MAXPLAYERS];     //         576 bytes(?)
-		plrconfig playerconfig[MAXPLAYERS]; // (up to) 528 bytes(?)
-		INT32 filesneedednum;               //           4 bytes
-		filesneededconfig_pak filesneededcfg; //       ??? bytes
-		UINT32 pingtable[MAXPLAYERS+1];     //          68 bytes
+		serverinfo_pak serverinfo;
+		serverrefuse_pak serverrefuse;
+		askinfo_pak askinfo;
+		msaskinfo_pak msaskinfo;
+		plrinfo_pak playerinfo[MAXPLAYERS];
+		plrconfig_pak playerconfig[MAXPLAYERS];
+		INT32 filesneedednum;
+		filesneededconfig_pak filesneededcfg;
+		UINT32 pingtable[MAXPLAYERS+1];
 	} u; // This is needed to pack diff packet types data together
 } ATTRPACK doomdata_t;
 
@@ -335,26 +321,7 @@ typedef struct
 #pragma pack()
 #endif
 
-#define MAXSERVERLIST (MAXNETNODES-1)
-typedef struct
-{
-	SINT8 node;
-	serverinfo_pak info;
-} serverelem_t;
-
-extern serverelem_t serverlist[MAXSERVERLIST];
-extern UINT32 serverlistcount;
-extern INT32 mapchangepending;
-
-// Points inside doomcom
-extern doomdata_t *netbuffer;
-
-extern consvar_t cv_showjoinaddress;
-extern consvar_t cv_playbackspeed;
-
-#define BASEPACKETSIZE      offsetof(doomdata_t, u)
 #define FILETXHEADER        offsetof(filetx_pak, data)
-#define BASESERVERTICSSIZE  offsetof(doomdata_t, u.serverpak.cmds[0])
 
 #define KICK_MSG_GO_AWAY     1
 #define KICK_MSG_CON_FAIL    2
@@ -365,108 +332,5 @@ extern consvar_t cv_playbackspeed;
 #define KICK_MSG_CUSTOM_KICK 7
 #define KICK_MSG_CUSTOM_BAN  8
 #define KICK_MSG_KEEP_BODY   0x80
-
-typedef enum
-{
-	KR_KICK          = 1, //Kicked by server
-	KR_PINGLIMIT     = 2, //Broke Ping Limit
-	KR_SYNCH         = 3, //Synch Failure
-	KR_TIMEOUT       = 4, //Connection Timeout
-	KR_BAN           = 5, //Banned by server
-	KR_LEAVE         = 6, //Quit the game
-
-} kickreason_t;
-
-/* the max number of name changes in some time period */
-#define MAXNAMECHANGES (5)
-#define NAMECHANGERATE (60*TICRATE)
-
-extern boolean server;
-extern boolean serverrunning;
-#define client (!server)
-extern boolean dedicated; // For dedicated server
-extern UINT16 software_MAXPACKETLENGTH;
-extern boolean acceptnewnode;
-extern SINT8 servernode;
-
-void Command_Ping_f(void);
-extern tic_t connectiontimeout;
-extern tic_t jointimeout;
-extern UINT16 pingmeasurecount;
-extern UINT32 realpingtable[MAXPLAYERS];
-extern UINT32 playerpingtable[MAXPLAYERS];
-extern tic_t servermaxping;
-
-extern consvar_t cv_netticbuffer, cv_allownewplayer, cv_joinnextround, cv_maxplayers, cv_joindelay, cv_rejointimeout;
-extern consvar_t cv_resynchattempts, cv_blamecfail;
-extern consvar_t cv_maxsend, cv_noticedownload, cv_downloadspeed;
-extern consvar_t cv_dedicatedidletime;
-
-// Used in d_net, the only dependence
-tic_t ExpandTics(INT32 low, INT32 node);
-void D_ClientServerInit(void);
-
-// Initialise the other field
-void RegisterNetXCmd(netxcmd_t id, void (*cmd_f)(UINT8 **p, INT32 playernum));
-void SendNetXCmd(netxcmd_t id, const void *param, size_t nparam);
-void SendNetXCmd2(netxcmd_t id, const void *param, size_t nparam); // splitsreen player
-void SendKick(UINT8 playernum, UINT8 msg);
-
-// Create any new ticcmds and broadcast to other players.
-void NetUpdate(void);
-
-// Maintain connections to nodes without timing them all out.
-void NetKeepAlive(void);
-
-void SV_StartSinglePlayerServer(void);
-boolean SV_SpawnServer(void);
-void SV_StopServer(void);
-void SV_ResetServer(void);
-void CL_AddSplitscreenPlayer(void);
-void CL_RemoveSplitscreenPlayer(void);
-void CL_Reset(void);
-void CL_ClearPlayer(INT32 playernum);
-void CL_QueryServerList(msg_server_t *list);
-void CL_UpdateServerList(boolean internetsearch, INT32 room);
-void CL_RemovePlayer(INT32 playernum, kickreason_t reason);
-// Is there a game running
-boolean Playing(void);
-
-// Broadcasts special packets to other players
-//  to notify of game exit
-void D_QuitNetGame(void);
-
-//? How many ticks to run?
-boolean TryRunTics(tic_t realtic);
-
-// extra data for lmps
-// these functions scare me. they contain magic.
-/*boolean AddLmpExtradata(UINT8 **demo_p, INT32 playernum);
-void ReadLmpExtraData(UINT8 **demo_pointer, INT32 playernum);*/
-
-#ifndef NONET
-// translate a playername in a player number return -1 if not found and
-// print a error message in the console
-SINT8 nametonum(const char *name);
-#endif
-
-extern char motd[254], server_context[8];
-extern UINT8 playernode[MAXPLAYERS];
-
-INT32 D_NumPlayers(void);
-INT32 D_NumBots(void);
-void D_ResetTiccmds(void);
-
-tic_t GetLag(INT32 node);
-UINT8 GetFreeXCmdSize(void);
-
-void D_MD5PasswordPass(const UINT8 *buffer, size_t len, const char *salt, void *dest);
-
-extern UINT8 hu_redownloadinggamestate;
-
-extern UINT8 adminpassmd5[16];
-extern boolean adminpasswordset;
-
-extern boolean hu_stopped;
 
 #endif
