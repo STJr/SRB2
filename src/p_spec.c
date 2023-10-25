@@ -1796,7 +1796,7 @@ void P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller)
 
 				if (trigid < 0 || trigid > 31) // limited by 32 bit variable
 				{
-					CONS_Debug(DBG_GAMELOGIC, "Unlockable trigger (sidedef %hu): bad trigger ID %d\n", triggerline->sidenum[0], trigid);
+					CONS_Debug(DBG_GAMELOGIC, "Unlockable trigger (sidedef %u): bad trigger ID %d\n", triggerline->sidenum[0], trigid);
 					return;
 				}
 				else if (!(unlocktriggers & (1 << trigid)))
@@ -1809,7 +1809,7 @@ void P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller)
 
 				if (unlockid <= 0 || unlockid > MAXUNLOCKABLES) // limited by unlockable count
 				{
-					CONS_Debug(DBG_GAMELOGIC, "Unlockable check (sidedef %hu): bad unlockable ID %d\n", triggerline->sidenum[0], unlockid);
+					CONS_Debug(DBG_GAMELOGIC, "Unlockable check (sidedef %u): bad unlockable ID %d\n", triggerline->sidenum[0], unlockid);
 					return;
 				}
 				else if (!(serverGamedata->unlocked[unlockid-1]))
@@ -2940,7 +2940,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 				INT32 trigid = line->args[0];
 
 				if (trigid < 0 || trigid > 31) // limited by 32 bit variable
-					CONS_Debug(DBG_GAMELOGIC, "Unlockable trigger (sidedef %hu): bad trigger ID %d\n", line->sidenum[0], trigid);
+					CONS_Debug(DBG_GAMELOGIC, "Unlockable trigger (sidedef %u): bad trigger ID %d\n", line->sidenum[0], trigid);
 				else
 				{
 					unlocktriggers |= 1 << trigid;
