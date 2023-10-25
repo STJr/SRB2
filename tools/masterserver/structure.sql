@@ -90,7 +90,7 @@ CREATE TABLE `ms_versions` (
   `mod_vstring` varchar(45) NOT NULL DEFAULT 'v1.0',
   `mod_codebase` int(10) unsigned NOT NULL DEFAULT 205,
   `mod_name` varchar(255) NOT NULL DEFAULT 'Default MOD Name',
-  `mod_url` text NOT NULL 
+  `mod_url` text NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --

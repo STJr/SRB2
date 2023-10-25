@@ -1,0 +1,15 @@
+target_sources(SRB2SDL2 PRIVATE
+	d_clisrv.c
+	server_connection.c
+	client_connection.c
+	tic_command.c
+	net_command.c
+	gamestate.c
+	commands.c
+	d_net.c
+	d_netcmd.c
+	d_netfil.c
+	http-mserv.c
+	i_tcp.c
+	mserv.c
+)
