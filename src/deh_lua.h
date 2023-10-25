@@ -13,6 +13,21 @@
 #ifndef __DEH_LUA_H__
 #define __DEH_LUA_H__
 
+#include "g_game.h"
+#include "s_sound.h"
+#include "z_zone.h"
+#include "m_menu.h"
+#include "m_misc.h"
+#include "p_local.h"
+#include "st_stuff.h"
+#include "fastcmp.h"
+#include "lua_script.h"
+#include "lua_libs.h"
+
+#include "dehacked.h"
+#include "deh_tables.h"
+
+void LUA_UpdateSprName(const char *name, lua_Integer value);
 boolean LUA_SetLuaAction(void *state, const char *actiontocompare);
 const char *LUA_GetActionName(void *action);
 void LUA_SetActionByName(void *state, const char *actiontocompare);

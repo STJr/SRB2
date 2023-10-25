@@ -527,7 +527,7 @@ boolean P_IsMobjTouchingPolyobj(mobj_t *mo, polyobj_t *po, sector_t *polysec);
 
 void P_SwitchWeather(INT32 weathernum);
 
-boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller);
+void P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller);
 void P_LinedefExecute(INT16 tag, mobj_t *actor, sector_t *caller);
 void P_RunNightserizeExecutors(mobj_t *actor);
 void P_RunDeNightserizeExecutors(mobj_t *actor);
@@ -895,7 +895,7 @@ typedef struct
 
 typedef enum
 {
-	ok,
+	planeok,
 	crushed,
 	pastdest
 } result_e;
