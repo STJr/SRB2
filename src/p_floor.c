@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2022 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -155,7 +155,7 @@ result_e T_MovePlane(sector_t *sector, fixed_t speed, fixed_t dest, boolean crus
 		}
 	}
 
-	return ok;
+	return planeok;
 }
 
 //
@@ -1128,7 +1128,7 @@ void T_ThwompSector(thwomp_t *thwomp)
 				thwomp->direction         // direction
 			);
 
-			if (res == ok || res == pastdest)
+			if (res == planeok || res == pastdest)
 				T_MovePlane
 				(
 					thwomp->sector,             // sector
@@ -1160,7 +1160,7 @@ void T_ThwompSector(thwomp_t *thwomp)
 				thwomp->direction // direction
 			);
 
-			if (res == ok || res == pastdest)
+			if (res == planeok || res == pastdest)
 				T_MovePlane
 				(
 					thwomp->sector,   // sector
@@ -1465,7 +1465,7 @@ void T_RaiseSector(raise_t *raise)
 		direction           // direction
 	);
 
-	if (res == ok || res == pastdest)
+	if (res == planeok || res == pastdest)
 		T_MovePlane
 		(
 			raise->sector,    // sector
@@ -1660,7 +1660,7 @@ void EV_DoFloor(mtag_t tag, line_t *line, floor_e floortype)
 				// chained linedef executing ability
 				// Only set it on one of the moving sectors (the smallest numbered)
 				if (line->args[3])
-					dofloor->tag = firstone ? (INT16)line->args[3] : -1;
+					dofloor->tag = firstone ? (INT16)line->args[3] : 0;
 
 				// flat changing ability
 				dofloor->texture = line->args[4] ? line->frontsector->floorpic : -1;

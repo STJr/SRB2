@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2022 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -36,6 +36,7 @@
 #include "p_slopes.h"
 #include "f_finale.h"
 #include "m_cond.h"
+#include "netcode/net_command.h"
 
 static CV_PossibleValue_t CV_BobSpeed[] = {{0, "MIN"}, {4*FRACUNIT, "MAX"}, {0, NULL}};
 consvar_t cv_movebob = CVAR_INIT ("movebob", "1.0", CV_FLOAT|CV_SAVE, CV_BobSpeed, NULL);
@@ -1551,6 +1552,31 @@ void P_CheckGravity(mobj_t *mo, boolean affect)
 	}
 }
 
+//
+// P_SetPitchRollFromSlope
+//
+void P_SetPitchRollFromSlope(mobj_t *mo, pslope_t *slope)
+{
+#if 0
+	if (slope)
+	{
+		fixed_t tempz = slope->normal.z;
+		fixed_t tempy = slope->normal.y;
+		fixed_t tempx = slope->normal.x;
+
+		mo->pitch = R_PointToAngle2(0, 0, FixedSqrt(FixedMul(tempy, tempy) + FixedMul(tempz, tempz)), tempx);
+		mo->roll = R_PointToAngle2(0, 0, tempz, tempy);
+	}
+	else
+	{
+		mo->pitch = mo->roll = 0;
+	}
+#else
+	(void)mo;
+	(void)slope;
+#endif
+}
+
 #define STOPSPEED (FRACUNIT)
 
 //
@@ -1985,6 +2011,7 @@ void P_XYMovement(mobj_t *mo)
 			// Now compare the Zs of the different quantizations
 			if (oldangle-newangle > ANG30 && oldangle-newangle < ANGLE_180) { // Allow for a bit of sticking - this value can be adjusted later
 				mo->standingslope = oldslope;
+				P_SetPitchRollFromSlope(mo, mo->standingslope);
 				P_SlopeLaunch(mo);
 
 				//CONS_Printf("launched off of slope - ");
@@ -2557,6 +2584,7 @@ boolean P_ZMovement(mobj_t *mo)
 		if (((mo->eflags & MFE_VERTICALFLIP) ? tmceilingslope : tmfloorslope) && (mo->type != MT_STEAM))
 		{
 			mo->standingslope = (mo->eflags & MFE_VERTICALFLIP) ? tmceilingslope : tmfloorslope;
+			P_SetPitchRollFromSlope(mo, mo->standingslope);
 			P_ReverseQuantizeMomentumToSlope(&mom, mo->standingslope);
 		}
 
@@ -3139,7 +3167,8 @@ boolean P_SceneryZMovement(mobj_t *mo)
 
 	if (P_CheckDeathPitCollide(mo))
 	{
-		P_RemoveMobj(mo);
+		if (mo->type != MT_GHOST)  // ghosts play death animations instead, so don't remove them
+			P_RemoveMobj(mo);
 		return false;
 	}
 
@@ -3660,7 +3689,7 @@ boolean P_CameraThinker(player_t *player, camera_t *thiscam, boolean resetcalled
 			dummy.y = thiscam->y;
 			dummy.z = thiscam->z;
 			dummy.height = thiscam->height;
-			if (!resetcalled && !(player->pflags & PF_NOCLIP) && !P_CheckSight(&dummy, player->mo)) // TODO: "P_CheckCameraSight" instead.
+			if (!resetcalled && !(player->pflags & PF_NOCLIP || player->powers[pw_carry] == CR_NIGHTSMODE) && !P_CheckSight(&dummy, player->mo)) // TODO: "P_CheckCameraSight" instead.
 				P_ResetCamera(player, thiscam);
 			else
 			{
@@ -3691,7 +3720,7 @@ boolean P_CameraThinker(player_t *player, camera_t *thiscam, boolean resetcalled
 		// adjust height
 		thiscam->z += thiscam->momz + player->mo->pmomz;
 
-		if (!itsatwodlevel && !(player->pflags & PF_NOCLIP))
+		if (!itsatwodlevel && !(player->pflags & PF_NOCLIP || player->powers[pw_carry] == CR_NIGHTSMODE))
 		{
 			// clip movement
 			if (thiscam->z <= thiscam->floorz) // hit the floor
@@ -3989,12 +4018,11 @@ void P_NullPrecipThinker(precipmobj_t *mobj)
 {
 	//(void)mobj;
 	mobj->precipflags &= ~PCF_THUNK;
+	R_ResetPrecipitationMobjInterpolationState(mobj);
 }
 
 void P_SnowThinker(precipmobj_t *mobj)
 {
-	R_ResetPrecipitationMobjInterpolationState(mobj);
-
 	P_CycleStateAnimation((mobj_t *)mobj);
 
 	// adjust height
@@ -4007,8 +4035,6 @@ void P_SnowThinker(precipmobj_t *mobj)
 
 void P_RainThinker(precipmobj_t *mobj)
 {
-	R_ResetPrecipitationMobjInterpolationState(mobj);
-
 	P_CycleStateAnimation((mobj_t *)mobj);
 
 	if (mobj->state != &states[S_RAIN1])
@@ -5664,23 +5690,29 @@ static void P_Boss9Thinker(mobj_t *mobj)
 			{
 				mobj_t *missile = P_SpawnMissile(spawner, mobj, MT_MSGATHER);
 				missile->fuse = (dist/P_AproxDistance(missile->momx, missile->momy));
+				if (missile->fuse <= 0) // Prevents a division by zero when calculating missile->scalespeed
+					missile->fuse = 1;
 
 				if (missile->fuse > mobj->fuse)
-					P_RemoveMobj(missile);
-
-				if (mobj->health > mobj->info->damage)
 				{
-					P_SetScale(missile, FRACUNIT/3);
-					missile->color = SKINCOLOR_MAGENTA; // sonic OVA/4 purple power
+					P_RemoveMobj(missile);
 				}
 				else
 				{
-					P_SetScale(missile, FRACUNIT/5);
-					missile->color = SKINCOLOR_SUNSET; // sonic cd electric power
+					if (mobj->health > mobj->info->damage)
+					{
+						P_SetScale(missile, FRACUNIT/3);
+						missile->color = SKINCOLOR_MAGENTA; // sonic OVA/4 purple power
+					}
+					else
+					{
+						P_SetScale(missile, FRACUNIT/5);
+						missile->color = SKINCOLOR_SUNSET; // sonic cd electric power
+					}
+					missile->destscale = missile->scale*2;
+					missile->scalespeed = abs(missile->scale - missile->destscale)/missile->fuse;
+					missile->colorized = true;
 				}
-				missile->destscale = missile->scale*2;
-				missile->scalespeed = abs(missile->scale - missile->destscale)/missile->fuse;
-				missile->colorized = true;
 			}
 
 			// ...then down. easier than changing the missile's momz after-the-fact
@@ -6335,11 +6367,7 @@ void P_SpawnParaloop(fixed_t x, fixed_t y, fixed_t z, fixed_t radius, INT32 numb
 		mobj->fuse = (radius>>(FRACBITS+2)) + 1;
 
 		if (spawncenter)
-		{
-			mobj->x = x;
-			mobj->y = y;
-			mobj->z = z;
-		}
+			P_SetOrigin(mobj, x, y, z);
 
 		if (mobj->fuse <= 1)
 			mobj->fuse = 2;
@@ -6766,7 +6794,8 @@ void P_RunShields(void)
 	// run shields
 	for (i = 0; i < numshields; i++)
 	{
-		P_ShieldLook(shields[i], shields[i]->threshold);
+		if (!P_MobjWasRemoved(shields[i]))
+			P_ShieldLook(shields[i], shields[i]->threshold);
 		P_SetTarget(&shields[i], NULL);
 	}
 	numshields = 0;
@@ -6905,6 +6934,13 @@ static void P_AddOverlay(mobj_t *thing)
 static void P_RemoveOverlay(mobj_t *thing)
 {
 	mobj_t *mo;
+	if (overlaycap == thing)
+	{
+		P_SetTarget(&overlaycap, thing->hnext);
+		P_SetTarget(&thing->hnext, NULL);
+		return;
+	}
+
 	for (mo = overlaycap; mo; mo = mo->hnext)
 	{
 		if (mo->hnext != thing)
@@ -7915,11 +7951,6 @@ static void P_MobjSceneryThink(mobj_t *mobj)
 			P_RemoveMobj(mobj);
 			return;
 		}
-
-		if (!camera.chase)
-			mobj->flags2 |= MF2_DONTDRAW;
-		else
-			mobj->flags2 &= ~MF2_DONTDRAW;
 
 		P_UnsetThingPosition(mobj);
 		{
@@ -9197,7 +9228,7 @@ static void P_DragonbomberThink(mobj_t *mobj)
 		else
 		{
 			fixed_t vspeed = FixedMul(mobj->info->speed >> 3, mobj->scale);
-			fixed_t z = mobj->target->z + (mobj->height >> 1) + (mobj->flags & MFE_VERTICALFLIP ? -128*mobj->scale : 128*mobj->scale + mobj->target->height);
+			fixed_t z = mobj->target->z + (mobj->height >> 1) + (mobj->eflags & MFE_VERTICALFLIP ? -128*mobj->scale : (128*mobj->scale + mobj->target->height));
 			angle_t diff = R_PointToAngle2(mobj->x, mobj->y, mobj->target->x, mobj->target->y) - mobj->angle;
 			if (diff > ANGLE_180)
 				mobj->angle -= DRAGONTURNSPEED;
@@ -9595,7 +9626,7 @@ static boolean P_MobjRegularThink(mobj_t *mobj)
 	case MT_BOSSFLYPOINT:
 		return false;
 	case MT_NIGHTSCORE:
-		mobj->color = (UINT16)(leveltime % SKINCOLOR_WHITE);
+		mobj->color = linkColor[mobj->extravalue2][(leveltime + mobj->extravalue1) % NUMLINKCOLORS];
 		break;
 	case MT_JETFUME1:
 		if (!P_JetFume1Think(mobj))
@@ -9691,7 +9722,7 @@ static boolean P_MobjRegularThink(mobj_t *mobj)
 		P_RingThinker(mobj);
 		if (mobj->flags2 & MF2_NIGHTSPULL)
 			P_NightsItemChase(mobj);
-		else
+		else if (mobj->type != MT_BOMBSPHERE) // prevent shields from attracting bomb spheres
 			A_AttractChase(mobj);
 		return false;
 		// Flung items
@@ -9709,6 +9740,11 @@ static boolean P_MobjRegularThink(mobj_t *mobj)
 			A_AttractChase(mobj);
 		break;
 	case MT_EMBLEM:
+		if (P_EmblemWasCollected(mobj->health - 1) || !P_CanPickupEmblem(&players[consoleplayer], mobj->health - 1))
+			mobj->frame |= (tr_trans50 << FF_TRANSSHIFT);
+		else
+			mobj->frame &= ~FF_TRANSMASK;
+
 		if (mobj->flags2 & MF2_NIGHTSPULL)
 			P_NightsItemChase(mobj);
 		break;
@@ -9833,9 +9869,9 @@ static boolean P_MobjRegularThink(mobj_t *mobj)
 		break;
 	case MT_MINUS:
 		if (P_IsObjectOnGround(mobj))
-			mobj->rollangle = 0;
+			mobj->spriteroll = 0;
 		else
-			mobj->rollangle = R_PointToAngle2(0, 0, P_MobjFlip(mobj)*mobj->momz, (mobj->scale << 1) - min(abs(mobj->momz), mobj->scale << 1));
+			mobj->spriteroll = R_PointToAngle2(0, 0, P_MobjFlip(mobj)*mobj->momz, (mobj->scale << 1) - min(abs(mobj->momz), mobj->scale << 1));
 		break;
 	case MT_PUSH:
 		P_PointPushThink(mobj);
@@ -10066,6 +10102,8 @@ static boolean P_FuseThink(mobj_t *mobj)
 	case MT_SPIKE:
 	case MT_WALLSPIKE:
 		P_SetMobjState(mobj, mobj->state->nextstate);
+		if (P_MobjWasRemoved(mobj))
+			return false;
 		mobj->fuse = mobj->spawnpoint ? mobj->spawnpoint->args[0] : mobj->info->speed;
 		break;
 	case MT_NIGHTSCORE:
@@ -10227,7 +10265,7 @@ void P_MobjThinker(mobj_t *mobj)
 	if (mobj->flags2 & MF2_FIRING)
 		P_FiringThink(mobj);
 
-	if (mobj->type == MT_AMBIENT)
+	if (mobj->flags & MF_AMBIENT)
 	{
 		if (leveltime % mobj->health)
 			return;
@@ -10526,6 +10564,29 @@ static fixed_t P_DefaultMobjShadowScale (mobj_t *thing)
 		case MT_REDFLAG:
 		case MT_BLUEFLAG:
 
+		case MT_BOUNCERING:
+		case MT_AUTOMATICRING:
+		case MT_INFINITYRING:
+		case MT_RAILRING:
+		case MT_EXPLOSIONRING:
+		case MT_SCATTERRING:
+		case MT_GRENADERING:
+		
+		case MT_BOUNCEPICKUP:
+		case MT_RAILPICKUP:
+		case MT_AUTOPICKUP:
+		case MT_EXPLODEPICKUP:
+		case MT_SCATTERPICKUP:
+		case MT_GRENADEPICKUP:
+		
+		case MT_REDRING:
+		case MT_THROWNBOUNCE:
+		case MT_THROWNINFINITY:
+		case MT_THROWNAUTOMATIC:
+		case MT_THROWNSCATTER:
+		case MT_THROWNEXPLOSION:
+		case MT_THROWNGRENADE:
+
 		case MT_EMBLEM:
 
 		case MT_TOKEN:
@@ -10613,6 +10674,8 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 	mobj->health = (info->spawnhealth ? info->spawnhealth : 1);
 
 	mobj->reactiontime = info->reactiontime;
+
+	mobj->dispoffset = info->dispoffset;
 
 	mobj->lastlook = -1; // stuff moved in P_enemy.P_LookForPlayer
 
@@ -11141,11 +11204,7 @@ void P_RemoveMobj(mobj_t *mobj)
 
 	P_SetTarget(&mobj->hnext, P_SetTarget(&mobj->hprev, NULL));
 
-	// DBG: set everything in mobj_t to 0xFF instead of leaving it. debug memory error.
-#ifdef SCRAMBLE_REMOVED
-	// Invalidate mobj_t data to cause crashes if accessed!
-	memset((UINT8 *)mobj + sizeof(thinker_t), 0xff, sizeof(mobj_t) - sizeof(thinker_t));
-#endif
+	R_RemoveMobjInterpolator(mobj);
 
 	// free block
 	if (!mobj->thinker.next)
@@ -11164,7 +11223,16 @@ void P_RemoveMobj(mobj_t *mobj)
 
 	P_RemoveThinker((thinker_t *)mobj);
 
-	R_RemoveMobjInterpolator(mobj);
+#ifdef PARANOIA
+	// Saved to avoid being scrambled like below...
+	mobj->thinker.debug_mobjtype = mobj->type;
+#endif
+
+	// DBG: set everything in mobj_t to 0xFF instead of leaving it. debug memory error.
+#ifdef SCRAMBLE_REMOVED
+	// Invalidate mobj_t data to cause crashes if accessed!
+	memset((UINT8 *)mobj + sizeof(thinker_t), 0xff, sizeof(mobj_t) - sizeof(thinker_t));
+#endif
 }
 
 // This does not need to be added to Lua.
@@ -11195,28 +11263,48 @@ void P_RemovePrecipMobj(precipmobj_t *mobj)
 void P_RemoveSavegameMobj(mobj_t *mobj)
 {
 	// unlink from sector and block lists
-	P_UnsetThingPosition(mobj);
-
-	// Remove touching_sectorlist from mobj.
-	if (sector_list)
+	if (((thinker_t *)mobj)->function.acp1 == (actionf_p1)P_NullPrecipThinker)
 	{
-		P_DelSeclist(sector_list);
-		sector_list = NULL;
+		P_UnsetPrecipThingPosition((precipmobj_t *)mobj);
+
+		if (precipsector_list)
+		{
+			P_DelPrecipSeclist(precipsector_list);
+			precipsector_list = NULL;
+		}
+	}
+	else
+	{
+		// unlink from sector and block lists
+		P_UnsetThingPosition(mobj);
+
+		// Remove touching_sectorlist from mobj.
+		if (sector_list)
+		{
+			P_DelSeclist(sector_list);
+			sector_list = NULL;
+		}
 	}
 
 	// stop any playing sound
 	S_StopSound(mobj);
+	R_RemoveMobjInterpolator(mobj);
 
 	// free block
-	P_RemoveThinker((thinker_t *)mobj);
-	R_RemoveMobjInterpolator(mobj);
+	// Here we use the same code as R_RemoveThinkerDelayed, but without reference counting (we're removing everything so it shouldn't matter) and without touching currentthinker since we aren't in P_RunThinkers
+	{
+		thinker_t *thinker = (thinker_t *)mobj;
+		thinker_t *next = thinker->next;
+		(next->prev = thinker->prev)->next = next;
+		Z_Free(thinker);
+	}
 }
 
 static CV_PossibleValue_t respawnitemtime_cons_t[] = {{1, "MIN"}, {300, "MAX"}, {0, NULL}};
-consvar_t cv_itemrespawntime = CVAR_INIT ("respawnitemtime", "30", CV_SAVE|CV_NETVAR|CV_CHEAT, respawnitemtime_cons_t, NULL);
-consvar_t cv_itemrespawn = CVAR_INIT ("respawnitem", "On", CV_SAVE|CV_NETVAR, CV_OnOff, NULL);
+consvar_t cv_itemrespawntime = CVAR_INIT ("respawnitemtime", "30", CV_SAVE|CV_NETVAR|CV_CHEAT|CV_ALLOWLUA, respawnitemtime_cons_t, NULL);
+consvar_t cv_itemrespawn = CVAR_INIT ("respawnitem", "On", CV_SAVE|CV_NETVAR|CV_ALLOWLUA, CV_OnOff, NULL);
 static CV_PossibleValue_t flagtime_cons_t[] = {{0, "MIN"}, {300, "MAX"}, {0, NULL}};
-consvar_t cv_flagtime = CVAR_INIT ("flagtime", "30", CV_SAVE|CV_NETVAR|CV_CHEAT, flagtime_cons_t, NULL);
+consvar_t cv_flagtime = CVAR_INIT ("flagtime", "30", CV_SAVE|CV_NETVAR|CV_CHEAT|CV_ALLOWLUA, flagtime_cons_t, NULL);
 
 void P_SpawnPrecipitation(void)
 {
@@ -11499,8 +11587,6 @@ void P_SpawnPlayer(INT32 playernum)
 				// Spawn as a spectator,
 				// yes even in splitscreen mode
 				p->spectator = true;
-				if (playernum&1) p->skincolor = skincolor_redteam;
-				else             p->skincolor = skincolor_blueteam;
 
 				// but immediately send a team change packet.
 				NetPacket.packet.playernum = playernum;
@@ -11520,13 +11606,6 @@ void P_SpawnPlayer(INT32 playernum)
 		// Fix stupid non spectator spectators.
 		if (!p->spectator && !p->ctfteam)
 			p->spectator = true;
-
-		// Fix team colors.
-		// This code isn't being done right somewhere else. Oh well.
-		if (p->ctfteam == 1)
-			p->skincolor = skincolor_redteam;
-		else if (p->ctfteam == 2)
-			p->skincolor = skincolor_blueteam;
 	}
 
 	if ((netgame || multiplayer) && ((gametyperules & GTR_SPAWNINVUL) || leveltime) && !p->spectator && !(maptol & TOL_NIGHTS))
@@ -11538,7 +11617,7 @@ void P_SpawnPlayer(INT32 playernum)
 	mobj->angle = 0;
 
 	// set color translations for player sprites
-	mobj->color = p->skincolor;
+	mobj->color = P_GetPlayerColor(p);
 
 	// set 'spritedef' override in mobj for player skins.. (see ProjectSprite)
 	// (usefulness: when body mobj is detached from player (who respawns),
@@ -11776,7 +11855,7 @@ void P_MovePlayerToStarpost(INT32 playernum)
 mapthing_t *huntemeralds[MAXHUNTEMERALDS];
 INT32 numhuntemeralds;
 
-fixed_t P_GetMobjSpawnHeight(const mobjtype_t mobjtype, const fixed_t x, const fixed_t y, const fixed_t dz, const fixed_t offset, const boolean flip, const fixed_t scale)
+fixed_t P_GetMobjSpawnHeight(const mobjtype_t mobjtype, const fixed_t x, const fixed_t y, const fixed_t dz, const fixed_t offset, const boolean flip, const fixed_t scale, const boolean absolutez)
 {
 	const subsector_t *ss = R_PointInSubsector(x, y);
 
@@ -11786,9 +11865,9 @@ fixed_t P_GetMobjSpawnHeight(const mobjtype_t mobjtype, const fixed_t x, const f
 
 	// Establish height.
 	if (flip)
-		return P_GetSectorCeilingZAt(ss->sector, x, y) - dz - FixedMul(scale, offset + mobjinfo[mobjtype].height);
+		return (absolutez ? dz : P_GetSectorCeilingZAt(ss->sector, x, y) - dz) - FixedMul(scale, offset + mobjinfo[mobjtype].height);
 	else
-		return P_GetSectorFloorZAt(ss->sector, x, y) + dz + FixedMul(scale, offset);
+		return (absolutez ? dz : P_GetSectorFloorZAt(ss->sector, x, y) + dz) + FixedMul(scale, offset);
 }
 
 fixed_t P_GetMapThingSpawnHeight(const mobjtype_t mobjtype, const mapthing_t* mthing, const fixed_t x, const fixed_t y)
@@ -11796,6 +11875,7 @@ fixed_t P_GetMapThingSpawnHeight(const mobjtype_t mobjtype, const mapthing_t* mt
 	fixed_t dz = mthing->z << FRACBITS; // Base offset from the floor.
 	fixed_t offset = 0; // Specific scaling object offset.
 	boolean flip = (!!(mobjinfo[mobjtype].flags & MF_SPAWNCEILING) ^ !!(mthing->options & MTF_OBJECTFLIP));
+	boolean absolutez = !!(mthing->options & MTF_ABSOLUTEZ);
 
 	switch (mobjtype)
 	{
@@ -11830,7 +11910,6 @@ fixed_t P_GetMapThingSpawnHeight(const mobjtype_t mobjtype, const mapthing_t* mt
 	case MT_EMERHUNT:
 	case MT_EMERALDSPAWN:
 	case MT_TOKEN:
-	case MT_EMBLEM:
 	case MT_RING:
 	case MT_REDTEAMRING:
 	case MT_BLUETEAMRING:
@@ -11842,13 +11921,17 @@ fixed_t P_GetMapThingSpawnHeight(const mobjtype_t mobjtype, const mapthing_t* mt
 		offset += mthing->args[0] ? 0 : 24*FRACUNIT;
 		break;
 
+	case MT_EMBLEM:
+		offset += mthing->args[1] ? 0 : 24 * FRACUNIT;
+		break;
+
 	// Remaining objects.
 	default:
 		if (P_WeaponOrPanel(mobjtype))
 			offset += mthing->args[0] ? 0 : 24*FRACUNIT;
 	}
 
-	if (!(dz + offset)) // Snap to the surfaces when there's no offset set.
+	if (!(dz + offset) && !absolutez) // Snap to the surfaces when there's no offset set.
 	{
 		if (flip)
 			return ONCEILINGZ;
@@ -11856,7 +11939,7 @@ fixed_t P_GetMapThingSpawnHeight(const mobjtype_t mobjtype, const mapthing_t* mt
 			return ONFLOORZ;
 	}
 
-	return P_GetMobjSpawnHeight(mobjtype, x, y, dz, offset, flip, mthing->scale);
+	return P_GetMobjSpawnHeight(mobjtype, x, y, dz, offset, flip, mthing->scale, absolutez);
 }
 
 static boolean P_SpawnNonMobjMapThing(mapthing_t *mthing)
@@ -11971,12 +12054,8 @@ static boolean P_AllowMobjSpawn(mapthing_t* mthing, mobjtype_t i)
 
 		break;
 	case MT_EMBLEM:
-		if (netgame || multiplayer)
-			return false; // Single player
-
-		if (modifiedgame && !savemoddata)
-			return false; // No cheating!!
-
+		if (!G_CoopGametype())
+			return false; // Gametype's not right
 		break;
 	default:
 		break;
@@ -12120,7 +12199,6 @@ static boolean P_SetupEmblem(mapthing_t *mthing, mobj_t *mobj)
 	INT32 j;
 	emblem_t* emblem = M_GetLevelEmblems(gamemap);
 	skincolornum_t emcolor;
-	boolean validEmblem = true;
 
 	while (emblem)
 	{
@@ -12145,42 +12223,19 @@ static boolean P_SetupEmblem(mapthing_t *mthing, mobj_t *mobj)
 	emcolor = M_GetEmblemColor(&emblemlocations[j]); // workaround for compiler complaint about bad function casting
 	mobj->color = (UINT16)emcolor;
 
-	validEmblem = !emblemlocations[j].collected;
+	mobj->frame &= ~FF_TRANSMASK;
 
-	if (emblemlocations[j].type == ET_SKIN)
+	if (emblemlocations[j].type == ET_GLOBAL)
 	{
-		INT32 skinnum = M_EmblemSkinNum(&emblemlocations[j]);
-
-		if (players[0].skin != skinnum)
+		mobj->reactiontime = emblemlocations[j].var;
+		if (emblemlocations[j].var & GE_NIGHTSITEM)
 		{
-			validEmblem = false;
+			mobj->flags |= MF_NIGHTSITEM;
+			mobj->flags &= ~MF_SPECIAL;
+			mobj->flags2 |= MF2_DONTDRAW;
 		}
 	}
 
-	if (validEmblem == false)
-	{
-		P_UnsetThingPosition(mobj);
-		mobj->flags |= MF_NOCLIP;
-		mobj->flags &= ~MF_SPECIAL;
-		mobj->flags |= MF_NOBLOCKMAP;
-		mobj->frame |= (tr_trans50 << FF_TRANSSHIFT);
-		P_SetThingPosition(mobj);
-	}
-	else
-	{
-		mobj->frame &= ~FF_TRANSMASK;
-
-		if (emblemlocations[j].type == ET_GLOBAL)
-		{
-			mobj->reactiontime = emblemlocations[j].var;
-			if (emblemlocations[j].var & GE_NIGHTSITEM)
-			{
-				mobj->flags |= MF_NIGHTSITEM;
-				mobj->flags &= ~MF_SPECIAL;
-				mobj->flags2 |= MF2_DONTDRAW;
-			}
-		}
-	}
 	return true;
 }
 
@@ -12553,7 +12608,7 @@ static boolean P_SetupNiGHTSDrone(mapthing_t *mthing, mobj_t *mobj)
 	dronemangoaldiff = max(mobjinfo[MT_NIGHTSDRONE_MAN].height - mobjinfo[MT_NIGHTSDRONE_GOAL].height, 0);
 
 	if (flip && mobj->height != oldheight)
-		P_MoveOrigin(mobj, mobj->x, mobj->y, mobj->z - (mobj->height - oldheight));
+		P_SetOrigin(mobj, mobj->x, mobj->y, mobj->z - (mobj->height - oldheight));
 
 	if (!flip)
 	{
@@ -13254,8 +13309,31 @@ static boolean P_SetupSpawnedMapThing(mapthing_t *mthing, mobj_t *mobj, boolean 
 				mobj->flags2 |= MF2_STRONGBOX;
 		}
 	}
+	// Custom ambient sounds
+	if ((mobj->flags & MF_AMBIENT) && mobj->type != MT_AMBIENT)
+	{
+		mobj->threshold = mobj->info->seesound;
+		mobj->health = mobj->info->spawnhealth;
+	}
 
 	return true;
+}
+
+// Pre-UDMF backwards compatibility stuff. Remove for 2.3
+static void P_SetAmbush(mapthing_t *mthing, mobj_t *mobj)
+{
+	if (mobj->type == MT_NIGHTSBUMPER
+		|| mobj->type == MT_AXIS
+		|| mobj->type == MT_AXISTRANSFER
+		|| mobj->type == MT_AXISTRANSFERLINE
+		|| mobj->type == MT_NIGHTSBUMPER
+		|| mobj->type == MT_STARPOST)
+		return;
+
+	if ((mthing->options & MTF_OBJECTSPECIAL) && (mobj->flags & MF_PUSHABLE))
+		return;
+
+	mobj->flags2 |= MF2_AMBUSH;
 }
 
 static mobj_t *P_SpawnMobjFromMapThing(mapthing_t *mthing, fixed_t x, fixed_t y, fixed_t z, mobjtype_t i)
@@ -13269,6 +13347,9 @@ static mobj_t *P_SpawnMobjFromMapThing(mapthing_t *mthing, fixed_t x, fixed_t y,
 	P_SetScale(mobj, FixedMul(mobj->scale, mthing->scale));
 	mobj->destscale = FixedMul(mobj->destscale, mthing->scale);
 
+	mobj->spritexscale = mthing->spritexscale;
+	mobj->spriteyscale = mthing->spriteyscale;
+
 	if (!P_SetupSpawnedMapThing(mthing, mobj, &doangle))
 		return mobj;
 
@@ -13279,6 +13360,9 @@ static mobj_t *P_SpawnMobjFromMapThing(mapthing_t *mthing, fixed_t x, fixed_t y,
 	mobj->roll = FixedAngle(mthing->roll << FRACBITS);
 
 	mthing->mobj = mobj;
+
+	if (!udmf && (mthing->options & MTF_AMBUSH))
+		P_SetAmbush(mthing, mobj);
 
 	// Generic reverse gravity for individual objects flag.
 	if (mthing->options & MTF_OBJECTFLIP)
@@ -13352,7 +13436,7 @@ void P_SpawnHoop(mapthing_t *mthing)
 	vector4_t v, res;
 	fixed_t x = mthing->x << FRACBITS;
 	fixed_t y = mthing->y << FRACBITS;
-	fixed_t z = P_GetMobjSpawnHeight(MT_HOOP, x, y, mthing->z << FRACBITS, 0, false, mthing->scale);
+	fixed_t z = P_GetMobjSpawnHeight(MT_HOOP, x, y, mthing->z << FRACBITS, 0, false, mthing->scale, mthing->options & MTF_ABSOLUTEZ);
 
 	hoopcenter = P_SpawnMobj(x, y, z, MT_HOOPCENTER);
 	hoopcenter->spawnpoint = mthing;
@@ -13479,7 +13563,7 @@ static void P_SpawnItemRow(mapthing_t *mthing, mobjtype_t *itemtypes, UINT8 numi
 			itemtypes[r] = P_GetMobjtypeSubstitute(&dummything, itemtypes[r]);
 		}
 	}
-	z = P_GetMobjSpawnHeight(itemtypes[0], x, y, z, 0, mthing->options & MTF_OBJECTFLIP, mthing->scale);
+	z = P_GetMobjSpawnHeight(itemtypes[0], x, y, z, 0, mthing->options & MTF_OBJECTFLIP, mthing->scale, mthing->options & MTF_ABSOLUTEZ);
 
 	for (r = 0; r < numitems; r++)
 	{
@@ -13506,7 +13590,7 @@ static void P_SpawnItemRow(mapthing_t *mthing, mobjtype_t *itemtypes, UINT8 numi
 static void P_SpawnSingularItemRow(mapthing_t *mthing, mobjtype_t itemtype, INT32 numitems, fixed_t horizontalspacing, fixed_t verticalspacing, INT16 fixedangle, boolean bonustime)
 {
 	mobjtype_t itemtypes[1] = { itemtype };
-	return P_SpawnItemRow(mthing, itemtypes, 1, numitems, horizontalspacing, verticalspacing, fixedangle, bonustime);
+	P_SpawnItemRow(mthing, itemtypes, 1, numitems, horizontalspacing, verticalspacing, fixedangle, bonustime);
 }
 
 static void P_SpawnItemCircle(mapthing_t *mthing, mobjtype_t *itemtypes, UINT8 numitemtypes, INT32 numitems, fixed_t size, boolean bonustime)
@@ -13538,7 +13622,7 @@ static void P_SpawnItemCircle(mapthing_t *mthing, mobjtype_t *itemtypes, UINT8 n
 			itemtypes[i] = P_GetMobjtypeSubstitute(&dummything, itemtypes[i]);
 		}
 	}
-	z = P_GetMobjSpawnHeight(itemtypes[0], x, y, z, 0, false, mthing->scale);
+	z = P_GetMobjSpawnHeight(itemtypes[0], x, y, z, 0, false, mthing->scale, mthing->options & MTF_ABSOLUTEZ);
 
 	for (i = 0; i < numitems; i++)
 	{
@@ -13650,7 +13734,6 @@ void P_SpawnItemPattern(mapthing_t *mthing, boolean bonustime)
 		UINT8 numitemtypes;
 		if (!udmf)
 			return;
-		CONS_Printf("Itemstring: %s\n", mthing->stringargs[0]);
 		P_ParseItemTypes(mthing->stringargs[0], itemtypes, &numitemtypes);
 		P_SpawnItemCircle(mthing, itemtypes, numitemtypes, mthing->args[0], mthing->args[1] << FRACBITS, bonustime);
 		return;
@@ -14107,6 +14190,13 @@ mobj_t *P_SpawnMobjFromMobj(mobj_t *mobj, fixed_t xofs, fixed_t yofs, fixed_t zo
 		newmobj->old_angle2 = mobj->old_angle2;
 		newmobj->old_angle = mobj->old_angle;
 	}
+
+	newmobj->old_pitch2 = mobj->old_pitch2;
+	newmobj->old_pitch = mobj->old_pitch;
+	newmobj->old_roll2 = mobj->old_roll2;
+	newmobj->old_roll = mobj->old_roll;
+	newmobj->old_spriteroll2 = mobj->old_spriteroll2;
+	newmobj->old_spriteroll = mobj->old_spriteroll;
 
 	newmobj->old_scale2 = mobj->old_scale2;
 	newmobj->old_scale = mobj->old_scale;

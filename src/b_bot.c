@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2007-2016 by John "JTE" Muniz.
-// Copyright (C) 2011-2022 by Sonic Team Junior.
+// Copyright (C) 2011-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -118,7 +118,7 @@ static void B_BuildTailsTiccmd(mobj_t *sonic, mobj_t *tails, ticcmd_t *cmd)
 		return;
 	}
 
-	// Adapted from CobaltBW's tails_AI.wad
+	// Adapted from clairebun's tails_AI.wad
 
 	// Check water
 	if (water)
@@ -188,6 +188,7 @@ static void B_BuildTailsTiccmd(mobj_t *sonic, mobj_t *tails, ticcmd_t *cmd)
 			&& !(pcmd->forwardmove || pcmd->sidemove || player->dashspeed)
 			&& P_IsObjectOnGround(sonic) && P_IsObjectOnGround(tails)
 			&& !(player->pflags & PF_STASIS)
+			&& !(player->exiting)
 			&& bot->charability == CA_FLY)
 				mem->thinkstate = AI_THINKFLY;
 		else if (mem->thinkstate == AI_THINKFLY)
@@ -630,7 +631,8 @@ void B_HandleFlightIndicator(player_t *player)
 	}
 
 	// otherwise, update its visibility
-	if (P_IsLocalPlayer(player->botleader))
+	tails->hnext->drawonlyforplayer = player->botleader; // Hide it from the other player in splitscreen, and yourself when spectating
+	if (P_IsLocalPlayer(player->botleader)) // Only display it on your own view. Don't display it for spectators
 		tails->hnext->flags2 &= ~MF2_DONTDRAW;
 	else
 		tails->hnext->flags2 |= MF2_DONTDRAW;

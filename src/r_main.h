@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2022 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -114,7 +114,7 @@ extern consvar_t cv_chasecam, cv_chasecam2;
 extern consvar_t cv_flipcam, cv_flipcam2;
 
 extern consvar_t cv_shadow;
-extern consvar_t cv_ffloorclip;
+extern consvar_t cv_ffloorclip, cv_spriteclip;
 extern consvar_t cv_translucency;
 extern consvar_t cv_drawdist, cv_drawdist_nights, cv_drawdist_precip;
 extern consvar_t cv_fov;

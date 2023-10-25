@@ -1,6 +1,6 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
-// Copyright (C) 1998-2022 by Sonic Team Junior.
+// Copyright (C) 1998-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -1030,6 +1030,12 @@ EXPORT void HWRAPI(LoadCustomShader) (int number, char *code, size_t size, boole
 EXPORT void HWRAPI(SetShader) (int type)
 {
 #ifdef GL_SHADERS
+	if (type == SHADER_NONE)
+	{
+		UnSetShader();
+		return;
+	}
+
 	if (gl_allowshaders != HWD_SHADEROPTION_OFF)
 	{
 		gl_shader_t *shader = gl_shaderstate.current;
@@ -1130,7 +1136,7 @@ static void GLPerspective(GLfloat fovy, GLfloat aspect)
 	const GLfloat zNear = NEAR_CLIPPING_PLANE;
 	const GLfloat zFar = FAR_CLIPPING_PLANE;
 	const GLfloat radians = (GLfloat)(fovy / 2.0f * M_PIl / 180.0f);
-	const GLfloat sine = sin(radians);
+	const GLfloat sine = (GLfloat)sin(radians);
 	const GLfloat deltaZ = zFar - zNear;
 	GLfloat cotangent;
 
@@ -2042,9 +2048,9 @@ static void Shader_SetUniforms(FSurfaceInfo *Surface, GLRGBAFloat *poly, GLRGBAF
 
 		if (Surface != NULL)
 		{
-			UNIFORM_1(shader->uniforms[gluniform_lighting], Surface->LightInfo.light_level, pglUniform1f);
-			UNIFORM_1(shader->uniforms[gluniform_fade_start], Surface->LightInfo.fade_start, pglUniform1f);
-			UNIFORM_1(shader->uniforms[gluniform_fade_end], Surface->LightInfo.fade_end, pglUniform1f);
+			UNIFORM_1(shader->uniforms[gluniform_lighting], (GLfloat)Surface->LightInfo.light_level, pglUniform1f);
+			UNIFORM_1(shader->uniforms[gluniform_fade_start], (GLfloat)Surface->LightInfo.fade_start, pglUniform1f);
+			UNIFORM_1(shader->uniforms[gluniform_fade_end], (GLfloat)Surface->LightInfo.fade_end, pglUniform1f);
 		}
 
 		UNIFORM_1(shader->uniforms[gluniform_leveltime], shader_leveltime, pglUniform1f);
@@ -2290,7 +2296,7 @@ EXPORT void HWRAPI(DrawPolygon) (FSurfaceInfo *pSurf, FOutVector *pOutVerts, FUI
 
 	pglVertexPointer(3, GL_FLOAT, sizeof(FOutVector), &pOutVerts[0].x);
 	pglTexCoordPointer(2, GL_FLOAT, sizeof(FOutVector), &pOutVerts[0].s);
-	pglDrawArrays(GL_TRIANGLE_FAN, 0, iNumPts);
+	pglDrawArrays(PolyFlags & PF_WireFrame ? GL_LINES : GL_TRIANGLE_FAN, 0, iNumPts);
 
 	if (PolyFlags & PF_RemoveYWrap)
 		pglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
@@ -2673,7 +2679,7 @@ EXPORT void HWRAPI(CreateModelVBOs) (model_t *model)
 
 #define BUFFER_OFFSET(i) ((void*)(i))
 
-static void DrawModelEx(model_t *model, INT32 frameIndex, float duration, float tics, INT32 nextFrameIndex, FTransform *pos, float scale, UINT8 flipped, UINT8 hflipped, FSurfaceInfo *Surface)
+static void DrawModelEx(model_t *model, INT32 frameIndex, float duration, float tics, INT32 nextFrameIndex, FTransform *pos, float hscale, float vscale, UINT8 flipped, UINT8 hflipped, FSurfaceInfo *Surface)
 {
 	static GLRGBAFloat poly = {0,0,0,0};
 	static GLRGBAFloat tint = {0,0,0,0};
@@ -2697,10 +2703,11 @@ static void DrawModelEx(model_t *model, INT32 frameIndex, float duration, float 
 #endif
 
 	// Affect input model scaling
-	scale *= 0.5f;
-	scalex = scale;
-	scaley = scale;
-	scalez = scale;
+	hscale *= 0.5f;
+	vscale *= 0.5f;
+	scalex = hscale;
+	scaley = vscale;
+	scalez = hscale;
 
 	if (duration > 0.0 && tics >= 0.0) // don't interpolate if instantaneous or infinite in length
 	{
@@ -2776,7 +2783,6 @@ static void DrawModelEx(model_t *model, INT32 frameIndex, float duration, float 
 	pglEnable(GL_CULL_FACE);
 	pglEnable(GL_NORMALIZE);
 
-#ifdef USE_FTRANSFORM_MIRROR
 	// flipped is if the object is vertically flipped
 	// hflipped is if the object is horizontally flipped
 	// pos->flip is if the screen is flipped vertically
@@ -2789,17 +2795,6 @@ static void DrawModelEx(model_t *model, INT32 frameIndex, float duration, float 
 		else
 			pglCullFace(GL_BACK);
 	}
-#else
-	// pos->flip is if the screen is flipped too
-	if (flipped ^ hflipped ^ pos->flip) // If one or three of these are active, but not two, invert the model's culling
-	{
-		pglCullFace(GL_FRONT);
-	}
-	else
-	{
-		pglCullFace(GL_BACK);
-	}
-#endif
 
 	pglPushMatrix(); // should be the same as glLoadIdentity
 	//Hurdler: now it seems to work
@@ -2809,22 +2804,14 @@ static void DrawModelEx(model_t *model, INT32 frameIndex, float duration, float 
 	if (hflipped)
 		scalez = -scalez;
 
-#ifdef USE_FTRANSFORM_ANGLEZ
-	pglRotatef(pos->anglez, 0.0f, 0.0f, -1.0f); // rotate by slope from Kart
-#endif
-	pglRotatef(pos->angley, 0.0f, -1.0f, 0.0f);
+	pglRotatef(pos->anglez, 0.0f, 0.0f, -1.0f);
 	pglRotatef(pos->anglex, 1.0f, 0.0f, 0.0f);
+	pglRotatef(pos->angley, 0.0f, -1.0f, 0.0f);
 
 	if (pos->roll)
 	{
-		float roll = (1.0f * pos->rollflip);
 		pglTranslatef(pos->centerx, pos->centery, 0);
-		if (pos->rotaxis == 2) // Z
-			pglRotatef(pos->rollangle, 0.0f, 0.0f, roll);
-		else if (pos->rotaxis == 1) // Y
-			pglRotatef(pos->rollangle, 0.0f, roll, 0.0f);
-		else // X
-			pglRotatef(pos->rollangle, roll, 0.0f, 0.0f);
+		pglRotatef(pos->rollangle, pos->rollx, 0.0f, pos->rollz);
 		pglTranslatef(-pos->centerx, -pos->centery, 0);
 	}
 
@@ -2978,9 +2965,9 @@ static void DrawModelEx(model_t *model, INT32 frameIndex, float duration, float 
 // -----------------+
 // HWRAPI DrawModel : Draw a model
 // -----------------+
-EXPORT void HWRAPI(DrawModel) (model_t *model, INT32 frameIndex, float duration, float tics, INT32 nextFrameIndex, FTransform *pos, float scale, UINT8 flipped, UINT8 hflipped, FSurfaceInfo *Surface)
+EXPORT void HWRAPI(DrawModel) (model_t *model, INT32 frameIndex, float duration, float tics, INT32 nextFrameIndex, FTransform *pos, float hscale, float vscale, UINT8 flipped, UINT8 hflipped, FSurfaceInfo *Surface)
 {
-	DrawModelEx(model, frameIndex, duration, tics, nextFrameIndex, pos, scale, flipped, hflipped, Surface);
+	DrawModelEx(model, frameIndex, duration, tics, nextFrameIndex, pos, hscale, vscale, flipped, hflipped, Surface);
 }
 
 // -----------------+
@@ -2997,13 +2984,9 @@ EXPORT void HWRAPI(SetTransform) (FTransform *stransform)
 	if (stransform)
 	{
 		used_fov = stransform->fovxangle;
-#ifdef USE_FTRANSFORM_MIRROR
-		// mirroring from Kart
 		if (stransform->mirror)
 			pglScalef(-stransform->scalex, stransform->scaley, -stransform->scalez);
-		else
-#endif
-		if (stransform->flip)
+		else if (stransform->flip)
 			pglScalef(stransform->scalex, -stransform->scaley, -stransform->scalez);
 		else
 			pglScalef(stransform->scalex, stransform->scaley, -stransform->scalez);
@@ -3038,7 +3021,7 @@ EXPORT void HWRAPI(SetTransform) (FTransform *stransform)
 
 	if (special_splitscreen)
 	{
-		used_fov = atan(tan(used_fov*M_PI/360)*0.8)*360/M_PI;
+		used_fov = (float)(atan(tan(used_fov*M_PI/360)*0.8)*360/M_PI);
 		GLPerspective(used_fov, 2*ASPECT_RATIO);
 	}
 	else

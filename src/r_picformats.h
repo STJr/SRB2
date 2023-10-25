@@ -1,8 +1,8 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 2018-2022 by Jaime "Lactozilla" Passos.
-// Copyright (C) 2019-2022 by Sonic Team Junior.
+// Copyright (C) 2018-2023 by Jaime "Lactozilla" Passos.
+// Copyright (C) 2019-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -95,7 +95,6 @@ typedef enum
 typedef struct
 {
 	INT32 x, y;
-	rotaxis_t rotaxis;
 } spriteframepivot_t;
 
 typedef struct

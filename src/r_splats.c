@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2022 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -11,6 +11,7 @@
 /// \brief Floor splats
 
 #include "r_draw.h"
+#include "r_fps.h"
 #include "r_main.h"
 #include "r_splats.h"
 #include "r_bsp.h"
@@ -30,20 +31,8 @@ static void prepare_rastertab(void);
 
 static void R_RasterizeFloorSplat(floorsplat_t *pSplat, vector2_t *verts, vissprite_t *vis);
 
-#ifdef USEASM
-void ASMCALL rasterize_segment_tex_asm(INT32 x1, INT32 y1, INT32 x2, INT32 y2, INT32 tv1, INT32 tv2, INT32 tc, INT32 dir);
-#endif
-
 static void rasterize_segment_tex(INT32 x1, INT32 y1, INT32 x2, INT32 y2, INT32 tv1, INT32 tv2, INT32 tc, INT32 dir)
 {
-#ifdef USEASM
-	if (R_ASM)
-	{
-		rasterize_segment_tex_asm(x1, y1, x2, y2, tv1, tv2, tc, dir);
-		return;
-	}
-	else
-#endif
 	{
 		fixed_t xs, xe, count;
 		fixed_t dx0, dx1;
@@ -185,12 +174,12 @@ void R_DrawFloorSplat(vissprite_t *spr)
 		splat.scale = FixedMul(splat.scale, ((skin_t *)mobj->skin)->highresscale);
 
 	if (spr->rotateflags & SRF_3D || renderflags & RF_NOSPLATBILLBOARD)
-		splatangle = spr->centerangle;
+		splatangle = mobj->angle;
 	else
 		splatangle = spr->viewpoint.angle;
 
 	if (!(spr->cut & SC_ISROTATED))
-		splatangle += mobj->rollangle;
+		splatangle += mobj->spriteroll;
 
 	splat.angle = -splatangle;
 	splat.angle += ANGLE_90;
@@ -209,8 +198,8 @@ void R_DrawFloorSplat(vissprite_t *spr)
 	xoffset = FixedMul(leftoffset, splat.xscale);
 	yoffset = FixedMul(topoffset, splat.yscale);
 
-	x = spr->gx;
-	y = spr->gy;
+	x = mobj->x;
+	y = mobj->y;
 	w = (splat.width * splat.xscale);
 	h = (splat.height * splat.yscale);
 
@@ -263,8 +252,8 @@ void R_DrawFloorSplat(vissprite_t *spr)
 	// Translate
 	for (i = 0; i < 4; i++)
 	{
-		tr_x = rotated[i].x + x;
-		tr_y = rotated[i].y + y;
+		tr_x = rotated[i].x + mobj->x;
+		tr_y = rotated[i].y + mobj->y;
 
 		if (splat.slope)
 		{
@@ -292,8 +281,8 @@ void R_DrawFloorSplat(vissprite_t *spr)
 		tr_y = v3d->y - spr->viewpoint.y;
 
 		// rotation around vertical y axis
-		rot_x = FixedMul(tr_x, sa) - FixedMul(tr_y, ca);
-		rot_y = FixedMul(tr_x, ca) + FixedMul(tr_y, sa);
+		rot_x = FixedMul(tr_x - (mobj->x - x), sa) - FixedMul(tr_y - (mobj->y - y), ca);
+		rot_y = FixedMul(tr_x - (mobj->x - x), ca) + FixedMul(tr_y - (mobj->y - y), sa);
 		rot_z = v3d->z - spr->viewpoint.z;
 
 		if (rot_y < FRACUNIT)
@@ -325,9 +314,7 @@ static void R_RasterizeFloorSplat(floorsplat_t *pSplat, vector2_t *verts, visspr
 	fixed_t planeheight = 0;
 	fixed_t step;
 
-	int spanfunctype = SPANDRAWFUNC_SPRITE;
-
-	prepare_rastertab();
+	int spanfunctype;
 
 #define RASTERPARAMS(vnum1, vnum2, tv1, tv2, tc, dir) \
     x1 = verts[vnum1].x; \
@@ -378,21 +365,15 @@ static void R_RasterizeFloorSplat(floorsplat_t *pSplat, vector2_t *verts, visspr
     if (ry1 > maxy) \
         maxy = ry1;
 
-	// do segment a -> top of texture
-	RASTERPARAMS(3,2,0,pSplat->width-1,0,0);
-	// do segment b -> right side of texture
-	RASTERPARAMS(2,1,0,pSplat->width-1,pSplat->height-1,0);
-	// do segment c -> bottom of texture
-	RASTERPARAMS(1,0,pSplat->width-1,0,pSplat->height-1,0);
-	// do segment d -> left side of texture
-	RASTERPARAMS(0,3,pSplat->width-1,0,0,1);
-
 	ds_source = (UINT8 *)pSplat->pic;
 	ds_flatwidth = pSplat->width;
 	ds_flatheight = pSplat->height;
-	ds_powersoftwo = false;
 
-	if (R_CheckPowersOfTwo())
+	ds_powersoftwo = ds_solidcolor = false;
+
+	if (R_CheckSolidColorFlat())
+		ds_solidcolor = true;
+	else if (R_CheckPowersOfTwo())
 	{
 		R_SetFlatVars(ds_flatwidth * ds_flatheight);
 		ds_powersoftwo = true;
@@ -403,9 +384,8 @@ static void R_RasterizeFloorSplat(floorsplat_t *pSplat, vector2_t *verts, visspr
 		R_SetTiltedSpan(0);
 		R_SetScaledSlopePlane(pSplat->slope, vis->viewpoint.x, vis->viewpoint.y, vis->viewpoint.z, pSplat->xscale, pSplat->yscale, -pSplat->verts[0].x, pSplat->verts[0].y, vis->viewpoint.angle, pSplat->angle);
 		R_CalculateSlopeVectors();
-		spanfunctype = SPANDRAWFUNC_TILTEDSPRITE;
 	}
-	else
+	else if (!ds_solidcolor)
 	{
 		planeheight = abs(pSplat->z - vis->viewpoint.z);
 
@@ -440,22 +420,69 @@ static void R_RasterizeFloorSplat(floorsplat_t *pSplat, vector2_t *verts, visspr
 			ds_colormap = &vis->extra_colormap->colormap[ds_colormap - colormaps];
 	}
 
-	if (vis->transmap)
-	{
-		ds_transmap = vis->transmap;
+	ds_transmap = vis->transmap;
 
+	// Determine which R_DrawWhatever to use
+
+	// Solid color
+	if (ds_solidcolor)
+	{
+		UINT16 px = *(UINT16 *)ds_source;
+
+		// Uh, it's not visible.
+		if (!(px & 0xFF00))
+			return;
+
+		// Pixel color is contained in the lower 8 bits (upper 8 are the opacity), so advance the pointer
+		ds_source++;
+
+		if (pSplat->slope)
+		{
+			if (ds_transmap)
+				spanfunctype = SPANDRAWFUNC_TILTEDTRANSSOLID;
+			else
+				spanfunctype = SPANDRAWFUNC_TILTEDSOLID;
+		}
+		else
+		{
+			if (ds_transmap)
+				spanfunctype = SPANDRAWFUNC_TRANSSOLID;
+			else
+				spanfunctype = SPANDRAWFUNC_SOLID;
+		}
+	}
+	// Transparent
+	else if (ds_transmap)
+	{
 		if (pSplat->slope)
 			spanfunctype = SPANDRAWFUNC_TILTEDTRANSSPRITE;
 		else
 			spanfunctype = SPANDRAWFUNC_TRANSSPRITE;
 	}
+	// Opaque
 	else
-		ds_transmap = NULL;
+	{
+		if (pSplat->slope)
+			spanfunctype = SPANDRAWFUNC_TILTEDSPRITE;
+		else
+			spanfunctype = SPANDRAWFUNC_SPRITE;
+	}
 
-	if (ds_powersoftwo)
+	if (ds_powersoftwo || ds_solidcolor)
 		spanfunc = spanfuncs[spanfunctype];
 	else
 		spanfunc = spanfuncs_npo2[spanfunctype];
+
+	prepare_rastertab();
+
+	// do segment a -> top of texture
+	RASTERPARAMS(3,2,0,pSplat->width-1,0,0);
+	// do segment b -> right side of texture
+	RASTERPARAMS(2,1,0,pSplat->width-1,pSplat->height-1,0);
+	// do segment c -> bottom of texture
+	RASTERPARAMS(1,0,pSplat->width-1,0,pSplat->height-1,0);
+	// do segment d -> left side of texture
+	RASTERPARAMS(0,3,pSplat->width-1,0,0,1);
 
 	if (maxy >= vid.height)
 		maxy = vid.height-1;
@@ -511,7 +538,7 @@ static void R_RasterizeFloorSplat(floorsplat_t *pSplat, vector2_t *verts, visspr
 		if (x2 < x1)
 			continue;
 
-		if (!pSplat->slope)
+		if (!ds_solidcolor && !pSplat->slope)
 		{
 			fixed_t xstep, ystep;
 			fixed_t distance, span;
@@ -560,7 +587,7 @@ static void R_RasterizeFloorSplat(floorsplat_t *pSplat, vector2_t *verts, visspr
 		rastertab[y].maxx = INT32_MIN;
 	}
 
-	if (pSplat->angle && !pSplat->slope)
+	if (!ds_solidcolor && pSplat->angle && !pSplat->slope)
 		memset(cachedheight, 0, sizeof(cachedheight));
 }
 
