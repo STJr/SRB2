@@ -36,6 +36,7 @@
 #include "p_slopes.h"
 #include "f_finale.h"
 #include "m_cond.h"
+#include "netcode/net_command.h"
 
 static CV_PossibleValue_t CV_BobSpeed[] = {{0, "MIN"}, {4*FRACUNIT, "MAX"}, {0, NULL}};
 consvar_t cv_movebob = CVAR_INIT ("movebob", "1.0", CV_FLOAT|CV_SAVE, CV_BobSpeed, NULL);
@@ -3688,7 +3689,7 @@ boolean P_CameraThinker(player_t *player, camera_t *thiscam, boolean resetcalled
 			dummy.y = thiscam->y;
 			dummy.z = thiscam->z;
 			dummy.height = thiscam->height;
-			if (!resetcalled && !(player->pflags & PF_NOCLIP) && !P_CheckSight(&dummy, player->mo)) // TODO: "P_CheckCameraSight" instead.
+			if (!resetcalled && !(player->pflags & PF_NOCLIP || player->powers[pw_carry] == CR_NIGHTSMODE) && !P_CheckSight(&dummy, player->mo)) // TODO: "P_CheckCameraSight" instead.
 				P_ResetCamera(player, thiscam);
 			else
 			{
@@ -3719,7 +3720,7 @@ boolean P_CameraThinker(player_t *player, camera_t *thiscam, boolean resetcalled
 		// adjust height
 		thiscam->z += thiscam->momz + player->mo->pmomz;
 
-		if (!itsatwodlevel && !(player->pflags & PF_NOCLIP))
+		if (!itsatwodlevel && !(player->pflags & PF_NOCLIP || player->powers[pw_carry] == CR_NIGHTSMODE))
 		{
 			// clip movement
 			if (thiscam->z <= thiscam->floorz) // hit the floor
@@ -6882,7 +6883,6 @@ void P_RunOverlays(void)
 		mo->eflags = (mo->eflags & ~MFE_VERTICALFLIP) | (mo->target->eflags & MFE_VERTICALFLIP);
 		mo->scale = mo->destscale = mo->target->scale;
 		mo->angle = (mo->target->player ? mo->target->player->drawangle : mo->target->angle) + mo->movedir;
-		P_SetTarget(&mo->dontdrawforviewmobj, mo->target->dontdrawforviewmobj); // Hide the overlay from the view that its target is hidden from - But don't copy drawonlyforplayer!
 
 		if (!(mo->state->frame & FF_ANIMATE))
 			zoffs = FixedMul(((signed)mo->state->var2)*FRACUNIT, mo->scale);
@@ -11587,8 +11587,6 @@ void P_SpawnPlayer(INT32 playernum)
 				// Spawn as a spectator,
 				// yes even in splitscreen mode
 				p->spectator = true;
-				if (playernum&1) p->skincolor = skincolor_redteam;
-				else             p->skincolor = skincolor_blueteam;
 
 				// but immediately send a team change packet.
 				NetPacket.packet.playernum = playernum;
@@ -11608,13 +11606,6 @@ void P_SpawnPlayer(INT32 playernum)
 		// Fix stupid non spectator spectators.
 		if (!p->spectator && !p->ctfteam)
 			p->spectator = true;
-
-		// Fix team colors.
-		// This code isn't being done right somewhere else. Oh well.
-		if (p->ctfteam == 1)
-			p->skincolor = skincolor_redteam;
-		else if (p->ctfteam == 2)
-			p->skincolor = skincolor_blueteam;
 	}
 
 	if ((netgame || multiplayer) && ((gametyperules & GTR_SPAWNINVUL) || leveltime) && !p->spectator && !(maptol & TOL_NIGHTS))
@@ -11626,7 +11617,7 @@ void P_SpawnPlayer(INT32 playernum)
 	mobj->angle = 0;
 
 	// set color translations for player sprites
-	mobj->color = p->skincolor;
+	mobj->color = P_GetPlayerColor(p);
 
 	// set 'spritedef' override in mobj for player skins.. (see ProjectSprite)
 	// (usefulness: when body mobj is detached from player (who respawns),

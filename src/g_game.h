@@ -49,6 +49,8 @@ extern boolean promptactive;
 
 extern consvar_t cv_pauseifunfocused;
 
+extern consvar_t cv_instantretry;
+
 // used in game menu
 extern consvar_t cv_tutorialprompt;
 extern consvar_t cv_chatwidth, cv_chatnotifications, cv_chatheight, cv_chattime, cv_consolechat, cv_chatbacktint, cv_chatspamprotection, cv_compactscoreboard;
@@ -174,8 +176,7 @@ void G_SpawnPlayer(INT32 playernum);
 
 // Can be called by the startup code or M_Responder.
 // A normal game starts at map 1, but a warp test can start elsewhere
-void G_DeferedInitNew(boolean pultmode, const char *mapname, INT32 pickedchar,
-	boolean SSSG, boolean FLS);
+void G_DeferedInitNew(boolean pultmode, const char *mapname, INT32 character, boolean SSSG, boolean FLS);
 void G_DoLoadLevel(boolean resetplayer);
 void G_StartTitleCard(void);
 void G_PreLevelTitleCard(void);

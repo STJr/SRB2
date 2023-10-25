@@ -15,7 +15,7 @@
 #include "f_finale.h"
 #include "g_game.h"
 #include "hu_stuff.h"
-#include "i_net.h"
+#include "netcode/i_net.h"
 #include "i_video.h"
 #include "p_tick.h"
 #include "r_defs.h"
