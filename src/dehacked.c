@@ -575,7 +575,7 @@ static void DEH_LoadDehackedFile(MYFILE *f, boolean mainfile)
 	} // end while
 
 	if (gamedataadded)
-		G_LoadGameData();
+		G_LoadGameData(clientGamedata);
 
 	if (gamestate == GS_TITLESCREEN)
 	{

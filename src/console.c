@@ -72,8 +72,8 @@ static INT32 con_curlines;  // vid lines currently used by console
 
        INT32 con_clipviewtop; // (useless)
 
-static INT32 con_hudlines;        // number of console heads up message lines
-static INT32 con_hudtime[MAXHUDLINES];      // remaining time of display for hud msg lines
+static UINT8  con_hudlines;             // number of console heads up message lines
+static UINT32 con_hudtime[MAXHUDLINES]; // remaining time of display for hud msg lines
 
        INT32 con_clearlines;      // top screen lines to refresh when view reduced
        boolean con_hudupdate;   // when messages scroll, we need a backgrnd refresh
@@ -126,10 +126,13 @@ static void CONS_backcolor_Change(void);
 static char con_buffer[CON_BUFFERSIZE];
 
 // how many seconds the hud messages lasts on the screen
-static consvar_t cons_msgtimeout = CVAR_INIT ("con_hudtime", "5", CV_SAVE, CV_Unsigned, NULL);
+// CV_Unsigned can overflow when multiplied by TICRATE later, so let's use a 3-year limit instead
+static CV_PossibleValue_t hudtime_cons_t[] = {{0, "MIN"}, {99999999, "MAX"}, {0, NULL}};
+static consvar_t cons_hudtime = CVAR_INIT ("con_hudtime", "5", CV_SAVE, hudtime_cons_t, NULL);
 
 // number of lines displayed on the HUD
-static consvar_t cons_hudlines = CVAR_INIT ("con_hudlines", "5", CV_CALL|CV_SAVE, CV_Unsigned, CONS_hudlines_Change);
+static CV_PossibleValue_t hudlines_cons_t[] = {{0, "MIN"}, {MAXHUDLINES, "MAX"}, {0, NULL}};
+static consvar_t cons_hudlines = CVAR_INIT ("con_hudlines", "5", CV_CALL|CV_SAVE, hudlines_cons_t, CONS_hudlines_Change);
 
 // number of lines console move per frame
 // (con_speed needs a limit, apparently)
@@ -180,11 +183,6 @@ static void CONS_hudlines_Change(void)
 	// Clear the currently displayed lines
 	for (i = 0; i < con_hudlines; i++)
 		con_hudtime[i] = 0;
-
-	if (cons_hudlines.value < 1)
-		cons_hudlines.value = 1;
-	else if (cons_hudlines.value > MAXHUDLINES)
-		cons_hudlines.value = MAXHUDLINES;
 
 	con_hudlines = cons_hudlines.value;
 
@@ -395,16 +393,16 @@ static void CON_SetupColormaps(void)
 
 	//                      0x1       0x3                           0x9                           0xF
 	colset(magentamap, 177, 177, 178, 178, 178, 180, 180, 180, 182, 182, 182, 182, 184, 184, 184, 185);
-	colset(yellowmap,   82,  82,  73,  73,  73,  64,  64,  64,  66,  66,  66,  66,  67,  67,  67,  68);
-	colset(lgreenmap,   96,  96,  98,  98,  98, 101, 101, 101, 104, 104, 104, 104, 106, 106, 106, 107);
-	colset(bluemap,    146, 146, 147, 147, 147, 149, 149, 149, 152, 152, 152, 152, 155, 155, 155, 157);
-	colset(redmap,      32,  32,  33,  33,  33,  35,  35,  35,  39,  39,  39,  39,  42,  42,  42,  44);
+	colset(yellowmap,   82,  82,  73,  73,  73,  74,  74,  74,  66,  66,  66,  66,  67,  67,  67,  68);
+	colset(lgreenmap,   96,  96,  98,  98,  98, 100, 100, 100, 103, 103, 103, 103, 105, 105, 105, 107);
+	colset(bluemap,    146, 146, 147, 147, 147, 148, 148, 148, 149, 149, 149, 149, 150, 150, 150, 151);
+	colset(redmap,      32,  32,  33,  33,  33,  34,  34,  34,  35,  35,  35,  35,  37,  37,  37,  39);
 	colset(graymap,      8,   9,  10,  11,  12,  13,  14,  15,  16,  17,  18,  19,  20,  21,  22,  23);
 	colset(orangemap,   50,  50,  52,  52,  52,  54,  54,  54,  56,  56,  56,  56,  59,  59,  59,  60);
 	colset(skymap,     129, 129, 130, 130, 130, 131, 131, 131, 133, 133, 133, 133, 135, 135, 135, 136);
 	colset(purplemap,  160, 160, 161, 161, 161, 162, 162, 162, 163, 163, 163, 163, 164, 164, 164, 165);
 	colset(aquamap,    120, 120, 121, 121, 121, 122, 122, 122, 123, 123, 123, 123, 124, 124, 124, 125);
-	colset(peridotmap,  72,  72, 188, 188, 189, 189, 189, 189, 190, 190, 190, 190, 191, 191, 191,  94);
+	colset(peridotmap,  73,  73, 188, 188, 188, 189, 189, 189, 190, 190, 190, 190, 191, 191, 191,  94);
 	colset(azuremap,   144, 144, 145, 145, 145, 146, 146, 146, 170, 170, 170, 170, 171, 171, 171, 172);
 	colset(brownmap,   219, 219, 221, 221, 221, 222, 222, 222, 224, 224, 224, 224, 227, 227, 227, 229);
 	colset(rosymap,    200, 200, 201, 201, 201, 202, 202, 202, 203, 203, 203, 203, 204, 204, 204, 205);
@@ -477,7 +475,7 @@ void CON_Init(void)
 
 		Unlock_state();
 
-		CV_RegisterVar(&cons_msgtimeout);
+		CV_RegisterVar(&cons_hudtime);
 		CV_RegisterVar(&cons_hudlines);
 		CV_RegisterVar(&cons_speed);
 		CV_RegisterVar(&cons_height);
@@ -792,9 +790,8 @@ void CON_Ticker(void)
 	// make overlay messages disappear after a while
 	for (i = 0; i < con_hudlines; i++)
 	{
-		con_hudtime[i]--;
-		if (con_hudtime[i] < 0)
-			con_hudtime[i] = 0;
+		if (con_hudtime[i])
+			con_hudtime[i]--;
 	}
 
 	Unlock_state();
@@ -1343,7 +1340,8 @@ boolean CON_Responder(event_t *ev)
 static void CON_Linefeed(void)
 {
 	// set time for heads up messages
-	con_hudtime[con_cy%con_hudlines] = cons_msgtimeout.value*TICRATE;
+	if (con_hudlines)
+		con_hudtime[con_cy%con_hudlines] = cons_hudtime.value*TICRATE;
 
 	con_cy++;
 	con_cx = 0;
@@ -1699,7 +1697,7 @@ static void CON_DrawHudlines(void)
 	INT32 charwidth = 8 * con_scalefactor;
 	INT32 charheight = 8 * con_scalefactor;
 
-	if (con_hudlines <= 0)
+	if (!con_hudlines)
 		return;
 
 	if (chat_on && OLDCHAT)
@@ -1707,7 +1705,7 @@ static void CON_DrawHudlines(void)
 	else
 		y = 0;
 
-	for (i = con_cy - con_hudlines+1; i <= con_cy; i++)
+	for (i = con_cy - con_hudlines; i <= con_cy; i++)
 	{
 		size_t c;
 		INT32 x;
@@ -1889,7 +1887,7 @@ void CON_Drawer(void)
 		CON_DrawConsole();
 	else if (gamestate == GS_LEVEL
 	|| gamestate == GS_INTERMISSION || gamestate == GS_ENDING || gamestate == GS_CUTSCENE
-	|| gamestate == GS_CREDITS || gamestate == GS_EVALUATION)
+	|| gamestate == GS_CREDITS || gamestate == GS_EVALUATION || gamestate == GS_WAITINGPLAYERS)
 		CON_DrawHudlines();
 
 	Unlock_state();
