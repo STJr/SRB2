@@ -28,7 +28,7 @@
 #include "p_slopes.h" // for P_SlopeById and slopelist
 #include "p_polyobj.h" // polyobj_t, PolyObjects
 #ifdef LUA_ALLOW_BYTECODE
-#include "d_netfil.h" // for LUA_DumpFile
+#include "netcode/d_netfil.h" // for LUA_DumpFile
 #endif
 
 #include "lua_script.h"
@@ -224,6 +224,18 @@ int LUA_PushGlobals(lua_State *L, const char *word)
 		return 1;
 	} else if (fastcmp(word,"pointlimit")) {
 		lua_pushinteger(L, cv_pointlimit.value);
+		return 1;
+	} else if (fastcmp(word, "redflag")) {
+		LUA_PushUserdata(L, redflag, META_MOBJ);
+		return 1;
+	} else if (fastcmp(word, "blueflag")) {
+		LUA_PushUserdata(L, blueflag, META_MOBJ);
+		return 1;
+	} else if (fastcmp(word, "rflagpoint")) {
+		LUA_PushUserdata(L, rflagpoint, META_MAPTHING);
+		return 1;
+	} else if (fastcmp(word, "bflagpoint")) {
+		LUA_PushUserdata(L, bflagpoint, META_MAPTHING);
 		return 1;
 	// begin map vars
 	} else if (fastcmp(word,"spstage_start")) {
@@ -501,7 +513,19 @@ static int setglobals(lua_State *L)
 
 		actionnum = LUA_GetActionNumByName(name);
 		if (actionnum < NUMACTIONS)
-			actionsoverridden[actionnum] = true;
+		{
+			int i;
+
+			for (i = MAX_ACTION_RECURSION-1; i > 0; i--)
+			{
+				// Move other references deeper.
+				actionsoverridden[actionnum][i] = actionsoverridden[actionnum][i - 1];
+			}
+
+			// Add the new reference.
+			lua_pushvalue(L, 2);
+			actionsoverridden[actionnum][0] = luaL_ref(L, LUA_REGISTRYINDEX);
+		}
 
 		Z_Free(name);
 		return 0;
@@ -965,6 +989,7 @@ enum
 	ARCH_MAPHEADER,
 	ARCH_SKINCOLOR,
 	ARCH_MOUSE,
+	ARCH_SKIN,
 
 	ARCH_TEND=0xFF,
 };
@@ -993,6 +1018,7 @@ static const struct {
 	{META_MAPHEADER,   ARCH_MAPHEADER},
 	{META_SKINCOLOR,   ARCH_SKINCOLOR},
 	{META_MOUSE,    ARCH_MOUSE},
+	{META_SKIN,     ARCH_SKIN},
 	{NULL,          ARCH_NULL}
 };
 
@@ -1314,6 +1340,13 @@ static UINT8 ArchiveValue(int TABLESINDEX, int myindex)
 			WRITEUINT8(save_p, m == &mouse ? 1 : 2);
 			break;
 		}
+		case ARCH_SKIN:
+		{
+			skin_t *skin = *((skin_t **)lua_touserdata(gL, myindex));
+			WRITEUINT8(save_p, ARCH_SKIN);
+			WRITEUINT8(save_p, skin - skins); // UINT8 because MAXSKINS is only 32
+			break;
+		}
 		default:
 			WRITEUINT8(save_p, ARCH_NULL);
 			return 2;
@@ -1560,6 +1593,9 @@ static UINT8 UnArchiveValue(int TABLESINDEX)
 	case ARCH_MOUSE:
 		LUA_PushUserdata(gL, READUINT16(save_p) == 1 ? &mouse : &mouse2, META_MOUSE);
 		break;
+	case ARCH_SKIN:
+		LUA_PushUserdata(gL, &skins[READUINT8(save_p)], META_SKIN);
+		break;
 	case ARCH_TEND:
 		return 1;
 	}
@@ -1729,15 +1765,37 @@ void LUA_UnArchive(void)
 }
 
 // For mobj_t, player_t, etc. to take custom variables.
-int Lua_optoption(lua_State *L, int narg,
-	const char *def, const char *const lst[])
+int Lua_optoption(lua_State *L, int narg, int def, int list_ref)
 {
-	const char *name = (def) ? luaL_optstring(L, narg, def) :  luaL_checkstring(L, narg);
-	int i;
-	for (i=0; lst[i]; i++)
-		if (fastcmp(lst[i], name))
-			return i;
+	if (lua_isnoneornil(L, narg))
+		return def;
+
+	I_Assert(lua_checkstack(L, 2));
+	luaL_checkstring(L, narg);
+
+	lua_rawgeti(L, LUA_REGISTRYINDEX, list_ref);
+	I_Assert(lua_istable(L, -1));
+	lua_pushvalue(L, narg);
+	lua_rawget(L, -2);
+
+	if (lua_isnumber(L, -1))
+		return lua_tointeger(L, -1);
 	return -1;
+}
+
+int Lua_CreateFieldTable(lua_State *L, const char *const lst[])
+{
+	int i;
+
+	lua_newtable(L);
+	for (i = 0; lst[i] != NULL; i++)
+	{
+		lua_pushstring(L, lst[i]);
+		lua_pushinteger(L, i);
+		lua_settable(L, -3);
+	}
+
+	return luaL_ref(L, LUA_REGISTRYINDEX);
 }
 
 void LUA_PushTaggableObjectArray

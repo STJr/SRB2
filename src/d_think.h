@@ -17,6 +17,8 @@
 #ifndef __D_THINK__
 #define __D_THINK__
 
+#include "doomdef.h"
+
 #ifdef __GNUG__
 #pragma interface
 #endif
@@ -49,6 +51,11 @@ typedef struct thinker_s
 	// killough 11/98: count of how many other objects reference
 	// this one using pointers. Used for garbage collection.
 	INT32 references;
+
+#ifdef PARANOIA
+	INT32 debug_mobjtype;
+	tic_t debug_time;
+#endif
 } thinker_t;
 
 #endif

@@ -12,7 +12,7 @@
 #include "m_perfstats.h"
 #include "v_video.h"
 #include "i_video.h"
-#include "d_netcmd.h"
+#include "netcode/d_netcmd.h"
 #include "r_main.h"
 #include "i_system.h"
 #include "z_zone.h"
