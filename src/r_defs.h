@@ -423,12 +423,12 @@ typedef struct sector_s
 	void *fadecolormapdata; // fade colormap thinker
 
 	// floor and ceiling texture offsets
-	fixed_t floor_xoffs, floor_yoffs;
-	fixed_t ceiling_xoffs, ceiling_yoffs;
+	fixed_t floorxoffset, flooryoffset;
+	fixed_t ceilingxoffset, ceilingyoffset;
 
 	// flat angle
-	angle_t floorpic_angle;
-	angle_t ceilingpic_angle;
+	angle_t floorangle;
+	angle_t ceilingangle;
 
 	INT32 heightsec; // other sector, or -1 if no other sector
 	INT32 camsec; // used for camera clipping
@@ -547,7 +547,6 @@ typedef struct line_s
 	size_t validcount; // if == validcount, already checked
 	polyobj_t *polyobj; // Belongs to a polyobject?
 
-	char *text; // a concatenation of all front and back texture names, for linedef specials that require a string.
 	INT16 callcount; // no. of calls left before triggering, for the "X calls" linedef specials, defaults to 0
 } line_t;
 
@@ -558,6 +557,10 @@ typedef struct
 
 	// add this to the calculated texture top
 	fixed_t rowoffset;
+
+	// per-texture offsets for UDMF
+	fixed_t offsetx_top, offsetx_mid, offsetx_bot;
+	fixed_t offsety_top, offsety_mid, offsety_bot;
 
 	// Texture indices.
 	// We do not maintain names here.
@@ -571,8 +574,6 @@ typedef struct
 
 	INT16 special; // the special of the linedef this side belongs to
 	INT16 repeatcnt; // # of times to repeat midtexture
-
-	char *text; // a concatenation of all top, bottom, and mid texture names, for linedef specials that require a string.
 
 	extracolormap_t *colormap_data; // storage for colormaps; not applied to sectors.
 } side_t;
@@ -756,12 +757,12 @@ typedef struct drawseg_s
 	// Pointers to lists for sprite clipping, all three adjusted so [x1] is first value.
 	INT16 *sprtopclip;
 	INT16 *sprbottomclip;
-	INT16 *maskedtexturecol;
+	fixed_t *maskedtexturecol;
 
 	struct visplane_s *ffloorplanes[MAXFFLOORS];
 	INT32 numffloorplanes;
 	struct ffloor_s *thicksides[MAXFFLOORS];
-	INT16 *thicksidecol;
+	fixed_t *thicksidecol;
 	INT32 numthicksides;
 	fixed_t frontscale[MAXVIDWIDTH];
 

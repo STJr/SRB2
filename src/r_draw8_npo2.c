@@ -18,6 +18,11 @@
 #define SPANSIZE 16
 #define INVSPAN 0.0625f
 
+#if defined(__GNUC__) || defined(__clang__) // Suppress intentional libdivide compiler warnings - Also added to libdivide.h
+    #pragma GCC diagnostic push
+    #pragma GCC diagnostic ignored "-Waggregate-return"
+#endif
+
 /**	\brief The R_DrawSpan_NPO2_8 function
 	Draws the actual span.
 */
@@ -1572,3 +1577,7 @@ void R_DrawTiltedWaterSpan_NPO2_8(void)
 	}
 #endif
 }
+
+#if defined(__GNUC__) || defined(__clang__) // Stop suppressing intentional libdivide compiler warnings
+    #pragma GCC diagnostic pop
+#endif

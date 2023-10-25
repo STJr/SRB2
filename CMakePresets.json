@@ -1,0 +1,29 @@
+{
+	"version": 3,
+	"configurePresets": [
+		{
+			"name": "default",
+			"description": "Build using default generator",
+			"binaryDir": "build",
+			"cacheVariables": {
+				"CMAKE_C_FLAGS": "-fdiagnostics-color",
+				"CMAKE_CXX_FLAGS": "-fdiagnostics-color",
+				"CMAKE_BUILD_TYPE": "RelWithDebInfo"
+			}
+		},
+		{
+			"name": "debug",
+			"description": "Build for development (no optimizations)",
+			"inherits": "default",
+			"cacheVariables": {
+				"CMAKE_BUILD_TYPE": "Debug"
+			}
+		}
+	],
+	"buildPresets": [
+		{
+			"name": "default",
+			"configurePreset": "default"
+		}
+	]
+}
