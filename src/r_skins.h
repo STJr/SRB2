@@ -96,6 +96,7 @@ void SetPlayerSkinByNum(INT32 playernum,INT32 skinnum); // Tails 03-16-2002
 boolean R_SkinUsable(INT32 playernum, INT32 skinnum);
 UINT32 R_GetSkinAvailabilities(void);
 INT32 R_SkinAvailable(const char *name);
+INT32 R_GetForcedSkin(INT32 playernum);
 void R_AddSkins(UINT16 wadnum, boolean mainfile);
 void R_PatchSkins(UINT16 wadnum, boolean mainfile);
 
