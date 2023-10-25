@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2021 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -60,9 +60,6 @@ extern visplane_t *floorplane;
 extern visplane_t *ceilingplane;
 
 // Visplane related.
-extern INT16 *lastopening, *openings;
-extern size_t maxopenings;
-
 extern INT16 floorclip[MAXVIDWIDTH], ceilingclip[MAXVIDWIDTH];
 extern fixed_t frontscale[MAXVIDWIDTH], yslopetab[MAXVIDHEIGHT*16];
 extern fixed_t cachedheight[MAXVIDHEIGHT];
@@ -83,9 +80,6 @@ visplane_t *R_FindPlane(fixed_t height, INT32 picnum, INT32 lightlevel, fixed_t 
 visplane_t *R_CheckPlane(visplane_t *pl, INT32 start, INT32 stop);
 void R_ExpandPlane(visplane_t *pl, INT32 start, INT32 stop);
 void R_PlaneBounds(visplane_t *plane);
-
-void R_CheckFlatLength(size_t size);
-boolean R_CheckPowersOfTwo(void);
 
 // Draws a single visplane.
 void R_DrawSinglePlane(visplane_t *pl);
