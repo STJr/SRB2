@@ -28,6 +28,7 @@
 #include "m_misc.h"
 #include "v_video.h" // video flags for CEchos
 #include "f_finale.h"
+#include "netcode/net_command.h"
 
 // CTF player names
 #define CTFTEAMCODE(pl) pl->ctfteam ? (pl->ctfteam == 1 ? "\x85" : "\x84") : ""
@@ -164,6 +165,62 @@ boolean P_CanPickupItem(player_t *player, boolean weapon)
 	return true;
 }
 
+boolean P_CanPickupEmblem(player_t *player, INT32 emblemID)
+{
+	emblem_t *emblem = NULL;
+
+	if (emblemID < 0 || emblemID >= numemblems)
+	{
+		// Invalid emblem ID, can't pickup.
+		return false;
+	}
+
+	emblem = &emblemlocations[emblemID];
+
+	if (demoplayback)
+	{
+		// Never collect emblems in replays.
+		return false;
+	}
+
+	if (player->bot && player->bot != BOT_MPAI)
+	{
+		// Your little lap-dog can't grab these for you.
+		return false;
+	}
+
+	if (emblem->type == ET_SKIN)
+	{
+		INT32 skinnum = M_EmblemSkinNum(emblem);
+
+		if (player->skin != skinnum)
+		{
+			// Incorrect skin to pick up this emblem.
+			return false;
+		}
+	}
+
+	return true;
+}
+
+boolean P_EmblemWasCollected(INT32 emblemID)
+{
+	if (emblemID < 0 || emblemID >= numemblems)
+	{
+		// Invalid emblem ID, can't pickup.
+		return true;
+	}
+
+	if (shareEmblems && !serverGamedata->collected[emblemID])
+	{
+		// It can be worth collecting again if we're sharing emblems
+		// and the server doesn't have it.
+		return false;
+	}
+
+	return clientGamedata->collected[emblemID];
+}
+
 //
 // P_DoNightsScore
 //
@@ -199,42 +256,19 @@ void P_DoNightsScore(player_t *player)
 		player->linktimer = nightslinktics;
 	}
 
-	if (player->linkcount < 10)
-	{
-		if (player->bonustime)
-		{
-			P_AddPlayerScore(player, player->linkcount*20);
-			P_SetMobjState(dummymo, dummymo->info->xdeathstate+player->linkcount-1);
-		}
-		else
-		{
-			P_AddPlayerScore(player, player->linkcount*10);
-			P_SetMobjState(dummymo, dummymo->info->spawnstate+player->linkcount-1);
-		}
-	}
-	else
-	{
-		if (player->bonustime)
-		{
-			P_AddPlayerScore(player, 200);
-			P_SetMobjState(dummymo, dummymo->info->xdeathstate+9);
-		}
-		else
-		{
-			P_AddPlayerScore(player, 100);
-			P_SetMobjState(dummymo, dummymo->info->spawnstate+9);
-		}
-	}
+	// Award 10-100 score, doubled if bonus time is active
+	P_AddPlayerScore(player, min(player->linkcount,10)*(player->bonustime ? 20 : 10));
+	P_SetMobjState(dummymo, (player->bonustime ? dummymo->info->xdeathstate : dummymo->info->spawnstate) + min(player->linkcount,10)-1);
 
-	// Hoops are the only things that should add to your drill meter
-	//player->drillmeter += TICRATE;
+	// Make objects slowly rise & scale up
 	dummymo->momz = FRACUNIT;
 	dummymo->fuse = 3*TICRATE;
-
-	// What?! NO, don't use the camera! Scale up instead!
-	//P_InstaThrust(dummymo, R_PointToAngle2(dummymo->x, dummymo->y, camera.x, camera.y), 3*FRACUNIT);
 	dummymo->scalespeed = FRACUNIT/25;
 	dummymo->destscale = 2*FRACUNIT;
+
+	// Add extra values used for color variety
+	dummymo->extravalue1 = player->linkcount-1;
+	dummymo->extravalue2 = ((player->linkcount-1 >= 300) ? (player->linkcount-1 >= 600) ? 2 : 1 : 0);
 }
 
 //
@@ -465,23 +499,20 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			if (special->type == MT_PTERABYTE && special->target == player->mo && special->extravalue1 == 1)
 				return; // Can't hurt a Pterabyte if it's trying to pick you up
 
-			if ((P_MobjFlip(toucher)*toucher->momz < 0) && (elementalpierce != 1))
+			if ((P_MobjFlip(toucher)*toucher->momz < 0) && (elementalpierce != 1) && (!(player->powers[pw_strong] & STR_HEAVY)))
 			{
-				if (!(player->charability2 == CA2_MELEE && player->panim == PA_ABILITY2))
+				fixed_t setmomz = -toucher->momz; // Store this, momz get changed by P_DoJump within P_DoBubbleBounce
+				
+				if (elementalpierce == 2) // Reset bubblewrap, part 1
+					P_DoBubbleBounce(player);
+				toucher->momz = setmomz;
+				if (elementalpierce == 2) // Reset bubblewrap, part 2
 				{
-					fixed_t setmomz = -toucher->momz; // Store this, momz get changed by P_DoJump within P_DoBubbleBounce
-
-					if (elementalpierce == 2) // Reset bubblewrap, part 1
-						P_DoBubbleBounce(player);
-					toucher->momz = setmomz;
-					if (elementalpierce == 2) // Reset bubblewrap, part 2
-					{
-						boolean underwater = toucher->eflags & MFE_UNDERWATER;
-
-						if (underwater)
-							toucher->momz /= 2;
-						toucher->momz -= (toucher->momz/(underwater ? 8 : 4)); // Cap the height!
-					}
+					boolean underwater = toucher->eflags & MFE_UNDERWATER;
+							
+					if (underwater)
+						toucher->momz /= 2;
+					toucher->momz -= (toucher->momz/(underwater ? 8 : 4)); // Cap the height!
 				}
 			}
 			if (player->pflags & PF_BOUNCING)
@@ -500,8 +531,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 					toucher->momx = 7*toucher->momx>>3;
 					toucher->momy = 7*toucher->momy>>3;
 				}
-				else if (player->dashmode >= DASHMODE_THRESHOLD && (player->charflags & (SF_DASHMODE|SF_MACHINE)) == (SF_DASHMODE|SF_MACHINE)
-					&& player->panim == PA_DASH)
+				else if ((player->powers[pw_strong] & STR_DASH) && player->panim == PA_DASH)
 					P_DoPlayerPain(player, special, special);
 			}
 			P_DamageMobj(special, toucher, toucher, 1, 0);
@@ -563,7 +593,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			special->momx = special->momy = special->momz = 0;
 			P_GivePlayerSpheres(player, 1);
 
-			if (special->type == MT_BLUESPHERE)
+			if (special->type == MT_BLUESPHERE || special->type == MT_FLINGBLUESPHERE)
 			{
 				special->destscale = ((player->powers[pw_carry] == CR_NIGHTSMODE) ? 4 : 2)*special->scale;
 				if (states[special->info->deathstate].tics > 0)
@@ -738,13 +768,70 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 		// Secret emblem thingy
 		case MT_EMBLEM:
 			{
-				if (demoplayback || (player->bot && player->bot != BOT_MPAI) || special->health <= 0 || special->health > MAXEMBLEMS)
-					return;
-				emblemlocations[special->health-1].collected = true;
+				const boolean toucherIsServer = ((player - players) == serverplayer);
+				const boolean consoleIsServer = (consoleplayer == serverplayer);
+				boolean prevCollected = false;
 
-				M_UpdateUnlockablesAndExtraEmblems();
-				G_SaveGameData();
-				break;
+				if ((special->flags2 & MF2_NIGHTSPULL)
+					&& (toucher == special->tracer))
+				{
+					// Since collecting may not remove the object,
+					// we need to manually stop it from chasing.
+					P_SetTarget(&special->tracer, NULL);
+					special->flags2 &= ~MF2_NIGHTSPULL;
+					special->movefactor = 0;
+					special->momx = special->momy = special->momz = 0;
+				}
+
+				if (!P_CanPickupEmblem(player, special->health - 1))
+				{
+					return;
+				}
+
+				prevCollected = P_EmblemWasCollected(special->health - 1);
+
+				if (toucherIsServer || shareEmblems)
+				{
+					serverGamedata->collected[special->health-1] = true;
+					M_SilentUpdateUnlockablesAndEmblems(serverGamedata);
+				}
+
+				if (P_IsLocalPlayer(player) || (consoleIsServer && shareEmblems))
+				{
+					clientGamedata->collected[special->health-1] = true;
+					M_UpdateUnlockablesAndExtraEmblems(clientGamedata);
+					G_SaveGameData(clientGamedata);
+				}
+
+				if (netgame)
+				{
+					// This always spawns the object to prevent mobjnum issues,
+					// but makes the effect invisible to whoever it doesn't matter to.
+					mobj_t *spark = P_SpawnMobjFromMobj(special, 0, 0, 0, MT_SPARK);
+
+					if (prevCollected == false && P_EmblemWasCollected(special->health - 1) == true)
+					{
+						// Play the sound if it was collected.
+						S_StartSound((shareEmblems ? NULL : special), special->info->deathsound);
+					}
+					else
+					{
+						// We didn't collect it, make it invisible to us.
+						spark->flags2 |= MF2_DONTDRAW;
+					}
+
+					return;
+				}
+				else
+				{
+					if (prevCollected == false && P_EmblemWasCollected(special->health - 1) == true)
+					{
+						// Disappear when collecting for local games.
+						break;
+					}
+
+					return;
+				}
 			}
 
 		// CTF Flags
@@ -1058,7 +1145,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 					if (!(mo2->type == MT_RING || mo2->type == MT_COIN
 						|| mo2->type == MT_BLUESPHERE || mo2->type == MT_BOMBSPHERE
 						|| mo2->type == MT_NIGHTSCHIP || mo2->type == MT_NIGHTSSTAR
-						|| ((mo2->type == MT_EMBLEM) && (mo2->reactiontime & GE_NIGHTSPULL))))
+						|| ((mo2->type == MT_EMBLEM) && (mo2->reactiontime & GE_NIGHTSPULL) && P_CanPickupEmblem(player, mo2->health - 1) && !P_EmblemWasCollected(mo2->health - 1))))
 						continue;
 
 					// Yay! The thing's in reach! Pull it in!
@@ -2149,7 +2236,7 @@ void P_CheckTimeLimit(void)
 		}
 
 		if (server)
-			SendNetXCmd(XD_EXITLEVEL, NULL, 0);
+			D_SendExitLevel(false);
 	}
 
 	//Optional tie-breaker for Match/CTF
@@ -2212,11 +2299,11 @@ void P_CheckTimeLimit(void)
 			}
 		}
 		if (server)
-			SendNetXCmd(XD_EXITLEVEL, NULL, 0);
+			D_SendExitLevel(false);
 	}
 
 	if (server)
-		SendNetXCmd(XD_EXITLEVEL, NULL, 0);
+		D_SendExitLevel(false);
 }
 
 /** Checks if a player's score is over the pointlimit and the round should end.
@@ -2245,7 +2332,7 @@ void P_CheckPointLimit(void)
 		if ((UINT32)cv_pointlimit.value <= redscore || (UINT32)cv_pointlimit.value <= bluescore)
 		{
 			if (server)
-				SendNetXCmd(XD_EXITLEVEL, NULL, 0);
+				D_SendExitLevel(false);
 		}
 	}
 	else
@@ -2258,7 +2345,7 @@ void P_CheckPointLimit(void)
 			if ((UINT32)cv_pointlimit.value <= players[i].score)
 			{
 				if (server)
-					SendNetXCmd(XD_EXITLEVEL, NULL, 0);
+					D_SendExitLevel(false);
 				return;
 			}
 		}
@@ -2302,7 +2389,7 @@ void P_CheckSurvivors(void)
 		{
 			CONS_Printf(M_GetText("The IT player has left the game.\n"));
 			if (server)
-				SendNetXCmd(XD_EXITLEVEL, NULL, 0);
+				D_SendExitLevel(false);
 
 			return;
 		}
@@ -2322,7 +2409,7 @@ void P_CheckSurvivors(void)
 			{
 				CONS_Printf(M_GetText("All players have been tagged!\n"));
 				if (server)
-					SendNetXCmd(XD_EXITLEVEL, NULL, 0);
+					D_SendExitLevel(false);
 			}
 
 			return;
@@ -2334,7 +2421,7 @@ void P_CheckSurvivors(void)
 		{
 			CONS_Printf(M_GetText("There are no players able to become IT.\n"));
 			if (server)
-				SendNetXCmd(XD_EXITLEVEL, NULL, 0);
+				D_SendExitLevel(false);
 		}
 
 		return;
@@ -2346,7 +2433,7 @@ void P_CheckSurvivors(void)
 	{
 		CONS_Printf(M_GetText("All players have been tagged!\n"));
 		if (server)
-			SendNetXCmd(XD_EXITLEVEL, NULL, 0);
+			D_SendExitLevel(false);
 	}
 }
 
@@ -2544,7 +2631,7 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 			}
 		}
 
-		target->color = target->player->skincolor;
+		target->color = P_GetPlayerColor(target->player);
 		target->colorized = false;
 		G_GhostAddColor(GHC_NORMAL);
 
@@ -2583,7 +2670,7 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 				if (!(netgame || multiplayer || demoplayback || demorecording || metalrecording || modeattacking) && numgameovers < maxgameovers)
 				{
 					numgameovers++;
-					if ((!modifiedgame || savemoddata) && cursaveslot > 0)
+					if (!usedCheats && cursaveslot > 0)
 						G_SaveGameOver((UINT32)cursaveslot, (target->player->continues <= 0));
 				}
 			}
@@ -3031,7 +3118,7 @@ static void P_NiGHTSDamage(mobj_t *target, mobj_t *source)
 		P_SetPlayerMobjState(target, S_PLAY_NIGHTS_STUN);
 		S_StartSound(target, sfx_nghurt);
 
-		player->mo->rollangle = 0;
+		player->mo->spriteroll = 0;
 
 		if (oldnightstime > 10*TICRATE
 			&& player->nightstime < 10*TICRATE)
@@ -3213,7 +3300,7 @@ static boolean P_PlayerHitsPlayer(mobj_t *target, mobj_t *inflictor, mobj_t *sou
 		return false;
 
 	// Add pity.
-	if (!player->powers[pw_flashing] && !player->powers[pw_invulnerability] && !player->powers[pw_super]
+	if (!player->powers[pw_flashing] && !player->powers[pw_invulnerability] && !player->powers[pw_super] && !(player->powers[pw_strong] & STR_GUARD)
 	&& source->player->score > player->score)
 		player->pity++;
 
@@ -3237,7 +3324,7 @@ static void P_KillPlayer(player_t *player, mobj_t *source, INT32 damage)
 
 	// Get rid of shield
 	player->powers[pw_shield] = SH_NONE;
-	player->mo->color = player->skincolor;
+	player->mo->color = P_GetPlayerColor(player);
 
 	// Get rid of emeralds
 	player->powers[pw_emeralds] = 0;
@@ -3354,7 +3441,7 @@ void P_RemoveShield(player_t *player)
 	{ // Second layer shields
 		if (((player->powers[pw_shield] & SH_STACK) == SH_FIREFLOWER) && !(player->powers[pw_super] || (mariomode && player->powers[pw_invulnerability])))
 		{
-			player->mo->color = player->skincolor;
+			player->mo->color = P_GetPlayerColor(player);
 			G_GhostAddColor(GHC_NORMAL);
 		}
 		player->powers[pw_shield] = SH_NONE;
@@ -3546,6 +3633,8 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 		UINT8 shouldForce = LUA_HookShouldDamage(target, inflictor, source, damage, damagetype);
 		if (P_MobjWasRemoved(target))
 			return (shouldForce == 1); // mobj was removed
+		if (P_MobjWasRemoved(source))
+			source = NULL;
 		if (shouldForce == 1)
 			force = true;
 		else if (shouldForce == 2)
@@ -3683,7 +3772,7 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 			}
 			return false;
 		}
-		else if (player->powers[pw_invulnerability] || player->powers[pw_flashing] || player->powers[pw_super]) // ignore bouncing & such in invulnerability
+		else if (player->powers[pw_invulnerability] || player->powers[pw_flashing] || player->powers[pw_super] || (player->powers[pw_strong] & STR_GUARD)) // ignore bouncing & such in invulnerability
 		{
 			if (force
 			|| (inflictor && inflictor->flags & MF_MISSILE && inflictor->flags2 & MF2_SUPERFIRE)) // Super Sonic is stunned!
@@ -3762,6 +3851,9 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 		P_SetMobjState(target, target->info->meleestate); // go to pinch pain state
 	else
 		P_SetMobjState(target, target->info->painstate);
+
+	if (P_MobjWasRemoved(target))
+		return false;
 
 	if (target->type == MT_HIVEELEMENTAL)
 		target->extravalue1 += 3;

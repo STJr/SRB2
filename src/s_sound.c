@@ -289,8 +289,8 @@ void S_RegisterSoundStuff(void)
 	CV_RegisterVar(&cv_miditimiditypath);
 #endif
 
-	COM_AddCommand("tunes", Command_Tunes_f);
-	COM_AddCommand("restartaudio", Command_RestartAudio_f);
+	COM_AddCommand("tunes", Command_Tunes_f, COM_LUA);
+	COM_AddCommand("restartaudio", Command_RestartAudio_f, COM_LUA);
 }
 
 static void SetChannelsNum(void)
@@ -1692,6 +1692,7 @@ UINT8 soundtestpage = 1;
 //
 boolean S_PrepareSoundTest(void)
 {
+	gamedata_t *data = clientGamedata;
 	musicdef_t *def;
 	INT32 pos = numsoundtestdefs = 0;
 
@@ -1717,9 +1718,9 @@ boolean S_PrepareSoundTest(void)
 		if (!(def->soundtestpage & soundtestpage))
 			continue;
 		soundtestdefs[pos++] = def;
-		if (def->soundtestcond > 0 && !(mapvisited[def->soundtestcond-1] & MV_BEATEN))
+		if (def->soundtestcond > 0 && !(data->mapvisited[def->soundtestcond-1] & MV_BEATEN))
 			continue;
-		if (def->soundtestcond < 0 && !M_Achieved(-1-def->soundtestcond))
+		if (def->soundtestcond < 0 && !M_Achieved(-1-def->soundtestcond, data))
 			continue;
 		def->allowed = true;
 	}
