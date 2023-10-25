@@ -109,6 +109,17 @@ extern boolean (*I_NetCanSend)(void);
 */
 extern void (*I_NetFreeNodenum)(INT32 nodenum);
 
+/**
+	\brief	split a string into address and port
+
+	\param	address	string to split
+
+	\param	port	double pointer to hold port component (optional)
+
+	\return	address component
+*/
+extern char *I_NetSplitAddress(char *address, char **port);
+
 /**	\brief	open a connection with specified address
 
 	\param	address	address to connect to

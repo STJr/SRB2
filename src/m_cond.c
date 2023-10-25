@@ -21,6 +21,9 @@
 #include "r_skins.h" // numskins
 #include "r_draw.h" // R_GetColorByName
 
+gamedata_t *clientGamedata; // Our gamedata
+gamedata_t *serverGamedata; // Server's gamedata
+
 // Map triggers for linedef executors
 // 32 triggers, one bit each
 UINT32 unlocktriggers;
@@ -41,12 +44,76 @@ unlockable_t unlockables[MAXUNLOCKABLES];
 INT32 numemblems = 0;
 INT32 numextraemblems = 0;
 
+// Temporary holding place for nights data for the current map
+nightsdata_t ntemprecords[MAXPLAYERS];
+
+// Create a new gamedata_t, for start-up
+gamedata_t *M_NewGameDataStruct(void)
+{
+	gamedata_t *data = Z_Calloc(sizeof (*data), PU_STATIC, NULL);
+	M_ClearSecrets(data);
+	G_ClearRecords(data);
+	return data;
+}
+
+void M_CopyGameData(gamedata_t *dest, gamedata_t *src)
+{
+	INT32 i, j;
+
+	M_ClearSecrets(dest);
+	G_ClearRecords(dest);
+
+	dest->loaded = src->loaded;
+	dest->totalplaytime = src->totalplaytime;
+
+	dest->timesBeaten = src->timesBeaten;
+	dest->timesBeatenWithEmeralds = src->timesBeatenWithEmeralds;
+	dest->timesBeatenUltimate = src->timesBeatenUltimate;
+
+	memcpy(dest->achieved, src->achieved, sizeof(dest->achieved));
+	memcpy(dest->collected, src->collected, sizeof(dest->collected));
+	memcpy(dest->extraCollected, src->extraCollected, sizeof(dest->extraCollected));
+	memcpy(dest->unlocked, src->unlocked, sizeof(dest->unlocked));
+
+	memcpy(dest->mapvisited, src->mapvisited, sizeof(dest->mapvisited));
+
+	// Main records
+	for (i = 0; i < NUMMAPS; ++i)
+	{
+		if (!src->mainrecords[i])
+			continue;
+
+		G_AllocMainRecordData((INT16)i, dest);
+		dest->mainrecords[i]->score = src->mainrecords[i]->score;
+		dest->mainrecords[i]->time = src->mainrecords[i]->time;
+		dest->mainrecords[i]->rings = src->mainrecords[i]->rings;
+	}
+
+	// Nights records
+	for (i = 0; i < NUMMAPS; ++i)
+	{
+		if (!src->nightsrecords[i] || !src->nightsrecords[i]->nummares)
+			continue;
+
+		G_AllocNightsRecordData((INT16)i, dest);
+
+		for (j = 0; j < (src->nightsrecords[i]->nummares + 1); j++)
+		{
+			dest->nightsrecords[i]->score[j] = src->nightsrecords[i]->score[j];
+			dest->nightsrecords[i]->grade[j] = src->nightsrecords[i]->grade[j];
+			dest->nightsrecords[i]->time[j] = src->nightsrecords[i]->time[j];
+		}
+
+		dest->nightsrecords[i]->nummares = src->nightsrecords[i]->nummares;
+	}
+}
+
 void M_AddRawCondition(UINT8 set, UINT8 id, conditiontype_t c, INT32 r, INT16 x1, INT16 x2)
 {
 	condition_t *cond;
 	UINT32 num, wnum;
 
-	I_Assert(set && set <= MAXCONDITIONSETS);
+	I_Assert(set < MAXCONDITIONSETS);
 
 	wnum = conditionSets[set - 1].numconditions;
 	num = ++conditionSets[set - 1].numconditions;
@@ -70,89 +137,90 @@ void M_ClearConditionSet(UINT8 set)
 		conditionSets[set - 1].condition = NULL;
 		conditionSets[set - 1].numconditions = 0;
 	}
-	conditionSets[set - 1].achieved = false;
+	clientGamedata->achieved[set - 1] = serverGamedata->achieved[set - 1] = false;
 }
 
 // Clear ALL secrets.
-void M_ClearSecrets(void)
+void M_ClearSecrets(gamedata_t *data)
 {
 	INT32 i;
 
-	memset(mapvisited, 0, sizeof(mapvisited));
+	memset(data->mapvisited, 0, sizeof(data->mapvisited));
 
 	for (i = 0; i < MAXEMBLEMS; ++i)
-		emblemlocations[i].collected = false;
+		data->collected[i] = false;
 	for (i = 0; i < MAXEXTRAEMBLEMS; ++i)
-		extraemblems[i].collected = false;
+		data->extraCollected[i] = false;
 	for (i = 0; i < MAXUNLOCKABLES; ++i)
-		unlockables[i].unlocked = false;
+		data->unlocked[i] = false;
 	for (i = 0; i < MAXCONDITIONSETS; ++i)
-		conditionSets[i].achieved = false;
+		data->achieved[i] = false;
 
-	timesBeaten = timesBeatenWithEmeralds = timesBeatenUltimate = 0;
+	data->timesBeaten = data->timesBeatenWithEmeralds = data->timesBeatenUltimate = 0;
 
 	// Re-unlock any always unlocked things
-	M_SilentUpdateUnlockablesAndEmblems();
+	M_SilentUpdateUnlockablesAndEmblems(data);
+	M_SilentUpdateSkinAvailabilites();
 }
 
 // ----------------------
 // Condition set checking
 // ----------------------
-static UINT8 M_CheckCondition(condition_t *cn)
+static UINT8 M_CheckCondition(condition_t *cn, gamedata_t *data)
 {
 	switch (cn->type)
 	{
 		case UC_PLAYTIME: // Requires total playing time >= x
-			return (totalplaytime >= (unsigned)cn->requirement);
+			return (data->totalplaytime >= (unsigned)cn->requirement);
 		case UC_GAMECLEAR: // Requires game beaten >= x times
-			return (timesBeaten >= (unsigned)cn->requirement);
+			return (data->timesBeaten >= (unsigned)cn->requirement);
 		case UC_ALLEMERALDS: // Requires game beaten with all 7 emeralds >= x times
-			return (timesBeatenWithEmeralds >= (unsigned)cn->requirement);
+			return (data->timesBeatenWithEmeralds >= (unsigned)cn->requirement);
 		case UC_ULTIMATECLEAR: // Requires game beaten on ultimate >= x times (in other words, never)
-			return (timesBeatenUltimate >= (unsigned)cn->requirement);
+			return (data->timesBeatenUltimate >= (unsigned)cn->requirement);
 		case UC_OVERALLSCORE: // Requires overall score >= x
-			return (M_GotHighEnoughScore(cn->requirement));
+			return (M_GotHighEnoughScore(cn->requirement, data));
 		case UC_OVERALLTIME: // Requires overall time <= x
-			return (M_GotLowEnoughTime(cn->requirement));
+			return (M_GotLowEnoughTime(cn->requirement, data));
 		case UC_OVERALLRINGS: // Requires overall rings >= x
-			return (M_GotHighEnoughRings(cn->requirement));
+			return (M_GotHighEnoughRings(cn->requirement, data));
 		case UC_MAPVISITED: // Requires map x to be visited
-			return ((mapvisited[cn->requirement - 1] & MV_VISITED) == MV_VISITED);
+			return ((data->mapvisited[cn->requirement - 1] & MV_VISITED) == MV_VISITED);
 		case UC_MAPBEATEN: // Requires map x to be beaten
-			return ((mapvisited[cn->requirement - 1] & MV_BEATEN) == MV_BEATEN);
+			return ((data->mapvisited[cn->requirement - 1] & MV_BEATEN) == MV_BEATEN);
 		case UC_MAPALLEMERALDS: // Requires map x to be beaten with all emeralds in possession
-			return ((mapvisited[cn->requirement - 1] & MV_ALLEMERALDS) == MV_ALLEMERALDS);
+			return ((data->mapvisited[cn->requirement - 1] & MV_ALLEMERALDS) == MV_ALLEMERALDS);
 		case UC_MAPULTIMATE: // Requires map x to be beaten on ultimate
-			return ((mapvisited[cn->requirement - 1] & MV_ULTIMATE) == MV_ULTIMATE);
+			return ((data->mapvisited[cn->requirement - 1] & MV_ULTIMATE) == MV_ULTIMATE);
 		case UC_MAPPERFECT: // Requires map x to be beaten with a perfect bonus
-			return ((mapvisited[cn->requirement - 1] & MV_PERFECT) == MV_PERFECT);
+			return ((data->mapvisited[cn->requirement - 1] & MV_PERFECT) == MV_PERFECT);
 		case UC_MAPSCORE: // Requires score on map >= x
-			return (G_GetBestScore(cn->extrainfo1) >= (unsigned)cn->requirement);
+			return (G_GetBestScore(cn->extrainfo1, data) >= (unsigned)cn->requirement);
 		case UC_MAPTIME: // Requires time on map <= x
-			return (G_GetBestTime(cn->extrainfo1) <= (unsigned)cn->requirement);
+			return (G_GetBestTime(cn->extrainfo1, data) <= (unsigned)cn->requirement);
 		case UC_MAPRINGS: // Requires rings on map >= x
-			return (G_GetBestRings(cn->extrainfo1) >= cn->requirement);
+			return (G_GetBestRings(cn->extrainfo1, data) >= cn->requirement);
 		case UC_NIGHTSSCORE:
-			return (G_GetBestNightsScore(cn->extrainfo1, (UINT8)cn->extrainfo2) >= (unsigned)cn->requirement);
+			return (G_GetBestNightsScore(cn->extrainfo1, (UINT8)cn->extrainfo2, data) >= (unsigned)cn->requirement);
 		case UC_NIGHTSTIME:
-			return (G_GetBestNightsTime(cn->extrainfo1, (UINT8)cn->extrainfo2) <= (unsigned)cn->requirement);
+			return (G_GetBestNightsTime(cn->extrainfo1, (UINT8)cn->extrainfo2, data) <= (unsigned)cn->requirement);
 		case UC_NIGHTSGRADE:
-			return (G_GetBestNightsGrade(cn->extrainfo1, (UINT8)cn->extrainfo2) >= cn->requirement);
+			return (G_GetBestNightsGrade(cn->extrainfo1, (UINT8)cn->extrainfo2, data) >= cn->requirement);
 		case UC_TRIGGER: // requires map trigger set
 			return !!(unlocktriggers & (1 << cn->requirement));
 		case UC_TOTALEMBLEMS: // Requires number of emblems >= x
-			return (M_GotEnoughEmblems(cn->requirement));
+			return (M_GotEnoughEmblems(cn->requirement, data));
 		case UC_EMBLEM: // Requires emblem x to be obtained
-			return emblemlocations[cn->requirement-1].collected;
+			return data->collected[cn->requirement-1];
 		case UC_EXTRAEMBLEM: // Requires extra emblem x to be obtained
-			return extraemblems[cn->requirement-1].collected;
+			return data->extraCollected[cn->requirement-1];
 		case UC_CONDITIONSET: // requires condition set x to already be achieved
-			return M_Achieved(cn->requirement-1);
+			return M_Achieved(cn->requirement-1, data);
 	}
 	return false;
 }
 
-static UINT8 M_CheckConditionSet(conditionset_t *c)
+static UINT8 M_CheckConditionSet(conditionset_t *c, gamedata_t *data)
 {
 	UINT32 i;
 	UINT32 lastID = 0;
@@ -173,13 +241,13 @@ static UINT8 M_CheckConditionSet(conditionset_t *c)
 			continue;
 
 		lastID = cn->id;
-		achievedSoFar = M_CheckCondition(cn);
+		achievedSoFar = M_CheckCondition(cn, data);
 	}
 
 	return achievedSoFar;
 }
 
-void M_CheckUnlockConditions(void)
+void M_CheckUnlockConditions(gamedata_t *data)
 {
 	INT32 i;
 	conditionset_t *c;
@@ -187,30 +255,27 @@ void M_CheckUnlockConditions(void)
 	for (i = 0; i < MAXCONDITIONSETS; ++i)
 	{
 		c = &conditionSets[i];
-		if (!c->numconditions || c->achieved)
+		if (!c->numconditions || data->achieved[i])
 			continue;
 
-		c->achieved = (M_CheckConditionSet(c));
+		data->achieved[i] = (M_CheckConditionSet(c, data));
 	}
 }
 
-UINT8 M_UpdateUnlockablesAndExtraEmblems(void)
+UINT8 M_UpdateUnlockablesAndExtraEmblems(gamedata_t *data)
 {
 	INT32 i;
 	char cechoText[992] = "";
 	UINT8 cechoLines = 0;
 
-	if (modifiedgame && !savemoddata)
-		return false;
-
-	M_CheckUnlockConditions();
+	M_CheckUnlockConditions(data);
 
 	// Go through extra emblems
 	for (i = 0; i < numextraemblems; ++i)
 	{
-		if (extraemblems[i].collected || !extraemblems[i].conditionset)
+		if (data->extraCollected[i] || !extraemblems[i].conditionset)
 			continue;
-		if ((extraemblems[i].collected = M_Achieved(extraemblems[i].conditionset - 1)) != false)
+		if ((data->extraCollected[i] = M_Achieved(extraemblems[i].conditionset - 1, data)) != false)
 		{
 			strcat(cechoText, va(M_GetText("Got \"%s\" emblem!\\"), extraemblems[i].name));
 			++cechoLines;
@@ -220,14 +285,14 @@ UINT8 M_UpdateUnlockablesAndExtraEmblems(void)
 	// Fun part: if any of those unlocked we need to go through the
 	// unlock conditions AGAIN just in case an emblem reward was reached
 	if (cechoLines)
-		M_CheckUnlockConditions();
+		M_CheckUnlockConditions(data);
 
 	// Go through unlockables
 	for (i = 0; i < MAXUNLOCKABLES; ++i)
 	{
-		if (unlockables[i].unlocked || !unlockables[i].conditionset)
+		if (data->unlocked[i] || !unlockables[i].conditionset)
 			continue;
-		if ((unlockables[i].unlocked = M_Achieved(unlockables[i].conditionset - 1)) != false)
+		if ((data->unlocked[i] = M_Achieved(unlockables[i].conditionset - 1, data)) != false)
 		{
 			if (unlockables[i].nocecho)
 				continue;
@@ -251,45 +316,50 @@ UINT8 M_UpdateUnlockablesAndExtraEmblems(void)
 		HU_DoCEcho(slashed);
 		return true;
 	}
+
 	return false;
 }
 
 // Used when loading gamedata to make sure all unlocks are synched with conditions
-void M_SilentUpdateUnlockablesAndEmblems(void)
+void M_SilentUpdateUnlockablesAndEmblems(gamedata_t *data)
 {
 	INT32 i;
 	boolean checkAgain = false;
 
 	// Just in case they aren't to sync
-	M_CheckUnlockConditions();
-	M_CheckLevelEmblems();
+	M_CheckUnlockConditions(data);
+	M_CheckLevelEmblems(data);
+	M_CompletionEmblems(data);
 
 	// Go through extra emblems
 	for (i = 0; i < numextraemblems; ++i)
 	{
-		if (extraemblems[i].collected || !extraemblems[i].conditionset)
+		if (data->extraCollected[i] || !extraemblems[i].conditionset)
 			continue;
-		if ((extraemblems[i].collected = M_Achieved(extraemblems[i].conditionset - 1)) != false)
+		if ((data->extraCollected[i] = M_Achieved(extraemblems[i].conditionset - 1, data)) != false)
 			checkAgain = true;
 	}
 
 	// check again if extra emblems unlocked, blah blah, etc
 	if (checkAgain)
-		M_CheckUnlockConditions();
+		M_CheckUnlockConditions(data);
 
 	// Go through unlockables
 	for (i = 0; i < MAXUNLOCKABLES; ++i)
 	{
-		if (unlockables[i].unlocked || !unlockables[i].conditionset)
+		if (data->unlocked[i] || !unlockables[i].conditionset)
 			continue;
-		unlockables[i].unlocked = M_Achieved(unlockables[i].conditionset - 1);
+		data->unlocked[i] = M_Achieved(unlockables[i].conditionset - 1, data);
 	}
+}
 
+void M_SilentUpdateSkinAvailabilites(void)
+{
 	players[consoleplayer].availabilities = players[1].availabilities = R_GetSkinAvailabilities(); // players[1] is supposed to be for 2p
 }
 
 // Emblem unlocking shit
-UINT8 M_CheckLevelEmblems(void)
+UINT8 M_CheckLevelEmblems(gamedata_t *data)
 {
 	INT32 i;
 	INT32 valToReach;
@@ -300,7 +370,7 @@ UINT8 M_CheckLevelEmblems(void)
 	// Update Score, Time, Rings emblems
 	for (i = 0; i < numemblems; ++i)
 	{
-		if (emblemlocations[i].type <= ET_SKIN || emblemlocations[i].type == ET_MAP || emblemlocations[i].collected)
+		if (emblemlocations[i].type <= ET_SKIN || emblemlocations[i].type == ET_MAP || data->collected[i])
 			continue;
 
 		levelnum = emblemlocations[i].level;
@@ -309,32 +379,32 @@ UINT8 M_CheckLevelEmblems(void)
 		switch (emblemlocations[i].type)
 		{
 			case ET_SCORE: // Requires score on map >= x
-				res = (G_GetBestScore(levelnum) >= (unsigned)valToReach);
+				res = (G_GetBestScore(levelnum, data) >= (unsigned)valToReach);
 				break;
 			case ET_TIME: // Requires time on map <= x
-				res = (G_GetBestTime(levelnum) <= (unsigned)valToReach);
+				res = (G_GetBestTime(levelnum, data) <= (unsigned)valToReach);
 				break;
 			case ET_RINGS: // Requires rings on map >= x
-				res = (G_GetBestRings(levelnum) >= valToReach);
+				res = (G_GetBestRings(levelnum, data) >= valToReach);
 				break;
 			case ET_NGRADE: // Requires NiGHTS grade on map >= x
-				res = (G_GetBestNightsGrade(levelnum, 0) >= valToReach);
+				res = (G_GetBestNightsGrade(levelnum, 0, data) >= valToReach);
 				break;
 			case ET_NTIME: // Requires NiGHTS time on map <= x
-				res = (G_GetBestNightsTime(levelnum, 0) <= (unsigned)valToReach);
+				res = (G_GetBestNightsTime(levelnum, 0, data) <= (unsigned)valToReach);
 				break;
 			default: // unreachable but shuts the compiler up.
 				continue;
 		}
 
-		emblemlocations[i].collected = res;
+		data->collected[i] = res;
 		if (res)
 			++somethingUnlocked;
 	}
 	return somethingUnlocked;
 }
 
-UINT8 M_CompletionEmblems(void) // Bah! Duplication sucks, but it's for a separate print when awarding emblems and it's sorta different enough.
+UINT8 M_CompletionEmblems(gamedata_t *data) // Bah! Duplication sucks, but it's for a separate print when awarding emblems and it's sorta different enough.
 {
 	INT32 i;
 	INT32 embtype;
@@ -345,7 +415,7 @@ UINT8 M_CompletionEmblems(void) // Bah! Duplication sucks, but it's for a separa
 
 	for (i = 0; i < numemblems; ++i)
 	{
-		if (emblemlocations[i].type != ET_MAP || emblemlocations[i].collected)
+		if (emblemlocations[i].type != ET_MAP || data->collected[i])
 			continue;
 
 		levelnum = emblemlocations[i].level;
@@ -361,9 +431,9 @@ UINT8 M_CompletionEmblems(void) // Bah! Duplication sucks, but it's for a separa
 		if (embtype & ME_PERFECT)
 			flags |= MV_PERFECT;
 
-		res = ((mapvisited[levelnum - 1] & flags) == flags);
+		res = ((data->mapvisited[levelnum - 1] & flags) == flags);
 
-		emblemlocations[i].collected = res;
+		data->collected[i] = res;
 		if (res)
 			++somethingUnlocked;
 	}
@@ -373,48 +443,105 @@ UINT8 M_CompletionEmblems(void) // Bah! Duplication sucks, but it's for a separa
 // -------------------
 // Quick unlock checks
 // -------------------
-UINT8 M_AnySecretUnlocked(void)
+UINT8 M_AnySecretUnlocked(gamedata_t *data)
 {
 	INT32 i;
 	for (i = 0; i < MAXUNLOCKABLES; ++i)
 	{
-		if (!unlockables[i].nocecho && unlockables[i].unlocked)
+		if (!unlockables[i].nocecho && data->unlocked[i])
 			return true;
 	}
 	return false;
 }
 
-UINT8 M_SecretUnlocked(INT32 type)
+UINT8 M_SecretUnlocked(INT32 type, gamedata_t *data)
 {
 	INT32 i;
 	for (i = 0; i < MAXUNLOCKABLES; ++i)
 	{
-		if (unlockables[i].type == type && unlockables[i].unlocked)
+		if (unlockables[i].type == type && data->unlocked[i])
 			return true;
 	}
 	return false;
 }
 
-UINT8 M_MapLocked(INT32 mapnum)
+UINT8 M_MapLocked(INT32 mapnum, gamedata_t *data)
 {
-	if (!mapheaderinfo[mapnum-1] || mapheaderinfo[mapnum-1]->unlockrequired < 0)
+	if (dedicated)
+	{
+		// If you're in a dedicated server, every level is unlocked.
+		// Yes, technically this means you can view any level by
+		// running a dedicated server and joining it yourself, but
+		// that's better than making dedicated server's lives hell.
 		return false;
-	if (!unlockables[mapheaderinfo[mapnum-1]->unlockrequired].unlocked)
+	}
+
+	if (!mapheaderinfo[mapnum-1] || mapheaderinfo[mapnum-1]->unlockrequired < 0)
+	{
+		return false;
+	}
+
+	if (!data->unlocked[mapheaderinfo[mapnum-1]->unlockrequired])
+	{
 		return true;
+	}
+
 	return false;
 }
 
-INT32 M_CountEmblems(void)
+UINT8 M_CampaignWarpIsCheat(INT32 gt, INT32 mapnum, gamedata_t *data)
+{
+	if (M_MapLocked(mapnum, data) == true)
+	{
+		// Warping to locked maps is definitely always a cheat
+		return true;
+	}
+
+	if ((gametypedefaultrules[gt] & GTR_CAMPAIGN) == 0)
+	{
+		// Not a campaign, do whatever you want.
+		return false;
+	}
+
+	if (G_IsSpecialStage(mapnum))
+	{
+		// Warping to special stages is a cheat
+		return true;
+	}
+
+	if (mapheaderinfo[mapnum-1]->menuflags & LF2_HIDEINMENU)
+	{
+		// You're never allowed to warp to this level.
+		return true;
+	}
+
+	if (mapheaderinfo[mapnum-1]->menuflags & LF2_NOVISITNEEDED)
+	{
+		// You're always allowed to warp to this level.
+		return false;
+	}
+
+	if (mapnum == spstage_start)
+	{
+		// Warping to the first level is never a cheat
+		return false;
+	}
+
+	// It's only a cheat if you've never been there.
+	return (!(data->mapvisited[mapnum-1]));
+}
+
+INT32 M_CountEmblems(gamedata_t *data)
 {
 	INT32 found = 0, i;
 	for (i = 0; i < numemblems; ++i)
 	{
-		if (emblemlocations[i].collected)
+		if (data->collected[i])
 			found++;
 	}
 	for (i = 0; i < numextraemblems; ++i)
 	{
-		if (extraemblems[i].collected)
+		if (data->extraCollected[i])
 			found++;
 	}
 	return found;
@@ -426,23 +553,23 @@ INT32 M_CountEmblems(void)
 
 // Theoretically faster than using M_CountEmblems()
 // Stops when it reaches the target number of emblems.
-UINT8 M_GotEnoughEmblems(INT32 number)
+UINT8 M_GotEnoughEmblems(INT32 number, gamedata_t *data)
 {
 	INT32 i, gottenemblems = 0;
 	for (i = 0; i < numemblems; ++i)
 	{
-		if (emblemlocations[i].collected)
+		if (data->collected[i])
 			if (++gottenemblems >= number) return true;
 	}
 	for (i = 0; i < numextraemblems; ++i)
 	{
-		if (extraemblems[i].collected)
+		if (data->extraCollected[i])
 			if (++gottenemblems >= number) return true;
 	}
 	return false;
 }
 
-UINT8 M_GotHighEnoughScore(INT32 tscore)
+UINT8 M_GotHighEnoughScore(INT32 tscore, gamedata_t *data)
 {
 	INT32 mscore = 0;
 	INT32 i;
@@ -451,16 +578,16 @@ UINT8 M_GotHighEnoughScore(INT32 tscore)
 	{
 		if (!mapheaderinfo[i] || !(mapheaderinfo[i]->menuflags & LF2_RECORDATTACK))
 			continue;
-		if (!mainrecords[i])
+		if (!data->mainrecords[i])
 			continue;
 
-		if ((mscore += mainrecords[i]->score) > tscore)
+		if ((mscore += data->mainrecords[i]->score) > tscore)
 			return true;
 	}
 	return false;
 }
 
-UINT8 M_GotLowEnoughTime(INT32 tictime)
+UINT8 M_GotLowEnoughTime(INT32 tictime, gamedata_t *data)
 {
 	INT32 curtics = 0;
 	INT32 i;
@@ -470,15 +597,15 @@ UINT8 M_GotLowEnoughTime(INT32 tictime)
 		if (!mapheaderinfo[i] || !(mapheaderinfo[i]->menuflags & LF2_RECORDATTACK))
 			continue;
 
-		if (!mainrecords[i] || !mainrecords[i]->time)
+		if (!data->mainrecords[i] || !data->mainrecords[i]->time)
 			return false;
-		else if ((curtics += mainrecords[i]->time) > tictime)
+		else if ((curtics += data->mainrecords[i]->time) > tictime)
 			return false;
 	}
 	return true;
 }
 
-UINT8 M_GotHighEnoughRings(INT32 trings)
+UINT8 M_GotHighEnoughRings(INT32 trings, gamedata_t *data)
 {
 	INT32 mrings = 0;
 	INT32 i;
@@ -487,10 +614,10 @@ UINT8 M_GotHighEnoughRings(INT32 trings)
 	{
 		if (!mapheaderinfo[i] || !(mapheaderinfo[i]->menuflags & LF2_RECORDATTACK))
 			continue;
-		if (!mainrecords[i])
+		if (!data->mainrecords[i])
 			continue;
 
-		if ((mrings += mainrecords[i]->rings) > trings)
+		if ((mrings += data->mainrecords[i]->rings) > trings)
 			return true;
 	}
 	return false;

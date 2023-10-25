@@ -357,7 +357,7 @@ static int lib_cvRegisterVar(lua_State *L)
 			if (lua_islightuserdata(L, 4))
 			{
 				CV_PossibleValue_t *pv = lua_touserdata(L, 4);
-				if (pv == CV_OnOff || pv == CV_YesNo || pv == CV_Unsigned || pv == CV_Natural)
+				if (pv == CV_OnOff || pv == CV_YesNo || pv == CV_Unsigned || pv == CV_Natural || pv == CV_TrueFalse)
 					cvar->PossibleValue = pv;
 				else
 					FIELDERROR("PossibleValue", "CV_PossibleValue_t expected, got unrecognised pointer")
@@ -566,27 +566,59 @@ static luaL_Reg lib[] = {
 	{NULL, NULL}
 };
 
+enum cvar_e
+{
+	cvar_name,
+	cvar_defaultvalue,
+	cvar_flags,
+	cvar_value,
+	cvar_string,
+	cvar_changed,
+};
+
+static const char *const cvar_opt[] = {
+	"name",
+	"defaultvalue",
+	"flags",
+	"value",
+	"string",
+	"changed",
+	NULL,
+};
+
+static int cvar_fields_ref = LUA_NOREF;
+
 static int cvar_get(lua_State *L)
 {
 	consvar_t *cvar = *(consvar_t **)luaL_checkudata(L, 1, META_CVAR);
-	const char *field = luaL_checkstring(L, 2);
+	enum cvar_e field = Lua_optoption(L, 2, -1, cvar_fields_ref);
 
-	if(fastcmp(field,"name"))
+	switch (field)
+	{
+	case cvar_name:
 		lua_pushstring(L, cvar->name);
-	else if(fastcmp(field,"defaultvalue"))
+		break;
+	case cvar_defaultvalue:
 		lua_pushstring(L, cvar->defaultvalue);
-	else if(fastcmp(field,"flags"))
+		break;
+	case cvar_flags:
 		lua_pushinteger(L, cvar->flags);
-	else if(fastcmp(field,"value"))
+		break;
+	case cvar_value:
 		lua_pushinteger(L, cvar->value);
-	else if(fastcmp(field,"string"))
+		break;
+	case cvar_string:
 		lua_pushstring(L, cvar->string);
-	else if(fastcmp(field,"changed"))
+		break;
+	case cvar_changed:
 		lua_pushboolean(L, cvar->changed);
-	else if (devparm)
-		return luaL_error(L, LUA_QL("consvar_t") " has no field named " LUA_QS, field);
-	else
-		return 0;
+		break;
+	default:
+		if (devparm)
+			return luaL_error(L, LUA_QL("consvar_t") " has no field named " LUA_QS ".", lua_tostring(L, 2));
+		else
+			return 0;
+	}
 	return 1;
 }
 
@@ -597,6 +629,8 @@ int LUA_ConsoleLib(lua_State *L)
 		lua_pushcfunction(L, cvar_get);
 		lua_setfield(L, -2, "__index");
 	lua_pop(L,1);
+
+	cvar_fields_ref = Lua_CreateFieldTable(L, cvar_opt);
 
 	// Set empty registry tables
 	lua_newtable(L);
@@ -618,6 +652,8 @@ int LUA_ConsoleLib(lua_State *L)
 	lua_setglobal(L, "CV_Unsigned");
 	lua_pushlightuserdata(L, CV_Natural);
 	lua_setglobal(L, "CV_Natural");
+	lua_pushlightuserdata(L, CV_TrueFalse);
+	lua_setglobal(L, "CV_TrueFalse");
 
 	// Set global functions
 	lua_pushvalue(L, LUA_GLOBALSINDEX);

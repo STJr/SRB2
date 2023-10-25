@@ -33,7 +33,7 @@ typedef union
 typedef struct
 {
 	msg_header_t header;
-	char ip[16];
+	char ip[sizeof "ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff"];
 	char port[8];
 	char name[32];
 	INT32 room;
