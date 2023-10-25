@@ -138,8 +138,7 @@ static void R_InstallSpriteLump(UINT16 wad,            // graphics patch
 #ifdef ROTSPRITE
 	for (r = 0; r < 16; r++)
 	{
-		sprtemp[frame].rotated[0][r] = NULL;
-		sprtemp[frame].rotated[1][r] = NULL;
+		sprtemp[frame].rotated[r] = NULL;
 	}
 #endif
 
