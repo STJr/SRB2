@@ -862,6 +862,7 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 
 		for (i = 0; i < MAXPLAYERS; i++)
 		{
+			tic_t marebegunat;
 			if (!playeringame[i] || !players[i].mo || players[i].spectator)
 				continue;
 
@@ -883,8 +884,12 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 				P_AddPlayerScore(&players[i], (players[i].spheres) * 50);
 			}
 
+			marebegunat = player->marebegunat;
+			if (marebegunat > INT32_MAX)
+				marebegunat = 0;
+
 			// Add score to leaderboards now
-			player->lastmaretime = leveltime - max(0, player->marebegunat);
+			player->lastmaretime = leveltime - marebegunat;
 			G_AddTempNightsRecords(player, players[i].marescore, player->lastmaretime, players[i].mare + 1);
 
 			// transfer scores anyway
@@ -898,6 +903,7 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 	}
 	else if (oldmare != player->mare)
 	{
+		tic_t marebegunat;
 		/// \todo Handle multi-mare special stages.
 		// Spheres bonus
 		P_AddPlayerScore(player, (player->spheres) * 50);
@@ -910,8 +916,12 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 		player->finishedspheres = (INT16)(player->spheres);
 		player->finishedrings = (INT16)(player->rings);
 
+		marebegunat = player->marebegunat;
+		if (marebegunat > INT32_MAX)
+			marebegunat = 0;
+
 		// Add score to temp leaderboards
-		player->lastmaretime = leveltime - max(0, player->marebegunat);
+		player->lastmaretime = leveltime - marebegunat;
 		G_AddTempNightsRecords(player, player->marescore, player->lastmaretime, (UINT8)(oldmare + 1));
 
 		// Starting a new mare, transfer scores
