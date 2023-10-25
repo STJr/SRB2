@@ -50,6 +50,7 @@
 #include "m_random.h"
 
 #include "dehacked.h" // for map headers
+#include "deh_tables.h" // FREE_SKINCOLORS
 #include "r_main.h"
 #include "m_cond.h" // for emblems
 
@@ -86,6 +87,8 @@
 #include "fastcmp.h" // textmap parsing
 
 #include "taglist.h"
+
+#include "netcode/net_command.h"
 
 //
 // Map MD5, calculated on level load.
@@ -1266,12 +1269,19 @@ static void P_WriteDuplicateText(const char *text, char **target)
 
 static void P_WriteSkincolor(INT32 constant, char **target)
 {
+	const char *color_name;
+
 	if (constant <= SKINCOLOR_NONE
 	|| constant >= (INT32)numskincolors)
 		return;
 
+	if (constant >= SKINCOLOR_FIRSTFREESLOT)
+		color_name = FREE_SKINCOLORS[constant - SKINCOLOR_FIRSTFREESLOT];
+	else
+		color_name = COLOR_ENUMS[constant];
+
 	P_WriteDuplicateText(
-		va("SKINCOLOR_%s", skincolors[constant].name),
+		va("SKINCOLOR_%s", color_name),
 		target
 	);
 }
@@ -2025,6 +2035,8 @@ static void ParseTextmapThingParameter(UINT32 i, const char *param, const char *
 	// Flags
 	else if (fastcmp(param, "flip") && fastcmp("true", val))
 		mapthings[i].options |= MTF_OBJECTFLIP;
+	else if (fastcmp(param, "absolutez") && fastcmp("true", val))
+		mapthings[i].options |= MTF_ABSOLUTEZ;
 
 	else if (fastncmp(param, "stringarg", 9) && strlen(param) > 9)
 	{
@@ -6810,6 +6822,9 @@ static void P_ConvertBinaryThingTypes(void)
 		default:
 			break;
 		}
+		
+		// Clear binary thing height hacks, to prevent interfering with UDMF-only flags
+		mapthings[i].options &= 0xF;
 	}
 }
 
@@ -7161,37 +7176,23 @@ static void P_RunLevelScript(const char *scriptname)
 
 static void P_ForceCharacter(const char *forcecharskin)
 {
-	if (netgame)
-	{
-		char skincmd[33];
-		if (splitscreen)
-		{
-			sprintf(skincmd, "skin2 %s\n", forcecharskin);
-			CV_Set(&cv_skin2, forcecharskin);
-		}
+	// Don't do anything if the server is forcing a skin already.
+	if (netgame && cv_forceskin.value >= 0)
+		return;
 
-		sprintf(skincmd, "skin %s\n", forcecharskin);
-		COM_BufAddText(skincmd);
-	}
-	else
+	for (unsigned i = 0; i < MAXPLAYERS; i++)
 	{
-		if (splitscreen)
-		{
-			SetPlayerSkin(secondarydisplayplayer, forcecharskin);
-			if ((unsigned)cv_playercolor2.value != skins[players[secondarydisplayplayer].skin].prefcolor)
-			{
-				CV_StealthSetValue(&cv_playercolor2, skins[players[secondarydisplayplayer].skin].prefcolor);
-				players[secondarydisplayplayer].skincolor = skins[players[secondarydisplayplayer].skin].prefcolor;
-			}
-		}
+		if (!playeringame[i])
+			continue;
 
-		SetPlayerSkin(consoleplayer, forcecharskin);
-		// normal player colors in single player
-		if ((unsigned)cv_playercolor.value != skins[players[consoleplayer].skin].prefcolor)
-		{
-			CV_StealthSetValue(&cv_playercolor, skins[players[consoleplayer].skin].prefcolor);
-			players[consoleplayer].skincolor = skins[players[consoleplayer].skin].prefcolor;
-		}
+		INT32 skinnum = R_SkinAvailable(forcecharskin);
+		if (skinnum == -1 || !R_SkinUsable(i, skinnum))
+			continue;
+
+		SetPlayerSkinByNum(i, skinnum);
+
+		if (!netgame)
+			players[i].skincolor = skins[skinnum].prefcolor;
 	}
 }
 

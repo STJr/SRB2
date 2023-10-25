@@ -25,7 +25,7 @@ endif
 # Tested by Steel, as of release 2.2.8.
 ifdef FREEBSD
 opts+=-I/usr/X11R6/include -DLINUX -DFREEBSD
-libs+=-L/usr/X11R6/lib -lipx -lkvm
+libs+=-L/usr/X11R6/lib -lkvm -lexecinfo
 endif
 
 # FIXME: UNTESTED
