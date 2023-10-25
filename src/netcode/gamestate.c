@@ -284,7 +284,7 @@ void Command_ResendGamestate(void)
 	netbuffer->packettype = PT_WILLRESENDGAMESTATE;
 	if (!HSendPacket(playernode[playernum], true, 0, 0))
 	{
-		CONS_Alert(CONS_ERROR, M_GetText("A problem occured, please try again.\n"));
+		CONS_Alert(CONS_ERROR, M_GetText("A problem occurred, please try again.\n"));
 		return;
 	}
 }
