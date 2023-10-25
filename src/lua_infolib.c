@@ -66,7 +66,7 @@ const char *const sfxinfo_wopt[] = {
 	"caption",
 	NULL};
 
-boolean actionsoverridden[NUMACTIONS] = {false};
+int actionsoverridden[NUMACTIONS][MAX_ACTION_RECURSION];
 
 //
 // Sprite Names
@@ -319,7 +319,7 @@ static int PopPivotSubTable(spriteframepivot_t *pivot, lua_State *L, int stk, in
 				else if (ikey == 2 || (key && fastcmp(key, "y")))
 					pivot[idx].y = (INT32)value;
 				else if (ikey == 3 || (key && fastcmp(key, "rotaxis")))
-					pivot[idx].rotaxis = (UINT8)value;
+					LUA_UsageWarning(L, "\"rotaxis\" is deprecated and will be removed.")
 				else if (ikey == -1 && (key != NULL))
 					FIELDERROR("pivot key", va("invalid option %s", key));
 				okcool = 1;
@@ -508,8 +508,6 @@ static int pivotlist_get(lua_State *L)
 	const char *field = luaL_checkstring(L, 2);
 	UINT8 frame;
 
-	I_Assert(framepivot != NULL);
-
 	frame = R_Char2Frame(field[0]);
 	if (frame == 255)
 		luaL_error(L, "invalid frame %s", field);
@@ -538,8 +536,6 @@ static int pivotlist_set(lua_State *L)
 		return luaL_error(L, "Do not alter spriteframepivot_t in HUD rendering code!");
 	if (hook_cmd_running)
 		return luaL_error(L, "Do not alter spriteframepivot_t in CMD building code!");
-
-	I_Assert(pivotlist != NULL);
 
 	frame = R_Char2Frame(field[0]);
 	if (frame == 255)
@@ -576,7 +572,10 @@ static int framepivot_get(lua_State *L)
 	else if (fastcmp("y", field))
 		lua_pushinteger(L, framepivot->y);
 	else if (fastcmp("rotaxis", field))
-		lua_pushinteger(L, (UINT8)framepivot->rotaxis);
+	{
+		LUA_UsageWarning(L, "\"rotaxis\" is deprecated and will be removed.");
+		lua_pushinteger(L, 0);
+	}
 	else
 		return luaL_error(L, va("Field %s does not exist in spriteframepivot_t", field));
 
@@ -602,7 +601,7 @@ static int framepivot_set(lua_State *L)
 	else if (fastcmp("y", field))
 		framepivot->y = luaL_checkinteger(L, 3);
 	else if (fastcmp("rotaxis", field))
-		framepivot->rotaxis = luaL_checkinteger(L, 3);
+		LUA_UsageWarning(L, "\"rotaxis\" is deprecated and will be removed.")
 	else
 		return luaL_error(L, va("Field %s does not exist in spriteframepivot_t", field));
 
@@ -645,8 +644,8 @@ static void A_Lua(mobj_t *actor)
 		if (lua_rawequal(gL, -1, -4))
 		{
 			found = true;
-			superactions[superstack] = lua_tostring(gL, -2); // "A_ACTION"
-			++superstack;
+			luaactions[luaactionstack] = lua_tostring(gL, -2); // "A_ACTION"
+			++luaactionstack;
 			lua_pop(gL, 2); // pop the name and function
 			break;
 		}
@@ -661,8 +660,8 @@ static void A_Lua(mobj_t *actor)
 
 	if (found)
 	{
-		--superstack;
-		superactions[superstack] = NULL;
+		--luaactionstack;
+		luaactions[luaactionstack] = NULL;
 	}
 }
 
@@ -812,22 +811,54 @@ boolean LUA_SetLuaAction(void *stv, const char *action)
 	return true; // action successfully set.
 }
 
+static UINT8 superstack[NUMACTIONS];
 boolean LUA_CallAction(enum actionnum actionnum, mobj_t *actor)
 {
 	I_Assert(actor != NULL);
 
-	if (!actionsoverridden[actionnum]) // The action is not overriden,
-		return false; // action not called.
+	if (actionsoverridden[actionnum][0] == LUA_REFNIL)
+	{
+		// The action was not overridden at all,
+		// so just call the hardcoded version.
+		return false;
+	}
 
-	if (superstack && fasticmp(actionpointers[actionnum].name, superactions[superstack-1])) // the action is calling itself,
-		return false; // let it call the hardcoded function instead.
+	if (luaactionstack && fasticmp(actionpointers[actionnum].name, luaactions[luaactionstack-1]))
+	{
+		// The action is calling itself,
+		// so look up the next Lua reference in its stack.
 
+		// 0 is just the reference to the one we're calling,
+		// so we increment here.
+		superstack[actionnum]++;
+
+		if (superstack[actionnum] >= MAX_ACTION_RECURSION)
+		{
+			CONS_Alert(CONS_WARNING, "Max Lua super recursion reached! Cool it on calling super!\n");
+			superstack[actionnum] = 0;
+			return false;
+		}
+	}
+
+	if (actionsoverridden[actionnum][superstack[actionnum]] == LUA_REFNIL)
+	{
+		// No Lua reference beyond this point.
+		// Let it call the hardcoded function instead.
+
+		if (superstack[actionnum])
+		{
+			// Decrement super stack
+			superstack[actionnum]--;
+		}
+
+		return false;
+	}
+
+	// Push error function
 	lua_pushcfunction(gL, LUA_GetErrorMessage);
 
-	// grab function by uppercase name.
-	lua_getfield(gL, LUA_REGISTRYINDEX, LREG_ACTIONS);
-	lua_getfield(gL, -1, actionpointers[actionnum].name);
-	lua_remove(gL, -2); // pop LREG_ACTIONS
+	// Push function by reference.
+	lua_getref(gL, actionsoverridden[actionnum][superstack[actionnum]]);
 
 	if (lua_isnil(gL, -1)) // no match
 	{
@@ -835,7 +866,7 @@ boolean LUA_CallAction(enum actionnum actionnum, mobj_t *actor)
 		return false; // action not called.
 	}
 
-	if (superstack == MAXRECURSION)
+	if (luaactionstack >= MAX_ACTION_RECURSION)
 	{
 		CONS_Alert(CONS_WARNING, "Max Lua Action recursion reached! Cool it on the calling A_Action functions from inside A_Action functions!\n");
 		lua_pop(gL, 2); // pop function and error handler
@@ -849,14 +880,20 @@ boolean LUA_CallAction(enum actionnum actionnum, mobj_t *actor)
 	lua_pushinteger(gL, var1);
 	lua_pushinteger(gL, var2);
 
-	superactions[superstack] = actionpointers[actionnum].name;
-	++superstack;
+	luaactions[luaactionstack] = actionpointers[actionnum].name;
+	++luaactionstack;
 
 	LUA_Call(gL, 3, 0, -(2 + 3));
 	lua_pop(gL, -1); // Error handler
 
-	--superstack;
-	superactions[superstack] = NULL;
+	if (superstack[actionnum])
+	{
+		// Decrement super stack
+		superstack[actionnum]--;
+	}
+
+	--luaactionstack;
+	luaactions[luaactionstack] = NULL;
 	return true; // action successfully called.
 }
 
@@ -1168,7 +1205,7 @@ static int mobjinfo_fields_ref = LUA_NOREF;
 static int mobjinfo_get(lua_State *L)
 {
 	mobjinfo_t *info = *((mobjinfo_t **)luaL_checkudata(L, 1, META_MOBJINFO));
-	enum mobjinfo_e field = luaL_checkoption(L, 2, mobjinfo_opt[0], mobjinfo_opt);
+	enum mobjinfo_e field = Lua_optoption(L, 2, mobjinfo_doomednum, mobjinfo_fields_ref);
 
 	I_Assert(info != NULL);
 	I_Assert(info >= mobjinfo);
@@ -1709,7 +1746,7 @@ static int lib_setSkinColor(lua_State *L)
 		else if (i == 6 || (str && fastcmp(str,"accessible"))) {
 			boolean v = lua_toboolean(L, 3);
 			if (cnum < FIRSTSUPERCOLOR && v != skincolors[cnum].accessible)
-				return luaL_error(L, "skincolors[] index %d is a standard color; accessibility changes are prohibited.", cnum);
+				CONS_Alert(CONS_WARNING, "skincolors[] index %d is a standard color; accessibility changes are prohibited.", cnum);
 			else
 				info->accessible = v;
 		}
@@ -1804,7 +1841,7 @@ static int skincolor_set(lua_State *L)
 	else if (fastcmp(field,"accessible")) {
 		boolean v = lua_toboolean(L, 3);
 		if (cnum < FIRSTSUPERCOLOR && v != skincolors[cnum].accessible)
-			return luaL_error(L, "skincolors[] index %d is a standard color; accessibility changes are prohibited.", cnum);
+			CONS_Alert(CONS_WARNING, "skincolors[] index %d is a standard color; accessibility changes are prohibited.", cnum);
 		else
 			info->accessible = v;
 	} else
