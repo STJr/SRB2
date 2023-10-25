@@ -30,6 +30,7 @@ extern UINT8 used_spr[(NUMSPRITEFREESLOTS / 8) + 1]; // Bitwise flag for sprite 
 	memset(FREE_MOBJS,0,sizeof(char *) * NUMMOBJFREESLOTS);\
 	memset(FREE_SKINCOLORS,0,sizeof(char *) * NUMCOLORFREESLOTS);\
 	memset(used_spr,0,sizeof(UINT8) * ((NUMSPRITEFREESLOTS / 8) + 1));\
+	memset(actionsoverridden, LUA_REFNIL, sizeof(actionsoverridden));\
 }
 
 struct flickytypes_s {
@@ -61,7 +62,7 @@ extern const char *const MOBJTYPE_LIST[];
 extern const char *const MOBJFLAG_LIST[];
 extern const char *const MOBJFLAG2_LIST[]; // \tMF2_(\S+).*// (.+) --> \t"\1", // \2
 extern const char *const MOBJEFLAG_LIST[];
-extern const char *const MAPTHINGFLAG_LIST[4];
+extern const char *const MAPTHINGFLAG_LIST[];
 extern const char *const PLAYERFLAG_LIST[];
 extern const char *const GAMETYPERULE_LIST[];
 extern const char *const ML_LIST[]; // Linedef flags

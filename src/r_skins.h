@@ -35,8 +35,9 @@ typedef struct
 	UINT16 wadnum;
 	skinflags_t flags;
 
-	char realname[SKINNAMESIZE+1]; // Display name for level completion.
+	char realname[SKINNAMESIZE+1]; // Display name for level completion
 	char hudname[SKINNAMESIZE+1]; // HUD name to display (officially exactly 5 characters long)
+	char supername[SKINNAMESIZE+7]; // Super name to display when collecting all emeralds
 
 	UINT8 ability; // ability definition
 	UINT8 ability2; // secondary ability definition
@@ -95,9 +96,12 @@ void SetPlayerSkinByNum(INT32 playernum,INT32 skinnum); // Tails 03-16-2002
 boolean R_SkinUsable(INT32 playernum, INT32 skinnum);
 UINT32 R_GetSkinAvailabilities(void);
 INT32 R_SkinAvailable(const char *name);
+INT32 R_GetForcedSkin(INT32 playernum);
 void R_AddSkins(UINT16 wadnum, boolean mainfile);
 void R_PatchSkins(UINT16 wadnum, boolean mainfile);
 
 UINT8 P_GetSkinSprite2(skin_t *skin, UINT8 spr2, player_t *player);
+
+void R_RefreshSprite2(void);
 
 #endif //__R_SKINS__
