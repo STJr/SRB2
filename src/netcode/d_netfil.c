@@ -31,24 +31,25 @@
 #include <sys/utime.h>
 #endif
 
-#include "doomdef.h"
-#include "doomstat.h"
-#include "d_main.h"
-#include "g_game.h"
-#include "i_time.h"
+#include "../doomdef.h"
+#include "../doomstat.h"
+#include "../d_main.h"
+#include "../g_game.h"
+#include "../i_time.h"
 #include "i_net.h"
-#include "i_system.h"
-#include "m_argv.h"
+#include "../i_system.h"
+#include "../m_argv.h"
 #include "d_net.h"
-#include "w_wad.h"
+#include "../w_wad.h"
 #include "d_netfil.h"
-#include "z_zone.h"
-#include "byteptr.h"
-#include "p_setup.h"
-#include "m_misc.h"
-#include "m_menu.h"
-#include "md5.h"
-#include "filesrch.h"
+#include "net_command.h"
+#include "../z_zone.h"
+#include "../byteptr.h"
+#include "../p_setup.h"
+#include "../m_misc.h"
+#include "../m_menu.h"
+#include "../md5.h"
+#include "../filesrch.h"
 
 #include <errno.h>
 
@@ -103,26 +104,31 @@ typedef struct
 } pauseddownload_t;
 static pauseddownload_t *pauseddownload = NULL;
 
-#ifndef NONET
 // for cl loading screen
 INT32 lastfilenum = -1;
 INT32 downloadcompletednum = 0;
 UINT32 downloadcompletedsize = 0;
 INT32 totalfilesrequestednum = 0;
 UINT32 totalfilesrequestedsize = 0;
-#endif
 
 luafiletransfer_t *luafiletransfers = NULL;
 boolean waitingforluafiletransfer = false;
 boolean waitingforluafilecommand = false;
 char luafiledir[256 + 16] = "luafiles";
 
+// max file size to send to a player (in kilobytes)
+static CV_PossibleValue_t maxsend_cons_t[] = {{0, "MIN"}, {204800, "MAX"}, {0, NULL}};
+consvar_t cv_maxsend = CVAR_INIT ("maxsend", "4096", CV_SAVE|CV_NETVAR, maxsend_cons_t, NULL);
+
+consvar_t cv_noticedownload = CVAR_INIT ("noticedownload", "Off", CV_SAVE|CV_NETVAR, CV_OnOff, NULL);
+
+// Speed of file downloading (in packets per tic)
+static CV_PossibleValue_t downloadspeed_cons_t[] = {{1, "MIN"}, {300, "MAX"}, {0, NULL}};
+consvar_t cv_downloadspeed = CVAR_INIT ("downloadspeed", "16", CV_SAVE|CV_NETVAR, downloadspeed_cons_t, NULL);
 
 static UINT16 GetWadNumFromFileNeededId(UINT8 id)
 {
-	UINT16 wadnum;
-
-	for (wadnum = mainwads; wadnum < numwadfiles; wadnum++)
+	for (UINT16 wadnum = mainwads; wadnum < numwadfiles; wadnum++)
 	{
 		if (!wadfiles[wadnum]->important)
 			continue;
@@ -142,14 +148,13 @@ static UINT16 GetWadNumFromFileNeededId(UINT8 id)
   */
 UINT8 *PutFileNeeded(UINT16 firstfile)
 {
-	size_t i;
 	UINT8 count = 0;
 	UINT8 *p_start = netbuffer->packettype == PT_MOREFILESNEEDED ? netbuffer->u.filesneededcfg.files : netbuffer->u.serverinfo.fileneeded;
 	UINT8 *p = p_start;
 	char wadfilename[MAX_WADPATH] = "";
 	UINT8 filestatus, folder;
 
-	for (i = mainwads; i < numwadfiles; i++) //mainwads, otherwise we start on the first mainwad
+	for (size_t i = mainwads; i < numwadfiles; i++) //mainwads, otherwise we start on the first mainwad
 	{
 		// If it has only music/sound lumps, don't put it in the list
 		if (!wadfiles[i]->important)
@@ -224,7 +229,6 @@ void FreeFileNeeded(void)
   */
 void D_ParseFileneeded(INT32 fileneedednum_parm, UINT8 *fileneededstr, UINT16 firstfile)
 {
-	INT32 i;
 	UINT8 *p;
 	UINT8 filestatus;
 
@@ -233,7 +237,7 @@ void D_ParseFileneeded(INT32 fileneedednum_parm, UINT8 *fileneededstr, UINT16 fi
 
 	AllocFileNeeded(fileneedednum);
 
-	for (i = firstfile; i < fileneedednum; i++)
+	for (INT32 i = firstfile; i < fileneedednum; i++)
 	{
 		fileneeded[i].type = FILENEEDED_WAD;
 		fileneeded[i].status = FS_NOTCHECKED; // We haven't even started looking for the file yet
@@ -250,9 +254,7 @@ void D_ParseFileneeded(INT32 fileneedednum_parm, UINT8 *fileneededstr, UINT16 fi
 
 void CL_PrepareDownloadSaveGame(const char *tmpsave)
 {
-#ifndef NONET
 	lastfilenum = -1;
-#endif
 
 	FreeFileNeeded();
 	AllocFileNeeded(1);
@@ -275,9 +277,9 @@ void CL_PrepareDownloadSaveGame(const char *tmpsave)
   */
 boolean CL_CheckDownloadable(void)
 {
-	UINT8 i,dlstatus = 0;
+	UINT8 dlstatus = 0;
 
-	for (i = 0; i < fileneedednum; i++)
+	for (UINT8 i = 0; i < fileneedednum; i++)
 		if (fileneeded[i].status != FS_FOUND && fileneeded[i].status != FS_OPEN)
 		{
 			if (fileneeded[i].willsend == 1)
@@ -298,7 +300,7 @@ boolean CL_CheckDownloadable(void)
 
 	// not downloadable, put reason in console
 	CONS_Alert(CONS_NOTICE, M_GetText("You need additional files to connect to this server:\n"));
-	for (i = 0; i < fileneedednum; i++)
+	for (UINT8 i = 0; i < fileneedednum; i++)
 		if (fileneeded[i].status != FS_FOUND && fileneeded[i].status != FS_OPEN)
 		{
 			CONS_Printf(" * \"%s\" (%dK)", fileneeded[i].filename, fileneeded[i].totalsize >> 10);
@@ -368,14 +370,13 @@ void CL_AbortDownloadResume(void)
 boolean CL_SendFileRequest(void)
 {
 	char *p;
-	INT32 i;
 	INT64 totalfreespaceneeded = 0, availablefreespace;
 
 #ifdef PARANOIA
 	if (M_CheckParm("-nodownload"))
 		I_Error("Attempted to download files in -nodownload mode");
 
-	for (i = 0; i < fileneedednum; i++)
+	for (INT32 i = 0; i < fileneedednum; i++)
 		if (fileneeded[i].status != FS_FOUND && fileneeded[i].status != FS_OPEN
 			&& (fileneeded[i].willsend == 0 || fileneeded[i].willsend == 2))
 		{
@@ -385,7 +386,7 @@ boolean CL_SendFileRequest(void)
 
 	netbuffer->packettype = PT_REQUESTFILE;
 	p = (char *)netbuffer->u.textcmd;
-	for (i = 0; i < fileneedednum; i++)
+	for (INT32 i = 0; i < fileneedednum; i++)
 		if ((fileneeded[i].status == FS_NOTFOUND || fileneeded[i].status == FS_MD5SUMBAD))
 		{
 			totalfreespaceneeded += fileneeded[i].totalsize;
@@ -413,26 +414,31 @@ boolean CL_SendFileRequest(void)
 }
 
 // get request filepak and put it on the send queue
-// returns false if a requested file was not found or cannot be sent
-boolean PT_RequestFile(INT32 node)
+void PT_RequestFile(SINT8 node)
 {
 	UINT8 *p = netbuffer->u.textcmd;
-	UINT8 id;
+
+	if (client || !cv_downloading.value)
+	{
+		Net_CloseConnection(node); // close connection if you are not the server or disabled downloading
+		return;
+	}
 
 	while (p < netbuffer->u.textcmd + MAXTEXTCMD-1) // Don't allow hacked client to overflow
 	{
-		id = READUINT8(p);
+		UINT8 id = READUINT8(p);
 		if (id == 0xFF)
 			break;
 
 		if (!AddFileToSendQueue(node, id))
 		{
 			SV_AbortSendFiles(node);
-			return false; // don't read the rest of the files
+			Net_CloseConnection(node); // close connection if one of the requested files could not be sent
+			return; // don't read the rest of the files
 		}
 	}
 
-	return true; // no problems with any files
+	return; // no problems with any files
 }
 
 /** Checks if the files needed aren't already loaded or on the disk
@@ -531,9 +537,7 @@ INT32 CL_CheckFiles(void)
 // Load it now
 boolean CL_LoadServerFiles(void)
 {
-	INT32 i;
-
-	for (i = 0; i < fileneedednum; i++)
+	for (INT32 i = 0; i < fileneedednum; i++)
 	{
 		if (fileneeded[i].status == FS_OPEN)
 			continue; // Already loaded
@@ -629,11 +633,10 @@ void AddLuaFileTransfer(const char *filename, const char *mode)
 
 static void SV_PrepareSendLuaFileToNextNode(void)
 {
-	INT32 i;
 	UINT8 success = 1;
 
     // Find a client to send the file to
-	for (i = 1; i < MAXNETNODES; i++)
+	for (INT32 i = 1; i < MAXNETNODES; i++)
 		if (luafiletransfers->nodestatus[i] == LFTNS_WAITING) // Node waiting
 		{
 			// Tell the client we're about to send them the file
@@ -655,13 +658,12 @@ static void SV_PrepareSendLuaFileToNextNode(void)
 void SV_PrepareSendLuaFile(void)
 {
 	char *binfilename;
-	INT32 i;
 
 	luafiletransfers->ongoing = true;
 
 	// Set status to "waiting" for everyone
-	for (i = 0; i < MAXNETNODES; i++)
-		luafiletransfers->nodestatus[i] = (nodeingame[i] ? LFTNS_WAITING : LFTNS_NONE);
+	for (INT32 i = 0; i < MAXNETNODES; i++)
+		luafiletransfers->nodestatus[i] = (netnodes[i].ingame ? LFTNS_WAITING : LFTNS_NONE);
 
 	if (FIL_ReadFileOK(luafiletransfers->realfilename))
 	{
@@ -1137,12 +1139,13 @@ void FileSendTicker(void)
 	}
 }
 
-void PT_FileAck(void)
+void PT_FileAck(SINT8 node)
 {
 	fileack_pak *packet = &netbuffer->u.fileack;
-	INT32 node = doomcom->remotenode;
 	filetran_t *trans = &transfer[node];
-	INT32 i, j;
+
+	if (client)
+		return;
 
 	// Wrong file id? Ignore it, it's probably a late packet
 	if (!(trans->txlist && packet->fileid == trans->txlist->fileid))
@@ -1161,11 +1164,11 @@ void PT_FileAck(void)
 			trans->dontsenduntil = 0;
 	}
 
-	for (i = 0; i < packet->numsegments; i++)
+	for (INT32 i = 0; i < packet->numsegments; i++)
 	{
 		fileacksegment_t *segment = &packet->segments[i];
 
-		for (j = 0; j < 32; j++)
+		for (INT32 j = 0; j < 32; j++)
 			if (LONG(segment->acks) & (1 << j))
 			{
 				if (LONG(segment->start) * FILEFRAGMENTSIZE >= trans->txlist->size)
@@ -1190,24 +1193,23 @@ void PT_FileAck(void)
 	}
 }
 
-void PT_FileReceived(void)
+void PT_FileReceived(SINT8 node)
 {
-	filetx_t *trans = transfer[doomcom->remotenode].txlist;
+	filetx_t *trans = transfer[node].txlist;
 
-	if (trans && netbuffer->u.filereceived == trans->fileid)
-		SV_EndFileSend(doomcom->remotenode);
+	if (server && trans && netbuffer->u.filereceived == trans->fileid)
+		SV_EndFileSend(node);
 }
 
 static void SendAckPacket(fileack_pak *packet, UINT8 fileid)
 {
 	size_t packetsize;
-	INT32 i;
 
 	packetsize = sizeof(*packet) + packet->numsegments * sizeof(*packet->segments);
 
 	// Finalise the packet
 	packet->fileid = fileid;
-	for (i = 0; i < packet->numsegments; i++)
+	for (INT32 i = 0; i < packet->numsegments; i++)
 	{
 		packet->segments[i].start = LONG(packet->segments[i].start);
 		packet->segments[i].acks = LONG(packet->segments[i].acks);
@@ -1247,9 +1249,7 @@ static void AddFragmentToAckPacket(fileack_pak *packet, UINT8 iteration, UINT32 
 
 void FileReceiveTicker(void)
 {
-	INT32 i;
-
-	for (i = 0; i < fileneedednum; i++)
+	for (INT32 i = 0; i < fileneedednum; i++)
 	{
 		fileneeded_t *file = &fileneeded[i];
 
@@ -1263,8 +1263,7 @@ void FileReceiveTicker(void)
 			if (file->ackresendposition != UINT32_MAX && file->status == FS_DOWNLOADING)
 			{
 				// Acknowledge ~70 MB/s, whichs means the client sends ~18 KB/s
-				INT32 j;
-				for (j = 0; j < 2048; j++)
+				for (INT32 j = 0; j < 2048; j++)
 				{
 					if (file->receivedfragments[file->ackresendposition])
 						AddFragmentToAckPacket(file->ackpacket, file->iteration, file->ackresendposition, i);
@@ -1281,8 +1280,27 @@ void FileReceiveTicker(void)
 	}
 }
 
-void PT_FileFragment(void)
+void PT_FileFragment(SINT8 node, INT32 netconsole)
 {
+	if (netnodes[node].ingame)
+	{
+		// Only accept PT_FILEFRAGMENT from the server.
+		if (node != servernode)
+		{
+			CONS_Alert(CONS_WARNING, M_GetText("%s received from non-host %d\n"), "PT_FILEFRAGMENT", node);
+			if (server)
+				SendKick(netconsole, KICK_MSG_CON_FAIL | KICK_MSG_KEEP_BODY);
+			return;
+		}
+		if (server)
+			return;
+	}
+	else if (server || node != servernode)
+	{
+		Net_CloseConnection(node);
+		return;
+	}
+
 	INT32 filenum = netbuffer->u.filetxpak.fileid;
 	fileneeded_t *file = &fileneeded[filenum];
 	UINT32 fragmentpos = LONG(netbuffer->u.filetxpak.position);
@@ -1439,9 +1457,7 @@ void PT_FileFragment(void)
 		I_Error("Received a file not requested (file id: %d, file status: %s)\n", filenum, s);
 	}
 
-#ifndef NONET
 	lastfilenum = filenum;
-#endif
 }
 
 /** \brief Checks if a node is downloading a file
@@ -1469,15 +1485,14 @@ void SV_AbortSendFiles(INT32 node)
 
 void CloseNetFile(void)
 {
-	INT32 i;
 	// Is sending?
-	for (i = 0; i < MAXNETNODES; i++)
+	for (INT32 i = 0; i < MAXNETNODES; i++)
 		SV_AbortSendFiles(i);
 
 	// Receiving a file?
 	if (fileneeded)
 	{
-		for (i = 0; i < fileneedednum; i++)
+		for (INT32 i = 0; i < fileneedednum; i++)
 			if (fileneeded[i].status == FS_DOWNLOADING && fileneeded[i].file)
 			{
 				fclose(fileneeded[i].file);
@@ -1510,9 +1525,7 @@ void CloseNetFile(void)
 
 void Command_Downloads_f(void)
 {
-	INT32 node;
-
-	for (node = 0; node < MAXNETNODES; node++)
+	for (INT32 node = 0; node < MAXNETNODES; node++)
 		if (transfer[node].txlist
 		&& transfer[node].txlist->ram == SF_FILE) // Node is downloading a file?
 		{
@@ -1546,14 +1559,11 @@ void Command_Downloads_f(void)
 
 void nameonly(char *s)
 {
-	size_t j, len;
-	void *ns;
-
-	for (j = strlen(s); j != (size_t)-1; j--)
+	for (size_t j = strlen(s); j != (size_t)-1; j--)
 		if ((s[j] == '\\') || (s[j] == ':') || (s[j] == '/'))
 		{
-			ns = &(s[j+1]);
-			len = strlen(ns);
+			void *ns = &(s[j+1]);
+			size_t len = strlen(ns);
 #if 0
 			M_Memcpy(s, ns, len+1);
 #else
@@ -1566,9 +1576,9 @@ void nameonly(char *s)
 // Returns the length in characters of the last element of a path.
 size_t nameonlylength(const char *s)
 {
-	size_t j, len = strlen(s);
+	size_t len = strlen(s);
 
-	for (j = len; j != (size_t)-1; j--)
+	for (size_t j = len; j != (size_t)-1; j--)
 		if ((s[j] == '\\') || (s[j] == ':') || (s[j] == '/'))
 			return len - j - 1;
 

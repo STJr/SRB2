@@ -26,11 +26,11 @@
 #include "y_inter.h"
 #include "hu_stuff.h"	// HU_AddChatText
 #include "console.h"
-#include "d_netcmd.h" // IsPlayerAdmin
+#include "netcode/d_netcmd.h" // IsPlayerAdmin
 #include "m_menu.h" // Player Setup menu color stuff
 #include "m_misc.h" // M_MapNumber
 #include "b_bot.h" // B_UpdateBotleader
-#include "d_clisrv.h" // CL_RemovePlayer
+#include "netcode/d_clisrv.h" // CL_RemovePlayer
 #include "i_system.h" // I_GetPreciseTime, I_GetPrecisePrecision
 
 #include "lua_script.h"
@@ -3544,7 +3544,7 @@ static int lib_gAddGametype(lua_State *L)
 // Partly lifted from Got_AddPlayer
 static int lib_gAddPlayer(lua_State *L)
 {
-	INT16 i, newplayernum, botcount = 1;
+	INT16 i, newplayernum;
 	player_t *newplayer;
 	SINT8 skinnum = 0, bot;
 
@@ -3552,10 +3552,8 @@ static int lib_gAddPlayer(lua_State *L)
 	{
 		if (!playeringame[i])
 			break;
-
-		if (players[i].bot)
-			botcount++; // How many of us are there already?
 	}
+
 	if (i >= MAXPLAYERS)
 	{
 		lua_pushnil(L);

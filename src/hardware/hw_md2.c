@@ -486,7 +486,7 @@ void HWR_InitModels(void)
 	size_t i;
 	INT32 s;
 	FILE *f;
-	char name[24], filename[32];
+	char name[26], filename[32];
 	float scale, offset;
 	size_t prefixlen;
 
@@ -585,7 +585,7 @@ modelfound:
 void HWR_AddPlayerModel(int skin) // For skins that were added after startup
 {
 	FILE *f;
-	char name[24], filename[32];
+	char name[26], filename[32];
 	float scale, offset;
 	size_t prefixlen;
 
@@ -644,7 +644,7 @@ void HWR_AddSpriteModel(size_t spritenum) // For sprites that were added after s
 	// name[24] is used to check for names in the models.dat file that match with sprites or player skins
 	// sprite names are always 4 characters long, and names is for player skins can be up to 19 characters long
 	// PLAYERMODELPREFIX is 6 characters long
-	char name[24], filename[32];
+	char name[26], filename[32];
 	float scale, offset;
 
 	if (nomd2s)
