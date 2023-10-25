@@ -15,7 +15,8 @@
 #include "console.h"
 #include "d_main.h"
 #include "d_player.h"
-#include "d_clisrv.h"
+#include "netcode/d_clisrv.h"
+#include "netcode/net_command.h"
 #include "f_finale.h"
 #include "p_setup.h"
 #include "p_saveg.h"
@@ -54,6 +55,8 @@
 gameaction_t gameaction;
 gamestate_t gamestate = GS_NULL;
 UINT8 ultimatemode = false;
+
+INT32 pickedchar;
 
 boolean botingame;
 UINT8 botskin;
@@ -156,6 +159,7 @@ textprompt_t *textprompts[MAX_PROMPTS];
 
 INT16 nextmapoverride;
 UINT8 skipstats;
+INT16 nextgametype = -1;
 
 // Pointers to each CTF flag
 mobj_t *redflag;
@@ -314,6 +318,8 @@ consvar_t cv_consolechat = CVAR_INIT ("chatmode", "Window", CV_SAVE, consolechat
 
 // Pause game upon window losing focus
 consvar_t cv_pauseifunfocused = CVAR_INIT ("pauseifunfocused", "Yes", CV_SAVE, CV_YesNo, NULL);
+
+consvar_t cv_instantretry = CVAR_INIT ("instantretry", "No", CV_SAVE, CV_YesNo, NULL);
 
 consvar_t cv_crosshair = CVAR_INIT ("crosshair", "Cross", CV_SAVE, crosshair_cons_t, NULL);
 consvar_t cv_crosshair2 = CVAR_INIT ("crosshair2", "Cross", CV_SAVE, crosshair_cons_t, NULL);
@@ -1441,6 +1447,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 			// I assume this is netgame-safe because gunslinger spawns this for only the local player...... *sweats intensely*
 			newtarget = P_SpawnMobj(ticcmd_ztargetfocus[forplayer]->x, ticcmd_ztargetfocus[forplayer]->y, ticcmd_ztargetfocus[forplayer]->z, MT_LOCKON); // positioning, flip handled in P_SceneryThinker
 			P_SetTarget(&newtarget->target, ticcmd_ztargetfocus[forplayer]);
+			newtarget->drawonlyforplayer = player; // Hide it from the other player in splitscreen, and yourself when spectating
 
 			if (player->mo && P_AproxDistance(
 				player->mo->x - ticcmd_ztargetfocus[forplayer]->x,
@@ -2078,7 +2085,7 @@ boolean G_Responder(event_t *ev)
 	if (gameaction == ga_nothing && !singledemo &&
 		((demoplayback && !modeattacking && !titledemo) || gamestate == GS_TITLESCREEN))
 	{
-		if (ev->type == ev_keydown && ev->key != 301 && !(gamestate == GS_TITLESCREEN && finalecount < TICRATE))
+		if (ev->type == ev_keydown && ev->key != 301 && !(gamestate == GS_TITLESCREEN && finalecount < (cv_tutorialprompt.value ? TICRATE : 0)))
 		{
 			M_StartControlPanel();
 			return true;
@@ -2136,7 +2143,7 @@ boolean G_Responder(event_t *ev)
 			if (! netgame)
 				F_StartGameEvaluation();
 			else if (server || IsPlayerAdmin(consoleplayer))
-				SendNetXCmd(XD_EXITLEVEL, NULL, 0);
+				D_SendExitLevel(false);
 			return true;
 		}
 	}
@@ -2171,9 +2178,9 @@ boolean G_Responder(event_t *ev)
 					if (menuactive || pausedelay < 0 || leveltime < 2)
 						return true;
 
-					if (pausedelay < 1+(NEWTICRATE/2))
+					if (!cv_instantretry.value && pausedelay < 1+(NEWTICRATE/2))
 						pausedelay = 1+(NEWTICRATE/2);
-					else if (++pausedelay > 1+(NEWTICRATE/2)+(NEWTICRATE/3))
+					else if (cv_instantretry.value || ++pausedelay > 1+(NEWTICRATE/2)+(NEWTICRATE/3))
 					{
 						G_SetModeAttackRetryFlag();
 						return true;
@@ -2522,7 +2529,6 @@ static inline void G_PlayerFinishLevel(INT32 player)
 
 	memset(p->powers, 0, sizeof (p->powers));
 	p->ringweapons = 0;
-	p->recordscore = 0;
 
 	p->mo->flags2 &= ~MF2_SHADOW; // cancel invisibility
 	P_FlashPal(p, 0, 0); // Resets
@@ -2546,7 +2552,6 @@ void G_PlayerReborn(INT32 player, boolean betweenmaps)
 {
 	player_t *p;
 	INT32 score;
-	INT32 recordscore;
 	INT32 lives;
 	INT32 continues;
 	fixed_t camerascale;
@@ -2748,25 +2753,6 @@ void G_PlayerReborn(INT32 player, boolean betweenmaps)
 
 	//if ((netgame || multiplayer) && !p->spectator) -- moved into P_SpawnPlayer to account for forced changes there
 		//p->powers[pw_flashing] = flashingtics-1; // Babysitting deterrent
-
-	// Check to make sure their color didn't change somehow...
-	if (G_GametypeHasTeams())
-	{
-		if (p->ctfteam == 1 && p->skincolor != skincolor_redteam)
-		{
-			if (p == &players[consoleplayer])
-				CV_SetValue(&cv_playercolor, skincolor_redteam);
-			else if (p == &players[secondarydisplayplayer])
-				CV_SetValue(&cv_playercolor2, skincolor_redteam);
-		}
-		else if (p->ctfteam == 2 && p->skincolor != skincolor_blueteam)
-		{
-			if (p == &players[consoleplayer])
-				CV_SetValue(&cv_playercolor, skincolor_blueteam);
-			else if (p == &players[secondarydisplayplayer])
-				CV_SetValue(&cv_playercolor2, skincolor_blueteam);
-		}
-	}
 
 	if (betweenmaps)
 		return;
@@ -3462,9 +3448,7 @@ UINT32 gametypedefaultrules[NUMGAMETYPES] =
 };
 
 //
-// G_SetGametype
-//
-// Set a new gametype, also setting gametype rules accordingly. Yay!
+// Sets a new gametype.
 //
 void G_SetGametype(INT16 gtype)
 {
@@ -3862,7 +3846,7 @@ static INT16 RandMap(UINT32 tolflags, INT16 pprevmap)
 	for (ix = 0; ix < NUMMAPS; ix++)
 		if (mapheaderinfo[ix] && (mapheaderinfo[ix]->typeoflevel & tolflags) == tolflags
 		 && ix != pprevmap // Don't pick the same map.
-		 && (dedicated || !M_MapLocked(ix+1, serverGamedata)) // Don't pick locked maps.
+		 && (!M_MapLocked(ix+1, serverGamedata)) // Don't pick locked maps.
 		)
 			okmaps[numokmaps++] = ix;
 
@@ -4054,6 +4038,13 @@ static void G_DoCompleted(void)
 			nextmap = 1100-1; // No infinite loop for you
 	}
 
+	INT16 gametype_to_use;
+
+	if (nextgametype >= 0 && nextgametype < gametypecount)
+		gametype_to_use = nextgametype;
+	else
+		gametype_to_use = gametype;
+
 	// If nextmap is actually going to get used, make sure it points to
 	// a map of the proper gametype -- skip levels that don't support
 	// the current gametype. (Helps avoid playing boss levels in Race,
@@ -4062,8 +4053,8 @@ static void G_DoCompleted(void)
 	{
 		if (nextmap >= 0 && nextmap < NUMMAPS)
 		{
-			register INT16 cm = nextmap;
-			UINT32 tolflag = G_TOLFlag(gametype);
+			INT16 cm = nextmap;
+			UINT32 tolflag = G_TOLFlag(gametype_to_use);
 			UINT8 visitedmap[(NUMMAPS+7)/8];
 
 			memset(visitedmap, 0, sizeof (visitedmap));
@@ -4118,7 +4109,7 @@ static void G_DoCompleted(void)
 	{
 		token--;
 
-		if (!nextmapoverride)
+//		if (!nextmapoverride) // Having a token should pull the player into the special stage before going to the overridden map (Issue #933)
 			for (i = 0; i < 7; i++)
 				if (!(emeralds & (1<<i)))
 				{
@@ -4143,7 +4134,7 @@ static void G_DoCompleted(void)
 		if (cv_advancemap.value == 0) // Stay on same map.
 			nextmap = prevmap;
 		else if (cv_advancemap.value == 2) // Go to random map.
-			nextmap = RandMap(G_TOLFlag(gametype), prevmap);
+			nextmap = RandMap(G_TOLFlag(gametype_to_use), prevmap);
 	}
 
 	// We are committed to this map now.
@@ -4152,7 +4143,6 @@ static void G_DoCompleted(void)
 	if (nextmap < NUMMAPS && !mapheaderinfo[nextmap])
 		P_AllocMapHeader(nextmap);
 
-	// If the current gametype has no intermission screen set, then don't start it.
 	Y_DetermineIntermissionType();
 
 	if ((skipstats && !modeattacking) || (modeattacking && stagefailed) || (intertype == int_none))
@@ -4218,12 +4208,21 @@ static void G_DoWorldDone(void)
 {
 	if (server)
 	{
+		INT16 gametype_to_use;
+
+		if (nextgametype >= 0 && nextgametype < gametypecount)
+			gametype_to_use = nextgametype;
+		else
+			gametype_to_use = gametype;
+
 		if (gametyperules & GTR_CAMPAIGN)
 			// don't reset player between maps
-			D_MapChange(nextmap+1, gametype, ultimatemode, false, 0, false, false);
+			D_MapChange(nextmap+1, gametype_to_use, ultimatemode, false, 0, false, false);
 		else
 			// resetplayer in match/chaos/tag/CTF/race for more equality
-			D_MapChange(nextmap+1, gametype, ultimatemode, true, 0, false, false);
+			D_MapChange(nextmap+1, gametype_to_use, ultimatemode, true, 0, false, false);
+
+		nextgametype = -1;
 	}
 
 	gameaction = ga_nothing;
@@ -4266,7 +4265,7 @@ static void G_DoContinued(void)
 {
 	player_t *pl = &players[consoleplayer];
 	I_Assert(!netgame && !multiplayer);
-	I_Assert(pl->continues > 0);
+	//I_Assert(pl->continues > 0);
 
 	if (pl->continues)
 		pl->continues--;
@@ -4790,12 +4789,9 @@ void G_LoadGame(UINT32 slot, INT16 mapoverride)
 	Z_Free(savebuffer);
 	save_p = savebuffer = NULL;
 
-//	gameaction = ga_nothing;
-//	G_SetGamestate(GS_LEVEL);
 	displayplayer = consoleplayer;
 	multiplayer = splitscreen = false;
 
-//	G_DeferedInitNew(sk_medium, G_BuildMapName(1), 0, 0, 1);
 	if (setsizeneeded)
 		R_ExecuteSetViewSize();
 
@@ -4988,9 +4984,9 @@ cleanup:
 // Can be called by the startup code or the menu task,
 // consoleplayer, displayplayer, playeringame[] should be set.
 //
-void G_DeferedInitNew(boolean pultmode, const char *mapname, INT32 pickedchar, boolean SSSG, boolean FLS)
+void G_DeferedInitNew(boolean pultmode, const char *mapname, INT32 character, boolean SSSG, boolean FLS)
 {
-	UINT16 color = skins[pickedchar].prefcolor;
+	pickedchar = character;
 	paused = false;
 
 	if (demoplayback)
@@ -5011,10 +5007,7 @@ void G_DeferedInitNew(boolean pultmode, const char *mapname, INT32 pickedchar, b
 		SplitScreen_OnChange();
 	}
 
-	color = skins[pickedchar].prefcolor;
-	SetPlayerSkinByNum(consoleplayer, pickedchar);
-	CV_StealthSet(&cv_skin, skins[pickedchar].name);
-	CV_StealthSetValue(&cv_playercolor, color);
+	SetPlayerSkinByNum(consoleplayer, character);
 
 	if (mapname)
 		D_MapChange(M_MapNumber(mapname[3], mapname[4]), gametype, pultmode, true, 1, false, FLS);
@@ -5048,6 +5041,12 @@ void G_InitNew(UINT8 pultmode, const char *mapname, boolean resetplayer, boolean
 		numgameovers = tokenlist = token = sstimer = redscore = bluescore = lastmap = 0;
 		countdown = countdown2 = exitfadestarted = 0;
 
+		if (!FLS)
+		{
+			emeralds = 0;
+			memset(&luabanks, 0, sizeof(luabanks));
+		}
+
 		for (i = 0; i < MAXPLAYERS; i++)
 		{
 			players[i].playerstate = PST_REBORN;
@@ -5055,6 +5054,7 @@ void G_InitNew(UINT8 pultmode, const char *mapname, boolean resetplayer, boolean
 			players[i].starpostx = players[i].starposty = players[i].starpostz = 0;
 			players[i].recordscore = 0;
 
+			// default lives, continues and score
 			if (netgame || multiplayer)
 			{
 				if (!FLS || (players[i].lives < 1))
@@ -5087,6 +5087,10 @@ void G_InitNew(UINT8 pultmode, const char *mapname, boolean resetplayer, boolean
 			CV_StealthSetValue(&cv_itemfinder, 0);
 	}
 
+	// Restore each player's skin if it was previously forced to be a specific one
+	// (Looks a bit silly, but it works.)
+	boolean reset_skin = netgame && mapheaderinfo[gamemap-1] && mapheaderinfo[gamemap-1]->forcecharacter[0] != '\0';
+
 	// internal game map
 	// well this check is useless because it is done before (d_netcmd.c::command_map_f)
 	// but in case of for demos....
@@ -5113,6 +5117,22 @@ void G_InitNew(UINT8 pultmode, const char *mapname, boolean resetplayer, boolean
 	ultimatemode = pultmode;
 	automapactive = false;
 	imcontinuing = false;
+
+	if (reset_skin)
+		D_SendPlayerConfig();
+
+	// fetch saved data if available
+	if (savedata.lives > 0)
+	{
+		numgameovers = savedata.numgameovers;
+		players[consoleplayer].continues = savedata.continues;
+		players[consoleplayer].lives = savedata.lives;
+		players[consoleplayer].score = savedata.score;
+		if ((botingame = ((botskin = savedata.botskin) != 0)))
+			botcolor = skins[botskin-1].prefcolor;
+		emeralds = savedata.emeralds;
+		savedata.lives = 0;
+	}
 
 	if ((gametyperules & GTR_CUTSCENES) && !skipprecutscene && mapheaderinfo[gamemap-1]->precutscenenum && !modeattacking && !(marathonmode & MA_NOCUTSCENES)) // Start a custom cutscene.
 		F_StartCustomCutscene(mapheaderinfo[gamemap-1]->precutscenenum-1, true, resetplayer, FLS);

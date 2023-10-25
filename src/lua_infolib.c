@@ -508,8 +508,6 @@ static int pivotlist_get(lua_State *L)
 	const char *field = luaL_checkstring(L, 2);
 	UINT8 frame;
 
-	I_Assert(framepivot != NULL);
-
 	frame = R_Char2Frame(field[0]);
 	if (frame == 255)
 		luaL_error(L, "invalid frame %s", field);
@@ -538,8 +536,6 @@ static int pivotlist_set(lua_State *L)
 		return luaL_error(L, "Do not alter spriteframepivot_t in HUD rendering code!");
 	if (hook_cmd_running)
 		return luaL_error(L, "Do not alter spriteframepivot_t in CMD building code!");
-
-	I_Assert(pivotlist != NULL);
 
 	frame = R_Char2Frame(field[0]);
 	if (frame == 255)
@@ -1750,7 +1746,7 @@ static int lib_setSkinColor(lua_State *L)
 		else if (i == 6 || (str && fastcmp(str,"accessible"))) {
 			boolean v = lua_toboolean(L, 3);
 			if (cnum < FIRSTSUPERCOLOR && v != skincolors[cnum].accessible)
-				return luaL_error(L, "skincolors[] index %d is a standard color; accessibility changes are prohibited.", cnum);
+				CONS_Alert(CONS_WARNING, "skincolors[] index %d is a standard color; accessibility changes are prohibited.", cnum);
 			else
 				info->accessible = v;
 		}
@@ -1845,7 +1841,7 @@ static int skincolor_set(lua_State *L)
 	else if (fastcmp(field,"accessible")) {
 		boolean v = lua_toboolean(L, 3);
 		if (cnum < FIRSTSUPERCOLOR && v != skincolors[cnum].accessible)
-			return luaL_error(L, "skincolors[] index %d is a standard color; accessibility changes are prohibited.", cnum);
+			CONS_Alert(CONS_WARNING, "skincolors[] index %d is a standard color; accessibility changes are prohibited.", cnum);
 		else
 			info->accessible = v;
 	} else

@@ -25,6 +25,7 @@ enum skin {
 	skin_flags,
 	skin_realname,
 	skin_hudname,
+	skin_supername,
 	skin_ability,
 	skin_ability2,
 	skin_thokitem,
@@ -63,6 +64,7 @@ static const char *const skin_opt[] = {
 	"flags",
 	"realname",
 	"hudname",
+	"supername",
 	"ability",
 	"ability2",
 	"thokitem",
@@ -125,6 +127,9 @@ static int skin_get(lua_State *L)
 		break;
 	case skin_hudname:
 		lua_pushstring(L, skin->hudname);
+		break;
+	case skin_supername:
+		lua_pushstring(L, skin->supername);
 		break;
 	case skin_ability:
 		lua_pushinteger(L, skin->ability);
@@ -334,13 +339,13 @@ static const char *const sprites_opt[] = {
 // skin.sprites[i] -> sprites[i]
 static int lib_getSkinSprite(lua_State *L)
 {
-	spritedef_t *sprites = *(spritedef_t **)luaL_checkudata(L, 1, META_SKINSPRITES);
+	spritedef_t *sksprites = *(spritedef_t **)luaL_checkudata(L, 1, META_SKINSPRITES);
 	playersprite_t i = luaL_checkinteger(L, 2);
 
 	if (i < 0 || i >= NUMPLAYERSPRITES*2)
 		return luaL_error(L, LUA_QL("skin_t") " field 'sprites' index %d out of range (0 - %d)", i, (NUMPLAYERSPRITES*2)-1);
 
-	LUA_PushUserdata(L, &sprites[i], META_SKINSPRITESLIST);
+	LUA_PushUserdata(L, &sksprites[i], META_SKINSPRITESLIST);
 	return 1;
 }
 

@@ -1553,30 +1553,32 @@ typedef enum
 
 typedef enum
 {
-	MD2_CUSVAL      = 1,
-	MD2_CVMEM       = 1<<1,
-	MD2_SKIN        = 1<<2,
-	MD2_COLOR       = 1<<3,
-	MD2_SCALESPEED  = 1<<4,
-	MD2_EXTVAL1     = 1<<5,
-	MD2_EXTVAL2     = 1<<6,
-	MD2_HNEXT       = 1<<7,
-	MD2_HPREV       = 1<<8,
-	MD2_FLOORROVER  = 1<<9,
-	MD2_CEILINGROVER = 1<<10,
-	MD2_SLOPE        = 1<<11,
-	MD2_COLORIZED    = 1<<12,
-	MD2_MIRRORED     = 1<<13,
-	MD2_SPRITEROLL   = 1<<14,
-	MD2_SHADOWSCALE  = 1<<15,
-	MD2_RENDERFLAGS  = 1<<16,
-	MD2_BLENDMODE    = 1<<17,
-	MD2_SPRITEXSCALE = 1<<18,
-	MD2_SPRITEYSCALE = 1<<19,
-	MD2_SPRITEXOFFSET = 1<<20,
-	MD2_SPRITEYOFFSET = 1<<21,
-	MD2_FLOORSPRITESLOPE = 1<<22,
-	MD2_DISPOFFSET = 1<<23
+	MD2_CUSVAL              = 1,
+	MD2_CVMEM               = 1<<1,
+	MD2_SKIN                = 1<<2,
+	MD2_COLOR               = 1<<3,
+	MD2_SCALESPEED          = 1<<4,
+	MD2_EXTVAL1             = 1<<5,
+	MD2_EXTVAL2             = 1<<6,
+	MD2_HNEXT               = 1<<7,
+	MD2_HPREV               = 1<<8,
+	MD2_FLOORROVER          = 1<<9,
+	MD2_CEILINGROVER        = 1<<10,
+	MD2_SLOPE               = 1<<11,
+	MD2_COLORIZED           = 1<<12,
+	MD2_MIRRORED            = 1<<13,
+	MD2_SPRITEROLL          = 1<<14,
+	MD2_SHADOWSCALE         = 1<<15,
+	MD2_RENDERFLAGS         = 1<<16,
+	MD2_BLENDMODE           = 1<<17,
+	MD2_SPRITEXSCALE        = 1<<18,
+	MD2_SPRITEYSCALE        = 1<<19,
+	MD2_SPRITEXOFFSET       = 1<<20,
+	MD2_SPRITEYOFFSET       = 1<<21,
+	MD2_FLOORSPRITESLOPE    = 1<<22,
+	MD2_DISPOFFSET          = 1<<23,
+	MD2_DRAWONLYFORPLAYER   = 1<<24,
+	MD2_DONTDRAWFORVIEWMOBJ = 1<<25
 } mobj_diff2_t;
 
 typedef enum
@@ -1811,6 +1813,10 @@ static void SaveMobjThinker(const thinker_t *th, const UINT8 type)
 		|| (slope->normal.z != FRACUNIT))
 			diff2 |= MD2_FLOORSPRITESLOPE;
 	}
+	if (mobj->drawonlyforplayer)
+		diff2 |= MD2_DRAWONLYFORPLAYER;
+	if (mobj->dontdrawforviewmobj)
+		diff2 |= MD2_DONTDRAWFORVIEWMOBJ;
 	if (mobj->dispoffset != mobj->info->dispoffset)
 		diff2 |= MD2_DISPOFFSET;
 
@@ -1988,6 +1994,10 @@ static void SaveMobjThinker(const thinker_t *th, const UINT8 type)
 		WRITEFIXED(save_p, slope->normal.y);
 		WRITEFIXED(save_p, slope->normal.z);
 	}
+	if (diff2 & MD2_DRAWONLYFORPLAYER)
+		WRITEUINT8(save_p, mobj->drawonlyforplayer-players);
+	if (diff2 & MD2_DONTDRAWFORVIEWMOBJ)
+		WRITEUINT32(save_p, mobj->dontdrawforviewmobj->mobjnum);
 	if (diff2 & MD2_DISPOFFSET)
 		WRITEINT32(save_p, mobj->dispoffset);
 
@@ -2706,8 +2716,8 @@ static void P_NetArchiveThinkers(void)
 				continue;
 			}
 #ifdef PARANOIA
-			else if (th->function.acp1 != (actionf_p1)P_RemoveThinkerDelayed) // wait garbage collection
-				I_Error("unknown thinker type %p", th->function.acp1);
+			else
+				I_Assert(th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed); // wait garbage collection
 #endif
 		}
 
@@ -3044,6 +3054,10 @@ static thinker_t* LoadMobjThinker(actionf_p1 thinker)
 		slope->normal.y = READFIXED(save_p);
 		slope->normal.z = READFIXED(save_p);
 	}
+	if (diff2 & MD2_DRAWONLYFORPLAYER)
+		mobj->drawonlyforplayer = &players[READUINT8(save_p)];
+	if (diff2 & MD2_DONTDRAWFORVIEWMOBJ)
+		mobj->dontdrawforviewmobj = (mobj_t *)(size_t)READUINT32(save_p);
 	if (diff2 & MD2_DISPOFFSET)
 		mobj->dispoffset = READINT32(save_p);
 	else
@@ -4063,6 +4077,13 @@ static void P_RelinkPointers(void)
 		if (mobj->type == MT_HOOP || mobj->type == MT_HOOPCOLLIDE || mobj->type == MT_HOOPCENTER)
 			continue;
 
+		if (mobj->dontdrawforviewmobj)
+		{
+			temp = (UINT32)(size_t)mobj->dontdrawforviewmobj;
+			mobj->dontdrawforviewmobj = NULL;
+			if (!P_SetTarget(&mobj->dontdrawforviewmobj, P_FindNewPosition(temp)))
+				CONS_Debug(DBG_GAMELOGIC, "dontdrawforviewmobj not found on %d\n", mobj->type);
+		}
 		if (mobj->tracer)
 		{
 			temp = (UINT32)(size_t)mobj->tracer;
