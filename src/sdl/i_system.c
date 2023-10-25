@@ -187,7 +187,8 @@ static char returnWadPath[256];
 #include "../i_system.h"
 #include "../i_threads.h"
 #include "../screen.h" //vid.WndParent
-#include "../d_net.h"
+#include "../netcode/d_net.h"
+#include "../netcode/commands.h"
 #include "../g_game.h"
 #include "../filesrch.h"
 #include "endtxt.h"
@@ -208,7 +209,7 @@ static char returnWadPath[256];
 
 #if !defined(NOMUMBLE) && defined(HAVE_MUMBLE)
 // Mumble context string
-#include "../d_clisrv.h"
+#include "../netcode/d_clisrv.h"
 #include "../byteptr.h"
 #endif
 
@@ -259,10 +260,10 @@ UINT8 keyboard_started = false;
 
 #ifdef UNIXBACKTRACE
 #define STDERR_WRITE(string) if (fd != -1) I_OutputMsg("%s", string)
-#define CRASHLOG_WRITE(string) if (fd != -1) write(fd, string, strlen(string))
+#define CRASHLOG_WRITE(string) if (fd != -1) junk = write(fd, string, strlen(string))
 #define CRASHLOG_STDERR_WRITE(string) \
 	if (fd != -1)\
-		write(fd, string, strlen(string));\
+		junk = write(fd, string, strlen(string));\
 	I_OutputMsg("%s", string)
 
 static void write_backtrace(INT32 signal)
@@ -271,6 +272,7 @@ static void write_backtrace(INT32 signal)
 	size_t size;
 	time_t rawtime;
 	struct tm timeinfo;
+	ssize_t junk;
 
 	enum { BT_SIZE = 1024, STR_SIZE = 32 };
 	void *array[BT_SIZE];
@@ -314,7 +316,7 @@ static void write_backtrace(INT32 signal)
 	backtrace_symbols_fd(array, size, STDERR_FILENO);
 
 	CRASHLOG_WRITE("\n"); // Write another newline to the log so it looks nice :)
-
+	(void)junk;
 	close(fd);
 }
 #undef STDERR_WRITE
@@ -405,8 +407,10 @@ static void I_ReportSignal(int num, int coredumped)
 
 	SDL_ShowMessageBox(&messageboxdata, &buttonid);
 
+#if SDL_VERSION_ATLEAST(2,0,14)
 	if (buttonid == 1)
 		SDL_OpenURL("https://www.srb2.org/discord");
+#endif
 }
 
 #ifndef NEWSIGNALHANDLER
@@ -2262,7 +2266,7 @@ void I_Sleep(UINT32 ms)
 }
 
 #ifdef NEWSIGNALHANDLER
-static void newsignalhandler_Warn(const char *pr)
+ATTRNORETURN static FUNCNORETURN void newsignalhandler_Warn(const char *pr)
 {
 	char text[128];
 
@@ -2384,9 +2388,7 @@ void I_Quit(void)
 	SDLforceUngrabMouse();
 	quiting = SDL_FALSE;
 	M_SaveConfig(NULL); //save game config, cvars..
-#ifndef NONET
 	D_SaveBan(); // save the ban list
-#endif
 	G_SaveGameData(clientGamedata); // Tails 12-08-2002
 	//added:16-02-98: when recording a demo, should exit using 'q' key,
 	//        but sometimes we forget and use 'F10'.. so save here too.
@@ -2501,9 +2503,7 @@ void I_Error(const char *error, ...)
 	// ---
 
 	M_SaveConfig(NULL); // save game config, cvars..
-#ifndef NONET
 	D_SaveBan(); // save the ban list
-#endif
 	G_SaveGameData(clientGamedata); // Tails 12-08-2002
 
 	// Shutdown. Here might be other errors.
@@ -3035,11 +3035,11 @@ size_t I_GetFreeMem(size_t *total)
 #ifdef FREEBSD
 	u_int v_free_count, v_page_size, v_page_count;
 	size_t size = sizeof(v_free_count);
-	sysctlbyname("vm.stat.vm.v_free_count", &v_free_count, &size, NULL, 0);
-	size_t size = sizeof(v_page_size);
-	sysctlbyname("vm.stat.vm.v_page_size", &v_page_size, &size, NULL, 0);
-	size_t size = sizeof(v_page_count);
-	sysctlbyname("vm.stat.vm.v_page_count", &v_page_count, &size, NULL, 0);
+	sysctlbyname("vm.stats.vm.v_free_count", &v_free_count, &size, NULL, 0);
+	size = sizeof(v_page_size);
+	sysctlbyname("vm.stats.vm.v_page_size", &v_page_size, &size, NULL, 0);
+	size = sizeof(v_page_count);
+	sysctlbyname("vm.stats.vm.v_page_count", &v_page_count, &size, NULL, 0);
 
 	if (total)
 		*total = v_page_count * v_page_size;
