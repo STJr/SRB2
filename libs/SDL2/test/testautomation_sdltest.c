@@ -89,7 +89,6 @@ int
 sdltest_randomNumber(void *arg)
 {
   Sint64 result;
-  Uint64 uresult;
   double dresult;
   Uint64 umax;
   Sint64 min, max;
@@ -127,7 +126,7 @@ sdltest_randomNumber(void *arg)
   SDLTest_AssertPass("Call to SDLTest_RandomSint32");
   SDLTest_AssertCheck(result >= min && result <= max, "Verify result value, expected: [%"SDL_PRIs64",%"SDL_PRIs64"], got: %"SDL_PRIs64, min, max, result);
 
-  uresult = SDLTest_RandomUint64();
+  SDLTest_RandomUint64();
   SDLTest_AssertPass("Call to SDLTest_RandomUint64");
 
   result = SDLTest_RandomSint64();
@@ -1132,7 +1131,7 @@ sdltest_randomAsciiString(void *arg)
      SDLTest_AssertCheck(len >= 1 && len <= 255, "Validate that result length; expected: len=[1,255], got: %d", (int) len);
      nonAsciiCharacters = 0;
      for (i=0; i<len; i++) {
-       if (iscntrl(result[i])) {
+       if (SDL_iscntrl(result[i])) {
          nonAsciiCharacters++;
        }
      }
@@ -1163,14 +1162,14 @@ sdltest_randomAsciiStringWithMaximumLength(void *arg)
 
   targetLen = 16 + SDLTest_RandomUint8();
   result = SDLTest_RandomAsciiStringWithMaximumLength((int) targetLen);
-  SDLTest_AssertPass("Call to SDLTest_RandomAsciiStringWithMaximumLength(%d)", targetLen);
+  SDLTest_AssertPass("Call to SDLTest_RandomAsciiStringWithMaximumLength(%d)", (int) targetLen);
   SDLTest_AssertCheck(result != NULL, "Validate that result is not NULL");
   if (result != NULL) {
      len = SDL_strlen(result);
      SDLTest_AssertCheck(len >= 1 && len <= targetLen, "Validate that result length; expected: len=[1,%d], got: %d", (int) targetLen, (int) len);
      nonAsciiCharacters = 0;
      for (i=0; i<len; i++) {
-       if (iscntrl(result[i])) {
+       if (SDL_iscntrl(result[i])) {
          nonAsciiCharacters++;
        }
      }
@@ -1184,7 +1183,7 @@ sdltest_randomAsciiStringWithMaximumLength(void *arg)
   /* Negative test */
   targetLen = 0;
   result = SDLTest_RandomAsciiStringWithMaximumLength((int) targetLen);
-  SDLTest_AssertPass("Call to SDLTest_RandomAsciiStringWithMaximumLength(%d)", targetLen);
+  SDLTest_AssertPass("Call to SDLTest_RandomAsciiStringWithMaximumLength(%d)", (int) targetLen);
   SDLTest_AssertCheck(result == NULL, "Validate that result is NULL");
   lastError = (char *)SDL_GetError();
   SDLTest_AssertPass("SDL_GetError()");
@@ -1217,14 +1216,14 @@ sdltest_randomAsciiStringOfSize(void *arg)
   /* Positive test */
   targetLen = 16 + SDLTest_RandomUint8();
   result = SDLTest_RandomAsciiStringOfSize((int) targetLen);
-  SDLTest_AssertPass("Call to SDLTest_RandomAsciiStringOfSize(%d)", targetLen);
+  SDLTest_AssertPass("Call to SDLTest_RandomAsciiStringOfSize(%d)", (int) targetLen);
   SDLTest_AssertCheck(result != NULL, "Validate that result is not NULL");
   if (result != NULL) {
      len = SDL_strlen(result);
      SDLTest_AssertCheck(len == targetLen, "Validate that result length; expected: len=%d, got: %d", (int) targetLen, (int) len);
      nonAsciiCharacters = 0;
      for (i=0; i<len; i++) {
-       if (iscntrl(result[i])) {
+       if (SDL_iscntrl(result[i])) {
          nonAsciiCharacters++;
        }
      }
@@ -1238,7 +1237,7 @@ sdltest_randomAsciiStringOfSize(void *arg)
   /* Negative test */
   targetLen = 0;
   result = SDLTest_RandomAsciiStringOfSize((int) targetLen);
-  SDLTest_AssertPass("Call to SDLTest_RandomAsciiStringOfSize(%d)", targetLen);
+  SDLTest_AssertPass("Call to SDLTest_RandomAsciiStringOfSize(%d)", (int) targetLen);
   SDLTest_AssertCheck(result == NULL, "Validate that result is NULL");
   lastError = (char *)SDL_GetError();
   SDLTest_AssertPass("SDL_GetError()");
