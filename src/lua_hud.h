@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2014-2016 by John "JTE" Muniz.
-// Copyright (C) 2014-2021 by Sonic Team Junior.
+// Copyright (C) 2014-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -9,6 +9,11 @@
 //-----------------------------------------------------------------------------
 /// \file  lua_hud.h
 /// \brief HUD enable/disable flags for Lua scripting
+
+#ifndef __LUA_HUD_H__
+#define __LUA_HUD_H__
+
+#include "lua_hudlib_drawlist.h"
 
 enum hud {
 	hud_stagetitle = 0,
@@ -47,4 +52,6 @@ extern boolean hud_running;
 
 boolean LUA_HudEnabled(enum hud option);
 
-void LUA_SetHudHook(int hook);
+void LUA_SetHudHook(int hook, huddrawlist_h list);
+
+#endif // __LUA_HUD_H__
