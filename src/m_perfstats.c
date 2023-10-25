@@ -1,6 +1,6 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
-// Copyright (C) 2020-2022 by Sonic Team Junior.
+// Copyright (C) 2020-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -12,7 +12,7 @@
 #include "m_perfstats.h"
 #include "v_video.h"
 #include "i_video.h"
-#include "d_netcmd.h"
+#include "netcode/d_netcmd.h"
 #include "r_main.h"
 #include "i_system.h"
 #include "z_zone.h"

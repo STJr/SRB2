@@ -2,7 +2,7 @@
 strcasestr -- case insensitive substring searching function.
 */
 /*
-Copyright 2019-2022 James R.
+Copyright 2019-2023 James R.
 All rights reserved.
 
 Redistribution and use in source forms, with or without modification, is
@@ -61,7 +61,7 @@ swapp (char ***ppap, char ***ppbp, char **cpap, char **cpbp)
 }
 
 char *
-strcasestr (const char *s, const char *q)
+nongnu_strcasestr (const char *s, const char *q)
 {
 	size_t  qn;
 

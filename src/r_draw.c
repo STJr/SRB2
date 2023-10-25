@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2022 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -179,8 +179,6 @@ CV_PossibleValue_t Color_cons_t[MAXSKINCOLORS+1];
 void R_InitTranslucencyTables(void)
 {
 	// Load here the transparency lookup tables 'TRANSx0'
-	// NOTE: the TRANSx0 resources MUST BE aligned on 64k for the asm
-	// optimised code (in other words, transtables pointer low word is 0)
 	transtables = Z_MallocAlign(NUMTRANSTABLES*0x10000, PU_STATIC,
 		NULL, 16);
 

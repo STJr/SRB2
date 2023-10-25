@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2022 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -1660,6 +1660,35 @@ INT32 R_CheckTextureNumForName(const char *name)
 		}
 
 	return -1;
+}
+
+//
+// R_CheckTextureNameForNum
+//
+// because sidedefs use numbers and sometimes you want names
+// returns no texture marker if no texture was found
+//
+const char *R_CheckTextureNameForNum(INT32 num)
+{
+	if (num > 0 && num < numtextures)
+		return textures[num]->name;
+	
+	return "-";
+}
+
+//
+// R_TextureNameForNum
+//
+// calls R_CheckTextureNameForNum and returns REDWALL if result is a no texture marker
+//
+const char *R_TextureNameForNum(INT32 num)
+{
+	const char *result = R_CheckTextureNameForNum(num);
+
+	if (strcmp(result, "-") == 0)
+		return "REDWALL";
+
+	return result;
 }
 
 //

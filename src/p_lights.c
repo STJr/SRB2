@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2022 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -17,7 +17,7 @@
 #include "r_state.h"
 #include "z_zone.h"
 #include "m_random.h"
-#include "d_netcmd.h"
+#include "netcode/d_netcmd.h"
 
 /** Removes any active lighting effects in a sector.
   *
@@ -353,8 +353,8 @@ void P_FadeLightBySector(sector_t *sector, INT32 destvalue, INT32 speed, boolean
 	else
 	{
 		// Speed means increment per tic (literally speed).
-		ll->timer = FixedDiv((destvalue<<FRACBITS) - ll->fixedcurlevel, speed<<FRACBITS)>>FRACBITS;
-		ll->fixedpertic = speed<<FRACBITS;
+		ll->timer = abs(FixedDiv((destvalue<<FRACBITS) - ll->fixedcurlevel, speed<<FRACBITS)>>FRACBITS);
+		ll->fixedpertic = ll->destlevel < ll->sourcelevel ? -speed<<FRACBITS : speed<<FRACBITS;
 	}
 }
 
