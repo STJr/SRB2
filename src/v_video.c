@@ -1179,7 +1179,6 @@ void V_DrawFill(INT32 x, INT32 y, INT32 w, INT32 h, INT32 c)
 	const UINT8 *deststop;
 	UINT32 alphalevel = ((c & V_ALPHAMASK) >> V_ALPHASHIFT);
 	UINT32 blendmode = ((c & V_BLENDMASK) >> V_BLENDSHIFT);
-	INT32 u;
 
 	UINT8 perplayershuffle = 0;
 
