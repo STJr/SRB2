@@ -718,17 +718,17 @@ static void hook_think_frame(int type)
 	}
 }
 
-void LUA_HookPreThinkFrame()
+void LUA_HookPreThinkFrame(void)
 {
 	hook_think_frame(HOOK(PreThinkFrame));
 }
 
-void LUA_HookThinkFrame()
+void LUA_HookThinkFrame(void)
 {
 	hook_think_frame(HOOK(ThinkFrame));
 }
 
-void LUA_HookPostThinkFrame()
+void LUA_HookPostThinkFrame(void)
 {
 	hook_think_frame(HOOK(PostThinkFrame));
 }
