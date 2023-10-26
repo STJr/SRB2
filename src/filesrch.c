@@ -23,6 +23,11 @@
 #include <windows.h>
 #endif
 #include <sys/stat.h>
+
+#ifndef S_ISLNK
+#define IGNORE_SYMLINKS
+#endif
+
 #ifndef IGNORE_SYMLINKS
 #include <unistd.h>
 #include <libgen.h>
@@ -467,8 +472,10 @@ filestatus_t filesearch(char *filename, const char *startpath, const UINT8 *want
 					else
 						strcpy(filename,dent->d_name);
 #ifndef IGNORE_SYMLINKS
-					if (lstat(filename, &statbuf) != -1) {
-						if (S_ISLNK(statbuf.st_mode)) {
+					if (lstat(filename, &statbuf) != -1)
+					{
+						if (S_ISLNK(statbuf.st_mode))
+						{
 							char *tempbuf = realpath(filename, NULL);
 							if (!tempbuf)
 								I_Error("Error parsing link %s: %s", filename, strerror(errno));
