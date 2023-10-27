@@ -20,6 +20,7 @@
 #include "lua_libs.h"
 
 boolean mousegrabbedbylua = true;
+boolean ignoregameinputs = false;
 
 ///////////////
 // FUNCTIONS //
@@ -163,10 +164,31 @@ static int lib_get(lua_State *L)
 		LUA_PushUserdata(L, &mouse2, META_MOUSE);
 		return 1;
 	}
+	else if (fastcmp(field, "ignoregameinputs"))
+	{
+		lua_pushboolean(L, ignoregameinputs);
+		return 1;
+	}
 	else
 	{
 		return 0;
 	}
+}
+
+static int lib_set(lua_State *L)
+{
+	const char *field = luaL_checkstring(L, 2);
+
+	if (fastcmp(field, "ignoregameinputs"))
+	{
+		ignoregameinputs = luaL_checkboolean(L, 3);
+	}
+	else
+	{
+		lua_rawset(L, 1);
+	}
+
+	return 0;
 }
 
 ///////////////////
@@ -282,6 +304,9 @@ int LUA_InputLib(lua_State *L)
 		lua_createtable(L, 0, 2);
 			lua_pushcfunction(L, lib_get);
 			lua_setfield(L, -2, "__index");
+
+			lua_pushcfunction(L, lib_set);
+			lua_setfield(L, -2, "__newindex");
 		lua_setmetatable(L, -2);
 
 		lua_newuserdata(L, 0);
