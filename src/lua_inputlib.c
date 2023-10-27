@@ -285,18 +285,8 @@ static int mouse_num(lua_State *L)
 
 int LUA_InputLib(lua_State *L)
 {
-	luaL_newmetatable(L, META_KEYEVENT);
-		lua_pushcfunction(L, keyevent_get);
-		lua_setfield(L, -2, "__index");
-	lua_pop(L, 1);
-
-	luaL_newmetatable(L, META_MOUSE);
-		lua_pushcfunction(L, mouse_get);
-		lua_setfield(L, -2, "__index");
-
-		lua_pushcfunction(L, mouse_num);
-		lua_setfield(L, -2, "__len");
-	lua_pop(L, 1);
+	LUA_RegisterUserdataMetatable(L, META_KEYEVENT, keyevent_get, NULL, NULL);
+	LUA_RegisterUserdataMetatable(L, META_MOUSE, mouse_get, NULL, mouse_num);
 
 	// Register the library, then add __index and __newindex
 	// metamethods to it to allow global variables

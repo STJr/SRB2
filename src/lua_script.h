@@ -73,6 +73,14 @@ void LUA_PushTaggableObjectArray
 		size_t sizeof_element,
 		const char *meta);
 
+void LUA_RegisterUserdataMetatable(
+	lua_State *L,
+	const char *name,
+	lua_CFunction get,
+	lua_CFunction set,
+	lua_CFunction len
+);
+
 void LUA_InsertTaggroupIterator
 (		lua_State *L,
 		taggroup_t *garray[],

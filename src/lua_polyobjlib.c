@@ -447,32 +447,9 @@ static int lib_numPolyObjects(lua_State *L)
 
 int LUA_PolyObjLib(lua_State *L)
 {
-	luaL_newmetatable(L, META_POLYOBJVERTICES);
-		lua_pushcfunction(L, polyobjvertices_get);
-		lua_setfield(L, -2, "__index");
-
-		lua_pushcfunction(L, polyobjvertices_num);
-		lua_setfield(L, -2, "__len");
-	lua_pop(L, 1);
-
-	luaL_newmetatable(L, META_POLYOBJLINES);
-		lua_pushcfunction(L, polyobjlines_get);
-		lua_setfield(L, -2, "__index");
-
-		lua_pushcfunction(L, polyobjlines_num);
-		lua_setfield(L, -2, "__len");
-	lua_pop(L, 1);
-
-	luaL_newmetatable(L, META_POLYOBJ);
-		lua_pushcfunction(L, polyobj_get);
-		lua_setfield(L, -2, "__index");
-
-		lua_pushcfunction(L, polyobj_set);
-		lua_setfield(L, -2, "__newindex");
-
-		lua_pushcfunction(L, polyobj_num);
-		lua_setfield(L, -2, "__len");
-	lua_pop(L,1);
+	LUA_RegisterUserdataMetatable(L, META_POLYOBJVERTICES, polyobjvertices_get, NULL, polyobjvertices_num);
+	LUA_RegisterUserdataMetatable(L, META_POLYOBJLINES, polyobjlines_get, NULL, polyobjlines_num);
+	LUA_RegisterUserdataMetatable(L, META_POLYOBJ, polyobj_get, polyobj_set, polyobj_num);
 
 	lua_newuserdata(L, 0);
 		lua_createtable(L, 0, 2);

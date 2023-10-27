@@ -1914,95 +1914,17 @@ int LUA_InfoLib(lua_State *L)
 	lua_newtable(L);
 	lua_setfield(L, LUA_REGISTRYINDEX, LREG_ACTIONS);
 
-	luaL_newmetatable(L, META_STATE);
-		lua_pushcfunction(L, state_get);
-		lua_setfield(L, -2, "__index");
-
-		lua_pushcfunction(L, state_set);
-		lua_setfield(L, -2, "__newindex");
-
-		lua_pushcfunction(L, state_num);
-		lua_setfield(L, -2, "__len");
-	lua_pop(L, 1);
-
-	luaL_newmetatable(L, META_MOBJINFO);
-		lua_pushcfunction(L, mobjinfo_get);
-		lua_setfield(L, -2, "__index");
-
-		lua_pushcfunction(L, mobjinfo_set);
-		lua_setfield(L, -2, "__newindex");
-
-		lua_pushcfunction(L, mobjinfo_num);
-		lua_setfield(L, -2, "__len");
-	lua_pop(L, 1);
+	LUA_RegisterUserdataMetatable(L, META_STATE, state_get, state_set, state_num);
+	LUA_RegisterUserdataMetatable(L, META_MOBJINFO, mobjinfo_get, mobjinfo_set, mobjinfo_num);
+	LUA_RegisterUserdataMetatable(L, META_SKINCOLOR, skincolor_get, skincolor_set, skincolor_num);
+	LUA_RegisterUserdataMetatable(L, META_COLORRAMP, colorramp_get, colorramp_set, colorramp_len);
+	LUA_RegisterUserdataMetatable(L, META_SFXINFO, sfxinfo_get, sfxinfo_set, sfxinfo_num);
+	LUA_RegisterUserdataMetatable(L, META_SPRITEINFO, spriteinfo_get, spriteinfo_set, spriteinfo_num);
+	LUA_RegisterUserdataMetatable(L, META_PIVOTLIST, pivotlist_get, pivotlist_set, pivotlist_num);
+	LUA_RegisterUserdataMetatable(L, META_FRAMEPIVOT, framepivot_get, framepivot_set, framepivot_num);
+	LUA_RegisterUserdataMetatable(L, META_LUABANKS, lib_getluabanks, lib_setluabanks, lib_luabankslen);
 
 	mobjinfo_fields_ref = Lua_CreateFieldTable(L, mobjinfo_opt);
-
-	luaL_newmetatable(L, META_SKINCOLOR);
-		lua_pushcfunction(L, skincolor_get);
-		lua_setfield(L, -2, "__index");
-
-		lua_pushcfunction(L, skincolor_set);
-		lua_setfield(L, -2, "__newindex");
-
-		lua_pushcfunction(L, skincolor_num);
-		lua_setfield(L, -2, "__len");
-	lua_pop(L, 1);
-
-	luaL_newmetatable(L, META_COLORRAMP);
-		lua_pushcfunction(L, colorramp_get);
-		lua_setfield(L, -2, "__index");
-
-		lua_pushcfunction(L, colorramp_set);
-		lua_setfield(L, -2, "__newindex");
-
-		lua_pushcfunction(L, colorramp_len);
-		lua_setfield(L, -2, "__len");
-	lua_pop(L,1);
-
-	luaL_newmetatable(L, META_SFXINFO);
-		lua_pushcfunction(L, sfxinfo_get);
-		lua_setfield(L, -2, "__index");
-
-		lua_pushcfunction(L, sfxinfo_set);
-		lua_setfield(L, -2, "__newindex");
-
-		lua_pushcfunction(L, sfxinfo_num);
-		lua_setfield(L, -2, "__len");
-	lua_pop(L, 1);
-
-	luaL_newmetatable(L, META_SPRITEINFO);
-		lua_pushcfunction(L, spriteinfo_get);
-		lua_setfield(L, -2, "__index");
-
-		lua_pushcfunction(L, spriteinfo_set);
-		lua_setfield(L, -2, "__newindex");
-
-		lua_pushcfunction(L, spriteinfo_num);
-		lua_setfield(L, -2, "__len");
-	lua_pop(L, 1);
-
-	luaL_newmetatable(L, META_PIVOTLIST);
-		lua_pushcfunction(L, pivotlist_get);
-		lua_setfield(L, -2, "__index");
-
-		lua_pushcfunction(L, pivotlist_set);
-		lua_setfield(L, -2, "__newindex");
-
-		lua_pushcfunction(L, pivotlist_num);
-		lua_setfield(L, -2, "__len");
-	lua_pop(L, 1);
-
-	luaL_newmetatable(L, META_FRAMEPIVOT);
-		lua_pushcfunction(L, framepivot_get);
-		lua_setfield(L, -2, "__index");
-
-		lua_pushcfunction(L, framepivot_set);
-		lua_setfield(L, -2, "__newindex");
-
-		lua_pushcfunction(L, framepivot_num);
-		lua_setfield(L, -2, "__len");
-	lua_pop(L, 1);
 
 	lua_newuserdata(L, 0);
 		lua_createtable(L, 0, 2);
@@ -2103,17 +2025,6 @@ int LUA_InfoLib(lua_State *L)
 			lua_setfield(L, -2, "__len");
 		lua_setmetatable(L, -2);
 	lua_setglobal(L, "spriteinfo");
-
-	luaL_newmetatable(L, META_LUABANKS);
-		lua_pushcfunction(L, lib_getluabanks);
-		lua_setfield(L, -2, "__index");
-
-		lua_pushcfunction(L, lib_setluabanks);
-		lua_setfield(L, -2, "__newindex");
-
-		lua_pushcfunction(L, lib_luabankslen);
-		lua_setfield(L, -2, "__len");
-	lua_pop(L, 1);
 
 	return 0;
 }

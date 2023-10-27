@@ -1523,38 +1523,11 @@ static int ticcmd_set(lua_State *L)
 
 int LUA_PlayerLib(lua_State *L)
 {
-	luaL_newmetatable(L, META_PLAYER);
-		lua_pushcfunction(L, player_get);
-		lua_setfield(L, -2, "__index");
-
-		lua_pushcfunction(L, player_set);
-		lua_setfield(L, -2, "__newindex");
-
-		lua_pushcfunction(L, player_num);
-		lua_setfield(L, -2, "__len");
-	lua_pop(L,1);
+	LUA_RegisterUserdataMetatable(L, META_PLAYER, player_get, player_set, player_num);
+	LUA_RegisterUserdataMetatable(L, META_POWERS, power_get, power_set, power_len);
+	LUA_RegisterUserdataMetatable(L, META_TICCMD, ticcmd_get, ticcmd_set, NULL);
 
 	player_fields_ref = Lua_CreateFieldTable(L, player_opt);
-
-	luaL_newmetatable(L, META_POWERS);
-		lua_pushcfunction(L, power_get);
-		lua_setfield(L, -2, "__index");
-
-		lua_pushcfunction(L, power_set);
-		lua_setfield(L, -2, "__newindex");
-
-		lua_pushcfunction(L, power_len);
-		lua_setfield(L, -2, "__len");
-	lua_pop(L,1);
-
-	luaL_newmetatable(L, META_TICCMD);
-		lua_pushcfunction(L, ticcmd_get);
-		lua_setfield(L, -2, "__index");
-
-		lua_pushcfunction(L, ticcmd_set);
-		lua_setfield(L, -2, "__newindex");
-	lua_pop(L,1);
-
 	ticcmd_fields_ref = Lua_CreateFieldTable(L, ticcmd_opt);
 
 	lua_newuserdata(L, 0);

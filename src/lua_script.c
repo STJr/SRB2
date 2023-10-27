@@ -1832,3 +1832,32 @@ void LUA_PushTaggableObjectArray
 		lua_setmetatable(L, -2);
 	lua_setglobal(L, field);
 }
+
+void LUA_RegisterUserdataMetatable(
+	lua_State *L,
+	const char *name,
+	lua_CFunction get,
+	lua_CFunction set,
+	lua_CFunction len
+)
+{
+	luaL_newmetatable(L, name);
+
+	if (get)
+	{
+		lua_pushcfunction(L, get);
+		lua_setfield(L, -2, "__index");
+	}
+	if (set)
+	{
+		lua_pushcfunction(L, set);
+		lua_setfield(L, -2, "__newindex");
+	}
+	if (len)
+	{
+		lua_pushcfunction(L, len);
+		lua_setfield(L, -2, "__len");
+	}
+
+	lua_pop(L, 1);
+}

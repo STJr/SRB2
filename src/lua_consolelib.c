@@ -626,10 +626,7 @@ static int cvar_get(lua_State *L)
 int LUA_ConsoleLib(lua_State *L)
 {
 	// Metatable for consvar_t
-	luaL_newmetatable(L, META_CVAR);
-		lua_pushcfunction(L, cvar_get);
-		lua_setfield(L, -2, "__index");
-	lua_pop(L,1);
+	LUA_RegisterUserdataMetatable(L, META_CVAR, cvar_get, NULL, NULL);
 
 	cvar_fields_ref = Lua_CreateFieldTable(L, cvar_opt);
 

@@ -2843,120 +2843,37 @@ static int mapheaderinfo_get(lua_State *L)
 
 int LUA_MapLib(lua_State *L)
 {
-	luaL_newmetatable(L, META_SECTORLINES);
-		lua_pushcfunction(L, sectorlines_get);
-		lua_setfield(L, -2, "__index");
-
-		lua_pushcfunction(L, sectorlines_num);
-		lua_setfield(L, -2, "__len");
-	lua_pop(L, 1);
-
-	luaL_newmetatable(L, META_SECTOR);
-		lua_pushcfunction(L, sector_get);
-		lua_setfield(L, -2, "__index");
-
-		lua_pushcfunction(L, sector_set);
-		lua_setfield(L, -2, "__newindex");
-
-		lua_pushcfunction(L, sector_num);
-		lua_setfield(L, -2, "__len");
-	lua_pop(L, 1);
+	LUA_RegisterUserdataMetatable(L, META_SECTORLINES, sectorlines_get, NULL, sectorlines_num);
+	LUA_RegisterUserdataMetatable(L, META_SECTOR, sector_get, sector_set, sector_num);
+	LUA_RegisterUserdataMetatable(L, META_SUBSECTOR, subsector_get, NULL, subsector_num);
+	LUA_RegisterUserdataMetatable(L, META_LINE, line_get, NULL, line_num);
+	LUA_RegisterUserdataMetatable(L, META_LINEARGS, lineargs_get, NULL, lineargs_len);
+	LUA_RegisterUserdataMetatable(L, META_LINESTRINGARGS, linestringargs_get, NULL, linestringargs_len);
+	LUA_RegisterUserdataMetatable(L, META_SIDENUM, sidenum_get, NULL, NULL);
+	LUA_RegisterUserdataMetatable(L, META_SIDE, side_get, side_set, side_num);
+	LUA_RegisterUserdataMetatable(L, META_VERTEX, vertex_get, NULL, vertex_num);
+	LUA_RegisterUserdataMetatable(L, META_FFLOOR, ffloor_get, ffloor_set, NULL);
+	LUA_RegisterUserdataMetatable(L, META_BBOX, bbox_get, NULL, NULL);
+	LUA_RegisterUserdataMetatable(L, META_SLOPE, slope_get, slope_set, NULL);
+	LUA_RegisterUserdataMetatable(L, META_VECTOR2, vector2_get, NULL, NULL);
+	LUA_RegisterUserdataMetatable(L, META_VECTOR3, vector3_get, NULL, NULL);
+	LUA_RegisterUserdataMetatable(L, META_MAPHEADER, mapheaderinfo_get, NULL, NULL);
 
 	sector_fields_ref = Lua_CreateFieldTable(L, sector_opt);
-
-	luaL_newmetatable(L, META_SUBSECTOR);
-		lua_pushcfunction(L, subsector_get);
-		lua_setfield(L, -2, "__index");
-
-		lua_pushcfunction(L, subsector_num);
-		lua_setfield(L, -2, "__len");
-	lua_pop(L, 1);
-
 	subsector_fields_ref = Lua_CreateFieldTable(L, subsector_opt);
-
-	luaL_newmetatable(L, META_LINE);
-		lua_pushcfunction(L, line_get);
-		lua_setfield(L, -2, "__index");
-
-		lua_pushcfunction(L, line_num);
-		lua_setfield(L, -2, "__len");
-	lua_pop(L, 1);
-
 	line_fields_ref = Lua_CreateFieldTable(L, line_opt);
-
-	luaL_newmetatable(L, META_LINEARGS);
-		lua_pushcfunction(L, lineargs_get);
-		lua_setfield(L, -2, "__index");
-
-		lua_pushcfunction(L, lineargs_len);
-		lua_setfield(L, -2, "__len");
-	lua_pop(L, 1);
-
-	luaL_newmetatable(L, META_LINESTRINGARGS);
-		lua_pushcfunction(L, linestringargs_get);
-		lua_setfield(L, -2, "__index");
-
-		lua_pushcfunction(L, linestringargs_len);
-		lua_setfield(L, -2, "__len");
-	lua_pop(L, 1);
-
-	luaL_newmetatable(L, META_SIDENUM);
-		lua_pushcfunction(L, sidenum_get);
-		lua_setfield(L, -2, "__index");
-	lua_pop(L, 1);
-
-	luaL_newmetatable(L, META_SIDE);
-		lua_pushcfunction(L, side_get);
-		lua_setfield(L, -2, "__index");
-
-		lua_pushcfunction(L, side_set);
-		lua_setfield(L, -2, "__newindex");
-
-		lua_pushcfunction(L, side_num);
-		lua_setfield(L, -2, "__len");
-	lua_pop(L, 1);
-
 	side_fields_ref = Lua_CreateFieldTable(L, side_opt);
-
-	luaL_newmetatable(L, META_VERTEX);
-		lua_pushcfunction(L, vertex_get);
-		lua_setfield(L, -2, "__index");
-
-		lua_pushcfunction(L, vertex_num);
-		lua_setfield(L, -2, "__len");
-	lua_pop(L, 1);
-
 	vertex_fields_ref = Lua_CreateFieldTable(L, vertex_opt);
-
-	luaL_newmetatable(L, META_FFLOOR);
-		lua_pushcfunction(L, ffloor_get);
-		lua_setfield(L, -2, "__index");
-
-		lua_pushcfunction(L, ffloor_set);
-		lua_setfield(L, -2, "__newindex");
-	lua_pop(L, 1);
-
 	ffloor_fields_ref = Lua_CreateFieldTable(L, ffloor_opt);
+	slope_fields_ref = Lua_CreateFieldTable(L, slope_opt);
+	mapheaderinfo_fields_ref = Lua_CreateFieldTable(L, mapheaderinfo_opt);
 
 #ifdef HAVE_LUA_SEGS
-	luaL_newmetatable(L, META_SEG);
-		lua_pushcfunction(L, seg_get);
-		lua_setfield(L, -2, "__index");
-
-		lua_pushcfunction(L, seg_num);
-		lua_setfield(L, -2, "__len");
-	lua_pop(L, 1);
+	LUA_RegisterUserdataMetatable(L, META_SEG, seg_get, NULL, seg_num);
+	LUA_RegisterUserdataMetatable(L, META_NODE, node_get, NULL, node_num);
+	LUA_RegisterUserdataMetatable(L, META_NODECHILDREN, nodechildren_get, NULL, NULL);
 
 	seg_fields_ref = Lua_CreateFieldTable(L, seg_opt);
-
-	luaL_newmetatable(L, META_NODE);
-		lua_pushcfunction(L, node_get);
-		lua_setfield(L, -2, "__index");
-
-		lua_pushcfunction(L, node_num);
-		lua_setfield(L, -2, "__len");
-	lua_pop(L, 1);
-
 	node_fields_ref = Lua_CreateFieldTable(L, node_opt);
 
 	luaL_newmetatable(L, META_NODEBBOX);
@@ -2965,47 +2882,7 @@ int LUA_MapLib(lua_State *L)
 		lua_pushcfunction(L, nodebbox_call);
 		lua_setfield(L, -2, "__call");
 	lua_pop(L, 1);
-
-	luaL_newmetatable(L, META_NODECHILDREN);
-		lua_pushcfunction(L, nodechildren_get);
-		lua_setfield(L, -2, "__index");
-	lua_pop(L, 1);
 #endif
-
-	luaL_newmetatable(L, META_BBOX);
-		lua_pushcfunction(L, bbox_get);
-		lua_setfield(L, -2, "__index");
-	lua_pop(L, 1);
-
-	luaL_newmetatable(L, META_SLOPE);
-		lua_pushcfunction(L, slope_get);
-		lua_setfield(L, -2, "__index");
-
-		lua_pushcfunction(L, slope_set);
-		lua_setfield(L, -2, "__newindex");
-	lua_pop(L, 1);
-
-	slope_fields_ref = Lua_CreateFieldTable(L, slope_opt);
-
-	luaL_newmetatable(L, META_VECTOR2);
-		lua_pushcfunction(L, vector2_get);
-		lua_setfield(L, -2, "__index");
-	lua_pop(L, 1);
-
-	luaL_newmetatable(L, META_VECTOR3);
-		lua_pushcfunction(L, vector3_get);
-		lua_setfield(L, -2, "__index");
-	lua_pop(L, 1);
-
-	luaL_newmetatable(L, META_MAPHEADER);
-		lua_pushcfunction(L, mapheaderinfo_get);
-		lua_setfield(L, -2, "__index");
-
-		//lua_pushcfunction(L, mapheaderinfo_num);
-		//lua_setfield(L, -2, "__len");
-	lua_pop(L, 1);
-
-	mapheaderinfo_fields_ref = Lua_CreateFieldTable(L, mapheaderinfo_opt);
 
 	LUA_PushTaggableObjectArray(L, "sectors",
 			lib_iterateSectors,
