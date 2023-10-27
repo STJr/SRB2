@@ -1,15 +1,17 @@
 #Source code
+/Makefile text=auto
 /src/*.c text=auto
 /src/*.h text=auto
 /src/*.s text=auto
 /src/*.m text=auto
 /src/*.xpm text=auto
 /src/Makefile text=auto
+/tools/Makefile text=auto
 /src/Make*.cfg text=auto
 /src/CMakeLists.txt text=auto
+*.mk -whitespace text=auto
 # Windows EOL
 *.cs -crlf -whitespace
-*.mk -crlf -whitespace
 *.bat -crlf -whitespace
 *.dev -crlf -whitespace
 *.dsp -crlf -whitespace

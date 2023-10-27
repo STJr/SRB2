@@ -259,10 +259,10 @@ UINT8 keyboard_started = false;
 
 #ifdef UNIXBACKTRACE
 #define STDERR_WRITE(string) if (fd != -1) I_OutputMsg("%s", string)
-#define CRASHLOG_WRITE(string) if (fd != -1) write(fd, string, strlen(string))
+#define CRASHLOG_WRITE(string) if (fd != -1) junk = write(fd, string, strlen(string))
 #define CRASHLOG_STDERR_WRITE(string) \
 	if (fd != -1)\
-		write(fd, string, strlen(string));\
+		junk = write(fd, string, strlen(string));\
 	I_OutputMsg("%s", string)
 
 static void write_backtrace(INT32 signal)
@@ -271,6 +271,7 @@ static void write_backtrace(INT32 signal)
 	size_t size;
 	time_t rawtime;
 	struct tm timeinfo;
+	ssize_t junk;
 
 	enum { BT_SIZE = 1024, STR_SIZE = 32 };
 	void *array[BT_SIZE];
@@ -314,7 +315,7 @@ static void write_backtrace(INT32 signal)
 	backtrace_symbols_fd(array, size, STDERR_FILENO);
 
 	CRASHLOG_WRITE("\n"); // Write another newline to the log so it looks nice :)
-
+	(void)junk;
 	close(fd);
 }
 #undef STDERR_WRITE
@@ -405,8 +406,10 @@ static void I_ReportSignal(int num, int coredumped)
 
 	SDL_ShowMessageBox(&messageboxdata, &buttonid);
 
+#if SDL_VERSION_ATLEAST(2,0,14)
 	if (buttonid == 1)
 		SDL_OpenURL("https://www.srb2.org/discord");
+#endif
 }
 
 #ifndef NEWSIGNALHANDLER
@@ -2262,7 +2265,7 @@ void I_Sleep(UINT32 ms)
 }
 
 #ifdef NEWSIGNALHANDLER
-static void newsignalhandler_Warn(const char *pr)
+ATTRNORETURN static FUNCNORETURN void newsignalhandler_Warn(const char *pr)
 {
 	char text[128];
 
@@ -3035,11 +3038,11 @@ size_t I_GetFreeMem(size_t *total)
 #ifdef FREEBSD
 	u_int v_free_count, v_page_size, v_page_count;
 	size_t size = sizeof(v_free_count);
-	sysctlbyname("vm.stat.vm.v_free_count", &v_free_count, &size, NULL, 0);
-	size_t size = sizeof(v_page_size);
-	sysctlbyname("vm.stat.vm.v_page_size", &v_page_size, &size, NULL, 0);
-	size_t size = sizeof(v_page_count);
-	sysctlbyname("vm.stat.vm.v_page_count", &v_page_count, &size, NULL, 0);
+	sysctlbyname("vm.stats.vm.v_free_count", &v_free_count, &size, NULL, 0);
+	size = sizeof(v_page_size);
+	sysctlbyname("vm.stats.vm.v_page_size", &v_page_size, &size, NULL, 0);
+	size = sizeof(v_page_count);
+	sysctlbyname("vm.stats.vm.v_page_count", &v_page_count, &size, NULL, 0);
 
 	if (total)
 		*total = v_page_count * v_page_size;
