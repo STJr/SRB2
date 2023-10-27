@@ -415,9 +415,11 @@ int LUA_PushGlobals(lua_State *L, const char *word)
 	} else if (fastcmp(word, "stagefailed")) {
 		lua_pushboolean(L, stagefailed);
 		return 1;
+	// TODO: 2.3: Deprecated (moved to the input library)
 	} else if (fastcmp(word, "mouse")) {
 		LUA_PushUserdata(L, &mouse, META_MOUSE);
 		return 1;
+	// TODO: 2.3: Deprecated (moved to the input library)
 	} else if (fastcmp(word, "mouse2")) {
 		LUA_PushUserdata(L, &mouse2, META_MOUSE);
 		return 1;
