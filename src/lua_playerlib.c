@@ -1530,14 +1530,6 @@ int LUA_PlayerLib(lua_State *L)
 	player_fields_ref = Lua_CreateFieldTable(L, player_opt);
 	ticcmd_fields_ref = Lua_CreateFieldTable(L, ticcmd_opt);
 
-	lua_newuserdata(L, 0);
-		lua_createtable(L, 0, 2);
-			lua_pushcfunction(L, lib_getPlayer);
-			lua_setfield(L, -2, "__index");
-
-			lua_pushcfunction(L, lib_lenPlayer);
-			lua_setfield(L, -2, "__len");
-		lua_setmetatable(L, -2);
-	lua_setglobal(L, "players");
+	LUA_RegisterGlobalUserdata(L, "players", lib_getPlayer, NULL, lib_lenPlayer);
 	return 0;
 }

@@ -451,14 +451,6 @@ int LUA_PolyObjLib(lua_State *L)
 	LUA_RegisterUserdataMetatable(L, META_POLYOBJLINES, polyobjlines_get, NULL, polyobjlines_num);
 	LUA_RegisterUserdataMetatable(L, META_POLYOBJ, polyobj_get, polyobj_set, polyobj_num);
 
-	lua_newuserdata(L, 0);
-		lua_createtable(L, 0, 2);
-			lua_pushcfunction(L, lib_getPolyObject);
-			lua_setfield(L, -2, "__index");
-
-			lua_pushcfunction(L, lib_numPolyObjects);
-			lua_setfield(L, -2, "__len");
-		lua_setmetatable(L, -2);
-	lua_setglobal(L, "polyobjects");
+	LUA_RegisterGlobalUserdata(L, "polyobjects", lib_getPolyObject, NULL, lib_numPolyObjects);
 	return 0;
 }

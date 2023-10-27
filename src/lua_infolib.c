@@ -1926,105 +1926,16 @@ int LUA_InfoLib(lua_State *L)
 
 	mobjinfo_fields_ref = Lua_CreateFieldTable(L, mobjinfo_opt);
 
-	lua_newuserdata(L, 0);
-		lua_createtable(L, 0, 2);
-			lua_pushcfunction(L, lib_getSprname);
-			lua_setfield(L, -2, "__index");
-
-			lua_pushcfunction(L, lib_sprnamelen);
-			lua_setfield(L, -2, "__len");
-		lua_setmetatable(L, -2);
-	lua_setglobal(L, "sprnames");
-
-	lua_newuserdata(L, 0);
-		lua_createtable(L, 0, 2);
-			lua_pushcfunction(L, lib_getSpr2name);
-			lua_setfield(L, -2, "__index");
-
-			lua_pushcfunction(L, lib_spr2namelen);
-			lua_setfield(L, -2, "__len");
-		lua_setmetatable(L, -2);
-	lua_setglobal(L, "spr2names");
-
-	lua_newuserdata(L, 0);
-		lua_createtable(L, 0, 2);
-			lua_pushcfunction(L, lib_getSpr2default);
-			lua_setfield(L, -2, "__index");
-
-			lua_pushcfunction(L, lib_setSpr2default);
-			lua_setfield(L, -2, "__newindex");
-
-			lua_pushcfunction(L, lib_spr2namelen);
-			lua_setfield(L, -2, "__len");
-		lua_setmetatable(L, -2);
-	lua_setglobal(L, "spr2defaults");
-
-	lua_newuserdata(L, 0);
-		lua_createtable(L, 0, 2);
-			lua_pushcfunction(L, lib_getState);
-			lua_setfield(L, -2, "__index");
-
-			lua_pushcfunction(L, lib_setState);
-			lua_setfield(L, -2, "__newindex");
-
-			lua_pushcfunction(L, lib_statelen);
-			lua_setfield(L, -2, "__len");
-		lua_setmetatable(L, -2);
-	lua_setglobal(L, "states");
-
-	lua_newuserdata(L, 0);
-		lua_createtable(L, 0, 2);
-			lua_pushcfunction(L, lib_getMobjInfo);
-			lua_setfield(L, -2, "__index");
-
-			lua_pushcfunction(L, lib_setMobjInfo);
-			lua_setfield(L, -2, "__newindex");
-
-			lua_pushcfunction(L, lib_mobjinfolen);
-			lua_setfield(L, -2, "__len");
-		lua_setmetatable(L, -2);
-	lua_setglobal(L, "mobjinfo");
-
-	lua_newuserdata(L, 0);
-		lua_createtable(L, 0, 2);
-			lua_pushcfunction(L, lib_getSkinColor);
-			lua_setfield(L, -2, "__index");
-
-			lua_pushcfunction(L, lib_setSkinColor);
-			lua_setfield(L, -2, "__newindex");
-
-			lua_pushcfunction(L, lib_skincolorslen);
-			lua_setfield(L, -2, "__len");
-		lua_setmetatable(L, -2);
-	lua_setglobal(L, "skincolors");
-
-	lua_newuserdata(L, 0);
-		lua_createtable(L, 0, 2);
-			lua_pushcfunction(L, lib_getSfxInfo);
-			lua_setfield(L, -2, "__index");
-
-			lua_pushcfunction(L, lib_setSfxInfo);
-			lua_setfield(L, -2, "__newindex");
-
-			lua_pushcfunction(L, lib_sfxlen);
-			lua_setfield(L, -2, "__len");
-		lua_setmetatable(L, -2);
-	lua_pushvalue(L, -1);
-	lua_setglobal(L, "S_sfx");
-	lua_setglobal(L, "sfxinfo");
-
-	lua_newuserdata(L, 0);
-		lua_createtable(L, 0, 2);
-			lua_pushcfunction(L, lib_getSpriteInfo);
-			lua_setfield(L, -2, "__index");
-
-			lua_pushcfunction(L, lib_setSpriteInfo);
-			lua_setfield(L, -2, "__newindex");
-
-			lua_pushcfunction(L, lib_spriteinfolen);
-			lua_setfield(L, -2, "__len");
-		lua_setmetatable(L, -2);
-	lua_setglobal(L, "spriteinfo");
+	LUA_RegisterGlobalUserdata(L, "sprnames", lib_getSprname, NULL, lib_sprnamelen);
+	LUA_RegisterGlobalUserdata(L, "spr2names", lib_getSpr2name, NULL, lib_spr2namelen);
+	LUA_RegisterGlobalUserdata(L, "spr2defaults", lib_getSpr2default, lib_setSpr2default, lib_spr2namelen);
+	LUA_RegisterGlobalUserdata(L, "states", lib_getState, lib_setState, lib_statelen);
+	LUA_RegisterGlobalUserdata(L, "mobjinfo", lib_getMobjInfo, lib_setMobjInfo, lib_mobjinfolen);
+	LUA_RegisterGlobalUserdata(L, "skincolors", lib_getSkinColor, lib_setSkinColor, lib_skincolorslen);
+	LUA_RegisterGlobalUserdata(L, "spriteinfo", lib_getSpriteInfo, lib_setSpriteInfo, lib_spriteinfolen);
+	LUA_RegisterGlobalUserdata(L, "sfxinfo", lib_getSfxInfo, lib_setSfxInfo, lib_sfxlen);
+	// TODO: 2.3: Delete this alias
+	LUA_RegisterGlobalUserdata(L, "S_sfx", lib_getSfxInfo, lib_setSfxInfo, lib_sfxlen);
 
 	return 0;
 }

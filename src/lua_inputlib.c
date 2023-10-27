@@ -291,28 +291,11 @@ int LUA_InputLib(lua_State *L)
 	// Register the library, then add __index and __newindex
 	// metamethods to it to allow global variables
 	luaL_register(L, "input", lib);
-		lua_createtable(L, 0, 2);
-			lua_pushcfunction(L, lib_get);
-			lua_setfield(L, -2, "__index");
+		LUA_CreateAndSetMetatable(L, lib_get, lib_set, NULL, false);
 
-			lua_pushcfunction(L, lib_set);
-			lua_setfield(L, -2, "__newindex");
-		lua_setmetatable(L, -2);
-
-		lua_newuserdata(L, 0);
-			lua_createtable(L, 0, 2);
-				lua_pushcfunction(L, lib_getGameKeyDown);
-				lua_setfield(L, -2, "__index");
-
-				lua_pushcfunction(L, lib_setGameKeyDown);
-				lua_setfield(L, -2, "__newindex");
-
-				lua_pushcfunction(L, lib_lenGameKeyDown);
-				lua_setfield(L, -2, "__len");
-			lua_setmetatable(L, -2);
-		lua_pushvalue(L, -1); // TODO: 2.3: Delete (gamekeydown moved to input library)
-		lua_setglobal(L, "gamekeydown"); // Delete too
-		lua_setfield(L, -2, "gamekeydown");
+		LUA_CreateAndSetUserdataField(L, -1, "gamekeydown", lib_getGameKeyDown, lib_setGameKeyDown, lib_lenGameKeyDown, false);
+		// TODO: 2.3: Delete this alias (moved to input library)
+		LUA_RegisterGlobalUserdata(L, "gamekeydown", lib_getGameKeyDown, lib_setGameKeyDown, lib_lenGameKeyDown);
 	lua_pop(L, 1);
 
 	return 0;

@@ -2868,6 +2868,27 @@ int LUA_MapLib(lua_State *L)
 	slope_fields_ref = Lua_CreateFieldTable(L, slope_opt);
 	mapheaderinfo_fields_ref = Lua_CreateFieldTable(L, mapheaderinfo_opt);
 
+	LUA_RegisterGlobalUserdata(L, "subsectors", lib_getSubsector, NULL, lib_numsubsectors);
+	LUA_RegisterGlobalUserdata(L, "sides", lib_getSide, NULL, lib_numsides);
+	LUA_RegisterGlobalUserdata(L, "vertexes", lib_getVertex, NULL, lib_numvertexes);
+	LUA_RegisterGlobalUserdata(L, "mapheaderinfo", lib_getMapheaderinfo, NULL, lib_nummapheaders);
+
+	LUA_PushTaggableObjectArray(L, "sectors",
+			lib_iterateSectors,
+			lib_getSector,
+			lib_numsectors,
+			tags_sectors,
+			&numsectors, &sectors,
+			sizeof (sector_t), META_SECTOR);
+
+	LUA_PushTaggableObjectArray(L, "lines",
+			lib_iterateLines,
+			lib_getLine,
+			lib_numlines,
+			tags_lines,
+			&numlines, &lines,
+			sizeof (line_t), META_LINE);
+
 #ifdef HAVE_LUA_SEGS
 	LUA_RegisterUserdataMetatable(L, META_SEG, seg_get, NULL, seg_num);
 	LUA_RegisterUserdataMetatable(L, META_NODE, node_get, NULL, node_num);
@@ -2882,84 +2903,10 @@ int LUA_MapLib(lua_State *L)
 		lua_pushcfunction(L, nodebbox_call);
 		lua_setfield(L, -2, "__call");
 	lua_pop(L, 1);
+
+	LUA_RegisterGlobalUserdata(L, "segs", lib_getSeg, NULL, lib_numsegs);
+	LUA_RegisterGlobalUserdata(L, "nodes", lib_getNode, NULL, lib_numnodes);
 #endif
 
-	LUA_PushTaggableObjectArray(L, "sectors",
-			lib_iterateSectors,
-			lib_getSector,
-			lib_numsectors,
-			tags_sectors,
-			&numsectors, &sectors,
-			sizeof (sector_t), META_SECTOR);
-
-	lua_newuserdata(L, 0);
-		lua_createtable(L, 0, 2);
-			lua_pushcfunction(L, lib_getSubsector);
-			lua_setfield(L, -2, "__index");
-
-			lua_pushcfunction(L, lib_numsubsectors);
-			lua_setfield(L, -2, "__len");
-		lua_setmetatable(L, -2);
-	lua_setglobal(L, "subsectors");
-
-	LUA_PushTaggableObjectArray(L, "lines",
-			lib_iterateLines,
-			lib_getLine,
-			lib_numlines,
-			tags_lines,
-			&numlines, &lines,
-			sizeof (line_t), META_LINE);
-
-	lua_newuserdata(L, 0);
-		lua_createtable(L, 0, 2);
-			lua_pushcfunction(L, lib_getSide);
-			lua_setfield(L, -2, "__index");
-
-			lua_pushcfunction(L, lib_numsides);
-			lua_setfield(L, -2, "__len");
-		lua_setmetatable(L, -2);
-	lua_setglobal(L, "sides");
-
-	lua_newuserdata(L, 0);
-		lua_createtable(L, 0, 2);
-			lua_pushcfunction(L, lib_getVertex);
-			lua_setfield(L, -2, "__index");
-
-			lua_pushcfunction(L, lib_numvertexes);
-			lua_setfield(L, -2, "__len");
-		lua_setmetatable(L, -2);
-	lua_setglobal(L, "vertexes");
-
-#ifdef HAVE_LUA_SEGS
-	lua_newuserdata(L, 0);
-		lua_createtable(L, 0, 2);
-			lua_pushcfunction(L, lib_getSeg);
-			lua_setfield(L, -2, "__index");
-
-			lua_pushcfunction(L, lib_numsegs);
-			lua_setfield(L, -2, "__len");
-		lua_setmetatable(L, -2);
-	lua_setglobal(L, "segs");
-
-	lua_newuserdata(L, 0);
-		lua_createtable(L, 0, 2);
-			lua_pushcfunction(L, lib_getNode);
-			lua_setfield(L, -2, "__index");
-
-			lua_pushcfunction(L, lib_numnodes);
-			lua_setfield(L, -2, "__len");
-		lua_setmetatable(L, -2);
-	lua_setglobal(L, "nodes");
-#endif
-
-	lua_newuserdata(L, 0);
-		lua_createtable(L, 0, 2);
-			lua_pushcfunction(L, lib_getMapheaderinfo);
-			lua_setfield(L, -2, "__index");
-
-			lua_pushcfunction(L, lib_nummapheaders);
-			lua_setfield(L, -2, "__len");
-		lua_setmetatable(L, -2);
-	lua_setglobal(L, "mapheaderinfo");
 	return 0;
 }

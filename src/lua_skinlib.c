@@ -380,15 +380,7 @@ int LUA_SkinLib(lua_State *L)
 
 	skin_fields_ref = Lua_CreateFieldTable(L, skin_opt);
 
-	lua_newuserdata(L, 0);
-		lua_createtable(L, 0, 2);
-			lua_pushcfunction(L, lib_getSkin);
-			lua_setfield(L, -2, "__index");
-
-			lua_pushcfunction(L, lib_numSkins);
-			lua_setfield(L, -2, "__len");
-		lua_setmetatable(L, -2);
-	lua_setglobal(L, "skins");
+	LUA_RegisterGlobalUserdata(L, "skins", lib_getSkin, NULL, lib_numSkins);
 
 	return 0;
 }

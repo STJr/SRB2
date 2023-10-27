@@ -1412,15 +1412,7 @@ int LUA_HudLib(lua_State *L)
 	patch_fields_ref = Lua_CreateFieldTable(L, patch_opt);
 	camera_fields_ref = Lua_CreateFieldTable(L, camera_opt);
 
-	lua_newuserdata(L, 0);
-		lua_createtable(L, 0, 2);
-			lua_pushcfunction(L, lib_getHudInfo);
-			lua_setfield(L, -2, "__index");
-
-			lua_pushcfunction(L, lib_hudinfolen);
-			lua_setfield(L, -2, "__len");
-		lua_setmetatable(L, -2);
-	lua_setglobal(L, "hudinfo");
+	LUA_RegisterGlobalUserdata(L, "hudinfo", lib_getHudInfo, NULL, lib_hudinfolen);
 
 	luaL_register(L, "hud", lib_hud);
 	return 0;
