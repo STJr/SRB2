@@ -10882,7 +10882,7 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type, ...)
 	// increment mobj reference, so we don't get a dangling reference in case MobjSpawn calls P_RemoveMobj
 	mobj->thinker.references++;
 
-	if (!(mobj->flags & MF_NOTHINK))
+	if (!(mobj->flags & MF_NOTHINK) || (titlemapinaction && mobj->type == MT_ALTVIEWMAN))
 		P_AddThinker(THINK_MOBJ, &mobj->thinker);
 
 	// DANGER! This can cause P_SpawnMobj to return NULL!
