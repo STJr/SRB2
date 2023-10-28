@@ -41,6 +41,12 @@ typedef LPVOID (WINAPI *p_MapViewOfFile) (HANDLE, DWORD, DWORD, DWORD, SIZE_T);
 #include <ntsecapi.h>
 #undef SystemFunction036
 
+// A little more than the minimum sleep duration on Windows.
+// May be incorrect for other platforms, but we don't currently have a way to
+// query the scheduler granularity. SDL will do what's needed to make this as
+// low as possible though.
+#define MIN_SLEEP_DURATION_MS 2.1
+
 #endif
 #include <stdio.h>
 #include <stdlib.h>

@@ -30,12 +30,6 @@ static precise_t enterprecise, oldenterprecise;
 static fixed_t entertic, oldentertics;
 static double tictimer;
 
-// A little more than the minimum sleep duration on Windows.
-// May be incorrect for other platforms, but we don't currently have a way to
-// query the scheduler granularity. SDL will do what's needed to make this as
-// low as possible though.
-#define MIN_SLEEP_DURATION_MS 2.1
-
 tic_t I_GetTime(void)
 {
 	return g_time.time;
