@@ -39,7 +39,6 @@ else ifdef SOLARIS # FIXME: UNTESTED
 UNIX=1
 platform=solaris
 else ifdef CYGWIN32 # FIXME: UNTESTED
-nasm_format=win32
 platform=cygwin
 else ifdef MINGW
 ifdef MINGW64
@@ -64,6 +63,8 @@ ifdef UNIX
 include Makefile.d/nix.mk
 endif
 
-ifdef SDL
+ifeq ($(SDL), 1)
 include Makefile.d/sdl.mk
+else
+include Makefile.d/dummy.mk
 endif

@@ -17,9 +17,7 @@ sources+=win32/Srb2win.rc
 opts+=-DSTDC_HEADERS
 libs+=-ladvapi32 -lkernel32 -lmsvcrt -luser32
 
-nasm_format:=win32
-
-SDL=1
+SDL?=1
 
 ifndef NOHW
 opts+=-DUSE_WGL_SWAP
@@ -35,11 +33,9 @@ libs+=-lws2_32
 endif
 endif
 
-ifndef NONET
 ifndef MINGW64 # miniupnc is broken with MINGW64
 opts+=-I../libs -DSTATIC_MINIUPNPC
 libs+=-L../libs/miniupnpc/mingw$(32) -lws2_32 -liphlpapi
-endif
 endif
 
 ifndef MINGW64
@@ -76,6 +72,7 @@ else
 lib:=../libs/SDL2_mixer/$(mingw)
 endif
 
+ifdef SDL
 mixer_opts:=-I$(lib)/include/SDL2
 mixer_libs:=-L$(lib)/lib
 
@@ -85,6 +82,7 @@ SDL_opts:=-I$(lib)/include/SDL2\
 SDL_libs:=-L$(lib)/lib $(mixer_libs)\
 	-lmingw32 -lSDL2main -lSDL2 -mwindows
 $(eval $(call _set,SDL))
+endif
 
 lib:=../libs/zlib
 ZLIB_opts:=-I$(lib)

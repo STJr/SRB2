@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2021 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -17,6 +17,11 @@
 
 #define SPANSIZE 16
 #define INVSPAN 0.0625f
+
+#if defined(__GNUC__) || defined(__clang__) // Suppress intentional libdivide compiler warnings - Also added to libdivide.h
+    #pragma GCC diagnostic push
+    #pragma GCC diagnostic ignored "-Waggregate-return"
+#endif
 
 /**	\brief The R_DrawSpan_NPO2_8 function
 	Draws the actual span.
@@ -111,17 +116,7 @@ void R_DrawTiltedSpan_NPO2_8(void)
 
 	iz = ds_szp->z + ds_szp->y*(centery-ds_y) + ds_szp->x*(ds_x1-centerx);
 
-	// Lighting is simple. It's just linear interpolation from start to end
-	{
-		float planelightfloat = PLANELIGHTFLOAT;
-		float lightstart, lightend;
-
-		lightend = (iz + ds_szp->x*width) * planelightfloat;
-		lightstart = iz * planelightfloat;
-
-		R_CalcTiltedLighting(FLOAT_TO_FIXED(lightstart), FLOAT_TO_FIXED(lightend));
-		//CONS_Printf("tilted lighting %f to %f (foc %f)\n", lightstart, lightend, focallengthf);
-	}
+	CALC_SLOPE_LIGHT
 
 	uz = ds_sup->z + ds_sup->y*(centery-ds_y) + ds_sup->x*(ds_x1-centerx);
 	vz = ds_svp->z + ds_svp->y*(centery-ds_y) + ds_svp->x*(ds_x1-centerx);
@@ -311,17 +306,7 @@ void R_DrawTiltedTranslucentSpan_NPO2_8(void)
 
 	iz = ds_szp->z + ds_szp->y*(centery-ds_y) + ds_szp->x*(ds_x1-centerx);
 
-	// Lighting is simple. It's just linear interpolation from start to end
-	{
-		float planelightfloat = PLANELIGHTFLOAT;
-		float lightstart, lightend;
-
-		lightend = (iz + ds_szp->x*width) * planelightfloat;
-		lightstart = iz * planelightfloat;
-
-		R_CalcTiltedLighting(FLOAT_TO_FIXED(lightstart), FLOAT_TO_FIXED(lightend));
-		//CONS_Printf("tilted lighting %f to %f (foc %f)\n", lightstart, lightend, focallengthf);
-	}
+	CALC_SLOPE_LIGHT
 
 	uz = ds_sup->z + ds_sup->y*(centery-ds_y) + ds_sup->x*(ds_x1-centerx);
 	vz = ds_svp->z + ds_svp->y*(centery-ds_y) + ds_svp->x*(ds_x1-centerx);
@@ -509,17 +494,7 @@ void R_DrawTiltedSplat_NPO2_8(void)
 
 	iz = ds_szp->z + ds_szp->y*(centery-ds_y) + ds_szp->x*(ds_x1-centerx);
 
-	// Lighting is simple. It's just linear interpolation from start to end
-	{
-		float planelightfloat = PLANELIGHTFLOAT;
-		float lightstart, lightend;
-
-		lightend = (iz + ds_szp->x*width) * planelightfloat;
-		lightstart = iz * planelightfloat;
-
-		R_CalcTiltedLighting(FLOAT_TO_FIXED(lightstart), FLOAT_TO_FIXED(lightend));
-		//CONS_Printf("tilted lighting %f to %f (foc %f)\n", lightstart, lightend, focallengthf);
-	}
+	CALC_SLOPE_LIGHT
 
 	uz = ds_sup->z + ds_sup->y*(centery-ds_y) + ds_sup->x*(ds_x1-centerx);
 	vz = ds_svp->z + ds_svp->y*(centery-ds_y) + ds_svp->x*(ds_x1-centerx);
@@ -992,6 +967,9 @@ void R_DrawTiltedFloorSprite_NPO2_8(void)
 	double endz, endu, endv;
 	UINT32 stepu, stepv;
 
+	struct libdivide_u32_t x_divider = libdivide_u32_gen(ds_flatwidth);
+	struct libdivide_u32_t y_divider = libdivide_u32_gen(ds_flatheight);
+
 	iz = ds_szp->z + ds_szp->y*(centery-ds_y) + ds_szp->x*(ds_x1-centerx);
 	uz = ds_sup->z + ds_sup->y*(centery-ds_y) + ds_sup->x*(ds_x1-centerx);
 	vz = ds_svp->z + ds_svp->y*(centery-ds_y) + ds_svp->x*(ds_x1-centerx);
@@ -1033,12 +1011,13 @@ void R_DrawTiltedFloorSprite_NPO2_8(void)
 
 			// Carefully align all of my Friends.
 			if (x < 0)
-				x = ds_flatwidth - ((UINT32)(ds_flatwidth - x) % ds_flatwidth);
+				x += (libdivide_u32_do((UINT32)(-x-1), &x_divider) + 1) * ds_flatwidth;
+			else
+				x -= libdivide_u32_do((UINT32)x, &x_divider) * ds_flatwidth;
 			if (y < 0)
-				y = ds_flatheight - ((UINT32)(ds_flatheight - y) % ds_flatheight);
-
-			x %= ds_flatwidth;
-			y %= ds_flatheight;
+				y += (libdivide_u32_do((UINT32)(-y-1), &y_divider) + 1) * ds_flatheight;
+			else
+				y -= libdivide_u32_do((UINT32)y, &y_divider) * ds_flatheight;
 
 			val = source[((y * ds_flatwidth) + x)];
 			if (val & 0xFF00)
@@ -1065,12 +1044,13 @@ void R_DrawTiltedFloorSprite_NPO2_8(void)
 
 				// Carefully align all of my Friends.
 				if (x < 0)
-					x = ds_flatwidth - ((UINT32)(ds_flatwidth - x) % ds_flatwidth);
+					x += (libdivide_u32_do((UINT32)(-x-1), &x_divider) + 1) * ds_flatwidth;
+				else
+					x -= libdivide_u32_do((UINT32)x, &x_divider) * ds_flatwidth;
 				if (y < 0)
-					y = ds_flatheight - ((UINT32)(ds_flatheight - y) % ds_flatheight);
-
-				x %= ds_flatwidth;
-				y %= ds_flatheight;
+					y += (libdivide_u32_do((UINT32)(-y-1), &y_divider) + 1) * ds_flatheight;
+				else
+					y -= libdivide_u32_do((UINT32)y, &y_divider) * ds_flatheight;
 
 				val = source[((y * ds_flatwidth) + x)];
 				if (val & 0xFF00)
@@ -1101,12 +1081,13 @@ void R_DrawTiltedFloorSprite_NPO2_8(void)
 
 				// Carefully align all of my Friends.
 				if (x < 0)
-					x = ds_flatwidth - ((UINT32)(ds_flatwidth - x) % ds_flatwidth);
+					x += (libdivide_u32_do((UINT32)(-x-1), &x_divider) + 1) * ds_flatwidth;
+				else
+					x -= libdivide_u32_do((UINT32)x, &x_divider) * ds_flatwidth;
 				if (y < 0)
-					y = ds_flatheight - ((UINT32)(ds_flatheight - y) % ds_flatheight);
-
-				x %= ds_flatwidth;
-				y %= ds_flatheight;
+					y += (libdivide_u32_do((UINT32)(-y-1), &y_divider) + 1) * ds_flatheight;
+				else
+					y -= libdivide_u32_do((UINT32)y, &y_divider) * ds_flatheight;
 
 				val = source[((y * ds_flatwidth) + x)];
 				if (val & 0xFF00)
@@ -1142,6 +1123,9 @@ void R_DrawTiltedTranslucentFloorSprite_NPO2_8(void)
 	double endz, endu, endv;
 	UINT32 stepu, stepv;
 
+	struct libdivide_u32_t x_divider = libdivide_u32_gen(ds_flatwidth);
+	struct libdivide_u32_t y_divider = libdivide_u32_gen(ds_flatheight);
+
 	iz = ds_szp->z + ds_szp->y*(centery-ds_y) + ds_szp->x*(ds_x1-centerx);
 	uz = ds_sup->z + ds_sup->y*(centery-ds_y) + ds_sup->x*(ds_x1-centerx);
 	vz = ds_svp->z + ds_svp->y*(centery-ds_y) + ds_svp->x*(ds_x1-centerx);
@@ -1183,12 +1167,13 @@ void R_DrawTiltedTranslucentFloorSprite_NPO2_8(void)
 
 			// Carefully align all of my Friends.
 			if (x < 0)
-				x = ds_flatwidth - ((UINT32)(ds_flatwidth - x) % ds_flatwidth);
+				x += (libdivide_u32_do((UINT32)(-x-1), &x_divider) + 1) * ds_flatwidth;
+			else
+				x -= libdivide_u32_do((UINT32)x, &x_divider) * ds_flatwidth;
 			if (y < 0)
-				y = ds_flatheight - ((UINT32)(ds_flatheight - y) % ds_flatheight);
-
-			x %= ds_flatwidth;
-			y %= ds_flatheight;
+				y += (libdivide_u32_do((UINT32)(-y-1), &y_divider) + 1) * ds_flatheight;
+			else
+				y -= libdivide_u32_do((UINT32)y, &y_divider) * ds_flatheight;
 
 			val = source[((y * ds_flatwidth) + x)];
 			if (val & 0xFF00)
@@ -1215,12 +1200,13 @@ void R_DrawTiltedTranslucentFloorSprite_NPO2_8(void)
 
 				// Carefully align all of my Friends.
 				if (x < 0)
-					x = ds_flatwidth - ((UINT32)(ds_flatwidth - x) % ds_flatwidth);
+					x += (libdivide_u32_do((UINT32)(-x-1), &x_divider) + 1) * ds_flatwidth;
+				else
+					x -= libdivide_u32_do((UINT32)x, &x_divider) * ds_flatwidth;
 				if (y < 0)
-					y = ds_flatheight - ((UINT32)(ds_flatheight - y) % ds_flatheight);
-
-				x %= ds_flatwidth;
-				y %= ds_flatheight;
+					y += (libdivide_u32_do((UINT32)(-y-1), &y_divider) + 1) * ds_flatheight;
+				else
+					y -= libdivide_u32_do((UINT32)y, &y_divider) * ds_flatheight;
 
 				val = source[((y * ds_flatwidth) + x)];
 				if (val & 0xFF00)
@@ -1251,12 +1237,13 @@ void R_DrawTiltedTranslucentFloorSprite_NPO2_8(void)
 
 				// Carefully align all of my Friends.
 				if (x < 0)
-					x = ds_flatwidth - ((UINT32)(ds_flatwidth - x) % ds_flatwidth);
+					x += (libdivide_u32_do((UINT32)(-x-1), &x_divider) + 1) * ds_flatwidth;
+				else
+					x -= libdivide_u32_do((UINT32)x, &x_divider) * ds_flatwidth;
 				if (y < 0)
-					y = ds_flatheight - ((UINT32)(ds_flatheight - y) % ds_flatheight);
-
-				x %= ds_flatwidth;
-				y %= ds_flatheight;
+					y += (libdivide_u32_do((UINT32)(-y-1), &y_divider) + 1) * ds_flatheight;
+				else
+					y -= libdivide_u32_do((UINT32)y, &y_divider) * ds_flatheight;
 
 				val = source[((y * ds_flatwidth) + x)];
 				if (val & 0xFF00)
@@ -1337,7 +1324,7 @@ void R_DrawTranslucentSpan_NPO2_8 (void)
 	}
 }
 
-void R_DrawTranslucentWaterSpan_NPO2_8(void)
+void R_DrawWaterSpan_NPO2_8(void)
 {
 	fixed_t xposition;
 	fixed_t yposition;
@@ -1400,10 +1387,10 @@ void R_DrawTranslucentWaterSpan_NPO2_8(void)
 	}
 }
 
-/**	\brief The R_DrawTiltedTranslucentWaterSpan_NPO2_8 function
+/**	\brief The R_DrawTiltedWaterSpan_NPO2_8 function
 	Like DrawTiltedTranslucentSpan_NPO2, but for water
 */
-void R_DrawTiltedTranslucentWaterSpan_NPO2_8(void)
+void R_DrawTiltedWaterSpan_NPO2_8(void)
 {
 	// x1, x2 = ds_x1, ds_x2
 	int width = ds_x2 - ds_x1;
@@ -1426,17 +1413,7 @@ void R_DrawTiltedTranslucentWaterSpan_NPO2_8(void)
 
 	iz = ds_szp->z + ds_szp->y*(centery-ds_y) + ds_szp->x*(ds_x1-centerx);
 
-	// Lighting is simple. It's just linear interpolation from start to end
-	{
-		float planelightfloat = PLANELIGHTFLOAT;
-		float lightstart, lightend;
-
-		lightend = (iz + ds_szp->x*width) * planelightfloat;
-		lightstart = iz * planelightfloat;
-
-		R_CalcTiltedLighting(FLOAT_TO_FIXED(lightstart), FLOAT_TO_FIXED(lightend));
-		//CONS_Printf("tilted lighting %f to %f (foc %f)\n", lightstart, lightend, focallengthf);
-	}
+	CALC_SLOPE_LIGHT
 
 	uz = ds_sup->z + ds_sup->y*(centery-ds_y) + ds_sup->x*(ds_x1-centerx);
 	vz = ds_svp->z + ds_svp->y*(centery-ds_y) + ds_svp->x*(ds_x1-centerx);
@@ -1600,3 +1577,7 @@ void R_DrawTiltedTranslucentWaterSpan_NPO2_8(void)
 	}
 #endif
 }
+
+#if defined(__GNUC__) || defined(__clang__) // Stop suppressing intentional libdivide compiler warnings
+    #pragma GCC diagnostic pop
+#endif
