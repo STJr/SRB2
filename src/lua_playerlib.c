@@ -407,7 +407,7 @@ static int player_get(lua_State *L)
 	case player_realmo:
 		LUA_PushUserdata(L, plr->mo, META_MOBJ);
 		break;
-	// Kept for backward-compatibility
+	// TODO: 2.3: Kept for backward-compatibility
 	// Should be fixed to work like "realmo" later
 	case player_mo:
 		if (plr->spectator)

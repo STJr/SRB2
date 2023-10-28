@@ -4347,7 +4347,7 @@ void G_LoadGameSettings(void)
 }
 
 #define GAMEDATA_ID 0x86E4A27C // Change every major version, as usual
-#define COMPAT_GAMEDATA_ID 0xFCAFE211 // Can be removed entirely for 2.3
+#define COMPAT_GAMEDATA_ID 0xFCAFE211 // TODO: 2.3: Delete
 
 // G_LoadGameData
 // Loads the main data file, which stores information such as emblems found, etc.
