@@ -194,6 +194,7 @@ static int lib_comAddCommand(lua_State *L)
 	if (lua_gettop(L) >= 3)
 	{ // For the third argument, only take a boolean or a number.
 		lua_settop(L, 3);
+		// TODO: 2.3: Remove boolean option
 		if (lua_type(L, 3) == LUA_TBOOLEAN)
 		{
 			CONS_Alert(CONS_WARNING,

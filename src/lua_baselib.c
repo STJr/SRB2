@@ -1788,6 +1788,7 @@ static int lib_pMove(lua_State *L)
 	return 2;
 }
 
+// TODO: 2.3: Delete
 static int lib_pTeleportMove(lua_State *L)
 {
 	mobj_t *ptmthing = tmthing;
@@ -2266,6 +2267,7 @@ static int lib_pMobjTouchingSectorSpecial(lua_State *L)
 	return 1;
 }
 
+// TODO: 2.3: Delete
 static int lib_pThingOnSpecial3DFloor(lua_State *L)
 {
 	mobj_t *mo = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));

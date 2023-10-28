@@ -318,6 +318,7 @@ static int PopPivotSubTable(spriteframepivot_t *pivot, lua_State *L, int stk, in
 					pivot[idx].x = (INT32)value;
 				else if (ikey == 2 || (key && fastcmp(key, "y")))
 					pivot[idx].y = (INT32)value;
+				// TODO: 2.3: Delete
 				else if (ikey == 3 || (key && fastcmp(key, "rotaxis")))
 					LUA_UsageWarning(L, "\"rotaxis\" is deprecated and will be removed.")
 				else if (ikey == -1 && (key != NULL))
@@ -571,6 +572,7 @@ static int framepivot_get(lua_State *L)
 		lua_pushinteger(L, framepivot->x);
 	else if (fastcmp("y", field))
 		lua_pushinteger(L, framepivot->y);
+	// TODO: 2.3: Delete
 	else if (fastcmp("rotaxis", field))
 	{
 		LUA_UsageWarning(L, "\"rotaxis\" is deprecated and will be removed.");
@@ -600,6 +602,7 @@ static int framepivot_set(lua_State *L)
 		framepivot->x = luaL_checkinteger(L, 3);
 	else if (fastcmp("y", field))
 		framepivot->y = luaL_checkinteger(L, 3);
+	// TODO: 2.3: delete
 	else if (fastcmp("rotaxis", field))
 		LUA_UsageWarning(L, "\"rotaxis\" is deprecated and will be removed.")
 	else

@@ -1098,6 +1098,7 @@ static int line_get(lua_State *L)
 	case line_polyobj:
 		LUA_PushUserdata(L, line->polyobj, META_POLYOBJ);
 		return 1;
+	// TODO: 2.3: Delete
 	case line_text:
 		{
 			if (udmf)
@@ -1231,6 +1232,7 @@ static int side_get(lua_State *L)
 	case side_repeatcnt:
 		lua_pushinteger(L, side->repeatcnt);
 		return 1;
+	// TODO: 2.3: Delete
 	case side_text:
 		{
 			if (udmf)
