@@ -469,3 +469,16 @@ Debian testing Clang:
     WFLAGS: -Wno-cast-align -Wno-deprecated-non-prototype
     CFLAGS: -Wno-cast-align -Wno-deprecated-non-prototype
     LDFLAGS: -Wl,-fuse-ld=gold
+
+Debian testing musl:
+  extends: Debian stable musl
+
+  image: debian:testing-slim
+
+  artifacts:
+    name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-testing-musl"
+
+  variables:
+    CC: musl-gcc
+    LDD: musl-ldd
+    LDFLAGS: -Wl,-fuse-ld=gold
