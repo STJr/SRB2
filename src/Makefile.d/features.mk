@@ -18,10 +18,6 @@ opts+=-DHWRENDER
 sources+=$(call List,hardware/Sourcefile)
 endif
 
-ifdef NONET
-NOCURL=1
-endif
-
 ifndef NOMD5
 sources+=md5.c
 endif
