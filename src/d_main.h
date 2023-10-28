@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2021 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -43,6 +43,9 @@ void D_PostEvent(const event_t *ev);
 void D_ProcessEvents(void);
 
 const char *D_Home(void);
+
+boolean D_IsPathAllowed(const char *path);
+boolean D_CheckPathAllowed(const char *path, const char *why);
 
 //
 // BASE LEVEL

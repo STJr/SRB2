@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2012-2016 by John "JTE" Muniz.
-// Copyright (C) 2012-2021 by Sonic Team Junior.
+// Copyright (C) 2012-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -29,6 +29,9 @@
 #include "d_netcmd.h" // IsPlayerAdmin
 #include "m_menu.h" // Player Setup menu color stuff
 #include "m_misc.h" // M_MapNumber
+#include "b_bot.h" // B_UpdateBotleader
+#include "d_clisrv.h" // CL_RemovePlayer
+#include "i_system.h" // I_GetPreciseTime, I_GetPrecisePrecision
 
 #include "lua_script.h"
 #include "lua_libs.h"
@@ -185,6 +188,8 @@ static const struct {
 	{META_MAPHEADER,    "mapheader_t"},
 
 	{META_POLYOBJ,      "polyobj_t"},
+	{META_POLYOBJVERTICES, "polyobj_t.vertices"},
+	{META_POLYOBJLINES, "polyobj_t.lines"},
 
 	{META_CVAR,         "consvar_t"},
 
@@ -214,6 +219,7 @@ static const struct {
 
 	{META_LUABANKS,     "luabanks[]"},
 
+	{META_KEYEVENT,     "keyevent_t"},
 	{META_MOUSE,        "mouse_t"},
 	{NULL,              NULL}
 };
@@ -683,11 +689,12 @@ static int lib_pSpawnLockOn(lua_State *L)
 		return LUA_ErrInvalid(L, "player_t");
 	if (state >= NUMSTATES)
 		return luaL_error(L, "state %d out of range (0 - %d)", state, NUMSTATES-1);
-	if (P_IsLocalPlayer(player)) // Only display it on your own view.
+	if (P_IsLocalPlayer(player)) // Only display it on your own view. Don't display it for spectators
 	{
 		mobj_t *visual = P_SpawnMobj(lockon->x, lockon->y, lockon->z, MT_LOCKON); // positioning, flip handled in P_SceneryThinker
 		P_SetTarget(&visual->target, lockon);
 		visual->flags2 |= MF2_DONTDRAW;
+		visual->drawonlyforplayer = player; // Hide it from the other player in splitscreen, and yourself when spectating
 		P_SetMobjStateNF(visual, state);
 	}
 	return 0;
@@ -868,6 +875,7 @@ static int lib_pGetClosestAxis(lua_State *L)
 
 static int lib_pSpawnParaloop(lua_State *L)
 {
+	mobj_t *ptmthing = tmthing;
 	fixed_t x = luaL_checkfixed(L, 1);
 	fixed_t y = luaL_checkfixed(L, 2);
 	fixed_t z = luaL_checkfixed(L, 3);
@@ -884,6 +892,7 @@ static int lib_pSpawnParaloop(lua_State *L)
 	if (nstate >= NUMSTATES)
 		return luaL_error(L, "state %d out of range (0 - %d)", nstate, NUMSTATES-1);
 	P_SpawnParaloop(x, y, z, radius, number, type, nstate, rotangle, spawncenter);
+	P_SetTarget(&tmthing, ptmthing);
 	return 0;
 }
 
@@ -1070,7 +1079,8 @@ static int lib_pZMovement(lua_State *L)
 	if (!actor)
 		return LUA_ErrInvalid(L, "mobj_t");
 	lua_pushboolean(L, P_ZMovement(actor));
-	P_CheckPosition(actor, actor->x, actor->y);
+	if (!P_MobjWasRemoved(actor))
+		P_CheckPosition(actor, actor->x, actor->y);
 	P_SetTarget(&tmthing, ptmthing);
 	return 1;
 }
@@ -1098,7 +1108,8 @@ static int lib_pSceneryZMovement(lua_State *L)
 	if (!actor)
 		return LUA_ErrInvalid(L, "mobj_t");
 	lua_pushboolean(L, P_SceneryZMovement(actor));
-	P_CheckPosition(actor, actor->x, actor->y);
+	if (!P_MobjWasRemoved(actor))
+		P_CheckPosition(actor, actor->x, actor->y);
 	P_SetTarget(&tmthing, ptmthing);
 	return 1;
 }
@@ -1292,6 +1303,17 @@ static int lib_pInQuicksand(lua_State *L)
 	if (!mo)
 		return LUA_ErrInvalid(L, "mobj_t");
 	lua_pushboolean(L, P_InQuicksand(mo));
+	return 1;
+}
+
+static int lib_pInJumpFlipSector(lua_State *L)
+{
+	mobj_t *mo = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
+	//HUDSAFE
+	INLEVEL
+	if (!mo)
+		return LUA_ErrInvalid(L, "mobj_t");
+	lua_pushboolean(L, P_InJumpFlipSector(mo));
 	return 1;
 }
 
@@ -1777,7 +1799,42 @@ static int lib_pTeleportMove(lua_State *L)
 	INLEVEL
 	if (!thing)
 		return LUA_ErrInvalid(L, "mobj_t");
-	lua_pushboolean(L, P_TeleportMove(thing, x, y, z));
+	LUA_Deprecated(L, "P_TeleportMove", "P_SetOrigin\" or \"P_MoveOrigin");
+	lua_pushboolean(L, P_MoveOrigin(thing, x, y, z));
+	LUA_PushUserdata(L, tmthing, META_MOBJ);
+	P_SetTarget(&tmthing, ptmthing);
+	return 2;
+}
+
+static int lib_pSetOrigin(lua_State *L)
+{
+	mobj_t *ptmthing = tmthing;
+	mobj_t *thing = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
+	fixed_t x = luaL_checkfixed(L, 2);
+	fixed_t y = luaL_checkfixed(L, 3);
+	fixed_t z = luaL_checkfixed(L, 4);
+	NOHUD
+	INLEVEL
+	if (!thing)
+		return LUA_ErrInvalid(L, "mobj_t");
+	lua_pushboolean(L, P_SetOrigin(thing, x, y, z));
+	LUA_PushUserdata(L, tmthing, META_MOBJ);
+	P_SetTarget(&tmthing, ptmthing);
+	return 2;
+}
+
+static int lib_pMoveOrigin(lua_State *L)
+{
+	mobj_t *ptmthing = tmthing;
+	mobj_t *thing = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
+	fixed_t x = luaL_checkfixed(L, 2);
+	fixed_t y = luaL_checkfixed(L, 3);
+	fixed_t z = luaL_checkfixed(L, 4);
+	NOHUD
+	INLEVEL
+	if (!thing)
+		return LUA_ErrInvalid(L, "mobj_t");
+	lua_pushboolean(L, P_MoveOrigin(thing, x, y, z));
 	LUA_PushUserdata(L, tmthing, META_MOBJ);
 	P_SetTarget(&tmthing, ptmthing);
 	return 2;
@@ -1881,6 +1938,37 @@ static int lib_pDoSpring(lua_State *L)
 		return LUA_ErrInvalid(L, "mobj_t");
 	lua_pushboolean(L, P_DoSpring(spring, object));
 	return 1;
+}
+
+static int lib_pTryCameraMove(lua_State *L)
+{
+	camera_t *cam = *((camera_t **)luaL_checkudata(L, 1, META_CAMERA));
+	fixed_t x = luaL_checkfixed(L, 2);
+	fixed_t y = luaL_checkfixed(L, 3);
+
+	if (!cam)
+		return LUA_ErrInvalid(L, "camera_t");
+	lua_pushboolean(L, P_TryCameraMove(x, y, cam));
+	return 1;
+}
+
+static int lib_pTeleportCameraMove(lua_State *L)
+{
+	camera_t *cam = *((camera_t **)luaL_checkudata(L, 1, META_CAMERA));
+	fixed_t x = luaL_checkfixed(L, 2);
+	fixed_t y = luaL_checkfixed(L, 3);
+	fixed_t z = luaL_checkfixed(L, 4);
+
+	if (!cam)
+		return LUA_ErrInvalid(L, "camera_t");
+	cam->x = x;
+	cam->y = y;
+	cam->z = z;
+	P_CheckCameraPosition(x, y, cam);
+	cam->subsector = R_PointInSubsector(x, y);
+	cam->floorz = tmfloorz;
+	cam->ceilingz = tmceilingz;
+	return 0;
 }
 
 // P_INTER
@@ -2165,6 +2253,43 @@ static int lib_pExplodeMissile(lua_State *L)
 	return 0;
 }
 
+static int lib_pMobjTouchingSectorSpecial(lua_State *L)
+{
+	mobj_t *mo = *((mobj_t**)luaL_checkudata(L, 1, META_MOBJ));
+	INT32 section = (INT32)luaL_checkinteger(L, 2);
+	INT32 number = (INT32)luaL_checkinteger(L, 3);
+	//HUDSAFE
+	INLEVEL
+	if (!mo)
+		return LUA_ErrInvalid(L, "mobj_t");
+	LUA_PushUserdata(L, P_MobjTouchingSectorSpecial(mo, section, number), META_SECTOR);
+	return 1;
+}
+
+static int lib_pThingOnSpecial3DFloor(lua_State *L)
+{
+	mobj_t *mo = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
+	NOHUD
+	INLEVEL
+	if (!mo)
+		return LUA_ErrInvalid(L, "mobj_t");
+	LUA_Deprecated(L, "P_ThingOnSpecial3DFloor", "P_MobjTouchingSectorSpecial\" or \"P_MobjTouchingSectorSpecialFlag");
+	LUA_PushUserdata(L, P_ThingOnSpecial3DFloor(mo), META_SECTOR);
+	return 1;
+}
+
+static int lib_pMobjTouchingSectorSpecialFlag(lua_State *L)
+{
+	mobj_t *mo = *((mobj_t**)luaL_checkudata(L, 1, META_MOBJ));
+	sectorspecialflags_t flag = (INT32)luaL_checkinteger(L, 2);
+	//HUDSAFE
+	INLEVEL
+	if (!mo)
+		return LUA_ErrInvalid(L, "mobj_t");
+	LUA_PushUserdata(L, P_MobjTouchingSectorSpecialFlag(mo, flag), META_SECTOR);
+	return 1;
+}
+
 static int lib_pPlayerTouchingSectorSpecial(lua_State *L)
 {
 	player_t *player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
@@ -2175,6 +2300,18 @@ static int lib_pPlayerTouchingSectorSpecial(lua_State *L)
 	if (!player)
 		return LUA_ErrInvalid(L, "player_t");
 	LUA_PushUserdata(L, P_PlayerTouchingSectorSpecial(player, section, number), META_SECTOR);
+	return 1;
+}
+
+static int lib_pPlayerTouchingSectorSpecialFlag(lua_State *L)
+{
+	player_t *player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
+	sectorspecialflags_t flag = (INT32)luaL_checkinteger(L, 2);
+	//HUDSAFE
+	INLEVEL
+	if (!player)
+		return LUA_ErrInvalid(L, "player_t");
+	LUA_PushUserdata(L, P_PlayerTouchingSectorSpecialFlag(player, flag), META_SECTOR);
 	return 1;
 }
 
@@ -2309,27 +2446,17 @@ static int lib_pFadeLight(lua_State *L)
 	INT32 speed = (INT32)luaL_checkinteger(L, 3);
 	boolean ticbased = lua_optboolean(L, 4);
 	boolean force = lua_optboolean(L, 5);
+	boolean relative = lua_optboolean(L, 6);
 	NOHUD
 	INLEVEL
-	P_FadeLight(tag, destvalue, speed, ticbased, force);
+	P_FadeLight(tag, destvalue, speed, ticbased, force, relative);
 	return 0;
-}
-
-static int lib_pThingOnSpecial3DFloor(lua_State *L)
-{
-	mobj_t *mo = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
-	NOHUD
-	INLEVEL
-	if (!mo)
-		return LUA_ErrInvalid(L, "mobj_t");
-	LUA_PushUserdata(L, P_ThingOnSpecial3DFloor(mo), META_SECTOR);
-	return 1;
 }
 
 static int lib_pIsFlagAtBase(lua_State *L)
 {
 	mobjtype_t flag = luaL_checkinteger(L, 1);
-	NOHUD
+	//HUDSAFE
 	INLEVEL
 	if (flag >= NUMMOBJTYPES)
 		return luaL_error(L, "mobj type %d out of range (0 - %d)", flag, NUMMOBJTYPES-1);
@@ -2719,6 +2846,22 @@ static int lib_rTextureNumForName(lua_State *L)
 	const char *name = luaL_checkstring(L, 1);
 	//HUDSAFE
 	lua_pushinteger(L, R_TextureNumForName(name));
+	return 1;
+}
+
+static int lib_rCheckTextureNameForNum(lua_State *L)
+{
+	INT32 num = (INT32)luaL_checkinteger(L, 1);
+	//HUDSAFE
+	lua_pushstring(L, R_CheckTextureNameForNum(num));
+	return 1;
+}
+
+static int lib_rTextureNameForNum(lua_State *L)
+{
+	INT32 num = (INT32)luaL_checkinteger(L, 1);
+	//HUDSAFE
+	lua_pushstring(L, R_TextureNameForNum(num));
 	return 1;
 }
 
@@ -3397,6 +3540,123 @@ static int lib_gAddGametype(lua_State *L)
 	return 0;
 }
 
+// Bot adding function!
+// Partly lifted from Got_AddPlayer
+static int lib_gAddPlayer(lua_State *L)
+{
+	INT16 i, newplayernum;
+	player_t *newplayer;
+	SINT8 skinnum = 0, bot;
+
+	for (i = 0; i < MAXPLAYERS; i++)
+	{
+		if (!playeringame[i])
+			break;
+	}
+
+	if (i >= MAXPLAYERS)
+	{
+		lua_pushnil(L);
+		return 1;
+	}
+
+	newplayernum = i;
+
+	CL_ClearPlayer(newplayernum);
+
+	playeringame[newplayernum] = true;
+	G_AddPlayer(newplayernum);
+	newplayer = &players[newplayernum];
+
+	newplayer->jointime = 0;
+	newplayer->quittime = 0;
+
+	// Read the skin argument (defaults to Sonic)
+	if (!lua_isnoneornil(L, 1))
+	{
+		skinnum = R_SkinAvailable(luaL_checkstring(L, 1));
+		skinnum = skinnum < 0 ? 0 : skinnum;
+	}
+
+	// Read the color (defaults to skin prefcolor)
+	if (!lua_isnoneornil(L, 2))
+		newplayer->skincolor = R_GetColorByName(luaL_checkstring(L, 2));
+	else
+		newplayer->skincolor = skins[skinnum]->prefcolor;
+
+	// Set the bot default name as the skin
+	strcpy(player_names[newplayernum], skins[skinnum]->realname);
+
+	// Read the bot name, if given
+	if (!lua_isnoneornil(L, 3))
+		strlcpy(player_names[newplayernum], luaL_checkstring(L, 3), sizeof(*player_names));
+
+	bot = luaL_optinteger(L, 4, 3);
+	newplayer->bot = (bot >= BOT_NONE && bot <= BOT_MPAI) ? bot : BOT_MPAI;
+
+	// If our bot is a 2P type, we'll need to set its leader so it can spawn
+	if (newplayer->bot == BOT_2PAI || newplayer->bot == BOT_2PHUMAN)
+		B_UpdateBotleader(newplayer);
+
+	// Set the skin (can't do this until AFTER bot type is set!)
+	SetPlayerSkinByNum(newplayernum, skinnum);
+
+	if (netgame)
+	{
+		char joinmsg[256];
+
+		// Truncate bot name
+		player_names[newplayernum][sizeof(*player_names) - 8] = '\0'; // The length of colored [BOT] + 1
+
+		strcpy(joinmsg, M_GetText("\x82*Bot %s has joined the game (player %d)"));
+		strcpy(joinmsg, va(joinmsg, player_names[newplayernum], newplayernum));
+		HU_AddChatText(joinmsg, false);
+
+		// Append blue [BOT] tag at the end
+		strlcat(player_names[newplayernum], "\x84[BOT]\x80", sizeof(*player_names));
+	}
+
+	LUA_PushUserdata(L, newplayer, META_PLAYER);
+	return 1;
+}
+
+
+// Bot removing function
+static int lib_gRemovePlayer(lua_State *L)
+{
+	UINT8 pnum = -1;
+	if (!lua_isnoneornil(L, 1))
+		pnum = luaL_checkinteger(L, 1);
+	else // No argument
+		return luaL_error(L, "argument #1 not given (expected number)");
+	if (pnum >= MAXPLAYERS) // Out of range
+		return luaL_error(L, "playernum %d out of range (0 - %d)", pnum, MAXPLAYERS-1);
+	if (playeringame[pnum]) // Found player
+	{
+		if (players[pnum].bot == BOT_NONE) // Can't remove clients.
+			return luaL_error(L, "G_RemovePlayer can only be used on players with a bot value other than BOT_NONE.");
+		else
+		{
+			players[pnum].removing = true;
+			lua_pushboolean(L, true);
+			return 1;
+		}
+	}
+	// Fell through. Invalid player
+	return LUA_ErrInvalid(L, "player_t");
+}
+
+
+static int lib_gSetUsedCheats(lua_State *L)
+{
+	// Let large-scale level packs using Lua be able to add cheat commands.
+	boolean silent = lua_optboolean(L, 1);
+	//NOHUD
+	//INLEVEL
+	G_SetUsedCheats(silent);
+	return 0;
+}
+
 static int Lcheckmapnumber (lua_State *L, int idx, const char *fun)
 {
 	if (ISINLEVEL)
@@ -3564,7 +3824,7 @@ static int lib_gDoReborn(lua_State *L)
 }
 
 // Another Lua function that doesn't actually exist!
-// Sets nextmapoverride & skipstats without instantly ending the level, for instances where other sources should be exiting the level, like normal signposts.
+// Sets nextmapoverride, skipstats and nextgametype without instantly ending the level, for instances where other sources should be exiting the level, like normal signposts.
 static int lib_gSetCustomExitVars(lua_State *L)
 {
 	int n = lua_gettop(L); // Num arguments
@@ -3573,18 +3833,21 @@ static int lib_gSetCustomExitVars(lua_State *L)
 
 	// LUA EXTENSION: Custom exit like support
 	// Supported:
-	//	G_SetCustomExitVars();			[reset to defaults]
-	//	G_SetCustomExitVars(int)		[nextmap override only]
-	//	G_SetCustomExitVars(nil, int)	[skipstats only]
-	//	G_SetCustomExitVars(int, int)	[both of the above]
+	//	G_SetCustomExitVars();               [reset to defaults]
+	//	G_SetCustomExitVars(int)             [nextmap override only]
+	//	G_SetCustomExitVars(nil, int)        [skipstats only]
+	//	G_SetCustomExitVars(int, int)        [both of the above]
+	//	G_SetCustomExitVars(int, int, int)   [nextmapoverride, skipstats and nextgametype]
 
 	nextmapoverride = 0;
 	skipstats = 0;
+	nextgametype = -1;
 
 	if (n >= 1)
 	{
 		nextmapoverride = (INT16)luaL_optinteger(L, 1, 0);
 		skipstats = (INT16)luaL_optinteger(L, 2, 0);
+		nextgametype = (INT16)luaL_optinteger(L, 3, -1);
 	}
 
 	return 0;
@@ -3738,6 +4001,12 @@ static int lib_gTicsToMilliseconds(lua_State *L)
 	return 1;
 }
 
+static int lib_getTimeMicros(lua_State *L)
+{
+	lua_pushinteger(L, I_GetPreciseTime() / (I_GetPrecisePrecision() / 1000000));
+	return 1;
+}
+
 static luaL_Reg lib[] = {
 	{"print", lib_print},
 	{"chatprint", lib_chatprint},
@@ -3834,6 +4103,7 @@ static luaL_Reg lib[] = {
 	{"P_IsObjectOnGround",lib_pIsObjectOnGround},
 	{"P_InSpaceSector",lib_pInSpaceSector},
 	{"P_InQuicksand",lib_pInQuicksand},
+	{"P_InJumpFlipSector",lib_pInJumpFlipSector},
 	{"P_SetObjectMomZ",lib_pSetObjectMomZ},
 	{"P_PlayJingle",lib_pPlayJingle},
 	{"P_PlayJingleMusic",lib_pPlayJingleMusic},
@@ -3873,6 +4143,8 @@ static luaL_Reg lib[] = {
 	{"P_TryMove",lib_pTryMove},
 	{"P_Move",lib_pMove},
 	{"P_TeleportMove",lib_pTeleportMove},
+	{"P_SetOrigin",lib_pSetOrigin},
+	{"P_MoveOrigin",lib_pMoveOrigin},
 	{"P_SlideMove",lib_pSlideMove},
 	{"P_BounceMove",lib_pBounceMove},
 	{"P_CheckSight", lib_pCheckSight},
@@ -3881,6 +4153,8 @@ static luaL_Reg lib[] = {
 	{"P_FloorzAtPos",lib_pFloorzAtPos},
 	{"P_CeilingzAtPos",lib_pCeilingzAtPos},
 	{"P_DoSpring",lib_pDoSpring},
+	{"P_TryCameraMove", lib_pTryCameraMove},
+	{"P_TeleportCameraMove", lib_pTeleportCameraMove},
 
 	// p_inter
 	{"P_RemoveShield",lib_pRemoveShield},
@@ -3905,7 +4179,11 @@ static luaL_Reg lib[] = {
 	{"P_SetMobjStateNF",lib_pSetMobjStateNF},
 	{"P_DoSuperTransformation",lib_pDoSuperTransformation},
 	{"P_ExplodeMissile",lib_pExplodeMissile},
+	{"P_MobjTouchingSectorSpecial",lib_pMobjTouchingSectorSpecial},
+	{"P_ThingOnSpecial3DFloor",lib_pThingOnSpecial3DFloor},
+	{"P_MobjTouchingSectorSpecialFlag",lib_pMobjTouchingSectorSpecialFlag},
 	{"P_PlayerTouchingSectorSpecial",lib_pPlayerTouchingSectorSpecial},
+	{"P_PlayerTouchingSectorSpecialFlag",lib_pPlayerTouchingSectorSpecialFlag},
 	{"P_FindLowestFloorSurrounding",lib_pFindLowestFloorSurrounding},
 	{"P_FindHighestFloorSurrounding",lib_pFindHighestFloorSurrounding},
 	{"P_FindNextHighestFloor",lib_pFindNextHighestFloor},
@@ -3917,7 +4195,6 @@ static luaL_Reg lib[] = {
 	{"P_LinedefExecute",lib_pLinedefExecute},
 	{"P_SpawnLightningFlash",lib_pSpawnLightningFlash},
 	{"P_FadeLight",lib_pFadeLight},
-	{"P_ThingOnSpecial3DFloor",lib_pThingOnSpecial3DFloor},
 	{"P_IsFlagAtBase",lib_pIsFlagAtBase},
 	{"P_SetupLevelSky",lib_pSetupLevelSky},
 	{"P_SetSkyboxMobj",lib_pSetSkyboxMobj},
@@ -3946,6 +4223,8 @@ static luaL_Reg lib[] = {
 	// r_data
 	{"R_CheckTextureNumForName",lib_rCheckTextureNumForName},
 	{"R_TextureNumForName",lib_rTextureNumForName},
+	{"R_CheckTextureNameForNum", lib_rCheckTextureNameForNum},
+	{"R_TextureNameForNum", lib_rTextureNameForNum},
 
 	// r_draw
 	{"R_GetColorByName", lib_rGetColorByName},
@@ -3983,6 +4262,9 @@ static luaL_Reg lib[] = {
 
 	// g_game
 	{"G_AddGametype", lib_gAddGametype},
+	{"G_AddPlayer", lib_gAddPlayer},
+	{"G_RemovePlayer", lib_gRemovePlayer},
+	{"G_SetUsedCheats", lib_gSetUsedCheats},
 	{"G_BuildMapName",lib_gBuildMapName},
 	{"G_BuildMapTitle",lib_gBuildMapTitle},
 	{"G_FindMap",lib_gFindMap},
@@ -4007,6 +4289,8 @@ static luaL_Reg lib[] = {
 	{"G_TicsToSeconds",lib_gTicsToSeconds},
 	{"G_TicsToCentiseconds",lib_gTicsToCentiseconds},
 	{"G_TicsToMilliseconds",lib_gTicsToMilliseconds},
+
+	{"getTimeMicros",lib_getTimeMicros},
 
 	{NULL, NULL}
 };
