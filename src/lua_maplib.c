@@ -2898,10 +2898,8 @@ int LUA_MapLib(lua_State *L)
 	node_fields_ref = Lua_CreateFieldTable(L, node_opt);
 
 	luaL_newmetatable(L, META_NODEBBOX);
-		//lua_pushcfunction(L, nodebbox_get);
-		//lua_setfield(L, -2, "__index");
-		lua_pushcfunction(L, nodebbox_call);
-		lua_setfield(L, -2, "__call");
+		//LUA_SetCFunctionField(L, "__index", nodebbox_get);
+		LUA_SetCFunctionField(L, "__call", nodebbox_call);
 	lua_pop(L, 1);
 
 	LUA_RegisterGlobalUserdata(L, "segs", lib_getSeg, NULL, lib_numsegs);

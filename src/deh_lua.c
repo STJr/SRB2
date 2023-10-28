@@ -771,8 +771,7 @@ int LUA_SOCLib(lua_State *L)
 	lua_register(L,"getActionName",lib_getActionName);
 
 	luaL_newmetatable(L, META_ACTION);
-		lua_pushcfunction(L, action_call);
-		lua_setfield(L, -2, "__call");
+		LUA_SetCFunctionField(L, "__call", action_call);
 	lua_pop(L, 1);
 
 	return 0;

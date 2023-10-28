@@ -578,8 +578,7 @@ static void LUA_ClearState(void)
 
 	// lock the global namespace
 	lua_getmetatable(L, LUA_GLOBALSINDEX);
-		lua_pushcfunction(L, setglobals);
-		lua_setfield(L, -2, "__newindex");
+		LUA_SetCFunctionField(L, "__newindex", setglobals);
 		lua_newtable(L);
 		lua_setfield(L, -2, "__metatable");
 	lua_pop(L, 1);
@@ -1815,20 +1814,17 @@ void LUA_PushTaggableObjectArray
 	lua_newuserdata(L, 0);
 		lua_createtable(L, 0, 2);
 			lua_createtable(L, 0, 2);
-				lua_pushcfunction(L, iterator);
-				lua_setfield(L, -2, "iterate");
+				LUA_SetCFunctionField(L, "iterate", iterator);
 
 				LUA_InsertTaggroupIterator(L, garray,
 						max_elements, element_array, sizeof_element, meta);
 
 				lua_createtable(L, 0, 1);
-					lua_pushcfunction(L, indexer);
-					lua_setfield(L, -2, "__index");
+					LUA_SetCFunctionField(L, "__index", indexer);
 				lua_setmetatable(L, -2);
 			lua_setfield(L, -2, "__index");
 
-			lua_pushcfunction(L, counter);
-			lua_setfield(L, -2, "__len");
+			LUA_SetCFunctionField(L, "__len", counter);
 		lua_setmetatable(L, -2);
 	lua_setglobal(L, field);
 }
@@ -1841,20 +1837,17 @@ static void SetBasicMetamethods(
 )
 {
 	if (get)
-	{
-		lua_pushcfunction(L, get);
-		lua_setfield(L, -2, "__index");
-	}
+		LUA_SetCFunctionField(L, "__index", get);
 	if (set)
-	{
-		lua_pushcfunction(L, set);
-		lua_setfield(L, -2, "__newindex");
-	}
+		LUA_SetCFunctionField(L, "__newindex", set);
 	if (len)
-	{
-		lua_pushcfunction(L, len);
-		lua_setfield(L, -2, "__len");
-	}
+		LUA_SetCFunctionField(L, "__len", len);
+}
+
+void LUA_SetCFunctionField(lua_State *L, const char *name, lua_CFunction value)
+{
+	lua_pushcfunction(L, value);
+	lua_setfield(L, -2, name);
 }
 
 void LUA_RegisterUserdataMetatable(

@@ -73,6 +73,8 @@ void LUA_PushTaggableObjectArray
 		size_t sizeof_element,
 		const char *meta);
 
+void LUA_SetCFunctionField(lua_State *L, const char *name, lua_CFunction value);
+
 void LUA_RegisterUserdataMetatable(
 	lua_State *L,
 	const char *name,
