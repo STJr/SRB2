@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -108,6 +108,17 @@ extern boolean (*I_NetCanSend)(void);
 
 */
 extern void (*I_NetFreeNodenum)(INT32 nodenum);
+
+/**
+	\brief	split a string into address and port
+
+	\param	address	string to split
+
+	\param	port	double pointer to hold port component (optional)
+
+	\return	address component
+*/
+extern char *I_NetSplitAddress(char *address, char **port);
 
 /**	\brief	open a connection with specified address
 

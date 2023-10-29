@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 2013-2016 by Matthew "Kaito Sinclaire" Walsh.
 // Copyright (C) 2013      by "Ninji".
-// Copyright (C) 2013-2020 by Sonic Team Junior.
+// Copyright (C) 2013-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -608,7 +608,7 @@ static void GIF_framewrite(void)
 		{
 			// golden's attempt at creating a "dynamic delay"
 			UINT16 mingifdelay = 10; // minimum gif delay in milliseconds (keep at 10 because gifs can't get more precise).
-			gif_delayus += I_PreciseToMicros(I_GetPreciseTime() - gif_prevframetime); // increase delay by how much time was spent between last measurement
+			gif_delayus += (I_GetPreciseTime() - gif_prevframetime) / (I_GetPrecisePrecision() / 1000000); // increase delay by how much time was spent between last measurement
 
 			if (gif_delayus/1000 >= mingifdelay) // delay is big enough to be able to effect gif frame delay?
 			{
@@ -621,7 +621,7 @@ static void GIF_framewrite(void)
 		{
 			float delayf = ceil(100.0f/NEWTICRATE);
 
-			delay = (UINT16)I_PreciseToMicros((I_GetPreciseTime() - gif_prevframetime))/10/1000;
+			delay = (UINT16)((I_GetPreciseTime() - gif_prevframetime)) / (I_GetPrecisePrecision() / 1000000) /10/1000;
 
 			if (delay < (UINT16)(delayf))
 				delay = (UINT16)(delayf);

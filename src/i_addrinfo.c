@@ -1,6 +1,6 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
-// Copyright (C) 2011-2020 by Sonic Team Junior.
+// Copyright (C) 2011-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -20,7 +20,7 @@
 #else
 #include <winsock.h>
 #endif
-#elif !defined (__DJGPP__)
+#else
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <netdb.h>

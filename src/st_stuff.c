@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -43,6 +43,10 @@
 #endif
 
 #include "lua_hud.h"
+#include "lua_hudlib_drawlist.h"
+#include "lua_hook.h"
+
+#include "r_fps.h"
 
 UINT16 objectsdrawn = 0;
 
@@ -104,6 +108,9 @@ static patch_t *sneakers;
 static patch_t *gravboots;
 static patch_t *nonicon;
 static patch_t *nonicon2;
+static patch_t *nightopianhelper;
+static patch_t *linkfreeze;
+static patch_t *superparaloop;
 static patch_t *bluestat;
 static patch_t *byelstat;
 static patch_t *orngstat;
@@ -159,6 +166,18 @@ hudinfo_t hudinfo[NUMHUDITEMS] =
 
 	{ 288, 176, V_SNAPTORIGHT|V_SNAPTOBOTTOM}, // HUD_POWERUPS
 };
+
+static huddrawlist_h luahuddrawlist_game[2];
+static huddrawlist_h luahuddrawlist_titlecard;
+
+// NiGHTS link colors; 3 sets with increasingly fancy colors (1 to 299, 300 to 599, 600 and above)
+skincolornum_t linkColor[3][NUMLINKCOLORS] = {
+{SKINCOLOR_SHAMROCK, SKINCOLOR_AQUA, SKINCOLOR_SKY, SKINCOLOR_BLUE, SKINCOLOR_PURPLE, SKINCOLOR_MAGENTA,
+ SKINCOLOR_ROSY, SKINCOLOR_RED, SKINCOLOR_ORANGE, SKINCOLOR_GOLD, SKINCOLOR_YELLOW, SKINCOLOR_PERIDOT},
+{SKINCOLOR_EMERALD, SKINCOLOR_OCEAN, SKINCOLOR_AQUAMARINE, SKINCOLOR_SAPPHIRE, SKINCOLOR_GALAXY, SKINCOLOR_SIBERITE,
+ SKINCOLOR_TAFFY, SKINCOLOR_RUBY, SKINCOLOR_GARNET, SKINCOLOR_TOPAZ, SKINCOLOR_LEMON, SKINCOLOR_LIME},
+{SKINCOLOR_ISLAND, SKINCOLOR_TURQUOISE, SKINCOLOR_DREAM, SKINCOLOR_DAYBREAK, SKINCOLOR_VAPOR, SKINCOLOR_FUCHSIA,
+ SKINCOLOR_VIOLET, SKINCOLOR_EVENTIDE, SKINCOLOR_KETCHUP, SKINCOLOR_FOUNDATION, SKINCOLOR_HEADLIGHT, SKINCOLOR_CHARTREUSE}};
 
 //
 // STATUS BAR CODE
@@ -306,6 +325,10 @@ void ST_LoadGraphics(void)
 	nonicon2 = W_CachePatchName("NONICON2", PU_HUDGFX);
 
 	// NiGHTS HUD things
+	nightopianhelper = W_CachePatchName("NHLPICON", PU_HUDGFX);
+	linkfreeze = W_CachePatchName("NLFZICON", PU_HUDGFX);
+	superparaloop = W_CachePatchName("NSPRICON", PU_HUDGFX);
+
 	bluestat = W_CachePatchName("BLUESTAT", PU_HUDGFX);
 	byelstat = W_CachePatchName("BYELSTAT", PU_HUDGFX);
 	orngstat = W_CachePatchName("ORNGSTAT", PU_HUDGFX);
@@ -419,6 +442,10 @@ void ST_Init(void)
 		return;
 
 	ST_LoadGraphics();
+
+	luahuddrawlist_game[0] = LUA_HUD_CreateDrawList();
+	luahuddrawlist_game[1] = LUA_HUD_CreateDrawList();
+	luahuddrawlist_titlecard = LUA_HUD_CreateDrawList();
 }
 
 // change the status bar too, when pressing F12 while viewing a demo.
@@ -788,7 +815,7 @@ static inline void ST_drawRings(void)
 static void ST_drawLivesArea(void)
 {
 	INT32 v_colmap = V_YELLOWMAP, livescount;
-	boolean notgreyedout;
+	boolean notgreyedout = false;
 
 	if (!stplyr->skincolor)
 		return; // Just joined a server, skin isn't loaded yet!
@@ -841,39 +868,36 @@ static void ST_drawLivesArea(void)
 	if (metalrecording)
 	{
 		if (((2*leveltime)/TICRATE) & 1)
+		{
 			V_DrawRightAlignedString(hudinfo[HUD_LIVES].x+58, hudinfo[HUD_LIVES].y+8,
 				hudinfo[HUD_LIVES].f|V_PERPLAYER|V_REDMAP|V_HUDTRANS, "REC");
+		}
 	}
 	// Spectator
 	else if (stplyr->spectator)
+	{
 		v_colmap = V_GRAYMAP;
-	// Tag
-	else if (gametyperules & GTR_TAG)
-	{
-		if (stplyr->pflags & PF_TAGIT)
-		{
-			V_DrawRightAlignedString(hudinfo[HUD_LIVES].x+58, hudinfo[HUD_LIVES].y+8, V_HUDTRANS|hudinfo[HUD_LIVES].f|V_PERPLAYER, "IT!");
-			v_colmap = V_ORANGEMAP;
-		}
 	}
-	// Team name
-	else if (G_GametypeHasTeams())
-	{
-		if (stplyr->ctfteam == 1)
-		{
-			V_DrawRightAlignedString(hudinfo[HUD_LIVES].x+58, hudinfo[HUD_LIVES].y+8, V_HUDTRANS|hudinfo[HUD_LIVES].f|V_PERPLAYER, "RED");
-			v_colmap = V_REDMAP;
-		}
-		else if (stplyr->ctfteam == 2)
-		{
-			V_DrawRightAlignedString(hudinfo[HUD_LIVES].x+58, hudinfo[HUD_LIVES].y+8, V_HUDTRANS|hudinfo[HUD_LIVES].f|V_PERPLAYER, "BLUE");
-			v_colmap = V_BLUEMAP;
-		}
-	}
-	// Lives number
 	else
 	{
-		boolean candrawlives = true;
+		boolean candrawlives = false;
+
+		// Set the player's name color.
+		if (G_TagGametype() && (stplyr->pflags & PF_TAGIT))
+		{
+			v_colmap = V_ORANGEMAP;
+		}
+		else if (G_GametypeHasTeams())
+		{
+			if (stplyr->ctfteam == 1)
+			{
+				v_colmap = V_REDMAP;
+			}
+			else if (stplyr->ctfteam == 2)
+			{
+				v_colmap = V_BLUEMAP;
+			}
+		}
 
 		// Co-op and Competition, normal life counter
 		if (G_GametypeUsesLives())
@@ -909,12 +933,15 @@ static void ST_drawLivesArea(void)
 				livescount = (((netgame || multiplayer) && G_GametypeUsesCoopLives() && cv_cooplives.value == 0) ? INFLIVES : stplyr->lives);
 				notgreyedout = true;
 			}
+
+			candrawlives = true;
 		}
 		// Infinity symbol (Race)
 		else if (G_PlatformGametype() && !(gametyperules & GTR_LIVES))
 		{
 			livescount = INFLIVES;
 			notgreyedout = true;
+			candrawlives = true;
 		}
 		// Otherwise nothing, sorry.
 		// Special Stages keep not showing lives,
@@ -923,8 +950,6 @@ static void ST_drawLivesArea(void)
 		// cannot show up because Special Stages
 		// still have the GTR_LIVES gametype rule
 		// by default.
-		else
-			candrawlives = false;
 
 		// Draw the lives counter here.
 		if (candrawlives)
@@ -932,8 +957,10 @@ static void ST_drawLivesArea(void)
 			// x
 			V_DrawScaledPatch(hudinfo[HUD_LIVES].x+22, hudinfo[HUD_LIVES].y+10, hudinfo[HUD_LIVES].f|V_PERPLAYER|V_HUDTRANS, stlivex);
 			if (livescount == INFLIVES)
+			{
 				V_DrawCharacter(hudinfo[HUD_LIVES].x+50, hudinfo[HUD_LIVES].y+8,
 					'\x16' | 0x80 | hudinfo[HUD_LIVES].f|V_PERPLAYER|V_HUDTRANS, false);
+			}
 			else
 			{
 				if (stplyr->playerstate == PST_DEAD && !(stplyr->spectator) && (livescount || stplyr->deadtimer < (TICRATE<<1)) && !(stplyr->pflags & PF_FINISHED))
@@ -942,6 +969,25 @@ static void ST_drawLivesArea(void)
 					livescount = 99;
 				V_DrawRightAlignedString(hudinfo[HUD_LIVES].x+58, hudinfo[HUD_LIVES].y+8,
 					hudinfo[HUD_LIVES].f|V_PERPLAYER|(notgreyedout ? V_HUDTRANS : V_HUDTRANSHALF), va("%d",livescount));
+			}
+		}
+		else
+		{
+			// Draw team name instead of lives, if possible.
+			if (G_TagGametype() && (stplyr->pflags & PF_TAGIT))
+			{
+				V_DrawRightAlignedString(hudinfo[HUD_LIVES].x+58, hudinfo[HUD_LIVES].y+8, V_HUDTRANS|hudinfo[HUD_LIVES].f|V_PERPLAYER, "IT!");
+			}
+			else if (G_GametypeHasTeams())
+			{
+				if (stplyr->ctfteam == 1)
+				{
+					V_DrawRightAlignedString(hudinfo[HUD_LIVES].x+58, hudinfo[HUD_LIVES].y+8, V_HUDTRANS|hudinfo[HUD_LIVES].f|V_PERPLAYER, "RED");
+				}
+				else if (stplyr->ctfteam == 2)
+				{
+					V_DrawRightAlignedString(hudinfo[HUD_LIVES].x+58, hudinfo[HUD_LIVES].y+8, V_HUDTRANS|hudinfo[HUD_LIVES].f|V_PERPLAYER, "BLUE");
+				}
 			}
 		}
 #undef ST_drawLivesX
@@ -1175,7 +1221,17 @@ static void ST_drawInput(void)
 			break;
 
 		case CS_SIMPLE:
-			V_DrawThinString(x, y, hudinfo[HUD_LIVES].f, "SIMPLE");
+			V_DrawThinString(x, y, hudinfo[HUD_LIVES].f, "AUTOMATIC");
+			y -= 8;
+			break;
+
+		case CS_STANDARD:
+			V_DrawThinString(x, y, hudinfo[HUD_LIVES].f, "MANUAL");
+			y -= 8;
+			break;
+
+		case CS_LEGACY:
+			V_DrawThinString(x, y, hudinfo[HUD_LIVES].f, "STRAFE");
 			y -= 8;
 			break;
 
@@ -1367,7 +1423,7 @@ void ST_drawTitleCard(void)
 		zzticker = lt_ticker;
 		V_DrawMappedPatch(FixedInt(lt_zigzag), (-zzticker) % zigzag->height, V_SNAPTOTOP|V_SNAPTOLEFT, zigzag, colormap);
 		V_DrawMappedPatch(FixedInt(lt_zigzag), (zigzag->height-zzticker) % zigzag->height, V_SNAPTOTOP|V_SNAPTOLEFT, zigzag, colormap);
-		V_DrawMappedPatch(FixedInt(lt_zigzag), (-zigzag->height+zzticker) % zztext->height, V_SNAPTOTOP|V_SNAPTOLEFT, zztext, colormap);
+		V_DrawMappedPatch(FixedInt(lt_zigzag), (-zztext->height+zzticker) % zztext->height, V_SNAPTOTOP|V_SNAPTOLEFT, zztext, colormap);
 		V_DrawMappedPatch(FixedInt(lt_zigzag), (zzticker) % zztext->height, V_SNAPTOTOP|V_SNAPTOLEFT, zztext, colormap);
 	}
 
@@ -1391,7 +1447,12 @@ void ST_drawTitleCard(void)
 	lt_lasttic = lt_ticker;
 
 luahook:
-	LUAh_TitleCardHUD(stplyr);
+	//if (renderisnewtic)
+	{
+		LUA_HUD_ClearDrawList(luahuddrawlist_titlecard);
+		LUA_HUDHOOK(titlecard, luahuddrawlist_titlecard);
+	}
+	LUA_HUD_DrawList(luahuddrawlist_titlecard);
 }
 
 //
@@ -1422,6 +1483,21 @@ void ST_drawWipeTitleCard(void)
 	}
 }
 
+#define ICONSEP (16+4) // matches weapon rings HUD
+
+static INT32 ST_powerupHUDoffset(UINT16 timer)
+{
+	if (timer > 7)
+		return ICONSEP;
+	else
+	{
+		UINT8 a = ICONSEP, b = 7-timer;
+		while (b--)
+			a = 2*a/3;
+		return a;
+	}
+}
+
 static void ST_drawPowerupHUD(void)
 {
 	patch_t *p = NULL;
@@ -1429,7 +1505,6 @@ static void ST_drawPowerupHUD(void)
 	INT32 offs = hudinfo[HUD_POWERUPS].x;
 	const UINT8 q = ((splitscreen && stplyr == &players[secondarydisplayplayer]) ? 1 : 0);
 	static INT32 flagoffs[2] = {0, 0}, shieldoffs[2] = {0, 0}, finishoffs[2] = {0, 0};
-#define ICONSEP (16+4) // matches weapon rings HUD
 
 	if (F_GetPromptHideHud(hudinfo[HUD_POWERUPS].y))
 		return;
@@ -1541,15 +1616,7 @@ static void ST_drawPowerupHUD(void)
 		DRAWTIMERICON(invincibility, invulntime)
 	}
 
-	if (invulntime > 7)
-		offs -= ICONSEP;
-	else
-	{
-		UINT8 a = ICONSEP, b = 7-invulntime;
-		while (b--)
-			a = 2*a/3;
-		offs -= a;
-	}
+	offs -= ST_powerupHUDoffset(invulntime);
 
 	// Super Sneakers
 	if (stplyr->powers[pw_sneakers] > 3*TICRATE || (stplyr->powers[pw_sneakers] && leveltime & 1))
@@ -1557,21 +1624,43 @@ static void ST_drawPowerupHUD(void)
 		DRAWTIMERICON(sneakers, stplyr->powers[pw_sneakers])
 	}
 
-	if (stplyr->powers[pw_sneakers] > 7)
-		offs -= ICONSEP;
-	else
-	{
-		UINT8 a = ICONSEP, b = 7-stplyr->powers[pw_sneakers];
-		while (b--)
-			a = 2*a/3;
-		offs -= a;
-	}
+	offs -= ST_powerupHUDoffset(stplyr->powers[pw_sneakers]);
 
 	// Gravity Boots
 	if (stplyr->powers[pw_gravityboots] > 3*TICRATE || (stplyr->powers[pw_gravityboots] && leveltime & 1))
 	{
 		DRAWTIMERICON(gravboots, stplyr->powers[pw_gravityboots])
 	}
+
+	offs -= ST_powerupHUDoffset(stplyr->powers[pw_gravityboots]);
+
+// --------------------
+// NiGHTS timer-based powerups
+// --------------------
+
+	// Nightopian Helper
+	if (stplyr->powers[pw_nights_helper] > 3*TICRATE || (stplyr->powers[pw_nights_helper] && leveltime & 1))
+	{
+		DRAWTIMERICON(nightopianhelper, stplyr->powers[pw_nights_helper])
+	}
+
+	offs -= ST_powerupHUDoffset(stplyr->powers[pw_nights_helper]);
+
+	// Link Freeze
+	if (stplyr->powers[pw_nights_linkfreeze] > 3*TICRATE || (stplyr->powers[pw_nights_linkfreeze] && leveltime & 1))
+	{
+		DRAWTIMERICON(linkfreeze, stplyr->powers[pw_nights_linkfreeze])
+	}
+
+	offs -= ST_powerupHUDoffset(stplyr->powers[pw_nights_linkfreeze]);
+
+	// Super Paraloop
+	if (stplyr->powers[pw_nights_superloop] > 3*TICRATE || (stplyr->powers[pw_nights_superloop] && leveltime & 1))
+	{
+		DRAWTIMERICON(superparaloop, stplyr->powers[pw_nights_superloop])
+	}
+
+	//offs -= ST_powerupHUDoffset(stplyr->powers[pw_nights_superloop]);
 
 #undef DRAWTIMERICON
 #undef ICONSEP
@@ -1671,7 +1760,7 @@ static void ST_drawNightsRecords(void)
 			ST_DrawNightsOverlayNum((BASEVIDWIDTH/2 + 56)<<FRACBITS, 160<<FRACBITS, FRACUNIT, aflag, stplyr->lastmarescore, nightsnum, SKINCOLOR_AZURE);
 
 			// If new record, say so!
-			if (!(netgame || multiplayer) && G_GetBestNightsScore(gamemap, stplyr->lastmare + 1) <= stplyr->lastmarescore)
+			if (!(netgame || multiplayer) && G_GetBestNightsScore(gamemap, stplyr->lastmare + 1, clientGamedata) <= stplyr->lastmarescore)
 			{
 				if (stplyr->texttimer & 16)
 					V_DrawCenteredString(BASEVIDWIDTH/2, 184, V_YELLOWMAP|aflag, "* NEW RECORD *");
@@ -1690,43 +1779,11 @@ static void ST_drawNightsRecords(void)
 	}
 }
 
-// 2.0-1: [21:42] <+Rob> Beige - Lavender - Steel Blue - Peach - Orange - Purple - Silver - Yellow - Pink - Red - Blue - Green - Cyan - Gold
-/*#define NUMLINKCOLORS 14
-static skincolornum_t linkColor[NUMLINKCOLORS] =
-{SKINCOLOR_BEIGE,  SKINCOLOR_LAVENDER, SKINCOLOR_AZURE, SKINCOLOR_PEACH, SKINCOLOR_ORANGE,
- SKINCOLOR_MAGENTA, SKINCOLOR_SILVER, SKINCOLOR_SUPERGOLD4, SKINCOLOR_PINK,  SKINCOLOR_RED,
- SKINCOLOR_BLUE, SKINCOLOR_GREEN, SKINCOLOR_CYAN, SKINCOLOR_GOLD};*/
-
-// 2.2 indev list: (unix time 1470866042) <Rob> Emerald, Aqua, Cyan, Blue, Pastel, Purple, Magenta, Rosy, Red, Orange, Gold, Yellow, Peridot
-/*#define NUMLINKCOLORS 13
-static skincolornum_t linkColor[NUMLINKCOLORS] =
-{SKINCOLOR_EMERALD, SKINCOLOR_AQUA, SKINCOLOR_CYAN, SKINCOLOR_BLUE, SKINCOLOR_PASTEL,
- SKINCOLOR_PURPLE, SKINCOLOR_MAGENTA, SKINCOLOR_ROSY, SKINCOLOR_RED,  SKINCOLOR_ORANGE,
- SKINCOLOR_GOLD, SKINCOLOR_YELLOW, SKINCOLOR_PERIDOT};*/
-
-// 2.2 indev list again: [19:59:52] <baldobo> Ruby > Red > Flame > Sunset > Orange > Gold > Yellow > Lime > Green > Aqua  > cyan > Sky > Blue > Pastel > Purple > Bubblegum > Magenta > Rosy > repeat
-// [20:00:25] <baldobo> Also Icy for the link freeze text color
-// [20:04:03] <baldobo> I would start it on lime
-/*#define NUMLINKCOLORS 18
-static skincolornum_t linkColor[NUMLINKCOLORS] =
-{SKINCOLOR_LIME, SKINCOLOR_EMERALD, SKINCOLOR_AQUA, SKINCOLOR_CYAN, SKINCOLOR_SKY,
- SKINCOLOR_SAPPHIRE, SKINCOLOR_PASTEL, SKINCOLOR_PURPLE, SKINCOLOR_BUBBLEGUM, SKINCOLOR_MAGENTA,
- SKINCOLOR_ROSY, SKINCOLOR_RUBY, SKINCOLOR_RED, SKINCOLOR_FLAME, SKINCOLOR_SUNSET,
- SKINCOLOR_ORANGE, SKINCOLOR_GOLD, SKINCOLOR_YELLOW};*/
-
-// 2.2+ list for real this time: https://wiki.srb2.org/wiki/User:Rob/Sandbox (check history around 31/10/17, spoopy)
-#define NUMLINKCOLORS 12
-static skincolornum_t linkColor[2][NUMLINKCOLORS] = {
-{SKINCOLOR_EMERALD, SKINCOLOR_AQUA, SKINCOLOR_SKY, SKINCOLOR_BLUE, SKINCOLOR_PURPLE, SKINCOLOR_MAGENTA,
- SKINCOLOR_ROSY, SKINCOLOR_RED, SKINCOLOR_ORANGE, SKINCOLOR_GOLD, SKINCOLOR_YELLOW, SKINCOLOR_PERIDOT},
-{SKINCOLOR_SEAFOAM, SKINCOLOR_CYAN, SKINCOLOR_WAVE, SKINCOLOR_SAPPHIRE, SKINCOLOR_VAPOR, SKINCOLOR_BUBBLEGUM,
- SKINCOLOR_VIOLET, SKINCOLOR_RUBY, SKINCOLOR_FLAME, SKINCOLOR_SUNSET, SKINCOLOR_SANDY, SKINCOLOR_LIME}};
-
 static void ST_drawNiGHTSLink(void)
 {
 	static INT32 prevsel[2] = {0, 0}, prevtime[2] = {0, 0};
 	const UINT8 q = ((splitscreen && stplyr == &players[secondarydisplayplayer]) ? 1 : 0);
-	INT32 sel = ((stplyr->linkcount-1) / 5) % NUMLINKCOLORS, aflag = V_PERPLAYER, mag = ((stplyr->linkcount-1 >= 300) ? 1 : 0);
+	INT32 sel = ((stplyr->linkcount-1) / 5) % NUMLINKCOLORS, aflag = V_PERPLAYER, mag = ((stplyr->linkcount-1 >= 300) ? (stplyr->linkcount-1 >= 600) ? 2 : 1 : 0);
 	skincolornum_t colornum;
 	fixed_t x, y, scale;
 
@@ -2036,9 +2093,8 @@ static void ST_drawNiGHTSHUD(void)
 		else
 			numbersize = 48/2;
 
-		if ((oldspecialstage && leveltime & 2)
-			&& (stplyr->mo->eflags & (MFE_TOUCHWATER|MFE_UNDERWATER))
-			&& !(stplyr->powers[pw_shield] & SH_PROTECTWATER))
+		if ((oldspecialstage && leveltime & 2) &&
+			(stplyr->mo->eflags & (MFE_TOUCHWATER|MFE_UNDERWATER) && !(stplyr->powers[pw_shield] & ((stplyr->mo->eflags & MFE_TOUCHLAVA) ? SH_PROTECTFIRE : SH_PROTECTWATER))))
 			col = SKINCOLOR_ORANGE;
 
 		ST_DrawNightsOverlayNum((160 + numbersize)<<FRACBITS, 14<<FRACBITS, FRACUNIT, V_PERPLAYER|V_SNAPTOTOP, realnightstime, nightsnum, col);
@@ -2187,7 +2243,7 @@ static void ST_drawMatchHUD(void)
 		{
 			sprintf(penaltystr, "-%d", stplyr->ammoremoval);
 			V_DrawString(offset + 8 + stplyr->ammoremovalweapon * 20, y,
-				V_REDMAP|V_SNAPTOBOTTOM, penaltystr);
+				V_REDMAP|V_SNAPTOBOTTOM|V_PERPLAYER, penaltystr);
 		}
 
 	}
@@ -2291,7 +2347,7 @@ static void ST_drawTextHUD(void)
 
 			for (i = 0; i < MAXPLAYERS; i++)
 			{
-				if (!playeringame[i] || players[i].spectator)
+				if (!playeringame[i] || players[i].spectator || players[i].bot)
 					continue;
 				if (players[i].lives <= 0)
 					continue;
@@ -2456,6 +2512,8 @@ num:
 static INT32 ST_drawEmeraldHuntIcon(mobj_t *hunt, patch_t **patches, INT32 offset)
 {
 	INT32 interval, i;
+	if (stplyr->mo == NULL)
+		return 0;  // player just joined after spectating, can happen on custom gamemodes.
 	UINT32 dist = ((UINT32)P_AproxDistance(P_AproxDistance(stplyr->mo->x - hunt->x, stplyr->mo->y - hunt->y), stplyr->mo->z - hunt->z))>>FRACBITS;
 
 	if (dist < 128)
@@ -2516,11 +2574,11 @@ static void ST_doHuntIconsAndSound(void)
 			interval = newinterval;
 	}
 
-	if (!(P_AutoPause() || paused) && interval > 0 && leveltime && leveltime % interval == 0)
+	if (!(P_AutoPause() || paused) && interval > 0 && leveltime && leveltime % interval == 0 && renderisnewtic)
 		S_StartSound(NULL, sfx_emfind);
 }
 
-static void ST_doItemFinderIconsAndSound(void)
+static boolean ST_doItemFinderIconsAndSound(void)
 {
 	INT32 emblems[16];
 	thinker_t *th;
@@ -2531,6 +2589,12 @@ static void ST_doItemFinderIconsAndSound(void)
 	INT32 interval = 0, newinterval = 0;
 	INT32 soffset;
 
+	if (!(cv_itemfinder.value && M_SecretUnlocked(SECRET_ITEMFINDER, clientGamedata)))
+	{
+		// Not unlocked, or not enabled. Use emerald hunt radar.
+		return false;
+	}
+
 	for (i = 0; i < numemblems; ++i)
 	{
 		if (emblemlocations[i].type > ET_SKIN || emblemlocations[i].level != gamemap)
@@ -2538,15 +2602,21 @@ static void ST_doItemFinderIconsAndSound(void)
 
 		emblems[stemblems++] = i;
 
-		if (!emblemlocations[i].collected)
+		if (!P_EmblemWasCollected(i) && P_CanPickupEmblem(stplyr, i))
+		{
 			++stunfound;
+		}
 
 		if (stemblems >= 16)
 			break;
 	}
+
 	// Found all/none exist? Don't waste our time
 	if (!stunfound)
-		return;
+	{
+		// Allow emerald hunt radar to function after they're all collected.
+		return false;
+	}
 
 	// Scan thinkers to find emblem mobj with these ids
 	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
@@ -2566,6 +2636,9 @@ static void ST_doItemFinderIconsAndSound(void)
 		{
 			if (mo2->health == emblems[i] + 1)
 			{
+				if (P_EmblemWasCollected(emblems[i]) || !P_CanPickupEmblem(stplyr, emblems[i]))
+					break;
+
 				soffset = (i * 20) - ((stemblems - 1) * 10);
 
 				newinterval = ST_drawEmeraldHuntIcon(mo2, itemhoming, soffset);
@@ -2578,8 +2651,10 @@ static void ST_doItemFinderIconsAndSound(void)
 
 	}
 
-	if (!(P_AutoPause() || paused) && interval > 0 && leveltime && leveltime % interval == 0)
+	if (!(P_AutoPause() || paused) && interval > 0 && leveltime && leveltime % interval == 0 && renderisnewtic)
 		S_StartSound(NULL, sfx_emfind);
+
+	return true;
 }
 
 //
@@ -2698,9 +2773,7 @@ static void ST_overlayDrawer(void)
 			ST_drawRaceHUD();
 
 		// Emerald Hunt Indicators
-		if (cv_itemfinder.value && M_SecretUnlocked(SECRET_ITEMFINDER))
-			ST_doItemFinderIconsAndSound();
-		else
+		if (!ST_doItemFinderIconsAndSound())
 			ST_doHuntIconsAndSound();
 
 		if(!P_IsLocalPlayer(stplyr))
@@ -2715,24 +2788,30 @@ static void ST_overlayDrawer(void)
 		}
 
 		// This is where we draw all the fun cheese if you have the chasecam off!
-		if (!(maptol & TOL_NIGHTS))
+		if ((stplyr == &players[displayplayer] && !camera.chase)
+		|| ((splitscreen && stplyr == &players[secondarydisplayplayer]) && !camera2.chase))
 		{
-			if ((stplyr == &players[displayplayer] && !camera.chase)
-			|| ((splitscreen && stplyr == &players[secondarydisplayplayer]) && !camera2.chase))
-			{
-				ST_drawFirstPersonHUD();
-				if (cv_powerupdisplay.value)
-					ST_drawPowerupHUD();  // same as it ever was...
-			}
-			else if (cv_powerupdisplay.value == 2)
+			ST_drawFirstPersonHUD();
+			if (cv_powerupdisplay.value)
 				ST_drawPowerupHUD();  // same as it ever was...
 		}
+		else if (cv_powerupdisplay.value == 2)
+			ST_drawPowerupHUD();  // same as it ever was...
+		
 	}
 	else if (!(netgame || multiplayer) && cv_powerupdisplay.value == 2)
 		ST_drawPowerupHUD(); // same as it ever was...
 
 	if (!(netgame || multiplayer) || !hu_showscores)
-		LUAh_GameHUD(stplyr);
+	{
+		INT32 hooklistindex = splitscreen && stplyr == &players[secondarydisplayplayer] ? 1 : 0;
+		if (renderisnewtic)
+		{
+			LUA_HUD_ClearDrawList(luahuddrawlist_game[hooklistindex]);
+			LUA_HUDHOOK(game, luahuddrawlist_game[hooklistindex]);
+		}
+		LUA_HUD_DrawList(luahuddrawlist_game[hooklistindex]);
+	}
 
 	// draw level title Tails
 	if (stagetitle && (!WipeInAction) && (!WipeStageTitle))

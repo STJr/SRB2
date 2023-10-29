@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -188,25 +188,10 @@ static void DEH_LoadDehackedFile(MYFILE *f, boolean mainfile)
 	dbg_line = -1; // start at -1 so the first line is 0.
 	while (!myfeof(f))
 	{
-		char origpos[128];
-		INT32 size = 0;
-		char *traverse;
-
 		myfgets(s, MAXLINELEN, f);
 		memcpy(textline, s, MAXLINELEN);
 		if (s[0] == '\n' || s[0] == '#')
 			continue;
-
-		traverse = s;
-
-		while (traverse[0] != '\n')
-		{
-			traverse++;
-			size++;
-		}
-
-		strncpy(origpos, s, size);
-		origpos[size] = '\0';
 
 		if (NULL != (word = strtok(s, " "))) {
 			strupr(word);
@@ -562,13 +547,10 @@ static void DEH_LoadDehackedFile(MYFILE *f, boolean mainfile)
 					}
 
 					if (clearall || fastcmp(word2, "UNLOCKABLES"))
-						memset(&unlockables, 0, sizeof(unlockables));
+						clear_unlockables();
 
 					if (clearall || fastcmp(word2, "EMBLEMS"))
-					{
-						memset(&emblemlocations, 0, sizeof(emblemlocations));
-						numemblems = 0;
-					}
+						clear_emblems();
 
 					if (clearall || fastcmp(word2, "EXTRAEMBLEMS"))
 					{
@@ -593,7 +575,7 @@ static void DEH_LoadDehackedFile(MYFILE *f, boolean mainfile)
 	} // end while
 
 	if (gamedataadded)
-		G_LoadGameData();
+		G_LoadGameData(clientGamedata);
 
 	if (gamestate == GS_TITLESCREEN)
 	{

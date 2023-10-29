@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -23,9 +23,16 @@
 #include "lua_hook.h"
 #include "m_perfstats.h"
 #include "i_system.h" // I_GetPreciseTime
+#include "r_main.h"
+#include "r_fps.h"
+#include "i_video.h" // rendermode
 
 // Object place
 #include "m_cheat.h"
+
+#ifdef PARANOIA
+#include "deh_tables.h" // MOBJTYPE_LIST
+#endif
 
 tic_t leveltime;
 
@@ -208,7 +215,48 @@ void P_AddThinker(const thinklistnum_t n, thinker_t *thinker)
 	thlist[n].prev = thinker;
 
 	thinker->references = 0;    // killough 11/98: init reference counter to 0
+
+#ifdef PARANOIA
+	thinker->debug_mobjtype = MT_NULL;
+#endif
 }
+
+#ifdef PARANOIA
+static const char *MobjTypeName(const mobj_t *mobj)
+{
+	actionf_p1 p1 = mobj->thinker.function.acp1;
+
+	if (p1 == (actionf_p1)P_MobjThinker)
+	{
+		return MOBJTYPE_LIST[mobj->type];
+	}
+	else if (p1 == (actionf_p1)P_RemoveThinkerDelayed)
+	{
+		if (mobj->thinker.debug_mobjtype != MT_NULL)
+		{
+			return MOBJTYPE_LIST[mobj->thinker.debug_mobjtype];
+		}
+	}
+
+	return "<Not a mobj>";
+}
+
+static const char *MobjThinkerName(const mobj_t *mobj)
+{
+	actionf_p1 p1 = mobj->thinker.function.acp1;
+
+	if (p1 == (actionf_p1)P_MobjThinker)
+	{
+		return "P_MobjThinker";
+	}
+	else if (p1 == (actionf_p1)P_RemoveThinkerDelayed)
+	{
+		return "P_RemoveThinkerDelayed";
+	}
+
+	return "<Unknown Thinker>";
+}
+#endif
 
 //
 // killough 11/98:
@@ -231,20 +279,34 @@ static thinker_t *currentthinker;
 void P_RemoveThinkerDelayed(thinker_t *thinker)
 {
 	thinker_t *next;
-#ifdef PARANOIA
-#define BEENAROUNDBIT (0x40000000) // has to be sufficiently high that it's unlikely to happen in regular gameplay. If you change this, pay attention to the bit pattern of INT32_MIN.
-	if (thinker->references & ~BEENAROUNDBIT)
+
+	if (thinker->references != 0)
 	{
-		if (thinker->references & BEENAROUNDBIT) // Usually gets cleared up in one frame; what's going on here, then?
-			CONS_Printf("Number of potentially faulty references: %d\n", (thinker->references & ~BEENAROUNDBIT));
-		thinker->references |= BEENAROUNDBIT;
+#ifdef PARANOIA
+		if (thinker->debug_time > leveltime)
+		{
+			thinker->debug_time = leveltime + 2; // do not print errors again
+		}
+		// Removed mobjs can be the target of another mobj. In
+		// that case, the other mobj will manage its reference
+		// to the removed mobj in P_MobjThinker. However, if
+		// the removed mobj is removed after the other object
+		// thinks, the reference management is delayed by one
+		// tic.
+		else if (thinker->debug_time < leveltime)
+		{
+			CONS_Printf(
+					"PARANOIA/P_RemoveThinkerDelayed: %p %s references=%d\n",
+					(void*)thinker,
+					MobjTypeName((mobj_t*)thinker),
+					thinker->references
+			);
+
+			thinker->debug_time = leveltime + 2; // do not print this error again
+		}
+#endif
 		return;
 	}
-#undef BEENAROUNDBIT
-#else
-	if (thinker->references)
-		return;
-#endif
 
 	/* Remove from main thinker list */
 	next = thinker->next;
@@ -254,6 +316,7 @@ void P_RemoveThinkerDelayed(thinker_t *thinker)
 	* thinker->prev->next = thinker->next */
 	(next->prev = currentthinker = thinker->prev)->next = next;
 
+	R_DestroyLevelInterpolators(thinker);
 	Z_Free(thinker);
 }
 
@@ -287,12 +350,45 @@ void P_RemoveThinker(thinker_t *thinker)
  * references, and delay removal until the count is 0.
  */
 
-mobj_t *P_SetTarget(mobj_t **mop, mobj_t *targ)
+mobj_t *P_SetTarget2(mobj_t **mop, mobj_t *targ
+#ifdef PARANOIA
+		, const char *source_file, int source_line
+#endif
+)
 {
-	if (*mop)              // If there was a target already, decrease its refcount
+	if (*mop) // If there was a target already, decrease its refcount
+	{
 		(*mop)->thinker.references--;
-if ((*mop = targ) != NULL) // Set new target and if non-NULL, increase its counter
+
+#ifdef PARANOIA
+		if ((*mop)->thinker.references < 0)
+		{
+			CONS_Printf(
+					"PARANOIA/P_SetTarget: %p %s %s references=%d, references go negative! (%s:%d)\n",
+					(void*)*mop,
+					MobjTypeName(*mop),
+					MobjThinkerName(*mop),
+					(*mop)->thinker.references,
+					source_file,
+					source_line
+			);
+		}
+
+		(*mop)->thinker.debug_time = leveltime;
+#endif
+	}
+
+	if (targ != NULL) // Set new target and if non-NULL, increase its counter
+	{
 		targ->thinker.references++;
+
+#ifdef PARANOIA
+		targ->thinker.debug_time = leveltime;
+#endif
+	}
+
+	*mop = targ;
+
 	return targ;
 }
 
@@ -323,7 +419,7 @@ static inline void P_RunThinkers(void)
 	size_t i;
 	for (i = 0; i < NUM_THINKERLISTS; i++)
 	{
-		ps_thlist_times[i] = I_GetPreciseTime();
+		PS_START_TIMING(ps_thlist_times[i]);
 		for (currentthinker = thlist[i].next; currentthinker != &thlist[i]; currentthinker = currentthinker->next)
 		{
 #ifdef PARANOIA
@@ -331,7 +427,7 @@ static inline void P_RunThinkers(void)
 #endif
 			currentthinker->function.acp1(currentthinker);
 		}
-		ps_thlist_times[i] = I_GetPreciseTime() - ps_thlist_times[i];
+		PS_STOP_TIMING(ps_thlist_times[i]);
 	}
 
 }
@@ -487,7 +583,7 @@ static inline void P_DoSpecialStageStuff(void)
 					continue;
 
 				// If in water, deplete timer 6x as fast.
-				if (players[i].mo->eflags & (MFE_TOUCHWATER|MFE_UNDERWATER) && !(players[i].powers[pw_shield] & SH_PROTECTWATER))
+				if (players[i].mo->eflags & (MFE_TOUCHWATER|MFE_UNDERWATER) && !(players[i].powers[pw_shield] & ((players[i].mo->eflags & MFE_TOUCHLAVA) ? SH_PROTECTFIRE : SH_PROTECTWATER)))
 					players[i].nightstime -= 5;
 				if (--players[i].nightstime > 6)
 				{
@@ -616,8 +712,10 @@ void P_Ticker(boolean run)
 		if (OP_FreezeObjectplace())
 		{
 			P_MapStart();
+			R_UpdateMobjInterpolators();
 			OP_ObjectplaceMovement(&players[0]);
 			P_MoveChaseCamera(&players[0], &camera, false);
+			R_UpdateViewInterpolation();
 			P_MapEnd();
 			S_SetStackAdjustmentStart();
 			return;
@@ -640,6 +738,8 @@ void P_Ticker(boolean run)
 
 	if (run)
 	{
+		R_UpdateMobjInterpolators();
+
 		if (demorecording)
 			G_WriteDemoTiccmd(&players[consoleplayer].cmd, 0);
 		if (demoplayback)
@@ -653,21 +753,24 @@ void P_Ticker(boolean run)
 			}
 		}
 
-		ps_lua_mobjhooks = 0;
-		ps_checkposition_calls = 0;
+		ps_lua_mobjhooks.value.i = 0;
+		ps_checkposition_calls.value.i = 0;
 
-		LUAh_PreThinkFrame();
+		LUA_HOOK(PreThinkFrame);
 
-		ps_playerthink_time = I_GetPreciseTime();
+		PS_START_TIMING(ps_playerthink_time);
 		for (i = 0; i < MAXPLAYERS; i++)
 			if (playeringame[i] && players[i].mo && !P_MobjWasRemoved(players[i].mo))
 				P_PlayerThink(&players[i]);
-		ps_playerthink_time = I_GetPreciseTime() - ps_playerthink_time;
+		PS_STOP_TIMING(ps_playerthink_time);
 	}
 
 	// Keep track of how long they've been playing!
 	if (!demoplayback) // Don't increment if a demo is playing.
-		totalplaytime++;
+	{
+		clientGamedata->totalplaytime++;
+		serverGamedata->totalplaytime++;
+	}
 
 	if (!(maptol & TOL_NIGHTS) && G_IsSpecialStage(gamemap))
 		P_DoSpecialStageStuff();
@@ -677,18 +780,18 @@ void P_Ticker(boolean run)
 
 	if (run)
 	{
-		ps_thinkertime = I_GetPreciseTime();
+		PS_START_TIMING(ps_thinkertime);
 		P_RunThinkers();
-		ps_thinkertime = I_GetPreciseTime() - ps_thinkertime;
+		PS_STOP_TIMING(ps_thinkertime);
 
 		// Run any "after all the other thinkers" stuff
 		for (i = 0; i < MAXPLAYERS; i++)
 			if (playeringame[i] && players[i].mo && !P_MobjWasRemoved(players[i].mo))
 				P_PlayerAfterThink(&players[i]);
 
-		ps_lua_thinkframe_time = I_GetPreciseTime();
-		LUAh_ThinkFrame();
-		ps_lua_thinkframe_time = I_GetPreciseTime() - ps_lua_thinkframe_time;
+		PS_START_TIMING(ps_lua_thinkframe_time);
+		LUA_HookThinkFrame();
+		PS_STOP_TIMING(ps_lua_thinkframe_time);
 	}
 
 	// Run shield positioning
@@ -760,7 +863,43 @@ void P_Ticker(boolean run)
 		if (modeattacking)
 			G_GhostTicker();
 
-		LUAh_PostThinkFrame();
+		LUA_HOOK(PostThinkFrame);
+	}
+
+	if (run)
+	{
+		R_UpdateLevelInterpolators();
+		R_UpdateViewInterpolation();
+
+		// Hack: ensure newview is assigned every tic.
+		// Ensures view interpolation is T-1 to T in poor network conditions
+		// We need a better way to assign view state decoupled from game logic
+		if (rendermode != render_none)
+		{
+			player_t *player1 = &players[displayplayer];
+			if (player1->mo && skyboxmo[0] && cv_skybox.value)
+			{
+				R_SkyboxFrame(player1);
+			}
+			if (player1->mo)
+			{
+				R_SetupFrame(player1);
+			}
+
+			if (splitscreen)
+			{
+				player_t *player2 = &players[secondarydisplayplayer];
+				if (player2->mo && skyboxmo[0] && cv_skybox.value)
+				{
+					R_SkyboxFrame(player2);
+				}
+				if (player2->mo)
+				{
+					R_SetupFrame(player2);
+				}
+			}
+		}
+
 	}
 
 	P_MapEnd();
@@ -783,7 +922,9 @@ void P_PreTicker(INT32 frames)
 	{
 		P_MapStart();
 
-		LUAh_PreThinkFrame();
+		R_UpdateMobjInterpolators();
+
+		LUA_HOOK(PreThinkFrame);
 
 		for (i = 0; i < MAXPLAYERS; i++)
 			if (playeringame[i] && players[i].mo && !P_MobjWasRemoved(players[i].mo))
@@ -810,7 +951,7 @@ void P_PreTicker(INT32 frames)
 			if (playeringame[i] && players[i].mo && !P_MobjWasRemoved(players[i].mo))
 				P_PlayerAfterThink(&players[i]);
 
-		LUAh_ThinkFrame();
+		LUA_HookThinkFrame();
 
 		// Run shield positioning
 		P_RunShields();
@@ -819,7 +960,11 @@ void P_PreTicker(INT32 frames)
 		P_UpdateSpecials();
 		P_RespawnSpecials();
 
-		LUAh_PostThinkFrame();
+		LUA_HOOK(PostThinkFrame);
+
+		R_UpdateLevelInterpolators();
+		R_UpdateViewInterpolation();
+		R_ResetViewInterpolation(0);
 
 		P_MapEnd();
 	}
