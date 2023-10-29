@@ -1,6 +1,6 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
-// Copyright (C) 2020 by James R.
+// Copyright (C) 2020-2023 by James R.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -65,6 +65,8 @@ static I_mutex hms_api_mutex;
 
 static char *hms_server_token;
 
+static char hms_useragent[512];
+
 struct HMS_buffer
 {
 	CURL *curl;
@@ -79,6 +81,22 @@ Contact_error (void)
 	CONS_Alert(CONS_ERROR,
 			"There was a problem contacting the master server...\n"
 	);
+}
+
+static void
+get_user_agent(char *buf, size_t len)
+{
+	if (snprintf(buf, len, "%s/%s (%s; %s; %i; %i) SRB2BASE/%i", SRB2APPLICATION, VERSIONSTRING, compbranch, comprevision,  MODID, MODVERSION, CODEBASE) < 0)
+		I_Error("http-mserv: get_user_agent failed");
+}
+
+static void
+init_user_agent_once(void)
+{
+	if (hms_useragent[0] != '\0')
+		return;
+	
+	get_user_agent(hms_useragent, 512);
 }
 
 static size_t
@@ -141,7 +159,7 @@ HMS_connect (const char *format, ...)
 		return NULL;
 	}
 
-	if (cv_masterserver_token.string[0])
+	if (cv_masterserver_token.string && cv_masterserver_token.string[0])
 	{
 		quack_token = curl_easy_escape(curl, cv_masterserver_token.string, 0);
 		token_length = ( sizeof "?token="-1 )+ strlen(quack_token);
@@ -155,6 +173,8 @@ HMS_connect (const char *format, ...)
 #ifdef HAVE_THREADS
 	I_lock_mutex(&hms_api_mutex);
 #endif
+
+	init_user_agent_once();
 
 	seek = strlen(hms_api) + 1;/* + '/' */
 
@@ -196,11 +216,17 @@ HMS_connect (const char *format, ...)
 
 	curl_easy_setopt(curl, CURLOPT_URL, url);
 	curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
-	curl_easy_setopt(curl, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
+
+#ifndef NO_IPV6
+	if (M_CheckParm("-noipv6"))
+#endif
+		curl_easy_setopt(curl, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
 
 	curl_easy_setopt(curl, CURLOPT_TIMEOUT, cv_masterserver_timeout.value);
 	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, HMS_on_read);
 	curl_easy_setopt(curl, CURLOPT_WRITEDATA, buffer);
+
+	curl_easy_setopt(curl, CURLOPT_USERAGENT, hms_useragent);
 
 	curl_free(quack_token);
 	free(url);

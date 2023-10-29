@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -64,7 +64,7 @@
 		#include <errno.h>
 		#include <time.h>
 
-		#if (defined (__unix__) && !defined (MSDOS)) || defined(__APPLE__) || defined (UNIXCOMMON)
+		#if defined (__unix__) || defined (__APPLE__) || defined (UNIXCOMMON)
 			#include <sys/time.h>
 		#endif // UNIXCOMMON
 	#endif
@@ -107,15 +107,6 @@
 		#endif
 	#endif // USE_WINSOCK
 
-	#ifdef __DJGPP__
-		#ifdef WATTCP // Alam_GBC: Wattcp may need this
-			#include <tcp.h>
-			#define strerror strerror_s
-		#else // wattcp
-			#include <lsck/lsck.h>
-		#endif // libsocket
-	#endif // djgpp
-
 	typedef union
 	{
 		struct sockaddr     any;
@@ -149,32 +140,22 @@
 
 #include "doomstat.h"
 
-// win32 or djgpp
-#if defined (USE_WINSOCK) || defined (__DJGPP__)
+// win32
+#ifdef USE_WINSOCK
 	// winsock stuff (in winsock a socket is not a file)
 	#define ioctl ioctlsocket
 	#define close closesocket
 #endif
 
 #include "i_addrinfo.h"
-
-#ifdef __DJGPP__
-
-#ifdef WATTCP
 #define SELECTTEST
-#endif
-
-#else
-#define SELECTTEST
-#endif
-
 #define DEFAULTPORT "5029"
 
 #if defined (USE_WINSOCK) && !defined (NONET)
 	typedef SOCKET SOCKET_TYPE;
 	#define ERRSOCKET (SOCKET_ERROR)
 #else
-	#if (defined (__unix__) && !defined (MSDOS)) || defined (__APPLE__) || defined (__HAIKU__)
+	#if defined (__unix__) || defined (__APPLE__) || defined (__HAIKU__)
 		typedef int SOCKET_TYPE;
 	#else
 		typedef unsigned long SOCKET_TYPE;
@@ -184,7 +165,7 @@
 
 #ifndef NONET
 	// define socklen_t in DOS/Windows if it is not already defined
-	#if (defined (WATTCP) && !defined (__libsocket_socklen_t)) || defined (USE_WINSOCK1)
+	#ifdef USE_WINSOCK1
 		typedef int socklen_t;
 	#endif
 	static SOCKET_TYPE mysockets[MAXNETNODES+1] = {ERRSOCKET};
@@ -207,19 +188,6 @@ static const char *serverport_name = DEFAULTPORT;
 static const char *clientport_name;/* any port */
 
 #ifndef NONET
-
-#ifdef WATTCP
-static void wattcp_outch(char s)
-{
-	static char old = '\0';
-	char pr[2] = {s,0};
-	if (s == old && old == ' ') return;
-	else old = s;
-	if (s == '\r') CONS_Printf("\n");
-	else if (s != '\n') CONS_Printf(pr);
-}
-#endif
-
 #ifdef USE_WINSOCK
 // stupid microsoft makes things complicated
 static char *get_WSAErrorStr(int e)
@@ -372,8 +340,14 @@ static inline void I_UPnP_rem(const char *port, const char * servicetype)
 
 static const char *SOCK_AddrToStr(mysockaddr_t *sk)
 {
-	static char s[64]; // 255.255.255.255:65535 or IPv6:65535
+	static char s[64]; // 255.255.255.255:65535 or
+	// [ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff]:65535
 #ifdef HAVE_NTOP
+#ifdef HAVE_IPV6
+	int v6 = (sk->any.sa_family == AF_INET6);
+#else
+	int v6 = 0;
+#endif
 	void *addr;
 
 	if(sk->any.sa_family == AF_INET)
@@ -387,14 +361,21 @@ static const char *SOCK_AddrToStr(mysockaddr_t *sk)
 
 	if(addr == NULL)
 		sprintf(s, "No address");
-	else if(inet_ntop(sk->any.sa_family, addr, s, sizeof (s)) == NULL)
+	else if(inet_ntop(sk->any.sa_family, addr, &s[v6], sizeof (s) - v6) == NULL)
 		sprintf(s, "Unknown family type, error #%u", errno);
 #ifdef HAVE_IPV6
-	else if(sk->any.sa_family == AF_INET6 && sk->ip6.sin6_port != 0)
-		strcat(s, va(":%d", ntohs(sk->ip6.sin6_port)));
+	else if(sk->any.sa_family == AF_INET6)
+	{
+		s[0] = '[';
+		strcat(s, "]");
+
+		if (sk->ip6.sin6_port != 0)
+			strcat(s, va(":%d", ntohs(sk->ip6.sin6_port)));
+	}
 #endif
 	else if(sk->any.sa_family == AF_INET  && sk->ip4.sin_port  != 0)
 		strcat(s, va(":%d", ntohs(sk->ip4.sin_port)));
+
 #else
 	if (sk->any.sa_family == AF_INET)
 	{
@@ -459,7 +440,7 @@ static boolean SOCK_cmpaddr(mysockaddr_t *a, mysockaddr_t *b, UINT8 mask)
 			&& (b->ip4.sin_port == 0 || (a->ip4.sin_port == b->ip4.sin_port));
 #ifdef HAVE_IPV6
 	else if (b->any.sa_family == AF_INET6)
-		return memcmp(&a->ip6.sin6_addr, &b->ip6.sin6_addr, sizeof(b->ip6.sin6_addr))
+		return !memcmp(&a->ip6.sin6_addr, &b->ip6.sin6_addr, sizeof(b->ip6.sin6_addr))
 			&& (b->ip6.sin6_port == 0 || (a->ip6.sin6_port == b->ip6.sin6_port));
 #endif
 	else
@@ -764,15 +745,10 @@ static SOCKET_TYPE UDP_Bind(int family, struct sockaddr *addr, socklen_t addrlen
 	int opt;
 	socklen_t opts;
 #ifdef FIONBIO
-#ifdef WATTCP
-	char trueval = true;
-#else
 	unsigned long trueval = true;
 #endif
-#endif
 	mysockaddr_t straddr;
-	struct sockaddr_in sin;
-	socklen_t len = sizeof(sin);
+	socklen_t len = sizeof(straddr);
 
 	if (s == (SOCKET_TYPE)ERRSOCKET)
 		return (SOCKET_TYPE)ERRSOCKET;
@@ -790,14 +766,12 @@ static SOCKET_TYPE UDP_Bind(int family, struct sockaddr *addr, socklen_t addrlen
 	}
 #endif
 
-	straddr.any = *addr;
+	memcpy(&straddr, addr, addrlen);
 	I_OutputMsg("Binding to %s\n", SOCK_AddrToStr(&straddr));
 
 	if (family == AF_INET)
 	{
-		mysockaddr_t tmpaddr;
-		tmpaddr.any = *addr ;
-		if (tmpaddr.ip4.sin_addr.s_addr == htonl(INADDR_ANY))
+		if (straddr.ip4.sin_addr.s_addr == htonl(INADDR_ANY))
 		{
 			opt = true;
 			opts = (socklen_t)sizeof(opt);
@@ -814,7 +788,7 @@ static SOCKET_TYPE UDP_Bind(int family, struct sockaddr *addr, socklen_t addrlen
 #ifdef HAVE_IPV6
 	else if (family == AF_INET6)
 	{
-		if (memcmp(addr, &in6addr_any, sizeof(in6addr_any)) == 0) //IN6_ARE_ADDR_EQUAL
+		if (memcmp(&straddr.ip6.sin6_addr, &in6addr_any, sizeof(in6addr_any)) == 0) //IN6_ARE_ADDR_EQUAL
 		{
 			opt = true;
 			opts = (socklen_t)sizeof(opt);
@@ -824,7 +798,7 @@ static SOCKET_TYPE UDP_Bind(int family, struct sockaddr *addr, socklen_t addrlen
 		// make it IPv6 ony
 		opt = true;
 		opts = (socklen_t)sizeof(opt);
-		if (setsockopt(s, SOL_SOCKET, IPV6_V6ONLY, (char *)&opt, opts))
+		if (setsockopt(s, IPPROTO_IPV6, IPV6_V6ONLY, (char *)&opt, opts))
 		{
 			CONS_Alert(CONS_WARNING, M_GetText("Could not limit IPv6 bind\n")); // I do not care anymore
 		}
@@ -866,10 +840,17 @@ static SOCKET_TYPE UDP_Bind(int family, struct sockaddr *addr, socklen_t addrlen
 			CONS_Printf(M_GetText("Network system buffer set to: %dKb\n"), opt>>10);
 	}
 
-	if (getsockname(s, (struct sockaddr *)&sin, &len) == -1)
+	if (getsockname(s, &straddr.any, &len) == -1)
 		CONS_Alert(CONS_WARNING, M_GetText("Failed to get port number\n"));
 	else
-		current_port = (UINT16)ntohs(sin.sin_port);
+	{
+		if (family == AF_INET)
+			current_port = (UINT16)ntohs(straddr.ip4.sin_port);
+#ifdef HAVE_IPV6
+		else if (family == AF_INET6)
+			current_port = (UINT16)ntohs(straddr.ip6.sin6_port);
+#endif
+	}
 
 	return s;
 }
@@ -880,7 +861,7 @@ static boolean UDP_Socket(void)
 	struct my_addrinfo *ai, *runp, hints;
 	int gaie;
 #ifdef HAVE_IPV6
-	const INT32 b_ipv6 = M_CheckParm("-ipv6");
+	const INT32 b_ipv6 = !M_CheckParm("-noipv6");
 #endif
 	const char *serv;
 
@@ -1138,61 +1119,7 @@ boolean I_InitTcpDriver(void)
 		CONS_Debug(DBG_NETPLAY, "WinSock description: %s\n",WSAData.szDescription);
 		CONS_Debug(DBG_NETPLAY, "WinSock System Status: %s\n",WSAData.szSystemStatus);
 #endif
-#ifdef __DJGPP__
-#ifdef WATTCP // Alam_GBC: survive bootp, dhcp, rarp and wattcp/pktdrv from failing to load
-		survive_eth   = 1; // would be needed to not exit if pkt_eth_init() fails
-		survive_bootp = 1; // ditto for BOOTP
-		survive_dhcp  = 1; // ditto for DHCP/RARP
-		survive_rarp  = 1;
-		//_watt_do_exit = false;
-		//_watt_handle_cbreak = false;
-		//_watt_no_config = true;
-		_outch = wattcp_outch;
-		init_misc();
-//#ifdef DEBUGFILE
-		dbug_init();
-//#endif
-		switch (sock_init())
-		{
-			case 0:
-				init_tcp_driver = true;
-				break;
-			case 3:
-				CONS_Debug(DBG_NETPLAY, "No packet driver detected\n");
-				break;
-			case 4:
-				CONS_Debug(DBG_NETPLAY, "Error while talking to packet driver\n");
-				break;
-			case 5:
-				CONS_Debug(DBG_NETPLAY, "BOOTP failed\n");
-				break;
-			case 6:
-				CONS_Debug(DBG_NETPLAY, "DHCP failed\n");
-				break;
-			case 7:
-				CONS_Debug(DBG_NETPLAY, "RARP failed\n");
-				break;
-			case 8:
-				CONS_Debug(DBG_NETPLAY, "TCP/IP failed\n");
-				break;
-			case 9:
-				CONS_Debug(DBG_NETPLAY, "PPPoE login/discovery failed\n");
-				break;
-			default:
-				CONS_Debug(DBG_NETPLAY, "Unknown error with TCP/IP stack\n");
-				break;
-		}
-		hires_timer(0);
-#else // wattcp
-		if (__lsck_init())
-			init_tcp_driver = true;
-		else
-			CONS_Debug(DBG_NETPLAY, "No TCP/IP driver detected\n");
-#endif // libsocket
-#endif // __DJGPP__
-#ifndef __DJGPP__
 		init_tcp_driver = true;
-#endif
 	}
 #endif
 	if (!tcp_was_up && init_tcp_driver)
@@ -1217,10 +1144,8 @@ static void SOCK_CloseSocket(void)
 		if (mysockets[i] != (SOCKET_TYPE)ERRSOCKET
 		 && FD_ISSET(mysockets[i], &masterset))
 		{
-#if !defined (__DJGPP__) || defined (WATTCP)
 			FD_CLR(mysockets[i], &masterset);
 			close(mysockets[i]);
-#endif
 		}
 		mysockets[i] = ERRSOCKET;
 	}
@@ -1237,14 +1162,6 @@ void I_ShutdownTcpDriver(void)
 	WS_addrinfocleanup();
 	WSACleanup();
 #endif
-#ifdef __DJGPP__
-#ifdef WATTCP // wattcp
-	//_outch = NULL;
-	sock_exit();
-#else
-	__lsck_uninit();
-#endif // libsocket
-#endif // __DJGPP__
 	CONS_Printf("shut down\n");
 	init_tcp_driver = false;
 #endif
@@ -1256,6 +1173,7 @@ static SINT8 SOCK_NetMakeNodewPort(const char *address, const char *port)
 	SINT8 newnode = -1;
 	struct my_addrinfo *ai = NULL, *runp, hints;
 	int gaie;
+	size_t i;
 
 	 if (!port || !port[0])
 		port = DEFAULTPORT;
@@ -1283,13 +1201,24 @@ static SINT8 SOCK_NetMakeNodewPort(const char *address, const char *port)
 
 	while (runp != NULL)
 	{
-		// find ip of the server
-		if (sendto(mysockets[0], NULL, 0, 0, runp->ai_addr, runp->ai_addrlen) == 0)
+		// test ip address of server
+		for (i = 0; i < mysocketses; ++i)
 		{
-			memcpy(&clientaddress[newnode], runp->ai_addr, runp->ai_addrlen);
-			break;
+			/* sendto tests that there is a network to this
+				address */
+			if (runp->ai_addr->sa_family == myfamily[i] &&
+					sendto(mysockets[i], NULL, 0, 0,
+						runp->ai_addr, runp->ai_addrlen) == 0)
+			{
+				memcpy(&clientaddress[newnode], runp->ai_addr, runp->ai_addrlen);
+				break;
+			}
 		}
-		runp = runp->ai_next;
+
+		if (i < mysocketses)
+			runp = runp->ai_next;
+		else
+			break;
 	}
 	I_freeaddrinfo(ai);
 	return newnode;
