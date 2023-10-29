@@ -1,6 +1,6 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
-// Copyright (C) 2020-2022 by Sonic Team Junior.
+// Copyright (C) 2020-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -42,10 +42,10 @@ int unsortedVertexArrayAllocSize = 65536;
 // Call HWR_RenderBatches to render all the collected geometry.
 void HWR_StartBatching(void)
 {
-    if (currently_batching)
-        I_Error("Repeat call to HWR_StartBatching without HWR_RenderBatches");
+	if (currently_batching)
+		I_Error("Repeat call to HWR_StartBatching without HWR_RenderBatches");
 
-    // init arrays if that has not been done yet
+	// init arrays if that has not been done yet
 	if (!finalVertexArray)
 	{
 		finalVertexArray = malloc(finalVertexArrayAllocSize * sizeof(FOutVector));
@@ -55,7 +55,7 @@ void HWR_StartBatching(void)
 		unsortedVertexArray = malloc(unsortedVertexArrayAllocSize * sizeof(FOutVector));
 	}
 
-    currently_batching = true;
+	currently_batching = true;
 }
 
 // This replaces the direct calls to pfnSetTexture in cases where batching is available.

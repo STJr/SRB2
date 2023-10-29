@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2022 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -34,6 +34,7 @@
 #include "lua_script.h"
 #include "d_netfil.h" // findfile
 #include "r_data.h" // Color_cons_t
+#include "d_main.h" // D_IsPathAllowed
 
 //========
 // protos.
@@ -57,6 +58,7 @@ static boolean CV_FilterVarByVersion(consvar_t *v, const char *valstr);
 static boolean CV_Command(void);
 consvar_t *CV_FindVar(const char *name);
 static const char *CV_StringValue(const char *var_name);
+static boolean CV_Immutable(const consvar_t *var);
 
 static consvar_t *consvar_vars; // list of registered console variables
 static UINT16     consvar_number_of_netids = 0;
@@ -74,6 +76,7 @@ CV_PossibleValue_t CV_OnOff[] = {{0, "Off"}, {1, "On"}, {0, NULL}};
 CV_PossibleValue_t CV_YesNo[] = {{0, "No"}, {1, "Yes"}, {0, NULL}};
 CV_PossibleValue_t CV_Unsigned[] = {{0, "MIN"}, {999999999, "MAX"}, {0, NULL}};
 CV_PossibleValue_t CV_Natural[] = {{1, "MIN"}, {999999999, "MAX"}, {0, NULL}};
+CV_PossibleValue_t CV_TrueFalse[] = {{0, "False"}, {1, "True"}, {0, NULL}};
 
 // Filter consvars by EXECVERSION
 // First implementation is 26 (2.1.21), so earlier configs default at 25 (2.1.20)
@@ -108,6 +111,7 @@ static cmdalias_t *com_alias; // aliases list
 // =========================================================================
 
 static vsbuf_t com_text; // variable sized buffer
+static com_flags_t com_flags = 0;
 
 /** Purges control characters out of some text.
   *
@@ -140,7 +144,7 @@ COM_Purge (char *s, int *np)
   * \param ptext The text to add.
   * \sa COM_BufInsertTextEx
   */
-void COM_BufAddTextEx(const char *ptext, int flags)
+void COM_BufAddTextEx(const char *ptext, com_flags_t flags)
 {
 	int l;
 	char *text;
@@ -163,7 +167,7 @@ void COM_BufAddTextEx(const char *ptext, int flags)
   * \param ptext The text to execute. A newline is automatically added.
   * \sa COM_BufAddTextEx
   */
-void COM_BufInsertTextEx(const char *ptext, int flags)
+void COM_BufInsertTextEx(const char *ptext, com_flags_t flags)
 {
 	const INT32 old_wait = com_wait;
 
@@ -264,6 +268,8 @@ void COM_BufExecute(void)
 			break;
 		}
 	}
+
+	com_flags = 0;
 }
 
 /** Executes a string immediately.  Used for skirting around WAIT commands.
@@ -308,6 +314,7 @@ typedef struct xcommand_s
 	const char *name;
 	struct xcommand_s *next;
 	com_func_t function;
+	com_flags_t flags;
 } xcommand_t;
 
 static xcommand_t *com_commands = NULL; // current commands
@@ -317,7 +324,6 @@ static size_t com_argc;
 static char *com_argv[MAX_ARGS];
 static const char *com_null_string = "";
 static char *com_args = NULL; // current command args or NULL
-static int com_flags;
 
 static void Got_NetVar(UINT8 **p, INT32 playernum);
 
@@ -329,16 +335,16 @@ void COM_Init(void)
 	VS_Alloc(&com_text, COM_BUF_SIZE);
 
 	// add standard commands
-	COM_AddCommand("alias", COM_Alias_f);
-	COM_AddCommand("echo", COM_Echo_f);
-	COM_AddCommand("cecho", COM_CEcho_f);
-	COM_AddCommand("cechoflags", COM_CEchoFlags_f);
-	COM_AddCommand("cechoduration", COM_CEchoDuration_f);
-	COM_AddCommand("exec", COM_Exec_f);
-	COM_AddCommand("wait", COM_Wait_f);
-	COM_AddCommand("help", COM_Help_f);
-	COM_AddCommand("toggle", COM_Toggle_f);
-	COM_AddCommand("add", COM_Add_f);
+	COM_AddCommand("alias", COM_Alias_f, 0);
+	COM_AddCommand("echo", COM_Echo_f, COM_LUA);
+	COM_AddCommand("cecho", COM_CEcho_f, COM_LUA);
+	COM_AddCommand("cechoflags", COM_CEchoFlags_f, COM_LUA);
+	COM_AddCommand("cechoduration", COM_CEchoDuration_f, COM_LUA);
+	COM_AddCommand("exec", COM_Exec_f, 0);
+	COM_AddCommand("wait", COM_Wait_f, 0);
+	COM_AddCommand("help", COM_Help_f, COM_LUA);
+	COM_AddCommand("toggle", COM_Toggle_f, COM_LUA);
+	COM_AddCommand("add", COM_Add_f, COM_LUA);
 	RegisterNetXCmd(XD_NETVAR, Got_NetVar);
 }
 
@@ -440,7 +446,6 @@ static void COM_TokenizeString(char *ptext)
 
 	com_argc = 0;
 	com_args = NULL;
-	com_flags = 0;
 
 	while (com_argc < MAX_ARGS)
 	{
@@ -478,7 +483,7 @@ static void COM_TokenizeString(char *ptext)
   * \param name Name of the command.
   * \param func Function called when the command is run.
   */
-void COM_AddCommand(const char *name, com_func_t func)
+void COM_AddCommand(const char *name, com_func_t func, com_flags_t flags)
 {
 	xcommand_t *cmd;
 
@@ -508,6 +513,7 @@ void COM_AddCommand(const char *name, com_func_t func)
 	cmd = ZZ_Alloc(sizeof *cmd);
 	cmd->name = name;
 	cmd->function = func;
+	cmd->flags = flags;
 	cmd->next = com_commands;
 	com_commands = cmd;
 }
@@ -540,6 +546,7 @@ int COM_AddLuaCommand(const char *name)
 	cmd = ZZ_Alloc(sizeof *cmd);
 	cmd->name = name;
 	cmd->function = COM_Lua_f;
+	cmd->flags = COM_LUA;
 	cmd->next = com_commands;
 	com_commands = cmd;
 	return 0;
@@ -635,6 +642,12 @@ static void COM_ExecuteString(char *ptext)
 	{
 		if (!stricmp(com_argv[0], cmd->name)) //case insensitive now that we have lower and uppercase!
 		{
+			if ((com_flags & COM_LUA) && !(cmd->flags & COM_LUA))
+			{
+				CONS_Alert(CONS_WARNING, "Command '%s' cannot be run from Lua.\n", cmd->name);
+				return;
+			}
+
 			cmd->function();
 			return;
 		}
@@ -660,7 +673,7 @@ static void COM_ExecuteString(char *ptext)
 	// check cvars
 	// Hurdler: added at Ebola's request ;)
 	// (don't flood the console in software mode with bad gl_xxx command)
-	if (!CV_Command() && con_destlines)
+	if (!CV_Command() && (con_destlines || dedicated))
 		CONS_Printf(M_GetText("Unknown command '%s'\n"), COM_Argv(0));
 }
 
@@ -668,25 +681,58 @@ static void COM_ExecuteString(char *ptext)
 //                            SCRIPT COMMANDS
 // =========================================================================
 
+static void print_alias(void)
+{
+	cmdalias_t *a;
+
+	CONS_Printf("\x82""Current alias commands:\n");
+	for (a = com_alias; a; a = a->next)
+	{
+		CONS_Printf("%s : %s", a->name, a->value);
+	}
+}
+
+static void add_alias(char *newname, char *newcmd)
+{
+	cmdalias_t *a;
+
+	// Check for existing aliases first
+	for (a = com_alias; a; a = a->next)
+	{
+		if (!stricmp(newname, a->name))
+		{
+			Z_Free(a->value); // Free old cmd 
+			a->value = newcmd;
+			return;
+		}
+	}
+
+	// No alias found, add it instead
+	a = ZZ_Alloc(sizeof *a);
+	a->next = com_alias;
+	com_alias = a;
+
+	a->name = newname;
+	a->value = newcmd;
+}
+
 /** Creates a command name that replaces another command.
   */
 static void COM_Alias_f(void)
 {
-	cmdalias_t *a;
+	char *name;
+	char *zcmd;
 	char cmd[1024];
 	size_t i, c;
 
 	if (COM_Argc() < 3)
 	{
 		CONS_Printf(M_GetText("alias <name> <command>: create a shortcut command that executes other command(s)\n"));
+		print_alias();
 		return;
 	}
 
-	a = ZZ_Alloc(sizeof *a);
-	a->next = com_alias;
-	com_alias = a;
-
-	a->name = Z_StrDup(COM_Argv(1));
+	name = Z_StrDup(COM_Argv(1));
 
 	// copy the rest of the command line
 	cmd[0] = 0; // start out with a null string
@@ -698,8 +744,8 @@ static void COM_Alias_f(void)
 			strcat(cmd, " ");
 	}
 	strcat(cmd, "\n");
-
-	a->value = Z_StrDup(cmd);
+	zcmd = Z_StrDup(cmd);
+	add_alias(name, zcmd);
 }
 
 /** Prints a line of text to the console.
@@ -770,6 +816,9 @@ static void COM_Exec_f(void)
 		return;
 	}
 
+	if (!D_CheckPathAllowed(COM_Argv(1), "tried to exec"))
+		return;
+
 	// load file
 	// Try with Argv passed verbatim first, for back compat
 	FIL_ReadFile(COM_Argv(1), &buf);
@@ -794,8 +843,8 @@ static void COM_Exec_f(void)
 		CONS_Printf(M_GetText("executing %s\n"), COM_Argv(1));
 
 	// insert text file into the command buffer
-	COM_BufAddText((char *)buf);
-	COM_BufAddText("\n");
+	COM_BufAddTextEx((char *)buf, com_flags);
+	COM_BufAddTextEx("\n", com_flags);
 
 	// free buffer
 	Z_Free(buf);
@@ -848,9 +897,11 @@ static void COM_Help_f(void)
 			{
 				CONS_Printf(" Possible values:\n");
 				if (cvar->PossibleValue == CV_YesNo)
-					CONS_Printf("  Yes or No (On or Off, 1 or 0)\n");
+					CONS_Printf("  Yes or No (On or Off, True or False, 1 or 0)\n");
 				else if (cvar->PossibleValue == CV_OnOff)
-					CONS_Printf("  On or Off (Yes or No, 1 or 0)\n");
+					CONS_Printf("  On or Off (Yes or No, True or False, 1 or 0)\n");
+				else if (cvar->PossibleValue == CV_TrueFalse)
+					CONS_Printf("  True or False (On or Off, Yes or No, 1 or 0)\n");
 				else if (cvar->PossibleValue == Color_cons_t)
 				{
 					for (i = 1; i < numskincolors; ++i)
@@ -998,7 +1049,10 @@ static void COM_Toggle_f(void)
 		return;
 	}
 
-	if (!(cvar->PossibleValue == CV_YesNo || cvar->PossibleValue == CV_OnOff))
+	if (CV_Immutable(cvar))
+		return;
+
+	if (!(cvar->PossibleValue == CV_YesNo || cvar->PossibleValue == CV_OnOff || cvar->PossibleValue == CV_TrueFalse))
 	{
 		CONS_Alert(CONS_NOTICE, M_GetText("%s is not a boolean value\n"), COM_Argv(1));
 		return;
@@ -1026,6 +1080,9 @@ static void COM_Add_f(void)
 		CONS_Alert(CONS_NOTICE, M_GetText("%s is not a cvar\n"), COM_Argv(1));
 		return;
 	}
+
+	if (CV_Immutable(cvar))
+		return;
 
 	if (( cvar->flags & CV_FLOAT ))
 	{
@@ -1116,7 +1173,7 @@ void VS_Write(vsbuf_t *buf, const void *data, size_t length)
 	M_Memcpy(VS_GetSpace(buf, length), data, length);
 }
 
-void VS_WriteEx(vsbuf_t *buf, const void *data, size_t length, int flags)
+void VS_WriteEx(vsbuf_t *buf, const void *data, size_t length, com_flags_t flags)
 {
 	char *p;
 	p = VS_GetSpace(buf, 2 + length);
@@ -1486,12 +1543,12 @@ static void Setvalue(consvar_t *var, const char *valstr, boolean stealth)
 						goto found;
 			}
 			// Not found ... but wait, there's hope!
-			if (var->PossibleValue == CV_OnOff || var->PossibleValue == CV_YesNo)
+			if (var->PossibleValue == CV_OnOff || var->PossibleValue == CV_YesNo || var->PossibleValue == CV_TrueFalse)
 			{
 				overrideval = -1;
-				if (!stricmp(valstr, "on") || !stricmp(valstr, "yes"))
+				if (!stricmp(valstr, "on") || !stricmp(valstr, "yes") || !stricmp(valstr, "true"))
 					overrideval = 1;
-				else if (!stricmp(valstr, "off") || !stricmp(valstr, "no"))
+				else if (!stricmp(valstr, "off") || !stricmp(valstr, "no") || !stricmp(valstr, "false"))
 					overrideval = 0;
 
 				if (overrideval != -1)
@@ -1725,9 +1782,13 @@ void CV_SaveVars(UINT8 **p, boolean in_demo)
 		if ((cvar->flags & CV_NETVAR) && !CV_IsSetToDefault(cvar))
 		{
 			if (in_demo)
+			{
 				WRITESTRING(*p, cvar->name);
+			}
 			else
+			{
 				WRITEUINT16(*p, cvar->netid);
+			}
 			WRITESTRING(*p, cvar->string);
 			WRITEUINT8(*p, false);
 			++count;
@@ -2076,9 +2137,10 @@ void CV_AddValue(consvar_t *var, INT32 increment)
 					{
 						increment = 0;
 						currentindice = max;
+						break; // The value we definitely want, stop here.
 					}
 					else if (var->PossibleValue[max].value == var->value)
-						currentindice = max;
+						currentindice = max; // The value we maybe want.
 				}
 
 				if (increment)
@@ -2365,7 +2427,7 @@ static boolean CV_Command(void)
 	if (!v)
 		return false;
 
-	if (( com_flags & COM_SAFE ) && ( v->flags & CV_NOLUA ))
+	if (CV_Immutable(v))
 	{
 		CONS_Alert(CONS_WARNING, "Variable '%s' cannot be changed from Lua.\n", v->name);
 		return true;
@@ -2452,6 +2514,22 @@ void CV_SaveVariables(FILE *f)
 
 			fprintf(f, "%s \"%s\"\n", cvar->name, string);
 		}
+}
+
+// Returns true if this cvar cannot be modified in current context.
+// Such as if the cvar does not have CV_ALLOWLUA.
+static boolean CV_Immutable(const consvar_t *var)
+{
+	// Currently operating from Lua
+	if (com_flags & COM_LUA)
+	{
+		if (!(var->flags & CV_ALLOWLUA))
+		{
+			return true;
+		}
+	}
+
+	return false;
 }
 
 //============================================================================

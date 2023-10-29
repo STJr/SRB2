@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2022 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -620,86 +620,97 @@ void *R_GetLevelFlat(levelflat_t *levelflat)
 }
 
 //
-// R_CheckPowersOfTwo
-//
-// Sets ds_powersoftwo true if the flat's dimensions are powers of two, and returns that.
+// Checks if the current flat's dimensions are powers of two
 //
 boolean R_CheckPowersOfTwo(void)
 {
-	boolean wpow2 = (!(ds_flatwidth & (ds_flatwidth - 1)));
-	boolean hpow2 = (!(ds_flatheight & (ds_flatheight - 1)));
+	boolean wpow2 = !(ds_flatwidth & (ds_flatwidth - 1));
+	boolean hpow2 = !(ds_flatheight & (ds_flatheight - 1));
 
-	// Initially, the flat isn't powers-of-two-sized.
-	ds_powersoftwo = false;
+	if (ds_flatwidth > 2048 || ds_flatheight > 2048)
+		return false;
 
-	// But if the width and height are powers of two,
-	// and are EQUAL, then it's okay :]
-	if ((ds_flatwidth == ds_flatheight) && (wpow2 && hpow2))
-		ds_powersoftwo = true;
-
-	// Just return ds_powersoftwo.
-	return ds_powersoftwo;
+	return ds_flatwidth == ds_flatheight && wpow2 && hpow2;
 }
 
 //
-// R_CheckFlatLength
+// Checks if the current flat's dimensions are 1x1
 //
-// Determine the flat's dimensions from its lump length.
+boolean R_CheckSolidColorFlat(void)
+{
+	return ds_flatwidth == 1 && ds_flatheight == 1;
+}
+
 //
-void R_CheckFlatLength(size_t size)
+// Returns the flat size corresponding to the length of a lump
+//
+UINT16 R_GetFlatSize(size_t length)
+{
+	switch (length)
+	{
+		case 4194304: // 2048x2048 lump
+			return 2048;
+		case 1048576: // 1024x1024 lump
+			return 1024;
+		case 262144:// 512x512 lump
+			return 512;
+		case 65536: // 256x256 lump
+			return 256;
+		case 16384: // 128x128 lump
+			return 128;
+		case 1024: // 32x32 lump
+			return 32;
+		case 256: // 16x16 lump
+			return 16;
+		case 64: // 8x8 lump
+			return 8;
+		case 16: // 4x4 lump
+			return 4;
+		case 4: // 2x2 lump
+			return 2;
+		case 1: // 1x1 lump
+			return 1;
+		default: // 64x64 lump
+			return 64;
+	}
+}
+
+//
+// Determines a flat's width bits from its size
+//
+UINT8 R_GetFlatBits(INT32 size)
 {
 	switch (size)
 	{
-		case 4194304: // 2048x2048 lump
-			nflatmask = 0x3FF800;
-			nflatxshift = 21;
-			nflatyshift = 10;
-			nflatshiftup = 5;
-			ds_flatwidth = ds_flatheight = 2048;
-			break;
-		case 1048576: // 1024x1024 lump
-			nflatmask = 0xFFC00;
-			nflatxshift = 22;
-			nflatyshift = 12;
-			nflatshiftup = 6;
-			ds_flatwidth = ds_flatheight = 1024;
-			break;
-		case 262144:// 512x512 lump
-			nflatmask = 0x3FE00;
-			nflatxshift = 23;
-			nflatyshift = 14;
-			nflatshiftup = 7;
-			ds_flatwidth = ds_flatheight = 512;
-			break;
-		case 65536: // 256x256 lump
-			nflatmask = 0xFF00;
-			nflatxshift = 24;
-			nflatyshift = 16;
-			nflatshiftup = 8;
-			ds_flatwidth = ds_flatheight = 256;
-			break;
-		case 16384: // 128x128 lump
-			nflatmask = 0x3F80;
-			nflatxshift = 25;
-			nflatyshift = 18;
-			nflatshiftup = 9;
-			ds_flatwidth = ds_flatheight = 128;
-			break;
-		case 1024: // 32x32 lump
-			nflatmask = 0x3E0;
-			nflatxshift = 27;
-			nflatyshift = 22;
-			nflatshiftup = 11;
-			ds_flatwidth = ds_flatheight = 32;
-			break;
-		default: // 64x64 lump
-			nflatmask = 0xFC0;
-			nflatxshift = 26;
-			nflatyshift = 20;
-			nflatshiftup = 10;
-			ds_flatwidth = ds_flatheight = 64;
-			break;
+		case 2048: return 11;
+		case 1024: return 10;
+		case 512:  return 9;
+		case 256:  return 8;
+		case 128:  return 7;
+		case 32:   return 5;
+		case 16:   return 4;
+		case 8:    return 3;
+		case 4:    return 2;
+		case 2:    return 1;
+		case 1:    return 0;
+		default:   return 6; // 64x64
 	}
+}
+
+void R_SetFlatVars(size_t length)
+{
+	UINT16 size = R_GetFlatSize(length);
+	UINT8 bits = R_GetFlatBits(size);
+
+	ds_flatwidth = ds_flatheight = size;
+
+	if (bits == 0)
+		return;
+
+	nflatshiftup = 16 - bits;
+	nflatxshift = 16 + nflatshiftup;
+	nflatyshift = nflatxshift - bits;
+	nflatmask = (size - 1) * size;
 }
 
 //
@@ -748,7 +759,7 @@ Rloadflats (INT32 i, INT32 w)
 			UINT16 wadnum = (UINT16)w;
 			lumpnum_t lumpnum = texstart + j;
 			size_t lumplength;
-			size_t flatsize = 0;
+			size_t flatsize;
 
 			if (W_FileHasFolders(wadfiles[w]))
 			{
@@ -758,31 +769,7 @@ Rloadflats (INT32 i, INT32 w)
 
 			W_ReadLumpHeaderPwad(wadnum, lumpnum, header, sizeof header, 0);
 			lumplength = W_LumpLengthPwad(wadnum, lumpnum);
-
-			switch (lumplength)
-			{
-				case 4194304: // 2048x2048 lump
-					flatsize = 2048;
-					break;
-				case 1048576: // 1024x1024 lump
-					flatsize = 1024;
-					break;
-				case 262144:// 512x512 lump
-					flatsize = 512;
-					break;
-				case 65536: // 256x256 lump
-					flatsize = 256;
-					break;
-				case 16384: // 128x128 lump
-					flatsize = 128;
-					break;
-				case 1024: // 32x32 lump
-					flatsize = 32;
-					break;
-				default: // 64x64 lump
-					flatsize = 64;
-					break;
-			}
+			flatsize = R_GetFlatSize(lumplength);
 
 			//CONS_Printf("\n\"%s\" is a flat, dimensions %d x %d",W_CheckNameForNumPwad((UINT16)w,texstart+j),flatsize,flatsize);
 			texture = textures[i] = Z_Calloc(sizeof(texture_t) + sizeof(texpatch_t), PU_STATIC, NULL);
@@ -1673,6 +1660,35 @@ INT32 R_CheckTextureNumForName(const char *name)
 		}
 
 	return -1;
+}
+
+//
+// R_CheckTextureNameForNum
+//
+// because sidedefs use numbers and sometimes you want names
+// returns no texture marker if no texture was found
+//
+const char *R_CheckTextureNameForNum(INT32 num)
+{
+	if (num > 0 && num < numtextures)
+		return textures[num]->name;
+	
+	return "-";
+}
+
+//
+// R_TextureNameForNum
+//
+// calls R_CheckTextureNameForNum and returns REDWALL if result is a no texture marker
+//
+const char *R_TextureNameForNum(INT32 num)
+{
+	const char *result = R_CheckTextureNameForNum(num);
+
+	if (strcmp(result, "-") == 0)
+		return "REDWALL";
+
+	return result;
 }
 
 //

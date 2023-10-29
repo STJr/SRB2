@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2022 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -407,9 +407,9 @@ void FV3_Rotate(vector3_t *rotVec, const vector3_t *axisVec, const angle_t angle
 	rotVec->z = az+dz+ez;
 }
 
-void FM_Rotate(matrix_t *dest, angle_t angle, fixed_t x, fixed_t y, fixed_t z)
-{
 #define M(row,col) dest->m[row * 4 + col]
+matrix_t *FM_Rotate(matrix_t *dest, angle_t angle, fixed_t x, fixed_t y, fixed_t z)
+{
 	const fixed_t sinA = FINESINE(angle>>ANGLETOFINESHIFT);
 	const fixed_t cosA = FINECOSINE(angle>>ANGLETOFINESHIFT);
 	const fixed_t invCosA = FRACUNIT - cosA;
@@ -459,5 +459,84 @@ void FM_Rotate(matrix_t *dest, angle_t angle, fixed_t x, fixed_t y, fixed_t z)
 	M(1, 3) = 0;
 	M(2, 3) = 0;
 	M(3, 3) = FRACUNIT;
-#undef M
+
+	return dest;
 }
+
+
+matrix_t *FM_RotateX(matrix_t *dest, angle_t rad)
+{
+	const angle_t fa = rad>>ANGLETOFINESHIFT;
+	const fixed_t cosrad = FINECOSINE(fa), sinrad = FINESINE(fa);
+
+	M(0, 0) = FRACUNIT;
+	M(0, 1) = 0;
+	M(0, 2) = 0;
+	M(0, 3) = 0;
+	M(1, 0) = 0;
+	M(1, 1) = cosrad;
+	M(1, 2) = sinrad;
+	M(1, 3) = 0;
+	M(2, 0) = 0;
+	M(2, 1) = -sinrad;
+	M(2, 2) = cosrad;
+	M(2, 3) = 0;
+	M(3, 0) = 0;
+	M(3, 1) = 0;
+	M(3, 2) = 0;
+	M(3, 3) = FRACUNIT;
+
+	return dest;
+}
+
+matrix_t *FM_RotateY(matrix_t *dest, angle_t rad)
+{
+	const angle_t fa = rad>>ANGLETOFINESHIFT;
+	const fixed_t cosrad = FINECOSINE(fa), sinrad = FINESINE(fa);
+
+	M(0, 0) = cosrad;
+	M(0, 1) = 0;
+	M(0, 2) = -sinrad;
+	M(0, 3) = 0;
+	M(1, 0) = 0;
+	M(1, 1) = FRACUNIT;
+	M(1, 2) = 0;
+	M(1, 3) = 0;
+	M(2, 0) = sinrad;
+	M(2, 1) = 0;
+	M(2, 2) = cosrad;
+	M(2, 3) = 0;
+	M(3, 0) = 0;
+	M(3, 1) = 0;
+	M(3, 2) = 0;
+	M(3, 3) =  FRACUNIT;
+
+	return dest;
+}
+
+matrix_t *FM_RotateZ(matrix_t *dest, angle_t rad)
+{
+	const angle_t fa = rad>>ANGLETOFINESHIFT;
+	const fixed_t cosrad = FINECOSINE(fa), sinrad = FINESINE(fa);
+
+	M(0, 0) = cosrad;
+	M(0, 1) = sinrad;
+	M(0, 2) = 0;
+	M(0, 3) = 0;
+	M(1, 0) = -sinrad;
+	M(1, 1) = cosrad;
+	M(1, 2) = 0;
+	M(1, 3) = 0;
+	M(2, 0) = 0;
+	M(2, 1) = 0;
+	M(2, 2) = FRACUNIT;
+	M(2, 3) = 0;
+	M(3, 0) = 0;
+	M(3, 1) = 0;
+	M(3, 2) = 0;
+	M(3, 3) = FRACUNIT;
+
+	return dest;
+}
+
+#undef M

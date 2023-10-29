@@ -1,27 +1,33 @@
 #include "../doomdef.h"
+#include "../doomtype.h"
 #include "../i_system.h"
+
+FILE *logstream = NULL;
 
 UINT8 graphics_started = 0;
 
 UINT8 keyboard_started = 0;
 
-UINT32 I_GetFreeMem(UINT32 *total)
+size_t I_GetFreeMem(size_t *total)
 {
 	*total = 0;
 	return 0;
 }
 
-tic_t I_GetTime(void)
+void I_Sleep(UINT32 ms)
+{
+	(void)ms;
+}
+
+precise_t I_GetPreciseTime(void)
 {
 	return 0;
 }
 
-int I_GetTimeMicros(void)
+UINT64 I_GetPrecisePrecision(void)
 {
-	return 0;
+	return 1000000;
 }
-
-void I_Sleep(void){}
 
 void I_GetEvent(void){}
 
@@ -95,8 +101,6 @@ void I_OutputMsg(const char *error, ...)
 void I_StartupMouse(void){}
 
 void I_StartupMouse2(void){}
-
-void I_StartupKeyboard(void){}
 
 INT32 I_GetKey(void)
 {
@@ -176,12 +180,25 @@ INT32 I_ClipboardCopy(const char *data, size_t size)
 	return -1;
 }
 
-char *I_ClipboardPaste(void)
+const char *I_ClipboardPaste(void)
 {
 	return NULL;
 }
 
-void I_RegisterSysCommands(void) {}
+size_t I_GetRandomBytes(char *destination, size_t amount)
+{
+	(void)destination;
+	(void)amount;
+	return 0;
+}
+
+void I_RegisterSysCommands(void){}
+
+void I_GetCursorPosition(INT32 *x, INT32 *y)
+{
+	(void)x;
+	(void)y;
+}
 
 #include "../sdl/dosstr.c"
 

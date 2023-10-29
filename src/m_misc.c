@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2022 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -36,6 +36,7 @@
 #include "v_video.h"
 #include "z_zone.h"
 #include "g_input.h"
+#include "i_time.h"
 #include "i_video.h"
 #include "d_main.h"
 #include "m_argv.h"
@@ -62,7 +63,7 @@ typedef off_t off64_t;
 
 #if defined(__MINGW32__) && ((__GNUC__ > 7) || (__GNUC__ == 6 && __GNUC_MINOR__ >= 3)) && (__GNUC__ < 8)
 #define PRIdS "u"
-#elif defined (_WIN32)
+#elif defined(_WIN32) && !defined(__MINGW64__)
 #define PRIdS "Iu"
 #else
 #define PRIdS "zu"
@@ -273,8 +274,8 @@ size_t FIL_ReadFileTag(char const *name, UINT8 **buffer, INT32 tag)
 	size_t count, length;
 	UINT8 *buf;
 
-	if (FIL_ReadFileOK(name))
-		handle = fopen(name, "rb");
+	//if (FIL_ReadFileOK(name))
+		handle = fopenfile(name, "rb");
 
 	if (!handle)
 		return 0;
@@ -467,6 +468,7 @@ void Command_SaveConfig_f(void)
 		CONS_Printf(M_GetText("saveconfig <filename[.cfg]> [-silent] : save config to a file\n"));
 		return;
 	}
+
 	strcpy(tmpstr, COM_Argv(1));
 	FIL_ForceExtension(tmpstr, ".cfg");
 
@@ -566,10 +568,13 @@ void M_FirstLoadConfig(void)
 	gameconfig_loaded = true;
 
 	// reset to default player stuff
-	COM_BufAddText (va("%s \"%s\"\n",cv_skin.name,cv_defaultskin.string));
-	COM_BufAddText (va("%s \"%s\"\n",cv_playercolor.name,cv_defaultplayercolor.string));
-	COM_BufAddText (va("%s \"%s\"\n",cv_skin2.name,cv_defaultskin2.string));
-	COM_BufAddText (va("%s \"%s\"\n",cv_playercolor2.name,cv_defaultplayercolor2.string));
+	if (!dedicated)
+	{
+		COM_BufAddText (va("%s \"%s\"\n",cv_skin.name,cv_defaultskin.string));
+		COM_BufAddText (va("%s \"%s\"\n",cv_playercolor.name,cv_defaultplayercolor.string));
+		COM_BufAddText (va("%s \"%s\"\n",cv_skin2.name,cv_defaultskin2.string));
+		COM_BufAddText (va("%s \"%s\"\n",cv_playercolor2.name,cv_defaultplayercolor2.string));
+	}
 }
 
 /** Saves the game configuration.
@@ -833,7 +838,7 @@ static void M_PNGText(png_structp png_ptr, png_infop png_info_ptr, PNG_CONST png
 	else
 		snprintf(lvlttltext, 48, "Unknown");
 
-	if (gamestate == GS_LEVEL && &players[displayplayer] && players[displayplayer].mo)
+	if (gamestate == GS_LEVEL && players[displayplayer].mo)
 		snprintf(locationtxt, 40, "X:%d Y:%d Z:%d A:%d",
 			players[displayplayer].mo->x>>FRACBITS,
 			players[displayplayer].mo->y>>FRACBITS,
@@ -2159,63 +2164,6 @@ const char *GetRevisionString(void)
 	rev[7] = '\0';
 
 	return rev;
-}
-
-// Vector/matrix math
-TVector *VectorMatrixMultiply(TVector v, TMatrix m)
-{
-	static TVector ret;
-
-	ret[0] = FixedMul(v[0],m[0][0]) + FixedMul(v[1],m[1][0]) + FixedMul(v[2],m[2][0]) + FixedMul(v[3],m[3][0]);
-	ret[1] = FixedMul(v[0],m[0][1]) + FixedMul(v[1],m[1][1]) + FixedMul(v[2],m[2][1]) + FixedMul(v[3],m[3][1]);
-	ret[2] = FixedMul(v[0],m[0][2]) + FixedMul(v[1],m[1][2]) + FixedMul(v[2],m[2][2]) + FixedMul(v[3],m[3][2]);
-	ret[3] = FixedMul(v[0],m[0][3]) + FixedMul(v[1],m[1][3]) + FixedMul(v[2],m[2][3]) + FixedMul(v[3],m[3][3]);
-
-	return &ret;
-}
-
-TMatrix *RotateXMatrix(angle_t rad)
-{
-	static TMatrix ret;
-	const angle_t fa = rad>>ANGLETOFINESHIFT;
-	const fixed_t cosrad = FINECOSINE(fa), sinrad = FINESINE(fa);
-
-	ret[0][0] = FRACUNIT; ret[0][1] =       0; ret[0][2] = 0;        ret[0][3] = 0;
-	ret[1][0] =        0; ret[1][1] =  cosrad; ret[1][2] = sinrad;   ret[1][3] = 0;
-	ret[2][0] =        0; ret[2][1] = -sinrad; ret[2][2] = cosrad;   ret[2][3] = 0;
-	ret[3][0] =        0; ret[3][1] =       0; ret[3][2] = 0;        ret[3][3] = FRACUNIT;
-
-	return &ret;
-}
-
-#if 0
-TMatrix *RotateYMatrix(angle_t rad)
-{
-	static TMatrix ret;
-	const angle_t fa = rad>>ANGLETOFINESHIFT;
-	const fixed_t cosrad = FINECOSINE(fa), sinrad = FINESINE(fa);
-
-	ret[0][0] = cosrad;   ret[0][1] =        0; ret[0][2] = -sinrad;   ret[0][3] = 0;
-	ret[1][0] = 0;        ret[1][1] = FRACUNIT; ret[1][2] = 0;         ret[1][3] = 0;
-	ret[2][0] = sinrad;   ret[2][1] =        0; ret[2][2] = cosrad;    ret[2][3] = 0;
-	ret[3][0] = 0;        ret[3][1] =        0; ret[3][2] = 0;         ret[3][3] = FRACUNIT;
-
-	return &ret;
-}
-#endif
-
-TMatrix *RotateZMatrix(angle_t rad)
-{
-	static TMatrix ret;
-	const angle_t fa = rad>>ANGLETOFINESHIFT;
-	const fixed_t cosrad = FINECOSINE(fa), sinrad = FINESINE(fa);
-
-	ret[0][0] = cosrad;    ret[0][1] = sinrad;   ret[0][2] =        0; ret[0][3] = 0;
-	ret[1][0] = -sinrad;   ret[1][1] = cosrad;   ret[1][2] =        0; ret[1][3] = 0;
-	ret[2][0] = 0;         ret[2][1] = 0;        ret[2][2] = FRACUNIT; ret[2][3] = 0;
-	ret[3][0] = 0;         ret[3][1] = 0;        ret[3][2] =        0; ret[3][3] = FRACUNIT;
-
-	return &ret;
 }
 
 /** Set of functions to take in a size_t as an argument,

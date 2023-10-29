@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2022 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -256,6 +256,13 @@ typedef enum
 
 typedef enum
 {
+	TMG_NORMAL  = 0,
+	TMG_REVERSE = 1,
+	TMG_TEMPREVERSE = 2,
+} textmapgravity_t;
+
+typedef enum
+{
 	TMNP_FASTEST   = 0,
 	TMNP_SLOWEST   = 1,
 	TMNP_TRIGGERER = 2,
@@ -489,6 +496,7 @@ void P_SpawnSpecials(boolean fromnetsave);
 // every tic
 void P_UpdateSpecials(void);
 sector_t *P_MobjTouchingSectorSpecial(mobj_t *mo, INT32 section, INT32 number);
+sector_t *P_ThingOnSpecial3DFloor(mobj_t *mo);
 sector_t *P_MobjTouchingSectorSpecialFlag(mobj_t *mo, sectorspecialflags_t flag);
 sector_t *P_PlayerTouchingSectorSpecial(player_t *player, INT32 section, INT32 number);
 sector_t *P_PlayerTouchingSectorSpecialFlag(player_t *player, sectorspecialflags_t flag);
@@ -519,7 +527,7 @@ boolean P_IsMobjTouchingPolyobj(mobj_t *mo, polyobj_t *po, sector_t *polysec);
 
 void P_SwitchWeather(INT32 weathernum);
 
-boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller);
+void P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller);
 void P_LinedefExecute(INT16 tag, mobj_t *actor, sector_t *caller);
 void P_RunNightserizeExecutors(mobj_t *actor);
 void P_RunDeNightserizeExecutors(mobj_t *actor);
@@ -887,7 +895,7 @@ typedef struct
 
 typedef enum
 {
-	ok,
+	planeok,
 	crushed,
 	pastdest
 } result_e;
@@ -1029,8 +1037,8 @@ typedef struct
 	INT16 speed;        ///< Speed to fade by
 	boolean ticbased;    ///< Tic-based logic toggle
 	INT32 timer;        ///< Timer for tic-based logic
-	boolean doexists;   ///< Handle FF_EXISTS
-	boolean dotranslucent; ///< Handle FF_TRANSLUCENT
+	boolean doexists;   ///< Handle FOF_EXISTS
+	boolean dotranslucent; ///< Handle FOF_TRANSLUCENT
 	boolean dolighting; ///< Handle shadows and light blocks
 	boolean docolormap; ///< Handle colormaps
 	boolean docollision; ///< Handle interactive flags

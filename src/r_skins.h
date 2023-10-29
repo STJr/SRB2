@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2022 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -35,8 +35,9 @@ typedef struct
 	UINT16 wadnum;
 	skinflags_t flags;
 
-	char realname[SKINNAMESIZE+1]; // Display name for level completion.
+	char realname[SKINNAMESIZE+1]; // Display name for level completion
 	char hudname[SKINNAMESIZE+1]; // HUD name to display (officially exactly 5 characters long)
+	char supername[SKINNAMESIZE+7]; // Super name to display when collecting all emeralds
 
 	UINT8 ability; // ability definition
 	UINT8 ability2; // secondary ability definition
@@ -99,5 +100,7 @@ void R_AddSkins(UINT16 wadnum, boolean mainfile);
 void R_PatchSkins(UINT16 wadnum, boolean mainfile);
 
 UINT8 P_GetSkinSprite2(skin_t *skin, UINT8 spr2, player_t *player);
+
+void R_RefreshSprite2(void);
 
 #endif //__R_SKINS__

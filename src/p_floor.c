@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2022 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -17,6 +17,7 @@
 #include "m_random.h"
 #include "p_local.h"
 #include "p_slopes.h"
+#include "r_fps.h"
 #include "r_state.h"
 #include "s_sound.h"
 #include "z_zone.h"
@@ -154,7 +155,7 @@ result_e T_MovePlane(sector_t *sector, fixed_t speed, fixed_t dest, boolean crus
 		}
 	}
 
-	return ok;
+	return planeok;
 }
 
 //
@@ -523,6 +524,8 @@ void T_ContinuousFalling(continuousfall_t *faller)
 	{
 		faller->sector->ceilingheight = faller->ceilingstartheight;
 		faller->sector->floorheight = faller->floorstartheight;
+
+		R_ClearLevelInterpolatorState(&faller->thinker);
 	}
 
 	P_CheckSector(faller->sector, false); // you might think this is irrelevant. you would be wrong
@@ -551,7 +554,7 @@ static fixed_t P_SectorCheckWater(sector_t *analyzesector,
 
 		for (rover = analyzesector->ffloors; rover; rover = rover->next)
 		{
-			if (!(rover->flags & FF_EXISTS) || !(rover->flags & FF_SWIMMABLE) || rover->flags & FF_SOLID)
+			if (!(rover->fofflags & FOF_EXISTS) || !(rover->fofflags & FOF_SWIMMABLE) || rover->fofflags & FOF_SOLID)
 				continue;
 
 			// If the sector is below the water, don't bother.
@@ -588,7 +591,6 @@ void T_BounceCheese(bouncecheese_t *bouncer)
 	if (bouncer->sector->crumblestate == CRUMBLE_RESTORE || bouncer->sector->crumblestate == CRUMBLE_WAIT
 		|| bouncer->sector->crumblestate == CRUMBLE_ACTIVATED) // Oops! Crumbler says to remove yourself!
 	{
-		bouncer->sector->crumblestate = CRUMBLE_WAIT;
 		bouncer->sector->ceilingdata = NULL;
 		bouncer->sector->ceilspeed = 0;
 		bouncer->sector->floordata = NULL;
@@ -757,10 +759,10 @@ void T_StartCrumble(crumble_t *crumble)
 
 				for (rover = sector->ffloors; rover; rover = rover->next)
 				{
-					if (!(rover->flags & FF_CRUMBLE))
+					if (!(rover->fofflags & FOF_CRUMBLE))
 						continue;
 
-					if (!(rover->flags & FF_FLOATBOB))
+					if (!(rover->fofflags & FOF_FLOATBOB))
 						continue;
 
 					if (rover->master != crumble->sourceline)
@@ -769,7 +771,7 @@ void T_StartCrumble(crumble_t *crumble)
 					rover->alpha = crumble->origalpha;
 
 					if (rover->alpha == 0xff)
-						rover->flags &= ~FF_TRANSLUCENT;
+						rover->fofflags &= ~FOF_TRANSLUCENT;
 				}
 			}
 
@@ -793,13 +795,13 @@ void T_StartCrumble(crumble_t *crumble)
 
 				for (rover = sector->ffloors; rover; rover = rover->next)
 				{
-					if (rover->flags & FF_NORETURN)
+					if (rover->fofflags & FOF_NORETURN)
 						continue;
 
-					if (!(rover->flags & FF_CRUMBLE))
+					if (!(rover->fofflags & FOF_CRUMBLE))
 						continue;
 
-					if (!(rover->flags & FF_FLOATBOB))
+					if (!(rover->fofflags & FOF_FLOATBOB))
 						continue;
 
 					if (rover->master != crumble->sourceline)
@@ -807,7 +809,7 @@ void T_StartCrumble(crumble_t *crumble)
 
 					if (rover->alpha == crumble->origalpha)
 					{
-						rover->flags |= FF_TRANSLUCENT;
+						rover->fofflags |= FOF_TRANSLUCENT;
 						rover->alpha = 0x00;
 					}
 					else
@@ -815,7 +817,7 @@ void T_StartCrumble(crumble_t *crumble)
 						rover->alpha = crumble->origalpha;
 
 						if (rover->alpha == 0xff)
-							rover->flags &= ~FF_TRANSLUCENT;
+							rover->fofflags &= ~FOF_TRANSLUCENT;
 					}
 				}
 			}
@@ -1082,7 +1084,7 @@ void T_ThwompSector(thwomp_t *thwomp)
 
 	if (thwomp->direction == 0) // Not going anywhere, so look for players.
 	{
-		if (rover->flags & FF_EXISTS)
+		if (rover->fofflags & FOF_EXISTS)
 		{
 			UINT8 i;
 			// scan the players to find victims!
@@ -1126,7 +1128,7 @@ void T_ThwompSector(thwomp_t *thwomp)
 				thwomp->direction         // direction
 			);
 
-			if (res == ok || res == pastdest)
+			if (res == planeok || res == pastdest)
 				T_MovePlane
 				(
 					thwomp->sector,             // sector
@@ -1158,7 +1160,7 @@ void T_ThwompSector(thwomp_t *thwomp)
 				thwomp->direction // direction
 			);
 
-			if (res == ok || res == pastdest)
+			if (res == planeok || res == pastdest)
 				T_MovePlane
 				(
 					thwomp->sector,   // sector
@@ -1175,7 +1177,7 @@ void T_ThwompSector(thwomp_t *thwomp)
 
 			if (res == pastdest)
 			{
-				if (rover->flags & FF_EXISTS)
+				if (rover->fofflags & FOF_EXISTS)
 					S_StartSound((void *)&actionsector->soundorg, thwomp->sound);
 
 				thwomp->direction = 1; // start heading back up
@@ -1463,7 +1465,7 @@ void T_RaiseSector(raise_t *raise)
 		direction           // direction
 	);
 
-	if (res == ok || res == pastdest)
+	if (res == planeok || res == pastdest)
 		T_MovePlane
 		(
 			raise->sector,    // sector
@@ -1658,7 +1660,7 @@ void EV_DoFloor(mtag_t tag, line_t *line, floor_e floortype)
 				// chained linedef executing ability
 				// Only set it on one of the moving sectors (the smallest numbered)
 				if (line->args[3])
-					dofloor->tag = firstone ? (INT16)line->args[3] : -1;
+					dofloor->tag = firstone ? (INT16)line->args[3] : 0;
 
 				// flat changing ability
 				dofloor->texture = line->args[4] ? line->frontsector->floorpic : -1;
@@ -1709,6 +1711,9 @@ void EV_DoFloor(mtag_t tag, line_t *line, floor_e floortype)
 		}
 
 		firstone = 0;
+
+		// interpolation
+		R_CreateInterpolator_SectorPlane(&dofloor->thinker, sec, false);
 	}
 }
 
@@ -1805,6 +1810,10 @@ void EV_DoElevator(mtag_t tag, line_t *line, elevator_e elevtype)
 		}
 
 		elevator->ceilingdestheight = elevator->floordestheight + sec->ceilingheight - sec->floorheight;
+
+		// interpolation
+		R_CreateInterpolator_SectorPlane(&elevator->thinker, sec, false);
+		R_CreateInterpolator_SectorPlane(&elevator->thinker, sec, true);
 	}
 }
 
@@ -1861,11 +1870,10 @@ void EV_CrumbleChain(sector_t *sec, ffloor_t *rover)
 		}
 	}
 
-#undef controlsec
-
-	// soundorg z height never gets set normally, so MEH.
-	sec->soundorg.z = sec->floorheight;
+	sec->soundorg.z = (controlsec->floorheight + controlsec->ceilingheight)/2;
 	S_StartSound(&sec->soundorg, mobjinfo[type].activesound);
+
+#undef controlsec
 
 	// Find the outermost vertexes in the subsector
 	for (i = 0; i < sec->linecount; i++)
@@ -1928,7 +1936,7 @@ void EV_CrumbleChain(sector_t *sec, ffloor_t *rover)
 	}
 
 	// no longer exists (can't collide with again)
-	rover->flags &= ~FF_EXISTS;
+	rover->fofflags &= ~FOF_EXISTS;
 	rover->master->frontsector->moved = true;
 	P_RecalcPrecipInSector(sec);
 }
@@ -1953,6 +1961,10 @@ void EV_BounceSector(sector_t *sec, fixed_t momz, line_t *sourceline)
 	bouncer->speed = momz/2;
 	bouncer->distance = FRACUNIT;
 	bouncer->low = true;
+
+	// interpolation
+	R_CreateInterpolator_SectorPlane(&bouncer->thinker, sec, false);
+	R_CreateInterpolator_SectorPlane(&bouncer->thinker, sec, true);
 }
 
 // For T_ContinuousFalling special
@@ -1978,6 +1990,10 @@ void EV_DoContinuousFall(sector_t *sec, sector_t *backsector, fixed_t spd, boole
 
 	faller->destheight = backwards ? backsector->ceilingheight : backsector->floorheight;
 	faller->direction = backwards ? 1 : -1;
+
+	// interpolation
+	R_CreateInterpolator_SectorPlane(&faller->thinker, sec, false);
+	R_CreateInterpolator_SectorPlane(&faller->thinker, sec, true);
 }
 
 // Some other 3dfloor special things Tails 03-11-2002 (Search p_mobj.c for description)
@@ -2030,6 +2046,10 @@ INT32 EV_StartCrumble(sector_t *sec, ffloor_t *rover, boolean floating,
 
 	crumble->sector->crumblestate = CRUMBLE_ACTIVATED;
 
+	// interpolation
+	R_CreateInterpolator_SectorPlane(&crumble->thinker, sec, false);
+	R_CreateInterpolator_SectorPlane(&crumble->thinker, sec, true);
+
 	TAG_ITER_SECTORS(tag, i)
 	{
 		foundsec = &sectors[i];
@@ -2054,8 +2074,8 @@ void EV_MarioBlock(ffloor_t *rover, sector_t *sector, mobj_t *puncher)
 	if (roversec->floordata || roversec->ceilingdata)
 		return;
 
-	if (!(rover->flags & FF_SOLID))
-		rover->flags |= (FF_SOLID|FF_RENDERALL|FF_CUTLEVEL);
+	if (!(rover->fofflags & FOF_SOLID))
+		rover->fofflags |= (FOF_SOLID|FOF_RENDERALL|FOF_CUTLEVEL);
 
 	// Find an item to pop out!
 	thing = SearchMarioNode(roversec->touching_thinglist);
@@ -2081,6 +2101,10 @@ void EV_MarioBlock(ffloor_t *rover, sector_t *sector, mobj_t *puncher)
 		block->ceilingstartheight = block->sector->ceilingheight;
 		block->tag = (INT16)rover->master->args[0];
 
+		// interpolation
+		R_CreateInterpolator_SectorPlane(&block->thinker, roversec, false);
+		R_CreateInterpolator_SectorPlane(&block->thinker, roversec, true);
+
 		if (itsamonitor)
 		{
 			oldx = thing->x;
@@ -2089,9 +2113,9 @@ void EV_MarioBlock(ffloor_t *rover, sector_t *sector, mobj_t *puncher)
 		}
 
 		P_UnsetThingPosition(thing);
-		thing->x = sector->soundorg.x;
-		thing->y = sector->soundorg.y;
-		thing->z = topheight;
+		thing->x = thing->old_x = sector->soundorg.x;
+		thing->y = thing->old_y = sector->soundorg.y;
+		thing->z = thing->old_z = topheight;
 		thing->momz = FixedMul(6*FRACUNIT, thing->scale);
 		P_SetThingPosition(thing);
 		if (thing->flags & MF_SHOOTABLE)
@@ -2112,9 +2136,9 @@ void EV_MarioBlock(ffloor_t *rover, sector_t *sector, mobj_t *puncher)
 		if (itsamonitor && thing)
 		{
 			P_UnsetThingPosition(thing);
-			thing->x = oldx;
-			thing->y = oldy;
-			thing->z = oldz;
+			thing->x = thing->old_x = oldx;
+			thing->y = thing->old_y = oldy;
+			thing->z = thing->old_z = oldz;
 			thing->momx = 1;
 			thing->momy = 1;
 			P_SetThingPosition(thing);
