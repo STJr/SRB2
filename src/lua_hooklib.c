@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2012-2016 by John "JTE" Muniz.
-// Copyright (C) 2012-2021 by Sonic Team Junior.
+// Copyright (C) 2012-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -31,12 +31,15 @@
                                   ABSTRACTION
    ========================================================================= */
 
-static const char * const mobjHookNames[] = { MOBJ_HOOK_LIST (TOSTR)  NULL };
-static const char * const     hookNames[] = {      HOOK_LIST (TOSTR)  NULL };
+#define LIST(id, M) \
+	static const char * const id [] = { M (TOSTR)  NULL }
 
-static const char * const stringHookNames[] = {
-	STRING_HOOK_LIST (TOSTR)  NULL
-};
+LIST   (mobjHookNames,   MOBJ_HOOK_LIST);
+LIST       (hookNames,        HOOK_LIST);
+LIST    (hudHookNames,    HUD_HOOK_LIST);
+LIST (stringHookNames, STRING_HOOK_LIST);
+
+#undef LIST
 
 typedef struct {
 	int numHooks;
@@ -49,6 +52,7 @@ typedef struct {
 } stringhook_t;
 
 static hook_t hookIds[HOOK(MAX)];
+static hook_t hudHookIds[HUD_HOOK(MAX)];
 static hook_t mobjHookIds[NUMMOBJTYPES][MOBJ_HOOK(MAX)];
 
 // Lua tables are used to lookup string hook ids.
@@ -56,6 +60,7 @@ static stringhook_t stringHooks[STRING_HOOK(MAX)];
 
 // This will be indexed by hook id, the value of which fetches the registry.
 static int * hookRefs;
+static int   nextid;
 
 // After a hook errors once, don't print the error again.
 static UINT8 * hooksErrored;
@@ -67,7 +72,7 @@ static boolean mobj_hook_available(int hook_type, mobjtype_t mobj_type)
 	return
 		(
 				mobjHookIds [MT_NULL] [hook_type].numHooks > 0 ||
-				mobjHookIds[mobj_type][hook_type].numHooks > 0
+				(mobj_type < NUMMOBJTYPES && mobjHookIds[mobj_type][hook_type].numHooks > 0)
 		);
 }
 
@@ -104,13 +109,13 @@ static void get_table(lua_State *L)
 	lua_remove(L, -2);
 }
 
-static void add_hook_to_table(lua_State *L, int id, int n)
+static void add_hook_to_table(lua_State *L, int n)
 {
-	lua_pushnumber(L, id);
+	lua_pushnumber(L, nextid);
 	lua_rawseti(L, -2, n);
 }
 
-static void add_string_hook(lua_State *L, int type, int id)
+static void add_string_hook(lua_State *L, int type)
 {
 	stringhook_t * hook = &stringHooks[type];
 
@@ -146,33 +151,54 @@ static void add_string_hook(lua_State *L, int type, int id)
 	{
 		lua_pushstring(L, string);
 		get_table(L);
-		add_hook_to_table(L, id, 1 + lua_objlen(L, -1));
+		add_hook_to_table(L, 1 + lua_objlen(L, -1));
 	}
 	else
-		add_hook_to_table(L, id, ++hook->numGeneric);
+		add_hook_to_table(L, ++hook->numGeneric);
 }
 
-static void add_hook(hook_t *map, int id)
+static void add_hook(hook_t *map)
 {
 	Z_Realloc(map->ids, (map->numHooks + 1) * sizeof *map->ids,
 			PU_STATIC, &map->ids);
-	map->ids[map->numHooks++] = id;
+	map->ids[map->numHooks++] = nextid;
 }
 
-static void add_mobj_hook(lua_State *L, int hook_type, int id)
+static void add_mobj_hook(lua_State *L, int hook_type)
 {
 	mobjtype_t   mobj_type = luaL_optnumber(L, 3, MT_NULL);
 
 	luaL_argcheck(L, mobj_type < NUMMOBJTYPES, 3, "invalid mobjtype_t");
 
-	add_hook(&mobjHookIds[mobj_type][hook_type], id);
+	add_hook(&mobjHookIds[mobj_type][hook_type]);
+}
+
+static void add_hud_hook(lua_State *L, int idx)
+{
+	add_hook(&hudHookIds[luaL_checkoption(L,
+				idx, "game", hudHookNames)]);
+}
+
+static void add_hook_ref(lua_State *L, int idx)
+{
+	if (!(nextid & 7))
+	{
+		Z_Realloc(hooksErrored,
+				BIT_ARRAY_SIZE (nextid + 1) * sizeof *hooksErrored,
+				PU_STATIC, &hooksErrored);
+		hooksErrored[nextid >> 3] = 0;
+	}
+
+	Z_Realloc(hookRefs, (nextid + 1) * sizeof *hookRefs, PU_STATIC, &hookRefs);
+
+	// set the hook function in the registry.
+	lua_pushvalue(L, idx);
+	hookRefs[nextid++] = luaL_ref(L, LUA_REGISTRYINDEX);
 }
 
 // Takes hook, function, and additional arguments (mobj type to act on, etc.)
 static int lib_addHook(lua_State *L)
 {
-	static int nextid;
-
 	const char * name;
 	int type;
 
@@ -185,34 +211,26 @@ static int lib_addHook(lua_State *L)
 	/* this is a very special case */
 	if (( type = hook_in_list(name, stringHookNames) ) < STRING_HOOK(MAX))
 	{
-		add_string_hook(L, type, nextid);
+		add_string_hook(L, type);
 	}
 	else if (( type = hook_in_list(name, mobjHookNames) ) < MOBJ_HOOK(MAX))
 	{
-		add_mobj_hook(L, type, nextid);
+		add_mobj_hook(L, type);
 	}
 	else if (( type = hook_in_list(name, hookNames) ) < HOOK(MAX))
 	{
-		add_hook(&hookIds[type], nextid);
+		add_hook(&hookIds[type]);
+	}
+	else if (strcmp(name, "HUD") == 0)
+	{
+		add_hud_hook(L, 3);
 	}
 	else
 	{
 		return luaL_argerror(L, 1, lua_pushfstring(L, "invalid hook " LUA_QS, name));
 	}
 
-	if (!(nextid & 7))
-	{
-		Z_Realloc(hooksErrored,
-				BIT_ARRAY_SIZE (nextid + 1) * sizeof *hooksErrored,
-				PU_STATIC, &hooksErrored);
-		hooksErrored[nextid >> 3] = 0;
-	}
-
-	Z_Realloc(hookRefs, (nextid + 1) * sizeof *hookRefs, PU_STATIC, &hookRefs);
-
-	// set the hook function in the registry.
-	lua_pushvalue(L, 2);/* the function */
-	hookRefs[nextid++] = luaL_ref(L, LUA_REGISTRYINDEX);
+	add_hook_ref(L, 2);/* the function */
 
 	return 0;
 }
@@ -223,6 +241,21 @@ int LUA_HookLib(lua_State *L)
 	errorRef = luaL_ref(L, LUA_REGISTRYINDEX);
 
 	lua_register(L, "addHook", lib_addHook);
+
+	return 0;
+}
+
+/* TODO: remove in next backwards incompatible release */
+int lib_hudadd(lua_State *L);/* yeah compiler */
+int lib_hudadd(lua_State *L)
+{
+	if (!lua_lumploading)
+		return luaL_error(L, "This function cannot be called from within a hook or coroutine!");
+
+	luaL_checktype(L, 1, LUA_TFUNCTION);
+
+	add_hud_hook(L, 2);
+	add_hook_ref(L, 1);
 
 	return 0;
 }
@@ -259,11 +292,16 @@ static void push_string(void)
 	lua_pushvalue(gL, SINDEX);
 }
 
-static boolean start_hook_stack(void)
+static boolean begin_hook_values(Hook_State *hook)
+{
+	hook->top = lua_gettop(gL);
+	return true;
+}
+
+static void start_hook_stack(void)
 {
 	lua_settop(gL, 0);
 	push_error_handler();
-	return true;
 }
 
 static boolean init_hook_type
@@ -279,10 +317,11 @@ static boolean init_hook_type
 
 	if (nonzero)
 	{
+		start_hook_stack();
 		hook->hook_type = hook_type;
 		hook->mobj_type = mobj_type;
 		hook->string = string;
-		return start_hook_stack();
+		return begin_hook_values(hook);
 	}
 	else
 		return false;
@@ -304,8 +343,15 @@ static boolean prepare_mobj_hook
 		Hook_State * hook,
 		int          default_status,
 		int          hook_type,
-		mobjtype_t   mobj_type
+		mobj_t     * primary_mobj
 ){
+	const mobjtype_t mobj_type =
+		primary_mobj ? primary_mobj->type : NUMMOBJTYPES;
+
+#ifdef PARANOIA
+	if (mobj_type == MT_NULL)
+		I_Error("MT_NULL has been passed to a mobj hook\n");
+#endif
 	return init_hook_type(hook, default_status,
 			hook_type, mobj_type, NULL,
 			mobj_hook_available(hook_type, mobj_type));
@@ -323,7 +369,7 @@ static boolean prepare_string_hook
 				stringHooks[hook_type].ref))
 	{
 		lua_pushstring(gL, string);
-		return true;
+		return begin_hook_values(hook);
 	}
 	else
 		return false;
@@ -332,12 +378,12 @@ static boolean prepare_string_hook
 static void init_hook_call
 (
 		Hook_State * hook,
-		int    values,
 		int    results,
 		Hook_Callback results_handler
 ){
-	hook->top = lua_gettop(gL);
-	hook->values = values;
+	const int top = lua_gettop(gL);
+	hook->values = (top - hook->top);
+	hook->top = top;
 	hook->results = results;
 	hook->results_handler = results_handler;
 }
@@ -447,13 +493,12 @@ static int call_mobj_type_hooks(Hook_State *hook, mobjtype_t mobj_type)
 static int call_hooks
 (
 		Hook_State * hook,
-		int        values,
 		int        results,
 		Hook_Callback results_handler
 ){
 	int calls = 0;
 
-	init_hook_call(hook, values, results, results_handler);
+	init_hook_call(hook, results, results_handler);
 
 	if (hook->string)
 	{
@@ -463,9 +508,11 @@ static int call_hooks
 	{
 		/* call generic mobj hooks first */
 		calls += call_mobj_type_hooks(hook, MT_NULL);
-		calls += call_mobj_type_hooks(hook, hook->mobj_type);
 
-		ps_lua_mobjhooks += calls;
+		if (hook->mobj_type < NUMMOBJTYPES)
+			calls += call_mobj_type_hooks(hook, hook->mobj_type);
+
+		ps_lua_mobjhooks.value.i += calls;
 	}
 	else
 		calls += call_mapped(hook, &hookIds[hook->hook_type]);
@@ -511,10 +558,10 @@ static void res_force(Hook_State *hook)
 int LUA_HookMobj(mobj_t *mobj, int hook_type)
 {
 	Hook_State hook;
-	if (prepare_mobj_hook(&hook, false, hook_type, mobj->type))
+	if (prepare_mobj_hook(&hook, false, hook_type, mobj))
 	{
 		LUA_PushUserdata(gL, mobj, META_MOBJ);
-		call_hooks(&hook, 1, 1, res_true);
+		call_hooks(&hook, 1, res_true);
 	}
 	return hook.status;
 }
@@ -522,11 +569,11 @@ int LUA_HookMobj(mobj_t *mobj, int hook_type)
 int LUA_Hook2Mobj(mobj_t *t1, mobj_t *t2, int hook_type)
 {
 	Hook_State hook;
-	if (prepare_mobj_hook(&hook, 0, hook_type, t1->type))
+	if (prepare_mobj_hook(&hook, 0, hook_type, t1))
 	{
 		LUA_PushUserdata(gL, t1, META_MOBJ);
 		LUA_PushUserdata(gL, t2, META_MOBJ);
-		call_hooks(&hook, 2, 1, res_force);
+		call_hooks(&hook, 1, res_force);
 	}
 	return hook.status;
 }
@@ -535,7 +582,7 @@ void LUA_HookVoid(int type)
 {
 	Hook_State hook;
 	if (prepare_hook(&hook, 0, type))
-		call_hooks(&hook, 0, 0, res_none);
+		call_hooks(&hook, 0, res_none);
 }
 
 void LUA_HookInt(INT32 number, int hook_type)
@@ -544,7 +591,7 @@ void LUA_HookInt(INT32 number, int hook_type)
 	if (prepare_hook(&hook, 0, hook_type))
 	{
 		lua_pushinteger(gL, number);
-		call_hooks(&hook, 1, 0, res_none);
+		call_hooks(&hook, 0, res_none);
 	}
 }
 
@@ -554,7 +601,7 @@ void LUA_HookBool(boolean value, int hook_type)
 	if (prepare_hook(&hook, 0, hook_type))
 	{
 		lua_pushboolean(gL, value);
-		call_hooks(&hook, 1, 0, res_none);
+		call_hooks(&hook, 0, res_none);
 	}
 }
 
@@ -564,7 +611,7 @@ int LUA_HookPlayer(player_t *player, int hook_type)
 	if (prepare_hook(&hook, false, hook_type))
 	{
 		LUA_PushUserdata(gL, player, META_PLAYER);
-		call_hooks(&hook, 1, 1, res_true);
+		call_hooks(&hook, 1, res_true);
 	}
 	return hook.status;
 }
@@ -580,7 +627,7 @@ int LUA_HookTiccmd(player_t *player, ticcmd_t *cmd, int hook_type)
 		if (hook_type == HOOK(PlayerCmd))
 			hook_cmd_running = true;
 
-		call_hooks(&hook, 2, 1, res_true);
+		call_hooks(&hook, 1, res_true);
 
 		if (hook_type == HOOK(PlayerCmd))
 			hook_cmd_running = false;
@@ -588,15 +635,36 @@ int LUA_HookTiccmd(player_t *player, ticcmd_t *cmd, int hook_type)
 	return hook.status;
 }
 
-int LUA_HookKey(INT32 keycode, int hook_type)
+int LUA_HookKey(event_t *event, int hook_type)
 {
 	Hook_State hook;
 	if (prepare_hook(&hook, false, hook_type))
 	{
-		lua_pushinteger(gL, keycode);
-		call_hooks(&hook, 1, 1, res_true);
+		LUA_PushUserdata(gL, event, META_KEYEVENT);
+		call_hooks(&hook, 1, res_true);
 	}
 	return hook.status;
+}
+
+void LUA_HookHUD(int hook_type, huddrawlist_h list)
+{
+	const hook_t * map = &hudHookIds[hook_type];
+	Hook_State hook;
+	if (map->numHooks > 0)
+	{
+		start_hook_stack();
+		begin_hook_values(&hook);
+
+		LUA_SetHudHook(hook_type, list);
+
+		hud_running = true; // local hook
+		init_hook_call(&hook, 0, res_none);
+		call_mapped(&hook, map);
+		hud_running = false;
+
+		lua_pushnil(gL);
+		lua_setfield(gL, LUA_REGISTRYINDEX, "HUD_DRAW_LIST");
+	}
 }
 
 /* =========================================================================
@@ -618,7 +686,7 @@ void LUA_HookThinkFrame(void)
 
 	if (prepare_hook(&hook, 0, type))
 	{
-		init_hook_call(&hook, 0, 0, res_none);
+		init_hook_call(&hook, 0, res_none);
 
 		for (k = 0; k < map->numHooks; ++k)
 		{
@@ -649,11 +717,11 @@ void LUA_HookThinkFrame(void)
 int LUA_HookMobjLineCollide(mobj_t *mobj, line_t *line)
 {
 	Hook_State hook;
-	if (prepare_mobj_hook(&hook, 0, MOBJ_HOOK(MobjLineCollide), mobj->type))
+	if (prepare_mobj_hook(&hook, 0, MOBJ_HOOK(MobjLineCollide), mobj))
 	{
 		LUA_PushUserdata(gL, mobj, META_MOBJ);
 		LUA_PushUserdata(gL, line, META_LINE);
-		call_hooks(&hook, 2, 1, res_force);
+		call_hooks(&hook, 1, res_force);
 	}
 	return hook.status;
 }
@@ -661,11 +729,11 @@ int LUA_HookMobjLineCollide(mobj_t *mobj, line_t *line)
 int LUA_HookTouchSpecial(mobj_t *special, mobj_t *toucher)
 {
 	Hook_State hook;
-	if (prepare_mobj_hook(&hook, false, MOBJ_HOOK(TouchSpecial), special->type))
+	if (prepare_mobj_hook(&hook, false, MOBJ_HOOK(TouchSpecial), special))
 	{
 		LUA_PushUserdata(gL, special, META_MOBJ);
 		LUA_PushUserdata(gL, toucher, META_MOBJ);
-		call_hooks(&hook, 2, 1, res_true);
+		call_hooks(&hook, 1, res_true);
 	}
 	return hook.status;
 }
@@ -678,19 +746,18 @@ static int damage_hook
 		INT32   damage,
 		UINT8   damagetype,
 		int     hook_type,
-		int     values,
 		Hook_Callback results_handler
 ){
 	Hook_State hook;
-	if (prepare_mobj_hook(&hook, 0, hook_type, target->type))
+	if (prepare_mobj_hook(&hook, 0, hook_type, target))
 	{
 		LUA_PushUserdata(gL, target, META_MOBJ);
 		LUA_PushUserdata(gL, inflictor, META_MOBJ);
 		LUA_PushUserdata(gL, source, META_MOBJ);
-		if (values == 5)
+		if (hook_type != MOBJ_HOOK(MobjDeath))
 			lua_pushinteger(gL, damage);
 		lua_pushinteger(gL, damagetype);
-		call_hooks(&hook, values, 1, results_handler);
+		call_hooks(&hook, 1, results_handler);
 	}
 	return hook.status;
 }
@@ -698,19 +765,32 @@ static int damage_hook
 int LUA_HookShouldDamage(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 damage, UINT8 damagetype)
 {
 	return damage_hook(target, inflictor, source, damage, damagetype,
-			MOBJ_HOOK(ShouldDamage), 5, res_force);
+			MOBJ_HOOK(ShouldDamage), res_force);
 }
 
 int LUA_HookMobjDamage(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 damage, UINT8 damagetype)
 {
 	return damage_hook(target, inflictor, source, damage, damagetype,
-			MOBJ_HOOK(MobjDamage), 5, res_true);
+			MOBJ_HOOK(MobjDamage), res_true);
 }
 
 int LUA_HookMobjDeath(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damagetype)
 {
 	return damage_hook(target, inflictor, source, 0, damagetype,
-			MOBJ_HOOK(MobjDeath), 4, res_true);
+			MOBJ_HOOK(MobjDeath), res_true);
+}
+
+int LUA_HookMobjMoveBlocked(mobj_t *t1, mobj_t *t2, line_t *line)
+{
+	Hook_State hook;
+	if (prepare_mobj_hook(&hook, 0, MOBJ_HOOK(MobjMoveBlocked), t1))
+	{
+		LUA_PushUserdata(gL, t1, META_MOBJ);
+		LUA_PushUserdata(gL, t2, META_MOBJ);
+		LUA_PushUserdata(gL, line, META_LINE);
+		call_hooks(&hook, 1, res_true);
+	}
+	return hook.status;
 }
 
 typedef struct {
@@ -783,7 +863,7 @@ int LUA_HookBotAI(mobj_t *sonic, mobj_t *tails, ticcmd_t *cmd)
 
 		hook.userdata = &botai;
 
-		call_hooks(&hook, 2, 8, res_botai);
+		call_hooks(&hook, 8, res_botai);
 	}
 
 	return hook.status;
@@ -798,7 +878,7 @@ void LUA_HookLinedefExecute(line_t *line, mobj_t *mo, sector_t *sector)
 		LUA_PushUserdata(gL, line, META_LINE);
 		LUA_PushUserdata(gL, mo, META_MOBJ);
 		LUA_PushUserdata(gL, sector, META_SECTOR);
-		ps_lua_mobjhooks += call_hooks(&hook, 3, 0, res_none);
+		ps_lua_mobjhooks.value.i += call_hooks(&hook, 0, res_none);
 	}
 }
 
@@ -822,7 +902,7 @@ int LUA_HookPlayerMsg(int source, int target, int flags, char *msg)
 			LUA_PushUserdata(gL, &players[target-1], META_PLAYER); // target
 		}
 		lua_pushstring(gL, msg); // msg
-		call_hooks(&hook, 4, 1, res_true);
+		call_hooks(&hook, 1, res_true);
 	}
 	return hook.status;
 }
@@ -830,13 +910,13 @@ int LUA_HookPlayerMsg(int source, int target, int flags, char *msg)
 int LUA_HookHurtMsg(player_t *player, mobj_t *inflictor, mobj_t *source, UINT8 damagetype)
 {
 	Hook_State hook;
-	if (prepare_hook(&hook, false, HOOK(HurtMsg)))
+	if (prepare_mobj_hook(&hook, false, MOBJ_HOOK(HurtMsg), inflictor))
 	{
 		LUA_PushUserdata(gL, player, META_PLAYER);
 		LUA_PushUserdata(gL, inflictor, META_MOBJ);
 		LUA_PushUserdata(gL, source, META_MOBJ);
 		lua_pushinteger(gL, damagetype);
-		call_hooks(&hook, 4, 1, res_true);
+		call_hooks(&hook, 1, res_true);
 	}
 	return hook.status;
 }
@@ -855,12 +935,14 @@ void LUA_HookNetArchive(lua_CFunction archFunc)
 		push_error_handler();
 		lua_insert(gL, EINDEX);
 
+		begin_hook_values(&hook);
+
 		// tables becomes an upvalue of archFunc
 		lua_pushvalue(gL, -1);
 		lua_pushcclosure(gL, archFunc, 1);
 		// stack: tables, archFunc
 
-		init_hook_call(&hook, 1, 0, res_none);
+		init_hook_call(&hook, 0, res_none);
 		call_mapped(&hook, map);
 
 		lua_pop(gL, 1); // pop archFunc
@@ -872,11 +954,11 @@ void LUA_HookNetArchive(lua_CFunction archFunc)
 int LUA_HookMapThingSpawn(mobj_t *mobj, mapthing_t *mthing)
 {
 	Hook_State hook;
-	if (prepare_mobj_hook(&hook, false, MOBJ_HOOK(MapThingSpawn), mobj->type))
+	if (prepare_mobj_hook(&hook, false, MOBJ_HOOK(MapThingSpawn), mobj))
 	{
 		LUA_PushUserdata(gL, mobj, META_MOBJ);
 		LUA_PushUserdata(gL, mthing, META_MAPTHING);
-		call_hooks(&hook, 2, 1, res_true);
+		call_hooks(&hook, 1, res_true);
 	}
 	return hook.status;
 }
@@ -884,11 +966,11 @@ int LUA_HookMapThingSpawn(mobj_t *mobj, mapthing_t *mthing)
 int LUA_HookFollowMobj(player_t *player, mobj_t *mobj)
 {
 	Hook_State hook;
-	if (prepare_mobj_hook(&hook, false, MOBJ_HOOK(FollowMobj), mobj->type))
+	if (prepare_mobj_hook(&hook, false, MOBJ_HOOK(FollowMobj), mobj))
 	{
 		LUA_PushUserdata(gL, player, META_PLAYER);
 		LUA_PushUserdata(gL, mobj, META_MOBJ);
-		call_hooks(&hook, 2, 1, res_true);
+		call_hooks(&hook, 1, res_true);
 	}
 	return hook.status;
 }
@@ -900,7 +982,7 @@ int LUA_HookPlayerCanDamage(player_t *player, mobj_t *mobj)
 	{
 		LUA_PushUserdata(gL, player, META_PLAYER);
 		LUA_PushUserdata(gL, mobj, META_MOBJ);
-		call_hooks(&hook, 2, 1, res_force);
+		call_hooks(&hook, 1, res_force);
 	}
 	return hook.status;
 }
@@ -912,7 +994,7 @@ void LUA_HookPlayerQuit(player_t *plr, kickreason_t reason)
 	{
 		LUA_PushUserdata(gL, plr, META_PLAYER); // Player that quit
 		lua_pushinteger(gL, reason); // Reason for quitting
-		call_hooks(&hook, 2, 0, res_none);
+		call_hooks(&hook, 0, res_none);
 	}
 }
 
@@ -926,7 +1008,7 @@ int LUA_HookTeamSwitch(player_t *player, int newteam, boolean fromspectators, bo
 		lua_pushboolean(gL, fromspectators);
 		lua_pushboolean(gL, tryingautobalance);
 		lua_pushboolean(gL, tryingscramble);
-		call_hooks(&hook, 5, 1, res_false);
+		call_hooks(&hook, 1, res_false);
 	}
 	return hook.status;
 }
@@ -941,7 +1023,7 @@ int LUA_HookViewpointSwitch(player_t *player, player_t *newdisplayplayer, boolea
 		lua_pushboolean(gL, forced);
 
 		hud_running = true; // local hook
-		call_hooks(&hook, 3, 1, res_force);
+		call_hooks(&hook, 1, res_force);
 		hud_running = false;
 	}
 	return hook.status;
@@ -956,7 +1038,7 @@ int LUA_HookSeenPlayer(player_t *player, player_t *seenfriend)
 		LUA_PushUserdata(gL, seenfriend, META_PLAYER);
 
 		hud_running = true; // local hook
-		call_hooks(&hook, 2, 1, res_false);
+		call_hooks(&hook, 1, res_false);
 		hud_running = false;
 	}
 	return hook.status;
@@ -972,7 +1054,7 @@ int LUA_HookShouldJingleContinue(player_t *player, const char *musname)
 		push_string();
 
 		hud_running = true; // local hook
-		call_hooks(&hook, 2, 1, res_true);
+		call_hooks(&hook, 1, res_true);
 		hud_running = false;
 	}
 	return hook.status;
@@ -1038,13 +1120,14 @@ int LUA_HookMusicChange(const char *oldname, struct MusicChange *param)
 
 	if (prepare_hook(&hook, false, type))
 	{
-		init_hook_call(&hook, 7, 6, res_musicchange);
+		init_hook_call(&hook, 6, res_musicchange);
+		hook.values = 7;/* values pushed later */
 		hook.userdata = param;
 
 		lua_pushstring(gL, oldname);/* the only constant value */
 		lua_pushstring(gL, param->newname);/* semi constant */
 
-		for (k = 0; k <= map->numHooks; ++k)
+		for (k = 0; k < map->numHooks; ++k)
 		{
 			get_hook(&hook, map->ids, k);
 
@@ -1084,7 +1167,7 @@ fixed_t LUA_HookPlayerHeight(player_t *player)
 	if (prepare_hook(&hook, -1, HOOK(PlayerHeight)))
 	{
 		LUA_PushUserdata(gL, player, META_PLAYER);
-		call_hooks(&hook, 1, 1, res_playerheight);
+		call_hooks(&hook, 1, res_playerheight);
 	}
 	return hook.status;
 }
@@ -1095,7 +1178,7 @@ int LUA_HookPlayerCanEnterSpinGaps(player_t *player)
 	if (prepare_hook(&hook, 0, HOOK(PlayerCanEnterSpinGaps)))
 	{
 		LUA_PushUserdata(gL, player, META_PLAYER);
-		call_hooks(&hook, 1, 1, res_force);
+		call_hooks(&hook, 1, res_force);
 	}
 	return hook.status;
 }
