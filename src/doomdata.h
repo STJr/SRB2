@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2021 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -62,6 +62,10 @@ enum
 #define MTF_AMBUSH 8
 
 // Do not use bit five or after, as they are used for object z-offsets.
+// Unless it's exclusive to UDMF.
+
+// Flag to use Z as absolute spawn height, ignoring the floor and ceiling.
+#define MTF_ABSOLUTEZ 16
 
 #if defined(_MSC_VER)
 #pragma pack(1)
@@ -123,15 +127,15 @@ typedef struct
 // lower texture unpegged
 #define ML_DONTPEGBOTTOM       16
 
-#define ML_EFFECT1             32
+#define ML_SKEWTD              32
 
 // Don't let Knuckles climb on this line
 #define ML_NOCLIMB             64
 
-#define ML_EFFECT2             128
-#define ML_EFFECT3             256
-#define ML_EFFECT4             512
-#define ML_EFFECT5            1024
+#define ML_NOSKEW             128
+#define ML_MIDPEG             256
+#define ML_MIDSOLID           512
+#define ML_WRAPMIDTEX        1024
 
 #define ML_NETONLY           2048 // Apply effect only in netgames
 #define ML_NONET             4096 // Apply  effect only in single player games
@@ -196,7 +200,7 @@ typedef struct
 #pragma pack()
 #endif
 
-#define NUMMAPTHINGARGS 6
+#define NUMMAPTHINGARGS 10
 #define NUMMAPTHINGSTRINGARGS 2
 
 // Thing definition, position, orientation and type,
@@ -211,6 +215,7 @@ typedef struct
 	UINT8 extrainfo;
 	taglist_t tags;
 	fixed_t scale;
+	fixed_t spritexscale, spriteyscale;
 	INT32 args[NUMMAPTHINGARGS];
 	char *stringargs[NUMMAPTHINGSTRINGARGS];
 	struct mobj_s *mobj;

@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2021 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -155,7 +155,15 @@ enum
 	SPANDRAWFUNC_WATER,
 	SPANDRAWFUNC_TILTEDWATER,
 
+	SPANDRAWFUNC_SOLID,
+	SPANDRAWFUNC_TRANSSOLID,
+	SPANDRAWFUNC_TILTEDSOLID,
+	SPANDRAWFUNC_TILTEDTRANSSOLID,
+	SPANDRAWFUNC_WATERSOLID,
+	SPANDRAWFUNC_TILTEDWATERSOLID,
+
 	SPANDRAWFUNC_FOG,
+	SPANDRAWFUNC_TILTEDFOG,
 
 	SPANDRAWFUNC_MAX
 };
@@ -182,6 +190,8 @@ extern viddef_t vid;
 extern INT32 setmodeneeded; // mode number to set if needed, or 0
 extern UINT8 setrenderneeded;
 
+extern double averageFPS;
+
 void SCR_ChangeRenderer(void);
 
 extern CV_PossibleValue_t cv_renderer_t[];
@@ -189,9 +199,12 @@ extern CV_PossibleValue_t cv_renderer_t[];
 extern INT32 scr_bpp;
 extern UINT8 *scr_borderpatch; // patch used to fill the view borders
 
-extern consvar_t cv_scr_width, cv_scr_height, cv_scr_depth, cv_renderview, cv_renderer, cv_fullscreen;
+extern consvar_t cv_scr_width, cv_scr_height, cv_scr_width_w, cv_scr_height_w, cv_scr_depth, cv_fullscreen;
+extern consvar_t cv_renderview, cv_renderer;
+extern consvar_t cv_renderhitbox, cv_renderhitboxinterpolation, cv_renderhitboxgldepth;
 // wait for page flipping to end or not
 extern consvar_t cv_vidwait;
+extern consvar_t cv_timescale;
 
 // Initialize the screen
 void SCR_Startup(void);
@@ -210,6 +223,8 @@ void SCR_CheckDefaultMode(void);
 
 // Set the mode number which is saved in the config
 void SCR_SetDefaultMode(void);
+
+void SCR_CalculateFPS(void);
 
 FUNCMATH boolean SCR_IsAspectCorrect(INT32 width, INT32 height);
 

@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2012-2016 by John "JTE" Muniz.
-// Copyright (C) 2012-2021 by Sonic Team Junior.
+// Copyright (C) 2012-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -85,6 +85,12 @@ static int lib_finetangent(lua_State *L)
 	// HACK: add ANGLE_90 to make tan() in Lua start at 0 like it should
 	// use & 4095 instead of & FINEMASK (8191), so it doesn't go out of the array's bounds
 	lua_pushfixed(L, FINETANGENT(((luaL_checkangle(L, 1)+ANGLE_90)>>ANGLETOFINESHIFT) & 4095));
+	return 1;
+}
+
+static int lib_fixedasin(lua_State *L)
+{
+	lua_pushangle(L, -FixedAcos(luaL_checkfixed(L, 1)) + ANGLE_90);
 	return 1;
 }
 
@@ -199,6 +205,7 @@ static luaL_Reg lib_math[] = {
 	{"sin", lib_finesine},
 	{"cos", lib_finecosine},
 	{"tan", lib_finetangent},
+	{"asin", lib_fixedasin},
 	{"acos", lib_fixedacos},
 	{"FixedAngle", lib_fixedangle},
 	{"fixangle"  , lib_fixedangle},

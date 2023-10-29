@@ -1,8 +1,8 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2021 by Sonic Team Junior.
-// Copyright (C) 2020-2021 by Nev3r.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 2020-2023 by Nev3r.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -14,6 +14,7 @@
 #include "taglist.h"
 #include "z_zone.h"
 #include "r_data.h"
+#include "p_spec.h"
 
 // Bit array of whether a tag exists for sectors/lines/things.
 bitarray_t tags_available[BIT_ARRAY_SIZE (MAXTAGS)];
@@ -35,6 +36,25 @@ void Tag_Add (taglist_t* list, const mtag_t tag)
 		return;
 	list->tags = Z_Realloc(list->tags, (list->count + 1) * sizeof(mtag_t), PU_LEVEL, NULL);
 	list->tags[list->count++] = tag;
+}
+
+/// Removes a tag from a given element's taglist.
+/// \warning This does not rebuild the global taggroups, which are used for iteration.
+void Tag_Remove(taglist_t* list, const mtag_t tag)
+{
+	UINT16 i;
+
+	for (i = 0; i < list->count; i++)
+	{
+		if (list->tags[i] != tag)
+			continue;
+
+		for (; i+1 < list->count; i++)
+			list->tags[i] = list->tags[i+1];
+
+		list->tags = Z_Realloc(list->tags, (list->count - 1) * sizeof(mtag_t), PU_LEVEL, NULL);
+		return;
+	}
 }
 
 /// Sets the first tag entry in a taglist.
@@ -191,6 +211,38 @@ void Taggroup_Add (taggroup_t *garray[], const mtag_t tag, size_t id)
 	group->elements[i] = id;
 }
 
+static void Taggroup_Add_Init(taggroup_t *garray[], const mtag_t tag, size_t id)
+{
+	taggroup_t *group;
+
+	if (tag == MTAG_GLOBAL)
+		return;
+
+	group = garray[(UINT16)tag];
+
+	if (! in_bit_array(tags_available, tag))
+	{
+		num_tags++;
+		set_bit_array(tags_available, tag);
+	}
+
+	// Create group if empty.
+	if (!group)
+		group = garray[(UINT16)tag] = Z_Calloc(sizeof(taggroup_t), PU_LEVEL, NULL);
+	else if (group->elements[group->count - 1] == id)
+		return; // Don't add duplicates
+
+	group->count++;
+
+	if (group->count > group->capacity)
+	{
+		group->capacity = 2 * group->count;
+		group->elements = Z_Realloc(group->elements, group->capacity * sizeof(size_t), PU_LEVEL, NULL);
+	}
+
+	group->elements[group->count - 1] = id;
+}
+
 static size_t total_elements_with_tag (const mtag_t tag)
 {
 	return
@@ -250,17 +302,17 @@ void Taggroup_Remove (taggroup_t *garray[], const mtag_t tag, size_t id)
 
 static void Taglist_AddToSectors (const mtag_t tag, const size_t itemid)
 {
-	Taggroup_Add(tags_sectors, tag, itemid);
+	Taggroup_Add_Init(tags_sectors, tag, itemid);
 }
 
 static void Taglist_AddToLines (const mtag_t tag, const size_t itemid)
 {
-	Taggroup_Add(tags_lines, tag, itemid);
+	Taggroup_Add_Init(tags_lines, tag, itemid);
 }
 
 static void Taglist_AddToMapthings (const mtag_t tag, const size_t itemid)
 {
-	Taggroup_Add(tags_mapthings, tag, itemid);
+	Taggroup_Add_Init(tags_mapthings, tag, itemid);
 }
 
 /// After all taglists have been built for each element (sectors, lines, things),
@@ -376,6 +428,22 @@ INT32 P_FindSpecialLineFromTag(INT16 special, INT16 tag, INT32 start)
 
 // Ingame list manipulation.
 
+/// Adds the tag to the given sector, and updates the global taggroups.
+void Tag_SectorAdd (const size_t id, const mtag_t tag)
+{
+	sector_t* sec = &sectors[id];
+	Tag_Add(&sec->tags, tag);
+	Taggroup_Add(tags_sectors, tag, id);
+}
+
+/// Removes the tag from the given sector, and updates the global taggroups.
+void Tag_SectorRemove (const size_t id, const mtag_t tag)
+{
+	sector_t* sec = &sectors[id];
+	Tag_Remove(&sec->tags, tag);
+	Taggroup_Remove(tags_sectors, tag, id);
+}
+
 /// Changes the first tag for a given sector, and updates the global taggroups.
 void Tag_SectorFSet (const size_t id, const mtag_t tag)
 {
@@ -387,4 +455,22 @@ void Tag_SectorFSet (const size_t id, const mtag_t tag)
 	Taggroup_Remove(tags_sectors, curtag, id);
 	Taggroup_Add(tags_sectors, tag, id);
 	Tag_FSet(&sec->tags, tag);
+
+	// Sectors with linedef trigger effects need to have their trigger tag updated too
+	// This is a bit of a hack...
+	if (!udmf && GETSECSPECIAL(sec->special, 2) >= 1 && GETSECSPECIAL(sec->special, 2) <= 7)
+		sec->triggertag = tag;
+}
+
+mtag_t Tag_NextUnused(mtag_t start)
+{
+	while ((UINT16)start < MAXTAGS)
+	{
+		if (!in_bit_array(tags_available, (UINT16)start))
+			return start;
+
+		start++;
+	}
+
+	return (mtag_t)MAXTAGS;
 }
