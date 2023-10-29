@@ -155,7 +155,7 @@ result_e T_MovePlane(sector_t *sector, fixed_t speed, fixed_t dest, boolean crus
 		}
 	}
 
-	return ok;
+	return planeok;
 }
 
 //
@@ -1128,7 +1128,7 @@ void T_ThwompSector(thwomp_t *thwomp)
 				thwomp->direction         // direction
 			);
 
-			if (res == ok || res == pastdest)
+			if (res == planeok || res == pastdest)
 				T_MovePlane
 				(
 					thwomp->sector,             // sector
@@ -1160,7 +1160,7 @@ void T_ThwompSector(thwomp_t *thwomp)
 				thwomp->direction // direction
 			);
 
-			if (res == ok || res == pastdest)
+			if (res == planeok || res == pastdest)
 				T_MovePlane
 				(
 					thwomp->sector,   // sector
@@ -1465,7 +1465,7 @@ void T_RaiseSector(raise_t *raise)
 		direction           // direction
 	);
 
-	if (res == ok || res == pastdest)
+	if (res == planeok || res == pastdest)
 		T_MovePlane
 		(
 			raise->sector,    // sector

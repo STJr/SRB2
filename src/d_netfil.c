@@ -498,7 +498,7 @@ INT32 CL_CheckFiles(void)
 		CONS_Debug(DBG_NETPLAY, "searching for '%s' ", fileneeded[i].filename);
 
 		// Check in already loaded files
-		for (j = mainwads; wadfiles[j]; j++)
+		for (j = mainwads; j < numwadfiles; j++)
 		{
 			nameonly(strcpy(wadfilename, wadfiles[j]->filename));
 			if (!stricmp(wadfilename, fileneeded[i].filename) &&

@@ -39,6 +39,7 @@
 #include "v_video.h"
 #include "lua_hook.h"
 #include "md5.h" // demo checksums
+#include "d_netfil.h" // G_CheckDemoExtraFiles
 
 boolean timingdemo; // if true, exit with report on completion
 boolean nodrawers; // for comparative timing purposes
@@ -49,6 +50,7 @@ static char demoname[64];
 boolean demorecording;
 boolean demoplayback;
 boolean titledemo; // Title Screen demo can be cancelled by any key
+demo_file_override_e demofileoverride;
 static UINT8 *demobuffer = NULL;
 static UINT8 *demo_p, *demotime_p;
 static UINT8 *demoend;
@@ -56,6 +58,7 @@ static UINT8 demoflags;
 static UINT16 demoversion;
 boolean singledemo; // quit after playing a demo from cmdline
 boolean demo_start; // don't start playing demo right away
+boolean demo_forwardmove_rng; // old demo backwards compatibility
 boolean demosynced = true; // console warning message
 
 boolean metalrecording; // recording as metal sonic
@@ -95,7 +98,7 @@ demoghost *ghosts = NULL;
 // DEMO RECORDING
 //
 
-#define DEMOVERSION 0x000f
+#define DEMOVERSION 0x0010
 #define DEMOHEADER  "\xF0" "SRB2Replay" "\x0F"
 
 #define DF_GHOST        0x01 // This demo contains ghost data too!
@@ -1413,6 +1416,10 @@ void G_BeginRecording(void)
 	char name[MAXCOLORNAME+1];
 	player_t *player = &players[consoleplayer];
 
+	char *filename;
+	UINT16 totalfiles;
+	UINT8 *m;
+
 	if (demo_p)
 		return;
 	memset(name,0,sizeof(name));
@@ -1435,23 +1442,43 @@ void G_BeginRecording(void)
 	M_Memcpy(demo_p, mapmd5, 16); demo_p += 16;
 
 	WRITEUINT8(demo_p,demoflags);
+
+	// file list
+	m = demo_p;/* file count */
+	demo_p += 2;
+
+	totalfiles = 0;
+	for (i = mainwads; ++i < numwadfiles; )
+	{
+		if (wadfiles[i]->important)
+		{
+			nameonly(( filename = va("%s", wadfiles[i]->filename) ));
+			WRITESTRINGL(demo_p, filename, MAX_WADPATH);
+			WRITEMEM(demo_p, wadfiles[i]->md5sum, 16);
+
+			totalfiles++;
+		}
+	}
+
+	WRITEUINT16(m, totalfiles);
+
 	switch ((demoflags & DF_ATTACKMASK)>>DF_ATTACKSHIFT)
 	{
-	case ATTACKING_NONE: // 0
-		break;
-	case ATTACKING_RECORD: // 1
-		demotime_p = demo_p;
-		WRITEUINT32(demo_p,UINT32_MAX); // time
-		WRITEUINT32(demo_p,0); // score
-		WRITEUINT16(demo_p,0); // rings
-		break;
-	case ATTACKING_NIGHTS: // 2
-		demotime_p = demo_p;
-		WRITEUINT32(demo_p,UINT32_MAX); // time
-		WRITEUINT32(demo_p,0); // score
-		break;
-	default: // 3
-		break;
+		case ATTACKING_NONE: // 0
+			break;
+		case ATTACKING_RECORD: // 1
+			demotime_p = demo_p;
+			WRITEUINT32(demo_p,UINT32_MAX); // time
+			WRITEUINT32(demo_p,0); // score
+			WRITEUINT16(demo_p,0); // rings
+			break;
+		case ATTACKING_NIGHTS: // 2
+			demotime_p = demo_p;
+			WRITEUINT32(demo_p,UINT32_MAX); // time
+			WRITEUINT32(demo_p,0); // score
+			break;
+		default: // 3
+			break;
 	}
 
 	WRITEUINT32(demo_p,P_GetInitSeed());
@@ -1483,18 +1510,18 @@ void G_BeginRecording(void)
 	// Stats
 	WRITEUINT8(demo_p,player->charability);
 	WRITEUINT8(demo_p,player->charability2);
-	WRITEUINT8(demo_p,player->actionspd>>FRACBITS);
-	WRITEUINT8(demo_p,player->mindash>>FRACBITS);
-	WRITEUINT8(demo_p,player->maxdash>>FRACBITS);
-	WRITEUINT8(demo_p,player->normalspeed>>FRACBITS);
-	WRITEUINT8(demo_p,player->runspeed>>FRACBITS);
+	WRITEFIXED(demo_p,player->actionspd);
+	WRITEFIXED(demo_p,player->mindash);
+	WRITEFIXED(demo_p,player->maxdash);
+	WRITEFIXED(demo_p,player->normalspeed);
+	WRITEFIXED(demo_p,player->runspeed);
 	WRITEUINT8(demo_p,player->thrustfactor);
 	WRITEUINT8(demo_p,player->accelstart);
 	WRITEUINT8(demo_p,player->acceleration);
 	WRITEFIXED(demo_p,player->height);
 	WRITEFIXED(demo_p,player->spinheight);
-	WRITEUINT8(demo_p,player->camerascale>>FRACBITS);
-	WRITEUINT8(demo_p,player->shieldscale>>FRACBITS);
+	WRITEFIXED(demo_p,player->camerascale);
+	WRITEFIXED(demo_p,player->shieldscale);
 
 	// Trying to convert it back to % causes demo desync due to precision loss.
 	// Don't do it.
@@ -1590,6 +1617,183 @@ void G_BeginMetal(void)
 	oldmetal.angle = mo->angle>>24;
 }
 
+static void G_LoadDemoExtraFiles(UINT8 **pp, UINT16 this_demo_version)
+{
+	UINT16 totalfiles;
+	char filename[MAX_WADPATH];
+	UINT8 md5sum[16];
+	filestatus_t ncs;
+	boolean toomany = false;
+	boolean alreadyloaded;
+	UINT16 i, j;
+
+	if (this_demo_version < 0x0010)
+	{
+		// demo has no file list
+		return;
+	}
+
+	totalfiles = READUINT16((*pp));
+	for (i = 0; i < totalfiles; ++i)
+	{
+		if (toomany)
+			SKIPSTRING((*pp));
+		else
+		{
+			strlcpy(filename, (char *)(*pp), sizeof filename);
+			SKIPSTRING((*pp));
+		}
+		READMEM((*pp), md5sum, 16);
+
+		if (!toomany)
+		{
+			alreadyloaded = false;
+
+			for (j = 0; j < numwadfiles; ++j)
+			{
+				if (memcmp(md5sum, wadfiles[j]->md5sum, 16) == 0)
+				{
+					alreadyloaded = true;
+					break;
+				}
+			}
+
+			if (alreadyloaded)
+				continue;
+
+			if (numwadfiles >= MAX_WADFILES)
+				toomany = true;
+			else
+				ncs = findfile(filename, md5sum, false);
+
+			if (toomany)
+			{
+				CONS_Alert(CONS_WARNING, M_GetText("Too many files loaded to add anymore for demo playback\n"));
+				if (!CON_Ready())
+					M_StartMessage(M_GetText("There are too many files loaded to add this demo's addons.\n\nDemo playback may desync.\n\nPress ESC\n"), NULL, MM_NOTHING);
+			}
+			else if (ncs != FS_FOUND)
+			{
+				if (ncs == FS_NOTFOUND)
+					CONS_Alert(CONS_NOTICE, M_GetText("You do not have a copy of %s\n"), filename);
+				else if (ncs == FS_MD5SUMBAD)
+					CONS_Alert(CONS_NOTICE, M_GetText("Checksum mismatch on %s\n"), filename);
+				else
+					CONS_Alert(CONS_NOTICE, M_GetText("Unknown error finding file %s\n"), filename);
+
+				if (!CON_Ready())
+					M_StartMessage(M_GetText("There were errors trying to add this demo's addons. Check the console for more information.\n\nDemo playback may desync.\n\nPress ESC\n"), NULL, MM_NOTHING);
+			}
+			else
+			{
+				P_AddWadFile(filename);
+			}
+		}
+	}
+}
+
+static void G_SkipDemoExtraFiles(UINT8 **pp, UINT16 this_demo_version)
+{
+	UINT16 totalfiles;
+	UINT16 i;
+
+	if (this_demo_version < 0x0010)
+	{
+		// demo has no file list
+		return;
+	}
+
+	totalfiles = READUINT16((*pp));
+	for (i = 0; i < totalfiles; ++i)
+	{
+		SKIPSTRING((*pp));// file name
+		(*pp) += 16;// md5
+	}
+}
+
+// G_CheckDemoExtraFiles: checks if our loaded WAD list matches the demo's.
+// Enabling quick prevents filesystem checks to see if needed files are available to load.
+static UINT8 G_CheckDemoExtraFiles(UINT8 **pp, boolean quick, UINT16 this_demo_version)
+{
+	UINT16 totalfiles, filesloaded, nmusfilecount;
+	char filename[MAX_WADPATH];
+	UINT8 md5sum[16];
+	boolean toomany = false;
+	boolean alreadyloaded;
+	UINT16 i, j;
+	UINT8 error = DFILE_ERROR_NONE;
+
+	if (this_demo_version < 0x0010)
+	{
+		// demo has no file list
+		return DFILE_ERROR_NONE;
+	}
+
+	totalfiles = READUINT16((*pp));
+	filesloaded = 0;
+	for (i = 0; i < totalfiles; ++i)
+	{
+		if (toomany)
+			SKIPSTRING((*pp));
+		else
+		{
+			strlcpy(filename, (char *)(*pp), sizeof filename);
+			SKIPSTRING((*pp));
+		}
+		READMEM((*pp), md5sum, 16);
+
+		if (!toomany)
+		{
+			alreadyloaded = false;
+			nmusfilecount = 0;
+
+			for (j = 0; j < numwadfiles; ++j)
+			{
+				if (wadfiles[j]->important && j > mainwads)
+					nmusfilecount++;
+				else
+					continue;
+
+				if (memcmp(md5sum, wadfiles[j]->md5sum, 16) == 0)
+				{
+					alreadyloaded = true;
+
+					if (i != nmusfilecount-1 && error < DFILE_ERROR_OUTOFORDER)
+						error |= DFILE_ERROR_OUTOFORDER;
+
+					break;
+				}
+			}
+
+			if (alreadyloaded)
+			{
+				filesloaded++;
+				continue;
+			}
+
+			if (numwadfiles >= MAX_WADFILES)
+				error = DFILE_ERROR_CANNOTLOAD;
+			else if (!quick && findfile(filename, md5sum, false) != FS_FOUND)
+				error = DFILE_ERROR_CANNOTLOAD;
+			else if (error < DFILE_ERROR_INCOMPLETEOUTOFORDER)
+				error |= DFILE_ERROR_NOTLOADED;
+		} else
+			error = DFILE_ERROR_CANNOTLOAD;
+	}
+
+	// Get final file count
+	nmusfilecount = 0;
+
+	for (j = 0; j < numwadfiles; ++j)
+		if (wadfiles[j]->important && j > mainwads)
+			nmusfilecount++;
+
+	if (!error && filesloaded < nmusfilecount)
+		error = DFILE_ERROR_EXTRAFILES;
+
+	return error;
+}
+
 void G_SetDemoTime(UINT32 ptime, UINT32 pscore, UINT16 prings)
 {
 	if (!demorecording || !demotime_p)
@@ -1618,10 +1822,9 @@ UINT8 G_CmpDemoTime(char *oldname, char *newname)
 	UINT8 *buffer,*p;
 	UINT8 flags;
 	UINT32 oldtime, newtime, oldscore, newscore;
-	UINT16 oldrings, newrings, oldversion;
+	UINT16 oldrings, newrings, oldversion, newversion;
 	size_t bufsize ATTRUNUSED;
 	UINT8 c;
-	UINT16 s ATTRUNUSED;
 	UINT8 aflags = 0;
 
 	// load the new file
@@ -1637,15 +1840,15 @@ UINT8 G_CmpDemoTime(char *oldname, char *newname)
 	I_Assert(c == VERSION);
 	c = READUINT8(p); // SUBVERSION
 	I_Assert(c == SUBVERSION);
-	s = READUINT16(p);
-	I_Assert(s >= 0x000c);
+	newversion = READUINT16(p);
+	I_Assert(newversion == DEMOVERSION);
 	p += 16; // demo checksum
 	I_Assert(!memcmp(p, "PLAY", 4));
 	p += 4; // PLAY
 	p += 2; // gamemap
 	p += 16; // map md5
 	flags = READUINT8(p); // demoflags
-
+	G_SkipDemoExtraFiles(&p, newversion);
 	aflags = flags & (DF_RECORDATTACK|DF_NIGHTSATTACK);
 	I_Assert(aflags);
 	if (flags & DF_RECORDATTACK)
@@ -1687,7 +1890,8 @@ UINT8 G_CmpDemoTime(char *oldname, char *newname)
 	switch(oldversion) // demoversion
 	{
 	case DEMOVERSION: // latest always supported
-	case 0x000e: // The previous demoversions also supported
+	case 0x000f: // The previous demoversions also supported 
+	case 0x000e:
 	case 0x000d: // all that changed between then and now was longer color name
 	case 0x000c:
 		break;
@@ -1710,6 +1914,7 @@ UINT8 G_CmpDemoTime(char *oldname, char *newname)
 		p += 2; // gamemap
 	p += 16; // mapmd5
 	flags = READUINT8(p);
+	G_SkipDemoExtraFiles(&p, oldversion);
 	if (!(flags & aflags))
 	{
 		CONS_Alert(CONS_NOTICE, M_GetText("File '%s' not from same game mode. It will be overwritten.\n"), oldname);
@@ -1829,8 +2034,10 @@ void G_DoPlayDemo(char *defdemoname)
 	version = READUINT8(demo_p);
 	subversion = READUINT8(demo_p);
 	demoversion = READUINT16(demo_p);
+	demo_forwardmove_rng = (demoversion < 0x0010);
 	switch(demoversion)
 	{
+	case 0x000f:
 	case 0x000d:
 	case 0x000e:
 	case DEMOVERSION: // latest always supported
@@ -1871,6 +2078,69 @@ void G_DoPlayDemo(char *defdemoname)
 	demo_p += 16; // mapmd5
 
 	demoflags = READUINT8(demo_p);
+
+	if (titledemo)
+	{
+		// Titledemos should always play and ought to always be compatible with whatever wadlist is running.
+		G_SkipDemoExtraFiles(&demo_p, demoversion);
+	}
+	else if (demofileoverride == DFILE_OVERRIDE_LOAD)
+	{
+		G_LoadDemoExtraFiles(&demo_p, demoversion);
+	}
+	else if (demofileoverride == DFILE_OVERRIDE_SKIP)
+	{
+		G_SkipDemoExtraFiles(&demo_p, demoversion);
+	}
+	else
+	{
+		UINT8 error = G_CheckDemoExtraFiles(&demo_p, false, demoversion);
+
+		if (error)
+		{
+			switch (error)
+			{
+				case DFILE_ERROR_NOTLOADED:
+					snprintf(msg, 1024,
+						M_GetText("Required files for this demo are not loaded.\n\nUse\n\"playdemo %s -addfiles\"\nto load them and play the demo.\n"),
+					pdemoname);
+					break;
+
+				case DFILE_ERROR_OUTOFORDER:
+					snprintf(msg, 1024,
+						M_GetText("Required files for this demo are loaded out of order.\n\nUse\n\"playdemo %s -force\"\nto play the demo anyway.\n"),
+					pdemoname);
+					break;
+
+				case DFILE_ERROR_INCOMPLETEOUTOFORDER:
+					snprintf(msg, 1024,
+						M_GetText("Required files for this demo are not loaded, and some are out of order.\n\nUse\n\"playdemo %s -addfiles\"\nto load needed files and play the demo.\n"),
+					pdemoname);
+					break;
+
+				case DFILE_ERROR_CANNOTLOAD:
+					snprintf(msg, 1024,
+						M_GetText("Required files for this demo cannot be loaded.\n\nUse\n\"playdemo %s -force\"\nto play the demo anyway.\n"),
+					pdemoname);
+					break;
+
+				case DFILE_ERROR_EXTRAFILES:
+					snprintf(msg, 1024,
+						M_GetText("You have additional files loaded beyond the demo's file list.\n\nUse\n\"playdemo %s -force\"\nto play the demo anyway.\n"),
+					pdemoname);
+					break;
+			}
+
+			CONS_Alert(CONS_ERROR, "%s", msg);
+			M_StartMessage(msg, NULL, MM_NOTHING);
+			Z_Free(pdemoname);
+			Z_Free(demobuffer);
+			demoplayback = false;
+			titledemo = false;
+			return;
+		}
+	}
+
 	modeattacking = (demoflags & DF_ATTACKMASK)>>DF_ATTACKSHIFT;
 	CON_ToggleOff();
 
@@ -1913,18 +2183,18 @@ void G_DoPlayDemo(char *defdemoname)
 
 	charability = READUINT8(demo_p);
 	charability2 = READUINT8(demo_p);
-	actionspd = (fixed_t)READUINT8(demo_p)<<FRACBITS;
-	mindash = (fixed_t)READUINT8(demo_p)<<FRACBITS;
-	maxdash = (fixed_t)READUINT8(demo_p)<<FRACBITS;
-	normalspeed = (fixed_t)READUINT8(demo_p)<<FRACBITS;
-	runspeed = (fixed_t)READUINT8(demo_p)<<FRACBITS;
+	actionspd = (demoversion < 0x0010) ? (fixed_t)READUINT8(demo_p)<<FRACBITS : READFIXED(demo_p);
+	mindash = (demoversion < 0x0010) ? (fixed_t)READUINT8(demo_p)<<FRACBITS : READFIXED(demo_p);
+	maxdash = (demoversion < 0x0010) ? (fixed_t)READUINT8(demo_p)<<FRACBITS : READFIXED(demo_p);
+	normalspeed = (demoversion < 0x0010) ? (fixed_t)READUINT8(demo_p)<<FRACBITS : READFIXED(demo_p);
+	runspeed = (demoversion < 0x0010) ? (fixed_t)READUINT8(demo_p)<<FRACBITS : READFIXED(demo_p);
 	thrustfactor = READUINT8(demo_p);
 	accelstart = READUINT8(demo_p);
 	acceleration = READUINT8(demo_p);
 	height = (demoversion < 0x000e) ? (fixed_t)READUINT8(demo_p)<<FRACBITS : READFIXED(demo_p);
 	spinheight = (demoversion < 0x000e) ? (fixed_t)READUINT8(demo_p)<<FRACBITS : READFIXED(demo_p);
-	camerascale = (fixed_t)READUINT8(demo_p)<<FRACBITS;
-	shieldscale = (fixed_t)READUINT8(demo_p)<<FRACBITS;
+	camerascale = (demoversion < 0x0010) ? (fixed_t)READUINT8(demo_p)<<FRACBITS : READFIXED(demo_p);
+	shieldscale = (demoversion < 0x0010) ? (fixed_t)READUINT8(demo_p)<<FRACBITS : READFIXED(demo_p);
 	jumpfactor = READFIXED(demo_p);
 	followitem = READUINT32(demo_p);
 
@@ -2026,6 +2296,88 @@ void G_DoPlayDemo(char *defdemoname)
 	demo_start = true;
 }
 
+//
+// Check if a replay can be loaded from the menu
+//
+UINT8 G_CheckDemoForError(char *defdemoname)
+{
+	lumpnum_t l;
+	char *n,*pdemoname;
+	UINT16 our_demo_version;
+
+	if (titledemo)
+	{
+		// Don't do anything with files for these.
+		return DFILE_ERROR_NONE;
+	}
+
+	n = defdemoname+strlen(defdemoname);
+	while (*n != '/' && *n != '\\' && n != defdemoname)
+		n--;
+	if (n != defdemoname)
+		n++;
+	pdemoname = ZZ_Alloc(strlen(n)+1);
+	strcpy(pdemoname,n);
+
+	// Internal if no extension, external if one exists
+	if (FIL_CheckExtension(defdemoname))
+	{
+		//FIL_DefaultExtension(defdemoname, ".lmp");
+		if (!FIL_ReadFile(defdemoname, &demobuffer))
+		{
+			return DFILE_ERROR_NOTDEMO;
+		}
+		demo_p = demobuffer;
+	}
+	// load demo resource from WAD
+	else if ((l = W_CheckNumForName(defdemoname)) == LUMPERROR)
+	{
+		return DFILE_ERROR_NOTDEMO;
+	}
+	else // it's an internal demo
+	{
+		demobuffer = demo_p = W_CacheLumpNum(l, PU_STATIC);
+	}
+
+	// read demo header
+	if (memcmp(demo_p, DEMOHEADER, 12))
+	{
+		return DFILE_ERROR_NOTDEMO;
+	}
+	demo_p += 12; // DEMOHEADER
+
+	demo_p++; // version
+	demo_p++; // subversion
+	our_demo_version = READUINT16(demo_p);
+	switch(our_demo_version)
+	{
+	case 0x000d:
+	case 0x000e:
+	case 0x000f:
+	case DEMOVERSION: // latest always supported
+		break;
+#ifdef OLD22DEMOCOMPAT
+	case 0x000c:
+		break;
+#endif
+	// too old, cannot support.
+	default:
+		return DFILE_ERROR_NOTDEMO;
+	}
+	demo_p += 16; // demo checksum
+	if (memcmp(demo_p, "PLAY", 4))
+	{
+		return DFILE_ERROR_NOTDEMO;
+	}
+	demo_p += 4; // "PLAY"
+	demo_p += 2; // gamemap
+	demo_p += 16; // mapmd5
+
+	demo_p++; // demoflags
+
+	return G_CheckDemoExtraFiles(&demo_p, true, our_demo_version);
+}
+
 void G_AddGhost(char *defdemoname)
 {
 	INT32 i;
@@ -2085,6 +2437,7 @@ void G_AddGhost(char *defdemoname)
 	ghostversion = READUINT16(p);
 	switch(ghostversion)
 	{
+	case 0x000f:
 	case 0x000d:
 	case 0x000e:
 	case DEMOVERSION: // latest always supported
@@ -2130,6 +2483,9 @@ void G_AddGhost(char *defdemoname)
 		Z_Free(buffer);
 		return;
 	}
+
+	G_SkipDemoExtraFiles(&p, ghostversion); // Don't wanna modify the file list for ghosts.
+
 	switch ((flags & DF_ATTACKMASK)>>DF_ATTACKSHIFT)
 	{
 	case ATTACKING_NONE: // 0
@@ -2161,17 +2517,12 @@ void G_AddGhost(char *defdemoname)
 	// Ghosts do not have a player structure to put this in.
 	p++; // charability
 	p++; // charability2
-	p++; // actionspd
-	p++; // mindash
-	p++; // maxdash
-	p++; // normalspeed
-	p++; // runspeed
+	p += (ghostversion < 0x0010) ? 5 : 5 * sizeof(fixed_t); // actionspd, mindash, maxdash, normalspeed, and runspeed
 	p++; // thrustfactor
 	p++; // accelstart
 	p++; // acceleration
 	p += (ghostversion < 0x000e) ? 2 : 2 * sizeof(fixed_t); // height and spinheight
-	p++; // camerascale
-	p++; // shieldscale
+	p += (ghostversion < 0x0010) ? 2 : 2 * sizeof(fixed_t); // camerascale and shieldscale
 	p += 4; // jumpfactor
 	p += 4; // followitem
 
@@ -2347,6 +2698,7 @@ void G_DoPlayMetal(void)
 	switch(metalversion)
 	{
 	case DEMOVERSION: // latest always supported
+	case 0x000f:
 	case 0x000e: // There are checks wheter the momentum is from older demo versions or not
 	case 0x000d: // all that changed between then and now was longer color name
 	case 0x000c:

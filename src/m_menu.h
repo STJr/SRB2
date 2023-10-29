@@ -482,6 +482,8 @@ void M_MoveColorBefore(UINT16 color, UINT16 targ);
 void M_MoveColorAfter(UINT16 color, UINT16 targ);
 UINT16 M_GetColorBefore(UINT16 color);
 UINT16 M_GetColorAfter(UINT16 color);
+UINT16 M_GetColorIndex(UINT16 color);
+menucolor_t* M_GetColorFromIndex(UINT16 index);
 void M_InitPlayerSetupColors(void);
 void M_FreePlayerSetupColors(void);
 

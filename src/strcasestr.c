@@ -61,7 +61,7 @@ swapp (char ***ppap, char ***ppbp, char **cpap, char **cpbp)
 }
 
 char *
-strcasestr (const char *s, const char *q)
+nongnu_strcasestr (const char *s, const char *q)
 {
 	size_t  qn;
 

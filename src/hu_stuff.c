@@ -2025,7 +2025,7 @@ void HU_Drawer(void)
 		V_DrawCenteredString(BASEVIDWIDTH/2, 180, V_YELLOWMAP | V_ALLOWLOWERCASE, resynch_text);
 	}
 
-	if (modeattacking && pausedelay > 0 && !pausebreakkey)
+	if (modeattacking && pausedelay > 0 && !(pausebreakkey || cv_instantretry.value))
 	{
 		INT32 strength = ((pausedelay - 1 - NEWTICRATE/2)*10)/(NEWTICRATE/3);
 		INT32 y = hudinfo[HUD_LIVES].y - 13;
@@ -2862,18 +2862,6 @@ static void HU_DrawRankings(void)
 			V_DrawCenteredString(256, 16, 0, va("%d", cv_pointlimit.value));
 		}
 	}
-	else if (gametyperankings[gametype] == GT_COOP)
-	{
-		INT32 totalscore = 0;
-		for (i = 0; i < MAXPLAYERS; i++)
-		{
-			if (playeringame[i])
-				totalscore += players[i].score;
-		}
-
-		V_DrawCenteredString(256, 8, 0, "TOTAL SCORE");
-		V_DrawCenteredString(256, 16, 0, va("%u", totalscore));
-	}
 	else
 	{
 		if (circuitmap)
@@ -2994,9 +2982,9 @@ static void HU_DrawCoopOverlay(void)
 		V_DrawSmallScaledPatch(148, 172, 0, tokenicon);
 	}
 
-	if (LUA_HudEnabled(hud_tabemblems) && (!modifiedgame || savemoddata))
+	if (LUA_HudEnabled(hud_tabemblems))
 	{
-		V_DrawString(160, 144, 0, va("- %d/%d", M_CountEmblems(), numemblems+numextraemblems));
+		V_DrawString(160, 144, 0, va("- %d/%d", M_CountEmblems(clientGamedata), numemblems+numextraemblems));
 		V_DrawScaledPatch(128, 144 - emblemicon->height/4, 0, emblemicon);
 	}
 
@@ -3027,6 +3015,15 @@ static void HU_DrawNetplayCoopOverlay(void)
 	{
 		V_DrawString(168, 10, 0, va("- %d", token));
 		V_DrawSmallScaledPatch(148, 6, 0, tokenicon);
+	}
+
+	if (G_CoopGametype() && LUA_HudEnabled(hud_tabemblems))
+	{
+		V_DrawCenteredString(256, 14, 0, "/");
+		V_DrawString(256 + 4, 14, 0, va("%d", numemblems + numextraemblems));
+		V_DrawRightAlignedString(256 - 4, 14, 0, va("%d", M_CountEmblems(clientGamedata)));
+
+		V_DrawSmallScaledPatch(256 - (emblemicon->width / 4), 6, 0, emblemicon);
 	}
 
 	if (!LUA_HudEnabled(hud_coopemeralds))

@@ -24,7 +24,7 @@ static INT64 start_time; // as microseconds since the epoch
 
 // I should probably return how much memory is remaining
 // for this process, considering Android's process memory limit.
-UINT32 I_GetFreeMem(UINT32 *total)
+size_t I_GetFreeMem(size_t *total)
 {
   // what the heck?  sysinfo() is partially missing in bionic?
   /* struct sysinfo si; */
@@ -277,5 +277,27 @@ char *I_ClipboardPaste(void)
 }
 
 void I_RegisterSysCommands(void) {}
+
+// This is identical to the SDL implementation.
+size_t I_GetRandomBytes(char *destination, size_t count)
+{
+  FILE *rndsource;
+  size_t actual_bytes;
+
+  if (!(rndsource = fopen("/dev/urandom", "r")))
+	  if (!(rndsource = fopen("/dev/random", "r")))
+		  actual_bytes = 0;
+
+  if (rndsource)
+  {
+	  actual_bytes = fread(destination, 1, count, rndsource);
+	  fclose(rndsource);
+  }
+
+  if (actual_bytes == 0)
+    I_OutputMsg("I_GetRandomBytes(): couldn't get any random bytes");
+
+  return actual_bytes;
+}
 
 #include "../sdl/dosstr.c"

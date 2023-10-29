@@ -631,7 +631,8 @@ void B_HandleFlightIndicator(player_t *player)
 	}
 
 	// otherwise, update its visibility
-	if (P_IsLocalPlayer(player->botleader))
+	tails->hnext->drawonlyforplayer = player->botleader; // Hide it from the other player in splitscreen, and yourself when spectating
+	if (P_IsLocalPlayer(player->botleader)) // Only display it on your own view. Don't display it for spectators
 		tails->hnext->flags2 &= ~MF2_DONTDRAW;
 	else
 		tails->hnext->flags2 |= MF2_DONTDRAW;
