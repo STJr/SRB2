@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2012-2016 by John "JTE" Muniz.
-// Copyright (C) 2012-2021 by Sonic Team Junior.
+// Copyright (C) 2012-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -253,7 +253,7 @@ static int lib_comBufAddText(lua_State *L)
 		plr = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
 	if (plr && plr != &players[consoleplayer])
 		return 0;
-	COM_BufAddTextEx(va("%s\n", luaL_checkstring(L, 2)), COM_SAFE);
+	COM_BufAddTextEx(va("%s\n", luaL_checkstring(L, 2)), COM_LUA);
 	return 0;
 }
 
@@ -269,7 +269,7 @@ static int lib_comBufInsertText(lua_State *L)
 		plr = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
 	if (plr && plr != &players[consoleplayer])
 		return 0;
-	COM_BufInsertTextEx(va("%s\n", luaL_checkstring(L, 2)), COM_SAFE);
+	COM_BufInsertTextEx(va("%s\n", luaL_checkstring(L, 2)), COM_LUA);
 	return 0;
 }
 
@@ -313,36 +313,57 @@ static int lib_cvRegisterVar(lua_State *L)
 #define TYPEERROR(f, t) FIELDERROR(f, va("%s expected, got %s", lua_typename(L, t), luaL_typename(L, -1)))
 
 	lua_pushnil(L);
-	while (lua_next(L, 1)) {
+	while (lua_next(L, 1))
+	{
 		// stack: cvar table, cvar userdata, key/index, value
 		//            1             2            3        4
 		i = 0;
 		k = NULL;
 		if (lua_isnumber(L, 3))
+		{
 			i = lua_tointeger(L, 3);
+		}
 		else if (lua_isstring(L, 3))
+		{
 			k = lua_tostring(L, 3);
+		}
 
-		if (i == 1 || (k && fasticmp(k, "name"))) {
+		if (i == 1 || (k && fasticmp(k, "name")))
+		{
 			if (!lua_isstring(L, 4))
+			{
 				TYPEERROR("name", LUA_TSTRING)
+			}
 			cvar->name = Z_StrDup(lua_tostring(L, 4));
-		} else if (i == 2 || (k && fasticmp(k, "defaultvalue"))) {
+		}
+		else if (i == 2 || (k && fasticmp(k, "defaultvalue")))
+		{
 			if (!lua_isstring(L, 4))
+			{
 				TYPEERROR("defaultvalue", LUA_TSTRING)
+			}
 			cvar->defaultvalue = Z_StrDup(lua_tostring(L, 4));
-		} else if (i == 3 || (k && fasticmp(k, "flags"))) {
+		}
+		else if (i == 3 || (k && fasticmp(k, "flags")))
+		{
 			if (!lua_isnumber(L, 4))
+			{
 				TYPEERROR("flags", LUA_TNUMBER)
+			}
 			cvar->flags = (INT32)lua_tointeger(L, 4);
-		} else if (i == 4 || (k && fasticmp(k, "PossibleValue"))) {
-			if (lua_islightuserdata(L, 4)) {
+		}
+		else if (i == 4 || (k && fasticmp(k, "PossibleValue")))
+		{
+			if (lua_islightuserdata(L, 4))
+			{
 				CV_PossibleValue_t *pv = lua_touserdata(L, 4);
-				if (pv == CV_OnOff || pv == CV_YesNo || pv == CV_Unsigned || pv == CV_Natural)
+				if (pv == CV_OnOff || pv == CV_YesNo || pv == CV_Unsigned || pv == CV_Natural || pv == CV_TrueFalse)
 					cvar->PossibleValue = pv;
 				else
 					FIELDERROR("PossibleValue", "CV_PossibleValue_t expected, got unrecognised pointer")
-			} else if (lua_istable(L, 4)) {
+			}
+			else if (lua_istable(L, 4))
+			{
 				// Accepts tables in the form of {MIN=0, MAX=9999} or {Red=0, Green=1, Blue=2}
 				// and converts them to CV_PossibleValue_t {{0,"MIN"},{9999,"MAX"}} or {{0,"Red"},{1,"Green"},{2,"Blue"}}
 				//
@@ -353,7 +374,8 @@ static int lib_cvRegisterVar(lua_State *L)
 				CV_PossibleValue_t *cvpv;
 
 				lua_pushnil(L);
-				while (lua_next(L, 4)) {
+				while (lua_next(L, 4))
+				{
 					count++;
 					lua_pop(L, 1);
 				}
@@ -367,7 +389,8 @@ static int lib_cvRegisterVar(lua_State *L)
 
 				i = 0;
 				lua_pushnil(L);
-				while (lua_next(L, 4)) {
+				while (lua_next(L, 4))
+				{
 					// stack: [...] PossibleValue table, index, value
 					//                       4             5      6
 					if (lua_type(L, 5) != LUA_TSTRING
@@ -381,11 +404,18 @@ static int lib_cvRegisterVar(lua_State *L)
 				cvpv[i].value = 0;
 				cvpv[i].strvalue = NULL;
 				cvar->PossibleValue = cvpv;
-			} else
+			}
+			else
+			{
 				FIELDERROR("PossibleValue", va("%s or CV_PossibleValue_t expected, got %s", lua_typename(L, LUA_TTABLE), luaL_typename(L, -1)))
-		} else if (cvar->flags & CV_CALL && (i == 5 || (k && fasticmp(k, "func")))) {
+			}
+		}
+		else if (cvar->flags & CV_CALL && (i == 5 || (k && fasticmp(k, "func"))))
+		{
 			if (!lua_isfunction(L, 4))
+			{
 				TYPEERROR("func", LUA_TFUNCTION)
+			}
 			lua_getfield(L, LUA_REGISTRYINDEX, "CV_OnChange");
 			I_Assert(lua_istable(L, 5));
 			lua_pushlightuserdata(L, cvar);
@@ -400,18 +430,35 @@ static int lib_cvRegisterVar(lua_State *L)
 #undef FIELDERROR
 #undef TYPEERROR
 
-	if (!cvar->name)
-		return luaL_error(L, M_GetText("Variable has no name!\n"));
-	if ((cvar->flags & CV_NOINIT) && !(cvar->flags & CV_CALL))
-		return luaL_error(L, M_GetText("Variable %s has CV_NOINIT without CV_CALL\n"), cvar->name);
-	if ((cvar->flags & CV_CALL) && !cvar->func)
-		return luaL_error(L, M_GetText("Variable %s has CV_CALL without a function\n"), cvar->name);
+	if (!cvar->name || cvar->name[0] == '\0')
+	{
+		return luaL_error(L, M_GetText("Variable has no name!"));
+	}
 
+	if (!cvar->defaultvalue)
+	{
+		return luaL_error(L, M_GetText("Variable has no defaultvalue!"));
+	}
+
+	if ((cvar->flags & CV_NOINIT) && !(cvar->flags & CV_CALL))
+	{
+		return luaL_error(L, M_GetText("Variable %s has CV_NOINIT without CV_CALL"), cvar->name);
+	}
+
+	if ((cvar->flags & CV_CALL) && !cvar->func)
+	{
+		return luaL_error(L, M_GetText("Variable %s has CV_CALL without a function"), cvar->name);
+	}
+
+	cvar->flags |= CV_ALLOWLUA;
 	// actually time to register it to the console now! Finally!
 	cvar->flags |= CV_MODIFIED;
 	CV_RegisterVar(cvar);
+
 	if (cvar->flags & CV_MODIFIED)
+	{
 		return luaL_error(L, "failed to register cvar (probable conflict with internal variable/command names)");
+	}
 
 	// return cvar userdata
 	return 1;
@@ -432,7 +479,7 @@ static int CVarSetFunction
 ){
 	consvar_t *cvar = *(consvar_t **)luaL_checkudata(L, 1, META_CVAR);
 
-	if (cvar->flags & CV_NOLUA)
+	if (!(cvar->flags & CV_ALLOWLUA))
 		return luaL_error(L, "Variable '%s' cannot be set from Lua.", cvar->name);
 
 	switch (lua_type(L, 2))
@@ -464,7 +511,7 @@ static int lib_cvAddValue(lua_State *L)
 {
 	consvar_t *cvar = *(consvar_t **)luaL_checkudata(L, 1, META_CVAR);
 
-	if (cvar->flags & CV_NOLUA)
+	if (!(cvar->flags & CV_ALLOWLUA))
 		return luaL_error(L, "Variable %s cannot be set from Lua.", cvar->name);
 
 	CV_AddValue(cvar, (INT32)luaL_checknumber(L, 2));
@@ -519,27 +566,59 @@ static luaL_Reg lib[] = {
 	{NULL, NULL}
 };
 
+enum cvar_e
+{
+	cvar_name,
+	cvar_defaultvalue,
+	cvar_flags,
+	cvar_value,
+	cvar_string,
+	cvar_changed,
+};
+
+static const char *const cvar_opt[] = {
+	"name",
+	"defaultvalue",
+	"flags",
+	"value",
+	"string",
+	"changed",
+	NULL,
+};
+
+static int cvar_fields_ref = LUA_NOREF;
+
 static int cvar_get(lua_State *L)
 {
 	consvar_t *cvar = *(consvar_t **)luaL_checkudata(L, 1, META_CVAR);
-	const char *field = luaL_checkstring(L, 2);
+	enum cvar_e field = Lua_optoption(L, 2, -1, cvar_fields_ref);
 
-	if(fastcmp(field,"name"))
+	switch (field)
+	{
+	case cvar_name:
 		lua_pushstring(L, cvar->name);
-	else if(fastcmp(field,"defaultvalue"))
+		break;
+	case cvar_defaultvalue:
 		lua_pushstring(L, cvar->defaultvalue);
-	else if(fastcmp(field,"flags"))
+		break;
+	case cvar_flags:
 		lua_pushinteger(L, cvar->flags);
-	else if(fastcmp(field,"value"))
+		break;
+	case cvar_value:
 		lua_pushinteger(L, cvar->value);
-	else if(fastcmp(field,"string"))
+		break;
+	case cvar_string:
 		lua_pushstring(L, cvar->string);
-	else if(fastcmp(field,"changed"))
+		break;
+	case cvar_changed:
 		lua_pushboolean(L, cvar->changed);
-	else if (devparm)
-		return luaL_error(L, LUA_QL("consvar_t") " has no field named " LUA_QS, field);
-	else
-		return 0;
+		break;
+	default:
+		if (devparm)
+			return luaL_error(L, LUA_QL("consvar_t") " has no field named " LUA_QS ".", lua_tostring(L, 2));
+		else
+			return 0;
+	}
 	return 1;
 }
 
@@ -550,6 +629,8 @@ int LUA_ConsoleLib(lua_State *L)
 		lua_pushcfunction(L, cvar_get);
 		lua_setfield(L, -2, "__index");
 	lua_pop(L,1);
+
+	cvar_fields_ref = Lua_CreateFieldTable(L, cvar_opt);
 
 	// Set empty registry tables
 	lua_newtable(L);
@@ -571,6 +652,8 @@ int LUA_ConsoleLib(lua_State *L)
 	lua_setglobal(L, "CV_Unsigned");
 	lua_pushlightuserdata(L, CV_Natural);
 	lua_setglobal(L, "CV_Natural");
+	lua_pushlightuserdata(L, CV_TrueFalse);
+	lua_setglobal(L, "CV_TrueFalse");
 
 	// Set global functions
 	lua_pushvalue(L, LUA_GLOBALSINDEX);

@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2021 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -40,6 +40,7 @@
 #include "hu_stuff.h"
 #include "i_sound.h"
 #include "i_system.h"
+#include "i_time.h"
 #include "i_threads.h"
 #include "i_video.h"
 #include "m_argv.h"
@@ -64,10 +65,13 @@
 #include "deh_tables.h" // Dehacked list test
 #include "m_cond.h" // condition initialization
 #include "fastcmp.h"
+#include "r_fps.h" // Frame interpolation/uncapped
 #include "keys.h"
-#include "filesrch.h" // refreshdirmenu, mainwadstally
+#include "filesrch.h" // refreshdirmenu
 #include "g_input.h" // tutorial mode control scheming
 #include "m_perfstats.h"
+#include "m_random.h"
+#include "command.h"
 
 #ifdef CMAKECONFIG
 #include "config.h"
@@ -96,11 +100,8 @@ int SUBVERSION;
 // platform independant focus loss
 UINT8 window_notinfocus = false;
 
-//
-// DEMO LOOP
-//
-static char *startupwadfiles[MAX_WADFILES];
-static char *startuppwads[MAX_WADFILES];
+static addfilelist_t startupwadfiles;
+static addfilelist_t startuppwads;
 
 boolean devparm = false; // started game with -devparm
 
@@ -119,6 +120,9 @@ boolean midi_disabled = false;
 boolean sound_disabled = false;
 boolean digital_disabled = false;
 
+//
+// DEMO LOOP
+//
 boolean advancedemo;
 #ifdef DEBUGFILE
 INT32 debugload = 0;
@@ -272,7 +276,7 @@ void D_ProcessEvents(void)
 		if (eaten)
 			continue; // ate the event
 
-		if (!hooked && G_LuaResponder(ev))
+		if (!hooked && !CON_Ready() && G_LuaResponder(ev))
 			continue;
 
 		G_Responder(ev);
@@ -456,6 +460,13 @@ static void D_Display(void)
 
 		case GS_WAITINGPLAYERS:
 			// The clientconnect drawer is independent...
+			if (netgame)
+			{
+				// I don't think HOM from nothing drawing is independent...
+				F_WaitingPlayersDrawer();
+				HU_Erase();
+				HU_Drawer();
+			}
 		case GS_DEDICATEDSERVER:
 		case GS_NULL:
 			break;
@@ -476,7 +487,8 @@ static void D_Display(void)
 
 			if (!automapactive && !dedicated && cv_renderview.value)
 			{
-				ps_rendercalltime = I_GetPreciseTime();
+				R_ApplyLevelInterpolators(R_UsingFrameInterpolation() ? rendertimefrac : FRACUNIT);
+				PS_START_TIMING(ps_rendercalltime);
 				if (players[displayplayer].mo || players[displayplayer].playerstate == PST_DEAD)
 				{
 					topleft = screens[0] + viewwindowy*vid.width + viewwindowx;
@@ -523,7 +535,8 @@ static void D_Display(void)
 					if (postimgtype2)
 						V_DoPostProcessor(1, postimgtype2, postimgparam2);
 				}
-				ps_rendercalltime = I_GetPreciseTime() - ps_rendercalltime;
+				PS_STOP_TIMING(ps_rendercalltime);
+				R_RestoreLevelInterpolators();
 			}
 
 			if (lastdraw)
@@ -537,7 +550,7 @@ static void D_Display(void)
 				lastdraw = false;
 			}
 
-			ps_uitime = I_GetPreciseTime();
+			PS_START_TIMING(ps_uitime);
 
 			if (gamestate == GS_LEVEL)
 			{
@@ -550,7 +563,7 @@ static void D_Display(void)
 		}
 		else
 		{
-			ps_uitime = I_GetPreciseTime();
+			PS_START_TIMING(ps_uitime);
 		}
 	}
 
@@ -592,7 +605,7 @@ static void D_Display(void)
 
 	CON_Drawer();
 
-	ps_uitime = I_GetPreciseTime() - ps_uitime;
+	PS_STOP_TIMING(ps_uitime);
 
 	//
 	// wipe update
@@ -678,9 +691,9 @@ static void D_Display(void)
 			M_DrawPerfStats();
 		}
 
-		ps_swaptime = I_GetPreciseTime();
+		PS_START_TIMING(ps_swaptime);
 		I_FinishUpdate(); // page flip or blit buffer
-		ps_swaptime = I_GetPreciseTime() - ps_swaptime;
+		PS_STOP_TIMING(ps_swaptime);
 	}
 }
 
@@ -692,8 +705,13 @@ tic_t rendergametic;
 
 void D_SRB2Loop(void)
 {
-	tic_t oldentertics = 0, entertic = 0, realtics = 0, rendertimeout = INFTICS;
+	tic_t entertic = 0, oldentertics = 0, realtics = 0, rendertimeout = INFTICS;
+	double deltatics = 0.0;
+	double deltasecs = 0.0;
 	static lumpnum_t gstartuplumpnum;
+
+	boolean interp = false;
+	boolean doDisplay = false;
 
 	if (dedicated)
 		server = true;
@@ -705,6 +723,7 @@ void D_SRB2Loop(void)
 	I_DoStartupMouse();
 #endif
 
+	I_UpdateTime(cv_timescale.value);
 	oldentertics = I_GetTime();
 
 	// end of loading screen: CONS_Printf() will no more call FinishUpdate()
@@ -745,6 +764,19 @@ void D_SRB2Loop(void)
 
 	for (;;)
 	{
+		// capbudget is the minimum precise_t duration of a single loop iteration
+		precise_t capbudget;
+		precise_t enterprecise = I_GetPreciseTime();
+		precise_t finishprecise = enterprecise;
+
+		{
+			// Casting the return value of a function is bad practice (apparently)
+			double budget = round((1.0 / R_GetFramerateCap()) * I_GetPrecisePrecision());
+			capbudget = (precise_t) budget;
+		}
+
+		I_UpdateTime(cv_timescale.value);
+
 		if (lastwipetic)
 		{
 			oldentertics = lastwipetic;
@@ -756,7 +788,11 @@ void D_SRB2Loop(void)
 		realtics = entertic - oldentertics;
 		oldentertics = entertic;
 
-		refreshdirmenu = 0; // not sure where to put this, here as good as any?
+		if (demoplayback && gamestate == GS_LEVEL)
+		{
+			// Nicer place to put this.
+			realtics = realtics * cv_playbackspeed.value;
+		}
 
 #ifdef DEBUGFILE
 		if (!realtics)
@@ -764,64 +800,123 @@ void D_SRB2Loop(void)
 				debugload--;
 #endif
 
-		if (!realtics && !singletics)
-		{
-			I_Sleep();
-			continue;
-		}
+		interp = R_UsingFrameInterpolation() && !dedicated;
+		doDisplay = false;
 
 #ifdef HW3SOUND
 		HW3S_BeginFrameUpdate();
 #endif
 
-		// don't skip more than 10 frames at a time
-		// (fadein / fadeout cause massive frame skip!)
-		if (realtics > 8)
-			realtics = 1;
+		refreshdirmenu = 0; // not sure where to put this, here as good as any?
 
-		// process tics (but maybe not if realtic == 0)
-		TryRunTics(realtics);
-
-		if (lastdraw || singletics || gametic > rendergametic)
+		if (realtics > 0 || singletics)
 		{
-			rendergametic = gametic;
-			rendertimeout = entertic+TICRATE/17;
+			// don't skip more than 10 frames at a time
+			// (fadein / fadeout cause massive frame skip!)
+			if (realtics > 8)
+				realtics = 1;
 
-			// Update display, next frame, with current state.
-			D_Display();
+			// process tics (but maybe not if realtic == 0)
+			TryRunTics(realtics);
 
-			if (moviemode)
-				M_SaveFrame();
-			if (takescreenshot) // Only take screenshots after drawing.
-				M_DoScreenShot();
-		}
-		else if (rendertimeout < entertic) // in case the server hang or netsplit
-		{
-			// Lagless camera! Yay!
-			if (gamestate == GS_LEVEL && netgame)
+			if (lastdraw || singletics || gametic > rendergametic)
 			{
-				if (splitscreen && camera2.chase)
-					P_MoveChaseCamera(&players[secondarydisplayplayer], &camera2, false);
-				if (camera.chase)
-					P_MoveChaseCamera(&players[displayplayer], &camera, false);
-			}
-			D_Display();
+				rendergametic = gametic;
+				rendertimeout = entertic + TICRATE/17;
 
-			if (moviemode)
-				M_SaveFrame();
-			if (takescreenshot) // Only take screenshots after drawing.
-				M_DoScreenShot();
+				doDisplay = true;
+			}
+			else if (rendertimeout < entertic) // in case the server hang or netsplit
+			{
+				// Lagless camera! Yay!
+				if (gamestate == GS_LEVEL && netgame)
+				{
+					// Evaluate the chase cam once for every local realtic
+					// This might actually be better suited inside G_Ticker or TryRunTics
+					for (tic_t chasecamtics = 0; chasecamtics < realtics; chasecamtics++)
+					{
+						if (splitscreen && camera2.chase)
+							P_MoveChaseCamera(&players[secondarydisplayplayer], &camera2, false);
+						if (camera.chase)
+							P_MoveChaseCamera(&players[displayplayer], &camera, false);
+					}
+					R_UpdateViewInterpolation();
+				}
+
+				doDisplay = true;
+			}
+
+			renderisnewtic = true;
+		}
+		else
+		{
+			renderisnewtic = false;
 		}
 
-		// consoleplayer -> displayplayer (hear sounds from viewpoint)
+		if (interp)
+		{
+			// I looked at the possibility of putting in a float drawer for
+			// perfstats and it's very complicated, so we'll just do this instead...
+			ps_interp_frac.value.p = (precise_t)((FIXED_TO_FLOAT(g_time.timefrac)) * 1000.0f);
+			ps_interp_lag.value.p = (precise_t)((deltasecs) * 1000.0f);
+
+			renderdeltatics = FLOAT_TO_FIXED(deltatics);
+
+			if (!(paused || P_AutoPause()) && deltatics < 1.0 && !hu_stopped)
+			{
+				rendertimefrac = g_time.timefrac;
+			}
+			else
+			{
+				rendertimefrac = FRACUNIT;
+			}
+		}
+		else
+		{
+			renderdeltatics = realtics * FRACUNIT;
+			rendertimefrac = FRACUNIT;
+		}
+
+		if (interp || doDisplay)
+		{
+			D_Display();
+		}
+
+		// Only take screenshots after drawing.
+		if (moviemode)
+			M_SaveFrame();
+		if (takescreenshot)
+			M_DoScreenShot();
+
+		// consoleplayer -> displayplayers (hear sounds from viewpoint)
 		S_UpdateSounds(); // move positional sounds
-		S_UpdateClosedCaptions();
+		if (realtics > 0 || singletics)
+			S_UpdateClosedCaptions();
 
 #ifdef HW3SOUND
 		HW3S_EndFrameUpdate();
 #endif
 
 		LUA_Step();
+
+		// Fully completed frame made.
+		finishprecise = I_GetPreciseTime();
+		if (!singletics)
+		{
+			INT64 elapsed = (INT64)(finishprecise - enterprecise);
+
+			// in the case of "match refresh rate" + vsync, don't sleep at all
+			const boolean vsync_with_match_refresh = cv_vidwait.value && cv_fpscap.value == 0;
+
+			if (elapsed > 0 && (INT64)capbudget > elapsed && !vsync_with_match_refresh)
+			{
+				I_SleepDuration(capbudget - (finishprecise - enterprecise));
+			}
+		}
+		// Capture the time once more to get the real delta time.
+		finishprecise = I_GetPreciseTime();
+		deltasecs = (double)((INT64)(finishprecise - enterprecise)) / I_GetPrecisePrecision();
+		deltatics = deltasecs * NEWTICRATE;
 	}
 }
 
@@ -923,51 +1018,68 @@ void D_StartTitle(void)
 	tutorialmode = false;
 }
 
-//
-// D_AddFile
-//
-static void D_AddFile(char **list, const char *file)
-{
-	size_t pnumwadfiles;
-	char *newfile;
+#define REALLOC_FILE_LIST \
+	if (list->files == NULL) \
+	{ \
+		list->files = calloc(sizeof(list->files), 2); \
+		list->numfiles = 1; \
+	} \
+	else \
+	{ \
+		index = list->numfiles; \
+		list->files = realloc(list->files, sizeof(list->files) * ((++list->numfiles) + 1)); \
+		if (list->files == NULL) \
+			I_Error("%s: No more free memory to add file %s", __FUNCTION__, file); \
+	}
 
-	for (pnumwadfiles = 0; list[pnumwadfiles]; pnumwadfiles++)
-		;
+static void D_AddFile(addfilelist_t *list, const char *file)
+{
+	char *newfile;
+	size_t index = 0;
+
+	REALLOC_FILE_LIST
 
 	newfile = malloc(strlen(file) + 1);
 	if (!newfile)
-		I_Error("No more free memory to AddFile %s",file);
+		I_Error("D_AddFile: No more free memory to add file %s", file);
 
 	strcpy(newfile, file);
-	list[pnumwadfiles] = newfile;
+	list->files[index] = newfile;
 }
 
-static void D_AddFolder(char **list, const char *file)
+static void D_AddFolder(addfilelist_t *list, const char *file)
 {
-	size_t pnumwadfiles;
 	char *newfile;
+	size_t index = 0;
 
-	for (pnumwadfiles = 0; list[pnumwadfiles]; pnumwadfiles++)
-		;
+	REALLOC_FILE_LIST
 
 	newfile = malloc(strlen(file) + 2); // Path delimiter + NULL terminator
 	if (!newfile)
-		I_Error("No more free memory to AddFolder %s",file);
+		I_Error("D_AddFolder: No more free memory to add folder %s", file);
 
 	strcpy(newfile, file);
 	strcat(newfile, PATHSEP);
 
-	list[pnumwadfiles] = newfile;
+	list->files[index] = newfile;
 }
 
-static inline void D_CleanFile(char **list)
+#undef REALLOC_FILE_LIST
+
+static inline void D_CleanFile(addfilelist_t *list)
 {
-	size_t pnumwadfiles;
-	for (pnumwadfiles = 0; list[pnumwadfiles]; pnumwadfiles++)
+	if (list->files)
 	{
-		free(list[pnumwadfiles]);
-		list[pnumwadfiles] = NULL;
+		size_t pnumwadfiles = 0;
+
+		for (; pnumwadfiles < list->numfiles; pnumwadfiles++)
+			free(list->files[pnumwadfiles]);
+
+		free(list->files);
+		list->files = NULL;
 	}
+
+	list->numfiles = 0;
 }
 
 ///\brief Checks if a netgame URL is being handled, and changes working directory to the EXE's if so.
@@ -1051,7 +1163,7 @@ static void IdentifyVersion(void)
 
 	// Load the IWAD
 	if (srb2wad != NULL && FIL_ReadFileOK(srb2wad))
-		D_AddFile(startupwadfiles, srb2wad);
+		D_AddFile(&startupwadfiles, srb2wad);
 	else
 		I_Error("srb2.pk3 not found! Expected in %s, ss file: %s\n", srb2waddir, srb2wad);
 
@@ -1062,14 +1174,14 @@ static void IdentifyVersion(void)
 	// checking in D_SRB2Main
 
 	// Add the maps
-	D_AddFile(startupwadfiles, va(pandf,srb2waddir,"zones.pk3"));
+	D_AddFile(&startupwadfiles, va(pandf,srb2waddir, "zones.pk3"));
 
 	// Add the players
-	D_AddFile(startupwadfiles, va(pandf,srb2waddir, "player.dta"));
+	D_AddFile(&startupwadfiles, va(pandf,srb2waddir, "player.dta"));
 
 #ifdef USE_PATCH_DTA
 	// Add our crappy patches to fix our bugs
-	D_AddFile(startupwadfiles, va(pandf,srb2waddir,"patch.pk3"));
+	D_AddFile(&startupwadfiles, va(pandf,srb2waddir, "patch.pk3"));
 #endif
 
 #if !defined (HAVE_SDL) || defined (HAVE_MIXER)
@@ -1079,16 +1191,13 @@ static void IdentifyVersion(void)
 			const char *musicpath = va(pandf,srb2waddir,str);\
 			int ms = W_VerifyNMUSlumps(musicpath, false); \
 			if (ms == 1) \
-				D_AddFile(startupwadfiles, musicpath); \
+				D_AddFile(&startupwadfiles, musicpath); \
 			else if (ms == 0) \
 				I_Error("File "str" has been modified with non-music/sound lumps"); \
 		}
 
 		MUSICTEST("music.dta")
-		MUSICTEST("patch_music.pk3")
-#ifdef DEVELOP // remove when music_new.dta is merged into music.dta
-		MUSICTEST("music_new.dta")
-#endif
+		//MUSICTEST("patch_music.pk3")
 	}
 #endif
 }
@@ -1108,6 +1217,15 @@ D_ConvertVersionNumbers (void)
 #endif
 }
 
+static void Command_assert(void)
+{
+#if !defined(NDEBUG) || defined(PARANOIA)
+	CONS_Printf("Yes, assertions are enabled.\n");
+#else
+	CONS_Printf("No, assertions are NOT enabled.\n");
+#endif
+}
+
 //
 // D_SRB2Main
 //
@@ -1121,10 +1239,15 @@ void D_SRB2Main(void)
 	/* break the version string into version numbers, for netplay */
 	D_ConvertVersionNumbers();
 
+	if (!strcmp(compbranch, ""))
+	{
+		compbranch = "detached HEAD";
+	}
+
 	// Print GPL notice for our console users (Linux)
 	CONS_Printf(
 	"\n\nSonic Robo Blast 2\n"
-	"Copyright (C) 1998-2021 by Sonic Team Junior\n\n"
+	"Copyright (C) 1998-2023 by Sonic Team Junior\n\n"
 	"This program comes with ABSOLUTELY NO WARRANTY.\n\n"
 	"This is free software, and you are welcome to redistribute it\n"
 	"and/or modify it under the terms of the GNU General Public License\n"
@@ -1234,11 +1357,12 @@ void D_SRB2Main(void)
 	snprintf(addonsdir, sizeof addonsdir, "%s%s%s", srb2home, PATHSEP, "addons");
 	I_mkdir(addonsdir, 0755);
 
-	// rand() needs seeded regardless of password
-	srand((unsigned int)time(NULL));
-	rand();
-	rand();
-	rand();
+	// seed M_Random because it is necessary; seed P_Random for scripts that
+	// might want to use random numbers immediately at start
+	if (!M_RandomSeedFromOS())
+		M_RandomSeed((UINT32)time(NULL)); // less good but serviceable
+
+	P_SetRandSeed(M_RandomizedSeed());
 
 	if (M_CheckParm("-password") && M_IsNextParm())
 		D_SetPassword(M_GetNextParm());
@@ -1250,8 +1374,13 @@ void D_SRB2Main(void)
 	CONS_Printf("Z_Init(): Init zone memory allocation daemon. \n");
 	Z_Init();
 
+	clientGamedata = M_NewGameDataStruct();
+	serverGamedata = M_NewGameDataStruct();
+
 	// Do this up here so that WADs loaded through the command line can use ExecCfg
 	COM_Init();
+
+	COM_AddCommand("assert", Command_assert, COM_LUA);
 
 	// Add any files specified on the command line with
 	// "-file <file>" or "-folder <folder>" to the add-on list
@@ -1269,9 +1398,9 @@ void D_SRB2Main(void)
 			else if (myargv[i][0] == '-' || myargv[i][0] == '+')
 				addontype = 0;
 			else if (addontype == 1)
-				D_AddFile(startuppwads, myargv[i]);
+				D_AddFile(&startuppwads, myargv[i]);
 			else if (addontype == 2)
-				D_AddFolder(startuppwads, myargv[i]);
+				D_AddFolder(&startuppwads, myargv[i]);
 		}
 	}
 
@@ -1293,8 +1422,8 @@ void D_SRB2Main(void)
 	//---------------------------------------------------- READY TIME
 	// we need to check for dedicated before initialization of some subsystems
 
-	CONS_Printf("I_StartupTimer()...\n");
-	I_StartupTimer();
+	CONS_Printf("I_InitializeTime()...\n");
+	I_InitializeTime();
 
 	// Make backups of some SOCcable tables.
 	P_BackupTables();
@@ -1310,8 +1439,8 @@ void D_SRB2Main(void)
 
 	// load wad, including the main wad file
 	CONS_Printf("W_InitMultipleFiles(): Adding IWAD and main PWADs.\n");
-	W_InitMultipleFiles(startupwadfiles);
-	D_CleanFile(startupwadfiles);
+	W_InitMultipleFiles(&startupwadfiles);
+	D_CleanFile(&startupwadfiles);
 
 #ifndef DEVELOP // md5s last updated 22/02/20 (ddmmyy)
 
@@ -1325,8 +1454,6 @@ void D_SRB2Main(void)
 	// don't check music.dta because people like to modify it, and it doesn't matter if they do
 	// ...except it does if they slip maps in there, and that's what W_VerifyNMUSlumps is for.
 #endif //ifndef DEVELOP
-
-	mainwadstally = packetsizetally; // technically not accurate atm, remember to port the two-stage -file process from kart in 2.2.x
 
 	cht_Init();
 
@@ -1358,9 +1485,16 @@ void D_SRB2Main(void)
 
 	I_RegisterSysCommands();
 
-	CONS_Printf("W_InitMultipleFiles(): Adding extra PWADs.\n");
-	W_InitMultipleFiles(startuppwads);
-	D_CleanFile(startuppwads);
+	CON_StopRefresh(); // Temporarily stop refreshing the screen for wad loading
+
+	if (startuppwads.numfiles)
+	{
+		CONS_Printf("W_InitMultipleFiles(): Adding extra PWADs.\n");
+		W_InitMultipleFiles(&startuppwads);
+		D_CleanFile(&startuppwads);
+	}
+
+	CON_StartRefresh(); // Restart the refresh!
 
 	CONS_Printf("HU_LoadGraphics()...\n");
 	HU_LoadGraphics();
@@ -1368,7 +1502,15 @@ void D_SRB2Main(void)
 	//--------------------------------------------------------- CONFIG.CFG
 	M_FirstLoadConfig(); // WARNING : this do a "COM_BufExecute()"
 
-	G_LoadGameData();
+	if (M_CheckParm("-gamedata") && M_IsNextParm())
+	{
+		// Moved from G_LoadGameData itself, as it would cause some crazy
+		// confusion issues when loading mods.
+		strlcpy(gamedatafilename, M_GetNextParm(), sizeof gamedatafilename);
+	}
+
+	G_LoadGameData(clientGamedata);
+	M_CopyGameData(serverGamedata, clientGamedata);
 
 #if defined (__unix__) || defined (UNIXCOMMON) || defined (HAVE_SDL)
 	VID_PrepareModeList(); // Regenerate Modelist according to cv_fullscreen
@@ -1395,7 +1537,7 @@ void D_SRB2Main(void)
 		else
 		{
 			if (!M_CheckParm("-server"))
-				G_SetGameModified(true);
+				G_SetUsedCheats(true);
 			autostart = true;
 		}
 	}
@@ -1564,6 +1706,8 @@ void D_SRB2Main(void)
 		// as having been modified for the first game.
 		M_PushSpecialParameters(); // push all "+" parameter at the command buffer
 
+		COM_BufExecute(); // ensure the command buffer gets executed before the map starts (+skin)
+
 		if (M_CheckParm("-gametype") && M_IsNextParm())
 		{
 			// from Command_Map_f
@@ -1593,14 +1737,15 @@ void D_SRB2Main(void)
 			// Prevent warping to nonexistent levels
 			if (W_CheckNumForName(G_BuildMapName(pstartmap)) == LUMPERROR)
 				I_Error("Could not warp to %s (map not found)\n", G_BuildMapName(pstartmap));
-			// Prevent warping to locked levels
-			// ... unless you're in a dedicated server.  Yes, technically this means you can view any level by
-			// running a dedicated server and joining it yourself, but that's better than making dedicated server's
-			// lives hell.
-			else if (!dedicated && M_MapLocked(pstartmap))
-				I_Error("You need to unlock this level before you can warp to it!\n");
 			else
 			{
+				if (M_CampaignWarpIsCheat(gametype, pstartmap, serverGamedata))
+				{
+					// If you're warping via command line, you know what you're doing.
+					// No need to I_Error over this.
+					G_SetUsedCheats(false);
+				}
+
 				D_MapChange(pstartmap, gametype, ultimatemode, true, 0, false, false);
 			}
 		}
@@ -1669,4 +1814,86 @@ const char *D_Home(void)
 #endif// _WIN32
 	if (usehome) return userhome;
 	else return NULL;
+}
+
+static boolean check_top_dir(const char **path, const char *top)
+{
+	// empty string does NOT match
+	if (!strcmp(top, ""))
+		return false;
+
+	if (!startswith(*path, top))
+		return false;
+
+	*path += strlen(top);
+
+	// if it doesn't already end with a path separator,
+	// check if a separator follows
+	if (!endswith(top, PATHSEP))
+	{
+		if (startswith(*path, PATHSEP))
+			*path += strlen(PATHSEP);
+		else
+			return false;
+	}
+
+	return true;
+}
+
+static int cmp_strlen_desc(const void *a, const void *b)
+{
+	return ((int)strlen(*(const char*const*)b) - (int)strlen(*(const char*const*)a));
+}
+
+boolean D_IsPathAllowed(const char *path)
+{
+	const char *paths[] = {
+		srb2home,
+		srb2path,
+		cv_addons_folder.string
+	};
+
+	const size_t n_paths = sizeof paths / sizeof *paths;
+
+	size_t i;
+
+	// Sort folder paths by longest to shortest so
+	// overlapping paths work. E.g.:
+	// Path 1: /home/james/.srb2/addons
+	// Path 2: /home/james/.srb2
+	qsort(paths, n_paths, sizeof *paths, cmp_strlen_desc);
+
+	// These paths are allowed to be absolute
+	// path is offset so ".." can be checked only in the
+	// rest of the path
+	for (i = 0; i < n_paths; ++i)
+	{
+		if (check_top_dir(&path, paths[i]))
+			break;
+	}
+
+	// Only if none of the presets matched
+	if (i == n_paths)
+	{
+		// Cannot be an absolute path
+		if (M_IsPathAbsolute(path))
+			return false;
+	}
+
+	// Cannot traverse upwards
+	if (strstr(path, ".."))
+		return false;
+
+	return true;
+}
+
+boolean D_CheckPathAllowed(const char *path, const char *why)
+{
+	if (!D_IsPathAllowed(path))
+	{
+		CONS_Alert(CONS_WARNING, "%s: %s, location is not allowed\n", why, path);
+		return false;
+	}
+
+	return true;
 }

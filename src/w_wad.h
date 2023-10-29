@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2021 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -67,6 +67,7 @@ typedef struct
 	unsigned long position; // filelump_t filepos
 	unsigned long disksize; // filelump_t size
 	char name[9];           // filelump_t name[] e.g. "LongEntr"
+	UINT32 hash;
 	char *longname;         //                   e.g. "LongEntryName"
 	char *fullname;         //                   e.g. "Folder/Subfolder/LongEntryName.extension"
 	char *diskpath;         // path to the file  e.g. "/usr/games/srb2/Addon/Folder/Subfolder/LongEntryName.extension"
@@ -97,9 +98,15 @@ virtlump_t* vres_Find(const virtres_t*, const char*);
 //                         DYNAMIC WAD LOADING
 // =========================================================================
 
+// Maximum of files that can be loaded
+// (there is a max of simultaneous open files anyway)
+#ifdef ENFORCE_WAD_LIMIT
+#define MAX_WADFILES 2048 // This cannot be any higher than UINT16_MAX.
+#else
+#define MAX_WADFILES UINT16_MAX
+#endif
+
 #define MAX_WADPATH 512
-#define MAX_WADFILES 48 // maximum of wad files used at the same time
-// (there is a max of simultaneous open files anyway, and this should be plenty)
 
 #define lumpcache_t void *
 
@@ -134,7 +141,13 @@ typedef struct wadfile_s
 #define LUMPNUM(lumpnum) (UINT16)((lumpnum)&0xFFFF) // lump number for this pwad
 
 extern UINT16 numwadfiles;
-extern wadfile_t *wadfiles[MAX_WADFILES];
+extern wadfile_t **wadfiles;
+
+typedef struct
+{
+	char **files;
+	size_t numfiles;
+} addfilelist_t;
 
 // =========================================================================
 
@@ -148,7 +161,7 @@ UINT16 W_InitFile(const char *filename, boolean mainfile, boolean startup);
 UINT16 W_InitFolder(const char *path, boolean mainfile, boolean startup);
 
 // W_InitMultipleFiles exits if a file was not found, but not if all is okay.
-void W_InitMultipleFiles(char **filenames);
+void W_InitMultipleFiles(addfilelist_t *list);
 
 #define W_FileHasFolders(wadfile) ((wadfile)->type == RET_PK3 || (wadfile)->type == RET_FOLDER)
 

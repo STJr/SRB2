@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2021 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -27,6 +27,7 @@ typedef enum
 
 typedef enum
 {
+	FS_NOTCHECKED,
 	FS_NOTFOUND,
 	FS_FOUND,
 	FS_REQUESTED,
@@ -35,13 +36,21 @@ typedef enum
 	FS_MD5SUMBAD
 } filestatus_t;
 
+typedef enum
+{
+	FILENEEDED_WAD,
+	FILENEEDED_SAVEGAME,
+	FILENEEDED_LUAFILE
+} fileneededtype_t;
+
 typedef struct
 {
-	UINT8 willsend; // Is the server willing to send it?
-	UINT8 folder; // File is a folder
 	char filename[MAX_WADPATH];
 	UINT8 md5sum[16];
 	filestatus_t status; // The value returned by recsearch
+	UINT8 willsend; // Is the server willing to send it?
+	UINT8 folder; // File is a folder
+	fileneededtype_t type;
 	boolean justdownloaded; // To prevent late fragments from causing an I_Error
 
 	// Used only for download
@@ -58,19 +67,25 @@ typedef struct
 #define FILENEEDEDSIZE 23
 
 extern INT32 fileneedednum;
-extern fileneeded_t fileneeded[MAX_WADFILES];
+extern fileneeded_t *fileneeded;
 extern char downloaddir[512];
 
 #ifndef NONET
 extern INT32 lastfilenum;
+extern INT32 downloadcompletednum;
+extern UINT32 downloadcompletedsize;
+extern INT32 totalfilesrequestednum;
+extern UINT32 totalfilesrequestedsize;
 #endif
 
-UINT8 *PutFileNeeded(void);
-void D_ParseFileneeded(INT32 fileneedednum_parm, UINT8 *fileneededstr);
+void AllocFileNeeded(INT32 size);
+void FreeFileNeeded(void);
+UINT8 *PutFileNeeded(UINT16 firstfile);
+void D_ParseFileneeded(INT32 fileneedednum_parm, UINT8 *fileneededstr, UINT16 firstfile);
 void CL_PrepareDownloadSaveGame(const char *tmpsave);
 
 INT32 CL_CheckFiles(void);
-void CL_LoadServerFiles(void);
+boolean CL_LoadServerFiles(void);
 void AddRamToSendQueue(INT32 node, void *data, size_t size, freemethod_t freemethod,
 	UINT8 fileid);
 
