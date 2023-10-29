@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2021 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -59,6 +59,7 @@ INT32 *texturetranslation;
 // Painfully simple texture id cacheing to make maps load faster. :3
 static struct {
 	char name[9];
+	UINT32 hash;
 	INT32 id;
 } *tidcache = NULL;
 static INT32 tidcachelen = 0;
@@ -619,86 +620,97 @@ void *R_GetLevelFlat(levelflat_t *levelflat)
 }
 
 //
-// R_CheckPowersOfTwo
-//
-// Sets ds_powersoftwo true if the flat's dimensions are powers of two, and returns that.
+// Checks if the current flat's dimensions are powers of two
 //
 boolean R_CheckPowersOfTwo(void)
 {
-	boolean wpow2 = (!(ds_flatwidth & (ds_flatwidth - 1)));
-	boolean hpow2 = (!(ds_flatheight & (ds_flatheight - 1)));
+	boolean wpow2 = !(ds_flatwidth & (ds_flatwidth - 1));
+	boolean hpow2 = !(ds_flatheight & (ds_flatheight - 1));
 
-	// Initially, the flat isn't powers-of-two-sized.
-	ds_powersoftwo = false;
+	if (ds_flatwidth > 2048 || ds_flatheight > 2048)
+		return false;
 
-	// But if the width and height are powers of two,
-	// and are EQUAL, then it's okay :]
-	if ((ds_flatwidth == ds_flatheight) && (wpow2 && hpow2))
-		ds_powersoftwo = true;
-
-	// Just return ds_powersoftwo.
-	return ds_powersoftwo;
+	return ds_flatwidth == ds_flatheight && wpow2 && hpow2;
 }
 
 //
-// R_CheckFlatLength
+// Checks if the current flat's dimensions are 1x1
 //
-// Determine the flat's dimensions from its lump length.
+boolean R_CheckSolidColorFlat(void)
+{
+	return ds_flatwidth == 1 && ds_flatheight == 1;
+}
+
 //
-void R_CheckFlatLength(size_t size)
+// Returns the flat size corresponding to the length of a lump
+//
+UINT16 R_GetFlatSize(size_t length)
+{
+	switch (length)
+	{
+		case 4194304: // 2048x2048 lump
+			return 2048;
+		case 1048576: // 1024x1024 lump
+			return 1024;
+		case 262144:// 512x512 lump
+			return 512;
+		case 65536: // 256x256 lump
+			return 256;
+		case 16384: // 128x128 lump
+			return 128;
+		case 1024: // 32x32 lump
+			return 32;
+		case 256: // 16x16 lump
+			return 16;
+		case 64: // 8x8 lump
+			return 8;
+		case 16: // 4x4 lump
+			return 4;
+		case 4: // 2x2 lump
+			return 2;
+		case 1: // 1x1 lump
+			return 1;
+		default: // 64x64 lump
+			return 64;
+	}
+}
+
+//
+// Determines a flat's width bits from its size
+//
+UINT8 R_GetFlatBits(INT32 size)
 {
 	switch (size)
 	{
-		case 4194304: // 2048x2048 lump
-			nflatmask = 0x3FF800;
-			nflatxshift = 21;
-			nflatyshift = 10;
-			nflatshiftup = 5;
-			ds_flatwidth = ds_flatheight = 2048;
-			break;
-		case 1048576: // 1024x1024 lump
-			nflatmask = 0xFFC00;
-			nflatxshift = 22;
-			nflatyshift = 12;
-			nflatshiftup = 6;
-			ds_flatwidth = ds_flatheight = 1024;
-			break;
-		case 262144:// 512x512 lump
-			nflatmask = 0x3FE00;
-			nflatxshift = 23;
-			nflatyshift = 14;
-			nflatshiftup = 7;
-			ds_flatwidth = ds_flatheight = 512;
-			break;
-		case 65536: // 256x256 lump
-			nflatmask = 0xFF00;
-			nflatxshift = 24;
-			nflatyshift = 16;
-			nflatshiftup = 8;
-			ds_flatwidth = ds_flatheight = 256;
-			break;
-		case 16384: // 128x128 lump
-			nflatmask = 0x3F80;
-			nflatxshift = 25;
-			nflatyshift = 18;
-			nflatshiftup = 9;
-			ds_flatwidth = ds_flatheight = 128;
-			break;
-		case 1024: // 32x32 lump
-			nflatmask = 0x3E0;
-			nflatxshift = 27;
-			nflatyshift = 22;
-			nflatshiftup = 11;
-			ds_flatwidth = ds_flatheight = 32;
-			break;
-		default: // 64x64 lump
-			nflatmask = 0xFC0;
-			nflatxshift = 26;
-			nflatyshift = 20;
-			nflatshiftup = 10;
-			ds_flatwidth = ds_flatheight = 64;
-			break;
+		case 2048: return 11;
+		case 1024: return 10;
+		case 512:  return 9;
+		case 256:  return 8;
+		case 128:  return 7;
+		case 32:   return 5;
+		case 16:   return 4;
+		case 8:    return 3;
+		case 4:    return 2;
+		case 2:    return 1;
+		case 1:    return 0;
+		default:   return 6; // 64x64
 	}
+}
+
+void R_SetFlatVars(size_t length)
+{
+	UINT16 size = R_GetFlatSize(length);
+	UINT8 bits = R_GetFlatBits(size);
+
+	ds_flatwidth = ds_flatheight = size;
+
+	if (bits == 0)
+		return;
+
+	nflatshiftup = 16 - bits;
+	nflatxshift = 16 + nflatshiftup;
+	nflatyshift = nflatxshift - bits;
+	nflatmask = (size - 1) * size;
 }
 
 //
@@ -725,9 +737,10 @@ Rloadflats (INT32 i, INT32 w)
 	UINT16 texstart, texend;
 	texture_t *texture;
 	texpatch_t *patch;
+	UINT8 header[PNG_HEADER_SIZE];
 
 	// Yes
-	if (wadfiles[w]->type == RET_PK3)
+	if (W_FileHasFolders(wadfiles[w]))
 	{
 		texstart = W_CheckNumForFolderStartPK3("flats/", (UINT16)w, 0);
 		texend = W_CheckNumForFolderEndPK3("flats/", (UINT16)w, texstart);
@@ -743,59 +756,37 @@ Rloadflats (INT32 i, INT32 w)
 		// Work through each lump between the markers in the WAD.
 		for (j = 0; j < (texend - texstart); j++)
 		{
-			UINT8 *flatlump;
 			UINT16 wadnum = (UINT16)w;
 			lumpnum_t lumpnum = texstart + j;
 			size_t lumplength;
-			size_t flatsize = 0;
+			size_t flatsize;
 
-			if (wadfiles[w]->type == RET_PK3)
+			if (W_FileHasFolders(wadfiles[w]))
 			{
 				if (W_IsLumpFolder(wadnum, lumpnum)) // Check if lump is a folder
 					continue; // If it is then SKIP IT
 			}
 
-			flatlump = W_CacheLumpNumPwad(wadnum, lumpnum, PU_CACHE);
+			W_ReadLumpHeaderPwad(wadnum, lumpnum, header, sizeof header, 0);
 			lumplength = W_LumpLengthPwad(wadnum, lumpnum);
-
-			switch (lumplength)
-			{
-				case 4194304: // 2048x2048 lump
-					flatsize = 2048;
-					break;
-				case 1048576: // 1024x1024 lump
-					flatsize = 1024;
-					break;
-				case 262144:// 512x512 lump
-					flatsize = 512;
-					break;
-				case 65536: // 256x256 lump
-					flatsize = 256;
-					break;
-				case 16384: // 128x128 lump
-					flatsize = 128;
-					break;
-				case 1024: // 32x32 lump
-					flatsize = 32;
-					break;
-				default: // 64x64 lump
-					flatsize = 64;
-					break;
-			}
+			flatsize = R_GetFlatSize(lumplength);
 
 			//CONS_Printf("\n\"%s\" is a flat, dimensions %d x %d",W_CheckNameForNumPwad((UINT16)w,texstart+j),flatsize,flatsize);
 			texture = textures[i] = Z_Calloc(sizeof(texture_t) + sizeof(texpatch_t), PU_STATIC, NULL);
 
 			// Set texture properties.
 			M_Memcpy(texture->name, W_CheckNameForNumPwad(wadnum, lumpnum), sizeof(texture->name));
+			texture->hash = quickncasehash(texture->name, 8);
 
 #ifndef NO_PNG_LUMPS
-			if (Picture_IsLumpPNG((UINT8 *)flatlump, lumplength))
+			if (Picture_IsLumpPNG(header, lumplength))
 			{
+				UINT8 *flatlump = W_CacheLumpNumPwad(wadnum, lumpnum, PU_CACHE);
 				INT32 width, height;
 				Picture_PNGDimensions((UINT8 *)flatlump, &width, &height, NULL, NULL, lumplength);
 				texture->width = (INT16)width;
 				texture->height = (INT16)height;
+				Z_Free(flatlump);
 			}
 			else
 #endif
@@ -813,8 +804,6 @@ Rloadflats (INT32 i, INT32 w)
 			patch->wad = (UINT16)w;
 			patch->lump = texstart + j;
 			patch->flip = 0;
-
-			Z_Unlock(flatlump);
 
 			texturewidth[i] = texture->width;
 			textureheight[i] = texture->height << FRACBITS;
@@ -835,11 +824,11 @@ Rloadtextures (INT32 i, INT32 w)
 	UINT16 j;
 	UINT16 texstart, texend, texturesLumpPos;
 	texture_t *texture;
-	softwarepatch_t *patchlump;
 	texpatch_t *patch;
+	softwarepatch_t patchlump;
 
 	// Get the lump numbers for the markers in the WAD, if they exist.
-	if (wadfiles[w]->type == RET_PK3)
+	if (W_FileHasFolders(wadfiles[w]))
 	{
 		texstart = W_CheckNumForFolderStartPK3("textures/", (UINT16)w, 0);
 		texend = W_CheckNumForFolderEndPK3("textures/", (UINT16)w, texstart);
@@ -870,13 +859,13 @@ Rloadtextures (INT32 i, INT32 w)
 			size_t lumplength;
 #endif
 
-			if (wadfiles[w]->type == RET_PK3)
+			if (W_FileHasFolders(wadfiles[w]))
 			{
 				if (W_IsLumpFolder(wadnum, lumpnum)) // Check if lump is a folder
 					continue; // If it is then SKIP IT
 			}
 
-			patchlump = W_CacheLumpNumPwad(wadnum, lumpnum, PU_CACHE);
+			W_ReadLumpHeaderPwad(wadnum, lumpnum, &patchlump, PNG_HEADER_SIZE, 0);
 #ifndef NO_PNG_LUMPS
 			lumplength = W_LumpLengthPwad(wadnum, lumpnum);
 #endif
@@ -886,20 +875,23 @@ Rloadtextures (INT32 i, INT32 w)
 
 			// Set texture properties.
 			M_Memcpy(texture->name, W_CheckNameForNumPwad(wadnum, lumpnum), sizeof(texture->name));
+			texture->hash = quickncasehash(texture->name, 8);
 
 #ifndef NO_PNG_LUMPS
-			if (Picture_IsLumpPNG((UINT8 *)patchlump, lumplength))
+			if (Picture_IsLumpPNG((UINT8 *)&patchlump, lumplength))
 			{
+				UINT8 *png = W_CacheLumpNumPwad(wadnum, lumpnum, PU_CACHE);
 				INT32 width, height;
-				Picture_PNGDimensions((UINT8 *)patchlump, &width, &height, NULL, NULL, lumplength);
+				Picture_PNGDimensions(png, &width, &height, NULL, NULL, lumplength);
 				texture->width = (INT16)width;
 				texture->height = (INT16)height;
+				Z_Free(png);
 			}
 			else
 #endif
 			{
-				texture->width = SHORT(patchlump->width);
-				texture->height = SHORT(patchlump->height);
+				texture->width = SHORT(patchlump.width);
+				texture->height = SHORT(patchlump.height);
 			}
 
 			texture->type = TEXTURETYPE_SINGLEPATCH;
@@ -915,8 +907,6 @@ Rloadtextures (INT32 i, INT32 w)
 			patch->lump = texstart + j;
 			patch->flip = 0;
 
-			Z_Unlock(patchlump);
-
 			texturewidth[i] = texture->width;
 			textureheight[i] = texture->height << FRACBITS;
 			i++;
@@ -926,27 +916,53 @@ Rloadtextures (INT32 i, INT32 w)
 	return i;
 }
 
-//
-// R_LoadTextures
-// Initializes the texture list with the textures from the world map.
-//
-void R_LoadTextures(void)
+static INT32
+count_range
+(		const char * marker_start,
+		const char * marker_end,
+		const char * folder,
+		UINT16 wadnum)
 {
-	INT32 i, w;
 	UINT16 j;
-	UINT16 texstart, texend, texturesLumpPos;
+	UINT16 texstart, texend;
+	INT32 count = 0;
 
-	// Free previous memory before numtextures change.
-	if (numtextures)
+	// Count flats
+	if (W_FileHasFolders(wadfiles[wadnum]))
 	{
-		for (i = 0; i < numtextures; i++)
-		{
-			Z_Free(textures[i]);
-			Z_Free(texturecache[i]);
-		}
-		Z_Free(texturetranslation);
-		Z_Free(textures);
+		texstart = W_CheckNumForFolderStartPK3(folder, wadnum, 0);
+		texend = W_CheckNumForFolderEndPK3(folder, wadnum, texstart);
 	}
+	else
+	{
+		texstart = W_CheckNumForMarkerStartPwad(marker_start, wadnum, 0);
+		texend = W_CheckNumForNamePwad(marker_end, wadnum, texstart);
+	}
+
+	if (texstart != INT16_MAX && texend != INT16_MAX)
+	{
+		// PK3s have subfolders, so we can't just make a simple sum
+		if (W_FileHasFolders(wadfiles[wadnum]))
+		{
+			for (j = texstart; j < texend; j++)
+			{
+				if (!W_IsLumpFolder(wadnum, j)) // Check if lump is a folder; if not, then count it
+					count++;
+			}
+		}
+		else // Add all the textures between markers
+		{
+			count += (texend - texstart);
+		}
+	}
+
+	return count;
+}
+
+static INT32 R_CountTextures(UINT16 wadnum)
+{
+	UINT16 texturesLumpPos;
+	INT32 count = 0;
 
 	// Load patches and textures.
 
@@ -955,111 +971,130 @@ void R_LoadTextures(void)
 	// the markers.
 	// This system will allocate memory for all duplicate/patched textures even if it never uses them,
 	// but the alternative is to spend a ton of time checking and re-checking all previous entries just to skip any potentially patched textures.
-	for (w = 0, numtextures = 0; w < numwadfiles; w++)
-	{
+
 #ifdef WALLFLATS
-		// Count flats
-		if (wadfiles[w]->type == RET_PK3)
-		{
-			texstart = W_CheckNumForFolderStartPK3("flats/", (UINT16)w, 0);
-			texend = W_CheckNumForFolderEndPK3("flats/", (UINT16)w, texstart);
-		}
-		else
-		{
-			texstart = W_CheckNumForMarkerStartPwad("F_START", (UINT16)w, 0);
-			texend = W_CheckNumForNamePwad("F_END", (UINT16)w, texstart);
-		}
+	count += count_range("F_START", "F_END", "flats/", wadnum);
+#endif
 
-		if (!( texstart == INT16_MAX || texend == INT16_MAX ))
-		{
-			// PK3s have subfolders, so we can't just make a simple sum
-			if (wadfiles[w]->type == RET_PK3)
-			{
-				for (j = texstart; j < texend; j++)
-				{
-					if (!W_IsLumpFolder((UINT16)w, j)) // Check if lump is a folder; if not, then count it
-						numtextures++;
-				}
-			}
-			else // Add all the textures between F_START and F_END
-			{
-				numtextures += (UINT32)(texend - texstart);
-			}
-		}
-#endif/*WALLFLATS*/
+	// Count the textures from TEXTURES lumps
+	texturesLumpPos = W_CheckNumForNamePwad("TEXTURES", wadnum, 0);
 
-		// Count the textures from TEXTURES lumps
-		texturesLumpPos = W_CheckNumForNamePwad("TEXTURES", (UINT16)w, 0);
-		while (texturesLumpPos != INT16_MAX)
-		{
-			numtextures += R_CountTexturesInTEXTURESLump((UINT16)w, (UINT16)texturesLumpPos);
-			texturesLumpPos = W_CheckNumForNamePwad("TEXTURES", (UINT16)w, texturesLumpPos + 1);
-		}
-
-		// Count single-patch textures
-		if (wadfiles[w]->type == RET_PK3)
-		{
-			texstart = W_CheckNumForFolderStartPK3("textures/", (UINT16)w, 0);
-			texend = W_CheckNumForFolderEndPK3("textures/", (UINT16)w, texstart);
-		}
-		else
-		{
-			texstart = W_CheckNumForMarkerStartPwad(TX_START, (UINT16)w, 0);
-			texend = W_CheckNumForNamePwad(TX_END, (UINT16)w, 0);
-		}
-
-		if (texstart == INT16_MAX || texend == INT16_MAX)
-			continue;
-
-		// PK3s have subfolders, so we can't just make a simple sum
-		if (wadfiles[w]->type == RET_PK3)
-		{
-			for (j = texstart; j < texend; j++)
-			{
-				if (!W_IsLumpFolder((UINT16)w, j)) // Check if lump is a folder; if not, then count it
-					numtextures++;
-			}
-		}
-		else // Add all the textures between TX_START and TX_END
-		{
-			numtextures += (UINT32)(texend - texstart);
-		}
+	while (texturesLumpPos != INT16_MAX)
+	{
+		count += R_CountTexturesInTEXTURESLump(wadnum, texturesLumpPos);
+		texturesLumpPos = W_CheckNumForNamePwad("TEXTURES", wadnum, texturesLumpPos + 1);
 	}
 
-	// If no textures found by this point, bomb out
-	if (!numtextures)
-		I_Error("No textures detected in any WADs!\n");
+	// Count single-patch textures
+	count += count_range(TX_START, TX_END, "textures/", wadnum);
+
+	return count;
+}
+
+static void
+recallocuser
+(		void * user,
+		size_t old,
+		size_t new)
+{
+	char *p = Z_Realloc(*(void**)user,
+			new, PU_STATIC, user);
+
+	if (new > old)
+		memset(&p[old], 0, (new - old));
+}
+
+static void R_AllocateTextures(INT32 add)
+{
+	const INT32 newtextures = (numtextures + add);
+	const size_t newsize = newtextures * sizeof (void*);
+	const size_t oldsize = numtextures * sizeof (void*);
+
+	INT32 i;
 
 	// Allocate memory and initialize to 0 for all the textures we are initialising.
-	// There are actually 5 buffers allocated in one for convenience.
-	textures = Z_Calloc((numtextures * sizeof(void *)) * 5, PU_STATIC, NULL);
+	recallocuser(&textures, oldsize, newsize);
 
 	// Allocate texture column offset table.
-	texturecolumnofs = (void *)((UINT8 *)textures + (numtextures * sizeof(void *)));
+	recallocuser(&texturecolumnofs, oldsize, newsize);
 	// Allocate texture referencing cache.
-	texturecache     = (void *)((UINT8 *)textures + ((numtextures * sizeof(void *)) * 2));
+	recallocuser(&texturecache, oldsize, newsize);
 	// Allocate texture width table.
-	texturewidth     = (void *)((UINT8 *)textures + ((numtextures * sizeof(void *)) * 3));
+	recallocuser(&texturewidth, oldsize, newsize);
 	// Allocate texture height table.
-	textureheight    = (void *)((UINT8 *)textures + ((numtextures * sizeof(void *)) * 4));
+	recallocuser(&textureheight, oldsize, newsize);
 	// Create translation table for global animation.
-	texturetranslation = Z_Malloc((numtextures + 1) * sizeof(*texturetranslation), PU_STATIC, NULL);
+	Z_Realloc(texturetranslation, (newtextures + 1) * sizeof(*texturetranslation), PU_STATIC, &texturetranslation);
 
-	for (i = 0; i < numtextures; i++)
-		texturetranslation[i] = i;
-
-	for (i = 0, w = 0; w < numwadfiles; w++)
+	for (i = 0; i < numtextures; ++i)
 	{
-#ifdef WALLFLATS
-		i = Rloadflats(i, w);
-#endif
-		i = Rloadtextures(i, w);
+		// R_FlushTextureCache relies on the user for
+		// Z_Free, texturecache has been reallocated so the
+		// user is now garbage memory.
+		Z_SetUser(texturecache[i],
+				(void**)&texturecache[i]);
 	}
+
+	while (i < newtextures)
+	{
+		texturetranslation[i] = i;
+		i++;
+	}
+}
+
+static INT32 R_DefineTextures(INT32 i, UINT16 w)
+{
+#ifdef WALLFLATS
+	i = Rloadflats(i, w);
+#endif
+	return Rloadtextures(i, w);
+}
+
+static void R_FinishLoadingTextures(INT32 add)
+{
+	numtextures += add;
 
 #ifdef HWRENDER
 	if (rendermode == render_opengl)
 		HWR_LoadMapTextures(numtextures);
 #endif
+}
+
+//
+// R_LoadTextures
+// Initializes the texture list with the textures from the world map.
+//
+void R_LoadTextures(void)
+{
+	INT32 i, w;
+	INT32 newtextures = 0;
+
+	for (w = 0; w < numwadfiles; w++)
+	{
+		newtextures += R_CountTextures((UINT16)w);
+	}
+
+	// If no textures found by this point, bomb out
+	if (!newtextures)
+		I_Error("No textures detected in any WADs!\n");
+
+	R_AllocateTextures(newtextures);
+
+	for (i = 0, w = 0; w < numwadfiles; w++)
+	{
+		i = R_DefineTextures(i, w);
+	}
+
+	R_FinishLoadingTextures(newtextures);
+}
+
+void R_LoadTexturesPwad(UINT16 wadnum)
+{
+	INT32 newtextures = R_CountTextures(wadnum);
+
+	R_AllocateTextures(newtextures);
+	R_DefineTextures(numtextures, wadnum);
+	R_FinishLoadingTextures(newtextures);
 }
 
 static texpatch_t *R_ParsePatch(boolean actuallyLoadPatch)
@@ -1368,6 +1403,7 @@ static texture_t *R_ParseTexture(boolean actuallyLoadTexture)
 			// Allocate memory for a zero-patch texture. Obviously, we'll be adding patches momentarily.
 			resultTexture = (texture_t *)Z_Calloc(sizeof(texture_t),PU_STATIC,NULL);
 			M_Memcpy(resultTexture->name, newTextureName, 8);
+			resultTexture->hash = quickncasehash(newTextureName, 8);
 			resultTexture->width = newTextureWidth;
 			resultTexture->height = newTextureHeight;
 			resultTexture->type = TEXTURETYPE_COMPOSITE;
@@ -1553,6 +1589,7 @@ lumpnum_t R_GetFlatNumForName(const char *name)
 					continue;
 			break;
 		case RET_PK3:
+		case RET_FOLDER:
 			if ((start = W_CheckNumForFolderStartPK3("Flats/", i, 0)) == INT16_MAX)
 				continue;
 			if ((end = W_CheckNumForFolderEndPK3("Flats/", i, start)) == INT16_MAX)
@@ -1593,19 +1630,22 @@ void R_ClearTextureNumCache(boolean btell)
 INT32 R_CheckTextureNumForName(const char *name)
 {
 	INT32 i;
+	UINT32 hash;
 
 	// "NoTexture" marker.
 	if (name[0] == '-')
 		return 0;
 
+	hash = quickncasehash(name, 8);
+
 	for (i = 0; i < tidcachelen; i++)
-		if (!strncasecmp(tidcache[i].name, name, 8))
+		if (tidcache[i].hash == hash && !strncasecmp(tidcache[i].name, name, 8))
 			return tidcache[i].id;
 
 	// Need to parse the list backwards, so textures loaded more recently are used in lieu of ones loaded earlier
 	//for (i = 0; i < numtextures; i++) <- old
 	for (i = (numtextures - 1); i >= 0; i--) // <- new
-		if (!strncasecmp(textures[i]->name, name, 8))
+		if (textures[i]->hash == hash && !strncasecmp(textures[i]->name, name, 8))
 		{
 			tidcachelen++;
 			Z_Realloc(tidcache, tidcachelen * sizeof(*tidcache), PU_STATIC, &tidcache);
@@ -1614,11 +1654,41 @@ INT32 R_CheckTextureNumForName(const char *name)
 #ifndef ZDEBUG
 			CONS_Debug(DBG_SETUP, "texture #%s: %s\n", sizeu1(tidcachelen), tidcache[tidcachelen-1].name);
 #endif
+			tidcache[tidcachelen-1].hash = hash;
 			tidcache[tidcachelen-1].id = i;
 			return i;
 		}
 
 	return -1;
+}
+
+//
+// R_CheckTextureNameForNum
+//
+// because sidedefs use numbers and sometimes you want names
+// returns no texture marker if no texture was found
+//
+const char *R_CheckTextureNameForNum(INT32 num)
+{
+	if (num > 0 && num < numtextures)
+		return textures[num]->name;
+	
+	return "-";
+}
+
+//
+// R_TextureNameForNum
+//
+// calls R_CheckTextureNameForNum and returns REDWALL if result is a no texture marker
+//
+const char *R_TextureNameForNum(INT32 num)
+{
+	const char *result = R_CheckTextureNameForNum(num);
+
+	if (strcmp(result, "-") == 0)
+		return "REDWALL";
+
+	return result;
 }
 
 //

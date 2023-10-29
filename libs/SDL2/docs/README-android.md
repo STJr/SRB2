@@ -10,8 +10,7 @@ If you are using the older ant build process, it is no longer officially
 supported, but you can use the "android-project-ant" directory as a template.
 
 
-================================================================================
- Requirements
+Requirements
 ================================================================================
 
 Android SDK (version 26 or later)
@@ -23,8 +22,7 @@ https://developer.android.com/tools/sdk/ndk/index.html
 Minimum API level supported by SDL: 16 (Android 4.1)
 
 
-================================================================================
- How the port works
+How the port works
 ================================================================================
 
 - Android applications are Java-based, optionally with parts written in C
@@ -42,8 +40,7 @@ dispatches to native functions implemented in the SDL library:
 src/core/android/SDL_android.c
 
 
-================================================================================
- Building an app
+Building an app
 ================================================================================
 
 For simple projects you can use the script located at build-scripts/androidbuild.sh
@@ -82,6 +79,23 @@ For more complex projects, follow these instructions:
 
 4b. If you want to build manually, run './gradlew installDebug' in the project directory. This compiles the .java, creates an .apk with the native code embedded, and installs it on any connected Android device
 
+
+If you already have a project that uses CMake, the instructions change somewhat:
+
+1. Do points 1 and 2 from the instruction above.
+2. Edit "<project>/app/build.gradle" to comment out or remove sections containing ndk-build
+   and uncomment the cmake sections. Add arguments to the CMake invocation as needed.
+3. Edit "<project>/app/jni/CMakeLists.txt" to include your project (it defaults to
+   adding the "src" subdirectory). Note that you'll have SDL2, SDL2main and SDL2-static
+   as targets in your project, so you should have "target_link_libraries(yourgame SDL2 SDL2main)"
+   in your CMakeLists.txt file. Also be aware that you should use add_library() instead of
+   add_executable() for the target containing your "main" function.
+
+If you wish to use Android Studio, you can skip the last step.
+
+4. Run './gradlew installDebug' or './gradlew installRelease' in the project directory. It will build and install your .apk on any
+   connected Android device
+
 Here's an explanation of the files in the Android project, so you can customize them:
 
     android-project/app
@@ -90,10 +104,12 @@ Here's an explanation of the files in the Android project, so you can customize 
         jni/			- directory holding native code
         jni/Application.mk	- Application JNI settings, including target platform and STL library
         jni/Android.mk		- Android makefile that can call recursively the Android.mk files in all subdirectories
+        jni/CMakeLists.txt	- Top-level CMake project that adds SDL as a subproject
         jni/SDL/		- (symlink to) directory holding the SDL library files
         jni/SDL/Android.mk	- Android makefile for creating the SDL shared library
         jni/src/		- directory holding your C/C++ source
         jni/src/Android.mk	- Android makefile that you should customize to include your source code and any library references
+        jni/src/CMakeLists.txt	- CMake file that you may customize to include your source code and any library references
         src/main/assets/	- directory holding asset files for your application
         src/main/res/		- directory holding resources for your application
         src/main/res/mipmap-*	- directories holding icons for different phone hardware
@@ -101,8 +117,7 @@ Here's an explanation of the files in the Android project, so you can customize 
         src/main/java/org/libsdl/app/SDLActivity.java - the Java class handling the initialization and binding to SDL. Be very careful changing this, as the SDL library relies on this implementation. You should instead subclass this for your application.
 
 
-================================================================================
- Customizing your application name
+Customizing your application name
 ================================================================================
 
 To customize your application name, edit AndroidManifest.xml and replace
@@ -132,8 +147,7 @@ Then replace "SDLActivity" in AndroidManifest.xml with the name of your
 class, .e.g. "MyGame"
 
 
-================================================================================
- Customizing your application icon
+Customizing your application icon
 ================================================================================
 
 Conceptually changing your icon is just replacing the "ic_launcher.png" files in
@@ -141,8 +155,7 @@ the drawable directories under the res directory. There are several directories
 for different screen sizes.
 
 
-================================================================================
- Loading assets
+Loading assets
 ================================================================================
 
 Any files you put in the "app/src/main/assets" directory of your project
@@ -170,8 +183,7 @@ disable this behaviour, see for example:
 http://ponystyle.com/blog/2010/03/26/dealing-with-asset-compression-in-android-apps/
 
 
-================================================================================
- Pause / Resume behaviour
+Pause / Resume behaviour
 ================================================================================
 
 If SDL_HINT_ANDROID_BLOCK_ON_PAUSE hint is set (the default),
@@ -186,13 +198,37 @@ app can continue to operate as it was.
 
 However, there's a chance (on older hardware, or on systems under heavy load),
 where the GL context can not be restored. In that case you have to listen for
-a specific message, (which is not yet implemented!) and restore your textures
-manually or quit the app (which is actually the kind of behaviour you'll see
-under iOS, if the OS can not restore your GL context it will just kill your app)
+a specific message (SDL_RENDER_DEVICE_RESET) and restore your textures
+manually or quit the app.
 
+You should not use the SDL renderer API while the app going in background:
+- SDL_APP_WILLENTERBACKGROUND:
+    after you read this message, GL context gets backed-up and you should not
+    use the SDL renderer API.
 
+- SDL_APP_DIDENTERFOREGROUND:
+   GL context is restored, and the SDL renderer API is available (unless you
+   receive SDL_RENDER_DEVICE_RESET).
+
+Mouse / Touch events
 ================================================================================
- Threads and the Java VM
+
+In some case, SDL generates synthetic mouse (resp. touch) events for touch
+(resp. mouse) devices.
+To enable/disable this behavior, see SDL_hints.h:
+- SDL_HINT_TOUCH_MOUSE_EVENTS
+- SDL_HINT_MOUSE_TOUCH_EVENTS
+
+Misc
+================================================================================
+
+For some device, it appears to works better setting explicitly GL attributes
+before creating a window:
+  SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 5);
+  SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 6);
+  SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 5);
+
+Threads and the Java VM
 ================================================================================
 
 For a quick tour on how Linux native threads interoperate with the Java VM, take
@@ -207,8 +243,17 @@ your thread automatically anyway (when you make an SDL call), but it'll never
 detach it.
 
 
-================================================================================
- Using STL
+If you ever want to use JNI in a native thread (created by "SDL_CreateThread()"),
+it won't be able to find your java class and method because of the java class loader
+which is different for native threads, than for java threads (eg your "main()").
+
+the work-around is to find class/method, in you "main()" thread, and to use them
+in your native thread.
+
+see:
+https://developer.android.com/training/articles/perf-jni#faq:-why-didnt-findclass-find-my-class
+
+Using STL
 ================================================================================
 
 You can use STL in your project by creating an Application.mk file in the jni
@@ -220,8 +265,7 @@ For more information go here:
 	https://developer.android.com/ndk/guides/cpp-support
 
 
-================================================================================
- Using the emulator
+Using the emulator
 ================================================================================
 
 There are some good tips and tricks for getting the most out of the
@@ -233,8 +277,7 @@ Notice that this software emulator is incredibly slow and needs a lot of disk sp
 Using a real device works better.
 
 
-================================================================================
- Troubleshooting
+Troubleshooting
 ================================================================================
 
 You can see if adb can see any devices with the following command:
@@ -313,8 +356,7 @@ If you need to build without optimization turned on, you can create a file calle
     APP_OPTIM := debug
 
 
-================================================================================
- Memory debugging
+Memory debugging
 ================================================================================
 
 The best (and slowest) way to debug memory issues on Android is valgrind.
@@ -365,8 +407,7 @@ When you're done instrumenting with valgrind, you can disable the wrapper:
     adb shell setprop wrap.org.libsdl.app ""
 
 
-================================================================================
- Graphics debugging
+Graphics debugging
 ================================================================================
 
 If you are developing on a compatible Tegra-based tablet, NVidia provides
@@ -379,8 +420,7 @@ The Tegra Graphics Debugger is available from NVidia here:
 https://developer.nvidia.com/tegra-graphics-debugger
 
 
-================================================================================
- Why is API level 16 the minimum required?
+Why is API level 16 the minimum required?
 ================================================================================
 
 The latest NDK toolchain doesn't support targeting earlier than API level 16.
@@ -389,8 +429,7 @@ about 99% of the Android devices accessing Google Play support API level 16 or
 higher (January 2018).
 
 
-================================================================================
- A note regarding the use of the "dirty rectangles" rendering technique
+A note regarding the use of the "dirty rectangles" rendering technique
 ================================================================================
 
 If your app uses a variation of the "dirty rectangles" rendering technique,
@@ -408,8 +447,7 @@ screen each frame.
 Reference: http://www.khronos.org/registry/egl/specs/EGLTechNote0001.html
 
 
-================================================================================
- Ending your application
+Ending your application
 ================================================================================
 
 Two legitimate ways:
@@ -426,8 +464,7 @@ Don't call exit() as it stops the activity badly.
 NB: "Back button" can be handled as a SDL_KEYDOWN/UP events, with Keycode
 SDLK_AC_BACK, for any purpose.
 
-================================================================================
- Known issues
+Known issues
 ================================================================================
 
 - The number of buttons reported for each joystick is hardcoded to be 36, which
