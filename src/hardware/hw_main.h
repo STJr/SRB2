@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2021 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -19,6 +19,8 @@
 #include "../am_map.h"
 #include "../d_player.h"
 #include "../r_defs.h"
+
+#include "../m_perfstats.h"
 
 // Startup & Shutdown the hardware mode renderer
 void HWR_Startup(void);
@@ -115,25 +117,26 @@ extern float gl_viewwindowx, gl_basewindowcentery;
 // BP: big hack for a test in lighting ref : 1249753487AB
 extern fixed_t *hwbbox;
 extern FTransform atransform;
+extern float gl_viewsin, gl_viewcos;
 
 
 // Render stats
-extern precise_t ps_hw_skyboxtime;
-extern precise_t ps_hw_nodesorttime;
-extern precise_t ps_hw_nodedrawtime;
-extern precise_t ps_hw_spritesorttime;
-extern precise_t ps_hw_spritedrawtime;
+extern ps_metric_t ps_hw_skyboxtime;
+extern ps_metric_t ps_hw_nodesorttime;
+extern ps_metric_t ps_hw_nodedrawtime;
+extern ps_metric_t ps_hw_spritesorttime;
+extern ps_metric_t ps_hw_spritedrawtime;
 
 // Render stats for batching
-extern int ps_hw_numpolys;
-extern int ps_hw_numverts;
-extern int ps_hw_numcalls;
-extern int ps_hw_numshaders;
-extern int ps_hw_numtextures;
-extern int ps_hw_numpolyflags;
-extern int ps_hw_numcolors;
-extern precise_t ps_hw_batchsorttime;
-extern precise_t ps_hw_batchdrawtime;
+extern ps_metric_t ps_hw_numpolys;
+extern ps_metric_t ps_hw_numverts;
+extern ps_metric_t ps_hw_numcalls;
+extern ps_metric_t ps_hw_numshaders;
+extern ps_metric_t ps_hw_numtextures;
+extern ps_metric_t ps_hw_numpolyflags;
+extern ps_metric_t ps_hw_numcolors;
+extern ps_metric_t ps_hw_batchsorttime;
+extern ps_metric_t ps_hw_batchdrawtime;
 
 extern boolean gl_init;
 extern boolean gl_maploaded;

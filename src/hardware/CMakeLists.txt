@@ -1,1 +1,14 @@
-target_sourcefile(c)
+target_sources(SRB2SDL2 PRIVATE
+	hw_bsp.c
+	hw_draw.c
+	hw_light.c
+	hw_main.c
+	hw_clip.c
+	hw_md2.c
+	hw_cache.c
+	hw_md2load.c
+	hw_md3load.c
+	hw_model.c
+	hw_batching.c
+	r_opengl/r_opengl.c
+)

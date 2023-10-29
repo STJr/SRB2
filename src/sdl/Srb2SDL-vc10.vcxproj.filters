@@ -135,6 +135,15 @@
     <ClInclude Include="..\dehacked.h">
       <Filter>D_Doom</Filter>
     </ClInclude>
+    <ClInclude Include="..\deh_lua.h">
+      <Filter>D_Doom</Filter>
+    </ClInclude>
+    <ClInclude Include="..\deh_soc.h">
+      <Filter>D_Doom</Filter>
+    </ClInclude>
+    <ClInclude Include="..\deh_tables.h">
+      <Filter>D_Doom</Filter>
+    </ClInclude>
     <ClInclude Include="..\doomdata.h">
       <Filter>D_Doom</Filter>
     </ClInclude>
@@ -288,6 +297,9 @@
     <ClInclude Include="..\i_tcp.h">
       <Filter>I_Interface</Filter>
     </ClInclude>
+    <ClInclude Include="..\i_threads.h">
+      <Filter>I_Interface</Filter>
+    </ClInclude>
     <ClInclude Include="..\i_video.h">
       <Filter>I_Interface</Filter>
     </ClInclude>
@@ -402,6 +414,9 @@
     <ClInclude Include="..\tables.h">
       <Filter>P_Play</Filter>
     </ClInclude>
+    <ClInclude Include="..\taglist.h">
+      <Filter>P_Play</Filter>
+    </ClInclude>
     <ClInclude Include="..\libdivide.h">
       <Filter>R_Rend</Filter>
     </ClInclude>
@@ -494,6 +509,21 @@
     </ClInclude>
     <ClInclude Include="..\r_portal.h">
       <Filter>R_Rend</Filter>
+    </ClInclude>
+    <ClInclude Include="..\lua_hudlib_drawlist.h">
+      <Filter>LUA</Filter>
+    </ClInclude>
+    <ClInclude Include="..\i_time.h">
+      <Filter>I_Interface</Filter>
+    </ClInclude>
+    <ClInclude Include="..\r_fps.h">
+      <Filter>R_Rend</Filter>
+    </ClInclude>
+    <ClInclude Include="..\p_haptic.h">
+      <Filter>P_Play</Filter>
+    </ClInclude>
+    <ClInclude Include="..\m_easing.h">
+      <Filter>M_Misc</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -598,6 +628,15 @@
       <Filter>BLUA</Filter>
     </ClCompile>
     <ClCompile Include="..\dehacked.c">
+      <Filter>D_Doom</Filter>
+    </ClCompile>
+    <ClCompile Include="..\deh_lua.c">
+      <Filter>D_Doom</Filter>
+    </ClCompile>
+    <ClCompile Include="..\deh_soc.c">
+      <Filter>D_Doom</Filter>
+    </ClCompile>
+    <ClCompile Include="..\deh_tables.c">
       <Filter>D_Doom</Filter>
     </ClCompile>
     <ClCompile Include="..\d_clisrv.c">
@@ -747,6 +786,9 @@
     <ClCompile Include="..\lua_skinlib.c">
       <Filter>LUA</Filter>
     </ClCompile>
+    <ClCompile Include="..\lua_taglib.c">
+      <Filter>LUA</Filter>
+    </ClCompile>
     <ClCompile Include="..\lua_thinkerlib.c">
       <Filter>LUA</Filter>
     </ClCompile>
@@ -852,6 +894,9 @@
     <ClCompile Include="..\tables.c">
       <Filter>P_Play</Filter>
     </ClCompile>
+    <ClCompile Include="..\taglist.c">
+      <Filter>P_Play</Filter>
+    </ClCompile>
     <ClCompile Include="..\t_facon.c">
       <Filter>P_Play</Filter>
     </ClCompile>
@@ -930,9 +975,6 @@
     <ClCompile Include="hwsym_sdl.c">
       <Filter>SDLApp</Filter>
     </ClCompile>
-    <ClCompile Include="i_cdmus.c">
-      <Filter>SDLApp</Filter>
-    </ClCompile>
     <ClCompile Include="i_main.c">
       <Filter>SDLApp</Filter>
     </ClCompile>
@@ -987,6 +1029,24 @@
     </ClCompile>
     <ClCompile Include="..\r_portal.c">
       <Filter>R_Rend</Filter>
+    </ClCompile>
+    <ClCompile Include="..\lua_hudlib_drawlist.c">
+      <Filter>LUA</Filter>
+    </ClCompile>
+    <ClCompile Include="i_gamepad.c">
+      <Filter>SDLApp</Filter>
+    </ClCompile>
+    <ClCompile Include="..\i_time.c">
+      <Filter>I_Interface</Filter>
+    </ClCompile>
+    <ClCompile Include="..\r_fps.c">
+      <Filter>R_Rend</Filter>
+    </ClCompile>
+    <ClCompile Include="..\p_haptic.c">
+      <Filter>P_Play</Filter>
+    </ClCompile>
+    <ClCompile Include="..\m_easing.c">
+      <Filter>M_Misc</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

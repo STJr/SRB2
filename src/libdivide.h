@@ -581,6 +581,11 @@ static inline void libdivide_u128_shift(uint64_t *u1, uint64_t *u0, int32_t sign
 
 ////////// UINT32
 
+#if defined(__GNUC__) || defined(__clang__) // Suppress intentional compiler warnings
+    #pragma GCC diagnostic push
+    #pragma GCC diagnostic ignored "-Waggregate-return"
+#endif
+
 static inline struct libdivide_u32_t libdivide_internal_u32_gen(uint32_t d, int branchfree) {
     struct libdivide_u32_t result;
     uint32_t floor_log_2_d;
@@ -646,6 +651,10 @@ struct libdivide_u32_t libdivide_u32_gen(uint32_t d) {
     struct libdivide_u32_branchfree_t ret = {tmp.magic, (uint8_t)(tmp.more & LIBDIVIDE_32_SHIFT_MASK)};
     return ret;
 }*/
+
+#if defined(__GNUC__) || defined(__clang__) // Stop suppressing intentional compiler warnings
+    #pragma GCC diagnostic pop
+#endif
 
 uint32_t libdivide_u32_do(uint32_t numer, const struct libdivide_u32_t *denom) {
     uint8_t more = denom->more;

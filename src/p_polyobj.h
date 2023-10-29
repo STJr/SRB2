@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2006      by James Haley
-// Copyright (C) 2006-2021 by Sonic Team Junior.
+// Copyright (C) 2006-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -137,7 +137,7 @@ typedef struct polyrotate_s
 	INT32 polyObjNum;    // numeric id of polyobject (avoid C pointers here)
 	INT32 speed;         // speed of movement per frame
 	INT32 distance;      // distance to move
-	UINT8 turnobjs;      // turn objects? 0=no, 1=everything but players, 2=everything
+	UINT8 turnobjs;      // turn objects? PTF_ flags
 } polyrotate_t;
 
 typedef struct polymove_s
@@ -247,14 +247,27 @@ typedef struct polyfade_s
 // Line Activation Data Structures
 //
 
+typedef enum
+{
+	TMPR_DONTROTATEOTHERS = 1,
+	TMPR_ROTATEPLAYERS    = 1<<1,
+	TMPR_CONTINUOUS       = 1<<2,
+	TMPR_OVERRIDE         = 1<<3,
+} textmappolyrotate_t;
+
+typedef enum
+{
+	PTF_PLAYERS = 1,    // Turn players with movement
+	PTF_OTHERS = 1<<1, // Turn other mobjs with movement
+} polyturnflags_e;
+
 typedef struct polyrotdata_s
 {
 	INT32 polyObjNum;   // numeric id of polyobject to affect
 	INT32 direction;    // direction of rotation
 	INT32 speed;        // angular speed
 	INT32 distance;     // distance to move
-	UINT8 turnobjs;     // rotate objects being carried?
-	UINT8 overRide;     // if true, will override any action on the object
+	UINT8 flags;        // TMPR_ flags
 } polyrotdata_t;
 
 typedef struct polymovedata_s
@@ -280,6 +293,20 @@ typedef struct polywaypointdata_s
 	UINT8 returnbehavior; // behavior after reaching the last waypoint
 	UINT8 flags;          // PWF_ flags
 } polywaypointdata_t;
+
+typedef enum
+{
+	TMPV_NOCHANGE  = 0,
+	TMPV_VISIBLE   = 1,
+	TMPV_INVISIBLE = 2,
+} textmappolyvisibility_t;
+
+typedef enum
+{
+	TMPT_NOCHANGE   = 0,
+	TMPT_TANGIBLE   = 1,
+	TMPT_INTANGIBLE = 2,
+} textmappolytangibility_t;
 
 // polyobject door types
 typedef enum
@@ -322,6 +349,15 @@ typedef struct polyflagdata_s
 	fixed_t momx;
 } polyflagdata_t;
 
+typedef enum
+{
+	TMPF_RELATIVE        = 1,
+	TMPF_OVERRIDE        = 1<<1,
+	TMPF_TICBASED        = 1<<2,
+	TMPF_IGNORECOLLISION = 1<<3,
+	TMPF_GHOSTFADE       = 1<<4,
+} textmappolyfade_t;
+
 typedef struct polyfadedata_s
 {
 	INT32 polyObjNum;
@@ -337,7 +373,7 @@ typedef struct polyfadedata_s
 //
 
 boolean Polyobj_moveXY(polyobj_t *po, fixed_t x, fixed_t y, boolean checkmobjs);
-boolean Polyobj_rotate(polyobj_t *po, angle_t delta, UINT8 turnthings, boolean checkmobjs);
+boolean Polyobj_rotate(polyobj_t *po, angle_t delta, boolean turnplayers, boolean turnothers, boolean checkmobjs);
 polyobj_t *Polyobj_GetForNum(INT32 id);
 void Polyobj_InitLevel(void);
 void Polyobj_MoveOnLoad(polyobj_t *po, angle_t angle, fixed_t x, fixed_t y);

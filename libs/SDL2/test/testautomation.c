@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 1997-2019 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2022 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -62,7 +62,7 @@ main(int argc, char *argv[])
             }
             else if (SDL_strcasecmp(argv[i], "--execKey") == 0) {
                 if (argv[i + 1]) {
-                    SDL_sscanf(argv[i + 1], "%"SDL_PRIu64, (long long unsigned int *)&userExecKey);
+                    SDL_sscanf(argv[i + 1], "%"SDL_PRIu64, &userExecKey);
                     consumed = 2;
                 }
             }
