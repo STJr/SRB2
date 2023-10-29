@@ -1992,24 +1992,6 @@ HW3SOUND for 3D hardware sound  support
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="src/v_video.h" />
-		<Unit filename="src/vid_copy.s">
-			<Option compilerVar="CC" />
-			<Option compiler="avrgcc" use="1" buildCommand="$compiler $options -x assembler-with-cpp -c $file -o $object" />
-			<Option compiler="gnu_gcc_compiler_for_mingw32" use="1" buildCommand="$compiler $options -x assembler-with-cpp -c $file -o $object" />
-			<Option compiler="gnu_gcc_compiler_for_mingw64" use="1" buildCommand="$compiler $options -x assembler-with-cpp -c $file -o $object" />
-			<Option compiler="armelfgcc" use="1" buildCommand="$compiler $options -x assembler-with-cpp -c $file -o $object" />
-			<Option compiler="tricoregcc" use="1" buildCommand="$compiler $options -x assembler-with-cpp -c $file -o $object" />
-			<Option compiler="ppcgcc" use="1" buildCommand="$compiler $options -x assembler-with-cpp -c $file -o $object" />
-			<Option compiler="gcc" use="1" buildCommand="$compiler $options -x assembler-with-cpp -c $file -o $object" />
-			<Option target="Debug Native/SDL" />
-			<Option target="Release Native/SDL" />
-			<Option target="Debug Linux/SDL" />
-			<Option target="Release Linux/SDL" />
-			<Option target="Debug Mingw/SDL" />
-			<Option target="Release Mingw/SDL" />
-			<Option target="Debug Mingw/DirectX" />
-			<Option target="Release Mingw/DirectX" />
-		</Unit>
 		<Unit filename="src/w_wad.c">
 			<Option compilerVar="CC" />
 		</Unit>

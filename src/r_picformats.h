@@ -1,8 +1,8 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 2018-2021 by Jaime "Lactozilla" Passos.
-// Copyright (C) 2019-2021 by Sonic Team Junior.
+// Copyright (C) 2018-2023 by Jaime "Lactozilla" Passos.
+// Copyright (C) 2019-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -95,7 +95,6 @@ typedef enum
 typedef struct
 {
 	INT32 x, y;
-	rotaxis_t rotaxis;
 } spriteframepivot_t;
 
 typedef struct
@@ -105,6 +104,7 @@ typedef struct
 } spriteinfo_t;
 
 // Portable Network Graphics
+#define PNG_HEADER_SIZE (8)
 boolean Picture_IsLumpPNG(const UINT8 *d, size_t s);
 #define Picture_ThrowPNGError(lumpname, wadfilename) I_Error("W_Wad: Lump \"%s\" in file \"%s\" is a .png - please convert to either Doom or Flat (raw) image format.", lumpname, wadfilename); // Fears Of LJ Sonic
 

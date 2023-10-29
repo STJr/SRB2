@@ -12,6 +12,10 @@
 #include <stdarg.h>
 #include <stddef.h>
 
+#ifdef _MSC_VER
+#include <stdint.h>
+#endif
+
 
 #include "luaconf.h"
 

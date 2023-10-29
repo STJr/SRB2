@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2007-2016 by John "JTE" Muniz.
-// Copyright (C) 2011-2021 by Sonic Team Junior.
+// Copyright (C) 2011-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -17,6 +17,7 @@
 #include "p_local.h"
 #include "b_bot.h"
 #include "lua_hook.h"
+#include "i_system.h" // I_BaseTiccmd
 
 void B_UpdateBotleader(player_t *player)
 {
@@ -29,7 +30,7 @@ void B_UpdateBotleader(player_t *player)
 	{
 		if (players[i].bot || players[i].playerstate != PST_LIVE || players[i].spectator || !players[i].mo)
 			continue;
-		
+
 		if (!player->botleader)
 		{
 			player->botleader = &players[i]; // set default
@@ -84,7 +85,7 @@ static void B_BuildTailsTiccmd(mobj_t *sonic, mobj_t *tails, ticcmd_t *cmd)
 	boolean stalled = (bmom < scale >> 1) && dist > followthres; // Helps to see if the AI is having trouble catching up
 	boolean samepos = (sonic->x == tails->x && sonic->y == tails->y);
 	boolean blocked = bot->blocked;
-	
+
 	if (!samepos)
 		ang = R_PointToAngle2(tails->x, tails->y, sonic->x, sonic->y);
 
@@ -117,7 +118,7 @@ static void B_BuildTailsTiccmd(mobj_t *sonic, mobj_t *tails, ticcmd_t *cmd)
 		return;
 	}
 
-	// Adapted from CobaltBW's tails_AI.wad
+	// Adapted from clairebun's tails_AI.wad
 
 	// Check water
 	if (water)
@@ -132,17 +133,17 @@ static void B_BuildTailsTiccmd(mobj_t *sonic, mobj_t *tails, ticcmd_t *cmd)
 	// Update catchup_tics
 	if (mem->thinkstate == AI_SPINFOLLOW)
 	{
-		mem-> catchup_tics = 0;
+		mem->catchup_tics = 0;
 	}
 	else if (dist > followmax || zdist > comfortheight || stalled)
 	{
-		mem-> catchup_tics = min(mem-> catchup_tics + 2, 70);
-		if (mem-> catchup_tics >= 70)
+		mem->catchup_tics = min(mem->catchup_tics + 2, 70);
+		if (mem->catchup_tics >= 70)
 			mem->thinkstate = AI_CATCHUP;
 	}
 	else
 	{
-		mem-> catchup_tics = max(mem-> catchup_tics - 1, 0);
+		mem->catchup_tics = max(mem->catchup_tics - 1, 0);
 		if (mem->thinkstate == AI_CATCHUP)
 			mem->thinkstate = AI_FOLLOW;
 	}
@@ -187,6 +188,7 @@ static void B_BuildTailsTiccmd(mobj_t *sonic, mobj_t *tails, ticcmd_t *cmd)
 			&& !(pcmd->forwardmove || pcmd->sidemove || player->dashspeed)
 			&& P_IsObjectOnGround(sonic) && P_IsObjectOnGround(tails)
 			&& !(player->pflags & PF_STASIS)
+			&& !(player->exiting)
 			&& bot->charability == CA_FLY)
 				mem->thinkstate = AI_THINKFLY;
 		else if (mem->thinkstate == AI_THINKFLY)
@@ -317,7 +319,6 @@ static void B_BuildTailsTiccmd(mobj_t *sonic, mobj_t *tails, ticcmd_t *cmd)
 		{
 			// Copy inputs
 			cmd->angleturn = (sonic->angle) >> 16; // NOT FRACBITS DAMNIT
-			bot->drawangle = ang;
 			cmd->forwardmove = 8 * pcmd->forwardmove / 10;
 			cmd->sidemove = 8 * pcmd->sidemove / 10;
 		}
@@ -344,7 +345,7 @@ static void B_BuildTailsTiccmd(mobj_t *sonic, mobj_t *tails, ticcmd_t *cmd)
 		else if (!jump_last && !(bot->pflags & PF_JUMPED) //&& !(player->pflags & PF_SPINNING)
 			&& ((zdist > 32*scale && player->pflags & PF_JUMPED) // Following
 				|| (zdist > 64*scale && mem->thinkstate == AI_CATCHUP) // Vertical catch-up
-				|| (stalled && mem-> catchup_tics > 20 && bot->powers[pw_carry] == CR_NONE)
+				|| (stalled && mem->catchup_tics > 20 && bot->powers[pw_carry] == CR_NONE)
 				//|| (bmom < scale>>3 && dist > followthres && !(bot->powers[pw_carry])) // Stopped & not in carry state
 				|| (bot->pflags & PF_SPINNING && !(bot->pflags & PF_JUMPED)))) // Spinning
 					jump = true;
@@ -371,6 +372,8 @@ static void B_BuildTailsTiccmd(mobj_t *sonic, mobj_t *tails, ticcmd_t *cmd)
 
 void B_BuildTiccmd(player_t *player, ticcmd_t *cmd)
 {
+	G_CopyTiccmd(cmd, I_BaseTiccmd(), 1); // empty, or external driver
+
 	// Can't build a ticcmd if we aren't spawned...
 	if (!player->mo)
 		return;
@@ -390,7 +393,7 @@ void B_BuildTiccmd(player_t *player, ticcmd_t *cmd)
 		return;
 
 	// Make sure we have a valid main character to follow
-	 B_UpdateBotleader(player);
+	B_UpdateBotleader(player);
 	if (!player->botleader)
 		return;
 
@@ -403,7 +406,7 @@ void B_KeysToTiccmd(mobj_t *mo, ticcmd_t *cmd, boolean forward, boolean backward
 {
 	player_t *player = mo->player;
 	// don't try to do stuff if your sonic is in a minecart or something
-	if (&player->botleader && player->botleader->powers[pw_carry] && player->botleader->powers[pw_carry] != CR_PLAYER)
+	if (player->botleader && player->botleader->powers[pw_carry] && player->botleader->powers[pw_carry] != CR_PLAYER)
 		return;
 	// Turn the virtual keypresses into ticcmd_t.
 	if (twodlevel || mo->flags2 & MF2_TWOD) {
@@ -446,10 +449,10 @@ void B_KeysToTiccmd(mobj_t *mo, ticcmd_t *cmd, boolean forward, boolean backward
 			cmd->forwardmove += MAXPLMOVE<<FRACBITS>>16;
 		if (backward)
 			cmd->forwardmove -= MAXPLMOVE<<FRACBITS>>16;
- 		if (left)
+		if (left)
 			cmd->angleturn += 1280;
 		if (right)
-			cmd->angleturn -= 1280; 
+			cmd->angleturn -= 1280;
 		if (strafeleft)
 			cmd->sidemove -= MAXPLMOVE<<FRACBITS>>16;
 		if (straferight)
@@ -484,7 +487,7 @@ boolean B_CheckRespawn(player_t *player)
 	//We don't have a main player to spawn to!
 	if (!player->botleader)
 		return false;
-	
+
 	sonic = player->botleader->mo;
 	// We can't follow Sonic if he's not around!
 	if (!sonic || sonic->health <= 0)
@@ -577,7 +580,7 @@ void B_RespawnBot(INT32 playernum)
 	player->powers[pw_nocontrol] = sonic->player->powers[pw_nocontrol];
 	player->pflags |= PF_AUTOBRAKE|(sonic->player->pflags & PF_DIRECTIONCHAR);
 
-	P_TeleportMove(tails, x, y, z);
+	P_SetOrigin(tails, x, y, z);
 	if (player->charability == CA_FLY)
 	{
 		P_SetPlayerMobjState(tails, S_PLAY_FLY);
@@ -593,25 +596,44 @@ void B_HandleFlightIndicator(player_t *player)
 {
 	mobj_t *tails = player->mo;
 	botmem_t *mem = &player->botmem;
+	boolean shouldExist;
+
 	if (!tails)
 		return;
 
-	if (mem->thinkstate == AI_THINKFLY && player->bot == BOT_2PAI && tails->health)
+	shouldExist = (mem->thinkstate == AI_THINKFLY) && player->botleader
+		&& player->bot == BOT_2PAI && player->playerstate == PST_LIVE;
+
+	// check whether the indicator doesn't exist
+	if (P_MobjWasRemoved(tails->hnext))
 	{
-		if (!tails->hnext)
-		{
-			P_SetTarget(&tails->hnext, P_SpawnMobjFromMobj(tails, 0, 0, 0, MT_OVERLAY));
-			if (tails->hnext)
-			{
-				P_SetTarget(&tails->hnext->target, tails);
-				P_SetTarget(&tails->hnext->hprev, tails);
-				P_SetMobjState(tails->hnext, S_FLIGHTINDICATOR);
-			}
-		}
+		// if it shouldn't exist, everything is fine
+		if (!shouldExist)
+			return;
+
+		// otherwise, spawn it
+		P_SetTarget(&tails->hnext, P_SpawnMobjFromMobj(tails, 0, 0, 0, MT_OVERLAY));
+		P_SetTarget(&tails->hnext->target, tails);
+		P_SetTarget(&tails->hnext->hprev, tails);
+		P_SetMobjState(tails->hnext, S_FLIGHTINDICATOR);
 	}
-	else if (tails->hnext && tails->hnext->type == MT_OVERLAY && tails->hnext->state == states+S_FLIGHTINDICATOR)
+
+	// if the mobj isn't a flight indicator, let's not mess with it
+	if (tails->hnext->type != MT_OVERLAY || (tails->hnext->state != states+S_FLIGHTINDICATOR))
+		return;
+
+	// if it shouldn't exist, remove it
+	if (!shouldExist)
 	{
 		P_RemoveMobj(tails->hnext);
 		P_SetTarget(&tails->hnext, NULL);
+		return;
 	}
+
+	// otherwise, update its visibility
+	tails->hnext->drawonlyforplayer = player->botleader; // Hide it from the other player in splitscreen, and yourself when spectating
+	if (P_IsLocalPlayer(player->botleader)) // Only display it on your own view. Don't display it for spectators
+		tails->hnext->flags2 &= ~MF2_DONTDRAW;
+	else
+		tails->hnext->flags2 |= MF2_DONTDRAW;
 }

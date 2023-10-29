@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2021 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -59,6 +59,7 @@
 #include "r_textures.h"
 #include "r_patch.h"
 #include "r_picformats.h"
+#include "i_time.h"
 #include "i_system.h"
 #include "i_video.h" // rendermode
 #include "md5.h"
@@ -200,7 +201,7 @@ FILE *W_OpenWadFile(const char **filename, boolean useerrors)
 }
 
 // Look for all DEHACKED and Lua scripts inside a PK3 archive.
-static inline void W_LoadDehackedLumpsPK3(UINT16 wadnum, boolean mainfile)
+static void W_LoadDehackedLumpsPK3(UINT16 wadnum, boolean mainfile)
 {
 	UINT16 posStart, posEnd;
 
@@ -240,7 +241,7 @@ static inline void W_LoadDehackedLumpsPK3(UINT16 wadnum, boolean mainfile)
 }
 
 // search for all DEHACKED lump in all wads and load it
-static inline void W_LoadDehackedLumps(UINT16 wadnum, boolean mainfile)
+static void W_LoadDehackedLumps(UINT16 wadnum, boolean mainfile)
 {
 	UINT16 lump;
 
@@ -304,7 +305,7 @@ static inline void W_LoadDehackedLumps(UINT16 wadnum, boolean mainfile)
   * \param resblock resulting MD5 checksum
   * \return 0 if MD5 checksum was made, and is at resblock, 1 if error was found
   */
-static inline INT32 W_MakeFileMD5(const char *filename, void *resblock)
+static INT32 W_MakeFileMD5(const char *filename, void *resblock)
 {
 #ifdef NOMD5
 	(void)filename;
@@ -361,6 +362,7 @@ static lumpinfo_t* ResGetLumpsStandalone (FILE* handle, UINT16* numlumps, const 
 	lumpinfo->size = ftell(handle);
 	fseek(handle, 0, SEEK_SET);
 	strcpy(lumpinfo->name, lumpname);
+	lumpinfo->hash = quickncasehash(lumpname, 8);
 
 	// Allocate the lump's long name.
 	lumpinfo->longname = Z_Malloc(9 * sizeof(char), PU_STATIC, NULL);
@@ -459,6 +461,7 @@ static lumpinfo_t* ResGetLumpsWad (FILE* handle, UINT16* nlmp, const char* filen
 			lump_p->compression = CM_NOCOMPRESSION;
 		memset(lump_p->name, 0x00, 9);
 		strncpy(lump_p->name, fileinfo->name, 8);
+		lump_p->hash = quickncasehash(lump_p->name, 8);
 
 		// Allocate the lump's long name.
 		lump_p->longname = Z_Malloc(9 * sizeof(char), PU_STATIC, NULL);
@@ -634,14 +637,13 @@ static lumpinfo_t* ResGetLumpsZip (FILE* handle, UINT16* nlmp)
 
 		memset(lump_p->name, '\0', 9); // Making sure they're initialized to 0. Is it necessary?
 		strncpy(lump_p->name, trimname, min(8, dotpos - trimname));
+		lump_p->hash = quickncasehash(lump_p->name, 8);
 
 		lump_p->longname = Z_Calloc(dotpos - trimname + 1, PU_STATIC, NULL);
 		strlcpy(lump_p->longname, trimname, dotpos - trimname + 1);
 
 		lump_p->fullname = Z_Calloc(zentry.namelen + 1, PU_STATIC, NULL);
 		strncpy(lump_p->fullname, fullname, zentry.namelen);
-
-		free(fullname);
 
 		switch(zentry.compression)
 		{
@@ -661,6 +663,8 @@ static lumpinfo_t* ResGetLumpsZip (FILE* handle, UINT16* nlmp)
 			lump_p->compression = CM_UNSUPPORTED;
 			break;
 		}
+
+		free(fullname);
 
 		// skip and ignore comments/extra fields
 		if (fseek(handle, zentry.xtralen + zentry.commlen, SEEK_CUR) != 0)
@@ -968,7 +972,7 @@ UINT16 W_InitFile(const char *filename, boolean mainfile, boolean startup)
 	// add the wadfile
 	//
 	CONS_Printf(M_GetText("Added file %s (%u lumps)\n"), filename, numlumps);
-	wadfiles = Z_Realloc(wadfiles, sizeof(wadfile_t) * (numwadfiles + 1), PU_STATIC, NULL);
+	wadfiles = Z_Realloc(wadfiles, sizeof(wadfile_t *) * (numwadfiles + 1), PU_STATIC, NULL);
 	wadfiles[numwadfiles] = wadfile;
 	numwadfiles++; // must come BEFORE W_LoadDehackedLumps, so any addfile called by COM_BufInsertText called by Lua doesn't overwrite what we just loaded
 
@@ -1031,7 +1035,7 @@ UINT16 W_InitFolder(const char *path, boolean mainfile, boolean startup)
 		return W_InitFileError(path, startup);
 	}
 
-	important = 0; /// \todo Implement a W_VerifyFolder.
+	important = 1; /// \todo Implement a W_VerifyFolder.
 
 	// Remove path delimiters.
 	p = path + (strlen(path) - 1);
@@ -1146,6 +1150,7 @@ UINT16 W_InitFolder(const char *path, boolean mainfile, boolean startup)
 	Z_Calloc(numlumps * sizeof (*wadfile->patchcache), PU_STATIC, &wadfile->patchcache);
 
 	CONS_Printf(M_GetText("Added folder %s (%u files, %u folders)\n"), fn, numlumps, foldercount);
+	wadfiles = Z_Realloc(wadfiles, sizeof(wadfile_t *) * (numwadfiles + 1), PU_STATIC, NULL);
 	wadfiles[numwadfiles] = wadfile;
 	numwadfiles++;
 
@@ -1225,12 +1230,14 @@ UINT16 W_CheckNumForNamePwad(const char *name, UINT16 wad, UINT16 startlump)
 {
 	UINT16 i;
 	static char uname[8 + 1];
+	UINT32 hash;
 
 	if (!TestValidLump(wad,0))
 		return INT16_MAX;
 
 	strlcpy(uname, name, sizeof uname);
 	strupr(uname);
+	hash = quickncasehash(uname, 8);
 
 	//
 	// scan forward
@@ -1241,7 +1248,7 @@ UINT16 W_CheckNumForNamePwad(const char *name, UINT16 wad, UINT16 startlump)
 	{
 		lumpinfo_t *lump_p = wadfiles[wad]->lumpinfo + startlump;
 		for (i = startlump; i < wadfiles[wad]->numlumps; i++, lump_p++)
-			if (!strncmp(lump_p->name, uname, sizeof(uname) - 1))
+			if (lump_p->hash == hash && !strncmp(lump_p->name, uname, sizeof(uname) - 1))
 				return i;
 	}
 
@@ -1444,15 +1451,20 @@ lumpnum_t W_CheckNumForLongName(const char *name)
 // TODO: Make it search through cache first, maybe...?
 lumpnum_t W_CheckNumForMap(const char *name)
 {
+	UINT32 hash = quickncasehash(name, 8);
 	UINT16 lumpNum, end;
 	UINT32 i;
+	lumpinfo_t *p;
 	for (i = numwadfiles - 1; i < numwadfiles; i--)
 	{
 		if (wadfiles[i]->type == RET_WAD)
 		{
 			for (lumpNum = 0; lumpNum < wadfiles[i]->numlumps; lumpNum++)
-				if (!strncmp(name, (wadfiles[i]->lumpinfo + lumpNum)->name, 8))
+			{
+				p = wadfiles[i]->lumpinfo + lumpNum;
+				if (p->hash == hash && !strncmp(name, p->name, 8))
 					return (i<<16) + lumpNum;
+			}
 		}
 		else if (W_FileHasFolders(wadfiles[i]))
 		{
@@ -1464,9 +1476,10 @@ lumpnum_t W_CheckNumForMap(const char *name)
 			// Now look for the specified map.
 			for (; lumpNum < end; lumpNum++)
 			{
-				if (!strnicmp(name, wadfiles[i]->lumpinfo[lumpNum].name, 8))
+				p = wadfiles[i]->lumpinfo + lumpNum;
+				if (p->hash == hash && !strnicmp(name, p->name, 8))
 				{
-					const char *extension = strrchr(wadfiles[i]->lumpinfo[lumpNum].fullname, '.');
+					const char *extension = strrchr(p->fullname, '.');
 					if (!(extension && stricmp(extension, ".wad")))
 						return (i<<16) + lumpNum;
 				}
@@ -1944,7 +1957,7 @@ void *W_CacheLumpNumForce(lumpnum_t lumpnum, INT32 tag)
 // return false.
 //
 // no outside code uses the PWAD form, for now
-static inline boolean W_IsLumpCachedPWAD(UINT16 wad, UINT16 lump, void *ptr)
+static boolean W_IsLumpCachedPWAD(UINT16 wad, UINT16 lump, void *ptr)
 {
 	void *lcache;
 
@@ -1976,7 +1989,7 @@ boolean W_IsLumpCached(lumpnum_t lumpnum, void *ptr)
 // return false.
 //
 // no outside code uses the PWAD form, for now
-static inline boolean W_IsPatchCachedPWAD(UINT16 wad, UINT16 lump, void *ptr)
+static boolean W_IsPatchCachedPWAD(UINT16 wad, UINT16 lump, void *ptr)
 {
 	void *lcache;
 
@@ -2472,6 +2485,10 @@ int W_VerifyNMUSlumps(const char *filename, boolean exit_on_error)
 		{"STNONEX", 7}, // "X" graphic
 		{"ULTIMATE", 8}, // Ultimate no-save
 
+		{"SLCT", 4}, // Level select "cursor"
+		{"LSSTATIC", 8}, // Level select static
+		{"BLANKLV", 7}, // "?" level images
+
 		{"CRFNT", 5}, // Sonic 1 font changes
 		{"NTFNT", 5}, // Character Select font changes
 		{"NTFNO", 5}, // Character Select font (outline)
@@ -2483,12 +2500,23 @@ int W_VerifyNMUSlumps(const char *filename, boolean exit_on_error)
 		{"STLIVE", 6}, // Life graphics, background and the "X" that shows under skin's HUDNAME
 		{"CROSHAI", 7}, // First person crosshairs
 		{"INTERSC", 7}, // Default intermission backgrounds (co-op)
+		{"SPECTILE", 8}, // Special stage intermission background
 		{"STT", 3}, // Acceptable HUD changes (Score Time Rings)
 		{"YB_", 3}, // Intermission graphics, goes with the above
 		{"RESULT", 6}, // Used in intermission for competitive modes, above too :3
 		{"RACE", 4}, // Race mode graphics, 321go
+		{"SRB2BACK", 8}, // MP intermission background
 		{"M_", 2}, // Menu stuff
 		{"LT", 2}, // Titlecard changes
+		{"HOMING", 6}, // Emerald hunt radar
+		{"HOMITM", 6}, // Emblem radar
+
+		{"CHARFG", 6}, // Character select menu
+		{"CHARBG", 6},
+		{"RECATK", 6}, // Record Attack menu
+		{"RECCLOCK", 8},
+		{"NTSATK", 6}, // NiGHTS Mode menu
+		{"NTSSONC", 7},
 
 		{"SLID", 4}, // Continue
 		{"CONT", 4},
@@ -2512,6 +2540,7 @@ int W_VerifyNMUSlumps(const char *filename, boolean exit_on_error)
 		{"DRILL", 5},
 		{"GRADE", 5},
 		{"MINUS5", 6},
+		{"NGRTIMER", 8}, // NiGHTS Mode timer
 
 		{"MUSICDEF", 8}, // Song definitions (thanks kart)
 		{"SHADERS", 7}, // OpenGL shader definitions
