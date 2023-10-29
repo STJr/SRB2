@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2021 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -40,25 +40,38 @@ extern UINT8 keyboard_started;
 
 	\return	free memory in the system
 */
-UINT32 I_GetFreeMem(UINT32 *total);
+size_t I_GetFreeMem(size_t *total);
 
-/**	\brief  Called by D_SRB2Loop, returns current time in tics.
-*/
-tic_t I_GetTime(void);
-
-/**	\brief	Returns precise time value for performance measurement.
+/**	\brief	Returns precise time value for performance measurement. The precise
+            time should be a monotonically increasing counter, and will wrap.
+			precise_t is internally represented as an unsigned integer and
+			integer arithmetic may be used directly between values of precise_t.
   */
 precise_t I_GetPreciseTime(void);
 
-/**	\brief	Returns the difference between precise times as microseconds.
+/**	\brief	Fills a buffer with random data, returns amount of data obtained.
   */
-int I_PreciseToMicros(precise_t);
+size_t I_GetRandomBytes(char *destination, size_t count);
 
-/**	\brief	The I_Sleep function
+/** \brief  Get the precision of precise_t in units per second. Invocations of
+            this function for the program's duration MUST return the same value.
+  */
+UINT64 I_GetPrecisePrecision(void);
+
+/** \brief  Get the current time in rendering tics, including fractions.
+*/
+double I_GetFrameTime(void);
+
+/**	\brief	Sleeps for the given duration in milliseconds. Depending on the
+            operating system's scheduler, the calling thread may give up its
+			time slice for a longer duration. The implementation should give a
+			best effort to sleep for the given duration, without spin-locking.
+			Calling code should check the current precise time after sleeping
+			and not assume the thread has slept for the expected duration.
 
 	\return	void
 */
-void I_Sleep(void);
+void I_Sleep(UINT32 ms);
 
 /**	\brief Get events
 
@@ -313,5 +326,13 @@ INT32 I_ClipboardCopy(const char *data, size_t size);
 const char *I_ClipboardPaste(void);
 
 void I_RegisterSysCommands(void);
+
+/** \brief Return the position of the cursor relative to the top-left window corner.
+*/
+void I_GetCursorPosition(INT32 *x, INT32 *y);
+
+/** \brief Sets whether the mouse is grabbed
+*/
+void I_SetMouseGrab(boolean grab);
 
 #endif

@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2021 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -119,11 +119,6 @@ void HWR_DrawPatch(patch_t *gpatch, INT32 x, INT32 y, INT32 option)
 
 	flags = PF_Translucent|PF_NoDepthTest;
 
-	if (option & V_WRAPX)
-		flags |= PF_ForceWrapX;
-	if (option & V_WRAPY)
-		flags |= PF_ForceWrapY;
-
 	// clip it since it is used for bunny scroll in doom I
 	HWD.pfnDrawPolygon(NULL, v, 4, flags);
 }
@@ -135,6 +130,7 @@ void HWR_DrawStretchyFixedPatch(patch_t *gpatch, fixed_t x, fixed_t y, fixed_t p
 	float cx = FIXED_TO_FLOAT(x);
 	float cy = FIXED_TO_FLOAT(y);
 	UINT8 alphalevel = ((option & V_ALPHAMASK) >> V_ALPHASHIFT);
+	UINT8 blendmode = ((option & V_BLENDMASK) >> V_BLENDSHIFT);
 	GLPatch_t *hwrPatch;
 
 //  3--2
@@ -144,9 +140,6 @@ void HWR_DrawStretchyFixedPatch(patch_t *gpatch, fixed_t x, fixed_t y, fixed_t p
 	float dupx, dupy, fscalew, fscaleh, fwidth, fheight;
 
 	UINT8 perplayershuffle = 0;
-
-	if (alphalevel >= 10 && alphalevel < 13)
-		return;
 
 	// make patch ready in hardware cache
 	if (!colormap)
@@ -191,14 +184,8 @@ void HWR_DrawStretchyFixedPatch(patch_t *gpatch, fixed_t x, fixed_t y, fixed_t p
 			offsetx = (float)(gpatch->leftoffset) * fscalew;
 
 		// top offset
-		// TODO: make some kind of vertical version of V_FLIP, maybe by deprecating V_OFFSET in future?!?
+		// TODO: make some kind of vertical version of V_FLIP
 		offsety = (float)(gpatch->topoffset) * fscaleh;
-
-		if ((option & (V_NOSCALESTART|V_OFFSET)) == (V_NOSCALESTART|V_OFFSET)) // Multiply by dupx/dupy for crosshairs
-		{
-			offsetx *= dupx;
-			offsety *= dupy;
-		}
 
 		cx -= offsetx;
 		cy -= offsety;
@@ -317,7 +304,7 @@ void HWR_DrawStretchyFixedPatch(patch_t *gpatch, fixed_t x, fixed_t y, fixed_t p
 		}
 	}
 
-	if (pscale != FRACUNIT || (splitscreen && option & V_PERPLAYER))
+	if (pscale != FRACUNIT || vscale != FRACUNIT || (splitscreen && option & V_PERPLAYER))
 	{
 		fwidth = (float)(gpatch->width) * fscalew * dupx;
 		fheight = (float)(gpatch->height) * fscaleh * dupy;
@@ -359,21 +346,17 @@ void HWR_DrawStretchyFixedPatch(patch_t *gpatch, fixed_t x, fixed_t y, fixed_t p
 	v[0].t = v[1].t = 0.0f;
 	v[2].t = v[3].t = hwrPatch->max_t;
 
-	flags = PF_Translucent|PF_NoDepthTest;
-
-	if (option & V_WRAPX)
-		flags |= PF_ForceWrapX;
-	if (option & V_WRAPY)
-		flags |= PF_ForceWrapY;
-
 	// clip it since it is used for bunny scroll in doom I
+	flags = HWR_GetBlendModeFlag(blendmode+1)|PF_NoDepthTest;
+
 	if (alphalevel)
 	{
 		FSurfaceInfo Surf;
 		Surf.PolyColor.s.red = Surf.PolyColor.s.green = Surf.PolyColor.s.blue = 0xff;
-		if (alphalevel == 13) Surf.PolyColor.s.alpha = softwaretranstogl_lo[st_translucency];
-		else if (alphalevel == 14) Surf.PolyColor.s.alpha = softwaretranstogl[st_translucency];
-		else if (alphalevel == 15) Surf.PolyColor.s.alpha = softwaretranstogl_hi[st_translucency];
+
+		if (alphalevel == 10) Surf.PolyColor.s.alpha = softwaretranstogl_lo[st_translucency]; // V_HUDTRANSHALF
+		else if (alphalevel == 11) Surf.PolyColor.s.alpha = softwaretranstogl[st_translucency]; // V_HUDTRANS
+		else if (alphalevel == 12) Surf.PolyColor.s.alpha = softwaretranstogl_hi[st_translucency]; // V_HUDTRANSDOUBLE
 		else Surf.PolyColor.s.alpha = softwaretranstogl[10-alphalevel];
 		flags |= PF_Modulated;
 		HWD.pfnDrawPolygon(&Surf, v, 4, flags);
@@ -382,26 +365,30 @@ void HWR_DrawStretchyFixedPatch(patch_t *gpatch, fixed_t x, fixed_t y, fixed_t p
 		HWD.pfnDrawPolygon(NULL, v, 4, flags);
 }
 
-void HWR_DrawCroppedPatch(patch_t *gpatch, fixed_t x, fixed_t y, fixed_t pscale, INT32 option, fixed_t sx, fixed_t sy, fixed_t w, fixed_t h)
+void HWR_DrawCroppedPatch(patch_t *gpatch, fixed_t x, fixed_t y, fixed_t pscale, fixed_t vscale, INT32 option, const UINT8 *colormap, fixed_t sx, fixed_t sy, fixed_t w, fixed_t h)
 {
 	FOutVector v[4];
 	FBITFIELD flags;
 	float cx = FIXED_TO_FLOAT(x);
 	float cy = FIXED_TO_FLOAT(y);
 	UINT8 alphalevel = ((option & V_ALPHAMASK) >> V_ALPHASHIFT);
+	UINT8 blendmode = ((option & V_BLENDMASK) >> V_BLENDSHIFT);
 	GLPatch_t *hwrPatch;
 
 //  3--2
 //  | /|
 //  |/ |
 //  0--1
-	float dupx, dupy, fscale, fwidth, fheight;
+	float dupx, dupy, fscalew, fscaleh, fwidth, fheight;
 
-	if (alphalevel >= 10 && alphalevel < 13)
-		return;
+	UINT8 perplayershuffle = 0;
 
 	// make patch ready in hardware cache
-	HWR_GetPatch(gpatch);
+	if (!colormap)
+		HWR_GetPatch(gpatch);
+	else
+		HWR_GetMappedPatch(gpatch, colormap);
+
 	hwrPatch = ((GLPatch_t *)gpatch->hardware);
 
 	dupx = (float)vid.dupx;
@@ -423,12 +410,80 @@ void HWR_DrawCroppedPatch(patch_t *gpatch, fixed_t x, fixed_t y, fixed_t pscale,
 	}
 
 	dupx = dupy = (dupx < dupy ? dupx : dupy);
-	fscale = FIXED_TO_FLOAT(pscale);
+	fscalew = fscaleh = FIXED_TO_FLOAT(pscale);
+	if (vscale != pscale)
+		fscaleh = FIXED_TO_FLOAT(vscale);
 
-	// fuck it, no GL support for croppedpatch v_perplayer right now. it's not like it's accessible to Lua or anything, and we only use it for menus...
+	cx -= (float)(gpatch->leftoffset) * fscalew;
+	cy -= (float)(gpatch->topoffset) * fscaleh;
 
-	cy -= (float)(gpatch->topoffset) * fscale;
-	cx -= (float)(gpatch->leftoffset) * fscale;
+	if (splitscreen && (option & V_PERPLAYER))
+	{
+		float adjusty = ((option & V_NOSCALESTART) ? vid.height : BASEVIDHEIGHT)/2.0f;
+		fscaleh /= 2;
+		cy /= 2;
+#ifdef QUADS
+		if (splitscreen > 1) // 3 or 4 players
+		{
+			float adjustx = ((option & V_NOSCALESTART) ? vid.width : BASEVIDWIDTH)/2.0f;
+			fscalew /= 2;
+			cx /= 2;
+			if (stplyr == &players[displayplayer])
+			{
+				if (!(option & (V_SNAPTOTOP|V_SNAPTOBOTTOM)))
+					perplayershuffle |= 1;
+				if (!(option & (V_SNAPTOLEFT|V_SNAPTORIGHT)))
+					perplayershuffle |= 4;
+				option &= ~V_SNAPTOBOTTOM|V_SNAPTORIGHT;
+			}
+			else if (stplyr == &players[secondarydisplayplayer])
+			{
+				if (!(option & (V_SNAPTOTOP|V_SNAPTOBOTTOM)))
+					perplayershuffle |= 1;
+				if (!(option & (V_SNAPTOLEFT|V_SNAPTORIGHT)))
+					perplayershuffle |= 8;
+				cx += adjustx;
+				option &= ~V_SNAPTOBOTTOM|V_SNAPTOLEFT;
+			}
+			else if (stplyr == &players[thirddisplayplayer])
+			{
+				if (!(option & (V_SNAPTOTOP|V_SNAPTOBOTTOM)))
+					perplayershuffle |= 2;
+				if (!(option & (V_SNAPTOLEFT|V_SNAPTORIGHT)))
+					perplayershuffle |= 4;
+				cy += adjusty;
+				option &= ~V_SNAPTOTOP|V_SNAPTORIGHT;
+			}
+			else if (stplyr == &players[fourthdisplayplayer])
+			{
+				if (!(option & (V_SNAPTOTOP|V_SNAPTOBOTTOM)))
+					perplayershuffle |= 2;
+				if (!(option & (V_SNAPTOLEFT|V_SNAPTORIGHT)))
+					perplayershuffle |= 8;
+				cx += adjustx;
+				cy += adjusty;
+				option &= ~V_SNAPTOTOP|V_SNAPTOLEFT;
+			}
+		}
+		else
+#endif
+		// 2 players
+		{
+			if (stplyr == &players[displayplayer])
+			{
+				if (!(option & (V_SNAPTOTOP|V_SNAPTOBOTTOM)))
+					perplayershuffle = 1;
+				option &= ~V_SNAPTOBOTTOM;
+			}
+			else //if (stplyr == &players[secondarydisplayplayer])
+			{
+				if (!(option & (V_SNAPTOTOP|V_SNAPTOBOTTOM)))
+					perplayershuffle = 2;
+				cy += adjusty;
+				option &= ~V_SNAPTOTOP;
+			}
+		}
+	}
 
 	if (!(option & V_NOSCALESTART))
 	{
@@ -447,6 +502,10 @@ void HWR_DrawCroppedPatch(patch_t *gpatch, fixed_t x, fixed_t y, fixed_t pscale,
 					cx += ((float)vid.width - ((float)BASEVIDWIDTH * dupx));
 				else if (!(option & V_SNAPTOLEFT))
 					cx += ((float)vid.width - ((float)BASEVIDWIDTH * dupx))/2;
+				if (perplayershuffle & 4)
+					cx -= ((float)vid.width - ((float)BASEVIDWIDTH * dupx))/4;
+				else if (perplayershuffle & 8)
+					cx += ((float)vid.width - ((float)BASEVIDWIDTH * dupx))/4;
 			}
 			if (fabsf((float)vid.height - (float)BASEVIDHEIGHT * dupy) > 1.0E-36f)
 			{
@@ -454,23 +513,27 @@ void HWR_DrawCroppedPatch(patch_t *gpatch, fixed_t x, fixed_t y, fixed_t pscale,
 					cy += ((float)vid.height - ((float)BASEVIDHEIGHT * dupy));
 				else if (!(option & V_SNAPTOTOP))
 					cy += ((float)vid.height - ((float)BASEVIDHEIGHT * dupy))/2;
+				if (perplayershuffle & 1)
+					cy -= ((float)vid.height - ((float)BASEVIDHEIGHT * dupy))/4;
+				else if (perplayershuffle & 2)
+					cy += ((float)vid.height - ((float)BASEVIDHEIGHT * dupy))/4;
 			}
 		}
 	}
 
-	fwidth = w;
-	fheight = h;
+	fwidth = FIXED_TO_FLOAT(w);
+	fheight = FIXED_TO_FLOAT(h);
 
-	if (sx + w > gpatch->width)
-		fwidth = gpatch->width - sx;
+	if (sx + w > gpatch->width<<FRACBITS)
+		fwidth = FIXED_TO_FLOAT((gpatch->width<<FRACBITS) - sx);
 
-	if (sy + h > gpatch->height)
-		fheight = gpatch->height - sy;
+	if (sy + h > gpatch->height<<FRACBITS)
+		fheight = FIXED_TO_FLOAT((gpatch->height<<FRACBITS) - sy);
 
-	if (pscale != FRACUNIT)
+	if (pscale != FRACUNIT || vscale != FRACUNIT || (splitscreen && option & V_PERPLAYER))
 	{
-		fwidth *=  fscale * dupx;
-		fheight *=  fscale * dupy;
+		fwidth *= fscalew * dupx;
+		fheight *= fscaleh * dupy;
 	}
 	else
 	{
@@ -495,34 +558,101 @@ void HWR_DrawCroppedPatch(patch_t *gpatch, fixed_t x, fixed_t y, fixed_t pscale,
 
 	v[0].z = v[1].z = v[2].z = v[3].z = 1.0f;
 
-	v[0].s = v[3].s = ((sx)/(float)(gpatch->width))*hwrPatch->max_s;
-	if (sx + w > gpatch->width)
+	v[0].s = v[3].s = (FIXED_TO_FLOAT(sx)/(float)(gpatch->width))*hwrPatch->max_s;
+	if (sx + w > gpatch->width<<FRACBITS)
 		v[2].s = v[1].s = hwrPatch->max_s;
 	else
-		v[2].s = v[1].s = ((sx+w)/(float)(gpatch->width))*hwrPatch->max_s;
+		v[2].s = v[1].s = (FIXED_TO_FLOAT(sx+w)/(float)(gpatch->width))*hwrPatch->max_s;
 
-	v[0].t = v[1].t = ((sy)/(float)(gpatch->height))*hwrPatch->max_t;
-	if (sy + h > gpatch->height)
+	v[0].t = v[1].t = (FIXED_TO_FLOAT(sy)/(float)(gpatch->height))*hwrPatch->max_t;
+	if (sy + h > gpatch->height<<FRACBITS)
 		v[2].t = v[3].t = hwrPatch->max_t;
 	else
-		v[2].t = v[3].t = ((sy+h)/(float)(gpatch->height))*hwrPatch->max_t;
+		v[2].t = v[3].t = (FIXED_TO_FLOAT(sy+h)/(float)(gpatch->height))*hwrPatch->max_t;
 
-	flags = PF_Translucent|PF_NoDepthTest;
+	// Auto-crop at splitscreen borders!
+	if (splitscreen && (option & V_PERPLAYER))
+	{
+#define flerp(a,b,amount) (((a) * (1.0f - (amount))) + ((b) * (amount))) // Float lerp
 
-	if (option & V_WRAPX)
-		flags |= PF_ForceWrapX;
-	if (option & V_WRAPY)
-		flags |= PF_ForceWrapY;
+#ifdef QUADS
+		if (splitscreen > 1) // 3 or 4 players
+		{
+			#error Auto-cropping doesnt take quadscreen into account! Fix it!
+			// Hint: For player 1/2, copy player 1's code below. For player 3/4, copy player 2's code below
+			// For player 1/3 and 2/4, mangle the below code to apply horizontally instead of vertically
+		}
+		else
+#endif
+		// 2 players
+		{
+			if (stplyr == &players[displayplayer]) // Player 1's screen, crop at the bottom
+			{
+				if ((cy - fheight) < 0) // If the bottom is below the border
+				{
+					if (cy <= 0) // If the whole patch is beyond the border...
+						return; // ...crop away the entire patch, don't draw anything
+
+					if (fheight <= 0) // Don't divide by zero
+						return;
+
+					v[2].y = v[3].y = 0; // Clamp the polygon edge vertex position
+					// Now for the UV-map... Uh-oh, math time!
+
+					// On second thought, a basic linear interpolation suffices
+					//float full_height = fheight;
+					//float cropped_height = fheight - cy;
+					//float remaining_height = cy;
+					//float cropped_percentage = (fheight - cy) / fheight;
+					//float remaining_percentage = cy / fheight;
+					//v[2].t = v[3].t = lerp(v[2].t, v[0].t, cropped_percentage);
+					// By swapping v[2] and v[0], we can use remaining_percentage for less operations
+					//v[2].t = v[3].t = lerp(v[0].t, v[2].t, remaining_percentage);
+
+					v[2].t = v[3].t = flerp(v[0].t, v[2].t, cy/fheight);
+				}
+			}
+			else //if (stplyr == &players[secondarydisplayplayer]) // Player 2's screen, crop at the top
+			{
+				if (cy > 0) // If the top is above the border
+				{
+					if ((cy - fheight) >= 0) // If the whole patch is beyond the border...
+						return; // ...crop away the entire patch, don't draw anything
+
+					if (fheight <= 0) // Don't divide by zero
+						return;
+
+					v[0].y = v[1].y = 0; // Clamp the polygon edge vertex position
+					// Now for the UV-map... Uh-oh, math time!
+
+					// On second thought, a basic linear interpolation suffices
+					//float full_height = fheight;
+					//float cropped_height = cy;
+					//float remaining_height = fheight - cy;
+					//float cropped_percentage = cy / fheight;
+					//float remaining_percentage = (fheight - cy) / fheight;
+					//v[0].t = v[1].t = lerp(v[0].t, v[2].t, cropped_percentage);
+
+					v[0].t = v[1].t = flerp(v[0].t, v[2].t, cy/fheight);
+				}
+			}
+		}
+#undef flerp
+	}
 
 	// clip it since it is used for bunny scroll in doom I
+	flags = HWR_GetBlendModeFlag(blendmode+1)|PF_NoDepthTest;
+
 	if (alphalevel)
 	{
 		FSurfaceInfo Surf;
 		Surf.PolyColor.s.red = Surf.PolyColor.s.green = Surf.PolyColor.s.blue = 0xff;
-		if (alphalevel == 13) Surf.PolyColor.s.alpha = softwaretranstogl_lo[st_translucency];
-		else if (alphalevel == 14) Surf.PolyColor.s.alpha = softwaretranstogl[st_translucency];
-		else if (alphalevel == 15) Surf.PolyColor.s.alpha = softwaretranstogl_hi[st_translucency];
+
+		if (alphalevel == 10) Surf.PolyColor.s.alpha = softwaretranstogl_lo[st_translucency]; // V_HUDTRANSHALF
+		else if (alphalevel == 11) Surf.PolyColor.s.alpha = softwaretranstogl[st_translucency]; // V_HUDTRANS
+		else if (alphalevel == 12) Surf.PolyColor.s.alpha = softwaretranstogl_hi[st_translucency]; // V_HUDTRANSDOUBLE
 		else Surf.PolyColor.s.alpha = softwaretranstogl[10-alphalevel];
+
 		flags |= PF_Modulated;
 		HWD.pfnDrawPolygon(&Surf, v, 4, flags);
 	}
@@ -575,42 +705,10 @@ void HWR_DrawPic(INT32 x, INT32 y, lumpnum_t lumpnum)
 // --------------------------------------------------------------------------
 void HWR_DrawFlatFill (INT32 x, INT32 y, INT32 w, INT32 h, lumpnum_t flatlumpnum)
 {
-	FOutVector  v[4];
-	double dflatsize;
-	INT32 flatflag;
+	FOutVector v[4];
 	const size_t len = W_LumpLength(flatlumpnum);
-
-	switch (len)
-	{
-		case 4194304: // 2048x2048 lump
-			dflatsize = 2048.0f;
-			flatflag = 2047;
-			break;
-		case 1048576: // 1024x1024 lump
-			dflatsize = 1024.0f;
-			flatflag = 1023;
-			break;
-		case 262144:// 512x512 lump
-			dflatsize = 512.0f;
-			flatflag = 511;
-			break;
-		case 65536: // 256x256 lump
-			dflatsize = 256.0f;
-			flatflag = 255;
-			break;
-		case 16384: // 128x128 lump
-			dflatsize = 128.0f;
-			flatflag = 127;
-			break;
-		case 1024: // 32x32 lump
-			dflatsize = 32.0f;
-			flatflag = 31;
-			break;
-		default: // 64x64 lump
-			dflatsize = 64.0f;
-			flatflag = 63;
-			break;
-	}
+	UINT16 flatflag = R_GetFlatSize(len) - 1;
+	double dflatsize = (double)(flatflag + 1);
 
 //  3--2
 //  | /|
@@ -624,7 +722,6 @@ void HWR_DrawFlatFill (INT32 x, INT32 y, INT32 w, INT32 h, lumpnum_t flatlumpnum
 
 	v[0].z = v[1].z = v[2].z = v[3].z = 1.0f;
 
-	// flat is 64x64 lod and texture offsets are [0.0, 1.0]
 	v[0].s = v[3].s = (float)((x & flatflag)/dflatsize);
 	v[2].s = v[1].s = (float)(v[0].s + w/dflatsize);
 	v[0].t = v[1].t = (float)((y & flatflag)/dflatsize);

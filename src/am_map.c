@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2021 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -458,7 +458,7 @@ boolean AM_Responder(event_t *ev)
 	{
 		if (!automapactive)
 		{
-			if (ev->type == ev_keydown && ev->data1 == AM_TOGGLEKEY)
+			if (ev->type == ev_keydown && ev->key == AM_TOGGLEKEY)
 			{
 				//faB: prevent alt-tab in win32 version to activate automap just before
 				//     minimizing the app; doesn't do any harm to the DOS version
@@ -473,7 +473,7 @@ boolean AM_Responder(event_t *ev)
 		else if (ev->type == ev_keydown)
 		{
 			rc = true;
-			switch (ev->data1)
+			switch (ev->key)
 			{
 				case AM_PANRIGHTKEY: // pan right
 					if (!followplayer)
@@ -550,7 +550,7 @@ boolean AM_Responder(event_t *ev)
 		else if (ev->type == ev_keyup)
 		{
 			rc = false;
-			switch (ev->data1)
+			switch (ev->key)
 			{
 				case AM_PANRIGHTKEY:
 					if (!followplayer)

@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2021 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -74,9 +74,9 @@ consvar_t stereoreverse = CVAR_INIT ("stereoreverse", "Off", CV_SAVE, CV_OnOff, 
 static consvar_t precachesound = CVAR_INIT ("precachesound", "Off", CV_SAVE, CV_OnOff, NULL);
 
 // actual general (maximum) sound & music volume, saved into the config
-consvar_t cv_soundvolume = CVAR_INIT ("soundvolume", "18", CV_SAVE, soundvolume_cons_t, NULL);
-consvar_t cv_digmusicvolume = CVAR_INIT ("digmusicvolume", "18", CV_SAVE, soundvolume_cons_t, NULL);
-consvar_t cv_midimusicvolume = CVAR_INIT ("midimusicvolume", "18", CV_SAVE, soundvolume_cons_t, NULL);
+consvar_t cv_soundvolume = CVAR_INIT ("soundvolume", "16", CV_SAVE, soundvolume_cons_t, NULL);
+consvar_t cv_digmusicvolume = CVAR_INIT ("digmusicvolume", "16", CV_SAVE, soundvolume_cons_t, NULL);
+consvar_t cv_midimusicvolume = CVAR_INIT ("midimusicvolume", "16", CV_SAVE, soundvolume_cons_t, NULL);
 
 static void Captioning_OnChange(void)
 {
@@ -222,7 +222,7 @@ static INT32 S_getChannel(const void *origin, sfxinfo_t *sfxinfo)
 		}
 		else if (origin && channels[cnum].origin == origin
 			&& channels[cnum].sfxinfo->name != sfxinfo->name
-			&& channels[cnum].sfxinfo->pitch == SF_TOTALLYSINGLE && sfxinfo->pitch == SF_TOTALLYSINGLE)
+			&& channels[cnum].sfxinfo->pitch & SF_TOTALLYSINGLE && sfxinfo->pitch & SF_TOTALLYSINGLE)
 		{
 			S_StopChannel(cnum);
 			break;
@@ -289,8 +289,8 @@ void S_RegisterSoundStuff(void)
 	CV_RegisterVar(&cv_miditimiditypath);
 #endif
 
-	COM_AddCommand("tunes", Command_Tunes_f);
-	COM_AddCommand("restartaudio", Command_RestartAudio_f);
+	COM_AddCommand("tunes", Command_Tunes_f, COM_LUA);
+	COM_AddCommand("restartaudio", Command_RestartAudio_f, COM_LUA);
 }
 
 static void SetChannelsNum(void)
@@ -1692,6 +1692,7 @@ UINT8 soundtestpage = 1;
 //
 boolean S_PrepareSoundTest(void)
 {
+	gamedata_t *data = clientGamedata;
 	musicdef_t *def;
 	INT32 pos = numsoundtestdefs = 0;
 
@@ -1717,9 +1718,9 @@ boolean S_PrepareSoundTest(void)
 		if (!(def->soundtestpage & soundtestpage))
 			continue;
 		soundtestdefs[pos++] = def;
-		if (def->soundtestcond > 0 && !(mapvisited[def->soundtestcond-1] & MV_BEATEN))
+		if (def->soundtestcond > 0 && !(data->mapvisited[def->soundtestcond-1] & MV_BEATEN))
 			continue;
-		if (def->soundtestcond < 0 && !M_Achieved(-1-def->soundtestcond))
+		if (def->soundtestcond < 0 && !M_Achieved(-1-def->soundtestcond, data))
 			continue;
 		def->allowed = true;
 	}
@@ -2238,6 +2239,16 @@ static void S_ChangeMusicToQueue(void)
 void S_ChangeMusicEx(const char *mmusic, UINT16 mflags, boolean looping, UINT32 position, UINT32 prefadems, UINT32 fadeinms)
 {
 	char newmusic[7];
+
+	struct MusicChange hook_param = {
+		newmusic,
+		&mflags,
+		&looping,
+		&position,
+		&prefadems,
+		&fadeinms
+	};
+
 	boolean currentmidi = (I_SongType() == MU_MID || I_SongType() == MU_MID_EX);
 	boolean midipref = cv_musicpref.value;
 
@@ -2245,13 +2256,13 @@ void S_ChangeMusicEx(const char *mmusic, UINT16 mflags, boolean looping, UINT32 
 		return;
 
 	strncpy(newmusic, mmusic, 7);
-	if (LUAh_MusicChange(music_name, newmusic, &mflags, &looping, &position, &prefadems, &fadeinms))
+	if (LUA_HookMusicChange(music_name, &hook_param))
 		return;
 	newmusic[6] = 0;
 
- 	// No Music (empty string)
+	// No Music (empty string)
 	if (newmusic[0] == 0)
- 	{
+	{
 		if (prefadems)
 			I_FadeSong(0, prefadems, &S_StopMusic);
 		else
@@ -2269,7 +2280,7 @@ void S_ChangeMusicEx(const char *mmusic, UINT16 mflags, boolean looping, UINT32 
 	}
 	else if (strnicmp(music_name, newmusic, 6) || (mflags & MUSIC_FORCERESET) ||
 		(midipref != currentmidi && S_PrefAvailable(midipref, newmusic)))
- 	{
+	{
 		CONS_Debug(DBG_DETAILED, "Now playing song %s\n", newmusic);
 
 		S_StopMusic();
@@ -2292,7 +2303,7 @@ void S_ChangeMusicEx(const char *mmusic, UINT16 mflags, boolean looping, UINT32 
 	{
 		I_SetSongPosition(position);
 		I_FadeSong(100, fadeinms, NULL);
- 	}
+}
 	else // reset volume to 100 with same music
 	{
 		I_StopFadingSong();

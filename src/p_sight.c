@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2021 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -306,8 +306,8 @@ static boolean P_CrossSubsector(size_t num, register los_t *los)
 			// check front sector's FOFs first
 			for (rover = front->ffloors; rover; rover = rover->next)
 			{
-				if (!(rover->flags & FF_EXISTS)
-					|| !(rover->flags & FF_RENDERSIDES) || rover->flags & FF_TRANSLUCENT)
+				if (!(rover->fofflags & FOF_EXISTS)
+					|| !(rover->fofflags & FOF_RENDERSIDES) || (rover->fofflags & (FOF_TRANSLUCENT|FOF_FOG)))
 				{
 					continue;
 				}
@@ -322,8 +322,8 @@ static boolean P_CrossSubsector(size_t num, register los_t *los)
 			// check back sector's FOFs as well
 			for (rover = back->ffloors; rover; rover = rover->next)
 			{
-				if (!(rover->flags & FF_EXISTS)
-					|| !(rover->flags & FF_RENDERSIDES) || rover->flags & FF_TRANSLUCENT)
+				if (!(rover->fofflags & FOF_EXISTS)
+					|| !(rover->fofflags & FOF_RENDERSIDES) || (rover->fofflags & (FOF_TRANSLUCENT|FOF_FOG)))
 				{
 					continue;
 				}
@@ -451,8 +451,8 @@ boolean P_CheckSight(mobj_t *t1, mobj_t *t2)
 			// Allow sight through water, fog, etc.
 			/// \todo Improve by checking fog density/translucency
 			/// and setting a sight limit.
-			if (!(rover->flags & FF_EXISTS)
-				|| !(rover->flags & FF_RENDERPLANES) || rover->flags & FF_TRANSLUCENT)
+			if (!(rover->fofflags & FOF_EXISTS)
+				|| !(rover->fofflags & FOF_RENDERPLANES) || (rover->fofflags & (FOF_TRANSLUCENT|FOF_FOG)))
 			{
 				continue;
 			}
@@ -470,10 +470,10 @@ boolean P_CheckSight(mobj_t *t1, mobj_t *t2)
 				return false;
 			}
 
-			if (rover->flags & FF_SOLID)
+			if (rover->fofflags & FOF_SOLID)
 				continue; // shortcut since neither mobj can be inside the 3dfloor
 
-			if (rover->flags & FF_BOTHPLANES || !(rover->flags & FF_INVERTPLANES))
+			if (rover->fofflags & FOF_BOTHPLANES || !(rover->fofflags & FOF_INVERTPLANES))
 			{
 				if (los.sightzstart >= topz1 && t2->z + t2->height < topz2)
 					return false; // blocked by upper outside plane
@@ -482,7 +482,7 @@ boolean P_CheckSight(mobj_t *t1, mobj_t *t2)
 					return false; // blocked by lower outside plane
 			}
 
-			if (rover->flags & FF_BOTHPLANES || rover->flags & FF_INVERTPLANES)
+			if (rover->fofflags & FOF_BOTHPLANES || rover->fofflags & FOF_INVERTPLANES)
 			{
 				if (los.sightzstart < topz1 && t2->z >= topz2)
 					return false; // blocked by upper inside plane

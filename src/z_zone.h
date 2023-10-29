@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2021 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -15,6 +15,7 @@
 #define __Z_ZONE__
 
 #include <stdio.h>
+#include "doomdef.h"
 #include "doomtype.h"
 
 #ifdef __GNUC__ // __attribute__ ((X))
@@ -39,6 +40,7 @@ enum
 	// Tags < PU_LEVEL are not purged until freed explicitly.
 	PU_STATIC                = 1, // static entire execution time
 	PU_LUA                   = 2, // static entire execution time -- used by lua so it doesn't get caught in loops forever
+	PU_PERFSTATS             = 3, // static between changes to ps_samplesize cvar
 
 	PU_SOUND                 = 11, // static while playing
 	PU_MUSIC                 = 12, // static while playing
@@ -100,10 +102,10 @@ void *Z_CallocAlign(size_t size, INT32 tag, void *user, INT32 alignbits) FUNCALL
 void *Z_ReallocAlign(void *ptr, size_t size, INT32 tag, void *user, INT32 alignbits) FUNCALLOC(2);
 #endif
 
-// Alloc with no alignment
-#define Z_Malloc(s,t,u)    Z_MallocAlign(s, t, u, 0)
-#define Z_Calloc(s,t,u)    Z_CallocAlign(s, t, u, 0)
-#define Z_Realloc(p,s,t,u) Z_ReallocAlign(p, s, t, u, 0)
+// Alloc with standard alignment
+#define Z_Malloc(s,t,u)    Z_MallocAlign(s, t, u, sizeof(void *))
+#define Z_Calloc(s,t,u)    Z_CallocAlign(s, t, u, sizeof(void *))
+#define Z_Realloc(p,s,t,u) Z_ReallocAlign(p, s, t, u, sizeof(void *))
 
 // Free all memory by tag
 // these don't give line numbers for ZDEBUG currently though
