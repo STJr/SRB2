@@ -15,7 +15,7 @@
 #include "hw_md2load.h"
 #include "hw_md3load.h"
 #include "hw_md2.h"
-#include "u_list.h"
+#include "../u_list.h"
 #include <string.h>
 
 static float PI = (3.1415926535897932384626433832795f);
@@ -672,6 +672,9 @@ void GeneratePolygonNormals(model_t *model, int ztag)
 
 			for (k = 0; k < mesh->numTriangles; k++)
 			{
+				/// TODO: normalize vectors
+				(void)vertices;
+				(void)polyNormals;
 //				Vector::Normal(vertices, polyNormals);
 				vertices += 3 * 3;
 				polyNormals++;

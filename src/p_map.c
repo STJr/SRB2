@@ -177,10 +177,8 @@ boolean P_DoSpring(mobj_t *spring, mobj_t *object)
 	{
 		if (spring->info->painchance == 3)
 			;
-		else if (object->player->charability == CA_TWINSPIN && object->player->panim == PA_ABILITY)
+		else if (object->player->powers[pw_strong] & STR_SPRING)
 			strong = 1;
-		else if (object->player->charability2 == CA2_MELEE && object->player->panim == PA_ABILITY2)
-			strong = 2;
 	}
 
 	if (spring->info->painchance == -1) // Pinball bumper mode.
@@ -495,7 +493,8 @@ springstate:
 
 		if (strong)
 		{
-			P_TwinSpinRejuvenate(object->player, (strong == 1 ? object->player->thokitem : object->player->revitem));
+			if (object->player->charability == CA_TWINSPIN || object->player->charability2 == CA2_MELEE)
+				P_TwinSpinRejuvenate(object->player, (object->player->charability == CA_TWINSPIN ? object->player->thokitem : object->player->revitem));
 			S_StartSound(object, sfx_sprong); // strong spring. sprong.
 		}
 	}
@@ -836,43 +835,25 @@ static boolean PIT_CheckThing(mobj_t *thing)
 		return true;
 	}
 
-	// SF_DASHMODE users destroy spikes and monitors, CA_TWINSPIN users and CA2_MELEE users destroy spikes.
-	if ((tmthing->player)
-		&& ((((tmthing->player->charflags & (SF_DASHMODE|SF_MACHINE)) == (SF_DASHMODE|SF_MACHINE)) && (tmthing->player->dashmode >= DASHMODE_THRESHOLD)
-		&& (thing->flags & (MF_MONITOR)
-		|| (thing->type == MT_SPIKE
-		|| thing->type == MT_WALLSPIKE)))
-	|| ((((tmthing->player->charability == CA_TWINSPIN) && (tmthing->player->panim == PA_ABILITY))
-	|| (tmthing->player->charability2 == CA2_MELEE && tmthing->player->panim == PA_ABILITY2))
-		&& (thing->type == MT_SPIKE
-		|| thing->type == MT_WALLSPIKE))))
+	// STR_SPIKE users destroy spikes
+	if ((tmthing->player) && ((tmthing->player->powers[pw_strong] & STR_SPIKE) && (thing->type == MT_SPIKE || thing->type == MT_WALLSPIKE)))
 	{
-		if ((thing->flags & (MF_MONITOR)) && (thing->health <= 0 || !(thing->flags & MF_SHOOTABLE)))
-			return true;
-		blockdist = thing->radius + tmthing->radius;
-		if (abs(thing->x - tmx) >= blockdist || abs(thing->y - tmy) >= blockdist)
-			return true; // didn't hit it
-		// see if it went over / under
-		if (tmthing->z > thing->z + thing->height)
-			return true; // overhead
-		if (tmthing->z + tmthing->height < thing->z)
-			return true; // underneath
-		if (thing->type == MT_SPIKE
-		|| thing->type == MT_WALLSPIKE)
-		{
-			mobj_t *iter;
-			if (thing->flags & MF_SOLID)
-				S_StartSound(tmthing, thing->info->deathsound);
-			for (iter = thing->subsector->sector->thinglist; iter; iter = iter->snext)
-				if (iter->type == thing->type && iter->health > 0 && iter->flags & MF_SOLID && (iter == thing || P_AproxDistance(P_AproxDistance(thing->x - iter->x, thing->y - iter->y), thing->z - iter->z) < 56*thing->scale))//FixedMul(56*FRACUNIT, thing->scale))
-					P_KillMobj(iter, tmthing, tmthing, 0);
-			return true;
-		}
-		else
-		{
-			if (P_DamageMobj(thing, tmthing, tmthing, 1, 0))
-				return true;
-		}
+		mobj_t *iter;
+        	blockdist = thing->radius + tmthing->radius;
+        	if (abs(thing->x - tmx) >= blockdist || abs(thing->y - tmy) >= blockdist)
+            		return true; // didn't hit it
+        	// see if it went over / under
+        	if (tmthing->z > thing->z + thing->height)
+            		return true; // overhead
+        	if (tmthing->z + tmthing->height < thing->z)
+            		return true; // underneath
+
+		if (thing->flags & MF_SOLID)
+			S_StartSound(tmthing, thing->info->deathsound);
+		for (iter = thing->subsector->sector->thinglist; iter; iter = iter->snext)
+			if (iter->type == thing->type && iter->health > 0 && iter->flags & MF_SOLID && (iter == thing || P_AproxDistance(P_AproxDistance(thing->x - iter->x, thing->y - iter->y), thing->z - iter->z) < 56*thing->scale))//FixedMul(56*FRACUNIT, thing->scale))
+				P_KillMobj(iter, tmthing, tmthing, 0);
+		return true;
 	}
 
 	// vectorise metal - done in a special case as at this point neither has the right flags for touching
@@ -1185,7 +1166,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 	}
 
 	// When solid spikes move, assume they just popped up and teleport things on top of them to hurt.
-	if (tmthing->type == MT_SPIKE && tmthing->flags & MF_SOLID)
+	if (tmthing->type == MT_SPIKE && (thing->flags & MF_SOLID) && (tmthing->flags & MF_SOLID))
 	{
 		if (thing->z > tmthing->z + tmthing->height)
 			return true; // overhead
@@ -1727,25 +1708,22 @@ static boolean PIT_CheckThing(mobj_t *thing)
 				// Going down? Then bounce back up.
 				if (P_DamageMobj(thing, tmthing, tmthing, 1, 0) // break the monitor
 				&& (flipval*(*momz) < 0) // monitor is on the floor and you're going down, or on the ceiling and you're going up
-				&& (elementalpierce != 1)) // you're not piercing through the monitor...
+				&& (elementalpierce != 1) && (!(player->powers[pw_strong] & STR_HEAVY))) // you're not piercing through the monitor...
 				{
-					if (!(player->charability2 == CA2_MELEE && player->panim == PA_ABILITY2))
+					fixed_t setmomz = -*momz; // Store this, momz get changed by P_DoJump within P_DoBubbleBounce
+
+					if (elementalpierce == 2) // Reset bubblewrap, part 1
+						P_DoBubbleBounce(player);
+					*momz = setmomz; // Therefore, you should be thrust in the opposite direction, vertically.
+					if (player->charability == CA_TWINSPIN && player->panim == PA_ABILITY)
+						P_TwinSpinRejuvenate(player, player->thokitem);
+					if (elementalpierce == 2) // Reset bubblewrap, part 2
 					{
-						fixed_t setmomz = -*momz; // Store this, momz get changed by P_DoJump within P_DoBubbleBounce
+						boolean underwater = tmthing->eflags & MFE_UNDERWATER;
 
-						if (elementalpierce == 2) // Reset bubblewrap, part 1
-							P_DoBubbleBounce(player);
-						*momz = setmomz; // Therefore, you should be thrust in the opposite direction, vertically.
-						if (player->charability == CA_TWINSPIN && player->panim == PA_ABILITY)
-							P_TwinSpinRejuvenate(player, player->thokitem);
-						if (elementalpierce == 2) // Reset bubblewrap, part 2
-						{
-							boolean underwater = tmthing->eflags & MFE_UNDERWATER;
-
-							if (underwater)
-								*momz /= 2;
-							*momz -= (*momz/(underwater ? 8 : 4)); // Cap the height!
-						}
+						if (underwater)
+							*momz /= 2;
+						*momz -= (*momz/(underwater ? 8 : 4)); // Cap the height!
 					}
 				}
 				if (!(elementalpierce == 1 && thing->flags & MF_GRENADEBOUNCE)) // prevent gold monitor clipthrough.
@@ -2546,7 +2524,6 @@ boolean P_CheckCameraPosition(fixed_t x, fixed_t y, camera_t *thiscam)
 boolean P_TryCameraMove(fixed_t x, fixed_t y, camera_t *thiscam)
 {
 	subsector_t *s = R_PointInSubsector(x, y);
-	boolean retval = true;
 	boolean itsatwodlevel = false;
 
 	floatok = false;
@@ -2561,8 +2538,8 @@ boolean P_TryCameraMove(fixed_t x, fixed_t y, camera_t *thiscam)
 		fixed_t tryx = thiscam->x;
 		fixed_t tryy = thiscam->y;
 
-		if ((thiscam == &camera && (players[displayplayer].pflags & PF_NOCLIP))
-		|| (thiscam == &camera2 && (players[secondarydisplayplayer].pflags & PF_NOCLIP)))
+		if ((thiscam == &camera && (players[displayplayer].pflags & PF_NOCLIP || players[displayplayer].powers[pw_carry] == CR_NIGHTSMODE))
+		|| (thiscam == &camera2 && (players[secondarydisplayplayer].pflags & PF_NOCLIP || players[secondarydisplayplayer].powers[pw_carry] == CR_NIGHTSMODE)))
 		{ // Noclipping player camera noclips too!!
 			floatok = true;
 			thiscam->floorz = thiscam->z;
@@ -2630,7 +2607,7 @@ boolean P_TryCameraMove(fixed_t x, fixed_t y, camera_t *thiscam)
 	thiscam->y = y;
 	thiscam->subsector = s;
 
-	return retval;
+	return true;
 }
 
 //
@@ -2950,6 +2927,8 @@ boolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, boolean allowdropoff)
 			if (thing->momz <= 0)
 			{
 				thing->standingslope = tmfloorslope;
+				P_SetPitchRollFromSlope(thing, thing->standingslope);
+
 				if (thing->momz == 0 && thing->player && !startingonground)
 					P_PlayerHitFloor(thing->player, true);
 			}
@@ -2961,6 +2940,8 @@ boolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, boolean allowdropoff)
 			if (thing->momz >= 0)
 			{
 				thing->standingslope = tmceilingslope;
+				P_SetPitchRollFromSlope(thing, thing->standingslope);
+
 				if (thing->momz == 0 && thing->player && !startingonground)
 					P_PlayerHitFloor(thing->player, true);
 			}
@@ -3749,7 +3730,9 @@ void P_SlideMove(mobj_t *mo)
 
 	boolean papercol = false;
 	vertex_t v1, v2; // fake vertexes
-	line_t junk; // fake linedef
+	static line_t junk; // fake linedef
+
+	memset(&junk, 0x00, sizeof(junk));
 
 	if (tmhitthing && mo->z + mo->height > tmhitthing->z && mo->z < tmhitthing->z + tmhitthing->height)
 	{
@@ -4027,131 +4010,135 @@ void P_BounceMove(mobj_t *mo)
 	slidemo = mo;
 	hitcount = 0;
 
-retry:
-	if (++hitcount == 3)
-		goto bounceback; // don't loop forever
+	do
+	{
+		if (++hitcount == 3)
+			goto bounceback; // don't loop forever
 
-	if (mo->player)
-	{
-		mmomx = mo->player->rmomx;
-		mmomy = mo->player->rmomy;
-	}
-	else
-	{
-		mmomx = mo->momx;
-		mmomy = mo->momy;
-	}
-
-	// trace along the three leading corners
-	if (mo->momx > 0)
-	{
-		leadx = mo->x + mo->radius;
-		trailx = mo->x - mo->radius;
-	}
-	else
-	{
-		leadx = mo->x - mo->radius;
-		trailx = mo->x + mo->radius;
-	}
-
-	if (mo->momy > 0)
-	{
-		leady = mo->y + mo->radius;
-		traily = mo->y - mo->radius;
-	}
-	else
-	{
-		leady = mo->y - mo->radius;
-		traily = mo->y + mo->radius;
-	}
-
-	bestslidefrac = FRACUNIT + 1;
-
-	P_PathTraverse(leadx, leady, leadx + mmomx, leady + mmomy, PT_ADDLINES, PTR_SlideTraverse);
-	P_PathTraverse(trailx, leady, trailx + mmomx, leady + mmomy, PT_ADDLINES, PTR_SlideTraverse);
-	P_PathTraverse(leadx, traily, leadx + mmomx, traily + mmomy, PT_ADDLINES, PTR_SlideTraverse);
-
-	// move up to the wall
-	if (bestslidefrac == FRACUNIT + 1)
-	{
-		// the move must have hit the middle, so bounce straight back
-bounceback:
-		if (P_TryMove(mo, mo->x - mmomx, mo->y - mmomy, true))
+		if (mo->player)
 		{
-			mo->momx *= -1;
-			mo->momy *= -1;
-			mo->momx = FixedMul(mo->momx, (FRACUNIT - (FRACUNIT>>2) - (FRACUNIT>>3)));
-			mo->momy = FixedMul(mo->momy, (FRACUNIT - (FRACUNIT>>2) - (FRACUNIT>>3)));
+			mmomx = mo->player->rmomx;
+			mmomy = mo->player->rmomy;
+		}
+		else
+		{
+			mmomx = mo->momx;
+			mmomy = mo->momy;
+		}
 
-			if (mo->player)
+		// trace along the three leading corners
+		if (mo->momx > 0)
+		{
+			leadx = mo->x + mo->radius;
+			trailx = mo->x - mo->radius;
+		}
+		else
+		{
+			leadx = mo->x - mo->radius;
+			trailx = mo->x + mo->radius;
+		}
+
+		if (mo->momy > 0)
+		{
+			leady = mo->y + mo->radius;
+			traily = mo->y - mo->radius;
+		}
+		else
+		{
+			leady = mo->y - mo->radius;
+			traily = mo->y + mo->radius;
+		}
+
+		bestslidefrac = FRACUNIT + 1;
+
+		P_PathTraverse(leadx, leady, leadx + mmomx, leady + mmomy, PT_ADDLINES, PTR_SlideTraverse);
+		P_PathTraverse(trailx, leady, trailx + mmomx, leady + mmomy, PT_ADDLINES, PTR_SlideTraverse);
+		P_PathTraverse(leadx, traily, leadx + mmomx, traily + mmomy, PT_ADDLINES, PTR_SlideTraverse);
+
+		// move up to the wall
+		if (bestslidefrac == FRACUNIT + 1)
+		{
+			// the move must have hit the middle, so bounce straight back
+bounceback:
+			if (P_TryMove(mo, mo->x - mmomx, mo->y - mmomy, true))
 			{
-				mo->player->cmomx *= -1;
-				mo->player->cmomy *= -1;
-				mo->player->cmomx = FixedMul(mo->player->cmomx,
-					(FRACUNIT - (FRACUNIT>>2) - (FRACUNIT>>3)));
-				mo->player->cmomy = FixedMul(mo->player->cmomy,
-					(FRACUNIT - (FRACUNIT>>2) - (FRACUNIT>>3)));
+				mo->momx *= -1;
+				mo->momy *= -1;
+				mo->momx = FixedMul(mo->momx, (FRACUNIT - (FRACUNIT>>2) - (FRACUNIT>>3)));
+				mo->momy = FixedMul(mo->momy, (FRACUNIT - (FRACUNIT>>2) - (FRACUNIT>>3)));
+
+				if (mo->player)
+				{
+					mo->player->cmomx *= -1;
+					mo->player->cmomy *= -1;
+					mo->player->cmomx = FixedMul(mo->player->cmomx,
+						(FRACUNIT - (FRACUNIT>>2) - (FRACUNIT>>3)));
+					mo->player->cmomy = FixedMul(mo->player->cmomy,
+						(FRACUNIT - (FRACUNIT>>2) - (FRACUNIT>>3)));
+				}
+			}
+			return;
+		}
+
+		// fudge a bit to make sure it doesn't hit
+		bestslidefrac -= 0x800;
+		if (bestslidefrac > 0)
+		{
+			newx = FixedMul(mmomx, bestslidefrac);
+			newy = FixedMul(mmomy, bestslidefrac);
+
+			if (!P_TryMove(mo, mo->x + newx, mo->y + newy, true))
+			{
+				if (P_MobjWasRemoved(mo))
+					return;
+				goto bounceback;
 			}
 		}
-		return;
+
+		// Now continue along the wall.
+		// First calculate remainder.
+		bestslidefrac = FRACUNIT - bestslidefrac;
+
+		if (bestslidefrac > FRACUNIT)
+			bestslidefrac = FRACUNIT;
+
+		if (bestslidefrac <= 0)
+			return;
+
+		if (mo->type == MT_SHELL)
+		{
+			tmxmove = mmomx;
+			tmymove = mmomy;
+		}
+		else if (mo->type == MT_THROWNBOUNCE)
+		{
+			tmxmove = FixedMul(mmomx, (FRACUNIT - (FRACUNIT>>6) - (FRACUNIT>>5)));
+			tmymove = FixedMul(mmomy, (FRACUNIT - (FRACUNIT>>6) - (FRACUNIT>>5)));
+		}
+		else if (mo->type == MT_THROWNGRENADE || mo->type == MT_CYBRAKDEMON_NAPALM_BOMB_LARGE)
+		{
+			// Quickly decay speed as it bounces
+			tmxmove = FixedDiv(mmomx, 2*FRACUNIT);
+			tmymove = FixedDiv(mmomy, 2*FRACUNIT);
+		}
+		else
+		{
+			tmxmove = FixedMul(mmomx, (FRACUNIT - (FRACUNIT>>2) - (FRACUNIT>>3)));
+			tmymove = FixedMul(mmomy, (FRACUNIT - (FRACUNIT>>2) - (FRACUNIT>>3)));
+		}
+
+		P_HitBounceLine(bestslideline); // clip the moves
+
+		mo->momx = tmxmove;
+		mo->momy = tmymove;
+
+		if (mo->player)
+		{
+			mo->player->cmomx = tmxmove;
+			mo->player->cmomy = tmymove;
+		}
 	}
-
-	// fudge a bit to make sure it doesn't hit
-	bestslidefrac -= 0x800;
-	if (bestslidefrac > 0)
-	{
-		newx = FixedMul(mmomx, bestslidefrac);
-		newy = FixedMul(mmomy, bestslidefrac);
-
-		if (!P_TryMove(mo, mo->x + newx, mo->y + newy, true))
-			goto bounceback;
-	}
-
-	// Now continue along the wall.
-	// First calculate remainder.
-	bestslidefrac = FRACUNIT - bestslidefrac;
-
-	if (bestslidefrac > FRACUNIT)
-		bestslidefrac = FRACUNIT;
-
-	if (bestslidefrac <= 0)
-		return;
-
-	if (mo->type == MT_SHELL)
-	{
-		tmxmove = mmomx;
-		tmymove = mmomy;
-	}
-	else if (mo->type == MT_THROWNBOUNCE)
-	{
-		tmxmove = FixedMul(mmomx, (FRACUNIT - (FRACUNIT>>6) - (FRACUNIT>>5)));
-		tmymove = FixedMul(mmomy, (FRACUNIT - (FRACUNIT>>6) - (FRACUNIT>>5)));
-	}
-	else if (mo->type == MT_THROWNGRENADE || mo->type == MT_CYBRAKDEMON_NAPALM_BOMB_LARGE)
-	{
-		// Quickly decay speed as it bounces
-		tmxmove = FixedDiv(mmomx, 2*FRACUNIT);
-		tmymove = FixedDiv(mmomy, 2*FRACUNIT);
-	}
-	else
-	{
-		tmxmove = FixedMul(mmomx, (FRACUNIT - (FRACUNIT>>2) - (FRACUNIT>>3)));
-		tmymove = FixedMul(mmomy, (FRACUNIT - (FRACUNIT>>2) - (FRACUNIT>>3)));
-	}
-
-	P_HitBounceLine(bestslideline); // clip the moves
-
-	mo->momx = tmxmove;
-	mo->momy = tmymove;
-
-	if (mo->player)
-	{
-		mo->player->cmomx = tmxmove;
-		mo->player->cmomy = tmymove;
-	}
-
-	if (!P_TryMove(mo, mo->x + tmxmove, mo->y + tmymove, true))
-		goto retry;
+	while (!P_TryMove(mo, mo->x + tmxmove, mo->y + tmymove, true) && !P_MobjWasRemoved(mo));
 }
 
 //

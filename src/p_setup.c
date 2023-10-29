@@ -50,6 +50,7 @@
 #include "m_random.h"
 
 #include "dehacked.h" // for map headers
+#include "deh_tables.h" // FREE_SKINCOLORS
 #include "r_main.h"
 #include "m_cond.h" // for emblems
 
@@ -1049,10 +1050,10 @@ static void P_LoadSectors(UINT8 *data)
 		ss->special = SHORT(ms->special);
 		Tag_FSet(&ss->tags, SHORT(ms->tag));
 
-		ss->floor_xoffs = ss->floor_yoffs = 0;
-		ss->ceiling_xoffs = ss->ceiling_yoffs = 0;
+		ss->floorxoffset = ss->flooryoffset = 0;
+		ss->ceilingxoffset = ss->ceilingyoffset = 0;
 
-		ss->floorpic_angle = ss->ceilingpic_angle = 0;
+		ss->floorangle = ss->ceilingangle = 0;
 
 		ss->floorlightlevel = ss->ceilinglightlevel = 0;
 		ss->floorlightabsolute = ss->ceilinglightabsolute = false;
@@ -1103,7 +1104,6 @@ static void P_InitializeLinedef(line_t *ld)
 	ld->validcount = 0;
 	ld->polyobj = NULL;
 
-	ld->text = NULL;
 	ld->callcount = 0;
 
 	// cph 2006/09/30 - fix sidedef errors right away.
@@ -1207,8 +1207,113 @@ static void P_InitializeSidedef(side_t *sd)
 		sd->special = sd->line->special;
 	}
 
-	sd->text = NULL;
 	sd->colormap_data = NULL;
+}
+
+static boolean contextdrift = false;
+
+// In Ring Racers, this is just the reference implementation.
+// But in SRB2, backwards compatibility is a design goal!?
+// So we let the map function on load, but report that there's
+// an issue which could prevent saving it as a UDMF map.
+//
+// ... "context drift" is a term I learned from the story "Lena",
+// styled after a wikipedia article on a man whose brain scan
+// spawns an industry of digital brain emulation. It is a term
+// to describe that the understanding of the world MMAcevedo has
+// is rooted in a specific moment and time and will lose relevance
+// as societal norms, languages, and events change and are changed.
+// It is on the real wikipedia, but under the name "concept drift".
+// I am connecting the idea of the rooted-in-time brainstate with
+// the numerical evaluation of get_number(), the ground truth
+// CONTEXT for all these silly integers, that will trip up future
+// builds of SRB2 that have modified states and object lists.
+// Golden statues rotating in place of carousel rides is perhaps
+// not quite what qntm meant, but is a TEXTMAP, a human-readable
+// document for imparting a sense of place made/read by machines,
+// not its own language providing a vulnerable context?
+// ~toast 200723, see https://qntm.org/mmacevedo
+//
+static void P_WriteConstant(INT32 constant, char **target, const char *desc, UINT32 id)
+{
+	char buffer[12];
+	size_t len;
+
+	CONS_Alert(
+		CONS_WARNING, M_GetText(
+		"P_WriteConstant has been called for %s %d, "
+		"this level is vulnerable to context drift "
+		"if -writetextmap is used.\n"),
+		desc, id
+	);
+
+	contextdrift = true;
+
+	sprintf(buffer, "%d", constant);
+	len = strlen(buffer) + 1;
+	*target = Z_Malloc(len, PU_LEVEL, NULL);
+	M_Memcpy(*target, buffer, len);
+}
+
+static void P_WriteDuplicateText(const char *text, char **target)
+{
+	if (text == NULL || text[0] == '\0')
+		return;
+
+	size_t len = strlen(text) + 1;
+	*target = Z_Malloc(len, PU_LEVEL, NULL);
+	M_Memcpy(*target, text, len);
+}
+
+static void P_WriteSkincolor(INT32 constant, char **target)
+{
+	const char *color_name;
+
+	if (constant <= SKINCOLOR_NONE
+	|| constant >= (INT32)numskincolors)
+		return;
+
+	if (constant >= SKINCOLOR_FIRSTFREESLOT)
+		color_name = FREE_SKINCOLORS[constant - SKINCOLOR_FIRSTFREESLOT];
+	else
+		color_name = COLOR_ENUMS[constant];
+
+	P_WriteDuplicateText(
+		va("SKINCOLOR_%s", color_name),
+		target
+	);
+}
+
+static void P_WriteSfx(INT32 constant, char **target)
+{
+	if (constant <= sfx_None
+	|| constant >= (INT32)sfxfree)
+		return;
+
+	P_WriteDuplicateText(
+		va("SFX_%s", S_sfx[constant].name),
+		target
+	);
+}
+
+static void P_WriteTics(INT32 tics, char **target)
+{
+	if (!tics)
+		return;
+
+	INT32 seconds = (tics / TICRATE);
+	tics %= TICRATE;
+
+	const char *text;
+
+	if (tics && !seconds)
+		text = va("%d", tics);
+	else if (seconds && !tics)
+		text = va("(%d*TICRATE)", seconds);
+	else
+		text = va("(%d*TICRATE)%s%d", seconds, (tics > 0) ? "+" : "", tics);
+
+	P_WriteDuplicateText(text, target);
 }
 
 static void P_LoadSidedefs(UINT8 *data)
@@ -1262,9 +1367,13 @@ static void P_LoadSidedefs(UINT8 *data)
 
 			case 413: // Change music
 			{
+				sd->toptexture = sd->midtexture = sd->bottomtexture = 0;
+
+				if (!isfrontside)
+					break;
+
 				char process[8+1];
 
-				sd->toptexture = sd->midtexture = sd->bottomtexture = 0;
 				if (msd->bottomtexture[0] != '-' || msd->bottomtexture[1] != '\0')
 				{
 					M_Memcpy(process,msd->bottomtexture,8);
@@ -1279,48 +1388,39 @@ static void P_LoadSidedefs(UINT8 *data)
 					sd->midtexture = get_number(process);
 				}
 
-				sd->text = Z_Malloc(7, PU_LEVEL, NULL);
-				if (isfrontside && !(msd->toptexture[0] == '-' && msd->toptexture[1] == '\0'))
+				if (msd->toptexture[0] != '-' && msd->toptexture[1] != '\0')
 				{
+					sd->line->stringargs[0] = Z_Malloc(7, PU_LEVEL, NULL);
+
 					M_Memcpy(process,msd->toptexture,8);
 					process[8] = '\0';
 
 					// If they type in O_ or D_ and their music name, just shrug,
 					// then copy the rest instead.
 					if ((process[0] == 'O' || process[0] == 'D') && process[7])
-						M_Memcpy(sd->text, process+2, 6);
+						M_Memcpy(sd->line->stringargs[0], process+2, 6);
 					else // Assume it's a proper music name.
-						M_Memcpy(sd->text, process, 6);
-					sd->text[6] = 0;
+						M_Memcpy(sd->line->stringargs[0], process, 6);
+					sd->line->stringargs[0][6] = '\0';
 				}
-				else
-					sd->text[0] = 0;
+
 				break;
 			}
 
 			case 4: // Speed pad parameters
-			{
-				sd->toptexture = sd->midtexture = sd->bottomtexture = 0;
-				if (msd->toptexture[0] != '-' || msd->toptexture[1] != '\0')
-				{
-					char process[8+1];
-					M_Memcpy(process,msd->toptexture,8);
-					process[8] = '\0';
-					sd->toptexture = get_number(process);
-				}
-				break;
-			}
-
 			case 414: // Play SFX
 			{
 				sd->toptexture = sd->midtexture = sd->bottomtexture = 0;
+
+				if (!isfrontside)
+					break;
+
 				if (msd->toptexture[0] != '-' || msd->toptexture[1] != '\0')
 				{
 					char process[8 + 1];
 					M_Memcpy(process, msd->toptexture, 8);
 					process[8] = '\0';
-					sd->text = Z_Malloc(strlen(process) + 1, PU_LEVEL, NULL);
-					M_Memcpy(sd->text, process, strlen(process) + 1);
+					P_WriteDuplicateText(process, &sd->line->stringargs[0]);
 				}
 				break;
 			}
@@ -1329,21 +1429,13 @@ static void P_LoadSidedefs(UINT8 *data)
 			case 14: // Bustable block parameters
 			case 15: // Fan particle spawner parameters
 			{
-				char process[8*3+1];
-				memset(process,0,8*3+1);
-				sd->toptexture = sd->midtexture = sd->bottomtexture = 0;
-				if (msd->toptexture[0] == '-' && msd->toptexture[1] == '\0')
+				if (msd->toptexture[7] == '\0' && strcasecmp(msd->toptexture, "MT_NULL") == 0)
+				{
+					// Don't bulk the conversion with irrelevant types
 					break;
-				else
-					M_Memcpy(process,msd->toptexture,8);
-				if (msd->midtexture[0] != '-' || msd->midtexture[1] != '\0')
-					M_Memcpy(process+strlen(process), msd->midtexture, 8);
-				if (msd->bottomtexture[0] != '-' || msd->bottomtexture[1] != '\0')
-					M_Memcpy(process+strlen(process), msd->bottomtexture, 8);
-				sd->toptexture = get_number(process);
-				break;
+				}
 			}
-
+			// FALLTHRU
 			case 331: // Trigger linedef executor: Skin - Continuous
 			case 332: // Trigger linedef executor: Skin - Each time
 			case 333: // Trigger linedef executor: Skin - Once
@@ -1369,8 +1461,11 @@ static void P_LoadSidedefs(UINT8 *data)
 					M_Memcpy(process+strlen(process), msd->midtexture, 8);
 				if (msd->bottomtexture[0] != '-' || msd->bottomtexture[1] != '\0')
 					M_Memcpy(process+strlen(process), msd->bottomtexture, 8);
-				sd->text = Z_Malloc(strlen(process)+1, PU_LEVEL, NULL);
-				M_Memcpy(sd->text, process, strlen(process)+1);
+
+				P_WriteDuplicateText(
+					process,
+					&sd->line->stringargs[(isfrontside) ? 0 : 1]
+				);
 				break;
 			}
 
@@ -1426,6 +1521,7 @@ static void P_LoadThings(UINT8 *data)
 		mt->extrainfo = (UINT8)(mt->type >> 12);
 		Tag_FSet(&mt->tags, 0);
 		mt->scale = FRACUNIT;
+		mt->spritexscale = mt->spriteyscale = FRACUNIT;
 		memset(mt->args, 0, NUMMAPTHINGARGS*sizeof(*mt->args));
 		memset(mt->stringargs, 0x00, NUMMAPTHINGSTRINGARGS*sizeof(*mt->stringargs));
 		mt->pitch = mt->roll = 0;
@@ -1584,19 +1680,19 @@ static void ParseTextmapSectorParameter(UINT32 i, const char *param, const char 
 			if ((id = strchr(id, ' ')))
 				id++;
 		}
-	}
+	}	
 	else if (fastcmp(param, "xpanningfloor"))
-		sectors[i].floor_xoffs = FLOAT_TO_FIXED(atof(val));
+		sectors[i].floorxoffset = FLOAT_TO_FIXED(atof(val));
 	else if (fastcmp(param, "ypanningfloor"))
-		sectors[i].floor_yoffs = FLOAT_TO_FIXED(atof(val));
+		sectors[i].flooryoffset = FLOAT_TO_FIXED(atof(val));
 	else if (fastcmp(param, "xpanningceiling"))
-		sectors[i].ceiling_xoffs = FLOAT_TO_FIXED(atof(val));
+		sectors[i].ceilingxoffset = FLOAT_TO_FIXED(atof(val));
 	else if (fastcmp(param, "ypanningceiling"))
-		sectors[i].ceiling_yoffs = FLOAT_TO_FIXED(atof(val));
+		sectors[i].ceilingyoffset = FLOAT_TO_FIXED(atof(val));
 	else if (fastcmp(param, "rotationfloor"))
-		sectors[i].floorpic_angle = FixedAngle(FLOAT_TO_FIXED(atof(val)));
+		sectors[i].floorangle = FixedAngle(FLOAT_TO_FIXED(atof(val)));
 	else if (fastcmp(param, "rotationceiling"))
-		sectors[i].ceilingpic_angle = FixedAngle(FLOAT_TO_FIXED(atof(val)));
+		sectors[i].ceilingangle = FixedAngle(FLOAT_TO_FIXED(atof(val)));
 	else if (fastcmp(param, "floorplane_a"))
 	{
 		textmap_planefloor.defined |= PD_A;
@@ -1941,11 +2037,19 @@ static void ParseTextmapThingParameter(UINT32 i, const char *param, const char *
 		mapthings[i].roll = atol(val);
 	else if (fastcmp(param, "type"))
 		mapthings[i].type = atol(val);
-	else if (fastcmp(param, "scale") || fastcmp(param, "scalex") || fastcmp(param, "scaley"))
+	else if (fastcmp(param, "scale"))
+		mapthings[i].spritexscale = mapthings[i].spriteyscale = FLOAT_TO_FIXED(atof(val));
+	else if (fastcmp(param, "scalex"))
+		mapthings[i].spritexscale = FLOAT_TO_FIXED(atof(val));
+	else if (fastcmp(param, "scaley"))
+		mapthings[i].spriteyscale = FLOAT_TO_FIXED(atof(val));
+	else if (fastcmp(param, "mobjscale"))
 		mapthings[i].scale = FLOAT_TO_FIXED(atof(val));
 	// Flags
 	else if (fastcmp(param, "flip") && fastcmp("true", val))
 		mapthings[i].options |= MTF_OBJECTFLIP;
+	else if (fastcmp(param, "absolutez") && fastcmp("true", val))
+		mapthings[i].options |= MTF_ABSOLUTEZ;
 
 	else if (fastncmp(param, "stringarg", 9) && strlen(param) > 9)
 	{
@@ -1996,47 +2100,47 @@ static void TextmapParse(UINT32 dataPos, size_t num, void (*parser)(UINT32, cons
  */
 static void TextmapFixFlatOffsets(sector_t *sec)
 {
-	if (sec->floorpic_angle)
+	if (sec->floorangle)
 	{
-		fixed_t pc = FINECOSINE(sec->floorpic_angle>>ANGLETOFINESHIFT);
-		fixed_t ps = FINESINE  (sec->floorpic_angle>>ANGLETOFINESHIFT);
-		fixed_t xoffs = sec->floor_xoffs;
-		fixed_t yoffs = sec->floor_yoffs;
-		sec->floor_xoffs = (FixedMul(xoffs, pc) % MAXFLATSIZE) - (FixedMul(yoffs, ps) % MAXFLATSIZE);
-		sec->floor_yoffs = (FixedMul(xoffs, ps) % MAXFLATSIZE) + (FixedMul(yoffs, pc) % MAXFLATSIZE);
+		fixed_t pc = FINECOSINE(sec->floorangle>>ANGLETOFINESHIFT);
+		fixed_t ps = FINESINE  (sec->floorangle>>ANGLETOFINESHIFT);
+		fixed_t xoffs = sec->floorxoffset;
+		fixed_t yoffs = sec->flooryoffset;
+		sec->floorxoffset = (FixedMul(xoffs, pc) % MAXFLATSIZE) - (FixedMul(yoffs, ps) % MAXFLATSIZE);
+		sec->flooryoffset = (FixedMul(xoffs, ps) % MAXFLATSIZE) + (FixedMul(yoffs, pc) % MAXFLATSIZE);
 	}
 
-	if (sec->ceilingpic_angle)
+	if (sec->ceilingangle)
 	{
-		fixed_t pc = FINECOSINE(sec->ceilingpic_angle>>ANGLETOFINESHIFT);
-		fixed_t ps = FINESINE  (sec->ceilingpic_angle>>ANGLETOFINESHIFT);
-		fixed_t xoffs = sec->ceiling_xoffs;
-		fixed_t yoffs = sec->ceiling_yoffs;
-		sec->ceiling_xoffs = (FixedMul(xoffs, pc) % MAXFLATSIZE) - (FixedMul(yoffs, ps) % MAXFLATSIZE);
-		sec->ceiling_yoffs = (FixedMul(xoffs, ps) % MAXFLATSIZE) + (FixedMul(yoffs, pc) % MAXFLATSIZE);
+		fixed_t pc = FINECOSINE(sec->ceilingangle>>ANGLETOFINESHIFT);
+		fixed_t ps = FINESINE  (sec->ceilingangle>>ANGLETOFINESHIFT);
+		fixed_t xoffs = sec->ceilingxoffset;
+		fixed_t yoffs = sec->ceilingyoffset;
+		sec->ceilingxoffset = (FixedMul(xoffs, pc) % MAXFLATSIZE) - (FixedMul(yoffs, ps) % MAXFLATSIZE);
+		sec->ceilingyoffset = (FixedMul(xoffs, ps) % MAXFLATSIZE) + (FixedMul(yoffs, pc) % MAXFLATSIZE);
 	}
 }
 
 static void TextmapUnfixFlatOffsets(sector_t *sec)
 {
-	if (sec->floorpic_angle)
+	if (sec->floorangle)
 	{
-		fixed_t pc = FINECOSINE(sec->floorpic_angle >> ANGLETOFINESHIFT);
-		fixed_t ps = FINESINE(sec->floorpic_angle >> ANGLETOFINESHIFT);
-		fixed_t xoffs = sec->floor_xoffs;
-		fixed_t yoffs = sec->floor_yoffs;
-		sec->floor_xoffs = (FixedMul(xoffs, ps) % MAXFLATSIZE) + (FixedMul(yoffs, pc) % MAXFLATSIZE);
-		sec->floor_yoffs = (FixedMul(xoffs, pc) % MAXFLATSIZE) - (FixedMul(yoffs, ps) % MAXFLATSIZE);
+		fixed_t pc = FINECOSINE(sec->floorangle >> ANGLETOFINESHIFT);
+		fixed_t ps = FINESINE(sec->floorangle >> ANGLETOFINESHIFT);
+		fixed_t xoffs = sec->floorxoffset;
+		fixed_t yoffs = sec->flooryoffset;
+		sec->floorxoffset = (FixedMul(xoffs, ps) % MAXFLATSIZE) + (FixedMul(yoffs, pc) % MAXFLATSIZE);
+		sec->flooryoffset = (FixedMul(xoffs, pc) % MAXFLATSIZE) - (FixedMul(yoffs, ps) % MAXFLATSIZE);
 	}
 
-	if (sec->ceilingpic_angle)
+	if (sec->ceilingangle)
 	{
-		fixed_t pc = FINECOSINE(sec->ceilingpic_angle >> ANGLETOFINESHIFT);
-		fixed_t ps = FINESINE(sec->ceilingpic_angle >> ANGLETOFINESHIFT);
-		fixed_t xoffs = sec->ceiling_xoffs;
-		fixed_t yoffs = sec->ceiling_yoffs;
-		sec->ceiling_xoffs = (FixedMul(xoffs, ps) % MAXFLATSIZE) + (FixedMul(yoffs, pc) % MAXFLATSIZE);
-		sec->ceiling_yoffs = (FixedMul(xoffs, pc) % MAXFLATSIZE) - (FixedMul(yoffs, ps) % MAXFLATSIZE);
+		fixed_t pc = FINECOSINE(sec->ceilingangle >> ANGLETOFINESHIFT);
+		fixed_t ps = FINESINE(sec->ceilingangle >> ANGLETOFINESHIFT);
+		fixed_t xoffs = sec->ceilingxoffset;
+		fixed_t yoffs = sec->ceilingyoffset;
+		sec->ceilingxoffset = (FixedMul(xoffs, ps) % MAXFLATSIZE) + (FixedMul(yoffs, pc) % MAXFLATSIZE);
+		sec->ceilingyoffset = (FixedMul(xoffs, pc) % MAXFLATSIZE) - (FixedMul(yoffs, ps) % MAXFLATSIZE);
 	}
 }
 
@@ -2359,8 +2463,12 @@ static void P_WriteTextmap(void)
 			fprintf(f, "roll = %d;\n", wmapthings[i].roll);
 		if (wmapthings[i].type != 0)
 			fprintf(f, "type = %d;\n", wmapthings[i].type);
+		if (wmapthings[i].spritexscale != FRACUNIT)
+			fprintf(f, "scalex = %f;\n", FIXED_TO_FLOAT(wmapthings[i].spritexscale));
+		if (wmapthings[i].spriteyscale != FRACUNIT)
+			fprintf(f, "scaley = %f;\n", FIXED_TO_FLOAT(wmapthings[i].spriteyscale));
 		if (wmapthings[i].scale != FRACUNIT)
-			fprintf(f, "scale = %f;\n", FIXED_TO_FLOAT(wmapthings[i].scale));
+			fprintf(f, "mobjscale = %f;\n", FIXED_TO_FLOAT(wmapthings[i].scale));
 		if (wmapthings[i].options & MTF_OBJECTFLIP)
 			fprintf(f, "flip = true;\n");
 		for (j = 0; j < NUMMAPTHINGARGS; j++)
@@ -2562,18 +2670,18 @@ static void P_WriteTextmap(void)
 		}
 		sector_t tempsec = wsectors[i];
 		TextmapUnfixFlatOffsets(&tempsec);
-		if (tempsec.floor_xoffs != 0)
-			fprintf(f, "xpanningfloor = %f;\n", FIXED_TO_FLOAT(tempsec.floor_xoffs));
-		if (tempsec.floor_yoffs != 0)
-			fprintf(f, "ypanningfloor = %f;\n", FIXED_TO_FLOAT(tempsec.floor_yoffs));
-		if (tempsec.ceiling_xoffs != 0)
-			fprintf(f, "xpanningceiling = %f;\n", FIXED_TO_FLOAT(tempsec.ceiling_xoffs));
-		if (tempsec.ceiling_yoffs != 0)
-			fprintf(f, "ypanningceiling = %f;\n", FIXED_TO_FLOAT(tempsec.ceiling_yoffs));
-		if (wsectors[i].floorpic_angle != 0)
-			fprintf(f, "rotationfloor = %f;\n", FIXED_TO_FLOAT(AngleFixed(wsectors[i].floorpic_angle)));
-		if (wsectors[i].ceilingpic_angle != 0)
-			fprintf(f, "rotationceiling = %f;\n", FIXED_TO_FLOAT(AngleFixed(wsectors[i].ceilingpic_angle)));
+		if (tempsec.floorxoffset != 0)
+			fprintf(f, "xpanningfloor = %f;\n", FIXED_TO_FLOAT(tempsec.floorxoffset));
+		if (tempsec.flooryoffset != 0)
+			fprintf(f, "ypanningfloor = %f;\n", FIXED_TO_FLOAT(tempsec.flooryoffset));
+		if (tempsec.ceilingxoffset != 0)
+			fprintf(f, "xpanningceiling = %f;\n", FIXED_TO_FLOAT(tempsec.ceilingxoffset));
+		if (tempsec.ceilingyoffset != 0)
+			fprintf(f, "ypanningceiling = %f;\n", FIXED_TO_FLOAT(tempsec.ceilingyoffset));
+		if (wsectors[i].floorangle != 0)
+			fprintf(f, "rotationfloor = %f;\n", FIXED_TO_FLOAT(AngleFixed(wsectors[i].floorangle)));
+		if (wsectors[i].ceilingangle != 0)
+			fprintf(f, "rotationceiling = %f;\n", FIXED_TO_FLOAT(AngleFixed(wsectors[i].ceilingangle)));
         if (wsectors[i].extra_colormap)
 		{
 			INT32 lightcolor = P_RGBAToColor(wsectors[i].extra_colormap->rgba);
@@ -2743,6 +2851,15 @@ static void P_WriteTextmap(void)
 	Z_Free(wlines);
 	Z_Free(wsides);
 	Z_Free(specialthings);
+
+	if (contextdrift)
+	{
+		CONS_Alert(
+			CONS_WARNING, M_GetText(
+			"Some elements of this level are vulnerable to context drift."
+			"Please check the console log for more information.\n")
+		);
+	}
 }
 
 /** Loads the textmap data, after obtaining the elements count and allocating their respective space.
@@ -2793,10 +2910,10 @@ static void P_LoadTextmap(void)
 		sc->special = 0;
 		Tag_FSet(&sc->tags, 0);
 
-		sc->floor_xoffs = sc->floor_yoffs = 0;
-		sc->ceiling_xoffs = sc->ceiling_yoffs = 0;
+		sc->floorxoffset = sc->flooryoffset = 0;
+		sc->ceilingxoffset = sc->ceilingyoffset = 0;
 
-		sc->floorpic_angle = sc->ceilingpic_angle = 0;
+		sc->floorangle = sc->ceilingangle = 0;
 
 		sc->floorlightlevel = sc->ceilinglightlevel = 0;
 		sc->floorlightabsolute = sc->ceilinglightabsolute = false;
@@ -2911,6 +3028,7 @@ static void P_LoadTextmap(void)
 		mt->extrainfo = 0;
 		Tag_FSet(&mt->tags, 0);
 		mt->scale = FRACUNIT;
+		mt->spritexscale = mt->spriteyscale = FRACUNIT;
 		memset(mt->args, 0, NUMMAPTHINGARGS*sizeof(*mt->args));
 		memset(mt->stringargs, 0x00, NUMMAPTHINGSTRINGARGS*sizeof(*mt->stringargs));
 		mt->mobj = NULL;
@@ -2938,15 +3056,20 @@ static void P_ProcessLinedefsAfterSidedefs(void)
 		case 332: // Trigger linedef executor: Skin - Each time
 		case 333: // Trigger linedef executor: Skin - Once
 		case 443: // Calls a named Lua function
-			if (sides[ld->sidenum[0]].text)
+			if (ld->stringargs[0] && ld->stringargs[1])
 			{
-				size_t len = strlen(sides[ld->sidenum[0]].text) + 1;
-				if (ld->sidenum[1] != 0xffff && sides[ld->sidenum[1]].text)
-					len += strlen(sides[ld->sidenum[1]].text);
-				ld->text = Z_Malloc(len, PU_LEVEL, NULL);
-				M_Memcpy(ld->text, sides[ld->sidenum[0]].text, strlen(sides[ld->sidenum[0]].text) + 1);
-				if (ld->sidenum[1] != 0xffff && sides[ld->sidenum[1]].text)
-					M_Memcpy(ld->text + strlen(ld->text) + 1, sides[ld->sidenum[1]].text, strlen(sides[ld->sidenum[1]].text) + 1);
+				size_t len[2];
+				len[0] = strlen(ld->stringargs[0]);
+				len[1] = strlen(ld->stringargs[1]);
+
+				if (len[1])
+				{
+					ld->stringargs[0] = Z_Realloc(ld->stringargs[0], len[0] + len[1] + 1, PU_LEVEL, NULL);
+					M_Memcpy(ld->stringargs[0] + len[0] + 1, ld->stringargs[1], len[1] + 1);
+				}
+
+				Z_Free(ld->stringargs[1]);
+				ld->stringargs[1] = NULL;
 			}
 			break;
 		case 447: // Change colormap
@@ -3234,10 +3357,17 @@ static nodetype_t P_GetNodetype(const virtres_t *virt, UINT8 **nodedata)
 	nodetype_t nodetype = NT_UNSUPPORTED;
 	char signature[4 + 1];
 
+	*nodedata = NULL;
+
 	if (udmf)
 	{
-		*nodedata = vres_Find(virt, "ZNODES")->data;
-		supported[NT_XGLN] = supported[NT_XGL3] = true;
+		virtlump_t *virtznodes = vres_Find(virt, "ZNODES");
+
+		if (virtznodes && virtznodes->size)
+		{
+			*nodedata = virtznodes->data;
+			supported[NT_XGLN] = supported[NT_XGL3] = true;
+		}
 	}
 	else
 	{
@@ -3246,22 +3376,37 @@ static nodetype_t P_GetNodetype(const virtres_t *virt, UINT8 **nodedata)
 
 		if (virtsegs && virtsegs->size)
 		{
-			*nodedata = vres_Find(virt, "NODES")->data;
-			return NT_DOOM; // Traditional map format BSP tree.
-		}
-
-		virtssectors = vres_Find(virt, "SSECTORS");
-
-		if (virtssectors && virtssectors->size)
-		{ // Possibly GL nodes: NODES ignored, SSECTORS takes precedence as nodes lump, (It is confusing yeah) and has a signature.
-			*nodedata = virtssectors->data;
-			supported[NT_XGLN] = supported[NT_ZGLN] = supported[NT_XGL3] = true;
+			virtlump_t *virtnodes = vres_Find(virt, "NODES");
+			if (virtnodes && virtnodes->size)
+			{
+				*nodedata = virtnodes->data;
+				return NT_DOOM; // Traditional map format BSP tree.
+			}
 		}
 		else
-		{ // Possibly ZDoom extended nodes: SSECTORS is empty, NODES has a signature.
-			*nodedata = vres_Find(virt, "NODES")->data;
-			supported[NT_XNOD] = supported[NT_ZNOD] = true;
+		{
+			virtssectors = vres_Find(virt, "SSECTORS");
+
+			if (virtssectors && virtssectors->size)
+			{ // Possibly GL nodes: NODES ignored, SSECTORS takes precedence as nodes lump, (It is confusing yeah) and has a signature.
+				*nodedata = virtssectors->data;
+				supported[NT_XGLN] = supported[NT_ZGLN] = supported[NT_XGL3] = true;
+			}
+			else
+			{ // Possibly ZDoom extended nodes: SSECTORS is empty, NODES has a signature.
+				virtlump_t *virtnodes = vres_Find(virt, "NODES");
+				if (virtnodes && virtnodes->size)
+				{
+					*nodedata = virtnodes->data;
+					supported[NT_XNOD] = supported[NT_ZNOD] = true;
+				}
+			}
 		}
+	}
+
+	if (*nodedata == NULL)
+	{
+		I_Error("Level has no nodes (does your map have at least 2 sectors?)");
 	}
 
 	M_Memcpy(signature, *nodedata, 4);
@@ -4040,14 +4185,6 @@ static void P_AddBinaryMapTags(void)
 	}
 }
 
-static void P_WriteConstant(INT32 constant, char **target)
-{
-	char buffer[12];
-	sprintf(buffer, "%d", constant);
-	*target = Z_Malloc(strlen(buffer) + 1, PU_LEVEL, NULL);
-	M_Memcpy(*target, buffer, strlen(buffer) + 1);
-}
-
 static line_t *P_FindPointPushLine(taglist_t *list)
 {
 	INT32 i, l;
@@ -4190,7 +4327,6 @@ static void P_ConvertBinaryLinedefTypes(void)
 				lines[i].args[1] |= TMSP_NOTELEPORT;
 			if (lines[i].flags & ML_WRAPMIDTEX)
 				lines[i].args[1] |= TMSP_FORCESPIN;
-			P_WriteConstant(sides[lines[i].sidenum[0]].toptexture ? sides[lines[i].sidenum[0]].toptexture : sfx_spdpad, &lines[i].stringargs[0]);
 			break;
 		case 7: //Sector flat alignment
 			lines[i].args[0] = tag;
@@ -4276,8 +4412,6 @@ static void P_ConvertBinaryLinedefTypes(void)
 			lines[i].args[0] = sides[lines[i].sidenum[0]].textureoffset >> FRACBITS;
 			lines[i].args[1] = sides[lines[i].sidenum[0]].rowoffset >> FRACBITS;
 			lines[i].args[2] = !!(lines[i].flags & ML_SKEWTD);
-			if (sides[lines[i].sidenum[0]].toptexture)
-				P_WriteConstant(sides[lines[i].sidenum[0]].toptexture, &lines[i].stringargs[0]);
 			break;
 		case 16: //Minecart parameters
 			lines[i].args[0] = sides[lines[i].sidenum[0]].textureoffset >> FRACBITS;
@@ -4740,7 +4874,7 @@ static void P_ConvertBinaryLinedefTypes(void)
 				lines[i].args[2] = 16;
 			}
 			if (lines[i].flags & ML_MIDSOLID)
-				P_WriteConstant(sides[lines[i].sidenum[0]].textureoffset >> FRACBITS, &lines[i].stringargs[0]);
+				P_WriteSfx(sides[lines[i].sidenum[0]].textureoffset >> FRACBITS, &lines[i].stringargs[0]);
 			break;
 		case 252: //FOF: Shatter block
 		case 253: //FOF: Shatter block, translucent
@@ -5007,11 +5141,6 @@ static void P_ConvertBinaryLinedefTypes(void)
 			else
 				lines[i].args[0] = TMT_CONTINUOUS;
 			lines[i].args[1] = !!(lines[i].flags & ML_NOCLIMB);
-			if (lines[i].text)
-			{
-				lines[i].stringargs[0] = Z_Malloc(strlen(lines[i].text) + 1, PU_LEVEL, NULL);
-				M_Memcpy(lines[i].stringargs[0], lines[i].text, strlen(lines[i].text) + 1);
-			}
 			lines[i].special = 331;
 			break;
 		case 334: // Object dye - continuous
@@ -5024,11 +5153,6 @@ static void P_ConvertBinaryLinedefTypes(void)
 			else
 				lines[i].args[0] = TMT_CONTINUOUS;
 			lines[i].args[1] = !!(lines[i].flags & ML_NOCLIMB);
-			if (sides[lines[i].sidenum[0]].text)
-			{
-				lines[i].stringargs[0] = Z_Malloc(strlen(sides[lines[i].sidenum[0]].text) + 1, PU_LEVEL, NULL);
-				M_Memcpy(lines[i].stringargs[0], sides[lines[i].sidenum[0]].text, strlen(sides[lines[i].sidenum[0]].text) + 1);
-			}
 			lines[i].special = 334;
 			break;
 		case 337: //Emerald check - continuous
@@ -5175,11 +5299,6 @@ static void P_ConvertBinaryLinedefTypes(void)
 			lines[i].args[4] = (lines[i].sidenum[1] != 0xffff) ? sides[lines[i].sidenum[1]].textureoffset >> FRACBITS : 0;
 			lines[i].args[5] = (lines[i].sidenum[1] != 0xffff) ? sides[lines[i].sidenum[1]].rowoffset >> FRACBITS : -1;
 			lines[i].args[6] = sides[lines[i].sidenum[0]].bottomtexture;
-			if (sides[lines[i].sidenum[0]].text)
-			{
-				lines[i].stringargs[0] = Z_Malloc(strlen(sides[lines[i].sidenum[0]].text) + 1, PU_LEVEL, NULL);
-				M_Memcpy(lines[i].stringargs[0], sides[lines[i].sidenum[0]].text, strlen(sides[lines[i].sidenum[0]].text) + 1);
-			}
 			break;
 		case 414: //Play sound effect
 			lines[i].args[2] = tag;
@@ -5218,11 +5337,6 @@ static void P_ConvertBinaryLinedefTypes(void)
 					lines[i].args[0] = TMSS_TRIGGERMOBJ;
 					lines[i].args[1] = TMSL_EVERYONE;
 				}
-			}
-			if (sides[lines[i].sidenum[0]].text)
-			{
-				lines[i].stringargs[0] = Z_Malloc(strlen(sides[lines[i].sidenum[0]].text) + 1, PU_LEVEL, NULL);
-				M_Memcpy(lines[i].stringargs[0], sides[lines[i].sidenum[0]].text, strlen(sides[lines[i].sidenum[0]].text) + 1);
 			}
 			break;
 		case 415: //Run script
@@ -5314,13 +5428,6 @@ static void P_ConvertBinaryLinedefTypes(void)
 			lines[i].args[0] = sides[lines[i].sidenum[0]].textureoffset >> FRACBITS;
 			lines[i].args[1] = !!(lines[i].flags & ML_NOCLIMB);
 			break;
-		case 425: //Change object state
-			if (sides[lines[i].sidenum[0]].text)
-			{
-				lines[i].stringargs[0] = Z_Malloc(strlen(sides[lines[i].sidenum[0]].text) + 1, PU_LEVEL, NULL);
-				M_Memcpy(lines[i].stringargs[0], sides[lines[i].sidenum[0]].text, strlen(sides[lines[i].sidenum[0]].text) + 1);
-			}
-			break;
 		case 426: //Stop object
 			lines[i].args[0] = !!(lines[i].flags & ML_NOCLIMB);
 			break;
@@ -5360,18 +5467,18 @@ static void P_ConvertBinaryLinedefTypes(void)
 			lines[i].args[2] = !!(lines[i].flags & ML_BLOCKMONSTERS);
 			break;
 		case 434: //Award power-up
-			if (sides[lines[i].sidenum[0]].text)
+			if ((lines[i].flags & ML_BLOCKMONSTERS) == 0)
 			{
-				lines[i].stringargs[0] = Z_Malloc(strlen(sides[lines[i].sidenum[0]].text) + 1, PU_LEVEL, NULL);
-				M_Memcpy(lines[i].stringargs[0], sides[lines[i].sidenum[0]].text, strlen(sides[lines[i].sidenum[0]].text) + 1);
+				// do NOT read power from back sidedef if this flag is not present
+				if (lines[i].stringargs[1] != NULL)
+				{
+					Z_Free(lines[i].stringargs[1]);
+					lines[i].stringargs[1] = NULL;
+				}
+
+				// Instead... write the desired time!
+				P_WriteTics((lines[i].flags & ML_NOCLIMB) ? -1 : (sides[lines[i].sidenum[0]].textureoffset >> FRACBITS), &lines[i].stringargs[1]);
 			}
-			if (lines[i].sidenum[1] != 0xffff && lines[i].flags & ML_BLOCKMONSTERS) // read power from back sidedef
-			{
-				lines[i].stringargs[1] = Z_Malloc(strlen(sides[lines[i].sidenum[1]].text) + 1, PU_LEVEL, NULL);
-				M_Memcpy(lines[i].stringargs[1], sides[lines[i].sidenum[1]].text, strlen(sides[lines[i].sidenum[1]].text) + 1);
-			}
-			else
-				P_WriteConstant((lines[i].flags & ML_NOCLIMB) ? -1 : (sides[lines[i].sidenum[0]].textureoffset >> FRACBITS), &lines[i].stringargs[1]);
 			break;
 		case 435: //Change plane scroller direction
 			lines[i].args[0] = tag;
@@ -5399,30 +5506,10 @@ static void P_ConvertBinaryLinedefTypes(void)
 			break;
 		case 442: //Change object type state
 			lines[i].args[0] = tag;
-			if (sides[lines[i].sidenum[0]].text)
-			{
-				lines[i].stringargs[0] = Z_Malloc(strlen(sides[lines[i].sidenum[0]].text) + 1, PU_LEVEL, NULL);
-				M_Memcpy(lines[i].stringargs[0], sides[lines[i].sidenum[0]].text, strlen(sides[lines[i].sidenum[0]].text) + 1);
-			}
-			if (lines[i].sidenum[1] == 0xffff)
-				lines[i].args[1] = 1;
-			else
-			{
-				lines[i].args[1] = 0;
-				if (sides[lines[i].sidenum[1]].text)
-				{
-					lines[i].stringargs[1] = Z_Malloc(strlen(sides[lines[i].sidenum[1]].text) + 1, PU_LEVEL, NULL);
-					M_Memcpy(lines[i].stringargs[1], sides[lines[i].sidenum[1]].text, strlen(sides[lines[i].sidenum[1]].text) + 1);
-				}
-			}
+			lines[i].args[1] = (lines[i].sidenum[1] == 0xffff) ? 1 : 0;
 			break;
 		case 443: //Call Lua function
-			if (lines[i].text)
-			{
-				lines[i].stringargs[0] = Z_Malloc(strlen(lines[i].text) + 1, PU_LEVEL, NULL);
-				M_Memcpy(lines[i].stringargs[0], lines[i].text, strlen(lines[i].text) + 1);
-			}
-			else
+			if (lines[i].stringargs[0] == NULL)
 				CONS_Alert(CONS_WARNING, "Linedef %s is missing the hook name of the Lua function to call! (This should be given in the front texture fields)\n", sizeu1(i));
 			break;
 		case 444: //Earthquake
@@ -5575,11 +5662,6 @@ static void P_ConvertBinaryLinedefTypes(void)
 			if (lines[i].flags & ML_MIDSOLID)
 				lines[i].args[2] |= TMP_FREEZETHINKERS;*/
 			lines[i].args[3] = (lines[i].sidenum[1] != 0xFFFF) ? sides[lines[i].sidenum[1]].textureoffset >> FRACBITS : tag;
-			if (sides[lines[i].sidenum[0]].text)
-			{
-				lines[i].stringargs[0] = Z_Malloc(strlen(sides[lines[i].sidenum[0]].text) + 1, PU_LEVEL, NULL);
-				M_Memcpy(lines[i].stringargs[0], sides[lines[i].sidenum[0]].text, strlen(sides[lines[i].sidenum[0]].text) + 1);
-			}
 			break;
 		case 460: //Award rings
 			lines[i].args[0] = sides[lines[i].sidenum[0]].textureoffset >> FRACBITS;
@@ -5607,18 +5689,6 @@ static void P_ConvertBinaryLinedefTypes(void)
 			}
 			else
 				lines[i].args[4] = 0;
-			if (sides[lines[i].sidenum[0]].text)
-			{
-				lines[i].stringargs[0] = Z_Malloc(strlen(sides[lines[i].sidenum[0]].text) + 1, PU_LEVEL, NULL);
-				M_Memcpy(lines[i].stringargs[0], sides[lines[i].sidenum[0]].text, strlen(sides[lines[i].sidenum[0]].text) + 1);
-			}
-			break;
-		case 463: //Dye object
-			if (sides[lines[i].sidenum[0]].text)
-			{
-				lines[i].stringargs[0] = Z_Malloc(strlen(sides[lines[i].sidenum[0]].text) + 1, PU_LEVEL, NULL);
-				M_Memcpy(lines[i].stringargs[0], sides[lines[i].sidenum[0]].text, strlen(sides[lines[i].sidenum[0]].text) + 1);
-			}
 			break;
 		case 464: //Trigger egg capsule
 			lines[i].args[0] = tag;
@@ -6447,7 +6517,7 @@ static void P_ConvertBinaryThingTypes(void)
 			break;
 		case 543: //Balloon
 			if (mapthings[i].angle > 0)
-				P_WriteConstant(((mapthings[i].angle - 1) % (numskincolors - 1)) + 1, &mapthings[i].stringargs[0]);
+				P_WriteSkincolor(((mapthings[i].angle - 1) % (numskincolors - 1)) + 1, &mapthings[i].stringargs[0]);
 			mapthings[i].args[0] = !!(mapthings[i].options & MTF_AMBUSH);
 			break;
 		case 555: //Diagonal yellow spring
@@ -6472,22 +6542,22 @@ static void P_ConvertBinaryThingTypes(void)
 		case 706: //Water ambience G
 		case 707: //Water ambience H
 			mapthings[i].args[0] = 35;
-			P_WriteConstant(sfx_amwtr1 + mapthings[i].type - 700, &mapthings[i].stringargs[0]);
+			P_WriteSfx(sfx_amwtr1 + mapthings[i].type - 700, &mapthings[i].stringargs[0]);
 			mapthings[i].type = 700;
 			break;
 		case 708: //Disco ambience
 			mapthings[i].args[0] = 512;
-			P_WriteConstant(sfx_ambint, &mapthings[i].stringargs[0]);
+			P_WriteSfx(sfx_ambint, &mapthings[i].stringargs[0]);
 			mapthings[i].type = 700;
 			break;
 		case 709: //Volcano ambience
 			mapthings[i].args[0] = 220;
-			P_WriteConstant(sfx_ambin2, &mapthings[i].stringargs[0]);
+			P_WriteSfx(sfx_ambin2, &mapthings[i].stringargs[0]);
 			mapthings[i].type = 700;
 			break;
 		case 710: //Machine ambience
 			mapthings[i].args[0] = 24;
-			P_WriteConstant(sfx_ambmac, &mapthings[i].stringargs[0]);
+			P_WriteSfx(sfx_ambmac, &mapthings[i].stringargs[0]);
 			mapthings[i].type = 700;
 			break;
 		case 750: //Slope vertex
@@ -6550,8 +6620,7 @@ static void P_ConvertBinaryThingTypes(void)
 			mapthings[i].args[3] = sides[lines[j].sidenum[0]].rowoffset >> FRACBITS;
 			mapthings[i].args[4] = lines[j].backsector ? sides[lines[j].sidenum[1]].textureoffset >> FRACBITS : 0;
 			mapthings[i].args[6] = mapthings[i].angle;
-			if (sides[lines[j].sidenum[0]].toptexture)
-				P_WriteConstant(sides[lines[j].sidenum[0]].toptexture, &mapthings[i].stringargs[0]);
+			P_WriteDuplicateText(lines[j].stringargs[0], &mapthings[i].stringargs[0]);
 			break;
 		}
 		case 762: //PolyObject spawn point (crush)
@@ -6640,8 +6709,8 @@ static void P_ConvertBinaryThingTypes(void)
 				mapthings[i].args[8] |= TMM_ALWAYSTHINK;
 			if (mapthings[i].type == 1110)
 			{
-				P_WriteConstant(sides[lines[j].sidenum[0]].toptexture, &mapthings[i].stringargs[0]);
-				P_WriteConstant(lines[j].backsector ? sides[lines[j].sidenum[1]].toptexture : MT_NULL, &mapthings[i].stringargs[1]);
+				P_WriteDuplicateText(lines[j].stringargs[0], &mapthings[i].stringargs[0]);
+				P_WriteDuplicateText(lines[j].stringargs[1], &mapthings[i].stringargs[1]);
 			}
 			break;
 		}
@@ -6682,7 +6751,13 @@ static void P_ConvertBinaryThingTypes(void)
 			mapthings[i].args[0] = P_AproxDistance(lines[j].dx, lines[j].dy) >> FRACBITS;
 			mapthings[i].args[1] = sides[lines[j].sidenum[0]].textureoffset >> FRACBITS;
 			mapthings[i].args[2] = !!(lines[j].flags & ML_NOCLIMB);
-			P_WriteConstant(MT_ROCKCRUMBLE1 + (sides[lines[j].sidenum[0]].rowoffset >> FRACBITS), &mapthings[i].stringargs[0]);
+			INT32 id = (sides[lines[j].sidenum[0]].rowoffset >> FRACBITS);
+			// Rather than introduce deh_tables.h as a dependency for literally one
+			// conversion, we just... recreate the string expected to be produced.
+			if (id > 0 && id < 16)
+				P_WriteDuplicateText(va("MT_ROCKCRUMBLE%d", id+1), &mapthings[i].stringargs[0]);
+			else
+				P_WriteConstant(MT_ROCKCRUMBLE1 + id, &mapthings[i].stringargs[0], "Mapthing", i);
 			break;
 		}
 		case 1221: //Minecart saloon door
@@ -6774,6 +6849,9 @@ static void P_ConvertBinaryThingTypes(void)
 		default:
 			break;
 		}
+		
+		// Clear binary thing height hacks, to prevent interfering with UDMF-only flags
+		mapthings[i].options &= 0xF;
 	}
 }
 
@@ -6815,6 +6893,7 @@ static void P_ConvertBinaryLinedefFlags(void)
 //For maps in binary format, converts setup of specials to UDMF format.
 static void P_ConvertBinaryMap(void)
 {
+	contextdrift = false;
 	P_ConvertBinaryLinedefTypes();
 	P_ConvertBinarySectorTypes();
 	P_ConvertBinaryThingTypes();
@@ -7014,7 +7093,7 @@ static void P_InitLevelSettings(void)
 	stagefailed = G_IsSpecialStage(gamemap);
 
 	// Reset temporary record data
-	memset(&ntemprecords, 0, sizeof(nightsdata_t));
+	memset(&ntemprecords, 0, sizeof(ntemprecords));
 
 	// earthquake camera
 	memset(&quake,0,sizeof(struct quake));
@@ -7465,6 +7544,7 @@ static void P_RunSpecialStageWipe(void)
 		lastwipetic = nowtime;
 		if (moviemode) // make sure we save frames for the white hold too
 			M_SaveFrame();
+		NetKeepAlive(); // Prevent timeout
 	}
 }
 
@@ -7768,18 +7848,6 @@ boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate)
 	P_InitThinkers();
 	R_InitMobjInterpolators();
 	P_InitCachedActions();
-
-	if (!fromnetsave && savedata.lives > 0)
-	{
-		numgameovers = savedata.numgameovers;
-		players[consoleplayer].continues = savedata.continues;
-		players[consoleplayer].lives = savedata.lives;
-		players[consoleplayer].score = savedata.score;
-		if ((botingame = ((botskin = savedata.botskin) != 0)))
-			botcolor = skins[botskin-1].prefcolor;
-		emeralds = savedata.emeralds;
-		savedata.lives = 0;
-	}
 
 	// internal game map
 	maplumpname = G_BuildMapName(gamemap);
@@ -8212,7 +8280,7 @@ static boolean P_LoadAddon(UINT16 numlumps)
 	{
 		CONS_Printf(M_GetText("Current map %d replaced by added file, ending the level to ensure consistency.\n"), gamemap);
 		if (server)
-			SendNetXCmd(XD_EXITLEVEL, NULL, 0);
+			D_SendExitLevel(false);
 	}
 
 	return true;

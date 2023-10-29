@@ -912,7 +912,7 @@ static void readspriteframe(MYFILE *f, spriteinfo_t *sprinfo, UINT8 frame)
 			else if (fastcmp(word, "YPIVOT"))
 				sprinfo->pivot[frame].y = value;
 			else if (fastcmp(word, "ROTAXIS"))
-				sprinfo->pivot[frame].rotaxis = value;
+				deh_warning("SpriteInfo: ROTAXIS is deprecated and will be removed.");
 			else
 			{
 				f->curpos = lastline;

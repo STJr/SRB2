@@ -33,12 +33,20 @@ enum sector_e {
 	sector_floorheight,
 	sector_ceilingheight,
 	sector_floorpic,
+	sector_floorxoffset,
+	sector_flooryoffset,
+	sector_floorangle,	
 	sector_ceilingpic,
+	sector_ceilingxoffset,
+	sector_ceilingyoffset,
+	sector_ceilingangle,
 	sector_lightlevel,
 	sector_floorlightlevel,
 	sector_floorlightabsolute,
+	sector_floorlightsec,	
 	sector_ceilinglightlevel,
 	sector_ceilinglightabsolute,
+	sector_ceilinglightsec,
 	sector_special,
 	sector_tag,
 	sector_taglist,
@@ -63,12 +71,20 @@ static const char *const sector_opt[] = {
 	"floorheight",
 	"ceilingheight",
 	"floorpic",
+	"floorxoffset",
+	"flooryoffset",
+	"floorangle",
 	"ceilingpic",
+	"ceilingxoffset",
+	"ceilingyoffset",
+	"ceilingangle",	
 	"lightlevel",
 	"floorlightlevel",
 	"floorlightabsolute",
+	"floorlightsec",
 	"ceilinglightlevel",
 	"ceilinglightabsolute",
+	"ceilinglightsec",	
 	"special",
 	"tag",
 	"taglist",
@@ -649,6 +665,21 @@ static int sector_get(lua_State *L)
 		lua_pushlstring(L, levelflat->name, i);
 		return 1;
 	}
+	case sector_floorxoffset:
+	{
+		lua_pushfixed(L, sector->floorxoffset);
+		return 1;
+	}
+	case sector_flooryoffset:
+	{
+		lua_pushfixed(L, sector->flooryoffset);
+		return 1;
+	}
+	case sector_floorangle: 
+	{
+		lua_pushangle(L, sector->floorangle);
+		return 1;
+	}	
 	case sector_ceilingpic: // ceilingpic
 	{
 		levelflat_t *levelflat = &levelflats[sector->ceilingpic];
@@ -658,6 +689,21 @@ static int sector_get(lua_State *L)
 		lua_pushlstring(L, levelflat->name, i);
 		return 1;
 	}
+	case sector_ceilingxoffset:
+	{
+		lua_pushfixed(L, sector->ceilingxoffset);
+		return 1;
+	}
+	case sector_ceilingyoffset:
+	{
+		lua_pushfixed(L, sector->ceilingyoffset);
+		return 1;
+	}
+	case sector_ceilingangle:
+	{
+		lua_pushangle(L, sector->ceilingangle);
+		return 1;
+	}	
 	case sector_lightlevel:
 		lua_pushinteger(L, sector->lightlevel);
 		return 1;
@@ -667,12 +713,18 @@ static int sector_get(lua_State *L)
 	case sector_floorlightabsolute:
 		lua_pushboolean(L, sector->floorlightabsolute);
 		return 1;
+	case sector_floorlightsec:
+		lua_pushinteger(L, sector->floorlightsec);
+		return 1;		
 	case sector_ceilinglightlevel:
 		lua_pushinteger(L, sector->ceilinglightlevel);
 		return 1;
 	case sector_ceilinglightabsolute:
 		lua_pushboolean(L, sector->ceilinglightabsolute);
 		return 1;
+	case sector_ceilinglightsec:
+		lua_pushinteger(L, sector->ceilinglightsec);
+		return 1;		
 	case sector_special:
 		lua_pushinteger(L, sector->special);
 		return 1;
@@ -760,8 +812,9 @@ static int sector_set(lua_State *L)
 	case sector_fslope: // f_slope
 	case sector_cslope: // c_slope
 	case sector_friction: // friction
-	default:
 		return luaL_error(L, "sector_t field " LUA_QS " cannot be set.", sector_opt[field]);
+	default:
+		return luaL_error(L, "sector_t has no field named " LUA_QS ".", lua_tostring(L, 2));
 	case sector_floorheight: { // floorheight
 		boolean flag;
 		mobj_t *ptmthing = tmthing;
@@ -793,8 +846,26 @@ static int sector_set(lua_State *L)
 	case sector_floorpic:
 		sector->floorpic = P_AddLevelFlatRuntime(luaL_checkstring(L, 3));
 		break;
+	case sector_floorxoffset:
+		sector->floorxoffset = luaL_checkfixed(L, 3);
+		break;
+	case sector_flooryoffset:
+		sector->flooryoffset = luaL_checkfixed(L, 3);
+		break;
+	case sector_floorangle:
+		sector->floorangle = luaL_checkangle(L, 3);
+		break;				
 	case sector_ceilingpic:
 		sector->ceilingpic = P_AddLevelFlatRuntime(luaL_checkstring(L, 3));
+		break;
+	case sector_ceilingxoffset:
+		sector->ceilingxoffset = luaL_checkfixed(L, 3);
+		break;
+	case sector_ceilingyoffset:
+		sector->ceilingyoffset = luaL_checkfixed(L, 3);
+		break;
+	case sector_ceilingangle:
+		sector->ceilingangle = luaL_checkangle(L, 3);
 		break;
 	case sector_lightlevel:
 		sector->lightlevel = (INT16)luaL_checkinteger(L, 3);
@@ -805,12 +876,18 @@ static int sector_set(lua_State *L)
 	case sector_floorlightabsolute:
 		sector->floorlightabsolute = luaL_checkboolean(L, 3);
 		break;
+	case sector_floorlightsec:
+		sector->floorlightsec = (INT32)luaL_checkinteger(L, 3);
+		break;		
 	case sector_ceilinglightlevel:
 		sector->ceilinglightlevel = (INT16)luaL_checkinteger(L, 3);
 		break;
 	case sector_ceilinglightabsolute:
 		sector->ceilinglightabsolute = luaL_checkboolean(L, 3);
 		break;
+	case sector_ceilinglightsec:
+		sector->ceilinglightsec = (INT32)luaL_checkinteger(L, 3);
+		break;		
 	case sector_special:
 		sector->special = (INT16)luaL_checkinteger(L, 3);
 		break;
@@ -1044,8 +1121,24 @@ static int line_get(lua_State *L)
 		LUA_PushUserdata(L, line->polyobj, META_POLYOBJ);
 		return 1;
 	case line_text:
-		lua_pushstring(L, line->text);
-		return 1;
+		{
+			if (udmf)
+			{
+				LUA_Deprecated(L, "(linedef_t).text", "(linedef_t).stringargs");
+				lua_pushnil(L);
+				return 1;
+			}
+
+			if (line->special == 331 || line->special == 443)
+			{
+				// See P_ProcessLinedefsAfterSidedefs, P_ConvertBinaryLinedefTypes
+				lua_pushstring(L, line->stringargs[0]);
+			}
+			else
+				lua_pushnil(L);
+
+			return 1;
+		}
 	case line_callcount:
 		lua_pushinteger(L, line->callcount);
 		return 1;
@@ -1179,8 +1272,19 @@ static int side_get(lua_State *L)
 		lua_pushinteger(L, side->repeatcnt);
 		return 1;
 	case side_text:
-		lua_pushstring(L, side->text);
-		return 1;
+		{
+			if (udmf)
+			{
+				LUA_Deprecated(L, "(sidedef_t).text", "(sidedef_t).line.stringargs");
+				lua_pushnil(L);
+				return 1;
+			}
+
+			boolean isfrontside = side->line->sidenum[0] == side-sides;
+
+			lua_pushstring(L, side->line->stringargs[isfrontside ? 0 : 1]);
+			return 1;
+		}
 	}
 	return 0;
 }
@@ -1206,8 +1310,9 @@ static int side_set(lua_State *L)
 	case side_sector:
 	case side_special:
 	case side_text:
-	default:
 		return luaL_error(L, "side_t field " LUA_QS " cannot be set.", side_opt[field]);
+	default:
+		return luaL_error(L, "side_t has no field named " LUA_QS ".", lua_tostring(L, 2));
 	case side_textureoffset:
 		side->textureoffset = luaL_checkfixed(L, 3);
 		break;
@@ -2236,8 +2341,9 @@ static int ffloor_set(lua_State *L)
 	case ffloor_target: // target
 	case ffloor_next: // next
 	case ffloor_prev: // prev
-	default:
 		return luaL_error(L, "ffloor_t field " LUA_QS " cannot be set.", ffloor_opt[field]);
+	default:
+		return luaL_error(L, "ffloor_t has no field named " LUA_QS ".", lua_tostring(L, 2));
 	case ffloor_topheight: { // topheight
 		boolean flag;
 		fixed_t lastpos = *ffloor->topheight;
@@ -2371,8 +2477,9 @@ static int slope_set(lua_State *L)
 	case slope_d: // d
 	case slope_flags: // flags
 	case slope_normal: // normal
-	default:
 		return luaL_error(L, "pslope_t field " LUA_QS " cannot be set.", slope_opt[field]);
+	default:
+		return luaL_error(L, "pslope_t has no field named " LUA_QS ".", lua_tostring(L, 2));
 	case slope_o: { // o
 		luaL_checktype(L, 3, LUA_TTABLE);
 
@@ -2767,6 +2874,7 @@ static int mapheaderinfo_get(lua_State *L)
 		break;
 	// TODO add support for reading numGradedMares and grades
 	default:
+	{
 		// Read custom vars now
 		// (note: don't include the "LUA." in your lua scripts!)
 		UINT8 j = 0;
@@ -2776,6 +2884,7 @@ static int mapheaderinfo_get(lua_State *L)
 			lua_pushstring(L, header->customopts[j].value);
 		else
 			lua_pushnil(L);
+	}
 	}
 	return 1;
 }

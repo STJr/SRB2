@@ -8,7 +8,7 @@
 */
 
 #include "u_list.h"
-#include "../z_zone.h"
+#include "z_zone.h"
 
 // Utility for managing
 // structures in a linked

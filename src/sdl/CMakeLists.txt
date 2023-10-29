@@ -1,17 +1,17 @@
 # Declare SDL2 interface sources
 
-target_sources(SRB2SDL2 PRIVATE mixer_sound.c)
-
-target_sourcefile(c)
-
-target_sources(SRB2SDL2 PRIVATE ogl_sdl.c)
-
-target_sources(SRB2SDL2 PRIVATE i_threads.c)
-
-if(${SRB2_USEASM})
-	set_source_files_properties(${SRB2_ASM_SOURCES} PROPERTIES LANGUAGE C)
-	set_source_files_properties(${SRB2_ASM_SOURCES} PROPERTIES COMPILE_FLAGS "-x assembler-with-cpp")
-endif()
+target_sources(SRB2SDL2 PRIVATE
+	mixer_sound.c
+	ogl_sdl.c
+	i_threads.c
+	i_net.c
+	i_system.c
+	i_main.c
+	i_video.c
+	dosstr.c
+	endtxt.c
+	hwsym_sdl.c
+)
 
 if("${CMAKE_SYSTEM_NAME}" MATCHES Windows)
 	target_sources(SRB2SDL2 PRIVATE
@@ -66,18 +66,6 @@ endif()
 
 if("${CMAKE_SYSTEM_NAME}" MATCHES Linux)
 	target_link_libraries(SRB2SDL2 PRIVATE m rt)
-endif()
-
-if(${SRB2_USEASM})
-	if(${SRB2_CONFIG_YASM})
-		set(ASM_ASSEMBLER_TEMP ${CMAKE_ASM_YASM_COMPILER})
-		set(ASM_ASSEMBLER_OBJFORMAT ${CMAKE_ASM_YASM_OBJECT_FORMAT})
-		set_source_files_properties(${SRB2_NASM_SOURCES} LANGUAGE ASM_YASM)
-	else()
-		set(ASM_ASSEMBLER_TEMP ${CMAKE_ASM_NASM_COMPILER})
-		set(ASM_ASSEMBLER_OBJFORMAT ${CMAKE_ASM_NASM_OBJECT_FORMAT})
-		set_source_files_properties(${SRB2_NASM_SOURCES} LANGUAGE ASM_NASM)
-	endif()
 endif()
 
 if("${CMAKE_SYSTEM_NAME}" MATCHES Windows)
