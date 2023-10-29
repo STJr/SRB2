@@ -342,6 +342,7 @@
     <ClInclude Include="..\r_state.h" />
     <ClInclude Include="..\r_textures.h" />
     <ClInclude Include="..\r_things.h" />
+    <ClInclude Include="..\r_translation.h" />
     <ClInclude Include="..\screen.h" />
     <ClInclude Include="..\snake.h" />
     <ClInclude Include="..\sounds.h" />
@@ -530,6 +531,7 @@
     <ClCompile Include="..\r_splats.c" />
     <ClCompile Include="..\r_textures.c" />
     <ClCompile Include="..\r_things.c" />
+    <ClCompile Include="..\r_translation.c" />
     <ClCompile Include="..\screen.c" />
     <ClCompile Include="..\snake.c" />
     <ClCompile Include="..\sounds.c" />

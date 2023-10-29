@@ -62,6 +62,7 @@ r_splats.c
 r_things.c
 r_bbox.c
 r_textures.c
+r_translation.c
 r_patch.c
 r_patchrotation.c
 r_picformats.c

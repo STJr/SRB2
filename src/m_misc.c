@@ -2129,6 +2129,100 @@ const char *M_TokenizerRead(UINT32 i)
 	return tokenizerToken[i];
 }
 
+const char *M_TokenizerReadZDoom(UINT32 i)
+{
+	if (!tokenizerInput)
+		return NULL;
+
+	tokenizerStartPos = tokenizerEndPos;
+
+	// Try to detect comments now, in case we're pointing right at one
+	M_DetectComment(&tokenizerStartPos);
+
+	// Find the first non-whitespace char, or else the end of the string trying
+	while ((tokenizerInput[tokenizerStartPos] == ' '
+			|| tokenizerInput[tokenizerStartPos] == '\t'
+			|| tokenizerInput[tokenizerStartPos] == '\r'
+			|| tokenizerInput[tokenizerStartPos] == '\n'
+			|| tokenizerInput[tokenizerStartPos] == '\0'
+			|| tokenizerInComment != 0)
+			&& tokenizerStartPos < tokenizerInputLength)
+	{
+		// Try to detect comment endings now
+		if (tokenizerInComment == 1	&& tokenizerInput[tokenizerStartPos] == '\n')
+			tokenizerInComment = 0; // End of line for a single-line comment
+		else if (tokenizerInComment == 2
+			&& tokenizerStartPos < tokenizerInputLength - 1
+			&& tokenizerInput[tokenizerStartPos] == '*'
+			&& tokenizerInput[tokenizerStartPos+1] == '/')
+		{
+			// End of multi-line comment
+			tokenizerInComment = 0;
+			tokenizerStartPos++; // Make damn well sure we're out of the comment ending at the end of it all
+		}
+
+		tokenizerStartPos++;
+		M_DetectComment(&tokenizerStartPos);
+	}
+
+	// If the end of the string is reached, no token is to be read
+	if (tokenizerStartPos == tokenizerInputLength) {
+		tokenizerEndPos = tokenizerInputLength;
+		return NULL;
+	}
+	// Else, if it's one of these three symbols, capture only this one character
+	else if (tokenizerInput[tokenizerStartPos] == ','
+			|| tokenizerInput[tokenizerStartPos] == '{'
+			|| tokenizerInput[tokenizerStartPos] == '}'
+			|| tokenizerInput[tokenizerStartPos] == '['
+			|| tokenizerInput[tokenizerStartPos] == ']'
+			|| tokenizerInput[tokenizerStartPos] == '='
+			|| tokenizerInput[tokenizerStartPos] == ':'
+			|| tokenizerInput[tokenizerStartPos] == '%')
+	{
+		tokenizerEndPos = tokenizerStartPos + 1;
+		tokenizerToken[i][0] = tokenizerInput[tokenizerStartPos];
+		tokenizerToken[i][1] = '\0';
+		return tokenizerToken[i];
+	}
+	// Return entire string within quotes, except without the quotes.
+	else if (tokenizerInput[tokenizerStartPos] == '"')
+	{
+		tokenizerEndPos = ++tokenizerStartPos;
+		while (tokenizerInput[tokenizerEndPos] != '"' && tokenizerEndPos < tokenizerInputLength)
+			tokenizerEndPos++;
+
+		M_ReadTokenString(i);
+		tokenizerEndPos++;
+		return tokenizerToken[i];
+	}
+
+	// Now find the end of the token. This includes several additional characters that are okay to capture as one character, but not trailing at the end of another token.
+	tokenizerEndPos = tokenizerStartPos + 1;
+	while ((tokenizerInput[tokenizerEndPos] != ' '
+			&& tokenizerInput[tokenizerEndPos] != '\t'
+			&& tokenizerInput[tokenizerEndPos] != '\r'
+			&& tokenizerInput[tokenizerEndPos] != '\n'
+			&& tokenizerInput[tokenizerEndPos] != ','
+			&& tokenizerInput[tokenizerEndPos] != '{'
+			&& tokenizerInput[tokenizerEndPos] != '}'
+			&& tokenizerInput[tokenizerEndPos] != '['
+			&& tokenizerInput[tokenizerEndPos] != ']'
+			&& tokenizerInput[tokenizerEndPos] != '='
+			&& tokenizerInput[tokenizerEndPos] != ':'
+			&& tokenizerInput[tokenizerEndPos] != '%'
+			&& tokenizerInComment == 0)
+			&& tokenizerEndPos < tokenizerInputLength)
+	{
+		tokenizerEndPos++;
+		// Try to detect comment starts now; if it's in a comment, we don't want it in this token
+		M_DetectComment(&tokenizerEndPos);
+	}
+
+	M_ReadTokenString(i);
+	return tokenizerToken[i];
+}
+
 UINT32 M_TokenizerGetEndPos(void)
 {
 	return tokenizerEndPos;
