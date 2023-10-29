@@ -1849,6 +1849,7 @@ void P_SpawnShieldOrb(player_t *player)
 	{
 		ov = P_SpawnMobj(shieldobj->x, shieldobj->y, shieldobj->z, MT_OVERLAY);
 		P_SetTarget(&ov->target, shieldobj);
+		P_SetTarget(&ov->dontdrawforviewmobj, player->mo); // Hide the shield in first-person
 		P_SetMobjState(ov, shieldobj->info->seestate);
 		P_SetTarget(&shieldobj->tracer, ov);
 	}
@@ -1856,12 +1857,14 @@ void P_SpawnShieldOrb(player_t *player)
 	{
 		ov = P_SpawnMobj(shieldobj->x, shieldobj->y, shieldobj->z, MT_OVERLAY);
 		P_SetTarget(&ov->target, shieldobj);
+		P_SetTarget(&ov->dontdrawforviewmobj, player->mo); // Hide the shield in first-person
 		P_SetMobjState(ov, shieldobj->info->meleestate);
 	}
 	if (shieldobj->info->missilestate)
 	{
 		ov = P_SpawnMobj(shieldobj->x, shieldobj->y, shieldobj->z, MT_OVERLAY);
 		P_SetTarget(&ov->target, shieldobj);
+		P_SetTarget(&ov->dontdrawforviewmobj, player->mo); // Hide the shield in first-person
 		P_SetMobjState(ov, shieldobj->info->missilestate);
 	}
 	if (player->powers[pw_shield] & SH_FORCE)
@@ -2025,14 +2028,14 @@ mobj_t *P_SpawnGhostMobj(mobj_t *mobj)
 	ghost->standingslope = mobj->standingslope;
 
 	if (mobj->flags2 & MF2_OBJECTFLIP)
-		ghost->flags |= MF2_OBJECTFLIP;
+		ghost->flags2 |= MF2_OBJECTFLIP;
 
 	if (mobj->player && mobj->player->followmobj)
 	{
 		mobj_t *ghost2 = P_SpawnGhostMobj(mobj->player->followmobj);
 		P_SetTarget(&ghost2->tracer, ghost);
 		P_SetTarget(&ghost->tracer, ghost2);
-		P_SetTarget(&ghost2->dontdrawforviewmobj, mobj); // Hide the follow-ghost for the non-follow object
+		P_SetTarget(&ghost2->dontdrawforviewmobj, mobj); // Hide the follow-ghost for the non-follow target
 		ghost2->flags2 |= (mobj->player->followmobj->flags2 & MF2_LINKDRAW);
 	}
 
@@ -8741,7 +8744,10 @@ void P_MovePlayer(player_t *player)
 			player->mo->height = P_GetPlayerHeight(player);
 
 		if (player->mo->eflags & MFE_VERTICALFLIP && player->mo->height != oldheight) // adjust z height for reverse gravity, similar to how it's done for scaling
-			player->mo->z -= player->mo->height - oldheight;
+		{
+			player->mo->z     -= player->mo->height - oldheight;
+			player->mo->old_z -= player->mo->height - oldheight; // Snap the Z adjustment, while keeping the Z interpolation
+		}
 
 		// Crush test...
 		if ((player->mo->ceilingz - player->mo->floorz < player->mo->height)
@@ -11506,7 +11512,7 @@ static void P_DoMetalJetFume(player_t *player, mobj_t *fume)
 	}
 
 	fume->movecount = dashmode; // keeps track of previous dashmode value so we know whether Metal is entering or leaving it
-	fume->eflags = (fume->flags2 & ~MF2_OBJECTFLIP) | (mo->flags2 & MF2_OBJECTFLIP); // Make sure to flip in reverse gravity!
+	fume->flags2 = (fume->flags2 & ~MF2_OBJECTFLIP) | (mo->flags2 & MF2_OBJECTFLIP); // Make sure to flip in reverse gravity!
 	fume->eflags = (fume->eflags & ~MFE_VERTICALFLIP) | (mo->eflags & MFE_VERTICALFLIP); // Make sure to flip in reverse gravity!
 
 	// Finally, set its position
@@ -11757,7 +11763,7 @@ void P_PlayerThink(player_t *player)
 			if (!total || ((4*exiting)/total) >= numneeded)
 			{
 				if (server)
-					SendNetXCmd(XD_EXITLEVEL, NULL, 0);
+					D_SendExitLevel(false);
 			}
 			else
 				player->exiting = 3;
@@ -11765,7 +11771,7 @@ void P_PlayerThink(player_t *player)
 		else
 		{
 			if (server)
-				SendNetXCmd(XD_EXITLEVEL, NULL, 0);
+				D_SendExitLevel(false);
 		}
 	}
 
@@ -11863,7 +11869,7 @@ void P_PlayerThink(player_t *player)
 			mo2 = (mobj_t *)th;
 
 			if (!(mo2->type == MT_RING || mo2->type == MT_COIN
-				|| mo2->type == MT_BLUESPHERE || mo2->type == MT_BOMBSPHERE
+				|| mo2->type == MT_BLUESPHERE // || mo2->type == MT_BOMBSPHERE
 				|| mo2->type == MT_NIGHTSCHIP || mo2->type == MT_NIGHTSSTAR))
 				continue;
 

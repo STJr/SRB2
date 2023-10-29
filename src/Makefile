@@ -141,9 +141,9 @@ endif
 
 OBJDUMP_OPTS?=--wide --source --line-numbers
 
-OBJCOPY:=$(call Prefix,objcopy)
-OBJDUMP:=$(call Prefix,objdump)
-WINDRES:=$(call Prefix,windres)
+OBJCOPY?=$(call Prefix,objcopy)
+OBJDUMP?=$(call Prefix,objdump)
+WINDRES?=$(call Prefix,windres)
 
 GZIP?=gzip
 GZIP_OPTS?=-9 -f -n
@@ -392,4 +392,4 @@ else
 	@:
 endif
 
-$(warning The handwritten GNU Makefile for SRB2 is deprecated, and may be removed in the future. Please consider switching to CMake.)
+#$(warning The handwritten GNU Makefile for SRB2 is deprecated, and may be removed in the future. Please consider switching to CMake.)

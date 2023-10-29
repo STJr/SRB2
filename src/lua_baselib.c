@@ -3657,7 +3657,7 @@ static int lib_gAddGametype(lua_State *L)
 // Partly lifted from Got_AddPlayer
 static int lib_gAddPlayer(lua_State *L)
 {
-	INT16 i, newplayernum, botcount = 1;
+	INT16 i, newplayernum;
 	player_t *newplayer;
 	SINT8 skinnum = 0, bot;
 
@@ -3665,10 +3665,8 @@ static int lib_gAddPlayer(lua_State *L)
 	{
 		if (!playeringame[i])
 			break;
-
-		if (players[i].bot)
-			botcount++; // How many of us are there already?
 	}
+
 	if (i >= MAXPLAYERS)
 	{
 		lua_pushnil(L);
@@ -3939,7 +3937,7 @@ static int lib_gDoReborn(lua_State *L)
 }
 
 // Another Lua function that doesn't actually exist!
-// Sets nextmapoverride & skipstats without instantly ending the level, for instances where other sources should be exiting the level, like normal signposts.
+// Sets nextmapoverride, skipstats and nextgametype without instantly ending the level, for instances where other sources should be exiting the level, like normal signposts.
 static int lib_gSetCustomExitVars(lua_State *L)
 {
 	int n = lua_gettop(L); // Num arguments
@@ -3948,10 +3946,11 @@ static int lib_gSetCustomExitVars(lua_State *L)
 
 	// LUA EXTENSION: Custom exit like support
 	// Supported:
-	//	G_SetCustomExitVars();			[reset to defaults]
-	//	G_SetCustomExitVars(int)		[nextmap override only]
-	//	G_SetCustomExitVars(nil, int)	[skipstats only]
-	//	G_SetCustomExitVars(int, int)	[both of the above]
+	//	G_SetCustomExitVars();               [reset to defaults]
+	//	G_SetCustomExitVars(int)             [nextmap override only]
+	//	G_SetCustomExitVars(nil, int)        [skipstats only]
+	//	G_SetCustomExitVars(int, int)        [both of the above]
+	//	G_SetCustomExitVars(int, int, int)   [nextmapoverride, skipstats and nextgametype]
 
 	nextmapoverride = 0;
 	skipstats = 0;
@@ -3961,7 +3960,7 @@ static int lib_gSetCustomExitVars(lua_State *L)
 	{
 		nextmapoverride = (INT16)luaL_optinteger(L, 1, 0);
 		skipstats = (INT16)luaL_optinteger(L, 2, 0);
-		nextgametype = (INT16)luaL_optinteger(L, 3, 0);
+		nextgametype = (INT16)luaL_optinteger(L, 3, -1);
 	}
 
 	return 0;

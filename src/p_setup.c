@@ -50,6 +50,7 @@
 #include "m_random.h"
 
 #include "dehacked.h" // for map headers
+#include "deh_tables.h" // FREE_SKINCOLORS
 #include "r_main.h"
 #include "m_cond.h" // for emblems
 
@@ -1267,12 +1268,19 @@ static void P_WriteDuplicateText(const char *text, char **target)
 
 static void P_WriteSkincolor(INT32 constant, char **target)
 {
+	const char *color_name;
+
 	if (constant <= SKINCOLOR_NONE
 	|| constant >= (INT32)numskincolors)
 		return;
 
+	if (constant >= SKINCOLOR_FIRSTFREESLOT)
+		color_name = FREE_SKINCOLORS[constant - SKINCOLOR_FIRSTFREESLOT];
+	else
+		color_name = COLOR_ENUMS[constant];
+
 	P_WriteDuplicateText(
-		va("SKINCOLOR_%s", skincolors[constant].name),
+		va("SKINCOLOR_%s", color_name),
 		target
 	);
 }
@@ -2045,6 +2053,8 @@ static void ParseTextmapThingParameter(UINT32 i, const char *param, const char *
 	// Flags
 	else if (fastcmp(param, "flip") && fastcmp("true", val))
 		mapthings[i].options |= MTF_OBJECTFLIP;
+	else if (fastcmp(param, "absolutez") && fastcmp("true", val))
+		mapthings[i].options |= MTF_ABSOLUTEZ;
 
 	else if (fastncmp(param, "stringarg", 9) && strlen(param) > 9)
 	{
@@ -5498,7 +5508,7 @@ static void P_ConvertBinaryLinedefTypes(void)
 			break;
 		case 442: //Change object type state
 			lines[i].args[0] = tag;
-			lines[i].args[3] = (lines[i].sidenum[1] == 0xffff) ? 1 : 0;
+			lines[i].args[1] = (lines[i].sidenum[1] == 0xffff) ? 1 : 0;
 			break;
 		case 443: //Call Lua function
 			if (lines[i].stringargs[0] == NULL)
@@ -6843,6 +6853,9 @@ static void P_ConvertBinaryThingTypes(void)
 		default:
 			break;
 		}
+		
+		// Clear binary thing height hacks, to prevent interfering with UDMF-only flags
+		mapthings[i].options &= 0xF;
 	}
 }
 
@@ -8261,7 +8274,7 @@ static boolean P_LoadAddon(UINT16 numlumps)
 	{
 		CONS_Printf(M_GetText("Current map %d replaced by added file, ending the level to ensure consistency.\n"), gamemap);
 		if (server)
-			SendNetXCmd(XD_EXITLEVEL, NULL, 0);
+			D_SendExitLevel(false);
 	}
 
 	return true;

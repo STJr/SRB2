@@ -1131,7 +1131,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 					if (!(mo2->type == MT_RING || mo2->type == MT_COIN
 						|| mo2->type == MT_BLUESPHERE || mo2->type == MT_BOMBSPHERE
 						|| mo2->type == MT_NIGHTSCHIP || mo2->type == MT_NIGHTSSTAR
-						|| ((mo2->type == MT_EMBLEM) && (mo2->reactiontime & GE_NIGHTSPULL))))
+						|| ((mo2->type == MT_EMBLEM) && (mo2->reactiontime & GE_NIGHTSPULL) && P_CanPickupEmblem(player, mo2->health - 1) && !P_EmblemWasCollected(mo2->health - 1))))
 						continue;
 
 					// Yay! The thing's in reach! Pull it in!
@@ -2222,7 +2222,7 @@ void P_CheckTimeLimit(void)
 		}
 
 		if (server)
-			SendNetXCmd(XD_EXITLEVEL, NULL, 0);
+			D_SendExitLevel(false);
 	}
 
 	//Optional tie-breaker for Match/CTF
@@ -2297,11 +2297,11 @@ void P_CheckTimeLimit(void)
 			}
 		}
 		if (server)
-			SendNetXCmd(XD_EXITLEVEL, NULL, 0);
+			D_SendExitLevel(false);
 	}
 
 	if (server)
-		SendNetXCmd(XD_EXITLEVEL, NULL, 0);
+		D_SendExitLevel(false);
 }
 
 /** Checks if a player's score is over the pointlimit and the round should end.
@@ -2330,7 +2330,7 @@ void P_CheckPointLimit(void)
 		{
 			if (teamscores[G_GetTeam(i)] >= (UINT32)cv_pointlimit.value)
 			{
-				SendNetXCmd(XD_EXITLEVEL, NULL, 0);
+				D_SendExitLevel(false);
 				return;
 			}
 		}
@@ -2345,7 +2345,7 @@ void P_CheckPointLimit(void)
 
 			if ((UINT32)cv_pointlimit.value <= players[i].score)
 			{
-				SendNetXCmd(XD_EXITLEVEL, NULL, 0);
+				D_SendExitLevel(false);
 				return;
 			}
 		}
@@ -2389,7 +2389,7 @@ void P_CheckSurvivors(void)
 		{
 			CONS_Printf(M_GetText("The IT player has left the game.\n"));
 			if (server)
-				SendNetXCmd(XD_EXITLEVEL, NULL, 0);
+				D_SendExitLevel(false);
 
 			return;
 		}
@@ -2409,7 +2409,7 @@ void P_CheckSurvivors(void)
 			{
 				CONS_Printf(M_GetText("All players have been tagged!\n"));
 				if (server)
-					SendNetXCmd(XD_EXITLEVEL, NULL, 0);
+					D_SendExitLevel(false);
 			}
 
 			return;
@@ -2421,7 +2421,7 @@ void P_CheckSurvivors(void)
 		{
 			CONS_Printf(M_GetText("There are no players able to become IT.\n"));
 			if (server)
-				SendNetXCmd(XD_EXITLEVEL, NULL, 0);
+				D_SendExitLevel(false);
 		}
 
 		return;
@@ -2433,7 +2433,7 @@ void P_CheckSurvivors(void)
 	{
 		CONS_Printf(M_GetText("All players have been tagged!\n"));
 		if (server)
-			SendNetXCmd(XD_EXITLEVEL, NULL, 0);
+			D_SendExitLevel(false);
 	}
 }
 
