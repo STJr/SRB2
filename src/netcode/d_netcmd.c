@@ -1241,7 +1241,7 @@ static void SetColorLocal(INT32 playernum, UINT16 color)
 //
 static void SendNameAndColor(void)
 {
-	char buf[MAXPLAYERNAME+6];
+	char buf[MAXPLAYERNAME+7];
 	char *p;
 
 	p = buf;
