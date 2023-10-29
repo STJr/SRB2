@@ -13,10 +13,32 @@
 #include "r_things.h" // FEETADJUST
 #include "z_zone.h"
 #include "w_wad.h"
+#include "r_main.h" // R_PointToAngle
 
 #ifdef ROTSPRITE
 fixed_t rollcosang[ROTANGLES];
 fixed_t rollsinang[ROTANGLES];
+
+angle_t R_ModelRotationAngle(interpmobjstate_t *interp)
+{
+	return interp->spriteroll;
+}
+
+angle_t R_SpriteRotationAngle(interpmobjstate_t *interp)
+{
+#if 0
+	angle_t viewingAngle = R_PointToAngle(interp->x, interp->y);
+
+	fixed_t pitchMul = -FINESINE(viewingAngle >> ANGLETOFINESHIFT);
+	fixed_t rollMul = FINECOSINE(viewingAngle >> ANGLETOFINESHIFT);
+
+	angle_t rollOrPitch = FixedMul(interp->pitch, pitchMul) + FixedMul(interp->roll, rollMul);
+
+	return (rollOrPitch + R_ModelRotationAngle(interp));
+#else
+	return R_ModelRotationAngle(interp);
+#endif
+}
 
 INT32 R_GetRollAngle(angle_t rollangle)
 {

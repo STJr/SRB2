@@ -29,6 +29,7 @@ set(SRB2_ASSETS_GAME
 	"srb2.pk3"
 	"player.dta"
 	"zones.pk3"
+	"patch.pk3"
 	"music.dta"
 	"models.dat"
 )

@@ -113,6 +113,7 @@ static void Sk_SetDefaultValue(skin_t *skin)
 
 	strcpy(skin->realname, "Someone");
 	strcpy(skin->hudname, "???");
+	strcpy(skin->supername, "Someone super");
 
 	skin->starttranscolor = 96;
 	skin->prefcolor = SKINCOLOR_GREEN;
@@ -190,11 +191,12 @@ UINT32 R_GetSkinAvailabilities(void)
 			// This crash is impossible to trigger as is,
 			// but it could happen if MAXUNLOCKABLES is ever made higher than 32,
 			// and someone makes a mod that has 33+ unlockable characters. :V
-			I_Error("Too many unlockable characters\n");
+			// 2022/03/15: MAXUNLOCKABLES is now higher than 32
+			I_Error("Too many unlockable characters! (maximum is 32)\n");
 			return 0;
 		}
 
-		if (unlockables[i].unlocked)
+		if (clientGamedata->unlocked[i])
 		{
 			response |= (1 << unlockShift);
 		}
@@ -242,11 +244,12 @@ boolean R_SkinUsable(INT32 playernum, INT32 skinnum)
 		// Force 3.
 		return true;
 	}
+
 	if (playernum != -1 && players[playernum].bot)
-    {
-        //Force 4.
-        return true;
-    }
+	{
+		// Force 4.
+		return true;
+	}
 
 	// We will now check if this skin is supposed to be locked or not.
 
@@ -284,7 +287,7 @@ boolean R_SkinUsable(INT32 playernum, INT32 skinnum)
 	else
 	{
 		// We want to check our global unlockables.
-		return (unlockables[unlockID].unlocked);
+		return (clientGamedata->unlocked[unlockID]);
 	}
 }
 
@@ -499,7 +502,7 @@ static UINT16 W_CheckForPatchSkinMarkerInPwad(UINT16 wadid, UINT16 startlump)
 	return INT16_MAX; // not found
 }
 
-static void R_LoadSkinSprites(UINT16 wadnum, UINT16 *lump, UINT16 *lastlump, skin_t *skin)
+static void R_LoadSkinSprites(UINT16 wadnum, UINT16 *lump, UINT16 *lastlump, skin_t *skin, UINT8 start_spr2)
 {
 	UINT16 newlastlump;
 	UINT8 sprite2;
@@ -521,7 +524,7 @@ static void R_LoadSkinSprites(UINT16 wadnum, UINT16 *lump, UINT16 *lastlump, ski
 	{
 		newlastlump++;
 		// load all sprite sets we are aware of... for super!
-		for (sprite2 = 0; sprite2 < free_spr2; sprite2++)
+		for (sprite2 = start_spr2; sprite2 < free_spr2; sprite2++)
 			R_AddSingleSpriteDef(spr2names[sprite2], &skin->sprites[FF_SPR2SUPER|sprite2], wadnum, newlastlump, *lastlump);
 
 		newlastlump--;
@@ -529,11 +532,11 @@ static void R_LoadSkinSprites(UINT16 wadnum, UINT16 *lump, UINT16 *lastlump, ski
 	}
 
 	// load all sprite sets we are aware of... for normal stuff.
-	for (sprite2 = 0; sprite2 < free_spr2; sprite2++)
+	for (sprite2 = start_spr2; sprite2 < free_spr2; sprite2++)
 		R_AddSingleSpriteDef(spr2names[sprite2], &skin->sprites[sprite2], wadnum, *lump, *lastlump);
 
 	if (skin->sprites[0].numframes == 0)
-		I_Error("R_LoadSkinSprites: no frames found for sprite SPR2_%s\n", spr2names[0]);
+		CONS_Alert(CONS_ERROR, M_GetText("No frames found for sprite SPR2_%s\n"), spr2names[0]);
 }
 
 // returns whether found appropriate property
@@ -680,7 +683,7 @@ void R_AddSkins(UINT16 wadnum, boolean mainfile)
 	char *value;
 	size_t size;
 	skin_t *skin;
-	boolean hudname, realname;
+	boolean hudname, realname, supername;
 
 	//
 	// search for all skin markers in pwad
@@ -710,7 +713,7 @@ void R_AddSkins(UINT16 wadnum, boolean mainfile)
 		skin = &skins[numskins];
 		Sk_SetDefaultValue(skin);
 		skin->wadnum = wadnum;
-		hudname = realname = false;
+		hudname = realname = supername = false;
 		// parse
 		stoken = strtok (buf2, "\r\n= ");
 		while (stoken)
@@ -753,7 +756,7 @@ void R_AddSkins(UINT16 wadnum, boolean mainfile)
 					Z_Free(value2);
 				}
 
-				// copy to hudname and fullname as a default.
+				// copy to hudname, realname, and supername as a default.
 				if (!realname)
 				{
 					STRBUFCPY(skin->realname, skin->name);
@@ -769,6 +772,19 @@ void R_AddSkins(UINT16 wadnum, boolean mainfile)
 					strupr(skin->hudname);
 					SYMBOLCONVERT(skin->hudname)
 				}
+				if (!supername)
+				{
+					char superstring[SKINNAMESIZE+7];
+					strcpy(superstring, "Super ");
+					strlcat(superstring, skin->name, sizeof(superstring));
+					STRBUFCPY(skin->supername, superstring);
+				}
+			}
+			else if (!stricmp(stoken, "supername"))
+			{ // Super name (eg. "Super Knuckles")
+				supername = true;
+				STRBUFCPY(skin->supername, value);
+				SYMBOLCONVERT(skin->supername)
 			}
 			else if (!stricmp(stoken, "realname"))
 			{ // Display name (eg. "Knuckles")
@@ -777,6 +793,13 @@ void R_AddSkins(UINT16 wadnum, boolean mainfile)
 				SYMBOLCONVERT(skin->realname)
 				if (!hudname)
 					HUDNAMEWRITE(skin->realname);
+				if (!supername) //copy over default to capitalise the name
+				{
+					char superstring[SKINNAMESIZE+7];
+					strcpy(superstring, "Super ");
+					strlcat(superstring, skin->realname, sizeof(superstring));
+					STRBUFCPY(skin->supername, superstring);
+				}
 			}
 			else if (!stricmp(stoken, "hudname"))
 			{ // Life icon name (eg. "K.T.E")
@@ -795,7 +818,7 @@ next_token:
 		free(buf2);
 
 		// Add sprites
-		R_LoadSkinSprites(wadnum, &lump, &lastlump, skin);
+		R_LoadSkinSprites(wadnum, &lump, &lastlump, skin, 0);
 		//ST_LoadFaceGraphics(numskins); -- nah let's do this elsewhere
 
 		R_FlushTranslationColormapCache();
@@ -829,7 +852,7 @@ void R_PatchSkins(UINT16 wadnum, boolean mainfile)
 	char *value;
 	size_t size;
 	skin_t *skin;
-	boolean noskincomplain, realname, hudname;
+	boolean noskincomplain, realname, hudname, supername;
 
 	//
 	// search for all skin patch markers in pwad
@@ -853,7 +876,7 @@ void R_PatchSkins(UINT16 wadnum, boolean mainfile)
 		buf2[size] = '\0';
 
 		skin = NULL;
-		noskincomplain = realname = hudname = false;
+		noskincomplain = realname = hudname = supername = false;
 
 		/*
 		Parse. Has more phases than the parser in R_AddSkins because it needs to have the patching name first (no default skin name is acceptible for patching, unlike skin creation)
@@ -892,13 +915,26 @@ void R_PatchSkins(UINT16 wadnum, boolean mainfile)
 			else // Get the properties!
 			{
 				// Some of these can't go in R_ProcessPatchableFields because they have side effects for future lines.
-				if (!stricmp(stoken, "realname"))
+				if (!stricmp(stoken, "supername"))
+				{ // Super name (eg. "Super Knuckles")
+					supername = true;
+					STRBUFCPY(skin->supername, value);
+					SYMBOLCONVERT(skin->supername)
+				}
+				else if (!stricmp(stoken, "realname"))
 				{ // Display name (eg. "Knuckles")
 					realname = true;
 					STRBUFCPY(skin->realname, value);
 					SYMBOLCONVERT(skin->realname)
 					if (!hudname)
 						HUDNAMEWRITE(skin->realname);
+					if (!supername) //copy over default to capitalise the name
+					{
+						char superstring[SKINNAMESIZE+7];
+						strcpy(superstring, "Super ");
+						strlcat(superstring, skin->realname, sizeof(superstring));
+						STRBUFCPY(skin->supername, superstring);
+					}
 				}
 				else if (!stricmp(stoken, "hudname"))
 				{ // Life icon name (eg. "K.T.E")
@@ -928,7 +964,7 @@ next_token:
 		}
 
 		// Patch sprites
-		R_LoadSkinSprites(wadnum, &lump, &lastlump, skin);
+		R_LoadSkinSprites(wadnum, &lump, &lastlump, skin, 0);
 		//ST_LoadFaceGraphics(skinnum); -- nah let's do this elsewhere
 
 		R_FlushTranslationColormapCache();
@@ -941,3 +977,149 @@ next_token:
 
 #undef HUDNAMEWRITE
 #undef SYMBOLCONVERT
+
+static UINT16 W_CheckForEitherSkinMarkerInPwad(UINT16 wadid, UINT16 startlump)
+{
+	UINT16 i;
+	const char *S_SKIN = "S_SKIN";
+	const char *P_SKIN = "P_SKIN";
+	lumpinfo_t *lump_p;
+
+	// scan forward, start at <startlump>
+	if (startlump < wadfiles[wadid]->numlumps)
+	{
+		lump_p = wadfiles[wadid]->lumpinfo + startlump;
+		for (i = startlump; i < wadfiles[wadid]->numlumps; i++, lump_p++)
+			if (memcmp(lump_p->name,S_SKIN,6)==0 || memcmp(lump_p->name,P_SKIN,6)==0)
+				return i;
+	}
+	return INT16_MAX; // not found
+}
+
+static void R_RefreshSprite2ForWad(UINT16 wadnum, UINT8 start_spr2)
+{
+	UINT16 lump, lastlump = 0;
+	char *buf;
+	char *buf2;
+	char *stoken;
+	char *value;
+	size_t size;
+	skin_t *skin;
+	boolean noskincomplain;
+
+	//
+	// search for all skin patch markers in pwad
+	//
+
+	while ((lump = W_CheckForEitherSkinMarkerInPwad(wadnum, lastlump)) != INT16_MAX)
+	{
+		INT32 skinnum = 0;
+
+		// advance by default
+		lastlump = lump + 1;
+
+		buf = W_CacheLumpNumPwad(wadnum, lump, PU_CACHE);
+		size = W_LumpLengthPwad(wadnum, lump);
+
+		// for strtok
+		buf2 = malloc(size+1);
+		if (!buf2)
+			I_Error("R_RefreshSprite2ForWad: No more free memory\n");
+		M_Memcpy(buf2,buf,size);
+		buf2[size] = '\0';
+
+		skin = NULL;
+		noskincomplain = false;
+
+		/*
+		Parse. Has more phases than the parser in R_AddSkins because it needs to have the patching name first (no default skin name is acceptible for patching, unlike skin creation)
+		*/
+
+		stoken = strtok(buf2, "\r\n= ");
+		while (stoken)
+		{
+			if ((stoken[0] == '/' && stoken[1] == '/')
+				|| (stoken[0] == '#'))// skip comments
+			{
+				stoken = strtok(NULL, "\r\n"); // skip end of line
+				goto next_token;              // find the real next token
+			}
+
+			value = strtok(NULL, "\r\n= ");
+
+			if (!value)
+				I_Error("R_RefreshSprite2ForWad: syntax error in P_SKIN lump# %d(%s) in WAD %s\n", lump, W_CheckNameForNumPwad(wadnum,lump), wadfiles[wadnum]->filename);
+
+			if (!stricmp(stoken, "name"))
+			{
+				strlwr(value);
+				skinnum = R_SkinAvailable(value);
+				if (skinnum != -1)
+					skin = &skins[skinnum];
+				else
+				{
+					CONS_Debug(DBG_SETUP, "R_RefreshSprite2ForWad: unknown skin name in P_SKIN lump# %d(%s) in WAD %s\n", lump, W_CheckNameForNumPwad(wadnum,lump), wadfiles[wadnum]->filename);
+					noskincomplain = true;
+				}
+			}
+
+			if (!skin)
+				break;
+
+next_token:
+			stoken = strtok(NULL, "\r\n= ");
+		}
+		free(buf2);
+
+		if (!skin) // Didn't include a name parameter? What a waste.
+		{
+			if (!noskincomplain)
+				CONS_Debug(DBG_SETUP, "R_RefreshSprite2ForWad: no skin name given in P_SKIN lump #%d (WAD %s)\n", lump, wadfiles[wadnum]->filename);
+			continue;
+		}
+
+		// Update sprites, in the range of (start_spr2 - free_spr2-1)
+		R_LoadSkinSprites(wadnum, &lump, &lastlump, skin, start_spr2);
+		//R_FlushTranslationColormapCache(); // I don't think this is needed for what we're doing?
+	}
+}
+
+static playersprite_t old_spr2 = SPR2_FIRSTFREESLOT;
+void R_RefreshSprite2(void)
+{
+	// Sprite2s being defined by custom wads can create situations where
+	// a custom character might want to add support, but due to load order,
+	// might not be defined in time.
+
+	// The trick where you load characters then level packs to keep savedata
+	// in particular will practically garantuee a level pack can NEVER add custom animations,
+	// because custom character's Sprite2s will not be added.
+
+	// So, go through every file, and reload the sprite2s that were added.
+
+	INT32 i;
+
+	if (old_spr2 > free_spr2)
+	{
+#ifdef PARANOIA
+		I_Error("R_RefreshSprite2: old_spr2 is too high?! (old_spr2: %d, free_spr2: %d)\n", old_spr2, free_spr2);
+#else
+		// Just silently fix
+		old_spr2 = free_spr2;
+#endif
+	}
+
+	if (old_spr2 == free_spr2)
+	{
+		// No sprite2s were added since the last time we did freeslots.
+		return;
+	}
+
+	for (i = 0; i < numwadfiles; i++)
+	{
+		R_RefreshSprite2ForWad(i, old_spr2);
+	}
+
+	// Update previous value.
+	old_spr2 = free_spr2;
+}

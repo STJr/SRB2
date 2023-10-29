@@ -72,19 +72,16 @@ static UINT8 cheatf_ultimate(void)
 
 static UINT8 cheatf_warp(void)
 {
-	if (modifiedgame)
-		return 0;
-
 	if (menuactive && currentMenu != &MainDef)
 		return 0; // Only on the main menu!
 
 	S_StartSound(0, sfx_itemup);
 
 	// Temporarily unlock stuff.
-	G_SetGameModified(false);
-	unlockables[31].unlocked = true; // credits
-	unlockables[30].unlocked = true; // sound test
-	unlockables[28].unlocked = true; // level select
+	G_SetUsedCheats(false);
+	clientGamedata->unlocked[31] = true; // credits
+	clientGamedata->unlocked[30] = true; // sound test
+	clientGamedata->unlocked[28] = true; // level select
 
 	// Refresh secrets menu existing.
 	M_ClearMenus(true);
@@ -97,18 +94,15 @@ static UINT8 cheatf_devmode(void)
 {
 	UINT8 i;
 
-	if (modifiedgame)
-		return 0;
-
 	if (menuactive && currentMenu != &MainDef)
 		return 0; // Only on the main menu!
 
 	S_StartSound(0, sfx_itemup);
 
 	// Just unlock all the things and turn on -debug and console devmode.
-	G_SetGameModified(false);
+	G_SetUsedCheats(false);
 	for (i = 0; i < MAXUNLOCKABLES; i++)
-		unlockables[i].unlocked = true;
+		clientGamedata->unlocked[i] = true;
 	devparm = true;
 	cv_debug |= 0x8000;
 
@@ -244,7 +238,7 @@ boolean cht_Responder(event_t *ev)
 }
 
 // Console cheat commands rely on these a lot...
-#define REQUIRE_PANDORA if (!M_SecretUnlocked(SECRET_PANDORA) && !cv_debug)\
+#define REQUIRE_PANDORA if (!M_SecretUnlocked(SECRET_PANDORA, serverGamedata) && !cv_debug)\
 { CONS_Printf(M_GetText("You haven't earned this yet.\n")); return; }
 
 #define REQUIRE_DEVMODE if (!cv_debug)\
@@ -275,7 +269,7 @@ void Command_CheatNoClip_f(void)
 	plyr->pflags ^= PF_NOCLIP;
 	CONS_Printf(M_GetText("No Clipping %s\n"), plyr->pflags & PF_NOCLIP ? M_GetText("On") : M_GetText("Off"));
 
-	G_SetGameModified(multiplayer);
+	G_SetUsedCheats(false);
 }
 
 void Command_CheatGod_f(void)
@@ -290,7 +284,7 @@ void Command_CheatGod_f(void)
 	plyr->pflags ^= PF_GODMODE;
 	CONS_Printf(M_GetText("Cheese Mode %s\n"), plyr->pflags & PF_GODMODE ? M_GetText("On") : M_GetText("Off"));
 
-	G_SetGameModified(multiplayer);
+	G_SetUsedCheats(false);
 }
 
 void Command_CheatNoTarget_f(void)
@@ -305,7 +299,7 @@ void Command_CheatNoTarget_f(void)
 	plyr->pflags ^= PF_INVIS;
 	CONS_Printf(M_GetText("SEP Field %s\n"), plyr->pflags & PF_INVIS ? M_GetText("On") : M_GetText("Off"));
 
-	G_SetGameModified(multiplayer);
+	G_SetUsedCheats(false);
 }
 
 void Command_Scale_f(void)
@@ -879,7 +873,7 @@ void Command_Devmode_f(void)
 		return;
 	}
 
-	G_SetGameModified(multiplayer);
+	G_SetUsedCheats(false);
 }
 
 void Command_Setrings_f(void)
@@ -905,7 +899,7 @@ void Command_Setrings_f(void)
 			// no totalsphere addition to revert
 		}
 
-		G_SetGameModified(multiplayer);
+		G_SetUsedCheats(false);
 	}
 }
 
@@ -928,7 +922,7 @@ void Command_Setlives_f(void)
 			P_GivePlayerLives(&players[consoleplayer], atoi(COM_Argv(1)));
 		}
 
-		G_SetGameModified(multiplayer);
+		G_SetUsedCheats(false);
 	}
 }
 
@@ -955,7 +949,7 @@ void Command_Setcontinues_f(void)
 
 		players[consoleplayer].continues = numcontinues;
 
-		G_SetGameModified(multiplayer);
+		G_SetUsedCheats(false);
 	}
 }
 
@@ -1108,6 +1102,8 @@ static mapthing_t *OP_CreateNewMapThing(player_t *player, UINT16 type, boolean c
 
 	mt->options = (mt->z << ZSHIFT) | (UINT16)cv_opflags.value;
 	mt->scale = player->mo->scale;
+	mt->spritexscale = player->mo->spritexscale;
+	mt->spriteyscale = player->mo->spriteyscale;
 	memset(mt->args, 0, NUMMAPTHINGARGS*sizeof(*mt->args));
 	memset(mt->stringargs, 0x00, NUMMAPTHINGSTRINGARGS*sizeof(*mt->stringargs));
 	mt->pitch = mt->roll = 0;
@@ -1446,7 +1442,7 @@ void Command_ObjectPlace_f(void)
 	REQUIRE_SINGLEPLAYER;
 	REQUIRE_NOULTIMATE;
 
-	G_SetGameModified(multiplayer);
+	G_SetUsedCheats(false);
 
 	silent = COM_CheckParm("-silent");
 

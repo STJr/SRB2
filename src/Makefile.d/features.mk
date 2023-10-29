@@ -18,11 +18,8 @@ opts+=-DHWRENDER
 sources+=$(call List,hardware/Sourcefile)
 endif
 
-ifndef NOASM
-ifndef NONX86
-sources+=tmap.nas tmap_mmx.nas
-opts+=-DUSEASM
-endif
+ifdef NONET
+NOCURL=1
 endif
 
 ifndef NOMD5

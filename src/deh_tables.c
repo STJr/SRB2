@@ -198,6 +198,7 @@ actionpointer_t actionpointers[] =
 	{{A_Boss3TakeDamage},        "A_BOSS3TAKEDAMAGE"},
 	{{A_Boss3Path},              "A_BOSS3PATH"},
 	{{A_Boss3ShockThink},        "A_BOSS3SHOCKTHINK"},
+	{{A_Shockwave},              "A_SHOCKWAVE"},
 	{{A_LinedefExecute},         "A_LINEDEFEXECUTE"},
 	{{A_LinedefExecuteFromArg},  "A_LINEDEFEXECUTEFROMARG"},
 	{{A_PlaySeeSound},           "A_PLAYSEESOUND"},
@@ -4409,11 +4410,12 @@ const char *const MOBJEFLAG_LIST[] = {
 	NULL
 };
 
-const char *const MAPTHINGFLAG_LIST[4] = {
+const char *const MAPTHINGFLAG_LIST[] = {
 	"EXTRA", // Extra flag for objects.
 	"OBJECTFLIP", // Reverse gravity flag for objects.
 	"OBJECTSPECIAL", // Special flag used with certain objects.
-	"AMBUSH" // Deaf monsters/do not react to sound.
+	"AMBUSH", // Deaf monsters/do not react to sound.
+	"ABSOLUTEZ" // Absolute spawn height flag for objects.
 };
 
 const char *const PLAYERFLAG_LIST[] = {
@@ -4550,6 +4552,7 @@ const char *const MSF_LIST[] = {
 const char *const SSF_LIST[] = {
 	"OUTERSPACE",
 	"DOUBLESTEPUP",
+	"NOSTEPDOWN",
 	"WINDCURRENT",
 	"CONVEYOR",
 	"SPEEDPAD",
@@ -4566,6 +4569,8 @@ const char *const SSF_LIST[] = {
 	"ZOOMTUBEEND",
 	"FINISHLINE",
 	"ROPEHANG",
+	"JUMPFLIP",
+	"GRAVITYOVERRIDE",
 	NULL
 };
 
@@ -4609,66 +4614,111 @@ const char *COLOR_ENUMS[] = {
 	// Desaturated
 	"AETHER",     	// SKINCOLOR_AETHER,
 	"SLATE",     	// SKINCOLOR_SLATE,
+	"MOONSTONE",   	// SKINCOLOR_MOONSTONE,
 	"BLUEBELL",   	// SKINCOLOR_BLUEBELL,
 	"PINK",     	// SKINCOLOR_PINK,
+	"ROSEWOOD",   	// SKINCOLOR_ROSEWOOD,
 	"YOGURT",     	// SKINCOLOR_YOGURT,
+	"LATTE",     	// SKINCOLOR_LATTE,
 	"BROWN",     	// SKINCOLOR_BROWN,
+	"BOULDER",   	// SKINCOLOR_BOULDER
 	"BRONZE",     	// SKINCOLOR_BRONZE,
-	"TAN",     		// SKINCOLOR_TAN,
+	"SEPIA",     	// SKINCOLOR_SEPIA,
+	"ECRU",     	// SKINCOLOR_ECRU,
+	"TAN",      	// SKINCOLOR_TAN,
 	"BEIGE",     	// SKINCOLOR_BEIGE,
+	"ROSEBUSH",  	// SKINCOLOR_ROSEBUSH,
 	"MOSS",     	// SKINCOLOR_MOSS,
 	"AZURE",     	// SKINCOLOR_AZURE,
-	"LAVENDER",     // SKINCOLOR_LAVENDER,
+	"EGGPLANT",  	// SKINCOLOR_EGGPLANT,
+	"LAVENDER",   	// SKINCOLOR_LAVENDER,
 
 	// Viv's vivid colours (toast 21/07/17)
+	// Tweaks & additions (Lach, sphere, Alice, MotorRoach 26/10/22)
 	"RUBY",     	// SKINCOLOR_RUBY,
+	"CHERRY",     	// SKINCOLOR_CHERRY,
 	"SALMON",     	// SKINCOLOR_SALMON,
+	"PEPPER",     	// SKINCOLOR_PEPPER,
 	"RED",     		// SKINCOLOR_RED,
 	"CRIMSON",     	// SKINCOLOR_CRIMSON,
 	"FLAME",     	// SKINCOLOR_FLAME,
+	"GARNET",      	// SKINCOLOR_GARNET,
 	"KETCHUP",     	// SKINCOLOR_KETCHUP,
 	"PEACHY",     	// SKINCOLOR_PEACHY,
 	"QUAIL",     	// SKINCOLOR_QUAIL,
+	"FOUNDATION",   // SKINCOLOR_FOUNDATION,
 	"SUNSET",     	// SKINCOLOR_SUNSET,
 	"COPPER",     	// SKINCOLOR_COPPER,
 	"APRICOT",     	// SKINCOLOR_APRICOT,
 	"ORANGE",     	// SKINCOLOR_ORANGE,
 	"RUST",     	// SKINCOLOR_RUST,
+	"TANGERINE",   	// SKINCOLOR_TANGERINE,
+	"TOPAZ",     	// SKINCOLOR_TOPAZ,
 	"GOLD",     	// SKINCOLOR_GOLD,
 	"SANDY",     	// SKINCOLOR_SANDY,
+	"GOLDENROD",   	// SKINCOLOR_GOLDENROD,
 	"YELLOW",     	// SKINCOLOR_YELLOW,
 	"OLIVE",     	// SKINCOLOR_OLIVE,
+	"PEAR",     	// SKINCOLOR_PEAR,
+	"LEMON",     	// SKINCOLOR_LEMON,
 	"LIME",     	// SKINCOLOR_LIME,
 	"PERIDOT",     	// SKINCOLOR_PERIDOT,
 	"APPLE",     	// SKINCOLOR_APPLE,
+	"HEADLIGHT",	// SKINCOLOR_HEADLIGHT,
+	"CHARTREUSE",   // SKINCOLOR_CHARTREUSE,
 	"GREEN",     	// SKINCOLOR_GREEN,
 	"FOREST",     	// SKINCOLOR_FOREST,
-	"EMERALD",     	// SKINCOLOR_EMERALD,
+	"SHAMROCK",    	// SKINCOLOR_SHAMROCK,
+	"JADE",     	// SKINCOLOR_JADE,
 	"MINT",     	// SKINCOLOR_MINT,
+	"MASTER",     	// SKINCOLOR_MASTER,
+	"EMERALD",     	// SKINCOLOR_EMERALD,
 	"SEAFOAM",     	// SKINCOLOR_SEAFOAM,
+	"ISLAND",     	// SKINCOLOR_ISLAND,
+	"BOTTLE",     	// SKINCOLOR_BOTTLE,
 	"AQUA",     	// SKINCOLOR_AQUA,
 	"TEAL",     	// SKINCOLOR_TEAL,
+	"OCEAN",     	// SKINCOLOR_OCEAN,
 	"WAVE",     	// SKINCOLOR_WAVE,
 	"CYAN",     	// SKINCOLOR_CYAN,
+	"TURQUOISE",    // SKINCOLOR_TURQUOISE,
+	"AQUAMARINE",  	// SKINCOLOR_AQUAMARINE,
 	"SKY",     		// SKINCOLOR_SKY,
+	"MARINE",     	// SKINCOLOR_MARINE,
 	"CERULEAN",     // SKINCOLOR_CERULEAN,
+	"DREAM",     	// SKINCOLOR_DREAM,
 	"ICY",     		// SKINCOLOR_ICY,
+	"DAYBREAK",     // SKINCOLOR_DAYBREAK,
 	"SAPPHIRE",     // SKINCOLOR_SAPPHIRE,
+	"ARCTIC",     	// SKINCOLOR_ARCTIC,
 	"CORNFLOWER",   // SKINCOLOR_CORNFLOWER,
 	"BLUE",     	// SKINCOLOR_BLUE,
 	"COBALT",     	// SKINCOLOR_COBALT,
+	"MIDNIGHT",     // SKINCOLOR_MIDNIGHT,
+	"GALAXY",     	// SKINCOLOR_GALAXY,
 	"VAPOR",     	// SKINCOLOR_VAPOR,
 	"DUSK",     	// SKINCOLOR_DUSK,
+	"MAJESTY",     	// SKINCOLOR_MAJESTY,
 	"PASTEL",     	// SKINCOLOR_PASTEL,
 	"PURPLE",     	// SKINCOLOR_PURPLE,
-	"BUBBLEGUM",    // SKINCOLOR_BUBBLEGUM,
+	"NOBLE",     	// SKINCOLOR_NOBLE,
+	"FUCHSIA",     	// SKINCOLOR_FUCHSIA,
+	"BUBBLEGUM",   	// SKINCOLOR_BUBBLEGUM,
+	"SIBERITE",   	// SKINCOLOR_SIBERITE,
 	"MAGENTA",     	// SKINCOLOR_MAGENTA,
 	"NEON",     	// SKINCOLOR_NEON,
 	"VIOLET",     	// SKINCOLOR_VIOLET,
+	"ROYAL",     	// SKINCOLOR_ROYAL,
 	"LILAC",     	// SKINCOLOR_LILAC,
+	"MAUVE",     	// SKINCOLOR_MAUVE,
+	"EVENTIDE",   	// SKINCOLOR_EVENTIDE,
 	"PLUM",     	// SKINCOLOR_PLUM,
 	"RASPBERRY",  	// SKINCOLOR_RASPBERRY,
+	"TAFFY",     	// SKINCOLOR_TAFFY,
 	"ROSY",     	// SKINCOLOR_ROSY,
+	"FANCY",  		// SKINCOLOR_FANCY,
+	"SANGRIA",     	// SKINCOLOR_SANGRIA,
+	"VOLCANIC",    	// SKINCOLOR_VOLCANIC,
 
 	// Super special awesome Super flashing colors!
 	"SUPERSILVER1",	// SKINCOLOR_SUPERSILVER1
@@ -4768,7 +4818,9 @@ const char *const POWERS_LIST[] = {
 
 	"JUSTLAUNCHED",
 
-	"IGNORELATCH"
+	"IGNORELATCH",
+
+	"STRONG"
 };
 
 const char *const HUDITEMS_LIST[] = {
@@ -5120,6 +5172,30 @@ struct int_const_s const INT_CONST[] = {
 	{"CR_PTERABYTE",CR_PTERABYTE},
 	{"CR_DUSTDEVIL",CR_DUSTDEVIL},
 	{"CR_FAN",CR_FAN},
+
+	// Strong powers
+	{"STR_NONE",STR_NONE},
+	{"STR_ANIM",STR_ANIM},
+	{"STR_PUNCH",STR_PUNCH},
+	{"STR_TAIL",STR_TAIL},
+	{"STR_STOMP",STR_STOMP},
+	{"STR_UPPER",STR_UPPER},
+	{"STR_GUARD",STR_GUARD},
+	{"STR_HEAVY",STR_HEAVY},
+	{"STR_DASH",STR_DASH},
+	{"STR_WALL",STR_WALL},
+	{"STR_FLOOR",STR_FLOOR},
+	{"STR_CEILING",STR_CEILING},
+	{"STR_SPRING",STR_SPRING},
+	{"STR_SPIKE",STR_SPIKE},
+	{"STR_ATTACK",STR_ATTACK},
+	{"STR_BUST",STR_BUST},
+	{"STR_FLY",STR_FLY},
+	{"STR_GLIDE",STR_GLIDE},
+	{"STR_TWINSPIN",STR_TWINSPIN},
+	{"STR_MELEE",STR_MELEE},
+	{"STR_BOUNCE",STR_BOUNCE},
+	{"STR_METAL",STR_METAL},
 
 	// Ring weapons (ringweapons_t)
 	// Useful for A_GiveWeapon
