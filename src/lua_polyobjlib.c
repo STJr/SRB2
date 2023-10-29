@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
-// Copyright (C) 2020 by Iestyn "Monster Iestyn" Jealous.
-// Copyright (C) 2020 by Sonic Team Junior.
+// Copyright (C) 2020-2023 by Iestyn "Monster Iestyn" Jealous.
+// Copyright (C) 2020-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -244,13 +244,14 @@ static int lib_polyobj_rotate(lua_State *L)
 {
 	polyobj_t *po = *((polyobj_t **)luaL_checkudata(L, 1, META_POLYOBJ));
 	angle_t delta = luaL_checkangle(L, 2);
-	UINT8 turnthings = (UINT8)luaL_optinteger(L, 3, 0); // don't turn anything by default? (could change this if not desired)
-	boolean checkmobjs = lua_opttrueboolean(L, 4);
+	boolean turnplayers = lua_opttrueboolean(L, 3);
+	boolean turnothers = lua_opttrueboolean(L, 4);
+	boolean checkmobjs = lua_opttrueboolean(L, 5);
 	NOHUD
 	INLEVEL
 	if (!po)
 		return LUA_ErrInvalid(L, "polyobj_t");
-	lua_pushboolean(L, Polyobj_rotate(po, delta, turnthings, checkmobjs));
+	lua_pushboolean(L, Polyobj_rotate(po, delta, turnplayers, turnothers, checkmobjs));
 	return 1;
 }
 
@@ -417,7 +418,7 @@ static int lib_getPolyObject(lua_State *L)
 	{
 		i = luaL_checkinteger(L, 2);
 		if (i < 0 || i >= numPolyObjects)
-			return luaL_error(L, "PolyObjects[] index %d out of range (0 - %d)", i, numPolyObjects-1);
+			return luaL_error(L, "polyobjects[] index %d out of range (0 - %d)", i, numPolyObjects-1);
 		LUA_PushUserdata(L, &PolyObjects[i], META_POLYOBJ);
 		return 1;
 	}
@@ -481,6 +482,6 @@ int LUA_PolyObjLib(lua_State *L)
 			lua_pushcfunction(L, lib_numPolyObjects);
 			lua_setfield(L, -2, "__len");
 		lua_setmetatable(L, -2);
-	lua_setglobal(L, "PolyObjects");
+	lua_setglobal(L, "polyobjects");
 	return 0;
 }

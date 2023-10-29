@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -188,25 +188,10 @@ static void DEH_LoadDehackedFile(MYFILE *f, boolean mainfile)
 	dbg_line = -1; // start at -1 so the first line is 0.
 	while (!myfeof(f))
 	{
-		char origpos[128];
-		INT32 size = 0;
-		char *traverse;
-
 		myfgets(s, MAXLINELEN, f);
 		memcpy(textline, s, MAXLINELEN);
 		if (s[0] == '\n' || s[0] == '#')
 			continue;
-
-		traverse = s;
-
-		while (traverse[0] != '\n')
-		{
-			traverse++;
-			size++;
-		}
-
-		strncpy(origpos, s, size);
-		origpos[size] = '\0';
 
 		if (NULL != (word = strtok(s, " "))) {
 			strupr(word);
@@ -562,13 +547,10 @@ static void DEH_LoadDehackedFile(MYFILE *f, boolean mainfile)
 					}
 
 					if (clearall || fastcmp(word2, "UNLOCKABLES"))
-						memset(&unlockables, 0, sizeof(unlockables));
+						clear_unlockables();
 
 					if (clearall || fastcmp(word2, "EMBLEMS"))
-					{
-						memset(&emblemlocations, 0, sizeof(emblemlocations));
-						numemblems = 0;
-					}
+						clear_emblems();
 
 					if (clearall || fastcmp(word2, "EXTRAEMBLEMS"))
 					{
@@ -593,7 +575,7 @@ static void DEH_LoadDehackedFile(MYFILE *f, boolean mainfile)
 	} // end while
 
 	if (gamedataadded)
-		G_LoadGameData();
+		G_LoadGameData(clientGamedata);
 
 	if (gamestate == GS_TITLESCREEN)
 	{
@@ -644,26 +626,4 @@ void DEH_LoadDehackedLumpPwad(UINT16 wad, UINT16 lump, boolean mainfile)
 void DEH_LoadDehackedLump(lumpnum_t lumpnum)
 {
 	DEH_LoadDehackedLumpPwad(WADFILENUM(lumpnum),LUMPNUM(lumpnum), false);
-}
-
-void DEH_Check(void)
-{
-#if defined(_DEBUG) || defined(PARANOIA)
-	const size_t dehstates = sizeof(STATE_LIST)/sizeof(const char*);
-	const size_t dehmobjs  = sizeof(MOBJTYPE_LIST)/sizeof(const char*);
-	const size_t dehpowers = sizeof(POWERS_LIST)/sizeof(const char*);
-	const size_t dehcolors = sizeof(COLOR_ENUMS)/sizeof(const char*);
-
-	if (dehstates != S_FIRSTFREESLOT)
-		I_Error("You forgot to update the Dehacked states list, you dolt!\n(%d states defined, versus %s in the Dehacked list)\n", S_FIRSTFREESLOT, sizeu1(dehstates));
-
-	if (dehmobjs != MT_FIRSTFREESLOT)
-		I_Error("You forgot to update the Dehacked mobjtype list, you dolt!\n(%d mobj types defined, versus %s in the Dehacked list)\n", MT_FIRSTFREESLOT, sizeu1(dehmobjs));
-
-	if (dehpowers != NUMPOWERS)
-		I_Error("You forgot to update the Dehacked powers list, you dolt!\n(%d powers defined, versus %s in the Dehacked list)\n", NUMPOWERS, sizeu1(dehpowers));
-
-	if (dehcolors != SKINCOLOR_FIRSTFREESLOT)
-		I_Error("You forgot to update the Dehacked colors list, you dolt!\n(%d colors defined, versus %s in the Dehacked list)\n", SKINCOLOR_FIRSTFREESLOT, sizeu1(dehcolors));
-#endif
 }

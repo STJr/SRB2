@@ -1,6 +1,6 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
-// Copyright (C) 2020 by Sonic Team Junior.
+// Copyright (C) 2020-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -17,565 +17,826 @@
 #include "i_system.h"
 #include "z_zone.h"
 #include "p_local.h"
+#include "r_fps.h"
 
 #ifdef HWRENDER
 #include "hardware/hw_main.h"
 #endif
 
-struct perfstatcol;
 struct perfstatrow;
 
-typedef struct perfstatcol perfstatcol_t;
 typedef struct perfstatrow perfstatrow_t;
 
-struct perfstatcol {
-	INT32 lores_x;
-	INT32 hires_x;
-	INT32 color;
-	perfstatrow_t * rows;
-};
-
 struct perfstatrow {
-	const char * lores_label;
-	const char * hires_label;
-	void       * value;
+	const char  * lores_label;
+	const char  * hires_label;
+	ps_metric_t * metric;
+	UINT8         flags;
 };
 
-static precise_t ps_frametime = 0;
+// perfstatrow_t flags
 
-precise_t ps_tictime = 0;
+#define PS_TIME      1  // metric measures time (uses precise_t instead of INT32)
+#define PS_LEVEL     2  // metric is valid only when a level is active
+#define PS_SW        4  // metric is valid only in software mode
+#define PS_HW        8  // metric is valid only in opengl mode
+#define PS_BATCHING  16 // metric is valid only when opengl batching is active
+#define PS_HIDE_ZERO 32 // hide metric if its value is zero
 
-precise_t ps_playerthink_time = 0;
-precise_t ps_thinkertime = 0;
+static ps_metric_t ps_frametime = {0};
 
-precise_t ps_thlist_times[NUM_THINKERLISTS];
+ps_metric_t ps_tictime = {0};
 
-int ps_checkposition_calls = 0;
+ps_metric_t ps_playerthink_time = {0};
+ps_metric_t ps_thinkertime = {0};
 
-precise_t ps_lua_thinkframe_time = 0;
-int ps_lua_mobjhooks = 0;
+ps_metric_t ps_thlist_times[NUM_THINKERLISTS];
+
+static ps_metric_t ps_thinkercount = {0};
+static ps_metric_t ps_polythcount = {0};
+static ps_metric_t ps_mainthcount = {0};
+static ps_metric_t ps_mobjcount = {0};
+static ps_metric_t ps_regularcount = {0};
+static ps_metric_t ps_scenerycount = {0};
+static ps_metric_t ps_nothinkcount = {0};
+static ps_metric_t ps_dynslopethcount = {0};
+static ps_metric_t ps_precipcount = {0};
+static ps_metric_t ps_removecount = {0};
+
+ps_metric_t ps_checkposition_calls = {0};
+
+ps_metric_t ps_lua_thinkframe_time = {0};
+ps_metric_t ps_lua_mobjhooks = {0};
+
+ps_metric_t ps_otherlogictime = {0};
+
+// Columns for perfstats pages.
+
+// Position on screen is determined separately in the drawing functions.
+
+// New columns must also be added to the drawing and update functions.
+// Drawing functions: PS_DrawRenderStats, PS_DrawGameLogicStats, etc.
+// Update functions:
+//  - PS_UpdateFrameStats for frame-dependent values
+//  - PS_UpdateTickStats for tick-dependent values
+
+// Rendering stats columns
+
+perfstatrow_t rendertime_rows[] = {
+	{"frmtime", "Frame time:    ", &ps_frametime, PS_TIME},
+	{"drwtime", "3d rendering:  ", &ps_rendercalltime, PS_TIME|PS_LEVEL},
+
+#ifdef HWRENDER
+	{" skybox ", " Skybox render: ", &ps_hw_skyboxtime, PS_TIME|PS_LEVEL|PS_HW},
+	{" bsptime", " RenderBSPNode: ", &ps_bsptime, PS_TIME|PS_LEVEL|PS_HW},
+	{" batsort", " Batch sort:    ", &ps_hw_batchsorttime, PS_TIME|PS_LEVEL|PS_HW|PS_BATCHING},
+	{" batdraw", " Batch render:  ", &ps_hw_batchdrawtime, PS_TIME|PS_LEVEL|PS_HW|PS_BATCHING},
+	{" sprsort", " Sprite sort:   ", &ps_hw_spritesorttime, PS_TIME|PS_LEVEL|PS_HW},
+	{" sprdraw", " Sprite render: ", &ps_hw_spritedrawtime, PS_TIME|PS_LEVEL|PS_HW},
+	{" nodesrt", " Drwnode sort:  ", &ps_hw_nodesorttime, PS_TIME|PS_LEVEL|PS_HW},
+	{" nodedrw", " Drwnode render:", &ps_hw_nodedrawtime, PS_TIME|PS_LEVEL|PS_HW},
+	{" other  ", " Other:         ", &ps_otherrendertime, PS_TIME|PS_LEVEL|PS_HW},
+#endif
+
+	{" bsptime", " RenderBSPNode: ", &ps_bsptime, PS_TIME|PS_LEVEL|PS_SW},
+	{" sprclip", " R_ClipSprites: ", &ps_sw_spritecliptime, PS_TIME|PS_LEVEL|PS_SW},
+	{" portals", " Portals+Skybox:", &ps_sw_portaltime, PS_TIME|PS_LEVEL|PS_SW},
+	{" planes ", " R_DrawPlanes:  ", &ps_sw_planetime, PS_TIME|PS_LEVEL|PS_SW},
+	{" masked ", " R_DrawMasked:  ", &ps_sw_maskedtime, PS_TIME|PS_LEVEL|PS_SW},
+	{" other  ", " Other:         ", &ps_otherrendertime, PS_TIME|PS_LEVEL|PS_SW},
+
+	{"ui     ", "UI render:     ", &ps_uitime, PS_TIME},
+	{"finupdt", "I_FinishUpdate:", &ps_swaptime, PS_TIME},
+	{0}
+};
+
+perfstatrow_t gamelogicbrief_row[] = {
+	{"logic  ", "Game logic:    ", &ps_tictime, PS_TIME},
+	{0}
+};
+
+perfstatrow_t commoncounter_rows[] = {
+	{"bspcall", "BSP calls:   ", &ps_numbspcalls, 0},
+	{"sprites", "Sprites:     ", &ps_numsprites, 0},
+	{"drwnode", "Drawnodes:   ", &ps_numdrawnodes, 0},
+	{"plyobjs", "Polyobjects: ", &ps_numpolyobjects, 0},
+	{0}
+};
+
+perfstatrow_t interpolation_rows[] = {
+	{"intpfrc", "Interp frac: ", &ps_interp_frac, PS_TIME},
+	{"intplag", "Interp lag:  ", &ps_interp_lag, PS_TIME},
+	{0}
+};
+
+#ifdef HWRENDER
+perfstatrow_t batchcount_rows[] = {
+	{"polygon", "Polygons:  ", &ps_hw_numpolys, 0},
+	{"vertex ", "Vertices:  ", &ps_hw_numverts, 0},
+	{0}
+};
+
+perfstatrow_t batchcalls_rows[] = {
+	{"drwcall", "Draw calls:", &ps_hw_numcalls, 0},
+	{"shaders", "Shaders:   ", &ps_hw_numshaders, 0},
+	{"texture", "Textures:  ", &ps_hw_numtextures, 0},
+	{"polyflg", "Polyflags: ", &ps_hw_numpolyflags, 0},
+	{"colors ", "Colors:    ", &ps_hw_numcolors, 0},
+	{0}
+};
+#endif
+
+// Game logic stats columns
+
+perfstatrow_t gamelogic_rows[] = {
+	{"logic  ", "Game logic:     ", &ps_tictime, PS_TIME},
+	{" plrthnk", " P_PlayerThink:  ", &ps_playerthink_time, PS_TIME|PS_LEVEL},
+	{" thnkers", " P_RunThinkers:  ", &ps_thinkertime, PS_TIME|PS_LEVEL},
+	{"  plyobjs", "  Polyobjects:    ", &ps_thlist_times[THINK_POLYOBJ], PS_TIME|PS_LEVEL},
+	{"  main   ", "  Main:           ", &ps_thlist_times[THINK_MAIN], PS_TIME|PS_LEVEL},
+	{"  mobjs  ", "  Mobjs:          ", &ps_thlist_times[THINK_MOBJ], PS_TIME|PS_LEVEL},
+	{"  dynslop", "  Dynamic slopes: ", &ps_thlist_times[THINK_DYNSLOPE], PS_TIME|PS_LEVEL},
+	{"  precip ", "  Precipitation:  ", &ps_thlist_times[THINK_PRECIP], PS_TIME|PS_LEVEL},
+	{" lthinkf", " LUAh_ThinkFrame:", &ps_lua_thinkframe_time, PS_TIME|PS_LEVEL},
+	{" other  ", " Other:          ", &ps_otherlogictime, PS_TIME|PS_LEVEL},
+	{0}
+};
+
+perfstatrow_t thinkercount_rows[] = {
+	{"thnkers", "Thinkers:       ", &ps_thinkercount, PS_LEVEL},
+	{" plyobjs", " Polyobjects:    ", &ps_polythcount, PS_LEVEL},
+	{" main   ", " Main:           ", &ps_mainthcount, PS_LEVEL},
+	{" mobjs  ", " Mobjs:          ", &ps_mobjcount, PS_LEVEL},
+	{"  regular", "  Regular:        ", &ps_regularcount, PS_LEVEL},
+	{"  scenery", "  Scenery:        ", &ps_scenerycount, PS_LEVEL},
+	{"  nothink", "  Nothink:        ", &ps_nothinkcount, PS_HIDE_ZERO|PS_LEVEL},
+	{" dynslop", " Dynamic slopes: ", &ps_dynslopethcount, PS_LEVEL},
+	{" precip ", " Precipitation:  ", &ps_precipcount, PS_LEVEL},
+	{" remove ", " Pending removal:", &ps_removecount, PS_LEVEL},
+	{0}
+};
+
+perfstatrow_t misc_calls_rows[] = {
+	{"lmhook", "Lua mobj hooks: ", &ps_lua_mobjhooks, PS_LEVEL},
+	{"chkpos", "P_CheckPosition:", &ps_checkposition_calls, PS_LEVEL},
+	{0}
+};
+
+// Sample collection status for averaging.
+// Maximum of these two is shown to user if nonzero to tell that
+// the reported averages are not correct yet.
+int ps_frame_samples_left = 0;
+int ps_tick_samples_left = 0;
+// History writing positions for frame and tick based metrics
+int ps_frame_index = 0;
+int ps_tick_index = 0;
 
 // dynamically allocated resizeable array for thinkframe hook stats
 ps_hookinfo_t *thinkframe_hooks = NULL;
 int thinkframe_hooks_length = 0;
 int thinkframe_hooks_capacity = 16;
 
-static INT32 draw_row;
-
-void PS_SetThinkFrameHookInfo(int index, UINT32 time_taken, char* short_src)
+void PS_SetThinkFrameHookInfo(int index, precise_t time_taken, char* short_src)
 {
 	if (!thinkframe_hooks)
 	{
 		// array needs to be initialized
-		thinkframe_hooks = Z_Malloc(sizeof(ps_hookinfo_t) * thinkframe_hooks_capacity, PU_STATIC, NULL);
+		thinkframe_hooks = Z_Calloc(sizeof(ps_hookinfo_t) * thinkframe_hooks_capacity, PU_STATIC, NULL);
 	}
 	if (index >= thinkframe_hooks_capacity)
 	{
 		// array needs more space, realloc with double size
-		thinkframe_hooks_capacity *= 2;
+		int new_capacity = thinkframe_hooks_capacity * 2;
 		thinkframe_hooks = Z_Realloc(thinkframe_hooks,
-			sizeof(ps_hookinfo_t) * thinkframe_hooks_capacity, PU_STATIC, NULL);
+			sizeof(ps_hookinfo_t) * new_capacity, PU_STATIC, NULL);
+		// initialize new memory with zeros so the pointers in the structs are null
+		memset(&thinkframe_hooks[thinkframe_hooks_capacity], 0,
+			sizeof(ps_hookinfo_t) * thinkframe_hooks_capacity);
+		thinkframe_hooks_capacity = new_capacity;
 	}
-	thinkframe_hooks[index].time_taken = time_taken;
+	thinkframe_hooks[index].time_taken.value.p = time_taken;
 	memcpy(thinkframe_hooks[index].short_src, short_src, LUA_IDSIZE * sizeof(char));
 	// since the values are set sequentially from begin to end, the last call should leave
 	// the correct value to this variable
 	thinkframe_hooks_length = index + 1;
 }
 
-static void PS_SetFrameTime(void)
-{
-	precise_t currenttime = I_GetPreciseTime();
-	ps_frametime = currenttime - ps_prevframetime;
-	ps_prevframetime = currenttime;
-}
-
-static boolean M_HighResolution(void)
+static boolean PS_HighResolution(void)
 {
 	return (vid.width >= 640 && vid.height >= 400);
 }
 
-enum {
-	PERF_TIME,
-	PERF_COUNT,
-};
-
-static void M_DrawPerfString(perfstatcol_t *col, int type)
+static boolean PS_IsLevelActive(void)
 {
-	const boolean hires = M_HighResolution();
+	return gamestate == GS_LEVEL ||
+			(gamestate == GS_TITLESCREEN && titlemapinaction);
+}
 
-	INT32 draw_flags = V_MONOSPACE | col->color;
+// Is the row valid in the current context?
+static boolean PS_IsRowValid(perfstatrow_t *row)
+{
+	return !((row->flags & PS_LEVEL && !PS_IsLevelActive())
+		|| (row->flags & PS_SW && rendermode != render_soft)
+		|| (row->flags & PS_HW && rendermode != render_opengl)
+#ifdef HWRENDER
+		|| (row->flags & PS_BATCHING && !cv_glbatching.value)
+#endif
+		);
+}
 
+// Should the row be visible on the screen?
+static boolean PS_IsRowVisible(perfstatrow_t *row)
+{
+	boolean value_is_zero;
+
+	if (row->flags & PS_TIME)
+		value_is_zero = row->metric->value.p == 0;
+	else
+		value_is_zero = row->metric->value.i == 0;
+
+	return !(!PS_IsRowValid(row) ||
+		(row->flags & PS_HIDE_ZERO && value_is_zero));
+}
+
+static INT32 PS_GetMetricAverage(ps_metric_t *metric, boolean time_metric)
+{
+	char* history_read_pos = metric->history; // char* used for pointer arithmetic
+	INT64 sum = 0;
+	int i;
+	int value_size = time_metric ? sizeof(precise_t) : sizeof(INT32);
+
+	for (i = 0; i < cv_ps_samplesize.value; i++)
+	{
+		if (time_metric)
+			sum += (*((precise_t*)history_read_pos)) / (I_GetPrecisePrecision() / 1000000);
+		else
+			sum += *((INT32*)history_read_pos);
+		history_read_pos += value_size;
+	}
+
+	return sum / cv_ps_samplesize.value;
+}
+
+static INT32 PS_GetMetricMinOrMax(ps_metric_t *metric, boolean time_metric, boolean get_max)
+{
+	char* history_read_pos = metric->history; // char* used for pointer arithmetic
+	INT32 found_value = get_max ? INT32_MIN : INT32_MAX;
+	int i;
+	int value_size = time_metric ? sizeof(precise_t) : sizeof(INT32);
+
+	for (i = 0; i < cv_ps_samplesize.value; i++)
+	{
+		INT32 value;
+		if (time_metric)
+			value = (*((precise_t*)history_read_pos)) / (I_GetPrecisePrecision() / 1000000);
+		else
+			value = *((INT32*)history_read_pos);
+
+		if ((get_max && value > found_value) ||
+			(!get_max && value < found_value))
+		{
+			found_value = value;
+		}
+		history_read_pos += value_size;
+	}
+
+	return found_value;
+}
+
+// Calculates the standard deviation for metric.
+static INT32 PS_GetMetricSD(ps_metric_t *metric, boolean time_metric)
+{
+	char* history_read_pos = metric->history; // char* used for pointer arithmetic
+	INT64 sum = 0;
+	int i;
+	int value_size = time_metric ? sizeof(precise_t) : sizeof(INT32);
+	INT32 avg = PS_GetMetricAverage(metric, time_metric);
+
+	for (i = 0; i < cv_ps_samplesize.value; i++)
+	{
+		INT64 value;
+		if (time_metric)
+			value = (*((precise_t*)history_read_pos)) / (I_GetPrecisePrecision() / 1000000);
+		else
+			value = *((INT32*)history_read_pos);
+
+		value -= avg;
+		sum += value * value;
+
+		history_read_pos += value_size;
+	}
+
+	return round(sqrt(sum / cv_ps_samplesize.value));
+}
+
+// Returns the value to show on screen for metric.
+static INT32 PS_GetMetricScreenValue(ps_metric_t *metric, boolean time_metric)
+{
+	if (cv_ps_samplesize.value > 1 && metric->history)
+	{
+		if (cv_ps_descriptor.value == 1)
+			return PS_GetMetricAverage(metric, time_metric);
+		else if (cv_ps_descriptor.value == 2)
+			return PS_GetMetricSD(metric, time_metric);
+		else if (cv_ps_descriptor.value == 3)
+			return PS_GetMetricMinOrMax(metric, time_metric, false);
+		else
+			return PS_GetMetricMinOrMax(metric, time_metric, true);
+	}
+	else
+	{
+		if (time_metric)
+			return (metric->value.p) / (I_GetPrecisePrecision() / 1000000);
+		else
+			return metric->value.i;
+	}
+}
+
+static int PS_DrawPerfRows(int x, int y, int color, perfstatrow_t *rows)
+{
+	const boolean hires = PS_HighResolution();
+	INT32 draw_flags = V_MONOSPACE | color;
 	perfstatrow_t * row;
-
-	int value;
+	int draw_y = y;
 
 	if (hires)
 		draw_flags |= V_ALLOWLOWERCASE;
 
-	for (row = col->rows; row->lores_label; ++row)
+	for (row = rows; row->lores_label; ++row)
 	{
-		if (type == PERF_TIME)
-			value = I_PreciseToMicros(*(precise_t *)row->value);
-		else
-			value = *(int *)row->value;
+		const char *label;
+		INT32 value;
+		char *final_str;
+
+		if (!PS_IsRowVisible(row))
+			continue;
+
+		label = hires ? row->hires_label : row->lores_label;
+		value = PS_GetMetricScreenValue(row->metric, !!(row->flags & PS_TIME));
+		final_str = va("%s %d", label, value);
 
 		if (hires)
 		{
-			V_DrawSmallString(col->hires_x, draw_row, draw_flags,
-					va("%s %d", row->hires_label, value));
-
-			draw_row += 5;
+			V_DrawSmallString(x, draw_y, draw_flags, final_str);
+			draw_y += 5;
 		}
 		else
 		{
-			V_DrawThinString(col->lores_x, draw_row, draw_flags,
-					va("%s %d", row->lores_label, value));
-
-			draw_row += 8;
+			V_DrawThinString(x, draw_y, draw_flags, final_str);
+			draw_y += 8;
 		}
+	}
+
+	return draw_y;
+}
+
+static void PS_UpdateMetricHistory(ps_metric_t *metric, boolean time_metric, boolean frame_metric, boolean set_user)
+{
+	int index = frame_metric ? ps_frame_index : ps_tick_index;
+
+	if (!metric->history)
+	{
+		// allocate history table
+		int value_size = time_metric ? sizeof(precise_t) : sizeof(INT32);
+		void** memory_user = set_user ? &metric->history : NULL;
+
+		metric->history = Z_Calloc(value_size * cv_ps_samplesize.value, PU_PERFSTATS,
+				memory_user);
+
+		// reset "samples left" counter since this history table needs to be filled
+		if (frame_metric)
+			ps_frame_samples_left = cv_ps_samplesize.value;
+		else
+			ps_tick_samples_left = cv_ps_samplesize.value;
+	}
+
+	if (time_metric)
+	{
+		precise_t *history = (precise_t*)metric->history;
+		history[index] = metric->value.p;
+	}
+	else
+	{
+		INT32 *history = (INT32*)metric->history;
+		history[index] = metric->value.i;
 	}
 }
 
-static void M_DrawPerfTiming(perfstatcol_t *col)
+static void PS_UpdateRowHistories(perfstatrow_t *rows, boolean frame_metric)
 {
-	M_DrawPerfString(col, PERF_TIME);
-}
-
-static void M_DrawPerfCount(perfstatcol_t *col)
-{
-	M_DrawPerfString(col, PERF_COUNT);
-}
-
-static void M_DrawRenderStats(void)
-{
-	const boolean hires = M_HighResolution();
-
-	const int half_row = hires ? 5 : 4;
-
-	precise_t extrarendertime;
-
-	perfstatrow_t frametime_row[] = {
-		{"frmtime", "Frame time:    ", &ps_frametime},
-		{0}
-	};
-
-	perfstatrow_t rendercalltime_row[] = {
-		{"drwtime", "3d rendering:  ", &ps_rendercalltime},
-		{0}
-	};
-
-	perfstatrow_t opengltime_row[] = {
-		{"skybox ", "Skybox render: ", &ps_hw_skyboxtime},
-		{"bsptime", "RenderBSPNode: ", &ps_bsptime},
-		{"nodesrt", "Drwnode sort:  ", &ps_hw_nodesorttime},
-		{"nodedrw", "Drwnode render:", &ps_hw_nodedrawtime},
-		{"sprsort", "Sprite sort:   ", &ps_hw_spritesorttime},
-		{"sprdraw", "Sprite render: ", &ps_hw_spritedrawtime},
-		{"other  ", "Other:         ", &extrarendertime},
-		{0}
-	};
-
-	perfstatrow_t softwaretime_row[] = {
-		{"bsptime", "RenderBSPNode: ", &ps_bsptime},
-		{"sprclip", "R_ClipSprites: ", &ps_sw_spritecliptime},
-		{"portals", "Portals+Skybox:", &ps_sw_portaltime},
-		{"planes ", "R_DrawPlanes:  ", &ps_sw_planetime},
-		{"masked ", "R_DrawMasked:  ", &ps_sw_maskedtime},
-		{"other  ", "Other:         ", &extrarendertime},
-		{0}
-	};
-
-	perfstatrow_t uiswaptime_row[] = {
-		{"ui     ", "UI render:     ", &ps_uitime},
-		{"finupdt", "I_FinishUpdate:", &ps_swaptime},
-		{0}
-	};
-
-	perfstatrow_t tictime_row[] = {
-		{"logic  ", "Game logic:    ", &ps_tictime},
-		{0}
-	};
-
-	perfstatrow_t rendercalls_row[] = {
-		{"bspcall", "BSP calls:   ", &ps_numbspcalls},
-		{"sprites", "Sprites:     ", &ps_numsprites},
-		{"drwnode", "Drawnodes:   ", &ps_numdrawnodes},
-		{"plyobjs", "Polyobjects: ", &ps_numpolyobjects},
-		{0}
-	};
-
-	perfstatrow_t batchtime_row[] = {
-		{"batsort", "Batch sort:  ", &ps_hw_batchsorttime},
-		{"batdraw", "Batch render:", &ps_hw_batchdrawtime},
-		{0}
-	};
-
-	perfstatrow_t batchcount_row[] = {
-		{"polygon", "Polygons:  ", &ps_hw_numpolys},
-		{"vertex ", "Vertices:  ", &ps_hw_numverts},
-		{0}
-	};
-
-	perfstatrow_t batchcalls_row[] = {
-		{"drwcall", "Draw calls:", &ps_hw_numcalls},
-		{"shaders", "Shaders:   ", &ps_hw_numshaders},
-		{"texture", "Textures:  ", &ps_hw_numtextures},
-		{"polyflg", "Polyflags: ", &ps_hw_numpolyflags},
-		{"colors ", "Colors:    ", &ps_hw_numcolors},
-		{0}
-	};
-
-	perfstatcol_t      frametime_col =  {20,  20, V_YELLOWMAP,      frametime_row};
-	perfstatcol_t rendercalltime_col =  {20,  20, V_YELLOWMAP, rendercalltime_row};
-
-	perfstatcol_t     opengltime_col =  {24,  24, V_YELLOWMAP,     opengltime_row};
-	perfstatcol_t   softwaretime_col =  {24,  24, V_YELLOWMAP,   softwaretime_row};
-
-	perfstatcol_t     uiswaptime_col =  {20,  20, V_YELLOWMAP,     uiswaptime_row};
-	perfstatcol_t        tictime_col =  {20,  20, V_GRAYMAP,          tictime_row};
-
-	perfstatcol_t    rendercalls_col =  {90, 115, V_BLUEMAP,      rendercalls_row};
-
-	perfstatcol_t      batchtime_col =  {90, 115, V_REDMAP,         batchtime_row};
-
-	perfstatcol_t     batchcount_col = {155, 200, V_PURPLEMAP,     batchcount_row};
-	perfstatcol_t     batchcalls_col = {220, 200, V_PURPLEMAP,     batchcalls_row};
-
-
-	boolean rendering = (
-			gamestate == GS_LEVEL ||
-			(gamestate == GS_TITLESCREEN && titlemapinaction)
-	);
-
-	draw_row = 10;
-	M_DrawPerfTiming(&frametime_col);
-
-	if (rendering)
+	perfstatrow_t *row;
+	for (row = rows; row->lores_label; row++)
 	{
-		M_DrawPerfTiming(&rendercalltime_col);
+		if (PS_IsRowValid(row))
+			PS_UpdateMetricHistory(row->metric, !!(row->flags & PS_TIME), frame_metric, true);
+	}
+}
 
+// Update all metrics that are calculated on every frame.
+static void PS_UpdateFrameStats(void)
+{
+	// update frame time
+	precise_t currenttime = I_GetPreciseTime();
+	ps_frametime.value.p = currenttime - ps_prevframetime;
+	ps_prevframetime = currenttime;
+
+	// update 3d rendering stats
+	if (PS_IsLevelActive())
+	{
 		// Remember to update this calculation when adding more 3d rendering stats!
-		extrarendertime = ps_rendercalltime - ps_bsptime;
+		ps_otherrendertime.value.p = ps_rendercalltime.value.p - ps_bsptime.value.p;
 
 #ifdef HWRENDER
 		if (rendermode == render_opengl)
 		{
-			extrarendertime -=
-				ps_hw_skyboxtime +
-				ps_hw_nodesorttime +
-				ps_hw_nodedrawtime +
-				ps_hw_spritesorttime +
-				ps_hw_spritedrawtime;
+			ps_otherrendertime.value.p -=
+				ps_hw_skyboxtime.value.p +
+				ps_hw_nodesorttime.value.p +
+				ps_hw_nodedrawtime.value.p +
+				ps_hw_spritesorttime.value.p +
+				ps_hw_spritedrawtime.value.p;
 
 			if (cv_glbatching.value)
 			{
-				extrarendertime -=
-					ps_hw_batchsorttime +
-					ps_hw_batchdrawtime;
+				ps_otherrendertime.value.p -=
+					ps_hw_batchsorttime.value.p +
+					ps_hw_batchdrawtime.value.p;
 			}
-
-			M_DrawPerfTiming(&opengltime_col);
 		}
 		else
 #endif
 		{
-			extrarendertime -=
-				ps_sw_spritecliptime +
-				ps_sw_portaltime +
-				ps_sw_planetime +
-				ps_sw_maskedtime;
-
-			M_DrawPerfTiming(&softwaretime_col);
+			ps_otherrendertime.value.p -=
+				ps_sw_spritecliptime.value.p +
+				ps_sw_portaltime.value.p +
+				ps_sw_planetime.value.p +
+				ps_sw_maskedtime.value.p;
 		}
 	}
 
-	M_DrawPerfTiming(&uiswaptime_col);
-
-	draw_row += half_row;
-	M_DrawPerfTiming(&tictime_col);
-
-	if (rendering)
+	if (cv_ps_samplesize.value > 1)
 	{
-		draw_row = 10;
-		M_DrawPerfCount(&rendercalls_col);
+		PS_UpdateRowHistories(rendertime_rows, true);
+		if (PS_IsLevelActive())
+			PS_UpdateRowHistories(commoncounter_rows, true);
+
+		if (R_UsingFrameInterpolation())
+			PS_UpdateRowHistories(interpolation_rows, true);
 
 #ifdef HWRENDER
 		if (rendermode == render_opengl && cv_glbatching.value)
 		{
-			draw_row += half_row;
-			M_DrawPerfTiming(&batchtime_col);
-
-			draw_row = 10;
-			M_DrawPerfCount(&batchcount_col);
-
-			if (hires)
-				draw_row += half_row;
-			else
-				draw_row  = 10;
-
-			M_DrawPerfCount(&batchcalls_col);
+			PS_UpdateRowHistories(batchcount_rows, true);
+			PS_UpdateRowHistories(batchcalls_rows, true);
 		}
 #endif
+
+		ps_frame_index++;
+		if (ps_frame_index >= cv_ps_samplesize.value)
+			ps_frame_index = 0;
+		if (ps_frame_samples_left)
+			ps_frame_samples_left--;
 	}
 }
 
-static void M_DrawTickStats(void)
+// Update thinker counters by iterating the thinker lists.
+static void PS_CountThinkers(void)
 {
-	int i = 0;
+	int i;
 	thinker_t *thinker;
-	int thinkercount = 0;
-	int polythcount = 0;
-	int mainthcount = 0;
-	int mobjcount = 0;
-	int nothinkcount = 0;
-	int scenerycount = 0;
-	int regularcount = 0;
-	int dynslopethcount = 0;
-	int precipcount = 0;
-	int removecount = 0;
 
-	precise_t extratime =
-		ps_tictime -
-		ps_playerthink_time -
-		ps_thinkertime -
-		ps_lua_thinkframe_time;
-
-	perfstatrow_t tictime_row[] = {
-		{"logic  ", "Game logic:     ", &ps_tictime},
-		{0}
-	};
-
-	perfstatrow_t thinker_time_row[] = {
-		{"plrthnk", "P_PlayerThink:  ", &ps_playerthink_time},
-		{"thnkers", "P_RunThinkers:  ", &ps_thinkertime},
-		{0}
-	};
-
-	perfstatrow_t detailed_thinker_time_row[] = {
-		{"plyobjs", "Polyobjects:    ", &ps_thlist_times[THINK_POLYOBJ]},
-		{"main   ", "Main:           ", &ps_thlist_times[THINK_MAIN]},
-		{"mobjs  ", "Mobjs:          ", &ps_thlist_times[THINK_MOBJ]},
-		{"dynslop", "Dynamic slopes: ", &ps_thlist_times[THINK_DYNSLOPE]},
-		{"precip ", "Precipitation:  ", &ps_thlist_times[THINK_PRECIP]},
-		{0}
-	};
-
-	perfstatrow_t extra_thinker_time_row[] = {
-		{"lthinkf", "LUAh_ThinkFrame:", &ps_lua_thinkframe_time},
-		{"other  ", "Other:          ", &extratime},
-		{0}
-	};
-
-	perfstatrow_t thinkercount_row[] = {
-		{"thnkers", "Thinkers:       ", &thinkercount},
-		{0}
-	};
-
-	perfstatrow_t detailed_thinkercount_row[] = {
-		{"plyobjs", "Polyobjects:    ", &polythcount},
-		{"main   ", "Main:           ", &mainthcount},
-		{"mobjs  ", "Mobjs:          ", &mobjcount},
-		{0}
-	};
-
-	perfstatrow_t mobjthinkercount_row[] = {
-		{"regular", "Regular:        ", &regularcount},
-		{"scenery", "Scenery:        ", &scenerycount},
-		{0}
-	};
-
-	perfstatrow_t nothinkcount_row[] = {
-		{"nothink", "Nothink:        ", &nothinkcount},
-		{0}
-	};
-
-	perfstatrow_t detailed_thinkercount_row2[] = {
-		{"dynslop", "Dynamic slopes: ", &dynslopethcount},
-		{"precip ", "Precipitation:  ", &precipcount},
-		{"remove ", "Pending removal:", &removecount},
-		{0}
-	};
-
-	perfstatrow_t misc_calls_row[] = {
-		{"lmhook", "Lua mobj hooks: ", &ps_lua_mobjhooks},
-		{"chkpos", "P_CheckPosition:", &ps_checkposition_calls},
-		{0}
-	};
-
-	perfstatcol_t               tictime_col  =  {20,  20, V_YELLOWMAP,               tictime_row};
-	perfstatcol_t          thinker_time_col  =  {24,  24, V_YELLOWMAP,          thinker_time_row};
-	perfstatcol_t detailed_thinker_time_col  =  {28,  28, V_YELLOWMAP, detailed_thinker_time_row};
-	perfstatcol_t    extra_thinker_time_col  =  {24,  24, V_YELLOWMAP,    extra_thinker_time_row};
-
-	perfstatcol_t          thinkercount_col  =  {90, 115, V_BLUEMAP,            thinkercount_row};
-	perfstatcol_t detailed_thinkercount_col  =  {94, 119, V_BLUEMAP,   detailed_thinkercount_row};
-	perfstatcol_t      mobjthinkercount_col  =  {98, 123, V_BLUEMAP,        mobjthinkercount_row};
-	perfstatcol_t          nothinkcount_col  =  {98, 123, V_BLUEMAP,            nothinkcount_row};
-	perfstatcol_t detailed_thinkercount_col2 =  {94, 119, V_BLUEMAP,   detailed_thinkercount_row2};
-	perfstatcol_t            misc_calls_col  = {170, 216, V_PURPLEMAP,            misc_calls_row};
+	ps_thinkercount.value.i = 0;
+	ps_polythcount.value.i = 0;
+	ps_mainthcount.value.i = 0;
+	ps_mobjcount.value.i = 0;
+	ps_regularcount.value.i = 0;
+	ps_scenerycount.value.i = 0;
+	ps_nothinkcount.value.i = 0;
+	ps_dynslopethcount.value.i = 0;
+	ps_precipcount.value.i = 0;
+	ps_removecount.value.i = 0;
 
 	for (i = 0; i < NUM_THINKERLISTS; i++)
 	{
 		for (thinker = thlist[i].next; thinker != &thlist[i]; thinker = thinker->next)
 		{
-			thinkercount++;
+			ps_thinkercount.value.i++;
 			if (thinker->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
-				removecount++;
+				ps_removecount.value.i++;
 			else if (i == THINK_POLYOBJ)
-				polythcount++;
+				ps_polythcount.value.i++;
 			else if (i == THINK_MAIN)
-				mainthcount++;
+				ps_mainthcount.value.i++;
 			else if (i == THINK_MOBJ)
 			{
 				if (thinker->function.acp1 == (actionf_p1)P_MobjThinker)
 				{
 					mobj_t *mobj = (mobj_t*)thinker;
-					mobjcount++;
+					ps_mobjcount.value.i++;
 					if (mobj->flags & MF_NOTHINK)
-						nothinkcount++;
+						ps_nothinkcount.value.i++;
 					else if (mobj->flags & MF_SCENERY)
-						scenerycount++;
+						ps_scenerycount.value.i++;
 					else
-						regularcount++;
+						ps_regularcount.value.i++;
 				}
 			}
 			else if (i == THINK_DYNSLOPE)
-				dynslopethcount++;
+				ps_dynslopethcount.value.i++;
 			else if (i == THINK_PRECIP)
-				precipcount++;
+				ps_precipcount.value.i++;
 		}
 	}
+}
 
-	draw_row = 10;
-	M_DrawPerfTiming(&tictime_col);
-	M_DrawPerfTiming(&thinker_time_col);
-	M_DrawPerfTiming(&detailed_thinker_time_col);
-	M_DrawPerfTiming(&extra_thinker_time_col);
-
-	draw_row = 10;
-	M_DrawPerfCount(&thinkercount_col);
-	M_DrawPerfCount(&detailed_thinkercount_col);
-	M_DrawPerfCount(&mobjthinkercount_col);
-
-	if (nothinkcount)
-		M_DrawPerfCount(&nothinkcount_col);
-
-	M_DrawPerfCount(&detailed_thinkercount_col2);
-
-	if (M_HighResolution())
+// Update all metrics that are calculated on every tick.
+void PS_UpdateTickStats(void)
+{
+	if (cv_perfstats.value == 1 && cv_ps_samplesize.value > 1)
 	{
+		PS_UpdateRowHistories(gamelogicbrief_row, false);
+	}
+	if (cv_perfstats.value == 2)
+	{
+		if (PS_IsLevelActive())
+		{
+			ps_otherlogictime.value.p =
+				ps_tictime.value.p -
+				ps_playerthink_time.value.p -
+				ps_thinkertime.value.p -
+				ps_lua_thinkframe_time.value.p;
+
+			PS_CountThinkers();
+		}
+
+		if (cv_ps_samplesize.value > 1)
+		{
+			PS_UpdateRowHistories(gamelogic_rows, false);
+			PS_UpdateRowHistories(thinkercount_rows, false);
+			PS_UpdateRowHistories(misc_calls_rows, false);
+		}
+	}
+	if (cv_perfstats.value == 3 && cv_ps_samplesize.value > 1 && PS_IsLevelActive())
+	{
+		int i;
+		for (i = 0; i < thinkframe_hooks_length; i++)
+		{
+			PS_UpdateMetricHistory(&thinkframe_hooks[i].time_taken, true, false, false);
+		}
+	}
+	if (cv_perfstats.value && cv_ps_samplesize.value > 1)
+	{
+		ps_tick_index++;
+		if (ps_tick_index >= cv_ps_samplesize.value)
+			ps_tick_index = 0;
+		if (ps_tick_samples_left)
+			ps_tick_samples_left--;
+	}
+}
+
+static void PS_DrawDescriptorHeader(void)
+{
+	if (cv_ps_samplesize.value > 1)
+	{
+		const char* descriptor_names[] = {
+			"average",
+			"standard deviation",
+			"minimum",
+			"maximum"
+		};
+		const boolean hires = PS_HighResolution();
+		char* str;
+		INT32 flags = V_MONOSPACE | V_ALLOWLOWERCASE;
+		int samples_left = max(ps_frame_samples_left, ps_tick_samples_left);
+		int x, y;
+
+		if (cv_perfstats.value == 3)
+		{
+			x = 2;
+			y = 0;
+		}
+		else
+		{
+			x = 20;
+			y = hires ? 5 : 2;
+		}
+
+		if (samples_left)
+		{
+			str = va("Samples needed for correct results: %d", samples_left);
+			flags |= V_REDMAP;
+		}
+		else
+		{
+			str = va("Showing the %s of %d samples.",
+					descriptor_names[cv_ps_descriptor.value - 1], cv_ps_samplesize.value);
+			flags |= V_GREENMAP;
+		}
+
+		if (hires)
+			V_DrawSmallString(x, y, flags, str);
+		else
+			V_DrawThinString(x, y, flags, str);
+	}
+}
+
+static void PS_DrawRenderStats(void)
+{
+	const boolean hires = PS_HighResolution();
+	const int half_row = hires ? 5 : 4;
+	int x, y, cy = 10;
+
+	PS_DrawDescriptorHeader();
+
+	y = PS_DrawPerfRows(20, 10, V_YELLOWMAP, rendertime_rows);
+
+	PS_DrawPerfRows(20, y + half_row, V_GRAYMAP, gamelogicbrief_row);
+
+	if (PS_IsLevelActive())
+	{
+		x = hires ? 115 : 90;
+		cy = PS_DrawPerfRows(x, 10, V_BLUEMAP, commoncounter_rows) + half_row;
+
+#ifdef HWRENDER
+		if (rendermode == render_opengl && cv_glbatching.value)
+		{
+			x = hires ? 200 : 155;
+			y = PS_DrawPerfRows(x, 10, V_PURPLEMAP, batchcount_rows);
+
+			x = hires ? 200 : 220;
+			y = hires ? y + half_row : 10;
+			PS_DrawPerfRows(x, y, V_PURPLEMAP, batchcalls_rows);
+		}
+#endif
+	}
+
+	if (R_UsingFrameInterpolation())
+	{
+		x = hires ? 115 : 90;
+		PS_DrawPerfRows(x, cy, V_ROSYMAP, interpolation_rows);
+	}
+}
+
+static void PS_DrawGameLogicStats(void)
+{
+	const boolean hires = PS_HighResolution();
+	int x, y;
+
+	PS_DrawDescriptorHeader();
+
+	PS_DrawPerfRows(20, 10, V_YELLOWMAP, gamelogic_rows);
+
+	x = hires ? 115 : 90;
+	PS_DrawPerfRows(x, 10, V_BLUEMAP, thinkercount_rows);
+
+	if (hires)
 		V_DrawSmallString(212, 10, V_MONOSPACE | V_ALLOWLOWERCASE | V_PURPLEMAP, "Calls:");
 
-		draw_row = 15;
-	}
-	else
-	{
-		draw_row = 10;
-	}
+	x = hires ? 216 : 170;
+	y = hires ? 15 : 10;
+	PS_DrawPerfRows(x, y, V_PURPLEMAP, misc_calls_rows);
+}
 
-	M_DrawPerfCount(&misc_calls_col);
+static void PS_DrawThinkFrameStats(void)
+{
+	char s[100];
+	int i;
+	// text writing position
+	int x = 2;
+	int y = 4;
+	UINT32 text_color;
+	char tempbuffer[LUA_IDSIZE];
+	char last_mod_name[LUA_IDSIZE];
+	last_mod_name[0] = '\0';
+
+	PS_DrawDescriptorHeader();
+
+	for (i = 0; i < thinkframe_hooks_length; i++)
+	{
+
+#define NEXT_ROW() \
+y += 4; \
+if (y > 192) \
+{ \
+	y = 4; \
+	x += 106; \
+	if (x > 214) \
+		break; \
+}
+
+		char* str = thinkframe_hooks[i].short_src;
+		char* tempstr = tempbuffer;
+		int len = (int)strlen(str);
+		char* str_ptr;
+		if (strcmp(".lua", str + len - 4) == 0)
+		{
+			str[len-4] = '\0'; // remove .lua at end
+			len -= 4;
+		}
+		// we locate the wad/pk3 name in the string and compare it to
+		// what we found on the previous iteration.
+		// if the name has changed, print it out on the screen
+		strcpy(tempstr, str);
+		str_ptr = strrchr(tempstr, '|');
+		if (str_ptr)
+		{
+			*str_ptr = '\0';
+			str = str_ptr + 1; // this is the name of the hook without the mod file name
+			str_ptr = strrchr(tempstr, PATHSEP[0]);
+			if (str_ptr)
+				tempstr = str_ptr + 1;
+			// tempstr should now point to the mod name, (wad/pk3) possibly truncated
+			if (strcmp(tempstr, last_mod_name) != 0)
+			{
+				strcpy(last_mod_name, tempstr);
+				len = (int)strlen(tempstr);
+				if (len > 25)
+					tempstr += len - 25;
+				snprintf(s, sizeof s - 1, "%s", tempstr);
+				V_DrawSmallString(x, y, V_MONOSPACE | V_ALLOWLOWERCASE | V_GRAYMAP, s);
+				NEXT_ROW()
+			}
+			text_color = V_YELLOWMAP;
+		}
+		else
+		{
+			// probably a standalone lua file
+			// cut off the folder if it's there
+			str_ptr = strrchr(tempstr, PATHSEP[0]);
+			if (str_ptr)
+				str = str_ptr + 1;
+			text_color = 0; // white
+		}
+		len = (int)strlen(str);
+		if (len > 20)
+			str += len - 20;
+		snprintf(s, sizeof s - 1, "%20s: %d", str,
+				PS_GetMetricScreenValue(&thinkframe_hooks[i].time_taken, true));
+		V_DrawSmallString(x, y, V_MONOSPACE | V_ALLOWLOWERCASE | text_color, s);
+		NEXT_ROW()
+
+#undef NEXT_ROW
+
+	}
 }
 
 void M_DrawPerfStats(void)
 {
-	char s[100];
-
-	PS_SetFrameTime();
-
 	if (cv_perfstats.value == 1) // rendering
 	{
-		M_DrawRenderStats();
+		PS_UpdateFrameStats();
+		PS_DrawRenderStats();
 	}
 	else if (cv_perfstats.value == 2) // logic
 	{
-		M_DrawTickStats();
+		// PS_UpdateTickStats is called in TryRunTics, since otherwise it would miss
+		// tics when frame skips happen
+		PS_DrawGameLogicStats();
 	}
 	else if (cv_perfstats.value == 3) // lua thinkframe
 	{
-		if (!(gamestate == GS_LEVEL || (gamestate == GS_TITLESCREEN && titlemapinaction)))
+		if (!PS_IsLevelActive())
 			return;
-		if (vid.width < 640 || vid.height < 400) // low resolution
+		if (!PS_HighResolution())
 		{
-			// it's not gonna fit very well..
-			V_DrawThinString(30, 30, V_MONOSPACE | V_ALLOWLOWERCASE | V_YELLOWMAP, "Not available for resolutions below 640x400");
+			// Low resolutions can't really use V_DrawSmallString that is used by thinkframe stats.
+			// A low-res version using V_DrawThinString could be implemented,
+			// but it would have much less space for information.
+			V_DrawThinString(80, 92, V_MONOSPACE | V_ALLOWLOWERCASE | V_YELLOWMAP, "Perfstats 3 is not available");
+			V_DrawThinString(80, 100, V_MONOSPACE | V_ALLOWLOWERCASE | V_YELLOWMAP, "for resolutions below 640x400.");
 		}
-		else // high resolution
+		else
 		{
-			int i;
-			// text writing position
-			int x = 2;
-			int y = 4;
-			UINT32 text_color;
-			char tempbuffer[LUA_IDSIZE];
-			char last_mod_name[LUA_IDSIZE];
-			last_mod_name[0] = '\0';
-			for (i = 0; i < thinkframe_hooks_length; i++)
-			{
-				char* str = thinkframe_hooks[i].short_src;
-				char* tempstr = tempbuffer;
-				int len = (int)strlen(str);
-				char* str_ptr;
-				if (strcmp(".lua", str + len - 4) == 0)
-				{
-					str[len-4] = '\0'; // remove .lua at end
-					len -= 4;
-				}
-				// we locate the wad/pk3 name in the string and compare it to
-				// what we found on the previous iteration.
-				// if the name has changed, print it out on the screen
-				strcpy(tempstr, str);
-				str_ptr = strrchr(tempstr, '|');
-				if (str_ptr)
-				{
-					*str_ptr = '\0';
-					str = str_ptr + 1; // this is the name of the hook without the mod file name
-					str_ptr = strrchr(tempstr, PATHSEP[0]);
-					if (str_ptr)
-						tempstr = str_ptr + 1;
-					// tempstr should now point to the mod name, (wad/pk3) possibly truncated
-					if (strcmp(tempstr, last_mod_name) != 0)
-					{
-						strcpy(last_mod_name, tempstr);
-						len = (int)strlen(tempstr);
-						if (len > 25)
-							tempstr += len - 25;
-						snprintf(s, sizeof s - 1, "%s", tempstr);
-						V_DrawSmallString(x, y, V_MONOSPACE | V_ALLOWLOWERCASE | V_GRAYMAP, s);
-						y += 4; // repeated code!
-						if (y > 192)
-						{
-							y = 4;
-							x += 106;
-							if (x > 214)
-								break;
-						}
-					}
-					text_color = V_YELLOWMAP;
-				}
-				else
-				{
-					// probably a standalone lua file
-					// cut off the folder if it's there
-					str_ptr = strrchr(tempstr, PATHSEP[0]);
-					if (str_ptr)
-						str = str_ptr + 1;
-					text_color = 0; // white
-				}
-				len = (int)strlen(str);
-				if (len > 20)
-					str += len - 20;
-				snprintf(s, sizeof s - 1, "%20s: %u", str, thinkframe_hooks[i].time_taken);
-				V_DrawSmallString(x, y, V_MONOSPACE | V_ALLOWLOWERCASE | text_color, s);
-				y += 4; // repeated code!
-				if (y > 192)
-				{
-					y = 4;
-					x += 106;
-					if (x > 214)
-						break;
-				}
-			}
+			PS_DrawThinkFrameStats();
 		}
 	}
+}
+
+// remove and unallocate history from all metrics
+static void PS_ClearHistory(void)
+{
+	int i;
+
+	Z_FreeTag(PU_PERFSTATS);
+	// thinkframe hook metric history pointers need to be cleared manually
+	for (i = 0; i < thinkframe_hooks_length; i++)
+	{
+		thinkframe_hooks[i].time_taken.history = NULL;
+	}
+
+	ps_frame_index = ps_tick_index = 0;
+	// PS_UpdateMetricHistory will set these correctly when it runs
+	ps_frame_samples_left = ps_tick_samples_left = 0;
+}
+
+void PS_PerfStats_OnChange(void)
+{
+	if (cv_perfstats.value && cv_ps_samplesize.value > 1)
+		PS_ClearHistory();
+}
+
+void PS_SampleSize_OnChange(void)
+{
+	if (cv_ps_samplesize.value > 1)
+		PS_ClearHistory();
 }

@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -40,19 +40,18 @@ EXPORT void HWRAPI(DrawIndexedTriangles) (FSurfaceInfo *pSurf, FOutVector *pOutV
 EXPORT void HWRAPI(RenderSkyDome) (gl_sky_t *sky);
 EXPORT void HWRAPI(SetBlend) (FBITFIELD PolyFlags);
 EXPORT void HWRAPI(ClearBuffer) (FBOOLEAN ColorMask, FBOOLEAN DepthMask, FRGBAFloat *ClearColor);
-EXPORT void HWRAPI(SetTexture) (FTextureInfo *TexInfo);
-EXPORT void HWRAPI(UpdateTexture) (FTextureInfo *TexInfo);
-EXPORT void HWRAPI(DeleteTexture) (FTextureInfo *TexInfo);
+EXPORT void HWRAPI(SetTexture) (GLMipmap_t *TexInfo);
+EXPORT void HWRAPI(UpdateTexture) (GLMipmap_t *TexInfo);
+EXPORT void HWRAPI(DeleteTexture) (GLMipmap_t *TexInfo);
 EXPORT void HWRAPI(ReadRect) (INT32 x, INT32 y, INT32 width, INT32 height, INT32 dst_stride, UINT16 *dst_data);
 EXPORT void HWRAPI(GClipRect) (INT32 minx, INT32 miny, INT32 maxx, INT32 maxy, float nearclip);
 EXPORT void HWRAPI(ClearMipMapCache) (void);
-EXPORT void HWRAPI(ClearCacheList) (void);
 
 //Hurdler: added for backward compatibility
 EXPORT void HWRAPI(SetSpecialState) (hwdspecialstate_t IdState, INT32 Value);
 
 //Hurdler: added for new development
-EXPORT void HWRAPI(DrawModel) (model_t *model, INT32 frameIndex, INT32 duration, INT32 tics, INT32 nextFrameIndex, FTransform *pos, float scale, UINT8 flipped, UINT8 hflipped, FSurfaceInfo *Surface);
+EXPORT void HWRAPI(DrawModel) (model_t *model, INT32 frameIndex, float duration, float tics, INT32 nextFrameIndex, FTransform *pos, float hscale, float vscale, UINT8 flipped, UINT8 hflipped, FSurfaceInfo *Surface);
 EXPORT void HWRAPI(CreateModelVBOs) (model_t *model);
 EXPORT void HWRAPI(SetTransform) (FTransform *ptransform);
 EXPORT INT32 HWRAPI(GetTextureUsed) (void);
@@ -69,7 +68,6 @@ EXPORT void HWRAPI(DrawScreenFinalTexture) (int width, int height);
 #define SCREENVERTS 10
 EXPORT void HWRAPI(PostImgRedraw) (float points[SCREENVERTS][SCREENVERTS][2]);
 
-// jimita
 EXPORT boolean HWRAPI(CompileShaders) (void);
 EXPORT void HWRAPI(CleanShaders) (void);
 EXPORT void HWRAPI(SetShader) (int type);
@@ -101,7 +99,6 @@ struct hwdriver_s
 	ReadRect            pfnReadRect;
 	GClipRect           pfnGClipRect;
 	ClearMipMapCache    pfnClearMipMapCache;
-	ClearCacheList      pfnClearCacheList;
 	SetSpecialState     pfnSetSpecialState;//Hurdler: added for backward compatibility
 	DrawModel           pfnDrawModel;
 	CreateModelVBOs     pfnCreateModelVBOs;
@@ -139,4 +136,3 @@ extern struct hwdriver_s hwdriver;
 #endif //not defined _CREATE_DLL_
 
 #endif //__HWR_DRV_H__
-

@@ -13,6 +13,7 @@
 ///	        FS_FOUND
 
 #include <stdio.h>
+#include <errno.h>
 #ifdef __GNUC__
 #include <dirent.h>
 #endif
@@ -29,15 +30,16 @@
 #include "m_misc.h"
 #include "z_zone.h"
 #include "m_menu.h" // Addons_option_Onchange
+#include "w_wad.h"
 
 #if defined (_WIN32) && defined (_MSC_VER)
 
-#include <errno.h>
 #include <io.h>
 #include <tchar.h>
 
 #define SUFFIX	"*"
 #define	SLASH	"\\"
+#define	S_ISREG(m)	(((m) & S_IFMT) == S_IFREG)
 #define	S_ISDIR(m)	(((m) & S_IFMT) == S_IFDIR)
 
 #ifndef INVALID_FILE_ATTRIBUTES
@@ -306,6 +308,39 @@ closedir (DIR * dirp)
 }
 #endif
 
+// fopen but it REALLY only works on regular files
+// Turns out, on linux, anyway, you can fopen directories
+// in read mode. (It's supposed to fail in write mode
+// though!!)
+FILE *fopenfile(const char *path, const char *mode)
+{
+	FILE *h = fopen(path, mode);
+
+	if (h != NULL)
+	{
+		struct stat st;
+		int eno;
+
+		if (fstat(fileno(h), &st) == -1)
+		{
+			eno = errno;
+		}
+		else if (!S_ISREG(st.st_mode))
+		{
+			eno = EACCES; // set some kinda error
+		}
+		else
+		{
+			return h; // ok
+		}
+
+		fclose(h);
+		errno = eno;
+	}
+
+	return NULL;
+}
+
 static CV_PossibleValue_t addons_cons_t[] = {{0, "Default"},
 #if 1
 												{1, "HOME"}, {2, "SRB2"},
@@ -337,8 +372,10 @@ size_t dir_on[menudepth];
 UINT8 refreshdirmenu = 0;
 char *refreshdirname = NULL;
 
-size_t packetsizetally = 0;
-size_t mainwadstally = 0;
+#define dirpathlen 1024
+#define maxdirdepth 48
+
+#define isuptree(dirent) ((dirent)[0]=='.' && ((dirent)[1]=='\0' || ((dirent)[1]=='.' && (dirent)[2]=='\0')))
 
 filestatus_t filesearch(char *filename, const char *startpath, const UINT8 *wantedmd5sum, boolean completepath, int maxsearchdepth)
 {
@@ -387,10 +424,7 @@ filestatus_t filesearch(char *filename, const char *startpath, const UINT8 *want
 			continue;
 		}
 
-		if (dent->d_name[0]=='.' &&
-				(dent->d_name[1]=='\0' ||
-					(dent->d_name[1]=='.' &&
-						dent->d_name[2]=='\0')))
+		if (isuptree(dent->d_name))
 		{
 			// we don't want to scan uptree
 			continue;
@@ -445,6 +479,381 @@ filestatus_t filesearch(char *filename, const char *startpath, const UINT8 *want
 	return retval;
 }
 
+#ifndef AVOID_ERRNO
+int direrror = 0;
+#endif
+
+// Checks if the specified path is a directory.
+// Returns 1 if so, 0 if not, and -1 if an error occurred.
+// direrror is set if there was an error.
+INT32 pathisdirectory(const char *path)
+{
+	struct stat fsstat;
+
+	if (stat(path, &fsstat) < 0)
+	{
+#ifndef AVOID_ERRNO
+		direrror = errno;
+#endif
+		return -1;
+	}
+	else if (S_ISDIR(fsstat.st_mode))
+		return 1;
+
+	return 0;
+}
+
+// Concatenates two paths, and checks if it is a directory that can be opened.
+// Returns 1 if so, 0 if not, and -1 if an error occurred.
+INT32 concatpaths(const char *path, const char *startpath)
+{
+	char dirpath[dirpathlen];
+	DIR *dirhandle;
+	INT32 stat;
+
+	if (startpath)
+	{
+		char basepath[dirpathlen];
+
+		snprintf(basepath, sizeof basepath, "%s" PATHSEP, startpath);
+		snprintf(dirpath, sizeof dirpath, "%s%s", basepath, path);
+
+		// Base path and directory path are the same? Not valid.
+		stat = samepaths(basepath, dirpath);
+
+		if (stat == 1)
+			return 0;
+		else if (stat < 0)
+			return -1;
+	}
+	else
+		snprintf(dirpath, sizeof dirpath, "%s", path);
+
+	// Check if the path is a directory.
+	// Will return -1 if there was an error.
+	stat = pathisdirectory(dirpath);
+	if (stat == 0)
+		return 0;
+	else if (stat < 0)
+	{
+		// The path doesn't exist, so it can't be a directory.
+		if (direrror == ENOENT)
+			return 0;
+
+		return -1;
+	}
+
+	// Open the directory.
+	// Will return 0 if it couldn't be opened.
+	dirhandle = opendir(dirpath);
+	if (dirhandle == NULL)
+		return 0;
+	else
+		closedir(dirhandle);
+
+	return 1;
+}
+
+// Checks if two paths are the same. Returns 1 if so, and 0 if not.
+// Returns -1 if an error occurred with the first path,
+// and returns -2 if an error occurred with the second path.
+// direrror is set if there was an error.
+INT32 samepaths(const char *path1, const char *path2)
+{
+	struct stat stat1;
+	struct stat stat2;
+
+	if (stat(path1, &stat1) < 0)
+	{
+#ifndef AVOID_ERRNO
+		direrror = errno;
+#endif
+		return -1;
+	}
+	if (stat(path2, &stat2) < 0)
+	{
+#ifndef AVOID_ERRNO
+		direrror = errno;
+#endif
+		return -2;
+	}
+
+	if (stat1.st_dev == stat2.st_dev)
+	{
+#if !defined(_WIN32)
+		return (stat1.st_ino == stat2.st_ino);
+#else
+		// The above doesn't work on NTFS or FAT.
+		HANDLE file1 = CreateFileA(path1, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
+		HANDLE file2 = CreateFileA(path2, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
+		BY_HANDLE_FILE_INFORMATION file1info, file2info;
+
+		if (file1 == INVALID_HANDLE_VALUE)
+		{
+#ifndef AVOID_ERRNO
+			direrror = ENOENT;
+#endif
+			return -1;
+		}
+		else if (file2 == INVALID_HANDLE_VALUE)
+		{
+			CloseHandle(file1);
+#ifndef AVOID_ERRNO
+			direrror = ENOENT;
+#endif
+			return -2;
+		}
+
+		// I have no idea why GetFileInformationByHandle would fail.
+		// Microsoft's documentation doesn't tell me.
+		// I'll just use EIO...
+		if (!GetFileInformationByHandle(file1, &file1info))
+		{
+#ifndef AVOID_ERRNO
+			direrror = EIO;
+#endif
+			return -1;
+		}
+		else if (!GetFileInformationByHandle(file2, &file2info))
+		{
+			CloseHandle(file1);
+			CloseHandle(file2);
+#ifndef AVOID_ERRNO
+			direrror = EIO;
+#endif
+			return -2;
+		}
+
+		if (file1info.dwVolumeSerialNumber == file2info.dwVolumeSerialNumber
+		&& file1info.nFileIndexLow == file2info.nFileIndexLow
+		&& file1info.nFileIndexHigh == file2info.nFileIndexHigh)
+		{
+			CloseHandle(file1);
+			CloseHandle(file2);
+			return 1;
+		}
+
+		return 0;
+#endif
+	}
+
+	return 0;
+}
+
+//
+// Directory loading
+//
+
+static void initdirpath(char *dirpath, size_t *dirpathindex, int depthleft)
+{
+	dirpathindex[depthleft] = strlen(dirpath) + 1;
+
+	if (dirpath[dirpathindex[depthleft]-2] != PATHSEP[0])
+	{
+		dirpath[dirpathindex[depthleft]-1] = PATHSEP[0];
+		dirpath[dirpathindex[depthleft]] = 0;
+	}
+	else
+		dirpathindex[depthleft]--;
+}
+
+lumpinfo_t *getdirectoryfiles(const char *path, UINT16 *nlmp, UINT16 *nfolders)
+{
+	DIR **dirhandle;
+	struct dirent *dent;
+	struct stat fsstat;
+
+	int rootdir = (maxdirdepth - 1);
+	int depthleft = rootdir;
+
+	char dirpath[dirpathlen];
+	size_t *dirpathindex;
+
+	lumpinfo_t *lumpinfo, *lump_p;
+	UINT16 i = 0, numlumps = 0;
+
+	boolean failure = false;
+
+	dirhandle = (DIR **)malloc(maxdirdepth * sizeof (DIR*));
+	dirpathindex = (size_t *)malloc(maxdirdepth * sizeof(size_t));
+
+	// Open the root directory
+	strlcpy(dirpath, path, dirpathlen);
+	dirhandle[depthleft] = opendir(dirpath);
+
+	if (dirhandle[depthleft] == NULL)
+	{
+		free(dirhandle);
+		free(dirpathindex);
+		return NULL;
+	}
+
+	initdirpath(dirpath, dirpathindex, depthleft);
+	(*nfolders) = 0;
+
+	// Count files and directories
+	while (depthleft < maxdirdepth)
+	{
+		dirpath[dirpathindex[depthleft]] = 0;
+		dent = readdir(dirhandle[depthleft]);
+
+		if (!dent)
+		{
+			if (depthleft != rootdir) // Don't close the root directory
+				closedir(dirhandle[depthleft]);
+			depthleft++;
+			continue;
+		}
+		else if (isuptree(dent->d_name))
+			continue;
+
+		strcpy(&dirpath[dirpathindex[depthleft]], dent->d_name);
+
+		if (stat(dirpath, &fsstat) < 0)
+			;
+		else if (S_ISDIR(fsstat.st_mode) && depthleft)
+		{
+			dirpathindex[--depthleft] = strlen(dirpath) + 1;
+			dirhandle[depthleft] = opendir(dirpath);
+
+			if (dirhandle[depthleft])
+				(*nfolders)++;
+			else
+				depthleft++;
+
+			dirpath[dirpathindex[depthleft]-1] = '/';
+			dirpath[dirpathindex[depthleft]] = 0;
+		}
+		else
+			numlumps++;
+
+		// Failure: Too many files.
+		if (numlumps == UINT16_MAX)
+		{
+			(*nlmp) = UINT16_MAX;
+			failure = true;
+			break;
+		}
+	}
+
+	// Failure: No files have been found.
+	if (!numlumps)
+	{
+		(*nlmp) = 0;
+		failure = true;
+	}
+
+	// Close any open directories and return if something went wrong.
+	if (failure)
+	{
+		for (; depthleft < maxdirdepth; closedir(dirhandle[depthleft++]));
+		free(dirpathindex);
+		free(dirhandle);
+		return NULL;
+	}
+
+	// Create the files and directories as lump entries
+	// It's possible to create lumps and count files at the same time,
+	// but I didn't want to have to reallocate memory for every lump.
+	rewinddir(dirhandle[rootdir]);
+	depthleft = rootdir;
+
+	strlcpy(dirpath, path, dirpathlen);
+	initdirpath(dirpath, dirpathindex, depthleft);
+
+	lump_p = lumpinfo = Z_Calloc(numlumps * sizeof(lumpinfo_t), PU_STATIC, NULL);
+
+	while (depthleft < maxdirdepth)
+	{
+		char *fullname, *trimname;
+
+		dirpath[dirpathindex[depthleft]] = 0;
+		dent = readdir(dirhandle[depthleft]);
+
+		if (!dent)
+		{
+			closedir(dirhandle[depthleft++]);
+			continue;
+		}
+		else if (isuptree(dent->d_name))
+			continue;
+
+		strcpy(&dirpath[dirpathindex[depthleft]], dent->d_name);
+
+		if (stat(dirpath, &fsstat) < 0)
+			continue;
+		else if (S_ISDIR(fsstat.st_mode) && depthleft)
+		{
+			dirpathindex[--depthleft] = strlen(dirpath) + 1;
+			dirhandle[depthleft] = opendir(dirpath);
+
+			if (dirhandle[depthleft])
+			{
+				dirpath[dirpathindex[depthleft]-1] = '/';
+				dirpath[dirpathindex[depthleft]] = 0;
+			}
+			else
+				depthleft++;
+
+			continue;
+		}
+
+		lump_p->diskpath = Z_StrDup(dirpath); // Path in the filesystem to the file
+		lump_p->compression = CM_NOCOMPRESSION; // Lump is uncompressed
+
+		// Remove the directory's path.
+		fullname = lump_p->diskpath;
+		if (strstr(fullname, path))
+			fullname += strlen(path) + 1;
+
+		// Get the 8-character long lump name.
+		trimname = strrchr(fullname, '/');
+		if (trimname)
+			trimname++;
+		else
+			trimname = fullname;
+
+		if (trimname[0])
+		{
+			char *dotpos = strrchr(trimname, '.');
+			if (dotpos == NULL)
+				dotpos = fullname + strlen(fullname);
+
+			strncpy(lump_p->name, trimname, min(8, dotpos - trimname));
+
+			// The name of the file, without the extension.
+			lump_p->longname = Z_Calloc(dotpos - trimname + 1, PU_STATIC, NULL);
+			strlcpy(lump_p->longname, trimname, dotpos - trimname + 1);
+		}
+		else
+			lump_p->longname = Z_Calloc(1, PU_STATIC, NULL);
+
+		// The complete name of the file, with its extension,
+		// excluding the path of the directory where it resides.
+		lump_p->fullname = Z_StrDup(fullname);
+		lump_p->hash = quickncasehash(lump_p->name, 8);
+
+		lump_p++;
+		i++;
+
+		if (i > numlumps || i == (UINT16_MAX-1))
+		{
+			for (; depthleft < maxdirdepth; closedir(dirhandle[depthleft++])); // Close any open directories.
+			break;
+		}
+	}
+
+	free(dirpathindex);
+	free(dirhandle);
+
+	(*nlmp) = numlumps;
+	return lumpinfo;
+}
+
+//
+// Addons menu
+//
+
 char exttable[NUM_EXT_TABLE][7] = { // maximum extension length (currently 4) plus 3 (null terminator, stop, and length including previous two)
 	"\5.txt", "\5.cfg", // exec
 	"\5.wad",
@@ -453,8 +862,7 @@ char exttable[NUM_EXT_TABLE][7] = { // maximum extension length (currently 4) pl
 #endif
 	"\5.pk3", "\5.soc", "\5.lua"}; // addfile
 
-char filenamebuf[MAX_WADFILES][MAX_WADPATH];
-
+static char (*filenamebuf)[MAX_WADPATH];
 
 static boolean filemenucmp(char *haystack, char *needle)
 {
@@ -640,10 +1048,7 @@ boolean preparefilemenu(boolean samedepth)
 
 		if (!dent)
 			break;
-		else if (dent->d_name[0]=='.' &&
-				(dent->d_name[1]=='\0' ||
-					(dent->d_name[1]=='.' &&
-						dent->d_name[2]=='\0')))
+		else if (isuptree(dent->d_name))
 			continue; // we don't want to scan uptree
 
 		strcpy(&menupath[menupathindex[menudepthleft]],dent->d_name);
@@ -704,10 +1109,7 @@ boolean preparefilemenu(boolean samedepth)
 
 		if (!dent)
 			break;
-		else if (dent->d_name[0]=='.' &&
-				(dent->d_name[1]=='\0' ||
-					(dent->d_name[1]=='.' &&
-						dent->d_name[2]=='\0')))
+		else if (isuptree(dent->d_name))
 			continue; // we don't want to scan uptree
 
 		strcpy(&menupath[menupathindex[menudepthleft]],dent->d_name);
@@ -732,6 +1134,10 @@ boolean preparefilemenu(boolean samedepth)
 				if (ext >= EXT_LOADSTART)
 				{
 					size_t i;
+
+					if (filenamebuf == NULL)
+						filenamebuf = calloc(sizeof(char) * MAX_WADPATH, numwadfiles);
+
 					for (i = 0; i < numwadfiles; i++)
 					{
 						if (!filenamebuf[i][0])
@@ -779,6 +1185,12 @@ boolean preparefilemenu(boolean samedepth)
 			else
 				coredirmenu[numfolders + pos++] = temp;
 		}
+	}
+
+	if (filenamebuf)
+	{
+		free(filenamebuf);
+		filenamebuf = NULL;
 	}
 
 	closedir(dirhandle);

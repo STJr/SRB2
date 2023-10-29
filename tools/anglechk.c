@@ -22,7 +22,6 @@
 #ifdef _MSC_VER
 #include <assert.h>
 #endif
-#define NOASM
 #include "../src/tables.h"
 #define NO_M
 #include "../src/m_fixed.c"

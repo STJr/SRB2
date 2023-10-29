@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2012-2016 by John "JTE" Muniz.
-// Copyright (C) 2012-2020 by Sonic Team Junior.
+// Copyright (C) 2012-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -10,10 +10,14 @@
 /// \file  lua_script.h
 /// \brief Lua scripting basics
 
+#ifndef LUA_SCRIPT_H
+#define LUA_SCRIPT_H
+
 #include "m_fixed.h"
 #include "doomtype.h"
 #include "d_player.h"
 #include "g_state.h"
+#include "taglist.h"
 
 #include "blua/lua.h"
 #include "blua/lualib.h"
@@ -46,28 +50,59 @@ void LUA_LoadLump(UINT16 wad, UINT16 lump, boolean noresults);
 void LUA_DumpFile(const char *filename);
 #endif
 fixed_t LUA_EvalMath(const char *word);
-void LUA_PushLightUserdata(lua_State *L, void *data, const char *meta);
-void LUA_PushUserdata(lua_State *L, void *data, const char *meta);
 int  LUA_PushServerPlayer(lua_State *L);
-void LUA_InvalidateUserdata(void *data);
-void LUA_InvalidateLevel(void);
-void LUA_InvalidateMapthings(void);
-void LUA_InvalidatePlayer(player_t *player);
 void LUA_Step(void);
 void LUA_Archive(void);
 void LUA_UnArchive(void);
 int LUA_PushGlobals(lua_State *L, const char *word);
 int LUA_CheckGlobals(lua_State *L, const char *word);
 void Got_Luacmd(UINT8 **cp, INT32 playernum); // lua_consolelib.c
-void LUA_CVarChanged(const char *name); // lua_consolelib.c
-int Lua_optoption(lua_State *L, int narg,
-	const char *def, const char *const lst[]);
-void LUAh_NetArchiveHook(lua_CFunction archFunc);
+void LUA_CVarChanged(void *cvar); // lua_consolelib.c
+int Lua_optoption(lua_State *L, int narg, int def, int list_ref);
+int Lua_CreateFieldTable(lua_State *L, const char *const lst[]);
+void LUA_HookNetArchive(lua_CFunction archFunc);
+
+void LUA_PushTaggableObjectArray
+(		lua_State *L,
+		const char *field,
+		lua_CFunction iterator,
+		lua_CFunction indexer,
+		lua_CFunction counter,
+		taggroup_t *garray[],
+		size_t * max_elements,
+		void * element_array,
+		size_t sizeof_element,
+		const char *meta);
+
+void LUA_InsertTaggroupIterator
+(		lua_State *L,
+		taggroup_t *garray[],
+		size_t * max_elements,
+		void * element_array,
+		size_t sizeof_element,
+		const char * meta);
+
+typedef enum {
+	LPUSHED_NIL,
+	LPUSHED_NEW,
+	LPUSHED_EXISTING,
+} lpushed_t;
+
+void LUA_PushUserdata(lua_State *L, void *data, const char *meta);
+lpushed_t LUA_RawPushUserdata(lua_State *L, void *data);
+
+void LUA_InvalidateUserdata(void *data);
+
+void LUA_InvalidateLevel(void);
+void LUA_InvalidateMapthings(void);
+void LUA_InvalidatePlayer(player_t *player);
 
 // Console wrapper
 void COM_Lua_f(void);
 
 #define LUA_ErrInvalid(L, type) luaL_error(L, "accessed " type " doesn't exist anymore, please check 'valid' before using " type ".");
+
+#define LUA_ErrSetDirectly(L, type, field) luaL_error(L, type " field " LUA_QL(field) " cannot be set directly.")
 
 // Deprecation warnings
 // Shows once upon use. Then doesn't show again.
@@ -99,3 +134,5 @@ void COM_Lua_f(void);
 
 #define INLEVEL if (! ISINLEVEL)\
 return luaL_error(L, "This can only be used in a level!");
+
+#endif/*LUA_SCRIPT_H*/

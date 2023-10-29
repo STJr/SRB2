@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -66,9 +66,12 @@ void R_AddSprites(sector_t *sec, INT32 lightlevel);
 void R_InitSprites(void);
 void R_ClearSprites(void);
 
+UINT8 R_GetBoundingBoxColor(mobj_t *thing);
+boolean R_ThingBoundingBoxVisible(mobj_t *thing);
+
 boolean R_ThingVisible (mobj_t *thing);
 
-boolean R_ThingVisibleWithinDist (mobj_t *thing,
+boolean R_ThingWithinDist (mobj_t *thing,
 		fixed_t        draw_dist,
 		fixed_t nights_draw_dist);
 
@@ -82,6 +85,7 @@ boolean R_ThingIsPaperSprite (mobj_t *thing);
 boolean R_ThingIsFloorSprite (mobj_t *thing);
 
 boolean R_ThingIsFullBright (mobj_t *thing);
+boolean R_ThingIsSemiBright (mobj_t *thing);
 boolean R_ThingIsFullDark (mobj_t *thing);
 
 // --------------
@@ -99,7 +103,7 @@ typedef struct
 	sector_t* viewsector;
 } maskcount_t;
 
-void R_DrawMasked(maskcount_t* masks, UINT8 nummasks);
+void R_DrawMasked(maskcount_t* masks, INT32 nummasks);
 
 // ----------
 // VISSPRITES
@@ -119,19 +123,22 @@ typedef enum
 	SC_NONE       = 0,
 	SC_TOP        = 1,
 	SC_BOTTOM     = 1<<1,
+	SC_NOTVISIBLE = 1<<2,
 	// other flags
-	SC_PRECIP     = 1<<2,
-	SC_LINKDRAW   = 1<<3,
-	SC_FULLBRIGHT = 1<<4,
-	SC_FULLDARK   = 1<<5,
-	SC_VFLIP      = 1<<6,
-	SC_ISSCALED   = 1<<7,
-	SC_ISROTATED  = 1<<8,
-	SC_SHADOW     = 1<<9,
-	SC_SHEAR      = 1<<10,
-	SC_SPLAT      = 1<<11,
+	SC_PRECIP     = 1<<3,
+	SC_LINKDRAW   = 1<<4,
+	SC_FULLBRIGHT = 1<<5,
+	SC_SEMIBRIGHT = 1<<6,
+	SC_FULLDARK   = 1<<7,
+	SC_VFLIP      = 1<<8,
+	SC_ISSCALED   = 1<<9,
+	SC_ISROTATED  = 1<<10,
+	SC_SHADOW     = 1<<11,
+	SC_SHEAR      = 1<<12,
+	SC_SPLAT      = 1<<13,
+	SC_BBOX       = 1<<14,
 	// masks
-	SC_CUTMASK    = SC_TOP|SC_BOTTOM,
+	SC_CUTMASK    = SC_TOP|SC_BOTTOM|SC_NOTVISIBLE,
 	SC_FLAGMASK   = ~SC_CUTMASK
 } spritecut_e;
 
@@ -151,17 +158,26 @@ typedef struct vissprite_s
 	INT32 x1, x2;
 
 	fixed_t gx, gy; // for line side calculation
-	fixed_t gz, gzt; // global bottom/top for silhouette clipping and sorting with 3D floors
+	fixed_t gz, gzt; // global bottom/top for silhouette clipping
+	fixed_t pz, pzt; // physical bottom/top for sorting with 3D floors
 
 	fixed_t startfrac; // horizontal position of x1
-	fixed_t scale;
-	fixed_t sortscale; // sortscale only differs from scale for paper sprites, floor sprites, and MF2_LINKDRAW
+	fixed_t xscale, scale; // projected horizontal and vertical scales
+	fixed_t thingscale; // the object's scale
+	fixed_t sortscale; // sortscale only differs from scale for paper sprites and floor sprites
 	fixed_t sortsplat; // the sortscale from behind the floor sprite
+	fixed_t linkscale; // the sortscale for MF2_LINKDRAW sprites
 	fixed_t scalestep; // only for paper sprites, 0 otherwise
 	fixed_t paperoffset, paperdistance; // for paper sprites, offset/dist relative to the angle
 	fixed_t xiscale; // negative if flipped
 
-	angle_t centerangle; // for paper sprites
+	angle_t centerangle; // for paper sprites / splats
+
+	// for floor sprites
+	struct {
+		fixed_t x, y, z; // the viewpoint's current position
+		angle_t angle; // the viewpoint's current angle
+	} viewpoint;
 
 	struct {
 		fixed_t tan; // The amount to shear the sprite vertically per row
@@ -182,10 +198,10 @@ typedef struct vissprite_s
 
 	extracolormap_t *extra_colormap; // global colormaps
 
-	fixed_t xscale;
+	fixed_t thingheight; // The actual height of the thing (for 3D floors)
+	sector_t *sector; // The sector containing the thing.
 
 	// Precalculated top and bottom screen coords for the sprite.
-	sector_t *sector; // The sector containing the thing.
 	INT16 sz, szt;
 
 	spritecut_e cut;
@@ -197,17 +213,21 @@ typedef struct vissprite_s
 
 	fixed_t shadowscale;
 
+	skincolornum_t color;
+
 	INT16 clipbot[MAXVIDWIDTH], cliptop[MAXVIDWIDTH];
 
-	INT32 dispoffset; // copy of info->dispoffset, affects ordering but not drawing
+	INT32 dispoffset; // copy of mobj->dispoffset, affects ordering but not drawing
 } vissprite_t;
 
-extern UINT32 visspritecount;
+extern UINT32 visspritecount, numvisiblesprites;
 
 void R_ClipSprites(drawseg_t* dsstart, portal_t* portal);
-void R_ClipVisSprite(vissprite_t *spr, INT32 x1, INT32 x2, drawseg_t* dsstart, portal_t* portal);
 
 boolean R_SpriteIsFlashing(vissprite_t *vis);
+
+void R_DrawThingBoundingBox(vissprite_t *spr);
+
 UINT8 *R_GetSpriteTranslation(vissprite_t *vis);
 
 // ----------
