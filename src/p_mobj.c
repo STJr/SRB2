@@ -10544,6 +10544,7 @@ static fixed_t P_DefaultMobjShadowScale (mobj_t *thing)
 		case MT_SMALLGRABCHAIN:
 		case MT_BIGGRABCHAIN:
 
+		case MT_BLUESPRINGBALL:
 		case MT_YELLOWSPRINGBALL:
 		case MT_REDSPRINGBALL:
 
