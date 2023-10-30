@@ -25,6 +25,11 @@ void PaletteRemap_Init(void)
 	remaptable_t *base = PaletteRemap_New();
 	PaletteRemap_SetIdentity(base);
 	PaletteRemap_Add(base);
+
+	remaptable_t *grayscale = PaletteRemap_New();
+	PaletteRemap_SetIdentity(grayscale);
+	PaletteRemap_AddDesaturation(grayscale, 0, 255, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0);
+	R_AddCustomTranslation("Grayscale", PaletteRemap_Add(grayscale));
 }
 
 remaptable_t *PaletteRemap_New(void)
