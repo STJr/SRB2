@@ -689,6 +689,11 @@ void R_AddCustomTranslation(const char *name, int trnum)
 	tr->hash = quickncasehash(name, strlen(name));
 }
 
+unsigned R_NumCustomTranslations(void)
+{
+	return numcustomtranslations;
+}
+
 remaptable_t *R_GetTranslationByID(int id)
 {
 	if (id < 0 || id >= (signed)numpaletteremaps)

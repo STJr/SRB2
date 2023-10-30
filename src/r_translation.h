@@ -43,6 +43,7 @@ struct PaletteRemapParseResult *PaletteRemap_ParseTranslation(remaptable_t *tr, 
 
 int R_FindCustomTranslation(const char *name);
 void R_AddCustomTranslation(const char *name, int trnum);
+unsigned R_NumCustomTranslations(void);
 remaptable_t *R_GetTranslationByID(int id);
 
 void R_LoadTrnslateLumps(void);

@@ -22,6 +22,7 @@
 #include "r_patch.h"
 #include "r_picformats.h"
 #include "r_things.h"
+#include "r_translation.h"
 #include "r_draw.h" // R_GetColorByName
 #include "doomstat.h" // luabanks[]
 
@@ -1899,6 +1900,32 @@ static int colorramp_len(lua_State *L)
 	return 1;
 }
 
+//////////////////////
+// TRANSLATION INFO //
+//////////////////////
+
+// Arbitrary translations[] table index -> colormap_t *
+static int lib_getTranslation(lua_State *L)
+{
+	lua_remove(L, 1);
+
+	const char *name = luaL_checkstring(L, 1);
+	remaptable_t *tr = R_GetTranslationByID(R_FindCustomTranslation(name));
+	if (tr)
+		LUA_PushUserdata(L, &tr->remap, META_COLORMAP);
+	else
+		lua_pushnil(L);
+
+	return 1;
+}
+
+// #translations -> R_GetNumTranslations()
+static int lib_translationslen(lua_State *L)
+{
+	lua_pushinteger(L, R_NumCustomTranslations());
+	return 1;
+}
+
 //////////////////////////////
 //
 // Now push all these functions into the Lua state!
@@ -2075,6 +2102,16 @@ int LUA_InfoLib(lua_State *L)
 			lua_setfield(L, -2, "__len");
 		lua_setmetatable(L, -2);
 	lua_setglobal(L, "skincolors");
+
+	lua_newuserdata(L, 0);
+		lua_createtable(L, 0, 2);
+			lua_pushcfunction(L, lib_getTranslation);
+			lua_setfield(L, -2, "__index");
+
+			lua_pushcfunction(L, lib_translationslen);
+			lua_setfield(L, -2, "__len");
+		lua_setmetatable(L, -2);
+	lua_setglobal(L, "translations");
 
 	lua_newuserdata(L, 0);
 		lua_createtable(L, 0, 2);
