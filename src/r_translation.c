@@ -14,6 +14,7 @@
 #include "v_video.h" // pMasterPalette
 #include "z_zone.h"
 #include "w_wad.h"
+#include "m_tokenizer.h"
 
 #include <errno.h>
 
@@ -294,9 +295,9 @@ boolean PaletteRemap_AddTint(remaptable_t *tr, int start, int end, int r, int g,
 	return true;
 }
 
-static boolean ExpectToken(const char *expect)
+static boolean ExpectToken(tokenizer_t *sc, const char *expect)
 {
-	return strcmp(M_TokenizerReadZDoom(0), expect) == 0;
+	return strcmp(sc->get(sc, 0), expect) == 0;
 }
 
 static boolean StringToNumber(const char *tkn, int *out)
@@ -321,14 +322,14 @@ static boolean StringToNumber(const char *tkn, int *out)
 	return true;
 }
 
-static boolean ParseNumber(int *out)
+static boolean ParseNumber(tokenizer_t *sc, int *out)
 {
-	return StringToNumber(M_TokenizerReadZDoom(0), out);
+	return StringToNumber(sc->get(sc, 0), out);
 }
 
-static boolean ParseDecimal(double *out)
+static boolean ParseDecimal(tokenizer_t *sc, double *out)
 {
-	const char *tkn = M_TokenizerReadZDoom(0);
+	const char *tkn = sc->get(sc, 0);
 
 	char *endPos = NULL;
 
@@ -362,26 +363,24 @@ static struct PaletteRemapParseResult *ThrowError(const char *format, ...)
 	return err;
 }
 
-struct PaletteRemapParseResult *PaletteRemap_ParseString(remaptable_t *tr, char *translation)
+static struct PaletteRemapParseResult *PaletteRemap_ParseString(remaptable_t *tr, tokenizer_t *sc)
 {
 	int start, end;
 
-	M_TokenizerOpen(translation);
-
-	if (!ParseNumber(&start))
+	if (!ParseNumber(sc, &start))
 		return ThrowError("expected a number for start range");
-	if (!ExpectToken(":"))
+	if (!ExpectToken(sc, ":"))
 		return ThrowError("expected ':'");
-	if (!ParseNumber(&end))
+	if (!ParseNumber(sc, &end))
 		return ThrowError("expected a number for end range");
 
 	if (start < 0 || start > 255 || end < 0 || end > 255)
 		return ThrowError("palette indices out of range");
 
-	if (!ExpectToken("="))
+	if (!ExpectToken(sc, "="))
 		return ThrowError("expected '='");
 
-	const char *tkn = M_TokenizerReadZDoom(0);
+	const char *tkn = sc->get(sc, 0);
 	if (strcmp(tkn, "[") == 0)
 	{
 		// translation using RGB values
@@ -389,42 +388,42 @@ struct PaletteRemapParseResult *PaletteRemap_ParseString(remaptable_t *tr, char 
 		int r2, g2, b2;
 
 		// start
-		if (!ParseNumber(&r1))
+		if (!ParseNumber(sc, &r1))
 			return ThrowError("expected a number for starting red");
-		if (!ExpectToken(","))
+		if (!ExpectToken(sc, ","))
 			return ThrowError("expected ','");
 
-		if (!ParseNumber(&g1))
+		if (!ParseNumber(sc, &g1))
 			return ThrowError("expected a number for starting green");
-		if (!ExpectToken(","))
+		if (!ExpectToken(sc, ","))
 			return ThrowError("expected ','");
 
-		if (!ParseNumber(&b1))
+		if (!ParseNumber(sc, &b1))
 			return ThrowError("expected a number for starting blue");
-		if (!ExpectToken(","))
+		if (!ExpectToken(sc, ","))
 			return ThrowError("expected ','");
 
-		if (!ExpectToken("]"))
+		if (!ExpectToken(sc, "]"))
 			return ThrowError("expected ']'");
-		if (!ExpectToken(":"))
+		if (!ExpectToken(sc, ":"))
 			return ThrowError("expected ':'");
-		if (!ExpectToken("["))
+		if (!ExpectToken(sc, "["))
 			return ThrowError("expected '[");
 
 		// end
-		if (!ParseNumber(&r2))
+		if (!ParseNumber(sc, &r2))
 			return ThrowError("expected a number for ending red");
-		if (!ExpectToken(","))
+		if (!ExpectToken(sc, ","))
 			return ThrowError("expected ','");
 
-		if (!ParseNumber(&g2))
+		if (!ParseNumber(sc, &g2))
 			return ThrowError("expected a number for ending green");
-		if (!ExpectToken(","))
+		if (!ExpectToken(sc, ","))
 			return ThrowError("expected ','");
 
-		if (!ParseNumber(&b2))
+		if (!ParseNumber(sc, &b2))
 			return ThrowError("expected a number for ending blue");
-		if (!ExpectToken("]"))
+		if (!ExpectToken(sc, "]"))
 			return ThrowError("expected ']'");
 
 		PaletteRemap_AddColorRange(tr, start, end, r1, g1, b1, r2, g2, b2);
@@ -435,45 +434,44 @@ struct PaletteRemapParseResult *PaletteRemap_ParseString(remaptable_t *tr, char 
 		double r1, g1, b1;
 		double r2, g2, b2;
 
-		if (!ExpectToken("["))
+		if (!ExpectToken(sc, "["))
 			return ThrowError("expected '[");
 
 		// start
-		if (!ParseDecimal(&r1))
+		if (!ParseDecimal(sc, &r1))
 			return ThrowError("expected a number for starting red");
-		if (!ExpectToken(","))
+		if (!ExpectToken(sc, ","))
 			return ThrowError("expected ','");
 
-		if (!ParseDecimal(&g1))
+		if (!ParseDecimal(sc, &g1))
 			return ThrowError("expected a number for starting green");
-		if (!ExpectToken(","))
+		if (!ExpectToken(sc, ","))
 			return ThrowError("expected ','");
 
-		if (!ParseDecimal(&b1))
+		if (!ParseDecimal(sc, &b1))
 			return ThrowError("expected a number for starting blue");
-		if (!ExpectToken("]"))
+		if (!ExpectToken(sc, "]"))
 			return ThrowError("expected ']'");
 
-		if (!ExpectToken(":"))
+		if (!ExpectToken(sc, ":"))
 			return ThrowError("expected ':'");
-
-		if (!ExpectToken("["))
+		if (!ExpectToken(sc, "["))
 			return ThrowError("expected '[");
 
 		// end
-		if (!ParseDecimal(&r2))
+		if (!ParseDecimal(sc, &r2))
 			return ThrowError("expected a number for ending red");
-		if (!ExpectToken(","))
+		if (!ExpectToken(sc, ","))
 			return ThrowError("expected ','");
 
-		if (!ParseDecimal(&g2))
+		if (!ParseDecimal(sc, &g2))
 			return ThrowError("expected a number for ending green");
-		if (!ExpectToken(","))
+		if (!ExpectToken(sc, ","))
 			return ThrowError("expected ','");
 
-		if (!ParseDecimal(&b2))
+		if (!ParseDecimal(sc, &b2))
 			return ThrowError("expected a number for ending blue");
-		if (!ExpectToken("]"))
+		if (!ExpectToken(sc, "]"))
 			return ThrowError("expected ']'");
 
 		PaletteRemap_AddDesaturation(tr, start, end, r1, g1, b1, r2, g2, b2);
@@ -483,19 +481,19 @@ struct PaletteRemapParseResult *PaletteRemap_ParseString(remaptable_t *tr, char 
 		// Colourise translation
 		int r, g, b;
 
-		if (!ExpectToken("["))
+		if (!ExpectToken(sc, "["))
 			return ThrowError("expected '[");
-		if (!ParseNumber(&r))
+		if (!ParseNumber(sc, &r))
 			return ThrowError("expected a number for red");
-		if (!ExpectToken(","))
+		if (!ExpectToken(sc, ","))
 			return ThrowError("expected ','");
-		if (!ParseNumber(&g))
+		if (!ParseNumber(sc, &g))
 			return ThrowError("expected a number for green");
-		if (!ExpectToken(","))
+		if (!ExpectToken(sc, ","))
 			return ThrowError("expected ','");
-		if (!ParseNumber(&b))
+		if (!ParseNumber(sc, &b))
 			return ThrowError("expected a number for blue");
-		if (!ExpectToken("]"))
+		if (!ExpectToken(sc, "]"))
 			return ThrowError("expected ']'");
 
 		PaletteRemap_AddColourisation(tr, start, end, r, g, b);
@@ -505,23 +503,23 @@ struct PaletteRemapParseResult *PaletteRemap_ParseString(remaptable_t *tr, char 
 		// Tint translation
 		int a, r, g, b;
 
-		if (!ExpectToken("["))
+		if (!ExpectToken(sc, "["))
 			return ThrowError("expected '[");
-		if (!ParseNumber(&a))
+		if (!ParseNumber(sc, &a))
 			return ThrowError("expected a number for amount");
-		if (!ExpectToken(","))
+		if (!ExpectToken(sc, ","))
 			return ThrowError("expected ','");
-		if (!ParseNumber(&r))
+		if (!ParseNumber(sc, &r))
 			return ThrowError("expected a number for red");
-		if (!ExpectToken(","))
+		if (!ExpectToken(sc, ","))
 			return ThrowError("expected ','");
-		if (!ParseNumber(&g))
+		if (!ParseNumber(sc, &g))
 			return ThrowError("expected a number for green");
-		if (!ExpectToken(","))
+		if (!ExpectToken(sc, ","))
 			return ThrowError("expected ','");
-		if (!ParseNumber(&b))
+		if (!ParseNumber(sc, &b))
 			return ThrowError("expected a number for blue");
-		if (!ExpectToken("]"))
+		if (!ExpectToken(sc, "]"))
 			return ThrowError("expected ']'");
 
 		PaletteRemap_AddTint(tr, start, end, r, g, b, a);
@@ -532,17 +530,23 @@ struct PaletteRemapParseResult *PaletteRemap_ParseString(remaptable_t *tr, char 
 
 		if (!StringToNumber(tkn, &pal1))
 			return ThrowError("expected a number for starting index");
-		if (!ExpectToken(":"))
+		if (!ExpectToken(sc, ":"))
 			return ThrowError("expected ':'");
-		if (!ParseNumber(&pal2))
+		if (!ParseNumber(sc, &pal2))
 			return ThrowError("expected a number for ending index");
 
 		PaletteRemap_AddIndexRange(tr, start, end, pal1, pal2);
 	}
 
-	M_TokenizerClose();
-
 	return NULL;
+}
+
+struct PaletteRemapParseResult *PaletteRemap_ParseTranslation(remaptable_t *tr, const char *translation)
+{
+	tokenizer_t *sc = Tokenizer_Open(translation, 1);
+	struct PaletteRemapParseResult *error = PaletteRemap_ParseString(tr, sc);
+	Tokenizer_Close(sc);
+	return error;
 }
 
 static void P_ParseTrnslate(INT32 wadNum, UINT16 lumpnum)
@@ -554,19 +558,18 @@ static void P_ParseTrnslate(INT32 wadNum, UINT16 lumpnum)
 	text[lumpLength] = '\0';
 	Z_Free(lumpData);
 
-	char *p = text;
-	char *tkn = M_GetToken(p);
+	tokenizer_t *sc = Tokenizer_Open(text, 1);
+	const char *tkn = sc->get(sc, 0);
 	while (tkn != NULL)
 	{
 		remaptable_t *tr = NULL;
 
-		char *name = tkn;
+		char *name = Z_StrDup(tkn);
 
-		tkn = M_GetToken(NULL);
+		tkn = sc->get(sc, 0);
 		if (strcmp(tkn, ":") == 0)
 		{
-			Z_Free(tkn);
-			tkn = M_GetToken(NULL);
+			tkn = sc->get(sc, 0);
 
 			remaptable_t *tbl = R_GetTranslationByID(R_FindCustomTranslation(tkn));
 			if (tbl)
@@ -577,8 +580,7 @@ static void P_ParseTrnslate(INT32 wadNum, UINT16 lumpnum)
 				goto fail;
 			}
 
-			Z_Free(tkn);
-			tkn = M_GetToken(NULL);
+			tkn = sc->get(sc, 0);
 		}
 		else
 		{
@@ -586,18 +588,15 @@ static void P_ParseTrnslate(INT32 wadNum, UINT16 lumpnum)
 			PaletteRemap_SetIdentity(tr);
 		}
 
-#if 0
-		tkn = M_GetToken(NULL);
 		if (strcmp(tkn, "=") != 0)
 		{
 			CONS_Alert(CONS_ERROR, "Error parsing translation '%s': Expected '=', got '%s'\n", name, tkn);
 			goto fail;
 		}
-		Z_Free(tkn);
-#endif
+		tkn = sc->get(sc, 0);
 
 		do {
-			struct PaletteRemapParseResult *error = PaletteRemap_ParseString(tr, tkn);
+			struct PaletteRemapParseResult *error = PaletteRemap_ParseTranslation(tr, tkn);
 			if (error)
 			{
 				CONS_Alert(CONS_ERROR, "Error parsing translation '%s': %s\n", name, error->error);
@@ -605,16 +604,14 @@ static void P_ParseTrnslate(INT32 wadNum, UINT16 lumpnum)
 				goto fail;
 			}
 
-			Z_Free(tkn);
-			tkn = M_GetToken(NULL);
+			tkn = sc->get(sc, 0);
 			if (!tkn)
 				break;
 
 			if (strcmp(tkn, ",") != 0)
 				break;
 
-			Z_Free(tkn);
-			tkn = M_GetToken(NULL);
+			tkn = sc->get(sc, 0);
 		} while (true);
 
 		// add it
@@ -624,8 +621,8 @@ static void P_ParseTrnslate(INT32 wadNum, UINT16 lumpnum)
 	}
 
 fail:
-	Z_Free(tkn);
-	Z_Free((void *)text);
+	Tokenizer_Close(sc);
+	Z_Free(text);
 }
 
 void R_LoadTrnslateLumps(void)

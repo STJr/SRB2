@@ -9,6 +9,9 @@
 /// \file  r_translation.h
 /// \brief Translations
 
+#ifndef __R_TRANSLATION__
+#define __R_TRANSLATION__
+
 #include "doomdef.h"
 
 typedef struct
@@ -36,10 +39,12 @@ struct PaletteRemapParseResult
 	char error[4096];
 };
 
-struct PaletteRemapParseResult *PaletteRemap_ParseString(remaptable_t *tr, char *translation);
+struct PaletteRemapParseResult *PaletteRemap_ParseTranslation(remaptable_t *tr, const char *translation);
 
 int R_FindCustomTranslation(const char *name);
 void R_AddCustomTranslation(const char *name, int trnum);
 remaptable_t *R_GetTranslationByID(int id);
 
 void R_LoadTrnslateLumps(void);
+
+#endif
