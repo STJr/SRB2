@@ -588,7 +588,7 @@ static int ScanConstants(lua_State *L, boolean mathlib, const char *word)
 		p = word+12;
 		for (i = 0; i < (signed)numcustomtranslations; i++)
 		{
-			if (fasticmp(p, customtranslations[i].name) == 0)
+			if (fasticmp(p, customtranslations[i].name))
 			{
 				lua_pushinteger(L, (int)customtranslations[i].id);
 				return 1;
