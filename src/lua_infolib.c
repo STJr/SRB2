@@ -1919,7 +1919,7 @@ static int lib_getTranslation(lua_State *L)
 	return 1;
 }
 
-// #translations -> R_GetNumTranslations()
+// #translations -> R_NumCustomTranslations()
 static int lib_translationslen(lua_State *L)
 {
 	lua_pushinteger(L, R_NumCustomTranslations());
