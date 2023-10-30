@@ -80,6 +80,7 @@ lzf.c
 b_bot.c
 u_list.c
 snake.c
+movie_decode.c
 lua_script.c
 lua_baselib.c
 lua_mathlib.c
@@ -99,3 +100,4 @@ lua_hudlib_drawlist.c
 lua_inputlib.c
 lua_colorlib.c
 lua_interceptlib.c
+lua_movielib.c

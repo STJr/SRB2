@@ -30,6 +30,7 @@
 #include "m_misc.h" // for tunes command
 #include "m_cond.h" // for conditionsets
 #include "lua_hook.h" // MusicChange hook
+#include "movie_decode.h"
 
 #ifdef HW3SOUND
 // 3D Sound Interface
@@ -2163,6 +2164,29 @@ static boolean S_LoadMusic(const char *mname)
 	}
 }
 
+static boolean S_LoadMovieMusic(void)
+{
+	if (S_MusicDisabled())
+		return false;
+
+	if (!activemovie)
+	{
+		CONS_Alert(CONS_ERROR, "Movie music could not be loaded: no movie playing!\n");
+		return false;
+	}
+
+	if (I_LoadMovieSong())
+	{
+		strcpy(music_name, "MOVIE");
+		return true;
+	}
+	else
+	{
+		CONS_Alert(CONS_ERROR, "Movie music could not be loaded: engine failure!\n");
+		return false;
+	}
+}
+
 static void S_UnloadMusic(void)
 {
 	I_UnloadSong();
@@ -2201,6 +2225,27 @@ static boolean S_PlayMusic(boolean looping, UINT32 fadeinms)
 				S_SetMusicLoopPoint(def->loop_ms);
 			break;
 		}
+	}
+
+	S_InitMusicVolume(); // switch between digi and sequence volume
+
+	if (S_MusicNotInFocus())
+		S_PauseAudio();
+
+	return true;
+}
+
+static boolean S_PlayMovieMusic(UINT32 fadeinms)
+{
+	if (S_MusicDisabled())
+		return false;
+
+	if ((!fadeinms && !I_PlaySong(false)) ||
+		(fadeinms && !I_FadeInPlaySong(fadeinms, false)))
+	{
+		CONS_Alert(CONS_ERROR, "Movie music could not be played: engine failure!\n");
+		S_UnloadMusic();
+		return false;
 	}
 
 	S_InitMusicVolume(); // switch between digi and sequence volume
@@ -2285,13 +2330,23 @@ void S_ChangeMusicEx(const char *mmusic, UINT16 mflags, boolean looping, UINT32 
 
 		S_StopMusic();
 
-		if (!S_LoadMusic(newmusic))
+		if (!strnicmp(newmusic, "MOVIE", 6))
+		{
+			if (!S_LoadMovieMusic())
+				return;
+		}
+		else if (!S_LoadMusic(newmusic))
 			return;
 
 		music_flags = mflags;
 		music_looping = looping;
 
-		if (!S_PlayMusic(looping, fadeinms))
+		if (!strnicmp(newmusic, "MOVIE", 6))
+		{
+			if (!S_PlayMovieMusic(fadeinms))
+				return;
+		}
+		else if (!S_PlayMusic(looping, fadeinms))
 			return;
 
 		if (position)

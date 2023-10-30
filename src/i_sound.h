@@ -29,7 +29,8 @@ typedef enum {
 	MU_FLAC,
 	MU_GME,
 	MU_MOD_EX, // libopenmpt
-	MU_MID_EX // Non-native MIDI
+	MU_MID_EX, // Non-native MIDI
+	MU_MOVIE
 } musictype_t;
 
 /**	\brief Sound subsystem runing and waiting
@@ -171,6 +172,8 @@ UINT32 I_GetSongPosition(void);
 	\todo Remove this
 */
 boolean I_LoadSong(char *data, size_t len);
+
+boolean I_LoadMovieSong(void);
 
 /**	\brief	See ::I_LoadSong, then think backwards
 

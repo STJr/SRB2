@@ -1088,6 +1088,8 @@ typedef enum sprite
 	NUMSPRITES
 } spritenum_t;
 
+extern spritenum_t moviespritenum;
+
 typedef enum playersprite
 {
 	SPR2_STND = 0,

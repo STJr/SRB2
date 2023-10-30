@@ -14,6 +14,8 @@
 #ifndef __SOUNDS__
 #define __SOUNDS__
 
+#include "doomdef.h"
+
 // Customisable sounds for Skins
 typedef enum
 {

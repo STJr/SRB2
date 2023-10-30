@@ -200,6 +200,7 @@ static char returnWadPath[256];
 #include "../netcode/commands.h"
 #include "../g_game.h"
 #include "../filesrch.h"
+#include "../movie_decode.h"
 #include "endtxt.h"
 #include "sdlmain.h"
 
@@ -215,6 +216,8 @@ static char returnWadPath[256];
 #endif
 
 #include "../d_main.h"
+
+
 
 #if !defined(NOMUMBLE) && defined(HAVE_MUMBLE)
 // Mumble context string
@@ -2489,6 +2492,8 @@ void I_Quit(void)
 	D_QuitNetGame();
 	CL_AbortDownloadResume();
 	M_FreePlayerSetupColors();
+	if (activemovie)
+		MovieDecode_Stop(&activemovie);
 	I_ShutdownMusic();
 	I_ShutdownSound();
 	// use this for 1.28 19990220 by Kin

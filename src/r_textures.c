@@ -56,6 +56,8 @@ fixed_t *textureheight; // needed for texture pegging
 
 INT32 *texturetranslation;
 
+INT32 movietexturenum = -1;
+
 // Painfully simple texture id cacheing to make maps load faster. :3
 static struct {
 	char name[9];
@@ -1049,6 +1051,8 @@ static INT32 R_DefineTextures(INT32 i, UINT16 w)
 static void R_FinishLoadingTextures(INT32 add)
 {
 	numtextures += add;
+
+	movietexturenum = R_CheckTextureNumForName("MOVIE");
 
 #ifdef HWRENDER
 	if (rendermode == render_opengl)

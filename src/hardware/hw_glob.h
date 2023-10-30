@@ -15,6 +15,7 @@
 
 #include "hw_defs.h"
 #include "hw_main.h"
+#include "../movie_decode.h"
 #include "../m_misc.h"
 #include "../p_setup.h"
 
@@ -137,6 +138,9 @@ UINT32 HWR_CreateLightTable(UINT8 *lighttable, RGBA_t *hw_lighttable);
 void HWR_UpdateLightTable(UINT32 id, UINT8 *lighttable, RGBA_t *hw_lighttable);
 UINT32 HWR_GetLightTableID(extracolormap_t *colormap);
 void HWR_ClearLightTables(void);
+
+GLMipmap_t *HWR_GetMovieTexture(movie_t *movie);
+GLMapTexture_t *HWR_GetMovieMapTexture(movie_t *movie);
 
 
 // --------

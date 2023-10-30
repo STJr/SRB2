@@ -121,3 +121,4 @@ int LUA_HudLib(lua_State *L);
 int LUA_ColorLib(lua_State *L);
 int LUA_InputLib(lua_State *L);
 int LUA_InterceptLib(lua_State *L);
+int LUA_MovieLib(lua_State *L);

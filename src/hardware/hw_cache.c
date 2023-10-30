@@ -18,6 +18,7 @@
 #include "hw_batching.h"
 
 #include "../doomstat.h"    //gamemode
+#include "../d_main.h"
 #include "../i_video.h"     //rendermode
 #include "../r_data.h"
 #include "../r_textures.h"
@@ -28,6 +29,7 @@
 #include "../r_patch.h"
 #include "../r_picformats.h"
 #include "../p_setup.h"
+#include "../movie_decode.h"
 
 INT32 patchformat = GL_TEXFMT_AP_88; // use alpha for holes
 INT32 textureformat = GL_TEXFMT_P_8; // use chromakey for hole
@@ -546,6 +548,7 @@ void HWR_MakePatch (const patch_t *patch, GLPatch_t *grPatch, GLMipmap_t *grMipm
 static size_t gl_numtextures = 0; // Texture count
 static GLMapTexture_t *gl_textures; // For all textures
 static GLMapTexture_t *gl_flats; // For all (texture) flats, as normal flats don't need to be cached
+static GLMapTexture_t gl_movietexture;
 boolean gl_maptexturesloaded = false;
 
 void HWR_FreeTextureData(patch_t *patch)
@@ -746,42 +749,49 @@ GLMapTexture_t *HWR_GetTexture(INT32 tex, boolean chromakeyed)
 #endif
 	}
 
-	GLMapTexture_t *grtex = &gl_textures[tex];
+	GLMapTexture_t *grtex = (tex == movietexturenum) ? HWR_GetMovieMapTexture(activemovie) : NULL;
 
-	GLMipmap_t *grMipmap = &grtex->mipmap;
-	GLMipmap_t *originalMipmap = grMipmap;
-
-	if (!originalMipmap->downloaded)
+	if (!grtex)
 	{
-		originalMipmap->flags = TF_WRAPXY;
-		originalMipmap->width = (UINT16)textures[tex]->width;
-		originalMipmap->height = (UINT16)textures[tex]->height;
-		originalMipmap->format = textureformat;
-	}
+		grtex = &gl_textures[tex];
 
-	// If chroma-keyed, create or use a different mipmap for the variant
-	if (chromakeyed && !textures[tex]->transparency)
-	{
-		// Allocate it if it wasn't already
-		if (!originalMipmap->nextcolormap)
+		GLMipmap_t *grMipmap = &grtex->mipmap;
+		GLMipmap_t *originalMipmap = grMipmap;
+
+		if (!originalMipmap->downloaded)
 		{
-			GLMipmap_t *newMipmap = calloc(1, sizeof (*grMipmap));
-			if (newMipmap == NULL)
-				I_Error("%s: Out of memory", "HWR_GetTexture");
-
-			newMipmap->flags = originalMipmap->flags | TF_CHROMAKEYED;
-			newMipmap->width = originalMipmap->width;
-			newMipmap->height = originalMipmap->height;
-			newMipmap->format = originalMipmap->format;
-			originalMipmap->nextcolormap = newMipmap;
+			originalMipmap->flags = TF_WRAPXY;
+			originalMipmap->width = (UINT16)textures[tex]->width;
+			originalMipmap->height = (UINT16)textures[tex]->height;
+			originalMipmap->format = textureformat;
 		}
 
-		// Generate, upload and bind the variant texture instead of the original one
-		grMipmap = originalMipmap->nextcolormap;
+		// If chroma-keyed, create or use a different mipmap for the variant
+		if (chromakeyed && !textures[tex]->transparency)
+		{
+			// Allocate it if it wasn't already
+			if (!originalMipmap->nextcolormap)
+			{
+				GLMipmap_t *newMipmap = calloc(1, sizeof (*grMipmap));
+				if (newMipmap == NULL)
+					I_Error("%s: Out of memory", "HWR_GetTexture");
+
+				newMipmap->flags = originalMipmap->flags | TF_CHROMAKEYED;
+				newMipmap->width = originalMipmap->width;
+				newMipmap->height = originalMipmap->height;
+				newMipmap->format = originalMipmap->format;
+				originalMipmap->nextcolormap = newMipmap;
+			}
+
+			// Generate, upload and bind the variant texture instead of the original one
+			grMipmap = originalMipmap->nextcolormap;
+		}
+
+		if (!grMipmap->data)
+			HWR_GenerateTexture(tex, grtex, grMipmap);
 	}
 
-	if (!grMipmap->data)
-		HWR_GenerateTexture(tex, grtex, grMipmap);
+	GLMipmap_t *grMipmap = &grtex->mipmap;
 
 	if (!grMipmap->downloaded)
 		HWD.pfnSetTexture(grMipmap);
@@ -1331,6 +1341,45 @@ void HWR_ClearLightTables(void)
 
 	if (vid.glstate == VID_GL_LIBRARY_LOADED)
 		HWD.pfnClearLightTables();
+}
+
+GLMipmap_t *HWR_GetMovieTexture(movie_t *movie)
+{
+	GLMapTexture_t *maptexture = HWR_GetMovieMapTexture(movie);
+	return maptexture ? &maptexture->mipmap : NULL;
+}
+
+GLMapTexture_t *HWR_GetMovieMapTexture(movie_t *movie)
+{
+	GLMipmap_t *texture = &gl_movietexture.mipmap;
+
+	if (!movie)
+		return NULL;
+
+	UINT8 *image = MovieDecode_GetImage(movie);
+	if (!image)
+		return (texture->data || texture->downloaded) ? &gl_movietexture : NULL;
+
+	FreeMapTexture(&gl_movietexture);
+
+	INT32 width, height;
+	MovieDecode_GetDimensions(movie, &width, &height);
+
+	memset(&gl_movietexture, 0, sizeof(gl_movietexture));
+	gl_movietexture.scaleX = 1.0f / width;
+	gl_movietexture.scaleY = 1.0f / height;
+
+	texture->flags = TF_WRAPXY;
+	texture->width = (UINT16)width;
+	texture->height = (UINT16)height;
+	texture->format = GL_TEXFMT_RGBA;
+
+	INT32 texturesize = texture->width * texture->height * 4;
+	Z_Malloc(texturesize, PU_HWRCACHE, &texture->data);
+
+	memcpy(texture->data, image, texturesize);
+
+	return &gl_movietexture;
 }
 
 #endif //HWRENDER

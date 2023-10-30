@@ -73,6 +73,7 @@
 #include "m_perfstats.h"
 #include "m_random.h"
 #include "command.h"
+#include "movie_decode.h"
 
 #ifdef CMAKECONFIG
 #include "config.h"
@@ -131,6 +132,8 @@ INT32 debugload = 0;
 
 UINT16 numskincolors;
 menucolor_t *menucolorhead, *menucolortail;
+
+movie_t *activemovie = NULL;
 
 char savegamename[256];
 char liveeventbackup[256];
@@ -901,6 +904,9 @@ void D_SRB2Loop(void)
 #ifdef HW3SOUND
 		HW3S_EndFrameUpdate();
 #endif
+
+		if (activemovie)
+			MovieDecode_Update(activemovie);
 
 		LUA_Step();
 

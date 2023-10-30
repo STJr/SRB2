@@ -533,6 +533,8 @@ char sprnames[NUMSPRITES + 1][MAXSPRITENAME + 1] =
 	"OLDK",
 };
 
+spritenum_t moviespritenum = -1;
+
 char spr2names[NUMPLAYERSPRITES][MAXSPRITENAME + 1] =
 {
 	"STND",

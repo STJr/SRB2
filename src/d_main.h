@@ -16,8 +16,11 @@
 
 #include "d_event.h"
 #include "w_wad.h"   // for MAX_WADFILES
+#include "movie_decode.h"
 
 extern boolean advancedemo;
+
+extern movie_t *activemovie;
 
 // make sure not to write back the config until it's been correctly loaded
 extern tic_t rendergametic;

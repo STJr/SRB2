@@ -35,11 +35,13 @@
 #if defined(HAVE_SDL) && defined(HAVE_MIXER) && SOUND==SOUND_MIXER
 
 #include "../sounds.h"
+#include "../d_main.h"
 #include "../s_sound.h"
 #include "../i_sound.h"
 #include "../w_wad.h"
 #include "../z_zone.h"
 #include "../byteptr.h"
+#include "../movie_decode.h"
 
 #ifdef _MSC_VER
 #pragma warning(disable : 4214 4244)
@@ -123,6 +125,8 @@ static UINT16 current_subsong;
 static size_t probesize;
 static int result;
 #endif
+
+static movie_t *movie = NULL;
 
 #ifdef HAVE_MIXERX
 static void Midiplayer_Onchange(void)
@@ -697,7 +701,7 @@ static void count_music_bytes(int chan, void *stream, int len, void *udata)
 	(void)stream;
 	(void)udata;
 
-	if (!music || I_SongType() == MU_GME || I_SongType() == MU_MOD || I_SongType() == MU_MID)
+	if (!music || I_SongType() == MU_MOVIE || I_SongType() == MU_GME || I_SongType() == MU_MOD || I_SongType() == MU_MID)
 		return;
 	music_bytes += len;
 }
@@ -755,6 +759,31 @@ static UINT32 music_fade(UINT32 interval, void *param)
 		Mix_VolumeMusic(get_real_volume(music_volume));
 		return interval;
 	}
+}
+
+static void mix_movie(void *udata, Uint8 *stream, int len)
+{
+	int i;
+	short *p;
+
+	(void)udata;
+
+	if (!movie || songpaused)
+		return;
+
+	// Play movie audio into stream
+	MovieDecode_CopyAudioSamples(movie, stream, len);
+	// for (i = 0; i < len; i++)
+	// 	stream[i] = i / 64;
+
+	// !!! Should this be used here?
+	// // Limiter to prevent music from being disorted with some formats
+	// if (music_volume >= 18)
+	// 	music_volume = 18;
+
+	// apply volume to stream
+	for (i = 0, p = (short *)stream; i < len/2; i++, p++)
+		*p = ((INT32)*p) * (music_volume*internal_volume/100)*2 / 40;
 }
 
 #ifdef HAVE_GME
@@ -825,6 +854,9 @@ void I_ShutdownMusic(void)
 
 musictype_t I_SongType(void)
 {
+	if (movie)
+		return MU_MOVIE;
+	else
 #ifdef HAVE_GME
 	if (gme)
 		return MU_GME;
@@ -856,6 +888,7 @@ musictype_t I_SongType(void)
 boolean I_SongPlaying(void)
 {
 	return (
+		(I_SongType() == MU_MOVIE && movie) ||
 #ifdef HAVE_GME
 		(I_SongType() == MU_GME && gme) ||
 #endif
@@ -980,7 +1013,7 @@ UINT32 I_GetSongLength(void)
 
 boolean I_SetSongLoopPoint(UINT32 looppoint)
 {
-	if (!music || I_SongType() == MU_GME || I_SongType() == MU_MOD || I_SongType() == MU_MID || !is_looping)
+	if (!music || I_SongType() == MU_MOVIE || I_SongType() == MU_GME || I_SongType() == MU_MOD || I_SongType() == MU_MID || !is_looping)
 		return false;
 	else
 	{
@@ -1163,6 +1196,7 @@ boolean I_LoadSong(char *data, size_t len)
 #ifdef HAVE_OPENMPT
 		|| openmpt_mhandle
 #endif
+		|| movie
 	)
 		I_UnloadSong();
 
@@ -1304,10 +1338,36 @@ boolean I_LoadSong(char *data, size_t len)
 	return true;
 }
 
+boolean I_LoadMovieSong(void)
+{
+	if (music
+#ifdef HAVE_GME
+		|| gme
+#endif
+#ifdef HAVE_OPENMPT
+		|| openmpt_mhandle
+#endif
+		|| movie
+	)
+		I_UnloadSong();
+
+	// always do this whether or not a music already exists
+	var_cleanup();
+
+	movie = activemovie;
+
+	return true; // All good and we're ready for music playback!
+}
+
 void I_UnloadSong(void)
 {
 	I_StopSong();
 
+	if (movie)
+	{
+		// !!! ... Something to do here???
+		movie = NULL;
+	}
 #ifdef HAVE_GME
 	if (gme)
 	{
@@ -1331,6 +1391,12 @@ void I_UnloadSong(void)
 
 boolean I_PlaySong(boolean looping)
 {
+	if (movie)
+	{
+		Mix_HookMusic(mix_movie, movie);
+		return true;
+	}
+	else
 #ifdef HAVE_GME
 	if (gme)
 	{
@@ -1397,6 +1463,11 @@ void I_StopSong(void)
 	if (!fading_nocleanup)
 		I_StopFadingSong();
 
+	if (movie)
+	{
+		Mix_HookMusic(NULL, NULL);
+		// !!! ... Something to do here???
+	}
 #ifdef HAVE_GME
 	if (gme)
 	{
@@ -1426,7 +1497,7 @@ void I_PauseSong(void)
 	if(I_SongType() == MU_MID) // really, SDL Mixer? why can't you pause MIDI???
 		return;
 
-	if(I_SongType() != MU_GME && I_SongType() != MU_MOD && I_SongType() != MU_MID)
+	if(I_SongType() != MU_MOVIE && I_SongType() != MU_GME && I_SongType() != MU_MOD && I_SongType() != MU_MID)
 		Mix_UnregisterEffect(MIX_CHANNEL_POST, count_music_bytes);
 
 	Mix_PauseMusic();
@@ -1438,7 +1509,7 @@ void I_ResumeSong(void)
 	if (I_SongType() == MU_MID)
 		return;
 
-	if (I_SongType() != MU_GME && I_SongType() != MU_MOD && I_SongType() != MU_MID)
+	if (I_SongType() != MU_MOVIE && I_SongType() != MU_GME && I_SongType() != MU_MOD && I_SongType() != MU_MID)
 	{
 		while(Mix_UnregisterEffect(MIX_CHANNEL_POST, count_music_bytes) != 0) { }
 			// HACK: fixes issue of multiple effect callbacks being registered
