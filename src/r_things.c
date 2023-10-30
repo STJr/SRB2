@@ -25,6 +25,7 @@
 #include "i_system.h"
 #include "r_fps.h"
 #include "r_things.h"
+#include "r_translation.h"
 #include "r_patch.h"
 #include "r_patchrotation.h"
 #include "r_picformats.h"
@@ -785,13 +786,18 @@ UINT8 *R_GetSpriteTranslation(vissprite_t *vis)
 		else
 			return R_GetTranslationColormap(TC_BOSS, vis->color, GTC_CACHE);
 	}
+	else if (vis->translation)
+	{
+		remaptable_t *tr = R_GetTranslationByID(vis->translation);
+		if (tr != NULL)
+			return tr->remap;
+	}
 	else if (vis->color)
 	{
 		// New colormap stuff for skins Tails 06-07-2002
-		if (!(vis->cut & SC_PRECIP) && vis->mobj->colorized)
+		if (vis->mobj->colorized)
 			return R_GetTranslationColormap(TC_RAINBOW, vis->color, GTC_CACHE);
-		else if (!(vis->cut & SC_PRECIP)
-			&& vis->mobj->player && vis->mobj->player->dashmode >= DASHMODE_THRESHOLD
+		else if (vis->mobj->player && vis->mobj->player->dashmode >= DASHMODE_THRESHOLD
 			&& (vis->mobj->player->charflags & SF_DASHMODE)
 			&& ((leveltime/2) & 1))
 		{
@@ -800,7 +806,7 @@ UINT8 *R_GetSpriteTranslation(vissprite_t *vis)
 			else
 				return R_GetTranslationColormap(TC_RAINBOW, vis->color, GTC_CACHE);
 		}
-		else if (!(vis->cut & SC_PRECIP) && vis->mobj->skin && vis->mobj->sprite == SPR_PLAY) // This thing is a player!
+		else if (vis->mobj->skin && vis->mobj->sprite == SPR_PLAY) // This thing is a player!
 		{
 			size_t skinnum = (skin_t*)vis->mobj->skin-skins;
 			return R_GetTranslationColormap((INT32)skinnum, vis->color, GTC_CACHE);
@@ -1407,6 +1413,7 @@ static void R_ProjectDropShadow(mobj_t *thing, vissprite_t *vis, fixed_t scale, 
 
 	shadow->mobj = thing; // Easy access! Tails 06-07-2002
 	shadow->color = thing->color;
+	shadow->translation = 0;
 
 	shadow->x1 = x1 < portalclipstart ? portalclipstart : x1;
 	shadow->x2 = x2 >= portalclipend ? portalclipend-1 : x2;
@@ -2232,6 +2239,11 @@ static void R_ProjectSprite(mobj_t *thing)
 	else
 		vis->color = oldthing->color;
 
+	if ((oldthing->flags2 & MF2_LINKDRAW) && oldthing->tracer && oldthing->translation == 0)
+		vis->translation = oldthing->tracer->translation;
+	else
+		vis->translation = oldthing->translation;
+
 	vis->x1 = x1 < portalclipstart ? portalclipstart : x1;
 	vis->x2 = x2 >= portalclipend ? portalclipend-1 : x2;
 
@@ -2502,6 +2514,7 @@ static void R_ProjectPrecipitationSprite(precipmobj_t *thing)
 	vis->extra_colormap = thing->subsector->sector->extra_colormap;
 	vis->heightsec = thing->subsector->sector->heightsec;
 	vis->color = SKINCOLOR_NONE;
+	vis->translation = 0;
 
 	// Fullbright
 	vis->colormap = colormaps;

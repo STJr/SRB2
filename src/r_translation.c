@@ -653,8 +653,7 @@ int R_FindCustomTranslation(const char *name)
 
 	for (unsigned i = 0; i < numcustomtranslations; i++)
 	{
-		if (hash == customtranslations[i].hash
-		&& strcmp(name, customtranslations[i].name) == 0)
+		if (hash == customtranslations[i].hash && strcmp(name, customtranslations[i].name) == 0)
 			return (int)customtranslations[i].id;
 	}
 
@@ -668,10 +667,10 @@ void R_AddCustomTranslation(const char *name, int trnum)
 
 	for (unsigned i = 0; i < numcustomtranslations; i++)
 	{
-		tr = &customtranslations[i];
-		if (hash == tr->hash
-		&& strcmp(name, tr->name) == 0)
+		struct CustomTranslation *lookup = &customtranslations[i];
+		if (hash == lookup->hash && strcmp(name, lookup->name) == 0)
 		{
+			tr = lookup;
 			break;
 		}
 	}

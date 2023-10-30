@@ -214,6 +214,7 @@ typedef struct vissprite_s
 	fixed_t shadowscale;
 
 	skincolornum_t color;
+	UINT16 translation;
 
 	INT16 clipbot[MAXVIDWIDTH], cliptop[MAXVIDWIDTH];
 

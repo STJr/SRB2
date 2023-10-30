@@ -39,6 +39,7 @@
 #include "../m_cheat.h"
 #include "../f_finale.h"
 #include "../r_things.h" // R_GetShadowZ
+#include "../r_translation.h"
 #include "../d_main.h"
 #include "../p_slopes.h"
 #include "hw_md2.h"
@@ -5503,6 +5504,12 @@ static void HWR_ProjectSprite(mobj_t *thing)
 			vis->colormap = R_GetTranslationColormap(TC_METALSONIC, 0, GTC_CACHE);
 		else
 			vis->colormap = R_GetTranslationColormap(TC_BOSS, vis->color, GTC_CACHE);
+	}
+	else if (vis->mobj->translation)
+	{
+		remaptable_t *tr = R_GetTranslationByID(vis->mobj->translation);
+		if (tr != NULL)
+			vis->colormap = tr->remap;
 	}
 	else if (vis->color)
 	{
