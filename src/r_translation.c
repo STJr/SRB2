@@ -17,8 +17,8 @@
 
 #include <errno.h>
 
-remaptable_t **paletteremaps = NULL;
-unsigned numpaletteremaps = 0;
+static remaptable_t **paletteremaps = NULL;
+static unsigned numpaletteremaps = 0;
 
 void PaletteRemap_Init(void)
 {

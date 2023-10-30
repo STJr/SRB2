@@ -17,9 +17,6 @@ typedef struct
 	unsigned num_entries;
 } remaptable_t;
 
-extern remaptable_t **paletteremaps;
-extern unsigned numpaletteremaps;
-
 void PaletteRemap_Init(void);
 remaptable_t *PaletteRemap_New(void);
 remaptable_t *PaletteRemap_Copy(remaptable_t *tr);
