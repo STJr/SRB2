@@ -104,3 +104,8 @@ lib:=../libs/miniupnpc
 MINIUPNPC_opts:=-I$(lib)/include -DMINIUPNP_STATICLIB
 MINIUPNPC_libs:=-L$(lib)/mingw$(32) -lminiupnpc -lws2_32 -liphlpapi
 $(eval $(call _set,MINIUPNPC))
+
+lib:=../libs/ffmpeg
+FFMPEG_opts:=-I$(lib)/include
+FFMPEG_libs:=-L$(lib)/lib -lavcodec-59 -lavformat-59 -lavutil-57 -lswresample-4 -lswscale-6
+$(eval $(call _set,FFMPEG))
