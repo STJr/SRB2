@@ -196,6 +196,7 @@ void A_SetRandomTics(mobj_t *actor);
 void A_ChangeColorRelative(mobj_t *actor);
 void A_ChangeColorAbsolute(mobj_t *actor);
 void A_Dye(mobj_t *actor);
+void A_SetTranslation(mobj_t *actor);
 void A_MoveRelative(mobj_t *actor);
 void A_MoveAbsolute(mobj_t *actor);
 void A_Thrust(mobj_t *actor);
@@ -9066,6 +9067,27 @@ void A_Dye(mobj_t *actor)
 		target->colorized = true;
 		target->color = color;
 	}
+}
+
+// Function: A_SetTranslation
+//
+// Description: Changes the translation of an actor.
+//
+// var1 = translation ID
+// var2 = unused
+//
+void A_SetTranslation(mobj_t *actor)
+{
+	INT32 locvar1 = var1;
+
+	mobj_t *target = actor;
+	if (LUA_CallAction(A_SETTRANSLATION, actor))
+		return;
+
+	if (R_TranslationIsValid(locvar1))
+		actor->translation = (UINT32)locvar1;
+	else
+		actor->translation = 0;
 }
 
 // Function: A_MoveRelative

@@ -8165,7 +8165,7 @@ static boolean P_LoadAddon(UINT16 numlumps)
 		HWR_ClearAllTextures();
 #endif
 
-	R_LoadTrnslateLumps();
+	R_LoadParsedTranslations();
 
 	//
 	// search for sprite replacements

@@ -140,7 +140,7 @@ boolean PaletteRemap_AddIndexRange(remaptable_t *tr, int start, int end, int pal
 	return true;
 }
 
-boolean PaletteRemap_AddColorRange(remaptable_t *tr, int start, int end, int _r1,int _g1, int _b1, int _r2, int _g2, int _b2)
+boolean PaletteRemap_AddColorRange(remaptable_t *tr, int start, int end, int _r1, int _g1, int _b1, int _r2, int _g2, int _b2)
 {
 	if (IndicesOutOfRange(start, end))
 		return false;
@@ -295,6 +295,91 @@ boolean PaletteRemap_AddTint(remaptable_t *tr, int start, int end, int r, int g,
 	return true;
 }
 
+struct ParsedTranslation
+{
+	struct ParsedTranslation *next;
+	remaptable_t *remap;
+	remaptable_t *baseTranslation;
+	struct PaletteRemapParseResult *data;
+};
+
+static struct ParsedTranslation *parsedTranslationListHead = NULL;
+static struct ParsedTranslation *parsedTranslationListTail = NULL;
+
+static void AddParsedTranslation(unsigned id, int base_translation, struct PaletteRemapParseResult *data)
+{
+	struct ParsedTranslation *node = Z_Calloc(sizeof(struct ParsedTranslation), PU_STATIC, NULL);
+
+	node->remap = paletteremaps[id];
+	node->data = data;
+
+	if (base_translation != -1)
+		node->baseTranslation = paletteremaps[base_translation];
+
+	if (parsedTranslationListHead == NULL)
+		parsedTranslationListHead = parsedTranslationListTail = node;
+	else
+	{
+		parsedTranslationListTail->next = node;
+		parsedTranslationListTail = node;
+	}
+}
+
+void PaletteRemap_ApplyResult(remaptable_t *tr, struct PaletteRemapParseResult *data)
+{
+	int start = data->start;
+	int end = data->end;
+
+	switch (data->type)
+	{
+	case REMAP_ADD_INDEXRANGE:
+		PaletteRemap_AddIndexRange(tr, start, end, data->indexRange.pal1, data->indexRange.pal2);
+		break;
+	case REMAP_ADD_COLORRANGE:
+		PaletteRemap_AddColorRange(tr, start, end,
+			data->colorRange.r1, data->colorRange.g1, data->colorRange.b1,
+			data->colorRange.r2, data->colorRange.g2, data->colorRange.b2);
+		break;
+	case REMAP_ADD_COLOURISATION:
+		PaletteRemap_AddColourisation(tr, start, end,
+			data->colourisation.r, data->colourisation.g, data->colourisation.b);
+		break;
+	case REMAP_ADD_DESATURATION:
+		PaletteRemap_AddDesaturation(tr, start, end,
+			data->desaturation.r1, data->desaturation.g1, data->desaturation.b1,
+			data->desaturation.r2, data->desaturation.g2, data->desaturation.b2);
+		break;
+	case REMAP_ADD_TINT:
+		PaletteRemap_AddTint(tr, start, end, data->tint.r, data->tint.g, data->tint.b, data->tint.amount);
+		break;
+	}
+}
+
+void R_LoadParsedTranslations(void)
+{
+	struct ParsedTranslation *node = parsedTranslationListHead;
+	while (node)
+	{
+		struct PaletteRemapParseResult *result = node->data;
+		struct ParsedTranslation *next = node->next;
+
+		remaptable_t *tr = node->remap;
+		PaletteRemap_SetIdentity(tr);
+
+		if (node->baseTranslation)
+			memcpy(tr, node->baseTranslation, sizeof(remaptable_t));
+
+		PaletteRemap_ApplyResult(tr, result);
+
+		Z_Free(result);
+		Z_Free(node);
+
+		node = next;
+	}
+
+	parsedTranslationListHead = parsedTranslationListTail = NULL;
+}
+
 static boolean ExpectToken(tokenizer_t *sc, const char *expect)
 {
 	return strcmp(sc->get(sc, 0), expect) == 0;
@@ -360,10 +445,21 @@ static struct PaletteRemapParseResult *ThrowError(const char *format, ...)
 	vsprintf(err->error, format, argptr);
 	va_end(argptr);
 
+	err->has_error = true;
+
 	return err;
 }
 
-static struct PaletteRemapParseResult *PaletteRemap_ParseString(remaptable_t *tr, tokenizer_t *sc)
+static struct PaletteRemapParseResult *MakeResult(enum PaletteRemapType type, int start, int end)
+{
+	struct PaletteRemapParseResult *tr = Z_Calloc(sizeof(struct PaletteRemapParseResult), PU_STATIC, NULL);
+	tr->type = type;
+	tr->start = start;
+	tr->end = end;
+	return tr;
+}
+
+static struct PaletteRemapParseResult *PaletteRemap_ParseString(tokenizer_t *sc)
 {
 	int start, end;
 
@@ -426,7 +522,14 @@ static struct PaletteRemapParseResult *PaletteRemap_ParseString(remaptable_t *tr
 		if (!ExpectToken(sc, "]"))
 			return ThrowError("expected ']'");
 
-		PaletteRemap_AddColorRange(tr, start, end, r1, g1, b1, r2, g2, b2);
+		struct PaletteRemapParseResult *tr = MakeResult(REMAP_ADD_COLORRANGE, start, end);
+		tr->colorRange.r1 = r1;
+		tr->colorRange.g1 = g1;
+		tr->colorRange.b1 = b1;
+		tr->colorRange.r2 = r2;
+		tr->colorRange.g2 = g2;
+		tr->colorRange.b2 = b2;
+		return tr;
 	}
 	else if (strcmp(tkn, "%") == 0)
 	{
@@ -474,7 +577,14 @@ static struct PaletteRemapParseResult *PaletteRemap_ParseString(remaptable_t *tr
 		if (!ExpectToken(sc, "]"))
 			return ThrowError("expected ']'");
 
-		PaletteRemap_AddDesaturation(tr, start, end, r1, g1, b1, r2, g2, b2);
+		struct PaletteRemapParseResult *tr = MakeResult(REMAP_ADD_DESATURATION, start, end);
+		tr->desaturation.r1 = r1;
+		tr->desaturation.g1 = g1;
+		tr->desaturation.b1 = b1;
+		tr->desaturation.r2 = r2;
+		tr->desaturation.g2 = g2;
+		tr->desaturation.b2 = b2;
+		return tr;
 	}
 	else if (strcmp(tkn, "#") == 0)
 	{
@@ -496,7 +606,11 @@ static struct PaletteRemapParseResult *PaletteRemap_ParseString(remaptable_t *tr
 		if (!ExpectToken(sc, "]"))
 			return ThrowError("expected ']'");
 
-		PaletteRemap_AddColourisation(tr, start, end, r, g, b);
+		struct PaletteRemapParseResult *tr = MakeResult(REMAP_ADD_COLOURISATION, start, end);
+		tr->colourisation.r = r;
+		tr->colourisation.g = g;
+		tr->colourisation.b = b;
+		return tr;
 	}
 	else if (strcmp(tkn, "@") == 0)
 	{
@@ -522,7 +636,12 @@ static struct PaletteRemapParseResult *PaletteRemap_ParseString(remaptable_t *tr
 		if (!ExpectToken(sc, "]"))
 			return ThrowError("expected ']'");
 
-		PaletteRemap_AddTint(tr, start, end, r, g, b, a);
+		struct PaletteRemapParseResult *tr = MakeResult(REMAP_ADD_TINT, start, end);
+		tr->tint.r = r;
+		tr->tint.g = g;
+		tr->tint.b = b;
+		tr->tint.amount = a;
+		return tr;
 	}
 	else
 	{
@@ -535,21 +654,24 @@ static struct PaletteRemapParseResult *PaletteRemap_ParseString(remaptable_t *tr
 		if (!ParseNumber(sc, &pal2))
 			return ThrowError("expected a number for ending index");
 
-		PaletteRemap_AddIndexRange(tr, start, end, pal1, pal2);
+		struct PaletteRemapParseResult *tr = MakeResult(REMAP_ADD_INDEXRANGE, start, end);
+		tr->indexRange.pal1 = pal1;
+		tr->indexRange.pal2 = pal2;
+		return tr;
 	}
 
 	return NULL;
 }
 
-struct PaletteRemapParseResult *PaletteRemap_ParseTranslation(remaptable_t *tr, const char *translation)
+struct PaletteRemapParseResult *PaletteRemap_ParseTranslation(const char *translation)
 {
 	tokenizer_t *sc = Tokenizer_Open(translation, 1);
-	struct PaletteRemapParseResult *error = PaletteRemap_ParseString(tr, sc);
+	struct PaletteRemapParseResult *result = PaletteRemap_ParseString(sc);
 	Tokenizer_Close(sc);
-	return error;
+	return result;
 }
 
-static void P_ParseTrnslate(INT32 wadNum, UINT16 lumpnum)
+void R_ParseTrnslate(INT32 wadNum, UINT16 lumpnum)
 {
 	char *lumpData = (char *)W_CacheLumpNumPwad(wadNum, lumpnum, PU_STATIC);
 	size_t lumpLength = W_LumpLengthPwad(wadNum, lumpnum);
@@ -562,7 +684,7 @@ static void P_ParseTrnslate(INT32 wadNum, UINT16 lumpnum)
 	const char *tkn = sc->get(sc, 0);
 	while (tkn != NULL)
 	{
-		remaptable_t *tr = NULL;
+		int base_translation = -1;
 
 		char *name = Z_StrDup(tkn);
 
@@ -571,21 +693,14 @@ static void P_ParseTrnslate(INT32 wadNum, UINT16 lumpnum)
 		{
 			tkn = sc->get(sc, 0);
 
-			remaptable_t *tbl = R_GetTranslationByID(R_FindCustomTranslation(tkn));
-			if (tbl)
-				tr = PaletteRemap_Copy(tbl);
-			else
+			base_translation = R_FindCustomTranslation(tkn);
+			if (base_translation == -1)
 			{
 				CONS_Alert(CONS_ERROR, "Error parsing translation '%s': No translation named '%s'\n", name, tkn);
 				goto fail;
 			}
 
 			tkn = sc->get(sc, 0);
-		}
-		else
-		{
-			tr = PaletteRemap_New();
-			PaletteRemap_SetIdentity(tr);
 		}
 
 		if (strcmp(tkn, "=") != 0)
@@ -595,12 +710,13 @@ static void P_ParseTrnslate(INT32 wadNum, UINT16 lumpnum)
 		}
 		tkn = sc->get(sc, 0);
 
+		struct PaletteRemapParseResult *result = NULL;
 		do {
-			struct PaletteRemapParseResult *error = PaletteRemap_ParseTranslation(tr, tkn);
-			if (error)
+			result = PaletteRemap_ParseTranslation(tkn);
+			if (result->has_error)
 			{
-				CONS_Alert(CONS_ERROR, "Error parsing translation '%s': %s\n", name, error->error);
-				Z_Free(error);
+				CONS_Alert(CONS_ERROR, "Error parsing translation '%s': %s\n", name, result->error);
+				Z_Free(result);
 				goto fail;
 			}
 
@@ -614,10 +730,17 @@ static void P_ParseTrnslate(INT32 wadNum, UINT16 lumpnum)
 			tkn = sc->get(sc, 0);
 		} while (true);
 
-		// add it
+		// Allocate it and register it
+		remaptable_t *tr = PaletteRemap_New();
 		unsigned id = PaletteRemap_Add(tr);
 		R_AddCustomTranslation(name, id);
+
+		// Free this, since it's no longer needed
 		Z_Free(name);
+
+		// The translation is not generated until later, because the palette may not have been loaded.
+		// We store the result for when it's needed.
+		AddParsedTranslation(id, base_translation, result);
 	}
 
 fail:
@@ -625,29 +748,8 @@ fail:
 	Z_Free(text);
 }
 
-void R_LoadTrnslateLumps(void)
-{
-	for (INT32 w = numwadfiles-1; w >= 0; w--)
-	{
-		UINT16 lump = W_CheckNumForNamePwad("TRNSLATE", w, 0);
-
-		while (lump != INT16_MAX)
-		{
-			P_ParseTrnslate(w, lump);
-			lump = W_CheckNumForNamePwad("TRNSLATE", (UINT16)w, lump + 1);
-		}
-	}
-}
-
-struct CustomTranslation
-{
-	char *name;
-	unsigned id;
-	UINT32 hash;
-};
-
-static struct CustomTranslation *customtranslations = NULL;
-static unsigned numcustomtranslations = 0;
+customtranslation_t *customtranslations = NULL;
+unsigned numcustomtranslations = 0;
 
 int R_FindCustomTranslation(const char *name)
 {
@@ -664,12 +766,12 @@ int R_FindCustomTranslation(const char *name)
 
 void R_AddCustomTranslation(const char *name, int trnum)
 {
-	struct CustomTranslation *tr = NULL;
+	customtranslation_t *tr = NULL;
 	UINT32 hash = quickncasehash(name, strlen(name));
 
 	for (unsigned i = 0; i < numcustomtranslations; i++)
 	{
-		struct CustomTranslation *lookup = &customtranslations[i];
+		customtranslation_t *lookup = &customtranslations[i];
 		if (hash == lookup->hash && strcmp(name, lookup->name) == 0)
 		{
 			tr = lookup;
@@ -680,7 +782,7 @@ void R_AddCustomTranslation(const char *name, int trnum)
 	if (tr == NULL)
 	{
 		numcustomtranslations++;
-		customtranslations = Z_Realloc(customtranslations, sizeof(struct CustomTranslation) * numcustomtranslations, PU_STATIC, NULL);
+		customtranslations = Z_Realloc(customtranslations, sizeof(customtranslation_t) * numcustomtranslations, PU_STATIC, NULL);
 		tr = &customtranslations[numcustomtranslations - 1];
 	}
 
@@ -696,8 +798,16 @@ unsigned R_NumCustomTranslations(void)
 
 remaptable_t *R_GetTranslationByID(int id)
 {
-	if (id < 0 || id >= (signed)numpaletteremaps)
+	if (!R_TranslationIsValid(id))
 		return NULL;
 
 	return paletteremaps[id];
+}
+
+boolean R_TranslationIsValid(int id)
+{
+	if (id < 0 || id >= (signed)numpaletteremaps)
+		return false;
+
+	return true;
 }

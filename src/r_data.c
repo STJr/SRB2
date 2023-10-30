@@ -1209,11 +1209,8 @@ void R_InitData(void)
 		R_Init8to16();
 	}
 
-	CONS_Printf("PaletteRemap_Init()...\n");
-	PaletteRemap_Init();
-
-	CONS_Printf("R_LoadTrnslateLumps()...\n");
-	R_LoadTrnslateLumps();
+	CONS_Printf("R_LoadParsedTranslations()...\n");
+	R_LoadParsedTranslations();
 
 	CONS_Printf("R_LoadTextures()...\n");
 	R_LoadTextures();
