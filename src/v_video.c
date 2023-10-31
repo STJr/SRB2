@@ -497,8 +497,141 @@ static inline UINT8 transmappedpdraw(const UINT8 *dest, const UINT8 *source, fix
 	return *(v_translevel + (((*(v_colormap + source[ofs>>FRACBITS]))<<8)&0xff00) + (*dest&0xff));
 }
 
+static void V_DrawPatchRGBA(fixed_t x, fixed_t y, fixed_t pscale, fixed_t vscale, INT32 scrn, patch_t *patch, const UINT8 *colormap);
+
+static void AdjustPositionByOffsets(patch_t *patch, fixed_t pscale, fixed_t vscale, INT32 scrn, fixed_t *x, fixed_t *y)
+{
+	fixed_t offsetx = 0, offsety = 0;
+
+	// left offset
+	if (scrn & V_FLIP)
+		offsetx = FixedMul((patch->width - patch->leftoffset)<<FRACBITS, pscale) + 1;
+	else
+		offsetx = FixedMul(patch->leftoffset<<FRACBITS, pscale);
+
+	// top offset
+	offsety = FixedMul(patch->topoffset<<FRACBITS, vscale);
+
+	// Subtract the offsets from x/y positions
+	*x -= offsetx;
+	*y -= offsety;
+}
+
+static UINT8 AdjustPositionForScreen(INT32 *scrn, fixed_t *x, fixed_t *y, fixed_t *fdup, fixed_t *colfrac, fixed_t *vdup, fixed_t *rowfrac)
+{
+	UINT8 perplayershuffle = 0;
+
+	INT32 flags = *scrn;
+
+	fixed_t adjusty = ((flags & V_NOSCALESTART) ? vid.height : BASEVIDHEIGHT)<<(FRACBITS-1);
+
+	*vdup >>= 1;
+	*rowfrac <<= 1;
+	*y >>= 1;
+
+#ifndef QUADS
+	(void)x;
+	(void)fdup;
+	(void)colfrac;
+#else
+	if (splitscreen > 1) // 3 or 4 players
+	{
+		fixed_t adjustx = ((flags & V_NOSCALESTART) ? vid.height : BASEVIDHEIGHT)<<(FRACBITS-1);
+
+		*fdup >>= 1;
+		*colfrac <<= 1;
+		*x >>= 1;
+
+		if (stplyr == &players[displayplayer])
+		{
+			if (!(scrn & (V_SNAPTOTOP|V_SNAPTOBOTTOM)))
+				perplayershuffle |= 1;
+			if (!(flags & (V_SNAPTOLEFT|V_SNAPTORIGHT)))
+				perplayershuffle |= 4;
+			*scrn &= ~V_SNAPTOBOTTOM|V_SNAPTORIGHT;
+		}
+		else if (stplyr == &players[secondarydisplayplayer])
+		{
+			if (!(flags & (V_SNAPTOTOP|V_SNAPTOBOTTOM)))
+				perplayershuffle |= 1;
+			if (!(flags & (V_SNAPTOLEFT|V_SNAPTORIGHT)))
+				perplayershuffle |= 8;
+			*x += adjustx;
+			*scrn &= ~V_SNAPTOBOTTOM|V_SNAPTOLEFT;
+		}
+		else if (stplyr == &players[thirddisplayplayer])
+		{
+			if (!(flags & (V_SNAPTOTOP|V_SNAPTOBOTTOM)))
+				perplayershuffle |= 2;
+			if (!(flags & (V_SNAPTOLEFT|V_SNAPTORIGHT)))
+				perplayershuffle |= 4;
+			*y += adjusty;
+			*scrn &= ~V_SNAPTOTOP|V_SNAPTORIGHT;
+		}
+		else //if (stplyr == &players[fourthdisplayplayer])
+		{
+			if (!(flags & (V_SNAPTOTOP|V_SNAPTOBOTTOM)))
+				perplayershuffle |= 2;
+			if (!(flags & (V_SNAPTOLEFT|V_SNAPTORIGHT)))
+				perplayershuffle |= 8;
+			*x += adjustx;
+			*y += adjusty;
+			*scrn &= ~V_SNAPTOTOP|V_SNAPTOLEFT;
+		}
+	}
+	else
+#endif
+	// 2 players
+	{
+		if (stplyr == &players[displayplayer])
+		{
+			if (!(flags & (V_SNAPTOTOP|V_SNAPTOBOTTOM)))
+				perplayershuffle = 1;
+			*scrn &= ~V_SNAPTOBOTTOM;
+		}
+		else //if (stplyr == &players[secondarydisplayplayer])
+		{
+			if (!(flags & (V_SNAPTOTOP|V_SNAPTOBOTTOM)))
+				perplayershuffle = 2;
+			*y += adjusty;
+			*scrn &= ~V_SNAPTOTOP;
+		}
+	}
+
+	return perplayershuffle;
+}
+
+static void AdjustPositionForVirtualRes(fixed_t dup, INT32 scrn, UINT8 perplayershuffle, fixed_t *x, fixed_t *y)
+{
+	if (vid.width != BASEVIDWIDTH * dup)
+	{
+		// dup adjustments pretend that screen width is BASEVIDWIDTH * dup,
+		// so center this imaginary screen
+		if (scrn & V_SNAPTORIGHT)
+			*x += (vid.width - (BASEVIDWIDTH * dup));
+		else if (!(scrn & V_SNAPTOLEFT))
+			*x += (vid.width - (BASEVIDWIDTH * dup)) / 2;
+		if (perplayershuffle & 4)
+			*x -= (vid.width - (BASEVIDWIDTH * dup)) / 4;
+		else if (perplayershuffle & 8)
+			*x += (vid.width - (BASEVIDWIDTH * dup)) / 4;
+	}
+	if (vid.height != BASEVIDHEIGHT * dup)
+	{
+		// same thing here
+		if (scrn & V_SNAPTOBOTTOM)
+			*y += (vid.height - (BASEVIDHEIGHT * dup));
+		else if (!(scrn & V_SNAPTOTOP))
+			*y += (vid.height - (BASEVIDHEIGHT * dup)) / 2;
+		if (perplayershuffle & 1)
+			*y -= (vid.height - (BASEVIDHEIGHT * dup)) / 4;
+		else if (perplayershuffle & 2)
+			*y += (vid.height - (BASEVIDHEIGHT * dup)) / 4;
+	}
+}
+
 // Draws a patch scaled to arbitrary size.
-void V_DrawStretchyFixedPatch(fixed_t x, fixed_t y, fixed_t pscale, fixed_t vscale, INT32 scrn, patch_t *patch, const UINT8 *colormap)
+void V_DrawPatch(fixed_t x, fixed_t y, fixed_t pscale, fixed_t vscale, INT32 scrn, patch_t *patch, const UINT8 *colormap)
 {
 	UINT8 (*patchdrawfunc)(const UINT8*, const UINT8*, fixed_t);
 	UINT32 alphalevel = ((scrn & V_ALPHAMASK) >> V_ALPHASHIFT);
@@ -514,10 +647,7 @@ void V_DrawStretchyFixedPatch(fixed_t x, fixed_t y, fixed_t pscale, fixed_t vsca
 
 	UINT8 perplayershuffle = 0;
 
-	if (Patch_NeedsUpdate(patch))
-		Patch_DoDynamicUpdate(patch);
-
-	if (patch->columns == NULL || rendermode == render_none)
+	if (rendermode == render_none)
 		return;
 
 #ifdef HWRENDER
@@ -527,6 +657,18 @@ void V_DrawStretchyFixedPatch(fixed_t x, fixed_t y, fixed_t pscale, fixed_t vsca
 		return;
 	}
 #endif
+
+	if (Patch_NeedsUpdate(patch, true))
+		Patch_DoDynamicUpdate(patch, true);
+
+	if (patch->columns == NULL)
+		return;
+
+	if (patch->format == PATCH_FORMAT_RGBA)
+	{
+		V_DrawPatchRGBA(x, y, pscale, vscale, scrn, patch, colormap);
+		return;
+	}
 
 	patchdrawfunc = standardpdraw;
 
@@ -577,92 +719,10 @@ void V_DrawStretchyFixedPatch(fixed_t x, fixed_t y, fixed_t pscale, fixed_t vsca
 	colfrac = FixedDiv(FRACUNIT, fdup);
 	rowfrac = FixedDiv(FRACUNIT, vdup);
 
-	{
-		fixed_t offsetx = 0, offsety = 0;
-
-		// left offset
-		if (scrn & V_FLIP)
-			offsetx = FixedMul((patch->width - patch->leftoffset)<<FRACBITS, pscale) + 1;
-		else
-			offsetx = FixedMul(patch->leftoffset<<FRACBITS, pscale);
-
-		// top offset
-		offsety = FixedMul(patch->topoffset<<FRACBITS, vscale);
-
-		// Subtract the offsets from x/y positions
-		x -= offsetx;
-		y -= offsety;
-	}
+	AdjustPositionByOffsets(patch, pscale, vscale, scrn, &x, &y);
 
 	if (splitscreen && (scrn & V_PERPLAYER))
-	{
-		fixed_t adjusty = ((scrn & V_NOSCALESTART) ? vid.height : BASEVIDHEIGHT)<<(FRACBITS-1);
-		vdup >>= 1;
-		rowfrac <<= 1;
-		y >>= 1;
-#ifdef QUADS
-		if (splitscreen > 1) // 3 or 4 players
-		{
-			fixed_t adjustx = ((scrn & V_NOSCALESTART) ? vid.height : BASEVIDHEIGHT)<<(FRACBITS-1));
-			fdup >>= 1;
-			colfrac <<= 1;
-			x >>= 1;
-			if (stplyr == &players[displayplayer])
-			{
-				if (!(scrn & (V_SNAPTOTOP|V_SNAPTOBOTTOM)))
-					perplayershuffle |= 1;
-				if (!(scrn & (V_SNAPTOLEFT|V_SNAPTORIGHT)))
-					perplayershuffle |= 4;
-				scrn &= ~V_SNAPTOBOTTOM|V_SNAPTORIGHT;
-			}
-			else if (stplyr == &players[secondarydisplayplayer])
-			{
-				if (!(scrn & (V_SNAPTOTOP|V_SNAPTOBOTTOM)))
-					perplayershuffle |= 1;
-				if (!(scrn & (V_SNAPTOLEFT|V_SNAPTORIGHT)))
-					perplayershuffle |= 8;
-				x += adjustx;
-				scrn &= ~V_SNAPTOBOTTOM|V_SNAPTOLEFT;
-			}
-			else if (stplyr == &players[thirddisplayplayer])
-			{
-				if (!(scrn & (V_SNAPTOTOP|V_SNAPTOBOTTOM)))
-					perplayershuffle |= 2;
-				if (!(scrn & (V_SNAPTOLEFT|V_SNAPTORIGHT)))
-					perplayershuffle |= 4;
-				y += adjusty;
-				scrn &= ~V_SNAPTOTOP|V_SNAPTORIGHT;
-			}
-			else //if (stplyr == &players[fourthdisplayplayer])
-			{
-				if (!(scrn & (V_SNAPTOTOP|V_SNAPTOBOTTOM)))
-					perplayershuffle |= 2;
-				if (!(scrn & (V_SNAPTOLEFT|V_SNAPTORIGHT)))
-					perplayershuffle |= 8;
-				x += adjustx;
-				y += adjusty;
-				scrn &= ~V_SNAPTOTOP|V_SNAPTOLEFT;
-			}
-		}
-		else
-#endif
-		// 2 players
-		{
-			if (stplyr == &players[displayplayer])
-			{
-				if (!(scrn & (V_SNAPTOTOP|V_SNAPTOBOTTOM)))
-					perplayershuffle = 1;
-				scrn &= ~V_SNAPTOBOTTOM;
-			}
-			else //if (stplyr == &players[secondarydisplayplayer])
-			{
-				if (!(scrn & (V_SNAPTOTOP|V_SNAPTOBOTTOM)))
-					perplayershuffle = 2;
-				y += adjusty;
-				scrn &= ~V_SNAPTOTOP;
-			}
-		}
-	}
+		perplayershuffle = AdjustPositionForScreen(&scrn, &x, &y, &fdup, &colfrac, &vdup, &rowfrac);
 
 	desttop = screens[scrn&V_PARAMMASK];
 
@@ -698,31 +758,7 @@ void V_DrawStretchyFixedPatch(fixed_t x, fixed_t y, fixed_t pscale, fixed_t vsca
 				}
 			}
 
-			if (vid.width != BASEVIDWIDTH * dup)
-			{
-				// dup adjustments pretend that screen width is BASEVIDWIDTH * dup,
-				// so center this imaginary screen
-				if (scrn & V_SNAPTORIGHT)
-					x += (vid.width - (BASEVIDWIDTH * dup));
-				else if (!(scrn & V_SNAPTOLEFT))
-					x += (vid.width - (BASEVIDWIDTH * dup)) / 2;
-				if (perplayershuffle & 4)
-					x -= (vid.width - (BASEVIDWIDTH * dup)) / 4;
-				else if (perplayershuffle & 8)
-					x += (vid.width - (BASEVIDWIDTH * dup)) / 4;
-			}
-			if (vid.height != BASEVIDHEIGHT * dup)
-			{
-				// same thing here
-				if (scrn & V_SNAPTOBOTTOM)
-					y += (vid.height - (BASEVIDHEIGHT * dup));
-				else if (!(scrn & V_SNAPTOTOP))
-					y += (vid.height - (BASEVIDHEIGHT * dup)) / 2;
-				if (perplayershuffle & 1)
-					y -= (vid.height - (BASEVIDHEIGHT * dup)) / 4;
-				else if (perplayershuffle & 2)
-					y += (vid.height - (BASEVIDHEIGHT * dup)) / 4;
-			}
+			AdjustPositionForVirtualRes(dup, scrn, perplayershuffle, &x, &y);
 		}
 
 		desttop += (y*vid.width) + x;
@@ -779,6 +815,187 @@ void V_DrawStretchyFixedPatch(fixed_t x, fixed_t y, fixed_t pscale, fixed_t vsca
 	}
 }
 
+// Draws a patch scaled to arbitrary size.
+static void V_DrawPatchRGBA(fixed_t x, fixed_t y, fixed_t pscale, fixed_t vscale, INT32 scrn, patch_t *patch, const UINT8 *colormap)
+{
+	UINT8 (*patchdrawfunc)(const UINT8*, const UINT8*, fixed_t);
+	UINT32 alphalevel = ((scrn & V_ALPHAMASK) >> V_ALPHASHIFT);
+	UINT32 blendmode = ((scrn & V_BLENDMASK) >> V_BLENDSHIFT);
+
+	fixed_t col, ofs, colfrac, rowfrac, fdup, vdup;
+	INT32 dup;
+	column_t *column;
+	UINT8 *desttop, *dest, *deststart, *destend;
+	const RGBA_t *source;
+	const UINT8 *deststop;
+	fixed_t pwidth; // patch width
+	fixed_t offx = 0; // x offset
+
+	UINT8 perplayershuffle = 0;
+
+	static colorlookup_t colorlookup;
+
+	if (Patch_NeedsUpdate(patch, true))
+		Patch_DoDynamicUpdate(patch, true);
+
+	if (patch->columns == NULL || rendermode == render_none)
+		return;
+
+	patchdrawfunc = standardpdraw;
+
+	v_translevel = NULL;
+	if (alphalevel || blendmode)
+	{
+		if (alphalevel == 10) // V_HUDTRANSHALF
+			alphalevel = hudminusalpha[st_translucency];
+		else if (alphalevel == 11) // V_HUDTRANS
+			alphalevel = 10 - st_translucency;
+		else if (alphalevel == 12) // V_HUDTRANSDOUBLE
+			alphalevel = hudplusalpha[st_translucency];
+
+		if (alphalevel >= 10)
+			return; // invis
+
+		if (alphalevel || blendmode)
+		{
+			v_translevel = R_GetBlendTable(blendmode+1, alphalevel);
+			patchdrawfunc = translucentpdraw;
+		}
+	}
+
+	v_colormap = NULL;
+	if (colormap)
+	{
+		v_colormap = colormap;
+		patchdrawfunc = (v_translevel) ? transmappedpdraw : mappedpdraw;
+	}
+
+	dup = vid.dup;
+	if (scrn & V_SCALEPATCHMASK) switch (scrn & V_SCALEPATCHMASK)
+	{
+		case V_NOSCALEPATCH:
+			dup = 1;
+			break;
+		case V_SMALLSCALEPATCH:
+			dup = vid.smalldup;
+			break;
+		case V_MEDSCALEPATCH:
+			dup = vid.meddup;
+			break;
+	}
+
+	fdup = vdup = pscale * dup;
+	if (vscale != pscale)
+		vdup = vscale * dup;
+	colfrac = FixedDiv(FRACUNIT, fdup);
+	rowfrac = FixedDiv(FRACUNIT, vdup);
+
+	AdjustPositionByOffsets(patch, pscale, vscale, scrn, &x, &y);
+
+	if (splitscreen && (scrn & V_PERPLAYER))
+		perplayershuffle = AdjustPositionForScreen(&scrn, &x, &y, &fdup, &colfrac, &vdup, &rowfrac);
+
+	desttop = screens[scrn&V_PARAMMASK];
+
+	if (!desttop)
+		return;
+
+	InitColorLUT(&colorlookup, pMasterPalette, false);
+
+	deststop = desttop + vid.rowbytes * vid.height;
+
+	if (scrn & V_NOSCALESTART)
+	{
+		x >>= FRACBITS;
+		y >>= FRACBITS;
+		desttop += (y*vid.width) + x;
+	}
+	else
+	{
+		x *= dup;
+		y *= dup;
+		x >>= FRACBITS;
+		y >>= FRACBITS;
+
+		// Center it if necessary
+		if (!(scrn & V_SCALEPATCHMASK))
+		{
+			// if it's meant to cover the whole screen, black out the rest (ONLY IF TOP LEFT ISN'T TRANSPARENT)
+			if (!v_translevel && x == 0 && patch->width == BASEVIDWIDTH && y == 0 && patch->height == BASEVIDHEIGHT)
+			{
+				column = &patch->columns[0];
+				if (column->num_posts && !column->posts[0].topdelta)
+				{
+					source = (RGBA_t*)column->pixels;
+					if (source->s.alpha)
+					{
+						UINT8 palidx = GetColorLUT(&colorlookup, source->s.red, source->s.green, source->s.blue);
+						V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, palidx);
+					}
+				}
+			}
+
+			AdjustPositionForVirtualRes(dup, scrn, perplayershuffle, &x, &y);
+		}
+
+		desttop += (y*vid.width) + x;
+	}
+
+	if (pscale != FRACUNIT) // scale width properly
+	{
+		pwidth = patch->width<<FRACBITS;
+		pwidth = FixedMul(pwidth, pscale);
+		pwidth *= dup;
+		pwidth >>= FRACBITS;
+	}
+	else
+		pwidth = patch->width * dup;
+
+	deststart = desttop;
+	destend = desttop + pwidth;
+
+	for (col = 0; (col>>FRACBITS) < patch->width; col += colfrac, ++offx, desttop++)
+	{
+		if (scrn & V_FLIP) // offx is measured from right edge instead of left
+		{
+			if (x+pwidth-offx < 0) // don't draw off the left of the screen (WRAP PREVENTION)
+				break;
+			if (x+pwidth-offx >= vid.width) // don't draw off the right of the screen (WRAP PREVENTION)
+				continue;
+		}
+		else
+		{
+			if (x+offx < 0) // don't draw off the left of the screen (WRAP PREVENTION)
+				continue;
+			if (x+offx >= vid.width) // don't draw off the right of the screen (WRAP PREVENTION)
+				break;
+		}
+
+		column = &patch->columns[col>>FRACBITS];
+
+		for (unsigned i = 0; i < column->num_posts; i++)
+		{
+			post_t *post = &column->posts[i];
+			source = (RGBA_t*)(column->pixels + post->data_offset);
+			dest = desttop;
+			if (scrn & V_FLIP)
+				dest = deststart + (destend - desttop);
+			dest += FixedInt(FixedMul(post->topdelta<<FRACBITS,vdup))*vid.width;
+
+			for (ofs = 0; dest < deststop && (size_t)(ofs>>FRACBITS) < post->length; ofs += rowfrac)
+			{
+				if (dest >= screens[scrn&V_PARAMMASK]) // don't draw off the top of the screen (CRASH PREVENTION)
+				{
+					RGBA_t texel = source[ofs>>FRACBITS];
+					UINT8 palidx = GetColorLUT(&colorlookup, texel.s.red, texel.s.green, texel.s.blue);
+					*dest = patchdrawfunc(dest, &palidx, 0);
+				}
+				dest += vid.width;
+			}
+		}
+	}
+}
+
 // Draws a patch cropped and scaled to arbitrary size.
 void V_DrawCroppedPatch(fixed_t x, fixed_t y, fixed_t pscale, fixed_t vscale, INT32 scrn, patch_t *patch, const UINT8 *colormap, fixed_t sx, fixed_t sy, fixed_t w, fixed_t h)
 {
@@ -794,9 +1011,6 @@ void V_DrawCroppedPatch(fixed_t x, fixed_t y, fixed_t pscale, fixed_t vscale, IN
 
 	UINT8 perplayershuffle = 0;
 
-	if (Patch_NeedsUpdate(patch))
-		Patch_DoDynamicUpdate(patch);
-
 	if (patch->columns == NULL || rendermode == render_none)
 		return;
 
@@ -807,6 +1021,12 @@ void V_DrawCroppedPatch(fixed_t x, fixed_t y, fixed_t pscale, fixed_t vscale, IN
 		return;
 	}
 #endif
+
+	if (Patch_NeedsUpdate(patch, true))
+		Patch_DoDynamicUpdate(patch, true);
+
+	if (patch->columns == NULL || rendermode == render_none)
+		return;
 
 	patchdrawfunc = standardpdraw;
 
@@ -869,7 +1089,7 @@ void V_DrawCroppedPatch(fixed_t x, fixed_t y, fixed_t pscale, fixed_t vscale, IN
 #ifdef QUADS
 		if (splitscreen > 1) // 3 or 4 players
 		{
-			fixed_t adjustx = ((scrn & V_NOSCALESTART) ? vid.height : BASEVIDHEIGHT)<<(FRACBITS-1));
+			fixed_t adjustx = ((scrn & V_NOSCALESTART) ? vid.height : BASEVIDHEIGHT)<<(FRACBITS-1);
 			fdup >>= 1;
 			colfrac <<= 1;
 			x >>= 1;
@@ -952,36 +1172,7 @@ void V_DrawCroppedPatch(fixed_t x, fixed_t y, fixed_t pscale, fixed_t vscale, IN
 
 		// Center it if necessary
 		if (!(scrn & V_SCALEPATCHMASK))
-		{
-			// if it's meant to cover the whole screen, black out the rest
-			// no the patch is cropped do not do this ever
-
-			if (vid.width != BASEVIDWIDTH * dup)
-			{
-				// dup adjustments pretend that screen width is BASEVIDWIDTH * dup,
-				// so center this imaginary screen
-				if (scrn & V_SNAPTORIGHT)
-					x += (vid.width - (BASEVIDWIDTH * dup));
-				else if (!(scrn & V_SNAPTOLEFT))
-					x += (vid.width - (BASEVIDWIDTH * dup)) / 2;
-				if (perplayershuffle & 4)
-					x -= (vid.width - (BASEVIDWIDTH * dup)) / 4;
-				else if (perplayershuffle & 8)
-					x += (vid.width - (BASEVIDWIDTH * dup)) / 4;
-			}
-			if (vid.height != BASEVIDHEIGHT * dup)
-			{
-				// same thing here
-				if (scrn & V_SNAPTOBOTTOM)
-					y += (vid.height - (BASEVIDHEIGHT * dup));
-				else if (!(scrn & V_SNAPTOTOP))
-					y += (vid.height - (BASEVIDHEIGHT * dup)) / 2;
-				if (perplayershuffle & 1)
-					y -= (vid.height - (BASEVIDHEIGHT * dup)) / 4;
-				else if (perplayershuffle & 2)
-					y += (vid.height - (BASEVIDHEIGHT * dup)) / 4;
-			}
-		}
+			AdjustPositionForVirtualRes(dup, scrn, perplayershuffle, &x, &y);
 
 		desttop += (y*vid.width) + x;
 	}
@@ -1057,8 +1248,8 @@ void V_DrawIntoPatch(patch_t *dest_patch, patch_t *src_patch, fixed_t x, fixed_t
 
 	dynamicpatch_t *dpatch = (dynamicpatch_t *)dest_patch;
 
-	if (Patch_NeedsUpdate(src_patch))
-		Patch_DoDynamicUpdate(src_patch);
+	if (Patch_NeedsUpdate(src_patch, true))
+		Patch_DoDynamicUpdate(src_patch, true);
 
 	if (src_patch->columns == NULL)
 		return;
@@ -1110,23 +1301,7 @@ void V_DrawIntoPatch(patch_t *dest_patch, patch_t *src_patch, fixed_t x, fixed_t
 	fixed_t colfrac = FixedDiv(FRACUNIT, fdup);
 	fixed_t rowfrac = FixedDiv(FRACUNIT, vdup);
 
-	fixed_t offsetx = 0, offsety = 0;
-
-	// left offset
-	if (flags & V_FLIP)
-		offsetx = FixedMul((src_patch->width - src_patch->leftoffset)<<FRACBITS, pscale) + 1;
-	else
-		offsetx = FixedMul(src_patch->leftoffset<<FRACBITS, pscale);
-
-	// top offset
-	offsety = FixedMul(src_patch->topoffset<<FRACBITS, vscale);
-
-	// Subtract the offsets from x/y positions
-	x -= offsetx;
-	y -= offsety;
-
-	x >>= FRACBITS;
-	y >>= FRACBITS;
+	AdjustPositionByOffsets(src_patch, pscale, vscale, flags, &x, &y);
 
 	fixed_t pwidth = src_patch->width;
 	if (pscale != FRACUNIT)
@@ -1404,31 +1579,7 @@ void V_DrawFill(INT32 x, INT32 y, INT32 w, INT32 h, INT32 c)
 		h *= vid.dup;
 
 		// Center it if necessary
-		if (vid.width != BASEVIDWIDTH * vid.dup)
-		{
-			// dup adjustments pretend that screen width is BASEVIDWIDTH * dup,
-			// so center this imaginary screen
-			if (c & V_SNAPTORIGHT)
-				x += (vid.width - (BASEVIDWIDTH * vid.dup));
-			else if (!(c & V_SNAPTOLEFT))
-				x += (vid.width - (BASEVIDWIDTH * vid.dup)) / 2;
-			if (perplayershuffle & 4)
-				x -= (vid.width - (BASEVIDWIDTH * vid.dup)) / 4;
-			else if (perplayershuffle & 8)
-				x += (vid.width - (BASEVIDWIDTH * vid.dup)) / 4;
-		}
-		if (vid.height != BASEVIDHEIGHT * vid.dup)
-		{
-			// same thing here
-			if (c & V_SNAPTOBOTTOM)
-				y += (vid.height - (BASEVIDHEIGHT * vid.dup));
-			else if (!(c & V_SNAPTOTOP))
-				y += (vid.height - (BASEVIDHEIGHT * vid.dup)) / 2;
-			if (perplayershuffle & 1)
-				y -= (vid.height - (BASEVIDHEIGHT * vid.dup)) / 4;
-			else if (perplayershuffle & 2)
-				y += (vid.height - (BASEVIDHEIGHT * vid.dup)) / 4;
-		}
+		AdjustPositionForVirtualRes(vid.dup, c, perplayershuffle, &x, &y);
 	}
 
 	if (x >= vid.width || y >= vid.height)
@@ -1608,31 +1759,7 @@ void V_DrawFillConsoleMap(INT32 x, INT32 y, INT32 w, INT32 h, INT32 c)
 		h *= vid.dup;
 
 		// Center it if necessary
-		if (vid.width != BASEVIDWIDTH * vid.dup)
-		{
-			// dup adjustments pretend that screen width is BASEVIDWIDTH * dup,
-			// so center this imaginary screen
-			if (c & V_SNAPTORIGHT)
-				x += (vid.width - (BASEVIDWIDTH * vid.dup));
-			else if (!(c & V_SNAPTOLEFT))
-				x += (vid.width - (BASEVIDWIDTH * vid.dup)) / 2;
-			if (perplayershuffle & 4)
-				x -= (vid.width - (BASEVIDWIDTH * vid.dup)) / 4;
-			else if (perplayershuffle & 8)
-				x += (vid.width - (BASEVIDWIDTH * vid.dup)) / 4;
-		}
-		if (vid.height != BASEVIDHEIGHT * vid.dup)
-		{
-			// same thing here
-			if (c & V_SNAPTOBOTTOM)
-				y += (vid.height - (BASEVIDHEIGHT * vid.dup));
-			else if (!(c & V_SNAPTOTOP))
-				y += (vid.height - (BASEVIDHEIGHT * vid.dup)) / 2;
-			if (perplayershuffle & 1)
-				y -= (vid.height - (BASEVIDHEIGHT * vid.dup)) / 4;
-			else if (perplayershuffle & 2)
-				y += (vid.height - (BASEVIDHEIGHT * vid.dup)) / 4;
-		}
+		AdjustPositionForVirtualRes(vid.dup, c, perplayershuffle, &x, &y);
 	}
 
 	if (x >= vid.width || y >= vid.height)
@@ -1790,31 +1917,7 @@ void V_DrawFadeFill(INT32 x, INT32 y, INT32 w, INT32 h, INT32 c, UINT16 color, U
 		h *= vid.dup;
 
 		// Center it if necessary
-		if (vid.width != BASEVIDWIDTH * vid.dup)
-		{
-			// dup adjustments pretend that screen width is BASEVIDWIDTH * dup,
-			// so center this imaginary screen
-			if (c & V_SNAPTORIGHT)
-				x += (vid.width - (BASEVIDWIDTH * vid.dup));
-			else if (!(c & V_SNAPTOLEFT))
-				x += (vid.width - (BASEVIDWIDTH * vid.dup)) / 2;
-			if (perplayershuffle & 4)
-				x -= (vid.width - (BASEVIDWIDTH * vid.dup)) / 4;
-			else if (perplayershuffle & 8)
-				x += (vid.width - (BASEVIDWIDTH * vid.dup)) / 4;
-		}
-		if (vid.height != BASEVIDHEIGHT * vid.dup)
-		{
-			// same thing here
-			if (c & V_SNAPTOBOTTOM)
-				y += (vid.height - (BASEVIDHEIGHT * vid.dup));
-			else if (!(c & V_SNAPTOTOP))
-				y += (vid.height - (BASEVIDHEIGHT * vid.dup)) / 2;
-			if (perplayershuffle & 1)
-				y -= (vid.height - (BASEVIDHEIGHT * vid.dup)) / 4;
-			else if (perplayershuffle & 2)
-				y += (vid.height - (BASEVIDHEIGHT * vid.dup)) / 4;
-		}
+		AdjustPositionForVirtualRes(vid.dup, c, perplayershuffle, &x, &y);
 	}
 
 	if (x >= vid.width || y >= vid.height)

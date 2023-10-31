@@ -272,7 +272,6 @@ static void HWR_DrawPatchInCache(GLMipmap_t *mipmap,
 	fixed_t scale_y   = FRACUNIT;
 
 	INT32 bpp = format2bpp(mipmap->format);
-
 	if (bpp < 1 || bpp > 4)
 		I_Error("HWR_DrawPatchInCache: no drawer defined for this bpp (%d)\n",bpp);
 
@@ -291,6 +290,39 @@ static void HWR_DrawPatchInCache(GLMipmap_t *mipmap,
 								yfracstep, scale_y,
 								NULL, pheight, // not that pheight is going to get used anyway...
 								bpp);
+	}
+}
+
+static void HWR_DrawPatchInCacheRGBA(GLMipmap_t *mipmap,
+	INT32 pblockwidth, INT32 pblockheight,
+	INT32 pwidth, INT32 pheight,
+	const patch_t *realpatch)
+{
+	if (pwidth <= 0 || pheight <= 0)
+		return;
+
+	INT32 bpp = format2bpp(mipmap->format);
+	if (bpp != 4)
+		I_Error("HWR_DrawPatchInCacheRGBA: invalid bpp (%d)\n",bpp);
+
+	fixed_t stepx = (pwidth << FRACBITS) / pblockwidth;
+	fixed_t stepy = (pheight << FRACBITS) / pblockheight;
+	fixed_t posy = 0;
+
+	RGBA_t *block = (RGBA_t*)mipmap->data;
+	const RGBA_t *source = (RGBA_t*)realpatch->pixels;
+
+	for (int j = 0; j < pblockheight; j++)
+	{
+		fixed_t posx = 0;
+		RGBA_t *dest = &block[j * mipmap->width];
+		for (int i = 0; i < pblockwidth; i++)
+		{
+			size_t position = ((posx >> FRACBITS) * pheight) + (posy >> FRACBITS);
+			*dest++ = source[position];
+			posx += stepx;
+		}
+		posy += stepy;
 	}
 }
 
@@ -539,10 +571,10 @@ void HWR_MakePatch (const patch_t *patch, GLPatch_t *grPatch, GLMipmap_t *grMipm
 	{
 		MakeBlock(grMipmap);
 
-		HWR_DrawPatchInCache(grMipmap,
-			grMipmap->width, grMipmap->height,
-			patch->width, patch->height,
-			patch);
+		if (patch->format == PATCH_FORMAT_RGBA)
+			HWR_DrawPatchInCacheRGBA(grMipmap, grMipmap->width, grMipmap->height, patch->width, patch->height, patch);
+		else
+			HWR_DrawPatchInCache(grMipmap, grMipmap->width, grMipmap->height, patch->width, patch->height, patch);
 	}
 }
 
@@ -942,16 +974,43 @@ static void HWR_UpdatePatchPixels(GLMipmap_t *mipmap, UINT8 *pixels, INT16 patch
 	}
 }
 
+static void HWR_UpdatePatchPixelsRGBA(GLMipmap_t *mipmap, RGBA_t *pixels, INT16 patchheight, INT16 left, INT16 top, INT16 right, INT16 bottom)
+{
+	INT32 bpp = format2bpp(mipmap->format);
+	if (bpp != 4)
+		I_Error("HWR_UpdatePatchPixelsRGBA: invalid bpp (%d)\n",bpp);
+
+	UINT8 *dest_pixels = (UINT8*)mipmap->data;
+
+	for (INT16 y = top; y < bottom; y++)
+	{
+		UINT8 *dest = &dest_pixels[(y * (mipmap->width * bpp)) + (left * bpp)];
+
+		for (INT16 x = left; x < right; x++)
+		{
+			RGBA_t texel = pixels[(x * patchheight) + y];
+			memcpy(dest, &texel, sizeof(RGBA_t));
+			dest += bpp;
+		}
+	}
+}
+
 static void HWR_UpdateMipmapRegion(patch_t *patch, GLMipmap_t *grMipmap, INT16 left, INT16 top, INT16 right, INT16 bottom)
 {
 	GLPatch_t *grPatch = patch->hardware;
 
-	bitarray_t *pixels_opaque = Patch_GetOpaqueRegions(patch);
-
-	if (pixels_opaque == NULL || grMipmap->width == 0 || grMipmap->data == NULL)
+	if (grMipmap->width == 0 || grMipmap->data == NULL || patch->type == PATCH_TYPE_STATIC)
 		HWR_MakePatch(patch, grPatch, grMipmap, true);
 	else
-		HWR_UpdatePatchPixels(grMipmap, patch->pixels, patch->height, pixels_opaque, left, top, right, bottom);
+	{
+		if (patch->format == PATCH_FORMAT_RGBA)
+			HWR_UpdatePatchPixelsRGBA(grMipmap, (RGBA_t*)patch->pixels, patch->width, left, top, right, bottom);
+		else
+		{
+			bitarray_t *pixels_opaque = Patch_GetOpaqueRegions(patch);
+			HWR_UpdatePatchPixels(grMipmap, patch->pixels, patch->height, pixels_opaque, left, top, right, bottom);
+		}
+	}
 
 	// If hardware does not have the texture, then call pfnSetTexture to upload it
 	// If it does have the texture, then call pfnUpdateTextureRegion to update it

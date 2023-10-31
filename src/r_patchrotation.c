@@ -160,7 +160,7 @@ static void RotatedPatch_CalculateDimensions(
 void RotatedPatch_DoRotation(rotsprite_t *rotsprite, patch_t *patch, INT32 angle, INT32 xpivot, INT32 ypivot, boolean flip)
 {
 	patch_t *rotated;
-	UINT16 *rawdst, *rawconv;
+	void *rawdst;
 	size_t size;
 	pictureflags_t bflip = (flip) ? PICFLAGS_XFLIP : 0;
 
@@ -177,7 +177,6 @@ void RotatedPatch_DoRotation(rotsprite_t *rotsprite, patch_t *patch, INT32 angle
 	INT32 sx, sy;
 	INT32 dx, dy;
 	INT32 ox, oy;
-	INT32 minx, miny, maxx, maxy;
 
 	// Don't cache angle = 0
 	if (angle < 1 || angle >= ROTANGLES)
@@ -205,89 +204,88 @@ void RotatedPatch_DoRotation(rotsprite_t *rotsprite, patch_t *patch, INT32 angle
 		newheight *= 2;
 	}
 
-	minx = newwidth;
-	miny = newheight;
-	maxx = 0;
-	maxy = 0;
-
 	// Draw the rotated sprite to a temporary buffer.
 	size = (newwidth * newheight);
 	if (!size)
 		size = (width * height);
-	rawdst = Z_Calloc(size * sizeof(UINT16), PU_STATIC, NULL);
 
-	for (dy = 0; dy < newheight; dy++)
+	int format;
+	int patchformat;
+
+	if (patch->format == PATCH_FORMAT_RGBA)
 	{
-		for (dx = 0; dx < newwidth; dx++)
+		UINT32 *dest = Z_Calloc(size * sizeof(UINT16), PU_STATIC, NULL);
+
+		patchformat = PICFMT_PATCH32;
+
+		for (dy = 0; dy < newheight; dy++)
 		{
-			x = (dx - (newwidth / 2)) * FRACUNIT;
-			y = (dy - (newheight / 2)) * FRACUNIT;
-			sx = FixedMul(x, ca) + FixedMul(y, sa) + xcenter;
-			sy = -FixedMul(x, sa) + FixedMul(y, ca) + ycenter;
-
-			sx >>= FRACBITS;
-			sy >>= FRACBITS;
-
-			if (sx >= 0 && sy >= 0 && sx < width && sy < height)
+			for (dx = 0; dx < newwidth; dx++)
 			{
-				void *input = Picture_GetPatchPixel(patch, PICFMT_PATCH, sx, sy, bflip);
-				if (input != NULL)
+				x = (dx - (newwidth / 2)) * FRACUNIT;
+				y = (dy - (newheight / 2)) * FRACUNIT;
+				sx = FixedMul(x, ca) + FixedMul(y, sa) + xcenter;
+				sy = -FixedMul(x, sa) + FixedMul(y, ca) + ycenter;
+
+				sx >>= FRACBITS;
+				sy >>= FRACBITS;
+
+				if (sx >= 0 && sy >= 0 && sx < width && sy < height)
 				{
-					rawdst[(dy * newwidth) + dx] = (0xFF00 | (*(UINT8 *)input));
-					if (dx < minx)
-						minx = dx;
-					if (dy < miny)
-						miny = dy;
-					if (dx > maxx)
-						maxx = dx;
-					if (dy > maxy)
-						maxy = dy;
+					void *input = Picture_GetPatchPixel(patch, patchformat, sx, sy, bflip);
+					if (input != NULL)
+					{
+						dest[(dy * newwidth) + dx] = *(UINT32 *)input;
+					}
 				}
 			}
 		}
+
+		rawdst = dest;
+		format = PICFMT_FLAT32;
+	}
+	else
+	{
+		UINT16 *dest = Z_Calloc(size * sizeof(UINT16), PU_STATIC, NULL);
+
+		patchformat = PICFMT_PATCH;
+
+		for (dy = 0; dy < newheight; dy++)
+		{
+			for (dx = 0; dx < newwidth; dx++)
+			{
+				x = (dx - (newwidth / 2)) * FRACUNIT;
+				y = (dy - (newheight / 2)) * FRACUNIT;
+				sx = FixedMul(x, ca) + FixedMul(y, sa) + xcenter;
+				sy = -FixedMul(x, sa) + FixedMul(y, ca) + ycenter;
+
+				sx >>= FRACBITS;
+				sy >>= FRACBITS;
+
+				if (sx >= 0 && sy >= 0 && sx < width && sy < height)
+				{
+					void *input = Picture_GetPatchPixel(patch, patchformat, sx, sy, bflip);
+					if (input != NULL)
+					{
+						dest[(dy * newwidth) + dx] = (0xFF00 | (*(UINT8 *)input));
+					}
+				}
+			}
+		}
+
+		rawdst = dest;
+		format = PICFMT_FLAT16;
 	}
 
 	ox = (newwidth / 2) + (leftoffset - xpivot);
 	oy = (newheight / 2) + (patch->topoffset - ypivot);
-	width = (maxx - minx);
-	height = (maxy - miny);
-
-	if ((unsigned)(width * height) > size)
-	{
-		UINT16 *src, *dest;
-
-		size = (width * height);
-		rawconv = Z_Calloc(size * sizeof(UINT16), PU_STATIC, NULL);
-
-		src = &rawdst[(miny * newwidth) + minx];
-		dest = rawconv;
-		dy = height;
-
-		while (dy--)
-		{
-			M_Memcpy(dest, src, width * sizeof(UINT16));
-			dest += width;
-			src += newwidth;
-		}
-
-		ox -= minx;
-		oy -= miny;
-
-		Z_Free(rawdst);
-	}
-	else
-	{
-		rawconv = rawdst;
-		width = newwidth;
-		height = newheight;
-	}
 
 	// make patch
-	rotated = (patch_t *)Picture_Convert(PICFMT_FLAT16, rawconv, PICFMT_PATCH, 0, NULL, width, height, 0, 0, 0);
+	rotated = (patch_t *)Picture_Convert(format, rawdst, patchformat, 0, NULL, newwidth, newheight, 0, 0, 0);
 
 	Z_ChangeTag(rotated, PU_PATCH_ROTATED);
 	Z_SetUser(rotated, (void **)(&rotsprite->patches[idx]));
-	Z_Free(rawconv);
+	Z_Free(rawdst);
 
 	rotated->leftoffset = ox;
 	rotated->topoffset = oy;

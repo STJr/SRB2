@@ -24,6 +24,7 @@
 #include "../m_misc.h" //FIL_WriteFile()
 #include "../r_draw.h" //viewborderlump
 #include "../r_main.h"
+#include "../r_patch.h"
 #include "../w_wad.h"
 #include "../z_zone.h"
 #include "../v_video.h"
@@ -81,6 +82,9 @@ void HWR_DrawPatch(patch_t *gpatch, INT32 x, INT32 y, INT32 option)
 	float sdup = FIXED_TO_FLOAT(vid.fdup)*2.0f;
 	float pdup = FIXED_TO_FLOAT(vid.fdup)*2.0f;
 
+	if (Patch_NeedsUpdate(gpatch, false))
+		Patch_DoDynamicUpdate(gpatch, false);
+
 	// make patch ready in hardware cache
 	HWR_GetPatch(gpatch);
 	hwrPatch = ((GLPatch_t *)gpatch->hardware);
@@ -137,6 +141,9 @@ void HWR_DrawStretchyFixedPatch(patch_t *gpatch, fixed_t x, fixed_t y, fixed_t p
 	float dup, fscalew, fscaleh, fwidth, fheight;
 
 	UINT8 perplayershuffle = 0;
+
+	if (Patch_NeedsUpdate(gpatch, false))
+		Patch_DoDynamicUpdate(gpatch, false);
 
 	// make patch ready in hardware cache
 	if (!colormap)
@@ -379,6 +386,9 @@ void HWR_DrawCroppedPatch(patch_t *gpatch, fixed_t x, fixed_t y, fixed_t pscale,
 	float dup, fscalew, fscaleh, fwidth, fheight;
 
 	UINT8 perplayershuffle = 0;
+
+	if (Patch_NeedsUpdate(gpatch, false))
+		Patch_DoDynamicUpdate(gpatch, false);
 
 	// make patch ready in hardware cache
 	if (!colormap)

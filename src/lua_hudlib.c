@@ -301,6 +301,11 @@ static int lib_patch_getPixel(lua_State *L)
 	void *pixel = Patch_GetPixel(patch, x, y);
 	if (pixel == NULL)
 		lua_pushnil(L);
+	else if (patch->format == PATCH_FORMAT_RGBA)
+	{
+		UINT32 px = *(UINT32 *)pixel;
+		lua_pushinteger(L, px);
+	}
 	else
 	{
 		UINT8 px = *(UINT8 *)pixel;
@@ -320,30 +325,40 @@ static int lib_patch_setPixel(lua_State *L)
 	int y = luaL_checkinteger(L, 3);
 	int color = luaL_checkinteger(L, 4);
 
-	UINT16 pixel = 0x0000;
-	if (color >= 0 && color <= 0xFF)
-		pixel = 0xFF00 | (UINT8)color;
+	if (patch->format == PATCH_FORMAT_RGBA)
+	{
+		UINT32 pixel = (UINT32)color;
+		Patch_SetPixel(patch, &pixel, PICFMT_FLAT32, x, y, true);
+	}
+	else
+	{
+		UINT16 pixel = 0x0000;
+		if (color >= 0 && color <= 0xFF)
+			pixel = 0xFF00 | (UINT8)color;
 
-	Patch_SetPixel(patch, &pixel, PICFMT_FLAT16, x, y, true);
+		Patch_SetPixel(patch, &pixel, PICFMT_FLAT16, x, y, true);
+	}
 
 	return 0;
 }
 
-static UINT16 *patch_update_buffer = NULL;
+static void *patch_update_buffer = NULL;
 static size_t patch_update_buffer_size = 0;
 
 static void img_prepare_buffer(size_t size)
 {
 	if (size > patch_update_buffer_size)
 	{
-		patch_update_buffer = Z_Realloc(patch_update_buffer, size * sizeof(UINT16), PU_STATIC, NULL);
+		patch_update_buffer = Z_Realloc(patch_update_buffer, size, PU_STATIC, NULL);
 		patch_update_buffer_size = size;
 	}
 }
 
 static void img_get_pixels_from_table(lua_State *L, size_t size)
 {
-	memset(patch_update_buffer, 0, patch_update_buffer_size);
+	UINT16 *buf = (UINT16 *)patch_update_buffer;
+
+	memset(buf, 0, patch_update_buffer_size);
 
 	for (size_t i = 0; i < size; i++)
 	{
@@ -362,9 +377,30 @@ static void img_get_pixels_from_table(lua_State *L, size_t size)
 		}
 
 		if (pal_idx != -1)
-			patch_update_buffer[i] = 0xFF00 | (UINT8)pal_idx;
+			buf[i] = 0xFF00 | (UINT8)pal_idx;
 		else
-			patch_update_buffer[i] = 0x0000;
+			buf[i] = 0x0000;
+	}
+}
+
+static void img_get_rgba_pixels_from_table(lua_State *L, size_t size)
+{
+	UINT32 *buf = (UINT32 *)patch_update_buffer;
+
+	memset(buf, 0, patch_update_buffer_size);
+
+	for (size_t i = 0; i < size; i++)
+	{
+		UINT32 color = 0;
+
+		if (lua_next(L, -2) != 0)
+		{
+			if (lua_isnumber(L,-1))
+				color = (UINT32)luaL_checkinteger(L, -1);
+			lua_pop(L, 1);
+		}
+
+		buf[i] = color;
 	}
 }
 
@@ -422,23 +458,41 @@ static int lib_patch_copy(lua_State *L)
 	{
 		size_t size = (unsigned)(src_img_width * src_img_height);
 
-		img_prepare_buffer(size);
-
 		if (lua_objlen(L, 2) + 1 != size)
 			return luaL_error(L, "invalid table length");
 
 		lua_pushvalue(L, 2);
 		lua_pushnil(L);
 
-		img_get_pixels_from_table(L, size);
+		int format;
+
+		if (patch->format == PATCH_FORMAT_RGBA)
+		{
+			img_prepare_buffer(size * 4);
+			img_get_rgba_pixels_from_table(L, size);
+
+			format = PICFMT_FLAT32;
+		}
+		else
+		{
+			img_prepare_buffer(size * 2);
+			img_get_pixels_from_table(L, size);
+
+			format = PICFMT_FLAT16;
+		}
 
 		lua_pop(L, 2);
 
-		Patch_UpdatePixels(patch, patch_update_buffer, src_img_width, src_img_height, PICFMT_FLAT16, sx, sy, sw, sh, dx, dy, copy_transparent);
+		Patch_UpdatePixels(patch, patch_update_buffer, src_img_width, src_img_height, format, sx, sy, sw, sh, dx, dy, copy_transparent);
 	}
 	else
 	{
-		V_DrawIntoPatch(patch, src_patch, dx << FRACBITS, dy << FRACBITS, FRACUNIT, FRACUNIT, 0, NULL, sx << FRACBITS, sy << FRACBITS, sw << FRACBITS, sh << FRACBITS, copy_transparent);
+		if (patch->format == PATCH_FORMAT_RGBA)
+		{
+			// Unimplemented
+		}
+		else
+			V_DrawIntoPatch(patch, src_patch, dx << FRACBITS, dy << FRACBITS, FRACUNIT, FRACUNIT, 0, NULL, sx << FRACBITS, sy << FRACBITS, sw << FRACBITS, sh << FRACBITS, copy_transparent);
 	}
 
 	return 0;
@@ -665,15 +719,40 @@ static int camera_set(lua_State *L)
 }
 
 // Image lib
+enum patch_fmt {
+	patch_fmt_palette,
+	patch_fmt_rgba
+};
+
+static const char *const patch_fmt_opt[] = {
+	"palette",
+	"rgba",
+	NULL};
+
 static int lib_image_create(lua_State *L)
 {
 	int w = luaL_checkinteger(L, 1);
 	int h = luaL_checkinteger(L, 2);
+	enum patch_fmt fmt = luaL_checkoption(L, 3, "palette", patch_fmt_opt);
+
 	if (w <= 0)
 		return luaL_error(L, "invalid image width %d", w);
 	if (h <= 0)
 		return luaL_error(L, "invalid image width %d", h);
-	LUA_PushUserdata(L, Patch_CreateDynamic(w, h), META_PATCH);
+
+	UINT8 format = 0;
+	switch(fmt)
+	{
+	case patch_fmt_palette:
+		format = PATCH_FORMAT_PALETTE;
+		break;
+	case patch_fmt_rgba:
+		format = PATCH_FORMAT_RGBA;
+		break;
+	}
+
+	LUA_PushUserdata(L, Patch_CreateDynamic(w, h, format), META_PATCH);
+
 	return 1;
 }
 

@@ -23,9 +23,15 @@ enum
 	PATCH_TYPE_DYNAMIC
 };
 
+enum
+{
+	PATCH_FORMAT_PALETTE,
+	PATCH_FORMAT_RGBA
+};
+
 // Patch functions
 patch_t *Patch_Create(INT16 width, INT16 height);
-patch_t *Patch_CreateDynamic(INT16 width, INT16 height);
+patch_t *Patch_CreateDynamic(INT16 width, INT16 height, UINT8 format);
 
 void *Patch_GetPixel(patch_t *patch, INT32 x, INT32 y);
 void Patch_SetPixel(patch_t *patch, void *pixel, pictureformat_t informat, INT32 x, INT32 y, boolean transparent_overwrite);
@@ -35,8 +41,10 @@ void Patch_UpdatePixels(patch_t *patch,
 	INT32 sx, INT32 sy, INT32 sw, INT32 sh, INT32 dx, INT32 dy,
 	boolean transparent_overwrite);
 
-boolean Patch_NeedsUpdate(patch_t *patch);
-void Patch_DoDynamicUpdate(patch_t *patch);
+unsigned Patch_GetBpp(patch_t *patch);
+
+boolean Patch_NeedsUpdate(patch_t *patch, boolean needs_columns);
+void Patch_DoDynamicUpdate(patch_t *patch, boolean update_columns);
 void Patch_MarkDirtyRect(patch_t *dpatch, INT16 left, INT16 top, INT16 right, INT16 bottom);
 
 void Patch_Clear(patch_t *patch);

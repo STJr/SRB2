@@ -810,6 +810,7 @@ typedef struct
 typedef struct
 {
 	UINT8 type;
+	UINT8 format;
 
 	INT16 width, height;
 	INT16 leftoffset, topoffset;
@@ -841,6 +842,7 @@ typedef struct
 	boolean update_columns;
 
 	INT16 rect_dirty[4]; // left, top, right, bottom
+	INT16 column_dirty[2]; // left, right
 
 	bitarray_t *pixels_opaque;
 } dynamicpatch_t;

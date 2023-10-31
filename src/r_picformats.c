@@ -356,6 +356,7 @@ void *Picture_PatchConvert(
 	}
 
 	patch_t *out = Patch_Create(inwidth, inheight);
+	out->format = inbpp == PICDEPTH_32BPP ? PATCH_FORMAT_RGBA : PATCH_FORMAT_PALETTE;
 	out->leftoffset = inleftoffset;
 	out->topoffset = intopoffset;
 
@@ -369,6 +370,8 @@ void *Picture_PatchConvert(
 
 	unsigned *column_posts = Z_Calloc(sizeof(unsigned) * inwidth, PU_STATIC, NULL);
 
+	size_t bpp = Patch_GetBpp(out);
+
 	// Write columns
 	for (INT32 x = 0; x < inwidth; x++)
 	{
@@ -377,7 +380,11 @@ void *Picture_PatchConvert(
 		boolean was_opaque = false;
 
 		column_t *column = &out->columns[x];
-		column->pixels = imgptr;
+		if (out->format == PATCH_FORMAT_RGBA)
+			column->pixels = &out->pixels[out->height * x * bpp];
+		else
+			column->pixels = imgptr;
+
 		column->posts = NULL;
 		column->num_posts = 0;
 
@@ -420,18 +427,30 @@ void *Picture_PatchConvert(
 			was_opaque = true;
 
 			// Write the pixel
-			UINT8 *last_ptr = imgptr;
-			imgptr = writePixelFunc(last_ptr, input);
+			if (out->format == PATCH_FORMAT_RGBA)
+			{
+				writePixelFunc(&column->pixels[y * bpp], input);
+				post_data_offset += bpp;
+			}
+			else
+			{
+				UINT8 *last_ptr = imgptr;
+				imgptr = writePixelFunc(last_ptr, input);
+				post_data_offset += imgptr - last_ptr;
+			}
 
 			post->length++;
-			post_data_offset += imgptr - last_ptr;
 		}
 	}
 
 	UINT8 *old_pixels = out->pixels;
-	size_t total_pixels = imgptr - out->pixels;
-	if (total_pixels != max_pixels)
-		out->pixels = Z_Realloc(out->pixels, total_pixels, PU_PATCH_DATA, NULL);
+
+	if (out->format != PATCH_FORMAT_RGBA)
+	{
+		size_t total_pixels = imgptr - out->pixels;
+		if (total_pixels != max_pixels)
+			out->pixels = Z_Realloc(out->pixels, total_pixels, PU_PATCH_DATA, NULL);
+	}
 
 	for (INT16 x = 0; x < inwidth; x++)
 	{
