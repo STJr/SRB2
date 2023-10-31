@@ -88,6 +88,8 @@ boolean R_ThingIsFullBright (mobj_t *thing);
 boolean R_ThingIsSemiBright (mobj_t *thing);
 boolean R_ThingIsFullDark (mobj_t *thing);
 
+boolean R_ThingIsFlashing (mobj_t *thing);
+
 // --------------
 // MASKED DRAWING
 // --------------
@@ -224,8 +226,6 @@ typedef struct vissprite_s
 extern UINT32 visspritecount, numvisiblesprites;
 
 void R_ClipSprites(drawseg_t* dsstart, portal_t* portal);
-
-boolean R_SpriteIsFlashing(vissprite_t *vis);
 
 void R_DrawThingBoundingBox(vissprite_t *spr);
 
