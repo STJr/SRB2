@@ -17,7 +17,8 @@
 #include "doomdef.h"
 #include "i_system.h"
 #include "d_event.h"
-#include "d_net.h"
+#include "netcode/d_net.h"
+#include "netcode/net_command.h"
 #include "g_game.h"
 #include "p_local.h"
 #include "r_fps.h"
@@ -105,8 +106,7 @@ void P_Thrust(mobj_t *mo, angle_t angle, fixed_t move)
 		mo->momy += FixedMul(move, FINESINE(angle));
 }
 
-#if 0
-static inline void P_ThrustEvenIn2D(mobj_t *mo, angle_t angle, fixed_t move)
+void P_ThrustEvenIn2D(mobj_t *mo, angle_t angle, fixed_t move)
 {
 	angle >>= ANGLETOFINESHIFT;
 
@@ -114,7 +114,7 @@ static inline void P_ThrustEvenIn2D(mobj_t *mo, angle_t angle, fixed_t move)
 	mo->momy += FixedMul(move, FINESINE(angle));
 }
 
-static inline void P_VectorInstaThrust(fixed_t xa, fixed_t xb, fixed_t xc, fixed_t ya, fixed_t yb, fixed_t yc,
+void P_VectorInstaThrust(fixed_t xa, fixed_t xb, fixed_t xc, fixed_t ya, fixed_t yb, fixed_t yc,
 	fixed_t za, fixed_t zb, fixed_t zc, fixed_t momentum, mobj_t *mo)
 {
 	fixed_t a1, b1, c1, a2, b2, c2, i, j, k;
@@ -144,7 +144,6 @@ static inline void P_VectorInstaThrust(fixed_t xa, fixed_t xb, fixed_t xc, fixed
 	mo->momy = j;
 	mo->momz = k;
 }
-#endif
 
 //
 // P_InstaThrust
@@ -686,7 +685,7 @@ static void P_DeNightserizePlayer(player_t *player)
 
 	player->mo->skin = &skins[player->skin];
 	player->followitem = skins[player->skin].followitem;
-	player->mo->color = player->skincolor;
+	player->mo->color = P_GetPlayerColor(player);
 	G_GhostAddColor(GHC_RETURNSKIN);
 
 	// Restore aiming angle
@@ -3032,7 +3031,7 @@ static void P_CheckInvincibilityTimer(player_t *player)
 				}
 				else
 				{
-					player->mo->color = player->skincolor;
+					player->mo->color = P_GetPlayerColor(player);
 					G_GhostAddColor(GHC_NORMAL);
 				}
 			}
@@ -4305,7 +4304,7 @@ static void P_DoSuperStuff(player_t *player)
 			}
 			else
 			{
-				player->mo->color = player->skincolor;
+				player->mo->color = P_GetPlayerColor(player);
 				G_GhostAddColor(GHC_NORMAL);
 			}
 
@@ -4355,7 +4354,7 @@ static void P_DoSuperStuff(player_t *player)
 			}
 			else
 			{
-				player->mo->color = player->skincolor;
+				player->mo->color = P_GetPlayerColor(player);
 				G_GhostAddColor(GHC_NORMAL);
 			}
 
@@ -11159,7 +11158,7 @@ static void P_MinecartThink(player_t *player)
 					detright->drawonlyforplayer = player;
 				}
 				else
-					P_RemoveMobj(detleft);
+					P_RemoveMobj(detright);
 			}
 		}
 		else
@@ -13118,4 +13117,17 @@ boolean P_PlayerShouldUseSpinHeight(player_t *player)
 		|| ((player->charflags & (SF_DASHMODE|SF_MACHINE)) == (SF_DASHMODE|SF_MACHINE)
 			&& player->dashmode >= DASHMODE_THRESHOLD && player->mo->state-states == S_PLAY_DASH)
 		|| JUMPCURLED(player));
+}
+
+UINT16 P_GetPlayerColor(player_t *player)
+{
+	if (G_GametypeHasTeams() && player->ctfteam)
+	{
+		if (player->ctfteam == 1)
+			return skincolor_redteam;
+		else if (player->ctfteam == 2)
+			return skincolor_blueteam;
+	}
+
+	return player->skincolor;
 }
