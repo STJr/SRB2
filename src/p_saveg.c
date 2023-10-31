@@ -1893,7 +1893,7 @@ static void SaveMobjThinker(const thinker_t *th, const UINT8 type)
 	if (diff & MD_RTIME)
 		WRITEINT32(save_p, mobj->reactiontime);
 	if (diff & MD_STATE)
-		WRITEUINT32(save_p, mobj->state-states);
+		WRITEUINT16(save_p, mobj->state-states);
 	if (diff & MD_TICS)
 		WRITEINT32(save_p, mobj->tics);
 	if (diff & MD_SPRITE) {
@@ -2917,7 +2917,7 @@ static thinker_t* LoadMobjThinker(actionf_p1 thinker)
 		mobj->reactiontime = mobj->info->reactiontime;
 
 	if (diff & MD_STATE)
-		mobj->state = &states[READUINT32(save_p)];
+		mobj->state = &states[READUINT16(save_p)];
 	else
 		mobj->state = &states[mobj->info->spawnstate];
 	if (diff & MD_TICS)
