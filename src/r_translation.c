@@ -11,6 +11,7 @@
 
 #include "r_translation.h"
 #include "r_data.h"
+#include "r_draw.h"
 #include "v_video.h" // pMasterPalette
 #include "z_zone.h"
 #include "w_wad.h"
@@ -21,22 +22,45 @@
 static remaptable_t **paletteremaps = NULL;
 static unsigned numpaletteremaps = 0;
 
+static int allWhiteRemap = 0;
+static int allBlackRemap = 0;
+static int dashModeRemap = 0;
+
+static void MakeDashModeRemap(void);
+
 void PaletteRemap_Init(void)
 {
+	// First translation must be the identity one.
 	remaptable_t *base = PaletteRemap_New();
 	PaletteRemap_SetIdentity(base);
 	PaletteRemap_Add(base);
 
+	// Grayscale translation
 	remaptable_t *grayscale = PaletteRemap_New();
 	PaletteRemap_SetIdentity(grayscale);
 	PaletteRemap_AddDesaturation(grayscale, 0, 255, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0);
 	R_AddCustomTranslation("Grayscale", PaletteRemap_Add(grayscale));
+
+	// All white (TC_ALLWHITE)
+	remaptable_t *allWhite = PaletteRemap_New();
+	memset(allWhite->remap, 0, NUM_PALETTE_ENTRIES * sizeof(UINT8));
+	allWhiteRemap = PaletteRemap_Add(allWhite);
+	R_AddCustomTranslation("AllWhite", allWhiteRemap);
+
+	// All black
+	remaptable_t *allBlack = PaletteRemap_New();
+	memset(allBlack->remap, 31, NUM_PALETTE_ENTRIES * sizeof(UINT8));
+	allBlackRemap = PaletteRemap_Add(allBlack);
+	R_AddCustomTranslation("AllBlack", allBlackRemap);
+
+	// Dash mode (TC_DASHMODE)
+	MakeDashModeRemap();
 }
 
 remaptable_t *PaletteRemap_New(void)
 {
 	remaptable_t *tr = Z_Calloc(sizeof(remaptable_t), PU_STATIC, NULL);
-	tr->num_entries = 256;
+	tr->num_entries = NUM_PALETTE_ENTRIES;
 	return tr;
 }
 
@@ -65,7 +89,7 @@ void PaletteRemap_SetIdentity(remaptable_t *tr)
 
 boolean PaletteRemap_IsIdentity(remaptable_t *tr)
 {
-	for (unsigned i = 0; i < 256; i++)
+	for (unsigned i = 0; i < NUM_PALETTE_ENTRIES; i++)
 	{
 		if (tr->remap[i] != i)
 			return false;
@@ -89,6 +113,52 @@ unsigned PaletteRemap_Add(remaptable_t *tr)
 	paletteremaps[numpaletteremaps - 1] = tr;
 
 	return numpaletteremaps - 1;
+}
+
+// This is a long one, because MotorRoach basically hand-picked the indices
+static void MakeDashModeRemap(void)
+{
+	remaptable_t *dashmode = PaletteRemap_New();
+
+	PaletteRemap_SetIdentity(dashmode);
+
+	UINT8 *dest_colormap = dashmode->remap;
+
+	// greens -> ketchups
+	dest_colormap[96] = dest_colormap[97] = 48;
+	dest_colormap[98] = 49;
+	dest_colormap[99] = 51;
+	dest_colormap[100] = 52;
+	dest_colormap[101] = dest_colormap[102] = 54;
+	dest_colormap[103] = 34;
+	dest_colormap[104] = 37;
+	dest_colormap[105] = 39;
+	dest_colormap[106] = 41;
+	for (unsigned i = 0; i < 5; i++)
+		dest_colormap[107 + i] = 43 + i;
+
+	// reds -> steel blues
+	dest_colormap[32] = 146;
+	dest_colormap[33] = 147;
+	dest_colormap[34] = dest_colormap[35] = 170;
+	dest_colormap[36] = 171;
+	dest_colormap[37] = dest_colormap[38] = 172;
+	dest_colormap[39] = dest_colormap[40] = dest_colormap[41] = 173;
+	dest_colormap[42] = dest_colormap[43] = dest_colormap[44] = 174;
+	dest_colormap[45] = dest_colormap[46] = dest_colormap[47] = 175;
+	dest_colormap[71] = 139;
+
+	// steel blues -> oranges
+	dest_colormap[170] = 52;
+	dest_colormap[171] = 54;
+	dest_colormap[172] = 56;
+	dest_colormap[173] = 42;
+	dest_colormap[174] = 45;
+	dest_colormap[175] = 47;
+
+	dashModeRemap = PaletteRemap_Add(dashmode);
+
+	R_AddCustomTranslation("DashMode", dashModeRemap);
 }
 
 static boolean PalIndexOutOfRange(int color)
@@ -810,4 +880,16 @@ boolean R_TranslationIsValid(int id)
 		return false;
 
 	return true;
+}
+
+remaptable_t *R_GetBuiltInTranslation(SINT8 tc)
+{
+	switch (tc)
+	{
+	case TC_ALLWHITE:
+		return R_GetTranslationByID(allWhiteRemap);
+	case TC_DASHMODE:
+		return R_GetTranslationByID(dashModeRemap);
+	}
+	return NULL;
 }

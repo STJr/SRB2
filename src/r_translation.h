@@ -100,4 +100,6 @@ boolean R_TranslationIsValid(int id);
 void R_ParseTrnslate(INT32 wadNum, UINT16 lumpnum);
 void R_LoadParsedTranslations(void);
 
+remaptable_t *R_GetBuiltInTranslation(SINT8 tc);
+
 #endif
