@@ -23,6 +23,7 @@
 #include "m_random.h"
 #include "m_misc.h"
 #include "r_skins.h"
+#include "r_translation.h"
 #include "i_video.h"
 #include "z_zone.h"
 #include "lua_hook.h"
@@ -9080,7 +9081,6 @@ void A_SetTranslation(mobj_t *actor)
 {
 	INT32 locvar1 = var1;
 
-	mobj_t *target = actor;
 	if (LUA_CallAction(A_SETTRANSLATION, actor))
 		return;
 
