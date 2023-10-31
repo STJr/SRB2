@@ -90,6 +90,8 @@ boolean R_ThingIsFullDark (mobj_t *thing);
 
 boolean R_ThingIsFlashing (mobj_t *thing);
 
+UINT8 *R_GetTranslationForThing(mobj_t *mobj, skincolornum_t color, UINT16 translation);
+
 // --------------
 // MASKED DRAWING
 // --------------
@@ -228,8 +230,6 @@ extern UINT32 visspritecount, numvisiblesprites;
 void R_ClipSprites(drawseg_t* dsstart, portal_t* portal);
 
 void R_DrawThingBoundingBox(vissprite_t *spr);
-
-UINT8 *R_GetSpriteTranslation(vissprite_t *vis);
 
 // ----------
 // DRAW NODES

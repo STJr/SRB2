@@ -5504,45 +5504,7 @@ static void HWR_ProjectSprite(mobj_t *thing)
 		translation = thing->translation;
 
 	//Hurdler: 25/04/2000: now support colormap in hardware mode
-	if (R_ThingIsFlashing(vis->mobj)) // Bosses "flash"
-	{
-		if (vis->mobj->type == MT_CYBRAKDEMON || vis->mobj->colorized)
-			vis->colormap = R_GetTranslationColormap(TC_ALLWHITE, 0, GTC_CACHE);
-		else if (vis->mobj->type == MT_METALSONIC_BATTLE)
-			vis->colormap = R_GetTranslationColormap(TC_METALSONIC, 0, GTC_CACHE);
-		else
-			vis->colormap = R_GetTranslationColormap(TC_BOSS, color, GTC_CACHE);
-	}
-	else if (translation != 0)
-	{
-		remaptable_t *tr = R_GetTranslationByID(translation);
-		if (tr != NULL)
-			vis->colormap = tr->remap;
-	}
-	else if (color != SKINCOLOR_NONE)
-	{
-		// New colormap stuff for skins Tails 06-07-2002
-		if (thing->colorized)
-			vis->colormap = R_GetTranslationColormap(TC_RAINBOW, color, GTC_CACHE);
-		else if (thing->player && thing->player->dashmode >= DASHMODE_THRESHOLD
-			&& (thing->player->charflags & SF_DASHMODE)
-			&& ((leveltime/2) & 1))
-		{
-			if (thing->player->charflags & SF_MACHINE)
-				vis->colormap = R_GetTranslationColormap(TC_DASHMODE, 0, GTC_CACHE);
-			else
-				vis->colormap = R_GetTranslationColormap(TC_RAINBOW, color, GTC_CACHE);
-		}
-		else if (thing->skin && thing->sprite == SPR_PLAY) // This thing is a player!
-		{
-			size_t skinnum = (skin_t*)thing->skin-skins;
-			vis->colormap = R_GetTranslationColormap((INT32)skinnum, color, GTC_CACHE);
-		}
-		else
-			vis->colormap = NULL;
-	}
-	else
-		vis->colormap = NULL;
+	vis->colormap = R_GetTranslationForThing(vis->mobj, color, translation);
 
 	// set top/bottom coords
 	vis->gzt = gzt;
