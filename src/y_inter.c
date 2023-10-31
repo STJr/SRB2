@@ -536,7 +536,7 @@ void Y_IntermissionDrawer(void)
 
 		if (animatetic && (tic_t)intertic >= animatetic)
 		{
-			const INT32 scradjust = (vid.width/vid.dupx)>>3; // 40 for BASEVIDWIDTH
+			const INT32 scradjust = (vid.width/vid.dup)>>3; // 40 for BASEVIDWIDTH
 			INT32 animatetimer = (intertic - animatetic);
 			if (animatetimer <= 16)
 			{
@@ -687,7 +687,7 @@ void Y_IntermissionDrawer(void)
 
 				if (intertic > 1)
 				{
-					if (stagefailed && data.spec.emeraldy < (vid.height/vid.dupy)+16)
+					if (stagefailed && data.spec.emeraldy < (vid.height/vid.dup)+16)
 					{
 						emeraldx += intertic - 6;
 					}
@@ -1163,7 +1163,7 @@ void Y_Ticker(void)
 			}
 			else
 			{
-				if (data.spec.emeraldy < (vid.height/vid.dupy)+16)
+				if (data.spec.emeraldy < (vid.height/vid.dup)+16)
 				{
 					data.spec.emeraldy += (++data.spec.emeraldmomy);
 				}
