@@ -1,5 +1,6 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
+// Copyright (C) 1998-2006 by Randy Heit.
 // Copyright (C) 2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
@@ -7,7 +8,7 @@
 // See the 'LICENSE' file for more details.
 //-----------------------------------------------------------------------------
 /// \file  r_translation.h
-/// \brief Translations
+/// \brief Translation table handling
 
 #ifndef __R_TRANSLATION__
 #define __R_TRANSLATION__
