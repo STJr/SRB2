@@ -2107,7 +2107,7 @@ static void ST_drawNiGHTSHUD(void)
 			V_DrawString(160 + numbersize + 8, 24, V_SNAPTOTOP|((realnightstime < 10) ? V_REDMAP : V_YELLOWMAP), va("%02d", G_TicsToCentiseconds(stplyr->nightstime)));
 	}
 
-	if (oldspecialstage)
+	if (oldspecialstage && LUA_HudEnabled(hud_nightsrecords))
 	{
 		if (leveltime < 5*TICRATE)
 		{
