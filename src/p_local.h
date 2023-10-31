@@ -146,6 +146,7 @@ void P_ForceLocalAngle(player_t *player, angle_t angle);
 boolean P_PlayerFullbright(player_t *player);
 boolean P_PlayerCanEnterSpinGaps(player_t *player);
 boolean P_PlayerShouldUseSpinHeight(player_t *player);
+UINT16 P_GetPlayerColor(player_t *player);
 
 boolean P_IsObjectInGoop(mobj_t *mo);
 boolean P_IsObjectOnGround(mobj_t *mo);
@@ -534,6 +535,9 @@ boolean P_Teleport(mobj_t *thing, fixed_t x, fixed_t y, fixed_t z, angle_t angle
 boolean P_SetMobjStateNF(mobj_t *mobj, statenum_t state);
 boolean P_CheckMissileSpawn(mobj_t *th);
 void P_Thrust(mobj_t *mo, angle_t angle, fixed_t move);
+void P_ThrustEvenIn2D(mobj_t *mo, angle_t angle, fixed_t move);
+void P_VectorInstaThrust(fixed_t xa, fixed_t xb, fixed_t xc, fixed_t ya, fixed_t yb, fixed_t yc,
+            fixed_t za, fixed_t zb, fixed_t zc, fixed_t momentum, mobj_t *mo);
 void P_DoSuperTransformation(player_t *player, boolean giverings);
 void P_ExplodeMissile(mobj_t *mo);
 void P_CheckGravity(mobj_t *mo, boolean affect);

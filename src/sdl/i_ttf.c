@@ -21,7 +21,7 @@
 #include "SDL_ttf.h"
 #include "../doomdef.h"
 #include "../doomstat.h"
-#include "../d_netfil.h"
+#include "../netcode/d_netfil.h"
 #include "../filesrch.h"
 #include "i_ttf.h"
 
