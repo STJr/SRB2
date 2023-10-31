@@ -1492,10 +1492,7 @@ void G_BeginRecording(void)
 	demo_p += 16;
 
 	// Skin
-	const char *skinname = cv_skin.string;
-	if (pickedchar >= 0 && pickedchar < numskins)
-		skinname = skins[pickedchar].name;
-
+	const char *skinname = skins[players[0].skin].name;
 	for (i = 0; i < 16 && skinname[i]; i++)
 		name[i] = skinname[i];
 	for (; i < 16; i++)
