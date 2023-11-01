@@ -160,6 +160,10 @@ opts+=-O0
 endif
 endif
 
+ifdef GCC45
+opts+=-fwrapv
+endif
+
 ifdef VALGRIND
 ifdef GCC46
 WFLAGS+=-Wno-error=unused-but-set-variable
