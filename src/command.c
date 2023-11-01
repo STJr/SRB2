@@ -1379,8 +1379,8 @@ void CV_RegisterVar(consvar_t *variable)
 #ifdef PARANOIA
 	if ((variable->flags & CV_NOINIT) && !(variable->flags & CV_CALL))
 		I_Error("variable %s has CV_NOINIT without CV_CALL\n", variable->name);
-	if ((variable->flags & CV_CALL) && !variable->func)
-		I_Error("variable %s has CV_CALL without a function\n", variable->name);
+	if ((variable->flags & CV_CALL) && !(variable->func || variable->can_change))
+		I_Error("variable %s has CV_CALL without any callbacks\n", variable->name);
 #endif
 
 	if (variable->flags & CV_NOINIT)
@@ -1446,12 +1446,13 @@ static void Setvalue(consvar_t *var, const char *valstr, boolean stealth)
 	boolean override = false;
 	INT32 overrideval = 0;
 
-	// If we want messages informing us if cheats have been enabled or disabled,
-	// we need to rework the consvars a little bit.  This call crashes the game
-	// on load because not all variables will be registered at that time.
-/*	boolean prevcheats = false;
-	if (var->flags & CV_CHEAT)
-		prevcheats = CV_CheatsEnabled(); */
+	// raise 'can change' code
+	LUA_CVarChanged(var); // let consolelib know what cvar this is.
+	if (var->flags & CV_CALL && var->can_change && !stealth)
+	{
+		if (!var->can_change(valstr))
+			return;
+	}
 
 	if (var->PossibleValue)
 	{
@@ -1613,16 +1614,6 @@ found:
 	}
 
 finish:
-	// See the note above.
-/* 	if (var->flags & CV_CHEAT)
-	{
-		boolean newcheats = CV_CheatsEnabled();
-
-		if (!prevcheats && newcheats)
-			CONS_Printf(M_GetText("Cheats have been enabled.\n"));
-		else if (prevcheats && !newcheats)
-			CONS_Printf(M_GetText("Cheats have been disabled.\n"));
-	} */
 
 	if (var->flags & CV_SHOWMODIFONETIME || var->flags & CV_SHOWMODIF)
 	{
@@ -1635,8 +1626,7 @@ finish:
 	}
 	var->flags |= CV_MODIFIED;
 	// raise 'on change' code
-	LUA_CVarChanged(var); // let consolelib know what cvar this is.
-	if (var->flags & CV_CALL && !stealth)
+	if (var->flags & CV_CALL && var->func && !stealth)
 		var->func();
 
 	return;
