@@ -1779,14 +1779,15 @@ bustupdone:
 //
 // P_CheckSkyHit
 //
-static boolean P_CheckSkyHit(mobj_t *mo)
+boolean P_CheckSkyHit(mobj_t *mo, line_t *line)
 {
-	if (ceilingline && ceilingline->backsector
-		&& ceilingline->backsector->ceilingpic == skyflatnum
-		&& ceilingline->frontsector
-		&& ceilingline->frontsector->ceilingpic == skyflatnum
-		&& (mo->z >= ceilingline->frontsector->ceilingheight
-		|| mo->z >= ceilingline->backsector->ceilingheight))
+	if (line && (line->special == 41 ||
+		(line->backsector
+		&& line->backsector->ceilingpic == skyflatnum
+		&& line->frontsector
+		&& line->frontsector->ceilingpic == skyflatnum
+		&& (mo->z >= line->frontsector->ceilingheight
+		|| mo->z >= line->backsector->ceilingheight))))
 			return true;
 	return false;
 }
@@ -1893,7 +1894,7 @@ void P_XYMovement(mobj_t *mo)
 					mo->fuse += ((5 - mo->threshold) * TICRATE);
 
 				// Check for hit against sky here
-				if (P_CheckSkyHit(mo))
+				if (P_CheckSkyHit(mo, ceilingline))
 				{
 					// Hack to prevent missiles exploding
 					// against the sky.
@@ -1913,7 +1914,7 @@ void P_XYMovement(mobj_t *mo)
 			mo->flags &= ~MF_STICKY; //Don't check again!
 
 			// Check for hit against sky here
-			if (P_CheckSkyHit(mo))
+			if (P_CheckSkyHit(mo, ceilingline))
 			{
 				// Hack to prevent missiles exploding
 				// against the sky.
@@ -1972,7 +1973,7 @@ void P_XYMovement(mobj_t *mo)
 		else if (mo->flags & MF_MISSILE)
 		{
 			// explode a missile
-			if (P_CheckSkyHit(mo))
+			if (P_CheckSkyHit(mo, ceilingline))
 			{
 				// Hack to prevent missiles exploding
 				// against the sky.

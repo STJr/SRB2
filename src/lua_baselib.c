@@ -1031,6 +1031,20 @@ static int lib_pRailThinker(lua_State *L)
 	return 1;
 }
 
+static int lib_pCheckSkyHit(lua_State *L)
+{
+	mobj_t *mobj = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
+	line_t *line = *((line_t **)luaL_checkudata(L, 2, META_LINE));
+	//HUDSAFE
+	INLEVEL
+	if (!mobj)
+		return LUA_ErrInvalid(L, "mobj_t");
+	if (!line)
+		return LUA_ErrInvalid(L, "line_t");
+	lua_pushboolean(L, P_CheckSkyHit(mobj, line));
+	return 1;
+}
+
 static int lib_pXYMovement(lua_State *L)
 {
 	mobj_t *actor = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
@@ -4206,6 +4220,7 @@ static luaL_Reg lib[] = {
 	{"P_CreateFloorSpriteSlope",lib_pCreateFloorSpriteSlope},
 	{"P_RemoveFloorSpriteSlope",lib_pRemoveFloorSpriteSlope},
 	{"P_RailThinker",lib_pRailThinker},
+	{"P_CheckSkyHit",lib_pCheckSkyHit},
 	{"P_XYMovement",lib_pXYMovement},
 	{"P_RingXYMovement",lib_pRingXYMovement},
 	{"P_SceneryXYMovement",lib_pSceneryXYMovement},

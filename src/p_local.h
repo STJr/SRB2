@@ -303,6 +303,7 @@ void P_RunOverlays(void);
 void P_HandleMinecartSegments(mobj_t *mobj);
 void P_MobjThinker(mobj_t *mobj);
 boolean P_RailThinker(mobj_t *mobj);
+boolean P_CheckSkyHit(mobj_t *mo, line_t *line);
 void P_PushableThinker(mobj_t *mobj);
 void P_SceneryThinker(mobj_t *mobj);
 
