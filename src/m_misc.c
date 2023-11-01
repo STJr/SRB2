@@ -989,7 +989,7 @@ static inline boolean M_PNGLib(void)
 
 static void M_PNGFrame(png_structp png_ptr, png_infop png_info_ptr, png_bytep png_buf)
 {
-	png_uint_16 downscale = apng_downscale ? vid.dupx : 1;
+	png_uint_16 downscale = apng_downscale ? vid.dup : 1;
 
 	png_uint_32 pitch = png_get_rowbytes(png_ptr, png_info_ptr);
 	PNG_CONST png_uint_32 width = vid.width / downscale;
@@ -1055,7 +1055,7 @@ static boolean M_SetupaPNG(png_const_charp filename, png_bytep pal)
 
 	apng_downscale = (!!cv_apng_downscale.value);
 
-	downscale = apng_downscale ? vid.dupx : 1;
+	downscale = apng_downscale ? vid.dup : 1;
 
 	apng_FILE = fopen(filename,"wb+"); // + mode for reading
 	if (!apng_FILE)
