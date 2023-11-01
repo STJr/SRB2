@@ -1742,6 +1742,48 @@ static int lib_pSwitchShield(lua_State *L)
 	return 0;
 }
 
+static int lib_pDoTailsOverlay(lua_State *L)
+{
+	player_t *player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
+	mobj_t *tails = *((mobj_t **)luaL_checkudata(L, 2, META_MOBJ));
+	NOHUD
+	INLEVEL
+	if (!player)
+		return LUA_ErrInvalid(L, "player_t");
+	if (!tails)
+		return LUA_ErrInvalid(L, "mobj_t");
+	P_DoTailsOverlay(player, tails);
+	return 0;
+}
+
+static int lib_pDoMetalJetFume(lua_State *L)
+{
+	player_t *player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
+	mobj_t *fume = *((mobj_t **)luaL_checkudata(L, 2, META_MOBJ));
+	NOHUD
+	INLEVEL
+	if (!player)
+		return LUA_ErrInvalid(L, "player_t");
+	if (!fume)
+		return LUA_ErrInvalid(L, "mobj_t");
+	P_DoMetalJetFume(player, fume);
+	return 0;
+}
+
+static int lib_pDoFollowMobj(lua_State *L)
+{
+	player_t *player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
+	mobj_t *followmobj = *((mobj_t **)luaL_checkudata(L, 2, META_MOBJ));
+	NOHUD
+	INLEVEL
+	if (!player)
+		return LUA_ErrInvalid(L, "player_t");
+	if (!followmobj)
+		return LUA_ErrInvalid(L, "mobj_t");
+	P_DoFollowMobj(player, followmobj);
+	return 0;
+}
+
 static int lib_pPlayerCanEnterSpinGaps(lua_State *L)
 {
 	player_t *player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
@@ -4211,6 +4253,9 @@ static luaL_Reg lib[] = {
 	{"P_SpawnSpinMobj",lib_pSpawnSpinMobj},
 	{"P_Telekinesis",lib_pTelekinesis},
 	{"P_SwitchShield",lib_pSwitchShield},
+	{"P_DoTailsOverlay",lib_pDoTailsOverlay},
+	{"P_DoMetalJetFume",lib_pDoMetalJetFume},
+	{"P_DoFollowMobj",lib_pDoFollowMobj},
 	{"P_PlayerCanEnterSpinGaps",lib_pPlayerCanEnterSpinGaps},
 	{"P_PlayerShouldUseSpinHeight",lib_pPlayerShouldUseSpinHeight},
 
