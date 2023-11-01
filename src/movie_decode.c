@@ -16,6 +16,11 @@
 #include "s_sound.h"
 #include "w_wad.h"
 
+#if defined(__GNUC__) || defined(__clang__)
+	// Because of swr_convert not using const on the input buffer's pointer
+    #pragma GCC diagnostic ignored "-Wcast-qual"
+#endif
+
 #define IO_BUFFER_SIZE (8 * 1024)
 #define STREAM_BUFFER_TIME (4 * TICRATE)
 
