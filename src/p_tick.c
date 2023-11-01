@@ -236,6 +236,8 @@ static const char *MobjTypeName(const mobj_t *mobj)
 	{
 		if (mobj->thinker.debug_mobjtype != MT_NULL)
 		{
+			if (mobj->thinker.debug_mobjtype >= MT_FIRSTFREESLOT)
+				return "MT_FREESLOT";
 			return MOBJTYPE_LIST[mobj->thinker.debug_mobjtype];
 		}
 	}
