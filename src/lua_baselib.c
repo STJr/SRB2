@@ -1579,6 +1579,19 @@ static int lib_pInstaThrust(lua_State *L)
 	return 0;
 }
 
+static int lib_pInstaThrustEvenIn2D(lua_State *L)
+{
+	mobj_t *mo = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
+	angle_t angle = luaL_checkangle(L, 2);
+	fixed_t move = luaL_checkfixed(L, 3);
+	NOHUD
+	INLEVEL
+	if (!mo)
+		return LUA_ErrInvalid(L, "mobj_t");
+	P_InstaThrustEvenIn2D(mo, angle, move);
+	return 0;
+}
+
 static int lib_pReturnThrustX(lua_State *L)
 {
 	angle_t angle;
@@ -2223,6 +2236,40 @@ static int lib_pThrust(lua_State *L)
 	if (!mo)
 		return LUA_ErrInvalid(L, "mobj_t");
 	P_Thrust(mo, angle, move);
+	return 0;
+}
+
+static int lib_pThrustEvenIn2D(lua_State *L)
+{
+	mobj_t *mo = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
+	angle_t angle = luaL_checkangle(L, 2);
+	fixed_t move = luaL_checkfixed(L, 3);
+	NOHUD
+	INLEVEL
+	if (!mo)
+		return LUA_ErrInvalid(L, "mobj_t");
+	P_ThrustEvenIn2D(mo, angle, move);
+	return 0;
+}
+
+static int lib_pVectorInstaThrust(lua_State *L)
+{
+    fixed_t xa = luaL_checkfixed(L, 1);
+    fixed_t xb = luaL_checkfixed(L, 2);
+    fixed_t xc = luaL_checkfixed(L, 3);
+    fixed_t ya = luaL_checkfixed(L, 4);
+    fixed_t yb = luaL_checkfixed(L, 5);
+    fixed_t yc = luaL_checkfixed(L, 6);
+    fixed_t za = luaL_checkfixed(L, 7);
+    fixed_t zb = luaL_checkfixed(L, 8);
+    fixed_t zc = luaL_checkfixed(L, 9);
+    fixed_t momentum = luaL_checkfixed(L, 10);
+	mobj_t *mo = *((mobj_t **)luaL_checkudata(L, 11, META_MOBJ));
+	NOHUD
+	INLEVEL
+	if (!mo)
+		return LUA_ErrInvalid(L, "mobj_t");
+	P_VectorInstaThrust(xa, xb, xc, ya, yb, yc, za, zb, zc, momentum, mo);
 	return 0;
 }
 
@@ -4136,6 +4183,7 @@ static luaL_Reg lib[] = {
 	{"P_DoPlayerFinish",lib_pDoPlayerFinish},
 	{"P_DoPlayerExit",lib_pDoPlayerExit},
 	{"P_InstaThrust",lib_pInstaThrust},
+	{"P_InstaThrustEvenIn2D",lib_pInstaThrustEvenIn2D},
 	{"P_ReturnThrustX",lib_pReturnThrustX},
 	{"P_ReturnThrustY",lib_pReturnThrustY},
 	{"P_LookForEnemies",lib_pLookForEnemies},
@@ -4189,6 +4237,8 @@ static luaL_Reg lib[] = {
 
 	// p_spec
 	{"P_Thrust",lib_pThrust},
+	{"P_ThrustEvenIn2D",lib_pThrustEvenIn2D},
+	{"P_VectorInstaThrust",lib_pVectorInstaThrust},
 	{"P_SetMobjStateNF",lib_pSetMobjStateNF},
 	{"P_DoSuperTransformation",lib_pDoSuperTransformation},
 	{"P_ExplodeMissile",lib_pExplodeMissile},
