@@ -2223,6 +2223,21 @@ static int lib_pDoMatchSuper(lua_State *L)
 	return 0;
 }
 
+static int lib_pTouchSpecialThing(lua_State *L)
+{
+	mobj_t *special = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
+	mobj_t *toucher = *((mobj_t **)luaL_checkudata(L, 2, META_MOBJ));
+	boolean heightcheck = lua_optboolean(L, 3);
+	NOHUD
+	INLEVEL
+	if (!special || !toucher)
+		return LUA_ErrInvalid(L, "mobj_t");
+	if (!toucher->player)
+		return luaL_error(L, "P_TouchSpecialThing requires a valid toucher.player.");
+	P_TouchSpecialThing(special, toucher, heightcheck);
+	return 0;
+}
+
 // P_SPEC
 ////////////
 
@@ -4214,6 +4229,7 @@ static luaL_Reg lib[] = {
 	{"P_FloorzAtPos",lib_pFloorzAtPos},
 	{"P_CeilingzAtPos",lib_pCeilingzAtPos},
 	{"P_DoSpring",lib_pDoSpring},
+	{"P_TouchSpecialThing",lib_pTouchSpecialThing},
 	{"P_TryCameraMove", lib_pTryCameraMove},
 	{"P_TeleportCameraMove", lib_pTeleportCameraMove},
 
