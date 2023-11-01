@@ -262,7 +262,7 @@ static void HWR_DrawPatchInCache(GLMipmap_t *mipmap,
 	INT32 pwidth, INT32 pheight,
 	const patch_t *realpatch)
 {
-	if (pwidth <= 0 || pheight <= 0)
+	if (pwidth <= 0 || pheight <= 0 || realpatch->columns == NULL)
 		return;
 
 	// source advance
@@ -547,7 +547,7 @@ static void HWR_GenerateTexture(INT32 texnum, GLMapTexture_t *grtex)
 }
 
 // patch may be NULL if grMipmap has been initialised already and makebitmap is false
-void HWR_MakePatch (const patch_t *patch, GLPatch_t *grPatch, GLMipmap_t *grMipmap, boolean makebitmap)
+void HWR_MakePatch (patch_t *patch, GLPatch_t *grPatch, GLMipmap_t *grMipmap, boolean makebitmap)
 {
 	if (grMipmap->width == 0)
 	{

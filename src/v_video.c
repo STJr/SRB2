@@ -479,6 +479,8 @@ static UINT8 hudminusalpha[11] = { 10,  9,  9,  8,  8,  7,  7,  6,  6,  5,  5};
 
 static const UINT8 *v_colormap = NULL;
 static const UINT8 *v_translevel = NULL;
+static UINT8 v_opacity;
+static UINT32 v_blendmode;
 
 static inline UINT8 standardpdraw(const UINT8 *dest, const UINT8 *source, fixed_t ofs)
 {
@@ -497,7 +499,109 @@ static inline UINT8 transmappedpdraw(const UINT8 *dest, const UINT8 *source, fix
 	return *(v_translevel + (((*(v_colormap + source[ofs>>FRACBITS]))<<8)&0xff00) + (*dest&0xff));
 }
 
-static void V_DrawPatchRGBA(fixed_t x, fixed_t y, fixed_t pscale, fixed_t vscale, INT32 scrn, patch_t *patch, const UINT8 *colormap);
+// input 8bpp output 8bpp
+static void standardpdraw_i8o8(void *dest, void *source)
+{
+	UINT8 *s = (UINT8 *)source;
+	UINT8 *d = (UINT8 *)dest;
+	*d = *s;
+}
+static void mappedpdraw_i8o8(void *dest, void *source)
+{
+	UINT8 *s = (UINT8 *)source;
+	UINT8 *d = (UINT8 *)dest;
+	*d = *(v_colormap + *s);
+}
+static void translucentpdraw_i8o8(void *dest, void *source)
+{
+	UINT8 *s = (UINT8 *)source;
+	UINT8 *d = (UINT8 *)dest;
+	*d = *(v_translevel + ((*s<<8)&0xff00) + (*d&0xff));
+}
+static void transmappedpdraw_i8o8(void *dest, void *source)
+{
+	UINT8 *s = (UINT8 *)source;
+	UINT8 *d = (UINT8 *)dest;
+	*d = *(v_translevel + (((*(v_colormap + *s))<<8)&0xff00) + (*d&0xff));
+}
+
+// input 8bpp output 32bpp
+static void standardpdraw_i8o32(void *dest, void *source)
+{
+	UINT8 *s = (UINT8 *)source;
+	RGBA_t *d = (RGBA_t *)dest;
+	*d = pMasterPalette[*s];
+}
+static void mappedpdraw_i8o32(void *dest, void *source)
+{
+	UINT8 *s = (UINT8 *)source;
+	RGBA_t *d = (RGBA_t *)dest;
+	*d = pMasterPalette[*(v_colormap + *s)];
+}
+static void translucentpdraw_i8o32(void *dest, void *source)
+{
+	UINT8 *s = (UINT8 *)source;
+	UINT32 *d = (UINT32 *)dest;
+	*d = ASTBlendPixel(*(RGBA_t *)d, pMasterPalette[*s], v_blendmode, v_opacity);
+}
+static void transmappedpdraw_i8o32(void *dest, void *source)
+{
+	UINT8 *s = (UINT8 *)source;
+	UINT32 *d = (UINT32 *)dest;
+	*d = ASTBlendPixel(*(RGBA_t *)d, pMasterPalette[*(v_colormap + *s)], v_blendmode, v_opacity);
+}
+
+// input 32bpp output 8bpp
+static void standardpdraw_i32o8(void *dest, void *source)
+{
+	RGBA_t src = *(RGBA_t *)source;
+	UINT8 *d = (UINT8 *)dest;
+	if (src.s.alpha != 0)
+		*d = GetColorLUT(&r_colorlookup, src.s.red, src.s.green, src.s.blue);
+}
+static void standardpdraw_ia32o8(void *dest, void *source)
+{
+	RGBA_t src = *(RGBA_t *)source;
+	UINT8 *d = (UINT8 *)dest;
+	src.rgba = ASTBlendPixel(pMasterPalette[*d], src, AST_TRANSLUCENT, 255);
+	*d = GetColorLUT(&r_colorlookup, src.s.red, src.s.green, src.s.blue);
+}
+static void translucentpdraw_i32o8(void *dest, void *source)
+{
+	RGBA_t src = *(RGBA_t *)source;
+	UINT8 *d = (UINT8 *)dest;
+
+	RGBA_t texel;
+	texel.rgba = ASTBlendPixel(pMasterPalette[*d], src, v_blendmode, v_opacity);
+	*d = GetColorLUT(&r_colorlookup, texel.s.red, texel.s.green, texel.s.blue);
+
+	// UINT8 idx = GetColorLUT(&r_colorlookup, src.s.red, src.s.green, src.s.blue);
+	// *d = *(v_translevel + ((idx<<8)&0xff00) + (*d&0xff));
+}
+
+// input 32bpp output 32bpp
+static void standardpdraw_i32o32(void *dest, void *source)
+{
+	RGBA_t *s = (RGBA_t *)source;
+	RGBA_t *d = (RGBA_t *)dest;
+	*d = *s;
+}
+#if 0
+static void standardpdraw_ia32o32(void *dest, void *source)
+{
+	RGBA_t *s = (RGBA_t *)source;
+	RGBA_t *d = (RGBA_t *)dest;
+	*d = ASTBlendPixel(*(RGBA_t *)d, *s, AST_TRANSLUCENT, 255);
+}
+#endif
+static void translucentpdraw_i32o32(void *dest, void *source)
+{
+	RGBA_t *s = (RGBA_t *)source;
+	UINT32 *d = (UINT32 *)dest;
+	*d = ASTBlendPixel(*(RGBA_t *)d, *s, v_blendmode, v_opacity);
+}
+
+static void V_DrawPatchRGBA(fixed_t x, fixed_t y, fixed_t pscale, fixed_t vscale, INT32 scrn, patch_t *patch);
 
 static void AdjustPositionByOffsets(patch_t *patch, fixed_t pscale, fixed_t vscale, INT32 scrn, fixed_t *x, fixed_t *y)
 {
@@ -666,7 +770,7 @@ void V_DrawPatch(fixed_t x, fixed_t y, fixed_t pscale, fixed_t vscale, INT32 scr
 
 	if (patch->format == PATCH_FORMAT_RGBA)
 	{
-		V_DrawPatchRGBA(x, y, pscale, vscale, scrn, patch, colormap);
+		V_DrawPatchRGBA(x, y, pscale, vscale, scrn, patch);
 		return;
 	}
 
@@ -816,9 +920,9 @@ void V_DrawPatch(fixed_t x, fixed_t y, fixed_t pscale, fixed_t vscale, INT32 scr
 }
 
 // Draws a patch scaled to arbitrary size.
-static void V_DrawPatchRGBA(fixed_t x, fixed_t y, fixed_t pscale, fixed_t vscale, INT32 scrn, patch_t *patch, const UINT8 *colormap)
+static void V_DrawPatchRGBA(fixed_t x, fixed_t y, fixed_t pscale, fixed_t vscale, INT32 scrn, patch_t *patch)
 {
-	UINT8 (*patchdrawfunc)(const UINT8*, const UINT8*, fixed_t);
+	void (*patchdrawfunc)(void*, void*);
 	UINT32 alphalevel = ((scrn & V_ALPHAMASK) >> V_ALPHASHIFT);
 	UINT32 blendmode = ((scrn & V_BLENDMASK) >> V_BLENDSHIFT);
 
@@ -826,14 +930,12 @@ static void V_DrawPatchRGBA(fixed_t x, fixed_t y, fixed_t pscale, fixed_t vscale
 	INT32 dup;
 	column_t *column;
 	UINT8 *desttop, *dest, *deststart, *destend;
-	const RGBA_t *source;
+	RGBA_t *source;
 	const UINT8 *deststop;
 	fixed_t pwidth; // patch width
 	fixed_t offx = 0; // x offset
 
 	UINT8 perplayershuffle = 0;
-
-	static colorlookup_t colorlookup;
 
 	if (Patch_NeedsUpdate(patch, true))
 		Patch_DoDynamicUpdate(patch, true);
@@ -841,9 +943,6 @@ static void V_DrawPatchRGBA(fixed_t x, fixed_t y, fixed_t pscale, fixed_t vscale
 	if (patch->columns == NULL || rendermode == render_none)
 		return;
 
-	patchdrawfunc = standardpdraw;
-
-	v_translevel = NULL;
 	if (alphalevel || blendmode)
 	{
 		if (alphalevel == 10) // V_HUDTRANSHALF
@@ -856,18 +955,22 @@ static void V_DrawPatchRGBA(fixed_t x, fixed_t y, fixed_t pscale, fixed_t vscale
 		if (alphalevel >= 10)
 			return; // invis
 
-		if (alphalevel || blendmode)
-		{
-			v_translevel = R_GetBlendTable(blendmode+1, alphalevel);
-			patchdrawfunc = translucentpdraw;
-		}
-	}
+		int alpha = (int)((float)(9 - alphalevel) * (255 / 9.0));
+		if (alpha < 0)
+			v_opacity = 0;
+		else if (alpha > 255)
+			v_opacity = 255;
+		else
+			v_opacity = (UINT8)alpha;
 
-	v_colormap = NULL;
-	if (colormap)
+		v_blendmode = blendmode+1;
+		patchdrawfunc = translucentpdraw_i32o8;
+	}
+	else
 	{
-		v_colormap = colormap;
-		patchdrawfunc = (v_translevel) ? transmappedpdraw : mappedpdraw;
+		v_opacity = 255;
+		v_blendmode = 0;
+		patchdrawfunc = standardpdraw_ia32o8;
 	}
 
 	dup = vid.dup;
@@ -900,7 +1003,7 @@ static void V_DrawPatchRGBA(fixed_t x, fixed_t y, fixed_t pscale, fixed_t vscale
 	if (!desttop)
 		return;
 
-	InitColorLUT(&colorlookup, pMasterPalette, false);
+	InitColorLUT(&r_colorlookup, pMasterPalette, false);
 
 	deststop = desttop + vid.rowbytes * vid.height;
 
@@ -929,7 +1032,7 @@ static void V_DrawPatchRGBA(fixed_t x, fixed_t y, fixed_t pscale, fixed_t vscale
 					source = (RGBA_t*)column->pixels;
 					if (source->s.alpha)
 					{
-						UINT8 palidx = GetColorLUT(&colorlookup, source->s.red, source->s.green, source->s.blue);
+						UINT8 palidx = GetColorLUT(&r_colorlookup, source->s.red, source->s.green, source->s.blue);
 						V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, palidx);
 					}
 				}
@@ -985,11 +1088,7 @@ static void V_DrawPatchRGBA(fixed_t x, fixed_t y, fixed_t pscale, fixed_t vscale
 			for (ofs = 0; dest < deststop && (size_t)(ofs>>FRACBITS) < post->length; ofs += rowfrac)
 			{
 				if (dest >= screens[scrn&V_PARAMMASK]) // don't draw off the top of the screen (CRASH PREVENTION)
-				{
-					RGBA_t texel = source[ofs>>FRACBITS];
-					UINT8 palidx = GetColorLUT(&colorlookup, texel.s.red, texel.s.green, texel.s.blue);
-					*dest = patchdrawfunc(dest, &palidx, 0);
-				}
+					patchdrawfunc(dest, &source[ofs>>FRACBITS]);
 				dest += vid.width;
 			}
 		}
@@ -1011,7 +1110,7 @@ void V_DrawCroppedPatch(fixed_t x, fixed_t y, fixed_t pscale, fixed_t vscale, IN
 
 	UINT8 perplayershuffle = 0;
 
-	if (patch->columns == NULL || rendermode == render_none)
+	if (rendermode == render_none)
 		return;
 
 #ifdef HWRENDER
@@ -1025,7 +1124,10 @@ void V_DrawCroppedPatch(fixed_t x, fixed_t y, fixed_t pscale, fixed_t vscale, IN
 	if (Patch_NeedsUpdate(patch, true))
 		Patch_DoDynamicUpdate(patch, true);
 
-	if (patch->columns == NULL || rendermode == render_none)
+	if (patch->columns == NULL)
+		return;
+
+	if (patch->format == PATCH_FORMAT_RGBA)
 		return;
 
 	patchdrawfunc = standardpdraw;
@@ -1241,10 +1343,301 @@ void V_DrawCroppedPatch(fixed_t x, fixed_t y, fixed_t pscale, fixed_t vscale, IN
 	}
 }
 
+static void V_DrawIntoPatchRGBA(patch_t *dest_patch, patch_t *src_patch, fixed_t x, fixed_t y, fixed_t pscale, fixed_t vscale, INT32 flags, const UINT8 *colormap, fixed_t sx, fixed_t sy, fixed_t w, fixed_t h, boolean copy_transparent)
+{
+	if (dest_patch->type != PATCH_TYPE_DYNAMIC)
+		return;
+
+	dynamicpatch_t *dpatch = (dynamicpatch_t *)dest_patch;
+
+	boolean source_paletted = src_patch->format == PATCH_FORMAT_PALETTE;
+	if (source_paletted && Patch_NeedsUpdate(src_patch, true))
+	{
+		Patch_DoDynamicUpdate(src_patch, true);
+
+		if (src_patch->columns == NULL)
+			return;
+	}
+
+	if (sx < 0)
+	{
+		w += sx;
+		sx = 0;
+	}
+	if (sy < 0)
+	{
+		h += sy;
+		sy = 0;
+	}
+
+	if (sx >= src_patch->width << FRACBITS || w <= 0)
+		return;
+	if (sy >= src_patch->height << FRACBITS || h <= 0)
+		return;
+
+	void (*patchdrawfunc)(void*, void*) = NULL;
+
+	v_translevel = NULL;
+	v_colormap = NULL;
+
+	UINT32 alphalevel = ((flags & V_ALPHAMASK) >> V_ALPHASHIFT);
+	UINT32 blendmode = ((flags & V_BLENDMASK) >> V_BLENDSHIFT);
+
+	if (alphalevel || blendmode)
+	{
+		if (alphalevel >= 10)
+			return;
+
+		int alpha = (int)((float)(9 - alphalevel) * (255 / 9.0));
+		if (alpha < 0)
+			v_opacity = 0;
+		else if (alpha > 255)
+			v_opacity = 255;
+		else
+			v_opacity = (UINT8)alpha;
+
+		v_blendmode = blendmode+1;
+	}
+	else
+	{
+		v_opacity = 255;
+		v_blendmode = 0;
+	}
+
+	if (source_paletted)
+	{
+		v_colormap = colormap;
+
+		if (dest_patch->format == PATCH_FORMAT_PALETTE)
+		{
+			if (alphalevel || blendmode)
+			{
+				v_translevel = R_GetBlendTable(v_blendmode, alphalevel);
+				patchdrawfunc = v_colormap ? transmappedpdraw_i8o8 : translucentpdraw_i8o8;
+			}
+			else
+				patchdrawfunc = v_colormap ? mappedpdraw_i8o8 : standardpdraw_i8o8;
+		}
+		else
+		{
+			if (alphalevel || blendmode)
+				patchdrawfunc = v_colormap ? transmappedpdraw_i8o32 : translucentpdraw_i8o32;
+			else
+				patchdrawfunc = v_colormap ? mappedpdraw_i8o32 : standardpdraw_i8o32;
+		}
+	}
+	else
+	{
+		if (dest_patch->format == PATCH_FORMAT_PALETTE)
+		{
+			if (alphalevel || blendmode)
+				patchdrawfunc = translucentpdraw_i32o8;
+			else
+				patchdrawfunc = standardpdraw_i32o8;
+
+			InitColorLUT(&r_colorlookup, pMasterPalette, false);
+		}
+		else
+		{
+			if (alphalevel || blendmode)
+				patchdrawfunc = translucentpdraw_i32o32;
+			else
+				patchdrawfunc = standardpdraw_i32o32;
+		}
+	}
+
+	fixed_t fdup = pscale;
+	fixed_t vdup = vscale;
+	fixed_t colfrac = FixedDiv(FRACUNIT, fdup);
+	fixed_t rowfrac = FixedDiv(FRACUNIT, vdup);
+
+	AdjustPositionByOffsets(src_patch, pscale, vscale, flags, &x, &y);
+
+	fixed_t pwidth = src_patch->width;
+	if (pscale != FRACUNIT)
+		pwidth = (pwidth * pscale) >> FRACBITS;
+
+	Patch_MarkDirtyRect(dest_patch, x >> FRACBITS, y >> FRACBITS, (x + w) >> FRACBITS, (y + h) >> FRACBITS);
+
+	if (copy_transparent)
+		Patch_ClearRect(dest_patch, x >> FRACBITS, y >> FRACBITS, w >> FRACBITS, h >> FRACBITS);
+
+	if (dest_patch->pixels == NULL)
+		dest_patch->pixels = Z_Calloc(dest_patch->width * dest_patch->height, PU_PATCH_DATA, NULL);
+
+	if (source_paletted)
+	{
+		int dest_x = x >> FRACBITS;
+
+		for (fixed_t col = sx; (col>>FRACBITS) < src_patch->width && (col - sx) < w; col += colfrac, dest_x++)
+		{
+			if (dest_x < 0)
+				continue;
+			else if (dest_x >= dest_patch->width)
+				break;
+
+			unsigned texturecolumn = col >> FRACBITS;
+			if (flags & V_FLIP)
+				texturecolumn = src_patch->width - 1 - texturecolumn;
+
+			column_t *column = &src_patch->columns[texturecolumn];
+
+			for (unsigned i = 0; i < column->num_posts; i++)
+			{
+				post_t *post = &column->posts[i];
+				INT32 topdelta = post->topdelta << FRACBITS;
+				UINT8 *source = column->pixels + post->data_offset;
+
+				int dest_y = y >> FRACBITS;
+
+				fixed_t ofs;
+				if (topdelta - sy > 0)
+				{
+					dest_y = (y + FixedMul(topdelta - sy, vdup)) >> FRACBITS;
+					ofs = 0;
+				}
+				else
+					ofs = sy - topdelta;
+
+				if (dest_patch->format == PATCH_FORMAT_RGBA)
+				{
+					// source 8bpp, dest 32bpp
+					RGBA_t *dest_pixels = (RGBA_t *)dest_patch->pixels;
+
+					for (; dest_y < dest_patch->height && (size_t)(ofs>>FRACBITS) < post->length && ((ofs - sy) + topdelta) < h; ofs += rowfrac, dest_y++)
+					{
+						if (dest_y < 0)
+							continue;
+
+						size_t position = (dest_x * dest_patch->height) + dest_y;
+						RGBA_t *dest = &dest_pixels[position];
+
+						if (dest->s.alpha == 0)
+							dpatch->update_columns = true;
+
+						patchdrawfunc(dest, (void*)(&source[ofs >> FRACBITS]));
+
+						dpatch->is_dirty = true;
+					}
+				}
+				else
+				{
+					// source 8bpp, dest 8bpp
+					for (; dest_y < dest_patch->height && (size_t)(ofs>>FRACBITS) < post->length && ((ofs - sy) + topdelta) < h; ofs += rowfrac, dest_y++)
+					{
+						if (dest_y < 0)
+							continue;
+
+						size_t position = (dest_x * dest_patch->height) + dest_y;
+						UINT8 *dest = &dest_patch->pixels[position];
+
+						if (!in_bit_array(dpatch->pixels_opaque, position))
+						{
+							set_bit_array(dpatch->pixels_opaque, position);
+							dpatch->update_columns = true;
+							*dest = 0;
+						}
+
+						patchdrawfunc(dest, (void*)(&source[ofs >> FRACBITS]));
+
+						dpatch->is_dirty = true;
+					}
+				}
+
+				if (dest_y >= dest_patch->height)
+					break;
+			}
+		}
+	}
+	else
+	{
+		RGBA_t *src_pixels = (RGBA_t *)src_patch->pixels;
+
+		int dest_y = y >> FRACBITS;
+
+		for (fixed_t row = sy; (row>>FRACBITS) < src_patch->height && (row - sy) < h; row += rowfrac, dest_y++)
+		{
+			if (dest_y < 0)
+				continue;
+			else if (dest_y >= dest_patch->height)
+				break;
+
+			int dest_x = x >> FRACBITS;
+
+			if (dest_patch->format == PATCH_FORMAT_RGBA)
+			{
+				RGBA_t *dest_pixels = (RGBA_t *)dest_patch->pixels;
+
+				// source 32bpp, dest 32bpp
+				for (fixed_t col = sx; (col>>FRACBITS) < src_patch->width && (col - sx) < w; col += colfrac, dest_x++)
+				{
+					if (dest_x < 0)
+						continue;
+					else if (dest_x >= dest_patch->width)
+						break;
+
+					unsigned texturecolumn = col >> FRACBITS;
+					if (flags & V_FLIP)
+						texturecolumn = src_patch->width - 1 - texturecolumn;
+
+					size_t dest_position = (dest_x * dest_patch->height) + dest_y;
+					size_t src_position = (texturecolumn * src_patch->height) + (row>>FRACBITS);
+					RGBA_t *dest = &dest_pixels[dest_position];
+					RGBA_t *src = &src_pixels[src_position];
+
+					if (dest->s.alpha == 0)
+						dpatch->update_columns = true;
+
+					patchdrawfunc(dest, src);
+
+					dpatch->is_dirty = true;
+				}
+			}
+			else
+			{
+				// source 32bpp, dest 8bpp
+				for (fixed_t col = sx; (col>>FRACBITS) < src_patch->width && (col - sx) < w; col += colfrac, dest_x++)
+				{
+					if (dest_x < 0)
+						continue;
+					else if (dest_x >= dest_patch->width)
+						break;
+
+					unsigned texturecolumn = col >> FRACBITS;
+					if (flags & V_FLIP)
+						texturecolumn = src_patch->width - 1 - texturecolumn;
+
+					size_t dest_position = (dest_x * dest_patch->height) + dest_y;
+					size_t src_position = (texturecolumn * src_patch->height) + (row>>FRACBITS);
+					UINT8 *dest = &dest_patch->pixels[dest_position];
+					RGBA_t *src = &src_pixels[src_position];
+
+					if (!in_bit_array(dpatch->pixels_opaque, dest_position))
+					{
+						set_bit_array(dpatch->pixels_opaque, dest_position);
+						dpatch->update_columns = true;
+						*dest = 0;
+					}
+
+					patchdrawfunc(dest, src);
+
+					dpatch->is_dirty = true;
+				}
+			}
+		}
+	}
+}
+
 void V_DrawIntoPatch(patch_t *dest_patch, patch_t *src_patch, fixed_t x, fixed_t y, fixed_t pscale, fixed_t vscale, INT32 flags, const UINT8 *colormap, fixed_t sx, fixed_t sy, fixed_t w, fixed_t h, boolean copy_transparent)
 {
 	if (dest_patch->type != PATCH_TYPE_DYNAMIC)
 		return;
+
+	if (src_patch->format != PATCH_FORMAT_PALETTE || dest_patch->format != PATCH_FORMAT_PALETTE)
+	{
+		V_DrawIntoPatchRGBA(dest_patch, src_patch, x, y, pscale, vscale, flags, colormap, sx, sy, w, h, copy_transparent);
+		return;
+	}
 
 	dynamicpatch_t *dpatch = (dynamicpatch_t *)dest_patch;
 
@@ -1281,13 +1674,10 @@ void V_DrawIntoPatch(patch_t *dest_patch, patch_t *src_patch, fixed_t x, fixed_t
 	if (alphalevel || blendmode)
 	{
 		if (alphalevel >= 10)
-			return; // invis
+			return;
 
-		if (alphalevel || blendmode)
-		{
-			v_translevel = R_GetBlendTable(blendmode+1, alphalevel);
-			patchdrawfunc = translucentpdraw;
-		}
+		v_translevel = R_GetBlendTable(blendmode+1, alphalevel);
+		patchdrawfunc = translucentpdraw;
 	}
 
 	if (colormap)
@@ -1307,12 +1697,12 @@ void V_DrawIntoPatch(patch_t *dest_patch, patch_t *src_patch, fixed_t x, fixed_t
 	if (pscale != FRACUNIT)
 		pwidth = (pwidth * pscale) >> FRACBITS;
 
-	int dest_x = x;
+	int dest_x = x >> FRACBITS;
 
-	Patch_MarkDirtyRect(dest_patch, x, y, x + (w >> FRACBITS), y + (h >> FRACBITS));
+	Patch_MarkDirtyRect(dest_patch, x >> FRACBITS, y >> FRACBITS, (x + w) >> FRACBITS, (y + h) >> FRACBITS);
 
 	if (copy_transparent)
-		Patch_ClearRect(dest_patch, x, y, w >> FRACBITS, h >> FRACBITS);
+		Patch_ClearRect(dest_patch, x >> FRACBITS, y >> FRACBITS, w >> FRACBITS, h >> FRACBITS);
 
 	if (dest_patch->pixels == NULL)
 		dest_patch->pixels = Z_Calloc(dest_patch->width * dest_patch->height, PU_PATCH_DATA, NULL);
@@ -1336,12 +1726,12 @@ void V_DrawIntoPatch(patch_t *dest_patch, patch_t *src_patch, fixed_t x, fixed_t
 			INT32 topdelta = post->topdelta << FRACBITS;
 			UINT8 *source = column->pixels + post->data_offset;
 
-			int dest_y = y;
+			int dest_y = y >> FRACBITS;
 
 			fixed_t ofs;
 			if (topdelta - sy > 0)
 			{
-				dest_y = y + FixedInt(FixedMul(topdelta - sy, vdup));
+				dest_y = (y + FixedMul(topdelta - sy, vdup)) >> FRACBITS;
 				ofs = 0;
 			}
 			else

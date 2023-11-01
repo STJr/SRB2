@@ -53,6 +53,8 @@ void InitColorLUT(colorlookup_t *lut, RGBA_t *palette, boolean makecolors);
 UINT8 GetColorLUT(colorlookup_t *lut, UINT8 r, UINT8 g, UINT8 b);
 UINT8 GetColorLUTDirect(colorlookup_t *lut, UINT8 r, UINT8 g, UINT8 b);
 
+extern colorlookup_t r_colorlookup;
+
 // Set the current RGB palette lookup to use for palettized graphics
 void V_SetPalette(INT32 palettenum);
 

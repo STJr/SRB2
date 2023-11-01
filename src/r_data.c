@@ -46,6 +46,8 @@ sprcache_t *spritecachedinfo;
 lighttable_t *colormaps;
 lighttable_t *fadecolormap;
 
+colorlookup_t r_colorlookup;
+
 // for debugging/info purposes
 size_t flatmemory, spritememory, texturememory;
 
@@ -53,51 +55,42 @@ size_t flatmemory, spritememory, texturememory;
 INT16 color8to16[256]; // remap color index to highcolor rgb value
 INT16 *hicolormaps; // test a 32k colormap remaps high -> high
 
-// Blends two pixels together, using the equation
-// that matches the specified alpha style.
+// Blends two pixels together, using the equation that matches the specified alpha style.
 UINT32 ASTBlendPixel(RGBA_t background, RGBA_t foreground, int style, UINT8 alpha)
 {
 	RGBA_t output;
 	INT16 fullalpha = (alpha - (0xFF - foreground.s.alpha));
+#define clamp(c) max(min((c), 0xFF), 0x00)
 	if (style == AST_TRANSLUCENT)
 	{
 		if (fullalpha <= 0)
 			output.rgba = background.rgba;
 		else
 		{
-			// don't go too high
 			if (fullalpha >= 0xFF)
 				fullalpha = 0xFF;
+
 			alpha = (UINT8)fullalpha;
 
-			// if the background pixel is empty,
-			// match software and don't blend anything
-			if (!background.s.alpha)
-			{
-				// ...unless the foreground pixel ISN'T actually translucent.
-				if (alpha == 0xFF)
-					output.rgba = foreground.rgba;
-				else
-					output.rgba = 0;
-			}
-			else
-			{
-				UINT8 beta = (0xFF - alpha);
-				output.s.red = ((background.s.red * beta) + (foreground.s.red * alpha)) / 0xFF;
-				output.s.green = ((background.s.green * beta) + (foreground.s.green * alpha)) / 0xFF;
-				output.s.blue = ((background.s.blue * beta) + (foreground.s.blue * alpha)) / 0xFF;
-				output.s.alpha = 0xFF;
-			}
+			UINT8 beta = 0xFF - alpha;
+			output.s.red = ((background.s.red * beta) + (foreground.s.red * alpha)) / 0xFF;
+			output.s.green = ((background.s.green * beta) + (foreground.s.green * alpha)) / 0xFF;
+			output.s.blue = ((background.s.blue * beta) + (foreground.s.blue * alpha)) / 0xFF;
+			output.s.alpha = clamp(((INT16)background.s.alpha) + fullalpha);
 		}
-		return output.rgba;
 	}
-#define clamp(c) max(min(c, 0xFF), 0x00);
 	else
 	{
-		float falpha = ((float)alpha / 256.0f);
+		float falpha = ((float)alpha / 255.0f);
 		float fr = ((float)foreground.s.red * falpha);
 		float fg = ((float)foreground.s.green * falpha);
 		float fb = ((float)foreground.s.blue * falpha);
+
+		if (background.s.alpha == 0x00)
+			output.s.alpha = clamp(fullalpha);
+		else
+			output.s.alpha = 0xFF;
+
 		if (style == AST_ADD)
 		{
 			output.s.red = clamp((int)(background.s.red + fr));
@@ -118,9 +111,9 @@ UINT32 ASTBlendPixel(RGBA_t background, RGBA_t foreground, int style, UINT8 alph
 		}
 		else if (style == AST_MODULATE)
 		{
-			fr = ((float)foreground.s.red / 256.0f);
-			fg = ((float)foreground.s.green / 256.0f);
-			fb = ((float)foreground.s.blue / 256.0f);
+			fr = ((float)foreground.s.red / 255.0f);
+			fg = ((float)foreground.s.green / 255.0f);
+			fb = ((float)foreground.s.blue / 255.0f);
 			output.s.red = clamp((int)(background.s.red * fr));
 			output.s.green = clamp((int)(background.s.green * fg));
 			output.s.blue = clamp((int)(background.s.blue * fb));
@@ -128,12 +121,49 @@ UINT32 ASTBlendPixel(RGBA_t background, RGBA_t foreground, int style, UINT8 alph
 		// just copy the pixel
 		else if (style == AST_COPY)
 			output.rgba = foreground.rgba;
-
-		output.s.alpha = 0xFF;
-		return output.rgba;
 	}
 #undef clamp
-	return 0;
+	return output.rgba;
+}
+
+static UINT32 BlendPixelForTexture(RGBA_t background, RGBA_t foreground, int style, UINT8 alpha)
+{
+	RGBA_t output;
+	if (style == AST_TRANSLUCENT)
+	{
+		INT16 fullalpha = (alpha - (0xFF - foreground.s.alpha));
+		if (fullalpha <= 0)
+			output.rgba = background.rgba;
+		else
+		{
+			// don't go too high
+			if (fullalpha >= 0xFF)
+				fullalpha = 0xFF;
+			alpha = (UINT8)fullalpha;
+
+			// if the background pixel is empty, match software and don't blend anything
+			if (!background.s.alpha)
+			{
+				// ...unless the foreground pixel ISN'T actually translucent.
+				if (alpha == 0xFF)
+					output.rgba = foreground.rgba;
+				else
+					output.rgba = 0;
+			}
+			else
+			{
+				UINT8 beta = (0xFF - alpha);
+				output.s.red = ((background.s.red * beta) + (foreground.s.red * alpha)) / 0xFF;
+				output.s.green = ((background.s.green * beta) + (foreground.s.green * alpha)) / 0xFF;
+				output.s.blue = ((background.s.blue * beta) + (foreground.s.blue * alpha)) / 0xFF;
+				output.s.alpha = 0xFF;
+			}
+		}
+
+		return output.rgba;
+	}
+
+	return ASTBlendPixel(background, foreground, style, alpha);
 }
 
 INT32 ASTTextureBlendingThreshold[2] = {255/11, (10*255/11)};
@@ -151,13 +181,13 @@ UINT32 ASTBlendTexturePixel(RGBA_t background, RGBA_t foreground, int style, UIN
 			if (alpha < ASTTextureBlendingThreshold[0])
 				return background.rgba;
 
-			return ASTBlendPixel(background, foreground, style, alpha);
+			return BlendPixelForTexture(background, foreground, style, alpha);
 		}
 		else // just copy the pixel
 			return foreground.rgba;
 	}
 	else
-		return ASTBlendPixel(background, foreground, style, alpha);
+		return BlendPixelForTexture(background, foreground, style, alpha);
 }
 
 // Blends two palette indexes for a texture patch, then
@@ -189,18 +219,16 @@ UINT8 ASTBlendPaletteIndexes(UINT8 background, UINT8 foreground, int style, UINT
 	// just copy the pixel
 	else if (style == AST_COPY)
 		return foreground;
-	// use ASTBlendPixel for all other blend modes
-	// and find the nearest colour in the palette
+	// use ASTBlendPixel for all other blend modes and find the nearest color in the palette
 	else if (style != AST_TRANSLUCENT)
 	{
 		RGBA_t texel;
 		RGBA_t bg = V_GetMasterColor(background);
 		RGBA_t fg = V_GetMasterColor(foreground);
-		texel.rgba = ASTBlendPixel(bg, fg, style, alpha);
+		texel.rgba = BlendPixelForTexture(bg, fg, style, alpha);
 		return NearestColor(texel.s.red, texel.s.green, texel.s.blue);
 	}
-	// fallback if all above fails, somehow
-	// return the background pixel
+
 	return background;
 }
 

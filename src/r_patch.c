@@ -404,9 +404,6 @@ void *Patch_GetPixel(patch_t *patch, INT32 x, INT32 y)
 	if (x < 0 || x >= patch->width || y < 0 || y >= patch->height)
 		return NULL;
 
-	if (Patch_NeedsUpdate(patch, true))
-		Patch_DoDynamicUpdate(patch, true);
-
 	if (patch->format == PATCH_FORMAT_RGBA)
 	{
 		// Well, that makes it easy
@@ -415,9 +412,6 @@ void *Patch_GetPixel(patch_t *patch, INT32 x, INT32 y)
 	}
 	else
 	{
-		if (patch->columns == NULL)
-			return NULL;
-
 		bitarray_t *pixels_opaque = Patch_GetOpaqueRegions(patch);
 		if (pixels_opaque)
 		{
@@ -429,6 +423,12 @@ void *Patch_GetPixel(patch_t *patch, INT32 x, INT32 y)
 			return &patch->pixels[position];
 		}
 	}
+
+	if (Patch_NeedsUpdate(patch, true))
+		Patch_DoDynamicUpdate(patch, true);
+
+	if (patch->columns == NULL)
+		return NULL;
 
 	column_t *column = &patch->columns[x];
 
@@ -509,25 +509,26 @@ void Patch_SetPixel(patch_t *patch, void *pixel, pictureformat_t informat, INT32
 
 	dynamicpatch_t *dpatch = (dynamicpatch_t *)patch;
 
+	size_t position = (x * patch->height) + y;
+
 	if (patch->format == PATCH_FORMAT_RGBA)
 	{
-		size_t position = (x * patch->height) + y;
-
 		RGBA_t *dest = (RGBA_t*)(&patch->pixels[position * 4]);
 
 		if (!pixel_is_opaque)
 		{
 			if (transparent_overwrite)
 			{
-				// No longer a pixel in this position, so columns need to be rebuilt
 				dest->s.alpha = 0;
-				dpatch->update_columns = true;
 				dpatch->is_dirty = true;
+
+				// No longer a pixel in this position, so columns need to be rebuilt
+				dpatch->update_columns = true;
 			}
 		}
 		else
 		{
-			// No pixel in this position, so columns need to be rebuilt
+			// No longer a pixel in this position, so columns need to be rebuilt
 			if (dest->s.alpha == 0)
 				dpatch->update_columns = true;
 
@@ -538,21 +539,20 @@ void Patch_SetPixel(patch_t *patch, void *pixel, pictureformat_t informat, INT32
 	}
 	else
 	{
-		size_t position = (x * patch->height) + y;
-
 		if (!pixel_is_opaque)
 		{
 			if (transparent_overwrite)
 			{
-				// No longer a pixel in this position, so columns need to be rebuilt
 				unset_bit_array(dpatch->pixels_opaque, position);
-				dpatch->update_columns = true;
 				dpatch->is_dirty = true;
+
+				// No longer a pixel in this position, so columns need to be rebuilt
+				dpatch->update_columns = true;
 			}
 		}
 		else
 		{
-			// No pixel in this position, so columns need to be rebuilt
+			// No longer a pixel in this position, so columns need to be rebuilt
 			if (!in_bit_array(dpatch->pixels_opaque, position))
 			{
 				set_bit_array(dpatch->pixels_opaque, position);
@@ -771,11 +771,6 @@ void Patch_DoDynamicUpdate(patch_t *patch, boolean update_columns)
 		return;
 
 	dynamicpatch_t *dpatch = (dynamicpatch_t *)patch;
-	if (!dpatch->is_dirty)
-		return;
-
-	if (patch->columns == NULL)
-		Patch_InitDynamicColumns(patch);
 
 	if (Patch_CheckDirtyRect(dpatch))
 	{
@@ -787,6 +782,9 @@ void Patch_DoDynamicUpdate(patch_t *patch, boolean update_columns)
 
 	if (update_columns && dpatch->update_columns && Patch_CheckDirtyColumns(dpatch))
 	{
+		if (patch->columns == NULL)
+			Patch_InitDynamicColumns(patch);
+
 		for (INT32 x = dpatch->column_dirty[0]; x < dpatch->column_dirty[1]; x++)
 			Patch_RebuildColumn(patch, x, dpatch->pixels_opaque);
 

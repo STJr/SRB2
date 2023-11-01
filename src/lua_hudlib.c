@@ -330,13 +330,15 @@ static int lib_patch_setPixel(lua_State *L)
 		UINT32 pixel = (UINT32)color;
 		Patch_SetPixel(patch, &pixel, PICFMT_FLAT32, x, y, true);
 	}
+	else if (color >= 0 && color <= 0xFF)
+	{
+		UINT16 pixel_u8 = (UINT8)color;
+		Patch_SetPixel(patch, &pixel_u8, PICFMT_FLAT, x, y, true);
+	}
 	else
 	{
-		UINT16 pixel = 0x0000;
-		if (color >= 0 && color <= 0xFF)
-			pixel = 0xFF00 | (UINT8)color;
-
-		Patch_SetPixel(patch, &pixel, PICFMT_FLAT16, x, y, true);
+		UINT16 empty_px = 0x0000;
+		Patch_SetPixel(patch, &empty_px, PICFMT_FLAT16, x, y, true);
 	}
 
 	return 0;
@@ -487,12 +489,7 @@ static int lib_patch_copy(lua_State *L)
 	}
 	else
 	{
-		if (patch->format == PATCH_FORMAT_RGBA)
-		{
-			// Unimplemented
-		}
-		else
-			V_DrawIntoPatch(patch, src_patch, dx << FRACBITS, dy << FRACBITS, FRACUNIT, FRACUNIT, 0, NULL, sx << FRACBITS, sy << FRACBITS, sw << FRACBITS, sh << FRACBITS, copy_transparent);
+		V_DrawIntoPatch(patch, src_patch, dx << FRACBITS, dy << FRACBITS, FRACUNIT, FRACUNIT, 0, NULL, sx << FRACBITS, sy << FRACBITS, sw << FRACBITS, sh << FRACBITS, copy_transparent);
 	}
 
 	return 0;
