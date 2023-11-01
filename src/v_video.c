@@ -586,14 +586,12 @@ static void standardpdraw_i32o32(void *dest, void *source)
 	RGBA_t *d = (RGBA_t *)dest;
 	*d = *s;
 }
-#if 0
 static void standardpdraw_ia32o32(void *dest, void *source)
 {
 	RGBA_t *s = (RGBA_t *)source;
-	RGBA_t *d = (RGBA_t *)dest;
+	UINT32 *d = (UINT32 *)dest;
 	*d = ASTBlendPixel(*(RGBA_t *)d, *s, AST_TRANSLUCENT, 255);
 }
-#endif
 static void translucentpdraw_i32o32(void *dest, void *source)
 {
 	RGBA_t *s = (RGBA_t *)source;
@@ -1343,7 +1341,7 @@ void V_DrawCroppedPatch(fixed_t x, fixed_t y, fixed_t pscale, fixed_t vscale, IN
 	}
 }
 
-static void V_DrawIntoPatchRGBA(patch_t *dest_patch, patch_t *src_patch, fixed_t x, fixed_t y, fixed_t pscale, fixed_t vscale, INT32 flags, const UINT8 *colormap, fixed_t sx, fixed_t sy, fixed_t w, fixed_t h, boolean copy_transparent)
+static void V_DrawIntoPatchRGBA(patch_t *dest_patch, patch_t *src_patch, fixed_t x, fixed_t y, fixed_t pscale, fixed_t vscale, INT32 flags, const UINT8 *colormap, fixed_t sx, fixed_t sy, fixed_t w, fixed_t h, boolean use_pixel_alpha, boolean copy_transparent)
 {
 	if (dest_patch->type != PATCH_TYPE_DYNAMIC)
 		return;
@@ -1432,6 +1430,8 @@ static void V_DrawIntoPatchRGBA(patch_t *dest_patch, patch_t *src_patch, fixed_t
 		{
 			if (alphalevel || blendmode)
 				patchdrawfunc = translucentpdraw_i32o8;
+			else if (use_pixel_alpha)
+				patchdrawfunc = standardpdraw_ia32o8;
 			else
 				patchdrawfunc = standardpdraw_i32o8;
 
@@ -1441,6 +1441,8 @@ static void V_DrawIntoPatchRGBA(patch_t *dest_patch, patch_t *src_patch, fixed_t
 		{
 			if (alphalevel || blendmode)
 				patchdrawfunc = translucentpdraw_i32o32;
+			else if (use_pixel_alpha)
+				patchdrawfunc = standardpdraw_ia32o32;
 			else
 				patchdrawfunc = standardpdraw_i32o32;
 		}
@@ -1628,14 +1630,14 @@ static void V_DrawIntoPatchRGBA(patch_t *dest_patch, patch_t *src_patch, fixed_t
 	}
 }
 
-void V_DrawIntoPatch(patch_t *dest_patch, patch_t *src_patch, fixed_t x, fixed_t y, fixed_t pscale, fixed_t vscale, INT32 flags, const UINT8 *colormap, fixed_t sx, fixed_t sy, fixed_t w, fixed_t h, boolean copy_transparent)
+void V_DrawIntoPatch(patch_t *dest_patch, patch_t *src_patch, fixed_t x, fixed_t y, fixed_t pscale, fixed_t vscale, INT32 flags, const UINT8 *colormap, fixed_t sx, fixed_t sy, fixed_t w, fixed_t h, boolean use_pixel_alpha, boolean copy_transparent)
 {
 	if (dest_patch->type != PATCH_TYPE_DYNAMIC)
 		return;
 
 	if (src_patch->format != PATCH_FORMAT_PALETTE || dest_patch->format != PATCH_FORMAT_PALETTE)
 	{
-		V_DrawIntoPatchRGBA(dest_patch, src_patch, x, y, pscale, vscale, flags, colormap, sx, sy, w, h, copy_transparent);
+		V_DrawIntoPatchRGBA(dest_patch, src_patch, x, y, pscale, vscale, flags, colormap, sx, sy, w, h, use_pixel_alpha, copy_transparent);
 		return;
 	}
 

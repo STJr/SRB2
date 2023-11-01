@@ -450,6 +450,7 @@ static int lib_patch_copy(lua_State *L)
 	int dx = luaL_optinteger(L, 7, 0);
 	int dy = luaL_optinteger(L, 8, 0);
 	boolean copy_transparent = lua_optboolean(L, 9);
+	boolean use_pixel_alpha = lua_optboolean(L, 10);
 
 	if (sw <= 0)
 		return luaL_error(L, "invalid copy rect width");
@@ -488,9 +489,7 @@ static int lib_patch_copy(lua_State *L)
 		Patch_UpdatePixels(patch, patch_update_buffer, src_img_width, src_img_height, format, sx, sy, sw, sh, dx, dy, copy_transparent);
 	}
 	else
-	{
-		V_DrawIntoPatch(patch, src_patch, dx << FRACBITS, dy << FRACBITS, FRACUNIT, FRACUNIT, 0, NULL, sx << FRACBITS, sy << FRACBITS, sw << FRACBITS, sh << FRACBITS, copy_transparent);
-	}
+		V_DrawIntoPatch(patch, src_patch, dx << FRACBITS, dy << FRACBITS, FRACUNIT, FRACUNIT, 0, NULL, sx << FRACBITS, sy << FRACBITS, sw << FRACBITS, sh << FRACBITS, use_pixel_alpha, copy_transparent);
 
 	return 0;
 }
