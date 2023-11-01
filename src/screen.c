@@ -494,7 +494,7 @@ void SCR_CalculateFPS(void)
 void SCR_DisplayTicRate(void)
 {
 	INT32 ticcntcolor = 0;
-	const INT32 h = vid.height-(8*vid.dupy);
+	const INT32 h = vid.height-(8*vid.dup);
 	UINT32 cap = R_GetFramerateCap();
 	double fps = round(averageFPS);
 
@@ -530,7 +530,7 @@ void SCR_DisplayTicRate(void)
 
 		width = V_StringWidth(drawnstr, V_NOSCALESTART);
 
-		V_DrawString(vid.width - ((7 * 8 * vid.dupx) + V_StringWidth("FPS: ", V_NOSCALESTART)), h,
+		V_DrawString(vid.width - ((7 * 8 * vid.dup) + V_StringWidth("FPS: ", V_NOSCALESTART)), h,
 			V_YELLOWMAP|V_NOSCALESTART|V_USERHUDTRANS, "FPS:");
 		V_DrawString(vid.width - width, h,
 			ticcntcolor|V_NOSCALESTART|V_USERHUDTRANS, drawnstr);
@@ -589,7 +589,7 @@ void SCR_ClosedCaptions(void)
 
 		if (closedcaptions[i].b)
 		{
-			y -= closedcaptions[i].b * vid.dupy;
+			y -= closedcaptions[i].b * vid.dup;
 			if (renderisnewtic)
 			{
 				closedcaptions[i].b--;
@@ -639,9 +639,9 @@ void SCR_DisplayMarathonInfo(void)
 #define PRIMEV1 13
 #define PRIMEV2 17 // I can't believe it! I'm on TV!
 		antisplice[0] += (entertic - oldentertics)*PRIMEV2;
-		antisplice[0] %= PRIMEV1*((vid.width/vid.dupx)+1);
+		antisplice[0] %= PRIMEV1*((vid.width/vid.dup)+1);
 		antisplice[1] += (entertic - oldentertics)*PRIMEV1;
-		antisplice[1] %= PRIMEV1*((vid.width/vid.dupx)+1);
+		antisplice[1] %= PRIMEV1*((vid.width/vid.dup)+1);
 		str = va("%i:%02i:%02i.%02i",
 			G_TicsToHours(marathontime),
 			G_TicsToMinutes(marathontime, false),
