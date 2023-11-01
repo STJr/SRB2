@@ -1425,6 +1425,18 @@ static int lib_pGivePlayerRings(lua_State *L)
 	return 0;
 }
 
+static int lib_pGivePlayerSpheres(lua_State *L)
+{
+	player_t *player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
+	INT32 num_spheres = (INT32)luaL_checkinteger(L, 2);
+	NOHUD
+	INLEVEL
+	if (!player)
+		return LUA_ErrInvalid(L, "player_t");
+	P_GivePlayerSpheres(player, num_spheres);
+	return 0;
+}
+
 static int lib_pGivePlayerLives(lua_State *L)
 {
 	player_t *player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
@@ -4173,6 +4185,7 @@ static luaL_Reg lib[] = {
 	{"P_SpawnShieldOrb",lib_pSpawnShieldOrb},
 	{"P_SpawnGhostMobj",lib_pSpawnGhostMobj},
 	{"P_GivePlayerRings",lib_pGivePlayerRings},
+	{"P_GivePlayerSpheres",lib_pGivePlayerSpheres},
 	{"P_GivePlayerLives",lib_pGivePlayerLives},
 	{"P_GiveCoopLives",lib_pGiveCoopLives},
 	{"P_ResetScore",lib_pResetScore},
