@@ -381,12 +381,11 @@ static void InitialiseAudioBuffer(movie_t *movie)
 	{
 		movieaudioframe_t *frame = EnqueueBuffer(&stream->framepool);
 
-		av_samples_alloc(
+		if (!av_samples_alloc(
 			frame->samples, NULL,
 			movie->frame->channels, movie->frame->nb_samples,
 			AV_SAMPLE_FMT_S16, 1
-		);
-		if (!frame->samples)
+		))
 			I_Error("FFmpeg: cannot allocate samples");
 	}
 }
