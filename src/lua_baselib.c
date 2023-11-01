@@ -1692,6 +1692,17 @@ static int lib_pDoJump(lua_State *L)
 	return 0;
 }
 
+static int lib_pDoSpinDashDust(lua_State *L)
+{
+	player_t *player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
+	NOHUD
+	INLEVEL
+	if (!player)
+		return LUA_ErrInvalid(L, "player_t");
+	P_DoSpinDashDust(player);
+	return 0;
+}
+
 static int lib_pSpawnThokMobj(lua_State *L)
 {
 	player_t *player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
@@ -4249,6 +4260,7 @@ static luaL_Reg lib[] = {
 	{"P_HomingAttack",lib_pHomingAttack},
 	{"P_SuperReady",lib_pSuperReady},
 	{"P_DoJump",lib_pDoJump},
+	{"P_DoSpinDashDust",lib_pDoSpinDashDust},
 	{"P_SpawnThokMobj",lib_pSpawnThokMobj},
 	{"P_SpawnSpinMobj",lib_pSpawnSpinMobj},
 	{"P_Telekinesis",lib_pTelekinesis},
