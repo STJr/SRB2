@@ -1451,7 +1451,29 @@ static void Setvalue(consvar_t *var, const char *valstr, boolean stealth)
 	if (var->flags & CV_CALL && var->can_change && !stealth)
 	{
 		if (!var->can_change(valstr))
-			return;
+		{
+			// The callback refused the default value on register. How naughty...
+			// So we just use some fallback value.
+			if (var->string == NULL)
+			{
+				if (var->PossibleValue)
+				{
+					// Use PossibleValue
+					valstr = var->PossibleValue[0].strvalue;
+				}
+				else
+				{
+					// Else, use an empty string
+					valstr = "";
+				}
+			}
+			else
+			{
+				// Callback returned false, and the game is not registering this variable,
+				// so we can return safely.
+				return;
+			}
+		}
 	}
 
 	if (var->PossibleValue)
