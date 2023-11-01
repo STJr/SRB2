@@ -159,6 +159,9 @@ stages:
 
 Debian testing GCC:
   stage: build
+
+  when: manual
+
   image: debian:testing-slim
 
   allow_failure: true
@@ -198,6 +201,8 @@ Debian testing GCC:
 Windows x86:
   stage: build
 
+  when: on_success
+
   artifacts:
     paths:
       - "bin/"
@@ -227,6 +232,8 @@ Windows x86:
 
 Debian stable:amd64:
   stage: build
+
+  when: on_success
 
   artifacts:
     paths:
@@ -270,6 +277,8 @@ Debian stable:amd64:
 Debian stable:i386:
   stage: build
 
+  when: manual
+
   artifacts:
     paths:
       - "bin/"
@@ -310,6 +319,8 @@ Debian stable:i386:
 
 Debian stable:arm64:
   stage: build
+
+  when: manual
 
   artifacts:
     paths:
@@ -353,6 +364,8 @@ Debian stable:arm64:
 Windows x64:
   stage: build
 
+  when: manual
+
   artifacts:
     paths:
       - "bin/"
@@ -382,6 +395,8 @@ Windows x64:
 
 Debian stable Clang:
   stage: build
+
+  when: manual
 
   allow_failure: true
 
@@ -422,6 +437,8 @@ Debian stable Clang:
 Debian stable musl:
   stage: build
 
+  when: manual
+
   allow_failure: true
 
   artifacts:
@@ -459,6 +476,8 @@ Debian stable musl:
 Debian testing Clang:
   extends: Debian stable Clang
 
+  when: manual
+
   image: debian:testing-slim
 
   artifacts:
@@ -472,6 +491,8 @@ Debian testing Clang:
 
 Debian testing musl:
   extends: Debian stable musl
+
+  when: manual
 
   image: debian:testing-slim
 
