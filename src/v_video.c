@@ -479,6 +479,7 @@ static UINT8 hudminusalpha[11] = { 10,  9,  9,  8,  8,  7,  7,  6,  6,  5,  5};
 
 static const UINT8 *v_colormap = NULL;
 static const UINT8 *v_translevel = NULL;
+static const RGBA_t *v_palette = NULL;
 static UINT8 v_opacity;
 static UINT32 v_blendmode;
 
@@ -530,25 +531,25 @@ static void standardpdraw_i8o32(void *dest, void *source)
 {
 	UINT8 *s = (UINT8 *)source;
 	RGBA_t *d = (RGBA_t *)dest;
-	*d = pMasterPalette[*s];
+	*d = v_palette[*s];
 }
 static void mappedpdraw_i8o32(void *dest, void *source)
 {
 	UINT8 *s = (UINT8 *)source;
 	RGBA_t *d = (RGBA_t *)dest;
-	*d = pMasterPalette[*(v_colormap + *s)];
+	*d = v_palette[*(v_colormap + *s)];
 }
 static void translucentpdraw_i8o32(void *dest, void *source)
 {
 	UINT8 *s = (UINT8 *)source;
 	UINT32 *d = (UINT32 *)dest;
-	*d = ASTBlendPixel(*(RGBA_t *)d, pMasterPalette[*s], v_blendmode, v_opacity);
+	*d = ASTBlendPixel(*(RGBA_t *)d, v_palette[*s], v_blendmode, v_opacity);
 }
 static void transmappedpdraw_i8o32(void *dest, void *source)
 {
 	UINT8 *s = (UINT8 *)source;
 	UINT32 *d = (UINT32 *)dest;
-	*d = ASTBlendPixel(*(RGBA_t *)d, pMasterPalette[*(v_colormap + *s)], v_blendmode, v_opacity);
+	*d = ASTBlendPixel(*(RGBA_t *)d, v_palette[*(v_colormap + *s)], v_blendmode, v_opacity);
 }
 
 // input 32bpp output 8bpp
@@ -574,9 +575,6 @@ static void translucentpdraw_i32o8(void *dest, void *source)
 	RGBA_t texel;
 	texel.rgba = ASTBlendPixel(pMasterPalette[*d], src, v_blendmode, v_opacity);
 	*d = GetColorLUT(&r_colorlookup, texel.s.red, texel.s.green, texel.s.blue);
-
-	// UINT8 idx = GetColorLUT(&r_colorlookup, src.s.red, src.s.green, src.s.blue);
-	// *d = *(v_translevel + ((idx<<8)&0xff00) + (*d&0xff));
 }
 
 // input 32bpp output 32bpp
@@ -917,7 +915,6 @@ void V_DrawPatch(fixed_t x, fixed_t y, fixed_t pscale, fixed_t vscale, INT32 scr
 	}
 }
 
-// Draws a patch scaled to arbitrary size.
 static void V_DrawPatchRGBA(fixed_t x, fixed_t y, fixed_t pscale, fixed_t vscale, INT32 scrn, patch_t *patch)
 {
 	void (*patchdrawfunc)(void*, void*);
@@ -1349,6 +1346,8 @@ static void V_DrawIntoPatchRGBA(patch_t *dest_patch, patch_t *src_patch, fixed_t
 	dynamicpatch_t *dpatch = (dynamicpatch_t *)dest_patch;
 
 	boolean source_paletted = src_patch->format == PATCH_FORMAT_PALETTE;
+	boolean dest_paletted = dest_patch->format == PATCH_FORMAT_PALETTE;
+
 	if (source_paletted && Patch_NeedsUpdate(src_patch, true))
 	{
 		Patch_DoDynamicUpdate(src_patch, true);
@@ -1404,10 +1403,12 @@ static void V_DrawIntoPatchRGBA(patch_t *dest_patch, patch_t *src_patch, fixed_t
 
 	if (source_paletted)
 	{
+		// Source image uses a palette
 		v_colormap = colormap;
 
-		if (dest_patch->format == PATCH_FORMAT_PALETTE)
+		if (dest_paletted)
 		{
+			// source 8bpp, dest 8bpp
 			if (alphalevel || blendmode)
 			{
 				v_translevel = R_GetBlendTable(v_blendmode, alphalevel);
@@ -1418,6 +1419,9 @@ static void V_DrawIntoPatchRGBA(patch_t *dest_patch, patch_t *src_patch, fixed_t
 		}
 		else
 		{
+			v_palette = pMasterPalette;
+
+			// source 8bpp, dest 32bpp
 			if (alphalevel || blendmode)
 				patchdrawfunc = v_colormap ? transmappedpdraw_i8o32 : translucentpdraw_i8o32;
 			else
@@ -1426,8 +1430,10 @@ static void V_DrawIntoPatchRGBA(patch_t *dest_patch, patch_t *src_patch, fixed_t
 	}
 	else
 	{
-		if (dest_patch->format == PATCH_FORMAT_PALETTE)
+		// Source image is in RGBA
+		if (dest_paletted)
 		{
+			// source 32bpp, dest 8bpp
 			if (alphalevel || blendmode)
 				patchdrawfunc = translucentpdraw_i32o8;
 			else if (use_pixel_alpha)
@@ -1435,10 +1441,12 @@ static void V_DrawIntoPatchRGBA(patch_t *dest_patch, patch_t *src_patch, fixed_t
 			else
 				patchdrawfunc = standardpdraw_i32o8;
 
+			// Init color look-up table
 			InitColorLUT(&r_colorlookup, pMasterPalette, false);
 		}
 		else
 		{
+			// source 32bpp, dest 32bpp
 			if (alphalevel || blendmode)
 				patchdrawfunc = translucentpdraw_i32o32;
 			else if (use_pixel_alpha)
