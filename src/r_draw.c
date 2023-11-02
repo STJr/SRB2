@@ -107,6 +107,7 @@ INT32 ds_waterofs, ds_bgofs;
 
 UINT16 ds_flatwidth, ds_flatheight;
 boolean ds_powersoftwo, ds_solidcolor;
+UINT32 ds_fillcolor;
 
 UINT8 *ds_source; // points to the start of a flat
 UINT8 *ds_transmap; // one of the translucency tables
@@ -884,6 +885,9 @@ void R_DrawViewBorder(void)
 }
 #endif
 
+#define SPANSIZE 16
+#define INVSPAN 0.0625f
+
 // R_CalcTiltedLighting
 // Exactly what it says on the tin. I wish I wasn't too lazy to explain things properly.
 static INT32 tiltlighting[MAXVIDWIDTH];
@@ -923,6 +927,7 @@ static void R_CalcTiltedLighting(fixed_t start, fixed_t end)
 
 #include "r_draw8.c"
 #include "r_draw8_npo2.c"
+#include "r_draw8_rgba.c"
 
 // ==========================================================================
 //                   INCLUDE 16bpp DRAWING CODE HERE

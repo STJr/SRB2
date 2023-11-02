@@ -43,6 +43,7 @@ enum mobj_e {
 	mobj_spriteyscale,
 	mobj_spritexoffset,
 	mobj_spriteyoffset,
+	mobj_image,
 	mobj_floorspriteslope,
 	mobj_drawonlyforplayer,
 	mobj_dontdrawforviewmobj,
@@ -123,6 +124,7 @@ static const char *const mobj_opt[] = {
 	"spriteyscale",
 	"spritexoffset",
 	"spriteyoffset",
+	"image",
 	"floorspriteslope",
 	"drawonlyforplayer",
 	"dontdrawforviewmobj",
@@ -262,6 +264,11 @@ static int mobj_get(lua_State *L)
 		break;
 	case mobj_spriteyoffset:
 		lua_pushfixed(L, mo->spriteyoffset);
+		break;
+	case mobj_image:
+		if (!mo->image)
+			return 0;
+		LUA_PushUserdata(L, mo->image, META_PATCH);
 		break;
 	case mobj_floorspriteslope:
 		LUA_PushUserdata(L, mo->floorspriteslope, META_SLOPE);
@@ -563,6 +570,12 @@ static int mobj_set(lua_State *L)
 		break;
 	case mobj_spriteyoffset:
 		mo->spriteyoffset = luaL_checkfixed(L, 3);
+		break;
+	case mobj_image:
+		if (lua_isnil(L, 3))
+			mo->image = NULL;
+		else
+			mo->image = *((patch_t **)luaL_checkudata(L, 3, META_PATCH));
 		break;
 	case mobj_floorspriteslope:
 		return NOSET;

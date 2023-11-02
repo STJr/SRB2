@@ -890,11 +890,11 @@ void Patch_FreeTags(INT32 lowtag, INT32 hightag)
 
 void Patch_GenerateFlat(patch_t *patch, pictureflags_t flags)
 {
-	UINT8 flip = (flags & (PICFLAGS_XFLIP | PICFLAGS_YFLIP));
+	UINT8 flip = flags & (PICFLAGS_XFLIP | PICFLAGS_YFLIP);
 	if (patch->flats[flip] == NULL)
 	{
 		if (patch->format == PATCH_FORMAT_RGBA)
-			patch->flats[flip] = Picture_Convert(PICFMT_PATCH32, patch->pixels, PICFMT_FLAT32, 0, NULL, 0, 0, 0, 0, flags);
+			patch->flats[flip] = Picture_Convert(PICFMT_PATCH32, patch, PICFMT_FLAT32, 0, NULL, 0, 0, 0, 0, flags);
 		else
 			patch->flats[flip] = Picture_Convert(PICFMT_PATCH, patch, PICFMT_FLAT16, 0, NULL, 0, 0, 0, 0, flags);
 	}

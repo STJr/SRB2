@@ -15,9 +15,6 @@
 // SPANS
 // ==========================================================================
 
-#define SPANSIZE 16
-#define INVSPAN 0.0625f
-
 #if defined(__GNUC__) || defined(__clang__) // Suppress intentional libdivide compiler warnings - Also added to libdivide.h
     #pragma GCC diagnostic push
     #pragma GCC diagnostic ignored "-Waggregate-return"

@@ -15,6 +15,7 @@
 #include "r_main.h"
 #include "r_splats.h"
 #include "r_bsp.h"
+#include "v_video.h"
 #include "p_local.h"
 #include "p_slopes.h"
 #include "w_wad.h"
@@ -423,18 +424,32 @@ static void R_RasterizeFloorSplat(floorsplat_t *pSplat, vector2_t *verts, visspr
 	ds_transmap = vis->transmap;
 
 	// Determine which R_DrawWhatever to use
+	boolean source_rgba = patch->format == PATCH_FORMAT_RGBA;
 
 	// Solid color
 	if (ds_solidcolor)
 	{
-		UINT16 px = *(UINT16 *)ds_source;
+		if (source_rgba)
+		{
+			RGBA_t px = *(RGBA_t *)ds_source;
 
-		// Uh, it's not visible.
-		if (!(px & 0xFF00))
-			return;
+			// Uh, it's not visible.
+			if (px.s.alpha == 0)
+				return;
 
-		// Pixel color is contained in the lower 8 bits (upper 8 are the opacity), so advance the pointer
-		ds_source++;
+			ds_fillcolor = GetColorLUT(&r_colorlookup, px.s.red, px.s.green, px.s.blue);
+		}
+		else
+		{
+			UINT16 px = *(UINT16 *)ds_source;
+
+			// Uh, it's not visible.
+			if (!(px & 0xFF00))
+				return;
+
+			// Pixel color is contained in the lower 8 bits (upper 8 are the opacity), so advance the pointer
+			ds_fillcolor = ds_source[1];
+		}
 
 		if (pSplat->slope)
 		{
@@ -468,7 +483,14 @@ static void R_RasterizeFloorSplat(floorsplat_t *pSplat, vector2_t *verts, visspr
 			spanfunctype = SPANDRAWFUNC_SPRITE;
 	}
 
-	if (ds_powersoftwo || ds_solidcolor)
+	if (source_rgba && !ds_solidcolor)
+	{
+		if (ds_powersoftwo)
+			spanfunc = spanfuncs_rgba[spanfunctype];
+		else
+			spanfunc = spanfuncs_npo2_rgba[spanfunctype];
+	}
+	else if (ds_powersoftwo || ds_solidcolor)
 		spanfunc = spanfuncs[spanfunctype];
 	else
 		spanfunc = spanfuncs_npo2[spanfunctype];

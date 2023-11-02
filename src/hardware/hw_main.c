@@ -4973,15 +4973,13 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	float spritexscale, spriteyscale;
 	float shadowheight = 1.0f, shadowscale = 1.0f;
 	float gz, gzt;
-	spritedef_t *sprdef;
-	spriteframe_t *sprframe;
+	spriteframe_t *sprframe = NULL;
 #ifdef ROTSPRITE
-	spriteinfo_t *sprinfo;
+	spriteinfo_t *sprinfo = NULL;
 #endif
 	md2_t *md2;
-	size_t lumpoff;
 	unsigned rot;
-	UINT16 flip;
+	UINT16 flip = 0;
 	boolean vflip = (!(thing->eflags & MFE_VERTICALFLIP) != !R_ThingVerticallyFlipped(thing));
 	boolean mirrored = thing->mirrored;
 	boolean hflip = (!R_ThingHorizontallyFlipped(thing) != !mirrored);
@@ -4993,6 +4991,7 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	const boolean papersprite = (R_ThingIsPaperSprite(thing) && !splat);
 	float z1, z2;
 
+	patch_t *gpatch = NULL;
 	fixed_t spr_width, spr_height;
 	fixed_t spr_offset, spr_topoffset;
 #ifdef ROTSPRITE
@@ -5021,7 +5020,6 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	}
 
 	dispoffset = thing->dispoffset;
-
 
 	if (R_UsingFrameInterpolation() && !paused)
 	{
@@ -5067,51 +5065,73 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	tr_x = FIXED_TO_FLOAT(interp.x);
 	tr_y = FIXED_TO_FLOAT(interp.y);
 
-	// decide which patch to use for sprite relative to player
-#ifdef RANGECHECK
-	if ((unsigned)thing->sprite >= numsprites)
-		I_Error("HWR_ProjectSprite: invalid sprite number %i ", thing->sprite);
-#endif
+	boolean using_sprite = thing->image == NULL;
+	boolean use_single_rotation = false;
 
-	rot = thing->frame&FF_FRAMEMASK;
-
-	//Fab : 02-08-98: 'skin' override spritedef currently used for skin
-	if (thing->skin && thing->sprite == SPR_PLAY)
+	if (!using_sprite)
 	{
-		sprdef = &((skin_t *)thing->skin)->sprites[thing->sprite2];
-#ifdef ROTSPRITE
-		sprinfo = &((skin_t *)thing->skin)->sprinfo[thing->sprite2];
-#endif
+		gpatch = (patch_t*)thing->image;
+
+		if (Patch_NeedsUpdate(gpatch, false))
+			Patch_DoDynamicUpdate(gpatch, false);
+
+		spr_width = gpatch->width << FRACBITS;
+		spr_height = gpatch->height << FRACBITS;
+		spr_offset = gpatch->leftoffset << FRACBITS;
+		spr_topoffset = gpatch->topoffset << FRACBITS;
+
+		use_single_rotation = true;
 	}
 	else
 	{
-		sprdef = &sprites[thing->sprite];
-#ifdef ROTSPRITE
-		sprinfo = &spriteinfo[thing->sprite];
-#endif
-	}
+		spritedef_t *sprdef;
 
-	if (rot >= sprdef->numframes)
-	{
-		CONS_Alert(CONS_ERROR, M_GetText("HWR_ProjectSprite: invalid sprite frame %s/%s for %s\n"),
-			sizeu1(rot), sizeu2(sprdef->numframes), sprnames[thing->sprite]);
-		thing->sprite = states[S_UNKNOWN].sprite;
-		thing->frame = states[S_UNKNOWN].frame;
-		sprdef = &sprites[thing->sprite];
-#ifdef ROTSPRITE
-		sprinfo = &spriteinfo[thing->sprite];
+		// decide which patch to use for sprite relative to player
+#ifdef RANGECHECK
+		if ((unsigned)thing->sprite >= numsprites)
+			I_Error("HWR_ProjectSprite: invalid sprite number %i ", thing->sprite);
 #endif
+
 		rot = thing->frame&FF_FRAMEMASK;
-		thing->state->sprite = thing->sprite;
-		thing->state->frame = thing->frame;
-	}
 
-	sprframe = &sprdef->spriteframes[rot];
+		//Fab : 02-08-98: 'skin' override spritedef currently used for skin
+		if (thing->skin && thing->sprite == SPR_PLAY)
+		{
+			sprdef = &((skin_t *)thing->skin)->sprites[thing->sprite2];
+#ifdef ROTSPRITE
+			sprinfo = &((skin_t *)thing->skin)->sprinfo[thing->sprite2];
+#endif
+		}
+		else
+		{
+			sprdef = &sprites[thing->sprite];
+#ifdef ROTSPRITE
+			sprinfo = &spriteinfo[thing->sprite];
+#endif
+		}
+
+		if (rot >= sprdef->numframes)
+		{
+			CONS_Alert(CONS_ERROR, M_GetText("HWR_ProjectSprite: invalid sprite frame %s/%s for %s\n"),
+				sizeu1(rot), sizeu2(sprdef->numframes), sprnames[thing->sprite]);
+			thing->sprite = states[S_UNKNOWN].sprite;
+			thing->frame = states[S_UNKNOWN].frame;
+			sprdef = &sprites[thing->sprite];
+#ifdef ROTSPRITE
+			sprinfo = &spriteinfo[thing->sprite];
+#endif
+			rot = thing->frame&FF_FRAMEMASK;
+			thing->state->sprite = thing->sprite;
+			thing->state->frame = thing->frame;
+		}
+
+		sprframe = &sprdef->spriteframes[rot];
 
 #ifdef PARANOIA
-	if (!sprframe)
-		I_Error("sprframes NULL for sprite %d\n", thing->sprite);
+		if (!sprframe)
+			I_Error("sprframes NULL for sprite %d\n", thing->sprite);
 #endif
+	}
 
 	if (splat)
 	{
@@ -5124,46 +5144,53 @@ static void HWR_ProjectSprite(mobj_t *thing)
 			ang = InvAngle(ang);
 	}
 
-	if (sprframe->rotate == SRF_SINGLE)
+	if (sprframe)
 	{
-		// use single rotation for all views
-		rot = 0;                        //Fab: for vis->patch below
-		lumpoff = sprframe->lumpid[0];     //Fab: see note above
-		flip = sprframe->flip; // Will only be 0x00 or 0xFF
+		size_t lumpoff;
 
-		if (papersprite && ang < ANGLE_180)
-			flip ^= 0xFFFF;
-	}
-	else
-	{
-		// choose a different rotation based on player view
-		if ((sprframe->rotate & SRF_RIGHT) && (ang < ANGLE_180)) // See from right
-			rot = 6; // F7 slot
-		else if ((sprframe->rotate & SRF_LEFT) && (ang >= ANGLE_180)) // See from left
-			rot = 2; // F3 slot
-		else if (sprframe->rotate & SRF_3DGE) // 16-angle mode
+		if (use_single_rotation)
 		{
-			rot = (ang+ANGLE_180+ANGLE_11hh)>>28;
-			rot = ((rot & 1)<<3)|(rot>>1);
+			// use single rotation for all views
+			rot = 0;                        //Fab: for vis->patch below
+			lumpoff = sprframe->lumpid[0];     //Fab: see note above
+			flip = sprframe->flip; // Will only be 0x00 or 0xFF
+
+			if (papersprite && ang < ANGLE_180)
+				flip ^= 0xFFFF;
 		}
-		else // Normal behaviour
-			rot = (ang+ANGLE_202h)>>29;
+		else
+		{
+			// choose a different rotation based on player view
+			if ((sprframe->rotate & SRF_RIGHT) && (ang < ANGLE_180)) // See from right
+				rot = 6; // F7 slot
+			else if ((sprframe->rotate & SRF_LEFT) && (ang >= ANGLE_180)) // See from left
+				rot = 2; // F3 slot
+			else if (sprframe->rotate & SRF_3DGE) // 16-angle mode
+			{
+				rot = (ang+ANGLE_180+ANGLE_11hh)>>28;
+				rot = ((rot & 1)<<3)|(rot>>1);
+			}
+			else // Normal behaviour
+				rot = (ang+ANGLE_202h)>>29;
 
-		//Fab: lumpid is the index for spritewidth,spriteoffset... tables
-		lumpoff = sprframe->lumpid[rot];
-		flip = sprframe->flip & (1<<rot);
+			//Fab: lumpid is the index for spritewidth,spriteoffset... tables
+			lumpoff = sprframe->lumpid[rot];
+			flip = sprframe->flip & (1<<rot);
 
-		if (papersprite && ang < ANGLE_180)
-			flip ^= (1<<rot);
+			if (papersprite && ang < ANGLE_180)
+				flip ^= (1<<rot);
+		}
+
+		gpatch = (patch_t *)W_CachePatchNum(sprframe->lumppat[rot], PU_SPRITE);
+
+		spr_width = spritecachedinfo[lumpoff].width;
+		spr_height = spritecachedinfo[lumpoff].height;
+		spr_offset = spritecachedinfo[lumpoff].offset;
+		spr_topoffset = spritecachedinfo[lumpoff].topoffset;
 	}
 
 	if (thing->skin && ((skin_t *)thing->skin)->flags & SF_HIRES)
 		this_scale *= FIXED_TO_FLOAT(((skin_t *)thing->skin)->highresscale);
-
-	spr_width = spritecachedinfo[lumpoff].width;
-	spr_height = spritecachedinfo[lumpoff].height;
-	spr_offset = spritecachedinfo[lumpoff].offset;
-	spr_topoffset = spritecachedinfo[lumpoff].topoffset;
 
 #ifdef ROTSPRITE
 	spriterotangle = R_SpriteRotationAngle(&interp);
@@ -5181,10 +5208,15 @@ static void HWR_ProjectSprite(mobj_t *thing)
 			rollangle = R_GetRollAngle(spriterotangle);
 		}
 
-		rotsprite = Patch_GetRotatedSprite(sprframe, (thing->frame & FF_FRAMEMASK), rot, flip, false, sprinfo, rollangle);
+		if (using_sprite)
+			rotsprite = Patch_GetRotatedSprite(sprframe, (thing->frame & FF_FRAMEMASK), rot, flip, false, sprinfo, rollangle);
+		else
+			rotsprite = Patch_GetRotated(gpatch, rollangle, flip);
 
 		if (rotsprite != NULL)
 		{
+			gpatch = rotsprite;
+
 			spr_width = rotsprite->width << FRACBITS;
 			spr_height = rotsprite->height << FRACBITS;
 			spr_offset = rotsprite->leftoffset << FRACBITS;
@@ -5386,7 +5418,7 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	vis->tracertz = tracertz;
 
 	vis->renderflags = thing->renderflags;
-	vis->rotateflags = sprframe->rotate;
+	vis->rotateflags = sprframe ? sprframe->rotate : SRF_3D;
 
 	vis->shadowheight = shadowheight;
 	vis->shadowscale = shadowscale;
@@ -5399,19 +5431,15 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	vis->spritexoffset = FIXED_TO_FLOAT(spr_offset);
 	vis->spriteyoffset = FIXED_TO_FLOAT(spr_topoffset);
 
-	vis->rotated = false;
-
 #ifdef ROTSPRITE
-	if (rotsprite)
-	{
-		vis->gpatch = (patch_t *)rotsprite;
-		vis->rotated = true;
-	}
-	else
+	vis->rotated = rotsprite != NULL;
+#else
+	vis->rotated = false;
 #endif
-		vis->gpatch = (patch_t *)W_CachePatchNum(sprframe->lumppat[rot], PU_SPRITE);
 
+	vis->gpatch = gpatch;
 	vis->mobj = thing;
+
 	if ((thing->flags2 & MF2_LINKDRAW) && thing->tracer && thing->color == SKINCOLOR_NONE)
 		vis->color = thing->tracer->color;
 	else

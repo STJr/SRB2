@@ -49,6 +49,7 @@
 // --------------------------------------------
 void (*colfunc)(void);
 void (*colfuncs[COLDRAWFUNC_MAX])(void);
+void (*colfuncs_rgba[COLDRAWFUNC_MAX])(void);
 
 void (*spanfunc)(void);
 void (*spanfuncs[SPANDRAWFUNC_MAX])(void);
@@ -119,14 +120,19 @@ void SCR_SetDrawFuncs(void)
 		colfunc = colfuncs[BASEDRAWFUNC];
 		spanfunc = spanfuncs[BASEDRAWFUNC];
 
-		colfuncs[COLDRAWFUNC_FUZZY] = R_DrawTranslucentColumn_8;
-		colfuncs[COLDRAWFUNC_TRANS] = R_DrawTranslatedColumn_8;
+		colfuncs[COLDRAWFUNC_TRANSLU] = R_DrawTranslucentColumn_8;
+		colfuncs[COLDRAWFUNC_MAPPED] = R_DrawTranslatedColumn_8;
 		colfuncs[COLDRAWFUNC_SHADE] = R_DrawShadeColumn_8;
 		colfuncs[COLDRAWFUNC_SHADOWED] = R_DrawColumnShadowed_8;
-		colfuncs[COLDRAWFUNC_TRANSTRANS] = R_DrawTranslatedTranslucentColumn_8;
+		colfuncs[COLDRAWFUNC_TRANSLU_MAPPED] = R_DrawTranslatedTranslucentColumn_8;
 		colfuncs[COLDRAWFUNC_TWOSMULTIPATCH] = R_Draw2sMultiPatchColumn_8;
 		colfuncs[COLDRAWFUNC_TWOSMULTIPATCHTRANS] = R_Draw2sMultiPatchTranslucentColumn_8;
 		colfuncs[COLDRAWFUNC_FOG] = R_DrawFogColumn_8;
+
+		colfuncs_rgba[BASEDRAWFUNC] = R_DrawBlendedColumn_8_RGBA;
+		colfuncs_rgba[COLDRAWFUNC_TRANSLU] = R_DrawTranslucentColumn_8_RGBA;
+		colfuncs_rgba[COLDRAWFUNC_MAPPED] = R_DrawBlendedColumn_8_RGBA;
+		colfuncs_rgba[COLDRAWFUNC_TRANSLU_MAPPED] = R_DrawTranslucentColumn_8_RGBA;
 
 		spanfuncs[SPANDRAWFUNC_TRANS] = R_DrawTranslucentSpan_8;
 		spanfuncs[SPANDRAWFUNC_TILTED] = R_DrawTiltedSpan_8;
@@ -149,6 +155,11 @@ void SCR_SetDrawFuncs(void)
 		spanfuncs[SPANDRAWFUNC_FOG] = R_DrawFogSpan_8;
 		spanfuncs[SPANDRAWFUNC_TILTEDFOG] = R_DrawTiltedFogSpan_8;
 
+		spanfuncs_rgba[SPANDRAWFUNC_SPRITE] = R_DrawFloorSprite_8_RGBA;
+		spanfuncs_rgba[SPANDRAWFUNC_TRANSSPRITE] = R_DrawTranslucentFloorSprite_8_RGBA;
+		spanfuncs_rgba[SPANDRAWFUNC_TILTEDSPRITE] = R_DrawTiltedFloorSprite_8_RGBA;
+		spanfuncs_rgba[SPANDRAWFUNC_TILTEDTRANSSPRITE] = R_DrawTiltedTranslucentFloorSprite_8_RGBA;
+
 		// Lactozilla: Non-powers-of-two
 		spanfuncs_npo2[BASEDRAWFUNC] = R_DrawSpan_NPO2_8;
 		spanfuncs_npo2[SPANDRAWFUNC_TRANS] = R_DrawTranslucentSpan_NPO2_8;
@@ -164,25 +175,13 @@ void SCR_SetDrawFuncs(void)
 		spanfuncs_npo2[SPANDRAWFUNC_WATER] = R_DrawWaterSpan_NPO2_8;
 		spanfuncs_npo2[SPANDRAWFUNC_TILTEDWATER] = R_DrawTiltedWaterSpan_NPO2_8;
 
+		spanfuncs_npo2_rgba[SPANDRAWFUNC_SPRITE] = R_DrawFloorSprite_NPO2_8_RGBA;
+		spanfuncs_npo2_rgba[SPANDRAWFUNC_TRANSSPRITE] = R_DrawTranslucentFloorSprite_NPO2_8_RGBA;
+		spanfuncs_npo2_rgba[SPANDRAWFUNC_TILTEDSPRITE] = R_DrawTiltedFloorSprite_NPO2_8_RGBA;
+		spanfuncs_npo2_rgba[SPANDRAWFUNC_TILTEDTRANSSPRITE] = R_DrawTiltedTranslucentFloorSprite_NPO2_8_RGBA;
 	}
-/*	else if (vid.bpp > 1)
-	{
-		I_OutputMsg("using highcolor mode\n");
-		spanfunc = basespanfunc = R_DrawSpan_16;
-		transcolfunc = R_DrawTranslatedColumn_16;
-		transtransfunc = R_DrawTranslucentColumn_16; // No 16bit operation for this function
-
-		colfunc = basecolfunc = R_DrawColumn_16;
-		shadecolfunc = NULL; // detect error if used somewhere..
-		fuzzcolfunc = R_DrawTranslucentColumn_16;
-		walldrawerfunc = R_DrawWallColumn_16;
-	}*/
 	else
 		I_Error("unknown bytes per pixel mode %d\n", vid.bpp);
-/*
-	if (SCR_IsAspectCorrect(vid.width, vid.height))
-		CONS_Alert(CONS_WARNING, M_GetText("Resolution is not aspect-correct!\nUse a multiple of %dx%d\n"), BASEVIDWIDTH, BASEVIDHEIGHT);
-*/
 }
 
 void SCR_SetMode(void)

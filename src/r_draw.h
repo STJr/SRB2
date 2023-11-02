@@ -168,15 +168,19 @@ void R_DrawViewBorder(void);
 // -----------------
 
 void R_DrawColumn_8(void);
-void R_DrawShadeColumn_8(void);
 void R_DrawTranslucentColumn_8(void);
-void R_DrawDropShadowColumn_8(void);
 void R_DrawTranslatedColumn_8(void);
 void R_DrawTranslatedTranslucentColumn_8(void);
+void R_DrawShadeColumn_8(void);
+void R_DrawDropShadowColumn_8(void);
 void R_Draw2sMultiPatchColumn_8(void);
 void R_Draw2sMultiPatchTranslucentColumn_8(void);
 void R_DrawFogColumn_8(void);
 void R_DrawColumnShadowed_8(void);
+
+void R_DrawColumn_8_RGBA(void);
+void R_DrawBlendedColumn_8_RGBA(void);
+void R_DrawTranslucentColumn_8_RGBA(void);
 
 #define PLANELIGHTFLOAT (BASEVIDWIDTH * BASEVIDWIDTH / vid.width / zeroheight / 21.0f * FIXED_TO_FLOAT(fovtan))
 
@@ -193,6 +197,11 @@ void R_DrawFloorSprite_8(void);
 void R_DrawTranslucentFloorSprite_8(void);
 void R_DrawTiltedFloorSprite_8(void);
 void R_DrawTiltedTranslucentFloorSprite_8(void);
+
+void R_DrawFloorSprite_8_RGBA(void);
+void R_DrawTranslucentFloorSprite_8_RGBA(void);
+void R_DrawTiltedFloorSprite_8_RGBA(void);
+void R_DrawTiltedTranslucentFloorSprite_8_RGBA(void);
 
 void R_DrawWaterSpan_8(void);
 void R_DrawTiltedWaterSpan_8(void);
@@ -214,6 +223,11 @@ void R_DrawFloorSprite_NPO2_8(void);
 void R_DrawTranslucentFloorSprite_NPO2_8(void);
 void R_DrawTiltedFloorSprite_NPO2_8(void);
 void R_DrawTiltedTranslucentFloorSprite_NPO2_8(void);
+
+void R_DrawFloorSprite_NPO2_8_RGBA(void);
+void R_DrawTranslucentFloorSprite_NPO2_8_RGBA(void);
+void R_DrawTiltedFloorSprite_NPO2_8_RGBA(void);
+void R_DrawTiltedTranslucentFloorSprite_NPO2_8_RGBA(void);
 
 void R_DrawWaterSpan_NPO2_8(void);
 void R_DrawTiltedWaterSpan_NPO2_8(void);

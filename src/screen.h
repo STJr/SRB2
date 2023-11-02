@@ -121,11 +121,11 @@ extern vmode_t specialmodes[NUMSPECIALMODES];
 enum
 {
 	COLDRAWFUNC_BASE = BASEDRAWFUNC,
-	COLDRAWFUNC_FUZZY,
-	COLDRAWFUNC_TRANS,
+	COLDRAWFUNC_TRANSLU,
+	COLDRAWFUNC_MAPPED,
 	COLDRAWFUNC_SHADE,
 	COLDRAWFUNC_SHADOWED,
-	COLDRAWFUNC_TRANSTRANS,
+	COLDRAWFUNC_TRANSLU_MAPPED,
 	COLDRAWFUNC_TWOSMULTIPATCH,
 	COLDRAWFUNC_TWOSMULTIPATCHTRANS,
 	COLDRAWFUNC_FOG,
@@ -135,6 +135,7 @@ enum
 
 extern void (*colfunc)(void);
 extern void (*colfuncs[COLDRAWFUNC_MAX])(void);
+extern void (*colfuncs_rgba[COLDRAWFUNC_MAX])(void);
 
 enum
 {
@@ -171,6 +172,8 @@ enum
 extern void (*spanfunc)(void);
 extern void (*spanfuncs[SPANDRAWFUNC_MAX])(void);
 extern void (*spanfuncs_npo2[SPANDRAWFUNC_MAX])(void);
+extern void (*spanfuncs_rgba[SPANDRAWFUNC_MAX])(void);
+extern void (*spanfuncs_npo2_rgba[SPANDRAWFUNC_MAX])(void);
 
 // -----
 // CPUID

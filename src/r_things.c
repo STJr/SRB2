@@ -31,6 +31,7 @@
 #include "r_plane.h"
 #include "r_portal.h"
 #include "r_splats.h"
+#include "v_video.h"
 #include "p_tick.h"
 #include "p_local.h"
 #include "p_slopes.h"
@@ -812,6 +813,7 @@ static void R_DrawVisSprite(vissprite_t *vis)
 	fixed_t this_scale = vis->thingscale;
 	INT32 x1, x2;
 	INT64 overflow_test;
+	boolean source_paletted;
 
 	if (!patch)
 		return;
@@ -837,26 +839,49 @@ static void R_DrawVisSprite(vissprite_t *vis)
 		return;
 	}
 
+	source_paletted = patch->format == PATCH_FORMAT_PALETTE;
+
+	if (!source_paletted)
+	{
+		InitColorLUT(&r_colorlookup, pMasterPalette, false);
+	}
+	else
+	{
+		dc_translation = R_GetSpriteTranslation(vis);
+	}
+
 	colfunc = colfuncs[BASEDRAWFUNC]; // hack: this isn't resetting properly somewhere.
 	dc_colormap = vis->colormap;
-	dc_translation = R_GetSpriteTranslation(vis);
 
-	if (R_SpriteIsFlashing(vis)) // Bosses "flash"
-		colfunc = colfuncs[COLDRAWFUNC_TRANS]; // translate certain pixels to white
-	else if (vis->color && vis->transmap) // Color mapping
+	if (source_paletted)
 	{
-		colfunc = colfuncs[COLDRAWFUNC_TRANSTRANS];
-		dc_transmap = vis->transmap;
+		if (R_SpriteIsFlashing(vis)) // Bosses "flash"
+			colfunc = colfuncs[COLDRAWFUNC_MAPPED]; // translate certain pixels to white
+		else if (vis->color && vis->transmap) // Color mapping
+		{
+			colfunc = colfuncs[COLDRAWFUNC_TRANSLU_MAPPED];
+			dc_transmap = vis->transmap;
+		}
+		else if (vis->transmap)
+		{
+			colfunc = colfuncs[COLDRAWFUNC_TRANSLU];
+			dc_transmap = vis->transmap;    //Fab : 29-04-98: translucency table
+		}
+		else if (vis->color) // translate green skin to another color
+			colfunc = colfuncs[COLDRAWFUNC_MAPPED];
+		else if (vis->mobj->sprite == SPR_PLAY) // Looks like a player, but doesn't have a color? Get rid of green sonic syndrome.
+			colfunc = colfuncs[COLDRAWFUNC_MAPPED];
 	}
-	else if (vis->transmap)
+	else
 	{
-		colfunc = colfuncs[COLDRAWFUNC_FUZZY];
-		dc_transmap = vis->transmap;    //Fab : 29-04-98: translucency table
+		if (vis->transmap)
+		{
+			colfunc = colfuncs_rgba[COLDRAWFUNC_TRANSLU];
+			dc_transmap = vis->transmap;    //Fab : 29-04-98: translucency table
+		}
+		else
+			colfunc = colfuncs_rgba[BASEDRAWFUNC];
 	}
-	else if (vis->color) // translate green skin to another color
-		colfunc = colfuncs[COLDRAWFUNC_TRANS];
-	else if (vis->mobj->sprite == SPR_PLAY) // Looks like a player, but doesn't have a color? Get rid of green sonic syndrome.
-		colfunc = colfuncs[COLDRAWFUNC_TRANS];
 
 	// Hack: Use a special column function for drop shadows that bypasses
 	// invalid memory access crashes caused by R_ProjectDropShadow putting wrong values
@@ -999,7 +1024,7 @@ static void R_DrawPrecipitationVisSprite(vissprite_t *vis)
 
 	if (vis->transmap)
 	{
-		colfunc = colfuncs[COLDRAWFUNC_FUZZY];
+		colfunc = colfuncs[COLDRAWFUNC_TRANSLU];
 		dc_transmap = vis->transmap;    //Fab : 29-04-98: translucency table
 	}
 
@@ -1526,15 +1551,13 @@ static void R_ProjectSprite(mobj_t *thing)
 
 	INT32 x1, x2;
 
-	spritedef_t *sprdef;
-	spriteframe_t *sprframe;
+	spriteframe_t *sprframe = NULL;
 #ifdef ROTSPRITE
-	spriteinfo_t *sprinfo;
+	spriteinfo_t *sprinfo = NULL;
 #endif
-	size_t lump;
 
-	size_t frame, rot;
-	UINT16 flip;
+	size_t rot = 0;
+	UINT16 flip = 0;
 	boolean vflip = (!(thing->eflags & MFE_VERTICALFLIP) != !R_ThingVerticallyFlipped(thing));
 	boolean mirrored = thing->mirrored;
 	boolean hflip = (!R_ThingHorizontallyFlipped(thing) != !mirrored);
@@ -1618,119 +1641,148 @@ static void R_ProjectSprite(mobj_t *thing)
 	xscale = FixedDiv(projection, tz);
 	sortscale = FixedDiv(projectiony, tz);
 
-	// decide which patch to use for sprite relative to player
-#ifdef RANGECHECK
-	if ((size_t)(thing->sprite) >= numsprites)
-		I_Error("R_ProjectSprite: invalid sprite number %d ", thing->sprite);
-#endif
+	boolean using_sprite = thing->image == NULL;
+	boolean use_single_rotation = false;
 
-	frame = thing->frame&FF_FRAMEMASK;
-
-	//Fab : 02-08-98: 'skin' override spritedef currently used for skin
-	if (thing->skin && thing->sprite == SPR_PLAY)
+	if (!using_sprite)
 	{
-		sprdef = &((skin_t *)thing->skin)->sprites[thing->sprite2];
-#ifdef ROTSPRITE
-		sprinfo = &((skin_t *)thing->skin)->sprinfo[thing->sprite2];
-#endif
-		if (frame >= sprdef->numframes) {
-			CONS_Alert(CONS_ERROR, M_GetText("R_ProjectSprite: invalid skins[\"%s\"].sprites[%sSPR2_%s] frame %s\n"), ((skin_t *)thing->skin)->name, ((thing->sprite2 & FF_SPR2SUPER) ? "FF_SPR2SUPER|": ""), spr2names[(thing->sprite2 & ~FF_SPR2SUPER)], sizeu5(frame));
-			thing->sprite = states[S_UNKNOWN].sprite;
-			thing->frame = states[S_UNKNOWN].frame;
-			sprdef = &sprites[thing->sprite];
-#ifdef ROTSPRITE
-			sprinfo = &spriteinfo[thing->sprite];
-#endif
-			frame = thing->frame&FF_FRAMEMASK;
-		}
+		patch = (patch_t*)thing->image;
+
+		if (Patch_NeedsUpdate(patch, true))
+			Patch_DoDynamicUpdate(patch, true);
+
+		if (patch->columns == NULL)
+			return;
+
+		spr_width = patch->width << FRACBITS;
+		spr_height = patch->height << FRACBITS;
+		spr_offset = patch->leftoffset << FRACBITS;
+		spr_topoffset = patch->topoffset << FRACBITS;
+
+		use_single_rotation = true;
 	}
 	else
 	{
-		sprdef = &sprites[thing->sprite];
-#ifdef ROTSPRITE
-		sprinfo = &spriteinfo[thing->sprite];
+		size_t frame = thing->frame & FF_FRAMEMASK;
+
+		spritedef_t *sprdef;
+
+		// decide which patch to use for sprite relative to player
+#ifdef RANGECHECK
+		if ((size_t)(thing->sprite) >= numsprites)
+			I_Error("R_ProjectSprite: invalid sprite number %d ", thing->sprite);
 #endif
 
-		if (frame >= sprdef->numframes)
+		//Fab : 02-08-98: 'skin' override spritedef currently used for skin
+		if (thing->skin && thing->sprite == SPR_PLAY)
 		{
-			CONS_Alert(CONS_ERROR, M_GetText("R_ProjectSprite: invalid sprite frame %s/%s for %s\n"),
-				sizeu1(frame), sizeu2(sprdef->numframes), sprnames[thing->sprite]);
-			if (thing->sprite == thing->state->sprite && thing->frame == thing->state->frame)
-			{
-				thing->state->sprite = states[S_UNKNOWN].sprite;
-				thing->state->frame = states[S_UNKNOWN].frame;
+			sprdef = &((skin_t *)thing->skin)->sprites[thing->sprite2];
+#ifdef ROTSPRITE
+			sprinfo = &((skin_t *)thing->skin)->sprinfo[thing->sprite2];
+#endif
+			if (frame >= sprdef->numframes) {
+				CONS_Alert(CONS_ERROR, M_GetText("R_ProjectSprite: invalid skins[\"%s\"].sprites[%sSPR2_%s] frame %s\n"), ((skin_t *)thing->skin)->name, ((thing->sprite2 & FF_SPR2SUPER) ? "FF_SPR2SUPER|": ""), spr2names[(thing->sprite2 & ~FF_SPR2SUPER)], sizeu5(frame));
+				thing->sprite = states[S_UNKNOWN].sprite;
+				thing->frame = states[S_UNKNOWN].frame;
+				sprdef = &sprites[thing->sprite];
+#ifdef ROTSPRITE
+				sprinfo = &spriteinfo[thing->sprite];
+#endif
+				frame = thing->frame&FF_FRAMEMASK;
 			}
-			thing->sprite = states[S_UNKNOWN].sprite;
-			thing->frame = states[S_UNKNOWN].frame;
-			sprdef = &sprites[thing->sprite];
-			sprinfo = &spriteinfo[thing->sprite];
-			frame = thing->frame&FF_FRAMEMASK;
 		}
-	}
+		else
+		{
+			sprdef = &sprites[thing->sprite];
+#ifdef ROTSPRITE
+			sprinfo = &spriteinfo[thing->sprite];
+#endif
 
-	sprframe = &sprdef->spriteframes[frame];
+			if (frame >= sprdef->numframes)
+			{
+				CONS_Alert(CONS_ERROR, M_GetText("R_ProjectSprite: invalid sprite frame %s/%s for %s\n"),
+					sizeu1(frame), sizeu2(sprdef->numframes), sprnames[thing->sprite]);
+				if (thing->sprite == thing->state->sprite && thing->frame == thing->state->frame)
+				{
+					thing->state->sprite = states[S_UNKNOWN].sprite;
+					thing->state->frame = states[S_UNKNOWN].frame;
+				}
+				thing->sprite = states[S_UNKNOWN].sprite;
+				thing->frame = states[S_UNKNOWN].frame;
+				sprdef = &sprites[thing->sprite];
+				sprinfo = &spriteinfo[thing->sprite];
+				frame = thing->frame&FF_FRAMEMASK;
+			}
+		}
+
+		sprframe = &sprdef->spriteframes[frame];
 
 #ifdef PARANOIA
-	if (!sprframe)
-		I_Error("R_ProjectSprite: sprframes NULL for sprite %d\n", thing->sprite);
+		if (!sprframe)
+			I_Error("R_ProjectSprite: sprframes NULL for sprite %d\n", thing->sprite);
 #endif
+
+		use_single_rotation = sprframe->rotate == SRF_SINGLE;
+	}
 
 	if (splat)
 	{
 		ang = R_PointToAngle2(0, viewz, 0, interp.z);
 	}
-	else if (sprframe->rotate != SRF_SINGLE || papersprite)
+	else if (!use_single_rotation || papersprite)
 	{
 		ang = R_PointToAngle (interp.x, interp.y) - interp.angle;
 		if (mirrored)
 			ang = InvAngle(ang);
 	}
 
-	if (sprframe->rotate == SRF_SINGLE)
+	if (sprframe)
 	{
-		// use single rotation for all views
-		rot = 0;                        //Fab: for vis->patch below
-		lump = sprframe->lumpid[0];     //Fab: see note above
-		flip = sprframe->flip; 			// Will only be 0 or 0xFFFF
-	}
-	else
-	{
-		// choose a different rotation based on player view
-		//ang = R_PointToAngle (interp.x, interp.y) - interpangle;
+		size_t lump;
 
-		if ((sprframe->rotate & SRF_RIGHT) && (ang < ANGLE_180)) // See from right
-			rot = 6; // F7 slot
-		else if ((sprframe->rotate & SRF_LEFT) && (ang >= ANGLE_180)) // See from left
-			rot = 2; // F3 slot
-		else if (sprframe->rotate & SRF_3DGE) // 16-angle mode
+		if (use_single_rotation)
 		{
-			rot = (ang+ANGLE_180+ANGLE_11hh)>>28;
-			rot = ((rot & 1)<<3)|(rot>>1);
+			// use single rotation for all views
+			rot = 0;                        //Fab: for vis->patch below
+			lump = sprframe->lumpid[0];     //Fab: see note above
+			flip = sprframe->flip; 			// Will only be 0 or 0xFFFF
 		}
-		else // Normal behaviour
-			rot = (ang+ANGLE_202h)>>29;
+		else
+		{
+			// choose a different rotation based on player view
+			if ((sprframe->rotate & SRF_RIGHT) && (ang < ANGLE_180)) // See from right
+				rot = 6; // F7 slot
+			else if ((sprframe->rotate & SRF_LEFT) && (ang >= ANGLE_180)) // See from left
+				rot = 2; // F3 slot
+			else if (sprframe->rotate & SRF_3DGE) // 16-angle mode
+			{
+				rot = (ang+ANGLE_180+ANGLE_11hh)>>28;
+				rot = ((rot & 1)<<3)|(rot>>1);
+			}
+			else // Normal behaviour
+				rot = (ang+ANGLE_202h)>>29;
 
-		//Fab: lumpid is the index for spritewidth,spriteoffset... tables
-		lump = sprframe->lumpid[rot];
-		flip = sprframe->flip & (1<<rot);
+			//Fab: lumpid is the index for spritewidth,spriteoffset... tables
+			lump = sprframe->lumpid[rot];
+			flip = sprframe->flip & (1<<rot);
+		}
+
+		I_Assert(lump < max_spritelumps);
+
+		//Fab: lumppat is the lump number of the patch to use, this is different
+		//     than lumpid for sprites-in-pwad : the graphics are patched
+		patch = W_CachePatchNum(sprframe->lumppat[rot], PU_SPRITE);
+
+		spr_width = spritecachedinfo[lump].width;
+		spr_height = spritecachedinfo[lump].height;
+		spr_offset = spritecachedinfo[lump].offset;
+		spr_topoffset = spritecachedinfo[lump].topoffset;
 	}
-
-	I_Assert(lump < max_spritelumps);
-
-	spr_width = spritecachedinfo[lump].width;
-	spr_height = spritecachedinfo[lump].height;
-	spr_offset = spritecachedinfo[lump].offset;
-	spr_topoffset = spritecachedinfo[lump].topoffset;
-
-	//Fab: lumppat is the lump number of the patch to use, this is different
-	//     than lumpid for sprites-in-pwad : the graphics are patched
-	patch = W_CachePatchNum(sprframe->lumppat[rot], PU_SPRITE);
 
 #ifdef ROTSPRITE
 	spriterotangle = R_SpriteRotationAngle(&interp);
 
-	if (spriterotangle != 0
-	&& !(splat && !(thing->renderflags & RF_NOSPLATROLLANGLE)))
+	if (spriterotangle != 0 && !(splat && !(thing->renderflags & RF_NOSPLATROLLANGLE)))
 	{
 		if (papersprite && ang >= ANGLE_180)
 		{
@@ -1742,7 +1794,10 @@ static void R_ProjectSprite(mobj_t *thing)
 			rollangle = R_GetRollAngle(spriterotangle);
 		}
 
-		rotsprite = Patch_GetRotatedSprite(sprframe, (thing->frame & FF_FRAMEMASK), rot, flip, false, sprinfo, rollangle);
+		if (using_sprite)
+			rotsprite = Patch_GetRotatedSprite(sprframe, (thing->frame & FF_FRAMEMASK), rot, flip, false, sprinfo, rollangle);
+		else
+			rotsprite = Patch_GetRotated(patch, rollangle, flip);
 
 		if (rotsprite != NULL)
 		{
@@ -2148,7 +2203,7 @@ static void R_ProjectSprite(mobj_t *thing)
 	// store information in a vissprite
 	vis = R_NewVisSprite();
 	vis->renderflags = thing->renderflags;
-	vis->rotateflags = sprframe->rotate;
+	vis->rotateflags = sprframe ? sprframe->rotate : SRF_3D;
 	vis->heightsec = heightsec; //SoM: 3/17/2000
 	vis->mobjflags = thing->flags;
 	vis->sortscale = sortscale;

@@ -978,7 +978,10 @@ void R_DrawSinglePlane(visplane_t *pl)
 		ds_flatheight = texture->height;
 
 		if (R_CheckSolidColorFlat())
+		{
 			ds_solidcolor = true;
+			ds_fillcolor = ds_source[0];
+		}
 		else if (R_CheckPowersOfTwo())
 		{
 			R_SetFlatVars(ds_flatwidth * ds_flatheight);

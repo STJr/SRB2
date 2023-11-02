@@ -569,9 +569,6 @@ void R_DrawTranslatedColumn_8(void)
 // SPANS
 // ==========================================================================
 
-#define SPANSIZE 16
-#define INVSPAN 0.0625f
-
 /**	\brief The R_DrawSpan_8 function
 	Draws the actual span.
 */
@@ -2032,7 +2029,7 @@ void R_DrawSolidColorSpan_8(void)
 {
 	size_t count = (ds_x2 - ds_x1 + 1);
 
-	UINT8 source = ds_colormap[ds_source[0]];
+	UINT8 source = ds_colormap[ds_fillcolor & 0xFF];
 	UINT8 *dest = ylookup[ds_y] + columnofs[ds_x1];
 
 	memset(dest, source, count);
@@ -2045,7 +2042,7 @@ void R_DrawTransSolidColorSpan_8(void)
 {
 	size_t count = (ds_x2 - ds_x1 + 1);
 
-	UINT8 source = ds_colormap[ds_source[0]];
+	UINT8 source = ds_colormap[ds_fillcolor & 0xFF];
 	UINT8 *dest = ylookup[ds_y] + columnofs[ds_x1];
 
 	const UINT8 *deststop = screens[0] + vid.rowbytes * vid.height;
@@ -2064,7 +2061,7 @@ void R_DrawTiltedSolidColorSpan_8(void)
 {
 	int width = ds_x2 - ds_x1;
 
-	UINT8 source = ds_source[0];
+	UINT8 source = ds_fillcolor;
 	UINT8 *dest = ylookup[ds_y] + columnofs[ds_x1];
 
 	double iz = ds_szp->z + ds_szp->y*(centery-ds_y) + ds_szp->x*(ds_x1-centerx);
@@ -2085,7 +2082,7 @@ void R_DrawTiltedTransSolidColorSpan_8(void)
 {
 	int width = ds_x2 - ds_x1;
 
-	UINT8 source = ds_source[0];
+	UINT8 source = ds_fillcolor;
 	UINT8 *dest = ylookup[ds_y] + columnofs[ds_x1];
 
 	double iz = ds_szp->z + ds_szp->y*(centery-ds_y) + ds_szp->x*(ds_x1-centerx);
@@ -2105,7 +2102,7 @@ void R_DrawTiltedTransSolidColorSpan_8(void)
 */
 void R_DrawWaterSolidColorSpan_8(void)
 {
-	UINT8 source = ds_source[0];
+	UINT8 source = ds_fillcolor;
 	UINT8 *colormap = ds_colormap;
 	UINT8 *dest = ylookup[ds_y] + columnofs[ds_x1];
 	UINT8 *dsrc = screens[1] + (ds_y+ds_bgofs)*vid.width + ds_x1;
@@ -2127,7 +2124,7 @@ void R_DrawTiltedWaterSolidColorSpan_8(void)
 {
 	int width = ds_x2 - ds_x1;
 
-	UINT8 source = ds_source[0];
+	UINT8 source = ds_fillcolor;
 	UINT8 *dest = ylookup[ds_y] + columnofs[ds_x1];
 	UINT8 *dsrc = screens[1] + (ds_y+ds_bgofs)*vid.width + ds_x1;
 
