@@ -190,7 +190,9 @@ typedef struct vissprite_s
 	lighttable_t *colormap; // for color translation and shadow draw
 	                        // maxbright frames as well
 
-	UINT8 *transmap; // for MF2_SHADOW sprites, which translucency table to use
+	UINT8 *transmap; // which translucency table to use
+	UINT8 opacity;
+	UINT8 blendmode;
 
 	INT32 mobjflags;
 

@@ -842,13 +842,9 @@ static void R_DrawVisSprite(vissprite_t *vis)
 	source_paletted = patch->format == PATCH_FORMAT_PALETTE;
 
 	if (!source_paletted)
-	{
 		InitColorLUT(&r_colorlookup, pMasterPalette, false);
-	}
 	else
-	{
 		dc_translation = R_GetSpriteTranslation(vis);
-	}
 
 	colfunc = colfuncs[BASEDRAWFUNC]; // hack: this isn't resetting properly somewhere.
 	dc_colormap = vis->colormap;
@@ -874,10 +870,13 @@ static void R_DrawVisSprite(vissprite_t *vis)
 	}
 	else
 	{
-		if (vis->transmap)
+		boolean use_translucency = !(vis->blendmode == AST_TRANSLUCENT && vis->opacity == 255);
+
+		if (use_translucency)
 		{
 			colfunc = colfuncs_rgba[COLDRAWFUNC_TRANSLU];
-			dc_transmap = vis->transmap;    //Fab : 29-04-98: translucency table
+			dc_blendmode = vis->blendmode;
+			dc_opacity = (dc_blendmode == AST_COPY || dc_blendmode == AST_OVERLAY) ? 255 : vis->opacity;
 		}
 		else
 			colfunc = colfuncs_rgba[BASEDRAWFUNC];
@@ -1004,7 +1003,6 @@ static void R_DrawVisSprite(vissprite_t *vis)
 	}
 
 	colfunc = colfuncs[BASEDRAWFUNC];
-	dc_hires = 0;
 
 	vis->x1 = x1;
 	vis->x2 = x2;
@@ -2287,10 +2285,18 @@ static void R_ProjectSprite(mobj_t *thing)
 		vis->scale += FixedMul(scalestep, spriteyscale) * (vis->x1 - x1);
 	}
 
-	if ((blendmode != AST_COPY) && cv_translucency.value)
+	if (cv_translucency.value)
+	{
+		vis->blendmode = blendmode;
+		vis->opacity = R_GetOpacityFromAlphaLevel(trans);
 		vis->transmap = R_GetBlendTable(blendmode, trans);
+	}
 	else
+	{
+		vis->blendmode = AST_COPY;
+		vis->opacity = 255;
 		vis->transmap = NULL;
+	}
 
 	if (R_ThingIsFullBright(oldthing) || oldthing->flags2 & MF2_SHADOW || thing->flags2 & MF2_SHADOW)
 		vis->cut |= SC_FULLBRIGHT;

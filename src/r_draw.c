@@ -66,8 +66,6 @@ lighttable_t *dc_colormap;
 INT32 dc_x = 0, dc_yl = 0, dc_yh = 0;
 
 fixed_t dc_iscale, dc_texturemid;
-UINT8 dc_hires; // under MSVC boolean is a byte, while on other systems, it a bit,
-               // soo lets make it a byte on all system for the ASM code
 UINT8 *dc_source;
 
 // -----------------------
@@ -81,6 +79,8 @@ UINT8 *blendtables[NUMBLENDMAPS];
 /**	\brief R_DrawTransColumn uses this
 */
 UINT8 *dc_transmap; // one of the translucency tables
+UINT8 dc_opacity;
+UINT8 dc_blendmode;
 
 // ----------------------
 // translation stuff here
@@ -378,6 +378,17 @@ boolean R_BlendLevelVisible(INT32 blendmode, INT32 alphalevel)
 		return true;
 
 	return (alphalevel < BlendTab_Count[BlendTab_FromStyle[blendmode]]);
+}
+
+UINT8 R_GetOpacityFromAlphaLevel(INT32 alphalevel)
+{
+	int alpha = (int)((float)(9 - alphalevel) * (255 / 9.0));
+	if (alpha < 0)
+		return 0;
+	else if (alpha > 255)
+		return 255;
+	else
+		return (UINT8)alpha;
 }
 
 // Define for getting accurate color brightness readings according to how the human eye sees them.

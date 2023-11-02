@@ -424,7 +424,7 @@ static void R_RasterizeFloorSplat(floorsplat_t *pSplat, vector2_t *verts, visspr
 	ds_transmap = vis->transmap;
 
 	// Determine which R_DrawWhatever to use
-	boolean source_rgba = patch->format == PATCH_FORMAT_RGBA;
+	boolean source_rgba = vis->patch->format == PATCH_FORMAT_RGBA;
 
 	// Solid color
 	if (ds_solidcolor)

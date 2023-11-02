@@ -22,13 +22,7 @@
 
 void R_DrawColumn_8_RGBA(void)
 {
-INT32 count;
-	register UINT8 *dest;
-	register fixed_t frac;
-	fixed_t fracstep;
-
-	count = dc_yh - dc_yl;
-
+	INT32 count = dc_yh - dc_yl;
 	if (count < 0) // Zero length, column does not exceed a pixel.
 		return;
 
@@ -37,27 +31,29 @@ INT32 count;
 		return;
 #endif
 
-	// Framebuffer destination address.
-	// Use ylookup LUT to avoid multiply with ScreenWidth.
-	// Use columnofs LUT for subwindows?
-
-	//dest = ylookup[dc_yl] + columnofs[dc_x];
-	dest = &topleft[dc_yl*vid.width + dc_x];
+	UINT8 *dest = &topleft[dc_yl*vid.width + dc_x];
 
 	count++;
 
 	// Determine scaling, which is the only mapping to be done.
-	fracstep = dc_iscale;
-	//frac = dc_texturemid + (dc_yl - centery)*fracstep;
-	frac = (dc_texturemid + FixedMul((dc_yl << FRACBITS) - centeryfrac, fracstep))*(!dc_hires);
+	fixed_t fracstep = dc_iscale;
+	fixed_t frac = dc_texturemid + FixedMul((dc_yl << FRACBITS) - centeryfrac, fracstep);
 
 	// Inner loop that does the actual texture mapping, e.g. a DDA-like scaling.
 	// This is as fast as it gets.
 	{
-		register const RGBA_t *source = (RGBA_t *)dc_source;
-		register const lighttable_t *colormap = dc_colormap;
-		register INT32 heightmask = dc_texheight-1;
-		RGBA_t color;
+		const RGBA_t *source = (RGBA_t *)dc_source;
+		const lighttable_t *colormap = dc_colormap;
+		INT32 heightmask = dc_texheight-1;
+
+		RGBA_t ocolor, color;
+		UINT8 idx;
+
+		#define GET_COLOR(f) \
+			ocolor = source[f]; \
+			idx = colormap[GetColorLUT(&r_colorlookup, ocolor.s.red, ocolor.s.green, ocolor.s.blue)]; \
+			color = pMasterPalette[idx]
+
 		if (dc_texheight & heightmask)   // not a power of 2 -- killough
 		{
 			heightmask++;
@@ -74,7 +70,7 @@ INT32 count;
 				// Re-map color indices from wall texture column
 				//  using a lighting/special effects LUT.
 				// heightmask is the Tutti-Frutti fix
-				color = source[frac>>FRACBITS];
+				GET_COLOR(frac>>FRACBITS);
 				*dest = colormap[GetColorLUT(&r_colorlookup, color.s.red, color.s.green, color.s.blue)];
 				dest += vid.width;
 
@@ -92,33 +88,39 @@ INT32 count;
 		{
 			while ((count -= 2) >= 0) // texture height is a power of 2
 			{
-				color = source[(frac>>FRACBITS) & heightmask];
+				GET_COLOR((frac>>FRACBITS) & heightmask);
 				*dest = colormap[GetColorLUT(&r_colorlookup, color.s.red, color.s.green, color.s.blue)];
 				dest += vid.width;
 				frac += fracstep;
-				color = source[(frac>>FRACBITS) & heightmask];
+				GET_COLOR((frac>>FRACBITS) & heightmask);
 				*dest = colormap[GetColorLUT(&r_colorlookup, color.s.red, color.s.green, color.s.blue)];
 				dest += vid.width;
 				frac += fracstep;
 			}
 			if (count & 1)
 			{
-				color = source[(frac>>FRACBITS) & heightmask];
+				GET_COLOR((frac>>FRACBITS) & heightmask);
 				*dest = colormap[GetColorLUT(&r_colorlookup, color.s.red, color.s.green, color.s.blue)];
 			}
 		}
+
+		#undef GET_COLOR
 	}
+}
+
+static UINT32 BlendPixel(RGBA_t background, RGBA_t foreground)
+{
+	UINT8 beta = 0xFF - foreground.s.alpha;
+	RGBA_t output;
+	output.s.red = ((background.s.red * beta) + (foreground.s.red * foreground.s.alpha)) / 0xFF;
+	output.s.green = ((background.s.green * beta) + (foreground.s.green * foreground.s.alpha)) / 0xFF;
+	output.s.blue = ((background.s.blue * beta) + (foreground.s.blue * foreground.s.alpha)) / 0xFF;
+	return output.rgba;
 }
 
 void R_DrawBlendedColumn_8_RGBA(void)
 {
-INT32 count;
-	register UINT8 *dest;
-	register fixed_t frac;
-	fixed_t fracstep;
-
-	count = dc_yh - dc_yl;
-
+	INT32 count = dc_yh - dc_yl;
 	if (count < 0) // Zero length, column does not exceed a pixel.
 		return;
 
@@ -127,27 +129,31 @@ INT32 count;
 		return;
 #endif
 
-	// Framebuffer destination address.
-	// Use ylookup LUT to avoid multiply with ScreenWidth.
-	// Use columnofs LUT for subwindows?
-
-	//dest = ylookup[dc_yl] + columnofs[dc_x];
-	dest = &topleft[dc_yl*vid.width + dc_x];
+	UINT8 *dest = &topleft[dc_yl*vid.width + dc_x];
 
 	count++;
 
 	// Determine scaling, which is the only mapping to be done.
-	fracstep = dc_iscale;
-	//frac = dc_texturemid + (dc_yl - centery)*fracstep;
-	frac = (dc_texturemid + FixedMul((dc_yl << FRACBITS) - centeryfrac, fracstep))*(!dc_hires);
+	fixed_t fracstep = dc_iscale;
+	fixed_t frac = dc_texturemid + FixedMul((dc_yl << FRACBITS) - centeryfrac, fracstep);
 
 	// Inner loop that does the actual texture mapping, e.g. a DDA-like scaling.
 	// This is as fast as it gets.
 	{
-		register const RGBA_t *source = (RGBA_t *)dc_source;
-		register const lighttable_t *colormap = dc_colormap;
-		register INT32 heightmask = dc_texheight-1;
-		RGBA_t color;
+		const RGBA_t *source = (RGBA_t *)dc_source;
+		const lighttable_t *colormap = dc_colormap;
+		INT32 heightmask = dc_texheight-1;
+
+		RGBA_t ocolor, color;
+		UINT8 idx;
+
+		#define GET_COLOR(f) \
+			ocolor = source[f]; \
+			idx = colormap[GetColorLUT(&r_colorlookup, ocolor.s.red, ocolor.s.green, ocolor.s.blue)]; \
+			color = pMasterPalette[idx]; \
+			color.s.alpha = ocolor.s.alpha; \
+			color.rgba = BlendPixel(pMasterPalette[*dest], color)
+
 		if (dc_texheight & heightmask)   // not a power of 2 -- killough
 		{
 			heightmask++;
@@ -164,8 +170,8 @@ INT32 count;
 				// Re-map color indices from wall texture column
 				//  using a lighting/special effects LUT.
 				// heightmask is the Tutti-Frutti fix
-				color.rgba = ASTBlendPixel(pMasterPalette[*dest], source[frac>>FRACBITS], AST_TRANSLUCENT, 255);
-				*dest = colormap[GetColorLUT(&r_colorlookup, color.s.red, color.s.green, color.s.blue)];
+				GET_COLOR(frac>>FRACBITS);
+				*dest = GetColorLUT(&r_colorlookup, color.s.red, color.s.green, color.s.blue);
 				dest += vid.width;
 
 				// Avoid overflow.
@@ -182,65 +188,69 @@ INT32 count;
 		{
 			while ((count -= 2) >= 0) // texture height is a power of 2
 			{
-				color.rgba = ASTBlendPixel(pMasterPalette[*dest], source[frac>>FRACBITS], AST_TRANSLUCENT, 255);
-				*dest = colormap[GetColorLUT(&r_colorlookup, color.s.red, color.s.green, color.s.blue)];
+				GET_COLOR((frac>>FRACBITS) & heightmask);
+				*dest = GetColorLUT(&r_colorlookup, color.s.red, color.s.green, color.s.blue);
 				dest += vid.width;
 				frac += fracstep;
-				color.rgba = ASTBlendPixel(pMasterPalette[*dest], source[frac>>FRACBITS], AST_TRANSLUCENT, 255);
-				*dest = colormap[GetColorLUT(&r_colorlookup, color.s.red, color.s.green, color.s.blue)];
+				GET_COLOR((frac>>FRACBITS) & heightmask);
+				*dest = GetColorLUT(&r_colorlookup, color.s.red, color.s.green, color.s.blue);
 				dest += vid.width;
 				frac += fracstep;
 			}
 			if (count & 1)
 			{
-				color.rgba = ASTBlendPixel(pMasterPalette[*dest], source[frac>>FRACBITS], AST_TRANSLUCENT, 255);
-				*dest = colormap[GetColorLUT(&r_colorlookup, color.s.red, color.s.green, color.s.blue)];
+				GET_COLOR((frac>>FRACBITS) & heightmask);
+				*dest = GetColorLUT(&r_colorlookup, color.s.red, color.s.green, color.s.blue);
 			}
 		}
+
+		#undef GET_COLOR
 	}
 }
 
 void R_DrawTranslucentColumn_8_RGBA(void)
 {
-register INT32 count;
-	register UINT8 *dest;
-	register fixed_t frac, fracstep;
-
-	count = dc_yh - dc_yl + 1;
-
-	if (count <= 0) // Zero length, column does not exceed a pixel.
+	INT32 count = dc_yh - dc_yl;
+	if (count < 0) // Zero length, column does not exceed a pixel.
 		return;
 
 #ifdef RANGECHECK
 	if ((unsigned)dc_x >= (unsigned)vid.width || dc_yl < 0 || dc_yh >= vid.height)
-		I_Error("R_DrawTranslucentColumn_8: %d to %d at %d", dc_yl, dc_yh, dc_x);
+		return;
 #endif
 
-	// FIXME. As above.
-	//dest = ylookup[dc_yl] + columnofs[dc_x];
-	dest = &topleft[dc_yl*vid.width + dc_x];
+	UINT8 *dest = &topleft[dc_yl*vid.width + dc_x];
 
-	// Looks familiar.
-	fracstep = dc_iscale;
-	//frac = dc_texturemid + (dc_yl - centery)*fracstep;
-	frac = (dc_texturemid + FixedMul((dc_yl << FRACBITS) - centeryfrac, fracstep))*(!dc_hires);
+	count++;
+
+	// Determine scaling, which is the only mapping to be done.
+	fixed_t fracstep = dc_iscale;
+	fixed_t frac = dc_texturemid + FixedMul((dc_yl << FRACBITS) - centeryfrac, fracstep);
 
 	// Inner loop that does the actual texture mapping, e.g. a DDA-like scaling.
 	// This is as fast as it gets.
 	{
-		register const RGBA_t *source = (RGBA_t *)dc_source;
-		register const UINT8 *transmap = dc_transmap;
-		register const lighttable_t *colormap = dc_colormap;
-		register INT32 heightmask = dc_texheight - 1;
-		RGBA_t color;
-		if (dc_texheight & heightmask)
+		const RGBA_t *source = (RGBA_t *)dc_source;
+		const lighttable_t *colormap = dc_colormap;
+		INT32 heightmask = dc_texheight-1;
+
+		RGBA_t ocolor, color;
+		UINT8 idx;
+
+		#define GET_COLOR(f) \
+			ocolor = source[f]; \
+			idx = colormap[GetColorLUT(&r_colorlookup, ocolor.s.red, ocolor.s.green, ocolor.s.blue)]; \
+			color = pMasterPalette[idx]; \
+			color.s.alpha = ocolor.s.alpha; \
+			color.rgba = ASTBlendPixel(pMasterPalette[*dest], color, dc_blendmode, dc_opacity)
+
+		if (dc_texheight & heightmask)   // not a power of 2 -- killough
 		{
 			heightmask++;
 			heightmask <<= FRACBITS;
 
 			if (frac < 0)
-				while ((frac += heightmask) < 0)
-					;
+				while ((frac += heightmask) <  0);
 			else
 				while (frac >= heightmask)
 					frac -= heightmask;
@@ -248,35 +258,43 @@ register INT32 count;
 			do
 			{
 				// Re-map color indices from wall texture column
-				// using a lighting/special effects LUT.
+				//  using a lighting/special effects LUT.
 				// heightmask is the Tutti-Frutti fix
-				color = source[frac>>FRACBITS];
-				*dest = *(transmap + (colormap[GetColorLUT(&r_colorlookup, color.s.red, color.s.green, color.s.blue)]<<8) + (*dest));
+				GET_COLOR(frac >> FRACBITS);
+				*dest = GetColorLUT(&r_colorlookup, color.s.red, color.s.green, color.s.blue);
 				dest += vid.width;
-				if ((frac += fracstep) >= heightmask)
+
+				// Avoid overflow.
+				if (fracstep > 0x7FFFFFFF - frac)
+					frac += fracstep - heightmask;
+				else
+					frac += fracstep;
+
+				while (frac >= heightmask)
 					frac -= heightmask;
-			}
-			while (--count);
+			} while (--count);
 		}
 		else
 		{
 			while ((count -= 2) >= 0) // texture height is a power of 2
 			{
-				color = source[(frac>>FRACBITS) & heightmask];
-				*dest = *(transmap + (colormap[GetColorLUT(&r_colorlookup, color.s.red, color.s.green, color.s.blue)]<<8) + (*dest));
+				GET_COLOR((frac>>FRACBITS) & heightmask);
+				*dest = GetColorLUT(&r_colorlookup, color.s.red, color.s.green, color.s.blue);
 				dest += vid.width;
 				frac += fracstep;
-				color = source[(frac>>FRACBITS) & heightmask];
-				*dest = *(transmap + (colormap[GetColorLUT(&r_colorlookup, color.s.red, color.s.green, color.s.blue)]<<8) + (*dest));
+				GET_COLOR((frac>>FRACBITS) & heightmask);
+				*dest = GetColorLUT(&r_colorlookup, color.s.red, color.s.green, color.s.blue);
 				dest += vid.width;
 				frac += fracstep;
 			}
 			if (count & 1)
 			{
-				color = source[(frac>>FRACBITS) & heightmask];
-				*dest = *(transmap + (colormap[GetColorLUT(&r_colorlookup, color.s.red, color.s.green, color.s.blue)]<<8) + (*dest));
+				GET_COLOR((frac>>FRACBITS) & heightmask);
+				*dest = GetColorLUT(&r_colorlookup, color.s.red, color.s.green, color.s.blue);
 			}
 		}
+
+		#undef GET_COLOR
 	}
 }
 

@@ -32,15 +32,15 @@ extern UINT8 *topleft;
 extern lighttable_t *dc_colormap;
 extern INT32 dc_x, dc_yl, dc_yh;
 extern fixed_t dc_iscale, dc_texturemid;
-extern UINT8 dc_hires;
 
 extern UINT8 *dc_source; // first pixel in a column
 
 // translucency stuff here
 extern UINT8 *dc_transmap;
+extern UINT8 dc_opacity;
+extern UINT8 dc_blendmode;
 
 // translation stuff here
-
 extern UINT8 *dc_translation;
 
 extern struct r_lightlist_s *dc_lightlist;
@@ -62,6 +62,7 @@ extern INT32 ds_waterofs, ds_bgofs;
 
 extern UINT16 ds_flatwidth, ds_flatheight;
 extern boolean ds_powersoftwo, ds_solidcolor;
+extern UINT32 ds_fillcolor;
 
 extern UINT8 *ds_source;
 extern UINT8 *ds_transmap;
@@ -145,6 +146,8 @@ UINT8 *R_GetTranslucencyTable(INT32 alphalevel);
 UINT8 *R_GetBlendTable(int style, INT32 alphalevel);
 
 boolean R_BlendLevelVisible(INT32 blendmode, INT32 alphalevel);
+
+UINT8 R_GetOpacityFromAlphaLevel(INT32 alphalevel);
 
 // Color ramp modification should force a recache
 extern UINT8 skincolor_modified[];

@@ -59,37 +59,27 @@ INT16 *hicolormaps; // test a 32k colormap remaps high -> high
 UINT32 ASTBlendPixel(RGBA_t background, RGBA_t foreground, int style, UINT8 alpha)
 {
 	RGBA_t output;
-	INT16 fullalpha = (alpha - (0xFF - foreground.s.alpha));
+
 #define clamp(c) max(min((c), 0xFF), 0x00)
+
+	INT16 fullalpha = clamp(((INT16)foreground.s.alpha) - (0xFF - alpha));
+
 	if (style == AST_TRANSLUCENT)
 	{
-		if (fullalpha <= 0)
-			output.rgba = background.rgba;
-		else
-		{
-			if (fullalpha >= 0xFF)
-				fullalpha = 0xFF;
-
-			alpha = (UINT8)fullalpha;
-
-			UINT8 beta = 0xFF - alpha;
-			output.s.red = ((background.s.red * beta) + (foreground.s.red * alpha)) / 0xFF;
-			output.s.green = ((background.s.green * beta) + (foreground.s.green * alpha)) / 0xFF;
-			output.s.blue = ((background.s.blue * beta) + (foreground.s.blue * alpha)) / 0xFF;
-			output.s.alpha = clamp(((INT16)background.s.alpha) + fullalpha);
-		}
+		UINT8 beta = 0xFF - fullalpha;
+		output.s.red = ((background.s.red * beta) + (foreground.s.red * fullalpha)) / 0xFF;
+		output.s.green = ((background.s.green * beta) + (foreground.s.green * fullalpha)) / 0xFF;
+		output.s.blue = ((background.s.blue * beta) + (foreground.s.blue * fullalpha)) / 0xFF;
+		output.s.alpha = clamp(((INT16)background.s.alpha) + fullalpha);
 	}
 	else
 	{
-		float falpha = ((float)alpha / 255.0f);
+		float falpha = ((float)fullalpha / 255.0f);
 		float fr = ((float)foreground.s.red * falpha);
 		float fg = ((float)foreground.s.green * falpha);
 		float fb = ((float)foreground.s.blue * falpha);
 
-		if (background.s.alpha == 0x00)
-			output.s.alpha = clamp(fullalpha);
-		else
-			output.s.alpha = 0xFF;
+		output.s.alpha = clamp(((INT16)background.s.alpha) + fullalpha);
 
 		if (style == AST_ADD)
 		{
@@ -119,8 +109,17 @@ UINT32 ASTBlendPixel(RGBA_t background, RGBA_t foreground, int style, UINT8 alph
 			output.s.blue = clamp((int)(background.s.blue * fb));
 		}
 		// just copy the pixel
-		else if (style == AST_COPY)
-			output.rgba = foreground.rgba;
+		else
+		{
+			if (foreground.s.alpha == 0x00)
+				output.rgba = background.rgba;
+			else
+			{
+				if (foreground.s.alpha != 0x00)
+					foreground.s.alpha = 0xFF;
+				output.rgba = foreground.rgba;
+			}
+		}
 	}
 #undef clamp
 	return output.rgba;

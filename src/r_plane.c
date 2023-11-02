@@ -637,8 +637,7 @@ static void R_DrawSkyPlane(visplane_t *pl)
 {
 	INT32 texture = texturetranslation[skytexture];
 
-	// Reset column drawer function (note: couldn't we just call walldrawerfunc directly?)
-	// (that is, unless we'll need to switch drawers in future for some reason)
+	// Reset column drawer function
 	colfunc = colfuncs[BASEDRAWFUNC];
 
 	dc_iscale = skyscale;
