@@ -160,7 +160,7 @@ opts+=-O0
 endif
 endif
 
-ifdef GCC45
+ifdef GCC34
 opts+=-fwrapv
 endif
 

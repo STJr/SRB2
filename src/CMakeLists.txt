@@ -260,6 +260,10 @@ target_compile_options(SRB2SDL2 PRIVATE
 			-Wdisabled-optimization
 		>
 
+		$<$<VERSION_GREATER_EQUAL:$<C_COMPILER_VERSION>,3.4.0>:
+			-fwrapv
+		>
+
 		$<$<VERSION_GREATER_EQUAL:$<C_COMPILER_VERSION>,4.0.0>:
 			-Wold-style-definition
 			-Wmissing-field-initializers
