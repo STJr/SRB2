@@ -1880,6 +1880,7 @@ static int lib_pMove(lua_State *L)
 	return 2;
 }
 
+// TODO: 2.3: Delete
 static int lib_pTeleportMove(lua_State *L)
 {
 	mobj_t *ptmthing = tmthing;
@@ -2407,6 +2408,7 @@ static int lib_pMobjTouchingSectorSpecial(lua_State *L)
 	return 1;
 }
 
+// TODO: 2.3: Delete
 static int lib_pThingOnSpecial3DFloor(lua_State *L)
 {
 	mobj_t *mo = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
@@ -4451,8 +4453,7 @@ int LUA_BaseLib(lua_State *L)
 	// Set metatable for string
 	lua_pushliteral(L, "");  // dummy string
 	lua_getmetatable(L, -1);  // get string metatable
-	lua_pushcfunction(L,lib_concat); // push concatination function
-	lua_setfield(L,-2,"__add"); // ... store it as mathematical addition
+	LUA_SetCFunctionField(L, "__add", lib_concat);
 	lua_pop(L, 2); // pop metatable and dummy string
 
 	lua_newtable(L);

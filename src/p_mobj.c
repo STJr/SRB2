@@ -10573,14 +10573,14 @@ static fixed_t P_DefaultMobjShadowScale (mobj_t *thing)
 		case MT_EXPLOSIONRING:
 		case MT_SCATTERRING:
 		case MT_GRENADERING:
-		
+
 		case MT_BOUNCEPICKUP:
 		case MT_RAILPICKUP:
 		case MT_AUTOPICKUP:
 		case MT_EXPLODEPICKUP:
 		case MT_SCATTERPICKUP:
 		case MT_GRENADEPICKUP:
-		
+
 		case MT_REDRING:
 		case MT_THROWNBOUNCE:
 		case MT_THROWNINFINITY:
@@ -13321,7 +13321,7 @@ static boolean P_SetupSpawnedMapThing(mapthing_t *mthing, mobj_t *mobj, boolean 
 	return true;
 }
 
-// Pre-UDMF backwards compatibility stuff. Remove for 2.3
+// TODO: 2.3: Delete (Pre-UDMF backwards compatibility stuff)
 static void P_SetAmbush(mapthing_t *mthing, mobj_t *mobj)
 {
 	if (mobj->type == MT_NIGHTSBUMPER

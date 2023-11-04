@@ -1679,7 +1679,7 @@ static void ParseTextmapSectorParameter(UINT32 i, const char *param, const char 
 			if ((id = strchr(id, ' ')))
 				id++;
 		}
-	}	
+	}
 	else if (fastcmp(param, "xpanningfloor"))
 		sectors[i].floorxoffset = FLOAT_TO_FIXED(atof(val));
 	else if (fastcmp(param, "ypanningfloor"))
@@ -6132,6 +6132,7 @@ static void P_ConvertBinarySectorTypes(void)
 			case 14: //Non-ramp sector
 				sectors[i].specialflags |= SSF_NOSTEPDOWN;
 				break;
+			// TODO: 2.3: Delete
 			case 15: //Bouncy FOF
 				CONS_Alert(CONS_WARNING, M_GetText("Deprecated bouncy FOF sector type detected. Please use linedef type 76 instead.\n"));
 				break;
@@ -6166,12 +6167,14 @@ static void P_ConvertBinarySectorTypes(void)
 				sectors[i].flags |= MSF_TRIGGERLINE_PLANE;
 				sectors[i].triggerer = TO_PLAYER;
 				break;
+			// TODO: 2.3: Delete
 			case 6: //Trigger linedef executor (Emerald check)
 				CONS_Alert(CONS_WARNING, M_GetText("Deprecated emerald check sector type detected. Please use linedef types 337-339 instead.\n"));
 				sectors[i].triggertag = tag;
 				sectors[i].flags &= ~MSF_TRIGGERLINE_PLANE;
 				sectors[i].triggerer = TO_PLAYEREMERALDS;
 				break;
+			// TODO: 2.3: Delete
 			case 7: //Trigger linedef executor (NiGHTS mare)
 				CONS_Alert(CONS_WARNING, M_GetText("Deprecated NiGHTS mare sector type detected. Please use linedef types 340-342 instead.\n"));
 				sectors[i].triggertag = tag;
@@ -6181,9 +6184,11 @@ static void P_ConvertBinarySectorTypes(void)
 			case 8: //Check for linedef executor on FOFs
 				sectors[i].flags |= MSF_TRIGGERLINE_MOBJ;
 				break;
+			// TODO: 2.3: Delete
 			case 10: //Special stage time/spheres requirements
 				CONS_Alert(CONS_WARNING, M_GetText("Deprecated sector type for special stage requirements detected. Please use the SpecialStageTime and SpecialStageSpheres level header options instead.\n"));
 				break;
+			// TODO: 2.3: Delete
 			case 11: //Custom global gravity
 				CONS_Alert(CONS_WARNING, M_GetText("Deprecated sector type for global gravity detected. Please use the Gravity level header option instead.\n"));
 				break;
@@ -6822,7 +6827,7 @@ static void P_ConvertBinaryThingTypes(void)
 		default:
 			break;
 		}
-		
+
 		// Clear binary thing height hacks, to prevent interfering with UDMF-only flags
 		mapthings[i].options &= 0xF;
 	}
