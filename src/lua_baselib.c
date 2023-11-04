@@ -3713,6 +3713,7 @@ static int lib_gAddPlayer(lua_State *L)
 
 	newplayer->jointime = 0;
 	newplayer->quittime = 0;
+	newplayer->lastinputtime = 0;
 
 	// Read the skin argument (defaults to Sonic)
 	if (!lua_isnoneornil(L, 1))
