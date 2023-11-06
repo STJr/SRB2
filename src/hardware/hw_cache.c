@@ -1055,7 +1055,7 @@ void HWR_GetMappedPatch(patch_t *patch, const UINT8 *colormap)
 		Patch_CreateGL(patch);
 	grPatch = patch->hardware;
 
-	if (colormap == colormaps || colormap == NULL)
+	if (colormap == colormaps || colormap == NULL || patch->format == PATCH_FORMAT_RGBA)
 	{
 		// Load the default (green) color in hardware cache
 		HWR_GetPatch(patch);
