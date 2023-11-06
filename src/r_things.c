@@ -805,7 +805,6 @@ static void R_DrawVisSprite(vissprite_t *vis)
 {
 	column_t *column;
 	void (*localcolfunc)(column_t *);
-	INT32 texturecolumn;
 	INT32 pwidth;
 	fixed_t frac;
 	patch_t *patch = vis->patch;
@@ -932,7 +931,7 @@ static void R_DrawVisSprite(vissprite_t *vis)
 		for (dc_x = vis->x1; dc_x <= vis->x2; dc_x++, spryscale += scalestep)
 		{
 			angle_t angle = ((vis->centerangle + xtoviewangle[dc_x]) >> ANGLETOFINESHIFT) & 0xFFF;
-			texturecolumn = (vis->paperoffset - FixedMul(FINETANGENT(angle), vis->paperdistance)) / horzscale;
+			INT32 texturecolumn = (vis->paperoffset - FixedMul(FINETANGENT(angle), vis->paperdistance)) / horzscale;
 
 			if (texturecolumn < 0 || texturecolumn >= pwidth)
 				continue;
@@ -943,7 +942,7 @@ static void R_DrawVisSprite(vissprite_t *vis)
 			sprtopscreen = (centeryfrac - FixedMul(dc_texturemid, spryscale));
 			dc_iscale = (0xffffffffu / (unsigned)spryscale);
 
-			column = Patch_GetColumn(patch, texturecolumn);
+			column = &patch->columns[texturecolumn];
 
 			localcolfunc (column);
 		}
@@ -957,8 +956,7 @@ static void R_DrawVisSprite(vissprite_t *vis)
 		// Vertically sheared sprite
 		for (dc_x = vis->x1; dc_x <= vis->x2; dc_x++, frac += vis->xiscale, dc_texturemid -= vis->shear.tan)
 		{
-			texturecolumn = frac>>FRACBITS;
-			column = Patch_GetColumn(patch, texturecolumn);
+			column = &patch->columns[frac>>FRACBITS];
 			sprtopscreen = (centeryfrac - FixedMul(dc_texturemid, spryscale));
 			localcolfunc (column);
 		}
@@ -972,8 +970,7 @@ static void R_DrawVisSprite(vissprite_t *vis)
 		// Non-paper drawing loop
 		for (dc_x = vis->x1; dc_x <= vis->x2; dc_x++, frac += vis->xiscale, sprtopscreen += vis->shear.tan)
 		{
-			texturecolumn = frac>>FRACBITS;
-			column = Patch_GetColumn(patch, texturecolumn);
+			column = &patch->columns[frac>>FRACBITS];
 			localcolfunc (column);
 		}
 	}
@@ -988,19 +985,12 @@ static void R_DrawVisSprite(vissprite_t *vis)
 // Special precipitation drawer Tails 08-18-2002
 static void R_DrawPrecipitationVisSprite(vissprite_t *vis)
 {
-	column_t *column;
-	INT32 texturecolumn;
-	fixed_t frac;
-	patch_t *patch;
-	INT64 overflow_test;
-
-	//Fab : R_InitSprites now sets a wad lump number
-	patch = vis->patch;
+	patch_t *patch = vis->patch;
 	if (!patch)
 		return;
 
 	// Check for overflow
-	overflow_test = (INT64)centeryfrac - (((INT64)vis->texturemid*vis->scale)>>FRACBITS);
+	INT64 overflow_test = (INT64)centeryfrac - (((INT64)vis->texturemid*vis->scale)>>FRACBITS);
 	if (overflow_test < 0) overflow_test = -overflow_test;
 	if ((UINT64)overflow_test&0xFFFFFFFF80000000ULL) return; // fixed point mult would overflow
 
@@ -1016,23 +1006,19 @@ static void R_DrawPrecipitationVisSprite(vissprite_t *vis)
 	dc_texturemid = vis->texturemid;
 	dc_texheight = 0;
 
-	frac = vis->startfrac;
 	spryscale = vis->scale;
 	sprtopscreen = centeryfrac - FixedMul(dc_texturemid,spryscale);
 	windowtop = windowbottom = sprbotscreen = INT32_MAX;
 
 	if (vis->x1 < 0)
 		vis->x1 = 0;
-
 	if (vis->x2 >= vid.width)
 		vis->x2 = vid.width-1;
 
+	fixed_t frac = vis->startfrac;
+
 	for (dc_x = vis->x1; dc_x <= vis->x2; dc_x++, frac += vis->xiscale)
-	{
-		texturecolumn = frac>>FRACBITS;
-		column = Patch_GetColumn(patch, texturecolumn);
-		R_DrawMaskedColumn(column);
-	}
+		R_DrawMaskedColumn(&patch->columns[frac>>FRACBITS]);
 
 	colfunc = colfuncs[BASEDRAWFUNC];
 }

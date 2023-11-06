@@ -47,11 +47,6 @@ patch_t *Patch_CreateFromDoomPatch(softwarepatch_t *source)
 
 	Patch_CalcDataSizes(source, &total_pixels, &total_posts);
 
-	int width_po2 = 1;
-	while (width_po2 < patch->width)
-		width_po2 <<= 1;
-	patch->width_mask = width_po2 - 1;
-
 	patch->columns = Z_Calloc(sizeof(column_t) * patch->width, PU_PATCH_DATA, NULL);
 	patch->posts = Z_Calloc(sizeof(post_t) * total_posts, PU_PATCH_DATA, NULL);
 	patch->pixels = Z_Calloc(sizeof(UINT8) * total_pixels, PU_PATCH_DATA, NULL);
@@ -121,19 +116,6 @@ void Patch_MakeColumns(softwarepatch_t *source, size_t num_columns, INT16 width,
 		else
 			column++;
 	}
-}
-
-column_t *Patch_GetColumn(patch_t *patch, unsigned column)
-{
-	if (column >= (unsigned)patch->width)
-	{
-		if (patch->width_mask + 1 == patch->width)
-			column &= patch->width_mask;
-		else
-			column %= patch->width;
-	}
-
-	return &patch->columns[column];
 }
 
 //
