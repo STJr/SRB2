@@ -123,9 +123,9 @@ void SCR_SetDrawFuncs(void)
 	colfuncs[COLDRAWFUNC_TWOSMULTIPATCHTRANS] = R_Draw2sMultiPatchTranslucentColumn_8;
 	colfuncs[COLDRAWFUNC_FOG] = R_DrawFogColumn_8;
 
-	colfuncs_rgba[BASEDRAWFUNC] = R_DrawBlendedColumn_8_RGBA;
+	colfuncs_rgba[BASEDRAWFUNC] = R_DrawColumn_8_RGBA;
 	colfuncs_rgba[COLDRAWFUNC_TRANSLU] = R_DrawTranslucentColumn_8_RGBA;
-	colfuncs_rgba[COLDRAWFUNC_MAPPED] = R_DrawBlendedColumn_8_RGBA;
+	colfuncs_rgba[COLDRAWFUNC_MAPPED] = R_DrawColumn_8_RGBA;
 	colfuncs_rgba[COLDRAWFUNC_TRANSLU_MAPPED] = R_DrawTranslucentColumn_8_RGBA;
 
 	spanfuncs[SPANDRAWFUNC_TRANS] = R_DrawTranslucentSpan_8;

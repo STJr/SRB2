@@ -182,7 +182,6 @@ void R_DrawFogColumn_8(void);
 void R_DrawColumnShadowed_8(void);
 
 void R_DrawColumn_8_RGBA(void);
-void R_DrawBlendedColumn_8_RGBA(void);
 void R_DrawTranslucentColumn_8_RGBA(void);
 
 #define PLANELIGHTFLOAT (BASEVIDWIDTH * BASEVIDWIDTH / vid.width / zeroheight / 21.0f * FIXED_TO_FLOAT(fovtan))
