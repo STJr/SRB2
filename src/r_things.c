@@ -676,15 +676,7 @@ void R_DrawMaskedColumn(column_t *column)
 			dc_texturemid = basetexturemid - (post->topdelta<<FRACBITS);
 
 			// Drawn by R_DrawColumn.
-			// This stuff is a likely cause of the splitscreen water crash bug.
-			// FIXTHIS: Figure out what "something more proper" is and do it.
-			// quick fix... something more proper should be done!!!
-			if (ylookup[dc_yl])
-				colfunc();
-#ifdef PARANOIA
-			else
-				I_Error("R_DrawMaskedColumn: Invalid ylookup for dc_yl %d", dc_yl);
-#endif
+			colfunc();
 		}
 	}
 
@@ -736,12 +728,8 @@ void R_DrawFlippedMaskedColumn(column_t *column)
 			dc_texturemid = basetexturemid - (topdelta<<FRACBITS);
 
 			// Still drawn by R_DrawColumn.
-			if (ylookup[dc_yl])
-				colfunc();
-#ifdef PARANOIA
-			else
-				I_Error("R_DrawMaskedColumn: Invalid ylookup for dc_yl %d", dc_yl);
-#endif
+			colfunc();
+
 			Z_Free(dc_source);
 		}
 	}
@@ -806,7 +794,6 @@ static void R_DrawVisSprite(vissprite_t *vis)
 {
 	column_t *column;
 	void (*localcolfunc)(column_t *);
-	INT32 texturecolumn;
 	INT32 pwidth;
 	fixed_t frac;
 	patch_t *patch = vis->patch;
@@ -956,7 +943,7 @@ static void R_DrawVisSprite(vissprite_t *vis)
 		for (dc_x = vis->x1; dc_x <= vis->x2; dc_x++, spryscale += scalestep)
 		{
 			angle_t angle = ((vis->centerangle + xtoviewangle[dc_x]) >> ANGLETOFINESHIFT) & 0xFFF;
-			texturecolumn = (vis->paperoffset - FixedMul(FINETANGENT(angle), vis->paperdistance)) / horzscale;
+			INT32 texturecolumn = (vis->paperoffset - FixedMul(FINETANGENT(angle), vis->paperdistance)) / horzscale;
 
 			if (texturecolumn < 0 || texturecolumn >= pwidth)
 				continue;
@@ -967,9 +954,9 @@ static void R_DrawVisSprite(vissprite_t *vis)
 			sprtopscreen = (centeryfrac - FixedMul(dc_texturemid, spryscale));
 			dc_iscale = (0xffffffffu / (unsigned)spryscale);
 
-			column = Patch_GetColumn(patch, texturecolumn);
+			column = &patch->columns[texturecolumn];
 
-			localcolfunc (column);
+			localcolfunc(column);
 		}
 	}
 	else if (vis->cut & SC_SHEAR)
@@ -981,10 +968,9 @@ static void R_DrawVisSprite(vissprite_t *vis)
 		// Vertically sheared sprite
 		for (dc_x = vis->x1; dc_x <= vis->x2; dc_x++, frac += vis->xiscale, dc_texturemid -= vis->shear.tan)
 		{
-			texturecolumn = frac>>FRACBITS;
-			column = Patch_GetColumn(patch, texturecolumn);
+			column = &patch->columns[frac>>FRACBITS];
 			sprtopscreen = (centeryfrac - FixedMul(dc_texturemid, spryscale));
-			localcolfunc (column);
+			localcolfunc(column);
 		}
 	}
 	else
@@ -996,9 +982,8 @@ static void R_DrawVisSprite(vissprite_t *vis)
 		// Non-paper drawing loop
 		for (dc_x = vis->x1; dc_x <= vis->x2; dc_x++, frac += vis->xiscale, sprtopscreen += vis->shear.tan)
 		{
-			texturecolumn = frac>>FRACBITS;
-			column = Patch_GetColumn(patch, texturecolumn);
-			localcolfunc (column);
+			column = &patch->columns[frac>>FRACBITS];
+			localcolfunc(column);
 		}
 	}
 
@@ -1043,7 +1028,7 @@ static void R_DrawPrecipitationVisSprite(vissprite_t *vis)
 
 	fixed_t frac = vis->startfrac;
 	for (dc_x = vis->x1; dc_x <= vis->x2; dc_x++, frac += vis->xiscale)
-		R_DrawMaskedColumn(Patch_GetColumn(patch, frac>>FRACBITS));
+		R_DrawMaskedColumn(&patch->columns[frac>>FRACBITS]);
 
 	colfunc = colfuncs[BASEDRAWFUNC];
 }

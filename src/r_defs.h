@@ -814,7 +814,6 @@ typedef struct
 
 	INT16 width, height;
 	INT16 leftoffset, topoffset;
-	INT32 width_mask;
 
 	UINT8 *pixels;
 	column_t *columns;

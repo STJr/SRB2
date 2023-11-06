@@ -552,6 +552,18 @@ static void transmappedpdraw_i8o32(void *dest, void *source)
 	*d = ASTBlendPixel(*(RGBA_t *)d, v_palette[*(v_colormap + *s)], v_blendmode, v_opacity);
 }
 
+static UINT32 DoTransparentAlphaBlend(RGBA_t background, RGBA_t foreground)
+{
+	UINT8 alpha = foreground.s.alpha;
+	UINT8 beta = 0xFF - alpha;
+	RGBA_t output;
+	output.s.red = ((background.s.red * beta) + (foreground.s.red * alpha)) / 0xFF;
+	output.s.green = ((background.s.green * beta) + (foreground.s.green * alpha)) / 0xFF;
+	output.s.blue = ((background.s.blue * beta) + (foreground.s.blue * alpha)) / 0xFF;
+	output.s.alpha = 0xFF;
+	return output.rgba;
+}
+
 // input 32bpp output 8bpp
 static void standardpdraw_i32o8(void *dest, void *source)
 {
@@ -564,7 +576,7 @@ static void standardpdraw_ia32o8(void *dest, void *source)
 {
 	RGBA_t src = *(RGBA_t *)source;
 	UINT8 *d = (UINT8 *)dest;
-	src.rgba = ASTBlendPixel(pMasterPalette[*d], src, AST_TRANSLUCENT, 255);
+	src.rgba = DoTransparentAlphaBlend(pMasterPalette[*d], src);
 	*d = GetColorLUT(&r_colorlookup, src.s.red, src.s.green, src.s.blue);
 }
 static void translucentpdraw_i32o8(void *dest, void *source)
@@ -588,7 +600,7 @@ static void standardpdraw_ia32o32(void *dest, void *source)
 {
 	RGBA_t *s = (RGBA_t *)source;
 	UINT32 *d = (UINT32 *)dest;
-	*d = ASTBlendPixel(*(RGBA_t *)d, *s, AST_TRANSLUCENT, 255);
+	*d = DoTransparentAlphaBlend(*(RGBA_t *)d, *s);
 }
 static void translucentpdraw_i32o32(void *dest, void *source)
 {
