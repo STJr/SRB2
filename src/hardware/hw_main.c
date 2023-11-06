@@ -4978,7 +4978,7 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	spriteinfo_t *sprinfo = NULL;
 #endif
 	md2_t *md2;
-	unsigned rot;
+	unsigned rot = 0;
 	UINT16 flip = 0;
 	boolean vflip = (!(thing->eflags & MFE_VERTICALFLIP) != !R_ThingVerticallyFlipped(thing));
 	boolean mirrored = thing->mirrored;
@@ -4992,8 +4992,8 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	float z1, z2;
 
 	patch_t *gpatch = NULL;
-	fixed_t spr_width, spr_height;
-	fixed_t spr_offset, spr_topoffset;
+	fixed_t spr_width = 0, spr_height = 0;
+	fixed_t spr_offset = 0, spr_topoffset = 0;
 #ifdef ROTSPRITE
 	patch_t *rotsprite = NULL;
 	INT32 rollangle = 0;
@@ -5204,9 +5204,7 @@ static void HWR_ProjectSprite(mobj_t *thing)
 			rollangle = R_GetRollAngle(InvAngle(spriterotangle));
 		}
 		else
-		{
 			rollangle = R_GetRollAngle(spriterotangle);
-		}
 
 		if (using_sprite)
 			rotsprite = Patch_GetRotatedSprite(sprframe, (thing->frame & FF_FRAMEMASK), rot, flip, false, sprinfo, rollangle);

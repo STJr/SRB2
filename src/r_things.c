@@ -1549,7 +1549,7 @@ static void R_ProjectSprite(mobj_t *thing)
 	INT32 trans;
 
 	vissprite_t *vis;
-	patch_t *patch;
+	patch_t *patch = NULL;
 
 	spritecut_e cut = SC_NONE;
 
@@ -1577,9 +1577,8 @@ static void R_ProjectSprite(mobj_t *thing)
 	fixed_t this_scale;
 	fixed_t spritexscale, spriteyscale;
 
-	// rotsprite
-	fixed_t spr_width, spr_height;
-	fixed_t spr_offset, spr_topoffset;
+	fixed_t spr_width = 0, spr_height = 0;
+	fixed_t spr_offset = 0, spr_topoffset = 0;
 
 #ifdef ROTSPRITE
 	patch_t *rotsprite = NULL;
