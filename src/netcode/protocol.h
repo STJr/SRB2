@@ -331,6 +331,7 @@ typedef struct
 #define KICK_MSG_PING_HIGH   6
 #define KICK_MSG_CUSTOM_KICK 7
 #define KICK_MSG_CUSTOM_BAN  8
+#define KICK_MSG_IDLE        9
 #define KICK_MSG_KEEP_BODY   0x80
 
 #endif

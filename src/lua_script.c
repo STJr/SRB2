@@ -415,9 +415,11 @@ int LUA_PushGlobals(lua_State *L, const char *word)
 	} else if (fastcmp(word, "stagefailed")) {
 		lua_pushboolean(L, stagefailed);
 		return 1;
+	// TODO: 2.3: Deprecated (moved to the input library)
 	} else if (fastcmp(word, "mouse")) {
 		LUA_PushUserdata(L, &mouse, META_MOUSE);
 		return 1;
+	// TODO: 2.3: Deprecated (moved to the input library)
 	} else if (fastcmp(word, "mouse2")) {
 		LUA_PushUserdata(L, &mouse2, META_MOUSE);
 		return 1;
@@ -576,8 +578,7 @@ static void LUA_ClearState(void)
 
 	// lock the global namespace
 	lua_getmetatable(L, LUA_GLOBALSINDEX);
-		lua_pushcfunction(L, setglobals);
-		lua_setfield(L, -2, "__newindex");
+		LUA_SetCFunctionField(L, "__newindex", setglobals);
 		lua_newtable(L);
 		lua_setfield(L, -2, "__metatable");
 	lua_pop(L, 1);
@@ -1813,20 +1814,107 @@ void LUA_PushTaggableObjectArray
 	lua_newuserdata(L, 0);
 		lua_createtable(L, 0, 2);
 			lua_createtable(L, 0, 2);
-				lua_pushcfunction(L, iterator);
-				lua_setfield(L, -2, "iterate");
+				LUA_SetCFunctionField(L, "iterate", iterator);
 
 				LUA_InsertTaggroupIterator(L, garray,
 						max_elements, element_array, sizeof_element, meta);
 
 				lua_createtable(L, 0, 1);
-					lua_pushcfunction(L, indexer);
-					lua_setfield(L, -2, "__index");
+					LUA_SetCFunctionField(L, "__index", indexer);
 				lua_setmetatable(L, -2);
 			lua_setfield(L, -2, "__index");
 
-			lua_pushcfunction(L, counter);
-			lua_setfield(L, -2, "__len");
+			LUA_SetCFunctionField(L, "__len", counter);
 		lua_setmetatable(L, -2);
 	lua_setglobal(L, field);
+}
+
+static void SetBasicMetamethods(
+	lua_State *L,
+	lua_CFunction get,
+	lua_CFunction set,
+	lua_CFunction len
+)
+{
+	if (get)
+		LUA_SetCFunctionField(L, "__index", get);
+	if (set)
+		LUA_SetCFunctionField(L, "__newindex", set);
+	if (len)
+		LUA_SetCFunctionField(L, "__len", len);
+}
+
+void LUA_SetCFunctionField(lua_State *L, const char *name, lua_CFunction value)
+{
+	lua_pushcfunction(L, value);
+	lua_setfield(L, -2, name);
+}
+
+void LUA_RegisterUserdataMetatable(
+	lua_State *L,
+	const char *name,
+	lua_CFunction get,
+	lua_CFunction set,
+	lua_CFunction len
+)
+{
+	luaL_newmetatable(L, name);
+	SetBasicMetamethods(L, get, set, len);
+	lua_pop(L, 1);
+}
+
+// If keep is true, leaves the metatable on the stack.
+// Otherwise, the stack size remains unchanged.
+void LUA_CreateAndSetMetatable(
+	lua_State *L,
+	lua_CFunction get,
+	lua_CFunction set,
+	lua_CFunction len,
+	boolean keep
+)
+{
+	lua_newtable(L);
+	SetBasicMetamethods(L, get, set, len);
+
+	lua_pushvalue(L, -1);
+	lua_setmetatable(L, -3);
+
+	if (!keep)
+		lua_pop(L, 1);
+}
+
+// If keep is true, leaves the userdata and metatable on the stack.
+// Otherwise, the stack size remains unchanged.
+void LUA_CreateAndSetUserdataField(
+	lua_State *L,
+	int index,
+	const char *name,
+	lua_CFunction get,
+	lua_CFunction set,
+	lua_CFunction len,
+	boolean keep
+)
+{
+	if (index < 0 && index > LUA_REGISTRYINDEX)
+		index -= 3;
+
+	lua_newuserdata(L, 0);
+	LUA_CreateAndSetMetatable(L, get, set, len, true);
+
+	lua_pushvalue(L, -2);
+	lua_setfield(L, index, name);
+
+	if (!keep)
+		lua_pop(L, 2);
+}
+
+void LUA_RegisterGlobalUserdata(
+	lua_State *L,
+	const char *name,
+	lua_CFunction get,
+	lua_CFunction set,
+	lua_CFunction len
+)
+{
+	LUA_CreateAndSetUserdataField(L, LUA_GLOBALSINDEX, name, get, set, len, false);
 }
