@@ -297,7 +297,8 @@ static int ScanConstants(lua_State *L, boolean mathlib, const char *word)
 			CacheAndPushConstant(L, word, (lua_Integer)PF_FULLSTASIS);
 			return 1;
 		}
-		else if (fastcmp(p, "USEDOWN")) // Remove case when 2.3 nears release...
+		// TODO: 2.3: Delete this alias
+		else if (fastcmp(p, "USEDOWN"))
 		{
 			CacheAndPushConstant(L, word, (lua_Integer)PF_SPINDOWN);
 			return 1;
@@ -597,7 +598,8 @@ static int ScanConstants(lua_State *L, boolean mathlib, const char *word)
 		return luaL_error(L, "translation '%s' could not be found.\n", word);
 	}
 
-	if (fastcmp(word, "BT_USE")) // Remove case when 2.3 nears release...
+	// TODO: 2.3: Delete this alias
+	if (fastcmp(word, "BT_USE"))
 	{
 		CacheAndPushConstant(L, word, (lua_Integer)BT_SPIN);
 		return 1;
@@ -785,8 +787,7 @@ int LUA_SOCLib(lua_State *L)
 	lua_register(L,"getActionName",lib_getActionName);
 
 	luaL_newmetatable(L, META_ACTION);
-		lua_pushcfunction(L, action_call);
-		lua_setfield(L, -2, "__call");
+		LUA_SetCFunctionField(L, "__call", action_call);
 	lua_pop(L, 1);
 
 	return 0;

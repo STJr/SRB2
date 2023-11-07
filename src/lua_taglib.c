@@ -372,8 +372,7 @@ void LUA_InsertTaggroupIterator
 		lua_pushcclosure(L, lib_numTaggroupElements, 2);
 		lua_setfield(L, -2, "__len");
 
-		lua_pushcfunction(L, element_iterator);
-		lua_setfield(L, -2, "__call");
+		LUA_SetCFunctionField(L, "__call", element_iterator);
 	lua_pushcclosure(L, lib_getTaggroup, 1);
 	lua_setfield(L, -2, "tagged");
 }
@@ -414,11 +413,9 @@ set_taglist_metatable(lua_State *L, const char *meta)
 		lua_setfenv(L, -2);
 		lua_setfield(L, -2, "__index");
 
-		lua_pushcfunction(L, taglist_len);
-		lua_setfield(L, -2, "__len");
+		LUA_SetCFunctionField(L, "__len", taglist_len);
 
-		lua_pushcfunction(L, taglist_equal);
-		lua_setfield(L, -2, "__eq");
+		LUA_SetCFunctionField(L, "__eq", taglist_equal);
 #ifdef MUTABLE_TAGS
 	return luaL_ref(L, LUA_REGISTRYINDEX);
 #endif
@@ -426,17 +423,11 @@ set_taglist_metatable(lua_State *L, const char *meta)
 
 int LUA_TagLib(lua_State *L)
 {
-	lua_newuserdata(L, 0);
-		lua_createtable(L, 0, 2);
-			lua_createtable(L, 0, 1);
-				lua_pushcfunction(L, lib_iterateTags);
-				lua_setfield(L, -2, "iterate");
-			lua_setfield(L, -2, "__index");
-
-			lua_pushcfunction(L, lib_numTags);
-			lua_setfield(L, -2, "__len");
-		lua_setmetatable(L, -2);
-	lua_setglobal(L, "tags");
+	LUA_CreateAndSetUserdataField(L, LUA_GLOBALSINDEX, "tags", NULL, NULL, lib_numTags, true);
+		lua_createtable(L, 0, 1);
+			LUA_SetCFunctionField(L, "iterate", lib_iterateTags);
+		lua_setfield(L, -2, "__index");
+	lua_pop(L, 2);
 
 	open_taglist(L);
 

@@ -78,10 +78,8 @@ void HWR_DrawPatch(patch_t *gpatch, INT32 x, INT32 y, INT32 option)
 //  | /|
 //  |/ |
 //  0--1
-	float sdupx = FIXED_TO_FLOAT(vid.fdupx)*2.0f;
-	float sdupy = FIXED_TO_FLOAT(vid.fdupy)*2.0f;
-	float pdupx = FIXED_TO_FLOAT(vid.fdupx)*2.0f;
-	float pdupy = FIXED_TO_FLOAT(vid.fdupy)*2.0f;
+	float sdup = FIXED_TO_FLOAT(vid.fdup)*2.0f;
+	float pdup = FIXED_TO_FLOAT(vid.fdup)*2.0f;
 
 	// make patch ready in hardware cache
 	HWR_GetPatch(gpatch);
@@ -90,25 +88,23 @@ void HWR_DrawPatch(patch_t *gpatch, INT32 x, INT32 y, INT32 option)
 	switch (option & V_SCALEPATCHMASK)
 	{
 	case V_NOSCALEPATCH:
-		pdupx = pdupy = 2.0f;
+		pdup = 2.0f;
 		break;
 	case V_SMALLSCALEPATCH:
-		pdupx = 2.0f * FIXED_TO_FLOAT(vid.fsmalldupx);
-		pdupy = 2.0f * FIXED_TO_FLOAT(vid.fsmalldupy);
+		pdup = 2.0f * FIXED_TO_FLOAT(vid.fsmalldup);
 		break;
 	case V_MEDSCALEPATCH:
-		pdupx = 2.0f * FIXED_TO_FLOAT(vid.fmeddupx);
-		pdupy = 2.0f * FIXED_TO_FLOAT(vid.fmeddupy);
+		pdup = 2.0f * FIXED_TO_FLOAT(vid.fmeddup);
 		break;
 	}
 
 	if (option & V_NOSCALESTART)
-		sdupx = sdupy = 2.0f;
+		sdup = 2.0f;
 
-	v[0].x = v[3].x = (x*sdupx-(gpatch->leftoffset)*pdupx)/vid.width - 1;
-	v[2].x = v[1].x = (x*sdupx+(gpatch->width-gpatch->leftoffset)*pdupx)/vid.width - 1;
-	v[0].y = v[1].y = 1-(y*sdupy-(gpatch->topoffset)*pdupy)/vid.height;
-	v[2].y = v[3].y = 1-(y*sdupy+(gpatch->height-gpatch->topoffset)*pdupy)/vid.height;
+	v[0].x = v[3].x = (x*sdup-(gpatch->leftoffset)*pdup)/vid.width - 1;
+	v[2].x = v[1].x = (x*sdup+(gpatch->width-gpatch->leftoffset)*pdup)/vid.width - 1;
+	v[0].y = v[1].y = 1-(y*sdup-(gpatch->topoffset)*pdup)/vid.height;
+	v[2].y = v[3].y = 1-(y*sdup+(gpatch->height-gpatch->topoffset)*pdup)/vid.height;
 
 	v[0].z = v[1].z = v[2].z = v[3].z = 1.0f;
 
@@ -137,7 +133,7 @@ void HWR_DrawStretchyFixedPatch(patch_t *gpatch, fixed_t x, fixed_t y, fixed_t p
 //  | /|
 //  |/ |
 //  0--1
-	float dupx, dupy, fscalew, fscaleh, fwidth, fheight;
+	float dup, fscalew, fscaleh, fwidth, fheight;
 
 	UINT8 perplayershuffle = 0;
 
@@ -149,25 +145,21 @@ void HWR_DrawStretchyFixedPatch(patch_t *gpatch, fixed_t x, fixed_t y, fixed_t p
 
 	hwrPatch = ((GLPatch_t *)gpatch->hardware);
 
-	dupx = (float)vid.dupx;
-	dupy = (float)vid.dupy;
+	dup = (float)vid.dup;
 
 	switch (option & V_SCALEPATCHMASK)
 	{
 	case V_NOSCALEPATCH:
-		dupx = dupy = 1.0f;
+		dup = 1.0f;
 		break;
 	case V_SMALLSCALEPATCH:
-		dupx = (float)vid.smalldupx;
-		dupy = (float)vid.smalldupy;
+		dup = (float)vid.smalldup;
 		break;
 	case V_MEDSCALEPATCH:
-		dupx = (float)vid.meddupx;
-		dupy = (float)vid.meddupy;
+		dup = (float)vid.meddup;
 		break;
 	}
 
-	dupx = dupy = (dupx < dupy ? dupx : dupy);
 	fscalew = fscaleh = FIXED_TO_FLOAT(pscale);
 	if (vscale != pscale)
 		fscaleh = FIXED_TO_FLOAT(vscale);
@@ -261,8 +253,8 @@ void HWR_DrawStretchyFixedPatch(patch_t *gpatch, fixed_t x, fixed_t y, fixed_t p
 
 	if (!(option & V_NOSCALESTART))
 	{
-		cx = cx * dupx;
-		cy = cy * dupy;
+		cx = cx * dup;
+		cy = cy * dup;
 
 		if (!(option & V_SCALEPATCHMASK))
 		{
@@ -279,40 +271,40 @@ void HWR_DrawStretchyFixedPatch(patch_t *gpatch, fixed_t x, fixed_t y, fixed_t p
 				}
 			}
 			// centre screen
-			if (fabsf((float)vid.width - (float)BASEVIDWIDTH * dupx) > 1.0E-36f)
+			if (fabsf((float)vid.width - (float)BASEVIDWIDTH * dup) > 1.0E-36f)
 			{
 				if (option & V_SNAPTORIGHT)
-					cx += ((float)vid.width - ((float)BASEVIDWIDTH * dupx));
+					cx += ((float)vid.width - ((float)BASEVIDWIDTH * dup));
 				else if (!(option & V_SNAPTOLEFT))
-					cx += ((float)vid.width - ((float)BASEVIDWIDTH * dupx))/2;
+					cx += ((float)vid.width - ((float)BASEVIDWIDTH * dup))/2;
 				if (perplayershuffle & 4)
-					cx -= ((float)vid.width - ((float)BASEVIDWIDTH * dupx))/4;
+					cx -= ((float)vid.width - ((float)BASEVIDWIDTH * dup))/4;
 				else if (perplayershuffle & 8)
-					cx += ((float)vid.width - ((float)BASEVIDWIDTH * dupx))/4;
+					cx += ((float)vid.width - ((float)BASEVIDWIDTH * dup))/4;
 			}
-			if (fabsf((float)vid.height - (float)BASEVIDHEIGHT * dupy) > 1.0E-36f)
+			if (fabsf((float)vid.height - (float)BASEVIDHEIGHT * dup) > 1.0E-36f)
 			{
 				if (option & V_SNAPTOBOTTOM)
-					cy += ((float)vid.height - ((float)BASEVIDHEIGHT * dupy));
+					cy += ((float)vid.height - ((float)BASEVIDHEIGHT * dup));
 				else if (!(option & V_SNAPTOTOP))
-					cy += ((float)vid.height - ((float)BASEVIDHEIGHT * dupy))/2;
+					cy += ((float)vid.height - ((float)BASEVIDHEIGHT * dup))/2;
 				if (perplayershuffle & 1)
-					cy -= ((float)vid.height - ((float)BASEVIDHEIGHT * dupy))/4;
+					cy -= ((float)vid.height - ((float)BASEVIDHEIGHT * dup))/4;
 				else if (perplayershuffle & 2)
-					cy += ((float)vid.height - ((float)BASEVIDHEIGHT * dupy))/4;
+					cy += ((float)vid.height - ((float)BASEVIDHEIGHT * dup))/4;
 			}
 		}
 	}
 
 	if (pscale != FRACUNIT || vscale != FRACUNIT || (splitscreen && option & V_PERPLAYER))
 	{
-		fwidth = (float)(gpatch->width) * fscalew * dupx;
-		fheight = (float)(gpatch->height) * fscaleh * dupy;
+		fwidth = (float)(gpatch->width) * fscalew * dup;
+		fheight = (float)(gpatch->height) * fscaleh * dup;
 	}
 	else
 	{
-		fwidth = (float)(gpatch->width) * dupx;
-		fheight = (float)(gpatch->height) * dupy;
+		fwidth = (float)(gpatch->width) * dup;
+		fheight = (float)(gpatch->height) * dup;
 	}
 
 	// positions of the cx, cy, are between 0 and vid.width/vid.height now, we need them to be between -1 and 1
@@ -379,7 +371,7 @@ void HWR_DrawCroppedPatch(patch_t *gpatch, fixed_t x, fixed_t y, fixed_t pscale,
 //  | /|
 //  |/ |
 //  0--1
-	float dupx, dupy, fscalew, fscaleh, fwidth, fheight;
+	float dup, fscalew, fscaleh, fwidth, fheight;
 
 	UINT8 perplayershuffle = 0;
 
@@ -391,25 +383,21 @@ void HWR_DrawCroppedPatch(patch_t *gpatch, fixed_t x, fixed_t y, fixed_t pscale,
 
 	hwrPatch = ((GLPatch_t *)gpatch->hardware);
 
-	dupx = (float)vid.dupx;
-	dupy = (float)vid.dupy;
+	dup = (float)vid.dup;
 
 	switch (option & V_SCALEPATCHMASK)
 	{
 	case V_NOSCALEPATCH:
-		dupx = dupy = 1.0f;
+		dup = 1.0f;
 		break;
 	case V_SMALLSCALEPATCH:
-		dupx = (float)vid.smalldupx;
-		dupy = (float)vid.smalldupy;
+		dup = (float)vid.smalldup;
 		break;
 	case V_MEDSCALEPATCH:
-		dupx = (float)vid.meddupx;
-		dupy = (float)vid.meddupy;
+		dup = (float)vid.meddup;
 		break;
 	}
 
-	dupx = dupy = (dupx < dupy ? dupx : dupy);
 	fscalew = fscaleh = FIXED_TO_FLOAT(pscale);
 	if (vscale != pscale)
 		fscaleh = FIXED_TO_FLOAT(vscale);
@@ -487,8 +475,8 @@ void HWR_DrawCroppedPatch(patch_t *gpatch, fixed_t x, fixed_t y, fixed_t pscale,
 
 	if (!(option & V_NOSCALESTART))
 	{
-		cx = cx * dupx;
-		cy = cy * dupy;
+		cx = cx * dup;
+		cy = cy * dup;
 
 		if (!(option & V_SCALEPATCHMASK))
 		{
@@ -496,27 +484,27 @@ void HWR_DrawCroppedPatch(patch_t *gpatch, fixed_t x, fixed_t y, fixed_t pscale,
 			// no the patch is cropped do not do this ever
 
 			// centre screen
-			if (fabsf((float)vid.width - (float)BASEVIDWIDTH * dupx) > 1.0E-36f)
+			if (fabsf((float)vid.width - (float)BASEVIDWIDTH * dup) > 1.0E-36f)
 			{
 				if (option & V_SNAPTORIGHT)
-					cx += ((float)vid.width - ((float)BASEVIDWIDTH * dupx));
+					cx += ((float)vid.width - ((float)BASEVIDWIDTH * dup));
 				else if (!(option & V_SNAPTOLEFT))
-					cx += ((float)vid.width - ((float)BASEVIDWIDTH * dupx))/2;
+					cx += ((float)vid.width - ((float)BASEVIDWIDTH * dup))/2;
 				if (perplayershuffle & 4)
-					cx -= ((float)vid.width - ((float)BASEVIDWIDTH * dupx))/4;
+					cx -= ((float)vid.width - ((float)BASEVIDWIDTH * dup))/4;
 				else if (perplayershuffle & 8)
-					cx += ((float)vid.width - ((float)BASEVIDWIDTH * dupx))/4;
+					cx += ((float)vid.width - ((float)BASEVIDWIDTH * dup))/4;
 			}
-			if (fabsf((float)vid.height - (float)BASEVIDHEIGHT * dupy) > 1.0E-36f)
+			if (fabsf((float)vid.height - (float)BASEVIDHEIGHT * dup) > 1.0E-36f)
 			{
 				if (option & V_SNAPTOBOTTOM)
-					cy += ((float)vid.height - ((float)BASEVIDHEIGHT * dupy));
+					cy += ((float)vid.height - ((float)BASEVIDHEIGHT * dup));
 				else if (!(option & V_SNAPTOTOP))
-					cy += ((float)vid.height - ((float)BASEVIDHEIGHT * dupy))/2;
+					cy += ((float)vid.height - ((float)BASEVIDHEIGHT * dup))/2;
 				if (perplayershuffle & 1)
-					cy -= ((float)vid.height - ((float)BASEVIDHEIGHT * dupy))/4;
+					cy -= ((float)vid.height - ((float)BASEVIDHEIGHT * dup))/4;
 				else if (perplayershuffle & 2)
-					cy += ((float)vid.height - ((float)BASEVIDHEIGHT * dupy))/4;
+					cy += ((float)vid.height - ((float)BASEVIDHEIGHT * dup))/4;
 			}
 		}
 	}
@@ -532,13 +520,13 @@ void HWR_DrawCroppedPatch(patch_t *gpatch, fixed_t x, fixed_t y, fixed_t pscale,
 
 	if (pscale != FRACUNIT || vscale != FRACUNIT || (splitscreen && option & V_PERPLAYER))
 	{
-		fwidth *= fscalew * dupx;
-		fheight *= fscaleh * dupy;
+		fwidth *= fscalew * dup;
+		fheight *= fscaleh * dup;
 	}
 	else
 	{
-		fwidth *= dupx;
-		fheight *= dupy;
+		fwidth *= dup;
+		fheight *= dup;
 	}
 
 	// positions of the cx, cy, are between 0 and vid.width/vid.height now, we need them to be between -1 and 1
@@ -674,9 +662,9 @@ void HWR_DrawPic(INT32 x, INT32 y, lumpnum_t lumpnum)
 //  0--1
 
 	v[0].x = v[3].x = 2.0f * (float)x/vid.width - 1;
-	v[2].x = v[1].x = 2.0f * (float)(x + patch->width*FIXED_TO_FLOAT(vid.fdupx))/vid.width - 1;
+	v[2].x = v[1].x = 2.0f * (float)(x + patch->width*FIXED_TO_FLOAT(vid.fdup))/vid.width - 1;
 	v[0].y = v[1].y = 1.0f - 2.0f * (float)y/vid.height;
-	v[2].y = v[3].y = 1.0f - 2.0f * (float)(y + patch->height*FIXED_TO_FLOAT(vid.fdupy))/vid.height;
+	v[2].y = v[3].y = 1.0f - 2.0f * (float)(y + patch->height*FIXED_TO_FLOAT(vid.fdup))/vid.height;
 
 	v[0].z = v[1].z = v[2].z = v[3].z = 1.0f;
 
@@ -866,35 +854,33 @@ void HWR_DrawFadeFill(INT32 x, INT32 y, INT32 w, INT32 h, INT32 color, UINT16 ac
 
 	if (!(color & V_NOSCALESTART))
 	{
-		float dupx = (float)vid.dupx, dupy = (float)vid.dupy;
+		fx *= vid.dup;
+		fy *= vid.dup;
+		fw *= vid.dup;
+		fh *= vid.dup;
 
-		fx *= dupx;
-		fy *= dupy;
-		fw *= dupx;
-		fh *= dupy;
-
-		if (fabsf((float)vid.width - (float)BASEVIDWIDTH * dupx) > 1.0E-36f)
+		if (fabsf((float)vid.width - (float)BASEVIDWIDTH * vid.dup) > 1.0E-36f)
 		{
 			if (color & V_SNAPTORIGHT)
-				fx += ((float)vid.width - ((float)BASEVIDWIDTH * dupx));
+				fx += ((float)vid.width - ((float)BASEVIDWIDTH * vid.dup));
 			else if (!(color & V_SNAPTOLEFT))
-				fx += ((float)vid.width - ((float)BASEVIDWIDTH * dupx)) / 2;
+				fx += ((float)vid.width - ((float)BASEVIDWIDTH * vid.dup)) / 2;
 			if (perplayershuffle & 4)
-				fx -= ((float)vid.width - ((float)BASEVIDWIDTH * dupx)) / 4;
+				fx -= ((float)vid.width - ((float)BASEVIDWIDTH * vid.dup)) / 4;
 			else if (perplayershuffle & 8)
-				fx += ((float)vid.width - ((float)BASEVIDWIDTH * dupx)) / 4;
+				fx += ((float)vid.width - ((float)BASEVIDWIDTH * vid.dup)) / 4;
 		}
-		if (fabsf((float)vid.height - (float)BASEVIDHEIGHT * dupy) > 1.0E-36f)
+		if (fabsf((float)vid.height - (float)BASEVIDHEIGHT * vid.dup) > 1.0E-36f)
 		{
 			// same thing here
 			if (color & V_SNAPTOBOTTOM)
-				fy += ((float)vid.height - ((float)BASEVIDHEIGHT * dupy));
+				fy += ((float)vid.height - ((float)BASEVIDHEIGHT * vid.dup));
 			else if (!(color & V_SNAPTOTOP))
-				fy += ((float)vid.height - ((float)BASEVIDHEIGHT * dupy)) / 2;
+				fy += ((float)vid.height - ((float)BASEVIDHEIGHT * vid.dup)) / 2;
 			if (perplayershuffle & 1)
-				fy -= ((float)vid.height - ((float)BASEVIDHEIGHT * dupy)) / 4;
+				fy -= ((float)vid.height - ((float)BASEVIDHEIGHT * vid.dup)) / 4;
 			else if (perplayershuffle & 2)
-				fy += ((float)vid.height - ((float)BASEVIDHEIGHT * dupy)) / 4;
+				fy += ((float)vid.height - ((float)BASEVIDHEIGHT * vid.dup)) / 4;
 		}
 	}
 
@@ -1032,10 +1018,10 @@ void HWR_DrawViewBorder(INT32 clearlines)
 		clearlines = BASEVIDHEIGHT; // refresh all
 
 	// calc view size based on original game resolution
-	baseviewwidth =  FixedInt(FixedDiv(FLOAT_TO_FIXED(gl_viewwidth), vid.fdupx)); //(cv_viewsize.value * BASEVIDWIDTH/10)&~7;
-	baseviewheight = FixedInt(FixedDiv(FLOAT_TO_FIXED(gl_viewheight), vid.fdupy));
-	top = FixedInt(FixedDiv(FLOAT_TO_FIXED(gl_baseviewwindowy), vid.fdupy));
-	side = FixedInt(FixedDiv(FLOAT_TO_FIXED(gl_viewwindowx), vid.fdupx));
+	baseviewwidth =  FixedInt(FixedDiv(FLOAT_TO_FIXED(gl_viewwidth), vid.fdup)); //(cv_viewsize.value * BASEVIDWIDTH/10)&~7;
+	baseviewheight = FixedInt(FixedDiv(FLOAT_TO_FIXED(gl_viewheight), vid.fdup));
+	top = FixedInt(FixedDiv(FLOAT_TO_FIXED(gl_baseviewwindowy), vid.fdup));
+	side = FixedInt(FixedDiv(FLOAT_TO_FIXED(gl_viewwindowx), vid.fdup));
 
 	// top
 	HWR_DrawFlatFill(0, 0,
@@ -1250,35 +1236,35 @@ void HWR_DrawConsoleFill(INT32 x, INT32 y, INT32 w, INT32 h, INT32 color, UINT32
 
 	if (!(color & V_NOSCALESTART))
 	{
-		float dupx = (float)vid.dupx, dupy = (float)vid.dupy;
+		float dup = (float)vid.dup;
 
-		fx *= dupx;
-		fy *= dupy;
-		fw *= dupx;
-		fh *= dupy;
+		fx *= dup;
+		fy *= dup;
+		fw *= dup;
+		fh *= dup;
 
-		if (fabsf((float)vid.width - (float)BASEVIDWIDTH * dupx) > 1.0E-36f)
+		if (fabsf((float)vid.width - (float)BASEVIDWIDTH * dup) > 1.0E-36f)
 		{
 			if (color & V_SNAPTORIGHT)
-				fx += ((float)vid.width - ((float)BASEVIDWIDTH * dupx));
+				fx += ((float)vid.width - ((float)BASEVIDWIDTH * dup));
 			else if (!(color & V_SNAPTOLEFT))
-				fx += ((float)vid.width - ((float)BASEVIDWIDTH * dupx)) / 2;
+				fx += ((float)vid.width - ((float)BASEVIDWIDTH * dup)) / 2;
 			if (perplayershuffle & 4)
-				fx -= ((float)vid.width - ((float)BASEVIDWIDTH * dupx)) / 4;
+				fx -= ((float)vid.width - ((float)BASEVIDWIDTH * dup)) / 4;
 			else if (perplayershuffle & 8)
-				fx += ((float)vid.width - ((float)BASEVIDWIDTH * dupx)) / 4;
+				fx += ((float)vid.width - ((float)BASEVIDWIDTH * dup)) / 4;
 		}
-		if (fabsf((float)vid.height - (float)BASEVIDHEIGHT * dupy) > 1.0E-36f)
+		if (fabsf((float)vid.height - (float)BASEVIDHEIGHT * dup) > 1.0E-36f)
 		{
 			// same thing here
 			if (color & V_SNAPTOBOTTOM)
-				fy += ((float)vid.height - ((float)BASEVIDHEIGHT * dupy));
+				fy += ((float)vid.height - ((float)BASEVIDHEIGHT * dup));
 			else if (!(color & V_SNAPTOTOP))
-				fy += ((float)vid.height - ((float)BASEVIDHEIGHT * dupy)) / 2;
+				fy += ((float)vid.height - ((float)BASEVIDHEIGHT * dup)) / 2;
 			if (perplayershuffle & 1)
-				fy -= ((float)vid.height - ((float)BASEVIDHEIGHT * dupy)) / 4;
+				fy -= ((float)vid.height - ((float)BASEVIDHEIGHT * dup)) / 4;
 			else if (perplayershuffle & 2)
-				fy += ((float)vid.height - ((float)BASEVIDHEIGHT * dupy)) / 4;
+				fy += ((float)vid.height - ((float)BASEVIDHEIGHT * dup)) / 4;
 		}
 	}
 
@@ -1416,8 +1402,6 @@ void HWR_DrawFill(INT32 x, INT32 y, INT32 w, INT32 h, INT32 color)
 
 	if (!(color & V_NOSCALESTART))
 	{
-		float dupx = (float)vid.dupx, dupy = (float)vid.dupy;
-
 		if (x == 0 && y == 0 && w == BASEVIDWIDTH && h == BASEVIDHEIGHT)
 		{
 			RGBA_t rgbaColour = V_GetColor(color);
@@ -1430,33 +1414,33 @@ void HWR_DrawFill(INT32 x, INT32 y, INT32 w, INT32 h, INT32 color)
 			return;
 		}
 
-		fx *= dupx;
-		fy *= dupy;
-		fw *= dupx;
-		fh *= dupy;
+		fx *= vid.dup;
+		fy *= vid.dup;
+		fw *= vid.dup;
+		fh *= vid.dup;
 
-		if (fabsf((float)vid.width - (float)BASEVIDWIDTH * dupx) > 1.0E-36f)
+		if (fabsf((float)vid.width - (float)BASEVIDWIDTH * vid.dup) > 1.0E-36f)
 		{
 			if (color & V_SNAPTORIGHT)
-				fx += ((float)vid.width - ((float)BASEVIDWIDTH * dupx));
+				fx += ((float)vid.width - ((float)BASEVIDWIDTH * vid.dup));
 			else if (!(color & V_SNAPTOLEFT))
-				fx += ((float)vid.width - ((float)BASEVIDWIDTH * dupx)) / 2;
+				fx += ((float)vid.width - ((float)BASEVIDWIDTH * vid.dup)) / 2;
 			if (perplayershuffle & 4)
-				fx -= ((float)vid.width - ((float)BASEVIDWIDTH * dupx)) / 4;
+				fx -= ((float)vid.width - ((float)BASEVIDWIDTH * vid.dup)) / 4;
 			else if (perplayershuffle & 8)
-				fx += ((float)vid.width - ((float)BASEVIDWIDTH * dupx)) / 4;
+				fx += ((float)vid.width - ((float)BASEVIDWIDTH * vid.dup)) / 4;
 		}
-		if (fabsf((float)vid.height - (float)BASEVIDHEIGHT * dupy) > 1.0E-36f)
+		if (fabsf((float)vid.height - (float)BASEVIDHEIGHT * vid.dup) > 1.0E-36f)
 		{
 			// same thing here
 			if (color & V_SNAPTOBOTTOM)
-				fy += ((float)vid.height - ((float)BASEVIDHEIGHT * dupy));
+				fy += ((float)vid.height - ((float)BASEVIDHEIGHT * vid.dup));
 			else if (!(color & V_SNAPTOTOP))
-				fy += ((float)vid.height - ((float)BASEVIDHEIGHT * dupy)) / 2;
+				fy += ((float)vid.height - ((float)BASEVIDHEIGHT * vid.dup)) / 2;
 			if (perplayershuffle & 1)
-				fy -= ((float)vid.height - ((float)BASEVIDHEIGHT * dupy)) / 4;
+				fy -= ((float)vid.height - ((float)BASEVIDHEIGHT * vid.dup)) / 4;
 			else if (perplayershuffle & 2)
-				fy += ((float)vid.height - ((float)BASEVIDHEIGHT * dupy)) / 4;
+				fy += ((float)vid.height - ((float)BASEVIDHEIGHT * vid.dup)) / 4;
 		}
 	}
 

@@ -48,7 +48,7 @@ typedef enum
 	KR_TIMEOUT       = 4, //Connection Timeout
 	KR_BAN           = 5, //Banned by server
 	KR_LEAVE         = 6, //Quit the game
-
+	KR_IDLE          = 7, //Remained still for too long
 } kickreason_t;
 
 /* the max number of name changes in some time period */
@@ -73,7 +73,7 @@ extern UINT32 realpingtable[MAXPLAYERS];
 extern UINT32 playerpingtable[MAXPLAYERS];
 extern tic_t servermaxping;
 
-extern consvar_t cv_netticbuffer, cv_resynchattempts, cv_blamecfail, cv_playbackspeed, cv_dedicatedidletime;
+extern consvar_t cv_netticbuffer, cv_resynchattempts, cv_blamecfail, cv_playbackspeed, cv_idletime, cv_dedicatedidletime;
 
 // Used in d_net, the only dependence
 void D_ClientServerInit(void);
