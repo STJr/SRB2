@@ -2266,7 +2266,7 @@ void I_Sleep(UINT32 ms)
 }
 
 #ifdef NEWSIGNALHANDLER
-static void newsignalhandler_Warn(const char *pr)
+ATTRNORETURN static FUNCNORETURN void newsignalhandler_Warn(const char *pr)
 {
 	char text[128];
 
@@ -3035,11 +3035,11 @@ size_t I_GetFreeMem(size_t *total)
 #ifdef FREEBSD
 	u_int v_free_count, v_page_size, v_page_count;
 	size_t size = sizeof(v_free_count);
-	sysctlbyname("vm.stat.vm.v_free_count", &v_free_count, &size, NULL, 0);
-	size_t size = sizeof(v_page_size);
-	sysctlbyname("vm.stat.vm.v_page_size", &v_page_size, &size, NULL, 0);
-	size_t size = sizeof(v_page_count);
-	sysctlbyname("vm.stat.vm.v_page_count", &v_page_count, &size, NULL, 0);
+	sysctlbyname("vm.stats.vm.v_free_count", &v_free_count, &size, NULL, 0);
+	size = sizeof(v_page_size);
+	sysctlbyname("vm.stats.vm.v_page_size", &v_page_size, &size, NULL, 0);
+	size = sizeof(v_page_count);
+	sysctlbyname("vm.stats.vm.v_page_count", &v_page_count, &size, NULL, 0);
 
 	if (total)
 		*total = v_page_count * v_page_size;

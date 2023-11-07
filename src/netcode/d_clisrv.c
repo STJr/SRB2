@@ -113,6 +113,7 @@ consvar_t cv_blamecfail = CVAR_INIT ("blamecfail", "Off", CV_SAVE|CV_NETVAR, CV_
 static CV_PossibleValue_t playbackspeed_cons_t[] = {{1, "MIN"}, {10, "MAX"}, {0, NULL}};
 consvar_t cv_playbackspeed = CVAR_INIT ("playbackspeed", "1", 0, playbackspeed_cons_t, NULL);
 
+consvar_t cv_idletime = CVAR_INIT ("idletime", "0", CV_SAVE, CV_Unsigned, NULL);
 consvar_t cv_dedicatedidletime = CVAR_INIT ("dedicatedidletime", "10", CV_SAVE, CV_Unsigned, NULL);
 
 void ResetNode(INT32 node)
@@ -226,6 +227,7 @@ static void Got_AddPlayer(UINT8 **p, INT32 playernum)
 
 	newplayer->jointime = 0;
 	newplayer->quittime = 0;
+	newplayer->lastinputtime = 0;
 
 	READSTRINGN(*p, player_names[newplayernum], MAXPLAYERNAME);
 
@@ -492,6 +494,10 @@ static void Got_KickCmd(UINT8 **p, INT32 playernum)
 			HU_AddChatText(va("\x82*%s has been banned (%s)", player_names[pnum], reason), false);
 			kickreason = KR_BAN;
 			break;
+		case KICK_MSG_IDLE:
+			HU_AddChatText(va("\x82*%s has left the game (Inactive for too long)", player_names[pnum]), false);
+			kickreason = KR_TIMEOUT;
+			break;
 	}
 
 	if (pnum == consoleplayer)
@@ -507,6 +513,8 @@ static void Got_KickCmd(UINT8 **p, INT32 playernum)
 			M_StartMessage(M_GetText("Server closed connection\n(synch failure)\nPress ESC\n"), NULL, MM_NOTHING);
 		else if (msg == KICK_MSG_PING_HIGH)
 			M_StartMessage(M_GetText("Server closed connection\n(Broke ping limit)\nPress ESC\n"), NULL, MM_NOTHING);
+		else if (msg == KICK_MSG_IDLE)
+			M_StartMessage(M_GetText("Server closed connection\n(Inactive for too long)\nPress ESC\n"), NULL, MM_NOTHING);
 		else if (msg == KICK_MSG_BANNED)
 			M_StartMessage(M_GetText("You have been banned by the server\n\nPress ESC\n"), NULL, MM_NOTHING);
 		else if (msg == KICK_MSG_CUSTOM_KICK)
@@ -1267,6 +1275,32 @@ static void UpdatePingTable(void)
 	}
 }
 
+static void IdleUpdate(void)
+{
+	INT32 i;
+	if (!server || !netgame)
+		return;
+
+	for (i = 1; i < MAXPLAYERS; i++)
+	{
+		if (cv_idletime.value && playeringame[i] && playernode[i] != UINT8_MAX && !players[i].quittime && !players[i].spectator && !players[i].bot && !IsPlayerAdmin(i) && i != serverplayer)
+		{
+			if (players[i].cmd.forwardmove || players[i].cmd.sidemove || players[i].cmd.buttons)
+				players[i].lastinputtime = 0;
+			else
+				players[i].lastinputtime++;
+
+			if (players[i].lastinputtime > (tic_t)cv_idletime.value * TICRATE * 60)
+			{
+				players[i].lastinputtime = 0;
+				SendKick(i, KICK_MSG_IDLE | KICK_MSG_KEEP_BODY);
+			}
+		}
+		else
+			players[i].lastinputtime = 0;
+	}
+}
+
 // Handle timeouts to prevent definitive freezes from happenning
 static void HandleNodeTimeouts(void)
 {
@@ -1298,6 +1332,8 @@ void NetKeepAlive(void)
 	UpdatePingTable();
 
 	GetPackets();
+
+	IdleUpdate();
 
 #ifdef MASTERSERVER
 	MasterClient_Ticker();
@@ -1418,6 +1454,8 @@ void NetUpdate(void)
 		CL_SendClientCmd(); // send it
 
 	GetPackets(); // get packet from client or from server
+
+	IdleUpdate();
 
 	// The client sends the command after receiving from the server
 	// The server sends it before because this is better in single player
