@@ -1366,8 +1366,8 @@ GLMapTexture_t *HWR_GetMovieMapTexture(movie_t *movie)
 	MovieDecode_GetDimensions(movie, &width, &height);
 
 	memset(&gl_movietexture, 0, sizeof(gl_movietexture));
-	gl_movietexture.scaleX = 1.0f / width;
-	gl_movietexture.scaleY = 1.0f / height;
+	gl_movietexture.scaleX = 1.0f / (width * FRACUNIT);
+	gl_movietexture.scaleY = 1.0f / (height * FRACUNIT);
 
 	texture->flags = TF_WRAPXY;
 	texture->width = (UINT16)width;
