@@ -253,16 +253,17 @@ static void CacheMovieLump(movie_t *movie, const char *name)
 	W_ReadLump(lumpnum, movie->lumpdata);
 }
 
-static int ReadStream(void *owner, UINT8 *buffer, int buffersize)
+static int ReadStream(void *owner, uint8_t *buffer, int buffersize)
 {
 	movie_t *movie = owner;
-	buffersize = min(buffersize, movie->lumpsize - movie->lumpposition);
+	size_t bs = buffersize;
+	buffersize = min(bs, movie->lumpsize - movie->lumpposition);
 	memcpy(buffer, &movie->lumpdata[movie->lumpposition], buffersize);
 	movie->lumpposition += buffersize;
 	return buffersize;
 }
 
-static INT64 SeekStream(void *owner, INT64 offset, int whence)
+static INT64 SeekStream(void *owner, int64_t offset, int whence)
 {
 	movie_t *movie = owner;
 
