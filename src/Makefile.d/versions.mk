@@ -77,7 +77,7 @@ endif
  WFLAGS+=-Wmissing-noreturn
 #WFLAGS+=-Wmissing-format-attribute
 #WFLAGS+=-Wno-multichar
-#WFLAGS+=-Wno-deprecated-declarations
+WFLAGS+=-Wno-deprecated-declarations
 #WFLAGS+=-Wpacked
 #WFLAGS+=-Wpadded
 #WFLAGS+=-Wredundant-decls
