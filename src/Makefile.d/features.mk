@@ -61,11 +61,11 @@ default_packages:=\
 	GME/libgme/LIBGME\
 	OPENMPT/libopenmpt/LIBOPENMPT\
 	ZLIB/zlib\
-	LIBAVCODEC/libavcodec\
-	LIBAVFORMAT/libavformat\
-	LIBAVUTIL/libavutil\
-	LIBSWRESAMPLE/libswresample\
-	LIBSWSCALE/libswscale\
+	AVCODEC/libavcodec\
+	AVFORMAT/libavformat\
+	AVUTIL/libavutil\
+	SWRESAMPLE/libswresample\
+	SWSCALE/libswscale\
 
 $(foreach p,$(default_packages),\
 	$(eval $(call Check_pkg_config,$(p))))
