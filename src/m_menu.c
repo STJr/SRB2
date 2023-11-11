@@ -11947,7 +11947,7 @@ static void M_HandleConnectIP(INT32 choice)
 			// Rudimentary number and period enforcing - also allows letters so hostnames can be used instead
 			// and square brackets for RFC 2732 IPv6 addresses
 			if ((choice >= '-' && choice <= ':') ||
-					(choice == '[' || choice == ']') ||
+					(choice == '[' || choice == ']' || choice == '%') ||
 					(choice >= 'A' && choice <= 'Z') ||
 					(choice >= 'a' && choice <= 'z'))
 			{
