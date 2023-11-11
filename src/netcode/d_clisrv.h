@@ -121,6 +121,7 @@ extern char motd[254], server_context[8];
 extern UINT8 playernode[MAXPLAYERS];
 
 INT32 D_NumPlayers(void);
+INT32 D_NumNodes(void);
 INT32 D_NumBots(void);
 
 tic_t GetLag(INT32 node);
