@@ -1039,7 +1039,7 @@ void G_ReadMetalTic(mobj_t *metal)
 			oldmetal.frame = G_ConvertOldFrameFlags(oldmetal.frame);
 	}
 	if (ziptic & GZT_SPR2)
-		oldmetal.sprite2 = (g->version < 0x0011) ? READUINT8(metal_p) : READUINT16(metal_p);
+		oldmetal.sprite2 = (metalversion < 0x0011) ? READUINT8(metal_p) : READUINT16(metal_p);
 
 	// Set movement, position, and angle
 	// oldmetal contains where you're supposed to be.
@@ -1172,7 +1172,7 @@ void G_ReadMetalTic(mobj_t *metal)
 				follow->z = metal->z + temp;
 				P_SetThingPosition(follow);
 				if (followtic & FZT_SKIN)
-					follow->sprite2 = (g->version < 0x0011) ? READUINT8(metal_p) : READUINT16(metal_p);
+					follow->sprite2 = (metalversion < 0x0011) ? READUINT8(metal_p) : READUINT16(metal_p);
 				else
 					follow->sprite2 = 0;
 				follow->sprite = READUINT16(metal_p);
