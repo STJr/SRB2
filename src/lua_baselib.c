@@ -3004,6 +3004,7 @@ static int lib_pIsStateSprite2Super(lua_State *L)
 	return 1;
 }
 
+// Not a real function. Who cares? I know I don't.
 static int lib_pGetSuperSprite2(lua_State *L)
 {
 	int animID = luaL_checkinteger(L, 1) & SPR2F_MASK;

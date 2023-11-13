@@ -40,21 +40,25 @@ skin_t skins[MAXSKINS];
 CV_PossibleValue_t skin_cons_t[MAXSKINS+1];
 #endif
 
+// Gets the animation ID of a state
 UINT16 P_GetStateSprite2(state_t *state)
 {
 	if (state->sprite2)
 		return state->sprite2;
 	else
 	{
-		UINT32 frame = state->frame & FF_FRAMEMASK;
-		boolean is_super = frame & FF_SPR2SUPER;
-		frame &= ~FF_SPR2SUPER;
-		if (is_super)
-			frame |= SPR2F_SUPER;
-		return frame;
+		// Transform the state frame into an animation ID
+		UINT32 stateframe = state->frame & FF_FRAMEMASK;
+		UINT16 spr2 = stateframe & ~FF_SPR2SUPER;
+
+		if (stateframe & FF_SPR2SUPER)
+			spr2 |= SPR2F_SUPER;
+
+		return spr2;
 	}
 }
 
+// Gets the starting frame of an animation
 UINT16 P_GetSprite2StateFrame(state_t *state)
 {
 	if (state->sprite2)
@@ -63,6 +67,7 @@ UINT16 P_GetSprite2StateFrame(state_t *state)
 		return 0;
 }
 
+// Checks if a state should use the "super" variant of the animation
 boolean P_IsStateSprite2Super(state_t *state)
 {
 	if (state->sprite2)
@@ -76,6 +81,7 @@ boolean P_IsStateSprite2Super(state_t *state)
 	return false;
 }
 
+// Applies SPR2F_SUPER to an animation based on the actor's state
 UINT16 P_ApplySuperFlagToSprite2(UINT16 spr2, mobj_t *mobj)
 {
 	if (mobj->player)
@@ -97,12 +103,8 @@ UINT16 P_ApplySuperFlagToSprite2(UINT16 spr2, mobj_t *mobj)
 	return spr2;
 }
 
-//
-// P_GetSkinSprite2
-// For non-super players, tries each sprite2's immediate predecessor until it finds one with a number of frames or ends up at standing.
+// For non-super players, this tries each sprite2's immediate predecessor until it finds one with a number of frames or ends up at standing.
 // For super players, does the same as above - but tries the super equivalent for each sprite2 before the non-super version.
-//
-
 UINT16 P_GetSkinSprite2(skin_t *skin, UINT16 spr2, player_t *player)
 {
 	UINT16 super = 0;
@@ -152,6 +154,7 @@ UINT16 P_GetSkinSprite2(skin_t *skin, UINT16 spr2, player_t *player)
 	return spr2;
 }
 
+// Gets the spritedef of a skin animation
 spritedef_t *P_GetSkinSpritedef(skin_t *skin, UINT16 spr2)
 {
 	if (!skin)
@@ -170,6 +173,7 @@ spritedef_t *P_GetSkinSpritedef(skin_t *skin, UINT16 spr2)
 		return &skin->sprites[spr2];
 }
 
+// Gets the spriteinfo of a skin animation
 spriteinfo_t *P_GetSkinSpriteInfo(skin_t *skin, UINT16 spr2)
 {
 	if (!skin)
@@ -188,6 +192,7 @@ spriteinfo_t *P_GetSkinSpriteInfo(skin_t *skin, UINT16 spr2)
 		return &skin->sprinfo[spr2];
 }
 
+// Checks if a skin animation is valid
 boolean P_IsValidSprite2(skin_t *skin, UINT16 spr2)
 {
 	spritedef_t *sprdef = P_GetSkinSpritedef(skin, spr2);
