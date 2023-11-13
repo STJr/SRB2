@@ -40,30 +40,63 @@ skin_t skins[MAXSKINS];
 CV_PossibleValue_t skin_cons_t[MAXSKINS+1];
 #endif
 
+UINT16 P_GetStateSprite2(state_t *state)
+{
+	if (state->sprite2)
+		return state->sprite2;
+	else
+	{
+		boolean is_super = state->frame & FF_SPR2SUPER;
+		UINT16 frame = state->frame & (FF_FRAMEMASK | ~FF_SPR2SUPER);
+		if (is_super)
+			frame |= SPR2F_SUPER;
+		return frame;
+	}
+}
+
+UINT16 P_GetSprite2StateFrame(state_t *state)
+{
+	if (state->sprite2)
+		return state->frame & FF_FRAMEMASK;
+	else
+		return 0;
+}
+
+boolean P_IsStateSprite2Super(state_t *state)
+{
+	if (state->sprite2)
+	{
+		if (state->sprite2 & SPR2F_SUPER)
+			return true;
+	}
+	else if (state->frame & FF_SPR2SUPER)
+		return true;
+
+	return false;
+}
+
 //
 // P_GetSkinSprite2
 // For non-super players, tries each sprite2's immediate predecessor until it finds one with a number of frames or ends up at standing.
 // For super players, does the same as above - but tries the super equivalent for each sprite2 before the non-super version.
 //
 
-UINT8 P_GetSkinSprite2(skin_t *skin, UINT8 spr2, player_t *player)
+UINT16 P_GetSkinSprite2(skin_t *skin, UINT16 spr2, player_t *player)
 {
-	UINT8 super = 0, i = 0;
+	UINT16 super = 0;
+	UINT8 i = 0;
 
 	if (!skin)
 		return 0;
 
-	if ((playersprite_t)(spr2 & ~FF_SPR2SUPER) >= free_spr2)
-		return 0;
-
-	while (!skin->sprites[spr2].numframes
+	while (!P_IsValidSprite2(skin, spr2)
 		&& spr2 != SPR2_STND
 		&& ++i < 32) // recursion limiter
 	{
-		if (spr2 & FF_SPR2SUPER)
+		if (spr2 & SPR2F_SUPER)
 		{
-			super = FF_SPR2SUPER;
-			spr2 &= ~FF_SPR2SUPER;
+			super = SPR2F_SUPER;
+			spr2 &= ~SPR2F_SUPER;
 			continue;
 		}
 
@@ -95,6 +128,48 @@ UINT8 P_GetSkinSprite2(skin_t *skin, UINT8 spr2, player_t *player)
 		return 0;
 
 	return spr2;
+}
+
+spritedef_t *P_GetSkinSpritedef(skin_t *skin, UINT16 spr2)
+{
+	if (!skin)
+		return NULL;
+
+	boolean is_super = spr2 & SPR2F_SUPER;
+
+	spr2 &= SPR2F_MASK;
+
+	if (spr2 >= free_spr2)
+		return NULL;
+
+	if (is_super)
+		return &skin->super.sprites[spr2];
+	else
+		return &skin->sprites[spr2];
+}
+
+spriteinfo_t *P_GetSkinSpriteInfo(skin_t *skin, UINT16 spr2)
+{
+	if (!skin)
+		return NULL;
+
+	boolean is_super = spr2 & SPR2F_SUPER;
+
+	spr2 &= SPR2F_MASK;
+
+	if (spr2 >= free_spr2)
+		return NULL;
+
+	if (is_super)
+		return &skin->super.sprinfo[spr2];
+	else
+		return &skin->sprinfo[spr2];
+}
+
+boolean P_IsValidSprite2(skin_t *skin, UINT16 spr2)
+{
+	spritedef_t *sprdef = P_GetSkinSpritedef(skin, spr2);
+	return sprdef && sprdef->numframes;
 }
 
 static void Sk_SetDefaultValue(skin_t *skin)
@@ -536,7 +611,7 @@ static void R_LoadSkinSprites(UINT16 wadnum, UINT16 *lump, UINT16 *lastlump, ski
 		newlastlump++;
 		// load all sprite sets we are aware of... for super!
 		for (sprite2 = start_spr2; sprite2 < free_spr2; sprite2++)
-			R_AddSingleSpriteDef(spr2names[sprite2], &skin->sprites[FF_SPR2SUPER|sprite2], wadnum, newlastlump, *lastlump);
+			R_AddSingleSpriteDef(spr2names[sprite2], &skin->super.sprites[sprite2], wadnum, newlastlump, *lastlump);
 
 		newlastlump--;
 		*lastlump = newlastlump; // okay, make the normal sprite set loading end there

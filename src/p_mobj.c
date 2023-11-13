@@ -393,31 +393,40 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 		{
 			skin_t *skin = ((skin_t *)mobj->skin);
 			UINT16 frame = (mobj->frame & FF_FRAMEMASK)+1;
-			UINT8 numframes, spr2;
+			UINT8 numframes;
+			UINT16 spr2;
+			boolean is_super = P_IsStateSprite2Super(st);
 
 			if (skin)
 			{
-				UINT16 stateframe = st->frame;
-
-				// Add/Remove FF_SPR2SUPER based on certain conditions
+				// Add/Remove SPR2F_SUPER based on certain conditions
 				if (player->charflags & SF_NOSUPERSPRITES)
-					stateframe = stateframe & ~FF_SPR2SUPER;
+					is_super = false;
 				else if (player->powers[pw_super])
-					stateframe = stateframe | FF_SPR2SUPER;
+					is_super = true;
 
-				if (stateframe & FF_SPR2SUPER)
+				if (is_super)
 				{
 					if (mobj->eflags & MFE_FORCENOSUPER)
-						stateframe = stateframe & ~FF_SPR2SUPER;
+						is_super = false;
 				}
 				else if (mobj->eflags & MFE_FORCESUPER)
-					stateframe = stateframe | FF_SPR2SUPER;
+					is_super = true;
+
+				spr2 = P_GetStateSprite2(st);
+
+				if (is_super)
+					spr2 |= SPR2F_SUPER;
+				else
+					spr2 &= ~SPR2F_SUPER;
 
 				// Get the sprite2 and frame number
-				spr2 = P_GetSkinSprite2(skin, (stateframe & FF_FRAMEMASK), mobj->player);
-				numframes = skin->sprites[spr2].numframes;
+				spr2 = P_GetSkinSprite2(skin, spr2, mobj->player);
 
-				if (state == S_PLAY_STND && (spr2 & FF_SPR2SUPER) && skin->sprites[SPR2_WAIT|FF_SPR2SUPER].numframes == 0)
+				spritedef_t *sprdef = P_GetSkinSpritedef(skin, spr2);
+				numframes = sprdef->numframes;
+
+				if (state == S_PLAY_STND && (spr2 & SPR2F_SUPER) && sprdef[SPR2_WAIT].numframes == 0)
 					mobj->tics = -1;	// If no super wait, don't wait at all
 			}
 			else
@@ -430,12 +439,19 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 			if (mobj->sprite != SPR_PLAY)
 			{
 				mobj->sprite = SPR_PLAY;
-				frame = 0;
+				frame = P_GetSprite2StateFrame(st);
 			}
 			else if (mobj->sprite2 != spr2)
 			{
-				if ((st->frame & FF_SPR2MIDSTART) && numframes && P_RandomChance(FRACUNIT/2))
-					frame = numframes/2;
+				if (st->frame & FF_SPR2MIDSTART)
+				{
+					if (numframes && P_RandomChance(FRACUNIT/2))
+						frame = numframes/2;
+					else
+						frame = 0;
+				}
+				else if (numframes)
+					frame = P_GetSprite2StateFrame(st) % numframes;
 				else
 					frame = 0;
 			}
@@ -450,6 +466,7 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 					{
 						if (mobj->frame & FF_FRAMEMASK)
 							mobj->frame--;
+
 						return P_SetPlayerMobjState(mobj, st->var1);
 					}
 				}
@@ -539,26 +556,35 @@ boolean P_SetMobjState(mobj_t *mobj, statenum_t state)
 		{
 			skin_t *skin = ((skin_t *)mobj->skin);
 			UINT16 frame = (mobj->frame & FF_FRAMEMASK)+1;
-			UINT8 numframes, spr2;
+			UINT8 numframes;
+			UINT16 spr2;
+			boolean is_super = P_IsStateSprite2Super(st);
 
 			if (skin)
 			{
-				UINT16 stateframe = st->frame;
-
-				// Add/Remove FF_SPR2SUPER based on certain conditions
-				if (stateframe & FF_SPR2SUPER)
+				// Add/Remove SPR2F_SUPER based on certain conditions
+				if (is_super)
 				{
 					if (mobj->eflags & MFE_FORCENOSUPER)
-						stateframe = stateframe & ~FF_SPR2SUPER;
+						is_super = false;
 				}
 				else if (mobj->eflags & MFE_FORCESUPER)
-					stateframe = stateframe | FF_SPR2SUPER;
+					is_super = true;
+
+				spr2 = P_GetStateSprite2(st);
+
+				if (is_super)
+					spr2 |= SPR2F_SUPER;
+				else
+					spr2 &= ~SPR2F_SUPER;
 
 				// Get the sprite2 and frame number
-				spr2 = P_GetSkinSprite2(skin, (stateframe & FF_FRAMEMASK), NULL);
-				numframes = skin->sprites[spr2].numframes;
+				spr2 = P_GetSkinSprite2(skin, spr2, NULL);
 
-				if (state == S_PLAY_STND && (spr2 & FF_SPR2SUPER) && skin->sprites[SPR2_WAIT|FF_SPR2SUPER].numframes == 0)
+				spritedef_t *sprdef = P_GetSkinSpritedef(skin, spr2);
+				numframes = sprdef->numframes;
+
+				if (state == S_PLAY_STND && (spr2 & SPR2F_SUPER) && sprdef[SPR2_WAIT].numframes == 0)
 					mobj->tics = -1;	// If no super wait, don't wait at all
 			}
 			else
@@ -571,12 +597,19 @@ boolean P_SetMobjState(mobj_t *mobj, statenum_t state)
 			if (mobj->sprite != SPR_PLAY)
 			{
 				mobj->sprite = SPR_PLAY;
-				frame = 0;
+				frame = P_GetSprite2StateFrame(st);
 			}
 			else if (mobj->sprite2 != spr2)
 			{
-				if ((st->frame & FF_SPR2MIDSTART) && numframes && P_RandomChance(FRACUNIT/2))
-					frame = numframes/2;
+				if (st->frame & FF_SPR2MIDSTART)
+				{
+					if (numframes && P_RandomChance(FRACUNIT/2))
+						frame = numframes/2;
+					else
+						frame = 0;
+				}
+				else if (numframes)
+					frame = P_GetSprite2StateFrame(st) % numframes;
 				else
 					frame = 0;
 			}
@@ -591,6 +624,7 @@ boolean P_SetMobjState(mobj_t *mobj, statenum_t state)
 					{
 						if (mobj->frame & FF_FRAMEMASK)
 							mobj->frame--;
+
 						return P_SetMobjState(mobj, st->var1);
 					}
 				}
@@ -11011,7 +11045,7 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 
 	if (mobj->skin) // correct inadequecies above.
 	{
-		mobj->sprite2 = P_GetSkinSprite2(mobj->skin, (mobj->frame & FF_FRAMEMASK), NULL);
+		mobj->sprite2 = P_GetSkinSprite2(mobj->skin, P_GetStateSprite2(mobj->state), NULL);
 		mobj->frame &= ~FF_FRAMEMASK;
 	}
 

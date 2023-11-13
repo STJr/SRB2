@@ -54,7 +54,8 @@ enum skin {
 	skin_contspeed,
 	skin_contangle,
 	skin_soundsid,
-	skin_sprites
+	skin_sprites,
+	skin_supersprites
 };
 
 static const char *const skin_opt[] = {
@@ -94,6 +95,7 @@ static const char *const skin_opt[] = {
 	"contangle",
 	"soundsid",
 	"sprites",
+	"supersprites",
 	NULL};
 
 #define UNIMPLEMENTED luaL_error(L, LUA_QL("skin_t") " field " LUA_QS " is not implemented for Lua and cannot be accessed.", skin_opt[field])
@@ -217,6 +219,9 @@ static int skin_get(lua_State *L)
 		break;
 	case skin_sprites:
 		LUA_PushUserdata(L, skin->sprites, META_SKINSPRITES);
+		break;
+	case skin_supersprites:
+		LUA_PushUserdata(L, skin->super.sprites, META_SKINSPRITES);
 		break;
 	}
 	return 1;
@@ -342,17 +347,17 @@ static int lib_getSkinSprite(lua_State *L)
 	spritedef_t *sksprites = *(spritedef_t **)luaL_checkudata(L, 1, META_SKINSPRITES);
 	playersprite_t i = luaL_checkinteger(L, 2);
 
-	if (i < 0 || i >= NUMPLAYERSPRITES*2)
-		return luaL_error(L, LUA_QL("skin_t") " field 'sprites' index %d out of range (0 - %d)", i, (NUMPLAYERSPRITES*2)-1);
+	if (i < 0 || i >= NUMPLAYERSPRITES)
+		return luaL_error(L, "skin sprites index %d out of range (0 - %d)", i, NUMPLAYERSPRITES-1);
 
 	LUA_PushUserdata(L, &sksprites[i], META_SKINSPRITESLIST);
 	return 1;
 }
 
-// #skin.sprites -> NUMPLAYERSPRITES*2
+// #skin.sprites -> NUMPLAYERSPRITES
 static int lib_numSkinsSprites(lua_State *L)
 {
-	lua_pushinteger(L, NUMPLAYERSPRITES*2);
+	lua_pushinteger(L, NUMPLAYERSPRITES);
 	return 1;
 }
 

@@ -1158,7 +1158,7 @@ typedef enum playersprite
 	SPR2_XTRA, // stuff that isn't in-map - "would this ever need an md2 or variable length animation?"
 
 	SPR2_FIRSTFREESLOT,
-	SPR2_LASTFREESLOT = 0x7f,
+	SPR2_LASTFREESLOT = 1024, // Do not make higher than SPR2F_MASK
 	NUMPLAYERSPRITES
 } playersprite_t;
 
@@ -4378,6 +4378,7 @@ typedef struct
 	INT32 var1;
 	INT32 var2;
 	statenum_t nextstate;
+	UINT16 sprite2;
 } state_t;
 
 extern state_t states[NUMSTATES];

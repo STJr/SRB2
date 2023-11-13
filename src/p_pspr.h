@@ -97,6 +97,9 @@
 /// \brief Frame flags - Animate: Start at a random place in the animation (mutually exclusive with above)
 #define FF_RANDOMANIM 0x40000000
 
+#define SPR2F_MASK 0x7FFF
+#define SPR2F_SUPER 0x8000
+
 /**	\brief translucency tables
 
 	\todo add another asm routine which use the fg and bg indexes in the

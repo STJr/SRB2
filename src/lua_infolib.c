@@ -167,7 +167,7 @@ static int lib_getSpr2default(lua_State *L)
 static int lib_setSpr2default(lua_State *L)
 {
 	playersprite_t i;
-	UINT8 j = 0;
+	UINT16 j = 0;
 
 	if (hud_running)
 		return luaL_error(L, "Do not alter spr2defaults[] in HUD rendering code!");

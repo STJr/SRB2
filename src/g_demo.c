@@ -2578,10 +2578,10 @@ void G_AddGhost(char *defdemoname)
 		}
 	gh->oldmo.color = gh->mo->color;
 
-	gh->mo->state = states+S_PLAY_STND;
+	gh->mo->state = &states[S_PLAY_STND];
 	gh->mo->sprite = gh->mo->state->sprite;
-	gh->mo->sprite2 = (gh->mo->state->frame & FF_FRAMEMASK);
-	//gh->mo->frame = tr_trans30<<FF_TRANSSHIFT;
+	gh->mo->sprite2 = P_GetStateSprite2(gh->mo->state);
+	gh->mo->frame = (gh->mo->state->frame & ~FF_FRAMEMASK) | P_GetSprite2StateFrame(gh->mo->state);
 	gh->mo->flags2 |= MF2_DONTDRAW;
 	gh->fadein = (9-3)*6; // fade from invisible to trans30 over as close to 35 tics as possible
 	gh->mo->tics = -1;

@@ -660,17 +660,15 @@ static int lib_pRemoveMobj(lua_State *L)
 	return 0;
 }
 
-// P_IsValidSprite2 technically doesn't exist, and probably never should... but too much would need to be exposed to allow this to be checked by other methods.
-
 static int lib_pIsValidSprite2(lua_State *L)
 {
 	mobj_t *mobj = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
-	UINT8 spr2 = (UINT8)luaL_checkinteger(L, 2);
+	UINT16 spr2 = (UINT16)luaL_checkinteger(L, 2);
 	//HUDSAFE
 	INLEVEL
 	if (!mobj)
 		return LUA_ErrInvalid(L, "mobj_t");
-	lua_pushboolean(L, (mobj->skin && (((skin_t *)mobj->skin)->sprites[spr2].numframes)));
+	lua_pushboolean(L, mobj->skin && P_IsValidSprite2(mobj->skin, spr2));
 	return 1;
 }
 
