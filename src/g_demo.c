@@ -571,7 +571,7 @@ void G_ConsGhostTic(void)
 	if (ziptic & GZT_FRAME)
 		demo_p++;
 	if (ziptic & GZT_SPR2)
-		demo_p++;
+		demo_p += (demoversion < 0x0011) ? sizeof(UINT8) : sizeof(UINT16);
 
 	if (ziptic & GZT_EXTRA)
 	{ // But wait, there's more!
@@ -640,7 +640,7 @@ void G_ConsGhostTic(void)
 		// momx, momy and momz
 		demo_p += (demoversion < 0x000e) ? sizeof(INT16) * 3 : sizeof(fixed_t) * 3;
 		if (followtic & FZT_SKIN)
-			demo_p++;
+			demo_p += (demoversion < 0x0011) ? sizeof(UINT8) : sizeof(UINT16);
 		demo_p += sizeof(UINT16);
 		demo_p++;
 		demo_p += (demoversion==0x000c) ? 1 : sizeof(UINT16);
