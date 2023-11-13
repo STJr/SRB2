@@ -1563,31 +1563,24 @@ boolean HWR_DrawModel(gl_vissprite_t *spr)
 
 			if (spr2frames)
 			{
-				boolean is_super = P_IsStateSprite2Super(&states[spr->mobj->state->nextstate]);
+				UINT16 next_spr2 = P_GetStateSprite2(&states[spr->mobj->state->nextstate]);
 
 				// Add/Remove SPR2F_SUPER based on certain conditions
 				if (spr->mobj->player)
 				{
 					if (spr->mobj->player->charflags & SF_NOSUPERSPRITES)
-						is_super = false;
+						next_spr2 &= ~SPR2F_SUPER;
 					else if (spr->mobj->player->powers[pw_super])
-						is_super = true;
+						next_spr2 |= SPR2F_SUPER;
 				}
 
-				if (is_super)
+				if (next_spr2 & SPR2F_SUPER)
 				{
 					if (spr->mobj->eflags & MFE_FORCENOSUPER)
-						is_super = false;
+						next_spr2 &= ~SPR2F_SUPER;
 				}
 				else if (spr->mobj->eflags & MFE_FORCESUPER)
-					is_super = true;
-
-				UINT16 next_spr2 = P_GetStateSprite2(&states[spr->mobj->state->nextstate]);
-
-				if (is_super)
 					next_spr2 |= SPR2F_SUPER;
-				else
-					next_spr2 &= ~SPR2F_SUPER;
 
 				if (HWR_CanInterpolateSprite2(spr2frames)
 					&& (spr->mobj->frame & FF_ANIMATE
