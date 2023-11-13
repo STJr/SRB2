@@ -1155,7 +1155,7 @@ typedef enum playersprite
 	SPR2_XTRA, // stuff that isn't in-map - "would this ever need an md2 or variable length animation?"
 
 	SPR2_FIRSTFREESLOT,
-	SPR2_LASTFREESLOT = 1024, // Do not make higher than SPR2F_MASK
+	SPR2_LASTFREESLOT = 1024, // Do not make higher than SPR2F_MASK (currently 0x3FF) plus one
 	NUMPLAYERSPRITES
 } playersprite_t;
 
