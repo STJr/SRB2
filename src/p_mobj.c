@@ -395,30 +395,24 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 			UINT16 frame = (mobj->frame & FF_FRAMEMASK)+1;
 			UINT8 numframes;
 			UINT16 spr2;
-			boolean is_super = P_IsStateSprite2Super(st);
 
 			if (skin)
 			{
-				// Add/Remove SPR2F_SUPER based on certain conditions
-				if (player->charflags & SF_NOSUPERSPRITES)
-					is_super = false;
-				else if (player->powers[pw_super])
-					is_super = true;
-
-				if (is_super)
-				{
-					if (mobj->eflags & MFE_FORCENOSUPER)
-						is_super = false;
-				}
-				else if (mobj->eflags & MFE_FORCESUPER)
-					is_super = true;
-
 				spr2 = P_GetStateSprite2(st);
 
-				if (is_super)
-					spr2 |= SPR2F_SUPER;
-				else
+				// Add/Remove SPR2F_SUPER based on certain conditions
+				if (player->charflags & SF_NOSUPERSPRITES)
 					spr2 &= ~SPR2F_SUPER;
+				else if (player->powers[pw_super])
+					spr2 |= SPR2F_SUPER;
+
+				if (spr2 & SPR2F_SUPER)
+				{
+					if (mobj->eflags & MFE_FORCENOSUPER)
+						spr2 &= ~SPR2F_SUPER;
+				}
+				else if (mobj->eflags & MFE_FORCESUPER)
+					spr2 |= SPR2F_SUPER;
 
 				// Get the sprite2 and frame number
 				spr2 = P_GetSkinSprite2(skin, spr2, mobj->player);
@@ -558,25 +552,19 @@ boolean P_SetMobjState(mobj_t *mobj, statenum_t state)
 			UINT16 frame = (mobj->frame & FF_FRAMEMASK)+1;
 			UINT8 numframes;
 			UINT16 spr2;
-			boolean is_super = P_IsStateSprite2Super(st);
 
 			if (skin)
 			{
-				// Add/Remove SPR2F_SUPER based on certain conditions
-				if (is_super)
-				{
-					if (mobj->eflags & MFE_FORCENOSUPER)
-						is_super = false;
-				}
-				else if (mobj->eflags & MFE_FORCESUPER)
-					is_super = true;
-
 				spr2 = P_GetStateSprite2(st);
 
-				if (is_super)
+				// Add/Remove SPR2F_SUPER based on certain conditions
+				if (spr2 & SPR2F_SUPER)
+				{
+					if (mobj->eflags & MFE_FORCENOSUPER)
+						spr2 &= ~SPR2F_SUPER;
+				}
+				else if (mobj->eflags & MFE_FORCESUPER)
 					spr2 |= SPR2F_SUPER;
-				else
-					spr2 &= ~SPR2F_SUPER;
 
 				// Get the sprite2 and frame number
 				spr2 = P_GetSkinSprite2(skin, spr2, NULL);

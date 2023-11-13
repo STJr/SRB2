@@ -1541,7 +1541,7 @@ boolean HWR_DrawModel(gl_vissprite_t *spr)
 #endif
 			if (!mod)
 				mod = 1;
-			frame = spr2frames->frames[frame%mod];
+			frame = spr2frames->frames[frame % mod];
 		}
 		else
 		{

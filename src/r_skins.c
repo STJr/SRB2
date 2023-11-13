@@ -46,8 +46,9 @@ UINT16 P_GetStateSprite2(state_t *state)
 		return state->sprite2;
 	else
 	{
-		boolean is_super = state->frame & FF_SPR2SUPER;
-		UINT16 frame = state->frame & (FF_FRAMEMASK | ~FF_SPR2SUPER);
+		UINT32 frame = state->frame & FF_FRAMEMASK;
+		boolean is_super = frame & FF_SPR2SUPER;
+		frame &= ~FF_SPR2SUPER;
 		if (is_super)
 			frame |= SPR2F_SUPER;
 		return frame;
@@ -588,10 +589,10 @@ static UINT16 W_CheckForPatchSkinMarkerInPwad(UINT16 wadid, UINT16 startlump)
 	return INT16_MAX; // not found
 }
 
-static void R_LoadSkinSprites(UINT16 wadnum, UINT16 *lump, UINT16 *lastlump, skin_t *skin, UINT8 start_spr2)
+static void R_LoadSkinSprites(UINT16 wadnum, UINT16 *lump, UINT16 *lastlump, skin_t *skin, UINT16 start_spr2)
 {
 	UINT16 newlastlump;
-	UINT8 sprite2;
+	UINT16 sprite2;
 
 	*lump += 1; // start after S_SKIN
 	*lastlump = W_CheckNumForNamePwad("S_END",wadnum,*lump); // stop at S_END
