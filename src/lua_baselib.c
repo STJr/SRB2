@@ -2909,6 +2909,9 @@ static int lib_rFrame2Char(lua_State *L)
 	return 2;
 }
 
+// R_SKINS
+////////////
+
 // R_SetPlayerSkin technically doesn't exist either, although it's basically just SetPlayerSkin and SetPlayerSkinByNum handled in one place for convenience
 static int lib_rSetPlayerSkin(lua_State *L)
 {
@@ -2968,6 +2971,36 @@ static int lib_rSkinUsable(lua_State *L)
 	}
 
 	lua_pushboolean(L, R_SkinUsable(j, i));
+	return 1;
+}
+
+static int lib_pGetStateSprite2(lua_State *L)
+{
+	int statenum = luaL_checkinteger(L, 1);
+	if (statenum < 0 || statenum >= NUMSTATES)
+		return luaL_error(L, "state %d out of range (0 - %d)", statenum, NUMSTATES-1);
+
+	lua_pushinteger(L, P_GetStateSprite2(&states[statenum]));
+	return 1;
+}
+
+static int lib_pGetSprite2StateFrame(lua_State *L)
+{
+	int statenum = luaL_checkinteger(L, 1);
+	if (statenum < 0 || statenum >= NUMSTATES)
+		return luaL_error(L, "state %d out of range (0 - %d)", statenum, NUMSTATES-1);
+
+	lua_pushinteger(L, P_GetSprite2StateFrame(&states[statenum]));
+	return 1;
+}
+
+static int lib_pIsStateSprite2Super(lua_State *L)
+{
+	int statenum = luaL_checkinteger(L, 1);
+	if (statenum < 0 || statenum >= NUMSTATES)
+		return luaL_error(L, "state %d out of range (0 - %d)", statenum, NUMSTATES-1);
+
+	lua_pushboolean(L, P_IsStateSprite2Super(&states[statenum]));
 	return 1;
 }
 
@@ -4370,7 +4403,12 @@ static luaL_Reg lib[] = {
 	{"R_Char2Frame",lib_rChar2Frame},
 	{"R_Frame2Char",lib_rFrame2Char},
 	{"R_SetPlayerSkin",lib_rSetPlayerSkin},
+
+	// r_skins
 	{"R_SkinUsable",lib_rSkinUsable},
+	{"P_GetStateSprite2",lib_pGetStateSprite2},
+	{"P_GetSprite2StateFrame",lib_pGetSprite2StateFrame},
+	{"P_IsStateSprite2Super",lib_pIsStateSprite2Super},
 
 	// r_data
 	{"R_CheckTextureNumForName",lib_rCheckTextureNumForName},
