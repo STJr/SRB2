@@ -11984,7 +11984,7 @@ static void M_HandleConnectIP(INT32 choice)
 
 static fixed_t    multi_tics;
 static UINT8      multi_frame;
-static UINT8      multi_spr2;
+static UINT16     multi_spr2;
 static boolean    multi_paused;
 static boolean    multi_invcolor;
 

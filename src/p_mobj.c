@@ -83,9 +83,15 @@ void P_AddCachedAction(mobj_t *mobj, INT32 statenum)
 //
 static void P_SetupStateAnimation(mobj_t *mobj, state_t *st)
 {
-	INT32 animlength = (mobj->sprite == SPR_PLAY && mobj->skin)
-		? (INT32)(((skin_t *)mobj->skin)->sprites[mobj->sprite2].numframes) - 1
-		: st->var1;
+	INT32 animlength;
+
+	if (mobj->sprite == SPR_PLAY && mobj->skin)
+	{
+		spritedef_t *spritedef = P_GetSkinSpritedef(mobj->skin, mobj->sprite2);
+		animlength = (INT32)(spritedef->numframes);
+	}
+	else
+		animlength = st->var1;
 
 	if (!(st->frame & FF_ANIMATE))
 		return;
@@ -136,8 +142,13 @@ FUNCINLINE static ATTRINLINE void P_CycleStateAnimation(mobj_t *mobj)
 	}
 
 	// sprite2 version of above
-	if (mobj->skin && (((++mobj->frame) & FF_FRAMEMASK) >= (UINT32)(((skin_t *)mobj->skin)->sprites[mobj->sprite2].numframes)))
-		mobj->frame &= ~FF_FRAMEMASK;
+	if (mobj->skin)
+	{
+		spritedef_t *spritedef = P_GetSkinSpritedef(mobj->skin, mobj->sprite2);
+		UINT32 anim_length = (UINT32)(spritedef->numframes);
+		if (((++mobj->frame) & FF_FRAMEMASK) >= anim_length)
+			mobj->frame &= ~FF_FRAMEMASK;
+	}
 }
 
 //

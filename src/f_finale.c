@@ -3527,7 +3527,7 @@ void F_TitleDemoTicker(void)
 // ==========
 
 static skin_t *contskins[2];
-static UINT8 cont_spr2[2][6];
+static UINT16 cont_spr2[2][6];
 static UINT8 *contcolormaps[2];
 
 void F_StartContinue(void)
