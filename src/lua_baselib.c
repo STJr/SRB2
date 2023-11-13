@@ -3004,6 +3004,16 @@ static int lib_pIsStateSprite2Super(lua_State *L)
 	return 1;
 }
 
+static int lib_pGetSuperSprite2(lua_State *L)
+{
+	int animID = luaL_checkinteger(L, 1) & SPR2F_MASK;
+	if (animID < 0 || animID >= NUMPLAYERSPRITES)
+		return luaL_error(L, "sprite2 %d out of range (0 - %d)", animID, NUMPLAYERSPRITES-1);
+
+	lua_pushinteger(L, animID | SPR2F_SUPER);
+	return 1;
+}
+
 // R_DATA
 ////////////
 
@@ -4409,6 +4419,7 @@ static luaL_Reg lib[] = {
 	{"P_GetStateSprite2",lib_pGetStateSprite2},
 	{"P_GetSprite2StateFrame",lib_pGetSprite2StateFrame},
 	{"P_IsStateSprite2Super",lib_pIsStateSprite2Super},
+	{"P_GetSuperSprite2",lib_pGetSuperSprite2},
 
 	// r_data
 	{"R_CheckTextureNumForName",lib_rCheckTextureNumForName},
