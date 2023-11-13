@@ -1167,7 +1167,7 @@ static boolean HWR_CanInterpolateSprite2(modelspr2frames_t *spr2frame)
 	return spr2frame->interpolate;
 }
 
-static modelspr2frames_t *HWR_GetModelSprite2(md2_t *md2, UINT16 spr2)
+static modelspr2frames_t *HWR_GetModelSprite2Frames(md2_t *md2, UINT16 spr2)
 {
 	if (!md2 || !md2->model)
 		return NULL;
@@ -1179,12 +1179,66 @@ static modelspr2frames_t *HWR_GetModelSprite2(md2_t *md2, UINT16 spr2)
 	if (spr2 >= free_spr2)
 		return NULL;
 
-	if (is_super && md2->model->superspr2frames)
-		return &md2->model->superspr2frames[spr2];
-	else if (md2->model->spr2frames)
+	if (is_super)
+	{
+		modelspr2frames_t *frames = md2->model->superspr2frames;
+		if (frames && md2->model->superspr2frames[spr2].numframes)
+			return &md2->model->superspr2frames[spr2];
+	}
+
+	if (md2->model->spr2frames)
 		return &md2->model->spr2frames[spr2];
 
 	return NULL;
+}
+
+static modelspr2frames_t *HWR_GetModelSprite2(md2_t *md2, skin_t *skin, UINT16 spr2, player_t *player)
+{
+	UINT16 super = 0;
+	UINT8 i = 0;
+
+	if (!md2 || !md2->model || !skin)
+		return HWR_GetModelSprite2Frames(md2, 0);
+
+	while (!HWR_GetModelSprite2Frames(md2, spr2)
+		&& spr2 != SPR2_STND
+		&& ++i < 32) // recursion limiter
+	{
+		if (spr2 & SPR2F_SUPER)
+		{
+			super = SPR2F_SUPER;
+			spr2 &= ~SPR2F_SUPER;
+			continue;
+		}
+
+		switch(spr2)
+		{
+		// Normal special cases.
+		case SPR2_JUMP:
+			spr2 = ((player
+					? player->charflags
+					: skin->flags)
+					& SF_NOJUMPSPIN) ? SPR2_SPNG : SPR2_ROLL;
+			break;
+		case SPR2_TIRE:
+			spr2 = ((player
+					? player->charability
+					: skin->ability)
+					== CA_SWIM) ? SPR2_SWIM : SPR2_FLY;
+			break;
+		// Use the handy list, that's what it's there for!
+		default:
+			spr2 = spr2defaults[spr2];
+			break;
+		}
+
+		spr2 |= super;
+	}
+
+	if (i >= 32) // probably an infinite loop...
+		spr2 = 0;
+
+	return HWR_GetModelSprite2Frames(md2, spr2);
 }
 
 // Adjust texture coords of model to fit into a patch's max_s and max_t
@@ -1477,7 +1531,7 @@ boolean HWR_DrawModel(gl_vissprite_t *spr)
 
 		frame = (spr->mobj->frame & FF_FRAMEMASK);
 		if (spr->mobj->skin && spr->mobj->sprite == SPR_PLAY)
-			spr2frames = HWR_GetModelSprite2(md2, spr->mobj->sprite2);
+			spr2frames = HWR_GetModelSprite2(md2, spr->mobj->skin, spr->mobj->sprite2, spr->mobj->player);
 		if (spr2frames)
 		{
 			mod = spr2frames->numframes;
