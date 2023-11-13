@@ -411,21 +411,10 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 			{
 				spr2 = P_GetStateSprite2(st);
 
-				// Add/Remove SPR2F_SUPER based on certain conditions
-				if (player->charflags & SF_NOSUPERSPRITES)
-					spr2 &= ~SPR2F_SUPER;
-				else if (player->powers[pw_super])
-					spr2 |= SPR2F_SUPER;
+				// Add or remove SPR2F_SUPER based on certain conditions
+				spr2 = P_ApplySuperFlagToSprite2(spr2, mobj);
 
-				if (spr2 & SPR2F_SUPER)
-				{
-					if (mobj->eflags & MFE_FORCENOSUPER)
-						spr2 &= ~SPR2F_SUPER;
-				}
-				else if (mobj->eflags & MFE_FORCESUPER)
-					spr2 |= SPR2F_SUPER;
-
-				// Get the sprite2 and frame number
+				// Get the needed sprite2 and frame number
 				spr2 = P_GetSkinSprite2(skin, spr2, mobj->player);
 
 				spritedef_t *sprdef = P_GetSkinSpritedef(skin, spr2);
@@ -568,16 +557,10 @@ boolean P_SetMobjState(mobj_t *mobj, statenum_t state)
 			{
 				spr2 = P_GetStateSprite2(st);
 
-				// Add/Remove SPR2F_SUPER based on certain conditions
-				if (spr2 & SPR2F_SUPER)
-				{
-					if (mobj->eflags & MFE_FORCENOSUPER)
-						spr2 &= ~SPR2F_SUPER;
-				}
-				else if (mobj->eflags & MFE_FORCESUPER)
-					spr2 |= SPR2F_SUPER;
+				// Add or remove SPR2F_SUPER based on certain conditions
+				spr2 = P_ApplySuperFlagToSprite2(spr2, mobj);
 
-				// Get the sprite2 and frame number
+				// Get the needed sprite2 and frame number
 				spr2 = P_GetSkinSprite2(skin, spr2, NULL);
 
 				spritedef_t *sprdef = P_GetSkinSpritedef(skin, spr2);

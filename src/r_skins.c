@@ -76,6 +76,27 @@ boolean P_IsStateSprite2Super(state_t *state)
 	return false;
 }
 
+UINT16 P_ApplySuperFlagToSprite2(UINT16 spr2, mobj_t *mobj)
+{
+	if (mobj->player)
+	{
+		if (mobj->player->charflags & SF_NOSUPERSPRITES)
+			spr2 &= ~SPR2F_SUPER;
+		else if (mobj->player->powers[pw_super])
+			spr2 |= SPR2F_SUPER;
+	}
+
+	if (spr2 & SPR2F_SUPER)
+	{
+		if (mobj->eflags & MFE_FORCENOSUPER)
+			spr2 &= ~SPR2F_SUPER;
+	}
+	else if (mobj->eflags & MFE_FORCESUPER)
+		spr2 |= SPR2F_SUPER;
+
+	return spr2;
+}
+
 //
 // P_GetSkinSprite2
 // For non-super players, tries each sprite2's immediate predecessor until it finds one with a number of frames or ends up at standing.
