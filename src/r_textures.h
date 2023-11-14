@@ -18,6 +18,7 @@
 #include "r_state.h"
 #include "p_setup.h" // levelflats
 #include "r_data.h"
+#include "movie_decode.h"
 
 #ifdef __GNUG__
 #pragma interface
@@ -84,6 +85,7 @@ UINT8 *R_GenerateTexture(size_t texnum);
 UINT8 *R_GetFlatForTexture(size_t texnum);
 INT32 R_GetTextureNum(INT32 texnum);
 void R_CheckTextureCache(INT32 tex);
+void R_CheckMovieTextureCache(movie_t *movie, INT32 texnum);
 void R_ClearTextureNumCache(boolean btell);
 
 // Retrieve texture data.

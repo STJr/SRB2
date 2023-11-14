@@ -13,6 +13,7 @@
 #include "lua_libs.h"
 #include "movie_decode.h"
 #include "d_main.h"
+#include "i_video.h"
 
 ///////////////
 // FUNCTIONS //
@@ -23,7 +24,7 @@ static int lib_play(lua_State *L)
 	const char *name = luaL_checkstring(L, 1);
 	if (activemovie)
 		return luaL_error(L, "movie already playing");
-	activemovie = MovieDecode_Play(name);
+	activemovie = MovieDecode_Play(name, (rendermode == render_soft));
 	return 0;
 }
 

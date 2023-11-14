@@ -10,10 +10,12 @@
 /// \brief Movie decoding using FFmpeg
 
 #include "movie_decode.h"
+#include "byteptr.h"
 #include "doomtype.h"
 #include "libavutil/channel_layout.h"
 #include "libavutil/imgutils.h"
 #include "s_sound.h"
+#include "v_video.h"
 #include "w_wad.h"
 
 #if defined(__GNUC__) || defined(__clang__)
@@ -338,6 +340,7 @@ static AVCodecContext *InitialiseDecoding(AVStream *stream)
 static void InitialiseVideoBuffer(movie_t *movie)
 {
 	moviestream_t *stream = &movie->videostream;
+	AVCodecContext *context = stream->codeccontext;
 
 	stream->numplanes = 1;
 
@@ -357,11 +360,16 @@ static void InitialiseVideoBuffer(movie_t *movie)
 
 		frame->imagedatasize = av_image_alloc(
 			frame->imagedata, frame->imagelinesize,
-			stream->codeccontext->width, stream->codeccontext->height,
+			context->width, context->height,
 			AV_PIX_FMT_RGBA, 1
 		);
 		if (frame->imagedatasize < 0)
 			I_Error("FFmpeg: cannot allocate image");
+
+		INT32 size = context->width * (4 + Movie_GetBytesPerPatchColumn(movie));
+		frame->patchdata = malloc(size);
+		if (!frame->patchdata)
+			I_Error("FFmpeg: cannot allocate patch data");
 	}
 }
 
@@ -409,6 +417,7 @@ static void UninitialiseMovieStream(movie_t *movie, moviestream_t *stream)
 		{
 			movievideoframe_t *frame = DequeueBuffer(&stream->framepool);
 			av_freep(&frame->imagedata[0]);
+			free(frame->patchdata);
 		}
 		else if (stream == &movie->audiostream)
 		{
@@ -462,6 +471,57 @@ static boolean ReceiveFrame(movie_t *movie, moviestream_t *stream)
 		I_Error("FFmpeg: cannot receive frame");
 }
 
+static void ConvertRGBAToPatch(movie_t *movie, movievideoframe_t *frame)
+{
+	INT32 width = movie->frame->width;
+	INT32 height = movie->frame->height;
+	UINT8 *src = frame->imagedata[0];
+	UINT8 *dst = frame->patchdata;
+	UINT16 *lut = movie->colorlut.table;
+	INT32 stride = 4 * width;
+
+	// Write column offsets
+	INT32 bytespercolumn = Movie_GetBytesPerPatchColumn(movie);
+	for (INT32 x = 0; x < width; x++)
+		WRITEUINT32(dst, width * 4 + x * bytespercolumn + 3);
+
+	for (INT32 x = 0; x < width; x++)
+	{
+		INT32 y = 0;
+		UINT8 *srcptr = &src[4 * x];
+
+		// Write posts
+		while (y < height)
+		{
+			INT32 postend = min(y + 254, height);
+
+			// Header
+			WRITEUINT8(dst, y ? 254 : 0); // Top delta
+			WRITEUINT8(dst, postend - y); // Length
+			WRITEUINT8(dst, 0); // Unused
+
+			// Pixel data
+			while (y < postend)
+			{
+				UINT8 r = srcptr[0];
+				UINT8 g = srcptr[1];
+				UINT8 b = srcptr[2];
+				UINT8 i = lut[CLUTINDEX(r, g, b)];
+				WRITEUINT8(dst, i);
+
+				srcptr += stride;
+				y++;
+			}
+
+			// Unused trail byte
+			WRITEUINT8(dst, 0);
+		}
+
+		// Terminate column
+		WRITEUINT8(dst, 0xFF);
+	}
+}
+
 static void ParseVideoFrame(movie_t *movie)
 {
 	movievideoframe_t *frame = DequeueBufferIntoBuffer(&movie->videostream.framequeue, &movie->videostream.framepool);
@@ -481,6 +541,9 @@ static void ParseVideoFrame(movie_t *movie)
 		frame->imagedata,
 		frame->imagelinesize
 	);
+
+	if (movie->usepatches)
+		ConvertRGBAToPatch(movie, frame);
 }
 
 static void ParseAudioFrame(movie_t *movie)
@@ -682,7 +745,7 @@ static boolean ReadPacket(movie_t *movie)
 	return true;
 }
 
-movie_t *MovieDecode_Play(const char *name)
+movie_t *MovieDecode_Play(const char *name, boolean usepatches)
 {
 	movie_t *movie;
 
@@ -737,9 +800,12 @@ movie_t *MovieDecode_Play(const char *name)
 	if (swr_init(movie->resamplingcontext))
 		I_Error("FFmpeg: cannot initialise resampling context");
 
+	InitColorLUT(&movie->colorlut, pMasterPalette, true);
+
 	movie->lastvideoframeusedid = 0;
 	movie->position = 0;
 	movie->audioposition = 0;
+	movie->usepatches = usepatches;
 
 	I_spawn_thread("decode-movie", (I_thread_fn)DecoderThread, movie);
 
@@ -851,12 +917,19 @@ UINT8 *MovieDecode_GetImage(movie_t *movie)
 	if (frame && movie->lastvideoframeusedid != frame->id)
 	{
 		movie->lastvideoframeusedid = frame->id;
-		return frame->imagedata[0];
+		return movie->usepatches ? frame->patchdata : frame->imagedata[0];
 	}
 	else
 	{
 		return NULL;
 	}
+}
+
+INT32 Movie_GetBytesPerPatchColumn(movie_t *movie)
+{
+	INT32 height = movie->videostream.codeccontext->height;
+	INT32 numpostspercolumn = (height + 253) / 254;
+	return height + numpostspercolumn * 4 + 1;
 }
 
 void MovieDecode_CopyAudioSamples(movie_t *movie, void *mem, size_t size)

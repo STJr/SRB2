@@ -19,6 +19,7 @@
 #include "libavutil/frame.h"
 #include "libswscale/swscale.h"
 #include "libswresample/swresample.h"
+#include "v_video.h"
 
 typedef struct
 {
@@ -28,6 +29,8 @@ typedef struct
 	INT32 imagedatasize;
 	UINT8 *imagedata[4];
 	INT32 imagelinesize[4];
+
+	UINT8 *patchdata;
 } movievideoframe_t;
 
 typedef struct
@@ -61,6 +64,8 @@ typedef struct
 typedef struct
 {
 	UINT64 lastvideoframeusedid;
+	colorlookup_t colorlut;
+	boolean usepatches;
 
 	AVFormatContext *formatcontext;
 	AVFrame *frame;
@@ -87,13 +92,14 @@ typedef struct
 	I_mutex condmutex;
 } movie_t;
 
-movie_t *MovieDecode_Play(const char *name);
+movie_t *MovieDecode_Play(const char *name, boolean usepatches);
 void MovieDecode_Stop(movie_t **movieptr);
 void MovieDecode_Seek(movie_t *movie, tic_t tic);
 void MovieDecode_Update(movie_t *movie);
 tic_t MovieDecode_GetDuration(movie_t *movie);
 void MovieDecode_GetDimensions(movie_t *movie, INT32 *width, INT32 *height);
 UINT8 *MovieDecode_GetImage(movie_t *movie);
+INT32 Movie_GetBytesPerPatchColumn(movie_t *movie);
 void MovieDecode_CopyAudioSamples(movie_t *movie, void *mem, size_t size);
 
 #endif
