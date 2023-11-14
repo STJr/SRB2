@@ -366,7 +366,7 @@ static void InitialiseVideoBuffer(movie_t *movie)
 		if (frame->imagedatasize < 0)
 			I_Error("FFmpeg: cannot allocate image");
 
-		INT32 size = context->width * (4 + Movie_GetBytesPerPatchColumn(movie));
+		INT32 size = context->width * (4 + MovieDecode_GetBytesPerPatchColumn(movie));
 		frame->patchdata = malloc(size);
 		if (!frame->patchdata)
 			I_Error("FFmpeg: cannot allocate patch data");
@@ -481,7 +481,7 @@ static void ConvertRGBAToPatch(movie_t *movie, movievideoframe_t *frame)
 	INT32 stride = 4 * width;
 
 	// Write column offsets
-	INT32 bytespercolumn = Movie_GetBytesPerPatchColumn(movie);
+	INT32 bytespercolumn = MovieDecode_GetBytesPerPatchColumn(movie);
 	for (INT32 x = 0; x < width; x++)
 		WRITEUINT32(dst, width * 4 + x * bytespercolumn + 3);
 
@@ -917,7 +917,7 @@ UINT8 *MovieDecode_GetImage(movie_t *movie)
 	}
 }
 
-INT32 Movie_GetBytesPerPatchColumn(movie_t *movie)
+INT32 MovieDecode_GetBytesPerPatchColumn(movie_t *movie)
 {
 	INT32 height = movie->videostream.codeccontext->height;
 	INT32 numpostspercolumn = (height + 253) / 254;

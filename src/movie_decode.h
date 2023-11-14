@@ -99,7 +99,7 @@ void MovieDecode_Update(movie_t *movie);
 tic_t MovieDecode_GetDuration(movie_t *movie);
 void MovieDecode_GetDimensions(movie_t *movie, INT32 *width, INT32 *height);
 UINT8 *MovieDecode_GetImage(movie_t *movie);
-INT32 Movie_GetBytesPerPatchColumn(movie_t *movie);
+INT32 MovieDecode_GetBytesPerPatchColumn(movie_t *movie);
 void MovieDecode_CopyAudioSamples(movie_t *movie, void *mem, size_t size);
 
 #endif
