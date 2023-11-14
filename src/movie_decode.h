@@ -21,16 +21,21 @@
 #include "libswresample/swresample.h"
 #include "v_video.h"
 
+typedef struct {
+	INT32 datasize;
+	UINT8 *data[4];
+	INT32 linesize[4];
+} avimage_t;
+
 typedef struct
 {
 	UINT64 id;
 	INT64 pts;
 
-	INT32 imagedatasize;
-	UINT8 *imagedata[4];
-	INT32 imagelinesize[4];
-
-	UINT8 *patchdata;
+	union {
+		avimage_t rgba;
+		UINT8 *patch;
+	} image;
 } movievideoframe_t;
 
 typedef struct

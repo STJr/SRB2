@@ -358,17 +358,18 @@ static void InitialiseVideoBuffer(movie_t *movie)
 	{
 		movievideoframe_t *frame = EnqueueBuffer(&stream->framepool);
 
-		frame->imagedatasize = av_image_alloc(
-			frame->imagedata, frame->imagelinesize,
+		avimage_t *image = &frame->image.rgba;
+		image->datasize = av_image_alloc(
+			image->data, image->linesize,
 			context->width, context->height,
 			AV_PIX_FMT_RGBA, 1
 		);
-		if (frame->imagedatasize < 0)
+		if (image->datasize < 0)
 			I_Error("FFmpeg: cannot allocate image");
 
 		INT32 size = context->width * (4 + MovieDecode_GetBytesPerPatchColumn(movie));
-		frame->patchdata = malloc(size);
-		if (!frame->patchdata)
+		frame->image.patch = malloc(size);
+		if (!frame->image.patch)
 			I_Error("FFmpeg: cannot allocate patch data");
 	}
 }
@@ -416,8 +417,8 @@ static void UninitialiseMovieStream(movie_t *movie, moviestream_t *stream)
 		if (stream == &movie->videostream)
 		{
 			movievideoframe_t *frame = DequeueBuffer(&stream->framepool);
-			av_freep(&frame->imagedata[0]);
-			free(frame->patchdata);
+			av_freep(&frame->image.rgba.data[0]);
+			free(frame->image.patch);
 		}
 		else if (stream == &movie->audiostream)
 		{
@@ -475,8 +476,8 @@ static void ConvertRGBAToPatch(movie_t *movie, movievideoframe_t *frame)
 {
 	INT32 width = movie->frame->width;
 	INT32 height = movie->frame->height;
-	UINT8 * restrict src = frame->imagedata[0];
-	UINT8 * restrict dst = frame->patchdata;
+	UINT8 * restrict src = frame->image.rgba.data[0];
+	UINT8 * restrict dst = frame->image.patch;
 	UINT16 *lut = movie->colorlut.table;
 	INT32 stride = 4 * width;
 
@@ -538,8 +539,8 @@ static void ParseVideoFrame(movie_t *movie)
 		movie->frame->linesize,
 		0,
 		movie->frame->height,
-		frame->imagedata,
-		frame->imagelinesize
+		frame->image.rgba.data,
+		frame->image.rgba.linesize
 	);
 
 	if (movie->usepatches)
@@ -909,7 +910,7 @@ UINT8 *MovieDecode_GetImage(movie_t *movie)
 	if (frame && movie->lastvideoframeusedid != frame->id)
 	{
 		movie->lastvideoframeusedid = frame->id;
-		return movie->usepatches ? frame->patchdata : frame->imagedata[0];
+		return movie->usepatches ? frame->image.patch : frame->image.rgba.data[0];
 	}
 	else
 	{
