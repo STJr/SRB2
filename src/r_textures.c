@@ -673,6 +673,7 @@ void R_CheckMovieTextureCache(movie_t *movie, INT32 texnum)
 	memcpy(block, image, blocksize);
 }
 
+// Note that this returns the column's first pixel, not the first post
 column_t *R_GetColumn(fixed_t tex, INT32 col)
 {
 	INT32 width = texturewidth[tex];
