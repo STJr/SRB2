@@ -1031,6 +1031,20 @@ static int lib_pRailThinker(lua_State *L)
 	return 1;
 }
 
+static int lib_pCheckSkyHit(lua_State *L)
+{
+	mobj_t *mobj = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
+	line_t *line = *((line_t **)luaL_checkudata(L, 2, META_LINE));
+	//HUDSAFE
+	INLEVEL
+	if (!mobj)
+		return LUA_ErrInvalid(L, "mobj_t");
+	if (!line)
+		return LUA_ErrInvalid(L, "line_t");
+	lua_pushboolean(L, P_CheckSkyHit(mobj, line));
+	return 1;
+}
+
 static int lib_pXYMovement(lua_State *L)
 {
 	mobj_t *actor = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
@@ -1425,6 +1439,18 @@ static int lib_pGivePlayerRings(lua_State *L)
 	return 0;
 }
 
+static int lib_pGivePlayerSpheres(lua_State *L)
+{
+	player_t *player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
+	INT32 num_spheres = (INT32)luaL_checkinteger(L, 2);
+	NOHUD
+	INLEVEL
+	if (!player)
+		return LUA_ErrInvalid(L, "player_t");
+	P_GivePlayerSpheres(player, num_spheres);
+	return 0;
+}
+
 static int lib_pGivePlayerLives(lua_State *L)
 {
 	player_t *player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
@@ -1680,6 +1706,17 @@ static int lib_pDoJump(lua_State *L)
 	return 0;
 }
 
+static int lib_pDoSpinDashDust(lua_State *L)
+{
+	player_t *player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
+	NOHUD
+	INLEVEL
+	if (!player)
+		return LUA_ErrInvalid(L, "player_t");
+	P_DoSpinDashDust(player);
+	return 0;
+}
+
 static int lib_pSpawnThokMobj(lua_State *L)
 {
 	player_t *player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
@@ -1727,6 +1764,48 @@ static int lib_pSwitchShield(lua_State *L)
 	if (!player)
 		return LUA_ErrInvalid(L, "player_t");
 	P_SwitchShield(player, shield);
+	return 0;
+}
+
+static int lib_pDoTailsOverlay(lua_State *L)
+{
+	player_t *player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
+	mobj_t *tails = *((mobj_t **)luaL_checkudata(L, 2, META_MOBJ));
+	NOHUD
+	INLEVEL
+	if (!player)
+		return LUA_ErrInvalid(L, "player_t");
+	if (!tails)
+		return LUA_ErrInvalid(L, "mobj_t");
+	P_DoTailsOverlay(player, tails);
+	return 0;
+}
+
+static int lib_pDoMetalJetFume(lua_State *L)
+{
+	player_t *player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
+	mobj_t *fume = *((mobj_t **)luaL_checkudata(L, 2, META_MOBJ));
+	NOHUD
+	INLEVEL
+	if (!player)
+		return LUA_ErrInvalid(L, "player_t");
+	if (!fume)
+		return LUA_ErrInvalid(L, "mobj_t");
+	P_DoMetalJetFume(player, fume);
+	return 0;
+}
+
+static int lib_pDoFollowMobj(lua_State *L)
+{
+	player_t *player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
+	mobj_t *followmobj = *((mobj_t **)luaL_checkudata(L, 2, META_MOBJ));
+	NOHUD
+	INLEVEL
+	if (!player)
+		return LUA_ErrInvalid(L, "player_t");
+	if (!followmobj)
+		return LUA_ErrInvalid(L, "mobj_t");
+	P_DoFollowMobj(player, followmobj);
 	return 0;
 }
 
@@ -1801,6 +1880,7 @@ static int lib_pMove(lua_State *L)
 	return 2;
 }
 
+// TODO: 2.3: Delete
 static int lib_pTeleportMove(lua_State *L)
 {
 	mobj_t *ptmthing = tmthing;
@@ -2211,6 +2291,21 @@ static int lib_pDoMatchSuper(lua_State *L)
 	return 0;
 }
 
+static int lib_pTouchSpecialThing(lua_State *L)
+{
+	mobj_t *special = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
+	mobj_t *toucher = *((mobj_t **)luaL_checkudata(L, 2, META_MOBJ));
+	boolean heightcheck = lua_optboolean(L, 3);
+	NOHUD
+	INLEVEL
+	if (!special || !toucher)
+		return LUA_ErrInvalid(L, "mobj_t");
+	if (!toucher->player)
+		return luaL_error(L, "P_TouchSpecialThing requires a valid toucher.player.");
+	P_TouchSpecialThing(special, toucher, heightcheck);
+	return 0;
+}
+
 // P_SPEC
 ////////////
 
@@ -2313,6 +2408,7 @@ static int lib_pMobjTouchingSectorSpecial(lua_State *L)
 	return 1;
 }
 
+// TODO: 2.3: Delete
 static int lib_pThingOnSpecial3DFloor(lua_State *L)
 {
 	mobj_t *mo = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
@@ -3617,6 +3713,7 @@ static int lib_gAddPlayer(lua_State *L)
 
 	newplayer->jointime = 0;
 	newplayer->quittime = 0;
+	newplayer->lastinputtime = 0;
 
 	// Read the skin argument (defaults to Sonic)
 	if (!lua_isnoneornil(L, 1))
@@ -4126,6 +4223,7 @@ static luaL_Reg lib[] = {
 	{"P_CreateFloorSpriteSlope",lib_pCreateFloorSpriteSlope},
 	{"P_RemoveFloorSpriteSlope",lib_pRemoveFloorSpriteSlope},
 	{"P_RailThinker",lib_pRailThinker},
+	{"P_CheckSkyHit",lib_pCheckSkyHit},
 	{"P_XYMovement",lib_pXYMovement},
 	{"P_RingXYMovement",lib_pRingXYMovement},
 	{"P_SceneryXYMovement",lib_pSceneryXYMovement},
@@ -4158,6 +4256,7 @@ static luaL_Reg lib[] = {
 	{"P_SpawnShieldOrb",lib_pSpawnShieldOrb},
 	{"P_SpawnGhostMobj",lib_pSpawnGhostMobj},
 	{"P_GivePlayerRings",lib_pGivePlayerRings},
+	{"P_GivePlayerSpheres",lib_pGivePlayerSpheres},
 	{"P_GivePlayerLives",lib_pGivePlayerLives},
 	{"P_GiveCoopLives",lib_pGiveCoopLives},
 	{"P_ResetScore",lib_pResetScore},
@@ -4179,10 +4278,14 @@ static luaL_Reg lib[] = {
 	{"P_HomingAttack",lib_pHomingAttack},
 	{"P_SuperReady",lib_pSuperReady},
 	{"P_DoJump",lib_pDoJump},
+	{"P_DoSpinDashDust",lib_pDoSpinDashDust},
 	{"P_SpawnThokMobj",lib_pSpawnThokMobj},
 	{"P_SpawnSpinMobj",lib_pSpawnSpinMobj},
 	{"P_Telekinesis",lib_pTelekinesis},
 	{"P_SwitchShield",lib_pSwitchShield},
+	{"P_DoTailsOverlay",lib_pDoTailsOverlay},
+	{"P_DoMetalJetFume",lib_pDoMetalJetFume},
+	{"P_DoFollowMobj",lib_pDoFollowMobj},
 	{"P_PlayerCanEnterSpinGaps",lib_pPlayerCanEnterSpinGaps},
 	{"P_PlayerShouldUseSpinHeight",lib_pPlayerShouldUseSpinHeight},
 
@@ -4201,6 +4304,7 @@ static luaL_Reg lib[] = {
 	{"P_FloorzAtPos",lib_pFloorzAtPos},
 	{"P_CeilingzAtPos",lib_pCeilingzAtPos},
 	{"P_DoSpring",lib_pDoSpring},
+	{"P_TouchSpecialThing",lib_pTouchSpecialThing},
 	{"P_TryCameraMove", lib_pTryCameraMove},
 	{"P_TeleportCameraMove", lib_pTeleportCameraMove},
 
@@ -4350,8 +4454,7 @@ int LUA_BaseLib(lua_State *L)
 	// Set metatable for string
 	lua_pushliteral(L, "");  // dummy string
 	lua_getmetatable(L, -1);  // get string metatable
-	lua_pushcfunction(L,lib_concat); // push concatination function
-	lua_setfield(L,-2,"__add"); // ... store it as mathematical addition
+	LUA_SetCFunctionField(L, "__add", lib_concat);
 	lua_pop(L, 2); // pop metatable and dummy string
 
 	lua_newtable(L);

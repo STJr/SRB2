@@ -1396,51 +1396,15 @@ int LUA_HudLib(lua_State *L)
 	luaL_register(L, NULL, lib_draw);
 	lib_draw_ref = luaL_ref(L, LUA_REGISTRYINDEX);
 
-	luaL_newmetatable(L, META_HUDINFO);
-		lua_pushcfunction(L, hudinfo_get);
-		lua_setfield(L, -2, "__index");
-
-		lua_pushcfunction(L, hudinfo_set);
-		lua_setfield(L, -2, "__newindex");
-
-		lua_pushcfunction(L, hudinfo_num);
-		lua_setfield(L, -2, "__len");
-	lua_pop(L,1);
-
-	lua_newuserdata(L, 0);
-		lua_createtable(L, 0, 2);
-			lua_pushcfunction(L, lib_getHudInfo);
-			lua_setfield(L, -2, "__index");
-
-			lua_pushcfunction(L, lib_hudinfolen);
-			lua_setfield(L, -2, "__len");
-		lua_setmetatable(L, -2);
-	lua_setglobal(L, "hudinfo");
-
-	luaL_newmetatable(L, META_COLORMAP);
-		lua_pushcfunction(L, colormap_get);
-		lua_setfield(L, -2, "__index");
-	lua_pop(L,1);
-
-	luaL_newmetatable(L, META_PATCH);
-		lua_pushcfunction(L, patch_get);
-		lua_setfield(L, -2, "__index");
-
-		lua_pushcfunction(L, patch_set);
-		lua_setfield(L, -2, "__newindex");
-	lua_pop(L,1);
+	LUA_RegisterUserdataMetatable(L, META_HUDINFO, hudinfo_get, hudinfo_set, hudinfo_num);
+	LUA_RegisterUserdataMetatable(L, META_COLORMAP, colormap_get, NULL, NULL);
+	LUA_RegisterUserdataMetatable(L, META_PATCH, patch_get, patch_set, NULL);
+	LUA_RegisterUserdataMetatable(L, META_CAMERA, camera_get, camera_set, NULL);
 
 	patch_fields_ref = Lua_CreateFieldTable(L, patch_opt);
-
-	luaL_newmetatable(L, META_CAMERA);
-		lua_pushcfunction(L, camera_get);
-		lua_setfield(L, -2, "__index");
-
-		lua_pushcfunction(L, camera_set);
-		lua_setfield(L, -2, "__newindex");
-	lua_pop(L,1);
-
 	camera_fields_ref = Lua_CreateFieldTable(L, camera_opt);
+
+	LUA_RegisterGlobalUserdata(L, "hudinfo", lib_getHudInfo, NULL, lib_hudinfolen);
 
 	luaL_register(L, "hud", lib_hud);
 	return 0;
