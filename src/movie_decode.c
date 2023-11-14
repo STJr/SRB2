@@ -475,8 +475,8 @@ static void ConvertRGBAToPatch(movie_t *movie, movievideoframe_t *frame)
 {
 	INT32 width = movie->frame->width;
 	INT32 height = movie->frame->height;
-	UINT8 *src = frame->imagedata[0];
-	UINT8 *dst = frame->patchdata;
+	UINT8 * restrict src = frame->imagedata[0];
+	UINT8 * restrict dst = frame->patchdata;
 	UINT16 *lut = movie->colorlut.table;
 	INT32 stride = 4 * width;
 
