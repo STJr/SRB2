@@ -867,26 +867,18 @@ void MovieDecode_Seek(movie_t *movie, tic_t tic)
 
 void MovieDecode_Update(movie_t *movie)
 {
-	boolean flushing;
-
 	I_lock_mutex(&movie->mutex);
 	{
-		flushing = movie->flushing;
-
 		while (movie->packetpool.size > 0 && ReadPacket(movie))
 			;
-	}
-	I_unlock_mutex(movie->mutex);
 
-	if (!flushing)
-	{
-		I_lock_mutex(&movie->mutex);
+		if (!movie->flushing)
 		{
 			PollFrameQueue(movie, &movie->videostream);
 			PollFrameQueue(movie, &movie->audiostream);
 		}
-		I_unlock_mutex(movie->mutex);
 	}
+	I_unlock_mutex(movie->mutex);
 
 	UpdateSeeking(movie);
 
