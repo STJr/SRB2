@@ -281,6 +281,19 @@ static INT64 SeekStream(void *owner, int64_t offset, int whence)
 	return 0;
 }
 
+static void AllocateAVImage(movie_t *movie, avimage_t *image)
+{
+	AVCodecContext *context = movie->videostream.codeccontext;
+
+	image->datasize = av_image_alloc(
+		image->data, image->linesize,
+		context->width, context->height,
+		AV_PIX_FMT_RGBA, 1
+	);
+	if (image->datasize < 0)
+		I_Error("FFmpeg: cannot allocate image");
+}
+
 static void InitialiseDemuxing(movie_t *movie)
 {
 	movie->formatcontext = avformat_alloc_context();
@@ -358,20 +371,21 @@ static void InitialiseVideoBuffer(movie_t *movie)
 	{
 		movievideoframe_t *frame = EnqueueBuffer(&stream->framepool);
 
-		avimage_t *image = &frame->image.rgba;
-		image->datasize = av_image_alloc(
-			image->data, image->linesize,
-			context->width, context->height,
-			AV_PIX_FMT_RGBA, 1
-		);
-		if (image->datasize < 0)
-			I_Error("FFmpeg: cannot allocate image");
-
-		INT32 size = context->width * (4 + MovieDecode_GetBytesPerPatchColumn(movie));
-		frame->image.patch = malloc(size);
-		if (!frame->image.patch)
-			I_Error("FFmpeg: cannot allocate patch data");
+		if (movie->usepatches)
+		{
+			INT32 size = context->width * (4 + MovieDecode_GetBytesPerPatchColumn(movie));
+			frame->image.patch = malloc(size);
+			if (!frame->image.patch)
+				I_Error("FFmpeg: cannot allocate patch data");
+		}
+		else
+		{
+			AllocateAVImage(movie, &frame->image.rgba);
+		}
 	}
+
+	if (movie->usepatches)
+		AllocateAVImage(movie, &movie->tmpimage);
 }
 
 static void InitialiseAudioBuffer(movie_t *movie)
@@ -417,8 +431,11 @@ static void UninitialiseMovieStream(movie_t *movie, moviestream_t *stream)
 		if (stream == &movie->videostream)
 		{
 			movievideoframe_t *frame = DequeueBuffer(&stream->framepool);
-			av_freep(&frame->image.rgba.data[0]);
-			free(frame->image.patch);
+
+			if (movie->usepatches)
+				free(frame->image.patch);
+			else
+				av_freep(&frame->image.rgba.data[0]);
 		}
 		else if (stream == &movie->audiostream)
 		{
@@ -430,6 +447,9 @@ static void UninitialiseMovieStream(movie_t *movie, moviestream_t *stream)
 	UninitialiseBuffer(&stream->buffer);
 	UninitialiseBuffer(&stream->framepool);
 	UninitialiseBuffer(&stream->framequeue);
+
+	if (stream == &movie->videostream && movie->usepatches)
+		av_freep(movie->tmpimage.data[0]);
 
 	avcodec_free_context(&stream->codeccontext);
 }
@@ -472,12 +492,10 @@ static boolean ReceiveFrame(movie_t *movie, moviestream_t *stream)
 		I_Error("FFmpeg: cannot receive frame");
 }
 
-static void ConvertRGBAToPatch(movie_t *movie, movievideoframe_t *frame)
+static void ConvertRGBAToPatch(movie_t *movie, UINT8 * restrict src, UINT8 * restrict dst)
 {
 	INT32 width = movie->frame->width;
 	INT32 height = movie->frame->height;
-	UINT8 * restrict src = frame->image.rgba.data[0];
-	UINT8 * restrict dst = frame->image.patch;
 	UINT16 *lut = movie->colorlut.table;
 	INT32 stride = 4 * width;
 
@@ -533,18 +551,19 @@ static void ParseVideoFrame(movie_t *movie)
 
 	frame->pts = movie->frame->pts;
 
+	avimage_t *image = movie->usepatches ? &movie->tmpimage : &frame->image.rgba;
 	sws_scale(
 		movie->scalingcontext,
 		(UINT8 const * const *)movie->frame->data,
 		movie->frame->linesize,
 		0,
 		movie->frame->height,
-		frame->image.rgba.data,
-		frame->image.rgba.linesize
+		image->data,
+		image->linesize
 	);
 
 	if (movie->usepatches)
-		ConvertRGBAToPatch(movie, frame);
+		ConvertRGBAToPatch(movie, movie->tmpimage.data[0], frame->image.patch);
 }
 
 static void ParseAudioFrame(movie_t *movie)
@@ -754,6 +773,11 @@ movie_t *MovieDecode_Play(const char *name, boolean usepatches)
 	if (!movie)
 		I_Error("FFmpeg: cannot allocate movie object");
 
+	movie->lastvideoframeusedid = 0;
+	movie->position = 0;
+	movie->audioposition = 0;
+	movie->usepatches = usepatches;
+
 	CacheMovieLump(movie, name);
 	InitialiseDemuxing(movie);
 	movie->videostream.codeccontext = InitialiseDecoding(movie->videostream.stream);
@@ -802,11 +826,6 @@ movie_t *MovieDecode_Play(const char *name, boolean usepatches)
 		I_Error("FFmpeg: cannot initialise resampling context");
 
 	InitColorLUT(&movie->colorlut, pMasterPalette, true);
-
-	movie->lastvideoframeusedid = 0;
-	movie->position = 0;
-	movie->audioposition = 0;
-	movie->usepatches = usepatches;
 
 	I_spawn_thread("decode-movie", (I_thread_fn)DecoderThread, movie);
 

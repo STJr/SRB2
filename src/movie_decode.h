@@ -71,6 +71,7 @@ typedef struct
 	UINT64 lastvideoframeusedid;
 	colorlookup_t colorlut;
 	boolean usepatches;
+	avimage_t tmpimage;
 
 	AVFormatContext *formatcontext;
 	AVFrame *frame;
