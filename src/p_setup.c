@@ -108,7 +108,7 @@ vertex_t *vertexes;
 seg_t *segs;
 sector_t *sectors;
 subsector_t *subsectors;
-node_t *nodes;
+bspnode_t *nodes;
 line_t *lines;
 side_t *sides;
 mapthing_t *mapthings;
@@ -3367,7 +3367,7 @@ static void P_LoadNodes(UINT8 *data)
 {
 	UINT8 j, k;
 	mapnode_t *mn = (mapnode_t*)data;
-	node_t *no = nodes;
+	bspnode_t *no = nodes;
 	size_t i;
 
 	for (i = 0; i < numnodes; i++, no++, mn++)
@@ -3743,7 +3743,7 @@ static UINT16 ShrinkNodeID(UINT32 x) {
 
 static void P_LoadExtendedNodes(UINT8 **data, nodetype_t nodetype)
 {
-	node_t *mn;
+	bspnode_t *mn;
 	size_t i, j, k;
 	boolean xgl3 = (nodetype == NT_XGL3);
 

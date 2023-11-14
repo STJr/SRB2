@@ -783,7 +783,7 @@ typedef struct
 
 	// If NF_SUBSECTOR its a subsector.
 	UINT16 children[2];
-} node_t;
+} bspnode_t;
 
 #if defined(_MSC_VER)
 #pragma pack(1)

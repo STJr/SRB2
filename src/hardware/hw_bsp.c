@@ -435,7 +435,7 @@ static poly_t *CutOutSubsecPoly(seg_t *lseg, INT32 count, poly_t *poly)
 		p1 = {0, 0, 0}, p2 = {0, 0, 0};
 	float fracs = 0.0f;
 
-	fdivline_t cutseg; // x, y, dx, dy as start of node_t struct
+	fdivline_t cutseg; // x, y, dx, dy as start of bspnode_t struct
 
 	poly_t *temppoly;
 
@@ -566,7 +566,7 @@ static inline void HWR_SubsecPoly(INT32 num, poly_t *poly)
 
 // the bsp divline have not enouth presition
 // search for the segs source of this divline
-static inline void SearchDivline(node_t *bsp, fdivline_t *divline)
+static inline void SearchDivline(bspnode_t *bsp, fdivline_t *divline)
 {
 	divline->x = FIXED_TO_FLOAT(bsp->x);
 	divline->y = FIXED_TO_FLOAT(bsp->y);
@@ -607,7 +607,7 @@ static void loading_status(void)
 // poly : the convex polygon that encloses all child subsectors
 static void WalkBSPNode(INT32 bspnum, poly_t *poly, UINT16 *leafnode, fixed_t *bbox)
 {
-	node_t *bsp;
+	bspnode_t *bsp;
 	poly_t *backpoly, *frontpoly;
 	fdivline_t fdivline;
 	polyvertex_t *pt;

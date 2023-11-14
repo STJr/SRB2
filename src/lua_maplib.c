@@ -1612,7 +1612,7 @@ static int seg_num(lua_State *L)
 
 static int node_get(lua_State *L)
 {
-	node_t *node = *((node_t **)luaL_checkudata(L, 1, META_NODE));
+	bspnode_t *node = *((bspnode_t **)luaL_checkudata(L, 1, META_NODE));
 	enum node_e field = Lua_optoption(L, 2, node_valid, node_fields_ref);
 
 	if (!node)
@@ -1653,7 +1653,7 @@ static int node_get(lua_State *L)
 
 static int node_num(lua_State *L)
 {
-	node_t *node = *((node_t **)luaL_checkudata(L, 1, META_NODE));
+	bspnode_t *node = *((bspnode_t **)luaL_checkudata(L, 1, META_NODE));
 	lua_pushinteger(L, node-nodes);
 	return 1;
 }
@@ -2128,7 +2128,7 @@ static int lib_iterateNodes(lua_State *L)
 	lua_settop(L, 2);
 	lua_remove(L, 1); // state is unused.
 	if (!lua_isnil(L, 1))
-		i = (size_t)(*((node_t **)luaL_checkudata(L, 1, META_NODE)) - nodes)+1;
+		i = (size_t)(*((bspnode_t **)luaL_checkudata(L, 1, META_NODE)) - nodes)+1;
 	if (i < numsegs)
 	{
 		LUA_PushUserdata(L, &nodes[i], META_NODE);

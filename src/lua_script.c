@@ -1323,7 +1323,7 @@ static UINT8 ArchiveValue(save_t *save_p, int TABLESINDEX, int myindex)
 		}
 		case ARCH_NODE:
 		{
-			node_t *node = *((node_t **)lua_touserdata(gL, myindex));
+			bspnode_t *node = *((bspnode_t **)lua_touserdata(gL, myindex));
 			if (!node)
 				P_WriteUINT8(save_p, ARCH_NULL);
 			else {
