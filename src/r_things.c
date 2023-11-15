@@ -37,6 +37,8 @@
 #include "p_slopes.h"
 #include "netcode/d_netfil.h" // blargh. for nameonly().
 #include "m_cheat.h" // objectplace
+#include "d_main.h"
+#include "movie_decode.h"
 #ifdef HWRENDER
 #include "hardware/hw_md2.h"
 #include "hardware/hw_glob.h"
@@ -1020,7 +1022,8 @@ static void R_DrawVisSprite(vissprite_t *vis)
 {
 	column_t *column;
 	void (*localcolfunc)(column_t *, unsigned);
-	INT32 pwidth;
+	INT32 pwidth, pheight;
+	column_t *pcolumns;
 	fixed_t frac;
 	patch_t *patch = vis->patch;
 	fixed_t this_scale = vis->thingscale;
@@ -1030,6 +1033,22 @@ static void R_DrawVisSprite(vissprite_t *vis)
 
 	if (!patch)
 		return;
+
+	if (vis->mobj->sprite == moviespritenum)
+	{
+		R_CheckTextureCache(movietexturenum);
+
+		pwidth = textures[movietexturenum]->width;
+		pheight = textures[movietexturenum]->height;
+		// Point to the first post instead of pixels
+		pcolumns = texturecache[movietexturenum] - 3;
+	}
+	else
+	{
+		pwidth = patch->width;
+		pheight = patch->height;
+		pcolumns = patch->columns;
+	}
 
 	// Check for overflow
 	overflow_test = (INT64)centeryfrac - (((INT64)vis->texturemid*vis->scale)>>FRACBITS);
@@ -1046,7 +1065,7 @@ static void R_DrawVisSprite(vissprite_t *vis)
 	// TODO This check should not be necessary. But Papersprites near to the camera will sometimes create invalid values
 	// for the vissprite's startfrac. This happens because they are not depth culled like other sprites.
 	// Someone who is more familiar with papersprites pls check and try to fix <3
-	if (vis->startfrac < 0 || vis->startfrac > (patch->width << FRACBITS))
+	if (vis->startfrac < 0 || vis->startfrac > (pwidth << FRACBITS))
 	{
 		// never draw vissprites with startfrac out of patch range
 		return;
@@ -1131,15 +1150,13 @@ static void R_DrawVisSprite(vissprite_t *vis)
 		vis->x2 = vid.width-1;
 
 	localcolfunc = (vis->cut & SC_VFLIP) ? R_DrawFlippedMaskedColumn : R_DrawMaskedColumn;
-	lengthcol = patch->height;
+	lengthcol = pheight;
 
 	// Split drawing loops for paper and non-paper to reduce conditional checks per sprite
 	if (vis->scalestep)
 	{
 		fixed_t horzscale = FixedMul(vis->spritexscale, this_scale);
 		fixed_t scalestep = FixedMul(vis->scalestep, vis->spriteyscale);
-
-		pwidth = patch->width;
 
 		// Papersprite drawing loop
 		for (dc_x = vis->x1; dc_x <= vis->x2; dc_x++, spryscale += scalestep)
@@ -1156,35 +1173,27 @@ static void R_DrawVisSprite(vissprite_t *vis)
 			sprtopscreen = (centeryfrac - FixedMul(dc_texturemid, spryscale));
 			dc_iscale = (0xffffffffu / (unsigned)spryscale);
 
-			column = &patch->columns[texturecolumn];
+			column = &pcolumns[texturecolumn];
 
 			localcolfunc (column, lengthcol);
 		}
 	}
 	else if (vis->cut & SC_SHEAR)
 	{
-#ifdef RANGECHECK
-		pwidth = patch->width;
-#endif
-
 		// Vertically sheared sprite
 		for (dc_x = vis->x1; dc_x <= vis->x2; dc_x++, frac += vis->xiscale, dc_texturemid -= vis->shear.tan)
 		{
-			column = &patch->columns[frac>>FRACBITS];
+			column = &pcolumns[frac>>FRACBITS];
 			sprtopscreen = (centeryfrac - FixedMul(dc_texturemid, spryscale));
 			localcolfunc (column, lengthcol);
 		}
 	}
 	else
 	{
-#ifdef RANGECHECK
-		pwidth = patch->width;
-#endif
-
 		// Non-paper drawing loop
 		for (dc_x = vis->x1; dc_x <= vis->x2; dc_x++, frac += vis->xiscale, sprtopscreen += vis->shear.tan)
 		{
-			column = &patch->columns[frac>>FRACBITS];
+			column = &pcolumns[frac>>FRACBITS];
 			localcolfunc (column, lengthcol);
 		}
 	}
@@ -1752,6 +1761,7 @@ static void R_ProjectSprite(mobj_t *thing)
 	boolean shadowdraw, shadoweffects, shadowskew;
 	boolean splat = R_ThingIsFloorSprite(thing);
 	boolean papersprite = (R_ThingIsPaperSprite(thing) && !splat);
+	boolean movie = (thing->sprite == moviespritenum);
 	fixed_t paperoffset = 0, paperdistance = 0;
 	angle_t centerangle = 0;
 
@@ -1921,10 +1931,22 @@ static void R_ProjectSprite(mobj_t *thing)
 
 	I_Assert(lump < max_spritelumps);
 
-	spr_width = spritecachedinfo[lump].width;
-	spr_height = spritecachedinfo[lump].height;
-	spr_offset = spritecachedinfo[lump].offset;
-	spr_topoffset = spritecachedinfo[lump].topoffset;
+	if (movie)
+	{
+		R_CheckTextureCache(movietexturenum);
+
+		spr_width = textures[movietexturenum]->width * FRACUNIT;
+		spr_height = textures[movietexturenum]->height * FRACUNIT;
+		spr_offset = spr_width / 2;
+		spr_topoffset = spr_height;
+	}
+	else
+	{
+		spr_width = spritecachedinfo[lump].width;
+		spr_height = spritecachedinfo[lump].height;
+		spr_offset = spritecachedinfo[lump].offset;
+		spr_topoffset = spritecachedinfo[lump].topoffset;
+	}
 
 	//Fab: lumppat is the lump number of the patch to use, this is different
 	//     than lumpid for sprites-in-pwad : the graphics are patched
@@ -1933,7 +1955,7 @@ static void R_ProjectSprite(mobj_t *thing)
 #ifdef ROTSPRITE
 	spriterotangle = R_SpriteRotationAngle(&interp);
 
-	if (spriterotangle != 0
+	if (spriterotangle != 0 && !movie
 	&& !(splat && !(thing->renderflags & RF_NOSPLATROLLANGLE)))
 	{
 		if (papersprite && ang >= ANGLE_180)
