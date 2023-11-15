@@ -3380,7 +3380,11 @@ static boolean R_CheckSpriteVisible(vissprite_t *spr, INT32 x1, INT32 x2)
 
 	if (scalestep)
 	{
-		height = spr->patch->height;
+		if (spr->mobj->sprite == moviespritenum)
+			height = textures[movietexturenum]->height;
+		else
+			height = spr->patch->height;
+
 		yscale = spr->scale;
 		scalestep = FixedMul(scalestep, spr->spriteyscale);
 
