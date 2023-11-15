@@ -350,10 +350,34 @@ static AVCodecContext *InitialiseDecoding(AVStream *stream)
 	return codeccontext;
 }
 
+static void InitialiseImages(movie_t *movie)
+{
+	moviestream_t *stream = &movie->videostream;
+
+	for (INT32 i = 0; i < stream->framepool.capacity; i++)
+	{
+		movievideoframe_t *frame = EnqueueBuffer(&stream->framepool);
+
+		if (movie->usepatches)
+		{
+			INT32 size = stream->codeccontext->width * (4 + MovieDecode_GetBytesPerPatchColumn(movie));
+			frame->image.patch = malloc(size);
+			if (!frame->image.patch)
+				I_Error("FFmpeg: cannot allocate patch data");
+		}
+		else
+		{
+			AllocateAVImage(movie, &frame->image.rgba);
+		}
+	}
+
+	if (movie->usepatches)
+		AllocateAVImage(movie, &movie->tmpimage);
+}
+
 static void InitialiseVideoBuffer(movie_t *movie)
 {
 	moviestream_t *stream = &movie->videostream;
-	AVCodecContext *context = stream->codeccontext;
 
 	stream->numplanes = 1;
 
@@ -367,25 +391,7 @@ static void InitialiseVideoBuffer(movie_t *movie)
 	CloneBuffer(&stream->framequeue, &stream->buffer);
 	CloneBuffer(&stream->framepool, &stream->buffer);
 
-	for (INT32 i = 0; i < stream->framepool.capacity; i++)
-	{
-		movievideoframe_t *frame = EnqueueBuffer(&stream->framepool);
-
-		if (movie->usepatches)
-		{
-			INT32 size = context->width * (4 + MovieDecode_GetBytesPerPatchColumn(movie));
-			frame->image.patch = malloc(size);
-			if (!frame->image.patch)
-				I_Error("FFmpeg: cannot allocate patch data");
-		}
-		else
-		{
-			AllocateAVImage(movie, &frame->image.rgba);
-		}
-	}
-
-	if (movie->usepatches)
-		AllocateAVImage(movie, &movie->tmpimage);
+	InitialiseImages(movie);
 }
 
 static void InitialiseAudioBuffer(movie_t *movie)
@@ -419,28 +425,48 @@ static void InitialiseAudioBuffer(movie_t *movie)
 	}
 }
 
-static void UninitialiseMovieStream(movie_t *movie, moviestream_t *stream)
+static void FlushFrameBuffers(moviestream_t *stream)
 {
 	while (stream->buffer.size > 0)
 		DequeueBufferIntoBuffer(&stream->framepool, &stream->buffer);
 	while (stream->framequeue.size > 0)
 		DequeueBufferIntoBuffer(&stream->framepool, &stream->framequeue);
+}
+
+static void UninitialiseImages(movie_t *movie)
+{
+	moviestream_t *stream = &movie->videostream;
+
+	FlushFrameBuffers(stream);
 
 	while (stream->framepool.size > 0)
 	{
-		if (stream == &movie->videostream)
-		{
-			movievideoframe_t *frame = DequeueBuffer(&stream->framepool);
+		movievideoframe_t *frame = DequeueBuffer(&stream->framepool);
 
-			if (movie->usepatches)
-				free(frame->image.patch);
-			else
-				av_freep(&frame->image.rgba.data[0]);
-		}
-		else if (stream == &movie->audiostream)
+		if (movie->usepatches)
+			free(frame->image.patch);
+		else
+			av_freep(&frame->image.rgba.data[0]);
+	}
+
+	if (movie->usepatches)
+		av_freep(&movie->tmpimage.data[0]);
+}
+
+static void UninitialiseMovieStream(movie_t *movie, moviestream_t *stream)
+{
+	FlushFrameBuffers(stream);
+
+	if (stream == &movie->videostream)
+	{
+		UninitialiseImages(movie);
+	}
+	else if (stream == &movie->audiostream)
+	{
+		while (stream->framepool.size > 0)
 		{
-			movieaudioframe_t *frame = DequeueBuffer(&stream->framepool);
-			av_freep(&frame->samples[0]);
+				movieaudioframe_t *frame = DequeueBuffer(&stream->framepool);
+				av_freep(&frame->samples[0]);
 		}
 	}
 
@@ -448,10 +474,24 @@ static void UninitialiseMovieStream(movie_t *movie, moviestream_t *stream)
 	UninitialiseBuffer(&stream->framepool);
 	UninitialiseBuffer(&stream->framequeue);
 
-	if (stream == &movie->videostream && movie->usepatches)
-		av_freep(&movie->tmpimage.data[0]);
-
 	avcodec_free_context(&stream->codeccontext);
+}
+
+static void StopDecoderThread(movie_t *movie)
+{
+	I_lock_mutex(&movie->mutex);
+	movie->stopping = true;
+	I_unlock_mutex(movie->mutex);
+
+	I_wake_one_cond(&movie->cond);
+
+	boolean stopping;
+	do
+	{
+		I_lock_mutex(&movie->mutex);
+		stopping = movie->stopping;
+		I_unlock_mutex(movie->mutex);
+	} while (stopping);
 }
 
 static void SendPacket(movie_t *movie)
@@ -839,19 +879,7 @@ void MovieDecode_Stop(movie_t **movieptr)
 	if (!movie)
 		return;
 
-	I_lock_mutex(&movie->mutex);
-	movie->stopping = true;
-	I_unlock_mutex(movie->mutex);
-
-	I_wake_one_cond(&movie->cond);
-
-	boolean stopping;
-	do
-	{
-		I_lock_mutex(&movie->mutex);
-		stopping = movie->stopping;
-		I_unlock_mutex(movie->mutex);
-	} while (stopping);
+	StopDecoderThread(movie);
 
 	S_StopMusic();
 
