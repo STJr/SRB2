@@ -645,6 +645,13 @@ static void FlushStream(movie_t *movie, moviestream_t *stream)
 	}
 
 	avcodec_flush_buffers(stream->codeccontext);
+
+	I_lock_mutex(&movie->mutex);
+	{
+		while (stream->framequeue.size != 0)
+			DequeueBufferIntoBuffer(&stream->framepool, &stream->framequeue);
+	}
+	I_unlock_mutex(movie->mutex);
 }
 
 static void FlushDecoding(movie_t *movie)
@@ -761,10 +768,6 @@ static void UpdateSeeking(movie_t *movie)
 
 			while (movie->packetqueue.size != 0)
 				DequeueBufferIntoBuffer(&movie->packetpool, &movie->packetqueue);
-			while (movie->videostream.framequeue.size != 0)
-				DequeueBufferIntoBuffer(&movie->videostream.framepool, &movie->videostream.framequeue);
-			while (movie->audiostream.framequeue.size != 0)
-				DequeueBufferIntoBuffer(&movie->audiostream.framepool, &movie->audiostream.framequeue);
 
 			avformat_seek_file(
 				movie->formatcontext,
