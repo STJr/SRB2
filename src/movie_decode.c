@@ -583,7 +583,7 @@ static void ConvertRGBAToPatch(movie_t *movie, UINT8 * restrict src, UINT8 * res
 
 static void ParseVideoFrame(movie_t *movie)
 {
-	movievideoframe_t *frame = DequeueBufferIntoBuffer(&movie->videostream.framequeue, &movie->videostream.framepool);
+	movievideoframe_t *frame = PeekBuffer(&movie->videostream.framepool);
 
 	static UINT64 nextid = 1;
 	frame->id = nextid;
@@ -604,6 +604,10 @@ static void ParseVideoFrame(movie_t *movie)
 
 	if (movie->usepatches)
 		ConvertRGBAToPatch(movie, movie->tmpimage.data[0], frame->image.patch);
+
+	I_lock_mutex(&movie->mutex);
+	DequeueBufferIntoBuffer(&movie->videostream.framequeue, &movie->videostream.framepool);
+	I_unlock_mutex(movie->mutex);
 }
 
 static void ParseAudioFrame(movie_t *movie)
@@ -613,7 +617,7 @@ static void ParseAudioFrame(movie_t *movie)
 	if (!movie->audiostream.framequeue.data)
 		InitialiseAudioBuffer(movie);
 
-	frame = DequeueBufferIntoBuffer(&movie->audiostream.framequeue, &movie->audiostream.framepool);
+	frame = PeekBuffer(&movie->audiostream.framepool);
 
 	frame->pts = movie->frame->pts;
 	frame->numsamples = movie->frame->nb_samples;
@@ -626,6 +630,10 @@ static void ParseAudioFrame(movie_t *movie)
 		movie->frame->nb_samples
 	) < 0)
 		I_Error("FFmpeg: cannot convert audio frames");
+
+	I_lock_mutex(&movie->mutex);
+	DequeueBufferIntoBuffer(&movie->audiostream.framequeue, &movie->audiostream.framepool);
+	I_unlock_mutex(movie->mutex);
 }
 
 static void FlushStream(movie_t *movie, moviestream_t *stream)
@@ -697,15 +705,11 @@ static void DecoderThread(movie_t *movie)
 
 		if (ReceiveFrame(movie, &movie->videostream))
 		{
-			I_lock_mutex(&movie->mutex);
 			ParseVideoFrame(movie);
-			I_unlock_mutex(movie->mutex);
 		}
 		else if (ReceiveFrame(movie, &movie->audiostream))
 		{
-			I_lock_mutex(&movie->mutex);
 			ParseAudioFrame(movie);
-			I_unlock_mutex(movie->mutex);
 		}
 		else
 		{
