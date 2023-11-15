@@ -62,7 +62,6 @@ typedef struct
 	moviebuffer_t buffer;
 	moviebuffer_t framequeue;
 	moviebuffer_t framepool;
-	INT32 availablequeuesize;
 	INT32 numplanes;
 } moviestream_t;
 
