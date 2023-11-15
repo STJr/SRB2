@@ -77,6 +77,7 @@
 #include "../lua_script.h"
 #include "../lua_libs.h"
 #include "../lua_hook.h"
+#include "../movie_decode.h"
 #include "sdlmain.h"
 #ifdef HWRENDER
 #include "../hardware/hw_main.h"
@@ -1540,6 +1541,9 @@ boolean VID_CheckRenderer(void)
 
 		if (!contextcreated)
 			Impl_CreateContext();
+
+		if (activemovie)
+			MovieDecode_SetImageFormat(activemovie, (rendermode == render_soft));
 
 		setrenderneeded = 0;
 	}

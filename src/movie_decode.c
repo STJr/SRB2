@@ -722,6 +722,8 @@ static void DecoderThread(movie_t *movie)
 	I_lock_mutex(&movie->mutex);
 	movie->stopping = false;
 	I_unlock_mutex(movie->mutex);
+
+	I_unlock_mutex(movie->condmutex);
 }
 
 static boolean ShouldSeek(movie_t *movie)
@@ -935,6 +937,20 @@ void MovieDecode_Update(movie_t *movie)
 		ClearOldVideoFrames(movie);
 		ClearOldAudioFrames(movie);
 	}
+}
+
+void MovieDecode_SetImageFormat(movie_t *movie, boolean usepatches)
+{
+	if (usepatches == movie->usepatches)
+		return;
+
+	StopDecoderThread(movie);
+	UninitialiseImages(movie);
+
+	movie->usepatches = usepatches;
+
+	InitialiseImages(movie);
+	I_spawn_thread("decode-movie", (I_thread_fn)DecoderThread, movie);
 }
 
 tic_t MovieDecode_GetDuration(movie_t *movie)

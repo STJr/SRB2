@@ -102,6 +102,7 @@ movie_t *MovieDecode_Play(const char *name, boolean usepatches);
 void MovieDecode_Stop(movie_t **movieptr);
 void MovieDecode_Seek(movie_t *movie, tic_t tic);
 void MovieDecode_Update(movie_t *movie);
+void MovieDecode_SetImageFormat(movie_t *movie, boolean usepatches);
 tic_t MovieDecode_GetDuration(movie_t *movie);
 void MovieDecode_GetDimensions(movie_t *movie, INT32 *width, INT32 *height);
 UINT8 *MovieDecode_GetImage(movie_t *movie);
