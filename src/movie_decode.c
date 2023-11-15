@@ -449,7 +449,7 @@ static void UninitialiseMovieStream(movie_t *movie, moviestream_t *stream)
 	UninitialiseBuffer(&stream->framequeue);
 
 	if (stream == &movie->videostream && movie->usepatches)
-		av_freep(movie->tmpimage.data[0]);
+		av_freep(&movie->tmpimage.data[0]);
 
 	avcodec_free_context(&stream->codeccontext);
 }
