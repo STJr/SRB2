@@ -758,33 +758,29 @@ static void PollFrameQueue(movie_t *movie, moviestream_t *stream)
 
 static void UpdateSeeking(movie_t *movie)
 {
-	I_lock_mutex(&movie->mutex);
+	if (ShouldSeek(movie))
 	{
-		if (ShouldSeek(movie))
-		{
-			movie->flushing = true;
+		movie->flushing = true;
 
-			ClearAllFrames(movie);
+		ClearAllFrames(movie);
 
-			while (movie->packetqueue.size != 0)
-				DequeueBufferIntoBuffer(&movie->packetpool, &movie->packetqueue);
+		while (movie->packetqueue.size != 0)
+			DequeueBufferIntoBuffer(&movie->packetpool, &movie->packetqueue);
 
-			avformat_seek_file(
-				movie->formatcontext,
-				movie->videostream.index,
-				TicsToVideoPTS(movie, movie->position - 3 * TICRATE),
-				TicsToVideoPTS(movie, movie->position),
-				TicsToVideoPTS(movie, movie->position + TICRATE / 2),
-				0
-			);
+		avformat_seek_file(
+			movie->formatcontext,
+			movie->videostream.index,
+			TicsToVideoPTS(movie, movie->position - 3 * TICRATE),
+			TicsToVideoPTS(movie, movie->position),
+			TicsToVideoPTS(movie, movie->position + TICRATE / 2),
+			0
+		);
 
-			I_wake_one_cond(&movie->cond);
-		}
-
-		if (llabs(AudioPTSToMS(movie, movie->audioposition) - TicsToMS(movie->position)) > 200)
-			movie->audioposition = TicsToAudioPTS(movie, movie->position);
+		I_wake_one_cond(&movie->cond);
 	}
-	I_unlock_mutex(movie->mutex);
+
+	if (llabs(AudioPTSToMS(movie, movie->audioposition) - TicsToMS(movie->position)) > 200)
+		movie->audioposition = TicsToAudioPTS(movie, movie->position);
 }
 
 static boolean ReadPacket(movie_t *movie)
@@ -930,10 +926,10 @@ void MovieDecode_Update(movie_t *movie)
 			PollFrameQueue(movie, &movie->videostream);
 			PollFrameQueue(movie, &movie->audiostream);
 		}
+
+		UpdateSeeking(movie);
 	}
 	I_unlock_mutex(movie->mutex);
-
-	UpdateSeeking(movie);
 
 	if (movie->videostream.buffer.size > 0)
 	{
