@@ -667,7 +667,7 @@ void R_CheckMovieTextureCache(movie_t *movie, INT32 texnum)
 	texturewidth[texnum] = width;
 	textureheight[texnum] = height << FRACBITS;
 
-	INT32 blocksize = width * (4 + MovieDecode_GetBytesPerPatchColumn(movie));
+	INT32 blocksize = MovieDecode_GetPatchBytes(movie);
 	UINT8 *block = Z_Malloc(blocksize, PU_CACHE, &texturecache[texnum]);
 	memcpy(block, image, blocksize);
 }

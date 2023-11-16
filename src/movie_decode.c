@@ -161,6 +161,13 @@ static INT64 GetAudioFrameEndPTS(movie_t *movie, movieaudioframe_t *frame)
 	return frame->pts + av_rescale_q(frame->numsamples, oldtb, newtb);
 }
 
+static INT32 GetBytesPerPatchColumn(moviedecodeworker_t *worker)
+{
+	INT32 height = worker->videostream.codeccontext->height;
+	INT32 numpostspercolumn = (height + 253) / 254;
+	return height + numpostspercolumn * 4 + 1;
+}
+
 static INT32 FindVideoBufferIndexForPosition(movie_t *movie, INT64 pts)
 {
 	INT32 i;
@@ -189,10 +196,10 @@ static INT32 FindAudioBufferIndexForPosition(movie_t *movie, INT64 pts)
 	return -1;
 }
 
-static void ClearOldestFrame(movie_t *movie, moviestream_t *stream)
+static void ClearOldestFrame(movie_t *movie, moviestream_t *stream, moviedecodeworkerstream_t *workerstream)
 {
-	DequeueBufferIntoBuffer(&stream->framepool, &stream->buffer);
-	I_wake_one_cond(&movie->cond);
+	DequeueBufferIntoBuffer(&workerstream->framepool, &stream->buffer);
+	I_wake_one_cond(&movie->decodeworker.cond);
 }
 
 static void ClearOldVideoFrames(movie_t *movie)
@@ -201,7 +208,7 @@ static void ClearOldVideoFrames(movie_t *movie)
 	INT64 limit = TicsToVideoPTS(movie, movie->position) - TicsToVideoPTS(movie, STREAM_BUFFER_TIME / 2);
 
 	while (buffer->size > 0 && ((movievideoframe_t*)PeekBuffer(buffer))->pts < limit)
-		ClearOldestFrame(movie, &movie->videostream);
+		ClearOldestFrame(movie, &movie->videostream, &movie->decodeworker.videostream);
 }
 
 static void ClearOldAudioFrames(movie_t *movie)
@@ -210,16 +217,16 @@ static void ClearOldAudioFrames(movie_t *movie)
 	INT64 limit = max(movie->audioposition - TicsToAudioPTS(movie, STREAM_BUFFER_TIME / 2), 0);
 
 	while (buffer->size > 0 && GetAudioFrameEndPTS(movie, PeekBuffer(buffer)) < limit)
-		ClearOldestFrame(movie, &movie->audiostream);
+		ClearOldestFrame(movie, &movie->audiostream, &movie->decodeworker.audiostream);
 }
 
 static void ClearAllFrames(movie_t *movie)
 {
 	while (movie->videostream.buffer.size != 0)
-		ClearOldestFrame(movie, &movie->videostream);
+		ClearOldestFrame(movie, &movie->videostream, &movie->decodeworker.videostream);
 
 	while (movie->audiostream.buffer.size != 0)
-		ClearOldestFrame(movie, &movie->audiostream);
+		ClearOldestFrame(movie, &movie->audiostream, &movie->decodeworker.audiostream);
 }
 
 static lumpnum_t FindMovieLumpNum(const char *name)
@@ -281,9 +288,9 @@ static INT64 SeekStream(void *owner, int64_t offset, int whence)
 	return 0;
 }
 
-static void AllocateAVImage(movie_t *movie, avimage_t *image)
+static void AllocateAVImage(moviedecodeworker_t *worker, avimage_t *image)
 {
-	AVCodecContext *context = movie->videostream.codeccontext;
+	AVCodecContext *context = worker->videostream.codeccontext;
 
 	image->datasize = av_image_alloc(
 		image->data, image->linesize,
@@ -350,34 +357,33 @@ static AVCodecContext *InitialiseDecoding(AVStream *stream)
 	return codeccontext;
 }
 
-static void InitialiseImages(movie_t *movie)
+static void InitialiseImages(moviedecodeworker_t *worker)
 {
-	moviestream_t *stream = &movie->videostream;
-
-	for (INT32 i = 0; i < stream->framepool.capacity; i++)
+	for (INT32 i = 0; i < worker->videostream.framepool.capacity; i++)
 	{
-		movievideoframe_t *frame = EnqueueBuffer(&stream->framepool);
+		movievideoframe_t *frame = EnqueueBuffer(&worker->videostream.framepool);
 
-		if (movie->usepatches)
+		if (worker->usepatches)
 		{
-			INT32 size = stream->codeccontext->width * (4 + MovieDecode_GetBytesPerPatchColumn(movie));
+			INT32 size = worker->videostream.codeccontext->width * (4 + GetBytesPerPatchColumn(worker));
 			frame->image.patch = malloc(size);
 			if (!frame->image.patch)
 				I_Error("FFmpeg: cannot allocate patch data");
 		}
 		else
 		{
-			AllocateAVImage(movie, &frame->image.rgba);
+			AllocateAVImage(worker, &frame->image.rgba);
 		}
 	}
 
-	if (movie->usepatches)
-		AllocateAVImage(movie, &movie->tmpimage);
+	if (worker->usepatches)
+		AllocateAVImage(worker, &worker->tmpimage);
 }
 
 static void InitialiseVideoBuffer(movie_t *movie)
 {
 	moviestream_t *stream = &movie->videostream;
+	moviedecodeworker_t *worker = &movie->decodeworker;
 
 	stream->numplanes = 1;
 
@@ -388,60 +394,60 @@ static void InitialiseVideoBuffer(movie_t *movie)
 		sizeof(movievideoframe_t)
 	);
 
-	CloneBuffer(&stream->framequeue, &stream->buffer);
-	CloneBuffer(&stream->framepool, &stream->buffer);
+	CloneBuffer(&worker->videostream.framequeue, &stream->buffer);
+	CloneBuffer(&worker->videostream.framepool, &stream->buffer);
 
-	InitialiseImages(movie);
+	InitialiseImages(worker);
 }
 
-static void InitialiseAudioBuffer(movie_t *movie)
+static void InitialiseAudioBuffer(moviestream_t *stream, moviedecodeworker_t *worker)
 {
-	moviestream_t *stream = &movie->audiostream;
+	moviedecodeworkerstream_t *workerstream = &worker->audiostream;
 
 	if (!stream->stream)
 		return;
 
-	stream->numplanes = av_sample_fmt_is_planar(AV_SAMPLE_FMT_S16) ? stream->codeccontext->channels : 1;
+	stream->numplanes = av_sample_fmt_is_planar(AV_SAMPLE_FMT_S16) ? workerstream->codeccontext->channels : 1;
 
 	InitialiseBuffer(
 		&stream->buffer,
-		STREAM_BUFFER_TIME / TICRATE * stream->codeccontext->sample_rate / movie->frame->nb_samples,
+		STREAM_BUFFER_TIME / TICRATE * workerstream->codeccontext->sample_rate / worker->frame->nb_samples,
 		sizeof(movieaudioframe_t)
 	);
 
-	CloneBuffer(&stream->framequeue, &stream->buffer);
-	CloneBuffer(&stream->framepool, &stream->buffer);
+	CloneBuffer(&workerstream->framequeue, &stream->buffer);
+	CloneBuffer(&workerstream->framepool, &stream->buffer);
 
-	for (INT32 i = 0; i < stream->framepool.capacity; i++)
+	for (INT32 i = 0; i < workerstream->framepool.capacity; i++)
 	{
-		movieaudioframe_t *frame = EnqueueBuffer(&stream->framepool);
+		movieaudioframe_t *frame = EnqueueBuffer(&workerstream->framepool);
 
 		if (!av_samples_alloc(
 			frame->samples, NULL,
-			movie->frame->channels, movie->frame->nb_samples,
+			worker->frame->channels, worker->frame->nb_samples,
 			AV_SAMPLE_FMT_S16, 1
 		))
 			I_Error("FFmpeg: cannot allocate samples");
 	}
 }
 
-static void FlushFrameBuffers(moviestream_t *stream)
+static void FlushFrameBuffers(moviestream_t *stream, moviedecodeworkerstream_t *workerstream)
 {
 	while (stream->buffer.size > 0)
-		DequeueBufferIntoBuffer(&stream->framepool, &stream->buffer);
-	while (stream->framequeue.size > 0)
-		DequeueBufferIntoBuffer(&stream->framepool, &stream->framequeue);
+		DequeueBufferIntoBuffer(&workerstream->framepool, &stream->buffer);
+	while (workerstream->framequeue.size > 0)
+		DequeueBufferIntoBuffer(&workerstream->framepool, &workerstream->framequeue);
 }
 
 static void UninitialiseImages(movie_t *movie)
 {
-	moviestream_t *stream = &movie->videostream;
+	moviedecodeworker_t *worker = &movie->decodeworker;
 
-	FlushFrameBuffers(stream);
+	FlushFrameBuffers(&movie->videostream, &worker->videostream);
 
-	while (stream->framepool.size > 0)
+	while (worker->videostream.framepool.size > 0)
 	{
-		movievideoframe_t *frame = DequeueBuffer(&stream->framepool);
+		movievideoframe_t *frame = DequeueBuffer(&worker->videostream.framepool);
 
 		if (movie->usepatches)
 			free(frame->image.patch);
@@ -450,12 +456,12 @@ static void UninitialiseImages(movie_t *movie)
 	}
 
 	if (movie->usepatches)
-		av_freep(&movie->tmpimage.data[0]);
+		av_freep(&worker->tmpimage.data[0]);
 }
 
-static void UninitialiseMovieStream(movie_t *movie, moviestream_t *stream)
+static void UninitialiseMovieStream(movie_t *movie, moviestream_t *stream, moviedecodeworkerstream_t *workerstream)
 {
-	FlushFrameBuffers(stream);
+	FlushFrameBuffers(stream, workerstream);
 
 	if (stream == &movie->videostream)
 	{
@@ -463,64 +469,64 @@ static void UninitialiseMovieStream(movie_t *movie, moviestream_t *stream)
 	}
 	else if (stream == &movie->audiostream)
 	{
-		while (stream->framepool.size > 0)
+		while (workerstream->framepool.size > 0)
 		{
-				movieaudioframe_t *frame = DequeueBuffer(&stream->framepool);
-				av_freep(&frame->samples[0]);
+			movieaudioframe_t *frame = DequeueBuffer(&workerstream->framepool);
+			av_freep(&frame->samples[0]);
 		}
 	}
 
 	UninitialiseBuffer(&stream->buffer);
-	UninitialiseBuffer(&stream->framepool);
-	UninitialiseBuffer(&stream->framequeue);
+	UninitialiseBuffer(&workerstream->framepool);
+	UninitialiseBuffer(&workerstream->framequeue);
 
-	avcodec_free_context(&stream->codeccontext);
+	avcodec_free_context(&workerstream->codeccontext);
 }
 
-static void StopDecoderThread(movie_t *movie)
+static void StopDecoderThread(moviedecodeworker_t *worker)
 {
-	I_lock_mutex(&movie->mutex);
-	movie->stopping = true;
-	I_unlock_mutex(movie->mutex);
+	I_lock_mutex(&worker->mutex);
+	worker->stopping = true;
+	I_unlock_mutex(worker->mutex);
 
-	I_wake_one_cond(&movie->cond);
+	I_wake_one_cond(&worker->cond);
 
 	boolean stopping;
 	do
 	{
-		I_lock_mutex(&movie->mutex);
-		stopping = movie->stopping;
-		I_unlock_mutex(movie->mutex);
+		I_lock_mutex(&worker->mutex);
+		stopping = worker->stopping;
+		I_unlock_mutex(worker->mutex);
 	} while (stopping);
 }
 
-static void SendPacket(movie_t *movie)
+static void SendPacket(moviedecodeworker_t *worker)
 {
-	moviestream_t *stream;
+	AVCodecContext *context;
 	AVPacket *packet;
 
-	if (movie->packetqueue.size == 0)
+	if (worker->packetqueue.size == 0)
 		return;
 
-	AVPacket **packetslot = DequeueBufferIntoBuffer(&movie->packetpool, &movie->packetqueue);
+	AVPacket **packetslot = DequeueBufferIntoBuffer(&worker->packetpool, &worker->packetqueue);
 	packet = *packetslot;
 
-	if (packet->stream_index == movie->videostream.index)
-		stream = &movie->videostream;
-	else if (packet->stream_index == movie->audiostream.index)
-		stream = &movie->audiostream;
+	if (packet->stream_index == worker->videostream.index)
+		context = worker->videostream.codeccontext;
+	else if (packet->stream_index == worker->audiostream.index)
+		context = worker->audiostream.codeccontext;
 	else
 		I_Error("FFmpeg: unexpected packet");
 
-	if (avcodec_send_packet(stream->codeccontext, packet) < 0)
+	if (avcodec_send_packet(context, packet) < 0)
 		I_Error("FFmpeg: cannot send packet to the decoder");
 
 	av_packet_unref(packet);
 }
 
-static boolean ReceiveFrame(movie_t *movie, moviestream_t *stream)
+static boolean ReceiveFrame(moviedecodeworker_t *worker, moviedecodeworkerstream_t *stream)
 {
-	int error = avcodec_receive_frame(stream->codeccontext, movie->frame);
+	int error = avcodec_receive_frame(stream->codeccontext, worker->frame);
 
 	if (error == 0) // Frame received successfully
 		return true;
@@ -532,15 +538,15 @@ static boolean ReceiveFrame(movie_t *movie, moviestream_t *stream)
 		I_Error("FFmpeg: cannot receive frame");
 }
 
-static void ConvertRGBAToPatch(movie_t *movie, UINT8 * restrict src, UINT8 * restrict dst)
+static void ConvertRGBAToPatch(moviedecodeworker_t *worker, UINT8 * restrict src, UINT8 * restrict dst)
 {
-	INT32 width = movie->frame->width;
-	INT32 height = movie->frame->height;
-	UINT16 *lut = movie->colorlut.table;
+	INT32 width = worker->frame->width;
+	INT32 height = worker->frame->height;
+	UINT16 *lut = worker->colorlut.table;
 	INT32 stride = 4 * width;
 
 	// Write column offsets
-	INT32 bytespercolumn = MovieDecode_GetBytesPerPatchColumn(movie);
+	INT32 bytespercolumn = GetBytesPerPatchColumn(worker);
 	for (INT32 x = 0; x < width; x++)
 		WRITEUINT32(dst, width * 4 + x * bytespercolumn + 3);
 
@@ -581,69 +587,69 @@ static void ConvertRGBAToPatch(movie_t *movie, UINT8 * restrict src, UINT8 * res
 	}
 }
 
-static void ParseVideoFrame(movie_t *movie)
+static void ParseVideoFrame(moviedecodeworker_t *worker)
 {
-	movievideoframe_t *frame = PeekBuffer(&movie->videostream.framepool);
+	movievideoframe_t *frame = PeekBuffer(&worker->videostream.framepool);
 
 	static UINT64 nextid = 1;
 	frame->id = nextid;
 	nextid++;
 
-	frame->pts = movie->frame->pts;
+	frame->pts = worker->frame->pts;
 
-	avimage_t *image = movie->usepatches ? &movie->tmpimage : &frame->image.rgba;
+	avimage_t *image = worker->usepatches ? &worker->tmpimage : &frame->image.rgba;
 	sws_scale(
-		movie->scalingcontext,
-		(UINT8 const * const *)movie->frame->data,
-		movie->frame->linesize,
+		worker->scalingcontext,
+		(UINT8 const * const *)worker->frame->data,
+		worker->frame->linesize,
 		0,
-		movie->frame->height,
+		worker->frame->height,
 		image->data,
 		image->linesize
 	);
 
-	if (movie->usepatches)
-		ConvertRGBAToPatch(movie, movie->tmpimage.data[0], frame->image.patch);
+	if (worker->usepatches)
+		ConvertRGBAToPatch(worker, worker->tmpimage.data[0], frame->image.patch);
 
-	I_lock_mutex(&movie->mutex);
-	DequeueBufferIntoBuffer(&movie->videostream.framequeue, &movie->videostream.framepool);
-	I_unlock_mutex(movie->mutex);
+	I_lock_mutex(&worker->mutex);
+	DequeueBufferIntoBuffer(&worker->videostream.framequeue, &worker->videostream.framepool);
+	I_unlock_mutex(worker->mutex);
 }
 
-static void ParseAudioFrame(movie_t *movie)
+static void ParseAudioFrame(moviedecodeworker_t *worker)
 {
 	movieaudioframe_t *frame;
 
-	if (!movie->audiostream.framequeue.data)
-		InitialiseAudioBuffer(movie);
+	if (!worker->audiostream.framequeue.data)
+		InitialiseAudioBuffer(worker->audiostream.stream, worker);
 
-	frame = PeekBuffer(&movie->audiostream.framepool);
+	frame = PeekBuffer(&worker->audiostream.framepool);
 
-	frame->pts = movie->frame->pts;
-	frame->numsamples = movie->frame->nb_samples;
+	frame->pts = worker->frame->pts;
+	frame->numsamples = worker->frame->nb_samples;
 
 	if (swr_convert(
-		movie->resamplingcontext,
+		worker->resamplingcontext,
 		frame->samples,
-		movie->frame->nb_samples,
-		(UINT8 const **)movie->frame->data,
-		movie->frame->nb_samples
+		worker->frame->nb_samples,
+		(UINT8 const **)worker->frame->data,
+		worker->frame->nb_samples
 	) < 0)
 		I_Error("FFmpeg: cannot convert audio frames");
 
-	I_lock_mutex(&movie->mutex);
-	DequeueBufferIntoBuffer(&movie->audiostream.framequeue, &movie->audiostream.framepool);
-	I_unlock_mutex(movie->mutex);
+	I_lock_mutex(&worker->mutex);
+	DequeueBufferIntoBuffer(&worker->audiostream.framequeue, &worker->audiostream.framepool);
+	I_unlock_mutex(worker->mutex);
 }
 
-static void FlushStream(movie_t *movie, moviestream_t *stream)
+static void FlushStream(moviedecodeworker_t *worker, moviedecodeworkerstream_t *stream)
 {
 	// Flush the decoder
 	if (avcodec_send_packet(stream->codeccontext, NULL) < 0)
 		I_Error("FFmpeg: cannot flush decoder");
 
 	while (true) {
-		int error = avcodec_receive_frame(stream->codeccontext, movie->frame);
+		int error = avcodec_receive_frame(stream->codeccontext, worker->frame);
 		if (error == 0)
 			continue;
 		else if (error == AVERROR_EOF)
@@ -654,27 +660,27 @@ static void FlushStream(movie_t *movie, moviestream_t *stream)
 
 	avcodec_flush_buffers(stream->codeccontext);
 
-	I_lock_mutex(&movie->mutex);
+	I_lock_mutex(&worker->mutex);
 	{
 		while (stream->framequeue.size != 0)
 			DequeueBufferIntoBuffer(&stream->framepool, &stream->framequeue);
 	}
-	I_unlock_mutex(movie->mutex);
+	I_unlock_mutex(worker->mutex);
 }
 
-static void FlushDecoding(movie_t *movie)
+static void FlushDecoding(moviedecodeworker_t *worker)
 {
-	FlushStream(movie, &movie->videostream);
-	FlushStream(movie, &movie->audiostream);
+	FlushStream(worker, &worker->videostream);
+	FlushStream(worker, &worker->audiostream);
 
-	I_lock_mutex(&movie->mutex);
-	movie->flushing = false;
-	I_unlock_mutex(movie->mutex);
+	I_lock_mutex(&worker->mutex);
+	worker->flushing = false;
+	I_unlock_mutex(worker->mutex);
 }
 
-static void DecoderThread(movie_t *movie)
+static void DecoderThread(moviedecodeworker_t *worker)
 {
-	I_lock_mutex(&movie->condmutex);
+	I_lock_mutex(&worker->condmutex);
 
 	while (true)
 	{
@@ -682,66 +688,66 @@ static void DecoderThread(movie_t *movie)
 		INT64 flushing;
 		boolean queuesfull;
 
-		I_lock_mutex(&movie->mutex);
+		I_lock_mutex(&worker->mutex);
 		{
-			stopping = movie->stopping;
-			flushing = movie->flushing;
+			stopping = worker->stopping;
+			flushing = worker->flushing;
 
-			INT32 vsize = movie->videostream.framepool.size;
-			INT32 asize = movie->audiostream.framepool.size;
-			queuesfull = (vsize == 0 || (movie->audiostream.framequeue.data && asize == 0));
+			INT32 vsize = worker->videostream.framepool.size;
+			INT32 asize = worker->audiostream.framepool.size;
+			queuesfull = (vsize == 0 || (worker->audiostream.framequeue.data && asize == 0));
 		}
-		I_unlock_mutex(movie->mutex);
+		I_unlock_mutex(worker->mutex);
 
 		if (stopping)
 			break;
 		if (flushing)
-			FlushDecoding(movie);
+			FlushDecoding(worker);
 		if (queuesfull)
 		{
-			I_hold_cond(&movie->cond, movie->condmutex);
+			I_hold_cond(&worker->cond, worker->condmutex);
 			continue;
 		}
 
-		if (ReceiveFrame(movie, &movie->videostream))
+		if (ReceiveFrame(worker, &worker->videostream))
 		{
-			ParseVideoFrame(movie);
+			ParseVideoFrame(worker);
 		}
-		else if (ReceiveFrame(movie, &movie->audiostream))
+		else if (ReceiveFrame(worker, &worker->audiostream))
 		{
-			ParseAudioFrame(movie);
+			ParseAudioFrame(worker);
 		}
 		else
 		{
 			boolean sent = false;
 
-			I_lock_mutex(&movie->mutex);
+			I_lock_mutex(&worker->mutex);
 			{
-				if (movie->packetqueue.size > 0)
+				if (worker->packetqueue.size > 0)
 				{
-					SendPacket(movie);
+					SendPacket(worker);
 					sent = true;
 				}
 			}
-			I_unlock_mutex(movie->mutex);
+			I_unlock_mutex(worker->mutex);
 
 			if (!sent)
-				I_hold_cond(&movie->cond, movie->condmutex);
+				I_hold_cond(&worker->cond, worker->condmutex);
 		}
 	}
 
-	I_lock_mutex(&movie->mutex);
-	movie->stopping = false;
-	I_unlock_mutex(movie->mutex);
+	I_lock_mutex(&worker->mutex);
+	worker->stopping = false;
+	I_unlock_mutex(worker->mutex);
 
-	I_unlock_mutex(movie->condmutex);
+	I_unlock_mutex(worker->condmutex);
 }
 
 static boolean ShouldSeek(movie_t *movie)
 {
 	moviebuffer_t *buffer = &movie->videostream.buffer;
 
-	if (movie->flushing || buffer->size == 0)
+	if (movie->decodeworker.flushing || buffer->size == 0)
 		return false;
 
 	movievideoframe_t *firstframe = GetBufferSlot(buffer, 0);
@@ -751,25 +757,27 @@ static boolean ShouldSeek(movie_t *movie)
 	return (behind > 1000 || ahead > 1000);
 }
 
-static void PollFrameQueue(movie_t *movie, moviestream_t *stream)
+static void PollFrameQueue(moviedecodeworker_t *worker, moviestream_t *stream, moviedecodeworkerstream_t *workerstream)
 {
-	while (stream->framequeue.size != 0)
+	while (workerstream->framequeue.size != 0)
 	{
-		DequeueBufferIntoBuffer(&stream->buffer, &stream->framequeue);
-		I_wake_one_cond(&movie->cond);
+		DequeueBufferIntoBuffer(&stream->buffer, &workerstream->framequeue);
+		I_wake_one_cond(&worker->cond);
 	}
 }
 
 static void UpdateSeeking(movie_t *movie)
 {
+	moviedecodeworker_t *worker = &movie->decodeworker;
+
 	if (ShouldSeek(movie))
 	{
-		movie->flushing = true;
+		worker->flushing = true;
 
 		ClearAllFrames(movie);
 
-		while (movie->packetqueue.size != 0)
-			DequeueBufferIntoBuffer(&movie->packetpool, &movie->packetqueue);
+		while (worker->packetqueue.size != 0)
+			DequeueBufferIntoBuffer(&worker->packetpool, &worker->packetqueue);
 
 		avformat_seek_file(
 			movie->formatcontext,
@@ -780,7 +788,7 @@ static void UpdateSeeking(movie_t *movie)
 			0
 		);
 
-		I_wake_one_cond(&movie->cond);
+		I_wake_one_cond(&worker->cond);
 	}
 
 	if (llabs(AudioPTSToMS(movie, movie->audioposition) - TicsToMS(movie->position)) > 200)
@@ -789,7 +797,8 @@ static void UpdateSeeking(movie_t *movie)
 
 static boolean ReadPacket(movie_t *movie)
 {
-	AVPacket **packetslot = PeekBuffer(&movie->packetpool);
+	moviedecodeworker_t *worker = &movie->decodeworker;
+	AVPacket **packetslot = PeekBuffer(&worker->packetpool);
 	AVPacket *packet = *packetslot;
 
 	int error = av_read_frame(movie->formatcontext, packet);
@@ -801,8 +810,8 @@ static boolean ReadPacket(movie_t *movie)
 	else if (packet->stream_index == movie->videostream.index
 		|| packet->stream_index == movie->audiostream.index)
 	{
-		DequeueBufferIntoBuffer(&movie->packetqueue, &movie->packetpool);
-		I_wake_one_cond(&movie->cond);
+		DequeueBufferIntoBuffer(&worker->packetqueue, &worker->packetpool);
+		I_wake_one_cond(&worker->cond);
 	}
 	else
 		av_packet_unref(packet);
@@ -818,61 +827,72 @@ movie_t *MovieDecode_Play(const char *name, boolean usepatches)
 	if (!movie)
 		I_Error("FFmpeg: cannot allocate movie object");
 
+	moviedecodeworker_t *worker = &movie->decodeworker;
+
 	movie->lastvideoframeusedid = 0;
 	movie->position = 0;
 	movie->audioposition = 0;
 	movie->usepatches = usepatches;
+	worker->usepatches = usepatches;
 
 	CacheMovieLump(movie, name);
 	InitialiseDemuxing(movie);
-	movie->videostream.codeccontext = InitialiseDecoding(movie->videostream.stream);
-	movie->audiostream.codeccontext = InitialiseDecoding(movie->audiostream.stream);
+	worker->videostream.codeccontext = InitialiseDecoding(movie->videostream.stream);
+	worker->audiostream.codeccontext = InitialiseDecoding(movie->audiostream.stream);
 	InitialiseVideoBuffer(movie);
 
-	InitialiseBuffer(&movie->packetqueue, 32, sizeof(AVPacket*));
-	CloneBuffer(&movie->packetpool, &movie->packetqueue);
-	for (INT32 i = 0; i < movie->packetpool.capacity; i++)
+	InitialiseBuffer(&worker->packetqueue, 32, sizeof(AVPacket*));
+	CloneBuffer(&worker->packetpool, &worker->packetqueue);
+	for (INT32 i = 0; i < worker->packetpool.capacity; i++)
 	{
 		AVPacket *packet = av_packet_alloc();
 		if (!packet)
 			I_Error("FFmpeg: cannot allocate packet");
 
-		AVPacket **packetslot = EnqueueBuffer(&movie->packetpool);
+		AVPacket **packetslot = EnqueueBuffer(&worker->packetpool);
 		*packetslot = packet;
 	}
 
-	movie->frame = av_frame_alloc();
-	if (!movie->frame)
+	worker->frame = av_frame_alloc();
+	if (!worker->frame)
 		I_Error("FFmpeg: cannot allocate frame");
 
-	int width = movie->videostream.codeccontext->width;
-	int height = movie->videostream.codeccontext->height;
-	movie->scalingcontext = sws_getContext(
-		width, height, movie->videostream.codeccontext->pix_fmt,
+	int width = worker->videostream.codeccontext->width;
+	int height = worker->videostream.codeccontext->height;
+	worker->scalingcontext = sws_getContext(
+		width, height, worker->videostream.codeccontext->pix_fmt,
 		width, height, AV_PIX_FMT_RGBA,
 		SWS_BILINEAR,
 		NULL,
 		NULL,
 		NULL
 	);
-	if (!movie->scalingcontext)
+	if (!worker->scalingcontext)
 		I_Error("FFmpeg: cannot create scaling context");
 
-	AVCodecContext *audiocodeccontext = movie->audiostream.codeccontext;
-	movie->resamplingcontext = swr_alloc_set_opts(
+	AVCodecContext *audiocodeccontext = worker->audiostream.codeccontext;
+	worker->resamplingcontext = swr_alloc_set_opts(
 		NULL,
 		audiocodeccontext->channel_layout, AV_SAMPLE_FMT_S16, 44100,
 		audiocodeccontext->channel_layout, audiocodeccontext->sample_fmt, audiocodeccontext->sample_rate,
 		0, NULL
 	);
-	if (!movie->resamplingcontext)
+	if (!worker->resamplingcontext)
 		I_Error("FFmpeg: cannot allocate resampling context");
-	if (swr_init(movie->resamplingcontext))
+	if (swr_init(worker->resamplingcontext))
 		I_Error("FFmpeg: cannot initialise resampling context");
 
-	InitColorLUT(&movie->colorlut, pMasterPalette, true);
+	InitColorLUT(&worker->colorlut, pMasterPalette, true);
 
-	I_spawn_thread("decode-movie", (I_thread_fn)DecoderThread, movie);
+	worker->videostream.index = movie->videostream.index;
+	worker->audiostream.index = movie->audiostream.index;
+
+	// Hack because we don't know the audio frame size in advance
+	// so we initialise the audio buffer in the worker thread
+	worker->videostream.stream = &movie->videostream;
+	worker->audiostream.stream = &movie->audiostream;
+
+	I_spawn_thread("decode-movie", (I_thread_fn)DecoderThread, worker);
 
 	return movie;
 }
@@ -880,16 +900,17 @@ movie_t *MovieDecode_Play(const char *name, boolean usepatches)
 void MovieDecode_Stop(movie_t **movieptr)
 {
 	movie_t *movie = *movieptr;
+	moviedecodeworker_t *worker = &movie->decodeworker;
 
 	if (!movie)
 		return;
 
-	StopDecoderThread(movie);
+	StopDecoderThread(worker);
 
 	S_StopMusic();
 
-	UninitialiseMovieStream(movie, &movie->videostream);
-	UninitialiseMovieStream(movie, &movie->audiostream);
+	UninitialiseMovieStream(movie, &movie->videostream, &worker->videostream);
+	UninitialiseMovieStream(movie, &movie->audiostream, &worker->audiostream);
 
 	av_freep(&movie->formatcontext->pb->buffer);
 	avio_context_free(&movie->formatcontext->pb);
@@ -897,17 +918,17 @@ void MovieDecode_Stop(movie_t **movieptr)
 
 	avformat_close_input(&movie->formatcontext);
 
-	sws_freeContext(movie->scalingcontext);
-	swr_free(&movie->resamplingcontext);
+	sws_freeContext(worker->scalingcontext);
+	swr_free(&worker->resamplingcontext);
 
-	while (movie->packetqueue.size > 0)
-		DequeueBufferIntoBuffer(&movie->packetpool, &movie->packetqueue);
-	while (movie->packetpool.size > 0)
-		av_packet_free(DequeueBuffer(&movie->packetpool));
-	UninitialiseBuffer(&movie->packetpool);
-	UninitialiseBuffer(&movie->packetqueue);
+	while (worker->packetqueue.size > 0)
+		DequeueBufferIntoBuffer(&worker->packetpool, &worker->packetqueue);
+	while (worker->packetpool.size > 0)
+		av_packet_free(DequeueBuffer(&worker->packetpool));
+	UninitialiseBuffer(&worker->packetpool);
+	UninitialiseBuffer(&worker->packetqueue);
 
-	av_frame_free(&movie->frame);
+	av_frame_free(&worker->frame);
 
 	free(movie);
 	*movieptr = NULL;
@@ -920,20 +941,22 @@ void MovieDecode_Seek(movie_t *movie, tic_t tic)
 
 void MovieDecode_Update(movie_t *movie)
 {
-	I_lock_mutex(&movie->mutex);
+	moviedecodeworker_t *worker = &movie->decodeworker;
+
+	I_lock_mutex(&worker->mutex);
 	{
-		while (movie->packetpool.size > 0 && ReadPacket(movie))
+		while (worker->packetpool.size > 0 && ReadPacket(movie))
 			;
 
-		if (!movie->flushing)
+		if (!worker->flushing)
 		{
-			PollFrameQueue(movie, &movie->videostream);
-			PollFrameQueue(movie, &movie->audiostream);
+			PollFrameQueue(worker, &movie->videostream, &worker->videostream);
+			PollFrameQueue(worker, &movie->audiostream, &worker->audiostream);
 		}
 
 		UpdateSeeking(movie);
 	}
-	I_unlock_mutex(movie->mutex);
+	I_unlock_mutex(worker->mutex);
 
 	if (movie->videostream.buffer.size > 0)
 	{
@@ -944,16 +967,19 @@ void MovieDecode_Update(movie_t *movie)
 
 void MovieDecode_SetImageFormat(movie_t *movie, boolean usepatches)
 {
+	moviedecodeworker_t *worker = &movie->decodeworker;
+
 	if (usepatches == movie->usepatches)
 		return;
 
-	StopDecoderThread(movie);
+	StopDecoderThread(worker);
 	UninitialiseImages(movie);
 
 	movie->usepatches = usepatches;
+	worker->usepatches = usepatches;
 
-	InitialiseImages(movie);
-	I_spawn_thread("decode-movie", (I_thread_fn)DecoderThread, movie);
+	InitialiseImages(worker);
+	I_spawn_thread("decode-movie", (I_thread_fn)DecoderThread, worker);
 }
 
 tic_t MovieDecode_GetDuration(movie_t *movie)
@@ -963,7 +989,7 @@ tic_t MovieDecode_GetDuration(movie_t *movie)
 
 void MovieDecode_GetDimensions(movie_t *movie, INT32 *width, INT32 *height)
 {
-	AVCodecContext *context = movie->videostream.codeccontext;
+	AVCodecContext *context = movie->decodeworker.videostream.codeccontext;
 	*width = context->width;
 	*height = context->height;
 }
@@ -984,18 +1010,17 @@ UINT8 *MovieDecode_GetImage(movie_t *movie)
 	}
 }
 
-INT32 MovieDecode_GetBytesPerPatchColumn(movie_t *movie)
+INT32 MovieDecode_GetPatchBytes(movie_t *movie)
 {
-	INT32 height = movie->videostream.codeccontext->height;
-	INT32 numpostspercolumn = (height + 253) / 254;
-	return height + numpostspercolumn * 4 + 1;
+	AVCodecContext *context = movie->decodeworker.videostream.codeccontext;
+	return context->width * (4 + GetBytesPerPatchColumn(&movie->decodeworker));
 }
 
 void MovieDecode_CopyAudioSamples(movie_t *movie, void *mem, size_t size)
 {
 	moviestream_t *stream = &movie->audiostream;
 	moviebuffer_t *buffer = &stream->buffer;
-	AVCodecContext *codeccontext = stream->codeccontext;
+	AVCodecContext *codeccontext = movie->decodeworker.audiostream.codeccontext;
 	UINT8 *membytes = mem;
 
 	// Here, if using packed audio, the sample size includes both channels

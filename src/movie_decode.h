@@ -54,34 +54,57 @@ typedef struct
 	INT32 size;
 } moviebuffer_t;
 
-typedef struct
-{
-	AVStream *stream;
-	int index;
-	AVCodecContext *codeccontext;
-	moviebuffer_t buffer;
-	moviebuffer_t framequeue;
-	moviebuffer_t framepool;
-	INT32 numplanes;
-} moviestream_t;
+typedef struct moviestream_s moviestream_t;
 
 typedef struct
 {
-	UINT64 lastvideoframeusedid;
+	int index;
+	AVCodecContext *codeccontext;
+	moviebuffer_t framepool;
+	moviebuffer_t framequeue;
+	moviestream_t *stream; // Hack
+} moviedecodeworkerstream_t;
+
+typedef struct
+{
 	colorlookup_t colorlut;
 	boolean usepatches;
 	avimage_t tmpimage;
+	moviebuffer_t packetpool;
+	moviebuffer_t packetqueue;
 
-	AVFormatContext *formatcontext;
 	AVFrame *frame;
 	struct SwsContext *scalingcontext;
 	SwrContext *resamplingcontext;
 
+	moviedecodeworkerstream_t videostream;
+	moviedecodeworkerstream_t audiostream;
+
+	boolean flushing;
+	boolean stopping;
+
+	I_mutex mutex;
+	I_cond cond;
+	I_mutex condmutex;
+} moviedecodeworker_t;
+
+struct moviestream_s
+{
+	AVStream *stream;
+	int index;
+	moviebuffer_t buffer;
+	INT32 numplanes;
+};
+
+typedef struct
+{
+	UINT64 lastvideoframeusedid;
+	boolean usepatches;
+	AVFormatContext *formatcontext;
+	moviedecodeworker_t decodeworker;
+
 	moviestream_t videostream;
 	moviestream_t audiostream;
-
-	moviebuffer_t packetpool;
-	moviebuffer_t packetqueue;
 
 	UINT8 *lumpdata;
 	size_t lumpsize;
@@ -89,12 +112,6 @@ typedef struct
 
 	tic_t position;
 	INT64 audioposition;
-	boolean flushing;
-	boolean stopping;
-
-	I_mutex mutex;
-	I_cond cond;
-	I_mutex condmutex;
 } movie_t;
 
 movie_t *MovieDecode_Play(const char *name, boolean usepatches);
@@ -105,7 +122,7 @@ void MovieDecode_SetImageFormat(movie_t *movie, boolean usepatches);
 tic_t MovieDecode_GetDuration(movie_t *movie);
 void MovieDecode_GetDimensions(movie_t *movie, INT32 *width, INT32 *height);
 UINT8 *MovieDecode_GetImage(movie_t *movie);
-INT32 MovieDecode_GetBytesPerPatchColumn(movie_t *movie);
+INT32 MovieDecode_GetPatchBytes(movie_t *movie);
 void MovieDecode_CopyAudioSamples(movie_t *movie, void *mem, size_t size);
 
 #endif
