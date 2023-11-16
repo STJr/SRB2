@@ -591,9 +591,8 @@ static void ParseVideoFrame(moviedecodeworker_t *worker)
 {
 	movievideoframe_t *frame = PeekBuffer(&worker->videostream.framepool);
 
-	static UINT64 nextid = 1;
-	frame->id = nextid;
-	nextid++;
+	frame->id = worker->nextframeid;
+	worker->nextframeid++;
 
 	frame->pts = worker->frame->pts;
 

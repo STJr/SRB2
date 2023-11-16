@@ -70,8 +70,7 @@ typedef struct
 	colorlookup_t colorlut;
 	boolean usepatches;
 	avimage_t tmpimage;
-	moviebuffer_t packetpool;
-	moviebuffer_t packetqueue;
+	UINT64 nextframeid;
 
 	AVFrame *frame;
 	struct SwsContext *scalingcontext;
@@ -79,6 +78,9 @@ typedef struct
 
 	moviedecodeworkerstream_t videostream;
 	moviedecodeworkerstream_t audiostream;
+
+	moviebuffer_t packetpool;
+	moviebuffer_t packetqueue;
 
 	boolean flushing;
 	boolean stopping;
