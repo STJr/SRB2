@@ -955,14 +955,14 @@ void MovieDecode_Update(movie_t *movie)
 		}
 
 		UpdateSeeking(movie);
+
+		if (movie->videostream.buffer.size > 0)
+		{
+			ClearOldVideoFrames(movie);
+			ClearOldAudioFrames(movie);
+		}
 	}
 	I_unlock_mutex(worker->mutex);
-
-	if (movie->videostream.buffer.size > 0)
-	{
-		ClearOldVideoFrames(movie);
-		ClearOldAudioFrames(movie);
-	}
 }
 
 void MovieDecode_SetImageFormat(movie_t *movie, boolean usepatches)
