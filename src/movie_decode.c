@@ -90,6 +90,12 @@ static void *DequeueBufferIntoBuffer(moviebuffer_t *dst, moviebuffer_t *src)
 	return dstslot;
 }
 
+static void DequeueWholeBufferIntoBuffer(moviebuffer_t *dst, moviebuffer_t *src)
+{
+	while (src->size > 0)
+		DequeueBufferIntoBuffer(dst, src);
+}
+
 static INT64 TicsToMS(tic_t tics)
 {
 	AVRational oldtb = { 1, 35 };
@@ -433,10 +439,8 @@ static void InitialiseAudioBuffer(moviestream_t *stream, moviedecodeworker_t *wo
 
 static void FlushFrameBuffers(moviestream_t *stream, moviedecodeworkerstream_t *workerstream)
 {
-	while (stream->buffer.size > 0)
-		DequeueBufferIntoBuffer(&workerstream->framepool, &stream->buffer);
-	while (workerstream->framequeue.size > 0)
-		DequeueBufferIntoBuffer(&workerstream->framepool, &workerstream->framequeue);
+	DequeueWholeBufferIntoBuffer(&workerstream->framepool, &stream->buffer);
+	DequeueWholeBufferIntoBuffer(&workerstream->framepool, &workerstream->framequeue);
 }
 
 static void UninitialiseImages(movie_t *movie)
@@ -660,10 +664,7 @@ static void FlushStream(moviedecodeworker_t *worker, moviedecodeworkerstream_t *
 	avcodec_flush_buffers(stream->codeccontext);
 
 	I_lock_mutex(&worker->mutex);
-	{
-		while (stream->framequeue.size != 0)
-			DequeueBufferIntoBuffer(&stream->framepool, &stream->framequeue);
-	}
+	DequeueWholeBufferIntoBuffer(&stream->framepool, &stream->framequeue);
 	I_unlock_mutex(worker->mutex);
 }
 
@@ -758,9 +759,9 @@ static boolean ShouldSeek(movie_t *movie)
 
 static void PollFrameQueue(moviedecodeworker_t *worker, moviestream_t *stream, moviedecodeworkerstream_t *workerstream)
 {
-	while (workerstream->framequeue.size != 0)
+	if (workerstream->framequeue.size != 0)
 	{
-		DequeueBufferIntoBuffer(&stream->buffer, &workerstream->framequeue);
+		DequeueWholeBufferIntoBuffer(&stream->buffer, &workerstream->framequeue);
 		I_wake_one_cond(&worker->cond);
 	}
 }
@@ -920,8 +921,7 @@ void MovieDecode_Stop(movie_t **movieptr)
 	sws_freeContext(worker->scalingcontext);
 	swr_free(&worker->resamplingcontext);
 
-	while (worker->packetqueue.size > 0)
-		DequeueBufferIntoBuffer(&worker->packetpool, &worker->packetqueue);
+	DequeueWholeBufferIntoBuffer(&worker->packetpool, &worker->packetqueue);
 	while (worker->packetpool.size > 0)
 		av_packet_free(DequeueBuffer(&worker->packetpool));
 	UninitialiseBuffer(&worker->packetpool);
