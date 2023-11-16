@@ -26,6 +26,10 @@
 #define IO_BUFFER_SIZE (8 * 1024)
 #define STREAM_BUFFER_TIME (4 * TICRATE)
 
+//
+// CIRCULAR BUFFER
+//
+
 static void InitialiseBuffer(moviebuffer_t *buffer, INT32 capacity, INT32 slotsize)
 {
 	buffer->capacity = capacity;
@@ -96,6 +100,10 @@ static void DequeueWholeBufferIntoBuffer(moviebuffer_t *dst, moviebuffer_t *src)
 		DequeueBufferIntoBuffer(dst, src);
 }
 
+//
+// TIME CONVERSION
+//
+
 static INT64 TicsToMS(tic_t tics)
 {
 	AVRational oldtb = { 1, 35 };
@@ -159,6 +167,10 @@ static INT64 PTSToTics(INT64 pts)
 	return av_rescale_q(pts, AV_TIME_BASE_Q, newtb);
 }
 
+//
+// MISCELLANEOUS GETTERS
+//
+
 static INT64 GetAudioFrameEndPTS(movie_t *movie, movieaudioframe_t *frame)
 {
 	AVRational oldtb = { 1, 44100 };
@@ -202,97 +214,9 @@ static INT32 FindAudioBufferIndexForPosition(movie_t *movie, INT64 pts)
 	return -1;
 }
 
-static void ClearOldestFrame(movie_t *movie, moviestream_t *stream, moviedecodeworkerstream_t *workerstream)
-{
-	DequeueBufferIntoBuffer(&workerstream->framepool, &stream->buffer);
-	I_wake_one_cond(&movie->decodeworker.cond);
-}
-
-static void ClearOldVideoFrames(movie_t *movie)
-{
-	moviebuffer_t *buffer = &movie->videostream.buffer;
-	INT64 limit = TicsToVideoPTS(movie, movie->position) - TicsToVideoPTS(movie, STREAM_BUFFER_TIME / 2);
-
-	while (buffer->size > 0 && ((movievideoframe_t*)PeekBuffer(buffer))->pts < limit)
-		ClearOldestFrame(movie, &movie->videostream, &movie->decodeworker.videostream);
-}
-
-static void ClearOldAudioFrames(movie_t *movie)
-{
-	moviebuffer_t *buffer = &movie->audiostream.buffer;
-	INT64 limit = max(movie->audioposition - TicsToAudioPTS(movie, STREAM_BUFFER_TIME / 2), 0);
-
-	while (buffer->size > 0 && GetAudioFrameEndPTS(movie, PeekBuffer(buffer)) < limit)
-		ClearOldestFrame(movie, &movie->audiostream, &movie->decodeworker.audiostream);
-}
-
-static void ClearAllFrames(movie_t *movie)
-{
-	while (movie->videostream.buffer.size != 0)
-		ClearOldestFrame(movie, &movie->videostream, &movie->decodeworker.videostream);
-
-	while (movie->audiostream.buffer.size != 0)
-		ClearOldestFrame(movie, &movie->audiostream, &movie->decodeworker.audiostream);
-}
-
-static lumpnum_t FindMovieLumpNum(const char *name)
-{
-	INT32 wadnum;
-
-	for (wadnum = numwadfiles - 1; wadnum >= 0; wadnum--)
-	{
-		char fullname[256];
-		UINT16 lumpnum;
-
-		snprintf(fullname, sizeof(fullname), "Movies/%s", name);
-		lumpnum = W_CheckNumForFullNamePK3(fullname, wadnum, 0);
-		if (lumpnum != INT16_MAX)
-			return (wadnum << 16) + lumpnum;
-	}
-
-	return LUMPERROR;
-}
-
-static void CacheMovieLump(movie_t *movie, const char *name)
-{
-	lumpnum_t lumpnum;
-
-	lumpnum = FindMovieLumpNum(name);
-	if (lumpnum == LUMPERROR)
-		I_Error("FFmpeg: cannot find movie lump");
-
-	movie->lumpsize = W_LumpLength(lumpnum);
-	movie->lumpdata = malloc(movie->lumpsize);
-	if (!movie->lumpdata)
-		I_Error("FFmpeg: cannot allocate lump data");
-	W_ReadLump(lumpnum, movie->lumpdata);
-}
-
-static int ReadStream(void *owner, uint8_t *buffer, int buffersize)
-{
-	movie_t *movie = owner;
-	size_t bs = buffersize;
-	buffersize = min(bs, movie->lumpsize - movie->lumpposition);
-	memcpy(buffer, &movie->lumpdata[movie->lumpposition], buffersize);
-	movie->lumpposition += buffersize;
-	return buffersize;
-}
-
-static INT64 SeekStream(void *owner, int64_t offset, int whence)
-{
-	movie_t *movie = owner;
-
-	if (whence == SEEK_CUR)
-		offset += movie->lumpposition;
-	else if (whence == SEEK_END)
-		offset += movie->lumpsize;
-	else if (whence == AVSEEK_SIZE)
-		return movie->lumpsize;
-
-	movie->lumpposition = offset;
-
-	return 0;
-}
+//
+// DECODING WORKER INITIALISATION
+//
 
 static void AllocateAVImage(moviedecodeworker_t *worker, avimage_t *image)
 {
@@ -305,37 +229,6 @@ static void AllocateAVImage(moviedecodeworker_t *worker, avimage_t *image)
 	);
 	if (image->datasize < 0)
 		I_Error("FFmpeg: cannot allocate image");
-}
-
-static void InitialiseDemuxing(movie_t *movie)
-{
-	movie->formatcontext = avformat_alloc_context();
-	if (!movie->formatcontext)
-		I_Error("FFmpeg: cannot allocate format context");
-
-	UINT8 *streambuffer = av_malloc(IO_BUFFER_SIZE);
-	if (!streambuffer)
-		I_Error("FFmpeg: cannot allocate stream buffer");
-	movie->lumpposition = 0;
-
-	movie->formatcontext->pb = avio_alloc_context(streambuffer, IO_BUFFER_SIZE, 0, movie, ReadStream, NULL, SeekStream);
-	if (!movie->formatcontext->pb)
-		I_Error("FFmpeg: cannot allocate I/O context");
-
-	if (avformat_open_input(&movie->formatcontext, NULL, NULL, NULL) != 0)
-		I_Error("FFmpeg: cannot open format context");
-
-	if (avformat_find_stream_info(movie->formatcontext, NULL) < 0)
-		I_Error("FFmpeg: cannot find stream information");
-
-	movie->videostream.index = av_find_best_stream(movie->formatcontext, AVMEDIA_TYPE_VIDEO, -1, -1, NULL, 0);
-	if (movie->videostream.index < 0)
-		I_Error("FFmpeg: cannot find video stream");
-	movie->videostream.stream = movie->formatcontext->streams[movie->videostream.index];
-
-	movie->audiostream.index = av_find_best_stream(movie->formatcontext, AVMEDIA_TYPE_AUDIO, -1, -1, NULL, 0);
-	if (movie->audiostream.index >= 0)
-		movie->audiostream.stream = movie->formatcontext->streams[movie->audiostream.index];
 }
 
 static AVCodecContext *InitialiseDecoding(AVStream *stream)
@@ -504,19 +397,14 @@ static void InitialiseDecodeWorker(movie_t *movie)
 	worker->audiostream.stream = &movie->audiostream;
 }
 
+//
+// DECODING WORKER DEINITIALISATION
+//
+
 static void FlushFrameBuffers(moviestream_t *stream, moviedecodeworkerstream_t *workerstream)
 {
 	DequeueWholeBufferIntoBuffer(&workerstream->framepool, &stream->buffer);
 	DequeueWholeBufferIntoBuffer(&workerstream->framepool, &workerstream->framequeue);
-}
-
-static void UninitialiseDemuxing(movie_t *movie)
-{
-	av_freep(&movie->formatcontext->pb->buffer);
-	avio_context_free(&movie->formatcontext->pb);
-	free(movie->lumpdata);
-
-	avformat_close_input(&movie->formatcontext);
 }
 
 static void UninitialiseImages(movie_t *movie)
@@ -599,6 +487,10 @@ static void StopDecoderThread(moviedecodeworker_t *worker)
 		I_unlock_mutex(worker->mutex);
 	} while (stopping);
 }
+
+//
+// DECODING WORKER THREAD
+//
 
 static void SendPacket(moviedecodeworker_t *worker)
 {
@@ -839,6 +731,183 @@ static void DecoderThread(moviedecodeworker_t *worker)
 	I_unlock_mutex(worker->condmutex);
 }
 
+//
+// FRAME CLEARING
+//
+
+static void ClearOldestFrame(movie_t *movie, moviestream_t *stream, moviedecodeworkerstream_t *workerstream)
+{
+	DequeueBufferIntoBuffer(&workerstream->framepool, &stream->buffer);
+	I_wake_one_cond(&movie->decodeworker.cond);
+}
+
+static void ClearOldVideoFrames(movie_t *movie)
+{
+	moviebuffer_t *buffer = &movie->videostream.buffer;
+	INT64 limit = TicsToVideoPTS(movie, movie->position) - TicsToVideoPTS(movie, STREAM_BUFFER_TIME / 2);
+
+	while (buffer->size > 0 && ((movievideoframe_t*)PeekBuffer(buffer))->pts < limit)
+		ClearOldestFrame(movie, &movie->videostream, &movie->decodeworker.videostream);
+}
+
+static void ClearOldAudioFrames(movie_t *movie)
+{
+	moviebuffer_t *buffer = &movie->audiostream.buffer;
+	INT64 limit = max(movie->audioposition - TicsToAudioPTS(movie, STREAM_BUFFER_TIME / 2), 0);
+
+	while (buffer->size > 0 && GetAudioFrameEndPTS(movie, PeekBuffer(buffer)) < limit)
+		ClearOldestFrame(movie, &movie->audiostream, &movie->decodeworker.audiostream);
+}
+
+static void ClearAllFrames(movie_t *movie)
+{
+	while (movie->videostream.buffer.size != 0)
+		ClearOldestFrame(movie, &movie->videostream, &movie->decodeworker.videostream);
+
+	while (movie->audiostream.buffer.size != 0)
+		ClearOldestFrame(movie, &movie->audiostream, &movie->decodeworker.audiostream);
+}
+
+//
+// DEMUXING AND I/O
+//
+
+static lumpnum_t FindMovieLumpNum(const char *name)
+{
+	INT32 wadnum;
+
+	for (wadnum = numwadfiles - 1; wadnum >= 0; wadnum--)
+	{
+		char fullname[256];
+		UINT16 lumpnum;
+
+		snprintf(fullname, sizeof(fullname), "Movies/%s", name);
+		lumpnum = W_CheckNumForFullNamePK3(fullname, wadnum, 0);
+		if (lumpnum != INT16_MAX)
+			return (wadnum << 16) + lumpnum;
+	}
+
+	return LUMPERROR;
+}
+
+static void CacheMovieLump(movie_t *movie, const char *name)
+{
+	lumpnum_t lumpnum;
+
+	lumpnum = FindMovieLumpNum(name);
+	if (lumpnum == LUMPERROR)
+		I_Error("FFmpeg: cannot find movie lump");
+
+	movie->lumpsize = W_LumpLength(lumpnum);
+	movie->lumpdata = malloc(movie->lumpsize);
+	if (!movie->lumpdata)
+		I_Error("FFmpeg: cannot allocate lump data");
+	W_ReadLump(lumpnum, movie->lumpdata);
+}
+
+static int ReadStream(void *owner, uint8_t *buffer, int buffersize)
+{
+	movie_t *movie = owner;
+	size_t bs = buffersize;
+	buffersize = min(bs, movie->lumpsize - movie->lumpposition);
+	memcpy(buffer, &movie->lumpdata[movie->lumpposition], buffersize);
+	movie->lumpposition += buffersize;
+	return buffersize;
+}
+
+static INT64 SeekStream(void *owner, int64_t offset, int whence)
+{
+	movie_t *movie = owner;
+
+	if (whence == SEEK_CUR)
+		offset += movie->lumpposition;
+	else if (whence == SEEK_END)
+		offset += movie->lumpsize;
+	else if (whence == AVSEEK_SIZE)
+		return movie->lumpsize;
+
+	movie->lumpposition = offset;
+
+	return 0;
+}
+
+static void InitialiseDemuxing(movie_t *movie)
+{
+	movie->formatcontext = avformat_alloc_context();
+	if (!movie->formatcontext)
+		I_Error("FFmpeg: cannot allocate format context");
+
+	UINT8 *streambuffer = av_malloc(IO_BUFFER_SIZE);
+	if (!streambuffer)
+		I_Error("FFmpeg: cannot allocate stream buffer");
+	movie->lumpposition = 0;
+
+	movie->formatcontext->pb = avio_alloc_context(streambuffer, IO_BUFFER_SIZE, 0, movie, ReadStream, NULL, SeekStream);
+	if (!movie->formatcontext->pb)
+		I_Error("FFmpeg: cannot allocate I/O context");
+
+	if (avformat_open_input(&movie->formatcontext, NULL, NULL, NULL) != 0)
+		I_Error("FFmpeg: cannot open format context");
+
+	if (avformat_find_stream_info(movie->formatcontext, NULL) < 0)
+		I_Error("FFmpeg: cannot find stream information");
+
+	movie->videostream.index = av_find_best_stream(movie->formatcontext, AVMEDIA_TYPE_VIDEO, -1, -1, NULL, 0);
+	if (movie->videostream.index < 0)
+		I_Error("FFmpeg: cannot find video stream");
+	movie->videostream.stream = movie->formatcontext->streams[movie->videostream.index];
+
+	movie->audiostream.index = av_find_best_stream(movie->formatcontext, AVMEDIA_TYPE_AUDIO, -1, -1, NULL, 0);
+	if (movie->audiostream.index >= 0)
+		movie->audiostream.stream = movie->formatcontext->streams[movie->audiostream.index];
+}
+
+static void UninitialiseDemuxing(movie_t *movie)
+{
+	av_freep(&movie->formatcontext->pb->buffer);
+	avio_context_free(&movie->formatcontext->pb);
+	free(movie->lumpdata);
+
+	avformat_close_input(&movie->formatcontext);
+}
+
+//
+// MAIN THREAD
+//
+
+static boolean ReadPacket(movie_t *movie)
+{
+	moviedecodeworker_t *worker = &movie->decodeworker;
+	AVPacket **packetslot = PeekBuffer(&worker->packetpool);
+	AVPacket *packet = *packetslot;
+
+	int error = av_read_frame(movie->formatcontext, packet);
+
+	if (error == AVERROR_EOF)
+		return false;
+	else if (error < 0)
+		I_Error("FFmpeg: cannot read packet");
+	else if (packet->stream_index == movie->videostream.index
+		|| packet->stream_index == movie->audiostream.index)
+	{
+		DequeueBufferIntoBuffer(&worker->packetqueue, &worker->packetpool);
+		I_wake_one_cond(&worker->cond);
+	}
+	else
+		av_packet_unref(packet);
+
+	return true;
+}
+
+static void PollFrameQueue(moviedecodeworker_t *worker, moviestream_t *stream, moviedecodeworkerstream_t *workerstream)
+{
+	if (workerstream->framequeue.size != 0)
+	{
+		DequeueWholeBufferIntoBuffer(&stream->buffer, &workerstream->framequeue);
+		I_wake_one_cond(&worker->cond);
+	}
+}
+
 static boolean ShouldSeek(movie_t *movie)
 {
 	moviebuffer_t *buffer = &movie->videostream.buffer;
@@ -851,15 +920,6 @@ static boolean ShouldSeek(movie_t *movie)
 	INT64 ahead = VideoPTSToMS(movie, firstframe->pts) - TicsToMS(movie->position);
 	INT64 behind = TicsToMS(movie->position) - VideoPTSToMS(movie, lastframe->pts);
 	return (behind > 1000 || ahead > 1000);
-}
-
-static void PollFrameQueue(moviedecodeworker_t *worker, moviestream_t *stream, moviedecodeworkerstream_t *workerstream)
-{
-	if (workerstream->framequeue.size != 0)
-	{
-		DequeueWholeBufferIntoBuffer(&stream->buffer, &workerstream->framequeue);
-		I_wake_one_cond(&worker->cond);
-	}
 }
 
 static void UpdateSeeking(movie_t *movie)
@@ -891,29 +951,9 @@ static void UpdateSeeking(movie_t *movie)
 		movie->audioposition = TicsToAudioPTS(movie, movie->position);
 }
 
-static boolean ReadPacket(movie_t *movie)
-{
-	moviedecodeworker_t *worker = &movie->decodeworker;
-	AVPacket **packetslot = PeekBuffer(&worker->packetpool);
-	AVPacket *packet = *packetslot;
-
-	int error = av_read_frame(movie->formatcontext, packet);
-
-	if (error == AVERROR_EOF)
-		return false;
-	else if (error < 0)
-		I_Error("FFmpeg: cannot read packet");
-	else if (packet->stream_index == movie->videostream.index
-		|| packet->stream_index == movie->audiostream.index)
-	{
-		DequeueBufferIntoBuffer(&worker->packetqueue, &worker->packetpool);
-		I_wake_one_cond(&worker->cond);
-	}
-	else
-		av_packet_unref(packet);
-
-	return true;
-}
+//
+// API
+//
 
 movie_t *MovieDecode_Play(const char *name, boolean usepatches)
 {
