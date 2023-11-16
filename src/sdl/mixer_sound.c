@@ -773,13 +773,6 @@ static void mix_movie(void *udata, Uint8 *stream, int len)
 
 	// Play movie audio into stream
 	MovieDecode_CopyAudioSamples(movie, stream, len);
-	// for (i = 0; i < len; i++)
-	// 	stream[i] = i / 64;
-
-	// !!! Should this be used here?
-	// // Limiter to prevent music from being disorted with some formats
-	// if (music_volume >= 18)
-	// 	music_volume = 18;
 
 	// apply volume to stream
 	for (i = 0, p = (short *)stream; i < len/2; i++, p++)
@@ -1364,10 +1357,7 @@ void I_UnloadSong(void)
 	I_StopSong();
 
 	if (movie)
-	{
-		// !!! ... Something to do here???
 		movie = NULL;
-	}
 #ifdef HAVE_GME
 	if (gme)
 	{
@@ -1464,10 +1454,7 @@ void I_StopSong(void)
 		I_StopFadingSong();
 
 	if (movie)
-	{
 		Mix_HookMusic(NULL, NULL);
-		// !!! ... Something to do here???
-	}
 #ifdef HAVE_GME
 	if (gme)
 	{
