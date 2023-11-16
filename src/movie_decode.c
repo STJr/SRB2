@@ -987,7 +987,8 @@ void MovieDecode_Stop(movie_t **movieptr)
 
 	StopDecoderThread(&movie->decodeworker);
 
-	S_StopMusic();
+	if (S_MusicType() == MU_MOVIE)
+		S_StopMusic();
 
 	UninitialiseDecodeWorker(movie);
 	UninitialiseBuffer(&movie->videostream.buffer);
