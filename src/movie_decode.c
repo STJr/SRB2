@@ -510,6 +510,15 @@ static void FlushFrameBuffers(moviestream_t *stream, moviedecodeworkerstream_t *
 	DequeueWholeBufferIntoBuffer(&workerstream->framepool, &workerstream->framequeue);
 }
 
+static void UninitialiseDemuxing(movie_t *movie)
+{
+	av_freep(&movie->formatcontext->pb->buffer);
+	avio_context_free(&movie->formatcontext->pb);
+	free(movie->lumpdata);
+
+	avformat_close_input(&movie->formatcontext);
+}
+
 static void UninitialiseImages(movie_t *movie)
 {
 	moviedecodeworker_t *worker = &movie->decodeworker;
@@ -530,7 +539,7 @@ static void UninitialiseImages(movie_t *movie)
 		av_freep(&worker->tmpimage.data[0]);
 }
 
-static void UninitialiseMovieStream(movie_t *movie, moviestream_t *stream, moviedecodeworkerstream_t *workerstream)
+static void UninitialiseDecodeWorkerStream(movie_t *movie, moviestream_t *stream, moviedecodeworkerstream_t *workerstream)
 {
 	FlushFrameBuffers(stream, workerstream);
 
@@ -547,11 +556,31 @@ static void UninitialiseMovieStream(movie_t *movie, moviestream_t *stream, movie
 		}
 	}
 
-	UninitialiseBuffer(&stream->buffer);
 	UninitialiseBuffer(&workerstream->framepool);
 	UninitialiseBuffer(&workerstream->framequeue);
 
 	avcodec_free_context(&workerstream->codeccontext);
+}
+
+static void UninitialisePacketQueue(moviedecodeworker_t *worker)
+{
+	DequeueWholeBufferIntoBuffer(&worker->packetpool, &worker->packetqueue);
+	while (worker->packetpool.size > 0)
+		av_packet_free(DequeueBuffer(&worker->packetpool));
+	UninitialiseBuffer(&worker->packetpool);
+	UninitialiseBuffer(&worker->packetqueue);
+}
+
+static void UninitialiseDecodeWorker(movie_t *movie)
+{
+	moviedecodeworker_t *worker = &movie->decodeworker;
+
+	UninitialiseDecodeWorkerStream(movie, &movie->videostream, &worker->videostream);
+	UninitialiseDecodeWorkerStream(movie, &movie->audiostream, &worker->audiostream);
+	UninitialisePacketQueue(worker);
+	sws_freeContext(worker->scalingcontext);
+	swr_free(&worker->resamplingcontext);
+	av_frame_free(&worker->frame);
 }
 
 static void StopDecoderThread(moviedecodeworker_t *worker)
@@ -912,34 +941,18 @@ movie_t *MovieDecode_Play(const char *name, boolean usepatches)
 void MovieDecode_Stop(movie_t **movieptr)
 {
 	movie_t *movie = *movieptr;
-	moviedecodeworker_t *worker = &movie->decodeworker;
 
 	if (!movie)
 		return;
 
-	StopDecoderThread(worker);
+	StopDecoderThread(&movie->decodeworker);
 
 	S_StopMusic();
 
-	UninitialiseMovieStream(movie, &movie->videostream, &worker->videostream);
-	UninitialiseMovieStream(movie, &movie->audiostream, &worker->audiostream);
-
-	av_freep(&movie->formatcontext->pb->buffer);
-	avio_context_free(&movie->formatcontext->pb);
-	free(movie->lumpdata);
-
-	avformat_close_input(&movie->formatcontext);
-
-	sws_freeContext(worker->scalingcontext);
-	swr_free(&worker->resamplingcontext);
-
-	DequeueWholeBufferIntoBuffer(&worker->packetpool, &worker->packetqueue);
-	while (worker->packetpool.size > 0)
-		av_packet_free(DequeueBuffer(&worker->packetpool));
-	UninitialiseBuffer(&worker->packetpool);
-	UninitialiseBuffer(&worker->packetqueue);
-
-	av_frame_free(&worker->frame);
+	UninitialiseDecodeWorker(movie);
+	UninitialiseBuffer(&movie->videostream.buffer);
+	UninitialiseBuffer(&movie->audiostream.buffer);
+	UninitialiseDemuxing(movie);
 
 	free(movie);
 	*movieptr = NULL;
