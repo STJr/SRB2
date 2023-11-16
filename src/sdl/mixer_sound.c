@@ -775,8 +775,8 @@ static void mix_movie(void *udata, Uint8 *stream, int len)
 	MovieDecode_CopyAudioSamples(movie, stream, len);
 
 	// apply volume to stream
-	for (i = 0, p = (short *)stream; i < len/2; i++, p++)
-		*p = ((INT32)*p) * (music_volume*internal_volume/100)*2 / 40;
+	for (i = 0, p = (short *)stream; i < len / 2; i++, p++)
+		*p = ((INT32)*p) * music_volume * internal_volume / 100 / 20;
 }
 
 #ifdef HAVE_GME
