@@ -53,11 +53,23 @@ static int lib_duration(lua_State *L)
 	return 1;
 }
 
+static int lib_dimensions(lua_State *L)
+{
+	if (!activemovie)
+		return luaL_error(L, "no movie currently playing");
+	INT32 width, height;
+	MovieDecode_GetDimensions(activemovie, &width, &height);
+	lua_pushinteger(L, width);
+	lua_pushinteger(L, height);
+	return 2;
+}
+
 static luaL_Reg lib[] = {
 	{"play", lib_play},
 	{"stop", lib_stop},
 	{"seek", lib_seek},
 	{"duration", lib_duration},
+	{"dimensions", lib_dimensions},
 	{NULL, NULL}
 };
 
