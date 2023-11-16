@@ -1034,7 +1034,7 @@ boolean R_IsPointInSector(sector_t *sector, fixed_t x, fixed_t y)
 {
 	size_t i;
 	line_t *closest = NULL;
-	fixed_t closestdist = 0x7fffffff;
+	fixed_t closestdist = INT32_MAX;
 
 	for (i = 0; i < sector->linecount; i++)
 	{
