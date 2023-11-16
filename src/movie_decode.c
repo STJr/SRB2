@@ -388,22 +388,14 @@ static void InitialiseImages(moviedecodeworker_t *worker)
 
 static void InitialiseVideoBuffer(movie_t *movie)
 {
-	moviestream_t *stream = &movie->videostream;
-	moviedecodeworker_t *worker = &movie->decodeworker;
+	movie->videostream.numplanes = 1;
 
-	stream->numplanes = 1;
-
-	AVRational *fps = &stream->stream->avg_frame_rate;
+	AVRational *fps = &movie->videostream.stream->avg_frame_rate;
 	InitialiseBuffer(
-		&stream->buffer,
+		&movie->videostream.buffer,
 		(INT64)STREAM_BUFFER_TIME / TICRATE * fps->num / fps->den,
 		sizeof(movievideoframe_t)
 	);
-
-	CloneBuffer(&worker->videostream.framequeue, &stream->buffer);
-	CloneBuffer(&worker->videostream.framepool, &stream->buffer);
-
-	InitialiseImages(worker);
 }
 
 static void InitialiseAudioBuffer(moviestream_t *stream, moviedecodeworker_t *worker)
@@ -435,6 +427,81 @@ static void InitialiseAudioBuffer(moviestream_t *stream, moviedecodeworker_t *wo
 		))
 			I_Error("FFmpeg: cannot allocate samples");
 	}
+}
+
+static void InitialisePacketQueue(moviedecodeworker_t *worker)
+{
+	InitialiseBuffer(&worker->packetqueue, 32, sizeof(AVPacket*));
+	CloneBuffer(&worker->packetpool, &worker->packetqueue);
+	for (INT32 i = 0; i < worker->packetpool.capacity; i++)
+	{
+		AVPacket *packet = av_packet_alloc();
+		if (!packet)
+			I_Error("FFmpeg: cannot allocate packet");
+
+		AVPacket **packetslot = EnqueueBuffer(&worker->packetpool);
+		*packetslot = packet;
+	}
+}
+
+static void InitialiseVideoConversion(moviedecodeworker_t *worker)
+{
+	worker->frame = av_frame_alloc();
+	if (!worker->frame)
+		I_Error("FFmpeg: cannot allocate frame");
+
+	int width = worker->videostream.codeccontext->width;
+	int height = worker->videostream.codeccontext->height;
+	worker->scalingcontext = sws_getContext(
+		width, height, worker->videostream.codeccontext->pix_fmt,
+		width, height, AV_PIX_FMT_RGBA,
+		SWS_BILINEAR,
+		NULL,
+		NULL,
+		NULL
+	);
+	if (!worker->scalingcontext)
+		I_Error("FFmpeg: cannot create scaling context");
+
+	InitColorLUT(&worker->colorlut, pMasterPalette, true);
+}
+
+static void InitialiseAudioConversion(moviedecodeworker_t *worker)
+{
+	AVCodecContext *audiocodeccontext = worker->audiostream.codeccontext;
+	worker->resamplingcontext = swr_alloc_set_opts(
+		NULL,
+		audiocodeccontext->channel_layout, AV_SAMPLE_FMT_S16, 44100,
+		audiocodeccontext->channel_layout, audiocodeccontext->sample_fmt, audiocodeccontext->sample_rate,
+		0, NULL
+	);
+	if (!worker->resamplingcontext)
+		I_Error("FFmpeg: cannot allocate resampling context");
+	if (swr_init(worker->resamplingcontext))
+		I_Error("FFmpeg: cannot initialise resampling context");
+}
+
+static void InitialiseDecodeWorker(movie_t *movie)
+{
+	moviedecodeworker_t *worker = &movie->decodeworker;
+	moviestream_t *vstream = &movie->videostream;
+
+	worker->usepatches = movie->usepatches;
+	worker->videostream.index = vstream->index;
+	worker->audiostream.index = movie->audiostream.index;
+	worker->videostream.codeccontext = InitialiseDecoding(vstream->stream);
+	worker->audiostream.codeccontext = InitialiseDecoding(movie->audiostream.stream);
+	CloneBuffer(&worker->videostream.framequeue, &vstream->buffer);
+	CloneBuffer(&worker->videostream.framepool, &vstream->buffer);
+	InitialiseImages(worker);
+	InitialisePacketQueue(worker);
+	InitialiseVideoConversion(worker);
+	InitialiseAudioConversion(worker);
+
+	// Hack because we don't know the audio frame size in advance
+	// so we initialise the audio buffer in the worker thread
+	worker->videostream.stream = vstream;
+	worker->audiostream.stream = &movie->audiostream;
 }
 
 static void FlushFrameBuffers(moviestream_t *stream, moviedecodeworkerstream_t *workerstream)
@@ -827,72 +894,17 @@ movie_t *MovieDecode_Play(const char *name, boolean usepatches)
 	if (!movie)
 		I_Error("FFmpeg: cannot allocate movie object");
 
-	moviedecodeworker_t *worker = &movie->decodeworker;
-
 	movie->lastvideoframeusedid = 0;
 	movie->position = 0;
 	movie->audioposition = 0;
 	movie->usepatches = usepatches;
-	worker->usepatches = usepatches;
 
 	CacheMovieLump(movie, name);
 	InitialiseDemuxing(movie);
-	worker->videostream.codeccontext = InitialiseDecoding(movie->videostream.stream);
-	worker->audiostream.codeccontext = InitialiseDecoding(movie->audiostream.stream);
 	InitialiseVideoBuffer(movie);
+	InitialiseDecodeWorker(movie);
 
-	InitialiseBuffer(&worker->packetqueue, 32, sizeof(AVPacket*));
-	CloneBuffer(&worker->packetpool, &worker->packetqueue);
-	for (INT32 i = 0; i < worker->packetpool.capacity; i++)
-	{
-		AVPacket *packet = av_packet_alloc();
-		if (!packet)
-			I_Error("FFmpeg: cannot allocate packet");
-
-		AVPacket **packetslot = EnqueueBuffer(&worker->packetpool);
-		*packetslot = packet;
-	}
-
-	worker->frame = av_frame_alloc();
-	if (!worker->frame)
-		I_Error("FFmpeg: cannot allocate frame");
-
-	int width = worker->videostream.codeccontext->width;
-	int height = worker->videostream.codeccontext->height;
-	worker->scalingcontext = sws_getContext(
-		width, height, worker->videostream.codeccontext->pix_fmt,
-		width, height, AV_PIX_FMT_RGBA,
-		SWS_BILINEAR,
-		NULL,
-		NULL,
-		NULL
-	);
-	if (!worker->scalingcontext)
-		I_Error("FFmpeg: cannot create scaling context");
-
-	AVCodecContext *audiocodeccontext = worker->audiostream.codeccontext;
-	worker->resamplingcontext = swr_alloc_set_opts(
-		NULL,
-		audiocodeccontext->channel_layout, AV_SAMPLE_FMT_S16, 44100,
-		audiocodeccontext->channel_layout, audiocodeccontext->sample_fmt, audiocodeccontext->sample_rate,
-		0, NULL
-	);
-	if (!worker->resamplingcontext)
-		I_Error("FFmpeg: cannot allocate resampling context");
-	if (swr_init(worker->resamplingcontext))
-		I_Error("FFmpeg: cannot initialise resampling context");
-
-	InitColorLUT(&worker->colorlut, pMasterPalette, true);
-
-	worker->videostream.index = movie->videostream.index;
-	worker->audiostream.index = movie->audiostream.index;
-
-	// Hack because we don't know the audio frame size in advance
-	// so we initialise the audio buffer in the worker thread
-	worker->videostream.stream = &movie->videostream;
-	worker->audiostream.stream = &movie->audiostream;
-
-	I_spawn_thread("decode-movie", (I_thread_fn)DecoderThread, worker);
+	I_spawn_thread("decode-movie", (I_thread_fn)DecoderThread, &movie->decodeworker);
 
 	return movie;
 }
