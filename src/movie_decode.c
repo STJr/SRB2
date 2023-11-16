@@ -974,6 +974,7 @@ void MovieDecode_SetImageFormat(movie_t *movie, boolean usepatches)
 
 	StopDecoderThread(worker);
 	UninitialiseImages(movie);
+	ClearAllFrames(movie);
 
 	movie->usepatches = usepatches;
 	worker->usepatches = usepatches;
