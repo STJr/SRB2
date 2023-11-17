@@ -11,6 +11,7 @@
 
 #include "movie_decode.h"
 #include "byteptr.h"
+#include "doomdef.h"
 #include "doomtype.h"
 #include "libavutil/channel_layout.h"
 #include "libavutil/imgutils.h"
@@ -106,7 +107,7 @@ static void DequeueWholeBufferIntoBuffer(moviebuffer_t *dst, moviebuffer_t *src)
 
 static INT64 TicsToMS(tic_t tics)
 {
-	AVRational oldtb = { 1, 35 };
+	AVRational oldtb = { 1, TICRATE };
 	AVRational newtb = { 1, 1000 };
 
 	return av_rescale_q(tics, oldtb, newtb);
@@ -162,7 +163,7 @@ static INT64 VideoPTSToMS(movie_t *movie, INT64 pts)
 
 static INT64 PTSToTics(INT64 pts)
 {
-	AVRational newtb = { 1, 35 };
+	AVRational newtb = { 1, TICRATE };
 
 	return av_rescale_q(pts, AV_TIME_BASE_Q, newtb);
 }
