@@ -1374,6 +1374,11 @@ GLMapTexture_t *HWR_GetMovieMapTexture(movie_t *movie)
 	texture->height = (UINT16)height;
 	texture->format = GL_TEXFMT_RGBA;
 
+	textures[movietexturenum]->width = width;
+	textures[movietexturenum]->height = height;
+	texturewidth[movietexturenum] = width;
+	textureheight[movietexturenum] = height << FRACBITS;
+
 	INT32 texturesize = texture->width * texture->height * 4;
 	Z_Malloc(texturesize, PU_HWRCACHE, &texture->data);
 
