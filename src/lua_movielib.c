@@ -36,6 +36,15 @@ static int lib_stop(lua_State *L)
 	return 0;
 }
 
+static int lib_setPosition(lua_State *L)
+{
+	if (!activemovie)
+		return luaL_error(L, "no movie currently playing");
+	int tic = luaL_checkinteger(L, 1);
+	MovieDecode_SetPosition(activemovie, tic);
+	return 0;
+}
+
 static int lib_seek(lua_State *L)
 {
 	if (!activemovie)
@@ -67,6 +76,7 @@ static int lib_dimensions(lua_State *L)
 static luaL_Reg lib[] = {
 	{"play", lib_play},
 	{"stop", lib_stop},
+	{"setPosition", lib_setPosition},
 	{"seek", lib_seek},
 	{"duration", lib_duration},
 	{"dimensions", lib_dimensions},

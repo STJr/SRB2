@@ -1000,6 +1000,11 @@ void MovieDecode_Stop(movie_t **movieptr)
 	*movieptr = NULL;
 }
 
+void MovieDecode_SetPosition(movie_t *movie, tic_t tic)
+{
+	movie->position = tic;
+}
+
 void MovieDecode_Seek(movie_t *movie, tic_t tic)
 {
 	movie->position = tic;

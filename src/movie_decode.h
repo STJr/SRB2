@@ -118,6 +118,7 @@ typedef struct
 
 movie_t *MovieDecode_Play(const char *name, boolean usepatches);
 void MovieDecode_Stop(movie_t **movieptr);
+void MovieDecode_SetPosition(movie_t *movie, tic_t tic);
 void MovieDecode_Seek(movie_t *movie, tic_t tic);
 void MovieDecode_Update(movie_t *movie);
 void MovieDecode_SetImageFormat(movie_t *movie, boolean usepatches);
