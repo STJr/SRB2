@@ -82,18 +82,10 @@ struct PaletteRemapParseResult *PaletteRemap_ParseTranslation(const char *transl
 
 void PaletteRemap_ApplyResult(remaptable_t *tr, struct PaletteRemapParseResult *data);
 
-typedef struct CustomTranslation
-{
-	char *name;
-	unsigned id;
-	UINT32 hash;
-} customtranslation_t;
-
-extern customtranslation_t *customtranslations;
-extern unsigned numcustomtranslations;
-
 int R_FindCustomTranslation(const char *name);
+int R_FindCustomTranslation_CaseInsensitive(const char *name);
 void R_AddCustomTranslation(const char *name, int trnum);
+const char *R_GetCustomTranslationName(unsigned id);
 unsigned R_NumCustomTranslations(void);
 remaptable_t *R_GetTranslationByID(int id);
 boolean R_TranslationIsValid(int id);

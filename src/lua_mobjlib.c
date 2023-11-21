@@ -343,9 +343,13 @@ static int mobj_get(lua_State *L)
 		break;
 	case mobj_translation:
 		if (mo->translation)
-			lua_pushinteger(L, mo->translation);
-		else
-			lua_pushnil(L);
+		{
+			const char *name = R_GetCustomTranslationName(mo->translation);
+			if (name)
+				lua_pushstring(L, name);
+			break;
+		}
+		lua_pushnil(L);
 		break;
 	case mobj_blendmode:
 		lua_pushinteger(L, mo->blendmode);

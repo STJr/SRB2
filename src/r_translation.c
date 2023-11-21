@@ -819,8 +819,15 @@ fail:
 	Z_Free(text);
 }
 
-customtranslation_t *customtranslations = NULL;
-unsigned numcustomtranslations = 0;
+typedef struct CustomTranslation
+{
+	char *name;
+	unsigned id;
+	UINT32 hash;
+} customtranslation_t;
+
+static customtranslation_t *customtranslations = NULL;
+static unsigned numcustomtranslations = 0;
 
 int R_FindCustomTranslation(const char *name)
 {
@@ -829,6 +836,18 @@ int R_FindCustomTranslation(const char *name)
 	for (unsigned i = 0; i < numcustomtranslations; i++)
 	{
 		if (hash == customtranslations[i].hash && strcmp(name, customtranslations[i].name) == 0)
+			return (int)customtranslations[i].id;
+	}
+
+	return -1;
+}
+
+// This is needed for SOC (which is case insensitive)
+int R_FindCustomTranslation_CaseInsensitive(const char *name)
+{
+	for (unsigned i = 0; i < numcustomtranslations; i++)
+	{
+		if (stricmp(name, customtranslations[i].name) == 0)
 			return (int)customtranslations[i].id;
 	}
 
@@ -860,6 +879,17 @@ void R_AddCustomTranslation(const char *name, int trnum)
 	tr->id = trnum;
 	tr->name = Z_StrDup(name);
 	tr->hash = quickncasehash(name, strlen(name));
+}
+
+const char *R_GetCustomTranslationName(unsigned id)
+{
+	for (unsigned i = 0; i < numcustomtranslations; i++)
+	{
+		if (id == customtranslations[i].id)
+			return customtranslations[i].name;
+	}
+
+	return NULL;
 }
 
 unsigned R_NumCustomTranslations(void)

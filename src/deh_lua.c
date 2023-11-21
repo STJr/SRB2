@@ -587,13 +587,11 @@ static int ScanConstants(lua_State *L, boolean mathlib, const char *word)
 	else if (mathlib && fastncmp("TRANSLATION_",word,12))
 	{
 		p = word+12;
-		for (i = 0; i < (signed)numcustomtranslations; i++)
+		int id = R_FindCustomTranslation_CaseInsensitive(p);
+		if (id != -1)
 		{
-			if (fasticmp(p, customtranslations[i].name))
-			{
-				lua_pushinteger(L, (int)customtranslations[i].id);
-				return 1;
-			}
+			lua_pushinteger(L, id);
+			return 1;
 		}
 		return luaL_error(L, "translation '%s' could not be found.\n", word);
 	}
