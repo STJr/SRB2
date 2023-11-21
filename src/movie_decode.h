@@ -31,6 +31,7 @@ typedef struct
 {
 	UINT64 id;
 	INT64 pts;
+	INT64 duration;
 
 	union {
 		avimage_t rgba;
@@ -104,6 +105,7 @@ typedef struct
 	boolean usepatches;
 	AVFormatContext *formatcontext;
 	moviedecodeworker_t decodeworker;
+	boolean seeking;
 
 	moviestream_t videostream;
 	moviestream_t audiostream;

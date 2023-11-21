@@ -172,6 +172,11 @@ static INT64 PTSToTics(INT64 pts)
 // MISCELLANEOUS GETTERS
 //
 
+static INT64 GetVideoFrameEndPTS(movievideoframe_t *frame)
+{
+	return frame->pts + frame->duration;
+}
+
 static INT64 GetAudioFrameEndPTS(movie_t *movie, movieaudioframe_t *frame)
 {
 	AVRational oldtb = { 1, 44100 };
@@ -213,6 +218,19 @@ static INT32 FindAudioBufferIndexForPosition(movie_t *movie, INT64 pts)
 	}
 
 	return -1;
+}
+
+static boolean IsPTSInVideoBuffer(movie_t *movie, INT64 pts)
+{
+	moviebuffer_t *buffer = &movie->videostream.buffer;
+
+	if (buffer->size == 0)
+		return false;
+
+	movievideoframe_t *firstframe = GetBufferSlot(buffer, 0);
+	movievideoframe_t *lastframe = GetBufferSlot(buffer, buffer->size - 1);
+
+	return (firstframe->pts <= pts && pts < GetVideoFrameEndPTS(lastframe));
 }
 
 //
@@ -588,6 +606,7 @@ static void ParseVideoFrame(moviedecodeworker_t *worker)
 	worker->nextframeid++;
 
 	frame->pts = worker->frame->pts;
+	frame->duration = worker->frame->pkt_duration;
 
 	avimage_t *image = worker->usepatches ? &worker->tmpimage : &frame->image.rgba;
 	sws_scale(
@@ -632,6 +651,13 @@ static void ParseAudioFrame(moviedecodeworker_t *worker)
 	I_lock_mutex(&worker->mutex);
 	DequeueBufferIntoBuffer(&worker->audiostream.framequeue, &worker->audiostream.framepool);
 	I_unlock_mutex(worker->mutex);
+}
+
+static void FlushDecodeWorker(moviedecodeworker_t *worker)
+{
+	worker->flushing = true;
+	DequeueWholeBufferIntoBuffer(&worker->packetpool, &worker->packetqueue);
+	I_wake_one_cond(&worker->cond);
 }
 
 static void FlushStream(moviedecodeworker_t *worker, moviedecodeworkerstream_t *stream)
@@ -909,44 +935,42 @@ static void PollFrameQueue(moviedecodeworker_t *worker, moviestream_t *stream, m
 	}
 }
 
-static boolean ShouldSeek(movie_t *movie)
+static void Seek(movie_t *movie)
 {
-	moviebuffer_t *buffer = &movie->videostream.buffer;
+	movie->seeking = true;
 
-	if (movie->decodeworker.flushing || buffer->size == 0)
-		return false;
+	ClearAllFrames(movie);
 
-	movievideoframe_t *firstframe = GetBufferSlot(buffer, 0);
-	movievideoframe_t *lastframe = GetBufferSlot(buffer, buffer->size - 1);
-	INT64 ahead = VideoPTSToMS(movie, firstframe->pts) - TicsToMS(movie->position);
-	INT64 behind = TicsToMS(movie->position) - VideoPTSToMS(movie, lastframe->pts);
-	return (behind > 1000 || ahead > 1000);
+	if (avformat_seek_file(
+		movie->formatcontext,
+		movie->videostream.index,
+		TicsToVideoPTS(movie, max((INT64)movie->position - 5 * TICRATE, 0)),
+		TicsToVideoPTS(movie, movie->position),
+		TicsToVideoPTS(movie, movie->position),
+		0
+	) < 0)
+		I_Error("FFmpeg: cannot seek");
+
+	FlushDecodeWorker(&movie->decodeworker);
 }
 
 static void UpdateSeeking(movie_t *movie)
 {
-	moviedecodeworker_t *worker = &movie->decodeworker;
+	moviebuffer_t *buffer = &movie->videostream.buffer;
 
-	if (ShouldSeek(movie))
+	if (movie->seeking && buffer->size > 0)
 	{
-		worker->flushing = true;
+		movievideoframe_t *lastframe = GetBufferSlot(buffer, buffer->size - 1);
+		INT64 target = TicsToMS(movie->position) + 250;
+		INT64 targetdist = target - VideoPTSToMS(movie, GetVideoFrameEndPTS(lastframe));
 
-		ClearAllFrames(movie);
-
-		while (worker->packetqueue.size != 0)
-			DequeueBufferIntoBuffer(&worker->packetpool, &worker->packetqueue);
-
-		avformat_seek_file(
-			movie->formatcontext,
-			movie->videostream.index,
-			TicsToVideoPTS(movie, movie->position - 3 * TICRATE),
-			TicsToVideoPTS(movie, movie->position),
-			TicsToVideoPTS(movie, movie->position + TICRATE / 2),
-			0
-		);
-
-		I_wake_one_cond(&worker->cond);
+		if (targetdist <= 0 || targetdist > 10000)
+			movie->seeking = false;
 	}
+
+	boolean inbuffer = IsPTSInVideoBuffer(movie, TicsToVideoPTS(movie, movie->position));
+	if (!(inbuffer || movie->seeking || movie->decodeworker.flushing || buffer->size == 0))
+		Seek(movie);
 
 	if (llabs(AudioPTSToMS(movie, movie->audioposition) - TicsToMS(movie->position)) > 200)
 		movie->audioposition = TicsToAudioPTS(movie, movie->position);
