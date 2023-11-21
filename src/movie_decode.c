@@ -26,6 +26,13 @@
 
 #define IO_BUFFER_SIZE (8 * 1024)
 #define STREAM_BUFFER_TIME (4 * TICRATE)
+#define NUM_PACKETS 32
+#define SAMPLE_RATE 44100
+#define MAX_AUDIO_DESYNC 200
+#define MAX_SEEK_DISTANCE 10000
+
+#define POST_MAX_HEIGHT 254
+#define POST_BASE_BYTES 4
 
 //
 // CIRCULAR BUFFER
@@ -132,14 +139,14 @@ static INT64 TicsToAudioPTS(movie_t *movie, tic_t tics)
 static INT64 PTSToSamples(movie_t *movie, INT64 pts)
 {
 	AVRational oldtb = movie->audiostream.stream->time_base;
-	AVRational newtb = { 1, 44100 };
+	AVRational newtb = { 1, SAMPLE_RATE };
 
 	return av_rescale_q(pts, oldtb, newtb);
 }
 
 static INT64 SamplesToPTS(movie_t *movie, INT64 numsamples)
 {
-	AVRational oldtb = { 1, 44100 };
+	AVRational oldtb = { 1, SAMPLE_RATE };
 	AVRational newtb = movie->audiostream.stream->time_base;
 
 	return av_rescale_q(numsamples, oldtb, newtb);
@@ -179,7 +186,7 @@ static INT64 GetVideoFrameEndPTS(movievideoframe_t *frame)
 
 static INT64 GetAudioFrameEndPTS(movie_t *movie, movieaudioframe_t *frame)
 {
-	AVRational oldtb = { 1, 44100 };
+	AVRational oldtb = { 1, SAMPLE_RATE };
 	AVRational newtb = movie->audiostream.stream->time_base;
 
 	return frame->pts + av_rescale_q(frame->numsamples, oldtb, newtb);
@@ -188,8 +195,8 @@ static INT64 GetAudioFrameEndPTS(movie_t *movie, movieaudioframe_t *frame)
 static INT32 GetBytesPerPatchColumn(moviedecodeworker_t *worker)
 {
 	INT32 height = worker->videostream.codeccontext->height;
-	INT32 numpostspercolumn = (height + 253) / 254;
-	return height + numpostspercolumn * 4 + 1;
+	INT32 numpostspercolumn = (height + POST_MAX_HEIGHT - 1) / POST_MAX_HEIGHT;
+	return height + numpostspercolumn * POST_BASE_BYTES + 1;
 }
 
 static INT32 FindVideoBufferIndexForPosition(movie_t *movie, INT64 pts)
@@ -283,7 +290,7 @@ static void InitialiseImages(moviedecodeworker_t *worker)
 
 		if (worker->usepatches)
 		{
-			INT32 size = worker->videostream.codeccontext->width * (4 + GetBytesPerPatchColumn(worker));
+			INT32 size = worker->videostream.codeccontext->width * (sizeof(UINT32) + GetBytesPerPatchColumn(worker));
 			frame->image.patch = malloc(size);
 			if (!frame->image.patch)
 				I_Error("FFmpeg: cannot allocate patch data");
@@ -343,7 +350,7 @@ static void InitialiseAudioBuffer(moviestream_t *stream, moviedecodeworker_t *wo
 
 static void InitialisePacketQueue(moviedecodeworker_t *worker)
 {
-	InitialiseBuffer(&worker->packetqueue, 32, sizeof(AVPacket*));
+	InitialiseBuffer(&worker->packetqueue, NUM_PACKETS, sizeof(AVPacket*));
 	CloneBuffer(&worker->packetpool, &worker->packetqueue);
 	for (INT32 i = 0; i < worker->packetpool.capacity; i++)
 	{
@@ -383,7 +390,7 @@ static void InitialiseAudioConversion(moviedecodeworker_t *worker)
 	AVCodecContext *audiocodeccontext = worker->audiostream.codeccontext;
 	worker->resamplingcontext = swr_alloc_set_opts(
 		NULL,
-		audiocodeccontext->channel_layout, AV_SAMPLE_FMT_S16, 44100,
+		audiocodeccontext->channel_layout, AV_SAMPLE_FMT_S16, SAMPLE_RATE,
 		audiocodeccontext->channel_layout, audiocodeccontext->sample_fmt, audiocodeccontext->sample_rate,
 		0, NULL
 	);
@@ -559,7 +566,7 @@ static void ConvertRGBAToPatch(moviedecodeworker_t *worker, UINT8 * restrict src
 	// Write column offsets
 	INT32 bytespercolumn = GetBytesPerPatchColumn(worker);
 	for (INT32 x = 0; x < width; x++)
-		WRITEUINT32(dst, width * 4 + x * bytespercolumn + 3);
+		WRITEUINT32(dst, width * sizeof(UINT32) + x * bytespercolumn + (POST_BASE_BYTES - 1));
 
 	for (INT32 x = 0; x < width; x++)
 	{
@@ -569,10 +576,10 @@ static void ConvertRGBAToPatch(moviedecodeworker_t *worker, UINT8 * restrict src
 		// Write posts
 		while (y < height)
 		{
-			INT32 postend = min(y + 254, height);
+			INT32 postend = min(y + POST_MAX_HEIGHT, height);
 
 			// Header
-			WRITEUINT8(dst, y ? 254 : 0); // Top delta
+			WRITEUINT8(dst, y ? POST_MAX_HEIGHT : 0); // Top delta
 			WRITEUINT8(dst, postend - y); // Length
 			WRITEUINT8(dst, 0); // Unused
 
@@ -964,7 +971,7 @@ static void UpdateSeeking(movie_t *movie)
 		INT64 target = TicsToMS(movie->position) + 250;
 		INT64 targetdist = target - VideoPTSToMS(movie, GetVideoFrameEndPTS(lastframe));
 
-		if (targetdist <= 0 || targetdist > 10000)
+		if (targetdist <= 0 || targetdist > MAX_SEEK_DISTANCE)
 			movie->seeking = false;
 	}
 
@@ -972,7 +979,7 @@ static void UpdateSeeking(movie_t *movie)
 	if (!(inbuffer || movie->seeking || movie->decodeworker.flushing || buffer->size == 0))
 		Seek(movie);
 
-	if (llabs(AudioPTSToMS(movie, movie->audioposition) - TicsToMS(movie->position)) > 200)
+	if (llabs(AudioPTSToMS(movie, movie->audioposition) - TicsToMS(movie->position)) > MAX_AUDIO_DESYNC)
 		movie->audioposition = TicsToAudioPTS(movie, movie->position);
 }
 
