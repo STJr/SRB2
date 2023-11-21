@@ -302,9 +302,9 @@ boolean PaletteRemap_AddDesaturation(remaptable_t *tr, int start, int end, doubl
 		double intensity = (pMasterPalette[c].s.red * 77 + pMasterPalette[c].s.green * 143 + pMasterPalette[c].s.blue * 37) / 255.0;
 
 		tr->remap[c] = NearestColor(
-		    min(255, (int)(r1 + intensity*r2)),
-		    min(255, (int)(g1 + intensity*g2)),
-		    min(255, (int)(b1 + intensity*b2))
+		    min(255, max(0, (int)(r1 + intensity*r2))),
+		    min(255, max(0, (int)(g1 + intensity*g2))),
+		    min(255, max(0, (int)(b1 + intensity*b2)))
 		);
 	}
 
