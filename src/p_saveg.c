@@ -1720,7 +1720,7 @@ static void SaveMobjThinker(const thinker_t *th, const UINT8 type)
 		diff |= MD_SPRITE;
 	if (mobj->frame != mobj->state->frame)
 		diff |= MD_FRAME;
-	if (mobj->anim_duration != (UINT16)(Action_ValueToInteger(mobj->state->var2)))
+	if (mobj->anim_duration != (UINT16)(Action_ValueToInteger(mobj->state->vars[1])))
 		diff |= MD_FRAME;
 	if (mobj->eflags)
 		diff |= MD_EFLAGS;
@@ -2941,7 +2941,7 @@ static thinker_t* LoadMobjThinker(actionf_p1 thinker)
 	else
 	{
 		mobj->frame = mobj->state->frame;
-		mobj->anim_duration = (UINT16)(Action_ValueToInteger(mobj->state->var2));
+		mobj->anim_duration = (UINT16)(Action_ValueToInteger(mobj->state->vars[1]));
 	}
 	if (diff & MD_EFLAGS)
 		mobj->eflags = READUINT16(save_p);

@@ -8001,14 +8001,9 @@ void A_GuardChase(mobj_t *actor, action_val_t *args, unsigned argcount)
 
 	// Now that we've moved, its time for our shield to move!
 	// Otherwise it'll never act as a proper overlay.
-	if (actor->tracer && actor->tracer->state
-	&& actor->tracer->state->action.acp1)
+	if (actor->tracer && actor->tracer->state && actor->tracer->state->action.acp1)
 	{
-		action_val_t call_args[2] = {
-			actor->tracer->state->var1,
-			actor->tracer->state->var2
-		};
-		actor->tracer->state->action.acpscr(actor->tracer, call_args, 2);
+		actor->tracer->state->action.acpscr(actor->tracer, actor->tracer->state->vars, MAX_ACTION_VARS);
 	}
 }
 
@@ -8146,11 +8141,7 @@ void A_Boss1Spikeballs(mobj_t *actor, action_val_t *args, unsigned argcount)
 
 	S_StartSound(ball, ball->info->seesound);
 
-	action_val_t call_args[2] = {
-		ball->state->var1,
-		ball->state->var2
-	};
-	ball->state->action.acpscr(ball, call_args, 2);
+	ball->state->action.acpscr(ball, ball->state->vars, MAX_ACTION_VARS);
 }
 
 // Function: A_Boss3TakeDamage
@@ -9465,21 +9456,15 @@ void A_DualAction(mobj_t *actor, action_val_t *args, unsigned argcount)
 
 	CONS_Debug(DBG_GAMELOGIC, "A_DualAction called from object type %d, var1: %d, var2: %d\n", actor->type, locvar1, locvar2);
 
-	action_val_t call_args[2];
-
-	call_args[0] = states[locvar1].var1;
-	call_args[1] = states[locvar1].var2;
 	astate = &states[locvar1];
 
 	CONS_Debug(DBG_GAMELOGIC, "A_DualAction: Calling First Action (state %d)...\n", locvar1);
-	states[locvar1].action.acpscr(actor, call_args, 2);
+	states[locvar1].action.acpscr(actor, states[locvar1].vars, MAX_ACTION_VARS);
 
-	call_args[0] = states[locvar2].var1;
-	call_args[1] = states[locvar2].var2;
 	astate = &states[locvar2];
 
 	CONS_Debug(DBG_GAMELOGIC, "A_DualAction: Calling Second Action (state %d)...\n", locvar2);
-	states[locvar2].action.acpscr(actor, call_args, 2);
+	states[locvar2].action.acpscr(actor, states[locvar2].vars, MAX_ACTION_VARS);
 }
 
 // Function: A_RemoteAction
@@ -9555,23 +9540,24 @@ void A_RemoteAction(mobj_t *actor, action_val_t *args, unsigned argcount)
 
 	if (actor->target)
 	{
-		// Steal the var1 and var2 from "locvar2"
-		action_val_t call_args[2] = {
-			states[locvar2].var1,
-			states[locvar2].var2
-		};
+		// Use the vars from "locvar2"
 		astate = &states[locvar2];
 
-		char *var1str = Action_ValueToString(states[locvar2].var1);
-		char *var2str = Action_ValueToString(states[locvar2].var2);
+		if (cv_debug)
+		{
+			CONS_Debug(DBG_GAMELOGIC, "A_RemoteAction: Calling action on %p\n", actor->target);
 
-		CONS_Debug(DBG_GAMELOGIC, "A_RemoteAction: Calling action on %p\n"
-				"var1 is %s\nvar2 is %s\n", actor->target, var1str, var2str);
+			for (unsigned i = 0; i < MAX_ACTION_VARS; i++)
+			{
+				char *varstr = Action_ValueToString(states[locvar2].vars[i]);
 
-		Z_Free(var1str);
-		Z_Free(var2str);
+				CONS_Debug(DBG_GAMELOGIC, "var%d is %s\n", i, varstr);
 
-		states[locvar2].action.acpscr(actor->target, call_args, 2);
+				Z_Free(varstr);
+			}
+		}
+
+		states[locvar2].action.acpscr(actor->target, states[locvar2].vars, MAX_ACTION_VARS);
 	}
 
 	P_SetTarget(&actor->target, originaltarget); // Restore the original target.
@@ -10710,13 +10696,13 @@ void A_CusValAction(mobj_t *actor, action_val_t *args, unsigned argcount)
 
 	if (locvar2 == 5)
 	{
-		call_args[0] = states[locvar1].var1;
+		call_args[0] = states[locvar1].vars[0];
 		call_args[1] = ACTION_INTEGER_VAL((INT32)actor->cvmem);
 	}
 	else if (locvar2 == 4)
 	{
 		call_args[0] = ACTION_INTEGER_VAL((INT32)actor->cvmem);
-		call_args[1] = states[locvar1].var2;
+		call_args[1] = states[locvar1].vars[1];
 	}
 	else if (locvar2 == 3)
 	{
@@ -10730,13 +10716,13 @@ void A_CusValAction(mobj_t *actor, action_val_t *args, unsigned argcount)
 	}
 	else if (locvar2 == 1)
 	{
-		call_args[0] = states[locvar1].var1;
+		call_args[0] = states[locvar1].vars[0];
 		call_args[1] = ACTION_INTEGER_VAL((INT32)actor->cusval);
 	}
 	else
 	{
 		call_args[0] = ACTION_INTEGER_VAL((INT32)actor->cusval);
-		call_args[1] = states[locvar1].var2;
+		call_args[1] = states[locvar1].vars[1];
 	}
 
 	astate = &states[locvar1];

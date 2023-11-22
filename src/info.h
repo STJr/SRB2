@@ -4099,14 +4099,15 @@ typedef enum state
 	NUMSTATES
 } statenum_t;
 
+#define MAX_ACTION_VARS 8
+
 typedef struct
 {
 	spritenum_t sprite;
 	UINT32 frame; // we use the upper 16 bits for translucency and other shade effects
 	INT32 tics;
 	actionf_t action;
-	action_val_t var1;
-	action_val_t var2;
+	action_val_t vars[MAX_ACTION_VARS];
 	statenum_t nextstate;
 } state_t;
 

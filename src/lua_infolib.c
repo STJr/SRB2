@@ -776,9 +776,9 @@ static int lib_setState(lua_State *L)
 				return luaL_typerror(L, 3, "function");
 			}
 		} else if (i == 5 || (str && fastcmp(str, "var1"))) {
-			LUA_ValueToActionVal(L, 3, &state->var1);
+			LUA_ValueToActionVal(L, 3, &state->vars[0]);
 		} else if (i == 6 || (str && fastcmp(str, "var2"))) {
-			LUA_ValueToActionVal(L, 3, &state->var2);
+			LUA_ValueToActionVal(L, 3, &state->vars[1]);
 		} else if (i == 7 || (str && fastcmp(str, "nextstate"))) {
 			value = luaL_checkinteger(L, 3);
 			if (value < S_NULL || value >= NUMSTATES)
@@ -980,11 +980,11 @@ static int state_get(lua_State *L)
 		lua_getglobal(L, name); // actually gets from LREG_ACTIONS if applicable, and pushes a META_ACTION userdata if not.
 		return 1; // return just the function
 	} else if (fastcmp(field,"var1")) {
-		PushActionValue(L, st->var1);
+		PushActionValue(L, st->vars[0]);
 		return 1;
 	}
 	else if (fastcmp(field,"var2")) {
-		PushActionValue(L, st->var2);
+		PushActionValue(L, st->vars[1]);
 		return 1;
 	}
 	else if (fastcmp(field,"nextstate"))
@@ -1053,9 +1053,9 @@ static int state_set(lua_State *L)
 			return luaL_typerror(L, 3, "function");
 		}
 	} else if (fastcmp(field,"var1"))
-		LUA_ValueToActionVal(L, 3, &st->var1);
+		LUA_ValueToActionVal(L, 3, &st->vars[0]);
 	else if (fastcmp(field,"var2"))
-		LUA_ValueToActionVal(L, 3, &st->var2);
+		LUA_ValueToActionVal(L, 3, &st->vars[1]);
 	else if (fastcmp(field,"nextstate")) {
 		value = luaL_checkinteger(L, 3);
 		if (value < S_NULL || value >= NUMSTATES)

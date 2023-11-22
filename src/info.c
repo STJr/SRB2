@@ -683,7 +683,7 @@ playersprite_t spr2defaults[NUMPLAYERSPRITES] = {
 };
 
 #define STATE(sprite, frame, duration, action, var1, var2, nextstate) \
-	{ sprite, frame, duration, action, ACTION_INTEGER_VAL(var1), ACTION_INTEGER_VAL(var2), nextstate }
+	{ sprite, frame, duration, action, { ACTION_INTEGER_VAL(var1), ACTION_INTEGER_VAL(var2) }, nextstate }
 
 state_t states[NUMSTATES] =
 {

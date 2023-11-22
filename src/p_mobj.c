@@ -60,12 +60,8 @@ void P_RunCachedActions(void)
 	{
 		if (ac->mobj && !P_MobjWasRemoved(ac->mobj)) // just in case...
 		{
-			action_val_t args[2] = {
-				states[ac->statenum].var1,
-				states[ac->statenum].var2
-			};
 			astate = &states[ac->statenum];
-			states[ac->statenum].action.acpscr(ac->mobj, args, 2);
+			states[ac->statenum].action.acpscr(ac->mobj, states[ac->statenum].vars, MAX_ACTION_VARS);
 		}
 		next = ac->next;
 		Z_Free(ac);
@@ -90,12 +86,12 @@ static void P_SetupStateAnimation(mobj_t *mobj, state_t *st)
 {
 	INT32 animlength = (mobj->sprite == SPR_PLAY && mobj->skin)
 		? (INT32)(((skin_t *)mobj->skin)->sprites[mobj->sprite2].numframes) - 1
-		: Action_ValueToInteger(st->var1);
+		: Action_ValueToInteger(st->vars[0]);
 
 	if (!(st->frame & FF_ANIMATE))
 		return;
 
-	INT32 var2 = Action_ValueToInteger(st->var2);
+	INT32 var2 = Action_ValueToInteger(st->vars[1]);
 
 	if (animlength <= 0 || var2 == 0)
 	{
@@ -129,14 +125,14 @@ FUNCINLINE static ATTRINLINE void P_CycleStateAnimation(mobj_t *mobj)
 	if (!(mobj->frame & FF_ANIMATE) || --mobj->anim_duration != 0)
 		return;
 
-	mobj->anim_duration = Action_ValueToInteger(mobj->state->var2);
+	mobj->anim_duration = Action_ValueToInteger(mobj->state->vars[1]);
 
 	if (mobj->sprite != SPR_PLAY)
 	{
 		// compare the current sprite frame to the one we started from
 		// if more than var1 away from it, swap back to the original
 		// else just advance by one
-		UINT32 var1 = Action_ValueToInteger(mobj->state->var1);
+		UINT32 var1 = Action_ValueToInteger(mobj->state->vars[0]);
 		if (((++mobj->frame) & FF_FRAMEMASK) - (mobj->state->frame & FF_FRAMEMASK) > var1)
 			mobj->frame = (mobj->state->frame & FF_FRAMEMASK) | (mobj->frame & ~FF_FRAMEMASK);
 
@@ -452,7 +448,7 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 			{
 				if (st->frame & FF_SPR2ENDSTATE) // no frame advancement
 				{
-					INT32 var1 = Action_ValueToInteger(st->var1);
+					INT32 var1 = Action_ValueToInteger(st->vars[0]);
 					if (var1 == mobj->state-states)
 						frame--;
 					else
@@ -484,12 +480,8 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 		// Call action functions when the state is set
 		if (st->action.acpscr)
 		{
-			action_val_t args[2] = {
-				st->var1,
-				st->var2
-			};
 			astate = st;
-			st->action.acpscr(mobj, args, 2);
+			st->action.acpscr(mobj, st->vars, MAX_ACTION_VARS);
 
 			// woah. a player was removed by an action.
 			// this sounds like a VERY BAD THING, but there's nothing we can do now...
@@ -595,7 +587,7 @@ boolean P_SetMobjState(mobj_t *mobj, statenum_t state)
 			{
 				if (st->frame & FF_SPR2ENDSTATE) // no frame advancement
 				{
-					INT32 var1 = Action_ValueToInteger(st->var1);
+					INT32 var1 = Action_ValueToInteger(st->vars[0]);
 					if (var1 == mobj->state-states)
 						frame--;
 					else
@@ -625,12 +617,8 @@ boolean P_SetMobjState(mobj_t *mobj, statenum_t state)
 		// Call action functions when the state is set
 		if (st->action.acpscr)
 		{
-			action_val_t args[2] = {
-				st->var1,
-				st->var2
-			};
 			astate = st;
-			st->action.acpscr(mobj, args, 2);
+			st->action.acpscr(mobj, st->vars, MAX_ACTION_VARS);
 			if (P_MobjWasRemoved(mobj))
 				return false;
 		}
@@ -6886,7 +6874,7 @@ void P_RunOverlays(void)
 
 			if (!(mo->state->frame & FF_ANIMATE))
 			{
-				INT32 var1 = Action_ValueToInteger(mo->state->var1);
+				INT32 var1 = Action_ValueToInteger(mo->state->vars[0]);
 				if (var1)
 					viewingangle += ANGLE_180;
 			}
@@ -6904,7 +6892,7 @@ void P_RunOverlays(void)
 		mo->angle = (mo->target->player ? mo->target->player->drawangle : mo->target->angle) + mo->movedir;
 
 		if (!(mo->state->frame & FF_ANIMATE))
-			zoffs = FixedMul(Action_ValueToInteger(mo->state->var2)*FRACUNIT, mo->scale);
+			zoffs = FixedMul(Action_ValueToInteger(mo->state->vars[1])*FRACUNIT, mo->scale);
 		// if you're using FF_ANIMATE on an overlay,
 		// then you're on your own.
 		else
@@ -6919,7 +6907,7 @@ void P_RunOverlays(void)
 			mo->z = (mo->target->z + mo->target->height - mo->height) - zoffs;
 		else
 			mo->z = mo->target->z + zoffs;
-		if (Action_ValueToInteger(mo->state->var1))
+		if (Action_ValueToInteger(mo->state->vars[0]))
 			P_SetUnderlayPosition(mo);
 		else
 			P_SetThingPosition(mo);
@@ -7422,7 +7410,7 @@ static void P_RosySceneryThink(mobj_t *mobj)
 			P_SetMobjState(mobj, stat);
 		}
 		else if (P_MobjFlip(mobj)*mobj->momz < 0)
-			mobj->frame = mobj->state->frame + Action_ValueToInteger(mobj->state->var1);
+			mobj->frame = mobj->state->frame + Action_ValueToInteger(mobj->state->vars[0]);
 	}
 
 	if (!player)
@@ -7474,7 +7462,7 @@ static void P_RosySceneryThink(mobj_t *mobj)
 				max = pdist;
 				if ((--mobj->extravalue1) <= 0)
 				{
-					if (++mobj->frame > mobj->state->frame + Action_ValueToInteger(mobj->state->var1))
+					if (++mobj->frame > mobj->state->frame + Action_ValueToInteger(mobj->state->vars[0]))
 						mobj->frame = mobj->state->frame;
 					if (mom > 12*mobj->scale)
 						mobj->extravalue1 = 2;
@@ -9951,9 +9939,9 @@ static void P_FiringThink(mobj_t *mobj)
 	{
 		if (mobj->state->tics > 1)
 		{
-			INT32 var2 = Action_ValueToInteger(mobj->state->var2);
+			INT32 var2 = Action_ValueToInteger(mobj->state->vars[1]);
 			action_val_t args[2] = {
-				mobj->state->var1,
+				mobj->state->vars[0],
 				ACTION_INTEGER_VAL(var2 & 65535)
 			};
 			mobj->state->action.acpscr(mobj, args, 2);
@@ -10841,12 +10829,7 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 					P_SetTarget(&ball->target, mobj);
 					ball->movedir = FixedAngle(FixedMul(FixedDiv(i<<FRACBITS, mobj->info->damage<<FRACBITS), 360<<FRACBITS));
 					ball->threshold = ball->radius + mobj->radius + FixedMul(ball->info->painchance, ball->scale);
-
-					action_val_t args[2] = {
-						ball->state->var1,
-						ball->state->var2
-					};
-					ball->state->action.acpscr(ball, args, 2);
+					ball->state->action.acpscr(ball, ball->state->vars, MAX_ACTION_VARS);
 				}
 			}
 			break;
@@ -11062,12 +11045,8 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 		}
 		else
 		{
-			action_val_t args[2] = {
-				st->var1,
-				st->var2
-			};
 			astate = st;
-			st->action.acpscr(mobj, args, 2);
+			st->action.acpscr(mobj, st->vars, MAX_ACTION_VARS);
 			// DANGER! This can cause P_SpawnMobj to return NULL!
 			// Avoid using MF_RUNSPAWNFUNC on mobjs whose spawn state expects target or tracer to already be set!
 			if (P_MobjWasRemoved(mobj))

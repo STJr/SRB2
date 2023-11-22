@@ -1503,7 +1503,7 @@ boolean HWR_DrawModel(gl_vissprite_t *spr)
 		if (spr->mobj->frame & FF_ANIMATE)
 		{
 			// set duration and tics to be the correct values for FF_ANIMATE states
-			INT32 var2 = Action_ValueToInteger(spr->mobj->state->var2);
+			INT32 var2 = Action_ValueToInteger(spr->mobj->state->vars[1]);
 			durs = (float)var2;
 			tics = (float)spr->mobj->anim_duration;
 		}
@@ -1567,7 +1567,7 @@ boolean HWR_DrawModel(gl_vissprite_t *spr)
 				if (spr->mobj->frame & FF_ANIMATE)
 				{
 					nextFrame = (spr->mobj->frame & FF_FRAMEMASK) + 1;
-					if (nextFrame >= (INT32)(Action_ValueToInteger(spr->mobj->state->var1) + (spr->mobj->state->frame & FF_FRAMEMASK)))
+					if (nextFrame >= (INT32)(Action_ValueToInteger(spr->mobj->state->vars[0]) + (spr->mobj->state->frame & FF_FRAMEMASK)))
 						nextFrame = (spr->mobj->state->frame & FF_FRAMEMASK) % mod;
 				}
 				else
