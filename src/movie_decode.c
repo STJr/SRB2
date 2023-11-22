@@ -25,7 +25,7 @@
 #endif
 
 #define IO_BUFFER_SIZE (8 * 1024)
-#define STREAM_BUFFER_TIME (4 * TICRATE)
+#define STREAM_BUFFER_TIME 4000
 #define NUM_PACKETS 32
 #define SAMPLE_RATE 44100
 #define MAX_AUDIO_DESYNC 200
@@ -112,30 +112,6 @@ static void DequeueWholeBufferIntoBuffer(moviebuffer_t *dst, moviebuffer_t *src)
 // TIME CONVERSION
 //
 
-static INT64 TicsToMS(tic_t tics)
-{
-	AVRational oldtb = { 1, TICRATE };
-	AVRational newtb = { 1, 1000 };
-
-	return av_rescale_q(tics, oldtb, newtb);
-}
-
-static INT64 TicsToVideoPTS(movie_t *movie, tic_t tics)
-{
-	AVRational oldtb = { 1, TICRATE };
-	AVRational newtb = movie->videostream.stream->time_base;
-
-	return av_rescale_q(tics, oldtb, newtb);
-}
-
-static INT64 TicsToAudioPTS(movie_t *movie, tic_t tics)
-{
-	AVRational oldtb = { 1, TICRATE };
-	AVRational newtb = movie->audiostream.stream->time_base;
-
-	return av_rescale_q(tics, oldtb, newtb);
-}
-
 static INT64 PTSToSamples(movie_t *movie, INT64 pts)
 {
 	AVRational oldtb = movie->audiostream.stream->time_base;
@@ -160,6 +136,14 @@ static INT64 AudioPTSToMS(movie_t *movie, INT64 pts)
 	return av_rescale_q(pts, oldtb, newtb);
 }
 
+static INT64 MSToAudioPTS(movie_t *movie, INT64 ms)
+{
+	AVRational oldtb = { 1, 1000 };
+	AVRational newtb = movie->audiostream.stream->time_base;
+
+	return av_rescale_q(ms, oldtb, newtb);
+}
+
 static INT64 VideoPTSToMS(movie_t *movie, INT64 pts)
 {
 	AVRational oldtb = movie->videostream.stream->time_base;
@@ -168,9 +152,17 @@ static INT64 VideoPTSToMS(movie_t *movie, INT64 pts)
 	return av_rescale_q(pts, oldtb, newtb);
 }
 
-static INT64 PTSToTics(INT64 pts)
+static INT64 MSToVideoPTS(movie_t *movie, INT64 ms)
 {
-	AVRational newtb = { 1, TICRATE };
+	AVRational oldtb = { 1, 1000 };
+	AVRational newtb = movie->videostream.stream->time_base;
+
+	return av_rescale_q(ms, oldtb, newtb);
+}
+
+static INT64 PTSToMS(INT64 pts)
+{
+	AVRational newtb = { 1, 1000 };
 
 	return av_rescale_q(pts, AV_TIME_BASE_Q, newtb);
 }
@@ -312,7 +304,7 @@ static void InitialiseVideoBuffer(movie_t *movie)
 	AVRational *fps = &movie->videostream.stream->avg_frame_rate;
 	InitialiseBuffer(
 		&movie->videostream.buffer,
-		(INT64)STREAM_BUFFER_TIME / TICRATE * fps->num / fps->den,
+		(INT64)STREAM_BUFFER_TIME / 1000 * fps->num / fps->den,
 		sizeof(movievideoframe_t)
 	);
 }
@@ -328,7 +320,7 @@ static void InitialiseAudioBuffer(moviestream_t *stream, moviedecodeworker_t *wo
 
 	InitialiseBuffer(
 		&stream->buffer,
-		STREAM_BUFFER_TIME / TICRATE * workerstream->codeccontext->sample_rate / worker->frame->nb_samples,
+		STREAM_BUFFER_TIME / 1000 * workerstream->codeccontext->sample_rate / worker->frame->nb_samples,
 		sizeof(movieaudioframe_t)
 	);
 
@@ -778,7 +770,7 @@ static void ClearOldestFrame(movie_t *movie, moviestream_t *stream, moviedecodew
 static void ClearOldVideoFrames(movie_t *movie)
 {
 	moviebuffer_t *buffer = &movie->videostream.buffer;
-	INT64 limit = TicsToVideoPTS(movie, movie->position) - TicsToVideoPTS(movie, STREAM_BUFFER_TIME / 2);
+	INT64 limit = MSToVideoPTS(movie, movie->position - STREAM_BUFFER_TIME / 2);
 
 	while (buffer->size > 0 && ((movievideoframe_t*)PeekBuffer(buffer))->pts < limit)
 		ClearOldestFrame(movie, &movie->videostream, &movie->decodeworker.videostream);
@@ -787,7 +779,7 @@ static void ClearOldVideoFrames(movie_t *movie)
 static void ClearOldAudioFrames(movie_t *movie)
 {
 	moviebuffer_t *buffer = &movie->audiostream.buffer;
-	INT64 limit = max(movie->audioposition - TicsToAudioPTS(movie, STREAM_BUFFER_TIME / 2), 0);
+	INT64 limit = max(movie->audioposition - MSToAudioPTS(movie, STREAM_BUFFER_TIME / 2), 0);
 
 	while (buffer->size > 0 && GetAudioFrameEndPTS(movie, PeekBuffer(buffer)) < limit)
 		ClearOldestFrame(movie, &movie->audiostream, &movie->decodeworker.audiostream);
@@ -951,9 +943,9 @@ static void Seek(movie_t *movie)
 	if (avformat_seek_file(
 		movie->formatcontext,
 		movie->videostream.index,
-		TicsToVideoPTS(movie, max((INT64)movie->position - 5 * TICRATE, 0)),
-		TicsToVideoPTS(movie, movie->position),
-		TicsToVideoPTS(movie, movie->position),
+		MSToVideoPTS(movie, max(movie->position - 5000, 0)),
+		MSToVideoPTS(movie, movie->position),
+		MSToVideoPTS(movie, movie->position),
 		0
 	) < 0)
 		I_Error("FFmpeg: cannot seek");
@@ -968,19 +960,19 @@ static void UpdateSeeking(movie_t *movie)
 	if (movie->seeking && buffer->size > 0)
 	{
 		movievideoframe_t *lastframe = GetBufferSlot(buffer, buffer->size - 1);
-		INT64 target = TicsToMS(movie->position) + 250;
+		INT64 target = movie->position + 250;
 		INT64 targetdist = target - VideoPTSToMS(movie, GetVideoFrameEndPTS(lastframe));
 
 		if (targetdist <= 0 || targetdist > MAX_SEEK_DISTANCE)
 			movie->seeking = false;
 	}
 
-	boolean inbuffer = IsPTSInVideoBuffer(movie, TicsToVideoPTS(movie, movie->position));
+	boolean inbuffer = IsPTSInVideoBuffer(movie, MSToVideoPTS(movie, movie->position));
 	if (!(inbuffer || movie->seeking || movie->decodeworker.flushing || buffer->size == 0))
 		Seek(movie);
 
-	if (llabs(AudioPTSToMS(movie, movie->audioposition) - TicsToMS(movie->position)) > MAX_AUDIO_DESYNC)
-		movie->audioposition = TicsToAudioPTS(movie, movie->position);
+	if (llabs(AudioPTSToMS(movie, movie->audioposition) - movie->position) > MAX_AUDIO_DESYNC)
+		movie->audioposition = MSToAudioPTS(movie, movie->position);
 }
 
 //
@@ -1031,14 +1023,14 @@ void MovieDecode_Stop(movie_t **movieptr)
 	*movieptr = NULL;
 }
 
-void MovieDecode_SetPosition(movie_t *movie, tic_t tic)
+void MovieDecode_SetPosition(movie_t *movie, INT64 ms)
 {
-	movie->position = tic;
+	movie->position = ms;
 }
 
-void MovieDecode_Seek(movie_t *movie, tic_t tic)
+void MovieDecode_Seek(movie_t *movie, INT64 ms)
 {
-	movie->position = tic;
+	movie->position = ms;
 }
 
 void MovieDecode_Update(movie_t *movie)
@@ -1085,9 +1077,9 @@ void MovieDecode_SetImageFormat(movie_t *movie, boolean usepatches)
 	I_spawn_thread("decode-movie", (I_thread_fn)DecoderThread, worker);
 }
 
-tic_t MovieDecode_GetDuration(movie_t *movie)
+INT64 MovieDecode_GetDuration(movie_t *movie)
 {
-	return PTSToTics(movie->formatcontext->duration);
+	return PTSToMS(movie->formatcontext->duration);
 }
 
 void MovieDecode_GetDimensions(movie_t *movie, INT32 *width, INT32 *height)
@@ -1099,7 +1091,7 @@ void MovieDecode_GetDimensions(movie_t *movie, INT32 *width, INT32 *height)
 
 UINT8 *MovieDecode_GetImage(movie_t *movie)
 {
-	INT32 bufferindex = FindVideoBufferIndexForPosition(movie, TicsToVideoPTS(movie, movie->position));
+	INT32 bufferindex = FindVideoBufferIndexForPosition(movie, MSToVideoPTS(movie, movie->position));
 	movievideoframe_t *frame = GetBufferSlot(&movie->videostream.buffer, bufferindex);
 
 	if (frame && movie->lastvideoframeusedid != frame->id)

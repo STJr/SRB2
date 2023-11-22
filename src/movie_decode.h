@@ -114,17 +114,17 @@ typedef struct
 	size_t lumpsize;
 	size_t lumpposition;
 
-	tic_t position;
+	INT64 position;
 	INT64 audioposition;
 } movie_t;
 
 movie_t *MovieDecode_Play(const char *name, boolean usepatches);
 void MovieDecode_Stop(movie_t **movieptr);
-void MovieDecode_SetPosition(movie_t *movie, tic_t tic);
-void MovieDecode_Seek(movie_t *movie, tic_t tic);
+void MovieDecode_SetPosition(movie_t *movie, INT64 ms);
+void MovieDecode_Seek(movie_t *movie, INT64 ms);
 void MovieDecode_Update(movie_t *movie);
 void MovieDecode_SetImageFormat(movie_t *movie, boolean usepatches);
-tic_t MovieDecode_GetDuration(movie_t *movie);
+INT64 MovieDecode_GetDuration(movie_t *movie);
 void MovieDecode_GetDimensions(movie_t *movie, INT32 *width, INT32 *height);
 UINT8 *MovieDecode_GetImage(movie_t *movie);
 INT32 MovieDecode_GetPatchBytes(movie_t *movie);

@@ -40,8 +40,8 @@ static int lib_setPosition(lua_State *L)
 {
 	if (!activemovie)
 		return luaL_error(L, "no movie currently playing");
-	int tic = luaL_checkinteger(L, 1);
-	MovieDecode_SetPosition(activemovie, tic);
+	int ms = luaL_checkinteger(L, 1);
+	MovieDecode_SetPosition(activemovie, ms);
 	return 0;
 }
 
@@ -49,8 +49,8 @@ static int lib_seek(lua_State *L)
 {
 	if (!activemovie)
 		return luaL_error(L, "no movie currently playing");
-	int tic = luaL_checkinteger(L, 1);
-	MovieDecode_Seek(activemovie, tic);
+	int ms = luaL_checkinteger(L, 1);
+	MovieDecode_Seek(activemovie, ms);
 	return 0;
 }
 
