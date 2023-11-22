@@ -2025,14 +2025,18 @@ static int lib_pCeilingzAtPos(lua_State *L)
 
 static int lib_pGetSectorColormapAt(lua_State *L)
 {
+	boolean has_sector = false;
 	sector_t *sector = NULL;
-	if (!lua_isnone(L, 1) && lua_isuserdata(L, 1))
+	if (!lua_isnoneornil(L, 1))
+	{
+		has_sector = true;
 		sector = *((sector_t **)luaL_checkudata(L, 1, META_SECTOR));
+	}
 	fixed_t x = luaL_checkfixed(L, 2);
 	fixed_t y = luaL_checkfixed(L, 3);
 	fixed_t z = luaL_checkfixed(L, 4);
 	INLEVEL
-	if (!sector)
+	if (has_sector && !sector)
 		return LUA_ErrInvalid(L, "sector_t");
 	extracolormap_t *exc;
 	if (sector)
