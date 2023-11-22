@@ -58,12 +58,12 @@ void P_RunCachedActions(void)
 
 	for (ac = actioncachehead.next; ac != &actioncachehead; ac = next)
 	{
-		action_val_t args[2] = {
-			ACTION_INTEGER_VAL(states[ac->statenum].var1),
-			ACTION_INTEGER_VAL(states[ac->statenum].var2)
-		};
 		if (ac->mobj && !P_MobjWasRemoved(ac->mobj)) // just in case...
 		{
+			action_val_t args[2] = {
+				states[ac->statenum].var1,
+				states[ac->statenum].var2
+			};
 			astate = &states[ac->statenum];
 			states[ac->statenum].action.acpscr(ac->mobj, args, 2);
 		}
@@ -90,31 +90,33 @@ static void P_SetupStateAnimation(mobj_t *mobj, state_t *st)
 {
 	INT32 animlength = (mobj->sprite == SPR_PLAY && mobj->skin)
 		? (INT32)(((skin_t *)mobj->skin)->sprites[mobj->sprite2].numframes) - 1
-		: st->var1;
+		: Action_ValueToInteger(st->var1);
 
 	if (!(st->frame & FF_ANIMATE))
 		return;
 
-	if (animlength <= 0 || st->var2 == 0)
+	INT32 var2 = Action_ValueToInteger(st->var2);
+
+	if (animlength <= 0 || var2 == 0)
 	{
 		mobj->frame &= ~FF_ANIMATE;
 		return; // Crash/stupidity prevention
 	}
 
-	mobj->anim_duration = (UINT16)st->var2;
+	mobj->anim_duration = (UINT16)var2;
 
 	if (st->frame & FF_GLOBALANIM)
 	{
 		// Attempt to account for the pre-ticker for objects spawned on load
 		if (!leveltime) return;
 
-		mobj->anim_duration -= (leveltime + 2) % st->var2;            // Duration synced to timer
-		mobj->frame += ((leveltime + 2) / st->var2) % (animlength + 1); // Frame synced to timer (duration taken into account)
+		mobj->anim_duration -= (leveltime + 2) % var2;            // Duration synced to timer
+		mobj->frame += ((leveltime + 2) / var2) % (animlength + 1); // Frame synced to timer (duration taken into account)
 	}
 	else if (st->frame & FF_RANDOMANIM)
 	{
 		mobj->frame += P_RandomKey(animlength + 1);     // Random starting frame
-		mobj->anim_duration -= P_RandomKey(st->var2); // Random duration for first frame
+		mobj->anim_duration -= P_RandomKey(var2); // Random duration for first frame
 	}
 }
 
@@ -127,14 +129,15 @@ FUNCINLINE static ATTRINLINE void P_CycleStateAnimation(mobj_t *mobj)
 	if (!(mobj->frame & FF_ANIMATE) || --mobj->anim_duration != 0)
 		return;
 
-	mobj->anim_duration = (UINT16)mobj->state->var2;
+	mobj->anim_duration = Action_ValueToInteger(mobj->state->var2);
 
 	if (mobj->sprite != SPR_PLAY)
 	{
 		// compare the current sprite frame to the one we started from
 		// if more than var1 away from it, swap back to the original
 		// else just advance by one
-		if (((++mobj->frame) & FF_FRAMEMASK) - (mobj->state->frame & FF_FRAMEMASK) > (UINT32)mobj->state->var1)
+		UINT32 var1 = Action_ValueToInteger(mobj->state->var1);
+		if (((++mobj->frame) & FF_FRAMEMASK) - (mobj->state->frame & FF_FRAMEMASK) > var1)
 			mobj->frame = (mobj->state->frame & FF_FRAMEMASK) | (mobj->frame & ~FF_FRAMEMASK);
 
 		return;
@@ -449,13 +452,14 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 			{
 				if (st->frame & FF_SPR2ENDSTATE) // no frame advancement
 				{
-					if (st->var1 == mobj->state-states)
+					INT32 var1 = Action_ValueToInteger(st->var1);
+					if (var1 == mobj->state-states)
 						frame--;
 					else
 					{
 						if (mobj->frame & FF_FRAMEMASK)
 							mobj->frame--;
-						return P_SetPlayerMobjState(mobj, st->var1);
+						return P_SetPlayerMobjState(mobj, var1);
 					}
 				}
 				else
@@ -481,8 +485,8 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 		if (st->action.acpscr)
 		{
 			action_val_t args[2] = {
-				ACTION_INTEGER_VAL(st->var1),
-				ACTION_INTEGER_VAL(st->var2)
+				st->var1,
+				st->var2
 			};
 			astate = st;
 			st->action.acpscr(mobj, args, 2);
@@ -591,13 +595,14 @@ boolean P_SetMobjState(mobj_t *mobj, statenum_t state)
 			{
 				if (st->frame & FF_SPR2ENDSTATE) // no frame advancement
 				{
-					if (st->var1 == mobj->state-states)
+					INT32 var1 = Action_ValueToInteger(st->var1);
+					if (var1 == mobj->state-states)
 						frame--;
 					else
 					{
 						if (mobj->frame & FF_FRAMEMASK)
 							mobj->frame--;
-						return P_SetMobjState(mobj, st->var1);
+						return P_SetMobjState(mobj, var1);
 					}
 				}
 				else
@@ -621,8 +626,8 @@ boolean P_SetMobjState(mobj_t *mobj, statenum_t state)
 		if (st->action.acpscr)
 		{
 			action_val_t args[2] = {
-				ACTION_INTEGER_VAL(st->var1),
-				ACTION_INTEGER_VAL(st->var2)
+				st->var1,
+				st->var2
 			};
 			astate = st;
 			st->action.acpscr(mobj, args, 2);
@@ -6879,8 +6884,12 @@ void P_RunOverlays(void)
 			else
 				viewingangle = R_PointToAngle2(mo->target->x, mo->target->y, camera.x, camera.y);
 
-			if (!(mo->state->frame & FF_ANIMATE) && mo->state->var1)
-				viewingangle += ANGLE_180;
+			if (!(mo->state->frame & FF_ANIMATE))
+			{
+				INT32 var1 = Action_ValueToInteger(mo->state->var1);
+				if (var1)
+					viewingangle += ANGLE_180;
+			}
 			destx = mo->target->x + P_ReturnThrustX(mo->target, viewingangle, FixedMul(FRACUNIT/4, mo->scale));
 			desty = mo->target->y + P_ReturnThrustY(mo->target, viewingangle, FixedMul(FRACUNIT/4, mo->scale));
 		}
@@ -6895,7 +6904,7 @@ void P_RunOverlays(void)
 		mo->angle = (mo->target->player ? mo->target->player->drawangle : mo->target->angle) + mo->movedir;
 
 		if (!(mo->state->frame & FF_ANIMATE))
-			zoffs = FixedMul(((signed)mo->state->var2)*FRACUNIT, mo->scale);
+			zoffs = FixedMul(Action_ValueToInteger(mo->state->var2)*FRACUNIT, mo->scale);
 		// if you're using FF_ANIMATE on an overlay,
 		// then you're on your own.
 		else
@@ -6910,7 +6919,7 @@ void P_RunOverlays(void)
 			mo->z = (mo->target->z + mo->target->height - mo->height) - zoffs;
 		else
 			mo->z = mo->target->z + zoffs;
-		if (mo->state->var1)
+		if (Action_ValueToInteger(mo->state->var1))
 			P_SetUnderlayPosition(mo);
 		else
 			P_SetThingPosition(mo);
@@ -7413,7 +7422,7 @@ static void P_RosySceneryThink(mobj_t *mobj)
 			P_SetMobjState(mobj, stat);
 		}
 		else if (P_MobjFlip(mobj)*mobj->momz < 0)
-			mobj->frame = mobj->state->frame + mobj->state->var1;
+			mobj->frame = mobj->state->frame + Action_ValueToInteger(mobj->state->var1);
 	}
 
 	if (!player)
@@ -7465,7 +7474,7 @@ static void P_RosySceneryThink(mobj_t *mobj)
 				max = pdist;
 				if ((--mobj->extravalue1) <= 0)
 				{
-					if (++mobj->frame > mobj->state->frame + mobj->state->var1)
+					if (++mobj->frame > mobj->state->frame + Action_ValueToInteger(mobj->state->var1))
 						mobj->frame = mobj->state->frame;
 					if (mom > 12*mobj->scale)
 						mobj->extravalue1 = 2;
@@ -9942,9 +9951,10 @@ static void P_FiringThink(mobj_t *mobj)
 	{
 		if (mobj->state->tics > 1)
 		{
+			INT32 var2 = Action_ValueToInteger(mobj->state->var2);
 			action_val_t args[2] = {
-				ACTION_INTEGER_VAL(mobj->state->var1),
-				ACTION_INTEGER_VAL(mobj->state->var2 & 65535)
+				mobj->state->var1,
+				ACTION_INTEGER_VAL(var2 & 65535)
 			};
 			mobj->state->action.acpscr(mobj, args, 2);
 		}
@@ -10833,8 +10843,8 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 					ball->threshold = ball->radius + mobj->radius + FixedMul(ball->info->painchance, ball->scale);
 
 					action_val_t args[2] = {
-						ACTION_INTEGER_VAL(ball->state->var1),
-						ACTION_INTEGER_VAL(ball->state->var2)
+						ball->state->var1,
+						ball->state->var2
 					};
 					ball->state->action.acpscr(ball, args, 2);
 				}
@@ -11053,8 +11063,8 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 		else
 		{
 			action_val_t args[2] = {
-				ACTION_INTEGER_VAL(st->var1),
-				ACTION_INTEGER_VAL(st->var2)
+				st->var1,
+				st->var2
 			};
 			astate = st;
 			st->action.acpscr(mobj, args, 2);

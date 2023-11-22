@@ -2760,11 +2760,11 @@ void readframe(MYFILE *f, INT32 num)
 			}
 			else if (fastcmp(word1, "VAR1"))
 			{
-				states[num].var1 = (INT32)get_number(word2);
+				states[num].var1 = ACTION_INTEGER_VAL((INT32)get_number(word2));
 			}
 			else if (fastcmp(word1, "VAR2"))
 			{
-				states[num].var2 = (INT32)get_number(word2);
+				states[num].var2 = ACTION_INTEGER_VAL((INT32)get_number(word2));
 			}
 			else if (fastcmp(word1, "ACTION"))
 			{

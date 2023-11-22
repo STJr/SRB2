@@ -739,16 +739,50 @@ static const char *Action_GetTypeName(UINT8 type)
 #define ARGS_VALUE_EXPECTED(expectedType) \
 		CONS_Alert(CONS_WARNING, "%s: in argument #%d: expected value of type %s, but was of type %s\n", action_name, argnum+1, Action_GetTypeName(expectedType), Action_GetTypeName(args[argnum].type))
 
+INT32 Action_ValueToInteger(action_val_t value)
+{
+	if (ACTION_VAL_IS_INTEGER(value))
+		return ACTION_VAL_AS_INTEGER(value);
+	else if (ACTION_VAL_IS_DECIMAL(value))
+		return FixedInt(ACTION_VAL_AS_DECIMAL(value));
+	else if (ACTION_VAL_IS_BOOLEAN(value))
+		return ACTION_VAL_AS_BOOLEAN(value) ? 1 : 0;
+
+	return 0;
+}
+
+char *Action_ValueToString(action_val_t value)
+{
+	size_t bufsize = 128;
+
+	if (ACTION_VAL_IS_INTEGER(value))
+	{
+		char *buffer = Z_Malloc(bufsize, PU_STATIC, NULL);
+		snprintf(buffer, bufsize, "<integer> %d", Action_ValueToInteger(value));
+		return buffer;
+	}
+	else if (ACTION_VAL_IS_DECIMAL(value))
+	{
+		char *buffer = Z_Malloc(bufsize, PU_STATIC, NULL);
+		snprintf(buffer, bufsize, "<decimal> %f", FixedToFloat(ACTION_VAL_AS_DECIMAL(value)));
+		return buffer;
+	}
+	else if (ACTION_VAL_IS_BOOLEAN(value))
+		return ACTION_VAL_AS_BOOLEAN(value) ? Z_StrDup("<boolean> true") : Z_StrDup("<boolean> false");
+	else if (ACTION_VAL_IS_STRING(value))
+		return Z_StrDup("<string>");
+	else if (ACTION_VAL_IS_NULL(value))
+		return Z_StrDup("<null>");
+
+	return Z_StrDup("<unknown>");
+}
+
 static INT32 GetInteger(action_val_t *args, unsigned argcount, unsigned argnum, const char *action_name)
 {
 	ARGS_CHECK_VALID(0);
 
-	if (ACTION_VAL_IS_INTEGER(args[argnum]))
-		return ACTION_VAL_AS_INTEGER(args[argnum]);
-	else if (ACTION_VAL_IS_DECIMAL(args[argnum]))
-		return FixedInt(ACTION_VAL_AS_DECIMAL(args[argnum]));
-	else if (ACTION_VAL_IS_BOOLEAN(args[argnum]))
-		return ACTION_VAL_AS_BOOLEAN(args[argnum]) ? 1 : 0;
+	if (ACTION_VAL_IS_INTEGER(args[argnum]) || ACTION_VAL_IS_DECIMAL(args[argnum]) || ACTION_VAL_IS_BOOLEAN(args[argnum]))
+		return Action_ValueToInteger(args[argnum]);
 
 	ARGS_VALUE_EXPECTED(ACTION_VAL_INTEGER);
 
@@ -7971,8 +8005,8 @@ void A_GuardChase(mobj_t *actor, action_val_t *args, unsigned argcount)
 	&& actor->tracer->state->action.acp1)
 	{
 		action_val_t call_args[2] = {
-			ACTION_INTEGER_VAL(actor->tracer->state->var1),
-			ACTION_INTEGER_VAL(actor->tracer->state->var2)
+			actor->tracer->state->var1,
+			actor->tracer->state->var2
 		};
 		actor->tracer->state->action.acpscr(actor->tracer, call_args, 2);
 	}
@@ -8113,8 +8147,8 @@ void A_Boss1Spikeballs(mobj_t *actor, action_val_t *args, unsigned argcount)
 	S_StartSound(ball, ball->info->seesound);
 
 	action_val_t call_args[2] = {
-		ACTION_INTEGER_VAL(ball->state->var1),
-		ACTION_INTEGER_VAL(ball->state->var2)
+		ball->state->var1,
+		ball->state->var2
 	};
 	ball->state->action.acpscr(ball, call_args, 2);
 }
@@ -9433,15 +9467,15 @@ void A_DualAction(mobj_t *actor, action_val_t *args, unsigned argcount)
 
 	action_val_t call_args[2];
 
-	call_args[0] = ACTION_INTEGER_VAL(states[locvar1].var1);
-	call_args[1] = ACTION_INTEGER_VAL(states[locvar1].var2);
+	call_args[0] = states[locvar1].var1;
+	call_args[1] = states[locvar1].var2;
 	astate = &states[locvar1];
 
 	CONS_Debug(DBG_GAMELOGIC, "A_DualAction: Calling First Action (state %d)...\n", locvar1);
 	states[locvar1].action.acpscr(actor, call_args, 2);
 
-	call_args[0] = ACTION_INTEGER_VAL(states[locvar2].var1);
-	call_args[1] = ACTION_INTEGER_VAL(states[locvar2].var2);
+	call_args[0] = states[locvar2].var1;
+	call_args[1] = states[locvar2].var2;
 	astate = &states[locvar2];
 
 	CONS_Debug(DBG_GAMELOGIC, "A_DualAction: Calling Second Action (state %d)...\n", locvar2);
@@ -9523,13 +9557,20 @@ void A_RemoteAction(mobj_t *actor, action_val_t *args, unsigned argcount)
 	{
 		// Steal the var1 and var2 from "locvar2"
 		action_val_t call_args[2] = {
-			ACTION_INTEGER_VAL(states[locvar2].var1),
-			ACTION_INTEGER_VAL(states[locvar2].var2)
+			states[locvar2].var1,
+			states[locvar2].var2
 		};
 		astate = &states[locvar2];
 
+		char *var1str = Action_ValueToString(states[locvar2].var1);
+		char *var2str = Action_ValueToString(states[locvar2].var2);
+
 		CONS_Debug(DBG_GAMELOGIC, "A_RemoteAction: Calling action on %p\n"
-				"var1 is %d\nvar2 is %d\n", actor->target, states[locvar2].var1, states[locvar2].var2);
+				"var1 is %s\nvar2 is %s\n", actor->target, var1str, var2str);
+
+		Z_Free(var1str);
+		Z_Free(var2str);
+
 		states[locvar2].action.acpscr(actor->target, call_args, 2);
 	}
 
@@ -10669,13 +10710,13 @@ void A_CusValAction(mobj_t *actor, action_val_t *args, unsigned argcount)
 
 	if (locvar2 == 5)
 	{
-		call_args[0] = ACTION_INTEGER_VAL(states[locvar1].var1);
+		call_args[0] = states[locvar1].var1;
 		call_args[1] = ACTION_INTEGER_VAL((INT32)actor->cvmem);
 	}
 	else if (locvar2 == 4)
 	{
 		call_args[0] = ACTION_INTEGER_VAL((INT32)actor->cvmem);
-		call_args[1] = ACTION_INTEGER_VAL(states[locvar1].var2);
+		call_args[1] = states[locvar1].var2;
 	}
 	else if (locvar2 == 3)
 	{
@@ -10689,13 +10730,13 @@ void A_CusValAction(mobj_t *actor, action_val_t *args, unsigned argcount)
 	}
 	else if (locvar2 == 1)
 	{
-		call_args[0] = ACTION_INTEGER_VAL(states[locvar1].var1);
+		call_args[0] = states[locvar1].var1;
 		call_args[1] = ACTION_INTEGER_VAL((INT32)actor->cusval);
 	}
 	else
 	{
 		call_args[0] = ACTION_INTEGER_VAL((INT32)actor->cusval);
-		call_args[1] = ACTION_INTEGER_VAL(states[locvar1].var2);
+		call_args[1] = states[locvar1].var2;
 	}
 
 	astate = &states[locvar1];

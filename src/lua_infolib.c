@@ -620,21 +620,24 @@ static int framepivot_num(lua_State *L)
 // STATE INFO //
 ////////////////
 
+static void PushActionValue(lua_State *L, action_val_t arg)
+{
+	if (ACTION_VAL_IS_INTEGER(arg))
+		lua_pushinteger(L, ACTION_VAL_AS_INTEGER(arg));
+	else if (ACTION_VAL_IS_DECIMAL(arg))
+		lua_pushfixed(L, ACTION_VAL_AS_DECIMAL(arg));
+	else if (ACTION_VAL_IS_BOOLEAN(arg))
+		lua_pushboolean(L, ACTION_VAL_AS_BOOLEAN(arg));
+	else if (ACTION_VAL_IS_STRING(arg))
+		lua_pushlstring(L, arg.v_string.chars, arg.v_string.length);
+	else if (ACTION_VAL_IS_NULL(arg))
+		lua_pushnil(L);
+}
+
 static void PushActionArguments(lua_State *L, action_val_t *args, unsigned argcount)
 {
 	for (unsigned i = 0; i < argcount; i++)
-	{
-		if (ACTION_VAL_IS_INTEGER(args[i]))
-			lua_pushinteger(L, ACTION_VAL_AS_INTEGER(args[i]));
-		else if (ACTION_VAL_IS_DECIMAL(args[i]))
-			lua_pushfixed(L, ACTION_VAL_AS_DECIMAL(args[i]));
-		else if (ACTION_VAL_IS_BOOLEAN(args[i]))
-			lua_pushboolean(L, ACTION_VAL_AS_BOOLEAN(args[i]));
-		else if (ACTION_VAL_IS_STRING(args[i]))
-			lua_pushlstring(L, args[i].v_string.chars, args[i].v_string.length);
-		else if (ACTION_VAL_IS_NULL(args[i]))
-			lua_pushnil(L);
-	}
+		PushActionValue(L, args[i]);
 }
 
 // Uses astate to determine which state is calling it
@@ -773,9 +776,9 @@ static int lib_setState(lua_State *L)
 				return luaL_typerror(L, 3, "function");
 			}
 		} else if (i == 5 || (str && fastcmp(str, "var1"))) {
-			state->var1 = (INT32)luaL_checkinteger(L, 3);
+			LUA_ValueToActionVal(L, 3, &state->var1);
 		} else if (i == 6 || (str && fastcmp(str, "var2"))) {
-			state->var2 = (INT32)luaL_checkinteger(L, 3);
+			LUA_ValueToActionVal(L, 3, &state->var2);
 		} else if (i == 7 || (str && fastcmp(str, "nextstate"))) {
 			value = luaL_checkinteger(L, 3);
 			if (value < S_NULL || value >= NUMSTATES)
@@ -976,10 +979,14 @@ static int state_get(lua_State *L)
 		// because the metatable will trigger.
 		lua_getglobal(L, name); // actually gets from LREG_ACTIONS if applicable, and pushes a META_ACTION userdata if not.
 		return 1; // return just the function
-	} else if (fastcmp(field,"var1"))
-		number = st->var1;
-	else if (fastcmp(field,"var2"))
-		number = st->var2;
+	} else if (fastcmp(field,"var1")) {
+		PushActionValue(L, st->var1);
+		return 1;
+	}
+	else if (fastcmp(field,"var2")) {
+		PushActionValue(L, st->var2);
+		return 1;
+	}
 	else if (fastcmp(field,"nextstate"))
 		number = st->nextstate;
 	else if (devparm)
@@ -1046,9 +1053,9 @@ static int state_set(lua_State *L)
 			return luaL_typerror(L, 3, "function");
 		}
 	} else if (fastcmp(field,"var1"))
-		st->var1 = (INT32)luaL_checknumber(L, 3);
+		LUA_ValueToActionVal(L, 3, &st->var1);
 	else if (fastcmp(field,"var2"))
-		st->var2 = (INT32)luaL_checknumber(L, 3);
+		LUA_ValueToActionVal(L, 3, &st->var2);
 	else if (fastcmp(field,"nextstate")) {
 		value = luaL_checkinteger(L, 3);
 		if (value < S_NULL || value >= NUMSTATES)

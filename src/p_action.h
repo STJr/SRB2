@@ -16,6 +16,10 @@
 
 #include "p_mobj.h"
 
+INT32 Action_ValueToInteger(action_val_t value);
+
+char *Action_ValueToString(action_val_t value);
+
 void Action_MakeString(action_string_t *out, const char *str);
 
 // IMPORTANT NOTE: If you add/remove from this list of action

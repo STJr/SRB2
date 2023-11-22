@@ -4105,8 +4105,8 @@ typedef struct
 	UINT32 frame; // we use the upper 16 bits for translucency and other shade effects
 	INT32 tics;
 	actionf_t action;
-	INT32 var1;
-	INT32 var2;
+	action_val_t var1;
+	action_val_t var2;
 	statenum_t nextstate;
 } state_t;
 
