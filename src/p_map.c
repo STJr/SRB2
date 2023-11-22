@@ -19,6 +19,7 @@
 #include "m_random.h"
 #include "p_local.h"
 #include "p_setup.h" // NiGHTS stuff
+#include "p_action.h"
 #include "r_fps.h"
 #include "r_state.h"
 #include "r_main.h"

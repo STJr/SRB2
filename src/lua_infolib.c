@@ -33,7 +33,6 @@
 extern CV_PossibleValue_t Color_cons_t[];
 extern UINT8 skincolor_modified[];
 
-boolean LUA_CallAction(enum actionnum actionnum, mobj_t *actor, INT32 *args, unsigned argcount);
 state_t *astate;
 
 enum sfxinfo_read {

@@ -17,6 +17,7 @@
 #include "g_game.h"
 #include "m_random.h"
 #include "p_local.h"
+#include "p_action.h"
 #include "s_sound.h"
 #include "r_main.h"
 #include "st_stuff.h"
@@ -2874,7 +2875,7 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 			break;
 
 		case MT_MINECART:
-			A_Scream(target);
+			A_Scream(target, NULL, 0);
 			target->momx = target->momy = target->momz = 0;
 			if (target->target && target->target->health)
 				P_KillMobj(target->target, target, source, 0);
