@@ -724,24 +724,24 @@ static const char *Action_GetTypeName(UINT8 type)
 	return "invalid";
 }
 
-#define ARGS_CHECK(defaultVal) \
+#define ARGS_CHECK_VALID(defaultVal) \
 	if (args == NULL) \
 	{ \
-		CONS_Alert(CONS_WARNING, "%s: tried to get argument #%d, but no arguments were provided\n", action_name, argnum); \
+		CONS_Alert(CONS_WARNING, "%s: tried to get argument #%d, but no arguments were provided\n", action_name, argnum+1); \
 		return defaultVal; \
 	} \
 	if (argnum >= argcount) \
 	{ \
-		CONS_Alert(CONS_WARNING, "%s: tried to get argument #%d, but was only provided with %d\n", action_name, argnum, argcount); \
+		CONS_Alert(CONS_WARNING, "%s: tried to get argument #%d, but was only provided with %d\n", action_name, argnum+1, argcount); \
 		return defaultVal; \
 	}
 
-#define ARGS_EXPECTED(expectedType) \
-		CONS_Alert(CONS_WARNING, "%s: in argument #%d: expected value of type %s, but was of type %s\n", action_name, argnum, Action_GetTypeName(expectedType), Action_GetTypeName(args[argnum].type))
+#define ARGS_VALUE_EXPECTED(expectedType) \
+		CONS_Alert(CONS_WARNING, "%s: in argument #%d: expected value of type %s, but was of type %s\n", action_name, argnum+1, Action_GetTypeName(expectedType), Action_GetTypeName(args[argnum].type))
 
 static INT32 GetInteger(action_val_t *args, unsigned argcount, unsigned argnum, const char *action_name)
 {
-	ARGS_CHECK(0);
+	ARGS_CHECK_VALID(0);
 
 	if (ACTION_VAL_IS_INTEGER(args[argnum]))
 		return ACTION_VAL_AS_INTEGER(args[argnum]);
@@ -750,7 +750,7 @@ static INT32 GetInteger(action_val_t *args, unsigned argcount, unsigned argnum, 
 	else if (ACTION_VAL_IS_BOOLEAN(args[argnum]))
 		return ACTION_VAL_AS_BOOLEAN(args[argnum]) ? 1 : 0;
 
-	ARGS_EXPECTED(ACTION_VAL_INTEGER);
+	ARGS_VALUE_EXPECTED(ACTION_VAL_INTEGER);
 
 	return 0;
 }
