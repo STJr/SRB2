@@ -16,6 +16,7 @@
 #include "m_menu.h" // Menu constants
 #include "y_inter.h" // Intermission constants
 #include "p_local.h" // some more constants
+#include "p_action.h" // Actions
 #include "r_draw.h" // Colormap constants
 #include "lua_script.h" // Lua stuff
 #include "m_cond.h" // Emblem constants

@@ -28,6 +28,7 @@
 #include "d_think.h"
 #include "r_sky.h"
 #include "p_setup.h"
+#include "p_action.h"
 #include "m_random.h"
 #include "m_misc.h"
 #include "i_video.h"
@@ -11551,10 +11552,11 @@ void P_DoFollowMobj(player_t *player, mobj_t *followmobj)
 				P_DoMetalJetFume(player, followmobj);
 				break;
 			default:
-				var1 = 1;
-				var2 = 0;
-				A_CapeChase(followmobj);
+			{
+				INT32 args[2] = { 1, 0 };
+				A_CapeChase(followmobj, args, 2);
 				break;
+			}
 		}
 	}
 }

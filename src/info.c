@@ -17,6 +17,7 @@
 #include "sounds.h"
 #include "p_mobj.h"
 #include "p_local.h" // DMG_ constants
+#include "p_action.h"
 #include "m_misc.h"
 #include "z_zone.h"
 #include "d_player.h"

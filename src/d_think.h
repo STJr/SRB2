@@ -30,11 +30,13 @@
 //
 typedef void (*actionf_v)();
 typedef void (*actionf_p1)(void *);
+typedef void (*actionf_script)(void *, INT32*, unsigned);
 
 typedef union
 {
 	actionf_v acv;
 	actionf_p1 acp1;
+	actionf_script acpscr;
 } actionf_t;
 
 // Historically, "think_t" is yet another function pointer to a routine

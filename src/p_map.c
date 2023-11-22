@@ -714,8 +714,7 @@ static void P_SlapStick(mobj_t *fang, mobj_t *pole)
 
 	pole->tracer->tracer->tics = pole->tracer->tics = pole->tics = fang->tics;
 
-	var1 = var2 = 0;
-	A_Scream(pole->tracer->tracer);
+	A_Scream(pole->tracer->tracer, NULL, 0);
 	S_StartSound(fang, sfx_altdi1);
 
 	P_SetTarget(&pole->tracer->tracer, NULL);

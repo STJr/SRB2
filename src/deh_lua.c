@@ -190,15 +190,27 @@ static int action_call(lua_State *L)
 	actionf_t *action = *((actionf_t **)luaL_checkudata(L, 1, META_ACTION));
 	mobj_t *actor = *((mobj_t **)luaL_checkudata(L, 2, META_MOBJ));
 
-	var1 = (INT32)luaL_optinteger(L, 3, 0);
-	var2 = (INT32)luaL_optinteger(L, 4, 0);
+	INT32 *call_args = NULL;
+
+	int n = lua_gettop(L);
+	int num_action_args = n - 2;
+	if (num_action_args > 0)
+	{
+		call_args = Z_Malloc(num_action_args * sizeof(INT32), PU_STATIC, NULL);
+		for (int i = 3; i < n; i++)
+			call_args[i] = (INT32)luaL_optinteger(L, i, 0);
+	}
 
 	if (!actor)
 	{
+		Z_Free(call_args);
 		return LUA_ErrInvalid(L, "mobj_t");
 	}
 
-	action->acp1(actor);
+	action->acpscr(actor, call_args, num_action_args);
+
+	Z_Free(call_args);
+
 	return 0;
 }
 

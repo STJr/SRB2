@@ -33,7 +33,7 @@
 extern CV_PossibleValue_t Color_cons_t[];
 extern UINT8 skincolor_modified[];
 
-boolean LUA_CallAction(enum actionnum actionnum, mobj_t *actor);
+boolean LUA_CallAction(enum actionnum actionnum, mobj_t *actor, INT32 *args, unsigned argcount);
 state_t *astate;
 
 enum sfxinfo_read {
@@ -623,7 +623,7 @@ static int framepivot_num(lua_State *L)
 
 // Uses astate to determine which state is calling it
 // Then looks up which Lua action is assigned to that state and calls it
-static void A_Lua(mobj_t *actor)
+static void A_Lua(mobj_t *actor, INT32 *args, unsigned argcount)
 {
 	boolean found = false;
 	I_Assert(actor != NULL);
@@ -657,9 +657,9 @@ static void A_Lua(mobj_t *actor)
 	lua_pop(gL, 1); // pop LREG_ACTION
 
 	LUA_PushUserdata(gL, actor, META_MOBJ);
-	lua_pushinteger(gL, var1);
-	lua_pushinteger(gL, var2);
-	LUA_Call(gL, 3, 0, 1);
+	for (unsigned i = 0; i < argcount; i++)
+		lua_pushinteger(gL, args[i]);
+	LUA_Call(gL, 1 + argcount, 0, 1);
 
 	if (found)
 	{
@@ -752,7 +752,7 @@ static int lib_setState(lua_State *L)
 				lua_pushvalue(L, 3); // Bring it to the top of the stack
 				lua_rawset(L, -3); // Set it in the registry
 				lua_pop(L, 1); // pop LREG_STATEACTION
-				state->action.acp1 = (actionf_p1)A_Lua; // Set the action for the userdata.
+				state->action.acpscr = (actionf_script)A_Lua; // Set the action for the userdata.
 				break;
 			default: // ?!
 				return luaL_typerror(L, 3, "function");
@@ -810,12 +810,12 @@ boolean LUA_SetLuaAction(void *stv, const char *action)
 	lua_pop(gL, 1); // pop LREG_STATEACTION
 
 	lua_pop(gL, 2); // pop the function and LREG_ACTIONS
-	st->action.acp1 = (actionf_p1)A_Lua; // Set the action for the userdata.
+	st->action.acpscr = (actionf_script)A_Lua; // Set the action for the userdata.
 	return true; // action successfully set.
 }
 
 static UINT8 superstack[NUMACTIONS];
-boolean LUA_CallAction(enum actionnum actionnum, mobj_t *actor)
+boolean LUA_CallAction(enum actionnum actionnum, mobj_t *actor, INT32 *args, unsigned argcount)
 {
 	I_Assert(actor != NULL);
 
@@ -877,16 +877,18 @@ boolean LUA_CallAction(enum actionnum actionnum, mobj_t *actor)
 	}
 
 	// Found a function.
-	// Call it with (actor, var1, var2)
+	// Call it with (actor, ...)
 	I_Assert(lua_isfunction(gL, -1));
 	LUA_PushUserdata(gL, actor, META_MOBJ);
-	lua_pushinteger(gL, var1);
-	lua_pushinteger(gL, var2);
+	for (unsigned i = 0; i < argcount; i++)
+		lua_pushinteger(gL, args[i]);
+
+	int nargs = 1 + argcount;
 
 	luaactions[luaactionstack] = actionpointers[actionnum].name;
 	++luaactionstack;
 
-	LUA_Call(gL, 3, 0, -(2 + 3));
+	LUA_Call(gL, nargs, 0, -(2 + nargs));
 	lua_pop(gL, -1); // Error handler
 
 	if (superstack[actionnum])
@@ -915,9 +917,9 @@ static int state_get(lua_State *L)
 		number = st->tics;
 	else if (fastcmp(field,"action")) {
 		const char *name;
-		if (!st->action.acp1) // Action is NULL.
+		if (!st->action.acpscr) // Action is NULL.
 			return 0; // return nil.
-		if (st->action.acp1 == (actionf_p1)A_Lua) { // This is a Lua function?
+		if (st->action.acpscr == (actionf_script)A_Lua) { // This is a Lua function?
 			lua_getfield(L, LUA_REGISTRYINDEX, LREG_STATEACTION);
 			I_Assert(lua_istable(L, -1));
 			lua_pushlightuserdata(L, st); // Push the state pointer and
@@ -996,7 +998,7 @@ static int state_set(lua_State *L)
 			lua_pushvalue(L, 3); // Bring it to the top of the stack
 			lua_rawset(L, -3); // Set it in the registry
 			lua_pop(L, 1); // pop LREG_STATEACTION
-			st->action.acp1 = (actionf_p1)A_Lua; // Set the action for the userdata.
+			st->action.acpscr = (actionf_script)A_Lua; // Set the action for the userdata.
 			break;
 		default: // ?!
 			return luaL_typerror(L, 3, "function");

@@ -20,6 +20,7 @@
 #include "g_game.h"
 #include "p_local.h"
 #include "p_setup.h" // levelflats for flat animation
+#include "p_action.h"
 #include "r_data.h"
 #include "r_fps.h"
 #include "r_textures.h"
@@ -3677,9 +3678,8 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 					if (color < 0 || color >= numskincolors)
 						return;
 
-					var1 = 0;
-					var2 = color;
-					A_Dye(mo);
+					INT32 args[2] = { 0, color };
+					A_Dye(mo, args, 2);
 				}
 			}
 			break;

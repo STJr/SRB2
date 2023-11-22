@@ -475,8 +475,8 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 							P_SetMobjState(special, S_FANG_PINCHPATHINGSTART2);
 						else
 						{
-							var1 = var2 = 4;
-							A_Boss5ExtraRepeat(special);
+							INT32 args[2] = { 4, 4 };
+							A_Boss5ExtraRepeat(special, args, 2);
 							P_SetMobjState(special, S_FANG_PATHINGCONT2); //S_FANG_PATHINGCONT1 if you want him to drop a bomb on the player
 						}
 						if (special->eflags & MFE_VERTICALFLIP)

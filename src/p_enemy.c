@@ -17,6 +17,7 @@
 #include "g_game.h"
 #include "p_local.h"
 #include "p_setup.h"
+#include "p_action.h"
 #include "r_main.h"
 #include "r_state.h"
 #include "s_sound.h"
@@ -35,8 +36,6 @@
 boolean LUA_CallAction(enum actionnum actionnum, mobj_t *actor);
 
 player_t *stplyr;
-INT32 var1;
-INT32 var2;
 INT32 modulothing;
 
 //
@@ -52,277 +51,6 @@ static dirtype_t diags[] =
 {
 	DI_NORTHWEST, DI_NORTHEAST, DI_SOUTHWEST, DI_SOUTHEAST
 };
-
-//Real Prototypes to A_*
-void A_Fall(mobj_t *actor);
-void A_Look(mobj_t *actor);
-void A_Chase(mobj_t *actor);
-void A_FaceStabChase(mobj_t *actor);
-void A_FaceStabRev(mobj_t *actor);
-void A_FaceStabHurl(mobj_t *actor);
-void A_FaceStabMiss(mobj_t *actor);
-void A_StatueBurst(mobj_t *actor);
-void A_JetJawRoam(mobj_t *actor);
-void A_JetJawChomp(mobj_t *actor);
-void A_PointyThink(mobj_t *actor);
-void A_CheckBuddy(mobj_t *actor);
-void A_HoodFire(mobj_t *actor);
-void A_HoodThink(mobj_t *actor);
-void A_HoodFall(mobj_t *actor);
-void A_ArrowBonks(mobj_t *actor);
-void A_SnailerThink(mobj_t *actor);
-void A_SharpChase(mobj_t *actor);
-void A_SharpSpin(mobj_t *actor);
-void A_SharpDecel(mobj_t *actor);
-void A_CrushstaceanWalk(mobj_t *actor);
-void A_CrushstaceanPunch(mobj_t *actor);
-void A_CrushclawAim(mobj_t *actor);
-void A_CrushclawLaunch(mobj_t *actor);
-void A_VultureVtol(mobj_t *actor);
-void A_VultureCheck(mobj_t *actor);
-void A_VultureHover(mobj_t *actor);
-void A_VultureBlast(mobj_t *actor);
-void A_VultureFly(mobj_t *actor);
-void A_SkimChase(mobj_t *actor);
-void A_FaceTarget(mobj_t *actor);
-void A_FaceTracer(mobj_t *actor);
-void A_LobShot(mobj_t *actor);
-void A_FireShot(mobj_t *actor);
-void A_SuperFireShot(mobj_t *actor);
-void A_BossFireShot(mobj_t *actor);
-void A_Boss7FireMissiles(mobj_t *actor);
-void A_Boss1Laser(mobj_t *actor);
-void A_FocusTarget(mobj_t *actor);
-void A_Boss4Reverse(mobj_t *actor);
-void A_Boss4SpeedUp(mobj_t *actor);
-void A_Boss4Raise(mobj_t *actor);
-void A_SkullAttack(mobj_t *actor);
-void A_BossZoom(mobj_t *actor);
-void A_BossScream(mobj_t *actor);
-void A_Scream(mobj_t *actor);
-void A_Pain(mobj_t *actor);
-void A_1upThinker(mobj_t *actor);
-void A_MonitorPop(mobj_t *actor);
-void A_GoldMonitorPop(mobj_t *actor);
-void A_GoldMonitorRestore(mobj_t *actor);
-void A_GoldMonitorSparkle(mobj_t *actor);
-void A_Explode(mobj_t *actor);
-void A_BossDeath(mobj_t *actor);
-void A_SetShadowScale(mobj_t *actor);
-void A_ShadowScream(mobj_t *actor);
-void A_CustomPower(mobj_t *actor);
-void A_GiveWeapon(mobj_t *actor);
-void A_RingBox(mobj_t *actor);
-void A_Invincibility(mobj_t *actor);
-void A_SuperSneakers(mobj_t *actor);
-void A_AwardScore(mobj_t *actor);
-void A_ExtraLife(mobj_t *actor);
-void A_GiveShield(mobj_t *actor);
-void A_GravityBox(mobj_t *actor);
-void A_ScoreRise(mobj_t *actor);
-void A_BunnyHop(mobj_t *actor);
-void A_BubbleSpawn(mobj_t *actor);
-void A_FanBubbleSpawn(mobj_t *actor);
-void A_BubbleRise(mobj_t *actor);
-void A_BubbleCheck(mobj_t *actor);
-void A_AttractChase(mobj_t *actor);
-void A_DropMine(mobj_t *actor);
-void A_FishJump(mobj_t *actor);
-void A_ThrownRing(mobj_t *actor);
-void A_SetSolidSteam(mobj_t *actor);
-void A_UnsetSolidSteam(mobj_t *actor);
-void A_SignSpin(mobj_t *actor);
-void A_SignPlayer(mobj_t *actor);
-void A_OverlayThink(mobj_t *actor);
-void A_JetChase(mobj_t *actor);
-void A_JetbThink(mobj_t *actor);
-void A_JetgShoot(mobj_t *actor);
-void A_JetgThink(mobj_t *actor);
-void A_ShootBullet(mobj_t *actor);
-void A_MinusDigging(mobj_t *actor);
-void A_MinusPopup(mobj_t *actor);
-void A_MinusCheck(mobj_t *actor);
-void A_ChickenCheck(mobj_t *actor);
-void A_MouseThink(mobj_t *actor);
-void A_DetonChase(mobj_t *actor);
-void A_CapeChase(mobj_t *actor);
-void A_RotateSpikeBall(mobj_t *actor);
-void A_SlingAppear(mobj_t *actor);
-void A_UnidusBall(mobj_t *actor);
-void A_RockSpawn(mobj_t *actor);
-void A_SetFuse(mobj_t *actor);
-void A_CrawlaCommanderThink(mobj_t *actor);
-void A_RingExplode(mobj_t *actor);
-void A_OldRingExplode(mobj_t *actor);
-void A_MixUp(mobj_t *actor);
-void A_RecyclePowers(mobj_t *actor);
-void A_Boss2TakeDamage(mobj_t *actor);
-void A_Boss7Chase(mobj_t *actor);
-void A_GoopSplat(mobj_t *actor);
-void A_Boss2PogoSFX(mobj_t *actor);
-void A_Boss2PogoTarget(mobj_t *actor);
-void A_EggmanBox(mobj_t *actor);
-void A_TurretFire(mobj_t *actor);
-void A_SuperTurretFire(mobj_t *actor);
-void A_TurretStop(mobj_t *actor);
-void A_SparkFollow(mobj_t *actor);
-void A_BuzzFly(mobj_t *actor);
-void A_GuardChase(mobj_t *actor);
-void A_EggShield(mobj_t *actor);
-void A_SetReactionTime(mobj_t *actor);
-void A_Boss1Spikeballs(mobj_t *actor);
-void A_Boss3TakeDamage(mobj_t *actor);
-void A_Boss3Path(mobj_t *actor);
-void A_Boss3ShockThink(mobj_t *actor);
-void A_Shockwave(mobj_t *actor);
-void A_LinedefExecute(mobj_t *actor);
-void A_LinedefExecuteFromArg(mobj_t *actor);
-void A_PlaySeeSound(mobj_t *actor);
-void A_PlayAttackSound(mobj_t *actor);
-void A_PlayActiveSound(mobj_t *actor);
-void A_SmokeTrailer(mobj_t *actor);
-void A_SpawnObjectAbsolute(mobj_t *actor);
-void A_SpawnObjectRelative(mobj_t *actor);
-void A_ChangeAngleRelative(mobj_t *actor);
-void A_ChangeAngleAbsolute(mobj_t *actor);
-void A_RollAngle(mobj_t *actor);
-void A_ChangeRollAngleRelative(mobj_t *actor);
-void A_ChangeRollAngleAbsolute(mobj_t *actor);
-void A_PlaySound(mobj_t *actor);
-void A_FindTarget(mobj_t *actor);
-void A_FindTracer(mobj_t *actor);
-void A_SetTics(mobj_t *actor);
-void A_SetRandomTics(mobj_t *actor);
-void A_ChangeColorRelative(mobj_t *actor);
-void A_ChangeColorAbsolute(mobj_t *actor);
-void A_Dye(mobj_t *actor);
-void A_MoveRelative(mobj_t *actor);
-void A_MoveAbsolute(mobj_t *actor);
-void A_Thrust(mobj_t *actor);
-void A_ZThrust(mobj_t *actor);
-void A_SetTargetsTarget(mobj_t *actor);
-void A_SetObjectFlags(mobj_t *actor);
-void A_SetObjectFlags2(mobj_t *actor);
-void A_RandomState(mobj_t *actor);
-void A_RandomStateRange(mobj_t *actor);
-void A_StateRangeByAngle(mobj_t *actor);
-void A_StateRangeByParameter(mobj_t *actor);
-void A_DualAction(mobj_t *actor);
-void A_RemoteAction(mobj_t *actor);
-void A_ToggleFlameJet(mobj_t *actor);
-void A_OrbitNights(mobj_t *actor);
-void A_GhostMe(mobj_t *actor);
-void A_SetObjectState(mobj_t *actor);
-void A_SetObjectTypeState(mobj_t *actor);
-void A_KnockBack(mobj_t *actor);
-void A_PushAway(mobj_t *actor);
-void A_RingDrain(mobj_t *actor);
-void A_SplitShot(mobj_t *actor);
-void A_MissileSplit(mobj_t *actor);
-void A_MultiShot(mobj_t *actor);
-void A_InstaLoop(mobj_t *actor);
-void A_Custom3DRotate(mobj_t *actor);
-void A_SearchForPlayers(mobj_t *actor);
-void A_CheckRandom(mobj_t *actor);
-void A_CheckTargetRings(mobj_t *actor);
-void A_CheckRings(mobj_t *actor);
-void A_CheckTotalRings(mobj_t *actor);
-void A_CheckHealth(mobj_t *actor);
-void A_CheckRange(mobj_t *actor);
-void A_CheckHeight(mobj_t *actor);
-void A_CheckTrueRange(mobj_t *actor);
-void A_CheckThingCount(mobj_t *actor);
-void A_CheckAmbush(mobj_t *actor);
-void A_CheckCustomValue(mobj_t *actor);
-void A_CheckCusValMemo(mobj_t *actor);
-void A_SetCustomValue(mobj_t *actor);
-void A_UseCusValMemo(mobj_t *actor);
-void A_RelayCustomValue(mobj_t *actor);
-void A_CusValAction(mobj_t *actor);
-void A_ForceStop(mobj_t *actor);
-void A_ForceWin(mobj_t *actor);
-void A_SpikeRetract(mobj_t *actor);
-void A_InfoState(mobj_t *actor);
-void A_Repeat(mobj_t *actor);
-void A_SetScale(mobj_t *actor);
-void A_RemoteDamage(mobj_t *actor);
-void A_HomingChase(mobj_t *actor);
-void A_TrapShot(mobj_t *actor);
-void A_Boss1Chase(mobj_t *actor);
-void A_Boss2Chase(mobj_t *actor);
-void A_Boss2Pogo(mobj_t *actor);
-void A_BossJetFume(mobj_t *actor);
-void A_VileTarget(mobj_t *actor);
-void A_VileAttack(mobj_t *actor);
-void A_VileFire(mobj_t *actor);
-void A_BrakChase(mobj_t *actor);
-void A_BrakFireShot(mobj_t *actor);
-void A_BrakLobShot(mobj_t *actor);
-void A_NapalmScatter(mobj_t *actor);
-void A_SpawnFreshCopy(mobj_t *actor);
-void A_FlickySpawn(mobj_t *actor);
-void A_FlickyCenter(mobj_t *actor);
-void A_FlickyAim(mobj_t *actor);
-void A_FlickyFly(mobj_t *actor);
-void A_FlickySoar(mobj_t *actor);
-void A_FlickyCoast(mobj_t *actor);
-void A_FlickyHop(mobj_t *actor);
-void A_FlickyFlounder(mobj_t *actor);
-void A_FlickyCheck(mobj_t *actor);
-void A_FlickyHeightCheck(mobj_t *actor);
-void A_FlickyFlutter(mobj_t *actor);
-void A_FlameParticle(mobj_t *actor);
-void A_FadeOverlay(mobj_t *actor);
-void A_Boss5Jump(mobj_t *actor);
-void A_LightBeamReset(mobj_t *actor);
-void A_MineExplode(mobj_t *actor);
-void A_MineRange(mobj_t *actor);
-void A_ConnectToGround(mobj_t *actor);
-void A_SpawnParticleRelative(mobj_t *actor);
-void A_MultiShotDist(mobj_t *actor);
-void A_WhoCaresIfYourSonIsABee(mobj_t *actor);
-void A_ParentTriesToSleep(mobj_t *actor);
-void A_CryingToMomma(mobj_t *actor);
-void A_CheckFlags2(mobj_t *actor);
-void A_Boss5FindWaypoint(mobj_t *actor);
-void A_DoNPCSkid(mobj_t *actor);
-void A_DoNPCPain(mobj_t *actor);
-void A_PrepareRepeat(mobj_t *actor);
-void A_Boss5ExtraRepeat(mobj_t *actor);
-void A_Boss5Calm(mobj_t *actor);
-void A_Boss5CheckOnGround(mobj_t *actor);
-void A_Boss5CheckFalling(mobj_t *actor);
-void A_Boss5PinchShot(mobj_t *actor);
-void A_Boss5MakeItRain(mobj_t *actor);
-void A_Boss5MakeJunk(mobj_t *actor);
-void A_LookForBetter(mobj_t *actor);
-void A_Boss5BombExplode(mobj_t *actor);
-void A_DustDevilThink(mobj_t *actor);
-void A_TNTExplode(mobj_t *actor);
-void A_DebrisRandom(mobj_t *actor);
-void A_TrainCameo(mobj_t *actor);
-void A_TrainCameo2(mobj_t *actor);
-void A_CanarivoreGas(mobj_t *actor);
-void A_KillSegments(mobj_t *actor);
-void A_SnapperSpawn(mobj_t *actor);
-void A_SnapperThinker(mobj_t *actor);
-void A_SaloonDoorSpawn(mobj_t *actor);
-void A_MinecartSparkThink(mobj_t *actor);
-void A_ModuloToState(mobj_t *actor);
-void A_LavafallRocks(mobj_t *actor);
-void A_LavafallLava(mobj_t *actor);
-void A_FallingLavaCheck(mobj_t *actor);
-void A_FireShrink(mobj_t *actor);
-void A_SpawnPterabytes(mobj_t *actor);
-void A_PterabyteHover(mobj_t *actor);
-void A_RolloutSpawn(mobj_t *actor);
-void A_RolloutRock(mobj_t *actor);
-void A_DragonbomberSpawn(mobj_t *actor);
-void A_DragonWing(mobj_t *actor);
-void A_DragonSegment(mobj_t *actor);
-void A_ChangeHeight(mobj_t *actor);
-
-//for p_enemy.c
 
 //
 // ENEMY THINKING
@@ -971,9 +699,32 @@ for (i = cvar.value; i; --i) spawnchance[numchoices++] = type
 	return spawnchance[P_RandomKey(numchoices)];
 }
 
+static INT32 GetInteger(INT32 *args, unsigned argcount, unsigned argnum, const char *action_name)
+{
+	if (args == NULL)
+	{
+		CONS_Alert(CONS_WARNING, "%s: tried to get argument #%d, but no arguments were provided\n", action_name, argnum);
+		return 0;
+	}
+
+	if (argnum >= argcount)
+	{
+		CONS_Alert(CONS_WARNING, "%s: tried to get argument #%d, but was only provided with %d\n", action_name, argnum, argcount);
+		return 0;
+	}
+
+	return args[argnum];
+}
+
+#define GET_ARG(argfunc, argnum) argfunc(args, argcount, argnum, __FUNCTION__)
+
 //
 // ACTION ROUTINES
 //
+
+#define ARGS_UNUSED() \
+	(void)args; \
+	(void)argcount
 
 // Function: A_Look
 //
@@ -984,13 +735,13 @@ for (i = cvar.value; i; --i) spawnchance[numchoices++] = type
 //		upper 16 bits = distance limit
 // var2 = If 1, only change to seestate. If 2, only play seesound. If 0, do both.
 //
-void A_Look(mobj_t *actor)
+void A_Look(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
-
 	if (LUA_CallAction(A_LOOK, actor))
 		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
 
 	if (!P_LookForPlayers(actor, locvar1 & 65535, false , FixedMul((locvar1 >> 16)*FRACUNIT, actor->scale)))
 		return;
@@ -999,12 +750,12 @@ void A_Look(mobj_t *actor)
 	if (!locvar2)
 	{
 		P_SetMobjState(actor, actor->info->seestate);
-		A_PlaySeeSound(actor);
+		A_PlaySeeSound(actor, NULL, 0);
 	}
 	else if (locvar2 == 1) // Only go into seestate
 		P_SetMobjState(actor, actor->info->seestate);
 	else if (locvar2 == 2) // Only play seesound
-		A_PlaySeeSound(actor);
+		A_PlaySeeSound(actor, NULL, 0);
 }
 
 // Function: A_Chase
@@ -1017,13 +768,13 @@ void A_Look(mobj_t *actor)
 //		3 = don't check meleestate and missilestate
 // var2 = unused
 //
-void A_Chase(mobj_t *actor)
+void A_Chase(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 delta;
-	INT32 locvar1 = var1;
-
 	if (LUA_CallAction(A_CHASE, actor))
 		return;
+
+	INT32 delta;
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
 
 	I_Assert(actor != NULL);
 	I_Assert(!P_MobjWasRemoved(actor));
@@ -1109,8 +860,10 @@ nomissile:
 // var1 = unused
 // var2 = unused
 //
-void A_FaceStabChase(mobj_t *actor)
+void A_FaceStabChase(mobj_t *actor, INT32 *args, unsigned argcount)
 {
+	ARGS_UNUSED();
+
 	INT32 delta;
 
 	if (LUA_CallAction(A_FACESTABCHASE, actor))
@@ -1230,13 +983,13 @@ static void P_FaceStabFlume(mobj_t *actor)
 // var1 = effective duration
 // var2 = effective nextstate
 //
-void A_FaceStabRev(mobj_t *actor)
+void A_FaceStabRev(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
-
 	if (LUA_CallAction(A_FACESTABREV, actor))
 		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
 
 	if (!actor->target)
 	{
@@ -1273,13 +1026,13 @@ void A_FaceStabRev(mobj_t *actor)
 // var1 = homing strength (recommended strength between 0-8)
 // var2 = effective nextstate
 //
-void A_FaceStabHurl(mobj_t *actor)
+void A_FaceStabHurl(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
-
 	if (LUA_CallAction(A_FACESTABHURL, actor))
 		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
 
 	if (actor->target)
 	{
@@ -1364,12 +1117,12 @@ void A_FaceStabHurl(mobj_t *actor)
 // var1 = unused
 // var2 = effective nextstate
 //
-void A_FaceStabMiss(mobj_t *actor)
+void A_FaceStabMiss(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar2 = var2;
-
 	if (LUA_CallAction(A_FACESTABMISS, actor))
 		return;
+
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
 
 	if (++actor->extravalue1 >= 3)
 	{
@@ -1396,15 +1149,15 @@ void A_FaceStabMiss(mobj_t *actor)
 // var1 = object to create
 // var2 = effective nextstate for created object
 //
-void A_StatueBurst(mobj_t *actor)
+void A_StatueBurst(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
-	mobjtype_t chunktype = (mobjtype_t)actor->info->raisestate;
-	mobj_t *new;
-
 	if (LUA_CallAction(A_STATUEBURST, actor))
 		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
+	mobjtype_t chunktype = (mobjtype_t)actor->info->raisestate;
+	mobj_t *new;
 
 	// make statue intangible upon spawning so you can't stand above the created object for 40 tics
 	actor->flags &= ~MF_SOLID;
@@ -1454,8 +1207,10 @@ void A_StatueBurst(mobj_t *actor)
 // var1 = unused
 // var2 = unused
 //
-void A_JetJawRoam(mobj_t *actor)
+void A_JetJawRoam(mobj_t *actor, INT32 *args, unsigned argcount)
 {
+	ARGS_UNUSED();
+
 	if (LUA_CallAction(A_JETJAWROAM, actor))
 		return;
 
@@ -1481,8 +1236,10 @@ void A_JetJawRoam(mobj_t *actor)
 // var1 = unused
 // var2 = unused
 //
-void A_JetJawChomp(mobj_t *actor)
+void A_JetJawChomp(mobj_t *actor, INT32 *args, unsigned argcount)
 {
+	ARGS_UNUSED();
+
 	INT32 delta;
 
 	if (LUA_CallAction(A_JETJAWCHOMP, actor))
@@ -1520,8 +1277,13 @@ void A_JetJawChomp(mobj_t *actor)
 // var1 = unused
 // var2 = unused
 //
-void A_PointyThink(mobj_t *actor)
+void A_PointyThink(mobj_t *actor, INT32 *args, unsigned argcount)
 {
+	ARGS_UNUSED();
+
+	if (LUA_CallAction(A_POINTYTHINK, actor))
+		return;
+
 	INT32 i;
 	player_t *player = NULL;
 	mobj_t *ball;
@@ -1532,9 +1294,6 @@ void A_PointyThink(mobj_t *actor)
 	fixed_t radius = FixedMul(actor->info->radius*actor->info->reactiontime, actor->scale);
 	boolean firsttime = true;
 	INT32 sign;
-
-	if (LUA_CallAction(A_POINTYTHINK, actor))
-		return;
 
 	actor->momx = actor->momy = actor->momz = 0;
 
@@ -1569,9 +1328,9 @@ void A_PointyThink(mobj_t *actor)
 	if (!player)
 		return;
 
-	// Okay, we found the closest player. Let's move based on his movement.
+	// Okay, we found the closest player. Let's move based on their movement.
 	P_SetTarget(&actor->target, player->mo);
-	A_FaceTarget(actor);
+	A_FaceTarget(actor, NULL, 0);
 	if (P_MobjWasRemoved(actor))
 		return;
 
@@ -1634,12 +1393,12 @@ void A_PointyThink(mobj_t *actor)
 //		1 = tracer
 // var2 = unused
 //
-void A_CheckBuddy(mobj_t *actor)
+void A_CheckBuddy(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-
 	if (LUA_CallAction(A_CHECKBUDDY, actor))
 		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
 
 	if (locvar1 && (!actor->tracer || actor->tracer->health <= 0))
 		P_RemoveMobj(actor);
@@ -1676,13 +1435,13 @@ static void P_ParabolicMove(mobj_t *actor, fixed_t x, fixed_t y, fixed_t z, fixe
 // var1 = object type to fire
 // var2 = unused
 //
-void A_HoodFire(mobj_t *actor)
+void A_HoodFire(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	mobj_t *arrow;
-	INT32 locvar1 = var1;
-
 	if (LUA_CallAction(A_HOODFIRE, actor))
 		return;
+
+	mobj_t *arrow;
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
 
 	// Check target first.
 	if (!actor->target)
@@ -1692,7 +1451,7 @@ void A_HoodFire(mobj_t *actor)
 		return;
 	}
 
-	A_FaceTarget(actor);
+	A_FaceTarget(actor, NULL, 0);
 	if (P_MobjWasRemoved(actor))
 		return;
 
@@ -1710,8 +1469,10 @@ void A_HoodFire(mobj_t *actor)
 // var1 = unused
 // var2 = unused
 //
-void A_HoodThink(mobj_t *actor)
+void A_HoodThink(mobj_t *actor, INT32 *args, unsigned argcount)
 {
+	ARGS_UNUSED();
+
 	fixed_t dx, dy, dz, dm;
 	boolean checksight;
 
@@ -1780,8 +1541,10 @@ void A_HoodThink(mobj_t *actor)
 // var1 = unused
 // var2 = unused
 //
-void A_HoodFall(mobj_t *actor)
+void A_HoodFall(mobj_t *actor, INT32 *args, unsigned argcount)
 {
+	ARGS_UNUSED();
+
 	if (LUA_CallAction(A_HOODFALL, actor))
 		return;
 
@@ -1800,8 +1563,10 @@ void A_HoodFall(mobj_t *actor)
 // var1 = unused
 // var2 = unused
 //
-void A_ArrowBonks(mobj_t *actor)
+void A_ArrowBonks(mobj_t *actor, INT32 *args, unsigned argcount)
 {
+	ARGS_UNUSED();
+
 	if (LUA_CallAction(A_ARROWBONKS, actor))
 		return;
 
@@ -1823,8 +1588,10 @@ void A_ArrowBonks(mobj_t *actor)
 // var1 = unused
 // var2 = unused
 //
-void A_SnailerThink(mobj_t *actor)
+void A_SnailerThink(mobj_t *actor, INT32 *args, unsigned argcount)
 {
+	ARGS_UNUSED();
+
 	if (LUA_CallAction(A_SNAILERTHINK, actor))
 		return;
 
@@ -1896,8 +1663,10 @@ void A_SnailerThink(mobj_t *actor)
 // var1 = unused
 // var2 = unused
 //
-void A_SharpChase(mobj_t *actor)
+void A_SharpChase(mobj_t *actor, INT32 *args, unsigned argcount)
 {
+	ARGS_UNUSED();
+
 	if (LUA_CallAction(A_SHARPCHASE, actor))
 		return;
 
@@ -1948,14 +1717,14 @@ void A_SharpChase(mobj_t *actor)
 // var1 = object # to spawn as dust (if not provided not done)
 // var2 = if nonzero, do the old-style spinning using this as the angle difference
 //
-void A_SharpSpin(mobj_t *actor)
+void A_SharpSpin(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
-	angle_t oldang = actor->angle;
-
 	if (LUA_CallAction(A_SHARPSPIN, actor))
 		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
+	angle_t oldang = actor->angle;
 
 	if (actor->threshold && actor->target)
 	{
@@ -1985,8 +1754,10 @@ void A_SharpSpin(mobj_t *actor)
 // var1 = unused
 // var2 = unused
 //
-void A_SharpDecel(mobj_t *actor)
+void A_SharpDecel(mobj_t *actor, INT32 *args, unsigned argcount)
 {
+	ARGS_UNUSED();
+
 	if (LUA_CallAction(A_SHARPDECEL, actor))
 		return;
 
@@ -2006,10 +1777,14 @@ void A_SharpDecel(mobj_t *actor)
 // var1 = speed (actor info's speed if 0)
 // var2 = state to switch to when blocked (spawnstate if 0)
 //
-void A_CrushstaceanWalk(mobj_t *actor)
+void A_CrushstaceanWalk(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = (var1 ? var1 : (INT32)actor->info->speed);
-	INT32 locvar2 = (var2 ? var2 : (INT32)actor->info->spawnstate);
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
+	if (!locvar1)
+		locvar1 = (INT32)actor->info->speed;
+	if (!locvar2)
+		locvar2 = (INT32)actor->info->spawnstate;
 	angle_t ang = actor->angle + ((actor->flags2 & MF2_AMBUSH) ? ANGLE_90 : ANGLE_270);
 
 	if (LUA_CallAction(A_CRUSHSTACEANWALK, actor))
@@ -2037,12 +1812,14 @@ void A_CrushstaceanWalk(mobj_t *actor)
 // var1 = unused
 // var2 = state to go to if unsuccessful (spawnstate if 0)
 //
-void A_CrushstaceanPunch(mobj_t *actor)
+void A_CrushstaceanPunch(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar2 = (var2 ? var2 : (INT32)actor->info->spawnstate);
-
 	if (LUA_CallAction(A_CRUSHSTACEANPUNCH, actor))
 		return;
+
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
+	if (!locvar2)
+		locvar2 = (INT32)actor->info->spawnstate;
 
 	if (!actor->tracer)
 		return;
@@ -2066,15 +1843,15 @@ void A_CrushstaceanPunch(mobj_t *actor)
 // var1 = sideways offset
 // var2 = vertical offset
 //
-void A_CrushclawAim(mobj_t *actor)
+void A_CrushclawAim(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
-	mobj_t *crab = actor->tracer;
-	angle_t ang;
-
 	if (LUA_CallAction(A_CRUSHCLAWAIM, actor))
 		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
+	mobj_t *crab = actor->tracer;
+	angle_t ang;
 
 	if (!crab)
 	{
@@ -2128,14 +1905,14 @@ void A_CrushclawAim(mobj_t *actor)
 //		anything else - backwards
 // var2 = state to change to when done
 //
-void A_CrushclawLaunch(mobj_t *actor)
+void A_CrushclawLaunch(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
-	mobj_t *crab = actor->tracer;
-
 	if (LUA_CallAction(A_CRUSHCLAWLAUNCH, actor))
 		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
+	mobj_t *crab = actor->tracer;
 
 	if (!crab)
 	{
@@ -2263,8 +2040,10 @@ void A_CrushclawLaunch(mobj_t *actor)
 // var1 = unused
 // var2 = unused
 //
-void A_VultureVtol(mobj_t *actor)
+void A_VultureVtol(mobj_t *actor, INT32 *args, unsigned argcount)
 {
+	ARGS_UNUSED();
+
 	if (LUA_CallAction(A_VULTUREVTOL, actor))
 		return;
 
@@ -2274,7 +2053,7 @@ void A_VultureVtol(mobj_t *actor)
 	actor->flags |= MF_NOGRAVITY;
 	actor->flags |= MF_FLOAT;
 
-	A_FaceTarget(actor);
+	A_FaceTarget(actor, NULL, 0);
 	if (P_MobjWasRemoved(actor))
 		return;
 
@@ -2300,8 +2079,10 @@ void A_VultureVtol(mobj_t *actor)
 // var1 = unused
 // var2 = unused
 //
-void A_VultureCheck(mobj_t *actor)
+void A_VultureCheck(mobj_t *actor, INT32 *args, unsigned argcount)
 {
+	ARGS_UNUSED();
+
 	if (LUA_CallAction(A_VULTURECHECK, actor))
 		return;
 
@@ -2351,8 +2132,10 @@ static void P_VultureHoverParticle(mobj_t *actor)
 // var1 = unused
 // var2 = unused
 //
-void A_VultureHover(mobj_t *actor)
+void A_VultureHover(mobj_t *actor, INT32 *args, unsigned argcount)
 {
+	ARGS_UNUSED();
+
 	fixed_t targetz;
 	fixed_t distdif;
 	fixed_t memz = actor->z;
@@ -2374,7 +2157,7 @@ void A_VultureHover(mobj_t *actor)
 
 	P_VultureHoverParticle(actor);
 
-	A_FaceTarget(actor);
+	A_FaceTarget(actor, NULL, 0);
 	if (P_MobjWasRemoved(actor))
 		return;
 
@@ -2416,8 +2199,10 @@ void A_VultureHover(mobj_t *actor)
 // var1 = unused
 // var2 = unused
 //
-void A_VultureBlast(mobj_t *actor)
+void A_VultureBlast(mobj_t *actor, INT32 *args, unsigned argcount)
 {
+	ARGS_UNUSED();
+
 	mobj_t *dust;
 	UINT8 i;
 	angle_t faa;
@@ -2454,8 +2239,10 @@ void A_VultureBlast(mobj_t *actor)
 // var1 = unused
 // var2 = unused
 //
-void A_VultureFly(mobj_t *actor)
+void A_VultureFly(mobj_t *actor, INT32 *args, unsigned argcount)
 {
+	ARGS_UNUSED();
+
 	fixed_t speedmax = 18*FRACUNIT;
 	angle_t angledif;
 	fixed_t dx, dy, dz, dxy, dm;
@@ -2550,8 +2337,10 @@ void A_VultureFly(mobj_t *actor)
 // var1 = unused
 // var2 = unused
 //
-void A_SkimChase(mobj_t *actor)
+void A_SkimChase(mobj_t *actor, INT32 *args, unsigned argcount)
 {
+	ARGS_UNUSED();
+
 	INT32 delta;
 
 	if (LUA_CallAction(A_SKIMCHASE, actor))
@@ -2638,8 +2427,10 @@ nomissile:
 // var1 = unused
 // var2 = unused
 //
-void A_FaceTarget(mobj_t *actor)
+void A_FaceTarget(mobj_t *actor, INT32 *args, unsigned argcount)
 {
+	ARGS_UNUSED();
+
 	if (LUA_CallAction(A_FACETARGET, actor))
 		return;
 
@@ -2656,8 +2447,10 @@ void A_FaceTarget(mobj_t *actor)
 // var1 = unused
 // var2 = unused
 //
-void A_FaceTracer(mobj_t *actor)
+void A_FaceTracer(mobj_t *actor, INT32 *args, unsigned argcount)
 {
+	ARGS_UNUSED();
+
 	if (LUA_CallAction(A_FACETRACER, actor))
 		return;
 
@@ -2676,16 +2469,16 @@ void A_FaceTracer(mobj_t *actor)
 //		var2 >> 16 = height offset
 //		var2 & 65535 = airtime
 //
-void A_LobShot(mobj_t *actor)
+void A_LobShot(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2 >> 16;
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1) >> 16;
 	mobj_t *shot;
 	angle_t an;
 	fixed_t z;
 	fixed_t dist;
 	fixed_t vertical, horizontal;
-	fixed_t airtime = max(1, var2 & 65535);
+	fixed_t airtime = max(1, locvar2 & 65535);
 
 	if (LUA_CallAction(A_LOBSHOT, actor))
 		return;
@@ -2693,7 +2486,7 @@ void A_LobShot(mobj_t *actor)
 	if (!actor->target)
 		return;
 
-	A_FaceTarget(actor);
+	A_FaceTarget(actor, NULL, 0);
 	if (P_MobjWasRemoved(actor))
 		return;
 
@@ -2778,19 +2571,19 @@ void A_LobShot(mobj_t *actor)
 // var1 = object # to shoot
 // var2 = height offset
 //
-void A_FireShot(mobj_t *actor)
+void A_FireShot(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	fixed_t z;
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
-
 	if (LUA_CallAction(A_FIRESHOT, actor))
 		return;
+
+	fixed_t z;
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
 
 	if (!actor->target)
 		return;
 
-	A_FaceTarget(actor);
+	A_FaceTarget(actor, NULL, 0);
 	if (P_MobjWasRemoved(actor))
 		return;
 
@@ -2817,20 +2610,20 @@ void A_FireShot(mobj_t *actor)
 // var1 = object # to shoot
 // var2 = height offset
 //
-void A_SuperFireShot(mobj_t *actor)
+void A_SuperFireShot(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	fixed_t z;
-	mobj_t *mo;
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
-
 	if (LUA_CallAction(A_SUPERFIRESHOT, actor))
 		return;
+
+	fixed_t z;
+	mobj_t *mo;
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
 
 	if (!actor->target)
 		return;
 
-	A_FaceTarget(actor);
+	A_FaceTarget(actor, NULL, 0);
 	if (P_MobjWasRemoved(actor))
 		return;
 
@@ -2866,20 +2659,20 @@ void A_SuperFireShot(mobj_t *actor)
 //		4 - Boss 3 Right side upper
 //		5 - Boss 3 Right side lower
 //
-void A_BossFireShot(mobj_t *actor)
+void A_BossFireShot(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	fixed_t x, y, z;
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
-	mobj_t *missile;
-
 	if (LUA_CallAction(A_BOSSFIRESHOT, actor))
 		return;
+
+	fixed_t x, y, z;
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
+	mobj_t *missile;
 
 	if (!actor->target)
 		return;
 
-	A_FaceTarget(actor);
+	A_FaceTarget(actor, NULL, 0);
 	if (P_MobjWasRemoved(actor))
 		return;
 
@@ -2953,14 +2746,14 @@ void A_BossFireShot(mobj_t *actor)
 // var1 = object # to shoot
 // var2 = firing sound
 //
-void A_Boss7FireMissiles(mobj_t *actor)
+void A_Boss7FireMissiles(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	mobj_t dummymo;
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
-
 	if (LUA_CallAction(A_BOSS7FIREMISSILES, actor))
 		return;
+
+	mobj_t dummymo;
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
 
 	if (!actor->target)
 	{
@@ -2968,7 +2761,7 @@ void A_Boss7FireMissiles(mobj_t *actor)
 		return;
 	}
 
-	A_FaceTarget(actor);
+	A_FaceTarget(actor, NULL, 0);
 	if (P_MobjWasRemoved(actor))
 		return;
 
@@ -3012,12 +2805,16 @@ void A_Boss7FireMissiles(mobj_t *actor)
 //		3 - Boss 1 Middle
 //		>=3 - Generic middle
 //
-void A_Boss1Laser(mobj_t *actor)
+void A_Boss1Laser(mobj_t *actor, INT32 *args, unsigned argcount)
 {
+	if (LUA_CallAction(A_BOSS1LASER, actor))
+		return;
+
 	fixed_t x, y, z, floorz, speed;
-	INT32 locvar1 = var1;
-	INT32 locvar2 = (var2 & 65535);
-	INT32 upperend = (var2>>16);
+	INT32 var2 = GET_ARG(GetInteger, 1);
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = var2 & 65535;
+	INT32 upperend = var2 >> 16;
 	INT32 i;
 	angle_t angle;
 	mobj_t *point;
@@ -3035,9 +2832,6 @@ void A_Boss1Laser(mobj_t *actor)
 		SKINCOLOR_SUPERRED4,
 		SKINCOLOR_SUPERRED3,
 	};
-
-	if (LUA_CallAction(A_BOSS1LASER, actor))
-		return;
 
 	if (!actor->target)
 		return;
@@ -3071,14 +2865,23 @@ void A_Boss1Laser(mobj_t *actor)
 				z = actor->z + FixedMul(56*FRACUNIT, actor->scale);
 			break;
 		case 2:
-			var1 = locvar1; var2 = 3; // Fire middle laser
-			A_Boss1Laser(actor);
-			var1 = locvar1; var2 = 0; // Fire left laser
-			A_Boss1Laser(actor);
-			var1 = locvar1; var2 = 1; // Fire right laser
-			A_Boss1Laser(actor);
+		{
+			INT32 call_args[2];
+			call_args[0] = locvar1;
+
+			// Fire middle laser
+			call_args[1] = 3;
+			A_Boss1Laser(actor, call_args, 2);
+
+			// Fire left laser
+			call_args[1] = 0;
+			A_Boss1Laser(actor, call_args, 2);
+
+			// Fire right laser
+			call_args[1] = 1;
+			A_Boss1Laser(actor, call_args, 2);
 			return;
-			break;
+		}
 		case 3:
 			x = actor->x + P_ReturnThrustX(actor, actor->angle, FixedMul(42*FRACUNIT, actor->scale));
 			y = actor->y + P_ReturnThrustY(actor, actor->angle, FixedMul(42*FRACUNIT, actor->scale));
@@ -3202,13 +3005,13 @@ void A_Boss1Laser(mobj_t *actor)
 //      & 1 - change horizontal angle
 //      & 2 - change vertical angle
 //
-void A_FocusTarget(mobj_t *actor)
+void A_FocusTarget(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
-
 	if (LUA_CallAction(A_FOCUSTARGET, actor))
 		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
 
 	if (actor->target)
 	{
@@ -3253,13 +3056,15 @@ void A_FocusTarget(mobj_t *actor)
 // var1 = sfx to play
 // var2 = sfx to play in pinch
 //
-void A_Boss4Reverse(mobj_t *actor)
+void A_Boss4Reverse(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	sfxenum_t locvar1 = (sfxenum_t)var1;
-	sfxenum_t locvar2 = (sfxenum_t)var2;
-
 	if (LUA_CallAction(A_BOSS4REVERSE, actor))
 		return;
+
+	INT32 var1 = GET_ARG(GetInteger, 0);
+	INT32 var2 = GET_ARG(GetInteger, 1);
+	sfxenum_t locvar1 = (sfxenum_t)var1;
+	sfxenum_t locvar2 = (sfxenum_t)var2;
 
 	actor->reactiontime = 0;
 	if (actor->movedir < 3)
@@ -3289,12 +3094,13 @@ void A_Boss4Reverse(mobj_t *actor)
 // var1 = sfx to play
 // var2 = unused
 //
-void A_Boss4SpeedUp(mobj_t *actor)
+void A_Boss4SpeedUp(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	sfxenum_t locvar1 = (sfxenum_t)var1;
-
 	if (LUA_CallAction(A_BOSS4SPEEDUP, actor))
 		return;
+
+	INT32 var1 = GET_ARG(GetInteger, 0);
+	sfxenum_t locvar1 = (sfxenum_t)var1;
 
 	S_StartSound(NULL, locvar1);
 	actor->reactiontime = 2;
@@ -3307,12 +3113,13 @@ void A_Boss4SpeedUp(mobj_t *actor)
 // var1 = sfx to play
 // var2 = unused
 //
-void A_Boss4Raise(mobj_t *actor)
+void A_Boss4Raise(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	sfxenum_t locvar1 = (sfxenum_t)var1;
-
 	if (LUA_CallAction(A_BOSS4RAISE, actor))
 		return;
+
+	INT32 var1 = GET_ARG(GetInteger, 0);
+	sfxenum_t locvar1 = (sfxenum_t)var1;
 
 	S_StartSound(NULL, locvar1);
 	actor->reactiontime = 1;
@@ -3333,17 +3140,17 @@ void A_Boss4Raise(mobj_t *actor)
 //
 #define SKULLSPEED (20*FRACUNIT)
 
-void A_SkullAttack(mobj_t *actor)
+void A_SkullAttack(mobj_t *actor, INT32 *args, unsigned argcount)
 {
+	if (LUA_CallAction(A_SKULLATTACK, actor))
+		return;
+
 	mobj_t *dest;
 	angle_t an;
 	INT32 dist;
 	INT32 speed;
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
-
-	if (LUA_CallAction(A_SKULLATTACK, actor))
-		return;
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
 
 	if (!actor->target)
 		return;
@@ -3354,7 +3161,7 @@ void A_SkullAttack(mobj_t *actor)
 	actor->flags2 |= MF2_SKULLFLY;
 	if (actor->info->activesound)
 		S_StartSound(actor, actor->info->activesound);
-	A_FaceTarget(actor);
+	A_FaceTarget(actor, NULL, 0);
 	if (P_MobjWasRemoved(actor))
 		return;
 
@@ -3446,13 +3253,15 @@ void A_SkullAttack(mobj_t *actor)
 
 // Function: A_BossZoom
 //
-// Description: Like A_SkullAttack, but used by Boss 1.
+// Description: Like A_SkullAttack, but formerly used by Boss 1.
 //
 // var1 = unused
 // var2 = unused
 //
-void A_BossZoom(mobj_t *actor)
+void A_BossZoom(mobj_t *actor, INT32 *args, unsigned argcount)
 {
+	ARGS_UNUSED();
+
 	mobj_t *dest;
 	angle_t an;
 	INT32 dist;
@@ -3467,7 +3276,7 @@ void A_BossZoom(mobj_t *actor)
 	actor->flags2 |= MF2_SKULLFLY;
 	if (actor->info->attacksound)
 		S_StartAttackSound(actor, actor->info->attacksound);
-	A_FaceTarget(actor);
+	A_FaceTarget(actor, NULL, 0);
 	if (P_MobjWasRemoved(actor))
 		return;
 
@@ -3491,17 +3300,17 @@ void A_BossZoom(mobj_t *actor)
 //		& 2 - Use entire vertical range of object to spawn
 // var2 = Object to spawn. Default is MT_SONIC3KBOSSEXPLODE.
 //
-void A_BossScream(mobj_t *actor)
+void A_BossScream(mobj_t *actor, INT32 *args, unsigned argcount)
 {
+	if (LUA_CallAction(A_BOSSSCREAM, actor))
+		return;
+
 	mobj_t *mo;
 	fixed_t x, y, z;
 	angle_t fa;
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
 	mobjtype_t explodetype;
-
-	if (LUA_CallAction(A_BOSSSCREAM, actor))
-		return;
 
 	if (locvar1 & 1)
 		fa = (FixedAngle(P_RandomKey(360)*FRACUNIT)>>ANGLETOFINESHIFT) & FINEMASK;
@@ -3543,8 +3352,10 @@ void A_BossScream(mobj_t *actor)
 // var1 = unused
 // var2 = unused
 //
-void A_Scream(mobj_t *actor)
+void A_Scream(mobj_t *actor, INT32 *args, unsigned argcount)
 {
+	ARGS_UNUSED();
+
 	if (LUA_CallAction(A_SCREAM, actor))
 		return;
 
@@ -3559,8 +3370,10 @@ void A_Scream(mobj_t *actor)
 // var1 = unused
 // var2 = unused
 //
-void A_Pain(mobj_t *actor)
+void A_Pain(mobj_t *actor, INT32 *args, unsigned argcount)
 {
+	ARGS_UNUSED();
+
 	if (LUA_CallAction(A_PAIN, actor))
 		return;
 
@@ -3578,12 +3391,12 @@ void A_Pain(mobj_t *actor)
 // var1 = value to set repeat to if nonzero
 // var2 = unused
 //
-void A_Fall(mobj_t *actor)
+void A_Fall(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-
 	if (LUA_CallAction(A_FALL, actor))
 		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
 
 	// actor is on ground, it can be walked over
 	actor->flags &= ~MF_SOLID;
@@ -3607,15 +3420,17 @@ void A_Fall(mobj_t *actor)
 // var1 = unused
 // var2 = unused
 //
-void A_1upThinker(mobj_t *actor)
+void A_1upThinker(mobj_t *actor, INT32 *args, unsigned argcount)
 {
+	ARGS_UNUSED();
+
+	if (LUA_CallAction(A_1UPTHINKER, actor))
+		return;
+
 	INT32 i;
 	fixed_t dist = INT32_MAX;
 	fixed_t temp;
 	INT32 closestplayer = -1;
-
-	if (LUA_CallAction(A_1UPTHINKER, actor))
-		return;
 
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
@@ -3675,8 +3490,10 @@ void A_1upThinker(mobj_t *actor)
 // var1 = unused
 // var2 = unused
 //
-void A_MonitorPop(mobj_t *actor)
+void A_MonitorPop(mobj_t *actor, INT32 *args, unsigned argcount)
 {
+	ARGS_UNUSED();
+
 	mobjtype_t item = 0;
 	mobj_t *newmobj;
 
@@ -3756,8 +3573,10 @@ void A_MonitorPop(mobj_t *actor)
 // var1 = unused
 // var2 = unused
 //
-void A_GoldMonitorPop(mobj_t *actor)
+void A_GoldMonitorPop(mobj_t *actor, INT32 *args, unsigned argcount)
 {
+	ARGS_UNUSED();
+
 	mobjtype_t item = 0;
 	mobj_t *newmobj;
 
@@ -3842,8 +3661,10 @@ void A_GoldMonitorPop(mobj_t *actor)
 // var1 = unused
 // var2 = unused
 //
-void A_GoldMonitorRestore(mobj_t *actor)
+void A_GoldMonitorRestore(mobj_t *actor, INT32 *args, unsigned argcount)
 {
+	ARGS_UNUSED();
+
 	if (LUA_CallAction(A_GOLDMONITORRESTORE, actor))
 		return;
 
@@ -3858,8 +3679,10 @@ void A_GoldMonitorRestore(mobj_t *actor)
 // var1 = unused
 // var2 = unused
 //
-void A_GoldMonitorSparkle(mobj_t *actor)
+void A_GoldMonitorSparkle(mobj_t *actor, INT32 *args, unsigned argcount)
 {
+	ARGS_UNUSED();
+
 	fixed_t i, ngangle, xofs, yofs;
 
 	if (LUA_CallAction(A_GOLDMONITORSPARKLE, actor))
@@ -3880,12 +3703,12 @@ void A_GoldMonitorSparkle(mobj_t *actor)
 // var1 = damagetype
 // var2 = unused
 //
-void A_Explode(mobj_t *actor)
+void A_Explode(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-
 	if (LUA_CallAction(A_EXPLODE, actor))
 		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
 
 	P_RadiusAttack(actor, actor->target, actor->info->damage, locvar1, true);
 }
@@ -4069,8 +3892,7 @@ static void P_DoBoss5Death(mobj_t *mo)
 	}
 	if (mo->tracer)
 	{
-		var1 = var2 = 0;
-		A_Boss5Jump(mo);
+		A_Boss5Jump(mo, NULL, 0);
 		mo->momx = ((16 - 1)*mo->momx)/16;
 		mo->momy = ((16 - 1)*mo->momy)/16;
 		{
@@ -4151,8 +3973,10 @@ static void P_DoBossDefaultDeath(mobj_t *mo)
 // var1 = unused
 // var2 = unused
 //
-void A_BossDeath(mobj_t *mo)
+void A_BossDeath(mobj_t *mo, INT32 *args, unsigned argcount)
 {
+	ARGS_UNUSED();
+
 	INT32 i;
 
 	if (LUA_CallAction(A_BOSSDEATH, mo))
@@ -4226,12 +4050,12 @@ void A_BossDeath(mobj_t *mo)
 // var1 = new fixed_t shadowscale (default = FRACUNIT)
 // var2 = unused
 //
-void A_SetShadowScale(mobj_t *actor)
+void A_SetShadowScale(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-
 	if (LUA_CallAction(A_SETSHADOWSCALE, actor))
 		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
 
 	actor->shadowscale = locvar1;
 }
@@ -4244,13 +4068,15 @@ void A_SetShadowScale(mobj_t *actor)
 // var1 = new fixed_t shadowscale (default = FRACUNIT)
 // var2 = unused
 //
-void A_ShadowScream(mobj_t *actor)
+void A_ShadowScream(mobj_t *actor, INT32 *args, unsigned argcount)
 {
+	(void)argcount;
+
 	if (LUA_CallAction(A_SHADOWSCREAM, actor))
 		return;
 
-	A_SetShadowScale(actor);
-	A_Scream(actor);
+	A_SetShadowScale(actor, args, 1);
+	A_Scream(actor, NULL, 0);
 }
 
 
@@ -4261,14 +4087,13 @@ void A_ShadowScream(mobj_t *actor)
 // var1 = Power index #
 // var2 = Power duration in tics
 //
-void A_CustomPower(mobj_t *actor)
+void A_CustomPower(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	player_t *player;
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
-
 	if (LUA_CallAction(A_CUSTOMPOWER, actor))
 		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
 
 	if (!actor->target || !actor->target->player)
 	{
@@ -4282,7 +4107,7 @@ void A_CustomPower(mobj_t *actor)
 		return;
 	}
 
-	player = actor->target->player;
+	player_t *player = actor->target->player;
 
 	P_SetPower(player, locvar1, locvar2);
 
@@ -4297,13 +4122,12 @@ void A_CustomPower(mobj_t *actor)
 // var1 = Weapon index #
 // var2 = unused
 //
-void A_GiveWeapon(mobj_t *actor)
+void A_GiveWeapon(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	player_t *player;
-	INT32 locvar1 = var1;
-
 	if (LUA_CallAction(A_GIVEWEAPON, actor))
 		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
 
 	if (!actor->target || !actor->target->player)
 	{
@@ -4317,7 +4141,7 @@ void A_GiveWeapon(mobj_t *actor)
 		return;
 	}
 
-	player = actor->target->player;
+	player_t *player = actor->target->player;
 
 	player->ringweapons |= locvar1;
 	if (actor->info->seesound)
@@ -4331,9 +4155,9 @@ void A_GiveWeapon(mobj_t *actor)
 // var1 = unused
 // var2 = unused
 //
-void A_RingBox(mobj_t *actor)
+void A_RingBox(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	player_t *player;
+	ARGS_UNUSED();
 
 	if (LUA_CallAction(A_RINGBOX, actor))
 		return;
@@ -4344,7 +4168,7 @@ void A_RingBox(mobj_t *actor)
 		return;
 	}
 
-	player = actor->target->player;
+	player_t *player = actor->target->player;
 
 	P_GivePlayerRings(player, actor->info->reactiontime);
 	if (actor->info->seesound)
@@ -4358,9 +4182,9 @@ void A_RingBox(mobj_t *actor)
 // var1 = unused
 // var2 = unused
 //
-void A_Invincibility(mobj_t *actor)
+void A_Invincibility(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	player_t *player;
+	ARGS_UNUSED();
 
 	if (LUA_CallAction(A_INVINCIBILITY, actor))
 		return;
@@ -4371,7 +4195,7 @@ void A_Invincibility(mobj_t *actor)
 		return;
 	}
 
-	player = actor->target->player;
+	player_t *player = actor->target->player;
 	player->powers[pw_invulnerability] = invulntics + 1;
 
 	if (P_IsLocalPlayer(player) && !player->powers[pw_super])
@@ -4391,9 +4215,9 @@ void A_Invincibility(mobj_t *actor)
 // var1 = unused
 // var2 = unused
 //
-void A_SuperSneakers(mobj_t *actor)
+void A_SuperSneakers(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	player_t *player;
+	ARGS_UNUSED();
 
 	if (LUA_CallAction(A_SUPERSNEAKERS, actor))
 		return;
@@ -4404,7 +4228,7 @@ void A_SuperSneakers(mobj_t *actor)
 		return;
 	}
 
-	player = actor->target->player;
+	player_t *player = actor->target->player;
 
 	actor->target->player->powers[pw_sneakers] = sneakertics + 1;
 
@@ -4426,9 +4250,9 @@ void A_SuperSneakers(mobj_t *actor)
 // var1 = unused
 // var2 = unused
 //
-void A_AwardScore(mobj_t *actor)
+void A_AwardScore(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	player_t *player;
+	ARGS_UNUSED();
 
 	if (LUA_CallAction(A_AWARDSCORE, actor))
 		return;
@@ -4439,7 +4263,7 @@ void A_AwardScore(mobj_t *actor)
 		return;
 	}
 
-	player = actor->target->player;
+	player_t *player = actor->target->player;
 
 	P_AddPlayerScore(player, actor->info->reactiontime);
 	if (actor->info->seesound)
@@ -4453,9 +4277,9 @@ void A_AwardScore(mobj_t *actor)
 // var1 = unused
 // var2 = unused
 //
-void A_ExtraLife(mobj_t *actor)
+void A_ExtraLife(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	player_t *player;
+	ARGS_UNUSED();
 
 	if (LUA_CallAction(A_EXTRALIFE, actor))
 		return;
@@ -4466,7 +4290,7 @@ void A_ExtraLife(mobj_t *actor)
 		return;
 	}
 
-	player = actor->target->player;
+	player_t *player = actor->target->player;
 
 	if (actor->type == MT_1UP_ICON && actor->tracer)
 	{
@@ -4490,13 +4314,12 @@ void A_ExtraLife(mobj_t *actor)
 // var1 = Shield type (make with SH_ constants)
 // var2 = unused
 //
-void A_GiveShield(mobj_t *actor)
+void A_GiveShield(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	player_t *player;
-	UINT16 locvar1 = var1;
-
 	if (LUA_CallAction(A_GIVESHIELD, actor))
 		return;
+
+	UINT16 locvar1 = GET_ARG(GetInteger, 0);
 
 	if (!actor->target || !actor->target->player)
 	{
@@ -4504,7 +4327,7 @@ void A_GiveShield(mobj_t *actor)
 		return;
 	}
 
-	player = actor->target->player;
+	player_t *player = actor->target->player;
 
 	P_SwitchShield(player, locvar1);
 	S_StartSound(player->mo, actor->info->seesound);
@@ -4517,9 +4340,9 @@ void A_GiveShield(mobj_t *actor)
 // var1 = unused
 // var2 = unused
 //
-void A_GravityBox(mobj_t *actor)
+void A_GravityBox(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	player_t *player;
+	ARGS_UNUSED();
 
 	if (LUA_CallAction(A_GRAVITYBOX, actor))
 		return;
@@ -4530,7 +4353,7 @@ void A_GravityBox(mobj_t *actor)
 		return;
 	}
 
-	player = actor->target->player;
+	player_t *player = actor->target->player;
 
 	S_StartSound(player, actor->info->activesound);
 
@@ -4544,8 +4367,10 @@ void A_GravityBox(mobj_t *actor)
 // var1 = unused
 // var2 = unused
 //
-void A_ScoreRise(mobj_t *actor)
+void A_ScoreRise(mobj_t *actor, INT32 *args, unsigned argcount)
 {
+	ARGS_UNUSED();
+
 	if (LUA_CallAction(A_SCORERISE, actor))
 		return;
 
@@ -4560,13 +4385,13 @@ void A_ScoreRise(mobj_t *actor)
 // var1 = jump strength
 // var2 = horizontal movement
 //
-void A_BunnyHop(mobj_t *actor)
+void A_BunnyHop(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
-
 	if (LUA_CallAction(A_BUNNYHOP, actor))
 		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
 
 	if (((actor->eflags & MFE_VERTICALFLIP) && actor->z + actor->height >= actor->ceilingz)
 		|| (!(actor->eflags & MFE_VERTICALFLIP) && actor->z <= actor->floorz))
@@ -4583,14 +4408,14 @@ void A_BunnyHop(mobj_t *actor)
 // var1 = Distance to look for players.  If no player is in this distance, bubbles aren't spawned. (Ambush overrides)
 // var2 = unused
 //
-void A_BubbleSpawn(mobj_t *actor)
+void A_BubbleSpawn(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 i, locvar1 = var1;
-	UINT8 prandom;
-	mobj_t *bubble = NULL;
-
 	if (LUA_CallAction(A_BUBBLESPAWN, actor))
 		return;
+
+	INT32 i, locvar1 = GET_ARG(GetInteger, 0);
+	UINT8 prandom;
+	mobj_t *bubble = NULL;
 
 	if (!(actor->eflags & MFE_UNDERWATER))
 	{
@@ -4635,23 +4460,23 @@ void A_BubbleSpawn(mobj_t *actor)
 // var1 = Distance to look for players.  If no player is in this distance, bubbles aren't spawned. (Ambush overrides)
 // var2 = unused
 //
-void A_FanBubbleSpawn(mobj_t *actor)
+void A_FanBubbleSpawn(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 i, locvar1 = var1;
+	if (LUA_CallAction(A_FANBUBBLESPAWN, actor))
+		return;
+
+	INT32 i, locvar1 = GET_ARG(GetInteger, 0);
 	UINT8 prandom;
 	mobj_t *bubble = NULL;
 	fixed_t hz = actor->z + (4*actor->height)/5;
-
-	if (LUA_CallAction(A_FANBUBBLESPAWN, actor))
-		return;
 
 	if (!(actor->eflags & MFE_UNDERWATER))
 		return;
 
 	if (!(actor->flags2 & MF2_AMBUSH))
 	{
-	// Quick! Look through players!
-	// Don't spawn bubbles unless a player is relatively close by (var2).
+		// Quick! Look through players!
+		// Don't spawn bubbles unless a player is relatively close by (var2).
 		for (i = 0; i < MAXPLAYERS; ++i)
 			if (playeringame[i] && players[i].mo
 			 && P_AproxDistance(actor->x - players[i].mo->x, actor->y - players[i].mo->y) < (locvar1<<FRACBITS))
@@ -4683,13 +4508,13 @@ void A_FanBubbleSpawn(mobj_t *actor)
 //		1 = Rise straight up
 // var2 = rising speed
 //
-void A_BubbleRise(mobj_t *actor)
+void A_BubbleRise(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
-
 	if (LUA_CallAction(A_BUBBLERISE, actor))
 		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
 
 	if (actor->type == MT_EXTRALARGEBUBBLE)
 		P_SetObjectMomZ(actor, FixedDiv(6*FRACUNIT,5*FRACUNIT), false); // make bubbles rise!
@@ -4722,8 +4547,10 @@ void A_BubbleRise(mobj_t *actor)
 // var1 = unused
 // var2 = unused
 //
-void A_BubbleCheck(mobj_t *actor)
+void A_BubbleCheck(mobj_t *actor, INT32 *args, unsigned argcount)
 {
+	ARGS_UNUSED();
+
 	if (LUA_CallAction(A_BUBBLECHECK, actor))
 		return;
 
@@ -4740,8 +4567,10 @@ void A_BubbleCheck(mobj_t *actor)
 // var1 = unused
 // var2 = unused
 //
-void A_AttractChase(mobj_t *actor)
+void A_AttractChase(mobj_t *actor, INT32 *args, unsigned argcount)
 {
+	ARGS_UNUSED();
+
 	if (LUA_CallAction(A_ATTRACTCHASE, actor))
 		return;
 
@@ -4806,15 +4635,15 @@ void A_AttractChase(mobj_t *actor)
 //		lower 16 bits = proximity check distance (0 disables)
 //		upper 16 bits = 0 to check proximity with target, 1 for tracer
 //
-void A_DropMine(mobj_t *actor)
+void A_DropMine(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
-	fixed_t z;
-	mobj_t *mine;
-
 	if (LUA_CallAction(A_DROPMINE, actor))
 		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
+	fixed_t z;
+	mobj_t *mine;
 
 	if (locvar2 & 65535)
 	{
@@ -4856,13 +4685,13 @@ void A_DropMine(mobj_t *actor)
 // var1 = Jump strength (in FRACBITS), if specified. Otherwise, uses the angle value.
 // var2 = Trail object to spawn, if desired.
 //
-void A_FishJump(mobj_t *actor)
+void A_FishJump(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
-
 	if (LUA_CallAction(A_FISHJUMP, actor))
 		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
 
 	if (locvar2)
 	{
@@ -4911,8 +4740,10 @@ void A_FishJump(mobj_t *actor)
 // var1 = unused
 // var2 = unused
 //
-void A_ThrownRing(mobj_t *actor)
+void A_ThrownRing(mobj_t *actor, INT32 *args, unsigned argcount)
 {
+	ARGS_UNUSED();
+
 	INT32 c = 0;
 	INT32 stop;
 	player_t *player;
@@ -5072,8 +4903,10 @@ void A_ThrownRing(mobj_t *actor)
 // var1 = unused
 // var2 = unused
 //
-void A_SetSolidSteam(mobj_t *actor)
+void A_SetSolidSteam(mobj_t *actor, INT32 *args, unsigned argcount)
 {
+	ARGS_UNUSED();
+
 	if (LUA_CallAction(A_SETSOLIDSTEAM, actor))
 		return;
 
@@ -5103,8 +4936,10 @@ void A_SetSolidSteam(mobj_t *actor)
 // var1 = unused
 // var2 = unused
 //
-void A_UnsetSolidSteam(mobj_t *actor)
+void A_UnsetSolidSteam(mobj_t *actor, INT32 *args, unsigned argcount)
 {
+	ARGS_UNUSED();
+
 	if (LUA_CallAction(A_UNSETSOLIDSTEAM, actor))
 		return;
 
@@ -5119,14 +4954,14 @@ void A_UnsetSolidSteam(mobj_t *actor)
 // var1 = degrees to rotate object (must be positive, because I'm lazy)
 // var2 = unused
 //
-void A_SignSpin(mobj_t *actor)
+void A_SignSpin(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-	INT16 i;
-	angle_t rotateangle = FixedAngle(locvar1 << FRACBITS);
-
 	if (LUA_CallAction(A_SIGNSPIN, actor))
 		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT16 i;
+	angle_t rotateangle = FixedAngle(locvar1 << FRACBITS);
 
 	if (P_IsObjectOnGround(actor) && P_MobjFlip(actor) * actor->momz <= 0)
 	{
@@ -5212,19 +5047,19 @@ static boolean SignSkinCheck(player_t *player, INT32 num)
 // var1 = number of skin to display (e.g. 2 = Knuckles; special cases: -1 = target's skin, -2 = skin roulette, -3 = Eggman)
 // var2 = custom sign color, if desired.
 //
-void A_SignPlayer(mobj_t *actor)
+void A_SignPlayer(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
+	if (LUA_CallAction(A_SIGNPLAYER, actor))
+		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
 	skin_t *skin = NULL;
 	mobj_t *ov;
 	UINT16 facecolor, signcolor = 0;
 	UINT32 signframe = states[actor->info->raisestate].frame;
 
 	facecolor = signcolor = (UINT16)locvar2;
-
-	if (LUA_CallAction(A_SIGNPLAYER, actor))
-		return;
 
 	if (actor->tracer == NULL || locvar1 < -3 || locvar1 >= numskins || signcolor >= numskincolors)
 		return;
@@ -5335,7 +5170,7 @@ void A_SignPlayer(mobj_t *actor)
 // var1 = unused
 // var2 = invert, z offset
 //
-void A_OverlayThink(mobj_t *actor)
+void A_OverlayThink(mobj_t *actor, INT32 *args, unsigned argcount)
 {
 	fixed_t destx, desty;
 
@@ -5344,6 +5179,8 @@ void A_OverlayThink(mobj_t *actor)
 
 	if (!actor->target)
 		return;
+
+	INT32 var2 = GET_ARG(GetInteger, 1);
 
 	if (!splitscreen && rendermode != render_soft)
 	{
@@ -5387,8 +5224,10 @@ void A_OverlayThink(mobj_t *actor)
 // var1 = unused
 // var2 = unused
 //
-void A_JetChase(mobj_t *actor)
+void A_JetChase(mobj_t *actor, INT32 *args, unsigned argcount)
 {
+	ARGS_UNUSED();
+
 	fixed_t thefloor;
 
 	if (LUA_CallAction(A_JETCHASE, actor))
@@ -5482,8 +5321,10 @@ void A_JetChase(mobj_t *actor)
 // var1 = unused
 // var2 = unused
 //
-void A_JetbThink(mobj_t *actor)
+void A_JetbThink(mobj_t *actor, INT32 *args, unsigned argcount)
 {
+	ARGS_UNUSED();
+
 	sector_t *nextsector;
 	fixed_t thefloor;
 
@@ -5498,7 +5339,7 @@ void A_JetbThink(mobj_t *actor)
 
 	if (actor->target)
 	{
-		A_JetChase(actor);
+		A_JetChase(actor, NULL, 0);
 		// check for melee attack
 		if (actor->info->raisestate
 			&& (actor->z > (actor->floorz + FixedMul((32<<FRACBITS), actor->scale)))
@@ -5548,8 +5389,10 @@ void A_JetbThink(mobj_t *actor)
 // var1 = unused
 // var2 = unused
 //
-void A_JetgShoot(mobj_t *actor)
+void A_JetgShoot(mobj_t *actor, INT32 *args, unsigned argcount)
 {
+	ARGS_UNUSED();
+
 	fixed_t dist;
 
 	if (LUA_CallAction(A_JETGSHOOT, actor))
@@ -5569,7 +5412,7 @@ void A_JetgShoot(mobj_t *actor)
 	if (dist < FixedMul(64*FRACUNIT, actor->scale))
 		return;
 
-	A_FaceTarget(actor);
+	A_FaceTarget(actor, NULL, 0);
 	if (P_MobjWasRemoved(actor))
 		return;
 
@@ -5591,8 +5434,10 @@ void A_JetgShoot(mobj_t *actor)
 // var1 = unused
 // var2 = unused
 //
-void A_ShootBullet(mobj_t *actor)
+void A_ShootBullet(mobj_t *actor, INT32 *args, unsigned argcount)
 {
+	ARGS_UNUSED();
+
 	fixed_t dist;
 
 	if (LUA_CallAction(A_SHOOTBULLET, actor))
@@ -5606,7 +5451,7 @@ void A_ShootBullet(mobj_t *actor)
 	if (dist > FixedMul(actor->info->painchance*FRACUNIT, actor->scale))
 		return;
 
-	A_FaceTarget(actor);
+	A_FaceTarget(actor, NULL, 0);
 	if (P_MobjWasRemoved(actor))
 		return;
 
@@ -5647,9 +5492,12 @@ static boolean PIT_MinusCarry(mobj_t *thing)
 // var1 = If 1, play digging sound.
 // var2 = unused
 //
-void A_MinusDigging(mobj_t *actor)
+void A_MinusDigging(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
+	if (LUA_CallAction(A_MINUSDIGGING, actor))
+		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
 	INT32 rad = 32;
 	angle_t fa = (actor->angle >> ANGLETOFINESHIFT) & FINEMASK;
 	fixed_t dis = actor->info->speed*4;
@@ -5657,9 +5505,6 @@ void A_MinusDigging(mobj_t *actor)
 	fixed_t y = FINESINE(fa)*dis + actor->y + FRACUNIT*P_RandomRange(-rad, rad);
 	fixed_t mz = (actor->eflags & MFE_VERTICALFLIP) ? actor->ceilingz : actor->floorz;
 	mobj_t *par;
-
-	if (LUA_CallAction(A_MINUSDIGGING, actor))
-		return;
 
 	if (!actor->target)
 	{
@@ -5690,11 +5535,11 @@ void A_MinusDigging(mobj_t *actor)
 
 	// Play digging sound
 	if (locvar1 == 1)
-		A_PlayActiveSound(actor);
+		A_PlayActiveSound(actor, NULL, 0);
 
 	// Move
-	var1 = 3;
-	A_Chase(actor);
+	INT32 call_args[1] = { 3 };
+	A_Chase(actor, call_args, 1);
 
 	// Carry over shit, maybe
 	if (P_MobjWasRemoved(actor->tracer) || !actor->tracer->health)
@@ -5733,8 +5578,10 @@ void A_MinusDigging(mobj_t *actor)
 // var1 = unused
 // var2 = unused
 //
-void A_MinusPopup(mobj_t *actor)
+void A_MinusPopup(mobj_t *actor, INT32 *args, unsigned argcount)
 {
+	ARGS_UNUSED();
+
 	INT32 num = 6;
 	angle_t ani = FixedAngle(FRACUNIT*360/num);
 	INT32 i;
@@ -5769,13 +5616,13 @@ void A_MinusPopup(mobj_t *actor)
 // var1 = State to switch to (if 0, use seestate).
 // var2 = If not 0, spawn debris when hitting the floor.
 //
-void A_MinusCheck(mobj_t *actor)
+void A_MinusCheck(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
-
 	if (LUA_CallAction(A_MINUSCHECK, actor))
 		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
 
 	if (((actor->eflags & MFE_VERTICALFLIP) && actor->z + actor->height >= actor->ceilingz) || (!(actor->eflags & MFE_VERTICALFLIP) && actor->z <= actor->floorz))
 	{
@@ -5803,8 +5650,10 @@ void A_MinusCheck(mobj_t *actor)
 // var1 = unused
 // var2 = unused
 //
-void A_ChickenCheck(mobj_t *actor)
+void A_ChickenCheck(mobj_t *actor, INT32 *args, unsigned argcount)
 {
+	ARGS_UNUSED();
+
 	if (LUA_CallAction(A_CHICKENCHECK, actor))
 		return;
 
@@ -5814,7 +5663,8 @@ void A_ChickenCheck(mobj_t *actor)
 		if (!(actor->momx || actor->momy || actor->momz)
 			&& actor->state > &states[actor->info->seestate])
 		{
-			A_Chase(actor);
+			INT32 call_args[1] = { 0 };
+			A_Chase(actor, call_args, 1);
 			P_SetMobjState(actor, actor->info->seestate);
 		}
 
@@ -5830,8 +5680,10 @@ void A_ChickenCheck(mobj_t *actor)
 // var1 = unused
 // var2 = unused
 //
-void A_JetgThink(mobj_t *actor)
+void A_JetgThink(mobj_t *actor, INT32 *args, unsigned argcount)
 {
+	ARGS_UNUSED();
+
 	sector_t *nextsector;
 
 	fixed_t thefloor;
@@ -5850,7 +5702,7 @@ void A_JetgThink(mobj_t *actor)
 		if (P_RandomChance(FRACUNIT/8) && !actor->reactiontime)
 			P_SetMobjState(actor, actor->info->missilestate);
 		else
-			A_JetChase (actor);
+			A_JetChase(actor, NULL, 0);
 	}
 	else if (actor->z - FixedMul((32<<FRACBITS), actor->scale) < thefloor && !(thefloor + FixedMul((32<<FRACBITS), actor->scale)
 		+ actor->height > actor->ceilingz))
@@ -5884,8 +5736,10 @@ void A_JetgThink(mobj_t *actor)
 // var1 = unused
 // var2 = unused
 //
-void A_MouseThink(mobj_t *actor)
+void A_MouseThink(mobj_t *actor, INT32 *args, unsigned argcount)
 {
+	ARGS_UNUSED();
+
 	if (LUA_CallAction(A_MOUSETHINK, actor))
 		return;
 
@@ -5918,8 +5772,10 @@ void A_MouseThink(mobj_t *actor)
 // var1 = unused
 // var2 = unused
 //
-void A_DetonChase(mobj_t *actor)
+void A_DetonChase(mobj_t *actor, INT32 *args, unsigned argcount)
 {
+	ARGS_UNUSED();
+
 	angle_t exact;
 	fixed_t xydist, dist;
 
@@ -6067,16 +5923,16 @@ void A_DetonChase(mobj_t *actor)
 //		upper 16 bits = forward/backward offset
 //		lower 16 bits = sideways offset
 //
-void A_CapeChase(mobj_t *actor)
+void A_CapeChase(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	mobj_t *chaser;
-	fixed_t foffsetx, foffsety, boffsetx, boffsety;
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
-	angle_t angle;
-
 	if (LUA_CallAction(A_CAPECHASE, actor))
 		return;
+
+	mobj_t *chaser;
+	fixed_t foffsetx, foffsety, boffsetx, boffsety;
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
+	angle_t angle;
 
 	CONS_Debug(DBG_GAMELOGIC, "A_CapeChase called from object type %d, var1: %d, var2: %d\n", actor->type, locvar1, locvar2);
 
@@ -6130,13 +5986,13 @@ void A_CapeChase(mobj_t *actor)
 //		1 = Use tracer
 // var2 = unused
 //
-void A_RotateSpikeBall(mobj_t *actor)
+void A_RotateSpikeBall(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-	const fixed_t radius = FixedMul(12*actor->info->speed, actor->scale);
-
 	if (LUA_CallAction(A_ROTATESPIKEBALL, actor))
 		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	const fixed_t radius = FixedMul(12*actor->info->speed, actor->scale);
 
 	if (!((!locvar1 && (actor->target)) || (locvar1 && (actor->tracer))))// This should NEVER happen.
 	{
@@ -6181,13 +6037,13 @@ void A_RotateSpikeBall(mobj_t *actor)
 //		2 = Throw when target leaves MF2_SKULLFLY.
 // var2 = unused
 //
-void A_UnidusBall(mobj_t *actor)
+void A_UnidusBall(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-	boolean canthrow = false;
-
 	if (LUA_CallAction(A_UNIDUSBALL, actor))
 		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	boolean canthrow = false;
 
 	actor->angle += ANGLE_11hh;
 
@@ -6274,8 +6130,10 @@ void A_UnidusBall(mobj_t *actor)
 //
 // var1 = unused
 // var2 = unused
-void A_RockSpawn(mobj_t *actor)
+void A_RockSpawn(mobj_t *actor, INT32 *args, unsigned argcount)
 {
+	ARGS_UNUSED();
+
 	mobj_t *mo;
 	mobjtype_t type;
 	fixed_t dist;
@@ -6305,8 +6163,8 @@ void A_RockSpawn(mobj_t *actor)
 	P_InstaThrust(mo, mo->angle, dist);
 	mo->momz = dist;
 
-	var1 = actor->spawnpoint->args[1];
-	A_SetTics(actor);
+	INT32 call_args[2] = { actor->spawnpoint->args[1], 0 };
+	A_SetTics(actor, call_args, 2);
 }
 
 //
@@ -6317,8 +6175,10 @@ void A_RockSpawn(mobj_t *actor)
 // var1 = unused
 // var2 = unused
 //
-void A_SlingAppear(mobj_t *actor)
+void A_SlingAppear(mobj_t *actor, INT32 *args, unsigned argcount)
 {
+	ARGS_UNUSED();
+
 	UINT8 mlength = 4;
 	mobj_t *spawnee, *hprev;
 
@@ -6367,13 +6227,13 @@ void A_SlingAppear(mobj_t *actor)
 //		lower 16 bits = if > 0, state to change to when fuse = 1
 //		upper 16 bits: 0 = (default) don't set fuse unless 0, 1 = force change, 2 = force no change
 //
-void A_SetFuse(mobj_t *actor)
+void A_SetFuse(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
-
 	if (LUA_CallAction(A_SETFUSE, actor))
 		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
 
 	if ((!actor->fuse || (locvar2 >> 16)) && (locvar2 >> 16) != 2) // set the actor's fuse value
 		actor->fuse = locvar1;
@@ -6392,17 +6252,17 @@ void A_SetFuse(mobj_t *actor)
 // var1 = shoot bullets?
 // var2 = "pogo mode" speed
 //
-void A_CrawlaCommanderThink(mobj_t *actor)
+void A_CrawlaCommanderThink(mobj_t *actor, INT32 *args, unsigned argcount)
 {
+	if (LUA_CallAction(A_CRAWLACOMMANDERTHINK, actor))
+		return;
+
 	fixed_t dist;
 	sector_t *nextsector;
 	fixed_t thefloor;
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
 	boolean hovermode = (actor->health > 1 || actor->fuse);
-
-	if (LUA_CallAction(A_CRAWLACOMMANDERTHINK, actor))
-		return;
 
 	if (actor->z >= actor->waterbottom && actor->watertop > actor->floorz
 		&& actor->z > actor->watertop - FixedMul(256*FRACUNIT, actor->scale))
@@ -6553,8 +6413,10 @@ void A_CrawlaCommanderThink(mobj_t *actor)
 // var1 = unused
 // var2 = unused
 //
-void A_RingExplode(mobj_t *actor)
+void A_RingExplode(mobj_t *actor, INT32 *args, unsigned argcount)
 {
+	ARGS_UNUSED();
+
 	mobj_t *mo2;
 	thinker_t *th;
 	angle_t d;
@@ -6597,15 +6459,16 @@ void A_RingExplode(mobj_t *actor)
 // var1 = object # to explode as debris
 // var2 = unused
 //
-void A_OldRingExplode(mobj_t *actor) {
+void A_OldRingExplode(mobj_t *actor, INT32 *args, unsigned argcount)
+{
+	if (LUA_CallAction(A_OLDRINGEXPLODE, actor))
+		return;
+
 	UINT8 i;
 	mobj_t *mo;
 	const fixed_t ns = FixedMul(20 * FRACUNIT, actor->scale);
-	INT32 locvar1 = var1;
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
 	boolean changecolor = (actor->target && actor->target->player);
-
-	if (LUA_CallAction(A_OLDRINGEXPLODE, actor))
-		return;
 
 	for (i = 0; i < 32; i++)
 	{
@@ -6675,8 +6538,10 @@ void A_OldRingExplode(mobj_t *actor) {
 // var1 = unused
 // var2 = unused
 //
-void A_MixUp(mobj_t *actor)
+void A_MixUp(mobj_t *actor, INT32 *args, unsigned argcount)
 {
+	ARGS_UNUSED();
+
 	boolean teleported[MAXPLAYERS];
 	INT32 i, numplayers = 0, prandom = 0;
 
@@ -6941,8 +6806,10 @@ void A_MixUp(mobj_t *actor)
 // var1 = unused
 // var2 = unused
 //
-void A_RecyclePowers(mobj_t *actor)
+void A_RecyclePowers(mobj_t *actor, INT32 *args, unsigned argcount)
 {
+	ARGS_UNUSED();
+
 	INT32 i, j, k, numplayers = 0;
 
 #ifdef WEIGHTEDRECYCLER
@@ -7082,8 +6949,10 @@ void A_RecyclePowers(mobj_t *actor)
 // var1 = unused
 // var2 = unused
 //
-void A_Boss1Chase(mobj_t *actor)
+void A_Boss1Chase(mobj_t *actor, INT32 *args, unsigned argcount)
 {
+	ARGS_UNUSED();
+
 	INT32 delta;
 
 	if (LUA_CallAction(A_BOSS1CHASE, actor))
@@ -7201,8 +7070,10 @@ nomissile:
 // var1 = unused
 // var2 = unused
 //
-void A_Boss2Chase(mobj_t *actor)
+void A_Boss2Chase(mobj_t *actor, INT32 *args, unsigned argcount)
 {
+	ARGS_UNUSED();
+
 	fixed_t radius;
 	boolean reverse = false;
 	INT32 speedvar;
@@ -7229,7 +7100,7 @@ void A_Boss2Chase(mobj_t *actor)
 	if (!actor->target) // This should NEVER happen.
 	{
 		CONS_Debug(DBG_GAMELOGIC, "Boss2 has no target!\n");
-		A_BossDeath(actor);
+		A_BossDeath(actor, NULL, 0);
 		return;
 	}
 
@@ -7331,8 +7202,10 @@ void A_Boss2Chase(mobj_t *actor)
 // var1 = unused
 // var2 = unused
 //
-void A_Boss2Pogo(mobj_t *actor)
+void A_Boss2Pogo(mobj_t *actor, INT32 *args, unsigned argcount)
 {
+	ARGS_UNUSED();
+
 	if (LUA_CallAction(A_BOSS2POGO, actor))
 		return;
 
@@ -7377,14 +7250,14 @@ void A_Boss2Pogo(mobj_t *actor)
 // var1 = Invincibility duration
 // var2 = unused
 //
-void A_Boss2TakeDamage(mobj_t *actor)
+void A_Boss2TakeDamage(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-
 	if (LUA_CallAction(A_BOSS2TAKEDAMAGE, actor))
 		return;
 
-	A_Pain(actor);
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+
+	A_Pain(actor, NULL, 0);
 	actor->reactiontime = 1; // turn around
 	if (locvar1 == 0) // old A_Invincibilerize behavior
 		actor->movecount = TICRATE;
@@ -7399,8 +7272,10 @@ void A_Boss2TakeDamage(mobj_t *actor)
 // var1 = unused
 // var2 = unused
 //
-void A_Boss7Chase(mobj_t *actor)
+void A_Boss7Chase(mobj_t *actor, INT32 *args, unsigned argcount)
 {
+	ARGS_UNUSED();
+
 	INT32 delta;
 	INT32 i;
 
@@ -7467,7 +7342,7 @@ void A_Boss7Chase(mobj_t *actor)
 		&& actor->target->player
 		&& (actor->target->player->powers[pw_carry] == CR_GENERIC))
 	{
-		A_FaceTarget(actor);
+		A_FaceTarget(actor, NULL, 0);
 		if (P_MobjWasRemoved(actor))
 			return;
 		P_SetMobjState(actor, S_BLACKEGG_SHOOT1);
@@ -7486,7 +7361,7 @@ void A_Boss7Chase(mobj_t *actor)
 			case 0: // Lob cannon balls
 				if (actor->z < 1056*FRACUNIT)
 				{
-					A_FaceTarget(actor);
+					A_FaceTarget(actor, NULL, 0);
 					if (P_MobjWasRemoved(actor))
 						return;
 					P_SetMobjState(actor, actor->info->xdeathstate);
@@ -7496,7 +7371,7 @@ void A_Boss7Chase(mobj_t *actor)
 				actor->threshold++;
 				/* FALLTHRU */
 			case 1: // Chaingun Goop
-				A_FaceTarget(actor);
+				A_FaceTarget(actor, NULL, 0);
 				if (P_MobjWasRemoved(actor))
 					return;
 				P_SetMobjState(actor, S_BLACKEGG_SHOOT1);
@@ -7507,7 +7382,7 @@ void A_Boss7Chase(mobj_t *actor)
 					actor->movecount = TICRATE + P_RandomByte()/2;
 				break;
 			case 2: // Homing Missile
-				A_FaceTarget(actor);
+				A_FaceTarget(actor, NULL, 0);
 				if (P_MobjWasRemoved(actor))
 					return;
 				P_SetMobjState(actor, actor->info->missilestate);
@@ -7540,8 +7415,10 @@ void A_Boss7Chase(mobj_t *actor)
 // var1 = unused
 // var2 = unused
 //
-void A_GoopSplat(mobj_t *actor)
+void A_GoopSplat(mobj_t *actor, INT32 *args, unsigned argcount)
 {
+	ARGS_UNUSED();
+
 	if (LUA_CallAction(A_GOOPSPLAT, actor))
 		return;
 
@@ -7562,13 +7439,13 @@ void A_GoopSplat(mobj_t *actor)
 // var1 = pogo jump strength
 // var2 = idle pogo speed
 //
-void A_Boss2PogoSFX(mobj_t *actor)
+void A_Boss2PogoSFX(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
-
 	if (LUA_CallAction(A_BOSS2POGOSFX, actor))
 		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
 
 	if (!actor->target || !(actor->target->flags & MF_SHOOTABLE))
 	{
@@ -7604,13 +7481,13 @@ void A_Boss2PogoSFX(mobj_t *actor)
 // var1 = pogo jump strength
 // var2 = idle pogo speed
 //
-void A_Boss2PogoTarget(mobj_t *actor)
+void A_Boss2PogoTarget(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
-
 	if (LUA_CallAction(A_BOSS2POGOTARGET, actor))
 		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
 
 	if (!actor->target || !(actor->target->flags & MF_SHOOTABLE) || (actor->target->player && actor->target->player->powers[pw_flashing])
 	|| P_AproxDistance(actor->x-actor->target->x, actor->y-actor->target->y) >= FixedMul(512*FRACUNIT, actor->scale))
@@ -7698,8 +7575,10 @@ void A_Boss2PogoTarget(mobj_t *actor)
 // var1 = unused
 // var2 = unused
 //
-void A_EggmanBox(mobj_t *actor)
+void A_EggmanBox(mobj_t *actor, INT32 *args, unsigned argcount)
 {
+	ARGS_UNUSED();
+
 	if (LUA_CallAction(A_EGGMANBOX, actor))
 		return;
 
@@ -7719,15 +7598,15 @@ void A_EggmanBox(mobj_t *actor)
 // var1 = object # to repeatedly fire
 // var2 = distance threshold
 //
-void A_TurretFire(mobj_t *actor)
+void A_TurretFire(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 count = 0;
-	fixed_t dist;
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
-
 	if (LUA_CallAction(A_TURRETFIRE, actor))
 		return;
+
+	INT32 count = 0;
+	fixed_t dist;
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
 
 	if (locvar2)
 		dist = FixedMul(locvar2*FRACUNIT, actor->scale);
@@ -7757,15 +7636,15 @@ void A_TurretFire(mobj_t *actor)
 // var1 = object # to repeatedly fire
 // var2 = distance threshold
 //
-void A_SuperTurretFire(mobj_t *actor)
+void A_SuperTurretFire(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 count = 0;
-	fixed_t dist;
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
-
 	if (LUA_CallAction(A_SUPERTURRETFIRE, actor))
 		return;
+
+	INT32 count = 0;
+	fixed_t dist;
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
 
 	if (locvar2)
 		dist = FixedMul(locvar2*FRACUNIT, actor->scale);
@@ -7796,12 +7675,12 @@ void A_SuperTurretFire(mobj_t *actor)
 // var1 = Don't play activesound?
 // var2 = unused
 //
-void A_TurretStop(mobj_t *actor)
+void A_TurretStop(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-
 	if (LUA_CallAction(A_TURRETSTOP, actor))
 		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
 
 	actor->flags2 &= ~MF2_FIRING;
 	actor->flags2 &= ~MF2_SUPERFIRE;
@@ -7817,8 +7696,10 @@ void A_TurretStop(mobj_t *actor)
 // var1 = unused
 // var2 = unused
 //
-void A_SparkFollow(mobj_t *actor)
+void A_SparkFollow(mobj_t *actor, INT32 *args, unsigned argcount)
 {
+	ARGS_UNUSED();
+
 	if (LUA_CallAction(A_SPARKFOLLOW, actor))
 		return;
 
@@ -7850,13 +7731,13 @@ void A_SparkFollow(mobj_t *actor)
 // var1 = sfx to play
 // var2 = length of sfx, set to threshold if played
 //
-void A_BuzzFly(mobj_t *actor)
+void A_BuzzFly(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
-
 	if (LUA_CallAction(A_BUZZFLY, actor))
 		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
 
 	if (actor->flags2 & MF2_AMBUSH)
 		return;
@@ -7950,8 +7831,10 @@ void A_BuzzFly(mobj_t *actor)
 // var1 = unused
 // var2 = unused
 //
-void A_GuardChase(mobj_t *actor)
+void A_GuardChase(mobj_t *actor, INT32 *args, unsigned argcount)
 {
+	ARGS_UNUSED();
+
 	INT32 delta;
 
 	if (LUA_CallAction(A_GUARDCHASE, actor))
@@ -8047,8 +7930,8 @@ void A_GuardChase(mobj_t *actor)
 	if (actor->tracer && actor->tracer->state
 	&& actor->tracer->state->action.acp1)
 	{
-		var1 = actor->tracer->state->var1, var2 = actor->tracer->state->var2;
-		actor->tracer->state->action.acp1(actor->tracer);
+		INT32 call_args[2] = { actor->tracer->state->var1, actor->tracer->state->var2 };
+		actor->tracer->state->action.acpscr(actor->tracer, call_args, 2);
 	}
 }
 
@@ -8059,8 +7942,10 @@ void A_GuardChase(mobj_t *actor)
 // var1 = unused
 // var2 = unused
 //
-void A_EggShield(mobj_t *actor)
+void A_EggShield(mobj_t *actor, INT32 *args, unsigned argcount)
 {
+	ARGS_UNUSED();
+
 	INT32 i;
 	player_t *player;
 	fixed_t blockdist;
@@ -8148,10 +8033,13 @@ void A_EggShield(mobj_t *actor)
 // var1 = 1 (use value in var2); 0 (use info table value)
 // var2 = if var1 = 1, then value to set
 //
-void A_SetReactionTime(mobj_t *actor)
+void A_SetReactionTime(mobj_t *actor, INT32 *args, unsigned argcount)
 {
 	if (LUA_CallAction(A_SETREACTIONTIME, actor))
 		return;
+
+	INT32 var1 = GET_ARG(GetInteger, 0);
+	INT32 var2 = GET_ARG(GetInteger, 1);
 
 	if (var1)
 		actor->reactiontime = var2;
@@ -8166,23 +8054,23 @@ void A_SetReactionTime(mobj_t *actor)
 // var1 = ball number
 // var2 = total balls
 //
-void A_Boss1Spikeballs(mobj_t *actor)
+void A_Boss1Spikeballs(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
-	mobj_t *ball;
-
 	if (LUA_CallAction(A_BOSS1SPIKEBALLS, actor))
 		return;
 
-	ball = P_SpawnMobj(actor->x, actor->y, actor->z, MT_EGGMOBILE_BALL);
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
+
+	mobj_t *ball = P_SpawnMobj(actor->x, actor->y, actor->z, MT_EGGMOBILE_BALL);
 	P_SetTarget(&ball->target, actor);
 	ball->movedir = FixedAngle(FixedMul(FixedDiv(locvar1<<FRACBITS, locvar2<<FRACBITS), 360<<FRACBITS));
 	ball->threshold = ball->radius + actor->radius + ball->info->painchance;
 
 	S_StartSound(ball, ball->info->seesound);
-	var1 = ball->state->var1, var2 = ball->state->var2;
-	ball->state->action.acp1(ball);
+
+	INT32 call_args[2] = { ball->state->var1, ball->state->var2 };
+	ball->state->action.acpscr(ball, call_args, 2);
 }
 
 // Function: A_Boss3TakeDamage
@@ -8192,12 +8080,12 @@ void A_Boss1Spikeballs(mobj_t *actor)
 // var1 = movecount value
 // var2 = unused
 //
-void A_Boss3TakeDamage(mobj_t *actor)
+void A_Boss3TakeDamage(mobj_t *actor, INT32 *args, unsigned argcount)
 {
 	if (LUA_CallAction(A_BOSS3TAKEDAMAGE, actor))
 		return;
 
-	actor->movecount = var1;
+	actor->movecount = GET_ARG(GetInteger, 0);
 	actor->movefactor = -512*FRACUNIT;
 }
 
@@ -8208,8 +8096,10 @@ void A_Boss3TakeDamage(mobj_t *actor)
 // var1 = unused
 // var2 = unused
 //
-void A_Boss3Path(mobj_t *actor)
+void A_Boss3Path(mobj_t *actor, INT32 *args, unsigned argcount)
 {
+	ARGS_UNUSED();
+
 	if (LUA_CallAction(A_BOSS3PATH, actor))
 		return;
 
@@ -8225,8 +8115,7 @@ void A_Boss3Path(mobj_t *actor)
 		actor->momy = 0;
 		actor->momz = 0;
 		P_SetTarget(&actor->target, actor->tracer->target);
-		var1 = 0, var2 = 0;
-		A_FaceTarget(actor);
+		A_FaceTarget(actor, NULL, 0);
 		if (P_MobjWasRemoved(actor))
 			return;
 
@@ -8332,8 +8221,10 @@ void A_Boss3Path(mobj_t *actor)
 // var1 = unused
 // var2 = unused
 //
-void A_Boss3ShockThink(mobj_t *actor)
+void A_Boss3ShockThink(mobj_t *actor, INT32 *args, unsigned argcount)
 {
+	ARGS_UNUSED();
+
 	if (LUA_CallAction(A_BOSS3SHOCKTHINK, actor))
 		return;
 
@@ -8387,17 +8278,17 @@ void A_Boss3ShockThink(mobj_t *actor)
 // var1 = object spawned
 // var2 = amount of objects spawned
 //
-void A_Shockwave(mobj_t *actor)
+void A_Shockwave(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
+	if (LUA_CallAction(A_SHOCKWAVE, actor))
+		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
 	INT32 i;
 
 	angle_t ang = 0, interval;
 	mobj_t *shock = NULL, *sfirst = NULL, *sprev = NULL;
-
-	if (LUA_CallAction(A_SHOCKWAVE, actor))
-		return;
 
 	if (locvar2 == 0)
 		locvar2 = 24; // a sensible default, just in case
@@ -8437,16 +8328,15 @@ void A_Shockwave(mobj_t *actor)
 // var1 = tag
 // var2 = add angle to tag (optional)
 //
-void A_LinedefExecute(mobj_t *actor)
+void A_LinedefExecute(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 tagnum;
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
-
 	if (LUA_CallAction(A_LINEDEFEXECUTE, actor))
 		return;
 
-	tagnum = locvar1;
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
+
+	INT32 tagnum = locvar1;
 	// state numbers option is no more, custom states cannot be guaranteed to stay the same number anymore, now that they can be defined by names instead
 
 	if (locvar2)
@@ -8465,13 +8355,12 @@ void A_LinedefExecute(mobj_t *actor)
 // var1 = mapthing arg to take tag from
 // var2 = unused
 //
-void A_LinedefExecuteFromArg(mobj_t *actor)
+void A_LinedefExecuteFromArg(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 tagnum;
-	INT32 locvar1 = var1;
-
 	if (LUA_CallAction(A_LINEDEFEXECUTEFROMARG, actor))
 		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
 
 	if (!actor->spawnpoint)
 		return;
@@ -8482,7 +8371,7 @@ void A_LinedefExecuteFromArg(mobj_t *actor)
 		return;
 	}
 
-	tagnum = actor->spawnpoint->args[locvar1];
+	INT32 tagnum = actor->spawnpoint->args[locvar1];
 
 	CONS_Debug(DBG_GAMELOGIC, "A_LinedefExecuteFromArg: Running mobjtype %d's sector with tag %d\n", actor->type, tagnum);
 
@@ -8497,8 +8386,10 @@ void A_LinedefExecuteFromArg(mobj_t *actor)
 // var1 = unused
 // var2 = unused
 //
-void A_PlaySeeSound(mobj_t *actor)
+void A_PlaySeeSound(mobj_t *actor, INT32 *args, unsigned argcount)
 {
+	ARGS_UNUSED();
+
 	if (LUA_CallAction(A_PLAYSEESOUND, actor))
 		return;
 
@@ -8513,8 +8404,10 @@ void A_PlaySeeSound(mobj_t *actor)
 // var1 = unused
 // var2 = unused
 //
-void A_PlayAttackSound(mobj_t *actor)
+void A_PlayAttackSound(mobj_t *actor, INT32 *args, unsigned argcount)
 {
+	ARGS_UNUSED();
+
 	if (LUA_CallAction(A_PLAYATTACKSOUND, actor))
 		return;
 
@@ -8529,8 +8422,10 @@ void A_PlayAttackSound(mobj_t *actor)
 // var1 = unused
 // var2 = unused
 //
-void A_PlayActiveSound(mobj_t *actor)
+void A_PlayActiveSound(mobj_t *actor, INT32 *args, unsigned argcount)
 {
+	ARGS_UNUSED();
+
 	if (LUA_CallAction(A_PLAYACTIVESOUND, actor))
 		return;
 
@@ -8545,13 +8440,13 @@ void A_PlayActiveSound(mobj_t *actor)
 // var1 = object # to spawn as smoke
 // var2 = unused
 //
-void A_SmokeTrailer(mobj_t *actor)
+void A_SmokeTrailer(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	mobj_t *th;
-	INT32 locvar1 = var1;
-
 	if (LUA_CallAction(A_SMOKETRAILER, actor))
 		return;
+
+	mobj_t *th;
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
 
 	if (leveltime % 4)
 		return;
@@ -8583,16 +8478,16 @@ void A_SmokeTrailer(mobj_t *actor)
 //		var2 >> 16 = z
 //		var2 & 65535 = type
 //
-void A_SpawnObjectAbsolute(mobj_t *actor)
+void A_SpawnObjectAbsolute(mobj_t *actor, INT32 *args, unsigned argcount)
 {
+	if (LUA_CallAction(A_SPAWNOBJECTABSOLUTE, actor))
+		return;
+
 	INT16 x, y, z; // Want to be sure we can use negative values
 	mobjtype_t type;
 	mobj_t *mo;
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
-
-	if (LUA_CallAction(A_SPAWNOBJECTABSOLUTE, actor))
-		return;
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
 
 	x = (INT16)(locvar1>>16);
 	y = (INT16)(locvar1&65535);
@@ -8619,16 +8514,16 @@ void A_SpawnObjectAbsolute(mobj_t *actor)
 //		var2 >> 16 = z
 //		var2 & 65535 = type
 //
-void A_SpawnObjectRelative(mobj_t *actor)
+void A_SpawnObjectRelative(mobj_t *actor, INT32 *args, unsigned argcount)
 {
+	if (LUA_CallAction(A_SPAWNOBJECTRELATIVE, actor))
+		return;
+
 	INT16 x, y, z; // Want to be sure we can use negative values
 	mobjtype_t type;
 	mobj_t *mo;
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
-
-	if (LUA_CallAction(A_SPAWNOBJECTRELATIVE, actor))
-		return;
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
 
 	CONS_Debug(DBG_GAMELOGIC, "A_SpawnObjectRelative called from object type %d, var1: %d, var2: %d\n", actor->type, locvar1, locvar2);
 
@@ -8658,31 +8553,23 @@ void A_SpawnObjectRelative(mobj_t *actor)
 // var1 = min
 // var2 = max
 //
-void A_ChangeAngleRelative(mobj_t *actor)
+void A_ChangeAngleRelative(mobj_t *actor, INT32 *args, unsigned argcount)
 {
+	if (LUA_CallAction(A_CHANGEANGLERELATIVE, actor))
+		return;
+
 	// Oh god, the old code /sucked/. Changed this and the absolute version to get a random range using amin and amax instead of
 	//  getting a random angle from the _entire_ spectrum and then clipping. While we're at it, do the angle conversion to the result
 	//  rather than the ranges, so <0 and >360 work as possible values. -Red
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
-	//angle_t angle = (P_RandomByte()+1)<<24;
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
 	const fixed_t amin = locvar1*FRACUNIT;
 	const fixed_t amax = locvar2*FRACUNIT;
-	//const angle_t amin = FixedAngle(locvar1*FRACUNIT);
-	//const angle_t amax = FixedAngle(locvar2*FRACUNIT);
-
-	if (LUA_CallAction(A_CHANGEANGLERELATIVE, actor))
-		return;
 
 #ifdef PARANOIA
 	if (amin > amax)
 		I_Error("A_ChangeAngleRelative: var1 is greater than var2");
 #endif
-/*
-	if (angle < amin)
-		angle = amin;
-	if (angle > amax)
-		angle = amax;*/
 
 	actor->angle += FixedAngle(P_RandomRange(amin, amax));
 }
@@ -8694,28 +8581,20 @@ void A_ChangeAngleRelative(mobj_t *actor)
 // var1 = min
 // var2 = max
 //
-void A_ChangeAngleAbsolute(mobj_t *actor)
+void A_ChangeAngleAbsolute(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
-	//angle_t angle = (P_RandomByte()+1)<<24;
-	const fixed_t amin = locvar1*FRACUNIT;
-	const fixed_t amax = locvar2*FRACUNIT;
-	//const angle_t amin = FixedAngle(locvar1*FRACUNIT);
-	//const angle_t amax = FixedAngle(locvar2*FRACUNIT);
-
 	if (LUA_CallAction(A_CHANGEANGLEABSOLUTE, actor))
 		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
+	const fixed_t amin = locvar1*FRACUNIT;
+	const fixed_t amax = locvar2*FRACUNIT;
 
 #ifdef PARANOIA
 	if (amin > amax)
 		I_Error("A_ChangeAngleAbsolute: var1 is greater than var2");
 #endif
-/*
-	if (angle < amin)
-		angle = amin;
-	if (angle > amax)
-		angle = amax;*/
 
 	actor->angle = FixedAngle(P_RandomRange(amin, amax));
 }
@@ -8727,20 +8606,18 @@ void A_ChangeAngleAbsolute(mobj_t *actor)
 // var1 = angle
 // var2 = relative? (default)
 //
-void A_RollAngle(mobj_t *actor)
+void A_RollAngle(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
-	const angle_t angle = FixedAngle(locvar1*FRACUNIT);
-
 	if (LUA_CallAction(A_ROLLANGLE, actor))
 		return;
 
-	// relative (default)
-	if (!locvar2)
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
+	const angle_t angle = FixedAngle(locvar1*FRACUNIT);
+
+	if (!locvar2) // relative (the default)
 		actor->spriteroll += angle;
-	// absolute
-	else
+	else // absolute
 		actor->spriteroll = angle;
 }
 
@@ -8751,15 +8628,15 @@ void A_RollAngle(mobj_t *actor)
 // var1 = min
 // var2 = max
 //
-void A_ChangeRollAngleRelative(mobj_t *actor)
+void A_ChangeRollAngleRelative(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
-	const fixed_t amin = locvar1*FRACUNIT;
-	const fixed_t amax = locvar2*FRACUNIT;
-
 	if (LUA_CallAction(A_CHANGEROLLANGLERELATIVE, actor))
 		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
+	const fixed_t amin = locvar1*FRACUNIT;
+	const fixed_t amax = locvar2*FRACUNIT;
 
 #ifdef PARANOIA
 	if (amin > amax)
@@ -8776,15 +8653,15 @@ void A_ChangeRollAngleRelative(mobj_t *actor)
 // var1 = min
 // var2 = max
 //
-void A_ChangeRollAngleAbsolute(mobj_t *actor)
+void A_ChangeRollAngleAbsolute(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
-	const fixed_t amin = locvar1*FRACUNIT;
-	const fixed_t amax = locvar2*FRACUNIT;
-
 	if (LUA_CallAction(A_CHANGEROLLANGLEABSOLUTE, actor))
 		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
+	const fixed_t amin = locvar1*FRACUNIT;
+	const fixed_t amax = locvar2*FRACUNIT;
 
 #ifdef PARANOIA
 	if (amin > amax)
@@ -8803,13 +8680,13 @@ void A_ChangeRollAngleAbsolute(mobj_t *actor)
 //		lower 16 bits = If 1, play sound using calling object as origin. If 0, play sound without an origin
 //		upper 16 bits = If 1, do not play sound during preticker.
 //
-void A_PlaySound(mobj_t *actor)
+void A_PlaySound(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
-
 	if (LUA_CallAction(A_PLAYSOUND, actor))
 		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
 
 	if (leveltime < 2 && (locvar2 >> 16))
 		return;
@@ -8824,17 +8701,17 @@ void A_PlaySound(mobj_t *actor)
 // var1 = mobj type
 // var2 = if (0) nearest; else furthest;
 //
-void A_FindTarget(mobj_t *actor)
+void A_FindTarget(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
+	if (LUA_CallAction(A_FINDTARGET, actor))
+		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
 	mobj_t *targetedmobj = NULL;
 	thinker_t *th;
 	mobj_t *mo2;
 	fixed_t dist1 = 0, dist2 = 0;
-
-	if (LUA_CallAction(A_FINDTARGET, actor))
-		return;
 
 	CONS_Debug(DBG_GAMELOGIC, "A_FindTarget called from object type %d, var1: %d, var2: %d\n", actor->type, locvar1, locvar2);
 
@@ -8888,17 +8765,17 @@ void A_FindTarget(mobj_t *actor)
 // var1 = mobj type
 // var2 = if (0) nearest; else furthest;
 //
-void A_FindTracer(mobj_t *actor)
+void A_FindTracer(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
+	if (LUA_CallAction(A_FINDTRACER, actor))
+		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
 	mobj_t *targetedmobj = NULL;
 	thinker_t *th;
 	mobj_t *mo2;
 	fixed_t dist1 = 0, dist2 = 0;
-
-	if (LUA_CallAction(A_FINDTRACER, actor))
-		return;
 
 	CONS_Debug(DBG_GAMELOGIC, "A_FindTracer called from object type %d, var1: %d, var2: %d\n", actor->type, locvar1, locvar2);
 
@@ -8952,13 +8829,13 @@ void A_FindTracer(mobj_t *actor)
 // var1 = tics to set to
 // var2 = if this is set, and no var1 is supplied, the mobj's threshold value will be used.
 //
-void A_SetTics(mobj_t *actor)
+void A_SetTics(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
-
 	if (LUA_CallAction(A_SETTICS, actor))
 		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
 
 	if (locvar1)
 		actor->tics = locvar1;
@@ -8973,13 +8850,13 @@ void A_SetTics(mobj_t *actor)
 // var1 = lower bound
 // var2 = upper bound
 //
-void A_SetRandomTics(mobj_t *actor)
+void A_SetRandomTics(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
-
 	if (LUA_CallAction(A_SETRANDOMTICS, actor))
 		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
 
 	actor->tics = P_RandomRange(locvar1, locvar2);
 }
@@ -8991,13 +8868,13 @@ void A_SetRandomTics(mobj_t *actor)
 // var1 = if (var1 > 0), find target and add its color value to yours
 // var2 = if (var1 = 0), color value to add
 //
-void A_ChangeColorRelative(mobj_t *actor)
+void A_ChangeColorRelative(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
-
 	if (LUA_CallAction(A_CHANGECOLORRELATIVE, actor))
 		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
 
 	if (locvar1)
 	{
@@ -9016,13 +8893,13 @@ void A_ChangeColorRelative(mobj_t *actor)
 // var1 = if (var1 > 0), set your color to your target's color
 // var2 = if (var1 = 0), color value to set to
 //
-void A_ChangeColorAbsolute(mobj_t *actor)
+void A_ChangeColorAbsolute(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
-
 	if (LUA_CallAction(A_CHANGECOLORABSOLUTE, actor))
 		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
 
 	if (locvar1)
 	{
@@ -9040,15 +8917,16 @@ void A_ChangeColorAbsolute(mobj_t *actor)
 // var1 = if (var1 != 0), dye your target instead of yourself
 // var2 = color value to dye
 //
-void A_Dye(mobj_t *actor)
+void A_Dye(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
+	if (LUA_CallAction(A_DYE, actor))
+		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
 
 	mobj_t *target = ((locvar1 && actor->target) ? actor->target : actor);
 	UINT16 color = (UINT16)locvar2;
-	if (LUA_CallAction(A_DYE, actor))
-		return;
 	if (color >= numskincolors)
 		return;
 
@@ -9075,13 +8953,13 @@ void A_Dye(mobj_t *actor)
 // var1 = angle
 // var2 = force
 //
-void A_MoveRelative(mobj_t *actor)
+void A_MoveRelative(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
-
 	if (LUA_CallAction(A_MOVERELATIVE, actor))
 		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
 
 	P_Thrust(actor, actor->angle+FixedAngle(locvar1*FRACUNIT), FixedMul(locvar2*FRACUNIT, actor->scale));
 }
@@ -9093,13 +8971,13 @@ void A_MoveRelative(mobj_t *actor)
 // var1 = angle
 // var2 = force
 //
-void A_MoveAbsolute(mobj_t *actor)
+void A_MoveAbsolute(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
-
 	if (LUA_CallAction(A_MOVEABSOLUTE, actor))
 		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
 
 	P_InstaThrust(actor, FixedAngle(locvar1*FRACUNIT), FixedMul(locvar2*FRACUNIT, actor->scale));
 }
@@ -9111,13 +8989,13 @@ void A_MoveAbsolute(mobj_t *actor)
 // var1 = amount of force
 // var2 = If 1, xy momentum is lost. If 0, xy momentum is kept
 //
-void A_Thrust(mobj_t *actor)
+void A_Thrust(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
-
 	if (LUA_CallAction(A_THRUST, actor))
 		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
 
 	if (!locvar1)
 		CONS_Debug(DBG_GAMELOGIC, "A_Thrust: Var1 not specified!\n");
@@ -9137,13 +9015,13 @@ void A_Thrust(mobj_t *actor)
 //		lower 16 bits = If 1, xy momentum is lost. If 0, xy momentum is kept
 //		upper 16 bits = If 1, z momentum is lost. If 0, z momentum is kept
 //
-void A_ZThrust(mobj_t *actor)
+void A_ZThrust(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
-
 	if (LUA_CallAction(A_ZTHRUST, actor))
 		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
 
 	if (!locvar1)
 		CONS_Debug(DBG_GAMELOGIC, "A_ZThrust: Var1 not specified!\n");
@@ -9170,14 +9048,14 @@ void A_ZThrust(mobj_t *actor)
 //		0 = target/tracer's target
 //		1 = target/tracer's tracer
 //
-void A_SetTargetsTarget(mobj_t *actor)
+void A_SetTargetsTarget(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
-	mobj_t *oldtarg = NULL, *newtarg = NULL;
-
 	if (LUA_CallAction(A_SETTARGETSTARGET, actor))
 		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
+	mobj_t *oldtarg = NULL, *newtarg = NULL;
 
 	// actor's target
 	if (locvar1) // or tracer
@@ -9214,14 +9092,14 @@ void A_SetTargetsTarget(mobj_t *actor)
 //		else if var2 == 1, remove the flag from the current flags
 //		else if var2 == 0, set the flags to the exact value
 //
-void A_SetObjectFlags(mobj_t *actor)
+void A_SetObjectFlags(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
-	boolean unlinkthings = false;
-
 	if (LUA_CallAction(A_SETOBJECTFLAGS, actor))
 		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
+	boolean unlinkthings = false;
 
 	if (locvar2 == 2)
 		locvar1 = actor->flags | locvar1;
@@ -9256,13 +9134,13 @@ void A_SetObjectFlags(mobj_t *actor)
 //		else if var2 == 1, remove the flag from the current flags
 //		else if var2 == 0, set the flags to the exact value
 //
-void A_SetObjectFlags2(mobj_t *actor)
+void A_SetObjectFlags2(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
-
 	if (LUA_CallAction(A_SETOBJECTFLAGS2, actor))
 		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
 
 	if (locvar2 == 2)
 		actor->flags2 |= locvar1;
@@ -9283,13 +9161,13 @@ void A_SetObjectFlags2(mobj_t *actor)
 //		3 - Boss 4 jet flame
 // var2 = unused
 //
-void A_BossJetFume(mobj_t *actor)
+void A_BossJetFume(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	mobj_t *filler;
-	INT32 locvar1 = var1;
-
 	if (LUA_CallAction(A_BOSSJETFUME, actor))
 		return;
+
+	mobj_t *filler;
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
 
 	if (locvar1 == 0) // Boss1 jet fumes
 	{
@@ -9418,13 +9296,13 @@ void A_BossJetFume(mobj_t *actor)
 // var1 = state number 1
 // var2 = state number 2
 //
-void A_RandomState(mobj_t *actor)
+void A_RandomState(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
-
 	if (LUA_CallAction(A_RANDOMSTATE, actor))
 		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
 
 	P_SetMobjState(actor, P_RandomChance(FRACUNIT/2) ? locvar1 : locvar2);
 }
@@ -9436,13 +9314,13 @@ void A_RandomState(mobj_t *actor)
 // var1 = Minimum state number to choose.
 // var2 = Maximum state number to use.
 //
-void A_RandomStateRange(mobj_t *actor)
+void A_RandomStateRange(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
-
 	if (LUA_CallAction(A_RANDOMSTATERANGE, actor))
 		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
 
 	P_SetMobjState(actor, P_RandomRange(locvar1, locvar2));
 }
@@ -9454,13 +9332,13 @@ void A_RandomStateRange(mobj_t *actor)
 // var1 = Minimum state number to use.
 // var2 = Maximum state number to use. The difference will act as a modulo operator.
 //
-void A_StateRangeByAngle(mobj_t *actor)
+void A_StateRangeByAngle(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
-
 	if (LUA_CallAction(A_STATERANGEBYANGLE, actor))
 		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
 
 	if (locvar2 - locvar1 < 0)
 		return; // invalid range
@@ -9475,14 +9353,14 @@ void A_StateRangeByAngle(mobj_t *actor)
 // var1 = Minimum state number to use.
 // var2 = Maximum state number to use. The difference will act as a modulo operator.
 //
-void A_StateRangeByParameter(mobj_t *actor)
+void A_StateRangeByParameter(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
-	UINT8 parameter = (actor->spawnpoint ? actor->spawnpoint->extrainfo : 0);
-
 	if (LUA_CallAction(A_STATERANGEBYPARAMETER, actor))
 		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
+	UINT8 parameter = (actor->spawnpoint ? actor->spawnpoint->extrainfo : 0);
 
 	if (locvar2 - locvar1 < 0)
 		return; // invalid range
@@ -9497,29 +9375,31 @@ void A_StateRangeByParameter(mobj_t *actor)
 // var1 = state # to use 1st action from
 // var2 = state # to use 2nd action from
 //
-void A_DualAction(mobj_t *actor)
+void A_DualAction(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
-
 	if (LUA_CallAction(A_DUALACTION, actor))
 		return;
 
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
+
 	CONS_Debug(DBG_GAMELOGIC, "A_DualAction called from object type %d, var1: %d, var2: %d\n", actor->type, locvar1, locvar2);
 
-	var1 = states[locvar1].var1;
-	var2 = states[locvar1].var2;
+	INT32 call_args[2];
+
+	call_args[0] = states[locvar1].var1;
+	call_args[1] = states[locvar1].var2;
 	astate = &states[locvar1];
 
 	CONS_Debug(DBG_GAMELOGIC, "A_DualAction: Calling First Action (state %d)...\n", locvar1);
-	states[locvar1].action.acp1(actor);
+	states[locvar1].action.acpscr(actor, call_args, 2);
 
-	var1 = states[locvar2].var1;
-	var2 = states[locvar2].var2;
+	call_args[0] = states[locvar2].var1;
+	call_args[1] = states[locvar2].var2;
 	astate = &states[locvar2];
 
 	CONS_Debug(DBG_GAMELOGIC, "A_DualAction: Calling Second Action (state %d)...\n", locvar2);
-	states[locvar2].action.acp1(actor);
+	states[locvar2].action.acpscr(actor, call_args, 2);
 }
 
 // Function: A_RemoteAction
@@ -9529,14 +9409,14 @@ void A_DualAction(mobj_t *actor)
 // var1 = remote object (-2 uses tracer, -1 uses target)
 // var2 = state reference for calling an action
 //
-void A_RemoteAction(mobj_t *actor)
+void A_RemoteAction(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
-	mobj_t *originaltarget = actor->target; // Hold on to the target for later.
-
 	if (LUA_CallAction(A_REMOTEACTION, actor))
 		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
+	mobj_t *originaltarget = actor->target; // Hold on to the target for later.
 
 	// If >=0, find the closest target.
 	if (locvar1 >= 0)
@@ -9596,13 +9476,12 @@ void A_RemoteAction(mobj_t *actor)
 	if (actor->target)
 	{
 		// Steal the var1 and var2 from "locvar2"
-		var1 = states[locvar2].var1;
-		var2 = states[locvar2].var2;
+		INT32 call_args[2] = { states[locvar2].var1, states[locvar2].var2 };
 		astate = &states[locvar2];
 
 		CONS_Debug(DBG_GAMELOGIC, "A_RemoteAction: Calling action on %p\n"
-				"var1 is %d\nvar2 is %d\n", actor->target, var1, var2);
-		states[locvar2].action.acp1(actor->target);
+				"var1 is %d\nvar2 is %d\n", actor->target, call_args[0], call_args[1]);
+		states[locvar2].action.acpscr(actor->target, call_args, 2);
 	}
 
 	P_SetTarget(&actor->target, originaltarget); // Restore the original target.
@@ -9615,8 +9494,10 @@ void A_RemoteAction(mobj_t *actor)
 // var1 = unused
 // var2 = unused
 //
-void A_ToggleFlameJet(mobj_t* actor)
+void A_ToggleFlameJet(mobj_t *actor, INT32 *args, unsigned argcount)
 {
+	ARGS_UNUSED();
+
 	if (LUA_CallAction(A_TOGGLEFLAMEJET, actor))
 		return;
 
@@ -9657,15 +9538,16 @@ void A_ToggleFlameJet(mobj_t* actor)
 //        Bits 1-10: X factor
 //        Bits 11-20: Y factor
 //        Bits 21-30: Z factor
-void A_OrbitNights(mobj_t* actor)
+void A_OrbitNights(mobj_t *actor, INT32 *args, unsigned argcount)
 {
+	if (LUA_CallAction(A_ORBITNIGHTS, actor))
+		return;
+
+	INT32 var2 = GET_ARG(GetInteger, 1);
 	INT32 ofs = (var2 & 0x3FF);
 	boolean ishelper = (var2 & 0x10000);
 	boolean donotrescale = (var2 & 0x40000);
 	INT32 xfactor = 32, yfactor = 32, zfactor = 20;
-
-	if (LUA_CallAction(A_ORBITNIGHTS, actor))
-		return;
 
 	if (actor->flags & MF_GRENADEBOUNCE)
 	{
@@ -9692,7 +9574,7 @@ void A_OrbitNights(mobj_t* actor)
 	}
 	else
 	{
-		actor->extravalue1 += var1;
+		actor->extravalue1 += GET_ARG(GetInteger, 0);
 		P_UnsetThingPosition(actor);
 		{
 			const angle_t fa  = (angle_t)actor->extravalue1 >> ANGLETOFINESHIFT;
@@ -9732,15 +9614,14 @@ void A_OrbitNights(mobj_t* actor)
 // var1 = duration in tics
 // var2 = unused
 //
-void A_GhostMe(mobj_t *actor)
+void A_GhostMe(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-	mobj_t *ghost;
-
 	if (LUA_CallAction(A_GHOSTME, actor))
 		return;
 
-	ghost = P_SpawnGhostMobj(actor);
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+
+	mobj_t *ghost = P_SpawnGhostMobj(actor);
 	if (ghost && locvar1 > 0)
 		ghost->fuse = locvar1;
 }
@@ -9754,14 +9635,14 @@ void A_GhostMe(mobj_t *actor)
 //		0 = target
 //		1 = tracer
 //
-void A_SetObjectState(mobj_t *actor)
+void A_SetObjectState(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
-	mobj_t *target;
-
 	if (LUA_CallAction(A_SETOBJECTSTATE, actor))
 		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
+	mobj_t *target;
 
 	if ((!locvar2 && !actor->target) || (locvar2 && !actor->tracer))
 	{
@@ -9793,19 +9674,19 @@ void A_SetObjectState(mobj_t *actor)
 //		lower 16 bits = type
 //		upper 16 bits = range (if == 0, across whole map)
 //
-void A_SetObjectTypeState(mobj_t *actor)
+void A_SetObjectTypeState(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
+	if (LUA_CallAction(A_SETOBJECTTYPESTATE, actor))
+		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
 	const UINT16 loc2lw = (UINT16)(locvar2 & 65535);
 	const UINT16 loc2up = (UINT16)(locvar2 >> 16);
 
 	thinker_t *th;
 	mobj_t *mo2;
 	fixed_t dist = 0;
-
-	if (LUA_CallAction(A_SETOBJECTTYPESTATE, actor))
-		return;
 
 	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 	{
@@ -9841,13 +9722,13 @@ void A_SetObjectTypeState(mobj_t *actor)
 //		1 = tracer
 // var2 = unused
 //
-void A_KnockBack(mobj_t *actor)
+void A_KnockBack(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-	mobj_t *target;
-
 	if (LUA_CallAction(A_KNOCKBACK, actor))
 		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	mobj_t *target;
 
 	if (!locvar1)
 		target = actor->target;
@@ -9874,15 +9755,15 @@ void A_KnockBack(mobj_t *actor)
 //		lower 16 bits = If 1, xy momentum is lost. If 0, xy momentum is kept
 //		upper 16 bits = 0 - target, 1 - tracer
 //
-void A_PushAway(mobj_t *actor)
+void A_PushAway(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
-	mobj_t *target; // target
-	angle_t an; // actor to target angle
-
 	if (LUA_CallAction(A_PUSHAWAY, actor))
 		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
+	mobj_t *target; // target
+	angle_t an; // actor to target angle
 
 	if ((!(locvar2 >> 16) && !actor->target) || ((locvar2 >> 16) && !actor->tracer))
 		return;
@@ -9910,13 +9791,12 @@ void A_PushAway(mobj_t *actor)
 // var1 = ammount of drained rings
 // var2 = unused
 //
-void A_RingDrain(mobj_t *actor)
+void A_RingDrain(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-	player_t *player;
-
 	if (LUA_CallAction(A_RINGDRAIN, actor))
 		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
 
 	if (!actor->target || !actor->target->player)
 	{
@@ -9925,7 +9805,7 @@ void A_RingDrain(mobj_t *actor)
 		return;
 	}
 
-	player = actor->target->player;
+	player_t *player = actor->target->player;
 	P_GivePlayerRings(player, -min(locvar1, player->rings));
 }
 
@@ -9938,22 +9818,22 @@ void A_RingDrain(mobj_t *actor)
 //		lower 16 bits = missile type
 //		upper 16 bits = height offset
 //
-void A_SplitShot(mobj_t *actor)
+void A_SplitShot(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
+	if (LUA_CallAction(A_SPLITSHOT, actor))
+		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
 	const UINT16 loc2lw = (UINT16)(locvar2 & 65535);
 	const UINT16 loc2up = (UINT16)(locvar2 >> 16);
 	const fixed_t offs = (fixed_t)(locvar1*FRACUNIT);
 	const fixed_t hoffs = (fixed_t)(loc2up*FRACUNIT);
 
-	if (LUA_CallAction(A_SPLITSHOT, actor))
-		return;
-
 	if (!actor->target)
 		return;
 
-	A_FaceTarget(actor);
+	A_FaceTarget(actor, NULL, 0);
 	if (P_MobjWasRemoved(actor))
 		return;
 	{
@@ -9981,13 +9861,13 @@ void A_SplitShot(mobj_t *actor)
 // var1 = splitting missile type
 // var2 = splitting angle
 //
-void A_MissileSplit(mobj_t *actor)
+void A_MissileSplit(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
-
 	if (LUA_CallAction(A_MISSILESPLIT, actor))
 		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
 
 	if (actor->eflags & MFE_VERTICALFLIP)
 		P_SpawnAlteredDirectionMissile(actor, locvar1, actor->x, actor->y, actor->z+actor->height, locvar2);
@@ -10004,21 +9884,21 @@ void A_MissileSplit(mobj_t *actor)
 //		upper 16 bits = missile type #
 // var2 = height offset
 //
-void A_MultiShot(mobj_t *actor)
+void A_MultiShot(mobj_t *actor, INT32 *args, unsigned argcount)
 {
+	if (LUA_CallAction(A_MULTISHOT, actor))
+		return;
+
 	fixed_t z, xr, yr;
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
 	const UINT16 loc1lw = (UINT16)(locvar1 & 65535);
 	const UINT16 loc1up = (UINT16)(locvar1 >> 16);
 	INT32 count = 0;
 	fixed_t ad;
 
-	if (LUA_CallAction(A_MULTISHOT, actor))
-		return;
-
 	if (actor->target)
-		A_FaceTarget(actor);
+		A_FaceTarget(actor, NULL, 0);
 
 	if (P_MobjWasRemoved(actor))
 		return;
@@ -10067,19 +9947,19 @@ void A_MultiShot(mobj_t *actor)
 //		upper 16 bits = maximum step #
 // var2 = force
 //
-void A_InstaLoop(mobj_t *actor)
+void A_InstaLoop(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
+	if (LUA_CallAction(A_INSTALOOP, actor))
+		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
 	fixed_t force = max(locvar2, 1)*FRACUNIT; // defaults to 1 if var2 < 1
 	const UINT16 loc1lw = (UINT16)(locvar1 & 65535);
 	const UINT16 loc1up = (UINT16)(locvar1 >> 16);
 	const angle_t fa = FixedAngleC(loc1lw*FRACUNIT*360, loc1up*FRACUNIT)>>ANGLETOFINESHIFT;
 	const fixed_t ac = FINECOSINE(fa);
 	const fixed_t as = FINESINE(fa);
-
-	if (LUA_CallAction(A_INSTALOOP, actor))
-		return;
 
 	P_InstaThrust(actor, actor->angle, FixedMul(ac, FixedMul(force, actor->scale)));
 	P_SetObjectMomZ(actor, FixedMul(as, force), false);
@@ -10096,10 +9976,13 @@ void A_InstaLoop(mobj_t *actor)
 //		lower 16 bits = vertical rotation speed in 1/10 fracunits per tic
 //		upper 16 bits = horizontal rotation speed in 1/10 fracunits per tic
 //
-void A_Custom3DRotate(mobj_t *actor)
+void A_Custom3DRotate(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
+	if (LUA_CallAction(A_CUSTOM3DROTATE, actor))
+		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
 
 	const UINT16 loc1lw = (UINT16)(locvar1 & 65535);
 	const UINT16 loc1up = (UINT16)(locvar1 >> 16);
@@ -10110,9 +9993,6 @@ void A_Custom3DRotate(mobj_t *actor)
 	const fixed_t hOff = FixedMul(loc1up*FRACUNIT, actor->scale);
 	const fixed_t hspeed = loc2up*FRACUNIT/10; // Monster's note (29/05/21): DO NOT SCALE, this is an angular speed!
 	const fixed_t vspeed = loc2lw*FRACUNIT/10; // ditto
-
-	if (LUA_CallAction(A_CUSTOM3DROTATE, actor))
-		return;
 
 	if (!actor->target) // Ensure we actually have a target first.
 	{
@@ -10166,13 +10046,13 @@ void A_Custom3DRotate(mobj_t *actor)
 //		else, do not call a specific state if no players are available
 // var2 = state number
 //
-void A_SearchForPlayers(mobj_t *actor)
+void A_SearchForPlayers(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
-
 	if (LUA_CallAction(A_SEARCHFORPLAYERS, actor))
 		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
 
 	if (!actor->target || !(actor->target->flags & MF_SHOOTABLE))
 	{
@@ -10197,14 +10077,14 @@ void A_SearchForPlayers(mobj_t *actor)
 //		upper 16 bits = numerator (defaults to 1 if zero)
 // var2 = state number
 //
-void A_CheckRandom(mobj_t *actor)
+void A_CheckRandom(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
-	fixed_t chance = FRACUNIT;
-
 	if (LUA_CallAction(A_CHECKRANDOM, actor))
 		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
+	fixed_t chance = FRACUNIT;
 
 	if ((locvar1 & 0xFFFF) == 0)
 		return;
@@ -10225,13 +10105,13 @@ void A_CheckRandom(mobj_t *actor)
 // var1 = if player rings >= var1 call state
 // var2 = state number
 //
-void A_CheckTargetRings(mobj_t *actor)
+void A_CheckTargetRings(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
-
 	if (LUA_CallAction(A_CHECKTARGETRINGS, actor))
 		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
 
 	if (!(actor->target) || !(actor->target->player))
 	   return;
@@ -10247,14 +10127,14 @@ void A_CheckTargetRings(mobj_t *actor)
 // var1 = if player rings >= var1 call state
 // var2 = state number
 //
-void A_CheckRings(mobj_t *actor)
+void A_CheckRings(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
-	INT32 i, cntr = 0;
-
 	if (LUA_CallAction(A_CHECKRINGS, actor))
 		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
+	INT32 i, cntr = 0;
 
 	for (i = 0; i < MAXPLAYERS; i++)
 		cntr += players[i].rings;
@@ -10270,15 +10150,15 @@ void A_CheckRings(mobj_t *actor)
 // var1 = if total player rings >= var1 call state
 // var2 = state number
 //
-void A_CheckTotalRings(mobj_t *actor)
+void A_CheckTotalRings(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
-
-	INT32 i, cntr = 0;
-
 	if (LUA_CallAction(A_CHECKTOTALRINGS, actor))
 		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
+
+	INT32 i, cntr = 0;
 
 	for (i = 0; i < MAXPLAYERS; i++)
 		cntr += players[i].totalring;
@@ -10294,13 +10174,13 @@ void A_CheckTotalRings(mobj_t *actor)
 // var1 = if health <= var1 call state
 // var2 = state number
 //
-void A_CheckHealth(mobj_t *actor)
+void A_CheckHealth(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
-
 	if (LUA_CallAction(A_CHECKHEALTH, actor))
 		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
 
 	if (actor->health <= locvar1)
 		P_SetMobjState(actor, locvar2);
@@ -10315,14 +10195,14 @@ void A_CheckHealth(mobj_t *actor)
 //		upper 16 bits = 0 - target, 1 - tracer
 // var2 = state number
 //
-void A_CheckRange(mobj_t *actor)
+void A_CheckRange(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
-	fixed_t dist;
-
 	if (LUA_CallAction(A_CHECKRANGE, actor))
 		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
+	fixed_t dist;
 
 	if ((!(locvar1 >> 16) && !actor->target) || ((locvar1 >> 16) && !actor->tracer))
 		return;
@@ -10345,14 +10225,14 @@ void A_CheckRange(mobj_t *actor)
 //		upper 16 bits = 0 - target, 1 - tracer
 // var2 = state number
 //
-void A_CheckHeight(mobj_t *actor)
+void A_CheckHeight(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
-	fixed_t height;
-
 	if (LUA_CallAction(A_CHECKHEIGHT, actor))
 		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
+	fixed_t height;
 
 	if ((!(locvar1 >> 16) && !actor->target) || ((locvar1 >> 16) && !actor->tracer))
 		return;
@@ -10375,16 +10255,16 @@ void A_CheckHeight(mobj_t *actor)
 //		upper 16 bits = 0 - target, 1 - tracer
 // var2 = state number
 //
-void A_CheckTrueRange(mobj_t *actor)
+void A_CheckTrueRange(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
+	if (LUA_CallAction(A_CHECKTRUERANGE, actor))
+		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
 	fixed_t height; // vertical range
 	fixed_t dist; // horizontal range
 	fixed_t l; // true range
-
-	if (LUA_CallAction(A_CHECKTRUERANGE, actor))
-		return;
 
 	if ((!(locvar1 >> 16) && !actor->target) || ((locvar1 >> 16) && !actor->tracer))
 		return;
@@ -10419,10 +10299,13 @@ void A_CheckTrueRange(mobj_t *actor)
 //		lower 16 bits = state to call
 //		upper 16 bits = range (if == 0, check whole map)
 //
-void A_CheckThingCount(mobj_t *actor)
+void A_CheckThingCount(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
+	if (LUA_CallAction(A_CHECKTHINGCOUNT, actor))
+		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
 
 	const UINT16 loc1lw = (UINT16)(locvar1 & 65535);
 	const UINT16 loc1up = (UINT16)(locvar1 >> 16);
@@ -10433,9 +10316,6 @@ void A_CheckThingCount(mobj_t *actor)
 	thinker_t *th;
 	mobj_t *mo2;
 	fixed_t dist = 0;
-
-	if (LUA_CallAction(A_CHECKTHINGCOUNT, actor))
-		return;
 
 	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 	{
@@ -10471,16 +10351,16 @@ void A_CheckThingCount(mobj_t *actor)
 //		1 = tracer
 // var2 = state number
 //
-void A_CheckAmbush(mobj_t *actor)
+void A_CheckAmbush(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
+	if (LUA_CallAction(A_CHECKAMBUSH, actor))
+		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
 	angle_t at; // angle target is currently facing
 	angle_t atp; // actor to target angle
 	angle_t an; // angle between at and atp
-
-	if (LUA_CallAction(A_CHECKAMBUSH, actor))
-		return;
 
 	if ((!locvar1 && !actor->target) || (locvar1 && !actor->tracer))
 		return;
@@ -10512,13 +10392,13 @@ void A_CheckAmbush(mobj_t *actor)
 // var1 = if custom value >= var1, call state
 // var2 = state number
 //
-void A_CheckCustomValue(mobj_t *actor)
+void A_CheckCustomValue(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
-
 	if (LUA_CallAction(A_CHECKCUSTOMVALUE, actor))
 		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
 
 	if (actor->cusval >= locvar1)
 		P_SetMobjState(actor, locvar2);
@@ -10531,13 +10411,13 @@ void A_CheckCustomValue(mobj_t *actor)
 // var1 = if memory value >= var1, call state
 // var2 = state number
 //
-void A_CheckCusValMemo(mobj_t *actor)
+void A_CheckCusValMemo(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
-
 	if (LUA_CallAction(A_CHECKCUSVALMEMO, actor))
 		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
 
 	if (actor->cvmem >= locvar1)
 		P_SetMobjState(actor, locvar2);
@@ -10556,13 +10436,13 @@ void A_CheckCusValMemo(mobj_t *actor)
 //      else if var2 == 1, substract var1 from the custom value
 //      else if var2 == 0, replace the custom value with var1
 //
-void A_SetCustomValue(mobj_t *actor)
+void A_SetCustomValue(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
-
 	if (LUA_CallAction(A_SETCUSTOMVALUE, actor))
 		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
 
 	if (cv_debug)
 		CONS_Printf("Init custom value is %d\n", actor->cusval);
@@ -10603,16 +10483,16 @@ void A_SetCustomValue(mobj_t *actor)
 //      else if var2 == 1,  mem -= cv  ||  cv -= mem
 //      else mem = cv  ||  cv = mem
 //
-void A_UseCusValMemo(mobj_t *actor)
+void A_UseCusValMemo(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
+	if (LUA_CallAction(A_USECUSVALMEMO, actor))
+		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
 
 	INT32 temp = actor->cusval; // value being manipulated
 	INT32 tempM = actor->cvmem; // value used to manipulate temp with
-
-	if (LUA_CallAction(A_USECUSVALMEMO, actor))
-		return;
 
 	if (locvar1 == 1) // cvmem being changed using cusval
 	{
@@ -10666,16 +10546,16 @@ void A_UseCusValMemo(mobj_t *actor)
 //      else if var2 == 1, substract var1 from the target's custom value
 //      else if var2 == 0, replace the target's custom value with var1
 //
-void A_RelayCustomValue(mobj_t *actor)
+void A_RelayCustomValue(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
+	if (LUA_CallAction(A_RELAYCUSTOMVALUE, actor))
+		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
 
 	INT32 temp; // reference value - var1 lower 16 bits changes this
 	INT32 tempT; // target's value - changed to tracer if var1 upper 16 bits set, then modified to become final value
-
-	if (LUA_CallAction(A_RELAYCUSTOMVALUE, actor))
-		return;
 
 	if ((!(locvar1 >> 16) && !actor->target) || ((locvar1 >> 16) && !actor->tracer))
 		return;
@@ -10728,47 +10608,49 @@ void A_RelayCustomValue(mobj_t *actor)
 //      else if var2 == 1, only replace new action's var2 with custom value
 //      else if var2 == 0, only replace new action's var1 with custom value
 //
-void A_CusValAction(mobj_t *actor)
+void A_CusValAction(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
-
 	if (LUA_CallAction(A_CUSVALACTION, actor))
 		return;
 
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
+
+	INT32 call_args[2];
+
 	if (locvar2 == 5)
 	{
-		var1 = states[locvar1].var1;
-		var2 = (INT32)actor->cvmem;
+		call_args[0] = states[locvar1].var1;
+		call_args[1] = (INT32)actor->cvmem;
 	}
 	else if (locvar2 == 4)
 	{
-		var1 = (INT32)actor->cvmem;
-		var2 = states[locvar1].var2;
+		call_args[0] = (INT32)actor->cvmem;
+		call_args[1] = states[locvar1].var2;
 	}
 	else if (locvar2 == 3)
 	{
-		var1 = (INT32)actor->cvmem;
-		var2 = (INT32)actor->cusval;
+		call_args[0] = (INT32)actor->cvmem;
+		call_args[1] = (INT32)actor->cusval;
 	}
 	else if (locvar2 == 2)
 	{
-		var1 = (INT32)actor->cusval;
-		var2 = (INT32)actor->cvmem;
+		call_args[0] = (INT32)actor->cusval;
+		call_args[1] = (INT32)actor->cvmem;
 	}
 	else if (locvar2 == 1)
 	{
-		var1 = states[locvar1].var1;
-		var2 = (INT32)actor->cusval;
+		call_args[0] = states[locvar1].var1;
+		call_args[1] = (INT32)actor->cusval;
 	}
 	else
 	{
-		var1 = (INT32)actor->cusval;
-		var2 = states[locvar1].var2;
+		call_args[0] = (INT32)actor->cusval;
+		call_args[1] = states[locvar1].var2;
 	}
 
 	astate = &states[locvar1];
-	states[locvar1].action.acp1(actor);
+	states[locvar1].action.acpscr(actor, call_args, 2);
 }
 
 // Function: A_ForceStop
@@ -10780,12 +10662,12 @@ void A_CusValAction(mobj_t *actor)
 //      else, stop x-y-movement only
 // var2 = unused
 //
-void A_ForceStop(mobj_t *actor)
+void A_ForceStop(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-
 	if (LUA_CallAction(A_FORCESTOP, actor))
 		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
 
 	actor->momx = actor->momy = 0;
 	if (locvar1 == 0)
@@ -10799,8 +10681,10 @@ void A_ForceStop(mobj_t *actor)
 // var1 = unused
 // var2 = unused
 //
-void A_ForceWin(mobj_t *actor)
+void A_ForceWin(mobj_t *actor, INT32 *args, unsigned argcount)
 {
+	ARGS_UNUSED();
+
 	INT32 i;
 
 	if (LUA_CallAction(A_FORCEWIN, actor))
@@ -10833,12 +10717,12 @@ void A_ForceWin(mobj_t *actor)
 //        else, actor solid
 // var2 = unused
 //
-void A_SpikeRetract(mobj_t *actor)
+void A_SpikeRetract(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-
 	if (LUA_CallAction(A_SPIKERETRACT, actor))
 		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
 
 	if (actor->flags & MF_NOBLOCKMAP)
 		return;
@@ -10871,9 +10755,9 @@ void A_SpikeRetract(mobj_t *actor)
 //        else if var1 == 6, set actor to raisestate
 // var2 = unused
 //
-void A_InfoState(mobj_t *actor)
+void A_InfoState(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
 	switch (locvar1)
 	{
 	case 0:
@@ -10916,13 +10800,13 @@ void A_InfoState(mobj_t *actor)
 // var1 = repeat count
 // var2 = state to return to if extravalue2 > 0
 //
-void A_Repeat(mobj_t *actor)
+void A_Repeat(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
-
 	if (LUA_CallAction(A_REPEAT, actor))
 		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
 
 	if (locvar1 && (!actor->extravalue2 || actor->extravalue2 > locvar1))
 		actor->extravalue2 = locvar1;
@@ -10940,14 +10824,14 @@ void A_Repeat(mobj_t *actor)
 //        upper 16 bits: 0 = actor, 1 = target, 2 = tracer
 //        lower 16 bits: 0 = instant change, 1 = smooth change
 //
-void A_SetScale(mobj_t *actor)
+void A_SetScale(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
-	mobj_t *target;
-
 	if (LUA_CallAction(A_SETSCALE, actor))
 		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
+	mobj_t *target;
 
 	if (locvar1 <= 0)
 	{
@@ -10982,15 +10866,15 @@ void A_SetScale(mobj_t *actor)
 // var1 = Mobj affected: 0 - actor, 1 - target, 2 - tracer
 // var2 = Action: 0 - Damage, 1 - Kill, 2 - Remove
 //
-void A_RemoteDamage(mobj_t *actor)
+void A_RemoteDamage(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
-	mobj_t *target; // we MUST have a target
-	mobj_t *source = NULL; // on the other hand we don't necessarily need a source
-
 	if (LUA_CallAction(A_REMOTEDAMAGE, actor))
 		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
+	mobj_t *target; // we MUST have a target
+	mobj_t *source = NULL; // on the other hand we don't necessarily need a source
 
 	if (locvar1 == 1)
 		target = actor->target;
@@ -11034,16 +10918,16 @@ void A_RemoteDamage(mobj_t *actor)
 // var1 = speed multiple
 // var2 = destination: 0 = target, 1 = tracer
 //
-void A_HomingChase(mobj_t *actor)
+void A_HomingChase(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
+	if (LUA_CallAction(A_HOMINGCHASE, actor))
+		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
 	mobj_t *dest;
 	fixed_t dist;
 	fixed_t speedmul;
-
-	if (LUA_CallAction(A_HOMINGCHASE, actor))
-		return;
 
 	if (locvar2 == 1)
 		dest = actor->tracer;
@@ -11083,10 +10967,13 @@ void A_HomingChase(mobj_t *actor)
 //				use vertical angle variable as horizontal distance to cover during momz calculation
 //        upper 16 bits = height offset
 //
-void A_TrapShot(mobj_t *actor)
+void A_TrapShot(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
+	if (LUA_CallAction(A_TRAPSHOT, actor))
+		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
 	boolean oldstyle = (locvar2 & 32768) ? true : false;
 	mobjtype_t type = (mobjtype_t)(locvar1 & 65535);
 	mobj_t *missile;
@@ -11094,9 +10981,6 @@ void A_TrapShot(mobj_t *actor)
 	INT16 vertoff = (INT16)(locvar2 >> 16);
 	fixed_t x, y, z;
 	fixed_t speed;
-
-	if (LUA_CallAction(A_TRAPSHOT, actor))
-		return;
 
 	x = actor->x + P_ReturnThrustX(actor, actor->angle, FixedMul(frontoff*FRACUNIT, actor->scale));
 	y = actor->y + P_ReturnThrustY(actor, actor->angle, FixedMul(frontoff*FRACUNIT, actor->scale));
@@ -11152,21 +11036,21 @@ void A_TrapShot(mobj_t *actor)
 // var1 = mobj to spawn
 // var2 = If 0, target only the actor's target. Else, target every player, period.
 //
-void A_VileTarget(mobj_t *actor)
+void A_VileTarget(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
+	if (LUA_CallAction(A_VILETARGET, actor))
+		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
 	mobj_t *fog;
 	mobjtype_t fogtype;
 	INT32 i;
 
-	if (LUA_CallAction(A_VILETARGET, actor))
-		return;
-
 	if (!actor->target)
 		return;
 
-	A_FaceTarget(actor);
+	A_FaceTarget(actor, NULL, 0);
 	if (P_MobjWasRemoved(actor))
 		return;
 
@@ -11193,7 +11077,7 @@ void A_VileTarget(mobj_t *actor)
 		P_SetTarget(&actor->tracer, fog);
 		P_SetTarget(&fog->target, actor);
 		P_SetTarget(&fog->tracer, actor->target);
-		A_VileFire(fog);
+		A_VileFire(fog, args, 2);
 	}
 	else
 	{
@@ -11225,7 +11109,7 @@ void A_VileTarget(mobj_t *actor)
 				P_SetTarget(&actor->tracer, fog);
 			P_SetTarget(&fog->target, actor);
 			P_SetTarget(&fog->tracer, players[i].mo);
-			A_VileFire(fog);
+			A_VileFire(fog, args, argcount);
 		}
 	}
 }
@@ -11240,22 +11124,22 @@ void A_VileTarget(mobj_t *actor)
 //		Lower 16 bits = optional explosion object
 //		Upper 16 bits = If 0, attack only the actor's target. Else, attack all the players. All of them.
 //
-void A_VileAttack(mobj_t *actor)
+void A_VileAttack(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
+	if (LUA_CallAction(A_VILEATTACK, actor))
+		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
 	sfxenum_t soundtoplay;
 	mobjtype_t explosionType = MT_NULL;
 	mobj_t *fire;
 	INT32 i;
 
-	if (LUA_CallAction(A_VILEATTACK, actor))
-		return;
-
 	if (!actor->target)
 		return;
 
-	A_FaceTarget(actor);
+	A_FaceTarget(actor, NULL, 0);
 	if (P_MobjWasRemoved(actor))
 		return;
 
@@ -11357,14 +11241,14 @@ void A_VileAttack(mobj_t *actor)
 //		Lower 16 bits = mobj to spawn (0 doesn't spawn a line at all)
 //		Upper 16 bits = # to spawn (default is 8)
 //
-void A_VileFire(mobj_t *actor)
+void A_VileFire(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
-	mobj_t *dest;
-
 	if (LUA_CallAction(A_VILEFIRE, actor))
 		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
+	mobj_t *dest;
 
 	dest = actor->tracer;
 	if (!dest)
@@ -11441,16 +11325,16 @@ void A_VileFire(mobj_t *actor)
 // var1 = lower-bound of frame length, in tics
 // var2 = optional sound to play
 //
-void A_BrakChase(mobj_t *actor)
+void A_BrakChase(mobj_t *actor, INT32 *args, unsigned argcount)
 {
+	if (LUA_CallAction(A_BRAKCHASE, actor))
+		return;
+
 	INT32 delta;
 	INT32 lowerbound;
 	INT32 newtics;
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
-
-	if (LUA_CallAction(A_BRAKCHASE, actor))
-		return;
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
 
 	// Set new tics NOW, in case the state changes while we're doing this and we try applying this to the painstate or something silly
 	if (actor->tics > 1 && locvar1 < actor->tics) // Not much point, otherwise
@@ -11564,18 +11448,18 @@ void A_BrakChase(mobj_t *actor)
 // var1 = object # to shoot
 // var2 = unused
 //
-void A_BrakFireShot(mobj_t *actor)
+void A_BrakFireShot(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	fixed_t x, y, z;
-	INT32 locvar1 = var1;
-
 	if (LUA_CallAction(A_BRAKFIRESHOT, actor))
 		return;
+
+	fixed_t x, y, z;
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
 
 	if (!actor->target)
 		return;
 
-	A_FaceTarget(actor);
+	A_FaceTarget(actor, NULL, 0);
 	if (P_MobjWasRemoved(actor))
 		return;
 
@@ -11614,8 +11498,11 @@ void A_BrakFireShot(mobj_t *actor)
 //		Upper 16 bits: if 0, aim 1/3 of the way. Else, aim directly at target.
 //
 
-void A_BrakLobShot(mobj_t *actor)
+void A_BrakLobShot(mobj_t *actor, INT32 *args, unsigned argcount)
 {
+	if (LUA_CallAction(A_BRAKLOBSHOT, actor))
+		return;
+
 	fixed_t v; // Velocity to shoot object
 	fixed_t a1, a2, aToUse; // Velocity squared
 	fixed_t g; // Gravity
@@ -11630,12 +11517,10 @@ void A_BrakLobShot(mobj_t *actor)
 	mobj_t *shot; // Object to shoot
 	fixed_t newTargetX; // If not aiming directly
 	fixed_t newTargetY; // If not aiming directly
-	INT32 locvar1 = var1;
+	INT32 var2 = GET_ARG(GetInteger, 1);
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
 	INT32 locvar2 = var2 & 0x0000FFFF;
 	INT32 aimDirect = var2 & 0xFFFF0000;
-
-	if (LUA_CallAction(A_BRAKLOBSHOT, actor))
-		return;
 
 	if (!actor->target)
 		return; // Don't even bother if we've got nothing to aim at.
@@ -11694,7 +11579,7 @@ void A_BrakLobShot(mobj_t *actor)
 	theta = tantoangle[SlopeDiv(aToUse,FixedMul(g,x))];
 
 	// Okay, complicated math done. Let's fire our object already, sheesh.
-	A_FaceTarget(actor);
+	A_FaceTarget(actor, NULL, 0);
 	if (P_MobjWasRemoved(actor))
 		return;
 
@@ -11728,8 +11613,13 @@ void A_BrakLobShot(mobj_t *actor)
 //		Lower 16 bits: distance to toss them (No default - 0 does just that - but negatives will revert to 128)
 //		Upper 16 bits: airtime in tics (default 16)
 //
-void A_NapalmScatter(mobj_t *actor)
+void A_NapalmScatter(mobj_t *actor, INT32 *args, unsigned argcount)
 {
+	if (LUA_CallAction(A_NAPALMSCATTER, actor))
+		return;
+
+	INT32 var1 = GET_ARG(GetInteger, 0);
+	INT32 var2 = GET_ARG(GetInteger, 1);
 	mobjtype_t typeOfShot = var1 & 0x0000FFFF; // Type
 	INT32 numToShoot = (var1 & 0xFFFF0000) >> 16; // How many
 	fixed_t distance = (var2 & 0x0000FFFF) << FRACBITS; // How far
@@ -11739,9 +11629,6 @@ void A_NapalmScatter(mobj_t *actor)
 	fixed_t g; // Gravity
 	INT32 i; // for-loop cursor
 	mobj_t *mo; // each and every spawned napalm burst
-
-	if (LUA_CallAction(A_NAPALMSCATTER, actor))
-		return;
 
 	// Some quick sanity-checking
 	if (typeOfShot >= NUMMOBJTYPES) // I'd add a <0 check, too, but 0x0000FFFF isn't negative in this case
@@ -11785,8 +11672,10 @@ void A_NapalmScatter(mobj_t *actor)
 // var1 = unused
 // var2 = unused
 //
-void A_SpawnFreshCopy(mobj_t *actor)
+void A_SpawnFreshCopy(mobj_t *actor, INT32 *args, unsigned argcount)
 {
+	ARGS_UNUSED();
+
 	mobj_t *newObject;
 
 	if (LUA_CallAction(A_SPAWNFRESHCOPY, actor))
@@ -11858,18 +11747,19 @@ mobj_t *P_InternalFlickySpawn(mobj_t *actor, mobjtype_t flickytype, fixed_t momz
 //		bit 19: if 1, spawn flicky slightly backward from spawn position. doesn't stack with 18.
 // var2 = upwards thrust for spawned flicky. If zero, default value is provided.
 //
-void A_FlickySpawn(mobj_t *actor)
+void A_FlickySpawn(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1 & 65535;
-	INT32 locvar2 = var2;
-	INT32 test = (var1 >> 16);
-	SINT8 moveforward = 0;
-
 	if (LUA_CallAction(A_FLICKYSPAWN, actor))
 		return;
 
+	INT32 var1 = GET_ARG(GetInteger, 0);
+	INT32 locvar1 = var1 & 65535;
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
+	INT32 test = var1 >> 16;
+	SINT8 moveforward = 0;
+
 	if (test & 1)
-		A_Scream(actor); // A shortcut for the truly lazy.
+		A_Scream(actor, NULL, 0); // A shortcut for the truly lazy.
 	if (test & 2)
 		moveforward = 1;
 	else if (test & 4)
@@ -11925,16 +11815,16 @@ void P_InternalFlickySetColor(mobj_t *actor, UINT8 color)
 // If TMFF_STATIONARY (MF_GRENADEBOUNCE): Flickies stand in-place without gravity (unless they hop, then gravity is applied.)
 // If TMFF_HOP (MF_NOCLIPTHING): is flagged, Flickies hop.
 //
-void A_FlickyCenter(mobj_t *actor)
+void A_FlickyCenter(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
+	if (LUA_CallAction(A_FLICKYCENTER, actor))
+		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
 	UINT16 flickytype = (locvar1 & 0xFFFF);
 	UINT8 flickycolor = ((locvar1 >> 16) & 0xFF);
 	UINT8 flickyflags = ((locvar1 >> 20) & 0xF);
-
-	if (LUA_CallAction(A_FLICKYCENTER, actor))
-		return;
 
 	if (!actor->tracer)
 	{
@@ -12049,14 +11939,14 @@ void P_InternalFlickyBubble(mobj_t *actor)
 // var1 = how far around the target (in angle constants) the flicky should look
 // var2 = distance from target to aim for
 //
-void A_FlickyAim(mobj_t *actor)
+void A_FlickyAim(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
-	boolean flickyhitwall = false;
-
 	if (LUA_CallAction(A_FLICKYAIM, actor))
 		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
+	boolean flickyhitwall = false;
 
 	if ((actor->momx == actor->momy && actor->momy == 0)
 		|| (actor->target && P_IsFlickyCenter(actor->target->type)
@@ -12109,9 +11999,8 @@ void P_InternalFlickyFly(mobj_t *actor, fixed_t flyspeed, fixed_t targetdist, fi
 	flyspeed = FixedMul(flyspeed, actor->scale);
 	actor->flags |= MF_NOGRAVITY;
 
-	var1 = ANG30;
-	var2 = 32*FRACUNIT;
-	A_FlickyAim(actor);
+	INT32 args[2] = { ANG30, 32*FRACUNIT };
+	A_FlickyAim(actor, args, 2);
 
 	chasez *= 8;
 	if (!actor->target || !(actor->fuse > 2*TICRATE))
@@ -12150,16 +12039,16 @@ void P_InternalFlickyFly(mobj_t *actor, fixed_t flyspeed, fixed_t targetdist, fi
 // var1 = how fast to fly
 // var2 = how far ahead the target should be considered
 //
-void A_FlickyFly(mobj_t *actor)
+void A_FlickyFly(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
-
 	if (LUA_CallAction(A_FLICKYFLY, actor))
 		return;
 
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
+
 	P_InternalFlickyFly(actor, locvar1, locvar2,
-	FINECOSINE((((actor->fuse % 36) * ANG10) >> ANGLETOFINESHIFT) & FINEMASK)
+		FINECOSINE((((actor->fuse % 36) * ANG10) >> ANGLETOFINESHIFT) & FINEMASK)
 	);
 }
 
@@ -12170,16 +12059,16 @@ void A_FlickyFly(mobj_t *actor)
 // var1 = how fast to fly
 // var2 = how far ahead the target should be considered
 //
-void A_FlickySoar(mobj_t *actor)
+void A_FlickySoar(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
-
 	if (LUA_CallAction(A_FLICKYSOAR, actor))
 		return;
 
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
+
 	P_InternalFlickyFly(actor, locvar1, locvar2,
-	2*(FRACUNIT/2 - abs(FINECOSINE((((actor->fuse % 144) * 5*ANG1/2) >> ANGLETOFINESHIFT) & FINEMASK)))
+		2*(FRACUNIT/2 - abs(FINECOSINE((((actor->fuse % 144) * 5*ANG1/2) >> ANGLETOFINESHIFT) & FINEMASK)))
 	);
 
 	if (P_MobjFlip(actor)*actor->momz > 0 && actor->frame == 1 && actor->sprite == SPR_FL10)
@@ -12194,13 +12083,13 @@ void A_FlickySoar(mobj_t *actor)
 // var2 = state to change to upon slowing down
 // the spawnstate of the mobj = state to change to when above water
 //
-void A_FlickyCoast(mobj_t *actor)
+void A_FlickyCoast(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
-
 	if (LUA_CallAction(A_FLICKYCOAST, actor))
 		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
 
 	if (actor->eflags & MFE_UNDERWATER)
 	{
@@ -12241,13 +12130,13 @@ void P_InternalFlickyHop(mobj_t *actor, fixed_t momz, fixed_t momh, angle_t angl
 // var1 = vertical thrust
 // var2 = horizontal thrust
 //
-void A_FlickyHop(mobj_t *actor)
+void A_FlickyHop(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
-
 	if (LUA_CallAction(A_FLICKYHOP, actor))
 		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
 
 	P_InternalFlickyHop(actor, locvar1, locvar2, actor->angle);
 }
@@ -12259,14 +12148,14 @@ void A_FlickyHop(mobj_t *actor)
 // var1 = intended vertical thrust
 // var2 = intended horizontal thrust
 //
-void A_FlickyFlounder(mobj_t *actor)
+void A_FlickyFlounder(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
-	angle_t hopangle;
-
 	if (LUA_CallAction(A_FLICKYFLOUNDER, actor))
 		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
+	angle_t hopangle;
 
 	locvar1 *= (P_RandomKey(2) + 1);
 	locvar2 *= (P_RandomKey(2) + 1);
@@ -12282,13 +12171,13 @@ void A_FlickyFlounder(mobj_t *actor)
 // var2 = state to change to upon falling
 // the meleestate of the mobj = state to change to when underwater
 //
-void A_FlickyCheck(mobj_t *actor)
+void A_FlickyCheck(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
-
 	if (LUA_CallAction(A_FLICKYCHECK, actor))
 		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
 
 	if (actor->target
 		&& P_IsFlickyCenter(actor->target->type)
@@ -12319,13 +12208,13 @@ void A_FlickyCheck(mobj_t *actor)
 // var1 = state to change to when falling below height relative to target
 // var2 = height relative to target to change state at
 //
-void A_FlickyHeightCheck(mobj_t *actor)
+void A_FlickyHeightCheck(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
-
 	if (LUA_CallAction(A_FLICKYHEIGHTCHECK, actor))
 		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
 
 	if (actor->target
 		&& P_IsFlickyCenter(actor->target->type)
@@ -12354,21 +12243,17 @@ void A_FlickyHeightCheck(mobj_t *actor)
 // var2 = state to change to upon falling
 // the meleestate of the mobj = state to change to when underwater
 //
-void A_FlickyFlutter(mobj_t *actor)
+void A_FlickyFlutter(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
+	(void)argcount;
 
 	if (LUA_CallAction(A_FLICKYFLUTTER, actor))
 		return;
 
-	var1 = locvar1;
-	var2 = locvar2;
-	A_FlickyCheck(actor);
+	A_FlickyCheck(actor, args, 2);
 
-	var1 = ANG30;
-	var2 = 32*FRACUNIT;
-	A_FlickyAim(actor);
+	INT32 call_args[2] = { ANG30, 32*FRACUNIT };
+	A_FlickyAim(actor, call_args, 2);
 
 	P_InstaThrust(actor, actor->angle, 2*actor->scale);
 	if (P_MobjFlip(actor)*actor->momz < -FRACUNIT/2)
@@ -12384,8 +12269,10 @@ void A_FlickyFlutter(mobj_t *actor)
 // var1 = unused
 // var2 = unused
 //
-void A_FlameParticle(mobj_t *actor)
+void A_FlameParticle(mobj_t *actor, INT32 *args, unsigned argcount)
 {
+	ARGS_UNUSED();
+
 	mobjtype_t type = (mobjtype_t)(mobjinfo[actor->type].painchance);
 	fixed_t rad, hei;
 	mobj_t *particle;
@@ -12413,15 +12300,14 @@ void A_FlameParticle(mobj_t *actor)
 // var1 = bit 1 = bit 1 = don't make fast, bit 2 = don't set tracer
 // var2 = unused
 //
-void A_FadeOverlay(mobj_t *actor)
+void A_FadeOverlay(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	mobj_t *fade;
-	INT32 locvar1 = var1;
-
 	if (LUA_CallAction(A_FADEOVERLAY, actor))
 		return;
 
-	fade = P_SpawnGhostMobj(actor);
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+
+	mobj_t *fade = P_SpawnGhostMobj(actor);
 	fade->frame = actor->frame;
 
 	if (!(locvar1 & 1))
@@ -12444,8 +12330,10 @@ void A_FadeOverlay(mobj_t *actor)
 // var1 = unused
 // var2 = unused
 //
-void A_Boss5Jump(mobj_t *actor)
+void A_Boss5Jump(mobj_t *actor, INT32 *args, unsigned argcount)
 {
+	ARGS_UNUSED();
+
 	fixed_t v; // Velocity to jump at
 	fixed_t a1, a2, aToUse; // Velocity squared
 	fixed_t g; // Gravity
@@ -12456,8 +12344,8 @@ void A_Boss5Jump(mobj_t *actor)
 	INT32 intHypotenuse; // x^2 + y^2. Frequently overflows fixed point, hence why we need integers proper.
 	fixed_t fixedHypotenuse; // However, we can work around that and still get a fixed-point number.
 	angle_t theta; // Angle of attack
-	// INT32 locvar1 = var1;
-	// INT32 locvar2 = var2;
+	// INT32 locvar1 = GET_ARG(GetInteger, 0);
+	// INT32 locvar2 = GET_ARG(GetInteger, 1);
 
 	if (LUA_CallAction(A_BOSS5JUMP, actor))
 		return;
@@ -12506,7 +12394,7 @@ void A_Boss5Jump(mobj_t *actor)
 	theta = tantoangle[SlopeDiv(aToUse,FixedMul(g,x))];
 
 	// Okay, complicated math done. Let's make this object jump already.
-	A_FaceTracer(actor);
+	A_FaceTracer(actor, NULL, 0);
 
 	if (actor->eflags & MFE_VERTICALFLIP)
 		actor->z--;
@@ -12528,10 +12416,12 @@ void A_Boss5Jump(mobj_t *actor)
 // var1 = unused
 // var2 = unused
 //
-void A_LightBeamReset(mobj_t *actor)
+void A_LightBeamReset(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	// INT32 locvar1 = var1;
-	// INT32 locvar2 = var2;
+	ARGS_UNUSED();
+
+	// INT32 locvar1 = GET_ARG(GetInteger, 0);
+	// INT32 locvar2 = GET_ARG(GetInteger, 1);
 
 	if (LUA_CallAction(A_LIGHTBEAMRESET, actor))
 		return;
@@ -12558,15 +12448,17 @@ void A_LightBeamReset(mobj_t *actor)
 // var1 = unused
 // var2 = unused
 //
-void A_MineExplode(mobj_t *actor)
+void A_MineExplode(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	// INT32 locvar1 = var1;
-	// INT32 locvar2 = var2;
+	ARGS_UNUSED();
+
+	// INT32 locvar1 = GET_ARG(GetInteger, 0);
+	// INT32 locvar2 = GET_ARG(GetInteger, 1);
 
 	if (LUA_CallAction(A_MINEEXPLODE, actor))
 		return;
 
-	A_Scream(actor);
+	A_Scream(actor, NULL, 0);
 	actor->flags = MF_NOGRAVITY|MF_NOCLIP;
 
 	quake.epicenter = NULL;
@@ -12610,19 +12502,18 @@ void A_MineExplode(mobj_t *actor)
 // var1 = Distance to alert at
 // var2 = unused
 //
-void A_MineRange(mobj_t *actor)
+void A_MineRange(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	fixed_t dm;
-	INT32 locvar1 = var1;
-	// INT32 locvar2 = var2;
-
 	if (LUA_CallAction(A_MINERANGE, actor))
 		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	// INT32 locvar2 = GET_ARG(GetInteger, 1);
 
 	if (!actor->target)
 		return;
 
-	dm = P_AproxDistance(actor->z - actor->target->z, P_AproxDistance(actor->y - actor->target->y, actor->x - actor->target->x));
+	fixed_t dm = P_AproxDistance(actor->z - actor->target->z, P_AproxDistance(actor->y - actor->target->y, actor->x - actor->target->x));
 	if ((dm>>FRACBITS) < locvar1)
 		P_SetMobjState(actor, actor->info->meleestate);
 }
@@ -12633,16 +12524,16 @@ void A_MineRange(mobj_t *actor)
 // var1 = Object type to connect to ground
 // var2 = Object type to place on ground
 //
-void A_ConnectToGround(mobj_t *actor)
+void A_ConnectToGround(mobj_t *actor, INT32 *args, unsigned argcount)
 {
+	if (LUA_CallAction(A_CONNECTTOGROUND, actor))
+		return;
+
 	mobj_t *work;
 	fixed_t endz;
 	angle_t ang;
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
-
-	if (LUA_CallAction(A_CONNECTTOGROUND, actor))
-		return;
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
 
 	if (actor->subsector->sector->ffloors)
 		P_AdjustMobjFloorZ_FFloors(actor, actor->subsector->sector, 2);
@@ -12696,17 +12587,16 @@ void A_ConnectToGround(mobj_t *actor)
 //		var2 >> 16 = z
 //		var2 & 65535 = state
 //
-void A_SpawnParticleRelative(mobj_t *actor)
+void A_SpawnParticleRelative(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT16 x, y, z; // Want to be sure we can use negative values
-	statenum_t state;
-	mobj_t *mo;
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
-
 	if (LUA_CallAction(A_SPAWNPARTICLERELATIVE, actor))
 		return;
 
+	INT16 x, y, z; // Want to be sure we can use negative values
+	statenum_t state;
+	mobj_t *mo;
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
 
 	CONS_Debug(DBG_GAMELOGIC, "A_SpawnParticleRelative called from object type %d, var1: %d, var2: %d\n", actor->type, locvar1, locvar2);
 
@@ -12737,29 +12627,24 @@ void A_SpawnParticleRelative(mobj_t *actor)
 // var1 = same as A_MultiShot
 // var2 = same as A_MultiShot
 //
-void A_MultiShotDist(mobj_t *actor)
+void A_MultiShotDist(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
+	(void)argcount;
 
 	if (LUA_CallAction(A_MULTISHOTDIST, actor))
 		return;
 
-	{
-		UINT8 i;
-		// Quick! Look through players!
-		// Don't spawn dust unless a player is relatively close by (var1).
-		for (i = 0; i < MAXPLAYERS; ++i)
-			if (playeringame[i] && players[i].mo
-			 && P_AproxDistance(actor->x - players[i].mo->x, actor->y - players[i].mo->y) < (1600<<FRACBITS))
-				break; // Stop looking.
-		if (i == MAXPLAYERS)
-			return; // don't make bubble!
-	}
+	UINT8 i;
+	// Quick! Look through players!
+	// Don't spawn unless a player is relatively close by 1600 units.
+	for (i = 0; i < MAXPLAYERS; ++i)
+		if (playeringame[i] && players[i].mo
+		 && P_AproxDistance(actor->x - players[i].mo->x, actor->y - players[i].mo->y) < (1600<<FRACBITS))
+			break; // Stop looking.
+	if (i == MAXPLAYERS)
+		return;
 
-	var1 = locvar1;
-	var2 = locvar2;
-	A_MultiShot(actor);
+	A_MultiShot(actor, args, 2);
 }
 
 // Function: A_WhoCaresIfYourSonIsABee
@@ -12773,18 +12658,18 @@ void A_MultiShotDist(mobj_t *actor)
 //		var2 >> 16 = forward offset
 //		var2 & 65535 = vertical offset
 //
-void A_WhoCaresIfYourSonIsABee(mobj_t *actor)
+void A_WhoCaresIfYourSonIsABee(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
+	if (LUA_CallAction(A_WHOCARESIFYOURSONISABEE, actor))
+		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
 	fixed_t foffsetx;
 	fixed_t foffsety;
 	mobj_t *son;
 
-	if (LUA_CallAction(A_WHOCARESIFYOURSONISABEE, actor))
-		return;
-
-	A_FaceTarget(actor);
+	A_FaceTarget(actor, NULL, 0);
 	if (P_MobjWasRemoved(actor))
 		return;
 
@@ -12813,12 +12698,12 @@ void A_WhoCaresIfYourSonIsABee(mobj_t *actor)
 // var1 = state to go to when extravalue1
 // var2 = unused
 //
-void A_ParentTriesToSleep(mobj_t *actor)
+void A_ParentTriesToSleep(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-
 	if (LUA_CallAction(A_PARENTTRIESTOSLEEP, actor))
 		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
 
 	if (actor->extravalue1)
 	{
@@ -12843,8 +12728,10 @@ void A_ParentTriesToSleep(mobj_t *actor)
 // var1 = unused
 // var2 = unused
 //
-void A_CryingToMomma(mobj_t *actor)
+void A_CryingToMomma(mobj_t *actor, INT32 *args, unsigned argcount)
 {
+	ARGS_UNUSED();
+
 	if (LUA_CallAction(A_CRYINGTOMOMMA, actor))
 		return;
 
@@ -12870,13 +12757,13 @@ void A_CryingToMomma(mobj_t *actor)
 // var1 = mask
 // var2 = state to go
 //
-void A_CheckFlags2(mobj_t *actor)
+void A_CheckFlags2(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
-
 	if (LUA_CallAction(A_CHECKFLAGS2, actor))
 		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
 
 	if (actor->flags2 & locvar1)
 		P_SetMobjState(actor, (statenum_t)locvar2);
@@ -12889,15 +12776,15 @@ void A_CheckFlags2(mobj_t *actor)
 // var1 = if 1, always go to ambush-marked waypoint. if 2, go to MT_BOSSFLYPOINT.
 // var2 = unused
 //
-void A_Boss5FindWaypoint(mobj_t *actor)
+void A_Boss5FindWaypoint(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
+	if (LUA_CallAction(A_BOSS5FINDWAYPOINT, actor))
+		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
 	boolean avoidcenter;
 	INT32 i;
 	INT32 bossid = (actor->spawnpoint ? actor->spawnpoint->args[0] : 0);
-
-	if (LUA_CallAction(A_BOSS5FINDWAYPOINT, actor))
-		return;
 
 	avoidcenter = !actor->tracer || (actor->health == actor->info->damage+1);
 
@@ -13060,7 +12947,7 @@ void A_Boss5FindWaypoint(mobj_t *actor)
 	}
 
 	// now face the tracer you just set!
-	A_FaceTracer(actor);
+	A_FaceTracer(actor, NULL, 0);
 	return;
 
 nowaypoints:
@@ -13079,14 +12966,14 @@ nowaypoints:
 // var1 = state to change to upon being slow enough
 // var2 = minimum speed
 //
-void A_DoNPCSkid(mobj_t *actor)
+void A_DoNPCSkid(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
-	fixed_t x, y, z;
-
 	if (LUA_CallAction(A_DONPCSKID, actor))
 		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
+	fixed_t x, y, z;
 
 	x = actor->x;
 	y = actor->y;
@@ -13134,20 +13021,19 @@ void A_DoNPCSkid(mobj_t *actor)
 //        Otherwise, vertical and horizontal speed
 //        will be multiplied by this.
 //
-void A_DoNPCPain(mobj_t *actor)
+void A_DoNPCPain(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
-	fixed_t vspeed = 0;
-	fixed_t hspeed = FixedMul(4*FRACUNIT, actor->scale);
-
 	if (LUA_CallAction(A_DONPCPAIN, actor))
 		return;
 
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
+	fixed_t vspeed = 0;
+	fixed_t hspeed = FixedMul(4*FRACUNIT, actor->scale);
+
 	actor->flags &= ~(MF_NOGRAVITY|MF_NOCLIP|MF_NOCLIPHEIGHT);
 
-	var1 = var2 = 0;
-	A_Pain(actor);
+	A_Pain(actor, NULL, 0);
 
 	actor->z += P_MobjFlip(actor);
 
@@ -13185,12 +13071,12 @@ void A_DoNPCPain(mobj_t *actor)
 // var1 = value to set extravalue2 to
 // var2 = unused
 //
-void A_PrepareRepeat(mobj_t *actor)
+void A_PrepareRepeat(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-
 	if (LUA_CallAction(A_PREPAREREPEAT, actor))
 		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
 
 	actor->extravalue2 = locvar1;
 }
@@ -13202,16 +13088,16 @@ void A_PrepareRepeat(mobj_t *actor)
 // var1 = maximum value to setextravalue2 to (normally)
 // var2 = pinch annoyance
 //
-void A_Boss5ExtraRepeat(mobj_t *actor)
+void A_Boss5ExtraRepeat(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
+	if (LUA_CallAction(A_BOSS5EXTRAREPEAT, actor))
+		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
 	INT32 calc;
 	INT32 locspawn;
 	INT32 lochealth;
-
-	if (LUA_CallAction(A_BOSS5EXTRAREPEAT, actor))
-		return;
 
 	if (actor->extravalue2 > 0 && !(actor->flags2 & MF2_FRET))
 		return;
@@ -13240,8 +13126,10 @@ void A_Boss5ExtraRepeat(mobj_t *actor)
 // var1 = unused
 // var2 = unused
 //
-void A_Boss5Calm(mobj_t *actor)
+void A_Boss5Calm(mobj_t *actor, INT32 *args, unsigned argcount)
 {
+	ARGS_UNUSED();
+
 	if (LUA_CallAction(A_BOSS5CALM, actor))
 		return;
 
@@ -13256,13 +13144,13 @@ void A_Boss5Calm(mobj_t *actor)
 // var1 = state to change to upon hitting ground.
 // var2 = state to change to upon hitting ground if health == pinchhealth, assuming it exists
 //
-void A_Boss5CheckOnGround(mobj_t *actor)
+void A_Boss5CheckOnGround(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
-
 	if (LUA_CallAction(A_BOSS5CHECKONGROUND, actor))
 		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
 
 	if ((!(actor->eflags & MFE_VERTICALFLIP) && actor->z <= actor->floorz)
 	|| (actor->eflags & MFE_VERTICALFLIP && actor->z + actor->height >= actor->ceilingz))
@@ -13287,19 +13175,18 @@ void A_Boss5CheckOnGround(mobj_t *actor)
 // var1 = state to change to when hitting ground.
 // var2 = state to change to when falling.
 //
-void A_Boss5CheckFalling(mobj_t *actor)
+void A_Boss5CheckFalling(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
-
 	if (LUA_CallAction(A_BOSS5CHECKFALLING, actor))
 		return;
 
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
+
 	if (actor->health && actor->extravalue2 > 1)
 	{
-		var1 = locvar1;
-		var2 = 0;
-		A_Boss5CheckOnGround(actor);
+		INT32 call_args[2] = { locvar1, 2 };
+		A_Boss5CheckOnGround(actor, call_args, 2);
 		return;
 	}
 
@@ -13314,15 +13201,15 @@ void A_Boss5CheckFalling(mobj_t *actor)
 // var1 = object # to shoot
 // var2 = height offset (from default of +48 FU)
 //
-void A_Boss5PinchShot(mobj_t *actor)
+void A_Boss5PinchShot(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
-	fixed_t zoffset;
-	mobj_t *missile;
-
 	if (LUA_CallAction(A_BOSS5PINCHSHOT, actor))
 		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
+	fixed_t zoffset;
+	mobj_t *missile;
 
 	if (actor->health > actor->info->damage)
 		return;
@@ -13349,29 +13236,27 @@ void A_Boss5PinchShot(mobj_t *actor)
 // var1 = object # to shoot
 // var2 = height offset (from default of +48 FU)
 //
-void A_Boss5MakeItRain(mobj_t *actor)
+void A_Boss5MakeItRain(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
-	INT32 offset = (48 + locvar2)<<16; // upper 16 bits, not fixed_t!
-	INT32 i;
-
 	if (LUA_CallAction(A_BOSS5MAKEITRAIN, actor))
 		return;
 
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
+	INT32 offset = (48 + locvar2)<<16; // upper 16 bits, not fixed_t!
+	INT32 i;
+
 	actor->flags2 |= MF2_STRONGBOX;
 
-	var1 = locvar1;
-	var2 = offset + 90;
-	A_TrapShot(actor);
+	INT32 call_args[2] = { locvar1, offset + 90 };
+	A_TrapShot(actor, call_args, 2);
 
 	for (i = 0; i < 8; i++)
 	{
 		actor->angle += ANGLE_45;
 
-		var1 = locvar1;
-		var2 = offset + (i & 1) ? 80 : 85;
-		A_TrapShot(actor);
+		call_args[1] = offset + (i & 1) ? 80 : 85;
+		A_TrapShot(actor, call_args, 2);
 	}
 
 	actor->extravalue2 = 0;
@@ -13384,16 +13269,16 @@ void A_Boss5MakeItRain(mobj_t *actor)
 // var1 = state # to set on MT_BROKENROBOT (if 0 do nothing, if -1 go to if colorized)
 // var2 = mode (-1 = spin, 0 = make 1, & 1 make 8, & 2 alart mode)
 //
-void A_Boss5MakeJunk(mobj_t *actor)
+void A_Boss5MakeJunk(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
+	if (LUA_CallAction(A_BOSS5MAKEJUNK, actor))
+		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
 	mobj_t *broked = NULL;
 	angle_t ang;
 	INT32 i = ((locvar2 & 1) ? 8 : 1);
-
-	if (LUA_CallAction(A_BOSS5MAKEJUNK, actor))
-		return;
 
 	if (locvar1 < 0 && (actor->flags2 & MF2_SLIDEPUSH)) // this entire action is a hack, don't judge me
 	{
@@ -13478,15 +13363,15 @@ void A_Boss5MakeJunk(mobj_t *actor)
 // var1 upper 16 bits = distance limit
 // var2 = unused
 //
-void A_LookForBetter(mobj_t *actor)
+void A_LookForBetter(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-
 	if (LUA_CallAction(A_LOOKFORBETTER, actor))
 		return;
 
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+
 	P_LookForPlayers(actor, (locvar1 & 65535), false, FixedMul((locvar1 >> 16)*FRACUNIT, actor->scale));
-	A_FaceTarget(actor);
+	A_FaceTarget(actor, NULL, 0);
 }
 
 /* * Spawns a dust ring.
@@ -13538,12 +13423,12 @@ static void P_DustRing(mobjtype_t mobjtype, UINT32 div, fixed_t x, fixed_t y, fi
 // var1 = Thing type to spawn as dust
 // var2 = unused
 //
-void A_Boss5BombExplode(mobj_t *actor)
+void A_Boss5BombExplode(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-
 	if (LUA_CallAction(A_BOSS5BOMBEXPLODE, actor))
 		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
 
 	// The original Lua script did not use |= to add flags but just set these flags exactly apparently?
 	// (I may modify this later)
@@ -13604,7 +13489,7 @@ static boolean PIT_DustDevilLaunch(mobj_t *thing)
 			if (player->powers[pw_nocontrol] == 0)
 			{
 				P_ResetPlayer(player);
-				A_PlayActiveSound(dustdevil);
+				A_PlayActiveSound(dustdevil, NULL, 0);
 			}
 			player->powers[pw_carry] = CR_DUSTDEVIL;
 			player->powers[pw_nocontrol] = 2;
@@ -13648,8 +13533,10 @@ static boolean PIT_DustDevilLaunch(mobj_t *thing)
 // var1 = unused
 // var2 = unused
 //
-void A_DustDevilThink(mobj_t *actor)
+void A_DustDevilThink(mobj_t *actor, INT32 *args, unsigned argcount)
 {
+	ARGS_UNUSED();
+
 	fixed_t scale = actor->scale;
 	mobj_t *layer = actor->tracer;
 	INT32 bx, by, xl, xh, yl, yh;
@@ -13790,15 +13677,15 @@ static boolean PIT_TNTExplode(mobj_t *nearby)
 // var1 = Thing type to spawn as dust.
 // var2 = unused
 //
-void A_TNTExplode(mobj_t *actor)
+void A_TNTExplode(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
+	if (LUA_CallAction(A_TNTEXPLODE, actor))
+		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
 	INT32 x, y;
 	INT32 xl, xh, yl, yh;
 	static mappoint_t epicenter = {0,0,0};
-
-	if (LUA_CallAction(A_TNTEXPLODE, actor))
-		return;
 
 	if (actor->tracer)
 	{
@@ -13859,17 +13746,17 @@ void A_TNTExplode(mobj_t *actor)
 // var1 = Frame range.
 // var2 = unused
 //
-void A_DebrisRandom(mobj_t *actor)
+void A_DebrisRandom(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-
 	if (LUA_CallAction(A_DEBRISRANDOM, actor))
 		return;
 
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+
 	actor->frame |= P_RandomRange(0, locvar1);
-	var1 = 0;
-	var2 = 359;
-	A_ChangeAngleAbsolute(actor);
+
+	INT32 call_args[2] = { 0, 359 };
+	A_ChangeAngleAbsolute(actor, call_args, 2);
 	P_Thrust(actor, actor->angle, FRACUNIT * 2);
 }
 
@@ -13891,10 +13778,13 @@ static mobj_t *P_TrainSeg(mobj_t *src, fixed_t x, fixed_t y, fixed_t z, angle_t 
 // var1 = Train width.
 // var2 = Train length.
 //
-void A_TrainCameo(mobj_t *actor)
+void A_TrainCameo(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
+	if (LUA_CallAction(A_TRAINCAMEO, actor))
+		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
 	fixed_t x = actor->x;
 	fixed_t y = actor->y;
 	fixed_t z = actor->z;
@@ -13903,9 +13793,6 @@ void A_TrainCameo(mobj_t *actor)
 	spritenum_t spr = SPR_TRAE;
 	fixed_t span = locvar1*FRACUNIT;
 	fixed_t len = locvar2*FRACUNIT;
-
-	if (LUA_CallAction(A_TRAINCAMEO, actor))
-		return;
 
 	//Spawn sides.
 	P_TrainSeg(actor, x, y + span, z, ang, spr, 0);
@@ -13930,10 +13817,13 @@ void A_TrainCameo(mobj_t *actor)
 // var1 = Train width.
 // var2 = Train length.
 //
-void A_TrainCameo2(mobj_t *actor)
+void A_TrainCameo2(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
+	if (LUA_CallAction(A_TRAINCAMEO2, actor))
+		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
 	fixed_t x = actor->x;
 	fixed_t y = actor->y;
 	fixed_t z = actor->z;
@@ -13941,9 +13831,6 @@ void A_TrainCameo2(mobj_t *actor)
 	spritenum_t spr = SPR_TRAI;
 	fixed_t span = locvar1*FRACUNIT;
 	fixed_t len = locvar2*FRACUNIT;
-
-	if (LUA_CallAction(A_TRAINCAMEO2, actor))
-		return;
 
 	//Spawn sides.
 	P_TrainSeg(actor, x, y + span, z, ang, spr, 0);
@@ -13964,12 +13851,12 @@ void A_TrainCameo2(mobj_t *actor)
 // var1 = Mobj type.
 // var2 = Unused
 //
-void A_CanarivoreGas(mobj_t *actor)
+void A_CanarivoreGas(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-
 	if (LUA_CallAction(A_CANARIVOREGAS, actor))
 		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
 
 	P_DustRing(locvar1, 4, actor->x, actor->y, actor->z + actor->height / 5, 18, 0, FRACUNIT/10, actor->scale);
 	P_DustRing(locvar1, 6, actor->x, actor->y, actor->z + actor->height / 5, 28, FRACUNIT, FRACUNIT/10, actor->scale);
@@ -13983,14 +13870,14 @@ void A_CanarivoreGas(mobj_t *actor)
 // var1 = Fuse (if 0, default to TICRATE/2).
 // var2 = Unused
 //
-void A_KillSegments(mobj_t *actor)
+void A_KillSegments(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-	mobj_t *seg = actor->tracer;
-	INT32 fuse = locvar1 ? locvar1 : TICRATE/2;
-
 	if (LUA_CallAction(A_KILLSEGMENTS, actor))
 		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	mobj_t *seg = actor->tracer;
+	INT32 fuse = locvar1 ? locvar1 : TICRATE/2;
 
 	while (seg)
 	{
@@ -14064,8 +13951,11 @@ static void P_SnapperLegPlace(mobj_t *mo)
 // var1 = Leg mobj type.
 // var2 = Head mobj type.
 //
-void A_SnapperSpawn(mobj_t *actor)
+void A_SnapperSpawn(mobj_t *actor, INT32 *args, unsigned argcount)
 {
+	INT32 var1 = GET_ARG(GetInteger, 0);
+	INT32 var2 = GET_ARG(GetInteger, 1);
+
 	mobjtype_t legtype = (mobjtype_t)var1;
 	mobjtype_t headtype = (mobjtype_t)var2;
 	mobj_t *ptr = actor;
@@ -14113,8 +14003,10 @@ void A_SnapperSpawn(mobj_t *actor)
 // var1 = Unused
 // var2 = Unused
 //
-void A_SnapperThinker(mobj_t *actor)
+void A_SnapperThinker(mobj_t *actor, INT32 *args, unsigned argcount)
 {
+	ARGS_UNUSED();
+
 	fixed_t x0 = actor->x;
 	fixed_t y0 = actor->y;
 	fixed_t xs, ys;
@@ -14192,7 +14084,7 @@ void A_SnapperThinker(mobj_t *actor)
 		{
 			if (actor->extravalue1 > 16)
 			{
-				A_PlayActiveSound(actor);
+				A_PlayActiveSound(actor, NULL, 0);
 				actor->extravalue2 = 1;
 
 				// If the snapper is chasing, accelerate; otherwise, decelerate.
@@ -14208,7 +14100,7 @@ void A_SnapperThinker(mobj_t *actor)
 		{
 			if (actor->extravalue1 < -16)
 			{
-				A_PlayActiveSound(actor);
+				A_PlayActiveSound(actor, NULL, 0);
 				actor->extravalue2 = 0;
 
 				// If the snapper is chasing, accelerate; otherwise, decelerate.
@@ -14232,19 +14124,19 @@ void A_SnapperThinker(mobj_t *actor)
 // var1 = mobjtype for sides
 // var2 = distance sides should be placed apart
 //
-void A_SaloonDoorSpawn(mobj_t *actor)
+void A_SaloonDoorSpawn(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
+	if (LUA_CallAction(A_SALOONDOORSPAWN, actor))
+		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
 	angle_t ang = actor->angle;
 	angle_t fa = (ang >> ANGLETOFINESHIFT) & FINEMASK;
 	fixed_t c = FINECOSINE(fa)*locvar2;
 	fixed_t s = FINESINE(fa)*locvar2;
 	mobj_t *door;
 	mobjflag2_t ambush = (actor->flags2 & MF2_AMBUSH);
-
-	if (LUA_CallAction(A_SALOONDOORSPAWN, actor))
-		return;
 
 	if (!locvar1)
 		return;
@@ -14273,8 +14165,10 @@ void A_SaloonDoorSpawn(mobj_t *actor)
 // var1 = unused
 // var2 = unused
 //
-void A_MinecartSparkThink(mobj_t *actor)
+void A_MinecartSparkThink(mobj_t *actor, INT32 *args, unsigned argcount)
 {
+	ARGS_UNUSED();
+
 	fixed_t dx = actor->momx;
 	fixed_t dy = actor->momy;
 	fixed_t dz, dm;
@@ -14309,13 +14203,13 @@ void A_MinecartSparkThink(mobj_t *actor)
 // var1 = Modulo
 // var2 = State
 //
-void A_ModuloToState(mobj_t *actor)
+void A_ModuloToState(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
-
 	if (LUA_CallAction(A_MODULOTOSTATE, actor))
 		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
 
 	if ((modulothing % locvar1 == 0))
 		P_SetMobjState(actor, (locvar2));
@@ -14329,8 +14223,10 @@ void A_ModuloToState(mobj_t *actor)
 // var1 = unused
 // var2 = unused
 //
-void A_LavafallRocks(mobj_t *actor)
+void A_LavafallRocks(mobj_t *actor, INT32 *args, unsigned argcount)
 {
+	ARGS_UNUSED();
+
 	UINT8 i;
 
 	if (LUA_CallAction(A_LAVAFALLROCKS, actor))
@@ -14359,8 +14255,10 @@ void A_LavafallRocks(mobj_t *actor)
 // var1 = unused
 // var2 = unused
 //
-void A_LavafallLava(mobj_t *actor)
+void A_LavafallLava(mobj_t *actor, INT32 *args, unsigned argcount)
 {
+	ARGS_UNUSED();
+
 	mobj_t *lavafall;
 	UINT8 i;
 
@@ -14390,8 +14288,10 @@ void A_LavafallLava(mobj_t *actor)
 // var1 = unused
 // var2 = unused
 //
-void A_FallingLavaCheck(mobj_t *actor)
+void A_FallingLavaCheck(mobj_t *actor, INT32 *args, unsigned argcount)
 {
+	ARGS_UNUSED();
+
 	if (LUA_CallAction(A_FALLINGLAVACHECK, actor))
 		return;
 
@@ -14412,13 +14312,13 @@ void A_FallingLavaCheck(mobj_t *actor)
 // var1 = Scale to shrink to
 // var2 = Shrinking speed
 //
-void A_FireShrink(mobj_t *actor)
+void A_FireShrink(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
-
 	if (LUA_CallAction(A_FIRESHRINK, actor))
 		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
 
 	actor->destscale = locvar1;
 	actor->scalespeed = FRACUNIT/locvar2;
@@ -14431,8 +14331,10 @@ void A_FireShrink(mobj_t *actor)
 // var1 = unused
 // var2 = unused
 //
-void A_SpawnPterabytes(mobj_t *actor)
+void A_SpawnPterabytes(mobj_t *actor, INT32 *args, unsigned argcount)
 {
+	ARGS_UNUSED();
+
 	mobj_t *waypoint, *ptera;
 	fixed_t c, s;
 	fixed_t rad = 280*FRACUNIT;
@@ -14472,8 +14374,10 @@ void A_SpawnPterabytes(mobj_t *actor)
 // var1 = unused
 // var2 = unused
 //
-void A_PterabyteHover(mobj_t *actor)
+void A_PterabyteHover(mobj_t *actor, INT32 *args, unsigned argcount)
 {
+	ARGS_UNUSED();
+
 	angle_t ang, fa;
 
 	if (LUA_CallAction(A_PTERABYTEHOVER, actor))
@@ -14493,13 +14397,13 @@ void A_PterabyteHover(mobj_t *actor)
 // var1 = Distance currently spawned rock should travel before spawning a new one
 // var2 = Object type to spawn
 //
-void A_RolloutSpawn(mobj_t *actor)
+void A_RolloutSpawn(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
-
 	if (LUA_CallAction(A_ROLLOUTSPAWN, actor))
 		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
 
 	if (!(actor->target)
 		|| P_MobjWasRemoved(actor->target)
@@ -14524,18 +14428,18 @@ void A_RolloutSpawn(mobj_t *actor)
 // var1 = Drag
 // var2 = Vertical bobbing speed factor
 //
-void A_RolloutRock(mobj_t *actor)
+void A_RolloutRock(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
+	if (LUA_CallAction(A_ROLLOUTROCK, actor))
+		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
 	UINT8 maxframes = actor->info->reactiontime; // number of frames the mobj cycles through
 	fixed_t pi = (22*FRACUNIT/7);
 	fixed_t circumference = FixedMul(2 * pi, actor->radius); // used to calculate when to change frame
 	fixed_t speed = P_AproxDistance(actor->momx, actor->momy), topspeed = FixedMul(actor->info->speed, actor->scale);
 	boolean inwater = actor->eflags & (MFE_TOUCHWATER|MFE_UNDERWATER);
-
-	if (LUA_CallAction(A_ROLLOUTROCK, actor))
-		return;
 
 	if (!actor->tracer || P_MobjWasRemoved(actor->tracer) || !actor->tracer->health)
 		actor->flags |= MF_PUSHABLE;
@@ -14618,13 +14522,15 @@ void A_RolloutRock(mobj_t *actor)
 // var1 = Tail segments to spawn
 // var2 = unused
 //
-void A_DragonbomberSpawn(mobj_t *actor)
+void A_DragonbomberSpawn(mobj_t *actor, INT32 *args, unsigned argcount)
 {
 	UINT8 i;
 	mobj_t *mo = actor;
 
 	if (LUA_CallAction(A_DRAGONBOMBERSPAWN, actor))
 		return;
+
+	INT32 var1 = GET_ARG(GetInteger, 0);
 
 	for (i = 0; i < var1; i++) // spawn tail segments
 	{
@@ -14654,8 +14560,10 @@ void A_DragonbomberSpawn(mobj_t *actor)
 // var1 = unused
 // var2 = unused
 //
-void A_DragonWing(mobj_t *actor)
+void A_DragonWing(mobj_t *actor, INT32 *args, unsigned argcount)
 {
+	ARGS_UNUSED();
+
 	mobj_t *target = actor->target;
 	fixed_t x, y;
 
@@ -14680,8 +14588,10 @@ void A_DragonWing(mobj_t *actor)
 // var1 = unused
 // var2 = unused
 //
-void A_DragonSegment(mobj_t *actor)
+void A_DragonSegment(mobj_t *actor, INT32 *args, unsigned argcount)
 {
+	ARGS_UNUSED();
+
 	mobj_t *target = actor->target;
 	fixed_t dist;
 	fixed_t radius;
@@ -14723,15 +14633,15 @@ void A_DragonSegment(mobj_t *actor)
 //     &1: height is absolute
 //     &2: scale with actor's scale
 //
-void A_ChangeHeight(mobj_t *actor)
+void A_ChangeHeight(mobj_t *actor, INT32 *args, unsigned argcount)
 {
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
-	fixed_t height = locvar1;
-	boolean reverse;
-
 	if (LUA_CallAction(A_CHANGEHEIGHT, actor))
 		return;
+
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+	INT32 locvar2 = GET_ARG(GetInteger, 1);
+	fixed_t height = locvar1;
+	boolean reverse;
 
 	reverse = (actor->eflags & MFE_VERTICALFLIP) || (actor->flags2 & MF2_OBJECTFLIP);
 

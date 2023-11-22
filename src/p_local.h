@@ -367,10 +367,6 @@ void P_FlashPal(player_t *pl, UINT16 type, UINT16 duration);
 // main player in game
 extern player_t *stplyr; // for splitscreen correct palette changes and overlay
 
-// Is there a better place for these?
-extern INT32 var1;
-extern INT32 var2;
-
 boolean P_CheckMeleeRange(mobj_t *actor);
 boolean P_JetbCheckMeleeRange(mobj_t *actor);
 boolean P_FaceStabCheckMeleeRange(mobj_t *actor);
