@@ -788,7 +788,7 @@ static SOCKET_TYPE UDP_Bind(int family, struct sockaddr *addr, socklen_t addrlen
 
 			inet_pton(AF_INET6, IPV6_MULTICAST_ADDRESS, &maddr.ipv6mr_multiaddr);
 			maddr.ipv6mr_interface = 0;
-			if (setsockopt(s, IPPROTO_IPV6, IPV6_JOIN_GROUP, &maddr, sizeof(maddr)) != 0)
+			if (setsockopt(s, IPPROTO_IPV6, IPV6_JOIN_GROUP, (const char *)&maddr, sizeof(maddr)) != 0)
 			{
 				CONS_Alert(CONS_WARNING, M_GetText("Could not register multicast address\n"));
 			}
