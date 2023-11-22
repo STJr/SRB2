@@ -18,6 +18,8 @@
 #include "hu_stuff.h" // need HUFONT start & end
 #include "netcode/d_net.h"
 #include "console.h"
+#include "lua_script.h"
+#include "lua_libs.h"
 
 #define MAXMOUSESENSITIVITY 100 // sensitivity steps
 
@@ -116,7 +118,10 @@ void G_MapEventsToControls(event_t *ev)
 	{
 		case ev_keydown:
 			if (ev->key < NUMINPUTS)
-				gamekeydown[ev->key] = 1;
+			{
+				if (!ignoregameinputs)
+					gamekeydown[ev->key] = 1;
+			}
 #ifdef PARANOIA
 			else
 			{
@@ -144,7 +149,7 @@ void G_MapEventsToControls(event_t *ev)
 
 		case ev_joystick: // buttons are virtual keys
 			i = ev->key;
-			if (i >= JOYAXISSET || menuactive || CON_Ready() || chat_on)
+			if (i >= JOYAXISSET || menuactive || CON_Ready() || chat_on || ignoregameinputs)
 				break;
 			if (ev->x != INT32_MAX) joyxmove[i] = ev->x;
 			if (ev->y != INT32_MAX) joyymove[i] = ev->y;
@@ -152,7 +157,7 @@ void G_MapEventsToControls(event_t *ev)
 
 		case ev_joystick2: // buttons are virtual keys
 			i = ev->key;
-			if (i >= JOYAXISSET || menuactive || CON_Ready() || chat_on)
+			if (i >= JOYAXISSET || menuactive || CON_Ready() || chat_on || ignoregameinputs)
 				break;
 			if (ev->x != INT32_MAX) joy2xmove[i] = ev->x;
 			if (ev->y != INT32_MAX) joy2ymove[i] = ev->y;
@@ -997,7 +1002,7 @@ static void setcontrol(INT32 (*gc)[2])
 	INT32 player = ((void*)gc == (void*)&gamecontrolbis ? 1 : 0);
 	boolean nestedoverride = false;
 
-	// Update me for 2.3
+	// TODO: 2.3: Delete the "use" alias
 	namectrl = (stricmp(COM_Argv(1), "use")) ? COM_Argv(1) : "spin";
 
 	for (numctrl = 0; numctrl < NUM_GAMECONTROLS && stricmp(namectrl, gamecontrolname[numctrl]);
