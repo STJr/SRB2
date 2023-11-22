@@ -19,36 +19,42 @@
 // FUNCTIONS //
 ///////////////
 
+static void CheckActiveMovie(lua_State *L)
+{
+	if (!activemovie)
+		return luaL_error(L, "no movie currently playing");
+}
+
 static int lib_play(lua_State *L)
 {
 	const char *name = luaL_checkstring(L, 1);
-	if (activemovie)
-		return luaL_error(L, "movie already playing");
+	MovieDecode_Stop(&activemovie);
 	activemovie = MovieDecode_Play(name, (rendermode == render_soft));
 	return 0;
 }
 
 static int lib_stop(lua_State *L)
 {
-	if (!activemovie)
-		return luaL_error(L, "no movie currently playing");
+	CheckActiveMovie(L);
 	MovieDecode_Stop(&activemovie);
 	return 0;
 }
 
 static int lib_setPosition(lua_State *L)
 {
-	if (!activemovie)
-		return luaL_error(L, "no movie currently playing");
+	CheckActiveMovie(L);
 	int ms = luaL_checkinteger(L, 1);
+	if (ms < 0)
+		return luaL_error(L, "the position cannot be negative");
 	MovieDecode_SetPosition(activemovie, ms);
 	return 0;
 }
 
 static int lib_seek(lua_State *L)
 {
-	if (!activemovie)
-		return luaL_error(L, "no movie currently playing");
+	CheckActiveMovie(L);
+	if (ms < 0)
+		return luaL_error(L, "the position cannot be negative");
 	int ms = luaL_checkinteger(L, 1);
 	MovieDecode_Seek(activemovie, ms);
 	return 0;
@@ -56,16 +62,14 @@ static int lib_seek(lua_State *L)
 
 static int lib_duration(lua_State *L)
 {
-	if (!activemovie)
-		return luaL_error(L, "no movie currently playing");
+	CheckActiveMovie(L);
 	lua_pushinteger(L, MovieDecode_GetDuration(activemovie));
 	return 1;
 }
 
 static int lib_dimensions(lua_State *L)
 {
-	if (!activemovie)
-		return luaL_error(L, "no movie currently playing");
+	CheckActiveMovie(L);
 	INT32 width, height;
 	MovieDecode_GetDimensions(activemovie, &width, &height);
 	lua_pushinteger(L, width);
