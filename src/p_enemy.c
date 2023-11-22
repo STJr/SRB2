@@ -11150,6 +11150,8 @@ void A_VileTarget(mobj_t *actor, action_val_t *args, unsigned argcount)
 	else
 		fogtype = (mobjtype_t)locvar1;
 
+	action_val_t call_args[2] = { ACTION_INTEGER_VAL(0), ACTION_INTEGER_VAL(0) };
+
 	if (!locvar2)
 	{
 		fog = P_SpawnMobj(actor->target->x,
@@ -11167,7 +11169,7 @@ void A_VileTarget(mobj_t *actor, action_val_t *args, unsigned argcount)
 		P_SetTarget(&actor->tracer, fog);
 		P_SetTarget(&fog->target, actor);
 		P_SetTarget(&fog->tracer, actor->target);
-		A_VileFire(fog, args, 2);
+		A_VileFire(fog, call_args, 2);
 	}
 	else
 	{
@@ -11199,7 +11201,7 @@ void A_VileTarget(mobj_t *actor, action_val_t *args, unsigned argcount)
 				P_SetTarget(&actor->tracer, fog);
 			P_SetTarget(&fog->target, actor);
 			P_SetTarget(&fog->tracer, players[i].mo);
-			A_VileFire(fog, args, argcount);
+			A_VileFire(fog, call_args, 2);
 		}
 	}
 }
