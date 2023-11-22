@@ -58,7 +58,10 @@ void P_RunCachedActions(void)
 
 	for (ac = actioncachehead.next; ac != &actioncachehead; ac = next)
 	{
-		INT32 args[2] = { states[ac->statenum].var1, states[ac->statenum].var2 };
+		action_val_t args[2] = {
+			ACTION_INTEGER_VAL(states[ac->statenum].var1),
+			ACTION_INTEGER_VAL(states[ac->statenum].var2)
+		};
 		if (ac->mobj && !P_MobjWasRemoved(ac->mobj)) // just in case...
 		{
 			astate = &states[ac->statenum];
@@ -477,7 +480,10 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 		// Call action functions when the state is set
 		if (st->action.acpscr)
 		{
-			INT32 args[2] = { st->var1, st->var2 };
+			action_val_t args[2] = {
+				ACTION_INTEGER_VAL(st->var1),
+				ACTION_INTEGER_VAL(st->var2)
+			};
 			astate = st;
 			st->action.acpscr(mobj, args, 2);
 
@@ -614,7 +620,10 @@ boolean P_SetMobjState(mobj_t *mobj, statenum_t state)
 		// Call action functions when the state is set
 		if (st->action.acpscr)
 		{
-			INT32 args[2] = { st->var1, st->var2 };
+			action_val_t args[2] = {
+				ACTION_INTEGER_VAL(st->var1),
+				ACTION_INTEGER_VAL(st->var2)
+			};
 			astate = st;
 			st->action.acpscr(mobj, args, 2);
 			if (P_MobjWasRemoved(mobj))
@@ -4269,7 +4278,7 @@ static void P_Boss1Thinker(mobj_t *mobj)
 
 	if (!mobj->tracer)
 	{
-		INT32 args[1] = { 0 };
+		action_val_t args[1] = { ACTION_INTEGER_VAL(0) };
 		A_BossJetFume(mobj, args, 1);
 	}
 
@@ -4320,7 +4329,7 @@ static void P_Boss2Thinker(mobj_t *mobj)
 
 	if (!mobj->tracer)
 	{
-		INT32 args[1] = { 0 };
+		action_val_t args[1] = { 0 };
 		A_BossJetFume(mobj, args, 1);
 	}
 
@@ -5003,7 +5012,7 @@ static void P_Boss4Thinker(mobj_t *mobj)
 				if (mobj->spawnpoint)
 					P_LinedefExecute(mobj->spawnpoint->args[4], mobj, NULL);
 				P_Boss4MoveSpikeballs(mobj, FixedAngle(mobj->movecount), 0);
-				INT32 args[1] = { 3 };
+				action_val_t args[1] = { ACTION_INTEGER_VAL(3) };
 				A_BossJetFume(mobj, args, 1);
 				return;
 			}
@@ -5042,7 +5051,7 @@ static void P_Boss4Thinker(mobj_t *mobj)
 		mobj->movedir = 3;
 		if (mobj->spawnpoint)
 			P_LinedefExecute(mobj->spawnpoint->args[4], mobj, NULL);
-		INT32 args[1] = { 3 };
+		action_val_t args[1] = { ACTION_INTEGER_VAL(3) };
 		A_BossJetFume(mobj, args, 1);
 		return;
 	}
@@ -5103,7 +5112,7 @@ static void P_Boss5Thinker(mobj_t *mobj)
 		{
 			mobj_t *prevtarget = mobj->target;
 			P_SetTarget(&mobj->target, NULL);
-			INT32 args[2] = { 0, 0 };
+			action_val_t args[2] = { ACTION_INTEGER_VAL(0), ACTION_INTEGER_VAL(0) };
 			A_DoNPCPain(mobj, args, 2);
 			P_SetTarget(&mobj->target, prevtarget);
 			P_SetMobjState(mobj, S_FANG_WALLHIT);
@@ -5233,9 +5242,9 @@ static void P_Boss7Thinker(mobj_t *mobj)
 
 		if ((leveltime & 15) == 0)
 		{
-			INT32 args[2] = {
-				MT_CANNONBALL,
-				2*TICRATE + (80<<16)
+			action_val_t args[2] = {
+				ACTION_INTEGER_VAL(MT_CANNONBALL),
+				ACTION_INTEGER_VAL(2*TICRATE + (80<<16))
 			};
 			A_LobShot(mobj, args, 2);
 			S_StartSound(0, sfx_begoop);
@@ -5477,7 +5486,7 @@ static void P_Boss9Thinker(mobj_t *mobj)
 		mobj->threshold = 0;
 		mobj->reactiontime = 0;
 		mobj->watertop = mobj->floorz + 32*FRACUNIT;
-		INT32 args[1] = { 2 };
+		action_val_t args[1] = { ACTION_INTEGER_VAL(2) };
 		A_BossJetFume(mobj, args, 1);
 
 		// Run through the thinkers ONCE and find all of the MT_BOSS9GATHERPOINT in the map.
@@ -5919,7 +5928,10 @@ static void P_Boss9Thinker(mobj_t *mobj)
 
 		if (mobj->health <= mobj->info->damage && mobj->fuse && !(mobj->fuse%TICRATE))
 		{
-			INT32 args[2] = { 1, 0 };
+			action_val_t args[2] = {
+				ACTION_INTEGER_VAL(1),
+				ACTION_INTEGER_VAL(0)
+			};
 			A_BossScream(mobj, args, 2);
 		}
 
@@ -7514,7 +7526,10 @@ static void P_RosySceneryThink(mobj_t *mobj)
 				}
 				else
 					P_SetMobjState(mobj, (stat = S_ROSY_JUMP));
-				INT32 args[2] = { 0, 0 };
+				action_val_t args[2] = {
+					ACTION_INTEGER_VAL(0),
+					ACTION_INTEGER_VAL(0)
+				};
 				A_DoNPCPain(mobj, args, 2);
 				mobj->cvmem -= TICRATE;
 			}
@@ -8137,7 +8152,10 @@ static boolean P_MobjBossThink(mobj_t *mobj)
 	{
 		if (!(mobj->tics & 1))
 		{
-			INT32 args[2] = { 2, 0 };
+			action_val_t args[2] = {
+				ACTION_INTEGER_VAL(2),
+				ACTION_INTEGER_VAL(0)
+			};
 			A_BossScream(mobj, args, 2);
 		}
 		if (P_CheckDeathPitCollide(mobj))
@@ -8580,7 +8598,7 @@ static boolean P_EggRobo1Think(mobj_t *mobj)
 			mobj->threshold += (mobj->ceilingz - mobj->height);
 		else
 			mobj->threshold += mobj->floorz;
-		INT32 args[1] = { 4 };
+		action_val_t args[1] = { ACTION_INTEGER_VAL(4) };
 		A_BossJetFume(mobj, args, 1);
 		mobj->flags2 |= MF2_STRONGBOX;
 	}
@@ -9113,7 +9131,10 @@ static void P_PterabyteThink(mobj_t *mobj)
 		fixed_t hspeed = 3*mobj->info->speed;
 		angle_t fa;
 
-		INT32 args[2] = { 1, 0 };
+		action_val_t args[2] = {
+			ACTION_INTEGER_VAL(1),
+			ACTION_INTEGER_VAL(0)
+		};
 		A_CapeChase(mobj, args, 2);
 
 		if (mobj->target)
@@ -9180,9 +9201,9 @@ static void P_PterabyteThink(mobj_t *mobj)
 	}
 	else // Returning
 	{
-		INT32 args[2] = {
-			2*mobj->info->speed,
-			1
+		action_val_t args[2] = {
+			ACTION_INTEGER_VAL(2*mobj->info->speed),
+			ACTION_INTEGER_VAL(1)
 		};
 		A_HomingChase(mobj, args, 2);
 		if (P_AproxDistance(mobj->x - mobj->tracer->x, mobj->y - mobj->tracer->y) <= mobj->info->speed)
@@ -9443,9 +9464,9 @@ static boolean P_MobjRegularThink(mobj_t *mobj)
 			if (mobj->tracer && mobj->tracer->player && mobj->tracer->health > 0
 				&& P_AproxDistance(P_AproxDistance(mobj->tracer->x - mobj->x, mobj->tracer->y - mobj->y), mobj->tracer->z - mobj->z) <= mobj->radius*16)
 			{
-				INT32 args[2] = {
-					mobj->info->speed,
-					1
+				action_val_t args[2] = {
+					ACTION_INTEGER_VAL(mobj->info->speed),
+					ACTION_INTEGER_VAL(1)
 				};
 
 				// Home in on the target.
@@ -9921,7 +9942,10 @@ static void P_FiringThink(mobj_t *mobj)
 	{
 		if (mobj->state->tics > 1)
 		{
-			INT32 args[2] = { mobj->state->var1, mobj->state->var2 & 65535 };
+			action_val_t args[2] = {
+				ACTION_INTEGER_VAL(mobj->state->var1),
+				ACTION_INTEGER_VAL(mobj->state->var2 & 65535)
+			};
 			mobj->state->action.acpscr(mobj, args, 2);
 		}
 	}
@@ -10087,7 +10111,7 @@ static boolean P_FuseThink(mobj_t *mobj)
 	case MT_FANG:
 		if (mobj->flags2 & MF2_SLIDEPUSH)
 		{
-			INT32 args[2] = { 0, 0 };
+			action_val_t args[2] = { ACTION_INTEGER_VAL(0), ACTION_INTEGER_VAL(0) };
 			A_BossDeath(mobj, args, 2);
 			return false;
 		}
@@ -10808,7 +10832,10 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 					ball->movedir = FixedAngle(FixedMul(FixedDiv(i<<FRACBITS, mobj->info->damage<<FRACBITS), 360<<FRACBITS));
 					ball->threshold = ball->radius + mobj->radius + FixedMul(ball->info->painchance, ball->scale);
 
-					INT32 args[2] = { ball->state->var1, ball->state->var2 };
+					action_val_t args[2] = {
+						ACTION_INTEGER_VAL(ball->state->var1),
+						ACTION_INTEGER_VAL(ball->state->var2)
+					};
 					ball->state->action.acpscr(ball, args, 2);
 				}
 			}
@@ -11025,7 +11052,10 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 		}
 		else
 		{
-			INT32 args[2] = { st->var1, st->var2 };
+			action_val_t args[2] = {
+				ACTION_INTEGER_VAL(st->var1),
+				ACTION_INTEGER_VAL(st->var2)
+			};
 			astate = st;
 			st->action.acpscr(mobj, args, 2);
 			// DANGER! This can cause P_SpawnMobj to return NULL!

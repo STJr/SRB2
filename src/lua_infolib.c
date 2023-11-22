@@ -620,9 +620,26 @@ static int framepivot_num(lua_State *L)
 // STATE INFO //
 ////////////////
 
+static void PushActionArguments(lua_State *L, action_val_t *args, unsigned argcount)
+{
+	for (unsigned i = 0; i < argcount; i++)
+	{
+		if (ACTION_VAL_IS_INTEGER(args[i]))
+			lua_pushinteger(L, ACTION_VAL_AS_INTEGER(args[i]));
+		else if (ACTION_VAL_IS_DECIMAL(args[i]))
+			lua_pushfixed(L, ACTION_VAL_AS_DECIMAL(args[i]));
+		else if (ACTION_VAL_IS_BOOLEAN(args[i]))
+			lua_pushboolean(L, ACTION_VAL_AS_BOOLEAN(args[i]));
+		else if (ACTION_VAL_IS_STRING(args[i]))
+			lua_pushlstring(L, args[i].v_string.chars, args[i].v_string.length);
+		else if (ACTION_VAL_IS_NULL(args[i]))
+			lua_pushnil(L);
+	}
+}
+
 // Uses astate to determine which state is calling it
 // Then looks up which Lua action is assigned to that state and calls it
-static void A_Lua(mobj_t *actor, INT32 *args, unsigned argcount)
+static void A_Lua(mobj_t *actor, action_val_t *args, unsigned argcount)
 {
 	boolean found = false;
 	I_Assert(actor != NULL);
@@ -656,8 +673,7 @@ static void A_Lua(mobj_t *actor, INT32 *args, unsigned argcount)
 	lua_pop(gL, 1); // pop LREG_ACTION
 
 	LUA_PushUserdata(gL, actor, META_MOBJ);
-	for (unsigned i = 0; i < argcount; i++)
-		lua_pushinteger(gL, args[i]);
+	PushActionArguments(gL, args, argcount);
 	LUA_Call(gL, 1 + argcount, 0, 1);
 
 	if (found)
@@ -814,7 +830,35 @@ boolean LUA_SetLuaAction(void *stv, const char *action)
 }
 
 static UINT8 superstack[NUMACTIONS];
-boolean LUA_CallAction(enum actionnum actionnum, mobj_t *actor, INT32 *args, unsigned argcount)
+
+void LUA_ValueToActionVal(lua_State *L, int i, action_val_t *val)
+{
+	action_val_t value;
+
+	switch (lua_type(L, i))
+	{
+	case LUA_TNUMBER:
+		value = ACTION_INTEGER_VAL((INT32)luaL_optinteger(L, i, 0));
+		break;
+	case LUA_TBOOLEAN:
+		value = ACTION_BOOLEAN_VAL(lua_toboolean(L, i));
+		break;
+	case LUA_TSTRING:
+	{
+		action_string_t stringval;
+		Action_MakeString(&stringval, lua_tostring(L, i));
+		value = ACTION_STRING_VAL(stringval);
+		break;
+	}
+	default:
+		value = ACTION_NULL_VAL;
+		break;
+	}
+
+	memcpy(val, &value, sizeof(action_val_t));
+}
+
+boolean LUA_CallAction(enum actionnum actionnum, mobj_t *actor, action_val_t *args, unsigned argcount)
 {
 	I_Assert(actor != NULL);
 
@@ -879,8 +923,7 @@ boolean LUA_CallAction(enum actionnum actionnum, mobj_t *actor, INT32 *args, uns
 	// Call it with (actor, ...)
 	I_Assert(lua_isfunction(gL, -1));
 	LUA_PushUserdata(gL, actor, META_MOBJ);
-	for (unsigned i = 0; i < argcount; i++)
-		lua_pushinteger(gL, args[i]);
+	PushActionArguments(gL, args, argcount);
 
 	int nargs = 1 + argcount;
 

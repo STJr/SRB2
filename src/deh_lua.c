@@ -184,21 +184,20 @@ static inline int lib_freeslot(lua_State *L)
 }
 
 // Wrapper for ALL A_Action functions.
-// Arguments: mobj_t actor, int var1, int var2
 static int action_call(lua_State *L)
 {
 	actionf_t *action = *((actionf_t **)luaL_checkudata(L, 1, META_ACTION));
 	mobj_t *actor = *((mobj_t **)luaL_checkudata(L, 2, META_MOBJ));
 
-	INT32 *call_args = NULL;
+	action_val_t *call_args = NULL;
 
 	int n = lua_gettop(L);
 	int num_action_args = n - 2;
 	if (num_action_args > 0)
 	{
-		call_args = Z_Malloc(num_action_args * sizeof(INT32), PU_STATIC, NULL);
-		for (int i = 3; i < n; i++)
-			call_args[i] = (INT32)luaL_optinteger(L, i, 0);
+		call_args = Z_Malloc(num_action_args * sizeof(action_val_t), PU_STATIC, NULL);
+		for (int i = 3, j = 0; i <= n; i++)
+			LUA_ValueToActionVal(L, i, &call_args[j++]);
 	}
 
 	if (!actor)

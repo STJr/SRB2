@@ -3678,7 +3678,10 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 					if (color < 0 || color >= numskincolors)
 						return;
 
-					INT32 args[2] = { 0, color };
+					action_val_t args[2] = {
+						ACTION_INTEGER_VAL(0),
+						ACTION_INTEGER_VAL(color)
+					};
 					A_Dye(mo, args, 2);
 				}
 			}

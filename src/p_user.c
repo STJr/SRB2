@@ -11553,7 +11553,10 @@ void P_DoFollowMobj(player_t *player, mobj_t *followmobj)
 				break;
 			default:
 			{
-				INT32 args[2] = { 1, 0 };
+				action_val_t args[2] = {
+					ACTION_INTEGER_VAL(1),
+					ACTION_INTEGER_VAL(0)
+				};
 				A_CapeChase(followmobj, args, 2);
 				break;
 			}
