@@ -320,6 +320,8 @@ static SDL_bool SDLSetMode(INT32 width, INT32 height, SDL_bool fullscreen, SDL_b
 	static SDL_bool wasfullscreen = SDL_FALSE;
 	int fullscreen_type = SDL_WINDOW_FULLSCREEN_DESKTOP;
 
+	boolean should_set_window_size = realwidth != width || realheight != height;
+
 	src_rect.w = realwidth = width;
 	src_rect.h = realheight = height;
 
@@ -356,7 +358,8 @@ static SDL_bool SDLSetMode(INT32 width, INT32 height, SDL_bool fullscreen, SDL_b
 			return SDL_FALSE;
 
 		wasfullscreen = fullscreen;
-		SDL_SetWindowSize(window, width, height);
+		if (should_set_window_size)
+			SDL_SetWindowSize(window, width, height);
 		if (fullscreen)
 			SDL_SetWindowFullscreen(window, fullscreen_type);
 
@@ -737,7 +740,8 @@ static void Impl_HandleWindowEvent(SDL_WindowEvent evt)
 		case SDL_WINDOWEVENT_SIZE_CHANGED:
 			if ((SDL_GetWindowFlags(window) & SDL_WINDOW_FULLSCREEN_DESKTOP) == 0)
 			{
-				SCR_SetSizeNoRestore(evt.data1, evt.data2);
+				if (realwidth != evt.data1 || realheight != evt.data2)
+					SCR_SetSizeNoRestore(evt.data1, evt.data2);
 				SCR_SetDefaultMode(evt.data1, evt.data2);
 			}
 			break;
