@@ -152,6 +152,18 @@ static boolean parse_word(action_val_t *value, char *word)
 
 		*value = ACTION_STRING_VAL(string);
 	}
+	else if (fastcmp(word, "true"))
+	{
+		*value = ACTION_BOOLEAN_VAL(true);
+	}
+	else if (fastcmp(word, "false"))
+	{
+		*value = ACTION_BOOLEAN_VAL(false);
+	}
+	else if (fastcmp(word, "null"))
+	{
+		*value = ACTION_NULL_VAL;
+	}
 	else
 	{
 		strupr(word);
