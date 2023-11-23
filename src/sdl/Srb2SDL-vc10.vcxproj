@@ -487,6 +487,7 @@
     <ClCompile Include="..\netcode\net_command.c" />
     <ClCompile Include="..\netcode\server_connection.c" />
     <ClCompile Include="..\netcode\tic_command.c" />
+    <ClCompile Include="..\p_action.c" />
     <ClCompile Include="..\p_ceilng.c" />
     <ClCompile Include="..\p_enemy.c" />
     <ClCompile Include="..\p_floor.c" />

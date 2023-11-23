@@ -891,6 +891,9 @@
     <ClCompile Include="..\info.c">
       <Filter>P_Play</Filter>
     </ClCompile>
+    <ClCompile Include="..\p_action.c">
+      <Filter>P_Play</Filter>
+    </ClCompile>
     <ClCompile Include="..\p_ceilng.c">
       <Filter>P_Play</Filter>
     </ClCompile>
