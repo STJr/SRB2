@@ -35,6 +35,95 @@ extern UINT8 skincolor_modified[];
 
 state_t *astate;
 
+boolean LUA_ValueIsValidActionVal(lua_State *L, int i)
+{
+	switch (lua_type(L, i))
+	{
+	case LUA_TNUMBER:
+	case LUA_TBOOLEAN:
+	case LUA_TSTRING:
+	case LUA_TNIL:
+		return true;
+	}
+
+	return false;
+}
+
+#define CHECK_ACTION_VAL_TYPE(n) \
+	if (!LUA_ValueIsValidActionVal(L, n)) \
+		return luaL_error(L, va("values of type %s cannot be passed to actions as an argument", luaL_typename(L, n)))
+
+void LUA_ValueToActionVal(lua_State *L, int i, action_val_t *val)
+{
+	action_val_t value;
+
+	switch (lua_type(L, i))
+	{
+	case LUA_TNUMBER:
+		value = ACTION_INTEGER_VAL((INT32)luaL_optinteger(L, i, 0));
+		break;
+	case LUA_TBOOLEAN:
+		value = ACTION_BOOLEAN_VAL(lua_toboolean(L, i));
+		break;
+	case LUA_TSTRING:
+	{
+		action_string_t stringval;
+		Action_MakeString(&stringval, Z_StrDup(lua_tostring(L, i)));
+		value = ACTION_STRING_VAL(stringval);
+		break;
+	}
+	default:
+		value = ACTION_NULL_VAL;
+		break;
+	}
+
+	memcpy(val, &value, sizeof(action_val_t));
+}
+
+#define FIELDERROR(f, e) luaL_error(L, "bad value for " LUA_QL(f) " in table passed to states[] (%s)", e)
+#define TYPEERROR(f, t1, t2) FIELDERROR(f, va("%s expected, got %s", lua_typename(L, t1), lua_typename(L, t2)))
+
+static boolean GetActionValuesFromTable(lua_State *L, action_val_t *vars, int n)
+{
+	lua_Integer i = 0;
+	if (lua_istable(L, n))
+	{
+		lua_pushnil(L);
+		while (lua_next(L, n))
+		{
+			if (lua_isnumber(L, n + 1))
+			{
+				i = lua_tointeger(L, n + 1);
+				if (i < 1 || i > MAX_ACTION_VARS)
+				{
+					FIELDERROR("vars", va("var %d is invalid", i));
+					return false;
+				}
+				i--;
+			}
+			else
+			{
+				FIELDERROR("vars", "vars table requires keys to be numbers");
+			}
+
+			CHECK_ACTION_VAL_TYPE(n + 2);
+			Action_FreeValue(vars[i]);
+			LUA_ValueToActionVal(L, n + 2, &vars[i]);
+			lua_pop(L, 1);
+		}
+	}
+	else
+	{
+		FIELDERROR("vars", va("%s expected, got %s", lua_typename(L, LUA_TTABLE), luaL_typename(L, -1)));
+		return false;
+	}
+
+	return true;
+}
+
+#undef FIELDERROR
+#undef TYPEERROR
+
 enum sfxinfo_read {
 	sfxinfor_name = 0,
 	sfxinfor_singular,
@@ -776,14 +865,21 @@ static int lib_setState(lua_State *L)
 				return luaL_typerror(L, 3, "function");
 			}
 		} else if (i == 5 || (str && fastcmp(str, "var1"))) {
+			CHECK_ACTION_VAL_TYPE(3);
+			Action_FreeValue(state->vars[0]);
 			LUA_ValueToActionVal(L, 3, &state->vars[0]);
 		} else if (i == 6 || (str && fastcmp(str, "var2"))) {
+			CHECK_ACTION_VAL_TYPE(3);
+			Action_FreeValue(state->vars[1]);
 			LUA_ValueToActionVal(L, 3, &state->vars[1]);
 		} else if (i == 7 || (str && fastcmp(str, "nextstate"))) {
 			value = luaL_checkinteger(L, 3);
 			if (value < S_NULL || value >= NUMSTATES)
 				return luaL_error(L, "nextstate number %d is invalid.", value);
 			state->nextstate = (statenum_t)value;
+		} else if (str && fastcmp(str, "vars")) {
+			if (!GetActionValuesFromTable(L, state->vars, 3))
+				return 0;
 		}
 		lua_pop(L, 1);
 	}
@@ -833,33 +929,6 @@ boolean LUA_SetLuaAction(void *stv, const char *action)
 }
 
 static UINT8 superstack[NUMACTIONS];
-
-void LUA_ValueToActionVal(lua_State *L, int i, action_val_t *val)
-{
-	action_val_t value;
-
-	switch (lua_type(L, i))
-	{
-	case LUA_TNUMBER:
-		value = ACTION_INTEGER_VAL((INT32)luaL_optinteger(L, i, 0));
-		break;
-	case LUA_TBOOLEAN:
-		value = ACTION_BOOLEAN_VAL(lua_toboolean(L, i));
-		break;
-	case LUA_TSTRING:
-	{
-		action_string_t stringval;
-		Action_MakeString(&stringval, lua_tostring(L, i));
-		value = ACTION_STRING_VAL(stringval);
-		break;
-	}
-	default:
-		value = ACTION_NULL_VAL;
-		break;
-	}
-
-	memcpy(val, &value, sizeof(action_val_t));
-}
 
 boolean LUA_CallAction(enum actionnum actionnum, mobj_t *actor, action_val_t *args, unsigned argcount)
 {
@@ -987,6 +1056,10 @@ static int state_get(lua_State *L)
 		PushActionValue(L, st->vars[1]);
 		return 1;
 	}
+	else if (fastcmp(field,"vars")) {
+		LUA_PushUserdata(L, st->vars, META_STATEVARS);
+		return 1;
+	}
 	else if (fastcmp(field,"nextstate"))
 		number = st->nextstate;
 	else if (devparm)
@@ -1023,7 +1096,7 @@ static int state_set(lua_State *L)
 		switch(lua_type(L, 3))
 		{
 		case LUA_TNIL: // Null? Set the action to nothing, then.
-			st->action.acp1 = NULL;
+			st->action.acpscr = NULL;
 			break;
 		case LUA_TSTRING: // It's a string, expect the name of a built-in action
 			LUA_SetActionByName(st, lua_tostring(L, 3));
@@ -1036,8 +1109,6 @@ static int state_set(lua_State *L)
 				return luaL_error(L, "not a valid action?");
 
 			st->action = *action;
-			st->action.acv = action->acv;
-			st->action.acp1 = action->acp1;
 			break;
 		}
 		case LUA_TFUNCTION: // It's a function (a Lua function or a C function? either way!)
@@ -1049,13 +1120,23 @@ static int state_set(lua_State *L)
 			lua_pop(L, 1); // pop LREG_STATEACTION
 			st->action.acpscr = (actionf_script)A_Lua; // Set the action for the userdata.
 			break;
-		default: // ?!
+		default: // Something else
 			return luaL_typerror(L, 3, "function");
 		}
-	} else if (fastcmp(field,"var1"))
+	} else if (fastcmp(field,"var1")) {
+		CHECK_ACTION_VAL_TYPE(3);
+		Action_FreeValue(st->vars[0]);
 		LUA_ValueToActionVal(L, 3, &st->vars[0]);
-	else if (fastcmp(field,"var2"))
+	}
+	else if (fastcmp(field,"var2")) {
+		CHECK_ACTION_VAL_TYPE(3);
+		Action_FreeValue(st->vars[1]);
 		LUA_ValueToActionVal(L, 3, &st->vars[1]);
+	}
+	else if (fastcmp(field,"vars")) {
+		if (!GetActionValuesFromTable(L, st->vars, 3))
+			return 0;
+	}
 	else if (fastcmp(field,"nextstate")) {
 		value = luaL_checkinteger(L, 3);
 		if (value < S_NULL || value >= NUMSTATES)
@@ -1072,6 +1153,34 @@ static int state_num(lua_State *L)
 {
 	state_t *state = *((state_t **)luaL_checkudata(L, 1, META_STATE));
 	lua_pushinteger(L, state-states);
+	return 1;
+}
+
+static int statevars_get(lua_State *L)
+{
+	action_val_t *vars = *((action_val_t **)luaL_checkudata(L, 1, META_STATEVARS));
+	int n = luaL_checkinteger(L, 2);
+	if (n <= 0 || n > MAX_ACTION_VARS)
+		return luaL_error(L, LUA_QL("state_t") " field 'vars' index %d out of range (1 - %d)", n, MAX_ACTION_VARS);
+	PushActionValue(L, vars[n-1]);
+	return 1;
+}
+
+static int statevars_set(lua_State *L)
+{
+	action_val_t *vars = *((action_val_t **)luaL_checkudata(L, 1, META_STATEVARS));
+	int n = luaL_checkinteger(L, 2);
+	if (n <= 0 || n > MAX_ACTION_VARS)
+		return luaL_error(L, LUA_QL("state_t") " field 'vars' index %d out of range (1 - %d)", n, MAX_ACTION_VARS);
+	n--;
+	Action_FreeValue(vars[n]);
+	LUA_ValueToActionVal(L, 3, &vars[n]);
+	return 0;
+}
+
+static int statevars_len(lua_State *L)
+{
+	lua_pushinteger(L, MAX_ACTION_VARS);
 	return 1;
 }
 
@@ -1969,6 +2078,7 @@ int LUA_InfoLib(lua_State *L)
 	lua_setfield(L, LUA_REGISTRYINDEX, LREG_ACTIONS);
 
 	LUA_RegisterUserdataMetatable(L, META_STATE, state_get, state_set, state_num);
+	LUA_RegisterUserdataMetatable(L, META_STATEVARS, statevars_get, statevars_set, statevars_len);
 	LUA_RegisterUserdataMetatable(L, META_MOBJINFO, mobjinfo_get, mobjinfo_set, mobjinfo_num);
 	LUA_RegisterUserdataMetatable(L, META_SKINCOLOR, skincolor_get, skincolor_set, skincolor_num);
 	LUA_RegisterUserdataMetatable(L, META_COLORRAMP, colorramp_get, colorramp_set, colorramp_len);

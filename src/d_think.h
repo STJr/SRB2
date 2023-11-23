@@ -35,10 +35,7 @@ enum
 typedef struct
 {
 	unsigned length;
-	union {
-		char *chars;
-		const char *const_chars;
-	};
+	char *chars;
 } action_string_t;
 
 typedef struct

@@ -188,6 +188,8 @@ static int action_call(lua_State *L)
 {
 	actionf_t *action = *((actionf_t **)luaL_checkudata(L, 1, META_ACTION));
 	mobj_t *actor = *((mobj_t **)luaL_checkudata(L, 2, META_MOBJ));
+	if (!actor)
+		return LUA_ErrInvalid(L, "mobj_t");
 
 	action_val_t *call_args = NULL;
 
@@ -195,18 +197,26 @@ static int action_call(lua_State *L)
 	int num_action_args = n - 2;
 	if (num_action_args > 0)
 	{
-		call_args = Z_Malloc(num_action_args * sizeof(action_val_t), PU_STATIC, NULL);
-		for (int i = 3, j = 0; i <= n; i++)
-			LUA_ValueToActionVal(L, i, &call_args[j++]);
-	}
+		call_args = Z_Calloc(num_action_args * sizeof(action_val_t), PU_STATIC, NULL);
 
-	if (!actor)
-	{
-		Z_Free(call_args);
-		return LUA_ErrInvalid(L, "mobj_t");
+		for (int i = 3, j = 0; i <= n; i++)
+		{
+			if (!LUA_ValueIsValidActionVal(L, i))
+			{
+				for (int k = 0; k < j; k++)
+					Action_FreeValue(call_args[k]);
+				Z_Free(call_args);
+				return luaL_error(L, va("value of type %s cannot be passed to an action", luaL_typename(L, i)));
+			}
+
+			LUA_ValueToActionVal(L, i, &call_args[j++]);
+		}
 	}
 
 	action->acpscr(actor, call_args, num_action_args);
+
+	for (int i = 0; i < num_action_args; i++)
+		Action_FreeValue(call_args[i]);
 
 	Z_Free(call_args);
 

@@ -700,10 +700,22 @@ for (i = cvar.value; i; --i) spawnchance[numchoices++] = type
 //
 // ACTION ROUTINES
 //
-void Action_MakeString(action_string_t *out, const char *str)
+void Action_FreeValue(action_val_t value)
 {
-	out->const_chars = str;
+	if (ACTION_VAL_IS_STRING(value))
+		Action_FreeStringChars(&value.v_string);
+}
+
+void Action_MakeString(action_string_t *out, char *str)
+{
+	out->chars = str;
 	out->length = strlen(str);
+}
+
+void Action_FreeStringChars(action_string_t *str)
+{
+	Z_Free(str->chars);
+	str->chars = NULL;
 }
 
 static const char *Action_GetTypeName(UINT8 type)

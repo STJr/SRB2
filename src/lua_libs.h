@@ -24,6 +24,7 @@ extern boolean ignoregameinputs;
 #define LREG_METATABLES "METATABLES"
 
 #define META_STATE "STATE_T*"
+#define META_STATEVARS "STATE_T*VARS"
 #define META_MOBJINFO "MOBJINFO_T*"
 #define META_SFXINFO "SFXINFO_T*"
 #define META_SKINCOLOR "SKINCOLOR_T*"

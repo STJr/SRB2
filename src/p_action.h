@@ -20,7 +20,10 @@ INT32 Action_ValueToInteger(action_val_t value);
 
 char *Action_ValueToString(action_val_t value);
 
-void Action_MakeString(action_string_t *out, const char *str);
+void Action_FreeValue(action_val_t value);
+
+void Action_MakeString(action_string_t *out, char *str);
+void Action_FreeStringChars(action_string_t *str);
 
 // IMPORTANT NOTE: If you add/remove from this list of action
 // functions, don't forget to update them in deh_tables.c!

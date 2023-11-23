@@ -47,6 +47,7 @@ extern INT32 lua_lumploading; // is LUA_LoadLump being called?
 int LUA_GetErrorMessage(lua_State *L);
 int LUA_Call(lua_State *L, int nargs, int nresults, int errorhandlerindex);
 boolean LUA_CallAction(enum actionnum actionnum, mobj_t *actor, action_val_t *args, unsigned argcount);
+boolean LUA_ValueIsValidActionVal(lua_State *L, int i);
 void LUA_ValueToActionVal(lua_State *L, int i, action_val_t *val);
 void LUA_LoadLump(UINT16 wad, UINT16 lump, boolean noresults);
 #ifdef LUA_ALLOW_BYTECODE

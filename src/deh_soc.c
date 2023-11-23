@@ -2758,14 +2758,6 @@ void readframe(MYFILE *f, INT32 num)
 			{
 				states[num].nextstate = get_state(word2);
 			}
-			else if (fastcmp(word1, "VAR1"))
-			{
-				states[num].vars[0] = ACTION_INTEGER_VAL((INT32)get_number(word2));
-			}
-			else if (fastcmp(word1, "VAR2"))
-			{
-				states[num].vars[1] = ACTION_INTEGER_VAL((INT32)get_number(word2));
-			}
 			else if (fastcmp(word1, "ACTION"))
 			{
 				size_t z;
@@ -2811,6 +2803,14 @@ void readframe(MYFILE *f, INT32 num)
 					deh_warning("Unknown action %s", actiontocompare);
 
 				free(actiontocompare);
+			}
+			else if (!strnicmp(word1, "VAR", 3)
+			&& strlen(word1) == 4
+			&& word1[3] >= '1' && word1[3] <= '8')
+			{
+				unsigned varSlot = (word1[3] - 0x30) - 1;
+				Action_FreeValue(states[num].vars[varSlot]);
+				states[num].vars[varSlot] = ACTION_INTEGER_VAL((INT32)get_number(word2));
 			}
 			else
 				deh_warning("Frame %d: unknown word '%s'", num, word1);

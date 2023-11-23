@@ -151,6 +151,7 @@ static const struct {
 	const char *utype;
 } meta2utype[] = {
 	{META_STATE,        "state_t"},
+	{META_STATEVARS,    "state_t.vars"},
 	{META_MOBJINFO,     "mobjinfo_t"},
 	{META_SFXINFO,      "sfxinfo_t"},
 	{META_SKINCOLOR,    "skincolor_t"},
