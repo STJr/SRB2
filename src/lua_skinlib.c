@@ -373,49 +373,14 @@ static int sprite_get(lua_State *L)
 
 int LUA_SkinLib(lua_State *L)
 {
-	luaL_newmetatable(L, META_SKIN);
-		lua_pushcfunction(L, skin_get);
-		lua_setfield(L, -2, "__index");
-
-		lua_pushcfunction(L, skin_set);
-		lua_setfield(L, -2, "__newindex");
-
-		lua_pushcfunction(L, skin_num);
-		lua_setfield(L, -2, "__len");
-	lua_pop(L,1);
+	LUA_RegisterUserdataMetatable(L, META_SKIN, skin_get, skin_set, skin_num);
+	LUA_RegisterUserdataMetatable(L, META_SOUNDSID, soundsid_get, NULL, soundsid_num);
+	LUA_RegisterUserdataMetatable(L, META_SKINSPRITES, lib_getSkinSprite, NULL, lib_numSkinsSprites);
+	LUA_RegisterUserdataMetatable(L, META_SKINSPRITESLIST, sprite_get, NULL, NULL);
 
 	skin_fields_ref = Lua_CreateFieldTable(L, skin_opt);
 
-	luaL_newmetatable(L, META_SOUNDSID);
-		lua_pushcfunction(L, soundsid_get);
-		lua_setfield(L, -2, "__index");
-
-		lua_pushcfunction(L, soundsid_num);
-		lua_setfield(L, -2, "__len");
-	lua_pop(L,1);
-
-	luaL_newmetatable(L, META_SKINSPRITES);
-		lua_pushcfunction(L, lib_getSkinSprite);
-		lua_setfield(L, -2, "__index");
-
-		lua_pushcfunction(L, lib_numSkinsSprites);
-		lua_setfield(L, -2, "__len");
-	lua_pop(L,1);
-
-	luaL_newmetatable(L, META_SKINSPRITESLIST);
-		lua_pushcfunction(L, sprite_get);
-		lua_setfield(L, -2, "__index");
-	lua_pop(L,1);
-
-	lua_newuserdata(L, 0);
-		lua_createtable(L, 0, 2);
-			lua_pushcfunction(L, lib_getSkin);
-			lua_setfield(L, -2, "__index");
-
-			lua_pushcfunction(L, lib_numSkins);
-			lua_setfield(L, -2, "__len");
-		lua_setmetatable(L, -2);
-	lua_setglobal(L, "skins");
+	LUA_RegisterGlobalUserdata(L, "skins", lib_getSkin, NULL, lib_numSkins);
 
 	return 0;
 }

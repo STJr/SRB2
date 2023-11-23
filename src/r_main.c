@@ -249,7 +249,7 @@ static void FlipCam2_OnChange(void)
 //
 // killough 5/2/98: reformatted
 //
-INT32 R_PointOnSide(fixed_t x, fixed_t y, node_t *node)
+INT32 R_PointOnSide(fixed_t x, fixed_t y, node_t *restrict node)
 {
 	if (!node->dx)
 		return x <= node->x ? node->dy > 0 : node->dy < 0;
@@ -261,9 +261,10 @@ INT32 R_PointOnSide(fixed_t x, fixed_t y, node_t *node)
 	fixed_t dy = (y >> 1) - (node->y >> 1);
 
 	// Try to quickly decide by looking at sign bits.
-	if ((node->dy ^ node->dx ^ dx ^ dy) < 0)
-		return (node->dy ^ dx) < 0;  // (left is negative)
-	return FixedMul(dy, node->dx>>FRACBITS) >= FixedMul(node->dy>>FRACBITS, dx);
+	// also use a mask to avoid branch prediction
+	INT32 mask = (node->dy ^ node->dx ^ dx ^ dy) >> 31;
+	return (mask & ((node->dy ^ dx) < 0)) |  // (left is negative)
+		(~mask & (FixedMul(dy, node->dx>>FRACBITS) >= FixedMul(node->dy>>FRACBITS, dx)));
 }
 
 // killough 5/2/98: reformatted
@@ -1084,6 +1085,7 @@ void R_SetupFrame(player_t *player)
 {
 	camera_t *thiscam;
 	boolean chasecam = R_ViewpointHasChasecam(player);
+	boolean ispaused = paused || P_AutoPause();
 	
 	if (splitscreen && player == &players[secondarydisplayplayer] && player != &players[consoleplayer])
 		thiscam = &camera2;
@@ -1134,6 +1136,30 @@ void R_SetupFrame(player_t *player)
 			}
 		}
 	}
+
+	if (quake.time && !ispaused)
+	{
+		fixed_t ir = quake.intensity>>1;
+
+		if (quake.epicenter) {
+			// Calculate 3D distance from epicenter, using the camera.
+			fixed_t xydist = R_PointToDist2(thiscam->x, thiscam->y, quake.epicenter->x, quake.epicenter->y);
+			fixed_t dist = R_PointToDist2(0, thiscam->z, xydist, quake.epicenter->z);
+
+			// More effect closer to epicenter, outside of radius = no effect
+			if (!quake.radius || dist > quake.radius)
+				ir = 0;
+			else
+				ir = FixedMul(ir, FRACUNIT - FixedDiv(dist, quake.radius));
+		}
+
+		quake.x = M_RandomRange(-ir,ir);
+		quake.y = M_RandomRange(-ir,ir);
+		quake.z = M_RandomRange(-ir,ir);
+	}
+	else if (!ispaused)
+		quake.x = quake.y = quake.z = 0;
+
 	newview->z += quake.z;
 
 	newview->player = player;

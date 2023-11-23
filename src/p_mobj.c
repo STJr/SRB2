@@ -36,6 +36,7 @@
 #include "p_slopes.h"
 #include "f_finale.h"
 #include "m_cond.h"
+#include "netcode/net_command.h"
 
 static CV_PossibleValue_t CV_BobSpeed[] = {{0, "MIN"}, {4*FRACUNIT, "MAX"}, {0, NULL}};
 consvar_t cv_movebob = CVAR_INIT ("movebob", "1.0", CV_FLOAT|CV_SAVE, CV_BobSpeed, NULL);
@@ -1778,14 +1779,15 @@ bustupdone:
 //
 // P_CheckSkyHit
 //
-static boolean P_CheckSkyHit(mobj_t *mo)
+boolean P_CheckSkyHit(mobj_t *mo, line_t *line)
 {
-	if (ceilingline && ceilingline->backsector
-		&& ceilingline->backsector->ceilingpic == skyflatnum
-		&& ceilingline->frontsector
-		&& ceilingline->frontsector->ceilingpic == skyflatnum
-		&& (mo->z >= ceilingline->frontsector->ceilingheight
-		|| mo->z >= ceilingline->backsector->ceilingheight))
+	if (line && (line->special == 41 ||
+		(line->backsector
+		&& line->backsector->ceilingpic == skyflatnum
+		&& line->frontsector
+		&& line->frontsector->ceilingpic == skyflatnum
+		&& (mo->z >= line->frontsector->ceilingheight
+		|| mo->z >= line->backsector->ceilingheight))))
 			return true;
 	return false;
 }
@@ -1892,7 +1894,7 @@ void P_XYMovement(mobj_t *mo)
 					mo->fuse += ((5 - mo->threshold) * TICRATE);
 
 				// Check for hit against sky here
-				if (P_CheckSkyHit(mo))
+				if (P_CheckSkyHit(mo, ceilingline))
 				{
 					// Hack to prevent missiles exploding
 					// against the sky.
@@ -1912,7 +1914,7 @@ void P_XYMovement(mobj_t *mo)
 			mo->flags &= ~MF_STICKY; //Don't check again!
 
 			// Check for hit against sky here
-			if (P_CheckSkyHit(mo))
+			if (P_CheckSkyHit(mo, ceilingline))
 			{
 				// Hack to prevent missiles exploding
 				// against the sky.
@@ -1971,7 +1973,7 @@ void P_XYMovement(mobj_t *mo)
 		else if (mo->flags & MF_MISSILE)
 		{
 			// explode a missile
-			if (P_CheckSkyHit(mo))
+			if (P_CheckSkyHit(mo, ceilingline))
 			{
 				// Hack to prevent missiles exploding
 				// against the sky.
@@ -10543,6 +10545,7 @@ static fixed_t P_DefaultMobjShadowScale (mobj_t *thing)
 		case MT_SMALLGRABCHAIN:
 		case MT_BIGGRABCHAIN:
 
+		case MT_BLUESPRINGBALL:
 		case MT_YELLOWSPRINGBALL:
 		case MT_REDSPRINGBALL:
 
@@ -10570,14 +10573,14 @@ static fixed_t P_DefaultMobjShadowScale (mobj_t *thing)
 		case MT_EXPLOSIONRING:
 		case MT_SCATTERRING:
 		case MT_GRENADERING:
-		
+
 		case MT_BOUNCEPICKUP:
 		case MT_RAILPICKUP:
 		case MT_AUTOPICKUP:
 		case MT_EXPLODEPICKUP:
 		case MT_SCATTERPICKUP:
 		case MT_GRENADEPICKUP:
-		
+
 		case MT_REDRING:
 		case MT_THROWNBOUNCE:
 		case MT_THROWNINFINITY:
@@ -11586,8 +11589,6 @@ void P_SpawnPlayer(INT32 playernum)
 				// Spawn as a spectator,
 				// yes even in splitscreen mode
 				p->spectator = true;
-				if (playernum&1) p->skincolor = skincolor_redteam;
-				else             p->skincolor = skincolor_blueteam;
 
 				// but immediately send a team change packet.
 				NetPacket.packet.playernum = playernum;
@@ -11607,13 +11608,6 @@ void P_SpawnPlayer(INT32 playernum)
 		// Fix stupid non spectator spectators.
 		if (!p->spectator && !p->ctfteam)
 			p->spectator = true;
-
-		// Fix team colors.
-		// This code isn't being done right somewhere else. Oh well.
-		if (p->ctfteam == 1)
-			p->skincolor = skincolor_redteam;
-		else if (p->ctfteam == 2)
-			p->skincolor = skincolor_blueteam;
 	}
 
 	if ((netgame || multiplayer) && ((gametyperules & GTR_SPAWNINVUL) || leveltime) && !p->spectator && !(maptol & TOL_NIGHTS))
@@ -11625,7 +11619,7 @@ void P_SpawnPlayer(INT32 playernum)
 	mobj->angle = 0;
 
 	// set color translations for player sprites
-	mobj->color = p->skincolor;
+	mobj->color = P_GetPlayerColor(p);
 
 	// set 'spritedef' override in mobj for player skins.. (see ProjectSprite)
 	// (usefulness: when body mobj is detached from player (who respawns),
@@ -13327,7 +13321,7 @@ static boolean P_SetupSpawnedMapThing(mapthing_t *mthing, mobj_t *mobj, boolean 
 	return true;
 }
 
-// Pre-UDMF backwards compatibility stuff. Remove for 2.3
+// TODO: 2.3: Delete (Pre-UDMF backwards compatibility stuff)
 static void P_SetAmbush(mapthing_t *mthing, mobj_t *mobj)
 {
 	if (mobj->type == MT_NIGHTSBUMPER

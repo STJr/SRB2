@@ -56,7 +56,6 @@
 #endif
 
 #ifdef _WINDOWS
-#define NONET
 #if !defined (HWRENDER) && !defined (NOHW)
 #define HWRENDER
 #endif
@@ -731,7 +730,7 @@ extern int
 /// Maintain compatibility with older 2.2 demos
 #define OLD22DEMOCOMPAT
 
-#if defined (HAVE_CURL) && ! defined (NONET)
+#ifdef HAVE_CURL
 #define MASTERSERVER
 #else
 #undef UPDATE_ALERT

@@ -2661,7 +2661,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 					titlemapcameraref = altview;
 				else if (!mo->player->awayviewtics || mo->player->awayviewmobj != altview) {
 					P_SetTarget(&mo->player->awayviewmobj, altview);
-					
+
 					if (mo->player == &players[displayplayer])
 						P_ResetCamera(mo->player, &camera); // reset p1 camera on p1 getting an awayviewmobj
 					else if (splitscreen && mo->player == &players[secondarydisplayplayer])
@@ -4178,6 +4178,7 @@ sector_t *P_MobjTouchingSectorSpecial(mobj_t *mo, INT32 section, INT32 number)
 	return NULL;
 }
 
+// TODO: 2.3: Delete
 // Deprecated in favor of P_MobjTouchingSectorSpecial
 // Kept for Lua backwards compatibility only
 sector_t *P_ThingOnSpecial3DFloor(mobj_t *mo)
@@ -6229,6 +6230,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 			sector->flags |= MSF_TRIGGERSPECIAL_TOUCH;
 		}
 
+		// TODO: 2.3: Delete everything below
 		// Process deprecated binary sector specials
 		if (udmf || !sector->special)
 			continue;

@@ -18,6 +18,8 @@
 #ifndef __D_NET__
 #define __D_NET__
 
+#include "../doomtype.h"
+
 // Max computers in a game
 // 127 is probably as high as this can go, because
 // SINT8 is used for nodes sometimes >:(
@@ -37,10 +39,24 @@ boolean Net_GetNetStat(void);
 extern INT32 getbytes;
 extern INT64 sendbytes; // Realtime updated
 
-extern SINT8 nodetoplayer[MAXNETNODES];
-extern SINT8 nodetoplayer2[MAXNETNODES]; // Say the numplayer for this node if any (splitscreen)
-extern UINT8 playerpernode[MAXNETNODES]; // Used specially for splitscreen
-extern boolean nodeingame[MAXNETNODES]; // Set false as nodes leave game
+typedef struct netnode_s
+{
+	boolean ingame; // set false as nodes leave game
+	tic_t freezetimeout; // Until when can this node freeze the server before getting a timeout?
+
+	SINT8 player;
+	SINT8 player2; // say the numplayer for this node if any (splitscreen)
+	UINT8 numplayers; // used specialy for scplitscreen
+
+	tic_t tic; // what tic the client have received
+	tic_t supposedtic; // nettics prevision for smaller packet
+
+	boolean sendingsavegame; // Are we sending the savegame?
+	boolean resendingsavegame; // Are we resending the savegame?
+	tic_t savegameresendcooldown; // How long before we can resend again?
+} netnode_t;
+
+extern netnode_t netnodes[MAXNETNODES];
 
 extern boolean serverrunning;
 
@@ -52,9 +68,6 @@ boolean HSendPacket(INT32 node, boolean reliable, UINT8 acknum,
 	size_t packetlength);
 boolean HGetPacket(void);
 void D_SetDoomcom(void);
-#ifndef NONET
-void D_SaveBan(void);
-#endif
 boolean D_CheckNetGame(void);
 void D_CloseConnection(void);
 void Net_UnAcknowledgePacket(INT32 node);

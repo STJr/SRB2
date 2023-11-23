@@ -88,6 +88,8 @@
 
 #include "taglist.h"
 
+#include "netcode/net_command.h"
+
 //
 // Map MD5, calculated on level load.
 // Sent to clients in PT_SERVERINFO.
@@ -1677,7 +1679,7 @@ static void ParseTextmapSectorParameter(UINT32 i, const char *param, const char 
 			if ((id = strchr(id, ' ')))
 				id++;
 		}
-	}	
+	}
 	else if (fastcmp(param, "xpanningfloor"))
 		sectors[i].floorxoffset = FLOAT_TO_FIXED(atof(val));
 	else if (fastcmp(param, "ypanningfloor"))
@@ -6130,6 +6132,7 @@ static void P_ConvertBinarySectorTypes(void)
 			case 14: //Non-ramp sector
 				sectors[i].specialflags |= SSF_NOSTEPDOWN;
 				break;
+			// TODO: 2.3: Delete
 			case 15: //Bouncy FOF
 				CONS_Alert(CONS_WARNING, M_GetText("Deprecated bouncy FOF sector type detected. Please use linedef type 76 instead.\n"));
 				break;
@@ -6164,12 +6167,14 @@ static void P_ConvertBinarySectorTypes(void)
 				sectors[i].flags |= MSF_TRIGGERLINE_PLANE;
 				sectors[i].triggerer = TO_PLAYER;
 				break;
+			// TODO: 2.3: Delete
 			case 6: //Trigger linedef executor (Emerald check)
 				CONS_Alert(CONS_WARNING, M_GetText("Deprecated emerald check sector type detected. Please use linedef types 337-339 instead.\n"));
 				sectors[i].triggertag = tag;
 				sectors[i].flags &= ~MSF_TRIGGERLINE_PLANE;
 				sectors[i].triggerer = TO_PLAYEREMERALDS;
 				break;
+			// TODO: 2.3: Delete
 			case 7: //Trigger linedef executor (NiGHTS mare)
 				CONS_Alert(CONS_WARNING, M_GetText("Deprecated NiGHTS mare sector type detected. Please use linedef types 340-342 instead.\n"));
 				sectors[i].triggertag = tag;
@@ -6179,9 +6184,11 @@ static void P_ConvertBinarySectorTypes(void)
 			case 8: //Check for linedef executor on FOFs
 				sectors[i].flags |= MSF_TRIGGERLINE_MOBJ;
 				break;
+			// TODO: 2.3: Delete
 			case 10: //Special stage time/spheres requirements
 				CONS_Alert(CONS_WARNING, M_GetText("Deprecated sector type for special stage requirements detected. Please use the SpecialStageTime and SpecialStageSpheres level header options instead.\n"));
 				break;
+			// TODO: 2.3: Delete
 			case 11: //Custom global gravity
 				CONS_Alert(CONS_WARNING, M_GetText("Deprecated sector type for global gravity detected. Please use the Gravity level header option instead.\n"));
 				break;
@@ -6820,7 +6827,7 @@ static void P_ConvertBinaryThingTypes(void)
 		default:
 			break;
 		}
-		
+
 		// Clear binary thing height hacks, to prevent interfering with UDMF-only flags
 		mapthings[i].options &= 0xF;
 	}
@@ -7174,37 +7181,23 @@ static void P_RunLevelScript(const char *scriptname)
 
 static void P_ForceCharacter(const char *forcecharskin)
 {
-	if (netgame)
-	{
-		char skincmd[33];
-		if (splitscreen)
-		{
-			sprintf(skincmd, "skin2 %s\n", forcecharskin);
-			CV_Set(&cv_skin2, forcecharskin);
-		}
+	// Don't do anything if the server is forcing a skin already.
+	if (netgame && cv_forceskin.value >= 0)
+		return;
 
-		sprintf(skincmd, "skin %s\n", forcecharskin);
-		COM_BufAddText(skincmd);
-	}
-	else
+	for (unsigned i = 0; i < MAXPLAYERS; i++)
 	{
-		if (splitscreen)
-		{
-			SetPlayerSkin(secondarydisplayplayer, forcecharskin);
-			if ((unsigned)cv_playercolor2.value != skins[players[secondarydisplayplayer].skin]->prefcolor)
-			{
-				CV_StealthSetValue(&cv_playercolor2, skins[players[secondarydisplayplayer].skin]->prefcolor);
-				players[secondarydisplayplayer].skincolor = skins[players[secondarydisplayplayer].skin]->prefcolor;
-			}
-		}
+		if (!playeringame[i])
+			continue;
 
-		SetPlayerSkin(consoleplayer, forcecharskin);
-		// normal player colors in single player
-		if ((unsigned)cv_playercolor.value != skins[players[consoleplayer].skin]->prefcolor)
-		{
-			CV_StealthSetValue(&cv_playercolor, skins[players[consoleplayer].skin]->prefcolor);
-			players[consoleplayer].skincolor = skins[players[consoleplayer].skin]->prefcolor;
-		}
+		INT32 skinnum = R_SkinAvailable(forcecharskin);
+		if (skinnum == -1 || !R_SkinUsable(i, skinnum))
+			continue;
+
+		SetPlayerSkinByNum(i, skinnum);
+
+		if (!netgame)
+			players[i].skincolor = skins[skinnum]->prefcolor;
 	}
 }
 
