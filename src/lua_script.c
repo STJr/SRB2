@@ -1345,7 +1345,7 @@ static UINT8 ArchiveValue(int TABLESINDEX, int myindex)
 		{
 			skin_t *skin = *((skin_t **)lua_touserdata(gL, myindex));
 			WRITEUINT8(save_p, ARCH_SKIN);
-			WRITEUINT8(save_p, skin->skinnum); // UINT8 because MAXSKINS is only 32
+			WRITEUINT8(save_p, skin->skinnum); // UINT8 because MAXSKINS must be <= 256
 			break;
 		}
 		default:
