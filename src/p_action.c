@@ -160,6 +160,10 @@ static INT32 GetInteger(action_val_t *args, unsigned argcount, unsigned argnum, 
 	if (ACTION_VAL_IS_INTEGER(args[argnum]) || ACTION_VAL_IS_BOOLEAN(args[argnum]))
 		return Action_ValueToInteger(args[argnum]);
 
+	// TODO: 2.3: Remove this
+	if (ACTION_VAL_IS_NULL(args[argnum]))
+		return 0;
+
 	ARGS_VALUE_EXPECTED(ACTION_VAL_INTEGER);
 
 	return 0;
