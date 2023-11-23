@@ -3264,7 +3264,7 @@ static void P_InitializeSeg(seg_t *seg)
 		UINT32 side = seg->linedef->sidenum[seg->side];
 
 		if (side == NO_SIDEDEF)
-			I_Error("P_InitializeSeg: Seg %s refers to side %d of linedef %s, which doesn't exist!\n", sizeu1((size_t)(seg - segs)), seg->side, sizeu1((size_t)(seg->linedef - lines)));
+			I_Error("P_InitializeSeg: Seg %s refers to side %d of linedef %s, which doesn't exist!\n", sizeu1((size_t)(seg - segs)), seg->side, sizeu2((size_t)(seg->linedef - lines)));
 
 		seg->sidedef = &sides[side];
 
@@ -3475,7 +3475,7 @@ static boolean P_LoadExtendedSubsectorsAndSegs(UINT8 **data, nodetype_t nodetype
 			{
 				UINT32 vertexnum = READUINT32((*data));
 				if (vertexnum >= numvertexes)
-					I_Error("P_LoadExtendedSubsectorsAndSegs: Seg %s in subsector %s has invalid vertex %d!\n", sizeu1(k), sizeu1(m), vertexnum);
+					I_Error("P_LoadExtendedSubsectorsAndSegs: Seg %s in subsector %s has invalid vertex %d!\n", sizeu1(k), sizeu2(m), vertexnum);
 
 				segs[k - 1 + ((m == 0) ? subsectors[i].numlines : 0)].v2 = segs[k].v1 = &vertexes[vertexnum];
 
@@ -3516,11 +3516,11 @@ static boolean P_LoadExtendedSubsectorsAndSegs(UINT8 **data, nodetype_t nodetype
 				UINT16 linenum = READUINT16((*data));
 
 				if (v1num >= numvertexes)
-					I_Error("P_LoadExtendedSubsectorsAndSegs: Seg %s in subsector %s has invalid v1 %d!\n", sizeu1(k), sizeu1(m), v1num);
+					I_Error("P_LoadExtendedSubsectorsAndSegs: Seg %s in subsector %s has invalid v1 %d!\n", sizeu1(k), sizeu2(m), v1num);
 				if (v2num >= numvertexes)
-					I_Error("P_LoadExtendedSubsectorsAndSegs: Seg %s in subsector %s has invalid v2 %d!\n", sizeu1(k), sizeu1(m), v2num);
+					I_Error("P_LoadExtendedSubsectorsAndSegs: Seg %s in subsector %s has invalid v2 %d!\n", sizeu1(k), sizeu2(m), v2num);
 				if (linenum >= numlines)
-					I_Error("P_LoadExtendedSubsectorsAndSegs: Seg %s in subsector %s has invalid linedef %d!\n", sizeu1(k), sizeu1(m), linenum);
+					I_Error("P_LoadExtendedSubsectorsAndSegs: Seg %s in subsector %s has invalid linedef %d!\n", sizeu1(k), sizeu2(m), linenum);
 
 				segs[k].v1 = &vertexes[v1num];
 				segs[k].v2 = &vertexes[v2num];
@@ -4012,7 +4012,7 @@ static void P_LinkMapData(void)
 		if (!seg->sidedef->sector)
 			CorruptMapError(va("P_LinkMapData: seg->sidedef->sector is NULL "
 				"(subsector %s, firstline is %d, sidedef is %s)", sizeu1(i), ss->firstline,
-				sizeu1(sidei)));
+				sizeu2(sidei)));
 		ss->sector = seg->sidedef->sector;
 	}
 
