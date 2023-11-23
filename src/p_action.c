@@ -57,8 +57,6 @@ static const char *Action_GetTypeName(UINT8 type)
 		return "null";
 	case ACTION_VAL_INTEGER:
 		return "integer";
-	case ACTION_VAL_DECIMAL:
-		return "decimal";
 	case ACTION_VAL_BOOLEAN:
 		return "boolean";
 	case ACTION_VAL_STRING:
@@ -86,8 +84,6 @@ INT32 Action_ValueToInteger(action_val_t value)
 {
 	if (ACTION_VAL_IS_INTEGER(value))
 		return ACTION_VAL_AS_INTEGER(value);
-	else if (ACTION_VAL_IS_DECIMAL(value))
-		return FixedInt(ACTION_VAL_AS_DECIMAL(value));
 	else if (ACTION_VAL_IS_BOOLEAN(value))
 		return ACTION_VAL_AS_BOOLEAN(value) ? 1 : 0;
 
@@ -96,18 +92,11 @@ INT32 Action_ValueToInteger(action_val_t value)
 
 char *Action_ValueToString(action_val_t value)
 {
-	size_t bufsize = 128;
-
 	if (ACTION_VAL_IS_INTEGER(value))
 	{
+		size_t bufsize = 128;
 		char *buffer = Z_Malloc(bufsize, PU_STATIC, NULL);
 		snprintf(buffer, bufsize, "<integer> %d", Action_ValueToInteger(value));
-		return buffer;
-	}
-	else if (ACTION_VAL_IS_DECIMAL(value))
-	{
-		char *buffer = Z_Malloc(bufsize, PU_STATIC, NULL);
-		snprintf(buffer, bufsize, "<decimal> %f", FixedToFloat(ACTION_VAL_AS_DECIMAL(value)));
 		return buffer;
 	}
 	else if (ACTION_VAL_IS_BOOLEAN(value))
@@ -124,7 +113,7 @@ static INT32 GetInteger(action_val_t *args, unsigned argcount, unsigned argnum, 
 {
 	ARGS_CHECK_VALID(0);
 
-	if (ACTION_VAL_IS_INTEGER(args[argnum]) || ACTION_VAL_IS_DECIMAL(args[argnum]) || ACTION_VAL_IS_BOOLEAN(args[argnum]))
+	if (ACTION_VAL_IS_INTEGER(args[argnum]) || ACTION_VAL_IS_BOOLEAN(args[argnum]))
 		return Action_ValueToInteger(args[argnum]);
 
 	ARGS_VALUE_EXPECTED(ACTION_VAL_INTEGER);

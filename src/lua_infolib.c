@@ -713,8 +713,6 @@ static void PushActionValue(lua_State *L, action_val_t arg)
 {
 	if (ACTION_VAL_IS_INTEGER(arg))
 		lua_pushinteger(L, ACTION_VAL_AS_INTEGER(arg));
-	else if (ACTION_VAL_IS_DECIMAL(arg))
-		lua_pushfixed(L, ACTION_VAL_AS_DECIMAL(arg));
 	else if (ACTION_VAL_IS_BOOLEAN(arg))
 		lua_pushboolean(L, ACTION_VAL_AS_BOOLEAN(arg));
 	else if (ACTION_VAL_IS_STRING(arg))
