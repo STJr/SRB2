@@ -66,6 +66,101 @@ fixed_t get_number(const char *word)
 	return i;*/
 }
 
+static boolean check_string_token(char *word)
+{
+	word++;
+
+	while (*word != '"' && *word != 0)
+	{
+		if (*word == '\\')
+			word++;
+		word++;
+	}
+
+	if (*word == 0)
+	{
+		deh_warning("Unterminated string");
+		return false;
+	}
+
+	return true;
+}
+
+static boolean parse_string_token(action_string_t *string, char *word)
+{
+	int token_length = strlen(word);
+	int length = token_length - 2;
+	if (length <= 0)
+		return false;
+
+	string->chars = Z_Calloc(length + 1, PU_STATIC, NULL);
+	string->length = 0;
+
+	char *chars = string->chars;
+
+	char *str = word + 1;
+	char *str_end = word + token_length - 1;
+
+	while (str < str_end)
+	{
+		// Parse escape characters
+		if (*str == '\\')
+		{
+			str++;
+
+			if (*str == 'n')
+				*chars = '\n';
+			else if (*str == '"')
+				*chars = '"';
+			else if (*str == '\\')
+				*chars = '\\';
+			else
+			{
+				Z_Free(string->chars);
+				deh_warning("Invalid escape character in string token");
+				return false;
+			}
+		}
+		else
+			*chars = *str;
+
+		string->length++;
+		chars++;
+		str++;
+	}
+
+	return true;
+}
+
+static boolean parse_word(action_val_t *value, char *word)
+{
+	if (*word == '"')
+	{
+		if (!check_string_token(word))
+		{
+			*value = ACTION_NULL_VAL;
+			return false;
+		}
+
+		action_string_t string;
+
+		if (!parse_string_token(&string, word))
+		{
+			*value = ACTION_NULL_VAL;
+			return false;
+		}
+
+		*value = ACTION_STRING_VAL(string);
+	}
+	else
+	{
+		strupr(word);
+		*value = ACTION_INTEGER_VAL(get_number(word));
+	}
+
+	return true;
+}
+
 #define PARAMCHECK(n) do { if (!params[n]) { deh_warning("Too few parameters, need %d", n); return; }} while (0)
 
 /* ======================================================================== */
@@ -2722,43 +2817,32 @@ void readframe(MYFILE *f, INT32 num)
 			if (s[0] == '\n')
 				break;
 
+			// First remove trailing newline, if there is one
+			tmp = strchr(s, '\n');
+			if (tmp)
+				*tmp = '\0';
+
 			tmp = strchr(s, '#');
 			if (tmp)
 				*tmp = '\0';
 			if (s == tmp)
 				continue; // Skip comment lines, but don't break.
 
-			word1 = strtok(s, " ");
-			if (word1)
-				strupr(word1);
+			// Set / reset word
+			word1 = s;
+
+			// Get the part before the " = "
+			tmp = strchr(s, '=');
+			if (tmp)
+				*(tmp-1) = '\0';
 			else
 				break;
+			strupr(word1);
 
-			word2 = strtok(NULL, " = ");
-			if (word2)
-				strupr(word2);
-			else
-				break;
-			if (word2[strlen(word2)-1] == '\n')
-				word2[strlen(word2)-1] = '\0';
+			// Now get the part after
+			word2 = tmp += 2;
 
-			if (fastcmp(word1, "SPRITENUMBER") || fastcmp(word1, "SPRITENAME"))
-			{
-				states[num].sprite = get_sprite(word2);
-			}
-			else if (fastcmp(word1, "SPRITESUBNUMBER") || fastcmp(word1, "SPRITEFRAME"))
-			{
-				states[num].frame = (INT32)get_number(word2); // So the FF_ flags get calculated
-			}
-			else if (fastcmp(word1, "DURATION"))
-			{
-				states[num].tics = (INT32)get_number(word2); // So TICRATE can be used
-			}
-			else if (fastcmp(word1, "NEXT"))
-			{
-				states[num].nextstate = get_state(word2);
-			}
-			else if (fastcmp(word1, "ACTION"))
+			if (fastcmp(word1, "ACTION"))
 			{
 				size_t z;
 				boolean found = false;
@@ -2810,10 +2894,31 @@ void readframe(MYFILE *f, INT32 num)
 			{
 				unsigned varSlot = (word1[3] - 0x30) - 1;
 				Action_FreeValue(states[num].vars[varSlot]);
-				states[num].vars[varSlot] = ACTION_INTEGER_VAL((INT32)get_number(word2));
+				parse_word(&states[num].vars[varSlot], word2);
 			}
 			else
-				deh_warning("Frame %d: unknown word '%s'", num, word1);
+			{
+				strupr(word2);
+
+				if (fastcmp(word1, "SPRITENUMBER") || fastcmp(word1, "SPRITENAME"))
+				{
+					states[num].sprite = get_sprite(word2);
+				}
+				else if (fastcmp(word1, "SPRITESUBNUMBER") || fastcmp(word1, "SPRITEFRAME"))
+				{
+					states[num].frame = (INT32)get_number(word2); // So the FF_ flags get calculated
+				}
+				else if (fastcmp(word1, "DURATION"))
+				{
+					states[num].tics = (INT32)get_number(word2); // So TICRATE can be used
+				}
+				else if (fastcmp(word1, "NEXT"))
+				{
+					states[num].nextstate = get_state(word2);
+				}
+				else
+					deh_warning("Frame %d: unknown word '%s'", num, word1);
+			}
 		}
 	} while (!myfeof(f));
 
