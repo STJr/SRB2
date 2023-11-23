@@ -26,6 +26,8 @@
 #include "r_main.h"
 #include "r_fps.h"
 #include "i_video.h" // rendermode
+#include "netcode/net_command.h"
+#include "netcode/server_connection.h"
 
 // Object place
 #include "m_cheat.h"
@@ -841,16 +843,7 @@ void P_Ticker(boolean run)
 			countdown2--;
 
 		if (quake.time)
-		{
-			fixed_t ir = quake.intensity>>1;
-			/// \todo Calculate distance from epicenter if set and modulate the intensity accordingly based on radius.
-			quake.x = M_RandomRange(-ir,ir);
-			quake.y = M_RandomRange(-ir,ir);
-			quake.z = M_RandomRange(-ir,ir);
 			--quake.time;
-		}
-		else
-			quake.x = quake.y = quake.z = 0;
 
 		if (metalplayback)
 			G_ReadMetalTic(metalplayback);

@@ -3073,11 +3073,14 @@ static boolean P_ThingHeightClip(mobj_t *thing)
 		if (!rover || ((rover->fofflags & FOF_EXISTS) && (rover->fofflags & FOF_SOLID)))
 		{
 			hitfloor = bouncing;
-			if (thing->eflags & MFE_VERTICALFLIP)
-				thing->pmomz = thing->ceilingz - (thing->z + thing->height);
-			else
-				thing->pmomz = thing->floorz - thing->z;
-			thing->eflags |= MFE_APPLYPMOMZ;
+			if (!(thing->player) || !(thing->player->pflags & PF_JUMPED || bouncing))
+			{
+				if (thing->eflags & MFE_VERTICALFLIP)
+					thing->pmomz = thing->ceilingz - (thing->z + thing->height);
+				else
+					thing->pmomz = thing->floorz - thing->z;
+				thing->eflags |= MFE_APPLYPMOMZ;
+			}
 
 			if (thing->eflags & MFE_VERTICALFLIP)
 				thing->z = thing->ceilingz - thing->height;
