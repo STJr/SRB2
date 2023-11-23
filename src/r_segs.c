@@ -49,7 +49,7 @@ fixed_t rw_distance;
 static INT32 rw_x, rw_stopx;
 static angle_t rw_centerangle;
 static fixed_t rw_offset, rw_offsetx;
-static fixed_t rw_offset_top, rw_offset_mid, rw_offset_bot;
+static fixed_t rw_offset_top, rw_offset_mid, rw_offset_bottom;
 static fixed_t rw_scale, rw_scalestep;
 static fixed_t rw_midtexturemid, rw_toptexturemid, rw_bottomtexturemid;
 static INT32 worldtop, worldbottom, worldhigh, worldlow;
@@ -1046,6 +1046,7 @@ UINT32 nombre = 100000;
 static void R_RenderSegLoop (void)
 {
 	angle_t angle;
+	fixed_t textureoffset;
 	size_t  pindex;
 	INT32     yl;
 	INT32     yh;
@@ -1223,10 +1224,8 @@ static void R_RenderSegLoop (void)
 		//SoM: Calculate offsets for Thick fake floors.
 		// calculate texture offset
 		angle = (rw_centerangle + xtoviewangle[rw_x])>>ANGLETOFINESHIFT;
-
-		fixed_t distance = FixedMul(FINETANGENT(angle), rw_distance);
-
-		texturecolumn = FixedDiv(rw_offset - distance, rw_invmidtexturescalex);
+		textureoffset = rw_offset - FixedMul(FINETANGENT(angle), rw_distance);
+		texturecolumn = FixedDiv(textureoffset, rw_invmidtexturescalex);
 
 		// texturecolumn and lighting are independent of wall tiers
 		if (segtextured)
@@ -1343,7 +1342,7 @@ static void R_RenderSegLoop (void)
 				if (mid >= floorclip[rw_x])
 					mid = floorclip[rw_x]-1;
 
-				toptexturecolumn = FixedDiv(rw_offset - distance, rw_invtoptexturescalex);
+				toptexturecolumn = FixedDiv(textureoffset, rw_invtoptexturescalex);
 
 				if (mid >= yl) // back ceiling lower than front ceiling ?
 				{
@@ -1363,7 +1362,7 @@ static void R_RenderSegLoop (void)
 						dc_yh = mid;
 						dc_texturemid = rw_toptexturemid;
 						dc_iscale = FixedMul(0xffffffffu / (unsigned)rw_scale, rw_toptexturescaley);
-						dc_source = R_GetColumn(toptexture, toptexturecolumn >> FRACBITS);
+						dc_source = R_GetColumn(toptexture, offset >> FRACBITS);
 						dc_texheight = textureheight[toptexture]>>FRACBITS;
 						colfunc();
 						ceilingclip[rw_x] = (INT16)mid;
@@ -1391,7 +1390,7 @@ static void R_RenderSegLoop (void)
 				if (mid <= ceilingclip[rw_x])
 					mid = ceilingclip[rw_x]+1;
 
-				bottomtexturecolumn = FixedDiv(rw_offset - distance, rw_invbottomtexturescalex);
+				bottomtexturecolumn = FixedDiv(textureoffset, rw_invbottomtexturescalex);
 
 				if (mid <= yh) // back floor higher than front floor ?
 				{
@@ -1402,7 +1401,7 @@ static void R_RenderSegLoop (void)
 					}
 					else if (mid < viewheight) // safe to draw bottom texture
 					{
-						fixed_t offset = rw_offset_bot;
+						fixed_t offset = rw_offset_bottom;
 						if (rw_bottomtexturescalex < 0)
 							offset = -offset;
 						offset = bottomtexturecolumn + offset;
@@ -1434,7 +1433,7 @@ static void R_RenderSegLoop (void)
 			maskedtexturecol[rw_x] = texturecolumn + rw_offsetx;
 
 		if (thicksidecol)
-			thicksidecol[rw_x] = rw_offset - distance;
+			thicksidecol[rw_x] = textureoffset;
 
 		if (maskedtextureheight)
 		{
@@ -2388,6 +2387,8 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 
 	if (segtextured)
 	{
+		fixed_t sideoffset = sidedef->textureoffset;
+
 		offsetangle = rw_normalangle-rw_angle1;
 
 		if (offsetangle > ANGLE_180)
@@ -2415,11 +2416,9 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 		rw_offset += curline->offset;
 		rw_centerangle = ANGLE_90 + viewangle - rw_normalangle;
 
-		rw_offsetx = sidedef->textureoffset;
-
-		rw_offset_top = rw_offsetx + sidedef->offsetx_top;
-		rw_offset_mid = rw_offsetx + sidedef->offsetx_mid;
-		rw_offset_bot = rw_offsetx + sidedef->offsetx_bot;
+		rw_offset_top = sideoffset + sidedef->offsetx_top;
+		rw_offset_mid = sideoffset + sidedef->offsetx_mid;
+		rw_offset_bottom = sideoffset + sidedef->offsetx_bot;
 
 		rw_offsetx = rw_offset_mid;
 		if (rw_midtexturescalex < 0)
