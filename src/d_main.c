@@ -1603,6 +1603,9 @@ void D_SRB2Main(void)
 	if (D_CheckNetGame())
 		autostart = true;
 
+	if (!dedicated)
+		pickedchar = R_SkinAvailable(cv_defaultskin.string);
+
 	// check for a driver that wants intermission stats
 	// start the apropriate game based on parms
 	if (M_CheckParm("-metal"))
@@ -1615,8 +1618,6 @@ void D_SRB2Main(void)
 		G_RecordDemo(M_GetNextParm());
 		autostart = true;
 	}
-
-	pickedchar = R_SkinAvailable(cv_defaultskin.string);
 
 	// user settings come before "+" parameters.
 	if (dedicated)

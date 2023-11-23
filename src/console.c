@@ -540,13 +540,13 @@ static void CON_RecalcSize(void)
 		con_scalefactor = 1;
 		break;
 	case V_SMALLSCALEPATCH:
-		con_scalefactor = vid.smalldupx;
+		con_scalefactor = vid.smalldup;
 		break;
 	case V_MEDSCALEPATCH:
-		con_scalefactor = vid.meddupx;
+		con_scalefactor = vid.meddup;
 		break;
 	default:	// Full scaling
-		con_scalefactor = vid.dupx;
+		con_scalefactor = vid.dup;
 		break;
 	}
 
@@ -664,7 +664,7 @@ static void CON_MoveConsole(void)
 	}
 
 	// Not instant - Increment fracmovement fractionally
-	fracmovement += FixedMul(cons_speed.value*vid.fdupy, renderdeltatics);
+	fracmovement += FixedMul(cons_speed.value*vid.fdup, renderdeltatics);
 
 	if (con_curlines < con_destlines) // Move the console downwards
 	{
@@ -1748,9 +1748,9 @@ static void CON_DrawBackpic(void)
 	con_backpic = W_CachePatchNum(piclump, PU_PATCH);
 
 	// Center the backpic, and draw a vertically cropped patch.
-	w = (con_backpic->width * vid.dupx);
+	w = con_backpic->width * vid.dup;
 	x = (vid.width / 2) - (w / 2);
-	h = con_curlines/vid.dupy;
+	h = con_curlines/vid.dup;
 
 	// If the patch doesn't fill the entire screen,
 	// then fill the sides with a solid color.

@@ -51,11 +51,11 @@ typedef struct viddef_s
 	INT32 height;
 	INT32 recalc; // if true, recalc vid-based stuff
 
-	INT32 dupx, dupy; // scale 1, 2, 3 value for menus & overlays
-	UINT8 smalldupx, smalldupy; // factor for a little bit of scaling
-	UINT8 meddupx, meddupy; // factor for moderate, but not full, scaling
+	INT32 dup; // scale 1, 2, 3 value for menus & overlays
+	UINT8 smalldup; // factor for a little bit of scaling
+	UINT8 meddup; // factor for moderate, but not full, scaling
 
-	INT32 fdupx, fdupy; // same as dupx, dupy, but exact value when aspect ratio isn't 320/200
+	INT32 fdup; // same as dupx, dupy, but exact value when aspect ratio isn't 320/200
 	INT32 bpp; // BYTES per pixel: 1 = 256color, 2 = highcolor
 
 	struct {

@@ -51,6 +51,7 @@
 #include "r_fps.h" // frame interpolation/uncapped
 
 #include "lua_hud.h"
+#include "lua_libs.h"
 
 gameaction_t gameaction;
 gamestate_t gamestate = GS_NULL;
@@ -1170,7 +1171,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 	// why build a ticcmd if we're paused?
 	// Or, for that matter, if we're being reborn.
 	// ...OR if we're blindfolded. No looking into the floor.
-	if (paused || P_AutoPause() || (gamestate == GS_LEVEL && (player->playerstate == PST_REBORN || ((gametyperules & GTR_TAG)
+	if (ignoregameinputs || paused || P_AutoPause() || (gamestate == GS_LEVEL && (player->playerstate == PST_REBORN || ((gametyperules & GTR_TAG)
 	&& (leveltime < hidetime * TICRATE) && (player->pflags & PF_TAGIT)))))
 	{//@TODO splitscreen player
 		cmd->angleturn = ticcmd_oldangleturn[forplayer];
@@ -4346,7 +4347,7 @@ void G_LoadGameSettings(void)
 }
 
 #define GAMEDATA_ID 0x86E4A27C // Change every major version, as usual
-#define COMPAT_GAMEDATA_ID 0xFCAFE211 // Can be removed entirely for 2.3
+#define COMPAT_GAMEDATA_ID 0xFCAFE211 // TODO: 2.3: Delete
 
 // G_LoadGameData
 // Loads the main data file, which stores information such as emblems found, etc.
