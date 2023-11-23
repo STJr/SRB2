@@ -74,8 +74,9 @@ static fixed_t topfrac, topstep;
 static fixed_t bottomfrac, bottomstep;
 
 static lighttable_t **walllights;
-static fixed_t *maskedtexturecol;
+static fixed_t *maskedtexturecol = NULL;
 static fixed_t *maskedtextureheight = NULL;
+static fixed_t *invscale = NULL;
 
 //SoM: 3/23/2000: Use boom opening limit removal
 static size_t numopenings;
@@ -165,7 +166,8 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 
 	frontsector = curline->frontsector;
 	backsector = curline->backsector;
-	texnum = R_GetTextureNum(curline->sidedef->midtexture);
+	sidedef = curline->sidedef;
+	texnum = R_GetTextureNum(sidedef->midtexture);
 	windowbottom = windowtop = sprbotscreen = INT32_MAX;
 
 	ldef = curline->linedef;
@@ -203,9 +205,13 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 		colfunc = colfuncs[COLDRAWFUNC_FUZZY];
 	}
 
+	fixed_t wall_scaley = sidedef->scaley_mid;
+	fixed_t scalestep = FixedDiv(ds->scalestep, wall_scaley);
+	fixed_t scale1 = FixedDiv(ds->scale1, wall_scaley);
+
 	range = max(ds->x2-ds->x1, 1);
-	rw_scalestep = ds->scalestep;
-	spryscale = ds->scale1 + (x1 - ds->x1)*rw_scalestep;
+	rw_scalestep = scalestep;
+	spryscale = scale1 + (x1 - ds->x1)*rw_scalestep;
 
 	// Texture must be cached before setting colfunc_2s,
 	// otherwise texture[texnum]->holes may be false when it shouldn't be
@@ -316,8 +322,8 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 	else
 		back = backsector;
 
-	if (ds->curline->sidedef->repeatcnt)
-		repeats = 1 + ds->curline->sidedef->repeatcnt;
+	if (sidedef->repeatcnt)
+		repeats = 1 + sidedef->repeatcnt;
 	else if (ldef->flags & ML_WRAPMIDTEX)
 	{
 		fixed_t high, low;
@@ -343,15 +349,14 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 	{
 		if (times > 0)
 		{
-			rw_scalestep = ds->scalestep;
-			spryscale = ds->scale1 + (x1 - ds->x1)*rw_scalestep;
-			if (dc_numlights)
-			{ // reset all lights to their starting heights
-				for (i = 0; i < dc_numlights; i++)
-				{
-					rlight = &dc_lightlist[i];
-					rlight->height = rlight->startheight;
-				}
+			rw_scalestep = scalestep;
+			spryscale = scale1 + (x1 - ds->x1)*rw_scalestep;
+
+			// reset all lights to their starting heights
+			for (i = 0; i < dc_numlights; i++)
+			{
+				rlight = &dc_lightlist[i];
+				rlight->height = rlight->startheight;
 			}
 		}
 
@@ -393,8 +398,10 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 				sprbotscreen = INT32_MAX;
 				sprtopscreen = windowtop = (centeryfrac - FixedMul(dc_texturemid, spryscale));
 
-				realbot = windowbottom = FixedMul(textureheight[texnum], spryscale) + sprtopscreen;
-				dc_iscale = 0xffffffffu / (unsigned)spryscale;
+				realbot = FixedMul(textureheight[texnum], spryscale) + sprtopscreen;
+				dc_iscale = FixedMul(ds->invscale[dc_x], wall_scaley);
+
+				windowbottom = realbot;
 
 				// draw the texture
 				col = (column_t *)((UINT8 *)R_GetColumn(texnum, (maskedtexturecol[dc_x] >> FRACBITS)) - 3);
@@ -469,7 +476,7 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 				dc_colormap = frontsector->extra_colormap->colormap + (dc_colormap - colormaps);
 
 			sprtopscreen = centeryfrac - FixedMul(dc_texturemid, spryscale);
-			dc_iscale = 0xffffffffu / (unsigned)spryscale;
+			dc_iscale = FixedMul(ds->invscale[dc_x], wall_scaley);
 
 			// draw the texture
 			col = (column_t *)((UINT8 *)R_GetColumn(texnum, (maskedtexturecol[dc_x] >> FRACBITS)) - 3);
@@ -1431,27 +1438,15 @@ static void R_RenderSegLoop (void)
 				floorclip[rw_x] = bottomclip;
 		}
 
-		if (maskedtexture || numthicksides)
-		{
-			// save texturecol
-			//  for backdrawing of masked mid texture
-			maskedtexturecol[rw_x] = texturecolumn >> FRACBITS;
+		if (maskedtexturecol)
+			maskedtexturecol[rw_x] = texturecolumn;
 
-			if (maskedtextureheight != NULL) {
-				maskedtextureheight[rw_x] = (curline->linedef->flags & ML_MIDPEG) ?
-											max(rw_midtexturemid, rw_midtextureback) :
-											min(rw_midtexturemid, rw_midtextureback);
-			}
-		}
-
-		if (dc_numlights)
+		if (maskedtextureheight)
 		{
-			for (i = 0; i < dc_numlights; i++)
-			{
-				dc_lightlist[i].height += dc_lightlist[i].heightstep;
-				if (dc_lightlist[i].flags & FOF_CUTSOLIDS)
-					dc_lightlist[i].botheight += dc_lightlist[i].botheightstep;
-			}
+			if (curline->linedef->flags & ML_MIDPEG)
+				maskedtextureheight[rw_x] = max(rw_midtexturemid, rw_midtextureback);
+			else
+				maskedtextureheight[rw_x] = min(rw_midtexturemid, rw_midtextureback);
 		}
 
 		if (midtexture || maskedtextureheight)
@@ -1463,6 +1458,19 @@ static void R_RenderSegLoop (void)
 			}
 
 			oldtexturecolumn = texturecolumn;
+		}
+
+		if (invscale)
+			invscale[rw_x] = 0xffffffffu / (unsigned)rw_scale;
+
+		if (dc_numlights)
+		{
+			for (i = 0; i < dc_numlights; i++)
+			{
+				dc_lightlist[i].height += dc_lightlist[i].heightstep;
+				if (dc_lightlist[i].flags & FOF_CUTSOLIDS)
+					dc_lightlist[i].botheight += dc_lightlist[i].botheightstep;
+			}
 		}
 
 		for (i = 0; i < numffloors; i++)
@@ -1569,6 +1577,8 @@ static void R_AllocTextureColumnTables(size_t range)
 			ds->maskedtexturecol = (ds->maskedtexturecol - oldtable) + texturecolumntable;
 		if (ds->thicksidecol + ds->x1 >= oldtable && ds->thicksidecol + ds->x1 <= oldlast)
 			ds->thicksidecol = (ds->thicksidecol - oldtable) + texturecolumntable;
+		if (ds->invscale + ds->x1 >= oldtable && ds->invscale + ds->x1 <= oldlast)
+			ds->invscale = (ds->invscale - oldtable) + texturecolumntable;
 	}
 }
 
@@ -1592,7 +1602,10 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 	fixed_t ceilingfrontslide, floorfrontslide, ceilingbackslide, floorbackslide;
 	static size_t maxdrawsegs = 0;
 
+	maskedtexturecol = NULL;
 	maskedtextureheight = NULL;
+	invscale = NULL;
+
 	//initialize segleft and segright
 	memset(&segleft, 0x00, sizeof(segleft));
 	memset(&segright, 0x00, sizeof(segright));
@@ -1749,6 +1762,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 	ds_p->maskedtexturecol = NULL;
 	ds_p->numthicksides = numthicksides = 0;
 	ds_p->thicksidecol = NULL;
+	ds_p->invscale = NULL;
 	ds_p->tsilheight = 0;
 
 	numbackffloors = 0;
@@ -2134,10 +2148,9 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 			// Used for height comparisons and etc across FOFs and slopes
 			fixed_t high1, highslope1, low1, lowslope1, high2, highslope2, low2, lowslope2;
 
-			//markceiling = markfloor = true;
 			maskedtexture = true;
 
-			ds_p->thicksidecol = maskedtexturecol = curtexturecolumntable - rw_x;
+			ds_p->thicksidecol = curtexturecolumntable - rw_x;
 			curtexturecolumntable += rw_stopx - rw_x;
 
 			lowcut = max(worldbottom, worldlow) + viewz;
@@ -2319,13 +2332,8 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 		if (sidedef->midtexture > 0 && sidedef->midtexture < numtextures)
 		{
 			// masked midtexture
-			if (!ds_p->thicksidecol)
-			{
-				ds_p->maskedtexturecol = maskedtexturecol = curtexturecolumntable - rw_x;
-				curtexturecolumntable += rw_stopx - rw_x;
-			}
-			else
-				ds_p->maskedtexturecol = ds_p->thicksidecol;
+			ds_p->maskedtexturecol = maskedtexturecol = curtexturecolumntable - rw_x;
+			curtexturecolumntable += rw_stopx - rw_x;
 
 			maskedtextureheight = ds_p->maskedtextureheight; // note to red, this == &(ds_p->maskedtextureheight[0])
 
@@ -2436,6 +2444,12 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 			walllights = scalelight[LIGHTLEVELS - 1];
 		else
 			walllights = scalelight[lightnum];
+	}
+
+	if (maskedtexture)
+	{
+		ds_p->invscale = invscale = curtexturecolumntable - rw_x;
+		curtexturecolumntable += rw_stopx - rw_x;
 	}
 
 	// if a floor / ceiling plane is on the wrong side
