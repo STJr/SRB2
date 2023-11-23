@@ -35,6 +35,7 @@ typedef struct
 {
 	unsigned length;
 	char *chars;
+	UINT32 hash;
 } action_string_t;
 
 typedef struct
@@ -44,7 +45,7 @@ typedef struct
 	{
 		INT32 v_integer;
 		boolean v_bool;
-		action_string_t v_string;
+		UINT32 v_string_id;
 	};
 } action_val_t;
 
@@ -56,11 +57,11 @@ typedef struct
 #define ACTION_NULL_VAL (action_val_t){ .type = ACTION_VAL_NULL }
 #define ACTION_INTEGER_VAL(val) (action_val_t){ .type = ACTION_VAL_INTEGER, .v_integer = (val) }
 #define ACTION_BOOLEAN_VAL(val) (action_val_t){ .type = ACTION_VAL_BOOLEAN, .v_bool = (val) }
-#define ACTION_STRING_VAL(val) (action_val_t){ .type = ACTION_VAL_STRING, .v_string = (val) }
+#define ACTION_STRING_VAL(val) (action_val_t){ .type = ACTION_VAL_STRING, .v_string_id = (val) }
 
 #define ACTION_VAL_AS_INTEGER(val) ((val).v_integer)
 #define ACTION_VAL_AS_BOOLEAN(val) ((val).v_bool)
-#define ACTION_VAL_AS_STRING(val) ((val).v_string)
+#define ACTION_VAL_AS_STRING(val) ((val).v_string_id)
 
 //
 // Experimental stuff.

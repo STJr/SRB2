@@ -203,8 +203,6 @@ static int action_call(lua_State *L)
 		{
 			if (!LUA_ValueIsValidActionVal(L, i))
 			{
-				for (int k = 0; k < j; k++)
-					Action_FreeValue(call_args[k]);
 				Z_Free(call_args);
 				return luaL_error(L, va("value of type %s cannot be passed to an action", luaL_typename(L, i)));
 			}
@@ -214,9 +212,6 @@ static int action_call(lua_State *L)
 	}
 
 	action->acpscr(actor, call_args, num_action_args);
-
-	for (int i = 0; i < num_action_args; i++)
-		Action_FreeValue(call_args[i]);
 
 	Z_Free(call_args);
 

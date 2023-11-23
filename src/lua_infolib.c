@@ -67,9 +67,9 @@ void LUA_ValueToActionVal(lua_State *L, int i, action_val_t *val)
 		break;
 	case LUA_TSTRING:
 	{
-		action_string_t stringval;
-		Action_MakeString(&stringval, Z_StrDup(lua_tostring(L, i)));
-		value = ACTION_STRING_VAL(stringval);
+		size_t string_length = 0;
+		const char *string = lua_tolstring(L, i, &string_length);
+		value = ACTION_STRING_VAL(Action_AddString(string, string_length));
 		break;
 	}
 	default:
@@ -107,7 +107,6 @@ static boolean GetActionValuesFromTable(lua_State *L, action_val_t *vars, int n)
 			}
 
 			CHECK_ACTION_VAL_TYPE(n + 2);
-			Action_FreeValue(vars[i]);
 			LUA_ValueToActionVal(L, n + 2, &vars[i]);
 			lua_pop(L, 1);
 		}
@@ -716,7 +715,13 @@ static void PushActionValue(lua_State *L, action_val_t arg)
 	else if (ACTION_VAL_IS_BOOLEAN(arg))
 		lua_pushboolean(L, ACTION_VAL_AS_BOOLEAN(arg));
 	else if (ACTION_VAL_IS_STRING(arg))
-		lua_pushlstring(L, arg.v_string.chars, arg.v_string.length);
+	{
+		action_string_t *string = Action_GetString(ACTION_VAL_AS_STRING(arg));
+		if (string)
+			lua_pushlstring(L, string->chars, string->length);
+		else
+			lua_pushnil(L);
+	}
 	else if (ACTION_VAL_IS_NULL(arg))
 		lua_pushnil(L);
 }
@@ -864,11 +869,9 @@ static int lib_setState(lua_State *L)
 			}
 		} else if (i == 5 || (str && fastcmp(str, "var1"))) {
 			CHECK_ACTION_VAL_TYPE(3);
-			Action_FreeValue(state->vars[0]);
 			LUA_ValueToActionVal(L, 3, &state->vars[0]);
 		} else if (i == 6 || (str && fastcmp(str, "var2"))) {
 			CHECK_ACTION_VAL_TYPE(3);
-			Action_FreeValue(state->vars[1]);
 			LUA_ValueToActionVal(L, 3, &state->vars[1]);
 		} else if (i == 7 || (str && fastcmp(str, "nextstate"))) {
 			value = luaL_checkinteger(L, 3);
@@ -1123,12 +1126,10 @@ static int state_set(lua_State *L)
 		}
 	} else if (fastcmp(field,"var1")) {
 		CHECK_ACTION_VAL_TYPE(3);
-		Action_FreeValue(st->vars[0]);
 		LUA_ValueToActionVal(L, 3, &st->vars[0]);
 	}
 	else if (fastcmp(field,"var2")) {
 		CHECK_ACTION_VAL_TYPE(3);
-		Action_FreeValue(st->vars[1]);
 		LUA_ValueToActionVal(L, 3, &st->vars[1]);
 	}
 	else if (fastcmp(field,"vars")) {
@@ -1171,7 +1172,6 @@ static int statevars_set(lua_State *L)
 	if (n <= 0 || n > MAX_ACTION_VARS)
 		return luaL_error(L, LUA_QL("state_t") " field 'vars' index %d out of range (1 - %d)", n, MAX_ACTION_VARS);
 	n--;
-	Action_FreeValue(vars[n]);
 	LUA_ValueToActionVal(L, 3, &vars[n]);
 	return 0;
 }

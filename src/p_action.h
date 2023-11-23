@@ -16,14 +16,16 @@
 
 #include "p_mobj.h"
 
+#define ACTION_NO_STRING 0xFFFFFFFF
+
 INT32 Action_ValueToInteger(action_val_t value);
 
 char *Action_ValueToString(action_val_t value);
 
-void Action_FreeValue(action_val_t value);
+UINT32 Action_FindMatchingString(const char *str, unsigned length);
+UINT32 Action_AddString(const char *str, unsigned length);
 
-void Action_MakeString(action_string_t *out, char *str);
-void Action_FreeStringChars(action_string_t *str);
+action_string_t *Action_GetString(UINT32 string_id);
 
 // IMPORTANT NOTE: If you add/remove from this list of action
 // functions, don't forget to update them in deh_tables.c!

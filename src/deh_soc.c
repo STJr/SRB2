@@ -86,17 +86,17 @@ static boolean check_string_token(char *word)
 	return true;
 }
 
-static boolean parse_string_token(action_string_t *string, char *word)
+static boolean parse_string_token(char **string_chars, unsigned *string_length, char *word)
 {
 	int token_length = strlen(word);
 	int length = token_length - 2;
 	if (length <= 0)
 		return false;
 
-	string->chars = Z_Calloc(length + 1, PU_STATIC, NULL);
-	string->length = 0;
+	*string_chars = Z_Calloc(length + 1, PU_STATIC, NULL);
+	*string_length = 0;
 
-	char *chars = string->chars;
+	char *chars = *string_chars;
 
 	char *str = word + 1;
 	char *str_end = word + token_length - 1;
@@ -116,7 +116,7 @@ static boolean parse_string_token(action_string_t *string, char *word)
 				*chars = '\\';
 			else
 			{
-				Z_Free(string->chars);
+				Z_Free(*string_chars);
 				deh_warning("Invalid escape character in string token");
 				return false;
 			}
@@ -124,7 +124,7 @@ static boolean parse_string_token(action_string_t *string, char *word)
 		else
 			*chars = *str;
 
-		string->length++;
+		(*string_length)++;
 		chars++;
 		str++;
 	}
@@ -142,15 +142,18 @@ static boolean parse_word(action_val_t *value, char *word)
 			return false;
 		}
 
-		action_string_t string;
+		char *string_chars = NULL;
+		unsigned string_length = 0;
 
-		if (!parse_string_token(&string, word))
+		if (!parse_string_token(&string_chars, &string_length, word))
 		{
 			*value = ACTION_NULL_VAL;
 			return false;
 		}
 
-		*value = ACTION_STRING_VAL(string);
+		*value = ACTION_STRING_VAL(Action_AddString(string_chars, string_length));
+
+		Z_Free(string_chars);
 	}
 	else if (fastcmp(word, "true"))
 	{
@@ -2905,7 +2908,6 @@ void readframe(MYFILE *f, INT32 num)
 			&& word1[3] >= '1' && word1[3] <= '8')
 			{
 				unsigned varSlot = (word1[3] - 0x30) - 1;
-				Action_FreeValue(states[num].vars[varSlot]);
 				parse_word(&states[num].vars[varSlot], word2);
 			}
 			else

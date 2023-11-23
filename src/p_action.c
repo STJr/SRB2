@@ -26,27 +26,60 @@
 #include "lua_hook.h"
 #include "m_cond.h" // SECRET_SKIN
 
-INT32 modulothing;
-
-//
-// ACTION ROUTINES
-//
-void Action_FreeValue(action_val_t value)
-{
-	if (ACTION_VAL_IS_STRING(value))
-		Action_FreeStringChars(&value.v_string);
-}
-
-void Action_MakeString(action_string_t *out, char *str)
-{
-	out->chars = str;
-	out->length = strlen(str);
-}
-
-void Action_FreeStringChars(action_string_t *str)
+#if 0
+static void Action_FreeStringChars(action_string_t *str)
 {
 	Z_Free(str->chars);
 	str->chars = NULL;
+}
+#endif
+
+static action_string_t *actionstrings = NULL;
+static UINT32 numactionstrings = 0;
+
+UINT32 Action_FindMatchingString(const char *str, unsigned length)
+{
+	UINT32 hash = quickncasehash(str, strlen(str));
+
+	for (UINT32 i = 0; i < numactionstrings; i++)
+	{
+		if (length == actionstrings[i].length
+		&& hash == actionstrings[i].hash
+		&& memcmp(str, actionstrings[i].chars, length) == 0)
+			return i;
+	}
+
+	return ACTION_NO_STRING;
+}
+
+UINT32 Action_AddString(const char *str, unsigned length)
+{
+	UINT32 hash = quickncasehash(str, length);
+
+	UINT32 id = Action_FindMatchingString(str, length);
+	if (id != ACTION_NO_STRING)
+		return id;
+
+	id = numactionstrings++;
+	actionstrings = Z_Realloc(actionstrings, sizeof(action_string_t) * numactionstrings, PU_STATIC, NULL);
+
+	action_string_t *astr = &actionstrings[id];
+	astr->length = length;
+	astr->hash = hash;
+
+	astr->chars = ZZ_Alloc(length + 1);
+	memcpy(astr->chars, str, length);
+	astr->chars[length] = '\0';
+
+	return id;
+}
+
+action_string_t *Action_GetString(UINT32 string_id)
+{
+	if (string_id >= numactionstrings)
+		return NULL;
+
+	return &actionstrings[string_id];
 }
 
 static const char *Action_GetTypeName(UINT8 type)
@@ -92,9 +125,10 @@ INT32 Action_ValueToInteger(action_val_t value)
 
 char *Action_ValueToString(action_val_t value)
 {
+	size_t bufsize = 128;
+
 	if (ACTION_VAL_IS_INTEGER(value))
 	{
-		size_t bufsize = 128;
 		char *buffer = Z_Malloc(bufsize, PU_STATIC, NULL);
 		snprintf(buffer, bufsize, "<integer> %d", Action_ValueToInteger(value));
 		return buffer;
@@ -102,7 +136,11 @@ char *Action_ValueToString(action_val_t value)
 	else if (ACTION_VAL_IS_BOOLEAN(value))
 		return ACTION_VAL_AS_BOOLEAN(value) ? Z_StrDup("<boolean> true") : Z_StrDup("<boolean> false");
 	else if (ACTION_VAL_IS_STRING(value))
-		return Z_StrDup("<string>");
+	{
+		char *buffer = Z_Malloc(bufsize, PU_STATIC, NULL);
+		snprintf(buffer, bufsize, "<string> %d", ACTION_VAL_AS_STRING(value));
+		return buffer;
+	}
 	else if (ACTION_VAL_IS_NULL(value))
 		return Z_StrDup("<null>");
 
@@ -128,6 +166,12 @@ static INT32 GetInteger(action_val_t *args, unsigned argcount, unsigned argnum, 
 	(void)argcount
 
 #define LUA_CALL_ACTION(action) LUA_CallAction(action, actor, args, argcount)
+
+//
+// ACTION ROUTINES
+//
+
+INT32 modulothing;
 
 // Function: A_Look
 //
