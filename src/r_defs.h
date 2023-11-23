@@ -757,6 +757,8 @@ typedef struct drawseg_s
 	fixed_t bsilheight; // do not clip sprites above this
 	fixed_t tsilheight; // do not clip sprites below this
 
+	fixed_t offsetx;
+
 	// Pointers to lists for sprite clipping, all three adjusted so [x1] is first value.
 	INT16 *sprtopclip;
 	INT16 *sprbottomclip;

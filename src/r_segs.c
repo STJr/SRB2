@@ -76,6 +76,7 @@ static fixed_t bottomfrac, bottomstep;
 static lighttable_t **walllights;
 static fixed_t *maskedtexturecol = NULL;
 static fixed_t *maskedtextureheight = NULL;
+static fixed_t *thicksidecol = NULL;
 static fixed_t *invscale = NULL;
 
 //SoM: 3/23/2000: Use boom opening limit removal
@@ -535,7 +536,7 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 	INT32             i, p;
 	fixed_t         bottombounds = viewheight << FRACBITS;
 	fixed_t         topbounds = (con_clipviewtop - 1) << FRACBITS;
-	fixed_t         offsetvalue = 0;
+	fixed_t         offsetvalue;
 	lightlist_t     *light;
 	r_lightlist_t   *rlight;
 	INT32           range;
@@ -544,11 +545,13 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 	// NOTE: INT64 instead of fixed_t because overflow concerns
 	INT64         top_frac, top_step, bottom_frac, bottom_step;
 	// skew FOF walls with slopes?
-	boolean	      slopeskew = false;
 	fixed_t       ffloortextureslide = 0;
 	INT32         oldx = -1;
 	fixed_t       left_top, left_bottom; // needed here for slope skewing
 	pslope_t      *skewslope = NULL;
+	boolean do_texture_skew;
+	UINT32 lineflags;
+	fixed_t wall_scalex, wall_scaley;
 
 	void (*colfunc_2s) (column_t *);
 
@@ -560,7 +563,7 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 	curline = ds->curline;
 	backsector = pfloor->target;
 	frontsector = curline->frontsector == pfloor->target ? curline->backsector : curline->frontsector;
-	texnum = R_GetTextureNum(sides[pfloor->master->sidenum[0]].midtexture);
+	sidedef = &sides[pfloor->master->sidenum[0]];
 
 	colfunc = colfuncs[BASEDRAWFUNC];
 
@@ -568,8 +571,13 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 	{
 		size_t linenum = curline->linedef-backsector->lines[0];
 		newline = pfloor->master->frontsector->lines[0] + linenum;
-		texnum = R_GetTextureNum(sides[newline->sidenum[0]].midtexture);
+		sidedef = &sides[newline->sidenum[0]];
+		lineflags = newline->flags;
 	}
+	else
+		lineflags = pfloor->master->flags;
+
+	texnum = R_GetTextureNum(sidedef->midtexture);
 
 	if (pfloor->fofflags & FOF_TRANSLUCENT)
 	{
@@ -721,7 +729,13 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 			walllights = scalelight[lightnum];
 	}
 
-	maskedtexturecol = ds->thicksidecol;
+	wall_scalex = FixedDiv(FRACUNIT, sidedef->scalex_mid);
+	wall_scaley = sidedef->scaley_mid;
+
+	thicksidecol = ds->thicksidecol;
+
+	for (INT32 x = x1; x <= x2; x++)
+		thicksidecol[x] = FixedDiv(thicksidecol[x], wall_scalex) + ds->offsetx;
 
 	mfloorclip = ds->sprbottomclip;
 	mceilingclip = ds->sprtopclip;
@@ -731,51 +745,29 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 	left_top    = P_GetFFloorTopZAt   (pfloor, ds->leftpos.x, ds->leftpos.y) - viewz;
 	left_bottom = P_GetFFloorBottomZAt(pfloor, ds->leftpos.x, ds->leftpos.y) - viewz;
 
+	do_texture_skew = lineflags & ML_SKEWTD;
 	skewslope = *pfloor->t_slope; // skew using top slope by default
-	if (newline)
-	{
-		if (newline->flags & ML_SKEWTD)
-			slopeskew = true;
-	}
-	else if (pfloor->master->flags & ML_SKEWTD)
-		slopeskew = true;
 
-	if (slopeskew)
-		dc_texturemid = left_top;
+	if (do_texture_skew)
+		dc_texturemid = FixedMul(left_top, wall_scaley);
 	else
-		dc_texturemid = *pfloor->topheight - viewz;
+		dc_texturemid = FixedMul(*pfloor->topheight - viewz, wall_scaley);
 
-	if (newline)
+	offsetvalue = sidedef->rowoffset + sidedef->offsety_mid;
+
+	if (lineflags & ML_DONTPEGBOTTOM)
 	{
-		offsetvalue = sides[newline->sidenum[0]].rowoffset + sides[newline->sidenum[0]].offsety_mid;
-		if (newline->flags & ML_DONTPEGBOTTOM)
-		{
-			skewslope = *pfloor->b_slope; // skew using bottom slope
-			if (slopeskew)
-				dc_texturemid = left_bottom;
-			else
-				offsetvalue -= *pfloor->topheight - *pfloor->bottomheight;
-		}
-	}
-	else
-	{
-		offsetvalue = sides[pfloor->master->sidenum[0]].rowoffset + sides[pfloor->master->sidenum[0]].offsety_mid;
-		if (curline->linedef->flags & ML_DONTPEGBOTTOM)
-		{
-			skewslope = *pfloor->b_slope; // skew using bottom slope
-			if (slopeskew)
-				dc_texturemid = left_bottom;
-			else
-				offsetvalue -= *pfloor->topheight - *pfloor->bottomheight;
-		}
+		skewslope = *pfloor->b_slope; // skew using bottom slope
+		if (do_texture_skew)
+			dc_texturemid = FixedMul(left_bottom, wall_scaley);
+		else
+			offsetvalue -= FixedMul(*pfloor->topheight - *pfloor->bottomheight, wall_scaley);
 	}
 
-	if (slopeskew)
+	if (do_texture_skew && skewslope)
 	{
 		angle_t lineangle = R_PointToAngle2(curline->v1->x, curline->v1->y, curline->v2->x, curline->v2->y);
-
-		if (skewslope)
-			ffloortextureslide = FixedMul(skewslope->zdelta, FINECOSINE((lineangle-skewslope->xydirection)>>ANGLETOFINESHIFT));
+		ffloortextureslide = FixedMul(skewslope->zdelta, FINECOSINE((lineangle-skewslope->xydirection)>>ANGLETOFINESHIFT));
 	}
 
 	dc_texturemid += offsetvalue;
@@ -829,7 +821,7 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 		if (ffloortextureslide)
 		{
 			if (oldx != -1)
-				dc_texturemid += FixedMul(ffloortextureslide, maskedtexturecol[oldx]-maskedtexturecol[dc_x]);
+				dc_texturemid += FixedMul(ffloortextureslide, thicksidecol[oldx]-thicksidecol[dc_x]);
 			oldx = dc_x;
 		}
 
@@ -862,10 +854,10 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 			continue;
 		}
 
-		dc_iscale = 0xffffffffu / (unsigned)spryscale;
+		dc_iscale = FixedMul(0xffffffffu / (unsigned)spryscale, wall_scaley);
 
 		// Get data for the column
-		col = (column_t *)((UINT8 *)R_GetColumn(texnum, (maskedtexturecol[dc_x] >> FRACBITS)) - 3);
+		col = (column_t *)((UINT8 *)R_GetColumn(texnum, (thicksidecol[dc_x] >> FRACBITS)) - 3);
 
 		// SoM: New code does not rely on R_DrawColumnShadowed_8 which
 		// will (hopefully) put less strain on the stack.
@@ -1439,7 +1431,10 @@ static void R_RenderSegLoop (void)
 		}
 
 		if (maskedtexturecol)
-			maskedtexturecol[rw_x] = texturecolumn;
+			maskedtexturecol[rw_x] = texturecolumn + rw_offsetx;
+
+		if (thicksidecol)
+			thicksidecol[rw_x] = rw_offset - distance;
 
 		if (maskedtextureheight)
 		{
@@ -1551,10 +1546,9 @@ static void R_AllocClippingTables(size_t range)
 static void R_AllocTextureColumnTables(size_t range)
 {
 	size_t pos = curtexturecolumntable - texturecolumntable;
+	size_t need = range * 3;
 
-	// For both tables, we reserve exactly an amount of memory that's equivalent to
-	// how many columns the seg will take on the entire screen (think about it)
-	if (pos + range < texturecolumntablesize)
+	if (pos + need < texturecolumntablesize)
 		return;
 
 	fixed_t *oldtable = texturecolumntable;
@@ -1563,7 +1557,7 @@ static void R_AllocTextureColumnTables(size_t range)
 	if (texturecolumntablesize == 0)
 		texturecolumntablesize = 16384;
 
-	texturecolumntablesize += range;
+	texturecolumntablesize += need;
 	texturecolumntable = Z_Realloc(texturecolumntable, texturecolumntablesize * sizeof (*texturecolumntable), PU_STATIC, NULL);
 	curtexturecolumntable = texturecolumntable + pos;
 
@@ -1604,6 +1598,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 
 	maskedtexturecol = NULL;
 	maskedtextureheight = NULL;
+	thicksidecol = NULL;
 	invscale = NULL;
 
 	//initialize segleft and segright
@@ -2135,9 +2130,9 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 		rw_toptexturemid += toprowoffset;
 		rw_bottomtexturemid += botrowoffset;
 
+		// allocate space for masked texture tables
 		R_AllocTextureColumnTables(rw_stopx - start);
 
-		// allocate space for masked texture tables
 		if (frontsector && backsector && !Tag_Compare(&frontsector->tags, &backsector->tags) && (backsector->ffloors || frontsector->ffloors))
 		{
 			ffloor_t *rover;
@@ -2150,7 +2145,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 
 			maskedtexture = true;
 
-			ds_p->thicksidecol = curtexturecolumntable - rw_x;
+			ds_p->thicksidecol = thicksidecol = curtexturecolumntable - rw_x;
 			curtexturecolumntable += rw_stopx - rw_x;
 
 			lowcut = max(worldbottom, worldlow) + viewz;
@@ -2329,13 +2324,16 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 
 			ds_p->numthicksides = numthicksides = i;
 		}
+
+		// masked midtexture
 		if (sidedef->midtexture > 0 && sidedef->midtexture < numtextures)
 		{
-			// masked midtexture
 			ds_p->maskedtexturecol = maskedtexturecol = curtexturecolumntable - rw_x;
 			curtexturecolumntable += rw_stopx - rw_x;
 
 			maskedtextureheight = ds_p->maskedtextureheight; // note to red, this == &(ds_p->maskedtextureheight[0])
+
+			maskedtexture = true;
 
 			if (curline->polyseg)
 			{
@@ -2426,6 +2424,9 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 		rw_offsetx = rw_offset_mid;
 		if (rw_midtexturescalex < 0)
 			rw_offsetx = -rw_offsetx;
+
+		if (numthicksides)
+			ds_p->offsetx = rw_offsetx;
 
 		// calculate light table
 		//  use different light tables
