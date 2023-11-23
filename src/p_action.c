@@ -125,10 +125,9 @@ INT32 Action_ValueToInteger(action_val_t value)
 
 char *Action_ValueToString(action_val_t value)
 {
-	size_t bufsize = 128;
-
 	if (ACTION_VAL_IS_INTEGER(value))
 	{
+		size_t bufsize = 64;
 		char *buffer = Z_Malloc(bufsize, PU_STATIC, NULL);
 		snprintf(buffer, bufsize, "<integer> %d", Action_ValueToInteger(value));
 		return buffer;
@@ -137,9 +136,16 @@ char *Action_ValueToString(action_val_t value)
 		return ACTION_VAL_AS_BOOLEAN(value) ? Z_StrDup("<boolean> true") : Z_StrDup("<boolean> false");
 	else if (ACTION_VAL_IS_STRING(value))
 	{
-		char *buffer = Z_Malloc(bufsize, PU_STATIC, NULL);
-		snprintf(buffer, bufsize, "<string> %d", ACTION_VAL_AS_STRING(value));
-		return buffer;
+		action_string_t *string = Action_GetString(ACTION_VAL_AS_STRING(value));
+		if (string)
+		{
+			size_t bufsize = string->length + 12;
+			char *buffer = Z_Malloc(bufsize, PU_STATIC, NULL);
+			snprintf(buffer, bufsize, "<string> \"%.*s\"", string->length, string->chars);
+			return buffer;
+		}
+		else
+			return Z_StrDup("<string> invalid");
 	}
 	else if (ACTION_VAL_IS_NULL(value))
 		return Z_StrDup("<null>");
