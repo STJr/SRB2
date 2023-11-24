@@ -35,10 +35,14 @@ enum sector_e {
 	sector_floorpic,
 	sector_floorxoffset,
 	sector_flooryoffset,
+	sector_floorxscale,
+	sector_flooryscale,
 	sector_floorangle,
 	sector_ceilingpic,
 	sector_ceilingxoffset,
 	sector_ceilingyoffset,
+	sector_ceilingxscale,
+	sector_ceilingyscale,
 	sector_ceilingangle,
 	sector_lightlevel,
 	sector_floorlightlevel,
@@ -73,10 +77,14 @@ static const char *const sector_opt[] = {
 	"floorpic",
 	"floorxoffset",
 	"flooryoffset",
+	"floorxscale",
+	"flooryscale",
 	"floorangle",
 	"ceilingpic",
 	"ceilingxoffset",
 	"ceilingyoffset",
+	"ceilingxscale",
+	"ceilingyscale",
 	"ceilingangle",
 	"lightlevel",
 	"floorlightlevel",
@@ -666,20 +674,20 @@ static int sector_get(lua_State *L)
 		return 1;
 	}
 	case sector_floorxoffset:
-	{
 		lua_pushfixed(L, sector->floorxoffset);
 		return 1;
-	}
 	case sector_flooryoffset:
-	{
 		lua_pushfixed(L, sector->flooryoffset);
 		return 1;
-	}
+	case sector_floorxscale:
+		lua_pushfixed(L, sector->floorxscale);
+		return 1;
+	case sector_flooryscale:
+		lua_pushfixed(L, sector->flooryscale);
+		return 1;
 	case sector_floorangle:
-	{
 		lua_pushangle(L, sector->floorangle);
 		return 1;
-	}
 	case sector_ceilingpic: // ceilingpic
 	{
 		levelflat_t *levelflat = &levelflats[sector->ceilingpic];
@@ -690,20 +698,20 @@ static int sector_get(lua_State *L)
 		return 1;
 	}
 	case sector_ceilingxoffset:
-	{
 		lua_pushfixed(L, sector->ceilingxoffset);
 		return 1;
-	}
 	case sector_ceilingyoffset:
-	{
 		lua_pushfixed(L, sector->ceilingyoffset);
 		return 1;
-	}
+	case sector_ceilingxscale:
+		lua_pushfixed(L, sector->ceilingxscale);
+		return 1;
+	case sector_ceilingyscale:
+		lua_pushfixed(L, sector->ceilingyscale);
+		return 1;
 	case sector_ceilingangle:
-	{
 		lua_pushangle(L, sector->ceilingangle);
 		return 1;
-	}
 	case sector_lightlevel:
 		lua_pushinteger(L, sector->lightlevel);
 		return 1;
@@ -852,6 +860,12 @@ static int sector_set(lua_State *L)
 	case sector_flooryoffset:
 		sector->flooryoffset = luaL_checkfixed(L, 3);
 		break;
+	case sector_floorxscale:
+		sector->floorxscale = luaL_checkfixed(L, 3);
+		break;
+	case sector_flooryscale:
+		sector->flooryscale = luaL_checkfixed(L, 3);
+		break;
 	case sector_floorangle:
 		sector->floorangle = luaL_checkangle(L, 3);
 		break;
@@ -863,6 +877,12 @@ static int sector_set(lua_State *L)
 		break;
 	case sector_ceilingyoffset:
 		sector->ceilingyoffset = luaL_checkfixed(L, 3);
+		break;
+	case sector_ceilingxscale:
+		sector->ceilingxscale = luaL_checkfixed(L, 3);
+		break;
+	case sector_ceilingyscale:
+		sector->ceilingyscale = luaL_checkfixed(L, 3);
 		break;
 	case sector_ceilingangle:
 		sector->ceilingangle = luaL_checkangle(L, 3);

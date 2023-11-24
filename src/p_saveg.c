@@ -867,6 +867,10 @@ static void P_NetUnArchiveWaypoints(void)
 #define SD_TRIGGERTAG 0x02
 #define SD_TRIGGERER 0x04
 #define SD_GRAVITY   0x08
+#define SD_FXSCALE   0x10
+#define SD_FYSCALE   0x20
+#define SD_CXSCALE   0x40
+#define SD_CYSCALE   0x80
 
 #define LD_FLAG          0x01
 #define LD_SPECIAL       0x02
@@ -1054,6 +1058,14 @@ static void ArchiveSectors(void)
 			diff2 |= SD_CXOFFS;
 		if (ss->ceilingyoffset != spawnss->ceilingyoffset)
 			diff2 |= SD_CYOFFS;
+		if (ss->floorxscale != spawnss->floorxscale)
+			diff2 |= SD_FXSCALE;
+		if (ss->flooryscale != spawnss->flooryscale)
+			diff2 |= SD_FYSCALE;
+		if (ss->ceilingxscale != spawnss->ceilingxscale)
+			diff2 |= SD_CXSCALE;
+		if (ss->ceilingyscale != spawnss->ceilingyscale)
+			diff2 |= SD_CYSCALE;
 		if (ss->floorangle != spawnss->floorangle)
 			diff2 |= SD_FLOORANG;
 		if (ss->ceilingangle != spawnss->ceilingangle)
@@ -1164,6 +1176,14 @@ static void ArchiveSectors(void)
 				WRITEUINT8(save_p, ss->triggerer);
 			if (diff4 & SD_GRAVITY)
 				WRITEFIXED(save_p, ss->gravity);
+			if (diff4 & SD_FXSCALE)
+				WRITEFIXED(save_p, ss->floorxscale);
+			if (diff4 & SD_FYSCALE)
+				WRITEFIXED(save_p, ss->flooryscale);
+			if (diff4 & SD_CXSCALE)
+				WRITEFIXED(save_p, ss->ceilingxscale);
+			if (diff4 & SD_CYSCALE)
+				WRITEFIXED(save_p, ss->ceilingyscale);
 			if (diff & SD_FFLOORS)
 				ArchiveFFloors(ss);
 		}
@@ -1284,6 +1304,14 @@ static void UnArchiveSectors(void)
 			sectors[i].triggerer = READUINT8(save_p);
 		if (diff4 & SD_GRAVITY)
 			sectors[i].gravity = READFIXED(save_p);
+		if (diff4 & SD_FXSCALE)
+			sectors[i].floorxscale = READFIXED(save_p);
+		if (diff4 & SD_FYSCALE)
+			sectors[i].flooryscale = READFIXED(save_p);
+		if (diff4 & SD_CXSCALE)
+			sectors[i].ceilingxscale = READFIXED(save_p);
+		if (diff4 & SD_CYSCALE)
+			sectors[i].ceilingyscale = READFIXED(save_p);
 
 		if (diff & SD_FFLOORS)
 			UnArchiveFFloors(&sectors[i]);

@@ -1981,6 +1981,8 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 			//SoM: 3/22/2000: Check floor x and y offsets.
 			|| backsector->floorxoffset != frontsector->floorxoffset
 			|| backsector->flooryoffset != frontsector->flooryoffset
+			|| backsector->floorxscale != frontsector->floorxscale
+			|| backsector->flooryscale != frontsector->flooryscale
 			|| backsector->floorangle != frontsector->floorangle
 			//SoM: 3/22/2000: Prevents bleeding.
 			|| (frontsector->heightsec != -1 && frontsector->floorpic != skyflatnum)
@@ -2014,6 +2016,8 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 			//SoM: 3/22/2000: Check floor x and y offsets.
 			|| backsector->ceilingxoffset != frontsector->ceilingxoffset
 			|| backsector->ceilingyoffset != frontsector->ceilingyoffset
+			|| backsector->ceilingxscale != frontsector->ceilingxscale
+			|| backsector->ceilingyscale != frontsector->ceilingyscale
 			|| backsector->ceilingangle != frontsector->ceilingangle
 			//SoM: 3/22/2000: Prevents bleeding.
 			|| (frontsector->heightsec != -1 && frontsector->ceilingpic != skyflatnum)
