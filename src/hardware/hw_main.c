@@ -1149,6 +1149,10 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 		// check TOP TEXTURE
 		if ((worldhighslope < worldtopslope || worldhigh < worldtop) && gl_toptexture)
 		{
+			grTex = HWR_GetTexture(gl_toptexture);
+			xscale = FixedToFloat(gl_sidedef->scalex_top);
+			yscale = FixedToFloat(gl_sidedef->scaley_top);
+
 			fixed_t texheight = FixedDiv(textureheight[gl_toptexture], gl_sidedef->scaley_top);
 
 			// PEGGING
@@ -1159,41 +1163,39 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 			else
 				texturevpeg = gl_backsector->ceilingheight + texheight - gl_frontsector->ceilingheight;
 
+			texturevpeg *= yscale;
+
 			texturevpeg += gl_sidedef->rowoffset + gl_sidedef->offsety_top;
 
 			// This is so that it doesn't overflow and screw up the wall, it doesn't need to go higher than the texture's height anyway
 			texturevpeg %= texheight;
 
-			grTex = HWR_GetTexture(gl_toptexture);
-			xscale = FIXED_TO_FLOAT(gl_sidedef->scalex_top) * grTex->scaleX;
-			yscale = FIXED_TO_FLOAT(gl_sidedef->scaley_top) * grTex->scaleY;
-
-			wallVerts[3].t = wallVerts[2].t = texturevpeg * yscale;
-			wallVerts[0].t = wallVerts[1].t = (texturevpeg + gl_frontsector->ceilingheight - gl_backsector->ceilingheight) * yscale;
-			wallVerts[0].s = wallVerts[3].s = (cliplow + gl_sidedef->offsetx_top) * xscale;
-			wallVerts[2].s = wallVerts[1].s = (cliphigh + gl_sidedef->offsetx_top) * xscale;
+			wallVerts[3].t = wallVerts[2].t = texturevpeg * grTex->scaleY;
+			wallVerts[0].t = wallVerts[1].t = (texturevpeg + (gl_frontsector->ceilingheight - gl_backsector->ceilingheight) * yscale) * grTex->scaleY;
+			wallVerts[0].s = wallVerts[3].s = ((cliplow * xscale) + gl_sidedef->offsetx_top) * grTex->scaleX;
+			wallVerts[2].s = wallVerts[1].s = ((cliphigh * xscale) + gl_sidedef->offsetx_top) * grTex->scaleX;
 
 			// Adjust t value for sloped walls
 			if (!(gl_linedef->flags & ML_SKEWTD))
 			{
 				// Unskewed
-				wallVerts[3].t -= (worldtop - gl_frontsector->ceilingheight) * yscale;
-				wallVerts[2].t -= (worldtopslope - gl_frontsector->ceilingheight) * yscale;
-				wallVerts[0].t -= (worldhigh - gl_backsector->ceilingheight) * yscale;
-				wallVerts[1].t -= (worldhighslope - gl_backsector->ceilingheight) * yscale;
+				wallVerts[3].t -= (worldtop - gl_frontsector->ceilingheight) * yscale * grTex->scaleY;
+				wallVerts[2].t -= (worldtopslope - gl_frontsector->ceilingheight) * yscale * grTex->scaleY;
+				wallVerts[0].t -= (worldhigh - gl_backsector->ceilingheight) * yscale * grTex->scaleY;
+				wallVerts[1].t -= (worldhighslope - gl_backsector->ceilingheight) * yscale * grTex->scaleY;
 			}
 			else if (gl_linedef->flags & ML_DONTPEGTOP)
 			{
 				// Skewed by top
-				wallVerts[0].t = (texturevpeg + worldtop - worldhigh) * yscale;
-				wallVerts[1].t = (texturevpeg + worldtopslope - worldhighslope) * yscale;
+				wallVerts[0].t = (texturevpeg + (worldtop - worldhigh) * yscale) * grTex->scaleY;
+				wallVerts[1].t = (texturevpeg + (worldtopslope - worldhighslope) * yscale) * grTex->scaleY;
 			}
 			else
 			{
 				// Skewed by bottom
-				wallVerts[0].t = wallVerts[1].t = (texturevpeg + worldtop - worldhigh) * yscale;
-				wallVerts[3].t = wallVerts[0].t - (worldtop - worldhigh) * yscale;
-				wallVerts[2].t = wallVerts[1].t - (worldtopslope - worldhighslope) * yscale;
+				wallVerts[0].t = wallVerts[1].t = (texturevpeg + (worldtop - worldhigh) * yscale) * grTex->scaleY;
+				wallVerts[3].t = wallVerts[0].t - (worldtop - worldhigh) * yscale * grTex->scaleY;
+				wallVerts[2].t = wallVerts[1].t - (worldtopslope - worldhighslope) * yscale * grTex->scaleY;
 			}
 
 			// set top/bottom coords
@@ -1213,6 +1215,10 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 		// check BOTTOM TEXTURE
 		if ((worldlowslope > worldbottomslope || worldlow > worldbottom) && gl_bottomtexture)
 		{
+			grTex = HWR_GetTexture(gl_bottomtexture);
+			xscale = FixedToFloat(gl_sidedef->scalex_bot);
+			yscale = FixedToFloat(gl_sidedef->scaley_bot);
+
 			// PEGGING
 			if (!(gl_linedef->flags & ML_DONTPEGBOTTOM))
 				texturevpeg = 0;
@@ -1221,40 +1227,38 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 			else
 				texturevpeg = gl_frontsector->floorheight - gl_backsector->floorheight;
 
+			texturevpeg *= yscale;
+
 			texturevpeg += gl_sidedef->rowoffset + gl_sidedef->offsety_bot;
 
 			// This is so that it doesn't overflow and screw up the wall, it doesn't need to go higher than the texture's height anyway
 			texturevpeg %= FixedDiv(textureheight[gl_bottomtexture], gl_sidedef->scaley_bot);
 
-			grTex = HWR_GetTexture(gl_bottomtexture);
-			xscale = FIXED_TO_FLOAT(gl_sidedef->scalex_bot) * grTex->scaleX;
-			yscale = FIXED_TO_FLOAT(gl_sidedef->scaley_bot) * grTex->scaleY;
-
-			wallVerts[3].t = wallVerts[2].t = texturevpeg * yscale;
-			wallVerts[0].t = wallVerts[1].t = (texturevpeg + gl_backsector->floorheight - gl_frontsector->floorheight) * yscale;
-			wallVerts[0].s = wallVerts[3].s = (cliplow + gl_sidedef->offsetx_bot) * xscale;
-			wallVerts[2].s = wallVerts[1].s = (cliphigh + gl_sidedef->offsetx_bot) * xscale;
+			wallVerts[3].t = wallVerts[2].t = texturevpeg * grTex->scaleY;
+			wallVerts[0].t = wallVerts[1].t = (texturevpeg + (gl_backsector->floorheight - gl_frontsector->floorheight) * yscale) * grTex->scaleY;
+			wallVerts[0].s = wallVerts[3].s = ((cliplow * xscale) + gl_sidedef->offsetx_bot) * grTex->scaleX;
+			wallVerts[2].s = wallVerts[1].s = ((cliphigh * xscale) + gl_sidedef->offsetx_bot) * grTex->scaleX;
 
 			// Adjust t value for sloped walls
 			if (!(gl_linedef->flags & ML_SKEWTD))
 			{
 				// Unskewed
-				wallVerts[0].t -= (worldbottom - gl_frontsector->floorheight) * yscale;
-				wallVerts[1].t -= (worldbottomslope - gl_frontsector->floorheight) * yscale;
-				wallVerts[3].t -= (worldlow - gl_backsector->floorheight) * yscale;
-				wallVerts[2].t -= (worldlowslope - gl_backsector->floorheight) * yscale;
+				wallVerts[0].t -= (worldbottom - gl_frontsector->floorheight) * yscale * grTex->scaleY;
+				wallVerts[1].t -= (worldbottomslope - gl_frontsector->floorheight) * yscale * grTex->scaleY;
+				wallVerts[3].t -= (worldlow - gl_backsector->floorheight) * yscale * grTex->scaleY;
+				wallVerts[2].t -= (worldlowslope - gl_backsector->floorheight) * yscale * grTex->scaleY;
 			}
 			else if (gl_linedef->flags & ML_DONTPEGBOTTOM)
 			{
 				// Skewed by bottom
-				wallVerts[0].t = wallVerts[1].t = (texturevpeg + worldlow - worldbottom) * yscale;
-				wallVerts[2].t = wallVerts[1].t - (worldlowslope - worldbottomslope) * yscale;
+				wallVerts[0].t = wallVerts[1].t = (texturevpeg + (worldlow - worldbottom) * yscale) * grTex->scaleY;
+				wallVerts[2].t = wallVerts[1].t - (worldlowslope - worldbottomslope) * yscale * grTex->scaleY;
 			}
 			else
 			{
 				// Skewed by top
-				wallVerts[0].t = (texturevpeg + worldlow - worldbottom) * yscale;
-				wallVerts[1].t = (texturevpeg + worldlowslope - worldbottomslope) * yscale;
+				wallVerts[0].t = (texturevpeg + (worldlow - worldbottom) * yscale) * grTex->scaleY;
+				wallVerts[1].t = (texturevpeg + (worldlowslope - worldbottomslope) * yscale) * grTex->scaleY;
 			}
 
 			// set top/bottom coords
@@ -1311,6 +1315,10 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 			else
 				repeats = 1;
 
+			grTex = HWR_GetTexture(gl_midtexture);
+			xscale = FixedToFloat(gl_sidedef->scalex_mid);
+			yscale = FixedToFloat(gl_sidedef->scaley_mid);
+
 			// SoM: a little note: popentop and popenbottom
 			// record the limits the texture can be displayed in.
 			// polytop and polybottom, are the ideal (i.e. unclipped)
@@ -1338,19 +1346,21 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 			// Find the wall's coordinates
 			fixed_t midtexheight = texheight * repeats;
 
+			fixed_t rowoffset = FixedDiv(gl_sidedef->rowoffset + gl_sidedef->offsety_mid, gl_sidedef->scaley_mid);
+
 			// Texture is not skewed
 			if (gl_linedef->flags & ML_NOSKEW)
 			{
 				// Peg it to the floor
 				if (gl_linedef->flags & ML_MIDPEG)
 				{
-					polybottom = max(front->floorheight, back->floorheight) + gl_sidedef->rowoffset + gl_sidedef->offsety_mid;
+					polybottom = max(front->floorheight, back->floorheight) + rowoffset;
 					polytop = polybottom + midtexheight;
 				}
 				// Peg it to the ceiling
 				else
 				{
-					polytop = min(front->ceilingheight, back->ceilingheight) + gl_sidedef->rowoffset + gl_sidedef->offsety_mid;
+					polytop = min(front->ceilingheight, back->ceilingheight) + rowoffset;
 					polybottom = polytop - midtexheight;
 				}
 
@@ -1361,17 +1371,17 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 			// Skew the texture, but peg it to the floor
 			else if (gl_linedef->flags & ML_MIDPEG)
 			{
-				polybottom = popenbottom + gl_sidedef->rowoffset + gl_sidedef->offsety_mid;
+				polybottom = popenbottom + rowoffset;
 				polytop = polybottom + midtexheight;
-				polybottomslope = popenbottomslope + gl_sidedef->rowoffset + gl_sidedef->offsety_mid;
+				polybottomslope = popenbottomslope + rowoffset;
 				polytopslope = polybottomslope + midtexheight;
 			}
 			// Skew it according to the ceiling's slope
 			else
 			{
-				polytop = popentop + gl_sidedef->rowoffset;
+				polytop = popentop + rowoffset;
 				polybottom = polytop - midtexheight;
-				polytopslope = popentopslope + gl_sidedef->rowoffset;
+				polytopslope = popentopslope + rowoffset;
 				polybottomslope = polytopslope - midtexheight;
 			}
 
@@ -1413,19 +1423,15 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 				texturevpegslope = polytopslope - hS;
 			}
 
-			grTex = HWR_GetTexture(gl_midtexture);
-			xscale = FIXED_TO_FLOAT(gl_sidedef->scalex_mid) * grTex->scaleX;
-			yscale = FIXED_TO_FLOAT(gl_sidedef->scaley_mid) * grTex->scaleY;
-
 			// Left side
-			wallVerts[3].t = texturevpeg * yscale;
-			wallVerts[0].t = (h - l + texturevpeg) * yscale;
-			wallVerts[0].s = wallVerts[3].s = (cliplow + gl_sidedef->offsetx_mid) * xscale;
+			wallVerts[3].t = texturevpeg * yscale * grTex->scaleY;
+			wallVerts[0].t = (h - l + texturevpeg) * yscale * grTex->scaleY;
+			wallVerts[0].s = wallVerts[3].s = ((cliplow * xscale) + gl_sidedef->offsetx_mid) * grTex->scaleX;
 
 			// Right side
-			wallVerts[2].t = texturevpegslope * yscale;
-			wallVerts[1].t = (hS - lS + texturevpegslope) * yscale;
-			wallVerts[2].s = wallVerts[1].s = (cliphigh + gl_sidedef->offsetx_mid) * xscale;
+			wallVerts[2].t = texturevpegslope * yscale * grTex->scaleY;
+			wallVerts[1].t = (hS - lS + texturevpegslope) * yscale * grTex->scaleY;
+			wallVerts[2].s = wallVerts[1].s = ((cliphigh * xscale) + gl_sidedef->offsetx_mid) * grTex->scaleX;
 
 			// set top/bottom coords
 			// Take the texture peg into account, rather than changing the offsets past
@@ -1483,38 +1489,40 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 		// Single sided line... Deal only with the middletexture (if one exists)
 		if (gl_midtexture && gl_linedef->special != HORIZONSPECIAL) // (Ignore horizon line for OGL)
 		{
+			grTex = HWR_GetTexture(gl_midtexture);
+			xscale = FixedToFloat(gl_sidedef->scalex_mid);
+			yscale = FixedToFloat(gl_sidedef->scaley_mid);
+
 			fixed_t texturevpeg;
 
 			// PEGGING
 			if ((gl_linedef->flags & (ML_DONTPEGBOTTOM|ML_NOSKEW)) == (ML_DONTPEGBOTTOM|ML_NOSKEW))
-				texturevpeg = gl_frontsector->floorheight + textureheight[gl_sidedef->midtexture] - gl_frontsector->ceilingheight + gl_sidedef->rowoffset + gl_sidedef->offsety_mid;
+				texturevpeg = (gl_frontsector->floorheight + textureheight[gl_sidedef->midtexture] - gl_frontsector->ceilingheight) * yscale;
 			else if (gl_linedef->flags & ML_DONTPEGBOTTOM)
-				texturevpeg = worldbottom + textureheight[gl_sidedef->midtexture] - worldtop + gl_sidedef->rowoffset + gl_sidedef->offsety_mid;
+				texturevpeg = (worldbottom + textureheight[gl_sidedef->midtexture] - worldtop) * yscale;
 			else
 				// top of texture at top
-				texturevpeg = gl_sidedef->rowoffset + gl_sidedef->offsety_mid;
+				texturevpeg = 0;
 
-			grTex = HWR_GetTexture(gl_midtexture);
-			xscale = FIXED_TO_FLOAT(gl_sidedef->scalex_mid) * grTex->scaleX;
-			yscale = FIXED_TO_FLOAT(gl_sidedef->scaley_mid) * grTex->scaleY;
+			texturevpeg += gl_sidedef->rowoffset + gl_sidedef->offsety_mid;
 
-			wallVerts[3].t = wallVerts[2].t = texturevpeg * yscale;
-			wallVerts[0].t = wallVerts[1].t = (texturevpeg + gl_frontsector->ceilingheight - gl_frontsector->floorheight) * yscale;
-			wallVerts[0].s = wallVerts[3].s = (cliplow + gl_sidedef->offsetx_mid) * xscale;
-			wallVerts[2].s = wallVerts[1].s = (cliphigh + gl_sidedef->offsetx_mid) * xscale;
+			wallVerts[3].t = wallVerts[2].t = texturevpeg * grTex->scaleY;
+			wallVerts[0].t = wallVerts[1].t = (texturevpeg + gl_frontsector->ceilingheight - gl_frontsector->floorheight) * grTex->scaleY;
+			wallVerts[0].s = wallVerts[3].s = ((cliplow * xscale) + gl_sidedef->offsetx_mid) * grTex->scaleX;
+			wallVerts[2].s = wallVerts[1].s = ((cliphigh * xscale) + gl_sidedef->offsetx_mid) * grTex->scaleX;
 
 			// Texture correction for slopes
 			if (gl_linedef->flags & ML_NOSKEW) {
-				wallVerts[3].t += (gl_frontsector->ceilingheight - worldtop) * yscale;
-				wallVerts[2].t += (gl_frontsector->ceilingheight - worldtopslope) * yscale;
-				wallVerts[0].t += (gl_frontsector->floorheight - worldbottom) * yscale;
-				wallVerts[1].t += (gl_frontsector->floorheight - worldbottomslope) * yscale;
+				wallVerts[3].t += (gl_frontsector->ceilingheight - worldtop) * yscale * grTex->scaleY;
+				wallVerts[2].t += (gl_frontsector->ceilingheight - worldtopslope) * yscale * grTex->scaleY;
+				wallVerts[0].t += (gl_frontsector->floorheight - worldbottom) * yscale * grTex->scaleY;
+				wallVerts[1].t += (gl_frontsector->floorheight - worldbottomslope) * yscale * yscale;
 			} else if (gl_linedef->flags & ML_DONTPEGBOTTOM) {
-				wallVerts[3].t = wallVerts[0].t + (worldbottom-worldtop) * yscale;
-				wallVerts[2].t = wallVerts[1].t + (worldbottomslope-worldtopslope) * yscale;
+				wallVerts[3].t = wallVerts[0].t + ((worldbottom - worldtop) * yscale) * grTex->scaleY;
+				wallVerts[2].t = wallVerts[1].t + ((worldbottomslope - worldtopslope) * yscale) * grTex->scaleY;
 			} else {
-				wallVerts[0].t = wallVerts[3].t - (worldbottom-worldtop) * yscale;
-				wallVerts[1].t = wallVerts[2].t - (worldbottomslope-worldtopslope) * yscale;
+				wallVerts[0].t = wallVerts[3].t - ((worldbottom - worldtop) * yscale) * grTex->scaleY;
+				wallVerts[1].t = wallVerts[2].t - ((worldbottomslope - worldtopslope) * yscale) * grTex->scaleY;
 			}
 
 			//Set textures properly on single sided walls that are sloped
@@ -1661,36 +1669,37 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 					}
 
 					grTex = HWR_GetTexture(texnum);
-					xscale = FIXED_TO_FLOAT(sides[rover->master->sidenum[0]].scalex_mid) * grTex->scaleX;
-					yscale = FIXED_TO_FLOAT(sides[rover->master->sidenum[0]].scaley_mid) * grTex->scaleY;
+					xscale = FixedToFloat(sides[rover->master->sidenum[0]].scalex_mid);
+					yscale = FixedToFloat(sides[rover->master->sidenum[0]].scaley_mid);
 
 					if (!slopeskew) // no skewing
 					{
 						if (attachtobottom)
-							texturevpeg -= *rover->topheight - *rover->bottomheight;
-						wallVerts[3].t = (*rover->topheight - h + texturevpeg) * yscale;
-						wallVerts[2].t = (*rover->topheight - hS + texturevpeg) * yscale;
-						wallVerts[0].t = (*rover->topheight - l + texturevpeg) * yscale;
-						wallVerts[1].t = (*rover->topheight - lS + texturevpeg) * yscale;
+							texturevpeg -= (*rover->topheight - *rover->bottomheight) * yscale;
+
+						wallVerts[3].t = (((*rover->topheight - h) * yscale) + texturevpeg) * grTex->scaleY;
+						wallVerts[2].t = (((*rover->topheight - hS) * yscale) + texturevpeg) * grTex->scaleY;
+						wallVerts[0].t = (((*rover->topheight - l) * yscale) + texturevpeg) * grTex->scaleY;
+						wallVerts[1].t = (((*rover->topheight - lS) * yscale) + texturevpeg) * grTex->scaleY;
 					}
 					else
 					{
 						if (!attachtobottom) // skew by top
 						{
-							wallVerts[3].t = wallVerts[2].t = texturevpeg * yscale;
-							wallVerts[0].t = (h - l + texturevpeg) * yscale;
-							wallVerts[1].t = (hS - lS + texturevpeg) * yscale;
+							wallVerts[3].t = wallVerts[2].t = texturevpeg * grTex->scaleY;
+							wallVerts[0].t = (((h - l) * yscale) + texturevpeg) * grTex->scaleY;
+							wallVerts[1].t = (((hS - lS) * yscale) + texturevpeg) * grTex->scaleY;
 						}
 						else // skew by bottom
 						{
-							wallVerts[0].t = wallVerts[1].t = texturevpeg * yscale;
-							wallVerts[3].t = wallVerts[0].t - (h - l) * yscale;
-							wallVerts[2].t = wallVerts[1].t - (hS - lS) * yscale;
+							wallVerts[0].t = wallVerts[1].t = texturevpeg * grTex->scaleY;
+							wallVerts[3].t = wallVerts[0].t - ((h - l) * yscale) * grTex->scaleY;
+							wallVerts[2].t = wallVerts[1].t - ((hS - lS) * yscale) * grTex->scaleY;
 						}
 					}
 
-					wallVerts[0].s = wallVerts[3].s = (cliplow + gl_sidedef->offsetx_mid) * xscale;
-					wallVerts[2].s = wallVerts[1].s = (cliphigh + gl_sidedef->offsetx_mid) * xscale;
+					wallVerts[0].s = wallVerts[3].s = ((cliplow * xscale) + gl_sidedef->offsetx_mid) * grTex->scaleX;
+					wallVerts[2].s = wallVerts[1].s = ((cliphigh * xscale) + gl_sidedef->offsetx_mid) * grTex->scaleX;
 				}
 				if (rover->fofflags & FOF_FOG)
 				{

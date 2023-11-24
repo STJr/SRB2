@@ -3330,7 +3330,7 @@ static void P_LoadSegs(UINT8 *data)
 
 		seg->length = P_SegLength(seg);
 #ifdef HWRENDER
-		seg->flength = (rendermode == render_opengl) ? P_SegLengthFloat(seg) : 0;
+		seg->flength = P_SegLengthFloat(seg);
 #endif
 
 		seg->glseg = false;
@@ -3562,7 +3562,7 @@ static boolean P_LoadExtendedSubsectorsAndSegs(UINT8 **data, nodetype_t nodetype
 		}
 		seg->length = P_SegLength(seg);
 #ifdef HWRENDER
-		seg->flength = (rendermode == render_opengl) ? P_SegLengthFloat(seg) : 0;
+		seg->flength = P_SegLengthFloat(seg);
 #endif
 	}
 
