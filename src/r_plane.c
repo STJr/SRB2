@@ -1037,7 +1037,7 @@ void R_DrawSinglePlane(visplane_t *pl)
 		{
 			mapfunc = R_MapTiltedPlane;
 
-			if (!pl->plangle && !ds_solidcolor)
+			if (!pl->plangle && !ds_solidcolor && pl->xscale == FRACUNIT && pl->yscale == FRACUNIT)
 			{
 				if (ds_powersoftwo)
 					R_AdjustSlopeCoordinates(&pl->slope->o);
