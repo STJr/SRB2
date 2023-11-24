@@ -63,10 +63,6 @@ extern visplane_t *ceilingplane;
 // Visplane related.
 extern INT16 floorclip[MAXVIDWIDTH], ceilingclip[MAXVIDWIDTH];
 extern fixed_t frontscale[MAXVIDWIDTH], yslopetab[MAXVIDHEIGHT*16];
-extern fixed_t cachedheight[MAXVIDHEIGHT];
-extern fixed_t cacheddistance[MAXVIDHEIGHT];
-extern fixed_t cachedxstep[MAXVIDHEIGHT];
-extern fixed_t cachedystep[MAXVIDHEIGHT];
 
 extern fixed_t *yslope;
 extern lighttable_t **planezlight;
