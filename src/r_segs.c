@@ -1822,13 +1822,13 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 			else if (linedef->flags & ML_DONTPEGBOTTOM)
 			{
 				rw_midtexturemid = FixedMul(worldbottom, rw_midtexturescaley) + texheight;
-				rw_midtextureslide = FixedMul(floorfrontslide, rw_midtexturescaley);
+				rw_midtextureslide = floorfrontslide;
 			}
 			else
 			{
 				// top of texture at top
 				rw_midtexturemid = FixedMul(worldtop, rw_midtexturescaley);
-				rw_midtextureslide = FixedMul(ceilingfrontslide, rw_midtexturescaley);
+				rw_midtextureslide = ceilingfrontslide;
 			}
 		}
 		else
@@ -1846,13 +1846,13 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 			else if (linedef->flags & ML_DONTPEGBOTTOM)
 			{
 				rw_midtexturemid = FixedMul(worldbottom, rw_midtexturescaley);
-				rw_midtextureslide = FixedMul(floorfrontslide, rw_midtexturescaley);
+				rw_midtextureslide = floorfrontslide;
 			}
 			else
 			{
 				// top of texture at top
 				rw_midtexturemid = FixedMul(worldtop, rw_midtexturescaley) + texheight;
-				rw_midtextureslide = FixedMul(ceilingfrontslide, rw_midtexturescaley);
+				rw_midtextureslide = ceilingfrontslide;
 			}
 		}
 
