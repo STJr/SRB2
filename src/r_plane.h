@@ -49,6 +49,7 @@ typedef struct visplane_s
 	INT32 high, low; // R_PlaneBounds should set these.
 
 	fixed_t xoffs, yoffs; // Scrolling flats.
+	fixed_t xscale, yscale;
 
 	struct ffloor_s *ffloor;
 	polyobj_t *polyobj;

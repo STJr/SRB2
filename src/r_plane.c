@@ -169,6 +169,8 @@ static void R_MapPlane(INT32 y, INT32 x1, INT32 x2)
 		{
 			ds_xstep = FixedMul(planesin, planeheight) / span;
 			ds_ystep = FixedMul(planecos, planeheight) / span;
+			ds_xstep = FixedMul(currentplane->xscale, ds_xstep);
+			ds_ystep = FixedMul(currentplane->yscale, ds_ystep);
 		}
 		else
 			ds_xstep = ds_ystep = FRACUNIT;
@@ -188,8 +190,8 @@ static void R_MapPlane(INT32 y, INT32 x1, INT32 x2)
 	// to step from those to the proper texture coordinate to start drawing at.
 	// That way, the texture coordinate is always calculated by its position
 	// on the screen and not by its position relative to the edge of the visplane.
-	ds_xfrac = xoffs + FixedMul(planecos, distance) + (x1 - centerx) * ds_xstep;
-	ds_yfrac = yoffs - FixedMul(planesin, distance) + (x1 - centerx) * ds_ystep;
+	ds_xfrac = xoffs + FixedMul(currentplane->xscale, FixedMul(planecos, distance)) + (x1 - centerx) * ds_xstep;
+	ds_yfrac = yoffs - FixedMul(currentplane->yscale, FixedMul(planesin, distance)) + (x1 - centerx) * ds_ystep;
 
 	// Water ripple effect
 	if (planeripple.active)
@@ -431,8 +433,11 @@ visplane_t *R_FindPlane(fixed_t height, INT32 picnum, INT32 lightlevel,
 		}
 	}
 
-	(void)xscale;
-	(void)yscale;
+	if (!slope)
+	{
+		xoff = FixedMul(xoff, xscale);
+		yoff = FixedMul(yoff, yscale);
+	}
 
 	// This appears to fix the Nimbus Ruins sky bug.
 	if (picnum == skyflatnum && pfloor)
@@ -449,6 +454,7 @@ visplane_t *R_FindPlane(fixed_t height, INT32 picnum, INT32 lightlevel,
 			if (height == check->height && picnum == check->picnum
 				&& lightlevel == check->lightlevel
 				&& xoff == check->xoffs && yoff == check->yoffs
+				&& xscale == check->xscale && yscale == check->yscale
 				&& planecolormap == check->extra_colormap
 				&& check->viewx == viewx && check->viewy == viewy && check->viewz == viewz
 				&& check->viewangle == viewangle
@@ -474,6 +480,8 @@ visplane_t *R_FindPlane(fixed_t height, INT32 picnum, INT32 lightlevel,
 	check->maxx = -1;
 	check->xoffs = xoff;
 	check->yoffs = yoff;
+	check->xscale = xscale;
+	check->yscale = yscale;
 	check->extra_colormap = planecolormap;
 	check->ffloor = pfloor;
 	check->viewx = viewx;
@@ -550,6 +558,8 @@ visplane_t *R_CheckPlane(visplane_t *pl, INT32 start, INT32 stop)
 		new_pl->lightlevel = pl->lightlevel;
 		new_pl->xoffs = pl->xoffs;
 		new_pl->yoffs = pl->yoffs;
+		new_pl->xscale = pl->xscale;
+		new_pl->yscale = pl->yscale;
 		new_pl->extra_colormap = pl->extra_colormap;
 		new_pl->ffloor = pl->ffloor;
 		new_pl->viewx = pl->viewx;
@@ -816,7 +826,16 @@ void R_SetTiltedSpan(INT32 span)
 static void R_SetSlopePlaneVectors(visplane_t *pl, INT32 y, fixed_t xoff, fixed_t yoff)
 {
 	R_SetTiltedSpan(y);
-	R_SetSlopePlane(pl->slope, pl->viewx, pl->viewy, pl->viewz, xoff, yoff, pl->viewangle, pl->plangle);
+
+	if (pl->xscale != FRACUNIT || pl->yscale != FRACUNIT)
+	{
+		R_SetScaledSlopePlane(pl->slope, pl->viewx, pl->viewy, pl->viewz,
+			FixedDiv(FRACUNIT, pl->xscale), FixedDiv(FRACUNIT, pl->yscale),
+			xoff, yoff, pl->viewangle, pl->plangle);
+	}
+	else
+		R_SetSlopePlane(pl->slope, pl->viewx, pl->viewy, pl->viewz, xoff, yoff, pl->viewangle, pl->plangle);
+
 	R_CalculateSlopeVectors();
 }
 
