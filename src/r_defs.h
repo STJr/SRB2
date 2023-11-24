@@ -559,11 +559,11 @@ typedef struct
 	fixed_t rowoffset;
 
 	// per-texture offsets for UDMF
-	fixed_t offsetx_top, offsetx_mid, offsetx_bot;
-	fixed_t offsety_top, offsety_mid, offsety_bot;
+	fixed_t offsetx_top, offsetx_mid, offsetx_bottom;
+	fixed_t offsety_top, offsety_mid, offsety_bottom;
 
-	fixed_t scalex_top, scalex_mid, scalex_bot;
-	fixed_t scaley_top, scaley_mid, scaley_bot;
+	fixed_t scalex_top, scalex_mid, scalex_bottom;
+	fixed_t scaley_top, scaley_mid, scaley_bottom;
 
 	// Texture indices.
 	// We do not maintain names here.

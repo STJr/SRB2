@@ -2043,7 +2043,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 		}
 
 		fixed_t toprowoffset = sidedef->rowoffset + sidedef->offsety_top;
-		fixed_t botrowoffset = sidedef->rowoffset + sidedef->offsety_bot;
+		fixed_t botrowoffset = sidedef->rowoffset + sidedef->offsety_bottom;
 
 		// check TOP TEXTURE
 		if (!bothceilingssky // never draw the top texture if on
@@ -2092,8 +2092,8 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 			// bottom texture
 			bottomtexture = R_GetTextureNum(sidedef->bottomtexture);
 
-			rw_bottomtexturescalex = sidedef->scalex_bot;
-			rw_bottomtexturescaley = sidedef->scaley_bot;
+			rw_bottomtexturescalex = sidedef->scalex_bottom;
+			rw_bottomtexturescaley = sidedef->scaley_bottom;
 
 			rw_invbottomtexturescalex = FixedDiv(FRACUNIT, rw_bottomtexturescalex);
 
@@ -2418,7 +2418,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 
 		rw_offset_top = sideoffset + sidedef->offsetx_top;
 		rw_offset_mid = sideoffset + sidedef->offsetx_mid;
-		rw_offset_bottom = sideoffset + sidedef->offsetx_bot;
+		rw_offset_bottom = sideoffset + sidedef->offsetx_bottom;
 
 		rw_offsetx = rw_offset_mid;
 		if (rw_midtexturescalex < 0)

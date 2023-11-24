@@ -1218,10 +1218,10 @@ static int side_get(lua_State *L)
 		lua_pushfixed(L, side->offsety_mid);
 		return 1;
 	case side_offsetx_bot:
-		lua_pushfixed(L, side->offsetx_bot);
+		lua_pushfixed(L, side->offsetx_bottom);
 		return 1;
 	case side_offsety_bot:
-		lua_pushfixed(L, side->offsety_bot);
+		lua_pushfixed(L, side->offsety_bottom);
 		return 1;
 	case side_scalex_top:
 		lua_pushfixed(L, side->scalex_top);
@@ -1236,10 +1236,10 @@ static int side_get(lua_State *L)
 		lua_pushfixed(L, side->scaley_mid);
 		return 1;
 	case side_scalex_bot:
-		lua_pushfixed(L, side->scalex_bot);
+		lua_pushfixed(L, side->scalex_bottom);
 		return 1;
 	case side_scaley_bot:
-		lua_pushfixed(L, side->scaley_bot);
+		lua_pushfixed(L, side->scaley_bottom);
 		return 1;
 	case side_toptexture:
 		lua_pushinteger(L, side->toptexture);
@@ -1324,10 +1324,10 @@ static int side_set(lua_State *L)
 		side->offsety_mid = luaL_checkfixed(L, 3);
 		break;
 	case side_offsetx_bot:
-		side->offsetx_bot = luaL_checkfixed(L, 3);
+		side->offsetx_bottom = luaL_checkfixed(L, 3);
 		break;
 	case side_offsety_bot:
-		side->offsety_bot = luaL_checkfixed(L, 3);
+		side->offsety_bottom = luaL_checkfixed(L, 3);
 		break;
 	case side_scalex_top:
 		side->scalex_top = luaL_checkfixed(L, 3);
@@ -1342,10 +1342,10 @@ static int side_set(lua_State *L)
 		side->scaley_mid = luaL_checkfixed(L, 3);
 		break;
 	case side_scalex_bot:
-		side->scalex_bot = luaL_checkfixed(L, 3);
+		side->scalex_bottom = luaL_checkfixed(L, 3);
 		break;
 	case side_scaley_bot:
-		side->scaley_bot = luaL_checkfixed(L, 3);
+		side->scaley_bottom = luaL_checkfixed(L, 3);
 		break;
 	case side_toptexture:
 		side->toptexture = luaL_checkinteger(L, 3);
