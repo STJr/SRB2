@@ -380,8 +380,8 @@ visplane_t *R_FindPlane(fixed_t height, INT32 picnum, INT32 lightlevel,
 
 	if (!slope) // Don't mess with this right now if a slope is involved
 	{
-		xoff += viewx;
-		yoff -= viewy;
+		xoff += FixedMul(viewx, xscale);
+		yoff -= FixedMul(viewy, yscale);
 
 		if (plangle != 0)
 		{
@@ -409,12 +409,6 @@ visplane_t *R_FindPlane(fixed_t height, INT32 picnum, INT32 lightlevel,
 			xoff -= polyobj->centerPt.x;
 			yoff += polyobj->centerPt.y;
 		}
-	}
-
-	if (!slope)
-	{
-		xoff = FixedMul(xoff, xscale);
-		yoff = FixedMul(yoff, yscale);
 	}
 
 	// This appears to fix the Nimbus Ruins sky bug.
@@ -809,7 +803,7 @@ static void R_SetSlopePlaneVectors(visplane_t *pl, INT32 y, fixed_t xoff, fixed_
 	{
 		R_SetScaledSlopePlane(pl->slope, pl->viewx, pl->viewy, pl->viewz,
 			FixedDiv(FRACUNIT, pl->xscale), FixedDiv(FRACUNIT, pl->yscale),
-			xoff, yoff, pl->viewangle, pl->plangle);
+			FixedDiv(xoff, pl->xscale), FixedDiv(yoff, pl->yscale), pl->viewangle, pl->plangle);
 	}
 	else
 		R_SetSlopePlane(pl->slope, pl->viewx, pl->viewy, pl->viewz, xoff, yoff, pl->viewangle, pl->plangle);
