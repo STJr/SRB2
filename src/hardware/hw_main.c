@@ -458,14 +458,18 @@ static void HWR_RenderPlane(subsector_t *subsector, extrasubsector_t *xsub, bool
 	{
 		if (!isceiling) // it's a floor
 		{
-			scrollx = FIXED_TO_FLOAT(FOFsector->floorxoffset)/fflatwidth;
-			scrolly = FIXED_TO_FLOAT(FOFsector->flooryoffset)/fflatheight;
+			fflatwidth /= FixedToFloat(FOFsector->floorxscale);
+			fflatheight /= FixedToFloat(FOFsector->flooryscale);
+			scrollx = FixedToFloat(FOFsector->floorxoffset) / fflatwidth;
+			scrolly = FixedToFloat(FOFsector->flooryoffset) / fflatheight;
 			angle = FOFsector->floorangle;
 		}
 		else // it's a ceiling
 		{
-			scrollx = FIXED_TO_FLOAT(FOFsector->ceilingxoffset)/fflatwidth;
-			scrolly = FIXED_TO_FLOAT(FOFsector->ceilingyoffset)/fflatheight;
+			fflatwidth /= FixedToFloat(FOFsector->ceilingxscale);
+			fflatheight /= FixedToFloat(FOFsector->ceilingyscale);
+			scrollx = FixedToFloat(FOFsector->ceilingxoffset) / fflatwidth;
+			scrolly = FixedToFloat(FOFsector->ceilingyoffset) / fflatheight;
 			angle = FOFsector->ceilingangle;
 		}
 	}
@@ -473,14 +477,18 @@ static void HWR_RenderPlane(subsector_t *subsector, extrasubsector_t *xsub, bool
 	{
 		if (!isceiling) // it's a floor
 		{
-			scrollx = FIXED_TO_FLOAT(gl_frontsector->floorxoffset)/fflatwidth;
-			scrolly = FIXED_TO_FLOAT(gl_frontsector->flooryoffset)/fflatheight;
+			fflatwidth /= FixedToFloat(gl_frontsector->floorxscale);
+			fflatheight /= FixedToFloat(gl_frontsector->flooryscale);
+			scrollx = FixedToFloat(gl_frontsector->floorxoffset) / fflatwidth;
+			scrolly = FixedToFloat(gl_frontsector->flooryoffset) / fflatheight;
 			angle = gl_frontsector->floorangle;
 		}
 		else // it's a ceiling
 		{
-			scrollx = FIXED_TO_FLOAT(gl_frontsector->ceilingxoffset)/fflatwidth;
-			scrolly = FIXED_TO_FLOAT(gl_frontsector->ceilingyoffset)/fflatheight;
+			fflatwidth /= FixedToFloat(gl_frontsector->ceilingxscale);
+			fflatheight /= FixedToFloat(gl_frontsector->ceilingyscale);
+			scrollx = FixedToFloat(gl_frontsector->ceilingxoffset) / fflatwidth;
+			scrolly = FixedToFloat(gl_frontsector->ceilingyoffset) / fflatheight;
 			angle = gl_frontsector->ceilingangle;
 		}
 	}
@@ -2705,14 +2713,18 @@ static void HWR_RenderPolyObjectPlane(polyobj_t *polysector, boolean isceiling, 
 	{
 		if (!isceiling) // it's a floor
 		{
-			scrollx = FIXED_TO_FLOAT(FOFsector->floorxoffset)/fflatwidth;
-			scrolly = FIXED_TO_FLOAT(FOFsector->flooryoffset)/fflatheight;
+			fflatwidth /= FixedToFloat(FOFsector->floorxscale);
+			fflatheight /= FixedToFloat(FOFsector->flooryscale);
+			scrollx = FixedToFloat(FOFsector->floorxoffset) / fflatwidth;
+			scrolly = FixedToFloat(FOFsector->flooryoffset) / fflatheight;
 			angle = FOFsector->floorangle;
 		}
 		else // it's a ceiling
 		{
-			scrollx = FIXED_TO_FLOAT(FOFsector->ceilingxoffset)/fflatwidth;
-			scrolly = FIXED_TO_FLOAT(FOFsector->ceilingyoffset)/fflatheight;
+			fflatwidth /= FixedToFloat(FOFsector->ceilingxscale);
+			fflatheight /= FixedToFloat(FOFsector->ceilingyscale);
+			scrollx = FixedToFloat(FOFsector->ceilingxoffset) / fflatwidth;
+			scrolly = FixedToFloat(FOFsector->ceilingyoffset) / fflatheight;
 			angle = FOFsector->ceilingangle;
 		}
 	}
@@ -2720,14 +2732,18 @@ static void HWR_RenderPolyObjectPlane(polyobj_t *polysector, boolean isceiling, 
 	{
 		if (!isceiling) // it's a floor
 		{
-			scrollx = FIXED_TO_FLOAT(gl_frontsector->floorxoffset)/fflatwidth;
-			scrolly = FIXED_TO_FLOAT(gl_frontsector->flooryoffset)/fflatheight;
+			fflatwidth /= FixedToFloat(gl_frontsector->floorxscale);
+			fflatheight /= FixedToFloat(gl_frontsector->flooryscale);
+			scrollx = FixedToFloat(gl_frontsector->floorxoffset) / fflatwidth;
+			scrolly = FixedToFloat(gl_frontsector->flooryoffset) / fflatheight;
 			angle = gl_frontsector->floorangle;
 		}
 		else // it's a ceiling
 		{
-			scrollx = FIXED_TO_FLOAT(gl_frontsector->ceilingxoffset)/fflatwidth;
-			scrolly = FIXED_TO_FLOAT(gl_frontsector->ceilingyoffset)/fflatheight;
+			fflatwidth /= FixedToFloat(gl_frontsector->ceilingxscale);
+			fflatheight /= FixedToFloat(gl_frontsector->ceilingyscale);
+			scrollx = FixedToFloat(gl_frontsector->ceilingxoffset) / fflatwidth;
+			scrolly = FixedToFloat(gl_frontsector->ceilingyoffset) / fflatheight;
 			angle = gl_frontsector->ceilingangle;
 		}
 	}
