@@ -1607,14 +1607,16 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 				if ((high1 < lowcut && highslope1 < lowcutslope) || (low1 > highcut && lowslope1 > highcutslope))
 					continue;
 
-				texnum = R_GetTextureNum(sides[rover->master->sidenum[0]].midtexture);
+				side_t *side = &sides[rover->master->sidenum[0]];
 
 				if (rover->master->flags & ML_TFERLINE)
 				{
 					size_t linenum = gl_curline->linedef-gl_backsector->lines[0];
 					newline = rover->master->frontsector->lines[0] + linenum;
-					texnum = R_GetTextureNum(sides[newline->sidenum[0]].midtexture);
+					side = &sides[newline->sidenum[0]];
 				}
+
+				texnum = R_GetTextureNum(side->midtexture);
 
 				h  = P_GetFFloorTopZAt   (rover, v1x, v1y);
 				hS = P_GetFFloorTopZAt   (rover, v2x, v2y);
@@ -1631,14 +1633,13 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 					l = lowcut;
 					lS = lowcutslope;
 				}
-				//Hurdler: HW code starts here
-				//FIXME: check if peging is correct
-				// set top/bottom coords
 
+				// set top/bottom coords
 				wallVerts[3].y = FIXED_TO_FLOAT(h);
 				wallVerts[2].y = FIXED_TO_FLOAT(hS);
 				wallVerts[0].y = FIXED_TO_FLOAT(l);
 				wallVerts[1].y = FIXED_TO_FLOAT(lS);
+
 				if (rover->fofflags & FOF_FOG)
 				{
 					wallVerts[3].t = wallVerts[2].t = 0;
@@ -1648,31 +1649,17 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 				}
 				else
 				{
-					fixed_t texturevpeg;
-					boolean attachtobottom = false;
-					boolean slopeskew = false; // skew FOF walls with slopes?
-
 					// Wow, how was this missing from OpenGL for so long?
 					// ...Oh well, anyway, Lower Unpegged now changes pegging of FOFs like in software
 					// -- Monster Iestyn 26/06/18
-					if (newline)
-					{
-						texturevpeg = sides[newline->sidenum[0]].rowoffset + sides[newline->sidenum[0]].offsety_mid;
-						attachtobottom = !!(newline->flags & ML_DONTPEGBOTTOM);
-						slopeskew = !!(newline->flags & ML_SKEWTD);
-					}
-					else
-					{
-						texturevpeg = sides[rover->master->sidenum[0]].rowoffset + sides[rover->master->sidenum[0]].offsety_mid;
-						attachtobottom = !!(gl_linedef->flags & ML_DONTPEGBOTTOM);
-						slopeskew = !!(rover->master->flags & ML_SKEWTD);
-					}
+					fixed_t texturevpeg = side->rowoffset + side->offsety_mid;
+					boolean attachtobottom = !!(rover->master->flags & ML_DONTPEGBOTTOM);
 
 					grTex = HWR_GetTexture(texnum);
-					xscale = FixedToFloat(sides[rover->master->sidenum[0]].scalex_mid);
-					yscale = FixedToFloat(sides[rover->master->sidenum[0]].scaley_mid);
+					xscale = FixedToFloat(side->scalex_mid);
+					yscale = FixedToFloat(side->scaley_mid);
 
-					if (!slopeskew) // no skewing
+					if (!(rover->master->flags & ML_SKEWTD)) // no skewing
 					{
 						if (attachtobottom)
 							texturevpeg -= (*rover->topheight - *rover->bottomheight) * yscale;
@@ -1698,9 +1685,10 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 						}
 					}
 
-					wallVerts[0].s = wallVerts[3].s = ((cliplow * xscale) + gl_sidedef->offsetx_mid) * grTex->scaleX;
-					wallVerts[2].s = wallVerts[1].s = ((cliphigh * xscale) + gl_sidedef->offsetx_mid) * grTex->scaleX;
+					wallVerts[0].s = wallVerts[3].s = ((cliplow * xscale) + side->offsetx_mid) * grTex->scaleX;
+					wallVerts[2].s = wallVerts[1].s = ((cliphigh * xscale) + side->offsetx_mid) * grTex->scaleX;
 				}
+
 				if (rover->fofflags & FOF_FOG)
 				{
 					FBITFIELD blendmode;
@@ -1767,14 +1755,17 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 				if ((high1 < lowcut && highslope1 < lowcutslope) || (low1 > highcut && lowslope1 > highcutslope))
 					continue;
 
-				texnum = R_GetTextureNum(sides[rover->master->sidenum[0]].midtexture);
+				side_t *side = &sides[rover->master->sidenum[0]];
 
 				if (rover->master->flags & ML_TFERLINE)
 				{
 					size_t linenum = gl_curline->linedef-gl_backsector->lines[0];
 					newline = rover->master->frontsector->lines[0] + linenum;
-					texnum = R_GetTextureNum(sides[newline->sidenum[0]].midtexture);
+					side = &sides[newline->sidenum[0]];
 				}
+
+				texnum = R_GetTextureNum(side->midtexture);
+
 				h  = P_GetFFloorTopZAt   (rover, v1x, v1y);
 				hS = P_GetFFloorTopZAt   (rover, v2x, v2y);
 				l  = P_GetFFloorBottomZAt(rover, v1x, v1y);
@@ -1808,22 +1799,16 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 				else
 				{
 					grTex = HWR_GetTexture(texnum);
-					xscale = FIXED_TO_FLOAT(sides[rover->master->sidenum[0]].scalex_mid) * grTex->scaleX;
-					yscale = FIXED_TO_FLOAT(sides[rover->master->sidenum[0]].scaley_mid) * grTex->scaleY;
+					xscale = FixedToFloat(side->scalex_mid);
+					yscale = FixedToFloat(side->scaley_mid);
 
-					if (newline)
-					{
-						wallVerts[3].t = wallVerts[2].t = (*rover->topheight - h + sides[newline->sidenum[0]].rowoffset + sides[newline->sidenum[0]].offsety_mid) * yscale;
-						wallVerts[0].t = wallVerts[1].t = (h - l + (*rover->topheight - h + sides[newline->sidenum[0]].rowoffset) + sides[newline->sidenum[0]].offsety_mid) * yscale;
-					}
-					else
-					{
-						wallVerts[3].t = wallVerts[2].t = (*rover->topheight - h + sides[rover->master->sidenum[0]].rowoffset + sides[rover->master->sidenum[0]].offsety_mid) * yscale;
-						wallVerts[0].t = wallVerts[1].t = (h - l + (*rover->topheight - h + sides[rover->master->sidenum[0]].rowoffset + sides[rover->master->sidenum[0]].offsety_mid)) * yscale;
-					}
+					fixed_t diff = (*rover->topheight - h) * yscale;
 
-					wallVerts[0].s = wallVerts[3].s = (cliplow + gl_sidedef->offsetx_mid) * xscale;
-					wallVerts[2].s = wallVerts[1].s = (cliphigh + gl_sidedef->offsetx_mid) * xscale;
+					wallVerts[3].t = wallVerts[2].t = (diff + side->rowoffset + side->offsety_mid) * grTex->scaleY;
+					wallVerts[0].t = wallVerts[1].t = (((h - l) * yscale) + (diff + side->rowoffset + side->offsety_mid)) * grTex->scaleY;
+
+					wallVerts[0].s = wallVerts[3].s = ((cliplow * xscale) + side->offsetx_mid) * grTex->scaleX;
+					wallVerts[2].s = wallVerts[1].s = ((cliphigh * xscale) + side->offsetx_mid) * grTex->scaleX;
 				}
 
 				if (rover->fofflags & FOF_FOG)
