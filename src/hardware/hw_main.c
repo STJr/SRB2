@@ -375,7 +375,7 @@ static void HWR_RenderPlane(subsector_t *subsector, extrasubsector_t *xsub, bool
 	float height; // constant y for all points on the convex flat polygon
 	float anglef = 0.0f;
 	float fflatwidth = 64.0f, fflatheight = 64.0f;
-	float xscale, yscale;
+	float xscale = 1.0f, yscale = 1.0f;
 
 	float tempxsow, tempytow;
 	float scrollx = 0.0f, scrolly = 0.0f;
@@ -2646,7 +2646,7 @@ static void HWR_RenderPolyObjectPlane(polyobj_t *polysector, boolean isceiling, 
 
 	float height = FIXED_TO_FLOAT(fixedheight); // constant y for all points on the convex flat polygon
 	float fflatwidth = 64.0f, fflatheight = 64.0f;
-	float xscale, yscale;
+	float xscale = 1.0f, yscale = 1.0f;
 
 	float scrollx = 0.0f, scrolly = 0.0f;
 	float tempxsow, tempytow, anglef = 0.0f;
