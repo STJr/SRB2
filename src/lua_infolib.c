@@ -2465,23 +2465,23 @@ static int teamscores_len(lua_State *L)
 static int playerstarts_get(lua_State *L)
 {
 	playerstarts_t *starts = *((playerstarts_t **)luaL_checkudata(L, 1, META_PLAYERSTARTS));
-	int i = luaL_checkinteger(L, 2);
-	if (i < 0 || i >= (signed)starts->count)
-		return luaL_error(L, "player start index %d out of range (0 - %d)", i, max(0, (int)starts->count - 1));
-	LUA_PushUserdata(L, starts->list[i], META_MAPTHING);
+	int index = luaL_checkinteger(L, 2);
+	if (index < 0 || index >= (signed)starts->count)
+		return luaL_error(L, "player start index %d out of range (0 - %d)", index, max(0, (int)starts->count - 1));
+	LUA_PushUserdata(L, starts->list[index], META_MAPTHING);
 	return 1;
 }
 
 static int playerstarts_set(lua_State *L)
 {
 	playerstarts_t *starts = *((playerstarts_t **)luaL_checkudata(L, 1, META_PLAYERSTARTS));
-	int i = luaL_checkinteger(L, 2);
+	int index = luaL_checkinteger(L, 2);
 	mapthing_t *mthing = *((mapthing_t **)luaL_checkudata(L, 3, META_MAPTHING));
-	if (i < 0 || i >= (signed)starts->count)
-		return luaL_error(L, "player start index %d out of range (0 - %d)", i, max(0, (int)starts->count - 1));
+	if (index < 0 || index >= (signed)starts->count)
+		return luaL_error(L, "player start index %d out of range (0 - %d)", index, max(0, (int)starts->count - 1));
 	if (!mthing)
 		return LUA_ErrInvalid(L, "mapthing_t");
-	starts->list[i] = mthing;
+	starts->list[index] = mthing;
 	return 0;
 }
 
@@ -2494,22 +2494,19 @@ static int playerstarts_len(lua_State *L)
 
 static int lib_getTeamstarts(lua_State *L)
 {
-	int i;
 	lua_remove(L, 1);
 
-	i = luaL_checkinteger(L, 1);
+	int i = luaL_checkinteger(L, 1);
 	if (i <= 0 || i >= numteams)
 		return luaL_error(L, "team index %d out of range (1 - %d)", i, numteams - 1);
 
 	LUA_PushUserdata(L, &teamstarts[i], META_PLAYERSTARTS);
-
 	return 1;
 }
 
-// #teamstarts -> MAXTEAMS
 static int lib_teamstartslen(lua_State *L)
 {
-	lua_pushinteger(L, MAXTEAMS);
+	lua_pushinteger(L, max(0, numteams - 1));
 	return 1;
 }
 
