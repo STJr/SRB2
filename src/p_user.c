@@ -13108,7 +13108,11 @@ boolean P_PlayerHasTeamFlag(player_t *player, UINT8 team)
 UINT16 P_GetPlayerColor(player_t *player)
 {
 	if (G_GametypeHasTeams() && player->ctfteam)
-		return G_GetTeamColor(player->ctfteam);
+	{
+		UINT16 skincolor = G_GetTeamColor(player->ctfteam);
+		if (skincolor != SKINCOLOR_NONE)
+			return skincolor;
+	}
 
 	return player->skincolor;
 }

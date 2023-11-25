@@ -11582,7 +11582,6 @@ void P_SpawnPlayer(INT32 playernum)
 				// Spawn as a spectator,
 				// yes even in splitscreen mode
 				p->spectator = true;
-				p->skincolor = teams[newteam].color;
 
 				// but immediately send a team change packet.
 				NetPacket.packet.playernum = playernum;
