@@ -56,6 +56,7 @@ hudnum_t get_huditem(const char *word);
 menutype_t get_menutype(const char *word);
 skincolornum_t get_skincolor(const char *word);
 INT16 get_gametype(const char *word);
+UINT8 get_team(const char *word);
 
 void readwipes(MYFILE *f);
 void readmaincfg(MYFILE *f);
@@ -71,6 +72,7 @@ void readtextprompt(MYFILE *f, INT32 num);
 void readcutscene(MYFILE *f, INT32 num);
 void readlevelheader(MYFILE *f, INT32 num);
 void readgametype(MYFILE *f, INT32 num);
+void readteam(MYFILE *f, INT32 num);
 void readsprite2(MYFILE *f, INT32 num);
 void readspriteinfo(MYFILE *f, INT32 num, boolean sprite2);
 #ifdef HWRENDER

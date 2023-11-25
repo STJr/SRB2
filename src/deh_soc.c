@@ -475,13 +475,12 @@ void readfreeslots(MYFILE *f)
 			}
 			else if (fastcmp(type, "TEAM"))
 			{
-				for (i = 0; i < MAXTEAMS; i++)
-					if (!teamnames[i]) {
-						teamnames[i] = Z_Malloc(strlen(word)+1, PU_STATIC, NULL);
-						strcpy(teamnames[i],word);
-						numteams++;
-						break;
-					}
+				if (numteams < MAXTEAMS)
+				{
+					teamnames[numteams] = Z_Malloc(strlen(word)+1, PU_STATIC, NULL);
+					strcpy(teamnames[numteams],word);
+					numteams++;
+				}
 			}
 			else if (fastcmp(type, "SPR2"))
 			{
@@ -1152,8 +1151,9 @@ void readgametype(MYFILE *f, INT32 num)
 	char gtconst[MAXLINELEN];
 	char gtdescription[441];
 
-	UINT8 teamcount = 0;
+	UINT8 teamcount = gametypes[num].teams.num;
 	UINT8 teamlist[MAXTEAMS];
+	boolean has_teams = false;
 
 	UINT8 newgtleftcolor, newgtrightcolor;
 	boolean has_desc_colors[2] = { false, false };
@@ -1329,26 +1329,20 @@ void readgametype(MYFILE *f, INT32 num)
 				do {
 					if (teamcount == MAXTEAMS)
 					{
-						deh_warning("readgametype %s: too many teams\n", gtname);
+						deh_warning("readgametype %d: too many teams\n", num);
 						break;
 					}
-					UINT8 team_id = TEAM_NONE;
-					for (i = 1; i < MAXTEAMS; i++)
-					{
-						if (!teamnames[i])
-							break;
-						if (fasticmp(tmp, teamnames[i]))
-						{
-							team_id = i;
-							break;
-						}
-					}
-					if (team_id == TEAM_NONE)
-						deh_warning("readgametype %s: unknown team %s\n", gtname, tmp);
-					else
+					char *tmp2 = Z_StrDup(tmp);
+					strupr(tmp2);
+					UINT8 team_id = get_team(tmp2);
+					if (team_id != TEAM_NONE)
 					{
 						teamlist[teamcount++] = team_id;
+						has_teams = true;
 					}
+					else
+						deh_warning("readgametype %d: unknown team %s\n", num, tmp);
+					Z_Free(tmp2);
 				} while((tmp = strtok(NULL,",")) != NULL);
 			}
 			// This SOC probably provided gametype rules as words, instead of using the RULES keyword.
@@ -1384,9 +1378,12 @@ void readgametype(MYFILE *f, INT32 num)
 		G_SetGametypeDescriptionRightColor(num, newgtrightcolor);
 
 	// Copy the teams
-	gametypes[num].teams.num = teamcount;
-	if (teamcount)
-		memcpy(gametypes[num].teams.list, teamlist, sizeof(teamlist[0]) * teamcount);
+	if (has_teams)
+	{
+		gametypes[num].teams.num = teamcount;
+		if (teamcount)
+			memcpy(gametypes[num].teams.list, teamlist, sizeof(teamlist[0]) * teamcount);
+	}
 
 	// Write the constant name.
 	if (gametypes[num].constant_name == NULL)
@@ -1401,6 +1398,133 @@ void readgametype(MYFILE *f, INT32 num)
 
 	// Update gametype_cons_t accordingly.
 	G_UpdateGametypeSelections();
+}
+
+void readteam(MYFILE *f, INT32 num)
+{
+	char *s = Z_Malloc(MAXLINELEN, PU_STATIC, NULL);
+	char *word;
+	char *word2, *word2lwr = NULL;
+	INT32 i;
+
+	team_t *team = &teams[num];
+
+	do
+	{
+		if (myfgets(s, MAXLINELEN, f))
+		{
+			if (s[0] == '\n')
+				break;
+
+			word = strtok(s, " ");
+			if (word)
+				strupr(word);
+			else
+				break;
+
+			word2 = strtok(NULL, " = ");
+			if (word2)
+			{
+				if (!word2lwr)
+					word2lwr = Z_Malloc(MAXLINELEN, PU_STATIC, NULL);
+				strcpy(word2lwr, word2);
+				strupr(word2);
+			}
+			else
+				break;
+
+			if (word2[strlen(word2)-1] == '\n')
+				word2[strlen(word2)-1] = '\0';
+			i = atoi(word2);
+
+			if (fastcmp(word, "NAME"))
+			{
+				Z_Free(team->name);
+				team->name = Z_StrDup(word2lwr);
+			}
+			else if (fastcmp(word, "FLAGNAME"))
+			{
+				Z_Free(team->flag_name);
+				team->flag_name = Z_StrDup(word2lwr);
+			}
+			else if (fastcmp(word, "FLAG"))
+			{
+				team->flag = (UINT16)get_number(word2);
+			}
+			else if (fastcmp(word, "FLAGTYPE"))
+			{
+				if (i == 0 && word2[0] != '0') // If word2 isn't a number
+					i = get_mobjtype(word2); // find a thing by name
+				if (i < NUMMOBJTYPES && i > 0)
+					team->flag_mobj_type = i;
+				else
+				{
+					deh_warning("readteam %d: Thing %d out of range (1 - %d)", num, i, NUMMOBJTYPES-1);
+				}
+			}
+			else if (fastcmp(word, "COLOR"))
+			{
+				if (i == 0 && word2[0] != '0') // If word2 isn't a number
+					i = get_skincolor(word2); // find a skincolor by name
+				if (i && i < numskincolors)
+					team->color = i;
+				else
+				{
+					deh_warning("readteam %d: Color %d out of range (1 - %d)", num, i, numskincolors-1);
+				}
+			}
+			else if (fastcmp(word, "WEAPONCOLOR"))
+			{
+				if (i == 0 && word2[0] != '0') // If word2 isn't a number
+					i = get_skincolor(word2); // find a skincolor by name
+				if (i && i < numskincolors)
+					team->weapon_color = i;
+				else
+				{
+					deh_warning("readteam %d: Weapon color %d out of range (1 - %d)", num, i, numskincolors-1);
+				}
+			}
+			else if (fastcmp(word, "MISSILECOLOR"))
+			{
+				if (i == 0 && word2[0] != '0') // If word2 isn't a number
+					i = get_skincolor(word2); // find a skincolor by name
+				if (i && i < numskincolors)
+					team->missile_color = i;
+				else
+				{
+					deh_warning("readteam %d: Missile color %d out of range (1 - %d)", num, i, numskincolors-1);
+				}
+			}
+			else if (fastcmp(word, "ICON"))
+			{
+				G_SetTeamIcon(num, TEAM_ICON, word2lwr);
+			}
+			else if (fastcmp(word, "FLAGICON"))
+			{
+				G_SetTeamIcon(num, TEAM_ICON_FLAG, word2lwr);
+			}
+			else if (fastcmp(word, "GOTFLAGICON"))
+			{
+				G_SetTeamIcon(num, TEAM_ICON_GOT_FLAG, word2lwr);
+			}
+			else if (fastcmp(word, "MISSINGFLAGICON"))
+			{
+				G_SetTeamIcon(num, TEAM_ICON_MISSING_FLAG, word2lwr);
+			}
+			else
+			{
+				deh_warning("readteam %d: unknown word '%s'", num, word);
+			}
+		}
+	} while (!myfeof(f)); // finish when the line is empty
+
+	// Free strings.
+	Z_Free(s);
+	if (word2lwr)
+		Z_Free(word2lwr);
+
+	ST_LoadTeamIcons();
+	G_UpdateTeamSelection();
 }
 
 void readlevelheader(MYFILE *f, INT32 num)
@@ -4230,6 +4354,22 @@ INT16 get_gametype(const char *word)
 	}
 	deh_warning("Couldn't find gametype named 'GT_%s'",word);
 	return GT_COOP;
+}
+
+UINT8 get_team(const char *word)
+{
+	UINT8 i;
+	if (*word >= '0' && *word <= '9')
+		return atoi(word);
+	if (fastncmp("TEAM_",word,5))
+		word += 5; // take off the TEAM_
+	for (i = 0; i < numteams; i++)
+	{
+		if (fastcmp(word, teamnames[i]))
+			return i;
+	}
+	deh_warning("Couldn't find team named 'TEAM_%s'",word);
+	return TEAM_NONE;
 }
 
 spritenum_t get_sprite(const char *word)

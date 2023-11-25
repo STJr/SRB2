@@ -2314,7 +2314,7 @@ static void Command_Teamchange_f(void)
 			if (M_StringOnlyHasDigits(COM_Argv(1)))
 			{
 				newteam = atoi(COM_Argv(1));
-				if (newteam >= teamsingame)
+				if (newteam == TEAM_NONE || newteam >= teamsingame)
 					newteam = MAXTEAMS;
 			}
 			else
@@ -2430,7 +2430,7 @@ static void Command_Teamchange2_f(void)
 			if (M_StringOnlyHasDigits(COM_Argv(1)))
 			{
 				newteam = atoi(COM_Argv(1));
-				if (newteam >= teamsingame)
+				if (newteam == TEAM_NONE || newteam >= teamsingame)
 					newteam = MAXTEAMS;
 			}
 			else
@@ -2567,7 +2567,7 @@ static void Command_ServerTeamChange_f(void)
 			if (M_StringOnlyHasDigits(COM_Argv(1)))
 			{
 				newteam = atoi(COM_Argv(1));
-				if (newteam >= teamsingame)
+				if (newteam == TEAM_NONE || newteam >= teamsingame)
 					newteam = MAXTEAMS;
 			}
 			else

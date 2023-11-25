@@ -3592,11 +3592,23 @@ void G_UpdateTeamSelection(void)
 		i++;
 	}
 
+	// If no selections were added, somehow, we add at least two fallbacks.
+	if (i == 0)
+	{
+		dummyteam_cons_t[i].value = 0;
+		dummyteam_cons_t[i].strvalue = "Spectator";
+		i++;
+
+		dummyteam_cons_t[i].value = 1;
+		dummyteam_cons_t[i].strvalue = "Playing";
+		i++;
+	}
+
 	dummyteam_cons_t[i].value = 0;
 	dummyteam_cons_t[i].strvalue = NULL;
 
 	cv_dummyteam.defaultvalue = dummyteam_cons_t[0].strvalue;
-	cv_dummyteam.value = 0;
+	cv_dummyteam.value = dummyteam_cons_t[0].value;
 	cv_dummyteam.string = cv_dummyteam.defaultvalue;
 }
 

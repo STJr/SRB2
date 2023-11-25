@@ -428,6 +428,18 @@ static void DEH_LoadDehackedFile(MYFILE *f, boolean mainfile)
 							ignorelines(f);
 					}
 				}
+				else if (fastcmp(word, "TEAM"))
+				{
+					if (i == 0 && word2[0] != '0') // If word2 isn't a number
+						i = get_team(word2); // find a team by name
+					if (i >= 0 && i < MAXTEAMS)
+						readteam(f, i);
+					else
+					{
+						deh_warning("Team %d out of range (0 - %d)", i, MAXTEAMS);
+						ignorelines(f);
+					}
+				}
 				else if (fastcmp(word, "CUTSCENE"))
 				{
 					if (i > 0 && i < 129)
