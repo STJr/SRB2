@@ -22,7 +22,7 @@
 static void CheckActiveMovie(lua_State *L)
 {
 	if (!activemovie)
-		return luaL_error(L, "no movie currently playing");
+		luaL_error(L, "no movie currently playing");
 }
 
 static int lib_play(lua_State *L)
@@ -53,9 +53,9 @@ static int lib_setPosition(lua_State *L)
 static int lib_seek(lua_State *L)
 {
 	CheckActiveMovie(L);
+	int ms = luaL_checkinteger(L, 1);
 	if (ms < 0)
 		return luaL_error(L, "the position cannot be negative");
-	int ms = luaL_checkinteger(L, 1);
 	MovieDecode_Seek(activemovie, ms);
 	return 0;
 }
