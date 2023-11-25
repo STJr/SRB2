@@ -178,10 +178,7 @@ static INT64 GetVideoFrameEndPTS(movievideoframe_t *frame)
 
 static INT64 GetAudioFrameEndPTS(movie_t *movie, movieaudioframe_t *frame)
 {
-	AVRational oldtb = { 1, SAMPLE_RATE };
-	AVRational newtb = movie->audiostream.stream->time_base;
-
-	return frame->pts + av_rescale_q(frame->numsamples, oldtb, newtb);
+	return frame->pts + SamplesToPTS(movie, frame->numsamples);
 }
 
 static INT32 GetBytesPerPatchColumn(moviedecodeworker_t *worker)
