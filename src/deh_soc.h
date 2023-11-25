@@ -56,7 +56,6 @@ hudnum_t get_huditem(const char *word);
 menutype_t get_menutype(const char *word);
 skincolornum_t get_skincolor(const char *word);
 INT16 get_gametype(const char *word);
-UINT8 get_team(const char *word);
 
 void readwipes(MYFILE *f);
 void readmaincfg(MYFILE *f);
