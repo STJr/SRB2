@@ -1234,7 +1234,7 @@ void readgametype(MYFILE *f, INT32 num)
 			else if (fastcmp(word, "IDENTIFIER"))
 			{
 				// GT_
-				strncpy(gtconst, word2, MAXLINELEN);
+				strlcpy(gtconst, word2, sizeof(gtconst));
 			}
 			// Point and time limits
 			else if (fastcmp(word, "DEFAULTPOINTLIMIT"))
