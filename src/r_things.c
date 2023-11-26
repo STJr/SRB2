@@ -3205,8 +3205,8 @@ static boolean R_CheckSpriteVisible(vissprite_t *spr, INT32 x1, INT32 x2)
 	INT16 sz = spr->sz;
 	INT16 szt = spr->szt;
 
-	fixed_t texturemid, yscale, scalestep = spr->scalestep;
-	INT32 height;
+	fixed_t texturemid = 0, yscale = 0, scalestep = spr->scalestep; // "= 0" pleases the compiler
+	INT32 height = 0;
 
 	if (scalestep)
 	{
