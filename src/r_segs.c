@@ -2086,7 +2086,6 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 			}
 
 			rw_toptexturemid = FixedMul(rw_toptexturemid, rw_toptexturescaley);
-			rw_toptextureslide = FixedMul(rw_toptextureslide, rw_toptexturescaley);
 		}
 
 		// check BOTTOM TEXTURE
@@ -2127,7 +2126,6 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 			}
 
 			rw_bottomtexturemid = FixedMul(rw_bottomtexturemid, rw_bottomtexturescaley);
-			rw_bottomtextureslide = FixedMul(rw_bottomtextureslide, rw_bottomtexturescaley);
 		}
 
 		rw_toptexturemid += toprowoffset;
