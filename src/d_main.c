@@ -1353,13 +1353,13 @@ void D_SRB2Main(void)
 
 			snprintf(luafiledir, sizeof luafiledir, "%s" PATHSEP "luafiles", userhome);
 #endif // DEFAULTDIR
-
-			strcpy(basesavegamename, savegamename);
-			strcpy(baseliveeventbackup, liveeventbackup);
 		}
 
 		configfile[sizeof configfile - 1] = '\0';
 	}
+
+	strcpy(basesavegamename, savegamename);
+	strcpy(baseliveeventbackup, liveeventbackup);
 
 	// Create addons dir
 	snprintf(addonsdir, sizeof addonsdir, "%s%s%s", srb2home, PATHSEP, "addons");
