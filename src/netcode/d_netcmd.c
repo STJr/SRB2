@@ -3622,7 +3622,8 @@ static void Command_Delfile(void)
 		return;
 	}
 
-	WRITESTRINGN(buf_p,p,240);
+	WRITESTRINGN(buf_p, p, 240);
+	WRITEMEM(buf_p, wadfiles[found]->md5sum, 16);
 	SendNetXCmd(XD_DELFILE, buf, buf_p - buf);
 }
 
@@ -3878,10 +3879,12 @@ static void Got_Addfoldercmd(UINT8 **cp, INT32 playernum)
 static void Got_Delfilecmd(UINT8 **cp, INT32 playernum)
 {
 	char filename[241];
+	char md5sum[16];
 	size_t i;
 	boolean found = false;
 
 	READSTRINGN(*cp, filename, 240);
+	READMEM(*cp, md5sum, 16);
 
 	if (playernum != serverplayer)
 	{
@@ -3893,11 +3896,12 @@ static void Got_Delfilecmd(UINT8 **cp, INT32 playernum)
 
 	for (i = 0; i < numwadfiles; i++)
 	{
-		if (!W_IsFilePresent(i))
+		if (!W_IsFilePresent(i) || !wadfiles[i]->important)
 			continue;
 
 		char *wadname = va("%s", wadfiles[i]->filename);
-		if (!stricmp(wadname, filename))
+		nameonly(wadname);
+		if (!stricmp(wadname, filename) && !memcmp(wadfiles[i]->md5sum, md5sum, 16))
 		{
 			// found the file we want to delete
 			found = true;
