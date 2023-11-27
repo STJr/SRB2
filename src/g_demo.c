@@ -1492,8 +1492,9 @@ void G_BeginRecording(void)
 	demo_p += 16;
 
 	// Skin
-	for (i = 0; i < 16 && cv_skin.string[i]; i++)
-		name[i] = cv_skin.string[i];
+	const char *skinname = skins[players[0].skin].name;
+	for (i = 0; i < 16 && skinname[i]; i++)
+		name[i] = skinname[i];
 	for (; i < 16; i++)
 		name[i] = '\0';
 	M_Memcpy(demo_p,name,16);

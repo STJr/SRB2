@@ -612,6 +612,7 @@ void D_RegisterServerCommands(void)
 	CV_RegisterVar(&cv_showjoinaddress);
 	CV_RegisterVar(&cv_blamecfail);
 	CV_RegisterVar(&cv_dedicatedidletime);
+	CV_RegisterVar(&cv_idletime);
 
 	COM_AddCommand("ping", Command_Ping_f, COM_LUA);
 	CV_RegisterVar(&cv_nettimeout);
@@ -1252,7 +1253,7 @@ static void SetColorLocal(INT32 playernum, UINT16 color)
 //
 static void SendNameAndColor(void)
 {
-	char buf[MAXPLAYERNAME+6];
+	char buf[MAXPLAYERNAME+7];
 	char *p;
 
 	p = buf;
