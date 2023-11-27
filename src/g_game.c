@@ -4409,8 +4409,10 @@ void G_AfterFileDeletion(void)
 {
 	for (INT32 i = 0; i < MAXPLAYERS; i++)
 	{
-		if (!playeringame[i] && players[i].skin >= numskins)
-			SetPlayerSkinByNum(i, -1);
+		if (players[i].skin >= numskins)
+			SetPlayerSkinByNum(i, GetPlayerDefaultSkin(i));
+		else
+			SetPlayerSkinByNum(i, players[i].skin);
 	}
 
 	if (!Playing())

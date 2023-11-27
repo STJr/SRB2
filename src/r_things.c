@@ -569,6 +569,9 @@ void R_InitSprites(void)
 	if (!numsprites)
 		I_Error("R_AddSpriteDefs: no sprites in namelist\n");
 
+	if (sprites)
+		Z_Free(sprites);
+
 	sprites = Z_Calloc(numsprites * sizeof (*sprites), PU_STATIC, NULL);
 
 	// find sprites in each -file added pwad
