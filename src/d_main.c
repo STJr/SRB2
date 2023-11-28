@@ -407,7 +407,6 @@ static void D_Display(void)
 		case GS_LEVEL:
 			if (!gametic)
 				break;
-#if 0
 			HU_Erase();
 			AM_Drawer();
 			break;
@@ -471,9 +470,6 @@ static void D_Display(void)
 			}
 		case GS_DEDICATEDSERVER:
 		case GS_NULL:
-#else
-		default:
-#endif
 			break;
 	}
 
@@ -561,7 +557,6 @@ static void D_Display(void)
 
 			PS_START_TIMING(ps_uitime);
 
-#if 0
 			if (gamestate == GS_LEVEL)
 			{
 				ST_Drawer();
@@ -570,7 +565,6 @@ static void D_Display(void)
 			}
 			else
 				F_TitleScreenDrawer();
-#endif
 		}
 		else
 		{

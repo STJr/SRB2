@@ -523,8 +523,7 @@ void V_DrawStretchyFixedPatch(fixed_t x, fixed_t y, fixed_t pscale, fixed_t vsca
 
 	UINT8 perplayershuffle = 0;
 
-	// if (rendermode == render_none)
-	if (true)
+	if (rendermode == render_none)
 		return;
 
 #ifdef HWRENDER
@@ -611,7 +610,7 @@ void V_DrawStretchyFixedPatch(fixed_t x, fixed_t y, fixed_t pscale, fixed_t vsca
 #ifdef QUADS
 		if (splitscreen > 1) // 3 or 4 players
 		{
-			fixed_t adjustx = ((scrn & V_NOSCALESTART) ? vid.height : BASEVIDHEIGHT)<<(FRACBITS-1));
+			fixed_t adjustx = ((scrn & V_NOSCALESTART) ? vid.height : BASEVIDHEIGHT)<<(FRACBITS-1);
 			fdup >>= 1;
 			colfrac <<= 1;
 			x >>= 1;
@@ -677,13 +676,12 @@ void V_DrawStretchyFixedPatch(fixed_t x, fixed_t y, fixed_t pscale, fixed_t vsca
 	if (!desttop)
 		return;
 
-	deststop = desttop + vid.rowbytes * vid.height;
+	deststop = desttop + vid.rowbytes * vid.width;
 
 	if (scrn & V_NOSCALESTART)
 	{
 		x >>= FRACBITS;
 		y >>= FRACBITS;
-		desttop += (y*vid.width) + x;
 	}
 	else
 	{
@@ -732,9 +730,9 @@ void V_DrawStretchyFixedPatch(fixed_t x, fixed_t y, fixed_t pscale, fixed_t vsca
 					y += (vid.height - (BASEVIDHEIGHT * dup)) / 4;
 			}
 		}
-
-		desttop += (y*vid.width) + x;
 	}
+
+	desttop += (x*vid.height) + y;
 
 	if (pscale != FRACUNIT) // scale width properly
 	{
@@ -747,9 +745,9 @@ void V_DrawStretchyFixedPatch(fixed_t x, fixed_t y, fixed_t pscale, fixed_t vsca
 		pwidth = patch->width * dup;
 
 	deststart = desttop;
-	destend = desttop + pwidth;
+	destend = desttop + pwidth*vid.height;
 
-	for (col = 0; (col>>FRACBITS) < patch->width; col += colfrac, ++offx, desttop++)
+	for (col = 0; (col>>FRACBITS) < patch->width; col += colfrac, ++offx, desttop += vid.height)
 	{
 		INT32 topdelta, prevdelta = -1;
 		if (scrn & V_FLIP) // offx is measured from right edge instead of left
@@ -778,13 +776,13 @@ void V_DrawStretchyFixedPatch(fixed_t x, fixed_t y, fixed_t pscale, fixed_t vsca
 			dest = desttop;
 			if (scrn & V_FLIP)
 				dest = deststart + (destend - desttop);
-			dest += FixedInt(FixedMul(topdelta<<FRACBITS,vdup))*vid.width;
+			dest += FixedInt(FixedMul(topdelta<<FRACBITS,vdup));
 
 			for (ofs = 0; dest < deststop && (ofs>>FRACBITS) < column->length; ofs += rowfrac)
 			{
 				if (dest >= screens[scrn&V_PARAMMASK]) // don't draw off the top of the screen (CRASH PREVENTION)
 					*dest = patchdrawfunc(dest, source, ofs);
-				dest += vid.width;
+				dest++;
 			}
 			column = (const column_t *)((const UINT8 *)column + column->length + 4);
 		}
@@ -807,8 +805,7 @@ void V_DrawCroppedPatch(fixed_t x, fixed_t y, fixed_t pscale, fixed_t vscale, IN
 
 	UINT8 perplayershuffle = 0;
 
-	// if (rendermode == render_none)
-	if (true)
+	if (rendermode == render_none)
 		return;
 
 #ifdef HWRENDER
@@ -881,7 +878,7 @@ void V_DrawCroppedPatch(fixed_t x, fixed_t y, fixed_t pscale, fixed_t vscale, IN
 #ifdef QUADS
 		if (splitscreen > 1) // 3 or 4 players
 		{
-			fixed_t adjustx = ((scrn & V_NOSCALESTART) ? vid.height : BASEVIDHEIGHT)<<(FRACBITS-1));
+			fixed_t adjustx = ((scrn & V_NOSCALESTART) ? vid.height : BASEVIDHEIGHT)<<(FRACBITS-1);
 			fdup >>= 1;
 			colfrac <<= 1;
 			x >>= 1;
@@ -947,13 +944,12 @@ void V_DrawCroppedPatch(fixed_t x, fixed_t y, fixed_t pscale, fixed_t vscale, IN
 	if (!desttop)
 		return;
 
-	deststop = desttop + vid.rowbytes * vid.height;
+	deststop = desttop + vid.rowbytes * vid.width;
 
 	if (scrn & V_NOSCALESTART)
 	{
 		x >>= FRACBITS;
 		y >>= FRACBITS;
-		desttop += (y*vid.width) + x;
 	}
 	else
 	{
@@ -994,9 +990,9 @@ void V_DrawCroppedPatch(fixed_t x, fixed_t y, fixed_t pscale, fixed_t vscale, IN
 					y += (vid.height - (BASEVIDHEIGHT * dup)) / 4;
 			}
 		}
-
-		desttop += (y*vid.width) + x;
 	}
+
+	desttop += (x*vid.height) + y;
 
 	// Auto-crop at splitscreen borders!
 	if (splitscreen && (scrn & V_PERPLAYER))
@@ -1015,7 +1011,7 @@ void V_DrawCroppedPatch(fixed_t x, fixed_t y, fixed_t pscale, fixed_t vscale, IN
 			if (stplyr == &players[displayplayer]) // Player 1's screen, crop at the bottom
 			{
 				// Just put a big old stop sign halfway through the screen
-				deststop -= vid.rowbytes * (vid.height>>1);
+				deststop -= vid.height>>1;
 			}
 			else //if (stplyr == &players[secondarydisplayplayer]) // Player 2's screen, crop at the top
 			{
@@ -1023,13 +1019,13 @@ void V_DrawCroppedPatch(fixed_t x, fixed_t y, fixed_t pscale, fixed_t vscale, IN
 				{
 					sy += ((vid.height>>1) - y) * rowfrac; // Start further down on the patch
 					h -= ((vid.height>>1) - y) * rowfrac; // Draw less downwards from the start
-					desttop += ((vid.height>>1) - y) * vid.width; // Start drawing at the border
+					desttop += (vid.height>>1) - y; // Start drawing at the border
 				}
 			}
 		}
 	}
 
-	for (col = sx; (col>>FRACBITS) < patch->width && (col - sx) < w; col += colfrac, ++x, desttop++)
+	for (col = sx; (col>>FRACBITS) < patch->width && (col - sx) < w; col += colfrac, ++x, desttop += vid.height)
 	{
 		INT32 topdelta, prevdelta = -1;
 		if (x < 0) // don't draw off the left of the screen (WRAP PREVENTION)
@@ -1048,7 +1044,7 @@ void V_DrawCroppedPatch(fixed_t x, fixed_t y, fixed_t pscale, fixed_t vscale, IN
 			dest = desttop;
 			if ((topdelta<<FRACBITS)-sy > 0)
 			{
-				dest += FixedInt(FixedMul((topdelta<<FRACBITS)-sy,vdup))*vid.width;
+				dest += FixedInt(FixedMul((topdelta<<FRACBITS)-sy,vdup));
 				ofs = 0;
 			}
 			else
@@ -1058,7 +1054,7 @@ void V_DrawCroppedPatch(fixed_t x, fixed_t y, fixed_t pscale, fixed_t vscale, IN
 			{
 				if (dest >= screens[scrn&V_PARAMMASK]) // don't draw off the top of the screen (CRASH PREVENTION)
 					*dest = patchdrawfunc(dest, source, ofs);
-				dest += vid.width;
+				dest++;
 			}
 			column = (const column_t *)((const UINT8 *)column + column->length + 4);
 		}
@@ -1098,8 +1094,8 @@ void V_DrawBlock(INT32 x, INT32 y, INT32 scrn, INT32 width, INT32 height, const 
 		I_Error("Bad V_DrawBlock");
 #endif
 
-	dest = screens[scrn] + y*vid.width + x;
-	deststop = screens[scrn] + vid.rowbytes * vid.height;
+	dest = screens[scrn] + x*vid.height + y;
+	deststop = screens[scrn] + vid.rowbytes * vid.width;
 
 	while (height--)
 	{
@@ -1145,7 +1141,7 @@ static void V_BlitScaledPic(INT32 rx1, INT32 ry1, INT32 scrn, pic_t * pic)
 		return;
 	}
 
-	dest = screens[scrn] + max(0, ry1 * vid.width) + max(0, rx1);
+	dest = screens[scrn] + max(0, rx1 * vid.height) + max(0, ry1);
 	// y cliping to the screen
 	if (ry1 + height * vid.dup >= vid.width)
 		height = (vid.width - ry1) / vid.dup - 1;
@@ -1172,13 +1168,12 @@ static void V_BlitScaledPic(INT32 rx1, INT32 ry1, INT32 scrn, pic_t * pic)
 //
 void V_DrawFill(INT32 x, INT32 y, INT32 w, INT32 h, INT32 c)
 {
-	UINT8 *dest;
+	UINT8 *dest, *desttop;
 	const UINT8 *deststop;
 
 	UINT8 perplayershuffle = 0;
 
-	// if (rendermode == render_none)
-	if (true)
+	if (rendermode == render_none)
 		return;
 
 #ifdef HWRENDER
@@ -1319,17 +1314,26 @@ void V_DrawFill(INT32 x, INT32 y, INT32 w, INT32 h, INT32 c)
 	if (y + h > vid.height)
 		h = vid.height - y;
 
-	dest = screens[0] + y*vid.width + x;
-	deststop = screens[0] + vid.rowbytes * vid.height;
+	dest = desttop = screens[0] + x*vid.height + y;
+	deststop = screens[0] + vid.rowbytes * vid.width;
 
 	c &= 255;
 
-	for (;(--h >= 0) && dest < deststop; dest += vid.width)
-		memset(dest, c, w * vid.bpp);
+	for (;(--h >= 0) && desttop < deststop; desttop++)
+	{
+		dest = desttop;
+
+		UINT8 *row_end = dest + (w * vid.height);
+		while (dest < row_end)
+		{
+			*dest = c;
+			dest += vid.height;
+		}
+	}
 }
 
 #ifdef HWRENDER
-// This is now a function since it's otherwise repeated 2 times and honestly looks retarded:
+// Used for both HWR_DrawConsoleFill and HWR_DrawConsoleBack -- should likely be moved to hw_draw.c, alongside similar code in V_DrawPromptBack
 static UINT32 V_GetHWConsBackColor(void)
 {
 	UINT8 r, g, b;
@@ -1363,20 +1367,17 @@ static UINT32 V_GetHWConsBackColor(void)
 #endif
 
 
-// THANK YOU MPC!!!
-// and thanks toaster for cleaning it up.
+// thanks toaster for cleaning it up.
 
 void V_DrawFillConsoleMap(INT32 x, INT32 y, INT32 w, INT32 h, INT32 c)
 {
-	UINT8 *dest;
+	UINT8 *dest, *desttop;
 	const UINT8 *deststop;
-	INT32 u;
 	UINT8 *fadetable;
 	UINT32 alphalevel = 0;
 	UINT8 perplayershuffle = 0;
 
-	// if (rendermode == render_none)
-	if (true)
+	if (rendermode == render_none)
 		return;
 
 #ifdef HWRENDER
@@ -1522,34 +1523,37 @@ void V_DrawFillConsoleMap(INT32 x, INT32 y, INT32 w, INT32 h, INT32 c)
 	if (y + h > vid.height)
 		h = vid.height-y;
 
-	dest = screens[0] + y*vid.width + x;
-	deststop = screens[0] + vid.rowbytes * vid.height;
+	dest = desttop = screens[0] + x*vid.height + y;
+	deststop = screens[0] + vid.rowbytes * vid.width;
 
 	c &= 255;
 
-	// Jimita (12-04-2018)
 	if (alphalevel)
 	{
 		fadetable = R_GetTranslucencyTable(alphalevel) + (c*256);
-		for (;(--h >= 0) && dest < deststop; dest += vid.width)
+		for (;(--h >= 0) && desttop < deststop; desttop++)
 		{
-			u = 0;
-			while (u < w)
+			dest = desttop;
+
+			UINT8 *row_end = dest + (w * vid.height);
+			while (dest < row_end)
 			{
-				dest[u] = fadetable[consolebgmap[dest[u]]];
-				u++;
+				*dest = fadetable[consolebgmap[*dest]];
+				dest += vid.height;
 			}
 		}
 	}
 	else
 	{
-		for (;(--h >= 0) && dest < deststop; dest += vid.width)
+		for (;(--h >= 0) && desttop < deststop; desttop++)
 		{
-			u = 0;
-			while (u < w)
+			dest = desttop;
+
+			UINT8 *row_end = dest + (w * vid.height);
+			while (dest < row_end)
 			{
-				dest[u] = consolebgmap[dest[u]];
-				u++;
+				*dest = consolebgmap[*dest];
+				dest += vid.height;
 			}
 		}
 	}
@@ -1565,14 +1569,12 @@ void V_DrawFillConsoleMap(INT32 x, INT32 y, INT32 w, INT32 h, INT32 c)
 //
 void V_DrawFadeFill(INT32 x, INT32 y, INT32 w, INT32 h, INT32 c, UINT16 color, UINT8 strength)
 {
-	UINT8 *dest;
+	UINT8 *dest, *desttop;
 	const UINT8 *deststop;
-	INT32 u;
 	UINT8 *fadetable;
 	UINT8 perplayershuffle = 0;
 
-	// if (rendermode == render_none)
-	if (true)
+	if (rendermode == render_none)
 		return;
 
 #ifdef HWRENDER
@@ -1705,21 +1707,24 @@ void V_DrawFadeFill(INT32 x, INT32 y, INT32 w, INT32 h, INT32 c, UINT16 color, U
 	if (y + h > vid.height)
 		h = vid.height-y;
 
-	dest = screens[0] + y*vid.width + x;
-	deststop = screens[0] + vid.rowbytes * vid.height;
+	dest = desttop = screens[0] + x*vid.height + y;
+	deststop = screens[0] + vid.rowbytes * vid.width;
 
 	c &= 255;
 
 	fadetable = ((color & 0xFF00) // Color is not palette index?
 		? ((UINT8 *)colormaps + strength*256) // Do COLORMAP fade.
 		: ((UINT8 *)R_GetTranslucencyTable((9-strength)+1) + color*256)); // Else, do TRANSMAP** fade.
-	for (;(--h >= 0) && dest < deststop; dest += vid.width)
+
+	for (;(--h >= 0) && desttop < deststop; desttop++)
 	{
-		u = 0;
-		while (u < w)
+		dest = desttop;
+
+		UINT8 *row_end = dest + (w * vid.height);
+		while (dest < row_end)
 		{
-			dest[u] = fadetable[dest[u]];
-			u++;
+			*dest = fadetable[*dest];
+			dest += vid.height;
 		}
 	}
 }
@@ -1732,7 +1737,7 @@ void V_DrawFlatFill(INT32 x, INT32 y, INT32 w, INT32 h, lumpnum_t flatnum)
 	INT32 u, v;
 	fixed_t dx, dy, xfrac, yfrac;
 	const UINT8 *src, *deststop;
-	UINT8 *flat, *dest;
+	UINT8 *flat, *dest, *desttop;
 	size_t lflatsize, flatshift;
 
 #ifdef HWRENDER
@@ -1748,8 +1753,8 @@ void V_DrawFlatFill(INT32 x, INT32 y, INT32 w, INT32 h, lumpnum_t flatnum)
 
 	flat = W_CacheLumpNum(flatnum, PU_CACHE);
 
-	dest = screens[0] + y*vid.dup*vid.width + x*vid.dup;
-	deststop = screens[0] + vid.rowbytes * vid.height;
+	dest = desttop = screens[0] + x*vid.height + y;
+	deststop = screens[0] + vid.rowbytes * vid.width;
 
 	// from V_DrawScaledPatch
 	if (vid.width != BASEVIDWIDTH * vid.dup)
@@ -1771,15 +1776,17 @@ void V_DrawFlatFill(INT32 x, INT32 y, INT32 w, INT32 h, lumpnum_t flatnum)
 	dy = FixedDiv(FRACUNIT, vid.dup<<(FRACBITS-2));
 
 	yfrac = 0;
-	for (v = 0; v < h; v++, dest += vid.width)
+	for (v = 0; v < h; v++, desttop++)
 	{
 		xfrac = 0;
 		src = flat + (((yfrac>>FRACBITS) & (lflatsize - 1)) << flatshift);
+		dest = desttop;
 		for (u = 0; u < w; u++)
 		{
-			if (&dest[u] > deststop)
+			if (dest > deststop)
 				return;
-			dest[u] = src[(xfrac>>FRACBITS)&(lflatsize-1)];
+			*dest = src[(xfrac>>FRACBITS)&(lflatsize-1)];
+			dest += vid.height;
 			xfrac += dx;
 		}
 		yfrac += dy;
@@ -1811,7 +1818,8 @@ void V_DrawPatchFill(patch_t *pat)
 //
 void V_DrawFadeScreen(UINT16 color, UINT8 strength)
 {
-#if 0
+	UINT8 *fadetable;
+
 #ifdef HWRENDER
 	if (rendermode == render_opengl)
 	{
@@ -1820,31 +1828,35 @@ void V_DrawFadeScreen(UINT16 color, UINT8 strength)
 	}
 #endif
 
+	if (color & 0xFF00) // Color is not palette index?
 	{
-		const UINT8 *fadetable = ((color & 0xFF00) // Color is not palette index?
-		? ((UINT8 *)(((color & 0x0F00) == 0x0A00) ? fadecolormap // Do fadecolormap fade.
-		: (((color & 0x0F00) == 0x0B00) ? fadecolormap + (256 * FADECOLORMAPROWS) // Do white fadecolormap fade.
-		: colormaps)) + strength*256) // Do COLORMAP fade.
-		: ((UINT8 *)R_GetTranslucencyTable((9-strength)+1) + color*256)); // Else, do TRANSMAP** fade.
-		const UINT8 *deststop = screens[0] + vid.rowbytes * vid.height;
-		UINT8 *buf = screens[0];
+		if ((color & 0x0F00) == 0x0A00) // Do fadecolormap fade.
+			fadetable = fadecolormap;
+		else if ((color & 0x0F00) == 0x0B00)
+			fadetable = fadecolormap + (256 * FADECOLORMAPROWS); // Do white fadecolormap fade.
+		else
+			fadetable = colormaps; // Do COLORMAP fade.
 
-		// heavily simplified -- we don't need to know x or y
-		// position when we're doing a full screen fade
-		for (; buf < deststop; ++buf)
-			*buf = fadetable[*buf];
+		fadetable += strength*256;
 	}
-#else
-	(void)color;
-	(void)strength;
-#endif
+	else // Else, do TRANSMAP** fade.
+	{
+		fadetable = R_GetTranslucencyTable((9-strength)+1) + color*256;
+	}
+
+	UINT8 *buf = screens[0];
+	const UINT8 *deststop = screens[0] + vid.rowbytes * vid.width;
+
+	// heavily simplified -- we don't need to know x or y
+	// position when we're doing a full screen fade
+	for (; buf < deststop; ++buf)
+		*buf = fadetable[*buf];
 }
 
 // Simple translucency with one color, over a set number of lines starting from the top.
 void V_DrawFadeConsBack(INT32 plines)
 {
-#if 0
-	UINT8 *deststop, *buf;
+	UINT8 *dest, *desttop, *deststop;
 
 #ifdef HWRENDER // not win32 only 19990829 by Kin
 	if (rendermode == render_opengl)
@@ -1857,18 +1869,26 @@ void V_DrawFadeConsBack(INT32 plines)
 
 	// heavily simplified -- we don't need to know x or y position,
 	// just the stop position
-	deststop = screens[0] + vid.rowbytes * min(plines, vid.height);
-	for (buf = screens[0]; buf < deststop; ++buf)
-		*buf = consolebgmap[*buf];
-#else
-	(void)plines;
-#endif
+	dest = desttop = screens[0];
+	deststop = screens[0] + min(plines, vid.height);
+
+	for (; desttop < deststop; desttop++)
+	{
+		dest = desttop;
+
+		UINT8 *row_end = dest + (vid.width * vid.height);
+		while (dest < row_end)
+		{
+			*dest = consolebgmap[*dest];
+			dest += vid.height;
+		}
+	}
 }
 
 // Very similar to F_DrawFadeConsBack, except we draw from the middle(-ish) of the screen to the bottom.
 void V_DrawPromptBack(INT32 boxheight, INT32 color)
 {
-	UINT8 *deststop, *buf;
+	UINT8 *dest, *desttop, *deststop;
 
 	if (color >= 256 && color < 512)
 	{
@@ -1922,13 +1942,26 @@ void V_DrawPromptBack(INT32 boxheight, INT32 color)
 
 	// heavily simplified -- we don't need to know x or y position,
 	// just the start and stop positions
-	buf = deststop = screens[0] + vid.rowbytes * vid.height;
+	int height;
 	if (boxheight < 0)
-		buf += vid.rowbytes * boxheight;
+		height = -boxheight;
 	else // 4 lines of space plus gaps between and some leeway
-		buf -= vid.rowbytes * ((boxheight * 4) + (boxheight/2)*5);
-	for (; buf < deststop; ++buf)
-		*buf = promptbgmap[*buf];
+		height = (boxheight * 4) + (boxheight/2)*5;
+
+	dest = desttop = screens[0] + (vid.height - height);
+	deststop = screens[0] + vid.rowbytes * vid.width;
+
+	for (;(--height >= 0) && desttop < deststop; desttop++)
+	{
+		dest = desttop;
+
+		UINT8 *row_end = dest + (vid.width * vid.height);
+		while (dest < row_end)
+		{
+			*dest = promptbgmap[*dest];
+			dest += vid.height;
+		}
+	}
 }
 
 // Gets string colormap, used for 0x80 color codes
@@ -2020,8 +2053,6 @@ void V_DrawChatCharacter(INT32 x, INT32 y, INT32 c, boolean lowercaseallowed, UI
 		return;
 
 	V_DrawFixedPatch(x*FRACUNIT, y*FRACUNIT, (vid.width < 640) ? (FRACUNIT) : (FRACUNIT/2), flags, hu_font[c], colormap);
-
-
 }
 
 // Precompile a wordwrapped string to any given width.
