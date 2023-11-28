@@ -1307,6 +1307,25 @@ void I_ReadScreen(UINT8 *scr)
 }
 
 //
+// I_ReadScreenTransposed
+// The screen buffers in SRB2 are transposed, meaning they are ordered by columns instead of rows.
+// This function copies the buffer transposed so that it's arranged by rows, for things that expect the buffer to be that way.
+//
+void I_ReadScreenTransposed(UINT8 *scr)
+{
+	if (rendermode != render_soft)
+		I_Error("I_ReadScreenTransposed: called while in non-software mode");
+
+	UINT8 *buffer = screens[0];
+
+	size_t dest_rowbytes = vid.width * vid.bpp;
+
+	for (int y = 0; y < vid.height; y++)
+		for (int x = 0; x < vid.width; x++)
+			scr[(y * dest_rowbytes) + x] = buffer[(x * vid.rowbytes) + y];
+}
+
+//
 // I_SetPalette
 //
 void I_SetPalette(RGBA_t *palette)

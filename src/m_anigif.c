@@ -565,7 +565,7 @@ static void GIF_framewrite(void)
 
 		// blit to temp screen
 		if (rendermode == render_soft)
-			I_ReadScreen(movie_screen);
+			I_ReadScreenTransposed(movie_screen);
 #ifdef HWRENDER
 		else if (rendermode == render_opengl)
 		{
@@ -594,7 +594,7 @@ static void GIF_framewrite(void)
 		// Copy the first frame into the movie screen
 		// OpenGL already does the same above.
 		if (gif_frames == 0 && rendermode == render_soft)
-			I_ReadScreen(movie_screen);
+			I_ReadScreenTransposed(movie_screen);
 
 		movie_screen = screens[0];
 	}

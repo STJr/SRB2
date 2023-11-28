@@ -1280,7 +1280,7 @@ void M_SaveFrame(void)
 				{
 					// munge planar buffer to linear
 					linear = screens[2];
-					I_ReadScreen(linear);
+					I_ReadScreenTransposed(linear);
 				}
 #ifdef HWRENDER
 				else
@@ -1590,7 +1590,7 @@ void M_DoScreenShot(void)
 	{
 		// munge planar buffer to linear
 		linear = screens[2];
-		I_ReadScreen(linear);
+		I_ReadScreenTransposed(linear);
 	}
 
 	if (!freename)

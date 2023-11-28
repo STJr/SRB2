@@ -143,6 +143,14 @@ void I_WaitVBL(INT32 count);
 */
 void I_ReadScreen(UINT8 *scr);
 
+/**	\brief	The I_ReadScreenTransposed function
+
+	\param	scr	buffer to copy screen to
+
+	\return	void
+*/
+void I_ReadScreenTransposed(UINT8 *scr);
+
 /**	\brief Start disk icon
 */
 void I_BeginRead(void);
