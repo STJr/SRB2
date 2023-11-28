@@ -952,9 +952,9 @@ void R_DrawSinglePlane(visplane_t *pl)
 					spanfunctype = SPANDRAWFUNC_WATER;
 
 					// Only copy the part of the screen we need
-					VID_BlitLinearScreen((splitscreen && viewplayer == &players[secondarydisplayplayer]) ? screens[0] + (top+(vid.height>>1))*vid.width : screens[0]+((top)*vid.width), screens[1]+((top)*vid.width),
+					VID_BlitLinearScreen(topleft+top, screens[1]+top,
 										 vid.width, bottom-top,
-										 vid.width, vid.width);
+										 vid.rowbytes, vid.rowbytes);
 				}
 			}
 		}

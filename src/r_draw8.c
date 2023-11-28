@@ -1581,8 +1581,9 @@ void R_DrawWaterSpan_8(void)
 
 	while (count--)
 	{
-		*dest = colormap[*(ds_transmap + (source[((yposition >> nflatyshift) & nflatmask) | (xposition >> nflatxshift)] << 8) + *dsrc++)];
+		*dest = colormap[*(ds_transmap + (source[((yposition >> nflatyshift) & nflatmask) | (xposition >> nflatxshift)] << 8) + *dsrc)];
 		dest += vid.height;
+		dsrc += vid.height;
 		xposition += xstep;
 		yposition += ystep;
 	}

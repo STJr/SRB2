@@ -324,7 +324,7 @@ void Y_ConsiderScreenBuffer(void)
 	y_buffer->source_bpp = vid.bpp;
 	y_buffer->source_rowbytes = vid.rowbytes;
 	y_buffer->source_picture = ZZ_Alloc(y_buffer->source_width*vid.bpp * y_buffer->source_height);
-	VID_BlitLinearScreen(screens[1], y_buffer->source_picture, vid.width*vid.bpp, vid.height, vid.width*vid.bpp, vid.rowbytes);
+	VID_BlitLinearScreen(screens[1], y_buffer->source_picture, vid.width*vid.bpp, vid.height, vid.rowbytes, vid.rowbytes);
 
 	// Make the rescaled screen buffer
 	Y_RescaleScreenBuffer();
@@ -411,7 +411,7 @@ void Y_IntermissionDrawer(void)
 		{
 			// no y_buffer
 			if (y_buffer == NULL)
-				VID_BlitLinearScreen(screens[1], screens[0], vid.width*vid.bpp, vid.height, vid.width*vid.bpp, vid.rowbytes);
+				VID_BlitLinearScreen(screens[1], screens[0], vid.width*vid.bpp, vid.height, vid.rowbytes, vid.rowbytes);
 			else
 			{
 				// Maybe the resolution changed?
@@ -419,7 +419,7 @@ void Y_IntermissionDrawer(void)
 					Y_RescaleScreenBuffer();
 
 				// Blit the already-scaled screen buffer to the current screen
-				VID_BlitLinearScreen(y_buffer->target_picture, screens[0], vid.width*vid.bpp, vid.height, vid.width*vid.bpp, vid.rowbytes);
+				VID_BlitLinearScreen(y_buffer->target_picture, screens[0], vid.width*vid.bpp, vid.height, vid.rowbytes, vid.rowbytes);
 			}
 		}
 #ifdef HWRENDER

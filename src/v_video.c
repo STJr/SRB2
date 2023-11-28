@@ -460,27 +460,18 @@ static void CV_constextsize_OnChange(void)
 void VID_BlitLinearScreen(const UINT8 *srcptr, UINT8 *destptr, INT32 width, INT32 height, size_t srcrowbytes,
 	size_t destrowbytes)
 {
-#if 0
 	if (srcrowbytes == destrowbytes)
-		M_Memcpy(destptr, srcptr, srcrowbytes * height);
+		M_Memcpy(destptr, srcptr, srcrowbytes * width);
 	else
 	{
-		while (height--)
+		while (width--)
 		{
-			M_Memcpy(destptr, srcptr, width);
+			M_Memcpy(destptr, srcptr, height);
 
 			destptr += destrowbytes;
 			srcptr += srcrowbytes;
 		}
 	}
-#else
-	(void)srcptr;
-	(void)destptr;
-	(void)width;
-	(void)height;
-	(void)srcrowbytes;
-	(void)destrowbytes;
-#endif
 }
 
 static UINT8 hudplusalpha[11]  = { 10,  8,  6,  4,  2,  0,  0,  0,  0,  0,  0};
