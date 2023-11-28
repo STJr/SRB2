@@ -42,6 +42,7 @@ typedef struct
 typedef struct
 {
 	INT64 pts;
+	INT64 firstsampleposition;
 	UINT8 *samples[2];
 	size_t numsamples;
 } movieaudioframe_t;

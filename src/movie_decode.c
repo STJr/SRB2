@@ -120,26 +120,18 @@ static INT64 PTSToSamples(movie_t *movie, INT64 pts)
 	return av_rescale_q(pts, oldtb, newtb);
 }
 
-static INT64 SamplesToPTS(movie_t *movie, INT64 numsamples)
+static INT64 SamplesToMS(INT64 numsamples)
 {
 	AVRational oldtb = { 1, SAMPLE_RATE };
-	AVRational newtb = movie->audiostream.stream->time_base;
+	AVRational newtb = { 1, 1000 };
 
 	return av_rescale_q(numsamples, oldtb, newtb);
 }
 
-static INT64 AudioPTSToMS(movie_t *movie, INT64 pts)
-{
-	AVRational oldtb = movie->audiostream.stream->time_base;
-	AVRational newtb = { 1, 1000 };
-
-	return av_rescale_q(pts, oldtb, newtb);
-}
-
-static INT64 MSToAudioPTS(movie_t *movie, INT64 ms)
+static INT64 MSToSamples(INT64 ms)
 {
 	AVRational oldtb = { 1, 1000 };
-	AVRational newtb = movie->audiostream.stream->time_base;
+	AVRational newtb = { 1, SAMPLE_RATE };
 
 	return av_rescale_q(ms, oldtb, newtb);
 }
@@ -176,9 +168,9 @@ static INT64 GetVideoFrameEndPTS(movievideoframe_t *frame)
 	return frame->pts + frame->duration;
 }
 
-static INT64 GetAudioFrameEndPTS(movie_t *movie, movieaudioframe_t *frame)
+static INT64 GetAudioFrameEndSample(movieaudioframe_t *frame)
 {
-	return frame->pts + SamplesToPTS(movie, frame->numsamples);
+	return frame->firstsampleposition + frame->numsamples;
 }
 
 static INT32 GetBytesPerPatchColumn(moviedecodeworker_t *worker)
@@ -202,14 +194,14 @@ static INT32 FindVideoBufferIndexForPosition(movie_t *movie, INT64 pts)
 	return -1;
 }
 
-static INT32 FindAudioBufferIndexForPosition(movie_t *movie, INT64 pts)
+static INT32 FindAudioBufferIndexForPosition(movie_t *movie, INT64 sample)
 {
 	INT32 i;
 
 	for (i = 0; i < movie->audiostream.buffer.size; i++)
 	{
 		movieaudioframe_t *frame = GetBufferSlot(&movie->audiostream.buffer, i);
-		if (frame->pts <= pts && pts < GetAudioFrameEndPTS(movie, frame))
+		if (frame->firstsampleposition <= sample && sample < GetAudioFrameEndSample(frame))
 			return i;
 	}
 
@@ -786,9 +778,9 @@ static void ClearOldVideoFrames(movie_t *movie)
 static void ClearOldAudioFrames(movie_t *movie)
 {
 	moviebuffer_t *buffer = &movie->audiostream.buffer;
-	INT64 limit = max(movie->audioposition - MSToAudioPTS(movie, STREAM_BUFFER_TIME / 2), 0);
+	INT64 limit = max(movie->audioposition - MSToSamples(STREAM_BUFFER_TIME / 2), 0);
 
-	while (buffer->size > 0 && GetAudioFrameEndPTS(movie, PeekBuffer(buffer)) < limit)
+	while (buffer->size > 0 && GetAudioFrameEndSample(PeekBuffer(buffer)) < limit)
 		ClearOldestFrame(movie, &movie->audiostream, &movie->decodeworker.audiostream);
 }
 
@@ -932,11 +924,39 @@ static boolean ReadPacket(movie_t *movie)
 	return true;
 }
 
-static void PollFrameQueue(moviedecodeworker_t *worker, moviestream_t *stream, moviedecodeworkerstream_t *workerstream)
+static void PollVideoFrameQueue(movie_t *movie)
 {
-	if (workerstream->framequeue.size != 0)
+	moviedecodeworker_t *worker = &movie->decodeworker;
+
+	if (worker->videostream.framequeue.size != 0)
 	{
-		DequeueWholeBufferIntoBuffer(&stream->buffer, &workerstream->framequeue);
+		DequeueWholeBufferIntoBuffer(&movie->videostream.buffer, &worker->videostream.framequeue);
+		I_wake_one_cond(&worker->cond);
+	}
+}
+
+static void PollAudioFrameQueue(movie_t *movie)
+{
+	moviedecodeworker_t *worker = &movie->decodeworker;
+	moviebuffer_t *buffer = &movie->audiostream.buffer;
+
+	if (worker->audiostream.framequeue.size != 0)
+	{
+		while (worker->audiostream.framequeue.size > 0)
+		{
+			movieaudioframe_t *frame = DequeueBufferIntoBuffer(buffer, &worker->audiostream.framequeue);
+
+			if (buffer->size > 1)
+			{
+				movieaudioframe_t *prevframe = GetBufferSlot(buffer, buffer->size - 2);
+				frame->firstsampleposition = prevframe->firstsampleposition + prevframe->numsamples;
+			}
+			else
+			{
+				frame->firstsampleposition = PTSToSamples(movie, frame->pts);
+			}
+		}
+
 		I_wake_one_cond(&worker->cond);
 	}
 }
@@ -978,8 +998,8 @@ static void UpdateSeeking(movie_t *movie)
 	if (!(inbuffer || movie->seeking || movie->decodeworker.flushing || buffer->size == 0))
 		Seek(movie);
 
-	if (llabs(AudioPTSToMS(movie, movie->audioposition) - movie->position) > MAX_AUDIO_DESYNC)
-		movie->audioposition = MSToAudioPTS(movie, movie->position);
+	if (llabs(SamplesToMS(movie->audioposition) - movie->position) > MAX_AUDIO_DESYNC)
+		movie->audioposition = MSToSamples(movie->position);
 }
 
 //
@@ -1051,8 +1071,8 @@ void MovieDecode_Update(movie_t *movie)
 
 		if (!worker->flushing)
 		{
-			PollFrameQueue(worker, &movie->videostream, &worker->videostream);
-			PollFrameQueue(worker, &movie->audiostream, &worker->audiostream);
+			PollVideoFrameQueue(movie);
+			PollAudioFrameQueue(movie);
 		}
 
 		UpdateSeeking(movie);
@@ -1132,7 +1152,7 @@ void MovieDecode_CopyAudioSamples(movie_t *movie, void *mem, size_t size)
 	INT64 numsamples = size / samplesize;
 
 	INT32 startbufferindex = FindAudioBufferIndexForPosition(movie, movie->audioposition);
-	INT32 endbufferindex = FindAudioBufferIndexForPosition(movie, movie->audioposition + SamplesToPTS(movie, numsamples));
+	INT32 endbufferindex = FindAudioBufferIndexForPosition(movie, movie->audioposition + numsamples);
 	size_t mempos = 0;
 
 	if (startbufferindex != -1 && endbufferindex != -1)
@@ -1141,7 +1161,7 @@ void MovieDecode_CopyAudioSamples(movie_t *movie, void *mem, size_t size)
 		for (i = startbufferindex; i <= endbufferindex; i++)
 		{
 			movieaudioframe_t *frame = GetBufferSlot(buffer, i);
-			INT32 startsample = PTSToSamples(movie, max(movie->audioposition - frame->pts, 0));
+			INT32 startsample = max(movie->audioposition - frame->firstsampleposition, 0);
 			INT32 sizeforframe = min(size, (frame->numsamples - startsample) * samplesize);
 			void *ptr = &frame->samples[0][startsample * samplesize];
 
@@ -1151,5 +1171,5 @@ void MovieDecode_CopyAudioSamples(movie_t *movie, void *mem, size_t size)
 		}
 	}
 
-	movie->audioposition += SamplesToPTS(movie, numsamples);
+	movie->audioposition += numsamples;
 }
