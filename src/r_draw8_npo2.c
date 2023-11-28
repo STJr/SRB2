@@ -153,7 +153,7 @@ void R_DrawTiltedSpan_NPO2_8(void)
 
 			*dest = colormap[source[((y * ds_flatwidth) + x)]];
 		}
-		dest++;
+		dest += vid.height;
 		iz += ds_szp->x;
 		uz += ds_sup->x;
 		vz += ds_svp->x;
@@ -203,7 +203,7 @@ void R_DrawTiltedSpan_NPO2_8(void)
 
 				*dest = colormap[source[((y * ds_flatwidth) + x)]];
 			}
-			dest++;
+			dest += vid.height;
 			u += stepu;
 			v += stepv;
 		}
@@ -272,7 +272,7 @@ void R_DrawTiltedSpan_NPO2_8(void)
 
 					*dest = colormap[source[((y * ds_flatwidth) + x)]];
 				}
-				dest++;
+				dest += vid.height;
 				u += stepu;
 				v += stepv;
 			}
@@ -342,7 +342,7 @@ void R_DrawTiltedTranslucentSpan_NPO2_8(void)
 
 			*dest = *(ds_transmap + (colormap[source[((y * ds_flatwidth) + x)]] << 8) + *dest);
 		}
-		dest++;
+		dest += vid.height;
 		iz += ds_szp->x;
 		uz += ds_sup->x;
 		vz += ds_svp->x;
@@ -392,7 +392,7 @@ void R_DrawTiltedTranslucentSpan_NPO2_8(void)
 
 				*dest = *(ds_transmap + (colormap[source[((y * ds_flatwidth) + x)]] << 8) + *dest);
 			}
-			dest++;
+			dest += vid.height;
 			u += stepu;
 			v += stepv;
 		}
@@ -461,7 +461,7 @@ void R_DrawTiltedTranslucentSpan_NPO2_8(void)
 
 					*dest = *(ds_transmap + (colormap[source[((y * ds_flatwidth) + x)]] << 8) + *dest);
 				}
-				dest++;
+				dest += vid.height;
 				u += stepu;
 				v += stepv;
 			}
@@ -535,7 +535,7 @@ void R_DrawTiltedSplat_NPO2_8(void)
 		if (val != TRANSPARENTPIXEL)
 			*dest = colormap[val];
 
-		dest++;
+		dest += vid.height;
 		iz += ds_szp->x;
 		uz += ds_sup->x;
 		vz += ds_svp->x;
@@ -587,7 +587,7 @@ void R_DrawTiltedSplat_NPO2_8(void)
 			}
 			if (val != TRANSPARENTPIXEL)
 				*dest = colormap[val];
-			dest++;
+			dest += vid.height;
 			u += stepu;
 			v += stepv;
 		}
@@ -660,7 +660,7 @@ void R_DrawTiltedSplat_NPO2_8(void)
 				}
 				if (val != TRANSPARENTPIXEL)
 					*dest = colormap[val];
-				dest++;
+				dest += vid.height;
 				u += stepu;
 				v += stepv;
 			}
@@ -731,7 +731,7 @@ void R_DrawSplat_NPO2_8 (void)
 		val = source[((y * ds_flatwidth) + x)];
 		if (val != TRANSPARENTPIXEL)
 			*dest = colormap[val];
-		dest++;
+		dest += vid.height;
 		xposition += xstep;
 		yposition += ystep;
 	}
@@ -799,7 +799,7 @@ void R_DrawTranslucentSplat_NPO2_8 (void)
 		val = source[((y * ds_flatwidth) + x)];
 		if (val != TRANSPARENTPIXEL)
 			*dest = *(ds_transmap + (colormap[val] << 8) + *dest);
-		dest++;
+		dest += vid.height;
 		xposition += xstep;
 		yposition += ystep;
 	}
@@ -869,7 +869,7 @@ void R_DrawFloorSprite_NPO2_8 (void)
 		val = source[((y * ds_flatwidth) + x)];
 		if (val & 0xFF00)
 			*dest = colormap[translation[val & 0xFF]];
-		dest++;
+		dest += vid.height;
 		xposition += xstep;
 		yposition += ystep;
 	}
@@ -939,7 +939,7 @@ void R_DrawTranslucentFloorSprite_NPO2_8 (void)
 		val = source[((y * ds_flatwidth) + x)];
 		if (val & 0xFF00)
 			*dest = *(ds_transmap + (colormap[translation[val & 0xFF]] << 8) + *dest);
-		dest++;
+		dest += vid.height;
 		xposition += xstep;
 		yposition += ystep;
 	}
@@ -1022,7 +1022,7 @@ void R_DrawTiltedFloorSprite_NPO2_8(void)
 			val = source[((y * ds_flatwidth) + x)];
 			if (val & 0xFF00)
 				*dest = colormap[translation[val & 0xFF]];
-			dest++;
+			dest += vid.height;
 
 			u += stepu;
 			v += stepv;
@@ -1092,7 +1092,7 @@ void R_DrawTiltedFloorSprite_NPO2_8(void)
 				val = source[((y * ds_flatwidth) + x)];
 				if (val & 0xFF00)
 					*dest = colormap[translation[val & 0xFF]];
-				dest++;
+				dest += vid.height;
 
 				u += stepu;
 				v += stepv;
@@ -1178,7 +1178,7 @@ void R_DrawTiltedTranslucentFloorSprite_NPO2_8(void)
 			val = source[((y * ds_flatwidth) + x)];
 			if (val & 0xFF00)
 				*dest = *(ds_transmap + (colormap[translation[val & 0xFF]] << 8) + *dest);
-			dest++;
+			dest += vid.height;
 
 			u += stepu;
 			v += stepv;
@@ -1248,7 +1248,7 @@ void R_DrawTiltedTranslucentFloorSprite_NPO2_8(void)
 				val = source[((y * ds_flatwidth) + x)];
 				if (val & 0xFF00)
 					*dest = *(ds_transmap + (colormap[translation[val & 0xFF]] << 8) + *dest);
-				dest++;
+				dest += vid.height;
 
 				u += stepu;
 				v += stepv;
@@ -1318,7 +1318,7 @@ void R_DrawTranslucentSpan_NPO2_8 (void)
 		y = (yposition >> FRACBITS);
 		val = ((y * ds_flatwidth) + x);
 		*dest = *(ds_transmap + (colormap[source[val]] << 8) + *dest);
-		dest++;
+		dest += vid.height;
 		xposition += xstep;
 		yposition += ystep;
 	}
