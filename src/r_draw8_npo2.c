@@ -37,7 +37,7 @@ void R_DrawSpan_NPO2_8 (void)
 	UINT8 *source;
 	UINT8 *colormap;
 	UINT8 *dest;
-	const UINT8 *deststop = screens[0] + vid.rowbytes * vid.height;
+	const UINT8 *deststop = screens[0] + vid.rowbytes * vid.width;
 
 	size_t count = (ds_x2 - ds_x1 + 1);
 
@@ -46,9 +46,9 @@ void R_DrawSpan_NPO2_8 (void)
 
 	source = ds_source;
 	colormap = ds_colormap;
-	dest = ylookup[ds_y] + columnofs[ds_x1];
+	dest = &topleft[ds_x1*vid.height + ds_y];
 
-	if (dest+8 > deststop)
+	if (dest > deststop)
 		return;
 
 	fixedwidth = ds_flatwidth << FRACBITS;
@@ -121,7 +121,7 @@ void R_DrawTiltedSpan_NPO2_8(void)
 	uz = ds_sup->z + ds_sup->y*(centery-ds_y) + ds_sup->x*(ds_x1-centerx);
 	vz = ds_svp->z + ds_svp->y*(centery-ds_y) + ds_svp->x*(ds_x1-centerx);
 
-	dest = ylookup[ds_y] + columnofs[ds_x1];
+	dest = &topleft[ds_x1*vid.height + ds_y];
 	source = ds_source;
 	//colormap = ds_colormap;
 
@@ -311,7 +311,7 @@ void R_DrawTiltedTranslucentSpan_NPO2_8(void)
 	uz = ds_sup->z + ds_sup->y*(centery-ds_y) + ds_sup->x*(ds_x1-centerx);
 	vz = ds_svp->z + ds_svp->y*(centery-ds_y) + ds_svp->x*(ds_x1-centerx);
 
-	dest = ylookup[ds_y] + columnofs[ds_x1];
+	dest = &topleft[ds_x1*vid.height + ds_y];
 	source = ds_source;
 	//colormap = ds_colormap;
 
@@ -499,7 +499,7 @@ void R_DrawTiltedSplat_NPO2_8(void)
 	uz = ds_sup->z + ds_sup->y*(centery-ds_y) + ds_sup->x*(ds_x1-centerx);
 	vz = ds_svp->z + ds_svp->y*(centery-ds_y) + ds_svp->x*(ds_x1-centerx);
 
-	dest = ylookup[ds_y] + columnofs[ds_x1];
+	dest = &topleft[ds_x1*vid.height + ds_y];
 	source = ds_source;
 	//colormap = ds_colormap;
 
@@ -683,7 +683,7 @@ void R_DrawSplat_NPO2_8 (void)
 	UINT8 *source;
 	UINT8 *colormap;
 	UINT8 *dest;
-	const UINT8 *deststop = screens[0] + vid.rowbytes * vid.height;
+	const UINT8 *deststop = screens[0] + vid.rowbytes * vid.width;
 
 	size_t count = (ds_x2 - ds_x1 + 1);
 	UINT32 val;
@@ -693,7 +693,7 @@ void R_DrawSplat_NPO2_8 (void)
 
 	source = ds_source;
 	colormap = ds_colormap;
-	dest = ylookup[ds_y] + columnofs[ds_x1];
+	dest = &topleft[ds_x1*vid.height + ds_y];
 
 	fixedwidth = ds_flatwidth << FRACBITS;
 	fixedheight = ds_flatheight << FRACBITS;
@@ -751,7 +751,7 @@ void R_DrawTranslucentSplat_NPO2_8 (void)
 	UINT8 *source;
 	UINT8 *colormap;
 	UINT8 *dest;
-	const UINT8 *deststop = screens[0] + vid.rowbytes * vid.height;
+	const UINT8 *deststop = screens[0] + vid.rowbytes * vid.width;
 
 	size_t count = (ds_x2 - ds_x1 + 1);
 	UINT32 val;
@@ -761,7 +761,7 @@ void R_DrawTranslucentSplat_NPO2_8 (void)
 
 	source = ds_source;
 	colormap = ds_colormap;
-	dest = ylookup[ds_y] + columnofs[ds_x1];
+	dest = &topleft[ds_x1*vid.height + ds_y];
 
 	fixedwidth = ds_flatwidth << FRACBITS;
 	fixedheight = ds_flatheight << FRACBITS;
@@ -820,7 +820,7 @@ void R_DrawFloorSprite_NPO2_8 (void)
 	UINT8 *translation;
 	UINT8 *colormap;
 	UINT8 *dest;
-	const UINT8 *deststop = screens[0] + vid.rowbytes * vid.height;
+	const UINT8 *deststop = screens[0] + vid.rowbytes * vid.width;
 
 	size_t count = (ds_x2 - ds_x1 + 1);
 	UINT32 val;
@@ -831,7 +831,7 @@ void R_DrawFloorSprite_NPO2_8 (void)
 	source = (UINT16 *)ds_source;
 	colormap = ds_colormap;
 	translation = ds_translation;
-	dest = ylookup[ds_y] + columnofs[ds_x1];
+	dest = &topleft[ds_x1*vid.height + ds_y];
 
 	fixedwidth = ds_flatwidth << FRACBITS;
 	fixedheight = ds_flatheight << FRACBITS;
@@ -890,7 +890,7 @@ void R_DrawTranslucentFloorSprite_NPO2_8 (void)
 	UINT8 *translation;
 	UINT8 *colormap;
 	UINT8 *dest;
-	const UINT8 *deststop = screens[0] + vid.rowbytes * vid.height;
+	const UINT8 *deststop = screens[0] + vid.rowbytes * vid.width;
 
 	size_t count = (ds_x2 - ds_x1 + 1);
 	UINT32 val;
@@ -901,7 +901,7 @@ void R_DrawTranslucentFloorSprite_NPO2_8 (void)
 	source = (UINT16 *)ds_source;
 	colormap = ds_colormap;
 	translation = ds_translation;
-	dest = ylookup[ds_y] + columnofs[ds_x1];
+	dest = &topleft[ds_x1*vid.height + ds_y];
 
 	fixedwidth = ds_flatwidth << FRACBITS;
 	fixedheight = ds_flatheight << FRACBITS;
@@ -974,7 +974,7 @@ void R_DrawTiltedFloorSprite_NPO2_8(void)
 	uz = ds_sup->z + ds_sup->y*(centery-ds_y) + ds_sup->x*(ds_x1-centerx);
 	vz = ds_svp->z + ds_svp->y*(centery-ds_y) + ds_svp->x*(ds_x1-centerx);
 
-	dest = ylookup[ds_y] + columnofs[ds_x1];
+	dest = &topleft[ds_x1*vid.height + ds_y];
 	source = (UINT16 *)ds_source;
 	colormap = ds_colormap;
 	translation = ds_translation;
@@ -1130,7 +1130,7 @@ void R_DrawTiltedTranslucentFloorSprite_NPO2_8(void)
 	uz = ds_sup->z + ds_sup->y*(centery-ds_y) + ds_sup->x*(ds_x1-centerx);
 	vz = ds_svp->z + ds_svp->y*(centery-ds_y) + ds_svp->x*(ds_x1-centerx);
 
-	dest = ylookup[ds_y] + columnofs[ds_x1];
+	dest = &topleft[ds_x1*vid.height + ds_y];
 	source = (UINT16 *)ds_source;
 	colormap = ds_colormap;
 	translation = ds_translation;
@@ -1271,7 +1271,7 @@ void R_DrawTranslucentSpan_NPO2_8 (void)
 	UINT8 *source;
 	UINT8 *colormap;
 	UINT8 *dest;
-	const UINT8 *deststop = screens[0] + vid.rowbytes * vid.height;
+	const UINT8 *deststop = screens[0] + vid.rowbytes * vid.width;
 
 	size_t count = (ds_x2 - ds_x1 + 1);
 	UINT32 val;
@@ -1281,7 +1281,7 @@ void R_DrawTranslucentSpan_NPO2_8 (void)
 
 	source = ds_source;
 	colormap = ds_colormap;
-	dest = ylookup[ds_y] + columnofs[ds_x1];
+	dest = &topleft[ds_x1*vid.height + ds_y];
 
 	fixedwidth = ds_flatwidth << FRACBITS;
 	fixedheight = ds_flatheight << FRACBITS;
@@ -1336,7 +1336,7 @@ void R_DrawWaterSpan_NPO2_8(void)
 	UINT8 *colormap;
 	UINT8 *dest;
 	UINT8 *dsrc;
-	const UINT8 *deststop = screens[0] + vid.rowbytes * vid.height;
+	const UINT8 *deststop = screens[0] + vid.rowbytes * vid.width;
 
 	size_t count = (ds_x2 - ds_x1 + 1);
 
@@ -1345,8 +1345,8 @@ void R_DrawWaterSpan_NPO2_8(void)
 
 	source = ds_source;
 	colormap = ds_colormap;
-	dest = ylookup[ds_y] + columnofs[ds_x1];
-	dsrc = screens[1] + (ds_y+ds_bgofs)*vid.width + ds_x1;
+	dest = &topleft[ds_x1*vid.height + ds_y];
+	dsrc = screens[1] + ds_x1*vid.height + (ds_y+ds_bgofs);
 
 	fixedwidth = ds_flatwidth << FRACBITS;
 	fixedheight = ds_flatheight << FRACBITS;
@@ -1381,7 +1381,9 @@ void R_DrawWaterSpan_NPO2_8(void)
 
 		x = (xposition >> FRACBITS);
 		y = (yposition >> FRACBITS);
-		*dest++ = colormap[*(ds_transmap + (source[((y * ds_flatwidth) + x)] << 8) + *dsrc++)];
+		*dest = colormap[*(ds_transmap + (source[((y * ds_flatwidth) + x)] << 8) + *dsrc)];
+		dest += vid.height;
+		dsrc += vid.height;
 		xposition += xstep;
 		yposition += ystep;
 	}
@@ -1418,8 +1420,8 @@ void R_DrawTiltedWaterSpan_NPO2_8(void)
 	uz = ds_sup->z + ds_sup->y*(centery-ds_y) + ds_sup->x*(ds_x1-centerx);
 	vz = ds_svp->z + ds_svp->y*(centery-ds_y) + ds_svp->x*(ds_x1-centerx);
 
-	dest = ylookup[ds_y] + columnofs[ds_x1];
-	dsrc = screens[1] + (ds_y+ds_bgofs)*vid.width + ds_x1;
+	dest = &topleft[ds_x1*vid.height + ds_y];
+	dsrc = screens[1] + ds_x1*vid.height + (ds_y+ds_bgofs);
 	source = ds_source;
 	//colormap = ds_colormap;
 
@@ -1448,9 +1450,10 @@ void R_DrawTiltedWaterSpan_NPO2_8(void)
 			else
 				y -= libdivide_u32_do((UINT32)y, &y_divider) * ds_flatheight;
 
-			*dest = *(ds_transmap + (colormap[source[((y * ds_flatwidth) + x)]] << 8) + *dsrc++);
+			*dest = *(ds_transmap + (colormap[source[((y * ds_flatwidth) + x)]] << 8) + *dsrc);
 		}
-		dest++;
+		dest += vid.height;
+		dsrc += vid.height;
 		iz += ds_szp->x;
 		uz += ds_sup->x;
 		vz += ds_svp->x;
@@ -1498,9 +1501,10 @@ void R_DrawTiltedWaterSpan_NPO2_8(void)
 				else
 					y -= libdivide_u32_do((UINT32)y, &y_divider) * ds_flatheight;
 
-				*dest = *(ds_transmap + (colormap[source[((y * ds_flatwidth) + x)]] << 8) + *dsrc++);
+				*dest = *(ds_transmap + (colormap[source[((y * ds_flatwidth) + x)]] << 8) + *dsrc);
 			}
-			dest++;
+			dest += vid.height;
+			dsrc += vid.height;
 			u += stepu;
 			v += stepv;
 		}
@@ -1530,7 +1534,7 @@ void R_DrawTiltedWaterSpan_NPO2_8(void)
 				else
 					y -= libdivide_u32_do((UINT32)y, &y_divider) * ds_flatheight;
 
-				*dest = *(ds_transmap + (colormap[source[((y * ds_flatwidth) + x)]] << 8) + *dsrc++);
+				*dest = *(ds_transmap + (colormap[source[((y * ds_flatwidth) + x)]] << 8) + *dsrc);
 			}
 		}
 		else
@@ -1567,9 +1571,10 @@ void R_DrawTiltedWaterSpan_NPO2_8(void)
 					else
 						y -= libdivide_u32_do((UINT32)y, &y_divider) * ds_flatheight;
 
-					*dest = *(ds_transmap + (colormap[source[((y * ds_flatwidth) + x)]] << 8) + *dsrc++);
+					*dest = *(ds_transmap + (colormap[source[((y * ds_flatwidth) + x)]] << 8) + *dsrc);
 				}
-				dest++;
+				dest += vid.height;
+				dsrc += vid.height;
 				u += stepu;
 				v += stepv;
 			}

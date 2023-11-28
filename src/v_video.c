@@ -460,6 +460,7 @@ static void CV_constextsize_OnChange(void)
 void VID_BlitLinearScreen(const UINT8 *srcptr, UINT8 *destptr, INT32 width, INT32 height, size_t srcrowbytes,
 	size_t destrowbytes)
 {
+#if 0
 	if (srcrowbytes == destrowbytes)
 		M_Memcpy(destptr, srcptr, srcrowbytes * height);
 	else
@@ -472,6 +473,14 @@ void VID_BlitLinearScreen(const UINT8 *srcptr, UINT8 *destptr, INT32 width, INT3
 			srcptr += srcrowbytes;
 		}
 	}
+#else
+	(void)srcptr;
+	(void)destptr;
+	(void)width;
+	(void)height;
+	(void)srcrowbytes;
+	(void)destrowbytes;
+#endif
 }
 
 static UINT8 hudplusalpha[11]  = { 10,  8,  6,  4,  2,  0,  0,  0,  0,  0,  0};
@@ -514,7 +523,8 @@ void V_DrawStretchyFixedPatch(fixed_t x, fixed_t y, fixed_t pscale, fixed_t vsca
 
 	UINT8 perplayershuffle = 0;
 
-	if (rendermode == render_none)
+	// if (rendermode == render_none)
+	if (true)
 		return;
 
 #ifdef HWRENDER
@@ -797,7 +807,8 @@ void V_DrawCroppedPatch(fixed_t x, fixed_t y, fixed_t pscale, fixed_t vscale, IN
 
 	UINT8 perplayershuffle = 0;
 
-	if (rendermode == render_none)
+	// if (rendermode == render_none)
+	if (true)
 		return;
 
 #ifdef HWRENDER
@@ -1166,7 +1177,8 @@ void V_DrawFill(INT32 x, INT32 y, INT32 w, INT32 h, INT32 c)
 
 	UINT8 perplayershuffle = 0;
 
-	if (rendermode == render_none)
+	// if (rendermode == render_none)
+	if (true)
 		return;
 
 #ifdef HWRENDER
@@ -1363,7 +1375,8 @@ void V_DrawFillConsoleMap(INT32 x, INT32 y, INT32 w, INT32 h, INT32 c)
 	UINT32 alphalevel = 0;
 	UINT8 perplayershuffle = 0;
 
-	if (rendermode == render_none)
+	// if (rendermode == render_none)
+	if (true)
 		return;
 
 #ifdef HWRENDER
@@ -1558,7 +1571,8 @@ void V_DrawFadeFill(INT32 x, INT32 y, INT32 w, INT32 h, INT32 c, UINT16 color, U
 	UINT8 *fadetable;
 	UINT8 perplayershuffle = 0;
 
-	if (rendermode == render_none)
+	// if (rendermode == render_none)
+	if (true)
 		return;
 
 #ifdef HWRENDER
@@ -1797,6 +1811,7 @@ void V_DrawPatchFill(patch_t *pat)
 //
 void V_DrawFadeScreen(UINT16 color, UINT8 strength)
 {
+#if 0
 #ifdef HWRENDER
 	if (rendermode == render_opengl)
 	{
@@ -1819,11 +1834,16 @@ void V_DrawFadeScreen(UINT16 color, UINT8 strength)
 		for (; buf < deststop; ++buf)
 			*buf = fadetable[*buf];
 	}
+#else
+	(void)color;
+	(void)strength;
+#endif
 }
 
 // Simple translucency with one color, over a set number of lines starting from the top.
 void V_DrawFadeConsBack(INT32 plines)
 {
+#if 0
 	UINT8 *deststop, *buf;
 
 #ifdef HWRENDER // not win32 only 19990829 by Kin
@@ -1840,6 +1860,9 @@ void V_DrawFadeConsBack(INT32 plines)
 	deststop = screens[0] + vid.rowbytes * min(plines, vid.height);
 	for (buf = screens[0]; buf < deststop; ++buf)
 		*buf = consolebgmap[*buf];
+#else
+	(void)plines;
+#endif
 }
 
 // Very similar to F_DrawFadeConsBack, except we draw from the middle(-ish) of the screen to the bottom.
@@ -3722,7 +3745,7 @@ void V_Init(void)
 {
 	INT32 i;
 	UINT8 *base = vid.buffer;
-	const INT32 screensize = vid.rowbytes * vid.height;
+	const INT32 screensize = vid.rowbytes * vid.width;
 
 	LoadMapPalette();
 

@@ -407,11 +407,13 @@ static void D_Display(void)
 		case GS_LEVEL:
 			if (!gametic)
 				break;
+#if 0
 			HU_Erase();
 			AM_Drawer();
 			break;
 
 		case GS_INTERMISSION:
+
 			Y_IntermissionDrawer();
 			HU_Erase();
 			HU_Drawer();
@@ -469,6 +471,9 @@ static void D_Display(void)
 			}
 		case GS_DEDICATEDSERVER:
 		case GS_NULL:
+#else
+		default:
+#endif
 			break;
 	}
 
@@ -491,7 +496,7 @@ static void D_Display(void)
 				PS_START_TIMING(ps_rendercalltime);
 				if (players[displayplayer].mo || players[displayplayer].playerstate == PST_DEAD)
 				{
-					topleft = screens[0] + viewwindowy*vid.width + viewwindowx;
+					topleft = screens[0] + viewwindowx*vid.height + viewwindowy;
 					objectsdrawn = 0;
 	#ifdef HWRENDER
 					if (rendermode != render_soft)
@@ -515,7 +520,7 @@ static void D_Display(void)
 						viewwindowy = vid.height / 2;
 						M_Memcpy(ylookup, ylookup2, viewheight*sizeof (ylookup[0]));
 
-						topleft = screens[0] + viewwindowy*vid.width + viewwindowx;
+						topleft = screens[0] + viewwindowx*vid.height + viewwindowy;
 
 						R_RenderPlayerView(&players[secondarydisplayplayer]);
 
@@ -527,6 +532,7 @@ static void D_Display(void)
 				// Image postprocessing effect
 				if (rendermode == render_soft)
 				{
+#if 0
 					if (!splitscreen)
 						R_ApplyViewMorph();
 
@@ -534,11 +540,13 @@ static void D_Display(void)
 						V_DoPostProcessor(0, postimgtype, postimgparam);
 					if (postimgtype2)
 						V_DoPostProcessor(1, postimgtype2, postimgparam2);
+#endif
 				}
 				PS_STOP_TIMING(ps_rendercalltime);
 				R_RestoreLevelInterpolators();
 			}
 
+#if 0
 			if (lastdraw)
 			{
 				if (rendermode == render_soft)
@@ -549,9 +557,11 @@ static void D_Display(void)
 				}
 				lastdraw = false;
 			}
+#endif
 
 			PS_START_TIMING(ps_uitime);
 
+#if 0
 			if (gamestate == GS_LEVEL)
 			{
 				ST_Drawer();
@@ -560,6 +570,7 @@ static void D_Display(void)
 			}
 			else
 				F_TitleScreenDrawer();
+#endif
 		}
 		else
 		{

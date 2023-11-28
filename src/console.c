@@ -1747,6 +1747,7 @@ static void CON_DrawHudlines(void)
 // Lactozilla: Draws the console's background picture.
 static void CON_DrawBackpic(void)
 {
+#if 0
 	patch_t *con_backpic;
 	lumpnum_t piclump;
 	int x, w, h;
@@ -1790,6 +1791,7 @@ static void CON_DrawBackpic(void)
 
 	// Unlock the cached patch.
 	W_UnlockCachedPatch(con_backpic);
+#endif
 }
 
 // draw the console background, text, and prompt if enough place

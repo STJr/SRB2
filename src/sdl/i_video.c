@@ -259,7 +259,7 @@ static void SDLSetMode(INT32 width, INT32 height, SDL_bool fullscreen, SDL_bool 
 			sw_texture_format = SDL_PIXELFORMAT_RGBA8888;
 		}
 
-		texture = SDL_CreateTexture(renderer, sw_texture_format, SDL_TEXTUREACCESS_STREAMING, width, height);
+		texture = SDL_CreateTexture(renderer, sw_texture_format, SDL_TEXTUREACCESS_STREAMING, height, width);
 
 		// Set up SW surface
 		if (vidSurface != NULL)
@@ -272,7 +272,7 @@ static void SDLSetMode(INT32 width, INT32 height, SDL_bool fullscreen, SDL_bool 
 			vid.buffer = NULL;
 		}
 		SDL_PixelFormatEnumToMasks(sw_texture_format, &bpp, &rmask, &gmask, &bmask, &amask);
-		vidSurface = SDL_CreateRGBSurface(0, width, height, bpp, rmask, gmask, bmask, amask);
+		vidSurface = SDL_CreateRGBSurface(0, height, width, bpp, rmask, gmask, bmask, amask);
 	}
 }
 
@@ -1227,6 +1227,7 @@ static inline boolean I_SkipFrame(void)
 // I_FinishUpdate
 //
 static SDL_Rect src_rect = { 0, 0, 0, 0 };
+static SDL_Rect dst_rect = { 0, 0, 0, 0 };
 
 void I_FinishUpdate(void)
 {
@@ -1268,7 +1269,7 @@ void I_FinishUpdate(void)
 		}
 
 		SDL_RenderClear(renderer);
-		SDL_RenderCopy(renderer, texture, &src_rect, NULL);
+		SDL_RenderCopyEx(renderer, texture, NULL, &dst_rect, 90.0, NULL, SDL_FLIP_VERTICAL);
 		SDL_RenderPresent(renderer);
 	}
 #ifdef HWRENDER
@@ -1663,8 +1664,13 @@ INT32 VID_SetMode(INT32 modeNum)
 	vid.modenum = modeNum;
 
 	//Impl_SetWindowName("SRB2 "VERSIONSTRING);
-	src_rect.w = vid.width;
-	src_rect.h = vid.height;
+	src_rect.w = vid.height;
+	src_rect.h = vid.width;
+
+	dst_rect.x = (vid.width - vid.height) / 2;
+	dst_rect.y = (vid.height - vid.width) / 2;
+	dst_rect.w = vid.height;
+	dst_rect.h = vid.width;
 
 	refresh_rate = VID_GetRefreshRate();
 
@@ -1741,12 +1747,12 @@ static void Impl_VideoSetupSDLBuffer(void)
 	// Set up the SDL palletized buffer (copied to vidbuffer before being rendered to texture)
 	if (vid.bpp == 1)
 	{
-		bufSurface = SDL_CreateRGBSurfaceFrom(screens[0],vid.width,vid.height,8,
+		bufSurface = SDL_CreateRGBSurfaceFrom(screens[0],vid.height,vid.width,8,
 			(int)vid.rowbytes,0x00000000,0x00000000,0x00000000,0x00000000); // 256 mode
 	}
 	else if (vid.bpp == 2) // Fury -- don't think this is used at all anymore
 	{
-		bufSurface = SDL_CreateRGBSurfaceFrom(screens[0],vid.width,vid.height,15,
+		bufSurface = SDL_CreateRGBSurfaceFrom(screens[0],vid.height,vid.width,15,
 			(int)vid.rowbytes,0x00007C00,0x000003E0,0x0000001F,0x00000000); // 555 mode
 	}
 	if (bufSurface)
@@ -1762,11 +1768,11 @@ static void Impl_VideoSetupSDLBuffer(void)
 static void Impl_VideoSetupBuffer(void)
 {
 	// Set up game's software render buffer
-	vid.rowbytes = vid.width * vid.bpp;
+	vid.rowbytes = vid.height * vid.bpp;
 	vid.direct = NULL;
 	if (vid.buffer)
 		free(vid.buffer);
-	vid.buffer = calloc(vid.rowbytes*vid.height, NUMSCREENS);
+	vid.buffer = calloc(vid.rowbytes*vid.width, NUMSCREENS);
 	if (!vid.buffer)
 	{
 		I_Error("%s", M_GetText("Not enough memory for video buffer\n"));

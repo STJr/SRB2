@@ -787,7 +787,7 @@ static void AM_drawPixel(INT32 xx, INT32 yy, INT32 cc)
 	UINT8 *dest = screens[0];
 	if (xx < 0 || yy < 0 || xx >= vid.width || yy >= vid.height)
 		return; // off the screen
-	dest[(yy*vid.width) + xx] = cc;
+	dest[(xx*vid.height) + yy] = cc;
 }
 
 //

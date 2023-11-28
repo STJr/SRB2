@@ -70,7 +70,7 @@ raster_bbox_seg
 
 	while (y < h)
 	{
-		topleft[x + y * vid.width] = pixel;
+		topleft[y + x * vid.height] = pixel;
 		y++;
 	}
 }
