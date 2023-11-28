@@ -40,8 +40,6 @@ void R_DrawColumn_8(void)
 #endif
 
 	// Framebuffer destination address.
-	// Use ylookup LUT to avoid multiply with ScreenWidth.
-	// Use columnofs LUT for subwindows?
 	dest = &topleft[dc_x*vid.height + dc_yl];
 
 	count++;
@@ -118,8 +116,6 @@ void R_Draw2sMultiPatchColumn_8(void)
 #endif
 
 	// Framebuffer destination address.
-	// Use ylookup LUT to avoid multiply with ScreenWidth.
-	// Use columnofs LUT for subwindows?
 	dest = &topleft[dc_x*vid.height + dc_yl];
 
 	count++;
@@ -212,8 +208,6 @@ void R_Draw2sMultiPatchTranslucentColumn_8(void)
 #endif
 
 	// Framebuffer destination address.
-	// Use ylookup LUT to avoid multiply with ScreenWidth.
-	// Use columnofs LUT for subwindows?
 	dest = &topleft[dc_x*vid.height + dc_yl];
 
 	count++;
@@ -1776,8 +1770,6 @@ void R_DrawFogColumn_8(void)
 #endif
 
 	// Framebuffer destination address.
-	// Use ylookup LUT to avoid multiply with ScreenWidth.
-	// Use columnofs LUT for subwindows?
 	dest = &topleft[dc_x*vid.height + dc_yl];
 
 	// Determine scaling, which is the only mapping to be done.

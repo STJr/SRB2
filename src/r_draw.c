@@ -39,23 +39,6 @@
 */
 INT32 viewwidth, scaledviewwidth, viewheight, viewwindowx, viewwindowy;
 
-/**	\brief pointer to the start of each line of the screen,
-*/
-UINT8 *ylookup[MAXVIDHEIGHT*4];
-
-/**	\brief pointer to the start of each line of the screen, for view1 (splitscreen)
-*/
-UINT8 *ylookup1[MAXVIDHEIGHT*4];
-
-/**	\brief pointer to the start of each line of the screen, for view2 (splitscreen)
-*/
-UINT8 *ylookup2[MAXVIDHEIGHT*4];
-
-/**	\brief  x byte offset for columns inside the viewwindow,
-	so the first column starts at (SCRWIDTH - VIEWWIDTH)/2
-*/
-INT32 columnofs[MAXVIDWIDTH*4];
-
 UINT8 *topleft;
 
 // =========================================================================
@@ -690,7 +673,7 @@ UINT16 R_GetSuperColorByName(const char *name)
 
 void R_InitViewBuffer(INT32 width, INT32 height)
 {
-	INT32 i, bytesperpixel = vid.bpp;
+	INT32 bytesperpixel = vid.bpp;
 
 	if (width > MAXVIDWIDTH)
 		width = MAXVIDWIDTH;
@@ -702,22 +685,11 @@ void R_InitViewBuffer(INT32 width, INT32 height)
 	// Handle resize, e.g. smaller view windows with border and/or status bar.
 	viewwindowx = (vid.width - width) >> 1;
 
-	// Column offset for those columns of the view window, but relative to the entire screen
-	for (i = 0; i < width; i++)
-		columnofs[i] = (viewwindowx + i) * bytesperpixel;
-
 	// Same with base row offset.
 	if (width == vid.width)
 		viewwindowy = 0;
 	else
 		viewwindowy = (vid.height - height) >> 1;
-
-	// Precalculate all row offsets.
-	for (i = 0; i < height; i++)
-	{
-		ylookup[i] = ylookup1[i] = screens[0] + (i+viewwindowy)*vid.width*bytesperpixel;
-		ylookup2[i] = screens[0] + (i+(vid.height>>1))*vid.width*bytesperpixel; // for splitscreen
-	}
 }
 
 /**	\brief	The R_VideoErase function

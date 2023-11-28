@@ -506,14 +506,12 @@ static void D_Display(void)
 					if (rendermode != render_none)
 					{
 						viewwindowy = vid.height / 2;
-						M_Memcpy(ylookup, ylookup2, viewheight*sizeof (ylookup[0]));
 
 						topleft = screens[0] + viewwindowx*vid.height + viewwindowy;
 
 						R_RenderPlayerView(&players[secondarydisplayplayer]);
 
 						viewwindowy = 0;
-						M_Memcpy(ylookup, ylookup1, viewheight*sizeof (ylookup[0]));
 					}
 				}
 
