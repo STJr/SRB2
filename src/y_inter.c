@@ -363,9 +363,9 @@ static void Y_RescaleScreenBuffer(void)
 	rowfrac = FixedDiv(FRACUNIT, yscalefac);
 	colfrac = FixedDiv(FRACUNIT, scalefac);
 
-	for (sy = 0, dy = 0; sy < (y_buffer->source_height << FRACBITS) && dy < y_buffer->target_height; sy += rowfrac, dy++)
-		for (sx = 0, dx = 0; sx < (y_buffer->source_width << FRACBITS) && dx < y_buffer->target_width; sx += colfrac, dx += y_buffer->target_bpp)
-			dest[(dy * y_buffer->target_rowbytes) + dx] = y_buffer->source_picture[((sy>>FRACBITS) * y_buffer->source_width) + (sx>>FRACBITS)];
+	for (sx = 0, dx = 0; sx < (y_buffer->source_width << FRACBITS) && dx < y_buffer->target_width; sx += colfrac, dx += y_buffer->target_bpp)
+		for (sy = 0, dy = 0; sy < (y_buffer->source_height << FRACBITS) && dy < y_buffer->target_height; sy += rowfrac, dy++)
+			dest[(dx * y_buffer->target_rowbytes) + dy] = y_buffer->source_picture[((sx>>FRACBITS) * y_buffer->source_height) + (sy>>FRACBITS)];
 }
 
 //
