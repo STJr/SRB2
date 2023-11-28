@@ -229,6 +229,11 @@ static boolean IsPTSInVideoBuffer(movie_t *movie, INT64 pts)
 	return (firstframe->pts <= pts && pts < GetVideoFrameEndPTS(lastframe));
 }
 
+static INT64 GetSamplesPerFrame(INT64 numsamples, INT64 inputsamplerate)
+{
+	return numsamples * SAMPLE_RATE / inputsamplerate + 1;
+}
+
 //
 // DECODING WORKER INITIALISATION
 //
@@ -315,9 +320,11 @@ static void InitialiseAudioBuffer(moviestream_t *stream, moviedecodeworker_t *wo
 
 	stream->numplanes = av_sample_fmt_is_planar(AV_SAMPLE_FMT_S16) ? workerstream->codeccontext->channels : 1;
 
+	INT64 samplesperframe = GetSamplesPerFrame(worker->frame->nb_samples, workerstream->codeccontext->sample_rate);
+
 	InitialiseBuffer(
 		&stream->buffer,
-		STREAM_BUFFER_TIME / 1000 * workerstream->codeccontext->sample_rate / worker->frame->nb_samples,
+		STREAM_BUFFER_TIME / 1000 * workerstream->codeccontext->sample_rate / samplesperframe,
 		sizeof(movieaudioframe_t)
 	);
 
@@ -330,7 +337,7 @@ static void InitialiseAudioBuffer(moviestream_t *stream, moviedecodeworker_t *wo
 
 		if (!av_samples_alloc(
 			frame->samples, NULL,
-			worker->frame->channels, worker->frame->nb_samples,
+			worker->frame->channels, samplesperframe,
 			AV_SAMPLE_FMT_S16, 1
 		))
 			I_Error("FFmpeg: cannot allocate samples");
@@ -632,17 +639,20 @@ static void ParseAudioFrame(moviedecodeworker_t *worker)
 
 	frame = PeekBuffer(&worker->audiostream.framepool);
 
-	frame->pts = worker->frame->pts;
-	frame->numsamples = worker->frame->nb_samples;
+	INT64 maxsamples = GetSamplesPerFrame(worker->frame->nb_samples, worker->audiostream.codeccontext->sample_rate);
 
-	if (swr_convert(
+	int numoutputsamples = swr_convert(
 		worker->resamplingcontext,
 		frame->samples,
-		worker->frame->nb_samples,
+		maxsamples,
 		(UINT8 const **)worker->frame->data,
 		worker->frame->nb_samples
-	) < 0)
-		I_Error("FFmpeg: cannot convert audio frames");
+	);
+	if (numoutputsamples < 0)
+		I_Error("FFmpeg: cannot convert audio frame");
+
+	frame->pts = worker->frame->pts;
+	frame->numsamples = numoutputsamples;
 
 	I_lock_mutex(&worker->mutex);
 	DequeueBufferIntoBuffer(&worker->audiostream.framequeue, &worker->audiostream.framepool);
