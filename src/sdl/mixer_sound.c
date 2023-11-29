@@ -1441,7 +1441,7 @@ void I_SetMusicVolume(UINT8 volume)
 	Mix_VolumeMusic(get_real_volume(music_volume));
 }
 
-boolean I_SetSongTrack(int track)
+boolean I_SetSongTrack(INT32 track)
 {
 #ifdef HAVE_GME
 	// If the specified track is within the number of tracks playing, then change it
