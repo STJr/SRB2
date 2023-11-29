@@ -120,6 +120,14 @@ static INT64 PTSToSamples(movie_t *movie, INT64 pts)
 	return av_rescale_q(pts, oldtb, newtb);
 }
 
+static INT64 SamplesToPTS(movie_t *movie, INT64 numsamples)
+{
+	AVRational oldtb = { 1, SAMPLE_RATE };
+	AVRational newtb = movie->audiostream.stream->time_base;
+
+	return av_rescale_q(numsamples, oldtb, newtb);
+}
+
 static INT64 SamplesToMS(INT64 numsamples)
 {
 	AVRational oldtb = { 1, SAMPLE_RATE };
@@ -152,6 +160,14 @@ static INT64 MSToVideoPTS(movie_t *movie, INT64 ms)
 	return av_rescale_q(ms, oldtb, newtb);
 }
 
+static INT64 MSToAudioPTS(movie_t *movie, INT64 ms)
+{
+	AVRational oldtb = { 1, 1000 };
+	AVRational newtb = movie->audiostream.stream->time_base;
+
+	return av_rescale_q(ms, oldtb, newtb);
+}
+
 static INT64 PTSToMS(INT64 pts)
 {
 	AVRational newtb = { 1, 1000 };
@@ -166,6 +182,11 @@ static INT64 PTSToMS(INT64 pts)
 static INT64 GetVideoFrameEndPTS(movievideoframe_t *frame)
 {
 	return frame->pts + frame->duration;
+}
+
+static INT64 GetAudioFrameEndPTS(movie_t *movie, movieaudioframe_t *frame)
+{
+	return frame->pts + SamplesToPTS(movie, frame->numsamples);
 }
 
 static INT64 GetAudioFrameEndSample(movieaudioframe_t *frame)
@@ -778,9 +799,9 @@ static void ClearOldVideoFrames(movie_t *movie)
 static void ClearOldAudioFrames(movie_t *movie)
 {
 	moviebuffer_t *buffer = &movie->audiostream.buffer;
-	INT64 limit = max(movie->audioposition - MSToSamples(STREAM_BUFFER_TIME / 2), 0);
+	INT64 limit = max(MSToAudioPTS(movie, movie->position - STREAM_BUFFER_TIME / 2), 0);
 
-	while (buffer->size > 0 && GetAudioFrameEndSample(PeekBuffer(buffer)) < limit)
+	while (buffer->size > 0 && GetAudioFrameEndPTS(movie, PeekBuffer(buffer)) < limit)
 		ClearOldestFrame(movie, &movie->audiostream, &movie->decodeworker.audiostream);
 }
 
@@ -998,8 +1019,12 @@ static void UpdateSeeking(movie_t *movie)
 	if (!(inbuffer || movie->seeking || movie->decodeworker.flushing || buffer->size == 0))
 		Seek(movie);
 
-	if (llabs(SamplesToMS(movie->audioposition) - movie->position) > MAX_AUDIO_DESYNC)
-		movie->audioposition = MSToSamples(movie->position);
+	if (movie->audioposition != -1)
+	{
+		INT64 desync = llabs(SamplesToMS(movie->audioposition) - movie->position);
+		if (desync > MAX_AUDIO_DESYNC)
+			movie->audioposition = -1;
+	}
 }
 
 //
@@ -1053,11 +1078,17 @@ void MovieDecode_Stop(movie_t **movieptr)
 void MovieDecode_SetPosition(movie_t *movie, INT64 ms)
 {
 	movie->position = ms;
+
+	if (movie->audioposition == -1)
+		movie->audioposition = MSToSamples(movie->position);
 }
 
 void MovieDecode_Seek(movie_t *movie, INT64 ms)
 {
 	movie->position = ms;
+
+	if (movie->audioposition == -1)
+		movie->audioposition = MSToSamples(movie->position);
 }
 
 void MovieDecode_Update(movie_t *movie)
@@ -1144,6 +1175,9 @@ void MovieDecode_CopyAudioSamples(movie_t *movie, void *mem, size_t size)
 	moviebuffer_t *buffer = &stream->buffer;
 	AVCodecContext *codeccontext = movie->decodeworker.audiostream.codeccontext;
 	UINT8 *membytes = mem;
+
+	if (movie->audioposition == -1)
+		return;
 
 	// Here, if using packed audio, the sample size includes both channels
 	INT32 samplesize = av_get_bytes_per_sample(AV_SAMPLE_FMT_S16);
