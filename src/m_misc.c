@@ -2805,3 +2805,17 @@ boolean M_IsStringEmpty(const char *s)
 
 	return true;
 }
+
+// Rounds off floating numbers and checks for 0 - 255 bounds
+int M_RoundUp(double number)
+{
+	if (number > 255.0l)
+		return 255;
+	if (number < 0.0l)
+		return 0;
+
+	if ((int)number <= (int)(number - 0.5f))
+		return (int)number + 1;
+
+	return (int)number;
+}

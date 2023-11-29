@@ -5071,3 +5071,35 @@ fixed_t P_CeilingzAtPos(fixed_t x, fixed_t y, fixed_t z, fixed_t height)
 
 	return ceilingz;
 }
+
+INT32 P_GetSectorLightAt(sector_t *sector, fixed_t x, fixed_t y, fixed_t z)
+{
+	if (!sector->numlights)
+		return -1;
+
+	INT32 light = sector->numlights - 1;
+
+	// R_GetPlaneLight won't work on sloped lights!
+	for (INT32 lightnum = 1; lightnum < sector->numlights; lightnum++) {
+		fixed_t h = P_GetLightZAt(&sector->lightlist[lightnum], x, y);
+		if (h <= z) {
+			light = lightnum - 1;
+			break;
+		}
+	}
+
+	return light;
+}
+
+extracolormap_t *P_GetColormapFromSectorAt(sector_t *sector, fixed_t x, fixed_t y, fixed_t z)
+{
+	if (sector->numlights)
+		return *sector->lightlist[P_GetSectorLightAt(sector, x, y, z)].extra_colormap;
+	else
+		return sector->extra_colormap;
+}
+
+extracolormap_t *P_GetSectorColormapAt(fixed_t x, fixed_t y, fixed_t z)
+{
+	return P_GetColormapFromSectorAt(R_PointInSubsector(x, y)->sector, x, y, z);
+}
