@@ -2607,7 +2607,15 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 				if (lumpnum == LUMPERROR || W_LumpLength(lumpnum) == 0)
 					CONS_Debug(DBG_SETUP, "Line type 415 Executor: script lump %s not found/not valid.\n", line->stringargs[0]);
 				else
-					COM_BufInsertText(W_CacheLumpNum(lumpnum, PU_CACHE));
+				{
+					void *lump = W_CacheLumpNum(lumpnum, PU_CACHE);
+					size_t len = W_LumpLength(lumpnum);
+					char *text = Z_Malloc(len + 1, PU_CACHE, NULL);
+					memcpy(text, lump, len);
+					text[len] = '\0';
+					COM_BufInsertText(text);
+					Z_Free(text);
+				}
 			}
 			break;
 
