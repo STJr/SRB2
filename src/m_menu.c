@@ -182,6 +182,9 @@ static fixed_t char_scroll = 0;
 
 static tic_t keydown = 0;
 
+// Lua
+static huddrawlist_h luahuddrawlist_playersetup;
+
 //
 // PROTOTYPES
 //
@@ -11988,6 +11991,19 @@ static UINT8      multi_frame;
 static UINT8      multi_spr2;
 static boolean    multi_paused;
 static boolean    multi_invcolor;
+static boolean    multi_override;
+
+static spritedef_t *multi_followitem_sprdef;
+static INT32        multi_followitem_skinnum;
+static UINT8        multi_followitem_numframes;
+static UINT8        multi_followitem_startframe;
+static UINT8        multi_followitem_frame;
+static fixed_t      multi_followitem_duration;
+static fixed_t      multi_followitem_tics;
+static fixed_t      multi_followitem_scale;
+static fixed_t      multi_followitem_yoffset;
+
+#define MULTI_DURATION (4*FRACUNIT)
 
 // this is set before entering the MultiPlayer setup menu,
 // for either player 1 or 2
@@ -12132,9 +12148,92 @@ static menucolor_t *M_GridIndexToMenuColor(UINT16 index)
 	}
 }
 
+static void M_SetPlayerSetupFollowItem()
+{
+	const mobjtype_t followitem = skins[setupm_fakeskin].followitem;
+
+	switch (followitem)
+	{
+		case MT_TAILSOVERLAY:
+		{
+			const state_t *state = &states[S_TAILSOVERLAY_MINUS30DEGREES];
+			const UINT8 sprite2 = P_GetSkinSprite2(&skins[setupm_fakeskin], state->frame & FF_FRAMEMASK, NULL);
+
+			if (state->sprite != SPR_PLAY)
+				break;
+
+			multi_followitem_sprdef = &skins[setupm_fakeskin].sprites[sprite2];
+			multi_followitem_skinnum = setupm_fakeskin;
+			multi_followitem_numframes = multi_followitem_sprdef->numframes;
+			multi_followitem_startframe = 0;
+			multi_followitem_frame = multi_frame;
+			multi_followitem_duration = MULTI_DURATION;
+			multi_followitem_tics = multi_tics;
+			multi_followitem_scale = FRACUNIT;
+			multi_followitem_yoffset = 0;
+
+			if ((state->frame & FF_SPR2MIDSTART) && (multi_followitem_numframes > 0) && M_RandomChance(FRACUNIT / 2))
+			{
+				multi_followitem_frame += multi_followitem_numframes / 2;
+			}
+			break;
+		}
+		case MT_METALJETFUME:
+		{
+			const state_t *state = &states[S_JETFUME1];
+
+			if (!(state->frame & FF_ANIMATE))
+				break;
+
+			multi_followitem_sprdef = &sprites[state->sprite];
+			multi_followitem_skinnum = TC_DEFAULT;
+			multi_followitem_numframes = state->var1 + 1;
+			multi_followitem_startframe = state->frame & FF_FRAMEMASK;
+			multi_followitem_frame = multi_followitem_startframe;
+			multi_followitem_duration = state->var2 * FRACUNIT;
+			multi_followitem_tics = multi_tics % multi_followitem_duration;
+			multi_followitem_scale = 2 * FRACUNIT / 3;
+			multi_followitem_yoffset = (skins[setupm_fakeskin].height - FixedMul(mobjinfo[followitem].height, multi_followitem_scale)) >> 1;
+			break;
+		}
+		default:
+			multi_followitem_sprdef = NULL;
+			break;
+	}
+}
+
+static void M_DrawPlayerSetupFollowItem(INT32 x, INT32 y, fixed_t scale, INT32 flags)
+{
+	spriteframe_t *sprframe;
+	patch_t *patch;
+	UINT8 *colormap;
+
+	if (multi_followitem_sprdef == NULL)
+		return;
+
+	if (multi_followitem_frame >= multi_followitem_startframe + multi_followitem_numframes)
+		multi_followitem_frame = multi_followitem_startframe;
+
+	colormap = R_GetTranslationColormap(multi_followitem_skinnum, setupm_fakecolor->color, GTC_CACHE);
+
+	sprframe = &multi_followitem_sprdef->spriteframes[multi_followitem_frame];
+	patch = W_CachePatchNum(sprframe->lumppat[0], PU_PATCH);
+	if (sprframe->flip & 1) // Only for first sprite
+		flags |= V_FLIP; // This sprite is left/right flipped!
+
+	x <<= FRACBITS;
+	y <<= FRACBITS;
+	y -= FixedMul(multi_followitem_yoffset, scale);
+
+	scale = FixedMul(scale, multi_followitem_scale);
+
+	V_DrawFixedPatch(x, y, scale, flags, patch, colormap);
+}
+
 static void M_DrawSetupMultiPlayerMenu(void)
 {
 	INT32 x, y, cursory = 0, flags = 0;
+	fixed_t scale;
 	spritedef_t *sprdef;
 	spriteframe_t *sprframe;
 	patch_t *patch;
@@ -12184,11 +12283,24 @@ static void M_DrawSetupMultiPlayerMenu(void)
 	y += 11;
 
 	// anim the player in the box
-	multi_tics -= renderdeltatics;
-	while (!multi_paused && multi_tics <= 0)
+	if (!multi_paused)
 	{
-		multi_frame++;
-		multi_tics += 4*FRACUNIT;
+		multi_tics -= renderdeltatics;
+		while (multi_tics <= 0)
+		{
+			multi_frame++;
+			multi_tics += MULTI_DURATION;
+		}
+
+		if (multi_followitem_sprdef != NULL)
+		{
+			multi_followitem_tics -= renderdeltatics;
+			while (multi_followitem_tics <= 0)
+			{
+				multi_followitem_frame++;
+				multi_followitem_tics += multi_followitem_duration;
+			}
+		}
 	}
 
 #define charw 74
@@ -12203,22 +12315,43 @@ static void M_DrawSetupMultiPlayerMenu(void)
 		goto faildraw;
 
 	// ok, draw player sprite for sure now
-	colormap = R_GetTranslationColormap(setupm_fakeskin, setupm_fakecolor->color, GTC_CACHE);
-
 	if (multi_frame >= sprdef->numframes)
 		multi_frame = 0;
+
+	scale = FixedDiv(skins[setupm_fakeskin].highresscale, skins[setupm_fakeskin].shieldscale);
+
+	#define chary (y+64)
+
+	if (renderisnewtic)
+	{
+		LUA_HUD_ClearDrawList(luahuddrawlist_playersetup);
+		multi_override = LUA_HookCharacterHUD
+		(
+			HUD_HOOK(playersetup), luahuddrawlist_playersetup, setupm_player,
+			x << FRACBITS, chary << FRACBITS, scale,
+			setupm_fakeskin, multi_spr2, multi_frame, 1, setupm_fakecolor->color,
+			(multi_tics >> FRACBITS) + 1, multi_paused
+		);
+	}
+
+	LUA_HUD_DrawList(luahuddrawlist_playersetup);
+
+	if (multi_override == true)
+		goto colordraw;
+
+	colormap = R_GetTranslationColormap(setupm_fakeskin, setupm_fakecolor->color, GTC_CACHE);
 
 	sprframe = &sprdef->spriteframes[multi_frame];
 	patch = W_CachePatchNum(sprframe->lumppat[0], PU_PATCH);
 	if (sprframe->flip & 1) // Only for first sprite
 		flags |= V_FLIP; // This sprite is left/right flipped!
 
-#define chary (y+64)
+	M_DrawPlayerSetupFollowItem(x, chary, scale, flags & ~V_FLIP);
 
 	V_DrawFixedPatch(
 		x<<FRACBITS,
 		chary<<FRACBITS,
-		FixedDiv(skins[setupm_fakeskin].highresscale, skins[setupm_fakeskin].shieldscale),
+		scale,
 		flags, patch, colormap);
 
 	goto colordraw;
@@ -12406,6 +12539,20 @@ static void M_DrawColorRamp(INT32 x, INT32 y, INT32 w, INT32 h, skincolor_t colo
 		V_DrawFill(x, y+(i*h), w, h, color.ramp[i]);
 }
 
+static void M_InitPlayerSetupLua(void)
+{
+	// I'd really like to assume that the drawlist has been destroyed,
+	// but it appears M_ClearMenus has options not to call exit routines...
+	// so that doesn't seem safe to me??
+	if (!LUA_HUD_IsDrawListValid(luahuddrawlist_playersetup))
+	{
+		LUA_HUD_DestroyDrawList(luahuddrawlist_playersetup);
+		luahuddrawlist_playersetup = LUA_HUD_CreateDrawList();
+	}
+	LUA_HUD_ClearDrawList(luahuddrawlist_playersetup);
+	multi_override = false;
+}
+
 // Handle 1P/2P MP Setup
 static void M_HandleSetupMultiPlayer(INT32 choice)
 {
@@ -12451,6 +12598,7 @@ static void M_HandleSetupMultiPlayer(INT32 choice)
 				}
 				while ((prev_setupm_fakeskin != setupm_fakeskin) && !(R_SkinUsable(-1, setupm_fakeskin)));
 				multi_spr2 = P_GetSkinSprite2(&skins[setupm_fakeskin], SPR2_WALK, NULL);
+				M_SetPlayerSetupFollowItem();
 			}
 			else if (itemOn == 2) // player color
 			{
@@ -12491,6 +12639,7 @@ static void M_HandleSetupMultiPlayer(INT32 choice)
 				}
 				while ((prev_setupm_fakeskin != setupm_fakeskin) && !(R_SkinUsable(-1, setupm_fakeskin)));
 				multi_spr2 = P_GetSkinSprite2(&skins[setupm_fakeskin], SPR2_WALK, NULL);
+				M_SetPlayerSetupFollowItem();
 			}
 			else if (itemOn == 2) // player color
 			{
@@ -12611,7 +12760,7 @@ static void M_SetupMultiPlayer(INT32 choice)
 	(void)choice;
 
 	multi_frame = 0;
-	multi_tics = 4*FRACUNIT;
+	multi_tics = MULTI_DURATION;
 
 	strcpy(setupm_name, cv_playername.string);
 
@@ -12641,6 +12790,10 @@ static void M_SetupMultiPlayer(INT32 choice)
 	MP_PlayerSetupMenu[2].status = (IT_KEYHANDLER|IT_STRING);
 
 	multi_spr2 = P_GetSkinSprite2(&skins[setupm_fakeskin], SPR2_WALK, NULL);
+	M_SetPlayerSetupFollowItem();
+
+	// allocate and/or clear Lua player setup draw list
+	M_InitPlayerSetupLua();
 
 	MP_PlayerSetupDef.prevMenu = currentMenu;
 	M_SetupNextMenu(&MP_PlayerSetupDef);
@@ -12652,7 +12805,7 @@ static void M_SetupMultiPlayer2(INT32 choice)
 	(void)choice;
 
 	multi_frame = 0;
-	multi_tics = 4*FRACUNIT;
+	multi_tics = MULTI_DURATION;
 
 	strcpy (setupm_name, cv_playername2.string);
 
@@ -12682,6 +12835,10 @@ static void M_SetupMultiPlayer2(INT32 choice)
 	MP_PlayerSetupMenu[2].status = (IT_KEYHANDLER|IT_STRING);
 
 	multi_spr2 = P_GetSkinSprite2(&skins[setupm_fakeskin], SPR2_WALK, NULL);
+	M_SetPlayerSetupFollowItem();
+
+	// allocate and/or clear Lua player setup draw list
+	M_InitPlayerSetupLua();
 
 	MP_PlayerSetupDef.prevMenu = currentMenu;
 	M_SetupNextMenu(&MP_PlayerSetupDef);
@@ -12703,6 +12860,12 @@ static boolean M_QuitMultiPlayerMenu(void)
 	// send color if changed
 	if (setupm_fakecolor->color != setupm_cvcolor->value)
 		COM_BufAddText (va("%s %d\n",setupm_cvcolor->name,setupm_fakecolor->color));
+
+	// de-allocate Lua player setup drawlist
+	LUA_HUD_DestroyDrawList(luahuddrawlist_playersetup);
+	luahuddrawlist_playersetup = NULL;
+	multi_override = false;
+
 	return true;
 }
 

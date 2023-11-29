@@ -229,6 +229,7 @@ static UINT8 cutscene_boostspeed = 0;
 char stjrintro[9] = "STJRI000";
 
 static huddrawlist_h luahuddrawlist_title;
+static huddrawlist_h luahuddrawlist_continue[2];
 
 //
 // This alters the text string cutscene_disptext.
@@ -3529,9 +3530,14 @@ void F_TitleDemoTicker(void)
 static skin_t *contskins[2];
 static UINT8 cont_spr2[2][6];
 static UINT8 *contcolormaps[2];
+static player_t *contPlayers[2];
+static skincolornum_t contColors[2]; // it's possible to change your skincolor in the continue screen, so this is for Lua to identify the skincolor that was used to cache the colormap
+static boolean contOverrides[2];
 
 void F_StartContinue(void)
 {
+	UINT8 i;
+
 	I_Assert(!netgame && !multiplayer);
 
 	if (continuesInSession && players[consoleplayer].continues <= 0)
@@ -3554,9 +3560,11 @@ void F_StartContinue(void)
 	S_ChangeMusicInternal("_conti", false);
 	S_StopSounds();
 
+	contPlayers[0] = &players[consoleplayer];
 	contskins[0] = &skins[players[consoleplayer].skin];
 	cont_spr2[0][0] = P_GetSkinSprite2(contskins[0], SPR2_CNT1, NULL);
 	cont_spr2[0][2] = contskins[0]->contangle & 7;
+	contColors[0] = players[consoleplayer].skincolor;
 	contcolormaps[0] = R_GetTranslationColormap(players[consoleplayer].skin, players[consoleplayer].skincolor, GTC_CACHE);
 	cont_spr2[0][4] = contskins[0]->sprites[cont_spr2[0][0]].numframes;
 	cont_spr2[0][5] = max(1, contskins[0]->contspeed);
@@ -3570,9 +3578,11 @@ void F_StartContinue(void)
 		else // HACK
 			secondplaya = 1;
 
+		contPlayers[1] = &players[secondplaya];
 		contskins[1] = &skins[players[secondplaya].skin];
 		cont_spr2[1][0] = P_GetSkinSprite2(contskins[1], SPR2_CNT4, NULL);
 		cont_spr2[1][2] = (contskins[1]->contangle >> 3) & 7;
+		contColors[1] = players[secondplaya].skincolor;
 		contcolormaps[1] = R_GetTranslationColormap(players[secondplaya].skin, players[secondplaya].skincolor, GTC_CACHE);
 		cont_spr2[1][4] = contskins[1]->sprites[cont_spr2[1][0]].numframes;
 		if (cont_spr2[1][0] == SPR2_CNT4)
@@ -3592,6 +3602,58 @@ void F_StartContinue(void)
 
 	timetonext = (11*TICRATE)+11;
 	continuetime = 0;
+
+	// allocate and/or clear Lua continue screen draw lists
+	for (i = 0; i < 2; i++)
+	{
+		if (!LUA_HUD_IsDrawListValid(luahuddrawlist_continue[i]))
+		{
+			LUA_HUD_DestroyDrawList(luahuddrawlist_continue[i]);
+			luahuddrawlist_continue[i] = LUA_HUD_CreateDrawList();
+		}
+		LUA_HUD_ClearDrawList(luahuddrawlist_continue[i]);
+		contOverrides[i] = false;
+	}
+}
+
+static void F_DestroyContinueDrawLists(void)
+{
+	UINT8 i;
+	for (i = 0; i < 2; i++)
+	{
+		LUA_HUD_DestroyDrawList(luahuddrawlist_continue[i]);
+		luahuddrawlist_continue[i] = NULL;
+		contOverrides[i] = false;
+	}
+}
+
+static void F_DrawContinueCharacter(INT32 dx, INT32 dy, UINT8 n)
+{
+	spritedef_t *sprdef;
+	spriteframe_t *sprframe;
+	patch_t *patch;
+
+	if (renderisnewtic)
+	{
+		LUA_HUD_ClearDrawList(luahuddrawlist_continue[n]);
+		contOverrides[n] = LUA_HookCharacterHUD
+		(
+			HUD_HOOK(continue), luahuddrawlist_continue[n], contPlayers[n],
+			dx, dy, contskins[n]->highresscale,
+			(INT32)(contskins[n] - skins), cont_spr2[n][0], cont_spr2[n][1], cont_spr2[n][2] + 1, contColors[n], // add 1 to rotation to convert internal angle numbers (0-7) to WAD editor angle numbers (1-8)
+			imcontinuing ? continuetime : timetonext, imcontinuing
+		);
+	}
+
+	LUA_HUD_DrawList(luahuddrawlist_continue[n]);
+
+	if (contOverrides[n] == true)
+		return;
+
+	sprdef = &contskins[n]->sprites[cont_spr2[n][0]];
+	sprframe = &sprdef->spriteframes[cont_spr2[n][1]];
+	patch = W_CachePatchNum(sprframe->lumppat[cont_spr2[n][2]], PU_PATCH_LOWPRIORITY);
+	V_DrawFixedPatch((dx), (dy), contskins[n]->highresscale, (sprframe->flip & (1<<cont_spr2[n][2])) ? V_FLIP : 0, patch, contcolormaps[n]);
 }
 
 //
@@ -3600,8 +3662,6 @@ void F_StartContinue(void)
 //
 void F_ContinueDrawer(void)
 {
-	spritedef_t *sprdef;
-	spriteframe_t *sprframe;
 	patch_t *patch;
 	INT32 i, x = (BASEVIDWIDTH>>1), ncontinues = players[consoleplayer].continues;
 	char numbuf[9] = "CONTNUM*";
@@ -3646,7 +3706,7 @@ void F_ContinueDrawer(void)
 	else if (ncontinues > 10)
 	{
 		if (!(continuetime & 1) || continuetime > 17)
-			V_DrawContinueIcon(x, 68, 0, players[consoleplayer].skin, players[consoleplayer].skincolor);
+			V_DrawContinueIcon(x, 68, 0, (INT32)(contskins[0] - skins), contColors[0]);
 		V_DrawScaledPatch(x+12, 66, 0, stlivex);
 		V_DrawRightAlignedString(x+38, 64, 0,
 			va("%d",(imcontinuing ? ncontinues-1 : ncontinues)));
@@ -3660,7 +3720,7 @@ void F_ContinueDrawer(void)
 		{
 			if (i == (ncontinues/2) && ((continuetime & 1) || continuetime > 17))
 				continue;
-			V_DrawContinueIcon(x - (i*30), 68, 0, players[consoleplayer].skin, players[consoleplayer].skincolor);
+			V_DrawContinueIcon(x - (i*30), 68, 0, (INT32)(contskins[0] - skins), contColors[0]);
 		}
 		x = BASEVIDWIDTH>>1;
 	}
@@ -3700,21 +3760,12 @@ void F_ContinueDrawer(void)
 	else if (lift[0] > TICRATE+5)
 		lift[0] = TICRATE+5;
 
-#define drawchar(dx, dy, n)	{\
-								sprdef = &contskins[n]->sprites[cont_spr2[n][0]];\
-								sprframe = &sprdef->spriteframes[cont_spr2[n][1]];\
-								patch = W_CachePatchNum(sprframe->lumppat[cont_spr2[n][2]], PU_PATCH_LOWPRIORITY);\
-								V_DrawFixedPatch((dx), (dy), contskins[n]->highresscale, (sprframe->flip & (1<<cont_spr2[n][2])) ? V_FLIP : 0, patch, contcolormaps[n]);\
-							}
-
 	if (offsy < 0)
-		drawchar((BASEVIDWIDTH<<(FRACBITS-1))-offsx, ((140-lift[0])<<FRACBITS)-offsy, 0);
+		F_DrawContinueCharacter((BASEVIDWIDTH<<(FRACBITS-1))-offsx, ((140-lift[0])<<FRACBITS)-offsy, 0);
 	if (contskins[1])
-		drawchar((BASEVIDWIDTH<<(FRACBITS-1))+offsx, ((140-lift[1])<<FRACBITS)+offsy, 1);
+		F_DrawContinueCharacter((BASEVIDWIDTH<<(FRACBITS-1))+offsx, ((140-lift[1])<<FRACBITS)+offsy, 1);
 	if (offsy >= 0)
-		drawchar((BASEVIDWIDTH<<(FRACBITS-1))-offsx, ((140-lift[0])<<FRACBITS)-offsy, 0);
-
-#undef drawchar
+		F_DrawContinueCharacter((BASEVIDWIDTH<<(FRACBITS-1))-offsx, ((140-lift[0])<<FRACBITS)-offsy, 0);
 
 	if (timetonext > (11*TICRATE))
 		V_DrawFadeScreen(31, timetonext-(11*TICRATE));
@@ -3730,6 +3781,7 @@ void F_ContinueTicker(void)
 		{
 			if (!(--timetonext))
 			{
+				F_DestroyContinueDrawLists();
 				Command_ExitGame_f();
 				return;
 			}
@@ -3739,6 +3791,7 @@ void F_ContinueTicker(void)
 	{
 		if (++continuetime == 3*TICRATE)
 		{
+			F_DestroyContinueDrawLists();
 			G_Continue();
 			return;
 		}
