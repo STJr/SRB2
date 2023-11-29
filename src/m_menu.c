@@ -12320,7 +12320,7 @@ static void M_DrawSetupMultiPlayerMenu(void)
 
 	scale = FixedDiv(skins[setupm_fakeskin].highresscale, skins[setupm_fakeskin].shieldscale);
 
-	#define chary (y+64)
+#define chary (y+64)
 
 	if (renderisnewtic)
 	{
