@@ -116,6 +116,9 @@ static int extracolormap_get(lua_State *L)
 	extracolormap_t *exc = *((extracolormap_t **)luaL_checkudata(L, 1, META_EXTRACOLORMAP));
 	enum extracolormap_e field = luaL_checkoption(L, 2, NULL, extracolormap_opt);
 
+	if (!exc)
+		return LUA_ErrInvalid(L, "extracolormap_t");
+
 	switch (field)
 	{
 	case extracolormap_red:
@@ -197,6 +200,9 @@ static int extracolormap_set(lua_State *L)
 {
 	extracolormap_t *exc = *((extracolormap_t **)luaL_checkudata(L, 1, META_EXTRACOLORMAP));
 	enum extracolormap_e field = luaL_checkoption(L, 2, NULL, extracolormap_opt);
+
+	if (!exc)
+		return LUA_ErrInvalid(L, "extracolormap_t");
 
 	UINT8 r = R_GetRgbaR(exc->rgba);
 	UINT8 g = R_GetRgbaG(exc->rgba);
