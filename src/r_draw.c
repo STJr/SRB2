@@ -125,9 +125,6 @@ UINT32 nflatxshift, nflatyshift, nflatshiftup, nflatmask;
 //                       TRANSLATION COLORMAP CODE
 // =========================================================================
 
-#define NUM_PALETTE_ENTRIES 256
-#define DEFAULT_STARTTRANSCOLOR 96
-
 enum
 {
 	DEFAULT_TT_CACHE_INDEX,

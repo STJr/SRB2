@@ -169,7 +169,6 @@ ps_metric_t ps_hw_batchdrawtime = {0};
 
 boolean gl_init = false;
 boolean gl_maploaded = false;
-boolean gl_sessioncommandsadded = false;
 boolean gl_shadersavailable = true;
 
 // ==========================================================================
@@ -186,8 +185,8 @@ void HWR_Lighting(FSurfaceInfo *Surface, INT32 light_level, extracolormap_t *col
 	RGBA_t poly_color, tint_color, fade_color;
 
 	poly_color.rgba = 0xFFFFFFFF;
-	tint_color.rgba = (colormap != NULL) ? (UINT32)colormap->rgba : GL_DEFAULTMIX;
-	fade_color.rgba = (colormap != NULL) ? (UINT32)colormap->fadergba : GL_DEFAULTFOG;
+	tint_color.rgba = (colormap != NULL) ? (UINT32)colormap->rgba : 0x00000000;
+	fade_color.rgba = (colormap != NULL) ? (UINT32)colormap->fadergba : 0xFF000000;
 
 	// Crappy backup coloring if you can't do shaders
 	if (!HWR_UseShader())
@@ -201,7 +200,7 @@ void HWR_Lighting(FSurfaceInfo *Surface, INT32 light_level, extracolormap_t *col
 		blue = (float)poly_color.s.blue;
 
 		// 48 is just an arbritrary value that looked relatively okay.
-		tint_alpha = (float)(sqrt(tint_color.s.alpha) * 48) / 255.0f;
+		tint_alpha = (float)(sqrt((float)tint_color.s.alpha / 10.2) * 48) / 255.0f;
 
 		// 8 is roughly the brightness of the "close" color in Software, and 16 the brightness of the "far" color.
 		// 8 is too bright for dark levels, and 16 is too dark for bright levels.
@@ -244,7 +243,7 @@ UINT8 HWR_FogBlockAlpha(INT32 light, extracolormap_t *colormap) // Let's see if 
 	RGBA_t realcolor, surfcolor;
 	INT32 alpha;
 
-	realcolor.rgba = (colormap != NULL) ? colormap->rgba : GL_DEFAULTMIX;
+	realcolor.rgba = (colormap != NULL) ? colormap->rgba : 0x00000000;
 
 	if (cv_glshaders.value && gl_shadersavailable)
 	{
@@ -6659,7 +6658,7 @@ consvar_t cv_glfakecontrast = CVAR_INIT ("gr_fakecontrast", "Smooth", CV_SAVE, g
 consvar_t cv_glslopecontrast = CVAR_INIT ("gr_slopecontrast", "Off", CV_SAVE, CV_OnOff, NULL);
 
 consvar_t cv_glfiltermode = CVAR_INIT ("gr_filtermode", "Nearest", CV_SAVE|CV_CALL, glfiltermode_cons_t, CV_glfiltermode_OnChange);
-consvar_t cv_glanisotropicmode = CVAR_INIT ("gr_anisotropicmode", "1", CV_CALL, glanisotropicmode_cons_t, CV_glanisotropic_OnChange);
+consvar_t cv_glanisotropicmode = CVAR_INIT ("gr_anisotropicmode", "1", CV_SAVE|CV_CALL, glanisotropicmode_cons_t, CV_glanisotropic_OnChange);
 
 consvar_t cv_glsolvetjoin = CVAR_INIT ("gr_solvetjoin", "On", 0, CV_OnOff, NULL);
 
@@ -6701,6 +6700,7 @@ void HWR_AddCommands(void)
 	CV_RegisterVar(&cv_glallowshaders);
 
 	CV_RegisterVar(&cv_glfiltermode);
+	CV_RegisterVar(&cv_glanisotropicmode);
 	CV_RegisterVar(&cv_glsolvetjoin);
 
 	CV_RegisterVar(&cv_glbatching);
@@ -6708,14 +6708,6 @@ void HWR_AddCommands(void)
 #ifndef NEWCLIP
 	CV_RegisterVar(&cv_glclipwalls);
 #endif
-}
-
-void HWR_AddSessionCommands(void)
-{
-	if (gl_sessioncommandsadded)
-		return;
-	CV_RegisterVar(&cv_glanisotropicmode);
-	gl_sessioncommandsadded = true;
 }
 
 // --------------------------------------------------------------------------
@@ -6728,7 +6720,6 @@ void HWR_Startup(void)
 		CONS_Printf("HWR_Startup()...\n");
 
 		HWR_InitPolyPool();
-		HWR_AddSessionCommands();
 		HWR_InitMapTextures();
 		HWR_InitModels();
 #ifdef ALAM_LIGHTING
@@ -6751,10 +6742,6 @@ void HWR_Startup(void)
 // --------------------------------------------------------------------------
 void HWR_Switch(void)
 {
-	// Add session commands
-	if (!gl_sessioncommandsadded)
-		HWR_AddSessionCommands();
-
 	// Set special states from CVARs
 	HWD.pfnSetSpecialState(HWD_SET_TEXTUREFILTERMODE, cv_glfiltermode.value);
 	HWD.pfnSetSpecialState(HWD_SET_TEXTUREANISOTROPICMODE, cv_glanisotropicmode.value);

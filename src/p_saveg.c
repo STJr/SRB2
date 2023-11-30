@@ -1079,7 +1079,7 @@ static void ArchiveSectors(void)
 
 		if (diff)
 		{
-			WRITEUINT16(save_p, i);
+			WRITEUINT32(save_p, i);
 			WRITEUINT8(save_p, diff);
 			if (diff & SD_DIFF2)
 				WRITEUINT8(save_p, diff2);
@@ -1150,18 +1150,19 @@ static void ArchiveSectors(void)
 		}
 	}
 
-	WRITEUINT16(save_p, 0xffff);
+	WRITEUINT32(save_p, 0xffffffff);
 }
 
 static void UnArchiveSectors(void)
 {
-	UINT16 i, j;
+	UINT32 i;
+	UINT16 j;
 	UINT8 diff, diff2, diff3, diff4;
 	for (;;)
 	{
-		i = READUINT16(save_p);
+		i = READUINT32(save_p);
 
-		if (i == 0xffff)
+		if (i == 0xffffffff)
 			break;
 
 		if (i > numsectors)
@@ -1299,7 +1300,7 @@ static void ArchiveLines(void)
 		if (li->executordelay != spawnli->executordelay)
 			diff2 |= LD_EXECUTORDELAY;
 
-		if (li->sidenum[0] != 0xffff)
+		if (li->sidenum[0] != NO_SIDEDEF)
 		{
 			si = &sides[li->sidenum[0]];
 			spawnsi = &spawnsides[li->sidenum[0]];
@@ -1313,7 +1314,7 @@ static void ArchiveLines(void)
 			if (si->midtexture != spawnsi->midtexture)
 				diff |= LD_S1MIDTEX;
 		}
-		if (li->sidenum[1] != 0xffff)
+		if (li->sidenum[1] != NO_SIDEDEF)
 		{
 			si = &sides[li->sidenum[1]];
 			spawnsi = &spawnsides[li->sidenum[1]];
@@ -1332,7 +1333,7 @@ static void ArchiveLines(void)
 
 		if (diff)
 		{
-			WRITEINT16(save_p, i);
+			WRITEUINT32(save_p, i);
 			WRITEUINT8(save_p, diff);
 			if (diff & LD_DIFF2)
 				WRITEUINT8(save_p, diff2);
@@ -1391,21 +1392,21 @@ static void ArchiveLines(void)
 				WRITEINT32(save_p, li->executordelay);
 		}
 	}
-	WRITEUINT16(save_p, 0xffff);
+	WRITEUINT32(save_p, 0xffffffff);
 }
 
 static void UnArchiveLines(void)
 {
-	UINT16 i;
+	UINT32 i;
 	line_t *li;
 	side_t *si;
 	UINT8 diff, diff2; // no diff3
 
 	for (;;)
 	{
-		i = READUINT16(save_p);
+		i = READUINT32(save_p);
 
-		if (i == 0xffff)
+		if (i == 0xffffffff)
 			break;
 		if (i > numlines)
 			I_Error("Invalid line number %u from server", i);

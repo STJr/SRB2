@@ -58,6 +58,7 @@ static lua_CFunction liblist[] = {
 	LUA_PolyObjLib, // polyobj_t
 	LUA_BlockmapLib, // blockmap stuff
 	LUA_HudLib, // HUD stuff
+	LUA_ColorLib, // general color functions
 	LUA_InputLib, // inputs
 	NULL
 };
