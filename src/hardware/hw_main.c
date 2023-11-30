@@ -170,7 +170,6 @@ ps_metric_t ps_hw_batchdrawtime = {0};
 
 boolean gl_init = false;
 boolean gl_maploaded = false;
-boolean gl_sessioncommandsadded = false;
 boolean gl_shadersavailable = true;
 
 // ==========================================================================
@@ -187,8 +186,8 @@ void HWR_Lighting(FSurfaceInfo *Surface, INT32 light_level, extracolormap_t *col
 	RGBA_t poly_color, tint_color, fade_color;
 
 	poly_color.rgba = 0xFFFFFFFF;
-	tint_color.rgba = (colormap != NULL) ? (UINT32)colormap->rgba : GL_DEFAULTMIX;
-	fade_color.rgba = (colormap != NULL) ? (UINT32)colormap->fadergba : GL_DEFAULTFOG;
+	tint_color.rgba = (colormap != NULL) ? (UINT32)colormap->rgba : 0x00000000;
+	fade_color.rgba = (colormap != NULL) ? (UINT32)colormap->fadergba : 0xFF000000;
 
 	// Crappy backup coloring if you can't do shaders
 	if (!HWR_UseShader())
@@ -202,7 +201,7 @@ void HWR_Lighting(FSurfaceInfo *Surface, INT32 light_level, extracolormap_t *col
 		blue = (float)poly_color.s.blue;
 
 		// 48 is just an arbritrary value that looked relatively okay.
-		tint_alpha = (float)(sqrt(tint_color.s.alpha) * 48) / 255.0f;
+		tint_alpha = (float)(sqrt((float)tint_color.s.alpha / 10.2) * 48) / 255.0f;
 
 		// 8 is roughly the brightness of the "close" color in Software, and 16 the brightness of the "far" color.
 		// 8 is too bright for dark levels, and 16 is too dark for bright levels.
@@ -245,7 +244,7 @@ UINT8 HWR_FogBlockAlpha(INT32 light, extracolormap_t *colormap) // Let's see if 
 	RGBA_t realcolor, surfcolor;
 	INT32 alpha;
 
-	realcolor.rgba = (colormap != NULL) ? colormap->rgba : GL_DEFAULTMIX;
+	realcolor.rgba = (colormap != NULL) ? colormap->rgba : 0x00000000;
 
 	if (cv_glshaders.value && gl_shadersavailable)
 	{
@@ -585,10 +584,26 @@ static void HWR_RenderPlane(subsector_t *subsector, extrasubsector_t *xsub, bool
 				P_ClosestPointOnLine(viewx, viewy, line->linedef, &v);
 				dist = FIXED_TO_FLOAT(R_PointToDist(v.x, v.y));
 
-				x1 = ((polyvertex_t *)line->pv1)->x;
-				y1 = ((polyvertex_t *)line->pv1)->y;
-				xd = ((polyvertex_t *)line->pv2)->x - x1;
-				yd = ((polyvertex_t *)line->pv2)->y - y1;
+				if (line->pv1)
+				{
+					x1 = ((polyvertex_t *)line->pv1)->x;
+					y1 = ((polyvertex_t *)line->pv1)->y;
+				}
+				else
+				{
+					x1 = FIXED_TO_FLOAT(line->v1->x);
+					y1 = FIXED_TO_FLOAT(line->v1->x);
+				}
+				if (line->pv2)
+				{
+					xd = ((polyvertex_t *)line->pv2)->x - x1;
+					yd = ((polyvertex_t *)line->pv2)->y - y1;
+				}
+				else
+				{
+					xd = FIXED_TO_FLOAT(line->v2->x) - x1;
+					yd = FIXED_TO_FLOAT(line->v2->y) - y1;
+				}
 
 				// Based on the seg length and the distance from the line, split horizon into multiple poly sets to reduce distortion
 				dist = sqrtf((xd*xd) + (yd*yd)) / dist / 16.0f;
@@ -1071,10 +1086,26 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 	gl_sidedef = gl_curline->sidedef;
 	gl_linedef = gl_curline->linedef;
 
-	vs.x = ((polyvertex_t *)gl_curline->pv1)->x;
-	vs.y = ((polyvertex_t *)gl_curline->pv1)->y;
-	ve.x = ((polyvertex_t *)gl_curline->pv2)->x;
-	ve.y = ((polyvertex_t *)gl_curline->pv2)->y;
+	if (gl_curline->pv1)
+	{
+		vs.x = ((polyvertex_t *)gl_curline->pv1)->x;
+		vs.y = ((polyvertex_t *)gl_curline->pv1)->y;
+	}
+	else
+	{
+		vs.x = FIXED_TO_FLOAT(gl_curline->v1->x);
+		vs.y = FIXED_TO_FLOAT(gl_curline->v1->y);
+	}
+	if (gl_curline->pv2)
+	{
+		ve.x = ((polyvertex_t *)gl_curline->pv2)->x;
+		ve.y = ((polyvertex_t *)gl_curline->pv2)->y;
+	}
+	else
+	{
+		ve.x = FIXED_TO_FLOAT(gl_curline->v2->x);
+		ve.y = FIXED_TO_FLOAT(gl_curline->v2->y);
+	}
 
 	v1x = FLOAT_TO_FIXED(vs.x);
 	v1y = FLOAT_TO_FIXED(vs.y);
@@ -1869,10 +1900,26 @@ static boolean CheckClip(seg_t * seg, sector_t * afrontsector, sector_t * abacks
 	if (afrontsector->f_slope || afrontsector->c_slope || abacksector->f_slope || abacksector->c_slope)
 	{
 		fixed_t v1x, v1y, v2x, v2y; // the seg's vertexes as fixed_t
-		v1x = FLOAT_TO_FIXED(((polyvertex_t *)gl_curline->pv1)->x);
-		v1y = FLOAT_TO_FIXED(((polyvertex_t *)gl_curline->pv1)->y);
-		v2x = FLOAT_TO_FIXED(((polyvertex_t *)gl_curline->pv2)->x);
-		v2y = FLOAT_TO_FIXED(((polyvertex_t *)gl_curline->pv2)->y);
+		if (gl_curline->pv1)
+		{
+			v1x = FLOAT_TO_FIXED(((polyvertex_t *)gl_curline->pv1)->x);
+			v1y = FLOAT_TO_FIXED(((polyvertex_t *)gl_curline->pv1)->y);
+		}
+		else
+		{
+			v1x = gl_curline->v1->x;
+			v1y = gl_curline->v1->y;
+		}
+		if (gl_curline->pv2)
+		{
+			v2x = FLOAT_TO_FIXED(((polyvertex_t *)gl_curline->pv2)->x);
+			v2y = FLOAT_TO_FIXED(((polyvertex_t *)gl_curline->pv2)->y);
+		}
+		else
+		{
+			v2x = gl_curline->v2->x;
+			v2y = gl_curline->v2->y;
+		}
 #define SLOPEPARAMS(slope, end1, end2, normalheight) \
 		end1 = P_GetZAt(slope, v1x, v1y, normalheight); \
 		end2 = P_GetZAt(slope, v2x, v2y, normalheight);
@@ -2245,10 +2292,26 @@ static void HWR_AddLine(seg_t * line)
 
 	gl_curline = line;
 
-	v1x = FLOAT_TO_FIXED(((polyvertex_t *)gl_curline->pv1)->x);
-	v1y = FLOAT_TO_FIXED(((polyvertex_t *)gl_curline->pv1)->y);
-	v2x = FLOAT_TO_FIXED(((polyvertex_t *)gl_curline->pv2)->x);
-	v2y = FLOAT_TO_FIXED(((polyvertex_t *)gl_curline->pv2)->y);
+	if (gl_curline->pv1)
+	{
+		v1x = FLOAT_TO_FIXED(((polyvertex_t *)gl_curline->pv1)->x);
+		v1y = FLOAT_TO_FIXED(((polyvertex_t *)gl_curline->pv1)->y);
+	}
+	else
+	{
+		v1x = gl_curline->v1->x;
+		v1y = gl_curline->v1->y;
+	}
+	if (gl_curline->pv2)
+	{
+		v2x = FLOAT_TO_FIXED(((polyvertex_t *)gl_curline->pv2)->x);
+		v2y = FLOAT_TO_FIXED(((polyvertex_t *)gl_curline->pv2)->y);
+	}
+	else
+	{
+		v2x = gl_curline->v2->x;
+		v2y = gl_curline->v2->y;
+	}
 
 	// OPTIMIZE: quickly reject orthogonal back sides.
 	angle1 = R_PointToAngle64(v1x, v1y);
@@ -5261,7 +5324,7 @@ static void HWR_ProjectSprite(mobj_t *thing)
 			rollangle = R_GetRollAngle(spriterotangle);
 		}
 
-		rotsprite = Patch_GetRotatedSprite(sprframe, (thing->frame & FF_FRAMEMASK), rot, flip, false, sprinfo, rollangle);
+		rotsprite = Patch_GetRotatedSprite(sprframe, (thing->frame & FF_FRAMEMASK), rot, flip, sprinfo, rollangle);
 
 		if (rotsprite != NULL)
 		{
@@ -6571,7 +6634,7 @@ consvar_t cv_glfakecontrast = CVAR_INIT ("gr_fakecontrast", "Smooth", CV_SAVE, g
 consvar_t cv_glslopecontrast = CVAR_INIT ("gr_slopecontrast", "Off", CV_SAVE, CV_OnOff, NULL);
 
 consvar_t cv_glfiltermode = CVAR_INIT ("gr_filtermode", "Nearest", CV_SAVE|CV_CALL, glfiltermode_cons_t, CV_glfiltermode_OnChange);
-consvar_t cv_glanisotropicmode = CVAR_INIT ("gr_anisotropicmode", "1", CV_CALL, glanisotropicmode_cons_t, CV_glanisotropic_OnChange);
+consvar_t cv_glanisotropicmode = CVAR_INIT ("gr_anisotropicmode", "1", CV_SAVE|CV_CALL, glanisotropicmode_cons_t, CV_glanisotropic_OnChange);
 
 consvar_t cv_glsolvetjoin = CVAR_INIT ("gr_solvetjoin", "On", 0, CV_OnOff, NULL);
 
@@ -6613,6 +6676,7 @@ void HWR_AddCommands(void)
 	CV_RegisterVar(&cv_glallowshaders);
 
 	CV_RegisterVar(&cv_glfiltermode);
+	CV_RegisterVar(&cv_glanisotropicmode);
 	CV_RegisterVar(&cv_glsolvetjoin);
 
 	CV_RegisterVar(&cv_glbatching);
@@ -6620,14 +6684,6 @@ void HWR_AddCommands(void)
 #ifndef NEWCLIP
 	CV_RegisterVar(&cv_glclipwalls);
 #endif
-}
-
-void HWR_AddSessionCommands(void)
-{
-	if (gl_sessioncommandsadded)
-		return;
-	CV_RegisterVar(&cv_glanisotropicmode);
-	gl_sessioncommandsadded = true;
 }
 
 // --------------------------------------------------------------------------
@@ -6640,7 +6696,6 @@ void HWR_Startup(void)
 		CONS_Printf("HWR_Startup()...\n");
 
 		HWR_InitPolyPool();
-		HWR_AddSessionCommands();
 		HWR_InitMapTextures();
 		HWR_InitModels();
 #ifdef ALAM_LIGHTING
@@ -6663,10 +6718,6 @@ void HWR_Startup(void)
 // --------------------------------------------------------------------------
 void HWR_Switch(void)
 {
-	// Add session commands
-	if (!gl_sessioncommandsadded)
-		HWR_AddSessionCommands();
-
 	// Set special states from CVARs
 	HWD.pfnSetSpecialState(HWD_SET_TEXTUREFILTERMODE, cv_glfiltermode.value);
 	HWD.pfnSetSpecialState(HWD_SET_TEXTUREANISOTROPICMODE, cv_glanisotropicmode.value);

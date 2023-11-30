@@ -239,7 +239,8 @@ static void B_BuildTailsTiccmd(mobj_t *sonic, mobj_t *tails, ticcmd_t *cmd)
 	// SPINNING
 	if (!(player->pflags & (PF_SPINNING|PF_STARTDASH)) && mem->thinkstate == AI_SPINFOLLOW)
 		mem->thinkstate = AI_FOLLOW;
-	else if (mem->thinkstate == AI_FOLLOW || mem->thinkstate == AI_SPINFOLLOW)
+	else if ((mem->thinkstate == AI_FOLLOW || mem->thinkstate == AI_SPINFOLLOW)
+		&& bot->charability2 == CA2_SPINDASH)
 	{
 		if (!_2d)
 		{
@@ -329,7 +330,7 @@ static void B_BuildTailsTiccmd(mobj_t *sonic, mobj_t *tails, ticcmd_t *cmd)
 	if (mem->thinkstate == AI_FOLLOW || mem->thinkstate == AI_CATCHUP || (mem->thinkstate == AI_SPINFOLLOW && player->pflags & PF_JUMPED))
 	{
 		// Flying catch-up
-		if (bot->pflags & PF_THOKKED)
+		if (bot->charability == CA_FLY && bot->pflags & PF_THOKKED)
 		{
 			cmd->forwardmove = min(MAXPLMOVE, (dist/scale)>>3);
 			if (zdist < -64*scale)
