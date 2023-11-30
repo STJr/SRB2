@@ -57,6 +57,7 @@ enum sector_e {
 	sector_ffloors,
 	sector_fslope,
 	sector_cslope,
+	sector_colormap,
 	sector_flags,
 	sector_specialflags,
 	sector_damagetype,
@@ -96,6 +97,7 @@ static const char *const sector_opt[] = {
 	"ffloors",
 	"f_slope",
 	"c_slope",
+	"colormap",
 	"flags",
 	"specialflags",
 	"damagetype",
@@ -753,6 +755,9 @@ static int sector_get(lua_State *L)
 	case sector_cslope: // c_slope
 		LUA_PushUserdata(L, sector->c_slope, META_SLOPE);
 		return 1;
+	case sector_colormap: // extra_colormap
+		LUA_PushUserdata(L, sector->extra_colormap, META_EXTRACOLORMAP);
+		return 1;
 	case sector_flags: // flags
 		lua_pushinteger(L, sector->flags);
 		return 1;
@@ -1070,7 +1075,7 @@ static int line_get(lua_State *L)
 		LUA_PushUserdata(L, &sides[line->sidenum[0]], META_SIDE);
 		return 1;
 	case line_backside: // backside
-		if (line->sidenum[1] == 0xffff)
+		if (line->sidenum[1] == NO_SIDEDEF)
 			return 0;
 		LUA_PushUserdata(L, &sides[line->sidenum[1]], META_SIDE);
 		return 1;
@@ -1243,6 +1248,9 @@ static int side_get(lua_State *L)
 	// TODO: 2.3: Delete
 	case side_text:
 		{
+			boolean isfrontside;
+			size_t sidei = side-sides;
+
 			if (udmf)
 			{
 				LUA_Deprecated(L, "(sidedef_t).text", "(sidedef_t).line.stringargs");
@@ -1250,7 +1258,7 @@ static int side_get(lua_State *L)
 				return 1;
 			}
 
-			boolean isfrontside = side->line->sidenum[0] == side-sides;
+			isfrontside = side->line->sidenum[0] == sidei;
 
 			lua_pushstring(L, side->line->stringargs[isfrontside ? 0 : 1]);
 			return 1;
