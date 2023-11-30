@@ -214,7 +214,7 @@ static fixed_t lsoffs[2];
 #define lshli levelselectselect[2]
 
 #define lshseperation 101
-#define lsbasevseperation ((62*vid.height)/(BASEVIDHEIGHT*vid.dupy)) //62
+#define lsbasevseperation ((62*vid.height)/(BASEVIDHEIGHT*vid.dup)) //62
 #define lsheadingheight 16
 #define getheadingoffset(row) (levelselect.rows[row].header[0] ? lsheadingheight : 0)
 #define lsvseperation(row) (lsbasevseperation + getheadingoffset(row))
@@ -1068,6 +1068,7 @@ static menuitem_t OP_ChangeControlsMenu[] =
 	{IT_CALL | IT_STRING2, NULL, "Move Right",       M_ChangeControl, GC_STRAFERIGHT },
 	{IT_CALL | IT_STRING2, NULL, "Jump",             M_ChangeControl, GC_JUMP      },
 	{IT_CALL | IT_STRING2, NULL, "Spin",             M_ChangeControl, GC_SPIN     },
+	{IT_CALL | IT_STRING2, NULL, "Shield",           M_ChangeControl, GC_SHIELD    },
 	{IT_HEADER, NULL, "Camera", NULL, 0},
 	{IT_SPACE, NULL, NULL, NULL, 0}, // padding
 	{IT_CALL | IT_STRING2, NULL, "Look Up",        M_ChangeControl, GC_LOOKUP      },
@@ -3574,16 +3575,16 @@ void M_Drawer(void)
 		{
 			if (customversionstring[0] != '\0')
 			{
-				V_DrawThinString(vid.dupx, vid.height - 17*vid.dupy, V_NOSCALESTART|V_TRANSLUCENT, "Mod version:");
-				V_DrawThinString(vid.dupx, vid.height - 9*vid.dupy, V_NOSCALESTART|V_TRANSLUCENT|V_ALLOWLOWERCASE, customversionstring);
+				V_DrawThinString(vid.dup, vid.height - 17*vid.dup, V_NOSCALESTART|V_TRANSLUCENT, "Mod version:");
+				V_DrawThinString(vid.dup, vid.height -  9*vid.dup, V_NOSCALESTART|V_TRANSLUCENT|V_ALLOWLOWERCASE, customversionstring);
 			}
 			else
 			{
 #ifdef DEVELOP // Development -- show revision / branch info
-				V_DrawThinString(vid.dupx, vid.height - 17*vid.dupy, V_NOSCALESTART|V_TRANSLUCENT|V_ALLOWLOWERCASE, compbranch);
-				V_DrawThinString(vid.dupx, vid.height - 9*vid.dupy,  V_NOSCALESTART|V_TRANSLUCENT|V_ALLOWLOWERCASE, comprevision);
+				V_DrawThinString(vid.dup, vid.height - 17*vid.dup, V_NOSCALESTART|V_TRANSLUCENT|V_ALLOWLOWERCASE, compbranch);
+				V_DrawThinString(vid.dup, vid.height -  9*vid.dup, V_NOSCALESTART|V_TRANSLUCENT|V_ALLOWLOWERCASE, comprevision);
 #else // Regular build
-				V_DrawThinString(vid.dupx, vid.height - 9*vid.dupy, V_NOSCALESTART|V_TRANSLUCENT|V_ALLOWLOWERCASE, va("%s", VERSIONSTRING));
+				V_DrawThinString(vid.dup, vid.height -  9*vid.dup, V_NOSCALESTART|V_TRANSLUCENT|V_ALLOWLOWERCASE, va("%s", VERSIONSTRING));
 #endif
 			}
 		}
@@ -5757,16 +5758,15 @@ static void M_DrawRecordAttackForeground(void)
 
 	INT32 i;
 	INT32 height = (fg->height / 2);
-	INT32 dupz = (vid.dupx < vid.dupy ? vid.dupx : vid.dupy);
 
 	for (i = -12; i < (BASEVIDHEIGHT/height) + 12; i++)
 	{
 		INT32 y = ((i*height) - (height - ((FixedInt(recatkdrawtimer*2))%height)));
 		// don't draw above the screen
 		{
-			INT32 sy = FixedMul(y, dupz<<FRACBITS) >> FRACBITS;
-			if (vid.height != BASEVIDHEIGHT * dupz)
-				sy += (vid.height - (BASEVIDHEIGHT * dupz)) / 2;
+			INT32 sy = FixedMul(y, vid.dup<<FRACBITS) >> FRACBITS;
+			if (vid.height != BASEVIDHEIGHT * vid.dup)
+				sy += (vid.height - (BASEVIDHEIGHT * vid.dup)) / 2;
 			if ((sy+height) < 0)
 				continue;
 		}
@@ -5790,13 +5790,12 @@ static void M_DrawRecordAttackForeground(void)
 static void M_DrawNightsAttackMountains(void)
 {
 	static fixed_t bgscrollx;
-	INT32 dupz = (vid.dupx < vid.dupy ? vid.dupx : vid.dupy);
 	patch_t *background = W_CachePatchName(curbgname, PU_PATCH);
 	INT16 w = background->width;
 	INT32 x = FixedInt(-bgscrollx) % w;
 	INT32 y = BASEVIDHEIGHT - (background->height * 2);
 
-	if (vid.height != BASEVIDHEIGHT * dupz)
+	if (vid.height != BASEVIDHEIGHT * vid.dup)
 		V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 158);
 	V_DrawFill(0, y+50, vid.width, BASEVIDHEIGHT, V_SNAPTOLEFT|31);
 
@@ -5952,7 +5951,7 @@ static void M_DrawLevelPlatterMenu(void)
 	}
 
 	// draw from top to bottom
-	while (y < (vid.height/vid.dupy))
+	while (y < (vid.height/vid.dup))
 	{
 		M_DrawLevelPlatterRow(iter, y);
 		y += lsvseperation(iter);
@@ -7799,9 +7798,9 @@ static void M_DrawSoundTest(void)
 		}
 	}
 
-	y = (BASEVIDWIDTH-(vid.width/vid.dupx))/2;
+	y = (BASEVIDWIDTH-(vid.width/vid.dup))/2;
 
-	V_DrawFill(y, 20, vid.width/vid.dupx, 24, 159);
+	V_DrawFill(y, 20, vid.width/vid.dup, 24, 159);
 	{
 		static fixed_t st_scroll = -FRACUNIT;
 		const char* titl;
@@ -8371,8 +8370,8 @@ static void M_DrawLoadGameData(void)
 	INT32 i, prev_i = 1, savetodraw, x, y, hsep = 90;
 	skin_t *charskin = NULL;
 
-	if (vid.width != BASEVIDWIDTH*vid.dupx)
-		hsep = (hsep*vid.width)/(BASEVIDWIDTH*vid.dupx);
+	if (vid.width != BASEVIDWIDTH*vid.dup)
+		hsep = (hsep*vid.width)/(BASEVIDWIDTH*vid.dup);
 
 	for (i = 2; prev_i; i = -(i + ((UINT32)i >> 31))) // draws from outwards in; 2, -2, 1, -1, 0
 	{
@@ -9357,7 +9356,7 @@ static void M_DrawSetupChoosePlayerMenu(void)
 	INT16 bgwidth = charbg->width;
 	INT16 fgwidth = charfg->width;
 	INT32 x, y;
-	INT32 w = (vid.width/vid.dupx);
+	INT32 w = (vid.width/vid.dup);
 
 	if (abs(char_scroll) > FRACUNIT/4)
 		char_scroll -= FixedMul((char_scroll>>2), renderdeltatics);
@@ -9393,7 +9392,7 @@ static void M_DrawSetupChoosePlayerMenu(void)
 	// Background and borders
 	V_DrawFill(0, 0, bgwidth, vid.height, V_SNAPTOTOP|colormap[101]);
 	{
-		INT32 sw = (BASEVIDWIDTH * vid.dupx);
+		INT32 sw = (BASEVIDWIDTH * vid.dup);
 		INT32 bw = (vid.width - sw) / 2;
 		col = colormap[106];
 		if (bw)
@@ -10815,7 +10814,7 @@ void M_DrawMarathon(void)
 	const char *cvstring;
 	char *work;
 	angle_t fa;
-	INT32 dupz = (vid.dupx < vid.dupy ? vid.dupx : vid.dupy), xspan = (vid.width/dupz), yspan = (vid.height/dupz), diffx = (xspan - BASEVIDWIDTH)/2, diffy = (yspan - BASEVIDHEIGHT)/2, maxy = BASEVIDHEIGHT + diffy;
+	INT32 xspan = (vid.width/vid.dup), yspan = (vid.height/vid.dup), diffx = (xspan - BASEVIDWIDTH)/2, diffy = (yspan - BASEVIDHEIGHT)/2, maxy = BASEVIDHEIGHT + diffy;
 
 	curbgxspeed = 0;
 	curbgyspeed = 18;
@@ -10888,16 +10887,17 @@ void M_DrawMarathon(void)
 		INT32 trans = V_60TRANS+((cnt&~3)<<(V_ALPHASHIFT-2));
 		INT32 height = fg->height / 2;
 		char patchname[7] = "CEMGx0";
+		INT32 dup;
 
-		dupz = (w*7)/6; //(w*42*120)/(360*6); -- I don't know why this works but I'm not going to complain.
-		dupz = ((dupz>>FRACBITS) % height);
+		dup = (w*7)/6; //(w*42*120)/(360*6); -- I don't know why this works but I'm not going to complain.
+		dup = ((dup>>FRACBITS) % height);
 		y = height/2;
-		while (y+dupz >= -diffy)
+		while (y+dup >= -diffy)
 			y -= height;
-		while (y-2-dupz < maxy)
+		while (y-2-dup < maxy)
 		{
-			V_DrawFixedPatch(((BASEVIDWIDTH-190)<<(FRACBITS-1)), (y-2-dupz)<<FRACBITS, FRACUNIT/2, trans, fg, NULL);
-			V_DrawFixedPatch(((BASEVIDWIDTH+190)<<(FRACBITS-1)), (y+dupz)<<FRACBITS, FRACUNIT/2, trans|V_FLIP, fg, NULL);
+			V_DrawFixedPatch(((BASEVIDWIDTH-190)<<(FRACBITS-1)), (y-2-dup)<<FRACBITS, FRACUNIT/2, trans, fg, NULL);
+			V_DrawFixedPatch(((BASEVIDWIDTH+190)<<(FRACBITS-1)), (y+dup)<<FRACBITS, FRACUNIT/2, trans|V_FLIP, fg, NULL);
 			y += height;
 		}
 
@@ -10915,16 +10915,16 @@ void M_DrawMarathon(void)
 		}
 
 		height = 18; // prevents the need for the next line
-		//dupz = (w*height)/18;
-		dupz = ((w>>FRACBITS) % height);
-		y = dupz+(height/4);
-		x = 105+dupz;
+		//dup = (w*height)/18;
+		dup = ((w>>FRACBITS) % height);
+		y = dup+(height/4);
+		x = 105+dup;
 		while (y >= -diffy)
 		{
 			x -= height;
 			y -= height;
 		}
-		while (y-dupz < maxy && x < (xspan/2))
+		while (y-dup < maxy && x < (xspan/2))
 		{
 			V_DrawFill((BASEVIDWIDTH/2)-x-height, -diffy, height, diffy+y+height, 153);
 			V_DrawFill((BASEVIDWIDTH/2)+x, (maxy-y)-height, height, height+y, 153);
@@ -13168,23 +13168,23 @@ static void M_Setup1PControlsMenu(INT32 choice)
 	currentMenu->lastOn = itemOn;
 
 	// Unhide the nine non-P2 controls and their headers
-	//OP_ChangeControlsMenu[18+0].status = IT_HEADER;
-	//OP_ChangeControlsMenu[18+1].status = IT_SPACE;
+	//OP_ChangeControlsMenu[19+0].status = IT_HEADER;
+	//OP_ChangeControlsMenu[19+1].status = IT_SPACE;
 	// ...
-	OP_ChangeControlsMenu[18+2].status = IT_CALL|IT_STRING2;
-	OP_ChangeControlsMenu[18+3].status = IT_CALL|IT_STRING2;
-	OP_ChangeControlsMenu[18+4].status = IT_CALL|IT_STRING2;
-	OP_ChangeControlsMenu[18+5].status = IT_CALL|IT_STRING2;
-	OP_ChangeControlsMenu[18+6].status = IT_CALL|IT_STRING2;
-	//OP_ChangeControlsMenu[18+7].status = IT_CALL|IT_STRING2;
-	//OP_ChangeControlsMenu[18+8].status = IT_CALL|IT_STRING2;
-	OP_ChangeControlsMenu[18+9].status = IT_CALL|IT_STRING2;
+	OP_ChangeControlsMenu[19+2].status = IT_CALL|IT_STRING2;
+	OP_ChangeControlsMenu[19+3].status = IT_CALL|IT_STRING2;
+	OP_ChangeControlsMenu[19+4].status = IT_CALL|IT_STRING2;
+	OP_ChangeControlsMenu[19+5].status = IT_CALL|IT_STRING2;
+	OP_ChangeControlsMenu[19+6].status = IT_CALL|IT_STRING2;
+	//OP_ChangeControlsMenu[19+7].status = IT_CALL|IT_STRING2;
+	//OP_ChangeControlsMenu[19+8].status = IT_CALL|IT_STRING2;
+	OP_ChangeControlsMenu[19+9].status = IT_CALL|IT_STRING2;
 	// ...
-	OP_ChangeControlsMenu[28+0].status = IT_HEADER;
-	OP_ChangeControlsMenu[28+1].status = IT_SPACE;
+	OP_ChangeControlsMenu[29+0].status = IT_HEADER;
+	OP_ChangeControlsMenu[29+1].status = IT_SPACE;
 	// ...
-	OP_ChangeControlsMenu[28+2].status = IT_CALL|IT_STRING2;
-	OP_ChangeControlsMenu[28+3].status = IT_CALL|IT_STRING2;
+	OP_ChangeControlsMenu[29+2].status = IT_CALL|IT_STRING2;
+	OP_ChangeControlsMenu[29+3].status = IT_CALL|IT_STRING2;
 
 	OP_ChangeControlsDef.prevMenu = &OP_P1ControlsDef;
 	OP_ChangeControlsDef.menuid &= ~(((1 << MENUBITS) - 1) << MENUBITS); // remove second level
@@ -13200,23 +13200,23 @@ static void M_Setup2PControlsMenu(INT32 choice)
 	currentMenu->lastOn = itemOn;
 
 	// Hide the nine non-P2 controls and their headers
-	//OP_ChangeControlsMenu[18+0].status = IT_GRAYEDOUT2;
-	//OP_ChangeControlsMenu[18+1].status = IT_GRAYEDOUT2;
+	//OP_ChangeControlsMenu[19+0].status = IT_GRAYEDOUT2;
+	//OP_ChangeControlsMenu[19+1].status = IT_GRAYEDOUT2;
 	// ...
-	OP_ChangeControlsMenu[18+2].status = IT_GRAYEDOUT2;
-	OP_ChangeControlsMenu[18+3].status = IT_GRAYEDOUT2;
-	OP_ChangeControlsMenu[18+4].status = IT_GRAYEDOUT2;
-	OP_ChangeControlsMenu[18+5].status = IT_GRAYEDOUT2;
-	OP_ChangeControlsMenu[18+6].status = IT_GRAYEDOUT2;
-	//OP_ChangeControlsMenu[18+7].status = IT_GRAYEDOUT2;
-	//OP_ChangeControlsMenu[18+8].status = IT_GRAYEDOUT2;
-	OP_ChangeControlsMenu[18+9].status = IT_GRAYEDOUT2;
+	OP_ChangeControlsMenu[19+2].status = IT_GRAYEDOUT2;
+	OP_ChangeControlsMenu[19+3].status = IT_GRAYEDOUT2;
+	OP_ChangeControlsMenu[19+4].status = IT_GRAYEDOUT2;
+	OP_ChangeControlsMenu[19+5].status = IT_GRAYEDOUT2;
+	OP_ChangeControlsMenu[19+6].status = IT_GRAYEDOUT2;
+	//OP_ChangeControlsMenu[19+7].status = IT_GRAYEDOUT2;
+	//OP_ChangeControlsMenu[19+8].status = IT_GRAYEDOUT2;
+	OP_ChangeControlsMenu[19+9].status = IT_GRAYEDOUT2;
 	// ...
-	OP_ChangeControlsMenu[28+0].status = IT_GRAYEDOUT2;
-	OP_ChangeControlsMenu[28+1].status = IT_GRAYEDOUT2;
+	OP_ChangeControlsMenu[29+0].status = IT_GRAYEDOUT2;
+	OP_ChangeControlsMenu[29+1].status = IT_GRAYEDOUT2;
 	// ...
-	OP_ChangeControlsMenu[28+2].status = IT_GRAYEDOUT2;
-	OP_ChangeControlsMenu[28+3].status = IT_GRAYEDOUT2;
+	OP_ChangeControlsMenu[29+2].status = IT_GRAYEDOUT2;
+	OP_ChangeControlsMenu[29+3].status = IT_GRAYEDOUT2;
 
 	OP_ChangeControlsDef.prevMenu = &OP_P2ControlsDef;
 	OP_ChangeControlsDef.menuid &= ~(((1 << MENUBITS) - 1) << MENUBITS); // remove second level

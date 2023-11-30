@@ -797,6 +797,7 @@ typedef enum sprite
 	SPR_BMCH, // Big Mace Chain
 	SPR_SMCE, // Small Mace
 	SPR_BMCE, // Big Mace
+	SPR_BSPB, // Blue spring on a ball
 	SPR_YSPB, // Yellow spring on a ball
 	SPR_RSPB, // Red spring on a ball
 	SPR_SFBR, // Small Firebar
@@ -2743,6 +2744,13 @@ typedef enum state
 	S_BIGMACE,
 	S_SMALLGRABCHAIN,
 	S_BIGGRABCHAIN,
+
+	// Blue spring on a ball
+	S_BLUESPRINGBALL,
+	S_BLUESPRINGBALL2,
+	S_BLUESPRINGBALL3,
+	S_BLUESPRINGBALL4,
+	S_BLUESPRINGBALL5,
 
 	// Yellow spring on a ball
 	S_YELLOWSPRINGBALL,
@@ -4722,6 +4730,7 @@ typedef enum mobj_type
 	MT_BIGMACE, // Big Mace
 	MT_SMALLGRABCHAIN, // Small Grab Chain
 	MT_BIGGRABCHAIN, // Big Grab Chain
+	MT_BLUESPRINGBALL, // Blue spring on a ball
 	MT_YELLOWSPRINGBALL, // Yellow spring on a ball
 	MT_REDSPRINGBALL, // Red spring on a ball
 	MT_SMALLFIREBAR, // Small Firebar

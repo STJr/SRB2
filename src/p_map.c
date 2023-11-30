@@ -3073,11 +3073,14 @@ static boolean P_ThingHeightClip(mobj_t *thing)
 		if (!rover || ((rover->fofflags & FOF_EXISTS) && (rover->fofflags & FOF_SOLID)))
 		{
 			hitfloor = bouncing;
-			if (thing->eflags & MFE_VERTICALFLIP)
-				thing->pmomz = thing->ceilingz - (thing->z + thing->height);
-			else
-				thing->pmomz = thing->floorz - thing->z;
-			thing->eflags |= MFE_APPLYPMOMZ;
+			if (!(thing->player) || !(thing->player->pflags & PF_JUMPED || bouncing))
+			{
+				if (thing->eflags & MFE_VERTICALFLIP)
+					thing->pmomz = thing->ceilingz - (thing->z + thing->height);
+				else
+					thing->pmomz = thing->floorz - thing->z;
+				thing->eflags |= MFE_APPLYPMOMZ;
+			}
 
 			if (thing->eflags & MFE_VERTICALFLIP)
 				thing->z = thing->ceilingz - thing->height;
@@ -3902,7 +3905,7 @@ retry:
 	P_PathTraverse(leadx, traily, leadx + mo->momx, traily + mo->momy,
 		PT_ADDLINES, PTR_SlideTraverse);
 
-	if (bestslideline && mo->player && bestslideline->sidenum[1] != 0xffff)
+	if (bestslideline && mo->player && bestslideline->sidenum[1] != NO_SIDEDEF)
 	{
 		sector_t *sec = P_PointOnLineSide(mo->x, mo->y, bestslideline) ? bestslideline->frontsector : bestslideline->backsector;
 		P_CheckLavaWall(mo, sec);
@@ -5067,4 +5070,36 @@ fixed_t P_CeilingzAtPos(fixed_t x, fixed_t y, fixed_t z, fixed_t height)
 	}
 
 	return ceilingz;
+}
+
+INT32 P_GetSectorLightAt(sector_t *sector, fixed_t x, fixed_t y, fixed_t z)
+{
+	if (!sector->numlights)
+		return -1;
+
+	INT32 light = sector->numlights - 1;
+
+	// R_GetPlaneLight won't work on sloped lights!
+	for (INT32 lightnum = 1; lightnum < sector->numlights; lightnum++) {
+		fixed_t h = P_GetLightZAt(&sector->lightlist[lightnum], x, y);
+		if (h <= z) {
+			light = lightnum - 1;
+			break;
+		}
+	}
+
+	return light;
+}
+
+extracolormap_t *P_GetColormapFromSectorAt(sector_t *sector, fixed_t x, fixed_t y, fixed_t z)
+{
+	if (sector->numlights)
+		return *sector->lightlist[P_GetSectorLightAt(sector, x, y, z)].extra_colormap;
+	else
+		return sector->extra_colormap;
+}
+
+extracolormap_t *P_GetSectorColormapAt(fixed_t x, fixed_t y, fixed_t z)
+{
+	return P_GetColormapFromSectorAt(R_PointInSubsector(x, y)->sector, x, y, z);
 }

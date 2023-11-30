@@ -159,6 +159,9 @@ stages:
 
 Debian testing GCC:
   stage: build
+
+  when: manual
+
   image: debian:testing-slim
 
   allow_failure: true
@@ -198,6 +201,8 @@ Debian testing GCC:
 Windows x86:
   stage: build
 
+  when: on_success
+
   artifacts:
     paths:
       - "bin/"
@@ -227,6 +232,8 @@ Windows x86:
 
 Debian stable:amd64:
   stage: build
+
+  when: on_success
 
   artifacts:
     paths:
@@ -270,6 +277,8 @@ Debian stable:amd64:
 Debian stable:i386:
   stage: build
 
+  when: manual
+
   artifacts:
     paths:
       - "bin/"
@@ -311,6 +320,8 @@ Debian stable:i386:
 Debian stable:arm64:
   stage: build
 
+  when: manual
+
   artifacts:
     paths:
       - "bin/"
@@ -345,13 +356,15 @@ Debian stable:arm64:
     - - |
           # make
           echo -e "\e[0Ksection_start:`date +%s`:make[collapsed=false]\r\e[0KCompiling SRB2"
-      - make --directory=src --keep-going CCACHE=1 ERRORMODE=1 LINUX64=1 ERRORMODE=1 NONX86=1 || make --directory=src --keep-going CCACHE=1 ERRORMODE=1 LINUX64=1 NONX86=1
+      - make --directory=src --keep-going CCACHE=1 ERRORMODE=1 LINUX64=1 ERRORMODE=1 NONX86=1 ARM64=1 || make --directory=src --keep-going CCACHE=1 ERRORMODE=1 LINUX64=1 NONX86=1 ARM64=1
       - |
           # make
           echo -e "\e[0Ksection_end:`date +%s`:make\r\e[0K"
 
 Windows x64:
   stage: build
+
+  when: manual
 
   artifacts:
     paths:
@@ -382,6 +395,8 @@ Windows x64:
 
 Debian stable Clang:
   stage: build
+
+  when: manual
 
   allow_failure: true
 
@@ -419,8 +434,49 @@ Debian stable Clang:
           # make
           echo -e "\e[0Ksection_end:`date +%s`:make\r\e[0K"
 
+Debian stable musl:
+  stage: build
+
+  when: manual
+
+  allow_failure: true
+
+  artifacts:
+    name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-musl"
+
+  variables:
+    CC: musl-gcc
+    LDD: musl-ldd
+
+  script:
+    - - |
+          # apt_toolchain
+          echo -e "\e[0Ksection_start:`date +%s`:apt_toolchain[collapsed=true]\r\e[0KInstalling toolchain packages"
+      - apt-get install gcc
+      - |
+          # apt_toolchain
+          echo -e "\e[0Ksection_end:`date +%s`:apt_toolchain\r\e[0K"
+
+    - - |
+          # apt_development
+          echo -e "\e[0Ksection_start:`date +%s`:apt_development[collapsed=true]\r\e[0KInstalling development packages"
+      - apt-get install musl-tools
+      - |
+          # apt_development
+          echo -e "\e[0Ksection_end:`date +%s`:apt_development\r\e[0K"
+
+    - - |
+          # make
+          echo -e "\e[0Ksection_start:`date +%s`:make[collapsed=false]\r\e[0KCompiling SRB2"
+      - make --directory=src --keep-going CCACHE=1 ERRORMODE=1 NONX86=1 SDL=0 NOHW=1 NOZLIB=1 NOCURL=1 NOGME=1 NOOPENMPT=1 || make --directory=src --keep-going CCACHE=1 ERRORMODE=1 NONX86=1 SDL=0 NOHW=1 NOZLIB=1 NOCURL=1 NOGME=1 NOOPENMPT=1
+      - |
+          # make
+          echo -e "\e[0Ksection_end:`date +%s`:make\r\e[0K"
+
 Debian testing Clang:
   extends: Debian stable Clang
+
+  when: manual
 
   image: debian:testing-slim
 
@@ -431,4 +487,19 @@ Debian testing Clang:
     CC: clang
     WFLAGS: -Wno-cast-align -Wno-deprecated-non-prototype
     CFLAGS: -Wno-cast-align -Wno-deprecated-non-prototype
+    LDFLAGS: -Wl,-fuse-ld=gold
+
+Debian testing musl:
+  extends: Debian stable musl
+
+  when: manual
+
+  image: debian:testing-slim
+
+  artifacts:
+    name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-testing-musl"
+
+  variables:
+    CC: musl-gcc
+    LDD: musl-ldd
     LDFLAGS: -Wl,-fuse-ld=gold

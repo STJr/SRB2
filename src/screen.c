@@ -494,7 +494,7 @@ void SCR_CalculateFPS(void)
 void SCR_DisplayTicRate(void)
 {
 	INT32 ticcntcolor = 0;
-	const INT32 h = vid.height-(8*vid.dupy);
+	const INT32 h = vid.height-(8*vid.dup);
 	UINT32 cap = R_GetFramerateCap();
 	double fps = round(averageFPS);
 
@@ -530,7 +530,7 @@ void SCR_DisplayTicRate(void)
 
 		width = V_StringWidth(drawnstr, V_NOSCALESTART);
 
-		V_DrawString(vid.width - ((7 * 8 * vid.dupx) + V_StringWidth("FPS: ", V_NOSCALESTART)), h,
+		V_DrawString(vid.width - ((7 * 8 * vid.dup) + V_StringWidth("FPS: ", V_NOSCALESTART)), h,
 			V_YELLOWMAP|V_NOSCALESTART|V_USERHUDTRANS, "FPS:");
 		V_DrawString(vid.width - width, h,
 			ticcntcolor|V_NOSCALESTART|V_USERHUDTRANS, drawnstr);
@@ -552,7 +552,7 @@ void SCR_ClosedCaptions(void)
 {
 	UINT8 i;
 	boolean gamestopped = (paused || P_AutoPause());
-	INT32 basey = BASEVIDHEIGHT;
+	INT32 basey = BASEVIDHEIGHT - 20;
 
 	if (gamestate != wipegamestate)
 		return;
@@ -572,7 +572,8 @@ void SCR_ClosedCaptions(void)
 
 	for (i = 0; i < NUMCAPTIONS; i++)
 	{
-		INT32 flags, y;
+		INT32 flags;
+		fixed_t y;
 		char dot;
 		boolean music;
 
@@ -585,14 +586,19 @@ void SCR_ClosedCaptions(void)
 			continue;
 
 		flags = V_SNAPTORIGHT|V_SNAPTOBOTTOM|V_ALLOWLOWERCASE;
-		y = basey-((i + 2)*10);
+		y = (basey-(i*10)) * FRACUNIT;
 
 		if (closedcaptions[i].b)
 		{
-			y -= closedcaptions[i].b * vid.dupy;
 			if (renderisnewtic)
-			{
 				closedcaptions[i].b--;
+
+			if (closedcaptions[i].b) // If the caption hasn't reached its final destination...
+			{
+				y -= closedcaptions[i].b * 4 * FRACUNIT; // ...move it per tic...
+				y += (rendertimefrac % FRACUNIT) * 4; // ...and interpolate it per frame
+				// We have to modulo it by FRACUNIT, so that it won't be a tic ahead with interpolation disabled
+				// Unlike everything else, captions are (intentionally) interpolated from T to T+1 instead of T-1 to T
 			}
 		}
 
@@ -606,7 +612,7 @@ void SCR_ClosedCaptions(void)
 		else
 			dot = ' ';
 
-		V_DrawRightAlignedString(BASEVIDWIDTH - 20, y, flags,
+		V_DrawRightAlignedStringAtFixed((BASEVIDWIDTH-20) * FRACUNIT, y, flags,
 			va("%c [%s]", dot, (closedcaptions[i].s->caption[0] ? closedcaptions[i].s->caption : closedcaptions[i].s->name)));
 	}
 }
@@ -639,9 +645,9 @@ void SCR_DisplayMarathonInfo(void)
 #define PRIMEV1 13
 #define PRIMEV2 17 // I can't believe it! I'm on TV!
 		antisplice[0] += (entertic - oldentertics)*PRIMEV2;
-		antisplice[0] %= PRIMEV1*((vid.width/vid.dupx)+1);
+		antisplice[0] %= PRIMEV1*((vid.width/vid.dup)+1);
 		antisplice[1] += (entertic - oldentertics)*PRIMEV1;
-		antisplice[1] %= PRIMEV1*((vid.width/vid.dupx)+1);
+		antisplice[1] %= PRIMEV1*((vid.width/vid.dup)+1);
 		str = va("%i:%02i:%02i.%02i",
 			G_TicsToHours(marathontime),
 			G_TicsToMinutes(marathontime, false),

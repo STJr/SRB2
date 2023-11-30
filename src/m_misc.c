@@ -989,7 +989,7 @@ static inline boolean M_PNGLib(void)
 
 static void M_PNGFrame(png_structp png_ptr, png_infop png_info_ptr, png_bytep png_buf)
 {
-	png_uint_16 downscale = apng_downscale ? vid.dupx : 1;
+	png_uint_16 downscale = apng_downscale ? vid.dup : 1;
 
 	png_uint_32 pitch = png_get_rowbytes(png_ptr, png_info_ptr);
 	PNG_CONST png_uint_32 width = vid.width / downscale;
@@ -1055,7 +1055,7 @@ static boolean M_SetupaPNG(png_const_charp filename, png_bytep pal)
 
 	apng_downscale = (!!cv_apng_downscale.value);
 
-	downscale = apng_downscale ? vid.dupx : 1;
+	downscale = apng_downscale ? vid.dup : 1;
 
 	apng_FILE = fopen(filename,"wb+"); // + mode for reading
 	if (!apng_FILE)
@@ -2804,4 +2804,18 @@ boolean M_IsStringEmpty(const char *s)
 	}
 
 	return true;
+}
+
+// Rounds off floating numbers and checks for 0 - 255 bounds
+int M_RoundUp(double number)
+{
+	if (number > 255.0l)
+		return 255;
+	if (number < 0.0l)
+		return 0;
+
+	if ((int)number <= (int)(number - 0.5f))
+		return (int)number + 1;
+
+	return (int)number;
 }

@@ -106,8 +106,7 @@ void P_Thrust(mobj_t *mo, angle_t angle, fixed_t move)
 		mo->momy += FixedMul(move, FINESINE(angle));
 }
 
-#if 0
-static inline void P_ThrustEvenIn2D(mobj_t *mo, angle_t angle, fixed_t move)
+void P_ThrustEvenIn2D(mobj_t *mo, angle_t angle, fixed_t move)
 {
 	angle >>= ANGLETOFINESHIFT;
 
@@ -115,7 +114,7 @@ static inline void P_ThrustEvenIn2D(mobj_t *mo, angle_t angle, fixed_t move)
 	mo->momy += FixedMul(move, FINESINE(angle));
 }
 
-static inline void P_VectorInstaThrust(fixed_t xa, fixed_t xb, fixed_t xc, fixed_t ya, fixed_t yb, fixed_t yc,
+void P_VectorInstaThrust(fixed_t xa, fixed_t xb, fixed_t xc, fixed_t ya, fixed_t yb, fixed_t yc,
 	fixed_t za, fixed_t zb, fixed_t zc, fixed_t momentum, mobj_t *mo)
 {
 	fixed_t a1, b1, c1, a2, b2, c2, i, j, k;
@@ -145,7 +144,6 @@ static inline void P_VectorInstaThrust(fixed_t xa, fixed_t xb, fixed_t xc, fixed
 	mo->momy = j;
 	mo->momz = k;
 }
-#endif
 
 //
 // P_InstaThrust
@@ -668,7 +666,7 @@ static void P_DeNightserizePlayer(player_t *player)
 	player->powers[pw_carry] = CR_NIGHTSFALL;
 
 	player->powers[pw_underwater] = 0;
-	player->pflags &= ~(PF_SPINDOWN|PF_JUMPDOWN|PF_ATTACKDOWN|PF_STARTDASH|PF_GLIDING|PF_STARTJUMP|PF_JUMPED|PF_NOJUMPDAMAGE|PF_THOKKED|PF_SPINNING|PF_DRILLING|PF_TRANSFERTOCLOSEST);
+	player->pflags &= ~(PF_SPINDOWN|PF_JUMPDOWN|PF_ATTACKDOWN|PF_SHIELDDOWN|PF_STARTDASH|PF_GLIDING|PF_STARTJUMP|PF_JUMPED|PF_NOJUMPDAMAGE|PF_THOKKED|PF_SPINNING|PF_DRILLING|PF_TRANSFERTOCLOSEST);
 	player->secondjump = 0;
 	player->homing = 0;
 	player->climbing = 0;
@@ -796,7 +794,7 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 		}
 	}
 
-	player->pflags &= ~(PF_SPINDOWN|PF_JUMPDOWN|PF_ATTACKDOWN|PF_STARTDASH|PF_GLIDING|PF_JUMPED|PF_NOJUMPDAMAGE|PF_THOKKED|PF_SHIELDABILITY|PF_SPINNING|PF_DRILLING);
+	player->pflags &= ~(PF_SPINDOWN|PF_JUMPDOWN|PF_ATTACKDOWN|PF_SHIELDDOWN|PF_STARTDASH|PF_GLIDING|PF_JUMPED|PF_NOJUMPDAMAGE|PF_THOKKED|PF_SHIELDABILITY|PF_SPINNING|PF_DRILLING);
 	player->homing = 0;
 	player->mo->fuse = 0;
 	player->speed = 0;
@@ -1344,8 +1342,6 @@ void P_DoSuperTransformation(player_t *player, boolean giverings)
 	if (!(mapheaderinfo[gamemap-1]->levelflags & LF_NOSSMUSIC) && P_IsLocalPlayer(player))
 		P_PlayJingle(player, JT_SUPER);
 
-	S_StartSound(NULL, sfx_supert); //let all players hear it -mattw_cfi
-
 	player->mo->momx = player->mo->momy = player->mo->momz = player->cmomx = player->cmomy = player->rmomx = player->rmomy = 0;
 
 	// Transformation animation
@@ -1362,14 +1358,67 @@ void P_DoSuperTransformation(player_t *player, boolean giverings)
 		player->powers[pw_sneakers] = 0;
 	}
 
-	if (!G_CoopGametype())
+	if (G_CoopGametype())
+		S_StartSound(player->mo, sfx_supert); //only hear it near yourself in co-op
+	else
 	{
+		S_StartSound(NULL, sfx_supert); //let all players hear it -mattw_cfi
 		HU_SetCEchoFlags(0);
 		HU_SetCEchoDuration(5);
 		HU_DoCEcho(va("%s\\is now super.\\\\\\\\", player_names[player-players]));
 	}
 
 	P_PlayerFlagBurst(player, false);
+}
+
+//
+// P_DoSuperDetransformation
+//
+// Detransform into regular Sonic!
+static void P_DoSuperDetransformation(player_t *player)
+{
+	player->powers[pw_emeralds] = 0; // lost the power stones
+	P_SpawnGhostMobj(player->mo);
+
+	player->powers[pw_super] = 0;
+
+	// Restore color
+	if ((player->powers[pw_shield] & SH_STACK) == SH_FIREFLOWER)
+	{
+		player->mo->color = SKINCOLOR_WHITE;
+		G_GhostAddColor(GHC_FIREFLOWER);
+	}
+	else
+	{
+		player->mo->color = P_GetPlayerColor(player);
+		G_GhostAddColor(GHC_NORMAL);
+	}
+
+	if (!G_CoopGametype())
+		player->powers[pw_flashing] = flashingtics-1;
+
+	if (player->mo->sprite2 & FF_SPR2SUPER)
+		P_SetPlayerMobjState(player->mo, player->mo->state-states);
+
+	// Inform the netgame that the champion has fallen in the heat of battle.
+	if (!G_CoopGametype())
+	{
+		S_StartSound(NULL, sfx_s3k66); //let all players hear it.
+		HU_SetCEchoFlags(0);
+		HU_SetCEchoDuration(5);
+		HU_DoCEcho(va("%s\\is no longer super.\\\\\\\\", player_names[player-players]));
+	}
+
+	// Resume normal music if you're the console player
+	if (P_IsLocalPlayer(player))
+	{
+		music_stack_noposition = true; // HACK: Do not reposition next music
+		music_stack_fadeout = MUSICRATE/2; // HACK: Fade out current music
+	}
+	P_RestoreMusic(player);
+
+	// If you had a shield, restore its visual significance.
+	P_SpawnShieldOrb(player);
 }
 
 // Adds to the player's score
@@ -2775,6 +2824,7 @@ static void P_CheckBouncySectors(player_t *player)
 			if (!(rover->fofflags & FOF_EXISTS))
 				continue; // FOFs should not be bouncy if they don't even "exist"
 
+			// TODO: 2.3: Delete
 			// Handle deprecated bouncy FOF sector type
 			if (!udmf && GETSECSPECIAL(rover->master->frontsector->special, 1) == 15)
 			{
@@ -4087,6 +4137,16 @@ static void P_DoFiring(player_t *player, ticcmd_t *cmd)
 
 	I_Assert(player != NULL);
 	I_Assert(!P_MobjWasRemoved(player->mo));
+	
+	// Toss a flag
+	if (cmd->buttons & BT_TOSSFLAG && G_GametypeHasTeams()
+		&& !(player->powers[pw_super]) && !(player->tossdelay))
+	{
+		if (!(player->gotflag & (GF_REDFLAG|GF_BLUEFLAG)))
+			P_PlayerEmeraldBurst(player, true); // Toss emeralds
+		else
+			P_PlayerFlagBurst(player, true);
+	}
 
 	if (!(cmd->buttons & (BT_ATTACK|BT_FIRENORMAL)))
 	{
@@ -4096,9 +4156,10 @@ static void P_DoFiring(player_t *player, ticcmd_t *cmd)
 		return;
 	}
 
-	if (player->pflags & PF_ATTACKDOWN || player->climbing || (G_TagGametype() && !(player->pflags & PF_TAGIT)))
+	if (player->pflags & PF_ATTACKDOWN || player->climbing)
 		return;
 
+	// Fire a fireball if we have the Fire Flower powerup!
 	if (((player->powers[pw_shield] & SH_STACK) == SH_FIREFLOWER) && !(player->weapondelay))
 	{
 		player->pflags |= PF_ATTACKDOWN;
@@ -4110,7 +4171,8 @@ static void P_DoFiring(player_t *player, ticcmd_t *cmd)
 		return;
 	}
 
-	if (!G_RingSlingerGametype() || player->weapondelay)
+	// No ringslinging outside of ringslinger!
+	if (!G_RingSlingerGametype() || player->weapondelay || (G_TagGametype() && !(player->pflags & PF_TAGIT)))
 		return;
 
 	player->pflags |= PF_ATTACKDOWN;
@@ -4288,34 +4350,7 @@ static void P_DoSuperStuff(player_t *player)
 		// If you're super and not Sonic, de-superize!
 		if (!(ALL7EMERALDS(emeralds) && player->charflags & SF_SUPER))
 		{
-			player->powers[pw_super] = 0;
-			P_SetPlayerMobjState(player->mo, S_PLAY_STND);
-			if (P_IsLocalPlayer(player))
-			{
-				music_stack_noposition = true; // HACK: Do not reposition next music
-				music_stack_fadeout = MUSICRATE/2; // HACK: Fade out current music
-			}
-			P_RestoreMusic(player);
-			P_SpawnShieldOrb(player);
-
-			// Restore color
-			if ((player->powers[pw_shield] & SH_STACK) == SH_FIREFLOWER)
-			{
-				player->mo->color = SKINCOLOR_WHITE;
-				G_GhostAddColor(GHC_FIREFLOWER);
-			}
-			else
-			{
-				player->mo->color = P_GetPlayerColor(player);
-				G_GhostAddColor(GHC_NORMAL);
-			}
-
-			if (!G_CoopGametype())
-			{
-				HU_SetCEchoFlags(0);
-				HU_SetCEchoDuration(5);
-				HU_DoCEcho(va("%s\\is no longer super.\\\\\\\\", player_names[player-players]));
-			}
+			P_DoSuperDetransformation(player);
 			return;
 		}
 
@@ -4342,69 +4377,37 @@ static void P_DoSuperStuff(player_t *player)
 
 		// Ran out of rings while super!
 		if (player->rings <= 0 || player->exiting)
-		{
-			player->powers[pw_emeralds] = 0; // lost the power stones
-			P_SpawnGhostMobj(player->mo);
-
-			player->powers[pw_super] = 0;
-
-			// Restore color
-			if ((player->powers[pw_shield] & SH_STACK) == SH_FIREFLOWER)
-			{
-				player->mo->color = SKINCOLOR_WHITE;
-				G_GhostAddColor(GHC_FIREFLOWER);
-			}
-			else
-			{
-				player->mo->color = P_GetPlayerColor(player);
-				G_GhostAddColor(GHC_NORMAL);
-			}
-
-			if (!G_CoopGametype())
-				player->powers[pw_flashing] = flashingtics-1;
-
-			if (player->mo->sprite2 & FF_SPR2SUPER)
-				P_SetPlayerMobjState(player->mo, player->mo->state-states);
-
-			// Inform the netgame that the champion has fallen in the heat of battle.
-			if (!G_CoopGametype())
-			{
-				S_StartSound(NULL, sfx_s3k66); //let all players hear it.
-				HU_SetCEchoFlags(0);
-				HU_SetCEchoDuration(5);
-				HU_DoCEcho(va("%s\\is no longer super.\\\\\\\\", player_names[player-players]));
-			}
-
-			// Resume normal music if you're the console player
-			if (P_IsLocalPlayer(player))
-			{
-				music_stack_noposition = true; // HACK: Do not reposition next music
-				music_stack_fadeout = MUSICRATE/2; // HACK: Fade out current music
-			}
-			P_RestoreMusic(player);
-
-			// If you had a shield, restore its visual significance.
-			P_SpawnShieldOrb(player);
-		}
+			P_DoSuperDetransformation(player);
 	}
 }
 
 //
 // P_SuperReady
 //
-// Returns true if player is ready to turn super, duh
+// Returns true if player is ready to transform or detransform
 //
-boolean P_SuperReady(player_t *player)
+boolean P_SuperReady(player_t *player, boolean transform)
 {
-	if (!player->powers[pw_super]
-	&& !player->powers[pw_invulnerability]
+	if (!transform &&
+	(player->powers[pw_super] < TICRATE*3/2
+	|| !G_CoopGametype())) // No turning back in competitive!
+		return false;
+	else if (transform
+	&& (player->powers[pw_super]
+	|| !ALL7EMERALDS(emeralds)
+	|| !(player->rings >= 50)))
+		return false;
+	
+	if (player->mo
 	&& !player->powers[pw_tailsfly]
+	&& !player->powers[pw_carry]
 	&& (player->charflags & SF_SUPER)
-	&& (player->pflags & PF_JUMPED)
-	&& !(player->powers[pw_shield] & SH_NOSTACK)
-	&& !(maptol & TOL_NIGHTS)
-	&& ALL7EMERALDS(emeralds)
-	&& (player->rings >= 50))
+	&& !P_PlayerInPain(player)
+	&& !player->climbing
+	&& !(player->pflags & (PF_FULLSTASIS|PF_THOKKED|PF_STARTDASH|PF_GLIDING|PF_SLIDING|PF_SHIELDABILITY))
+	&& ((player->pflags & PF_JUMPED) || (P_IsObjectOnGround(player->mo) && (player->panim == PA_IDLE || player->panim == PA_EDGE
+	|| player->panim == PA_WALK || player->panim == PA_RUN || (player->charflags & SF_DASHMODE && player->panim == PA_DASH))))
+	&& !(maptol & TOL_NIGHTS))
 		return true;
 
 	return false;
@@ -4603,7 +4606,7 @@ void P_DoJump(player_t *player, boolean soundandstate)
 	}
 }
 
-static void P_DoSpinDashDust(player_t *player)
+void P_DoSpinDashDust(player_t *player)
 {
 	UINT32 i;
 	mobj_t *particle;
@@ -5095,7 +5098,7 @@ static boolean P_PlayerShieldThink(player_t *player, ticcmd_t *cmd, mobj_t *lock
 {
 	mobj_t *lockonshield = NULL;
 
-	if ((player->powers[pw_shield] & SH_NOSTACK) && !player->powers[pw_super] && !(player->pflags & PF_SPINDOWN)
+	if ((player->powers[pw_shield] & SH_NOSTACK) && !player->powers[pw_super] && !(player->pflags & PF_SHIELDDOWN)
 		&& ((!(player->pflags & PF_THOKKED) || (((player->powers[pw_shield] & SH_NOSTACK) == SH_BUBBLEWRAP || (player->powers[pw_shield] & SH_NOSTACK) == SH_ATTRACT) && player->secondjump == UINT8_MAX) ))) // thokked is optional if you're bubblewrapped / 3dblasted
 	{
 		if ((player->powers[pw_shield] & SH_NOSTACK) == SH_ATTRACT && !(player->charflags & SF_NOSHIELDABILITY))
@@ -5122,7 +5125,7 @@ static boolean P_PlayerShieldThink(player_t *player, ticcmd_t *cmd, mobj_t *lock
 				}
 			}
 		}
-		if ((!(player->charflags & SF_NOSHIELDABILITY)) && (cmd->buttons & BT_SPIN && !LUA_HookPlayer(player, HOOK(ShieldSpecial)))) // Spin button effects
+		if ((!(player->charflags & SF_NOSHIELDABILITY)) && (cmd->buttons & BT_SHIELD && !LUA_HookPlayer(player, HOOK(ShieldSpecial)))) // Shield button effects
 		{
 			// Force stop
 			if ((player->powers[pw_shield] & ~(SH_FORCEHP|SH_STACK)) == SH_FORCE)
@@ -5243,52 +5246,45 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 			;
 		else if (P_PlayerShieldThink(player, cmd, lockonthok, visual))
 			;
-		else if ((cmd->buttons & BT_SPIN))
+		else if ((cmd->buttons & BT_SPIN) && !LUA_HookPlayer(player, HOOK(JumpSpinSpecial)))
 		{
-			if (!(player->pflags & PF_SPINDOWN) && P_SuperReady(player))
+			switch (player->charability)
 			{
-				// If you can turn super and aren't already,
-				// and you don't have a shield, do it!
-				P_DoSuperTransformation(player, false);
-			}
-			else if (!LUA_HookPlayer(player, HOOK(JumpSpinSpecial)))
-				switch (player->charability)
-				{
-					case CA_THOK:
-						if (player->powers[pw_super]) // Super Sonic float
+				case CA_THOK:
+					if (player->powers[pw_super]) // Super Sonic float
+					{
+						if ((player->speed > 5*player->mo->scale) // FixedMul(5<<FRACBITS, player->mo->scale), but scale is FRACUNIT-based
+						&& (P_MobjFlip(player->mo)*player->mo->momz <= 0))
 						{
-							if ((player->speed > 5*player->mo->scale) // FixedMul(5<<FRACBITS, player->mo->scale), but scale is FRACUNIT-based
-							&& (P_MobjFlip(player->mo)*player->mo->momz <= 0))
+							if (player->panim != PA_RUN && player->panim != PA_WALK)
 							{
-								if (player->panim != PA_RUN && player->panim != PA_WALK)
-								{
-									if (player->speed >= FixedMul(player->runspeed, player->mo->scale))
-										P_SetPlayerMobjState(player->mo, S_PLAY_FLOAT_RUN);
-									else
-										P_SetPlayerMobjState(player->mo, S_PLAY_FLOAT);
-								}
-
-								player->mo->momz = 0;
-								player->pflags &= ~(PF_STARTJUMP|PF_SPINNING);
-								player->secondjump = 1;
+								if (player->speed >= FixedMul(player->runspeed, player->mo->scale))
+									P_SetPlayerMobjState(player->mo, S_PLAY_FLOAT_RUN);
+								else
+									P_SetPlayerMobjState(player->mo, S_PLAY_FLOAT);
 							}
+
+							player->mo->momz = 0;
+							player->pflags &= ~(PF_STARTJUMP|PF_SPINNING);
+							player->secondjump = 1;
 						}
-						break;
-					case CA_TELEKINESIS:
-						if (!(player->pflags & (PF_THOKKED|PF_SPINDOWN)) || (player->charflags & SF_MULTIABILITY))
-						{
-							P_Telekinesis(player,
-								-FixedMul(player->actionspd, player->mo->scale), // -ve thrust (pulling towards player)
-								FixedMul(384*FRACUNIT, player->mo->scale));
-						}
-						break;
-					case CA_TWINSPIN:
-						if ((player->charability2 == CA2_MELEE) && (!(player->pflags & (PF_THOKKED|PF_SPINDOWN)) || player->charflags & SF_MULTIABILITY))
-							P_DoTwinSpin(player);
-						break;
-					default:
-						break;
-				}
+					}
+					break;
+				case CA_TELEKINESIS:
+					if (!(player->pflags & (PF_THOKKED|PF_SPINDOWN)) || (player->charflags & SF_MULTIABILITY))
+					{
+						P_Telekinesis(player,
+							-FixedMul(player->actionspd, player->mo->scale), // -ve thrust (pulling towards player)
+							FixedMul(384*FRACUNIT, player->mo->scale));
+					}
+					break;
+				case CA_TWINSPIN:
+					if ((player->charability2 == CA2_MELEE) && (!(player->pflags & (PF_THOKKED|PF_SPINDOWN)) || player->charflags & SF_MULTIABILITY))
+						P_DoTwinSpin(player);
+					break;
+				default:
+					break;
+			}
 		}
 	}
 
@@ -5351,12 +5347,6 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 		}
 		else if (player->pflags & PF_SLIDING || ((gametyperules & GTR_TEAMFLAGS) && player->gotflag) || player->pflags & PF_SHIELDABILITY)
 			;
-		/*else if (P_SuperReady(player))
-		{
-			// If you can turn super and aren't already,
-			// and you don't have a shield, do it!
-			P_DoSuperTransformation(player, false);
-		}*/
 		else if (player->pflags & PF_JUMPED)
 		{
 			if (!LUA_HookPlayer(player, HOOK(AbilitySpecial)))
@@ -8687,18 +8677,31 @@ void P_MovePlayer(player_t *player)
 	&& player->panim == PA_IDLE && !(player->powers[pw_carry]))
 		P_DoTeeter(player);
 
-	// Toss a flag
-	if (G_GametypeHasTeams() && (cmd->buttons & BT_TOSSFLAG) && !(player->powers[pw_super]) && !(player->tossdelay))
+	// Check for fire and shield buttons
+	if (!player->exiting && !(player->pflags & PF_STASIS))
 	{
-		if (!(player->gotflag & (GF_REDFLAG|GF_BLUEFLAG)))
-			P_PlayerEmeraldBurst(player, true); // Toss emeralds
-		else
-			P_PlayerFlagBurst(player, true);
-	}
-
-	// check for fire
-	if (!player->exiting)
+		// Check for fire buttons
 		P_DoFiring(player, cmd);
+		
+		// Release the shield button
+		if (!(cmd->buttons & BT_SHIELD))
+			player->pflags &= ~PF_SHIELDDOWN;
+		
+		// Shield button behavior
+		// Check P_PlayerShieldThink for actual shields!
+		else if (!(player->pflags & PF_SHIELDDOWN))
+		{
+			// Transform into super if we can!
+			if (P_SuperReady(player, true))
+				P_DoSuperTransformation(player, false);
+			
+			// Detransform from super if we can!
+			else if (P_SuperReady(player, false))
+				P_DoSuperDetransformation(player);
+			
+			player->pflags |= PF_SHIELDDOWN;
+		}
+	}
 
 	{
 		boolean atspinheight = false;
@@ -11193,7 +11196,7 @@ static void P_MinecartThink(player_t *player)
 }
 
 // Handle Tails' fluff
-static void P_DoTailsOverlay(player_t *player, mobj_t *tails)
+void P_DoTailsOverlay(player_t *player, mobj_t *tails)
 {
 	// init...
 	boolean smilesonground = P_IsObjectOnGround(player->mo);
@@ -11390,7 +11393,7 @@ static void P_DoTailsOverlay(player_t *player, mobj_t *tails)
 	tails->y = player->mo->y + P_ReturnThrustY(tails, tails->angle, FixedMul(backwards, tails->scale));
 	tails->z = player->mo->z + zoffs;
 	P_SetThingPosition(tails);
-	
+
 	if (player->mo->flags2 & MF2_SHADOW)
 		tails->flags2 |= MF2_SHADOW;
 	else
@@ -11398,7 +11401,7 @@ static void P_DoTailsOverlay(player_t *player, mobj_t *tails)
 }
 
 // Metal Sonic's jet fume
-static void P_DoMetalJetFume(player_t *player, mobj_t *fume)
+void P_DoMetalJetFume(player_t *player, mobj_t *fume)
 {
 	static const UINT8 FUME_SKINCOLORS[] =
 	{
@@ -11536,6 +11539,30 @@ static void P_DoMetalJetFume(player_t *player, mobj_t *fume)
 	}
 }
 
+// Handle Followmobj behavior
+void P_DoFollowMobj(player_t *player, mobj_t *followmobj)
+{
+	if (LUA_HookFollowMobj(player, followmobj) || P_MobjWasRemoved(followmobj))
+		{;}
+	else
+	{
+		switch (followmobj->type)
+		{
+			case MT_TAILSOVERLAY: // c:
+				P_DoTailsOverlay(player, followmobj);
+				break;
+			case MT_METALJETFUME:
+				P_DoMetalJetFume(player, followmobj);
+				break;
+			default:
+				var1 = 1;
+				var2 = 0;
+				A_CapeChase(followmobj);
+				break;
+		}
+	}
+}
+
 //
 // P_PlayerThink
 //
@@ -11606,7 +11633,7 @@ void P_PlayerThink(player_t *player)
 		P_SetTarget(&player->awayviewmobj, NULL); // remove awayviewmobj asap if invalid
 		player->awayviewtics = 1; // reset to one, the below code will immediately set it to zero
 	}
-	
+
 	if (player->awayviewtics && player->awayviewtics != -1)
 	{
 		player->awayviewtics--;
@@ -12278,11 +12305,11 @@ void P_PlayerThink(player_t *player)
 		if (!(player->stronganim))
 			player->stronganim = player->panim;
 		else if (player->panim != player->stronganim)
-			player->powers[pw_strong] = STR_NONE; 
-	}	
+			player->powers[pw_strong] = STR_NONE;
+	}
 	else if (player->stronganim)
 		player->stronganim = 0;
-			
+
 	//pw_super acts as a timer now
 	if (player->powers[pw_super]
 	&& (player->mo->state < &states[S_PLAY_SUPER_TRANS1]
@@ -12389,7 +12416,7 @@ void P_PlayerThink(player_t *player)
 			if (player->jumpfactor < FixedMul(skins[player->skin].jumpfactor, 5*FRACUNIT/4)) // Boost jump height.
 				player->jumpfactor += FRACUNIT/300;
 
-			if ((player->charflags & SF_MACHINE) && (!(player->powers[pw_strong] == STR_METAL))) 
+			if ((player->charflags & SF_MACHINE) && (!(player->powers[pw_strong] == STR_METAL)))
 					player->powers[pw_strong] = STR_METAL;
 		}
 
@@ -13012,27 +13039,7 @@ void P_PlayerAfterThink(player_t *player)
 		}
 
 		if (player->followmobj)
-		{
-			if (LUA_HookFollowMobj(player, player->followmobj) || P_MobjWasRemoved(player->followmobj))
-				{;}
-			else
-			{
-				switch (player->followmobj->type)
-				{
-					case MT_TAILSOVERLAY: // c:
-						P_DoTailsOverlay(player, player->followmobj);
-						break;
-					case MT_METALJETFUME:
-						P_DoMetalJetFume(player, player->followmobj);
-						break;
-					default:
-						var1 = 1;
-						var2 = 0;
-						A_CapeChase(player->followmobj);
-						break;
-				}
-			}
-		}
+			P_DoFollowMobj(player, player->followmobj);
 	}
 
 	P_DoPlayerHeadSigns(player); // Spawn Tag/CTF signs over player's head

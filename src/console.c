@@ -543,13 +543,13 @@ static void CON_RecalcSize(void)
 		con_scalefactor = 1;
 		break;
 	case V_SMALLSCALEPATCH:
-		con_scalefactor = vid.smalldupx;
+		con_scalefactor = vid.smalldup;
 		break;
 	case V_MEDSCALEPATCH:
-		con_scalefactor = vid.meddupx;
+		con_scalefactor = vid.meddup;
 		break;
 	default:	// Full scaling
-		con_scalefactor = vid.dupx;
+		con_scalefactor = vid.dup;
 		break;
 	}
 
@@ -667,7 +667,7 @@ static void CON_MoveConsole(void)
 	}
 
 	// Not instant - Increment fracmovement fractionally
-	fracmovement += FixedMul(cons_speed.value*vid.fdupy, renderdeltatics);
+	fracmovement += FixedMul(cons_speed.value*vid.fdup, renderdeltatics);
 
 	if (con_curlines < con_destlines) // Move the console downwards
 	{
@@ -921,7 +921,8 @@ boolean CON_Responder(event_t *ev)
 	static UINT8 consdown = false; // console is treated differently due to rare usage
 
 	// sequential completions a la 4dos
-	static char completion[80];
+	static char completioncmd[80 + sizeof("find ")] = "find ";
+	static char *completion = &completioncmd[sizeof("find ")-1];
 
 	static INT32 skips;
 
@@ -1057,36 +1058,14 @@ boolean CON_Responder(event_t *ev)
 		// show all cvars/commands that match what we have inputted
 		if (key == KEY_TAB)
 		{
-			size_t i, len;
-
 			if (!completion[0])
 			{
 				if (!input_len || input_len >= 40 || strchr(inputlines[inputline], ' '))
 					return true;
 				strcpy(completion, inputlines[inputline]);
 			}
-			len = strlen(completion);
-
-			//first check commands
-			CONS_Printf("\nCommands:\n");
-			for (i = 0, cmd = COM_CompleteCommand(completion, i); cmd; cmd = COM_CompleteCommand(completion, ++i))
-				CONS_Printf("  \x83" "%s" "\x80" "%s\n", completion, cmd+len);
-			if (i == 0) CONS_Printf("  (none)\n");
-
-			//now we move on to CVARs
-			CONS_Printf("Variables:\n");
-			for (i = 0, cmd = CV_CompleteVar(completion, i); cmd; cmd = CV_CompleteVar(completion, ++i))
-				CONS_Printf("  \x83" "%s" "\x80" "%s\n", completion, cmd+len);
-			if (i == 0) CONS_Printf("  (none)\n");
-
-			//and finally aliases
-			CONS_Printf("Aliases:\n");
-			for (i = 0, cmd = COM_CompleteAlias(completion, i); cmd; cmd = COM_CompleteAlias(completion, ++i))
-				CONS_Printf("  \x83" "%s" "\x80" "%s\n", completion, cmd+len);
-			if (i == 0) CONS_Printf("  (none)\n");
-
+			COM_BufInsertText(completioncmd);
 			completion[0] = 0;
-
 			return true;
 		}
 		// ---
@@ -1764,9 +1743,9 @@ static void CON_DrawBackpic(void)
 	con_backpic = W_CachePatchNum(piclump, PU_PATCH);
 
 	// Center the backpic, and draw a vertically cropped patch.
-	w = (con_backpic->width * vid.dupx);
+	w = con_backpic->width * vid.dup;
 	x = (vid.width / 2) - (w / 2);
-	h = con_curlines/vid.dupy;
+	h = con_curlines/vid.dup;
 
 	// If the patch doesn't fill the entire screen,
 	// then fill the sides with a solid color.

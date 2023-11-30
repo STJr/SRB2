@@ -158,7 +158,7 @@ consvar_t cv_drawdist = CVAR_INIT ("drawdist", "Infinite", CV_SAVE, drawdist_con
 consvar_t cv_drawdist_nights = CVAR_INIT ("drawdist_nights", "2048", CV_SAVE, drawdist_cons_t, NULL);
 consvar_t cv_drawdist_precip = CVAR_INIT ("drawdist_precip", "1024", CV_SAVE, drawdist_precip_cons_t, NULL);
 //consvar_t cv_precipdensity = CVAR_INIT ("precipdensity", "Moderate", CV_SAVE, precipdensity_cons_t, NULL);
-consvar_t cv_fov = CVAR_INIT ("fov", "90", CV_FLOAT|CV_CALL, fov_cons_t, Fov_OnChange);
+consvar_t cv_fov = CVAR_INIT ("fov", "90", CV_SAVE|CV_FLOAT|CV_CALL, fov_cons_t, Fov_OnChange);
 
 // Okay, whoever said homremoval causes a performance hit should be shot.
 consvar_t cv_homremoval = CVAR_INIT ("homremoval", "No", CV_SAVE, homremoval_cons_t, NULL);
@@ -1085,6 +1085,7 @@ void R_SetupFrame(player_t *player)
 {
 	camera_t *thiscam;
 	boolean chasecam = R_ViewpointHasChasecam(player);
+	boolean ispaused = paused || P_AutoPause();
 	
 	if (splitscreen && player == &players[secondarydisplayplayer] && player != &players[consoleplayer])
 		thiscam = &camera2;
@@ -1135,6 +1136,30 @@ void R_SetupFrame(player_t *player)
 			}
 		}
 	}
+
+	if (quake.time && !ispaused)
+	{
+		fixed_t ir = quake.intensity>>1;
+
+		if (quake.epicenter) {
+			// Calculate 3D distance from epicenter, using the camera.
+			fixed_t xydist = R_PointToDist2(thiscam->x, thiscam->y, quake.epicenter->x, quake.epicenter->y);
+			fixed_t dist = R_PointToDist2(0, thiscam->z, xydist, quake.epicenter->z);
+
+			// More effect closer to epicenter, outside of radius = no effect
+			if (!quake.radius || dist > quake.radius)
+				ir = 0;
+			else
+				ir = FixedMul(ir, FRACUNIT - FixedDiv(dist, quake.radius));
+		}
+
+		quake.x = M_RandomRange(-ir,ir);
+		quake.y = M_RandomRange(-ir,ir);
+		quake.z = M_RandomRange(-ir,ir);
+	}
+	else if (!ispaused)
+		quake.x = quake.y = quake.z = 0;
+
 	newview->z += quake.z;
 
 	newview->player = player;
