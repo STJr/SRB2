@@ -918,7 +918,8 @@ boolean CON_Responder(event_t *ev)
 	static UINT8 consdown = false; // console is treated differently due to rare usage
 
 	// sequential completions a la 4dos
-	static char completion[80];
+	static char completioncmd[80 + sizeof("find ")] = "find ";
+	static char *completion = &completioncmd[sizeof("find ")-1];
 
 	static INT32 skips;
 
@@ -1054,36 +1055,14 @@ boolean CON_Responder(event_t *ev)
 		// show all cvars/commands that match what we have inputted
 		if (key == KEY_TAB)
 		{
-			size_t i, len;
-
 			if (!completion[0])
 			{
 				if (!input_len || input_len >= 40 || strchr(inputlines[inputline], ' '))
 					return true;
 				strcpy(completion, inputlines[inputline]);
 			}
-			len = strlen(completion);
-
-			//first check commands
-			CONS_Printf("\nCommands:\n");
-			for (i = 0, cmd = COM_CompleteCommand(completion, i); cmd; cmd = COM_CompleteCommand(completion, ++i))
-				CONS_Printf("  \x83" "%s" "\x80" "%s\n", completion, cmd+len);
-			if (i == 0) CONS_Printf("  (none)\n");
-
-			//now we move on to CVARs
-			CONS_Printf("Variables:\n");
-			for (i = 0, cmd = CV_CompleteVar(completion, i); cmd; cmd = CV_CompleteVar(completion, ++i))
-				CONS_Printf("  \x83" "%s" "\x80" "%s\n", completion, cmd+len);
-			if (i == 0) CONS_Printf("  (none)\n");
-
-			//and finally aliases
-			CONS_Printf("Aliases:\n");
-			for (i = 0, cmd = COM_CompleteAlias(completion, i); cmd; cmd = COM_CompleteAlias(completion, ++i))
-				CONS_Printf("  \x83" "%s" "\x80" "%s\n", completion, cmd+len);
-			if (i == 0) CONS_Printf("  (none)\n");
-
+			COM_BufInsertText(completioncmd);
 			completion[0] = 0;
-
 			return true;
 		}
 		// ---
