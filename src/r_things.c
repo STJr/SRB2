@@ -2134,7 +2134,7 @@ static void R_ProjectSprite(mobj_t *thing)
 
 	if (thing->subsector->sector->numlights)
 	{
-		light = P_GetSectorLightAt(thing->subsector->sector, interp.x, interp.y, splat ? gz : gzt);
+		light = P_GetSectorLightNumAt(thing->subsector->sector, interp.x, interp.y, splat ? gz : gzt);
 
 		INT32 lightnum = (*thing->subsector->sector->lightlist[light].lightlevel >> LIGHTSEGSHIFT);
 		if (lightnum < 0)

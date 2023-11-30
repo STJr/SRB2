@@ -2023,6 +2023,28 @@ static int lib_pCeilingzAtPos(lua_State *L)
 	return 1;
 }
 
+static int lib_pGetSectorLightLevelAt(lua_State *L)
+{
+	boolean has_sector = false;
+	sector_t *sector = NULL;
+	if (!lua_isnoneornil(L, 1))
+	{
+		has_sector = true;
+		sector = *((sector_t **)luaL_checkudata(L, 1, META_SECTOR));
+	}
+	fixed_t x = luaL_checkfixed(L, 2);
+	fixed_t y = luaL_checkfixed(L, 3);
+	fixed_t z = luaL_checkfixed(L, 4);
+	INLEVEL
+	if (has_sector && !sector)
+		return LUA_ErrInvalid(L, "sector_t");
+	if (sector)
+		lua_pushinteger(L, P_GetLightLevelFromSectorAt(sector, x, y, z));
+	else
+		lua_pushinteger(L, P_GetSectorLightLevelAt(x, y, z));
+	return 1;
+}
+
 static int lib_pGetSectorColormapAt(lua_State *L)
 {
 	boolean has_sector = false;
@@ -4329,6 +4351,7 @@ static luaL_Reg lib[] = {
 	{"P_RadiusAttack",lib_pRadiusAttack},
 	{"P_FloorzAtPos",lib_pFloorzAtPos},
 	{"P_CeilingzAtPos",lib_pCeilingzAtPos},
+	{"P_GetSectorLightLevelAt",lib_pGetSectorLightLevelAt},
 	{"P_GetSectorColormapAt",lib_pGetSectorColormapAt},
 	{"P_DoSpring",lib_pDoSpring},
 	{"P_TouchSpecialThing",lib_pTouchSpecialThing},
