@@ -445,7 +445,6 @@ visplane_t *R_FindPlane(sector_t *sector, fixed_t height, INT32 picnum, INT32 li
 				&& lightlevel == check->lightlevel
 				&& xoff == check->xoffs && yoff == check->yoffs
 				&& planecolormap == check->extra_colormap
-				&& !pfloor && !check->ffloor
 				&& check->viewx == viewx && check->viewy == viewy && check->viewz == viewz
 				&& check->viewangle == viewangle
 				&& check->plangle == plangle
