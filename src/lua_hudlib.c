@@ -40,6 +40,7 @@ static const char *const hud_disable_options[] = {
 	"stagetitle",
 	"textspectator",
 	"crosshair",
+	"powerup",
 
 	"score",
 	"time",
