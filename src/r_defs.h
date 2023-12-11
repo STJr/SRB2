@@ -218,12 +218,16 @@ typedef struct ffloor_s
 	INT16 *toplightlevel;
 	fixed_t *topxoffs;
 	fixed_t *topyoffs;
+	fixed_t *topxscale;
+	fixed_t *topyscale;
 	angle_t *topangle;
 
 	fixed_t *bottomheight;
 	INT32 *bottompic;
 	fixed_t *bottomxoffs;
 	fixed_t *bottomyoffs;
+	fixed_t *bottomxscale;
+	fixed_t *bottomyscale;
 	angle_t *bottomangle;
 
 	// Pointers to pointers. Yup.
@@ -428,6 +432,10 @@ typedef struct sector_s
 	// floor and ceiling texture offsets
 	fixed_t floorxoffset, flooryoffset;
 	fixed_t ceilingxoffset, ceilingyoffset;
+
+	// floor and ceiling texture scale
+	fixed_t floorxscale, flooryscale;
+	fixed_t ceilingxscale, ceilingyscale;
 
 	// flat angle
 	angle_t floorangle;

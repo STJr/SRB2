@@ -391,8 +391,6 @@ static void R_RasterizeFloorSplat(floorsplat_t *pSplat, vector2_t *verts, visspr
 
 		if (pSplat->angle)
 		{
-			memset(cachedheight, 0, sizeof(cachedheight));
-
 			// Add the view offset, rotated by the plane angle.
 			fixed_t a = -pSplat->verts[0].x + vis->viewpoint.x;
 			fixed_t b = -pSplat->verts[0].y + vis->viewpoint.y;
@@ -547,29 +545,18 @@ static void R_RasterizeFloorSplat(floorsplat_t *pSplat, vector2_t *verts, visspr
 			angle_t planecos = FINECOSINE(angle);
 			angle_t planesin = FINESINE(angle);
 
-			if (planeheight != cachedheight[y])
+			// [RH] Notice that I dumped the caching scheme used by Doom.
+			// It did not offer any appreciable speedup.
+			distance = FixedMul(planeheight, yslope[y]);
+			span = abs(centery - y);
+
+			if (span) // Don't divide by zero
 			{
-				cachedheight[y] = planeheight;
-				distance = cacheddistance[y] = FixedMul(planeheight, yslope[y]);
-				span = abs(centery - y);
-
-				if (span) // Don't divide by zero
-				{
-					xstep = FixedMul(planesin, planeheight) / span;
-					ystep = FixedMul(planecos, planeheight) / span;
-				}
-				else
-					xstep = ystep = FRACUNIT;
-
-				cachedxstep[y] = xstep;
-				cachedystep[y] = ystep;
+				xstep = FixedMul(planesin, planeheight) / span;
+				ystep = FixedMul(planecos, planeheight) / span;
 			}
 			else
-			{
-				distance = cacheddistance[y];
-				xstep = cachedxstep[y];
-				ystep = cachedystep[y];
-			}
+				xstep = ystep = FRACUNIT;
 
 			ds_xstep = FixedDiv(xstep, pSplat->xscale);
 			ds_ystep = FixedDiv(ystep, pSplat->yscale);
@@ -586,9 +573,6 @@ static void R_RasterizeFloorSplat(floorsplat_t *pSplat, vector2_t *verts, visspr
 		rastertab[y].minx = INT32_MAX;
 		rastertab[y].maxx = INT32_MIN;
 	}
-
-	if (!ds_solidcolor && pSplat->angle && !pSplat->slope)
-		memset(cachedheight, 0, sizeof(cachedheight));
 }
 
 static void prepare_rastertab(void)

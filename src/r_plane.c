@@ -83,11 +83,6 @@ static fixed_t planeheight;
 fixed_t yslopetab[MAXVIDHEIGHT*16];
 fixed_t *yslope;
 
-fixed_t cachedheight[MAXVIDHEIGHT];
-fixed_t cacheddistance[MAXVIDHEIGHT];
-fixed_t cachedxstep[MAXVIDHEIGHT];
-fixed_t cachedystep[MAXVIDHEIGHT];
-
 static fixed_t xoffs, yoffs;
 static floatv3_t ds_slope_origin, ds_slope_u, ds_slope_v;
 
@@ -159,37 +154,28 @@ static void R_MapPlane(INT32 y, INT32 x1, INT32 x2)
 	planecos = FINECOSINE(angle);
 	planesin = FINESINE(angle);
 
-	if (planeheight != cachedheight[y])
+	// [RH] Notice that I dumped the caching scheme used by Doom.
+	// It did not offer any appreciable speedup.
+	distance = FixedMul(planeheight, yslope[y]);
+	span = abs(centery - y);
+
+	if (span) // Don't divide by zero
 	{
-		cachedheight[y] = planeheight;
-		cacheddistance[y] = distance = FixedMul(planeheight, yslope[y]);
-		span = abs(centery - y);
-
-		if (span) // Don't divide by zero
-		{
-			ds_xstep = FixedMul(planesin, planeheight) / span;
-			ds_ystep = FixedMul(planecos, planeheight) / span;
-		}
-		else
-			ds_xstep = ds_ystep = FRACUNIT;
-
-		cachedxstep[y] = ds_xstep;
-		cachedystep[y] = ds_ystep;
+		ds_xstep = FixedMul(planesin, planeheight) / span;
+		ds_ystep = FixedMul(planecos, planeheight) / span;
+		ds_xstep = FixedMul(currentplane->xscale, ds_xstep);
+		ds_ystep = FixedMul(currentplane->yscale, ds_ystep);
 	}
 	else
-	{
-		distance = cacheddistance[y];
-		ds_xstep = cachedxstep[y];
-		ds_ystep = cachedystep[y];
-	}
+		ds_xstep = ds_ystep = FRACUNIT;
 
 	// [RH] Instead of using the xtoviewangle array, I calculated the fractional values
 	// at the middle of the screen, then used the calculated ds_xstep and ds_ystep
 	// to step from those to the proper texture coordinate to start drawing at.
 	// That way, the texture coordinate is always calculated by its position
 	// on the screen and not by its position relative to the edge of the visplane.
-	ds_xfrac = xoffs + FixedMul(planecos, distance) + (x1 - centerx) * ds_xstep;
-	ds_yfrac = yoffs - FixedMul(planesin, distance) + (x1 - centerx) * ds_ystep;
+	ds_xfrac = xoffs + FixedMul(currentplane->xscale, FixedMul(planecos, distance)) + (x1 - centerx) * ds_xstep;
+	ds_yfrac = yoffs - FixedMul(currentplane->yscale, FixedMul(planesin, distance)) + (x1 - centerx) * ds_ystep;
 
 	// Water ripple effect
 	if (planeripple.active)
@@ -275,10 +261,7 @@ static void R_MapFogPlane(INT32 y, INT32 x1, INT32 x2)
 	if (x1 >= vid.width)
 		x1 = vid.width - 1;
 
-	if (planeheight != cachedheight[y])
-		distance = FixedMul(planeheight, yslope[y]);
-	else
-		distance = cacheddistance[y];
+	distance = FixedMul(planeheight, yslope[y]);
 
 	pindex = distance >> LIGHTZSHIFT;
 	if (pindex >= MAXLIGHTZ)
@@ -361,9 +344,6 @@ void R_ClearPlanes(void)
 	{
 		freehead = &(*freehead)->next;
 	}
-
-	// texture calculation
-	memset(cachedheight, 0, sizeof (cachedheight));
 }
 
 static visplane_t *new_visplane(unsigned hash)
@@ -391,7 +371,8 @@ static visplane_t *new_visplane(unsigned hash)
 //              If not, allocates another of them.
 //
 visplane_t *R_FindPlane(fixed_t height, INT32 picnum, INT32 lightlevel,
-	fixed_t xoff, fixed_t yoff, angle_t plangle, extracolormap_t *planecolormap,
+	fixed_t xoff, fixed_t yoff, fixed_t xscale, fixed_t yscale,
+	angle_t plangle, extracolormap_t *planecolormap,
 	ffloor_t *pfloor, polyobj_t *polyobj, pslope_t *slope)
 {
 	visplane_t *check;
@@ -399,8 +380,9 @@ visplane_t *R_FindPlane(fixed_t height, INT32 picnum, INT32 lightlevel,
 
 	if (!slope) // Don't mess with this right now if a slope is involved
 	{
-		xoff += viewx;
-		yoff -= viewy;
+		xoff += FixedMul(viewx, xscale);
+		yoff -= FixedMul(viewy, yscale);
+
 		if (plangle != 0)
 		{
 			// Add the view offset, rotated by the plane angle.
@@ -441,16 +423,16 @@ visplane_t *R_FindPlane(fixed_t height, INT32 picnum, INT32 lightlevel,
 		hash = visplane_hash(picnum, lightlevel, height);
 		for (check = visplanes[hash]; check; check = check->next)
 		{
-			if (polyobj != check->polyobj)
-				continue;
 			if (height == check->height && picnum == check->picnum
 				&& lightlevel == check->lightlevel
 				&& xoff == check->xoffs && yoff == check->yoffs
+				&& xscale == check->xscale && yscale == check->yscale
 				&& planecolormap == check->extra_colormap
 				&& check->viewx == viewx && check->viewy == viewy && check->viewz == viewz
 				&& check->viewangle == viewangle
 				&& check->plangle == plangle
-				&& check->slope == slope)
+				&& check->slope == slope
+				&& check->polyobj == polyobj)
 			{
 				return check;
 			}
@@ -470,6 +452,8 @@ visplane_t *R_FindPlane(fixed_t height, INT32 picnum, INT32 lightlevel,
 	check->maxx = -1;
 	check->xoffs = xoff;
 	check->yoffs = yoff;
+	check->xscale = xscale;
+	check->yscale = yscale;
 	check->extra_colormap = planecolormap;
 	check->ffloor = pfloor;
 	check->viewx = viewx;
@@ -546,6 +530,8 @@ visplane_t *R_CheckPlane(visplane_t *pl, INT32 start, INT32 stop)
 		new_pl->lightlevel = pl->lightlevel;
 		new_pl->xoffs = pl->xoffs;
 		new_pl->yoffs = pl->yoffs;
+		new_pl->xscale = pl->xscale;
+		new_pl->yscale = pl->yscale;
 		new_pl->extra_colormap = pl->extra_colormap;
 		new_pl->ffloor = pl->ffloor;
 		new_pl->viewx = pl->viewx;
@@ -812,7 +798,16 @@ void R_SetTiltedSpan(INT32 span)
 static void R_SetSlopePlaneVectors(visplane_t *pl, INT32 y, fixed_t xoff, fixed_t yoff)
 {
 	R_SetTiltedSpan(y);
-	R_SetSlopePlane(pl->slope, pl->viewx, pl->viewy, pl->viewz, xoff, yoff, pl->viewangle, pl->plangle);
+
+	if (pl->xscale != FRACUNIT || pl->yscale != FRACUNIT)
+	{
+		R_SetScaledSlopePlane(pl->slope, pl->viewx, pl->viewy, pl->viewz,
+			FixedDiv(FRACUNIT, pl->xscale), FixedDiv(FRACUNIT, pl->yscale),
+			FixedDiv(xoff, pl->xscale), FixedDiv(yoff, pl->yscale), pl->viewangle, pl->plangle);
+	}
+	else
+		R_SetSlopePlane(pl->slope, pl->viewx, pl->viewy, pl->viewz, xoff, yoff, pl->viewangle, pl->plangle);
+
 	R_CalculateSlopeVectors();
 }
 
@@ -1000,13 +995,6 @@ void R_DrawSinglePlane(visplane_t *pl)
 				}
 		}
 
-		// Don't mess with angle on slopes! We'll handle this ourselves later
-		if (!pl->slope && viewangle != pl->viewangle+pl->plangle)
-		{
-			memset(cachedheight, 0, sizeof (cachedheight));
-			viewangle = pl->viewangle+pl->plangle;
-		}
-
 		mapfunc = R_MapPlane;
 
 		if (ds_solidcolor)
@@ -1043,7 +1031,7 @@ void R_DrawSinglePlane(visplane_t *pl)
 		{
 			mapfunc = R_MapTiltedPlane;
 
-			if (!pl->plangle && !ds_solidcolor)
+			if (!pl->plangle && !ds_solidcolor && pl->xscale == FRACUNIT && pl->yscale == FRACUNIT)
 			{
 				if (ds_powersoftwo)
 					R_AdjustSlopeCoordinates(&pl->slope->o);

@@ -372,11 +372,9 @@ static void HWR_RenderPlane(subsector_t *subsector, extrasubsector_t *xsub, bool
 	INT32 i;
 
 	float height; // constant y for all points on the convex flat polygon
-	float flatxref, flatyref, anglef = 0.0f;
+	float anglef = 0.0f;
 	float fflatwidth = 64.0f, fflatheight = 64.0f;
-	UINT16 flatflag = 63;
-
-	boolean texflat = false;
+	float xscale = 1.0f, yscale = 1.0f;
 
 	float tempxsow, tempytow;
 	float scrollx = 0.0f, scrolly = 0.0f;
@@ -411,11 +409,7 @@ static void HWR_RenderPlane(subsector_t *subsector, extrasubsector_t *xsub, bool
 			slope = gl_frontsector->c_slope;
 	}
 
-	// Set fixedheight to the slope's height from our viewpoint, if we have a slope
-	if (slope)
-		fixedheight = P_GetSlopeZAt(slope, viewx, viewy);
-
-	height = FIXED_TO_FLOAT(fixedheight);
+	height = FixedToFloat(fixedheight);
 
 	// Allocate plane-vertex buffer if we need to
 	if (!planeVerts || nrPlaneVerts > numAllocedPlaneVerts)
@@ -431,8 +425,8 @@ static void HWR_RenderPlane(subsector_t *subsector, extrasubsector_t *xsub, bool
 		if (levelflat->type == LEVELFLAT_FLAT)
 		{
 			size_t len = W_LumpLength(levelflat->u.flat.lumpnum);
-			flatflag = R_GetFlatSize(len) - 1;
-			fflatwidth = fflatheight = (float)(flatflag + 1);
+			unsigned flatflag = R_GetFlatSize(len);
+			fflatwidth = fflatheight = (float)flatflag;
 		}
 		else
 		{
@@ -446,29 +440,28 @@ static void HWR_RenderPlane(subsector_t *subsector, extrasubsector_t *xsub, bool
 				fflatwidth = levelflat->width;
 				fflatheight = levelflat->height;
 			}
-			texflat = true;
 		}
 	}
 	else // set no texture
 		HWR_SetCurrentTexture(NULL);
-
-	// reference point for flat texture coord for each vertex around the polygon
-	flatxref = (float)(((fixed_t)pv->x & (~flatflag)) / fflatwidth);
-	flatyref = (float)(((fixed_t)pv->y & (~flatflag)) / fflatheight);
 
 	// transform
 	if (FOFsector != NULL)
 	{
 		if (!isceiling) // it's a floor
 		{
-			scrollx = FIXED_TO_FLOAT(FOFsector->floorxoffset)/fflatwidth;
-			scrolly = FIXED_TO_FLOAT(FOFsector->flooryoffset)/fflatheight;
+			xscale = FixedToFloat(FOFsector->floorxscale);
+			yscale = FixedToFloat(FOFsector->flooryscale);
+			scrollx = FixedToFloat(FOFsector->floorxoffset) / fflatwidth;
+			scrolly = FixedToFloat(FOFsector->flooryoffset) / fflatheight;
 			angle = FOFsector->floorangle;
 		}
 		else // it's a ceiling
 		{
-			scrollx = FIXED_TO_FLOAT(FOFsector->ceilingxoffset)/fflatwidth;
-			scrolly = FIXED_TO_FLOAT(FOFsector->ceilingyoffset)/fflatheight;
+			xscale = FixedToFloat(FOFsector->ceilingxscale);
+			yscale = FixedToFloat(FOFsector->ceilingyscale);
+			scrollx = FixedToFloat(FOFsector->ceilingxoffset) / fflatwidth;
+			scrolly = FixedToFloat(FOFsector->ceilingyoffset) / fflatheight;
 			angle = FOFsector->ceilingangle;
 		}
 	}
@@ -476,41 +469,28 @@ static void HWR_RenderPlane(subsector_t *subsector, extrasubsector_t *xsub, bool
 	{
 		if (!isceiling) // it's a floor
 		{
-			scrollx = FIXED_TO_FLOAT(gl_frontsector->floorxoffset)/fflatwidth;
-			scrolly = FIXED_TO_FLOAT(gl_frontsector->flooryoffset)/fflatheight;
+			xscale = FixedToFloat(gl_frontsector->floorxscale);
+			yscale = FixedToFloat(gl_frontsector->flooryscale);
+			scrollx = FixedToFloat(gl_frontsector->floorxoffset) / fflatwidth;
+			scrolly = FixedToFloat(gl_frontsector->flooryoffset) / fflatheight;
 			angle = gl_frontsector->floorangle;
 		}
 		else // it's a ceiling
 		{
-			scrollx = FIXED_TO_FLOAT(gl_frontsector->ceilingxoffset)/fflatwidth;
-			scrolly = FIXED_TO_FLOAT(gl_frontsector->ceilingyoffset)/fflatheight;
+			xscale = FixedToFloat(gl_frontsector->ceilingxscale);
+			yscale = FixedToFloat(gl_frontsector->ceilingyscale);
+			scrollx = FixedToFloat(gl_frontsector->ceilingxoffset) / fflatwidth;
+			scrolly = FixedToFloat(gl_frontsector->ceilingyoffset) / fflatheight;
 			angle = gl_frontsector->ceilingangle;
 		}
 	}
 
-	if (angle) // Only needs to be done if there's an altered angle
-	{
-		tempxsow = flatxref;
-		tempytow = flatyref;
-
-		anglef = ANG2RAD(InvAngle(angle));
-
-		flatxref = (tempxsow * cos(anglef)) - (tempytow * sin(anglef));
-		flatyref = (tempxsow * sin(anglef)) + (tempytow * cos(anglef));
-	}
+	anglef = ANG2RAD(InvAngle(angle));
 
 #define SETUP3DVERT(vert, vx, vy) {\
 		/* Hurdler: add scrolling texture on floor/ceiling */\
-		if (texflat)\
-		{\
-			vert->s = (float)((vx) / fflatwidth) + scrollx;\
-			vert->t = -(float)((vy) / fflatheight) + scrolly;\
-		}\
-		else\
-		{\
-			vert->s = (float)(((vx) / fflatwidth) - flatxref + scrollx);\
-			vert->t = (float)(flatyref - ((vy) / fflatheight) + scrolly);\
-		}\
+		vert->s = ((vx) / fflatwidth) + (scrollx / xscale);\
+		vert->t = -((vy) / fflatheight) + (scrolly / yscale);\
 \
 		/* Need to rotate before translate */\
 		if (angle) /* Only needs to be done if there's an altered angle */\
@@ -521,15 +501,18 @@ static void HWR_RenderPlane(subsector_t *subsector, extrasubsector_t *xsub, bool
 			vert->t = (tempxsow * sin(anglef)) + (tempytow * cos(anglef));\
 		}\
 \
-		vert->x = (vx);\
-		vert->y = height;\
-		vert->z = (vy);\
+		vert->s *= xscale;\
+		vert->t *= yscale;\
 \
 		if (slope)\
 		{\
-			fixedheight = P_GetSlopeZAt(slope, FLOAT_TO_FIXED((vx)), FLOAT_TO_FIXED((vy)));\
-			vert->y = FIXED_TO_FLOAT(fixedheight);\
+			fixedheight = P_GetSlopeZAt(slope, FloatToFixed((vx)), FloatToFixed((vy)));\
+			height = FixedToFloat(fixedheight);\
 		}\
+\
+		vert->x = (vx);\
+		vert->y = height;\
+		vert->z = (vy);\
 }
 
 	for (i = 0, v3d = planeVerts; i < (INT32)nrPlaneVerts; i++,v3d++,pv++)
@@ -2725,11 +2708,8 @@ static void HWR_RenderPolyObjectPlane(polyobj_t *polysector, boolean isceiling, 
 	INT32 i;
 
 	float height = FIXED_TO_FLOAT(fixedheight); // constant y for all points on the convex flat polygon
-	float flatxref, flatyref;
 	float fflatwidth = 64.0f, fflatheight = 64.0f;
-	UINT16 flatflag = 63;
-
-	boolean texflat = false;
+	float xscale = 1.0f, yscale = 1.0f;
 
 	float scrollx = 0.0f, scrolly = 0.0f;
 	float tempxsow, tempytow, anglef = 0.0f;
@@ -2760,8 +2740,8 @@ static void HWR_RenderPolyObjectPlane(polyobj_t *polysector, boolean isceiling, 
 		if (levelflat->type == LEVELFLAT_FLAT)
 		{
 			size_t len = W_LumpLength(levelflat->u.flat.lumpnum);
-			flatflag = R_GetFlatSize(len) - 1;
-			fflatwidth = fflatheight = (float)(flatflag + 1);
+			unsigned flatflag = R_GetFlatSize(len);
+			fflatwidth = fflatheight = (float)flatflag;
 		}
 		else
 		{
@@ -2775,18 +2755,10 @@ static void HWR_RenderPolyObjectPlane(polyobj_t *polysector, boolean isceiling, 
 				fflatwidth = levelflat->width;
 				fflatheight = levelflat->height;
 			}
-			texflat = true;
 		}
 	}
 	else // set no texture
 		HWR_SetCurrentTexture(NULL);
-
-	// reference point for flat texture coord for each vertex around the polygon
-	flatxref = FIXED_TO_FLOAT(polysector->origVerts[0].x);
-	flatyref = FIXED_TO_FLOAT(polysector->origVerts[0].y);
-
-	flatxref = (float)(((fixed_t)flatxref & (~flatflag)) / fflatwidth);
-	flatyref = (float)(((fixed_t)flatyref & (~flatflag)) / fflatheight);
 
 	// transform
 	v3d = planeVerts;
@@ -2795,14 +2767,18 @@ static void HWR_RenderPolyObjectPlane(polyobj_t *polysector, boolean isceiling, 
 	{
 		if (!isceiling) // it's a floor
 		{
-			scrollx = FIXED_TO_FLOAT(FOFsector->floorxoffset)/fflatwidth;
-			scrolly = FIXED_TO_FLOAT(FOFsector->flooryoffset)/fflatheight;
+			xscale = FixedToFloat(FOFsector->floorxscale);
+			yscale = FixedToFloat(FOFsector->flooryscale);
+			scrollx = FixedToFloat(FOFsector->floorxoffset) / fflatwidth;
+			scrolly = FixedToFloat(FOFsector->flooryoffset) / fflatheight;
 			angle = FOFsector->floorangle;
 		}
 		else // it's a ceiling
 		{
-			scrollx = FIXED_TO_FLOAT(FOFsector->ceilingxoffset)/fflatwidth;
-			scrolly = FIXED_TO_FLOAT(FOFsector->ceilingyoffset)/fflatheight;
+			xscale = FixedToFloat(FOFsector->ceilingxscale);
+			yscale = FixedToFloat(FOFsector->ceilingyscale);
+			scrollx = FixedToFloat(FOFsector->ceilingxoffset) / fflatwidth;
+			scrolly = FixedToFloat(FOFsector->ceilingyoffset) / fflatheight;
 			angle = FOFsector->ceilingangle;
 		}
 	}
@@ -2810,43 +2786,30 @@ static void HWR_RenderPolyObjectPlane(polyobj_t *polysector, boolean isceiling, 
 	{
 		if (!isceiling) // it's a floor
 		{
-			scrollx = FIXED_TO_FLOAT(gl_frontsector->floorxoffset)/fflatwidth;
-			scrolly = FIXED_TO_FLOAT(gl_frontsector->flooryoffset)/fflatheight;
+			xscale = FixedToFloat(gl_frontsector->floorxscale);
+			yscale = FixedToFloat(gl_frontsector->flooryscale);
+			scrollx = FixedToFloat(gl_frontsector->floorxoffset) / fflatwidth;
+			scrolly = FixedToFloat(gl_frontsector->flooryoffset) / fflatheight;
 			angle = gl_frontsector->floorangle;
 		}
 		else // it's a ceiling
 		{
-			scrollx = FIXED_TO_FLOAT(gl_frontsector->ceilingxoffset)/fflatwidth;
-			scrolly = FIXED_TO_FLOAT(gl_frontsector->ceilingyoffset)/fflatheight;
+			xscale = FixedToFloat(gl_frontsector->ceilingxscale);
+			yscale = FixedToFloat(gl_frontsector->ceilingyscale);
+			scrollx = FixedToFloat(gl_frontsector->ceilingxoffset) / fflatwidth;
+			scrolly = FixedToFloat(gl_frontsector->ceilingyoffset) / fflatheight;
 			angle = gl_frontsector->ceilingangle;
 		}
 	}
 
-	if (angle) // Only needs to be done if there's an altered angle
-	{
-		tempxsow = flatxref;
-		tempytow = flatyref;
-
-		anglef = ANG2RAD(InvAngle(angle));
-
-		flatxref = (tempxsow * cos(anglef)) - (tempytow * sin(anglef));
-		flatyref = (tempxsow * sin(anglef)) + (tempytow * cos(anglef));
-	}
+	anglef = ANG2RAD(InvAngle(angle));
 
 	for (i = 0; i < (INT32)nrPlaneVerts; i++,v3d++)
 	{
 		// Go from the polysector's original vertex locations
 		// Means the flat is offset based on the original vertex locations
-		if (texflat)
-		{
-			v3d->s = (float)(FIXED_TO_FLOAT(polysector->origVerts[i].x) / fflatwidth) + scrollx;
-			v3d->t = -(float)(FIXED_TO_FLOAT(polysector->origVerts[i].y) / fflatheight) + scrolly;
-		}
-		else
-		{
-			v3d->s = (float)((FIXED_TO_FLOAT(polysector->origVerts[i].x) / fflatwidth) - flatxref + scrollx);
-			v3d->t = (float)(flatyref - (FIXED_TO_FLOAT(polysector->origVerts[i].y) / fflatheight) + scrolly);
-		}
+		v3d->s = (FixedToFloat(polysector->origVerts[i].x) / fflatwidth) + (scrollx / xscale);
+		v3d->t = -(FixedToFloat(polysector->origVerts[i].y) / fflatheight) + (scrolly / yscale);
 
 		// Need to rotate before translate
 		if (angle) // Only needs to be done if there's an altered angle
@@ -2857,6 +2820,9 @@ static void HWR_RenderPolyObjectPlane(polyobj_t *polysector, boolean isceiling, 
 			v3d->s = (tempxsow * cos(anglef)) - (tempytow * sin(anglef));
 			v3d->t = (tempxsow * sin(anglef)) + (tempytow * cos(anglef));
 		}
+
+		v3d->s *= xscale;
+		v3d->t *= yscale;
 
 		v3d->x = FIXED_TO_FLOAT(polysector->vertices[i]->x);
 		v3d->y = height;

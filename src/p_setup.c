@@ -1055,6 +1055,9 @@ static void P_LoadSectors(UINT8 *data)
 		ss->floorxoffset = ss->flooryoffset = 0;
 		ss->ceilingxoffset = ss->ceilingyoffset = 0;
 
+		ss->floorxscale = ss->flooryscale = FRACUNIT;
+		ss->ceilingxscale = ss->ceilingyscale = FRACUNIT;
+
 		ss->floorangle = ss->ceilingangle = 0;
 
 		ss->floorlightlevel = ss->ceilinglightlevel = 0;
@@ -1696,6 +1699,14 @@ static void ParseTextmapSectorParameter(UINT32 i, const char *param, const char 
 		sectors[i].ceilingxoffset = FLOAT_TO_FIXED(atof(val));
 	else if (fastcmp(param, "ypanningceiling"))
 		sectors[i].ceilingyoffset = FLOAT_TO_FIXED(atof(val));
+	else if (fastcmp(param, "xscalefloor"))
+		sectors[i].floorxscale = FLOAT_TO_FIXED(atof(val));
+	else if (fastcmp(param, "yscalefloor"))
+		sectors[i].flooryscale = FLOAT_TO_FIXED(atof(val));
+	else if (fastcmp(param, "xscaleceiling"))
+		sectors[i].ceilingxscale = FLOAT_TO_FIXED(atof(val));
+	else if (fastcmp(param, "yscaleceiling"))
+		sectors[i].ceilingyscale = FLOAT_TO_FIXED(atof(val));
 	else if (fastcmp(param, "rotationfloor"))
 		sectors[i].floorangle = FixedAngle(FLOAT_TO_FIXED(atof(val)));
 	else if (fastcmp(param, "rotationceiling"))
@@ -2685,6 +2696,14 @@ static void P_WriteTextmap(void)
 			fprintf(f, "xpanningceiling = %f;\n", FIXED_TO_FLOAT(tempsec.ceilingxoffset));
 		if (tempsec.ceilingyoffset != 0)
 			fprintf(f, "ypanningceiling = %f;\n", FIXED_TO_FLOAT(tempsec.ceilingyoffset));
+		if (tempsec.floorxscale != 0)
+			fprintf(f, "xscalefloor = %f;\n", FIXED_TO_FLOAT(tempsec.floorxscale));
+		if (tempsec.flooryscale != 0)
+			fprintf(f, "yscalefloor = %f;\n", FIXED_TO_FLOAT(tempsec.flooryscale));
+		if (tempsec.ceilingxscale != 0)
+			fprintf(f, "xscaleceiling = %f;\n", FIXED_TO_FLOAT(tempsec.ceilingxscale));
+		if (tempsec.ceilingyscale != 0)
+			fprintf(f, "yscaleceiling = %f;\n", FIXED_TO_FLOAT(tempsec.ceilingyscale));
 		if (wsectors[i].floorangle != 0)
 			fprintf(f, "rotationfloor = %f;\n", FIXED_TO_FLOAT(AngleFixed(wsectors[i].floorangle)));
 		if (wsectors[i].ceilingangle != 0)
@@ -2919,6 +2938,9 @@ static void P_LoadTextmap(void)
 
 		sc->floorxoffset = sc->flooryoffset = 0;
 		sc->ceilingxoffset = sc->ceilingyoffset = 0;
+
+		sc->floorxscale = sc->flooryscale = FRACUNIT;
+		sc->ceilingxscale = sc->ceilingyscale = FRACUNIT;
 
 		sc->floorangle = sc->ceilingangle = 0;
 
