@@ -564,8 +564,11 @@ typedef struct
 	fixed_t rowoffset;
 
 	// per-texture offsets for UDMF
-	fixed_t offsetx_top, offsetx_mid, offsetx_bot;
-	fixed_t offsety_top, offsety_mid, offsety_bot;
+	fixed_t offsetx_top, offsetx_mid, offsetx_bottom;
+	fixed_t offsety_top, offsety_mid, offsety_bottom;
+
+	fixed_t scalex_top, scalex_mid, scalex_bottom;
+	fixed_t scaley_top, scaley_mid, scaley_bottom;
 
 	// Texture indices.
 	// We do not maintain names here.
@@ -759,10 +762,13 @@ typedef struct drawseg_s
 	fixed_t bsilheight; // do not clip sprites above this
 	fixed_t tsilheight; // do not clip sprites below this
 
+	fixed_t offsetx;
+
 	// Pointers to lists for sprite clipping, all three adjusted so [x1] is first value.
 	INT16 *sprtopclip;
 	INT16 *sprbottomclip;
 	fixed_t *maskedtexturecol;
+	fixed_t *invscale;
 
 	struct visplane_s *ffloorplanes[MAXFFLOORS];
 	INT32 numffloorplanes;
