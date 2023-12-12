@@ -2717,11 +2717,11 @@ static void P_WriteTextmap(void)
 
 			if (lightcolor != 0)
 				fprintf(f, "lightcolor = %d;\n", lightcolor);
-			if (lightalpha != 25)
+			if (lightalpha != 255)
 				fprintf(f, "lightalpha = %d;\n", lightalpha);
 			if (fadecolor != 0)
 				fprintf(f, "fadecolor = %d;\n", fadecolor);
-			if (fadealpha != 25)
+			if (fadealpha != 255)
 				fprintf(f, "fadealpha = %d;\n", fadealpha);
 			if (wsectors[i].extra_colormap->fadestart != 0)
 				fprintf(f, "fadestart = %d;\n", wsectors[i].extra_colormap->fadestart);
@@ -2961,9 +2961,9 @@ static void P_LoadTextmap(void)
 
 		textmap_colormap.used = false;
 		textmap_colormap.lightcolor = 0;
-		textmap_colormap.lightalpha = 25;
+		textmap_colormap.lightalpha = 255;
 		textmap_colormap.fadecolor = 0;
-		textmap_colormap.fadealpha = 25;
+		textmap_colormap.fadealpha = 255;
 		textmap_colormap.fadestart = 0;
 		textmap_colormap.fadeend = 31;
 		textmap_colormap.flags = 0;
