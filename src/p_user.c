@@ -17,7 +17,8 @@
 #include "doomdef.h"
 #include "i_system.h"
 #include "d_event.h"
-#include "d_net.h"
+#include "netcode/d_net.h"
+#include "netcode/net_command.h"
 #include "g_game.h"
 #include "p_local.h"
 #include "r_fps.h"
@@ -105,8 +106,7 @@ void P_Thrust(mobj_t *mo, angle_t angle, fixed_t move)
 		mo->momy += FixedMul(move, FINESINE(angle));
 }
 
-#if 0
-static inline void P_ThrustEvenIn2D(mobj_t *mo, angle_t angle, fixed_t move)
+void P_ThrustEvenIn2D(mobj_t *mo, angle_t angle, fixed_t move)
 {
 	angle >>= ANGLETOFINESHIFT;
 
@@ -114,7 +114,7 @@ static inline void P_ThrustEvenIn2D(mobj_t *mo, angle_t angle, fixed_t move)
 	mo->momy += FixedMul(move, FINESINE(angle));
 }
 
-static inline void P_VectorInstaThrust(fixed_t xa, fixed_t xb, fixed_t xc, fixed_t ya, fixed_t yb, fixed_t yc,
+void P_VectorInstaThrust(fixed_t xa, fixed_t xb, fixed_t xc, fixed_t ya, fixed_t yb, fixed_t yc,
 	fixed_t za, fixed_t zb, fixed_t zc, fixed_t momentum, mobj_t *mo)
 {
 	fixed_t a1, b1, c1, a2, b2, c2, i, j, k;
@@ -144,7 +144,6 @@ static inline void P_VectorInstaThrust(fixed_t xa, fixed_t xb, fixed_t xc, fixed
 	mo->momy = j;
 	mo->momz = k;
 }
-#endif
 
 //
 // P_InstaThrust
@@ -686,7 +685,7 @@ static void P_DeNightserizePlayer(player_t *player)
 
 	player->mo->skin = &skins[player->skin];
 	player->followitem = skins[player->skin].followitem;
-	player->mo->color = player->skincolor;
+	player->mo->color = P_GetPlayerColor(player);
 	G_GhostAddColor(GHC_RETURNSKIN);
 
 	// Restore aiming angle
@@ -2774,6 +2773,7 @@ static void P_CheckBouncySectors(player_t *player)
 			if (!(rover->fofflags & FOF_EXISTS))
 				continue; // FOFs should not be bouncy if they don't even "exist"
 
+			// TODO: 2.3: Delete
 			// Handle deprecated bouncy FOF sector type
 			if (!udmf && GETSECSPECIAL(rover->master->frontsector->special, 1) == 15)
 			{
@@ -3032,7 +3032,7 @@ static void P_CheckInvincibilityTimer(player_t *player)
 				}
 				else
 				{
-					player->mo->color = player->skincolor;
+					player->mo->color = P_GetPlayerColor(player);
 					G_GhostAddColor(GHC_NORMAL);
 				}
 			}
@@ -4305,7 +4305,7 @@ static void P_DoSuperStuff(player_t *player)
 			}
 			else
 			{
-				player->mo->color = player->skincolor;
+				player->mo->color = P_GetPlayerColor(player);
 				G_GhostAddColor(GHC_NORMAL);
 			}
 
@@ -4355,7 +4355,7 @@ static void P_DoSuperStuff(player_t *player)
 			}
 			else
 			{
-				player->mo->color = player->skincolor;
+				player->mo->color = P_GetPlayerColor(player);
 				G_GhostAddColor(GHC_NORMAL);
 			}
 
@@ -4602,7 +4602,7 @@ void P_DoJump(player_t *player, boolean soundandstate)
 	}
 }
 
-static void P_DoSpinDashDust(player_t *player)
+void P_DoSpinDashDust(player_t *player)
 {
 	UINT32 i;
 	mobj_t *particle;
@@ -11159,7 +11159,7 @@ static void P_MinecartThink(player_t *player)
 					detright->drawonlyforplayer = player;
 				}
 				else
-					P_RemoveMobj(detleft);
+					P_RemoveMobj(detright);
 			}
 		}
 		else
@@ -11192,7 +11192,7 @@ static void P_MinecartThink(player_t *player)
 }
 
 // Handle Tails' fluff
-static void P_DoTailsOverlay(player_t *player, mobj_t *tails)
+void P_DoTailsOverlay(player_t *player, mobj_t *tails)
 {
 	// init...
 	boolean smilesonground = P_IsObjectOnGround(player->mo);
@@ -11389,7 +11389,7 @@ static void P_DoTailsOverlay(player_t *player, mobj_t *tails)
 	tails->y = player->mo->y + P_ReturnThrustY(tails, tails->angle, FixedMul(backwards, tails->scale));
 	tails->z = player->mo->z + zoffs;
 	P_SetThingPosition(tails);
-	
+
 	if (player->mo->flags2 & MF2_SHADOW)
 		tails->flags2 |= MF2_SHADOW;
 	else
@@ -11397,7 +11397,7 @@ static void P_DoTailsOverlay(player_t *player, mobj_t *tails)
 }
 
 // Metal Sonic's jet fume
-static void P_DoMetalJetFume(player_t *player, mobj_t *fume)
+void P_DoMetalJetFume(player_t *player, mobj_t *fume)
 {
 	static const UINT8 FUME_SKINCOLORS[] =
 	{
@@ -11535,6 +11535,30 @@ static void P_DoMetalJetFume(player_t *player, mobj_t *fume)
 	}
 }
 
+// Handle Followmobj behavior
+void P_DoFollowMobj(player_t *player, mobj_t *followmobj)
+{
+	if (LUA_HookFollowMobj(player, followmobj) || P_MobjWasRemoved(followmobj))
+		{;}
+	else
+	{
+		switch (followmobj->type)
+		{
+			case MT_TAILSOVERLAY: // c:
+				P_DoTailsOverlay(player, followmobj);
+				break;
+			case MT_METALJETFUME:
+				P_DoMetalJetFume(player, followmobj);
+				break;
+			default:
+				var1 = 1;
+				var2 = 0;
+				A_CapeChase(followmobj);
+				break;
+		}
+	}
+}
+
 //
 // P_PlayerThink
 //
@@ -11605,7 +11629,7 @@ void P_PlayerThink(player_t *player)
 		P_SetTarget(&player->awayviewmobj, NULL); // remove awayviewmobj asap if invalid
 		player->awayviewtics = 1; // reset to one, the below code will immediately set it to zero
 	}
-	
+
 	if (player->awayviewtics && player->awayviewtics != -1)
 	{
 		player->awayviewtics--;
@@ -12277,11 +12301,11 @@ void P_PlayerThink(player_t *player)
 		if (!(player->stronganim))
 			player->stronganim = player->panim;
 		else if (player->panim != player->stronganim)
-			player->powers[pw_strong] = STR_NONE; 
-	}	
+			player->powers[pw_strong] = STR_NONE;
+	}
 	else if (player->stronganim)
 		player->stronganim = 0;
-			
+
 	//pw_super acts as a timer now
 	if (player->powers[pw_super]
 	&& (player->mo->state < &states[S_PLAY_SUPER_TRANS1]
@@ -12388,7 +12412,7 @@ void P_PlayerThink(player_t *player)
 			if (player->jumpfactor < FixedMul(skins[player->skin].jumpfactor, 5*FRACUNIT/4)) // Boost jump height.
 				player->jumpfactor += FRACUNIT/300;
 
-			if ((player->charflags & SF_MACHINE) && (!(player->powers[pw_strong] == STR_METAL))) 
+			if ((player->charflags & SF_MACHINE) && (!(player->powers[pw_strong] == STR_METAL)))
 					player->powers[pw_strong] = STR_METAL;
 		}
 
@@ -13011,27 +13035,7 @@ void P_PlayerAfterThink(player_t *player)
 		}
 
 		if (player->followmobj)
-		{
-			if (LUA_HookFollowMobj(player, player->followmobj) || P_MobjWasRemoved(player->followmobj))
-				{;}
-			else
-			{
-				switch (player->followmobj->type)
-				{
-					case MT_TAILSOVERLAY: // c:
-						P_DoTailsOverlay(player, player->followmobj);
-						break;
-					case MT_METALJETFUME:
-						P_DoMetalJetFume(player, player->followmobj);
-						break;
-					default:
-						var1 = 1;
-						var2 = 0;
-						A_CapeChase(player->followmobj);
-						break;
-				}
-			}
-		}
+			P_DoFollowMobj(player, player->followmobj);
 	}
 
 	P_DoPlayerHeadSigns(player); // Spawn Tag/CTF signs over player's head
@@ -13118,4 +13122,17 @@ boolean P_PlayerShouldUseSpinHeight(player_t *player)
 		|| ((player->charflags & (SF_DASHMODE|SF_MACHINE)) == (SF_DASHMODE|SF_MACHINE)
 			&& player->dashmode >= DASHMODE_THRESHOLD && player->mo->state-states == S_PLAY_DASH)
 		|| JUMPCURLED(player));
+}
+
+UINT16 P_GetPlayerColor(player_t *player)
+{
+	if (G_GametypeHasTeams() && player->ctfteam)
+	{
+		if (player->ctfteam == 1)
+			return skincolor_redteam;
+		else if (player->ctfteam == 2)
+			return skincolor_blueteam;
+	}
+
+	return player->skincolor;
 }

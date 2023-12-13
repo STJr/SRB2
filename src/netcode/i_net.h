@@ -18,8 +18,8 @@
 #pragma interface
 #endif
 
-#include "doomdef.h"
-#include "command.h"
+#include "../doomdef.h"
+#include "../command.h"
 
 /// \brief program net id
 #define DOOMCOM_ID (INT32)0x12345678l
