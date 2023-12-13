@@ -132,8 +132,6 @@ UINT32 nflatxshift, nflatyshift, nflatshiftup, nflatmask;
 #define RAINBOW_TT_CACHE_INDEX (MAXSKINS + 4)
 #define BLINK_TT_CACHE_INDEX (MAXSKINS + 5)
 #define DASHMODE_TT_CACHE_INDEX (MAXSKINS + 6)
-#define DEFAULT_STARTTRANSCOLOR 96
-#define NUM_PALETTE_ENTRIES 256
 
 static UINT8 **translationtablecache[MAXSKINS + 7] = {NULL};
 UINT8 skincolor_modified[MAXSKINCOLORS];

@@ -202,7 +202,7 @@ mobj_t *P_LookForEnemies(player_t *player, boolean nonenemies, boolean bullet);
 void P_NukeEnemies(mobj_t *inflictor, mobj_t *source, fixed_t radius);
 void P_Earthquake(mobj_t *inflictor, mobj_t *source, fixed_t radius);
 boolean P_HomingAttack(mobj_t *source, mobj_t *enemy); /// \todo doesn't belong in p_user
-boolean P_SuperReady(player_t *player);
+boolean P_SuperReady(player_t *player, boolean transform);
 void P_DoJump(player_t *player, boolean soundandstate);
 void P_DoSpinDashDust(player_t *player);
 #define P_AnalogMove(player) (P_ControlStyle(player) == CS_LMAOGALOG)
@@ -444,6 +444,10 @@ fixed_t P_CeilingzAtPos(fixed_t x, fixed_t y, fixed_t z, fixed_t height);
 boolean PIT_PushableMoved(mobj_t *thing);
 
 boolean P_DoSpring(mobj_t *spring, mobj_t *object);
+
+INT32 P_GetSectorLightAt(sector_t *sector, fixed_t x, fixed_t y, fixed_t z);
+extracolormap_t *P_GetColormapFromSectorAt(sector_t *sector, fixed_t x, fixed_t y, fixed_t z);
+extracolormap_t *P_GetSectorColormapAt(fixed_t x, fixed_t y, fixed_t z);
 
 //
 // P_SETUP
