@@ -5605,6 +5605,8 @@ static ffloor_t *P_AddFakeFloor(sector_t *sec, sector_t *sec2, line_t *master, I
 	fflr->bottompic = &sec2->floorpic;
 	fflr->bottomxoffs = &sec2->floorxoffset;
 	fflr->bottomyoffs = &sec2->flooryoffset;
+	fflr->bottomxscale = &sec2->floorxscale;
+	fflr->bottomyscale = &sec2->flooryscale;
 	fflr->bottomangle = &sec2->floorangle;
 
 	// Add the ceiling
@@ -5613,6 +5615,8 @@ static ffloor_t *P_AddFakeFloor(sector_t *sec, sector_t *sec2, line_t *master, I
 	fflr->toplightlevel = &sec2->lightlevel;
 	fflr->topxoffs = &sec2->ceilingxoffset;
 	fflr->topyoffs = &sec2->ceilingyoffset;
+	fflr->topxscale = &sec2->ceilingxscale;
+	fflr->topyscale = &sec2->ceilingyscale;
 	fflr->topangle = &sec2->ceilingangle;
 
 	// Add slopes

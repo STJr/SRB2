@@ -1055,6 +1055,9 @@ static void P_LoadSectors(UINT8 *data)
 		ss->floorxoffset = ss->flooryoffset = 0;
 		ss->ceilingxoffset = ss->ceilingyoffset = 0;
 
+		ss->floorxscale = ss->flooryscale = FRACUNIT;
+		ss->ceilingxscale = ss->ceilingyscale = FRACUNIT;
+
 		ss->floorangle = ss->ceilingangle = 0;
 
 		ss->floorlightlevel = ss->ceilinglightlevel = 0;
@@ -1352,8 +1355,11 @@ static void P_LoadSidedefs(UINT8 *data)
 		}
 		sd->rowoffset = SHORT(msd->rowoffset)<<FRACBITS;
 
-		sd->offsetx_top = sd->offsetx_mid = sd->offsetx_bot = 0;
-		sd->offsety_top = sd->offsety_mid = sd->offsety_bot = 0;
+		sd->offsetx_top = sd->offsetx_mid = sd->offsetx_bottom = 0;
+		sd->offsety_top = sd->offsety_mid = sd->offsety_bottom = 0;
+
+		sd->scalex_top = sd->scalex_mid = sd->scalex_bottom = FRACUNIT;
+		sd->scaley_top = sd->scaley_mid = sd->scaley_bottom = FRACUNIT;
 
 		P_SetSidedefSector(i, (UINT16)SHORT(msd->sector));
 
@@ -1693,6 +1699,14 @@ static void ParseTextmapSectorParameter(UINT32 i, const char *param, const char 
 		sectors[i].ceilingxoffset = FLOAT_TO_FIXED(atof(val));
 	else if (fastcmp(param, "ypanningceiling"))
 		sectors[i].ceilingyoffset = FLOAT_TO_FIXED(atof(val));
+	else if (fastcmp(param, "xscalefloor"))
+		sectors[i].floorxscale = FLOAT_TO_FIXED(atof(val));
+	else if (fastcmp(param, "yscalefloor"))
+		sectors[i].flooryscale = FLOAT_TO_FIXED(atof(val));
+	else if (fastcmp(param, "xscaleceiling"))
+		sectors[i].ceilingxscale = FLOAT_TO_FIXED(atof(val));
+	else if (fastcmp(param, "yscaleceiling"))
+		sectors[i].ceilingyscale = FLOAT_TO_FIXED(atof(val));
 	else if (fastcmp(param, "rotationfloor"))
 		sectors[i].floorangle = FixedAngle(FLOAT_TO_FIXED(atof(val)));
 	else if (fastcmp(param, "rotationceiling"))
@@ -1888,13 +1902,25 @@ static void ParseTextmapSidedefParameter(UINT32 i, const char *param, const char
 	else if (fastcmp(param, "offsetx_mid"))
 		sides[i].offsetx_mid = atol(val) << FRACBITS;
 	else if (fastcmp(param, "offsetx_bottom"))
-		sides[i].offsetx_bot = atol(val) << FRACBITS;
+		sides[i].offsetx_bottom = atol(val) << FRACBITS;
 	else if (fastcmp(param, "offsety_top"))
 		sides[i].offsety_top = atol(val) << FRACBITS;
 	else if (fastcmp(param, "offsety_mid"))
 		sides[i].offsety_mid = atol(val) << FRACBITS;
 	else if (fastcmp(param, "offsety_bottom"))
-		sides[i].offsety_bot = atol(val) << FRACBITS;
+		sides[i].offsety_bottom = atol(val) << FRACBITS;
+	else if (fastcmp(param, "scalex_top"))
+		sides[i].scalex_top = FLOAT_TO_FIXED(atof(val));
+	else if (fastcmp(param, "scalex_mid"))
+		sides[i].scalex_mid = FLOAT_TO_FIXED(atof(val));
+	else if (fastcmp(param, "scalex_bottom"))
+		sides[i].scalex_bottom = FLOAT_TO_FIXED(atof(val));
+	else if (fastcmp(param, "scaley_top"))
+		sides[i].scaley_top = FLOAT_TO_FIXED(atof(val));
+	else if (fastcmp(param, "scaley_mid"))
+		sides[i].scaley_mid = FLOAT_TO_FIXED(atof(val));
+	else if (fastcmp(param, "scaley_bottom"))
+		sides[i].scaley_bottom = FLOAT_TO_FIXED(atof(val));
 	else if (fastcmp(param, "texturetop"))
 		sides[i].toptexture = R_TextureNumForName(val);
 	else if (fastcmp(param, "texturebottom"))
@@ -2599,10 +2625,22 @@ static void P_WriteTextmap(void)
 			fprintf(f, "offsetx_mid = %d;\n", wsides[i].offsetx_mid >> FRACBITS);
 		if (wsides[i].offsety_mid != 0)
 			fprintf(f, "offsety_mid = %d;\n", wsides[i].offsety_mid >> FRACBITS);
-		if (wsides[i].offsetx_bot != 0)
-			fprintf(f, "offsetx_bottom = %d;\n", wsides[i].offsetx_bot >> FRACBITS);
-		if (wsides[i].offsety_bot != 0)
-			fprintf(f, "offsety_bottom = %d;\n", wsides[i].offsety_bot >> FRACBITS);
+		if (wsides[i].offsetx_bottom != 0)
+			fprintf(f, "offsetx_bottom = %d;\n", wsides[i].offsetx_bottom >> FRACBITS);
+		if (wsides[i].offsety_bottom != 0)
+			fprintf(f, "offsety_bottom = %d;\n", wsides[i].offsety_bottom >> FRACBITS);
+		if (wsides[i].scalex_top != FRACUNIT)
+			fprintf(f, "scalex_top = %f;\n", FIXED_TO_FLOAT(wsides[i].scalex_top));
+		if (wsides[i].scaley_top != FRACUNIT)
+			fprintf(f, "scaley_top = %f;\n", FIXED_TO_FLOAT(wsides[i].scaley_top));
+		if (wsides[i].scalex_mid != FRACUNIT)
+			fprintf(f, "scalex_mid = %f;\n", FIXED_TO_FLOAT(wsides[i].scalex_mid));
+		if (wsides[i].scaley_mid != FRACUNIT)
+			fprintf(f, "scaley_mid = %f;\n", FIXED_TO_FLOAT(wsides[i].scaley_mid));
+		if (wsides[i].scalex_bottom != FRACUNIT)
+			fprintf(f, "scalex_bottom = %f;\n", FIXED_TO_FLOAT(wsides[i].scalex_bottom));
+		if (wsides[i].scaley_bottom != FRACUNIT)
+			fprintf(f, "scaley_bottom = %f;\n", FIXED_TO_FLOAT(wsides[i].scaley_bottom));
 		if (wsides[i].toptexture > 0 && wsides[i].toptexture < numtextures)
 			fprintf(f, "texturetop = \"%.*s\";\n", 8, textures[wsides[i].toptexture]->name);
 		if (wsides[i].bottomtexture > 0 && wsides[i].bottomtexture < numtextures)
@@ -2658,6 +2696,14 @@ static void P_WriteTextmap(void)
 			fprintf(f, "xpanningceiling = %f;\n", FIXED_TO_FLOAT(tempsec.ceilingxoffset));
 		if (tempsec.ceilingyoffset != 0)
 			fprintf(f, "ypanningceiling = %f;\n", FIXED_TO_FLOAT(tempsec.ceilingyoffset));
+		if (tempsec.floorxscale != 0)
+			fprintf(f, "xscalefloor = %f;\n", FIXED_TO_FLOAT(tempsec.floorxscale));
+		if (tempsec.flooryscale != 0)
+			fprintf(f, "yscalefloor = %f;\n", FIXED_TO_FLOAT(tempsec.flooryscale));
+		if (tempsec.ceilingxscale != 0)
+			fprintf(f, "xscaleceiling = %f;\n", FIXED_TO_FLOAT(tempsec.ceilingxscale));
+		if (tempsec.ceilingyscale != 0)
+			fprintf(f, "yscaleceiling = %f;\n", FIXED_TO_FLOAT(tempsec.ceilingyscale));
 		if (wsectors[i].floorangle != 0)
 			fprintf(f, "rotationfloor = %f;\n", FIXED_TO_FLOAT(AngleFixed(wsectors[i].floorangle)));
 		if (wsectors[i].ceilingangle != 0)
@@ -2893,6 +2939,9 @@ static void P_LoadTextmap(void)
 		sc->floorxoffset = sc->flooryoffset = 0;
 		sc->ceilingxoffset = sc->ceilingyoffset = 0;
 
+		sc->floorxscale = sc->flooryscale = FRACUNIT;
+		sc->ceilingxscale = sc->ceilingyscale = FRACUNIT;
+
 		sc->floorangle = sc->ceilingangle = 0;
 
 		sc->floorlightlevel = sc->ceilinglightlevel = 0;
@@ -2979,8 +3028,10 @@ static void P_LoadTextmap(void)
 		// Defaults.
 		sd->textureoffset = 0;
 		sd->rowoffset = 0;
-		sd->offsetx_top = sd->offsetx_mid = sd->offsetx_bot = 0;
-		sd->offsety_top = sd->offsety_mid = sd->offsety_bot = 0;
+		sd->offsetx_top = sd->offsetx_mid = sd->offsetx_bottom = 0;
+		sd->offsety_top = sd->offsety_mid = sd->offsety_bottom = 0;
+		sd->scalex_top = sd->scalex_mid = sd->scalex_bottom = FRACUNIT;
+		sd->scaley_top = sd->scaley_mid = sd->scaley_bottom = FRACUNIT;
 		sd->toptexture = R_TextureNumForName("-");
 		sd->midtexture = R_TextureNumForName("-");
 		sd->bottomtexture = R_TextureNumForName("-");
@@ -3306,7 +3357,7 @@ static void P_LoadSegs(UINT8 *data)
 
 		seg->length = P_SegLength(seg);
 #ifdef HWRENDER
-		seg->flength = (rendermode == render_opengl) ? P_SegLengthFloat(seg) : 0;
+		seg->flength = P_SegLengthFloat(seg);
 #endif
 
 		seg->glseg = false;
@@ -3548,7 +3599,7 @@ static boolean P_LoadExtendedSubsectorsAndSegs(UINT8 **data, nodetype_t nodetype
 		}
 		seg->length = P_SegLength(seg);
 #ifdef HWRENDER
-		seg->flength = (rendermode == render_opengl) ? P_SegLengthFloat(seg) : 0;
+		seg->flength = P_SegLengthFloat(seg);
 #endif
 	}
 
