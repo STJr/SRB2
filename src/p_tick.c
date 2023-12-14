@@ -690,24 +690,10 @@ void P_Ticker(boolean run)
 {
 	INT32 i;
 
-	// Increment jointime and quittime even if paused
+	// Increment jointime even if paused
 	for (i = 0; i < MAXPLAYERS; i++)
 		if (playeringame[i])
-		{
 			players[i].jointime++;
-
-			if (players[i].quittime)
-			{
-				players[i].quittime++;
-
-				if (players[i].quittime == 30 * TICRATE && G_TagGametype())
-					P_CheckSurvivors();
-
-				if (server && players[i].quittime >= (tic_t)FixedMul(cv_rejointimeout.value, 60 * TICRATE)
-				&& !(players[i].quittime % TICRATE))
-					SendKick(i, KICK_MSG_PLAYER_QUIT);
-			}
-		}
 
 	if (objectplacing)
 	{
