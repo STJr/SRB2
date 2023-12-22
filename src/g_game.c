@@ -5387,17 +5387,19 @@ INT32 G_FindMapByNameOrCode(const char *mapname, char **realmapnamep)
 	if (mapnamelen == 1)
 	{
 		if (mapname[0] == '*') // current map
-			return gamemap;
+		{
+			usemapcode = true;
+			newmapnum = gamemap;
+		}
 		else if (mapname[0] == '+' && mapheaderinfo[gamemap-1]) // next map
 		{
+			usemapcode = true;
 			newmapnum = mapheaderinfo[gamemap-1]->nextlevel;
 			if (newmapnum < 1 || newmapnum > NUMMAPS)
 			{
 				CONS_Alert(CONS_ERROR, M_GetText("NextLevel (%d) is not a valid map.\n"), newmapnum);
 				return 0;
 			}
-			else
-				return newmapnum;
 		}
 	}
 	else if (mapnamelen == 2)/* maybe two digit code */
