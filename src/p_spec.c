@@ -2735,7 +2735,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 				mo->player->rmomx = mo->player->rmomy = 1;
 				mo->player->cmomx = mo->player->cmomy = 0;
 				P_ResetPlayer(mo->player);
-				P_SetPlayerMobjState(mo, S_PLAY_STND);
+				P_SetMobjState(mo, S_PLAY_STND);
 
 				// Reset bot too.
 				if (bot) {
@@ -2746,7 +2746,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 					bot->player->rmomx = bot->player->rmomy = 1;
 					bot->player->cmomx = bot->player->cmomy = 0;
 					P_ResetPlayer(bot->player);
-					P_SetPlayerMobjState(bot, S_PLAY_STND);
+					P_SetMobjState(bot, S_PLAY_STND);
 				}
 			}
 			break;
@@ -4566,7 +4566,7 @@ static void P_ProcessSpeedPad(player_t *player, sector_t *sector, sector_t *rove
 		if (!(player->pflags & PF_SPINNING))
 			player->pflags |= PF_SPINNING;
 
-		P_SetPlayerMobjState(player->mo, S_PLAY_ROLL);
+		P_SetMobjState(player->mo, S_PLAY_ROLL);
 	}
 
 	player->powers[pw_flashing] = TICRATE/3;
@@ -4744,7 +4744,7 @@ static void P_ProcessZoomTube(player_t *player, mtag_t sectag, boolean end)
 
 	if (player->mo->state-states != S_PLAY_ROLL)
 	{
-		P_SetPlayerMobjState(player->mo, S_PLAY_ROLL);
+		P_SetMobjState(player->mo, S_PLAY_ROLL);
 		S_StartSound(player->mo, sfx_spin);
 	}
 }
@@ -4958,7 +4958,7 @@ static void P_ProcessRopeHang(player_t *player, mtag_t sectag)
 	player->pflags &= ~(PF_JUMPED|PF_NOJUMPDAMAGE|PF_GLIDING|PF_BOUNCING|PF_SLIDING|PF_CANCARRY);
 	player->climbing = 0;
 	P_SetThingPosition(player->mo);
-	P_SetPlayerMobjState(player->mo, S_PLAY_RIDE);
+	P_SetMobjState(player->mo, S_PLAY_RIDE);
 }
 
 static boolean P_SectorHasSpecial(sector_t *sec)
@@ -5017,7 +5017,7 @@ static void P_EvaluateSpecialFlags(player_t *player, sector_t *sector, sector_t 
 		if (!player->powers[pw_carry])
 		{
 			P_ResetPlayer(player);
-			P_SetPlayerMobjState(player->mo, S_PLAY_FALL);
+			P_SetMobjState(player->mo, S_PLAY_FALL);
 			P_SetTarget(&player->mo->tracer, player->mo);
 			player->powers[pw_carry] = CR_FAN;
 		}
@@ -5032,7 +5032,7 @@ static void P_EvaluateSpecialFlags(player_t *player, sector_t *sector, sector_t 
 		if (!(player->pflags & PF_SPINNING))
 		{
 			player->pflags |= PF_SPINNING;
-			P_SetPlayerMobjState(player->mo, S_PLAY_ROLL);
+			P_SetMobjState(player->mo, S_PLAY_ROLL);
 			S_StartAttackSound(player->mo, sfx_spin);
 
 			if (abs(player->rmomx) < FixedMul(5*FRACUNIT, player->mo->scale)

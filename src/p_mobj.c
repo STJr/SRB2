@@ -177,7 +177,7 @@ static void P_CyclePlayerMobjState(mobj_t *mobj)
 
 		// you can cycle through multiple states in a tic
 		if (!mobj->tics && mobj->state)
-			if (!P_SetPlayerMobjState(mobj, mobj->state->nextstate))
+			if (!P_SetMobjState(mobj, mobj->state->nextstate))
 				return; // freed itself
 	}
 }
@@ -188,7 +188,7 @@ static void P_CyclePlayerMobjState(mobj_t *mobj)
 //
 // Separate from P_SetMobjState because of the pw_flashing check and Super states
 //
-boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
+static boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 {
 	state_t *st;
 	player_t *player = mobj->player;
@@ -514,10 +514,8 @@ boolean P_SetMobjState(mobj_t *mobj, statenum_t state)
 	statenum_t i = state; // initial state
 	statenum_t tempstate[NUMSTATES]; // for use with recursion
 
-#ifdef PARANOIA
 	if (mobj->player != NULL)
-		I_Error("P_SetMobjState used for player mobj. Use P_SetPlayerMobjState instead!\n(State called: %d)", state);
-#endif
+		P_SetPlayerMobjState(mobj, state);
 
 	if (recursion++) // if recursion detected,
 		memset(seenstate = tempstate, 0, sizeof tempstate); // clear state table
@@ -1648,7 +1646,7 @@ static void P_XYFriction(mobj_t *mo, fixed_t oldx, fixed_t oldy)
 		{
 			// if in a walking frame, stop moving
 			if (player->panim == PA_WALK)
-				P_SetPlayerMobjState(mo, S_PLAY_STND);
+				P_SetMobjState(mo, S_PLAY_STND);
 			mo->momx = player->cmomx;
 			mo->momy = player->cmomy;
 		}
@@ -2974,7 +2972,7 @@ void P_PlayerZMovement(mobj_t *mo)
 		}
 		// Get up if you fell.
 		if (mo->player->panim == PA_PAIN)
-			P_SetPlayerMobjState(mo, S_PLAY_WALK);
+			P_SetMobjState(mo, S_PLAY_WALK);
 
 		if (!mo->standingslope && (mo->eflags & MFE_VERTICALFLIP ? tmceilingslope : tmfloorslope)) {
 			// Handle landing on slope during Z movement
@@ -3957,7 +3955,7 @@ static void P_PlayerMobjThinker(mobj_t *mobj)
 		{
 			mobj->player->secondjump = 0;
 			mobj->player->powers[pw_tailsfly] = 0;
-			P_SetPlayerMobjState(mobj, S_PLAY_WALK);
+			P_SetMobjState(mobj, S_PLAY_WALK);
 		}
 #endif
 		mobj->eflags &= ~MFE_JUSTHITFLOOR;
@@ -7549,7 +7547,7 @@ static void P_RosySceneryThink(mobj_t *mobj)
 		if (stat == S_ROSY_HUG)
 		{
 			if (player->panim != PA_IDLE)
-				P_SetPlayerMobjState(mobj->target, S_PLAY_STND);
+				P_SetMobjState(mobj->target, S_PLAY_STND);
 			player->pflags |= PF_STASIS;
 		}
 
@@ -11771,9 +11769,9 @@ void P_MovePlayerToSpawn(INT32 playernum, mapthing_t *mthing)
 			mobj->flags2 |= MF2_OBJECTFLIP;
 		}
 		if (mthing->args[0])
-			P_SetPlayerMobjState(mobj, S_PLAY_FALL);
+			P_SetMobjState(mobj, S_PLAY_FALL);
 		else if (metalrecording)
-			P_SetPlayerMobjState(mobj, S_PLAY_WAIT);
+			P_SetMobjState(mobj, S_PLAY_WAIT);
 	}
 	else
 		z = floor;
