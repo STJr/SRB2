@@ -515,7 +515,7 @@ boolean P_SetMobjState(mobj_t *mobj, statenum_t state)
 	statenum_t tempstate[NUMSTATES]; // for use with recursion
 
 	if (mobj->player != NULL)
-		P_SetPlayerMobjState(mobj, state);
+		return P_SetPlayerMobjState(mobj, state);
 
 	if (recursion++) // if recursion detected,
 		memset(seenstate = tempstate, 0, sizeof tempstate); // clear state table
