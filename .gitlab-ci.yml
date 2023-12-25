@@ -566,19 +566,19 @@ Alpine 3 GCC:
           echo Adding ccache configution option
       - |
           # base_dir
-          echo base_dir = $PWD                  | tee --append ~/.ccache/ccache.conf
+          echo base_dir = $PWD                  | tee -a ~/.ccache/ccache.conf
       - |
           # cache_dir
-          echo cache_dir = $PWD/ccache          | tee --append ~/.ccache/ccache.conf
+          echo cache_dir = $PWD/ccache          | tee -a ~/.ccache/ccache.conf
       - |
           # compiler_check
-          echo compiler_check = content         | tee --append ~/.ccache/ccache.conf
+          echo compiler_check = content         | tee -a ~/.ccache/ccache.conf
       - |
           # stats_log
-          echo stats_log = $PWD/ccache_statslog | tee --append ~/.ccache/ccache.conf
+          echo stats_log = $PWD/ccache_statslog | tee -a ~/.ccache/ccache.conf
       - |
           # max_size
-          echo max_size = 50M                   | tee --append ~/.ccache/ccache.conf
+          echo max_size = 50M                   | tee -a ~/.ccache/ccache.conf
       - |
           # ccache_config
           echo -e "\e[0Ksection_end:`date +%s`:ccache_config\r\e[0K"
