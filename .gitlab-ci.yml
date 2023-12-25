@@ -172,6 +172,10 @@ Debian testing GCC:
   allow_failure: true
 
   artifacts:
+    paths:
+      - "bin/"
+      - "src/comptime.h"
+    expose_as: "testing-gcc"
     name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-testing-gcc"
 
   variables:
@@ -406,6 +410,10 @@ Debian stable Clang:
   allow_failure: true
 
   artifacts:
+    paths:
+      - "bin/"
+      - "src/comptime.h"
+    expose_as: "clang"
     name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-clang"
 
   variables:
@@ -447,6 +455,10 @@ Debian stable musl:
   allow_failure: true
 
   artifacts:
+    paths:
+      - "bin/"
+      - "src/comptime.h"
+    expose_as: "musl"
     name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-musl"
 
   variables:
@@ -486,6 +498,10 @@ Debian testing Clang:
   image: debian:testing-slim
 
   artifacts:
+    paths:
+      - "bin/"
+      - "src/comptime.h"
+    expose_as: "testing-clang"
     name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-testing-clang"
 
   variables:
@@ -502,6 +518,10 @@ Debian testing musl:
   image: debian:testing-slim
 
   artifacts:
+    paths:
+      - "bin/"
+      - "src/comptime.h"
+    expose_as: "testing-musl"
     name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-testing-musl"
 
   variables:
@@ -519,7 +539,11 @@ Alpine 3 GCC:
   allow_failure: true
 
   artifacts:
-    name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-Apline-3-gcc"
+    paths:
+      - "bin/"
+      - "src/comptime.h"
+    expose_as: "Apline-3"
+    name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-Apline-3"
 
   before_script:
     - - |
