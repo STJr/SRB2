@@ -356,7 +356,7 @@ angle_t R_PointToAngle2(fixed_t pviewx, fixed_t pviewy, fixed_t x, fixed_t y)
 fixed_t R_PointToDist2(fixed_t px2, fixed_t py2, fixed_t px1, fixed_t py1)
 {
 	angle_t angle;
-	fixed_t dx, dy, dist;
+	ufixed_t dx, dy, dist;
 
 	dx = abs(px1 - px2);
 	dy = abs(py1 - py2);
