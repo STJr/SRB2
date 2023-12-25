@@ -620,6 +620,10 @@ void D_RegisterServerCommands(void)
 	CV_RegisterVar(&cv_addons_folder);
 
 	CV_RegisterVar(&cv_dummyconsvar);
+
+	CV_RegisterVar(&cv_chatspamprotection);
+	CV_RegisterVar(&cv_chatspamspeed);
+	CV_RegisterVar(&cv_chatspamburst);
 }
 
 // =========================================================================
@@ -763,7 +767,6 @@ void D_RegisterClientCommands(void)
 	CV_RegisterVar(&cv_chatheight);
 	CV_RegisterVar(&cv_chatwidth);
 	CV_RegisterVar(&cv_chattime);
-	CV_RegisterVar(&cv_chatspamprotection);
 	CV_RegisterVar(&cv_chatbacktint);
 	CV_RegisterVar(&cv_consolechat);
 	CV_RegisterVar(&cv_chatnotifications);

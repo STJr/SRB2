@@ -308,7 +308,9 @@ consvar_t cv_chatheight= CVAR_INIT ("chatheight", "8", CV_SAVE, chatheight_cons_
 consvar_t cv_chatnotifications= CVAR_INIT ("chatnotifications", "On", CV_SAVE, CV_OnOff, NULL);
 
 // chat spam protection (why would you want to disable that???)
-consvar_t cv_chatspamprotection= CVAR_INIT ("chatspamprotection", "On", CV_SAVE, CV_OnOff, NULL);
+consvar_t cv_chatspamprotection= CVAR_INIT ("chatspamprotection", "On", CV_SAVE|CV_NETVAR, CV_OnOff, NULL);
+consvar_t cv_chatspamspeed= CVAR_INIT ("chatspamspeed", "35", CV_SAVE|CV_NETVAR, CV_Unsigned, NULL);
+consvar_t cv_chatspamburst= CVAR_INIT ("chatspamburst", "3", CV_SAVE|CV_NETVAR, CV_Unsigned, NULL);
 
 // minichat text background
 consvar_t cv_chatbacktint = CVAR_INIT ("chatbacktint", "On", CV_SAVE, CV_OnOff, NULL);
