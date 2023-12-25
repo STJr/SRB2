@@ -551,7 +551,7 @@ Alpine 3 GCC:
           echo -e "\e[0Ksection_start:`date +%s`:apk_cache[collapsed=true]\r\e[0KUpdating APK listing"
       - export APK_CACHE_DIR=`pwd`/apk-cache
       - mkdir --parents --verbose $APK_CACHE_DIR/
-      - ln -s /etc/apk/cache $APK_CACHE_DIR
+      - ln -sf /etc/apk/cache $APK_CACHE_DIR
       - |
           # apk_cache
           echo -e "\e[0Ksection_end:`date +%s`:apk_cache\r\e[0K"
