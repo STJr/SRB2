@@ -532,7 +532,7 @@ Debian testing musl:
 Alpine 3 GCC:
   stage: build
 
-  when: manual
+  when: on_success
 
   image: alpine:3
 
