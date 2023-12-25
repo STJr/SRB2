@@ -254,6 +254,7 @@ target_compile_options(SRB2SDL2 PRIVATE
 		-Winline
 		-Wformat-y2k
 		-Wformat-security
+		-fwrapv
 
 		$<$<VERSION_LESS:$<C_COMPILER_VERSION>,2.9.5>:
 			-Wno-div-by-zero
@@ -323,6 +324,7 @@ target_compile_options(SRB2SDL2 PRIVATE
 		-Wno-error=non-literal-null-conversion
 		-Wno-error=constant-conversion
 		-Wno-error=unused-but-set-variable
+		-fwrapv
 	>
 
 	# C, MSVC
