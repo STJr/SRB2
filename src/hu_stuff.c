@@ -79,6 +79,7 @@ patch_t *nto_font[NT_FONTSIZE];
 
 static player_t *plr;
 boolean chat_on; // entering a chat message?
+boolean chat_on_first_event; // blocker for first chat input event
 static char w_chat[HU_MAXMSGLEN + 1];
 static size_t c_input = 0; // let's try to make the chat input less shitty.
 static boolean headsupactive = false;
@@ -1025,7 +1026,7 @@ boolean HU_Responder(event_t *ev)
 {
 	INT32 c=0;
 
-	if (ev->type != ev_keydown)
+	if (ev->type != ev_keydown && ev->type != ev_text)
 		return false;
 
 	// only KeyDown events now...
@@ -1054,11 +1055,15 @@ boolean HU_Responder(event_t *ev)
 
 	if (!chat_on)
 	{
+		if (ev->type == ev_text)
+			return false;
+
 		// enter chat mode
 		if ((ev->key == gamecontrol[GC_TALKKEY][0] || ev->key == gamecontrol[GC_TALKKEY][1])
 			&& netgame && !OLD_MUTE) // check for old chat mute, still let the players open the chat incase they want to scroll otherwise.
 		{
 			chat_on = true;
+			chat_on_first_event = false;
 			w_chat[0] = 0;
 			teamtalk = false;
 			chat_scrollmedown = true;
@@ -1069,6 +1074,7 @@ boolean HU_Responder(event_t *ev)
 			&& netgame && !OLD_MUTE)
 		{
 			chat_on = true;
+			chat_on_first_event = false;
 			w_chat[0] = 0;
 			teamtalk = G_GametypeHasTeams(); // Don't teamtalk if we don't have teams.
 			chat_scrollmedown = true;
@@ -1078,6 +1084,31 @@ boolean HU_Responder(event_t *ev)
 	}
 	else // if chat_on
 	{
+		if (!chat_on_first_event)
+		{
+			// since the text event is sent immediately after the keydown event,
+			// we need to make sure that nothing is displayed once the chat
+			// opens, otherwise a 't' would be outputted.
+			chat_on_first_event = true;
+			return true;
+		}
+
+		if (ev->type == ev_text)
+		{
+			if ((c < HU_FONTSTART || c > HU_FONTEND || !hu_font[c-HU_FONTSTART])
+				&& c != ' ') // Allow spaces, of course
+			{
+				return false;
+			}
+
+			if (CHAT_MUTE || strlen(w_chat) >= HU_MAXMSGLEN)
+				return true;
+
+			memmove(&w_chat[c_input + 1], &w_chat[c_input], strlen(w_chat) - c_input + 1);
+			w_chat[c_input] = c;
+			c_input++;
+			return true;
+		}
 
 		// Ignore modifier keys
 		// Note that we do this here so users can still set
@@ -1087,23 +1118,8 @@ boolean HU_Responder(event_t *ev)
 		 || ev->key == KEY_LALT || ev->key == KEY_RALT)
 			return true;
 
-		c = (INT32)ev->key;
-
-		// I know this looks very messy but this works. If it ain't broke, don't fix it!
-		// shift LETTERS to uppercase if we have capslock or are holding shift
-		if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z'))
-		{
-			if (shiftdown ^ capslock)
-				c = shiftxform[c];
-		}
-		else // if we're holding shift we should still shift non letter symbols
-		{
-			if (shiftdown)
-				c = shiftxform[c];
-		}
-
 		// pasting. pasting is cool. chat is a bit limited, though :(
-		if ((c == 'v' || c == 'V') && ctrldown)
+		if (c == 'v' && ctrldown)
 		{
 			const char *paste;
 			size_t chatlen;
@@ -1170,16 +1186,6 @@ boolean HU_Responder(event_t *ev)
 				c_input += M_JumpWord(&w_chat[c_input]);
 			else
 				c_input++;
-		}
-		else if ((c >= HU_FONTSTART && c <= HU_FONTEND && hu_font[c-HU_FONTSTART])
-			|| c == ' ') // Allow spaces, of course
-		{
-			if (CHAT_MUTE || strlen(w_chat) >= HU_MAXMSGLEN)
-				return true;
-
-			memmove(&w_chat[c_input + 1], &w_chat[c_input], strlen(w_chat) - c_input + 1);
-			w_chat[c_input] = c;
-			c_input++;
 		}
 		else if (c == KEY_BACKSPACE)
 		{
