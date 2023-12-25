@@ -614,6 +614,9 @@ void B_HandleFlightIndicator(player_t *player)
 
 		// otherwise, spawn it
 		P_SetTarget(&tails->hnext, P_SpawnMobjFromMobj(tails, 0, 0, 0, MT_OVERLAY));
+		if (P_MobjWasRemoved(tails->hnext))
+			return;  // we can't spawn one, so it can't exist
+
 		P_SetTarget(&tails->hnext->target, tails);
 		P_SetTarget(&tails->hnext->hprev, tails);
 		P_SetMobjState(tails->hnext, S_FLIGHTINDICATOR);

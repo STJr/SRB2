@@ -256,6 +256,9 @@ void P_DoNightsScore(player_t *player)
 		player->linktimer = nightslinktics;
 	}
 
+	if (P_MobjWasRemoved(dummymo))
+		return;
+
 	// Award 10-100 score, doubled if bonus time is active
 	P_AddPlayerScore(player, min(player->linkcount,10)*(player->bonustime ? 20 : 10));
 	P_SetMobjState(dummymo, (player->bonustime ? dummymo->info->xdeathstate : dummymo->info->spawnstate) + min(player->linkcount,10)-1);
@@ -1301,7 +1304,8 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			{
 				// A flicky orbits us now
 				mobj_t *flickyobj = P_SpawnMobj(toucher->x, toucher->y, toucher->z + toucher->info->height, MT_NIGHTOPIANHELPER);
-				P_SetTarget(&flickyobj->target, toucher);
+				if (!P_MobjWasRemoved(flickyobj))
+					P_SetTarget(&flickyobj->target, toucher);
 
 				player->powers[pw_nights_helper] = (UINT16)special->info->speed;
 			}
@@ -1312,7 +1316,8 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 					if (playeringame[i] && players[i].mo && players[i].powers[pw_carry] == CR_NIGHTSMODE) {
 						players[i].powers[pw_nights_helper] = (UINT16)special->info->speed;
 						flickyobj = P_SpawnMobj(players[i].mo->x, players[i].mo->y, players[i].mo->z + players[i].mo->info->height, MT_NIGHTOPIANHELPER);
-						P_SetTarget(&flickyobj->target, players[i].mo);
+						if (!P_MobjWasRemoved(flickyobj))
+							P_SetTarget(&flickyobj->target, players[i].mo);
 					}
 				if (special->info->deathsound != sfx_None)
 					S_StartSound(NULL, special->info->deathsound);
@@ -1821,9 +1826,12 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			if (!player->bot && player->bot != BOT_MPAI && special->fuse <= TICRATE && player->powers[pw_carry] != CR_MINECART && !(player->powers[pw_ignorelatch] & (1<<15)))
 			{
 				mobj_t *mcart = P_SpawnMobj(special->x, special->y, special->z, MT_MINECART);
-				P_SetTarget(&mcart->target, toucher);
-				mcart->angle = toucher->angle = player->drawangle = special->angle;
-				mcart->friction = FRACUNIT;
+				if (!P_MobjWasRemoved(mcart))
+				{
+					P_SetTarget(&mcart->target, toucher);
+					mcart->angle = toucher->angle = player->drawangle = special->angle;
+					mcart->friction = FRACUNIT;
+				}
 
 				P_ResetPlayer(player);
 				player->pflags |= PF_JUMPDOWN;
@@ -2593,7 +2601,8 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 							break;
 					}
 
-					P_SetMobjState(scoremobj, scorestate);
+					if (!P_MobjWasRemoved(scoremobj))
+						P_SetMobjState(scoremobj, scorestate);
 
 					source->player->scoreadd = locscoreadd;
 				}
@@ -2754,6 +2763,8 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 				mo = P_SpawnMobj(inflictor->x + inflictor->momx, inflictor->y + inflictor->momy, inflictor->z + (inflictor->height / 2) + inflictor->momz, MT_EXTRALARGEBUBBLE);
 			else
 				mo = P_SpawnMobj(target->x, target->y, target->z, MT_EXTRALARGEBUBBLE);
+			if (P_MobjWasRemoved(mo))
+				break;
 			mo->destscale = target->scale;
 			P_SetScale(mo, mo->destscale);
 			P_SetMobjState(mo, mo->info->raisestate);
@@ -2832,8 +2843,11 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 					mo->angle = FixedAngle((P_RandomKey(36)*10)<<FRACBITS);
 
 					mo2 = P_SpawnMobjFromMobj(mo, 0, 0, 0, MT_BOSSJUNK);
-					mo2->angle = mo->angle;
-					P_SetMobjState(mo2, S_BOSSSEBH2);
+					if (!P_MobjWasRemoved(mo2))
+					{
+						mo2->angle = mo->angle;
+						P_SetMobjState(mo2, S_BOSSSEBH2);
+					}
 
 					if (++i == 2) // we've already removed 2 of these, let's stop now
 						break;
@@ -2932,7 +2946,10 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 			if (flip)
 				momz *= -1;
 #define makechunk(angtweak, xmov, ymov) \
+			do {\
 			chunk = P_SpawnMobjFromMobj(target, 0, 0, 0, MT_SPIKE);\
+			if (P_MobjWasRemoved(chunk))\
+				break;\
 			P_SetMobjState(chunk, target->info->xdeathstate);\
 			chunk->health = 0;\
 			chunk->angle = angtweak;\
@@ -2942,7 +2959,8 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 			chunk->y += ymov;\
 			P_SetThingPosition(chunk);\
 			P_InstaThrust(chunk,chunk->angle, 4*scale);\
-			chunk->momz = momz
+			chunk->momz = momz;\
+			} while (0)
 
 			makechunk(ang + ANGLE_180, -xoffs, -yoffs);
 			makechunk(ang, xoffs, yoffs);
@@ -2955,20 +2973,23 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 			momz *= -1;
 
 		chunk = P_SpawnMobjFromMobj(target, 0, 0, 0, MT_SPIKE);
-		P_SetMobjState(chunk, target->info->deathstate);
-		chunk->health = 0;
-		chunk->angle = ang + ANGLE_180;
-		P_UnsetThingPosition(chunk);
-		chunk->flags = MF_NOCLIP;
-		chunk->x -= xoffs;
-		chunk->y -= yoffs;
-		if (flip)
-			chunk->z -= 12*scale;
-		else
-			chunk->z += 12*scale;
-		P_SetThingPosition(chunk);
-		P_InstaThrust(chunk, chunk->angle, 2*scale);
-		chunk->momz = momz;
+		if (!P_MobjWasRemoved(chunk))
+		{
+			P_SetMobjState(chunk, target->info->deathstate);
+			chunk->health = 0;
+			chunk->angle = ang + ANGLE_180;
+			P_UnsetThingPosition(chunk);
+			chunk->flags = MF_NOCLIP;
+			chunk->x -= xoffs;
+			chunk->y -= yoffs;
+			if (flip)
+				chunk->z -= 12*scale;
+			else
+				chunk->z += 12*scale;
+			P_SetThingPosition(chunk);
+			P_InstaThrust(chunk, chunk->angle, 2*scale);
+			chunk->momz = momz;
+		}
 
 		P_SetMobjState(target, target->info->deathstate);
 		target->health = 0;
@@ -2977,7 +2998,10 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 		target->flags = MF_NOCLIP;
 		target->x += xoffs;
 		target->y += yoffs;
-		target->z = chunk->z;
+		if (flip)
+			target->z -= 12*scale;
+		else
+			target->z += 12*scale;
 		P_SetThingPosition(target);
 		P_InstaThrust(target, target->angle, 2*scale);
 		target->momz = momz;
@@ -3000,21 +3024,25 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 			sprflip = P_RandomChance(FRACUNIT/2);
 
 #define makechunk(angtweak, xmov, ymov) \
-			chunk = P_SpawnMobjFromMobj(target, 0, 0, 0, MT_WALLSPIKE);\
-			P_SetMobjState(chunk, target->info->xdeathstate);\
-			chunk->health = 0;\
-			chunk->angle = target->angle;\
-			P_UnsetThingPosition(chunk);\
-			chunk->flags = MF_NOCLIP;\
-			chunk->x += xmov - forwardxoffs;\
-			chunk->y += ymov - forwardyoffs;\
-			P_SetThingPosition(chunk);\
-			P_InstaThrust(chunk, angtweak, 4*scale);\
-			chunk->momz = P_RandomRange(5, 7)*scale;\
-			if (flip)\
-				chunk->momz *= -1;\
-			if (sprflip)\
-				chunk->frame |= FF_VERTICALFLIP
+			do {\
+				chunk = P_SpawnMobjFromMobj(target, 0, 0, 0, MT_WALLSPIKE);\
+				if (P_MobjWasRemoved(chunk))\
+					break;\
+				P_SetMobjState(chunk, target->info->xdeathstate);\
+				chunk->health = 0;\
+				chunk->angle = target->angle;\
+				P_UnsetThingPosition(chunk);\
+				chunk->flags = MF_NOCLIP;\
+				chunk->x += xmov - forwardxoffs;\
+				chunk->y += ymov - forwardyoffs;\
+				P_SetThingPosition(chunk);\
+				P_InstaThrust(chunk, angtweak, 4*scale);\
+				chunk->momz = P_RandomRange(5, 7)*scale;\
+				if (flip)\
+					chunk->momz *= -1;\
+				if (sprflip)\
+					chunk->frame |= FF_VERTICALFLIP;\
+			} while (0)
 
 			makechunk(ang + ANGLE_180, -xoffs, -yoffs);
 			sprflip = !sprflip;
@@ -3026,21 +3054,23 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 		sprflip = P_RandomChance(FRACUNIT/2);
 
 		chunk = P_SpawnMobjFromMobj(target, 0, 0, 0, MT_WALLSPIKE);
-
-		P_SetMobjState(chunk, target->info->deathstate);
-		chunk->health = 0;
-		chunk->angle = target->angle;
-		P_UnsetThingPosition(chunk);
-		chunk->flags = MF_NOCLIP;
-		chunk->x += forwardxoffs - xoffs;
-		chunk->y += forwardyoffs - yoffs;
-		P_SetThingPosition(chunk);
-		P_InstaThrust(chunk, ang + ANGLE_180, 2*scale);
-		chunk->momz = P_RandomRange(5, 7)*scale;
-		if (flip)
-			chunk->momz *= -1;
-		if (sprflip)
-			chunk->frame |= FF_VERTICALFLIP;
+		if (!P_MobjWasRemoved(chunk))
+		{
+			P_SetMobjState(chunk, target->info->deathstate);
+			chunk->health = 0;
+			chunk->angle = target->angle;
+			P_UnsetThingPosition(chunk);
+			chunk->flags = MF_NOCLIP;
+			chunk->x += forwardxoffs - xoffs;
+			chunk->y += forwardyoffs - yoffs;
+			P_SetThingPosition(chunk);
+			P_InstaThrust(chunk, ang + ANGLE_180, 2*scale);
+			chunk->momz = P_RandomRange(5, 7)*scale;
+			if (flip)
+				chunk->momz *= -1;
+			if (sprflip)
+				chunk->frame |= FF_VERTICALFLIP;
+		}
 
 		P_SetMobjState(target, target->info->deathstate);
 		target->health = 0;
@@ -3921,6 +3951,8 @@ void P_PlayerRingBurst(player_t *player, INT32 num_rings)
 			z += player->mo->height - mobjinfo[objType].height;
 
 		mo = P_SpawnMobj(player->mo->x, player->mo->y, z, objType);
+		if (P_MobjWasRemoved(mo))
+			continue;
 
 		mo->fuse = 8*TICRATE;
 		P_SetTarget(&mo->target, player->mo);
@@ -4054,6 +4086,9 @@ void P_PlayerWeaponPanelBurst(player_t *player)
 			z += player->mo->height - mobjinfo[weptype].height;
 
 		mo = P_SpawnMobj(player->mo->x, player->mo->y, z, weptype);
+		if (P_MobjWasRemoved(mo))
+			continue;
+
 		mo->reactiontime = ammoamt;
 		mo->flags2 |= MF2_DONTRESPAWN;
 		mo->flags &= ~(MF_NOGRAVITY|MF_NOCLIPHEIGHT);
@@ -4087,13 +4122,13 @@ void P_PlayerWeaponAmmoBurst(player_t *player)
 	mobj_t *mo;
 	angle_t fa;
 	fixed_t ns;
-	INT32 i = 0;
+	INT32 i;
 	fixed_t z;
 
 	mobjtype_t weptype = 0;
 	powertype_t power = 0;
 
-	while (true)
+	for (i = 0;; i++)
 	{
 		if (player->powers[pw_bouncering])
 		{
@@ -4138,6 +4173,8 @@ void P_PlayerWeaponAmmoBurst(player_t *player)
 			z += player->mo->height - mobjinfo[weptype].height;
 
 		mo = P_SpawnMobj(player->mo->x, player->mo->y, z, weptype);
+		if (P_MobjWasRemoved(mo))
+			continue;
 		mo->health = player->powers[power];
 		mo->flags2 |= MF2_DONTRESPAWN;
 		mo->flags &= ~(MF_NOGRAVITY|MF_NOCLIPHEIGHT);
@@ -4163,8 +4200,6 @@ void P_PlayerWeaponAmmoBurst(player_t *player)
 
 		if (i & 1)
 			P_SetObjectMomZ(mo, 3*FRACUNIT, true);
-
-		i++;
 	}
 }
 
@@ -4189,45 +4224,50 @@ void P_PlayerWeaponPanelOrAmmoBurst(player_t *player)
 		player->ringweapons &= ~rwflag; \
 		SETUP_DROP(pickup) \
 		mo = P_SpawnMobj(player->mo->x, player->mo->y, z, pickup); \
-		mo->reactiontime = 0; \
-		mo->flags2 |= MF2_DONTRESPAWN; \
-		mo->flags &= ~(MF_NOGRAVITY|MF_NOCLIPHEIGHT); \
-		P_SetTarget(&mo->target, player->mo); \
-		mo->fuse = 12*TICRATE; \
-		mo->destscale = player->mo->scale; \
-		P_SetScale(mo, player->mo->scale); \
-		mo->momx = FixedMul(FINECOSINE(fa),ns); \
-		if (!(twodlevel || (player->mo->flags2 & MF2_TWOD))) \
-			mo->momy = FixedMul(FINESINE(fa),ns); \
-		P_SetObjectMomZ(mo, 4*FRACUNIT, false); \
-		if (i & 1) \
-			P_SetObjectMomZ(mo, 4*FRACUNIT, true); \
-		if (player->mo->eflags & MFE_VERTICALFLIP) \
-			mo->flags2 |= MF2_OBJECTFLIP; \
-		++i; \
+		if (!P_MobjWasRemoved(mo)) \
+		{ \
+			mo->reactiontime = 0; \
+			mo->flags2 |= MF2_DONTRESPAWN; \
+			mo->flags &= ~(MF_NOGRAVITY|MF_NOCLIPHEIGHT); \
+			P_SetTarget(&mo->target, player->mo); \
+			mo->fuse = 12*TICRATE; \
+			mo->destscale = player->mo->scale; \
+			P_SetScale(mo, player->mo->scale); \
+			mo->momx = FixedMul(FINECOSINE(fa),ns); \
+			if (!(twodlevel || (player->mo->flags2 & MF2_TWOD))) \
+				mo->momy = FixedMul(FINESINE(fa),ns); \
+			P_SetObjectMomZ(mo, 4*FRACUNIT, false); \
+			if (i & 1) \
+				P_SetObjectMomZ(mo, 4*FRACUNIT, true); \
+			if (player->mo->eflags & MFE_VERTICALFLIP) \
+				mo->flags2 |= MF2_OBJECTFLIP; \
+		} \
 	} \
 	else if (player->powers[power] > 0) \
 	{ \
 		SETUP_DROP(ammo) \
 		mo = P_SpawnMobj(player->mo->x, player->mo->y, z, ammo); \
-		mo->health = player->powers[power]; \
-		mo->flags2 |= MF2_DONTRESPAWN; \
-		mo->flags &= ~(MF_NOGRAVITY|MF_NOCLIPHEIGHT); \
-		P_SetTarget(&mo->target, player->mo); \
-		mo->fuse = 12*TICRATE; \
-		mo->destscale = player->mo->scale; \
-		P_SetScale(mo, player->mo->scale); \
-		mo->momx = FixedMul(FINECOSINE(fa),ns); \
-		if (!(twodlevel || (player->mo->flags2 & MF2_TWOD))) \
-			mo->momy = FixedMul(FINESINE(fa),ns); \
-		P_SetObjectMomZ(mo, 3*FRACUNIT, false); \
-		if (i & 1) \
-			P_SetObjectMomZ(mo, 3*FRACUNIT, true); \
-		if (player->mo->eflags & MFE_VERTICALFLIP) \
-			mo->flags2 |= MF2_OBJECTFLIP; \
-		player->powers[power] = 0; \
-		++i; \
-	}
+		if (!P_MobjWasRemoved(mo)) \
+		{ \
+			mo->health = player->powers[power]; \
+			mo->flags2 |= MF2_DONTRESPAWN; \
+			mo->flags &= ~(MF_NOGRAVITY|MF_NOCLIPHEIGHT); \
+			P_SetTarget(&mo->target, player->mo); \
+			mo->fuse = 12*TICRATE; \
+			mo->destscale = player->mo->scale; \
+			P_SetScale(mo, player->mo->scale); \
+			mo->momx = FixedMul(FINECOSINE(fa),ns); \
+			if (!(twodlevel || (player->mo->flags2 & MF2_TWOD))) \
+				mo->momy = FixedMul(FINESINE(fa),ns); \
+			P_SetObjectMomZ(mo, 3*FRACUNIT, false); \
+			if (i & 1) \
+				P_SetObjectMomZ(mo, 3*FRACUNIT, true); \
+			if (player->mo->eflags & MFE_VERTICALFLIP) \
+				mo->flags2 |= MF2_OBJECTFLIP; \
+			player->powers[power] = 0; \
+		} \
+	} \
+	++i
 
 	DROP_WEAPON(RW_BOUNCE, MT_BOUNCEPICKUP, MT_BOUNCERING, pw_bouncering);
 	DROP_WEAPON(RW_RAIL, MT_RAILPICKUP, MT_RAILRING, pw_railring);
@@ -4351,23 +4391,26 @@ void P_PlayerEmeraldBurst(player_t *player, boolean toss)
 				momy = 0;
 
 			mo = P_SpawnMobj(player->mo->x, player->mo->y, z, MT_FLINGEMERALD);
-			mo->health = 1;
-			mo->threshold = stoneflag;
-			mo->flags2 |= (MF2_DONTRESPAWN|MF2_SLIDEPUSH);
-			mo->flags &= ~(MF_NOGRAVITY|MF_NOCLIPHEIGHT);
-			P_SetTarget(&mo->target, player->mo);
-			mo->fuse = 12*TICRATE;
-			P_SetMobjState(mo, statenum);
-
-			mo->momx = momx;
-			mo->momy = momy;
-
-			P_SetObjectMomZ(mo, 3*FRACUNIT, false);
-
-			if (player->mo->eflags & MFE_VERTICALFLIP)
+			if (!P_MobjWasRemoved(mo))
 			{
-				mo->momz = -mo->momz;
-				mo->flags2 |= MF2_OBJECTFLIP;
+				mo->health = 1;
+				mo->threshold = stoneflag;
+				mo->flags2 |= (MF2_DONTRESPAWN|MF2_SLIDEPUSH);
+				mo->flags &= ~(MF_NOGRAVITY|MF_NOCLIPHEIGHT);
+				P_SetTarget(&mo->target, player->mo);
+				mo->fuse = 12*TICRATE;
+				P_SetMobjState(mo, statenum);
+
+				mo->momx = momx;
+				mo->momy = momy;
+
+				P_SetObjectMomZ(mo, 3*FRACUNIT, false);
+
+				if (player->mo->eflags & MFE_VERTICALFLIP)
+				{
+					mo->momz = -mo->momz;
+					mo->flags2 |= MF2_OBJECTFLIP;
+				}
 			}
 
 			if (toss)
@@ -4395,6 +4438,8 @@ void P_PlayerFlagBurst(player_t *player, boolean toss)
 		type = MT_BLUEFLAG;
 
 	flag = P_SpawnMobj(player->mo->x, player->mo->y, player->mo->z, type);
+	if (P_MobjWasRemoved(flag))
+		return;
 
 	if (player->mo->eflags & MFE_VERTICALFLIP)
 	{
