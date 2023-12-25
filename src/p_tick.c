@@ -226,21 +226,22 @@ void P_AddThinker(const thinklistnum_t n, thinker_t *thinker)
 #ifdef PARANOIA
 static const char *MobjTypeName(const mobj_t *mobj)
 {
+	mobjtype_t type;
 	actionf_p1 p1 = mobj->thinker.function.acp1;
 
 	if (p1 == (actionf_p1)P_MobjThinker)
-	{
-		return MOBJTYPE_LIST[mobj->type];
-	}
-	else if (p1 == (actionf_p1)P_RemoveThinkerDelayed)
-	{
-		if (mobj->thinker.debug_mobjtype != MT_NULL)
-		{
-			return MOBJTYPE_LIST[mobj->thinker.debug_mobjtype];
-		}
-	}
+		type = mobj->type;
+	else if (p1 == (actionf_p1)P_RemoveThinkerDelayed && mobj->thinker.debug_mobjtype != MT_NULL)
+		type = mobj->thinker.debug_mobjtype;
+	else
+		return "<Not a mobj>";
 
-	return "<Not a mobj>";
+	if (type < 0 || type >= NUMMOBJTYPES || (type >= MT_FIRSTFREESLOT && !FREE_MOBJS[type - MT_FIRSTFREESLOT]))
+		return "<Invalid mobj type>";
+	else if (type >= MT_FIRSTFREESLOT)
+		return FREE_MOBJS[type - MT_FIRSTFREESLOT]; // This doesn't include "MT_"...
+	else
+		return MOBJTYPE_LIST[type];
 }
 
 static const char *MobjThinkerName(const mobj_t *mobj)
