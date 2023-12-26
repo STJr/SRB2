@@ -3177,42 +3177,40 @@ boolean M_Responder(event_t *ev)
 	}
 	else if (menuactive)
 	{
-		if (ev->type == ev_keydown || ev->type == ev_text)
+		if (ev->type == ev_keydown)
 		{
+			keydown++;
 			ch = ev->key;
-			if (ev->type == ev_keydown)
+
+			// added 5-2-98 remap virtual keys (mouse & joystick buttons)
+			switch (ch)
 			{
-				keydown++;
-				// added 5-2-98 remap virtual keys (mouse & joystick buttons)
-				switch (ch)
-				{
-					case KEY_MOUSE1:
-					case KEY_JOY1:
-						ch = KEY_ENTER;
-						break;
-					case KEY_JOY1 + 3:
-						ch = 'n';
-						break;
-					case KEY_MOUSE1 + 1:
-					case KEY_JOY1 + 1:
-						ch = KEY_ESCAPE;
-						break;
-					case KEY_JOY1 + 2:
-						ch = KEY_BACKSPACE;
-						break;
-					case KEY_HAT1:
-						ch = KEY_UPARROW;
-						break;
-					case KEY_HAT1 + 1:
-						ch = KEY_DOWNARROW;
-						break;
-					case KEY_HAT1 + 2:
-						ch = KEY_LEFTARROW;
-						break;
-					case KEY_HAT1 + 3:
-						ch = KEY_RIGHTARROW;
-						break;
-				}
+				case KEY_MOUSE1:
+				case KEY_JOY1:
+					ch = KEY_ENTER;
+					break;
+				case KEY_JOY1 + 3:
+					ch = 'n';
+					break;
+				case KEY_MOUSE1 + 1:
+				case KEY_JOY1 + 1:
+					ch = KEY_ESCAPE;
+					break;
+				case KEY_JOY1 + 2:
+					ch = KEY_BACKSPACE;
+					break;
+				case KEY_HAT1:
+					ch = KEY_UPARROW;
+					break;
+				case KEY_HAT1 + 1:
+					ch = KEY_DOWNARROW;
+					break;
+				case KEY_HAT1 + 2:
+					ch = KEY_LEFTARROW;
+					break;
+				case KEY_HAT1 + 3:
+					ch = KEY_RIGHTARROW;
+					break;
 			}
 		}
 		else if (ev->type == ev_joystick  && ev->key == 0 && joywait < I_GetTime())
@@ -3374,11 +3372,8 @@ boolean M_Responder(event_t *ev)
 	// Handle menuitems which need a specific key handling
 	if (routine && (currentMenu->menuitems[itemOn].status & IT_TYPE) == IT_KEYHANDLER)
 	{
-		// ignore ev_keydown events if the key maps to a character, since
-		// the ev_text event will follow immediately after in that case.
-		if (ev->type == ev_keydown && ch >= 32 && ch <= 127)
-			return true;
-
+		if (shiftdown && ch >= 32 && ch <= 127)
+			ch = shiftxform[ch];
 		routine(ch);
 		return true;
 	}
@@ -3420,11 +3415,6 @@ boolean M_Responder(event_t *ev)
 	{
 		if ((currentMenu->menuitems[itemOn].status & IT_CVARTYPE) == IT_CV_STRING)
 		{
-			// ignore ev_keydown events if the key maps to a character, since
-			// the ev_text event will follow immediately after in that case.
-			if (ev->type == ev_keydown && ch >= 32 && ch <= 127)
-				return false;
-
 			if (M_ChangeStringCvar(ch))
 				return true;
 			else

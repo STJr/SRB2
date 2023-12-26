@@ -22,7 +22,6 @@ typedef enum
 {
 	ev_keydown,
 	ev_keyup,
-	ev_text,
 	ev_console,
 	ev_mouse,
 	ev_joystick,
