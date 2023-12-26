@@ -983,7 +983,8 @@ boolean CON_Responder(event_t *ev)
 
 	if (ev->type == ev_text)
 	{
-		CON_InputAddChar(key);
+		if (!consoletoggle)
+			CON_InputAddChar(key);
 		return true;
 	}
 
