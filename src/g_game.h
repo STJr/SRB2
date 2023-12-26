@@ -36,6 +36,10 @@ extern boolean playeringame[MAXPLAYERS];
 // gametic at level start
 extern tic_t levelstarttic;
 
+extern boolean levelstarting; // starting the level
+extern boolean leveldemoload; // starting a demo
+extern boolean levelresetplayer; // reset players at level load
+
 // for modding?
 extern INT16 prevmap, nextmap;
 extern INT32 gameovertics;
@@ -177,10 +181,32 @@ void G_SpawnPlayer(INT32 playernum);
 // Can be called by the startup code or M_Responder.
 // A normal game starts at map 1, but a warp test can start elsewhere
 void G_DeferedInitNew(boolean pultmode, const char *mapname, INT32 character, boolean SSSG, boolean FLS);
-void G_DoLoadLevel(boolean resetplayer);
-void G_StartTitleCard(void);
-void G_PreLevelTitleCard(void);
-boolean G_IsTitleCardAvailable(void);
+void G_StartLevel(boolean resetplayer);
+void G_StartLevelWipe(void);
+void G_InitLevelGametype(void);
+void G_DoLoadLevel(void);
+
+// Title card
+void TitleCard_Start(void);
+void TitleCard_Run(void);
+void TitleCard_LoadGraphics(void);
+boolean TitleCard_Available(void);
+
+typedef struct
+{
+	boolean running, prelevel;
+	UINT8 wipe;
+
+	tic_t ticker;
+	tic_t exitticker, endtime;
+
+	fixed_t zigzag, scroll, momentum;
+	void *patches[3];
+} titlecard_t;
+
+extern titlecard_t titlecard;
+
+#define PRELEVELTIME 24 // frames in tics
 
 // Can be called by the startup code or M_Responder, calls P_SetupLevel.
 void G_LoadGame(UINT32 slot, INT16 mapoverride);
@@ -223,7 +249,7 @@ void G_UseContinue(void);
 void G_AfterIntermission(void);
 void G_EndGame(void); // moved from y_inter.c/h and renamed
 
-void G_Ticker(boolean run);
+void G_Ticker(boolean run, tic_t tics);
 boolean G_Responder(event_t *ev);
 boolean G_LuaResponder(event_t *ev);
 
@@ -233,13 +259,31 @@ void G_SetExitGameFlag(void);
 void G_ClearExitGameFlag(void);
 boolean G_GetExitGameFlag(void);
 
-void G_SetRetryFlag(void);
-void G_ClearRetryFlag(void);
-boolean G_GetRetryFlag(void);
+enum
+{
+	RETRY_SP,     // Retrying in Single Player.
+	RETRY_RA,     // Retrying in Mode Attack.
 
-void G_SetModeAttackRetryFlag(void);
-void G_ClearModeAttackRetryFlag(void);
-boolean G_GetModeAttackRetryFlag(void);
+	// Cleared at G_DoLoadLevel.
+	RETRY_CUR,    // Currently retrying.
+	RETRY_PAUSED, // Retrying while paused.
+
+	RETRY_MAX,
+};
+
+void G_SetRetryFlag(INT32 type);
+void G_ClearRetryFlag(INT32 type);
+boolean G_GetRetryFlag(INT32 type);
+
+void G_SetRetrySP(void);
+void G_ClearRetrySP(void);
+boolean G_GetRetrySP(void);
+
+void G_SetRetryRA(void);
+void G_ClearRetryRA(void);
+boolean G_GetRetryRA(void);
+
+void G_ClearAllRetryFlags(void);
 
 void G_LoadGameData(gamedata_t *data);
 void G_LoadGameSettings(void);

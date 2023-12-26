@@ -60,6 +60,7 @@ boolean singledemo; // quit after playing a demo from cmdline
 boolean demo_start; // don't start playing demo right away
 boolean demo_forwardmove_rng; // old demo backwards compatibility
 boolean demosynced = true; // console warning message
+demoplayer_t *demoplayerinfo; // starting a demo
 
 boolean metalrecording; // recording as metal sonic
 mobj_t *metalplayback;
@@ -1990,10 +1991,8 @@ void G_DoPlayDemo(char *defdemoname)
 	UINT8 i;
 	lumpnum_t l;
 	char skin[17],color[MAXCOLORNAME+1],*n,*pdemoname;
-	UINT8 version,subversion,charability,charability2,thrustfactor,accelstart,acceleration;
-	pflags_t pflags;
-	UINT32 randseed, followitem;
-	fixed_t camerascale,shieldscale,actionspd,mindash,maxdash,normalspeed,runspeed,jumpfactor,height,spinheight;
+	UINT8 version,subversion;
+	UINT32 randseed;
 	char msg[1024];
 
 	skin[16] = '\0';
@@ -2189,35 +2188,47 @@ void G_DoPlayDemo(char *defdemoname)
 	M_Memcpy(color, demo_p, (demoversion < 0x000d) ? 16 : MAXCOLORNAME);
 	demo_p += (demoversion < 0x000d) ? 16 : MAXCOLORNAME;
 
-	charability = READUINT8(demo_p);
-	charability2 = READUINT8(demo_p);
-	actionspd = (demoversion < 0x0010) ? (fixed_t)READUINT8(demo_p)<<FRACBITS : READFIXED(demo_p);
-	mindash = (demoversion < 0x0010) ? (fixed_t)READUINT8(demo_p)<<FRACBITS : READFIXED(demo_p);
-	maxdash = (demoversion < 0x0010) ? (fixed_t)READUINT8(demo_p)<<FRACBITS : READFIXED(demo_p);
-	normalspeed = (demoversion < 0x0010) ? (fixed_t)READUINT8(demo_p)<<FRACBITS : READFIXED(demo_p);
-	runspeed = (demoversion < 0x0010) ? (fixed_t)READUINT8(demo_p)<<FRACBITS : READFIXED(demo_p);
-	thrustfactor = READUINT8(demo_p);
-	accelstart = READUINT8(demo_p);
-	acceleration = READUINT8(demo_p);
-	height = (demoversion < 0x000e) ? (fixed_t)READUINT8(demo_p)<<FRACBITS : READFIXED(demo_p);
-	spinheight = (demoversion < 0x000e) ? (fixed_t)READUINT8(demo_p)<<FRACBITS : READFIXED(demo_p);
-	camerascale = (demoversion < 0x0010) ? (fixed_t)READUINT8(demo_p)<<FRACBITS : READFIXED(demo_p);
-	shieldscale = (demoversion < 0x0010) ? (fixed_t)READUINT8(demo_p)<<FRACBITS : READFIXED(demo_p);
-	jumpfactor = READFIXED(demo_p);
-	followitem = READUINT32(demo_p);
+	demoplayer_t *info = Z_Calloc(sizeof(demoplayer_t), PU_STATIC, NULL);
+	info->charability = READUINT8(demo_p);
+	info->charability2 = READUINT8(demo_p);
+	info->actionspd = (demoversion < 0x0010) ? (fixed_t)READUINT8(demo_p)<<FRACBITS : READFIXED(demo_p);
+	info->mindash = (demoversion < 0x0010) ? (fixed_t)READUINT8(demo_p)<<FRACBITS : READFIXED(demo_p);
+	info->maxdash = (demoversion < 0x0010) ? (fixed_t)READUINT8(demo_p)<<FRACBITS : READFIXED(demo_p);
+	info->normalspeed = (demoversion < 0x0010) ? (fixed_t)READUINT8(demo_p)<<FRACBITS : READFIXED(demo_p);
+	info->runspeed = (demoversion < 0x0010) ? (fixed_t)READUINT8(demo_p)<<FRACBITS : READFIXED(demo_p);
+	info->thrustfactor = READUINT8(demo_p);
+	info->accelstart = READUINT8(demo_p);
+	info->acceleration = READUINT8(demo_p);
+	info->height = (demoversion < 0x000e) ? (fixed_t)READUINT8(demo_p)<<FRACBITS : READFIXED(demo_p);
+	info->spinheight = (demoversion < 0x000e) ? (fixed_t)READUINT8(demo_p)<<FRACBITS : READFIXED(demo_p);
+	info->camerascale = (demoversion < 0x0010) ? (fixed_t)READUINT8(demo_p)<<FRACBITS : READFIXED(demo_p);
+	info->shieldscale = (demoversion < 0x0010) ? (fixed_t)READUINT8(demo_p)<<FRACBITS : READFIXED(demo_p);
+	info->jumpfactor = READFIXED(demo_p);
+	info->followitem = READUINT32(demo_p);
+
+	// Set color
+	info->color = SKINCOLOR_NONE;
+	for (i = 0; i < numskincolors; i++)
+		if (!stricmp(skincolors[i].name,color))
+		{
+			info->color = i;
+			break;
+		}
+
+	demoplayerinfo = info;
 
 	// pflag data
 	{
 		UINT8 buf = READUINT8(demo_p);
-		pflags = 0;
+		info->pflags = 0;
 		if (buf & 0x01)
-			pflags |= PF_FLIPCAM;
+			info->pflags |= PF_FLIPCAM;
 		if (buf & 0x02)
-			pflags |= PF_ANALOGMODE;
+			info->pflags |= PF_ANALOGMODE;
 		if (buf & 0x04)
-			pflags |= PF_DIRECTIONCHAR;
+			info->pflags |= PF_DIRECTIONCHAR;
 		if (buf & 0x08)
-			pflags |= PF_AUTOBRAKE;
+			info->pflags |= PF_AUTOBRAKE;
 		CV_SetValue(&cv_showinputjoy, !!(buf & 0x10));
 	}
 
@@ -2239,6 +2250,8 @@ void G_DoPlayDemo(char *defdemoname)
 		Z_Free(demobuffer);
 		demoplayback = false;
 		titledemo = false;
+		Z_Free(demoplayerinfo);
+		demoplayerinfo = NULL;
 		return;
 	}
 
@@ -2262,15 +2275,17 @@ void G_DoPlayDemo(char *defdemoname)
 	playeringame[0] = true;
 	P_SetRandSeed(randseed);
 	G_InitNew(false, G_BuildMapName(gamemap), true, true, false);
+}
+
+void G_FinishLoadingDemo(void)
+{
+	demoplayer_t *p = demoplayerinfo;
+	demo_start = true;
+	if (p == NULL)
+		return;
 
 	// Set color
-	players[0].skincolor = skins[players[0].skin].prefcolor;
-	for (i = 0; i < numskincolors; i++)
-		if (!stricmp(skincolors[i].name,color))
-		{
-			players[0].skincolor = i;
-			break;
-		}
+	players[0].skincolor = p->color;
 	if (players[0].mo)
 	{
 		players[0].mo->color = players[0].skincolor;
@@ -2282,25 +2297,23 @@ void G_DoPlayDemo(char *defdemoname)
 	// Set saved attribute values
 	// No cheat checking here, because even if they ARE wrong...
 	// it would only break the replay if we clipped them.
-	players[0].camerascale = camerascale;
-	players[0].shieldscale = shieldscale;
-	players[0].charability = charability;
-	players[0].charability2 = charability2;
-	players[0].actionspd = actionspd;
-	players[0].mindash = mindash;
-	players[0].maxdash = maxdash;
-	players[0].normalspeed = normalspeed;
-	players[0].runspeed = runspeed;
-	players[0].thrustfactor = thrustfactor;
-	players[0].accelstart = accelstart;
-	players[0].acceleration = acceleration;
-	players[0].height = height;
-	players[0].spinheight = spinheight;
-	players[0].jumpfactor = jumpfactor;
-	players[0].followitem = followitem;
-	players[0].pflags = pflags;
-
-	demo_start = true;
+	players[0].camerascale = p->camerascale;
+	players[0].shieldscale = p->shieldscale;
+	players[0].charability = p->charability;
+	players[0].charability2 = p->charability2;
+	players[0].actionspd = p->actionspd;
+	players[0].mindash = p->mindash;
+	players[0].maxdash = p->maxdash;
+	players[0].normalspeed = p->normalspeed;
+	players[0].runspeed = p->runspeed;
+	players[0].thrustfactor = p->thrustfactor;
+	players[0].accelstart = p->accelstart;
+	players[0].acceleration = p->acceleration;
+	players[0].height = p->height;
+	players[0].spinheight = p->spinheight;
+	players[0].jumpfactor = p->jumpfactor;
+	players[0].followitem = p->followitem;
+	players[0].pflags = p->pflags;
 }
 
 //
@@ -2857,6 +2870,10 @@ void G_StopDemo(void)
 	titledemo = false;
 	timingdemo = false;
 	singletics = false;
+
+	if (demoplayerinfo)
+		Z_Free(demoplayerinfo);
+	demoplayerinfo = NULL;
 
 	if (gamestate == GS_INTERMISSION)
 		Y_EndIntermission(); // cleanup

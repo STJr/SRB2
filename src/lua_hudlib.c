@@ -1437,8 +1437,8 @@ void LUA_SetHudHook(int hook, huddrawlist_h list)
 
 		case HUD_HOOK(titlecard):
 			LUA_PushUserdata(gL, stplyr, META_PLAYER);
-			lua_pushinteger(gL, lt_ticker);
-			lua_pushinteger(gL, (lt_endtime + TICRATE));
+			lua_pushinteger(gL, titlecard.ticker);
+			lua_pushinteger(gL, titlecard.endtime + TICRATE);
 			break;
 
 		case HUD_HOOK(intermission):

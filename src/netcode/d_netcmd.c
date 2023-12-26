@@ -2086,16 +2086,6 @@ static void Got_Mapcmd(UINT8 **cp, INT32 playernum)
 	LUA_HookInt(mapnumber, HOOK(MapChange));
 
 	G_InitNew(ultimatemode, mapname, resetplayer, skipprecutscene, FLS);
-	if (demoplayback && !timingdemo)
-		precache = true;
-	if (timingdemo)
-		G_DoneLevelLoad();
-
-	if (metalrecording)
-		G_BeginMetal();
-	if (demorecording) // Okay, level loaded, character spawned and skinned,
-		G_BeginRecording(); // I AM NOW READY TO RECORD.
-	demo_start = true;
 }
 
 static void Command_Pause(void)
@@ -4599,7 +4589,7 @@ void Command_Retry_f(void)
 	else
 	{
 		M_ClearMenus(true);
-		G_SetRetryFlag();
+		G_SetRetrySP();
 	}
 }
 

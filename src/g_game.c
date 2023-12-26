@@ -78,6 +78,9 @@ static void G_DoStartContinue(void);
 static void G_DoContinued(void);
 static void G_DoWorldDone(void);
 
+static void G_CheckPlayerReborn(void);
+static inline void G_TickerEnd(void);
+
 char   mapmusname[7]; // Music name
 UINT16 mapmusflags; // Track and reset bit
 UINT32 mapmusposition; // Position to jump to
@@ -125,9 +128,14 @@ INT32 secondarydisplayplayer; // for splitscreen
 
 tic_t gametic;
 tic_t levelstarttic; // gametic at level start
+boolean levelstarting; // starting the level
+boolean levelresetplayer; // reset players at level load
+
 UINT32 ssspheres; // old special stage
 INT16 lastmap; // last level you were at (returning from special stages)
 tic_t timeinmap; // Ticker for time spent in level (used for levelcard display)
+
+titlecard_t titlecard;
 
 INT16 spstage_start, spmarathon_start;
 INT16 sstage_start, sstage_end, smpstage_start, smpstage_end;
@@ -175,8 +183,7 @@ struct quake quake;
 mapheader_t* mapheaderinfo[NUMMAPS] = {NULL};
 
 static boolean exitgame = false;
-static boolean retrying = false;
-static boolean retryingmodeattack = false;
+static boolean retrying[RETRY_MAX];
 
 boolean stagefailed = false; // Used for GEMS BONUS? Also to see if you beat the stage.
 
@@ -1171,9 +1178,11 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 		!player->climbing && player->powers[pw_carry] != CR_MINECART;
 
 	// why build a ticcmd if we're paused?
+	// Or, if the level is starting.
 	// Or, for that matter, if we're being reborn.
 	// ...OR if we're blindfolded. No looking into the floor.
-	if (ignoregameinputs || paused || P_AutoPause() || (gamestate == GS_LEVEL && (player->playerstate == PST_REBORN || ((gametyperules & GTR_TAG)
+	if (ignoregameinputs || paused || P_AutoPause() || (levelstarting || WipeInAction) || titlecard.prelevel
+	|| (gamestate == GS_LEVEL && (player->playerstate == PST_REBORN || ((gametyperules & GTR_TAG)
 	&& (leveltime < hidetime * TICRATE) && (player->pflags & PF_TAGIT)))))
 	{//@TODO splitscreen player
 		cmd->angleturn = ticcmd_oldangleturn[forplayer];
@@ -1832,23 +1841,76 @@ static void AutoBrake2_OnChange(void)
 }
 
 //
-// G_DoLoadLevel
+// G_StartLevel
 //
-void G_DoLoadLevel(boolean resetplayer)
+void G_StartLevel(boolean resetplayer)
 {
 	INT32 i;
+	levelstarting = true;
 
 	// Make sure objectplace is OFF when you first start the level!
 	OP_ResetObjectplace();
 	demosynced = true;
 
 	levelstarttic = gametic; // for time calculation
+	levelresetplayer = resetplayer;
 
 	if (wipegamestate == GS_LEVEL)
 		wipegamestate = -1; // force a wipe
 
 	if (gamestate == GS_INTERMISSION)
 		Y_EndIntermission();
+
+	G_InitLevelGametype();
+	ranspecialwipe = SPECIALWIPE_NONE;
+
+	if (mapheaderinfo[gamemap-1]->runsoc[0] != '#')
+		P_RunSOC(mapheaderinfo[gamemap-1]->runsoc);
+
+	if (cv_runscripts.value && mapheaderinfo[gamemap-1]->scriptname[0] != '#')
+		P_RunLevelScript(mapheaderinfo[gamemap-1]->scriptname);
+
+	// clear cmd building stuff
+	memset(gamekeydown, 0, sizeof (gamekeydown));
+	for (i = 0;i < JOYAXISSET; i++)
+	{
+		joyxmove[i] = joyymove[i] = 0;
+		joy2xmove[i] = joy2ymove[i] = 0;
+	}
+	G_SetMouseDeltas(0, 0, 1);
+	G_SetMouseDeltas(0, 0, 2);
+
+#ifndef NOWIPE
+	if (!G_GetRetryRA() && rendermode != render_none)
+		G_StartLevelWipe();
+	else
+#endif
+	{
+		if (G_GetRetryRA())
+		{
+			ranspecialwipe = SPECIALWIPE_RETRY;
+			G_ClearRetryRA();
+		}
+
+		G_DoLoadLevel();
+	}
+}
+
+//
+// G_InitLevelGametype
+//
+void G_InitLevelGametype(void)
+{
+	maptol = mapheaderinfo[gamemap-1]->typeoflevel;
+	gametyperules = gametypedefaultrules[gametype];
+}
+
+//
+// G_DoLoadLevel
+//
+void G_DoLoadLevel(void)
+{
+	G_ClearAllRetryFlags();
 
 	// cleanup
 	if (titlemapinaction == TITLEMAP_LOADING)
@@ -1865,14 +1927,22 @@ void G_DoLoadLevel(boolean resetplayer)
 	else
 		titlemapinaction = TITLEMAP_OFF;
 
-	G_SetGamestate(GS_LEVEL);
 	I_UpdateMouseGrab();
 
-	for (i = 0; i < MAXPLAYERS; i++)
+	if (!titlemapinaction)
 	{
-		if (resetplayer || (playeringame[i] && players[i].playerstate == PST_DEAD))
-			players[i].playerstate = PST_REBORN;
+		INT32 i;
+
+		G_SetGamestate(GS_LEVEL);
+
+		for (i = 0; i < MAXPLAYERS; i++)
+		{
+			if (levelresetplayer || (playeringame[i] && players[i].playerstate == PST_DEAD))
+				players[i].playerstate = PST_REBORN;
+		}
 	}
+
+	levelstarting = false;
 
 	// Setup the level.
 	if (!P_LoadLevel(false, false)) // this never returns false?
@@ -1880,6 +1950,19 @@ void G_DoLoadLevel(boolean resetplayer)
 		// fail so reset game stuff
 		Command_ExitGame_f();
 		return;
+	}
+
+	if (netgame)
+	{
+		char *title = G_BuildMapTitle(gamemap);
+
+		CONS_Printf(M_GetText("Map is now \"%s"), G_BuildMapName(gamemap));
+		if (title)
+		{
+			CONS_Printf(": %s", title);
+			Z_Free(title);
+		}
+		CONS_Printf("\"\n");
 	}
 
 	P_FindEmerald();
@@ -1893,81 +1976,243 @@ void G_DoLoadLevel(boolean resetplayer)
 	Z_CheckHeap(-2);
 #endif
 
-	if (camera.chase)
-		P_ResetCamera(&players[displayplayer], &camera);
-	if (camera2.chase && splitscreen)
-		P_ResetCamera(&players[secondarydisplayplayer], &camera2);
-
-	// clear cmd building stuff
-	memset(gamekeydown, 0, sizeof (gamekeydown));
-	for (i = 0;i < JOYAXISSET; i++)
+	if (!titlemapinaction)
 	{
-		joyxmove[i] = joyymove[i] = 0;
-		joy2xmove[i] = joy2ymove[i] = 0;
+		if (camera.chase)
+			P_ResetCamera(&players[displayplayer], &camera);
+		if (camera2.chase && splitscreen)
+			P_ResetCamera(&players[secondarydisplayplayer], &camera2);
 	}
+	else
+	{
+		mapthing_t *startpos;
+
+		players[displayplayer].playerstate = PST_DEAD; // Don't spawn the player in dummy (I'm still a filthy cheater)
+
+		// Set Default Position
+		if (playerstarts[0])
+			startpos = playerstarts[0];
+		else if (deathmatchstarts[0])
+			startpos = deathmatchstarts[0];
+		else
+			startpos = NULL;
+
+		if (startpos)
+		{
+			camera.x = startpos->x << FRACBITS;
+			camera.y = startpos->y << FRACBITS;
+			camera.subsector = R_PointInSubsector(camera.x, camera.y);
+			camera.z = camera.subsector->sector->floorheight + (startpos->z << FRACBITS);
+			camera.angle = (startpos->angle % 360)*ANG1;
+			camera.aiming = 0;
+		}
+		else
+		{
+			camera.x = camera.y = camera.z = camera.angle = camera.aiming = 0;
+			camera.subsector = NULL; // toast is filthy too
+		}
+
+		camera.chase = true;
+		camera.height = 0;
+
+		// Run enter linedef exec for MN_MAIN, since this is where we start
+		if (menupres[MN_MAIN].entertag)
+			P_LinedefExecute(menupres[MN_MAIN].entertag, players[displayplayer].mo, NULL);
+	}
+
+	if (demoplayerinfo)
+	{
+		G_FinishLoadingDemo();
+		Z_Free(demoplayerinfo);
+	}
+	demoplayerinfo = NULL;
+
 	G_SetMouseDeltas(0, 0, 1);
 	G_SetMouseDeltas(0, 0, 2);
 
 	// clear hud messages remains (usually from game startup)
 	CON_ClearHUD();
+
+	if (demoplayback && !timingdemo)
+		precache = true;
+	if (timingdemo)
+		G_DoneLevelLoad();
+
+	if (metalrecording)
+		G_BeginMetal();
+	if (demorecording) // Okay, level loaded, character spawned and skinned,
+		G_BeginRecording(); // I AM NOW READY TO RECORD.
+	demo_start = true;
+}
+
+//
+// Run the level's wipe.
+//
+void G_StartLevelWipe(void)
+{
+	// Cancel all d_main.c fades
+	WipeRunPost = false;
+	wipegamestate = FORCEWIPEOFF;
+	wipestyle = WIPESTYLE_COLORMAP;
+	wipestyleflags = (WSF_FADEOUT|WSF_LEVELLOADING);
+
+	// Special stage fade to white
+	// This is handled BEFORE sounds are stopped.
+	if (rendermode != render_none && G_IsSpecialStage(gamemap))
+	{
+		// TODO call this after rendering the frame (because of F_WipeStartScreen calls)
+		P_RunSpecialStageWipe();
+		ranspecialwipe = SPECIALWIPE_SSTAGE;
+	}
+
+	// Let's fade to black here
+	// But only if we didn't do the special stage wipe
+	if (rendermode != render_none && ranspecialwipe == SPECIALWIPE_NONE)
+	{
+		// TODO same thing as the last one
+		P_RunLevelWipe();
+
+		// Fade out music here. Deduct 2 tics so the fade volume actually reaches 0.
+		// But don't halt the music! S_Start will take care of that. This dodges a MIDI crash bug.
+		if (!titlemapinaction && (RESETMUSIC ||
+			strnicmp(S_MusicName(),
+				(mapmusflags & MUSIC_RELOADRESET) ? mapheaderinfo[gamemap-1]->musname : mapmusname, 7)))
+			S_FadeMusic(0, FixedMul(
+				FixedDiv((F_GetWipeLength(wipedefs[wipe_level_toblack])-2)*NEWTICRATERATIO, NEWTICRATE), MUSICRATE));
+	}
 }
 
 //
 // Start the title card.
 //
-void G_StartTitleCard(void)
+void TitleCard_Start(void)
 {
-	// The title card has been disabled for this map.
-	// Oh well.
-	if (!G_IsTitleCardAvailable())
+	// The title card has been disabled for this map
+	if (!TitleCard_Available())
 	{
-		WipeStageTitle = false;
+		st_translucency = cv_translucenthud.value; // Reset the HUD translucency!
+		WipeRunPost = true; // Start the post wipe.
 		return;
 	}
 
-	// clear the hud
 	CON_ClearHUD();
+	TitleCard_LoadGraphics();
 
-	// prepare status bar
-	ST_startTitleCard();
+	// Actually start it
+	titlecard.running = true;
+	titlecard.prelevel = true;
 
-	// start the title card
-	WipeStageTitle = (!titlemapinaction);
+	titlecard.ticker = 0;
+	titlecard.exitticker = 0;
+	titlecard.endtime = 2*TICRATE + 10;
+
+	titlecard.scroll = BASEVIDWIDTH * FRACUNIT;
+	titlecard.momentum = 0;
+
+	if (titlecard.patches[1])
+	{
+		patch_t *patch = (patch_t *)titlecard.patches[1];
+		titlecard.zigzag = -(SHORT(patch->width) * FRACUNIT);
+	}
+
+	wipetypepost = IGNOREWIPE;
 }
 
 //
-// Run the title card before fading in to the level.
+// Load the graphics for the title card.
 //
-void G_PreLevelTitleCard(void)
+void TitleCard_LoadGraphics(void)
 {
-#ifndef NOWIPE
-	tic_t starttime = I_GetTime();
-	tic_t endtime = starttime + (PRELEVELTIME*NEWTICRATERATIO);
-	tic_t nowtime = starttime;
-	tic_t lasttime = starttime;
-	while (nowtime < endtime)
+#define SETPATCH(def, warning, custom, idx) \
+{ \
+	lumpnum_t patlumpnum = LUMPERROR; \
+	if (mapheaderinfo[gamemap-1]->custom[0] != '\0') \
+	{ \
+		patlumpnum = W_CheckNumForName(mapheaderinfo[gamemap-1]->custom); \
+		if (patlumpnum != LUMPERROR) \
+			titlecard.patches[idx] = (patch_t *)W_CachePatchNum(patlumpnum, PU_HUDGFX); \
+	} \
+	if (patlumpnum == LUMPERROR) \
+	{ \
+		if (!(mapheaderinfo[gamemap-1]->levelflags & LF_WARNINGTITLE)) \
+			titlecard.patches[idx] = (patch_t *)W_CachePatchName(def, PU_HUDGFX); \
+		else \
+			titlecard.patches[idx] = (patch_t *)W_CachePatchName(warning, PU_HUDGFX); \
+	} \
+}
+
+	SETPATCH("LTACTBLU", "LTACTRED", ltactdiamond, 0)
+	SETPATCH("LTZIGZAG", "LTZIGRED", ltzzpatch, 1)
+	SETPATCH("LTZZTEXT", "LTZZWARN", ltzztext, 2)
+
+#undef SETPATCH
+}
+
+//
+// Run the title card.
+//
+void TitleCard_Run(void)
+{
+	if (!TitleCard_Available())
+		return;
+
+	if (titlecard.wipe)
+		titlecard.wipe++;
+
+	if (titlecard.ticker >= (titlecard.endtime + TICRATE))
 	{
-		// draw loop
-		while (!((nowtime = I_GetTime()) - lasttime))
-		{
-			I_Sleep(cv_sleep.value);
-			I_UpdateTime(cv_timescale.value);
-		}
-		lasttime = nowtime;
-
-		ST_runTitleCard();
-		ST_preLevelTitleCardDrawer();
-		I_FinishUpdate(); // page flip or blit buffer
-		NetKeepAlive(); // Prevent timeouts
-
-		if (moviemode)
-			M_SaveFrame();
-		if (takescreenshot) // Only take screenshots after drawing.
-			M_DoScreenShot();
+		titlecard.running = false;
+		return;
 	}
-	if (!cv_showhud.value)
-		wipestyleflags = WSF_CROSSFADE;
-#endif
+	else if (titlecard.ticker >= PRELEVELTIME && titlecard.prelevel)
+	{
+		// Force a wipe
+		wipegamestate = -1;
+		WipeRunPost = true;
+
+		// TODO should be done after rendering
+		if (!cv_showhud.value)
+			F_WipeDoCrossfade();
+
+		// Disable prelevel flag
+		titlecard.prelevel = false;
+		titlecard.wipe = 1;
+	}
+
+	if (!(paused || P_AutoPause()))
+	{
+		// scroll to screen (level title)
+		if (!titlecard.exitticker)
+		{
+			if (abs(titlecard.scroll) > FRACUNIT)
+				titlecard.scroll -= (titlecard.scroll>>2);
+			else
+				titlecard.scroll = 0;
+		}
+		// scroll away from screen (level title)
+		else
+		{
+			titlecard.momentum -= FRACUNIT*6;
+			titlecard.scroll += titlecard.momentum;
+		}
+
+		// scroll to screen (zigzag)
+		if (!titlecard.exitticker)
+		{
+			if (abs(titlecard.zigzag) > FRACUNIT)
+				titlecard.zigzag -= (titlecard.zigzag>>2);
+			else
+				titlecard.zigzag = 0;
+		}
+		// scroll away from screen (zigzag)
+		else
+			titlecard.zigzag += titlecard.momentum;
+
+		// tick
+		titlecard.ticker++;
+		if (titlecard.ticker >= titlecard.endtime)
+			titlecard.exitticker++;
+	}
 }
 
 static boolean titlecardforreload = false;
@@ -1975,7 +2220,7 @@ static boolean titlecardforreload = false;
 //
 // Returns true if the current level has a title card.
 //
-boolean G_IsTitleCardAvailable(void)
+boolean TitleCard_Available(void)
 {
 	// The current level header explicitly disabled the title card.
 	UINT16 titleflag = LF_NOTITLECARDFIRST;
@@ -1984,6 +2229,8 @@ boolean G_IsTitleCardAvailable(void)
 		titleflag = LF_NOTITLECARDRECORDATTACK;
 	else if (titlecardforreload)
 		titleflag = LF_NOTITLECARDRESPAWN;
+
+	titlecardforreload = false;
 
 	if (mapheaderinfo[gamemap-1]->levelflags & titleflag)
 		return false;
@@ -2190,7 +2437,7 @@ boolean G_Responder(event_t *ev)
 						pausedelay = 1+(NEWTICRATE/2);
 					else if (cv_instantretry.value || ++pausedelay > 1+(NEWTICRATE/2)+(NEWTICRATE/3))
 					{
-						G_SetModeAttackRetryFlag();
+						G_SetRetryRA();
 						return true;
 					}
 					pausedelay++; // counteract subsequent subtraction this frame
@@ -2269,11 +2516,29 @@ boolean G_LuaResponder(event_t *ev)
 	return cancelled;
 }
 
+// see also SCR_DisplayMarathonInfo
+static void G_MarathonTicker(void)
+{
+	if (gamestate != GS_LEVEL)
+		return;
+	if ((marathonmode & (MA_INIT|MA_INGAME)) != MA_INGAME)
+		return;
+
+	// IGT doesn't increase during loads, unless the game's paused
+	if (!(paused || P_AutoPause()))
+	{
+		if (titlecard.prelevel || WipeInAction)
+			return;
+	}
+
+	marathontime++;
+}
+
 //
 // G_Ticker
 // Make ticcmd_ts for the players.
 //
-void G_Ticker(boolean run)
+void G_Ticker(boolean run, tic_t tics)
 {
 	UINT32 i;
 	INT32 buf;
@@ -2295,71 +2560,49 @@ void G_Ticker(boolean run)
 		}
 	}
 
-	// see also SCR_DisplayMarathonInfo
-	if ((marathonmode & (MA_INIT|MA_INGAME)) == MA_INGAME && gamestate == GS_LEVEL)
-		marathontime++;
-
-	P_MapStart();
-	// do player reborns if needed
-	if (gamestate == GS_LEVEL)
+	// Run the current wipe
+	if (WipeInAction)
 	{
-		// Or, alternatively, retry.
-		if (!(netgame || multiplayer) && G_GetRetryFlag())
+		if (run)
 		{
-			G_ClearRetryFlag();
+			boolean loading = (wipestyleflags & WSF_LEVELLOADING);
 
-			if (modeattacking)
+			switch (gamestate)
 			{
-				pausedelay = INT32_MIN;
-				M_ModeAttackRetry(0);
+				case GS_LEVEL:
+					if ((loading && G_GetRetryFlag(RETRY_PAUSED)) || !(paused || P_AutoPause()))
+						F_RunWipe();
+					break;
+				default:
+					F_RunWipe();
+					break;
 			}
-			else
-			{
-				// Costs a life to retry ... unless the player in question is dead already, or you haven't even touched the first starpost in marathon run.
-				if (marathonmode && gamemap == spmarathon_start && !players[consoleplayer].starposttime)
-				{
-					player_t *p = &players[consoleplayer];
-					marathonmode |= MA_INIT;
-					marathontime = 0;
 
-					numgameovers = tokenlist = token = 0;
-					countdown = countdown2 = exitfadestarted = 0;
+			// Run the title card
+			if (titlecard.running && (wipestyleflags & WSF_FADEIN))
+				TitleCard_Run();
 
-					p->playerstate = PST_REBORN;
-					p->starpostx = p->starposty = p->starpostz = 0;
+			// Run Marathon Mode in-game timer
+			G_MarathonTicker();
 
-					p->lives = startinglivesbalance[0];
-					p->continues = 1;
+			// do player reborns if needed
+			if (!loading)
+				G_CheckPlayerReborn();
 
-					p->score = p->recordscore = 0;
-
-					// The latter two should clear by themselves, but just in case
-					p->pflags &= ~(PF_TAGIT|PF_GAMETYPEOVER|PF_FULLSTASIS);
-
-					// Clear cheatcodes too, just in case.
-					p->pflags &= ~(PF_GODMODE|PF_NOCLIP|PF_INVIS);
-
-					p->xtralife = 0;
-
-					// Reset unlockable triggers
-					unlocktriggers = 0;
-
-					emeralds = 0;
-
-					memset(&luabanks, 0, sizeof(luabanks));
-				}
-				else if (G_GametypeUsesLives() && players[consoleplayer].playerstate == PST_LIVE && players[consoleplayer].lives != INFLIVES)
-					players[consoleplayer].lives -= 1;
-
-				G_DoReborn(consoleplayer);
-			}
+			G_TickerEnd();
 		}
-
-		for (i = 0; i < MAXPLAYERS; i++)
-			if (playeringame[i] && players[i].playerstate == PST_REBORN)
-				G_DoReborn(i);
+		return;
 	}
-	P_MapEnd();
+
+	// Oh my God I hope this doesn't implode anything
+	if (levelstarting || G_GetExitGameFlag())
+		return;
+
+	// Run Marathon Mode in-game timer
+	G_MarathonTicker();
+
+	// do player reborns if needed
+	G_CheckPlayerReborn();
 
 	// do things to change the game state
 	while (gameaction != ga_nothing)
@@ -2418,6 +2661,16 @@ void G_Ticker(boolean run)
 	switch (gamestate)
 	{
 		case GS_LEVEL:
+			if (titlecard.running)
+			{
+				if (run && tics <= 1)
+					TitleCard_Run();
+				if (titlecard.prelevel)
+				{
+					G_CheckPlayerReborn();
+					break;
+				}
+			}
 			if (titledemo)
 				F_TitleDemoTicker();
 			P_Ticker(run); // tic the game
@@ -2498,26 +2751,100 @@ void G_Ticker(boolean run)
 	}
 
 	if (run)
+		G_TickerEnd();
+}
+
+static inline void G_TickerEnd(void)
+{
+	if (pausedelay && pausedelay != INT32_MIN)
 	{
-		if (pausedelay && pausedelay != INT32_MIN)
-		{
-			if (pausedelay > 0)
-				pausedelay--;
-			else
-				pausedelay++;
-		}
-
-		if (camtoggledelay)
-			camtoggledelay--;
-
-		if (camtoggledelay2)
-			camtoggledelay2--;
-
-		if (gametic % NAMECHANGERATE == 0)
-		{
-			memset(player_name_changes, 0, sizeof player_name_changes);
-		}
+		if (pausedelay > 0)
+			pausedelay--;
+		else
+			pausedelay++;
 	}
+
+	if (camtoggledelay)
+		camtoggledelay--;
+
+	if (camtoggledelay2)
+		camtoggledelay2--;
+
+	if (gametic % NAMECHANGERATE == 0)
+	{
+		memset(player_name_changes, 0, sizeof player_name_changes);
+	}
+}
+
+static void G_CheckPlayerReborn(void)
+{
+	UINT32 i;
+
+	P_MapStart();
+
+	if (gamestate == GS_LEVEL)
+	{
+		// Or, alternatively, retry.
+		if (!(netgame || multiplayer) && G_GetRetrySP())
+		{
+			G_ClearRetrySP();
+
+			if (WipeInAction)
+				F_StopWipe();
+
+			if (modeattacking)
+			{
+				pausedelay = INT32_MIN;
+				M_ModeAttackRetry(0);
+			}
+			else
+			{
+				// Costs a life to retry ... unless the player in question is dead already, or you haven't even touched the first starpost in marathon run.
+				if (marathonmode && gamemap == spmarathon_start && !players[consoleplayer].starposttime)
+				{
+					player_t *p = &players[consoleplayer];
+					marathonmode |= MA_INIT;
+					marathontime = 0;
+
+					numgameovers = tokenlist = token = 0;
+					countdown = countdown2 = exitfadestarted = 0;
+
+					p->playerstate = PST_REBORN;
+					p->starpostx = p->starposty = p->starpostz = 0;
+
+					p->lives = startinglivesbalance[0];
+					p->continues = 1;
+
+					p->score = p->recordscore = 0;
+
+					// The latter two should clear by themselves, but just in case
+					p->pflags &= ~(PF_TAGIT|PF_GAMETYPEOVER|PF_FULLSTASIS);
+
+					// Clear cheatcodes too, just in case.
+					p->pflags &= ~(PF_GODMODE|PF_NOCLIP|PF_INVIS);
+
+					p->xtralife = 0;
+
+					// Reset unlockable triggers
+					unlocktriggers = 0;
+
+					emeralds = 0;
+
+					memset(&luabanks, 0, sizeof(luabanks));
+				}
+				else if (G_GametypeUsesLives() && players[consoleplayer].playerstate == PST_LIVE && players[consoleplayer].lives != INFLIVES)
+					players[consoleplayer].lives -= 1;
+
+				G_DoReborn(consoleplayer);
+			}
+		}
+
+		for (i = 0; i < MAXPLAYERS; i++)
+			if (playeringame[i] && players[i].playerstate == PST_REBORN)
+				G_DoReborn(i);
+	}
+
+	P_MapEnd();
 }
 
 //
@@ -3217,8 +3544,8 @@ void G_DoReborn(INT32 playernum)
 			}
 
 			// Do a wipe
-			wipegamestate = -1;
-			wipestyleflags = WSF_CROSSFADE;
+			// TODO should be done after rendering
+			F_WipeDoCrossfade();
 
 			if (camera.chase)
 				P_ResetCamera(&players[displayplayer], &camera);
@@ -3263,8 +3590,7 @@ void G_DoReborn(INT32 playernum)
 		{
 			LUA_HookInt(gamemap, HOOK(MapChange));
 			titlecardforreload = true;
-			G_DoLoadLevel(true);
-			titlecardforreload = false;
+			G_StartLevel(true);
 			if (metalrecording)
 				G_BeginMetal();
 			return;
@@ -5126,6 +5452,7 @@ void G_InitNew(UINT8 pultmode, const char *mapname, boolean resetplayer, boolean
 	ultimatemode = pultmode;
 	automapactive = false;
 	imcontinuing = false;
+	titlemapinaction = TITLEMAP_OFF;
 
 	if (reset_skin)
 		D_SendPlayerConfig();
@@ -5146,20 +5473,7 @@ void G_InitNew(UINT8 pultmode, const char *mapname, boolean resetplayer, boolean
 	if ((gametyperules & GTR_CUTSCENES) && !skipprecutscene && mapheaderinfo[gamemap-1]->precutscenenum && !modeattacking && !(marathonmode & MA_NOCUTSCENES)) // Start a custom cutscene.
 		F_StartCustomCutscene(mapheaderinfo[gamemap-1]->precutscenenum-1, true, resetplayer, FLS);
 	else
-		G_DoLoadLevel(resetplayer);
-
-	if (netgame)
-	{
-		char *title = G_BuildMapTitle(gamemap);
-
-		CONS_Printf(M_GetText("Map is now \"%s"), G_BuildMapName(gamemap));
-		if (title)
-		{
-			CONS_Printf(": %s", title);
-			Z_Free(title);
-		}
-		CONS_Printf("\"\n");
-	}
+		G_StartLevel(resetplayer);
 }
 
 
@@ -5480,37 +5794,79 @@ boolean G_GetExitGameFlag(void)
 	return exitgame;
 }
 
-// Same deal with retrying.
-void G_SetRetryFlag(void)
-{
-	retrying = true;
+//
+// Retrying flags
+//
+
+#define CheckRetryFlag(type) \
+{ \
+	if (type < 0 || type >= RETRY_MAX) \
+		I_Error("G_SetRetryFlag: out of bounds retry flag type (%d)", type); \
 }
 
-void G_ClearRetryFlag(void)
+void G_SetRetryFlag(INT32 type)
 {
-	retrying = false;
+	CheckRetryFlag(type);
+	retrying[type] = true;
 }
 
-boolean G_GetRetryFlag(void)
+void G_ClearRetryFlag(INT32 type)
 {
-	return retrying;
+	CheckRetryFlag(type);
+	retrying[type] = false;
 }
 
-void G_SetModeAttackRetryFlag(void)
+boolean G_GetRetryFlag(INT32 type)
 {
-	retryingmodeattack = true;
-	G_SetRetryFlag();
+	CheckRetryFlag(type);
+	return retrying[type];
 }
 
-void G_ClearModeAttackRetryFlag(void)
+void G_ClearAllRetryFlags(void)
 {
-	retryingmodeattack = false;
+	INT32 i = RETRY_MAX;
+	while (--i >= 0)
+		G_ClearRetryFlag(i);
 }
 
-boolean G_GetModeAttackRetryFlag(void)
+// Sets RETRY_CUR, may set RETRY_PAUSED.
+void G_SetRetrySP(void)
 {
-	return retryingmodeattack;
+	G_SetRetryFlag(RETRY_SP);
+	G_SetRetryFlag(RETRY_CUR);
+
+	if (paused)
+		G_SetRetryFlag(RETRY_PAUSED);
 }
+
+void G_ClearRetrySP(void)
+{
+	G_ClearRetryFlag(RETRY_SP);
+}
+
+boolean G_GetRetrySP(void)
+{
+	return G_GetRetryFlag(RETRY_SP);
+}
+
+// Sets RETRY_RA and calls G_SetRetryFlag.
+void G_SetRetryRA(void)
+{
+	G_SetRetryFlag(RETRY_RA);
+	G_SetRetrySP();
+}
+
+void G_ClearRetryRA(void)
+{
+	G_ClearRetryFlag(RETRY_RA);
+}
+
+boolean G_GetRetryRA(void)
+{
+	return G_GetRetryFlag(RETRY_RA);
+}
+
+#undef CheckRetryFlag
 
 // Time utility functions
 INT32 G_TicsToHours(tic_t tics)

@@ -3349,7 +3349,7 @@ INT32 V_LevelNameHeight(const char *string)
 	return w;
 }
 
-// For ST_drawTitleCard
+// For TitleCard_Draw
 // Returns the width of the act num patch(es)
 INT16 V_LevelActNumWidth(UINT8 num)
 {

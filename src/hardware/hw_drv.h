@@ -58,7 +58,7 @@ EXPORT INT32 HWRAPI(GetTextureUsed) (void);
 
 EXPORT void HWRAPI(FlushScreenTextures) (void);
 EXPORT void HWRAPI(StartScreenWipe) (void);
-EXPORT void HWRAPI(EndScreenWipe) (void);
+EXPORT void HWRAPI(EndScreenWipe) (boolean restore);
 EXPORT void HWRAPI(DoScreenWipe) (void);
 EXPORT void HWRAPI(DrawIntermissionBG) (void);
 EXPORT void HWRAPI(MakeScreenTexture) (void);

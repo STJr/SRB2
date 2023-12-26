@@ -1817,7 +1817,7 @@ static inline void HU_DrawCrosshairs(void)
 	INT32 cross1 = cv_crosshair.value & 3;
 	INT32 cross2 = cv_crosshair2.value & 3;
 
-	if (automapactive || demoplayback)
+	if (automapactive || demoplayback || titlecard.prelevel)
 		return;
 
 	stplyr = ((stplyr == &players[displayplayer]) ? &players[secondarydisplayplayer] : &players[displayplayer]);

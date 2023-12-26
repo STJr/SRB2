@@ -47,16 +47,10 @@ void ST_ReloadSkinFaceGraphics(void);
 
 void ST_doPaletteStuff(void);
 
-// title card
-void ST_startTitleCard(void);
-void ST_runTitleCard(void);
-void ST_drawTitleCard(void);
-void ST_preDrawTitleCard(void);
-void ST_preLevelTitleCardDrawer(void);
-void ST_drawWipeTitleCard(void);
-
-extern tic_t lt_ticker, lt_lasttic;
-extern tic_t lt_exitticker, lt_endtime;
+// Title card
+void TitleCard_Draw(void);
+void TitleCard_PreDraw(void);
+void TitleCard_DrawOverWipe(void);
 
 // return if player a is in the same team as player b
 boolean ST_SameTeam(player_t *a, player_t *b);

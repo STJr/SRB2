@@ -93,15 +93,23 @@ INT32 P_CheckLevelFlat(const char *flatname);
 extern size_t nummapthings;
 extern mapthing_t *mapthings;
 
-void P_SetupLevelSky(INT32 skynum, boolean global);
 #ifdef SCANTHINGS
 void P_ScanThings(INT16 mapnum, INT16 wadnum, INT16 lumpnum);
 #endif
 void P_RespawnThings(void);
+
 boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate);
+void P_SetupLevelSky(INT32 skynum, boolean global);
+
 #ifdef HWRENDER
 void HWR_LoadLevel(void);
 #endif
+
+void P_RunLevelWipe(void);
+void P_RunSpecialStageWipe(void);
+
+void P_RunLevelScript(const char *scriptname);
+
 boolean P_AddWadFile(const char *wadfilename);
 boolean P_AddFolder(const char *folderpath);
 boolean P_RunSOC(const char *socfilename);

@@ -3162,71 +3162,8 @@ EXPORT void HWRAPI(FlushScreenTextures) (void)
 	finalScreenTexture = 0;
 }
 
-// Create Screen to fade from
-EXPORT void HWRAPI(StartScreenWipe) (void)
-{
-	INT32 texsize = 2048;
-	boolean firstTime = (startScreenWipe == 0);
-
-	// Use a power of two texture, dammit
-	if(screen_width <= 512)
-		texsize = 512;
-	else if(screen_width <= 1024)
-		texsize = 1024;
-
-	// Create screen texture
-	if (firstTime)
-		pglGenTextures(1, &startScreenWipe);
-	pglBindTexture(GL_TEXTURE_2D, startScreenWipe);
-
-	if (firstTime)
-	{
-		pglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-		pglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-		Clamp2D(GL_TEXTURE_WRAP_S);
-		Clamp2D(GL_TEXTURE_WRAP_T);
-		pglCopyTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 0, 0, texsize, texsize, 0);
-	}
-	else
-		pglCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, texsize, texsize);
-
-	tex_downloaded = startScreenWipe;
-}
-
-// Create Screen to fade to
-EXPORT void HWRAPI(EndScreenWipe)(void)
-{
-	INT32 texsize = 2048;
-	boolean firstTime = (endScreenWipe == 0);
-
-	// Use a power of two texture, dammit
-	if(screen_width <= 512)
-		texsize = 512;
-	else if(screen_width <= 1024)
-		texsize = 1024;
-
-	// Create screen texture
-	if (firstTime)
-		pglGenTextures(1, &endScreenWipe);
-	pglBindTexture(GL_TEXTURE_2D, endScreenWipe);
-
-	if (firstTime)
-	{
-		pglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-		pglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-		Clamp2D(GL_TEXTURE_WRAP_S);
-		Clamp2D(GL_TEXTURE_WRAP_T);
-		pglCopyTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 0, 0, texsize, texsize, 0);
-	}
-	else
-		pglCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, texsize, texsize);
-
-	tex_downloaded = endScreenWipe;
-}
-
-
-// Draw the last scene under the intermission
-EXPORT void HWRAPI(DrawIntermissionBG)(void)
+// Draws a screen texture.
+static void DrawScreenTexture(GLuint tex)
 {
 	float xfix, yfix;
 	INT32 texsize = 2048;
@@ -3263,14 +3200,86 @@ EXPORT void HWRAPI(DrawIntermissionBG)(void)
 
 	pglClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
 
-	pglBindTexture(GL_TEXTURE_2D, screentexture);
+	pglBindTexture(GL_TEXTURE_2D, tex);
 	pglColor4ubv(white);
 
 	pglTexCoordPointer(2, GL_FLOAT, 0, fix);
 	pglVertexPointer(3, GL_FLOAT, 0, screenVerts);
 	pglDrawArrays(GL_TRIANGLE_FAN, 0, 4);
 
-	tex_downloaded = screentexture;
+	tex_downloaded = tex;
+}
+
+// Create Screen to fade from
+EXPORT void HWRAPI(StartScreenWipe) (void)
+{
+	INT32 texsize = 2048;
+	boolean firstTime = (startScreenWipe == 0);
+
+	// Use a power of two texture, dammit
+	if(screen_width <= 512)
+		texsize = 512;
+	else if(screen_width <= 1024)
+		texsize = 1024;
+
+	// Create screen texture
+	if (firstTime)
+		pglGenTextures(1, &startScreenWipe);
+	pglBindTexture(GL_TEXTURE_2D, startScreenWipe);
+
+	if (firstTime)
+	{
+		pglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		pglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		Clamp2D(GL_TEXTURE_WRAP_S);
+		Clamp2D(GL_TEXTURE_WRAP_T);
+		pglCopyTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 0, 0, texsize, texsize, 0);
+	}
+	else
+		pglCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, texsize, texsize);
+
+	tex_downloaded = startScreenWipe;
+}
+
+// Create Screen to fade to
+EXPORT void HWRAPI(EndScreenWipe)(boolean restore)
+{
+	INT32 texsize = 2048;
+	boolean firstTime = (endScreenWipe == 0);
+
+	// Use a power of two texture, dammit
+	if(screen_width <= 512)
+		texsize = 512;
+	else if(screen_width <= 1024)
+		texsize = 1024;
+
+	// Create screen texture
+	if (firstTime)
+		pglGenTextures(1, &endScreenWipe);
+	pglBindTexture(GL_TEXTURE_2D, endScreenWipe);
+
+	if (firstTime)
+	{
+		pglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		pglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		Clamp2D(GL_TEXTURE_WRAP_S);
+		Clamp2D(GL_TEXTURE_WRAP_T);
+		pglCopyTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 0, 0, texsize, texsize, 0);
+	}
+	else
+		pglCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, texsize, texsize);
+
+	tex_downloaded = endScreenWipe;
+
+	// Draw the start screen wipe texture
+	if (restore)
+		DrawScreenTexture(startScreenWipe);
+}
+
+// Draw the last scene under the intermission
+EXPORT void HWRAPI(DrawIntermissionBG)(void)
+{
+	DrawScreenTexture(screentexture);
 }
 
 // Do screen fades!

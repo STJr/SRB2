@@ -585,7 +585,7 @@ void SCR_DisplayMarathonInfo(void)
 		if (gamecomplete)
 			flags |= V_YELLOWMAP;
 		else if (marathonmode & MA_INGAME)
-			; // see also G_Ticker
+			; // see also G_MarathonTicker
 		else if (marathonmode & MA_INIT)
 			marathonmode &= ~MA_INIT;
 		else
