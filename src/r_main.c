@@ -1028,6 +1028,34 @@ void R_Init(void)
 }
 
 //
+// R_IsPointInSector
+//
+boolean R_IsPointInSector(sector_t *sector, fixed_t x, fixed_t y)
+{
+	size_t i;
+	line_t *closest = NULL;
+	fixed_t closestdist = INT32_MAX;
+
+	for (i = 0; i < sector->linecount; i++)
+	{
+		vertex_t v;
+		fixed_t dist;
+
+		// find the line closest to the point we're looking for.
+		P_ClosestPointOnLine(x, y, sector->lines[i], &v);
+		dist = R_PointToDist2(0, 0, v.x - x, v.y - y);
+		if (dist < closestdist)
+		{
+			closest = sector->lines[i];
+			closestdist = dist;
+		}
+	}
+
+	// if the side of the closest line is in this sector, we're inside of it.
+	return P_PointOnLineSide(x, y, closest) == 0 ? closest->frontsector == sector : closest->backsector == sector;
+}
+
+//
 // R_PointInSubsector
 //
 subsector_t *R_PointInSubsector(fixed_t x, fixed_t y)
