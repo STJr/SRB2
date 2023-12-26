@@ -693,6 +693,19 @@ static void Impl_HandleKeyboardEvent(SDL_KeyboardEvent evt, Uint32 type)
 	if (event.key) D_PostEvent(&event);
 }
 
+static void Impl_HandleTextEvent(SDL_TextInputEvent evt)
+{
+	event_t event;
+	event.type = ev_text;
+	if (evt.text[1] != '\0')
+	{
+		// limit ourselves to ASCII for now, we can add UTF-8 support later
+		return;
+	}
+	event.key = evt.text[0];
+	D_PostEvent(&event);
+}
+
 static void Impl_HandleMouseMotionEvent(SDL_MouseMotionEvent evt)
 {
 	static boolean firstmove = true;
@@ -940,6 +953,9 @@ void I_GetEvent(void)
 			case SDL_KEYUP:
 			case SDL_KEYDOWN:
 				Impl_HandleKeyboardEvent(evt.key, evt.type);
+				break;
+			case SDL_TEXTINPUT:
+				Impl_HandleTextEvent(evt.text);
 				break;
 			case SDL_MOUSEMOTION:
 				//if (!mouseMotionOnce)
