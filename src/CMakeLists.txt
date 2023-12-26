@@ -281,7 +281,7 @@ target_compile_options(SRB2SDL2 PRIVATE
 
 		$<$<VERSION_GREATER_EQUAL:$<C_COMPILER_VERSION>,4.5.0>:
 			-Wlogical-op
-			-Wno-error=array-bounds
+			#-Wno-error=array-bounds
 		>
 
 		$<$<VERSION_GREATER_EQUAL:$<C_COMPILER_VERSION>,4.6.0>:
