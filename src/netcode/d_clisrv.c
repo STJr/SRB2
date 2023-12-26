@@ -1623,6 +1623,17 @@ INT32 D_NumPlayers(void)
 	return num;
 }
 
+/** Returns the number of nodes on the server.
+  */
+INT32 D_NumNodes(void)
+{
+	INT32 num = 0;
+	for (INT32 ix = 0; ix < MAXNETNODES; ix++)
+		if (netnodes[ix].ingame)
+			num++;
+	return num;
+}
+
 /** Similar to the above, but counts only bots.
   * Purpose is to remove bots from both the player count and the
   * max player count on the server view
