@@ -264,7 +264,7 @@ boolean P_DoSpring(mobj_t *spring, mobj_t *object)
 				UINT8 secondjump = object->player->secondjump;
 				UINT16 tailsfly = object->player->powers[pw_tailsfly];
 				if (object->player->pflags & PF_GLIDING)
-					P_SetPlayerMobjState(object, S_PLAY_FALL);
+					P_SetMobjState(object, S_PLAY_FALL);
 				P_ResetPlayer(object->player);
 				object->player->pflags |= pflags;
 				object->player->secondjump = secondjump;
@@ -403,7 +403,7 @@ boolean P_DoSpring(mobj_t *spring, mobj_t *object)
 		}
 
 		if (object->player->pflags & PF_GLIDING)
-			P_SetPlayerMobjState(object, S_PLAY_FALL);
+			P_SetMobjState(object, S_PLAY_FALL);
 		if ((spring->info->painchance == 3))
 		{
 			if (!(pflags = (object->player->pflags & PF_SPINNING)) &&
@@ -411,11 +411,11 @@ boolean P_DoSpring(mobj_t *spring, mobj_t *object)
 				|| (spring->flags2 & MF2_AMBUSH)))
 			{
 				pflags = PF_SPINNING;
-				P_SetPlayerMobjState(object, S_PLAY_ROLL);
+				P_SetMobjState(object, S_PLAY_ROLL);
 				S_StartSound(object, sfx_spin);
 			}
 			else
-				P_SetPlayerMobjState(object, S_PLAY_ROLL);
+				P_SetMobjState(object, S_PLAY_ROLL);
 		}
 		else
 		{
@@ -424,7 +424,7 @@ boolean P_DoSpring(mobj_t *spring, mobj_t *object)
 			pflags = object->player->pflags & (PF_STARTJUMP | PF_JUMPED | PF_NOJUMPDAMAGE | PF_SPINNING | PF_THOKKED | PF_BOUNCING); // I still need these.
 
 			if (wasSpindashing) // Ensure we're in the rolling state, and not spindash.
-				P_SetPlayerMobjState(object, S_PLAY_ROLL);
+				P_SetMobjState(object, S_PLAY_ROLL);
 
 			if (object->player->charability == CA_GLIDEANDCLIMB && object->player->skidtime && (pflags & PF_JUMPED))
 			{
@@ -439,7 +439,7 @@ boolean P_DoSpring(mobj_t *spring, mobj_t *object)
 		if (spring->info->painchance == 1) // For all those ancient, SOC'd abilities.
 		{
 			object->player->pflags |= P_GetJumpFlags(object->player);
-			P_SetPlayerMobjState(object, S_PLAY_JUMP);
+			P_SetMobjState(object, S_PLAY_JUMP);
 		}
 		else if ((spring->info->painchance == 2) || ((spring->info->painchance != 3) && (pflags & PF_BOUNCING))) // Adding momentum only.
 		{
@@ -456,16 +456,16 @@ boolean P_DoSpring(mobj_t *spring, mobj_t *object)
 				object->player->secondjump = secondjump;
 			}
 			else if (object->player->dashmode >= DASHMODE_THRESHOLD)
-				P_SetPlayerMobjState(object, S_PLAY_DASH);
+				P_SetMobjState(object, S_PLAY_DASH);
 			else if (P_IsObjectOnGround(object))
-				P_SetPlayerMobjState(object, (horizspeed >= FixedMul(object->player->runspeed, object->scale)) ? S_PLAY_RUN : S_PLAY_WALK);
+				P_SetMobjState(object, (horizspeed >= FixedMul(object->player->runspeed, object->scale)) ? S_PLAY_RUN : S_PLAY_WALK);
 			else
-				P_SetPlayerMobjState(object, (object->momz > 0) ? S_PLAY_SPRING : S_PLAY_FALL);
+				P_SetMobjState(object, (object->momz > 0) ? S_PLAY_SPRING : S_PLAY_FALL);
 		}
 		else if (P_MobjFlip(object)*vertispeed > 0)
-			P_SetPlayerMobjState(object, S_PLAY_SPRING);
+			P_SetMobjState(object, S_PLAY_SPRING);
 		else
-			P_SetPlayerMobjState(object, S_PLAY_FALL);
+			P_SetMobjState(object, S_PLAY_FALL);
 	}
 	else if (horizspeed
 		&& object->tracer
@@ -547,7 +547,7 @@ static void P_DoFanAndGasJet(mobj_t *spring, mobj_t *object)
 			if (p && !p->powers[pw_tailsfly] && !p->powers[pw_carry]) // doesn't reset anim for Tails' flight
 			{
 				P_ResetPlayer(p);
-				P_SetPlayerMobjState(object, S_PLAY_FALL);
+				P_SetMobjState(object, S_PLAY_FALL);
 				P_SetTarget(&object->tracer, spring);
 				p->powers[pw_carry] = CR_FAN;
 			}
@@ -565,7 +565,7 @@ static void P_DoFanAndGasJet(mobj_t *spring, mobj_t *object)
 			{
 				P_ResetPlayer(p);
 				if (p->panim != PA_FALL)
-					P_SetPlayerMobjState(object, S_PLAY_FALL);
+					P_SetMobjState(object, S_PLAY_FALL);
 			}
 			break;
 		default:
@@ -1047,7 +1047,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 			thing->flags2 &= ~MF2_DONTDRAW; // don't leave the rock invisible if it was flashing prior to boarding
 			P_SetTarget(&thing->tracer, tmthing);
 			P_ResetPlayer(tmthing->player);
-			P_SetPlayerMobjState(tmthing, S_PLAY_WALK);
+			P_SetMobjState(tmthing, S_PLAY_WALK);
 			tmthing->player->powers[pw_carry] = CR_ROLLOUT;
 			P_SetTarget(&tmthing->tracer, thing);
 			if (!P_IsObjectOnGround(thing))

@@ -529,7 +529,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				else if (player->pflags & PF_GLIDING && !P_IsObjectOnGround(toucher))
 				{
 					player->pflags &= ~(PF_GLIDING|PF_JUMPED|PF_NOJUMPDAMAGE);
-					P_SetPlayerMobjState(toucher, S_PLAY_FALL);
+					P_SetMobjState(toucher, S_PLAY_FALL);
 					toucher->momz += P_MobjFlip(toucher) * (player->speed >> 3);
 					toucher->momx = 7*toucher->momx>>3;
 					toucher->momy = 7*toucher->momy>>3;
@@ -1249,7 +1249,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 
 					P_ResetPlayer(player);
 
-					P_SetPlayerMobjState(toucher, S_PLAY_FALL);
+					P_SetMobjState(toucher, S_PLAY_FALL);
 				}
 			}
 			return;
@@ -1558,7 +1558,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				if (player->pflags & PF_GLIDING && !P_IsObjectOnGround(toucher))
 				{
 					player->pflags &= ~(PF_GLIDING|PF_JUMPED|PF_NOJUMPDAMAGE);
-					P_SetPlayerMobjState(toucher, S_PLAY_FALL);
+					P_SetMobjState(toucher, S_PLAY_FALL);
 					toucher->momz += P_MobjFlip(toucher) * (player->speed >> 3);
 					toucher->momx = 7*toucher->momx>>3;
 					toucher->momy = 7*toucher->momy>>3;
@@ -1609,7 +1609,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 					if (player->pflags & PF_GLIDING && !P_IsObjectOnGround(toucher))
 					{
 						player->pflags &= ~(PF_GLIDING|PF_JUMPED|PF_NOJUMPDAMAGE);
-						P_SetPlayerMobjState(toucher, S_PLAY_FALL);
+						P_SetMobjState(toucher, S_PLAY_FALL);
 						toucher->momz += P_MobjFlip(toucher) * (player->speed >> 3);
 						toucher->momx = 7*toucher->momx>>3;
 						toucher->momy = 7*toucher->momy>>3;
@@ -1645,7 +1645,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			special->momx = special->momy = 0;
 
 			// Buenos Dias Mandy
-			P_SetPlayerMobjState(toucher, S_PLAY_STUN);
+			P_SetMobjState(toucher, S_PLAY_STUN);
 			player->pflags &= ~PF_APPLYAUTOBRAKE;
 			P_ResetPlayer(player);
 			player->drawangle = special->angle + ANGLE_180;
@@ -1724,7 +1724,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				{
 					player->powers[pw_carry] = CR_MACESPIN;
 					S_StartSound(toucher, sfx_spin);
-					P_SetPlayerMobjState(toucher, S_PLAY_ROLL);
+					P_SetMobjState(toucher, S_PLAY_ROLL);
 				}
 				else
 					player->powers[pw_carry] = CR_GENERIC;
@@ -1785,7 +1785,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			{
 				if (player->bot && player->bot != BOT_MPAI && toucher->state-states != S_PLAY_GASP)
 					S_StartSound(toucher, special->info->deathsound); // Force it to play a sound for bots
-				P_SetPlayerMobjState(toucher, S_PLAY_GASP);
+				P_SetMobjState(toucher, S_PLAY_GASP);
 				P_ResetPlayer(player);
 			}
 
@@ -1855,7 +1855,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				toucher->momz = toucher->tracer->momz + P_AproxDistance(toucher->tracer->momx, toucher->tracer->momy)/2;
 				P_ResetPlayer(player);
 				player->pflags &= ~PF_APPLYAUTOBRAKE;
-				P_SetPlayerMobjState(toucher, S_PLAY_FALL);
+				P_SetMobjState(toucher, S_PLAY_FALL);
 				P_SetTarget(&toucher->tracer->target, NULL);
 				P_KillMobj(toucher->tracer, toucher, special, 0);
 				P_SetTarget(&toucher->tracer, NULL);
@@ -3089,9 +3089,9 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 	else if (target->player)
 	{
 		if (damagetype == DMG_DROWNED || damagetype == DMG_SPACEDROWN)
-			P_SetPlayerMobjState(target, target->info->xdeathstate);
+			P_SetMobjState(target, target->info->xdeathstate);
 		else
-			P_SetPlayerMobjState(target, target->info->deathstate);
+			P_SetMobjState(target, target->info->deathstate);
 	}
 	else
 #ifdef DEBUG_NULL_DEATHSTATE
@@ -3145,7 +3145,7 @@ static void P_NiGHTSDamage(mobj_t *target, mobj_t *source)
 		}
 
 		player->powers[pw_flashing] = flashingtics;
-		P_SetPlayerMobjState(target, S_PLAY_NIGHTS_STUN);
+		P_SetMobjState(target, S_PLAY_NIGHTS_STUN);
 		S_StartSound(target, sfx_nghurt);
 
 		player->mo->spriteroll = 0;
@@ -3366,7 +3366,7 @@ static void P_KillPlayer(player_t *player, mobj_t *source, INT32 damage)
 	if (!player->spectator)
 		player->mo->flags2 &= ~MF2_DONTDRAW;
 
-	P_SetPlayerMobjState(player->mo, player->mo->info->deathstate);
+	P_SetMobjState(player->mo, player->mo->info->deathstate);
 	if ((gametyperules & GTR_TEAMFLAGS) && (player->gotflag & (GF_REDFLAG|GF_BLUEFLAG)))
 	{
 		P_PlayerFlagBurst(player, false);
@@ -3440,7 +3440,7 @@ static void P_SuperDamage(player_t *player, mobj_t *inflictor, mobj_t *source, I
 
 	P_InstaThrust(player->mo, ang, fallbackspeed);
 
-	P_SetPlayerMobjState(player->mo, S_PLAY_STUN);
+	P_SetMobjState(player->mo, S_PLAY_STUN);
 
 	P_ResetPlayer(player);
 
