@@ -369,7 +369,7 @@ static void R_RasterizeFloorSplat(floorsplat_t *pSplat, vector2_t *verts, visspr
 	ds_flatwidth = pSplat->width;
 	ds_flatheight = pSplat->height;
 
-	ds_powersoftwo = ds_solidcolor = false;
+	ds_powersoftwo = ds_solidcolor = ds_fog = false;
 
 	if (R_CheckSolidColorFlat())
 		ds_solidcolor = true;
@@ -381,9 +381,7 @@ static void R_RasterizeFloorSplat(floorsplat_t *pSplat, vector2_t *verts, visspr
 
 	if (pSplat->slope)
 	{
-		R_SetTiltedSpan(0);
 		R_SetScaledSlopePlane(pSplat->slope, vis->viewpoint.x, vis->viewpoint.y, vis->viewpoint.z, pSplat->xscale, pSplat->yscale, -pSplat->verts[0].x, pSplat->verts[0].y, vis->viewpoint.angle, pSplat->angle);
-		R_CalculateSlopeVectors();
 	}
 	else if (!ds_solidcolor)
 	{

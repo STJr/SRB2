@@ -957,16 +957,6 @@ void R_ExecuteSetViewSize(void)
 			dy = FixedMul(abs(dy), fovtan);
 			yslopetab[i] = FixedDiv(centerx*FRACUNIT, dy);
 		}
-
-		if (ds_su)
-			Z_Free(ds_su);
-		if (ds_sv)
-			Z_Free(ds_sv);
-		if (ds_sz)
-			Z_Free(ds_sz);
-
-		ds_su = ds_sv = ds_sz = NULL;
-		ds_sup = ds_svp = ds_szp = NULL;
 	}
 
 	memset(scalelight, 0xFF, sizeof(scalelight));
@@ -1011,9 +1001,6 @@ void R_Init(void)
 	//I_OutputMsg("\nR_InitViewBorder");
 	R_InitViewBorder();
 	R_SetViewSize(); // setsizeneeded is set true
-
-	//I_OutputMsg("\nR_InitPlanes");
-	R_InitPlanes();
 
 	// this is now done by SCR_Recalc() at the first mode set
 	//I_OutputMsg("\nR_InitLightTables");
