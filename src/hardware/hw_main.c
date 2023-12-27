@@ -6924,10 +6924,10 @@ void HWR_StartScreenWipe(void)
 	HWD.pfnStartScreenWipe();
 }
 
-void HWR_EndScreenWipe(boolean restore)
+void HWR_EndScreenWipe(void)
 {
 	//CONS_Debug(DBG_RENDER, "In HWR_EndScreenWipe()\n");
-	HWD.pfnEndScreenWipe(restore);
+	HWD.pfnEndScreenWipe();
 }
 
 void HWR_DrawIntermissionBG(void)

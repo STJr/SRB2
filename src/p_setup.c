@@ -7541,14 +7541,14 @@ void P_RunSpecialStageWipe(void)
 	if (RESETMUSIC ||
 		strnicmp(S_MusicName(),
 		(mapmusflags & MUSIC_RELOADRESET) ? mapheaderinfo[gamemap - 1]->musname : mapmusname, 7))
-		S_FadeOutStopMusic(MUSICRATE/4); //FixedMul(FixedDiv(F_GetWipeLength(wipedefs[wipe_speclevel_towhite])*NEWTICRATERATIO, NEWTICRATE), MUSICRATE)
+		S_FadeOutStopMusic(MUSICRATE/4);
 
 	if (titlemapinaction || F_GetQueuedWipe())
 		return;
 
 	wipe_t wipe = {0};
-	wipe.style = WIPESTYLE_COLORMAP;
 	wipe.flags = WSF_TOWHITE;
+	wipe.style = F_WipeGetStyle(wipe.flags);
 	wipe.callback = G_DoLoadLevel;
 	wipe.type = wipedefs[wipe_speclevel_towhite];
 	wipe.drawmenuontop = false;
@@ -7562,8 +7562,8 @@ void P_RunLevelWipe(void)
 		return;
 
 	wipe_t wipe = {0};
-	wipe.style = WIPESTYLE_COLORMAP;
 	wipe.flags = 0;
+	wipe.style = F_WipeGetStyle(wipe.flags);
 	wipe.callback = G_DoLoadLevel;
 	wipe.type = wipedefs[wipe_level_toblack];
 	wipe.drawmenuontop = false;
@@ -7945,8 +7945,8 @@ boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate)
 	if (ranspecialwipe == SPECIALWIPE_RETRY)
 	{
 		wipe_t wipe = {0};
-		wipe.style = WIPESTYLE_COLORMAP;
 		wipe.flags = WSF_TOWHITE | WSF_FADEIN;
+		wipe.style = F_WipeGetStyle(wipe.flags);
 		wipe.type = wipedefs[wipe_level_final];
 		wipe.drawmenuontop = true;
 		F_StartWipeParametrized(&wipe);

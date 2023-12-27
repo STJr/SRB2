@@ -53,7 +53,7 @@ UINT8 wipedefs[NUMWIPEDEFS] = {
 	99, // wipe_credits_intermediate (0)
 
 	0,  // wipe_level_toblack
-	UINT8_MAX,  // wipe_intermission_toblack
+	0,  // wipe_intermission_toblack
 	0,  // wipe_continuing_toblack
 	0,  // wipe_titlescreen_toblack
 	0,  // wipe_timeattack_toblack
@@ -98,8 +98,9 @@ static UINT8 wipe_frame;
 static boolean wipe_stopped = false;
 static tic_t wipe_holdframes = 0;
 
-wipestyle_t wipe_style = WIPESTYLE_UNDEFINED;
-wipeflags_t wipe_flags = WSF_CROSSFADE;
+static wipestyle_t wipe_style = WIPESTYLE_NORMAL;
+static wipeflags_t wipe_flags = WSF_CROSSFADE;
+
 specialwipe_t ranspecialwipe = SPECIALWIPE_NONE;
 
 boolean wipe_running = false;
@@ -422,7 +423,7 @@ void F_WipeEndScreen(void)
 #ifdef HWRENDER
 	if (rendermode == render_opengl)
 	{
-		HWR_EndScreenWipe(false);
+		HWR_EndScreenWipe();
 		return;
 	}
 #endif
@@ -442,7 +443,7 @@ static boolean F_WipeCanTint(wipeflags_t flags)
 
 /** Decides what wipe style to use.
   */
-static wipestyle_t F_WipeGetStyle(wipeflags_t flags)
+wipestyle_t F_WipeGetStyle(wipeflags_t flags)
 {
 	if (F_WipeCanTint(flags))
 		return WIPESTYLE_COLORMAP;
@@ -495,7 +496,7 @@ void F_StartWipeParametrized(wipe_t *wipe)
 		paldiv = FixedDiv(257<<FRACBITS, 11<<FRACBITS);
 #endif
 
-	if (wipe_numqueued >= WIPEQUEUESIZE)
+	if (wipe_numqueued >= WIPEQUEUESIZE || wipe->type == UINT8_MAX)
 	{
 		// Can't queue it, but its callback has to run.
 		if (wipe->callback)
@@ -672,11 +673,11 @@ wipe_t *F_GetQueuedWipe(void)
 
 void F_SetupFadeOut(wipeflags_t flags)
 {
+#ifndef NOWIPE
 	F_WipeStartScreen();
 
 	UINT8 wipecolor = (flags & WSF_TOWHITE) ? 0 : 31;
 
-#ifndef NOWIPE
 	if (F_WipeCanTint(flags))
 	{
 #ifdef HWRENDER
@@ -685,46 +686,47 @@ void F_SetupFadeOut(wipeflags_t flags)
 #endif
 	}
 	else
-#endif
 	{
 		F_WipeColorFill(wipecolor);
 	}
 
 	F_WipeEndScreen();
+#endif
+}
+
+void F_DoGenericTransition(void)
+{
+	F_QueuePreWipe(DEFAULTWIPE, 0, NULL);
+	F_QueuePostWipe(DEFAULTWIPE, WSF_FADEIN, NULL);
 }
 
 /** Starts the "pre" type of a wipe.
   */
-void F_QueuePreWipe(INT16 wipetypepre, wipeflags_t flags, wipe_callback_t callback)
+void F_QueuePreWipe(INT16 type, wipeflags_t flags, wipe_callback_t callback)
 {
-	if (wipetypepre == DEFAULTWIPE || !F_WipeExists(wipetypepre))
-		wipetypepre = wipedefs[F_GetWipedefIndex()];
+	if (type == DEFAULTWIPE || !F_WipeExists(type))
+		type = wipedefs[F_GetWipedefIndex()];
 
-	// Fade to black first
-	if (!(gamestate == GS_LEVEL || (gamestate == GS_TITLESCREEN && titlemapinaction)) // fades to black on its own timing, always
-	 && wipetypepre != UINT8_MAX)
-	{
-		wipe_t wipe = {0};
-		wipe.flags = flags;
-		wipe.style = F_WipeGetStyle(wipe.flags);
-		wipe.type = wipetypepre;
-		wipe.drawmenuontop = gamestate != GS_TIMEATTACK && gamestate != GS_TITLESCREEN;
-		wipe.callback = callback;
-		F_StartWipeParametrized(&wipe);
-	}
+	wipe_t wipe = {0};
+	wipe.flags = flags;
+	wipe.style = F_WipeGetStyle(flags);
+	wipe.type = type;
+	wipe.drawmenuontop = gamestate != GS_TIMEATTACK && gamestate != GS_TITLESCREEN;
+	wipe.callback = callback;
+	F_StartWipeParametrized(&wipe);
 }
 
 /** Starts the "post" type of a wipe.
   */
-void F_QueuePostWipe(INT16 wipetypepost, wipeflags_t flags, wipe_callback_t callback)
+void F_QueuePostWipe(INT16 type, wipeflags_t flags, wipe_callback_t callback)
 {
-	if (wipetypepost == DEFAULTWIPE || !F_WipeExists(wipetypepost))
-		wipetypepost = wipedefs[F_GetWipedefIndex() + WIPEFINALSHIFT];
+	if (type == DEFAULTWIPE || !F_WipeExists(type))
+		type = wipedefs[F_GetWipedefIndex() + WIPEFINALSHIFT];
 
 	wipe_t wipe = {0};
 	wipe.flags = flags;
-	wipe.style = F_WipeGetStyle(wipe.flags);
-	wipe.type = wipetypepost;
+	wipe.style = F_WipeGetStyle(flags);
+	wipe.type = type;
 	wipe.drawmenuontop = gamestate != GS_TIMEATTACK && gamestate != GS_TITLESCREEN;
 	wipe.callback = callback;
 	F_StartWipeParametrized(&wipe);
@@ -732,12 +734,12 @@ void F_QueuePostWipe(INT16 wipetypepost, wipeflags_t flags, wipe_callback_t call
 
 /** Does a crossfade.
   */
-void F_WipeDoCrossfade(void)
+void F_WipeDoCrossfade(INT16 type)
 {
 	wipe_t wipe = {0};
-	wipe.flags = WSF_CROSSFADE | WSF_FADEIN;
-	wipe.style = WIPESTYLE_NORMAL;
-	wipe.type = wipedefs[F_GetWipedefIndex()];
+	wipe.flags = WSF_CROSSFADE;
+	wipe.style = F_WipeGetStyle(wipe.flags);
+	wipe.type = type == DEFAULTWIPE ? wipedefs[F_GetWipedefIndex()] : type;
 	wipe.drawmenuontop = false;
 	F_StartWipeParametrized(&wipe);
 }

@@ -830,16 +830,6 @@ void F_IntroDrawer(void)
 	V_DrawString(cx, cy, V_ALLOWLOWERCASE, cutscene_disptext);
 }
 
-static void F_IntroDoCrossfade(void)
-{
-	wipe_t wipe = {0};
-	wipe.flags = WSF_CROSSFADE;
-	wipe.style = WIPESTYLE_NORMAL;
-	wipe.type = 99;
-	wipe.drawmenuontop = false;
-	F_StartWipeParametrized(&wipe);
-}
-
 static void F_IntroCheckMidSceneWipe(void)
 {
 	boolean do_crossfade = false;
@@ -858,10 +848,7 @@ static void F_IntroCheckMidSceneWipe(void)
 		do_crossfade = true;
 
 	if (do_crossfade)
-	{
-		F_IntroDoCrossfade();
-		timetonext--;
-	}
+		F_WipeDoCrossfade(99);
 }
 
 static void F_PlayIntroMusic(void)
@@ -872,7 +859,6 @@ static void F_PlayIntroMusic(void)
 static void F_IntroDoSpecialWipe(INT32 scene)
 {
 	wipe_t wipe = {0};
-	wipe.style = WIPESTYLE_NORMAL;
 	wipe.type = 99;
 	wipe.drawmenuontop = true;
 
@@ -883,18 +869,15 @@ static void F_IntroDoSpecialWipe(INT32 scene)
 		case INTRO_STJR:
 			// The intro music is timed with the fade out and fade in
 			wipe.callback = F_PlayIntroMusic;
-			wipe.style = WIPESTYLE_COLORMAP;
 			do_fade_in = true;
 			break;
 		case INTRO_SKYRUNNER:
 			wipe.flags = WSF_TOWHITE;
-			wipe.style = WIPESTYLE_COLORMAP;
 			wipe.type = 0;
 			wipe.holdframes = 17;
 			do_fade_in = true;
 			break;
 		case INTRO_LAST:
-			wipe.style = WIPESTYLE_COLORMAP;
 			wipe.holdframes = NEWTICRATE*2;
 			wipe.callback = D_StartTitle;
 			break;
@@ -902,6 +885,8 @@ static void F_IntroDoSpecialWipe(INT32 scene)
 			wipe.flags = WSF_CROSSFADE;
 			break;
 	}
+
+	wipe.style = F_WipeGetStyle(wipe.flags);
 
 	F_StartWipeParametrized(&wipe);
 
@@ -954,7 +939,7 @@ void F_IntroTicker(void)
 	{
 		if (F_IntroSceneCrossfades(intro_scenenum))
 		{
-			F_IntroDoCrossfade();
+			F_WipeDoCrossfade(99);
 			next = false;
 		}
 
@@ -3842,8 +3827,8 @@ static void F_AdvanceToNextScene(void)
 	if (cutscenes[cutnum]->scene[scenenum].fadecolor)
 	{
 		wipe_t wipe = {0};
-		wipe.flags = 0;
-		wipe.style = WIPESTYLE_NORMAL;
+		wipe.flags = WSF_CROSSFADE;
+		wipe.style = F_WipeGetStyle(wipe.flags);
 		wipe.type = cutscenes[cutnum]->scene[scenenum].fadeinid;
 		wipe.drawmenuontop = true;
 		wipe.callback = F_PlayCutsceneMusic;
@@ -3853,7 +3838,7 @@ static void F_AdvanceToNextScene(void)
 	}
 	else
 	{
-		F_WipeDoCrossfade();
+		F_WipeDoCrossfade(DEFAULTWIPE);
 	}
 
 	// Don't increment until after endcutscene check

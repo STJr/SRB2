@@ -170,11 +170,9 @@ extern boolean wipe_drawmenuontop;
 
 typedef enum
 {
-	WIPESTYLE_UNDEFINED,
 	WIPESTYLE_NORMAL,
 	WIPESTYLE_COLORMAP
 } wipestyle_t;
-extern wipestyle_t wipe_style;
 
 typedef enum
 {
@@ -182,7 +180,6 @@ typedef enum
 	WSF_TOWHITE   = 1<<1,
 	WSF_CROSSFADE = 1<<2
 } wipeflags_t;
-extern wipeflags_t wipe_flags;
 
 typedef void (*wipe_callback_t)(void);
 
@@ -214,11 +211,13 @@ void F_DisplayWipe(void);
 void F_StopWipe(void);
 void F_StopAllWipes(void);
 void F_SetupFadeOut(wipeflags_t flags);
-void F_QueuePreWipe(INT16 wipetypepre, wipeflags_t flags, wipe_callback_t callback);
-void F_QueuePostWipe(INT16 wipetypepost, wipeflags_t flags, wipe_callback_t callback);
-void F_WipeDoCrossfade(void);
+void F_DoGenericTransition(void);
+void F_QueuePreWipe(INT16 type, wipeflags_t flags, wipe_callback_t callback);
+void F_QueuePostWipe(INT16 type, wipeflags_t flags, wipe_callback_t callback);
+void F_WipeDoCrossfade(INT16 type);
 void F_StartPendingWipe(void);
 wipe_t *F_GetQueuedWipe(void);
+wipestyle_t F_WipeGetStyle(wipeflags_t flags);
 
 #define F_WipeColorFill(c) V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, c)
 

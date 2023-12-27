@@ -13235,6 +13235,14 @@ boolean P_PlayerShouldUseSpinHeight(player_t *player)
 		|| JUMPCURLED(player));
 }
 
+boolean P_IsHuman(player_t *player)
+{
+	if (!player)
+		return true;
+
+	return player->bot == BOT_NONE || player->bot == BOT_2PHUMAN;
+}
+
 UINT16 P_GetPlayerColor(player_t *player)
 {
 	if (G_GametypeHasTeams() && player->ctfteam)

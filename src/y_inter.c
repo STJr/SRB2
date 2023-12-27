@@ -1363,7 +1363,7 @@ void Y_StartIntermission(void)
 			}
 			usetile = false;
 
-			F_WipeDoCrossfade();
+			F_WipeDoCrossfade(DEFAULTWIPE);
 
 			// set up the "got through act" message according to skin name
 			if (stagefailed)
@@ -1440,23 +1440,7 @@ void Y_StartIntermission(void)
 			// tile if using the default background
 			usetile = !useinterpic;
 
-			F_QueuePreWipe(DEFAULTWIPE, 0, NULL);
-			F_QueuePostWipe(DEFAULTWIPE, WSF_FADEIN, NULL);
-
-			// get special stage specific patches
-/*			if (!stagefailed && ALL7EMERALDS(emeralds))
-			{
-				data.spec.cemerald = W_CachePatchName("GOTEMALL", PU_PATCH);
-				data.spec.headx = 70;
-				data.spec.nowsuper = players[consoleplayer].skin
-					? NULL : W_CachePatchName("NOWSUPER", PU_PATCH);
-			}
-			else
-			{
-				data.spec.cemerald = W_CachePatchName("CEMERALD", PU_PATCH);
-				data.spec.headx = 48;
-				data.spec.nowsuper = NULL;
-			} */
+			F_DoGenericTransition();
 
 			// Super form stuff (normally blank)
 			data.spec.passed3[0] = '\0';
@@ -1532,8 +1516,7 @@ void Y_StartIntermission(void)
 			usetile = true;
 			useinterpic = false;
 
-			F_QueuePreWipe(DEFAULTWIPE, 0, NULL);
-			F_QueuePostWipe(DEFAULTWIPE, WSF_FADEIN, NULL);
+			F_DoGenericTransition();
 			break;
 		}
 
@@ -1559,8 +1542,7 @@ void Y_StartIntermission(void)
 			usetile = true;
 			useinterpic = false;
 
-			F_QueuePreWipe(DEFAULTWIPE, 0, NULL);
-			F_QueuePostWipe(DEFAULTWIPE, WSF_FADEIN, NULL);
+			F_DoGenericTransition();
 			break;
 		}
 
@@ -1587,8 +1569,7 @@ void Y_StartIntermission(void)
 			usetile = true;
 			useinterpic = false;
 
-			F_QueuePreWipe(DEFAULTWIPE, 0, NULL);
-			F_QueuePostWipe(DEFAULTWIPE, WSF_FADEIN, NULL);
+			F_DoGenericTransition();
 			break;
 		}
 
@@ -1614,8 +1595,7 @@ void Y_StartIntermission(void)
 			usetile = true;
 			useinterpic = false;
 
-			F_QueuePreWipe(-1, 0, NULL);
-			F_QueuePostWipe(-1, WSF_FADEIN, NULL);
+			F_DoGenericTransition();
 			break;
 		}
 

@@ -79,7 +79,7 @@ static void G_DoContinued(void);
 static void G_DoWorldDone(void);
 
 static void G_CheckPlayerReborn(void);
-static inline void G_TickerEnd(void);
+static void G_TickerEnd(void);
 
 char   mapmusname[7]; // Music name
 UINT16 mapmusflags; // Track and reset bit
@@ -2087,7 +2087,7 @@ static void G_DoLevelFadeIn(void)
 	if (ranspecialwipe == SPECIALWIPE_SSTAGE)
 		flags |= WSF_TOWHITE;
 	wipe_t wipe = {0};
-	wipe.style = WIPESTYLE_COLORMAP;
+	wipe.style = F_WipeGetStyle(wipe.flags);
 	wipe.flags = flags;
 	wipe.type = wipedefs[wipe_level_final];
 	wipe.drawmenuontop = true;
@@ -2180,7 +2180,7 @@ void TitleCard_Run(void)
 	{
 		if (!cv_showhud.value)
 		{
-			F_WipeDoCrossfade();
+			F_WipeDoCrossfade(DEFAULTWIPE);
 		}
 		else
 		{
@@ -2563,7 +2563,6 @@ static void G_MarathonTicker(void)
 void G_Ticker(boolean run)
 {
 	UINT32 i;
-	INT32 buf;
 
 	// Bot players queued for removal
 	for (i = MAXPLAYERS-1; i != UINT32_MAX; i--)
@@ -2601,8 +2600,12 @@ void G_Ticker(boolean run)
 			}
 
 			// Run the title card
-			if (titlecard.running && (wipe_flags & WSF_FADEIN))
-				TitleCard_Run();
+			if (titlecard.running)
+			{
+				wipe_t *wipe = F_GetQueuedWipe();
+				if (wipe && wipe->flags & WSF_FADEIN)
+					TitleCard_Run();
+			}
 
 			// Run Marathon Mode in-game timer
 			G_MarathonTicker();
@@ -2638,16 +2641,15 @@ void G_Ticker(boolean run)
 			default: I_Error("gameaction = %d\n", gameaction);
 		}
 
-	buf = gametic % BACKUPTICS;
-
 	// Generate ticcmds for bots FIRST, then copy received ticcmds for players.
 	// This emulates pre-2.2.10 behaviour where the bot referenced their leader's last copied ticcmd,
 	// which is desirable because P_PlayerThink can override inputs (e.g. while PF_STASIS is applied or in a waterslide),
 	// and the bot AI needs to respect that.
-#define ISHUMAN (players[i].bot == BOT_NONE || players[i].bot == BOT_2PHUMAN)
+	INT32 buf = gametic % BACKUPTICS;
+
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
-		if (playeringame[i] && !ISHUMAN) // Less work is required if we're building a bot ticcmd.
+		if (playeringame[i] && !P_IsHuman(&players[i])) // Less work is required if we're building a bot ticcmd.
 		{
 			players[i].lastbuttons = players[i].cmd.buttons; // Save last frame's button readings
 			B_BuildTiccmd(&players[i], &players[i].cmd);
@@ -2660,7 +2662,7 @@ void G_Ticker(boolean run)
 
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
-		if (playeringame[i] && ISHUMAN)
+		if (playeringame[i] && P_IsHuman(&players[i]))
 		{
 			players[i].lastbuttons = players[i].cmd.buttons; // Save last frame's button readings
 			G_CopyTiccmd(&players[i].cmd, &netcmds[buf][i], 1);
@@ -2677,7 +2679,6 @@ void G_Ticker(boolean run)
 				players[i].cmd.angleturn = (players[i].angleturn & ~TICCMD_RECEIVED) | (players[i].cmd.angleturn & TICCMD_RECEIVED);
 		}
 	}
-#undef ISHUMAN
 
 	// do main actions
 	switch (gamestate)
@@ -2776,7 +2777,7 @@ void G_Ticker(boolean run)
 		G_TickerEnd();
 }
 
-static inline void G_TickerEnd(void)
+static void G_TickerEnd(void)
 {
 	if (pausedelay && pausedelay != INT32_MIN)
 	{
@@ -3562,9 +3563,7 @@ void G_DoReborn(INT32 playernum)
 				P_ClearStarPost(players[i].starpostnum);
 			}
 
-			// Do a wipe
-			// TODO should be done after rendering
-			F_WipeDoCrossfade();
+			F_WipeDoCrossfade(DEFAULTWIPE);
 
 			if (camera.chase)
 				P_ResetCamera(&players[displayplayer], &camera);

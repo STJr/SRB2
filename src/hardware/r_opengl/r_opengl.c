@@ -3242,7 +3242,7 @@ EXPORT void HWRAPI(StartScreenWipe) (void)
 }
 
 // Create Screen to fade to
-EXPORT void HWRAPI(EndScreenWipe)(boolean restore)
+EXPORT void HWRAPI(EndScreenWipe)(void)
 {
 	INT32 texsize = 2048;
 	boolean firstTime = (endScreenWipe == 0);
@@ -3270,10 +3270,6 @@ EXPORT void HWRAPI(EndScreenWipe)(boolean restore)
 		pglCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, texsize, texsize);
 
 	tex_downloaded = endScreenWipe;
-
-	// Draw the start screen wipe texture
-	if (restore)
-		DrawScreenTexture(startScreenWipe);
 }
 
 // Draw the last scene under the intermission
