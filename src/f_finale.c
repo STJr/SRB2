@@ -332,9 +332,6 @@ static tic_t introscenetime[NUMINTROSCENES] =
 	25*TICRATE,					// I'm just finding what mission obje...
 };
 
-// custom intros
-void F_StartCustomCutscene(INT32 cutscenenum, boolean precutscene, boolean resetplayer, boolean FLS);
-
 void F_StartIntro(void)
 {
 	S_StopMusic();
@@ -342,6 +339,7 @@ void F_StartIntro(void)
 
 	ScreenWipe_StopAll();
 
+	// custom intros
 	if (introtoplay)
 	{
 		if (!cutscenes[introtoplay - 1])
@@ -493,7 +491,7 @@ void F_StartIntro(void)
 	"\x80\n\xA9\xD2\xD2"
 	"\"All right, then\xAF... \xD2\xD2\xA7let's go!\"\n#");
 
-	boolean from_title = gamestate == GS_TITLESCREEN;
+	boolean do_fade_out = gamestate != GS_NULL;
 
 	G_SetGamestate(GS_INTRO);
 	gameaction = ga_nothing;
@@ -507,7 +505,7 @@ void F_StartIntro(void)
 	finalecount = animtimer = skullAnimCounter = stoptimer = 0;
 	timetonext = introscenetime[intro_scenenum];
 
-	if (from_title)
+	if (do_fade_out)
 	{
 		wipe_t wipe = {0};
 		wipe.style = ScreenWipe_GetStyle(wipe.flags);
