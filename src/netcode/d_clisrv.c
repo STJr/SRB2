@@ -820,7 +820,7 @@ void SV_StopServer(void)
 {
 	if (gamestate == GS_INTERMISSION)
 		Y_EndIntermission();
-	gamestate = wipegamestate = GS_NULL;
+	gamestate = GS_NULL;
 
 	localtextcmd[0] = 0;
 	localtextcmd2[0] = 0;
@@ -1239,7 +1239,7 @@ boolean TryRunTics(tic_t realtics)
 				if (update_stats)
 					PS_START_TIMING(ps_tictime);
 
-				G_Ticker((gametic % NEWTICRATERATIO) == 0, (neededtic - gametic));
+				G_Ticker((gametic % NEWTICRATERATIO) == 0);
 				ExtraDataTicker();
 				gametic++;
 				consistancy[gametic%BACKUPTICS] = Consistancy();

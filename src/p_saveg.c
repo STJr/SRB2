@@ -4540,11 +4540,6 @@ static inline boolean P_NetUnArchiveMisc(boolean reloading)
 	}
 
 	G_StartLevelWipe();
-	wipestyleflags &= ~WSF_ACTION;
-	F_StopWipe();
-
-	WipeRunPost = false;
-	wipetypepre = wipetypepost = IGNOREWIPE;
 
 	titlecard.prelevel = false;
 

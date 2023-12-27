@@ -2952,7 +2952,6 @@ static void M_HandleMenuPresState(menu_t *newMenu)
 		}
 	}
 
-
 	// Set the wipes for next frame
 	if (
 		(exitwipe >= 0 && enterlevel <= exitlevel) ||
@@ -2960,23 +2959,27 @@ static void M_HandleMenuPresState(menu_t *newMenu)
 		(anceslevel < 0 && newMenu != &MainDef && currentMenu != &MainDef)
 	)
 	{
+		INT16 wipetypepre = DEFAULTWIPE;
+		INT16 wipetypepost = DEFAULTWIPE;
+
 		if (gamestate == GS_TIMEATTACK)
 			wipetypepre = ((exitwipe && enterlevel <= exitlevel) || anceslevel < 0) ? exitwipe : DEFAULTWIPE; // force default
 		else
 			// HACK: INT16_MAX signals to not wipe
 			// because 0 is a valid index and -1 means default
-			wipetypepre = ((exitwipe && enterlevel <= exitlevel) || anceslevel < 0) ? exitwipe : IGNOREWIPE;
-		wipetypepost = ((enterwipe && enterlevel >= exitlevel) || anceslevel < 0) ? enterwipe : IGNOREWIPE;
-		wipegamestate = FORCEWIPE;
+			wipetypepre = ((exitwipe && enterlevel <= exitlevel) || anceslevel < 0) ? exitwipe : INT16_MAX;
+		wipetypepost = ((enterwipe && enterlevel >= exitlevel) || anceslevel < 0) ? enterwipe : INT16_MAX;
 
 		// If just one of the above is a force not-wipe,
 		// mirror the other wipe.
-		if (wipetypepre != IGNOREWIPE && wipetypepost == IGNOREWIPE)
+		if (wipetypepre != INT16_MAX && wipetypepost == INT16_MAX)
 			wipetypepost = wipetypepre;
-		else if (wipetypepost != IGNOREWIPE && wipetypepre == IGNOREWIPE)
+		else if (wipetypepost != INT16_MAX && wipetypepre == INT16_MAX)
 			wipetypepre = wipetypepost;
 
-		// D_Display runs the next step of processing
+		F_StopAllWipes();
+		F_QueuePreWipe(wipetypepre, 0, NULL);
+		F_QueuePostWipe(wipetypepost, 0, NULL);
 	}
 }
 
@@ -3000,7 +3003,6 @@ static void M_GoBack(INT32 choice)
 		if ((currentMenu->prevMenu == &MainDef) && (currentMenu == &SP_TimeAttackDef || currentMenu == &SP_NightsAttackDef || currentMenu == &SP_MarathonDef))
 		{
 			// D_StartTitle does its own wipe, since GS_TIMEATTACK is now a complete gamestate.
-
 			if (levelselect.rows)
 			{
 				Z_Free(levelselect.rows);
@@ -3008,7 +3010,7 @@ static void M_GoBack(INT32 choice)
 			}
 
 			menuactive = false;
-			wipetypepre = menupres[M_GetYoungestChildMenu()].exitwipe;
+			F_QueuePreWipe(menupres[M_GetYoungestChildMenu()].exitwipe, 0, F_InitTitleScreen);
 			I_UpdateMouseGrab();
 			D_StartTitle();
 		}
@@ -3166,7 +3168,7 @@ boolean M_Responder(event_t *ev)
 	if (gamestate == GS_TITLESCREEN && finalecount < (cv_tutorialprompt.value ? TICRATE : 0))
 		return false;
 
-	if (gamestate == GS_TIMEATTACK && WipeInAction)
+	if (gamestate == GS_TIMEATTACK && wipe_running)
 		return false;
 
 	if (CON_Ready())
@@ -10140,6 +10142,8 @@ static void M_TimeAttack(INT32 choice)
 
 	M_PatchSkinNameTable();
 
+	F_StopAllWipes();
+
 	G_SetGamestate(GS_TIMEATTACK); // do this before M_SetupNextMenu so that menu meta state knows that we're switching
 	titlemapinaction = TITLEMAP_OFF; // Nope don't give us HOMs please
 	M_SetupNextMenu(&SP_TimeAttackDef);
@@ -10147,6 +10151,12 @@ static void M_TimeAttack(INT32 choice)
 		CV_SetValue(&cv_nextmap, levelselect.rows[0].maplist[0]);
 	else
 		Nextmap_OnChange();
+
+	if (!F_GetQueuedWipe())
+	{
+		F_QueuePreWipe(wipedefs[wipe_level_toblack], 0, NULL);
+		F_QueuePostWipe(menupres[MN_SP_TIMEATTACK].enterwipe, WSF_FADEIN, NULL);
+	}
 
 	itemOn = tastart; // "Start" is selected.
 }
@@ -10348,6 +10358,8 @@ static void M_NightsAttack(INT32 choice)
 	// This is really just to make sure Sonic is the played character, just in case
 	M_PatchSkinNameTable();
 
+	F_StopAllWipes();
+
 	ntssupersonic[0] = W_CachePatchName("NTSSONC1", PU_PATCH);
 	ntssupersonic[1] = W_CachePatchName("NTSSONC2", PU_PATCH);
 
@@ -10358,6 +10370,12 @@ static void M_NightsAttack(INT32 choice)
 		CV_SetValue(&cv_nextmap, levelselect.rows[0].maplist[0]);
 	else
 		Nextmap_OnChange();
+
+	if (!F_GetQueuedWipe())
+	{
+		F_QueuePreWipe(wipedefs[wipe_level_toblack], 0, NULL);
+		F_QueuePostWipe(menupres[MN_SP_NIGHTSATTACK].enterwipe, WSF_FADEIN, NULL);
+	}
 
 	itemOn = nastart; // "Start" is selected.
 }
@@ -10666,23 +10684,31 @@ static void M_ModeAttackEndGame(INT32 choice)
 		Command_ExitGame_f();
 
 	M_StartControlPanel();
+
+	INT16 wipetype;
+
 	switch(modeattacking)
 	{
 	default:
 	case ATTACKING_RECORD:
 		currentMenu = &SP_TimeAttackDef;
-		wipetypepost = menupres[MN_SP_TIMEATTACK].enterwipe;
+		wipetype = menupres[MN_SP_TIMEATTACK].enterwipe;
 		break;
 	case ATTACKING_NIGHTS:
 		currentMenu = &SP_NightsAttackDef;
-		wipetypepost = menupres[MN_SP_NIGHTSATTACK].enterwipe;
+		wipetype = menupres[MN_SP_NIGHTSATTACK].enterwipe;
 		break;
 	}
+
 	itemOn = currentMenu->lastOn;
 	G_SetGamestate(GS_TIMEATTACK);
 	modeattacking = ATTACKING_NONE;
 	M_ChangeMenuMusic("_title", true);
 	Nextmap_OnChange();
+
+	F_StopAllWipes();
+	F_QueuePreWipe(wipedefs[wipe_level_toblack], 0, NULL);
+	F_QueuePostWipe(wipetype, WSF_FADEIN, NULL);
 }
 
 static void M_MarathonLiveEventBackup(INT32 choice)
@@ -10755,6 +10781,8 @@ static void M_Marathon(INT32 choice)
 
 	M_ChangeMenuMusic("spec8", true);
 
+	F_StopAllWipes();
+
 	SP_MarathonDef.prevMenu = &MainDef;
 	G_SetGamestate(GS_TIMEATTACK); // do this before M_SetupNextMenu so that menu meta state knows that we're switching
 	titlemapinaction = TITLEMAP_OFF; // Nope don't give us HOMs please
@@ -10762,6 +10790,12 @@ static void M_Marathon(INT32 choice)
 	itemOn = marathonstart; // "Start" is selected.
 	recatkdrawtimer = (50-8) * FRACUNIT;
 	char_scroll = 0;
+
+	if (!F_GetQueuedWipe())
+	{
+		F_QueuePreWipe(wipedefs[wipe_level_toblack], 0, NULL);
+		F_QueuePostWipe(menupres[MN_SP_MARATHON].enterwipe, WSF_FADEIN, NULL);
+	}
 }
 
 static void M_HandleMarathonChoosePlayer(INT32 choice)

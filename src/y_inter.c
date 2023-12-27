@@ -1328,9 +1328,7 @@ void Y_StartIntermission(void)
 		}
 	}
 
-	// We couldn't display the intermission even if we wanted to.
-	// But we still need to give the players their score bonuses, dummy.
-	//if (dedicated) return;
+	F_StopAllWipes();
 
 	// This should always exist, but just in case...
 	if(!mapheaderinfo[prevmap])
@@ -1364,6 +1362,8 @@ void Y_StartIntermission(void)
 #endif
 			}
 			usetile = false;
+
+			F_WipeDoCrossfade();
 
 			// set up the "got through act" message according to skin name
 			if (stagefailed)
@@ -1439,6 +1439,9 @@ void Y_StartIntermission(void)
 
 			// tile if using the default background
 			usetile = !useinterpic;
+
+			F_QueuePreWipe(DEFAULTWIPE, 0, NULL);
+			F_QueuePostWipe(DEFAULTWIPE, WSF_FADEIN, NULL);
 
 			// get special stage specific patches
 /*			if (!stagefailed && ALL7EMERALDS(emeralds))
@@ -1528,6 +1531,9 @@ void Y_StartIntermission(void)
 
 			usetile = true;
 			useinterpic = false;
+
+			F_QueuePreWipe(DEFAULTWIPE, 0, NULL);
+			F_QueuePostWipe(DEFAULTWIPE, WSF_FADEIN, NULL);
 			break;
 		}
 
@@ -1552,6 +1558,9 @@ void Y_StartIntermission(void)
 
 			usetile = true;
 			useinterpic = false;
+
+			F_QueuePreWipe(DEFAULTWIPE, 0, NULL);
+			F_QueuePostWipe(DEFAULTWIPE, WSF_FADEIN, NULL);
 			break;
 		}
 
@@ -1577,6 +1586,9 @@ void Y_StartIntermission(void)
 
 			usetile = true;
 			useinterpic = false;
+
+			F_QueuePreWipe(DEFAULTWIPE, 0, NULL);
+			F_QueuePostWipe(DEFAULTWIPE, WSF_FADEIN, NULL);
 			break;
 		}
 
@@ -1601,6 +1613,9 @@ void Y_StartIntermission(void)
 
 			usetile = true;
 			useinterpic = false;
+
+			F_QueuePreWipe(-1, 0, NULL);
+			F_QueuePostWipe(-1, WSF_FADEIN, NULL);
 			break;
 		}
 

@@ -75,6 +75,8 @@ void F_StartContinue(void);
 void F_ContinueTicker(void);
 void F_ContinueDrawer(void);
 
+void F_InitTitleScreen(void);
+
 void F_StartWaitingPlayers(void);
 void F_WaitingPlayersTicker(void);
 void F_WaitingPlayersDrawer(void);
@@ -88,7 +90,6 @@ extern INT32 intro_scenenum;
 enum
 {
 	INTRO_STJR      = 0,
-
 	INTRO_FIRST     = 1,
 	INTRO_ASTEROID  = 4,
 	INTRO_RADAR     = 5,
@@ -163,16 +164,9 @@ void F_MenuPresTicker(void);
 #endif
 
 #define DEFAULTWIPE -1
-#define IGNOREWIPE INT16_MAX
 
-// HACK for menu fading while titlemapinaction; skips the level check
-#define FORCEWIPE -3
-#define FORCEWIPEOFF -2
-
-extern boolean WipeInAction;
-extern boolean WipeRunPre;
-extern boolean WipeRunPost;
-extern boolean WipeDrawMenu;
+extern boolean wipe_running;
+extern boolean wipe_drawmenuontop;
 
 typedef enum
 {
@@ -180,22 +174,27 @@ typedef enum
 	WIPESTYLE_NORMAL,
 	WIPESTYLE_COLORMAP
 } wipestyle_t;
-extern wipestyle_t wipestyle;
+extern wipestyle_t wipe_style;
 
 typedef enum
 {
-	WSF_FADEOUT      = 1,
-	WSF_FADEIN       = 1<<1,
-	WSF_TOWHITE      = 1<<2,
-	WSF_CROSSFADE    = 1<<3,
-	WSF_LEVELLOADING = 1<<4,
-	WSF_SPECIALSTAGE = 1<<5,
-	WSF_INTROSTART   = 1<<6,
-	WSF_INTROEND     = 1<<7,
+	WSF_FADEIN    = 1,
+	WSF_TOWHITE   = 1<<1,
+	WSF_CROSSFADE = 1<<2
+} wipeflags_t;
+extern wipeflags_t wipe_flags;
 
-	WSF_ACTION       = (WSF_LEVELLOADING|WSF_SPECIALSTAGE|WSF_INTROSTART|WSF_INTROEND)
-} wipestyleflags_t;
-extern wipestyleflags_t wipestyleflags;
+typedef void (*wipe_callback_t)(void);
+
+typedef struct
+{
+	UINT8 type;
+	wipestyle_t style;
+	wipeflags_t flags;
+	boolean drawmenuontop;
+	tic_t holdframes;
+	wipe_callback_t callback;
+} wipe_t;
 
 typedef enum
 {
@@ -205,24 +204,21 @@ typedef enum
 } specialwipe_t;
 extern specialwipe_t ranspecialwipe;
 
-extern UINT8 wipetype;
-extern UINT8 wipeframe;
-
-void F_WipeSetStyle(void);
 void F_WipeStartScreen(void);
 void F_WipeEndScreen(void);
-void F_WipeEndScreenRestore(void);
 
-void F_StartWipe(UINT8 type, boolean drawMenu);
+void F_StartWipe(UINT8 type, wipeflags_t flags);
+void F_StartWipeParametrized(wipe_t *wipe);
 void F_RunWipe(void);
 void F_DisplayWipe(void);
 void F_StopWipe(void);
-
-void F_WipeStartPre(void);
-void F_WipeStartPost(void);
-
+void F_StopAllWipes(void);
+void F_SetupFadeOut(wipeflags_t flags);
+void F_QueuePreWipe(INT16 wipetypepre, wipeflags_t flags, wipe_callback_t callback);
+void F_QueuePostWipe(INT16 wipetypepost, wipeflags_t flags, wipe_callback_t callback);
 void F_WipeDoCrossfade(void);
-boolean F_WipeDoTinted(void);
+void F_StartPendingWipe(void);
+wipe_t *F_GetQueuedWipe(void);
 
 #define F_WipeColorFill(c) V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, c)
 
@@ -235,7 +231,6 @@ boolean F_WipeDoTinted(void);
 
 tic_t F_GetWipeLength(UINT8 type);
 boolean F_WipeExists(UINT8 type);
-boolean F_WipeCanTint(void);
 
 enum
 {

@@ -292,12 +292,6 @@ void D_ProcessEvents(void)
 // RENDERING
 //
 
-// wipegamestate can be set to -1 to force a wipe on the next draw
-// added comment : there is a wipe eatch change of the gamestate
-gamestate_t wipegamestate = GS_LEVEL;
-INT16 wipetypepre = DEFAULTWIPE;
-INT16 wipetypepost = DEFAULTWIPE;
-
 static void D_Render(void)
 {
 	if (!(gamestate == GS_LEVEL || (gamestate == GS_TITLESCREEN && titlemapinaction && curbghide && (!hidetitlemap))))
@@ -412,8 +406,6 @@ static void D_RenderNonLevel(void)
 
 		case GS_INTRO:
 			F_IntroDrawer();
-			if (wipegamestate == (gamestate_t)-1)
-				WipeRunPost = true;
 			break;
 
 		case GS_ENDING:
@@ -481,7 +473,7 @@ static void D_Display(void)
 	if (setrenderneeded || setmodeneeded)
 	{
 		SCR_SetMode(); // change video mode
-		if (WipeInAction)
+		if (wipe_running)
 			F_StopWipe();
 	}
 
@@ -506,16 +498,21 @@ static void D_Display(void)
 	I_UpdateNoBlit();
 
 	// save the current screen if about to wipe
-	// I'm scared of moving this way down there (before CON_Drawer mayhaps)
-	// but it's probably not a huge deal to leave it here...
-	// I'd have to make sure nothing during rendering is changing wipegamestate
-	if ((gamestate != wipegamestate) && wipetypepre != IGNOREWIPE)
-		F_WipeStartPre();
-	else
-		wipetypepre = DEFAULTWIPE;
+	wipe_t *wipe = F_GetQueuedWipe();
+	if (wipe && !wipe_running)
+	{
+		if (!(wipe->flags & (WSF_FADEIN | WSF_CROSSFADE)))
+		{
+			F_SetupFadeOut(wipe->flags);
+			F_StartPendingWipe();
+		}
+
+		if (wipe->flags & WSF_CROSSFADE)
+			F_WipeStartScreen();
+	}
 
 	// do buffered drawing
-	if (WipeInAction)
+	if (wipe_running)
 	{
 		F_DisplayWipe();
 
@@ -525,10 +522,7 @@ static void D_Display(void)
 	else
 		D_RenderNonLevel();
 
-	// STUPID race condition...
-	if (wipegamestate == GS_INTRO && gamestate == GS_TITLESCREEN)
-		wipegamestate = FORCEWIPEOFF;
-	else if (!WipeInAction)
+	if (!wipe_running)
 		D_Render();
 
 	// change gamma if needed
@@ -558,7 +552,7 @@ static void D_Display(void)
 	// vid size change is now finished if it was on...
 	vid.recalc = 0;
 
-	if (!WipeInAction || (WipeInAction && (WipeDrawMenu || G_GetRetryFlag(RETRY_CUR))))
+	if (!wipe_running || (wipe_running && (wipe_drawmenuontop || G_GetRetryFlag(RETRY_CUR))))
 	{
 #ifdef HAVE_THREADS
 		I_lock_mutex(&m_menu_mutex);
@@ -573,16 +567,24 @@ static void D_Display(void)
 	//
 	// wipe update
 	//
-	if (WipeRunPost && !WipeInAction && wipetypepost != IGNOREWIPE)
+	wipe = F_GetQueuedWipe();
+	if (wipe && !wipe_running && (wipe->flags & (WSF_FADEIN | WSF_CROSSFADE)))
 	{
-		F_WipeStartPost();
+		F_WipeEndScreen();
+
+		if (wipe->flags & WSF_FADEIN)
+		{
+			F_WipeColorFill(levelfadecol);
+			F_WipeStartScreen();
+		}
+
+		F_StartPendingWipe();
+
 		F_DisplayWipe();
 
 		if (titlecard.running)
 			TitleCard_DrawOverWipe();
 	}
-	else
-		wipetypepost = DEFAULTWIPE;
 
 	CON_Drawer();
 
@@ -872,6 +874,8 @@ void D_StartTitle(void)
 	INT32 i;
 
 	S_StopMusic();
+
+	TitleCard_Stop();
 
 	if (netgame)
 	{
@@ -1451,8 +1455,6 @@ void D_SRB2Main(void)
 	// set user default mode or mode set at cmdline
 	SCR_CheckDefaultMode();
 
-	wipegamestate = gamestate;
-
 	savedata.lives = 0; // flag this as not-used
 
 	//------------------------------------------------ COMMAND LINE PARAMS
@@ -1602,7 +1604,6 @@ void D_SRB2Main(void)
 			G_TimeDemo(tmp);
 
 		G_SetGamestate(GS_NULL);
-		wipegamestate = GS_NULL;
 		return;
 	}
 

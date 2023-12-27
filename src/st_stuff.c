@@ -1250,7 +1250,7 @@ static void ST_drawInput(void)
 //
 void TitleCard_PreDraw(void)
 {
-	if (!TitleCard_Available() || !titlecard.running)
+	if (!TitleCard_IsAvailable() || !titlecard.running)
 		return;
 
 	if (titlecard.ticker >= (titlecard.endtime + TICRATE))
@@ -1277,7 +1277,7 @@ void TitleCard_Draw(void)
 	UINT8 colornum;
 	const UINT8 *colormap;
 
-	if (!TitleCard_Available())
+	if (!TitleCard_IsAvailable())
 		return;
 
 	if (!titlecard.running)
@@ -2555,7 +2555,7 @@ static void ST_overlayDrawer(void)
 	// Check for a valid level title
 	// If the HUD is enabled
 	// And, if Lua is running, if the HUD library has the stage title enabled
-	if (TitleCard_Available() && !(hu_showscores && (netgame || multiplayer)))
+	if (TitleCard_IsAvailable() && !(hu_showscores && (netgame || multiplayer)))
 	{
 		stagetitle = true;
 		TitleCard_PreDraw();
@@ -2700,7 +2700,7 @@ static void ST_overlayDrawer(void)
 	}
 
 	// draw level title Tails
-	if (stagetitle && !WipeInAction && !titlecard.wipe)
+	if (stagetitle && !wipe_running && !titlecard.wipe)
 		TitleCard_Draw();
 
 	if (!hu_showscores && (netgame || multiplayer) && LUA_HudEnabled(hud_textspectator))

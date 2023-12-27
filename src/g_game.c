@@ -1181,7 +1181,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 	// Or, if the level is starting.
 	// Or, for that matter, if we're being reborn.
 	// ...OR if we're blindfolded. No looking into the floor.
-	if (ignoregameinputs || paused || P_AutoPause() || (levelstarting || WipeInAction) || titlecard.prelevel
+	if (ignoregameinputs || paused || P_AutoPause() || (levelstarting || wipe_running) || titlecard.prelevel
 	|| (gamestate == GS_LEVEL && (player->playerstate == PST_REBORN || ((gametyperules & GTR_TAG)
 	&& (leveltime < hidetime * TICRATE) && (player->pflags & PF_TAGIT)))))
 	{//@TODO splitscreen player
@@ -1855,14 +1855,10 @@ void G_StartLevel(boolean resetplayer)
 	levelstarttic = gametic; // for time calculation
 	levelresetplayer = resetplayer;
 
-	if (wipegamestate == GS_LEVEL)
-		wipegamestate = -1; // force a wipe
-
 	if (gamestate == GS_INTERMISSION)
 		Y_EndIntermission();
 
 	G_InitLevelGametype();
-	ranspecialwipe = SPECIALWIPE_NONE;
 
 	if (mapheaderinfo[gamemap-1]->runsoc[0] != '#')
 		P_RunSOC(mapheaderinfo[gamemap-1]->runsoc);
@@ -1880,8 +1876,11 @@ void G_StartLevel(boolean resetplayer)
 	G_SetMouseDeltas(0, 0, 1);
 	G_SetMouseDeltas(0, 0, 2);
 
+	if (titlemapinaction)
+		return;
+
 #ifndef NOWIPE
-	if (!G_GetRetryRA() && rendermode != render_none)
+	if (!G_GetRetryRA())
 		G_StartLevelWipe();
 	else
 #endif
@@ -2036,7 +2035,11 @@ void G_DoLoadLevel(void)
 	if (demoplayback && !timingdemo)
 		precache = true;
 	if (timingdemo)
+	{
+		framecount = 0;
+		demostarttime = I_GetTime();
 		G_DoneLevelLoad();
+	}
 
 	if (metalrecording)
 		G_BeginMetal();
@@ -2050,26 +2053,22 @@ void G_DoLoadLevel(void)
 //
 void G_StartLevelWipe(void)
 {
-	// Cancel all d_main.c fades
-	WipeRunPost = false;
-	wipegamestate = FORCEWIPEOFF;
-	wipestyle = WIPESTYLE_COLORMAP;
-	wipestyleflags = (WSF_FADEOUT|WSF_LEVELLOADING);
+	F_StopAllWipes();
+
+	ranspecialwipe = SPECIALWIPE_NONE;
 
 	// Special stage fade to white
 	// This is handled BEFORE sounds are stopped.
-	if (rendermode != render_none && G_IsSpecialStage(gamemap))
+	if (G_IsSpecialStage(gamemap))
 	{
-		// TODO call this after rendering the frame (because of F_WipeStartScreen calls)
 		P_RunSpecialStageWipe();
 		ranspecialwipe = SPECIALWIPE_SSTAGE;
 	}
 
 	// Let's fade to black here
 	// But only if we didn't do the special stage wipe
-	if (rendermode != render_none && ranspecialwipe == SPECIALWIPE_NONE)
+	if (ranspecialwipe == SPECIALWIPE_NONE)
 	{
-		// TODO same thing as the last one
 		P_RunLevelWipe();
 
 		// Fade out music here. Deduct 2 tics so the fade volume actually reaches 0.
@@ -2082,23 +2081,38 @@ void G_StartLevelWipe(void)
 	}
 }
 
+static void G_DoLevelFadeIn(void)
+{
+	wipeflags_t flags = WSF_FADEIN;
+	if (ranspecialwipe == SPECIALWIPE_SSTAGE)
+		flags |= WSF_TOWHITE;
+	wipe_t wipe = {0};
+	wipe.style = WIPESTYLE_COLORMAP;
+	wipe.flags = flags;
+	wipe.type = wipedefs[wipe_level_final];
+	wipe.drawmenuontop = true;
+	F_StartWipeParametrized(&wipe);
+}
+
 //
 // Start the title card.
 //
 void TitleCard_Start(void)
 {
 	// The title card has been disabled for this map
-	if (!TitleCard_Available())
+	if (!TitleCard_IsAvailable())
 	{
+		G_DoLevelFadeIn();
+
+		ranspecialwipe = SPECIALWIPE_NONE;
+
 		st_translucency = cv_translucenthud.value; // Reset the HUD translucency!
-		WipeRunPost = true; // Start the post wipe.
 		return;
 	}
 
 	CON_ClearHUD();
 	TitleCard_LoadGraphics();
 
-	// Actually start it
 	titlecard.running = true;
 	titlecard.prelevel = true;
 
@@ -2114,8 +2128,6 @@ void TitleCard_Start(void)
 		patch_t *patch = (patch_t *)titlecard.patches[1];
 		titlecard.zigzag = -(SHORT(patch->width) * FRACUNIT);
 	}
-
-	wipetypepost = IGNOREWIPE;
 }
 
 //
@@ -2153,7 +2165,7 @@ void TitleCard_LoadGraphics(void)
 //
 void TitleCard_Run(void)
 {
-	if (!TitleCard_Available())
+	if (!TitleCard_IsAvailable())
 		return;
 
 	if (titlecard.wipe)
@@ -2166,13 +2178,16 @@ void TitleCard_Run(void)
 	}
 	else if (titlecard.ticker >= PRELEVELTIME && titlecard.prelevel)
 	{
-		// Force a wipe
-		wipegamestate = -1;
-		WipeRunPost = true;
-
-		// TODO should be done after rendering
 		if (!cv_showhud.value)
+		{
 			F_WipeDoCrossfade();
+		}
+		else
+		{
+			G_DoLevelFadeIn();
+		}
+
+		ranspecialwipe = SPECIALWIPE_NONE;
 
 		// Disable prelevel flag
 		titlecard.prelevel = false;
@@ -2215,12 +2230,19 @@ void TitleCard_Run(void)
 	}
 }
 
+void TitleCard_Stop(void)
+{
+	titlecard.running = false;
+	titlecard.prelevel = false;
+	titlecard.wipe = 0;
+}
+
 static boolean titlecardforreload = false;
 
 //
 // Returns true if the current level has a title card.
 //
-boolean TitleCard_Available(void)
+boolean TitleCard_IsAvailable(void)
 {
 	// The current level header explicitly disabled the title card.
 	UINT16 titleflag = LF_NOTITLECARDFIRST;
@@ -2527,7 +2549,7 @@ static void G_MarathonTicker(void)
 	// IGT doesn't increase during loads, unless the game's paused
 	if (!(paused || P_AutoPause()))
 	{
-		if (titlecard.prelevel || WipeInAction)
+		if (titlecard.prelevel || wipe_running)
 			return;
 	}
 
@@ -2538,7 +2560,7 @@ static void G_MarathonTicker(void)
 // G_Ticker
 // Make ticcmd_ts for the players.
 //
-void G_Ticker(boolean run, tic_t tics)
+void G_Ticker(boolean run)
 {
 	UINT32 i;
 	INT32 buf;
@@ -2561,11 +2583,11 @@ void G_Ticker(boolean run, tic_t tics)
 	}
 
 	// Run the current wipe
-	if (WipeInAction)
+	if (wipe_running)
 	{
 		if (run)
 		{
-			boolean loading = (wipestyleflags & WSF_LEVELLOADING);
+			boolean loading = levelloading;
 
 			switch (gamestate)
 			{
@@ -2579,7 +2601,7 @@ void G_Ticker(boolean run, tic_t tics)
 			}
 
 			// Run the title card
-			if (titlecard.running && (wipestyleflags & WSF_FADEIN))
+			if (titlecard.running && (wipe_flags & WSF_FADEIN))
 				TitleCard_Run();
 
 			// Run Marathon Mode in-game timer
@@ -2663,7 +2685,7 @@ void G_Ticker(boolean run, tic_t tics)
 		case GS_LEVEL:
 			if (titlecard.running)
 			{
-				if (run && tics <= 1)
+				if (run)
 					TitleCard_Run();
 				if (titlecard.prelevel)
 				{
@@ -2782,15 +2804,12 @@ static void G_CheckPlayerReborn(void)
 
 	P_MapStart();
 
-	if (gamestate == GS_LEVEL)
+	if (gamestate == GS_LEVEL && !levelstarting)
 	{
 		// Or, alternatively, retry.
 		if (!(netgame || multiplayer) && G_GetRetrySP())
 		{
 			G_ClearRetrySP();
-
-			if (WipeInAction)
-				F_StopWipe();
 
 			if (modeattacking)
 			{
@@ -4341,13 +4360,14 @@ static void G_DoCompleted(void)
 
 	gameaction = ga_nothing;
 
+	TitleCard_Stop();
+
 	if (metalplayback)
 		G_StopMetalDemo();
 	if (metalrecording)
 		G_StopMetalRecording(false);
 
 	G_SetGamestate(GS_NULL);
-	wipegamestate = GS_NULL;
 
 	for (i = 0; i < MAXPLAYERS; i++)
 		if (playeringame[i])
@@ -4578,6 +4598,8 @@ void G_UseContinue(void)
 static void G_DoStartContinue(void)
 {
 	I_Assert(!netgame && !multiplayer);
+
+	TitleCard_Stop();
 
 	G_PlayerFinishLevel(consoleplayer); // take away cards and stuff
 
@@ -5798,27 +5820,18 @@ boolean G_GetExitGameFlag(void)
 // Retrying flags
 //
 
-#define CheckRetryFlag(type) \
-{ \
-	if (type < 0 || type >= RETRY_MAX) \
-		I_Error("G_SetRetryFlag: out of bounds retry flag type (%d)", type); \
-}
-
 void G_SetRetryFlag(INT32 type)
 {
-	CheckRetryFlag(type);
 	retrying[type] = true;
 }
 
 void G_ClearRetryFlag(INT32 type)
 {
-	CheckRetryFlag(type);
 	retrying[type] = false;
 }
 
 boolean G_GetRetryFlag(INT32 type)
 {
-	CheckRetryFlag(type);
 	return retrying[type];
 }
 

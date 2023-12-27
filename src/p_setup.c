@@ -7543,39 +7543,31 @@ void P_RunSpecialStageWipe(void)
 		(mapmusflags & MUSIC_RELOADRESET) ? mapheaderinfo[gamemap - 1]->musname : mapmusname, 7))
 		S_FadeOutStopMusic(MUSICRATE/4); //FixedMul(FixedDiv(F_GetWipeLength(wipedefs[wipe_speclevel_towhite])*NEWTICRATERATIO, NEWTICRATE), MUSICRATE)
 
-	F_WipeStartScreen();
-	wipestyleflags |= WSF_TOWHITE|WSF_SPECIALSTAGE;
+	if (titlemapinaction || F_GetQueuedWipe())
+		return;
 
-#ifdef HWRENDER
-	// uh..........
-	if (rendermode == render_opengl)
-		F_WipeColorFill(0);
-#endif
-
-	F_WipeEndScreen();
-	F_StartWipe(wipedefs[wipe_speclevel_towhite], false);
+	wipe_t wipe = {0};
+	wipe.style = WIPESTYLE_COLORMAP;
+	wipe.flags = WSF_TOWHITE;
+	wipe.callback = G_DoLoadLevel;
+	wipe.type = wipedefs[wipe_speclevel_towhite];
+	wipe.drawmenuontop = false;
+	wipe.holdframes = (3*TICRATE)/2;
+	F_StartWipeParametrized(&wipe);
 }
 
 void P_RunLevelWipe(void)
 {
-	F_WipeStartScreen();
+	if (titlemapinaction || F_GetQueuedWipe())
+		return;
 
-#ifdef HWRENDER
-	// uh..........
-	if (rendermode == render_opengl)
-		F_WipeColorFill(31);
-#endif
-
-	F_WipeEndScreen();
-
-	// for titlemap: run a specific wipe if specified
-	// needed for exiting time attack
-	if (wipetypepre != IGNOREWIPE)
-		F_StartWipe(
-			(wipetypepre != DEFAULTWIPE && F_WipeExists(wipetypepre)) ? wipetypepre : wipedefs[wipe_level_toblack],
-				true);
-
-	wipetypepre = DEFAULTWIPE;
+	wipe_t wipe = {0};
+	wipe.style = WIPESTYLE_COLORMAP;
+	wipe.flags = 0;
+	wipe.callback = G_DoLoadLevel;
+	wipe.type = wipedefs[wipe_level_toblack];
+	wipe.drawmenuontop = false;
+	F_StartWipeParametrized(&wipe);
 }
 
 static void P_InitPlayers(void)
@@ -7772,7 +7764,7 @@ boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate)
 		}
 	}
 
-	levelfadecol = (ranspecialwipe) ? 0 : 31;
+	levelfadecol = ranspecialwipe ? 0 : 31;
 
 	// Close text prompt before freeing the old level
 	F_EndTextPrompt(false, true);
@@ -7944,19 +7936,25 @@ boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate)
 	R_ResetViewInterpolation(0);
 	R_UpdateMobjInterpolators();
 
-	titlecard.running = false;
-	titlecard.prelevel = false;
-	titlecard.wipe = 0;
+	TitleCard_Stop();
+
+	// Don't run wipes for the titlemap
+	if (titlemapinaction)
+		return true;
 
 	if (ranspecialwipe == SPECIALWIPE_RETRY)
 	{
-		// Force a wipe
-		wipegamestate = -1;
-		wipestyleflags = (WSF_TOWHITE|WSF_FADEIN);
-		WipeRunPost = true;
+		wipe_t wipe = {0};
+		wipe.style = WIPESTYLE_COLORMAP;
+		wipe.flags = WSF_TOWHITE | WSF_FADEIN;
+		wipe.type = wipedefs[wipe_level_final];
+		wipe.drawmenuontop = true;
+		F_StartWipeParametrized(&wipe);
 
 		// Reset the HUD translucency!
 		st_translucency = cv_translucenthud.value;
+
+		ranspecialwipe = SPECIALWIPE_NONE;
 	}
 	else
 	{
@@ -7964,7 +7962,6 @@ boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate)
 		TitleCard_Start();
 	}
 
-	ranspecialwipe = SPECIALWIPE_NONE;
 	return true;
 }
 

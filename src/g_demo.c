@@ -2879,7 +2879,6 @@ void G_StopDemo(void)
 		Y_EndIntermission(); // cleanup
 
 	G_SetGamestate(GS_NULL);
-	wipegamestate = GS_NULL;
 	SV_StopServer();
 	SV_ResetServer();
 }

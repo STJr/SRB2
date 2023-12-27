@@ -182,10 +182,9 @@ void SCR_SetMode(void)
 	if (dedicated)
 		return;
 
-	if (!(setmodeneeded || setrenderneeded) || WipeInAction)
-		return; // should never happen and don't change it during a wipe, BAD!
+	if (!(setmodeneeded || setrenderneeded))
+		return;
 
-	// Lactozilla: Renderer switching
 	if (setrenderneeded)
 	{
 		// stop recording movies (APNG only)
@@ -503,9 +502,6 @@ void SCR_ClosedCaptions(void)
 	UINT8 i;
 	boolean gamestopped = (paused || P_AutoPause());
 	INT32 basey = BASEVIDHEIGHT - 20;
-
-	if (gamestate != wipegamestate)
-		return;
 
 	if (gamestate == GS_LEVEL)
 	{

@@ -2327,15 +2327,10 @@ void S_StopMusic(void)
 	{
 		if (closedcaptions[0].s-S_sfx == sfx_None)
 		{
-			if (gamestate != wipegamestate)
-			{
-				closedcaptions[0].c = NULL;
-				closedcaptions[0].s = NULL;
-				closedcaptions[0].t = 0;
-				closedcaptions[0].b = 0;
-			}
-			else
-				closedcaptions[0].t = CAPTIONFADETICS;
+			closedcaptions[0].c = NULL;
+			closedcaptions[0].s = NULL;
+			closedcaptions[0].t = 0;
+			closedcaptions[0].b = 0;
 		}
 	}
 }

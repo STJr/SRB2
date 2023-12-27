@@ -189,8 +189,11 @@ void G_DoLoadLevel(void);
 // Title card
 void TitleCard_Start(void);
 void TitleCard_Run(void);
+void TitleCard_Stop(void);
+
 void TitleCard_LoadGraphics(void);
-boolean TitleCard_Available(void);
+
+boolean TitleCard_IsAvailable(void);
 
 typedef struct
 {
@@ -249,7 +252,7 @@ void G_UseContinue(void);
 void G_AfterIntermission(void);
 void G_EndGame(void); // moved from y_inter.c/h and renamed
 
-void G_Ticker(boolean run, tic_t tics);
+void G_Ticker(boolean run);
 boolean G_Responder(event_t *ev);
 boolean G_LuaResponder(event_t *ev);
 
