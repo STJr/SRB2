@@ -392,17 +392,16 @@ static void D_RenderNonLevel(void)
 		case GS_LEVEL:
 			if (!gametic)
 				break;
-			HU_Erase();
 			AM_Drawer();
 			break;
 
 		case GS_INTERMISSION:
 			Y_IntermissionDrawer();
-			HU_Erase();
 			HU_Drawer();
 			break;
 
 		case GS_TIMEATTACK:
+			M_TimeAttackDrawer();
 			break;
 
 		case GS_INTRO:
@@ -411,13 +410,11 @@ static void D_RenderNonLevel(void)
 
 		case GS_ENDING:
 			F_EndingDrawer();
-			HU_Erase();
 			HU_Drawer();
 			break;
 
 		case GS_CUTSCENE:
 			F_CutsceneDrawer();
-			HU_Erase();
 			HU_Drawer();
 			break;
 
@@ -427,7 +424,6 @@ static void D_RenderNonLevel(void)
 
 		case GS_EVALUATION:
 			F_GameEvaluationDrawer();
-			HU_Erase();
 			HU_Drawer();
 			break;
 
@@ -437,21 +433,16 @@ static void D_RenderNonLevel(void)
 
 		case GS_CREDITS:
 			F_CreditDrawer();
-			HU_Erase();
 			HU_Drawer();
 			break;
 
 		case GS_WAITINGPLAYERS:
-			// The clientconnect drawer is independent...
 			if (netgame)
 			{
-				// I don't think HOM from nothing drawing is independent...
 				F_WaitingPlayersDrawer();
-				HU_Erase();
 				HU_Drawer();
 			}
-		case GS_DEDICATEDSERVER:
-		case GS_NULL:
+		default:
 			break;
 	}
 }

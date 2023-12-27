@@ -511,7 +511,7 @@ void F_StartIntro(void)
 		wipe.style = ScreenWipe_GetStyle(wipe.flags);
 		wipe.type = wipedefs[wipe_intro_toblack];
 		wipe.drawmenuontop = false;
-		wipe.holdframes = 35;
+		wipe.holdframes = TICRATE;
 		ScreenWipe_StartParametrized(&wipe);
 	}
 }

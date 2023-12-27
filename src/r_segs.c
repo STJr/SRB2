@@ -24,7 +24,6 @@
 #include "m_misc.h"
 #include "p_local.h" // Camera...
 #include "p_slopes.h"
-#include "console.h" // con_clipviewtop
 #include "taglist.h"
 
 // OPTIMIZE: closed two sided lines as single sided
@@ -535,7 +534,6 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 	INT32             templight;
 	INT32             i, p;
 	fixed_t         bottombounds = viewheight << FRACBITS;
-	fixed_t         topbounds = (con_clipviewtop - 1) << FRACBITS;
 	fixed_t         offsetvalue;
 	lightlist_t     *light;
 	r_lightlist_t   *rlight;
@@ -838,7 +836,7 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 		bottom_frac += bottom_step;
 
 		// SoM: If column is out of range, why bother with it??
-		if (windowbottom < topbounds || windowtop > bottombounds)
+		if (windowbottom < 0 || windowtop > bottombounds)
 		{
 			if (dc_numlights)
 			{

@@ -2774,8 +2774,7 @@ void G_Ticker(boolean run)
 			HU_Ticker();
 			break;
 
-		case GS_DEDICATEDSERVER:
-		case GS_NULL:
+		default:
 			break; // do nothing
 	}
 

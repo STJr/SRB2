@@ -706,7 +706,7 @@ void ScreenWipe_DoFadeOut(INT16 type, wipeflags_t flags, wipe_callback_t callbac
 	wipe.flags = flags;
 	wipe.style = ScreenWipe_GetStyle(flags);
 	wipe.type = type;
-	wipe.drawmenuontop = gamestate != GS_TIMEATTACK && gamestate != GS_TITLESCREEN;
+	wipe.drawmenuontop = true;
 	wipe.callback = callback;
 	ScreenWipe_StartParametrized(&wipe);
 }
@@ -722,7 +722,7 @@ void ScreenWipe_DoFadeIn(INT16 type, wipeflags_t flags, wipe_callback_t callback
 	wipe.flags = flags;
 	wipe.style = ScreenWipe_GetStyle(flags);
 	wipe.type = type;
-	wipe.drawmenuontop = gamestate != GS_TIMEATTACK && gamestate != GS_TITLESCREEN;
+	wipe.drawmenuontop = true;
 	wipe.callback = callback;
 	ScreenWipe_StartParametrized(&wipe);
 }

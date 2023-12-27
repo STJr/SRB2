@@ -80,25 +80,6 @@ extern UINT32 nflatyshift;
 extern UINT32 nflatshiftup;
 extern UINT32 nflatmask;
 
-/// \brief Top border
-#define BRDR_T 0
-/// \brief Bottom border
-#define BRDR_B 1
-/// \brief Left border
-#define BRDR_L 2
-/// \brief Right border
-#define BRDR_R 3
-/// \brief Topleft border
-#define BRDR_TL 4
-/// \brief Topright border
-#define BRDR_TR 5
-/// \brief Bottomleft border
-#define BRDR_BL 6
-/// \brief Bottomright border
-#define BRDR_BR 7
-
-extern lumpnum_t viewborderlump[8];
-
 // ------------------------------------------------
 // r_draw.c COMMON ROUTINES FOR BOTH 8bpp and 16bpp
 // ------------------------------------------------
