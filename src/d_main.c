@@ -36,6 +36,7 @@
 #include "console.h"
 #include "netcode/d_net.h"
 #include "f_finale.h"
+#include "f_wipe.h"
 #include "g_game.h"
 #include "hu_stuff.h"
 #include "i_sound.h"
@@ -474,7 +475,7 @@ static void D_Display(void)
 	{
 		SCR_SetMode(); // change video mode
 		if (wipe_running)
-			F_StopWipe();
+			ScreenWipe_Stop();
 	}
 
 	// Recalc the screen
@@ -498,23 +499,23 @@ static void D_Display(void)
 	I_UpdateNoBlit();
 
 	// save the current screen if about to wipe
-	wipe_t *wipe = F_GetQueuedWipe();
+	wipe_t *wipe = ScreenWipe_GetQueued();
 	if (wipe && !wipe_running)
 	{
-		if (!(wipe->flags & (WSF_FADEIN | WSF_CROSSFADE)))
+		if (!(wipe->flags & (WIPEFLAGS_FADEIN | WIPEFLAGS_CROSSFADE)))
 		{
-			F_SetupFadeOut(wipe->flags);
-			F_StartPendingWipe();
+			ScreenWipe_SetupFadeOut(wipe->flags);
+			ScreenWipe_StartPending();
 		}
 
-		if (wipe->flags & WSF_CROSSFADE)
-			F_WipeStartScreen();
+		if (wipe->flags & WIPEFLAGS_CROSSFADE)
+			ScreenWipe_StartScreen();
 	}
 
 	// do buffered drawing
 	if (wipe_running)
 	{
-		F_DisplayWipe();
+		ScreenWipe_Display();
 
 		if (gamestate == GS_LEVEL && !levelstarting)
 			TitleCard_DrawOverWipe();
@@ -567,20 +568,20 @@ static void D_Display(void)
 	//
 	// wipe update
 	//
-	wipe = F_GetQueuedWipe();
-	if (wipe && !wipe_running && (wipe->flags & (WSF_FADEIN | WSF_CROSSFADE)))
+	wipe = ScreenWipe_GetQueued();
+	if (wipe && !wipe_running && (wipe->flags & (WIPEFLAGS_FADEIN | WIPEFLAGS_CROSSFADE)))
 	{
-		F_WipeEndScreen();
+		ScreenWipe_EndScreen();
 
-		if (wipe->flags & WSF_FADEIN)
+		if (wipe->flags & WIPEFLAGS_FADEIN)
 		{
-			F_WipeColorFill(levelfadecol);
-			F_WipeStartScreen();
+			ScreenWipe_DoColorFill(levelfadecol);
+			ScreenWipe_StartScreen();
 		}
 
-		F_StartPendingWipe();
+		ScreenWipe_StartPending();
 
-		F_DisplayWipe();
+		ScreenWipe_Display();
 
 		if (titlecard.running)
 			TitleCard_DrawOverWipe();

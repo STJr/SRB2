@@ -26,7 +26,7 @@
 #include "z_zone.h"
 #include "p_setup.h" // levelflats
 #include "v_video.h" // pMasterPalette
-#include "f_finale.h" // wipes
+#include "f_wipe.h" // wipes
 #include "byteptr.h"
 #include "dehacked.h"
 

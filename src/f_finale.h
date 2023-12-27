@@ -10,7 +10,6 @@
 //-----------------------------------------------------------------------------
 /// \file  f_finale.h
 /// \brief Title screen, intro, game evaluation, and credits.
-///        Also includes protos for screen wipe functions.
 
 #ifndef __F_FINALE__
 #define __F_FINALE__
@@ -18,7 +17,6 @@
 #include "doomtype.h"
 #include "d_event.h"
 #include "p_mobj.h"
-#include "screen.h"
 
 //
 // FINALE
@@ -154,123 +152,5 @@ extern UINT16 curtttics;
 
 void F_InitMenuPresValues(void);
 void F_MenuPresTicker(void);
-
-//
-// WIPES
-//
-
-#if NUMSCREENS < 5
-#define NOWIPE // do not enable wipe image post processing for ARM, SH and MIPS CPUs
-#endif
-
-#define DEFAULTWIPE -1
-
-extern boolean wipe_running;
-extern boolean wipe_drawmenuontop;
-
-typedef enum
-{
-	WIPESTYLE_NORMAL,
-	WIPESTYLE_COLORMAP
-} wipestyle_t;
-
-typedef enum
-{
-	WSF_FADEIN    = 1,
-	WSF_TOWHITE   = 1<<1,
-	WSF_CROSSFADE = 1<<2
-} wipeflags_t;
-
-typedef void (*wipe_callback_t)(void);
-
-typedef struct
-{
-	UINT8 type;
-	wipestyle_t style;
-	wipeflags_t flags;
-	boolean drawmenuontop;
-	tic_t holdframes;
-	wipe_callback_t callback;
-} wipe_t;
-
-typedef enum
-{
-	SPECIALWIPE_NONE,
-	SPECIALWIPE_SSTAGE,
-	SPECIALWIPE_RETRY,
-} specialwipe_t;
-extern specialwipe_t ranspecialwipe;
-
-void F_WipeStartScreen(void);
-void F_WipeEndScreen(void);
-
-void F_StartWipe(UINT8 type, wipeflags_t flags);
-void F_StartWipeParametrized(wipe_t *wipe);
-void F_RunWipe(void);
-void F_DisplayWipe(void);
-void F_StopWipe(void);
-void F_StopAllWipes(void);
-void F_SetupFadeOut(wipeflags_t flags);
-void F_DoGenericTransition(void);
-void F_QueuePreWipe(INT16 type, wipeflags_t flags, wipe_callback_t callback);
-void F_QueuePostWipe(INT16 type, wipeflags_t flags, wipe_callback_t callback);
-void F_WipeDoCrossfade(INT16 type);
-void F_StartPendingWipe(void);
-wipe_t *F_GetQueuedWipe(void);
-wipestyle_t F_WipeGetStyle(wipeflags_t flags);
-
-#define F_WipeColorFill(c) V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, c)
-
-#define FADECOLORMAPDIV 8
-#define FADECOLORMAPROWS (256/FADECOLORMAPDIV)
-
-#define FADEREDFACTOR   15
-#define FADEGREENFACTOR 15
-#define FADEBLUEFACTOR  10
-
-tic_t F_GetWipeLength(UINT8 type);
-boolean F_WipeExists(UINT8 type);
-
-enum
-{
-	wipe_credits_intermediate, // makes a good 0 I guess.
-
-	wipe_level_toblack,
-	wipe_intermission_toblack,
-	wipe_continuing_toblack,
-	wipe_titlescreen_toblack,
-	wipe_timeattack_toblack,
-	wipe_credits_toblack,
-	wipe_evaluation_toblack,
-	wipe_gameend_toblack,
-	wipe_intro_toblack,
-	wipe_ending_toblack,
-	wipe_cutscene_toblack,
-
-	// custom intermissions
-	wipe_specinter_toblack,
-	wipe_multinter_toblack,
-	wipe_speclevel_towhite,
-
-	wipe_level_final,
-	wipe_intermission_final,
-	wipe_continuing_final,
-	wipe_titlescreen_final,
-	wipe_timeattack_final,
-	wipe_credits_final,
-	wipe_evaluation_final,
-	wipe_gameend_final,
-	wipe_intro_final,
-	wipe_ending_final,
-	wipe_cutscene_final,
-
-	// custom intermissions
-	wipe_specinter_final,
-	wipe_multinter_final,
-
-	NUMWIPEDEFS,
-	WIPEFINALSHIFT = (wipe_level_final-wipe_level_toblack)
-};
-extern UINT8 wipedefs[NUMWIPEDEFS];
 
 #endif

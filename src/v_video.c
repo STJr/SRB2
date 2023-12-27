@@ -20,7 +20,7 @@
 #include "v_video.h"
 #include "st_stuff.h"
 #include "hu_stuff.h"
-#include "f_finale.h"
+#include "f_wipe.h" // wipes
 #include "r_draw.h"
 #include "console.h"
 

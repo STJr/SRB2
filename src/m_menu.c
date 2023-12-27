@@ -47,6 +47,7 @@
 #include "p_local.h"
 #include "p_setup.h"
 #include "f_finale.h"
+#include "f_wipe.h"
 #include "lua_hook.h"
 
 #ifdef HWRENDER
@@ -2977,9 +2978,9 @@ static void M_HandleMenuPresState(menu_t *newMenu)
 		else if (wipetypepost != INT16_MAX && wipetypepre == INT16_MAX)
 			wipetypepre = wipetypepost;
 
-		F_StopAllWipes();
-		F_QueuePreWipe(wipetypepre, 0, NULL);
-		F_QueuePostWipe(wipetypepost, 0, NULL);
+		ScreenWipe_StopAll();
+		ScreenWipe_DoFadeOut(wipetypepre, 0, NULL);
+		ScreenWipe_DoFadeIn(wipetypepost, 0, NULL);
 	}
 }
 
@@ -3010,7 +3011,7 @@ static void M_GoBack(INT32 choice)
 			}
 
 			menuactive = false;
-			F_QueuePreWipe(menupres[M_GetYoungestChildMenu()].exitwipe, 0, F_InitTitleScreen);
+			ScreenWipe_DoFadeOut(menupres[M_GetYoungestChildMenu()].exitwipe, 0, F_InitTitleScreen);
 			I_UpdateMouseGrab();
 			D_StartTitle();
 		}
@@ -10142,7 +10143,7 @@ static void M_TimeAttack(INT32 choice)
 
 	M_PatchSkinNameTable();
 
-	F_StopAllWipes();
+	ScreenWipe_StopAll();
 
 	G_SetGamestate(GS_TIMEATTACK); // do this before M_SetupNextMenu so that menu meta state knows that we're switching
 	titlemapinaction = TITLEMAP_OFF; // Nope don't give us HOMs please
@@ -10152,10 +10153,10 @@ static void M_TimeAttack(INT32 choice)
 	else
 		Nextmap_OnChange();
 
-	if (!F_GetQueuedWipe())
+	if (!ScreenWipe_GetQueued())
 	{
-		F_QueuePreWipe(wipedefs[wipe_level_toblack], 0, NULL);
-		F_QueuePostWipe(menupres[MN_SP_TIMEATTACK].enterwipe, WSF_FADEIN, NULL);
+		ScreenWipe_DoFadeOut(wipedefs[wipe_level_toblack], 0, NULL);
+		ScreenWipe_DoFadeIn(menupres[MN_SP_TIMEATTACK].enterwipe, WIPEFLAGS_FADEIN, NULL);
 	}
 
 	itemOn = tastart; // "Start" is selected.
@@ -10358,7 +10359,7 @@ static void M_NightsAttack(INT32 choice)
 	// This is really just to make sure Sonic is the played character, just in case
 	M_PatchSkinNameTable();
 
-	F_StopAllWipes();
+	ScreenWipe_StopAll();
 
 	ntssupersonic[0] = W_CachePatchName("NTSSONC1", PU_PATCH);
 	ntssupersonic[1] = W_CachePatchName("NTSSONC2", PU_PATCH);
@@ -10371,10 +10372,10 @@ static void M_NightsAttack(INT32 choice)
 	else
 		Nextmap_OnChange();
 
-	if (!F_GetQueuedWipe())
+	if (!ScreenWipe_GetQueued())
 	{
-		F_QueuePreWipe(wipedefs[wipe_level_toblack], 0, NULL);
-		F_QueuePostWipe(menupres[MN_SP_NIGHTSATTACK].enterwipe, WSF_FADEIN, NULL);
+		ScreenWipe_DoFadeOut(wipedefs[wipe_level_toblack], 0, NULL);
+		ScreenWipe_DoFadeIn(menupres[MN_SP_NIGHTSATTACK].enterwipe, WIPEFLAGS_FADEIN, NULL);
 	}
 
 	itemOn = nastart; // "Start" is selected.
@@ -10706,9 +10707,9 @@ static void M_ModeAttackEndGame(INT32 choice)
 	M_ChangeMenuMusic("_title", true);
 	Nextmap_OnChange();
 
-	F_StopAllWipes();
-	F_QueuePreWipe(wipedefs[wipe_level_toblack], 0, NULL);
-	F_QueuePostWipe(wipetype, WSF_FADEIN, NULL);
+	ScreenWipe_StopAll();
+	ScreenWipe_DoFadeOut(wipedefs[wipe_level_toblack], 0, NULL);
+	ScreenWipe_DoFadeIn(wipetype, WIPEFLAGS_FADEIN, NULL);
 }
 
 static void M_MarathonLiveEventBackup(INT32 choice)
@@ -10781,7 +10782,7 @@ static void M_Marathon(INT32 choice)
 
 	M_ChangeMenuMusic("spec8", true);
 
-	F_StopAllWipes();
+	ScreenWipe_StopAll();
 
 	SP_MarathonDef.prevMenu = &MainDef;
 	G_SetGamestate(GS_TIMEATTACK); // do this before M_SetupNextMenu so that menu meta state knows that we're switching
@@ -10791,10 +10792,10 @@ static void M_Marathon(INT32 choice)
 	recatkdrawtimer = (50-8) * FRACUNIT;
 	char_scroll = 0;
 
-	if (!F_GetQueuedWipe())
+	if (!ScreenWipe_GetQueued())
 	{
-		F_QueuePreWipe(wipedefs[wipe_level_toblack], 0, NULL);
-		F_QueuePostWipe(menupres[MN_SP_MARATHON].enterwipe, WSF_FADEIN, NULL);
+		ScreenWipe_DoFadeOut(wipedefs[wipe_level_toblack], 0, NULL);
+		ScreenWipe_DoFadeIn(menupres[MN_SP_MARATHON].enterwipe, WIPEFLAGS_FADEIN, NULL);
 	}
 }
 

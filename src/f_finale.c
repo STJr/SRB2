@@ -16,6 +16,7 @@
 #include "d_main.h"
 #include "netcode/d_netcmd.h"
 #include "f_finale.h"
+#include "f_wipe.h"
 #include "g_game.h"
 #include "hu_stuff.h"
 #include "r_local.h"
@@ -339,7 +340,7 @@ void F_StartIntro(void)
 	S_StopMusic();
 	S_StopSounds();
 
-	F_StopAllWipes();
+	ScreenWipe_StopAll();
 
 	if (introtoplay)
 	{
@@ -509,11 +510,11 @@ void F_StartIntro(void)
 	if (from_title)
 	{
 		wipe_t wipe = {0};
-		wipe.style = F_WipeGetStyle(wipe.flags);
+		wipe.style = ScreenWipe_GetStyle(wipe.flags);
 		wipe.type = wipedefs[wipe_intro_toblack];
 		wipe.drawmenuontop = false;
 		wipe.holdframes = 35;
-		F_StartWipeParametrized(&wipe);
+		ScreenWipe_StartParametrized(&wipe);
 	}
 }
 
@@ -850,7 +851,7 @@ static void F_IntroCheckMidSceneWipe(void)
 	if (intro_scenenum == INTRO_STJR && intro_curtime == 2*TICRATE-19)
 	{
 		S_ChangeMusicInternal("_stjr", false);
-		F_QueuePostWipe(99, WSF_FADEIN, NULL);
+		ScreenWipe_DoFadeIn(99, WIPEFLAGS_FADEIN, NULL);
 		return;
 	}
 	else if (intro_scenenum == INTRO_RADAR && intro_curtime == 5*TICRATE)
@@ -861,7 +862,7 @@ static void F_IntroCheckMidSceneWipe(void)
 		do_crossfade = true;
 
 	if (do_crossfade)
-		F_WipeDoCrossfade(99);
+		ScreenWipe_DoCrossfade(99);
 }
 
 static void F_PlayIntroMusic(void)
@@ -885,7 +886,7 @@ static void F_IntroDoSpecialWipe(INT32 scene)
 			do_fade_in = true;
 			break;
 		case INTRO_SKYRUNNER:
-			wipe.flags = WSF_TOWHITE;
+			wipe.flags = WIPEFLAGS_TOWHITE;
 			wipe.type = 0;
 			wipe.holdframes = 17;
 			do_fade_in = true;
@@ -895,24 +896,24 @@ static void F_IntroDoSpecialWipe(INT32 scene)
 			wipe.callback = D_StartTitle;
 			break;
 		default:
-			wipe.flags = WSF_CROSSFADE;
+			wipe.flags = WIPEFLAGS_CROSSFADE;
 			break;
 	}
 
-	wipe.style = F_WipeGetStyle(wipe.flags);
+	wipe.style = ScreenWipe_GetStyle(wipe.flags);
 
-	F_StartWipeParametrized(&wipe);
+	ScreenWipe_StartParametrized(&wipe);
 
 	if (do_fade_in)
 	{
 		if (scene == INTRO_SKYRUNNER)
 			wipe.type = 99;
 
-		wipe.flags |= WSF_FADEIN;
+		wipe.flags |= WIPEFLAGS_FADEIN;
 		wipe.callback = NULL;
 		wipe.holdframes = 0;
 
-		F_StartWipeParametrized(&wipe);
+		ScreenWipe_StartParametrized(&wipe);
 	}
 }
 
@@ -952,7 +953,7 @@ void F_IntroTicker(void)
 	{
 		if (F_IntroSceneCrossfades(intro_scenenum))
 		{
-			F_WipeDoCrossfade(99);
+			ScreenWipe_DoCrossfade(99);
 			next = false;
 		}
 
@@ -1242,7 +1243,7 @@ void F_StartCredits(void)
 {
 	boolean from_ending = gamestate == GS_ENDING;
 
-	F_StopAllWipes();
+	ScreenWipe_StopAll();
 
 	TitleCard_Stop();
 
@@ -1270,8 +1271,8 @@ void F_StartCredits(void)
 	timetonext = 2*TICRATE;
 
 	if (!from_ending)
-		F_QueuePreWipe(wipedefs[wipe_credits_toblack], 0, NULL);
-	F_QueuePostWipe(wipedefs[wipe_credits_final], WSF_FADEIN, NULL);
+		ScreenWipe_DoFadeOut(wipedefs[wipe_credits_toblack], 0, NULL);
+	ScreenWipe_DoFadeIn(wipedefs[wipe_credits_final], WIPEFLAGS_FADEIN, NULL);
 }
 
 void F_CreditDrawer(void)
@@ -1468,8 +1469,8 @@ void F_StartGameEvaluation(void)
 	finalecount = -1;
 	sparklloop = 0;
 
-	F_QueuePreWipe(wipedefs[wipe_evaluation_toblack], 0, NULL);
-	F_QueuePostWipe(wipedefs[wipe_evaluation_final], WSF_FADEIN, NULL);
+	ScreenWipe_DoFadeOut(wipedefs[wipe_evaluation_toblack], 0, NULL);
+	ScreenWipe_DoFadeIn(wipedefs[wipe_evaluation_final], WIPEFLAGS_FADEIN, NULL);
 }
 
 void F_GameEvaluationDrawer(void)
@@ -1767,7 +1768,7 @@ static void F_CacheGoodEnding(void)
 
 void F_StartEnding(void)
 {
-	F_StopAllWipes();
+	ScreenWipe_StopAll();
 
 	TitleCard_Stop();
 
@@ -1789,8 +1790,8 @@ void F_StartEnding(void)
 
 	F_LoadEndingGraphics();
 
-	F_QueuePreWipe(wipedefs[wipe_ending_toblack], 0, NULL);
-	F_QueuePostWipe(wipedefs[wipe_ending_final], WSF_FADEIN, NULL);
+	ScreenWipe_DoFadeOut(wipedefs[wipe_ending_toblack], 0, NULL);
+	ScreenWipe_DoFadeIn(wipedefs[wipe_ending_final], WIPEFLAGS_FADEIN, NULL);
 }
 
 void F_EndingTicker(void)
@@ -2232,7 +2233,7 @@ void F_StartGameEnd(void)
 
 	timetonext = TICRATE;
 
-	F_QueuePostWipe(99, 0, NULL);
+	ScreenWipe_DoFadeIn(99, 0, NULL);
 }
 
 //
@@ -2415,7 +2416,7 @@ void F_InitTitleScreen(void)
 
 void F_StartTitleScreen(void)
 {
-	F_StopAllWipes();
+	ScreenWipe_StopAll();
 
 	if (menupres[MN_MAIN].musname[0])
 		S_ChangeMusic(menupres[MN_MAIN].musname, menupres[MN_MAIN].mustrack, menupres[MN_MAIN].muslooping);
@@ -2438,9 +2439,9 @@ void F_StartTitleScreen(void)
 		else
 			finalecount = 0;
 
-		if (!F_GetQueuedWipe())
-			F_QueuePreWipe(wipedefs[wipe_titlescreen_toblack], 0, F_InitTitleScreen);
-		F_QueuePostWipe(menupres[MN_MAIN].enterwipe, WSF_FADEIN, NULL);
+		if (!ScreenWipe_GetQueued())
+			ScreenWipe_DoFadeOut(wipedefs[wipe_titlescreen_toblack], 0, F_InitTitleScreen);
+		ScreenWipe_DoFadeIn(menupres[MN_MAIN].enterwipe, WIPEFLAGS_FADEIN, NULL);
 	}
 
 	G_SetGamestate(GS_TITLESCREEN);
@@ -3521,7 +3522,7 @@ void F_StartContinue(void)
 		return;
 	}
 
-	F_StopAllWipes();
+	ScreenWipe_StopAll();
 	G_SetGamestate(GS_CONTINUING);
 	gameaction = ga_nothing;
 
@@ -3574,8 +3575,8 @@ void F_StartContinue(void)
 	timetonext = (11*TICRATE)+11;
 	continuetime = 0;
 
-	F_QueuePreWipe(wipedefs[wipe_continuing_toblack], 0, NULL);
-	F_QueuePostWipe(wipedefs[wipe_continuing_final], WSF_FADEIN, NULL);
+	ScreenWipe_DoFadeOut(wipedefs[wipe_continuing_toblack], 0, NULL);
+	ScreenWipe_DoFadeIn(wipedefs[wipe_continuing_final], WIPEFLAGS_FADEIN, NULL);
 }
 
 //
@@ -3834,24 +3835,24 @@ static void F_PlayCutsceneMusic(void)
 
 static void F_AdvanceToNextScene(void)
 {
-	F_StopAllWipes();
+	ScreenWipe_StopAll();
 
 	// Fade to any palette color you want.
 	if (cutscenes[cutnum]->scene[scenenum].fadecolor)
 	{
 		wipe_t wipe = {0};
-		wipe.flags = WSF_CROSSFADE;
-		wipe.style = F_WipeGetStyle(wipe.flags);
+		wipe.flags = WIPEFLAGS_CROSSFADE;
+		wipe.style = ScreenWipe_GetStyle(wipe.flags);
 		wipe.type = cutscenes[cutnum]->scene[scenenum].fadeinid;
 		wipe.drawmenuontop = true;
 		wipe.callback = F_PlayCutsceneMusic;
-		F_StartWipeParametrized(&wipe);
+		ScreenWipe_StartParametrized(&wipe);
 
 		levelfadecol = cutscenes[cutnum]->scene[scenenum].fadecolor;
 	}
 	else
 	{
-		F_WipeDoCrossfade(DEFAULTWIPE);
+		ScreenWipe_DoCrossfade(DEFAULTWIPE);
 	}
 
 	// Don't increment until after endcutscene check
@@ -3881,7 +3882,7 @@ static void F_AdvanceToNextScene(void)
 
 	animtimer = pictime = cutscenes[cutnum]->scene[scenenum].picduration[picnum];
 
-	F_StartWipe(cutscenes[cutnum]->scene[scenenum].fadeoutid, 0);
+	ScreenWipe_Start(cutscenes[cutnum]->scene[scenenum].fadeoutid, 0);
 }
 
 // See also G_AfterIntermission, the only other place which handles intra-map/ending transitions
@@ -3951,8 +3952,8 @@ void F_StartCustomCutscene(INT32 cutscenenum, boolean precutscene, boolean reset
 	S_StopSounds();
 
 	if (!from_ending)
-		F_QueuePreWipe(wipedefs[wipe_cutscene_toblack], 0, NULL);
-	F_QueuePostWipe(wipedefs[wipe_cutscene_final], WSF_FADEIN, NULL);
+		ScreenWipe_DoFadeOut(wipedefs[wipe_cutscene_toblack], 0, NULL);
+	ScreenWipe_DoFadeIn(wipedefs[wipe_cutscene_final], WIPEFLAGS_FADEIN, NULL);
 }
 
 //
@@ -4668,8 +4669,8 @@ void F_TextPromptTicker(void)
 
 void F_StartWaitingPlayers(void)
 {
-	F_QueuePreWipe(0, 0, NULL);
-	F_QueuePostWipe(0, WSF_FADEIN, NULL);
+	ScreenWipe_DoFadeOut(0, 0, NULL);
+	ScreenWipe_DoFadeIn(0, WIPEFLAGS_FADEIN, NULL);
 
 	finalecount = 0;
 }

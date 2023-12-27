@@ -18,6 +18,7 @@
 #include "r_local.h"
 #include "p_local.h"
 #include "f_finale.h"
+#include "f_wipe.h"
 #include "st_stuff.h"
 #include "i_video.h"
 #include "v_video.h"

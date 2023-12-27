@@ -64,7 +64,8 @@
 
 #include "lua_hud.h" // level title
 
-#include "f_finale.h" // wipes
+#include "f_finale.h"
+#include "f_wipe.h" // wipes
 
 #include "md5.h" // map MD5
 
@@ -7543,31 +7544,31 @@ void P_RunSpecialStageWipe(void)
 		(mapmusflags & MUSIC_RELOADRESET) ? mapheaderinfo[gamemap - 1]->musname : mapmusname, 7))
 		S_FadeOutStopMusic(MUSICRATE/4);
 
-	if (titlemapinaction || F_GetQueuedWipe())
+	if (titlemapinaction || ScreenWipe_GetQueued())
 		return;
 
 	wipe_t wipe = {0};
-	wipe.flags = WSF_TOWHITE;
-	wipe.style = F_WipeGetStyle(wipe.flags);
+	wipe.flags = WIPEFLAGS_TOWHITE;
+	wipe.style = ScreenWipe_GetStyle(wipe.flags);
 	wipe.callback = G_DoLoadLevel;
 	wipe.type = wipedefs[wipe_speclevel_towhite];
 	wipe.drawmenuontop = false;
 	wipe.holdframes = (3*TICRATE)/2;
-	F_StartWipeParametrized(&wipe);
+	ScreenWipe_StartParametrized(&wipe);
 }
 
 void P_RunLevelWipe(void)
 {
-	if (titlemapinaction || F_GetQueuedWipe())
+	if (titlemapinaction || ScreenWipe_GetQueued())
 		return;
 
 	wipe_t wipe = {0};
 	wipe.flags = 0;
-	wipe.style = F_WipeGetStyle(wipe.flags);
+	wipe.style = ScreenWipe_GetStyle(wipe.flags);
 	wipe.callback = G_DoLoadLevel;
 	wipe.type = wipedefs[wipe_level_toblack];
 	wipe.drawmenuontop = false;
-	F_StartWipeParametrized(&wipe);
+	ScreenWipe_StartParametrized(&wipe);
 }
 
 static void P_InitPlayers(void)
@@ -7868,10 +7869,6 @@ boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate)
 	// clear special respawning que
 	iquehead = iquetail = 0;
 
-	// Remove the loading shit from the screen
-	if (rendermode != render_none && !(titlemapinaction || reloadinggamestate))
-		F_WipeColorFill(levelfadecol);
-
 	if (precache || dedicated)
 		R_PrecacheLevel();
 
@@ -7945,11 +7942,11 @@ boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate)
 	if (ranspecialwipe == SPECIALWIPE_RETRY)
 	{
 		wipe_t wipe = {0};
-		wipe.flags = WSF_TOWHITE | WSF_FADEIN;
-		wipe.style = F_WipeGetStyle(wipe.flags);
+		wipe.flags = WIPEFLAGS_TOWHITE | WIPEFLAGS_FADEIN;
+		wipe.style = ScreenWipe_GetStyle(wipe.flags);
 		wipe.type = wipedefs[wipe_level_final];
 		wipe.drawmenuontop = true;
-		F_StartWipeParametrized(&wipe);
+		ScreenWipe_StartParametrized(&wipe);
 
 		// Reset the HUD translucency!
 		st_translucency = cv_translucenthud.value;

@@ -13,6 +13,7 @@
 #include "doomstat.h"
 #include "d_main.h"
 #include "f_finale.h"
+#include "f_wipe.h"
 #include "g_game.h"
 #include "hu_stuff.h"
 #include "netcode/i_net.h"
@@ -1328,7 +1329,7 @@ void Y_StartIntermission(void)
 		}
 	}
 
-	F_StopAllWipes();
+	ScreenWipe_StopAll();
 
 	// This should always exist, but just in case...
 	if(!mapheaderinfo[prevmap])
@@ -1363,7 +1364,7 @@ void Y_StartIntermission(void)
 			}
 			usetile = false;
 
-			F_WipeDoCrossfade(DEFAULTWIPE);
+			ScreenWipe_DoCrossfade(DEFAULTWIPE);
 
 			// set up the "got through act" message according to skin name
 			if (stagefailed)
@@ -1440,7 +1441,7 @@ void Y_StartIntermission(void)
 			// tile if using the default background
 			usetile = !useinterpic;
 
-			F_DoGenericTransition();
+			ScreenWipe_DoFadeOutIn();
 
 			// Super form stuff (normally blank)
 			data.spec.passed3[0] = '\0';
@@ -1516,7 +1517,7 @@ void Y_StartIntermission(void)
 			usetile = true;
 			useinterpic = false;
 
-			F_DoGenericTransition();
+			ScreenWipe_DoFadeOutIn();
 			break;
 		}
 
@@ -1542,7 +1543,7 @@ void Y_StartIntermission(void)
 			usetile = true;
 			useinterpic = false;
 
-			F_DoGenericTransition();
+			ScreenWipe_DoFadeOutIn();
 			break;
 		}
 
@@ -1569,7 +1570,7 @@ void Y_StartIntermission(void)
 			usetile = true;
 			useinterpic = false;
 
-			F_DoGenericTransition();
+			ScreenWipe_DoFadeOutIn();
 			break;
 		}
 
@@ -1595,7 +1596,7 @@ void Y_StartIntermission(void)
 			usetile = true;
 			useinterpic = false;
 
-			F_DoGenericTransition();
+			ScreenWipe_DoFadeOutIn();
 			break;
 		}
 

@@ -18,6 +18,7 @@
 #include "netcode/d_clisrv.h"
 #include "netcode/net_command.h"
 #include "f_finale.h"
+#include "f_wipe.h"
 #include "p_setup.h"
 #include "p_saveg.h"
 #include "i_time.h"
@@ -2054,7 +2055,7 @@ void G_DoLoadLevel(void)
 //
 void G_StartLevelWipe(void)
 {
-	F_StopAllWipes();
+	ScreenWipe_StopAll();
 
 	ranspecialwipe = SPECIALWIPE_NONE;
 
@@ -2078,21 +2079,21 @@ void G_StartLevelWipe(void)
 			strnicmp(S_MusicName(),
 				(mapmusflags & MUSIC_RELOADRESET) ? mapheaderinfo[gamemap-1]->musname : mapmusname, 7)))
 			S_FadeMusic(0, FixedMul(
-				FixedDiv((F_GetWipeLength(wipedefs[wipe_level_toblack])-2)*NEWTICRATERATIO, NEWTICRATE), MUSICRATE));
+				FixedDiv((ScreenWipe_GetLength(wipedefs[wipe_level_toblack])-2)*NEWTICRATERATIO, NEWTICRATE), MUSICRATE));
 	}
 }
 
 static void G_DoLevelFadeIn(void)
 {
-	wipeflags_t flags = WSF_FADEIN;
+	wipeflags_t flags = WIPEFLAGS_FADEIN;
 	if (ranspecialwipe == SPECIALWIPE_SSTAGE)
-		flags |= WSF_TOWHITE;
+		flags |= WIPEFLAGS_TOWHITE;
 	wipe_t wipe = {0};
-	wipe.style = F_WipeGetStyle(wipe.flags);
+	wipe.style = ScreenWipe_GetStyle(wipe.flags);
 	wipe.flags = flags;
 	wipe.type = wipedefs[wipe_level_final];
 	wipe.drawmenuontop = true;
-	F_StartWipeParametrized(&wipe);
+	ScreenWipe_StartParametrized(&wipe);
 }
 
 //
@@ -2181,7 +2182,7 @@ void TitleCard_Run(void)
 	{
 		if (!cv_showhud.value)
 		{
-			F_WipeDoCrossfade(DEFAULTWIPE);
+			ScreenWipe_DoCrossfade(DEFAULTWIPE);
 		}
 		else
 		{
@@ -2593,18 +2594,18 @@ void G_Ticker(boolean run)
 			{
 				case GS_LEVEL:
 					if ((loading && G_GetRetryFlag(RETRY_PAUSED)) || !(paused || P_AutoPause()))
-						F_RunWipe();
+						ScreenWipe_Run();
 					break;
 				default:
-					F_RunWipe();
+					ScreenWipe_Run();
 					break;
 			}
 
 			// Run the title card
 			if (titlecard.running)
 			{
-				wipe_t *wipe = F_GetQueuedWipe();
-				if (wipe && wipe->flags & WSF_FADEIN)
+				wipe_t *wipe = ScreenWipe_GetQueued();
+				if (wipe && wipe->flags & WIPEFLAGS_FADEIN)
 					TitleCard_Run();
 			}
 
@@ -3574,7 +3575,7 @@ void G_DoReborn(INT32 playernum)
 				P_ClearStarPost(players[i].starpostnum);
 			}
 
-			F_WipeDoCrossfade(DEFAULTWIPE);
+			ScreenWipe_DoCrossfade(DEFAULTWIPE);
 
 			if (camera.chase)
 				P_ResetCamera(&players[displayplayer], &camera);

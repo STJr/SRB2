@@ -12,14 +12,13 @@
 /// \file  f_wipe.c
 /// \brief SRB2 2.1 custom fade mask "wipe" behavior.
 
-#include "f_finale.h"
+#include "f_wipe.h"
 #include "i_video.h"
 #include "v_video.h"
 
 #include "r_main.h" // framecount
 #include "r_state.h" // fadecolormap
 #include "r_draw.h" // transtable
-#include "p_pspr.h" // tr_transxxx
 #include "p_local.h"
 #include "st_stuff.h"
 #include "w_wad.h"
@@ -99,7 +98,7 @@ static boolean wipe_stopped = false;
 static tic_t wipe_holdframes = 0;
 
 static wipestyle_t wipe_style = WIPESTYLE_NORMAL;
-static wipeflags_t wipe_flags = WSF_CROSSFADE;
+static wipeflags_t wipe_flags = 0;
 
 specialwipe_t ranspecialwipe = SPECIALWIPE_NONE;
 
@@ -368,7 +367,7 @@ static void F_DoColormapWipe(fademask_t *fademask, UINT8 *colormap)
 			draw_linestogo = draw_lineend - draw_linestart;
 
 			int nmask = *mask;
-			if (wipe_flags & WSF_FADEIN)
+			if (wipe_flags & WIPEFLAGS_FADEIN)
 				nmask = (FADECOLORMAPROWS-1) - nmask;
 
 			transtbl = colormap + (nmask * 256);
@@ -399,7 +398,7 @@ static void F_DoColormapWipe(fademask_t *fademask, UINT8 *colormap)
 
 /** Saves the "before" screen of a wipe.
   */
-void F_WipeStartScreen(void)
+void ScreenWipe_StartScreen(void)
 {
 #ifndef NOWIPE
 #ifdef HWRENDER
@@ -417,7 +416,7 @@ void F_WipeStartScreen(void)
 
 /** Saves the "after" screen of a wipe.
   */
-void F_WipeEndScreen(void)
+void ScreenWipe_EndScreen(void)
 {
 #ifndef NOWIPE
 #ifdef HWRENDER
@@ -433,9 +432,9 @@ void F_WipeEndScreen(void)
 #endif
 }
 
-static boolean F_WipeCanTint(wipeflags_t flags)
+static boolean ScreenWipe_CanTint(wipeflags_t flags)
 {
-	if (flags & WSF_CROSSFADE)
+	if (flags & WIPEFLAGS_CROSSFADE)
 		return false;
 
 	return true;
@@ -443,9 +442,9 @@ static boolean F_WipeCanTint(wipeflags_t flags)
 
 /** Decides what wipe style to use.
   */
-wipestyle_t F_WipeGetStyle(wipeflags_t flags)
+wipestyle_t ScreenWipe_GetStyle(wipeflags_t flags)
 {
-	if (F_WipeCanTint(flags))
+	if (ScreenWipe_CanTint(flags))
 		return WIPESTYLE_COLORMAP;
 	else
 		return WIPESTYLE_NORMAL;
@@ -468,7 +467,7 @@ static void F_RestartWipe(void)
 	wipe_frame = 0;
 }
 
-void F_StartPendingWipe(void)
+void ScreenWipe_StartPending(void)
 {
 	if (wipe_numqueued)
 		F_RestartWipe();
@@ -477,17 +476,17 @@ void F_StartPendingWipe(void)
 /** After setting up the screens you want to wipe,
   * calling this will do a 'typical' wipe.
   */
-void F_StartWipe(UINT8 type, wipeflags_t flags)
+void ScreenWipe_Start(UINT8 type, wipeflags_t flags)
 {
 	wipe_t wipe = {0};
-	wipe.style = F_WipeGetStyle(flags);
+	wipe.style = ScreenWipe_GetStyle(flags);
 	wipe.flags = flags;
 	wipe.type = type;
 	wipe.drawmenuontop = true;
-	F_StartWipeParametrized(&wipe);
+	ScreenWipe_StartParametrized(&wipe);
 }
 
-void F_StartWipeParametrized(wipe_t *wipe)
+void ScreenWipe_StartParametrized(wipe_t *wipe)
 {
 #ifdef NOWIPE
 	(void)wipe;
@@ -510,7 +509,7 @@ void F_StartWipeParametrized(wipe_t *wipe)
 
 /** Runs the current wipe.
   */
-void F_RunWipe(void)
+void ScreenWipe_Run(void)
 {
 #ifndef NOWIPE
 	if (!wipe_numqueued)
@@ -520,7 +519,7 @@ void F_RunWipe(void)
 	{
 		wipe_holdframes--;
 		if (wipe_holdframes <= 0)
-			F_StopWipe();
+			ScreenWipe_Stop();
 		return;
 	}
 
@@ -530,23 +529,23 @@ void F_RunWipe(void)
 		wipe_stopped = true;
 		if (wipe_holdframes)
 		{
-			if (!(wipe_flags & WSF_FADEIN))
+			if (!(wipe_flags & WIPEFLAGS_FADEIN))
 				wipe_frame--;
 			return;
 		}
-		F_StopWipe();
+		ScreenWipe_Stop();
 		return;
 	}
 
 	wipe_frame++;
 #else
-	F_StopWipe();
+	ScreenWipe_Stop();
 #endif
 }
 
 /** Stops running the current wipe.
   */
-void F_StopWipe(void)
+void ScreenWipe_Stop(void)
 {
 	void (*callback)(void) = NULL;
 
@@ -571,11 +570,11 @@ void F_StopWipe(void)
 		callback();
 }
 
-void F_StopAllWipes(void)
+void ScreenWipe_StopAll(void)
 {
 	wipe_numqueued = 0;
 
-	F_StopWipe();
+	ScreenWipe_Stop();
 }
 
 #ifndef NOWIPE
@@ -586,7 +585,7 @@ static void F_RenderWipe(UINT8 style, UINT8 flags, fademask_t *fmask)
 	if (style == WIPESTYLE_COLORMAP)
 	{
 		UINT8 *colormap = fadecolormap;
-		if (flags & WSF_TOWHITE)
+		if (flags & WIPEFLAGS_TOWHITE)
 			colormap += (FADECOLORMAPROWS * 256);
 		F_DoColormapWipe(fmask, colormap);
 	}
@@ -610,7 +609,7 @@ static void F_RenderWipeHW(UINT8 style, UINT8 type, UINT8 frame)
 
 /** Displays the current wipe.
   */
-void F_DisplayWipe(void)
+void ScreenWipe_Display(void)
 {
 #ifndef NOWIPE
 	wipe_scr = screens[0];
@@ -629,7 +628,7 @@ void F_DisplayWipe(void)
 			else
 #endif
 				F_RenderWipe(wipe_style, wipe_flags, fmask);
-			F_WipeStartScreen();
+			ScreenWipe_StartScreen();
 		}
 		return;
 	}
@@ -658,7 +657,7 @@ static int F_GetWipedefIndex(void)
 	return index;
 }
 
-wipe_t *F_GetQueuedWipe(void)
+wipe_t *ScreenWipe_GetQueued(void)
 {
 	if (wipe_numqueued)
 		return &wipe_queue[0];
@@ -666,83 +665,83 @@ wipe_t *F_GetQueuedWipe(void)
 	return NULL;
 }
 
-void F_SetupFadeOut(wipeflags_t flags)
+void ScreenWipe_SetupFadeOut(wipeflags_t flags)
 {
 #ifndef NOWIPE
-	F_WipeStartScreen();
+	ScreenWipe_StartScreen();
 
-	UINT8 wipecolor = (flags & WSF_TOWHITE) ? 0 : 31;
+	UINT8 wipecolor = (flags & WIPEFLAGS_TOWHITE) ? 0 : 31;
 
-	if (F_WipeCanTint(flags))
+	if (ScreenWipe_CanTint(flags))
 	{
 #ifdef HWRENDER
 		if (rendermode == render_opengl)
-			F_WipeColorFill(wipecolor);
+			ScreenWipe_DoColorFill(wipecolor);
 #endif
 	}
 	else
 	{
-		F_WipeColorFill(wipecolor);
+		ScreenWipe_DoColorFill(wipecolor);
 	}
 
-	F_WipeEndScreen();
+	ScreenWipe_EndScreen();
 #endif
 }
 
-void F_DoGenericTransition(void)
+void ScreenWipe_DoFadeOutIn(void)
 {
-	F_QueuePreWipe(DEFAULTWIPE, 0, NULL);
-	F_QueuePostWipe(DEFAULTWIPE, WSF_FADEIN, NULL);
+	ScreenWipe_DoFadeOut(DEFAULTWIPE, 0, NULL);
+	ScreenWipe_DoFadeIn(DEFAULTWIPE, WIPEFLAGS_FADEIN, NULL);
 }
 
 /** Starts the "pre" type of a wipe.
   */
-void F_QueuePreWipe(INT16 type, wipeflags_t flags, wipe_callback_t callback)
+void ScreenWipe_DoFadeOut(INT16 type, wipeflags_t flags, wipe_callback_t callback)
 {
-	if (type == DEFAULTWIPE || !F_WipeExists(type))
+	if (type == DEFAULTWIPE || !ScreenWipe_Exists(type))
 		type = wipedefs[F_GetWipedefIndex()];
 
 	wipe_t wipe = {0};
 	wipe.flags = flags;
-	wipe.style = F_WipeGetStyle(flags);
+	wipe.style = ScreenWipe_GetStyle(flags);
 	wipe.type = type;
 	wipe.drawmenuontop = gamestate != GS_TIMEATTACK && gamestate != GS_TITLESCREEN;
 	wipe.callback = callback;
-	F_StartWipeParametrized(&wipe);
+	ScreenWipe_StartParametrized(&wipe);
 }
 
 /** Starts the "post" type of a wipe.
   */
-void F_QueuePostWipe(INT16 type, wipeflags_t flags, wipe_callback_t callback)
+void ScreenWipe_DoFadeIn(INT16 type, wipeflags_t flags, wipe_callback_t callback)
 {
-	if (type == DEFAULTWIPE || !F_WipeExists(type))
+	if (type == DEFAULTWIPE || !ScreenWipe_Exists(type))
 		type = wipedefs[F_GetWipedefIndex() + WIPEFINALSHIFT];
 
 	wipe_t wipe = {0};
 	wipe.flags = flags;
-	wipe.style = F_WipeGetStyle(flags);
+	wipe.style = ScreenWipe_GetStyle(flags);
 	wipe.type = type;
 	wipe.drawmenuontop = gamestate != GS_TIMEATTACK && gamestate != GS_TITLESCREEN;
 	wipe.callback = callback;
-	F_StartWipeParametrized(&wipe);
+	ScreenWipe_StartParametrized(&wipe);
 }
 
 /** Does a crossfade.
   */
-void F_WipeDoCrossfade(INT16 type)
+void ScreenWipe_DoCrossfade(INT16 type)
 {
 	wipe_t wipe = {0};
-	wipe.flags = WSF_CROSSFADE;
-	wipe.style = F_WipeGetStyle(wipe.flags);
+	wipe.flags = WIPEFLAGS_CROSSFADE;
+	wipe.style = ScreenWipe_GetStyle(wipe.flags);
 	wipe.type = type == DEFAULTWIPE ? wipedefs[F_GetWipedefIndex()] : type;
 	wipe.drawmenuontop = false;
-	F_StartWipeParametrized(&wipe);
+	ScreenWipe_StartParametrized(&wipe);
 }
 
 /** Returns tic length of wipe
   * One lump equals one tic
   */
-tic_t F_GetWipeLength(UINT8 type)
+tic_t ScreenWipe_GetLength(UINT8 type)
 {
 #ifdef NOWIPE
 	(void)type;
@@ -769,7 +768,7 @@ tic_t F_GetWipeLength(UINT8 type)
 
 /** Does the specified wipe exist?
   */
-boolean F_WipeExists(UINT8 type)
+boolean ScreenWipe_Exists(UINT8 type)
 {
 #ifdef NOWIPE
 	(void)type;

@@ -23,6 +23,7 @@
 #include "m_menu.h"
 #include "m_misc.h"
 #include "f_finale.h"
+#include "f_wipe.h"
 #include "st_stuff.h"
 #include "i_system.h"
 #include "p_setup.h"
