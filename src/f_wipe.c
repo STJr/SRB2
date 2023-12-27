@@ -562,6 +562,7 @@ void ScreenWipe_Stop(void)
 	wipe_stopped = false;
 	wipe_running = false;
 	wipe_drawmenuontop = false;
+	wipe_holdframes = 0;
 
 	if (titlecard.wipe)
 		titlecard.wipe = 0;
