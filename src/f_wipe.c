@@ -581,41 +581,31 @@ void F_StopAllWipes(void)
 #ifndef NOWIPE
 /** Renders the current wipe into wipe_scr.
   */
-static void F_RenderWipe(fademask_t *fmask)
+static void F_RenderWipe(UINT8 style, UINT8 flags, fademask_t *fmask)
 {
-	switch (wipe_style)
+	if (style == WIPESTYLE_COLORMAP)
 	{
-		case WIPESTYLE_COLORMAP:
-#ifdef HWRENDER
-			if (rendermode == render_opengl)
-			{
-				// send in the wipe type and wipe frame because we need to cache the graphic
-				HWR_DoTintedWipe(wipe_type, wipe_frame-1);
-			}
-			else
-#endif
-			{
-				UINT8 *colormap = fadecolormap;
-				if (wipe_flags & WSF_TOWHITE)
-					colormap += (FADECOLORMAPROWS * 256);
-				F_DoColormapWipe(fmask, colormap);
-			}
-			break;
-		case WIPESTYLE_NORMAL:
-#ifdef HWRENDER
-			if (rendermode == render_opengl)
-			{
-				// send in the wipe type and wipe frame because we need to cache the graphic
-				HWR_DoWipe(wipe_type, wipe_frame-1);
-			}
-			else
-#endif
-				F_DoWipe(fmask);
-			break;
-		default:
-			break;
+		UINT8 *colormap = fadecolormap;
+		if (flags & WSF_TOWHITE)
+			colormap += (FADECOLORMAPROWS * 256);
+		F_DoColormapWipe(fmask, colormap);
+	}
+	else
+	{
+		F_DoWipe(fmask);
 	}
 }
+
+#ifdef HWRENDER
+static void F_RenderWipeHW(UINT8 style, UINT8 type, UINT8 frame)
+{
+	// send in the wipe type and wipe frame because we need to cache the graphic
+	if (style == WIPESTYLE_COLORMAP)
+		HWR_DoTintedWipe(type, frame);
+	else
+		HWR_DoWipe(type, frame);
+}
+#endif
 #endif
 
 /** Displays the current wipe.
@@ -630,21 +620,26 @@ void F_DisplayWipe(void)
 	if (!fmask)
 	{
 		// Save screen for post-wipe
-		if (!(wipe_flags & WSF_CROSSFADE))
+		fmask = F_GetFadeMask(wipe_type, wipe_frame-1);
+		if (fmask)
 		{
-			fmask = F_GetFadeMask(wipe_type, wipe_frame-1);
-			if (!fmask)
-				return;
+#ifdef HWRENDER
+			if (rendermode == render_opengl)
+				F_RenderWipeHW(wipe_style, wipe_type, wipe_frame-1);
 			else
-			{
-				F_RenderWipe(fmask);
-				F_WipeStartScreen();
-			}
+#endif
+				F_RenderWipe(wipe_style, wipe_flags, fmask);
+			F_WipeStartScreen();
 		}
 		return;
 	}
 
-	F_RenderWipe(fmask);
+#ifdef HWRENDER
+	if (rendermode == render_opengl)
+		F_RenderWipeHW(wipe_style, wipe_type, wipe_frame);
+	else
+#endif
+		F_RenderWipe(wipe_style, wipe_flags, fmask);
 #endif
 }
 
