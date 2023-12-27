@@ -80,6 +80,7 @@ static void G_DoWorldDone(void);
 
 static void G_CheckPlayerReborn(void);
 static void G_TickerEnd(void);
+static void G_UpdateNameChangeRate(void);
 
 char   mapmusname[7]; // Music name
 UINT16 mapmusflags; // Track and reset bit
@@ -2615,13 +2616,17 @@ void G_Ticker(boolean run)
 				G_CheckPlayerReborn();
 
 			G_TickerEnd();
+			G_UpdateNameChangeRate();
 		}
 		return;
 	}
 
-	// Oh my God I hope this doesn't implode anything
 	if (levelstarting || G_GetExitGameFlag())
+	{
+		if (run)
+			G_UpdateNameChangeRate();
 		return;
+	}
 
 	// Run Marathon Mode in-game timer
 	G_MarathonTicker();
@@ -2774,7 +2779,10 @@ void G_Ticker(boolean run)
 	}
 
 	if (run)
+	{
 		G_TickerEnd();
+		G_UpdateNameChangeRate();
+	}
 }
 
 static void G_TickerEnd(void)
@@ -2792,7 +2800,10 @@ static void G_TickerEnd(void)
 
 	if (camtoggledelay2)
 		camtoggledelay2--;
+}
 
+static void G_UpdateNameChangeRate(void)
+{
 	if (gametic % NAMECHANGERATE == 0)
 	{
 		memset(player_name_changes, 0, sizeof player_name_changes);

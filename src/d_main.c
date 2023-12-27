@@ -708,14 +708,6 @@ void D_SRB2Loop(void)
 
 		I_UpdateTime(cv_timescale.value);
 
-#if 0
-		if (lastwipetic)
-		{
-			oldentertics = lastwipetic;
-			lastwipetic = 0;
-		}
-#endif
-
 		// get real tics
 		entertic = I_GetTime();
 		realtics = entertic - oldentertics;
