@@ -2558,6 +2558,48 @@ static void G_MarathonTicker(void)
 	marathontime++;
 }
 
+static void G_UpdateTiccmd(void)
+{
+	INT32 buf = gametic % BACKUPTICS;
+
+	// Generate ticcmds for bots FIRST, then copy received ticcmds for players.
+	// This emulates pre-2.2.10 behaviour where the bot referenced their leader's last copied ticcmd,
+	// which is desirable because P_PlayerThink can override inputs (e.g. while PF_STASIS is applied or in a waterslide),
+	// and the bot AI needs to respect that.
+	for (INT32 i = 0; i < MAXPLAYERS; i++)
+	{
+		if (playeringame[i] && !P_IsHuman(&players[i])) // Less work is required if we're building a bot ticcmd.
+		{
+			players[i].lastbuttons = players[i].cmd.buttons; // Save last frame's button readings
+			B_BuildTiccmd(&players[i], &players[i].cmd);
+
+			// Since bot TicCmd is pre-determined for both the client and server, the latency and packet checks are simplified.
+			players[i].cmd.latency = 0;
+			P_SetPlayerAngle(&players[i], players[i].cmd.angleturn << 16);
+		}
+	}
+
+	for (INT32 i = 0; i < MAXPLAYERS; i++)
+	{
+		if (playeringame[i] && P_IsHuman(&players[i]))
+		{
+			players[i].lastbuttons = players[i].cmd.buttons; // Save last frame's button readings
+			G_CopyTiccmd(&players[i].cmd, &netcmds[buf][i], 1);
+
+			// Use the leveltime sent in the player's ticcmd to determine control lag
+			players[i].cmd.latency = min(((leveltime & 0xFF) - players[i].cmd.latency) & 0xFF, MAXPREDICTTICS-1);
+
+			// Do angle adjustments.
+			players[i].angleturn += players[i].cmd.angleturn - players[i].oldrelangleturn;
+			players[i].oldrelangleturn = players[i].cmd.angleturn;
+			if (P_ControlStyle(&players[i]) == CS_LMAOGALOG)
+				P_ForceLocalAngle(&players[i], players[i].angleturn << 16);
+			else
+				players[i].cmd.angleturn = (players[i].angleturn & ~TICCMD_RECEIVED) | (players[i].cmd.angleturn & TICCMD_RECEIVED);
+		}
+	}
+}
+
 //
 // G_Ticker
 // Make ticcmd_ts for the players.
@@ -2647,44 +2689,7 @@ void G_Ticker(boolean run)
 			default: I_Error("gameaction = %d\n", gameaction);
 		}
 
-	// Generate ticcmds for bots FIRST, then copy received ticcmds for players.
-	// This emulates pre-2.2.10 behaviour where the bot referenced their leader's last copied ticcmd,
-	// which is desirable because P_PlayerThink can override inputs (e.g. while PF_STASIS is applied or in a waterslide),
-	// and the bot AI needs to respect that.
-	INT32 buf = gametic % BACKUPTICS;
-
-	for (i = 0; i < MAXPLAYERS; i++)
-	{
-		if (playeringame[i] && !P_IsHuman(&players[i])) // Less work is required if we're building a bot ticcmd.
-		{
-			players[i].lastbuttons = players[i].cmd.buttons; // Save last frame's button readings
-			B_BuildTiccmd(&players[i], &players[i].cmd);
-
-			// Since bot TicCmd is pre-determined for both the client and server, the latency and packet checks are simplified.
-			players[i].cmd.latency = 0;
-			P_SetPlayerAngle(&players[i], players[i].cmd.angleturn << 16);
-		}
-	}
-
-	for (i = 0; i < MAXPLAYERS; i++)
-	{
-		if (playeringame[i] && P_IsHuman(&players[i]))
-		{
-			players[i].lastbuttons = players[i].cmd.buttons; // Save last frame's button readings
-			G_CopyTiccmd(&players[i].cmd, &netcmds[buf][i], 1);
-
-			// Use the leveltime sent in the player's ticcmd to determine control lag
-			players[i].cmd.latency = min(((leveltime & 0xFF) - players[i].cmd.latency) & 0xFF, MAXPREDICTTICS-1);
-
-			// Do angle adjustments.
-			players[i].angleturn += players[i].cmd.angleturn - players[i].oldrelangleturn;
-			players[i].oldrelangleturn = players[i].cmd.angleturn;
-			if (P_ControlStyle(&players[i]) == CS_LMAOGALOG)
-				P_ForceLocalAngle(&players[i], players[i].angleturn << 16);
-			else
-				players[i].cmd.angleturn = (players[i].angleturn & ~TICCMD_RECEIVED) | (players[i].cmd.angleturn & TICCMD_RECEIVED);
-		}
-	}
+	G_UpdateTiccmd();
 
 	// do main actions
 	switch (gamestate)
