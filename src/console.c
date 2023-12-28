@@ -710,8 +710,9 @@ void CON_ToggleOff(void)
 
 	con_destlines = 0;
 	con_curlines = 0;
-	CON_ClearHUD();
 	con_forcepic = 0;
+
+	CON_ClearHUD();
 
 	I_UpdateMouseGrab();
 

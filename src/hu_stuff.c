@@ -2138,10 +2138,7 @@ void HU_DrawTabRankings(INT32 x, INT32 y, playersort_t *tab, INT32 scorelines, I
 			HU_DrawEmeralds(x-12,y+2,tab[i].emeralds);
 		}
 
-		if (greycheck)
-			V_DrawSmallTranslucentPatch (x, y-4, V_80TRANS, livesback);
-		else
-			V_DrawSmallScaledPatch (x, y-4, 0, livesback);
+		V_DrawSmallScaledPatch (x, y-4, greycheck ? V_80TRANS : 0, livesback);
 
 		if (tab[i].color == 0)
 		{
@@ -2150,10 +2147,7 @@ void HU_DrawTabRankings(INT32 x, INT32 y, playersort_t *tab, INT32 scorelines, I
 				V_DrawSmallScaledPatch(x, y-4, 0, superprefix[players[tab[i].num].skin]);
 			else
 			{
-				if (greycheck)
-					V_DrawSmallTranslucentPatch(x, y-4, V_80TRANS, faceprefix[players[tab[i].num].skin]);
-				else
-					V_DrawSmallScaledPatch(x, y-4, 0, faceprefix[players[tab[i].num].skin]);
+				V_DrawSmallScaledPatch(x, y-4, greycheck ? V_80TRANS : 0, faceprefix[players[tab[i].num].skin]);
 			}
 		}
 		else
@@ -2167,7 +2161,7 @@ void HU_DrawTabRankings(INT32 x, INT32 y, playersort_t *tab, INT32 scorelines, I
 			{
 				colormap = R_GetTranslationColormap(players[tab[i].num].skin, players[tab[i].num].mo ? players[tab[i].num].mo->color : tab[i].color, GTC_CACHE);
 				if (greycheck)
-					V_DrawSmallTranslucentMappedPatch (x, y-4, V_80TRANS, faceprefix[players[tab[i].num].skin], colormap);
+					V_DrawSmallMappedPatch (x, y-4, V_80TRANS, faceprefix[players[tab[i].num].skin], colormap);
 				else
 					V_DrawSmallMappedPatch (x, y-4, 0, faceprefix[players[tab[i].num].skin], colormap);
 			}
@@ -2177,10 +2171,7 @@ void HU_DrawTabRankings(INT32 x, INT32 y, playersort_t *tab, INT32 scorelines, I
 			V_DrawRightAlignedString(x, y+4, V_ALLOWLOWERCASE|(greycheck ? V_60TRANS : 0), va("%dx", players[tab[i].num].lives));
 		else if (G_TagGametype() && players[tab[i].num].pflags & PF_TAGIT)
 		{
-			if (greycheck)
-				V_DrawSmallTranslucentPatch(x-32, y-4, V_60TRANS, tagico);
-			else
-				V_DrawSmallScaledPatch(x-32, y-4, 0, tagico);
+			V_DrawSmallScaledPatch(x-32, y-4, greycheck ? V_60TRANS : 0, tagico);
 		}
 
 		if (players[tab[i].num].exiting || (players[tab[i].num].pflags & PF_FINISHED))
@@ -2436,7 +2427,7 @@ void HU_DrawTeamTabRankings(playersort_t *tab, INT32 whiteplayer)
 		{
 			colormap = R_GetTranslationColormap(players[tab[i].num].skin, players[tab[i].num].mo ? players[tab[i].num].mo->color : tab[i].color, GTC_CACHE);
 			if (greycheck)
-				V_DrawSmallTranslucentMappedPatch (x, y-4, V_80TRANS, faceprefix[players[tab[i].num].skin], colormap);
+				V_DrawSmallMappedPatch (x, y-4, V_80TRANS, faceprefix[players[tab[i].num].skin], colormap);
 			else
 				V_DrawSmallMappedPatch (x, y-4, 0, faceprefix[players[tab[i].num].skin], colormap);
 		}
@@ -2510,10 +2501,7 @@ void HU_DrawDualTabRankings(INT32 x, INT32 y, playersort_t *tab, INT32 scoreline
 				V_DrawSmallScaledPatch (x, y-4, 0, superprefix[players[tab[i].num].skin]);
 			else
 			{
-				if (greycheck)
-					V_DrawSmallTranslucentPatch (x, y-4, V_80TRANS, faceprefix[players[tab[i].num].skin]);
-				else
-					V_DrawSmallScaledPatch (x, y-4, 0, faceprefix[players[tab[i].num].skin]);
+				V_DrawSmallScaledPatch (x, y-4, greycheck ? V_80TRANS : 0, faceprefix[players[tab[i].num].skin]);
 			}
 		}
 		else
@@ -2527,7 +2515,7 @@ void HU_DrawDualTabRankings(INT32 x, INT32 y, playersort_t *tab, INT32 scoreline
 			{
 				colormap = R_GetTranslationColormap(players[tab[i].num].skin, players[tab[i].num].mo ? players[tab[i].num].mo->color : tab[i].color, GTC_CACHE);
 				if (greycheck)
-					V_DrawSmallTranslucentMappedPatch (x, y-4, V_80TRANS, faceprefix[players[tab[i].num].skin], colormap);
+					V_DrawSmallMappedPatch (x, y-4, V_80TRANS, faceprefix[players[tab[i].num].skin], colormap);
 				else
 					V_DrawSmallMappedPatch (x, y-4, 0, faceprefix[players[tab[i].num].skin], colormap);
 			}

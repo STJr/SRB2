@@ -206,13 +206,6 @@ boolean ST_SameTeam(player_t *a, player_t *b)
 
 static boolean st_stopped = true;
 
-void ST_Ticker(boolean run)
-{
-	(void)run;
-	if (st_stopped)
-		return;
-}
-
 // 0 is default, any others are special palettes.
 INT32 st_palette = 0;
 INT32 st_translucency = 10;
@@ -1292,7 +1285,7 @@ void TitleCard_Draw(void)
 	colormap = R_GetTranslationColormap(TC_DEFAULT, colornum, GTC_CACHE);
 
 	if (titlecard.prelevel)
-		V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, levelfadecol);
+		V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, levelfadecol|V_PERPLAYER);
 
 	if (!LUA_HudEnabled(hud_stagetitle) || titlecard.ticker >= (titlecard.endtime + TICRATE))
 	{
@@ -1315,24 +1308,18 @@ void TitleCard_Draw(void)
 	if (lvlttlxpos < 0)
 		lvlttlxpos = 0;
 
-	if (!splitscreen || (splitscreen && stplyr == &players[displayplayer]))
-	{
-		INT32 zzticker = titlecard.ticker;
-		V_DrawMappedPatch(FixedInt(titlecard.zigzag), (-zzticker) % zigzag->height, V_SNAPTOTOP|V_SNAPTOLEFT, zigzag, colormap);
-		V_DrawMappedPatch(FixedInt(titlecard.zigzag), (zigzag->height-zzticker) % zigzag->height, V_SNAPTOTOP|V_SNAPTOLEFT, zigzag, colormap);
-		V_DrawMappedPatch(FixedInt(titlecard.zigzag), (-zztext->height+zzticker) % zztext->height, V_SNAPTOTOP|V_SNAPTOLEFT, zztext, colormap);
-		V_DrawMappedPatch(FixedInt(titlecard.zigzag), (zzticker) % zztext->height, V_SNAPTOTOP|V_SNAPTOLEFT, zztext, colormap);
-	}
+	INT32 zzticker = titlecard.ticker;
+	V_DrawSplitscreenPatch(FixedInt(titlecard.zigzag), (-zzticker) % zigzag->height, V_SNAPTOTOP|V_SNAPTOLEFT, zigzag, colormap);
+	V_DrawSplitscreenPatch(FixedInt(titlecard.zigzag), (zigzag->height-zzticker) % zigzag->height, V_SNAPTOTOP|V_SNAPTOLEFT, zigzag, colormap);
+	V_DrawSplitscreenPatch(FixedInt(titlecard.zigzag), (-zztext->height+zzticker) % zztext->height, V_SNAPTOTOP|V_SNAPTOLEFT, zztext, colormap);
+	V_DrawSplitscreenPatch(FixedInt(titlecard.zigzag), (zzticker) % zztext->height, V_SNAPTOTOP|V_SNAPTOLEFT, zztext, colormap);
 
 	if (actnum)
 	{
-		if (!splitscreen)
-		{
-			if (actnum > 9) // slightly offset the act diamond for two-digit act numbers
-				V_DrawMappedPatch(ttlnumxpos + (V_LevelActNumWidth(actnum)/4) + ttlscroll, 104 - ttlscroll, 0, actpat, colormap);
-			else
-				V_DrawMappedPatch(ttlnumxpos + ttlscroll, 104 - ttlscroll, 0, actpat, colormap);
-		}
+		if (actnum > 9) // slightly offset the act diamond for two-digit act numbers
+			V_DrawSplitscreenPatch(ttlnumxpos + (V_LevelActNumWidth(actnum)/4) + ttlscroll, 104 - ttlscroll, 0, actpat, colormap);
+		else
+			V_DrawSplitscreenPatch(ttlnumxpos + ttlscroll, 104 - ttlscroll, 0, actpat, colormap);
 		V_DrawLevelActNum(ttlnumxpos + ttlscroll, 104, V_PERPLAYER, actnum);
 	}
 
@@ -1358,7 +1345,7 @@ void TitleCard_DrawOverWipe(void)
 	if (!(titlecard.running && titlecard.wipe && st_overlay))
 		return;
 
-	stplyr = &players[consoleplayer];
+	stplyr = &players[displayplayer];
 	TitleCard_PreDraw();
 	TitleCard_Draw();
 

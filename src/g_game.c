@@ -1878,6 +1878,10 @@ void G_StartLevel(boolean resetplayer)
 	G_SetMouseDeltas(0, 0, 1);
 	G_SetMouseDeltas(0, 0, 2);
 
+	// If starting a game, hide the console messages
+	if (gamestate != GS_LEVEL)
+		CON_ClearHUD();
+
 	if (titlemapinaction)
 		return;
 
@@ -2031,9 +2035,6 @@ void G_DoLoadLevel(void)
 	G_SetMouseDeltas(0, 0, 1);
 	G_SetMouseDeltas(0, 0, 2);
 
-	// clear hud messages remains (usually from game startup)
-	CON_ClearHUD();
-
 	if (demoplayback && !timingdemo)
 		precache = true;
 	if (timingdemo)
@@ -2112,7 +2113,6 @@ void TitleCard_Start(void)
 		return;
 	}
 
-	CON_ClearHUD();
 	TitleCard_LoadGraphics();
 
 	titlecard.running = true;
@@ -2697,24 +2697,18 @@ void G_Ticker(boolean run)
 	switch (gamestate)
 	{
 		case GS_LEVEL:
-			if (titlecard.running)
-			{
-				if (run)
-					TitleCard_Run();
-				if (titlecard.prelevel)
-				{
-					G_CheckPlayerReborn();
-					break;
-				}
-			}
+			if (titlecard.running && run)
+				TitleCard_Run();
 			if (titledemo)
 				F_TitleDemoTicker();
-			P_Ticker(run); // tic the game
-			ST_Ticker(run);
-			F_TextPromptTicker();
+			if (!titlecard.prelevel)
+			{
+				P_Ticker(run); // tic the game
+				F_TextPromptTicker();
+			}
+
 			AM_Ticker();
 			HU_Ticker();
-
 			break;
 
 		case GS_INTERMISSION:
@@ -2748,6 +2742,7 @@ void G_Ticker(boolean run)
 		case GS_GAMEEND:
 			if (run)
 				F_GameEndTicker();
+			HU_Ticker();
 			break;
 
 		case GS_EVALUATION:
@@ -3597,9 +3592,6 @@ void G_DoReborn(INT32 playernum)
 			}
 			G_SetMouseDeltas(0, 0, 1);
 			G_SetMouseDeltas(0, 0, 2);
-
-			// clear hud messages remains (usually from game startup)
-			CON_ClearHUD();
 
 			// Starpost support
 			for (i = 0; i < MAXPLAYERS; i++)
