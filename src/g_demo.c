@@ -798,32 +798,40 @@ void G_GhostTicker(void)
 					if (type == MT_GHOST)
 					{
 						mobj = P_SpawnGhostMobj(g->mo); // does a large portion of the work for us
-						mobj->frame = (mobj->frame & ~FF_FRAMEMASK)|tr_trans60<<FF_TRANSSHIFT; // P_SpawnGhostMobj sets trans50, we want trans60
+						if (!P_MobjWasRemoved(mobj))
+							mobj->frame = (mobj->frame & ~FF_FRAMEMASK)|tr_trans60<<FF_TRANSSHIFT; // P_SpawnGhostMobj sets trans50, we want trans60
 					}
 					else
 					{
 						mobj = P_SpawnMobjFromMobj(g->mo, 0, 0, -FixedDiv(FixedMul(g->mo->info->height, g->mo->scale) - g->mo->height,3*FRACUNIT), MT_THOK);
-						mobj->sprite = states[mobjinfo[type].spawnstate].sprite;
-						mobj->frame = (states[mobjinfo[type].spawnstate].frame & FF_FRAMEMASK) | tr_trans60<<FF_TRANSSHIFT;
-						mobj->color = g->mo->color;
-						mobj->skin = g->mo->skin;
-						P_SetScale(mobj, (mobj->destscale = g->mo->scale));
-
-						if (type == MT_THOK) // spintrail-specific modification for MT_THOK
+						if (!P_MobjWasRemoved(mobj))
 						{
-							mobj->frame = FF_TRANS80;
-							mobj->fuse = mobj->tics;
+							mobj->sprite = states[mobjinfo[type].spawnstate].sprite;
+							mobj->frame = (states[mobjinfo[type].spawnstate].frame & FF_FRAMEMASK) | tr_trans60<<FF_TRANSSHIFT;
+							mobj->color = g->mo->color;
+							mobj->skin = g->mo->skin;
+							P_SetScale(mobj, (mobj->destscale = g->mo->scale));
+
+							if (type == MT_THOK) // spintrail-specific modification for MT_THOK
+							{
+								mobj->frame = FF_TRANS80;
+								mobj->fuse = mobj->tics;
+							}
+							mobj->tics = -1; // nope.
 						}
-						mobj->tics = -1; // nope.
 					}
-					mobj->floorz = mobj->z;
-					mobj->ceilingz = mobj->z+mobj->height;
-					P_UnsetThingPosition(mobj);
-					mobj->flags = MF_NOBLOCKMAP|MF_NOCLIP|MF_NOCLIPHEIGHT|MF_NOGRAVITY; // make an ATTEMPT to curb crazy SOCs fucking stuff up...
-					P_SetThingPosition(mobj);
-					if (!mobj->fuse)
-						mobj->fuse = 8;
-					P_SetTarget(&mobj->target, g->mo);
+
+					if (!P_MobjWasRemoved(mobj))
+					{
+						mobj->floorz = mobj->z;
+						mobj->ceilingz = mobj->z+mobj->height;
+						P_UnsetThingPosition(mobj);
+						mobj->flags = MF_NOBLOCKMAP|MF_NOCLIP|MF_NOCLIPHEIGHT|MF_NOGRAVITY; // make an ATTEMPT to curb crazy SOCs fucking stuff up...
+						P_SetThingPosition(mobj);
+						if (!mobj->fuse)
+							mobj->fuse = 8;
+						P_SetTarget(&mobj->target, g->mo);
+					}
 				}
 			}
 			if (xziptic & EZT_HIT)
@@ -847,6 +855,8 @@ void G_GhostTicker(void)
 					|| health != 0 || i >= 4) // only spawn for the first 4 hits per frame, to prevent ghosts from splode-spamming too bad.
 						continue;
 					poof = P_SpawnMobj(x, y, z, MT_GHOST);
+					if (P_MobjWasRemoved(poof))
+						continue;
 					poof->angle = angle;
 					poof->flags = MF_NOBLOCKMAP|MF_NOCLIP|MF_NOCLIPHEIGHT|MF_NOGRAVITY; // make an ATTEMPT to curb crazy SOCs fucking stuff up...
 					poof->health = 0;
@@ -892,19 +902,22 @@ void G_GhostTicker(void)
 				if (follow)
 					P_RemoveMobj(follow);
 				P_SetTarget(&follow, P_SpawnMobjFromMobj(g->mo, 0, 0, 0, MT_GHOST));
-				P_SetTarget(&follow->tracer, g->mo);
-				follow->tics = -1;
-				temp = READINT16(g->p)<<FRACBITS;
-				follow->height = FixedMul(follow->scale, temp);
+				if (!P_MobjWasRemoved(follow))
+				{
+					P_SetTarget(&follow->tracer, g->mo);
+					follow->tics = -1;
+					temp = READINT16(g->p)<<FRACBITS;
+					follow->height = FixedMul(follow->scale, temp);
 
-				if (followtic & FZT_LINKDRAW)
-					follow->flags2 |= MF2_LINKDRAW;
+					if (followtic & FZT_LINKDRAW)
+						follow->flags2 |= MF2_LINKDRAW;
 
-				if (followtic & FZT_COLORIZED)
-					follow->colorized = true;
+					if (followtic & FZT_COLORIZED)
+						follow->colorized = true;
 
-				if (followtic & FZT_SKIN)
-					follow->skin = &skins[READUINT8(g->p)];
+					if (followtic & FZT_SKIN)
+						follow->skin = &skins[READUINT8(g->p)];
+				}
 			}
 			if (follow)
 			{
@@ -1097,28 +1110,35 @@ void G_ReadMetalTic(mobj_t *metal)
 				else
 				{
 					mobj = P_SpawnMobjFromMobj(metal, 0, 0, -FixedDiv(FixedMul(metal->info->height, metal->scale) - metal->height,3*FRACUNIT), MT_THOK);
-					mobj->sprite = states[mobjinfo[type].spawnstate].sprite;
-					mobj->frame = states[mobjinfo[type].spawnstate].frame;
-					mobj->angle = metal->angle;
-					mobj->color = metal->color;
-					mobj->skin = metal->skin;
-					P_SetScale(mobj, (mobj->destscale = metal->scale));
-
-					if (type == MT_THOK) // spintrail-specific modification for MT_THOK
+					if (!P_MobjWasRemoved(mobj))
 					{
-						mobj->frame = FF_TRANS70;
-						mobj->fuse = mobj->tics;
+						mobj->sprite = states[mobjinfo[type].spawnstate].sprite;
+						mobj->frame = states[mobjinfo[type].spawnstate].frame;
+						mobj->angle = metal->angle;
+						mobj->color = metal->color;
+						mobj->skin = metal->skin;
+						P_SetScale(mobj, (mobj->destscale = metal->scale));
+
+						if (type == MT_THOK) // spintrail-specific modification for MT_THOK
+						{
+							mobj->frame = FF_TRANS70;
+							mobj->fuse = mobj->tics;
+						}
+						mobj->tics = -1; // nope.
 					}
-					mobj->tics = -1; // nope.
 				}
-				mobj->floorz = mobj->z;
-				mobj->ceilingz = mobj->z+mobj->height;
-				P_UnsetThingPosition(mobj);
-				mobj->flags = MF_NOBLOCKMAP|MF_NOCLIP|MF_NOCLIPHEIGHT|MF_NOGRAVITY; // make an ATTEMPT to curb crazy SOCs fucking stuff up...
-				P_SetThingPosition(mobj);
-				if (!mobj->fuse)
-					mobj->fuse = 8;
-				P_SetTarget(&mobj->target, metal);
+
+				if (!P_MobjWasRemoved(mobj))
+				{
+					mobj->floorz = mobj->z;
+					mobj->ceilingz = mobj->z+mobj->height;
+					P_UnsetThingPosition(mobj);
+					mobj->flags = MF_NOBLOCKMAP|MF_NOCLIP|MF_NOCLIPHEIGHT|MF_NOGRAVITY; // make an ATTEMPT to curb crazy SOCs fucking stuff up...
+					P_SetThingPosition(mobj);
+					if (!mobj->fuse)
+						mobj->fuse = 8;
+					P_SetTarget(&mobj->target, metal);
+				}
 			}
 		}
 		if (xziptic & EZT_SPRITE)
@@ -1140,19 +1160,22 @@ void G_ReadMetalTic(mobj_t *metal)
 				if (follow)
 					P_RemoveMobj(follow);
 				P_SetTarget(&follow, P_SpawnMobjFromMobj(metal, 0, 0, 0, MT_GHOST));
-				P_SetTarget(&follow->tracer, metal);
-				follow->tics = -1;
-				temp = READINT16(metal_p)<<FRACBITS;
-				follow->height = FixedMul(follow->scale, temp);
+				if (!P_MobjWasRemoved(follow))
+				{
+					P_SetTarget(&follow->tracer, metal);
+					follow->tics = -1;
+					temp = READINT16(metal_p)<<FRACBITS;
+					follow->height = FixedMul(follow->scale, temp);
 
-				if (followtic & FZT_LINKDRAW)
-					follow->flags2 |= MF2_LINKDRAW;
+					if (followtic & FZT_LINKDRAW)
+						follow->flags2 |= MF2_LINKDRAW;
 
-				if (followtic & FZT_COLORIZED)
-					follow->colorized = true;
+					if (followtic & FZT_COLORIZED)
+						follow->colorized = true;
 
-				if (followtic & FZT_SKIN)
-					follow->skin = &skins[READUINT8(metal_p)];
+					if (followtic & FZT_SKIN)
+						follow->skin = &skins[READUINT8(metal_p)];
+				}
 			}
 			if (follow)
 			{
@@ -2535,7 +2558,9 @@ void G_AddGhost(char *defdemoname)
 	{ // A bit more complex than P_SpawnPlayer because ghosts aren't solid and won't just push themselves out of the ceiling.
 		fixed_t z,f,c;
 		fixed_t offset = mthing->z << FRACBITS;
-		gh->mo = P_SpawnMobj(mthing->x << FRACBITS, mthing->y << FRACBITS, 0, MT_GHOST);
+		P_SetTarget(&gh->mo, P_SpawnMobj(mthing->x << FRACBITS, mthing->y << FRACBITS, 0, MT_GHOST));
+		if (P_MobjWasRemoved(gh->mo))
+			return;
 		gh->mo->angle = FixedAngle(mthing->angle << FRACBITS);
 		f = gh->mo->floorz;
 		c = gh->mo->ceilingz - mobjinfo[MT_PLAYER].height;

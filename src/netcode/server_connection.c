@@ -109,7 +109,7 @@ static void SV_SendServerInfo(INT32 node, tic_t servertime)
 	netbuffer->u.serverinfo.leveltime = (tic_t)LONG(leveltime);
 
 	// Exclude bots from both counts
-	netbuffer->u.serverinfo.numberofplayer = (UINT8)(D_NumPlayers() - D_NumBots());
+	netbuffer->u.serverinfo.numberofplayer = (UINT8)D_NumNodes();
 	netbuffer->u.serverinfo.maxplayer = (UINT8)(cv_maxplayers.value - D_NumBots());
 
 	netbuffer->u.serverinfo.refusereason = GetRefuseReason(node);
@@ -164,7 +164,7 @@ static void SV_SendPlayerInfo(INT32 node)
 
 	for (UINT8 i = 0; i < MAXPLAYERS; i++)
 	{
-		if (!playeringame[i])
+		if (playernode[i] == UINT8_MAX || !netnodes[playernode[i]].ingame)
 		{
 			netbuffer->u.playerinfo[i].num = 255; // This slot is empty.
 			continue;

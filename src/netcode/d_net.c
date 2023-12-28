@@ -313,9 +313,9 @@ static void RemoveAck(INT32 i)
 }
 
 // We have got a packet, proceed the ack request and ack return
-static boolean Processackpak(void)
+static int Processackpak(void)
 {
-	boolean goodpacket = true;
+	int goodpacket = 0;
 	node_t *node = &nodes[doomcom->remotenode];
 
 	// Received an ack return, so remove the ack in the list
@@ -340,7 +340,7 @@ static boolean Processackpak(void)
 		{
 			DEBFILE(va("Discard(1) ack %d (duplicated)\n", ack));
 			duppacket++;
-			goodpacket = false; // Discard packet (duplicate)
+			goodpacket = 1; // Discard packet (duplicate)
 		}
 		else
 		{
@@ -350,10 +350,10 @@ static boolean Processackpak(void)
 				{
 					DEBFILE(va("Discard(2) ack %d (duplicated)\n", ack));
 					duppacket++;
-					goodpacket = false; // Discard packet (duplicate)
+					goodpacket = 1; // Discard packet (duplicate)
 					break;
 				}
-			if (goodpacket)
+			if (goodpacket == 0)
 			{
 				// Is a good packet so increment the acknowledge number,
 				// Then search for a "hole" in the queue
@@ -414,12 +414,13 @@ static boolean Processackpak(void)
 					else // Buffer full discard packet, sender will resend it
 					{ // We can admit the packet but we will not detect the duplication after :(
 						DEBFILE("no more freeackret\n");
-						goodpacket = false;
+						goodpacket = 2;
 					}
 				}
 			}
 		}
 	}
+	// return values: 0 = ok, 1 = duplicate, 2 = out of order
 	return goodpacket;
 }
 
@@ -1069,6 +1070,7 @@ boolean HGetPacket(void)
 	while(true)
 	{
 		//nodejustjoined = I_NetGet();
+		int goodpacket;
 		I_NetGet();
 
 		if (doomcom->remotenode == -1) // No packet received
@@ -1114,8 +1116,15 @@ boolean HGetPacket(void)
 		}*/
 
 		// Proceed the ack and ackreturn field
-		if (!Processackpak())
+		goodpacket = Processackpak();
+		if (goodpacket != 0)
+		{
+			// resend the ACK in case the previous ACK didn't reach the client.
+			// prevents the client's netbuffer from locking up.
+			if (goodpacket == 1)
+				Net_SendAcks(doomcom->remotenode);
 			continue; // discarded (duplicated)
+		}
 
 		// A packet with just ackreturn
 		if (netbuffer->packettype == PT_NOTHING)

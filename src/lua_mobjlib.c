@@ -641,10 +641,7 @@ static int mobj_set(lua_State *L)
 		mo->tics = luaL_checkinteger(L, 3);
 		break;
 	case mobj_state: // set state by enum
-		if (mo->player)
-			P_SetPlayerMobjState(mo, luaL_checkinteger(L, 3));
-		else
-			P_SetMobjState(mo, luaL_checkinteger(L, 3));
+		P_SetMobjState(mo, luaL_checkinteger(L, 3));
 		break;
 	case mobj_flags: // special handling for MF_NOBLOCKMAP and MF_NOSECTOR
 	{
