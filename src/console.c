@@ -937,7 +937,7 @@ boolean CON_Responder(event_t *ev)
 		return false;
 
 	// let go keyup events, don't eat them
-	if (ev->type != ev_keydown && ev->type != ev_console)
+	if (ev->type != ev_keydown && ev->type != ev_text && ev->type != ev_console)
 	{
 		if (ev->key == gamecontrol[GC_CONSOLE][0] || ev->key == gamecontrol[GC_CONSOLE][1])
 			consdown = false;
@@ -952,7 +952,7 @@ boolean CON_Responder(event_t *ev)
 		if (modeattacking || metalrecording || marathonmode)
 			return false;
 
-		if (key == gamecontrol[GC_CONSOLE][0] || key == gamecontrol[GC_CONSOLE][1])
+		if ((key == gamecontrol[GC_CONSOLE][0] || key == gamecontrol[GC_CONSOLE][1]) && !shiftdown)
 		{
 			if (consdown) // ignore repeat
 				return true;
@@ -964,7 +964,7 @@ boolean CON_Responder(event_t *ev)
 		// check other keys only if console prompt is active
 		if (!consoleready && key < NUMINPUTS) // metzgermeister: boundary check!!
 		{
-			if (! menuactive && bindtable[key])
+			if (ev->type == ev_keydown && !menuactive && bindtable[key])
 			{
 				COM_BufAddText(bindtable[key]);
 				COM_BufAddText("\n");
@@ -979,6 +979,13 @@ boolean CON_Responder(event_t *ev)
 			consoletoggle = true;
 			return true;
 		}
+	}
+
+	if (ev->type == ev_text)
+	{
+		if (!consoletoggle)
+			CON_InputAddChar(key);
+		return true;
 	}
 
 	// Always eat ctrl/shift/alt if console open, so the menu doesn't get ideas
@@ -1295,21 +1302,12 @@ boolean CON_Responder(event_t *ev)
 	else if (key == KEY_KPADSLASH)
 		key = '/';
 
-	if (key >= 'a' && key <= 'z')
-	{
-		if (capslock ^ shiftdown)
-			key = shiftxform[key];
-	}
-	else if (shiftdown)
-		key = shiftxform[key];
-
 	// enter a char into the command prompt
 	if (key < 32 || key > 127)
 		return true;
 
 	if (input_sel != input_cur)
 		CON_InputDelSelection();
-	CON_InputAddChar(key);
 
 	return true;
 }
