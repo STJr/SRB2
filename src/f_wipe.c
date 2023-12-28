@@ -495,7 +495,7 @@ void ScreenWipe_StartParametrized(wipe_t *wipe)
 		paldiv = FixedDiv(257<<FRACBITS, 11<<FRACBITS);
 #endif
 
-	if (wipe_numqueued >= WIPEQUEUESIZE || wipe->type == UINT8_MAX)
+	if (dedicated || wipe_numqueued >= WIPEQUEUESIZE || wipe->type == UINT8_MAX)
 	{
 		// Can't queue it, but its callback has to run.
 		if (wipe->callback)
