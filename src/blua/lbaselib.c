@@ -275,7 +275,7 @@ static int luaB_dofile (lua_State *L) {
 	int n = lua_gettop(L);
 
 	if (!W_FileHasFolders(wadfiles[numwadfiles - 1]))
-		luaL_error(L, "dofile() only works with PK3 files");
+		luaL_error(L, "dofile() only works with PK3 files and folders");
 
 	snprintf(fullfilename, sizeof(fullfilename), "Lua/%s", filename);
 	lumpnum = W_CheckNumForFullNamePK3(fullfilename, numwadfiles - 1, 0);
@@ -293,8 +293,8 @@ static int luaB_loadfile (lua_State *L) {
   char fullfilename[256];
   UINT16 lumpnum;
 
-  if (wadfiles[numwadfiles - 1]->type != RET_PK3)
-    luaL_error(L, "loadfile() only works with PK3 files");
+	if (!W_FileHasFolders(wadfiles[numwadfiles - 1]))
+    luaL_error(L, "loadfile() only works with PK3 files and folders");
 
   snprintf(fullfilename, sizeof(fullfilename), "Lua/%s", filename);
   lumpnum = W_CheckNumForFullNamePK3(fullfilename, numwadfiles - 1, 0);
