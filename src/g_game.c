@@ -2571,7 +2571,9 @@ static void G_UpdateTiccmd(void)
 		if (playeringame[i] && !P_IsHuman(&players[i])) // Less work is required if we're building a bot ticcmd.
 		{
 			players[i].lastbuttons = players[i].cmd.buttons; // Save last frame's button readings
-			B_BuildTiccmd(&players[i], &players[i].cmd);
+
+			if (!titlecard.prelevel)
+				B_BuildTiccmd(&players[i], &players[i].cmd);
 
 			// Since bot TicCmd is pre-determined for both the client and server, the latency and packet checks are simplified.
 			players[i].cmd.latency = 0;
