@@ -119,6 +119,10 @@ FUNCMATH UINT8 M_CountBits(UINT32 num, UINT8 size);
 // Rounds off floating numbers and checks for 0 - 255 bounds
 int M_RoundUp(double number);
 
+// Hashes some message using FNV-1a
+UINT32 FNV1a_Hash(const char *message, size_t size);
+UINT32 FNV1a_HashString(const char *message);
+
 #include "w_wad.h"
 extern char configfile[MAX_WADPATH];
 

@@ -857,13 +857,20 @@ const char *G_BuildClassicMapName(INT32 map)
 
 static UINT32 G_HashMapNameString(const char *name, size_t name_length)
 {
-	UINT32 hash = 0x811C9DC5;
+	UINT32 hash;
+	size_t i;
 
-	for (size_t i = 0; i < name_length; i++)
-	{
-		hash ^= name[i];
-		hash *= 0x1000193;
-	}
+	char *buffer = malloc(name_length + 1);
+	if (buffer == NULL)
+		return 0;
+
+	for (i = 0; i < name_length; i++)
+		buffer[i] = tolower(name[i]);
+	buffer[i] = '\0';
+
+	hash = FNV1a_HashString(buffer);
+
+	free(buffer);
 
 	return hash;
 }
