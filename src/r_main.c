@@ -1025,12 +1025,20 @@ boolean R_IsPointInSector(sector_t *sector, fixed_t x, fixed_t y)
 
 	for (i = 0; i < sector->linecount; i++)
 	{
-		vertex_t v;
+		vertex_t v, *v1, *v2;
 		fixed_t dist;
 
 		// find the line closest to the point we're looking for.
 		P_ClosestPointOnLine(x, y, sector->lines[i], &v);
-		dist = R_PointToDist2(0, 0, v.x - x, v.y - y);
+
+		v1 = sector->lines[i]->v1;
+		v2 = sector->lines[i]->v2;
+		// do some correction in order to prevent points outside the line from being measured.
+		if (R_PointToDist2(v.x, v.y, v1->x, v1->y) > R_PointToDist2(v1->x, v1->y, v2->x, v2->y))
+		    v = *v1;
+		if (R_PointToDist2(v.x, v.y, v2->x, v2->y) > R_PointToDist2(v1->x, v1->y, v2->x, v2->y))
+		    v = *v1;
+		dist = R_PointToDist2(v.x, v.y, x, y);
 		if (dist < closestdist)
 		{
 			closest = sector->lines[i];
