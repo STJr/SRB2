@@ -1340,10 +1340,10 @@ void readgametype(MYFILE *f, char *gtname)
 
 static INT32 ParseNextLevelName(const char *name)
 {
-	if      (fastcmp(name, "TITLE"))      return MAP_TITLE;
-	else if (fastcmp(name, "EVALUATION")) return MAP_EVALUATION;
-	else if (fastcmp(name, "CREDITS"))    return MAP_CREDITS;
-	else if (fastcmp(name, "ENDING"))     return MAP_ENDING;
+	if      (fastcmp(name, "TITLE"))      return NEXTMAP_TITLE;
+	else if (fastcmp(name, "EVALUATION")) return NEXTMAP_EVALUATION;
+	else if (fastcmp(name, "CREDITS"))    return NEXTMAP_CREDITS;
+	else if (fastcmp(name, "ENDING"))     return NEXTMAP_ENDING;
 	else
 	{
 		// Support using the actual map name,
@@ -1356,16 +1356,19 @@ static INT32 ParseNextLevelName(const char *name)
 
 static INT32 ConvertLevelHeaderMapNum(INT32 mapnum)
 {
-	if (mapnum == 1100)
-		return MAP_TITLE;
-	else if (mapnum == 1101)
-		return MAP_EVALUATION;
-	else if (mapnum == 1102)
-		return MAP_CREDITS;
-	else if (mapnum == 1103)
-		return MAP_ENDING;
-	else
+	switch (mapnum)
+	{
+	case 1100:
+		return NEXTMAP_TITLE;
+	case 1101:
+		return NEXTMAP_EVALUATION;
+	case 1102:
+		return NEXTMAP_CREDITS;
+	case 1103:
+		return NEXTMAP_ENDING;
+	default:
 		return mapnum;
+	}
 }
 
 void readlevelheader(MYFILE *f, INT32 num)

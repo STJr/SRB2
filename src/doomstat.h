@@ -281,7 +281,13 @@ extern struct quake
 typedef struct
 {
 	UINT32 hash;
-	char *name;
+	size_t length;
+	char *chars;
+} mapname_t;
+
+typedef struct
+{
+	mapname_t name;
 	char *thumbnail;
 	char *thumbnail_wide;
 	char *music;
@@ -311,7 +317,7 @@ typedef struct
 	char subttl[33];       ///< Subtitle for level
 	UINT8 actnum;          ///< Act number or 0 for none.
 	UINT32 typeoflevel;    ///< Combination of typeoflevel flags.
-	INT16 nextlevel;       ///< Map number of next level, or 1100-1102 to end.
+	INT16 nextlevel;       ///< Map number of next level, or NEXTMAP_* to end.
 	INT16 marathonnext;    ///< See nextlevel, but for Marathon mode. Necessary to support hub worlds ala SUGOI.
 	char keywords[33];     ///< Keywords separated by space to search for. 32 characters.
 	char musname[MAX_MUSIC_NAME+1]; ///< Music track to play. "" for no music.

@@ -178,6 +178,9 @@ mapheader_t* mapheaderinfo[MAXMAPS] = {NULL};
 gamemap_t gamemaps[MAXMAPS];
 UINT16 numgamemaps = 0;
 
+static mapname_t nextmapnames[NUM_NEXTMAPS];
+static INT16 nextmapids[NUM_NEXTMAPS] = { NEXTMAP_TITLE, NEXTMAP_EVALUATION, NEXTMAP_CREDITS, NEXTMAP_ENDING };
+
 static boolean exitgame = false;
 static boolean retrying = false;
 static boolean retryingmodeattack = false;
@@ -818,7 +821,7 @@ void G_SetUsedCheats(boolean silent)
 const char *G_BuildMapName(INT32 map)
 {
 	if (map > 0 && map <= numgamemaps)
-		return gamemaps[map - 1].name;
+		return gamemaps[map - 1].name.chars;
 
 	return "UNKNOWN";
 }
@@ -852,6 +855,19 @@ const char *G_BuildClassicMapName(INT32 map)
 	return mapname;
 }
 
+static UINT32 G_HashMapNameString(const char *name, size_t name_length)
+{
+	return quickncasehash(name, name_length);
+}
+
+static void G_MakeMapName(mapname_t *name, const char *string)
+{
+	name->length = strlen(string);
+	name->hash = G_HashMapNameString(string, name->length);
+	name->chars = Z_StrDup(string);
+	strupr(name->chars);
+}
+
 void G_InitMaps(void)
 {
 	for (UINT16 i = 0; i < NUMBASEMAPS; i++)
@@ -859,27 +875,51 @@ void G_InitMaps(void)
 		const char *name = G_BuildClassicMapName(i + 1);
 		G_AddMap(name);
 	}
+
+	G_MakeMapName(&nextmapnames[0], "SCENE_TITLE");
+	G_MakeMapName(&nextmapnames[1], "SCENE_EVALUATION");
+	G_MakeMapName(&nextmapnames[2], "SCENE_CREDITS");
+	G_MakeMapName(&nextmapnames[3], "SCENE_ENDING");
 }
 
-UINT16 G_GetMapNumber(const char *name)
+static UINT16 MapIDForHashedString(const char *name, size_t name_length, UINT32 name_hash)
 {
-	size_t name_len = strlen(name);
-
 	// Special case
-	if (name_len == 2 && name[0] >= 'A' && name[0] <= 'Z')
-	{
+	if (name_length == 2 && name[0] >= 'A' && name[0] <= 'Z')
 		return M_MapNumber(name[0], name[1]);
-	}
-
-	UINT32 hash = quickncasehash(name, name_len);
 
 	for (UINT16 i = 0; i < numgamemaps; i++)
 	{
-		if (hash == gamemaps[i].hash && stricmp(gamemaps[i].name, name) == 0)
+		if (gamemaps[i].name.length == name_length
+		&& gamemaps[i].name.hash == name_hash
+		&& stricmp(name, gamemaps[i].name.chars) == 0)
 			return i + 1;
 	}
 
 	return 0;
+}
+
+UINT16 G_GetMapNumber(const char *name)
+{
+	size_t name_length = strlen(name);
+
+	return MapIDForHashedString(name, name_length, G_HashMapNameString(name, name_length));
+}
+
+UINT16 G_GetNextMapNumber(const char *name)
+{
+	size_t name_length = strlen(name);
+	UINT32 name_hash = G_HashMapNameString(name, name_length);
+
+	for (UINT16 i = 0; i < NUM_NEXTMAPS; i++)
+	{
+		if (nextmapnames[i].length == name_length
+		&& nextmapnames[i].hash == name_hash
+		&& stricmp(name, nextmapnames[i].chars) == 0)
+			return nextmapids[i];
+	}
+
+	return MapIDForHashedString(name, name_length, name_hash);
 }
 
 UINT16 G_AddMap(const char *name)
@@ -898,10 +938,7 @@ UINT16 G_AddMap(const char *name)
 	if (name_len > MAX_MAP_NAME_SIZE)
 		return 0;
 
-	gamemaps[numgamemaps].hash = quickncasehash(name, name_len);
-	gamemaps[numgamemaps].name = Z_StrDup(name);
-
-	strupr(gamemaps[numgamemaps].name);
+	G_MakeMapName(&gamemaps[numgamemaps].name, name);
 
 	numgamemaps++;
 
@@ -925,7 +962,7 @@ boolean G_IsValidMapName(const char *name)
 
 static char *BuildCombinedMapString(INT16 map, const char *newfmt, const char *oldfmt)
 {
-	const char *mapname = gamemaps[map].name;
+	const char *mapname = gamemaps[map].name.chars;
 	const char *fmt = (map < NUMBASEMAPS) ? oldfmt : newfmt;
 
 	size_t len = strlen(mapname) + strlen(fmt) + 1;
@@ -994,10 +1031,10 @@ boolean G_IsGameEndMap(INT16 mapnum)
 {
 	switch (mapnum)
 	{
-		case MAP_TITLE:
-		case MAP_EVALUATION:
-		case MAP_CREDITS:
-		case MAP_ENDING:
+		case NEXTMAP_TITLE:
+		case NEXTMAP_EVALUATION:
+		case NEXTMAP_CREDITS:
+		case NEXTMAP_ENDING:
 			return true;
 		default:
 			return false;
@@ -4144,7 +4181,7 @@ static void G_HandleSaveLevel(void)
 	G_UpdateAllVisited();
 
 	// do this before running the intermission or custom cutscene, mostly for the sake of marathon mode but it also massively reduces redundant file save events in f_finale.c
-	if (nextmap >= 1100-1)
+	if (nextmap >= NEXTMAP_TITLE-1)
 	{
 		if (!gamecomplete)
 			gamecomplete = 2; // special temporary mode to prevent using SP level select in pause menu until the intermission is over without restricting it in every intermission
@@ -4215,7 +4252,7 @@ static void G_DoCompleted(void)
 	{
 		nextmap = (INT16)(mapheaderinfo[gamemap-1]->nextlevel-1);
 		if (marathonmode && nextmap == spmarathon_start-1)
-			nextmap = 1100-1; // No infinite loop for you
+			nextmap = NEXTMAP_TITLE-1; // No infinite loop for you
 	}
 
 	INT16 gametype_to_use;
@@ -4247,7 +4284,7 @@ static void G_DoCompleted(void)
 				else
 					cm = (INT16)(mapheaderinfo[cm]->nextlevel-1);
 
-				if (cm >= numgamemaps || cm < 0) // out of range (either 1100ish or error)
+				if (cm >= numgamemaps || cm < 0) // out of range (either NEXTMAP_* or error)
 				{
 					cm = nextmap; //Start the loop again so that the error checking below is executed.
 
@@ -4487,24 +4524,21 @@ void G_EndGame(void)
 	// Only do evaluation and credits in coop games.
 	if (gametyperules & GTR_CUTSCENES)
 	{
-		if (nextmap+1 == MAP_ENDING) // end game with ending
+		switch (nextmap+1)
 		{
+		case NEXTMAP_ENDING:
 			F_StartEnding();
 			return;
-		}
-		else if (nextmap+1 == MAP_CREDITS) // end game with credits
-		{
+		case NEXTMAP_CREDITS:
 			F_StartCredits();
 			return;
-		}
-		else if (nextmap+1 == MAP_EVALUATION) // end game with evaluation
-		{
+		case NEXTMAP_EVALUATION:
 			F_StartGameEvaluation();
 			return;
 		}
 	}
 
-	// 1100 or competitive multiplayer, so go back to title screen.
+	// NEXTMAP_TITLE or competitive multiplayer, so go back to title screen.
 	D_StartTitle();
 }
 

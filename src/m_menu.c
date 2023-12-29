@@ -8235,7 +8235,7 @@ static void M_SinglePlayerMenu(INT32 choice)
 	if (mapheaderinfo[spmarathon_start-1]
 		&& !mapheaderinfo[spmarathon_start-1]->marathonnext
 		&& (mapheaderinfo[spmarathon_start-1]->nextlevel == spmarathon_start
-			|| mapheaderinfo[spmarathon_start-1]->nextlevel >= 1100))
+			|| G_IsGameEndMap(mapheaderinfo[spmarathon_start-1]->nextlevel)))
 	{
 		SP_MainMenu[spmarathon].status = IT_NOTHING|IT_DISABLED; // Hide and disable the Marathon Run option...
 		// ...and lower the above options' display positions by 8 pixels to close the gap

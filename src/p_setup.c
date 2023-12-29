@@ -8119,7 +8119,7 @@ static lumpinfo_t* FindFolder(const char *folName, UINT16 *start, UINT16 *end, l
 	return lumpinfo;
 }
 
-void P_LoadMapsFromFile(UINT16 wadnum, boolean is_pwad)
+void P_LoadMapsFromFile(UINT16 wadnum, boolean added_ingame)
 {
 	boolean mapsadded = false;
 
@@ -8158,10 +8158,10 @@ void P_LoadMapsFromFile(UINT16 wadnum, boolean is_pwad)
 				break;
 			}
 			//If you replaced the map you're on, end the level when done.
-			else if (num == gamemap)
+			else if (gamestate == GS_LEVEL && num == gamemap)
 				replacedcurrentmap = true;
 
-			if (is_pwad)
+			if (added_ingame)
 				CONS_Printf("%s\n", name);
 			mapsadded = true;
 		}
@@ -8179,17 +8179,17 @@ void P_LoadMapsFromFile(UINT16 wadnum, boolean is_pwad)
 				num = (INT16)M_MapNumber(name[3], name[4]);
 
 				//If you replaced the map you're on, end the level when done.
-				if (num == gamemap)
+				if (gamestate == GS_LEVEL && num == gamemap)
 					replacedcurrentmap = true;
 
-				if (is_pwad)
+				if (added_ingame)
 					CONS_Printf("%s\n", name);
 				mapsadded = true;
 			}
 		}
 	}
 
-	if (!mapsadded && is_pwad)
+	if (!mapsadded && added_ingame)
 		CONS_Printf(M_GetText("No maps added\n"));
 }
 
@@ -8365,7 +8365,7 @@ static boolean P_LoadAddon(UINT16 numlumps)
 
 		if (gamestate == GS_LEVEL && (netgame || multiplayer))
 		{
-			CONS_Printf(M_GetText("Current map %d replaced by added file, ending the level to ensure consistency.\n"), gamemap);
+			CONS_Printf(M_GetText("Current map %s replaced by added file, ending the level to ensure consistency.\n"), G_BuildMapName(gamemap));
 			if (server)
 				D_SendExitLevel(false);
 		}

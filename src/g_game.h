@@ -119,6 +119,7 @@ const char *G_BuildMapName(INT32 map);
 
 void G_InitMaps(void);
 UINT16 G_GetMapNumber(const char *name);
+UINT16 G_GetNextMapNumber(const char *name);
 UINT16 G_AddMap(const char *name);
 boolean G_MapFileExists(const char *name);
 boolean G_IsValidMapName(const char *name);

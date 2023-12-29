@@ -223,15 +223,4 @@ typedef struct
 
 #define ZSHIFT 4
 
-#define MAXMAPS 16386
-
-#define MAX_MAP_NAME_SIZE 256 // This is an arbitrary limit to prevent exceedingly long map names.
-
-#define MAP_TITLE (MAXMAPS)
-#define MAP_EVALUATION (MAXMAPS+2)
-#define MAP_CREDITS (MAXMAPS+3)
-#define MAP_ENDING (MAXMAPS+4)
-
-#define NUMBASEMAPS 1035 // MAP01 to MAPZZ
-
 #endif // __DOOMDATA__

@@ -237,6 +237,19 @@ extern char logfilename[1024];
 #define PLAYERSMASK (MAXPLAYERS-1)
 #define MAXPLAYERNAME 21
 
+#define MAXMAPS 16386
+
+#define MAX_MAP_NAME_SIZE 256 // This is an arbitrary limit to prevent exceedingly long map names.
+
+#define NEXTMAP_TITLE (MAXMAPS)
+#define NEXTMAP_EVALUATION (MAXMAPS+2)
+#define NEXTMAP_CREDITS (MAXMAPS+3)
+#define NEXTMAP_ENDING (MAXMAPS+4)
+
+#define NUM_NEXTMAPS 4
+
+#define NUMBASEMAPS 1035 // MAP01 to MAPZZ
+
 #define COLORRAMPSIZE 16
 #define MAXCOLORNAME 32
 #define NUMCOLORFREESLOTS 1024

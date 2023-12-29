@@ -3846,6 +3846,25 @@ static int GetMapNameOrNumber(lua_State *L, int idx)
 		return luaL_checkinteger(L, idx);
 }
 
+static int GetNextMapNameOrNumber(lua_State *L, int idx)
+{
+	if (lua_type(L, idx) == LUA_TSTRING)
+	{
+		const char *mapname = luaL_checkstring(L, idx);
+		INT16 mapnum = G_GetNextMapNumber(mapname);
+		if (mapnum == 0)
+		{
+			return luaL_error(L,
+					"%s is not a valid game map.",
+					mapname
+			);
+		}
+		return mapnum;
+	}
+	else
+		return luaL_checkinteger(L, idx);
+}
+
 static int Lcheckmapnumber (lua_State *L, int idx, const char *fun)
 {
 	if (ISINLEVEL)
@@ -4078,8 +4097,8 @@ static int lib_gSetCustomExitVars(lua_State *L)
 	{
 		if (!lua_isnoneornil(L, 1))
 		{
-			INT16 mapnum = GetMapNameOrNumber(L, 1);
-			if (mapnum < 1 || mapnum > numgamemaps)
+			INT16 mapnum = GetNextMapNameOrNumber(L, 1);
+			if (mapnum < 1 || (mapnum > numgamemaps && !G_IsGameEndMap(mapnum)))
 			{
 				return luaL_error(L,
 						"map number %d out of range (1 - %d)",
