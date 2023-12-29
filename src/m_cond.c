@@ -78,7 +78,7 @@ void M_CopyGameData(gamedata_t *dest, gamedata_t *src)
 	memcpy(dest->mapvisited, src->mapvisited, sizeof(dest->mapvisited));
 
 	// Main records
-	for (i = 0; i < NUMMAPS; ++i)
+	for (i = 0; i < MAXMAPS; ++i)
 	{
 		if (!src->mainrecords[i])
 			continue;
@@ -90,7 +90,7 @@ void M_CopyGameData(gamedata_t *dest, gamedata_t *src)
 	}
 
 	// Nights records
-	for (i = 0; i < NUMMAPS; ++i)
+	for (i = 0; i < MAXMAPS; ++i)
 	{
 		if (!src->nightsrecords[i] || !src->nightsrecords[i]->nummares)
 			continue;
@@ -574,7 +574,7 @@ UINT8 M_GotHighEnoughScore(INT32 tscore, gamedata_t *data)
 	INT32 mscore = 0;
 	INT32 i;
 
-	for (i = 0; i < NUMMAPS; ++i)
+	for (i = 0; i < numgamemaps; ++i)
 	{
 		if (!mapheaderinfo[i] || !(mapheaderinfo[i]->menuflags & LF2_RECORDATTACK))
 			continue;
@@ -592,7 +592,7 @@ UINT8 M_GotLowEnoughTime(INT32 tictime, gamedata_t *data)
 	INT32 curtics = 0;
 	INT32 i;
 
-	for (i = 0; i < NUMMAPS; ++i)
+	for (i = 0; i < numgamemaps; ++i)
 	{
 		if (!mapheaderinfo[i] || !(mapheaderinfo[i]->menuflags & LF2_RECORDATTACK))
 			continue;
@@ -610,7 +610,7 @@ UINT8 M_GotHighEnoughRings(INT32 trings, gamedata_t *data)
 	INT32 mrings = 0;
 	INT32 i;
 
-	for (i = 0; i < NUMMAPS; ++i)
+	for (i = 0; i < numgamemaps; ++i)
 	{
 		if (!mapheaderinfo[i] || !(mapheaderinfo[i]->menuflags & LF2_RECORDATTACK))
 			continue;

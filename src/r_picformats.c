@@ -1678,13 +1678,13 @@ void R_ParseSPRTINFOLump(UINT16 wadNum, UINT16 lumpNum)
 //
 // Load and read every SPRTINFO lump from the specified file.
 //
-void R_LoadSpriteInfoLumps(UINT16 wadnum, UINT16 numlumps)
+void R_LoadSpriteInfoLumps(UINT16 wadnum)
 {
 	lumpinfo_t *lumpinfo = wadfiles[wadnum]->lumpinfo;
 	UINT16 i;
 	char *name;
 
-	for (i = 0; i < numlumps; i++, lumpinfo++)
+	for (i = 0; i < wadfiles[wadnum]->numlumps; i++, lumpinfo++)
 	{
 		name = lumpinfo->name;
 		// Load SPRTINFO and SPR_ lumps as SpriteInfo

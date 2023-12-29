@@ -1720,7 +1720,7 @@ void D_MapChange(INT32 mapnum, INT32 newgametype, boolean pultmode, boolean rese
 	{
 		UINT8 flags = 0;
 		const char *mapname = G_BuildMapName(mapnum);
-		I_Assert(W_CheckNumForName(mapname) != LUMPERROR);
+		I_Assert(G_MapFileExists(mapname) == true);
 		buf_p = buf;
 		if (pultmode)
 			flags |= 1;
@@ -2022,8 +2022,8 @@ static void Command_Map_f(void)
 static void Got_Mapcmd(UINT8 **cp, INT32 playernum)
 {
 	char mapname[MAX_WADPATH+1];
-	UINT8 flags;
-	INT32 resetplayer = 1, lastgametype;
+	UINT8 flags, newgametype;
+	INT32 resetplayer = 1, lastgametype = gametype;
 	UINT8 skipprecutscene, FLS;
 	INT16 mapnumber;
 
@@ -2039,6 +2039,12 @@ static void Got_Mapcmd(UINT8 **cp, INT32 playernum)
 		chmappending--;
 
 	flags = READUINT8(*cp);
+	newgametype = READUINT8(*cp);
+	READSTRINGN(*cp, mapname, MAX_WADPATH);
+
+	mapnumber = G_GetMapNumber(mapname);
+	if (!mapnumber) // Not valid???
+		return;
 
 	ultimatemode = ((flags & 1) != 0);
 	if (netgame || multiplayer)
@@ -2046,13 +2052,8 @@ static void Got_Mapcmd(UINT8 **cp, INT32 playernum)
 
 	resetplayer = ((flags & (1<<1)) == 0);
 
-	lastgametype = gametype;
-	gametype = READUINT8(*cp);
-
-	if (gametype < 0 || gametype >= gametypecount)
-		gametype = lastgametype;
-	else
-		G_SetGametype(gametype);
+	if (newgametype < gametypecount)
+		G_SetGametype(newgametype);
 
 	if (gametype != lastgametype)
 		D_GameTypeChanged(lastgametype); // emulate consvar_t behavior for gametype
@@ -2060,8 +2061,6 @@ static void Got_Mapcmd(UINT8 **cp, INT32 playernum)
 	skipprecutscene = ((flags & (1<<2)) != 0);
 
 	FLS = ((flags & (1<<3)) != 0);
-
-	READSTRINGN(*cp, mapname, MAX_WADPATH);
 
 	if (netgame)
 		P_SetRandSeed(READUINT32(*cp));
@@ -2082,7 +2081,6 @@ static void Got_Mapcmd(UINT8 **cp, INT32 playernum)
 		players[0].skincolor = skins[players[0].skin].prefcolor;
 	}
 
-	mapnumber = M_MapNumber(mapname[3], mapname[4]);
 	LUA_HookInt(mapnumber, HOOK(MapChange));
 
 	G_InitNew(ultimatemode, mapname, resetplayer, skipprecutscene, FLS);

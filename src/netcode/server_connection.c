@@ -121,7 +121,7 @@ static void SV_SendServerInfo(INT32 node, tic_t servertime)
 	netbuffer->u.serverinfo.flags = (dedicated ? SV_DEDICATED : 0);
 	strncpy(netbuffer->u.serverinfo.servername, cv_servername.string,
 		MAXSERVERNAME);
-	strncpy(netbuffer->u.serverinfo.mapname, G_BuildMapName(gamemap), 7);
+	strncpy(netbuffer->u.serverinfo.mapname, G_BuildMapName(gamemap), 7); // [mapnames] FIXME
 
 	M_Memcpy(netbuffer->u.serverinfo.mapmd5, mapmd5, 16);
 

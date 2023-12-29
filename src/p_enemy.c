@@ -4035,11 +4035,10 @@ static void P_DoBossVictory(mobj_t *mo)
 			// Touching the egg trap button calls P_DoPlayerExit, which calls P_RestoreMusic.
 			// So just park ourselves in the mapmus variables.
 			// But don't change the mapmus variables if they were modified from their level header values (e.g., TUNES).
-			boolean changed = strnicmp(mapheaderinfo[gamemap-1]->musname, S_MusicName(), 7);
-			if (!strnicmp(mapheaderinfo[gamemap-1]->musname, mapmusname, 7))
+			boolean changed = strnicmp(mapheaderinfo[gamemap-1]->musname, S_MusicName(), MAX_MUSIC_NAME);
+			if (!strnicmp(mapheaderinfo[gamemap-1]->musname, mapmusname, MAX_MUSIC_NAME))
 			{
-				strncpy(mapmusname, mapheaderinfo[gamemap-1]->muspostbossname, 7);
-				mapmusname[6] = 0;
+				strlcpy(mapmusname, mapheaderinfo[gamemap-1]->muspostbossname, MAX_MUSIC_NAME+1);
 				mapmusflags = (mapheaderinfo[gamemap-1]->muspostbosstrack & MUSIC_TRACKMASK) | MUSIC_RELOADRESET;
 				mapmusposition = mapheaderinfo[gamemap-1]->muspostbosspos;
 			}

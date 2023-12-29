@@ -122,7 +122,7 @@ boolean Picture_PNGDimensions(UINT8 *png, INT32 *width, INT32 *height, INT16 *to
 
 // SpriteInfo
 extern spriteinfo_t spriteinfo[NUMSPRITES];
-void R_LoadSpriteInfoLumps(UINT16 wadnum, UINT16 numlumps);
+void R_LoadSpriteInfoLumps(UINT16 wadnum);
 void R_ParseSPRTINFOLump(UINT16 wadNum, UINT16 lumpNum);
 
 #endif // __R_PICFORMATS__

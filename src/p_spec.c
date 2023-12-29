@@ -2522,7 +2522,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			// console player only unless TMM_ALLPLAYERS is set
 			if ((line->args[0] & TMM_ALLPLAYERS) || (mo && mo->player && P_IsLocalPlayer(mo->player)) || titlemapinaction)
 			{
-				boolean musicsame = (!line->stringargs[0] || !line->stringargs[0][0] || !strnicmp(line->stringargs[0], S_MusicName(), 7));
+				boolean musicsame = (!line->stringargs[0] || !line->stringargs[0][0] || !strnicmp(line->stringargs[0], S_MusicName(), MAX_MUSIC_NAME));
 				UINT16 tracknum = (UINT16)max(line->args[6], 0);
 				INT32 position = (INT32)max(line->args[1], 0);
 				UINT32 prefadems = (UINT32)max(line->args[2], 0);
@@ -2565,8 +2565,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 						strcpy(mapmusname, "");
 					else
 					{
-						strncpy(mapmusname, line->stringargs[0], 7);
-						mapmusname[6] = 0;
+						strlcpy(mapmusname, line->stringargs[0], MAX_MUSIC_NAME+1);
 					}
 
 					mapmusflags = tracknum & MUSIC_TRACKMASK;

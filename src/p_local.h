@@ -258,7 +258,7 @@ typedef enum
 
 typedef struct
 {
-	char musname[7];
+	char musname[MAX_MUSIC_NAME+1];
 	boolean looping;
 } jingle_t;
 

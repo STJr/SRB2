@@ -1067,16 +1067,16 @@ static void update_music_name(struct MusicChange *musicchange)
 	size_t length;
 	const char * new = lua_tolstring(gL, -6, &length);
 
-	if (length < 7)
+	if (length <= MAX_MUSIC_NAME)
 	{
 		strcpy(musicchange->newname, new);
 		lua_pushvalue(gL, -6);/* may as well keep it for next call */
 	}
 	else
 	{
-		memcpy(musicchange->newname, new, 6);
-		musicchange->newname[6] = '\0';
-		lua_pushlstring(gL, new, 6);
+		memcpy(musicchange->newname, new, MAX_MUSIC_NAME);
+		musicchange->newname[MAX_MUSIC_NAME] = '\0';
+		lua_pushlstring(gL, new, MAX_MUSIC_NAME);
 	}
 
 	lua_replace(gL, -7);

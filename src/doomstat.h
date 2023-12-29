@@ -31,7 +31,7 @@
 
 // Selected by user.
 extern INT16 gamemap;
-extern char mapmusname[7];
+extern char mapmusname[MAX_MUSIC_NAME+1];
 extern UINT16 mapmusflags;
 extern UINT32 mapmusposition;
 #define MUSIC_TRACKMASK   0x0FFF // ----************
@@ -79,6 +79,7 @@ extern boolean usedCheats;
 extern boolean disableSpeedAdjust; // Don't alter the duration of player states if true
 extern boolean imcontinuing; // Temporary flag while continuing
 extern boolean metalrecording;
+extern boolean replacedcurrentmap;
 
 #define ATTACKING_NONE   0
 #define ATTACKING_RECORD 1
@@ -175,7 +176,7 @@ typedef struct
 	UINT16 textxpos;
 	UINT16 textypos;
 
-	char   musswitch[7];
+	char   musswitch[MAX_MUSIC_NAME+1];
 	UINT16 musswitchflags;
 	UINT32 musswitchposition;
 
@@ -215,7 +216,7 @@ typedef struct
 	UINT16 ycoord[MAX_PROMPT_PICS]; // gfx
 	UINT16 picduration[MAX_PROMPT_PICS];
 
-	char   musswitch[7];
+	char   musswitch[MAX_MUSIC_NAME+1];
 	UINT16 musswitchflags;
 	UINT8 musicloop;
 
@@ -277,6 +278,16 @@ extern struct quake
 	fixed_t radius, intensity;
 } quake;
 
+typedef struct
+{
+	UINT32 hash;
+	char *name;
+	char *thumbnail;
+	char *thumbnail_wide;
+	char *music;
+	char *metal_replay;
+} gamemap_t;
+
 // NiGHTS grades
 typedef struct
 {
@@ -303,7 +314,7 @@ typedef struct
 	INT16 nextlevel;       ///< Map number of next level, or 1100-1102 to end.
 	INT16 marathonnext;    ///< See nextlevel, but for Marathon mode. Necessary to support hub worlds ala SUGOI.
 	char keywords[33];     ///< Keywords separated by space to search for. 32 characters.
-	char musname[7];       ///< Music track to play. "" for no music.
+	char musname[MAX_MUSIC_NAME+1]; ///< Music track to play. "" for no music.
 	UINT16 mustrack;       ///< Subsong to play. Only really relevant for music modules and specific formats supported by GME. 0 to ignore.
 	UINT32 muspos;    ///< Music position to jump to.
 	char forcecharacter[17];  ///< (SKINNAMESIZE+1) Skin to switch to or "" to disable.
@@ -351,9 +362,9 @@ typedef struct
 
 	// Music stuff.
 	UINT32 musinterfadeout;  ///< Fade out level music on intermission screen in milliseconds
-	char musintername[7];    ///< Intermission screen music.
+	char musintername[MAX_MUSIC_NAME+1]; ///< Intermission screen music.
 
-	char muspostbossname[7];    ///< Post-bossdeath music.
+	char muspostbossname[MAX_MUSIC_NAME+1]; ///< Post-bossdeath music.
 	UINT16 muspostbosstrack;    ///< Post-bossdeath track.
 	UINT32 muspostbosspos;      ///< Post-bossdeath position
 	UINT32 muspostbossfadein;   ///< Post-bossdeath fade-in milliseconds.
@@ -388,7 +399,11 @@ typedef struct
 #define LF2_NOVISITNEEDED 16 ///< Available in time attack/nights mode without visiting the level
 #define LF2_WIDEICON      32 ///< If you're in a circumstance where it fits, use a wide map icon
 
-extern mapheader_t* mapheaderinfo[NUMMAPS];
+extern mapheader_t* mapheaderinfo[MAXMAPS];
+
+extern gamemap_t gamemaps[MAXMAPS];
+
+extern UINT16 numgamemaps;
 
 // Gametypes
 #define NUMGAMETYPEFREESLOTS 128

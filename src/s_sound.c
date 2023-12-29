@@ -1352,12 +1352,12 @@ void S_InitSfxChannels(INT32 sfxVolume)
 /// Music
 /// ------------------------
 
-static char      music_name[7]; // up to 6-character name
+static char      music_name[MAX_MUSIC_NAME+1];
 static void      *music_data;
 static UINT16    music_flags;
 static boolean   music_looping;
 
-static char      queue_name[7];
+static char      queue_name[MAX_MUSIC_NAME+1];
 static UINT16    queue_flags;
 static boolean   queue_looping;
 static UINT32    queue_position;
@@ -1568,9 +1568,8 @@ ReadMusicDefFields (UINT16 wadnum, int line, boolean fields, char *stoken,
 			} else if (!stricmp(stoken, "soundtestpage")) {
 				def->soundtestpage = (UINT8)i;
 			} else if (!stricmp(stoken, "soundtestcond")) {
-				// Convert to map number
-				if (textline[0] >= 'A' && textline[0] <= 'Z' && textline[2] == '\0')
-					i = M_MapNumber(textline[0], textline[1]);
+				if (!i)
+					i = G_GetMapNumber(textline);
 				def->soundtestcond = (INT16)i;
 			} else if (!stricmp(stoken, "stoppingtime")) {
 				double stoppingtime = atof(textline)*TICRATE;
@@ -1778,8 +1777,8 @@ const char *S_MusicName(void)
 boolean S_MusicExists(const char *mname, boolean checkMIDI, boolean checkDigi)
 {
 	return (
-		(checkDigi ? W_CheckNumForName(va("O_%s", mname)) != LUMPERROR : false)
-		|| (checkMIDI ? W_CheckNumForName(va("D_%s", mname)) != LUMPERROR : false)
+		(checkDigi ? W_CheckNumForLongName(va("O_%s", mname)) != LUMPERROR : false)
+		|| (checkMIDI ? W_CheckNumForLongName(va("D_%s", mname)) != LUMPERROR : false)
 	);
 }
 
@@ -1826,7 +1825,7 @@ UINT32 S_GetMusicPosition(void)
 /// In this section: mazmazz doesn't know how to do dynamic arrays or struct pointers!
 /// ------------------------
 
-char music_stack_nextmusname[7];
+char music_stack_nextmusname[MAX_MUSIC_NAME+1];
 boolean music_stack_noposition = false;
 UINT32 music_stack_fadeout = 0;
 UINT32 music_stack_fadein = 0;
@@ -1910,7 +1909,7 @@ static void S_AddMusicStackEntry(const char *mname, UINT16 mflags, boolean loopi
 	if (!music_stacks)
 	{
 		music_stacks = Z_Calloc(sizeof (*mst), PU_MUSIC, NULL);
-		strncpy(music_stacks->musname, (status == JT_MASTER ? mname : (S_CheckQueue() ? queue_name : mapmusname)), 7);
+		strlcpy(music_stacks->musname, (status == JT_MASTER ? mname : (S_CheckQueue() ? queue_name : mapmusname)), MAX_MUSIC_NAME+1);
 		music_stacks->musflags = (status == JT_MASTER ? mflags : (S_CheckQueue() ? queue_flags : mapmusflags));
 		music_stacks->looping = (status == JT_MASTER ? looping : (S_CheckQueue() ? queue_looping : true));
 		music_stacks->position = (status == JT_MASTER ? position : (S_CheckQueue() ? queue_position : S_GetMusicPosition()));
@@ -1928,8 +1927,7 @@ static void S_AddMusicStackEntry(const char *mname, UINT16 mflags, boolean loopi
 
 	// create our new entry
 	new_mst = Z_Calloc(sizeof (*new_mst), PU_MUSIC, NULL);
-	strncpy(new_mst->musname, mname, 7);
-	new_mst->musname[6] = 0;
+	strlcpy(new_mst->musname, mname, MAX_MUSIC_NAME+1);
 	new_mst->musflags = mflags;
 	new_mst->looping = looping;
 	new_mst->position = position;
@@ -2033,13 +2031,13 @@ boolean S_RecallMusic(UINT16 status, boolean fromfirst)
 	if (result)
 	{
 		*entry = *result;
-		strncpy(entry->musname, result->musname, 7);
+		strlcpy(entry->musname, result->musname, MAX_MUSIC_NAME+1);
 	}
 
 	// no result, just grab mapmusname
 	if (!result || !entry->musname[0] || ((status == JT_MASTER || (music_stacks ? !music_stacks->status : false)) && !entry->status))
 	{
-		strncpy(entry->musname, mapmusname, 7);
+		strlcpy(entry->musname, mapmusname, MAX_MUSIC_NAME+1);
 		entry->musflags = mapmusflags;
 		entry->looping = true;
 		entry->position = mapmusposition;
@@ -2051,10 +2049,10 @@ boolean S_RecallMusic(UINT16 status, boolean fromfirst)
 
 	if (entry->status == JT_MASTER)
 	{
-		mapmuschanged = strnicmp(entry->musname, mapmusname, 7);
+		mapmuschanged = strnicmp(entry->musname, mapmusname, MAX_MUSIC_NAME);
 		if (mapmuschanged)
 		{
-			strncpy(entry->musname, mapmusname, 7);
+			strlcpy(entry->musname, mapmusname, MAX_MUSIC_NAME+1);
 			entry->musflags = mapmusflags;
 			entry->looping = true;
 			entry->position = mapmusposition;
@@ -2071,7 +2069,7 @@ boolean S_RecallMusic(UINT16 status, boolean fromfirst)
 		return false;
 	}
 
-	if (strncmp(entry->musname, S_MusicName(), 7) || // don't restart music if we're already playing it
+	if (strncmp(entry->musname, S_MusicName(), MAX_MUSIC_NAME) || // don't restart music if we're already playing it
 		(midipref != currentmidi && S_PrefAvailable(midipref, entry->musname))) // but do if the user's preference has changed
 	{
 		if (music_stack_fadeout)
@@ -2122,9 +2120,9 @@ static lumpnum_t S_GetMusicLumpNum(const char *mname)
 	boolean midipref = cv_musicpref.value;
 
 	if (S_PrefAvailable(midipref, mname))
-		return W_GetNumForName(va(midipref ? "d_%s":"o_%s", mname));
+		return W_GetNumForLongName(va(midipref ? "D_%s":"O_%s", mname));
 	else if (S_PrefAvailable(!midipref, mname))
-		return W_GetNumForName(va(midipref ? "o_%s":"d_%s", mname));
+		return W_GetNumForLongName(va(midipref ? "O_%s":"D_%s", mname));
 	else
 		return LUMPERROR;
 }
@@ -2141,18 +2139,16 @@ static boolean S_LoadMusic(const char *mname)
 
 	if (mlumpnum == LUMPERROR)
 	{
-		CONS_Alert(CONS_ERROR, "Music %.6s could not be loaded: lump not found!\n", mname);
+		CONS_Alert(CONS_ERROR, "Music %s could not be loaded: lump not found!\n", mname);
 		return false;
 	}
 
 	// load & register it
 	mdata = W_CacheLumpNum(mlumpnum, PU_MUSIC);
 
-
 	if (I_LoadSong(mdata, W_LumpLength(mlumpnum)))
 	{
-		strncpy(music_name, mname, 7);
-		music_name[6] = 0;
+		strlcpy(music_name, mname, MAX_MUSIC_NAME+1);
 		music_data = mdata;
 		return true;
 	}
@@ -2213,7 +2209,7 @@ static boolean S_PlayMusic(boolean looping, UINT32 fadeinms)
 
 static void S_QueueMusic(const char *mmusic, UINT16 mflags, boolean looping, UINT32 position, UINT32 fadeinms)
 {
-	strncpy(queue_name, mmusic, 7);
+	strlcpy(queue_name, mmusic, MAX_MUSIC_NAME+1);
 	queue_flags = mflags;
 	queue_looping = looping;
 	queue_position = position;
@@ -2238,7 +2234,7 @@ static void S_ChangeMusicToQueue(void)
 
 void S_ChangeMusicEx(const char *mmusic, UINT16 mflags, boolean looping, UINT32 position, UINT32 prefadems, UINT32 fadeinms)
 {
-	char newmusic[7];
+	char newmusic[MAX_MUSIC_NAME+1];
 
 	struct MusicChange hook_param = {
 		newmusic,
@@ -2255,10 +2251,9 @@ void S_ChangeMusicEx(const char *mmusic, UINT16 mflags, boolean looping, UINT32 
 	if (S_MusicDisabled())
 		return;
 
-	strncpy(newmusic, mmusic, 7);
+	strlcpy(newmusic, mmusic, MAX_MUSIC_NAME+1);
 	if (LUA_HookMusicChange(music_name, &hook_param))
 		return;
-	newmusic[6] = 0;
 
 	// No Music (empty string)
 	if (newmusic[0] == 0)
@@ -2278,7 +2273,7 @@ void S_ChangeMusicEx(const char *mmusic, UINT16 mflags, boolean looping, UINT32 
 		I_FadeSong(0, prefadems, S_ChangeMusicToQueue);
 		return;
 	}
-	else if (strnicmp(music_name, newmusic, 6) || (mflags & MUSIC_FORCERESET) ||
+	else if (strnicmp(music_name, newmusic, MAX_MUSIC_NAME) || (mflags & MUSIC_FORCERESET) ||
 		(midipref != currentmidi && S_PrefAvailable(midipref, newmusic)))
 	{
 		CONS_Debug(DBG_DETAILED, "Now playing song %s\n", newmusic);
@@ -2303,7 +2298,7 @@ void S_ChangeMusicEx(const char *mmusic, UINT16 mflags, boolean looping, UINT32 
 	{
 		I_SetSongPosition(position);
 		I_FadeSong(100, fadeinms, NULL);
-}
+	}
 	else // reset volume to 100 with same music
 	{
 		I_StopFadingSong();
@@ -2433,8 +2428,7 @@ void S_StartEx(boolean reset)
 {
 	if (mapmusflags & MUSIC_RELOADRESET)
 	{
-		strncpy(mapmusname, mapheaderinfo[gamemap-1]->musname, 7);
-		mapmusname[6] = 0;
+		strlcpy(mapmusname, mapheaderinfo[gamemap-1]->musname, MAX_MUSIC_NAME+1);
 		mapmusflags = (mapheaderinfo[gamemap-1]->mustrack & MUSIC_TRACKMASK);
 		mapmusposition = mapheaderinfo[gamemap-1]->muspos;
 	}
@@ -2487,18 +2481,17 @@ static void Command_Tunes_f(void)
 		track = mapheaderinfo[gamemap-1]->mustrack;
 	}
 
-	if (strlen(tunearg) > 6) // This is automatic -- just show the error just in case
-		CONS_Alert(CONS_NOTICE, M_GetText("Music name too long - truncated to six characters.\n"));
+	if (strlen(tunearg) > MAX_MUSIC_NAME) // This is automatic -- just show the error just in case
+		CONS_Alert(CONS_NOTICE, M_GetText("Music name too long - truncated to %d characters.\n"), MAX_MUSIC_NAME);
 
 	if (argc > 2)
 		track = (UINT16)atoi(COM_Argv(2))-1;
 
-	strncpy(mapmusname, tunearg, 7);
+	strlcpy(mapmusname, tunearg, MAX_MUSIC_NAME+1);
 
 	if (argc > 4)
 		position = (UINT32)atoi(COM_Argv(4));
 
-	mapmusname[6] = 0;
 	mapmusflags = (track & MUSIC_TRACKMASK);
 	mapmusposition = position;
 

@@ -2685,32 +2685,22 @@ static int vector3_get(lua_State *L)
 static int lib_getMapheaderinfo(lua_State *L)
 {
 	// i -> mapheaderinfo[i-1]
-
-	//int field;
 	lua_settop(L, 2);
 	lua_remove(L, 1); // dummy userdata table is unused.
 	if (lua_isnumber(L, 1))
 	{
 		size_t i = lua_tointeger(L, 1)-1;
-		if (i >= NUMMAPS)
+		if (i >= numgamemaps)
 			return 0;
 		LUA_PushUserdata(L, mapheaderinfo[i], META_MAPHEADER);
-		//CONS_Printf(mapheaderinfo[i]->lvlttl);
 		return 1;
-	}/*
-	field = luaL_checkoption(L, 1, NULL, array_opt);
-	switch(field)
-	{
-	case 0: // iterate
-		lua_pushcfunction(L, lib_iterateSubsectors);
-		return 1;
-	}*/
+	}
 	return 0;
 }
 
 static int lib_nummapheaders(lua_State *L)
 {
-	lua_pushinteger(L, NUMMAPS);
+	lua_pushinteger(L, numgamemaps);
 	return 1;
 }
 

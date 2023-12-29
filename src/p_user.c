@@ -1576,13 +1576,8 @@ void P_PlayJingle(player_t *player, jingletype_t jingletype)
 	UINT16 musflags = 0;
 	boolean looping = jingleinfo[jingletype].looping;
 
-	char newmusic[7];
-	strncpy(newmusic, musname, 7);
-#ifdef HAVE_LUA_MUSICPLUS
-	if(LUAh_MusicJingle(jingletype, newmusic, &musflags, &looping))
-		return;
-#endif
-	newmusic[6] = 0;
+	char newmusic[MAX_MUSIC_NAME];
+	strlcpy(newmusic, musname, MAX_MUSIC_NAME);
 
 	P_PlayJingleMusic(player, newmusic, musflags, looping, jingletype);
 }

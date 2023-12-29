@@ -203,9 +203,9 @@ typedef struct
 	boolean unlocked[MAXUNLOCKABLES];
 
 	// TIME ATTACK DATA
-	recorddata_t *mainrecords[NUMMAPS];
-	nightsdata_t *nightsrecords[NUMMAPS];
-	UINT8 mapvisited[NUMMAPS];
+	recorddata_t *mainrecords[MAXMAPS];
+	nightsdata_t *nightsrecords[MAXMAPS];
+	UINT8 mapvisited[MAXMAPS];
 
 	// # OF TIMES THE GAME HAS BEEN BEATEN
 	UINT32 timesBeaten;

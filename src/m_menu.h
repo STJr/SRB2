@@ -159,7 +159,7 @@ typedef struct
 	INT16 ttloop; // # frame to loop; -1 means dont loop
 	UINT16 tttics; // # of tics per frame
 
-	char musname[7]; ///< Music track to play. "" for no music.
+	char musname[MAX_MUSIC_NAME+1]; ///< Music track to play. "" for no music.
 	UINT16 mustrack; ///< Subsong to play. Only really relevant for music modules and specific formats supported by GME. 0 to ignore.
 	boolean muslooping; ///< Loop the music
 	boolean musstop; ///< Don't play any music
@@ -429,6 +429,7 @@ typedef struct
 	INT32 lives;
 	INT32 continuescore;
 	INT32 gamemap;
+	UINT8 flags;
 } saveinfo_t;
 
 extern description_t description[MAXSKINS];

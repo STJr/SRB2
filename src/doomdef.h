@@ -451,6 +451,8 @@ extern skincolor_t skincolors[MAXSKINCOLORS];
 
 #define MUSICRATE 1000 // sound timing is calculated by milliseconds
 
+#define MAX_MUSIC_NAME 64
+
 #define RING_DIST 512*FRACUNIT // how close you need to be to a ring to attract it
 
 #define PUSHACCEL (2*FRACUNIT) // Acceleration for MF2_SLIDEPUSH items.

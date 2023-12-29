@@ -2387,6 +2387,30 @@ boolean M_IsStringEmpty(const char *s)
 	return true;
 }
 
+const char *M_GetFilenameFromPath(const char *path)
+{
+	const char *slash = strrchr(path, '/');
+	if (slash)
+		return slash + 1;
+	return path;
+}
+
+const char *M_GetExtensionFromFilename(const char *filename)
+{
+	const char *dot = strrchr(filename, '.');
+	if (dot)
+		return dot + 1;
+	return NULL;
+}
+
+const char *M_CheckFilenameExtension(const char *filename, const char *ext)
+{
+	const char *dot = strrchr(filename, '.');
+	if (dot && (strstr(dot, ext) || strstr(dot + 1, ext)))
+		return dot + 1;
+	return NULL;
+}
+
 // Rounds off floating numbers and checks for 0 - 255 bounds
 int M_RoundUp(double number)
 {

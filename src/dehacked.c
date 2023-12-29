@@ -364,18 +364,18 @@ static void DEH_LoadDehackedFile(MYFILE *f, boolean mainfile)
 				}
 				else if (fastcmp(word, "LEVEL"))
 				{
-					// Support using the actual map name,
-					// i.e., Level AB, Level FZ, etc.
+					if (!isdigit(word2[0]))
+					{
+						INT16 mapnum = G_GetMapNumber(word2);
+						if (mapnum != 0)
+							i = mapnum;
+					}
 
-					// Convert to map number
-					if (word2[0] >= 'A' && word2[0] <= 'Z')
-						i = M_MapNumber(word2[0], word2[1]);
-
-					if (i > 0 && i <= NUMMAPS)
+					if (i > 0 && i <= numgamemaps)
 						readlevelheader(f, i);
 					else
 					{
-						deh_warning("Level number %d out of range (1 - %d)", i, NUMMAPS);
+						deh_warning("Level number %d out of range (1 - %d)", i, numgamemaps);
 						ignorelines(f);
 					}
 				}

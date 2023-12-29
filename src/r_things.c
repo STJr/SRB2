@@ -583,7 +583,7 @@ void R_InitSprites(void)
 	{
 		R_AddSkins((UINT16)i, true);
 		R_PatchSkins((UINT16)i, true);
-		R_LoadSpriteInfoLumps(i, wadfiles[i]->numlumps);
+		R_LoadSpriteInfoLumps(i);
 	}
 	ST_ReloadSkinFaceGraphics();
 
