@@ -106,6 +106,7 @@ void I_stop_threads(void)
 
 void I_lock_mutex(I_mutex *anchor)
 {
+	pthread_mutex_lock(&thread_lock);
 	if (*anchor == NULL)
 	{
 		pthread_mutexattr_t attr;
@@ -117,6 +118,7 @@ void I_lock_mutex(I_mutex *anchor)
 		pthread_mutex_init(*anchor, &attr);
 		pthread_mutexattr_destroy(&attr);
 	}
+	pthread_mutex_unlock(&thread_lock);
 	pthread_mutex_lock(*anchor);
 }
 
@@ -128,31 +130,37 @@ void I_unlock_mutex(I_mutex id)
 void I_hold_cond(I_cond *cond_anchor, I_mutex mutex_id)
 {
 	I_Assert(mutex_id != NULL);
+	pthread_mutex_lock(&thread_lock);
 	if (*cond_anchor == NULL)
 	{
 		*cond_anchor = malloc(sizeof(pthread_cond_t));
 		pthread_cond_init(*cond_anchor, NULL);
 	}
+	pthread_mutex_unlock(&thread_lock);
 	pthread_cond_wait(*cond_anchor, mutex_id);
 }
 
 void I_wake_one_cond(I_cond *anchor)
 {
+	pthread_mutex_lock(&thread_lock);
 	if (*anchor == NULL)
 	{
 		*anchor = malloc(sizeof(pthread_cond_t));
 		pthread_cond_init(*anchor, NULL);
 	}
+	pthread_mutex_unlock(&thread_lock);
 	pthread_cond_signal(*anchor);
 }
 
 void I_wake_all_cond(I_cond *anchor)
 {
+	pthread_mutex_lock(&thread_lock);
 	if (*anchor == NULL)
 	{
 		*anchor = malloc(sizeof(pthread_t));
 		pthread_cond_init(*anchor, NULL);
 	}
+	pthread_mutex_unlock(&thread_lock);
 	pthread_cond_broadcast(*anchor);
 }
 #elif defined (_WIN32)
@@ -253,11 +261,13 @@ void I_stop_threads(void)
 
 void I_lock_mutex(I_mutex *anchor)
 {
+	EnterCriticalSection(&thread_lock);
 	if (*anchor == NULL)
 	{
 		*anchor = malloc(sizeof(CRITICAL_SECTION));
 		InitializeCriticalSection(*anchor);
 	}
+	LeaveCriticalSection(&thread_lock);
 	EnterCriticalSection(*anchor);
 }
 
@@ -269,21 +279,37 @@ void I_unlock_mutex(I_mutex id)
 void I_hold_cond(I_cond *cond_anchor, I_mutex mutex_id)
 {
 	I_Assert(mutex_id != NULL);
+	EnterCriticalSection(&thread_lock);
 	if (*cond_anchor == NULL)
 	{
 		*cond_anchor = malloc(sizeof(CONDITION_VARIABLE));
 		InitializeConditionVariable(*cond_anchor);
 	}
+	LeaveCriticalSection(&thread_lock);
 	SleepConditionVariableCS(*cond_anchor, mutex_id, INFINITE);
 }
 
 void I_wake_one_cond(I_cond *anchor)
 {
+	EnterCriticalSection(&thread_lock);
+	if (*cond_anchor == NULL)
+	{
+		*cond_anchor = malloc(sizeof(CONDITION_VARIABLE));
+		InitializeConditionVariable(*cond_anchor);
+	}
+	LeaveCriticalSection(&thread_lock);
 	WakeConditionVariable(*anchor);
 }
 
 void I_wake_all_cond(I_cond *anchor)
 {
+	EnterCriticalSection(&thread_lock);
+	if (*cond_anchor == NULL)
+	{
+		*cond_anchor = malloc(sizeof(CONDITION_VARIABLE));
+		InitializeConditionVariable(*cond_anchor);
+	}
+	LeaveCriticalSection(&thread_lock);
 	WakeAllConditionVariable(*anchor);
 }
 #else
