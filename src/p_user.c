@@ -19,6 +19,7 @@
 #include "d_event.h"
 #include "netcode/d_net.h"
 #include "netcode/net_command.h"
+#include "g_demo.h" // demoplayback, demoversion
 #include "g_game.h"
 #include "p_local.h"
 #include "r_fps.h"
@@ -7518,49 +7519,46 @@ static void P_NiGHTSMovement(player_t *player)
 				newangle = 270;
 		}
 		else // AngleFixed(R_PointToAngle2()) results in slight inaccuracy! Don't use it unless movement is on both axises.
+		{
 			newangle = (INT16)FixedInt(AngleFixed(R_PointToAngle2(0,0, cmd->sidemove*FRACUNIT, cmd->forwardmove*FRACUNIT)));
+
+			if (cmd->forwardmove == -36 && cmd->sidemove == 35 && !(demoplayback && demoversion < 0x0011))
+				newangle = 315; // Hack to compensate for directly down-right returning 314, not 315
+		}
 
 		newangle -= player->viewrollangle / ANG1;
 
 		if (newangle < 0 && moved)
 			newangle = (INT16)(360+newangle);
-	}
 
-	if (player->pflags & PF_DRILLING)
-		thrustfactor = 2;
-	else
-	{
-		thrustfactor = 8;
-
-		// Decelerate while turning normally.
-		if (moved && player->flyangle != newangle && player->speed > 12000)
-			player->speed -= 60;
-	}
-
-	for (i = 0; i < thrustfactor; i++)
-	{
 		if (moved && player->flyangle != newangle)
 		{
-			INT32 anglediff = (((newangle-player->flyangle)+360)%360);
-			INT32 angledif2 = (((player->flyangle-newangle)+360)%360);
+			// "player->flyangle" is our current angle, "newangle" is where we want to go
+			INT32 anglediff = ((newangle - player->flyangle) + 360) % 360; // "+360" and then "%360" wraps it to 0-359
 
-			// player->flyangle is the one to move
-			// newangle is the "move to"
-			if (anglediff == 0 && angledif2 == 0)
-				break;
+			// How sharply can we turn?
+			if (player->pflags & PF_DRILLING)
+				thrustfactor = 2;
+			else
+			{
+				thrustfactor = 8;
+				if (player->speed > 12000) // Decelerate while turning normally
+					player->speed -= 60;
+			}
 
-			if (anglediff>angledif2)
-				player->flyangle--;
-			else // if (anglediff<angledif2)
-				player->flyangle++;
+			// Now, turn!
+			if (anglediff <= thrustfactor || anglediff >= (360-thrustfactor))
+				player->flyangle = newangle;
+			else if (anglediff <= 180)
+				player->flyangle += thrustfactor;
+			else
+				player->flyangle -= thrustfactor;
+
+			player->flyangle = (player->flyangle + 360) % 360; // Buff out negatives, >360 angles...
 		}
-
-		// Buff out negatives, >360 angles...
-		player->flyangle = ((player->flyangle + 360) % 360);
 	}
 
-	if (!(player->speed)
-		&& cmd->forwardmove == 0)
+	if (player->speed == 0 && cmd->forwardmove == 0 && (cmd->sidemove == 0 || (demoplayback && demoversion < 0x0011)))
 		still = true;
 
 	// No more bumper braking
@@ -7720,6 +7718,9 @@ static void P_NiGHTSMovement(player_t *player)
 				else
 					visangle += 180;
 			}
+
+			if (player->mo->eflags & MFE_VERTICALFLIP) // Flip the roll angle in reverse gravity
+				visangle *= -1;
 
 			rollangle = FixedAngle(visangle<<FRACBITS);
 		}
