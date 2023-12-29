@@ -857,7 +857,15 @@ const char *G_BuildClassicMapName(INT32 map)
 
 static UINT32 G_HashMapNameString(const char *name, size_t name_length)
 {
-	return quickncasehash(name, name_length);
+	UINT32 hash = 0x811C9DC5;
+
+	for (size_t i = 0; i < name_length; i++)
+	{
+		hash ^= name[i];
+		hash *= 0x1000193;
+	}
+
+	return hash;
 }
 
 static void G_MakeMapName(mapname_t *name, const char *string)
