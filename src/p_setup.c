@@ -8119,60 +8119,90 @@ static lumpinfo_t* FindFolder(const char *folName, UINT16 *start, UINT16 *end, l
 	return lumpinfo;
 }
 
+static int P_AddMap(const char *name, UINT32 lumpnum)
+{
+	// Check filename length
+	size_t name_len = strlen(name);
+	if (name_len > MAX_MAP_NAME_SIZE)
+	{
+		CONS_Alert(CONS_WARNING, "Map name's length of %s exceeds maximum of %d -- skipping\n", sizeu1(name_len), MAX_MAP_NAME_SIZE);
+		return 0;
+	}
+
+	if (!G_IsValidMapName(name))
+	{
+		CONS_Alert(CONS_WARNING, "Map name %s is invalid -- skipping\n", name);
+		return 0;
+	}
+
+	INT16 num = G_AddMap(name, lumpnum);
+	if (num == 0)
+	{
+		CONS_Alert(CONS_ERROR, "Too many maps loaded!\n");
+		return -1;
+	}
+
+	//If you replaced the map you're on, end the level when done.
+	if (gamestate == GS_LEVEL && num == gamemap)
+		replacedcurrentmap = true;
+
+	return 1;
+}
+
 void P_LoadMapsFromFile(UINT16 wadnum, boolean added_ingame)
 {
 	boolean mapsadded = false;
 
-	lumpinfo_t *lumpinfo = wadfiles[wadnum]->lumpinfo;
+	lumpinfo_t *lumpinfo = NULL;
+	UINT16 numlumps = 0;
 
 	INT16 num;
 	const char *name;
 
 	if (W_FileHasFolders(wadfiles[wadnum]))
 	{
-		UINT16 posStart = W_CheckNumForFolderStartPK3("Maps/", wadnum, 0);
-		if (posStart == INT16_MAX)
-			return;
+		UINT32 *list = NULL;
+		UINT16 capacity = 0;
 
-		UINT16 posEnd = W_CheckNumForFolderEndPK3("Maps/", wadnum, posStart);
+		W_GetFolderLumpsPwad("Maps/", wadnum, &list, &capacity, &numlumps);
 
-		lumpinfo += posStart;
-
-		for (; posStart < posEnd; posStart++, lumpinfo++)
+		for (UINT16 i = 0; i < numlumps; i++)
 		{
+			UINT32 lumpnum = list[i];
+
+			lumpinfo = wadfiles[wadnum]->lumpinfo + LUMPNUM(lumpnum);
+
 			name = M_GetFilenameFromPath(lumpinfo->fullname); // Full lump name, with its extension
 
+			// Extension must be .wad
 			if (!M_CheckFilenameExtension(name, "wad"))
-			{
-				// Extension must be .wad
 				continue;
-			}
 
-			name = lumpinfo->longname; // Name without the extension
+			// Get the name without the extension
+			name = lumpinfo->longname;
 
-			num = G_AddMap(name);
-
-			if (num == 0)
+			int status = P_AddMap(name, lumpnum);
+			if (status == 1)
 			{
-				CONS_Alert(CONS_ERROR, "Too many maps loaded!\n");
-				break;
+				if (added_ingame)
+					CONS_Printf("%s\n", name);
+				mapsadded = true;
 			}
-			//If you replaced the map you're on, end the level when done.
-			else if (gamestate == GS_LEVEL && num == gamemap)
-				replacedcurrentmap = true;
-
-			if (added_ingame)
-				CONS_Printf("%s\n", name);
-			mapsadded = true;
+			else if (status < 0)
+				break;
 		}
+
+		Z_Free(list);
 	}
 	else
 	{
-		UINT16 numlumps = wadfiles[wadnum]->numlumps;
+		lumpinfo = wadfiles[wadnum]->lumpinfo;
+		numlumps = wadfiles[wadnum]->numlumps;
+
 		for (size_t i = 0; i < numlumps; i++, lumpinfo++)
 		{
 			name = lumpinfo->name;
-			if (name[0] == 'M' && name[1] == 'A' && name[2] == 'P') // Ignore the headers
+			if (name[0] == 'M' && name[1] == 'A' && name[2] == 'P')
 			{
 				if (name[5]!='\0')
 					continue;
@@ -8186,6 +8216,41 @@ void P_LoadMapsFromFile(UINT16 wadnum, boolean added_ingame)
 					CONS_Printf("%s\n", name);
 				mapsadded = true;
 			}
+		}
+
+		// Now do markers
+		UINT16 start = W_CheckNumForMarkerStartPwad("LV_START", wadnum, 0);
+		UINT16 end = W_CheckNumForNamePwad("LV_END", wadnum, start);
+
+		lumpinfo = wadfiles[wadnum]->lumpinfo + start;
+
+		for (UINT16 l = start; l < end; l++, lumpinfo++)
+		{
+			name = lumpinfo->name;
+
+			// Ignore any of these lump names
+			if (stricmp(name, "THINGS") == 0
+			|| stricmp(name, "LINEDEFS") == 0
+			|| stricmp(name, "SIDEDEFS") == 0
+			|| stricmp(name, "VERTEXES") == 0
+			|| stricmp(name, "SEGS") == 0
+			|| stricmp(name, "SSECTORS") == 0
+			|| stricmp(name, "NODES") == 0
+			|| stricmp(name, "SECTORS") == 0
+			|| stricmp(name, "REJECT") == 0
+			|| stricmp(name, "BLOCKMAP") == 0
+			|| stricmp(name, "BEHAVIOR") == 0)
+				continue;
+
+			int status = P_AddMap(name, (wadnum << 16) + l);
+			if (status == 1)
+			{
+				if (added_ingame)
+					CONS_Printf("%s\n", name);
+				mapsadded = true;
+			}
+			else if (status < 0)
+				break;
 		}
 	}
 

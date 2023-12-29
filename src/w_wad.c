@@ -1158,6 +1158,7 @@ UINT16 W_InitFolder(const char *path, boolean mainfile, boolean startup)
 	numwadfiles++;
 
 	W_ReadFileShaders(wadfile);
+	P_LoadMapsFromFile(numwadfiles - 1, !startup);
 	W_LoadDehackedLumpsPK3(numwadfiles - 1, mainfile);
 	W_InvalidateLumpnumCache();
 
@@ -1336,6 +1337,42 @@ UINT16 W_CheckNumForFolderEndPK3(const char *name, UINT16 wad, UINT16 startlump)
 			break;
 	}
 	return i;
+}
+
+void W_GetFolderLumpsPwad(const char *name, UINT16 wad, UINT32 **list, UINT16 *list_capacity, UINT16 *numlumps)
+{
+	size_t name_length = strlen(name);
+	lumpinfo_t *lump_p = wadfiles[wad]->lumpinfo;
+
+	UINT16 capacity = *list_capacity;
+	UINT16 count = *numlumps;
+
+	for (UINT16 i = 0; i < wadfiles[wad]->numlumps; i++, lump_p++)
+	{
+		if (strnicmp(name, lump_p->fullname, name_length) == 0)
+		{
+			if (strlen(lump_p->fullname) > name_length)
+			{
+				if (!capacity || count >= capacity)
+				{
+					capacity = capacity ? (capacity * 2) : 16;
+					*list = Z_Realloc(*list, capacity * sizeof(UINT32), PU_STATIC, NULL);
+				}
+
+				(*list)[count] = (wad << 16) + i;
+				count++;
+			}
+		}
+	}
+
+	(*list_capacity) = capacity;
+	(*numlumps) = count;
+}
+
+void W_GetFolderLumps(const char *name, UINT32 **list, UINT16 *list_capacity, UINT16 *numlumps)
+{
+	for (UINT16 i = 0; i < numwadfiles; i++)
+		W_GetFolderLumpsPwad(name, i, list, list_capacity, numlumps);
 }
 
 // In a PK3 type of resource file, it looks for an entry with the specified full name.

@@ -873,7 +873,7 @@ void G_InitMaps(void)
 	for (UINT16 i = 0; i < NUMBASEMAPS; i++)
 	{
 		const char *name = G_BuildClassicMapName(i + 1);
-		G_AddMap(name);
+		G_AddMap(name, LUMPERROR);
 	}
 
 	G_MakeMapName(&nextmapnames[0], "SCENE_TITLE");
@@ -922,23 +922,22 @@ UINT16 G_GetNextMapNumber(const char *name)
 	return MapIDForHashedString(name, name_length, name_hash);
 }
 
-UINT16 G_AddMap(const char *name)
+UINT16 G_AddMap(const char *name, UINT32 lumpnum)
 {
+	// Too many maps loaded
 	if (numgamemaps == MAXMAPS)
 		return 0;
 
 	UINT16 mapnum = G_GetMapNumber(name);
 	if (mapnum != 0)
 	{
-		// That map already exists, silly.
+		// Update that map's lumpnum
+		gamemaps[mapnum - 1].lumpnum = lumpnum;
 		return mapnum;
 	}
 
-	size_t name_len = strlen(name);
-	if (name_len > MAX_MAP_NAME_SIZE)
-		return 0;
-
 	G_MakeMapName(&gamemaps[numgamemaps].name, name);
+	gamemaps[numgamemaps].lumpnum = lumpnum;
 
 	numgamemaps++;
 
@@ -949,13 +948,32 @@ UINT16 G_AddMap(const char *name)
 
 boolean G_MapFileExists(const char *name)
 {
-	return W_CheckNumForLongName(name) != LUMPERROR;
+	UINT16 mapnum = G_GetMapNumber(name);
+	if (mapnum == 0)
+		return false;
+
+	return gamemaps[mapnum - 1].lumpnum != LUMPERROR;
+}
+
+static boolean IsValidMapNameStartChar(const char chr)
+{
+	return isalpha(chr) || chr == '_' || chr == '$';
 }
 
 boolean G_IsValidMapName(const char *name)
 {
-	if (name[0] == '\0' || !isalpha(name[0]))
+	// Can't be empty, and must begin with a letter, an underscore, or a dollar sign
+	if (name[0] == '\0' || !IsValidMapNameStartChar(name[0]))
 		return false;
+
+	size_t length = strlen(name);
+
+	// Middle and end of name must be a letter, a digit, an underscore, or a dollar sign
+	for (size_t i = 1; i < length; i++)
+	{
+		if (!(IsValidMapNameStartChar(name[i]) || isdigit(name[i])))
+			return false;
+	}
 
 	return true;
 }

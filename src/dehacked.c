@@ -364,14 +364,28 @@ static void DEH_LoadDehackedFile(MYFILE *f, boolean mainfile)
 				}
 				else if (fastcmp(word, "LEVEL"))
 				{
-					if (!isdigit(word2[0]))
+					boolean is_valid_level = false;
+
+					if (G_IsValidMapName(word2))
 					{
 						INT16 mapnum = G_GetMapNumber(word2);
 						if (mapnum != 0)
+						{
 							i = mapnum;
+							is_valid_level = true;
+						}
+					}
+					else
+					{
+						is_valid_level = true;
 					}
 
-					if (i > 0 && i <= numgamemaps)
+					if (!is_valid_level)
+					{
+						deh_warning("Unknown level %s", word2);
+						ignorelines(f);
+					}
+					else if (i > 0 && i <= numgamemaps)
 						readlevelheader(f, i);
 					else
 					{

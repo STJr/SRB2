@@ -3010,12 +3010,10 @@ void reademblemdata(MYFILE *f, INT32 num)
 				emblemlocations[num-1].tag = (INT16)value;
 			else if (fastcmp(word, "MAPNUM"))
 			{
-				if (!value)
-				{
+				if (G_IsValidMapName(word2))
 					value = G_GetMapNumber(word2);
-					if (!value)
-						value = get_number(word2);
-				}
+				if (!value)
+					value = get_number(word2);
 
 				emblemlocations[num-1].level = (INT16)value;
 			}
@@ -3606,12 +3604,10 @@ void readmaincfg(MYFILE *f)
 				// i.e., Level AB, Level FZ, etc.
 
 				// Convert to map number
-				if (!value)
-				{
+				if (G_IsValidMapName(word2))
 					value = G_GetMapNumber(word2);
-					if (!value)
-						value = get_number(word2);
-				}
+				if (!value)
+					value = get_number(word2);
 
 				spstage_start = spmarathon_start = (INT16)value;
 			}
@@ -3621,12 +3617,10 @@ void readmaincfg(MYFILE *f)
 				// i.e., Level AB, Level FZ, etc.
 
 				// Convert to map number
-				if (!value)
-				{
+				if (G_IsValidMapName(word2))
 					value = G_GetMapNumber(word2);
-					if (!value)
-						value = get_number(word2);
-				}
+				if (!value)
+					value = get_number(word2);
 
 				spmarathon_start = (INT16)value;
 			}
@@ -3636,12 +3630,10 @@ void readmaincfg(MYFILE *f)
 				// i.e., Level AB, Level FZ, etc.
 
 				// Convert to map number
-				if (!value)
-				{
+				if (G_IsValidMapName(word2))
 					value = G_GetMapNumber(word2);
-					if (!value)
-						value = get_number(word2);
-				}
+				if (!value)
+					value = get_number(word2);
 
 				sstage_start = (INT16)value;
 				sstage_end = (INT16)(sstage_start+7); // 7 special stages total plus one weirdo
@@ -3652,12 +3644,10 @@ void readmaincfg(MYFILE *f)
 				// i.e., Level AB, Level FZ, etc.
 
 				// Convert to map number
-				if (!value)
-				{
+				if (G_IsValidMapName(word2))
 					value = G_GetMapNumber(word2);
-					if (!value)
-						value = get_number(word2);
-				}
+				if (!value)
+					value = get_number(word2);
 
 				smpstage_start = (INT16)value;
 				smpstage_end = (INT16)(smpstage_start+6); // 7 special stages total
@@ -3748,12 +3738,10 @@ void readmaincfg(MYFILE *f)
 				// i.e., Level AB, Level FZ, etc.
 
 				// Convert to map number
-				if (!value)
-				{
+				if (G_IsValidMapName(word2))
 					value = G_GetMapNumber(word2);
-					if (!value)
-						value = get_number(word2);
-				}
+				if (!value)
+					value = get_number(word2);
 
 				titlemap = (INT16)value;
 				titlechanged = true;
@@ -3922,15 +3910,12 @@ void readmaincfg(MYFILE *f)
 				// i.e., Level AB, Level FZ, etc.
 
 				// Convert to map number
-				if (!value)
-				{
+				if (G_IsValidMapName(word2))
 					value = G_GetMapNumber(word2);
-					if (!value)
-						value = get_number(word2);
-				}
+				if (!value)
+					value = get_number(word2);
 
 				bootmap = (INT16)value;
-				//titlechanged = true;
 			}
 			else if (fastcmp(word, "STARTCHAR"))
 			{
@@ -3943,12 +3928,10 @@ void readmaincfg(MYFILE *f)
 				// i.e., Level AB, Level FZ, etc.
 
 				// Convert to map number
-				if (!value)
-				{
+				if (G_IsValidMapName(word2))
 					value = G_GetMapNumber(word2);
-					if (!value)
-						value = get_number(word2);
-				}
+				if (!value)
+					value = get_number(word2);
 
 				tutorialmap = (INT16)value;
 			}
