@@ -1033,11 +1033,23 @@ boolean R_IsPointInSector(sector_t *sector, fixed_t x, fixed_t y)
 
 		v1 = sector->lines[i]->v1;
 		v2 = sector->lines[i]->v2;
+
 		// do some correction in order to prevent points outside the line from being measured.
-		if (R_PointToDist2(v.x, v.y, v1->x, v1->y) > R_PointToDist2(v1->x, v1->y, v2->x, v2->y))
-		    v = *v2;
-		else if (R_PointToDist2(v.x, v.y, v2->x, v2->y) > R_PointToDist2(v1->x, v1->y, v2->x, v2->y))
-		    v = *v1;
+		if (abs(v1->x - v2->x) > abs(v1->y - v2->y))
+		{
+			if (v.x < v1->x && v.x < v2->x)
+				v = v1->x < v2->x ? *v1 : *v2;
+			else if (v.x > v1->x && v.x > v2->x)
+				v = v1->x > v2->x ? *v1 : *v2;
+		}
+		else
+		{
+			if (v.y < v1->y && v.y < v2->y)
+				v = v1->y < v2->y ? *v1 : *v2;
+			else if (v.y > v1->y && v.y > v2->y)
+				v = v1->y > v2->y ? *v1 : *v2;
+		}
+
 		dist = R_PointToDist2(v.x, v.y, x, y);
 		if (dist < closestdist)
 		{
