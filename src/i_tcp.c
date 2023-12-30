@@ -117,13 +117,9 @@
 	} mysockaddr_t;
 
 	#ifdef HAVE_MINIUPNPC
-		#ifdef STATIC_MINIUPNPC
-			#define STATICLIB
-		#endif
-		#include "miniupnpc/miniwget.h"
-		#include "miniupnpc/miniupnpc.h"
-		#include "miniupnpc/upnpcommands.h"
-		#undef STATICLIB
+		#include "miniwget.h"
+		#include "miniupnpc.h"
+		#include "upnpcommands.h"
 		static UINT8 UPNP_support = TRUE;
 	#endif // HAVE_MINIUPNC
 
@@ -279,8 +275,10 @@ static inline void I_InitUPnP(void)
 {
 	struct UPNPDev * devlist = NULL;
 	int upnp_error = -2;
+	int scope_id = 0;
+	int status_code = 0;
 	CONS_Printf(M_GetText("Looking for UPnP Internet Gateway Device\n"));
-	devlist = upnpDiscover(2000, NULL, NULL, 0, false, &upnp_error);
+	devlist = upnpDiscover(2000, NULL, NULL, 0, false, 2, &upnp_error);
 	if (devlist)
 	{
 		struct UPNPDev *dev = devlist;
@@ -300,7 +298,7 @@ static inline void I_InitUPnP(void)
 
 		UPNP_GetValidIGD(devlist, &urls, &data, lanaddr, sizeof(lanaddr));
 		CONS_Printf(M_GetText("Local LAN IP address: %s\n"), lanaddr);
-		descXML = miniwget(dev->descURL, &descXMLsize);
+		descXML = miniwget(dev->descURL, &descXMLsize, scope_id, &status_code);
 		if (descXML)
 		{
 			parserootdesc(descXML, descXMLsize, &data);
@@ -308,7 +306,7 @@ static inline void I_InitUPnP(void)
 			descXML = NULL;
 			memset(&urls, 0, sizeof(struct UPNPUrls));
 			memset(&data, 0, sizeof(struct IGDdatas));
-			GetUPNPUrls(&urls, &data, dev->descURL);
+			GetUPNPUrls(&urls, &data, dev->descURL, status_code);
 			I_AddExitFunc(I_ShutdownUPnP);
 		}
 		freeUPNPDevlist(devlist);
