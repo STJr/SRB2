@@ -37,7 +37,7 @@ patch_t *Patch_GetRotated(patch_t *patch, INT32 angle, boolean flip);
 patch_t *Patch_GetRotatedSprite(
 	spriteframe_t *sprite,
 	size_t frame, size_t spriteangle,
-	boolean flip, boolean adjustfeet,
+	boolean flip,
 	void *info, INT32 rotationangle);
 angle_t R_ModelRotationAngle(interpmobjstate_t *interp);
 angle_t R_SpriteRotationAngle(interpmobjstate_t *interp);

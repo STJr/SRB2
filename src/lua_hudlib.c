@@ -517,7 +517,7 @@ static int libd_getSpritePatch(lua_State *L)
 		INT32 rot = R_GetRollAngle(rollangle);
 
 		if (rot) {
-			patch_t *rotsprite = Patch_GetRotatedSprite(sprframe, frame, angle, sprframe->flip & (1<<angle), true, &spriteinfo[i], rot);
+			patch_t *rotsprite = Patch_GetRotatedSprite(sprframe, frame, angle, sprframe->flip & (1<<angle), &spriteinfo[i], rot);
 			LUA_PushUserdata(L, rotsprite, META_PATCH);
 			lua_pushboolean(L, false);
 			lua_pushboolean(L, true);
@@ -629,7 +629,7 @@ static int libd_getSprite2Patch(lua_State *L)
 		INT32 rot = R_GetRollAngle(rollangle);
 
 		if (rot) {
-			patch_t *rotsprite = Patch_GetRotatedSprite(sprframe, frame, angle, sprframe->flip & (1<<angle), true, &skins[i].sprinfo[j], rot);
+			patch_t *rotsprite = Patch_GetRotatedSprite(sprframe, frame, angle, sprframe->flip & (1<<angle), &skins[i].sprinfo[j], rot);
 			LUA_PushUserdata(L, rotsprite, META_PATCH);
 			lua_pushboolean(L, false);
 			lua_pushboolean(L, true);
@@ -1206,19 +1206,11 @@ static int libd_height(lua_State *L)
 	return 1;
 }
 
-static int libd_dupx(lua_State *L)
+static int libd_dup(lua_State *L)
 {
 	HUDONLY
-	lua_pushinteger(L, vid.dupx); // push integral scale (patch scale)
-	lua_pushfixed(L, vid.fdupx); // push fixed point scale (position scale)
-	return 2;
-}
-
-static int libd_dupy(lua_State *L)
-{
-	HUDONLY
-	lua_pushinteger(L, vid.dupy); // push integral scale (patch scale)
-	lua_pushfixed(L, vid.fdupy); // push fixed point scale (position scale)
+	lua_pushinteger(L, vid.dup); // push integral scale (patch scale)
+	lua_pushfixed(L, vid.fdup); // push fixed point scale (position scale)
 	return 2;
 }
 
@@ -1338,8 +1330,8 @@ static luaL_Reg lib_draw[] = {
 	// properties
 	{"width", libd_width},
 	{"height", libd_height},
-	{"dupx", libd_dupx},
-	{"dupy", libd_dupy},
+	{"dupx", libd_dup},
+	{"dupy", libd_dup},
 	{"renderer", libd_renderer},
 	{"localTransFlag", libd_getlocaltransflag},
 	{"userTransFlag", libd_getusertransflag},
@@ -1404,51 +1396,15 @@ int LUA_HudLib(lua_State *L)
 	luaL_register(L, NULL, lib_draw);
 	lib_draw_ref = luaL_ref(L, LUA_REGISTRYINDEX);
 
-	luaL_newmetatable(L, META_HUDINFO);
-		lua_pushcfunction(L, hudinfo_get);
-		lua_setfield(L, -2, "__index");
-
-		lua_pushcfunction(L, hudinfo_set);
-		lua_setfield(L, -2, "__newindex");
-
-		lua_pushcfunction(L, hudinfo_num);
-		lua_setfield(L, -2, "__len");
-	lua_pop(L,1);
-
-	lua_newuserdata(L, 0);
-		lua_createtable(L, 0, 2);
-			lua_pushcfunction(L, lib_getHudInfo);
-			lua_setfield(L, -2, "__index");
-
-			lua_pushcfunction(L, lib_hudinfolen);
-			lua_setfield(L, -2, "__len");
-		lua_setmetatable(L, -2);
-	lua_setglobal(L, "hudinfo");
-
-	luaL_newmetatable(L, META_COLORMAP);
-		lua_pushcfunction(L, colormap_get);
-		lua_setfield(L, -2, "__index");
-	lua_pop(L,1);
-
-	luaL_newmetatable(L, META_PATCH);
-		lua_pushcfunction(L, patch_get);
-		lua_setfield(L, -2, "__index");
-
-		lua_pushcfunction(L, patch_set);
-		lua_setfield(L, -2, "__newindex");
-	lua_pop(L,1);
+	LUA_RegisterUserdataMetatable(L, META_HUDINFO, hudinfo_get, hudinfo_set, hudinfo_num);
+	LUA_RegisterUserdataMetatable(L, META_COLORMAP, colormap_get, NULL, NULL);
+	LUA_RegisterUserdataMetatable(L, META_PATCH, patch_get, patch_set, NULL);
+	LUA_RegisterUserdataMetatable(L, META_CAMERA, camera_get, camera_set, NULL);
 
 	patch_fields_ref = Lua_CreateFieldTable(L, patch_opt);
-
-	luaL_newmetatable(L, META_CAMERA);
-		lua_pushcfunction(L, camera_get);
-		lua_setfield(L, -2, "__index");
-
-		lua_pushcfunction(L, camera_set);
-		lua_setfield(L, -2, "__newindex");
-	lua_pop(L,1);
-
 	camera_fields_ref = Lua_CreateFieldTable(L, camera_opt);
+
+	LUA_RegisterGlobalUserdata(L, "hudinfo", lib_getHudInfo, NULL, lib_hudinfolen);
 
 	luaL_register(L, "hud", lib_hud);
 	return 0;
