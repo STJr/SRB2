@@ -138,6 +138,7 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[NOLIGHT],     // SPR_UNKN
 
 	&lspr[NOLIGHT],     // SPR_THOK
+	&lspr[NOLIGHT],     // SPR_THKE
 	&lspr[SUPERSONIC_L],// SPR_PLAY
 
 	// Enemies
@@ -341,6 +342,7 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[NOLIGHT],     // SPR_BMCH
 	&lspr[NOLIGHT],     // SPR_SMCE
 	&lspr[NOLIGHT],     // SPR_BMCE
+	&lspr[NOLIGHT],     // SPR_BSPB
 	&lspr[NOLIGHT],     // SPR_YSPB
 	&lspr[NOLIGHT],     // SPR_RSPB
 	&lspr[REDBALL_L],   // SPR_SFBR
