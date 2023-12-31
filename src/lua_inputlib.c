@@ -20,6 +20,7 @@
 #include "lua_libs.h"
 
 boolean mousegrabbedbylua = true;
+boolean ignoregameinputs = false;
 
 ///////////////
 // FUNCTIONS //
@@ -145,6 +146,51 @@ static luaL_Reg lib[] = {
 	{NULL, NULL}
 };
 
+///////////////
+// VARIABLES //
+///////////////
+
+static int lib_get(lua_State *L)
+{
+	const char *field = luaL_checkstring(L, 2);
+
+	if (fastcmp(field, "mouse"))
+	{
+		LUA_PushUserdata(L, &mouse, META_MOUSE);
+		return 1;
+	}
+	else if (fastcmp(field, "mouse2"))
+	{
+		LUA_PushUserdata(L, &mouse2, META_MOUSE);
+		return 1;
+	}
+	else if (fastcmp(field, "ignoregameinputs"))
+	{
+		lua_pushboolean(L, ignoregameinputs);
+		return 1;
+	}
+	else
+	{
+		return 0;
+	}
+}
+
+static int lib_set(lua_State *L)
+{
+	const char *field = luaL_checkstring(L, 2);
+
+	if (fastcmp(field, "ignoregameinputs"))
+	{
+		ignoregameinputs = luaL_checkboolean(L, 3);
+	}
+	else
+	{
+		lua_rawset(L, 1);
+	}
+
+	return 0;
+}
+
 ///////////////////
 // gamekeydown[] //
 ///////////////////
@@ -239,32 +285,18 @@ static int mouse_num(lua_State *L)
 
 int LUA_InputLib(lua_State *L)
 {
-	lua_newuserdata(L, 0);
-		lua_createtable(L, 0, 2);
-			lua_pushcfunction(L, lib_getGameKeyDown);
-			lua_setfield(L, -2, "__index");
+	LUA_RegisterUserdataMetatable(L, META_KEYEVENT, keyevent_get, NULL, NULL);
+	LUA_RegisterUserdataMetatable(L, META_MOUSE, mouse_get, NULL, mouse_num);
 
-			lua_pushcfunction(L, lib_setGameKeyDown);
-			lua_setfield(L, -2, "__newindex");
-
-			lua_pushcfunction(L, lib_lenGameKeyDown);
-			lua_setfield(L, -2, "__len");
-		lua_setmetatable(L, -2);
-	lua_setglobal(L, "gamekeydown");
-
-	luaL_newmetatable(L, META_KEYEVENT);
-		lua_pushcfunction(L, keyevent_get);
-		lua_setfield(L, -2, "__index");
-	lua_pop(L, 1);
-
-	luaL_newmetatable(L, META_MOUSE);
-		lua_pushcfunction(L, mouse_get);
-		lua_setfield(L, -2, "__index");
-
-		lua_pushcfunction(L, mouse_num);
-		lua_setfield(L, -2, "__len");
-	lua_pop(L, 1);
-
+	// Register the library, then add __index and __newindex
+	// metamethods to it to allow global variables
 	luaL_register(L, "input", lib);
+		LUA_CreateAndSetMetatable(L, lib_get, lib_set, NULL, false);
+
+		LUA_CreateAndSetUserdataField(L, -1, "gamekeydown", lib_getGameKeyDown, lib_setGameKeyDown, lib_lenGameKeyDown, false);
+		// TODO: 2.3: Delete this alias (moved to input library)
+		LUA_RegisterGlobalUserdata(L, "gamekeydown", lib_getGameKeyDown, lib_setGameKeyDown, lib_lenGameKeyDown);
+	lua_pop(L, 1);
+
 	return 0;
 }

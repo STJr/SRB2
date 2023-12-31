@@ -10,6 +10,7 @@
 /src/Make*.cfg text=auto
 /src/CMakeLists.txt text=auto
 *.mk -whitespace text=auto
+/comptime.sh text eol=lf
 # Windows EOL
 *.cs -crlf -whitespace
 *.bat -crlf -whitespace

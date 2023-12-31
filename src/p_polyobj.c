@@ -1243,6 +1243,8 @@ boolean Polyobj_rotate(polyobj_t *po, angle_t delta, boolean turnplayers, boolea
 // Returns NULL if no such polyobject exists.
 polyobj_t *Polyobj_GetForNum(INT32 id)
 {
+	if (numPolyObjects == 0)
+		return NULL;
 	INT32 curidx  = PolyObjects[id % numPolyObjects].first;
 
 	while (curidx != numPolyObjects && PolyObjects[curidx].id != id)
