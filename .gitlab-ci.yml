@@ -485,7 +485,7 @@ Debian stable musl:
     - - |
           # make
           echo -e "\e[0Ksection_start:`date +%s`:make[collapsed=false]\r\e[0KCompiling SRB2"
-      - make --directory=src --keep-going CCACHE=1 ERRORMODE=1 NONX86=1 SDL=0 NOHW=1 NOZLIB=1 NOCURL=1 NOGME=1 NOOPENMPT=1 || make --directory=src --keep-going CCACHE=1 ERRORMODE=1 NONX86=1 SDL=0 NOHW=1 NOZLIB=1 NOCURL=1 NOGME=1 NOOPENMPT=1
+      - make --directory=src --keep-going CCACHE=1 ERRORMODE=1 NONX86=1 SDL=0 NOHW=1 NOZLIB=1 NOCURL=1 NOGME=1 NOOPENMPT=1 || make --directory=src --keep-going CCACHE=1 ERRORMODE=1 NONX86=1 SDL=0 NOHW=1 NOZLIB=1 NOCURL=1 NOGME=1 NOOPENMPT=1 NOUPNP=1
       - |
           # make
           echo -e "\e[0Ksection_end:`date +%s`:make\r\e[0K"
