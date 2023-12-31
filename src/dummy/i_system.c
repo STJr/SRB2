@@ -1,6 +1,7 @@
 #include "../doomdef.h"
 #include "../doomtype.h"
 #include "../i_system.h"
+#include "../i_time.h"
 
 FILE *logstream = NULL;
 
@@ -17,6 +18,11 @@ size_t I_GetFreeMem(size_t *total)
 void I_Sleep(UINT32 ms)
 {
 	(void)ms;
+}
+
+void I_SleepDuration(precise_t duration)
+{
+	(void)duration;
 }
 
 precise_t I_GetPreciseTime(void)

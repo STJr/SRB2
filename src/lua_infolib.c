@@ -318,6 +318,7 @@ static int PopPivotSubTable(spriteframepivot_t *pivot, lua_State *L, int stk, in
 					pivot[idx].x = (INT32)value;
 				else if (ikey == 2 || (key && fastcmp(key, "y")))
 					pivot[idx].y = (INT32)value;
+				// TODO: 2.3: Delete
 				else if (ikey == 3 || (key && fastcmp(key, "rotaxis")))
 					LUA_UsageWarning(L, "\"rotaxis\" is deprecated and will be removed.")
 				else if (ikey == -1 && (key != NULL))
@@ -571,6 +572,7 @@ static int framepivot_get(lua_State *L)
 		lua_pushinteger(L, framepivot->x);
 	else if (fastcmp("y", field))
 		lua_pushinteger(L, framepivot->y);
+	// TODO: 2.3: Delete
 	else if (fastcmp("rotaxis", field))
 	{
 		LUA_UsageWarning(L, "\"rotaxis\" is deprecated and will be removed.");
@@ -600,6 +602,7 @@ static int framepivot_set(lua_State *L)
 		framepivot->x = luaL_checkinteger(L, 3);
 	else if (fastcmp("y", field))
 		framepivot->y = luaL_checkinteger(L, 3);
+	// TODO: 2.3: delete
 	else if (fastcmp("rotaxis", field))
 		LUA_UsageWarning(L, "\"rotaxis\" is deprecated and will be removed.")
 	else
@@ -1914,206 +1917,28 @@ int LUA_InfoLib(lua_State *L)
 	lua_newtable(L);
 	lua_setfield(L, LUA_REGISTRYINDEX, LREG_ACTIONS);
 
-	luaL_newmetatable(L, META_STATE);
-		lua_pushcfunction(L, state_get);
-		lua_setfield(L, -2, "__index");
-
-		lua_pushcfunction(L, state_set);
-		lua_setfield(L, -2, "__newindex");
-
-		lua_pushcfunction(L, state_num);
-		lua_setfield(L, -2, "__len");
-	lua_pop(L, 1);
-
-	luaL_newmetatable(L, META_MOBJINFO);
-		lua_pushcfunction(L, mobjinfo_get);
-		lua_setfield(L, -2, "__index");
-
-		lua_pushcfunction(L, mobjinfo_set);
-		lua_setfield(L, -2, "__newindex");
-
-		lua_pushcfunction(L, mobjinfo_num);
-		lua_setfield(L, -2, "__len");
-	lua_pop(L, 1);
+	LUA_RegisterUserdataMetatable(L, META_STATE, state_get, state_set, state_num);
+	LUA_RegisterUserdataMetatable(L, META_MOBJINFO, mobjinfo_get, mobjinfo_set, mobjinfo_num);
+	LUA_RegisterUserdataMetatable(L, META_SKINCOLOR, skincolor_get, skincolor_set, skincolor_num);
+	LUA_RegisterUserdataMetatable(L, META_COLORRAMP, colorramp_get, colorramp_set, colorramp_len);
+	LUA_RegisterUserdataMetatable(L, META_SFXINFO, sfxinfo_get, sfxinfo_set, sfxinfo_num);
+	LUA_RegisterUserdataMetatable(L, META_SPRITEINFO, spriteinfo_get, spriteinfo_set, spriteinfo_num);
+	LUA_RegisterUserdataMetatable(L, META_PIVOTLIST, pivotlist_get, pivotlist_set, pivotlist_num);
+	LUA_RegisterUserdataMetatable(L, META_FRAMEPIVOT, framepivot_get, framepivot_set, framepivot_num);
+	LUA_RegisterUserdataMetatable(L, META_LUABANKS, lib_getluabanks, lib_setluabanks, lib_luabankslen);
 
 	mobjinfo_fields_ref = Lua_CreateFieldTable(L, mobjinfo_opt);
 
-	luaL_newmetatable(L, META_SKINCOLOR);
-		lua_pushcfunction(L, skincolor_get);
-		lua_setfield(L, -2, "__index");
-
-		lua_pushcfunction(L, skincolor_set);
-		lua_setfield(L, -2, "__newindex");
-
-		lua_pushcfunction(L, skincolor_num);
-		lua_setfield(L, -2, "__len");
-	lua_pop(L, 1);
-
-	luaL_newmetatable(L, META_COLORRAMP);
-		lua_pushcfunction(L, colorramp_get);
-		lua_setfield(L, -2, "__index");
-
-		lua_pushcfunction(L, colorramp_set);
-		lua_setfield(L, -2, "__newindex");
-
-		lua_pushcfunction(L, colorramp_len);
-		lua_setfield(L, -2, "__len");
-	lua_pop(L,1);
-
-	luaL_newmetatable(L, META_SFXINFO);
-		lua_pushcfunction(L, sfxinfo_get);
-		lua_setfield(L, -2, "__index");
-
-		lua_pushcfunction(L, sfxinfo_set);
-		lua_setfield(L, -2, "__newindex");
-
-		lua_pushcfunction(L, sfxinfo_num);
-		lua_setfield(L, -2, "__len");
-	lua_pop(L, 1);
-
-	luaL_newmetatable(L, META_SPRITEINFO);
-		lua_pushcfunction(L, spriteinfo_get);
-		lua_setfield(L, -2, "__index");
-
-		lua_pushcfunction(L, spriteinfo_set);
-		lua_setfield(L, -2, "__newindex");
-
-		lua_pushcfunction(L, spriteinfo_num);
-		lua_setfield(L, -2, "__len");
-	lua_pop(L, 1);
-
-	luaL_newmetatable(L, META_PIVOTLIST);
-		lua_pushcfunction(L, pivotlist_get);
-		lua_setfield(L, -2, "__index");
-
-		lua_pushcfunction(L, pivotlist_set);
-		lua_setfield(L, -2, "__newindex");
-
-		lua_pushcfunction(L, pivotlist_num);
-		lua_setfield(L, -2, "__len");
-	lua_pop(L, 1);
-
-	luaL_newmetatable(L, META_FRAMEPIVOT);
-		lua_pushcfunction(L, framepivot_get);
-		lua_setfield(L, -2, "__index");
-
-		lua_pushcfunction(L, framepivot_set);
-		lua_setfield(L, -2, "__newindex");
-
-		lua_pushcfunction(L, framepivot_num);
-		lua_setfield(L, -2, "__len");
-	lua_pop(L, 1);
-
-	lua_newuserdata(L, 0);
-		lua_createtable(L, 0, 2);
-			lua_pushcfunction(L, lib_getSprname);
-			lua_setfield(L, -2, "__index");
-
-			lua_pushcfunction(L, lib_sprnamelen);
-			lua_setfield(L, -2, "__len");
-		lua_setmetatable(L, -2);
-	lua_setglobal(L, "sprnames");
-
-	lua_newuserdata(L, 0);
-		lua_createtable(L, 0, 2);
-			lua_pushcfunction(L, lib_getSpr2name);
-			lua_setfield(L, -2, "__index");
-
-			lua_pushcfunction(L, lib_spr2namelen);
-			lua_setfield(L, -2, "__len");
-		lua_setmetatable(L, -2);
-	lua_setglobal(L, "spr2names");
-
-	lua_newuserdata(L, 0);
-		lua_createtable(L, 0, 2);
-			lua_pushcfunction(L, lib_getSpr2default);
-			lua_setfield(L, -2, "__index");
-
-			lua_pushcfunction(L, lib_setSpr2default);
-			lua_setfield(L, -2, "__newindex");
-
-			lua_pushcfunction(L, lib_spr2namelen);
-			lua_setfield(L, -2, "__len");
-		lua_setmetatable(L, -2);
-	lua_setglobal(L, "spr2defaults");
-
-	lua_newuserdata(L, 0);
-		lua_createtable(L, 0, 2);
-			lua_pushcfunction(L, lib_getState);
-			lua_setfield(L, -2, "__index");
-
-			lua_pushcfunction(L, lib_setState);
-			lua_setfield(L, -2, "__newindex");
-
-			lua_pushcfunction(L, lib_statelen);
-			lua_setfield(L, -2, "__len");
-		lua_setmetatable(L, -2);
-	lua_setglobal(L, "states");
-
-	lua_newuserdata(L, 0);
-		lua_createtable(L, 0, 2);
-			lua_pushcfunction(L, lib_getMobjInfo);
-			lua_setfield(L, -2, "__index");
-
-			lua_pushcfunction(L, lib_setMobjInfo);
-			lua_setfield(L, -2, "__newindex");
-
-			lua_pushcfunction(L, lib_mobjinfolen);
-			lua_setfield(L, -2, "__len");
-		lua_setmetatable(L, -2);
-	lua_setglobal(L, "mobjinfo");
-
-	lua_newuserdata(L, 0);
-		lua_createtable(L, 0, 2);
-			lua_pushcfunction(L, lib_getSkinColor);
-			lua_setfield(L, -2, "__index");
-
-			lua_pushcfunction(L, lib_setSkinColor);
-			lua_setfield(L, -2, "__newindex");
-
-			lua_pushcfunction(L, lib_skincolorslen);
-			lua_setfield(L, -2, "__len");
-		lua_setmetatable(L, -2);
-	lua_setglobal(L, "skincolors");
-
-	lua_newuserdata(L, 0);
-		lua_createtable(L, 0, 2);
-			lua_pushcfunction(L, lib_getSfxInfo);
-			lua_setfield(L, -2, "__index");
-
-			lua_pushcfunction(L, lib_setSfxInfo);
-			lua_setfield(L, -2, "__newindex");
-
-			lua_pushcfunction(L, lib_sfxlen);
-			lua_setfield(L, -2, "__len");
-		lua_setmetatable(L, -2);
-	lua_pushvalue(L, -1);
-	lua_setglobal(L, "S_sfx");
-	lua_setglobal(L, "sfxinfo");
-
-	lua_newuserdata(L, 0);
-		lua_createtable(L, 0, 2);
-			lua_pushcfunction(L, lib_getSpriteInfo);
-			lua_setfield(L, -2, "__index");
-
-			lua_pushcfunction(L, lib_setSpriteInfo);
-			lua_setfield(L, -2, "__newindex");
-
-			lua_pushcfunction(L, lib_spriteinfolen);
-			lua_setfield(L, -2, "__len");
-		lua_setmetatable(L, -2);
-	lua_setglobal(L, "spriteinfo");
-
-	luaL_newmetatable(L, META_LUABANKS);
-		lua_pushcfunction(L, lib_getluabanks);
-		lua_setfield(L, -2, "__index");
-
-		lua_pushcfunction(L, lib_setluabanks);
-		lua_setfield(L, -2, "__newindex");
-
-		lua_pushcfunction(L, lib_luabankslen);
-		lua_setfield(L, -2, "__len");
-	lua_pop(L, 1);
+	LUA_RegisterGlobalUserdata(L, "sprnames", lib_getSprname, NULL, lib_sprnamelen);
+	LUA_RegisterGlobalUserdata(L, "spr2names", lib_getSpr2name, NULL, lib_spr2namelen);
+	LUA_RegisterGlobalUserdata(L, "spr2defaults", lib_getSpr2default, lib_setSpr2default, lib_spr2namelen);
+	LUA_RegisterGlobalUserdata(L, "states", lib_getState, lib_setState, lib_statelen);
+	LUA_RegisterGlobalUserdata(L, "mobjinfo", lib_getMobjInfo, lib_setMobjInfo, lib_mobjinfolen);
+	LUA_RegisterGlobalUserdata(L, "skincolors", lib_getSkinColor, lib_setSkinColor, lib_skincolorslen);
+	LUA_RegisterGlobalUserdata(L, "spriteinfo", lib_getSpriteInfo, lib_setSpriteInfo, lib_spriteinfolen);
+	LUA_RegisterGlobalUserdata(L, "sfxinfo", lib_getSfxInfo, lib_setSfxInfo, lib_sfxlen);
+	// TODO: 2.3: Delete this alias
+	LUA_RegisterGlobalUserdata(L, "S_sfx", lib_getSfxInfo, lib_setSfxInfo, lib_sfxlen);
 
 	return 0;
 }

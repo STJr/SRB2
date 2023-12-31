@@ -59,19 +59,19 @@ typedef struct viddef_s
 	} u;
 	INT32 recalc; // if true, recalc vid-based stuff
 	UINT8 *direct; // linear frame buffer, or vga base mem.
-	INT32 dupx, dupy; // scale 1, 2, 3 value for menus & overlays
-	INT32/*fixed_t*/ fdupx, fdupy; // same as dupx, dupy, but exact value when aspect ratio isn't 320/200
+	INT32 dup; // scale 1, 2, 3 value for menus & overlays
+	INT32/*fixed_t*/ fdup; // same as dup, but exact value when aspect ratio isn't 320/200
 	INT32 bpp; // BYTES per pixel: 1 = 256color, 2 = highcolor
 
 	INT32 baseratio; // Used to get the correct value for lighting walls
 
 	// for Win32 version
 	DNWH WndParent; // handle of the application's window
-	UINT8 smalldupx, smalldupy; // factor for a little bit of scaling
-	UINT8 meddupx, meddupy; // factor for moderate, but not full, scaling
+	UINT8 smalldup; // factor for a little bit of scaling
+	UINT8 meddup; // factor for moderate, but not full, scaling
 #ifdef HWRENDER
-	INT32/*fixed_t*/ fsmalldupx, fsmalldupy;
-	INT32/*fixed_t*/ fmeddupx, fmeddupy;
+	INT32/*fixed_t*/ fsmalldup;
+	INT32/*fixed_t*/ fmeddup;
 	INT32 glstate;
 #endif
 } viddef_t;
@@ -171,17 +171,6 @@ enum
 extern void (*spanfunc)(void);
 extern void (*spanfuncs[SPANDRAWFUNC_MAX])(void);
 extern void (*spanfuncs_npo2[SPANDRAWFUNC_MAX])(void);
-
-// -----
-// CPUID
-// -----
-extern boolean R_ASM;
-extern boolean R_486;
-extern boolean R_586;
-extern boolean R_MMX;
-extern boolean R_3DNow;
-extern boolean R_MMXExt;
-extern boolean R_SSE2;
 
 // ----------------
 // screen variables

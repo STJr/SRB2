@@ -76,12 +76,12 @@ static boolean mobj_hook_available(int hook_type, mobjtype_t mobj_type)
 		);
 }
 
-static int hook_in_list
+static unsigned hook_in_list
 (
 		const char * const         name,
 		const char * const * const list
 ){
-	int type;
+	unsigned type;
 
 	for (type = 0; list[type] != NULL; ++type)
 	{
@@ -200,7 +200,7 @@ static void add_hook_ref(lua_State *L, int idx)
 static int lib_addHook(lua_State *L)
 {
 	const char * name;
-	int type;
+	unsigned type;
 
 	if (!lua_lumploading)
 		return luaL_error(L, "This function cannot be called from within a hook or coroutine!");
