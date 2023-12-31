@@ -14,7 +14,11 @@ opts+=-I/usr/X11R6/include
 libs+=-L/usr/X11R6/lib
 endif
 
+ifndef DEDICATED
+ifndef DUMMY
 SDL?=1
+endif
+endif
 
 # In common usage.
 ifdef LINUX
