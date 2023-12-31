@@ -185,7 +185,7 @@ struct thread_s
 static thread_t *thread_list;
 static CRITICAL_SECTION thread_lock;
 
-static DWORD HandleThread(void *data)
+static DWORD __stdcall HandleThread(void *data)
 {
 	thread_t *thread = data;
 	thread->func(thread->userdata);
