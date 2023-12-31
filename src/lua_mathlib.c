@@ -125,6 +125,7 @@ static int lib_fixeddiv(lua_State *L)
 	return 1;
 }
 
+// TODO: 2.3: Delete
 static int lib_fixedrem(lua_State *L)
 {
 	LUA_Deprecated(L, "FixedRem(a, b)", "a % b");

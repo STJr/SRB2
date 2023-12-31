@@ -676,12 +676,11 @@ void R_DrawTiltedSpan_8(void)
 	double endz, endu, endv;
 	UINT32 stepu, stepv;
 
-	iz = ds_szp->z + ds_szp->y*(centery-ds_y) + ds_szp->x*(ds_x1-centerx);
+	iz = ds_sz.z + ds_sz.y*(centery-ds_y) + ds_sz.x*(ds_x1-centerx);
+	uz = ds_su.z + ds_su.y*(centery-ds_y) + ds_su.x*(ds_x1-centerx);
+	vz = ds_sv.z + ds_sv.y*(centery-ds_y) + ds_sv.x*(ds_x1-centerx);
 
-	CALC_SLOPE_LIGHT
-
-	uz = ds_sup->z + ds_sup->y*(centery-ds_y) + ds_sup->x*(ds_x1-centerx);
-	vz = ds_svp->z + ds_svp->y*(centery-ds_y) + ds_svp->x*(ds_x1-centerx);
+	R_CalcSlopeLight();
 
 	dest = ylookup[ds_y] + columnofs[ds_x1];
 	source = ds_source;
@@ -700,18 +699,18 @@ void R_DrawTiltedSpan_8(void)
 
 		*dest = colormap[source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)]];
 		dest++;
-		iz += ds_szp->x;
-		uz += ds_sup->x;
-		vz += ds_svp->x;
+		iz += ds_sz.x;
+		uz += ds_su.x;
+		vz += ds_sv.x;
 	} while (--width >= 0);
 #else
 	startz = 1.f/iz;
 	startu = uz*startz;
 	startv = vz*startz;
 
-	izstep = ds_szp->x * SPANSIZE;
-	uzstep = ds_sup->x * SPANSIZE;
-	vzstep = ds_svp->x * SPANSIZE;
+	izstep = ds_sz.x * SPANSIZE;
+	uzstep = ds_su.x * SPANSIZE;
+	vzstep = ds_sv.x * SPANSIZE;
 	//x1 = 0;
 	width++;
 
@@ -753,9 +752,9 @@ void R_DrawTiltedSpan_8(void)
 		else
 		{
 			double left = width;
-			iz += ds_szp->x * left;
-			uz += ds_sup->x * left;
-			vz += ds_svp->x * left;
+			iz += ds_sz.x * left;
+			uz += ds_su.x * left;
+			vz += ds_sv.x * left;
 
 			endz = 1.f/iz;
 			endu = uz*endz;
@@ -799,12 +798,11 @@ void R_DrawTiltedTranslucentSpan_8(void)
 	double endz, endu, endv;
 	UINT32 stepu, stepv;
 
-	iz = ds_szp->z + ds_szp->y*(centery-ds_y) + ds_szp->x*(ds_x1-centerx);
+	iz = ds_sz.z + ds_sz.y*(centery-ds_y) + ds_sz.x*(ds_x1-centerx);
+	uz = ds_su.z + ds_su.y*(centery-ds_y) + ds_su.x*(ds_x1-centerx);
+	vz = ds_sv.z + ds_sv.y*(centery-ds_y) + ds_sv.x*(ds_x1-centerx);
 
-	CALC_SLOPE_LIGHT
-
-	uz = ds_sup->z + ds_sup->y*(centery-ds_y) + ds_sup->x*(ds_x1-centerx);
-	vz = ds_svp->z + ds_svp->y*(centery-ds_y) + ds_svp->x*(ds_x1-centerx);
+	R_CalcSlopeLight();
 
 	dest = ylookup[ds_y] + columnofs[ds_x1];
 	source = ds_source;
@@ -822,18 +820,18 @@ void R_DrawTiltedTranslucentSpan_8(void)
 		colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
 		*dest = *(ds_transmap + (colormap[source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)]] << 8) + *dest);
 		dest++;
-		iz += ds_szp->x;
-		uz += ds_sup->x;
-		vz += ds_svp->x;
+		iz += ds_sz.x;
+		uz += ds_su.x;
+		vz += ds_sv.x;
 	} while (--width >= 0);
 #else
 	startz = 1.f/iz;
 	startu = uz*startz;
 	startv = vz*startz;
 
-	izstep = ds_szp->x * SPANSIZE;
-	uzstep = ds_sup->x * SPANSIZE;
-	vzstep = ds_svp->x * SPANSIZE;
+	izstep = ds_sz.x * SPANSIZE;
+	uzstep = ds_su.x * SPANSIZE;
+	vzstep = ds_sv.x * SPANSIZE;
 	//x1 = 0;
 	width++;
 
@@ -875,9 +873,9 @@ void R_DrawTiltedTranslucentSpan_8(void)
 		else
 		{
 			double left = width;
-			iz += ds_szp->x * left;
-			uz += ds_sup->x * left;
-			vz += ds_svp->x * left;
+			iz += ds_sz.x * left;
+			uz += ds_su.x * left;
+			vz += ds_sv.x * left;
 
 			endz = 1.f/iz;
 			endu = uz*endz;
@@ -922,12 +920,11 @@ void R_DrawTiltedWaterSpan_8(void)
 	double endz, endu, endv;
 	UINT32 stepu, stepv;
 
-	iz = ds_szp->z + ds_szp->y*(centery-ds_y) + ds_szp->x*(ds_x1-centerx);
+	iz = ds_sz.z + ds_sz.y*(centery-ds_y) + ds_sz.x*(ds_x1-centerx);
+	uz = ds_su.z + ds_su.y*(centery-ds_y) + ds_su.x*(ds_x1-centerx);
+	vz = ds_sv.z + ds_sv.y*(centery-ds_y) + ds_sv.x*(ds_x1-centerx);
 
-	CALC_SLOPE_LIGHT
-
-	uz = ds_sup->z + ds_sup->y*(centery-ds_y) + ds_sup->x*(ds_x1-centerx);
-	vz = ds_svp->z + ds_svp->y*(centery-ds_y) + ds_svp->x*(ds_x1-centerx);
+	R_CalcSlopeLight();
 
 	dest = ylookup[ds_y] + columnofs[ds_x1];
 	dsrc = screens[1] + (ds_y+ds_bgofs)*vid.width + ds_x1;
@@ -946,18 +943,18 @@ void R_DrawTiltedWaterSpan_8(void)
 		colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
 		*dest = *(ds_transmap + (colormap[source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)]] << 8) + *dsrc++);
 		dest++;
-		iz += ds_szp->x;
-		uz += ds_sup->x;
-		vz += ds_svp->x;
+		iz += ds_sz.x;
+		uz += ds_su.x;
+		vz += ds_sv.x;
 	} while (--width >= 0);
 #else
 	startz = 1.f/iz;
 	startu = uz*startz;
 	startv = vz*startz;
 
-	izstep = ds_szp->x * SPANSIZE;
-	uzstep = ds_sup->x * SPANSIZE;
-	vzstep = ds_svp->x * SPANSIZE;
+	izstep = ds_sz.x * SPANSIZE;
+	uzstep = ds_su.x * SPANSIZE;
+	vzstep = ds_sv.x * SPANSIZE;
 	//x1 = 0;
 	width++;
 
@@ -999,9 +996,9 @@ void R_DrawTiltedWaterSpan_8(void)
 		else
 		{
 			double left = width;
-			iz += ds_szp->x * left;
-			uz += ds_sup->x * left;
-			vz += ds_svp->x * left;
+			iz += ds_sz.x * left;
+			uz += ds_su.x * left;
+			vz += ds_sv.x * left;
 
 			endz = 1.f/iz;
 			endu = uz*endz;
@@ -1044,12 +1041,11 @@ void R_DrawTiltedSplat_8(void)
 	double endz, endu, endv;
 	UINT32 stepu, stepv;
 
-	iz = ds_szp->z + ds_szp->y*(centery-ds_y) + ds_szp->x*(ds_x1-centerx);
+	iz = ds_sz.z + ds_sz.y*(centery-ds_y) + ds_sz.x*(ds_x1-centerx);
+	uz = ds_su.z + ds_su.y*(centery-ds_y) + ds_su.x*(ds_x1-centerx);
+	vz = ds_sv.z + ds_sv.y*(centery-ds_y) + ds_sv.x*(ds_x1-centerx);
 
-	CALC_SLOPE_LIGHT
-
-	uz = ds_sup->z + ds_sup->y*(centery-ds_y) + ds_sup->x*(ds_x1-centerx);
-	vz = ds_svp->z + ds_svp->y*(centery-ds_y) + ds_svp->x*(ds_x1-centerx);
+	R_CalcSlopeLight();
 
 	dest = ylookup[ds_y] + columnofs[ds_x1];
 	source = ds_source;
@@ -1071,18 +1067,18 @@ void R_DrawTiltedSplat_8(void)
 			*dest = colormap[val];
 
 		dest++;
-		iz += ds_szp->x;
-		uz += ds_sup->x;
-		vz += ds_svp->x;
+		iz += ds_sz.x;
+		uz += ds_su.x;
+		vz += ds_sv.x;
 	} while (--width >= 0);
 #else
 	startz = 1.f/iz;
 	startu = uz*startz;
 	startv = vz*startz;
 
-	izstep = ds_szp->x * SPANSIZE;
-	uzstep = ds_sup->x * SPANSIZE;
-	vzstep = ds_svp->x * SPANSIZE;
+	izstep = ds_sz.x * SPANSIZE;
+	uzstep = ds_su.x * SPANSIZE;
+	vzstep = ds_sv.x * SPANSIZE;
 	//x1 = 0;
 	width++;
 
@@ -1128,9 +1124,9 @@ void R_DrawTiltedSplat_8(void)
 		else
 		{
 			double left = width;
-			iz += ds_szp->x * left;
-			uz += ds_sup->x * left;
-			vz += ds_svp->x * left;
+			iz += ds_sz.x * left;
+			uz += ds_su.x * left;
+			vz += ds_sv.x * left;
 
 			endz = 1.f/iz;
 			endu = uz*endz;
@@ -1613,9 +1609,9 @@ void R_DrawTiltedFloorSprite_8(void)
 	double endz, endu, endv;
 	UINT32 stepu, stepv;
 
-	iz = ds_szp->z + ds_szp->y*(centery-ds_y) + ds_szp->x*(ds_x1-centerx);
-	uz = ds_sup->z + ds_sup->y*(centery-ds_y) + ds_sup->x*(ds_x1-centerx);
-	vz = ds_svp->z + ds_svp->y*(centery-ds_y) + ds_svp->x*(ds_x1-centerx);
+	iz = ds_sz.z + ds_sz.y*(centery-ds_y) + ds_sz.x*(ds_x1-centerx);
+	uz = ds_su.z + ds_su.y*(centery-ds_y) + ds_su.x*(ds_x1-centerx);
+	vz = ds_sv.z + ds_sv.y*(centery-ds_y) + ds_sv.x*(ds_x1-centerx);
 
 	dest = ylookup[ds_y] + columnofs[ds_x1];
 	source = (UINT16 *)ds_source;
@@ -1626,9 +1622,9 @@ void R_DrawTiltedFloorSprite_8(void)
 	startu = uz*startz;
 	startv = vz*startz;
 
-	izstep = ds_szp->x * SPANSIZE;
-	uzstep = ds_sup->x * SPANSIZE;
-	vzstep = ds_svp->x * SPANSIZE;
+	izstep = ds_sz.x * SPANSIZE;
+	uzstep = ds_su.x * SPANSIZE;
+	vzstep = ds_sv.x * SPANSIZE;
 	//x1 = 0;
 	width++;
 
@@ -1673,9 +1669,9 @@ void R_DrawTiltedFloorSprite_8(void)
 		else
 		{
 			double left = width;
-			iz += ds_szp->x * left;
-			uz += ds_sup->x * left;
-			vz += ds_svp->x * left;
+			iz += ds_sz.x * left;
+			uz += ds_su.x * left;
+			vz += ds_sv.x * left;
 
 			endz = 1.f/iz;
 			endu = uz*endz;
@@ -1722,9 +1718,9 @@ void R_DrawTiltedTranslucentFloorSprite_8(void)
 	double endz, endu, endv;
 	UINT32 stepu, stepv;
 
-	iz = ds_szp->z + ds_szp->y*(centery-ds_y) + ds_szp->x*(ds_x1-centerx);
-	uz = ds_sup->z + ds_sup->y*(centery-ds_y) + ds_sup->x*(ds_x1-centerx);
-	vz = ds_svp->z + ds_svp->y*(centery-ds_y) + ds_svp->x*(ds_x1-centerx);
+	iz = ds_sz.z + ds_sz.y*(centery-ds_y) + ds_sz.x*(ds_x1-centerx);
+	uz = ds_su.z + ds_su.y*(centery-ds_y) + ds_su.x*(ds_x1-centerx);
+	vz = ds_sv.z + ds_sv.y*(centery-ds_y) + ds_sv.x*(ds_x1-centerx);
 
 	dest = ylookup[ds_y] + columnofs[ds_x1];
 	source = (UINT16 *)ds_source;
@@ -1735,9 +1731,9 @@ void R_DrawTiltedTranslucentFloorSprite_8(void)
 	startu = uz*startz;
 	startv = vz*startz;
 
-	izstep = ds_szp->x * SPANSIZE;
-	uzstep = ds_sup->x * SPANSIZE;
-	vzstep = ds_svp->x * SPANSIZE;
+	izstep = ds_sz.x * SPANSIZE;
+	uzstep = ds_su.x * SPANSIZE;
+	vzstep = ds_sv.x * SPANSIZE;
 	//x1 = 0;
 	width++;
 
@@ -1782,9 +1778,9 @@ void R_DrawTiltedTranslucentFloorSprite_8(void)
 		else
 		{
 			double left = width;
-			iz += ds_szp->x * left;
-			uz += ds_sup->x * left;
-			vz += ds_svp->x * left;
+			iz += ds_sz.x * left;
+			uz += ds_su.x * left;
+			vz += ds_sv.x * left;
 
 			endz = 1.f/iz;
 			endu = uz*endz;
@@ -2013,9 +2009,7 @@ void R_DrawTiltedFogSpan_8(void)
 
 	UINT8 *dest = ylookup[ds_y] + columnofs[ds_x1];
 
-	double iz = ds_szp->z + ds_szp->y*(centery-ds_y) + ds_szp->x*(ds_x1-centerx);
-
-	CALC_SLOPE_LIGHT
+	R_CalcSlopeLight();
 
 	do
 	{
@@ -2067,9 +2061,7 @@ void R_DrawTiltedSolidColorSpan_8(void)
 	UINT8 source = ds_source[0];
 	UINT8 *dest = ylookup[ds_y] + columnofs[ds_x1];
 
-	double iz = ds_szp->z + ds_szp->y*(centery-ds_y) + ds_szp->x*(ds_x1-centerx);
-
-	CALC_SLOPE_LIGHT
+	R_CalcSlopeLight();
 
 	do
 	{
@@ -2088,9 +2080,7 @@ void R_DrawTiltedTransSolidColorSpan_8(void)
 	UINT8 source = ds_source[0];
 	UINT8 *dest = ylookup[ds_y] + columnofs[ds_x1];
 
-	double iz = ds_szp->z + ds_szp->y*(centery-ds_y) + ds_szp->x*(ds_x1-centerx);
-
-	CALC_SLOPE_LIGHT
+	R_CalcSlopeLight();
 
 	do
 	{
@@ -2131,9 +2121,7 @@ void R_DrawTiltedWaterSolidColorSpan_8(void)
 	UINT8 *dest = ylookup[ds_y] + columnofs[ds_x1];
 	UINT8 *dsrc = screens[1] + (ds_y+ds_bgofs)*vid.width + ds_x1;
 
-	double iz = ds_szp->z + ds_szp->y*(centery-ds_y) + ds_szp->x*(ds_x1-centerx);
-
-	CALC_SLOPE_LIGHT
+	R_CalcSlopeLight();
 
 	do
 	{
