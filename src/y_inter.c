@@ -15,7 +15,7 @@
 #include "f_finale.h"
 #include "g_game.h"
 #include "hu_stuff.h"
-#include "i_net.h"
+#include "netcode/i_net.h"
 #include "i_video.h"
 #include "p_tick.h"
 #include "r_defs.h"
@@ -536,7 +536,7 @@ void Y_IntermissionDrawer(void)
 
 		if (animatetic && (tic_t)intertic >= animatetic)
 		{
-			const INT32 scradjust = (vid.width/vid.dupx)>>3; // 40 for BASEVIDWIDTH
+			const INT32 scradjust = (vid.width/vid.dup)>>3; // 40 for BASEVIDWIDTH
 			INT32 animatetimer = (intertic - animatetic);
 			if (animatetimer <= 16)
 			{
@@ -579,9 +579,9 @@ void Y_IntermissionDrawer(void)
 		{
 			if (LUA_HudEnabled(hud_intermissiontitletext))
 			{
-				const char *ringtext = "\x82" "50 rings, no shield";
-				const char *tut1text = "\x82" "press " "\x80" "spin";
-				const char *tut2text = "\x82" "mid-" "\x80" "jump";
+				const char *ringtext = "\x82" "get 50 rings then";
+				const char *tut1text = "\x82" "press " "\x80" "shield";
+				const char *tut2text = "\x82" "to " "\x80" "transform";
 				ttheight = 8;
 				V_DrawLevelTitle(data.spec.passedx1 + xoffset1, ttheight, 0, data.spec.passed1);
 				ttheight += V_LevelNameHeight(data.spec.passed3) + 2;
@@ -687,7 +687,7 @@ void Y_IntermissionDrawer(void)
 
 				if (intertic > 1)
 				{
-					if (stagefailed && data.spec.emeraldy < (vid.height/vid.dupy)+16)
+					if (stagefailed && data.spec.emeraldy < (vid.height/vid.dup)+16)
 					{
 						emeraldx += intertic - 6;
 					}
@@ -1163,7 +1163,7 @@ void Y_Ticker(void)
 			}
 			else
 			{
-				if (data.spec.emeraldy < (vid.height/vid.dupy)+16)
+				if (data.spec.emeraldy < (vid.height/vid.dup)+16)
 				{
 					data.spec.emeraldy += (++data.spec.emeraldmomy);
 				}

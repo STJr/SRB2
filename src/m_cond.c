@@ -509,7 +509,7 @@ UINT8 M_CampaignWarpIsCheat(INT32 gt, INT32 mapnum, gamedata_t *data)
 		return true;
 	}
 
-	if (mapheaderinfo[mapnum-1]->menuflags & LF2_HIDEINMENU)
+	if (!mapheaderinfo[mapnum-1] || mapheaderinfo[mapnum-1]->menuflags & LF2_HIDEINMENU)
 	{
 		// You're never allowed to warp to this level.
 		return true;

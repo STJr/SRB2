@@ -15,13 +15,14 @@
 #include <time.h>
 #endif
 
-#include "doomstat.h"
-#include "doomdef.h"
-#include "command.h"
-#include "i_threads.h"
+#include "../doomstat.h"
+#include "../doomdef.h"
+#include "../command.h"
+#include "../i_threads.h"
 #include "mserv.h"
-#include "m_menu.h"
-#include "z_zone.h"
+#include "client_connection.h"
+#include "../m_menu.h"
+#include "../z_zone.h"
 
 #ifdef MASTERSERVER
 
@@ -45,9 +46,7 @@ static I_cond  MSCond;
 #  define Unlock_state()
 #endif/*HAVE_THREADS*/
 
-#ifndef NONET
 static void Command_Listserv_f(void);
-#endif
 
 #endif/*MASTERSERVER*/
 
@@ -61,7 +60,7 @@ static CV_PossibleValue_t masterserver_update_rate_cons_t[] = {
 	{0,NULL}
 };
 
-consvar_t cv_masterserver = CVAR_INIT ("masterserver", "https://mb.srb2.org/MS/0", CV_SAVE|CV_CALL, NULL, MasterServer_OnChange);
+consvar_t cv_masterserver = CVAR_INIT ("masterserver", "https://ds.ms.srb2.org/MS/0", CV_SAVE|CV_CALL, NULL, MasterServer_OnChange);
 consvar_t cv_servername = CVAR_INIT ("servername", "SRB2 server", CV_SAVE|CV_NETVAR|CV_CALL|CV_NOINIT|CV_ALLOWLUA, NULL, Update_parameters);
 
 consvar_t cv_masterserver_update_rate = CVAR_INIT ("masterserver_update_rate", "15", CV_SAVE|CV_CALL|CV_NOINIT, masterserver_update_rate_cons_t, Update_parameters);
@@ -89,7 +88,6 @@ msg_rooms_t room_list[NUM_LIST_ROOMS+1]; // +1 for easy test
   */
 void AddMServCommands(void)
 {
-#ifndef NONET
 	CV_RegisterVar(&cv_masterserver);
 	CV_RegisterVar(&cv_masterserver_update_rate);
 	CV_RegisterVar(&cv_masterserver_timeout);
@@ -99,7 +97,6 @@ void AddMServCommands(void)
 #ifdef MASTERSERVER
 	COM_AddCommand("listserv", Command_Listserv_f, 0);
 	COM_AddCommand("masterserver_update", Update_parameters, COM_LUA); // allows people to updates manually in case you were delisted by accident
-#endif
 #endif
 }
 
@@ -189,7 +186,6 @@ void GetMODVersion_Console(void)
 }
 #endif
 
-#ifndef NONET
 /** Gets a list of game servers. Called from console.
   */
 static void Command_Listserv_f(void)
@@ -200,7 +196,6 @@ static void Command_Listserv_f(void)
 		HMS_list_servers();
 	}
 }
-#endif
 
 static void
 Finish_registration (void)
@@ -540,6 +535,13 @@ static void MasterServer_OnChange(void)
 	if (
 			! cv_masterserver.changed &&
 			strcmp(cv_masterserver.string, "ms.srb2.org:28900") == 0
+	){
+		CV_StealthSet(&cv_masterserver, cv_masterserver.defaultvalue);
+	}
+
+	if (
+			! cv_masterserver.changed &&
+			strcmp(cv_masterserver.string, "https://mb.srb2.org/MS/0") == 0
 	){
 		CV_StealthSet(&cv_masterserver, cv_masterserver.defaultvalue);
 	}
