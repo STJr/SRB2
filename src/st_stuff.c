@@ -516,10 +516,10 @@ static void ST_drawDebugInfo(void)
 
 #define VFLAGS V_MONOSPACE|V_SNAPTOTOP|V_SNAPTORIGHT
 
-	if ((moviemode == MM_GIF && cv_gif_downscale.value) || vid.dupx == 1)
+	if ((moviemode == MM_GIF && cv_gif_downscale.value) || vid.dup == 1)
 	{
 		textfunc = V_DrawRightAlignedString;
-		lowh = ((vid.height/vid.dupy) - 16);
+		lowh = ((vid.height/vid.dup) - 16);
 	}
 	else
 	{
