@@ -19,7 +19,7 @@ EOF
 versiongit() {
 	gitbranch="$(git rev-parse --abbrev-ref HEAD)"
 	gitversion="$(git rev-parse HEAD | cut -c -8)"
-	gitsubject="$(git log -1 --format=%s)"
+	gitsubject="$(git log -1 --format=%f)"
 	version "$gitbranch" "$gitversion" "$gitsubject";
 	exit 0
 }
