@@ -9,6 +9,10 @@ ifdef FREEBSD
 libs+=-lpthread
 endif
 
+ifdef MINGW
+libs+=-mconsole
+endif
+
 ifndef NOTHREADS
 opts+=-DHAVE_THREADS
 sources+=dedicated/i_threads.c
