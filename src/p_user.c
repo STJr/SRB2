@@ -2122,7 +2122,19 @@ void P_SpawnThokMobj(player_t *player)
 
 	if (type == MT_GHOST)
 		mobj = P_SpawnGhostMobj(player->mo); // virtually does everything here for us
-	else
+	else if (type == MT_THOKEFFECT) // Thok boom effect for Sonic
+	{
+		mobj = P_SpawnMobjFromMobj(player->mo, 0, 0, FixedDiv(player->mo->height, player->mo->scale)*3/4, type);
+		mobj->angle = player->mo->angle + ANGLE_90;
+		mobj->fuse = 7;
+		mobj->scale = player->mo->scale / 3;
+		mobj->destscale = 10 * player->mo->scale;
+		mobj->colorized = true;
+		mobj->color = player->mo->color;
+		mobj->momx = -player->mo->momx / 2;
+		mobj->momy = -player->mo->momy / 2;
+	}
+	else // Normal thok object handling
 	{
 		if (player->mo->eflags & MFE_VERTICALFLIP)
 			zheight = player->mo->z + player->mo->height + FixedDiv(P_GetPlayerHeight(player) - player->mo->height, 3*FRACUNIT) - FixedMul(mobjinfo[type].height, player->mo->scale);
