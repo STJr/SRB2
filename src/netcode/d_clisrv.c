@@ -116,6 +116,8 @@ consvar_t cv_playbackspeed = CVAR_INIT ("playbackspeed", "1", 0, playbackspeed_c
 consvar_t cv_idletime = CVAR_INIT ("idletime", "0", CV_SAVE, CV_Unsigned, NULL);
 consvar_t cv_dedicatedidletime = CVAR_INIT ("dedicatedidletime", "10", CV_SAVE, CV_Unsigned, NULL);
 
+static INT32 D_NumNodes(boolean skiphost);
+
 void ResetNode(INT32 node)
 {
 	memset(&netnodes[node], 0, sizeof(*netnodes));
@@ -1280,6 +1282,7 @@ static void UpdatePingTable(void)
 	}
 }
 
+// Handle idle and disconnected player timers
 static void IdleUpdate(void)
 {
 	INT32 i;
@@ -1302,7 +1305,26 @@ static void IdleUpdate(void)
 			}
 		}
 		else
+		{
 			players[i].lastinputtime = 0;
+
+			if (players[i].quittime && playeringame[i])
+			{
+				players[i].quittime++;
+
+				if (players[i].quittime == 30 * TICRATE && G_TagGametype())
+					P_CheckSurvivors();
+
+				if (server && players[i].quittime >= (tic_t)FixedMul(cv_rejointimeout.value, 60 * TICRATE)
+				&& !(players[i].quittime % TICRATE))
+				{
+					if (D_NumNodes(true) > 0)
+						SendKick(i, KICK_MSG_PLAYER_QUIT);
+					else // If the server is empty, don't send a NetXCmd - that would wake an idling dedicated server
+						CL_RemovePlayer(i, KICK_MSG_PLAYER_QUIT);
+				}
+			}
+		}
 	}
 }
 
@@ -1643,6 +1665,17 @@ INT32 D_NumBots(void)
 	INT32 num = 0, ix;
 	for (ix = 0; ix < MAXPLAYERS; ix++)
 		if (playeringame[ix] && players[ix].bot)
+			num++;
+	return num;
+}
+
+// Returns the number of currently-connected nodes in a netgame
+// Not necessarily equivalent to D_NumPlayers() minus D_NumBots()
+static INT32 D_NumNodes(boolean skiphost)
+{
+	INT32 num = 0, ix;
+	for (ix = skiphost ? 1 : 0; ix < MAXNETNODES; ix++)
+		if (netnodes[ix].ingame)
 			num++;
 	return num;
 }
