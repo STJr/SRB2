@@ -1921,6 +1921,9 @@ void EV_CrumbleChain(sector_t *sec, ffloor_t *rover)
 				for (c = topz; c > bottomz; c -= spacing)
 				{
 					spawned = P_SpawnMobj(a, b, c, type);
+					if (P_MobjWasRemoved(spawned))
+						continue;
+
 					spawned->angle += P_RandomKey(36)*ANG10; // irrelevant for default objects but might make sense for some custom ones
 
 					if (fromcenter)
