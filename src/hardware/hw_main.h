@@ -107,6 +107,8 @@ extern consvar_t cv_glslopecontrast;
 
 extern consvar_t cv_glbatching;
 
+extern consvar_t cv_glwireframe;
+
 extern float gl_viewwidth, gl_viewheight, gl_baseviewwindowy;
 
 extern float gl_viewwindowx, gl_basewindowcentery;
