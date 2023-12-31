@@ -33,7 +33,8 @@ char sprnames[NUMSPRITES + 1][5] =
 	"NULL", // invisible object
 	"UNKN",
 
-	"THOK", // Thok! mobj
+	"THOK", // Spin trail mobj
+	"THKE", // Thok boom effect
 	"PLAY",
 
 	// Enemies
@@ -250,6 +251,7 @@ char sprnames[NUMSPRITES + 1][5] =
 	"BMCH", // Big Mace Chain
 	"SMCE", // Small Mace
 	"BMCE", // Big Mace
+	"BSPB", // Blue spring on a ball
 	"YSPB", // Yellow spring on a ball
 	"RSPB", // Red spring on a ball
 	"SFBR", // Small Firebar
@@ -702,8 +704,9 @@ state_t states[NUMSTATES] =
 	{SPR_UNKN, FF_FULLBRIGHT, -1, {A_InfoState}, 5, 0, S_NULL}, // S_XDEATHSTATE
 	{SPR_UNKN, FF_FULLBRIGHT, -1, {A_InfoState}, 6, 0, S_NULL}, // S_RAISESTATE
 
-	// Thok
+	// Spin trail and thok boom effect
 	{SPR_THOK, FF_TRANS50, 8, {NULL}, 0, 0, S_NULL}, // S_THOK
+	{SPR_THKE, FF_TRANS50|FF_PAPERSPRITE, 8, {NULL}, 0, 0, S_NULL}, // S_THOKEFFECT
 
 	// Player
 	{SPR_PLAY, SPR2_STND|FF_ANIMATE,    105, {NULL}, 0,  7, S_PLAY_WAIT}, // S_PLAY_STND
@@ -2296,6 +2299,13 @@ state_t states[NUMSTATES] =
 	{SPR_BMCE, 0, -1, {NULL}, 0, 0, S_NULL}, // S_BIGMACE
 	{SPR_SMCH, 1, -1, {NULL}, 0, 0, S_NULL}, // S_SMALLGRABCHAIN
 	{SPR_BMCH, 1, -1, {NULL}, 0, 0, S_NULL}, // S_BIGGRABCHAIN
+
+	// Blue spring on a ball
+	{SPR_BSPB, 0, -1, {NULL},   0, 0, S_NULL},            // S_BLUESPRINGBALL
+	{SPR_BSPB, 4,  4, {A_Pain}, 0, 0, S_BLUESPRINGBALL3}, // S_BLUESPRINGBALL2
+	{SPR_BSPB, 3,  1, {NULL},   0, 0, S_BLUESPRINGBALL4}, // S_BLUESPRINGBALL3
+	{SPR_BSPB, 2,  1, {NULL},   0, 0, S_BLUESPRINGBALL5}, // S_BLUESPRINGBALL4
+	{SPR_BSPB, 1,  1, {NULL},   0, 0, S_BLUESPRINGBALL},  // S_BLUESPRINGBALL5
 
 	// Yellow spring on a ball
 	{SPR_YSPB, 0, -1, {NULL},   0, 0, S_NULL},              // S_YELLOWSPRINGBALL
@@ -4047,6 +4057,33 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 	{           // MT_THOK
 		-1,             // doomednum
 		S_THOK,         // spawnstate
+		1000,           // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		8,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		8,              // speed
+		32*FRACUNIT,    // radius
+		64*FRACUNIT,    // height
+		0,              // display offset
+		16,             // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_NOBLOCKMAP|MF_NOCLIP|MF_NOCLIPHEIGHT|MF_NOGRAVITY|MF_SCENERY, // flags
+		S_NULL          // raisestate
+	},
+	
+	{           // MT_THOKEFFECT
+		-1,             // doomednum
+		S_THOKEFFECT,   // spawnstate
 		1000,           // spawnhealth
 		S_NULL,         // seestate
 		sfx_None,       // seesound
@@ -11677,6 +11714,33 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		sfx_None,       // activesound
 		MF_SCENERY|MF_SPECIAL|MF_NOGRAVITY, // flags
 		S_NULL          // raisestate
+	},
+
+	{            // MT_BLUESPRINGBALL
+		1133,           // doomednum
+		S_BLUESPRINGBALL, // spawnstate
+		1000,           // spawnhealth
+		S_BLUESPRINGBALL2, // seestate
+		sfx_None,       // seesound
+		0,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_spring,     // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		24*FRACUNIT,    // speed
+		17*FRACUNIT,    // radius
+		34*FRACUNIT,    // height
+		1,              // display offset
+		11*FRACUNIT,    // mass
+		0,              // damage
+		sfx_mswing,     // activesound
+		MF_SCENERY|MF_SPRING|MF_NOGRAVITY, // flags
+		S_BLUESPRINGBALL2 // raisestate
 	},
 
 	{            // MT_YELLOWSPRINGBALL
