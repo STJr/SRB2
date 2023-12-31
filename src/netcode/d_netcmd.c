@@ -150,6 +150,7 @@ static void Command_Clearscores_f(void);
 
 // Remote Administration
 static void Command_Changepassword_f(void);
+static void Command_Clearpassword_f(void);
 static void Command_Login_f(void);
 static void Got_Verification(UINT8 **cp, INT32 playernum);
 static void Got_Removal(UINT8 **cp, INT32 playernum);
@@ -468,6 +469,7 @@ void D_RegisterServerCommands(void)
 
 	// Remote Administration
 	COM_AddCommand("password", Command_Changepassword_f, COM_LUA);
+	COM_AddCommand("clearpassword", Command_Clearpassword_f, COM_LUA);
 	COM_AddCommand("login", Command_Login_f, COM_LUA); // useful in dedicated to kick off remote admin
 	COM_AddCommand("promote", Command_Verify_f, COM_LUA);
 	RegisterNetXCmd(XD_VERIFIED, Got_Verification);
@@ -601,6 +603,7 @@ void D_RegisterServerCommands(void)
 	CV_RegisterVar(&cv_showjoinaddress);
 	CV_RegisterVar(&cv_blamecfail);
 	CV_RegisterVar(&cv_dedicatedidletime);
+	CV_RegisterVar(&cv_idletime);
 
 	COM_AddCommand("ping", Command_Ping_f, COM_LUA);
 	CV_RegisterVar(&cv_nettimeout);
@@ -619,6 +622,10 @@ void D_RegisterServerCommands(void)
 	CV_RegisterVar(&cv_addons_folder);
 
 	CV_RegisterVar(&cv_dummyconsvar);
+
+	CV_RegisterVar(&cv_chatspamprotection);
+	CV_RegisterVar(&cv_chatspamspeed);
+	CV_RegisterVar(&cv_chatspamburst);
 }
 
 // =========================================================================
@@ -762,7 +769,6 @@ void D_RegisterClientCommands(void)
 	CV_RegisterVar(&cv_chatheight);
 	CV_RegisterVar(&cv_chatwidth);
 	CV_RegisterVar(&cv_chattime);
-	CV_RegisterVar(&cv_chatspamprotection);
 	CV_RegisterVar(&cv_chatbacktint);
 	CV_RegisterVar(&cv_consolechat);
 	CV_RegisterVar(&cv_chatnotifications);
@@ -2840,8 +2846,15 @@ static void Got_Teamchange(UINT8 **cp, INT32 playernum)
 
 void D_SetPassword(const char *pw)
 {
-	D_MD5PasswordPass((const UINT8 *)pw, strlen(pw), BASESALT, &adminpassmd5);
-	adminpasswordset = true;
+	adminpassmd5 = Z_Realloc(adminpassmd5, sizeof(*adminpassmd5) * ++adminpasscount, PU_STATIC, NULL);
+	D_MD5PasswordPass((const UINT8 *)pw, strlen(pw), BASESALT, &adminpassmd5[adminpasscount-1]);
+}
+
+void D_ClearPassword(void)
+{
+	Z_Free(adminpassmd5);
+	adminpassmd5 = NULL;
+	adminpasscount = 0;
 }
 
 // Remote Administration
@@ -2859,12 +2872,30 @@ static void Command_Changepassword_f(void)
 
 	if (COM_Argc() != 2)
 	{
-		CONS_Printf(M_GetText("password <password>: change remote admin password\n"));
+		CONS_Printf(M_GetText("password <password>: add remote admin password\n"));
 		return;
 	}
 
 	D_SetPassword(COM_Argv(1));
-	CONS_Printf(M_GetText("Password set.\n"));
+	CONS_Printf(M_GetText("Password added.\n"));
+#endif
+}
+
+// Remote Administration
+static void Command_Clearpassword_f(void)
+{
+#ifdef NOMD5
+	// If we have no MD5 support then completely disable XD_LOGIN responses for security.
+	CONS_Alert(CONS_NOTICE, "Remote administration commands are not supported in this build.\n");
+#else
+	if (client) // cannot change remotely
+	{
+		CONS_Printf(M_GetText("Only the server can use this.\n"));
+		return;
+	}
+
+	D_ClearPassword();
+	CONS_Printf(M_GetText("Passwords cleared.\n"));
 #endif
 }
 

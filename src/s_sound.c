@@ -513,7 +513,7 @@ void S_StartCaption(sfxenum_t sfx_id, INT32 cnum, UINT16 lifespan)
 	closedcaptions[set].c = ((cnum == -1) ? NULL : &channels[cnum]);
 	closedcaptions[set].s = sfx;
 	closedcaptions[set].t = lifespan;
-	closedcaptions[set].b = 2; // bob
+	closedcaptions[set].b = 3; // bob
 }
 
 void S_StartSoundAtVolume(const void *origin_p, sfxenum_t sfx_id, INT32 volume)
