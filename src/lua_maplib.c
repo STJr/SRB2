@@ -35,10 +35,14 @@ enum sector_e {
 	sector_floorpic,
 	sector_floorxoffset,
 	sector_flooryoffset,
+	sector_floorxscale,
+	sector_flooryscale,
 	sector_floorangle,
 	sector_ceilingpic,
 	sector_ceilingxoffset,
 	sector_ceilingyoffset,
+	sector_ceilingxscale,
+	sector_ceilingyscale,
 	sector_ceilingangle,
 	sector_lightlevel,
 	sector_floorlightlevel,
@@ -74,10 +78,14 @@ static const char *const sector_opt[] = {
 	"floorpic",
 	"floorxoffset",
 	"flooryoffset",
+	"floorxscale",
+	"flooryscale",
 	"floorangle",
 	"ceilingpic",
 	"ceilingxoffset",
 	"ceilingyoffset",
+	"ceilingxscale",
+	"ceilingyscale",
 	"ceilingangle",
 	"lightlevel",
 	"floorlightlevel",
@@ -188,8 +196,16 @@ enum side_e {
 	side_offsety_top,
 	side_offsetx_mid,
 	side_offsety_mid,
+	side_offsetx_bottom,
 	side_offsetx_bot,
+	side_offsety_bottom,
 	side_offsety_bot,
+	side_scalex_top,
+	side_scaley_top,
+	side_scalex_mid,
+	side_scaley_mid,
+	side_scalex_bottom,
+	side_scaley_bottom,
 	side_toptexture,
 	side_bottomtexture,
 	side_midtexture,
@@ -208,8 +224,16 @@ static const char *const side_opt[] = {
 	"offsety_top",
 	"offsetx_mid",
 	"offsety_mid",
+	"offsetx_bottom",
 	"offsetx_bot",
+	"offsety_bottom",
 	"offsety_bot",
+	"scalex_top",
+	"scaley_top",
+	"scalex_mid",
+	"scaley_mid",
+	"scalex_bottom",
+	"scaley_bottom",
 	"toptexture",
 	"bottomtexture",
 	"midtexture",
@@ -249,8 +273,16 @@ enum ffloor_e {
 	ffloor_topheight,
 	ffloor_toppic,
 	ffloor_toplightlevel,
+	ffloor_topxoffs,
+	ffloor_topyoffs,
+	ffloor_topxscale,
+	ffloor_topyscale,
 	ffloor_bottomheight,
 	ffloor_bottompic,
+	ffloor_bottomxoffs,
+	ffloor_bottomyoffs,
+	ffloor_bottomxscale,
+	ffloor_bottomyscale,
 	ffloor_tslope,
 	ffloor_bslope,
 	ffloor_sector,
@@ -275,8 +307,16 @@ static const char *const ffloor_opt[] = {
 	"topheight",
 	"toppic",
 	"toplightlevel",
+	"topxoffs",
+	"topyoffs",
+	"topxscale",
+	"topyscale",
 	"bottomheight",
 	"bottompic",
+	"bottomxoffs",
+	"bottomyoffs",
+	"bottomxscale",
+	"bottomyscale",
 	"t_slope",
 	"b_slope",
 	"sector", // secnum pushed as control sector userdata
@@ -656,20 +696,20 @@ static int sector_get(lua_State *L)
 		return 1;
 	}
 	case sector_floorxoffset:
-	{
 		lua_pushfixed(L, sector->floorxoffset);
 		return 1;
-	}
 	case sector_flooryoffset:
-	{
 		lua_pushfixed(L, sector->flooryoffset);
 		return 1;
-	}
+	case sector_floorxscale:
+		lua_pushfixed(L, sector->floorxscale);
+		return 1;
+	case sector_flooryscale:
+		lua_pushfixed(L, sector->flooryscale);
+		return 1;
 	case sector_floorangle:
-	{
 		lua_pushangle(L, sector->floorangle);
 		return 1;
-	}
 	case sector_ceilingpic: // ceilingpic
 	{
 		levelflat_t *levelflat = &levelflats[sector->ceilingpic];
@@ -680,20 +720,20 @@ static int sector_get(lua_State *L)
 		return 1;
 	}
 	case sector_ceilingxoffset:
-	{
 		lua_pushfixed(L, sector->ceilingxoffset);
 		return 1;
-	}
 	case sector_ceilingyoffset:
-	{
 		lua_pushfixed(L, sector->ceilingyoffset);
 		return 1;
-	}
+	case sector_ceilingxscale:
+		lua_pushfixed(L, sector->ceilingxscale);
+		return 1;
+	case sector_ceilingyscale:
+		lua_pushfixed(L, sector->ceilingyscale);
+		return 1;
 	case sector_ceilingangle:
-	{
 		lua_pushangle(L, sector->ceilingangle);
 		return 1;
-	}
 	case sector_lightlevel:
 		lua_pushinteger(L, sector->lightlevel);
 		return 1;
@@ -845,6 +885,12 @@ static int sector_set(lua_State *L)
 	case sector_flooryoffset:
 		sector->flooryoffset = luaL_checkfixed(L, 3);
 		break;
+	case sector_floorxscale:
+		sector->floorxscale = luaL_checkfixed(L, 3);
+		break;
+	case sector_flooryscale:
+		sector->flooryscale = luaL_checkfixed(L, 3);
+		break;
 	case sector_floorangle:
 		sector->floorangle = luaL_checkangle(L, 3);
 		break;
@@ -856,6 +902,12 @@ static int sector_set(lua_State *L)
 		break;
 	case sector_ceilingyoffset:
 		sector->ceilingyoffset = luaL_checkfixed(L, 3);
+		break;
+	case sector_ceilingxscale:
+		sector->ceilingxscale = luaL_checkfixed(L, 3);
+		break;
+	case sector_ceilingyscale:
+		sector->ceilingyscale = luaL_checkfixed(L, 3);
 		break;
 	case sector_ceilingangle:
 		sector->ceilingangle = luaL_checkangle(L, 3);
@@ -1210,11 +1262,31 @@ static int side_get(lua_State *L)
 	case side_offsety_mid:
 		lua_pushfixed(L, side->offsety_mid);
 		return 1;
+	case side_offsetx_bottom:
 	case side_offsetx_bot:
-		lua_pushfixed(L, side->offsetx_bot);
+		lua_pushfixed(L, side->offsetx_bottom);
 		return 1;
+	case side_offsety_bottom:
 	case side_offsety_bot:
-		lua_pushfixed(L, side->offsety_bot);
+		lua_pushfixed(L, side->offsety_bottom);
+		return 1;
+	case side_scalex_top:
+		lua_pushfixed(L, side->scalex_top);
+		return 1;
+	case side_scaley_top:
+		lua_pushfixed(L, side->scaley_top);
+		return 1;
+	case side_scalex_mid:
+		lua_pushfixed(L, side->scalex_mid);
+		return 1;
+	case side_scaley_mid:
+		lua_pushfixed(L, side->scaley_mid);
+		return 1;
+	case side_scalex_bottom:
+		lua_pushfixed(L, side->scalex_bottom);
+		return 1;
+	case side_scaley_bottom:
+		lua_pushfixed(L, side->scaley_bottom);
 		return 1;
 	case side_toptexture:
 		lua_pushinteger(L, side->toptexture);
@@ -1302,10 +1374,30 @@ static int side_set(lua_State *L)
 		side->offsety_mid = luaL_checkfixed(L, 3);
 		break;
 	case side_offsetx_bot:
-		side->offsetx_bot = luaL_checkfixed(L, 3);
+	case side_offsetx_bottom:
+		side->offsetx_bottom = luaL_checkfixed(L, 3);
 		break;
 	case side_offsety_bot:
-		side->offsety_bot = luaL_checkfixed(L, 3);
+	case side_offsety_bottom:
+		side->offsety_bottom = luaL_checkfixed(L, 3);
+		break;
+	case side_scalex_top:
+		side->scalex_top = luaL_checkfixed(L, 3);
+		break;
+	case side_scaley_top:
+		side->scaley_top = luaL_checkfixed(L, 3);
+		break;
+	case side_scalex_mid:
+		side->scalex_mid = luaL_checkfixed(L, 3);
+		break;
+	case side_scaley_mid:
+		side->scaley_mid = luaL_checkfixed(L, 3);
+		break;
+	case side_scalex_bottom:
+		side->scalex_bottom = luaL_checkfixed(L, 3);
+		break;
+	case side_scaley_bottom:
+		side->scaley_bottom = luaL_checkfixed(L, 3);
 		break;
 	case side_toptexture:
 		side->toptexture = luaL_checkinteger(L, 3);
@@ -2122,6 +2214,18 @@ static int ffloor_get(lua_State *L)
 	case ffloor_toplightlevel:
 		lua_pushinteger(L, *ffloor->toplightlevel);
 		return 1;
+	case ffloor_topxoffs:
+		lua_pushfixed(L, *ffloor->topxoffs);
+		return 1;
+	case ffloor_topyoffs:
+		lua_pushfixed(L, *ffloor->topyoffs);
+		return 1;
+	case ffloor_topxscale:
+		lua_pushfixed(L, *ffloor->topxscale);
+		return 1;
+	case ffloor_topyscale:
+		lua_pushfixed(L, *ffloor->topyscale);
+		return 1;
 	case ffloor_bottomheight:
 		lua_pushfixed(L, *ffloor->bottomheight);
 		return 1;
@@ -2133,6 +2237,18 @@ static int ffloor_get(lua_State *L)
 		lua_pushlstring(L, levelflat->name, i);
 		return 1;
 	}
+	case ffloor_bottomxoffs:
+		lua_pushfixed(L, *ffloor->bottomxoffs);
+		return 1;
+	case ffloor_bottomyoffs:
+		lua_pushfixed(L, *ffloor->bottomyoffs);
+		return 1;
+	case ffloor_bottomxscale:
+		lua_pushfixed(L, *ffloor->bottomxscale);
+		return 1;
+	case ffloor_bottomyscale:
+		lua_pushfixed(L, *ffloor->bottomyscale);
+		return 1;
 	case ffloor_tslope:
 		LUA_PushUserdata(L, *ffloor->t_slope, META_SLOPE);
 		return 1;
@@ -2317,6 +2433,18 @@ static int ffloor_set(lua_State *L)
 	case ffloor_toplightlevel:
 		*ffloor->toplightlevel = (INT16)luaL_checkinteger(L, 3);
 		break;
+	case ffloor_topxoffs:
+		*ffloor->topxoffs = luaL_checkfixed(L, 3);
+		break;
+	case ffloor_topyoffs:
+		*ffloor->topyoffs = luaL_checkfixed(L, 3);
+		break;
+	case ffloor_topxscale:
+		*ffloor->topxscale = luaL_checkfixed(L, 3);
+		break;
+	case ffloor_topyscale:
+		*ffloor->topyscale = luaL_checkfixed(L, 3);
+		break;
 	case ffloor_bottomheight: { // bottomheight
 		boolean flag;
 		fixed_t lastpos = *ffloor->bottomheight;
@@ -2334,6 +2462,18 @@ static int ffloor_set(lua_State *L)
 	}
 	case ffloor_bottompic:
 		*ffloor->bottompic = P_AddLevelFlatRuntime(luaL_checkstring(L, 3));
+		break;
+	case ffloor_bottomxoffs:
+		*ffloor->bottomxoffs = luaL_checkfixed(L, 3);
+		break;
+	case ffloor_bottomyoffs:
+		*ffloor->bottomyoffs = luaL_checkfixed(L, 3);
+		break;
+	case ffloor_bottomxscale:
+		*ffloor->bottomxscale = luaL_checkfixed(L, 3);
+		break;
+	case ffloor_bottomyscale:
+		*ffloor->bottomyscale = luaL_checkfixed(L, 3);
 		break;
 	case ffloor_fofflags: {
 		ffloortype_e oldflags = ffloor->fofflags; // store FOF's old flags

@@ -106,14 +106,13 @@ fixed_t ds_xfrac, ds_yfrac, ds_xstep, ds_ystep;
 INT32 ds_waterofs, ds_bgofs;
 
 UINT16 ds_flatwidth, ds_flatheight;
-boolean ds_powersoftwo, ds_solidcolor;
+boolean ds_powersoftwo, ds_solidcolor, ds_fog;
 
 UINT8 *ds_source; // points to the start of a flat
 UINT8 *ds_transmap; // one of the translucency tables
 
 // Vectors for Software's tilted slope drawers
-floatv3_t *ds_su, *ds_sv, *ds_sz;
-floatv3_t *ds_sup, *ds_svp, *ds_szp;
+floatv3_t ds_su, ds_sv, ds_sz, ds_slopelight;
 float focallengthf, zeroheight;
 
 /**	\brief Variable flat sizes
@@ -906,13 +905,15 @@ static void R_CalcTiltedLighting(fixed_t start, fixed_t end)
 	}
 }
 
+#define PLANELIGHTFLOAT (BASEVIDWIDTH * BASEVIDWIDTH / vid.width / zeroheight / 21.0f * FIXED_TO_FLOAT(fovtan))
+
 // Lighting is simple. It's just linear interpolation from start to end
-#define CALC_SLOPE_LIGHT { \
-	float planelightfloat = PLANELIGHTFLOAT; \
-	float lightstart, lightend; \
-	lightend = (iz + ds_szp->x*width) * planelightfloat; \
-	lightstart = iz * planelightfloat; \
-	R_CalcTiltedLighting(FloatToFixed(lightstart), FloatToFixed(lightend)); \
+static void R_CalcSlopeLight(void)
+{
+	float iz = ds_slopelight.z + ds_slopelight.y * (centery - ds_y) + ds_slopelight.x * (ds_x1 - centerx);
+	float lightstart = iz * PLANELIGHTFLOAT;
+	float lightend = (iz + ds_slopelight.x * (ds_x2 - ds_x1)) * PLANELIGHTFLOAT;
+	R_CalcTiltedLighting(FloatToFixed(lightstart), FloatToFixed(lightend));
 }
 
 // ==========================================================================
