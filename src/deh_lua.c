@@ -589,7 +589,7 @@ static int ScanConstants(lua_State *L, boolean mathlib, const char *word)
 	{
 		CacheAndPushConstant(L, word, (lua_Integer)BT_SPIN);
 		return 1;
-	}
+	} 
 
 	for (i = 0; INT_CONST[i].n; i++)
 		if (fastcmp(word,INT_CONST[i].n)) {

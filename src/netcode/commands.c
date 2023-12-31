@@ -79,7 +79,7 @@ static void Ban_Clear(void)
 void Ban_Load_File(boolean warning)
 {
 	FILE *f;
-	const char *address, *mask;
+	char *address, *mask;
 	char buffer[MAX_WADPATH];
 
 	if (!I_ClearBans)
@@ -100,6 +100,14 @@ void Ban_Load_File(boolean warning)
 	{
 		address = strtok(buffer, " \t\r\n");
 		mask = strtok(NULL, " \t\r\n");
+		if (address[0] == '[')
+		{
+			size_t len;
+			address++;
+			len = strlen(address);
+			if (address[len-1] == ']')
+				address[len-1] = '\0';
+		}
 
 		I_SetBanAddress(address, mask);
 
