@@ -16,7 +16,7 @@ set GIT=%2
 if "%GIT%"=="" set GIT=git
 for /f "tokens=* usebackq" %%s in (`%GIT% rev-parse --abbrev-ref HEAD`) do @set BRA=%%s
 for /f "tokens=* usebackq" %%s in (`%GIT% rev-parse HEAD`) do @set REV=%%s
-for /f "tokens=* usebackq" %%s in (`%GIT% log -1 --format^=%%s`) do @set GL1=%%s
+for /f "tokens=* usebackq" %%s in (`%GIT% log -1 --format^=%%f`) do @set GL1=%%s
 set REV=%REV:~0,8%
 goto filwri
 
