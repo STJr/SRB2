@@ -292,10 +292,10 @@ void I_hold_cond(I_cond *cond_anchor, I_mutex mutex_id)
 void I_wake_one_cond(I_cond *anchor)
 {
 	EnterCriticalSection(&thread_lock);
-	if (*cond_anchor == NULL)
+	if (*anchor == NULL)
 	{
-		*cond_anchor = malloc(sizeof(CONDITION_VARIABLE));
-		InitializeConditionVariable(*cond_anchor);
+		*anchor = malloc(sizeof(CONDITION_VARIABLE));
+		InitializeConditionVariable(*anchor);
 	}
 	LeaveCriticalSection(&thread_lock);
 	WakeConditionVariable(*anchor);
@@ -304,10 +304,10 @@ void I_wake_one_cond(I_cond *anchor)
 void I_wake_all_cond(I_cond *anchor)
 {
 	EnterCriticalSection(&thread_lock);
-	if (*cond_anchor == NULL)
+	if (*anchor == NULL)
 	{
-		*cond_anchor = malloc(sizeof(CONDITION_VARIABLE));
-		InitializeConditionVariable(*cond_anchor);
+		*anchor = malloc(sizeof(CONDITION_VARIABLE));
+		InitializeConditionVariable(*anchor);
 	}
 	LeaveCriticalSection(&thread_lock);
 	WakeAllConditionVariable(*anchor);

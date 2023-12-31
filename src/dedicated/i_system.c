@@ -213,7 +213,9 @@ UINT8 graphics_started = 0;
 UINT8 keyboard_started = 0;
 
 static boolean consolevent = false;
+#if defined (__unix__) || defined(__APPLE__) || defined (UNIXCOMMON)
 static boolean framebuffer = false;
+#endif
 
 static size_t num_exit_funcs;
 static void (*exit_funcs[MAX_EXIT_FUNCS])(void);
