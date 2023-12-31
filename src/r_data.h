@@ -92,6 +92,7 @@ typedef enum
 	TMCF_OVERRIDE     = 1<<13,
 } textmapcolormapflags_t;
 
+void R_GenerateLightTable(extracolormap_t *extra_colormap, boolean uselookup);
 lighttable_t *R_CreateLightTable(extracolormap_t *extra_colormap);
 extracolormap_t * R_CreateColormapFromLinedef(char *p1, char *p2, char *p3);
 extracolormap_t* R_CreateColormap(INT32 rgba, INT32 fadergba, UINT8 fadestart, UINT8 fadeend, UINT8 flags);
