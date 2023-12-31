@@ -180,6 +180,11 @@ static boolean HWR_UseShader(void)
 	return (cv_glshaders.value && gl_shadersavailable);
 }
 
+static boolean HWR_IsWireframeMode(void)
+{
+	return (cv_glwireframe.value && cv_debug);
+}
+
 void HWR_Lighting(FSurfaceInfo *Surface, INT32 light_level, extracolormap_t *colormap)
 {
 	RGBA_t poly_color, tint_color, fade_color;
@@ -5860,6 +5865,9 @@ void HWR_BuildSkyDome(void)
 
 static void HWR_DrawSkyBackground(player_t *player)
 {
+	if (HWR_IsWireframeMode())
+		return;
+
 	HWD.pfnSetBlend(PF_Translucent|PF_NoDepthTest|PF_Modulated);
 
 	if (cv_glskydome.value)
@@ -6216,6 +6224,9 @@ void HWR_RenderSkyboxView(INT32 viewnumber, player_t *player)
 	// Reset the shader state.
 	HWR_SetShaderState();
 
+	if (HWR_IsWireframeMode())
+		HWD.pfnSetSpecialState(HWD_SET_WIREFRAME, 1);
+
 	validcount++;
 
 	if (cv_glbatching.value)
@@ -6277,6 +6288,9 @@ void HWR_RenderSkyboxView(INT32 viewnumber, player_t *player)
 	{
 		HWR_CreateDrawNodes();
 	}
+
+	if (HWR_IsWireframeMode())
+		HWD.pfnSetSpecialState(HWD_SET_WIREFRAME, 0);
 
 	HWD.pfnSetTransform(NULL);
 	HWD.pfnUnSetShader();
@@ -6432,6 +6446,9 @@ void HWR_RenderPlayerView(INT32 viewnumber, player_t *player)
 	// Reset the shader state.
 	HWR_SetShaderState();
 
+	if (HWR_IsWireframeMode())
+		HWD.pfnSetSpecialState(HWD_SET_WIREFRAME, 1);
+
 	ps_numbspcalls.value.i = 0;
 	ps_numpolyobjects.value.i = 0;
 	PS_START_TIMING(ps_bsptime);
@@ -6507,6 +6524,9 @@ void HWR_RenderPlayerView(INT32 viewnumber, player_t *player)
 	{
 		HWR_CreateDrawNodes();
 	}
+
+	if (HWR_IsWireframeMode())
+		HWD.pfnSetSpecialState(HWD_SET_WIREFRAME, 0);
 
 	HWD.pfnSetTransform(NULL);
 	HWD.pfnUnSetShader();
@@ -6585,6 +6605,8 @@ consvar_t cv_glsolvetjoin = CVAR_INIT ("gr_solvetjoin", "On", 0, CV_OnOff, NULL)
 
 consvar_t cv_glbatching = CVAR_INIT ("gr_batching", "On", 0, CV_OnOff, NULL);
 
+consvar_t cv_glwireframe = CVAR_INIT ("gr_wireframe", "Off", 0, CV_OnOff, NULL);
+
 static void CV_glfiltermode_OnChange(void)
 {
 	if (rendermode == render_opengl)
@@ -6625,6 +6647,8 @@ void HWR_AddCommands(void)
 	CV_RegisterVar(&cv_glsolvetjoin);
 
 	CV_RegisterVar(&cv_glbatching);
+
+	CV_RegisterVar(&cv_glwireframe);
 
 #ifndef NEWCLIP
 	CV_RegisterVar(&cv_glclipwalls);
