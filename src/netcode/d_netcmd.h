@@ -209,6 +209,7 @@ void ClearAdminPlayers(void);
 void RemoveAdminPlayer(INT32 playernum);
 void ItemFinder_OnChange(void);
 void D_SetPassword(const char *pw);
+void D_ClearPassword(void);
 
 // used for the player setup menu
 UINT8 CanChangeSkin(INT32 playernum);
