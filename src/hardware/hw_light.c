@@ -138,6 +138,7 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[NOLIGHT],     // SPR_UNKN
 
 	&lspr[NOLIGHT],     // SPR_THOK
+	&lspr[NOLIGHT],     // SPR_THKE
 	&lspr[SUPERSONIC_L],// SPR_PLAY
 
 	// Enemies
