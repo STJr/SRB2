@@ -370,8 +370,9 @@ const char *const STATE_LIST[] = { // array length left dynamic for sanity testi
 	"S_XDEATHSTATE",
 	"S_RAISESTATE",
 
-	// Thok
+	// Thok effect and spin trail
 	"S_THOK",
+	"S_THOKEFFECT",
 
 	// Player
 	"S_PLAY_STND",
@@ -1932,6 +1933,13 @@ const char *const STATE_LIST[] = { // array length left dynamic for sanity testi
 	"S_BIGMACE",
 	"S_SMALLGRABCHAIN",
 	"S_BIGGRABCHAIN",
+
+	// Blue spring on a ball
+	"S_BLUESPRINGBALL",
+	"S_BLUESPRINGBALL2",
+	"S_BLUESPRINGBALL3",
+	"S_BLUESPRINGBALL4",
+	"S_BLUESPRINGBALL5",
 
 	// Yellow spring on a ball
 	"S_YELLOWSPRINGBALL",
@@ -3553,7 +3561,8 @@ const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for sanity t
 	"MT_NULL",
 	"MT_UNKNOWN",
 
-	"MT_THOK", // Thok! mobj
+	"MT_THOK", // Spin trail mobj
+	"MT_THOKEFFECT", // Thok boom effect
 	"MT_PLAYER",
 	"MT_TAILSOVERLAY", // c:
 	"MT_METALJETFUME",
@@ -3891,6 +3900,7 @@ const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for sanity t
 	"MT_BIGMACE", // Big Mace
 	"MT_SMALLGRABCHAIN", // Small Grab Chain
 	"MT_BIGGRABCHAIN", // Big Grab Chain
+	"MT_BLUESPRINGBALL", // Blue spring on a ball
 	"MT_YELLOWSPRINGBALL", // Yellow spring on a ball
 	"MT_REDSPRINGBALL", // Red spring on a ball
 	"MT_SMALLFIREBAR", // Small Firebar
@@ -5568,7 +5578,8 @@ struct int_const_s const INT_CONST[] = {
 	{"ROTAXIS_Z",ROTAXIS_Z},
 
 	// Buttons (ticcmd_t)
-	{"BT_WEAPONMASK",BT_WEAPONMASK}, //our first four bits.
+	{"BT_WEAPONMASK",BT_WEAPONMASK}, //our first three bits.
+	{"BT_SHIELD",BT_SHIELD},
 	{"BT_WEAPONNEXT",BT_WEAPONNEXT},
 	{"BT_WEAPONPREV",BT_WEAPONPREV},
 	{"BT_ATTACK",BT_ATTACK}, // shoot rings
@@ -5748,9 +5759,7 @@ struct int_const_s const INT_CONST[] = {
 	{"GC_WEPSLOT5",GC_WEPSLOT5},
 	{"GC_WEPSLOT6",GC_WEPSLOT6},
 	{"GC_WEPSLOT7",GC_WEPSLOT7},
-	{"GC_WEPSLOT8",GC_WEPSLOT8},
-	{"GC_WEPSLOT9",GC_WEPSLOT9},
-	{"GC_WEPSLOT10",GC_WEPSLOT10},
+	{"GC_SHIELD",GC_SHIELD},
 	{"GC_FIRE",GC_FIRE},
 	{"GC_FIRENORMAL",GC_FIRENORMAL},
 	{"GC_TOSSFLAG",GC_TOSSFLAG},

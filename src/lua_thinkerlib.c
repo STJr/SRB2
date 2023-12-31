@@ -127,8 +127,7 @@ static int lib_startIterate(lua_State *L)
 int LUA_ThinkerLib(lua_State *L)
 {
 	luaL_newmetatable(L, META_ITERATIONSTATE);
-	lua_pushcfunction(L, iterationState_gc);
-	lua_setfield(L, -2, "__gc");
+	LUA_SetCFunctionField(L, "__gc", iterationState_gc);
 	lua_pop(L, 1);
 
 	lua_createtable(L, 0, 1);

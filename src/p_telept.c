@@ -96,7 +96,7 @@ void P_MixUp(mobj_t *thing, fixed_t x, fixed_t y, fixed_t z, angle_t angle,
 		P_ClearStarPost(starpostnum);
 
 		P_ResetPlayer(thing->player);
-		P_SetPlayerMobjState(thing, S_PLAY_STND);
+		P_SetMobjState(thing, S_PLAY_STND);
 
 		P_FlashPal(thing->player, PAL_MIXUP, 10);
 	}
@@ -153,7 +153,7 @@ boolean P_Teleport(mobj_t *thing, fixed_t x, fixed_t y, fixed_t z, angle_t angle
 			thing->player->rmomx = thing->player->rmomy = 0;
 			thing->player->speed = 0;
 			P_ResetPlayer(thing->player);
-			P_SetPlayerMobjState(thing, S_PLAY_STND);
+			P_SetMobjState(thing, S_PLAY_STND);
 
 			thing->reactiontime = TICRATE/2; // don't move for about half a second
 			thing->player->drawangle = angle;
