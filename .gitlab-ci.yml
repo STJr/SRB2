@@ -194,7 +194,7 @@ Debian testing GCC:
     - - |
           # apt_development
           echo -e "\e[0Ksection_start:`date +%s`:apt_development[collapsed=true]\r\e[0KInstalling development packages"
-      - apt-get install libsdl2-mixer-dev libpng-dev libcurl4-openssl-dev libgme-dev libopenmpt-dev
+      - apt-get install libsdl2-mixer-dev libpng-dev libcurl4-openssl-dev libgme-dev libopenmpt-dev libminiupnpc-dev
       - |
           # apt_development
           echo -e "\e[0Ksection_end:`date +%s`:apt_development\r\e[0K"
@@ -270,7 +270,7 @@ Debian stable:amd64:
     - - |
           # apt_development
           echo -e "\e[0Ksection_start:`date +%s`:apt_development[collapsed=true]\r\e[0KInstalling development packages"
-      - apt-get install libsdl2-mixer-dev:amd64 libpng-dev:amd64 libcurl4-openssl-dev:amd64 libgme-dev:amd64 libopenmpt-dev:amd64
+      - apt-get install libsdl2-mixer-dev:amd64 libpng-dev:amd64 libcurl4-openssl-dev:amd64 libgme-dev:amd64 libopenmpt-dev:amd64 libminiupnpc-dev:amd64
       - |
           # apt_development
           echo -e "\e[0Ksection_end:`date +%s`:apt_development\r\e[0K"
@@ -313,7 +313,7 @@ Debian stable:i386:
     - - |
           # apt_development
           echo -e "\e[0Ksection_start:`date +%s`:apt_development[collapsed=true]\r\e[0KInstalling development packages"
-      - apt-get install libsdl2-mixer-dev:i386 libpng-dev:i386 libcurl4-openssl-dev:i386 libgme-dev:i386 libopenmpt-dev:i386
+      - apt-get install libsdl2-mixer-dev:i386 libpng-dev:i386 libcurl4-openssl-dev:i386 libgme-dev:i386 libopenmpt-dev:i386 libminiupnpc-dev:i386
       - |
           # apt_development
           echo -e "\e[0Ksection_end:`date +%s`:apt_development\r\e[0K"
@@ -357,7 +357,7 @@ Debian stable:arm64:
     - - |
           # apt_development
           echo -e "\e[0Ksection_start:`date +%s`:apt_development[collapsed=true]\r\e[0KInstalling development packages"
-      - apt-get install libsdl2-mixer-dev:arm64 libpng-dev:arm64 libcurl4-openssl-dev:arm64 libgme-dev:arm64 libopenmpt-dev:arm64
+      - apt-get install libsdl2-mixer-dev:arm64 libpng-dev:arm64 libcurl4-openssl-dev:arm64 libgme-dev:arm64 libopenmpt-dev:arm64 libminiupnpc-dev:arm64
       - |
           # apt_development
           echo -e "\e[0Ksection_end:`date +%s`:apt_development\r\e[0K"
@@ -434,7 +434,7 @@ Debian stable Clang:
     - - |
           # apt_development
           echo -e "\e[0Ksection_start:`date +%s`:apt_development[collapsed=true]\r\e[0KInstalling development packages"
-      - apt-get install libsdl2-mixer-dev libpng-dev libcurl4-openssl-dev libgme-dev libopenmpt-dev
+      - apt-get install libsdl2-mixer-dev libpng-dev libcurl4-openssl-dev libgme-dev libopenmpt-dev libminiupnpc-dev
       - |
           # apt_development
           echo -e "\e[0Ksection_end:`date +%s`:apt_development\r\e[0K"
@@ -485,7 +485,7 @@ Debian stable musl:
     - - |
           # make
           echo -e "\e[0Ksection_start:`date +%s`:make[collapsed=false]\r\e[0KCompiling SRB2"
-      - make --directory=src --keep-going CCACHE=1 ERRORMODE=1 NONX86=1 SDL=0 NOHW=1 NOZLIB=1 NOCURL=1 NOGME=1 NOOPENMPT=1 || make --directory=src --keep-going CCACHE=1 ERRORMODE=1 NONX86=1 SDL=0 NOHW=1 NOZLIB=1 NOCURL=1 NOGME=1 NOOPENMPT=1
+      - make --directory=src --keep-going CCACHE=1 ERRORMODE=1 NONX86=1 SDL=0 NOHW=1 NOZLIB=1 NOCURL=1 NOGME=1 NOOPENMPT=1 || make --directory=src --keep-going CCACHE=1 ERRORMODE=1 NONX86=1 SDL=0 NOHW=1 NOZLIB=1 NOCURL=1 NOGME=1 NOOPENMPT=1 NOUPNP=1
       - |
           # make
           echo -e "\e[0Ksection_end:`date +%s`:make\r\e[0K"
@@ -628,7 +628,7 @@ Alpine 3 GCC:
     - - |
           # apk_development
           echo -e "\e[0Ksection_start:`date +%s`:apk_development[collapsed=true]\r\e[0KInstalling development packages"
-      - apk add musl-dev sdl2_mixer-dev libpng-dev curl-dev libgme-dev libopenmpt-dev
+      - apk add musl-dev sdl2_mixer-dev libpng-dev curl-dev libgme-dev libopenmpt-dev miniupnpc-dev
       - |
           # apk_development
           echo -e "\e[0Ksection_end:`date +%s`:apk_development\r\e[0K"
