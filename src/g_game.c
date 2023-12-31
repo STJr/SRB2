@@ -51,6 +51,7 @@
 #include "r_fps.h" // frame interpolation/uncapped
 
 #include "lua_hud.h"
+#include "lua_libs.h"
 
 gameaction_t gameaction;
 gamestate_t gamestate = GS_NULL;
@@ -307,7 +308,9 @@ consvar_t cv_chatheight= CVAR_INIT ("chatheight", "8", CV_SAVE, chatheight_cons_
 consvar_t cv_chatnotifications= CVAR_INIT ("chatnotifications", "On", CV_SAVE, CV_OnOff, NULL);
 
 // chat spam protection (why would you want to disable that???)
-consvar_t cv_chatspamprotection= CVAR_INIT ("chatspamprotection", "On", CV_SAVE, CV_OnOff, NULL);
+consvar_t cv_chatspamprotection= CVAR_INIT ("chatspamprotection", "On", CV_SAVE|CV_NETVAR, CV_OnOff, NULL);
+consvar_t cv_chatspamspeed= CVAR_INIT ("chatspamspeed", "35", CV_SAVE|CV_NETVAR, CV_Unsigned, NULL);
+consvar_t cv_chatspamburst= CVAR_INIT ("chatspamburst", "3", CV_SAVE|CV_NETVAR, CV_Unsigned, NULL);
 
 // minichat text background
 consvar_t cv_chatbacktint = CVAR_INIT ("chatbacktint", "On", CV_SAVE, CV_OnOff, NULL);
@@ -1170,7 +1173,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 	// why build a ticcmd if we're paused?
 	// Or, for that matter, if we're being reborn.
 	// ...OR if we're blindfolded. No looking into the floor.
-	if (paused || P_AutoPause() || (gamestate == GS_LEVEL && (player->playerstate == PST_REBORN || ((gametyperules & GTR_TAG)
+	if (ignoregameinputs || paused || P_AutoPause() || (gamestate == GS_LEVEL && (player->playerstate == PST_REBORN || ((gametyperules & GTR_TAG)
 	&& (leveltime < hidetime * TICRATE) && (player->pflags & PF_TAGIT)))))
 	{//@TODO splitscreen player
 		cmd->angleturn = ticcmd_oldangleturn[forplayer];
@@ -1334,7 +1337,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 #if NUM_WEAPONS > 10
 "Add extra inputs to g_input.h/gamecontrols_e"
 #endif
-	//use the four avaliable bits to determine the weapon.
+	//use the three avaliable bits to determine the weapon.
 	cmd->buttons &= ~BT_WEAPONMASK;
 	for (i = 0; i < NUM_WEAPONS; ++i)
 		if (PLAYERINPUTDOWN(ssplayer, GC_WEPSLOT1 + i))
@@ -1352,9 +1355,14 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 	axis = PlayerJoyAxis(ssplayer, JA_FIRENORMAL);
 	if (PLAYERINPUTDOWN(ssplayer, GC_FIRENORMAL) || (usejoystick && axis > 0))
 		cmd->buttons |= BT_FIRENORMAL;
-
+	
+	// Toss flag button
 	if (PLAYERINPUTDOWN(ssplayer, GC_TOSSFLAG))
 		cmd->buttons |= BT_TOSSFLAG;
+	
+	// Shield button
+	if (PLAYERINPUTDOWN(ssplayer, GC_SHIELD))
+		cmd->buttons |= BT_SHIELD;
 
 	// Lua scriptable buttons
 	if (PLAYERINPUTDOWN(ssplayer, GC_CUSTOM1))
@@ -2747,6 +2755,7 @@ void G_PlayerReborn(INT32 player, boolean betweenmaps)
 	p->pflags |= PF_SPINDOWN;
 	p->pflags |= PF_ATTACKDOWN;
 	p->pflags |= PF_JUMPDOWN;
+	p->pflags |= PF_SHIELDDOWN;
 
 	p->playerstate = PST_LIVE;
 	p->panim = PA_IDLE; // standing animation
@@ -4346,7 +4355,7 @@ void G_LoadGameSettings(void)
 }
 
 #define GAMEDATA_ID 0x86E4A27C // Change every major version, as usual
-#define COMPAT_GAMEDATA_ID 0xFCAFE211 // Can be removed entirely for 2.3
+#define COMPAT_GAMEDATA_ID 0xFCAFE211 // TODO: 2.3: Delete
 
 // G_LoadGameData
 // Loads the main data file, which stores information such as emblems found, etc.
@@ -5373,16 +5382,29 @@ void G_FreeMapSearch(mapsearchfreq_t *freq, INT32 freqc)
 INT32 G_FindMapByNameOrCode(const char *mapname, char **realmapnamep)
 {
 	boolean usemapcode = false;
-
 	INT32 newmapnum;
-
-	size_t mapnamelen;
-
+	size_t mapnamelen = strlen(mapname);
 	char *p;
 
-	mapnamelen = strlen(mapname);
-
-	if (mapnamelen == 2)/* maybe two digit code */
+	if (mapnamelen == 1)
+	{
+		if (mapname[0] == '*') // current map
+		{
+			usemapcode = true;
+			newmapnum = gamemap;
+		}
+		else if (mapname[0] == '+' && mapheaderinfo[gamemap-1]) // next map
+		{
+			usemapcode = true;
+			newmapnum = mapheaderinfo[gamemap-1]->nextlevel;
+			if (newmapnum < 1 || newmapnum > NUMMAPS)
+			{
+				CONS_Alert(CONS_ERROR, M_GetText("NextLevel (%d) is not a valid map.\n"), newmapnum);
+				return 0;
+			}
+		}
+	}
+	else if (mapnamelen == 2)/* maybe two digit code */
 	{
 		if (( newmapnum = M_MapNumber(mapname[0], mapname[1]) ))
 			usemapcode = true;

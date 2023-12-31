@@ -276,9 +276,6 @@ struct FSurfaceInfo
 };
 typedef struct FSurfaceInfo FSurfaceInfo;
 
-#define GL_DEFAULTMIX 0x00000000
-#define GL_DEFAULTFOG 0xFF000000
-
 //Hurdler: added for backward compatibility
 enum hwdsetspecialstate
 {
@@ -286,6 +283,7 @@ enum hwdsetspecialstate
 	HWD_SET_SHADERS,
 	HWD_SET_TEXTUREFILTERMODE,
 	HWD_SET_TEXTUREANISOTROPICMODE,
+	HWD_SET_WIREFRAME,
 	HWD_NUMSTATE
 };
 
