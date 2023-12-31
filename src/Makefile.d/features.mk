@@ -5,7 +5,7 @@
 passthru_opts+=\
 	NO_IPV6 NOHW NOMD5 NOPOSTPROCESSING\
 	MOBJCONSISTANCY PACKETDROP ZDEBUG\
-	HAVE_MINIUPNPC\
+	HAVE_MINIUPNPC NOEXECINFO\
 
 # build with debugging information
 ifdef DEBUGMODE
@@ -16,10 +16,6 @@ endif
 ifndef NOHW
 opts+=-DHWRENDER
 sources+=$(call List,hardware/Sourcefile)
-endif
-
-ifdef NONET
-NOCURL=1
 endif
 
 ifndef NOMD5

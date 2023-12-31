@@ -48,15 +48,18 @@ fixed_t rw_distance;
 //
 static INT32 rw_x, rw_stopx;
 static angle_t rw_centerangle;
-static fixed_t rw_offset;
-static fixed_t rw_offset_top, rw_offset_mid, rw_offset_bot;
-static fixed_t rw_offset2; // for splats
+static fixed_t rw_offset, rw_offsetx;
+static fixed_t rw_offset_top, rw_offset_mid, rw_offset_bottom;
 static fixed_t rw_scale, rw_scalestep;
 static fixed_t rw_midtexturemid, rw_toptexturemid, rw_bottomtexturemid;
 static INT32 worldtop, worldbottom, worldhigh, worldlow;
 static INT32 worldtopslope, worldbottomslope, worldhighslope, worldlowslope; // worldtop/bottom at end of slope
 static fixed_t rw_toptextureslide, rw_midtextureslide, rw_bottomtextureslide; // Defines how to adjust Y offsets along the wall for slopes
 static fixed_t rw_midtextureback, rw_midtexturebackslide; // Values for masked midtexture height calculation
+static fixed_t rw_midtexturescalex, rw_midtexturescaley;
+static fixed_t rw_toptexturescalex, rw_toptexturescaley;
+static fixed_t rw_bottomtexturescalex, rw_bottomtexturescaley;
+static fixed_t rw_invmidtexturescalex, rw_invtoptexturescalex, rw_invbottomtexturescalex;
 
 // Lactozilla: 3D floor clipping
 static boolean rw_floormarked = false;
@@ -71,8 +74,10 @@ static fixed_t topfrac, topstep;
 static fixed_t bottomfrac, bottomstep;
 
 static lighttable_t **walllights;
-static fixed_t *maskedtexturecol;
+static fixed_t *maskedtexturecol = NULL;
 static fixed_t *maskedtextureheight = NULL;
+static fixed_t *thicksidecol = NULL;
+static fixed_t *invscale = NULL;
 
 //SoM: 3/23/2000: Use boom opening limit removal
 static size_t numopenings;
@@ -162,7 +167,8 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 
 	frontsector = curline->frontsector;
 	backsector = curline->backsector;
-	texnum = R_GetTextureNum(curline->sidedef->midtexture);
+	sidedef = curline->sidedef;
+	texnum = R_GetTextureNum(sidedef->midtexture);
 	windowbottom = windowtop = sprbotscreen = INT32_MAX;
 
 	ldef = curline->linedef;
@@ -200,9 +206,13 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 		colfunc = colfuncs[COLDRAWFUNC_FUZZY];
 	}
 
+	fixed_t wall_scaley = sidedef->scaley_mid;
+	fixed_t scalestep = FixedDiv(ds->scalestep, wall_scaley);
+	fixed_t scale1 = FixedDiv(ds->scale1, wall_scaley);
+
 	range = max(ds->x2-ds->x1, 1);
-	rw_scalestep = ds->scalestep;
-	spryscale = ds->scale1 + (x1 - ds->x1)*rw_scalestep;
+	rw_scalestep = scalestep;
+	spryscale = scale1 + (x1 - ds->x1)*rw_scalestep;
 
 	// Texture must be cached before setting colfunc_2s,
 	// otherwise texture[texnum]->holes may be false when it shouldn't be
@@ -313,8 +323,8 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 	else
 		back = backsector;
 
-	if (ds->curline->sidedef->repeatcnt)
-		repeats = 1 + ds->curline->sidedef->repeatcnt;
+	if (sidedef->repeatcnt)
+		repeats = 1 + sidedef->repeatcnt;
 	else if (ldef->flags & ML_WRAPMIDTEX)
 	{
 		fixed_t high, low;
@@ -340,15 +350,14 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 	{
 		if (times > 0)
 		{
-			rw_scalestep = ds->scalestep;
-			spryscale = ds->scale1 + (x1 - ds->x1)*rw_scalestep;
-			if (dc_numlights)
-			{ // reset all lights to their starting heights
-				for (i = 0; i < dc_numlights; i++)
-				{
-					rlight = &dc_lightlist[i];
-					rlight->height = rlight->startheight;
-				}
+			rw_scalestep = scalestep;
+			spryscale = scale1 + (x1 - ds->x1)*rw_scalestep;
+
+			// reset all lights to their starting heights
+			for (i = 0; i < dc_numlights; i++)
+			{
+				rlight = &dc_lightlist[i];
+				rlight->height = rlight->startheight;
 			}
 		}
 
@@ -390,8 +399,10 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 				sprbotscreen = INT32_MAX;
 				sprtopscreen = windowtop = (centeryfrac - FixedMul(dc_texturemid, spryscale));
 
-				realbot = windowbottom = FixedMul(textureheight[texnum], spryscale) + sprtopscreen;
-				dc_iscale = 0xffffffffu / (unsigned)spryscale;
+				realbot = FixedMul(textureheight[texnum], spryscale) + sprtopscreen;
+				dc_iscale = FixedMul(ds->invscale[dc_x], wall_scaley);
+
+				windowbottom = realbot;
 
 				// draw the texture
 				col = (column_t *)((UINT8 *)R_GetColumn(texnum, (maskedtexturecol[dc_x] >> FRACBITS)) - 3);
@@ -466,7 +477,7 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 				dc_colormap = frontsector->extra_colormap->colormap + (dc_colormap - colormaps);
 
 			sprtopscreen = centeryfrac - FixedMul(dc_texturemid, spryscale);
-			dc_iscale = 0xffffffffu / (unsigned)spryscale;
+			dc_iscale = FixedMul(ds->invscale[dc_x], wall_scaley);
 
 			// draw the texture
 			col = (column_t *)((UINT8 *)R_GetColumn(texnum, (maskedtexturecol[dc_x] >> FRACBITS)) - 3);
@@ -525,7 +536,7 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 	INT32             i, p;
 	fixed_t         bottombounds = viewheight << FRACBITS;
 	fixed_t         topbounds = (con_clipviewtop - 1) << FRACBITS;
-	fixed_t         offsetvalue = 0;
+	fixed_t         offsetvalue;
 	lightlist_t     *light;
 	r_lightlist_t   *rlight;
 	INT32           range;
@@ -534,11 +545,13 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 	// NOTE: INT64 instead of fixed_t because overflow concerns
 	INT64         top_frac, top_step, bottom_frac, bottom_step;
 	// skew FOF walls with slopes?
-	boolean	      slopeskew = false;
 	fixed_t       ffloortextureslide = 0;
 	INT32         oldx = -1;
 	fixed_t       left_top, left_bottom; // needed here for slope skewing
 	pslope_t      *skewslope = NULL;
+	boolean do_texture_skew;
+	UINT32 lineflags;
+	fixed_t wall_scalex, wall_scaley;
 
 	void (*colfunc_2s) (column_t *);
 
@@ -550,7 +563,7 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 	curline = ds->curline;
 	backsector = pfloor->target;
 	frontsector = curline->frontsector == pfloor->target ? curline->backsector : curline->frontsector;
-	texnum = R_GetTextureNum(sides[pfloor->master->sidenum[0]].midtexture);
+	sidedef = &sides[pfloor->master->sidenum[0]];
 
 	colfunc = colfuncs[BASEDRAWFUNC];
 
@@ -558,8 +571,13 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 	{
 		size_t linenum = curline->linedef-backsector->lines[0];
 		newline = pfloor->master->frontsector->lines[0] + linenum;
-		texnum = R_GetTextureNum(sides[newline->sidenum[0]].midtexture);
+		sidedef = &sides[newline->sidenum[0]];
+		lineflags = newline->flags;
 	}
+	else
+		lineflags = pfloor->master->flags;
+
+	texnum = R_GetTextureNum(sidedef->midtexture);
 
 	if (pfloor->fofflags & FOF_TRANSLUCENT)
 	{
@@ -711,7 +729,13 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 			walllights = scalelight[lightnum];
 	}
 
-	maskedtexturecol = ds->thicksidecol;
+	wall_scalex = FixedDiv(FRACUNIT, sidedef->scalex_mid);
+	wall_scaley = sidedef->scaley_mid;
+
+	thicksidecol = ds->thicksidecol;
+
+	for (INT32 x = x1; x <= x2; x++)
+		thicksidecol[x] = FixedDiv(thicksidecol[x], wall_scalex) + ds->offsetx;
 
 	mfloorclip = ds->sprbottomclip;
 	mceilingclip = ds->sprtopclip;
@@ -721,51 +745,29 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 	left_top    = P_GetFFloorTopZAt   (pfloor, ds->leftpos.x, ds->leftpos.y) - viewz;
 	left_bottom = P_GetFFloorBottomZAt(pfloor, ds->leftpos.x, ds->leftpos.y) - viewz;
 
+	do_texture_skew = lineflags & ML_SKEWTD;
 	skewslope = *pfloor->t_slope; // skew using top slope by default
-	if (newline)
-	{
-		if (newline->flags & ML_SKEWTD)
-			slopeskew = true;
-	}
-	else if (pfloor->master->flags & ML_SKEWTD)
-		slopeskew = true;
 
-	if (slopeskew)
-		dc_texturemid = left_top;
+	if (do_texture_skew)
+		dc_texturemid = FixedMul(left_top, wall_scaley);
 	else
-		dc_texturemid = *pfloor->topheight - viewz;
+		dc_texturemid = FixedMul(*pfloor->topheight - viewz, wall_scaley);
 
-	if (newline)
+	offsetvalue = sidedef->rowoffset + sidedef->offsety_mid;
+
+	if (lineflags & ML_DONTPEGBOTTOM)
 	{
-		offsetvalue = sides[newline->sidenum[0]].rowoffset + sides[newline->sidenum[0]].offsety_mid;
-		if (newline->flags & ML_DONTPEGBOTTOM)
-		{
-			skewslope = *pfloor->b_slope; // skew using bottom slope
-			if (slopeskew)
-				dc_texturemid = left_bottom;
-			else
-				offsetvalue -= *pfloor->topheight - *pfloor->bottomheight;
-		}
-	}
-	else
-	{
-		offsetvalue = sides[pfloor->master->sidenum[0]].rowoffset + sides[pfloor->master->sidenum[0]].offsety_mid;
-		if (curline->linedef->flags & ML_DONTPEGBOTTOM)
-		{
-			skewslope = *pfloor->b_slope; // skew using bottom slope
-			if (slopeskew)
-				dc_texturemid = left_bottom;
-			else
-				offsetvalue -= *pfloor->topheight - *pfloor->bottomheight;
-		}
+		skewslope = *pfloor->b_slope; // skew using bottom slope
+		if (do_texture_skew)
+			dc_texturemid = FixedMul(left_bottom, wall_scaley);
+		else
+			offsetvalue -= FixedMul(*pfloor->topheight - *pfloor->bottomheight, wall_scaley);
 	}
 
-	if (slopeskew)
+	if (do_texture_skew && skewslope)
 	{
 		angle_t lineangle = R_PointToAngle2(curline->v1->x, curline->v1->y, curline->v2->x, curline->v2->y);
-
-		if (skewslope)
-			ffloortextureslide = FixedMul(skewslope->zdelta, FINECOSINE((lineangle-skewslope->xydirection)>>ANGLETOFINESHIFT));
+		ffloortextureslide = FixedMul(skewslope->zdelta, FINECOSINE((lineangle-skewslope->xydirection)>>ANGLETOFINESHIFT));
 	}
 
 	dc_texturemid += offsetvalue;
@@ -819,7 +821,7 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 		if (ffloortextureslide)
 		{
 			if (oldx != -1)
-				dc_texturemid += FixedMul(ffloortextureslide, maskedtexturecol[oldx]-maskedtexturecol[dc_x]);
+				dc_texturemid += FixedMul(ffloortextureslide, thicksidecol[oldx]-thicksidecol[dc_x]);
 			oldx = dc_x;
 		}
 
@@ -852,10 +854,10 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 			continue;
 		}
 
-		dc_iscale = 0xffffffffu / (unsigned)spryscale;
+		dc_iscale = FixedMul(0xffffffffu / (unsigned)spryscale, wall_scaley);
 
 		// Get data for the column
-		col = (column_t *)((UINT8 *)R_GetColumn(texnum, (maskedtexturecol[dc_x] >> FRACBITS)) - 3);
+		col = (column_t *)((UINT8 *)R_GetColumn(texnum, (thicksidecol[dc_x] >> FRACBITS)) - 3);
 
 		// SoM: New code does not rely on R_DrawColumnShadowed_8 which
 		// will (hopefully) put less strain on the stack.
@@ -1044,13 +1046,18 @@ UINT32 nombre = 100000;
 static void R_RenderSegLoop (void)
 {
 	angle_t angle;
+	fixed_t textureoffset;
 	size_t  pindex;
 	INT32     yl;
 	INT32     yh;
 
 	INT32     mid;
 	fixed_t texturecolumn = 0;
+	fixed_t toptexturecolumn = 0;
+	fixed_t bottomtexturecolumn = 0;
 	fixed_t oldtexturecolumn = -1;
+	fixed_t oldtexturecolumn_top = -1;
+	fixed_t oldtexturecolumn_bottom = -1;
 	INT32     top;
 	INT32     bottom;
 	INT32     i;
@@ -1217,17 +1224,8 @@ static void R_RenderSegLoop (void)
 		//SoM: Calculate offsets for Thick fake floors.
 		// calculate texture offset
 		angle = (rw_centerangle + xtoviewangle[rw_x])>>ANGLETOFINESHIFT;
-		texturecolumn = rw_offset-FixedMul(FINETANGENT(angle),rw_distance);
-
-		if (oldtexturecolumn != -1) {
-			rw_bottomtexturemid += FixedMul(rw_bottomtextureslide,  oldtexturecolumn-texturecolumn);
-			rw_midtexturemid    += FixedMul(rw_midtextureslide,     oldtexturecolumn-texturecolumn);
-			rw_toptexturemid    += FixedMul(rw_toptextureslide,     oldtexturecolumn-texturecolumn);
-			rw_midtextureback   += FixedMul(rw_midtexturebackslide, oldtexturecolumn-texturecolumn);
-		}
-		oldtexturecolumn = texturecolumn;
-
-		INT32 itexturecolumn = texturecolumn >> FRACBITS;
+		textureoffset = rw_offset - FixedMul(FINETANGENT(angle), rw_distance);
+		texturecolumn = FixedDiv(textureoffset, rw_invmidtexturescalex);
 
 		// texturecolumn and lighting are independent of wall tiers
 		if (segtextured)
@@ -1240,7 +1238,6 @@ static void R_RenderSegLoop (void)
 
 			dc_colormap = walllights[pindex];
 			dc_x = rw_x;
-			dc_iscale = 0xffffffffu / (unsigned)rw_scale;
 
 			if (frontsector->extra_colormap)
 				dc_colormap = frontsector->extra_colormap->colormap + (dc_colormap - colormaps);
@@ -1290,10 +1287,13 @@ static void R_RenderSegLoop (void)
 			// single sided line
 			if (yl <= yh && yh >= 0 && yl < viewheight)
 			{
+				fixed_t offset = texturecolumn + rw_offsetx;
+
 				dc_yl = yl;
 				dc_yh = yh;
 				dc_texturemid = rw_midtexturemid;
-				dc_source = R_GetColumn(midtexture, itexturecolumn + (rw_offset_mid>>FRACBITS));
+				dc_iscale = FixedMul(0xffffffffu / (unsigned)rw_scale, rw_midtexturescaley);
+				dc_source = R_GetColumn(midtexture, offset >> FRACBITS);
 				dc_texheight = textureheight[midtexture]>>FRACBITS;
 
 				//profile stuff ---------------------------------------------------------
@@ -1342,6 +1342,8 @@ static void R_RenderSegLoop (void)
 				if (mid >= floorclip[rw_x])
 					mid = floorclip[rw_x]-1;
 
+				toptexturecolumn = FixedDiv(textureoffset, rw_invtoptexturescalex);
+
 				if (mid >= yl) // back ceiling lower than front ceiling ?
 				{
 					if (yl >= viewheight) // entirely off bottom of screen
@@ -1351,10 +1353,16 @@ static void R_RenderSegLoop (void)
 					}
 					else if (mid >= 0) // safe to draw top texture
 					{
+						fixed_t offset = rw_offset_top;
+						if (rw_toptexturescalex < 0)
+							offset = -offset;
+						offset = toptexturecolumn + offset;
+
 						dc_yl = yl;
 						dc_yh = mid;
 						dc_texturemid = rw_toptexturemid;
-						dc_source = R_GetColumn(toptexture, itexturecolumn + (rw_offset_top>>FRACBITS));
+						dc_iscale = FixedMul(0xffffffffu / (unsigned)rw_scale, rw_toptexturescaley);
+						dc_source = R_GetColumn(toptexture, offset >> FRACBITS);
 						dc_texheight = textureheight[toptexture]>>FRACBITS;
 						colfunc();
 						ceilingclip[rw_x] = (INT16)mid;
@@ -1364,6 +1372,10 @@ static void R_RenderSegLoop (void)
 				}
 				else if (!rw_ceilingmarked)
 					ceilingclip[rw_x] = topclip;
+
+				if (oldtexturecolumn_top != -1)
+					rw_toptexturemid += FixedMul(rw_toptextureslide, oldtexturecolumn_top-toptexturecolumn);
+				oldtexturecolumn_top = toptexturecolumn;
 			}
 			else if (markceiling && (!rw_ceilingmarked)) // no top wall
 				ceilingclip[rw_x] = topclip;
@@ -1378,6 +1390,8 @@ static void R_RenderSegLoop (void)
 				if (mid <= ceilingclip[rw_x])
 					mid = ceilingclip[rw_x]+1;
 
+				bottomtexturecolumn = FixedDiv(textureoffset, rw_invbottomtexturescalex);
+
 				if (mid <= yh) // back floor higher than front floor ?
 				{
 					if (yh < 0) // entirely off top of screen
@@ -1387,10 +1401,16 @@ static void R_RenderSegLoop (void)
 					}
 					else if (mid < viewheight) // safe to draw bottom texture
 					{
+						fixed_t offset = rw_offset_bottom;
+						if (rw_bottomtexturescalex < 0)
+							offset = -offset;
+						offset = bottomtexturecolumn + offset;
+
 						dc_yl = mid;
 						dc_yh = yh;
 						dc_texturemid = rw_bottomtexturemid;
-						dc_source = R_GetColumn(bottomtexture, itexturecolumn + (rw_offset_bot>>FRACBITS));
+						dc_iscale = FixedMul(0xffffffffu / (unsigned)rw_scale, rw_bottomtexturescaley);
+						dc_source = R_GetColumn(bottomtexture, offset >> FRACBITS);
 						dc_texheight = textureheight[bottomtexture]>>FRACBITS;
 						colfunc();
 						floorclip[rw_x] = (INT16)mid;
@@ -1400,23 +1420,42 @@ static void R_RenderSegLoop (void)
 				}
 				else if (!rw_floormarked)
 					floorclip[rw_x] = bottomclip;
+
+				if (oldtexturecolumn_bottom != -1)
+					rw_bottomtexturemid += FixedMul(rw_bottomtextureslide, oldtexturecolumn_bottom-bottomtexturecolumn);
+				oldtexturecolumn_bottom = bottomtexturecolumn;
 			}
 			else if (markfloor && (!rw_floormarked)) // no bottom wall
 				floorclip[rw_x] = bottomclip;
 		}
 
-		if (maskedtexture || numthicksides)
-		{
-			// save texturecol
-			//  for backdrawing of masked mid texture
-			maskedtexturecol[rw_x] = texturecolumn + rw_offset_mid;
+		if (maskedtexturecol)
+			maskedtexturecol[rw_x] = texturecolumn + rw_offsetx;
 
-			if (maskedtextureheight != NULL) {
-				maskedtextureheight[rw_x] = (curline->linedef->flags & ML_MIDPEG) ?
-											max(rw_midtexturemid, rw_midtextureback) :
-											min(rw_midtexturemid, rw_midtextureback);
-			}
+		if (thicksidecol)
+			thicksidecol[rw_x] = textureoffset;
+
+		if (maskedtextureheight)
+		{
+			if (curline->linedef->flags & ML_MIDPEG)
+				maskedtextureheight[rw_x] = max(rw_midtexturemid, rw_midtextureback);
+			else
+				maskedtextureheight[rw_x] = min(rw_midtexturemid, rw_midtextureback);
 		}
+
+		if (midtexture || maskedtextureheight)
+		{
+			if (oldtexturecolumn != -1)
+			{
+				rw_midtexturemid += FixedMul(rw_midtextureslide, oldtexturecolumn-texturecolumn);
+				rw_midtextureback += FixedMul(rw_midtexturebackslide, oldtexturecolumn-texturecolumn);
+			}
+
+			oldtexturecolumn = texturecolumn;
+		}
+
+		if (invscale)
+			invscale[rw_x] = 0xffffffffu / (unsigned)rw_scale;
 
 		if (dc_numlights)
 		{
@@ -1506,10 +1545,9 @@ static void R_AllocClippingTables(size_t range)
 static void R_AllocTextureColumnTables(size_t range)
 {
 	size_t pos = curtexturecolumntable - texturecolumntable;
+	size_t need = range * 3;
 
-	// For both tables, we reserve exactly an amount of memory that's equivalent to
-	// how many columns the seg will take on the entire screen (think about it)
-	if (pos + range < texturecolumntablesize)
+	if (pos + need < texturecolumntablesize)
 		return;
 
 	fixed_t *oldtable = texturecolumntable;
@@ -1518,7 +1556,7 @@ static void R_AllocTextureColumnTables(size_t range)
 	if (texturecolumntablesize == 0)
 		texturecolumntablesize = 16384;
 
-	texturecolumntablesize += range;
+	texturecolumntablesize += need;
 	texturecolumntable = Z_Realloc(texturecolumntable, texturecolumntablesize * sizeof (*texturecolumntable), PU_STATIC, NULL);
 	curtexturecolumntable = texturecolumntable + pos;
 
@@ -1532,6 +1570,8 @@ static void R_AllocTextureColumnTables(size_t range)
 			ds->maskedtexturecol = (ds->maskedtexturecol - oldtable) + texturecolumntable;
 		if (ds->thicksidecol + ds->x1 >= oldtable && ds->thicksidecol + ds->x1 <= oldlast)
 			ds->thicksidecol = (ds->thicksidecol - oldtable) + texturecolumntable;
+		if (ds->invscale + ds->x1 >= oldtable && ds->invscale + ds->x1 <= oldlast)
+			ds->invscale = (ds->invscale - oldtable) + texturecolumntable;
 	}
 }
 
@@ -1555,7 +1595,11 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 	fixed_t ceilingfrontslide, floorfrontslide, ceilingbackslide, floorbackslide;
 	static size_t maxdrawsegs = 0;
 
+	maskedtexturecol = NULL;
 	maskedtextureheight = NULL;
+	thicksidecol = NULL;
+	invscale = NULL;
+
 	//initialize segleft and segright
 	memset(&segleft, 0x00, sizeof(segleft));
 	memset(&segright, 0x00, sizeof(segright));
@@ -1712,6 +1756,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 	ds_p->maskedtexturecol = NULL;
 	ds_p->numthicksides = numthicksides = 0;
 	ds_p->thicksidecol = NULL;
+	ds_p->invscale = NULL;
 	ds_p->tsilheight = 0;
 
 	numbackffloors = 0;
@@ -1751,32 +1796,67 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 			ceilingbackslide = FixedMul(backsector->c_slope->zdelta, FINECOSINE((lineangle-backsector->c_slope->xydirection)>>ANGLETOFINESHIFT));
 	}
 
+	rw_midtexturescalex = sidedef->scalex_mid;
+	rw_midtexturescaley = sidedef->scaley_mid;
+	rw_invmidtexturescalex = FixedDiv(FRACUNIT, rw_midtexturescalex);
+
 	if (!backsector)
 	{
-		fixed_t texheight;
-		// single sided line
 		midtexture = R_GetTextureNum(sidedef->midtexture);
-		texheight = textureheight[midtexture];
+
 		// a single sided line is terminal, so it must mark ends
 		markfloor = markceiling = true;
-		if (linedef->flags & ML_NOSKEW) {
-			if (linedef->flags & ML_DONTPEGBOTTOM)
-				rw_midtexturemid = frontsector->floorheight + texheight - viewz;
-			else
-				rw_midtexturemid = frontsector->ceilingheight - viewz;
-		}
-		else if (linedef->flags & ML_DONTPEGBOTTOM)
+
+		fixed_t rowoffset = sidedef->rowoffset + sidedef->offsety_mid;
+		fixed_t texheight = textureheight[midtexture];
+
+		if (rw_midtexturescaley > 0)
 		{
-			rw_midtexturemid = worldbottom + texheight;
-			rw_midtextureslide = floorfrontslide;
+			if (linedef->flags & ML_NOSKEW)
+			{
+				if (linedef->flags & ML_DONTPEGBOTTOM)
+					rw_midtexturemid = FixedMul(frontsector->floorheight - viewz, rw_midtexturescaley) + texheight;
+				else
+					rw_midtexturemid = FixedMul(frontsector->ceilingheight - viewz, rw_midtexturescaley);
+			}
+			else if (linedef->flags & ML_DONTPEGBOTTOM)
+			{
+				rw_midtexturemid = FixedMul(worldbottom, rw_midtexturescaley) + texheight;
+				rw_midtextureslide = floorfrontslide;
+			}
+			else
+			{
+				// top of texture at top
+				rw_midtexturemid = FixedMul(worldtop, rw_midtexturescaley);
+				rw_midtextureslide = ceilingfrontslide;
+			}
 		}
 		else
 		{
-			// top of texture at top
-			rw_midtexturemid = worldtop;
-			rw_midtextureslide = ceilingfrontslide;
+			// Upside down
+			rowoffset = -rowoffset;
+
+			if (linedef->flags & ML_NOSKEW)
+			{
+				if (linedef->flags & ML_DONTPEGBOTTOM)
+					rw_midtexturemid = FixedMul(frontsector->floorheight - viewz, rw_midtexturescaley);
+				else
+					rw_midtexturemid = FixedMul(frontsector->ceilingheight - viewz, rw_midtexturescaley) + texheight;
+			}
+			else if (linedef->flags & ML_DONTPEGBOTTOM)
+			{
+				rw_midtexturemid = FixedMul(worldbottom, rw_midtexturescaley);
+				rw_midtextureslide = floorfrontslide;
+			}
+			else
+			{
+				// top of texture at top
+				rw_midtexturemid = FixedMul(worldtop, rw_midtexturescaley) + texheight;
+				rw_midtextureslide = ceilingfrontslide;
+			}
 		}
-		rw_midtexturemid += sidedef->rowoffset + sidedef->offsety_mid;
+
+		rw_midtexturemid += rowoffset;
 
 		ds_p->silhouette = SIL_BOTH;
 		ds_p->sprtopclip = screenheightarray;
@@ -1901,6 +1981,8 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 			//SoM: 3/22/2000: Check floor x and y offsets.
 			|| backsector->floorxoffset != frontsector->floorxoffset
 			|| backsector->flooryoffset != frontsector->flooryoffset
+			|| backsector->floorxscale != frontsector->floorxscale
+			|| backsector->flooryscale != frontsector->flooryscale
 			|| backsector->floorangle != frontsector->floorangle
 			//SoM: 3/22/2000: Prevents bleeding.
 			|| (frontsector->heightsec != -1 && frontsector->floorpic != skyflatnum)
@@ -1934,6 +2016,8 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 			//SoM: 3/22/2000: Check floor x and y offsets.
 			|| backsector->ceilingxoffset != frontsector->ceilingxoffset
 			|| backsector->ceilingyoffset != frontsector->ceilingyoffset
+			|| backsector->ceilingxscale != frontsector->ceilingxscale
+			|| backsector->ceilingyscale != frontsector->ceilingyscale
 			|| backsector->ceilingangle != frontsector->ceilingangle
 			//SoM: 3/22/2000: Prevents bleeding.
 			|| (frontsector->heightsec != -1 && frontsector->ceilingpic != skyflatnum)
@@ -1962,16 +2046,28 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 			}
 		}
 
+		fixed_t toprowoffset = sidedef->rowoffset + sidedef->offsety_top;
+		fixed_t botrowoffset = sidedef->rowoffset + sidedef->offsety_bottom;
+
 		// check TOP TEXTURE
 		if (!bothceilingssky // never draw the top texture if on
 			&& (worldhigh < worldtop || worldhighslope < worldtopslope))
 		{
-			fixed_t texheight;
-			// top texture
 			toptexture = R_GetTextureNum(sidedef->toptexture);
-			texheight = textureheight[toptexture];
 
-			if (!(linedef->flags & ML_SKEWTD)) { // Ignore slopes for lower/upper textures unless flag is checked
+			rw_toptexturescalex = sidedef->scalex_top;
+			rw_toptexturescaley = sidedef->scaley_top;
+
+			rw_invtoptexturescalex = FixedDiv(FRACUNIT, rw_toptexturescalex);
+
+			if (rw_toptexturescaley < 0)
+				toprowoffset = -toprowoffset;
+
+			fixed_t texheight = textureheight[toptexture];
+
+			// Ignore slopes for lower/upper textures unless flag is checked
+			if (!(linedef->flags & ML_SKEWTD))
+			{
 				if (linedef->flags & ML_DONTPEGTOP)
 					rw_toptexturemid = frontsector->ceilingheight - viewz;
 				else
@@ -1988,7 +2084,10 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 				rw_toptexturemid = worldhigh + texheight;
 				rw_toptextureslide = ceilingbackslide;
 			}
+
+			rw_toptexturemid = FixedMul(rw_toptexturemid, rw_toptexturescaley);
 		}
+
 		// check BOTTOM TEXTURE
 		if (!bothfloorssky // never draw the bottom texture if on
 			&& (worldlow > worldbottom || worldlowslope > worldbottomslope)) // Only if VISIBLE!!!
@@ -1996,7 +2095,17 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 			// bottom texture
 			bottomtexture = R_GetTextureNum(sidedef->bottomtexture);
 
-			if (!(linedef->flags & ML_SKEWTD)) { // Ignore slopes for lower/upper textures unless flag is checked
+			rw_bottomtexturescalex = sidedef->scalex_bottom;
+			rw_bottomtexturescaley = sidedef->scaley_bottom;
+
+			rw_invbottomtexturescalex = FixedDiv(FRACUNIT, rw_bottomtexturescalex);
+
+			if (rw_bottomtexturescaley < 0)
+				botrowoffset = -botrowoffset;
+
+			// Ignore slopes for lower/upper textures unless flag is checked
+			if (!(linedef->flags & ML_SKEWTD))
+			{
 				if (linedef->flags & ML_DONTPEGBOTTOM)
 					rw_bottomtexturemid = frontsector->floorheight - viewz;
 				else
@@ -2009,18 +2118,22 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 				rw_bottomtexturemid = worldbottom;
 				rw_bottomtextureslide = floorfrontslide;
 			}
-			else {   // top of texture at top
+			else
+			{
+				// top of texture at top
 				rw_bottomtexturemid = worldlow;
 				rw_bottomtextureslide = floorbackslide;
 			}
+
+			rw_bottomtexturemid = FixedMul(rw_bottomtexturemid, rw_bottomtexturescaley);
 		}
 
-		rw_toptexturemid += sidedef->rowoffset + sidedef->offsety_top;
-		rw_bottomtexturemid += sidedef->rowoffset + sidedef->offsety_bot;
-
-		R_AllocTextureColumnTables(rw_stopx - start);
+		rw_toptexturemid += toprowoffset;
+		rw_bottomtexturemid += botrowoffset;
 
 		// allocate space for masked texture tables
+		R_AllocTextureColumnTables(rw_stopx - start);
+
 		if (frontsector && backsector && !Tag_Compare(&frontsector->tags, &backsector->tags) && (backsector->ffloors || frontsector->ffloors))
 		{
 			ffloor_t *rover;
@@ -2031,10 +2144,9 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 			// Used for height comparisons and etc across FOFs and slopes
 			fixed_t high1, highslope1, low1, lowslope1, high2, highslope2, low2, lowslope2;
 
-			//markceiling = markfloor = true;
 			maskedtexture = true;
 
-			ds_p->thicksidecol = maskedtexturecol = curtexturecolumntable - rw_x;
+			ds_p->thicksidecol = thicksidecol = curtexturecolumntable - rw_x;
 			curtexturecolumntable += rw_stopx - rw_x;
 
 			lowcut = max(worldbottom, worldlow) + viewz;
@@ -2213,21 +2325,20 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 
 			ds_p->numthicksides = numthicksides = i;
 		}
+
+		// masked midtexture
 		if (sidedef->midtexture > 0 && sidedef->midtexture < numtextures)
 		{
-			// masked midtexture
-			if (!ds_p->thicksidecol)
-			{
-				ds_p->maskedtexturecol = maskedtexturecol = curtexturecolumntable - rw_x;
-				curtexturecolumntable += rw_stopx - rw_x;
-			}
-			else
-				ds_p->maskedtexturecol = ds_p->thicksidecol;
+			ds_p->maskedtexturecol = maskedtexturecol = curtexturecolumntable - rw_x;
+			curtexturecolumntable += rw_stopx - rw_x;
 
 			maskedtextureheight = ds_p->maskedtextureheight; // note to red, this == &(ds_p->maskedtextureheight[0])
 
+			maskedtexture = true;
+
 			if (curline->polyseg)
-			{ // use REAL front and back floors please, so midtexture rendering isn't mucked up
+			{
+				// use REAL front and back floors please, so midtexture rendering isn't mucked up
 				rw_midtextureslide = rw_midtexturebackslide = 0;
 				if (linedef->flags & ML_MIDPEG)
 					rw_midtexturemid = rw_midtextureback = max(curline->frontsector->floorheight, curline->backsector->floorheight) - viewz;
@@ -2238,7 +2349,8 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 			{
 				// Set midtexture starting height
 				if (linedef->flags & ML_NOSKEW)
-				{ // Ignore slopes when texturing
+				{
+					// Ignore slopes when texturing
 					rw_midtextureslide = rw_midtexturebackslide = 0;
 					if (linedef->flags & ML_MIDPEG)
 						rw_midtexturemid = rw_midtextureback = max(frontsector->floorheight, backsector->floorheight) - viewz;
@@ -2261,6 +2373,10 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 					rw_midtexturebackslide = ceilingbackslide;
 				}
 			}
+
+			rw_midtexturemid = FixedMul(rw_midtexturemid, rw_midtexturescaley);
+			rw_midtextureback = FixedMul(rw_midtextureback, rw_midtexturescaley);
+
 			rw_midtexturemid += sidedef->rowoffset + sidedef->offsety_mid;
 			rw_midtextureback += sidedef->rowoffset + sidedef->offsety_mid;
 
@@ -2273,6 +2389,8 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 
 	if (segtextured)
 	{
+		fixed_t sideoffset = sidedef->textureoffset;
+
 		offsetangle = rw_normalangle-rw_angle1;
 
 		if (offsetangle > ANGLE_180)
@@ -2297,13 +2415,19 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 		if (rw_normalangle-rw_angle1 < ANGLE_180)
 			rw_offset = -rw_offset;
 
-		/// don't use texture offset for splats
-		rw_offset2 = rw_offset + curline->offset;
-		rw_offset += sidedef->textureoffset + curline->offset;
-		rw_offset_top = sidedef->offsetx_top;
-		rw_offset_mid = sidedef->offsetx_mid;
-		rw_offset_bot = sidedef->offsetx_bot;
+		rw_offset += curline->offset;
 		rw_centerangle = ANGLE_90 + viewangle - rw_normalangle;
+
+		rw_offset_top = sideoffset + sidedef->offsetx_top;
+		rw_offset_mid = sideoffset + sidedef->offsetx_mid;
+		rw_offset_bottom = sideoffset + sidedef->offsetx_bottom;
+
+		rw_offsetx = rw_offset_mid;
+		if (rw_midtexturescalex < 0)
+			rw_offsetx = -rw_offsetx;
+
+		if (numthicksides)
+			ds_p->offsetx = rw_offsetx;
 
 		// calculate light table
 		//  use different light tables
@@ -2322,6 +2446,12 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 			walllights = scalelight[LIGHTLEVELS - 1];
 		else
 			walllights = scalelight[lightnum];
+	}
+
+	if (maskedtexture)
+	{
+		ds_p->invscale = invscale = curtexturecolumntable - rw_x;
+		curtexturecolumntable += rw_stopx - rw_x;
 	}
 
 	// if a floor / ceiling plane is on the wrong side
