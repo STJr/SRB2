@@ -34,6 +34,7 @@
 */
 
 typedef INT32 fixed_t;
+typedef UINT32 ufixed_t;
 
 /*!
   \brief convert fixed_t into floating number
@@ -106,7 +107,7 @@ FUNCMATH FUNCINLINE static ATTRINLINE fixed_t FixedInt(fixed_t a)
 */
 FUNCMATH FUNCINLINE static ATTRINLINE fixed_t FixedDiv(fixed_t a, fixed_t b)
 {
-	if ((abs(a) >> (FRACBITS-2)) >= abs(b))
+	if (((ufixed_t)abs(a) >> (FRACBITS-2)) >= (ufixed_t)abs(b))
 		return (a^b) < 0 ? INT32_MIN : INT32_MAX;
 
 	return FixedDiv2(a, b);
