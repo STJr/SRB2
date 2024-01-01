@@ -2,8 +2,6 @@
 # Makefile options for unices (linux, bsd...)
 #
 
-EXENAME?=lsdl2srb2
-
 opts+=-DUNIXCOMMON -DLUA_USE_POSIX
 # Use -rdynamic so a backtrace log shows function names
 # instead of addresses
@@ -17,7 +15,16 @@ endif
 ifndef DEDICATED
 ifndef DUMMY
 SDL?=1
+DEDICATED?=0
 endif
+endif
+
+ifeq (${SDL},1)
+EXENAME?=lsdl2srb2
+endif
+
+ifeq (${DEDICATED},1)
+EXENAME?=lsrb2d
 endif
 
 # In common usage.
