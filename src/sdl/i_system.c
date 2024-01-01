@@ -138,7 +138,9 @@ typedef LPVOID (WINAPI *p_MapViewOfFile) (HANDLE, DWORD, DWORD, DWORD, SIZE_T);
 #endif
 
 #if defined (__unix__) || defined(__APPLE__) || defined (UNIXCOMMON)
+#ifndef NOEXECINFO
 #include <execinfo.h>
+#endif
 #include <time.h>
 #define UNIXBACKTRACE
 #endif
@@ -268,13 +270,17 @@ UINT8 keyboard_started = false;
 static void write_backtrace(INT32 signal)
 {
 	int fd = -1;
+#ifndef NOEXECINFO
 	size_t size;
+#endif
 	time_t rawtime;
 	struct tm timeinfo;
 	ssize_t junk;
 
 	enum { BT_SIZE = 1024, STR_SIZE = 32 };
+#ifndef NOEXECINFO
 	void *array[BT_SIZE];
+#endif
 	char timestr[STR_SIZE];
 
 	const char *error = "An error occurred within SRB2! Send this stack trace to someone who can help!\n";
@@ -307,12 +313,14 @@ static void write_backtrace(INT32 signal)
 	CRASHLOG_WRITE(strsignal(signal));
 	CRASHLOG_WRITE("\n"); // Newline for the signal name
 
+#ifndef NOEXECINFO
 	CRASHLOG_STDERR_WRITE("\nBacktrace:\n");
 
 	// Flood the output and log with the backtrace
 	size = backtrace(array, BT_SIZE);
 	backtrace_symbols_fd(array, size, fd);
 	backtrace_symbols_fd(array, size, STDERR_FILENO);
+#endif
 
 	CRASHLOG_WRITE("\n"); // Write another newline to the log so it looks nice :)
 	(void)junk;
