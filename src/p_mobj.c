@@ -1676,8 +1676,6 @@ static void P_XYFriction(mobj_t *mo, fixed_t oldx, fixed_t oldy)
 				mo->momx = FixedMul(mo->momx, mo->friction);
 				mo->momy = FixedMul(mo->momy, mo->friction);
 			}
-
-			mo->friction = ORIG_FRICTION;
 		}
 	}
 	else
