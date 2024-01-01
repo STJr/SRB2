@@ -1627,6 +1627,8 @@ static void R_ProjectSprite(mobj_t *thing)
 	height = interp.height; // Ditto
 
 	// transform the origin point
+	if (thing->type == MT_OVERLAY) // Handle overlays
+		R_ThingOffsetOverlay(thing, &interp.x, &interp.y);
 	tr_x = interp.x - viewx;
 	tr_y = interp.y - viewy;
 
@@ -1972,6 +1974,8 @@ static void R_ProjectSprite(mobj_t *thing)
 		radius = tracer_interp.radius; // For drop shadows
 		height = tracer_interp.height; // Ditto
 
+		if (thing->type == MT_OVERLAY) // Handle overlays
+			R_ThingOffsetOverlay(thing, &tracer_interp.x, &tracer_interp.y);
 		tr_x = (tracer_interp.x + sort_x) - viewx;
 		tr_y = (tracer_interp.y + sort_y) - viewy;
 		tz = FixedMul(tr_x, viewcos) + FixedMul(tr_y, viewsin);
@@ -3564,6 +3568,50 @@ boolean R_ThingIsSemiBright(mobj_t *thing)
 boolean R_ThingIsFullDark(mobj_t *thing)
 {
 	return ((thing->frame & FF_BRIGHTMASK) == FF_FULLDARK || (thing->renderflags & RF_BRIGHTMASK) == RF_FULLDARK);
+}
+
+// Offsets MT_OVERLAY towards the camera at render-time - Works in splitscreen!
+// The &x and &y arguments should be pre-interpolated, and will be modified
+void R_ThingOffsetOverlay(mobj_t *thing, fixed_t *x, fixed_t *y)
+{
+	mobj_t *mobj = thing;
+	INT16 offset = 0; // Offset towards or away from the camera, and how much
+	fixed_t offsetscale = thing->scale; // Occasionally needs to be interpolated
+	angle_t viewingangle;
+	UINT8 looplimit = 255; // Prevent infinite loops - A chain of 255 connected overlays is enough for any sane use case
+
+#ifdef PARANOIA
+	if (P_MobjWasRemoved(mobj) || !x || !y)
+		I_Error("R_ThingOffsetOverlay: thing, x, or y is invalid");
+#endif
+
+	do // Get the overlay's offset
+	{
+		// Does the overlay use FF_ANIMATE? If not, if var1 is non-zero, it's an underlay instead of an overlay
+		if (!(mobj->state->frame & FF_ANIMATE) && mobj->state->var1)
+			offset += 1; // Underlay below the target, away from the camera
+		else
+			offset -= 1; // Overlay on top of the target, towards the camera
+
+		looplimit -= 1;
+		mobj = mobj->target;
+	} while (!P_MobjWasRemoved(mobj) && mobj->type == MT_OVERLAY && looplimit > 0); // Handle overlays following other overlays
+
+	// Does the offset scale need to be interpolated?
+	if (thing->scale != thing->old_scale && R_UsingFrameInterpolation() && !paused)
+	{
+		interpmobjstate_t interp = {0};
+		R_InterpolateMobjState(thing, rendertimefrac, &interp);
+		offsetscale = interp.scale;
+	}
+
+
+	// Get the angle from the camera to the X and Y coordinates
+	viewingangle = R_PointToAngle(*x, *y);
+
+	// Finally, offset the X and Y coordinates towards or away from the camera
+	*x += P_ReturnThrustX(thing, viewingangle, FixedMul(offset * (FRACUNIT/4), offsetscale));
+	*y += P_ReturnThrustY(thing, viewingangle, FixedMul(offset * (FRACUNIT/4), offsetscale));
 }
 
 //

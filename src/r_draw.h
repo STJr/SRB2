@@ -61,7 +61,7 @@ extern fixed_t ds_xfrac, ds_yfrac, ds_xstep, ds_ystep;
 extern INT32 ds_waterofs, ds_bgofs;
 
 extern UINT16 ds_flatwidth, ds_flatheight;
-extern boolean ds_powersoftwo, ds_solidcolor;
+extern boolean ds_powersoftwo, ds_solidcolor, ds_fog;
 
 extern UINT8 *ds_source;
 extern UINT8 *ds_transmap;
@@ -71,8 +71,7 @@ typedef struct {
 } floatv3_t;
 
 // Vectors for Software's tilted slope drawers
-extern floatv3_t *ds_su, *ds_sv, *ds_sz;
-extern floatv3_t *ds_sup, *ds_svp, *ds_szp;
+extern floatv3_t ds_su, ds_sv, ds_sz, ds_slopelight;
 extern float focallengthf, zeroheight;
 
 // Variable flat sizes
@@ -177,8 +176,6 @@ void R_Draw2sMultiPatchColumn_8(void);
 void R_Draw2sMultiPatchTranslucentColumn_8(void);
 void R_DrawFogColumn_8(void);
 void R_DrawColumnShadowed_8(void);
-
-#define PLANELIGHTFLOAT (BASEVIDWIDTH * BASEVIDWIDTH / vid.width / zeroheight / 21.0f * FIXED_TO_FLOAT(fovtan))
 
 void R_DrawSpan_8(void);
 void R_DrawTranslucentSpan_8(void);
