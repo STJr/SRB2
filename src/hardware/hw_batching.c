@@ -116,15 +116,20 @@ void HWR_ProcessPolygon(FSurfaceInfo *pSurf, FOutVector *pOutVerts, FUINT iNumPt
 		polygonArray[polygonArraySize].texture = current_texture;
 		polygonArray[polygonArraySize].shader = shader;
 		polygonArray[polygonArraySize].horizonSpecial = horizonSpecial;
-		polygonArray[polygonArraySize].hash = 0;
+		// default to polygonArraySize so we don't lose order on horizon lines
+		// (yes, it's supposed to be negative, since we're sorting in that direction)
+		polygonArray[polygonArraySize].hash = -polygonArraySize;
 		polygonArraySize++;
 
 		if (!(PolyFlags & PF_NoTexture) && !horizonSpecial)
 		{
 			// use FNV-1a to hash polygons for later sorting.
-			int32_t hash = 0x811c9dc5;
+			INT32 hash = 0x811c9dc5;
 #define DIGEST(h, x) h ^= (x); h *= 0x01000193
-			DIGEST(hash, current_texture->downloaded);
+			if (current_texture)
+			{
+				DIGEST(hash, current_texture->downloaded);
+			}
 			DIGEST(hash, PolyFlags);
 			DIGEST(hash, pSurf->PolyColor.rgba);
 			if (cv_glshaders.value && gl_shadersavailable)
@@ -137,7 +142,8 @@ void HWR_ProcessPolygon(FSurfaceInfo *pSurf, FOutVector *pOutVerts, FUINT iNumPt
 				DIGEST(hash, pSurf->LightInfo.fade_end);
 			}
 #undef DIGEST
-			polygonArray[polygonArraySize-1].hash = hash;
+			// remove the sign bit to ensure that skybox and horizon line comes first.
+			polygonArray[polygonArraySize-1].hash = (hash & INT32_MAX);
 		}
 
 		memcpy(&unsortedVertexArray[unsortedVertexArraySize], pOutVerts, iNumPts * sizeof(FOutVector));
