@@ -1259,8 +1259,8 @@ static void SendNameAndColor(void)
 			CV_StealthSetValue(&cv_playercolor, players[consoleplayer].skincolor);
 		else if (skincolors[atoi(cv_playercolor.defaultvalue)].accessible)
 			CV_StealthSet(&cv_playercolor, cv_playercolor.defaultvalue);
-		else if (skins[players[consoleplayer].skin].prefcolor && skincolors[skins[players[consoleplayer].skin].prefcolor].accessible)
-			CV_StealthSetValue(&cv_playercolor, skins[players[consoleplayer].skin].prefcolor);
+		else if (skins[players[consoleplayer].skin]->prefcolor && skincolors[skins[players[consoleplayer].skin]->prefcolor].accessible)
+			CV_StealthSetValue(&cv_playercolor, skins[players[consoleplayer].skin]->prefcolor);
 		else {
 			UINT16 i = 0;
 			while (i<numskincolors && !skincolors[i].accessible) i++;
@@ -1270,7 +1270,7 @@ static void SendNameAndColor(void)
 
 	if (!strcmp(cv_playername.string, player_names[consoleplayer])
 	&& cv_playercolor.value == players[consoleplayer].skincolor
-	&& !strcmp(cv_skin.string, skins[players[consoleplayer].skin].name))
+	&& !strcmp(cv_skin.string, skins[players[consoleplayer].skin]->name))
 		return;
 
 	players[consoleplayer].availabilities = R_GetSkinAvailabilities();
@@ -1313,7 +1313,7 @@ static void SendNameAndColor(void)
 	if ((cv_skin.value < 0) || !R_SkinUsable(consoleplayer, cv_skin.value))
 	{
 		INT32 defaultSkinNum = GetPlayerDefaultSkin(consoleplayer);
-		CV_StealthSet(&cv_skin, skins[defaultSkinNum].name);
+		CV_StealthSet(&cv_skin, skins[defaultSkinNum]->name);
 		cv_skin.value = defaultSkinNum;
 	}
 
@@ -1344,8 +1344,8 @@ static void SendNameAndColor2(void)
 			CV_StealthSetValue(&cv_playercolor2, players[secondplaya].skincolor);
 		else if (skincolors[atoi(cv_playercolor2.defaultvalue)].accessible)
 			CV_StealthSet(&cv_playercolor, cv_playercolor2.defaultvalue);
-		else if (skins[players[secondplaya].skin].prefcolor && skincolors[skins[players[secondplaya].skin].prefcolor].accessible)
-			CV_StealthSetValue(&cv_playercolor2, skins[players[secondplaya].skin].prefcolor);
+		else if (skins[players[secondplaya].skin]->prefcolor && skincolors[skins[players[secondplaya].skin]->prefcolor].accessible)
+			CV_StealthSetValue(&cv_playercolor2, skins[players[secondplaya].skin]->prefcolor);
 		else {
 			UINT16 i = 0;
 			while (i<numskincolors && !skincolors[i].accessible) i++;
@@ -2079,7 +2079,7 @@ static void Got_Mapcmd(UINT8 **cp, INT32 playernum)
 	if (modeattacking)
 	{
 		SetPlayerSkinByNum(0, cv_chooseskin.value-1);
-		players[0].skincolor = skins[players[0].skin].prefcolor;
+		players[0].skincolor = skins[players[0].skin]->prefcolor;
 	}
 
 	mapnumber = M_MapNumber(mapname[3], mapname[4]);
@@ -4743,7 +4743,7 @@ static void ForceSkin_OnChange(void)
 	}
 	else
 	{
-		CONS_Printf("The server is restricting all players to skin \"%s\".\n",skins[cv_forceskin.value].name);
+		CONS_Printf("The server is restricting all players to skin \"%s\".\n",skins[cv_forceskin.value]->name);
 		if (Playing())
 			ForceAllSkins(cv_forceskin.value);
 	}
@@ -4789,7 +4789,7 @@ static void Skin_OnChange(void)
 		if (!(cv_debug || devparm)
 		&& (gamestate != GS_WAITINGPLAYERS)) // allows command line -warp x +skin y
 		{
-			CV_StealthSet(&cv_skin, skins[players[consoleplayer].skin].name);
+			CV_StealthSet(&cv_skin, skins[players[consoleplayer].skin]->name);
 			return;
 		}
 

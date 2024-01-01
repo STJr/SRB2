@@ -3764,10 +3764,10 @@ static int lib_gAddPlayer(lua_State *L)
 	if (!lua_isnoneornil(L, 2))
 		newplayer->skincolor = R_GetColorByName(luaL_checkstring(L, 2));
 	else
-		newplayer->skincolor = skins[skinnum].prefcolor;
+		newplayer->skincolor = skins[skinnum]->prefcolor;
 
 	// Set the bot default name as the skin
-	strcpy(player_names[newplayernum], skins[skinnum].realname);
+	strcpy(player_names[newplayernum], skins[skinnum]->realname);
 
 	// Read the bot name, if given
 	if (!lua_isnoneornil(L, 3))

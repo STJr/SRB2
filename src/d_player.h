@@ -451,10 +451,10 @@ typedef struct player_s
 	UINT16 flashcount;
 	UINT16 flashpal;
 
-	// Player skin colorshift, 0-15 for which color to draw player.
+	// Player skin colorshift, which color to draw player.
 	UINT16 skincolor;
 
-	INT32 skin;
+	UINT8 skin;
 	UINT32 availabilities;
 
 	UINT32 score; // player score (total)

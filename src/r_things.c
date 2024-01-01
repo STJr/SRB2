@@ -509,10 +509,6 @@ void R_AddSpriteDefs(UINT16 wadnum)
 
 		if (R_AddSingleSpriteDef(sprnames[i], &sprites[i], wadnum, start, end))
 		{
-#ifdef HWRENDER
-			if (rendermode == render_opengl)
-				HWR_AddSpriteModel(i);
-#endif
 			// if a new sprite was added (not just replaced)
 			addsprites++;
 #ifndef ZDEBUG
@@ -587,14 +583,10 @@ void R_InitSprites(void)
 	}
 	ST_ReloadSkinFaceGraphics();
 
-	//
-	// check if all sprites have frames
-	//
-	/*
-	for (i = 0; i < numsprites; i++)
-		if (sprites[i].numframes < 1)
-			CONS_Debug(DBG_SETUP, "R_InitSprites: sprite %s has no frames at all\n", sprnames[i]);
-	*/
+#ifdef HWRENDER
+	if (rendermode == render_opengl)
+		HWR_LoadModels();
+#endif
 }
 
 //
@@ -806,8 +798,8 @@ UINT8 *R_GetSpriteTranslation(vissprite_t *vis)
 		}
 		else if (!(vis->cut & SC_PRECIP) && vis->mobj->skin && vis->mobj->sprite == SPR_PLAY) // This thing is a player!
 		{
-			size_t skinnum = (skin_t*)vis->mobj->skin-skins;
-			return R_GetTranslationColormap((INT32)skinnum, vis->color, GTC_CACHE);
+			UINT8 skinnum = ((skin_t*)vis->mobj->skin)->skinnum;
+			return R_GetTranslationColormap(skinnum, vis->color, GTC_CACHE);
 		}
 		else // Use the defaults
 			return R_GetTranslationColormap(TC_DEFAULT, vis->color, GTC_CACHE);

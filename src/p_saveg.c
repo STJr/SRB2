@@ -78,11 +78,11 @@ static inline void P_ArchivePlayer(void)
 
 	// Write skin names, so that loading skins in different orders
 	// doesn't change who the save file is for!
-	WRITESTRINGN(save_p, skins[player->skin].name, SKINNAMESIZE);
+	WRITESTRINGN(save_p, skins[player->skin]->name, SKINNAMESIZE);
 
 	if (botskin != 0)
 	{
-		WRITESTRINGN(save_p, skins[botskin-1].name, SKINNAMESIZE);
+		WRITESTRINGN(save_p, skins[botskin-1]->name, SKINNAMESIZE);
 	}
 	else
 	{
@@ -2058,7 +2058,7 @@ static void SaveMobjThinker(const thinker_t *th, const UINT8 type)
 	if (diff2 & MD2_CVMEM)
 		WRITEINT32(save_p, mobj->cvmem);
 	if (diff2 & MD2_SKIN)
-		WRITEUINT8(save_p, (UINT8)((skin_t *)mobj->skin - skins));
+		WRITEUINT8(save_p, (UINT8)(((skin_t *)mobj->skin)->skinnum));
 	if (diff2 & MD2_COLOR)
 		WRITEUINT16(save_p, mobj->color);
 	if (diff2 & MD2_EXTVAL1)
@@ -3112,7 +3112,7 @@ static thinker_t* LoadMobjThinker(actionf_p1 thinker)
 	if (diff2 & MD2_CVMEM)
 		mobj->cvmem = READINT32(save_p);
 	if (diff2 & MD2_SKIN)
-		mobj->skin = &skins[READUINT8(save_p)];
+		mobj->skin = skins[READUINT8(save_p)];
 	if (diff2 & MD2_COLOR)
 		mobj->color = READUINT16(save_p);
 	if (diff2 & MD2_EXTVAL1)

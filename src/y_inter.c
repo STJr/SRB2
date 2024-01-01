@@ -97,7 +97,7 @@ typedef union
 		// Continues
 		UINT8 continues;
 		patch_t *pcontinues;
-		INT32 *playerchar; // Continue HUD
+		UINT8 *playerchar; // Continue HUD
 		UINT16 *playercolor;
 
 		UINT8 gotlife; // Number of extra lives obtained
@@ -108,7 +108,7 @@ typedef union
 		UINT32 scores[MAXPLAYERS]; // Winner's score
 		UINT16 *color[MAXPLAYERS]; // Winner's color #
 		boolean spectator[MAXPLAYERS]; // Spectator list
-		INT32 *character[MAXPLAYERS]; // Winner's character #
+		UINT8 *character[MAXPLAYERS]; // Winner's character #
 		INT32 num[MAXPLAYERS]; // Winner's player #
 		char *name[MAXPLAYERS]; // Winner's name
 		patch_t *result; // RESULT
@@ -121,7 +121,7 @@ typedef union
 	struct
 	{
 		UINT16 *color[MAXPLAYERS]; // Winner's color #
-		INT32 *character[MAXPLAYERS]; // Winner's character #
+		UINT8 *character[MAXPLAYERS]; // Winner's character #
 		INT32 num[MAXPLAYERS]; // Winner's player #
 		char name[MAXPLAYERS][9]; // Winner's name
 		UINT32 times[MAXPLAYERS];
@@ -1382,22 +1382,22 @@ void Y_StartIntermission(void)
 			else
 			{
 				// too long so just show "YOU GOT THROUGH THE ACT"
-				if (strlen(skins[players[consoleplayer].skin].realname) > 13)
+				if (strlen(skins[players[consoleplayer].skin]->realname) > 13)
 				{
 					strcpy(data.coop.passed1, "you got");
 					strcpy(data.coop.passed2, (mapheaderinfo[gamemap-1]->actnum) ? "through act" : "through the act");
 				}
 				// long enough that "X GOT" won't fit so use "X PASSED THE ACT"
-				else if (strlen(skins[players[consoleplayer].skin].realname) > 8)
+				else if (strlen(skins[players[consoleplayer].skin]->realname) > 8)
 				{
-					strcpy(data.coop.passed1, skins[players[consoleplayer].skin].realname);
+					strcpy(data.coop.passed1, skins[players[consoleplayer].skin]->realname);
 					strcpy(data.coop.passed2, (mapheaderinfo[gamemap-1]->actnum) ? "passed act" : "passed the act");
 				}
 				// length is okay for normal use
 				else
 				{
 					snprintf(data.coop.passed1, sizeof data.coop.passed1, "%s got",
-						skins[players[consoleplayer].skin].realname);
+						skins[players[consoleplayer].skin]->realname);
 					strcpy(data.coop.passed2, (mapheaderinfo[gamemap-1]->actnum) ? "through act" : "through the act");
 				}
 			}
@@ -1469,26 +1469,26 @@ void Y_StartIntermission(void)
 			{
 				snprintf(data.spec.passed1,
 					sizeof data.spec.passed1, "%s",
-					skins[players[consoleplayer].skin].realname);
+					skins[players[consoleplayer].skin]->realname);
 				data.spec.passed1[sizeof data.spec.passed1 - 1] = '\0';
 				strcpy(data.spec.passed2, "got them all!");
 
 				if (players[consoleplayer].charflags & SF_SUPER)
 				{
 					strcpy(data.spec.passed3, "can now become");
-					if (strlen(skins[players[consoleplayer].skin].supername) > 20) //too long, use generic
+					if (strlen(skins[players[consoleplayer].skin]->supername) > 20) //too long, use generic
 						strcpy(data.spec.passed4, "their super form");
 					else
-						strcpy(data.spec.passed4, skins[players[consoleplayer].skin].supername);
+						strcpy(data.spec.passed4, skins[players[consoleplayer].skin]->supername);
 				}
 			}
 			else
 			{
-				if (strlen(skins[players[consoleplayer].skin].realname) <= SKINNAMESIZE-5)
+				if (strlen(skins[players[consoleplayer].skin]->realname) <= SKINNAMESIZE-5)
 				{
 					snprintf(data.spec.passed1,
 						sizeof data.spec.passed1, "%s got",
-						skins[players[consoleplayer].skin].realname);
+						skins[players[consoleplayer].skin]->realname);
 					data.spec.passed1[sizeof data.spec.passed1 - 1] = '\0';
 				}
 				else
