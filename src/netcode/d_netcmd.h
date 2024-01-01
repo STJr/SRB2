@@ -15,7 +15,7 @@
 #ifndef __D_NETCMD__
 #define __D_NETCMD__
 
-#include "command.h"
+#include "../command.h"
 
 // console vars
 extern consvar_t cv_playername;
@@ -209,6 +209,7 @@ void ClearAdminPlayers(void);
 void RemoveAdminPlayer(INT32 playernum);
 void ItemFinder_OnChange(void);
 void D_SetPassword(const char *pw);
+void D_ClearPassword(void);
 
 // used for the player setup menu
 UINT8 CanChangeSkin(INT32 playernum);

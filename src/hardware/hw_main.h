@@ -54,7 +54,6 @@ UINT8 *HWR_GetScreenshot(void);
 boolean HWR_Screenshot(const char *pathname);
 
 void HWR_AddCommands(void);
-void HWR_AddSessionCommands(void);
 void transform(float *cx, float *cy, float *cz);
 INT32 HWR_GetTextureUsed(void);
 void HWR_DoPostProcessor(player_t *player);
@@ -102,6 +101,8 @@ extern consvar_t cv_glslopecontrast;
 extern consvar_t cv_glbatching;
 extern consvar_t cv_glpaletterendering;
 extern consvar_t cv_glpalettedepth;
+
+extern consvar_t cv_glwireframe;
 
 extern float gl_viewwidth, gl_viewheight, gl_baseviewwindowy;
 

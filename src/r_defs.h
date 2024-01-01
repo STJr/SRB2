@@ -53,6 +53,9 @@ typedef struct
 // Could even use more than 32 levels.
 typedef UINT8 lighttable_t;
 
+#define NUM_PALETTE_ENTRIES 256
+#define DEFAULT_STARTTRANSCOLOR 96
+
 #define CMF_FADEFULLBRIGHTSPRITES  1
 #define CMF_FOG 4
 
@@ -220,12 +223,16 @@ typedef struct ffloor_s
 	INT16 *toplightlevel;
 	fixed_t *topxoffs;
 	fixed_t *topyoffs;
+	fixed_t *topxscale;
+	fixed_t *topyscale;
 	angle_t *topangle;
 
 	fixed_t *bottomheight;
 	INT32 *bottompic;
 	fixed_t *bottomxoffs;
 	fixed_t *bottomyoffs;
+	fixed_t *bottomxscale;
+	fixed_t *bottomyscale;
 	angle_t *bottomangle;
 
 	// Pointers to pointers. Yup.
@@ -431,6 +438,10 @@ typedef struct sector_s
 	fixed_t floorxoffset, flooryoffset;
 	fixed_t ceilingxoffset, ceilingyoffset;
 
+	// floor and ceiling texture scale
+	fixed_t floorxscale, flooryscale;
+	fixed_t ceilingxscale, ceilingyscale;
+
 	// flat angle
 	angle_t floorangle;
 	angle_t ceilingangle;
@@ -517,6 +528,8 @@ typedef enum
 #define NUMLINEARGS 10
 #define NUMLINESTRINGARGS 2
 
+#define NO_SIDEDEF 0xFFFFFFFF
+
 typedef struct line_s
 {
 	// Vertices, from v1 to v2.
@@ -534,7 +547,7 @@ typedef struct line_s
 	char *stringargs[NUMLINESTRINGARGS];
 
 	// Visual appearance: sidedefs.
-	UINT16 sidenum[2]; // sidenum[1] will be 0xffff if one-sided
+	UINT32 sidenum[2]; // sidenum[1] will be NO_SIDEDEF if one-sided
 	fixed_t alpha; // translucency
 	UINT8 blendmode; // blendmode
 	INT32 executordelay;
@@ -564,8 +577,11 @@ typedef struct
 	fixed_t rowoffset;
 
 	// per-texture offsets for UDMF
-	fixed_t offsetx_top, offsetx_mid, offsetx_bot;
-	fixed_t offsety_top, offsety_mid, offsety_bot;
+	fixed_t offsetx_top, offsetx_mid, offsetx_bottom;
+	fixed_t offsety_top, offsety_mid, offsety_bottom;
+
+	fixed_t scalex_top, scalex_mid, scalex_bottom;
+	fixed_t scaley_top, scaley_mid, scaley_bottom;
 
 	// Texture indices.
 	// We do not maintain names here.
@@ -759,10 +775,13 @@ typedef struct drawseg_s
 	fixed_t bsilheight; // do not clip sprites above this
 	fixed_t tsilheight; // do not clip sprites below this
 
+	fixed_t offsetx;
+
 	// Pointers to lists for sprite clipping, all three adjusted so [x1] is first value.
 	INT16 *sprtopclip;
 	INT16 *sprbottomclip;
 	fixed_t *maskedtexturecol;
+	fixed_t *invscale;
 
 	struct visplane_s *ffloorplanes[MAXFFLOORS];
 	INT32 numffloorplanes;
@@ -927,7 +946,7 @@ typedef struct
 	UINT16 flip;
 
 #ifdef ROTSPRITE
-	rotsprite_t *rotated[2][16]; // Rotated patches
+	rotsprite_t *rotated[16]; // Rotated patches
 #endif
 } spriteframe_t;
 

@@ -262,7 +262,6 @@
     <ClInclude Include="..\u_list.h" />
     <ClInclude Include="..\hu_stuff.h" />
     <ClInclude Include="..\info.h" />
-    <ClInclude Include="..\i_addrinfo.h" />
     <ClInclude Include="..\i_joy.h" />
     <ClInclude Include="..\i_net.h" />
     <ClInclude Include="..\i_sound.h" />
@@ -297,6 +296,21 @@
     <ClInclude Include="..\m_queue.h" />
     <ClInclude Include="..\m_random.h" />
     <ClInclude Include="..\m_swap.h" />
+    <ClInclude Include="..\netcode\client_connection.h" />
+    <ClInclude Include="..\netcode\commands.h" />
+    <ClInclude Include="..\netcode\d_clisrv.h" />
+    <ClInclude Include="..\netcode\d_net.h" />
+    <ClInclude Include="..\netcode\d_netcmd.h" />
+    <ClInclude Include="..\netcode\d_netfil.h" />
+    <ClInclude Include="..\netcode\gamestate.h" />
+    <ClInclude Include="..\netcode\i_addrinfo.h" />
+    <ClInclude Include="..\netcode\i_net.h" />
+    <ClInclude Include="..\netcode\i_tcp.h" />
+    <ClInclude Include="..\netcode\mserv.h" />
+    <ClInclude Include="..\netcode\net_command.h" />
+    <ClInclude Include="..\netcode\protocol.h" />
+    <ClInclude Include="..\netcode\server_connection.h" />
+    <ClInclude Include="..\netcode\tic_command.h" />
     <ClInclude Include="..\p5prof.h" />
     <ClInclude Include="..\p_haptic.h" />
     <ClInclude Include="..\p_local.h" />
@@ -329,6 +343,7 @@
     <ClInclude Include="..\r_textures.h" />
     <ClInclude Include="..\r_things.h" />
     <ClInclude Include="..\screen.h" />
+    <ClInclude Include="..\snake.h" />
     <ClInclude Include="..\sounds.h" />
     <ClInclude Include="..\st_stuff.h" />
     <ClInclude Include="..\s_sound.h" />
@@ -400,11 +415,7 @@
     <ClCompile Include="..\deh_soc.c" />
     <ClCompile Include="..\deh_lua.c" />
     <ClCompile Include="..\deh_tables.c" />
-    <ClCompile Include="..\d_clisrv.c" />
     <ClCompile Include="..\d_main.c" />
-    <ClCompile Include="..\d_net.c" />
-    <ClCompile Include="..\d_netcmd.c" />
-    <ClCompile Include="..\d_netfil.c" />
     <ClCompile Include="..\filesrch.c" />
     <ClCompile Include="..\f_finale.c" />
     <ClCompile Include="..\f_wipe.c" />
@@ -428,10 +439,6 @@
     <ClCompile Include="..\u_list.c" />
     <ClCompile Include="..\hu_stuff.c" />
     <ClCompile Include="..\info.c" />
-    <ClCompile Include="..\i_addrinfo.c">
-      <ExcludedFromBuild>true</ExcludedFromBuild>
-    </ClCompile>
-    <ClCompile Include="..\i_tcp.c" />
     <ClCompile Include="..\i_time.c" />
     <ClCompile Include="..\lua_baselib.c" />
     <ClCompile Include="..\lua_blockmaplib.c" />
@@ -452,8 +459,6 @@
     <ClCompile Include="..\lua_thinkerlib.c" />
     <ClCompile Include="..\lzf.c" />
     <ClCompile Include="..\md5.c" />
-    <ClCompile Include="..\mserv.c" />
-    <ClCompile Include="..\http-mserv.c" />
     <ClCompile Include="..\m_aatree.c" />
     <ClCompile Include="..\m_anigif.c" />
     <ClCompile Include="..\m_argv.c" />
@@ -467,6 +472,22 @@
     <ClCompile Include="..\m_perfstats.c" />
     <ClCompile Include="..\m_queue.c" />
     <ClCompile Include="..\m_random.c" />
+    <ClCompile Include="..\netcode\client_connection.c" />
+    <ClCompile Include="..\netcode\commands.c" />
+    <ClCompile Include="..\netcode\d_clisrv.c" />
+    <ClCompile Include="..\netcode\d_net.c" />
+    <ClCompile Include="..\netcode\d_netcmd.c" />
+    <ClCompile Include="..\netcode\d_netfil.c" />
+    <ClCompile Include="..\netcode\gamestate.c" />
+    <ClCompile Include="..\netcode\http-mserv.c" />
+    <ClCompile Include="..\netcode\i_addrinfo.c">
+      <ExcludedFromBuild>true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\netcode\i_tcp.c" />
+    <ClCompile Include="..\netcode\mserv.c" />
+    <ClCompile Include="..\netcode\net_command.c" />
+    <ClCompile Include="..\netcode\server_connection.c" />
+    <ClCompile Include="..\netcode\tic_command.c" />
     <ClCompile Include="..\p_ceilng.c" />
     <ClCompile Include="..\p_enemy.c" />
     <ClCompile Include="..\p_floor.c" />
@@ -511,6 +532,7 @@
     <ClCompile Include="..\r_textures.c" />
     <ClCompile Include="..\r_things.c" />
     <ClCompile Include="..\screen.c" />
+    <ClCompile Include="..\snake.c" />
     <ClCompile Include="..\sounds.c" />
     <ClCompile Include="..\string.c" />
     <ClCompile Include="..\st_stuff.c" />
