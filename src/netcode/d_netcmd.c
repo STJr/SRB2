@@ -3671,11 +3671,11 @@ static void Got_RequestAddfoldercmd(UINT8 **cp, INT32 playernum)
 
 static void Got_Addfilecmd(UINT8 **cp, INT32 playernum)
 {
-	char filename[241];
+	char filename[MAX_WADPATH+1];
 	filestatus_t ncs = FS_NOTCHECKED;
 	UINT8 md5sum[16];
 
-	READSTRINGN(*cp, filename, 240);
+	READSTRINGN(*cp, filename, MAX_WADPATH);
 	READMEM(*cp, md5sum, 16);
 
 	if (playernum != serverplayer)
