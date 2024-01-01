@@ -867,24 +867,47 @@ static void P_NetUnArchiveWaypoints(void)
 #define SD_TRIGGERTAG 0x02
 #define SD_TRIGGERER 0x04
 #define SD_GRAVITY   0x08
+#define SD_FXSCALE   0x10
+#define SD_FYSCALE   0x20
+#define SD_CXSCALE   0x40
+#define SD_CYSCALE   0x80
 
-#define LD_FLAG     0x01
-#define LD_SPECIAL  0x02
-#define LD_CLLCOUNT 0x04
-#define LD_S1TEXOFF 0x08
-#define LD_S1TOPTEX 0x10
-#define LD_S1BOTTEX 0x20
-#define LD_S1MIDTEX 0x40
-#define LD_DIFF2    0x80
+#define LD_FLAG          0x01
+#define LD_SPECIAL       0x02
+#define LD_CLLCOUNT      0x04
+#define LD_ARGS          0x08
+#define LD_STRINGARGS    0x10
+#define LD_EXECUTORDELAY 0x20
+#define LD_SIDE1         0x40
+#define LD_SIDE2         0x80
 
-// diff2 flags
-#define LD_S2TEXOFF      0x01
-#define LD_S2TOPTEX      0x02
-#define LD_S2BOTTEX      0x04
-#define LD_S2MIDTEX      0x08
-#define LD_ARGS          0x10
-#define LD_STRINGARGS    0x20
-#define LD_EXECUTORDELAY 0x40
+// sidedef flags
+enum
+{
+	LD_SDTEXOFFX     = 1,
+	LD_SDTEXOFFY     = 1<<1,
+	LD_SDTOPTEX      = 1<<2,
+	LD_SDBOTTEX      = 1<<3,
+	LD_SDMIDTEX      = 1<<4,
+	LD_SDTOPOFFX     = 1<<5,
+	LD_SDTOPOFFY     = 1<<6,
+	LD_SDMIDOFFX     = 1<<7,
+	LD_SDMIDOFFY     = 1<<8,
+	LD_SDBOTOFFX     = 1<<9,
+	LD_SDBOTOFFY     = 1<<10,
+	LD_SDTOPSCALEX   = 1<<11,
+	LD_SDTOPSCALEY   = 1<<12,
+	LD_SDMIDSCALEX   = 1<<13,
+	LD_SDMIDSCALEY   = 1<<14,
+	LD_SDBOTSCALEX   = 1<<15,
+	LD_SDBOTSCALEY   = 1<<16,
+	LD_SDLIGHT       = 1<<17,
+	LD_SDTOPLIGHT    = 1<<18,
+	LD_SDMIDLIGHT    = 1<<19,
+	LD_SDBOTLIGHT    = 1<<20,
+	LD_SDREPEATCNT   = 1<<21,
+	LD_SDFLAGS       = 1<<22
+};
 
 static boolean P_AreArgsEqual(const line_t *li, const line_t *spawnli)
 {
@@ -1035,6 +1058,14 @@ static void ArchiveSectors(void)
 			diff2 |= SD_CXOFFS;
 		if (ss->ceilingyoffset != spawnss->ceilingyoffset)
 			diff2 |= SD_CYOFFS;
+		if (ss->floorxscale != spawnss->floorxscale)
+			diff2 |= SD_FXSCALE;
+		if (ss->flooryscale != spawnss->flooryscale)
+			diff2 |= SD_FYSCALE;
+		if (ss->ceilingxscale != spawnss->ceilingxscale)
+			diff2 |= SD_CXSCALE;
+		if (ss->ceilingyscale != spawnss->ceilingyscale)
+			diff2 |= SD_CYSCALE;
 		if (ss->floorangle != spawnss->floorangle)
 			diff2 |= SD_FLOORANG;
 		if (ss->ceilingangle != spawnss->ceilingangle)
@@ -1145,6 +1176,14 @@ static void ArchiveSectors(void)
 				WRITEUINT8(save_p, ss->triggerer);
 			if (diff4 & SD_GRAVITY)
 				WRITEFIXED(save_p, ss->gravity);
+			if (diff4 & SD_FXSCALE)
+				WRITEFIXED(save_p, ss->floorxscale);
+			if (diff4 & SD_FYSCALE)
+				WRITEFIXED(save_p, ss->flooryscale);
+			if (diff4 & SD_CXSCALE)
+				WRITEFIXED(save_p, ss->ceilingxscale);
+			if (diff4 & SD_CYSCALE)
+				WRITEFIXED(save_p, ss->ceilingyscale);
 			if (diff & SD_FFLOORS)
 				ArchiveFFloors(ss);
 		}
@@ -1266,10 +1305,103 @@ static void UnArchiveSectors(void)
 			sectors[i].triggerer = READUINT8(save_p);
 		if (diff4 & SD_GRAVITY)
 			sectors[i].gravity = READFIXED(save_p);
+		if (diff4 & SD_FXSCALE)
+			sectors[i].floorxscale = READFIXED(save_p);
+		if (diff4 & SD_FYSCALE)
+			sectors[i].flooryscale = READFIXED(save_p);
+		if (diff4 & SD_CXSCALE)
+			sectors[i].ceilingxscale = READFIXED(save_p);
+		if (diff4 & SD_CYSCALE)
+			sectors[i].ceilingyscale = READFIXED(save_p);
 
 		if (diff & SD_FFLOORS)
 			UnArchiveFFloors(&sectors[i]);
 	}
+}
+
+static UINT32 GetSideDiff(const side_t *si, const side_t *spawnsi)
+{
+	UINT32 diff = 0;
+	if (si->textureoffset != spawnsi->textureoffset)
+		diff |= LD_SDTEXOFFX;
+	if (si->rowoffset != spawnsi->rowoffset)
+		diff |= LD_SDTEXOFFY;
+	//SoM: 4/1/2000: Some textures are colormaps. Don't worry about invalid textures.
+	if (si->toptexture != spawnsi->toptexture)
+		diff |= LD_SDTOPTEX;
+	if (si->bottomtexture != spawnsi->bottomtexture)
+		diff |= LD_SDBOTTEX;
+	if (si->midtexture != spawnsi->midtexture)
+		diff |= LD_SDMIDTEX;
+	if (si->offsetx_top != spawnsi->offsetx_top)
+		diff |= LD_SDTOPOFFX;
+	if (si->offsetx_mid != spawnsi->offsetx_mid)
+		diff |= LD_SDMIDOFFX;
+	if (si->offsetx_bottom != spawnsi->offsetx_bottom)
+		diff |= LD_SDBOTOFFX;
+	if (si->offsety_top != spawnsi->offsety_top)
+		diff |= LD_SDTOPOFFY;
+	if (si->offsety_mid != spawnsi->offsety_mid)
+		diff |= LD_SDMIDOFFY;
+	if (si->offsety_bottom != spawnsi->offsety_bottom)
+		diff |= LD_SDBOTOFFY;
+	if (si->scalex_top != spawnsi->scalex_top)
+		diff |= LD_SDTOPSCALEX;
+	if (si->scalex_mid != spawnsi->scalex_mid)
+		diff |= LD_SDMIDSCALEX;
+	if (si->scalex_bottom != spawnsi->scalex_bottom)
+		diff |= LD_SDBOTSCALEX;
+	if (si->scaley_top != spawnsi->scaley_top)
+		diff |= LD_SDTOPSCALEY;
+	if (si->scaley_mid != spawnsi->scaley_mid)
+		diff |= LD_SDMIDSCALEY;
+	if (si->scaley_bottom != spawnsi->scaley_bottom)
+		diff |= LD_SDBOTSCALEY;
+	if (si->repeatcnt != spawnsi->repeatcnt)
+		diff |= LD_SDREPEATCNT;
+	return diff;
+}
+
+static void ArchiveSide(const side_t *si, UINT32 diff)
+{
+	WRITEUINT32(save_p, diff);
+
+	if (diff & LD_SDTEXOFFX)
+		WRITEFIXED(save_p, si->textureoffset);
+	if (diff & LD_SDTEXOFFY)
+		WRITEFIXED(save_p, si->rowoffset);
+	if (diff & LD_SDTOPTEX)
+		WRITEINT32(save_p, si->toptexture);
+	if (diff & LD_SDBOTTEX)
+		WRITEINT32(save_p, si->bottomtexture);
+	if (diff & LD_SDMIDTEX)
+		WRITEINT32(save_p, si->midtexture);
+	if (diff & LD_SDTOPOFFX)
+		WRITEFIXED(save_p, si->offsetx_top);
+	if (diff & LD_SDMIDOFFX)
+		WRITEFIXED(save_p, si->offsetx_mid);
+	if (diff & LD_SDBOTOFFX)
+		WRITEFIXED(save_p, si->offsetx_bottom);
+	if (diff & LD_SDTOPOFFY)
+		WRITEFIXED(save_p, si->offsety_top);
+	if (diff & LD_SDMIDOFFY)
+		WRITEFIXED(save_p, si->offsety_mid);
+	if (diff & LD_SDBOTOFFY)
+		WRITEFIXED(save_p, si->offsety_bottom);
+	if (diff & LD_SDTOPSCALEX)
+		WRITEFIXED(save_p, si->scalex_top);
+	if (diff & LD_SDMIDSCALEX)
+		WRITEFIXED(save_p, si->scalex_mid);
+	if (diff & LD_SDBOTSCALEX)
+		WRITEFIXED(save_p, si->scalex_bottom);
+	if (diff & LD_SDTOPSCALEY)
+		WRITEFIXED(save_p, si->scaley_top);
+	if (diff & LD_SDMIDSCALEY)
+		WRITEFIXED(save_p, si->scaley_mid);
+	if (diff & LD_SDBOTSCALEY)
+		WRITEFIXED(save_p, si->scaley_bottom);
+	if (diff & LD_SDREPEATCNT)
+		WRITEINT16(save_p, si->repeatcnt);
 }
 
 static void ArchiveLines(void)
@@ -1277,13 +1409,13 @@ static void ArchiveLines(void)
 	size_t i;
 	const line_t *li = lines;
 	const line_t *spawnli = spawnlines;
-	const side_t *si;
-	const side_t *spawnsi;
-	UINT8 diff, diff2; // no diff3
+	UINT8 diff;
+	UINT32 diff2;
+	UINT32 diff3;
 
 	for (i = 0; i < numlines; i++, spawnli++, li++)
 	{
-		diff = diff2 = 0;
+		diff = diff2 = diff3 = 0;
 
 		if (li->special != spawnli->special)
 			diff |= LD_SPECIAL;
@@ -1292,84 +1424,44 @@ static void ArchiveLines(void)
 			diff |= LD_CLLCOUNT;
 
 		if (!P_AreArgsEqual(li, spawnli))
-			diff2 |= LD_ARGS;
+			diff |= LD_ARGS;
 
 		if (!P_AreStringArgsEqual(li, spawnli))
-			diff2 |= LD_STRINGARGS;
+			diff |= LD_STRINGARGS;
 
 		if (li->executordelay != spawnli->executordelay)
-			diff2 |= LD_EXECUTORDELAY;
+			diff |= LD_EXECUTORDELAY;
 
 		if (li->sidenum[0] != NO_SIDEDEF)
 		{
-			si = &sides[li->sidenum[0]];
-			spawnsi = &spawnsides[li->sidenum[0]];
-			if (si->textureoffset != spawnsi->textureoffset)
-				diff |= LD_S1TEXOFF;
-			//SoM: 4/1/2000: Some textures are colormaps. Don't worry about invalid textures.
-			if (si->toptexture != spawnsi->toptexture)
-				diff |= LD_S1TOPTEX;
-			if (si->bottomtexture != spawnsi->bottomtexture)
-				diff |= LD_S1BOTTEX;
-			if (si->midtexture != spawnsi->midtexture)
-				diff |= LD_S1MIDTEX;
+			diff2 = GetSideDiff(&sides[li->sidenum[0]], &spawnsides[li->sidenum[0]]);
+			if (diff2)
+				diff |= LD_SIDE1;
 		}
 		if (li->sidenum[1] != NO_SIDEDEF)
 		{
-			si = &sides[li->sidenum[1]];
-			spawnsi = &spawnsides[li->sidenum[1]];
-			if (si->textureoffset != spawnsi->textureoffset)
-				diff2 |= LD_S2TEXOFF;
-			if (si->toptexture != spawnsi->toptexture)
-				diff2 |= LD_S2TOPTEX;
-			if (si->bottomtexture != spawnsi->bottomtexture)
-				diff2 |= LD_S2BOTTEX;
-			if (si->midtexture != spawnsi->midtexture)
-				diff2 |= LD_S2MIDTEX;
+			diff3 = GetSideDiff(&sides[li->sidenum[1]], &spawnsides[li->sidenum[1]]);
+			if (diff3)
+				diff |= LD_SIDE2;
 		}
-
-		if (diff2)
-			diff |= LD_DIFF2;
 
 		if (diff)
 		{
 			WRITEUINT32(save_p, i);
 			WRITEUINT8(save_p, diff);
-			if (diff & LD_DIFF2)
-				WRITEUINT8(save_p, diff2);
 			if (diff & LD_FLAG)
 				WRITEINT16(save_p, li->flags);
 			if (diff & LD_SPECIAL)
 				WRITEINT16(save_p, li->special);
 			if (diff & LD_CLLCOUNT)
 				WRITEINT16(save_p, li->callcount);
-
-			si = &sides[li->sidenum[0]];
-			if (diff & LD_S1TEXOFF)
-				WRITEFIXED(save_p, si->textureoffset);
-			if (diff & LD_S1TOPTEX)
-				WRITEINT32(save_p, si->toptexture);
-			if (diff & LD_S1BOTTEX)
-				WRITEINT32(save_p, si->bottomtexture);
-			if (diff & LD_S1MIDTEX)
-				WRITEINT32(save_p, si->midtexture);
-
-			si = &sides[li->sidenum[1]];
-			if (diff2 & LD_S2TEXOFF)
-				WRITEFIXED(save_p, si->textureoffset);
-			if (diff2 & LD_S2TOPTEX)
-				WRITEINT32(save_p, si->toptexture);
-			if (diff2 & LD_S2BOTTEX)
-				WRITEINT32(save_p, si->bottomtexture);
-			if (diff2 & LD_S2MIDTEX)
-				WRITEINT32(save_p, si->midtexture);
-			if (diff2 & LD_ARGS)
+			if (diff & LD_ARGS)
 			{
 				UINT8 j;
 				for (j = 0; j < NUMLINEARGS; j++)
 					WRITEINT32(save_p, li->args[j]);
 			}
-			if (diff2 & LD_STRINGARGS)
+			if (diff & LD_STRINGARGS)
 			{
 				UINT8 j;
 				for (j = 0; j < NUMLINESTRINGARGS; j++)
@@ -1388,19 +1480,64 @@ static void ArchiveLines(void)
 						WRITECHAR(save_p, li->stringargs[j][k]);
 				}
 			}
-			if (diff2 & LD_EXECUTORDELAY)
+			if (diff & LD_EXECUTORDELAY)
 				WRITEINT32(save_p, li->executordelay);
+			if (diff & LD_SIDE1)
+				ArchiveSide(&sides[li->sidenum[0]], diff2);
+			if (diff & LD_SIDE2)
+				ArchiveSide(&sides[li->sidenum[1]], diff3);
 		}
 	}
 	WRITEUINT32(save_p, 0xffffffff);
+}
+
+static void UnArchiveSide(side_t *si)
+{
+	UINT32 diff = READUINT32(save_p);
+
+	if (diff & LD_SDTEXOFFX)
+		si->textureoffset = READFIXED(save_p);
+	if (diff & LD_SDTEXOFFY)
+		si->rowoffset = READFIXED(save_p);
+	if (diff & LD_SDTOPTEX)
+		si->toptexture = READINT32(save_p);
+	if (diff & LD_SDBOTTEX)
+		si->bottomtexture = READINT32(save_p);
+	if (diff & LD_SDMIDTEX)
+		si->midtexture = READINT32(save_p);
+	if (diff & LD_SDTOPOFFX)
+		si->offsetx_top = READFIXED(save_p);
+	if (diff & LD_SDMIDOFFX)
+		si->offsetx_mid = READFIXED(save_p);
+	if (diff & LD_SDBOTOFFX)
+		si->offsetx_bottom = READFIXED(save_p);
+	if (diff & LD_SDTOPOFFY)
+		si->offsety_top = READFIXED(save_p);
+	if (diff & LD_SDMIDOFFY)
+		si->offsety_mid = READFIXED(save_p);
+	if (diff & LD_SDBOTOFFY)
+		si->offsety_bottom = READFIXED(save_p);
+	if (diff & LD_SDTOPSCALEX)
+		si->scalex_top = READFIXED(save_p);
+	if (diff & LD_SDMIDSCALEX)
+		si->scalex_mid = READFIXED(save_p);
+	if (diff & LD_SDBOTSCALEX)
+		si->scalex_bottom = READFIXED(save_p);
+	if (diff & LD_SDTOPSCALEY)
+		si->scaley_top = READFIXED(save_p);
+	if (diff & LD_SDMIDSCALEY)
+		si->scaley_mid = READFIXED(save_p);
+	if (diff & LD_SDBOTSCALEY)
+		si->scaley_bottom = READFIXED(save_p);
+	if (diff & LD_SDREPEATCNT)
+		si->repeatcnt = READINT16(save_p);
 }
 
 static void UnArchiveLines(void)
 {
 	UINT32 i;
 	line_t *li;
-	side_t *si;
-	UINT8 diff, diff2; // no diff3
+	UINT8 diff;
 
 	for (;;)
 	{
@@ -1414,44 +1551,19 @@ static void UnArchiveLines(void)
 		diff = READUINT8(save_p);
 		li = &lines[i];
 
-		if (diff & LD_DIFF2)
-			diff2 = READUINT8(save_p);
-		else
-			diff2 = 0;
-
 		if (diff & LD_FLAG)
 			li->flags = READINT16(save_p);
 		if (diff & LD_SPECIAL)
 			li->special = READINT16(save_p);
 		if (diff & LD_CLLCOUNT)
 			li->callcount = READINT16(save_p);
-
-		si = &sides[li->sidenum[0]];
-		if (diff & LD_S1TEXOFF)
-			si->textureoffset = READFIXED(save_p);
-		if (diff & LD_S1TOPTEX)
-			si->toptexture = READINT32(save_p);
-		if (diff & LD_S1BOTTEX)
-			si->bottomtexture = READINT32(save_p);
-		if (diff & LD_S1MIDTEX)
-			si->midtexture = READINT32(save_p);
-
-		si = &sides[li->sidenum[1]];
-		if (diff2 & LD_S2TEXOFF)
-			si->textureoffset = READFIXED(save_p);
-		if (diff2 & LD_S2TOPTEX)
-			si->toptexture = READINT32(save_p);
-		if (diff2 & LD_S2BOTTEX)
-			si->bottomtexture = READINT32(save_p);
-		if (diff2 & LD_S2MIDTEX)
-			si->midtexture = READINT32(save_p);
-		if (diff2 & LD_ARGS)
+		if (diff & LD_ARGS)
 		{
 			UINT8 j;
 			for (j = 0; j < NUMLINEARGS; j++)
 				li->args[j] = READINT32(save_p);
 		}
-		if (diff2 & LD_STRINGARGS)
+		if (diff & LD_STRINGARGS)
 		{
 			UINT8 j;
 			for (j = 0; j < NUMLINESTRINGARGS; j++)
@@ -1472,9 +1584,12 @@ static void UnArchiveLines(void)
 				li->stringargs[j][len] = '\0';
 			}
 		}
-		if (diff2 & LD_EXECUTORDELAY)
+		if (diff & LD_EXECUTORDELAY)
 			li->executordelay = READINT32(save_p);
-
+		if (diff & LD_SIDE1)
+			UnArchiveSide(&sides[li->sidenum[0]]);
+		if (diff & LD_SIDE2)
+			UnArchiveSide(&sides[li->sidenum[1]]);
 	}
 }
 

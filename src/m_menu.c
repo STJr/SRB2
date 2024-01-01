@@ -3179,40 +3179,42 @@ boolean M_Responder(event_t *ev)
 	}
 	else if (menuactive)
 	{
-		if (ev->type == ev_keydown)
+		if (ev->type == ev_keydown || ev->type == ev_text)
 		{
-			keydown++;
 			ch = ev->key;
-
-			// added 5-2-98 remap virtual keys (mouse & joystick buttons)
-			switch (ch)
+			if (ev->type == ev_keydown)
 			{
-				case KEY_MOUSE1:
-				case KEY_JOY1:
-					ch = KEY_ENTER;
-					break;
-				case KEY_JOY1 + 3:
-					ch = 'n';
-					break;
-				case KEY_MOUSE1 + 1:
-				case KEY_JOY1 + 1:
-					ch = KEY_ESCAPE;
-					break;
-				case KEY_JOY1 + 2:
-					ch = KEY_BACKSPACE;
-					break;
-				case KEY_HAT1:
-					ch = KEY_UPARROW;
-					break;
-				case KEY_HAT1 + 1:
-					ch = KEY_DOWNARROW;
-					break;
-				case KEY_HAT1 + 2:
-					ch = KEY_LEFTARROW;
-					break;
-				case KEY_HAT1 + 3:
-					ch = KEY_RIGHTARROW;
-					break;
+				keydown++;
+				// added 5-2-98 remap virtual keys (mouse & joystick buttons)
+				switch (ch)
+				{
+					case KEY_MOUSE1:
+					case KEY_JOY1:
+						ch = KEY_ENTER;
+						break;
+					case KEY_JOY1 + 3:
+						ch = 'n';
+						break;
+					case KEY_MOUSE1 + 1:
+					case KEY_JOY1 + 1:
+						ch = KEY_ESCAPE;
+						break;
+					case KEY_JOY1 + 2:
+						ch = KEY_BACKSPACE;
+						break;
+					case KEY_HAT1:
+						ch = KEY_UPARROW;
+						break;
+					case KEY_HAT1 + 1:
+						ch = KEY_DOWNARROW;
+						break;
+					case KEY_HAT1 + 2:
+						ch = KEY_LEFTARROW;
+						break;
+					case KEY_HAT1 + 3:
+						ch = KEY_RIGHTARROW;
+						break;
+				}
 			}
 		}
 		else if (ev->type == ev_joystick  && ev->key == 0 && joywait < I_GetTime())
@@ -3374,8 +3376,11 @@ boolean M_Responder(event_t *ev)
 	// Handle menuitems which need a specific key handling
 	if (routine && (currentMenu->menuitems[itemOn].status & IT_TYPE) == IT_KEYHANDLER)
 	{
-		if (shiftdown && ch >= 32 && ch <= 127)
-			ch = shiftxform[ch];
+		// ignore ev_keydown events if the key maps to a character, since
+		// the ev_text event will follow immediately after in that case.
+		if (ev->type == ev_keydown && ch >= 32 && ch <= 127)
+			return true;
+
 		routine(ch);
 		return true;
 	}
@@ -3417,6 +3422,11 @@ boolean M_Responder(event_t *ev)
 	{
 		if ((currentMenu->menuitems[itemOn].status & IT_CVARTYPE) == IT_CV_STRING)
 		{
+			// ignore ev_keydown events if the key maps to a character, since
+			// the ev_text event will follow immediately after in that case.
+			if (ev->type == ev_keydown && ch >= 32 && ch <= 127)
+				return false;
+
 			if (M_ChangeStringCvar(ch))
 				return true;
 			else
@@ -4130,31 +4140,97 @@ void M_DrawTextBox(INT32 x, INT32 y, INT32 width, INT32 boxlines)
 */
 }
 
-static fixed_t staticalong = 0;
-
+//
+// Draw the TV static effect on unavailable map icons
+//
 static void M_DrawStaticBox(fixed_t x, fixed_t y, INT32 flags, fixed_t w, fixed_t h)
 {
-	patch_t *patch;
-	fixed_t sw, pw;
+	patch_t *patch = W_CachePatchName("LSSTATIC", PU_PATCH);
+	static fixed_t staticx = 0, staticy = 0; // Keep track of where we are across function calls
 
-	patch = W_CachePatchName("LSSTATIC", PU_PATCH);
-	pw = patch->width - (sw = w*2); //FixedDiv(w, scale); -- for scale FRACUNIT/2
 
-	/*if (pw > 0) -- model code for modders providing weird LSSTATIC
+	if (!patch->width || !patch->height) // Shouldn't be necessary, but I don't want to get in trouble!
 	{
-		if (staticalong > pw)
-			staticalong -= pw;
+		W_UnlockCachedPatch(patch);
+		return;
 	}
-	else
-		staticalong = 0;*/
+	if (patch->width == 1) // Nothing to randomise or tile
+	{
+		// Just stretch the patch over the whole box - no need to draw it 160 times over
+		// Technically, we should crop and maybe tile and randomise the Y axis, but... it's not worth it here
+		V_DrawStretchyFixedPatch(x*FRACUNIT, y*FRACUNIT, (w*FRACUNIT) / patch->width, (h*FRACUNIT) / patch->height, flags, patch, NULL);
+		W_UnlockCachedPatch(patch);
+		return;
+	}
+	if (patch->width == 160) // Something to randomise or tile - but don't!
+	{
+		// If it's 160 pixels wide, the modder probably wants the patch fixed in place
+		// But instead of "just drawing" it, why not allow sequential frames of animation on the Y axis?
+		// For example, this could be used to make a vignette effect, whether animated or not
+		// This function is primarily called with a patch region of 160x100, so the frames must be 160x100 too
+		fixed_t temp = patch->height / 100; // Amount of 160x100 frames in the patch
+		if (temp) // Don't modulo by zero
+			temp = (gametic % temp) * h*2*FRACUNIT; // Which frame to draw
 
-	if (staticalong > pw) // simplified for base LSSTATIC
-		staticalong -= pw;
+		V_DrawCroppedPatch(x*FRACUNIT, y*FRACUNIT, (w*FRACUNIT) / 160, (h*FRACUNIT) / 100, flags, patch, NULL, 0, temp, w*2*FRACUNIT, h*2*FRACUNIT);
+		
+		W_UnlockCachedPatch(patch);
+		return;
+	}
 
-	V_DrawCroppedPatch(x<<FRACBITS, y<<FRACBITS, FRACUNIT/2, FRACUNIT/2, flags, patch, NULL, staticalong<<FRACBITS, 0, sw<<FRACBITS, h*2<<FRACBITS); // FixedDiv(h, scale)); -- for scale FRACUNIT/2
 
-	staticalong += sw; //M_RandomRange(sw/2, 2*sw); -- turns out less randomisation looks better because immediately adjacent frames can't end up close to each other
+	// If the patch isn't 1 or 160 pixels wide, that means that it's time for randomised static!
 
+	// First, randomise the static patch's offset - It's largely just based on "w", but there's...
+	// ...the tiniest bit of randomisation, to keep it animated even when the patch width is 160 x [static boxes on-screen]
+	// Making it TOO randomised could make it randomise to the almost-same position multiple frames in a row - that's bad
+	staticx = (staticx + (w*4) + (M_RandomByte() % 4)) % (patch->width*2);
+
+	if (patch->height == h*2) // Is the patch 100 pixels tall? If so, reset "staticy"...
+		staticy = 0; // ...in case that one add-on would randomise it and a later add-on wouldn't
+	else // Otherwise, as we already make "staticx" near-sequential, I think that making "staticy"...
+		staticy = M_RandomRange(0, (patch->height*2) - 1); // ...fully random instead of sequential increases the... randomness
+
+	// The drawing function calls can get a bit lengthy, so let's make a little shortcut
+#define DRAWSTATIC(_x,_y,_sx,_sy,_w,_h) V_DrawCroppedPatch((x*FRACUNIT)+((_x)*FRACUNIT/4), (y*FRACUNIT)+((_y)*FRACUNIT/4),\
+FRACUNIT/2, FRACUNIT/2, flags, patch, NULL, (_sx)*FRACUNIT/2, (_sy)*FRACUNIT/2, (w*2*FRACUNIT)+((_w)*FRACUNIT/2), (h*2*FRACUNIT)+((_h)*FRACUNIT/2))
+
+	// And finally, let's draw it! Don't worry about "staticx" plus "w*2" potentially going off-patch
+	DRAWSTATIC(0, 0, staticx, staticy, 0, 0); // This gets drawn in all cases
+
+	if ((patch->width*2) - staticx >= w*4) // No horizontal tiling
+	{
+		if ((patch->height*2) - staticy >= h*4) // Simplest-case scenario, no tiling at all
+			{}
+		else // Vertical tiling only
+		{
+			for (INT16 j = 2; ((patch->height*j) - staticy) < h*4; j += 2)
+				DRAWSTATIC(0, (patch->height*j) - staticy, staticx, 0, 0, staticy - (patch->height*j));
+		}
+	}
+	else // Horizontal tiling
+	{
+		if ((patch->height*2) - staticy >= h*4) // Horizontal tiling only
+		{
+			for (INT16 i = 2; ((patch->width*i) - staticx) < w*4; i += 2)
+				DRAWSTATIC((patch->width*i) - staticx, 0, 0, staticy, staticx - (patch->width*i), 0);
+		}
+		else // Horizontal and vertical tiling
+		{
+			for (INT16 j = 2; ((patch->height*j) - staticy) < h*4; j += 2)
+				DRAWSTATIC(0, (patch->height*j) - staticy, staticx, 0, 0, staticy - (patch->height*j));
+
+			for (INT16 i = 2; ((patch->width*i) - staticx) < w*4; i += 2)
+			{
+				DRAWSTATIC((patch->width*i) - staticx, 0, 0, staticy, staticx - (patch->width*i), 0);
+				for (INT16 j = 2; ((patch->height*j) - staticy) < h*4; j += 2)
+					DRAWSTATIC((patch->width*i) - staticx, (patch->height*j) - staticy, 0, 0, staticx - (patch->width*i), staticy - (patch->height*j));
+			}
+		}
+	}
+#undef DRAWSTATIC
+
+	// Now that we're done with the patch, it's time to say our goodbyes. Until next time, patch!
 	W_UnlockCachedPatch(patch);
 }
 
@@ -11268,6 +11344,8 @@ static void M_DrawConnectMenu(void)
 			V_DrawSmallString(currentMenu->x+202, S_LINEY(i)+8, globalflags, "\x85" "Mod");
 		if (serverlist[slindex].info.cheatsenabled)
 			V_DrawSmallString(currentMenu->x+222, S_LINEY(i)+8, globalflags, "\x83" "Cheats");
+		if (Net_IsNodeIPv6(serverlist[slindex].node))
+			V_DrawSmallString(currentMenu->x+252, S_LINEY(i)+8, globalflags, "\x84" "IPv6");
 
 		V_DrawSmallString(currentMenu->x, S_LINEY(i)+8, globalflags,
 		                     va("Ping: %u", (UINT32)LONG(serverlist[slindex].info.time)));
@@ -11961,7 +12039,7 @@ static void M_HandleConnectIP(INT32 choice)
 			// Rudimentary number and period enforcing - also allows letters so hostnames can be used instead
 			// and square brackets for RFC 2732 IPv6 addresses
 			if ((choice >= '-' && choice <= ':') ||
-					(choice == '[' || choice == ']') ||
+					(choice == '[' || choice == ']' || choice == '%') ||
 					(choice >= 'A' && choice <= 'Z') ||
 					(choice >= 'a' && choice <= 'z'))
 			{
