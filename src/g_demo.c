@@ -929,7 +929,7 @@ void G_GhostTicker(void)
 						follow->colorized = true;
 
 					if (followtic & FZT_SKIN)
-						follow->skin = &skins[READUINT8(g->p)];
+						follow->skin = skins[READUINT8(g->p)];
 				}
 			}
 			if (follow)
@@ -1199,7 +1199,7 @@ void G_ReadMetalTic(mobj_t *metal)
 						follow->colorized = true;
 
 					if (followtic & FZT_SKIN)
-						follow->skin = &skins[READUINT8(metal_p)];
+						follow->skin = skins[READUINT8(metal_p)];
 				}
 			}
 			if (follow)

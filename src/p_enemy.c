@@ -3786,7 +3786,7 @@ void A_MonitorPop(mobj_t *actor)
 					P_SetTarget(&newmobj->tracer, livesico);
 
 					livesico->color = newmobj->target->player->mo->color;
-					livesico->skin = &skins[newmobj->target->player->skin];
+					livesico->skin = skins[newmobj->target->player->skin];
 					P_SetMobjState(livesico, newmobj->info->seestate);
 				}
 
@@ -3877,7 +3877,7 @@ void A_GoldMonitorPop(mobj_t *actor)
 					P_SetTarget(&newmobj->tracer, livesico);
 
 					livesico->color = newmobj->target->player->mo->color;
-					livesico->skin = &skins[newmobj->target->player->skin];
+					livesico->skin = skins[newmobj->target->player->skin];
 					P_SetMobjState(livesico, newmobj->info->seestate);
 				}
 
