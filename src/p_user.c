@@ -4482,7 +4482,7 @@ boolean P_SuperReady(player_t *player, boolean transform)
 //
 // Jump routine for the player
 //
-void P_DoJump(player_t *player, boolean soundandstate)
+void P_DoJump(player_t *player, boolean soundandstate, boolean allowflip)
 {
 	fixed_t factor;
 	const fixed_t dist6 = FixedMul(FixedDiv(player->speed, player->mo->scale), player->actionspd)/20;
@@ -4655,7 +4655,7 @@ void P_DoJump(player_t *player, boolean soundandstate)
 	if (player->charflags & SF_NOJUMPDAMAGE)
 		player->pflags &= ~PF_SPINNING;
 
-	if (P_InJumpFlipSector(player->mo)) // Flip gravity on jump?
+	if (allowflip && P_InJumpFlipSector(player->mo)) // Flip gravity on jump?
 	{
 		player->mo->flags2 ^= MF2_OBJECTFLIP;
 		S_StartSound(player->mo, sfx_s3k73); // Play gravity flip sound
@@ -4876,7 +4876,7 @@ static void P_DoSpinAbility(player_t *player, ticcmd_t *cmd)
 #if 0
 					if ((player->charability == CA_TWINSPIN) && (player->speed > FixedMul(player->runspeed, player->mo->scale)))
 					{
-						P_DoJump(player, false);
+						P_DoJump(player, false, false);
 						player->pflags &= ~PF_STARTJUMP;
 						player->mo->momz = FixedMul(player->mo->momz, 3*FRACUNIT/2); // NOT 1.5 times the jump height, but 2.25 times.
 						P_SetMobjState(player->mo, S_PLAY_TWINSPIN);
@@ -4956,7 +4956,7 @@ void P_DoJumpShield(player_t *player)
 		return;
 
 	player->pflags &= ~PF_JUMPED;
-	P_DoJump(player, false);
+	P_DoJump(player, false, true);
 	player->secondjump = 0;
 	player->pflags |= PF_THOKKED|PF_SHIELDABILITY;
 	player->pflags &= ~(PF_STARTJUMP|PF_SPINNING|PF_BOUNCING);
@@ -5002,7 +5002,7 @@ void P_DoBubbleBounce(player_t *player)
 	player->pflags &= ~(PF_JUMPED|PF_NOJUMPDAMAGE|PF_SHIELDABILITY);
 	S_StartSound(player->mo, sfx_s3k44);
 	P_MobjCheckWater(player->mo);
-	P_DoJump(player, false);
+	P_DoJump(player, false, false);
 	if (player->charflags & SF_NOJUMPSPIN)
 		P_SetMobjState(player->mo, S_PLAY_FALL);
 	else
@@ -5032,7 +5032,7 @@ void P_DoAbilityBounce(player_t *player, boolean changemomz)
 		else if (player->mo->eflags & MFE_UNDERWATER)
 			prevmomz /= 2;
 
-		P_DoJump(player, false);
+		P_DoJump(player, false, false);
 		player->pflags &= ~(PF_STARTJUMP|PF_JUMPED);
 		minmomz = FixedMul(player->mo->momz, 3*FRACUNIT/2);
 
@@ -5405,7 +5405,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 		// Jump S3&K style while in quicksand.
 		else if (P_InQuicksand(player->mo))
 		{
-			P_DoJump(player, true);
+			P_DoJump(player, true, false);
 			player->secondjump = 0;
 			player->pflags &= ~PF_THOKKED;
 		}
@@ -5418,7 +5418,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 		// can't jump while in air, can't jump while jumping
 		else if (onground || player->climbing || player->powers[pw_carry])
 		{
-			P_DoJump(player, true);
+			P_DoJump(player, true, true);
 			player->secondjump = 0;
 			player->pflags &= ~PF_THOKKED;
 		}
@@ -5448,7 +5448,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 						if ((player->charability == CA_JUMPTHOK) && !(player->pflags & PF_THOKKED))
 						{
 							player->pflags &= ~PF_JUMPED;
-							P_DoJump(player, false);
+							P_DoJump(player, false, true);
 						}
 
 						P_InstaThrust(player->mo, player->mo->angle, FixedMul(actionspd, player->mo->scale));
@@ -5557,7 +5557,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 					{
 						player->pflags |= PF_THOKKED;
 						player->pflags &= ~(PF_JUMPED|PF_SPINNING);
-						P_DoJump(player, true);
+						P_DoJump(player, true, true);
 						player->secondjump++;
 					}
 					break;
