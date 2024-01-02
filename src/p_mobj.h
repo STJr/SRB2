@@ -302,8 +302,8 @@ typedef struct mobj_s
 	INT32 blendmode; // blend mode
 	fixed_t spritexscale, spriteyscale;
 	fixed_t spritexoffset, spriteyoffset;
-	fixed_t old_spritexscale, old_spriteyscale;
-	fixed_t old_spritexoffset, old_spriteyoffset;
+	fixed_t old_spritexscale, old_spriteyscale, old_spritexscale2, old_spriteyscale2;
+	fixed_t old_spritexoffset, old_spriteyoffset, old_spritexoffset2, old_spriteyoffset2;
 	struct pslope_s *floorspriteslope; // The slope that the floorsprite is rotated by
 
 	struct msecnode_s *touching_sectorlist; // a linked list of sectors where this object appears
@@ -441,8 +441,8 @@ typedef struct precipmobj_s
 	INT32 blendmode; // blend mode
 	fixed_t spritexscale, spriteyscale;
 	fixed_t spritexoffset, spriteyoffset;
-	fixed_t old_spritexscale, old_spriteyscale;
-	fixed_t old_spritexoffset, old_spriteyoffset;
+	fixed_t old_spritexscale, old_spriteyscale, old_spritexscale2, old_spriteyscale2;
+	fixed_t old_spritexoffset, old_spriteyoffset, old_spritexoffset2, old_spriteyoffset2;
 	struct pslope_s *floorspriteslope; // The slope that the floorsprite is rotated by
 
 	struct mprecipsecnode_s *touching_sectorlist; // a linked list of sectors where this object appears

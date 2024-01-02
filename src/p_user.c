@@ -2095,6 +2095,10 @@ mobj_t *P_SpawnGhostMobj(mobj_t *mobj)
 	ghost->old_pitch = mobj->old_pitch2;
 	ghost->old_roll = mobj->old_roll2;
 	ghost->old_spriteroll = mobj->old_spriteroll2;
+	ghost->old_spritexscale = mobj->old_spritexscale2;
+	ghost->old_spriteyscale = mobj->old_spriteyscale2;
+	ghost->old_spritexoffset = mobj->old_spritexoffset2;
+	ghost->old_spriteyoffset = mobj->old_spriteyoffset2;
 	ghost->old_scale = mobj->old_scale2;
 
 	return ghost;
