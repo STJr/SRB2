@@ -925,13 +925,14 @@ static int lib_pSetScale(lua_State *L)
 {
 	mobj_t *mobj = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
 	fixed_t newscale = luaL_checkfixed(L, 2);
+	boolean instant = lua_optboolean(L, 3);
 	NOHUD
 	INLEVEL
 	if (!mobj)
 		return LUA_ErrInvalid(L, "mobj_t");
 	if (newscale < FRACUNIT/100)
 		newscale = FRACUNIT/100;
-	P_SetScale(mobj, newscale);
+	P_SetScale(mobj, newscale, instant);
 	return 0;
 }
 

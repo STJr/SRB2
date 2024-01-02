@@ -374,7 +374,7 @@ static void SetSkin(player_t *player, INT32 skinnum)
 		player->mo->skin = skin;
 		if (newcolor)
 			player->mo->color = newcolor;
-		P_SetScale(player->mo, player->mo->scale);
+		P_SetScale(player->mo, player->mo->scale, false);
 		player->mo->radius = radius;
 
 		P_SetMobjState(player->mo, player->mo->state-states); // Prevent visual errors when switching between skins with differing number of frames
