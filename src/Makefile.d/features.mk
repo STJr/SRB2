@@ -54,7 +54,7 @@ ifndef NOUPNP
 MINIUPNPC_PKGCONFIG?=miniupnpc
 $(eval $(call Use_pkg_config,MINIUPNPC))
 HAVE_MINIUPNPC=1
-opts+=-DHAVE_MINIUPNP
+opts+=-DHAVE_MINIUPNPC
 endif
 endif
 
