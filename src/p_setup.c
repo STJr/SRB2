@@ -8315,7 +8315,7 @@ static boolean P_LoadAddon(UINT16 numlumps)
 	{
 		CONS_Printf(M_GetText("Current map %d replaced by added file, ending the level to ensure consistency.\n"), gamemap);
 		if (server)
-			D_SendExitLevel(false);
+			SendNetXCmd(XD_EXITLEVEL, NULL, 0);
 	}
 
 	return true;

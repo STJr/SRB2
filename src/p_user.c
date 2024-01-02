@@ -11904,7 +11904,7 @@ void P_PlayerThink(player_t *player)
 			if (!total || ((4*exiting)/total) >= numneeded)
 			{
 				if (server)
-					D_SendExitLevel(false);
+					SendNetXCmd(XD_EXITLEVEL, NULL, 0);
 			}
 			else
 				player->exiting = 3;
@@ -11912,7 +11912,7 @@ void P_PlayerThink(player_t *player)
 		else
 		{
 			if (server)
-				D_SendExitLevel(false);
+				SendNetXCmd(XD_EXITLEVEL, NULL, 0);
 		}
 	}
 
