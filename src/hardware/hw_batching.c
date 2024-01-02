@@ -78,7 +78,9 @@ void HWR_SetCurrentTexture(GLMipmap_t *texture)
 // render the polygon immediately.
 void HWR_ProcessPolygon(FSurfaceInfo *pSurf, FOutVector *pOutVerts, FUINT iNumPts, FBITFIELD PolyFlags, int shader, boolean horizonSpecial)
 {
-    if (currently_batching)
+	// draw skybox and horizon lines immediately so they don't bloat the polygon buffer.
+	// this is important for performance since horizon lines are order-sensitive and can't easily be batched.
+	if (currently_batching && !(PolyFlags & PF_NoTexture) && !horizonSpecial)
 	{
 		if (!pSurf)
 			I_Error("Got a null FSurfaceInfo in batching");// nulls should not come in the stuff that batching currently applies to
@@ -115,36 +117,25 @@ void HWR_ProcessPolygon(FSurfaceInfo *pSurf, FOutVector *pOutVerts, FUINT iNumPt
 		polygonArray[polygonArraySize].polyFlags = PolyFlags;
 		polygonArray[polygonArraySize].texture = current_texture;
 		polygonArray[polygonArraySize].shader = shader;
-		polygonArray[polygonArraySize].horizonSpecial = horizonSpecial;
-		// default to polygonArraySize so we don't lose order on horizon lines
-		// (yes, it's supposed to be negative, since we're sorting in that direction)
-		polygonArray[polygonArraySize].hash = -polygonArraySize;
 		polygonArraySize++;
 
-		if (!(PolyFlags & PF_NoTexture) && !horizonSpecial)
-		{
-			// use FNV-1a to hash polygons for later sorting.
-			INT32 hash = 0x811c9dc5;
+		// use FNV-1a to hash polygons for later sorting.
+		INT32 hash = 0x811c9dc5;
 #define DIGEST(h, x) h ^= (x); h *= 0x01000193
-			if (current_texture)
-			{
-				DIGEST(hash, current_texture->downloaded);
-			}
-			DIGEST(hash, PolyFlags);
-			DIGEST(hash, pSurf->PolyColor.rgba);
-			if (cv_glshaders.value && gl_shadersavailable)
-			{
-				DIGEST(hash, shader);
-				DIGEST(hash, pSurf->TintColor.rgba);
-				DIGEST(hash, pSurf->FadeColor.rgba);
-				DIGEST(hash, pSurf->LightInfo.light_level);
-				DIGEST(hash, pSurf->LightInfo.fade_start);
-				DIGEST(hash, pSurf->LightInfo.fade_end);
-			}
-#undef DIGEST
-			// remove the sign bit to ensure that skybox and horizon line comes first.
-			polygonArray[polygonArraySize-1].hash = (hash & INT32_MAX);
+		DIGEST(hash, current_texture->downloaded);
+		DIGEST(hash, PolyFlags);
+		DIGEST(hash, pSurf->PolyColor.rgba);
+		if (cv_glshaders.value && gl_shadersavailable)
+		{
+			DIGEST(hash, shader);
+			DIGEST(hash, pSurf->TintColor.rgba);
+			DIGEST(hash, pSurf->FadeColor.rgba);
+			DIGEST(hash, pSurf->LightInfo.light_level);
+			DIGEST(hash, pSurf->LightInfo.fade_start);
+			DIGEST(hash, pSurf->LightInfo.fade_end);
 		}
+#undef DIGEST
+		polygonArray[polygonArraySize-1].hash = hash;
 
 		memcpy(&unsortedVertexArray[unsortedVertexArraySize], pOutVerts, iNumPts * sizeof(FOutVector));
 		unsortedVertexArraySize += iNumPts;
@@ -239,10 +230,7 @@ void HWR_RenderBatches(void)
 		HWD.pfnSetShader(currentShader);
 	}
 
-	if (currentPolyFlags & PF_NoTexture)
-		currentTexture = NULL;
-    else
-	    HWD.pfnSetTexture(currentTexture);
+	HWD.pfnSetTexture(currentTexture);
 
 	while (1)// note: remember handling notexture polyflag as having texture number 0 (also in comparePolygons)
 	{
@@ -314,8 +302,6 @@ void HWR_RenderBatches(void)
 			nextTexture = polygonArray[nextIndex].texture;
 			nextPolyFlags = polygonArray[nextIndex].polyFlags;
 			nextSurfaceInfo = polygonArray[nextIndex].surf;
-			if (nextPolyFlags & PF_NoTexture)
-				nextTexture = 0;
 			if (currentShader != nextShader && cv_glshaders.value && gl_shadersavailable)
 			{
 				changeState = true;
