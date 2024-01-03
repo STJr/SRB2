@@ -288,18 +288,12 @@ static void bt_write_all(int fd, const char *string) {
 static void write_backtrace(INT32 signal)
 {
 	int fd = -1;
-#ifndef NOEXECINFO
-	size_t size;
-#endif
 	time_t rawtime;
 	struct tm timeinfo;
 	size_t bt_size;
 
 	enum { BT_SIZE = 1024, STR_SIZE = 32 };
 	void *funcptrs[BT_SIZE];
-#ifndef NOEXECINFO
-	void *array[BT_SIZE];
-#endif
 	char timestr[STR_SIZE];
 
 	const char *filename = va("%s" PATHSEP "%s", srb2home, "crash-log.txt");
