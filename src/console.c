@@ -220,13 +220,16 @@ static char *bindtable[NUMINPUTS];
 static void CONS_Bind_f(void)
 {
 	size_t na;
+	char *newcmd;
+	//size_t newlen = 0;
+	unsigned int i;
 	INT32 key;
 
 	na = COM_Argc();
 
-	if (na != 2 && na != 3)
+	if (na < 2)
 	{
-		CONS_Printf(M_GetText("bind <keyname> [<command>]: create shortcut keys to command(s)\n"));
+		CONS_Printf(M_GetText("bind <keyname> [<command>] [<arg1>] [...]: create shortcut keys to command(s)\n"));
 		CONS_Printf("\x82%s", M_GetText("Bind table :\n"));
 		na = 0;
 		for (key = 0; key < NUMINPUTS; key++)
@@ -250,8 +253,36 @@ static void CONS_Bind_f(void)
 	Z_Free(bindtable[key]);
 	bindtable[key] = NULL;
 
-	if (na == 3)
-		bindtable[key] = Z_StrDup(COM_Argv(2));
+	if (na < 3)
+		return;
+
+	for (i = 2; i < na; ++i)
+	{
+		const char *arg = COM_Argv(i);
+
+		// on the second iteration, and after
+		if (i > 2)
+		{
+			size_t newlen = strlen(bindtable[key]) + strlen(arg) + 1; // new length, allow space for ' ' and '\0'
+			size_t curpos = newcmd - bindtable[key]; // offset from newcmd to original pointer
+
+			newcmd = bindtable[key] = Z_Realloc(bindtable[key], newlen, PU_STATIC, NULL);
+			newcmd += curpos; // reapply offset
+
+			newcmd[0] = ' '; // replace previous '\0' w/ ' '
+			++newcmd; // make sure later strcpy doesnt overwrite ' '
+		}
+		// first iteration
+		else
+			// allocate space for argument and a ' ' or '\0'
+			newcmd = bindtable[key] = Z_Calloc(strlen(arg) + 1, PU_STATIC, NULL);
+
+		// the copy
+		strcpy(newcmd, arg);
+
+		// move window past copied argument for next iteration
+		newcmd += strlen(arg);
+	}
 }
 
 //======================================================================
