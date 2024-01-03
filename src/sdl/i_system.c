@@ -339,14 +339,6 @@ static void write_backtrace(INT32 signal)
 	bt_size = backtrace(funcptrs, BT_SIZE);
 	backtrace_symbols_fd(funcptrs, bt_size, fd);
 	backtrace_symbols_fd(funcptrs, bt_size, STDERR_FILENO);
-#ifndef NOEXECINFO
-	CRASHLOG_STDERR_WRITE("\nBacktrace:\n");
-
-	// Flood the output and log with the backtrace
-	size = backtrace(array, BT_SIZE);
-	backtrace_symbols_fd(array, size, fd);
-	backtrace_symbols_fd(array, size, STDERR_FILENO);
-#endif
 
 	bt_write_file(fd, "\n"); // Write another newline to the log so it looks nice :)
 	if (fd != -1) {
