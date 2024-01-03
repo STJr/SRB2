@@ -15,7 +15,7 @@
 #include "console.h"
 #include "d_main.h"
 #include "d_player.h"
-#include "d_clisrv.h"
+#include "netcode/d_clisrv.h"
 #include "p_setup.h"
 #include "i_time.h"
 #include "i_system.h"
@@ -39,7 +39,7 @@
 #include "v_video.h"
 #include "lua_hook.h"
 #include "md5.h" // demo checksums
-#include "d_netfil.h" // G_CheckDemoExtraFiles
+#include "netcode/d_netfil.h" // G_CheckDemoExtraFiles
 
 boolean timingdemo; // if true, exit with report on completion
 boolean nodrawers; // for comparative timing purposes
@@ -492,7 +492,7 @@ void G_WriteGhostTic(mobj_t *ghost)
 			if (ghost->player->followmobj->colorized)
 				followtic |= FZT_COLORIZED;
 			if (followtic & FZT_SKIN)
-				WRITEUINT8(demo_p,(UINT8)(((skin_t *)(ghost->player->followmobj->skin))-skins));
+				WRITEUINT8(demo_p,(UINT8)(((skin_t *)ghost->player->followmobj->skin)->skinnum));
 			oldghost.flags2 |= MF2_AMBUSH;
 		}
 
@@ -761,7 +761,7 @@ void G_GhostTicker(void)
 					g->mo->color = SKINCOLOR_WHITE;
 					break;
 				case GHC_NIGHTSSKIN: // not actually a colour
-					g->mo->skin = &skins[DEFAULTNIGHTSSKIN];
+					g->mo->skin = skins[DEFAULTNIGHTSSKIN];
 					break;
 				}
 			}
@@ -798,32 +798,53 @@ void G_GhostTicker(void)
 					if (type == MT_GHOST)
 					{
 						mobj = P_SpawnGhostMobj(g->mo); // does a large portion of the work for us
-						mobj->frame = (mobj->frame & ~FF_FRAMEMASK)|tr_trans60<<FF_TRANSSHIFT; // P_SpawnGhostMobj sets trans50, we want trans60
+						if (!P_MobjWasRemoved(mobj))
+							mobj->frame = (mobj->frame & ~FF_FRAMEMASK)|tr_trans60<<FF_TRANSSHIFT; // P_SpawnGhostMobj sets trans50, we want trans60
 					}
+					else if (type == MT_THOKEFFECT)
+					{
+						mobj = P_SpawnMobjFromMobj(g->mo, 0, 0, FixedDiv(g->mo->height, g->mo->scale)*3/4, type);
+						mobj->angle = g->mo->angle + ANGLE_90;
+						mobj->fuse = 7;
+						mobj->scale = g->mo->scale / 3;
+						mobj->destscale = 10 * g->mo->scale;
+						mobj->colorized = true;
+						mobj->color = g->mo->color;
+						mobj->momx = -g->mo->momx / 2;
+						mobj->momy = -g->mo->momy / 2;
+					}
+
 					else
 					{
 						mobj = P_SpawnMobjFromMobj(g->mo, 0, 0, -FixedDiv(FixedMul(g->mo->info->height, g->mo->scale) - g->mo->height,3*FRACUNIT), MT_THOK);
-						mobj->sprite = states[mobjinfo[type].spawnstate].sprite;
-						mobj->frame = (states[mobjinfo[type].spawnstate].frame & FF_FRAMEMASK) | tr_trans60<<FF_TRANSSHIFT;
-						mobj->color = g->mo->color;
-						mobj->skin = g->mo->skin;
-						P_SetScale(mobj, (mobj->destscale = g->mo->scale));
-
-						if (type == MT_THOK) // spintrail-specific modification for MT_THOK
+						if (!P_MobjWasRemoved(mobj))
 						{
-							mobj->frame = FF_TRANS80;
-							mobj->fuse = mobj->tics;
+							mobj->sprite = states[mobjinfo[type].spawnstate].sprite;
+							mobj->frame = (states[mobjinfo[type].spawnstate].frame & FF_FRAMEMASK) | tr_trans60<<FF_TRANSSHIFT;
+							mobj->color = g->mo->color;
+							mobj->skin = g->mo->skin;
+							P_SetScale(mobj, (mobj->destscale = g->mo->scale));
+
+							if (type == MT_THOK) // spintrail-specific modification for MT_THOK
+							{
+								mobj->frame = FF_TRANS80;
+								mobj->fuse = mobj->tics;
+							}
+							mobj->tics = -1; // nope.
 						}
-						mobj->tics = -1; // nope.
 					}
-					mobj->floorz = mobj->z;
-					mobj->ceilingz = mobj->z+mobj->height;
-					P_UnsetThingPosition(mobj);
-					mobj->flags = MF_NOBLOCKMAP|MF_NOCLIP|MF_NOCLIPHEIGHT|MF_NOGRAVITY; // make an ATTEMPT to curb crazy SOCs fucking stuff up...
-					P_SetThingPosition(mobj);
-					if (!mobj->fuse)
-						mobj->fuse = 8;
-					P_SetTarget(&mobj->target, g->mo);
+
+					if (!P_MobjWasRemoved(mobj))
+					{
+						mobj->floorz = mobj->z;
+						mobj->ceilingz = mobj->z+mobj->height;
+						P_UnsetThingPosition(mobj);
+						mobj->flags = MF_NOBLOCKMAP|MF_NOCLIP|MF_NOCLIPHEIGHT|MF_NOGRAVITY; // make an ATTEMPT to curb crazy SOCs fucking stuff up...
+						P_SetThingPosition(mobj);
+						if (!mobj->fuse)
+							mobj->fuse = 8;
+						P_SetTarget(&mobj->target, g->mo);
+					}
 				}
 			}
 			if (xziptic & EZT_HIT)
@@ -847,6 +868,8 @@ void G_GhostTicker(void)
 					|| health != 0 || i >= 4) // only spawn for the first 4 hits per frame, to prevent ghosts from splode-spamming too bad.
 						continue;
 					poof = P_SpawnMobj(x, y, z, MT_GHOST);
+					if (P_MobjWasRemoved(poof))
+						continue;
 					poof->angle = angle;
 					poof->flags = MF_NOBLOCKMAP|MF_NOCLIP|MF_NOCLIPHEIGHT|MF_NOGRAVITY; // make an ATTEMPT to curb crazy SOCs fucking stuff up...
 					poof->health = 0;
@@ -892,19 +915,22 @@ void G_GhostTicker(void)
 				if (follow)
 					P_RemoveMobj(follow);
 				P_SetTarget(&follow, P_SpawnMobjFromMobj(g->mo, 0, 0, 0, MT_GHOST));
-				P_SetTarget(&follow->tracer, g->mo);
-				follow->tics = -1;
-				temp = READINT16(g->p)<<FRACBITS;
-				follow->height = FixedMul(follow->scale, temp);
+				if (!P_MobjWasRemoved(follow))
+				{
+					P_SetTarget(&follow->tracer, g->mo);
+					follow->tics = -1;
+					temp = READINT16(g->p)<<FRACBITS;
+					follow->height = FixedMul(follow->scale, temp);
 
-				if (followtic & FZT_LINKDRAW)
-					follow->flags2 |= MF2_LINKDRAW;
+					if (followtic & FZT_LINKDRAW)
+						follow->flags2 |= MF2_LINKDRAW;
 
-				if (followtic & FZT_COLORIZED)
-					follow->colorized = true;
+					if (followtic & FZT_COLORIZED)
+						follow->colorized = true;
 
-				if (followtic & FZT_SKIN)
-					follow->skin = &skins[READUINT8(g->p)];
+					if (followtic & FZT_SKIN)
+						follow->skin = &skins[READUINT8(g->p)];
+				}
 			}
 			if (follow)
 			{
@@ -1094,31 +1120,50 @@ void G_ReadMetalTic(mobj_t *metal)
 				{
 					mobj = P_SpawnGhostMobj(metal); // does a large portion of the work for us
 				}
+				else if (type == MT_THOKEFFECT)
+				{
+					mobj = P_SpawnMobjFromMobj(metal, 0, 0, FixedDiv(metal->height, metal->scale)*3/4, type);
+					mobj->angle = metal->angle + ANGLE_90;
+					mobj->fuse = 7;
+					mobj->scale = metal->scale / 3;
+					mobj->destscale = 10 * metal->scale;
+					mobj->colorized = true;
+					mobj->color = metal->color;
+					mobj->momx = -metal->momx / 2;
+					mobj->momy = -metal->momy / 2;
+				}
 				else
 				{
 					mobj = P_SpawnMobjFromMobj(metal, 0, 0, -FixedDiv(FixedMul(metal->info->height, metal->scale) - metal->height,3*FRACUNIT), MT_THOK);
-					mobj->sprite = states[mobjinfo[type].spawnstate].sprite;
-					mobj->frame = states[mobjinfo[type].spawnstate].frame;
-					mobj->angle = metal->angle;
-					mobj->color = metal->color;
-					mobj->skin = metal->skin;
-					P_SetScale(mobj, (mobj->destscale = metal->scale));
-
-					if (type == MT_THOK) // spintrail-specific modification for MT_THOK
+					if (!P_MobjWasRemoved(mobj))
 					{
-						mobj->frame = FF_TRANS70;
-						mobj->fuse = mobj->tics;
+						mobj->sprite = states[mobjinfo[type].spawnstate].sprite;
+						mobj->frame = states[mobjinfo[type].spawnstate].frame;
+						mobj->angle = metal->angle;
+						mobj->color = metal->color;
+						mobj->skin = metal->skin;
+						P_SetScale(mobj, (mobj->destscale = metal->scale));
+
+						if (type == MT_THOK) // spintrail-specific modification for MT_THOK
+						{
+							mobj->frame = FF_TRANS70;
+							mobj->fuse = mobj->tics;
+						}
+						mobj->tics = -1; // nope.
 					}
-					mobj->tics = -1; // nope.
 				}
-				mobj->floorz = mobj->z;
-				mobj->ceilingz = mobj->z+mobj->height;
-				P_UnsetThingPosition(mobj);
-				mobj->flags = MF_NOBLOCKMAP|MF_NOCLIP|MF_NOCLIPHEIGHT|MF_NOGRAVITY; // make an ATTEMPT to curb crazy SOCs fucking stuff up...
-				P_SetThingPosition(mobj);
-				if (!mobj->fuse)
-					mobj->fuse = 8;
-				P_SetTarget(&mobj->target, metal);
+
+				if (!P_MobjWasRemoved(mobj))
+				{
+					mobj->floorz = mobj->z;
+					mobj->ceilingz = mobj->z+mobj->height;
+					P_UnsetThingPosition(mobj);
+					mobj->flags = MF_NOBLOCKMAP|MF_NOCLIP|MF_NOCLIPHEIGHT|MF_NOGRAVITY; // make an ATTEMPT to curb crazy SOCs fucking stuff up...
+					P_SetThingPosition(mobj);
+					if (!mobj->fuse)
+						mobj->fuse = 8;
+					P_SetTarget(&mobj->target, metal);
+				}
 			}
 		}
 		if (xziptic & EZT_SPRITE)
@@ -1140,19 +1185,22 @@ void G_ReadMetalTic(mobj_t *metal)
 				if (follow)
 					P_RemoveMobj(follow);
 				P_SetTarget(&follow, P_SpawnMobjFromMobj(metal, 0, 0, 0, MT_GHOST));
-				P_SetTarget(&follow->tracer, metal);
-				follow->tics = -1;
-				temp = READINT16(metal_p)<<FRACBITS;
-				follow->height = FixedMul(follow->scale, temp);
+				if (!P_MobjWasRemoved(follow))
+				{
+					P_SetTarget(&follow->tracer, metal);
+					follow->tics = -1;
+					temp = READINT16(metal_p)<<FRACBITS;
+					follow->height = FixedMul(follow->scale, temp);
 
-				if (followtic & FZT_LINKDRAW)
-					follow->flags2 |= MF2_LINKDRAW;
+					if (followtic & FZT_LINKDRAW)
+						follow->flags2 |= MF2_LINKDRAW;
 
-				if (followtic & FZT_COLORIZED)
-					follow->colorized = true;
+					if (followtic & FZT_COLORIZED)
+						follow->colorized = true;
 
-				if (followtic & FZT_SKIN)
-					follow->skin = &skins[READUINT8(metal_p)];
+					if (followtic & FZT_SKIN)
+						follow->skin = &skins[READUINT8(metal_p)];
+				}
 			}
 			if (follow)
 			{
@@ -1339,7 +1387,7 @@ void G_WriteMetalTic(mobj_t *metal)
 			if (metal->player->followmobj->colorized)
 				followtic |= FZT_COLORIZED;
 			if (followtic & FZT_SKIN)
-				WRITEUINT8(demo_p,(UINT8)(((skin_t *)(metal->player->followmobj->skin))-skins));
+				WRITEUINT8(demo_p,(UINT8)(((skin_t *)metal->player->followmobj->skin)->skinnum));
 			oldmetal.flags2 |= MF2_AMBUSH;
 		}
 
@@ -1492,16 +1540,21 @@ void G_BeginRecording(void)
 	demo_p += 16;
 
 	// Skin
-	for (i = 0; i < 16 && cv_skin.string[i]; i++)
-		name[i] = cv_skin.string[i];
+	const char *skinname = skins[players[0].skin]->name;
+	for (i = 0; i < 16 && skinname[i]; i++)
+		name[i] = skinname[i];
 	for (; i < 16; i++)
 		name[i] = '\0';
 	M_Memcpy(demo_p,name,16);
 	demo_p += 16;
 
 	// Color
-	for (i = 0; i < MAXCOLORNAME && cv_playercolor.string[i]; i++)
-		name[i] = cv_playercolor.string[i];
+	UINT16 skincolor = players[0].skincolor;
+	if (skincolor >= numskincolors)
+		skincolor = SKINCOLOR_NONE;
+	const char *skincolor_name = skincolors[skincolor].name;
+	for (i = 0; i < MAXCOLORNAME && skincolor_name[i]; i++)
+		name[i] = skincolor_name[i];
 	for (; i < MAXCOLORNAME; i++)
 		name[i] = '\0';
 	M_Memcpy(demo_p,name,MAXCOLORNAME);
@@ -1887,16 +1940,9 @@ UINT8 G_CmpDemoTime(char *oldname, char *newname)
 	p++; // VERSION
 	p++; // SUBVERSION
 	oldversion = READUINT16(p);
-	switch(oldversion) // demoversion
+	if (oldversion < 0x000c || oldversion > DEMOVERSION)
 	{
-	case DEMOVERSION: // latest always supported
-	case 0x000f: // The previous demoversions also supported 
-	case 0x000e:
-	case 0x000d: // all that changed between then and now was longer color name
-	case 0x000c:
-		break;
-	// too old, cannot support.
-	default:
+		// too old (or new), cannot support
 		CONS_Alert(CONS_NOTICE, M_GetText("File '%s' invalid format. It will be overwritten.\n"), oldname);
 		Z_Free(buffer);
 		return UINT8_MAX;
@@ -1969,14 +2015,11 @@ void G_DoPlayDemo(char *defdemoname)
 	UINT8 i;
 	lumpnum_t l;
 	char skin[17],color[MAXCOLORNAME+1],*n,*pdemoname;
-	UINT8 version,subversion,charability,charability2,thrustfactor,accelstart,acceleration,cnamelen;
+	UINT8 version,subversion,charability,charability2,thrustfactor,accelstart,acceleration;
 	pflags_t pflags;
 	UINT32 randseed, followitem;
 	fixed_t camerascale,shieldscale,actionspd,mindash,maxdash,normalspeed,runspeed,jumpfactor,height,spinheight;
 	char msg[1024];
-#ifdef OLD22DEMOCOMPAT
-	boolean use_old_demo_vars = false;
-#endif
 
 	skin[16] = '\0';
 	color[MAXCOLORNAME] = '\0';
@@ -2035,23 +2078,13 @@ void G_DoPlayDemo(char *defdemoname)
 	subversion = READUINT8(demo_p);
 	demoversion = READUINT16(demo_p);
 	demo_forwardmove_rng = (demoversion < 0x0010);
-	switch(demoversion)
-	{
-	case 0x000f:
-	case 0x000d:
-	case 0x000e:
-	case DEMOVERSION: // latest always supported
-		cnamelen = MAXCOLORNAME;
-		break;
 #ifdef OLD22DEMOCOMPAT
-	// all that changed between then and now was longer color name
-	case 0x000c:
-		cnamelen = 16;
-		use_old_demo_vars = true;
-		break;
+	if (demoversion < 0x000c || demoversion > DEMOVERSION)
+#else
+	if (demoversion < 0x000d || demoversion > DEMOVERSION)
 #endif
-	// too old, cannot support.
-	default:
+	{
+		// too old (or new), cannot support
 		snprintf(msg, 1024, M_GetText("%s is an incompatible replay format and cannot be played.\n"), pdemoname);
 		CONS_Alert(CONS_ERROR, "%s", msg);
 		M_StartMessage(msg, NULL, MM_NOTHING);
@@ -2178,8 +2211,8 @@ void G_DoPlayDemo(char *defdemoname)
 	demo_p += 16;
 
 	// Color
-	M_Memcpy(color,demo_p,cnamelen);
-	demo_p += cnamelen;
+	M_Memcpy(color, demo_p, (demoversion < 0x000d) ? 16 : MAXCOLORNAME);
+	demo_p += (demoversion < 0x000d) ? 16 : MAXCOLORNAME;
 
 	charability = READUINT8(demo_p);
 	charability2 = READUINT8(demo_p);
@@ -2215,7 +2248,7 @@ void G_DoPlayDemo(char *defdemoname)
 
 	// net var data
 #ifdef OLD22DEMOCOMPAT
-	if (use_old_demo_vars)
+	if (demoversion < 0x000d)
 		CV_LoadOldDemoVars(&demo_p);
 	else
 #endif
@@ -2256,14 +2289,13 @@ void G_DoPlayDemo(char *defdemoname)
 	G_InitNew(false, G_BuildMapName(gamemap), true, true, false);
 
 	// Set color
-	players[0].skincolor = skins[players[0].skin].prefcolor;
+	players[0].skincolor = skins[players[0].skin]->prefcolor;
 	for (i = 0; i < numskincolors; i++)
 		if (!stricmp(skincolors[i].name,color))
 		{
 			players[0].skincolor = i;
 			break;
 		}
-	CV_StealthSetValue(&cv_playercolor, players[0].skincolor);
 	if (players[0].mo)
 	{
 		players[0].mo->color = players[0].skincolor;
@@ -2349,19 +2381,13 @@ UINT8 G_CheckDemoForError(char *defdemoname)
 	demo_p++; // version
 	demo_p++; // subversion
 	our_demo_version = READUINT16(demo_p);
-	switch(our_demo_version)
-	{
-	case 0x000d:
-	case 0x000e:
-	case 0x000f:
-	case DEMOVERSION: // latest always supported
-		break;
 #ifdef OLD22DEMOCOMPAT
-	case 0x000c:
-		break;
+	if (our_demo_version < 0x000c || our_demo_version > DEMOVERSION)
+#else
+	if (our_demo_version < 0x000d || our_demo_version > DEMOVERSION)
 #endif
-	// too old, cannot support.
-	default:
+	{
+		// too old (or new), cannot support
 		return DFILE_ERROR_NOTDEMO;
 	}
 	demo_p += 16; // demo checksum
@@ -2383,7 +2409,6 @@ void G_AddGhost(char *defdemoname)
 	INT32 i;
 	lumpnum_t l;
 	char name[17],skin[17],color[MAXCOLORNAME+1],*n,*pdemoname,md5[16];
-	UINT8 cnamelen;
 	demoghost *gh;
 	UINT8 flags, subversion;
 	UINT8 *buffer,*p;
@@ -2435,20 +2460,9 @@ void G_AddGhost(char *defdemoname)
 	p++; // VERSION
 	subversion = READUINT8(p); // SUBVERSION
 	ghostversion = READUINT16(p);
-	switch(ghostversion)
+	if (ghostversion < 0x000c || ghostversion > DEMOVERSION)
 	{
-	case 0x000f:
-	case 0x000d:
-	case 0x000e:
-	case DEMOVERSION: // latest always supported
-		cnamelen = MAXCOLORNAME;
-		break;
-	// all that changed between then and now was longer color name
-	case 0x000c:
-		cnamelen = 16;
-		break;
-	// too old, cannot support.
-	default:
+		// too old (or new), cannot support
 		CONS_Alert(CONS_NOTICE, M_GetText("Ghost %s: Demo version incompatible.\n"), pdemoname);
 		Z_Free(pdemoname);
 		Z_Free(buffer);
@@ -2511,8 +2525,8 @@ void G_AddGhost(char *defdemoname)
 	p += 16;
 
 	// Color
-	M_Memcpy(color, p,cnamelen);
-	p += cnamelen;
+	M_Memcpy(color, p, (ghostversion < 0x000d) ? 16 : MAXCOLORNAME);
+	p += (ghostversion < 0x000d) ? 16 : MAXCOLORNAME;
 
 	// Ghosts do not have a player structure to put this in.
 	p++; // charability
@@ -2569,7 +2583,9 @@ void G_AddGhost(char *defdemoname)
 	{ // A bit more complex than P_SpawnPlayer because ghosts aren't solid and won't just push themselves out of the ceiling.
 		fixed_t z,f,c;
 		fixed_t offset = mthing->z << FRACBITS;
-		gh->mo = P_SpawnMobj(mthing->x << FRACBITS, mthing->y << FRACBITS, 0, MT_GHOST);
+		P_SetTarget(&gh->mo, P_SpawnMobj(mthing->x << FRACBITS, mthing->y << FRACBITS, 0, MT_GHOST));
+		if (P_MobjWasRemoved(gh->mo))
+			return;
 		gh->mo->angle = FixedAngle(mthing->angle << FRACBITS);
 		f = gh->mo->floorz;
 		c = gh->mo->ceilingz - mobjinfo[MT_PLAYER].height;
@@ -2593,11 +2609,11 @@ void G_AddGhost(char *defdemoname)
 	gh->oldmo.z = gh->mo->z;
 
 	// Set skin
-	gh->mo->skin = &skins[0];
+	gh->mo->skin = skins[0];
 	for (i = 0; i < numskins; i++)
-		if (!stricmp(skins[i].name,skin))
+		if (!stricmp(skins[i]->name,skin))
 		{
-			gh->mo->skin = &skins[i];
+			gh->mo->skin = skins[i];
 			break;
 		}
 	gh->oldmo.skin = gh->mo->skin;
@@ -2695,16 +2711,9 @@ void G_DoPlayMetal(void)
 	metal_p++; // VERSION
 	metal_p++; // SUBVERSION
 	metalversion = READUINT16(metal_p);
-	switch(metalversion)
+	if (metalversion < 0x000c || metalversion > DEMOVERSION)
 	{
-	case DEMOVERSION: // latest always supported
-	case 0x000f:
-	case 0x000e: // There are checks wheter the momentum is from older demo versions or not
-	case 0x000d: // all that changed between then and now was longer color name
-	case 0x000c:
-		break;
-	// too old, cannot support.
-	default:
+		// too old (or new), cannot support
 		CONS_Alert(CONS_WARNING, M_GetText("Failed to load bot recording for this map, format version incompatible.\n"));
 		Z_Free(metalbuffer);
 		return;

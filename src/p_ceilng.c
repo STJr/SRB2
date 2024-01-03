@@ -17,7 +17,7 @@
 #include "r_main.h"
 #include "s_sound.h"
 #include "z_zone.h"
-#include "d_netcmd.h"
+#include "netcode/d_netcmd.h"
 
 // ==========================================================================
 //                              CEILINGS

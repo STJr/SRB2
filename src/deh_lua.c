@@ -297,7 +297,8 @@ static int ScanConstants(lua_State *L, boolean mathlib, const char *word)
 			CacheAndPushConstant(L, word, (lua_Integer)PF_FULLSTASIS);
 			return 1;
 		}
-		else if (fastcmp(p, "USEDOWN")) // Remove case when 2.3 nears release...
+		// TODO: 2.3: Delete this alias
+		else if (fastcmp(p, "USEDOWN"))
 		{
 			CacheAndPushConstant(L, word, (lua_Integer)PF_SPINDOWN);
 			return 1;
@@ -583,11 +584,12 @@ static int ScanConstants(lua_State *L, boolean mathlib, const char *word)
 		return 0;
 	}
 
-	if (fastcmp(word, "BT_USE")) // Remove case when 2.3 nears release...
+	// TODO: 2.3: Delete this alias
+	if (fastcmp(word, "BT_USE"))
 	{
 		CacheAndPushConstant(L, word, (lua_Integer)BT_SPIN);
 		return 1;
-	}
+	} 
 
 	for (i = 0; INT_CONST[i].n; i++)
 		if (fastcmp(word,INT_CONST[i].n)) {
@@ -598,14 +600,9 @@ static int ScanConstants(lua_State *L, boolean mathlib, const char *word)
 	return 0;
 }
 
-static inline int lib_getenum(lua_State *L)
+static inline int getEnum(lua_State *L, boolean mathlib, const char *word)
 {
-	const char *word;
 	fixed_t i;
-	boolean mathlib = lua_toboolean(L, lua_upvalueindex(1));
-	if (lua_type(L,2) != LUA_TSTRING)
-		return 0;
-	word = lua_tostring(L,2);
 
 	// check actions, super and globals first, as they don't have _G caching implemented
 	// so they benefit from being checked first
@@ -671,6 +668,46 @@ static inline int lib_getenum(lua_State *L)
 	}
 	else if ((!mathlib && LUA_PushGlobals(L, word)) || ScanConstants(L, mathlib, word))
 		return 1;
+
+	return -1;
+}
+
+static int constants_get(lua_State *L)
+{
+	const char *key;
+	int ret;
+
+	if (!lua_isstring(L, 2))
+		return 0;
+
+	key = luaL_checkstring(L, 2);
+
+	// In Lua, mathlib is never there
+	ret = getEnum(L, false, key);
+
+	if (ret != -1)
+		// Don't allow A_* or super.
+		// All userdata is meant to be considered global variables,
+		// so no need to get more specific than "is it userdata?"
+		if (!lua_isuserdata(L, -1) && !lua_isfunction(L, -1))
+			return ret;
+
+	return 0;
+}
+
+static inline int lib_getenum(lua_State *L)
+{
+	const char *word;
+	int ret;
+	boolean mathlib = lua_toboolean(L, lua_upvalueindex(1));
+	if (lua_type(L,2) != LUA_TSTRING)
+		return 0;
+	word = lua_tostring(L,2);
+
+	ret = getEnum(L, mathlib, word);
+
+	if (ret != -1)
+		return ret;
 
 	if (mathlib) return luaL_error(L, "constant '%s' could not be parsed.\n", word);
 
@@ -771,9 +808,17 @@ int LUA_SOCLib(lua_State *L)
 	lua_register(L,"getActionName",lib_getActionName);
 
 	luaL_newmetatable(L, META_ACTION);
-		lua_pushcfunction(L, action_call);
-		lua_setfield(L, -2, "__call");
+		LUA_SetCFunctionField(L, "__call", action_call);
 	lua_pop(L, 1);
+
+	// Allow access to constants without forcing the use of name comparison checks Lua-side
+	// This table will not access global variables, only constants
+	lua_newuserdata(L, 0);
+		lua_createtable(L, 0, 2);
+			lua_pushcfunction(L, constants_get);
+			lua_setfield(L, -2, "__index");
+		lua_setmetatable(L, -2);
+	lua_setglobal(L, "constants");
 
 	return 0;
 }

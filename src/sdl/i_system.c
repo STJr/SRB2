@@ -41,6 +41,12 @@ typedef LPVOID (WINAPI *p_MapViewOfFile) (HANDLE, DWORD, DWORD, DWORD, SIZE_T);
 #include <ntsecapi.h>
 #undef SystemFunction036
 
+// A little more than the minimum sleep duration on Windows.
+// May be incorrect for other platforms, but we don't currently have a way to
+// query the scheduler granularity. SDL will do what's needed to make this as
+// low as possible though.
+#define MIN_SLEEP_DURATION_MS 2.1
+
 #endif
 #include <stdio.h>
 #include <stdlib.h>
@@ -138,7 +144,9 @@ typedef LPVOID (WINAPI *p_MapViewOfFile) (HANDLE, DWORD, DWORD, DWORD, SIZE_T);
 #endif
 
 #if defined (__unix__) || defined(__APPLE__) || defined (UNIXCOMMON)
+#ifndef NOEXECINFO
 #include <execinfo.h>
+#endif
 #include <time.h>
 #define UNIXBACKTRACE
 #endif
@@ -187,7 +195,8 @@ static char returnWadPath[256];
 #include "../i_system.h"
 #include "../i_threads.h"
 #include "../screen.h" //vid.WndParent
-#include "../d_net.h"
+#include "../netcode/d_net.h"
+#include "../netcode/commands.h"
 #include "../g_game.h"
 #include "../filesrch.h"
 #include "endtxt.h"
@@ -208,7 +217,7 @@ static char returnWadPath[256];
 
 #if !defined(NOMUMBLE) && defined(HAVE_MUMBLE)
 // Mumble context string
-#include "../d_clisrv.h"
+#include "../netcode/d_clisrv.h"
 #include "../byteptr.h"
 #endif
 
@@ -279,12 +288,18 @@ static void bt_write_all(int fd, const char *string) {
 static void write_backtrace(INT32 signal)
 {
 	int fd = -1;
+#ifndef NOEXECINFO
+	size_t size;
+#endif
 	time_t rawtime;
 	struct tm timeinfo;
 	size_t bt_size;
 
 	enum { BT_SIZE = 1024, STR_SIZE = 32 };
 	void *funcptrs[BT_SIZE];
+#ifndef NOEXECINFO
+	void *array[BT_SIZE];
+#endif
 	char timestr[STR_SIZE];
 
 	const char *filename = va("%s" PATHSEP "%s", srb2home, "crash-log.txt");
@@ -324,6 +339,14 @@ static void write_backtrace(INT32 signal)
 	bt_size = backtrace(funcptrs, BT_SIZE);
 	backtrace_symbols_fd(funcptrs, bt_size, fd);
 	backtrace_symbols_fd(funcptrs, bt_size, STDERR_FILENO);
+#ifndef NOEXECINFO
+	CRASHLOG_STDERR_WRITE("\nBacktrace:\n");
+
+	// Flood the output and log with the backtrace
+	size = backtrace(array, BT_SIZE);
+	backtrace_symbols_fd(array, size, fd);
+	backtrace_symbols_fd(array, size, STDERR_FILENO);
+#endif
 
 	bt_write_file(fd, "\n"); // Write another newline to the log so it looks nice :)
 	if (fd != -1) {
@@ -618,6 +641,7 @@ void I_GetConsoleEvents(void)
 		return;
 
 	ev.type = ev_console;
+	ev.key = 0;
 	if (read(STDIN_FILENO, &key, 1) == -1 || !key)
 		return;
 
@@ -644,9 +668,10 @@ void I_GetConsoleEvents(void)
 		}
 		else return;
 	}
-	else
+	else if (tty_con.cursor < sizeof (tty_con.buffer))
 	{
 		// push regular character
+		ev.type = ev_text;
 		ev.key = tty_con.buffer[tty_con.cursor] = key;
 		tty_con.cursor++;
 		// print the current line (this is differential)
@@ -2275,6 +2300,52 @@ void I_Sleep(UINT32 ms)
 	SDL_Delay(ms);
 }
 
+void I_SleepDuration(precise_t duration)
+{
+#if defined(__linux__) || defined(__FreeBSD__)
+	UINT64 precision = I_GetPrecisePrecision();
+	struct timespec ts = {
+		.tv_sec = duration / precision,
+		.tv_nsec = duration * 1000000000 / precision % 1000000000,
+	};
+	int status;
+	do status = clock_nanosleep(CLOCK_MONOTONIC, 0, &ts, &ts);
+	while (status == EINTR);
+#else
+	UINT64 precision = I_GetPrecisePrecision();
+	INT32 sleepvalue = cv_sleep.value;
+	UINT64 delaygranularity;
+	precise_t cur;
+	precise_t dest;
+
+	{
+		double gran = round(((double)(precision / 1000) * sleepvalue * MIN_SLEEP_DURATION_MS));
+		delaygranularity = (UINT64)gran;
+	}
+
+	cur = I_GetPreciseTime();
+	dest = cur + duration;
+
+	// the reason this is not dest > cur is because the precise counter may wrap
+	// two's complement arithmetic is our friend here, though!
+	// e.g. cur 0xFFFFFFFFFFFFFFFE = -2, dest 0x0000000000000001 = 1
+	// 0x0000000000000001 - 0xFFFFFFFFFFFFFFFE = 3
+	while ((INT64)(dest - cur) > 0)
+	{
+		// If our cv_sleep value exceeds the remaining sleep duration, use the
+		// hard sleep function.
+		if (sleepvalue > 0 && (dest - cur) > delaygranularity)
+		{
+			I_Sleep(sleepvalue);
+		}
+
+		// Otherwise, this is a spinloop.
+
+		cur = I_GetPreciseTime();
+	}
+#endif
+}
+
 #ifdef NEWSIGNALHANDLER
 ATTRNORETURN static FUNCNORETURN void newsignalhandler_Warn(const char *pr)
 {
@@ -2398,9 +2469,7 @@ void I_Quit(void)
 	SDLforceUngrabMouse();
 	quiting = SDL_FALSE;
 	M_SaveConfig(NULL); //save game config, cvars..
-#ifndef NONET
 	D_SaveBan(); // save the ban list
-#endif
 	G_SaveGameData(clientGamedata); // Tails 12-08-2002
 	//added:16-02-98: when recording a demo, should exit using 'q' key,
 	//        but sometimes we forget and use 'F10'.. so save here too.
@@ -2515,9 +2584,7 @@ void I_Error(const char *error, ...)
 	// ---
 
 	M_SaveConfig(NULL); // save game config, cvars..
-#ifndef NONET
 	D_SaveBan(); // save the ban list
-#endif
 	G_SaveGameData(clientGamedata); // Tails 12-08-2002
 
 	// Shutdown. Here might be other errors.
