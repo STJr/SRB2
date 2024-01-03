@@ -83,6 +83,10 @@
 	#undef ETIMEDOUT
 	#endif
 	#define ETIMEDOUT WSAETIMEDOUT
+	#ifdef EHOSTUNREACH
+	#undef EHOSTUNREACH
+	#endif
+	#define EHOSTUNREACH WSAEHOSTUNREACH
 	#ifndef IOC_VENDOR
 	#define IOC_VENDOR 0x18000000
 	#endif
@@ -109,16 +113,18 @@ typedef union
 #endif
 } mysockaddr_t;
 
-#ifdef HAVE_MINIUPNPC
-	#ifdef STATIC_MINIUPNPC
-		#define STATICLIB
+	#ifdef HAVE_MINIUPNPC
+	#ifdef MINIUPNP_STATICLIB
+		#include "miniwget.h"
+		#include "miniupnpc.h"
+		#include "upnpcommands.h"
+	#else
+		#include "miniupnpc/miniwget.h"
+		#include "miniupnpc/miniupnpc.h"
+		#include "miniupnpc/upnpcommands.h"
 	#endif
-	#include "miniupnpc/miniwget.h"
-	#include "miniupnpc/miniupnpc.h"
-	#include "miniupnpc/upnpcommands.h"
-	#undef STATICLIB
-	static UINT8 UPNP_support = TRUE;
-#endif // HAVE_MINIUPNC
+		static boolean UPNP_support = true;
+	#endif // HAVE_MINIUPNC
 
 #define MAXBANS 100
 
@@ -153,6 +159,8 @@ typedef union
 	#endif
 	#define ERRSOCKET (-1)
 #endif
+
+#define IPV6_MULTICAST_ADDRESS "ff15::57e1:1a12"
 
 // define socklen_t in DOS/Windows if it is not already defined
 #ifdef USE_WINSOCK1
@@ -254,21 +262,24 @@ static const char* inet_ntopA(short af, const void *cp, char *buf, socklen_t len
 #endif
 
 #ifdef HAVE_MINIUPNPC // based on old XChat patch
+static void I_ShutdownUPnP(void);
 static struct UPNPUrls urls;
 static struct IGDdatas data;
 static char lanaddr[64];
 
-static void I_ShutdownUPnP(void)
-{
-	FreeUPNPUrls(&urls);
-}
-
 static inline void I_InitUPnP(void)
 {
+	const char * const deviceTypes[] = {
+		"urn:schemas-upnp-org:device:InternetGatewayDevice:2",
+		"urn:schemas-upnp-org:device:InternetGatewayDevice:1",
+		0
+	};
 	struct UPNPDev * devlist = NULL;
 	int upnp_error = -2;
+	int scope_id = 0;
+	int status_code = 0;
 	CONS_Printf(M_GetText("Looking for UPnP Internet Gateway Device\n"));
-	devlist = upnpDiscover(2000, NULL, NULL, 0, false, &upnp_error);
+	devlist = upnpDiscoverDevices(deviceTypes, 500, NULL, NULL, 0, false, 2, &upnp_error, 0);
 	if (devlist)
 	{
 		struct UPNPDev *dev = devlist;
@@ -288,7 +299,7 @@ static inline void I_InitUPnP(void)
 
 		UPNP_GetValidIGD(devlist, &urls, &data, lanaddr, sizeof(lanaddr));
 		CONS_Printf(M_GetText("Local LAN IP address: %s\n"), lanaddr);
-		descXML = miniwget(dev->descURL, &descXMLsize);
+		descXML = miniwget(dev->descURL, &descXMLsize, scope_id, &status_code);
 		if (descXML)
 		{
 			parserootdesc(descXML, descXMLsize, &data);
@@ -296,7 +307,7 @@ static inline void I_InitUPnP(void)
 			descXML = NULL;
 			memset(&urls, 0, sizeof(struct UPNPUrls));
 			memset(&data, 0, sizeof(struct IGDdatas));
-			GetUPNPUrls(&urls, &data, dev->descURL);
+			GetUPNPUrls(&urls, &data, dev->descURL, status_code);
 			I_AddExitFunc(I_ShutdownUPnP);
 		}
 		freeUPNPDevlist(devlist);
@@ -323,6 +334,12 @@ static inline void I_UPnP_rem(const char *port, const char * servicetype)
 		return;
 	UPNP_DeletePortMapping(urls.controlURL, data.first.servicetype,
 	                       port, servicetype, NULL);
+}
+
+static void I_ShutdownUPnP(void)
+{
+	I_UPnP_rem(serverport_name, "UDP");
+	FreeUPNPUrls(&urls);
 }
 #endif
 
@@ -402,6 +419,20 @@ static const char *SOCK_GetBanMask(size_t ban)
 	return NULL;
 }
 
+#ifdef HAVE_IPV6
+static boolean SOCK_cmpipv6(mysockaddr_t *a, mysockaddr_t *b, UINT8 mask)
+{
+	UINT8 bitmask;
+	I_Assert(mask <= 128);
+	if (memcmp(&a->ip6.sin6_addr, &b->ip6.sin6_addr, mask / 8) != 0)
+		return false;
+	if (mask % 8 == 0)
+		return true;
+	bitmask = 255 << (mask % 8);
+	return (a->ip6.sin6_addr.s6_addr[mask / 8] & bitmask) == (b->ip6.sin6_addr.s6_addr[mask / 8] & bitmask);
+}
+#endif
+
 static boolean SOCK_cmpaddr(mysockaddr_t *a, mysockaddr_t *b, UINT8 mask)
 {
 	UINT32 bitmask = INADDR_NONE;
@@ -414,7 +445,7 @@ static boolean SOCK_cmpaddr(mysockaddr_t *a, mysockaddr_t *b, UINT8 mask)
 			&& (b->ip4.sin_port == 0 || (a->ip4.sin_port == b->ip4.sin_port));
 #ifdef HAVE_IPV6
 	else if (b->any.sa_family == AF_INET6)
-		return !memcmp(&a->ip6.sin6_addr, &b->ip6.sin6_addr, sizeof(b->ip6.sin6_addr))
+		return SOCK_cmpipv6(a, b, mask)
 			&& (b->ip6.sin6_port == 0 || (a->ip6.sin6_port == b->ip6.sin6_port));
 #endif
 	else
@@ -621,6 +652,7 @@ static inline ssize_t SOCK_SendToAddr(SOCKET_TYPE socket, mysockaddr_t *sockaddr
 	socklen_t d6 = (socklen_t)sizeof(struct sockaddr_in6);
 #endif
 	socklen_t d, da = (socklen_t)sizeof(mysockaddr_t);
+	ssize_t status;
 
 	switch (sockaddr->any.sa_family)
 	{
@@ -631,7 +663,12 @@ static inline ssize_t SOCK_SendToAddr(SOCKET_TYPE socket, mysockaddr_t *sockaddr
 		default:       d = da; break;
 	}
 
-	return sendto(socket, (char *)&doomcom->data, doomcom->datalength, 0, &sockaddr->any, d);
+	status = sendto(socket, (char *)&doomcom->data, doomcom->datalength, 0, &sockaddr->any, d);
+	if (status == -1)
+	{
+		CONS_Alert(CONS_WARNING, "Unable to send packet to %s: %s\n", SOCK_AddrToStr(sockaddr), strerror(errno));
+	}
+	return status;
 }
 
 static void SOCK_Send(void)
@@ -670,7 +707,7 @@ static void SOCK_Send(void)
 	if (c == ERRSOCKET)
 	{
 		int e = errno; // save error code so it can't be modified later
-		if (e != ECONNREFUSED && e != EWOULDBLOCK)
+		if (e != ECONNREFUSED && e != EWOULDBLOCK && e != EHOSTUNREACH)
 			I_Error("SOCK_Send, error sending to node %d (%s) #%u: %s", doomcom->remotenode,
 				SOCK_GetNodeAddress(doomcom->remotenode), e, strerror(e));
 	}
@@ -769,6 +806,24 @@ static SOCKET_TYPE UDP_Bind(int family, struct sockaddr *addr, socklen_t addrlen
 		I_OutputMsg("Binding failed\n");
 		return (SOCKET_TYPE)ERRSOCKET;
 	}
+
+#ifdef HAVE_IPV6
+	if (family == AF_INET6)
+	{
+		// we need to set all of this *after* binding to an address!
+		if (memcmp(&straddr.ip6.sin6_addr, &in6addr_any, sizeof(in6addr_any)) == 0) //IN6_ARE_ADDR_EQUAL
+		{
+			struct ipv6_mreq maddr;
+
+			inet_pton(AF_INET6, IPV6_MULTICAST_ADDRESS, &maddr.ipv6mr_multiaddr);
+			maddr.ipv6mr_interface = 0;
+			if (setsockopt(s, IPPROTO_IPV6, IPV6_JOIN_GROUP, (const char *)&maddr, sizeof(maddr)) != 0)
+			{
+				CONS_Alert(CONS_WARNING, M_GetText("Could not register multicast address\n"));
+			}
+		}
+	}
+#endif
 
 #ifdef FIONBIO
 	// make it non blocking
@@ -950,65 +1005,28 @@ static boolean UDP_Socket(void)
 	// ip + udp
 	packetheaderlength = 20 + 8; // for stats
 
-	hints.ai_family = AF_INET;
-	gaie = I_getaddrinfo("127.0.0.1", "0", &hints, &ai);
-	if (gaie == 0)
-	{
-		runp = ai;
-		while (runp != NULL && s < MAXNETNODES+1)
-		{
-			memcpy(&clientaddress[s], runp->ai_addr, runp->ai_addrlen);
-			s++;
-			runp = runp->ai_next;
-		}
-		I_freeaddrinfo(ai);
-	}
-	else
-	{
-		clientaddress[s].any.sa_family = AF_INET;
-		clientaddress[s].ip4.sin_port = htons(0);
-		clientaddress[s].ip4.sin_addr.s_addr = htonl(INADDR_LOOPBACK); //GetLocalAddress(); // my own ip
-		s++;
-	}
+	clientaddress[s].any.sa_family = AF_INET;
+	clientaddress[s].ip4.sin_port = htons(0);
+	clientaddress[s].ip4.sin_addr.s_addr = htonl(INADDR_LOOPBACK); //GetLocalAddress(); // my own ip
+	s++;
 
 	s = 0;
 
 	// setup broadcast adress to BROADCASTADDR entry
-	gaie = I_getaddrinfo("255.255.255.255", "0", &hints, &ai);
-	if (gaie == 0)
-	{
-		runp = ai;
-		while (runp != NULL && s < MAXNETNODES+1)
-		{
-			memcpy(&broadcastaddress[s], runp->ai_addr, runp->ai_addrlen);
-			s++;
-			runp = runp->ai_next;
-		}
-		I_freeaddrinfo(ai);
-	}
-	else
-	{
-		broadcastaddress[s].any.sa_family = AF_INET;
-		broadcastaddress[s].ip4.sin_port = htons(0);
-		broadcastaddress[s].ip4.sin_addr.s_addr = htonl(INADDR_BROADCAST);
-		s++;
-	}
+	broadcastaddress[s].any.sa_family = AF_INET;
+	broadcastaddress[s].ip4.sin_port = htons(atoi(DEFAULTPORT));
+	broadcastaddress[s].ip4.sin_addr.s_addr = htonl(INADDR_BROADCAST);
+	s++;
+
 #ifdef HAVE_IPV6
 	if (b_ipv6)
 	{
-		hints.ai_family = AF_INET6;
-		gaie = I_getaddrinfo("ff02::1", "0", &hints, &ai);
-		if (gaie == 0)
-		{
-			runp = ai;
-			while (runp != NULL && s < MAXNETNODES+1)
-			{
-				memcpy(&broadcastaddress[s], runp->ai_addr, runp->ai_addrlen);
-				s++;
-				runp = runp->ai_next;
-			}
-			I_freeaddrinfo(ai);
-		}
+		broadcastaddress[s].any.sa_family = AF_INET6;
+		broadcastaddress[s].ip6.sin6_port = htons(atoi(DEFAULTPORT));
+		broadcastaddress[s].ip6.sin6_flowinfo = 0;
+		inet_pton(AF_INET6, IPV6_MULTICAST_ADDRESS, &broadcastaddress[s].ip6.sin6_addr);
+		broadcastaddress[s].ip6.sin6_scope_id = 0;
+		s++;
 	}
 #endif
 
@@ -1081,10 +1099,10 @@ boolean I_InitTcpDriver(void)
 	{
 		I_AddExitFunc(I_ShutdownTcpDriver);
 #ifdef HAVE_MINIUPNPC
-		if (M_CheckParm("-useUPnP"))
-			I_InitUPnP();
-		else
+		if (M_CheckParm("-noUPnP"))
 			UPNP_support = false;
+		else
+			I_InitUPnP();
 #endif
 	}
 	return init_tcp_driver;
@@ -1371,6 +1389,15 @@ boolean I_InitTcpNetwork(void)
 	bannednode = SOCK_bannednode;
 
 	return ret;
+}
+
+boolean Net_IsNodeIPv6(INT32 node)
+{
+#ifdef NO_IPV6
+	return false;
+#else
+	return clientaddress[node].any.sa_family == AF_INET6;
+#endif
 }
 
 #include "i_addrinfo.c"

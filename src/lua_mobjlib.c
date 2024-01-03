@@ -641,10 +641,7 @@ static int mobj_set(lua_State *L)
 		mo->tics = luaL_checkinteger(L, 3);
 		break;
 	case mobj_state: // set state by enum
-		if (mo->player)
-			P_SetPlayerMobjState(mo, luaL_checkinteger(L, 3));
-		else
-			P_SetMobjState(mo, luaL_checkinteger(L, 3));
+		P_SetMobjState(mo, luaL_checkinteger(L, 3));
 		break;
 	case mobj_flags: // special handling for MF_NOBLOCKMAP and MF_NOSECTOR
 	{
@@ -682,10 +679,10 @@ static int mobj_set(lua_State *L)
 		strlcpy(skin, luaL_checkstring(L, 3), sizeof skin);
 		strlwr(skin); // all skin names are lowercase
 		for (i = 0; i < numskins; i++)
-			if (fastcmp(skins[i].name, skin))
+			if (fastcmp(skins[i]->name, skin))
 			{
 				if (!mo->player || R_SkinUsable(mo->player-players, i))
-					mo->skin = &skins[i];
+					mo->skin = skins[i];
 				return 0;
 			}
 		return luaL_error(L, "mobj.skin '%s' not found!", skin);
@@ -1163,43 +1160,12 @@ static int lib_nummapthings(lua_State *L)
 
 int LUA_MobjLib(lua_State *L)
 {
-	luaL_newmetatable(L, META_MOBJ);
-		lua_pushcfunction(L, mobj_get);
-		lua_setfield(L, -2, "__index");
-
-		lua_pushcfunction(L, mobj_set);
-		lua_setfield(L, -2, "__newindex");
-	lua_pop(L,1);
+	LUA_RegisterUserdataMetatable(L, META_MOBJ, mobj_get, mobj_set, NULL);
+	LUA_RegisterUserdataMetatable(L, META_THINGARGS, thingargs_get, NULL, thingargs_len);
+	LUA_RegisterUserdataMetatable(L, META_THINGSTRINGARGS, thingstringargs_get, NULL, thingstringargs_len);
+	LUA_RegisterUserdataMetatable(L, META_MAPTHING, mapthing_get, mapthing_set, mapthing_num);
 
 	mobj_fields_ref = Lua_CreateFieldTable(L, mobj_opt);
-
-	luaL_newmetatable(L, META_THINGARGS);
-		lua_pushcfunction(L, thingargs_get);
-		lua_setfield(L, -2, "__index");
-
-		lua_pushcfunction(L, thingargs_len);
-		lua_setfield(L, -2, "__len");
-	lua_pop(L, 1);
-
-	luaL_newmetatable(L, META_THINGSTRINGARGS);
-		lua_pushcfunction(L, thingstringargs_get);
-		lua_setfield(L, -2, "__index");
-
-		lua_pushcfunction(L, thingstringargs_len);
-		lua_setfield(L, -2, "__len");
-	lua_pop(L, 1);
-
-	luaL_newmetatable(L, META_MAPTHING);
-		lua_pushcfunction(L, mapthing_get);
-		lua_setfield(L, -2, "__index");
-
-		lua_pushcfunction(L, mapthing_set);
-		lua_setfield(L, -2, "__newindex");
-
-		lua_pushcfunction(L, mapthing_num);
-		lua_setfield(L, -2, "__len");
-	lua_pop(L,1);
-
 	mapthing_fields_ref = Lua_CreateFieldTable(L, mapthing_opt);
 
 	LUA_PushTaggableObjectArray(L, "mapthings",

@@ -90,8 +90,8 @@ INT16 consistancy[BACKUPTICS];
 // true when a player is connecting or disconnecting so that the gameplay has stopped in its tracks
 boolean hu_stopped = false;
 
-UINT8 adminpassmd5[16];
-boolean adminpasswordset = false;
+UINT8 (*adminpassmd5)[16];
+UINT32 adminpasscount = 0;
 
 tic_t neededtic;
 SINT8 servernode = 0; // the number of the server node
@@ -113,6 +113,7 @@ consvar_t cv_blamecfail = CVAR_INIT ("blamecfail", "Off", CV_SAVE|CV_NETVAR, CV_
 static CV_PossibleValue_t playbackspeed_cons_t[] = {{1, "MIN"}, {10, "MAX"}, {0, NULL}};
 consvar_t cv_playbackspeed = CVAR_INIT ("playbackspeed", "1", 0, playbackspeed_cons_t, NULL);
 
+consvar_t cv_idletime = CVAR_INIT ("idletime", "0", CV_SAVE, CV_Unsigned, NULL);
 consvar_t cv_dedicatedidletime = CVAR_INIT ("dedicatedidletime", "10", CV_SAVE, CV_Unsigned, NULL);
 
 void ResetNode(INT32 node)
@@ -226,6 +227,7 @@ static void Got_AddPlayer(UINT8 **p, INT32 playernum)
 
 	newplayer->jointime = 0;
 	newplayer->quittime = 0;
+	newplayer->lastinputtime = 0;
 
 	READSTRINGN(*p, player_names[newplayernum], MAXPLAYERNAME);
 
@@ -492,6 +494,10 @@ static void Got_KickCmd(UINT8 **p, INT32 playernum)
 			HU_AddChatText(va("\x82*%s has been banned (%s)", player_names[pnum], reason), false);
 			kickreason = KR_BAN;
 			break;
+		case KICK_MSG_IDLE:
+			HU_AddChatText(va("\x82*%s has left the game (Inactive for too long)", player_names[pnum]), false);
+			kickreason = KR_TIMEOUT;
+			break;
 	}
 
 	if (pnum == consoleplayer)
@@ -507,6 +513,8 @@ static void Got_KickCmd(UINT8 **p, INT32 playernum)
 			M_StartMessage(M_GetText("Server closed connection\n(synch failure)\nPress ESC\n"), NULL, MM_NOTHING);
 		else if (msg == KICK_MSG_PING_HIGH)
 			M_StartMessage(M_GetText("Server closed connection\n(Broke ping limit)\nPress ESC\n"), NULL, MM_NOTHING);
+		else if (msg == KICK_MSG_IDLE)
+			M_StartMessage(M_GetText("Server closed connection\n(Inactive for too long)\nPress ESC\n"), NULL, MM_NOTHING);
 		else if (msg == KICK_MSG_BANNED)
 			M_StartMessage(M_GetText("You have been banned by the server\n\nPress ESC\n"), NULL, MM_NOTHING);
 		else if (msg == KICK_MSG_CUSTOM_KICK)
@@ -854,26 +862,31 @@ static void PT_Login(SINT8 node, INT32 netconsole)
 
 #ifndef NOMD5
 	UINT8 finalmd5[16];/* Well, it's the cool thing to do? */
+	UINT32 i;
 
 	if (doomcom->datalength < 16)/* ignore partial sends */
 		return;
 
-	if (!adminpasswordset)
+	if (adminpasscount == 0)
 	{
 		CONS_Printf(M_GetText("Password from %s failed (no password set).\n"), player_names[netconsole]);
 		return;
 	}
 
-	// Do the final pass to compare with the sent md5
-	D_MD5PasswordPass(adminpassmd5, 16, va("PNUM%02d", netconsole), &finalmd5);
-
-	if (!memcmp(netbuffer->u.md5sum, finalmd5, 16))
+	for (i = 0; i < adminpasscount; i++)
 	{
-		CONS_Printf(M_GetText("%s passed authentication.\n"), player_names[netconsole]);
-		COM_BufInsertText(va("promote %d\n", netconsole)); // do this immediately
+		// Do the final pass to compare with the sent md5
+		D_MD5PasswordPass(adminpassmd5[i], 16, va("PNUM%02d", netconsole), &finalmd5);
+
+		if (!memcmp(netbuffer->u.md5sum, finalmd5, 16))
+		{
+			CONS_Printf(M_GetText("%s passed authentication.\n"), player_names[netconsole]);
+			COM_BufInsertText(va("promote %d\n", netconsole)); // do this immediately
+			return;
+		}
 	}
-	else
-		CONS_Printf(M_GetText("Password from %s failed.\n"), player_names[netconsole]);
+
+	CONS_Printf(M_GetText("Password from %s failed.\n"), player_names[netconsole]);
 #else
 	(void)netconsole;
 #endif
@@ -1267,6 +1280,52 @@ static void UpdatePingTable(void)
 	}
 }
 
+// Handle idle and disconnected player timers
+static void IdleUpdate(void)
+{
+	INT32 i;
+	if (!server || !netgame)
+		return;
+
+	for (i = 1; i < MAXPLAYERS; i++)
+	{
+		if (cv_idletime.value && playeringame[i] && playernode[i] != UINT8_MAX && !players[i].quittime && !players[i].spectator && !players[i].bot && !IsPlayerAdmin(i) && i != serverplayer)
+		{
+			if (players[i].cmd.forwardmove || players[i].cmd.sidemove || players[i].cmd.buttons)
+				players[i].lastinputtime = 0;
+			else
+				players[i].lastinputtime++;
+
+			if (players[i].lastinputtime > (tic_t)cv_idletime.value * TICRATE * 60)
+			{
+				players[i].lastinputtime = 0;
+				SendKick(i, KICK_MSG_IDLE | KICK_MSG_KEEP_BODY);
+			}
+		}
+		else
+		{
+			players[i].lastinputtime = 0;
+
+			if (players[i].quittime && playeringame[i])
+			{
+				players[i].quittime++;
+
+				if (players[i].quittime == 30 * TICRATE && G_TagGametype())
+					P_CheckSurvivors();
+
+				if (server && players[i].quittime >= (tic_t)FixedMul(cv_rejointimeout.value, 60 * TICRATE)
+				&& !(players[i].quittime % TICRATE))
+				{
+					if (D_NumNodes(true) > 0)
+						SendKick(i, KICK_MSG_PLAYER_QUIT);
+					else // If the server is empty, don't send a NetXCmd - that would wake an idling dedicated server
+						CL_RemovePlayer(i, KICK_MSG_PLAYER_QUIT);
+				}
+			}
+		}
+	}
+}
+
 // Handle timeouts to prevent definitive freezes from happenning
 static void HandleNodeTimeouts(void)
 {
@@ -1298,6 +1357,8 @@ void NetKeepAlive(void)
 	UpdatePingTable();
 
 	GetPackets();
+
+	IdleUpdate();
 
 #ifdef MASTERSERVER
 	MasterClient_Ticker();
@@ -1419,6 +1480,8 @@ void NetUpdate(void)
 
 	GetPackets(); // get packet from client or from server
 
+	IdleUpdate();
+
 	// The client sends the command after receiving from the server
 	// The server sends it before because this is better in single player
 
@@ -1474,7 +1537,7 @@ void NetUpdate(void)
 
 	nowtime /= NEWTICRATERATIO;
 
-	if (nowtime > resptime)
+	if (nowtime != resptime)
 	{
 		resptime = nowtime;
 #ifdef HAVE_THREADS
@@ -1576,6 +1639,20 @@ INT32 D_NumPlayers(void)
 	INT32 num = 0;
 	for (INT32 ix = 0; ix < MAXPLAYERS; ix++)
 		if (playeringame[ix])
+			num++;
+	return num;
+}
+
+/** Returns the number of currently-connected nodes in a netgame.
+  * Not necessarily equivalent to D_NumPlayers() minus D_NumBots().
+  *
+  * \param skiphost Skip the server's own node.
+  */
+INT32 D_NumNodes(boolean skiphost)
+{
+	INT32 num = 0;
+	for (INT32 ix = skiphost ? 1 : 0; ix < MAXNETNODES; ix++)
+		if (netnodes[ix].ingame)
 			num++;
 	return num;
 }
