@@ -1056,6 +1056,26 @@ boolean R_IsPointInSector(sector_t *sector, fixed_t x, fixed_t y)
 			closest = sector->lines[i];
 			closestdist = dist;
 		}
+		else if (dist == closestdist)
+		{
+			// we're most likely matching against a corner here, so check which point is closest on the opposite side.
+			vertex_t *diff;
+			if (closest->v1->x == v.x && closest->v1->y == v.y)
+				diff = closest->v2;
+			else
+				diff = closest->v1;
+
+			if (v1->x == v.x && v1->y == v.y)
+				v = *v2;
+			else
+				v = *v1;
+
+			if (R_PointToDist2(v.x, v.y, x, y) < R_PointToDist2(diff->x, diff->y, x, y))
+			{
+				closest = sector->lines[i];
+				closestdist = dist;
+			}
+		}
 	}
 
 	// if the side of the closest line is in this sector, we're inside of it.
