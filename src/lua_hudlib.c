@@ -557,7 +557,7 @@ static int libd_getSprite2Patch(lua_State *L)
 	{
 		const char *name = luaL_checkstring(L, 1);
 		for (i = 0; i < numskins; i++)
-			if (fastcmp(skins[i].name, name))
+			if (fastcmp(skins[i]->name, name))
 				break;
 		if (i >= numskins)
 			return 0;
@@ -600,7 +600,7 @@ static int libd_getSprite2Patch(lua_State *L)
 	if (super)
 		j |= SPR2F_SUPER;
 
-	sprdef = P_GetSkinSpritedef(&skins[i], j);
+	sprdef = P_GetSkinSpritedef(skins[i], j);
 
 	// set frame number
 	frame = luaL_optinteger(L, 2, 0);
@@ -628,7 +628,7 @@ static int libd_getSprite2Patch(lua_State *L)
 		INT32 rot = R_GetRollAngle(rollangle);
 
 		if (rot) {
-			patch_t *rotsprite = Patch_GetRotatedSprite(sprframe, frame, angle, sprframe->flip & (1<<angle), P_GetSkinSpriteInfo(&skins[i], j), rot);
+			patch_t *rotsprite = Patch_GetRotatedSprite(sprframe, frame, angle, sprframe->flip & (1<<angle), P_GetSkinSpriteInfo(skins[i], j), rot);
 			LUA_PushUserdata(L, rotsprite, META_PATCH);
 			lua_pushboolean(L, false);
 			lua_pushboolean(L, true);

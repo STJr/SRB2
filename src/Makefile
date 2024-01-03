@@ -66,6 +66,7 @@
 # NOPOSTPROCESSING=1 - ?
 # MOBJCONSISTANCY=1 - ??
 # PACKETDROP=1 - ??
+# NOEXECINFO=1 - Disable stack trace dump support
 # DEBUGMODE=1 - Enable various debugging capabilities.
 #               Also disables optimizations.
 # NOZLIB=1 - Disable some compression capability. Implies

@@ -10,6 +10,8 @@
 #include "../doomdef.h"
 #include "../doomtype.h"
 #include "../info.h"
+#include "../r_skins.h"
+#include "../r_state.h"
 #include "../z_zone.h"
 #include "hw_model.h"
 #include "hw_md2load.h"
@@ -141,9 +143,7 @@ tag_t *GetTagByName(model_t *model, char *name, int frame)
 //
 // LoadModel
 //
-// Load a model and
-// convert it to the
-// internal format.
+// Load a model and convert it to the internal format.
 //
 model_t *LoadModel(const char *filename, int ztag)
 {
@@ -193,9 +193,6 @@ model_t *LoadModel(const char *filename, int ztag)
 		return NULL;
 	}
 
-	model->mdlFilename = (char*)Z_Malloc(strlen(filename)+1, ztag, 0);
-	strcpy(model->mdlFilename, filename);
-
 	Optimize(model);
 	GeneratePolygonNormals(model, ztag);
 	LoadModelSprite2(model);
@@ -236,15 +233,16 @@ model_t *LoadModel(const char *filename, int ztag)
 void HWR_ReloadModels(void)
 {
 	size_t i;
-	INT32 s;
 
-	for (s = 0; s < MAXSKINS; s++)
+	HWR_LoadModels();
+
+	for (i = 0; i < md2_numplayermodels; i++)
 	{
-		if (md2_playermodels[s].model)
-			LoadModelSprite2(md2_playermodels[s].model);
+		if (md2_playermodels[i].model)
+			LoadModelSprite2(md2_playermodels[i].model);
 	}
 
-	for (i = 0; i < NUMSPRITES; i++)
+	for (i = 0; i < numsprites; i++)
 	{
 		if (md2_models[i].model)
 			LoadModelInterpolationSettings(md2_models[i].model);
@@ -255,7 +253,7 @@ void LoadModelInterpolationSettings(model_t *model)
 {
 	INT32 i;
 	INT32 numframes = model->meshes[0].numFrames;
-	char *framename = model->framenames;
+	char *framename = model->frameNames;
 
 	if (!framename)
 		return;
@@ -296,7 +294,7 @@ void LoadModelSprite2(model_t *model)
 	modelspr2frames_t *spr2frames = NULL;
 	modelspr2frames_t *superspr2frames = NULL;
 	INT32 numframes = model->meshes[0].numFrames;
-	char *framename = model->framenames;
+	char *framename = model->frameNames;
 
 	if (!framename)
 		return;
