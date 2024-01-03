@@ -740,7 +740,7 @@ Alpine 3 GCC Dedicated:
     - - |
           # apk_development
           echo -e "\e[0Ksection_start:`date +%s`:apk_development[collapsed=true]\r\e[0KInstalling development packages"
-      - apk add musl-dev zlib-dev curl-dev
+      - apk add musl-dev libpng-dev curl-dev
       - |
           # apk_development
           echo -e "\e[0Ksection_end:`date +%s`:apk_development\r\e[0K"
