@@ -23,6 +23,16 @@
 #include <windows.h>
 #endif
 #include <sys/stat.h>
+
+#ifndef S_ISLNK
+#define IGNORE_SYMLINKS
+#endif
+
+#ifndef IGNORE_SYMLINKS
+#include <unistd.h>
+#include <libgen.h>
+#include <limits.h>
+#endif
 #include <string.h>
 
 #include "filesrch.h"
@@ -461,6 +471,9 @@ filestatus_t filesearch(char *filename, const char *startpath, const UINT8 *want
 		}
 		else if (!strcasecmp(searchname, dent->d_name))
 		{
+#ifndef IGNORE_SYMLINKS
+			struct stat statbuf;
+#endif
 			switch (checkfilemd5(searchpath, wantedmd5sum))
 			{
 				case FS_FOUND:
@@ -468,6 +481,19 @@ filestatus_t filesearch(char *filename, const char *startpath, const UINT8 *want
 						strcpy(filename,searchpath);
 					else
 						strcpy(filename,dent->d_name);
+#ifndef IGNORE_SYMLINKS
+					if (lstat(filename, &statbuf) != -1)
+					{
+						if (S_ISLNK(statbuf.st_mode))
+						{
+							char *tempbuf = realpath(filename, NULL);
+							if (!tempbuf)
+								I_Error("Error parsing link %s: %s", filename, strerror(errno));
+							strncpy(filename, tempbuf, MAX_WADPATH);
+							free(tempbuf);
+						}
+					}
+#endif
 					retval = FS_FOUND;
 					found = 1;
 					break;

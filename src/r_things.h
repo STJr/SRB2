@@ -92,6 +92,8 @@ boolean R_ThingIsFlashing (mobj_t *thing);
 
 UINT8 *R_GetTranslationForThing(mobj_t *mobj, skincolornum_t color, UINT16 translation);
 
+void R_ThingOffsetOverlay (mobj_t *thing, fixed_t *outx, fixed_t *outy);
+
 // --------------
 // MASKED DRAWING
 // --------------

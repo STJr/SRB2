@@ -356,7 +356,7 @@ angle_t R_PointToAngle2(fixed_t pviewx, fixed_t pviewy, fixed_t x, fixed_t y)
 fixed_t R_PointToDist2(fixed_t px2, fixed_t py2, fixed_t px1, fixed_t py1)
 {
 	angle_t angle;
-	fixed_t dx, dy, dist;
+	ufixed_t dx, dy, dist;
 
 	dx = abs(px1 - px2);
 	dy = abs(py1 - py2);
@@ -957,16 +957,6 @@ void R_ExecuteSetViewSize(void)
 			dy = FixedMul(abs(dy), fovtan);
 			yslopetab[i] = FixedDiv(centerx*FRACUNIT, dy);
 		}
-
-		if (ds_su)
-			Z_Free(ds_su);
-		if (ds_sv)
-			Z_Free(ds_sv);
-		if (ds_sz)
-			Z_Free(ds_sz);
-
-		ds_su = ds_sv = ds_sz = NULL;
-		ds_sup = ds_svp = ds_szp = NULL;
 	}
 
 	memset(scalelight, 0xFF, sizeof(scalelight));
@@ -1012,9 +1002,6 @@ void R_Init(void)
 	R_InitViewBorder();
 	R_SetViewSize(); // setsizeneeded is set true
 
-	//I_OutputMsg("\nR_InitPlanes");
-	R_InitPlanes();
-
 	// this is now done by SCR_Recalc() at the first mode set
 	//I_OutputMsg("\nR_InitLightTables");
 	R_InitLightTables();
@@ -1025,6 +1012,34 @@ void R_Init(void)
 	R_InitDrawNodes();
 
 	framecount = 0;
+}
+
+//
+// R_IsPointInSector
+//
+boolean R_IsPointInSector(sector_t *sector, fixed_t x, fixed_t y)
+{
+	size_t i;
+	line_t *closest = NULL;
+	fixed_t closestdist = INT32_MAX;
+
+	for (i = 0; i < sector->linecount; i++)
+	{
+		vertex_t v;
+		fixed_t dist;
+
+		// find the line closest to the point we're looking for.
+		P_ClosestPointOnLine(x, y, sector->lines[i], &v);
+		dist = R_PointToDist2(0, 0, v.x - x, v.y - y);
+		if (dist < closestdist)
+		{
+			closest = sector->lines[i];
+			closestdist = dist;
+		}
+	}
+
+	// if the side of the closest line is in this sector, we're inside of it.
+	return P_PointOnLineSide(x, y, closest) == 0 ? closest->frontsector == sector : closest->backsector == sector;
 }
 
 //
