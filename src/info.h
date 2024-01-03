@@ -580,8 +580,7 @@ typedef enum sprite
 	SPR_NULL, // invisible object
 	SPR_UNKN,
 
-	SPR_THOK, // Spin trail mobj
-	SPR_THKE, // Thok boom effect
+	SPR_THOK, // Thok! mobj
 	SPR_PLAY,
 
 	// Enemies
@@ -1183,9 +1182,8 @@ typedef enum state
 	S_XDEATHSTATE,
 	S_RAISESTATE,
 
-	// Thok boom effect and spin trail
+	// Thok
 	S_THOK,
-	S_THOKEFFECT,
 
 	// Player
 	S_PLAY_STND,
@@ -4394,8 +4392,7 @@ typedef enum mobj_type
 	MT_NULL,
 	MT_UNKNOWN,
 
-	MT_THOK, // Spin trail mobj
-	MT_THOKEFFECT, // Thok boom effect
+	MT_THOK, // Thok! mobj
 	MT_PLAYER,
 	MT_TAILSOVERLAY, // c:
 	MT_METALJETFUME,
