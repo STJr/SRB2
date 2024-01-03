@@ -290,10 +290,12 @@ static void write_backtrace(INT32 signal)
 	int fd = -1;
 	time_t rawtime;
 	struct tm timeinfo;
-	size_t bt_size;
 
 	enum { BT_SIZE = 1024, STR_SIZE = 32 };
+#ifndef NOEXECINFO
 	void *funcptrs[BT_SIZE];
+	size_t bt_size;
+#endif
 	char timestr[STR_SIZE];
 
 	const char *filename = va("%s" PATHSEP "%s", srb2home, "crash-log.txt");
@@ -327,12 +329,16 @@ static void write_backtrace(INT32 signal)
 	bt_write_file(fd, strsignal(signal));
 	bt_write_file(fd, "\n"); // Newline for the signal name
 
+#ifdef NOEXECINFO
+	bt_write_all(fd, "\nNo Backtrace support\n");
+#else
 	bt_write_all(fd, "\nBacktrace:\n");
 
 	// Flood the output and log with the backtrace
 	bt_size = backtrace(funcptrs, BT_SIZE);
 	backtrace_symbols_fd(funcptrs, bt_size, fd);
 	backtrace_symbols_fd(funcptrs, bt_size, STDERR_FILENO);
+#endif
 
 	bt_write_file(fd, "\n"); // Write another newline to the log so it looks nice :)
 	if (fd != -1) {
