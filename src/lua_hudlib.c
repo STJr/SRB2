@@ -169,6 +169,7 @@ enum cameraf {
 	camera_x,
 	camera_y,
 	camera_z,
+	camera_reset,
 	camera_angle,
 	camera_subsector,
 	camera_floorz,
@@ -187,6 +188,7 @@ static const char *const camera_opt[] = {
 	"x",
 	"y",
 	"z",
+	"reset",
 	"angle",
 	"subsector",
 	"floorz",
@@ -341,6 +343,9 @@ static int camera_get(lua_State *L)
 	case camera_z:
 		lua_pushinteger(L, cam->z);
 		break;
+	case camera_reset:
+		lua_pushboolean(L, cam->reset);
+		break;
 	case camera_angle:
 		lua_pushinteger(L, cam->angle);
 		break;
@@ -387,6 +392,9 @@ static int camera_set(lua_State *L)
 	case camera_x:
 	case camera_y:
 		return luaL_error(L, LUA_QL("camera_t") " field " LUA_QS " should not be set directly. Use " LUA_QL("P_TryCameraMove") " or " LUA_QL("P_TeleportCameraMove") " instead.", camera_opt[field]);
+	case camera_reset:
+		cam->reset = luaL_checkboolean(L, 3);
+		break;
 	case camera_chase: {
 		INT32 chase = luaL_checkboolean(L, 3);
 		if (cam == &camera)
