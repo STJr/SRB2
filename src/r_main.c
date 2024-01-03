@@ -1076,9 +1076,9 @@ boolean R_IsPointInSector(sector_t *sector, fixed_t x, fixed_t y)
 			ca = R_PointToAngle2(v.x, v.y, cv->x, cv->y) - angle;
 			da = R_PointToAngle2(v.x, v.y, dv->x, dv->y) - angle;
 			if (ca > ANGLE_180)
-				ca = ANGLE_180 - (ca - ANGLE_180);
+				ca = -ca;
 			if (da > ANGLE_180)
-				da = ANGLE_180 - (da - ANGLE_180);
+				da = -da;
 
 			if (ca > da)
 			{
