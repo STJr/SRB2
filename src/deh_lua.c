@@ -600,7 +600,7 @@ static int ScanConstants(lua_State *L, boolean mathlib, const char *word)
 	return 0;
 }
 
-static inline int getEnum(lua_State *L, boolean mathlib, const char *word)
+FUNCINLINE static ATTRINLINE int getEnum(lua_State *L, boolean mathlib, const char *word)
 {
 	fixed_t i;
 
