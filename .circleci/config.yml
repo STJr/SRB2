@@ -53,7 +53,7 @@ jobs:
          command: sudo apt-get -o Dir::Cache="/home/circleci/.cache/apt" -qq -y --no-install-recommends remove libcurl4-openssl-dev:amd64
       - run:
           name: Install i386 SDK
-          command: sudo apt-get -o Dir::Cache="/home/circleci/.cache/apt" -qq -y --no-install-recommends install git build-essential libpng-dev:i386 libsdl2-mixer-dev:i386 libgme-dev:i386 libcurl4-openssl-dev:i386 libopenmpt-dev:i386 libminiupnpc-dev:i386 gettext ccache wget gcc-multilib upx openssh-client 
+          command: sudo apt-get -o Dir::Cache="/home/circleci/.cache/apt" -qq -y --no-install-recommends install git build-essential libpng-dev:i386 libsdl2-mixer-dev:i386 libgme-dev:i386 libcurl4-openssl-dev:i386 libopenmpt-dev:i386 libminiupnpc-dev gettext ccache wget gcc-multilib upx openssh-client 
       - run:
           name: make md5sum
           command: sudo find /home/circleci/.cache/apt/archives -type f -print0 | sort -z | sudo xargs -r0 md5sum > /home/circleci/.cache/apt_archives.md5
