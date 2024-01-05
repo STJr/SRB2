@@ -51,7 +51,7 @@ jobs:
          command: sudo apt-get -o Dir::Cache="/home/circleci/.cache/apt" -qq -y --no-install-recommends remove libcurl4-openssl-dev:amd64
       - run:
           name: Install i386 SDK
-          command: sudo apt-get -o Dir::Cache="/home/circleci/.cache/apt" -qq -y --no-install-recommends install git build-essential libpng-dev:i386 libsdl2-mixer-dev:i386 libgme-dev:i386 libcurl4-openssl-dev:i386 libopenmpt-dev:i386 libminiupnpc-dev:i386 gettext ccache wget gcc-multilib upx openssh-client
+          command: sudo apt-get -o Dir::Cache="/home/circleci/.cache/apt" -qq -y --no-install-recommends install git build-essential libpng-dev:i386 libsdl2-mixer-dev:i386 libgme-dev:i386 libcurl4-openssl-dev:i386 libopenmpt-dev:i386 gettext ccache wget gcc-multilib upx openssh-client
       - run:
           name: make md5sum
           command: sudo find /home/circleci/.cache/apt/archives -type f -print0 | sort -z | sudo xargs -r0 md5sum > /home/circleci/.cache/apt_archives.md5
@@ -62,13 +62,13 @@ jobs:
       - checkout
       - run:
           name: Compile without network support
-          command: make -C src LINUX=1 ERRORMODE=1 -k NONET=1 -j4
+          command: make -C src LINUX=1 ERRORMODE=1 -k NONET=1 NOUPNP=1 -j4
       - run:
           name: wipe build
-          command: make -C src LINUX=1 cleandep
+          command: make -C src LINUX=1 NOUPNP=1 cleandep
       - run:
           name: rebuild depend
-          command: make -C src LINUX=1 clean
+          command: make -C src LINUX=1 NOUPNP=1 clean
       - run:
           name: make master depend file
           command: find make/linux/SDL/deps/ -type f -print0 | sort -z | xargs -r0 cat > make/linux/SDL.deps
@@ -77,7 +77,7 @@ jobs:
             - v1-SRB2-{{ .Branch }}-{{ checksum "make/linux/SDL.deps" }}
       - run:
           name: Compile
-          command: make -C src LINUX=1 ERRORMODE=1 -k -j4
+          command: make -C src LINUX=1 ERRORMODE=1 NOUPNP=1 -k -j4
       - store_artifacts:
           path: /home/circleci/SRB2/bin/
           destination: bin
