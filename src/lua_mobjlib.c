@@ -973,6 +973,9 @@ static int mapthing_get(lua_State *L)
 		return 0;
 	}
 
+	if (field == (enum mapthing_e)-1)
+		return LUA_ErrInvalid(L, "fields");
+
 	switch (field)
 	{
 		case mapthing_valid:
@@ -1031,7 +1034,7 @@ static int mapthing_get(lua_State *L)
 			break;
 		default:
 			if (devparm)
-				return luaL_error(L, LUA_QL("mapthing_t") " has no field named " LUA_QS, field);
+				return luaL_error(L, "%s %s", LUA_QL("mapthing_t"), va("has no field named: %ui", field));
 			else
 				return 0;
 	}
@@ -1047,6 +1050,9 @@ static int mapthing_set(lua_State *L)
 
 	if (!mt)
 		return luaL_error(L, "accessed mapthing_t doesn't exist anymore.");
+
+	if (field == (enum mapthing_e)-1)
+		return LUA_ErrInvalid(L, "fields");
 
 	if (hud_running)
 		return luaL_error(L, "Do not alter mapthing_t in HUD rendering code!");
@@ -1105,7 +1111,7 @@ static int mapthing_set(lua_State *L)
 			mt->mobj = *((mobj_t **)luaL_checkudata(L, 3, META_MOBJ));
 			break;
 		default:
-			return luaL_error(L, LUA_QL("mapthing_t") " has no field named " LUA_QS, field);
+			return luaL_error(L, "%s %s", LUA_QL("mapthing_t"), va("has no field named: %ui", field));
 	}
 
 	return 0;
