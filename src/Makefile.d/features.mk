@@ -55,6 +55,7 @@ endif
 # (Valgrind is a memory debugger.)
 ifdef VALGRIND
 VALGRIND_PKGCONFIG?=valgrind
+VALGRIND_LDFLAGS=
 $(eval $(call Use_pkg_config,VALGRIND))
 ZDEBUG=1
 opts+=-DHAVE_VALGRIND
