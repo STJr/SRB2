@@ -1662,7 +1662,7 @@ static void setRamp(lua_State *L, skincolor_t* c) {
 	lua_pushnil(L);
 	for (i=0; i<COLORRAMPSIZE; i++) {
 		if (lua_objlen(L,-2)!=COLORRAMPSIZE) {
-			luaL_error(L, LUA_QL("skincolor_t") " field 'ramp' must be %d entries long; got %d.", COLORRAMPSIZE, lua_objlen(L,-2));
+			luaL_error(L, LUA_QL("skincolor_t") " field 'ramp' must be %d entries long; got %d.", COLORRAMPSIZE, luaL_getn(L,-2));
 			break;
 		}
 		if (lua_next(L, -2) != 0) {
