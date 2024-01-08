@@ -1867,30 +1867,12 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 	else
 	{
 		// two sided line
-		boolean bothceilingssky = false; // turned on if both back and front ceilings are sky
-		boolean bothfloorssky = false; // likewise, but for floors
-
 		SLOPEPARAMS(backsector->c_slope, worldhigh, worldhighslope, backsector->ceilingheight)
 		SLOPEPARAMS(backsector->f_slope, worldlow,  worldlowslope,  backsector->floorheight)
 		worldhigh -= viewz;
 		worldhighslope -= viewz;
 		worldlow -= viewz;
 		worldlowslope -= viewz;
-
-		// hack to allow height changes in outdoor areas
-		// This is what gets rid of the upper textures if there should be sky
-		if (frontsector->ceilingpic == skyflatnum
-			&& backsector->ceilingpic == skyflatnum)
-		{
-			bothceilingssky = true;
-		}
-
-		// likewise, but for floors and upper textures
-		if (frontsector->floorpic == skyflatnum
-			&& backsector->floorpic == skyflatnum)
-		{
-			bothfloorssky = true;
-		}
 
 		ds_p->sprtopclip = ds_p->sprbottomclip = NULL;
 		ds_p->silhouette = 0;
@@ -1991,6 +1973,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 			|| backsector->floorlightsec != frontsector->floorlightsec
 			//SoM: 4/3/2000: Check for colormaps
 			|| frontsector->extra_colormap != backsector->extra_colormap
+			|| !P_CompareSectorPortals(P_SectorGetFloorPortal(frontsector), P_SectorGetFloorPortal(backsector))
 			|| (frontsector->ffloors != backsector->ffloors && !Tag_Compare(&frontsector->tags, &backsector->tags)))
 		{
 			markfloor = true;
@@ -2026,9 +2009,10 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 			|| backsector->ceilinglightsec != frontsector->ceilinglightsec
 			//SoM: 4/3/2000: Check for colormaps
 			|| frontsector->extra_colormap != backsector->extra_colormap
+			|| !P_CompareSectorPortals(P_SectorGetCeilingPortal(frontsector), P_SectorGetCeilingPortal(backsector))
 			|| (frontsector->ffloors != backsector->ffloors && !Tag_Compare(&frontsector->tags, &backsector->tags)))
 		{
-				markceiling = true;
+			markceiling = true;
 		}
 		else
 		{
@@ -2478,7 +2462,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 	worldtopslope >>= 4;
 	worldbottomslope >>= 4;
 
-	if (linedef->special == HORIZONSPECIAL) { // HORIZON LINES
+	if (horizonline) { // HORIZON LINES
 		topstep = bottomstep = 0;
 		topfrac = bottomfrac = (centeryfrac>>4);
 		topfrac++; // Prevent 1px HOM
@@ -2579,7 +2563,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 		{
 			ffloor[i].f_pos >>= 4;
 			ffloor[i].f_pos_slope >>= 4;
-			if (linedef->special == HORIZONSPECIAL) // Horizon lines extend FOFs in contact with them too.
+			if (horizonline) // Horizon lines extend FOFs in contact with them too.
 			{
 				ffloor[i].f_step = 0;
 				ffloor[i].f_frac = (centeryfrac>>4);

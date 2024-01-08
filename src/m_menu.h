@@ -200,8 +200,8 @@ void M_Drawer(void);
 // Called by D_SRB2Main, loads the config file.
 void M_Init(void);
 
-// Called by D_SRB2Main also, sets up the playermenu and description tables.
-void M_InitCharacterTables(void);
+// Called by deh_soc.c, sets up the playermenu and description tables.
+void M_InitCharacterTables(INT32 num);
 
 // Called by intro code to force menu up upon a keypress,
 // does nothing if menu is already up.
@@ -375,10 +375,8 @@ typedef struct
 	patch_t *charpic;
 	UINT8 prev;
 	UINT8 next;
-
-	// new character select
 	char displayname[SKINNAMESIZE+1];
-	SINT8 skinnum[2];
+	INT16 skinnum[2];
 	UINT16 oppositecolor;
 	char nametag[8];
 	patch_t *namepic;
@@ -432,7 +430,8 @@ typedef struct
 	UINT8 flags;
 } saveinfo_t;
 
-extern description_t description[MAXSKINS];
+extern description_t *description;
+extern INT32 numdescriptions;
 
 extern consvar_t cv_showfocuslost;
 extern consvar_t cv_newgametype, cv_nextmap, cv_chooseskin, cv_serversort;

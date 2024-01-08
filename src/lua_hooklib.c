@@ -671,10 +671,8 @@ void LUA_HookHUD(int hook_type, huddrawlist_h list)
                                SPECIALIZED HOOKS
    ========================================================================= */
 
-void LUA_HookThinkFrame(void)
+static void hook_think_frame(int type)
 {
-	const int type = HOOK(ThinkFrame);
-
 	// variables used by perf stats
 	int hook_index = 0;
 	precise_t time_taken = 0;
@@ -692,7 +690,7 @@ void LUA_HookThinkFrame(void)
 		{
 			get_hook(&hook, map->ids, k);
 
-			if (cv_perfstats.value == 3)
+			if (cv_perfstats.value >= 3)
 			{
 				lua_pushvalue(gL, -1);/* need the function again */
 				time_taken = I_GetPreciseTime();
@@ -700,18 +698,39 @@ void LUA_HookThinkFrame(void)
 
 			call_single_hook(&hook);
 
-			if (cv_perfstats.value == 3)
+			if (cv_perfstats.value >= 3)
 			{
 				lua_Debug ar;
 				time_taken = I_GetPreciseTime() - time_taken;
 				lua_getinfo(gL, ">S", &ar);
-				PS_SetThinkFrameHookInfo(hook_index, time_taken, ar.short_src);
+				if (type == 4) // sorry for magic numbers
+					PS_SetPreThinkFrameHookInfo(hook_index, time_taken, ar.short_src);
+				else if (type == 5)
+					PS_SetThinkFrameHookInfo(hook_index, time_taken, ar.short_src);
+				else if (type == 6)
+					PS_SetPostThinkFrameHookInfo(hook_index, time_taken, ar.short_src);
+				
 				hook_index++;
 			}
 		}
 
 		lua_settop(gL, 0);
 	}
+}
+
+void LUA_HookPreThinkFrame(void)
+{
+	hook_think_frame(HOOK(PreThinkFrame));
+}
+
+void LUA_HookThinkFrame(void)
+{
+	hook_think_frame(HOOK(ThinkFrame));
+}
+
+void LUA_HookPostThinkFrame(void)
+{
+	hook_think_frame(HOOK(PostThinkFrame));
 }
 
 int LUA_HookMobjLineCollide(mobj_t *mobj, line_t *line)

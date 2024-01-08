@@ -3477,7 +3477,7 @@ static void PTR_GlideClimbTraverse(line_t *li)
 	}
 
 	// see about climbing on the wall
-	if (!(checkline->flags & ML_NOCLIMB) && checkline->special != HORIZONSPECIAL)
+	if (!(checkline->flags & ML_NOCLIMB) && checkline->special != SPECIAL_HORIZON_LINE)
 	{
 		boolean canclimb;
 		angle_t climbangle, climbline;

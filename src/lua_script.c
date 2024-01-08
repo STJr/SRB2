@@ -1396,7 +1396,7 @@ static UINT8 ArchiveValue(int TABLESINDEX, int myindex)
 		{
 			skin_t *skin = *((skin_t **)lua_touserdata(gL, myindex));
 			WRITEUINT8(save_p, ARCH_SKIN);
-			WRITEUINT8(save_p, skin - skins); // UINT8 because MAXSKINS is only 32
+			WRITEUINT8(save_p, skin->skinnum); // UINT8 because MAXSKINS must be <= 256
 			break;
 		}
 		default:
@@ -1646,7 +1646,7 @@ static UINT8 UnArchiveValue(int TABLESINDEX)
 		LUA_PushUserdata(gL, READUINT16(save_p) == 1 ? &mouse : &mouse2, META_MOUSE);
 		break;
 	case ARCH_SKIN:
-		LUA_PushUserdata(gL, &skins[READUINT8(save_p)], META_SKIN);
+		LUA_PushUserdata(gL, skins[READUINT8(save_p)], META_SKIN);
 		break;
 	case ARCH_TEND:
 		return 1;

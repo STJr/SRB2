@@ -51,9 +51,11 @@ typedef struct visplane_s
 	fixed_t xoffs, yoffs; // Scrolling flats.
 	fixed_t xscale, yscale;
 
+	sector_t *sector;
 	struct ffloor_s *ffloor;
 	polyobj_t *polyobj;
 	pslope_t *slope;
+	sectorportal_t *portalsector;
 } visplane_t;
 
 extern visplane_t *visplanes[MAXVISPLANES];
@@ -71,8 +73,9 @@ void R_ClearPlanes(void);
 void R_ClearFFloorClips (void);
 
 void R_DrawPlanes(void);
-visplane_t *R_FindPlane(fixed_t height, INT32 picnum, INT32 lightlevel, fixed_t xoff, fixed_t yoff, fixed_t xscale, fixed_t yscale,
-	angle_t plangle, extracolormap_t *planecolormap, ffloor_t *ffloor, polyobj_t *polyobj, pslope_t *slope);
+visplane_t *R_FindPlane(sector_t *sector, fixed_t height, INT32 picnum, INT32 lightlevel,
+	fixed_t xoff, fixed_t yoff, fixed_t xscale, fixed_t yscale, angle_t plangle,
+	extracolormap_t *planecolormap, ffloor_t *ffloor, polyobj_t *polyobj, pslope_t *slope, sectorportal_t *portalsector);
 visplane_t *R_CheckPlane(visplane_t *pl, INT32 start, INT32 stop);
 void R_ExpandPlane(visplane_t *pl, INT32 start, INT32 stop);
 void R_PlaneBounds(visplane_t *plane);

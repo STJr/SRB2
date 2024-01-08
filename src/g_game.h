@@ -119,7 +119,7 @@ const char *G_BuildMapName(INT32 map);
 
 void G_InitMaps(void);
 UINT16 G_GetMapNumber(const char *name);
-UINT16 G_GetNextMapNumber(const char *name);
+UINT16 G_GetMapNumberForNextMap(const char *name);
 UINT16 G_AddMap(const char *name, UINT32 lumpnum);
 boolean G_MapFileExists(const char *name);
 boolean G_IsValidMapName(const char *name);
@@ -230,6 +230,7 @@ boolean G_CoopGametype(void);
 boolean G_TagGametype(void);
 boolean G_CompetitionGametype(void);
 boolean G_EnoughPlayersFinished(void);
+INT16 G_GetNextMap(boolean ignoretokens, boolean silent);
 void G_ExitLevel(void);
 void G_NextLevel(void);
 void G_Continue(void);

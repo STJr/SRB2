@@ -1195,7 +1195,7 @@ static int line_num(lua_State *L)
 
 static int sidenum_get(lua_State *L)
 {
-	UINT16 *sidenum = *((UINT16 **)luaL_checkudata(L, 1, META_SIDENUM));
+	UINT32 *sidenum = *((UINT32 **)luaL_checkudata(L, 1, META_SIDENUM));
 	int i;
 	lua_settop(L, 2);
 	if (!lua_isnumber(L, 2))
