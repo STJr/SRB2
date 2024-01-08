@@ -1961,6 +1961,45 @@ static int lib_pMoveOrigin(lua_State *L)
 	return 2;
 }
 
+static int lib_pLineIsBlocking(lua_State *L)
+{
+	mobj_t *mo = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
+	line_t *line = *((line_t **)luaL_checkudata(L, 2, META_LINE));
+	NOHUD
+	INLEVEL
+	if (!mo)
+		return LUA_ErrInvalid(L, "mobj_t");
+	if (!line)
+		return LUA_ErrInvalid(L, "line_t");
+	
+	// P_LineOpening in P_LineIsBlocking sets these variables.
+	// We want to keep their old values after so that whatever
+	// map collision code uses them doesn't get messed up.
+	fixed_t oldopentop = opentop;
+	fixed_t oldopenbottom = openbottom;
+	fixed_t oldopenrange = openrange;
+	fixed_t oldlowfloor = lowfloor;
+	fixed_t oldhighceiling = highceiling;
+	pslope_t *oldopentopslope = opentopslope;
+	pslope_t *oldopenbottomslope = openbottomslope;
+	ffloor_t *oldopenfloorrover = openfloorrover;
+	ffloor_t *oldopenceilingrover = openceilingrover;
+	
+	lua_pushboolean(L, P_LineIsBlocking(mo, line));
+	
+	opentop = oldopentop;
+	openbottom = oldopenbottom;
+	openrange = oldopenrange;
+	lowfloor = oldlowfloor;
+	highceiling = oldhighceiling;
+	opentopslope = oldopentopslope;
+	openbottomslope = oldopenbottomslope;
+	openfloorrover = oldopenfloorrover;
+	openceilingrover = oldopenceilingrover;
+	
+	return 1;
+}
+
 static int lib_pSlideMove(lua_State *L)
 {
 	mobj_t *mo = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
@@ -4350,6 +4389,7 @@ static luaL_Reg lib[] = {
 	{"P_TeleportMove",lib_pTeleportMove},
 	{"P_SetOrigin",lib_pSetOrigin},
 	{"P_MoveOrigin",lib_pMoveOrigin},
+	{"P_LineIsBlocking",lib_pLineIsBlocking},
 	{"P_SlideMove",lib_pSlideMove},
 	{"P_BounceMove",lib_pBounceMove},
 	{"P_CheckSight", lib_pCheckSight},
