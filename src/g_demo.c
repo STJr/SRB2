@@ -492,7 +492,7 @@ void G_WriteGhostTic(mobj_t *ghost)
 			if (ghost->player->followmobj->colorized)
 				followtic |= FZT_COLORIZED;
 			if (followtic & FZT_SKIN)
-				WRITEUINT8(demo_p,(UINT8)(((skin_t *)(ghost->player->followmobj->skin))-skins));
+				WRITEUINT8(demo_p,(UINT8)(((skin_t *)ghost->player->followmobj->skin)->skinnum));
 			oldghost.flags2 |= MF2_AMBUSH;
 		}
 
@@ -761,7 +761,7 @@ void G_GhostTicker(void)
 					g->mo->color = SKINCOLOR_WHITE;
 					break;
 				case GHC_NIGHTSSKIN: // not actually a colour
-					g->mo->skin = &skins[DEFAULTNIGHTSSKIN];
+					g->mo->skin = skins[DEFAULTNIGHTSSKIN];
 					break;
 				}
 			}
@@ -801,19 +801,6 @@ void G_GhostTicker(void)
 						if (!P_MobjWasRemoved(mobj))
 							mobj->frame = (mobj->frame & ~FF_FRAMEMASK)|tr_trans60<<FF_TRANSSHIFT; // P_SpawnGhostMobj sets trans50, we want trans60
 					}
-					else if (type == MT_THOKEFFECT)
-					{
-						mobj = P_SpawnMobjFromMobj(g->mo, 0, 0, FixedDiv(g->mo->height, g->mo->scale)*3/4, type);
-						mobj->angle = g->mo->angle + ANGLE_90;
-						mobj->fuse = 7;
-						mobj->scale = g->mo->scale / 3;
-						mobj->destscale = 10 * g->mo->scale;
-						mobj->colorized = true;
-						mobj->color = g->mo->color;
-						mobj->momx = -g->mo->momx / 2;
-						mobj->momy = -g->mo->momy / 2;
-					}
-
 					else
 					{
 						mobj = P_SpawnMobjFromMobj(g->mo, 0, 0, -FixedDiv(FixedMul(g->mo->info->height, g->mo->scale) - g->mo->height,3*FRACUNIT), MT_THOK);
@@ -929,7 +916,7 @@ void G_GhostTicker(void)
 						follow->colorized = true;
 
 					if (followtic & FZT_SKIN)
-						follow->skin = &skins[READUINT8(g->p)];
+						follow->skin = skins[READUINT8(g->p)];
 				}
 			}
 			if (follow)
@@ -1120,18 +1107,6 @@ void G_ReadMetalTic(mobj_t *metal)
 				{
 					mobj = P_SpawnGhostMobj(metal); // does a large portion of the work for us
 				}
-				else if (type == MT_THOKEFFECT)
-				{
-					mobj = P_SpawnMobjFromMobj(metal, 0, 0, FixedDiv(metal->height, metal->scale)*3/4, type);
-					mobj->angle = metal->angle + ANGLE_90;
-					mobj->fuse = 7;
-					mobj->scale = metal->scale / 3;
-					mobj->destscale = 10 * metal->scale;
-					mobj->colorized = true;
-					mobj->color = metal->color;
-					mobj->momx = -metal->momx / 2;
-					mobj->momy = -metal->momy / 2;
-				}
 				else
 				{
 					mobj = P_SpawnMobjFromMobj(metal, 0, 0, -FixedDiv(FixedMul(metal->info->height, metal->scale) - metal->height,3*FRACUNIT), MT_THOK);
@@ -1199,7 +1174,7 @@ void G_ReadMetalTic(mobj_t *metal)
 						follow->colorized = true;
 
 					if (followtic & FZT_SKIN)
-						follow->skin = &skins[READUINT8(metal_p)];
+						follow->skin = skins[READUINT8(metal_p)];
 				}
 			}
 			if (follow)
@@ -1387,7 +1362,7 @@ void G_WriteMetalTic(mobj_t *metal)
 			if (metal->player->followmobj->colorized)
 				followtic |= FZT_COLORIZED;
 			if (followtic & FZT_SKIN)
-				WRITEUINT8(demo_p,(UINT8)(((skin_t *)(metal->player->followmobj->skin))-skins));
+				WRITEUINT8(demo_p,(UINT8)(((skin_t *)metal->player->followmobj->skin)->skinnum));
 			oldmetal.flags2 |= MF2_AMBUSH;
 		}
 
@@ -1540,7 +1515,7 @@ void G_BeginRecording(void)
 	demo_p += 16;
 
 	// Skin
-	const char *skinname = skins[players[0].skin].name;
+	const char *skinname = skins[players[0].skin]->name;
 	for (i = 0; i < 16 && skinname[i]; i++)
 		name[i] = skinname[i];
 	for (; i < 16; i++)
@@ -2289,7 +2264,7 @@ void G_DoPlayDemo(char *defdemoname)
 	G_InitNew(false, G_BuildMapName(gamemap), true, true, false);
 
 	// Set color
-	players[0].skincolor = skins[players[0].skin].prefcolor;
+	players[0].skincolor = skins[players[0].skin]->prefcolor;
 	for (i = 0; i < numskincolors; i++)
 		if (!stricmp(skincolors[i].name,color))
 		{
@@ -2609,11 +2584,11 @@ void G_AddGhost(char *defdemoname)
 	gh->oldmo.z = gh->mo->z;
 
 	// Set skin
-	gh->mo->skin = &skins[0];
+	gh->mo->skin = skins[0];
 	for (i = 0; i < numskins; i++)
-		if (!stricmp(skins[i].name,skin))
+		if (!stricmp(skins[i]->name,skin))
 		{
-			gh->mo->skin = &skins[i];
+			gh->mo->skin = skins[i];
 			break;
 		}
 	gh->oldmo.skin = gh->mo->skin;

@@ -1280,6 +1280,7 @@ static void UpdatePingTable(void)
 	}
 }
 
+// Handle idle and disconnected player timers
 static void IdleUpdate(void)
 {
 	INT32 i;
@@ -1302,7 +1303,26 @@ static void IdleUpdate(void)
 			}
 		}
 		else
+		{
 			players[i].lastinputtime = 0;
+
+			if (players[i].quittime && playeringame[i])
+			{
+				players[i].quittime++;
+
+				if (players[i].quittime == 30 * TICRATE && G_TagGametype())
+					P_CheckSurvivors();
+
+				if (server && players[i].quittime >= (tic_t)FixedMul(cv_rejointimeout.value, 60 * TICRATE)
+				&& !(players[i].quittime % TICRATE))
+				{
+					if (D_NumNodes(true) > 0)
+						SendKick(i, KICK_MSG_PLAYER_QUIT);
+					else // If the server is empty, don't send a NetXCmd - that would wake an idling dedicated server
+						CL_RemovePlayer(i, KICK_MSG_PLAYER_QUIT);
+				}
+			}
+		}
 	}
 }
 
@@ -1517,7 +1537,7 @@ void NetUpdate(void)
 
 	nowtime /= NEWTICRATERATIO;
 
-	if (nowtime > resptime)
+	if (nowtime != resptime)
 	{
 		resptime = nowtime;
 #ifdef HAVE_THREADS
@@ -1623,12 +1643,15 @@ INT32 D_NumPlayers(void)
 	return num;
 }
 
-/** Returns the number of nodes on the server.
+/** Returns the number of currently-connected nodes in a netgame.
+  * Not necessarily equivalent to D_NumPlayers() minus D_NumBots().
+  *
+  * \param skiphost Skip the server's own node.
   */
-INT32 D_NumNodes(void)
+INT32 D_NumNodes(boolean skiphost)
 {
 	INT32 num = 0;
-	for (INT32 ix = 0; ix < MAXNETNODES; ix++)
+	for (INT32 ix = skiphost ? 1 : 0; ix < MAXNETNODES; ix++)
 		if (netnodes[ix].ingame)
 			num++;
 	return num;

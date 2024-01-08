@@ -993,6 +993,9 @@ static void P_InitializeSector(sector_t *ss)
 	ss->lightingdata = NULL;
 	ss->fadecolormapdata = NULL;
 
+	ss->portal_floor = UINT32_MAX;
+	ss->portal_ceiling = UINT32_MAX;
+
 	ss->heightsec = -1;
 	ss->camsec = -1;
 
@@ -1110,6 +1113,7 @@ static void P_InitializeLinedef(line_t *ld)
 	ld->polyobj = NULL;
 
 	ld->callcount = 0;
+	ld->secportal = UINT32_MAX;
 
 	// cph 2006/09/30 - fix sidedef errors right away.
 	// cph 2002/07/20 - these errors are fatal if not fixed, so apply them
@@ -7267,7 +7271,7 @@ static void P_ForceCharacter(const char *forcecharskin)
 		SetPlayerSkinByNum(i, skinnum);
 
 		if (!netgame)
-			players[i].skincolor = skins[skinnum].prefcolor;
+			players[i].skincolor = skins[skinnum]->prefcolor;
 	}
 }
 
@@ -7310,8 +7314,8 @@ static void P_LoadRecordGhosts(void)
 			if (cv_ghost_bestscore.value == 1 && players[consoleplayer].skin != i)
 				continue;
 
-			if (FIL_FileExists(va("%s-%s-score-best.lmp", gpath, skins[i].name)))
-				G_AddGhost(va("%s-%s-score-best.lmp", gpath, skins[i].name));
+			if (FIL_FileExists(va("%s-%s-score-best.lmp", gpath, skins[i]->name)))
+				G_AddGhost(va("%s-%s-score-best.lmp", gpath, skins[i]->name));
 		}
 	}
 
@@ -7323,8 +7327,8 @@ static void P_LoadRecordGhosts(void)
 			if (cv_ghost_besttime.value == 1 && players[consoleplayer].skin != i)
 				continue;
 
-			if (FIL_FileExists(va("%s-%s-time-best.lmp", gpath, skins[i].name)))
-				G_AddGhost(va("%s-%s-time-best.lmp", gpath, skins[i].name));
+			if (FIL_FileExists(va("%s-%s-time-best.lmp", gpath, skins[i]->name)))
+				G_AddGhost(va("%s-%s-time-best.lmp", gpath, skins[i]->name));
 		}
 	}
 
@@ -7336,8 +7340,8 @@ static void P_LoadRecordGhosts(void)
 			if (cv_ghost_bestrings.value == 1 && players[consoleplayer].skin != i)
 				continue;
 
-			if (FIL_FileExists(va("%s-%s-rings-best.lmp", gpath, skins[i].name)))
-				G_AddGhost(va("%s-%s-rings-best.lmp", gpath, skins[i].name));
+			if (FIL_FileExists(va("%s-%s-rings-best.lmp", gpath, skins[i]->name)))
+				G_AddGhost(va("%s-%s-rings-best.lmp", gpath, skins[i]->name));
 		}
 	}
 
@@ -7349,8 +7353,8 @@ static void P_LoadRecordGhosts(void)
 			if (cv_ghost_last.value == 1 && players[consoleplayer].skin != i)
 				continue;
 
-			if (FIL_FileExists(va("%s-%s-last.lmp", gpath, skins[i].name)))
-				G_AddGhost(va("%s-%s-last.lmp", gpath, skins[i].name));
+			if (FIL_FileExists(va("%s-%s-last.lmp", gpath, skins[i]->name)))
+				G_AddGhost(va("%s-%s-last.lmp", gpath, skins[i]->name));
 		}
 	}
 
@@ -7380,8 +7384,8 @@ static void P_LoadNightsGhosts(void)
 			if (cv_ghost_bestscore.value == 1 && players[consoleplayer].skin != i)
 				continue;
 
-			if (FIL_FileExists(va("%s-%s-score-best.lmp", gpath, skins[i].name)))
-				G_AddGhost(va("%s-%s-score-best.lmp", gpath, skins[i].name));
+			if (FIL_FileExists(va("%s-%s-score-best.lmp", gpath, skins[i]->name)))
+				G_AddGhost(va("%s-%s-score-best.lmp", gpath, skins[i]->name));
 		}
 	}
 
@@ -7393,8 +7397,8 @@ static void P_LoadNightsGhosts(void)
 			if (cv_ghost_besttime.value == 1 && players[consoleplayer].skin != i)
 				continue;
 
-			if (FIL_FileExists(va("%s-%s-time-best.lmp", gpath, skins[i].name)))
-				G_AddGhost(va("%s-%s-time-best.lmp", gpath, skins[i].name));
+			if (FIL_FileExists(va("%s-%s-time-best.lmp", gpath, skins[i]->name)))
+				G_AddGhost(va("%s-%s-time-best.lmp", gpath, skins[i]->name));
 		}
 	}
 
@@ -7406,8 +7410,8 @@ static void P_LoadNightsGhosts(void)
 			if (cv_ghost_last.value == 1 && players[consoleplayer].skin != i)
 				continue;
 
-			if (FIL_FileExists(va("%s-%s-last.lmp", gpath, skins[i].name)))
-				G_AddGhost(va("%s-%s-last.lmp", gpath, skins[i].name));
+			if (FIL_FileExists(va("%s-%s-last.lmp", gpath, skins[i]->name)))
+				G_AddGhost(va("%s-%s-last.lmp", gpath, skins[i]->name));
 		}
 	}
 
@@ -7883,6 +7887,7 @@ boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate)
 	P_InitThinkers();
 	R_InitMobjInterpolators();
 	P_InitCachedActions();
+	P_InitSectorPortals();
 
 	// internal game map
 	maplumpname = G_BuildMapName(gamemap);
@@ -8315,7 +8320,7 @@ static boolean P_LoadAddon(UINT16 numlumps)
 	{
 		CONS_Printf(M_GetText("Current map %d replaced by added file, ending the level to ensure consistency.\n"), gamemap);
 		if (server)
-			D_SendExitLevel(false);
+			SendNetXCmd(XD_EXITLEVEL, NULL, 0);
 	}
 
 	return true;

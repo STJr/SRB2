@@ -132,7 +132,9 @@ M_waiting_mode_t m_waiting_mode = M_NOT_WAITING;
 const char *quitmsg[NUM_QUITMESSAGES];
 
 // Stuff for customizing the player select screen Tails 09-22-2003
-description_t description[MAXSKINS];
+description_t *description = NULL;
+INT32 numdescriptions = 0;
+
 INT16 char_on = -1, startchar = 0;
 static char *char_notes = NULL;
 
@@ -258,7 +260,7 @@ static void M_ConfirmTeamScramble(INT32 choice);
 static void M_ConfirmTeamChange(INT32 choice);
 static void M_SecretsMenu(INT32 choice);
 static void M_SetupChoosePlayer(INT32 choice);
-static UINT8 M_SetupChoosePlayerDirect(INT32 choice);
+static UINT16 M_SetupChoosePlayerDirect(INT32 choice);
 static void M_QuitSRB2(INT32 choice);
 menu_t SP_MainDef, OP_MainDef;
 menu_t MISC_ScrambleTeamDef, MISC_ChangeTeamDef;
@@ -2258,7 +2260,7 @@ void Nextmap_OnChange(void)
 		SP_NightsAttackMenu[naghost].status = IT_DISABLED;
 
 		// Check if file exists, if not, disable REPLAY option
-		sprintf(tabase,"%s"PATHSEP"replay"PATHSEP"%s"PATHSEP"%s-%s",srb2home, timeattackfolder, G_BuildMapName(cv_nextmap.value), skins[cv_chooseskin.value-1].name);
+		sprintf(tabase,"%s"PATHSEP"replay"PATHSEP"%s"PATHSEP"%s-%s",srb2home, timeattackfolder, G_BuildMapName(cv_nextmap.value), skins[cv_chooseskin.value-1]->name);
 
 #ifdef OLDNREPLAYNAME
 		sprintf(tabaseold,"%s"PATHSEP"replay"PATHSEP"%s"PATHSEP"%s",srb2home, timeattackfolder, G_BuildMapName(cv_nextmap.value));
@@ -2329,7 +2331,7 @@ void Nextmap_OnChange(void)
 		SP_TimeAttackMenu[taghost].status = IT_DISABLED;
 
 		// Check if file exists, if not, disable REPLAY option
-		sprintf(tabase,"%s"PATHSEP"replay"PATHSEP"%s"PATHSEP"%s-%s",srb2home, timeattackfolder, G_BuildMapName(cv_nextmap.value), skins[cv_chooseskin.value-1].name);
+		sprintf(tabase,"%s"PATHSEP"replay"PATHSEP"%s"PATHSEP"%s-%s",srb2home, timeattackfolder, G_BuildMapName(cv_nextmap.value), skins[cv_chooseskin.value-1]->name);
 		for (i = 0; i < 5; i++) {
 			SP_ReplayMenu[i].status = IT_DISABLED;
 			SP_GuestReplayMenu[i].status = IT_DISABLED;
@@ -2751,7 +2753,7 @@ void M_ChangeMenuMusic(const char *defaultmusname, boolean defaultmuslooping)
 
 void M_SetMenuCurBackground(const char *defaultname)
 {
-	char name[9];
+	char name[9] = "";
 	strncpy(name, defaultname, 8);
 	name[8] = '\0';
 	M_IterateMenuTree(MIT_SetCurBackground, &name);
@@ -3029,7 +3031,7 @@ static void M_ChangeCvar(INT32 choice)
 		{
 			SINT8 skinno = R_SkinAvailable(cv_chooseskin.string);
 			if (skinno != -1)
-				CV_SetValue(cv,skins[skinno].prefcolor);
+				CV_SetValue(cv,skins[skinno]->prefcolor);
 			return;
 		}
 		CV_Set(cv,cv->defaultvalue);
@@ -3650,9 +3652,12 @@ void M_StartControlPanel(void)
 	}
 	else if (!(netgame || multiplayer)) // Single Player
 	{
+		// Devmode unlocks Pandora's Box in the pause menu
+		boolean pandora = ((M_SecretUnlocked(SECRET_PANDORA, serverGamedata) || cv_debug || devparm) && !marathonmode);
+		
 		if (gamestate != GS_LEVEL || ultimatemode) // intermission, so gray out stuff.
 		{
-			SPauseMenu[spause_pandora].status = (M_SecretUnlocked(SECRET_PANDORA, serverGamedata)) ? (IT_GRAYEDOUT) : (IT_DISABLED);
+			SPauseMenu[spause_pandora].status = (pandora) ? (IT_GRAYEDOUT) : (IT_DISABLED);
 			SPauseMenu[spause_retry].status = IT_GRAYEDOUT;
 		}
 		else
@@ -3661,7 +3666,7 @@ void M_StartControlPanel(void)
 			if (players[consoleplayer].playerstate != PST_LIVE)
 				++numlives;
 
-			SPauseMenu[spause_pandora].status = (M_SecretUnlocked(SECRET_PANDORA, serverGamedata) && !marathonmode) ? (IT_STRING | IT_CALL) : (IT_DISABLED);
+			SPauseMenu[spause_pandora].status = (pandora) ? (IT_STRING | IT_CALL) : (IT_DISABLED);
 
 			// The list of things that can disable retrying is (was?) a little too complex
 			// for me to want to use the short if statement syntax
@@ -3672,7 +3677,11 @@ void M_StartControlPanel(void)
 		}
 
 		// We can always use level select though. :33
-		SPauseMenu[spause_levelselect].status = (maplistoption != 0) ? (IT_STRING | IT_CALL) : (IT_DISABLED);
+		// Guarantee it if we have either it unlocked or devmode is enabled
+		if ((maplistoption != 0 || M_SecretUnlocked(SECRET_LEVELSELECT, serverGamedata) || cv_debug || devparm) && !marathonmode)
+			SPauseMenu[spause_levelselect].status = (IT_STRING | IT_CALL);
+		else
+			SPauseMenu[spause_levelselect].status = (IT_DISABLED);
 
 		// And emblem hints.
 		SPauseMenu[spause_hints].status = (M_SecretUnlocked(SECRET_EMBLEMHINTS, clientGamedata) && !marathonmode) ? (IT_STRING | IT_CALL) : (IT_DISABLED);
@@ -3936,24 +3945,32 @@ void M_Init(void)
 	CV_RegisterVar(&cv_serversort);
 }
 
-void M_InitCharacterTables(void)
+static void M_InitCharacterDescription(INT32 i)
 {
-	UINT8 i;
-
 	// Setup description table
-	for (i = 0; i < MAXSKINS; i++)
-	{
-		description[i].used = false;
-		strcpy(description[i].notes, "???");
-		strcpy(description[i].picname, "");
-		strcpy(description[i].nametag, "");
-		strcpy(description[i].skinname, "");
-		strcpy(description[i].displayname, "");
-		description[i].prev = description[i].next = 0;
-		description[i].charpic = NULL;
-		description[i].namepic = NULL;
-		description[i].oppositecolor = description[i].tagtextcolor = description[i].tagoutlinecolor = 0;
-	}
+	description_t *desc = &description[i];
+	desc->picname[0] = '\0';
+	desc->nametag[0] = '\0';
+	desc->skinname[0] = '\0';
+	desc->displayname[0] = '\0';
+	desc->prev = desc->next = 0;
+	desc->charpic = NULL;
+	desc->namepic = NULL;
+	desc->oppositecolor = SKINCOLOR_NONE;
+	desc->tagtextcolor = SKINCOLOR_NONE;
+	desc->tagoutlinecolor = SKINCOLOR_NONE;
+	strcpy(desc->notes, "???");
+}
+
+void M_InitCharacterTables(INT32 num)
+{
+	INT32 i = numdescriptions;
+
+	description = Z_Realloc(description, sizeof(description_t) * num, PU_STATIC, NULL);
+	numdescriptions = num;
+
+	for (; i < numdescriptions; i++)
+		M_InitCharacterDescription(i);
 }
 
 // ==========================================================================
@@ -4130,31 +4147,97 @@ void M_DrawTextBox(INT32 x, INT32 y, INT32 width, INT32 boxlines)
 */
 }
 
-static fixed_t staticalong = 0;
-
+//
+// Draw the TV static effect on unavailable map icons
+//
 static void M_DrawStaticBox(fixed_t x, fixed_t y, INT32 flags, fixed_t w, fixed_t h)
 {
-	patch_t *patch;
-	fixed_t sw, pw;
+	patch_t *patch = W_CachePatchName("LSSTATIC", PU_PATCH);
+	static fixed_t staticx = 0, staticy = 0; // Keep track of where we are across function calls
 
-	patch = W_CachePatchName("LSSTATIC", PU_PATCH);
-	pw = patch->width - (sw = w*2); //FixedDiv(w, scale); -- for scale FRACUNIT/2
 
-	/*if (pw > 0) -- model code for modders providing weird LSSTATIC
+	if (!patch->width || !patch->height) // Shouldn't be necessary, but I don't want to get in trouble!
 	{
-		if (staticalong > pw)
-			staticalong -= pw;
+		W_UnlockCachedPatch(patch);
+		return;
 	}
-	else
-		staticalong = 0;*/
+	if (patch->width == 1) // Nothing to randomise or tile
+	{
+		// Just stretch the patch over the whole box - no need to draw it 160 times over
+		// Technically, we should crop and maybe tile and randomise the Y axis, but... it's not worth it here
+		V_DrawStretchyFixedPatch(x*FRACUNIT, y*FRACUNIT, (w*FRACUNIT) / patch->width, (h*FRACUNIT) / patch->height, flags, patch, NULL);
+		W_UnlockCachedPatch(patch);
+		return;
+	}
+	if (patch->width == 160) // Something to randomise or tile - but don't!
+	{
+		// If it's 160 pixels wide, the modder probably wants the patch fixed in place
+		// But instead of "just drawing" it, why not allow sequential frames of animation on the Y axis?
+		// For example, this could be used to make a vignette effect, whether animated or not
+		// This function is primarily called with a patch region of 160x100, so the frames must be 160x100 too
+		fixed_t temp = patch->height / 100; // Amount of 160x100 frames in the patch
+		if (temp) // Don't modulo by zero
+			temp = (gametic % temp) * h*2*FRACUNIT; // Which frame to draw
 
-	if (staticalong > pw) // simplified for base LSSTATIC
-		staticalong -= pw;
+		V_DrawCroppedPatch(x*FRACUNIT, y*FRACUNIT, (w*FRACUNIT) / 160, (h*FRACUNIT) / 100, flags, patch, NULL, 0, temp, w*2*FRACUNIT, h*2*FRACUNIT);
+		
+		W_UnlockCachedPatch(patch);
+		return;
+	}
 
-	V_DrawCroppedPatch(x<<FRACBITS, y<<FRACBITS, FRACUNIT/2, FRACUNIT/2, flags, patch, NULL, staticalong<<FRACBITS, 0, sw<<FRACBITS, h*2<<FRACBITS); // FixedDiv(h, scale)); -- for scale FRACUNIT/2
 
-	staticalong += sw; //M_RandomRange(sw/2, 2*sw); -- turns out less randomisation looks better because immediately adjacent frames can't end up close to each other
+	// If the patch isn't 1 or 160 pixels wide, that means that it's time for randomised static!
 
+	// First, randomise the static patch's offset - It's largely just based on "w", but there's...
+	// ...the tiniest bit of randomisation, to keep it animated even when the patch width is 160 x [static boxes on-screen]
+	// Making it TOO randomised could make it randomise to the almost-same position multiple frames in a row - that's bad
+	staticx = (staticx + (w*4) + (M_RandomByte() % 4)) % (patch->width*2);
+
+	if (patch->height == h*2) // Is the patch 100 pixels tall? If so, reset "staticy"...
+		staticy = 0; // ...in case that one add-on would randomise it and a later add-on wouldn't
+	else // Otherwise, as we already make "staticx" near-sequential, I think that making "staticy"...
+		staticy = M_RandomRange(0, (patch->height*2) - 1); // ...fully random instead of sequential increases the... randomness
+
+	// The drawing function calls can get a bit lengthy, so let's make a little shortcut
+#define DRAWSTATIC(_x,_y,_sx,_sy,_w,_h) V_DrawCroppedPatch((x*FRACUNIT)+((_x)*FRACUNIT/4), (y*FRACUNIT)+((_y)*FRACUNIT/4),\
+FRACUNIT/2, FRACUNIT/2, flags, patch, NULL, (_sx)*FRACUNIT/2, (_sy)*FRACUNIT/2, (w*2*FRACUNIT)+((_w)*FRACUNIT/2), (h*2*FRACUNIT)+((_h)*FRACUNIT/2))
+
+	// And finally, let's draw it! Don't worry about "staticx" plus "w*2" potentially going off-patch
+	DRAWSTATIC(0, 0, staticx, staticy, 0, 0); // This gets drawn in all cases
+
+	if ((patch->width*2) - staticx >= w*4) // No horizontal tiling
+	{
+		if ((patch->height*2) - staticy >= h*4) // Simplest-case scenario, no tiling at all
+			{}
+		else // Vertical tiling only
+		{
+			for (INT16 j = 2; ((patch->height*j) - staticy) < h*4; j += 2)
+				DRAWSTATIC(0, (patch->height*j) - staticy, staticx, 0, 0, staticy - (patch->height*j));
+		}
+	}
+	else // Horizontal tiling
+	{
+		if ((patch->height*2) - staticy >= h*4) // Horizontal tiling only
+		{
+			for (INT16 i = 2; ((patch->width*i) - staticx) < w*4; i += 2)
+				DRAWSTATIC((patch->width*i) - staticx, 0, 0, staticy, staticx - (patch->width*i), 0);
+		}
+		else // Horizontal and vertical tiling
+		{
+			for (INT16 j = 2; ((patch->height*j) - staticy) < h*4; j += 2)
+				DRAWSTATIC(0, (patch->height*j) - staticy, staticx, 0, 0, staticy - (patch->height*j));
+
+			for (INT16 i = 2; ((patch->width*i) - staticx) < w*4; i += 2)
+			{
+				DRAWSTATIC((patch->width*i) - staticx, 0, 0, staticy, staticx - (patch->width*i), 0);
+				for (INT16 j = 2; ((patch->height*j) - staticy) < h*4; j += 2)
+					DRAWSTATIC((patch->width*i) - staticx, (patch->height*j) - staticy, 0, 0, staticx - (patch->width*i), staticy - (patch->height*j));
+			}
+		}
+	}
+#undef DRAWSTATIC
+
+	// Now that we're done with the patch, it's time to say our goodbyes. Until next time, patch!
 	W_UnlockCachedPatch(patch);
 }
 
@@ -4948,9 +5031,9 @@ static void M_PatchSkinNameTable(void)
 
 	for (j = 0; j < MAXSKINS; j++)
 	{
-		if (skins[j].name[0] != '\0' && R_SkinUsable(-1, j))
+		if (j < numskins && skins[j]->name[0] != '\0' && R_SkinUsable(-1, j))
 		{
-			skins_cons_t[j].strvalue = skins[j].realname;
+			skins_cons_t[j].strvalue = skins[j]->realname;
 			skins_cons_t[j].value = j+1;
 		}
 		else
@@ -5066,7 +5149,8 @@ static boolean M_CanShowLevelOnPlatter(INT32 mapnum, INT32 gt)
 			return false;
 
 		case LLM_LEVELSELECT:
-			if (!(mapheaderinfo[mapnum]->levelselect & maplistoption))
+			if (!(mapheaderinfo[mapnum]->levelselect & maplistoption)
+			&& !(cv_debug || devparm)) //Allow ALL levels in devmode!
 				return false;
 
 			return true;
@@ -7626,9 +7710,12 @@ static void M_PauseLevelSelect(INT32 choice)
 	SP_PauseLevelSelectDef.prevMenu = currentMenu;
 	levellistmode = LLM_LEVELSELECT;
 
-	// maplistoption is NOT specified, so that this
+	// maplistoption is only specified if not set already
+	// and we have the level select unlocked so that it
 	// transfers the level select list from the menu
 	// used to enter the game to the pause menu.
+	if (maplistoption == 0 && M_SecretUnlocked(SECRET_LEVELSELECT, serverGamedata))
+		maplistoption = 1;
 
 	if (!M_PrepareLevelPlatter(-1, true))
 	{
@@ -8426,7 +8513,7 @@ static void M_DrawLoadGameData(void)
 		savetodraw--;
 
 		if (savegameinfo[savetodraw].lives != 0)
-			charskin = &skins[savegameinfo[savetodraw].skinnum];
+			charskin = skins[savegameinfo[savetodraw].skinnum];
 
 		// signpost background
 		{
@@ -8560,7 +8647,7 @@ static void M_DrawLoadGameData(void)
 			// botskin first
 			if (savegameinfo[savetodraw].botskin)
 			{
-				skin_t *charbotskin = &skins[savegameinfo[savetodraw].botskin-1];
+				skin_t *charbotskin = skins[savegameinfo[savetodraw].botskin-1];
 				sprdef = &charbotskin->sprites[SPR2_SIGN];
 				if (!sprdef->numframes)
 					goto skipbot;
@@ -9139,9 +9226,9 @@ static void M_CacheCharacterSelectEntry(INT32 i, INT32 skinnum)
 {
 	if (!(description[i].picname[0]))
 	{
-		if (skins[skinnum].sprites[SPR2_XTRA].numframes > XTRA_CHARSEL)
+		if (skins[skinnum]->sprites[SPR2_XTRA].numframes > XTRA_CHARSEL)
 		{
-			spritedef_t *sprdef = &skins[skinnum].sprites[SPR2_XTRA];
+			spritedef_t *sprdef = &skins[skinnum]->sprites[SPR2_XTRA];
 			spriteframe_t *sprframe = &sprdef->spriteframes[XTRA_CHARSEL];
 			description[i].charpic = W_CachePatchNum(sprframe->lumppat[0], PU_PATCH);
 		}
@@ -9155,71 +9242,74 @@ static void M_CacheCharacterSelectEntry(INT32 i, INT32 skinnum)
 		description[i].namepic = W_CachePatchName(description[i].nametag, PU_PATCH);
 }
 
-static UINT8 M_SetupChoosePlayerDirect(INT32 choice)
+static UINT16 M_SetupChoosePlayerDirect(INT32 choice)
 {
 	INT32 skinnum, botskinnum;
-	UINT8 i;
-	UINT8 firstvalid = 255, lastvalid = 255;
+	UINT16 i;
+	INT32 firstvalid = INT32_MAX, lastvalid = INT32_MAX;
 	boolean allowed = false;
-	char *and;
 	(void)choice;
 
 	if (!mapheaderinfo[startmap-1] || mapheaderinfo[startmap-1]->forcecharacter[0] == '\0')
 	{
-		for (i = 0; i < MAXSKINS; i++) // Handle charsels, availability, and unlocks.
+		for (i = 0; i < numdescriptions; i++) // Handle charsels, availability, and unlocks.
 		{
-			if (description[i].used) // If the character's disabled through SOC, there's nothing we can do for it.
+			char *and;
+
+			// If the character's disabled through SOC, there's nothing we can do for it.
+			if (!description[i].used)
+				continue;
+
+			and = strchr(description[i].skinname, '&');
+
+			if (and)
 			{
-				and = strchr(description[i].skinname, '&');
-				if (and)
+				char firstskin[SKINNAMESIZE+1];
+				if (mapheaderinfo[startmap-1] && mapheaderinfo[startmap-1]->typeoflevel & TOL_NIGHTS) // skip tagteam characters for NiGHTS levels
+					continue;
+				strncpy(firstskin, description[i].skinname, (and - description[i].skinname));
+				firstskin[(and - description[i].skinname)] = '\0';
+				description[i].skinnum[0] = R_SkinAvailable(firstskin);
+				description[i].skinnum[1] = R_SkinAvailable(and+1);
+			}
+			else
+			{
+				description[i].skinnum[0] = R_SkinAvailable(description[i].skinname);
+				description[i].skinnum[1] = -1;
+			}
+
+			skinnum = description[i].skinnum[0];
+
+			if ((skinnum != -1) && (R_SkinUsable(-1, skinnum)))
+			{
+				botskinnum = description[i].skinnum[1];
+				if ((botskinnum != -1) && (!R_SkinUsable(-1, botskinnum)))
 				{
-					char firstskin[SKINNAMESIZE+1];
-					if (mapheaderinfo[startmap-1] && mapheaderinfo[startmap-1]->typeoflevel & TOL_NIGHTS) // skip tagteam characters for NiGHTS levels
-						continue;
-					strncpy(firstskin, description[i].skinname, (and - description[i].skinname));
-					firstskin[(and - description[i].skinname)] = '\0';
-					description[i].skinnum[0] = R_SkinAvailable(firstskin);
-					description[i].skinnum[1] = R_SkinAvailable(and+1);
+					// Bot skin isn't unlocked
+					continue;
 				}
+
+				// Handling order.
+				if (firstvalid == INT32_MAX)
+					firstvalid = i;
 				else
 				{
-					description[i].skinnum[0] = R_SkinAvailable(description[i].skinname);
-					description[i].skinnum[1] = -1;
+					description[i].prev = lastvalid;
+					description[lastvalid].next = i;
 				}
-				skinnum = description[i].skinnum[0];
-				if ((skinnum != -1) && (R_SkinUsable(-1, skinnum)))
-				{
-					botskinnum = description[i].skinnum[1];
-					if ((botskinnum != -1) && (!R_SkinUsable(-1, botskinnum)))
-					{
-						// Bot skin isn't unlocked
-						continue;
-					}
+				lastvalid = i;
 
-					// Handling order.
-					if (firstvalid == 255)
-						firstvalid = i;
-					else
-					{
-						description[i].prev = lastvalid;
-						description[lastvalid].next = i;
-					}
-					lastvalid = i;
+				if (i == char_on)
+					allowed = true;
 
-					if (i == char_on)
-						allowed = true;
-
-					M_CacheCharacterSelectEntry(i, skinnum);
-				}
-				// else -- Technically, character select icons without corresponding skins get bundled away behind this too. Sucks to be them.
+				M_CacheCharacterSelectEntry(i, skinnum);
 			}
+			// else -- Technically, character select icons without corresponding skins get bundled away behind this too. Sucks to be them.
 		}
 	}
 
 	if (firstvalid == lastvalid) // We're being forced into a specific character, so might as well just skip it.
-	{
 		return firstvalid;
-	}
 
 	// One last bit of order we can't do in the iteration above.
 	description[firstvalid].prev = lastvalid;
@@ -9228,7 +9318,7 @@ static UINT8 M_SetupChoosePlayerDirect(INT32 choice)
 	if (!allowed)
 	{
 		char_on = firstvalid;
-		if (startchar > 0 && startchar < MAXSKINS)
+		if (startchar > 0 && startchar < numdescriptions)
 		{
 			INT16 workchar = startchar;
 			while (workchar--)
@@ -9236,13 +9326,13 @@ static UINT8 M_SetupChoosePlayerDirect(INT32 choice)
 		}
 	}
 
-	return MAXSKINS;
+	return MAXCHARACTERSLOTS;
 }
 
 static void M_SetupChoosePlayer(INT32 choice)
 {
-	UINT8 skinset = M_SetupChoosePlayerDirect(choice);
-	if (skinset != MAXSKINS)
+	UINT16 skinset = M_SetupChoosePlayerDirect(choice);
+	if (skinset != MAXCHARACTERSLOTS)
 	{
 		M_ChoosePlayer(skinset);
 		return;
@@ -9353,7 +9443,7 @@ static void M_DrawSetupChoosePlayerMenu(void)
 {
 	const INT32 my = 16;
 
-	skin_t *charskin = &skins[0];
+	skin_t *charskin = skins[0];
 	INT32 skinnum = 0;
 	UINT16 col;
 	UINT8 *colormap = NULL;
@@ -9385,7 +9475,7 @@ static void M_DrawSetupChoosePlayerMenu(void)
 
 	// Find skin number from description[]
 	skinnum = description[char_on].skinnum[0];
-	charskin = &skins[skinnum];
+	charskin = skins[skinnum];
 
 	// Use the opposite of the character's skincolor
 	col = description[char_on].oppositecolor;
@@ -9488,7 +9578,7 @@ static void M_DrawSetupChoosePlayerMenu(void)
 				prevoutlinecolor = description[prev].tagoutlinecolor;
 				if (prevtext[0] == '\0')
 					prevpatch = description[prev].namepic;
-				charskin = &skins[description[prev].skinnum[0]];
+				charskin = skins[description[prev].skinnum[0]];
 				if (!prevtextcolor)
 					prevtextcolor = charskin->prefcolor;
 				if (!prevoutlinecolor)
@@ -9518,7 +9608,7 @@ static void M_DrawSetupChoosePlayerMenu(void)
 				nextoutlinecolor = description[next].tagoutlinecolor;
 				if (nexttext[0] == '\0')
 					nextpatch = description[next].namepic;
-				charskin = &skins[description[next].skinnum[0]];
+				charskin = skins[description[next].skinnum[0]];
 				if (!nexttextcolor)
 					nexttextcolor = charskin->prefcolor;
 				if (!nextoutlinecolor)
@@ -9563,7 +9653,7 @@ static void M_ChoosePlayer(INT32 choice)
 	UINT8 skinnum;
 
 	// skip this if forcecharacter or no characters available
-	if (choice == 255)
+	if (choice == INT32_MAX)
 	{
 		skinnum = botskin = 0;
 		botingame = false;
@@ -9576,7 +9666,7 @@ static void M_ChoosePlayer(INT32 choice)
 		if ((botingame = (description[choice].skinnum[1] != -1))) {
 			// this character has a second skin
 			botskin = (UINT8)(description[choice].skinnum[1]+1);
-			botcolor = skins[description[choice].skinnum[1]].prefcolor;
+			botcolor = skins[description[choice].skinnum[1]]->prefcolor;
 		}
 		else
 			botskin = botcolor = 0;
@@ -9864,7 +9954,7 @@ void M_DrawTimeAttackMenu(void)
 	gamedata_t *data = clientGamedata;
 	INT32 i, x, y, empatx, empaty, cursory = 0;
 	UINT16 dispstatus;
-	patch_t *PictureOfUrFace;	// my WHAT
+	patch_t *PictureOfUrFace;
 	patch_t *empatch;
 
 	M_SetMenuCurBackground("RECATKBG");
@@ -9933,9 +10023,9 @@ void M_DrawTimeAttackMenu(void)
 
 	// Character face!
 	{
-		if (skins[cv_chooseskin.value-1].sprites[SPR2_XTRA].numframes > XTRA_CHARSEL)
+		if (skins[cv_chooseskin.value-1]->sprites[SPR2_XTRA].numframes > XTRA_CHARSEL)
 		{
-			spritedef_t *sprdef = &skins[cv_chooseskin.value-1].sprites[SPR2_XTRA];
+			spritedef_t *sprdef = &skins[cv_chooseskin.value-1]->sprites[SPR2_XTRA];
 			spriteframe_t *sprframe = &sprdef->spriteframes[XTRA_CHARSEL];
 			PictureOfUrFace = W_CachePatchNum(sprframe->lumppat[0], PU_PATCH);
 		}
@@ -10381,7 +10471,7 @@ static void M_ChooseNightsAttack(INT32 choice)
 		I_Error("Out of memory for replay filepath\n");
 
 	sprintf(gpath,"replay"PATHSEP"%s"PATHSEP"%s", timeattackfolder, G_BuildMapName(cv_nextmap.value));
-	snprintf(nameofdemo, sizeof nameofdemo, "%s-%s-last", gpath, skins[cv_chooseskin.value-1].name);
+	snprintf(nameofdemo, sizeof nameofdemo, "%s-%s-last", gpath, skins[cv_chooseskin.value-1]->name);
 
 	if (!cv_autorecord.value)
 		remove(va("%s"PATHSEP"%s.lmp", srb2home, nameofdemo));
@@ -10410,7 +10500,7 @@ static void M_ChooseTimeAttack(INT32 choice)
 		I_Error("Out of memory for replay filepath\n");
 
 	sprintf(gpath,"replay"PATHSEP"%s"PATHSEP"%s", timeattackfolder, G_BuildMapName(cv_nextmap.value));
-	snprintf(nameofdemo, sizeof nameofdemo, "%s-%s-last", gpath, skins[cv_chooseskin.value-1].name);
+	snprintf(nameofdemo, sizeof nameofdemo, "%s-%s-last", gpath, skins[cv_chooseskin.value-1]->name);
 
 	if (!cv_autorecord.value)
 		remove(va("%s"PATHSEP"%s.lmp", srb2home, nameofdemo));
@@ -10463,7 +10553,7 @@ static void M_ReplayTimeAttack(INT32 choice)
 		if (choice != 4)
 		{
 			// srb2/replay/main/map01-sonic-time-best.lmp
-			snprintf(ra_demoname, 1024, "%s"PATHSEP"replay"PATHSEP"%s"PATHSEP"%s-%s-%s.lmp", srb2home, timeattackfolder, G_BuildMapName(cv_nextmap.value), skins[cv_chooseskin.value-1].name, which);
+			snprintf(ra_demoname, 1024, "%s"PATHSEP"replay"PATHSEP"%s"PATHSEP"%s-%s-%s.lmp", srb2home, timeattackfolder, G_BuildMapName(cv_nextmap.value), skins[cv_chooseskin.value-1]->name, which);
 		}
 	}
 	else if (currentMenu == &SP_NightsReplayDef)
@@ -10486,7 +10576,7 @@ static void M_ReplayTimeAttack(INT32 choice)
 
 		if (choice != 3)
 		{
-			snprintf(ra_demoname, 1024, "%s"PATHSEP"replay"PATHSEP"%s"PATHSEP"%s-%s-%s.lmp", srb2home, timeattackfolder, G_BuildMapName(cv_nextmap.value), skins[cv_chooseskin.value-1].name, which);
+			snprintf(ra_demoname, 1024, "%s"PATHSEP"replay"PATHSEP"%s"PATHSEP"%s-%s-%s.lmp", srb2home, timeattackfolder, G_BuildMapName(cv_nextmap.value), skins[cv_chooseskin.value-1]->name, which);
 
 #ifdef OLDNREPLAYNAME // Check for old style named NiGHTS replay if a new style replay doesn't exist.
 			if (!FIL_FileExists(ra_demoname))
@@ -10573,7 +10663,7 @@ static void M_OverwriteGuest(const char *which)
 	char *rguest = Z_StrDup(va("%s"PATHSEP"replay"PATHSEP"%s"PATHSEP"%s-guest.lmp", srb2home, timeattackfolder, G_BuildMapName(cv_nextmap.value)));
 	UINT8 *buf;
 	size_t len;
-	len = FIL_ReadFile(va("%s"PATHSEP"replay"PATHSEP"%s"PATHSEP"%s-%s-%s.lmp", srb2home, timeattackfolder, G_BuildMapName(cv_nextmap.value), skins[cv_chooseskin.value-1].name, which), &buf);
+	len = FIL_ReadFile(va("%s"PATHSEP"replay"PATHSEP"%s"PATHSEP"%s-%s-%s.lmp", srb2home, timeattackfolder, G_BuildMapName(cv_nextmap.value), skins[cv_chooseskin.value-1]->name, which), &buf);
 
 	if (!len) {
 		return;
@@ -10715,7 +10805,7 @@ static void M_MarathonLiveEventBackup(INT32 choice)
 // Going to Marathon menu...
 static void M_Marathon(INT32 choice)
 {
-	UINT8 skinset;
+	UINT16 skinset;
 	INT32 mapnum = 0;
 
 	if (choice != -1 && FIL_FileExists(liveeventbackup))
@@ -10739,7 +10829,7 @@ static void M_Marathon(INT32 choice)
 
 	skinset = M_SetupChoosePlayerDirect(-1);
 
-	SP_MarathonMenu[marathonplayer].status = (skinset == MAXSKINS) ? IT_KEYHANDLER|IT_STRING : IT_NOTHING|IT_DISABLED;
+	SP_MarathonMenu[marathonplayer].status = (skinset == MAXCHARACTERSLOTS) ? IT_KEYHANDLER|IT_STRING : IT_NOTHING|IT_DISABLED;
 
 	while (mapnum < NUMMAPS)
 	{
@@ -12182,11 +12272,11 @@ static void M_DrawSetupMultiPlayerMenu(void)
 	// draw skin string
 	V_DrawRightAlignedString(BASEVIDWIDTH - x, y,
 	             ((MP_PlayerSetupMenu[1].status & IT_TYPE) == IT_SPACE ? V_TRANSLUCENT : 0)|(itemOn == 1 ? V_YELLOWMAP : 0)|V_ALLOWLOWERCASE,
-	             skins[setupm_fakeskin].realname);
+	             skins[setupm_fakeskin]->realname);
 
 	if (itemOn == 1 && (MP_PlayerSetupMenu[1].status & IT_TYPE) != IT_SPACE)
 	{
-		V_DrawCharacter(BASEVIDWIDTH - x - 10 - V_StringWidth(skins[setupm_fakeskin].realname, V_ALLOWLOWERCASE) - (skullAnimCounter/5), y,
+		V_DrawCharacter(BASEVIDWIDTH - x - 10 - V_StringWidth(skins[setupm_fakeskin]->realname, V_ALLOWLOWERCASE) - (skullAnimCounter/5), y,
 			'\x1C' | V_YELLOWMAP, false);
 		V_DrawCharacter(BASEVIDWIDTH - x + 2 + (skullAnimCounter/5), y,
 			'\x1D' | V_YELLOWMAP, false);
@@ -12209,7 +12299,7 @@ static void M_DrawSetupMultiPlayerMenu(void)
 	V_DrawFill(x-(charw/2), y, charw, 84,
 		multi_invcolor ?skincolors[skincolors[setupm_fakecolor->color].invcolor].ramp[skincolors[setupm_fakecolor->color].invshade] : 159);
 
-	sprdef = &skins[setupm_fakeskin].sprites[multi_spr2];
+	sprdef = &skins[setupm_fakeskin]->sprites[multi_spr2];
 
 	if (!setupm_fakecolor->color || !sprdef->numframes) // should never happen but hey, who knows
 		goto faildraw;
@@ -12230,7 +12320,7 @@ static void M_DrawSetupMultiPlayerMenu(void)
 	V_DrawFixedPatch(
 		x<<FRACBITS,
 		chary<<FRACBITS,
-		FixedDiv(skins[setupm_fakeskin].highresscale, skins[setupm_fakeskin].shieldscale),
+		FixedDiv(skins[setupm_fakeskin]->highresscale, skins[setupm_fakeskin]->shieldscale),
 		flags, patch, colormap);
 
 	goto colordraw;
@@ -12462,7 +12552,7 @@ static void M_HandleSetupMultiPlayer(INT32 choice)
 						setupm_fakeskin = numskins-1;
 				}
 				while ((prev_setupm_fakeskin != setupm_fakeskin) && !(R_SkinUsable(-1, setupm_fakeskin)));
-				multi_spr2 = P_GetSkinSprite2(&skins[setupm_fakeskin], SPR2_WALK, NULL);
+				multi_spr2 = P_GetSkinSprite2(skins[setupm_fakeskin], SPR2_WALK, NULL);
 			}
 			else if (itemOn == 2) // player color
 			{
@@ -12478,7 +12568,7 @@ static void M_HandleSetupMultiPlayer(INT32 choice)
 			{
 				S_StartSound(NULL,sfx_strpst);
 				// you know what? always putting these in the buffer won't hurt anything.
-				COM_BufAddText (va("%s \"%s\"\n",setupm_cvdefaultskin->name,skins[setupm_fakeskin].name));
+				COM_BufAddText (va("%s \"%s\"\n",setupm_cvdefaultskin->name,skins[setupm_fakeskin]->name));
 				COM_BufAddText (va("%s %d\n",setupm_cvdefaultcolor->name,setupm_fakecolor->color));
 				break;
 			}
@@ -12502,7 +12592,7 @@ static void M_HandleSetupMultiPlayer(INT32 choice)
 						setupm_fakeskin = 0;
 				}
 				while ((prev_setupm_fakeskin != setupm_fakeskin) && !(R_SkinUsable(-1, setupm_fakeskin)));
-				multi_spr2 = P_GetSkinSprite2(&skins[setupm_fakeskin], SPR2_WALK, NULL);
+				multi_spr2 = P_GetSkinSprite2(skins[setupm_fakeskin], SPR2_WALK, NULL);
 			}
 			else if (itemOn == 2) // player color
 			{
@@ -12558,7 +12648,7 @@ static void M_HandleSetupMultiPlayer(INT32 choice)
 			}
 			else if (itemOn == 2)
 			{
-				UINT16 col = skins[setupm_fakeskin].prefcolor;
+				UINT16 col = skins[setupm_fakeskin]->prefcolor;
 				if ((setupm_fakecolor->color != col) && skincolors[col].accessible)
 				{
 					S_StartSound(NULL,sfx_menu1); // Tails
@@ -12652,7 +12742,7 @@ static void M_SetupMultiPlayer(INT32 choice)
 
 	MP_PlayerSetupMenu[2].status = (IT_KEYHANDLER|IT_STRING);
 
-	multi_spr2 = P_GetSkinSprite2(&skins[setupm_fakeskin], SPR2_WALK, NULL);
+	multi_spr2 = P_GetSkinSprite2(skins[setupm_fakeskin], SPR2_WALK, NULL);
 
 	MP_PlayerSetupDef.prevMenu = currentMenu;
 	M_SetupNextMenu(&MP_PlayerSetupDef);
@@ -12693,7 +12783,7 @@ static void M_SetupMultiPlayer2(INT32 choice)
 
 	MP_PlayerSetupMenu[2].status = (IT_KEYHANDLER|IT_STRING);
 
-	multi_spr2 = P_GetSkinSprite2(&skins[setupm_fakeskin], SPR2_WALK, NULL);
+	multi_spr2 = P_GetSkinSprite2(skins[setupm_fakeskin], SPR2_WALK, NULL);
 
 	MP_PlayerSetupDef.prevMenu = currentMenu;
 	M_SetupNextMenu(&MP_PlayerSetupDef);
@@ -12711,7 +12801,7 @@ static boolean M_QuitMultiPlayerMenu(void)
 			setupm_name[l] =0;
 		COM_BufAddText (va("%s \"%s\"\n",setupm_cvname->name,setupm_name));
 	}
-	COM_BufAddText (va("%s \"%s\"\n",setupm_cvskin->name,skins[setupm_fakeskin].name));
+	COM_BufAddText (va("%s \"%s\"\n",setupm_cvskin->name,skins[setupm_fakeskin]->name));
 	// send color if changed
 	if (setupm_fakecolor->color != setupm_cvcolor->value)
 		COM_BufAddText (va("%s %d\n",setupm_cvcolor->name,setupm_fakecolor->color));

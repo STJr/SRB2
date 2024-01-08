@@ -88,6 +88,8 @@ boolean R_ThingIsFullBright (mobj_t *thing);
 boolean R_ThingIsSemiBright (mobj_t *thing);
 boolean R_ThingIsFullDark (mobj_t *thing);
 
+void R_ThingOffsetOverlay (mobj_t *thing, fixed_t *outx, fixed_t *outy);
+
 // --------------
 // MASKED DRAWING
 // --------------

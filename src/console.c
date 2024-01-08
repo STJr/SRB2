@@ -1893,9 +1893,9 @@ void CON_Drawer(void)
 
 	if (con_curlines > 0)
 		CON_DrawConsole();
-	else if (gamestate == GS_LEVEL
-	|| gamestate == GS_INTERMISSION || gamestate == GS_ENDING || gamestate == GS_CUTSCENE
-	|| gamestate == GS_CREDITS || gamestate == GS_EVALUATION || gamestate == GS_WAITINGPLAYERS)
+	else if (gamestate == GS_LEVEL || gamestate == GS_INTERMISSION || gamestate == GS_CREDITS
+	|| gamestate == GS_EVALUATION || gamestate == GS_ENDING || gamestate == GS_CUTSCENE
+	|| gamestate == GS_WAITINGPLAYERS || cv_debug)
 		CON_DrawHudlines();
 
 	Unlock_state();

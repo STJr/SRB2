@@ -3677,7 +3677,7 @@ void A_1upThinker(mobj_t *actor)
 		}
 	}
 
-	if (closestplayer == -1 || skins[players[closestplayer].skin].sprites[SPR2_LIFE].numframes == 0)
+	if (closestplayer == -1 || skins[players[closestplayer].skin]->sprites[SPR2_LIFE].numframes == 0)
 	{ // Closest player not found (no players in game?? may be empty dedicated server!), or does not have correct sprite.
 		if (actor->tracer)
 		{
@@ -3698,7 +3698,7 @@ void A_1upThinker(mobj_t *actor)
 			return;
 
 		P_SetTarget(&actor->tracer->target, actor);
-		actor->tracer->skin = &skins[players[closestplayer].skin]; // required here to prevent spr2 default showing stand for a single frame
+		actor->tracer->skin = skins[players[closestplayer].skin]; // required here to prevent spr2 default showing stand for a single frame
 		P_SetMobjState(actor->tracer, actor->info->seestate);
 
 		// The overlay is going to be one tic early turning off and on
@@ -3708,7 +3708,7 @@ void A_1upThinker(mobj_t *actor)
 	}
 
 	actor->tracer->color = players[closestplayer].mo->color;
-	actor->tracer->skin = &skins[players[closestplayer].skin];
+	actor->tracer->skin = skins[players[closestplayer].skin];
 }
 
 // Function: A_MonitorPop
@@ -3769,6 +3769,7 @@ void A_MonitorPop(mobj_t *actor)
 	{
 		P_SetTarget(&newmobj->target, actor->target); // Transfer target
 
+
 		if (item == MT_1UP_ICON)
 		{
 			if (!newmobj->target
@@ -3785,7 +3786,7 @@ void A_MonitorPop(mobj_t *actor)
 					P_SetTarget(&newmobj->tracer, livesico);
 
 					livesico->color = newmobj->target->player->mo->color;
-					livesico->skin = &skins[newmobj->target->player->skin];
+					livesico->skin = skins[newmobj->target->player->skin];
 					P_SetMobjState(livesico, newmobj->info->seestate);
 				}
 
@@ -3857,7 +3858,6 @@ void A_GoldMonitorPop(mobj_t *actor)
 	if (!P_MobjWasRemoved(newmobj))
 	{
 		P_SetTarget(&newmobj->target, actor->target); // Transfer target
-
 		if (item == MT_1UP_ICON)
 		{
 			if (actor->tracer) // Remove the old lives icon.
@@ -3877,7 +3877,7 @@ void A_GoldMonitorPop(mobj_t *actor)
 					P_SetTarget(&newmobj->tracer, livesico);
 
 					livesico->color = newmobj->target->player->mo->color;
-					livesico->skin = &skins[newmobj->target->player->skin];
+					livesico->skin = skins[newmobj->target->player->skin];
 					P_SetMobjState(livesico, newmobj->info->seestate);
 				}
 
@@ -5349,7 +5349,7 @@ void A_SignPlayer(mobj_t *actor)
 		if (!actor->target->player)
 			return;
 
-		skin = &skins[actor->target->player->skin];
+		skin = skins[actor->target->player->skin];
 		facecolor = P_GetPlayerColor(actor->target->player);
 
 		if (signcolor)
@@ -5380,10 +5380,10 @@ void A_SignPlayer(mobj_t *actor)
 				if (!SignSkinCheck(player, skincount))
 					skinnum++;
 			}
-			skin = &skins[skinnum];
+			skin = skins[skinnum];
 		}
 		else // specific skin
-			skin = &skins[locvar1];
+			skin = skins[locvar1];
 
 		facecolor = skin->prefcolor;
 		if (signcolor)
