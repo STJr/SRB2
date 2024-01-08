@@ -38,6 +38,8 @@
 #include "doomstat.h"
 #include "g_state.h"
 
+#include "hu_stuff.h"
+
 lua_State *gL = NULL;
 
 // List of internal libraries to load from SRB2
@@ -431,6 +433,9 @@ int LUA_PushGlobals(lua_State *L, const char *word)
 		if (!splitscreen)
 			return 0;
 		LUA_PushUserdata(L, &camera2, META_CAMERA);
+		return 1;
+	} else if (fastcmp(word, "chatactive")) {
+		lua_pushboolean(L, chat_on);
 		return 1;
 	}
 	return 0;
