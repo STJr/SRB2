@@ -41,20 +41,19 @@ UINT8 *save_p;
 
 // Block UINT32s to attempt to ensure that the correct data is
 // being sent and received
-#define ARCHIVEBLOCK_MISC     0x7FEEDEED
-#define ARCHIVEBLOCK_PLAYERS  0x7F448008
-#define ARCHIVEBLOCK_WORLD    0x7F8C08C0
-#define ARCHIVEBLOCK_POBJS    0x7F928546
-#define ARCHIVEBLOCK_THINKERS 0x7F37037C
-#define ARCHIVEBLOCK_SPECIALS 0x7F228378
-#define ARCHIVEBLOCK_EMBLEMS  0x7F4A5445
+#define ARCHIVEBLOCK_MISC       0x7FEEDEED
+#define ARCHIVEBLOCK_PLAYERS    0x7F448008
+#define ARCHIVEBLOCK_WORLD      0x7F8C08C0
+#define ARCHIVEBLOCK_POBJS      0x7F928546
+#define ARCHIVEBLOCK_THINKERS   0x7F37037C
+#define ARCHIVEBLOCK_SPECIALS   0x7F228378
+#define ARCHIVEBLOCK_EMBLEMS    0x7F4A5445
+#define ARCHIVEBLOCK_SECPORTALS 0x7FBE34C9
 
 // Note: This cannot be bigger
 // than an UINT16
 typedef enum
 {
-//	RFLAGPOINT = 0x01,
-//	BFLAGPOINT = 0x02,
 	CAPSULE    = 0x04,
 	AWAYVIEW   = 0x08,
 	FIRSTAXIS  = 0x10,
@@ -853,33 +852,43 @@ static void P_NetUnArchiveWaypoints(void)
 #define SD_DIFF3     0x80
 
 // diff3 flags
-#define SD_TAGLIST   0x01
-#define SD_COLORMAP  0x02
+#define SD_TAGLIST      0x01
+#define SD_COLORMAP     0x02
 #define SD_CRUMBLESTATE 0x04
-#define SD_FLOORLIGHT 0x08
-#define SD_CEILLIGHT 0x10
-#define SD_FLAG      0x20
-#define SD_SPECIALFLAG 0x40
-#define SD_DIFF4     0x80
+#define SD_FLOORLIGHT   0x08
+#define SD_CEILLIGHT    0x10
+#define SD_FLAG         0x20
+#define SD_SPECIALFLAG  0x40
+#define SD_DIFF4        0x80
 
-//diff4 flags
+// diff4 flags
 #define SD_DAMAGETYPE 0x01
 #define SD_TRIGGERTAG 0x02
 #define SD_TRIGGERER 0x04
-#define SD_GRAVITY   0x08
-#define SD_FXSCALE   0x10
-#define SD_FYSCALE   0x20
-#define SD_CXSCALE   0x40
-#define SD_CYSCALE   0x80
+#define SD_FXSCALE   0x08
+#define SD_FYSCALE   0x10
+#define SD_CXSCALE   0x20
+#define SD_CYSCALE   0x40
+#define SD_DIFF5     0x80
 
+// diff5 flags
+#define SD_GRAVITY     0x01
+#define SD_FLOORPORTAL 0x02
+#define SD_CEILPORTAL  0x04
+
+// diff1 flags
 #define LD_FLAG          0x01
 #define LD_SPECIAL       0x02
 #define LD_CLLCOUNT      0x04
 #define LD_ARGS          0x08
 #define LD_STRINGARGS    0x10
-#define LD_EXECUTORDELAY 0x20
-#define LD_SIDE1         0x40
-#define LD_SIDE2         0x80
+#define LD_SIDE1         0x20
+#define LD_SIDE2         0x40
+#define LD_DIFF2         0x80
+
+// diff2 flags
+#define LD_EXECUTORDELAY 0x01
+#define LD_TRANSFPORTAL  0x02
 
 // sidedef flags
 enum
@@ -1028,11 +1037,11 @@ static void ArchiveSectors(void)
 	size_t i, j;
 	const sector_t *ss = sectors;
 	const sector_t *spawnss = spawnsectors;
-	UINT8 diff, diff2, diff3, diff4;
+	UINT8 diff, diff2, diff3, diff4, diff5;
 
 	for (i = 0; i < numsectors; i++, ss++, spawnss++)
 	{
-		diff = diff2 = diff3 = diff4 = 0;
+		diff = diff2 = diff3 = diff4 = diff5 = 0;
 		if (ss->floorheight != spawnss->floorheight)
 			diff |= SD_FLOORHT;
 		if (ss->ceilingheight != spawnss->ceilingheight)
@@ -1094,10 +1103,17 @@ static void ArchiveSectors(void)
 		if (ss->triggerer != spawnss->triggerer)
 			diff4 |= SD_TRIGGERER;
 		if (ss->gravity != spawnss->gravity)
-			diff4 |= SD_GRAVITY;
+			diff5 |= SD_GRAVITY;
+		if (ss->portal_floor != spawnss->portal_floor)
+			diff5 |= SD_FLOORPORTAL;
+		if (ss->portal_ceiling != spawnss->portal_ceiling)
+			diff5 |= SD_CEILPORTAL;
 
 		if (ss->ffloors && CheckFFloorDiff(ss))
 			diff |= SD_FFLOORS;
+
+		if (diff5)
+			diff4 |= SD_DIFF5;
 
 		if (diff4)
 			diff3 |= SD_DIFF4;
@@ -1118,6 +1134,8 @@ static void ArchiveSectors(void)
 				WRITEUINT8(save_p, diff3);
 			if (diff3 & SD_DIFF4)
 				WRITEUINT8(save_p, diff4);
+			if (diff4 & SD_DIFF5)
+				WRITEUINT8(save_p, diff5);
 			if (diff & SD_FLOORHT)
 				WRITEFIXED(save_p, ss->floorheight);
 			if (diff & SD_CEILHT)
@@ -1174,8 +1192,6 @@ static void ArchiveSectors(void)
 				WRITEINT16(save_p, ss->triggertag);
 			if (diff4 & SD_TRIGGERER)
 				WRITEUINT8(save_p, ss->triggerer);
-			if (diff4 & SD_GRAVITY)
-				WRITEFIXED(save_p, ss->gravity);
 			if (diff4 & SD_FXSCALE)
 				WRITEFIXED(save_p, ss->floorxscale);
 			if (diff4 & SD_FYSCALE)
@@ -1184,6 +1200,12 @@ static void ArchiveSectors(void)
 				WRITEFIXED(save_p, ss->ceilingxscale);
 			if (diff4 & SD_CYSCALE)
 				WRITEFIXED(save_p, ss->ceilingyscale);
+			if (diff5 & SD_GRAVITY)
+				WRITEFIXED(save_p, ss->gravity);
+			if (diff5 & SD_FLOORPORTAL)
+				WRITEUINT32(save_p, ss->portal_floor);
+			if (diff5 & SD_CEILPORTAL)
+				WRITEUINT32(save_p, ss->portal_ceiling);
 			if (diff & SD_FFLOORS)
 				ArchiveFFloors(ss);
 		}
@@ -1196,7 +1218,7 @@ static void UnArchiveSectors(void)
 {
 	UINT32 i;
 	UINT16 j;
-	UINT8 diff, diff2, diff3, diff4;
+	UINT8 diff, diff2, diff3, diff4, diff5;
 	for (;;)
 	{
 		i = READUINT32(save_p);
@@ -1220,6 +1242,10 @@ static void UnArchiveSectors(void)
 			diff4 = READUINT8(save_p);
 		else
 			diff4 = 0;
+		if (diff4 & SD_DIFF5)
+			diff5 = READUINT8(save_p);
+		else
+			diff5 = 0;
 
 		if (diff & SD_FLOORHT)
 			sectors[i].floorheight = READFIXED(save_p);
@@ -1303,8 +1329,6 @@ static void UnArchiveSectors(void)
 			sectors[i].triggertag = READINT16(save_p);
 		if (diff4 & SD_TRIGGERER)
 			sectors[i].triggerer = READUINT8(save_p);
-		if (diff4 & SD_GRAVITY)
-			sectors[i].gravity = READFIXED(save_p);
 		if (diff4 & SD_FXSCALE)
 			sectors[i].floorxscale = READFIXED(save_p);
 		if (diff4 & SD_FYSCALE)
@@ -1313,6 +1337,12 @@ static void UnArchiveSectors(void)
 			sectors[i].ceilingxscale = READFIXED(save_p);
 		if (diff4 & SD_CYSCALE)
 			sectors[i].ceilingyscale = READFIXED(save_p);
+		if (diff5 & SD_GRAVITY)
+			sectors[i].gravity = READFIXED(save_p);
+		if (diff5 & SD_FLOORPORTAL)
+			sectors[i].portal_floor = READUINT32(save_p);
+		if (diff5 & SD_CEILPORTAL)
+			sectors[i].portal_ceiling = READUINT32(save_p);
 
 		if (diff & SD_FFLOORS)
 			UnArchiveFFloors(&sectors[i]);
@@ -1409,13 +1439,14 @@ static void ArchiveLines(void)
 	size_t i;
 	const line_t *li = lines;
 	const line_t *spawnli = spawnlines;
-	UINT8 diff;
-	UINT32 diff2;
-	UINT32 diff3;
+	UINT8 diff, diff2;
+	UINT32 side1diff;
+	UINT32 side2diff;
 
 	for (i = 0; i < numlines; i++, spawnli++, li++)
 	{
-		diff = diff2 = diff3 = 0;
+		diff = diff2 = 0;
+		side1diff = side2diff = 0;
 
 		if (li->special != spawnli->special)
 			diff |= LD_SPECIAL;
@@ -1430,25 +1461,33 @@ static void ArchiveLines(void)
 			diff |= LD_STRINGARGS;
 
 		if (li->executordelay != spawnli->executordelay)
-			diff |= LD_EXECUTORDELAY;
+			diff2 |= LD_EXECUTORDELAY;
+
+		if (li->secportal != spawnli->secportal)
+			diff2 |= LD_TRANSFPORTAL;
 
 		if (li->sidenum[0] != NO_SIDEDEF)
 		{
-			diff2 = GetSideDiff(&sides[li->sidenum[0]], &spawnsides[li->sidenum[0]]);
-			if (diff2)
+			side1diff = GetSideDiff(&sides[li->sidenum[0]], &spawnsides[li->sidenum[0]]);
+			if (side1diff)
 				diff |= LD_SIDE1;
 		}
 		if (li->sidenum[1] != NO_SIDEDEF)
 		{
-			diff3 = GetSideDiff(&sides[li->sidenum[1]], &spawnsides[li->sidenum[1]]);
-			if (diff3)
+			side2diff = GetSideDiff(&sides[li->sidenum[1]], &spawnsides[li->sidenum[1]]);
+			if (side2diff)
 				diff |= LD_SIDE2;
 		}
+
+		if (diff2)
+			diff |= LD_DIFF2;
 
 		if (diff)
 		{
 			WRITEUINT32(save_p, i);
 			WRITEUINT8(save_p, diff);
+			if (diff & LD_DIFF2)
+				WRITEUINT8(save_p, diff2);
 			if (diff & LD_FLAG)
 				WRITEINT16(save_p, li->flags);
 			if (diff & LD_SPECIAL)
@@ -1480,12 +1519,14 @@ static void ArchiveLines(void)
 						WRITECHAR(save_p, li->stringargs[j][k]);
 				}
 			}
-			if (diff & LD_EXECUTORDELAY)
-				WRITEINT32(save_p, li->executordelay);
 			if (diff & LD_SIDE1)
-				ArchiveSide(&sides[li->sidenum[0]], diff2);
+				ArchiveSide(&sides[li->sidenum[0]], side1diff);
 			if (diff & LD_SIDE2)
-				ArchiveSide(&sides[li->sidenum[1]], diff3);
+				ArchiveSide(&sides[li->sidenum[1]], side2diff);
+			if (diff2 & LD_EXECUTORDELAY)
+				WRITEINT32(save_p, li->executordelay);
+			if (diff2 & LD_TRANSFPORTAL)
+				WRITEUINT32(save_p, li->secportal);
 		}
 	}
 	WRITEUINT32(save_p, 0xffffffff);
@@ -1537,7 +1578,7 @@ static void UnArchiveLines(void)
 {
 	UINT32 i;
 	line_t *li;
-	UINT8 diff;
+	UINT8 diff, diff2;
 
 	for (;;)
 	{
@@ -1549,6 +1590,10 @@ static void UnArchiveLines(void)
 			I_Error("Invalid line number %u from server", i);
 
 		diff = READUINT8(save_p);
+		if (diff & LD_DIFF2)
+			diff2 = READUINT8(save_p);
+		else
+			diff2 = 0;
 		li = &lines[i];
 
 		if (diff & LD_FLAG)
@@ -1584,12 +1629,14 @@ static void UnArchiveLines(void)
 				li->stringargs[j][len] = '\0';
 			}
 		}
-		if (diff & LD_EXECUTORDELAY)
-			li->executordelay = READINT32(save_p);
 		if (diff & LD_SIDE1)
 			UnArchiveSide(&sides[li->sidenum[0]]);
 		if (diff & LD_SIDE2)
 			UnArchiveSide(&sides[li->sidenum[1]]);
+		if (diff2 & LD_EXECUTORDELAY)
+			li->executordelay = READINT32(save_p);
+		if (diff2 & LD_TRANSFPORTAL)
+			li->secportal = READUINT32(save_p);
 	}
 }
 
@@ -4851,6 +4898,86 @@ static inline void P_NetUnArchiveEmblems(void)
 	}
 }
 
+static void P_NetArchiveSectorPortals(void)
+{
+	WRITEUINT32(save_p, ARCHIVEBLOCK_SECPORTALS);
+
+	WRITEUINT32(save_p, secportalcount);
+
+	for (size_t i = 0; i < secportalcount; i++)
+	{
+		UINT8 type = secportals[i].type;
+
+		WRITEUINT8(save_p, type);
+		WRITEFIXED(save_p, secportals[i].origin.x);
+		WRITEFIXED(save_p, secportals[i].origin.y);
+
+		switch (type)
+		{
+		case SECPORTAL_LINE:
+			WRITEUINT32(save_p, SaveLine(secportals[i].line.start));
+			WRITEUINT32(save_p, SaveLine(secportals[i].line.dest));
+			break;
+		case SECPORTAL_PLANE:
+		case SECPORTAL_HORIZON:
+		case SECPORTAL_FLOOR:
+		case SECPORTAL_CEILING:
+			WRITEUINT32(save_p, SaveSector(secportals[i].sector));
+			break;
+		case SECPORTAL_OBJECT:
+			if (secportals[i].mobj && !P_MobjWasRemoved(secportals[i].mobj))
+				SaveMobjnum(secportals[i].mobj);
+			else
+				WRITEUINT32(save_p, 0);
+			break;
+		default:
+			break;
+		}
+	}
+}
+
+static void P_NetUnArchiveSectorPortals(void)
+{
+	if (READUINT32(save_p) != ARCHIVEBLOCK_SECPORTALS)
+		I_Error("Bad $$$.sav at archive block Secportals");
+
+	Z_Free(secportals);
+	P_InitSectorPortals();
+
+	UINT32 count = READUINT32(save_p);
+
+	for (UINT32 i = 0; i < count; i++)
+	{
+		UINT32 id = P_NewSectorPortal();
+
+		sectorportal_t *secportal = &secportals[id];
+
+		secportal->type = READUINT8(save_p);
+		secportal->origin.x = READFIXED(save_p);
+		secportal->origin.y = READFIXED(save_p);
+
+		switch (secportal->type)
+		{
+		case SECPORTAL_LINE:
+			secportal->line.start = LoadLine(READUINT32(save_p));
+			secportal->line.dest = LoadLine(READUINT32(save_p));
+			break;
+		case SECPORTAL_PLANE:
+		case SECPORTAL_HORIZON:
+		case SECPORTAL_FLOOR:
+		case SECPORTAL_CEILING:
+			secportal->sector = LoadSector(READUINT32(save_p));
+			break;
+		case SECPORTAL_OBJECT:
+			id = READUINT32(save_p);
+			secportal->mobj = (id == 0) ? NULL : P_FindNewPosition(id);
+			break;
+		default:
+			break;
+		}
+	}
+}
+
 static inline void P_ArchiveLuabanksAndConsistency(void)
 {
 	UINT8 i, banksinuse = NUM_LUABANKS;
@@ -4937,6 +5064,7 @@ void P_SaveNetGame(boolean resending)
 		P_NetArchiveSpecials();
 		P_NetArchiveColormaps();
 		P_NetArchiveWaypoints();
+		P_NetArchiveSectorPortals();
 	}
 	LUA_Archive();
 
@@ -4977,6 +5105,7 @@ boolean P_LoadNetGame(boolean reloading)
 		P_NetUnArchiveSpecials();
 		P_NetUnArchiveColormaps();
 		P_NetUnArchiveWaypoints();
+		P_NetUnArchiveSectorPortals();
 		P_RelinkPointers();
 		P_FinishMobjs();
 	}
