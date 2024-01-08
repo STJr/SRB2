@@ -6061,7 +6061,7 @@ static void P_3dMovement(player_t *player)
 	// Monster Iestyn - 04-11-13
 	// Quadrants are stupid, excessive and broken, let's do this a much simpler way!
 	// Get delta angle from rmom angle and player angle first
-	dangle = R_PointToAngle2(0,0, player->rmomx, player->rmomy) - player->mo->angle;
+	dangle = R_PointToAngle2(0,0, player->rmomx, player->rmomy) - (cmd->angleturn<<16);
 	if (dangle > ANGLE_180) //flip to keep to one side
 		dangle = InvAngle(dangle);
 
