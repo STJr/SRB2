@@ -993,6 +993,9 @@ static void P_InitializeSector(sector_t *ss)
 	ss->lightingdata = NULL;
 	ss->fadecolormapdata = NULL;
 
+	ss->portal_floor = UINT32_MAX;
+	ss->portal_ceiling = UINT32_MAX;
+
 	ss->heightsec = -1;
 	ss->camsec = -1;
 
@@ -1110,6 +1113,7 @@ static void P_InitializeLinedef(line_t *ld)
 	ld->polyobj = NULL;
 
 	ld->callcount = 0;
+	ld->secportal = UINT32_MAX;
 
 	// cph 2006/09/30 - fix sidedef errors right away.
 	// cph 2002/07/20 - these errors are fatal if not fixed, so apply them
@@ -7883,6 +7887,7 @@ boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate)
 	P_InitThinkers();
 	R_InitMobjInterpolators();
 	P_InitCachedActions();
+	P_InitSectorPortals();
 
 	// internal game map
 	maplumpname = G_BuildMapName(gamemap);

@@ -109,10 +109,18 @@ FILE *fopenfile(const char*, const char*);
 
 // If you don't disable ALL debug first, you get ALL debug enabled
 #if !defined (NDEBUG)
+#ifndef PACKETDROP
 #define PACKETDROP
+#endif
+#ifndef PARANOIA
 #define PARANOIA
+#endif
+#ifndef RANGECHECK
 #define RANGECHECK
+#endif
+#ifndef ZDEBUG
 #define ZDEBUG
+#endif
 #endif
 
 // Uncheck this to compile debugging code

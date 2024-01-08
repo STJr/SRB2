@@ -2122,19 +2122,7 @@ void P_SpawnThokMobj(player_t *player)
 
 	if (type == MT_GHOST)
 		mobj = P_SpawnGhostMobj(player->mo); // virtually does everything here for us
-	else if (type == MT_THOKEFFECT) // Thok boom effect for Sonic
-	{
-		mobj = P_SpawnMobjFromMobj(player->mo, 0, 0, FixedDiv(player->mo->height, player->mo->scale)*3/4, type);
-		mobj->angle = player->mo->angle + ANGLE_90;
-		mobj->fuse = 7;
-		mobj->scale = player->mo->scale / 3;
-		mobj->destscale = 10 * player->mo->scale;
-		mobj->colorized = true;
-		mobj->color = player->mo->color;
-		mobj->momx = -player->mo->momx / 2;
-		mobj->momy = -player->mo->momy / 2;
-	}
-	else // Normal thok object handling
+	else
 	{
 		if (player->mo->eflags & MFE_VERTICALFLIP)
 			zheight = player->mo->z + player->mo->height + FixedDiv(P_GetPlayerHeight(player) - player->mo->height, 3*FRACUNIT) - FixedMul(mobjinfo[type].height, player->mo->scale);
@@ -6073,7 +6061,7 @@ static void P_3dMovement(player_t *player)
 	// Monster Iestyn - 04-11-13
 	// Quadrants are stupid, excessive and broken, let's do this a much simpler way!
 	// Get delta angle from rmom angle and player angle first
-	dangle = R_PointToAngle2(0,0, player->rmomx, player->rmomy) - player->mo->angle;
+	dangle = R_PointToAngle2(0,0, player->rmomx, player->rmomy) - (cmd->angleturn<<16);
 	if (dangle > ANGLE_180) //flip to keep to one side
 		dangle = InvAngle(dangle);
 
