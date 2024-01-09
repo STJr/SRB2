@@ -553,7 +553,7 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 	fixed_t       left_top, left_bottom; // needed here for slope skewing
 	pslope_t      *skewslope = NULL;
 	boolean do_texture_skew;
-	UINT32 lineflags;
+	INT16 lineflags;
 	fixed_t wall_scalex, wall_scaley;
 
 	void (*colfunc_2s) (column_t *);
@@ -578,7 +578,7 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 		lineflags = newline->flags;
 	}
 	else
-		lineflags = pfloor->master->flags;
+		lineflags = curline->linedef->flags;
 
 	texnum = R_GetTextureNum(sidedef->midtexture);
 
@@ -757,10 +757,12 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 	left_bottom = P_GetFFloorBottomZAt(pfloor, ds->leftpos.x, ds->leftpos.y) - viewz;
 
 	do_texture_skew = lineflags & ML_SKEWTD;
-	skewslope = *pfloor->t_slope; // skew using top slope by default
 
 	if (do_texture_skew)
+	{
+		skewslope = *pfloor->t_slope; // skew using top slope by default
 		dc_texturemid = FixedMul(left_top, wall_scaley);
+	}
 	else
 		dc_texturemid = FixedMul(*pfloor->topheight - viewz, wall_scaley);
 
@@ -768,14 +770,16 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 
 	if (lineflags & ML_DONTPEGBOTTOM)
 	{
-		skewslope = *pfloor->b_slope; // skew using bottom slope
 		if (do_texture_skew)
+		{
+			skewslope = *pfloor->b_slope; // skew using bottom slope
 			dc_texturemid = FixedMul(left_bottom, wall_scaley);
+		}
 		else
 			offsetvalue -= FixedMul(*pfloor->topheight - *pfloor->bottomheight, wall_scaley);
 	}
 
-	if (do_texture_skew && skewslope)
+	if (skewslope)
 	{
 		angle_t lineangle = R_PointToAngle2(curline->v1->x, curline->v1->y, curline->v2->x, curline->v2->y);
 		ffloortextureslide = FixedMul(skewslope->zdelta, FINECOSINE((lineangle-skewslope->xydirection)>>ANGLETOFINESHIFT));
