@@ -525,6 +525,9 @@ static boolean R_IsFFloorTranslucent(visffloor_t *pfloor)
 //
 // R_RenderThickSideRange
 // Renders all the thick sides in the given range.
+
+static fixed_t ffloortexturecolumn[MAXVIDWIDTH];
+
 void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 {
 	size_t          pindex;
@@ -732,10 +735,10 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 	wall_scalex = FixedDiv(FRACUNIT, sidedef->scalex_mid);
 	wall_scaley = sidedef->scaley_mid;
 
-	thicksidecol = ds->thicksidecol;
+	thicksidecol = ffloortexturecolumn;
 
 	for (INT32 x = x1; x <= x2; x++)
-		thicksidecol[x] = FixedDiv(thicksidecol[x], wall_scalex) + ds->offsetx;
+		thicksidecol[x] = FixedDiv(ds->thicksidecol[x], wall_scalex) + ds->offsetx;
 
 	mfloorclip = ds->sprbottomclip;
 	mceilingclip = ds->sprtopclip;
