@@ -737,8 +737,16 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 
 	thicksidecol = ffloortexturecolumn;
 
-	for (INT32 x = x1; x <= x2; x++)
-		thicksidecol[x] = FixedDiv(ds->thicksidecol[x], wall_scalex) + ds->offsetx;
+	if (wall_scalex == FRACUNIT)
+	{
+		for (INT32 x = x1; x <= x2; x++)
+			thicksidecol[x] = ds->thicksidecol[x] + ds->offsetx;
+	}
+	else
+	{
+		for (INT32 x = x1; x <= x2; x++)
+			thicksidecol[x] = FixedDiv(ds->thicksidecol[x], wall_scalex) + ds->offsetx;
+	}
 
 	mfloorclip = ds->sprbottomclip;
 	mceilingclip = ds->sprtopclip;
