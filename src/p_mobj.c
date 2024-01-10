@@ -19,6 +19,7 @@
 #include "hu_stuff.h"
 #include "p_local.h"
 #include "p_setup.h"
+#include "p_dialog.h"
 #include "r_fps.h"
 #include "r_main.h"
 #include "r_skins.h"
@@ -11850,6 +11851,13 @@ void P_SpawnPlayer(INT32 playernum)
 
 	// Spawn with a pity shield if necessary.
 	P_DoPityCheck(p);
+
+	if (globaltextprompt && p->textprompt != globaltextprompt)
+	{
+		P_EndTextPrompt(p, false, true);
+		p->promptactive = true;
+		p->textprompt = globaltextprompt;
+	}
 }
 
 void P_AfterPlayerSpawn(INT32 playernum)

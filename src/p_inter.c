@@ -17,6 +17,7 @@
 #include "g_game.h"
 #include "m_random.h"
 #include "p_local.h"
+#include "p_dialog.h"
 #include "s_sound.h"
 #include "r_main.h"
 #include "st_stuff.h"
@@ -1502,7 +1503,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 		{
 			if (special->health && !player->bot)
 			{
-				F_StartTextPrompt(199, 0, toucher, 0, true, false);
+				P_StartTextPrompt(player, 199, 0, 0, true, false, false);
 				special->health = 0;
 				if (ultimatemode && player->continues < 99)
 					player->continues++;

@@ -32,6 +32,7 @@
 #include "../p_saveg.h"
 #include "../z_zone.h"
 #include "../p_local.h"
+#include "../p_dialog.h"
 #include "../m_misc.h"
 #include "../am_map.h"
 #include "../m_random.h"
@@ -585,6 +586,21 @@ void CL_RemovePlayer(INT32 playernum, kickreason_t reason)
 
 	if (gametyperules & GTR_TEAMFLAGS)
 		P_PlayerFlagBurst(&players[playernum], false); // Don't take the flag with you!
+
+	P_EndTextPrompt(&players[playernum], false, false);
+
+	// Reassign the callplayer of the globaltextprompt if it is someone who just left
+	if (globaltextprompt && globaltextprompt->callplayer == &players[playernum])
+	{
+		for (INT32 i = 0; i < MAXPLAYERS; i++)
+		{
+			if (playeringame[i] && !(players[i].spectator || players[i].quittime))
+			{
+				globaltextprompt->callplayer = &players[i];
+				break;
+			}
+		}
+	}
 
 	RedistributeSpecialStageSpheres(playernum);
 

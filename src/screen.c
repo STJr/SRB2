@@ -509,7 +509,7 @@ void SCR_ClosedCaptions(void)
 
 	if (gamestate == GS_LEVEL)
 	{
-		if (promptactive)
+		if (players[displayplayer].promptactive)
 			basey -= 42;
 		else if (splitscreen)
 			basey -= 8;

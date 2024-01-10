@@ -20,6 +20,7 @@
 #include "p_setup.h"
 #include "p_spec.h"
 #include "p_saveg.h"
+#include "p_dialog.h"
 
 #include "i_time.h"
 #include "i_sound.h" // for I_PlayCD()..
@@ -5704,9 +5705,9 @@ static void P_ConvertBinaryLinedefTypes(void)
 				lines[i].args[2] |= TMP_KEEPCONTROLS;
 			if (lines[i].flags & ML_MIDPEG)
 				lines[i].args[2] |= TMP_KEEPREALTIME;
-			/*if (lines[i].flags & ML_NOCLIMB)
+			if (lines[i].flags & ML_NOCLIMB)
 				lines[i].args[2] |= TMP_ALLPLAYERS;
-			if (lines[i].flags & ML_MIDSOLID)
+			/*if (lines[i].flags & ML_MIDSOLID)
 				lines[i].args[2] |= TMP_FREEZETHINKERS;*/
 			lines[i].args[3] = (lines[i].sidenum[1] != NO_SIDEDEF) ? sides[lines[i].sidenum[1]].textureoffset >> FRACBITS : tag;
 			break;
@@ -7857,8 +7858,8 @@ boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate)
 
 	levelfadecol = (ranspecialwipe) ? 0 : 31;
 
-	// Close text prompt before freeing the old level
-	F_EndTextPrompt(false, true);
+	// Close text prompt before freeing the level
+	P_EndAllTextPrompts(false, true);
 
 	LUA_InvalidateLevel();
 

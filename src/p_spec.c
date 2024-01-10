@@ -20,6 +20,7 @@
 #include "g_game.h"
 #include "p_local.h"
 #include "p_setup.h" // levelflats for flat animation
+#include "p_dialog.h"
 #include "r_data.h"
 #include "r_fps.h"
 #include "r_textures.h"
@@ -3594,14 +3595,14 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 
 		case 459: // Control Text Prompt
 			// console player only
-			if (mo && mo->player && P_IsLocalPlayer(mo->player) && (!bot || bot != mo))
+			if (mo && mo->player && (!bot || bot != mo))
 			{
 				INT32 promptnum = max(0, line->args[0] - 1);
 				INT32 pagenum = max(0, line->args[1] - 1);
 				INT32 postexectag = abs(line->args[3]);
 
 				boolean closetextprompt = (line->args[2] & TMP_CLOSE);
-				//boolean allplayers = (line->args[2] & TMP_ALLPLAYERS);
+				boolean allplayers = (line->args[2] & TMP_ALLPLAYERS);
 				boolean runpostexec = (line->args[2] & TMP_RUNPOSTEXEC);
 				boolean blockcontrols = !(line->args[2] & TMP_KEEPCONTROLS);
 				boolean freezerealtime = !(line->args[2] & TMP_KEEPREALTIME);
@@ -3609,12 +3610,12 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 				boolean callbynamedtag = (line->args[2] & TMP_CALLBYNAME);
 
 				if (closetextprompt)
-					F_EndTextPrompt(false, false);
+					P_EndTextPrompt(mo->player, false, false);
 				else
 				{
 					if (callbynamedtag && line->stringargs[0] && line->stringargs[0][0])
-						F_GetPromptPageByNamedTag(line->stringargs[0], &promptnum, &pagenum);
-					F_StartTextPrompt(promptnum, pagenum, mo, runpostexec ? postexectag : 0, blockcontrols, freezerealtime);
+						P_GetPromptPageByNamedTag(line->stringargs[0], &promptnum, &pagenum);
+					P_StartTextPrompt(mo->player, promptnum, pagenum, runpostexec ? postexectag : 0, blockcontrols, freezerealtime, allplayers);
 				}
 			}
 			break;
@@ -8420,6 +8421,7 @@ static void P_AddFakeFloorFader(ffloor_t *rover, size_t sectornum, size_t ffloor
 	d->docollision = docollision;
 	d->doghostfade = doghostfade;
 	d->exactalpha = exactalpha;
+	d->dest_exc = NULL;
 
 	// find any existing thinkers and remove them, then replace with new data
 	P_ResetFakeFloorFader(rover, d, false);

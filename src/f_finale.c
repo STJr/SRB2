@@ -37,6 +37,7 @@
 #include "m_cond.h"
 #include "p_local.h"
 #include "p_setup.h"
+#include "p_dialog.h"
 #include "st_stuff.h" // hud hiding
 #include "fastcmp.h"
 #include "console.h"
@@ -55,7 +56,6 @@ static INT32 timetonext; // Delay between screen changes
 static INT32 continuetime; // Short delay when continuing
 
 static tic_t animtimer; // Used for some animation timings
-static INT16 skullAnimCounter; // Prompts: Chevron animation
 
 static INT32 deplete;
 static tic_t stoptimer;
@@ -202,111 +202,20 @@ static patch_t *endescp[5]; // escape pod + flame
 static INT32 sparkloffs[3][2]; // eggrock explosions/blackrock sparkles
 static INT32 sparklloop;
 
-//
-// PROMPT STATE
-//
-boolean promptactive = false;
-static mobj_t *promptmo;
-static INT16 promptpostexectag;
-static boolean promptblockcontrols;
-static char *promptpagetext = NULL;
-static INT32 callpromptnum = INT32_MAX;
-static INT32 callpagenum = INT32_MAX;
-static INT32 callplayer = INT32_MAX;
-
-//
-// CUTSCENE TEXT WRITING
-//
-static const char *cutscene_basetext = NULL;
-static char cutscene_disptext[1024];
-static INT32 cutscene_baseptr = 0;
-static INT32 cutscene_writeptr = 0;
-static INT32 cutscene_textcount = 0;
-static INT32 cutscene_textspeed = 0;
-static UINT8 cutscene_boostspeed = 0;
-
 // STJR Intro
 char stjrintro[9] = "STJRI000";
 
 static huddrawlist_h luahuddrawlist_title;
 
-//
-// This alters the text string cutscene_disptext.
-// Use the typical string drawing functions to display it.
-// Returns 0 if \0 is reached (end of input)
-//
-static UINT8 F_WriteText(void)
-{
-	INT32 numtowrite = 1;
-	const char *c;
-
-	if (cutscene_boostspeed)
-	{
-		// for custom cutscene speedup mode
-		numtowrite = 8;
-	}
-	else
-	{
-		// Don't draw any characters if the count was 1 or more when we started
-		if (--cutscene_textcount >= 0)
-			return 1;
-
-		if (cutscene_textspeed < 7)
-			numtowrite = 8 - cutscene_textspeed;
-	}
-
-	for (;numtowrite > 0;++cutscene_baseptr)
-	{
-		c = &cutscene_basetext[cutscene_baseptr];
-		if (!c || !*c || *c=='#')
-			return 0;
-
-		// \xA0 - \xAF = change text speed
-		if ((UINT8)*c >= 0xA0 && (UINT8)*c <= 0xAF)
-		{
-			cutscene_textspeed = (INT32)((UINT8)*c - 0xA0);
-			continue;
-		}
-		// \xB0 - \xD2 = delay character for up to one second (35 tics)
-		else if ((UINT8)*c >= 0xB0 && (UINT8)*c <= (0xB0+TICRATE-1))
-		{
-			cutscene_textcount = (INT32)((UINT8)*c - 0xAF);
-			numtowrite = 0;
-			continue;
-		}
-
-		cutscene_disptext[cutscene_writeptr++] = *c;
-
-		// Ignore other control codes (color)
-		if ((UINT8)*c < 0x80)
-			--numtowrite;
-	}
-	// Reset textcount for next tic based on speed
-	// if it wasn't already set by a delay.
-	if (cutscene_textcount < 0)
-	{
-		cutscene_textcount = 0;
-		if (cutscene_textspeed > 7)
-			cutscene_textcount = cutscene_textspeed - 7;
-	}
-	return 1;
-}
-
-static void F_NewCutscene(const char *basetext)
-{
-	cutscene_basetext = basetext;
-	memset(cutscene_disptext,0,sizeof(cutscene_disptext));
-	cutscene_writeptr = cutscene_baseptr = 0;
-	cutscene_textspeed = 9;
-	cutscene_textcount = TICRATE/2;
-}
+static textwriter_t textwriter;
 
 // =============
 //  INTRO SCENE
 // =============
 #define NUMINTROSCENES 17
-INT32 intro_scenenum = 0;
-INT32 intro_curtime = 0;
+
+static INT32 intro_scenenum = 0;
+static INT32 intro_curtime = 0;
 
 const char *introtext[NUMINTROSCENES];
 
@@ -505,10 +414,10 @@ void F_StartIntro(void)
 	gameaction = ga_nothing;
 	paused = false;
 	CON_ToggleOff();
-	F_NewCutscene(introtext[0]);
+	P_ResetTextWriter(&textwriter, introtext[0]);
 
 	intro_scenenum = 0;
-	finalecount = animtimer = skullAnimCounter = stoptimer = 0;
+	finalecount = animtimer = stoptimer = 0;
 	timetonext = introscenetime[intro_scenenum];
 }
 
@@ -835,7 +744,8 @@ void F_IntroDrawer(void)
 		V_DrawRightAlignedString(BASEVIDWIDTH-4, BASEVIDHEIGHT-12, V_ALLOWLOWERCASE|(trans<<V_ALPHASHIFT), "\x86""Press ""\x82""ENTER""\x86"" to skip...");
 	}
 
-	V_DrawString(cx, cy, V_ALLOWLOWERCASE, cutscene_disptext);
+	if (textwriter.disptext)
+		V_DrawString(cx, cy, V_ALLOWLOWERCASE, textwriter.disptext);
 }
 
 //
@@ -848,7 +758,7 @@ void F_IntroTicker(void)
 
 	timetonext--;
 
-	F_WriteText();
+	P_CutsceneWriteText(&textwriter);
 
 	// check for skipping
 	if (keypressed)
@@ -937,7 +847,7 @@ void F_IntroTicker(void)
 			return;
 		}
 
-		F_NewCutscene(introtext[++intro_scenenum]);
+		P_ResetTextWriter(&textwriter, introtext[++intro_scenenum]);
 		timetonext = introscenetime[intro_scenenum];
 
 		F_WipeStartScreen();
@@ -2489,7 +2399,7 @@ void F_StartTitleScreen(void)
 
 	// IWAD dependent stuff.
 
-	animtimer = skullAnimCounter = 0;
+	animtimer = 0;
 
 	demoDelayLeft = demoDelayTime;
 	demoIdleLeft = demoIdleTime;
@@ -3834,7 +3744,7 @@ boolean F_ContinueResponder(event_t *event)
 //  CUSTOM CUTSCENES
 // ==================
 static INT32 scenenum, cutnum;
-static INT32 picxpos, picypos, picnum, pictime, picmode, numpics, pictoloop;
+static INT32 picxpos, picypos, picnum, pictime;
 static INT32 textxpos, textypos;
 static boolean cutsceneover = false;
 static boolean runningprecutscene = false, precutresetplayer = false, precutFLS = false;
@@ -3870,32 +3780,38 @@ static void F_AdvanceToNextScene(void)
 	timetonext = 0;
 	stoptimer = 0;
 	picnum = 0;
-	picxpos = cutscenes[cutnum]->scene[scenenum].xcoord[picnum];
-	picypos = cutscenes[cutnum]->scene[scenenum].ycoord[picnum];
 
-	if (cutscenes[cutnum]->scene[scenenum].musswitch[0])
-		S_ChangeMusicEx(cutscenes[cutnum]->scene[scenenum].musswitch,
-			cutscenes[cutnum]->scene[scenenum].musswitchflags,
-			cutscenes[cutnum]->scene[scenenum].musicloop,
-			cutscenes[cutnum]->scene[scenenum].musswitchposition, 0, 0);
+	scene_t *scene = &cutscenes[cutnum]->scene[scenenum];
+
+	cutscene_pic_t *pic = &scene->pics[picnum];
+
+	picxpos = pic->xcoord;
+	picypos = pic->ycoord;
+
+	if (scene->musswitch[0])
+		S_ChangeMusicEx(scene->musswitch,
+			scene->musswitchflags,
+			scene->musicloop,
+			scene->musswitchposition, 0, 0);
 
 	// Fade to the next
-	F_NewCutscene(cutscenes[cutnum]->scene[scenenum].text);
+	P_ResetTextWriter(&textwriter, scene->text);
 
 	picnum = 0;
-	picxpos = cutscenes[cutnum]->scene[scenenum].xcoord[picnum];
-	picypos = cutscenes[cutnum]->scene[scenenum].ycoord[picnum];
-	textxpos = cutscenes[cutnum]->scene[scenenum].textxpos;
-	textypos = cutscenes[cutnum]->scene[scenenum].textypos;
+	pic = &scene->pics[picnum];
+	picxpos = pic->xcoord;
+	picypos = pic->ycoord;
+	textxpos = scene->textxpos;
+	textypos = scene->textypos;
 
-	animtimer = pictime = cutscenes[cutnum]->scene[scenenum].picduration[picnum];
+	animtimer = pictime = pic->duration;
 
 	if (rendermode != render_none)
 	{
 		F_CutsceneDrawer();
 
 		F_WipeEndScreen();
-		F_RunWipe(cutscenes[cutnum]->scene[scenenum].fadeoutid, true);
+		F_RunWipe(scene->fadeoutid, true);
 	}
 }
 
@@ -3935,7 +3851,7 @@ void F_StartCustomCutscene(INT32 cutscenenum, boolean precutscene, boolean reset
 	paused = false;
 	CON_ToggleOff();
 
-	F_NewCutscene(cutscenes[cutscenenum]->scene[0].text);
+	P_ResetTextWriter(&textwriter, cutscenes[cutscenenum]->scene[0].text);
 
 	cutsceneover = false;
 	runningprecutscene = precutscene;
@@ -3944,24 +3860,29 @@ void F_StartCustomCutscene(INT32 cutscenenum, boolean precutscene, boolean reset
 
 	scenenum = picnum = 0;
 	cutnum = cutscenenum;
-	picxpos = cutscenes[cutnum]->scene[0].xcoord[0];
-	picypos = cutscenes[cutnum]->scene[0].ycoord[0];
-	textxpos = cutscenes[cutnum]->scene[0].textxpos;
-	textypos = cutscenes[cutnum]->scene[0].textypos;
 
-	pictime = cutscenes[cutnum]->scene[0].picduration[0];
+	scene_t *scene = &cutscenes[cutnum]->scene[scenenum];
+
+	cutscene_pic_t *pic = &scene->pics[picnum];
+
+	picxpos = pic->xcoord;
+	picypos = pic->ycoord;
+	textxpos = scene->textxpos;
+	textypos = scene->textypos;
+
+	pictime = pic->duration;
 
 	keypressed = false;
 	finalecount = 0;
 	timetonext = 0;
-	animtimer = cutscenes[cutnum]->scene[0].picduration[0]; // Picture duration
+	animtimer = pic->duration; // Picture duration
 	stoptimer = 0;
 
-	if (cutscenes[cutnum]->scene[0].musswitch[0])
-		S_ChangeMusicEx(cutscenes[cutnum]->scene[0].musswitch,
-			cutscenes[cutnum]->scene[0].musswitchflags,
-			cutscenes[cutnum]->scene[0].musicloop,
-			cutscenes[cutnum]->scene[scenenum].musswitchposition, 0, 0);
+	if (scene->musswitch[0])
+		S_ChangeMusicEx(scene->musswitch,
+			scene->musswitchflags,
+			scene->musicloop,
+			scene->musswitchposition, 0, 0);
 	else
 		S_StopMusic();
 	S_StopSounds();
@@ -3972,19 +3893,22 @@ void F_StartCustomCutscene(INT32 cutscenenum, boolean precutscene, boolean reset
 //
 void F_CutsceneDrawer(void)
 {
-	V_DrawFill(0,0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
+	V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
 
-	if (cutscenes[cutnum]->scene[scenenum].picname[picnum][0] != '\0')
+	cutscene_pic_t *pic = &cutscenes[cutnum]->scene[scenenum].pics[picnum];
+
+	if (pic->name[0] != '\0')
 	{
-		if (cutscenes[cutnum]->scene[scenenum].pichires[picnum])
+		if (pic->hires)
 			V_DrawSmallScaledPatch(picxpos, picypos, 0,
-				W_CachePatchName(cutscenes[cutnum]->scene[scenenum].picname[picnum], PU_PATCH_LOWPRIORITY));
+				W_CachePatchLongName(pic->name, PU_PATCH_LOWPRIORITY));
 		else
 			V_DrawScaledPatch(picxpos,picypos, 0,
-				W_CachePatchName(cutscenes[cutnum]->scene[scenenum].picname[picnum], PU_PATCH_LOWPRIORITY));
+				W_CachePatchLongName(pic->name, PU_PATCH_LOWPRIORITY));
 	}
 
-	V_DrawString(textxpos, textypos, V_ALLOWLOWERCASE, cutscene_disptext);
+	if (textwriter.disptext)
+		V_DrawString(textxpos, textypos, V_ALLOWLOWERCASE, textwriter.disptext);
 }
 
 void F_CutsceneTicker(void)
@@ -3998,7 +3922,7 @@ void F_CutsceneTicker(void)
 
 	// advance animation
 	finalecount++;
-	cutscene_boostspeed = 0;
+	textwriter.boostspeed = 0;
 
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
@@ -4008,7 +3932,7 @@ void F_CutsceneTicker(void)
 		if (players[i].cmd.buttons & BT_SPIN)
 		{
 			keypressed = false;
-			cutscene_boostspeed = 1;
+			textwriter.boostspeed = 1;
 			if (timetonext)
 				timetonext = 2;
 		}
@@ -4019,12 +3943,17 @@ void F_CutsceneTicker(void)
 		animtimer--;
 		if (animtimer <= 0)
 		{
-			if (picnum < 7 && cutscenes[cutnum]->scene[scenenum].picname[picnum+1][0] != '\0')
+			scene_t *scene = &cutscenes[cutnum]->scene[scenenum];
+
+			cutscene_pic_t *next_pic = NULL;
+
+			if (picnum < MAX_CUTSCENE_PICS-1 && scene->pics[picnum+1].name[0] != '\0')
 			{
 				picnum++;
-				picxpos = cutscenes[cutnum]->scene[scenenum].xcoord[picnum];
-				picypos = cutscenes[cutnum]->scene[scenenum].ycoord[picnum];
-				pictime = cutscenes[cutnum]->scene[scenenum].picduration[picnum];
+				next_pic = &scene->pics[picnum];
+				picxpos = next_pic->xcoord;
+				picypos = next_pic->ycoord;
+				pictime = next_pic->duration;
 				animtimer = pictime;
 			}
 			else
@@ -4037,7 +3966,7 @@ void F_CutsceneTicker(void)
 
 	if (++stoptimer > 2 && timetonext == 1)
 		F_AdvanceToNextScene();
-	else if (!timetonext && !F_WriteText())
+	else if (!timetonext && !P_CutsceneWriteText(&textwriter))
 		timetonext = 5*TICRATE + 1;
 }
 
@@ -4047,631 +3976,6 @@ boolean F_CutsceneResponder(event_t *event)
 		return F_IntroResponder(event);
 
 	return false;
-}
-
-// ==================
-//  TEXT PROMPTS
-// ==================
-
-static void F_GetPageTextGeometry(UINT8 *pagelines, boolean *rightside, INT32 *boxh, INT32 *texth, INT32 *texty, INT32 *namey, INT32 *chevrony, INT32 *textx, INT32 *textr)
-{
-	// reuse:
-	// cutnum -> promptnum
-	// scenenum -> pagenum
-	lumpnum_t iconlump = W_CheckNumForName(textprompts[cutnum]->page[scenenum].iconname);
-
-	*pagelines = textprompts[cutnum]->page[scenenum].lines ? textprompts[cutnum]->page[scenenum].lines : 4;
-	*rightside = (iconlump != LUMPERROR && textprompts[cutnum]->page[scenenum].rightside);
-
-	// Vertical calculations
-	*boxh = *pagelines*2;
-	*texth = textprompts[cutnum]->page[scenenum].name[0] ? (*pagelines-1)*2 : *pagelines*2; // name takes up first line if it exists
-	*texty = BASEVIDHEIGHT - ((*texth * 4) + (*texth/2)*4);
-	*namey = BASEVIDHEIGHT - ((*boxh * 4) + (*boxh/2)*4);
-	*chevrony = BASEVIDHEIGHT - (((1*2) * 4) + ((1*2)/2)*4); // force on last line
-
-	// Horizontal calculations
-	// Shift text to the right if we have a character icon on the left side
-	// Add 4 margin against icon
-	*textx = (iconlump != LUMPERROR && !*rightside) ? ((*boxh * 4) + (*boxh/2)*4) + 4 : 4;
-	*textr = *rightside ? BASEVIDWIDTH - (((*boxh * 4) + (*boxh/2)*4) + 4) : BASEVIDWIDTH-4;
-}
-
-static fixed_t F_GetPromptHideHudBound(void)
-{
-	UINT8 pagelines;
-	boolean rightside;
-	INT32 boxh, texth, texty, namey, chevrony;
-	INT32 textx, textr;
-
-	if (cutnum == INT32_MAX || scenenum == INT32_MAX || !textprompts[cutnum] || scenenum >= textprompts[cutnum]->numpages ||
-		!textprompts[cutnum]->page[scenenum].hidehud ||
-		(splitscreen && textprompts[cutnum]->page[scenenum].hidehud != 2)) // don't hide on splitscreen, unless hide all is forced
-		return 0;
-	else if (textprompts[cutnum]->page[scenenum].hidehud == 2) // hide all
-		return BASEVIDHEIGHT;
-
-	F_GetPageTextGeometry(&pagelines, &rightside, &boxh, &texth, &texty, &namey, &chevrony, &textx, &textr);
-
-	// calc boxheight (see V_DrawPromptBack)
-	boxh *= vid.dup;
-	boxh = (boxh * 4) + (boxh/2)*5; // 4 lines of space plus gaps between and some leeway
-
-	// return a coordinate to check
-	// if negative: don't show hud elements below this coordinate (visually)
-	// if positive: don't show hud elements above this coordinate (visually)
-	return 0 - boxh; // \todo: if prompt at top of screen (someday), make this return positive
-}
-
-boolean F_GetPromptHideHudAll(void)
-{
-	if (cutnum == INT32_MAX || scenenum == INT32_MAX || !textprompts[cutnum] || scenenum >= textprompts[cutnum]->numpages ||
-		!textprompts[cutnum]->page[scenenum].hidehud ||
-		(splitscreen && textprompts[cutnum]->page[scenenum].hidehud != 2)) // don't hide on splitscreen, unless hide all is forced
-		return false;
-	else if (textprompts[cutnum]->page[scenenum].hidehud == 2) // hide all
-		return true;
-	else
-		return false;
-}
-
-boolean F_GetPromptHideHud(fixed_t y)
-{
-	INT32 ybound;
-	boolean fromtop;
-	fixed_t ytest;
-
-	if (!promptactive)
-		return false;
-
-	ybound = F_GetPromptHideHudBound();
-	fromtop = (ybound >= 0);
-	ytest = (fromtop ? ybound : BASEVIDHEIGHT + ybound);
-
-	return (fromtop ? y < ytest : y >= ytest); // true means hide
-}
-
-static void F_PreparePageText(char *pagetext)
-{
-	UINT8 pagelines;
-	boolean rightside;
-	INT32 boxh, texth, texty, namey, chevrony;
-	INT32 textx, textr;
-
-	F_GetPageTextGeometry(&pagelines, &rightside, &boxh, &texth, &texty, &namey, &chevrony, &textx, &textr);
-
-	if (promptpagetext)
-		Z_Free(promptpagetext);
-	promptpagetext = (pagetext && pagetext[0]) ? V_WordWrap(textx, textr, 0, pagetext) : Z_StrDup("");
-
-	F_NewCutscene(promptpagetext);
-	cutscene_textspeed = textprompts[cutnum]->page[scenenum].textspeed ? textprompts[cutnum]->page[scenenum].textspeed : TICRATE/5;
-	cutscene_textcount = 0; // no delay in beginning
-	cutscene_boostspeed = 0; // don't print 8 characters to start
-
-	// \todo update control hot strings on re-config
-	// and somehow don't reset cutscene text counters
-}
-
-static void F_AdvanceToNextPage(void)
-{
-	INT32 nextprompt = textprompts[cutnum]->page[scenenum].nextprompt ? textprompts[cutnum]->page[scenenum].nextprompt - 1 : INT32_MAX,
-		nextpage = textprompts[cutnum]->page[scenenum].nextpage ? textprompts[cutnum]->page[scenenum].nextpage - 1 : INT32_MAX,
-		oldcutnum = cutnum;
-
-	if (textprompts[cutnum]->page[scenenum].nexttag[0])
-		F_GetPromptPageByNamedTag(textprompts[cutnum]->page[scenenum].nexttag, &nextprompt, &nextpage);
-
-	// determine next prompt
-	if (nextprompt != INT32_MAX)
-	{
-		if (nextprompt <= MAX_PROMPTS && textprompts[nextprompt])
-			cutnum = nextprompt;
-		else
-			cutnum = INT32_MAX;
-	}
-
-	// determine next page
-	if (nextpage != INT32_MAX)
-	{
-		if (cutnum != INT32_MAX)
-		{
-			scenenum = nextpage;
-			if (scenenum >= MAX_PAGES || scenenum > textprompts[cutnum]->numpages-1)
-				scenenum = INT32_MAX;
-		}
-	}
-	else
-	{
-		if (cutnum != oldcutnum)
-			scenenum = 0;
-		else if (scenenum + 1 < MAX_PAGES && scenenum < textprompts[cutnum]->numpages-1)
-			scenenum++;
-		else
-			scenenum = INT32_MAX;
-	}
-
-	// close the prompt if either num is invalid
-	if (cutnum == INT32_MAX || scenenum == INT32_MAX)
-		F_EndTextPrompt(false, false);
-	else
-	{
-		// on page mode, number of tics before allowing boost
-		// on timer mode, number of tics until page advances
-		timetonext = textprompts[cutnum]->page[scenenum].timetonext ? textprompts[cutnum]->page[scenenum].timetonext : TICRATE/10;
-		F_PreparePageText(textprompts[cutnum]->page[scenenum].text);
-
-		// gfx
-		picnum = textprompts[cutnum]->page[scenenum].pictostart;
-		numpics = textprompts[cutnum]->page[scenenum].numpics;
-		picmode = textprompts[cutnum]->page[scenenum].picmode;
-		pictoloop = textprompts[cutnum]->page[scenenum].pictoloop > 0 ? textprompts[cutnum]->page[scenenum].pictoloop - 1 : 0;
-		picxpos = textprompts[cutnum]->page[scenenum].xcoord[picnum];
-		picypos = textprompts[cutnum]->page[scenenum].ycoord[picnum];
-		animtimer = pictime = textprompts[cutnum]->page[scenenum].picduration[picnum];
-
-		// music change
-		if (textprompts[cutnum]->page[scenenum].musswitch[0])
-			S_ChangeMusic(textprompts[cutnum]->page[scenenum].musswitch,
-				textprompts[cutnum]->page[scenenum].musswitchflags,
-				textprompts[cutnum]->page[scenenum].musicloop);
-	}
-}
-
-void F_EndTextPrompt(boolean forceexec, boolean noexec)
-{
-	boolean promptwasactive = promptactive;
-	promptactive = false;
-	callpromptnum = callpagenum = callplayer = INT32_MAX;
-
-	if (promptwasactive)
-	{
-		if (promptmo && promptmo->player && promptblockcontrols)
-			promptmo->reactiontime = TICRATE/4; // prevent jumping right away // \todo account freeze realtime for this)
-		// \todo reset frozen realtime?
-	}
-
-	// \todo net safety, maybe loop all player thinkers?
-	if ((promptwasactive || forceexec) && !noexec && promptpostexectag)
-	{
-		if (tmthing) // edge case where starting an invalid prompt immediately on level load will make P_MapStart fail
-			P_LinedefExecute(promptpostexectag, promptmo, NULL);
-		else
-		{
-			P_MapStart();
-			P_LinedefExecute(promptpostexectag, promptmo, NULL);
-			P_MapEnd();
-		}
-	}
-}
-
-void F_StartTextPrompt(INT32 promptnum, INT32 pagenum, mobj_t *mo, UINT16 postexectag, boolean blockcontrols, boolean freezerealtime)
-{
-	INT32 i;
-
-	// if splitscreen and we already have a prompt active, ignore.
-	// \todo Proper per-player splitscreen support (individual prompts)
-	if (promptactive && splitscreen && promptnum == callpromptnum && pagenum == callpagenum)
-		return;
-
-	// \todo proper netgame support
-	if (netgame)
-	{
-		F_EndTextPrompt(true, false); // run the post-effects immediately
-		return;
-	}
-
-	// We share vars, so no starting text prompts over cutscenes or title screens!
-	keypressed = false;
-	finalecount = 0;
-	timetonext = 0;
-	animtimer = 0;
-	stoptimer = 0;
-	skullAnimCounter = 0;
-
-	// Set up state
-	promptmo = mo;
-	promptpostexectag = postexectag;
-	promptblockcontrols = blockcontrols;
-	(void)freezerealtime; // \todo freeze player->realtime, maybe this needs to cycle through player thinkers
-
-	// Initialize current prompt and scene
-	callpromptnum = promptnum;
-	callpagenum = pagenum;
-	cutnum = (promptnum < MAX_PROMPTS && textprompts[promptnum]) ? promptnum : INT32_MAX;
-	scenenum = (cutnum != INT32_MAX && pagenum < MAX_PAGES && pagenum <= textprompts[cutnum]->numpages-1) ? pagenum : INT32_MAX;
-	promptactive = (cutnum != INT32_MAX && scenenum != INT32_MAX);
-
-	if (promptactive)
-	{
-		// on page mode, number of tics before allowing boost
-		// on timer mode, number of tics until page advances
-		timetonext = textprompts[cutnum]->page[scenenum].timetonext ? textprompts[cutnum]->page[scenenum].timetonext : TICRATE/10;
-		F_PreparePageText(textprompts[cutnum]->page[scenenum].text);
-
-		// gfx
-		picnum = textprompts[cutnum]->page[scenenum].pictostart;
-		numpics = textprompts[cutnum]->page[scenenum].numpics;
-		picmode = textprompts[cutnum]->page[scenenum].picmode;
-		pictoloop = textprompts[cutnum]->page[scenenum].pictoloop > 0 ? textprompts[cutnum]->page[scenenum].pictoloop - 1 : 0;
-		picxpos = textprompts[cutnum]->page[scenenum].xcoord[picnum];
-		picypos = textprompts[cutnum]->page[scenenum].ycoord[picnum];
-		animtimer = pictime = textprompts[cutnum]->page[scenenum].picduration[picnum];
-
-		// music change
-		if (textprompts[cutnum]->page[scenenum].musswitch[0])
-			S_ChangeMusic(textprompts[cutnum]->page[scenenum].musswitch,
-				textprompts[cutnum]->page[scenenum].musswitchflags,
-				textprompts[cutnum]->page[scenenum].musicloop);
-
-		// get the calling player
-		if (promptblockcontrols && mo && mo->player)
-		{
-			for (i = 0; i < MAXPLAYERS; i++)
-			{
-				if (players[i].mo == mo)
-				{
-					callplayer = i;
-					break;
-				}
-			}
-		}
-	}
-	else
-		F_EndTextPrompt(true, false); // run the post-effects immediately
-}
-
-static boolean F_GetTextPromptTutorialTag(char *tag, INT32 length)
-{
-	INT32 gcs = gcs_custom;
-	boolean suffixed = true;
-
-	if (!tag || !tag[0] || !tutorialmode)
-		return false;
-
-	if (!strncmp(tag, "TAM", 3)) // Movement
-		gcs = G_GetControlScheme(gamecontrol, gcl_movement, num_gcl_movement);
-	else if (!strncmp(tag, "TAC", 3)) // Camera
-	{
-		// Check for gcl_movement so we can differentiate between FPS and Platform schemes.
-		gcs = G_GetControlScheme(gamecontrol, gcl_movement, num_gcl_movement);
-		if (gcs == gcs_custom) // try again, maybe we'll get a match
-			gcs = G_GetControlScheme(gamecontrol, gcl_camera, num_gcl_camera);
-		if (gcs == gcs_fps && !cv_usemouse.value)
-			gcs = gcs_platform; // Platform (arrow) scheme is stand-in for no mouse
-	}
-	else if (!strncmp(tag, "TAD", 3)) // Movement and Camera
-		gcs = G_GetControlScheme(gamecontrol, gcl_movement_camera, num_gcl_movement_camera);
-	else if (!strncmp(tag, "TAJ", 3)) // Jump
-		gcs = G_GetControlScheme(gamecontrol, gcl_jump, num_gcl_jump);
-	else if (!strncmp(tag, "TAS", 3)) // Spin
-		gcs = G_GetControlScheme(gamecontrol, gcl_spin, num_gcl_spin);
-	else if (!strncmp(tag, "TAA", 3)) // Char ability
-		gcs = G_GetControlScheme(gamecontrol, gcl_jump, num_gcl_jump);
-	else if (!strncmp(tag, "TAW", 3)) // Shield ability
-		gcs = G_GetControlScheme(gamecontrol, gcl_jump_spin, num_gcl_jump_spin);
-	else
-		gcs = G_GetControlScheme(gamecontrol, gcl_tutorial_used, num_gcl_tutorial_used);
-
-	switch (gcs)
-	{
-		case gcs_fps:
-			// strncat(tag, "FPS", length);
-			suffixed = false;
-			break;
-
-		case gcs_platform:
-			strncat(tag, "PLATFORM", length);
-			break;
-
-		default:
-			strncat(tag, "CUSTOM", length);
-			break;
-	}
-
-	return suffixed;
-}
-
-void F_GetPromptPageByNamedTag(const char *tag, INT32 *promptnum, INT32 *pagenum)
-{
-	INT32 nosuffixpromptnum = INT32_MAX, nosuffixpagenum = INT32_MAX;
-	INT32 tutorialpromptnum = (tutorialmode) ? TUTORIAL_PROMPT-1 : 0;
-	boolean suffixed = false, found = false;
-	char suffixedtag[33];
-
-	*promptnum = *pagenum = INT32_MAX;
-
-	if (!tag || !tag[0])
-		return;
-
-	strncpy(suffixedtag, tag, 33);
-	suffixedtag[32] = 0;
-
-	if (tutorialmode)
-		suffixed = F_GetTextPromptTutorialTag(suffixedtag, 33);
-
-	for (*promptnum = 0 + tutorialpromptnum; *promptnum < MAX_PROMPTS; (*promptnum)++)
-	{
-		if (!textprompts[*promptnum])
-			continue;
-
-		for (*pagenum = 0; *pagenum < textprompts[*promptnum]->numpages && *pagenum < MAX_PAGES; (*pagenum)++)
-		{
-			if (suffixed && fastcmp(suffixedtag, textprompts[*promptnum]->page[*pagenum].tag))
-			{
-				// this goes first because fastcmp ends early if first string is shorter
-				found = true;
-				break;
-			}
-			else if (nosuffixpromptnum == INT32_MAX && nosuffixpagenum == INT32_MAX && fastcmp(tag, textprompts[*promptnum]->page[*pagenum].tag))
-			{
-				if (suffixed)
-				{
-					nosuffixpromptnum = *promptnum;
-					nosuffixpagenum = *pagenum;
-					// continue searching for the suffixed tag
-				}
-				else
-				{
-					found = true;
-					break;
-				}
-			}
-		}
-
-		if (found)
-			break;
-	}
-
-	if (suffixed && !found && nosuffixpromptnum != INT32_MAX && nosuffixpagenum != INT32_MAX)
-	{
-		found = true;
-		*promptnum = nosuffixpromptnum;
-		*pagenum = nosuffixpagenum;
-	}
-
-	if (!found)
-		CONS_Debug(DBG_GAMELOGIC, "Text prompt: Can't find a page with named tag %s or suffixed tag %s\n", tag, suffixedtag);
-}
-
-void F_TextPromptDrawer(void)
-{
-	// reuse:
-	// cutnum -> promptnum
-	// scenenum -> pagenum
-	lumpnum_t iconlump;
-	UINT8 pagelines;
-	boolean rightside;
-	INT32 boxh, texth, texty, namey, chevrony;
-	INT32 textx, textr;
-
-	// Data
-	patch_t *patch;
-
-	if (!promptactive)
-		return;
-
-	iconlump = W_CheckNumForName(textprompts[cutnum]->page[scenenum].iconname);
-	F_GetPageTextGeometry(&pagelines, &rightside, &boxh, &texth, &texty, &namey, &chevrony, &textx, &textr);
-
-	// Draw gfx first
-	if (picnum >= 0 && picnum < numpics && textprompts[cutnum]->page[scenenum].picname[picnum][0] != '\0')
-	{
-		if (textprompts[cutnum]->page[scenenum].pichires[picnum])
-			V_DrawSmallScaledPatch(picxpos, picypos, 0,
-				W_CachePatchName(textprompts[cutnum]->page[scenenum].picname[picnum], PU_PATCH_LOWPRIORITY));
-		else
-			V_DrawScaledPatch(picxpos,picypos, 0,
-				W_CachePatchName(textprompts[cutnum]->page[scenenum].picname[picnum], PU_PATCH_LOWPRIORITY));
-	}
-
-	// Draw background
-	V_DrawPromptBack(boxh, textprompts[cutnum]->page[scenenum].backcolor);
-
-	// Draw narrator icon
-	if (iconlump != LUMPERROR)
-	{
-		INT32 iconx, icony, scale, scaledsize;
-		patch = W_CachePatchName(textprompts[cutnum]->page[scenenum].iconname, PU_PATCH_LOWPRIORITY);
-
-		// scale and center
-		if (patch->width > patch->height)
-		{
-			scale = FixedDiv(((boxh * 4) + (boxh/2)*4) - 4, patch->width);
-			scaledsize = FixedMul(patch->height, scale);
-			iconx = (rightside ? BASEVIDWIDTH - (((boxh * 4) + (boxh/2)*4)) : 4) << FRACBITS;
-			icony = ((namey-4) << FRACBITS) + FixedDiv(BASEVIDHEIGHT - namey + 4 - scaledsize, 2); // account for 4 margin
-		}
-		else if (patch->height > patch->width)
-		{
-			scale = FixedDiv(((boxh * 4) + (boxh/2)*4) - 4, patch->height);
-			scaledsize = FixedMul(patch->width, scale);
-			iconx = (rightside ? BASEVIDWIDTH - (((boxh * 4) + (boxh/2)*4)) : 4) << FRACBITS;
-			icony = namey << FRACBITS;
-			iconx += FixedDiv(FixedMul(patch->height, scale) - scaledsize, 2);
-		}
-		else
-		{
-			scale = FixedDiv(((boxh * 4) + (boxh/2)*4) - 4, patch->width);
-			iconx = (rightside ? BASEVIDWIDTH - (((boxh * 4) + (boxh/2)*4)) : 4) << FRACBITS;
-			icony = namey << FRACBITS;
-		}
-
-		if (textprompts[cutnum]->page[scenenum].iconflip)
-			iconx += FixedMul(patch->width, scale) << FRACBITS;
-
-		V_DrawFixedPatch(iconx, icony, scale, (V_SNAPTOBOTTOM|(textprompts[cutnum]->page[scenenum].iconflip ? V_FLIP : 0)), patch, NULL);
-		W_UnlockCachedPatch(patch);
-	}
-
-	// Draw text
-	V_DrawString(textx, texty, (V_SNAPTOBOTTOM|V_ALLOWLOWERCASE), cutscene_disptext);
-
-	// Draw name
-	// Don't use V_YELLOWMAP here so that the name color can be changed with control codes
-	if (textprompts[cutnum]->page[scenenum].name[0])
-		V_DrawString(textx, namey, (V_SNAPTOBOTTOM|V_ALLOWLOWERCASE), textprompts[cutnum]->page[scenenum].name);
-
-	// Draw chevron
-	if (promptblockcontrols && !timetonext)
-		V_DrawString(textr-8, chevrony + (skullAnimCounter/5), (V_SNAPTOBOTTOM|V_YELLOWMAP), "\x1B"); // down arrow
-}
-
-#define nocontrolallowed(j) {\
-		players[j].powers[pw_nocontrol] = 1;\
-		if (players[j].mo)\
-		{\
-			if (players[j].mo->state == states+S_PLAY_STND && players[j].mo->tics != -1)\
-				players[j].mo->tics++;\
-			else if (players[j].mo->state == states+S_PLAY_WAIT)\
-				P_SetMobjState(players[j].mo, S_PLAY_STND);\
-		}\
-	}
-
-void F_TextPromptTicker(void)
-{
-	INT32 i;
-
-	if (!promptactive || paused || P_AutoPause())
-		return;
-
-	// advance animation
-	finalecount++;
-	cutscene_boostspeed = 0;
-
-	// for the chevron
-	if (--skullAnimCounter <= 0)
-		skullAnimCounter = 8;
-
-	// button handling
-	if (textprompts[cutnum]->page[scenenum].timetonext)
-	{
-		if (promptblockcontrols) // same procedure as below, just without the button handling
-		{
-			for (i = 0; i < MAXPLAYERS; i++)
-			{
-				if (netgame && i != serverplayer && !IsPlayerAdmin(i))
-					continue;
-				else if (splitscreen) {
-					// Both players' controls are locked,
-					// But only consoleplayer can advance the prompt.
-					// \todo Proper per-player splitscreen support (individual prompts)
-					if (i == consoleplayer || i == secondarydisplayplayer)
-						nocontrolallowed(i)
-				}
-				else if (i == consoleplayer)
-					nocontrolallowed(i)
-
-				if (!splitscreen)
-					break;
-			}
-		}
-
-		if (timetonext >= 1)
-			timetonext--;
-
-		if (!timetonext)
-			F_AdvanceToNextPage();
-
-		F_WriteText();
-	}
-	else
-	{
-		if (promptblockcontrols)
-		{
-			for (i = 0; i < MAXPLAYERS; i++)
-			{
-				if (netgame && i != serverplayer && !IsPlayerAdmin(i))
-					continue;
-				else if (splitscreen) {
-					// Both players' controls are locked,
-					// But only the triggering player can advance the prompt.
-					if (i == consoleplayer || i == secondarydisplayplayer)
-					{
-						players[i].powers[pw_nocontrol] = 1;
-
-						if (callplayer == consoleplayer || callplayer == secondarydisplayplayer)
-						{
-							if (i != callplayer)
-								continue;
-						}
-						else if (i != consoleplayer)
-							continue;
-					}
-					else
-						continue;
-				}
-				else if (i == consoleplayer)
-					nocontrolallowed(i)
-				else
-					continue;
-
-				if ((players[i].cmd.buttons & BT_SPIN) || (players[i].cmd.buttons & BT_JUMP))
-				{
-					if (timetonext > 1)
-						timetonext--;
-					else if (cutscene_baseptr) // don't set boost if we just reset the string
-						cutscene_boostspeed = 1; // only after a slight delay
-
-					if (keypressed)
-					{
-						if (!splitscreen)
-							break;
-						else
-							continue;
-					}
-
-					if (!timetonext) // is 0 when finished generating text
-					{
-						F_AdvanceToNextPage();
-						if (promptactive)
-							S_StartSound(NULL, sfx_menu1);
-					}
-					keypressed = true; // prevent repeat events
-				}
-				else if (!(players[i].cmd.buttons & BT_SPIN) && !(players[i].cmd.buttons & BT_JUMP))
-					keypressed = false;
-
-				if (!splitscreen)
-					break;
-			}
-		}
-
-		// generate letter-by-letter text
-		if (scenenum >= MAX_PAGES ||
-			!textprompts[cutnum]->page[scenenum].text ||
-			!textprompts[cutnum]->page[scenenum].text[0] ||
-			!F_WriteText())
-			timetonext = !promptblockcontrols; // never show the chevron if we can't toggle pages
-	}
-
-	// gfx
-	if (picnum >= 0 && picnum < numpics)
-	{
-		if (animtimer <= 0)
-		{
-			boolean persistanimtimer = false;
-
-			if (picnum < numpics-1 && textprompts[cutnum]->page[scenenum].picname[picnum+1][0] != '\0')
-				picnum++;
-			else if (picmode == PROMPT_PIC_LOOP)
-				picnum = pictoloop;
-			else if (picmode == PROMPT_PIC_DESTROY)
-				picnum = -1;
-			else // if (picmode == PROMPT_PIC_PERSIST)
-				persistanimtimer = true;
-
-			if (!persistanimtimer && picnum >= 0)
-			{
-				picxpos = textprompts[cutnum]->page[scenenum].xcoord[picnum];
-				picypos = textprompts[cutnum]->page[scenenum].ycoord[picnum];
-				pictime = textprompts[cutnum]->page[scenenum].picduration[picnum];
-				animtimer = pictime;
-			}
-		}
-		else
-			animtimer--;
-	}
 }
 
 // ================

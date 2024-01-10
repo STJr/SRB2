@@ -21,6 +21,7 @@
 #include "p_local.h"
 #include "p_setup.h"
 #include "p_saveg.h"
+#include "p_dialog.h"
 #include "r_data.h"
 #include "r_fps.h"
 #include "r_textures.h"
@@ -49,6 +50,7 @@ UINT8 *save_p;
 #define ARCHIVEBLOCK_SPECIALS   0x7F228378
 #define ARCHIVEBLOCK_EMBLEMS    0x7F4A5445
 #define ARCHIVEBLOCK_SECPORTALS 0x7FBE34C9
+#define ARCHIVEBLOCK_TEXTPROMPT 0x7F5B94D3
 
 // Note: This cannot be bigger
 // than an UINT16
@@ -61,6 +63,9 @@ typedef enum
 	FOLLOW     = 0x40,
 	DRONE      = 0x80,
 } player_saveflags;
+
+static void P_NetArchiveDialog(dialog_t *dialog);
+static void P_NetUnArchiveDialog(dialog_t *dialog);
 
 static inline void P_ArchivePlayer(void)
 {
@@ -128,7 +133,6 @@ static void P_NetArchivePlayers(void)
 {
 	INT32 i, j;
 	UINT16 flags;
-//	size_t q;
 
 	WRITEUINT32(save_p, ARCHIVEBLOCK_PLAYERS);
 
@@ -349,6 +353,15 @@ static void P_NetArchivePlayers(void)
 		WRITEFIXED(save_p, players[i].jumpfactor);
 		WRITEFIXED(save_p, players[i].height);
 		WRITEFIXED(save_p, players[i].spinheight);
+
+		if (players[i].promptactive && players[i].textprompt)
+		{
+			WRITEUINT8(save_p, players[i].promptactive);
+			if (!globaltextprompt)
+				P_NetArchiveDialog(players[i].textprompt);
+		}
+		else
+			WRITEUINT8(save_p, 0);
 	}
 }
 
@@ -562,6 +575,16 @@ static void P_NetUnArchivePlayers(void)
 		players[i].jumpfactor = READFIXED(save_p);
 		players[i].height = READFIXED(save_p);
 		players[i].spinheight = READFIXED(save_p);
+
+		players[i].promptactive = (boolean)READUINT8(save_p);
+
+		if (globaltextprompt)
+			players[i].textprompt = globaltextprompt;
+		else
+		{
+			players[i].textprompt = Z_Calloc(sizeof(dialog_t), PU_LEVEL, NULL);
+			P_NetUnArchiveDialog(players[i].textprompt);
+		}
 
 		players[i].viewheight = 41*players[i].height/48; // scale cannot be factored in at this point
 	}
@@ -2480,7 +2503,10 @@ static void SaveFadeThinker(const thinker_t *th, const UINT8 type)
 {
 	const fade_t *ht = (const void *)th;
 	WRITEUINT8(save_p, type);
-	WRITEUINT32(save_p, CheckAddNetColormapToList(ht->dest_exc));
+	if (ht->dest_exc)
+		WRITEUINT32(save_p, CheckAddNetColormapToList(ht->dest_exc));
+	else
+		WRITEUINT32(save_p, 0xFFFFFFFF);
 	WRITEUINT32(save_p, ht->sectornum);
 	WRITEUINT32(save_p, ht->ffloornum);
 	WRITEINT32(save_p, ht->alpha);
@@ -3654,10 +3680,15 @@ static inline thinker_t* LoadDisappearThinker(actionf_p1 thinker)
 
 static inline thinker_t* LoadFadeThinker(actionf_p1 thinker)
 {
+	UINT32 dest_exc;
 	sector_t *ss;
 	fade_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
 	ht->thinker.function.acp1 = thinker;
-	ht->dest_exc = GetNetColormapFromList(READUINT32(save_p));
+	dest_exc = READUINT32(save_p);
+	if (dest_exc != 0xFFFFFFFF)
+		ht->dest_exc = GetNetColormapFromList(dest_exc);
+	else
+		ht->dest_exc = NULL;
 	ht->sectornum = READUINT32(save_p);
 	ht->ffloornum = READUINT32(save_p);
 	ht->alpha = READINT32(save_p);
@@ -4898,6 +4929,99 @@ static inline void P_NetUnArchiveEmblems(void)
 	}
 }
 
+static void P_NetArchiveDialog(dialog_t *dialog)
+{
+	if (dialog == NULL)
+		I_Error("P_NetArchiveDialog: dialog == NULL");
+
+	WRITEINT32(save_p, dialog->promptnum);
+	WRITEINT32(save_p, dialog->pagenum);
+	WRITEINT32(save_p, dialog->timetonext);
+	WRITEINT16(save_p, dialog->postexectag);
+	WRITEUINT8(save_p, dialog->blockcontrols);
+	WRITEUINT8(save_p, (UINT8)(dialog->callplayer-players));
+	WRITEINT32(save_p, dialog->picnum);
+	WRITEINT32(save_p, dialog->pictoloop);
+	WRITEINT32(save_p, dialog->pictimer);
+	WRITEINT32(save_p, dialog->writer.writeptr);
+	WRITEINT32(save_p, dialog->writer.textcount);
+	WRITEINT32(save_p, dialog->writer.textspeed);
+	WRITEINT32(save_p, dialog->writer.boostspeed);
+}
+
+static void P_NetUnArchiveDialog(dialog_t *dialog)
+{
+	UINT8 playernum;
+
+	INT32 numchars, textcount, textspeed, boostspeed;
+
+	if (dialog == NULL)
+		I_Error("P_NetUnArchiveDialog: dialog == NULL");
+
+	dialog->promptnum = READINT32(save_p);
+	dialog->pagenum = READINT32(save_p);
+	dialog->timetonext = READINT32(save_p);
+	dialog->postexectag = READINT16(save_p);
+	dialog->blockcontrols = READUINT8(save_p);
+	playernum = READUINT8(save_p);
+	dialog->picnum = READINT32(save_p);
+	dialog->pictoloop = READINT32(save_p);
+	dialog->pictimer = READINT32(save_p);
+	numchars = READINT32(save_p);
+	textcount = READINT32(save_p);
+	textspeed = READINT32(save_p);
+	boostspeed = READINT32(save_p);
+
+	if (dialog->promptnum < 0 || dialog->promptnum >= MAX_PROMPTS || !textprompts[dialog->promptnum])
+		I_Error("Invalid text prompt %d from server", dialog->promptnum);
+	else if (dialog->pagenum < 0 || dialog->pagenum >= MAX_PAGES || dialog->pagenum >= textprompts[dialog->promptnum]->numpages)
+		I_Error("Invalid text prompt page %d from server", dialog->pagenum);
+
+	if (playernum >= MAXPLAYERS)
+		I_Error("Invalid player number %u from server", playernum);
+
+	dialog->prompt = textprompts[dialog->promptnum];
+	dialog->page = &dialog->prompt->page[dialog->pagenum];
+	dialog->callplayer = &players[playernum];
+
+	P_DialogSetText(dialog, dialog->page->text, numchars);
+
+	dialog->writer.textcount = textcount;
+	dialog->writer.textspeed = textspeed;
+	dialog->writer.boostspeed = boostspeed;
+}
+
+static void P_NetArchiveGlobalTextPrompt(void)
+{
+	WRITEUINT32(save_p, ARCHIVEBLOCK_TEXTPROMPT);
+
+	if (!globaltextprompt)
+	{
+		WRITEUINT8(save_p, 0);
+		return;
+	}
+
+	WRITEUINT8(save_p, 0xFF);
+
+	P_NetArchiveDialog(globaltextprompt);
+}
+
+static void P_NetUnArchiveGlobalTextPrompt(void)
+{
+	if (READUINT32(save_p) != ARCHIVEBLOCK_TEXTPROMPT)
+		I_Error("Bad $$$.sav at archive block GlobalTextPrompt");
+
+	P_FreeTextPrompt(globaltextprompt);
+
+	globaltextprompt = NULL;
+
+	if (READUINT8(save_p) == 0xFF)
+	{
+		globaltextprompt = Z_Calloc(sizeof(dialog_t), PU_LEVEL, NULL);
+		P_NetUnArchiveDialog(globaltextprompt);
+	}
+}
+
 static void P_NetArchiveSectorPortals(void)
 {
 	WRITEUINT32(save_p, ARCHIVEBLOCK_SECPORTALS);
@@ -5042,6 +5166,7 @@ void P_SaveNetGame(boolean resending)
 	CV_SaveNetVars(&save_p);
 	P_NetArchiveMisc(resending);
 	P_NetArchiveEmblems();
+	P_NetArchiveGlobalTextPrompt();
 
 	// Assign the mobjnumber for pointer tracking
 	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
@@ -5096,6 +5221,7 @@ boolean P_LoadNetGame(boolean reloading)
 	if (!P_NetUnArchiveMisc(reloading))
 		return false;
 	P_NetUnArchiveEmblems();
+	P_NetUnArchiveGlobalTextPrompt();
 	P_NetUnArchivePlayers();
 	if (gamestate == GS_LEVEL)
 	{

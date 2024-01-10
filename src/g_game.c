@@ -158,6 +158,8 @@ boolean exitfadestarted = false;
 cutscene_t *cutscenes[128];
 textprompt_t *textprompts[MAX_PROMPTS];
 
+struct dialog_s *globaltextprompt = NULL;
+
 INT16 nextmapoverride;
 UINT8 skipstats;
 INT16 nextgametype = -1;
@@ -2422,7 +2424,6 @@ void G_Ticker(boolean run)
 				F_TitleDemoTicker();
 			P_Ticker(run); // tic the game
 			ST_Ticker(run);
-			F_TextPromptTicker();
 			AM_Ticker();
 			HU_Ticker();
 

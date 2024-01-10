@@ -14,6 +14,7 @@
 #include "doomstat.h"
 #include "g_game.h"
 #include "p_local.h"
+#include "p_dialog.h"
 #include "z_zone.h"
 #include "s_sound.h"
 #include "st_stuff.h"
@@ -788,7 +789,10 @@ void P_Ticker(boolean run)
 		// Run any "after all the other thinkers" stuff
 		for (i = 0; i < MAXPLAYERS; i++)
 			if (playeringame[i] && players[i].mo && !P_MobjWasRemoved(players[i].mo))
+			{
 				P_PlayerAfterThink(&players[i]);
+				P_RunTextPrompt(&players[i]);
+			}
 
 		PS_START_TIMING(ps_lua_thinkframe_time);
 		LUA_HookThinkFrame();

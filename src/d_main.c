@@ -48,6 +48,7 @@
 #include "m_misc.h"
 #include "p_setup.h"
 #include "p_saveg.h"
+#include "p_dialog.h"
 #include "r_main.h"
 #include "r_local.h"
 #include "s_sound.h"

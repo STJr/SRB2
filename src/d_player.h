@@ -609,6 +609,9 @@ typedef struct player_s
 	botmem_t botmem;
 	boolean blocked;
 
+	boolean promptactive;
+	struct dialog_s *textprompt;
+
 	tic_t jointime; // Timer when player joins game to change skin/color
 	tic_t quittime; // Time elapsed since user disconnected, zero if connected
 	tic_t lastinputtime; // the last tic the player has made any input

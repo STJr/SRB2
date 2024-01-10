@@ -31,6 +31,7 @@
 #include "m_misc.h" // moviemode
 #include "m_anigif.h" // cv_gif_downscale
 #include "p_setup.h" // NiGHTS grading
+#include "p_dialog.h"
 
 //random index
 #include "m_random.h"

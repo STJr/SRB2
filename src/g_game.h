@@ -45,7 +45,7 @@ extern INT16 rw_maximums[NUM_WEAPONS];
 extern INT32 pausedelay;
 extern boolean pausebreakkey;
 
-extern boolean promptactive;
+extern struct dialog_s *globaltextprompt;
 
 extern consvar_t cv_pauseifunfocused;
 

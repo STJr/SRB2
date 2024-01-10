@@ -164,13 +164,20 @@ extern boolean exitfadestarted;
 
 typedef struct
 {
+	char name[64];
+	UINT8 hires;
+	UINT16 xcoord;
+	UINT16 ycoord;
+	UINT16 duration;
+} cutscene_pic_t;
+
+#define MAX_CUTSCENE_PICS 8
+
+typedef struct
+{
 	UINT8 numpics;
-	char picname[8][8];
-	UINT8 pichires[8];
 	char *text;
-	UINT16 xcoord[8];
-	UINT16 ycoord[8];
-	UINT16 picduration[8];
+	cutscene_pic_t pics[MAX_CUTSCENE_PICS];
 	UINT8 musicloop;
 	UINT16 textxpos;
 	UINT16 textypos;
@@ -203,17 +210,14 @@ extern cutscene_t *cutscenes[128];
 #define PROMPT_PIC_LOOP 1
 #define PROMPT_PIC_DESTROY 2
 #define MAX_PROMPT_PICS 8
+
 typedef struct
 {
 	UINT8 numpics;
 	UINT8 picmode; // sequence mode after displaying last pic, 0 = persist, 1 = loop, 2 = destroy
 	UINT8 pictoloop; // if picmode == loop, which pic to loop to?
 	UINT8 pictostart; // initial pic number to show
-	char picname[MAX_PROMPT_PICS][8];
-	UINT8 pichires[MAX_PROMPT_PICS];
-	UINT16 xcoord[MAX_PROMPT_PICS]; // gfx
-	UINT16 ycoord[MAX_PROMPT_PICS]; // gfx
-	UINT16 picduration[MAX_PROMPT_PICS];
+	cutscene_pic_t pics[MAX_PROMPT_PICS];
 
 	char   musswitch[7];
 	UINT16 musswitchflags;
@@ -221,7 +225,7 @@ typedef struct
 
 	char tag[33]; // page tag
 	char name[34]; // narrator name, extra char for color
-	char iconname[8]; // narrator icon lump
+	char iconname[9]; // narrator icon lump
 	boolean rightside; // narrator side, false = left, true = right
 	boolean iconflip; // narrator flip icon horizontally
 	UINT8 hidehud; // hide hud, 0 = show all, 1 = hide depending on prompt position (top/bottom), 2 = hide all

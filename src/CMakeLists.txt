@@ -38,6 +38,7 @@ add_executable(SRB2SDL2 MACOSX_BUNDLE WIN32
 	m_queue.c
 	info.c
 	p_ceilng.c
+	p_dialog.c
 	p_enemy.c
 	p_floor.c
 	p_inter.c

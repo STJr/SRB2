@@ -1887,6 +1887,34 @@ void readlevelheader(MYFILE *f, INT32 num)
 	Z_Free(s);
 }
 
+static boolean ParseCutscenePic(cutscene_pic_t *pic, UINT16 usi, const char *word, char *word2)
+{
+	if (fastcmp(word, "NAME"))
+	{
+		strlcpy(pic->name, word2, sizeof(pic->name));
+	}
+	else if (fastcmp(word, "HIRES"))
+	{
+		pic->hires = (UINT8)(usi || word2[0] == 'T' || word2[0] == 'Y');
+	}
+	else if (fastcmp(word, "DURATION"))
+	{
+		pic->duration = usi;
+	}
+	else if (fastcmp(word, "XCOORD"))
+	{
+		pic->xcoord = usi;
+	}
+	else if (fastcmp(word, "YCOORD"))
+	{
+		pic->ycoord = usi;
+	}
+	else
+		return false;
+
+	return true;
+}
+
 static void readcutscenescene(MYFILE *f, INT32 num, INT32 scenenum)
 {
 	char *s = Z_Calloc(MAXLINELEN, PU_STATIC, NULL);
@@ -1969,7 +1997,6 @@ static void readcutscenescene(MYFILE *f, INT32 num, INT32 scenenum)
 			i = atoi(word2);
 			usi = (UINT16)i;
 
-
 			if (fastcmp(word, "NUMBEROFPICS"))
 			{
 				cutscenes[num]->scene[scenenum].numpics = (UINT8)i;
@@ -1977,40 +2004,21 @@ static void readcutscenescene(MYFILE *f, INT32 num, INT32 scenenum)
 			else if (fastncmp(word, "PIC", 3))
 			{
 				picid = (UINT8)atoi(word + 3);
-				if (picid > 8 || picid == 0)
+				if (picid > MAX_CUTSCENE_PICS || picid == 0)
 				{
 					deh_warning("CutSceneScene %d: unknown word '%s'", num, word);
 					continue;
 				}
 				--picid;
 
-				if (fastcmp(word+4, "NAME"))
-				{
-					strncpy(cutscenes[num]->scene[scenenum].picname[picid], word2, 8);
-				}
-				else if (fastcmp(word+4, "HIRES"))
-				{
-					cutscenes[num]->scene[scenenum].pichires[picid] = (UINT8)(i || word2[0] == 'T' || word2[0] == 'Y');
-				}
-				else if (fastcmp(word+4, "DURATION"))
-				{
-					cutscenes[num]->scene[scenenum].picduration[picid] = usi;
-				}
-				else if (fastcmp(word+4, "XCOORD"))
-				{
-					cutscenes[num]->scene[scenenum].xcoord[picid] = usi;
-				}
-				else if (fastcmp(word+4, "YCOORD"))
-				{
-					cutscenes[num]->scene[scenenum].ycoord[picid] = usi;
-				}
-				else
+				cutscene_pic_t *pic = &cutscenes[num]->scene[scenenum].pics[picid];
+
+				if (!ParseCutscenePic(pic, usi, word+4, word2))
 					deh_warning("CutSceneScene %d: unknown word '%s'", num, word);
 			}
 			else if (fastcmp(word, "MUSIC"))
 			{
-				strncpy(cutscenes[num]->scene[scenenum].musswitch, word2, 7);
-				cutscenes[num]->scene[scenenum].musswitch[6] = 0;
+				strlcpy(cutscenes[num]->scene[scenenum].musswitch, word2, sizeof(cutscenes[num]->scene[scenenum].musswitch));
 			}
 			else if (fastcmp(word, "MUSICTRACK"))
 			{
@@ -2123,6 +2131,8 @@ static void readtextpromptpage(MYFILE *f, INT32 num, INT32 pagenum)
 	UINT16 usi;
 	UINT8 picid;
 
+	textpage_t *page = &textprompts[num]->page[pagenum];
+
 	do
 	{
 		if (myfgets(s, MAXLINELEN, f))
@@ -2153,8 +2163,8 @@ static void readtextpromptpage(MYFILE *f, INT32 num, INT32 pagenum)
 
 				if (!pagetext)
 				{
-					Z_Free(textprompts[num]->page[pagenum].text);
-					textprompts[num]->page[pagenum].text = NULL;
+					Z_Free(page->text);
+					page->text = NULL;
 					continue;
 				}
 
@@ -2179,11 +2189,9 @@ static void readtextpromptpage(MYFILE *f, INT32 num, INT32 pagenum)
 					- strlen(buffer) - 1, f));
 
 				// A text prompt overwriting another one...
-				Z_Free(textprompts[num]->page[pagenum].text);
+				Z_Free(page->text);
 
-				textprompts[num]->page[pagenum].text = Z_StrDup(buffer);
-
-				Z_Free(buffer);
+				page->text = buffer;
 
 				continue;
 			}
@@ -2202,38 +2210,35 @@ static void readtextpromptpage(MYFILE *f, INT32 num, INT32 pagenum)
 			// copypasta from readcutscenescene
 			if (fastcmp(word, "NUMBEROFPICS"))
 			{
-				textprompts[num]->page[pagenum].numpics = (UINT8)i;
+				page->numpics = (UINT8)i;
 			}
 			else if (fastcmp(word, "PICMODE"))
 			{
 				UINT8 picmode = 0; // PROMPT_PIC_PERSIST
 				if (usi == 1 || word2[0] == 'L') picmode = PROMPT_PIC_LOOP;
 				else if (usi == 2 || word2[0] == 'D' || word2[0] == 'H') picmode = PROMPT_PIC_DESTROY;
-				textprompts[num]->page[pagenum].picmode = picmode;
+				page->picmode = picmode;
 			}
 			else if (fastcmp(word, "PICTOLOOP"))
-				textprompts[num]->page[pagenum].pictoloop = (UINT8)i;
+				page->pictoloop = (UINT8)i;
 			else if (fastcmp(word, "PICTOSTART"))
-				textprompts[num]->page[pagenum].pictostart = (UINT8)i;
+				page->pictostart = (UINT8)i;
 			else if (fastcmp(word, "PICSMETAPAGE"))
 			{
-				if (usi && usi <= textprompts[num]->numpages)
+				if (usi && usi > 0 && usi <= textprompts[num]->numpages)
 				{
 					UINT8 metapagenum = usi - 1;
 
-					textprompts[num]->page[pagenum].numpics = textprompts[num]->page[metapagenum].numpics;
-					textprompts[num]->page[pagenum].picmode = textprompts[num]->page[metapagenum].picmode;
-					textprompts[num]->page[pagenum].pictoloop = textprompts[num]->page[metapagenum].pictoloop;
-					textprompts[num]->page[pagenum].pictostart = textprompts[num]->page[metapagenum].pictostart;
+					textpage_t *metapage = &textprompts[num]->page[metapagenum];
 
-					for (picid = 0; picid < MAX_PROMPT_PICS; picid++)
-					{
-						strncpy(textprompts[num]->page[pagenum].picname[picid], textprompts[num]->page[metapagenum].picname[picid], 8);
-						textprompts[num]->page[pagenum].pichires[picid] = textprompts[num]->page[metapagenum].pichires[picid];
-						textprompts[num]->page[pagenum].picduration[picid] = textprompts[num]->page[metapagenum].picduration[picid];
-						textprompts[num]->page[pagenum].xcoord[picid] = textprompts[num]->page[metapagenum].xcoord[picid];
-						textprompts[num]->page[pagenum].ycoord[picid] = textprompts[num]->page[metapagenum].ycoord[picid];
-					}
+					page->numpics = metapage->numpics;
+					page->picmode = metapage->picmode;
+					page->pictoloop = metapage->pictoloop;
+					page->pictostart = metapage->pictostart;
+
+					memcpy(&page->pics,
+						&metapage->pics,
+						sizeof(cutscene_pic_t) * page->numpics);
 				}
 			}
 			else if (fastncmp(word, "PIC", 3))
@@ -2244,43 +2249,33 @@ static void readtextpromptpage(MYFILE *f, INT32 num, INT32 pagenum)
 					deh_warning("textpromptscene %d: unknown word '%s'", num, word);
 					continue;
 				}
+
 				--picid;
 
-				if (fastcmp(word+4, "NAME"))
+#if 0
+				if (picid >= page->numpics)
 				{
-					strncpy(textprompts[num]->page[pagenum].picname[picid], word2, 8);
+					deh_warning("textpromptscene %d: invalid page %d of %d", picid+1, page->numpics);
+					continue;
 				}
-				else if (fastcmp(word+4, "HIRES"))
-				{
-					textprompts[num]->page[pagenum].pichires[picid] = (UINT8)(i || word2[0] == 'T' || word2[0] == 'Y');
-				}
-				else if (fastcmp(word+4, "DURATION"))
-				{
-					textprompts[num]->page[pagenum].picduration[picid] = usi;
-				}
-				else if (fastcmp(word+4, "XCOORD"))
-				{
-					textprompts[num]->page[pagenum].xcoord[picid] = usi;
-				}
-				else if (fastcmp(word+4, "YCOORD"))
-				{
-					textprompts[num]->page[pagenum].ycoord[picid] = usi;
-				}
-				else
+#endif
+
+				cutscene_pic_t *pic = &page->pics[picid];
+
+				if (!ParseCutscenePic(pic, usi, word+4, word2))
 					deh_warning("textpromptscene %d: unknown word '%s'", num, word);
 			}
 			else if (fastcmp(word, "MUSIC"))
 			{
-				strncpy(textprompts[num]->page[pagenum].musswitch, word2, 7);
-				textprompts[num]->page[pagenum].musswitch[6] = 0;
+				strlcpy(page->musswitch, word2, sizeof(page->musswitch));
 			}
 			else if (fastcmp(word, "MUSICTRACK"))
 			{
-				textprompts[num]->page[pagenum].musswitchflags = ((UINT16)i) & MUSIC_TRACKMASK;
+				page->musswitchflags = ((UINT16)i) & MUSIC_TRACKMASK;
 			}
 			else if (fastcmp(word, "MUSICLOOP"))
 			{
-				textprompts[num]->page[pagenum].musicloop = (UINT8)(i || word2[0] == 'T' || word2[0] == 'Y');
+				page->musicloop = (UINT8)(i || word2[0] == 'T' || word2[0] == 'Y');
 			}
 			// end copypasta from readcutscenescene
 			else if (fastcmp(word, "NAME"))
@@ -2304,19 +2299,19 @@ static void readtextpromptpage(MYFILE *f, INT32 num, INT32 pagenum)
 							name[j] = ' ';
 					}
 
-					strncpy(textprompts[num]->page[pagenum].name, name, 32);
+					strncpy(page->name, name, 32);
 				}
 				else
-					*textprompts[num]->page[pagenum].name = '\0';
+					*page->name = '\0';
 			}
 			else if (fastcmp(word, "ICON"))
-				strncpy(textprompts[num]->page[pagenum].iconname, word2, 8);
+				strncpy(page->iconname, word2, 8);
 			else if (fastcmp(word, "ICONALIGN"))
-				textprompts[num]->page[pagenum].rightside = (i || word2[0] == 'R');
+				page->rightside = (i || word2[0] == 'R');
 			else if (fastcmp(word, "ICONFLIP"))
-				textprompts[num]->page[pagenum].iconflip = (i || word2[0] == 'T' || word2[0] == 'Y');
+				page->iconflip = (i || word2[0] == 'T' || word2[0] == 'Y');
 			else if (fastcmp(word, "LINES"))
-				textprompts[num]->page[pagenum].lines = usi;
+				page->lines = usi;
 			else if (fastcmp(word, "BACKCOLOR"))
 			{
 				INT32 backcolor;
@@ -2343,65 +2338,67 @@ static void readtextpromptpage(MYFILE *f, INT32 num, INT32 pagenum)
 				else if (i >= 256 && i < 512) backcolor = i; // non-transparent palette index
 				else if (i < 0) backcolor = INT32_MAX; // CONS_BACKCOLOR user-configured
 				else backcolor = 1; // default gray
-				textprompts[num]->page[pagenum].backcolor = backcolor;
+				page->backcolor = backcolor;
 			}
 			else if (fastcmp(word, "ALIGN"))
 			{
 				UINT8 align = 0; // left
 				if (usi == 1 || word2[0] == 'R') align = 1;
 				else if (usi == 2 || word2[0] == 'C' || word2[0] == 'M') align = 2;
-				textprompts[num]->page[pagenum].align = align;
+				page->align = align;
 			}
 			else if (fastcmp(word, "VERTICALALIGN"))
 			{
 				UINT8 align = 0; // top
 				if (usi == 1 || word2[0] == 'B') align = 1;
 				else if (usi == 2 || word2[0] == 'C' || word2[0] == 'M') align = 2;
-				textprompts[num]->page[pagenum].verticalalign = align;
+				page->verticalalign = align;
 			}
 			else if (fastcmp(word, "TEXTSPEED"))
-				textprompts[num]->page[pagenum].textspeed = get_number(word2);
+				page->textspeed = get_number(word2);
 			else if (fastcmp(word, "TEXTSFX"))
-				textprompts[num]->page[pagenum].textsfx = get_number(word2);
+				page->textsfx = get_number(word2);
 			else if (fastcmp(word, "HIDEHUD"))
 			{
 				UINT8 hidehud = 0;
 				if ((word2[0] == 'F' && (word2[1] == 'A' || !word2[1])) || word2[0] == 'N') hidehud = 0; // false
 				else if (usi == 1 || word2[0] == 'T' || word2[0] == 'Y') hidehud = 1; // true (hide appropriate HUD elements)
 				else if (usi == 2 || word2[0] == 'A' || (word2[0] == 'F' && word2[1] == 'O')) hidehud = 2; // force (hide all HUD elements)
-				textprompts[num]->page[pagenum].hidehud = hidehud;
+				page->hidehud = hidehud;
 			}
 			else if (fastcmp(word, "METAPAGE"))
 			{
-				if (usi && usi <= textprompts[num]->numpages)
+				if (usi && usi > 0 && usi <= textprompts[num]->numpages)
 				{
 					UINT8 metapagenum = usi - 1;
 
-					strncpy(textprompts[num]->page[pagenum].name, textprompts[num]->page[metapagenum].name, 32);
-					strncpy(textprompts[num]->page[pagenum].iconname, textprompts[num]->page[metapagenum].iconname, 8);
-					textprompts[num]->page[pagenum].rightside = textprompts[num]->page[metapagenum].rightside;
-					textprompts[num]->page[pagenum].iconflip = textprompts[num]->page[metapagenum].iconflip;
-					textprompts[num]->page[pagenum].lines = textprompts[num]->page[metapagenum].lines;
-					textprompts[num]->page[pagenum].backcolor = textprompts[num]->page[metapagenum].backcolor;
-					textprompts[num]->page[pagenum].align = textprompts[num]->page[metapagenum].align;
-					textprompts[num]->page[pagenum].verticalalign = textprompts[num]->page[metapagenum].verticalalign;
-					textprompts[num]->page[pagenum].textspeed = textprompts[num]->page[metapagenum].textspeed;
-					textprompts[num]->page[pagenum].textsfx = textprompts[num]->page[metapagenum].textsfx;
-					textprompts[num]->page[pagenum].hidehud = textprompts[num]->page[metapagenum].hidehud;
+					textpage_t *metapage = &textprompts[num]->page[metapagenum];
+
+					strlcpy(page->name, metapage->name, sizeof(page->name));
+					strlcpy(page->iconname, metapage->iconname, sizeof(page->iconname));
+					page->rightside = metapage->rightside;
+					page->iconflip = metapage->iconflip;
+					page->lines = metapage->lines;
+					page->backcolor = metapage->backcolor;
+					page->align = metapage->align;
+					page->verticalalign = metapage->verticalalign;
+					page->textspeed = metapage->textspeed;
+					page->textsfx = metapage->textsfx;
+					page->hidehud = metapage->hidehud;
 
 					// music: don't copy, else each page change may reset the music
 				}
 			}
 			else if (fastcmp(word, "TAG"))
-				strncpy(textprompts[num]->page[pagenum].tag, word2, 33);
+				strncpy(page->tag, word2, 33);
 			else if (fastcmp(word, "NEXTPROMPT"))
-				textprompts[num]->page[pagenum].nextprompt = usi;
+				page->nextprompt = usi;
 			else if (fastcmp(word, "NEXTPAGE"))
-				textprompts[num]->page[pagenum].nextpage = usi;
+				page->nextpage = usi;
 			else if (fastcmp(word, "NEXTTAG"))
-				strncpy(textprompts[num]->page[pagenum].nexttag, word2, 33);
+				strncpy(page->nexttag, word2, 33);
 			else if (fastcmp(word, "TIMETONEXT"))
-				textprompts[num]->page[pagenum].timetonext = get_number(word2);
+				page->timetonext = get_number(word2);
 			else
 				deh_warning("PromptPage %d: unknown word '%s'", num, word);
 		}

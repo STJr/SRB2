@@ -420,7 +420,7 @@ typedef enum
 	TMP_CALLBYNAME     = 1<<2,
 	TMP_KEEPCONTROLS   = 1<<3,
 	TMP_KEEPREALTIME   = 1<<4,
-	//TMP_ALLPLAYERS     = 1<<5,
+	TMP_ALLPLAYERS     = 1<<5,
 	//TMP_FREEZETHINKERS = 1<<6,
 } textmappromptflags_t;
 
