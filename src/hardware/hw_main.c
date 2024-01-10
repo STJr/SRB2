@@ -1625,12 +1625,17 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 
 				side_t *side = &sides[rover->master->sidenum[0]];
 
+				INT16 lineflags;
+
 				if (rover->master->flags & ML_TFERLINE)
 				{
 					size_t linenum = gl_curline->linedef-gl_backsector->lines[0];
 					newline = rover->master->frontsector->lines[0] + linenum;
 					side = &sides[newline->sidenum[0]];
+					lineflags = newline->flags;
 				}
+				else
+					lineflags = gl_curline->linedef->flags;
 
 				texnum = R_GetTextureNum(side->midtexture);
 
@@ -1669,13 +1674,13 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 					// ...Oh well, anyway, Lower Unpegged now changes pegging of FOFs like in software
 					// -- Monster Iestyn 26/06/18
 					fixed_t texturevpeg = side->rowoffset + side->offsety_mid;
-					boolean attachtobottom = !!(rover->master->flags & ML_DONTPEGBOTTOM);
+					boolean attachtobottom = !!(lineflags & ML_DONTPEGBOTTOM);
 
 					grTex = HWR_GetTexture(texnum);
 					xscale = FixedToFloat(side->scalex_mid);
 					yscale = FixedToFloat(side->scaley_mid);
 
-					if (!(rover->master->flags & ML_SKEWTD)) // no skewing
+					if (!(lineflags & ML_SKEWTD)) // no skewing
 					{
 						if (attachtobottom)
 							texturevpeg -= (*rover->topheight - *rover->bottomheight) * yscale;
