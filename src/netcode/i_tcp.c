@@ -134,6 +134,7 @@ typedef union
 #include "d_netfil.h"
 #include "i_tcp.h"
 #include "../m_argv.h"
+#include "../i_threads.h"
 
 #include "../doomstat.h"
 
@@ -263,12 +264,24 @@ static const char* inet_ntopA(short af, const void *cp, char *buf, socklen_t len
 
 #ifdef HAVE_MINIUPNPC // based on old XChat patch
 static void I_ShutdownUPnP(void);
+static void I_InitUPnP(void);
+static void init_upnpc_once(int *upnpc_userdata);
 static struct UPNPUrls urls;
 static struct IGDdatas data;
 static char lanaddr[64];
+int *upnpc_started = 0;
 
-static inline void I_InitUPnP(void)
+static void I_InitUPnP(void)
 {
+	I_spawn_thread("init_upnpc_once", (I_thread_fn)init_upnpc_once, upnpc_started);
+}
+
+static void
+init_upnpc_once( int *upnpc_userdata)
+{
+	if (upnpc_userdata != 0)
+		return;
+
 	const char * const deviceTypes[] = {
 		"urn:schemas-upnp-org:device:InternetGatewayDevice:2",
 		"urn:schemas-upnp-org:device:InternetGatewayDevice:1",
