@@ -265,12 +265,13 @@ static const char* inet_ntopA(short af, const void *cp, char *buf, socklen_t len
 #ifdef HAVE_MINIUPNPC // based on old XChat patch
 static void I_ShutdownUPnP(void);
 static void I_InitUPnP(void);
+I_mutex upnp_mutex;
 static struct UPNPUrls urls;
 static struct IGDdatas data;
 static char lanaddr[64];
 struct upnpdata
 {
-	int	upnpc_started;
+	int upnpc_started;
 };
 static struct upnpdata *upnpuser;
 static void init_upnpc_once(struct upnpdata *upnpdata);
@@ -289,6 +290,7 @@ init_upnpc_once(struct upnpdata *upnpuserdata)
 	if (upnpuserdata->upnpc_started != 0)
 		return;
 
+	I_lock_mutex(&upnp_mutex);
 	const char * const deviceTypes[] = {
 		"urn:schemas-upnp-org:device:InternetGatewayDevice:2",
 		"urn:schemas-upnp-org:device:InternetGatewayDevice:1",
@@ -331,6 +333,7 @@ init_upnpc_once(struct upnpdata *upnpuserdata)
 			I_AddExitFunc(I_ShutdownUPnP);
 		}
 		freeUPNPDevlist(devlist);
+		I_unlock_mutex(upnp_mutex);
 	}
 	else if (upnp_error == UPNPDISCOVER_SOCKET_ERROR)
 	{
@@ -341,26 +344,32 @@ init_upnpc_once(struct upnpdata *upnpuserdata)
 
 static inline void I_UPnP_add(const char * addr, const char *port, const char * servicetype)
 {
+	I_lock_mutex(&upnp_mutex);
 	if (addr == NULL)
 		addr = lanaddr;
 	if (!urls.controlURL || urls.controlURL[0] == '\0')
 		return;
 	UPNP_AddPortMapping(urls.controlURL, data.first.servicetype,
 	                    port, port, addr, "SRB2", servicetype, NULL, NULL);
+	I_unlock_mutex(upnp_mutex);
 }
 
 static inline void I_UPnP_rem(const char *port, const char * servicetype)
 {
+	I_lock_mutex(&upnp_mutex);
 	if (!urls.controlURL || urls.controlURL[0] == '\0')
 		return;
 	UPNP_DeletePortMapping(urls.controlURL, data.first.servicetype,
 	                       port, servicetype, NULL);
+	I_unlock_mutex(upnp_mutex);
 }
 
 static void I_ShutdownUPnP(void)
 {
 	I_UPnP_rem(serverport_name, "UDP");
+	I_lock_mutex(&upnp_mutex);
 	FreeUPNPUrls(&urls);
+	I_unlock_mutex(upnp_mutex);
 }
 #endif
 
