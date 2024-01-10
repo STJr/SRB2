@@ -265,21 +265,28 @@ static const char* inet_ntopA(short af, const void *cp, char *buf, socklen_t len
 #ifdef HAVE_MINIUPNPC // based on old XChat patch
 static void I_ShutdownUPnP(void);
 static void I_InitUPnP(void);
-static void init_upnpc_once(int *upnpc_userdata);
 static struct UPNPUrls urls;
 static struct IGDdatas data;
 static char lanaddr[64];
-int *upnpc_started = 0;
+struct upnpdata
+{
+	int	upnpc_started;
+};
+static struct upnpdata *upnpuser;
+static void init_upnpc_once(struct upnpdata *upnpdata);
 
 static void I_InitUPnP(void)
 {
-	I_spawn_thread("init_upnpc_once", (I_thread_fn)init_upnpc_once, upnpc_started);
+	upnpuser = malloc(sizeof *upnpuser);
+	upnpuser->upnpc_started = 0;
+	I_spawn_thread("init_upnpc_once", (I_thread_fn)init_upnpc_once, upnpuser);
 }
 
 static void
-init_upnpc_once( int *upnpc_userdata)
+init_upnpc_once(struct upnpdata *upnpuserdata)
 {
-	if (upnpc_userdata != 0)
+
+	if (upnpuserdata->upnpc_started != 0)
 		return;
 
 	const char * const deviceTypes[] = {
@@ -329,6 +336,7 @@ init_upnpc_once( int *upnpc_userdata)
 	{
 		CONS_Printf(M_GetText("No UPnP devices discovered\n"));
 	}
+	upnpuserdata->upnpc_started =1;
 }
 
 static inline void I_UPnP_add(const char * addr, const char *port, const char * servicetype)
