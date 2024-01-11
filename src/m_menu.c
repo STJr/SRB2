@@ -5980,14 +5980,14 @@ static void M_DrawNightsAttackBackground(void)
 }
 
 // NiGHTS Attack floating Super Sonic.
-static patch_t *ntssupersonic[2];
+/*static patch_t *ntssupersonic[2];
 static void M_DrawNightsAttackSuperSonic(void)
 {
 	const UINT8 *colormap = R_GetTranslationColormap(TC_DEFAULT, SKINCOLOR_YELLOW, GTC_CACHE);
 	INT32 timer = FixedInt(ntsatkdrawtimer/4) % 2;
 	angle_t fa = (FixedAngle((FixedInt(ntsatkdrawtimer * 4) % 360)<<FRACBITS)>>ANGLETOFINESHIFT) & FINEMASK;
 	V_DrawFixedPatch(235<<FRACBITS, (120<<FRACBITS) - (8*FINESINE(fa)), FRACUNIT, 0, ntssupersonic[timer], colormap);
-}
+}*/
 
 static void M_DrawLevelPlatterMenu(void)
 {
@@ -10346,7 +10346,52 @@ void M_DrawNightsAttackMenu(void)
 		}
 
 		// Super Sonic
-		M_DrawNightsAttackSuperSonic();
+		//M_DrawNightsAttackSuperSonic();
+
+		//Draw selected character's NiGHTS sprite
+
+		patch_t *NightsAttackSprite; //The patch for the sprite itself
+		INT32 spritetimer; //Timer for animating NiGHTS sprite
+		INT32 flags; //Flag var for checking if the sprite needs to be flipped
+		INT32 skinnumber; //Number for skin
+		INT32 color; //natkcolor
+
+		const UINT8 *colormap = NULL; //Colormap var for coloring the sprite
+
+		if (skins[cv_chooseskin.value-1].sprites[SPR2_NFLY].numframes == 0) //If we don't have NiGHTS sprites
+			skinnumber = 0; //Default to Sonic
+		else
+			skinnumber = (cv_chooseskin.value-1);
+			
+		spritedef_t *sprdef = &skins[skinnumber].sprites[SPR2_NFLY]; //Make our patch the selected character's NFLY sprite
+		spritetimer = FixedInt(ntsatkdrawtimer/2) % skins[skinnumber].sprites[SPR2_NFLY].numframes; //Make the sprite timer cycle though all the frames at 2 tics per frame
+		spriteframe_t *sprframe = &sprdef->spriteframes[spritetimer]; //Our animation frame is equal to the number on the timer
+
+		NightsAttackSprite = W_CachePatchNum(sprframe->lumppat[6], PU_PATCH); //Draw the right facing angle
+
+		if (skins[skinnumber].natkcolor) //If you set natkcolor use it
+			color = skins[skinnumber].natkcolor;
+		else if ((skins[skinnumber].flags & SF_SUPER) && !(skins[skinnumber].flags & SF_NONIGHTSSUPER)) //If you go super in NiGHTS, use supercolor
+			color = skins[skinnumber].supercolor+4;
+		else //If you don't go super in NiGHTS or at all, use prefcolor
+			color = skins[skinnumber].prefcolor;
+
+			
+			
+		colormap = R_GetTranslationColormap(TC_BLINK, color, GTC_CACHE); //Make the sprite color be our prefcolor
+				
+		angle_t fa = (FixedAngle(((FixedInt(ntsatkdrawtimer * 4)) % 360)<<FRACBITS)>>ANGLETOFINESHIFT) & FINEMASK;
+
+		if (sprframe->flip & 1<<6) //If our sprite is supposed to be flipped
+			flags = V_FLIP; //Flip it
+		else
+			flags = 0;
+			
+
+		V_DrawFixedPatch((270<<FRACBITS), ((186<<FRACBITS) - (8*FINESINE(fa))), FixedDiv(skins[skinnumber].highresscale, skins[skinnumber].shieldscale), flags, NightsAttackSprite, colormap); //Draw the sprite
+				
+		//End of NiGHTS sprite drawing
+
 		//if (P_HasGrades(cv_nextmap.value, 0))
 		//	V_DrawScaledPatch(235 - (((ngradeletters[bestoverall])->width)*3)/2, 135, 0, ngradeletters[bestoverall]);
 
@@ -10438,8 +10483,8 @@ static void M_NightsAttack(INT32 choice)
 	// This is really just to make sure Sonic is the played character, just in case
 	M_PatchSkinNameTable();
 
-	ntssupersonic[0] = W_CachePatchName("NTSSONC1", PU_PATCH);
-	ntssupersonic[1] = W_CachePatchName("NTSSONC2", PU_PATCH);
+	//ntssupersonic[0] = W_CachePatchName("NTSSONC1", PU_PATCH);
+	//ntssupersonic[1] = W_CachePatchName("NTSSONC2", PU_PATCH);
 
 	G_SetGamestate(GS_TIMEATTACK); // do this before M_SetupNextMenu so that menu meta state knows that we're switching
 	titlemapinaction = TITLEMAP_OFF; // Nope don't give us HOMs please
