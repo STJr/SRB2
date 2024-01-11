@@ -48,56 +48,15 @@
 // also used for LUA_UpdateSprName
 #include "deh_tables.h"
 
+#define PARSE_TEXT_PROMPT_CHOICES
+
 // Loops through every constant and operation in word and performs its calculations, returning the final value.
 fixed_t get_number(const char *word)
 {
 	return LUA_EvalMath(word);
-
-	/*// DESPERATELY NEEDED: Order of operations support! :x
-	fixed_t i = find_const(&word);
-	INT32 o;
-	while(*word) {
-		o = operation_pad(&word);
-		if (o != -1)
-			i = OPERATIONS[o].v(i,find_const(&word));
-		else
-			break;
-	}
-	return i;*/
 }
 
 #define PARAMCHECK(n) do { if (!params[n]) { deh_warning("Too few parameters, need %d", n); return; }} while (0)
-
-/* ======================================================================== */
-// Load a dehacked file format
-/* ======================================================================== */
-/* a sample to see
-                   Thing 1 (Player)       {           // MT_PLAYER
-INT32 doomednum;     ID # = 3232              -1,             // doomednum
-INT32 spawnstate;    Initial frame = 32       "PLAY",         // spawnstate
-INT32 spawnhealth;   Hit points = 3232        100,            // spawnhealth
-INT32 seestate;      First moving frame = 32  "PLAY_RUN1",    // seestate
-INT32 seesound;      Alert sound = 32         sfx_None,       // seesound
-INT32 reactiontime;  Reaction time = 3232     0,              // reactiontime
-INT32 attacksound;   Attack sound = 32        sfx_None,       // attacksound
-INT32 painstate;     Injury frame = 32        "PLAY_PAIN",    // painstate
-INT32 painchance;    Pain chance = 3232       255,            // painchance
-INT32 painsound;     Pain sound = 32          sfx_plpain,     // painsound
-INT32 meleestate;    Close attack frame = 32  "NULL",         // meleestate
-INT32 missilestate;  Far attack frame = 32    "PLAY_ATK1",    // missilestate
-INT32 deathstate;    Death frame = 32         "PLAY_DIE1",    // deathstate
-INT32 xdeathstate;   Exploding frame = 32     "PLAY_XDIE1",   // xdeathstate
-INT32 deathsound;    Death sound = 32         sfx_pldeth,     // deathsound
-INT32 speed;         Speed = 3232             0,              // speed
-INT32 radius;        Width = 211812352        16*FRACUNIT,    // radius
-INT32 height;        Height = 211812352       56*FRACUNIT,    // height
-INT32 dispoffset;    DispOffset = 0           0,              // dispoffset
-INT32 mass;          Mass = 3232              100,            // mass
-INT32 damage;        Missile damage = 3232    0,              // damage
-INT32 activesound;   Action sound = 32        sfx_None,       // activesound
-INT32 flags;         Bits = 3232              MF_SOLID|MF_SHOOTABLE|MF_DROPOFF|MF_PICKUP|MF_NOTDMATCH,
-INT32 raisestate;    Respawn frame = 32       S_NULL          // raisestate
-                                         }, */
 
 #ifdef HWRENDER
 static INT32 searchvalue(const char *s)
@@ -2122,6 +2081,87 @@ void readcutscene(MYFILE *f, INT32 num)
 	Z_Free(s);
 }
 
+static char *gettextpromptpicnum(const char *word)
+{
+	const char *num_start = word;
+	const char *num_end = num_start;
+	while (isdigit(*num_end))
+		num_end++;
+
+	size_t count = num_end - num_start;
+
+	char *buf = malloc(count + 1);
+	if (!buf)
+		return NULL;
+
+	strncpy(buf, num_start, count);
+	buf[count] = '\0';
+
+	return buf;
+}
+
+#ifdef PARSE_TEXT_PROMPT_CHOICES
+static void readtextpromptchoice(MYFILE *f, textpage_t *page, INT32 num)
+{
+	char *s = Z_Calloc(MAXLINELEN, PU_STATIC, NULL);
+	char *word = s;
+	char *word2;
+
+	promptchoice_t *choice = &page->choices[num];
+
+	do
+	{
+		if (myfgets(s, MAXLINELEN, f))
+		{
+			if (s[0] == '\n')
+				break;
+
+			// First remove trailing newline, if there is one
+			char *tmp = strchr(s, '\n');
+			if (tmp)
+				*tmp = '\0';
+
+			tmp = strchr(s, '#');
+			if (tmp)
+				*tmp = '\0';
+			if (s == tmp)
+				continue; // Skip comment lines, but don't break.
+
+			// Get the part before the " = "
+			tmp = strchr(s, '=');
+			if (tmp)
+				*(tmp-1) = '\0';
+			else
+				break;
+			strupr(word);
+
+			// Now get the part after
+			word2 = tmp + 2;
+
+			INT32 i = atoi(word2); // used for numerical settings
+
+			if (fastcmp(word, "TEXT"))
+			{
+				Z_Free(choice->text);
+				choice->text = Z_StrDup(word2);
+			}
+			else if (fastcmp(word, "NEXTPROMPT"))
+				choice->nextprompt = (UINT8)i;
+			else if (fastcmp(word, "NEXTPAGE"))
+				choice->nextpage = (UINT8)i;
+			else if (fastcmp(word, "NEXTTAG"))
+				strlcpy(choice->nexttag, word2, sizeof(choice->nexttag));
+			else if (fastcmp(word, "EXECUTELINEDEFBYTAG"))
+				choice->exectag = (INT16)i;
+			else
+				deh_warning("PromptChoice %d: unknown word '%s'", num, word);
+		}
+	} while (!myfeof(f)); // finish when the line is empty
+
+	Z_Free(s);
+}
+#endif
+
 static void readtextpromptpage(MYFILE *f, INT32 num, INT32 pagenum)
 {
 	char *s = Z_Calloc(MAXLINELEN, PU_STATIC, NULL);
@@ -2129,7 +2169,6 @@ static void readtextpromptpage(MYFILE *f, INT32 num, INT32 pagenum)
 	char *word2;
 	INT32 i;
 	UINT16 usi;
-	UINT8 picid;
 
 	textpage_t *page = &textprompts[num]->page[pagenum];
 
@@ -2149,8 +2188,6 @@ static void readtextpromptpage(MYFILE *f, INT32 num, INT32 pagenum)
 			if (fastcmp(word, "PAGETEXT"))
 			{
 				char *pagetext = NULL;
-				char *buffer;
-				const int bufferlen = 4096;
 
 				for (i = 0; i < MAXLINELEN; i++)
 				{
@@ -2178,15 +2215,12 @@ static void readtextpromptpage(MYFILE *f, INT32 num, INT32 pagenum)
 					}
 				}
 
-				buffer = Z_Malloc(4096, PU_STATIC, NULL);
-				strcpy(buffer, pagetext);
+				const int bufferlen = 4096;
 
-				// \todo trim trailing whitespace before the #
-				// and also support # at the end of a PAGETEXT with no line break
+				char *buffer = Z_Malloc(bufferlen, PU_STATIC, NULL);
 
-				strcat(buffer,
-					myhashfgets(pagetext, bufferlen
-					- strlen(buffer) - 1, f));
+				strlcpy(buffer, pagetext, bufferlen);
+				strlcat(buffer, myhashfgets(pagetext, MAXLINELEN, f), bufferlen);
 
 				// A text prompt overwriting another one...
 				Z_Free(page->text);
@@ -2210,7 +2244,18 @@ static void readtextpromptpage(MYFILE *f, INT32 num, INT32 pagenum)
 			// copypasta from readcutscenescene
 			if (fastcmp(word, "NUMBEROFPICS"))
 			{
+				if (i < 0 || i > MAX_PROMPT_PICS)
+				{
+					deh_warning("textpromptscene %d: invalid number of pictures %d (maximum is %d)'", num, i, MAX_PROMPT_PICS);
+					continue;
+				}
+
 				page->numpics = (UINT8)i;
+
+				if (!page->numpics)
+					Z_Free(page->pics);
+				else
+					page->pics = Z_Realloc(page->pics, sizeof(cutscene_pic_t) * page->numpics, PU_STATIC, NULL);
 			}
 			else if (fastcmp(word, "PICMODE"))
 			{
@@ -2236,35 +2281,62 @@ static void readtextpromptpage(MYFILE *f, INT32 num, INT32 pagenum)
 					page->pictoloop = metapage->pictoloop;
 					page->pictostart = metapage->pictostart;
 
-					memcpy(&page->pics,
-						&metapage->pics,
-						sizeof(cutscene_pic_t) * page->numpics);
+					page->pics = Z_Realloc(page->pics, sizeof(cutscene_pic_t) * page->numpics, PU_STATIC, NULL);
+
+					memcpy(page->pics, metapage->pics, sizeof(cutscene_pic_t) * page->numpics);
 				}
 			}
 			else if (fastncmp(word, "PIC", 3))
 			{
-				picid = (UINT8)atoi(word + 3);
+				char *word3 = word+3;
+				char *num_text = gettextpromptpicnum(word3);
+				if (!num_text)
+					continue;
+
+				UINT16 picid = (UINT16)atoi(num_text);
 				if (picid > MAX_PROMPT_PICS || picid == 0)
 				{
 					deh_warning("textpromptscene %d: unknown word '%s'", num, word);
+					free(num_text);
 					continue;
 				}
 
 				--picid;
 
-#if 0
-				if (picid >= page->numpics)
-				{
-					deh_warning("textpromptscene %d: invalid page %d of %d", picid+1, page->numpics);
-					continue;
-				}
-#endif
+				if (!page->pics || picid >= page->numpics)
+					page->pics = Z_Realloc(page->pics, sizeof(cutscene_pic_t) * (picid+1), PU_STATIC, NULL);
 
-				cutscene_pic_t *pic = &page->pics[picid];
+				word3 += strlen(num_text);
 
-				if (!ParseCutscenePic(pic, usi, word+4, word2))
+				free(num_text);
+
+				if (!ParseCutscenePic(&page->pics[picid], usi, word3, word2))
 					deh_warning("textpromptscene %d: unknown word '%s'", num, word);
 			}
+#ifdef PARSE_TEXT_PROMPT_CHOICES
+			else if (fastcmp(word, "CHOICE"))
+			{
+				if (1 <= i && i <= MAX_PROMPT_CHOICES)
+				{
+					if (!page->choices || i > page->numchoices)
+					{
+						page->numchoices = i;
+						page->choices = Z_Realloc(page->choices, sizeof(promptchoice_t) * i, PU_STATIC, NULL);
+					}
+
+					readtextpromptchoice(f, page, i - 1);
+					skipemptylines(f);
+				}
+				else
+					deh_warning("Text prompt choice %d out of range (1 - %d)", i, MAX_PROMPT_CHOICES);
+			}
+			else if (fastcmp(word, "INITIALCHOICE"))
+				page->startchoice = i;
+			else if (fastcmp(word, "NOCHOICE"))
+				page->nochoice = i;
+			else if (fastcmp(word, "CHOICESALIGN"))
+				page->choicesleftside = (boolean)(i || word2[0] == 'L');
+#endif
 			else if (fastcmp(word, "MUSIC"))
 			{
 				strlcpy(page->musswitch, word2, sizeof(page->musswitch));
@@ -2282,30 +2354,29 @@ static void readtextpromptpage(MYFILE *f, INT32 num, INT32 pagenum)
 			{
 				if (*word2 != '\0')
 				{
-					INT32 j;
+					size_t j;
 
 					// HACK: Add yellow control char now
 					// so the drawing function doesn't call it repeatedly
 					char name[34];
 					name[0] = '\x82'; // color yellow
 					name[1] = 0;
-					strncat(name, word2, 33);
-					name[33] = 0;
+					strlcat(name, word2, sizeof(name));
 
 					// Replace _ with ' '
-					for (j = 0; j < 32 && name[j]; j++)
+					for (j = 1; j < sizeof(name) && name[j]; j++)
 					{
 						if (name[j] == '_')
 							name[j] = ' ';
 					}
 
-					strncpy(page->name, name, 32);
+					strlcpy(page->name, name, sizeof(page->name));
 				}
 				else
 					*page->name = '\0';
 			}
 			else if (fastcmp(word, "ICON"))
-				strncpy(page->iconname, word2, 8);
+				strlcpy(page->iconname, word2, sizeof(page->iconname));
 			else if (fastcmp(word, "ICONALIGN"))
 				page->rightside = (i || word2[0] == 'R');
 			else if (fastcmp(word, "ICONFLIP"))
@@ -2390,13 +2461,13 @@ static void readtextpromptpage(MYFILE *f, INT32 num, INT32 pagenum)
 				}
 			}
 			else if (fastcmp(word, "TAG"))
-				strncpy(page->tag, word2, 33);
+				strlcpy(page->tag, word2, sizeof(page->tag));
 			else if (fastcmp(word, "NEXTPROMPT"))
 				page->nextprompt = usi;
 			else if (fastcmp(word, "NEXTPAGE"))
 				page->nextpage = usi;
 			else if (fastcmp(word, "NEXTTAG"))
-				strncpy(page->nexttag, word2, 33);
+				strlcpy(page->nexttag, word2, sizeof(page->nexttag));
 			else if (fastcmp(word, "TIMETONEXT"))
 				page->timetonext = get_number(word2);
 			else
@@ -2461,7 +2532,6 @@ void readtextprompt(MYFILE *f, INT32 num)
 				}
 				else
 					deh_warning("Page number %d out of range (1 - %d)", value, MAX_PAGES);
-
 			}
 			else
 				deh_warning("Prompt %d: unknown word '%s', Page <num> expected.", num, word);

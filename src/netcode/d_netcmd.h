@@ -124,29 +124,31 @@ extern consvar_t cv_freedemocamera;
 typedef enum
 {
 	XD_NAMEANDCOLOR = 1,
-	XD_WEAPONPREF,  // 2
-	XD_KICK,        // 3
-	XD_NETVAR,      // 4
-	XD_SAY,         // 5
-	XD_MAP,         // 6
-	XD_EXITLEVEL,   // 7
-	XD_ADDFILE,     // 8
-	XD_ADDFOLDER,   // 9
-	XD_PAUSE,       // 10
-	XD_ADDPLAYER,   // 11
-	XD_TEAMCHANGE,  // 12
-	XD_CLEARSCORES, // 13
-	XD_VERIFIED,    // 14
-	XD_RANDOMSEED,  // 15
-	XD_RUNSOC,      // 16
-	XD_REQADDFILE,  // 17
-	XD_REQADDFOLDER,// 18
-	XD_SETMOTD,     // 19
-	XD_SUICIDE,     // 20
-	XD_DEMOTED,     // 21
-	XD_LUACMD,      // 22
-	XD_LUAVAR,      // 23
-	XD_LUAFILE,     // 24
+	XD_WEAPONPREF,    // 2
+	XD_KICK,          // 3
+	XD_NETVAR,        // 4
+	XD_SAY,           // 5
+	XD_MAP,           // 6
+	XD_EXITLEVEL,     // 7
+	XD_ADDFILE,       // 8
+	XD_ADDFOLDER,     // 9
+	XD_PAUSE,         // 10
+	XD_ADDPLAYER,     // 11
+	XD_TEAMCHANGE,    // 12
+	XD_CLEARSCORES,   // 13
+	XD_VERIFIED,      // 14
+	XD_RANDOMSEED,    // 15
+	XD_RUNSOC,        // 16
+	XD_REQADDFILE,    // 17
+	XD_REQADDFOLDER,  // 18
+	XD_SETMOTD,       // 19
+	XD_SUICIDE,       // 20
+	XD_DEMOTED,       // 21
+	XD_LUACMD,        // 22
+	XD_LUAVAR,        // 23
+	XD_LUAFILE,       // 24
+	XD_DIALOGCHOICE,  // 25
+	XD_DIALOGCONFIRM, // 25
 	MAXNETXCMD
 } netxcmd_t;
 
@@ -198,6 +200,8 @@ void D_RegisterClientCommands(void);
 void CleanupPlayerName(INT32 playernum, const char *newname);
 boolean EnsurePlayerNameIsGood(char *name, INT32 playernum);
 void D_SendPlayerConfig(void);
+void D_SendTextPromptChoice(INT32 choice);
+void D_SendTextPromptConfirm(INT32 choice);
 void Command_ExitGame_f(void);
 void Command_Retry_f(void);
 void D_GameTypeChanged(INT32 lastgametype); // not a real _OnChange function anymore

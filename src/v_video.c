@@ -1334,7 +1334,7 @@ void V_DrawFill(INT32 x, INT32 y, INT32 w, INT32 h, INT32 c)
 
 	c &= 255;
 
-	// borrowing this from jimitia's new hud drawing functions rq
+	// Draw translucent
 	if (alphalevel)
 	{
 		v_translevel += c<<8;
@@ -1352,7 +1352,7 @@ void V_DrawFill(INT32 x, INT32 y, INT32 w, INT32 h, INT32 c)
 }
 
 #ifdef HWRENDER
-// This is now a function since it's otherwise repeated 2 times and honestly looks retarded:
+// For OpenGL mode, returns a RGB value for the console back color
 static UINT32 V_GetHWConsBackColor(void)
 {
 	UINT8 r, g, b;
@@ -1386,8 +1386,7 @@ static UINT32 V_GetHWConsBackColor(void)
 #endif
 
 
-// THANK YOU MPC!!!
-// and thanks toaster for cleaning it up.
+// thanks toaster for cleaning it up.
 
 void V_DrawFillConsoleMap(INT32 x, INT32 y, INT32 w, INT32 h, INT32 c)
 {
@@ -1549,16 +1548,17 @@ void V_DrawFillConsoleMap(INT32 x, INT32 y, INT32 w, INT32 h, INT32 c)
 
 	c &= 255;
 
-	// Jimita (12-04-2018)
+	// Draw translucent
 	if (alphalevel)
 	{
-		fadetable = R_GetTranslucencyTable(alphalevel) + (c*256);
+		fadetable = R_GetTranslucencyTable(alphalevel);
+
 		for (;(--h >= 0) && dest < deststop; dest += vid.width)
 		{
 			u = 0;
 			while (u < w)
 			{
-				dest[u] = fadetable[consolebgmap[dest[u]]];
+				dest[u] = fadetable[(consolebgmap[dest[u]]<<8) + dest[u]];
 				u++;
 			}
 		}
@@ -1877,6 +1877,39 @@ void V_DrawFadeConsBack(INT32 plines)
 		*buf = consolebgmap[*buf];
 }
 
+#ifdef HWRENDER
+// For OpenGL mode, returns a RGB value for the text prompt back color
+static UINT32 V_GetHWPromptBackColor(INT32 color)
+{
+	UINT32 hwcolor;
+	switch (color)
+	{
+		case 0:		hwcolor = 0xffffff00;	break; 	// White
+		case 1:		hwcolor = 0x00000000;	break; 	// Black // Note this is different from V_DrawFadeConsBack
+		case 2:		hwcolor = 0xdeb88700;	break;	// Sepia
+		case 3:		hwcolor = 0x40201000;	break; 	// Brown
+		case 4:		hwcolor = 0xfa807200;	break; 	// Pink
+		case 5:		hwcolor = 0xff69b400;	break; 	// Raspberry
+		case 6:		hwcolor = 0xff000000;	break; 	// Red
+		case 7:		hwcolor = 0xffd68300;	break;	// Creamsicle
+		case 8:		hwcolor = 0xff800000;	break; 	// Orange
+		case 9:		hwcolor = 0xdaa52000;	break; 	// Gold
+		case 10:	hwcolor = 0x80800000;	break; 	// Yellow
+		case 11:	hwcolor = 0x00ff0000;	break; 	// Emerald
+		case 12:	hwcolor = 0x00800000;	break; 	// Green
+		case 13:	hwcolor = 0x4080ff00;	break; 	// Cyan
+		case 14:	hwcolor = 0x4682b400;	break; 	// Steel
+		case 15:	hwcolor = 0x1e90ff00;	break;	// Periwinkle
+		case 16:	hwcolor = 0x0000ff00;	break; 	// Blue
+		case 17:	hwcolor = 0xff00ff00;	break; 	// Purple
+		case 18:	hwcolor = 0xee82ee00;	break; 	// Lavender
+		// Default green
+		default:	hwcolor = 0x00800000;	break;
+	}
+	return hwcolor;
+}
+#endif
+
 // Very similar to F_DrawFadeConsBack, except we draw from the middle(-ish) of the screen to the bottom.
 void V_DrawPromptBack(INT32 boxheight, INT32 color)
 {
@@ -1900,32 +1933,7 @@ void V_DrawPromptBack(INT32 boxheight, INT32 color)
 #ifdef HWRENDER
 	if (rendermode == render_opengl)
 	{
-		UINT32 hwcolor;
-		switch (color)
-		{
-			case 0:		hwcolor = 0xffffff00;	break; 	// White
-			case 1:		hwcolor = 0x00000000;	break; 	// Black // Note this is different from V_DrawFadeConsBack
-			case 2:		hwcolor = 0xdeb88700;	break;	// Sepia
-			case 3:		hwcolor = 0x40201000;	break; 	// Brown
-			case 4:		hwcolor = 0xfa807200;	break; 	// Pink
-			case 5:		hwcolor = 0xff69b400;	break; 	// Raspberry
-			case 6:		hwcolor = 0xff000000;	break; 	// Red
-			case 7:		hwcolor = 0xffd68300;	break;	// Creamsicle
-			case 8:		hwcolor = 0xff800000;	break; 	// Orange
-			case 9:		hwcolor = 0xdaa52000;	break; 	// Gold
-			case 10:	hwcolor = 0x80800000;	break; 	// Yellow
-			case 11:	hwcolor = 0x00ff0000;	break; 	// Emerald
-			case 12:	hwcolor = 0x00800000;	break; 	// Green
-			case 13:	hwcolor = 0x4080ff00;	break; 	// Cyan
-			case 14:	hwcolor = 0x4682b400;	break; 	// Steel
-			case 15:	hwcolor = 0x1e90ff00;	break;	// Periwinkle
-			case 16:	hwcolor = 0x0000ff00;	break; 	// Blue
-			case 17:	hwcolor = 0xff00ff00;	break; 	// Purple
-			case 18:	hwcolor = 0xee82ee00;	break; 	// Lavender
-			// Default green
-			default:	hwcolor = 0x00800000;	break;
-		}
-		HWR_DrawTutorialBack(hwcolor, boxheight);
+		HWR_DrawTutorialBack(V_GetHWPromptBackColor(color), boxheight);
 		return;
 	}
 #endif
@@ -1941,6 +1949,205 @@ void V_DrawPromptBack(INT32 boxheight, INT32 color)
 		buf -= vid.rowbytes * ((boxheight * 4) + (boxheight/2)*5);
 	for (; buf < deststop; ++buf)
 		*buf = promptbgmap[*buf];
+}
+
+void V_DrawPromptRect(INT32 x, INT32 y, INT32 w, INT32 h, INT32 color, INT32 flags)
+{
+	UINT8 *dest;
+	const UINT8 *deststop;
+	UINT32 alphalevel = 0;
+	UINT8 perplayershuffle = 0;
+
+	if (rendermode == render_none)
+		return;
+
+	flags &= ~255;
+
+	if (color >= 256 && color < 512)
+	{
+		V_DrawFill(x, y, w, h, (color-256)|flags);
+		return;
+	}
+
+	if (color == INT32_MAX)
+		color = cons_backcolor.value;
+
+#ifdef HWRENDER
+	if (rendermode == render_opengl)
+	{
+		HWR_DrawConsoleFill(x, y, w, h, flags, V_GetHWPromptBackColor(color));
+		return;
+	}
+#endif
+
+	CON_SetupBackColormapEx(color, true);
+
+	if ((alphalevel = ((flags & V_ALPHAMASK) >> V_ALPHASHIFT)))
+	{
+		if (alphalevel == 10) // V_HUDTRANSHALF
+			alphalevel = hudminusalpha[st_translucency];
+		else if (alphalevel == 11) // V_HUDTRANS
+			alphalevel = 10 - st_translucency;
+		else if (alphalevel == 12) // V_HUDTRANSDOUBLE
+			alphalevel = hudplusalpha[st_translucency];
+
+		if (alphalevel >= 10)
+			return; // invis
+	}
+
+	if (splitscreen && (flags & V_PERPLAYER))
+	{
+		fixed_t adjusty = ((flags & V_NOSCALESTART) ? vid.height : BASEVIDHEIGHT)>>1;
+		h >>= 1;
+		y >>= 1;
+#ifdef QUADS
+		if (splitscreen > 1) // 3 or 4 players
+		{
+			fixed_t adjustx = ((flags & V_NOSCALESTART) ? vid.height : BASEVIDHEIGHT)>>1;
+			w >>= 1;
+			x >>= 1;
+			if (stplyr == &players[displayplayer])
+			{
+				if (!(flags & (V_SNAPTOTOP|V_SNAPTOBOTTOM)))
+					perplayershuffle |= 1;
+				if (!(flags & (V_SNAPTOLEFT|V_SNAPTORIGHT)))
+					perplayershuffle |= 4;
+				flags &= ~V_SNAPTOBOTTOM|V_SNAPTORIGHT;
+			}
+			else if (stplyr == &players[secondarydisplayplayer])
+			{
+				if (!(flags & (V_SNAPTOTOP|V_SNAPTOBOTTOM)))
+					perplayershuffle |= 1;
+				if (!(flags & (V_SNAPTOLEFT|V_SNAPTORIGHT)))
+					perplayershuffle |= 8;
+				x += adjustx;
+				flags &= ~V_SNAPTOBOTTOM|V_SNAPTOLEFT;
+			}
+			else if (stplyr == &players[thirddisplayplayer])
+			{
+				if (!(flags & (V_SNAPTOTOP|V_SNAPTOBOTTOM)))
+					perplayershuffle |= 2;
+				if (!(flags & (V_SNAPTOLEFT|V_SNAPTORIGHT)))
+					perplayershuffle |= 4;
+				y += adjusty;
+				flags &= ~V_SNAPTOTOP|V_SNAPTORIGHT;
+			}
+			else //if (stplyr == &players[fourthdisplayplayer])
+			{
+				if (!(flags & (V_SNAPTOTOP|V_SNAPTOBOTTOM)))
+					perplayershuffle |= 2;
+				if (!(flags & (V_SNAPTOLEFT|V_SNAPTORIGHT)))
+					perplayershuffle |= 8;
+				x += adjustx;
+				y += adjusty;
+				flags &= ~V_SNAPTOTOP|V_SNAPTOLEFT;
+			}
+		}
+		else
+#endif
+		// 2 players
+		{
+			if (stplyr == &players[displayplayer])
+			{
+				if (!(flags & (V_SNAPTOTOP|V_SNAPTOBOTTOM)))
+					perplayershuffle |= 1;
+				flags &= ~V_SNAPTOBOTTOM;
+			}
+			else //if (stplyr == &players[secondarydisplayplayer])
+			{
+				if (!(flags & (V_SNAPTOTOP|V_SNAPTOBOTTOM)))
+					perplayershuffle |= 2;
+				y += adjusty;
+				flags &= ~V_SNAPTOTOP;
+			}
+		}
+	}
+
+	if (!(flags & V_NOSCALESTART))
+	{
+		x *= vid.dup;
+		y *= vid.dup;
+		w *= vid.dup;
+		h *= vid.dup;
+
+		// Center it if necessary
+		if (vid.width != BASEVIDWIDTH * vid.dup)
+		{
+			// dup adjustments pretend that screen width is BASEVIDWIDTH * dup,
+			// so center this imaginary screen
+			if (flags & V_SNAPTORIGHT)
+				x += (vid.width - (BASEVIDWIDTH * vid.dup));
+			else if (!(flags & V_SNAPTOLEFT))
+				x += (vid.width - (BASEVIDWIDTH * vid.dup)) / 2;
+			if (perplayershuffle & 4)
+				x -= (vid.width - (BASEVIDWIDTH * vid.dup)) / 4;
+			else if (perplayershuffle & 8)
+				x += (vid.width - (BASEVIDWIDTH * vid.dup)) / 4;
+		}
+		if (vid.height != BASEVIDHEIGHT * vid.dup)
+		{
+			// same thing here
+			if (flags & V_SNAPTOBOTTOM)
+				y += (vid.height - (BASEVIDHEIGHT * vid.dup));
+			else if (!(flags & V_SNAPTOTOP))
+				y += (vid.height - (BASEVIDHEIGHT * vid.dup)) / 2;
+			if (perplayershuffle & 1)
+				y -= (vid.height - (BASEVIDHEIGHT * vid.dup)) / 4;
+			else if (perplayershuffle & 2)
+				y += (vid.height - (BASEVIDHEIGHT * vid.dup)) / 4;
+		}
+	}
+
+	if (x >= vid.width || y >= vid.height)
+		return; // off the screen
+	if (x < 0) {
+		w += x;
+		x = 0;
+	}
+	if (y < 0) {
+		h += y;
+		y = 0;
+	}
+
+	if (w <= 0 || h <= 0)
+		return; // zero width/height wouldn't draw anything
+	if (x + w > vid.width)
+		w = vid.width-x;
+	if (y + h > vid.height)
+		h = vid.height-y;
+
+	dest = screens[0] + y*vid.width + x;
+	deststop = screens[0] + vid.rowbytes * vid.height;
+
+	CON_SetupBackColormapEx(color, true);
+
+	// Draw translucent
+	if (alphalevel)
+	{
+		UINT8 *fadetable = R_GetTranslucencyTable(alphalevel);
+
+		for (;(--h >= 0) && dest < deststop; dest += vid.width)
+		{
+			INT32 u = 0;
+			while (u < w)
+			{
+				dest[u] = fadetable[(promptbgmap[dest[u]]<<8) + dest[u]];
+				u++;
+			}
+		}
+	}
+	else
+	{
+		for (;(--h >= 0) && dest < deststop; dest += vid.width)
+		{
+			INT32 u = 0;
+			while (u < w)
+			{
+				dest[u] = promptbgmap[dest[u]];
+				u++;
+			}
+		}
+	}
 }
 
 // Gets string colormap, used for 0x80 color codes

@@ -26,6 +26,7 @@
 #include "../r_skins.h"
 #include "../p_local.h"
 #include "../p_setup.h"
+#include "../p_dialog.h"
 #include "../s_sound.h"
 #include "../i_sound.h"
 #include "../m_misc.h"
@@ -77,6 +78,8 @@ static void Got_RandomSeed(UINT8 **cp, INT32 playernum);
 static void Got_RunSOCcmd(UINT8 **cp, INT32 playernum);
 static void Got_Teamchange(UINT8 **cp, INT32 playernum);
 static void Got_Clearscores(UINT8 **cp, INT32 playernum);
+static void Got_TextPromptChoice(UINT8 **cp, INT32 playernum);
+static void Got_TextPromptConfirm(UINT8 **cp, INT32 playernum);
 
 static void PointLimit_OnChange(void);
 static void TimeLimit_OnChange(void);
@@ -429,7 +432,9 @@ const char *netxcmdnames[MAXNETXCMD - 1] =
 	"SUICIDE",
 	"LUACMD",
 	"LUAVAR",
-	"LUAFILE"
+	"LUAFILE",
+	"DIALOGCHOICE",
+	"DIALOGCONFIRM"
 };
 
 // =========================================================================
@@ -466,6 +471,8 @@ void D_RegisterServerCommands(void)
 	RegisterNetXCmd(XD_RUNSOC, Got_RunSOCcmd);
 	RegisterNetXCmd(XD_LUACMD, Got_Luacmd);
 	RegisterNetXCmd(XD_LUAFILE, Got_LuaFile);
+	RegisterNetXCmd(XD_DIALOGCHOICE, Got_TextPromptChoice);
+	RegisterNetXCmd(XD_DIALOGCONFIRM, Got_TextPromptConfirm);
 
 	// Remote Administration
 	COM_AddCommand("password", Command_Changepassword_f, COM_LUA);
@@ -2836,6 +2843,40 @@ static void Got_Teamchange(UINT8 **cp, INT32 playernum)
 	// In tag, check to see if you still have a game.
 	if (G_TagGametype())
 		P_CheckSurvivors();
+}
+
+void D_SendTextPromptChoice(INT32 choice)
+{
+	SendNetXCmd(XD_DIALOGCHOICE, &choice, sizeof(choice));
+}
+
+void D_SendTextPromptConfirm(INT32 choice)
+{
+	SendNetXCmd(XD_DIALOGCONFIRM, &choice, sizeof(choice));
+}
+
+static void Got_TextPromptChoice(UINT8 **cp, INT32 playernum)
+{
+	INT32 choice = READINT32(*cp);
+
+	if (!P_SetCurrentDialogChoice(&players[playernum], choice))
+	{
+		CONS_Alert(CONS_WARNING, M_GetText("Illegal text prompt choice command received from %s\n"), player_names[playernum]);
+		if (server)
+			SendKick(playernum, KICK_MSG_CON_FAIL | KICK_MSG_KEEP_BODY);
+	}
+}
+
+static void Got_TextPromptConfirm(UINT8 **cp, INT32 playernum)
+{
+	INT32 choice = READINT32(*cp);
+
+	if (!P_SelectDialogChoice(&players[playernum], choice))
+	{
+		CONS_Alert(CONS_WARNING, M_GetText("Illegal text prompt confirmation command received from %s\n"), player_names[playernum]);
+		if (server)
+			SendKick(playernum, KICK_MSG_CON_FAIL | KICK_MSG_KEEP_BODY);
+	}
 }
 
 //

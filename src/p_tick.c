@@ -789,10 +789,30 @@ void P_Ticker(boolean run)
 		// Run any "after all the other thinkers" stuff
 		for (i = 0; i < MAXPLAYERS; i++)
 			if (playeringame[i] && players[i].mo && !P_MobjWasRemoved(players[i].mo))
-			{
 				P_PlayerAfterThink(&players[i]);
-				P_RunTextPrompt(&players[i]);
+
+		// Run text prompts
+		if (globaltextprompt)
+		{
+			player_t *promptplayer = globaltextprompt->callplayer;
+
+			// Reassign the callplayer if they either quit, or became a spectator
+			if (!promptplayer || promptplayer->spectator || promptplayer->quittime)
+			{
+				for (i = 0; i < MAXPLAYERS; i++)
+				{
+					if (playeringame[i] && !(players[i].spectator || players[i].quittime))
+					{
+						globaltextprompt->callplayer = &players[i];
+						break;
+					}
+				}
 			}
+		}
+
+		for (i = 0; i < MAXPLAYERS; i++)
+			if (playeringame[i])
+				P_RunTextPrompt(&players[i]);
 
 		PS_START_TIMING(ps_lua_thinkframe_time);
 		LUA_HookThinkFrame();

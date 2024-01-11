@@ -20,6 +20,7 @@
 #include "f_finale.h"
 #include "p_setup.h"
 #include "p_saveg.h"
+#include "p_dialog.h"
 #include "i_time.h"
 #include "i_system.h"
 #include "am_map.h"
@@ -2085,6 +2086,80 @@ static boolean ViewpointSwitchResponder(event_t *ev)
 	return true;
 }
 
+static boolean G_TextPromptResponder(event_t *ev)
+{
+	if (ev->type != ev_keydown)
+		return false;
+
+	player_t *player = &players[consoleplayer];
+	if (!player->promptactive)
+		return false;
+
+	dialog_t *dialog = globaltextprompt ? globaltextprompt : player->textprompt;
+	if (!dialog->showchoices)
+		return false;
+
+	player_t *promptplayer = globaltextprompt ? globaltextprompt->callplayer : player;
+	if (player != promptplayer)
+		return false;
+
+	INT32 key = ev->key;
+
+	// remap virtual keys (mouse & joystick buttons)
+	switch (key)
+	{
+		case KEY_JOY1:
+		case KEY_JOY1 + 2:
+			key = KEY_ENTER;
+			break;
+		case KEY_HAT1:
+			key = KEY_UPARROW;
+			break;
+		case KEY_HAT1 + 1:
+			key = KEY_DOWNARROW;
+			break;
+		case KEY_HAT1 + 2:
+			key = KEY_LEFTARROW;
+			break;
+		case KEY_HAT1 + 3:
+			key = KEY_RIGHTARROW;
+			break;
+	}
+
+	if (key == KEY_UPARROW)
+	{
+		INT32 choice = dialog->curchoice - 1;
+		if (choice < 0)
+			choice = dialog->numchoices - 1;
+		D_SendTextPromptChoice(choice);
+		return true;
+	}
+	else if (key == KEY_DOWNARROW)
+	{
+		INT32 choice = dialog->curchoice + 1;
+		if (choice >= dialog->numchoices)
+			choice = 0;
+		D_SendTextPromptChoice(choice);
+		return true;
+	}
+	else if (!ev->repeated)
+	{
+		if (key == KEY_ENTER || key == gamecontrol[GC_JUMP][0] || key == gamecontrol[GC_JUMP][1])
+		{
+			D_SendTextPromptConfirm(dialog->curchoice);
+			return true;
+		}
+		else if (dialog->nochoice > 0 && dialog->nochoice <= dialog->numchoices
+			&& (key == gamecontrol[GC_SPIN][0] || key == gamecontrol[GC_SPIN][1]))
+		{
+			D_SendTextPromptChoice(dialog->nochoice);
+			return true;
+		}
+	}
+
+	return false;
+}
+
 //
 // G_Responder
 // Get info needed to make ticcmd_ts for the players.
@@ -2174,6 +2249,9 @@ boolean G_Responder(event_t *ev)
 
 	// update keys current state
 	G_MapEventsToControls(ev);
+
+	if (G_TextPromptResponder(ev))
+		return true;
 
 	switch (ev->type)
 	{

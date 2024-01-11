@@ -206,10 +206,25 @@ extern cutscene_t *cutscenes[128];
 #define MAX_PROMPTS (TUTORIAL_PROMPT+TUTORIAL_AREAS*TUTORIAL_AREA_PROMPTS*3) // 3 control modes
 #define MAX_PAGES 128
 
-#define PROMPT_PIC_PERSIST 0
-#define PROMPT_PIC_LOOP 1
-#define PROMPT_PIC_DESTROY 2
-#define MAX_PROMPT_PICS 8
+enum
+{
+	PROMPT_PIC_PERSIST,
+	PROMPT_PIC_LOOP,
+	PROMPT_PIC_DESTROY
+};
+
+#define MAX_PROMPT_PICS 512
+
+#define MAX_PROMPT_CHOICES 12
+
+typedef struct
+{
+	UINT8 nextprompt; // next prompt to jump to, one-based. 0 = current prompt
+	UINT8 nextpage; // next page to jump to, one-based. 0 = next page within prompt->numpages
+	char nexttag[33]; // next tag to jump to. If set, this overrides nextprompt and nextpage.
+	INT16 exectag;
+	char *text;
+} promptchoice_t;
 
 typedef struct
 {
@@ -217,7 +232,7 @@ typedef struct
 	UINT8 picmode; // sequence mode after displaying last pic, 0 = persist, 1 = loop, 2 = destroy
 	UINT8 pictoloop; // if picmode == loop, which pic to loop to?
 	UINT8 pictostart; // initial pic number to show
-	cutscene_pic_t pics[MAX_PROMPT_PICS];
+	cutscene_pic_t *pics;
 
 	char   musswitch[7];
 	UINT16 musswitchflags;
@@ -240,6 +255,11 @@ typedef struct
 	char nexttag[33]; // next tag to jump to. If set, this overrides nextprompt and nextpage.
 	INT32 timetonext; // time in tics to jump to next page automatically. 0 = don't jump automatically
 	char *text;
+	INT32 numchoices;
+	promptchoice_t *choices;
+	INT32 startchoice;
+	INT32 nochoice;
+	boolean choicesleftside;
 } textpage_t;
 
 typedef struct

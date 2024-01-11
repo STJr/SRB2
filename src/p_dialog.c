@@ -23,7 +23,7 @@
 #include "z_zone.h"
 #include "fastcmp.h"
 
-static INT16 skullAnimCounter; // Prompts: Chevron animation
+static INT16 chevronAnimCounter;
 
 static boolean IsSpeedControlChar(UINT8 chr)
 {
@@ -202,33 +202,91 @@ void P_ResetTextWriter(textwriter_t *writer, const char *basetext)
 //  TEXT PROMPTS
 // ==================
 
-static void F_GetPageTextGeometry(dialog_t *dialog, UINT8 *pagelines, boolean *rightside, INT32 *boxh, INT32 *texth, INT32 *texty, INT32 *namey, INT32 *chevrony, INT32 *textx, INT32 *textr)
+typedef struct
+{
+	UINT8 pagelines;
+	boolean rightside;
+	INT32 boxh;
+	INT32 texth;
+	INT32 texty;
+	INT32 namey;
+	INT32 chevrony;
+	INT32 textx;
+	INT32 textr;
+	INT32 choicesx;
+	INT32 choicesy;
+	struct {
+		INT32 x, y, w, h;
+	} choicesbox;
+} dialog_geometry_t;
+
+static void F_GetPageTextGeometry(dialog_t *dialog, dialog_geometry_t *geo)
 {
 	lumpnum_t iconlump = W_CheckNumForName(dialog->page->iconname);
 
-	*pagelines = dialog->page->lines ? dialog->page->lines : 4;
-	*rightside = (iconlump != LUMPERROR && dialog->page->rightside);
+	INT32 pagelines = dialog->page->lines ? dialog->page->lines : 4;
+	boolean rightside = (iconlump != LUMPERROR && dialog->page->rightside);
 
 	// Vertical calculations
-	*boxh = *pagelines*2;
-	*texth = dialog->page->name[0] ? (*pagelines-1)*2 : *pagelines*2; // name takes up first line if it exists
-	*texty = BASEVIDHEIGHT - ((*texth * 4) + (*texth/2)*4);
-	*namey = BASEVIDHEIGHT - ((*boxh * 4) + (*boxh/2)*4);
-	*chevrony = BASEVIDHEIGHT - (((1*2) * 4) + ((1*2)/2)*4); // force on last line
+	INT32 boxh = pagelines*2;
+	INT32 texth = dialog->page->name[0] ? (pagelines-1)*2 : pagelines*2; // name takes up first line if it exists
+	INT32 namey = BASEVIDHEIGHT - ((boxh * 4) + (boxh/2)*4);
+
+	geo->texty = BASEVIDHEIGHT - ((texth * 4) + (texth/2)*4);
+	geo->namey = namey;
+	geo->chevrony = BASEVIDHEIGHT - (((1*2) * 4) + ((1*2)/2)*4); // force on last line
+	geo->pagelines = pagelines;
+	geo->rightside = rightside;
+	geo->boxh = boxh;
+	geo->texth = texth;
 
 	// Horizontal calculations
 	// Shift text to the right if we have a character icon on the left side
 	// Add 4 margin against icon
-	*textx = (iconlump != LUMPERROR && !*rightside) ? ((*boxh * 4) + (*boxh/2)*4) + 4 : 4;
-	*textr = *rightside ? BASEVIDWIDTH - (((*boxh * 4) + (*boxh/2)*4) + 4) : BASEVIDWIDTH-4;
+	geo->textx = (iconlump != LUMPERROR && !rightside) ? ((boxh * 4) + (boxh/2)*4) + 4 : 4;
+	geo->textr = rightside ? BASEVIDWIDTH - (((boxh * 4) + (boxh/2)*4) + 4) : BASEVIDWIDTH-4;
+
+	// Calculate choices box
+	if (dialog->numchoices)
+	{
+		const int choices_box_spacing = 4;
+
+		INT32 longestchoice = dialog->longestchoice + 16;
+		INT32 choices_height = dialog->numchoices * 10;
+		INT32 choices_x, choices_y, choices_h, choices_w = longestchoice + (choices_box_spacing * 2);
+
+		if (dialog->page->choicesleftside)
+			choices_x = 16;
+		else
+			choices_x = (BASEVIDWIDTH - 8) - choices_w;
+
+		choices_h = choices_height + (choices_box_spacing * 2);
+		choices_y = namey - 8 - choices_h;
+
+		geo->choicesbox.x = choices_x;
+		geo->choicesbox.w = choices_w;
+		geo->choicesbox.y = choices_y;
+		geo->choicesbox.h = choices_h;
+
+		geo->choicesx = choices_x + choices_box_spacing;
+		geo->choicesy = choices_y + choices_box_spacing;
+	}
+	else
+	{
+		geo->choicesbox.x = 0;
+		geo->choicesbox.y = 0;
+		geo->choicesbox.w = 0;
+		geo->choicesbox.w = 0;
+		geo->choicesx = 0;
+		geo->choicesy = 0;
+	}
 }
 
 static fixed_t F_GetPromptHideHudBound(dialog_t *dialog)
 {
-	UINT8 pagelines;
-	boolean rightside;
-	INT32 boxh, texth, texty, namey, chevrony;
-	INT32 textx, textr;
+	dialog_geometry_t geo;
+
+	INT32 boxh;
 
 	if (!dialog->prompt || !dialog->page ||
 		!dialog->page->hidehud ||
@@ -237,10 +295,10 @@ static fixed_t F_GetPromptHideHudBound(dialog_t *dialog)
 	else if (dialog->page->hidehud == 2) // hide all
 		return BASEVIDHEIGHT;
 
-	F_GetPageTextGeometry(dialog, &pagelines, &rightside, &boxh, &texth, &texty, &namey, &chevrony, &textx, &textr);
+	F_GetPageTextGeometry(dialog, &geo);
 
 	// calc boxheight (see V_DrawPromptBack)
-	boxh *= vid.dup;
+	boxh = geo.boxh * vid.dup;
 	boxh = (boxh * 4) + (boxh/2)*5; // 4 lines of space plus gaps between and some leeway
 
 	// return a coordinate to check
@@ -290,16 +348,13 @@ boolean F_GetPromptHideHud(fixed_t y)
 
 void P_DialogSetText(dialog_t *dialog, char *pagetext, INT32 numchars)
 {
-	UINT8 pagelines;
-	boolean rightside;
-	INT32 boxh, texth, texty, namey, chevrony;
-	INT32 textx, textr;
+	dialog_geometry_t geo;
 
-	F_GetPageTextGeometry(dialog, &pagelines, &rightside, &boxh, &texth, &texty, &namey, &chevrony, &textx, &textr);
+	F_GetPageTextGeometry(dialog, &geo);
 
 	if (dialog->pagetext)
 		Z_Free(dialog->pagetext);
-	dialog->pagetext = (pagetext && pagetext[0]) ? V_WordWrap(textx, textr, 0, pagetext) : Z_StrDup("");
+	dialog->pagetext = (pagetext && pagetext[0]) ? V_WordWrap(geo.textx, geo.textr, 0, pagetext) : Z_StrDup("");
 
 	textwriter_t *writer = &dialog->writer;
 
@@ -346,14 +401,55 @@ static void P_DialogStartPage(dialog_t *dialog)
 	dialog->timetonext = dialog->page->timetonext ? dialog->page->timetonext : TICRATE/10;
 	P_PreparePageText(dialog, dialog->page->text);
 
+	if (dialog->page->numchoices > 0)
+	{
+		INT32 startchoice = dialog->page->startchoice ? dialog->page->startchoice - 1 : 0;
+		INT32 nochoice = dialog->page->nochoice ? dialog->page->nochoice - 1 : 0;
+
+		dialog->numchoices = dialog->page->numchoices;
+		dialog->longestchoice = 0;
+
+		if (startchoice >= 0 && startchoice < dialog->numchoices)
+			dialog->curchoice = startchoice;
+		if (nochoice >= 0 && nochoice < dialog->numchoices)
+			dialog->nochoice = nochoice;
+
+		for (INT32 i = 0; i < dialog->numchoices; i++)
+		{
+			INT32 width = V_StringWidth(dialog->page->choices[i].text, 0);
+			if (width > dialog->longestchoice)
+				dialog->longestchoice = width;
+		}
+	}
+	else
+	{
+		dialog->curchoice = 0;
+		dialog->nochoice = -1;
+		dialog->numchoices = 0;
+		dialog->longestchoice = 0;
+	}
+
+	dialog->showchoices = false;
+	dialog->selectedchoice = false;
+
 	// gfx
 	dialog->numpics = dialog->page->numpics;
-	dialog->picnum = dialog->page->pictostart;
-	dialog->pictoloop = dialog->page->pictoloop > 0 ? dialog->page->pictoloop - 1 : 0;
-	dialog->pictimer = dialog->page->pics[dialog->picnum].duration;
-	dialog->picmode = dialog->page->picmode;
+	dialog->pics = dialog->page->pics;
 
-	memcpy(dialog->pics, dialog->page->pics, sizeof(cutscene_pic_t) * dialog->page->numpics);
+	if (dialog->pics)
+	{
+		dialog->picnum = dialog->page->pictostart;
+		dialog->pictoloop = dialog->page->pictoloop > 0 ? dialog->page->pictoloop - 1 : 0;
+		dialog->pictimer = dialog->pics[dialog->picnum].duration;
+		dialog->picmode = dialog->page->picmode;
+	}
+	else
+	{
+		dialog->picnum = 0;
+		dialog->pictoloop = 0;
+		dialog->pictimer = 0;
+		dialog->picmode = 0;
+	}
 
 	// music change
 	if (dialog->page->musswitch[0])
@@ -364,19 +460,9 @@ static void P_DialogStartPage(dialog_t *dialog)
 	}
 }
 
-static void P_AdvanceToNextPage(player_t *player, dialog_t *dialog)
+static boolean P_LoadNextPageAndPrompt(player_t *player, dialog_t *dialog, INT32 nextprompt, INT32 nextpage)
 {
-	INT32 nextprompt = INT32_MAX, nextpage = INT32_MAX;
-
-	if (dialog->page->nextprompt)
-		nextprompt = dialog->page->nextprompt - 1;
-	if (dialog->page->nextpage)
-		nextpage = dialog->page->nextpage - 1;
-
 	textprompt_t *oldprompt = dialog->prompt;
-
-	if (dialog->page->nexttag[0])
-		P_GetPromptPageByNamedTag(dialog->page->nexttag, &nextprompt, &nextpage);
 
 	// determine next prompt
 	if (nextprompt != INT32_MAX)
@@ -431,9 +517,47 @@ static void P_AdvanceToNextPage(player_t *player, dialog_t *dialog)
 
 	// close the prompt if either num is invalid
 	if (dialog->prompt == NULL || dialog->page == NULL)
+	{
 		P_EndTextPrompt(player, false, false);
-	else
-		P_DialogStartPage(dialog);
+		return false;
+	}
+
+	P_DialogStartPage(dialog);
+
+	return true;
+}
+
+static boolean P_AdvanceToNextPage(player_t *player, dialog_t *dialog)
+{
+	INT32 nextprompt = INT32_MAX, nextpage = INT32_MAX;
+
+	if (dialog->page->nextprompt)
+		nextprompt = dialog->page->nextprompt - 1;
+	if (dialog->page->nextpage)
+		nextpage = dialog->page->nextpage - 1;
+
+	if (dialog->page->nexttag[0])
+		P_GetPromptPageByNamedTag(dialog->page->nexttag, &nextprompt, &nextpage);
+
+	return P_LoadNextPageAndPrompt(player, dialog, nextprompt, nextpage);
+}
+
+static boolean P_ExecuteChoice(player_t *player, dialog_t *dialog, promptchoice_t *choice)
+{
+	if (choice->exectag)
+		P_LinedefExecute(choice->exectag, player->mo, NULL);
+
+	INT32 nextprompt = INT32_MAX, nextpage = INT32_MAX;
+
+	if (choice->nextprompt)
+		nextprompt = choice->nextprompt - 1;
+	if (choice->nextpage)
+		nextpage = choice->nextpage - 1;
+
+	if (choice->nexttag[0])
+		P_GetPromptPageByNamedTag(choice->nexttag, &nextprompt, &nextpage);
+
+	return P_LoadNextPageAndPrompt(player, dialog, nextprompt, nextpage);
 }
 
 void P_FreeTextPrompt(dialog_t *dialog)
@@ -441,6 +565,7 @@ void P_FreeTextPrompt(dialog_t *dialog)
 	if (dialog)
 	{
 		Z_Free(dialog->writer.disptext);
+		Z_Free(dialog->pagetext);
 		Z_Free(dialog);
 	}
 }
@@ -579,7 +704,7 @@ void P_StartTextPrompt(player_t *player, INT32 promptnum, INT32 pagenum, UINT16 
 	dialog->timetonext = 0;
 	dialog->pictimer = 0;
 
-	skullAnimCounter = 0;
+	chevronAnimCounter = 0;
 
 	// Set up state
 	dialog->postexectag = postexectag;
@@ -746,28 +871,30 @@ void F_TextPromptDrawer(void)
 		return;
 
 	lumpnum_t iconlump;
-	UINT8 pagelines;
-	boolean rightside;
-	INT32 boxh, texth, texty, namey, chevrony;
-	INT32 textx, textr;
+	dialog_geometry_t geo;
 
 	// Data
 	patch_t *patch;
 
 	iconlump = W_CheckNumForName(dialog->page->iconname);
-	F_GetPageTextGeometry(dialog, &pagelines, &rightside, &boxh, &texth, &texty, &namey, &chevrony, &textx, &textr);
+	F_GetPageTextGeometry(dialog, &geo);
+
+	boolean rightside = geo.rightside;
+	INT32 boxh = geo.boxh, texty = geo.texty, namey = geo.namey, chevrony = geo.chevrony;
+	INT32 textx = geo.textx, textr = geo.textr;
+	INT32 choicesx = geo.choicesx, choicesy = geo.choicesy;
 
 	// Draw gfx first
-	if (dialog->picnum >= 0 && dialog->picnum < dialog->numpics && dialog->pics[dialog->picnum].name[0] != '\0')
+	if (dialog->pics && dialog->picnum >= 0 && dialog->picnum < dialog->numpics && dialog->pics[dialog->picnum].name[0] != '\0')
 	{
 		cutscene_pic_t *pic = &dialog->pics[dialog->picnum];
 
+		patch = W_CachePatchLongName(pic->name, PU_PATCH_LOWPRIORITY);
+
 		if (pic->hires)
-			V_DrawSmallScaledPatch(pic->xcoord, pic->ycoord, 0,
-				W_CachePatchLongName(pic->name, PU_PATCH_LOWPRIORITY));
+			V_DrawSmallScaledPatch(pic->xcoord, pic->ycoord, 0, patch);
 		else
-			V_DrawScaledPatch(pic->xcoord, pic->ycoord, 0,
-				W_CachePatchLongName(pic->name, PU_PATCH_LOWPRIORITY));
+			V_DrawScaledPatch(pic->xcoord, pic->ycoord, 0, patch);
 	}
 
 	// Draw background
@@ -777,7 +904,7 @@ void F_TextPromptDrawer(void)
 	if (iconlump != LUMPERROR)
 	{
 		INT32 iconx, icony, scale, scaledsize;
-		patch = W_CachePatchName(dialog->page->iconname, PU_PATCH_LOWPRIORITY);
+		patch = W_CachePatchLongName(dialog->page->iconname, PU_PATCH_LOWPRIORITY);
 
 		// scale and center
 		if (patch->width > patch->height)
@@ -818,12 +945,46 @@ void F_TextPromptDrawer(void)
 	if (dialog->page->name[0])
 		V_DrawString(textx, namey, (V_SNAPTOBOTTOM|V_ALLOWLOWERCASE), dialog->page->name);
 
+	// Draw choices
+	if (dialog->showchoices)
+	{
+		INT32 snap_flags = V_SNAPTOBOTTOM;
+
+		if (dialog->page->choicesleftside)
+			snap_flags |= V_SNAPTOLEFT;
+		else
+			snap_flags |= V_SNAPTORIGHT;
+
+		V_DrawPromptRect(geo.choicesbox.x, geo.choicesbox.y, geo.choicesbox.w, geo.choicesbox.h, dialog->page->backcolor, snap_flags);
+
+		textx = choicesx + 12;
+
+		for (INT32 i = 0; i < dialog->numchoices; i++)
+		{
+			const char *text = dialog->page->choices[i].text;
+
+			INT32 flags = snap_flags | V_ALLOWLOWERCASE;
+
+			boolean selected = dialog->curchoice == i;
+
+			if (selected)
+				flags |= V_YELLOWMAP;
+
+			V_DrawString(textx, choicesy, flags, text);
+
+			if (selected)
+				V_DrawString(choicesx + (chevronAnimCounter/5), choicesy, V_YELLOWMAP, "\x1D");
+
+			choicesy += 10;
+		}
+	}
+
 	if (globaltextprompt && (globaltextprompt->callplayer != &players[displayplayer]))
 		return;
 
 	// Draw chevron
-	if (dialog->blockcontrols && !dialog->timetonext)
-		V_DrawString(textr-8, chevrony + (skullAnimCounter/5), (V_SNAPTOBOTTOM|V_YELLOWMAP), "\x1B"); // down arrow
+	if (dialog->blockcontrols && !dialog->timetonext && !dialog->showchoices)
+		V_DrawString(textr-8, chevrony + (chevronAnimCounter/5), (V_SNAPTOBOTTOM|V_YELLOWMAP), "\x1B"); // down arrow
 }
 
 static void P_LockPlayerControls(player_t *player)
@@ -841,7 +1002,7 @@ static void P_LockPlayerControls(player_t *player)
 
 static void P_UpdatePromptGfx(dialog_t *dialog)
 {
-	if (dialog->picnum < 0 || dialog->picnum >= dialog->numpics)
+	if (!dialog->pics || dialog->picnum < 0 || dialog->picnum >= dialog->numpics)
 		return;
 
 	if (dialog->pictimer <= 0)
@@ -864,90 +1025,138 @@ static void P_UpdatePromptGfx(dialog_t *dialog)
 		dialog->pictimer--;
 }
 
-void P_RunTextPrompt(player_t *player)
+static void P_PlayDialogSound(player_t *player, sfxenum_t sound)
+{
+	if (P_IsLocalPlayer(player) || &players[displayplayer] == player)
+		S_StartSound(NULL, sound);
+}
+
+static dialog_t *P_GetPlayerDialog(player_t *player)
+{
+	return globaltextprompt ? globaltextprompt : player->textprompt;
+}
+
+boolean P_SetCurrentDialogChoice(player_t *player, INT32 choice)
 {
 	if (!player->promptactive)
+		return false;
+
+	dialog_t *dialog = P_GetPlayerDialog(player);
+
+	if (!dialog || choice < 0 || choice >= dialog->numchoices)
+		return false;
+
+	dialog->curchoice = choice;
+
+	P_PlayDialogSound(player, sfx_menu1);
+
+	return true;
+}
+
+boolean P_SelectDialogChoice(player_t *player, INT32 choice)
+{
+	if (!player->promptactive)
+		return false;
+
+	dialog_t *dialog = P_GetPlayerDialog(player);
+
+	if (!dialog || choice < 0 || choice >= dialog->numchoices)
+		return false;
+
+	dialog->curchoice = choice;
+	dialog->selectedchoice = true;
+
+	return true;
+}
+
+void P_RunTextPrompt(player_t *player)
+{
+	if (!player || !player->promptactive)
 		return;
 
-	dialog_t *dialog = globaltextprompt ? globaltextprompt : player->textprompt;
+	dialog_t *dialog = P_GetPlayerDialog(player);
 	if (!dialog)
 	{
 		player->promptactive = false;
 		return;
 	}
 
-	textwriter_t *writer = &dialog->writer;
-
-	// advance animation
-	writer->boostspeed = 0;
+	player_t *promptplayer = dialog->callplayer;
+	if (!promptplayer)
+		return;
 
 	// for the chevron
-	if (P_IsLocalPlayer(player) && --skullAnimCounter <= 0)
-		skullAnimCounter = 8;
-
-	player_t *promptplayer = player;
-
-	if (globaltextprompt)
+	if (P_IsLocalPlayer(player))
 	{
-		promptplayer = globaltextprompt->callplayer;
-
-		// Reassign the callplayer if they either quit, or became a spectator
-		if (promptplayer->spectator || promptplayer->quittime)
-		{
-			for (INT32 i = 0; i < MAXPLAYERS; i++)
-			{
-				if (playeringame[i] && !(players[i].spectator || players[i].quittime))
-				{
-					promptplayer = globaltextprompt->callplayer = &players[i];
-					break;
-				}
-			}
-		}
+		if (--chevronAnimCounter <= 0)
+			chevronAnimCounter = 8;
 	}
+
+	// Don't update if the player is a spectator, or quit the game
+	if (player->spectator || player->quittime)
+		return;
+
+	// Block player controls
+	if (dialog->blockcontrols)
+		P_LockPlayerControls(player);
+
+	// Stop here if this player isn't who started this dialog
+	if (player != promptplayer)
+		return;
+
+	textwriter_t *writer = &dialog->writer;
+
+	writer->boostspeed = 0;
 
 	// button handling
 	if (dialog->page->timetonext)
 	{
-		if (dialog->blockcontrols) // same procedure as below, just without the button handling
-			P_LockPlayerControls(player);
+		// same procedure as below, just without the button handling
+		if (dialog->timetonext >= 1)
+			dialog->timetonext--;
 
-		if (player == promptplayer)
+		if (!dialog->timetonext)
 		{
-			if (dialog->timetonext >= 1)
-				dialog->timetonext--;
-
-			if (!dialog->timetonext)
-			{
-				P_AdvanceToNextPage(player, dialog);
-				return;
-			}
-			else
-			{
-				INT32 write = P_DialogWriteText(dialog, &dialog->writer);
-				if (write == 1 && dialog->page->textsfx)
-					S_StartSound(NULL, dialog->page->textsfx);
-			}
+			P_AdvanceToNextPage(player, dialog);
+			return;
+		}
+		else
+		{
+			INT32 write = P_DialogWriteText(dialog, writer);
+			if (write == 1 && dialog->page->textsfx)
+				P_PlayDialogSound(player, dialog->page->textsfx);
 		}
 	}
 	else
 	{
 		if (dialog->blockcontrols)
 		{
-			P_LockPlayerControls(player);
+			// Handle choices
+			if (dialog->showchoices)
+			{
+				if (dialog->selectedchoice)
+				{
+					dialog->selectedchoice = false;
 
-			if ((promptplayer->cmd.buttons & BT_SPIN) || (promptplayer->cmd.buttons & BT_JUMP))
+					P_PlayDialogSound(player, sfx_menu1);
+
+					P_ExecuteChoice(player, dialog, &dialog->page->choices[dialog->curchoice]);
+					return;
+				}
+			}
+			else if ((player->cmd.buttons & BT_SPIN) || (player->cmd.buttons & BT_JUMP))
 			{
 				if (dialog->timetonext > 1)
 					dialog->timetonext--;
 				else if (writer->baseptr) // don't set boost if we just reset the string
 					writer->boostspeed = 1; // only after a slight delay
 
-				if (!dialog->timetonext) // is 0 when finished generating text
+				if (!dialog->timetonext && !dialog->showchoices) // timetonext is 0 when finished generating text
 				{
-					P_AdvanceToNextPage(player, dialog);
+					if (!P_AdvanceToNextPage(player, dialog))
+						return;
 
-					if (promptplayer->promptactive)
-						S_StartSound(NULL, sfx_menu1);
+					P_PlayDialogSound(player, sfx_menu1);
 
 					return;
 				}
@@ -959,19 +1168,19 @@ void P_RunTextPrompt(player_t *player)
 			dialog->timetonext = !dialog->blockcontrols;
 
 		// generate letter-by-letter text
-		if (player == promptplayer)
+		INT32 write = P_DialogWriteText(dialog, writer);
+		if (write)
 		{
-			INT32 write = P_DialogWriteText(dialog, &dialog->writer);
-			if (write)
-			{
-				if (write == 1 && dialog->page->textsfx)
-					S_StartSound(NULL, dialog->page->textsfx);
-			}
-			else
-				dialog->timetonext = !dialog->blockcontrols;
+			if (write == 1 && dialog->page->textsfx)
+				P_PlayDialogSound(player, dialog->page->textsfx);
+		}
+		else
+		{
+			if (dialog->blockcontrols && !dialog->showchoices && dialog->numchoices)
+				dialog->showchoices = true;
+			dialog->timetonext = !dialog->blockcontrols;
 		}
 	}
 
-	if (player == promptplayer)
-		P_UpdatePromptGfx(dialog);
+	P_UpdatePromptGfx(dialog);
 }

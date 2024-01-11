@@ -17,6 +17,7 @@
 #include "doomtype.h"
 
 #include "d_player.h"
+#include "d_event.h"
 
 //
 // CUTSCENE TEXT WRITING
@@ -56,7 +57,13 @@ typedef struct dialog_s
 	INT32 pictimer;
 	INT32 picmode;
 	INT32 numpics;
-	cutscene_pic_t pics[MAX_PROMPT_PICS];
+	cutscene_pic_t *pics;
+	boolean showchoices;
+	INT32 curchoice;
+	INT32 numchoices;
+	INT32 nochoice;
+	INT32 longestchoice;
+	boolean selectedchoice;
 } dialog_t;
 
 void P_StartTextPrompt(player_t *player, INT32 promptnum, INT32 pagenum, UINT16 postexectag, boolean blockcontrols, boolean freezerealtime, boolean allplayers);
@@ -66,6 +73,8 @@ void P_EndAllTextPrompts(boolean forceexec, boolean noexec);
 void P_RunTextPrompt(player_t *player);
 void P_FreeTextPrompt(dialog_t *dialog);
 void P_DialogSetText(dialog_t *dialog, char *pagetext, INT32 numchars);
+boolean P_SetCurrentDialogChoice(player_t *player, INT32 choice);
+boolean P_SelectDialogChoice(player_t *player, INT32 choice);
 boolean F_GetPromptHideHudAll(void);
 boolean F_GetPromptHideHud(fixed_t y);
 void F_TextPromptDrawer(void);
