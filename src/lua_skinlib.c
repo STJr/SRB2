@@ -54,7 +54,8 @@ enum skin {
 	skin_contspeed,
 	skin_contangle,
 	skin_soundsid,
-	skin_sprites
+	skin_sprites,
+	skin_natkcolor
 };
 
 static const char *const skin_opt[] = {
@@ -94,6 +95,7 @@ static const char *const skin_opt[] = {
 	"contangle",
 	"soundsid",
 	"sprites",
+	"natkcolor",
 	NULL};
 
 #define UNIMPLEMENTED luaL_error(L, LUA_QL("skin_t") " field " LUA_QS " is not implemented for Lua and cannot be accessed.", skin_opt[field])
@@ -217,6 +219,9 @@ static int skin_get(lua_State *L)
 		break;
 	case skin_sprites:
 		LUA_PushUserdata(L, skin->sprites, META_SKINSPRITES);
+		break;
+	case skin_natkcolor:
+		lua_pushinteger(L, skin->natkcolor);
 		break;
 	}
 	return 1;
