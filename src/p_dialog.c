@@ -206,6 +206,14 @@ void P_ResetTextWriter(textwriter_t *writer, const char *basetext)
 //  TEXT PROMPTS
 // ==================
 
+static textprompt_t *P_GetTextPromptByID(INT32 promptnum)
+{
+	if (promptnum < 0 || promptnum >= MAX_PROMPTS || !textprompts[promptnum])
+		return NULL;
+
+	return textprompts[promptnum];
+}
+
 INT32 P_GetTextPromptByName(const char *name)
 {
 	for (INT32 i = 0; i < MAX_PROMPTS; i++)
@@ -217,15 +225,7 @@ INT32 P_GetTextPromptByName(const char *name)
 	return -1;
 }
 
-static textprompt_t *P_GetTextPromptByID(INT32 promptnum)
-{
-	if (promptnum < 0 || promptnum >= MAX_PROMPTS || !textprompts[promptnum])
-		return NULL;
-
-	return textprompts[promptnum];
-}
-
-static INT32 P_GetPromptPageByName(textprompt_t *prompt, const char *name)
+INT32 P_GetPromptPageByName(textprompt_t *prompt, const char *name)
 {
 	for (INT32 i = 0; i < prompt->numpages; i++)
 	{
@@ -2165,6 +2165,12 @@ static void ParseConversation(tokenizer_t *sc)
 		}
 
 		tkn = sc->get(sc, 0);
+	}
+
+	if (!prompt->numpages)
+	{
+		CONS_Alert(CONS_WARNING, "Conversation has no pages\n");
+		goto fail;
 	}
 
 	if (name)

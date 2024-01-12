@@ -83,6 +83,7 @@ boolean F_GetPromptHideHud(fixed_t y);
 void F_TextPromptDrawer(void);
 
 INT32 P_GetTextPromptByName(const char *name);
+INT32 P_GetPromptPageByName(textprompt_t *prompt, const char *name);
 void P_GetPromptPageByNamedTag(const char *tag, INT32 *promptnum, INT32 *pagenum);
 void P_SetMetaPage(textpage_t *page, textpage_t *metapage);
 void P_SetPicsMetaPage(textpage_t *page, textpage_t *metapage);

@@ -15,6 +15,7 @@
 #include "p_local.h"
 #include "p_setup.h" // So we can have P_SetupLevelSky
 #include "p_slopes.h" // P_GetSlopeZAt
+#include "p_dialog.h"
 #include "z_zone.h"
 #include "r_main.h"
 #include "r_draw.h"
@@ -1855,6 +1856,79 @@ static int lib_pPlayerShouldUseSpinHeight(lua_State *L)
 		return LUA_ErrInvalid(L, "player_t");
 	lua_pushboolean(L, P_PlayerShouldUseSpinHeight(player));
 	return 1;
+}
+
+static int lib_pStartTextPrompt(lua_State *L)
+{
+	player_t *player;
+	INT32 promptnum = INT32_MAX, pagenum = 1;
+	const char *promptname = NULL, *pagename = NULL;
+	boolean blockcontrols;
+	boolean allplayers;
+
+	player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
+
+	if (lua_type(L, 2) == LUA_TSTRING)
+		promptname = luaL_checkstring(L, 2);
+	else
+		promptnum = luaL_checkinteger(L, 2);
+
+	if (lua_type(L, 3) == LUA_TSTRING)
+		pagename = luaL_checkstring(L, 3);
+	else if (!lua_isnoneornil(L, 3))
+		pagenum = luaL_checkinteger(L, 3);
+
+	blockcontrols = lua_optboolean(L, 4);
+	allplayers = lua_optboolean(L, 5);
+
+	NOHUD
+	INLEVEL
+
+	if (!player)
+		return LUA_ErrInvalid(L, "player_t");
+
+	if (promptname) {
+		promptnum = P_GetTextPromptByName(promptname);
+		if (promptnum == -1)
+			return luaL_error(L, "no text prompt named '%s'", promptname);
+	}
+	else {
+		if (promptnum <= 0 || promptnum > MAX_PROMPTS)
+			return luaL_error(L, "text prompt %d out of range (1 - %d)", promptnum, MAX_PROMPTS);
+		promptnum--;
+	}
+
+	textprompt_t *textprompt = textprompts[promptnum];
+	if (!textprompt)
+		return luaL_error(L, "invalid text prompt %d", promptnum);
+
+	if (pagename) {
+		pagenum = P_GetPromptPageByName(textprompt, pagename);
+		if (pagenum == -1)
+			return luaL_error(L, "no text prompt page named '%s'", pagename);
+	}
+	else {
+		if (pagenum <= 0 || pagenum > textprompt->numpages)
+			return luaL_error(L, "text prompt page %d out of range (1 - %d)", pagenum, textprompt->numpages);
+		pagenum--;
+	}
+
+	P_StartTextPrompt(player, promptnum, pagenum, 0, blockcontrols, false, allplayers);
+
+	return 0;
+}
+
+static int lib_pEndTextPrompt(lua_State *L)
+{
+	player_t *player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
+	boolean noexec = lua_optboolean(L, 2);
+
+	NOHUD
+	INLEVEL
+
+	P_EndTextPrompt(player, false, noexec);
+
+	return 0;
 }
 
 // P_MAP
@@ -4381,6 +4455,10 @@ static luaL_Reg lib[] = {
 	{"P_DoFollowMobj",lib_pDoFollowMobj},
 	{"P_PlayerCanEnterSpinGaps",lib_pPlayerCanEnterSpinGaps},
 	{"P_PlayerShouldUseSpinHeight",lib_pPlayerShouldUseSpinHeight},
+
+	// p_dialog
+	{"P_StartTextPrompt",lib_pStartTextPrompt},
+	{"P_EndTextPrompt",lib_pEndTextPrompt},
 
 	// p_map
 	{"P_CheckPosition",lib_pCheckPosition},
