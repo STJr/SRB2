@@ -1,0 +1,143 @@
+===============================================================================
+USDF-SRB2: SRB2 Strife Dialog Format v1.0
+based on GZDoom Strife Dialog Format v1.0 - 2019
+
+    Copyright (c) 2024 Sonic Team Junior
+       uses GZDoom Strife Dialog Format v1.0 as a template,
+       original document Copyright (c) 2019 Rachael Alexanderson.
+    Permission is granted to copy, distribute and/or modify this document
+    under the terms of the GNU Free Documentation License, Version 1.2
+    or any later version published by the Free Software Foundation;
+    with no Invariant Sections, no Front-Cover Texts, and no Back-Cover Texts.
+
+===============================================================================
+
+=======================================
+I. Grammar / Syntax
+=======================================
+
+    No changes.
+
+=======================================
+II. Implementation Semantics
+=======================================
+
+    No changes.
+
+=======================================
+III. Changes to GZSDF spec
+=======================================
+
+    SRB2 Strife Dialogue Format implements most of SRB2's text prompt features,
+    while using the GZSDF format as a base.
+
+    SRB2-format dialogues need to start with this line:
+
+    namespace = "srb2";
+
+---------------------
+III.A : Conversations
+---------------------
+
+conversation // Starts a dialog.
+{
+    id = <string|int>; // Assigns an ID to a dialogue.
+                       // If int, this corresponds to an SRB2 text prompt number.
+
+    page // Starts a new page. Pages are automatically numbered starting at 1.
+    {
+        pagename         = <string>;     // Name of the page. For use with next.
+
+        name             = <string>;     // Name of the speaker.
+        icon             = <string>;     // Icon lump.
+        textsound        = <string>;     // The sound that is played when the text is typed.
+        dialog           = <string>;     // Dialog of the page.
+
+        nextpage         = <string|int>; // Sets the next page.
+        nextconversation = <string|int>; // Sets the next conversation.
+        nexttag          = <string>;     // Jumps to a page with this tag.
+
+        duration         = <integer>;    // Duration in frames of this page.
+        textspeed        = <integer>;    // The speed which the text is typed at.
+                                         // Default: 1/5th of a second
+        textlines        = <integer>;    // How many lines of text to display.
+                                         // Default: 4
+
+        iconside         = <integer>;    // Which side to display the icon.
+                                         // This must be either "left" or "right".
+                                         // Default: "left"
+        flipicon         = <bool>;       // Whether to flip the icon horizontally.
+                                         // Default: false
+        displayhud       = <string>;     // Whether or not to display the HUD. This must one of:
+                                         // - "show"
+                                         // - "hide"
+                                         // - "hideall"
+                                         // Default: "hide"
+        backcolor        = <string>;     // The color to use for the text box background.
+                                         // Default: "gray"
+        alignchoices     = <string>;     // Which side the dialog choices are displayed at.
+                                         // This must be either "left" or "right".
+                                         // Default: "right"
+        picturesequence  = <string>;     // How to play the picture sequence. This must one of:
+                                         // - "persist"
+                                         // - "loop"
+                                         // - "hide"
+                                         // Default: "persist"
+
+        music            = <string>;     // Which music to play.
+        musictrack       = <integer>;    // Which music track to play.
+        loopmusic        = <bool>;       // Whether to loop the music.
+                                         // Default: false
+
+        executelinedef   = <integer>;    // Executes every linedef with this tag. Execution is ignored if 0.
+
+        restoremusic     = <bool>;       // Whether to restore the map's music.
+        closedialog      = <bool>;       // Should the dialog be closed after this page?
+                                         // Default: false
+
+        // Choices shall be automatically numbered.
+        choice
+        {
+            text             = <string>;     // Name of the choice.
+
+            nextpage         = <string|int>; // Sets the next page.
+            nextconversation = <string|int>; // Sets the next conversation.
+            nexttag          = <string>;     // Jumps to a page with this tag.
+
+            executelinedef   = <integer>;    // Executes every linedef with this tag. Execution is ignored if 0.
+
+            highlighted      = <bool>;       // Whether this is the choice to be highlighted
+                                             // when the list of choices appear.
+                                             // Default: false
+
+            nochoice         = <bool>;       // Is this the "No" choice?
+                                             // Default: false
+
+            closedialog      = <bool>;       // Should the dialog be closed upon selecting this choice?
+                                             // Default: false
+        }
+
+        // Used to configure a picture sequence.
+        picture
+        {
+            name        = <string>;  // Lump name of the picture.
+
+            x           = <integer>; // X coordinate.
+            y           = <integer>; // Y coordinate.
+
+            duration    = <integer>; // Duration.
+
+            hires       = <bool>;    // Should the picture be displayed at 0.5 scale?
+                                     // Default: false
+
+            start       = <bool>;    // Is this the first picture in the sequence?
+                                     // Default: false
+            looppoint   = <bool>;    // Is this the loop point in the sequence?
+                                     // Default: false
+        }
+    }
+}
+
+===============================================================================
+EOF
+===============================================================================
