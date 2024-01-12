@@ -1762,7 +1762,7 @@ INT32 P_ParsePromptBackColor(const char *word)
 	}
 
 #define IS_TOKEN(expected) \
-	if (!tkn || strcmp(tkn, expected) != 0) \
+	if (!tkn || stricmp(tkn, expected) != 0) \
 	{ \
 		if (tkn) \
 			CONS_Alert(CONS_ERROR, "Error parsing DIALOGUE: Expected '%s', got '%s'\n", expected, tkn); \
@@ -1775,7 +1775,7 @@ INT32 P_ParsePromptBackColor(const char *word)
 	GET_TOKEN(); \
 	IS_TOKEN(expected)
 
-#define CHECK_TOKEN(check) (strcmp(tkn, check) == 0)
+#define CHECK_TOKEN(check) (stricmp(tkn, check) == 0)
 
 #define EXPECT_NUMBER(what) \
 	int num = 0; \
@@ -1812,6 +1812,7 @@ static void ParseChoice(textpage_t *page, tokenizer_t *sc)
 		if (CHECK_TOKEN("text"))
 		{
 			EXPECT_TOKEN("=");
+			EXPECT_TOKEN("\"");
 
 			GET_TOKEN();
 
@@ -1819,6 +1820,7 @@ static void ParseChoice(textpage_t *page, tokenizer_t *sc)
 
 			choice->text = Z_StrDup(tkn);
 
+			EXPECT_TOKEN("\"");
 			EXPECT_TOKEN(";");
 		}
 		else if (CHECK_TOKEN("nextpage"))
@@ -1827,15 +1829,23 @@ static void ParseChoice(textpage_t *page, tokenizer_t *sc)
 
 			GET_TOKEN();
 
-			Z_Free(choice->nextpagename);
-
-			int num = 0;
-			if (StringToNumber(tkn, &num))
-				choice->nextpage = num;
-			else
+			if (CHECK_TOKEN("\""))
 			{
+				GET_TOKEN();
+
+				Z_Free(choice->nextpagename);
 				choice->nextpage = 0;
 				choice->nextpagename = Z_StrDup(tkn);
+
+				EXPECT_TOKEN("\"");
+			}
+			else
+			{
+				EXPECT_NUMBER("choice 'nextpage'");
+
+				Z_Free(choice->nextpagename);
+
+				choice->nextpage = num;
 			}
 
 			EXPECT_TOKEN(";");
@@ -1846,15 +1856,23 @@ static void ParseChoice(textpage_t *page, tokenizer_t *sc)
 
 			GET_TOKEN();
 
-			Z_Free(choice->nextpromptname);
-
-			int num = 0;
-			if (StringToNumber(tkn, &num))
-				choice->nextprompt = num;
-			else
+			if (CHECK_TOKEN("\""))
 			{
+				GET_TOKEN();
+
+				Z_Free(choice->nextpromptname);
 				choice->nextprompt = 0;
 				choice->nextpromptname = Z_StrDup(tkn);
+
+				EXPECT_TOKEN("\"");
+			}
+			else
+			{
+				EXPECT_NUMBER("choice 'nextconversation'");
+
+				Z_Free(choice->nextpromptname);
+
+				choice->nextprompt = num;
 			}
 
 			EXPECT_TOKEN(";");
@@ -1862,11 +1880,13 @@ static void ParseChoice(textpage_t *page, tokenizer_t *sc)
 		else if (CHECK_TOKEN("nexttag"))
 		{
 			EXPECT_TOKEN("=");
+			EXPECT_TOKEN("\"");
 
 			GET_TOKEN();
 
 			strlcpy(choice->nexttag, tkn, sizeof(choice->nexttag));
 
+			EXPECT_TOKEN("\"");
 			EXPECT_TOKEN(";");
 		}
 		else if (CHECK_TOKEN("executelinedef"))
@@ -1956,11 +1976,13 @@ static void ParsePicture(textpage_t *page, tokenizer_t *sc)
 		if (CHECK_TOKEN("name"))
 		{
 			EXPECT_TOKEN("=");
+			EXPECT_TOKEN("\"");
 
 			GET_TOKEN();
 
 			strlcpy(pic->name, tkn, sizeof(pic->name));
 
+			EXPECT_TOKEN("\"");
 			EXPECT_TOKEN(";");
 		}
 		else if (CHECK_TOKEN("x"))
@@ -2440,8 +2462,6 @@ static char *ParsePageDialog(char *text, size_t *text_length)
 		input++;
 	}
 
-	WRITE_TEXTCHAR('\0');
-
 	*text_length = buffer_pos;
 
 	return (char*)buf;
@@ -2498,6 +2518,7 @@ static void ParsePage(textprompt_t *prompt, tokenizer_t *sc)
 		if (CHECK_TOKEN("pagename"))
 		{
 			EXPECT_TOKEN("=");
+			EXPECT_TOKEN("\"");
 
 			GET_TOKEN();
 
@@ -2505,63 +2526,105 @@ static void ParsePage(textprompt_t *prompt, tokenizer_t *sc)
 
 			page->pagename = Z_StrDup(tkn);
 
+			EXPECT_TOKEN("\"");
 			EXPECT_TOKEN(";");
 		}
 		else if (CHECK_TOKEN("name"))
 		{
 			EXPECT_TOKEN("=");
+			EXPECT_TOKEN("\"");
 
 			GET_TOKEN();
 
 			strlcpy(page->name, tkn, sizeof(page->name));
 
+			EXPECT_TOKEN("\"");
 			EXPECT_TOKEN(";");
 		}
 		else if (CHECK_TOKEN("dialog"))
 		{
 			EXPECT_TOKEN("=");
+			EXPECT_TOKEN("\"");
 
 			GET_TOKEN();
 
-			Z_Free(page->text);
+			UINT8 *buffer = NULL;
+			size_t buffer_pos = 0;
+			size_t buffer_capacity = 0;
 
-			char *escaped = EscapeStringChars(tkn);
-			if (escaped)
+			size_t total_text_length = 0;
+
+			Z_Free(page->text);
+			page->textlength = 0;
+
+			while (true)
 			{
-				page->text = ParsePageDialog(escaped, &page->textlength);
-				Z_Free(escaped);
+				char *escaped = EscapeStringChars(tkn);
+				if (escaped)
+				{
+					size_t parsed_length = 0;
+					char *parsed = ParsePageDialog(escaped, &parsed_length);
+
+					M_BufferMemWrite((UINT8 *)parsed, parsed_length, &buffer, &buffer_pos, &buffer_capacity);
+					total_text_length += parsed_length;
+
+					Z_Free(escaped);
+				}
+
+				EXPECT_TOKEN("\"");
+
+				GET_TOKEN();
+
+				if (CHECK_TOKEN(";"))
+					break;
+				else
+				{
+					IS_TOKEN("\"");
+					GET_TOKEN();
+				}
 			}
 
-			EXPECT_TOKEN(";");
+			page->text = Z_Malloc(total_text_length + 1, PU_STATIC, NULL);
+			memcpy(page->text, buffer, total_text_length);
+			page->text[total_text_length] = '\0';
+			page->textlength = total_text_length;
+
+			Z_Free(buffer);
 		}
 		else if (CHECK_TOKEN("icon"))
 		{
 			EXPECT_TOKEN("=");
+			EXPECT_TOKEN("\"");
 
 			GET_TOKEN();
 
 			strlcpy(page->iconname, tkn, sizeof(page->iconname));
 
+			EXPECT_TOKEN("\"");
 			EXPECT_TOKEN(";");
 		}
 		else if (CHECK_TOKEN("tag"))
 		{
 			EXPECT_TOKEN("=");
+			EXPECT_TOKEN("\"");
 
 			GET_TOKEN();
 
 			strlcpy(page->tag, tkn, sizeof(page->tag));
 
+			EXPECT_TOKEN("\"");
 			EXPECT_TOKEN(";");
 		}
 		else if (CHECK_TOKEN("textsound"))
 		{
 			EXPECT_TOKEN("=");
+			EXPECT_TOKEN("\"");
 
 			GET_TOKEN();
 
 			page->textsfx = get_sfx(tkn);
 
+			EXPECT_TOKEN("\"");
 			EXPECT_TOKEN(";");
 		}
 		else if (CHECK_TOKEN("nextpage"))
@@ -2570,18 +2633,24 @@ static void ParsePage(textprompt_t *prompt, tokenizer_t *sc)
 
 			GET_TOKEN();
 
-			Z_Free(page->nextpagename);
-
-			int num = 0;
-			if (StringToNumber(tkn, &num))
-				page->nextpage = num;
-			else
+			if (CHECK_TOKEN("\""))
 			{
+				GET_TOKEN();
+
+				Z_Free(page->nextpagename);
 				page->nextpage = 0;
 				page->nextpagename = Z_StrDup(tkn);
-			}
 
-			page->nextpage = num;
+				EXPECT_TOKEN("\"");
+			}
+			else
+			{
+				EXPECT_NUMBER("page 'nextpage'");
+
+				Z_Free(page->nextpagename);
+
+				page->nextpage = num;
+			}
 
 			EXPECT_TOKEN(";");
 		}
@@ -2591,15 +2660,23 @@ static void ParsePage(textprompt_t *prompt, tokenizer_t *sc)
 
 			GET_TOKEN();
 
-			Z_Free(page->nextpromptname);
-
-			int num = 0;
-			if (StringToNumber(tkn, &num))
-				page->nextprompt = num;
-			else
+			if (CHECK_TOKEN("\""))
 			{
+				GET_TOKEN();
+
+				Z_Free(page->nextpromptname);
 				page->nextprompt = 0;
 				page->nextpromptname = Z_StrDup(tkn);
+
+				EXPECT_TOKEN("\"");
+			}
+			else
+			{
+				EXPECT_NUMBER("page 'nextconversation'");
+
+				Z_Free(page->nextpromptname);
+
+				page->nextprompt = num;
 			}
 
 			EXPECT_TOKEN(";");
@@ -2607,11 +2684,13 @@ static void ParsePage(textprompt_t *prompt, tokenizer_t *sc)
 		else if (CHECK_TOKEN("nexttag"))
 		{
 			EXPECT_TOKEN("=");
+			EXPECT_TOKEN("\"");
 
 			GET_TOKEN();
 
 			strlcpy(page->nexttag, tkn, sizeof(page->nexttag));
 
+			EXPECT_TOKEN("\"");
 			EXPECT_TOKEN(";");
 		}
 		else if (CHECK_TOKEN("duration"))
@@ -2688,6 +2767,7 @@ static void ParsePage(textprompt_t *prompt, tokenizer_t *sc)
 		else if (CHECK_TOKEN("displayhud"))
 		{
 			EXPECT_TOKEN("=");
+			EXPECT_TOKEN("\"");
 
 			GET_TOKEN();
 
@@ -2698,16 +2778,19 @@ static void ParsePage(textprompt_t *prompt, tokenizer_t *sc)
 			else if (CHECK_TOKEN("hideall"))
 				page->hidehud = 2;
 
+			EXPECT_TOKEN("\"");
 			EXPECT_TOKEN(";");
 		}
 		else if (CHECK_TOKEN("backcolor"))
 		{
 			EXPECT_TOKEN("=");
+			EXPECT_TOKEN("\"");
 
 			GET_TOKEN();
 
 			page->backcolor = P_ParsePromptBackColor(tkn);
 
+			EXPECT_TOKEN("\"");
 			EXPECT_TOKEN(";");
 		}
 		else if (CHECK_TOKEN("choice"))
@@ -2732,6 +2815,7 @@ static void ParsePage(textprompt_t *prompt, tokenizer_t *sc)
 		else if (CHECK_TOKEN("alignchoices"))
 		{
 			EXPECT_TOKEN("=");
+			EXPECT_TOKEN("\"");
 
 			GET_TOKEN();
 
@@ -2740,6 +2824,7 @@ static void ParsePage(textprompt_t *prompt, tokenizer_t *sc)
 			else if (CHECK_TOKEN("right"))
 				page->choicesleftside = false;
 
+			EXPECT_TOKEN("\"");
 			EXPECT_TOKEN(";");
 		}
 		else if (CHECK_TOKEN("picture"))
@@ -2764,6 +2849,7 @@ static void ParsePage(textprompt_t *prompt, tokenizer_t *sc)
 		else if (CHECK_TOKEN("picturesequence"))
 		{
 			EXPECT_TOKEN("=");
+			EXPECT_TOKEN("\"");
 
 			GET_TOKEN();
 
@@ -2774,16 +2860,19 @@ static void ParsePage(textprompt_t *prompt, tokenizer_t *sc)
 			else if (CHECK_TOKEN("hide"))
 				page->picmode = 2;
 
+			EXPECT_TOKEN("\"");
 			EXPECT_TOKEN(";");
 		}
 		else if (CHECK_TOKEN("music"))
 		{
 			EXPECT_TOKEN("=");
+			EXPECT_TOKEN("\"");
 
 			GET_TOKEN();
 
 			strlcpy(page->musswitch, tkn, sizeof(page->musswitch));
 
+			EXPECT_TOKEN("\"");
 			EXPECT_TOKEN(";");
 		}
 		else if (CHECK_TOKEN("musictrack"))
@@ -2920,11 +3009,20 @@ static void ParseConversation(tokenizer_t *sc)
 
 			GET_TOKEN();
 
-			int num = 0;
-			if (StringToNumber(tkn, &num))
-				id = num;
+			if (CHECK_TOKEN("\""))
+			{
+				GET_TOKEN();
+
+				name = Z_StrDup(tkn);
+
+				EXPECT_TOKEN("\"");
+			}
 			else
-				name = Z_StrDup(tkn); // Must be named, then
+			{
+				EXPECT_NUMBER("conversation 'id'");
+
+				id = num;
+			}
 
 			EXPECT_TOKEN(";");
 		}
@@ -3014,7 +3112,7 @@ static void ParseDialogue(UINT16 wadNum, UINT16 lumpnum)
 	const char *tkn = sc->get(sc, 0);
 
 	// Look for namespace at the beginning.
-	if (strcmp(tkn, "namespace") != 0)
+	if (!CHECK_TOKEN("namespace"))
 	{
 		CONS_Alert(CONS_ERROR, "No namespace at beginning of DIALOGUE text!\n");
 		goto fail;
@@ -3023,10 +3121,11 @@ static void ParseDialogue(UINT16 wadNum, UINT16 lumpnum)
 	EXPECT_TOKEN("=");
 
 	// Check if namespace is valid.
+	EXPECT_TOKEN("\"");
 	GET_TOKEN();
 	if (strcmp(tkn, "srb2") != 0)
 		CONS_Alert(CONS_WARNING, "Invalid namespace '%s', only 'srb2' is supported.\n", tkn);
-
+	EXPECT_TOKEN("\"");
 	EXPECT_TOKEN(";");
 
 	GET_TOKEN();
