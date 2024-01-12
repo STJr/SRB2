@@ -62,12 +62,15 @@ static void WriterTextBufferAlloc(textwriter_t *writer)
 UINT8 P_CutsceneWriteText(textwriter_t *writer)
 {
 	INT32 numtowrite = 1;
+
 	const char *c;
+
+	const int max_speed = 8;
 
 	if (writer->boostspeed)
 	{
 		// for custom cutscene speedup mode
-		numtowrite = 8;
+		numtowrite = max_speed;
 	}
 	else
 	{
@@ -75,8 +78,8 @@ UINT8 P_CutsceneWriteText(textwriter_t *writer)
 		if (--writer->textcount >= 0)
 			return 1;
 
-		if (writer->textspeed < 7)
-			numtowrite = 8 - writer->textspeed;
+		if (writer->textspeed < max_speed-1)
+			numtowrite = max_speed - writer->textspeed;
 	}
 
 	for (;numtowrite > 0;++writer->baseptr)
@@ -181,6 +184,14 @@ static INT32 P_FindTextPromptSlot(const char *name)
 	return -1;
 }
 
+void P_InitTextPromptPage(textpage_t *page)
+{
+	page->lines = 4; // default line count to four
+	page->textspeed = TICRATE/5; // default text speed to 1/5th of a second
+	page->backcolor = 1; // default to gray
+	page->hidehud = 1; // hide appropriate HUD elements
+}
+
 void P_FreeTextPrompt(textprompt_t *prompt)
 {
 	if (!prompt)
@@ -235,7 +246,7 @@ static void F_GetPageTextGeometry(dialog_t *dialog, dialog_geometry_t *geo)
 	if (dialog->icon[0])
 		iconlump = W_CheckNumForLongName(dialog->icon);
 
-	INT32 pagelines = dialog->page->lines ? dialog->page->lines : 4;
+	INT32 pagelines = dialog->page->lines;
 	boolean rightside = iconlump != LUMPERROR && dialog->page->rightside;
 
 	// Vertical calculations
@@ -597,8 +608,13 @@ static UINT8 P_DialogWriteText(dialog_t *dialog, textwriter_t *writer)
 
 	writer->numtowrite = 1;
 
+	const int max_speed = 8;
+
 	if (writer->boostspeed && !writer->paused)
-		writer->numtowrite = 8;
+	{
+		// When the player is holding jump or spin
+		writer->numtowrite = max_speed;
+	}
 	else
 	{
 		// Don't draw any characters if the count was 1 or more when we started
@@ -607,8 +623,8 @@ static UINT8 P_DialogWriteText(dialog_t *dialog, textwriter_t *writer)
 
 		writer->paused = false;
 
-		if (writer->textspeed < 7)
-			writer->numtowrite = 8 - writer->textspeed;
+		if (writer->textspeed >= 0 && writer->textspeed < max_speed-1)
+			writer->numtowrite = max_speed - writer->textspeed;
 	}
 
 	while (writer->numtowrite > 0)
@@ -636,7 +652,7 @@ static UINT8 P_DialogWriteText(dialog_t *dialog, textwriter_t *writer)
 
 		// Ignore non-printable characters
 		// (that is, decrement numtowrite if this character is printable.)
-		if (lastchar < 0x80)
+		if (lastchar < 0x80 && writer->textspeed >= 0)
 			--writer->numtowrite;
 	}
 
@@ -645,8 +661,8 @@ static UINT8 P_DialogWriteText(dialog_t *dialog, textwriter_t *writer)
 	if (writer->textcount < 0)
 	{
 		writer->textcount = 0;
-		if (writer->textspeed > 7)
-			writer->textcount = writer->textspeed - 7;
+		if (writer->textspeed > max_speed-1)
+			writer->textcount = writer->textspeed - max_speed-1;
 	}
 
 	if (lastchar == '\0' || isspace(lastchar))
@@ -710,13 +726,22 @@ void P_DialogSetText(dialog_t *dialog, char *pagetext, size_t textlength)
 
 	P_ResetTextWriter(writer, dialog->pagetext, dialog->pagetextlength);
 
-	writer->textspeed = dialog->page->textspeed ? dialog->page->textspeed : TICRATE/5;
+	INT32 textspeed = dialog->page->textspeed;
+	if (textspeed >= -1)
+		writer->textspeed = textspeed;
+	else
+		writer->textspeed = TICRATE/5;
+
 	writer->textcount = 0; // no delay in beginning
 	writer->boostspeed = false; // don't print 8 characters to start
 
 	P_DialogSetDisplayText(dialog);
+
+	// Immediately type the first character
+	P_DialogWriteText(dialog, writer);
 }
 
+// TODO: Just remove this? This used to be a wrapper.
 static void P_PreparePageText(dialog_t *dialog, char *pagetext, size_t textlength)
 {
 	P_DialogSetText(dialog, pagetext, textlength);
@@ -727,8 +752,6 @@ static void P_PreparePageText(dialog_t *dialog, char *pagetext, size_t textlengt
 
 static void P_DialogStartPage(player_t *player, dialog_t *dialog)
 {
-	P_PreparePageText(dialog, dialog->page->text, dialog->page->textlength);
-
 	// on page mode, number of tics before allowing boost
 	// on timer mode, number of tics until page advances
 	dialog->timetonext = dialog->page->timetonext ? dialog->page->timetonext : TICRATE/10;
@@ -782,6 +805,9 @@ static void P_DialogStartPage(player_t *player, dialog_t *dialog)
 	strlcpy(dialog->icon, dialog->page->iconname, sizeof(dialog->icon));
 
 	dialog->iconflip = dialog->page->iconflip;
+
+	// Prepare page text
+	P_PreparePageText(dialog, dialog->page->text, dialog->page->textlength);
 
 	// music change
 	if (P_IsLocalPlayer(player) || globaltextprompt)
@@ -2290,12 +2316,14 @@ static void InterpretControlCode(char **input, UINT8 **buf, size_t *buffer_pos, 
 		char *param = GetControlCodeParam(input);
 		if (param)
 		{
-			int speed = 0;
+			int speed = 1;
 
 			if (StringToNumber(param, &speed))
 			{
 				if (speed < 0)
 					speed = 0;
+
+				speed--;
 			}
 			else
 				EXPECTED_NUMBER("SPEED");
@@ -2459,8 +2487,7 @@ static void ParsePage(textprompt_t *prompt, tokenizer_t *sc)
 
 	textpage_t *page = &prompt->page[prompt->numpages];
 
-	page->backcolor = 1; // default to gray
-	page->hidehud = 1; // hide appropriate HUD elements
+	P_InitTextPromptPage(page);
 
 	prompt->numpages++;
 
@@ -2595,6 +2622,9 @@ static void ParsePage(textprompt_t *prompt, tokenizer_t *sc)
 
 			EXPECT_NUMBER("page 'duration'");
 
+			if (num < 0)
+				num = 0;
+
 			page->timetonext = num;
 
 			EXPECT_TOKEN(";");
@@ -2607,7 +2637,10 @@ static void ParsePage(textprompt_t *prompt, tokenizer_t *sc)
 
 			EXPECT_NUMBER("page 'textspeed'");
 
-			page->textspeed = num;
+			if (num < 1)
+				num = 1;
+
+			page->textspeed = num - 1;
 
 			EXPECT_TOKEN(";");
 		}
@@ -2618,6 +2651,9 @@ static void ParsePage(textprompt_t *prompt, tokenizer_t *sc)
 			GET_TOKEN();
 
 			EXPECT_NUMBER("page 'textlines'");
+
+			if (num < 1)
+				num = 1;
 
 			page->lines = num;
 

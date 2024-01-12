@@ -2278,7 +2278,12 @@ static void readtextpromptpage(MYFILE *f, INT32 num, INT32 pagenum)
 			else if (fastcmp(word, "ICONFLIP"))
 				page->iconflip = (i || word2[0] == 'T' || word2[0] == 'Y');
 			else if (fastcmp(word, "LINES"))
-				page->lines = usi;
+			{
+				if (i <= 0)
+					deh_warning("PromptPage %d: line count must be 1 or higher", num);
+				else
+					page->lines = usi;
+			}
 			else if (fastcmp(word, "BACKCOLOR"))
 			{
 				INT32 backcolor = -1;
@@ -2395,8 +2400,9 @@ void readtextprompt(MYFILE *f, INT32 num)
 			{
 				if (1 <= value && value <= MAX_PAGES)
 				{
-					textprompts[num]->page[value - 1].backcolor = 1; // default to gray
-					textprompts[num]->page[value - 1].hidehud = 1; // hide appropriate HUD elements
+					textpage_t *page = &textprompts[num]->page[value - 1];
+					if (page->lines == 0)
+						P_InitTextPromptPage(page);
 					readtextpromptpage(f, num, value - 1);
 				}
 				else

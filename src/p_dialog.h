@@ -103,6 +103,7 @@ INT32 P_GetPromptPageByName(textprompt_t *prompt, const char *name);
 void P_GetPromptPageByNamedTag(const char *tag, INT32 *promptnum, INT32 *pagenum);
 void P_SetMetaPage(textpage_t *page, textpage_t *metapage);
 void P_SetPicsMetaPage(textpage_t *page, textpage_t *metapage);
+void P_InitTextPromptPage(textpage_t *page);
 void P_FreeTextPrompt(textprompt_t *prompt);
 
 char *P_ConvertSOCPageDialog(char *text, size_t *text_length);

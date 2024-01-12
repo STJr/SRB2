@@ -257,7 +257,7 @@ typedef struct
 	INT32 backcolor; // see CON_SetupBackColormap: 0-11, INT32_MAX for user-defined (CONS_BACKCOLOR)
 	UINT8 align; // text alignment, 0 = left, 1 = right, 2 = center
 	UINT8 verticalalign; // vertical text alignment, 0 = top, 1 = bottom, 2 = middle
-	UINT8 textspeed; // text speed, delay in tics between characters.
+	SINT8 textspeed; // text speed, delay in tics between characters.
 	sfxenum_t textsfx; // sfx_ id for printing text
 	UINT16 nextprompt; // next prompt to jump to, one-based. 0 = current prompt
 	UINT8 nextpage; // next page to jump to, one-based. 0 = next page within prompt->numpages
