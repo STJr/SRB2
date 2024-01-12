@@ -25,10 +25,11 @@
 typedef struct
 {
 	const char *basetext;
+	size_t basetextlength;
 	char *disptext;
 	size_t disptextsize;
-	INT32 baseptr;
-	INT32 writeptr;
+	UINT32 baseptr;
+	UINT32 writeptr;
 	INT32 textcount;
 	INT32 textspeed;
 	INT32 numtowrite;
@@ -36,7 +37,7 @@ typedef struct
 } textwriter_t;
 
 UINT8 P_CutsceneWriteText(textwriter_t *writer);
-void P_ResetTextWriter(textwriter_t *writer, const char *basetext);
+void P_ResetTextWriter(textwriter_t *writer, const char *basetext, size_t basetextlength);
 
 //
 // PROMPT STATE
@@ -45,23 +46,32 @@ typedef struct dialog_s
 {
 	INT32 promptnum;
 	INT32 pagenum;
+
 	textprompt_t *prompt;
 	textpage_t *page;
-	INT32 timetonext;
+	player_t *callplayer;
 	textwriter_t writer;
-	INT16 postexectag;
-	boolean blockcontrols;
+
 	char *pagetext;
 	size_t pagetextlength;
 	char *disptext;
 	size_t disptextsize;
-	player_t *callplayer;
+
+	boolean blockcontrols;
+	INT32 timetonext;
+	INT16 postexectag;
+
 	INT32 picnum;
 	INT32 pictoloop;
 	INT32 pictimer;
 	INT32 picmode;
 	INT32 numpics;
 	cutscene_pic_t *pics;
+
+	char speaker[256];
+	char icon[256];
+	boolean iconflip;
+
 	boolean showchoices;
 	INT32 curchoice;
 	INT32 numchoices;
@@ -77,7 +87,7 @@ void P_EndTextPrompt(player_t *player, boolean forceexec, boolean noexec);
 void P_EndAllTextPrompts(boolean forceexec, boolean noexec);
 void P_RunDialog(player_t *player);
 void P_FreeDialog(dialog_t *dialog);
-void P_DialogSetText(dialog_t *dialog, char *pagetext, size_t textlength, INT32 numchars);
+void P_DialogSetText(dialog_t *dialog, char *pagetext, size_t textlength);
 void P_DialogUpdateLongestChoice(dialog_t *dialog);
 
 boolean P_SetCurrentDialogChoice(player_t *player, INT32 choice);

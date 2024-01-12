@@ -580,7 +580,7 @@ static void P_NetUnArchivePlayers(void)
 
 		if (globaltextprompt)
 			players[i].textprompt = globaltextprompt;
-		else
+		else if (players[i].promptactive)
 		{
 			players[i].textprompt = Z_Calloc(sizeof(dialog_t), PU_LEVEL, NULL);
 			P_NetUnArchiveDialog(players[i].textprompt);
@@ -4951,17 +4951,23 @@ static void P_NetArchiveDialog(dialog_t *dialog)
 	WRITEINT32(save_p, dialog->picnum);
 	WRITEINT32(save_p, dialog->pictoloop);
 	WRITEINT32(save_p, dialog->pictimer);
-	WRITEINT32(save_p, dialog->writer.writeptr);
+	WRITEUINT32(save_p, dialog->writer.baseptr);
+	WRITEUINT32(save_p, dialog->writer.writeptr);
 	WRITEINT32(save_p, dialog->writer.textcount);
 	WRITEINT32(save_p, dialog->writer.textspeed);
-	WRITEINT32(save_p, dialog->writer.boostspeed);
+	WRITEUINT8(save_p, (UINT8)dialog->writer.boostspeed);
+	WRITESTRINGN(save_p, dialog->speaker, sizeof(dialog->speaker) - 1);
+	WRITESTRINGN(save_p, dialog->icon, sizeof(dialog->icon) - 1);
+	WRITEUINT8(save_p, (UINT8)dialog->iconflip);
 }
 
 static void P_NetUnArchiveDialog(dialog_t *dialog)
 {
 	UINT8 playernum;
-
-	INT32 numchars, textcount, textspeed, boostspeed;
+	UINT32 baseptr, writeptr;
+	INT32 textcount, textspeed;
+	char speaker[256], icon[256];
+	boolean iconflip, boostspeed;
 
 	if (dialog == NULL)
 		I_Error("P_NetUnArchiveDialog: dialog == NULL");
@@ -4993,10 +4999,15 @@ static void P_NetUnArchiveDialog(dialog_t *dialog)
 	dialog->picnum = READINT32(save_p);
 	dialog->pictoloop = READINT32(save_p);
 	dialog->pictimer = READINT32(save_p);
-	numchars = READINT32(save_p);
+	baseptr = READUINT32(save_p);
+	writeptr = READUINT32(save_p);
 	textcount = READINT32(save_p);
 	textspeed = READINT32(save_p);
-	boostspeed = READINT32(save_p);
+	boostspeed = (boolean)READUINT8(save_p);
+
+	READSTRINGN(save_p, speaker, sizeof(speaker) - 1);
+	READSTRINGN(save_p, icon, sizeof(icon) - 1);
+	iconflip = (boolean)READUINT8(save_p);
 
 	if (dialog->promptnum < 0 || dialog->promptnum >= MAX_PROMPTS || !textprompts[dialog->promptnum])
 		I_Error("Invalid text prompt %d from server", dialog->promptnum);
@@ -5020,8 +5031,14 @@ static void P_NetUnArchiveDialog(dialog_t *dialog)
 			I_Error("Invalid text prompt nochoice %d from server", dialog->nochoice);
 	}
 
-	P_DialogSetText(dialog, dialog->page->text, dialog->page->textlength, numchars);
+	P_DialogSetText(dialog, dialog->page->text, dialog->page->textlength);
 
+	strlcpy(dialog->speaker, speaker, sizeof(dialog->speaker));
+	strlcpy(dialog->icon, icon, sizeof(dialog->icon));
+	dialog->iconflip = iconflip;
+
+	dialog->writer.baseptr = baseptr;
+	dialog->writer.writeptr = writeptr;
 	dialog->writer.textcount = textcount;
 	dialog->writer.textspeed = textspeed;
 	dialog->writer.boostspeed = boostspeed;

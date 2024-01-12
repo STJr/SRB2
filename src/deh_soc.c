@@ -2255,17 +2255,12 @@ static void readtextpromptpage(MYFILE *f, INT32 num, INT32 pagenum)
 			{
 				if (*word2 != '\0')
 				{
-					size_t j;
+					char name[256];
 
-					// HACK: Add yellow control char now
-					// so the drawing function doesn't call it repeatedly
-					char name[34];
-					name[0] = '\x82'; // color yellow
-					name[1] = 0;
-					strlcat(name, word2, sizeof(name));
+					strlcpy(name, word2, sizeof(name));
 
 					// Replace _ with ' '
-					for (j = 1; j < sizeof(name) && name[j]; j++)
+					for (size_t j = 0; j < sizeof(name) && name[j]; j++)
 					{
 						if (name[j] == '_')
 							name[j] = ' ';

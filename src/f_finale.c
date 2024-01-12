@@ -209,6 +209,11 @@ static huddrawlist_h luahuddrawlist_title;
 
 static textwriter_t textwriter;
 
+static void F_ResetTextWriter(textwriter_t *writer, const char *basetext)
+{
+	P_ResetTextWriter(writer, basetext, strlen(basetext));
+}
+
 // =============
 //  INTRO SCENE
 // =============
@@ -414,7 +419,7 @@ void F_StartIntro(void)
 	gameaction = ga_nothing;
 	paused = false;
 	CON_ToggleOff();
-	P_ResetTextWriter(&textwriter, introtext[0]);
+	F_ResetTextWriter(&textwriter, introtext[0]);
 
 	intro_scenenum = 0;
 	finalecount = animtimer = stoptimer = 0;
@@ -847,7 +852,7 @@ void F_IntroTicker(void)
 			return;
 		}
 
-		P_ResetTextWriter(&textwriter, introtext[++intro_scenenum]);
+		F_ResetTextWriter(&textwriter, introtext[++intro_scenenum]);
 		timetonext = introscenetime[intro_scenenum];
 
 		F_WipeStartScreen();
@@ -3795,7 +3800,7 @@ static void F_AdvanceToNextScene(void)
 			scene->musswitchposition, 0, 0);
 
 	// Fade to the next
-	P_ResetTextWriter(&textwriter, scene->text);
+	F_ResetTextWriter(&textwriter, scene->text);
 
 	picnum = 0;
 	pic = &scene->pics[picnum];
@@ -3851,7 +3856,7 @@ void F_StartCustomCutscene(INT32 cutscenenum, boolean precutscene, boolean reset
 	paused = false;
 	CON_ToggleOff();
 
-	P_ResetTextWriter(&textwriter, cutscenes[cutscenenum]->scene[0].text);
+	F_ResetTextWriter(&textwriter, cutscenes[cutscenenum]->scene[0].text);
 
 	cutsceneover = false;
 	runningprecutscene = precutscene;
