@@ -10,6 +10,7 @@
 /// \brief Tokenizer
 
 #include "m_tokenizer.h"
+#include "m_misc.h"
 #include "z_zone.h"
 
 tokenizer_t *Tokenizer_Open(const char *inputString, unsigned numTokens)
@@ -148,10 +149,28 @@ const char *Tokenizer_Read(tokenizer_t *tokenizer, UINT32 i)
 	else if (tokenizer->input[tokenizer->startPos] == '"')
 	{
 		tokenizer->endPos = ++tokenizer->startPos;
+
+		size_t buffer_pos = 0;
+		size_t buffer_capacity = 0;
+
+		char *buf = NULL;
+
 		while (tokenizer->input[tokenizer->endPos] != '"' && tokenizer->endPos < tokenizer->inputLength)
+		{
+			M_StringBufferWrite(tokenizer->input[tokenizer->endPos], &buf, &buffer_pos, &buffer_capacity);
+
 			tokenizer->endPos++;
 
-		Tokenizer_ReadTokenString(tokenizer, i);
+			// Escape any quotation marks
+			if (tokenizer->input[tokenizer->endPos] == '\\'
+				&& tokenizer->input[tokenizer->endPos+1] == '"')
+			{
+				M_StringBufferWrite('"', &buf, &buffer_pos, &buffer_capacity);
+				tokenizer->endPos += 2;
+			}
+		}
+
+		tokenizer->token[i] = buf;
 		tokenizer->endPos++;
 		return tokenizer->token[i];
 	}

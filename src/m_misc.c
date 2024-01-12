@@ -2011,6 +2011,20 @@ void M_TokenizerSetEndPos(UINT32 newPos)
 		Tokenizer_SetEndPos(globalTokenizer, newPos);
 }
 
+void M_StringBufferWrite(char chr, char **buffer, size_t *buffer_pos, size_t *buffer_capacity)
+{
+	if (!(*buffer) || *buffer_pos >= *buffer_capacity)
+	{
+		if (!(*buffer_capacity))
+			*buffer_capacity = 16;
+		*buffer_capacity *= 2;
+		*buffer = Z_Realloc(*buffer, *buffer_capacity, PU_STATIC, NULL);
+	}
+
+	(*buffer)[*buffer_pos] = chr;
+	(*buffer_pos)++;
+}
+
 /** Count bits in a number.
   */
 UINT8 M_CountBits(UINT32 num, UINT8 size)

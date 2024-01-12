@@ -1722,6 +1722,131 @@ fail:
 	return;
 }
 
+#define BUFWRITE(writechr) M_StringBufferWrite((writechr), &buf, &buffer_pos, &buffer_capacity)
+
+static char *EscapeStringChars(const char *string)
+{
+	size_t buffer_pos = 0;
+	size_t buffer_capacity = 0;
+
+	char *buf = NULL;
+
+	while (*string)
+	{
+		char chr = *string++;
+
+		if (chr == '\\')
+		{
+			chr = *string++;
+
+			switch (chr)
+			{
+			case 'n':
+				BUFWRITE('\n');
+				break;
+			case 't':
+				BUFWRITE('\t');
+				break;
+			case '\\':
+				BUFWRITE('\\');
+				break;
+			case '"':
+				BUFWRITE('\"');
+				break;
+			case '\'':
+				BUFWRITE('\'');
+				break;
+			case 'x': {
+				int out = 0, c;
+				int i = 0;
+
+				chr = *string++;
+
+				for (i = 0; i < 5 && isxdigit(chr); i++)
+				{
+					c = ((chr <= '9') ? (chr - '0') : (tolower(chr) - 'a' + 10));
+					out = (out << 4) | c;
+					chr = *string++;
+				}
+
+				string--;
+
+				switch (i)
+				{
+					case 4:
+						BUFWRITE((out >> 8) & 0xFF);
+						buf++;
+						/* FALLTHRU */
+					case 2:
+						BUFWRITE(out & 0xFF);
+						break;
+					default:
+						CONS_Alert(CONS_WARNING, "While parsing string: escape sequence has wrong size\n");
+						goto fail;
+				}
+
+				break;
+			}
+			default:
+				if (isdigit(chr))
+				{
+					int out = 0;
+					int i = 0;
+					do
+					{
+						out = 10*out + (chr - '0');
+						chr = *string++;
+					} while (++i < 3 && isdigit(chr));
+
+					string--;
+
+					if (out > 255)
+					{
+						CONS_Alert(CONS_WARNING, "While parsing string: escape sequence is too large\n");
+						goto fail;
+					}
+
+					BUFWRITE((char)out);
+				}
+				break;
+			}
+		}
+		else
+		{
+			BUFWRITE(chr);
+		}
+	}
+
+	return buf;
+
+fail:
+	Z_Free(buf);
+	return NULL;
+}
+
+#undef BUFWRITE
+
+static char *ParsePageDialog(char *text)
+{
+	char *input = text;
+
+	size_t buffer_pos = 0;
+	size_t buffer_capacity = 0;
+
+	char *buf = NULL;
+
+	while (*input)
+	{
+		char chr = *input;
+
+		M_StringBufferWrite(chr, &buf, &buffer_pos, &buffer_capacity);
+
+		input++;
+	}
+
+	return buf;
+}
+
 static void ParsePage(textprompt_t *prompt, tokenizer_t *sc)
 {
 	const char *tkn;
@@ -1774,7 +1899,12 @@ static void ParsePage(textprompt_t *prompt, tokenizer_t *sc)
 
 			Z_Free(page->text);
 
-			page->text = Z_StrDup(tkn);
+			char *escaped = EscapeStringChars(tkn);
+			if (escaped)
+			{
+				page->text = ParsePageDialog(escaped);
+				Z_Free(escaped);
+			}
 
 			EXPECT_TOKEN(";");
 		}
