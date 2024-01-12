@@ -2093,7 +2093,7 @@ static boolean G_TextPromptResponder(event_t *ev)
 	if (ev->type != ev_keydown)
 		return false;
 
-	INT32 key = ev->key;
+	INT32 key = KEY_NULL;
 
 	// Check P2
 	if (G_IsGameControlP2(ev->key, GC_FORWARD))
@@ -2125,52 +2125,9 @@ static boolean G_TextPromptResponder(event_t *ev)
 		key = KEY_ENTER;
 	else if (G_IsGameControl(ev->key, GC_SPIN))
 		key = KEY_BACKSPACE;
-	// remap virtual keys (joystick buttons)
-	else
-	{
-		// This looks really bad and redundant because SRB2 events
-		// don't directly tell you which player a gamepad event might have come from.
-		switch (key)
-		{
-			case KEY_JOY1:
-			case KEY_JOY1 + 2:
-				key = KEY_ENTER;
-				break;
-			case KEY_HAT1:
-				key = KEY_UPARROW;
-				break;
-			case KEY_HAT1 + 1:
-				key = KEY_DOWNARROW;
-				break;
-			case KEY_HAT1 + 2:
-				key = KEY_LEFTARROW;
-				break;
-			case KEY_HAT1 + 3:
-				key = KEY_RIGHTARROW;
-				break;
-			case KEY_2JOY1:
-			case KEY_2JOY1 + 2:
-				key = KEY_ENTER;
-				localplayer = 1;
-				break;
-			case KEY_2HAT1:
-				key = KEY_UPARROW;
-				localplayer = 1;
-				break;
-			case KEY_2HAT1 + 1:
-				key = KEY_DOWNARROW;
-				localplayer = 1;
-				break;
-			case KEY_2HAT1 + 2:
-				key = KEY_LEFTARROW;
-				localplayer = 1;
-				break;
-			case KEY_2HAT1 + 3:
-				key = KEY_RIGHTARROW;
-				localplayer = 1;
-				break;
-		}
-	}
+
+	if (key == KEY_NULL)
+		return false;
 
 	player_t *player = (localplayer == 1) ? &players[secondarydisplayplayer] : &players[consoleplayer];
 	if (!player->promptactive)
