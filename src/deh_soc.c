@@ -2139,6 +2139,7 @@ static void readtextpromptpage(MYFILE *f, INT32 num, INT32 pagenum)
 				{
 					Z_Free(page->text);
 					page->text = NULL;
+					page->textlength = 0;
 					continue;
 				}
 
@@ -2162,7 +2163,7 @@ static void readtextpromptpage(MYFILE *f, INT32 num, INT32 pagenum)
 				// A text prompt overwriting another one...
 				Z_Free(page->text);
 
-				page->text = buffer;
+				page->text = P_ConvertSOCPageDialog(buffer, &page->textlength);
 
 				continue;
 			}

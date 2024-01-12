@@ -19,6 +19,7 @@
 #include "g_input.h"
 #include "s_sound.h"
 #include "v_video.h"
+#include "hu_stuff.h"
 #include "w_wad.h"
 #include "z_zone.h"
 #include "m_tokenizer.h"
@@ -29,33 +30,28 @@
 
 static INT16 chevronAnimCounter;
 
-static boolean IsSpeedControlChar(UINT8 chr)
+static boolean IsCutsceneSpeedControlChar(UINT8 chr)
 {
 	return chr >= 0xA0 && chr <= 0xAF;
 }
 
-static boolean IsDelayControlChar(UINT8 chr)
+static boolean IsCutsceneDelayControlChar(UINT8 chr)
 {
 	return chr >= 0xB0 && chr <= (0xB0+TICRATE-1);
 }
 
 static void WriterTextBufferAlloc(textwriter_t *writer)
 {
-	if (!writer->disptext_size)
-		writer->disptext_size = 16;
+	if (!writer->disptextsize)
+		writer->disptextsize = 16;
 
-	size_t oldsize = writer->disptext_size;
+	size_t oldsize = writer->disptextsize;
 
-	while (((unsigned)writer->writeptr) + 1 >= writer->disptext_size)
-		writer->disptext_size *= 2;
+	while (((unsigned)writer->writeptr) + 1 >= writer->disptextsize)
+		writer->disptextsize *= 2;
 
-	if (!writer->disptext)
-		writer->disptext = Z_Calloc(writer->disptext_size, PU_STATIC, NULL);
-	else if (oldsize != writer->disptext_size)
-	{
-		writer->disptext = Z_Realloc(writer->disptext, writer->disptext_size, PU_STATIC, NULL);
-		memset(&writer->disptext[writer->writeptr], 0x00, writer->disptext_size - writer->writeptr);
-	}
+	if (!writer->disptext || oldsize != writer->disptextsize)
+		writer->disptext = Z_Realloc(writer->disptext, writer->disptextsize, PU_STATIC, NULL);
 }
 
 //
@@ -90,13 +86,13 @@ UINT8 P_CutsceneWriteText(textwriter_t *writer)
 			return 0;
 
 		// \xA0 - \xAF = change text speed
-		if (IsSpeedControlChar((UINT8)*c))
+		if (IsCutsceneSpeedControlChar((UINT8)*c))
 		{
 			writer->textspeed = (INT32)((UINT8)*c - 0xA0);
 			continue;
 		}
 		// \xB0 - \xD2 = delay character for up to one second (35 tics)
-		else if (IsDelayControlChar((UINT8)*c))
+		else if (IsCutsceneDelayControlChar((UINT8)*c))
 		{
 			writer->textcount = (INT32)((UINT8)*c - 0xAF);
 			numtowrite = 0;
@@ -122,84 +118,15 @@ UINT8 P_CutsceneWriteText(textwriter_t *writer)
 	return 1;
 }
 
-static UINT8 P_DialogWriteText(dialog_t *dialog, textwriter_t *writer)
-{
-	INT32 numtowrite = 1;
-	const char *c;
-
-	unsigned char lastchar = 0;
-
-	(void)dialog;
-
-	if (writer->boostspeed)
-	{
-		// for custom cutscene speedup mode
-		numtowrite = 8;
-	}
-	else
-	{
-		// Don't draw any characters if the count was 1 or more when we started
-		if (--writer->textcount >= 0)
-			return 2;
-
-		if (writer->textspeed < 7)
-			numtowrite = 8 - writer->textspeed;
-	}
-
-	for (;numtowrite > 0;++writer->baseptr)
-	{
-		c = &writer->basetext[writer->baseptr];
-		if (!c || !*c)
-			return 0;
-
-		lastchar = *c;
-
-		// \xA0 - \xAF = change text speed
-		if (IsSpeedControlChar(lastchar))
-		{
-			writer->textspeed = (INT32)(lastchar - 0xA0);
-			continue;
-		}
-		// \xB0 - \xD2 = delay character for up to one second (35 tics)
-		else if (IsDelayControlChar(lastchar))
-		{
-			writer->textcount = (INT32)(lastchar - 0xAF);
-			numtowrite = 0;
-			continue;
-		}
-
-		WriterTextBufferAlloc(writer);
-
-		writer->disptext[writer->writeptr++] = lastchar;
-
-		// Ignore other control codes (color)
-		if ((UINT8)lastchar < 0x80)
-			--numtowrite;
-	}
-
-	// Reset textcount for next tic based on speed
-	// if it wasn't already set by a delay.
-	if (writer->textcount < 0)
-	{
-		writer->textcount = 0;
-		if (writer->textspeed > 7)
-			writer->textcount = writer->textspeed - 7;
-	}
-
-	if (!lastchar || isspace(lastchar))
-		return 2;
-	else
-		return 1;
-}
-
 void P_ResetTextWriter(textwriter_t *writer, const char *basetext)
 {
 	writer->basetext = basetext;
-	if (writer->disptext && writer->disptext_size)
-		memset(writer->disptext,0,writer->disptext_size);
 	writer->writeptr = writer->baseptr = 0;
 	writer->textspeed = 9;
 	writer->textcount = TICRATE/2;
+
+	if (writer->disptext && writer->disptextsize)
+		memset(writer->disptext, 0, writer->disptextsize);
 }
 
 // ==================
@@ -331,6 +258,16 @@ static void F_GetPageTextGeometry(dialog_t *dialog, dialog_geometry_t *geo)
 	{
 		const int choices_box_spacing = 4;
 
+		if (dialog->longestchoice == -1)
+		{
+			for (INT32 i = 0; i < dialog->numchoices; i++)
+			{
+				INT32 width = V_StringWidth(dialog->page->choices[i].text, 0);
+				if (width > dialog->longestchoice)
+					dialog->longestchoice = width;
+			}
+		}
+
 		INT32 longestchoice = dialog->longestchoice + 16;
 		INT32 choices_height = dialog->numchoices * 10;
 		INT32 choices_x, choices_y, choices_h, choices_w = longestchoice + (choices_box_spacing * 2);
@@ -453,15 +390,190 @@ void P_SetPicsMetaPage(textpage_t *page, textpage_t *metapage)
 	memcpy(page->pics, metapage->pics, sizeof(cutscene_pic_t) * page->numpics);
 }
 
-void P_DialogSetText(dialog_t *dialog, char *pagetext, INT32 numchars)
+#define READ_NUM(where) { \
+	int temp = 0; \
+	temp |= (*code) << 24; code++; \
+	temp |= (*code) << 16; code++; \
+	temp |= (*code) << 8; code++; \
+	temp |= (*code); code++; \
+	where = temp; \
+}
+
+// Dialog control codes
+enum
 {
+	TP_OP_SPEED,
+	TP_OP_DELAY,
+
+	TP_OP_CONTROL = 0xFF
+};
+
+static const UINT8 *InterpretBytecode(const UINT8 *code, dialog_t *dialog, textwriter_t *writer)
+{
+	(void)dialog;
+
+	int num = 0;
+
+	switch (*code++)
+	{
+	case TP_OP_SPEED:
+		READ_NUM(num);
+		writer->textspeed = num;
+		break;
+	case TP_OP_DELAY:
+		READ_NUM(num);
+		writer->textcount = num;
+		writer->numtowrite = 0;
+		break;
+	}
+
+	return code;
+}
+
+static int SkipBytecode(const UINT8 *code)
+{
+	const UINT8 *baseptr = code;
+
+	switch (*code++)
+	{
+	case TP_OP_SPEED:
+	case TP_OP_DELAY:
+		code += 4;
+		break;
+	}
+
+	return code - baseptr;
+}
+
+#undef READ_NUM
+
+static void P_DialogGetDispText(char *disptext, const char *text, size_t length)
+{
+	for (size_t i = 0; i < length; i++)
+	{
+		const char *c = &text[i];
+		if (*c == '\0')
+		{
+			*disptext = *c;
+			return;
+		}
+
+		const UINT8 *code = (const UINT8*)c;
+		if (*code == TP_OP_CONTROL)
+		{
+			i += SkipBytecode(code + 1);
+			continue;
+		}
+
+		*disptext = *c;
+
+		disptext++;
+	}
+}
+
+enum
+{
+	DIALOG_WRITETEXT_DONE,
+	DIALOG_WRITETEXT_TALK,
+	DIALOG_WRITETEXT_SILENT
+};
+
+static UINT8 P_DialogWriteText(dialog_t *dialog, textwriter_t *writer)
+{
+	const UINT8 *baseptr = (const UINT8*)writer->basetext;
+	if (!baseptr)
+		return DIALOG_WRITETEXT_DONE;
+
+	UINT8 lastchar = 0;
+
+	writer->numtowrite = 1;
+
+	if (writer->boostspeed)
+		writer->numtowrite = 8;
+	else
+	{
+		// Don't draw any characters if the count was 1 or more when we started
+		if (--writer->textcount >= 0)
+			return DIALOG_WRITETEXT_SILENT;
+
+		if (writer->textspeed < 7)
+			writer->numtowrite = 8 - writer->textspeed;
+	}
+
+	while (true)
+	{
+		if (writer->numtowrite <= 0)
+			break;
+
+		const UINT8 *c = &baseptr[writer->baseptr];
+		if (!*c)
+			return DIALOG_WRITETEXT_DONE;
+
+		const UINT8 *code = (const UINT8*)c;
+
+		if (*code == TP_OP_CONTROL)
+		{
+			code = InterpretBytecode(code + 1, dialog, writer);
+			writer->baseptr = code - baseptr;
+			continue;
+		}
+
+		lastchar = *c;
+
+		writer->writeptr++;
+		writer->baseptr++;
+
+		// Ignore other control codes (color)
+		if (lastchar < 0x80)
+			--writer->numtowrite;
+	}
+
+	// Reset textcount for next tic based on speed
+	// if it wasn't already set by a delay.
+	if (writer->textcount < 0)
+	{
+		writer->textcount = 0;
+		if (writer->textspeed > 7)
+			writer->textcount = writer->textspeed - 7;
+	}
+
+	if (!lastchar || isspace(lastchar))
+		return DIALOG_WRITETEXT_SILENT;
+	else
+		return DIALOG_WRITETEXT_TALK;
+}
+
+static void P_DialogSetDisplayText(dialog_t *dialog)
+{
+	P_DialogGetDispText(dialog->disptext, dialog->pagetext, dialog->pagetextlength);
+
 	dialog_geometry_t geo;
 
 	F_GetPageTextGeometry(dialog, &geo);
 
-	if (dialog->pagetext)
-		Z_Free(dialog->pagetext);
-	dialog->pagetext = (pagetext && pagetext[0]) ? V_WordWrap(geo.textx, geo.textr, 0, pagetext) : Z_StrDup("");
+	V_WordWrapInPlace(geo.textx, geo.textr, 0, dialog->disptext);
+}
+
+void P_DialogSetText(dialog_t *dialog, char *pagetext, size_t textlength, INT32 numchars)
+{
+	Z_Free(dialog->pagetext);
+
+	if (pagetext && pagetext[0])
+	{
+		dialog->pagetextlength = textlength;
+		dialog->pagetext = Z_Calloc(textlength + 1, PU_STATIC, NULL);
+		memcpy(dialog->pagetext, pagetext, textlength);
+		dialog->pagetext[textlength] = '\0';
+	}
+	else
+	{
+		dialog->pagetextlength = 0;
+		dialog->pagetext = Z_StrDup("");
+	}
+
+	Z_Free(dialog->disptext);
+	dialog->disptextsize = textlength + 1;
+	dialog->disptext = Z_Calloc(dialog->disptextsize, PU_STATIC, NULL);
 
 	textwriter_t *writer = &dialog->writer;
 
@@ -469,33 +581,27 @@ void P_DialogSetText(dialog_t *dialog, char *pagetext, INT32 numchars)
 
 	writer->textspeed = dialog->page->textspeed ? dialog->page->textspeed : TICRATE/5;
 	writer->textcount = 0; // no delay in beginning
-	writer->boostspeed = 0; // don't print 8 characters to start
+	writer->boostspeed = false; // don't print 8 characters to start
+
+	P_DialogSetDisplayText(dialog);
 
 	if (numchars <= 0)
 		return;
 
 	while (writer->writeptr < numchars)
 	{
+		P_DialogWriteText(dialog, writer);
+
 		const char *c = &writer->basetext[writer->baseptr];
-		if (!c || !*c || *c=='#')
-			return;
 
-		writer->baseptr++;
-
-		char chr = *c;
-
-		if (!IsSpeedControlChar((UINT8)chr) && !IsDelayControlChar((UINT8)chr))
-		{
-			WriterTextBufferAlloc(writer);
-
-			writer->disptext[writer->writeptr++] = chr;
-		}
+		if (!*c)
+			break;
 	}
 }
 
-static void P_PreparePageText(dialog_t *dialog, char *pagetext)
+static void P_PreparePageText(dialog_t *dialog, char *pagetext, size_t textlength)
 {
-	P_DialogSetText(dialog, pagetext, 0);
+	P_DialogSetText(dialog, pagetext, textlength, 0);
 
 	// \todo update control hot strings on re-config
 	// and somehow don't reset cutscene text counters
@@ -503,10 +609,13 @@ static void P_PreparePageText(dialog_t *dialog, char *pagetext)
 
 static void P_DialogStartPage(dialog_t *dialog)
 {
+	P_PreparePageText(dialog, dialog->page->text, dialog->page->textlength);
+
 	// on page mode, number of tics before allowing boost
 	// on timer mode, number of tics until page advances
 	dialog->timetonext = dialog->page->timetonext ? dialog->page->timetonext : TICRATE/10;
-	P_PreparePageText(dialog, dialog->page->text);
+
+	dialog->longestchoice = -1;
 
 	if (dialog->page->numchoices > 0)
 	{
@@ -514,26 +623,17 @@ static void P_DialogStartPage(dialog_t *dialog)
 		INT32 nochoice = dialog->page->nochoice ? dialog->page->nochoice - 1 : 0;
 
 		dialog->numchoices = dialog->page->numchoices;
-		dialog->longestchoice = 0;
 
 		if (startchoice >= 0 && startchoice < dialog->numchoices)
 			dialog->curchoice = startchoice;
 		if (nochoice >= 0 && nochoice < dialog->numchoices)
 			dialog->nochoice = nochoice;
-
-		for (INT32 i = 0; i < dialog->numchoices; i++)
-		{
-			INT32 width = V_StringWidth(dialog->page->choices[i].text, 0);
-			if (width > dialog->longestchoice)
-				dialog->longestchoice = width;
-		}
 	}
 	else
 	{
+		dialog->numchoices = 0;
 		dialog->curchoice = 0;
 		dialog->nochoice = -1;
-		dialog->numchoices = 0;
-		dialog->longestchoice = 0;
 	}
 
 	dialog->showchoices = false;
@@ -738,6 +838,7 @@ void P_FreeDialog(dialog_t *dialog)
 	{
 		Z_Free(dialog->writer.disptext);
 		Z_Free(dialog->pagetext);
+		Z_Free(dialog->disptext);
 		Z_Free(dialog);
 	}
 }
@@ -1033,6 +1134,79 @@ void P_GetPromptPageByNamedTag(const char *tag, INT32 *promptnum, INT32 *pagenum
 		CONS_Debug(DBG_GAMELOGIC, "Text prompt: Can't find a page with named tag %s or suffixed tag %s\n", tag, suffixedtag);
 }
 
+static void F_DrawDialogText(INT32 x, INT32 y, INT32 option, const char *string, size_t numchars)
+{
+	INT32 w, c, cx = x, cy = y, dup, scrwidth, left = 0;
+	const char *ch = string;
+	INT32 charflags = 0;
+	const UINT8 *colormap = NULL;
+	const INT32 spacewidth = 4;
+
+	INT32 lowercase = (option & V_ALLOWLOWERCASE);
+	option &= ~V_FLIP; // which is also shared with V_ALLOWLOWERCASE...
+
+	if (option & V_NOSCALESTART)
+	{
+		dup = vid.dup;
+		scrwidth = vid.width;
+	}
+	else
+	{
+		dup = 1;
+		scrwidth = vid.width/vid.dup;
+		left = (scrwidth - BASEVIDWIDTH)/2;
+		scrwidth -= left;
+	}
+
+	if (option & V_NOSCALEPATCH)
+		scrwidth *= vid.dup;
+
+	for (size_t i = 0; i < numchars; ch++, i++)
+	{
+		if (!*ch)
+			break;
+		if (*ch & 0x80) //color parsing -x 2.16.09
+		{
+			// manually set flags override color codes
+			charflags = ((*ch & 0x7f) << V_CHARCOLORSHIFT) & V_CHARCOLORMASK;
+			continue;
+		}
+		if (*ch == '\n')
+		{
+			cx = x;
+			cy += 12*dup;
+			continue;
+		}
+
+		c = *ch;
+		if (!lowercase)
+			c = toupper(c);
+		c -= HU_FONTSTART;
+
+		// character does not exist or is a space
+		if (c < 0 || c >= HU_FONTSIZE || !hu_font[c])
+		{
+			cx += spacewidth * dup;
+			continue;
+		}
+
+		w = hu_font[c]->width * dup;
+
+		if (cx > scrwidth)
+			continue;
+		if (cx+left + w < 0) //left boundary check
+		{
+			cx += w;
+			continue;
+		}
+
+		colormap = V_GetStringColormap(charflags);
+		V_DrawFixedPatch(cx<<FRACBITS, cy<<FRACBITS, FRACUNIT, option, hu_font[c], colormap);
+
+		cx += w;
+	}
+}
+
 void F_TextPromptDrawer(void)
 {
 	if (!stplyr || !stplyr->promptactive)
@@ -1112,8 +1286,8 @@ void F_TextPromptDrawer(void)
 	}
 
 	// Draw text
-	if (dialog->writer.disptext)
-		V_DrawString(textx, texty, (draw_flags|snap_flags|V_ALLOWLOWERCASE), dialog->writer.disptext);
+	if (dialog->disptext)
+		F_DrawDialogText(textx, texty, (draw_flags|snap_flags|V_ALLOWLOWERCASE), dialog->disptext, dialog->writer.writeptr);
 
 	// Draw name
 	// Don't use V_YELLOWMAP here so that the name color can be changed with control codes
@@ -1281,7 +1455,7 @@ void P_RunDialog(player_t *player)
 
 	textwriter_t *writer = &dialog->writer;
 
-	writer->boostspeed = 0;
+	writer->boostspeed = false;
 
 	// button handling
 	if (dialog->page->timetonext)
@@ -1298,8 +1472,11 @@ void P_RunDialog(player_t *player)
 		else
 		{
 			INT32 write = P_DialogWriteText(dialog, writer);
-			if (write == 1 && dialog->page->textsfx)
-				P_PlayDialogSound(player, dialog->page->textsfx);
+			if (write == DIALOG_WRITETEXT_TALK)
+			{
+				if (dialog->page->textsfx)
+					P_PlayDialogSound(player, dialog->page->textsfx);
+			}
 		}
 	}
 	else
@@ -1324,7 +1501,7 @@ void P_RunDialog(player_t *player)
 				if (dialog->timetonext > 1)
 					dialog->timetonext--;
 				else if (writer->baseptr) // don't set boost if we just reset the string
-					writer->boostspeed = 1; // only after a slight delay
+					writer->boostspeed = true; // only after a slight delay
 
 				if (!dialog->timetonext && !dialog->showchoices) // timetonext is 0 when finished generating text
 				{
@@ -1342,9 +1519,9 @@ void P_RunDialog(player_t *player)
 
 		// generate letter-by-letter text
 		INT32 write = P_DialogWriteText(dialog, writer);
-		if (write)
+		if (write != DIALOG_WRITETEXT_DONE)
 		{
-			if (write == 1 && dialog->page->textsfx)
+			if (write == DIALOG_WRITETEXT_TALK && dialog->page->textsfx)
 				P_PlayDialogSound(player, dialog->page->textsfx);
 		}
 		else
@@ -1826,26 +2003,253 @@ fail:
 
 #undef BUFWRITE
 
-static char *ParsePageDialog(char *text)
+static boolean MatchControlCode(const char *match, char **input)
+{
+	char *start = *input;
+	while (isspace(*start))
+	{
+		if (*start == '\0')
+			return false;
+		start++;
+	}
+
+	char *end = start;
+	while (*end != '}')
+	{
+		if (*end == '\0')
+			return false;
+		if (isspace(*end))
+			break;
+		end++;
+	}
+
+	size_t tknlen = end - start;
+	size_t matchlen = strlen(match);
+
+	if (tknlen != matchlen)
+		return false;
+
+	if (memcmp(match, start, tknlen) == 0)
+	{
+		while (isspace(*end))
+			end++;
+		*input = end;
+		return true;
+	}
+
+	return false;
+}
+
+static char *GetControlCodeParam(char **input)
+{
+	char *start = *input;
+	if (*start == '}')
+		return NULL;
+
+	char *end = start;
+	while (*end != '}')
+	{
+		if (*end == '\0')
+			return NULL;
+		end++;
+	}
+
+	size_t tknlen = end - start;
+	if (!tknlen)
+		return NULL;
+
+	while (isspace(start[tknlen - 1]))
+	{
+		tknlen--;
+		if (!tknlen)
+			return NULL;
+	}
+
+	char *result = Z_Malloc(tknlen + 1, PU_STATIC, NULL);
+	memcpy(result, start, tknlen);
+	result[tknlen] = '\0';
+
+	*input = end;
+
+	return result;
+}
+
+static void GetControlCodeEnd(char **input)
+{
+	char *start = *input;
+	if (*start == '}')
+		return;
+
+	char *end = start;
+	while (*end != '}')
+	{
+		if (*end == '\0')
+			return;
+		end++;
+	}
+
+	*input = end;
+}
+
+#define WRITE_CHAR(writechr) M_BufferWrite((writechr), buf, buffer_pos, buffer_capacity)
+#define WRITE_OP(writeop) { \
+	WRITE_CHAR(0xFF); \
+	WRITE_CHAR((writeop)); \
+}
+#define WRITE_NUM(num) { \
+	int n = num; \
+	WRITE_CHAR((n >> 24) & 0xFF); \
+	WRITE_CHAR((n >> 16) & 0xFF); \
+	WRITE_CHAR((n >> 8) & 0xFF); \
+	WRITE_CHAR((n) & 0xFF); \
+}
+
+#define EXPECTED_NUMBER(which) CONS_Alert(CONS_WARNING, "Expected integer in '%s', got '%s' instead\n", which, param)
+#define EXPECTED_PARAM(which) CONS_Alert(CONS_WARNING, "Expected parameter for '%s'\n", which)
+
+static void InterpretControlCode(char **input, UINT8 **buf, size_t *buffer_pos, size_t *buffer_capacity)
+{
+	if (MatchControlCode("PAUSE", input))
+	{
+		int pause_frames = 12;
+
+		char *param = GetControlCodeParam(input);
+		if (param)
+		{
+			if (!StringToNumber(param, &pause_frames))
+				EXPECTED_NUMBER("PAUSE");
+
+			Z_Free(param);
+		}
+
+		WRITE_OP(TP_OP_DELAY);
+		WRITE_NUM(pause_frames);
+	}
+	else if (MatchControlCode("SPEED", input))
+	{
+		char *param = GetControlCodeParam(input);
+		if (param)
+		{
+			int speed = 0;
+
+			if (!StringToNumber(param, &speed))
+				EXPECTED_NUMBER("SPEED");
+
+			Z_Free(param);
+
+			WRITE_OP(TP_OP_SPEED);
+			WRITE_NUM(speed);
+		}
+		else
+			EXPECTED_PARAM("SPEED");
+	}
+}
+
+static boolean InterpretCutsceneControlCode(UINT8 chr, UINT8 **buf, size_t *buffer_pos, size_t *buffer_capacity)
+{
+	if (IsCutsceneSpeedControlChar(chr))
+	{
+		WRITE_OP(TP_OP_SPEED);
+		WRITE_NUM((UINT8)chr - 0xA0);
+		return true;
+	}
+	else if (IsCutsceneDelayControlChar(chr))
+	{
+		WRITE_OP(TP_OP_DELAY);
+		WRITE_NUM((UINT8)chr - 0xAF);
+		return true;
+	}
+
+	return false;
+}
+
+#undef EXPECTED_NUMBER
+#undef EXPECTED_PARAM
+
+#undef WRITE_CHAR
+#undef WRITE_OP
+#undef WRITE_NUM
+
+#define WRITE_TEXTCHAR(writechr) M_BufferWrite((writechr), &buf, &buffer_pos, &buffer_capacity)
+
+static char *ParsePageDialog(char *text, size_t *text_length)
 {
 	char *input = text;
 
 	size_t buffer_pos = 0;
 	size_t buffer_capacity = 0;
 
-	char *buf = NULL;
+	UINT8 *buf = NULL;
 
 	while (*input)
 	{
-		char chr = *input;
+		unsigned char chr = *input;
 
-		M_StringBufferWrite(chr, &buf, &buffer_pos, &buffer_capacity);
+		if (chr == '\\')
+		{
+			if (input[1] == '{')
+			{
+				WRITE_TEXTCHAR(input[1]);
+				input += 2;
+			}
+			else
+				WRITE_TEXTCHAR(chr);
+		}
+		else if (chr == 0xFF)
+			; // Just ignore it
+		else if (chr == '{')
+		{
+			input++;
+
+			InterpretControlCode(&input, &buf, &buffer_pos, &buffer_capacity);
+
+			GetControlCodeEnd(&input);
+		}
+		else
+		{
+			WRITE_TEXTCHAR(chr);
+		}
 
 		input++;
 	}
 
-	return buf;
+	WRITE_TEXTCHAR('\0');
+
+	*text_length = buffer_pos;
+
+	return (char*)buf;
 }
+
+char *P_ConvertSOCPageDialog(char *text, size_t *text_length)
+{
+	char *input = text;
+
+	size_t buffer_pos = 0;
+	size_t buffer_capacity = 0;
+
+	UINT8 *buf = NULL;
+
+	while (*input)
+	{
+		unsigned char chr = *input;
+
+		if (!InterpretCutsceneControlCode((UINT8)chr, &buf, &buffer_pos, &buffer_capacity))
+		{
+			if (chr != 0xFF)
+				WRITE_TEXTCHAR(chr);
+		}
+
+		input++;
+	}
+
+	WRITE_TEXTCHAR('\0');
+
+	*text_length = buffer_pos;
+
+	return (char*)buf;
+}
+
+#undef WRITE_TEXTCHAR
 
 static void ParsePage(textprompt_t *prompt, tokenizer_t *sc)
 {
@@ -1902,7 +2306,7 @@ static void ParsePage(textprompt_t *prompt, tokenizer_t *sc)
 			char *escaped = EscapeStringChars(tkn);
 			if (escaped)
 			{
-				page->text = ParsePageDialog(escaped);
+				page->text = ParsePageDialog(escaped, &page->textlength);
 				Z_Free(escaped);
 			}
 

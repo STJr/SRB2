@@ -109,6 +109,9 @@ const char * M_Ftrim (double);
 // Returns true if the string is empty.
 boolean M_IsStringEmpty(const char *s);
 
+void M_BufferWrite(UINT8 chr, UINT8 **buffer, size_t *buffer_pos, size_t *buffer_capacity);
+void M_BufferMemWrite(UINT8 *mem, size_t count, UINT8 **buffer, size_t *buffer_pos, size_t *buffer_capacity);
+
 void M_StringBufferWrite(char chr, char **buffer, size_t *buffer_pos, size_t *buffer_capacity);
 
 // counting bits, for weapon ammo code, usually

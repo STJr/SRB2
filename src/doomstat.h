@@ -266,6 +266,7 @@ typedef struct
 	char nexttag[33]; // next tag to jump to. If set, this overrides nextprompt and nextpage.
 	INT32 timetonext; // time in tics to jump to next page automatically. 0 = don't jump automatically
 	char *text;
+	size_t textlength;
 	INT32 numchoices;
 	promptchoice_t *choices;
 	INT32 startchoice;

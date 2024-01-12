@@ -2257,12 +2257,11 @@ void V_DrawChatCharacter(INT32 x, INT32 y, INT32 c, boolean lowercaseallowed, UI
 
 // Precompile a wordwrapped string to any given width.
 // This is a muuuch better method than V_WORDWRAP.
-char *V_WordWrap(INT32 x, INT32 w, INT32 option, const char *string)
+void V_WordWrapInPlace(INT32 x, INT32 w, INT32 option, char *string)
 {
 	int c;
 	size_t chw, i, lastusablespace = 0;
 	size_t slen;
-	char *newstring = Z_StrDup(string);
 	INT32 spacewidth = 4, charwidth = 0;
 
 	slen = strlen(string);
@@ -2288,7 +2287,7 @@ char *V_WordWrap(INT32 x, INT32 w, INT32 option, const char *string)
 
 	for (i = 0; i < slen; ++i)
 	{
-		c = newstring[i];
+		c = string[i];
 		if ((UINT8)c & 0x80) //color parsing! -Inuyasha 2.16.09
 			continue;
 
@@ -2315,12 +2314,18 @@ char *V_WordWrap(INT32 x, INT32 w, INT32 option, const char *string)
 
 		if (lastusablespace != 0 && x > w)
 		{
-			newstring[lastusablespace] = '\n';
+			string[lastusablespace] = '\n';
 			i = lastusablespace;
 			lastusablespace = 0;
 			x = 0;
 		}
 	}
+}
+
+char *V_WordWrap(INT32 x, INT32 w, INT32 option, const char *string)
+{
+	char *newstring = Z_StrDup(string);
+	V_WordWrapInPlace(x, w, option, newstring);
 	return newstring;
 }
 

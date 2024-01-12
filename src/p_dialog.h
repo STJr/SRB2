@@ -26,12 +26,13 @@ typedef struct
 {
 	const char *basetext;
 	char *disptext;
-	size_t disptext_size;
+	size_t disptextsize;
 	INT32 baseptr;
 	INT32 writeptr;
 	INT32 textcount;
 	INT32 textspeed;
-	UINT8 boostspeed;
+	INT32 numtowrite;
+	boolean boostspeed;
 } textwriter_t;
 
 UINT8 P_CutsceneWriteText(textwriter_t *writer);
@@ -51,6 +52,9 @@ typedef struct dialog_s
 	INT16 postexectag;
 	boolean blockcontrols;
 	char *pagetext;
+	size_t pagetextlength;
+	char *disptext;
+	size_t disptextsize;
 	player_t *callplayer;
 	INT32 picnum;
 	INT32 pictoloop;
@@ -73,7 +77,8 @@ void P_EndTextPrompt(player_t *player, boolean forceexec, boolean noexec);
 void P_EndAllTextPrompts(boolean forceexec, boolean noexec);
 void P_RunDialog(player_t *player);
 void P_FreeDialog(dialog_t *dialog);
-void P_DialogSetText(dialog_t *dialog, char *pagetext, INT32 numchars);
+void P_DialogSetText(dialog_t *dialog, char *pagetext, size_t textlength, INT32 numchars);
+void P_DialogUpdateLongestChoice(dialog_t *dialog);
 
 boolean P_SetCurrentDialogChoice(player_t *player, INT32 choice);
 boolean P_SelectDialogChoice(player_t *player, INT32 choice);
@@ -89,6 +94,7 @@ void P_SetMetaPage(textpage_t *page, textpage_t *metapage);
 void P_SetPicsMetaPage(textpage_t *page, textpage_t *metapage);
 void P_FreeTextPrompt(textprompt_t *prompt);
 
+char *P_ConvertSOCPageDialog(char *text, size_t *text_length);
 INT32 P_ParsePromptBackColor(const char *word);
 
 #endif

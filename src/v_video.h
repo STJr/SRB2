@@ -207,6 +207,7 @@ void V_DrawLevelTitle(INT32 x, INT32 y, INT32 option, const char *string);
 
 // wordwrap a string using the hu_font
 char *V_WordWrap(INT32 x, INT32 w, INT32 option, const char *string);
+void V_WordWrapInPlace(INT32 x, INT32 w, INT32 option, char *string);
 UINT8 *V_GetStringColormap(INT32 colorflags);
 
 // draw a string using the hu_font

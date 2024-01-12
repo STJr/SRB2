@@ -4939,6 +4939,14 @@ static void P_NetArchiveDialog(dialog_t *dialog)
 	WRITEINT32(save_p, dialog->timetonext);
 	WRITEINT16(save_p, dialog->postexectag);
 	WRITEUINT8(save_p, dialog->blockcontrols);
+	WRITEINT32(save_p, dialog->numchoices);
+	if (dialog->numchoices)
+	{
+		WRITEINT32(save_p, dialog->curchoice);
+		WRITEINT32(save_p, dialog->nochoice);
+		WRITEUINT8(save_p, (UINT8)dialog->showchoices);
+		WRITEUINT8(save_p, (UINT8)dialog->selectedchoice);
+	}
 	WRITEUINT8(save_p, (UINT8)(dialog->callplayer-players));
 	WRITEINT32(save_p, dialog->picnum);
 	WRITEINT32(save_p, dialog->pictoloop);
@@ -4963,6 +4971,24 @@ static void P_NetUnArchiveDialog(dialog_t *dialog)
 	dialog->timetonext = READINT32(save_p);
 	dialog->postexectag = READINT16(save_p);
 	dialog->blockcontrols = READUINT8(save_p);
+	dialog->numchoices = READINT32(save_p);
+	dialog->longestchoice = -1;
+
+	if (dialog->numchoices)
+	{
+		dialog->curchoice = READINT32(save_p);
+		dialog->nochoice = READINT32(save_p);
+		dialog->showchoices = (boolean)READUINT8(save_p);
+		dialog->selectedchoice = (boolean)READUINT8(save_p);
+	}
+	else
+	{
+		dialog->curchoice = 0;
+		dialog->nochoice = -1;
+		dialog->showchoices = false;
+		dialog->selectedchoice = false;
+	}
+
 	playernum = READUINT8(save_p);
 	dialog->picnum = READINT32(save_p);
 	dialog->pictoloop = READINT32(save_p);
@@ -4984,7 +5010,17 @@ static void P_NetUnArchiveDialog(dialog_t *dialog)
 	dialog->page = &dialog->prompt->page[dialog->pagenum];
 	dialog->callplayer = &players[playernum];
 
-	P_DialogSetText(dialog, dialog->page->text, numchars);
+	if (dialog->numchoices)
+	{
+		if (dialog->numchoices < 0 || dialog->numchoices > dialog->page->numchoices)
+			I_Error("Invalid text prompt numchoices %d from server", dialog->numchoices);
+		if (dialog->curchoice < 0 || dialog->curchoice > dialog->page->numchoices)
+			I_Error("Invalid text prompt curchoice %d from server", dialog->curchoice);
+		if (dialog->nochoice != -1 && (dialog->nochoice < 0 || dialog->nochoice > dialog->page->numchoices))
+			I_Error("Invalid text prompt nochoice %d from server", dialog->nochoice);
+	}
+
+	P_DialogSetText(dialog, dialog->page->text, dialog->page->textlength, numchars);
 
 	dialog->writer.textcount = textcount;
 	dialog->writer.textspeed = textspeed;
