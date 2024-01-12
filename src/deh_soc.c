@@ -26,6 +26,7 @@
 #include "st_stuff.h"
 #include "i_system.h"
 #include "p_setup.h"
+#include "p_dialog.h"
 #include "r_data.h"
 #include "r_textures.h"
 #include "r_draw.h"
@@ -47,8 +48,6 @@
 #include "deh_lua.h" // included due to some LUA_SetLuaAction hack smh
 // also used for LUA_UpdateSprName
 #include "deh_tables.h"
-
-#define PARSE_TEXT_PROMPT_CHOICES
 
 // Loops through every constant and operation in word and performs its calculations, returning the final value.
 fixed_t get_number(const char *word)
@@ -2100,68 +2099,6 @@ static char *gettextpromptpicnum(const char *word)
 	return buf;
 }
 
-#ifdef PARSE_TEXT_PROMPT_CHOICES
-static void readtextpromptchoice(MYFILE *f, textpage_t *page, INT32 num)
-{
-	char *s = Z_Calloc(MAXLINELEN, PU_STATIC, NULL);
-	char *word = s;
-	char *word2;
-
-	promptchoice_t *choice = &page->choices[num];
-
-	do
-	{
-		if (myfgets(s, MAXLINELEN, f))
-		{
-			if (s[0] == '\n')
-				break;
-
-			// First remove trailing newline, if there is one
-			char *tmp = strchr(s, '\n');
-			if (tmp)
-				*tmp = '\0';
-
-			tmp = strchr(s, '#');
-			if (tmp)
-				*tmp = '\0';
-			if (s == tmp)
-				continue; // Skip comment lines, but don't break.
-
-			// Get the part before the " = "
-			tmp = strchr(s, '=');
-			if (tmp)
-				*(tmp-1) = '\0';
-			else
-				break;
-			strupr(word);
-
-			// Now get the part after
-			word2 = tmp + 2;
-
-			INT32 i = atoi(word2); // used for numerical settings
-
-			if (fastcmp(word, "TEXT"))
-			{
-				Z_Free(choice->text);
-				choice->text = Z_StrDup(word2);
-			}
-			else if (fastcmp(word, "NEXTPROMPT"))
-				choice->nextprompt = (UINT8)i;
-			else if (fastcmp(word, "NEXTPAGE"))
-				choice->nextpage = (UINT8)i;
-			else if (fastcmp(word, "NEXTTAG"))
-				strlcpy(choice->nexttag, word2, sizeof(choice->nexttag));
-			else if (fastcmp(word, "EXECUTELINEDEFBYTAG"))
-				choice->exectag = (INT16)i;
-			else
-				deh_warning("PromptChoice %d: unknown word '%s'", num, word);
-		}
-	} while (!myfeof(f)); // finish when the line is empty
-
-	Z_Free(s);
-}
-#endif
-
 static void readtextpromptpage(MYFILE *f, INT32 num, INT32 pagenum)
 {
 	char *s = Z_Calloc(MAXLINELEN, PU_STATIC, NULL);
@@ -2270,21 +2207,8 @@ static void readtextpromptpage(MYFILE *f, INT32 num, INT32 pagenum)
 				page->pictostart = (UINT8)i;
 			else if (fastcmp(word, "PICSMETAPAGE"))
 			{
-				if (usi && usi > 0 && usi <= textprompts[num]->numpages)
-				{
-					UINT8 metapagenum = usi - 1;
-
-					textpage_t *metapage = &textprompts[num]->page[metapagenum];
-
-					page->numpics = metapage->numpics;
-					page->picmode = metapage->picmode;
-					page->pictoloop = metapage->pictoloop;
-					page->pictostart = metapage->pictostart;
-
-					page->pics = Z_Realloc(page->pics, sizeof(cutscene_pic_t) * page->numpics, PU_STATIC, NULL);
-
-					memcpy(page->pics, metapage->pics, sizeof(cutscene_pic_t) * page->numpics);
-				}
+				if (usi > 0 && usi <= textprompts[num]->numpages)
+					P_SetPicsMetaPage(page, &textprompts[num]->page[usi - 1]);
 			}
 			else if (fastncmp(word, "PIC", 3))
 			{
@@ -2313,30 +2237,6 @@ static void readtextpromptpage(MYFILE *f, INT32 num, INT32 pagenum)
 				if (!ParseCutscenePic(&page->pics[picid], usi, word3, word2))
 					deh_warning("textpromptscene %d: unknown word '%s'", num, word);
 			}
-#ifdef PARSE_TEXT_PROMPT_CHOICES
-			else if (fastcmp(word, "CHOICE"))
-			{
-				if (1 <= i && i <= MAX_PROMPT_CHOICES)
-				{
-					if (!page->choices || i > page->numchoices)
-					{
-						page->numchoices = i;
-						page->choices = Z_Realloc(page->choices, sizeof(promptchoice_t) * i, PU_STATIC, NULL);
-					}
-
-					readtextpromptchoice(f, page, i - 1);
-					skipemptylines(f);
-				}
-				else
-					deh_warning("Text prompt choice %d out of range (1 - %d)", i, MAX_PROMPT_CHOICES);
-			}
-			else if (fastcmp(word, "INITIALCHOICE"))
-				page->startchoice = i;
-			else if (fastcmp(word, "NOCHOICE"))
-				page->nochoice = i;
-			else if (fastcmp(word, "CHOICESALIGN"))
-				page->choicesleftside = (boolean)(i || word2[0] == 'L');
-#endif
 			else if (fastcmp(word, "MUSIC"))
 			{
 				strlcpy(page->musswitch, word2, sizeof(page->musswitch));
@@ -2385,30 +2285,21 @@ static void readtextpromptpage(MYFILE *f, INT32 num, INT32 pagenum)
 				page->lines = usi;
 			else if (fastcmp(word, "BACKCOLOR"))
 			{
-				INT32 backcolor;
-				if      (i == 0 || fastcmp(word2, "WHITE")) backcolor = 0;
-				else if (i == 1 || fastcmp(word2, "GRAY") || fastcmp(word2, "GREY") ||
-					fastcmp(word2, "BLACK")) backcolor = 1;
-				else if (i == 2 || fastcmp(word2, "SEPIA")) backcolor = 2;
-				else if (i == 3 || fastcmp(word2, "BROWN")) backcolor = 3;
-				else if (i == 4 || fastcmp(word2, "PINK")) backcolor = 4;
-				else if (i == 5 || fastcmp(word2, "RASPBERRY")) backcolor = 5;
-				else if (i == 6 || fastcmp(word2, "RED")) backcolor = 6;
-				else if (i == 7 || fastcmp(word2, "CREAMSICLE")) backcolor = 7;
-				else if (i == 8 || fastcmp(word2, "ORANGE")) backcolor = 8;
-				else if (i == 9 || fastcmp(word2, "GOLD")) backcolor = 9;
-				else if (i == 10 || fastcmp(word2, "YELLOW")) backcolor = 10;
-				else if (i == 11 || fastcmp(word2, "EMERALD")) backcolor = 11;
-				else if (i == 12 || fastcmp(word2, "GREEN")) backcolor = 12;
-				else if (i == 13 || fastcmp(word2, "CYAN") || fastcmp(word2, "AQUA")) backcolor = 13;
-				else if (i == 14 || fastcmp(word2, "STEEL")) backcolor = 14;
-				else if (i == 15 || fastcmp(word2, "PERIWINKLE")) backcolor = 15;
-				else if (i == 16 || fastcmp(word2, "BLUE")) backcolor = 16;
-				else if (i == 17 || fastcmp(word2, "PURPLE")) backcolor = 17;
-				else if (i == 18 || fastcmp(word2, "LAVENDER")) backcolor = 18;
-				else if (i >= 256 && i < 512) backcolor = i; // non-transparent palette index
-				else if (i < 0) backcolor = INT32_MAX; // CONS_BACKCOLOR user-configured
-				else backcolor = 1; // default gray
+				INT32 backcolor = -1;
+
+				if (i >= 256 && i < 512)
+					backcolor = i; // non-transparent palette index
+				else if (i < 0)
+					backcolor = INT32_MAX; // CONS_BACKCOLOR user-configured
+				else
+				{
+					strlwr(word2);
+					backcolor = P_ParsePromptBackColor(word2);
+				}
+
+				if (backcolor < 0)
+					backcolor = 1; // default gray
+
 				page->backcolor = backcolor;
 			}
 			else if (fastcmp(word, "ALIGN"))
@@ -2439,26 +2330,8 @@ static void readtextpromptpage(MYFILE *f, INT32 num, INT32 pagenum)
 			}
 			else if (fastcmp(word, "METAPAGE"))
 			{
-				if (usi && usi > 0 && usi <= textprompts[num]->numpages)
-				{
-					UINT8 metapagenum = usi - 1;
-
-					textpage_t *metapage = &textprompts[num]->page[metapagenum];
-
-					strlcpy(page->name, metapage->name, sizeof(page->name));
-					strlcpy(page->iconname, metapage->iconname, sizeof(page->iconname));
-					page->rightside = metapage->rightside;
-					page->iconflip = metapage->iconflip;
-					page->lines = metapage->lines;
-					page->backcolor = metapage->backcolor;
-					page->align = metapage->align;
-					page->verticalalign = metapage->verticalalign;
-					page->textspeed = metapage->textspeed;
-					page->textsfx = metapage->textsfx;
-					page->hidehud = metapage->hidehud;
-
-					// music: don't copy, else each page change may reset the music
-				}
+				if (usi > 0 && usi <= textprompts[num]->numpages)
+					P_SetMetaPage(page, &textprompts[num]->page[usi - 1]);
 			}
 			else if (fastcmp(word, "TAG"))
 				strlcpy(page->tag, word2, sizeof(page->tag));

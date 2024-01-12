@@ -164,10 +164,10 @@ extern boolean exitfadestarted;
 
 typedef struct
 {
-	char name[64];
+	char name[256];
 	UINT8 hires;
-	UINT16 xcoord;
-	UINT16 ycoord;
+	INT16 xcoord;
+	INT16 ycoord;
 	UINT16 duration;
 } cutscene_pic_t;
 
@@ -219,16 +219,21 @@ enum
 
 typedef struct
 {
-	UINT8 nextprompt; // next prompt to jump to, one-based. 0 = current prompt
+	UINT16 nextprompt; // next prompt to jump to, one-based. 0 = current prompt
 	UINT8 nextpage; // next page to jump to, one-based. 0 = next page within prompt->numpages
+	char *nextpromptname;
+	char *nextpagename;
 	char nexttag[33]; // next tag to jump to. If set, this overrides nextprompt and nextpage.
 	INT16 exectag;
+	boolean endprompt;
 	char *text;
 } promptchoice_t;
 
 typedef struct
 {
-	UINT8 numpics;
+	char *pagename;
+
+	UINT16 numpics;
 	UINT8 picmode; // sequence mode after displaying last pic, 0 = persist, 1 = loop, 2 = destroy
 	UINT8 pictoloop; // if picmode == loop, which pic to loop to?
 	UINT8 pictostart; // initial pic number to show
@@ -237,6 +242,9 @@ typedef struct
 	char   musswitch[7];
 	UINT16 musswitchflags;
 	UINT8 musicloop;
+
+	boolean restoremusic;
+	boolean endprompt;
 
 	char tag[33]; // page tag
 	char name[34]; // narrator name, extra char for color
@@ -250,8 +258,10 @@ typedef struct
 	UINT8 verticalalign; // vertical text alignment, 0 = top, 1 = bottom, 2 = middle
 	UINT8 textspeed; // text speed, delay in tics between characters.
 	sfxenum_t textsfx; // sfx_ id for printing text
-	UINT8 nextprompt; // next prompt to jump to, one-based. 0 = current prompt
+	UINT16 nextprompt; // next prompt to jump to, one-based. 0 = current prompt
 	UINT8 nextpage; // next page to jump to, one-based. 0 = next page within prompt->numpages
+	char *nextpromptname;
+	char *nextpagename;
 	char nexttag[33]; // next tag to jump to. If set, this overrides nextprompt and nextpage.
 	INT32 timetonext; // time in tics to jump to next page automatically. 0 = don't jump automatically
 	char *text;
@@ -264,6 +274,7 @@ typedef struct
 
 typedef struct
 {
+	char *name;
 	textpage_t page[MAX_PAGES];
 	INT32 numpages; // Number of pages in this prompt
 } textprompt_t;

@@ -21,7 +21,11 @@
 #include "v_video.h"
 #include "w_wad.h"
 #include "z_zone.h"
+#include "m_tokenizer.h"
+#include "deh_soc.h"
 #include "fastcmp.h"
+
+#include <errno.h>
 
 static INT16 chevronAnimCounter;
 
@@ -202,6 +206,82 @@ void P_ResetTextWriter(textwriter_t *writer, const char *basetext)
 //  TEXT PROMPTS
 // ==================
 
+INT32 P_GetTextPromptByName(const char *name)
+{
+	for (INT32 i = 0; i < MAX_PROMPTS; i++)
+	{
+		if (textprompts[i] && textprompts[i]->name && strcmp(name, textprompts[i]->name) == 0)
+			return i;
+	}
+
+	return -1;
+}
+
+static textprompt_t *P_GetTextPromptByID(INT32 promptnum)
+{
+	if (promptnum < 0 || promptnum >= MAX_PROMPTS || !textprompts[promptnum])
+		return NULL;
+
+	return textprompts[promptnum];
+}
+
+static INT32 P_GetPromptPageByName(textprompt_t *prompt, const char *name)
+{
+	for (INT32 i = 0; i < prompt->numpages; i++)
+	{
+		const char *pagename = prompt->page[i].pagename;
+
+		if (pagename && strcmp(name, pagename) == 0)
+			return i;
+	}
+
+	return -1;
+}
+
+static INT32 P_FindTextPromptSlot(const char *name)
+{
+	INT32 id = P_GetTextPromptByName(name);
+	if (id != -1)
+		return id;
+
+	for (INT32 i = 0; i < MAX_PROMPTS; i++)
+	{
+		if (!textprompts[i])
+			return i;
+	}
+
+	return -1;
+}
+
+void P_FreeTextPrompt(textprompt_t *prompt)
+{
+	if (!prompt)
+		return;
+
+	for (INT32 i = 0; i < prompt->numpages; i++)
+	{
+		textpage_t *page = &prompt->page[i];
+
+		for (INT32 j = 0; j < page->numchoices; j++)
+		{
+			promptchoice_t *choice = &page->choices[j];
+			Z_Free(choice->text);
+			Z_Free(choice->nextpromptname);
+			Z_Free(choice->nextpagename);
+		}
+
+		Z_Free(page->choices);
+		Z_Free(page->pics);
+		Z_Free(page->pagename);
+		Z_Free(page->nextpromptname);
+		Z_Free(page->nextpagename);
+		Z_Free(page->text);
+	}
+
+	Z_Free(prompt->name);
+	Z_Free(prompt);
+}
+
 typedef struct
 {
 	UINT8 pagelines;
@@ -346,6 +426,35 @@ boolean F_GetPromptHideHud(fixed_t y)
 	return (fromtop ? y < ytest : y >= ytest); // true means hide
 }
 
+void P_SetMetaPage(textpage_t *page, textpage_t *metapage)
+{
+	strlcpy(page->name, metapage->name, sizeof(page->name));
+	strlcpy(page->iconname, metapage->iconname, sizeof(page->iconname));
+	page->rightside = metapage->rightside;
+	page->iconflip = metapage->iconflip;
+	page->lines = metapage->lines;
+	page->backcolor = metapage->backcolor;
+	page->align = metapage->align;
+	page->verticalalign = metapage->verticalalign;
+	page->textspeed = metapage->textspeed;
+	page->textsfx = metapage->textsfx;
+	page->hidehud = metapage->hidehud;
+
+	// music: don't copy, else each page change may reset the music
+}
+
+void P_SetPicsMetaPage(textpage_t *page, textpage_t *metapage)
+{
+	page->numpics = metapage->numpics;
+	page->picmode = metapage->picmode;
+	page->pictoloop = metapage->pictoloop;
+	page->pictostart = metapage->pictostart;
+
+	page->pics = Z_Realloc(page->pics, sizeof(cutscene_pic_t) * page->numpics, PU_STATIC, NULL);
+
+	memcpy(page->pics, metapage->pics, sizeof(cutscene_pic_t) * page->numpics);
+}
+
 void P_DialogSetText(dialog_t *dialog, char *pagetext, INT32 numchars)
 {
 	dialog_geometry_t geo;
@@ -458,6 +567,12 @@ static void P_DialogStartPage(dialog_t *dialog)
 			dialog->page->musswitchflags,
 			dialog->page->musicloop);
 	}
+	else if (dialog->page->restoremusic)
+	{
+		S_ChangeMusic(mapheaderinfo[gamemap-1]->musname,
+			mapheaderinfo[gamemap-1]->mustrack,
+			true);
+	}
 }
 
 static boolean P_LoadNextPageAndPrompt(player_t *player, dialog_t *dialog, INT32 nextprompt, INT32 nextpage)
@@ -527,40 +642,86 @@ static boolean P_LoadNextPageAndPrompt(player_t *player, dialog_t *dialog, INT32
 	return true;
 }
 
+static void P_GetNextPromptAndPage(textprompt_t *dialog, char *nextpromptname, char *nextpagename, char *nexttag, INT32 nextprompt, INT32 nextpage, INT32 *foundprompt, INT32 *foundpage)
+{
+	INT32 prompt = INT32_MAX, page = INT32_MAX;
+
+	if (nextpromptname && nextpromptname[0])
+		prompt = P_GetTextPromptByName(nextpromptname);
+	else if (nextprompt)
+		prompt = nextprompt - 1;
+
+	textprompt_t *nextdialog = P_GetTextPromptByID(prompt);
+	if (!nextdialog)
+		nextdialog = dialog;
+
+	if (nextpagename && nextpagename[0])
+	{
+		if (nextdialog)
+			page = P_GetPromptPageByName(nextdialog, nextpagename);
+	}
+	else if (nextpage)
+		page = nextpage - 1;
+
+	if (nexttag && nexttag[0])
+		P_GetPromptPageByNamedTag(nexttag, &prompt, &page);
+
+	*foundprompt = prompt;
+	*foundpage = page;
+}
+
+static void P_PageGetNextPromptAndPage(textprompt_t *prompt, textpage_t *page, INT32 *nextprompt, INT32 *nextpage)
+{
+	P_GetNextPromptAndPage(prompt,
+		page->nextpromptname, page->nextpagename, page->nexttag,
+		page->nextprompt, page->nextpage,
+		nextprompt, nextpage);
+}
+
+static void P_ChoiceGetNextPromptAndPage(textprompt_t *prompt, promptchoice_t *choice, INT32 *nextprompt, INT32 *nextpage)
+{
+	P_GetNextPromptAndPage(prompt,
+		choice->nextpromptname, choice->nextpagename, choice->nexttag,
+		choice->nextprompt, choice->nextpage,
+		nextprompt, nextpage);
+}
+
 static boolean P_AdvanceToNextPage(player_t *player, dialog_t *dialog)
 {
+	if (dialog->page->endprompt)
+	{
+		P_EndTextPrompt(player, false, false);
+		return false;
+	}
+
 	INT32 nextprompt = INT32_MAX, nextpage = INT32_MAX;
 
-	if (dialog->page->nextprompt)
-		nextprompt = dialog->page->nextprompt - 1;
-	if (dialog->page->nextpage)
-		nextpage = dialog->page->nextpage - 1;
-
-	if (dialog->page->nexttag[0])
-		P_GetPromptPageByNamedTag(dialog->page->nexttag, &nextprompt, &nextpage);
+	P_PageGetNextPromptAndPage(dialog->prompt, dialog->page, &nextprompt, &nextpage);
 
 	return P_LoadNextPageAndPrompt(player, dialog, nextprompt, nextpage);
 }
 
 static boolean P_ExecuteChoice(player_t *player, dialog_t *dialog, promptchoice_t *choice)
 {
+	textprompt_t *curprompt = dialog->prompt;
+
 	if (choice->exectag)
 		P_LinedefExecute(choice->exectag, player->mo, NULL);
 
+	if (choice->endprompt)
+	{
+		P_EndTextPrompt(player, false, false);
+		return false;
+	}
+
 	INT32 nextprompt = INT32_MAX, nextpage = INT32_MAX;
 
-	if (choice->nextprompt)
-		nextprompt = choice->nextprompt - 1;
-	if (choice->nextpage)
-		nextpage = choice->nextpage - 1;
-
-	if (choice->nexttag[0])
-		P_GetPromptPageByNamedTag(choice->nexttag, &nextprompt, &nextpage);
+	P_ChoiceGetNextPromptAndPage(curprompt, choice, &nextprompt, &nextpage);
 
 	return P_LoadNextPageAndPrompt(player, dialog, nextprompt, nextpage);
 }
 
-void P_FreeTextPrompt(dialog_t *dialog)
+void P_FreeDialog(dialog_t *dialog)
 {
 	if (dialog)
 	{
@@ -575,7 +736,7 @@ static void P_FreePlayerDialog(player_t *player)
 	if (player->textprompt == globaltextprompt)
 		return;
 
-	P_FreeTextPrompt(player->textprompt);
+	P_FreeDialog(player->textprompt);
 
 	player->textprompt = NULL;
 }
@@ -628,7 +789,7 @@ static void P_EndGlobalTextPrompt(boolean forceexec, boolean noexec)
 			P_DoEndDialog(&players[i], globaltextprompt, false, true);
 	}
 
-	P_FreeTextPrompt(globaltextprompt);
+	P_FreeDialog(globaltextprompt);
 
 	globaltextprompt = NULL;
 
@@ -1069,7 +1230,7 @@ boolean P_SelectDialogChoice(player_t *player, INT32 choice)
 	return true;
 }
 
-void P_RunTextPrompt(player_t *player)
+void P_RunDialog(player_t *player)
 {
 	if (!player || !player->promptactive)
 		return;
@@ -1164,7 +1325,7 @@ void P_RunTextPrompt(player_t *player)
 		}
 
 		// never show the chevron if we can't toggle pages
-		if (dialog->pagenum >= MAX_PAGES || !dialog->page->text || !dialog->page->text[0])
+		if (!dialog->page->text || !dialog->page->text[0])
 			dialog->timetonext = !dialog->blockcontrols;
 
 		// generate letter-by-letter text
@@ -1183,4 +1344,925 @@ void P_RunTextPrompt(player_t *player)
 	}
 
 	P_UpdatePromptGfx(dialog);
+}
+
+// DIALOGUE parsing
+static boolean StringToNumber(const char *tkn, int *out)
+{
+	char *endPos = NULL;
+
+#ifndef AVOID_ERRNO
+	errno = 0;
+#endif
+
+	int result = strtol(tkn, &endPos, 10);
+	if (endPos == tkn || *endPos != '\0')
+		return false;
+
+#ifndef AVOID_ERRNO
+	if (errno == ERANGE)
+		return false;
+#endif
+
+	*out = result;
+
+	return true;
+}
+
+INT32 P_ParsePromptBackColor(const char *word)
+{
+	struct {
+		const char *name;
+		int id;
+	} all_colors[] = {
+		{ "white",      0 },
+		{ "gray",       1 },
+		{ "grey",       1 },
+		{ "black",      1 },
+		{ "sepia",      2 },
+		{ "brown",      3 },
+		{ "pink",       4 },
+		{ "raspberry",  5 },
+		{ "red",        6 },
+		{ "creamsicle", 7 },
+		{ "orange",     8 },
+		{ "gold",       9 },
+		{ "yellow",     10 },
+		{ "emerald",    11 },
+		{ "green",      12 },
+		{ "cyan",       13 },
+		{ "aqua",       13 },
+		{ "steel",      14 },
+		{ "periwinkle", 15 },
+		{ "blue",       16 },
+		{ "purple",     17 },
+		{ "lavender",   18 }
+	};
+
+	for (size_t i = 0; i < sizeof(all_colors) / sizeof(all_colors[0]); i++)
+	{
+		if (fastcmp(word, all_colors[i].name))
+			return all_colors[i].id;
+	}
+
+	return -1;
+}
+
+#define GET_TOKEN() \
+	tkn = sc->get(sc, 0); \
+	if (!tkn) \
+	{ \
+		CONS_Alert(CONS_ERROR, "Error parsing DIALOGUE: Unexpected EOF\n"); \
+		goto fail; \
+	}
+
+#define IS_TOKEN(expected) \
+	if (!tkn || strcmp(tkn, expected) != 0) \
+	{ \
+		if (tkn) \
+			CONS_Alert(CONS_ERROR, "Error parsing DIALOGUE: Expected '%s', got '%s'\n", expected, tkn); \
+		else \
+			CONS_Alert(CONS_ERROR, "Error parsing DIALOGUE: Expected '%s', got EOF\n", expected); \
+		goto fail; \
+	}
+
+#define EXPECT_TOKEN(expected) \
+	GET_TOKEN(); \
+	IS_TOKEN(expected)
+
+#define CHECK_TOKEN(check) (strcmp(tkn, check) == 0)
+
+#define EXPECT_NUMBER(what) \
+	int num = 0; \
+	if (!StringToNumber(tkn, &num)) \
+	{ \
+		CONS_Alert(CONS_ERROR, "Error parsing " what ": expected a number, got '%s'\n", tkn); \
+		goto fail; \
+	}
+
+#define IGNORE_FIELD() \
+	EXPECT_TOKEN("="); \
+	GET_TOKEN(); \
+	EXPECT_TOKEN(";")
+
+static void ParseChoice(textpage_t *page, tokenizer_t *sc)
+{
+	const char *tkn;
+
+	if (page->numchoices == MAX_PROMPT_CHOICES)
+		abort();
+
+	page->numchoices++;
+
+	page->choices = Z_Realloc(page->choices, sizeof(promptchoice_t) * page->numchoices, PU_STATIC, NULL);
+
+	promptchoice_t *choice = &page->choices[page->numchoices - 1];
+
+	INT32 choiceid = page->numchoices;
+
+	GET_TOKEN();
+
+	while (!CHECK_TOKEN("}"))
+	{
+		if (CHECK_TOKEN("text"))
+		{
+			EXPECT_TOKEN("=");
+
+			GET_TOKEN();
+
+			Z_Free(choice->text);
+
+			choice->text = Z_StrDup(tkn);
+
+			EXPECT_TOKEN(";");
+		}
+		else if (CHECK_TOKEN("nextpage"))
+		{
+			EXPECT_TOKEN("=");
+
+			GET_TOKEN();
+
+			Z_Free(choice->nextpagename);
+
+			int num = 0;
+			if (StringToNumber(tkn, &num))
+				choice->nextpage = num;
+			else
+			{
+				choice->nextpage = 0;
+				choice->nextpagename = Z_StrDup(tkn);
+			}
+
+			EXPECT_TOKEN(";");
+		}
+		else if (CHECK_TOKEN("nextconversation"))
+		{
+			EXPECT_TOKEN("=");
+
+			GET_TOKEN();
+
+			Z_Free(choice->nextpromptname);
+
+			int num = 0;
+			if (StringToNumber(tkn, &num))
+				choice->nextprompt = num;
+			else
+			{
+				choice->nextprompt = 0;
+				choice->nextpromptname = Z_StrDup(tkn);
+			}
+
+			EXPECT_TOKEN(";");
+		}
+		else if (CHECK_TOKEN("nexttag"))
+		{
+			EXPECT_TOKEN("=");
+
+			GET_TOKEN();
+
+			strlcpy(choice->nexttag, tkn, sizeof(choice->nexttag));
+
+			EXPECT_TOKEN(";");
+		}
+		else if (CHECK_TOKEN("executelinedefsbytag"))
+		{
+			EXPECT_TOKEN("=");
+
+			GET_TOKEN();
+
+			EXPECT_NUMBER("choice 'executelinedefsbytag'");
+
+			choice->exectag = num;
+
+			EXPECT_TOKEN(";");
+		}
+		else if (CHECK_TOKEN("highlighted"))
+		{
+			EXPECT_TOKEN("=");
+
+			GET_TOKEN();
+
+			if (CHECK_TOKEN("true"))
+				page->startchoice = choiceid;
+
+			EXPECT_TOKEN(";");
+		}
+		else if (CHECK_TOKEN("nochoice"))
+		{
+			EXPECT_TOKEN("=");
+
+			GET_TOKEN();
+
+			if (CHECK_TOKEN("true"))
+				page->nochoice = choiceid;
+
+			EXPECT_TOKEN(";");
+		}
+		else if (CHECK_TOKEN("closedialog"))
+		{
+			EXPECT_TOKEN("=");
+
+			GET_TOKEN();
+
+			if (CHECK_TOKEN("true"))
+				choice->endprompt = true;
+			else if (CHECK_TOKEN("false"))
+				choice->endprompt = false;
+
+			EXPECT_TOKEN(";");
+		}
+		else
+		{
+			CONS_Alert(CONS_WARNING, "While parsing choice: Unknown token '%s'\n", tkn);
+			IGNORE_FIELD();
+		}
+
+		tkn = sc->get(sc, 0);
+	}
+
+	return;
+
+fail:
+	while (tkn && !CHECK_TOKEN("}"))
+		tkn = sc->get(sc, 0);
+
+	return;
+}
+
+static void ParsePicture(textpage_t *page, tokenizer_t *sc)
+{
+	const char *tkn;
+
+	if (page->numpics == MAX_PROMPT_PICS)
+		abort();
+
+	page->numpics++;
+
+	page->pics = Z_Realloc(page->pics, sizeof(cutscene_pic_t) * page->numpics, PU_STATIC, NULL);
+
+	cutscene_pic_t *pic = &page->pics[page->numpics - 1];
+
+	INT32 picid = page->numpics;
+
+	GET_TOKEN();
+
+	while (!CHECK_TOKEN("}"))
+	{
+		if (CHECK_TOKEN("name"))
+		{
+			EXPECT_TOKEN("=");
+
+			GET_TOKEN();
+
+			strlcpy(pic->name, tkn, sizeof(pic->name));
+
+			EXPECT_TOKEN(";");
+		}
+		else if (CHECK_TOKEN("x"))
+		{
+			EXPECT_TOKEN("=");
+
+			GET_TOKEN();
+
+			EXPECT_NUMBER("picture 'x'");
+
+			pic->xcoord = num;
+
+			EXPECT_TOKEN(";");
+		}
+		else if (CHECK_TOKEN("y"))
+		{
+			EXPECT_TOKEN("=");
+
+			GET_TOKEN();
+
+			EXPECT_NUMBER("picture 'y'");
+
+			pic->ycoord = num;
+
+			EXPECT_TOKEN(";");
+		}
+		else if (CHECK_TOKEN("duration"))
+		{
+			EXPECT_TOKEN("=");
+
+			GET_TOKEN();
+
+			EXPECT_NUMBER("picture 'duration'");
+
+			if (num < 0)
+				num = 0;
+
+			pic->duration = num;
+
+			EXPECT_TOKEN(";");
+		}
+		else if (CHECK_TOKEN("hires"))
+		{
+			EXPECT_TOKEN("=");
+
+			GET_TOKEN();
+
+			if (CHECK_TOKEN("true"))
+				pic->hires = true;
+			else if (CHECK_TOKEN("false"))
+				pic->hires = false;
+
+			EXPECT_TOKEN(";");
+		}
+		else if (CHECK_TOKEN("start"))
+		{
+			EXPECT_TOKEN("=");
+
+			GET_TOKEN();
+
+			if (CHECK_TOKEN("true"))
+				page->pictostart = picid - 1;
+
+			EXPECT_TOKEN(";");
+		}
+		else if (CHECK_TOKEN("looppoint"))
+		{
+			EXPECT_TOKEN("=");
+
+			GET_TOKEN();
+
+			if (CHECK_TOKEN("true"))
+				page->pictoloop = picid;
+
+			EXPECT_TOKEN(";");
+		}
+		else
+		{
+			CONS_Alert(CONS_WARNING, "While parsing pic: Unknown token '%s'\n", tkn);
+			IGNORE_FIELD();
+		}
+
+		tkn = sc->get(sc, 0);
+	}
+
+	return;
+
+fail:
+	while (tkn && !CHECK_TOKEN("}"))
+		tkn = sc->get(sc, 0);
+
+	return;
+}
+
+static void ParsePage(textprompt_t *prompt, tokenizer_t *sc)
+{
+	const char *tkn;
+
+	if (prompt->numpages == MAX_PAGES)
+		abort();
+
+	textpage_t *page = &prompt->page[prompt->numpages];
+
+	page->backcolor = 1; // default to gray
+	page->hidehud = 1; // hide appropriate HUD elements
+
+	prompt->numpages++;
+
+	GET_TOKEN();
+
+	while (!CHECK_TOKEN("}"))
+	{
+		if (CHECK_TOKEN("pagename"))
+		{
+			EXPECT_TOKEN("=");
+
+			GET_TOKEN();
+
+			Z_Free(page->pagename);
+
+			page->pagename = Z_StrDup(tkn);
+
+			EXPECT_TOKEN(";");
+		}
+		else if (CHECK_TOKEN("name"))
+		{
+			EXPECT_TOKEN("=");
+
+			GET_TOKEN();
+
+			char name[34];
+			name[0] = '\x82'; // color yellow
+			name[1] = 0;
+			strlcat(name, tkn, sizeof(name));
+			strlcpy(page->name, name, sizeof(page->name));
+
+			EXPECT_TOKEN(";");
+		}
+		else if (CHECK_TOKEN("dialog"))
+		{
+			EXPECT_TOKEN("=");
+
+			GET_TOKEN();
+
+			Z_Free(page->text);
+
+			page->text = Z_StrDup(tkn);
+
+			EXPECT_TOKEN(";");
+		}
+		else if (CHECK_TOKEN("icon"))
+		{
+			EXPECT_TOKEN("=");
+
+			GET_TOKEN();
+
+			strlcpy(page->iconname, tkn, sizeof(page->iconname));
+
+			EXPECT_TOKEN(";");
+		}
+		else if (CHECK_TOKEN("tag"))
+		{
+			EXPECT_TOKEN("=");
+
+			GET_TOKEN();
+
+			strlcpy(page->tag, tkn, sizeof(page->tag));
+
+			EXPECT_TOKEN(";");
+		}
+		else if (CHECK_TOKEN("textsound"))
+		{
+			EXPECT_TOKEN("=");
+
+			GET_TOKEN();
+
+			page->textsfx = get_sfx(tkn);
+
+			EXPECT_TOKEN(";");
+		}
+		else if (CHECK_TOKEN("nextpage"))
+		{
+			EXPECT_TOKEN("=");
+
+			GET_TOKEN();
+
+			Z_Free(page->nextpagename);
+
+			int num = 0;
+			if (StringToNumber(tkn, &num))
+				page->nextpage = num;
+			else
+			{
+				page->nextpage = 0;
+				page->nextpagename = Z_StrDup(tkn);
+			}
+
+			page->nextpage = num;
+
+			EXPECT_TOKEN(";");
+		}
+		else if (CHECK_TOKEN("nextconversation"))
+		{
+			EXPECT_TOKEN("=");
+
+			GET_TOKEN();
+
+			Z_Free(page->nextpromptname);
+
+			int num = 0;
+			if (StringToNumber(tkn, &num))
+				page->nextprompt = num;
+			else
+			{
+				page->nextprompt = 0;
+				page->nextpromptname = Z_StrDup(tkn);
+			}
+
+			EXPECT_TOKEN(";");
+		}
+		else if (CHECK_TOKEN("nexttag"))
+		{
+			EXPECT_TOKEN("=");
+
+			GET_TOKEN();
+
+			strlcpy(page->nexttag, tkn, sizeof(page->nexttag));
+
+			EXPECT_TOKEN(";");
+		}
+		else if (CHECK_TOKEN("duration"))
+		{
+			EXPECT_TOKEN("=");
+
+			GET_TOKEN();
+
+			EXPECT_NUMBER("page 'duration'");
+
+			page->timetonext = num;
+
+			EXPECT_TOKEN(";");
+		}
+		else if (CHECK_TOKEN("textspeed"))
+		{
+			EXPECT_TOKEN("=");
+
+			GET_TOKEN();
+
+			EXPECT_NUMBER("page 'textspeed'");
+
+			page->textspeed = num;
+
+			EXPECT_TOKEN(";");
+		}
+		else if (CHECK_TOKEN("textlines"))
+		{
+			EXPECT_TOKEN("=");
+
+			GET_TOKEN();
+
+			EXPECT_NUMBER("page 'textlines'");
+
+			page->lines = num;
+
+			EXPECT_TOKEN(";");
+		}
+		else if (CHECK_TOKEN("iconside"))
+		{
+			EXPECT_TOKEN("=");
+
+			GET_TOKEN();
+
+			if (CHECK_TOKEN("right"))
+				page->rightside = true;
+			else if (CHECK_TOKEN("left"))
+				page->rightside = false;
+
+			EXPECT_TOKEN(";");
+		}
+		else if (CHECK_TOKEN("flipicon"))
+		{
+			EXPECT_TOKEN("=");
+
+			GET_TOKEN();
+
+			if (CHECK_TOKEN("true"))
+				page->iconflip = true;
+			else if (CHECK_TOKEN("false"))
+				page->iconflip = false;
+
+			EXPECT_TOKEN(";");
+		}
+		else if (CHECK_TOKEN("displayhud"))
+		{
+			EXPECT_TOKEN("=");
+
+			GET_TOKEN();
+
+			if (CHECK_TOKEN("show"))
+				page->hidehud = 0;
+			else if (CHECK_TOKEN("hide"))
+				page->hidehud = 1;
+			else if (CHECK_TOKEN("hideall"))
+				page->hidehud = 2;
+
+			EXPECT_TOKEN(";");
+		}
+		else if (CHECK_TOKEN("backcolor"))
+		{
+			EXPECT_TOKEN("=");
+
+			GET_TOKEN();
+
+			page->backcolor = P_ParsePromptBackColor(tkn);
+
+			EXPECT_TOKEN(";");
+		}
+		else if (CHECK_TOKEN("choice"))
+		{
+			EXPECT_TOKEN("{");
+
+			if (page->numchoices == MAX_PROMPT_CHOICES)
+			{
+				while (!CHECK_TOKEN("}"))
+				{
+					GET_TOKEN();
+				}
+			}
+			else
+			{
+				ParseChoice(page, sc);
+
+				if (page->numchoices == MAX_PROMPT_CHOICES)
+					CONS_Alert(CONS_WARNING, "Conversation page exceeded max amount of choices; ignoring any more choices\n");
+			}
+		}
+		else if (CHECK_TOKEN("alignchoices"))
+		{
+			EXPECT_TOKEN("=");
+
+			GET_TOKEN();
+
+			if (CHECK_TOKEN("left"))
+				page->choicesleftside = true;
+			else if (CHECK_TOKEN("right"))
+				page->choicesleftside = false;
+
+			EXPECT_TOKEN(";");
+		}
+		else if (CHECK_TOKEN("picture"))
+		{
+			EXPECT_TOKEN("{");
+
+			if (page->numpics == MAX_PROMPT_PICS)
+			{
+				while (!CHECK_TOKEN("}"))
+				{
+					GET_TOKEN();
+				}
+			}
+			else
+			{
+				ParsePicture(page, sc);
+
+				if (page->numpics == MAX_PROMPT_PICS)
+					CONS_Alert(CONS_WARNING, "Conversation page exceeded max amount of pictures; ignoring any more pictures\n");
+			}
+		}
+		else if (CHECK_TOKEN("picturesequence"))
+		{
+			EXPECT_TOKEN("=");
+
+			GET_TOKEN();
+
+			if (CHECK_TOKEN("persist"))
+				page->picmode = 0;
+			else if (CHECK_TOKEN("loop"))
+				page->picmode = 1;
+			else if (CHECK_TOKEN("hide"))
+				page->picmode = 2;
+
+			EXPECT_TOKEN(";");
+		}
+		else if (CHECK_TOKEN("music"))
+		{
+			EXPECT_TOKEN("=");
+
+			GET_TOKEN();
+
+			strlcpy(page->musswitch, tkn, sizeof(page->musswitch));
+
+			EXPECT_TOKEN(";");
+		}
+		else if (CHECK_TOKEN("musictrack"))
+		{
+			EXPECT_TOKEN("=");
+
+			GET_TOKEN();
+
+			EXPECT_NUMBER("page 'musictrack'");
+
+			if (num < 0)
+				num = 0;
+
+			page->musswitchflags = ((UINT16)num) & MUSIC_TRACKMASK;
+
+			EXPECT_TOKEN(";");
+		}
+		else if (CHECK_TOKEN("loopmusic"))
+		{
+			EXPECT_TOKEN("=");
+
+			GET_TOKEN();
+
+			if (CHECK_TOKEN("true"))
+				page->musicloop = 1;
+			else if (CHECK_TOKEN("false"))
+				page->musicloop = 0;
+
+			EXPECT_TOKEN(";");
+		}
+		else if (CHECK_TOKEN("restoremusic"))
+		{
+			EXPECT_TOKEN("=");
+
+			GET_TOKEN();
+
+			if (CHECK_TOKEN("true"))
+				page->restoremusic = true;
+			else if (CHECK_TOKEN("false"))
+				page->restoremusic = false;
+
+			EXPECT_TOKEN(";");
+		}
+		else if (CHECK_TOKEN("closedialog"))
+		{
+			EXPECT_TOKEN("=");
+
+			GET_TOKEN();
+
+			if (CHECK_TOKEN("true"))
+				page->endprompt = true;
+			else if (CHECK_TOKEN("false"))
+				page->endprompt = false;
+
+			EXPECT_TOKEN(";");
+		}
+#if 0
+		else if (CHECK_TOKEN("metapage"))
+		{
+			EXPECT_TOKEN("=");
+
+			GET_TOKEN();
+
+			EXPECT_NUMBER("page 'metapage'");
+
+			if (num > 0 && num <= prompt->numpages)
+				P_SetMetaPage(page, &prompt->page[num - 1]);
+
+			EXPECT_TOKEN(";");
+		}
+		else if (CHECK_TOKEN("picsmetapage"))
+		{
+			EXPECT_TOKEN("=");
+
+			GET_TOKEN();
+
+			EXPECT_NUMBER("page 'picsmetapage'");
+
+			if (num > 0 && num <= prompt->numpages)
+				P_SetPicsMetaPage(page, &prompt->page[num - 1]);
+
+			EXPECT_TOKEN(";");
+		}
+#endif
+		else
+		{
+			CONS_Alert(CONS_WARNING, "While parsing page: Unknown token '%s'\n", tkn);
+			IGNORE_FIELD();
+		}
+
+		tkn = sc->get(sc, 0);
+	}
+
+	return;
+
+fail:
+	while (tkn && !CHECK_TOKEN("}"))
+		tkn = sc->get(sc, 0);
+
+	return;
+}
+
+static void ParseConversation(tokenizer_t *sc)
+{
+	INT32 id = 0;
+
+	char *name = NULL;
+
+	textprompt_t *prompt = NULL;
+
+	const char *tkn;
+
+	GET_TOKEN();
+
+	prompt = Z_Calloc(sizeof(textprompt_t), PU_STATIC, NULL);
+
+	while (!CHECK_TOKEN("}"))
+	{
+		if (CHECK_TOKEN("id"))
+		{
+			EXPECT_TOKEN("=");
+
+			GET_TOKEN();
+
+			int num = 0;
+			if (StringToNumber(tkn, &num))
+				id = num;
+			else
+				name = Z_StrDup(tkn); // Must be named, then
+
+			EXPECT_TOKEN(";");
+		}
+		else if (CHECK_TOKEN("page"))
+		{
+			EXPECT_TOKEN("{");
+
+			if (prompt->numpages == MAX_PAGES)
+			{
+				while (!CHECK_TOKEN("}"))
+				{
+					GET_TOKEN();
+				}
+			}
+			else
+			{
+				ParsePage(prompt, sc);
+
+				if (prompt->numpages == MAX_PAGES)
+					CONS_Alert(CONS_WARNING, "Conversation exceeded max amount of pages; ignoring any more pages\n");
+			}
+		}
+		else
+		{
+			CONS_Alert(CONS_WARNING, "While parsing conversation: Unknown token '%s'\n", tkn);
+			IGNORE_FIELD();
+		}
+
+		tkn = sc->get(sc, 0);
+	}
+
+	if (name)
+	{
+		id = P_FindTextPromptSlot(name);
+
+		if (id < 0)
+		{
+			CONS_Alert(CONS_WARNING, "No more free conversation slots\n");
+			goto fail;
+		}
+
+		prompt->name = Z_StrDup(name);
+
+		P_FreeTextPrompt(textprompts[id]);
+
+		textprompts[id] = prompt;
+	}
+	else if (id)
+	{
+		if (id <= 0 || id > MAX_PROMPTS)
+		{
+			CONS_Alert(CONS_WARNING, "Conversation ID %d out of range (1 - %d)\n", id, MAX_PROMPTS);
+			goto fail;
+		}
+
+		--id;
+
+		P_FreeTextPrompt(textprompts[id]);
+
+		textprompts[id] = prompt;
+	}
+	else
+	{
+		CONS_Alert(CONS_WARNING, "Conversation has missing ID\n");
+fail:
+		Z_Free(prompt);
+		Z_Free(name);
+	}
+}
+
+static void ParseDialogue(UINT16 wadNum, UINT16 lumpnum)
+{
+	char *lumpData = (char *)W_CacheLumpNumPwad(wadNum, lumpnum, PU_STATIC);
+	size_t lumpLength = W_LumpLengthPwad(wadNum, lumpnum);
+	char *text = (char *)Z_Malloc((lumpLength + 1), PU_STATIC, NULL);
+	memmove(text, lumpData, lumpLength);
+	text[lumpLength] = '\0';
+	Z_Free(lumpData);
+
+	tokenizer_t *sc = Tokenizer_Open(text, 1);
+	const char *tkn = sc->get(sc, 0);
+
+	// Look for namespace at the beginning.
+	if (strcmp(tkn, "namespace") != 0)
+	{
+		CONS_Alert(CONS_ERROR, "No namespace at beginning of DIALOGUE text!\n");
+		goto fail;
+	}
+
+	EXPECT_TOKEN("=");
+
+	// Check if namespace is valid.
+	GET_TOKEN();
+	if (strcmp(tkn, "srb2") != 0)
+		CONS_Alert(CONS_WARNING, "Invalid namespace '%s', only 'srb2' is supported.\n", tkn);
+
+	EXPECT_TOKEN(";");
+
+	GET_TOKEN();
+	while (tkn != NULL)
+	{
+		IS_TOKEN("conversation");
+
+		EXPECT_TOKEN("{");
+
+		ParseConversation(sc);
+
+		tkn = sc->get(sc, 0);
+	}
+
+fail:
+	Tokenizer_Close(sc);
+	Z_Free(text);
+}
+
+#undef GET_TOKEN
+#undef IS_TOKEN
+#undef CHECK_TOKEN
+#undef EXPECT_TOKEN
+#undef EXPECT_NUMBER
+
+void P_LoadDialogueLumps(UINT16 wadnum)
+{
+	UINT16 lump = W_CheckNumForNamePwad("DIALOGUE", wadnum, 0);
+	while (lump != INT16_MAX)
+	{
+		ParseDialogue(wadnum, lump);
+		lump = W_CheckNumForNamePwad("DIALOGUE", wadnum, lump + 1);
+	}
 }

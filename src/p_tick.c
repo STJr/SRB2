@@ -812,7 +812,7 @@ void P_Ticker(boolean run)
 
 		for (i = 0; i < MAXPLAYERS; i++)
 			if (playeringame[i])
-				P_RunTextPrompt(&players[i]);
+				P_RunDialog(&players[i]);
 
 		PS_START_TIMING(ps_lua_thinkframe_time);
 		LUA_HookThinkFrame();

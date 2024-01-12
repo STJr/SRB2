@@ -1521,6 +1521,10 @@ void D_SRB2Main(void)
 
 	savedata.lives = 0; // flag this as not-used
 
+	// Parse all DIALOGUE lumps
+	for (UINT16 w = 0; w < numwadfiles; w++)
+		P_LoadDialogueLumps(w);
+
 	//------------------------------------------------ COMMAND LINE PARAMS
 
 	// this must be done after loading gamedata,

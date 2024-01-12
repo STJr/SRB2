@@ -136,6 +136,7 @@ const char *Tokenizer_Read(tokenizer_t *tokenizer, UINT32 i)
 			|| tokenizer->input[tokenizer->startPos] == ']'
 			|| tokenizer->input[tokenizer->startPos] == '='
 			|| tokenizer->input[tokenizer->startPos] == ':'
+			|| tokenizer->input[tokenizer->startPos] == ';'
 			|| tokenizer->input[tokenizer->startPos] == '%')
 	{
 		tokenizer->endPos = tokenizer->startPos + 1;
@@ -169,6 +170,7 @@ const char *Tokenizer_Read(tokenizer_t *tokenizer, UINT32 i)
 			&& tokenizer->input[tokenizer->endPos] != '='
 			&& tokenizer->input[tokenizer->endPos] != ':'
 			&& tokenizer->input[tokenizer->endPos] != '%'
+			&& tokenizer->input[tokenizer->endPos] != ';'
 			&& tokenizer->inComment == 0)
 			&& tokenizer->endPos < tokenizer->inputLength)
 	{

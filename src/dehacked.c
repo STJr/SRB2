@@ -183,26 +183,6 @@ void ignorelinesuntilhash(MYFILE *f)
 	Z_Free(s);
 }
 
-void skipemptylines(MYFILE *f)
-{
-	char *s = Z_Malloc(MAXLINELEN, PU_STATIC, NULL);
-	do
-	{
-		int lastline = dbg_line;
-		char *lastpos = f->curpos;
-		if (myfgets(s, MAXLINELEN, f))
-		{
-			if (s[0] != '\n' && !isspace(s[0]))
-			{
-				dbg_line = lastline;
-				f->curpos = lastpos;
-				break;
-			}
-		}
-	} while (!myfeof(f));
-	Z_Free(s);
-}
-
 static void DEH_LoadDehackedFile(MYFILE *f, boolean mainfile)
 {
 	char *s = Z_Malloc(MAXLINELEN, PU_STATIC, NULL);

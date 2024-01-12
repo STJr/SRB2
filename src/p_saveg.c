@@ -5011,7 +5011,7 @@ static void P_NetUnArchiveGlobalTextPrompt(void)
 	if (READUINT32(save_p) != ARCHIVEBLOCK_TEXTPROMPT)
 		I_Error("Bad $$$.sav at archive block GlobalTextPrompt");
 
-	P_FreeTextPrompt(globaltextprompt);
+	P_FreeDialog(globaltextprompt);
 
 	globaltextprompt = NULL;
 

@@ -62,5 +62,4 @@ typedef struct
 char *myfgets(char *buf, size_t bufsize, MYFILE *f);
 char *myhashfgets(char *buf, size_t bufsize, MYFILE *f);
 void ignorelinesuntilhash(MYFILE *f);
-void skipemptylines(MYFILE *f);
 #endif

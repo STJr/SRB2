@@ -8303,6 +8303,9 @@ static boolean P_LoadAddon(UINT16 numlumps)
 	if (!mapsadded)
 		CONS_Printf(M_GetText("No maps added\n"));
 
+	// Parse all DIALOGUE lumps
+	P_LoadDialogueLumps(wadnum);
+
 	R_LoadSpriteInfoLumps(wadnum, numlumps);
 
 #ifdef HWRENDER

@@ -66,17 +66,28 @@ typedef struct dialog_s
 	boolean selectedchoice;
 } dialog_t;
 
+void P_LoadDialogueLumps(UINT16 wadnum);
+
 void P_StartTextPrompt(player_t *player, INT32 promptnum, INT32 pagenum, UINT16 postexectag, boolean blockcontrols, boolean freezerealtime, boolean allplayers);
-void P_GetPromptPageByNamedTag(const char *tag, INT32 *promptnum, INT32 *pagenum);
 void P_EndTextPrompt(player_t *player, boolean forceexec, boolean noexec);
 void P_EndAllTextPrompts(boolean forceexec, boolean noexec);
-void P_RunTextPrompt(player_t *player);
-void P_FreeTextPrompt(dialog_t *dialog);
+void P_RunDialog(player_t *player);
+void P_FreeDialog(dialog_t *dialog);
 void P_DialogSetText(dialog_t *dialog, char *pagetext, INT32 numchars);
+
 boolean P_SetCurrentDialogChoice(player_t *player, INT32 choice);
 boolean P_SelectDialogChoice(player_t *player, INT32 choice);
+
 boolean F_GetPromptHideHudAll(void);
 boolean F_GetPromptHideHud(fixed_t y);
 void F_TextPromptDrawer(void);
+
+INT32 P_GetTextPromptByName(const char *name);
+void P_GetPromptPageByNamedTag(const char *tag, INT32 *promptnum, INT32 *pagenum);
+void P_SetMetaPage(textpage_t *page, textpage_t *metapage);
+void P_SetPicsMetaPage(textpage_t *page, textpage_t *metapage);
+void P_FreeTextPrompt(textprompt_t *prompt);
+
+INT32 P_ParsePromptBackColor(const char *word);
 
 #endif
