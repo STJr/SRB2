@@ -368,9 +368,7 @@ static fixed_t F_GetPromptHideHudBound(dialog_t *dialog)
 
 	INT32 boxh;
 
-	if (!dialog->prompt || !dialog->page ||
-		!dialog->page->hidehud ||
-		(splitscreen && dialog->page->hidehud != 2)) // don't hide on splitscreen, unless hide all is forced
+	if (!dialog->prompt || !dialog->page || !dialog->page->hidehud)
 		return 0;
 	else if (dialog->page->hidehud == 2) // hide all
 		return BASEVIDHEIGHT;
@@ -389,10 +387,10 @@ static fixed_t F_GetPromptHideHudBound(dialog_t *dialog)
 
 boolean F_GetPromptHideHudAll(void)
 {
-	if (!players[displayplayer].promptactive)
+	if (!stplyr || !stplyr->promptactive)
 		return false;
 
-	dialog_t *dialog = globaltextprompt ? globaltextprompt : players[displayplayer].textprompt;
+	dialog_t *dialog = globaltextprompt ? globaltextprompt : stplyr->textprompt;
 	if (!dialog)
 		return false;
 
@@ -412,10 +410,10 @@ boolean F_GetPromptHideHud(fixed_t y)
 	boolean fromtop;
 	fixed_t ytest;
 
-	if (!players[displayplayer].promptactive)
+	if (!stplyr || !stplyr->promptactive)
 		return false;
 
-	dialog_t *dialog = globaltextprompt ? globaltextprompt : players[displayplayer].textprompt;
+	dialog_t *dialog = globaltextprompt ? globaltextprompt : stplyr->textprompt;
 	if (!dialog)
 		return false;
 
@@ -1037,15 +1035,18 @@ void P_GetPromptPageByNamedTag(const char *tag, INT32 *promptnum, INT32 *pagenum
 
 void F_TextPromptDrawer(void)
 {
-	if (!players[displayplayer].promptactive)
+	if (!stplyr || !stplyr->promptactive)
 		return;
 
-	dialog_t *dialog = globaltextprompt ? globaltextprompt : players[displayplayer].textprompt;
+	dialog_t *dialog = globaltextprompt ? globaltextprompt : stplyr->textprompt;
 	if (!dialog)
 		return;
 
 	lumpnum_t iconlump;
 	dialog_geometry_t geo;
+
+	INT32 draw_flags = V_PERPLAYER;
+	INT32 snap_flags = V_SNAPTOBOTTOM;
 
 	// Data
 	patch_t *patch;
@@ -1066,13 +1067,13 @@ void F_TextPromptDrawer(void)
 		patch = W_CachePatchLongName(pic->name, PU_PATCH_LOWPRIORITY);
 
 		if (pic->hires)
-			V_DrawSmallScaledPatch(pic->xcoord, pic->ycoord, 0, patch);
+			V_DrawSmallScaledPatch(pic->xcoord, pic->ycoord, draw_flags, patch);
 		else
-			V_DrawScaledPatch(pic->xcoord, pic->ycoord, 0, patch);
+			V_DrawScaledPatch(pic->xcoord, pic->ycoord, draw_flags, patch);
 	}
 
 	// Draw background
-	V_DrawPromptBack(boxh, dialog->page->backcolor);
+	V_DrawPromptBack(boxh, dialog->page->backcolor, draw_flags|snap_flags);
 
 	// Draw narrator icon
 	if (iconlump != LUMPERROR)
@@ -1106,30 +1107,30 @@ void F_TextPromptDrawer(void)
 		if (dialog->page->iconflip)
 			iconx += FixedMul(patch->width, scale) << FRACBITS;
 
-		V_DrawFixedPatch(iconx, icony, scale, (V_SNAPTOBOTTOM|(dialog->page->iconflip ? V_FLIP : 0)), patch, NULL);
+		V_DrawFixedPatch(iconx, icony, scale, (draw_flags|snap_flags|(dialog->page->iconflip ? V_FLIP : 0)), patch, NULL);
 		W_UnlockCachedPatch(patch);
 	}
 
 	// Draw text
 	if (dialog->writer.disptext)
-		V_DrawString(textx, texty, (V_SNAPTOBOTTOM|V_ALLOWLOWERCASE), dialog->writer.disptext);
+		V_DrawString(textx, texty, (draw_flags|snap_flags|V_ALLOWLOWERCASE), dialog->writer.disptext);
 
 	// Draw name
 	// Don't use V_YELLOWMAP here so that the name color can be changed with control codes
 	if (dialog->page->name[0])
-		V_DrawString(textx, namey, (V_SNAPTOBOTTOM|V_ALLOWLOWERCASE), dialog->page->name);
+		V_DrawString(textx, namey, (draw_flags|snap_flags|V_ALLOWLOWERCASE), dialog->page->name);
 
 	// Draw choices
 	if (dialog->showchoices)
 	{
-		INT32 snap_flags = V_SNAPTOBOTTOM;
+		INT32 choices_flags = draw_flags | snap_flags;
 
 		if (dialog->page->choicesleftside)
-			snap_flags |= V_SNAPTOLEFT;
+			choices_flags |= V_SNAPTOLEFT;
 		else
-			snap_flags |= V_SNAPTORIGHT;
+			choices_flags |= V_SNAPTORIGHT;
 
-		V_DrawPromptRect(geo.choicesbox.x, geo.choicesbox.y, geo.choicesbox.w, geo.choicesbox.h, dialog->page->backcolor, snap_flags);
+		V_DrawPromptRect(geo.choicesbox.x, geo.choicesbox.y, geo.choicesbox.w, geo.choicesbox.h, dialog->page->backcolor, choices_flags);
 
 		textx = choicesx + 12;
 
@@ -1137,7 +1138,7 @@ void F_TextPromptDrawer(void)
 		{
 			const char *text = dialog->page->choices[i].text;
 
-			INT32 flags = snap_flags | V_ALLOWLOWERCASE;
+			INT32 flags = choices_flags | V_ALLOWLOWERCASE;
 
 			boolean selected = dialog->curchoice == i;
 
@@ -1147,7 +1148,7 @@ void F_TextPromptDrawer(void)
 			V_DrawString(textx, choicesy, flags, text);
 
 			if (selected)
-				V_DrawString(choicesx + (chevronAnimCounter/5), choicesy, V_YELLOWMAP, "\x1D");
+				V_DrawString(choicesx + (chevronAnimCounter/5), choicesy, choices_flags|V_YELLOWMAP, "\x1D");
 
 			choicesy += 10;
 		}
@@ -1158,7 +1159,7 @@ void F_TextPromptDrawer(void)
 
 	// Draw chevron
 	if (dialog->blockcontrols && !dialog->timetonext && !dialog->showchoices)
-		V_DrawString(textr-8, chevrony + (chevronAnimCounter/5), (V_SNAPTOBOTTOM|V_YELLOWMAP), "\x1B"); // down arrow
+		V_DrawString(textr-8, chevrony + (chevronAnimCounter/5), (draw_flags|snap_flags|V_YELLOWMAP), "\x1B"); // down arrow
 }
 
 static void P_LockPlayerControls(player_t *player)

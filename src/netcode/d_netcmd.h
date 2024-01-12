@@ -200,8 +200,8 @@ void D_RegisterClientCommands(void);
 void CleanupPlayerName(INT32 playernum, const char *newname);
 boolean EnsurePlayerNameIsGood(char *name, INT32 playernum);
 void D_SendPlayerConfig(void);
-void D_SendTextPromptChoice(INT32 choice);
-void D_SendTextPromptConfirm(INT32 choice);
+void D_SendTextPromptChoice(INT32 choice, UINT8 localplayer);
+void D_SendTextPromptConfirm(INT32 choice, UINT8 localplayer);
 void Command_ExitGame_f(void);
 void Command_Retry_f(void);
 void D_GameTypeChanged(INT32 lastgametype); // not a real _OnChange function anymore

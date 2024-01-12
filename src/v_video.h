@@ -193,7 +193,7 @@ void V_DrawFadeScreen(UINT16 color, UINT8 strength);
 void V_DrawFadeFill(INT32 x, INT32 y, INT32 w, INT32 h, INT32 c, UINT16 color, UINT8 strength);
 
 void V_DrawFadeConsBack(INT32 plines);
-void V_DrawPromptBack(INT32 boxheight, INT32 color);
+void V_DrawPromptBack(INT32 boxheight, INT32 color, INT32 flags);
 void V_DrawPromptRect(INT32 x, INT32 y, INT32 w, INT32 h, INT32 color, INT32 flags);
 
 // draw a single character

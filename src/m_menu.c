@@ -3298,7 +3298,7 @@ boolean M_Responder(event_t *ev)
 
 	if (ch == -1)
 		return false;
-	else if (ch == gamecontrol[GC_SYSTEMMENU][0] || ch == gamecontrol[GC_SYSTEMMENU][1]) // allow remappable ESC key
+	else if (G_IsGameControl(ch, GC_SYSTEMMENU)) // allow remappable ESC key
 		ch = KEY_ESCAPE;
 
 	// F-Keys

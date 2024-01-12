@@ -1073,7 +1073,7 @@ boolean HU_Responder(event_t *ev)
 			return false;
 
 		// enter chat mode
-		if ((ev->key == gamecontrol[GC_TALKKEY][0] || ev->key == gamecontrol[GC_TALKKEY][1])
+		if (G_IsGameControl(ev->key, GC_TALKKEY)
 			&& netgame && !OLD_MUTE) // check for old chat mute, still let the players open the chat incase they want to scroll otherwise.
 		{
 			chat_on = true;
@@ -1084,7 +1084,7 @@ boolean HU_Responder(event_t *ev)
 			typelines = 1;
 			return true;
 		}
-		if ((ev->key == gamecontrol[GC_TEAMKEY][0] || ev->key == gamecontrol[GC_TEAMKEY][1])
+		if (G_IsGameControl(ev->key, GC_TEAMKEY)
 			&& netgame && !OLD_MUTE)
 		{
 			chat_on = true;
@@ -1167,8 +1167,7 @@ boolean HU_Responder(event_t *ev)
 			I_UpdateMouseGrab();
 		}
 		else if (c == KEY_ESCAPE
-			|| ((c == gamecontrol[GC_TALKKEY][0] || c == gamecontrol[GC_TALKKEY][1]
-			|| c == gamecontrol[GC_TEAMKEY][0] || c == gamecontrol[GC_TEAMKEY][1])
+			|| ((G_IsGameControl(c, GC_TALKKEY) || G_IsGameControl(c, GC_TEAMKEY))
 			&& c >= KEY_MOUSE1)) // If it's not a keyboard key, then the chat button is used as a toggle.
 		{
 			chat_on = false;

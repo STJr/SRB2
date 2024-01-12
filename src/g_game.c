@@ -2013,9 +2013,9 @@ static boolean ViewpointSwitchResponder(event_t *ev)
 	UINT8 canSwitchView = 0;
 
 	INT32 direction = 0;
-	if (ev->key == KEY_F12 || ev->key == gamecontrol[GC_VIEWPOINTNEXT][0] || ev->key == gamecontrol[GC_VIEWPOINTNEXT][1])
+	if (ev->key == KEY_F12 || G_IsGameControl(ev->key, GC_VIEWPOINTNEXT))
 		direction = 1;
-	if (ev->key == gamecontrol[GC_VIEWPOINTPREV][0] || ev->key == gamecontrol[GC_VIEWPOINTPREV][1])
+	if (G_IsGameControl(ev->key, GC_VIEWPOINTPREV))
 		direction = -1;
 	// This enabled reverse-iterating with shift+F12, sadly I had to
 	// disable this in case your shift key is bound to a control =((
@@ -2088,10 +2088,91 @@ static boolean ViewpointSwitchResponder(event_t *ev)
 
 static boolean G_TextPromptResponder(event_t *ev)
 {
+	UINT8 localplayer = 0;
+
 	if (ev->type != ev_keydown)
 		return false;
 
-	player_t *player = &players[consoleplayer];
+	INT32 key = ev->key;
+
+	// Check P2
+	if (G_IsGameControlP2(ev->key, GC_FORWARD))
+	{
+		key = KEY_UPARROW;
+		localplayer = 1;
+	}
+	else if (G_IsGameControlP2(ev->key, GC_BACKWARD))
+	{
+		key = KEY_DOWNARROW;
+		localplayer = 1;
+	}
+	else if (G_IsGameControlP2(ev->key, GC_JUMP))
+	{
+		key = KEY_ENTER;
+		localplayer = 1;
+	}
+	else if (G_IsGameControlP2(ev->key, GC_SPIN))
+	{
+		key = KEY_BACKSPACE;
+		localplayer = 1;
+	}
+	// Check P1
+	else if (G_IsGameControl(ev->key, GC_FORWARD))
+		key = KEY_UPARROW;
+	else if (G_IsGameControl(ev->key, GC_BACKWARD))
+		key = KEY_DOWNARROW;
+	else if (G_IsGameControl(ev->key, GC_JUMP))
+		key = KEY_ENTER;
+	else if (G_IsGameControl(ev->key, GC_SPIN))
+		key = KEY_BACKSPACE;
+	// remap virtual keys (joystick buttons)
+	else
+	{
+		// This looks really bad and redundant because SRB2 events
+		// don't directly tell you which player a gamepad event might have come from.
+		switch (key)
+		{
+			case KEY_JOY1:
+			case KEY_JOY1 + 2:
+				key = KEY_ENTER;
+				break;
+			case KEY_HAT1:
+				key = KEY_UPARROW;
+				break;
+			case KEY_HAT1 + 1:
+				key = KEY_DOWNARROW;
+				break;
+			case KEY_HAT1 + 2:
+				key = KEY_LEFTARROW;
+				break;
+			case KEY_HAT1 + 3:
+				key = KEY_RIGHTARROW;
+				break;
+			case KEY_2JOY1:
+			case KEY_2JOY1 + 2:
+				key = KEY_ENTER;
+				localplayer = 1;
+				break;
+			case KEY_2HAT1:
+				key = KEY_UPARROW;
+				localplayer = 1;
+				break;
+			case KEY_2HAT1 + 1:
+				key = KEY_DOWNARROW;
+				localplayer = 1;
+				break;
+			case KEY_2HAT1 + 2:
+				key = KEY_LEFTARROW;
+				localplayer = 1;
+				break;
+			case KEY_2HAT1 + 3:
+				key = KEY_RIGHTARROW;
+				localplayer = 1;
+				break;
+		}
+	}
+
+	player_t *player = (localplayer == 1) ? &players[secondarydisplayplayer] : &players[consoleplayer];
 	if (!player->promptactive)
 		return false;
 
@@ -2103,35 +2184,12 @@ static boolean G_TextPromptResponder(event_t *ev)
 	if (player != promptplayer)
 		return false;
 
-	INT32 key = ev->key;
-
-	// remap virtual keys (mouse & joystick buttons)
-	switch (key)
-	{
-		case KEY_JOY1:
-		case KEY_JOY1 + 2:
-			key = KEY_ENTER;
-			break;
-		case KEY_HAT1:
-			key = KEY_UPARROW;
-			break;
-		case KEY_HAT1 + 1:
-			key = KEY_DOWNARROW;
-			break;
-		case KEY_HAT1 + 2:
-			key = KEY_LEFTARROW;
-			break;
-		case KEY_HAT1 + 3:
-			key = KEY_RIGHTARROW;
-			break;
-	}
-
 	if (key == KEY_UPARROW)
 	{
 		INT32 choice = dialog->curchoice - 1;
 		if (choice < 0)
 			choice = dialog->numchoices - 1;
-		D_SendTextPromptChoice(choice);
+		D_SendTextPromptChoice(choice, localplayer);
 		return true;
 	}
 	else if (key == KEY_DOWNARROW)
@@ -2139,20 +2197,19 @@ static boolean G_TextPromptResponder(event_t *ev)
 		INT32 choice = dialog->curchoice + 1;
 		if (choice >= dialog->numchoices)
 			choice = 0;
-		D_SendTextPromptChoice(choice);
+		D_SendTextPromptChoice(choice, localplayer);
 		return true;
 	}
 	else if (!ev->repeated)
 	{
-		if (key == KEY_ENTER || key == gamecontrol[GC_JUMP][0] || key == gamecontrol[GC_JUMP][1])
+		if (key == KEY_ENTER)
 		{
-			D_SendTextPromptConfirm(dialog->curchoice);
+			D_SendTextPromptConfirm(dialog->curchoice, localplayer);
 			return true;
 		}
-		else if (dialog->nochoice > 0 && dialog->nochoice <= dialog->numchoices
-			&& (key == gamecontrol[GC_SPIN][0] || key == gamecontrol[GC_SPIN][1]))
+		else if (dialog->nochoice > 0 && dialog->nochoice <= dialog->numchoices && key == KEY_BACKSPACE)
 		{
-			D_SendTextPromptChoice(dialog->nochoice);
+			D_SendTextPromptChoice(dialog->nochoice, localplayer);
 			return true;
 		}
 	}
@@ -2256,9 +2313,7 @@ boolean G_Responder(event_t *ev)
 	switch (ev->type)
 	{
 		case ev_keydown:
-			if (ev->key == gamecontrol[GC_PAUSE][0]
-				|| ev->key == gamecontrol[GC_PAUSE][1]
-				|| ev->key == KEY_PAUSE)
+			if (G_IsGameControl(ev->key, GC_PAUSE) || ev->key == KEY_PAUSE)
 			{
 				if (modeattacking && !demoplayback && (gamestate == GS_LEVEL))
 				{
@@ -2287,8 +2342,7 @@ boolean G_Responder(event_t *ev)
 					}
 				}
 			}
-			if (ev->key == gamecontrol[GC_CAMTOGGLE][0]
-				|| ev->key == gamecontrol[GC_CAMTOGGLE][1])
+			if (G_IsGameControl(ev->key, GC_CAMTOGGLE))
 			{
 				if (!camtoggledelay)
 				{
@@ -2296,8 +2350,7 @@ boolean G_Responder(event_t *ev)
 					CV_SetValue(&cv_chasecam, cv_chasecam.value ? 0 : 1);
 				}
 			}
-			if (ev->key == gamecontrolbis[GC_CAMTOGGLE][0]
-				|| ev->key == gamecontrolbis[GC_CAMTOGGLE][1])
+			if (G_IsGameControlP2(ev->key, GC_CAMTOGGLE))
 			{
 				if (!camtoggledelay2)
 				{

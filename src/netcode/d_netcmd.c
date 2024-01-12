@@ -2845,14 +2845,30 @@ static void Got_Teamchange(UINT8 **cp, INT32 playernum)
 		P_CheckSurvivors();
 }
 
-void D_SendTextPromptChoice(INT32 choice)
+void D_SendTextPromptChoice(INT32 choice, UINT8 localplayer)
 {
-	SendNetXCmd(XD_DIALOGCHOICE, &choice, sizeof(choice));
+	UINT8 buf[sizeof(INT32)];
+	UINT8 *buf_p = buf;
+
+	WRITEINT32(buf_p, choice);
+
+	if (localplayer == 1)
+		SendNetXCmd2(XD_DIALOGCHOICE, buf, sizeof(buf));
+	else
+		SendNetXCmd(XD_DIALOGCHOICE, buf, sizeof(buf));
 }
 
-void D_SendTextPromptConfirm(INT32 choice)
+void D_SendTextPromptConfirm(INT32 choice, UINT8 localplayer)
 {
-	SendNetXCmd(XD_DIALOGCONFIRM, &choice, sizeof(choice));
+	UINT8 buf[sizeof(INT32)];
+	UINT8 *buf_p = buf;
+
+	WRITEINT32(buf_p, choice);
+
+	if (localplayer == 1)
+		SendNetXCmd2(XD_DIALOGCONFIRM, buf, sizeof(buf));
+	else
+		SendNetXCmd(XD_DIALOGCONFIRM, buf, sizeof(buf));
 }
 
 static void Got_TextPromptChoice(UINT8 **cp, INT32 playernum)

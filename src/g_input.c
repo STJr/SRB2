@@ -102,6 +102,16 @@ static dclick_t joy2dclicks[JOYBUTTONS + JOYHATS*4];
 // protos
 static UINT8 G_CheckDoubleClick(UINT8 state, dclick_t *dt);
 
+boolean G_IsGameControl(INT32 key, gamecontrols_e gc)
+{
+	return key == gamecontrol[gc][0] || key == gamecontrol[gc][1];
+}
+
+boolean G_IsGameControlP2(INT32 key, gamecontrols_e gc)
+{
+	return key == gamecontrolbis[gc][0] || key == gamecontrolbis[gc][1];
+}
+
 //
 // Remaps the inputs to game controls.
 //

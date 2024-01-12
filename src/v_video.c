@@ -1911,17 +1911,29 @@ static UINT32 V_GetHWPromptBackColor(INT32 color)
 #endif
 
 // Very similar to F_DrawFadeConsBack, except we draw from the middle(-ish) of the screen to the bottom.
-void V_DrawPromptBack(INT32 boxheight, INT32 color)
+// TODO: Remove this and just use V_DrawPromptRect
+void V_DrawPromptBack(INT32 boxheight, INT32 color, INT32 flags)
 {
 	UINT8 *deststop, *buf;
 
-	if (color >= 256 && color < 512)
+	boolean use_palette_color = color >= 256 && color < 512;
+
+	if ((flags & V_PERPLAYER) || use_palette_color)
 	{
 		if (boxheight < 0)
 			boxheight = -boxheight;
 		else // 4 lines of space plus gaps between and some leeway
 			boxheight = ((boxheight * 4) + (boxheight/2)*5);
-		V_DrawFill((BASEVIDWIDTH-(vid.width/vid.dup))/2, BASEVIDHEIGHT-boxheight, (vid.width/vid.dup),boxheight, (color-256)|V_SNAPTOBOTTOM);
+
+		INT32 x = (BASEVIDWIDTH-(vid.width / vid.dup)) / 2;
+		INT32 y = BASEVIDHEIGHT-boxheight;
+		INT32 w = vid.width / vid.dup;
+		INT32 h = boxheight;
+
+		if (use_palette_color)
+			V_DrawFill(x, y, w, h, (color-256)|flags);
+		else
+			V_DrawPromptRect(x, y, w, h, color, flags);
 		return;
 	}
 

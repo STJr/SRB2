@@ -179,6 +179,9 @@ extern const INT32 gcl_jump_spin[num_gcl_jump_spin];
 // remaps the input event to a game control.
 void G_MapEventsToControls(event_t *ev);
 
+boolean G_IsGameControl(INT32 key, gamecontrols_e gc);
+boolean G_IsGameControlP2(INT32 key, gamecontrols_e gc);
+
 // returns the name of a key
 const char *G_KeyNumToName(INT32 keynum);
 INT32 G_KeyNameToNum(const char *keystr);
