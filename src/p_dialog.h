@@ -34,6 +34,7 @@ typedef struct
 	INT32 textspeed;
 	INT32 numtowrite;
 	boolean boostspeed;
+	boolean paused;
 } textwriter_t;
 
 UINT8 P_CutsceneWriteText(textwriter_t *writer);

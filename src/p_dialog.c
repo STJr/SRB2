@@ -435,6 +435,7 @@ enum
 {
 	TP_OP_SPEED,
 	TP_OP_DELAY,
+	TP_OP_PAUSE,
 
 	TP_OP_NAME,
 	TP_OP_ICON,
@@ -494,6 +495,12 @@ static const UINT8 *InterpretBytecode(const UINT8 *code, dialog_t *dialog, textw
 			writer->textcount = num;
 			writer->numtowrite = 0;
 			break;
+		case TP_OP_PAUSE:
+			READ_NUM(num);
+			writer->textcount = num;
+			writer->numtowrite = 0;
+			writer->paused = true;
+			break;
 		case TP_OP_NAME: {
 			char *speaker = BytecodeReadString(&code);
 			if (speaker)
@@ -529,6 +536,7 @@ static int SkipBytecode(const UINT8 *code)
 	{
 		case TP_OP_SPEED:
 		case TP_OP_DELAY:
+		case TP_OP_PAUSE:
 			code += 4;
 			break;
 		case TP_OP_NAME:
@@ -589,13 +597,15 @@ static UINT8 P_DialogWriteText(dialog_t *dialog, textwriter_t *writer)
 
 	writer->numtowrite = 1;
 
-	if (writer->boostspeed)
+	if (writer->boostspeed && !writer->paused)
 		writer->numtowrite = 8;
 	else
 	{
 		// Don't draw any characters if the count was 1 or more when we started
 		if (--writer->textcount >= 0)
 			return DIALOG_WRITETEXT_SILENT;
+
+		writer->paused = false;
 
 		if (writer->textspeed < 7)
 			writer->numtowrite = 8 - writer->textspeed;
@@ -2237,7 +2247,26 @@ static void GetControlCodeEnd(char **input)
 
 static void InterpretControlCode(char **input, UINT8 **buf, size_t *buffer_pos, size_t *buffer_capacity)
 {
-	if (MatchControlCode("PAUSE", input))
+	if (MatchControlCode("DELAY", input))
+	{
+		int delay_frames = 12;
+
+		char *param = GetControlCodeParam(input);
+		if (param)
+		{
+			if (!StringToNumber(param, &delay_frames))
+				EXPECTED_NUMBER("DELAY");
+
+			Z_Free(param);
+		}
+
+		if (delay_frames > 0)
+		{
+			WRITE_OP(TP_OP_DELAY);
+			WRITE_NUM(delay_frames);
+		}
+	}
+	else if (MatchControlCode("PAUSE", input))
 	{
 		int pause_frames = 12;
 
@@ -2250,8 +2279,11 @@ static void InterpretControlCode(char **input, UINT8 **buf, size_t *buffer_pos, 
 			Z_Free(param);
 		}
 
-		WRITE_OP(TP_OP_DELAY);
-		WRITE_NUM(pause_frames);
+		if (pause_frames > 0)
+		{
+			WRITE_OP(TP_OP_PAUSE);
+			WRITE_NUM(pause_frames);
+		}
 	}
 	else if (MatchControlCode("SPEED", input))
 	{
@@ -2260,7 +2292,12 @@ static void InterpretControlCode(char **input, UINT8 **buf, size_t *buffer_pos, 
 		{
 			int speed = 0;
 
-			if (!StringToNumber(param, &speed))
+			if (StringToNumber(param, &speed))
+			{
+				if (speed < 0)
+					speed = 0;
+			}
+			else
 				EXPECTED_NUMBER("SPEED");
 
 			Z_Free(param);

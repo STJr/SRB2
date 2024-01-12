@@ -4956,6 +4956,7 @@ static void P_NetArchiveDialog(dialog_t *dialog)
 	WRITEINT32(save_p, dialog->writer.textcount);
 	WRITEINT32(save_p, dialog->writer.textspeed);
 	WRITEUINT8(save_p, (UINT8)dialog->writer.boostspeed);
+	WRITEUINT8(save_p, (UINT8)dialog->writer.paused);
 	WRITESTRINGN(save_p, dialog->speaker, sizeof(dialog->speaker) - 1);
 	WRITESTRINGN(save_p, dialog->icon, sizeof(dialog->icon) - 1);
 	WRITEUINT8(save_p, (UINT8)dialog->iconflip);
@@ -4967,7 +4968,7 @@ static void P_NetUnArchiveDialog(dialog_t *dialog)
 	UINT32 baseptr, writeptr;
 	INT32 textcount, textspeed;
 	char speaker[256], icon[256];
-	boolean iconflip, boostspeed;
+	boolean iconflip, boostspeed, writerpaused;
 
 	if (dialog == NULL)
 		I_Error("P_NetUnArchiveDialog: dialog == NULL");
@@ -5004,6 +5005,7 @@ static void P_NetUnArchiveDialog(dialog_t *dialog)
 	textcount = READINT32(save_p);
 	textspeed = READINT32(save_p);
 	boostspeed = (boolean)READUINT8(save_p);
+	writerpaused = (boolean)READUINT8(save_p);
 
 	READSTRINGN(save_p, speaker, sizeof(speaker) - 1);
 	READSTRINGN(save_p, icon, sizeof(icon) - 1);
@@ -5042,6 +5044,7 @@ static void P_NetUnArchiveDialog(dialog_t *dialog)
 	dialog->writer.textcount = textcount;
 	dialog->writer.textspeed = textspeed;
 	dialog->writer.boostspeed = boostspeed;
+	dialog->writer.paused = writerpaused;
 }
 
 static void P_NetArchiveGlobalTextPrompt(void)
