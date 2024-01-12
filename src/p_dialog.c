@@ -439,8 +439,45 @@ enum
 	TP_OP_NAME,
 	TP_OP_ICON,
 
+	TP_OP_CHARNAME,
+	TP_OP_PLAYERNAME,
+
 	TP_OP_CONTROL = 0xFF
 };
+
+static boolean ProcessInstruction(dialog_t *dialog, UINT8 **cptr, UINT8 **buffer, size_t *buffer_pos, size_t *buffer_capacity)
+{
+	UINT8 *code = *cptr;
+	if (*code++ != TP_OP_CONTROL)
+		return false;
+
+	player_t *player = dialog->callplayer;
+
+	switch (*code)
+	{
+		case TP_OP_CHARNAME: {
+			char charname[256];
+			strlcpy(charname, skins[player->skin]->realname, sizeof(charname));
+			M_BufferMemWrite((UINT8 *)charname, strlen(charname), buffer, buffer_pos, buffer_capacity);
+			break;
+		}
+		case TP_OP_PLAYERNAME: {
+			char playername[256];
+			if (netgame)
+				strlcpy(playername, player_names[player-players], sizeof(playername));
+			else
+				strlcpy(playername, skins[player->skin]->realname, sizeof(playername));
+			M_BufferMemWrite((UINT8 *)playername, strlen(playername), buffer, buffer_pos, buffer_capacity);
+			break;
+		}
+		default:
+			return false;
+	}
+
+	*cptr = code;
+
+	return true;
+}
 
 static const UINT8 *InterpretBytecode(const UINT8 *code, dialog_t *dialog, textwriter_t *writer)
 {
@@ -474,6 +511,10 @@ static const UINT8 *InterpretBytecode(const UINT8 *code, dialog_t *dialog, textw
 				Z_Free(icon);
 			}
 			break;
+		case TP_OP_CHARNAME:
+		case TP_OP_PLAYERNAME:
+			// Ignore
+			break;
 		}
 	}
 
@@ -494,6 +535,10 @@ static int SkipBytecode(const UINT8 *code)
 		case TP_OP_ICON: {
 			UINT8 n = *code++;
 			code += n;
+			break;
+		case TP_OP_CHARNAME:
+		case TP_OP_PLAYERNAME:
+			// Nothing else to read
 			break;
 		}
 	}
@@ -611,13 +656,28 @@ static void P_DialogSetDisplayText(dialog_t *dialog)
 	V_WordWrapInPlace(geo.textx, geo.textr, 0, dialog->disptext);
 }
 
-static char *P_ProcessPageText(char *pagetext, size_t textlength, size_t *outlength)
+static char *P_ProcessPageText(dialog_t *dialog, UINT8 *pagetext, size_t textlength, size_t *outlength)
 {
-	*outlength = textlength;
-	char *buf = Z_Calloc(textlength + 1, PU_STATIC, NULL);
-	memcpy(buf, pagetext, textlength);
-	buf[textlength] = '\0';
-	return buf;
+	size_t buffer_pos = 0;
+	size_t buffer_capacity = 0;
+
+	UINT8 *buf = NULL;
+
+	UINT8 *text = pagetext;
+	UINT8 *end = pagetext + textlength;
+
+	while (text < end)
+	{
+		if (!ProcessInstruction(dialog, &text, &buf, &buffer_pos, &buffer_capacity))
+		{
+			M_StringBufferWrite(*text, (char**)&buf, &buffer_pos, &buffer_capacity);
+			text++;
+		}
+	}
+
+	*outlength = buffer_pos;
+
+	return (char*)buf;
 }
 
 void P_DialogSetText(dialog_t *dialog, char *pagetext, size_t textlength)
@@ -625,7 +685,7 @@ void P_DialogSetText(dialog_t *dialog, char *pagetext, size_t textlength)
 	Z_Free(dialog->pagetext);
 
 	if (pagetext && pagetext[0])
-		dialog->pagetext = P_ProcessPageText(pagetext, textlength, &dialog->pagetextlength);
+		dialog->pagetext = P_ProcessPageText(dialog, (UINT8 *)pagetext, textlength, &dialog->pagetextlength);
 	else
 	{
 		dialog->pagetextlength = 0;
@@ -2236,6 +2296,14 @@ static void InterpretControlCode(char **input, UINT8 **buf, size_t *buffer_pos, 
 		}
 		else
 			EXPECTED_PARAM("ICON");
+	}
+	else if (MatchControlCode("CHARNAME", input))
+	{
+		WRITE_OP(TP_OP_CHARNAME);
+	}
+	else if (MatchControlCode("PLAYERNAME", input))
+	{
+		WRITE_OP(TP_OP_PLAYERNAME);
 	}
 }
 
