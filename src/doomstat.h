@@ -242,8 +242,9 @@ typedef struct
 	char   musswitch[7];
 	UINT16 musswitchflags;
 	UINT8 musicloop;
-
 	boolean restoremusic;
+
+	INT16 exectag;
 	boolean endprompt;
 
 	char tag[33]; // page tag

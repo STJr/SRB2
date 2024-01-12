@@ -688,7 +688,16 @@ static void P_ChoiceGetNextPromptAndPage(textprompt_t *prompt, promptchoice_t *c
 
 static boolean P_AdvanceToNextPage(player_t *player, dialog_t *dialog)
 {
-	if (dialog->page->endprompt)
+	textprompt_t *curprompt = dialog->prompt;
+	textpage_t *curpage = dialog->page;
+
+	if (curpage->exectag)
+		P_LinedefExecute(curpage->exectag, player->mo, NULL);
+
+	if (!player->promptactive || dialog->prompt != curprompt || dialog->page != curpage)
+		return false;
+
+	if (curpage->endprompt)
 	{
 		P_EndTextPrompt(player, false, false);
 		return false;
@@ -696,7 +705,7 @@ static boolean P_AdvanceToNextPage(player_t *player, dialog_t *dialog)
 
 	INT32 nextprompt = INT32_MAX, nextpage = INT32_MAX;
 
-	P_PageGetNextPromptAndPage(dialog->prompt, dialog->page, &nextprompt, &nextpage);
+	P_PageGetNextPromptAndPage(dialog->prompt, curpage, &nextprompt, &nextpage);
 
 	return P_LoadNextPageAndPrompt(player, dialog, nextprompt, nextpage);
 }
@@ -704,9 +713,13 @@ static boolean P_AdvanceToNextPage(player_t *player, dialog_t *dialog)
 static boolean P_ExecuteChoice(player_t *player, dialog_t *dialog, promptchoice_t *choice)
 {
 	textprompt_t *curprompt = dialog->prompt;
+	textpage_t *curpage = dialog->page;
 
 	if (choice->exectag)
 		P_LinedefExecute(choice->exectag, player->mo, NULL);
+
+	if (!player->promptactive || dialog->prompt != curprompt || dialog->page != curpage)
+		return false;
 
 	if (choice->endprompt)
 	{
@@ -1314,10 +1327,8 @@ void P_RunDialog(player_t *player)
 
 				if (!dialog->timetonext && !dialog->showchoices) // timetonext is 0 when finished generating text
 				{
-					if (!P_AdvanceToNextPage(player, dialog))
-						return;
-
-					P_PlayDialogSound(player, sfx_menu1);
+					if (P_AdvanceToNextPage(player, dialog))
+						P_PlayDialogSound(player, sfx_menu1);
 
 					return;
 				}
@@ -1524,13 +1535,13 @@ static void ParseChoice(textpage_t *page, tokenizer_t *sc)
 
 			EXPECT_TOKEN(";");
 		}
-		else if (CHECK_TOKEN("executelinedefsbytag"))
+		else if (CHECK_TOKEN("executelinedef"))
 		{
 			EXPECT_TOKEN("=");
 
 			GET_TOKEN();
 
-			EXPECT_NUMBER("choice 'executelinedefsbytag'");
+			EXPECT_NUMBER("choice 'executelinedef'");
 
 			choice->exectag = num;
 
@@ -2034,6 +2045,18 @@ static void ParsePage(textprompt_t *prompt, tokenizer_t *sc)
 				page->musicloop = 1;
 			else if (CHECK_TOKEN("false"))
 				page->musicloop = 0;
+
+			EXPECT_TOKEN(";");
+		}
+		else if (CHECK_TOKEN("executelinedef"))
+		{
+			EXPECT_TOKEN("=");
+
+			GET_TOKEN();
+
+			EXPECT_NUMBER("page 'executelinedef'");
+
+			page->exectag = num;
 
 			EXPECT_TOKEN(";");
 		}
