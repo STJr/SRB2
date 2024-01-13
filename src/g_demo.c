@@ -493,7 +493,7 @@ void G_WriteGhostTic(mobj_t *ghost)
 			if (ghost->player->followmobj->colorized)
 				followtic |= FZT_COLORIZED;
 			if (followtic & FZT_SKIN)
-				WRITEUINT8(demo_p,(UINT8)(((skin_t *)(ghost->player->followmobj->skin))-skins));
+				WRITEUINT8(demo_p,(UINT8)(((skin_t *)ghost->player->followmobj->skin)->skinnum));
 			oldghost.flags2 |= MF2_AMBUSH;
 		}
 
@@ -762,7 +762,7 @@ void G_GhostTicker(void)
 					g->mo->color = SKINCOLOR_WHITE;
 					break;
 				case GHC_NIGHTSSKIN: // not actually a colour
-					g->mo->skin = &skins[DEFAULTNIGHTSSKIN];
+					g->mo->skin = skins[DEFAULTNIGHTSSKIN];
 					break;
 				}
 			}
@@ -917,7 +917,7 @@ void G_GhostTicker(void)
 						follow->colorized = true;
 
 					if (followtic & FZT_SKIN)
-						follow->skin = &skins[READUINT8(g->p)];
+						follow->skin = skins[READUINT8(g->p)];
 				}
 			}
 			if (follow)
@@ -1175,7 +1175,7 @@ void G_ReadMetalTic(mobj_t *metal)
 						follow->colorized = true;
 
 					if (followtic & FZT_SKIN)
-						follow->skin = &skins[READUINT8(metal_p)];
+						follow->skin = skins[READUINT8(metal_p)];
 				}
 			}
 			if (follow)
@@ -1363,7 +1363,7 @@ void G_WriteMetalTic(mobj_t *metal)
 			if (metal->player->followmobj->colorized)
 				followtic |= FZT_COLORIZED;
 			if (followtic & FZT_SKIN)
-				WRITEUINT8(demo_p,(UINT8)(((skin_t *)(metal->player->followmobj->skin))-skins));
+				WRITEUINT8(demo_p,(UINT8)(((skin_t *)metal->player->followmobj->skin)->skinnum));
 			oldmetal.flags2 |= MF2_AMBUSH;
 		}
 
@@ -1516,7 +1516,7 @@ void G_BeginRecording(void)
 	demo_p += 16;
 
 	// Skin
-	const char *skinname = skins[players[0].skin].name;
+	const char *skinname = skins[players[0].skin]->name;
 	for (i = 0; i < 16 && skinname[i]; i++)
 		name[i] = skinname[i];
 	for (; i < 16; i++)
@@ -2285,7 +2285,9 @@ void G_FinishLoadingDemo(void)
 		return;
 
 	// Set color
-	players[0].skincolor = p->color;
+	if (p->color != SKINCOLOR_NONE)
+		players[0].skincolor = p->color;
+
 	if (players[0].mo)
 	{
 		players[0].mo->color = players[0].skincolor;
@@ -2597,11 +2599,11 @@ void G_AddGhost(char *defdemoname)
 	gh->oldmo.z = gh->mo->z;
 
 	// Set skin
-	gh->mo->skin = &skins[0];
+	gh->mo->skin = skins[0];
 	for (i = 0; i < numskins; i++)
-		if (!stricmp(skins[i].name,skin))
+		if (!stricmp(skins[i]->name,skin))
 		{
-			gh->mo->skin = &skins[i];
+			gh->mo->skin = skins[i];
 			break;
 		}
 	gh->oldmo.skin = gh->mo->skin;

@@ -121,52 +121,53 @@ float focallengthf, zeroheight;
 UINT32 nflatxshift, nflatyshift, nflatshiftup, nflatmask;
 
 // =========================================================================
-//                   TRANSLATION COLORMAP CODE
+//                       TRANSLATION COLORMAP CODE
 // =========================================================================
 
-#define DEFAULT_TT_CACHE_INDEX MAXSKINS
-#define BOSS_TT_CACHE_INDEX (MAXSKINS + 1)
-#define METALSONIC_TT_CACHE_INDEX (MAXSKINS + 2)
-#define ALLWHITE_TT_CACHE_INDEX (MAXSKINS + 3)
-#define RAINBOW_TT_CACHE_INDEX (MAXSKINS + 4)
-#define BLINK_TT_CACHE_INDEX (MAXSKINS + 5)
-#define DASHMODE_TT_CACHE_INDEX (MAXSKINS + 6)
-
-static UINT8 **translationtablecache[MAXSKINS + 7] = {NULL};
-UINT8 skincolor_modified[MAXSKINCOLORS];
-
-static INT32 SkinToCacheIndex(INT32 skinnum)
+enum
 {
-	switch (skinnum)
+	DEFAULT_TT_CACHE_INDEX,
+	BOSS_TT_CACHE_INDEX,
+	METALSONIC_TT_CACHE_INDEX,
+	ALLWHITE_TT_CACHE_INDEX,
+	RAINBOW_TT_CACHE_INDEX,
+	BLINK_TT_CACHE_INDEX,
+	DASHMODE_TT_CACHE_INDEX,
+
+	TT_CACHE_SIZE
+};
+
+static UINT8 **translationtablecache[TT_CACHE_SIZE] = {NULL};
+static UINT8 **skintranslationcache[NUM_PALETTE_ENTRIES] = {NULL};
+
+boolean skincolor_modified[MAXSKINCOLORS];
+
+static INT32 TranslationToCacheIndex(INT32 translation)
+{
+	switch (translation)
 	{
-		case TC_DEFAULT:    return DEFAULT_TT_CACHE_INDEX;
 		case TC_BOSS:       return BOSS_TT_CACHE_INDEX;
 		case TC_METALSONIC: return METALSONIC_TT_CACHE_INDEX;
 		case TC_ALLWHITE:   return ALLWHITE_TT_CACHE_INDEX;
 		case TC_RAINBOW:    return RAINBOW_TT_CACHE_INDEX;
 		case TC_BLINK:      return BLINK_TT_CACHE_INDEX;
 		case TC_DASHMODE:   return DASHMODE_TT_CACHE_INDEX;
-		     default:       break;
+		default:            return DEFAULT_TT_CACHE_INDEX;
 	}
-
-	return skinnum;
 }
 
-static INT32 CacheIndexToSkin(INT32 ttc)
+static INT32 CacheIndexToTranslation(INT32 index)
 {
-	switch (ttc)
+	switch (index)
 	{
-		case DEFAULT_TT_CACHE_INDEX:    return TC_DEFAULT;
 		case BOSS_TT_CACHE_INDEX:       return TC_BOSS;
 		case METALSONIC_TT_CACHE_INDEX: return TC_METALSONIC;
 		case ALLWHITE_TT_CACHE_INDEX:   return TC_ALLWHITE;
 		case RAINBOW_TT_CACHE_INDEX:    return TC_RAINBOW;
 		case BLINK_TT_CACHE_INDEX:      return TC_BLINK;
 		case DASHMODE_TT_CACHE_INDEX:   return TC_DASHMODE;
-		     default:                   break;
+		default:                        return TC_DEFAULT;
 	}
-
-	return ttc;
 }
 
 CV_PossibleValue_t Color_cons_t[MAXSKINCOLORS+1];
@@ -396,18 +397,18 @@ static void R_RainbowColormap(UINT8 *dest_colormap, UINT16 skincolor)
 	RGBA_t color;
 	UINT8 brightness;
 	INT32 j;
-	UINT8 colorbrightnesses[16];
+	UINT8 colorbrightnesses[COLORRAMPSIZE];
 	UINT16 brightdif;
 	INT32 temp;
 
 	// first generate the brightness of all the colours of that skincolour
-	for (i = 0; i < 16; i++)
+	for (i = 0; i < COLORRAMPSIZE; i++)
 	{
 		color = V_GetColor(skincolors[skincolor].ramp[i]);
 		SETBRIGHTNESS(colorbrightnesses[i], color.s.red, color.s.green, color.s.blue);
 	}
 
-	// next, for every colour in the palette, choose the transcolor that has the closest brightness
+	// next, for every colour in the palette, choose the translated colour that has the closest brightness
 	for (i = 0; i < NUM_PALETTE_ENTRIES; i++)
 	{
 		if (i == 0 || i == 31) // pure black and pure white don't change
@@ -418,7 +419,7 @@ static void R_RainbowColormap(UINT8 *dest_colormap, UINT16 skincolor)
 		color = V_GetColor(i);
 		SETBRIGHTNESS(brightness, color.s.red, color.s.green, color.s.blue);
 		brightdif = 256;
-		for (j = 0; j < 16; j++)
+		for (j = 0; j < COLORRAMPSIZE; j++)
 		{
 			temp = abs((INT16)brightness - (INT16)colorbrightnesses[j]);
 			if (temp < brightdif)
@@ -434,28 +435,29 @@ static void R_RainbowColormap(UINT8 *dest_colormap, UINT16 skincolor)
 
 /**	\brief	Generates a translation colormap.
 
-	\param	dest_colormap	colormap to populate
-	\param	skinnum		skin number, or a translation mode
-	\param	color		translation color
+	\param	dest_colormap   colormap to populate
+	\param	translation     translation mode
+	\param	color           translation color
+	\param  starttranscolor starting point of the translation
 
 	\return	void
 */
-static void R_GenerateTranslationColormap(UINT8 *dest_colormap, INT32 skinnum, UINT16 color)
+static void R_GenerateTranslationColormap(UINT8 *dest_colormap, INT32 translation, UINT16 color, INT32 starttranscolor)
 {
-	INT32 i, starttranscolor, skinramplength;
+	INT32 i, skinramplength;
 
 	// Handle a couple of simple special cases
-	if (skinnum < TC_DEFAULT)
+	if (translation < TC_DEFAULT)
 	{
-		switch (skinnum)
+		switch (translation)
 		{
 			case TC_ALLWHITE:
 				memset(dest_colormap, 0, NUM_PALETTE_ENTRIES * sizeof(UINT8));
 				return;
 			case TC_RAINBOW:
 				if (color >= numskincolors)
-					I_Error("Invalid skin color #%hu.", (UINT16)color);
-				if (color != SKINCOLOR_NONE)
+					I_Error("Invalid skin color #%hu", (UINT16)color);
+				else if (color != SKINCOLOR_NONE)
 				{
 					R_RainbowColormap(dest_colormap, color);
 					return;
@@ -463,8 +465,8 @@ static void R_GenerateTranslationColormap(UINT8 *dest_colormap, INT32 skinnum, U
 				break;
 			case TC_BLINK:
 				if (color >= numskincolors)
-					I_Error("Invalid skin color #%hu.", (UINT16)color);
-				if (color != SKINCOLOR_NONE)
+					I_Error("Invalid skin color #%hu", (UINT16)color);
+				else if (color != SKINCOLOR_NONE)
 				{
 					memset(dest_colormap, skincolors[color].ramp[3], NUM_PALETTE_ENTRIES * sizeof(UINT8));
 					return;
@@ -478,26 +480,28 @@ static void R_GenerateTranslationColormap(UINT8 *dest_colormap, INT32 skinnum, U
 			dest_colormap[i] = (UINT8)i;
 
 		// White!
-		if (skinnum == TC_BOSS)
+		if (translation == TC_BOSS)
 		{
 			UINT8 *originalColormap = R_GetTranslationColormap(TC_DEFAULT, (skincolornum_t)color, GTC_CACHE);
-			for (i = 0; i < 16; i++)
+			if (starttranscolor >= NUM_PALETTE_ENTRIES)
+				I_Error("Invalid startcolor #%d", starttranscolor);
+			for (i = 0; i < COLORRAMPSIZE; i++)
 			{
-				dest_colormap[DEFAULT_STARTTRANSCOLOR + i] = originalColormap[DEFAULT_STARTTRANSCOLOR + i];
+				dest_colormap[starttranscolor + i] = originalColormap[starttranscolor + i];
 				dest_colormap[31-i] = i;
 			}
 		}
-		else if (skinnum == TC_METALSONIC)
+		else if (translation == TC_METALSONIC)
 		{
 			for (i = 0; i < 6; i++)
 			{
 				dest_colormap[skincolors[SKINCOLOR_BLUE].ramp[12-i]] = skincolors[SKINCOLOR_BLUE].ramp[i];
 			}
 			dest_colormap[159] = dest_colormap[253] = dest_colormap[254] = 0;
-			for (i = 0; i < 16; i++)
+			for (i = 0; i < COLORRAMPSIZE; i++)
 				dest_colormap[96+i] = dest_colormap[skincolors[SKINCOLOR_COBALT].ramp[i]];
 		}
-		else if (skinnum == TC_DASHMODE) // This is a long one, because MotorRoach basically hand-picked the indices
+		else if (translation == TC_DASHMODE) // This is a long one, because MotorRoach basically hand-picked the indices
 		{
 			// greens -> ketchups
 			dest_colormap[96] = dest_colormap[97] = 48;
@@ -541,26 +545,21 @@ static void R_GenerateTranslationColormap(UINT8 *dest_colormap, INT32 skinnum, U
 	}
 
 	if (color >= numskincolors)
-		I_Error("Invalid skin color #%hu.", (UINT16)color);
-
-	if (skinnum < 0 && skinnum > TC_DEFAULT)
-		I_Error("Invalid translation colormap index %d.", skinnum);
-
-	starttranscolor = (skinnum != TC_DEFAULT) ? skins[skinnum].starttranscolor : DEFAULT_STARTTRANSCOLOR;
+		I_Error("Invalid skin color #%hu", (UINT16)color);
 
 	if (starttranscolor >= NUM_PALETTE_ENTRIES)
-		I_Error("Invalid startcolor #%d.", starttranscolor);
+		I_Error("Invalid startcolor #%d", starttranscolor);
 
 	// Fill in the entries of the palette that are fixed
 	for (i = 0; i < starttranscolor; i++)
 		dest_colormap[i] = (UINT8)i;
 
-	i = starttranscolor + 16;
+	i = starttranscolor + COLORRAMPSIZE;
 	if (i < NUM_PALETTE_ENTRIES)
 	{
 		for (i = (UINT8)i; i < NUM_PALETTE_ENTRIES; i++)
 			dest_colormap[i] = (UINT8)i;
-		skinramplength = 16;
+		skinramplength = COLORRAMPSIZE;
 	}
 	else
 		skinramplength = i - NUM_PALETTE_ENTRIES; // shouldn't this be NUM_PALETTE_ENTRIES - starttranscolor?
@@ -573,7 +572,7 @@ static void R_GenerateTranslationColormap(UINT8 *dest_colormap, INT32 skinnum, U
 
 /**	\brief	Retrieves a translation colormap from the cache.
 
-	\param	skinnum	number of skin, TC_DEFAULT or TC_BOSS
+	\param	skinnum	number of skin, or translation modes
 	\param	color	translation color
 	\param	flags	set GTC_CACHE to use the cache
 
@@ -581,25 +580,47 @@ static void R_GenerateTranslationColormap(UINT8 *dest_colormap, INT32 skinnum, U
 */
 UINT8* R_GetTranslationColormap(INT32 skinnum, skincolornum_t color, UINT8 flags)
 {
-	UINT8* ret;
-	INT32 skintableindex = SkinToCacheIndex(skinnum); // Adjust if we want the default colormap
-	INT32 i;
+	UINT8 ***cache = NULL;
+	INT32 index, starttranscolor;
+	UINT8 *ret;
+
+	// Adjust if we want the default colormap
+	if (skinnum >= numskins)
+		I_Error("Invalid skin number %d", skinnum);
+	else if (skinnum >= 0)
+	{
+		cache = skintranslationcache;
+		starttranscolor = index = skins[skinnum]->starttranscolor;
+	}
+	else if (skinnum <= TC_DEFAULT)
+	{
+		cache = translationtablecache;
+		starttranscolor = DEFAULT_STARTTRANSCOLOR;
+		index = TranslationToCacheIndex(skinnum);
+	}
+	else
+		I_Error("Invalid translation %d", skinnum);
 
 	if (flags & GTC_CACHE)
 	{
 		// Allocate table for skin if necessary
-		if (!translationtablecache[skintableindex])
-			translationtablecache[skintableindex] = Z_Calloc(MAXSKINCOLORS * sizeof(UINT8**), PU_STATIC, NULL);
+		if (!cache[index])
+			cache[index] = Z_Calloc(MAXSKINCOLORS * sizeof(UINT8**), PU_STATIC, NULL);
 
 		// Get colormap
-		ret = translationtablecache[skintableindex][color];
+		ret = cache[index][color];
 
 		// Rebuild the cache if necessary
 		if (skincolor_modified[color])
 		{
-			for (i = 0; i < (INT32)(sizeof(translationtablecache) / sizeof(translationtablecache[0])); i++)
+			INT32 i;
+
+			for (i = 0; i < TT_CACHE_SIZE; i++)
 				if (translationtablecache[i] && translationtablecache[i][color])
-					R_GenerateTranslationColormap(translationtablecache[i][color], CacheIndexToSkin(i), color);
+					R_GenerateTranslationColormap(translationtablecache[i][color], CacheIndexToTranslation(i), color, starttranscolor);
+			for (i = 0; i < NUM_PALETTE_ENTRIES; i++)
+				if (skintranslationcache[i] && skintranslationcache[i][color])
+					R_GenerateTranslationColormap(skintranslationcache[i][color], 0, color, i);
 
 			skincolor_modified[color] = false;
 		}
@@ -610,11 +631,11 @@ UINT8* R_GetTranslationColormap(INT32 skinnum, skincolornum_t color, UINT8 flags
 	if (!ret)
 	{
 		ret = Z_MallocAlign(NUM_PALETTE_ENTRIES, (flags & GTC_CACHE) ? PU_LEVEL : PU_STATIC, NULL, 8);
-		R_GenerateTranslationColormap(ret, skinnum, color);
+		R_GenerateTranslationColormap(ret, skinnum, color, starttranscolor);
 
 		// Cache the colormap if desired
 		if (flags & GTC_CACHE)
-			translationtablecache[skintableindex][color] = ret;
+			cache[index][color] = ret;
 	}
 
 	return ret;
@@ -632,9 +653,12 @@ void R_FlushTranslationColormapCache(void)
 {
 	INT32 i;
 
-	for (i = 0; i < (INT32)(sizeof(translationtablecache) / sizeof(translationtablecache[0])); i++)
+	for (i = 0; i < TT_CACHE_SIZE; i++)
 		if (translationtablecache[i])
 			memset(translationtablecache[i], 0, MAXSKINCOLORS * sizeof(UINT8**));
+	for (i = 0; i < NUM_PALETTE_ENTRIES; i++)
+		if (skintranslationcache[i])
+			memset(skintranslationcache[i], 0, MAXSKINCOLORS * sizeof(UINT8**));
 }
 
 UINT16 R_GetColorByName(const char *name)

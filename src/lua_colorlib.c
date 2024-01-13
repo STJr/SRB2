@@ -13,9 +13,32 @@
 #include "doomdef.h"
 #include "fastcmp.h"
 #include "r_data.h"
+#include "v_video.h"
 
 #include "lua_script.h"
 #include "lua_libs.h"
+
+#define COLORLIB_USE_LOOKUP
+
+#ifdef COLORLIB_USE_LOOKUP
+	static colorlookup_t colormix_lut;
+	#define GetNearestColor(r, g, b) GetColorLUT(&colormix_lut, r, g, b)
+#else
+	#define GetNearestColor(r, g, b) NearestPaletteColor(r, g, b, pMasterPalette)
+#endif
+
+////////////////
+// Color library
+////////////////
+
+static int lib_colorPaletteToRgb(lua_State *L)
+{
+	RGBA_t color = V_GetMasterColor((UINT8)luaL_checkinteger(L, 1));
+	lua_pushinteger(L, color.s.red);
+	lua_pushinteger(L, color.s.green);
+	lua_pushinteger(L, color.s.blue);
+	return 3;
+}
 
 #define IS_HEX_CHAR(x) ((x >= '0' && x <= '9') || (x >= 'a' && x <= 'f') || (x >= 'A' && x <= 'F'))
 #define ARE_HEX_CHARS(str, i) IS_HEX_CHAR(str[i]) && IS_HEX_CHAR(str[i + 1])
@@ -30,6 +53,13 @@ static UINT32 hex2int(char x)
 		return x - 'A' + 10;
 
 	return 0;
+}
+
+static UINT8 GetHTMLColorLength(const char *str)
+{
+	if (str[0] == '#')
+		str++;
+	return strlen(str) >= 8 ? 4 : 3;
 }
 
 static UINT8 ParseHTMLColor(const char *str, UINT8 *rgba, size_t numc)
@@ -76,6 +106,302 @@ static UINT8 ParseHTMLColor(const char *str, UINT8 *rgba, size_t numc)
 
 	return 0;
 }
+
+static UINT8 GetPackedRGBA(UINT32 colors, UINT8 *rgba)
+{
+	if (colors > 0xFFFFFF)
+	{
+		rgba[0] = (colors >> 24) & 0xFF;
+		rgba[1] = (colors >> 16) & 0xFF;
+		rgba[2] = (colors >> 8) & 0xFF;
+		rgba[3] = colors & 0xFF;
+		return 4;
+	}
+	else
+	{
+		rgba[0] = (colors >> 16) & 0xFF;
+		rgba[1] = (colors >> 8) & 0xFF;
+		rgba[2] = colors & 0xFF;
+		rgba[3] = 0xFF;
+		return 3;
+	}
+}
+
+static UINT8 GetArgsRGBA(lua_State *L, UINT8 index, INT32 *r, INT32 *g, INT32 *b, INT32 *a)
+{
+	UINT8 rgba[4] = { 0, 0, 0, 255 };
+	UINT8 num = 0;
+
+	if (lua_gettop(L) == 1 && lua_type(L, index) == LUA_TNUMBER)
+	{
+		num = GetPackedRGBA(luaL_checkinteger(L, 1), rgba);
+
+		*r = rgba[0];
+		*g = rgba[1];
+		*b = rgba[2];
+		if (a)
+			*a = rgba[3];
+	}
+	else if (lua_type(L, index) == LUA_TSTRING)
+	{
+		const char *str = lua_tostring(L, index);
+		UINT8 parsed = ParseHTMLColor(str, rgba, GetHTMLColorLength(str));
+		if (!parsed)
+			luaL_error(L, "Malformed HTML color '%s'", str);
+
+		num = parsed == 8 ? 4 : 3;
+
+		*r = rgba[0];
+		*g = rgba[1];
+		*b = rgba[2];
+		if (a)
+			*a = rgba[3];
+	}
+	else
+	{
+		INT32 temp;
+
+#define CHECKINT(i) luaL_checkinteger(L, i)
+#define GETCOLOR(c, i, desc) { \
+			temp = CHECKINT(i); \
+			if (temp < 0 || temp > 255) \
+				luaL_error(L, desc " channel %d out of range (0 - 255)", temp); \
+			c = temp; \
+			num++; \
+		}
+
+		GETCOLOR(*r, index + 0, "red color");
+		GETCOLOR(*g, index + 1, "green color");
+		GETCOLOR(*b, index + 2, "blue color");
+#undef CHECKINT
+#define CHECKINT(i) luaL_optinteger(L, i, 255)
+		if (a)
+			GETCOLOR(*a, index + 3, "alpha");
+#undef CHECKINT
+#undef GETCOLOR
+
+		num = 3 + (lua_type(L, index + 3) == LUA_TNUMBER);
+	}
+
+	return num;
+}
+
+static int lib_colorRgbToPalette(lua_State *L)
+{
+	INT32 r, g, b;
+	GetArgsRGBA(L, 1, &r, &g, &b, NULL);
+
+#ifdef COLORLIB_USE_LOOKUP
+	InitColorLUT(&colormix_lut, pMasterPalette, false);
+#endif
+
+	lua_pushinteger(L, GetNearestColor(r, g, b));
+	return 1;
+}
+
+#define SCALE_UINT8_TO_FIXED(val) FixedDiv(val * FRACUNIT, 255 * FRACUNIT)
+#define SCALE_FIXED_TO_UINT8(val) FixedRound(FixedMul(val, 255 * FRACUNIT)) / FRACUNIT
+
+static fixed_t hue2rgb(fixed_t p, fixed_t q, fixed_t t)
+{
+	if (t < 0)
+		t += FRACUNIT;
+	if (t > FRACUNIT)
+		t -= FRACUNIT;
+
+	fixed_t out;
+
+	if (t < FRACUNIT / 6)
+		out = p + FixedMul(FixedMul(q - p, 6 * FRACUNIT), t);
+	else if (t < FRACUNIT / 2)
+		out = q;
+	else if (t < 2 * FRACUNIT / 3)
+		out = p + FixedMul(FixedMul(q - p, 2 * FRACUNIT / 3 - t), 6 * FRACUNIT);
+	else
+		out = p;
+
+	return out;
+}
+
+static int lib_colorHslToRgb(lua_State *L)
+{
+	fixed_t h, s, l;
+
+#define GETHSL(c, i, desc) \
+	c = luaL_checkinteger(L, i); \
+	if (c < 0 || c > 255) \
+		luaL_error(L, desc " %d out of range (0 - 255)", c)
+
+	GETHSL(h, 1, "hue");
+	GETHSL(s, 2, "saturation");
+	GETHSL(l, 3, "value");
+#undef GETHSL
+
+	if (!s)
+	{
+		lua_pushinteger(L, l);
+		lua_pushinteger(L, l);
+		lua_pushinteger(L, l);
+	}
+	else
+	{
+		h = SCALE_UINT8_TO_FIXED(h);
+		s = SCALE_UINT8_TO_FIXED(s);
+		l = SCALE_UINT8_TO_FIXED(l);
+
+		fixed_t q, p;
+
+		if (l < FRACUNIT/2)
+			q = FixedMul(l, FRACUNIT + s);
+		else
+			q = l + s - FixedMul(l, s);
+
+		p = l * 2 - q;
+
+		lua_pushinteger(L, SCALE_FIXED_TO_UINT8(hue2rgb(p, q, h + FRACUNIT/3)));
+		lua_pushinteger(L, SCALE_FIXED_TO_UINT8(hue2rgb(p, q, h)));
+		lua_pushinteger(L, SCALE_FIXED_TO_UINT8(hue2rgb(p, q, h - FRACUNIT/3)));
+	}
+
+	return 3;
+}
+
+static int lib_colorRgbToHsl(lua_State *L)
+{
+	INT32 ir, ig, ib;
+	GetArgsRGBA(L, 1, &ir, &ig, &ib, NULL);
+
+	fixed_t r = SCALE_UINT8_TO_FIXED(ir);
+	fixed_t g = SCALE_UINT8_TO_FIXED(ig);
+	fixed_t b = SCALE_UINT8_TO_FIXED(ib);
+
+	fixed_t cmin = min(min(r, g), b);
+	fixed_t cmax = max(max(r, g), b);
+
+	fixed_t h, s, l = (cmax + cmin) / 2;
+	fixed_t delta = cmax - cmin;
+
+	if (!delta)
+		h = s = 0;
+	else
+	{
+		if (l > FRACUNIT / 2)
+			s = FixedDiv(delta, (FRACUNIT * 2) - cmax - cmin);
+		else
+			s = FixedDiv(delta, cmax + cmin);
+
+		if (r > g && r > b)
+		{
+			h = FixedDiv(g - b, delta);
+
+			if (g < b)
+				h += FRACUNIT * 6;
+		}
+		else
+		{
+			h = FixedDiv(r - g, delta);
+
+			if (g > b)
+				h += FRACUNIT * 2;
+			else
+				h += FRACUNIT * 4;
+		}
+
+		h = FixedDiv(h, FRACUNIT * 6);
+	}
+
+	lua_pushinteger(L, SCALE_FIXED_TO_UINT8(h));
+	lua_pushinteger(L, SCALE_FIXED_TO_UINT8(s));
+	lua_pushinteger(L, SCALE_FIXED_TO_UINT8(l));
+
+	return 3;
+}
+
+static int lib_colorHexToRgb(lua_State *L)
+{
+	UINT8 rgba[4] = { 0, 0, 0, 255 };
+
+	const char *str = luaL_checkstring(L, 1);
+	UINT8 parsed = ParseHTMLColor(str, rgba, 4), num = 3;
+	if (!parsed)
+		luaL_error(L, "Malformed HTML color '%s'", str);
+	else if (parsed == 8)
+		num++;
+
+	lua_pushinteger(L, rgba[0]);
+	lua_pushinteger(L, rgba[1]);
+	lua_pushinteger(L, rgba[2]);
+	if (num == 4)
+		lua_pushinteger(L, rgba[3]);
+
+	return num;
+}
+
+static int lib_colorRgbToHex(lua_State *L)
+{
+	INT32 r, g, b, a;
+	UINT8 num = GetArgsRGBA(L, 1, &r, &g, &b, &a);
+
+	char buffer[10];
+	if (num >= 4)
+		snprintf(buffer, sizeof buffer, "#%02X%02X%02X%02X", r, g, b, a);
+	else
+		snprintf(buffer, sizeof buffer, "#%02X%02X%02X", r, g, b);
+
+	lua_pushstring(L, buffer);
+	return 1;
+}
+
+static int lib_colorPackRgb(lua_State *L)
+{
+	INT32 r, g, b;
+
+	GetArgsRGBA(L, 1, &r, &g, &b, NULL);
+
+	UINT32 packed = ((r & 0xFF) << 16) | ((g & 0xFF) << 8) | (b & 0xFF);
+
+	lua_pushinteger(L, packed);
+	return 1;
+}
+
+static int lib_colorPackRgba(lua_State *L)
+{
+	INT32 r, g, b, a;
+
+	GetArgsRGBA(L, 1, &r, &g, &b, &a);
+
+	UINT32 packed = ((r & 0xFF) << 24) | ((g & 0xFF) << 16) | ((b & 0xFF) << 8) | (a & 0xFF);
+
+	lua_pushinteger(L, packed);
+	return 1;
+}
+
+static int lib_colorUnpackRgb(lua_State *L)
+{
+	UINT8 rgba[4];
+
+	UINT8 num = GetPackedRGBA(lua_tointeger(L, 1), rgba);
+
+	for (UINT8 i = 0; i < num; i++)
+	{
+		lua_pushinteger(L, rgba[i]);
+	}
+
+	return num;
+}
+
+static luaL_Reg color_lib[] = {
+	{"paletteToRgb", lib_colorPaletteToRgb},
+	{"rgbToPalette", lib_colorRgbToPalette},
+	{"hslToRgb", lib_colorHslToRgb},
+	{"rgbToHsl", lib_colorRgbToHsl},
+	{"hexToRgb", lib_colorHexToRgb},
+	{"rgbToHex", lib_colorRgbToHex},
+	{"packRgb", lib_colorPackRgb},
+	{"packRgba", lib_colorPackRgba},
+	{"unpackRgb", lib_colorUnpackRgb},
+	{NULL, NULL}
+};
 
 /////////////////////////
 // extracolormap userdata
@@ -180,21 +506,7 @@ static void GetExtraColormapRGBA(lua_State *L, UINT8 *rgba, int arg)
 	}
 	else
 	{
-		UINT32 colors = lua_tointeger(L, arg);
-		if (colors > 0xFFFFFF)
-		{
-			rgba[0] = (colors >> 24) & 0xFF;
-			rgba[1] = (colors >> 16) & 0xFF;
-			rgba[2] = (colors >> 8) & 0xFF;
-			rgba[3] = colors & 0xFF;
-		}
-		else
-		{
-			rgba[0] = (colors >> 16) & 0xFF;
-			rgba[1] = (colors >> 8) & 0xFF;
-			rgba[2] = colors & 0xFF;
-			rgba[3] = 0xFF;
-		}
+		GetPackedRGBA(lua_tointeger(L, arg), rgba);
 	}
 }
 
@@ -327,6 +639,8 @@ int LUA_ColorLib(lua_State *L)
 		lua_pushcfunction(L, lighttable_len);
 		lua_setfield(L, -2, "__len");
 	lua_pop(L, 1);
+
+	luaL_register(L, "color", color_lib);
 
 	return 0;
 }

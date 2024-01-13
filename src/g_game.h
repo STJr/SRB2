@@ -245,6 +245,7 @@ boolean G_CoopGametype(void);
 boolean G_TagGametype(void);
 boolean G_CompetitionGametype(void);
 boolean G_EnoughPlayersFinished(void);
+INT16 G_GetNextMap(boolean ignoretokens, boolean silent);
 void G_ExitLevel(void);
 void G_NextLevel(void);
 void G_Continue(void);

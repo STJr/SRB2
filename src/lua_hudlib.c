@@ -169,6 +169,7 @@ enum cameraf {
 	camera_x,
 	camera_y,
 	camera_z,
+	camera_reset,
 	camera_angle,
 	camera_subsector,
 	camera_floorz,
@@ -187,6 +188,7 @@ static const char *const camera_opt[] = {
 	"x",
 	"y",
 	"z",
+	"reset",
 	"angle",
 	"subsector",
 	"floorz",
@@ -341,6 +343,9 @@ static int camera_get(lua_State *L)
 	case camera_z:
 		lua_pushinteger(L, cam->z);
 		break;
+	case camera_reset:
+		lua_pushboolean(L, cam->reset);
+		break;
 	case camera_angle:
 		lua_pushinteger(L, cam->angle);
 		break;
@@ -387,6 +392,9 @@ static int camera_set(lua_State *L)
 	case camera_x:
 	case camera_y:
 		return luaL_error(L, LUA_QL("camera_t") " field " LUA_QS " should not be set directly. Use " LUA_QL("P_TryCameraMove") " or " LUA_QL("P_TeleportCameraMove") " instead.", camera_opt[field]);
+	case camera_reset:
+		cam->reset = luaL_checkboolean(L, 3);
+		break;
 	case camera_chase: {
 		INT32 chase = luaL_checkboolean(L, 3);
 		if (cam == &camera)
@@ -557,7 +565,7 @@ static int libd_getSprite2Patch(lua_State *L)
 	{
 		const char *name = luaL_checkstring(L, 1);
 		for (i = 0; i < numskins; i++)
-			if (fastcmp(skins[i].name, name))
+			if (fastcmp(skins[i]->name, name))
 				break;
 		if (i >= numskins)
 			return 0;
@@ -599,9 +607,9 @@ static int libd_getSprite2Patch(lua_State *L)
 	if (super)
 		j |= FF_SPR2SUPER;
 
-	j = P_GetSkinSprite2(&skins[i], j, NULL); // feed skin and current sprite2 through to change sprite2 used if necessary
+	j = P_GetSkinSprite2(skins[i], j, NULL); // feed skin and current sprite2 through to change sprite2 used if necessary
 
-	sprdef = &skins[i].sprites[j];
+	sprdef = &skins[i]->sprites[j];
 
 	// set frame number
 	frame = luaL_optinteger(L, 2, 0);
@@ -629,7 +637,7 @@ static int libd_getSprite2Patch(lua_State *L)
 		INT32 rot = R_GetRollAngle(rollangle);
 
 		if (rot) {
-			patch_t *rotsprite = Patch_GetRotatedSprite(sprframe, frame, angle, sprframe->flip & (1<<angle), &skins[i].sprinfo[j], rot);
+			patch_t *rotsprite = Patch_GetRotatedSprite(sprframe, frame, angle, sprframe->flip & (1<<angle), &skins[i]->sprinfo[j], rot);
 			LUA_PushUserdata(L, rotsprite, META_PATCH);
 			lua_pushboolean(L, false);
 			lua_pushboolean(L, true);
