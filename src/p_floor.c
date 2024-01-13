@@ -1212,6 +1212,19 @@ static boolean T_SectorHasEnemies(sector_t *sec)
 	return false;
 }
 
+static void T_UpdateMobjPlaneZ(sector_t *sec)
+{
+	msecnode_t *node = sec->touching_thinglist; // things touching this sector
+	mobj_t *mo;
+	while (node)
+	{
+		mo = node->m_thing;
+		mo->floorz = P_FloorzAtPos(mo->x, mo->y, mo->z, mo->height);
+		mo->ceilingz = P_CeilingzAtPos(mo->x, mo->y, mo->z, mo->height);
+		node = node->m_thinglist_next;
+	}
+}
+
 //
 // T_NoEnemiesThinker
 //
@@ -1921,6 +1934,9 @@ void EV_CrumbleChain(sector_t *sec, ffloor_t *rover)
 				for (c = topz; c > bottomz; c -= spacing)
 				{
 					spawned = P_SpawnMobj(a, b, c, type);
+					if (P_MobjWasRemoved(spawned))
+						continue;
+
 					spawned->angle += P_RandomKey(36)*ANG10; // irrelevant for default objects but might make sense for some custom ones
 
 					if (fromcenter)
@@ -1938,6 +1954,7 @@ void EV_CrumbleChain(sector_t *sec, ffloor_t *rover)
 	// no longer exists (can't collide with again)
 	rover->fofflags &= ~FOF_EXISTS;
 	rover->master->frontsector->moved = true;
+	T_UpdateMobjPlaneZ(sec); // prevent objects from floating
 	P_RecalcPrecipInSector(sec);
 }
 

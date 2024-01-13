@@ -353,7 +353,7 @@ angle_t R_PointToAngle2(fixed_t pviewx, fixed_t pviewy, fixed_t x, fixed_t y)
 fixed_t R_PointToDist2(fixed_t px2, fixed_t py2, fixed_t px1, fixed_t py1)
 {
 	angle_t angle;
-	fixed_t dx, dy, dist;
+	ufixed_t dx, dy, dist;
 
 	dx = abs(px1 - px2);
 	dy = abs(py1 - py2);
@@ -966,16 +966,6 @@ void R_ExecuteSetViewSize(void)
 			dy = FixedMul(abs(dy), fovtan);
 			yslopetab[i] = FixedDiv(centerx*FRACUNIT, dy);
 		}
-
-		if (ds_su)
-			Z_Free(ds_su);
-		if (ds_sv)
-			Z_Free(ds_sv);
-		if (ds_sz)
-			Z_Free(ds_sz);
-
-		ds_su = ds_sv = ds_sz = NULL;
-		ds_sup = ds_svp = ds_szp = NULL;
 	}
 
 	memset(scalelight, 0xFF, sizeof(scalelight));
@@ -1048,6 +1038,34 @@ fixed_t R_AdjustFOV(fixed_t ftan)
 		return FixedMul(ftan, resmul);
 
 	return ftan;
+}
+
+//
+// R_IsPointInSector
+//
+boolean R_IsPointInSector(sector_t *sector, fixed_t x, fixed_t y)
+{
+	size_t i;
+	line_t *closest = NULL;
+	fixed_t closestdist = INT32_MAX;
+
+	for (i = 0; i < sector->linecount; i++)
+	{
+		vertex_t v;
+		fixed_t dist;
+
+		// find the line closest to the point we're looking for.
+		P_ClosestPointOnLine(x, y, sector->lines[i], &v);
+		dist = R_PointToDist2(0, 0, v.x - x, v.y - y);
+		if (dist < closestdist)
+		{
+			closest = sector->lines[i];
+			closestdist = dist;
+		}
+	}
+
+	// if the side of the closest line is in this sector, we're inside of it.
+	return P_PointOnLineSide(x, y, closest) == 0 ? closest->frontsector == sector : closest->backsector == sector;
 }
 
 //
@@ -1542,9 +1560,8 @@ void R_RenderPlayerView(player_t *player)
 
 	ps_numsprites.value.i = numvisiblesprites;
 
-	// Add skybox portals caused by sky visplanes.
-	if (cv_skybox.value && skyboxmo[0])
-		Portal_AddSkyboxPortals();
+	// Add portals caused by visplanes.
+	Portal_AddPlanePortals(cv_skybox.value);
 
 	// Portal rendering. Hijacks the BSP traversal.
 	PS_START_TIMING(ps_sw_portaltime);
@@ -1577,9 +1594,21 @@ void R_RenderPlayerView(player_t *player)
 			Mask_Pre(&masks[nummasks - 1]);
 			curdrawsegs = ds_p;
 
-			// Render the BSP from the new viewpoint, and clip
-			// any sprites with the new clipsegs and window.
-			R_RenderBSPNode((INT32)numnodes - 1);
+			if (portal->is_horizon)
+			{
+				// If the portal is a plane or a horizon portal, then we just render a horizon line
+				R_RenderPortalHorizonLine(portal->horizon_sector);
+			}
+			else
+			{
+				// Render the BSP from the new viewpoint, and clip
+				// any sprites with the new clipsegs and window.
+				R_RenderBSPNode((INT32)numnodes - 1);
+			}
+
+			// Don't add skybox portals while already rendering a skybox view, because that'll cause an infinite loop
+			Portal_AddPlanePortals(cv_skybox.value && !portal->is_skybox);
+
 			Mask_Post(&masks[nummasks - 1]);
 
 			R_ClipSprites(ds_p - (masks[nummasks - 1].drawsegs[1] - masks[nummasks - 1].drawsegs[0]), portal);

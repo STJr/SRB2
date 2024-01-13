@@ -308,7 +308,9 @@ consvar_t cv_chatheight= CVAR_INIT ("chatheight", "8", CV_SAVE, chatheight_cons_
 consvar_t cv_chatnotifications= CVAR_INIT ("chatnotifications", "On", CV_SAVE, CV_OnOff, NULL);
 
 // chat spam protection (why would you want to disable that???)
-consvar_t cv_chatspamprotection= CVAR_INIT ("chatspamprotection", "On", CV_SAVE, CV_OnOff, NULL);
+consvar_t cv_chatspamprotection= CVAR_INIT ("chatspamprotection", "On", CV_SAVE|CV_NETVAR, CV_OnOff, NULL);
+consvar_t cv_chatspamspeed= CVAR_INIT ("chatspamspeed", "35", CV_SAVE|CV_NETVAR, CV_Unsigned, NULL);
+consvar_t cv_chatspamburst= CVAR_INIT ("chatspamburst", "3", CV_SAVE|CV_NETVAR, CV_Unsigned, NULL);
 
 // minichat text background
 consvar_t cv_chatbacktint = CVAR_INIT ("chatbacktint", "On", CV_SAVE, CV_OnOff, NULL);
@@ -586,14 +588,14 @@ static void G_SetMainRecords(gamedata_t *data, player_t *player)
 			I_Error("Out of memory for replay filepath\n");
 
 		sprintf(gpath,"%s"PATHSEP"replay"PATHSEP"%s"PATHSEP"%s", srb2home, timeattackfolder, G_BuildMapName(gamemap));
-		snprintf(lastdemo, 255, "%s-%s-last.lmp", gpath, skins[cv_chooseskin.value-1].name);
+		snprintf(lastdemo, 255, "%s-%s-last.lmp", gpath, skins[cv_chooseskin.value-1]->name);
 
 		if (FIL_FileExists(lastdemo))
 		{
 			UINT8 *buf;
 			size_t len = FIL_ReadFile(lastdemo, &buf);
 
-			snprintf(bestdemo, 255, "%s-%s-time-best.lmp", gpath, skins[cv_chooseskin.value-1].name);
+			snprintf(bestdemo, 255, "%s-%s-time-best.lmp", gpath, skins[cv_chooseskin.value-1]->name);
 			if (!FIL_FileExists(bestdemo) || G_CmpDemoTime(bestdemo, lastdemo) & 1)
 			{ // Better time, save this demo.
 				if (FIL_FileExists(bestdemo))
@@ -602,7 +604,7 @@ static void G_SetMainRecords(gamedata_t *data, player_t *player)
 				CONS_Printf("\x83%s\x80 %s '%s'\n", M_GetText("NEW RECORD TIME!"), M_GetText("Saved replay as"), bestdemo);
 			}
 
-			snprintf(bestdemo, 255, "%s-%s-score-best.lmp", gpath, skins[cv_chooseskin.value-1].name);
+			snprintf(bestdemo, 255, "%s-%s-score-best.lmp", gpath, skins[cv_chooseskin.value-1]->name);
 			if (!FIL_FileExists(bestdemo) || (G_CmpDemoTime(bestdemo, lastdemo) & (1<<1)))
 			{ // Better score, save this demo.
 				if (FIL_FileExists(bestdemo))
@@ -611,7 +613,7 @@ static void G_SetMainRecords(gamedata_t *data, player_t *player)
 				CONS_Printf("\x83%s\x80 %s '%s'\n", M_GetText("NEW HIGH SCORE!"), M_GetText("Saved replay as"), bestdemo);
 			}
 
-			snprintf(bestdemo, 255, "%s-%s-rings-best.lmp", gpath, skins[cv_chooseskin.value-1].name);
+			snprintf(bestdemo, 255, "%s-%s-rings-best.lmp", gpath, skins[cv_chooseskin.value-1]->name);
 			if (!FIL_FileExists(bestdemo) || (G_CmpDemoTime(bestdemo, lastdemo) & (1<<2)))
 			{ // Better rings, save this demo.
 				if (FIL_FileExists(bestdemo))
@@ -724,14 +726,14 @@ static void G_SetNightsRecords(gamedata_t *data, player_t *player)
 			I_Error("Out of memory for replay filepath\n");
 
 		sprintf(gpath,"%s"PATHSEP"replay"PATHSEP"%s"PATHSEP"%s", srb2home, timeattackfolder, G_BuildMapName(gamemap));
-		snprintf(lastdemo, 255, "%s-%s-last.lmp", gpath, skins[cv_chooseskin.value-1].name);
+		snprintf(lastdemo, 255, "%s-%s-last.lmp", gpath, skins[cv_chooseskin.value-1]->name);
 
 		if (FIL_FileExists(lastdemo))
 		{
 			UINT8 *buf;
 			size_t len = FIL_ReadFile(lastdemo, &buf);
 
-			snprintf(bestdemo, 255, "%s-%s-time-best.lmp", gpath, skins[cv_chooseskin.value-1].name);;
+			snprintf(bestdemo, 255, "%s-%s-time-best.lmp", gpath, skins[cv_chooseskin.value-1]->name);
 			if (!FIL_FileExists(bestdemo) || G_CmpDemoTime(bestdemo, lastdemo) & 1)
 			{ // Better time, save this demo.
 				if (FIL_FileExists(bestdemo))
@@ -740,7 +742,7 @@ static void G_SetNightsRecords(gamedata_t *data, player_t *player)
 				CONS_Printf("\x83%s\x80 %s '%s'\n", M_GetText("NEW RECORD TIME!"), M_GetText("Saved replay as"), bestdemo);
 			}
 
-			snprintf(bestdemo, 255, "%s-%s-score-best.lmp", gpath, skins[cv_chooseskin.value-1].name);
+			snprintf(bestdemo, 255, "%s-%s-score-best.lmp", gpath, skins[cv_chooseskin.value-1]->name);
 			if (!FIL_FileExists(bestdemo) || (G_CmpDemoTime(bestdemo, lastdemo) & (1<<1)))
 			{ // Better score, save this demo.
 				if (FIL_FileExists(bestdemo))
@@ -2149,7 +2151,7 @@ boolean G_Responder(event_t *ev)
 			if (! netgame)
 				F_StartGameEvaluation();
 			else if (server || IsPlayerAdmin(consoleplayer))
-				D_SendExitLevel(false);
+				SendNetXCmd(XD_EXITLEVEL, NULL, 0);
 			return true;
 		}
 	}
@@ -2596,7 +2598,7 @@ void G_PlayerReborn(INT32 player, boolean betweenmaps)
 	UINT8 laps;
 	UINT8 mare;
 	UINT16 skincolor;
-	INT32 skin;
+	UINT8 skin;
 	UINT32 availabilities;
 	tic_t jointime;
 	tic_t quittime;
@@ -3999,13 +4001,136 @@ static void G_HandleSaveLevel(void)
 }
 
 //
+// G_GetNextMap
+//
+INT16 G_GetNextMap(boolean ignoretokens, boolean silent)
+{
+	INT32 i;
+	INT16 newmapnum;
+	boolean spec = G_IsSpecialStage(gamemap);
+	
+	// go to next level
+	// newmapnum is 0-based, unlike gamemap
+	if (nextmapoverride != 0)
+		newmapnum = (INT16)(nextmapoverride-1);
+	else if (marathonmode && mapheaderinfo[gamemap-1]->marathonnext)
+		newmapnum = (INT16)(mapheaderinfo[gamemap-1]->marathonnext-1);
+	else
+	{
+		newmapnum = (INT16)(mapheaderinfo[gamemap-1]->nextlevel-1);
+		if (marathonmode && newmapnum == spmarathon_start-1)
+			newmapnum = 1100-1; // No infinite loop for you
+	}
+
+	INT16 gametype_to_use;
+
+	if (nextgametype >= 0 && nextgametype < gametypecount)
+		gametype_to_use = nextgametype;
+	else
+		gametype_to_use = gametype;
+
+	// If newmapnum is actually going to get used, make sure it points to
+	// a map of the proper gametype -- skip levels that don't support
+	// the current gametype. (Helps avoid playing boss levels in Race,
+	// for instance).
+	if (!spec || nextmapoverride)
+	{
+		if (newmapnum >= 0 && newmapnum < NUMMAPS)
+		{
+			INT16 cm = newmapnum;
+			UINT32 tolflag = G_TOLFlag(gametype_to_use);
+			UINT8 visitedmap[(NUMMAPS+7)/8];
+
+			memset(visitedmap, 0, sizeof (visitedmap));
+
+			while (!mapheaderinfo[cm] || !(mapheaderinfo[cm]->typeoflevel & tolflag))
+			{
+				visitedmap[cm/8] |= (1<<(cm&7));
+				if (!mapheaderinfo[cm])
+					cm = -1; // guarantee error execution
+				else if (marathonmode && mapheaderinfo[cm]->marathonnext)
+					cm = (INT16)(mapheaderinfo[cm]->marathonnext-1);
+				else
+					cm = (INT16)(mapheaderinfo[cm]->nextlevel-1);
+
+				if (cm >= NUMMAPS || cm < 0) // out of range (either 1100ish or error)
+				{
+					cm = newmapnum; //Start the loop again so that the error checking below is executed.
+
+					//Make sure the map actually exists before you try to go to it!
+					if ((W_CheckNumForName(G_BuildMapName(cm + 1)) == LUMPERROR))
+					{
+						if (!silent)
+							CONS_Alert(CONS_ERROR, M_GetText("Next map given (MAP %d) doesn't exist! Reverting to MAP01.\n"), cm+1);
+						cm = 0;
+						break;
+					}
+				}
+
+				if (visitedmap[cm/8] & (1<<(cm&7))) // smells familiar
+				{
+					// We got stuck in a loop, came back to the map we started on
+					// without finding one supporting the current gametype.
+					// Thus, print a warning, and just use this map anyways.
+					if (!silent)
+						CONS_Alert(CONS_WARNING, M_GetText("Can't find a compatible map after map %d; using map %d anyway\n"), prevmap+1, cm+1);
+					break;
+				}
+			}
+			newmapnum = cm;
+		}
+
+		// wrap around in race
+		if (newmapnum >= 1100-1 && newmapnum <= 1102-1 && !(gametyperules & GTR_CAMPAIGN))
+			newmapnum = (INT16)(spstage_start-1);
+
+		if (newmapnum < 0 || (newmapnum >= NUMMAPS && newmapnum < 1100-1) || newmapnum > 1103-1)
+			I_Error("Followed map %d to invalid map %d\n", prevmap + 1, newmapnum + 1);
+
+		if (!spec)
+			lastmap = newmapnum; // Remember last map for when you come out of the special stage.
+	}
+
+	if (!ignoretokens && (gottoken = ((gametyperules & GTR_SPECIALSTAGES) && token)))
+	{
+		token--;
+
+//		if (!nextmapoverride) // Having a token should pull the player into the special stage before going to the overridden map (Issue #933)
+			for (i = 0; i < 7; i++)
+				if (!(emeralds & (1<<i)))
+				{
+					newmapnum = ((netgame || multiplayer) ? smpstage_start : sstage_start) + i - 1; // to special stage!
+					break;
+				}
+
+		if (i == 7)
+		{
+			gottoken = false;
+			token = 0;
+		}
+	}
+
+	if (spec && (!gottoken || ignoretokens) && !nextmapoverride)
+		newmapnum = lastmap; // Exiting from a special stage? Go back to the game. Tails 08-11-2001
+	
+	if (!(gametyperules & GTR_CAMPAIGN))
+	{
+		if (cv_advancemap.value == 0) // Stay on same map.
+			newmapnum = prevmap;
+		else if (cv_advancemap.value == 2) // Go to random map.
+			newmapnum = RandMap(G_TOLFlag(gametype_to_use), prevmap);
+	}
+	
+	return newmapnum;
+}
+
+//
 // G_DoCompleted
 //
 static void G_DoCompleted(void)
 {
 	INT32 i;
-	boolean spec = G_IsSpecialStage(gamemap);
-
+	
 	tokenlist = 0; // Reset the list
 
 	if (modeattacking && pausedelay)
@@ -4030,119 +4155,11 @@ static void G_DoCompleted(void)
 
 	S_StopSounds();
 
+	//Get and set prevmap/nextmap
 	prevmap = (INT16)(gamemap-1);
-
-	// go to next level
-	// nextmap is 0-based, unlike gamemap
-	if (nextmapoverride != 0)
-		nextmap = (INT16)(nextmapoverride-1);
-	else if (marathonmode && mapheaderinfo[gamemap-1]->marathonnext)
-		nextmap = (INT16)(mapheaderinfo[gamemap-1]->marathonnext-1);
-	else
-	{
-		nextmap = (INT16)(mapheaderinfo[gamemap-1]->nextlevel-1);
-		if (marathonmode && nextmap == spmarathon_start-1)
-			nextmap = 1100-1; // No infinite loop for you
-	}
-
-	INT16 gametype_to_use;
-
-	if (nextgametype >= 0 && nextgametype < gametypecount)
-		gametype_to_use = nextgametype;
-	else
-		gametype_to_use = gametype;
-
-	// If nextmap is actually going to get used, make sure it points to
-	// a map of the proper gametype -- skip levels that don't support
-	// the current gametype. (Helps avoid playing boss levels in Race,
-	// for instance).
-	if (!spec || nextmapoverride)
-	{
-		if (nextmap >= 0 && nextmap < NUMMAPS)
-		{
-			INT16 cm = nextmap;
-			UINT32 tolflag = G_TOLFlag(gametype_to_use);
-			UINT8 visitedmap[(NUMMAPS+7)/8];
-
-			memset(visitedmap, 0, sizeof (visitedmap));
-
-			while (!mapheaderinfo[cm] || !(mapheaderinfo[cm]->typeoflevel & tolflag))
-			{
-				visitedmap[cm/8] |= (1<<(cm&7));
-				if (!mapheaderinfo[cm])
-					cm = -1; // guarantee error execution
-				else if (marathonmode && mapheaderinfo[cm]->marathonnext)
-					cm = (INT16)(mapheaderinfo[cm]->marathonnext-1);
-				else
-					cm = (INT16)(mapheaderinfo[cm]->nextlevel-1);
-
-				if (cm >= NUMMAPS || cm < 0) // out of range (either 1100ish or error)
-				{
-					cm = nextmap; //Start the loop again so that the error checking below is executed.
-
-					//Make sure the map actually exists before you try to go to it!
-					if ((W_CheckNumForName(G_BuildMapName(cm + 1)) == LUMPERROR))
-					{
-						CONS_Alert(CONS_ERROR, M_GetText("Next map given (MAP %d) doesn't exist! Reverting to MAP01.\n"), cm+1);
-						cm = 0;
-						break;
-					}
-				}
-
-				if (visitedmap[cm/8] & (1<<(cm&7))) // smells familiar
-				{
-					// We got stuck in a loop, came back to the map we started on
-					// without finding one supporting the current gametype.
-					// Thus, print a warning, and just use this map anyways.
-					CONS_Alert(CONS_WARNING, M_GetText("Can't find a compatible map after map %d; using map %d anyway\n"), prevmap+1, cm+1);
-					break;
-				}
-			}
-			nextmap = cm;
-		}
-
-		// wrap around in race
-		if (nextmap >= 1100-1 && nextmap <= 1102-1 && !(gametyperules & GTR_CAMPAIGN))
-			nextmap = (INT16)(spstage_start-1);
-
-		if (nextmap < 0 || (nextmap >= NUMMAPS && nextmap < 1100-1) || nextmap > 1103-1)
-			I_Error("Followed map %d to invalid map %d\n", prevmap + 1, nextmap + 1);
-
-		if (!spec)
-			lastmap = nextmap; // Remember last map for when you come out of the special stage.
-	}
-
-	if ((gottoken = ((gametyperules & GTR_SPECIALSTAGES) && token)))
-	{
-		token--;
-
-//		if (!nextmapoverride) // Having a token should pull the player into the special stage before going to the overridden map (Issue #933)
-			for (i = 0; i < 7; i++)
-				if (!(emeralds & (1<<i)))
-				{
-					nextmap = ((netgame || multiplayer) ? smpstage_start : sstage_start) + i - 1; // to special stage!
-					break;
-				}
-
-		if (i == 7)
-		{
-			gottoken = false;
-			token = 0;
-		}
-	}
-
-	if (spec && !gottoken && !nextmapoverride)
-		nextmap = lastmap; // Exiting from a special stage? Go back to the game. Tails 08-11-2001
-
+	nextmap = G_GetNextMap(false, false);
+	
 	automapactive = false;
-
-	if (!(gametyperules & GTR_CAMPAIGN))
-	{
-		if (cv_advancemap.value == 0) // Stay on same map.
-			nextmap = prevmap;
-		else if (cv_advancemap.value == 2) // Go to random map.
-			nextmap = RandMap(G_TOLFlag(gametype_to_use), prevmap);
-	}
 
 	// We are committed to this map now.
 	// We may as well allocate its header if it doesn't exist
@@ -5006,7 +5023,7 @@ void G_DeferedInitNew(boolean pultmode, const char *mapname, INT32 character, bo
 	if (savedata.lives > 0)
 	{
 		if ((botingame = ((botskin = savedata.botskin) != 0)))
-			botcolor = skins[botskin-1].prefcolor;
+			botcolor = skins[botskin-1]->prefcolor;
 	}
 	else if (splitscreen != SSSG)
 	{
@@ -5136,7 +5153,7 @@ void G_InitNew(UINT8 pultmode, const char *mapname, boolean resetplayer, boolean
 		players[consoleplayer].lives = savedata.lives;
 		players[consoleplayer].score = savedata.score;
 		if ((botingame = ((botskin = savedata.botskin) != 0)))
-			botcolor = skins[botskin-1].prefcolor;
+			botcolor = skins[botskin-1]->prefcolor;
 		emeralds = savedata.emeralds;
 		savedata.lives = 0;
 	}
@@ -5380,16 +5397,29 @@ void G_FreeMapSearch(mapsearchfreq_t *freq, INT32 freqc)
 INT32 G_FindMapByNameOrCode(const char *mapname, char **realmapnamep)
 {
 	boolean usemapcode = false;
-
 	INT32 newmapnum;
-
-	size_t mapnamelen;
-
+	size_t mapnamelen = strlen(mapname);
 	char *p;
 
-	mapnamelen = strlen(mapname);
-
-	if (mapnamelen == 2)/* maybe two digit code */
+	if (mapnamelen == 1)
+	{
+		if (mapname[0] == '*') // current map
+		{
+			usemapcode = true;
+			newmapnum = gamemap;
+		}
+		else if (mapname[0] == '+' && mapheaderinfo[gamemap-1]) // next map
+		{
+			usemapcode = true;
+			newmapnum = mapheaderinfo[gamemap-1]->nextlevel;
+			if (newmapnum < 1 || newmapnum > NUMMAPS)
+			{
+				CONS_Alert(CONS_ERROR, M_GetText("NextLevel (%d) is not a valid map.\n"), newmapnum);
+				return 0;
+			}
+		}
+	}
+	else if (mapnamelen == 2)/* maybe two digit code */
 	{
 		if (( newmapnum = M_MapNumber(mapname[0], mapname[1]) ))
 			usemapcode = true;
