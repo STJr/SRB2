@@ -60,7 +60,7 @@ static boolean StringToNumber(const char *tkn, int *out)
 	return true;
 }
 
-INT32 P_ParsePromptBackColor(const char *word)
+INT32 P_ParsePromptBackColor(const char *color)
 {
 	struct {
 		const char *name;
@@ -92,8 +92,38 @@ INT32 P_ParsePromptBackColor(const char *word)
 
 	for (size_t i = 0; i < sizeof(all_colors) / sizeof(all_colors[0]); i++)
 	{
-		if (strcmp(word, all_colors[i].name) == 0)
+		if (strcmp(color, all_colors[i].name) == 0)
 			return all_colors[i].id;
+	}
+
+	return -1;
+}
+
+static int ParsePromptTextColor(const char *color)
+{
+	const char *text_colors[] = {
+		"white",
+		"magenta",
+		"yellow",
+		"green",
+		"blue",
+		"red",
+		"gray",
+		"orange",
+		"sky",
+		"purple",
+		"aqua",
+		"peridot",
+		"azure",
+		"brown",
+		"rosy",
+		"invert"
+	};
+
+	for (size_t i = 0; i < sizeof(text_colors) / sizeof(text_colors[0]); i++)
+	{
+		if (stricmp(color, text_colors[i]) == 0)
+			return (int)(i + 128);
 	}
 
 	return -1;
@@ -719,8 +749,8 @@ static void GetCommandEnd(char **input)
 		WRITE_CHAR(str[i]); \
 }
 
-#define EXPECTED_NUMBER(which) CONS_Alert(CONS_WARNING, "Expected integer in '%s', got '%s' instead\n", which, param)
-#define EXPECTED_PARAM(which) CONS_Alert(CONS_WARNING, "Expected parameter for '%s'\n", which)
+#define EXPECTED_NUMBER(which) ParseError(tokenizer_line, CONS_WARNING, "Expected integer for command '%s'; got '%s' instead", which, param)
+#define EXPECTED_PARAM(which) ParseError(tokenizer_line, CONS_WARNING, "Expected parameter for command '%s'", which)
 #define IS_COMMAND(match) MatchCommand(match, sizeof(match) - 1, command_start, cmd_len, input)
 
 static void ParseCommand(char **input, UINT8 **buf, size_t *buffer_pos, size_t *buffer_capacity, int tokenizer_line)
@@ -834,9 +864,25 @@ static void ParseCommand(char **input, UINT8 **buf, size_t *buffer_pos, size_t *
 	{
 		WRITE_OP(TP_OP_NEXTPAGE);
 	}
+	else if (IS_COMMAND("COLOR"))
+	{
+		char *param = GetCommandParam(input);
+		if (param)
+		{
+			int color = ParsePromptTextColor(param);
+			if (color == -1)
+				ParseError(tokenizer_line, CONS_WARNING, "Unknown text color '%s'", param);
+			else
+				WRITE_CHAR((UINT8)color);
+
+			Z_Free(param);
+		}
+		else
+			EXPECTED_PARAM("COLOR");
+	}
 	else
 	{
-		ParseError(tokenizer_line, CONS_WARNING, "Unknown command %.*s\n", (int)cmd_len, command_start);
+		ParseError(tokenizer_line, CONS_WARNING, "Unknown command %.*s", (int)cmd_len, command_start);
 	}
 }
 

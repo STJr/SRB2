@@ -18,6 +18,6 @@ void P_LoadDialogueLumps(UINT16 wadnum);
 
 char *P_ConvertSOCPageDialog(char *text, size_t *text_length);
 
-INT32 P_ParsePromptBackColor(const char *word);
+INT32 P_ParsePromptBackColor(const char *color);
 
 #endif

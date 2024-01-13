@@ -238,7 +238,6 @@ static void W_LoadDehackedLumpsPK3(UINT16 wadnum, boolean mainfile)
 
 		for(; posStart < posEnd; posStart++)
 		{
-			lumpinfo_t *lump_p = &wadfiles[wadnum]->lumpinfo[posStart];
 			char *name = W_GetFullLumpPathName(wadnum, posStart);
 			CONS_Printf(M_GetText("Loading SOC from %s\n"), name);
 			DEH_LoadDehackedLumpPwad(wadnum, posStart, mainfile);
