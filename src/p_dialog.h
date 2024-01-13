@@ -61,6 +61,7 @@ typedef struct dialog_s
 	size_t disptextsize;
 
 	boolean blockcontrols;
+	boolean gotonext;
 	INT32 timetonext;
 	INT16 postexectag;
 

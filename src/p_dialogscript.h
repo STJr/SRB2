@@ -22,6 +22,8 @@ enum
 	TP_OP_DELAY,
 	TP_OP_PAUSE,
 
+	TP_OP_NEXTPAGE,
+
 	TP_OP_NAME,
 	TP_OP_ICON,
 

@@ -490,6 +490,8 @@ void P_DialogSetText(dialog_t *dialog, char *pagetext, size_t textlength)
 
 static void P_DialogStartPage(player_t *player, dialog_t *dialog)
 {
+	dialog->gotonext = false;
+
 	// on page mode, number of tics before allowing boost
 	// on timer mode, number of tics until page advances
 	dialog->timetonext = dialog->page->timetonext ? dialog->page->timetonext : TICRATE/10;
@@ -1372,6 +1374,8 @@ void P_RunDialog(player_t *player)
 	{
 		if (dialog->blockcontrols)
 		{
+			boolean gotonext = dialog->gotonext;
+
 			// Handle choices
 			if (dialog->showchoices)
 			{
@@ -1393,12 +1397,14 @@ void P_RunDialog(player_t *player)
 					writer->boostspeed = true; // only after a slight delay
 
 				if (!dialog->timetonext && !dialog->showchoices) // timetonext is 0 when finished generating text
-				{
-					if (P_AdvanceToNextPage(player, dialog))
-						P_PlayDialogSound(player, sfx_menu1);
+					gotonext = true;
+			}
 
-					return;
-				}
+			if (gotonext)
+			{
+				if (P_AdvanceToNextPage(player, dialog))
+					P_PlayDialogSound(player, sfx_menu1);
+				return;
 			}
 		}
 

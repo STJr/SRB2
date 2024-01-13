@@ -63,6 +63,9 @@ const UINT8 *P_DialogRunOpcode(const UINT8 *code, dialog_t *dialog, textwriter_t
 			writer->numtowrite = 0;
 			writer->paused = true;
 			break;
+		case TP_OP_NEXTPAGE:
+			dialog->gotonext = true;
+			break;
 		case TP_OP_NAME: {
 			char *speaker = ReadString(&code);
 			if (speaker)
@@ -140,6 +143,7 @@ int P_DialogSkipOpcode(const UINT8 *code)
 			UINT8 n = *code++;
 			code += n;
 			break;
+		case TP_OP_NEXTPAGE:
 		case TP_OP_CHARNAME:
 		case TP_OP_PLAYERNAME:
 			// Nothing else to read

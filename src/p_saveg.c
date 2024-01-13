@@ -4944,8 +4944,6 @@ static void P_NetArchiveDialog(dialog_t *dialog)
 	{
 		WRITEINT32(save_p, dialog->curchoice);
 		WRITEINT32(save_p, dialog->nochoice);
-		WRITEUINT8(save_p, (UINT8)dialog->showchoices);
-		WRITEUINT8(save_p, (UINT8)dialog->selectedchoice);
 	}
 	WRITEUINT8(save_p, (UINT8)(dialog->callplayer-players));
 	WRITEINT32(save_p, dialog->picnum);
@@ -4955,11 +4953,23 @@ static void P_NetArchiveDialog(dialog_t *dialog)
 	WRITEUINT32(save_p, dialog->writer.writeptr);
 	WRITEINT32(save_p, dialog->writer.textcount);
 	WRITEINT32(save_p, dialog->writer.textspeed);
-	WRITEUINT8(save_p, (UINT8)dialog->writer.boostspeed);
-	WRITEUINT8(save_p, (UINT8)dialog->writer.paused);
 	WRITESTRINGN(save_p, dialog->speaker, sizeof(dialog->speaker) - 1);
 	WRITESTRINGN(save_p, dialog->icon, sizeof(dialog->icon) - 1);
-	WRITEUINT8(save_p, (UINT8)dialog->iconflip);
+
+	UINT8 flags = 0;
+	if (dialog->gotonext)
+		flags |= 1;
+	if (dialog->showchoices)
+		flags |= 2;
+	if (dialog->selectedchoice)
+		flags |= 4;
+	if (dialog->iconflip)
+		flags |= 8;
+	if (dialog->writer.boostspeed)
+		flags |= 16;
+	if (dialog->writer.paused)
+		flags |= 32;
+	WRITEUINT8(save_p, flags);
 }
 
 static void P_NetUnArchiveDialog(dialog_t *dialog)
@@ -4985,15 +4995,11 @@ static void P_NetUnArchiveDialog(dialog_t *dialog)
 	{
 		dialog->curchoice = READINT32(save_p);
 		dialog->nochoice = READINT32(save_p);
-		dialog->showchoices = (boolean)READUINT8(save_p);
-		dialog->selectedchoice = (boolean)READUINT8(save_p);
 	}
 	else
 	{
 		dialog->curchoice = 0;
 		dialog->nochoice = -1;
-		dialog->showchoices = false;
-		dialog->selectedchoice = false;
 	}
 
 	playernum = READUINT8(save_p);
@@ -5004,12 +5010,17 @@ static void P_NetUnArchiveDialog(dialog_t *dialog)
 	writeptr = READUINT32(save_p);
 	textcount = READINT32(save_p);
 	textspeed = READINT32(save_p);
-	boostspeed = (boolean)READUINT8(save_p);
-	writerpaused = (boolean)READUINT8(save_p);
 
 	READSTRINGN(save_p, speaker, sizeof(speaker) - 1);
 	READSTRINGN(save_p, icon, sizeof(icon) - 1);
-	iconflip = (boolean)READUINT8(save_p);
+
+	UINT8 flags = READUINT8(save_p);
+	dialog->gotonext = (flags & 1) ? true : false;
+	dialog->showchoices = (dialog->numchoices && (flags & 2)) ? true : false;
+	dialog->selectedchoice = (dialog->numchoices && (flags & 4)) ? true : false;
+	iconflip = (flags & 8) ? true : false;
+	boostspeed = (flags & 16) ? true : false;
+	writerpaused = (flags & 32) ? true : false;
 
 	if (dialog->promptnum < 0 || dialog->promptnum >= MAX_PROMPTS || !textprompts[dialog->promptnum])
 		I_Error("Invalid text prompt %d from server", dialog->promptnum);

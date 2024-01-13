@@ -542,7 +542,6 @@ static char *EscapeStringChars(const char *string)
 				{
 					case 4:
 						BUFWRITE((out >> 8) & 0xFF);
-						buf++;
 						/* FALLTHRU */
 					case 2:
 						BUFWRITE(out & 0xFF);
@@ -803,6 +802,10 @@ static void InterpretControlCode(char **input, UINT8 **buf, size_t *buffer_pos, 
 	else if (MatchControlCode("PLAYERNAME", input))
 	{
 		WRITE_OP(TP_OP_PLAYERNAME);
+	}
+	else if (MatchControlCode("NEXTPAGE", input))
+	{
+		WRITE_OP(TP_OP_NEXTPAGE);
 	}
 }
 
