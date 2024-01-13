@@ -71,6 +71,7 @@ typedef struct
 	UINT16 prefcolor;
 	UINT16 supercolor;
 	UINT16 prefoppositecolor; // if 0 use tables instead
+	UINT16 natkcolor; //Color for Nights Attack Menu
 
 	fixed_t highresscale; // scale of highres, default is 0.5
 	UINT8 contspeed; // continue screen animation speed
