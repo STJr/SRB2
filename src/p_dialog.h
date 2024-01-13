@@ -106,4 +106,6 @@ void P_SetPicsMetaPage(textpage_t *page, textpage_t *metapage);
 void P_InitTextPromptPage(textpage_t *page);
 void P_FreeTextPrompt(textprompt_t *prompt);
 
+dialog_t *P_GetPlayerDialog(player_t *player);
+
 #endif

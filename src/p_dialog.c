@@ -115,6 +115,11 @@ void P_FreeTextPrompt(textprompt_t *prompt)
 	Z_Free(prompt);
 }
 
+dialog_t *P_GetPlayerDialog(player_t *player)
+{
+	return globaltextprompt ? globaltextprompt : player->textprompt;
+}
+
 typedef struct
 {
 	UINT8 pagelines;
@@ -236,13 +241,11 @@ boolean F_GetPromptHideHudAll(void)
 	if (!stplyr || !stplyr->promptactive)
 		return false;
 
-	dialog_t *dialog = globaltextprompt ? globaltextprompt : stplyr->textprompt;
+	dialog_t *dialog = P_GetPlayerDialog(stplyr);
 	if (!dialog)
 		return false;
 
-	if (!dialog->prompt || !dialog->page ||
-		!dialog->page->hidehud ||
-		(splitscreen && dialog->page->hidehud != 2)) // don't hide on splitscreen, unless hide all is forced
+	if (!dialog->prompt || !dialog->page || !dialog->page->hidehud)
 		return false;
 	else if (dialog->page->hidehud == 2) // hide all
 		return true;
@@ -259,7 +262,7 @@ boolean F_GetPromptHideHud(fixed_t y)
 	if (!stplyr || !stplyr->promptactive)
 		return false;
 
-	dialog_t *dialog = globaltextprompt ? globaltextprompt : stplyr->textprompt;
+	dialog_t *dialog = P_GetPlayerDialog(stplyr);
 	if (!dialog)
 		return false;
 
@@ -1101,7 +1104,7 @@ void F_TextPromptDrawer(void)
 	if (!stplyr || !stplyr->promptactive)
 		return;
 
-	dialog_t *dialog = globaltextprompt ? globaltextprompt : stplyr->textprompt;
+	dialog_t *dialog = P_GetPlayerDialog(stplyr);
 	if (!dialog)
 		return;
 
@@ -1269,11 +1272,6 @@ static void P_PlayDialogSound(player_t *player, sfxenum_t sound)
 {
 	if (P_IsLocalPlayer(player) || &players[displayplayer] == player)
 		S_StartSound(NULL, sound);
-}
-
-static dialog_t *P_GetPlayerDialog(player_t *player)
-{
-	return globaltextprompt ? globaltextprompt : player->textprompt;
 }
 
 boolean P_SetCurrentDialogChoice(player_t *player, INT32 choice)

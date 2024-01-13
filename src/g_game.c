@@ -2088,55 +2088,82 @@ static boolean ViewpointSwitchResponder(event_t *ev)
 
 static boolean G_TextPromptResponder(event_t *ev)
 {
-	UINT8 localplayer = 0;
-
 	if (ev->type != ev_keydown)
 		return false;
 
+	player_t *player = NULL;
+	dialog_t *dialog = NULL;
+
+	UINT8 localplayer = 0;
+
 	INT32 key = KEY_NULL;
 
-	// Check P2
-	if (G_IsGameControlP2(ev->key, GC_FORWARD))
+	if (!splitscreen)
 	{
-		key = KEY_UPARROW;
-		localplayer = 1;
-	}
-	else if (G_IsGameControlP2(ev->key, GC_BACKWARD))
-	{
-		key = KEY_DOWNARROW;
-		localplayer = 1;
-	}
-	else if (G_IsGameControlP2(ev->key, GC_JUMP))
-	{
-		key = KEY_ENTER;
-		localplayer = 1;
-	}
-	else if (G_IsGameControlP2(ev->key, GC_SPIN))
-	{
-		key = KEY_BACKSPACE;
-		localplayer = 1;
-	}
-	// Check P1
-	else if (G_IsGameControl(ev->key, GC_FORWARD))
-		key = KEY_UPARROW;
-	else if (G_IsGameControl(ev->key, GC_BACKWARD))
-		key = KEY_DOWNARROW;
-	else if (G_IsGameControl(ev->key, GC_JUMP))
-		key = KEY_ENTER;
-	else if (G_IsGameControl(ev->key, GC_SPIN))
-		key = KEY_BACKSPACE;
+		player = &players[consoleplayer];
+		if (!player->promptactive)
+			return false;
 
+		dialog = P_GetPlayerDialog(player);
+		if (!dialog || !dialog->showchoices)
+			return false;
+	}
+	else
+	{
+		// Check P2
+		if (G_IsGameControlP2(ev->key, GC_FORWARD))
+		{
+			key = KEY_UPARROW;
+			localplayer = 1;
+		}
+		else if (G_IsGameControlP2(ev->key, GC_BACKWARD))
+		{
+			key = KEY_DOWNARROW;
+			localplayer = 1;
+		}
+		else if (G_IsGameControlP2(ev->key, GC_JUMP))
+		{
+			key = KEY_ENTER;
+			localplayer = 1;
+		}
+		else if (G_IsGameControlP2(ev->key, GC_SPIN))
+		{
+			key = KEY_BACKSPACE;
+			localplayer = 1;
+		}
+	}
+
+	// Check P1
+	if (localplayer == 0)
+	{
+		if (G_IsGameControl(ev->key, GC_FORWARD))
+			key = KEY_UPARROW;
+		else if (G_IsGameControl(ev->key, GC_BACKWARD))
+			key = KEY_DOWNARROW;
+		else if (G_IsGameControl(ev->key, GC_JUMP))
+			key = KEY_ENTER;
+		else if (G_IsGameControl(ev->key, GC_SPIN))
+			key = KEY_BACKSPACE;
+	}
+
+	// No key was hit
 	if (key == KEY_NULL)
 		return false;
 
-	player_t *player = (localplayer == 1) ? &players[secondarydisplayplayer] : &players[consoleplayer];
-	if (!player->promptactive)
-		return false;
+	// If on splitscreen, get the player that might correspond to this key press
+	if (splitscreen)
+	{
+		player = (localplayer == 1) ? &players[secondarydisplayplayer] : &players[consoleplayer];
+		if (!player->promptactive)
+			return false;
 
-	dialog_t *dialog = globaltextprompt ? globaltextprompt : player->textprompt;
-	if (!dialog->showchoices)
-		return false;
+		dialog = P_GetPlayerDialog(player);
+		if (!dialog || !dialog->showchoices)
+			return false;
+	}
 
+	// Get the player that started this prompt
+	// If this is not a global text prompt, it will be the same player.
 	player_t *promptplayer = globaltextprompt ? globaltextprompt->callplayer : player;
 	if (player != promptplayer)
 		return false;
@@ -2159,6 +2186,7 @@ static boolean G_TextPromptResponder(event_t *ev)
 	}
 	else if (!ev->repeated)
 	{
+		// Ignore repeated key events if the key was jump or spin
 		if (key == KEY_ENTER)
 		{
 			D_SendTextPromptConfirm(dialog->curchoice, localplayer);
