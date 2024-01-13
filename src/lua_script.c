@@ -689,7 +689,7 @@ static inline MYFILE *LUA_GetFile(UINT16 wad, UINT16 lump, char **name)
 		lumpinfo_t *lump_p = &wadfiles[wad]->lumpinfo[lump];
 		len += 1 + strlen(lump_p->fullname); // length of file name, '|', and lump name
 		*name = malloc(len+1);
-		sprintf(*name, "%s|%s", wadfiles[wad]->filename, lump_p->fullname);
+		snprintf(*name, len+1, "%s|%s", wadfiles[wad]->filename, lump_p->fullname);
 		(*name)[len] = '\0'; // annoying that index takes priority over dereference, but w/e
 	}
 

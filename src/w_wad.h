@@ -168,6 +168,8 @@ void W_InitMultipleFiles(addfilelist_t *list);
 INT32 W_IsPathToFolderValid(const char *path);
 char *W_GetFullFolderPath(const char *path);
 
+char *W_GetFullLumpPathName(UINT16 wadnum, UINT16 lumpnum);
+
 const char *W_CheckNameForNumPwad(UINT16 wad, UINT16 lump);
 const char *W_CheckNameForNum(lumpnum_t lumpnum);
 

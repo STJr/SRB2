@@ -200,6 +200,16 @@ FILE *W_OpenWadFile(const char **filename, boolean useerrors)
 	return handle;
 }
 
+char *W_GetFullLumpPathName(UINT16 wadnum, UINT16 lumpnum)
+{
+	lumpinfo_t *lump_p = &wadfiles[wadnum]->lumpinfo[lumpnum];
+	size_t length = strlen(wadfiles[wadnum]->filename) + 1 + strlen(lump_p->fullname); // length of file name, '|', and lump name
+	char *name = malloc(length + 1);
+	snprintf(name, length + 1, "%s|%s", wadfiles[wadnum]->filename, lump_p->fullname);
+	name[length] = '\0';
+	return name;
+}
+
 // Look for all DEHACKED and Lua scripts inside a PK3 archive.
 static void W_LoadDehackedLumpsPK3(UINT16 wadnum, boolean mainfile)
 {
@@ -229,10 +239,7 @@ static void W_LoadDehackedLumpsPK3(UINT16 wadnum, boolean mainfile)
 		for(; posStart < posEnd; posStart++)
 		{
 			lumpinfo_t *lump_p = &wadfiles[wadnum]->lumpinfo[posStart];
-			size_t length = strlen(wadfiles[wadnum]->filename) + 1 + strlen(lump_p->fullname); // length of file name, '|', and lump name
-			char *name = malloc(length + 1);
-			sprintf(name, "%s|%s", wadfiles[wadnum]->filename, lump_p->fullname);
-			name[length] = '\0';
+			char *name = W_GetFullLumpPathName(wadnum, posStart);
 			CONS_Printf(M_GetText("Loading SOC from %s\n"), name);
 			DEH_LoadDehackedLumpPwad(wadnum, posStart, mainfile);
 			free(name);
@@ -257,12 +264,8 @@ static void W_LoadDehackedLumps(UINT16 wadnum, boolean mainfile)
 		lumpinfo_t *lump_p = wadfiles[wadnum]->lumpinfo;
 		for (lump = 0; lump < wadfiles[wadnum]->numlumps; lump++, lump_p++)
 			if (memcmp(lump_p->name,"SOC_",4)==0) // Check for generic SOC lump
-			{	// shameless copy+paste of code from LUA_LoadLump
-				size_t length = strlen(wadfiles[wadnum]->filename) + 1 + strlen(lump_p->fullname); // length of file name, '|', and lump name
-				char *name = malloc(length + 1);
-				sprintf(name, "%s|%s", wadfiles[wadnum]->filename, lump_p->fullname);
-				name[length] = '\0';
-
+			{
+				char *name = W_GetFullLumpPathName(wadnum, lump);
 				CONS_Printf(M_GetText("Loading SOC from %s\n"), name);
 				DEH_LoadDehackedLumpPwad(wadnum, lump, mainfile);
 				free(name);

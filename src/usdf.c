@@ -99,11 +99,23 @@ INT32 P_ParsePromptBackColor(const char *word)
 	return -1;
 }
 
+static void ParseError(int line, alerttype_t alerttype, const char *format, ...)
+{
+	char string[8192];
+
+	va_list argptr;
+	va_start(argptr, format);
+	vsnprintf(string, sizeof string, format, argptr);
+	va_end(argptr);
+
+	CONS_Alert(alerttype, "While parsing DIALOGUE, line %d: %s\n", line, string);
+}
+
 #define GET_TOKEN() \
 	tkn = sc->get(sc, 0); \
 	if (!tkn) \
 	{ \
-		CONS_Alert(CONS_ERROR, "Error parsing DIALOGUE: Unexpected EOF\n"); \
+		ParseError(sc->line, CONS_ERROR, "Unexpected EOF"); \
 		goto fail; \
 	}
 
@@ -111,9 +123,9 @@ INT32 P_ParsePromptBackColor(const char *word)
 	if (!tkn || stricmp(tkn, expected) != 0) \
 	{ \
 		if (tkn) \
-			CONS_Alert(CONS_ERROR, "Error parsing DIALOGUE: Expected '%s', got '%s'\n", expected, tkn); \
+			ParseError(sc->line, CONS_ERROR, "Expected '%s', got '%s'", expected, tkn); \
 		else \
-			CONS_Alert(CONS_ERROR, "Error parsing DIALOGUE: Expected '%s', got EOF\n", expected); \
+			ParseError(sc->line, CONS_ERROR, "Expected '%s', got EOF", expected); \
 		goto fail; \
 	}
 
@@ -127,7 +139,7 @@ INT32 P_ParsePromptBackColor(const char *word)
 	int num = 0; \
 	if (!StringToNumber(tkn, &num)) \
 	{ \
-		CONS_Alert(CONS_ERROR, "Error parsing " what ": expected a number, got '%s'\n", tkn); \
+		ParseError(sc->line, CONS_ERROR, "In " what ": expected a number, got '%s'", tkn); \
 		goto fail; \
 	}
 
@@ -137,7 +149,7 @@ enum {
 	PARSE_STATUS_EOF
 };
 
-static int ExitBlock(tokenizer_t *sc, INT32 bracket)
+static int ExitBlock(tokenizer_t *sc, int bracket)
 {
 	const char *tkn = sc->token[0];
 	if (!tkn)
@@ -172,7 +184,7 @@ static int SkipBlock(tokenizer_t *sc)
 	if (!tkn)
 		return PARSE_STATUS_EOF;
 
-	INT32 bracket = 0;
+	int bracket = 0;
 
 	while (true)
 	{
@@ -202,13 +214,10 @@ static int SkipBlock(tokenizer_t *sc)
 		if (CHECK_TOKEN("=")) {\
 			GET_TOKEN(); \
 		} \
-		if (CHECK_TOKEN(";")) { \
-			GET_TOKEN(); \
-		} \
 	} \
 }
 
-static int ParseChoice(textpage_t *page, tokenizer_t *sc, INT32 bracket)
+static int ParseChoice(textpage_t *page, tokenizer_t *sc, int bracket)
 {
 	const char *tkn;
 
@@ -356,7 +365,7 @@ static int ParseChoice(textpage_t *page, tokenizer_t *sc, INT32 bracket)
 		}
 		else
 		{
-			CONS_Alert(CONS_WARNING, "While parsing choice: Unknown token '%s'\n", tkn);
+			ParseError(sc->line, CONS_WARNING, "In choice: Unknown token '%s'", tkn);
 			IGNORE_FIELD();
 		}
 
@@ -369,7 +378,7 @@ fail:
 	return ExitBlock(sc, bracket);
 }
 
-static int ParsePicture(textpage_t *page, tokenizer_t *sc, INT32 bracket)
+static int ParsePicture(textpage_t *page, tokenizer_t *sc, int bracket)
 {
 	const char *tkn;
 
@@ -476,7 +485,7 @@ static int ParsePicture(textpage_t *page, tokenizer_t *sc, INT32 bracket)
 		}
 		else
 		{
-			CONS_Alert(CONS_WARNING, "While parsing pic: Unknown token '%s'\n", tkn);
+			ParseError(sc->line, CONS_WARNING, "In picture: Unknown token '%s'", tkn);
 			IGNORE_FIELD();
 		}
 
@@ -491,7 +500,7 @@ fail:
 
 #define BUFWRITE(writechr) M_StringBufferWrite((writechr), &buf, &buffer_pos, &buffer_capacity)
 
-static char *EscapeStringChars(const char *string)
+static char *EscapeStringChars(const char *string, int tokenizer_line)
 {
 	size_t buffer_pos = 0;
 	size_t buffer_capacity = 0;
@@ -547,7 +556,7 @@ static char *EscapeStringChars(const char *string)
 						BUFWRITE(out & 0xFF);
 						break;
 					default:
-						CONS_Alert(CONS_WARNING, "While parsing string: escape sequence has wrong size\n");
+						ParseError(tokenizer_line, CONS_WARNING, "In string: escape sequence has wrong size");
 						goto fail;
 				}
 
@@ -568,7 +577,7 @@ static char *EscapeStringChars(const char *string)
 
 					if (out > 255)
 					{
-						CONS_Alert(CONS_WARNING, "While parsing string: escape sequence is too large\n");
+						ParseError(tokenizer_line, CONS_WARNING, "In string: escape sequence is too large");
 						goto fail;
 					}
 
@@ -714,7 +723,7 @@ static void GetCommandEnd(char **input)
 #define EXPECTED_PARAM(which) CONS_Alert(CONS_WARNING, "Expected parameter for '%s'\n", which)
 #define IS_COMMAND(match) MatchCommand(match, sizeof(match) - 1, command_start, cmd_len, input)
 
-static void ParseCommand(char **input, UINT8 **buf, size_t *buffer_pos, size_t *buffer_capacity)
+static void ParseCommand(char **input, UINT8 **buf, size_t *buffer_pos, size_t *buffer_capacity, int tokenizer_line)
 {
 	char *command_start = NULL;
 	char *command_end = NULL;
@@ -827,7 +836,7 @@ static void ParseCommand(char **input, UINT8 **buf, size_t *buffer_pos, size_t *
 	}
 	else
 	{
-		CONS_Alert(CONS_WARNING, "Unknown command %.*s\n", (int)cmd_len, command_start);
+		ParseError(tokenizer_line, CONS_WARNING, "Unknown command %.*s\n", (int)cmd_len, command_start);
 	}
 }
 
@@ -860,7 +869,7 @@ static boolean ConvertCutsceneControlCode(UINT8 chr, UINT8 **buf, size_t *buffer
 
 #define WRITE_TEXTCHAR(writechr) M_BufferWrite((writechr), &buf, &buffer_pos, &buffer_capacity)
 
-static char *ParsePageDialog(char *text, size_t *text_length)
+static char *ParsePageDialog(char *text, size_t *text_length, int tokenizer_line)
 {
 	char *input = text;
 
@@ -889,7 +898,7 @@ static char *ParsePageDialog(char *text, size_t *text_length)
 		{
 			input++;
 
-			ParseCommand(&input, &buf, &buffer_pos, &buffer_capacity);
+			ParseCommand(&input, &buf, &buffer_pos, &buffer_capacity, tokenizer_line);
 
 			GetCommandEnd(&input);
 		}
@@ -937,7 +946,7 @@ char *P_ConvertSOCPageDialog(char *text, size_t *text_length)
 
 #undef WRITE_TEXTCHAR
 
-static int ParsePage(textprompt_t *prompt, tokenizer_t *sc, INT32 bracket)
+static int ParsePage(textprompt_t *prompt, tokenizer_t *sc, int bracket)
 {
 	const char *tkn;
 
@@ -998,11 +1007,11 @@ static int ParsePage(textprompt_t *prompt, tokenizer_t *sc, INT32 bracket)
 
 			while (true)
 			{
-				char *escaped = EscapeStringChars(tkn);
+				char *escaped = EscapeStringChars(tkn, sc->line);
 				if (escaped)
 				{
 					size_t parsed_length = 0;
-					char *parsed = ParsePageDialog(escaped, &parsed_length);
+					char *parsed = ParsePageDialog(escaped, &parsed_length, 0);
 
 					M_BufferMemWrite((UINT8 *)parsed, parsed_length, &buffer, &buffer_pos, &buffer_capacity);
 					total_text_length += parsed_length;
@@ -1252,7 +1261,7 @@ static int ParsePage(textprompt_t *prompt, tokenizer_t *sc, INT32 bracket)
 				}
 
 				if (page->numchoices == MAX_PROMPT_CHOICES)
-					CONS_Alert(CONS_WARNING, "Conversation page exceeded max amount of choices; ignoring any more choices\n");
+					ParseError(sc->line, CONS_WARNING, "Conversation page exceeded max amount of choices; ignoring any more choices");
 			}
 		}
 		else if (CHECK_TOKEN("alignchoices"))
@@ -1290,7 +1299,7 @@ static int ParsePage(textprompt_t *prompt, tokenizer_t *sc, INT32 bracket)
 				}
 
 				if (page->numpics == MAX_PROMPT_PICS)
-					CONS_Alert(CONS_WARNING, "Conversation page exceeded max amount of pictures; ignoring any more pictures\n");
+					ParseError(sc->line, CONS_WARNING, "Conversation page exceeded max amount of pictures; ignoring any more pictures");
 			}
 		}
 		else if (CHECK_TOKEN("picturesequence"))
@@ -1390,7 +1399,7 @@ static int ParsePage(textprompt_t *prompt, tokenizer_t *sc, INT32 bracket)
 		}
 		else
 		{
-			CONS_Alert(CONS_WARNING, "While parsing page: Unknown token '%s'\n", tkn);
+			ParseError(sc->line, CONS_WARNING, "In page: Unknown token '%s'", tkn);
 			IGNORE_FIELD();
 		}
 
@@ -1405,7 +1414,7 @@ fail:
 
 #undef IGNORE_FIELD
 
-static int ParseConversation(tokenizer_t *sc, INT32 bracket)
+static int ParseConversation(tokenizer_t *sc, int bracket, int tokenizer_line)
 {
 	int parse_status = PARSE_STATUS_OK;
 
@@ -1464,12 +1473,12 @@ static int ParseConversation(tokenizer_t *sc, INT32 bracket)
 				}
 
 				if (prompt->numpages == MAX_PAGES)
-					CONS_Alert(CONS_WARNING, "Conversation exceeded max amount of pages; ignoring any more pages\n");
+					ParseError(sc->line, CONS_WARNING, "Conversation exceeded max amount of pages; ignoring any more pages");
 			}
 		}
 		else
 		{
-			CONS_Alert(CONS_WARNING, "While parsing conversation: Unknown token '%s'\n", tkn);
+			ParseError(sc->line, CONS_WARNING, "In conversation: Unknown token '%s'", tkn);
 			GET_TOKEN();
 			if (CHECK_TOKEN("{"))
 			{
@@ -1493,7 +1502,7 @@ static int ParseConversation(tokenizer_t *sc, INT32 bracket)
 	// Now do some verifications
 	if (!prompt->numpages)
 	{
-		CONS_Alert(CONS_WARNING, "Conversation has no pages\n");
+		ParseError(tokenizer_line, CONS_WARNING, "Conversation has no pages");
 		goto ignore;
 	}
 
@@ -1582,9 +1591,11 @@ static void ParseDialogue(UINT16 wadNum, UINT16 lumpnum)
 	{
 		IS_TOKEN("conversation");
 
+		int tokenizer_line = sc->line;
+
 		EXPECT_TOKEN("{");
 
-		ParseConversation(sc, 1);
+		ParseConversation(sc, 1, tokenizer_line);
 
 		tkn = sc->get(sc, 0);
 	}
@@ -1605,7 +1616,12 @@ void P_LoadDialogueLumps(UINT16 wadnum)
 	UINT16 lump = W_CheckNumForNamePwad("DIALOGUE", wadnum, 0);
 	while (lump != INT16_MAX)
 	{
+		char *name = W_GetFullLumpPathName(wadnum, lump);
+		CONS_Printf(M_GetText("Loading DIALOGUE from %s\n"), name);
+		free(name);
+
 		ParseDialogue(wadnum, lump);
+
 		lump = W_CheckNumForNamePwad("DIALOGUE", wadnum, lump + 1);
 	}
 }
