@@ -228,7 +228,7 @@ static int taglist_get(lua_State *L)
 	}
 	else
 	{
-		lua_getmetatable(L, 1);
+		lua_getglobal(L, "taglist");
 		lua_replace(L, 1);
 		lua_rawget(L, 1);
 		return 1;

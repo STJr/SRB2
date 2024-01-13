@@ -1,0 +1,26 @@
+/*.cmake text=auto
+/*.py text=auto
+/*.rc -crlf -whitespace
+/*.sh text eol=lf
+/*.txt text=auto
+/CMakeLists.txt text=auto
+/LICENSE text=auto
+/Makefile text=auto
+/Makefile.mingw text=auto
+/include/*.h text=auto
+/java/*.bat -crlf -whitespace
+/java/*.java text=auto
+/java/*.sh text eol=lf
+/man3/miniupnpc.3 eol=lf
+/msvc/*.sln -crlf -whitespace
+/msvc/*.vbs -crlf -whitespace
+/msvc/*.vcproj -crlf -whitespace
+/msvc/*.vcxproj* -crlf -whitespace
+/src/*.c text=auto
+/src/*.h text=auto
+/testdesc/*.values text=auto
+/testdesc/*.xml text=auto
+/testreplyparse/*.namevalue text=auto
+/testreplyparse/*.txt text=auto
+/testreplyparse/*.xml text=auto
+MANIFEST.in eol=lf

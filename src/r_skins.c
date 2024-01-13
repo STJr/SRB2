@@ -18,6 +18,7 @@
 #include "st_stuff.h"
 #include "w_wad.h"
 #include "z_zone.h"
+#include "m_menu.h"
 #include "m_misc.h"
 #include "m_menu.h"
 #include "info.h" // spr2names
@@ -33,13 +34,7 @@
 #endif
 
 INT32 numskins = 0;
-skin_t skins[MAXSKINS];
-
-// FIXTHIS: don't work because it must be inistilised before the config load
-//#define SKINVALUES
-#ifdef SKINVALUES
-CV_PossibleValue_t skin_cons_t[MAXSKINS+1];
-#endif
+skin_t **skins = NULL;
 
 //
 // P_GetSkinSprite2
@@ -106,7 +101,7 @@ static void Sk_SetDefaultValue(skin_t *skin)
 	//
 	memset(skin, 0, sizeof (skin_t));
 	snprintf(skin->name,
-		sizeof skin->name, "skin %u", (UINT32)(skin-skins));
+		sizeof skin->name, "skin %u", (UINT32)(skin->skinnum));
 	skin->name[sizeof skin->name - 1] = '\0';
 	skin->wadnum = INT16_MAX;
 
@@ -150,6 +145,8 @@ static void Sk_SetDefaultValue(skin_t *skin)
 	skin->contspeed = 17;
 	skin->contangle = 0;
 
+	skin->natkcolor = SKINCOLOR_NONE;
+
 	for (i = 0; i < sfx_skinsoundslot0; i++)
 		if (S_sfx[i].skinsound != -1)
 			skin->soundsid[S_sfx[i].skinsound] = i;
@@ -160,16 +157,6 @@ static void Sk_SetDefaultValue(skin_t *skin)
 //
 void R_InitSkins(void)
 {
-#ifdef SKINVALUES
-	INT32 i;
-
-	for (i = 0; i <= MAXSKINS; i++)
-	{
-		skin_cons_t[i].value = 0;
-		skin_cons_t[i].strvalue = NULL;
-	}
-#endif
-
 	// no default skin!
 	numskins = 0;
 }
@@ -292,7 +279,7 @@ boolean R_SkinUsable(INT32 playernum, INT32 skinnum)
 	}
 }
 
-// returns true if the skin name is found (loaded from pwad)
+// returns the skin number if the skin name is found (loaded from pwad)
 // warning return -1 if not found
 INT32 R_SkinAvailable(const char *name)
 {
@@ -301,7 +288,7 @@ INT32 R_SkinAvailable(const char *name)
 	for (i = 0; i < numskins; i++)
 	{
 		// search in the skin list
-		if (stricmp(skins[i].name,name)==0)
+		if (!stricmp(skins[i]->name,name))
 			return i;
 	}
 	return -1;
@@ -325,7 +312,7 @@ INT32 R_GetForcedSkin(INT32 playernum)
 // Auxillary function that actually sets the skin
 static void SetSkin(player_t *player, INT32 skinnum)
 {
-	skin_t *skin = &skins[skinnum];
+	skin_t *skin = skins[skinnum];
 	UINT16 newcolor = 0;
 
 	player->skin = skinnum;
@@ -382,7 +369,7 @@ static void SetSkin(player_t *player, INT32 skinnum)
 		fixed_t radius = FixedMul(skin->radius, player->mo->scale);
 		if ((player->powers[pw_carry] == CR_NIGHTSMODE) && (skin->sprites[SPR2_NFLY].numframes == 0)) // If you don't have a sprite for flying horizontally, use the default NiGHTS skin.
 		{
-			skin = &skins[DEFAULTNIGHTSSKIN];
+			skin = skins[DEFAULTNIGHTSSKIN];
 			player->followitem = skin->followitem;
 			if (!(cv_debug || devparm) && !(netgame || multiplayer || demoplayback))
 				newcolor = skin->prefcolor; // will be updated in thinker to flashing
@@ -393,7 +380,7 @@ static void SetSkin(player_t *player, INT32 skinnum)
 		P_SetScale(player->mo, player->mo->scale);
 		player->mo->radius = radius;
 
-		P_SetPlayerMobjState(player->mo, player->mo->state-states); // Prevent visual errors when switching between skins with differing number of frames
+		P_SetMobjState(player->mo, player->mo->state-states); // Prevent visual errors when switching between skins with differing number of frames
 	}
 }
 
@@ -604,7 +591,6 @@ static boolean R_ProcessPatchableFields(skin_t *skin, char *stoken, char *value)
 		UINT16 color = R_GetSuperColorByName(value);
 		skin->supercolor = (color ? color : SKINCOLOR_SUPERGOLD1);
 	}
-
 #define GETFLOAT(field) else if (!stricmp(stoken, #field)) skin->field = FLOAT_TO_FIXED(atof(value));
 	GETFLOAT(jumpfactor)
 	GETFLOAT(highresscale)
@@ -644,6 +630,9 @@ static boolean R_ProcessPatchableFields(skin_t *skin, char *stoken, char *value)
 	GETFLAG(CANBUSTWALLS)
 	GETFLAG(NOSHIELDABILITY)
 #undef GETFLAG
+
+	else if (!stricmp(stoken, "natkcolor"))
+		skin->natkcolor = R_GetColorByName(value); // SKINCOLOR_NONE is allowed here
 
 	else // let's check if it's a sound, otherwise error out
 	{
@@ -722,8 +711,10 @@ void R_AddSkins(UINT16 wadnum, boolean mainfile)
 		buf2[size] = '\0';
 
 		// set defaults
-		skin = &skins[numskins];
+		skins = Z_Realloc(skins, sizeof(skin_t*) * (numskins + 1), PU_STATIC, NULL);
+		skin = skins[numskins] = Z_Calloc(sizeof(skin_t), PU_STATIC, NULL);
 		Sk_SetDefaultValue(skin);
+		skin->skinnum = numskins;
 		skin->wadnum = wadnum;
 		hudname = realname = supername = false;
 		// parse
@@ -837,15 +828,6 @@ next_token:
 
 		if (mainfile == false)
 			CONS_Printf(M_GetText("Added skin '%s'\n"), skin->name);
-#ifdef SKINVALUES
-		skin_cons_t[numskins].value = numskins;
-		skin_cons_t[numskins].strvalue = skin->name;
-#endif
-
-#ifdef HWRENDER
-		if (rendermode == render_opengl)
-			HWR_AddPlayerModel(numskins);
-#endif
 
 		numskins++;
 	}
@@ -916,7 +898,7 @@ void R_PatchSkins(UINT16 wadnum, boolean mainfile)
 					strlwr(value);
 					skinnum = R_SkinAvailable(value);
 					if (skinnum != -1)
-						skin = &skins[skinnum];
+						skin = skins[skinnum];
 					else
 					{
 						CONS_Debug(DBG_SETUP, "R_PatchSkins: unknown skin name in P_SKIN lump# %d(%s) in WAD %s\n", lump, W_CheckNameForNumPwad(wadnum,lump), wadfiles[wadnum]->filename);
@@ -992,31 +974,20 @@ next_token:
 
 void R_DelSkins(void)
 {
-	size_t i, j;
-
-	for (i = 0; i < MAXSKINS; i++)
+	for (int i = 0; i < numskins; i++)
 	{
-		if (!skins[i].name[0])
-		{
-			numskins--;
-			continue;
-		}
-
 		ST_UnLoadFaceGraphics(i);
 
-		for (j = 0; j < 32; j++)
-		{
-			if (!stricmp(skins[i].name, description[j].skinname))
-			{
-				memset(description[j].skinname, 0, SKINNAMESIZE*2+2);
-				break;
-			}
-		}
+		Z_Free(skins[i]);
 
-		numskins--;
+		skins[i] = NULL;
 	}
 
-	M_InitCharacterTables();
+	numskins = 0;
+
+	Z_Free(skins);
+
+	M_InitCharacterTables(0);
 }
 
 static UINT16 W_CheckForEitherSkinMarkerInPwad(UINT16 wadid, UINT16 startlump)
@@ -1096,7 +1067,7 @@ static void R_RefreshSprite2ForWad(UINT16 wadnum, UINT8 start_spr2)
 				strlwr(value);
 				skinnum = R_SkinAvailable(value);
 				if (skinnum != -1)
-					skin = &skins[skinnum];
+					skin = skins[skinnum];
 				else
 				{
 					CONS_Debug(DBG_SETUP, "R_RefreshSprite2ForWad: unknown skin name in P_SKIN lump# %d(%s) in WAD %s\n", lump, W_CheckNameForNumPwad(wadnum,lump), wadfiles[wadnum]->filename);

@@ -264,7 +264,7 @@ boolean P_DoSpring(mobj_t *spring, mobj_t *object)
 				UINT8 secondjump = object->player->secondjump;
 				UINT16 tailsfly = object->player->powers[pw_tailsfly];
 				if (object->player->pflags & PF_GLIDING)
-					P_SetPlayerMobjState(object, S_PLAY_FALL);
+					P_SetMobjState(object, S_PLAY_FALL);
 				P_ResetPlayer(object->player);
 				object->player->pflags |= pflags;
 				object->player->secondjump = secondjump;
@@ -403,7 +403,7 @@ boolean P_DoSpring(mobj_t *spring, mobj_t *object)
 		}
 
 		if (object->player->pflags & PF_GLIDING)
-			P_SetPlayerMobjState(object, S_PLAY_FALL);
+			P_SetMobjState(object, S_PLAY_FALL);
 		if ((spring->info->painchance == 3))
 		{
 			if (!(pflags = (object->player->pflags & PF_SPINNING)) &&
@@ -411,11 +411,11 @@ boolean P_DoSpring(mobj_t *spring, mobj_t *object)
 				|| (spring->flags2 & MF2_AMBUSH)))
 			{
 				pflags = PF_SPINNING;
-				P_SetPlayerMobjState(object, S_PLAY_ROLL);
+				P_SetMobjState(object, S_PLAY_ROLL);
 				S_StartSound(object, sfx_spin);
 			}
 			else
-				P_SetPlayerMobjState(object, S_PLAY_ROLL);
+				P_SetMobjState(object, S_PLAY_ROLL);
 		}
 		else
 		{
@@ -424,7 +424,7 @@ boolean P_DoSpring(mobj_t *spring, mobj_t *object)
 			pflags = object->player->pflags & (PF_STARTJUMP | PF_JUMPED | PF_NOJUMPDAMAGE | PF_SPINNING | PF_THOKKED | PF_BOUNCING); // I still need these.
 
 			if (wasSpindashing) // Ensure we're in the rolling state, and not spindash.
-				P_SetPlayerMobjState(object, S_PLAY_ROLL);
+				P_SetMobjState(object, S_PLAY_ROLL);
 
 			if (object->player->charability == CA_GLIDEANDCLIMB && object->player->skidtime && (pflags & PF_JUMPED))
 			{
@@ -439,7 +439,7 @@ boolean P_DoSpring(mobj_t *spring, mobj_t *object)
 		if (spring->info->painchance == 1) // For all those ancient, SOC'd abilities.
 		{
 			object->player->pflags |= P_GetJumpFlags(object->player);
-			P_SetPlayerMobjState(object, S_PLAY_JUMP);
+			P_SetMobjState(object, S_PLAY_JUMP);
 		}
 		else if ((spring->info->painchance == 2) || ((spring->info->painchance != 3) && (pflags & PF_BOUNCING))) // Adding momentum only.
 		{
@@ -456,16 +456,16 @@ boolean P_DoSpring(mobj_t *spring, mobj_t *object)
 				object->player->secondjump = secondjump;
 			}
 			else if (object->player->dashmode >= DASHMODE_THRESHOLD)
-				P_SetPlayerMobjState(object, S_PLAY_DASH);
+				P_SetMobjState(object, S_PLAY_DASH);
 			else if (P_IsObjectOnGround(object))
-				P_SetPlayerMobjState(object, (horizspeed >= FixedMul(object->player->runspeed, object->scale)) ? S_PLAY_RUN : S_PLAY_WALK);
+				P_SetMobjState(object, (horizspeed >= FixedMul(object->player->runspeed, object->scale)) ? S_PLAY_RUN : S_PLAY_WALK);
 			else
-				P_SetPlayerMobjState(object, (object->momz > 0) ? S_PLAY_SPRING : S_PLAY_FALL);
+				P_SetMobjState(object, (object->momz > 0) ? S_PLAY_SPRING : S_PLAY_FALL);
 		}
 		else if (P_MobjFlip(object)*vertispeed > 0)
-			P_SetPlayerMobjState(object, S_PLAY_SPRING);
+			P_SetMobjState(object, S_PLAY_SPRING);
 		else
-			P_SetPlayerMobjState(object, S_PLAY_FALL);
+			P_SetMobjState(object, S_PLAY_FALL);
 	}
 	else if (horizspeed
 		&& object->tracer
@@ -547,7 +547,7 @@ static void P_DoFanAndGasJet(mobj_t *spring, mobj_t *object)
 			if (p && !p->powers[pw_tailsfly] && !p->powers[pw_carry]) // doesn't reset anim for Tails' flight
 			{
 				P_ResetPlayer(p);
-				P_SetPlayerMobjState(object, S_PLAY_FALL);
+				P_SetMobjState(object, S_PLAY_FALL);
 				P_SetTarget(&object->tracer, spring);
 				p->powers[pw_carry] = CR_FAN;
 			}
@@ -565,7 +565,7 @@ static void P_DoFanAndGasJet(mobj_t *spring, mobj_t *object)
 			{
 				P_ResetPlayer(p);
 				if (p->panim != PA_FALL)
-					P_SetPlayerMobjState(object, S_PLAY_FALL);
+					P_SetMobjState(object, S_PLAY_FALL);
 			}
 			break;
 		default:
@@ -1047,7 +1047,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 			thing->flags2 &= ~MF2_DONTDRAW; // don't leave the rock invisible if it was flashing prior to boarding
 			P_SetTarget(&thing->tracer, tmthing);
 			P_ResetPlayer(tmthing->player);
-			P_SetPlayerMobjState(tmthing, S_PLAY_WALK);
+			P_SetMobjState(tmthing, S_PLAY_WALK);
 			tmthing->player->powers[pw_carry] = CR_ROLLOUT;
 			P_SetTarget(&tmthing->tracer, thing);
 			if (!P_IsObjectOnGround(thing))
@@ -2865,6 +2865,8 @@ boolean P_CheckMove(mobj_t *thing, fixed_t x, fixed_t y, boolean allowdropoff)
 {
 	boolean moveok;
 	mobj_t *hack = P_SpawnMobjFromMobj(thing, 0, 0, 0, MT_RAY);
+	if (P_MobjWasRemoved(hack))
+		return false;
 
 	hack->radius = thing->radius;
 	hack->height = thing->height;
@@ -3403,36 +3405,41 @@ static boolean P_IsClimbingValid(player_t *player, angle_t angle)
 	return false;
 }
 
-static boolean PTR_LineIsBlocking(line_t *li)
+//
+// P_LineIsBlocking
+//
+// Determines if line would block mo's movement
+//
+boolean P_LineIsBlocking(mobj_t *mo, line_t *li)
 {
 	// one-sided linedefs are always solid to sliding movement.
 	if (!li->backsector)
-		return !P_PointOnLineSide(slidemo->x, slidemo->y, li);
+		return !P_PointOnLineSide(mo->x, mo->y, li);
 
-	if (!(slidemo->flags & MF_MISSILE))
+	if (!(mo->flags & MF_MISSILE))
 	{
 		if (li->flags & ML_IMPASSIBLE)
 			return true;
 
-		if ((slidemo->flags & (MF_ENEMY|MF_BOSS)) && li->flags & ML_BLOCKMONSTERS)
+		if ((mo->flags & (MF_ENEMY|MF_BOSS)) && li->flags & ML_BLOCKMONSTERS)
 			return true;
 	}
 
 	// set openrange, opentop, openbottom
-	P_LineOpening(li, slidemo);
+	P_LineOpening(li, mo);
 
-	if (openrange < slidemo->height)
+	if (openrange < mo->height)
 		return true; // doesn't fit
 
-	if (opentop - slidemo->z < slidemo->height)
+	if (opentop - mo->z < mo->height)
 		return true; // mobj is too high
 
-	if (openbottom - slidemo->z > FixedMul(MAXSTEPMOVE, slidemo->scale))
+	if (openbottom - mo->z > FixedMul(MAXSTEPMOVE, mo->scale))
 		return true; // too big a step up
 
-	if (slidemo->player
-		&& openrange < P_GetPlayerHeight(slidemo->player)
-		&& !P_PlayerCanEnterSpinGaps(slidemo->player))
+	if (mo->player
+		&& openrange < P_GetPlayerHeight(mo->player)
+		&& !P_PlayerCanEnterSpinGaps(mo->player))
 			return true; // nonspin character should not take this path
 
 	return false;
@@ -3475,7 +3482,7 @@ static void PTR_GlideClimbTraverse(line_t *li)
 	}
 
 	// see about climbing on the wall
-	if (!(checkline->flags & ML_NOCLIMB) && checkline->special != HORIZONSPECIAL)
+	if (!(checkline->flags & ML_NOCLIMB) && checkline->special != SPECIAL_HORIZON_LINE)
 	{
 		boolean canclimb;
 		angle_t climbangle, climbline;
@@ -3536,7 +3543,7 @@ static boolean PTR_SlideTraverse(intercept_t *in)
 
 	li = in->d.line;
 
-	if (!PTR_LineIsBlocking(li))
+	if (!P_LineIsBlocking(slidemo, li))
 		return true;
 
 	// the line blocks movement,
@@ -3905,7 +3912,7 @@ retry:
 	P_PathTraverse(leadx, traily, leadx + mo->momx, traily + mo->momy,
 		PT_ADDLINES, PTR_SlideTraverse);
 
-	if (bestslideline && mo->player && bestslideline->sidenum[1] != 0xffff)
+	if (bestslideline && mo->player && bestslideline->sidenum[1] != NO_SIDEDEF)
 	{
 		sector_t *sec = P_PointOnLineSide(mo->x, mo->y, bestslideline) ? bestslideline->frontsector : bestslideline->backsector;
 		P_CheckLavaWall(mo, sec);
@@ -5070,4 +5077,36 @@ fixed_t P_CeilingzAtPos(fixed_t x, fixed_t y, fixed_t z, fixed_t height)
 	}
 
 	return ceilingz;
+}
+
+INT32 P_GetSectorLightAt(sector_t *sector, fixed_t x, fixed_t y, fixed_t z)
+{
+	if (!sector->numlights)
+		return -1;
+
+	INT32 light = sector->numlights - 1;
+
+	// R_GetPlaneLight won't work on sloped lights!
+	for (INT32 lightnum = 1; lightnum < sector->numlights; lightnum++) {
+		fixed_t h = P_GetLightZAt(&sector->lightlist[lightnum], x, y);
+		if (h <= z) {
+			light = lightnum - 1;
+			break;
+		}
+	}
+
+	return light;
+}
+
+extracolormap_t *P_GetColormapFromSectorAt(sector_t *sector, fixed_t x, fixed_t y, fixed_t z)
+{
+	if (sector->numlights)
+		return *sector->lightlist[P_GetSectorLightAt(sector, x, y, z)].extra_colormap;
+	else
+		return sector->extra_colormap;
+}
+
+extracolormap_t *P_GetSectorColormapAt(fixed_t x, fixed_t y, fixed_t z)
+{
+	return P_GetColormapFromSectorAt(R_PointInSubsector(x, y)->sector, x, y, z);
 }

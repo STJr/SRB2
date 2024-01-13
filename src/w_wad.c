@@ -228,7 +228,7 @@ static void W_LoadDehackedLumpsPK3(UINT16 wadnum, boolean mainfile)
 	posStart = W_CheckNumForFullNamePK3("Init.lua", wadnum, 0);
 	if (posStart != INT16_MAX)
 	{
-		LUA_LoadLump(wadnum, posStart, true);
+		LUA_DoLump(wadnum, posStart, true);
 	}
 	else
 	{
@@ -237,7 +237,7 @@ static void W_LoadDehackedLumpsPK3(UINT16 wadnum, boolean mainfile)
 		{
 			posEnd = W_CheckNumForFolderEndPK3("Lua/", wadnum, posStart);
 			for (; posStart < posEnd; posStart++)
-				LUA_LoadLump(wadnum, posStart, true);
+				LUA_DoLump(wadnum, posStart, true);
 		}
 	}
 
@@ -271,7 +271,7 @@ static void W_LoadDehackedLumps(UINT16 wadnum, boolean mainfile)
 		lumpinfo_t *lump_p = wadfiles[wadnum]->lumpinfo;
 		for (lump = 0; lump < wadfiles[wadnum]->numlumps; lump++, lump_p++)
 			if (memcmp(lump_p->name,"LUA_",4)==0)
-				LUA_LoadLump(wadnum, lump, true);
+				LUA_DoLump(wadnum, lump, true);
 	}
 
 	{
@@ -1015,6 +1015,7 @@ UINT16 W_InitFile(const char *filename, boolean mainfile, boolean startup)
 
 	// TODO: HACK ALERT - Load Lua & SOC stuff right here. I feel like this should be out of this place, but... Let's stick with this for now.
 	W_LoadFileScripts(numwadfiles - 1, mainfile);
+
 	W_InvalidateLumpnumCache();
 
 	return wadfile->numlumps;
@@ -1232,7 +1233,7 @@ void W_LoadFileScripts(UINT16 wadfilenum, boolean mainfile)
 			DEH_LoadDehackedLumpPwad(wadfilenum, 0, mainfile);
 			break;
 		case RET_LUA:
-			LUA_LoadLump(wadfilenum, 0, true);
+			LUA_DoLump(numwadfiles - 1, 0, true);
 			break;
 		default:
 			break;

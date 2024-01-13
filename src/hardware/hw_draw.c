@@ -1319,6 +1319,7 @@ void HWR_DrawFill(INT32 x, INT32 y, INT32 w, INT32 h, INT32 color)
 	FOutVector v[4];
 	FSurfaceInfo Surf;
 	float fx, fy, fw, fh;
+	UINT8 alphalevel = ((color & V_ALPHAMASK) >> V_ALPHASHIFT);
 
 	UINT8 perplayershuffle = 0;
 
@@ -1483,8 +1484,16 @@ void HWR_DrawFill(INT32 x, INT32 y, INT32 w, INT32 h, INT32 color)
 
 	Surf.PolyColor = V_GetColor(color);
 
+	if (alphalevel)
+	{
+		if (alphalevel == 10) Surf.PolyColor.s.alpha = softwaretranstogl_lo[st_translucency]; // V_HUDTRANSHALF
+		else if (alphalevel == 11) Surf.PolyColor.s.alpha = softwaretranstogl[st_translucency]; // V_HUDTRANS
+		else if (alphalevel == 12) Surf.PolyColor.s.alpha = softwaretranstogl_hi[st_translucency]; // V_HUDTRANSDOUBLE
+		else Surf.PolyColor.s.alpha = softwaretranstogl[10-alphalevel];
+	}
+
 	HWD.pfnDrawPolygon(&Surf, v, 4,
-		PF_Modulated|PF_NoTexture|PF_NoDepthTest);
+		PF_Modulated|PF_NoTexture|PF_NoDepthTest|PF_Translucent);
 }
 
 #ifdef HAVE_PNG

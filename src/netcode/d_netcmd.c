@@ -155,6 +155,7 @@ static void Command_Clearscores_f(void);
 
 // Remote Administration
 static void Command_Changepassword_f(void);
+static void Command_Clearpassword_f(void);
 static void Command_Login_f(void);
 static void Got_Verification(UINT8 **cp, INT32 playernum);
 static void Got_Removal(UINT8 **cp, INT32 playernum);
@@ -384,7 +385,7 @@ consvar_t cv_mute = CVAR_INIT ("mute", "Off", CV_NETVAR|CV_CALL|CV_ALLOWLUA, CV_
 consvar_t cv_sleep = CVAR_INIT ("cpusleep", "1", CV_SAVE, sleeping_cons_t, NULL);
 
 static CV_PossibleValue_t perfstats_cons_t[] = {
-	{0, "Off"}, {1, "Rendering"}, {2, "Logic"}, {3, "ThinkFrame"}, {0, NULL}};
+	{0, "Off"}, {1, "Rendering"}, {2, "Logic"}, {3, "ThinkFrame"}, {4, "PreThinkFrame"}, {5, "PostThinkFrame"}, {0, NULL}};
 consvar_t cv_perfstats = CVAR_INIT ("perfstats", "Off", CV_CALL, perfstats_cons_t, PS_PerfStats_OnChange);
 static CV_PossibleValue_t ps_samplesize_cons_t[] = {
 	{1, "MIN"}, {1000, "MAX"}, {0, NULL}};
@@ -476,6 +477,7 @@ void D_RegisterServerCommands(void)
 
 	// Remote Administration
 	COM_AddCommand("password", Command_Changepassword_f, COM_LUA);
+	COM_AddCommand("clearpassword", Command_Clearpassword_f, COM_LUA);
 	COM_AddCommand("login", Command_Login_f, COM_LUA); // useful in dedicated to kick off remote admin
 	COM_AddCommand("promote", Command_Verify_f, COM_LUA);
 	RegisterNetXCmd(XD_VERIFIED, Got_Verification);
@@ -631,6 +633,10 @@ void D_RegisterServerCommands(void)
 	CV_RegisterVar(&cv_addons_folder);
 
 	CV_RegisterVar(&cv_dummyconsvar);
+
+	CV_RegisterVar(&cv_chatspamprotection);
+	CV_RegisterVar(&cv_chatspamspeed);
+	CV_RegisterVar(&cv_chatspamburst);
 }
 
 // =========================================================================
@@ -774,7 +780,6 @@ void D_RegisterClientCommands(void)
 	CV_RegisterVar(&cv_chatheight);
 	CV_RegisterVar(&cv_chatwidth);
 	CV_RegisterVar(&cv_chattime);
-	CV_RegisterVar(&cv_chatspamprotection);
 	CV_RegisterVar(&cv_chatbacktint);
 	CV_RegisterVar(&cv_consolechat);
 	CV_RegisterVar(&cv_chatnotifications);
@@ -1265,8 +1270,8 @@ static void SendNameAndColor(void)
 			CV_StealthSetValue(&cv_playercolor, players[consoleplayer].skincolor);
 		else if (skincolors[atoi(cv_playercolor.defaultvalue)].accessible)
 			CV_StealthSet(&cv_playercolor, cv_playercolor.defaultvalue);
-		else if (skins[players[consoleplayer].skin].prefcolor && skincolors[skins[players[consoleplayer].skin].prefcolor].accessible)
-			CV_StealthSetValue(&cv_playercolor, skins[players[consoleplayer].skin].prefcolor);
+		else if (skins[players[consoleplayer].skin]->prefcolor && skincolors[skins[players[consoleplayer].skin]->prefcolor].accessible)
+			CV_StealthSetValue(&cv_playercolor, skins[players[consoleplayer].skin]->prefcolor);
 		else {
 			UINT16 i = 0;
 			while (i<numskincolors && !skincolors[i].accessible) i++;
@@ -1276,7 +1281,7 @@ static void SendNameAndColor(void)
 
 	if (!strcmp(cv_playername.string, player_names[consoleplayer])
 	&& cv_playercolor.value == players[consoleplayer].skincolor
-	&& !strcmp(cv_skin.string, skins[players[consoleplayer].skin].name))
+	&& !strcmp(cv_skin.string, skins[players[consoleplayer].skin]->name))
 		return;
 
 	players[consoleplayer].availabilities = R_GetSkinAvailabilities();
@@ -1319,7 +1324,7 @@ static void SendNameAndColor(void)
 	if ((cv_skin.value < 0) || !R_SkinUsable(consoleplayer, cv_skin.value))
 	{
 		INT32 defaultSkinNum = GetPlayerDefaultSkin(consoleplayer);
-		CV_StealthSet(&cv_skin, skins[defaultSkinNum].name);
+		CV_StealthSet(&cv_skin, skins[defaultSkinNum]->name);
 		cv_skin.value = defaultSkinNum;
 	}
 
@@ -1350,8 +1355,8 @@ static void SendNameAndColor2(void)
 			CV_StealthSetValue(&cv_playercolor2, players[secondplaya].skincolor);
 		else if (skincolors[atoi(cv_playercolor2.defaultvalue)].accessible)
 			CV_StealthSet(&cv_playercolor, cv_playercolor2.defaultvalue);
-		else if (skins[players[secondplaya].skin].prefcolor && skincolors[skins[players[secondplaya].skin].prefcolor].accessible)
-			CV_StealthSetValue(&cv_playercolor2, skins[players[secondplaya].skin].prefcolor);
+		else if (skins[players[secondplaya].skin]->prefcolor && skincolors[skins[players[secondplaya].skin]->prefcolor].accessible)
+			CV_StealthSetValue(&cv_playercolor2, skins[players[secondplaya].skin]->prefcolor);
 		else {
 			UINT16 i = 0;
 			while (i<numskincolors && !skincolors[i].accessible) i++;
@@ -1831,7 +1836,7 @@ static void Command_Map_f(void)
 		return;
 	}
 
-	option_force    =   COM_CheckPartialParm("-f");
+	option_force    =   COM_CheckPartialParm("-f") || (cv_debug || devparm);
 	option_gametype =   COM_CheckPartialParm("-g");
 	newresetplayers = ! COM_CheckParm("-noresetplayers");
 
@@ -2085,7 +2090,7 @@ static void Got_Mapcmd(UINT8 **cp, INT32 playernum)
 	if (modeattacking)
 	{
 		SetPlayerSkinByNum(0, cv_chooseskin.value-1);
-		players[0].skincolor = skins[players[0].skin].prefcolor;
+		players[0].skincolor = skins[players[0].skin]->prefcolor;
 	}
 
 	mapnumber = M_MapNumber(mapname[3], mapname[4]);
@@ -2852,8 +2857,15 @@ static void Got_Teamchange(UINT8 **cp, INT32 playernum)
 
 void D_SetPassword(const char *pw)
 {
-	D_MD5PasswordPass((const UINT8 *)pw, strlen(pw), BASESALT, &adminpassmd5);
-	adminpasswordset = true;
+	adminpassmd5 = Z_Realloc(adminpassmd5, sizeof(*adminpassmd5) * ++adminpasscount, PU_STATIC, NULL);
+	D_MD5PasswordPass((const UINT8 *)pw, strlen(pw), BASESALT, &adminpassmd5[adminpasscount-1]);
+}
+
+void D_ClearPassword(void)
+{
+	Z_Free(adminpassmd5);
+	adminpassmd5 = NULL;
+	adminpasscount = 0;
 }
 
 // Remote Administration
@@ -2871,12 +2883,30 @@ static void Command_Changepassword_f(void)
 
 	if (COM_Argc() != 2)
 	{
-		CONS_Printf(M_GetText("password <password>: change remote admin password\n"));
+		CONS_Printf(M_GetText("password <password>: add remote admin password\n"));
 		return;
 	}
 
 	D_SetPassword(COM_Argv(1));
-	CONS_Printf(M_GetText("Password set.\n"));
+	CONS_Printf(M_GetText("Password added.\n"));
+#endif
+}
+
+// Remote Administration
+static void Command_Clearpassword_f(void)
+{
+#ifdef NOMD5
+	// If we have no MD5 support then completely disable XD_LOGIN responses for security.
+	CONS_Alert(CONS_NOTICE, "Remote administration commands are not supported in this build.\n");
+#else
+	if (client) // cannot change remotely
+	{
+		CONS_Printf(M_GetText("Only the server can use this.\n"));
+		return;
+	}
+
+	D_ClearPassword();
+	CONS_Printf(M_GetText("Passwords cleared.\n"));
 #endif
 }
 
@@ -3787,11 +3817,11 @@ static void Got_RequestAddfoldercmd(UINT8 **cp, INT32 playernum)
 
 static void Got_Addfilecmd(UINT8 **cp, INT32 playernum)
 {
-	char filename[241];
+	char filename[MAX_WADPATH+1];
 	filestatus_t ncs = FS_NOTCHECKED;
 	UINT8 md5sum[16];
 
-	READSTRINGN(*cp, filename, 240);
+	READSTRINGN(*cp, filename, MAX_WADPATH);
 	READMEM(*cp, md5sum, 16);
 
 	if (playernum != serverplayer)
@@ -4658,37 +4688,62 @@ static void Command_Mapmd5_f(void)
 		CONS_Printf(M_GetText("You must be in a level to use this.\n"));
 }
 
-void D_SendExitLevel(boolean cheat)
-{
-	UINT8 buf[8];
-	UINT8 *buf_p = buf;
-
-	WRITEUINT8(buf_p, cheat);
-
-	SendNetXCmd(XD_EXITLEVEL, &buf, buf_p - buf);
-}
-
 static void Command_ExitLevel_f(void)
 {
 	if (!(server || (IsPlayerAdmin(consoleplayer))))
 		CONS_Printf(M_GetText("Only the server or a remote admin can use this.\n"));
 	else if (( gamestate != GS_LEVEL && gamestate != GS_CREDITS ) || demoplayback)
 		CONS_Printf(M_GetText("You must be in a level to use this.\n"));
+	else if (usedCheats)
+		SendNetXCmd(XD_EXITLEVEL, NULL, 0); // Does it matter if it's a cheat if we've used one already?
+	else if (!(splitscreen || multiplayer || cv_debug))
+		CONS_Printf(M_GetText("Cheats must be enabled to force a level exit in single player.\n"));
 	else
-		D_SendExitLevel(true);
+	{
+		if (G_IsSpecialStage(gamemap) // If you wanna give up that emerald then go right ahead!
+			|| gamestate == GS_CREDITS) // Somebody hasn't heard of the credits skip button...
+		{
+			SendNetXCmd(XD_EXITLEVEL, NULL, 0);
+			return;
+		}
+		
+		// Allow exiting without cheating if at least one player beat the level
+		// Consistent with just setting playersforexit to one
+		if (splitscreen || multiplayer)
+		{
+			INT32 i;
+			for (i = 0; i < MAXPLAYERS; i++)
+			{
+				if (!playeringame[i] || players[i].spectator || players[i].bot)
+					continue;
+				if (players[i].quittime > 30 * TICRATE)
+					continue;
+				if (players[i].lives <= 0)
+					continue;
+		
+				if ((players[i].pflags & PF_FINISHED) || players[i].exiting)
+				{
+					SendNetXCmd(XD_EXITLEVEL, NULL, 0);
+					return;
+				}
+			}
+		}
+		
+		// Only consider it a cheat if we're not allowed to go to the next map
+		if (M_CampaignWarpIsCheat(gametype, G_GetNextMap(true, true) + 1, serverGamedata))
+			CONS_Alert(CONS_NOTICE, M_GetText("Cheats must be enabled to force exit to a locked level!\n"));
+		else
+			SendNetXCmd(XD_EXITLEVEL, NULL, 0);
+	}
 }
 
 static void Got_ExitLevelcmd(UINT8 **cp, INT32 playernum)
 {
-	boolean cheat = false;
-
-	cheat = (boolean)READUINT8(*cp);
+	(void)cp;
 
 	// Ignore duplicate XD_EXITLEVEL commands.
 	if (gameaction == ga_completed)
-	{
 		return;
-	}
 
 	if (playernum != serverplayer && !IsPlayerAdmin(playernum))
 	{
@@ -4696,11 +4751,6 @@ static void Got_ExitLevelcmd(UINT8 **cp, INT32 playernum)
 		if (server)
 			SendKick(playernum, KICK_MSG_CON_FAIL | KICK_MSG_KEEP_BODY);
 		return;
-	}
-
-	if (G_CoopGametype() && cheat)
-	{
-		G_SetUsedCheats(false);
 	}
 
 	G_ExitLevel();
@@ -4906,7 +4956,7 @@ static void ForceSkin_OnChange(void)
 	}
 	else
 	{
-		CONS_Printf("The server is restricting all players to skin \"%s\".\n",skins[cv_forceskin.value].name);
+		CONS_Printf("The server is restricting all players to skin \"%s\".\n",skins[cv_forceskin.value]->name);
 		if (Playing())
 			ForceAllSkins(cv_forceskin.value);
 	}
@@ -4952,7 +5002,7 @@ static void Skin_OnChange(void)
 		if (!(cv_debug || devparm)
 		&& (gamestate != GS_WAITINGPLAYERS)) // allows command line -warp x +skin y
 		{
-			CV_StealthSet(&cv_skin, skins[players[consoleplayer].skin].name);
+			CV_StealthSet(&cv_skin, skins[players[consoleplayer].skin]->name);
 			return;
 		}
 

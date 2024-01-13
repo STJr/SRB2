@@ -213,6 +213,8 @@ static const struct {
 	{META_HUDINFO,      "hudinfo_t"},
 	{META_PATCH,        "patch_t"},
 	{META_COLORMAP,     "colormap"},
+	{META_EXTRACOLORMAP,"extracolormap_t"},
+	{META_LIGHTTABLE,   "lighttable_t"},
 	{META_CAMERA,       "camera_t"},
 
 	{META_ACTION,       "action"},
@@ -1344,6 +1346,17 @@ static int lib_pSetObjectMomZ(lua_State *L)
 	return 0;
 }
 
+static int lib_pIsLocalPlayer(lua_State *L)
+{
+	player_t *player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
+	//NOHUD
+	//INLEVEL
+	if (!player)
+		return LUA_ErrInvalid(L, "player_t");
+	lua_pushboolean(L, P_IsLocalPlayer(player));
+	return 1;
+}
+
 static int lib_pPlayJingle(lua_State *L)
 {
 	player_t *player = NULL;
@@ -1683,6 +1696,19 @@ static int lib_pHomingAttack(lua_State *L)
 	return 1;
 }
 
+static int lib_pResetCamera(lua_State *L)
+{
+	player_t *player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
+	camera_t *cam = *((camera_t **)luaL_checkudata(L, 2, META_CAMERA));
+
+	if (!player)
+		return LUA_ErrInvalid(L, "player_t");
+	if (!cam)
+		return LUA_ErrInvalid(L, "camera_t");
+	P_ResetCamera(player, cam);
+	return 0;
+}
+
 static int lib_pSuperReady(lua_State *L)
 {
 	player_t *player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
@@ -1699,11 +1725,12 @@ static int lib_pDoJump(lua_State *L)
 {
 	player_t *player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
 	boolean soundandstate = (boolean)lua_opttrueboolean(L, 2);
+	boolean allowflip = (boolean)lua_opttrueboolean(L, 3);
 	NOHUD
 	INLEVEL
 	if (!player)
 		return LUA_ErrInvalid(L, "player_t");
-	P_DoJump(player, soundandstate);
+	P_DoJump(player, soundandstate, allowflip);
 	return 0;
 }
 
@@ -1934,6 +1961,45 @@ static int lib_pMoveOrigin(lua_State *L)
 	return 2;
 }
 
+static int lib_pLineIsBlocking(lua_State *L)
+{
+	mobj_t *mo = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
+	line_t *line = *((line_t **)luaL_checkudata(L, 2, META_LINE));
+	NOHUD
+	INLEVEL
+	if (!mo)
+		return LUA_ErrInvalid(L, "mobj_t");
+	if (!line)
+		return LUA_ErrInvalid(L, "line_t");
+	
+	// P_LineOpening in P_LineIsBlocking sets these variables.
+	// We want to keep their old values after so that whatever
+	// map collision code uses them doesn't get messed up.
+	fixed_t oldopentop = opentop;
+	fixed_t oldopenbottom = openbottom;
+	fixed_t oldopenrange = openrange;
+	fixed_t oldlowfloor = lowfloor;
+	fixed_t oldhighceiling = highceiling;
+	pslope_t *oldopentopslope = opentopslope;
+	pslope_t *oldopenbottomslope = openbottomslope;
+	ffloor_t *oldopenfloorrover = openfloorrover;
+	ffloor_t *oldopenceilingrover = openceilingrover;
+	
+	lua_pushboolean(L, P_LineIsBlocking(mo, line));
+	
+	opentop = oldopentop;
+	openbottom = oldopenbottom;
+	openrange = oldopenrange;
+	lowfloor = oldlowfloor;
+	highceiling = oldhighceiling;
+	opentopslope = oldopentopslope;
+	openbottomslope = oldopenbottomslope;
+	openfloorrover = oldopenfloorrover;
+	openceilingrover = oldopenceilingrover;
+	
+	return 1;
+}
+
 static int lib_pSlideMove(lua_State *L)
 {
 	mobj_t *mo = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
@@ -2019,6 +2085,30 @@ static int lib_pCeilingzAtPos(lua_State *L)
 	//HUDSAFE
 	INLEVEL
 	lua_pushfixed(L, P_CeilingzAtPos(x, y, z, height));
+	return 1;
+}
+
+static int lib_pGetSectorColormapAt(lua_State *L)
+{
+	boolean has_sector = false;
+	sector_t *sector = NULL;
+	if (!lua_isnoneornil(L, 1))
+	{
+		has_sector = true;
+		sector = *((sector_t **)luaL_checkudata(L, 1, META_SECTOR));
+	}
+	fixed_t x = luaL_checkfixed(L, 2);
+	fixed_t y = luaL_checkfixed(L, 3);
+	fixed_t z = luaL_checkfixed(L, 4);
+	INLEVEL
+	if (has_sector && !sector)
+		return LUA_ErrInvalid(L, "sector_t");
+	extracolormap_t *exc;
+	if (sector)
+		exc = P_GetColormapFromSectorAt(sector, x, y, z);
+	else
+		exc = P_GetSectorColormapAt(x, y, z);
+	LUA_PushUserdata(L, exc, META_EXTRACOLORMAP);
 	return 1;
 }
 
@@ -3727,10 +3817,10 @@ static int lib_gAddPlayer(lua_State *L)
 	if (!lua_isnoneornil(L, 2))
 		newplayer->skincolor = R_GetColorByName(luaL_checkstring(L, 2));
 	else
-		newplayer->skincolor = skins[skinnum].prefcolor;
+		newplayer->skincolor = skins[skinnum]->prefcolor;
 
 	// Set the bot default name as the skin
-	strcpy(player_names[newplayernum], skins[skinnum].realname);
+	strcpy(player_names[newplayernum], skins[skinnum]->realname);
 
 	// Read the bot name, if given
 	if (!lua_isnoneornil(L, 3))
@@ -4251,6 +4341,7 @@ static luaL_Reg lib[] = {
 	{"P_InQuicksand",lib_pInQuicksand},
 	{"P_InJumpFlipSector",lib_pInJumpFlipSector},
 	{"P_SetObjectMomZ",lib_pSetObjectMomZ},
+	{"P_IsLocalPlayer",lib_pIsLocalPlayer},
 	{"P_PlayJingle",lib_pPlayJingle},
 	{"P_PlayJingleMusic",lib_pPlayJingleMusic},
 	{"P_RestoreMusic",lib_pRestoreMusic},
@@ -4277,6 +4368,7 @@ static luaL_Reg lib[] = {
 	{"P_NukeEnemies",lib_pNukeEnemies},
 	{"P_Earthquake",lib_pEarthquake},
 	{"P_HomingAttack",lib_pHomingAttack},
+	{"P_ResetCamera",lib_pResetCamera},
 	{"P_SuperReady",lib_pSuperReady},
 	{"P_DoJump",lib_pDoJump},
 	{"P_DoSpinDashDust",lib_pDoSpinDashDust},
@@ -4297,6 +4389,7 @@ static luaL_Reg lib[] = {
 	{"P_TeleportMove",lib_pTeleportMove},
 	{"P_SetOrigin",lib_pSetOrigin},
 	{"P_MoveOrigin",lib_pMoveOrigin},
+	{"P_LineIsBlocking",lib_pLineIsBlocking},
 	{"P_SlideMove",lib_pSlideMove},
 	{"P_BounceMove",lib_pBounceMove},
 	{"P_CheckSight", lib_pCheckSight},
@@ -4304,6 +4397,7 @@ static luaL_Reg lib[] = {
 	{"P_RadiusAttack",lib_pRadiusAttack},
 	{"P_FloorzAtPos",lib_pFloorzAtPos},
 	{"P_CeilingzAtPos",lib_pCeilingzAtPos},
+	{"P_GetSectorColormapAt",lib_pGetSectorColormapAt},
 	{"P_DoSpring",lib_pDoSpring},
 	{"P_TouchSpecialThing",lib_pTouchSpecialThing},
 	{"P_TryCameraMove", lib_pTryCameraMove},
