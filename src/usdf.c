@@ -235,18 +235,6 @@ static int SkipBlock(tokenizer_t *sc)
 	return PARSE_STATUS_FAIL;
 }
 
-#define IGNORE_FIELD() { \
-	GET_TOKEN(); \
-	if (CHECK_TOKEN("{")) { \
-		if (SkipBlock(sc) == PARSE_STATUS_EOF) \
-			return PARSE_STATUS_EOF; \
-	} else { \
-		if (CHECK_TOKEN("=")) {\
-			GET_TOKEN(); \
-		} \
-	} \
-}
-
 #define BUFWRITE(writechr) M_BufferWrite(&buf, (UINT8)(writechr))
 
 static char *EscapeStringChars(const char *string, int tokenizer_line)
@@ -732,6 +720,18 @@ char *P_ConvertSOCPageDialog(char *text, size_t *text_length)
 }
 
 #undef WRITE_TEXTCHAR
+
+#define IGNORE_FIELD() { \
+	GET_TOKEN(); \
+	if (CHECK_TOKEN("{")) { \
+		if (SkipBlock(sc) == PARSE_STATUS_EOF) \
+			return PARSE_STATUS_EOF; \
+	} else { \
+		if (CHECK_TOKEN("=")) {\
+			GET_TOKEN(); \
+		} \
+	} \
+}
 
 static int ParseChoice(textpage_t *page, tokenizer_t *sc, int bracket)
 {
