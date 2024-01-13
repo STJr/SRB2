@@ -268,6 +268,10 @@ static char *EscapeStringChars(const char *string, int tokenizer_line)
 			case '\'':
 				BUFWRITE('\'');
 				break;
+			case '{':
+				BUFWRITE('\\');
+				BUFWRITE('{');
+				break;
 			case 'x': {
 				int out = 0, c;
 				int i = 0;
@@ -319,6 +323,8 @@ static char *EscapeStringChars(const char *string, int tokenizer_line)
 
 					BUFWRITE((char)out);
 				}
+				else
+					ParseError(tokenizer_line, CONS_WARNING, "In string: unknown escape sequence '\\%c'", chr);
 				break;
 			}
 		}
@@ -659,16 +665,15 @@ static char *ParseText(char *text, size_t *text_length, boolean parse_scripts, i
 
 		if (chr == '\\')
 		{
-			if (input[1] == '{')
+			unsigned char nextchar = input[1];
+			if (nextchar == '{')
 			{
-				WRITE_TEXTCHAR(input[1]);
-				input += 2;
+				WRITE_TEXTCHAR(nextchar);
+				input++;
 			}
 			else
 				WRITE_TEXTCHAR(chr);
 		}
-		else if (chr == 0xFF)
-			; // Just ignore it
 		else if (chr == '{')
 		{
 			input++;
@@ -680,6 +685,8 @@ static char *ParseText(char *text, size_t *text_length, boolean parse_scripts, i
 
 			GetCommandEnd(&input);
 		}
+		else if (chr == 0xFF)
+			; // Just ignore it
 		else
 			WRITE_TEXTCHAR(chr);
 
