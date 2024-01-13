@@ -247,318 +247,6 @@ static int SkipBlock(tokenizer_t *sc)
 	} \
 }
 
-static int ParseChoice(textpage_t *page, tokenizer_t *sc, int bracket)
-{
-	if (page->numchoices == MAX_PROMPT_CHOICES)
-		return PARSE_STATUS_FAIL;
-
-	page->numchoices++;
-	page->choices = Z_Realloc(page->choices, sizeof(promptchoice_t) * page->numchoices, PU_STATIC, NULL);
-
-	promptchoice_t *choice = &page->choices[page->numchoices - 1];
-
-	INT32 choiceid = page->numchoices;
-
-	const char *tkn;
-	writebuffer_t buf;
-
-	GET_TOKEN();
-
-	while (!CHECK_TOKEN("}"))
-	{
-		if (CHECK_TOKEN("text"))
-		{
-			EXPECT_TOKEN("=");
-			EXPECT_TOKEN("\"");
-
-			GET_TOKEN();
-
-			M_BufferInit(&buf);
-
-			size_t total_length = 0;
-
-			Z_Free(choice->text);
-			choice->text = NULL;
-
-			while (true)
-			{
-				char *escaped = EscapeStringChars(tkn, sc->line);
-				if (escaped)
-				{
-					size_t parsed_length = 0;
-					char *parsed = ParseText(escaped, &parsed_length, true, sc->line);
-
-					M_BufferMemWrite(&buf, (UINT8 *)parsed, parsed_length);
-					total_length += parsed_length;
-
-					Z_Free(escaped);
-				}
-
-				EXPECT_TOKEN("\"");
-
-				GET_TOKEN();
-
-				if (CHECK_TOKEN(";"))
-					break;
-				else
-				{
-					IS_TOKEN("\"");
-					GET_TOKEN();
-				}
-			}
-
-			choice->text = Z_Realloc(buf.data, total_length + 1, PU_STATIC, NULL);
-			choice->text[total_length] = '\0';
-
-			buf.data = NULL;
-		}
-		else if (CHECK_TOKEN("nextpage"))
-		{
-			EXPECT_TOKEN("=");
-
-			GET_TOKEN();
-
-			if (CHECK_TOKEN("\""))
-			{
-				GET_TOKEN();
-
-				Z_Free(choice->nextpagename);
-				choice->nextpage = 0;
-				choice->nextpagename = Z_StrDup(tkn);
-
-				EXPECT_TOKEN("\"");
-			}
-			else
-			{
-				EXPECT_NUMBER("choice 'nextpage'");
-
-				Z_Free(choice->nextpagename);
-
-				choice->nextpage = num;
-			}
-
-			EXPECT_TOKEN(";");
-		}
-		else if (CHECK_TOKEN("nextconversation"))
-		{
-			EXPECT_TOKEN("=");
-
-			GET_TOKEN();
-
-			if (CHECK_TOKEN("\""))
-			{
-				GET_TOKEN();
-
-				Z_Free(choice->nextpromptname);
-				choice->nextprompt = 0;
-				choice->nextpromptname = Z_StrDup(tkn);
-
-				EXPECT_TOKEN("\"");
-			}
-			else
-			{
-				EXPECT_NUMBER("choice 'nextconversation'");
-
-				Z_Free(choice->nextpromptname);
-
-				choice->nextprompt = num;
-			}
-
-			EXPECT_TOKEN(";");
-		}
-		else if (CHECK_TOKEN("nexttag"))
-		{
-			EXPECT_TOKEN("=");
-			EXPECT_TOKEN("\"");
-
-			GET_TOKEN();
-
-			strlcpy(choice->nexttag, tkn, sizeof(choice->nexttag));
-
-			EXPECT_TOKEN("\"");
-			EXPECT_TOKEN(";");
-		}
-		else if (CHECK_TOKEN("executelinedef"))
-		{
-			EXPECT_TOKEN("=");
-
-			GET_TOKEN();
-
-			EXPECT_NUMBER("choice 'executelinedef'");
-
-			choice->exectag = num;
-
-			EXPECT_TOKEN(";");
-		}
-		else if (CHECK_TOKEN("highlighted"))
-		{
-			EXPECT_TOKEN("=");
-
-			GET_TOKEN();
-
-			if (CHECK_TOKEN("true"))
-				page->startchoice = choiceid;
-
-			EXPECT_TOKEN(";");
-		}
-		else if (CHECK_TOKEN("nochoice"))
-		{
-			EXPECT_TOKEN("=");
-
-			GET_TOKEN();
-
-			if (CHECK_TOKEN("true"))
-				page->nochoice = choiceid;
-
-			EXPECT_TOKEN(";");
-		}
-		else if (CHECK_TOKEN("closedialog"))
-		{
-			EXPECT_TOKEN("=");
-
-			GET_TOKEN();
-
-			if (CHECK_TOKEN("true"))
-				choice->endprompt = true;
-			else if (CHECK_TOKEN("false"))
-				choice->endprompt = false;
-
-			EXPECT_TOKEN(";");
-		}
-		else
-		{
-			ParseError(sc->line, CONS_WARNING, "In choice: Unknown token '%s'", tkn);
-			IGNORE_FIELD();
-		}
-
-		GET_TOKEN();
-	}
-
-	return PARSE_STATUS_OK;
-
-fail:
-	return ExitBlock(sc, bracket);
-}
-
-static int ParsePicture(textpage_t *page, tokenizer_t *sc, int bracket)
-{
-	if (page->numpics == MAX_PROMPT_PICS)
-		return PARSE_STATUS_FAIL;
-
-	page->numpics++;
-	page->pics = Z_Realloc(page->pics, sizeof(cutscene_pic_t) * page->numpics, PU_STATIC, NULL);
-
-	cutscene_pic_t *pic = &page->pics[page->numpics - 1];
-
-	INT32 picid = page->numpics;
-
-	const char *tkn;
-
-	GET_TOKEN();
-
-	while (!CHECK_TOKEN("}"))
-	{
-		if (CHECK_TOKEN("name"))
-		{
-			EXPECT_TOKEN("=");
-			EXPECT_TOKEN("\"");
-
-			GET_TOKEN();
-
-			strlcpy(pic->name, tkn, sizeof(pic->name));
-
-			EXPECT_TOKEN("\"");
-			EXPECT_TOKEN(";");
-		}
-		else if (CHECK_TOKEN("x"))
-		{
-			EXPECT_TOKEN("=");
-
-			GET_TOKEN();
-
-			EXPECT_NUMBER("picture 'x'");
-
-			pic->xcoord = num;
-
-			EXPECT_TOKEN(";");
-		}
-		else if (CHECK_TOKEN("y"))
-		{
-			EXPECT_TOKEN("=");
-
-			GET_TOKEN();
-
-			EXPECT_NUMBER("picture 'y'");
-
-			pic->ycoord = num;
-
-			EXPECT_TOKEN(";");
-		}
-		else if (CHECK_TOKEN("duration"))
-		{
-			EXPECT_TOKEN("=");
-
-			GET_TOKEN();
-
-			EXPECT_NUMBER("picture 'duration'");
-
-			if (num < 0)
-				num = 0;
-
-			pic->duration = num;
-
-			EXPECT_TOKEN(";");
-		}
-		else if (CHECK_TOKEN("hires"))
-		{
-			EXPECT_TOKEN("=");
-
-			GET_TOKEN();
-
-			if (CHECK_TOKEN("true"))
-				pic->hires = true;
-			else if (CHECK_TOKEN("false"))
-				pic->hires = false;
-
-			EXPECT_TOKEN(";");
-		}
-		else if (CHECK_TOKEN("start"))
-		{
-			EXPECT_TOKEN("=");
-
-			GET_TOKEN();
-
-			if (CHECK_TOKEN("true"))
-				page->pictostart = picid - 1;
-
-			EXPECT_TOKEN(";");
-		}
-		else if (CHECK_TOKEN("looppoint"))
-		{
-			EXPECT_TOKEN("=");
-
-			GET_TOKEN();
-
-			if (CHECK_TOKEN("true"))
-				page->pictoloop = picid;
-
-			EXPECT_TOKEN(";");
-		}
-		else
-		{
-			ParseError(sc->line, CONS_WARNING, "In picture: Unknown token '%s'", tkn);
-			IGNORE_FIELD();
-		}
-
-		GET_TOKEN();
-	}
-
-	return PARSE_STATUS_OK;
-
-fail:
-	return ExitBlock(sc, bracket);
-}
-
 #define BUFWRITE(writechr) M_BufferWrite(&buf, (UINT8)(writechr))
 
 static char *EscapeStringChars(const char *string, int tokenizer_line)
@@ -1044,6 +732,318 @@ char *P_ConvertSOCPageDialog(char *text, size_t *text_length)
 }
 
 #undef WRITE_TEXTCHAR
+
+static int ParseChoice(textpage_t *page, tokenizer_t *sc, int bracket)
+{
+	if (page->numchoices == MAX_PROMPT_CHOICES)
+		return PARSE_STATUS_FAIL;
+
+	page->numchoices++;
+	page->choices = Z_Realloc(page->choices, sizeof(promptchoice_t) * page->numchoices, PU_STATIC, NULL);
+
+	promptchoice_t *choice = &page->choices[page->numchoices - 1];
+
+	INT32 choiceid = page->numchoices;
+
+	const char *tkn;
+	writebuffer_t buf;
+
+	GET_TOKEN();
+
+	while (!CHECK_TOKEN("}"))
+	{
+		if (CHECK_TOKEN("text"))
+		{
+			EXPECT_TOKEN("=");
+			EXPECT_TOKEN("\"");
+
+			GET_TOKEN();
+
+			M_BufferInit(&buf);
+
+			size_t total_length = 0;
+
+			Z_Free(choice->text);
+			choice->text = NULL;
+
+			while (true)
+			{
+				char *escaped = EscapeStringChars(tkn, sc->line);
+				if (escaped)
+				{
+					size_t parsed_length = 0;
+					char *parsed = ParseText(escaped, &parsed_length, true, sc->line);
+
+					M_BufferMemWrite(&buf, (UINT8 *)parsed, parsed_length);
+					total_length += parsed_length;
+
+					Z_Free(escaped);
+				}
+
+				EXPECT_TOKEN("\"");
+
+				GET_TOKEN();
+
+				if (CHECK_TOKEN(";"))
+					break;
+				else
+				{
+					IS_TOKEN("\"");
+					GET_TOKEN();
+				}
+			}
+
+			choice->text = Z_Realloc(buf.data, total_length + 1, PU_STATIC, NULL);
+			choice->text[total_length] = '\0';
+
+			buf.data = NULL;
+		}
+		else if (CHECK_TOKEN("nextpage"))
+		{
+			EXPECT_TOKEN("=");
+
+			GET_TOKEN();
+
+			if (CHECK_TOKEN("\""))
+			{
+				GET_TOKEN();
+
+				Z_Free(choice->nextpagename);
+				choice->nextpage = 0;
+				choice->nextpagename = Z_StrDup(tkn);
+
+				EXPECT_TOKEN("\"");
+			}
+			else
+			{
+				EXPECT_NUMBER("choice 'nextpage'");
+
+				Z_Free(choice->nextpagename);
+
+				choice->nextpage = num;
+			}
+
+			EXPECT_TOKEN(";");
+		}
+		else if (CHECK_TOKEN("nextconversation"))
+		{
+			EXPECT_TOKEN("=");
+
+			GET_TOKEN();
+
+			if (CHECK_TOKEN("\""))
+			{
+				GET_TOKEN();
+
+				Z_Free(choice->nextpromptname);
+				choice->nextprompt = 0;
+				choice->nextpromptname = Z_StrDup(tkn);
+
+				EXPECT_TOKEN("\"");
+			}
+			else
+			{
+				EXPECT_NUMBER("choice 'nextconversation'");
+
+				Z_Free(choice->nextpromptname);
+
+				choice->nextprompt = num;
+			}
+
+			EXPECT_TOKEN(";");
+		}
+		else if (CHECK_TOKEN("nexttag"))
+		{
+			EXPECT_TOKEN("=");
+			EXPECT_TOKEN("\"");
+
+			GET_TOKEN();
+
+			strlcpy(choice->nexttag, tkn, sizeof(choice->nexttag));
+
+			EXPECT_TOKEN("\"");
+			EXPECT_TOKEN(";");
+		}
+		else if (CHECK_TOKEN("executelinedef"))
+		{
+			EXPECT_TOKEN("=");
+
+			GET_TOKEN();
+
+			EXPECT_NUMBER("choice 'executelinedef'");
+
+			choice->exectag = num;
+
+			EXPECT_TOKEN(";");
+		}
+		else if (CHECK_TOKEN("highlighted"))
+		{
+			EXPECT_TOKEN("=");
+
+			GET_TOKEN();
+
+			if (CHECK_TOKEN("true"))
+				page->startchoice = choiceid;
+
+			EXPECT_TOKEN(";");
+		}
+		else if (CHECK_TOKEN("nochoice"))
+		{
+			EXPECT_TOKEN("=");
+
+			GET_TOKEN();
+
+			if (CHECK_TOKEN("true"))
+				page->nochoice = choiceid;
+
+			EXPECT_TOKEN(";");
+		}
+		else if (CHECK_TOKEN("closedialog"))
+		{
+			EXPECT_TOKEN("=");
+
+			GET_TOKEN();
+
+			if (CHECK_TOKEN("true"))
+				choice->endprompt = true;
+			else if (CHECK_TOKEN("false"))
+				choice->endprompt = false;
+
+			EXPECT_TOKEN(";");
+		}
+		else
+		{
+			ParseError(sc->line, CONS_WARNING, "In choice: Unknown token '%s'", tkn);
+			IGNORE_FIELD();
+		}
+
+		GET_TOKEN();
+	}
+
+	return PARSE_STATUS_OK;
+
+fail:
+	return ExitBlock(sc, bracket);
+}
+
+static int ParsePicture(textpage_t *page, tokenizer_t *sc, int bracket)
+{
+	if (page->numpics == MAX_PROMPT_PICS)
+		return PARSE_STATUS_FAIL;
+
+	page->numpics++;
+	page->pics = Z_Realloc(page->pics, sizeof(cutscene_pic_t) * page->numpics, PU_STATIC, NULL);
+
+	cutscene_pic_t *pic = &page->pics[page->numpics - 1];
+
+	INT32 picid = page->numpics;
+
+	const char *tkn;
+
+	GET_TOKEN();
+
+	while (!CHECK_TOKEN("}"))
+	{
+		if (CHECK_TOKEN("name"))
+		{
+			EXPECT_TOKEN("=");
+			EXPECT_TOKEN("\"");
+
+			GET_TOKEN();
+
+			strlcpy(pic->name, tkn, sizeof(pic->name));
+
+			EXPECT_TOKEN("\"");
+			EXPECT_TOKEN(";");
+		}
+		else if (CHECK_TOKEN("x"))
+		{
+			EXPECT_TOKEN("=");
+
+			GET_TOKEN();
+
+			EXPECT_NUMBER("picture 'x'");
+
+			pic->xcoord = num;
+
+			EXPECT_TOKEN(";");
+		}
+		else if (CHECK_TOKEN("y"))
+		{
+			EXPECT_TOKEN("=");
+
+			GET_TOKEN();
+
+			EXPECT_NUMBER("picture 'y'");
+
+			pic->ycoord = num;
+
+			EXPECT_TOKEN(";");
+		}
+		else if (CHECK_TOKEN("duration"))
+		{
+			EXPECT_TOKEN("=");
+
+			GET_TOKEN();
+
+			EXPECT_NUMBER("picture 'duration'");
+
+			if (num < 0)
+				num = 0;
+
+			pic->duration = num;
+
+			EXPECT_TOKEN(";");
+		}
+		else if (CHECK_TOKEN("hires"))
+		{
+			EXPECT_TOKEN("=");
+
+			GET_TOKEN();
+
+			if (CHECK_TOKEN("true"))
+				pic->hires = true;
+			else if (CHECK_TOKEN("false"))
+				pic->hires = false;
+
+			EXPECT_TOKEN(";");
+		}
+		else if (CHECK_TOKEN("start"))
+		{
+			EXPECT_TOKEN("=");
+
+			GET_TOKEN();
+
+			if (CHECK_TOKEN("true"))
+				page->pictostart = picid - 1;
+
+			EXPECT_TOKEN(";");
+		}
+		else if (CHECK_TOKEN("looppoint"))
+		{
+			EXPECT_TOKEN("=");
+
+			GET_TOKEN();
+
+			if (CHECK_TOKEN("true"))
+				page->pictoloop = picid;
+
+			EXPECT_TOKEN(";");
+		}
+		else
+		{
+			ParseError(sc->line, CONS_WARNING, "In picture: Unknown token '%s'", tkn);
+			IGNORE_FIELD();
+		}
+
+		GET_TOKEN();
+	}
+
+	return PARSE_STATUS_OK;
+
+fail:
+	return ExitBlock(sc, bracket);
+}
 
 static int ParsePage(textprompt_t *prompt, tokenizer_t *sc, int bracket)
 {
