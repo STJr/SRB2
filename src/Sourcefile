@@ -34,6 +34,7 @@ m_queue.c
 info.c
 p_ceilng.c
 p_dialog.c
+p_dialogscript.c
 p_enemy.c
 p_floor.c
 p_inter.c
@@ -70,6 +71,7 @@ r_picformats.c
 r_portal.c
 screen.c
 taglist.c
+usdf.c
 v_video.c
 s_sound.c
 sounds.c

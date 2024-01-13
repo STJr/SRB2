@@ -40,6 +40,7 @@ add_executable(SRB2SDL2 MACOSX_BUNDLE WIN32
 	info.c
 	p_ceilng.c
 	p_dialog.c
+	p_dialogscript.c
 	p_enemy.c
 	p_floor.c
 	p_inter.c
@@ -76,6 +77,7 @@ add_executable(SRB2SDL2 MACOSX_BUNDLE WIN32
 	r_portal.c
 	screen.c
 	taglist.c
+	usdf.c
 	v_video.c
 	s_sound.c
 	sounds.c

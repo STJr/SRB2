@@ -313,7 +313,8 @@
     <ClInclude Include="..\netcode\server_connection.h" />
     <ClInclude Include="..\netcode\tic_command.h" />
     <ClInclude Include="..\p5prof.h" />
-    <ClInclude Include="..\p_haptic.h" />
+    <ClInclude Include="..\p_dialog.h" />
+    <ClInclude Include="..\p_dialogscript.h" />
     <ClInclude Include="..\p_local.h" />
     <ClInclude Include="..\p_maputl.h" />
     <ClInclude Include="..\p_mobj.h" />
@@ -350,6 +351,7 @@
     <ClInclude Include="..\s_sound.h" />
     <ClInclude Include="..\tables.h" />
     <ClInclude Include="..\taglist.h" />
+    <ClInclude Include="..\usdf.h" />
     <ClInclude Include="..\v_video.h" />
     <ClInclude Include="..\w_wad.h" />
     <ClInclude Include="..\y_inter.h" />
@@ -490,9 +492,9 @@
     <ClCompile Include="..\netcode\server_connection.c" />
     <ClCompile Include="..\netcode\tic_command.c" />
     <ClCompile Include="..\p_ceilng.c" />
+    <ClCompile Include="..\p_dialog.c" />
     <ClCompile Include="..\p_enemy.c" />
     <ClCompile Include="..\p_floor.c" />
-    <ClCompile Include="..\p_haptic.c" />
     <ClCompile Include="..\p_inter.c" />
     <ClCompile Include="..\p_lights.c" />
     <ClCompile Include="..\p_map.c" />
@@ -540,6 +542,7 @@
     <ClCompile Include="..\s_sound.c" />
     <ClCompile Include="..\tables.c" />
     <ClCompile Include="..\taglist.c" />
+    <ClCompile Include="..\usdf.c" />
     <ClCompile Include="..\t_facon.c">
       <ExcludedFromBuild>true</ExcludedFromBuild>
     </ClCompile>

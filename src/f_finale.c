@@ -209,6 +209,89 @@ static huddrawlist_h luahuddrawlist_title;
 
 static textwriter_t textwriter;
 
+static void WriterTextBufferAlloc(textwriter_t *writer)
+{
+	if (!writer->disptextsize)
+		writer->disptextsize = 16;
+
+	size_t oldsize = writer->disptextsize;
+
+	while (((unsigned)writer->writeptr) + 1 >= writer->disptextsize)
+		writer->disptextsize *= 2;
+
+	if (!writer->disptext || oldsize != writer->disptextsize)
+		writer->disptext = Z_Realloc(writer->disptext, writer->disptextsize, PU_STATIC, NULL);
+}
+
+//
+// This alters the text string writer->disptext.
+// Use the typical string drawing functions to display it.
+// Returns 0 if \0 is reached (end of input)
+//
+static boolean F_WriteText(textwriter_t *writer)
+{
+	INT32 numtowrite = 1;
+
+	const char *c;
+
+	const int max_speed = 8;
+
+	if (writer->boostspeed)
+	{
+		// for custom cutscene speedup mode
+		numtowrite = max_speed;
+	}
+	else
+	{
+		// Don't draw any characters if the count was 1 or more when we started
+		if (--writer->textcount >= 0)
+			return true;
+
+		if (writer->textspeed < max_speed-1)
+			numtowrite = max_speed - writer->textspeed;
+	}
+
+	for (;numtowrite > 0;++writer->baseptr)
+	{
+		c = &writer->basetext[writer->baseptr];
+		if (!c || !*c || *c=='#')
+			return false;
+
+		// \xA0 - \xAF = change text speed
+		if ((UINT8)*c >= 0xA0 && (UINT8)*c <= 0xAF)
+		{
+			writer->textspeed = (INT32)((UINT8)*c - 0xA0);
+			continue;
+		}
+		// \xB0 - \xD2 = delay character for up to one second (35 tics)
+		else if ((UINT8)*c >= 0xB0 && (UINT8)*c <= (0xB0+TICRATE-1))
+		{
+			writer->textcount = (INT32)((UINT8)*c - 0xAF);
+			numtowrite = 0;
+			continue;
+		}
+
+		WriterTextBufferAlloc(writer);
+
+		writer->disptext[writer->writeptr++] = *c;
+
+		// Ignore other control codes (color)
+		if ((UINT8)*c < 0x80)
+			--numtowrite;
+	}
+
+	// Reset textcount for next tic based on speed
+	// if it wasn't already set by a delay.
+	if (writer->textcount < 0)
+	{
+		writer->textcount = 0;
+		if (writer->textspeed > max_speed-1)
+			writer->textcount = writer->textspeed - (max_speed-1);
+	}
+
+	return true;
+}
+
 static void F_ResetTextWriter(textwriter_t *writer, const char *basetext)
 {
 	P_ResetTextWriter(writer, basetext, strlen(basetext));
@@ -763,7 +846,7 @@ void F_IntroTicker(void)
 
 	timetonext--;
 
-	P_CutsceneWriteText(&textwriter);
+	F_WriteText(&textwriter);
 
 	// check for skipping
 	if (keypressed)
@@ -3971,7 +4054,7 @@ void F_CutsceneTicker(void)
 
 	if (++stoptimer > 2 && timetonext == 1)
 		F_AdvanceToNextScene();
-	else if (!timetonext && !P_CutsceneWriteText(&textwriter))
+	else if (!timetonext && !F_WriteText(&textwriter))
 		timetonext = 5*TICRATE + 1;
 }
 

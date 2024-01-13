@@ -552,8 +552,14 @@
     <ClInclude Include="..\r_fps.h">
       <Filter>R_Rend</Filter>
     </ClInclude>
-    <ClInclude Include="..\p_haptic.h">
-      <Filter>P_Play</Filter>
+    <ClInclude Include="..\p_dialog.h">
+      <Filter>P_Dialog</Filter>
+    </ClInclude>
+    <ClInclude Include="..\p_dialogscript.h">
+      <Filter>P_Dialog</Filter>
+    </ClInclude>
+    <ClInclude Include="..\usdf.h">
+      <Filter>P_Dialog</Filter>
     </ClInclude>
     <ClInclude Include="..\m_easing.h">
       <Filter>M_Misc</Filter>
@@ -1102,8 +1108,14 @@
     <ClCompile Include="..\r_fps.c">
       <Filter>R_Rend</Filter>
     </ClCompile>
-    <ClCompile Include="..\p_haptic.c">
-      <Filter>P_Play</Filter>
+    <ClCompile Include="..\p_dialog.c">
+      <Filter>P_Dialog</Filter>
+    </ClCompile>
+    <ClCompile Include="..\p_dialogscript.c">
+      <Filter>P_Dialog</Filter>
+    </ClCompile>
+    <ClCompile Include="..\usdf.c">
+      <Filter>P_Dialog</Filter>
     </ClCompile>
     <ClCompile Include="..\m_easing.c">
       <Filter>M_Misc</Filter>

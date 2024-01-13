@@ -27,6 +27,7 @@
 #include "i_system.h"
 #include "p_setup.h"
 #include "p_dialog.h"
+#include "usdf.h"
 #include "r_data.h"
 #include "r_textures.h"
 #include "r_draw.h"

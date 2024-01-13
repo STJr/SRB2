@@ -20,14 +20,16 @@
 #include "p_setup.h"
 #include "p_spec.h"
 #include "p_saveg.h"
+#include "p_polyobj.h"
 #include "p_dialog.h"
 
 #include "i_time.h"
-#include "i_sound.h" // for I_PlayCD()..
+#include "i_sound.h"
 #include "i_video.h" // for I_FinishUpdate()..
 #include "r_sky.h"
 #include "i_system.h"
 
+#include "r_main.h"
 #include "r_data.h"
 #include "r_things.h" // for R_AddSpriteDefs
 #include "r_textures.h"
@@ -52,12 +54,10 @@
 
 #include "dehacked.h" // for map headers
 #include "deh_tables.h" // FREE_SKINCOLORS
-#include "r_main.h"
+#include "usdf.h"
 #include "m_cond.h" // for emblems
 
 #include "m_argv.h"
-
-#include "p_polyobj.h"
 
 #include "v_video.h"
 
