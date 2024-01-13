@@ -772,7 +772,7 @@ static int ParseChoice(textpage_t *page, tokenizer_t *sc, int bracket)
 				if (escaped)
 				{
 					size_t parsed_length = 0;
-					char *parsed = ParseText(escaped, &parsed_length, true, sc->line);
+					char *parsed = ParseText(escaped, &parsed_length, false, sc->line);
 
 					M_BufferMemWrite(&buf, (UINT8 *)parsed, parsed_length);
 					total_length += parsed_length;
