@@ -38,6 +38,8 @@
 #include "doomstat.h"
 #include "g_state.h"
 
+#include "hu_stuff.h"
+
 lua_State *gL = NULL;
 
 // List of internal libraries to load from SRB2
@@ -431,6 +433,9 @@ int LUA_PushGlobals(lua_State *L, const char *word)
 		if (!splitscreen)
 			return 0;
 		LUA_PushUserdata(L, &camera2, META_CAMERA);
+		return 1;
+	} else if (fastcmp(word, "chatactive")) {
+		lua_pushboolean(L, chat_on);
 		return 1;
 	}
 	return 0;
@@ -1398,7 +1403,7 @@ static UINT8 ArchiveValue(int TABLESINDEX, int myindex)
 		{
 			skin_t *skin = *((skin_t **)lua_touserdata(gL, myindex));
 			WRITEUINT8(save_p, ARCH_SKIN);
-			WRITEUINT8(save_p, skin - skins); // UINT8 because MAXSKINS is only 32
+			WRITEUINT8(save_p, skin->skinnum); // UINT8 because MAXSKINS must be <= 256
 			break;
 		}
 		case ARCH_GAMETYPE:
@@ -1655,7 +1660,7 @@ static UINT8 UnArchiveValue(int TABLESINDEX)
 		LUA_PushUserdata(gL, READUINT16(save_p) == 1 ? &mouse : &mouse2, META_MOUSE);
 		break;
 	case ARCH_SKIN:
-		LUA_PushUserdata(gL, &skins[READUINT8(save_p)], META_SKIN);
+		LUA_PushUserdata(gL, skins[READUINT8(save_p)], META_SKIN);
 		break;
 	case ARCH_GAMETYPE:
 		LUA_PushUserdata(gL, &gametypes[READUINT8(save_p)], META_GAMETYPE);

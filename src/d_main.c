@@ -1431,10 +1431,6 @@ void D_SRB2Main(void)
 	// Make backups of some SOCcable tables.
 	P_BackupTables();
 
-	// Setup character tables
-	// Have to be done here before files are loaded
-	M_InitCharacterTables();
-
 	mainwads = 3; // doesn't include music.dta
 #ifdef USE_PATCH_DTA
 	mainwads++;

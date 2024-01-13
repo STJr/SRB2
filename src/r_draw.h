@@ -146,7 +146,7 @@ UINT8 *R_GetBlendTable(int style, INT32 alphalevel);
 boolean R_BlendLevelVisible(INT32 blendmode, INT32 alphalevel);
 
 // Color ramp modification should force a recache
-extern UINT8 skincolor_modified[];
+extern boolean skincolor_modified[];
 
 void R_InitViewBuffer(INT32 width, INT32 height);
 void R_InitViewBorder(void);

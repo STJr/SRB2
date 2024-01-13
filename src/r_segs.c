@@ -525,6 +525,9 @@ static boolean R_IsFFloorTranslucent(visffloor_t *pfloor)
 //
 // R_RenderThickSideRange
 // Renders all the thick sides in the given range.
+
+static fixed_t ffloortexturecolumn[MAXVIDWIDTH];
+
 void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 {
 	size_t          pindex;
@@ -550,7 +553,7 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 	fixed_t       left_top, left_bottom; // needed here for slope skewing
 	pslope_t      *skewslope = NULL;
 	boolean do_texture_skew;
-	UINT32 lineflags;
+	INT16 lineflags;
 	fixed_t wall_scalex, wall_scaley;
 
 	void (*colfunc_2s) (column_t *);
@@ -575,7 +578,7 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 		lineflags = newline->flags;
 	}
 	else
-		lineflags = pfloor->master->flags;
+		lineflags = curline->linedef->flags;
 
 	texnum = R_GetTextureNum(sidedef->midtexture);
 
@@ -732,10 +735,18 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 	wall_scalex = FixedDiv(FRACUNIT, sidedef->scalex_mid);
 	wall_scaley = sidedef->scaley_mid;
 
-	thicksidecol = ds->thicksidecol;
+	thicksidecol = ffloortexturecolumn;
 
-	for (INT32 x = x1; x <= x2; x++)
-		thicksidecol[x] = FixedDiv(thicksidecol[x], wall_scalex) + ds->offsetx;
+	if (wall_scalex == FRACUNIT)
+	{
+		for (INT32 x = x1; x <= x2; x++)
+			thicksidecol[x] = ds->thicksidecol[x] + ds->offsetx;
+	}
+	else
+	{
+		for (INT32 x = x1; x <= x2; x++)
+			thicksidecol[x] = FixedDiv(ds->thicksidecol[x], wall_scalex) + ds->offsetx;
+	}
 
 	mfloorclip = ds->sprbottomclip;
 	mceilingclip = ds->sprtopclip;
@@ -746,10 +757,12 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 	left_bottom = P_GetFFloorBottomZAt(pfloor, ds->leftpos.x, ds->leftpos.y) - viewz;
 
 	do_texture_skew = lineflags & ML_SKEWTD;
-	skewslope = *pfloor->t_slope; // skew using top slope by default
 
 	if (do_texture_skew)
+	{
+		skewslope = *pfloor->t_slope; // skew using top slope by default
 		dc_texturemid = FixedMul(left_top, wall_scaley);
+	}
 	else
 		dc_texturemid = FixedMul(*pfloor->topheight - viewz, wall_scaley);
 
@@ -757,14 +770,16 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 
 	if (lineflags & ML_DONTPEGBOTTOM)
 	{
-		skewslope = *pfloor->b_slope; // skew using bottom slope
 		if (do_texture_skew)
+		{
+			skewslope = *pfloor->b_slope; // skew using bottom slope
 			dc_texturemid = FixedMul(left_bottom, wall_scaley);
+		}
 		else
 			offsetvalue -= FixedMul(*pfloor->topheight - *pfloor->bottomheight, wall_scaley);
 	}
 
-	if (do_texture_skew && skewslope)
+	if (skewslope)
 	{
 		angle_t lineangle = R_PointToAngle2(curline->v1->x, curline->v1->y, curline->v2->x, curline->v2->y);
 		ffloortextureslide = FixedMul(skewslope->zdelta, FINECOSINE((lineangle-skewslope->xydirection)>>ANGLETOFINESHIFT));
@@ -1867,30 +1882,12 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 	else
 	{
 		// two sided line
-		boolean bothceilingssky = false; // turned on if both back and front ceilings are sky
-		boolean bothfloorssky = false; // likewise, but for floors
-
 		SLOPEPARAMS(backsector->c_slope, worldhigh, worldhighslope, backsector->ceilingheight)
 		SLOPEPARAMS(backsector->f_slope, worldlow,  worldlowslope,  backsector->floorheight)
 		worldhigh -= viewz;
 		worldhighslope -= viewz;
 		worldlow -= viewz;
 		worldlowslope -= viewz;
-
-		// hack to allow height changes in outdoor areas
-		// This is what gets rid of the upper textures if there should be sky
-		if (frontsector->ceilingpic == skyflatnum
-			&& backsector->ceilingpic == skyflatnum)
-		{
-			bothceilingssky = true;
-		}
-
-		// likewise, but for floors and upper textures
-		if (frontsector->floorpic == skyflatnum
-			&& backsector->floorpic == skyflatnum)
-		{
-			bothfloorssky = true;
-		}
 
 		ds_p->sprtopclip = ds_p->sprbottomclip = NULL;
 		ds_p->silhouette = 0;
@@ -1991,6 +1988,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 			|| backsector->floorlightsec != frontsector->floorlightsec
 			//SoM: 4/3/2000: Check for colormaps
 			|| frontsector->extra_colormap != backsector->extra_colormap
+			|| !P_CompareSectorPortals(P_SectorGetFloorPortal(frontsector), P_SectorGetFloorPortal(backsector))
 			|| (frontsector->ffloors != backsector->ffloors && !Tag_Compare(&frontsector->tags, &backsector->tags)))
 		{
 			markfloor = true;
@@ -2026,9 +2024,10 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 			|| backsector->ceilinglightsec != frontsector->ceilinglightsec
 			//SoM: 4/3/2000: Check for colormaps
 			|| frontsector->extra_colormap != backsector->extra_colormap
+			|| !P_CompareSectorPortals(P_SectorGetCeilingPortal(frontsector), P_SectorGetCeilingPortal(backsector))
 			|| (frontsector->ffloors != backsector->ffloors && !Tag_Compare(&frontsector->tags, &backsector->tags)))
 		{
-				markceiling = true;
+			markceiling = true;
 		}
 		else
 		{
@@ -2478,7 +2477,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 	worldtopslope >>= 4;
 	worldbottomslope >>= 4;
 
-	if (linedef->special == HORIZONSPECIAL) { // HORIZON LINES
+	if (horizonline) { // HORIZON LINES
 		topstep = bottomstep = 0;
 		topfrac = bottomfrac = (centeryfrac>>4);
 		topfrac++; // Prevent 1px HOM
@@ -2579,7 +2578,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 		{
 			ffloor[i].f_pos >>= 4;
 			ffloor[i].f_pos_slope >>= 4;
-			if (linedef->special == HORIZONSPECIAL) // Horizon lines extend FOFs in contact with them too.
+			if (horizonline) // Horizon lines extend FOFs in contact with them too.
 			{
 				ffloor[i].f_step = 0;
 				ffloor[i].f_frac = (centeryfrac>>4);

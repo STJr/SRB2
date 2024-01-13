@@ -204,7 +204,7 @@ void P_NukeEnemies(mobj_t *inflictor, mobj_t *source, fixed_t radius);
 void P_Earthquake(mobj_t *inflictor, mobj_t *source, fixed_t radius);
 boolean P_HomingAttack(mobj_t *source, mobj_t *enemy); /// \todo doesn't belong in p_user
 boolean P_SuperReady(player_t *player, boolean transform);
-void P_DoJump(player_t *player, boolean soundandstate);
+void P_DoJump(player_t *player, boolean soundandstate, boolean allowflip);
 void P_DoSpinDashDust(player_t *player);
 #define P_AnalogMove(player) (P_ControlStyle(player) == CS_LMAOGALOG)
 boolean P_TransferToNextMare(player_t *player);
@@ -424,6 +424,7 @@ boolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, boolean allowdropoff);
 boolean P_Move(mobj_t *actor, fixed_t speed);
 boolean P_SetOrigin(mobj_t *thing, fixed_t x, fixed_t y, fixed_t z);
 boolean P_MoveOrigin(mobj_t *thing, fixed_t x, fixed_t y, fixed_t z);
+boolean P_LineIsBlocking(mobj_t *mo, line_t *li);
 void P_SlideMove(mobj_t *mo);
 void P_BounceMove(mobj_t *mo);
 boolean P_CheckSight(mobj_t *t1, mobj_t *t2);
