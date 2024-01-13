@@ -310,46 +310,45 @@ void HWR_RenderBatches(void)
 		{
 			// check if a state change is required, set the change bools and next vars
 			int nextIndex = polygonIndexArray[polygonReadPos];
-			nextShader = polygonArray[nextIndex].shader;
-			nextTexture = polygonArray[nextIndex].texture;
-			nextPolyFlags = polygonArray[nextIndex].polyFlags;
-			nextSurfaceInfo = polygonArray[nextIndex].surf;
-			if (nextPolyFlags & PF_NoTexture)
-				nextTexture = 0;
-			if (currentShader != nextShader && cv_glshaders.value && gl_shadersavailable)
+			if (polygonArray[index].hash != polygonArray[nextIndex].hash)
 			{
 				changeState = true;
-				changeShader = true;
-			}
-			if (currentTexture != nextTexture)
-			{
-				changeState = true;
-				changeTexture = true;
-			}
-			if (currentPolyFlags != nextPolyFlags)
-			{
-				changeState = true;
-				changePolyFlags = true;
-			}
-			if (cv_glshaders.value && gl_shadersavailable)
-			{
-				if (currentSurfaceInfo.PolyColor.rgba != nextSurfaceInfo.PolyColor.rgba ||
-					currentSurfaceInfo.TintColor.rgba != nextSurfaceInfo.TintColor.rgba ||
-					currentSurfaceInfo.FadeColor.rgba != nextSurfaceInfo.FadeColor.rgba ||
-					currentSurfaceInfo.LightInfo.light_level != nextSurfaceInfo.LightInfo.light_level ||
-					currentSurfaceInfo.LightInfo.fade_start != nextSurfaceInfo.LightInfo.fade_start ||
-					currentSurfaceInfo.LightInfo.fade_end != nextSurfaceInfo.LightInfo.fade_end)
+				nextShader = polygonArray[nextIndex].shader;
+				nextTexture = polygonArray[nextIndex].texture;
+				nextPolyFlags = polygonArray[nextIndex].polyFlags;
+				nextSurfaceInfo = polygonArray[nextIndex].surf;
+				if (nextPolyFlags & PF_NoTexture)
+					nextTexture = 0;
+				if (currentShader != nextShader && cv_glshaders.value && gl_shadersavailable)
 				{
-					changeState = true;
-					changeSurfaceInfo = true;
+					changeShader = true;
 				}
-			}
-			else
-			{
-				if (currentSurfaceInfo.PolyColor.rgba != nextSurfaceInfo.PolyColor.rgba)
+				if (currentTexture != nextTexture)
 				{
-					changeState = true;
-					changeSurfaceInfo = true;
+					changeTexture = true;
+				}
+				if (currentPolyFlags != nextPolyFlags)
+				{
+					changePolyFlags = true;
+				}
+				if (cv_glshaders.value && gl_shadersavailable)
+				{
+					if (currentSurfaceInfo.PolyColor.rgba != nextSurfaceInfo.PolyColor.rgba ||
+						currentSurfaceInfo.TintColor.rgba != nextSurfaceInfo.TintColor.rgba ||
+						currentSurfaceInfo.FadeColor.rgba != nextSurfaceInfo.FadeColor.rgba ||
+						currentSurfaceInfo.LightInfo.light_level != nextSurfaceInfo.LightInfo.light_level ||
+						currentSurfaceInfo.LightInfo.fade_start != nextSurfaceInfo.LightInfo.fade_start ||
+						currentSurfaceInfo.LightInfo.fade_end != nextSurfaceInfo.LightInfo.fade_end)
+					{
+						changeSurfaceInfo = true;
+					}
+				}
+				else
+				{
+					if (currentSurfaceInfo.PolyColor.rgba != nextSurfaceInfo.PolyColor.rgba)
+					{
+						changeSurfaceInfo = true;
+					}
 				}
 			}
 		}
@@ -371,36 +370,39 @@ void HWR_RenderBatches(void)
 		if (stopFlag) break;
 
 		// change state according to change bools and next vars, update current vars and reset bools
-		if (changeShader)
+		if (changeState)
 		{
-			HWD.pfnSetShader(nextShader);
-			currentShader = nextShader;
-			changeShader = false;
+			if (changeShader)
+			{
+				HWD.pfnSetShader(nextShader);
+				currentShader = nextShader;
+				changeShader = false;
 
-			ps_hw_numshaders.value.i++;
-		}
-		if (changeTexture)
-		{
-			// texture should be already ready for use from calls to SetTexture during batch collection
-		    HWD.pfnSetTexture(nextTexture);
-			currentTexture = nextTexture;
-			changeTexture = false;
+				ps_hw_numshaders.value.i++;
+			}
+			if (changeTexture)
+			{
+				// texture should be already ready for use from calls to SetTexture during batch collection
+			    HWD.pfnSetTexture(nextTexture);
+				currentTexture = nextTexture;
+				changeTexture = false;
 
-			ps_hw_numtextures.value.i++;
-		}
-		if (changePolyFlags)
-		{
-			currentPolyFlags = nextPolyFlags;
-			changePolyFlags = false;
+				ps_hw_numtextures.value.i++;
+			}
+			if (changePolyFlags)
+			{
+				currentPolyFlags = nextPolyFlags;
+				changePolyFlags = false;
 
-			ps_hw_numpolyflags.value.i++;
-		}
-		if (changeSurfaceInfo)
-		{
-			currentSurfaceInfo = nextSurfaceInfo;
-			changeSurfaceInfo = false;
+				ps_hw_numpolyflags.value.i++;
+			}
+			if (changeSurfaceInfo)
+			{
+				currentSurfaceInfo = nextSurfaceInfo;
+				changeSurfaceInfo = false;
 
-			ps_hw_numcolors.value.i++;
+				ps_hw_numcolors.value.i++;
+			}
 		}
 		// and that should be it?
 	}
