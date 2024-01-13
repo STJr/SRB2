@@ -2254,6 +2254,9 @@ static void readtextpromptpage(MYFILE *f, INT32 num, INT32 pagenum)
 			// end copypasta from readcutscenescene
 			else if (fastcmp(word, "NAME"))
 			{
+				Z_Free(page->name);
+				page->name = NULL;
+
 				if (*word2 != '\0')
 				{
 					char name[256];
@@ -2267,10 +2270,8 @@ static void readtextpromptpage(MYFILE *f, INT32 num, INT32 pagenum)
 							name[j] = ' ';
 					}
 
-					strlcpy(page->name, name, sizeof(page->name));
+					page->name = Z_StrDup(name);
 				}
-				else
-					*page->name = '\0';
 			}
 			else if (fastcmp(word, "ICON"))
 				strlcpy(page->iconname, word2, sizeof(page->iconname));

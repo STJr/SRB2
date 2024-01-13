@@ -248,7 +248,7 @@ typedef struct
 	boolean endprompt;
 
 	char tag[33]; // page tag
-	char name[34]; // narrator name, extra char for color
+	char *name; // narrator name
 	char iconname[256]; // narrator icon lump
 	boolean rightside; // narrator side, false = left, true = right
 	boolean iconflip; // narrator flip icon horizontally

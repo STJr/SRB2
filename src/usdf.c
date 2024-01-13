@@ -17,7 +17,7 @@
 #include "m_tokenizer.h"
 
 #include "deh_soc.h"
-#include "m_misc.h"
+#include "m_writebuffer.h"
 #include "z_zone.h"
 #include "w_wad.h"
 
@@ -249,18 +249,18 @@ static int SkipBlock(tokenizer_t *sc)
 
 static int ParseChoice(textpage_t *page, tokenizer_t *sc, int bracket)
 {
-	const char *tkn;
-
 	if (page->numchoices == MAX_PROMPT_CHOICES)
 		return PARSE_STATUS_FAIL;
 
 	page->numchoices++;
-
 	page->choices = Z_Realloc(page->choices, sizeof(promptchoice_t) * page->numchoices, PU_STATIC, NULL);
 
 	promptchoice_t *choice = &page->choices[page->numchoices - 1];
 
 	INT32 choiceid = page->numchoices;
+
+	const char *tkn;
+	writebuffer_t buf;
 
 	GET_TOKEN();
 
@@ -273,12 +273,44 @@ static int ParseChoice(textpage_t *page, tokenizer_t *sc, int bracket)
 
 			GET_TOKEN();
 
+			M_BufferInit(&buf);
+
+			size_t total_length = 0;
+
 			Z_Free(choice->text);
+			choice->text = NULL;
 
-			choice->text = Z_StrDup(tkn);
+			while (true)
+			{
+				char *escaped = EscapeStringChars(tkn, sc->line);
+				if (escaped)
+				{
+					size_t parsed_length = 0;
+					char *parsed = ParseText(escaped, &parsed_length, true, sc->line);
 
-			EXPECT_TOKEN("\"");
-			EXPECT_TOKEN(";");
+					M_BufferMemWrite(&buf, (UINT8 *)parsed, parsed_length);
+					total_length += parsed_length;
+
+					Z_Free(escaped);
+				}
+
+				EXPECT_TOKEN("\"");
+
+				GET_TOKEN();
+
+				if (CHECK_TOKEN(";"))
+					break;
+				else
+				{
+					IS_TOKEN("\"");
+					GET_TOKEN();
+				}
+			}
+
+			choice->text = Z_Realloc(buf.data, total_length + 1, PU_STATIC, NULL);
+			choice->text[total_length] = '\0';
+
+			buf.data = NULL;
 		}
 		else if (CHECK_TOKEN("nextpage"))
 		{
@@ -410,18 +442,17 @@ fail:
 
 static int ParsePicture(textpage_t *page, tokenizer_t *sc, int bracket)
 {
-	const char *tkn;
-
 	if (page->numpics == MAX_PROMPT_PICS)
 		return PARSE_STATUS_FAIL;
 
 	page->numpics++;
-
 	page->pics = Z_Realloc(page->pics, sizeof(cutscene_pic_t) * page->numpics, PU_STATIC, NULL);
 
 	cutscene_pic_t *pic = &page->pics[page->numpics - 1];
 
 	INT32 picid = page->numpics;
+
+	const char *tkn;
 
 	GET_TOKEN();
 
@@ -528,14 +559,13 @@ fail:
 	return ExitBlock(sc, bracket);
 }
 
-#define BUFWRITE(writechr) M_StringBufferWrite((writechr), &buf, &buffer_pos, &buffer_capacity)
+#define BUFWRITE(writechr) M_BufferWrite(&buf, (UINT8)(writechr))
 
 static char *EscapeStringChars(const char *string, int tokenizer_line)
 {
-	size_t buffer_pos = 0;
-	size_t buffer_capacity = 0;
+	writebuffer_t buf;
 
-	char *buf = NULL;
+	M_BufferInit(&buf);
 
 	while (*string)
 	{
@@ -617,15 +647,14 @@ static char *EscapeStringChars(const char *string, int tokenizer_line)
 			}
 		}
 		else
-		{
 			BUFWRITE(chr);
-		}
 	}
 
-	return buf;
+	return (char*)buf.data;
 
 fail:
-	Z_Free(buf);
+	M_BufferFree(&buf);
+
 	return NULL;
 }
 
@@ -728,7 +757,7 @@ static void GetCommandEnd(char **input)
 	*input = end;
 }
 
-#define WRITE_CHAR(writechr) M_BufferWrite((writechr), buf, buffer_pos, buffer_capacity)
+#define WRITE_CHAR(writechr) M_BufferWrite(bufptr, (UINT8)(writechr))
 #define WRITE_OP(writeop) { \
 	WRITE_CHAR(0xFF); \
 	WRITE_CHAR((writeop)); \
@@ -745,15 +774,16 @@ static void GetCommandEnd(char **input)
 	if (maxlen > 255) \
 		maxlen = 255; \
 	WRITE_CHAR(maxlen); \
-	for (size_t i = 0; i < maxlen; i++) \
-		WRITE_CHAR(str[i]); \
+	M_BufferMemWrite(bufptr, (UINT8*)str, maxlen); \
 }
 
 #define EXPECTED_NUMBER(which) ParseError(tokenizer_line, CONS_WARNING, "Expected integer for command '%s'; got '%s' instead", which, param)
 #define EXPECTED_PARAM(which) ParseError(tokenizer_line, CONS_WARNING, "Expected parameter for command '%s'", which)
 #define IS_COMMAND(match) MatchCommand(match, sizeof(match) - 1, command_start, cmd_len, input)
 
-static void ParseCommand(char **input, UINT8 **buf, size_t *buffer_pos, size_t *buffer_capacity, int tokenizer_line)
+static boolean CheckIfNonScriptCommand(char *command_start, size_t cmd_len, char **input, writebuffer_t *bufptr, int tokenizer_line);
+
+static void ParseCommand(char **input, writebuffer_t *bufptr, int tokenizer_line)
 {
 	char *command_start = NULL;
 	char *command_end = NULL;
@@ -864,7 +894,31 @@ static void ParseCommand(char **input, UINT8 **buf, size_t *buffer_pos, size_t *
 	{
 		WRITE_OP(TP_OP_NEXTPAGE);
 	}
-	else if (IS_COMMAND("COLOR"))
+	else if (!CheckIfNonScriptCommand(command_start, cmd_len, input, bufptr, tokenizer_line))
+	{
+		ParseError(tokenizer_line, CONS_WARNING, "Unknown command %.*s", (int)cmd_len, command_start);
+	}
+}
+
+static void ParseNonScriptCommand(char **input, writebuffer_t *bufptr, int tokenizer_line)
+{
+	char *command_start = NULL;
+	char *command_end = NULL;
+
+	if (!GetCommand(&command_start, &command_end, *input))
+		return;
+
+	size_t cmd_len = command_end - command_start;
+
+	if (!CheckIfNonScriptCommand(command_start, cmd_len, input, bufptr, tokenizer_line))
+	{
+		ParseError(tokenizer_line, CONS_WARNING, "Unknown command %.*s", (int)cmd_len, command_start);
+	}
+}
+
+static boolean CheckIfNonScriptCommand(char *command_start, size_t cmd_len, char **input, writebuffer_t *bufptr, int tokenizer_line)
+{
+	if (IS_COMMAND("COLOR"))
 	{
 		char *param = GetCommandParam(input);
 		if (param)
@@ -881,14 +935,14 @@ static void ParseCommand(char **input, UINT8 **buf, size_t *buffer_pos, size_t *
 			EXPECTED_PARAM("COLOR");
 	}
 	else
-	{
-		ParseError(tokenizer_line, CONS_WARNING, "Unknown command %.*s", (int)cmd_len, command_start);
-	}
+		return false;
+
+	return true;
 }
 
 #undef IS_COMMAND
 
-static boolean ConvertCutsceneControlCode(UINT8 chr, UINT8 **buf, size_t *buffer_pos, size_t *buffer_capacity)
+static boolean ConvertCutsceneControlCode(UINT8 chr, writebuffer_t *bufptr)
 {
 	if (chr >= 0xA0 && chr <= 0xAF)
 	{
@@ -913,16 +967,15 @@ static boolean ConvertCutsceneControlCode(UINT8 chr, UINT8 **buf, size_t *buffer
 #undef WRITE_OP
 #undef WRITE_NUM
 
-#define WRITE_TEXTCHAR(writechr) M_BufferWrite((writechr), &buf, &buffer_pos, &buffer_capacity)
+#define WRITE_TEXTCHAR(writechr) M_BufferWrite(&buf, (UINT8)(writechr))
 
-static char *ParsePageDialog(char *text, size_t *text_length, int tokenizer_line)
+static char *ParseText(char *text, size_t *text_length, boolean parse_scripts, int tokenizer_line)
 {
 	char *input = text;
 
-	size_t buffer_pos = 0;
-	size_t buffer_capacity = 0;
+	writebuffer_t buf;
 
-	UINT8 *buf = NULL;
+	M_BufferInit(&buf);
 
 	while (*input)
 	{
@@ -944,37 +997,37 @@ static char *ParsePageDialog(char *text, size_t *text_length, int tokenizer_line
 		{
 			input++;
 
-			ParseCommand(&input, &buf, &buffer_pos, &buffer_capacity, tokenizer_line);
+			if (parse_scripts)
+				ParseCommand(&input, &buf, tokenizer_line);
+			else
+				ParseNonScriptCommand(&input, &buf, tokenizer_line);
 
 			GetCommandEnd(&input);
 		}
 		else
-		{
 			WRITE_TEXTCHAR(chr);
-		}
 
 		input++;
 	}
 
-	*text_length = buffer_pos;
+	*text_length = buf.pos;
 
-	return (char*)buf;
+	return (char*)buf.data;
 }
 
 char *P_ConvertSOCPageDialog(char *text, size_t *text_length)
 {
 	char *input = text;
 
-	size_t buffer_pos = 0;
-	size_t buffer_capacity = 0;
+	writebuffer_t buf;
 
-	UINT8 *buf = NULL;
+	M_BufferInit(&buf);
 
 	while (*input)
 	{
 		unsigned char chr = *input;
 
-		if (!ConvertCutsceneControlCode((UINT8)chr, &buf, &buffer_pos, &buffer_capacity))
+		if (!ConvertCutsceneControlCode((UINT8)chr, &buf))
 		{
 			if (chr != 0xFF)
 				WRITE_TEXTCHAR(chr);
@@ -985,25 +1038,25 @@ char *P_ConvertSOCPageDialog(char *text, size_t *text_length)
 
 	WRITE_TEXTCHAR('\0');
 
-	*text_length = buffer_pos;
+	*text_length = buf.pos;
 
-	return (char*)buf;
+	return (char*)buf.data;
 }
 
 #undef WRITE_TEXTCHAR
 
 static int ParsePage(textprompt_t *prompt, tokenizer_t *sc, int bracket)
 {
-	const char *tkn;
-
 	if (prompt->numpages == MAX_PAGES)
 		return PARSE_STATUS_FAIL;
 
 	textpage_t *page = &prompt->page[prompt->numpages];
+	prompt->numpages++;
 
 	P_InitTextPromptPage(page);
 
-	prompt->numpages++;
+	const char *tkn;
+	writebuffer_t buf;
 
 	GET_TOKEN();
 
@@ -1030,26 +1083,12 @@ static int ParsePage(textprompt_t *prompt, tokenizer_t *sc, int bracket)
 
 			GET_TOKEN();
 
-			strlcpy(page->name, tkn, sizeof(page->name));
+			M_BufferInit(&buf);
 
-			EXPECT_TOKEN("\"");
-			EXPECT_TOKEN(";");
-		}
-		else if (CHECK_TOKEN("dialog"))
-		{
-			EXPECT_TOKEN("=");
-			EXPECT_TOKEN("\"");
+			size_t total_length = 0;
 
-			GET_TOKEN();
-
-			UINT8 *buffer = NULL;
-			size_t buffer_pos = 0;
-			size_t buffer_capacity = 0;
-
-			size_t total_text_length = 0;
-
-			Z_Free(page->text);
-			page->textlength = 0;
+			Z_Free(page->name);
+			page->name = NULL;
 
 			while (true)
 			{
@@ -1057,10 +1096,10 @@ static int ParsePage(textprompt_t *prompt, tokenizer_t *sc, int bracket)
 				if (escaped)
 				{
 					size_t parsed_length = 0;
-					char *parsed = ParsePageDialog(escaped, &parsed_length, 0);
+					char *parsed = ParseText(escaped, &parsed_length, false, sc->line);
 
-					M_BufferMemWrite((UINT8 *)parsed, parsed_length, &buffer, &buffer_pos, &buffer_capacity);
-					total_text_length += parsed_length;
+					M_BufferMemWrite(&buf, (UINT8 *)parsed, parsed_length);
+					total_length += parsed_length;
 
 					Z_Free(escaped);
 				}
@@ -1078,12 +1117,58 @@ static int ParsePage(textprompt_t *prompt, tokenizer_t *sc, int bracket)
 				}
 			}
 
-			page->text = Z_Malloc(total_text_length + 1, PU_STATIC, NULL);
-			memcpy(page->text, buffer, total_text_length);
-			page->text[total_text_length] = '\0';
-			page->textlength = total_text_length;
+			page->name = Z_Realloc(buf.data, total_length + 1, PU_STATIC, NULL);
+			page->name[total_length] = '\0';
 
-			Z_Free(buffer);
+			buf.data = NULL;
+		}
+		else if (CHECK_TOKEN("dialog"))
+		{
+			EXPECT_TOKEN("=");
+			EXPECT_TOKEN("\"");
+
+			GET_TOKEN();
+
+			M_BufferInit(&buf);
+
+			size_t total_length = 0;
+
+			Z_Free(page->text);
+			page->text = NULL;
+			page->textlength = 0;
+
+			while (true)
+			{
+				char *escaped = EscapeStringChars(tkn, sc->line);
+				if (escaped)
+				{
+					size_t parsed_length = 0;
+					char *parsed = ParseText(escaped, &parsed_length, true, sc->line);
+
+					M_BufferMemWrite(&buf, (UINT8 *)parsed, parsed_length);
+					total_length += parsed_length;
+
+					Z_Free(escaped);
+				}
+
+				EXPECT_TOKEN("\"");
+
+				GET_TOKEN();
+
+				if (CHECK_TOKEN(";"))
+					break;
+				else
+				{
+					IS_TOKEN("\"");
+					GET_TOKEN();
+				}
+			}
+
+			page->text = Z_Realloc(buf.data, total_length + 1, PU_STATIC, NULL);
+			page->text[total_length] = '\0';
+			page->textlength = total_length;
+
+			buf.data = NULL;
 		}
 		else if (CHECK_TOKEN("icon"))
 		{
@@ -1455,6 +1540,8 @@ static int ParsePage(textprompt_t *prompt, tokenizer_t *sc, int bracket)
 	return PARSE_STATUS_OK;
 
 fail:
+	M_BufferFree(&buf);
+
 	return ExitBlock(sc, bracket);
 }
 

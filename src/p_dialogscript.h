@@ -16,6 +16,8 @@
 
 #include "p_dialog.h"
 
+#include "m_writebuffer.h"
+
 enum
 {
 	TP_OP_SPEED,
@@ -34,7 +36,7 @@ enum
 };
 
 const UINT8 *P_DialogRunOpcode(const UINT8 *code, dialog_t *dialog, textwriter_t *writer);
-boolean P_DialogPreprocessOpcode(dialog_t *dialog, UINT8 **cptr, UINT8 **buffer, size_t *buffer_pos, size_t *buffer_capacity);
+boolean P_DialogPreprocessOpcode(dialog_t *dialog, UINT8 **cptr, writebuffer_t *buf);
 int P_DialogSkipOpcode(const UINT8 *code);
 
 #endif

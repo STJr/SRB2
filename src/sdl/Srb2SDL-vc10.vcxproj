@@ -474,6 +474,7 @@
     <ClCompile Include="..\m_tokenizer.c" />
     <ClCompile Include="..\m_perfstats.c" />
     <ClCompile Include="..\m_queue.c" />
+    <ClCompile Include="..\m_writebuffer.c" />
     <ClCompile Include="..\m_random.c" />
     <ClCompile Include="..\netcode\client_connection.c" />
     <ClCompile Include="..\netcode\commands.c" />

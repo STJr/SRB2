@@ -10,7 +10,7 @@
 /// \brief Tokenizer
 
 #include "m_tokenizer.h"
-#include "m_misc.h"
+#include "m_writebuffer.h"
 #include "z_zone.h"
 
 tokenizer_t *Tokenizer_Open(const char *inputString, unsigned numTokens)
@@ -111,30 +111,31 @@ const char *Tokenizer_Read(tokenizer_t *tokenizer, UINT32 i)
 	// If in a string, return the entire string within quotes, except without the quotes.
 	if (tokenizer->inString == 1)
 	{
-		size_t buffer_pos = 0;
-		size_t buffer_capacity = 0;
+		writebuffer_t buf;
 
-		char *buf = NULL;
+		M_BufferInit(&buf);
 
 		while (tokenizer->input[tokenizer->endPos] != '"' && tokenizer->endPos < tokenizer->inputLength)
 		{
 			DetectLineBreak(tokenizer, tokenizer->endPos);
 
-			M_StringBufferWrite(tokenizer->input[tokenizer->endPos], &buf, &buffer_pos, &buffer_capacity);
+			M_BufferWrite(&buf, tokenizer->input[tokenizer->endPos]);
 
 			tokenizer->endPos++;
 
 			// Escape any quotation marks
-			if (tokenizer->input[tokenizer->endPos] == '\\'
-				&& tokenizer->input[tokenizer->endPos+1] == '"')
+			if (tokenizer->input[tokenizer->endPos] == '\\' && tokenizer->input[tokenizer->endPos+1] == '"')
 			{
-				M_StringBufferWrite('"', &buf, &buffer_pos, &buffer_capacity);
+				M_BufferWrite(&buf, '"');
 				tokenizer->endPos += 2;
 			}
 		}
 
-		tokenizer->token[i] = buf;
+		M_BufferWrite(&buf, '\0');
+
+		tokenizer->token[i] = (char*)buf.data;
 		tokenizer->inString = 2;
+
 		return tokenizer->token[i];
 	}
 	// If just ended a string, return only a quotation mark.

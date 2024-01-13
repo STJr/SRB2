@@ -20,7 +20,7 @@
 #include "g_input.h"
 #include "s_sound.h"
 #include "v_video.h"
-#include "m_misc.h"
+#include "m_writebuffer.h"
 #include "hu_stuff.h"
 #include "w_wad.h"
 #include "z_zone.h"
@@ -108,6 +108,7 @@ void P_FreeTextPrompt(textprompt_t *prompt)
 		Z_Free(page->pagename);
 		Z_Free(page->nextpromptname);
 		Z_Free(page->nextpagename);
+		Z_Free(page->name);
 		Z_Free(page->text);
 	}
 
@@ -275,7 +276,9 @@ boolean F_GetPromptHideHud(fixed_t y)
 
 void P_SetMetaPage(textpage_t *page, textpage_t *metapage)
 {
-	strlcpy(page->name, metapage->name, sizeof(page->name));
+	Z_Free(page->name);
+	if (metapage->name)
+		page->name = Z_StrDup(metapage->name);
 	strlcpy(page->iconname, metapage->iconname, sizeof(page->iconname));
 	page->rightside = metapage->rightside;
 	page->iconflip = metapage->iconflip;
@@ -304,11 +307,17 @@ void P_SetPicsMetaPage(textpage_t *page, textpage_t *metapage)
 
 void P_SetDialogSpeaker(dialog_t *dialog, const char *speaker)
 {
+	if (!speaker || !strlen(speaker))
+	{
+		dialog->speaker[0] = '\0';
+		return;
+	}
+
 	char name[256];
 
 	// Add yellow control char
 	name[0] = '\x82';
-	name[1] = 0;
+	name[1] = '\0';
 
 	strlcat(name, speaker, sizeof(name));
 	strlcpy(dialog->speaker, name, sizeof(dialog->speaker));
@@ -431,26 +440,25 @@ static void P_DialogSetDisplayText(dialog_t *dialog)
 
 static char *P_ProcessPageText(dialog_t *dialog, UINT8 *pagetext, size_t textlength, size_t *outlength)
 {
-	size_t buffer_pos = 0;
-	size_t buffer_capacity = 0;
+	writebuffer_t buf;
 
-	UINT8 *buf = NULL;
+	M_BufferInit(&buf);
 
 	UINT8 *text = pagetext;
 	UINT8 *end = pagetext + textlength;
 
 	while (text < end)
 	{
-		if (!P_DialogPreprocessOpcode(dialog, &text, &buf, &buffer_pos, &buffer_capacity))
+		if (!P_DialogPreprocessOpcode(dialog, &text, &buf))
 		{
-			M_StringBufferWrite(*text, (char**)&buf, &buffer_pos, &buffer_capacity);
+			M_BufferWrite(&buf, *text);
 			text++;
 		}
 	}
 
-	*outlength = buffer_pos;
+	*outlength = buf.pos;
 
-	return (char*)buf;
+	return (char*)buf.data;
 }
 
 void P_DialogSetText(dialog_t *dialog, char *pagetext, size_t textlength)
@@ -1028,7 +1036,7 @@ void P_GetPromptPageByNamedTag(const char *tag, INT32 *promptnum, INT32 *pagenum
 		CONS_Debug(DBG_GAMELOGIC, "Text prompt: Can't find a page with named tag %s or suffixed tag %s\n", tag, suffixedtag);
 }
 
-static void F_DrawDialogText(INT32 x, INT32 y, INT32 option, const char *string, size_t numchars)
+static void F_DrawDialogText(INT32 x, INT32 y, INT32 option, const char *string, size_t numchars, boolean do_line_breaks, const UINT8 *highlight)
 {
 	INT32 w, c, cx = x, cy = y, dup, scrwidth, left = 0;
 	const char *ch = string;
@@ -1067,8 +1075,11 @@ static void F_DrawDialogText(INT32 x, INT32 y, INT32 option, const char *string,
 		}
 		if (*ch == '\n')
 		{
-			cx = x;
-			cy += 12*dup;
+			if (do_line_breaks)
+			{
+				cx = x;
+				cy += 12*dup;
+			}
 			continue;
 		}
 
@@ -1095,6 +1106,8 @@ static void F_DrawDialogText(INT32 x, INT32 y, INT32 option, const char *string,
 		}
 
 		colormap = V_GetStringColormap(charflags);
+		if (!colormap)
+			colormap = highlight;
 		V_DrawFixedPatch(cx<<FRACBITS, cy<<FRACBITS, FRACUNIT, option, hu_font[c], colormap);
 
 		cx += w;
@@ -1183,12 +1196,11 @@ void F_TextPromptDrawer(void)
 
 	// Draw text
 	if (dialog->disptext)
-		F_DrawDialogText(textx, texty, (draw_flags|snap_flags|V_ALLOWLOWERCASE), dialog->disptext, dialog->writer.writeptr);
+		F_DrawDialogText(textx, texty, (draw_flags|snap_flags|V_ALLOWLOWERCASE), dialog->disptext, dialog->writer.writeptr, true, NULL);
 
 	// Draw name
-	// Don't use V_YELLOWMAP here so that the name color can be changed with control codes
 	if (dialog->speaker[0])
-		V_DrawString(textx, namey, (draw_flags|snap_flags|V_ALLOWLOWERCASE), dialog->speaker);
+		F_DrawDialogText(textx, namey, (draw_flags|snap_flags|V_ALLOWLOWERCASE), dialog->speaker, strlen(dialog->speaker), false, NULL);
 
 	// Draw choices
 	if (dialog->showchoices)
@@ -1209,13 +1221,14 @@ void F_TextPromptDrawer(void)
 			const char *text = dialog->page->choices[i].text;
 
 			INT32 flags = choices_flags | V_ALLOWLOWERCASE;
+			INT32 highlight_flags = 0;
 
 			boolean selected = dialog->curchoice == i;
 
 			if (selected)
-				flags |= V_YELLOWMAP;
+				highlight_flags |= V_YELLOWMAP;
 
-			V_DrawString(textx, choicesy, flags, text);
+			F_DrawDialogText(textx, choicesy, flags, text, strlen(text), false, V_GetStringColormap(highlight_flags & V_CHARCOLORMASK));
 
 			if (selected)
 				V_DrawString(choicesx + (chevronAnimCounter/5), choicesy, choices_flags|V_YELLOWMAP, "\x1D");

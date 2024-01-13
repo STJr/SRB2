@@ -348,6 +348,9 @@
     <ClInclude Include="..\m_queue.h">
       <Filter>M_Misc</Filter>
     </ClInclude>
+    <ClInclude Include="..\m_writebuffer.h">
+      <Filter>M_Misc</Filter>
+    </ClInclude>
     <ClInclude Include="..\m_random.h">
       <Filter>M_Misc</Filter>
     </ClInclude>
@@ -847,6 +850,9 @@
       <Filter>M_Misc</Filter>
     </ClCompile>
     <ClCompile Include="..\m_queue.c">
+      <Filter>M_Misc</Filter>
+    </ClCompile>
+    <ClCompile Include="..\m_writebuffer.c">
       <Filter>M_Misc</Filter>
     </ClCompile>
     <ClCompile Include="..\m_random.c">

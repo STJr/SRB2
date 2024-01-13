@@ -14,7 +14,7 @@
 #include "d_player.h" // player_t
 #include "r_skins.h" // skins
 #include "g_game.h" // player_names
-#include "m_misc.h" // M_BufferMemWrite
+#include "m_writebuffer.h"
 #include "z_zone.h"
 #include "w_wad.h"
 
@@ -93,7 +93,7 @@ const UINT8 *P_DialogRunOpcode(const UINT8 *code, dialog_t *dialog, textwriter_t
 	return code;
 }
 
-boolean P_DialogPreprocessOpcode(dialog_t *dialog, UINT8 **cptr, UINT8 **buffer, size_t *buffer_pos, size_t *buffer_capacity)
+boolean P_DialogPreprocessOpcode(dialog_t *dialog, UINT8 **cptr, writebuffer_t *buf)
 {
 	UINT8 *code = *cptr;
 	if (*code++ != TP_OP_CONTROL)
@@ -106,7 +106,7 @@ boolean P_DialogPreprocessOpcode(dialog_t *dialog, UINT8 **cptr, UINT8 **buffer,
 		case TP_OP_CHARNAME: {
 			char charname[256];
 			strlcpy(charname, skins[player->skin]->realname, sizeof(charname));
-			M_BufferMemWrite((UINT8 *)charname, strlen(charname), buffer, buffer_pos, buffer_capacity);
+			M_BufferMemWrite(buf, (UINT8 *)charname, strlen(charname));
 			break;
 		}
 		case TP_OP_PLAYERNAME: {
@@ -115,7 +115,7 @@ boolean P_DialogPreprocessOpcode(dialog_t *dialog, UINT8 **cptr, UINT8 **buffer,
 				strlcpy(playername, player_names[player-players], sizeof(playername));
 			else
 				strlcpy(playername, skins[player->skin]->realname, sizeof(playername));
-			M_BufferMemWrite((UINT8 *)playername, strlen(playername), buffer, buffer_pos, buffer_capacity);
+			M_BufferMemWrite(buf, (UINT8 *)playername, strlen(playername));
 			break;
 		}
 		default:
