@@ -741,15 +741,6 @@ void P_DialogSetText(dialog_t *dialog, char *pagetext, size_t textlength)
 	P_DialogWriteText(dialog, writer);
 }
 
-// TODO: Just remove this? This used to be a wrapper.
-static void P_PreparePageText(dialog_t *dialog, char *pagetext, size_t textlength)
-{
-	P_DialogSetText(dialog, pagetext, textlength);
-
-	// \todo update control hot strings on re-config
-	// and somehow don't reset cutscene text counters
-}
-
 static void P_DialogStartPage(player_t *player, dialog_t *dialog)
 {
 	// on page mode, number of tics before allowing boost
@@ -807,7 +798,7 @@ static void P_DialogStartPage(player_t *player, dialog_t *dialog)
 	dialog->iconflip = dialog->page->iconflip;
 
 	// Prepare page text
-	P_PreparePageText(dialog, dialog->page->text, dialog->page->textlength);
+	P_DialogSetText(dialog, dialog->page->text, dialog->page->textlength);
 
 	// music change
 	if (P_IsLocalPlayer(player) || globaltextprompt)
@@ -1785,17 +1776,89 @@ INT32 P_ParsePromptBackColor(const char *word)
 		goto fail; \
 	}
 
-#define IGNORE_FIELD() \
-	EXPECT_TOKEN("="); \
-	GET_TOKEN(); \
-	EXPECT_TOKEN(";")
+enum {
+	PARSE_STATUS_OK,
+	PARSE_STATUS_FAIL,
+	PARSE_STATUS_EOF
+};
 
-static void ParseChoice(textpage_t *page, tokenizer_t *sc)
+static int ExitBlock(tokenizer_t *sc, INT32 bracket)
+{
+	const char *tkn = sc->token[0];
+	if (!tkn)
+		return PARSE_STATUS_EOF;
+	else if (strcmp(tkn, "}") == 0)
+		return PARSE_STATUS_FAIL;
+
+	INT32 curbracket = bracket;
+
+	while (true)
+	{
+		if (strcmp(tkn, "{") == 0)
+			curbracket++;
+		else if (strcmp(tkn, "}") == 0)
+		{
+			curbracket--;
+			if (curbracket < bracket)
+				break;
+		}
+
+		tkn = sc->get(sc, 0);
+		if (!tkn)
+			return PARSE_STATUS_EOF;
+	}
+
+	return PARSE_STATUS_FAIL;
+}
+
+static int SkipBlock(tokenizer_t *sc)
+{
+	const char *tkn = sc->token[0];
+	if (!tkn)
+		return PARSE_STATUS_EOF;
+
+	INT32 bracket = 0;
+
+	while (true)
+	{
+		if (strcmp(tkn, "{") == 0)
+			bracket++;
+		else if (strcmp(tkn, "}") == 0)
+		{
+			bracket--;
+			if (bracket <= 0)
+				break;
+		}
+
+		tkn = sc->get(sc, 0);
+		if (!tkn)
+			return PARSE_STATUS_EOF;
+	}
+
+	return PARSE_STATUS_FAIL;
+}
+
+#define IGNORE_FIELD() { \
+	GET_TOKEN(); \
+	if (CHECK_TOKEN("{")) { \
+		if (SkipBlock(sc) == PARSE_STATUS_EOF) \
+			return PARSE_STATUS_EOF; \
+	} else { \
+		if (CHECK_TOKEN("=")) {\
+			GET_TOKEN(); \
+		} \
+		if (CHECK_TOKEN(";")) { \
+			GET_TOKEN(); \
+		} \
+	} \
+}
+
+static int ParseChoice(textpage_t *page, tokenizer_t *sc, INT32 bracket)
 {
 	const char *tkn;
 
 	if (page->numchoices == MAX_PROMPT_CHOICES)
-		abort();
+		return PARSE_STATUS_FAIL;
 
 	page->numchoices++;
 
@@ -1942,24 +2005,21 @@ static void ParseChoice(textpage_t *page, tokenizer_t *sc)
 			IGNORE_FIELD();
 		}
 
-		tkn = sc->get(sc, 0);
+		GET_TOKEN();
 	}
 
-	return;
+	return PARSE_STATUS_OK;
 
 fail:
-	while (tkn && !CHECK_TOKEN("}"))
-		tkn = sc->get(sc, 0);
-
-	return;
+	return ExitBlock(sc, bracket);
 }
 
-static void ParsePicture(textpage_t *page, tokenizer_t *sc)
+static int ParsePicture(textpage_t *page, tokenizer_t *sc, INT32 bracket)
 {
 	const char *tkn;
 
 	if (page->numpics == MAX_PROMPT_PICS)
-		abort();
+		return PARSE_STATUS_FAIL;
 
 	page->numpics++;
 
@@ -2065,16 +2125,13 @@ static void ParsePicture(textpage_t *page, tokenizer_t *sc)
 			IGNORE_FIELD();
 		}
 
-		tkn = sc->get(sc, 0);
+		GET_TOKEN();
 	}
 
-	return;
+	return PARSE_STATUS_OK;
 
 fail:
-	while (tkn && !CHECK_TOKEN("}"))
-		tkn = sc->get(sc, 0);
-
-	return;
+	return ExitBlock(sc, bracket);
 }
 
 #define BUFWRITE(writechr) M_StringBufferWrite((writechr), &buf, &buffer_pos, &buffer_capacity)
@@ -2498,12 +2555,12 @@ char *P_ConvertSOCPageDialog(char *text, size_t *text_length)
 
 #undef WRITE_TEXTCHAR
 
-static void ParsePage(textprompt_t *prompt, tokenizer_t *sc)
+static int ParsePage(textprompt_t *prompt, tokenizer_t *sc, INT32 bracket)
 {
 	const char *tkn;
 
 	if (prompt->numpages == MAX_PAGES)
-		abort();
+		return PARSE_STATUS_FAIL;
 
 	textpage_t *page = &prompt->page[prompt->numpages];
 
@@ -2806,7 +2863,11 @@ static void ParsePage(textprompt_t *prompt, tokenizer_t *sc)
 			}
 			else
 			{
-				ParseChoice(page, sc);
+				if (ParseChoice(page, sc, bracket + 1) != PARSE_STATUS_OK)
+				{
+					page->numchoices--;
+					goto fail;
+				}
 
 				if (page->numchoices == MAX_PROMPT_CHOICES)
 					CONS_Alert(CONS_WARNING, "Conversation page exceeded max amount of choices; ignoring any more choices\n");
@@ -2840,7 +2901,11 @@ static void ParsePage(textprompt_t *prompt, tokenizer_t *sc)
 			}
 			else
 			{
-				ParsePicture(page, sc);
+				if (ParsePicture(page, sc, bracket + 1) != PARSE_STATUS_OK)
+				{
+					page->numpics--;
+					goto fail;
+				}
 
 				if (page->numpics == MAX_PROMPT_PICS)
 					CONS_Alert(CONS_WARNING, "Conversation page exceeded max amount of pictures; ignoring any more pictures\n");
@@ -2975,24 +3040,23 @@ static void ParsePage(textprompt_t *prompt, tokenizer_t *sc)
 			IGNORE_FIELD();
 		}
 
-		tkn = sc->get(sc, 0);
+		GET_TOKEN();
 	}
 
-	return;
+	return PARSE_STATUS_OK;
 
 fail:
-	while (tkn && !CHECK_TOKEN("}"))
-		tkn = sc->get(sc, 0);
-
-	return;
+	return ExitBlock(sc, bracket);
 }
 
-static void ParseConversation(tokenizer_t *sc)
+#undef IGNORE_FIELD
+
+static int ParseConversation(tokenizer_t *sc, INT32 bracket)
 {
+	int parse_status = PARSE_STATUS_OK;
+
 	INT32 id = 0;
-
 	char *name = NULL;
-
 	textprompt_t *prompt = NULL;
 
 	const char *tkn;
@@ -3039,7 +3103,11 @@ static void ParseConversation(tokenizer_t *sc)
 			}
 			else
 			{
-				ParsePage(prompt, sc);
+				if (ParsePage(prompt, sc, bracket + 1) != PARSE_STATUS_OK)
+				{
+					prompt->numpages--;
+					goto fail;
+				}
 
 				if (prompt->numpages == MAX_PAGES)
 					CONS_Alert(CONS_WARNING, "Conversation exceeded max amount of pages; ignoring any more pages\n");
@@ -3048,16 +3116,31 @@ static void ParseConversation(tokenizer_t *sc)
 		else
 		{
 			CONS_Alert(CONS_WARNING, "While parsing conversation: Unknown token '%s'\n", tkn);
-			IGNORE_FIELD();
+			GET_TOKEN();
+			if (CHECK_TOKEN("{"))
+			{
+				if (SkipBlock(sc) == PARSE_STATUS_EOF)
+				{
+					parse_status = PARSE_STATUS_EOF;
+					goto ignore;
+				}
+			}
+			else
+			{
+				EXPECT_TOKEN("=");
+				GET_TOKEN();
+				EXPECT_TOKEN(";");
+			}
 		}
 
-		tkn = sc->get(sc, 0);
+		GET_TOKEN();
 	}
 
+	// Now do some verifications
 	if (!prompt->numpages)
 	{
 		CONS_Alert(CONS_WARNING, "Conversation has no pages\n");
-		goto fail;
+		goto ignore;
 	}
 
 	if (name)
@@ -3067,7 +3150,7 @@ static void ParseConversation(tokenizer_t *sc)
 		if (id < 0)
 		{
 			CONS_Alert(CONS_WARNING, "No more free conversation slots\n");
-			goto fail;
+			goto ignore;
 		}
 
 		prompt->name = Z_StrDup(name);
@@ -3075,13 +3158,15 @@ static void ParseConversation(tokenizer_t *sc)
 		P_FreeTextPrompt(textprompts[id]);
 
 		textprompts[id] = prompt;
+
+		return parse_status;
 	}
 	else if (id)
 	{
 		if (id <= 0 || id > MAX_PROMPTS)
 		{
 			CONS_Alert(CONS_WARNING, "Conversation ID %d out of range (1 - %d)\n", id, MAX_PROMPTS);
-			goto fail;
+			goto ignore;
 		}
 
 		--id;
@@ -3089,14 +3174,23 @@ static void ParseConversation(tokenizer_t *sc)
 		P_FreeTextPrompt(textprompts[id]);
 
 		textprompts[id] = prompt;
+
+		return parse_status;
 	}
 	else
 	{
 		CONS_Alert(CONS_WARNING, "Conversation has missing ID\n");
-fail:
-		Z_Free(prompt);
-		Z_Free(name);
+		goto ignore;
 	}
+
+fail:
+	parse_status = ExitBlock(sc, bracket);
+
+ignore:
+	Z_Free(prompt);
+	Z_Free(name);
+
+	return parse_status;
 }
 
 static void ParseDialogue(UINT16 wadNum, UINT16 lumpnum)
@@ -3129,13 +3223,14 @@ static void ParseDialogue(UINT16 wadNum, UINT16 lumpnum)
 	EXPECT_TOKEN(";");
 
 	GET_TOKEN();
+
 	while (tkn != NULL)
 	{
 		IS_TOKEN("conversation");
 
 		EXPECT_TOKEN("{");
 
-		ParseConversation(sc);
+		ParseConversation(sc, 1);
 
 		tkn = sc->get(sc, 0);
 	}
