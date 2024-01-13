@@ -592,9 +592,8 @@ fail:
 
 #undef BUFWRITE
 
-static boolean MatchControlCode(const char *match, char **input)
+static boolean GetCommand(char **command_start, char **command_end, char *start)
 {
-	char *start = *input;
 	while (isspace(*start))
 	{
 		if (*start == '\0')
@@ -612,24 +611,34 @@ static boolean MatchControlCode(const char *match, char **input)
 		end++;
 	}
 
-	size_t tknlen = end - start;
-	size_t matchlen = strlen(match);
+	*command_start = start;
+	*command_end = end;
 
+	return true;
+}
+
+static boolean MatchCommand(const char *match, size_t matchlen, char *tkn, size_t tknlen, char **input)
+{
 	if (tknlen != matchlen)
 		return false;
 
-	if (memcmp(match, start, tknlen) == 0)
+	char *cmp = tkn;
+	char *cmpEnd = cmp + tknlen;
+	while (cmp < cmpEnd)
 	{
-		while (isspace(*end))
-			end++;
-		*input = end;
-		return true;
+		if (toupper(*cmp) != *match)
+			return false;
+		cmp++;
+		match++;
 	}
 
-	return false;
+	while (isspace(*cmpEnd))
+		cmpEnd++;
+	*input = cmpEnd;
+	return true;
 }
 
-static char *GetControlCodeParam(char **input)
+static char *GetCommandParam(char **input)
 {
 	char *start = *input;
 	if (*start == '}')
@@ -663,7 +672,7 @@ static char *GetControlCodeParam(char **input)
 	return result;
 }
 
-static void GetControlCodeEnd(char **input)
+static void GetCommandEnd(char **input)
 {
 	char *start = *input;
 	if (*start == '}')
@@ -703,14 +712,23 @@ static void GetControlCodeEnd(char **input)
 
 #define EXPECTED_NUMBER(which) CONS_Alert(CONS_WARNING, "Expected integer in '%s', got '%s' instead\n", which, param)
 #define EXPECTED_PARAM(which) CONS_Alert(CONS_WARNING, "Expected parameter for '%s'\n", which)
+#define IS_COMMAND(match) MatchCommand(match, sizeof(match) - 1, command_start, cmd_len, input)
 
-static void InterpretControlCode(char **input, UINT8 **buf, size_t *buffer_pos, size_t *buffer_capacity)
+static void ParseCommand(char **input, UINT8 **buf, size_t *buffer_pos, size_t *buffer_capacity)
 {
-	if (MatchControlCode("DELAY", input))
+	char *command_start = NULL;
+	char *command_end = NULL;
+
+	if (!GetCommand(&command_start, &command_end, *input))
+		return;
+
+	size_t cmd_len = command_end - command_start;
+
+	if (IS_COMMAND("DELAY"))
 	{
 		int delay_frames = 12;
 
-		char *param = GetControlCodeParam(input);
+		char *param = GetCommandParam(input);
 		if (param)
 		{
 			if (!StringToNumber(param, &delay_frames))
@@ -725,11 +743,11 @@ static void InterpretControlCode(char **input, UINT8 **buf, size_t *buffer_pos, 
 			WRITE_NUM(delay_frames);
 		}
 	}
-	else if (MatchControlCode("PAUSE", input))
+	else if (IS_COMMAND("PAUSE"))
 	{
 		int pause_frames = 12;
 
-		char *param = GetControlCodeParam(input);
+		char *param = GetCommandParam(input);
 		if (param)
 		{
 			if (!StringToNumber(param, &pause_frames))
@@ -744,9 +762,9 @@ static void InterpretControlCode(char **input, UINT8 **buf, size_t *buffer_pos, 
 			WRITE_NUM(pause_frames);
 		}
 	}
-	else if (MatchControlCode("SPEED", input))
+	else if (IS_COMMAND("SPEED"))
 	{
-		char *param = GetControlCodeParam(input);
+		char *param = GetCommandParam(input);
 		if (param)
 		{
 			int speed = 1;
@@ -769,9 +787,9 @@ static void InterpretControlCode(char **input, UINT8 **buf, size_t *buffer_pos, 
 		else
 			EXPECTED_PARAM("SPEED");
 	}
-	else if (MatchControlCode("NAME", input))
+	else if (IS_COMMAND("NAME"))
 	{
-		char *param = GetControlCodeParam(input);
+		char *param = GetCommandParam(input);
 		if (param)
 		{
 			WRITE_OP(TP_OP_NAME);
@@ -782,9 +800,9 @@ static void InterpretControlCode(char **input, UINT8 **buf, size_t *buffer_pos, 
 		else
 			EXPECTED_PARAM("NAME");
 	}
-	else if (MatchControlCode("ICON", input))
+	else if (IS_COMMAND("ICON"))
 	{
-		char *param = GetControlCodeParam(input);
+		char *param = GetCommandParam(input);
 		if (param)
 		{
 			WRITE_OP(TP_OP_ICON);
@@ -795,21 +813,27 @@ static void InterpretControlCode(char **input, UINT8 **buf, size_t *buffer_pos, 
 		else
 			EXPECTED_PARAM("ICON");
 	}
-	else if (MatchControlCode("CHARNAME", input))
+	else if (IS_COMMAND("CHARNAME"))
 	{
 		WRITE_OP(TP_OP_CHARNAME);
 	}
-	else if (MatchControlCode("PLAYERNAME", input))
+	else if (IS_COMMAND("PLAYERNAME"))
 	{
 		WRITE_OP(TP_OP_PLAYERNAME);
 	}
-	else if (MatchControlCode("NEXTPAGE", input))
+	else if (IS_COMMAND("NEXTPAGE"))
 	{
 		WRITE_OP(TP_OP_NEXTPAGE);
 	}
+	else
+	{
+		CONS_Alert(CONS_WARNING, "Unknown command %.*s\n", (int)cmd_len, command_start);
+	}
 }
 
-static boolean InterpretCutsceneControlCode(UINT8 chr, UINT8 **buf, size_t *buffer_pos, size_t *buffer_capacity)
+#undef IS_COMMAND
+
+static boolean ConvertCutsceneControlCode(UINT8 chr, UINT8 **buf, size_t *buffer_pos, size_t *buffer_capacity)
 {
 	if (chr >= 0xA0 && chr <= 0xAF)
 	{
@@ -865,9 +889,9 @@ static char *ParsePageDialog(char *text, size_t *text_length)
 		{
 			input++;
 
-			InterpretControlCode(&input, &buf, &buffer_pos, &buffer_capacity);
+			ParseCommand(&input, &buf, &buffer_pos, &buffer_capacity);
 
-			GetControlCodeEnd(&input);
+			GetCommandEnd(&input);
 		}
 		else
 		{
@@ -895,7 +919,7 @@ char *P_ConvertSOCPageDialog(char *text, size_t *text_length)
 	{
 		unsigned char chr = *input;
 
-		if (!InterpretCutsceneControlCode((UINT8)chr, &buf, &buffer_pos, &buffer_capacity))
+		if (!ConvertCutsceneControlCode((UINT8)chr, &buf, &buffer_pos, &buffer_capacity))
 		{
 			if (chr != 0xFF)
 				WRITE_TEXTCHAR(chr);
