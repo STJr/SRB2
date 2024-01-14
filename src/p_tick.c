@@ -756,6 +756,23 @@ void P_Ticker(boolean run)
 		ps_lua_mobjhooks.value.i = 0;
 		ps_checkposition_calls.value.i = 0;
 
+		// Reassign the globaltextprompt player if they either quit, or became a spectator
+		if (globaltextprompt)
+		{
+			player_t *promptplayer = globaltextprompt->player;
+			if (!promptplayer || !playeringame[promptplayer-players] || promptplayer->spectator || promptplayer->quittime)
+			{
+				for (i = 0; i < MAXPLAYERS; i++)
+				{
+					if (playeringame[i] && !(players[i].spectator || players[i].quittime))
+					{
+						globaltextprompt->player = &players[i];
+						break;
+					}
+				}
+			}
+		}
+
 		PS_START_TIMING(ps_lua_prethinkframe_time);
 		LUA_HookPreThinkFrame();
 		PS_STOP_TIMING(ps_lua_prethinkframe_time);
@@ -792,24 +809,6 @@ void P_Ticker(boolean run)
 				P_PlayerAfterThink(&players[i]);
 
 		// Run text prompts
-		if (globaltextprompt)
-		{
-			player_t *promptplayer = globaltextprompt->player;
-
-			// Reassign the player if they either quit, or became a spectator
-			if (!promptplayer || promptplayer->spectator || promptplayer->quittime || !playeringame[promptplayer-players])
-			{
-				for (i = 0; i < MAXPLAYERS; i++)
-				{
-					if (playeringame[i] && !(players[i].spectator || players[i].quittime))
-					{
-						globaltextprompt->player = &players[i];
-						break;
-					}
-				}
-			}
-		}
-
 		for (i = 0; i < MAXPLAYERS; i++)
 			if (playeringame[i])
 				P_RunDialog(&players[i]);
