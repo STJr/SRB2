@@ -115,7 +115,6 @@ void HWR_DrawPatch(patch_t *gpatch, INT32 x, INT32 y, INT32 option)
 
 	flags = PF_Translucent|PF_NoDepthTest;
 
-	// clip it since it is used for bunny scroll in doom I
 	HWD.pfnDrawPolygon(NULL, v, 4, flags);
 }
 
@@ -338,7 +337,215 @@ void HWR_DrawStretchyFixedPatch(patch_t *gpatch, fixed_t x, fixed_t y, fixed_t p
 	v[0].t = v[1].t = 0.0f;
 	v[2].t = v[3].t = hwrPatch->max_t;
 
-	// clip it since it is used for bunny scroll in doom I
+	flags = HWR_GetBlendModeFlag(blendmode+1)|PF_NoDepthTest;
+
+	if (alphalevel)
+	{
+		FSurfaceInfo Surf;
+		Surf.PolyColor.s.red = Surf.PolyColor.s.green = Surf.PolyColor.s.blue = 0xff;
+
+		if (alphalevel == 10) Surf.PolyColor.s.alpha = softwaretranstogl_lo[st_translucency]; // V_HUDTRANSHALF
+		else if (alphalevel == 11) Surf.PolyColor.s.alpha = softwaretranstogl[st_translucency]; // V_HUDTRANS
+		else if (alphalevel == 12) Surf.PolyColor.s.alpha = softwaretranstogl_hi[st_translucency]; // V_HUDTRANSDOUBLE
+		else Surf.PolyColor.s.alpha = softwaretranstogl[10-alphalevel];
+		flags |= PF_Modulated;
+		HWD.pfnDrawPolygon(&Surf, v, 4, flags);
+	}
+	else
+		HWD.pfnDrawPolygon(NULL, v, 4, flags);
+}
+
+void HWR_DrawTexture(INT32 texturenum, fixed_t x, fixed_t y, fixed_t pscale, fixed_t vscale, INT32 option)
+{
+	FOutVector v[4];
+	FBITFIELD flags;
+	float cx = FIXED_TO_FLOAT(x);
+	float cy = FIXED_TO_FLOAT(y);
+	UINT8 alphalevel = ((option & V_ALPHAMASK) >> V_ALPHASHIFT);
+	UINT8 blendmode = ((option & V_BLENDMASK) >> V_BLENDSHIFT);
+
+//  3--2
+//  | /|
+//  |/ |
+//  0--1
+	float dup, fscalew, fscaleh, fwidth, fheight;
+
+	UINT8 perplayershuffle = 0;
+
+	if (texturenum < 0 || texturenum >= numtextures)
+		return;
+
+	// make texture ready in hardware cache
+	HWR_GetTexture(texturenum);
+
+	INT32 texwidth = textures[texturenum]->width;
+	INT32 texheight = textures[texturenum]->height;
+
+	dup = (float)vid.dup;
+
+	switch (option & V_SCALEPATCHMASK)
+	{
+	case V_NOSCALEPATCH:
+		dup = 1.0f;
+		break;
+	case V_SMALLSCALEPATCH:
+		dup = (float)vid.smalldup;
+		break;
+	case V_MEDSCALEPATCH:
+		dup = (float)vid.meddup;
+		break;
+	}
+
+	fscalew = fscaleh = FIXED_TO_FLOAT(pscale);
+	if (vscale != pscale)
+		fscaleh = FIXED_TO_FLOAT(vscale);
+
+	if (option & V_FLIP)
+		cx -= (float)(texwidth) * fscalew;
+
+	if (splitscreen && (option & V_PERPLAYER))
+	{
+		float adjusty = ((option & V_NOSCALESTART) ? vid.height : BASEVIDHEIGHT)/2.0f;
+		fscaleh /= 2;
+		cy /= 2;
+#ifdef QUADS
+		if (splitscreen > 1) // 3 or 4 players
+		{
+			float adjustx = ((option & V_NOSCALESTART) ? vid.width : BASEVIDWIDTH)/2.0f;
+			fscalew /= 2;
+			cx /= 2;
+			if (stplyr == &players[displayplayer])
+			{
+				if (!(option & (V_SNAPTOTOP|V_SNAPTOBOTTOM)))
+					perplayershuffle |= 1;
+				if (!(option & (V_SNAPTOLEFT|V_SNAPTORIGHT)))
+					perplayershuffle |= 4;
+				option &= ~V_SNAPTOBOTTOM|V_SNAPTORIGHT;
+			}
+			else if (stplyr == &players[secondarydisplayplayer])
+			{
+				if (!(option & (V_SNAPTOTOP|V_SNAPTOBOTTOM)))
+					perplayershuffle |= 1;
+				if (!(option & (V_SNAPTOLEFT|V_SNAPTORIGHT)))
+					perplayershuffle |= 8;
+				cx += adjustx;
+				option &= ~V_SNAPTOBOTTOM|V_SNAPTOLEFT;
+			}
+			else if (stplyr == &players[thirddisplayplayer])
+			{
+				if (!(option & (V_SNAPTOTOP|V_SNAPTOBOTTOM)))
+					perplayershuffle |= 2;
+				if (!(option & (V_SNAPTOLEFT|V_SNAPTORIGHT)))
+					perplayershuffle |= 4;
+				cy += adjusty;
+				option &= ~V_SNAPTOTOP|V_SNAPTORIGHT;
+			}
+			else if (stplyr == &players[fourthdisplayplayer])
+			{
+				if (!(option & (V_SNAPTOTOP|V_SNAPTOBOTTOM)))
+					perplayershuffle |= 2;
+				if (!(option & (V_SNAPTOLEFT|V_SNAPTORIGHT)))
+					perplayershuffle |= 8;
+				cx += adjustx;
+				cy += adjusty;
+				option &= ~V_SNAPTOTOP|V_SNAPTOLEFT;
+			}
+		}
+		else
+#endif
+		// 2 players
+		{
+			if (stplyr == &players[displayplayer])
+			{
+				if (!(option & (V_SNAPTOTOP|V_SNAPTOBOTTOM)))
+					perplayershuffle = 1;
+				option &= ~V_SNAPTOBOTTOM;
+			}
+			else //if (stplyr == &players[secondarydisplayplayer])
+			{
+				if (!(option & (V_SNAPTOTOP|V_SNAPTOBOTTOM)))
+					perplayershuffle = 2;
+				cy += adjusty;
+				option &= ~V_SNAPTOTOP;
+			}
+		}
+	}
+
+	if (!(option & V_NOSCALESTART))
+	{
+		cx = cx * dup;
+		cy = cy * dup;
+
+		if (!(option & V_SCALEPATCHMASK))
+		{
+			// centre screen
+			if (fabsf((float)vid.width - (float)BASEVIDWIDTH * dup) > 1.0E-36f)
+			{
+				if (option & V_SNAPTORIGHT)
+					cx += ((float)vid.width - ((float)BASEVIDWIDTH * dup));
+				else if (!(option & V_SNAPTOLEFT))
+					cx += ((float)vid.width - ((float)BASEVIDWIDTH * dup))/2;
+				if (perplayershuffle & 4)
+					cx -= ((float)vid.width - ((float)BASEVIDWIDTH * dup))/4;
+				else if (perplayershuffle & 8)
+					cx += ((float)vid.width - ((float)BASEVIDWIDTH * dup))/4;
+			}
+			if (fabsf((float)vid.height - (float)BASEVIDHEIGHT * dup) > 1.0E-36f)
+			{
+				if (option & V_SNAPTOBOTTOM)
+					cy += ((float)vid.height - ((float)BASEVIDHEIGHT * dup));
+				else if (!(option & V_SNAPTOTOP))
+					cy += ((float)vid.height - ((float)BASEVIDHEIGHT * dup))/2;
+				if (perplayershuffle & 1)
+					cy -= ((float)vid.height - ((float)BASEVIDHEIGHT * dup))/4;
+				else if (perplayershuffle & 2)
+					cy += ((float)vid.height - ((float)BASEVIDHEIGHT * dup))/4;
+			}
+		}
+	}
+
+	if (pscale != FRACUNIT || vscale != FRACUNIT || (splitscreen && option & V_PERPLAYER))
+	{
+		fwidth = (float)(texwidth) * fscalew * dup;
+		fheight = (float)(texheight) * fscaleh * dup;
+	}
+	else
+	{
+		fwidth = (float)(texwidth) * dup;
+		fheight = (float)(texheight) * dup;
+	}
+
+	// positions of the cx, cy, are between 0 and vid.width/vid.height now, we need them to be between -1 and 1
+	cx = -1 + (cx / (vid.width/2));
+	cy = 1 - (cy / (vid.height/2));
+
+	// fwidth and fheight are similar
+	fwidth /= vid.width / 2;
+	fheight /= vid.height / 2;
+
+	// set the polygon vertices to the right positions
+	v[0].x = v[3].x = cx;
+	v[2].x = v[1].x = cx + fwidth;
+
+	v[0].y = v[1].y = cy;
+	v[2].y = v[3].y = cy - fheight;
+
+	v[0].z = v[1].z = v[2].z = v[3].z = 1.0f;
+
+	if (option & V_FLIP)
+	{
+		v[0].s = v[3].s = 1.0f;
+		v[2].s = v[1].s = 0.0f;
+	}
+	else
+	{
+		v[0].s = v[3].s = 0.0f;
+		v[2].s = v[1].s = 1.0f;
+	}
+
+	v[0].t = v[1].t = 0.0f;
+	v[2].t = v[3].t = 1.0f;
+
 	flags = HWR_GetBlendModeFlag(blendmode+1)|PF_NoDepthTest;
 
 	if (alphalevel)
@@ -585,18 +792,8 @@ void HWR_DrawCroppedPatch(patch_t *gpatch, fixed_t x, fixed_t y, fixed_t pscale,
 						return;
 
 					v[2].y = v[3].y = 0; // Clamp the polygon edge vertex position
+
 					// Now for the UV-map... Uh-oh, math time!
-
-					// On second thought, a basic linear interpolation suffices
-					//float full_height = fheight;
-					//float cropped_height = fheight - cy;
-					//float remaining_height = cy;
-					//float cropped_percentage = (fheight - cy) / fheight;
-					//float remaining_percentage = cy / fheight;
-					//v[2].t = v[3].t = lerp(v[2].t, v[0].t, cropped_percentage);
-					// By swapping v[2] and v[0], we can use remaining_percentage for less operations
-					//v[2].t = v[3].t = lerp(v[0].t, v[2].t, remaining_percentage);
-
 					v[2].t = v[3].t = flerp(v[0].t, v[2].t, cy/fheight);
 				}
 			}
@@ -611,16 +808,8 @@ void HWR_DrawCroppedPatch(patch_t *gpatch, fixed_t x, fixed_t y, fixed_t pscale,
 						return;
 
 					v[0].y = v[1].y = 0; // Clamp the polygon edge vertex position
+
 					// Now for the UV-map... Uh-oh, math time!
-
-					// On second thought, a basic linear interpolation suffices
-					//float full_height = fheight;
-					//float cropped_height = cy;
-					//float remaining_height = fheight - cy;
-					//float cropped_percentage = cy / fheight;
-					//float remaining_percentage = (fheight - cy) / fheight;
-					//v[0].t = v[1].t = lerp(v[0].t, v[2].t, cropped_percentage);
-
 					v[0].t = v[1].t = flerp(v[0].t, v[2].t, cy/fheight);
 				}
 			}
@@ -628,7 +817,6 @@ void HWR_DrawCroppedPatch(patch_t *gpatch, fixed_t x, fixed_t y, fixed_t pscale,
 #undef flerp
 	}
 
-	// clip it since it is used for bunny scroll in doom I
 	flags = HWR_GetBlendModeFlag(blendmode+1)|PF_NoDepthTest;
 
 	if (alphalevel)

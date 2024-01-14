@@ -227,6 +227,9 @@ void *W_CachePatchNum(lumpnum_t lumpnum, INT32 tag);
 void *W_CacheSoftwarePatchNumPwad(UINT16 wad, UINT16 lump, INT32 tag);
 void *W_CacheSoftwarePatchNum(lumpnum_t lumpnum, INT32 tag);
 
+boolean W_IsValidPatchNumPwad(UINT16 wad, UINT16 lump);
+boolean W_IsValidPatchNum(lumpnum_t lumpnum);
+
 void W_UnlockCachedPatch(void *patch);
 
 void W_VerifyFileMD5(UINT16 wadfilenum, const char *matchmd5);

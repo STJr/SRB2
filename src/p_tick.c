@@ -794,16 +794,16 @@ void P_Ticker(boolean run)
 		// Run text prompts
 		if (globaltextprompt)
 		{
-			player_t *promptplayer = globaltextprompt->callplayer;
+			player_t *promptplayer = globaltextprompt->player;
 
-			// Reassign the callplayer if they either quit, or became a spectator
-			if (!promptplayer || promptplayer->spectator || promptplayer->quittime)
+			// Reassign the player if they either quit, or became a spectator
+			if (!promptplayer || promptplayer->spectator || promptplayer->quittime || !playeringame[promptplayer-players])
 			{
 				for (i = 0; i < MAXPLAYERS; i++)
 				{
 					if (playeringame[i] && !(players[i].spectator || players[i].quittime))
 					{
-						globaltextprompt->callplayer = &players[i];
+						globaltextprompt->player = &players[i];
 						break;
 					}
 				}

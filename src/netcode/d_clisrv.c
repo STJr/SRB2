@@ -589,19 +589,6 @@ void CL_RemovePlayer(INT32 playernum, kickreason_t reason)
 
 	P_EndTextPrompt(&players[playernum], false, false);
 
-	// Reassign the callplayer of the globaltextprompt if it is someone who just left
-	if (globaltextprompt && globaltextprompt->callplayer == &players[playernum])
-	{
-		for (INT32 i = 0; i < MAXPLAYERS; i++)
-		{
-			if (playeringame[i] && !(players[i].spectator || players[i].quittime))
-			{
-				globaltextprompt->callplayer = &players[i];
-				break;
-			}
-		}
-	}
-
 	RedistributeSpecialStageSpheres(playernum);
 
 	LUA_HookPlayerQuit(&players[playernum], reason); // Lua hook for player quitting

@@ -4945,7 +4945,7 @@ static void P_NetArchiveDialog(dialog_t *dialog)
 		WRITEINT32(save_p, dialog->curchoice);
 		WRITEINT32(save_p, dialog->nochoice);
 	}
-	WRITEUINT8(save_p, (UINT8)(dialog->callplayer-players));
+	WRITEUINT8(save_p, (UINT8)(dialog->player-players));
 	WRITEINT32(save_p, dialog->picnum);
 	WRITEINT32(save_p, dialog->pictoloop);
 	WRITEINT32(save_p, dialog->pictimer);
@@ -5032,7 +5032,7 @@ static void P_NetUnArchiveDialog(dialog_t *dialog)
 
 	dialog->prompt = textprompts[dialog->promptnum];
 	dialog->page = &dialog->prompt->page[dialog->pagenum];
-	dialog->callplayer = &players[playernum];
+	dialog->player = &players[playernum];
 
 	if (dialog->numchoices)
 	{
@@ -5044,10 +5044,10 @@ static void P_NetUnArchiveDialog(dialog_t *dialog)
 			I_Error("Invalid text prompt nochoice %d from server", dialog->nochoice);
 	}
 
-	P_DialogSetText(dialog, dialog->page->text, dialog->page->textlength);
+	P_SetDialogText(dialog, dialog->page->text, dialog->page->textlength);
 
 	strlcpy(dialog->speaker, speaker, sizeof(dialog->speaker));
-	strlcpy(dialog->icon, icon, sizeof(dialog->icon));
+	P_SetDialogIcon(dialog, icon);
 	dialog->iconflip = iconflip;
 
 	dialog->writer.baseptr = baseptr;

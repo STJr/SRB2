@@ -354,7 +354,9 @@ void *Picture_PatchConvert(
 
 	if (Picture_IsInternalPatchFormat(outformat))
 	{
-		patch_t *converted = Patch_Create((softwarepatch_t *)img, size, NULL);
+		patch_t *converted = Patch_Create((softwarepatch_t *)img, size);
+		if (!converted)
+			return NULL;
 
 #ifdef HWRENDER
 		Patch_CreateGL(converted);

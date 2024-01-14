@@ -2164,7 +2164,7 @@ static boolean G_TextPromptResponder(event_t *ev)
 
 	// Get the player that started this prompt
 	// If this is not a global text prompt, it will be the same player.
-	player_t *promptplayer = globaltextprompt ? globaltextprompt->callplayer : player;
+	player_t *promptplayer = globaltextprompt ? globaltextprompt->player : player;
 	if (player != promptplayer)
 		return false;
 

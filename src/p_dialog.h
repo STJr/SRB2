@@ -50,15 +50,12 @@ typedef struct dialog_s
 	INT32 promptnum;
 	INT32 pagenum;
 
-	textprompt_t *prompt;
-	textpage_t *page;
-	player_t *callplayer;
+	player_t *player; // The player that started this conversation
+
 	textwriter_t writer;
 
 	char *pagetext;
 	size_t pagetextlength;
-	char *disptext;
-	size_t disptextsize;
 
 	boolean blockcontrols;
 	boolean gotonext;
@@ -80,8 +77,18 @@ typedef struct dialog_s
 	INT32 curchoice;
 	INT32 numchoices;
 	INT32 nochoice;
-	INT32 longestchoice;
 	boolean selectedchoice;
+
+	// For internal use.
+	textprompt_t *prompt;
+	textpage_t *page;
+
+	INT32 longestchoice;
+	lumpnum_t iconlump;
+	INT32 icontexture;
+
+	char *disptext;
+	size_t disptextsize;
 } dialog_t;
 
 void P_StartTextPrompt(player_t *player, INT32 promptnum, INT32 pagenum, UINT16 postexectag, boolean blockcontrols, boolean freezerealtime, boolean allplayers);
@@ -89,8 +96,9 @@ void P_EndTextPrompt(player_t *player, boolean forceexec, boolean noexec);
 void P_EndAllTextPrompts(boolean forceexec, boolean noexec);
 void P_RunDialog(player_t *player);
 void P_FreeDialog(dialog_t *dialog);
-void P_DialogSetText(dialog_t *dialog, char *pagetext, size_t textlength);
+void P_SetDialogText(dialog_t *dialog, char *pagetext, size_t textlength);
 void P_SetDialogSpeaker(dialog_t *dialog, const char *speaker);
+void P_SetDialogIcon(dialog_t *dialog, const char *icon);
 
 boolean P_SetCurrentDialogChoice(player_t *player, INT32 choice);
 boolean P_SelectDialogChoice(player_t *player, INT32 choice);

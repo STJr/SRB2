@@ -20,6 +20,7 @@
 #include "g_input.h"
 #include "s_sound.h"
 #include "v_video.h"
+#include "r_textures.h"
 #include "m_writebuffer.h"
 #include "hu_stuff.h"
 #include "w_wad.h"
@@ -141,13 +142,10 @@ typedef struct
 
 static void F_GetPageTextGeometry(dialog_t *dialog, dialog_geometry_t *geo)
 {
-	lumpnum_t iconlump = LUMPERROR;
-
-	if (dialog->icon[0])
-		iconlump = W_CheckNumForLongName(dialog->icon);
+	boolean has_icon = dialog->iconlump != LUMPERROR || dialog->icontexture != -1;
 
 	INT32 pagelines = dialog->page->lines;
-	boolean rightside = iconlump != LUMPERROR && dialog->page->rightside;
+	boolean rightside = has_icon && dialog->page->rightside;
 
 	// Vertical calculations
 	INT32 boxh = pagelines*2;
@@ -165,7 +163,7 @@ static void F_GetPageTextGeometry(dialog_t *dialog, dialog_geometry_t *geo)
 	// Horizontal calculations
 	// Shift text to the right if we have a character icon on the left side
 	// Add 4 margin against icon
-	geo->textx = (iconlump != LUMPERROR && !rightside) ? ((boxh * 4) + (boxh/2)*4) + 4 : 4;
+	geo->textx = (has_icon && !rightside) ? ((boxh * 4) + (boxh/2)*4) + 4 : 4;
 	geo->textr = rightside ? BASEVIDWIDTH - (((boxh * 4) + (boxh/2)*4) + 4) : BASEVIDWIDTH-4;
 
 	// Calculate choices box
@@ -313,14 +311,27 @@ void P_SetDialogSpeaker(dialog_t *dialog, const char *speaker)
 		return;
 	}
 
-	char name[256];
+	strlcpy(dialog->speaker, speaker, sizeof(dialog->speaker));
+}
 
-	// Add yellow control char
-	name[0] = '\x82';
-	name[1] = '\0';
+void P_SetDialogIcon(dialog_t *dialog, const char *icon)
+{
+	dialog->iconlump = LUMPERROR;
+	dialog->icontexture = -1;
 
-	strlcat(name, speaker, sizeof(name));
-	strlcpy(dialog->speaker, name, sizeof(dialog->speaker));
+	if (!icon || !strlen(icon))
+	{
+		dialog->icon[0] = '\0';
+		return;
+	}
+
+	strlcpy(dialog->icon, icon, sizeof(dialog->icon));
+
+	lumpnum_t iconlump = W_CheckNumForLongName(icon);
+	if (iconlump == LUMPERROR || !W_IsValidPatchNum(iconlump))
+		dialog->icontexture = R_CheckTextureNumForName(icon);
+	else
+		dialog->iconlump = iconlump;
 }
 
 static void P_DialogGetDispText(char *disptext, const char *text, size_t length)
@@ -461,7 +472,7 @@ static char *P_ProcessPageText(dialog_t *dialog, UINT8 *pagetext, size_t textlen
 	return (char*)buf.data;
 }
 
-void P_DialogSetText(dialog_t *dialog, char *pagetext, size_t textlength)
+void P_SetDialogText(dialog_t *dialog, char *pagetext, size_t textlength)
 {
 	Z_Free(dialog->pagetext);
 
@@ -549,13 +560,12 @@ static void P_DialogStartPage(player_t *player, dialog_t *dialog)
 
 	// Set up narrator
 	P_SetDialogSpeaker(dialog, dialog->page->name);
-
-	strlcpy(dialog->icon, dialog->page->iconname, sizeof(dialog->icon));
+	P_SetDialogIcon(dialog, dialog->page->iconname);
 
 	dialog->iconflip = dialog->page->iconflip;
 
 	// Prepare page text
-	P_DialogSetText(dialog, dialog->page->text, dialog->page->textlength);
+	P_SetDialogText(dialog, dialog->page->text, dialog->page->textlength);
 
 	// music change
 	if (P_IsLocalPlayer(player) || globaltextprompt)
@@ -791,11 +801,10 @@ static void P_EndGlobalTextPrompt(boolean forceexec, boolean noexec)
 
 	INT16 postexectag = 0;
 
-	player_t *callplayer = globaltextprompt->callplayer;
-
-	if (callplayer)
+	player_t *player = globaltextprompt->player;
+	if (player)
 	{
-		if ((callplayer->promptactive || forceexec) && !noexec && globaltextprompt->postexectag)
+		if ((player->promptactive || forceexec) && !noexec && globaltextprompt->postexectag)
 			postexectag = globaltextprompt->postexectag;
 	}
 
@@ -810,7 +819,7 @@ static void P_EndGlobalTextPrompt(boolean forceexec, boolean noexec)
 	globaltextprompt = NULL;
 
 	if (postexectag)
-		P_LinedefExecute(postexectag, callplayer->mo, NULL);
+		P_LinedefExecute(postexectag, player->mo, NULL);
 }
 
 void P_EndTextPrompt(player_t *player, boolean forceexec, boolean noexec)
@@ -887,7 +896,7 @@ void P_StartTextPrompt(player_t *player, INT32 promptnum, INT32 pagenum, UINT16 
 	(void)freezerealtime; // \todo freeze player->realtime, maybe this needs to cycle through player thinkers
 
 	// Initialize current prompt and scene
-	dialog->callplayer = player;
+	dialog->player = player;
 	dialog->promptnum = (promptnum < MAX_PROMPTS && textprompts[promptnum]) ? promptnum : INT32_MAX;
 	dialog->pagenum = (dialog->promptnum != INT32_MAX && pagenum < MAX_PAGES && pagenum <= textprompts[dialog->promptnum]->numpages-1) ? pagenum : INT32_MAX;
 	dialog->prompt = NULL;
@@ -1040,7 +1049,7 @@ static void F_DrawDialogText(INT32 x, INT32 y, INT32 option, const char *string,
 {
 	INT32 w, c, cx = x, cy = y, dup, scrwidth, left = 0;
 	const char *ch = string;
-	INT32 charflags = 0;
+	INT32 charflags = option & V_CHARCOLORMASK;
 	const UINT8 *colormap = NULL;
 	const INT32 spacewidth = 4;
 
@@ -1114,6 +1123,69 @@ static void F_DrawDialogText(INT32 x, INT32 y, INT32 option, const char *string,
 	}
 }
 
+static void F_DrawDialogIcon(dialog_t *dialog, dialog_geometry_t *geo, INT32 flags)
+{
+	INT32 iconx, icony, scale, scaledsize;
+	INT32 width, height;
+
+	INT32 boxh = geo->boxh;
+	INT32 namey = geo->namey;
+	boolean rightside = geo->rightside;
+
+	patch_t *patch = NULL;
+
+	if (dialog->iconlump != LUMPERROR)
+	{
+		patch = W_CachePatchLongName(dialog->icon, PU_PATCH_LOWPRIORITY);
+		if (!patch)
+			return;
+
+		width = patch->width;
+		height = patch->height;
+	}
+	else if (dialog->icontexture != -1)
+	{
+		width = textures[dialog->icontexture]->width;
+		height = textures[dialog->icontexture]->height;
+	}
+	else
+		return;
+
+	// scale and center
+	if (width > height)
+	{
+		scale = FixedDiv(((boxh * 4) + (boxh/2)*4) - 4, width);
+		scaledsize = FixedMul(height, scale);
+		iconx = (rightside ? BASEVIDWIDTH - (((boxh * 4) + (boxh/2)*4)) : 4) << FRACBITS;
+		icony = ((namey-4) << FRACBITS) + FixedDiv(BASEVIDHEIGHT - namey + 4 - scaledsize, 2); // account for 4 margin
+	}
+	else if (height > width)
+	{
+		scale = FixedDiv(((boxh * 4) + (boxh/2)*4) - 4, height);
+		scaledsize = FixedMul(width, scale);
+		iconx = (rightside ? BASEVIDWIDTH - (((boxh * 4) + (boxh/2)*4)) : 4) << FRACBITS;
+		icony = namey << FRACBITS;
+		iconx += FixedDiv(FixedMul(height, scale) - scaledsize, 2);
+	}
+	else
+	{
+		scale = FixedDiv(((boxh * 4) + (boxh/2)*4) - 4, width);
+		iconx = (rightside ? BASEVIDWIDTH - (((boxh * 4) + (boxh/2)*4)) : 4) << FRACBITS;
+		icony = namey << FRACBITS;
+	}
+
+	if (dialog->iconflip)
+	{
+		iconx += FixedMul(width, scale) << FRACBITS;
+		flags |= V_FLIP;
+	}
+
+	if (patch)
+		V_DrawFixedPatch(iconx, icony, scale, flags, patch, NULL);
+	else
+		V_DrawTexture(iconx, icony, scale, scale, flags, texturetranslation[dialog->icontexture]);
+}
+
 void F_TextPromptDrawer(void)
 {
 	if (!stplyr || !stplyr->promptactive)
@@ -1123,7 +1195,6 @@ void F_TextPromptDrawer(void)
 	if (!dialog)
 		return;
 
-	lumpnum_t iconlump = LUMPERROR;
 	dialog_geometry_t geo;
 
 	INT32 draw_flags = V_PERPLAYER;
@@ -1134,7 +1205,6 @@ void F_TextPromptDrawer(void)
 
 	F_GetPageTextGeometry(dialog, &geo);
 
-	boolean rightside = geo.rightside;
 	INT32 boxh = geo.boxh, texty = geo.texty, namey = geo.namey, chevrony = geo.chevrony;
 	INT32 textx = geo.textx, textr = geo.textr;
 	INT32 choicesx = geo.choicesx, choicesy = geo.choicesy;
@@ -1156,43 +1226,7 @@ void F_TextPromptDrawer(void)
 	V_DrawPromptBack(boxh, dialog->page->backcolor, draw_flags|snap_flags);
 
 	// Draw narrator icon
-	if (dialog->icon[0])
-		iconlump = W_CheckNumForLongName(dialog->icon);
-
-	if (iconlump != LUMPERROR)
-	{
-		INT32 iconx, icony, scale, scaledsize;
-		patch = W_CachePatchLongName(dialog->icon, PU_PATCH_LOWPRIORITY);
-
-		// scale and center
-		if (patch->width > patch->height)
-		{
-			scale = FixedDiv(((boxh * 4) + (boxh/2)*4) - 4, patch->width);
-			scaledsize = FixedMul(patch->height, scale);
-			iconx = (rightside ? BASEVIDWIDTH - (((boxh * 4) + (boxh/2)*4)) : 4) << FRACBITS;
-			icony = ((namey-4) << FRACBITS) + FixedDiv(BASEVIDHEIGHT - namey + 4 - scaledsize, 2); // account for 4 margin
-		}
-		else if (patch->height > patch->width)
-		{
-			scale = FixedDiv(((boxh * 4) + (boxh/2)*4) - 4, patch->height);
-			scaledsize = FixedMul(patch->width, scale);
-			iconx = (rightside ? BASEVIDWIDTH - (((boxh * 4) + (boxh/2)*4)) : 4) << FRACBITS;
-			icony = namey << FRACBITS;
-			iconx += FixedDiv(FixedMul(patch->height, scale) - scaledsize, 2);
-		}
-		else
-		{
-			scale = FixedDiv(((boxh * 4) + (boxh/2)*4) - 4, patch->width);
-			iconx = (rightside ? BASEVIDWIDTH - (((boxh * 4) + (boxh/2)*4)) : 4) << FRACBITS;
-			icony = namey << FRACBITS;
-		}
-
-		if (dialog->iconflip)
-			iconx += FixedMul(patch->width, scale) << FRACBITS;
-
-		V_DrawFixedPatch(iconx, icony, scale, (draw_flags|snap_flags|(dialog->iconflip ? V_FLIP : 0)), patch, NULL);
-		W_UnlockCachedPatch(patch);
-	}
+	F_DrawDialogIcon(dialog, &geo, draw_flags | snap_flags);
 
 	// Draw text
 	if (dialog->disptext)
@@ -1200,7 +1234,7 @@ void F_TextPromptDrawer(void)
 
 	// Draw name
 	if (dialog->speaker[0])
-		F_DrawDialogText(textx, namey, (draw_flags|snap_flags|V_ALLOWLOWERCASE), dialog->speaker, strlen(dialog->speaker), false, NULL);
+		F_DrawDialogText(textx, namey, (draw_flags|snap_flags|V_ALLOWLOWERCASE|V_YELLOWMAP), dialog->speaker, strlen(dialog->speaker), false, NULL);
 
 	// Draw choices
 	if (dialog->showchoices)
@@ -1237,7 +1271,7 @@ void F_TextPromptDrawer(void)
 		}
 	}
 
-	if (globaltextprompt && (globaltextprompt->callplayer != &players[displayplayer]))
+	if (globaltextprompt && (globaltextprompt->player != &players[displayplayer]))
 		return;
 
 	// Draw chevron
@@ -1334,7 +1368,7 @@ void P_RunDialog(player_t *player)
 		return;
 	}
 
-	player_t *promptplayer = dialog->callplayer;
+	player_t *promptplayer = dialog->player;
 	if (!promptplayer)
 		return;
 

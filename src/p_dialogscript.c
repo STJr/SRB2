@@ -79,7 +79,7 @@ const UINT8 *P_DialogRunOpcode(const UINT8 *code, dialog_t *dialog, textwriter_t
 			char *icon = ReadString(&code);
 			if (icon)
 			{
-				strlcpy(dialog->icon, icon, sizeof(dialog->icon));
+				P_SetDialogIcon(dialog, icon);
 				Z_Free(icon);
 			}
 			break;
@@ -99,7 +99,7 @@ boolean P_DialogPreprocessOpcode(dialog_t *dialog, UINT8 **cptr, writebuffer_t *
 	if (*code++ != TP_OP_CONTROL)
 		return false;
 
-	player_t *player = dialog->callplayer;
+	player_t *player = dialog->player;
 
 	switch (*code)
 	{

@@ -18,7 +18,7 @@
 #include "doomdef.h"
 
 // Patch functions
-patch_t *Patch_Create(softwarepatch_t *source, size_t srcsize, void *dest);
+patch_t *Patch_Create(softwarepatch_t *source, size_t srcsize);
 void Patch_Free(patch_t *patch);
 
 #define Patch_FreeTag(tagnum) Patch_FreeTags(tagnum, tagnum)

@@ -2051,7 +2051,7 @@ void *W_CacheSoftwarePatchNumPwad(UINT16 wad, UINT16 lump, INT32 tag)
 	if (!lumpcache[lump])
 	{
 		size_t len = W_LumpLengthPwad(wad, lump);
-		void *ptr, *dest, *lumpdata = Z_Malloc(len, PU_STATIC, NULL);
+		void *ptr, *lumpdata = Z_Malloc(len, PU_STATIC, NULL);
 
 		// read the lump in full
 		W_ReadLumpHeaderPwad(wad, lump, lumpdata, 0, 0);
@@ -2062,8 +2062,9 @@ void *W_CacheSoftwarePatchNumPwad(UINT16 wad, UINT16 lump, INT32 tag)
 			ptr = Picture_PNGConvert((UINT8 *)lumpdata, PICFMT_DOOMPATCH, NULL, NULL, NULL, NULL, len, &len, 0);
 #endif
 
-		dest = Z_Calloc(sizeof(patch_t), tag, &lumpcache[lump]);
-		Patch_Create(ptr, len, dest);
+		patch_t *patch = Patch_Create(ptr, len);
+		Z_ChangeTag(patch, tag);
+		Z_SetUser(patch, &lumpcache[lump]);
 
 		Z_Free(ptr);
 	}
@@ -2102,6 +2103,39 @@ void *W_CachePatchNumPwad(UINT16 wad, UINT16 lump, INT32 tag)
 void *W_CachePatchNum(lumpnum_t lumpnum, INT32 tag)
 {
 	return W_CachePatchNumPwad(WADFILENUM(lumpnum),LUMPNUM(lumpnum),tag);
+}
+
+boolean W_IsValidPatchNumPwad(UINT16 wad, UINT16 lump)
+{
+	if (!TestValidLump(wad, lump))
+		return false;
+
+	lumpcache_t *lumpcache = wadfiles[wad]->patchcache;
+
+	// Probably is if it's loaded
+	if (lumpcache[lump])
+		return true;
+
+	void *lumpdata = W_CacheLumpNumPwad(wad, lump, PU_CACHE);
+	if (!lumpdata)
+		return false;
+
+	size_t len = W_LumpLengthPwad(wad, lump);
+
+#ifndef NO_PNG_LUMPS
+	if (Picture_IsLumpPNG((UINT8 *)lumpdata, len))
+	{
+		// Maybe it is?
+		return true;
+	}
+#endif
+
+	return Picture_CheckIfDoomPatch(lumpdata, len);
+}
+
+boolean W_IsValidPatchNum(lumpnum_t lumpnum)
+{
+	return W_IsValidPatchNumPwad(WADFILENUM(lumpnum), LUMPNUM(lumpnum));
 }
 
 void W_UnlockCachedPatch(void *patch)

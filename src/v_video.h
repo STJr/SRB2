@@ -181,6 +181,8 @@ void V_DrawBlock(INT32 x, INT32 y, INT32 scrn, INT32 width, INT32 height, const 
 // draw a pic_t, SCALED
 void V_DrawScaledPic (INT32 px1, INT32 py1, INT32 scrn, INT32 lumpnum);
 
+void V_DrawTexture(fixed_t x, fixed_t y, fixed_t pscale, fixed_t vscale, INT32 scrn, INT32 texturenum);
+
 // fill a box with a single color
 void V_DrawFill(INT32 x, INT32 y, INT32 w, INT32 h, INT32 c);
 void V_DrawFillConsoleMap(INT32 x, INT32 y, INT32 w, INT32 h, INT32 c);
