@@ -1024,10 +1024,14 @@ boolean R_IsPointInSector(sector_t *sector, fixed_t x, fixed_t y)
 
 	for (i = 0; i < sector->linecount; i++)
 	{
+		line_t *line = sector->lines[i];
 		vertex_t *v1, *v2;
 
-		v1 = sector->lines[i]->v1;
-		v2 = sector->lines[i]->v2;
+		if (line->frontsector == line->backsector)
+			continue;
+
+		v1 = line->v1;
+		v2 = line->v2;
 
 		// make sure v1 is below v2
 		if (v1->y > v2->y)
@@ -1040,7 +1044,7 @@ boolean R_IsPointInSector(sector_t *sector, fixed_t x, fixed_t y)
 			// horizontal line, we can't match this
 			continue;
 
-		if (v1->y <= y && y < v2->y)
+		if (v1->y < y && y <= v2->y)
 		{
 			// if the y axis in inside the line, find the point where we intersect on the x axis...
 			fixed_t vx = v1->x + (INT64)(v2->x - v1->x) * (y - v1->y) / (v2->y - v1->y);
