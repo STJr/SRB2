@@ -85,6 +85,8 @@ extern boolean ignoregameinputs;
 #define META_HUDINFO "HUDINFO_T*"
 #define META_PATCH "PATCH_T*"
 #define META_COLORMAP "COLORMAP"
+#define META_EXTRACOLORMAP "EXTRACOLORMAP_T*"
+#define META_LIGHTTABLE "LIGHTTABLE_T*"
 #define META_CAMERA "CAMERA_T*"
 
 #define META_ACTION "ACTIONF_T*"
@@ -112,4 +114,5 @@ int LUA_TagLib(lua_State *L);
 int LUA_PolyObjLib(lua_State *L);
 int LUA_BlockmapLib(lua_State *L);
 int LUA_HudLib(lua_State *L);
+int LUA_ColorLib(lua_State *L);
 int LUA_InputLib(lua_State *L);

@@ -51,6 +51,7 @@ typedef struct thinker_s
 	// killough 11/98: count of how many other objects reference
 	// this one using pointers. Used for garbage collection.
 	INT32 references;
+	boolean cachable;
 
 #ifdef PARANOIA
 	INT32 debug_mobjtype;

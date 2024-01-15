@@ -23,6 +23,16 @@
 #include <windows.h>
 #endif
 #include <sys/stat.h>
+
+#ifndef S_ISLNK
+#define IGNORE_SYMLINKS
+#endif
+
+#ifndef IGNORE_SYMLINKS
+#include <unistd.h>
+#include <libgen.h>
+#include <limits.h>
+#endif
 #include <string.h>
 
 #include "filesrch.h"
@@ -433,9 +443,19 @@ filestatus_t filesearch(char *filename, const char *startpath, const UINT8 *want
 		// okay, now we actually want searchpath to incorporate d_name
 		strcpy(&searchpath[searchpathindex[depthleft]],dent->d_name);
 
+#if defined(__linux__) || defined(__FreeBSD__)
+		if (dent->d_type == DT_UNKNOWN)
+			if (lstat(searchpath,&fsstat) == 0 && S_ISDIR(fsstat.st_mode))
+				dent->d_type = DT_DIR;
+
+		// Linux and FreeBSD has a special field for file type on dirent, so use that to speed up lookups.
+		// FIXME: should we also follow symlinks?
+		if (dent->d_type == DT_DIR && depthleft)
+#else
 		if (stat(searchpath,&fsstat) < 0) // do we want to follow symlinks? if not: change it to lstat
 			; // was the file (re)moved? can't stat it
 		else if (S_ISDIR(fsstat.st_mode) && depthleft)
+#endif
 		{
 			searchpathindex[--depthleft] = strlen(searchpath) + 1;
 			dirhandle[depthleft] = opendir(searchpath);
@@ -451,6 +471,9 @@ filestatus_t filesearch(char *filename, const char *startpath, const UINT8 *want
 		}
 		else if (!strcasecmp(searchname, dent->d_name))
 		{
+#ifndef IGNORE_SYMLINKS
+			struct stat statbuf;
+#endif
 			switch (checkfilemd5(searchpath, wantedmd5sum))
 			{
 				case FS_FOUND:
@@ -458,6 +481,19 @@ filestatus_t filesearch(char *filename, const char *startpath, const UINT8 *want
 						strcpy(filename,searchpath);
 					else
 						strcpy(filename,dent->d_name);
+#ifndef IGNORE_SYMLINKS
+					if (lstat(filename, &statbuf) != -1)
+					{
+						if (S_ISLNK(statbuf.st_mode))
+						{
+							char *tempbuf = realpath(filename, NULL);
+							if (!tempbuf)
+								I_Error("Error parsing link %s: %s", filename, strerror(errno));
+							strncpy(filename, tempbuf, MAX_WADPATH);
+							free(tempbuf);
+						}
+					}
+#endif
 					retval = FS_FOUND;
 					found = 1;
 					break;

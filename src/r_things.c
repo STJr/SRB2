@@ -138,8 +138,7 @@ static void R_InstallSpriteLump(UINT16 wad,            // graphics patch
 #ifdef ROTSPRITE
 	for (r = 0; r < 16; r++)
 	{
-		sprtemp[frame].rotated[0][r] = NULL;
-		sprtemp[frame].rotated[1][r] = NULL;
+		sprtemp[frame].rotated[r] = NULL;
 	}
 #endif
 
@@ -337,6 +336,11 @@ boolean R_AddSingleSpriteDef(const char *sprname, spritedef_t *spritedef, UINT16
 			spritecachedinfo[numspritelumps].height = height<<FRACBITS;
 
 			// BP: we cannot use special tric in hardware mode because feet in ground caused by z-buffer
+			// Monster Iestyn (21 Sep 2023): the above comment no longer makes sense in context!!! So I give an explanation here!
+			// FEETADJUST was originally an OpenGL-exclusive hack from Doom Legacy to avoid the player's feet being clipped as
+			// a result of rendering partially under the ground, but sometime before SRB2 2.1's release this was changed to apply
+			// to the software renderer as well.
+			// TODO: kill FEETADJUST altogether somehow and somehow fix OpenGL not to clip sprites that are partially underground (if possible)?
 			spritecachedinfo[numspritelumps].topoffset += FEETADJUST;
 
 			//----------------------------------------------------
@@ -505,10 +509,6 @@ void R_AddSpriteDefs(UINT16 wadnum)
 
 		if (R_AddSingleSpriteDef(sprnames[i], &sprites[i], wadnum, start, end))
 		{
-#ifdef HWRENDER
-			if (rendermode == render_opengl)
-				HWR_AddSpriteModel(i);
-#endif
 			// if a new sprite was added (not just replaced)
 			addsprites++;
 #ifndef ZDEBUG
@@ -583,14 +583,10 @@ void R_InitSprites(void)
 	}
 	ST_ReloadSkinFaceGraphics();
 
-	//
-	// check if all sprites have frames
-	//
-	/*
-	for (i = 0; i < numsprites; i++)
-		if (sprites[i].numframes < 1)
-			CONS_Debug(DBG_SETUP, "R_InitSprites: sprite %s has no frames at all\n", sprnames[i]);
-	*/
+#ifdef HWRENDER
+	if (rendermode == render_opengl)
+		HWR_LoadModels();
+#endif
 }
 
 //
@@ -785,8 +781,8 @@ UINT8 *R_GetSpriteTranslation(vissprite_t *vis)
 		}
 		else if (!(vis->cut & SC_PRECIP) && vis->mobj->skin && vis->mobj->sprite == SPR_PLAY) // This thing is a player!
 		{
-			size_t skinnum = (skin_t*)vis->mobj->skin-skins;
-			return R_GetTranslationColormap((INT32)skinnum, vis->color, GTC_CACHE);
+			UINT8 skinnum = ((skin_t*)vis->mobj->skin)->skinnum;
+			return R_GetTranslationColormap(skinnum, vis->color, GTC_CACHE);
 		}
 		else // Use the defaults
 			return R_GetTranslationColormap(TC_DEFAULT, vis->color, GTC_CACHE);
@@ -1262,8 +1258,8 @@ static void R_ProjectDropShadow(mobj_t *thing, vissprite_t *vis, fixed_t scale, 
 	patch_t *patch;
 	fixed_t xscale, yscale, shadowxscale, shadowyscale, shadowskew, x1, x2;
 	INT32 heightsec, phs;
-	INT32 light = 0;
-	fixed_t scalemul; UINT8 trans;
+	fixed_t scalemul;
+	UINT8 trans;
 	fixed_t floordiff;
 	fixed_t groundz;
 	pslope_t *groundslope;
@@ -1379,27 +1375,7 @@ static void R_ProjectDropShadow(mobj_t *thing, vissprite_t *vis, fixed_t scale, 
 	if (thing->renderflags & RF_NOCOLORMAPS)
 		shadow->extra_colormap = NULL;
 	else
-	{
-		if (thing->subsector->sector->numlights)
-		{
-			INT32 lightnum;
-			light = thing->subsector->sector->numlights - 1;
-
-			// R_GetPlaneLight won't work on sloped lights!
-			for (lightnum = 1; lightnum < thing->subsector->sector->numlights; lightnum++) {
-				fixed_t h = P_GetLightZAt(&thing->subsector->sector->lightlist[lightnum], interp.x, interp.y);
-				if (h <= shadow->gzt) {
-					light = lightnum - 1;
-					break;
-				}
-			}
-		}
-
-		if (thing->subsector->sector->numlights)
-			shadow->extra_colormap = *thing->subsector->sector->lightlist[light].extra_colormap;
-		else
-			shadow->extra_colormap = thing->subsector->sector->extra_colormap;
-	}
+		shadow->extra_colormap = P_GetColormapFromSectorAt(thing->subsector->sector, interp.x, interp.y, shadow->gzt);
 
 	shadow->transmap = R_GetTranslucencyTable(trans + 1);
 	shadow->colormap = scalelight[0][0]; // full dark!
@@ -1597,6 +1573,8 @@ static void R_ProjectSprite(mobj_t *thing)
 	height = interp.height; // Ditto
 
 	// transform the origin point
+	if (thing->type == MT_OVERLAY) // Handle overlays
+		R_ThingOffsetOverlay(thing, &interp.x, &interp.y);
 	tr_x = interp.x - viewx;
 	tr_y = interp.y - viewy;
 
@@ -1740,7 +1718,7 @@ static void R_ProjectSprite(mobj_t *thing)
 			rollangle = R_GetRollAngle(spriterotangle);
 		}
 
-		rotsprite = Patch_GetRotatedSprite(sprframe, (thing->frame & FF_FRAMEMASK), rot, flip, false, sprinfo, rollangle);
+		rotsprite = Patch_GetRotatedSprite(sprframe, (thing->frame & FF_FRAMEMASK), rot, flip, sprinfo, rollangle);
 
 		if (rotsprite != NULL)
 		{
@@ -1942,6 +1920,8 @@ static void R_ProjectSprite(mobj_t *thing)
 		radius = tracer_interp.radius; // For drop shadows
 		height = tracer_interp.height; // Ditto
 
+		if (thing->type == MT_OVERLAY) // Handle overlays
+			R_ThingOffsetOverlay(thing, &tracer_interp.x, &tracer_interp.y);
 		tr_x = (tracer_interp.x + sort_x) - viewx;
 		tr_y = (tracer_interp.y + sort_y) - viewy;
 		tz = FixedMul(tr_x, viewcos) + FixedMul(tr_y, viewsin);
@@ -2096,21 +2076,9 @@ static void R_ProjectSprite(mobj_t *thing)
 
 	if (thing->subsector->sector->numlights)
 	{
-		INT32 lightnum;
-		fixed_t top = (splat) ? gz : gzt;
-		light = thing->subsector->sector->numlights - 1;
+		light = P_GetSectorLightAt(thing->subsector->sector, interp.x, interp.y, splat ? gz : gzt);
 
-		// R_GetPlaneLight won't work on sloped lights!
-		for (lightnum = 1; lightnum < thing->subsector->sector->numlights; lightnum++) {
-			fixed_t h = P_GetLightZAt(&thing->subsector->sector->lightlist[lightnum], interp.x, interp.y);
-			if (h <= top) {
-				light = lightnum - 1;
-				break;
-			}
-		}
-		//light = R_GetPlaneLight(thing->subsector->sector, gzt, false);
-		lightnum = (*thing->subsector->sector->lightlist[light].lightlevel >> LIGHTSEGSHIFT);
-
+		INT32 lightnum = (*thing->subsector->sector->lightlist[light].lightlevel >> LIGHTSEGSHIFT);
 		if (lightnum < 0)
 			spritelights = scalelight[0];
 		else if (lightnum >= LIGHTLEVELS)
@@ -3147,8 +3115,8 @@ static boolean R_CheckSpriteVisible(vissprite_t *spr, INT32 x1, INT32 x2)
 	INT16 sz = spr->sz;
 	INT16 szt = spr->szt;
 
-	fixed_t texturemid, yscale, scalestep = spr->scalestep;
-	INT32 height;
+	fixed_t texturemid = 0, yscale = 0, scalestep = spr->scalestep; // "= 0" pleases the compiler
+	INT32 height = 0;
 
 	if (scalestep)
 	{
@@ -3546,6 +3514,50 @@ boolean R_ThingIsSemiBright(mobj_t *thing)
 boolean R_ThingIsFullDark(mobj_t *thing)
 {
 	return ((thing->frame & FF_BRIGHTMASK) == FF_FULLDARK || (thing->renderflags & RF_BRIGHTMASK) == RF_FULLDARK);
+}
+
+// Offsets MT_OVERLAY towards the camera at render-time - Works in splitscreen!
+// The &x and &y arguments should be pre-interpolated, and will be modified
+void R_ThingOffsetOverlay(mobj_t *thing, fixed_t *x, fixed_t *y)
+{
+	mobj_t *mobj = thing;
+	INT16 offset = 0; // Offset towards or away from the camera, and how much
+	fixed_t offsetscale = thing->scale; // Occasionally needs to be interpolated
+	angle_t viewingangle;
+	UINT8 looplimit = 255; // Prevent infinite loops - A chain of 255 connected overlays is enough for any sane use case
+
+#ifdef PARANOIA
+	if (P_MobjWasRemoved(mobj) || !x || !y)
+		I_Error("R_ThingOffsetOverlay: thing, x, or y is invalid");
+#endif
+
+	do // Get the overlay's offset
+	{
+		// Does the overlay use FF_ANIMATE? If not, if var1 is non-zero, it's an underlay instead of an overlay
+		if (!(mobj->state->frame & FF_ANIMATE) && mobj->state->var1)
+			offset += 1; // Underlay below the target, away from the camera
+		else
+			offset -= 1; // Overlay on top of the target, towards the camera
+
+		looplimit -= 1;
+		mobj = mobj->target;
+	} while (!P_MobjWasRemoved(mobj) && mobj->type == MT_OVERLAY && looplimit > 0); // Handle overlays following other overlays
+
+	// Does the offset scale need to be interpolated?
+	if (thing->scale != thing->old_scale && R_UsingFrameInterpolation() && !paused)
+	{
+		interpmobjstate_t interp = {0};
+		R_InterpolateMobjState(thing, rendertimefrac, &interp);
+		offsetscale = interp.scale;
+	}
+
+
+	// Get the angle from the camera to the X and Y coordinates
+	viewingangle = R_PointToAngle(*x, *y);
+
+	// Finally, offset the X and Y coordinates towards or away from the camera
+	*x += P_ReturnThrustX(thing, viewingangle, FixedMul(offset * (FRACUNIT/4), offsetscale));
+	*y += P_ReturnThrustY(thing, viewingangle, FixedMul(offset * (FRACUNIT/4), offsetscale));
 }
 
 //

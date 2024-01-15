@@ -1577,7 +1577,7 @@ static void R_ParseSpriteInfo(boolean spr2)
 	spritenum_t sprnum = NUMSPRITES;
 	playersprite_t spr2num = NUMPLAYERSPRITES;
 	INT32 i;
-	INT32 skinnumbers[MAXSKINS];
+	UINT8 *skinnumbers = NULL;
 	INT32 foundskins = 0;
 
 	// Sprite name
@@ -1675,7 +1675,9 @@ static void R_ParseSpriteInfo(boolean spr2)
 				if (skinnum == -1)
 					I_Error("Error parsing SPRTINFO lump: Unknown skin \"%s\"", skinName);
 
-				skinnumbers[foundskins] = skinnum;
+				if (skinnumbers == NULL)
+					skinnumbers = Z_Malloc(sizeof(UINT8) * numskins, PU_STATIC, NULL);
+				skinnumbers[foundskins] = (UINT8)skinnum;
 				foundskins++;
 			}
 			else if (stricmp(sprinfoToken, "FRAME")==0)
@@ -1688,8 +1690,7 @@ static void R_ParseSpriteInfo(boolean spr2)
 						I_Error("Error parsing SPRTINFO lump: No skins specified in this sprite2 definition");
 					for (i = 0; i < foundskins; i++)
 					{
-						size_t skinnum = skinnumbers[i];
-						skin_t *skin = &skins[skinnum];
+						skin_t *skin = skins[skinnumbers[i]];
 						spriteinfo_t *sprinfo = skin->sprinfo;
 						M_Memcpy(&sprinfo[spr2num], info, sizeof(spriteinfo_t));
 					}
@@ -1713,8 +1714,11 @@ static void R_ParseSpriteInfo(boolean spr2)
 	{
 		I_Error("Error parsing SPRTINFO lump: Expected \"{\" for sprite \"%s\", got \"%s\"",newSpriteName,sprinfoToken);
 	}
+
 	Z_Free(sprinfoToken);
 	Z_Free(info);
+	if (skinnumbers)
+		Z_Free(skinnumbers);
 }
 
 //

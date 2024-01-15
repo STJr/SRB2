@@ -947,6 +947,9 @@ static void P_InitializeSector(sector_t *ss)
 	ss->lightingdata = NULL;
 	ss->fadecolormapdata = NULL;
 
+	ss->portal_floor = UINT32_MAX;
+	ss->portal_ceiling = UINT32_MAX;
+
 	ss->heightsec = -1;
 	ss->camsec = -1;
 
@@ -1009,6 +1012,9 @@ static void P_LoadSectors(UINT8 *data)
 		ss->floorxoffset = ss->flooryoffset = 0;
 		ss->ceilingxoffset = ss->ceilingyoffset = 0;
 
+		ss->floorxscale = ss->flooryscale = FRACUNIT;
+		ss->ceilingxscale = ss->ceilingyscale = FRACUNIT;
+
 		ss->floorangle = ss->ceilingangle = 0;
 
 		ss->floorlightlevel = ss->ceilinglightlevel = 0;
@@ -1061,44 +1067,45 @@ static void P_InitializeLinedef(line_t *ld)
 	ld->polyobj = NULL;
 
 	ld->callcount = 0;
+	ld->secportal = UINT32_MAX;
 
 	// cph 2006/09/30 - fix sidedef errors right away.
 	// cph 2002/07/20 - these errors are fatal if not fixed, so apply them
 	for (j = 0; j < 2; j++)
-		if (ld->sidenum[j] != 0xffff && ld->sidenum[j] >= (UINT16)numsides)
+		if (ld->sidenum[j] != NO_SIDEDEF && ld->sidenum[j] >= (UINT32)numsides)
 		{
-			ld->sidenum[j] = 0xffff;
+			ld->sidenum[j] = NO_SIDEDEF;
 			CONS_Debug(DBG_SETUP, "P_InitializeLinedef: Linedef %s has out-of-range sidedef number\n", sizeu1((size_t)(ld - lines)));
 		}
 
 	// killough 11/98: fix common wad errors (missing sidedefs):
-	if (ld->sidenum[0] == 0xffff)
+	if (ld->sidenum[0] == NO_SIDEDEF)
 	{
 		ld->sidenum[0] = 0;  // Substitute dummy sidedef for missing right side
 		// cph - print a warning about the bug
 		CONS_Debug(DBG_SETUP, "P_InitializeLinedef: Linedef %s missing first sidedef\n", sizeu1((size_t)(ld - lines)));
 	}
 
-	if ((ld->sidenum[1] == 0xffff) && (ld->flags & ML_TWOSIDED))
+	if ((ld->sidenum[1] == NO_SIDEDEF) && (ld->flags & ML_TWOSIDED))
 	{
 		ld->flags &= ~ML_TWOSIDED;  // Clear 2s flag for missing left side
 		// cph - print a warning about the bug
 		CONS_Debug(DBG_SETUP, "P_InitializeLinedef: Linedef %s has two-sided flag set, but no second sidedef\n", sizeu1((size_t)(ld - lines)));
 	}
 
-	if (ld->sidenum[0] != 0xffff)
+	if (ld->sidenum[0] != NO_SIDEDEF)
 	{
 		sides[ld->sidenum[0]].special = ld->special;
 		sides[ld->sidenum[0]].line = ld;
 	}
-	if (ld->sidenum[1] != 0xffff)
+	if (ld->sidenum[1] != NO_SIDEDEF)
 	{
 		sides[ld->sidenum[1]].special = ld->special;
 		sides[ld->sidenum[1]].line = ld;
 	}
 }
 
-static void P_SetLinedefV1(size_t i, UINT16 vertex_num)
+static void P_SetLinedefV1(size_t i, UINT32 vertex_num)
 {
 	if (vertex_num >= numvertexes)
 	{
@@ -1108,7 +1115,7 @@ static void P_SetLinedefV1(size_t i, UINT16 vertex_num)
 	lines[i].v1 = &vertexes[vertex_num];
 }
 
-static void P_SetLinedefV2(size_t i, UINT16 vertex_num)
+static void P_SetLinedefV2(size_t i, UINT32 vertex_num)
 {
 	if (vertex_num >= numvertexes)
 	{
@@ -1133,17 +1140,22 @@ static void P_LoadLinedefs(UINT8 *data)
 		memset(ld->stringargs, 0x00, NUMLINESTRINGARGS*sizeof(*ld->stringargs));
 		ld->alpha = FRACUNIT;
 		ld->executordelay = 0;
-		P_SetLinedefV1(i, SHORT(mld->v1));
-		P_SetLinedefV2(i, SHORT(mld->v2));
+		P_SetLinedefV1(i, (UINT16)SHORT(mld->v1));
+		P_SetLinedefV2(i, (UINT16)SHORT(mld->v2));
 
-		ld->sidenum[0] = SHORT(mld->sidenum[0]);
-		ld->sidenum[1] = SHORT(mld->sidenum[1]);
+		ld->sidenum[0] = (UINT16)SHORT(mld->sidenum[0]);
+		ld->sidenum[1] = (UINT16)SHORT(mld->sidenum[1]);
+
+		if (ld->sidenum[0] == 0xffff)
+			ld->sidenum[0] = NO_SIDEDEF;
+		if (ld->sidenum[1] == 0xffff)
+			ld->sidenum[1] = NO_SIDEDEF;
 
 		P_InitializeLinedef(ld);
 	}
 }
 
-static void P_SetSidedefSector(size_t i, UINT16 sector_num)
+static void P_SetSidedefSector(size_t i, UINT32 sector_num)
 {
 	// cph 2006/09/30 - catch out-of-range sector numbers; use sector 0 instead
 	if (sector_num >= numsectors)
@@ -1301,10 +1313,13 @@ static void P_LoadSidedefs(UINT8 *data)
 		}
 		sd->rowoffset = SHORT(msd->rowoffset)<<FRACBITS;
 
-		sd->offsetx_top = sd->offsetx_mid = sd->offsetx_bot = 0;
-		sd->offsety_top = sd->offsety_mid = sd->offsety_bot = 0;
+		sd->offsetx_top = sd->offsetx_mid = sd->offsetx_bottom = 0;
+		sd->offsety_top = sd->offsety_mid = sd->offsety_bottom = 0;
 
-		P_SetSidedefSector(i, SHORT(msd->sector));
+		sd->scalex_top = sd->scalex_mid = sd->scalex_bottom = FRACUNIT;
+		sd->scaley_top = sd->scaley_mid = sd->scaley_bottom = FRACUNIT;
+
+		P_SetSidedefSector(i, (UINT16)SHORT(msd->sector));
 
 		// Special info stored in texture fields!
 		switch (sd->special)
@@ -1642,6 +1657,14 @@ static void ParseTextmapSectorParameter(UINT32 i, const char *param, const char 
 		sectors[i].ceilingxoffset = FLOAT_TO_FIXED(atof(val));
 	else if (fastcmp(param, "ypanningceiling"))
 		sectors[i].ceilingyoffset = FLOAT_TO_FIXED(atof(val));
+	else if (fastcmp(param, "xscalefloor"))
+		sectors[i].floorxscale = FLOAT_TO_FIXED(atof(val));
+	else if (fastcmp(param, "yscalefloor"))
+		sectors[i].flooryscale = FLOAT_TO_FIXED(atof(val));
+	else if (fastcmp(param, "xscaleceiling"))
+		sectors[i].ceilingxscale = FLOAT_TO_FIXED(atof(val));
+	else if (fastcmp(param, "yscaleceiling"))
+		sectors[i].ceilingyscale = FLOAT_TO_FIXED(atof(val));
 	else if (fastcmp(param, "rotationfloor"))
 		sectors[i].floorangle = FixedAngle(FLOAT_TO_FIXED(atof(val)));
 	else if (fastcmp(param, "rotationceiling"))
@@ -1837,13 +1860,25 @@ static void ParseTextmapSidedefParameter(UINT32 i, const char *param, const char
 	else if (fastcmp(param, "offsetx_mid"))
 		sides[i].offsetx_mid = atol(val) << FRACBITS;
 	else if (fastcmp(param, "offsetx_bottom"))
-		sides[i].offsetx_bot = atol(val) << FRACBITS;
+		sides[i].offsetx_bottom = atol(val) << FRACBITS;
 	else if (fastcmp(param, "offsety_top"))
 		sides[i].offsety_top = atol(val) << FRACBITS;
 	else if (fastcmp(param, "offsety_mid"))
 		sides[i].offsety_mid = atol(val) << FRACBITS;
 	else if (fastcmp(param, "offsety_bottom"))
-		sides[i].offsety_bot = atol(val) << FRACBITS;
+		sides[i].offsety_bottom = atol(val) << FRACBITS;
+	else if (fastcmp(param, "scalex_top"))
+		sides[i].scalex_top = FLOAT_TO_FIXED(atof(val));
+	else if (fastcmp(param, "scalex_mid"))
+		sides[i].scalex_mid = FLOAT_TO_FIXED(atof(val));
+	else if (fastcmp(param, "scalex_bottom"))
+		sides[i].scalex_bottom = FLOAT_TO_FIXED(atof(val));
+	else if (fastcmp(param, "scaley_top"))
+		sides[i].scaley_top = FLOAT_TO_FIXED(atof(val));
+	else if (fastcmp(param, "scaley_mid"))
+		sides[i].scaley_mid = FLOAT_TO_FIXED(atof(val));
+	else if (fastcmp(param, "scaley_bottom"))
+		sides[i].scaley_bottom = FLOAT_TO_FIXED(atof(val));
 	else if (fastcmp(param, "texturetop"))
 		sides[i].toptexture = R_TextureNumForName(val);
 	else if (fastcmp(param, "texturebottom"))
@@ -2443,7 +2478,7 @@ static void P_WriteTextmap(void)
 		fprintf(f, "v1 = %s;\n", sizeu1(wlines[i].v1 - vertexes));
 		fprintf(f, "v2 = %s;\n", sizeu1(wlines[i].v2 - vertexes));
 		fprintf(f, "sidefront = %d;\n", wlines[i].sidenum[0]);
-		if (wlines[i].sidenum[1] != 0xffff)
+		if (wlines[i].sidenum[1] != NO_SIDEDEF)
 			fprintf(f, "sideback = %d;\n", wlines[i].sidenum[1]);
 		firsttag = Tag_FGet(&wlines[i].tags);
 		if (firsttag != 0)
@@ -2548,10 +2583,22 @@ static void P_WriteTextmap(void)
 			fprintf(f, "offsetx_mid = %d;\n", wsides[i].offsetx_mid >> FRACBITS);
 		if (wsides[i].offsety_mid != 0)
 			fprintf(f, "offsety_mid = %d;\n", wsides[i].offsety_mid >> FRACBITS);
-		if (wsides[i].offsetx_bot != 0)
-			fprintf(f, "offsetx_bottom = %d;\n", wsides[i].offsetx_bot >> FRACBITS);
-		if (wsides[i].offsety_bot != 0)
-			fprintf(f, "offsety_bottom = %d;\n", wsides[i].offsety_bot >> FRACBITS);
+		if (wsides[i].offsetx_bottom != 0)
+			fprintf(f, "offsetx_bottom = %d;\n", wsides[i].offsetx_bottom >> FRACBITS);
+		if (wsides[i].offsety_bottom != 0)
+			fprintf(f, "offsety_bottom = %d;\n", wsides[i].offsety_bottom >> FRACBITS);
+		if (wsides[i].scalex_top != FRACUNIT)
+			fprintf(f, "scalex_top = %f;\n", FIXED_TO_FLOAT(wsides[i].scalex_top));
+		if (wsides[i].scaley_top != FRACUNIT)
+			fprintf(f, "scaley_top = %f;\n", FIXED_TO_FLOAT(wsides[i].scaley_top));
+		if (wsides[i].scalex_mid != FRACUNIT)
+			fprintf(f, "scalex_mid = %f;\n", FIXED_TO_FLOAT(wsides[i].scalex_mid));
+		if (wsides[i].scaley_mid != FRACUNIT)
+			fprintf(f, "scaley_mid = %f;\n", FIXED_TO_FLOAT(wsides[i].scaley_mid));
+		if (wsides[i].scalex_bottom != FRACUNIT)
+			fprintf(f, "scalex_bottom = %f;\n", FIXED_TO_FLOAT(wsides[i].scalex_bottom));
+		if (wsides[i].scaley_bottom != FRACUNIT)
+			fprintf(f, "scaley_bottom = %f;\n", FIXED_TO_FLOAT(wsides[i].scaley_bottom));
 		if (wsides[i].toptexture > 0 && wsides[i].toptexture < numtextures)
 			fprintf(f, "texturetop = \"%.*s\";\n", 8, textures[wsides[i].toptexture]->name);
 		if (wsides[i].bottomtexture > 0 && wsides[i].bottomtexture < numtextures)
@@ -2607,6 +2654,14 @@ static void P_WriteTextmap(void)
 			fprintf(f, "xpanningceiling = %f;\n", FIXED_TO_FLOAT(tempsec.ceilingxoffset));
 		if (tempsec.ceilingyoffset != 0)
 			fprintf(f, "ypanningceiling = %f;\n", FIXED_TO_FLOAT(tempsec.ceilingyoffset));
+		if (tempsec.floorxscale != 0)
+			fprintf(f, "xscalefloor = %f;\n", FIXED_TO_FLOAT(tempsec.floorxscale));
+		if (tempsec.flooryscale != 0)
+			fprintf(f, "yscalefloor = %f;\n", FIXED_TO_FLOAT(tempsec.flooryscale));
+		if (tempsec.ceilingxscale != 0)
+			fprintf(f, "xscaleceiling = %f;\n", FIXED_TO_FLOAT(tempsec.ceilingxscale));
+		if (tempsec.ceilingyscale != 0)
+			fprintf(f, "yscaleceiling = %f;\n", FIXED_TO_FLOAT(tempsec.ceilingyscale));
 		if (wsectors[i].floorangle != 0)
 			fprintf(f, "rotationfloor = %f;\n", FIXED_TO_FLOAT(AngleFixed(wsectors[i].floorangle)));
 		if (wsectors[i].ceilingangle != 0)
@@ -2842,6 +2897,9 @@ static void P_LoadTextmap(void)
 		sc->floorxoffset = sc->flooryoffset = 0;
 		sc->ceilingxoffset = sc->ceilingyoffset = 0;
 
+		sc->floorxscale = sc->flooryscale = FRACUNIT;
+		sc->ceilingxscale = sc->ceilingyscale = FRACUNIT;
+
 		sc->floorangle = sc->ceilingangle = 0;
 
 		sc->floorlightlevel = sc->ceilinglightlevel = 0;
@@ -2876,22 +2934,26 @@ static void P_LoadTextmap(void)
 		P_InitializeSector(sc);
 		if (textmap_colormap.used)
 		{
-			INT32 rgba = P_ColorToRGBA(textmap_colormap.lightcolor, textmap_colormap.lightalpha);
-			INT32 fadergba = P_ColorToRGBA(textmap_colormap.fadecolor, textmap_colormap.fadealpha);
+			// Convert alpha values from old 0-25 (A-Z) range to 0-255 range
+			UINT8 lightalpha = (textmap_colormap.lightalpha * 102) / 10;
+			UINT8 fadealpha = (textmap_colormap.fadealpha * 102) / 10;
+			
+			INT32 rgba = P_ColorToRGBA(textmap_colormap.lightcolor, lightalpha);
+			INT32 fadergba = P_ColorToRGBA(textmap_colormap.fadecolor, fadealpha);
 			sc->extra_colormap = sc->spawn_extra_colormap = R_CreateColormap(rgba, fadergba, textmap_colormap.fadestart, textmap_colormap.fadeend, textmap_colormap.flags);
 		}
 
 		if (textmap_planefloor.defined == (PD_A|PD_B|PD_C|PD_D))
-        {
+		{
 			sc->f_slope = MakeViaEquationConstants(textmap_planefloor.a, textmap_planefloor.b, textmap_planefloor.c, textmap_planefloor.d);
 			sc->hasslope = true;
-        }
+		}
 
 		if (textmap_planeceiling.defined == (PD_A|PD_B|PD_C|PD_D))
-        {
+		{
 			sc->c_slope = MakeViaEquationConstants(textmap_planeceiling.a, textmap_planeceiling.b, textmap_planeceiling.c, textmap_planeceiling.d);
 			sc->hasslope = true;
-        }
+		}
 
 		TextmapFixFlatOffsets(sc);
 	}
@@ -2908,8 +2970,8 @@ static void P_LoadTextmap(void)
 		memset(ld->stringargs, 0x00, NUMLINESTRINGARGS*sizeof(*ld->stringargs));
 		ld->alpha = FRACUNIT;
 		ld->executordelay = 0;
-		ld->sidenum[0] = 0xffff;
-		ld->sidenum[1] = 0xffff;
+		ld->sidenum[0] = NO_SIDEDEF;
+		ld->sidenum[1] = NO_SIDEDEF;
 
 		TextmapParse(linesPos[i], i, ParseTextmapLinedefParameter);
 
@@ -2917,7 +2979,7 @@ static void P_LoadTextmap(void)
 			I_Error("P_LoadTextmap: linedef %s has no v1 value set!\n", sizeu1(i));
 		if (!ld->v2)
 			I_Error("P_LoadTextmap: linedef %s has no v2 value set!\n", sizeu1(i));
-		if (ld->sidenum[0] == 0xffff)
+		if (ld->sidenum[0] == NO_SIDEDEF)
 			I_Error("P_LoadTextmap: linedef %s has no sidefront value set!\n", sizeu1(i));
 
 		P_InitializeLinedef(ld);
@@ -2928,8 +2990,10 @@ static void P_LoadTextmap(void)
 		// Defaults.
 		sd->textureoffset = 0;
 		sd->rowoffset = 0;
-		sd->offsetx_top = sd->offsetx_mid = sd->offsetx_bot = 0;
-		sd->offsety_top = sd->offsety_mid = sd->offsety_bot = 0;
+		sd->offsetx_top = sd->offsetx_mid = sd->offsetx_bottom = 0;
+		sd->offsety_top = sd->offsety_mid = sd->offsety_bottom = 0;
+		sd->scalex_top = sd->scalex_mid = sd->scalex_bottom = FRACUNIT;
+		sd->scaley_top = sd->scaley_mid = sd->scaley_bottom = FRACUNIT;
 		sd->toptexture = R_TextureNumForName("-");
 		sd->midtexture = R_TextureNumForName("-");
 		sd->bottomtexture = R_TextureNumForName("-");
@@ -2971,7 +3035,7 @@ static void P_ProcessLinedefsAfterSidedefs(void)
 	for (; i--; ld++)
 	{
 		ld->frontsector = sides[ld->sidenum[0]].sector; //e6y: Can't be -1 here
-		ld->backsector = ld->sidenum[1] != 0xffff ? sides[ld->sidenum[1]].sector : 0;
+		ld->backsector = ld->sidenum[1] != NO_SIDEDEF ? sides[ld->sidenum[1]].sector : 0;
 
 		if (udmf)
 			continue;
@@ -3207,10 +3271,10 @@ static void P_InitializeSeg(seg_t *seg)
 {
 	if (seg->linedef)
 	{
-		UINT16 side = seg->linedef->sidenum[seg->side];
+		UINT32 side = seg->linedef->sidenum[seg->side];
 
-		if (side == 0xffff)
-			I_Error("P_InitializeSeg: Seg %s refers to side %d of linedef %s, which doesn't exist!\n", sizeu1((size_t)(seg - segs)), seg->side, sizeu1((size_t)(seg->linedef - lines)));
+		if (side == NO_SIDEDEF)
+			I_Error("P_InitializeSeg: Seg %s refers to side %d of linedef %s, which doesn't exist!\n", sizeu1((size_t)(seg - segs)), seg->side, sizeu2((size_t)(seg->linedef - lines)));
 
 		seg->sidedef = &sides[side];
 
@@ -3252,7 +3316,7 @@ static void P_LoadSegs(UINT8 *data)
 
 		seg->length = P_SegLength(seg);
 #ifdef HWRENDER
-		seg->flength = (rendermode == render_opengl) ? P_SegLengthFloat(seg) : 0;
+		seg->flength = P_SegLengthFloat(seg);
 #endif
 
 		seg->glseg = false;
@@ -3394,7 +3458,7 @@ static boolean P_LoadExtraVertices(UINT8 **data)
 static boolean P_LoadExtendedSubsectorsAndSegs(UINT8 **data, nodetype_t nodetype)
 {
 	size_t i, k;
-	INT16 m;
+	size_t m;
 	seg_t *seg;
 
 	// Subsectors
@@ -3417,23 +3481,33 @@ static boolean P_LoadExtendedSubsectorsAndSegs(UINT8 **data, nodetype_t nodetype
 		{
 		case NT_XGLN:
 		case NT_XGL3:
-			for (m = 0; m < subsectors[i].numlines; m++, k++)
+			for (m = 0; m < (size_t)subsectors[i].numlines; m++, k++)
 			{
 				UINT32 vertexnum = READUINT32((*data));
-				UINT16 linenum;
-
 				if (vertexnum >= numvertexes)
-					I_Error("P_LoadExtendedSubsectorsAndSegs: Seg %s in subsector %d has invalid vertex %d!\n", sizeu1(k), m, vertexnum);
+					I_Error("P_LoadExtendedSubsectorsAndSegs: Seg %s in subsector %s has invalid vertex %d!\n", sizeu1(k), sizeu2(m), vertexnum);
 
 				segs[k - 1 + ((m == 0) ? subsectors[i].numlines : 0)].v2 = segs[k].v1 = &vertexes[vertexnum];
 
 				READUINT32((*data)); // partner, can be ignored by software renderer
 
-				linenum = (nodetype == NT_XGL3) ? READUINT32((*data)) : READUINT16((*data));
-				if (linenum != 0xFFFF && linenum >= numlines)
-					I_Error("P_LoadExtendedSubsectorsAndSegs: Seg %s in subsector %s has invalid linedef %d!\n", sizeu1(k), sizeu2(i), linenum);
-				segs[k].glseg = (linenum == 0xFFFF);
-				segs[k].linedef = (linenum == 0xFFFF) ? NULL : &lines[linenum];
+				if (nodetype == NT_XGL3)
+				{
+					UINT32 linenum = READUINT32((*data));
+					if (linenum != 0xFFFFFFFF && linenum >= numlines)
+						I_Error("P_LoadExtendedSubsectorsAndSegs: Seg %s in subsector %s has invalid linedef %d!\n", sizeu1(k), sizeu2(i), linenum);
+					segs[k].glseg = linenum == 0xFFFFFFFF;
+					segs[k].linedef = linenum == 0xFFFFFFFF ? NULL : &lines[linenum];
+				}
+				else
+				{
+					UINT16 linenum = READUINT16((*data));
+					if (linenum != 0xFFFF && linenum >= numlines)
+						I_Error("P_LoadExtendedSubsectorsAndSegs: Seg %s in subsector %s has invalid linedef %d!\n", sizeu1(k), sizeu2(i), linenum);
+					segs[k].glseg = linenum == 0xFFFF;
+					segs[k].linedef = linenum == 0xFFFF ? NULL : &lines[linenum];
+				}
+
 				segs[k].side = READUINT8((*data));
 			}
 			while (segs[subsectors[i].firstline].glseg)
@@ -3445,18 +3519,18 @@ static boolean P_LoadExtendedSubsectorsAndSegs(UINT8 **data, nodetype_t nodetype
 			break;
 
 		case NT_XNOD:
-			for (m = 0; m < subsectors[i].numlines; m++, k++)
+			for (m = 0; m < (size_t)subsectors[i].numlines; m++, k++)
 			{
 				UINT32 v1num = READUINT32((*data));
 				UINT32 v2num = READUINT32((*data));
 				UINT16 linenum = READUINT16((*data));
 
 				if (v1num >= numvertexes)
-					I_Error("P_LoadExtendedSubsectorsAndSegs: Seg %s in subsector %d has invalid v1 %d!\n", sizeu1(k), m, v1num);
+					I_Error("P_LoadExtendedSubsectorsAndSegs: Seg %s in subsector %s has invalid v1 %d!\n", sizeu1(k), sizeu2(m), v1num);
 				if (v2num >= numvertexes)
-					I_Error("P_LoadExtendedSubsectorsAndSegs: Seg %s in subsector %d has invalid v2 %d!\n", sizeu1(k), m, v2num);
+					I_Error("P_LoadExtendedSubsectorsAndSegs: Seg %s in subsector %s has invalid v2 %d!\n", sizeu1(k), sizeu2(m), v2num);
 				if (linenum >= numlines)
-					I_Error("P_LoadExtendedSubsectorsAndSegs: Seg %s in subsector %d has invalid linedef %d!\n", sizeu1(k), m, linenum);
+					I_Error("P_LoadExtendedSubsectorsAndSegs: Seg %s in subsector %s has invalid linedef %d!\n", sizeu1(k), sizeu2(m), linenum);
 
 				segs[k].v1 = &vertexes[v1num];
 				segs[k].v2 = &vertexes[v2num];
@@ -3484,7 +3558,7 @@ static boolean P_LoadExtendedSubsectorsAndSegs(UINT8 **data, nodetype_t nodetype
 		}
 		seg->length = P_SegLength(seg);
 #ifdef HWRENDER
-		seg->flength = (rendermode == render_opengl) ? P_SegLengthFloat(seg) : 0;
+		seg->flength = P_SegLengthFloat(seg);
 #endif
 	}
 
@@ -3941,14 +4015,14 @@ static void P_LinkMapData(void)
 		if (!seg->sidedef)
 			CorruptMapError(va("P_LinkMapData: seg->sidedef is NULL "
 				"(subsector %s, firstline is %d)", sizeu1(i), ss->firstline));
-		if (seg->sidedef - sides < 0 || seg->sidedef - sides > (UINT16)numsides)
+		if (seg->sidedef - sides < 0 || sidei > numsides)
 			CorruptMapError(va("P_LinkMapData: seg->sidedef refers to sidedef %s of %s "
 				"(subsector %s, firstline is %d)", sizeu1(sidei), sizeu2(numsides),
 				sizeu3(i), ss->firstline));
 		if (!seg->sidedef->sector)
 			CorruptMapError(va("P_LinkMapData: seg->sidedef->sector is NULL "
 				"(subsector %s, firstline is %d, sidedef is %s)", sizeu1(i), ss->firstline,
-				sizeu1(sidei)));
+				sizeu2(sidei)));
 		ss->sector = seg->sidedef->sector;
 	}
 
@@ -4866,7 +4940,7 @@ static void P_ConvertBinaryLinedefTypes(void)
 
 			break;
 		case 259: //Custom FOF
-			if (lines[i].sidenum[1] == 0xffff)
+			if (lines[i].sidenum[1] == NO_SIDEDEF)
 				I_Error("Custom FOF (tag %d) found without a linedef back side!", tag);
 
 			lines[i].args[0] = tag;
@@ -5220,8 +5294,8 @@ static void P_ConvertBinaryLinedefTypes(void)
 			lines[i].args[1] = sides[lines[i].sidenum[0]].midtexture;
 			lines[i].args[2] = sides[lines[i].sidenum[0]].textureoffset >> FRACBITS;
 			lines[i].args[3] = sides[lines[i].sidenum[0]].rowoffset >> FRACBITS;
-			lines[i].args[4] = (lines[i].sidenum[1] != 0xffff) ? sides[lines[i].sidenum[1]].textureoffset >> FRACBITS : 0;
-			lines[i].args[5] = (lines[i].sidenum[1] != 0xffff) ? sides[lines[i].sidenum[1]].rowoffset >> FRACBITS : -1;
+			lines[i].args[4] = (lines[i].sidenum[1] != NO_SIDEDEF) ? sides[lines[i].sidenum[1]].textureoffset >> FRACBITS : 0;
+			lines[i].args[5] = (lines[i].sidenum[1] != NO_SIDEDEF) ? sides[lines[i].sidenum[1]].rowoffset >> FRACBITS : -1;
 			lines[i].args[6] = sides[lines[i].sidenum[0]].bottomtexture;
 			break;
 		case 414: //Play sound effect
@@ -5325,7 +5399,7 @@ static void P_ConvertBinaryLinedefTypes(void)
 				lines[i].args[1] = max(sides[lines[i].sidenum[0]].textureoffset >> FRACBITS, 0);
 				// failsafe: if user specifies Back Y Offset and NOT Front Y Offset, use the Back Offset
 				// to be consistent with other light and fade specials
-				lines[i].args[2] = ((lines[i].sidenum[1] != 0xFFFF && !(sides[lines[i].sidenum[0]].rowoffset >> FRACBITS)) ?
+				lines[i].args[2] = ((lines[i].sidenum[1] != NO_SIDEDEF && !(sides[lines[i].sidenum[0]].rowoffset >> FRACBITS)) ?
 					max(min(sides[lines[i].sidenum[1]].rowoffset >> FRACBITS, 255), 0)
 					: max(min(sides[lines[i].sidenum[0]].rowoffset >> FRACBITS, 255), 0));
 			}
@@ -5430,7 +5504,7 @@ static void P_ConvertBinaryLinedefTypes(void)
 			break;
 		case 442: //Change object type state
 			lines[i].args[0] = tag;
-			lines[i].args[1] = (lines[i].sidenum[1] == 0xffff) ? 1 : 0;
+			lines[i].args[1] = (lines[i].sidenum[1] == NO_SIDEDEF) ? 1 : 0;
 			break;
 		case 443: //Call Lua function
 			if (lines[i].stringargs[0] == NULL)
@@ -5498,7 +5572,7 @@ static void P_ConvertBinaryLinedefTypes(void)
 		case 452: //Set FOF translucency
 			lines[i].args[0] = sides[lines[i].sidenum[0]].textureoffset >> FRACBITS;
 			lines[i].args[1] = sides[lines[i].sidenum[0]].rowoffset >> FRACBITS;
-			lines[i].args[2] = lines[i].sidenum[1] != 0xffff ? (sides[lines[i].sidenum[1]].textureoffset >> FRACBITS) : (P_AproxDistance(lines[i].dx, lines[i].dy) >> FRACBITS);
+			lines[i].args[2] = lines[i].sidenum[1] != NO_SIDEDEF ? (sides[lines[i].sidenum[1]].textureoffset >> FRACBITS) : (P_AproxDistance(lines[i].dx, lines[i].dy) >> FRACBITS);
 			if (lines[i].flags & ML_MIDPEG)
 				lines[i].args[3] |= TMST_RELATIVE;
 			if (lines[i].flags & ML_NOCLIMB)
@@ -5507,8 +5581,8 @@ static void P_ConvertBinaryLinedefTypes(void)
 		case 453: //Fade FOF
 			lines[i].args[0] = sides[lines[i].sidenum[0]].textureoffset >> FRACBITS;
 			lines[i].args[1] = sides[lines[i].sidenum[0]].rowoffset >> FRACBITS;
-			lines[i].args[2] = lines[i].sidenum[1] != 0xffff ? (sides[lines[i].sidenum[1]].textureoffset >> FRACBITS) : (lines[i].dx >> FRACBITS);
-			lines[i].args[3] = lines[i].sidenum[1] != 0xffff ? (sides[lines[i].sidenum[1]].rowoffset >> FRACBITS) : (abs(lines[i].dy) >> FRACBITS);
+			lines[i].args[2] = lines[i].sidenum[1] != NO_SIDEDEF ? (sides[lines[i].sidenum[1]].textureoffset >> FRACBITS) : (lines[i].dx >> FRACBITS);
+			lines[i].args[3] = lines[i].sidenum[1] != NO_SIDEDEF ? (sides[lines[i].sidenum[1]].rowoffset >> FRACBITS) : (abs(lines[i].dy) >> FRACBITS);
 			if (lines[i].flags & ML_MIDPEG)
 				lines[i].args[4] |= TMFT_RELATIVE;
 			if (lines[i].flags & ML_WRAPMIDTEX)
@@ -5535,7 +5609,7 @@ static void P_ConvertBinaryLinedefTypes(void)
 			break;
 		case 455: //Fade colormap
 		{
-			INT32 speed = (INT32)((((lines[i].flags & ML_DONTPEGBOTTOM) || !sides[lines[i].sidenum[0]].rowoffset) && lines[i].sidenum[1] != 0xFFFF) ?
+			INT32 speed = (INT32)((((lines[i].flags & ML_DONTPEGBOTTOM) || !sides[lines[i].sidenum[0]].rowoffset) && lines[i].sidenum[1] != NO_SIDEDEF) ?
 				abs(sides[lines[i].sidenum[1]].rowoffset >> FRACBITS)
 				: abs(sides[lines[i].sidenum[0]].rowoffset >> FRACBITS));
 
@@ -5565,7 +5639,7 @@ static void P_ConvertBinaryLinedefTypes(void)
 			lines[i].args[0] = tag;
 			lines[i].args[1] = sides[lines[i].sidenum[0]].textureoffset >> FRACBITS;
 			lines[i].args[2] = sides[lines[i].sidenum[0]].rowoffset >> FRACBITS;
-			lines[i].args[3] = (lines[i].sidenum[1] != 0xffff) ? sides[lines[i].sidenum[1]].textureoffset >> FRACBITS : 0;
+			lines[i].args[3] = (lines[i].sidenum[1] != NO_SIDEDEF) ? sides[lines[i].sidenum[1]].textureoffset >> FRACBITS : 0;
 			lines[i].args[4] = !!(lines[i].flags & ML_NOSKEW);
 			break;
 		case 459: //Control text prompt
@@ -5585,7 +5659,7 @@ static void P_ConvertBinaryLinedefTypes(void)
 				lines[i].args[2] |= TMP_ALLPLAYERS;
 			if (lines[i].flags & ML_MIDSOLID)
 				lines[i].args[2] |= TMP_FREEZETHINKERS;*/
-			lines[i].args[3] = (lines[i].sidenum[1] != 0xFFFF) ? sides[lines[i].sidenum[1]].textureoffset >> FRACBITS : tag;
+			lines[i].args[3] = (lines[i].sidenum[1] != NO_SIDEDEF) ? sides[lines[i].sidenum[1]].textureoffset >> FRACBITS : tag;
 			break;
 		case 460: //Award rings
 			lines[i].args[0] = sides[lines[i].sidenum[0]].textureoffset >> FRACBITS;
@@ -5598,7 +5672,7 @@ static void P_ConvertBinaryLinedefTypes(void)
 			lines[i].args[3] = (lines[i].flags & ML_SKEWTD) ? AngleFixed(R_PointToAngle2(lines[i].v1->x, lines[i].v1->y, lines[i].v2->x, lines[i].v2->y)) >> FRACBITS : 0;
 			if (lines[i].flags & ML_NOCLIMB)
 			{
-				if (lines[i].sidenum[1] != 0xffff) // Make sure the linedef has a back side
+				if (lines[i].sidenum[1] != NO_SIDEDEF) // Make sure the linedef has a back side
 				{
 					lines[i].args[4] = 1;
 					lines[i].args[5] = sides[lines[i].sidenum[1]].textureoffset >> FRACBITS;
@@ -5632,7 +5706,7 @@ static void P_ConvertBinaryLinedefTypes(void)
 			lines[i].args[0] = tag;
 			lines[i].args[1] = sides[lines[i].sidenum[0]].textureoffset >> FRACBITS;
 			lines[i].args[2] = sides[lines[i].sidenum[0]].rowoffset >> FRACBITS;
-			if (lines[i].sidenum[1] != 0xffff)
+			if (lines[i].sidenum[1] != NO_SIDEDEF)
 				lines[i].args[3] = sides[lines[i].sidenum[1]].textureoffset >> FRACBITS;
 			break;
 		case 482: //Polyobject - move
@@ -5704,7 +5778,7 @@ static void P_ConvertBinaryLinedefTypes(void)
 			if (!(lines[i].flags & ML_DONTPEGBOTTOM))
 				lines[i].args[1] /= 100;
 			// allow Back Y Offset to be consistent with other fade specials
-			lines[i].args[2] = (lines[i].sidenum[1] != 0xffff && !sides[lines[i].sidenum[0]].rowoffset) ?
+			lines[i].args[2] = (lines[i].sidenum[1] != NO_SIDEDEF && !sides[lines[i].sidenum[0]].rowoffset) ?
 				abs(sides[lines[i].sidenum[1]].rowoffset >> FRACBITS)
 				: abs(sides[lines[i].sidenum[0]].rowoffset >> FRACBITS);
 			if (lines[i].flags & ML_MIDPEG)
@@ -5731,7 +5805,7 @@ static void P_ConvertBinaryLinedefTypes(void)
 			lines[i].args[0] = tag;
 			if (lines[i].flags & ML_MIDPEG)
 			{
-				if (lines[i].sidenum[1] == 0xffff)
+				if (lines[i].sidenum[1] == NO_SIDEDEF)
 				{
 					CONS_Debug(DBG_GAMELOGIC, "Line special %d (line #%s) missing back side!\n", lines[i].special, sizeu1(i));
 					lines[i].special = 0;
@@ -5761,7 +5835,7 @@ static void P_ConvertBinaryLinedefTypes(void)
 			lines[i].args[0] = lines[i].special >= 507;
 			if (lines[i].special % 2 == 0)
 			{
-				if (lines[i].sidenum[1] == 0xffff)
+				if (lines[i].sidenum[1] == NO_SIDEDEF)
 				{
 					CONS_Debug(DBG_GAMELOGIC, "Line special %d (line #%s) missing back side!\n", lines[i].special, sizeu1(i));
 					lines[i].special = 0;
@@ -5917,7 +5991,7 @@ static void P_ConvertBinaryLinedefTypes(void)
 			{
 				UINT8 side = lines[i].special >= 714;
 
-				if (side == 1 && lines[i].sidenum[1] == 0xffff)
+				if (side == 1 && lines[i].sidenum[1] == NO_SIDEDEF)
 					CONS_Debug(DBG_GAMELOGIC, "P_ConvertBinaryMap: Line special %d (line #%s) missing 2nd side!\n", lines[i].special, sizeu1(i));
 				else
 				{
@@ -7148,7 +7222,7 @@ static void P_ForceCharacter(const char *forcecharskin)
 		SetPlayerSkinByNum(i, skinnum);
 
 		if (!netgame)
-			players[i].skincolor = skins[skinnum].prefcolor;
+			players[i].skincolor = skins[skinnum]->prefcolor;
 	}
 }
 
@@ -7191,8 +7265,8 @@ static void P_LoadRecordGhosts(void)
 			if (cv_ghost_bestscore.value == 1 && players[consoleplayer].skin != i)
 				continue;
 
-			if (FIL_FileExists(va("%s-%s-score-best.lmp", gpath, skins[i].name)))
-				G_AddGhost(va("%s-%s-score-best.lmp", gpath, skins[i].name));
+			if (FIL_FileExists(va("%s-%s-score-best.lmp", gpath, skins[i]->name)))
+				G_AddGhost(va("%s-%s-score-best.lmp", gpath, skins[i]->name));
 		}
 	}
 
@@ -7204,8 +7278,8 @@ static void P_LoadRecordGhosts(void)
 			if (cv_ghost_besttime.value == 1 && players[consoleplayer].skin != i)
 				continue;
 
-			if (FIL_FileExists(va("%s-%s-time-best.lmp", gpath, skins[i].name)))
-				G_AddGhost(va("%s-%s-time-best.lmp", gpath, skins[i].name));
+			if (FIL_FileExists(va("%s-%s-time-best.lmp", gpath, skins[i]->name)))
+				G_AddGhost(va("%s-%s-time-best.lmp", gpath, skins[i]->name));
 		}
 	}
 
@@ -7217,8 +7291,8 @@ static void P_LoadRecordGhosts(void)
 			if (cv_ghost_bestrings.value == 1 && players[consoleplayer].skin != i)
 				continue;
 
-			if (FIL_FileExists(va("%s-%s-rings-best.lmp", gpath, skins[i].name)))
-				G_AddGhost(va("%s-%s-rings-best.lmp", gpath, skins[i].name));
+			if (FIL_FileExists(va("%s-%s-rings-best.lmp", gpath, skins[i]->name)))
+				G_AddGhost(va("%s-%s-rings-best.lmp", gpath, skins[i]->name));
 		}
 	}
 
@@ -7230,8 +7304,8 @@ static void P_LoadRecordGhosts(void)
 			if (cv_ghost_last.value == 1 && players[consoleplayer].skin != i)
 				continue;
 
-			if (FIL_FileExists(va("%s-%s-last.lmp", gpath, skins[i].name)))
-				G_AddGhost(va("%s-%s-last.lmp", gpath, skins[i].name));
+			if (FIL_FileExists(va("%s-%s-last.lmp", gpath, skins[i]->name)))
+				G_AddGhost(va("%s-%s-last.lmp", gpath, skins[i]->name));
 		}
 	}
 
@@ -7261,8 +7335,8 @@ static void P_LoadNightsGhosts(void)
 			if (cv_ghost_bestscore.value == 1 && players[consoleplayer].skin != i)
 				continue;
 
-			if (FIL_FileExists(va("%s-%s-score-best.lmp", gpath, skins[i].name)))
-				G_AddGhost(va("%s-%s-score-best.lmp", gpath, skins[i].name));
+			if (FIL_FileExists(va("%s-%s-score-best.lmp", gpath, skins[i]->name)))
+				G_AddGhost(va("%s-%s-score-best.lmp", gpath, skins[i]->name));
 		}
 	}
 
@@ -7274,8 +7348,8 @@ static void P_LoadNightsGhosts(void)
 			if (cv_ghost_besttime.value == 1 && players[consoleplayer].skin != i)
 				continue;
 
-			if (FIL_FileExists(va("%s-%s-time-best.lmp", gpath, skins[i].name)))
-				G_AddGhost(va("%s-%s-time-best.lmp", gpath, skins[i].name));
+			if (FIL_FileExists(va("%s-%s-time-best.lmp", gpath, skins[i]->name)))
+				G_AddGhost(va("%s-%s-time-best.lmp", gpath, skins[i]->name));
 		}
 	}
 
@@ -7287,8 +7361,8 @@ static void P_LoadNightsGhosts(void)
 			if (cv_ghost_last.value == 1 && players[consoleplayer].skin != i)
 				continue;
 
-			if (FIL_FileExists(va("%s-%s-last.lmp", gpath, skins[i].name)))
-				G_AddGhost(va("%s-%s-last.lmp", gpath, skins[i].name));
+			if (FIL_FileExists(va("%s-%s-last.lmp", gpath, skins[i]->name)))
+				G_AddGhost(va("%s-%s-last.lmp", gpath, skins[i]->name));
 		}
 	}
 
@@ -7757,12 +7831,14 @@ boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate)
 	Patch_FreeTag(PU_PATCH_LOWPRIORITY);
 	Patch_FreeTag(PU_PATCH_ROTATED);
 	Z_FreeTags(PU_LEVEL, PU_PURGELEVEL - 1);
+	mobjcache = NULL;
 
 	R_InitializeLevelInterpolators();
 
 	P_InitThinkers();
 	R_InitMobjInterpolators();
 	P_InitCachedActions();
+	P_InitSectorPortals();
 
 	// internal game map
 	maplumpname = G_BuildMapName(gamemap);
@@ -8195,7 +8271,7 @@ static boolean P_LoadAddon(UINT16 numlumps)
 	{
 		CONS_Printf(M_GetText("Current map %d replaced by added file, ending the level to ensure consistency.\n"), gamemap);
 		if (server)
-			D_SendExitLevel(false);
+			SendNetXCmd(XD_EXITLEVEL, NULL, 0);
 	}
 
 	return true;

@@ -90,8 +90,8 @@ INT16 consistancy[BACKUPTICS];
 // true when a player is connecting or disconnecting so that the gameplay has stopped in its tracks
 boolean hu_stopped = false;
 
-UINT8 adminpassmd5[16];
-boolean adminpasswordset = false;
+UINT8 (*adminpassmd5)[16];
+UINT32 adminpasscount = 0;
 
 tic_t neededtic;
 SINT8 servernode = 0; // the number of the server node
@@ -862,26 +862,31 @@ static void PT_Login(SINT8 node, INT32 netconsole)
 
 #ifndef NOMD5
 	UINT8 finalmd5[16];/* Well, it's the cool thing to do? */
+	UINT32 i;
 
 	if (doomcom->datalength < 16)/* ignore partial sends */
 		return;
 
-	if (!adminpasswordset)
+	if (adminpasscount == 0)
 	{
 		CONS_Printf(M_GetText("Password from %s failed (no password set).\n"), player_names[netconsole]);
 		return;
 	}
 
-	// Do the final pass to compare with the sent md5
-	D_MD5PasswordPass(adminpassmd5, 16, va("PNUM%02d", netconsole), &finalmd5);
-
-	if (!memcmp(netbuffer->u.md5sum, finalmd5, 16))
+	for (i = 0; i < adminpasscount; i++)
 	{
-		CONS_Printf(M_GetText("%s passed authentication.\n"), player_names[netconsole]);
-		COM_BufInsertText(va("promote %d\n", netconsole)); // do this immediately
+		// Do the final pass to compare with the sent md5
+		D_MD5PasswordPass(adminpassmd5[i], 16, va("PNUM%02d", netconsole), &finalmd5);
+
+		if (!memcmp(netbuffer->u.md5sum, finalmd5, 16))
+		{
+			CONS_Printf(M_GetText("%s passed authentication.\n"), player_names[netconsole]);
+			COM_BufInsertText(va("promote %d\n", netconsole)); // do this immediately
+			return;
+		}
 	}
-	else
-		CONS_Printf(M_GetText("Password from %s failed.\n"), player_names[netconsole]);
+
+	CONS_Printf(M_GetText("Password from %s failed.\n"), player_names[netconsole]);
 #else
 	(void)netconsole;
 #endif
@@ -1275,6 +1280,7 @@ static void UpdatePingTable(void)
 	}
 }
 
+// Handle idle and disconnected player timers
 static void IdleUpdate(void)
 {
 	INT32 i;
@@ -1297,7 +1303,26 @@ static void IdleUpdate(void)
 			}
 		}
 		else
+		{
 			players[i].lastinputtime = 0;
+
+			if (players[i].quittime && playeringame[i])
+			{
+				players[i].quittime++;
+
+				if (players[i].quittime == 30 * TICRATE && G_TagGametype())
+					P_CheckSurvivors();
+
+				if (server && players[i].quittime >= (tic_t)FixedMul(cv_rejointimeout.value, 60 * TICRATE)
+				&& !(players[i].quittime % TICRATE))
+				{
+					if (D_NumNodes(true) > 0)
+						SendKick(i, KICK_MSG_PLAYER_QUIT);
+					else // If the server is empty, don't send a NetXCmd - that would wake an idling dedicated server
+						CL_RemovePlayer(i, KICK_MSG_PLAYER_QUIT);
+				}
+			}
+		}
 	}
 }
 
@@ -1512,7 +1537,7 @@ void NetUpdate(void)
 
 	nowtime /= NEWTICRATERATIO;
 
-	if (nowtime > resptime)
+	if (nowtime != resptime)
 	{
 		resptime = nowtime;
 #ifdef HAVE_THREADS
@@ -1614,6 +1639,20 @@ INT32 D_NumPlayers(void)
 	INT32 num = 0;
 	for (INT32 ix = 0; ix < MAXPLAYERS; ix++)
 		if (playeringame[ix])
+			num++;
+	return num;
+}
+
+/** Returns the number of currently-connected nodes in a netgame.
+  * Not necessarily equivalent to D_NumPlayers() minus D_NumBots().
+  *
+  * \param skiphost Skip the server's own node.
+  */
+INT32 D_NumNodes(boolean skiphost)
+{
+	INT32 num = 0;
+	for (INT32 ix = skiphost ? 1 : 0; ix < MAXNETNODES; ix++)
+		if (netnodes[ix].ingame)
 			num++;
 	return num;
 }

@@ -158,7 +158,7 @@ consvar_t cv_drawdist = CVAR_INIT ("drawdist", "Infinite", CV_SAVE, drawdist_con
 consvar_t cv_drawdist_nights = CVAR_INIT ("drawdist_nights", "2048", CV_SAVE, drawdist_cons_t, NULL);
 consvar_t cv_drawdist_precip = CVAR_INIT ("drawdist_precip", "1024", CV_SAVE, drawdist_precip_cons_t, NULL);
 //consvar_t cv_precipdensity = CVAR_INIT ("precipdensity", "Moderate", CV_SAVE, precipdensity_cons_t, NULL);
-consvar_t cv_fov = CVAR_INIT ("fov", "90", CV_FLOAT|CV_CALL, fov_cons_t, Fov_OnChange);
+consvar_t cv_fov = CVAR_INIT ("fov", "90", CV_SAVE|CV_FLOAT|CV_CALL, fov_cons_t, Fov_OnChange);
 
 // Okay, whoever said homremoval causes a performance hit should be shot.
 consvar_t cv_homremoval = CVAR_INIT ("homremoval", "No", CV_SAVE, homremoval_cons_t, NULL);
@@ -356,7 +356,7 @@ angle_t R_PointToAngle2(fixed_t pviewx, fixed_t pviewy, fixed_t x, fixed_t y)
 fixed_t R_PointToDist2(fixed_t px2, fixed_t py2, fixed_t px1, fixed_t py1)
 {
 	angle_t angle;
-	fixed_t dx, dy, dist;
+	ufixed_t dx, dy, dist;
 
 	dx = abs(px1 - px2);
 	dy = abs(py1 - py2);
@@ -957,16 +957,6 @@ void R_ExecuteSetViewSize(void)
 			dy = FixedMul(abs(dy), fovtan);
 			yslopetab[i] = FixedDiv(centerx*FRACUNIT, dy);
 		}
-
-		if (ds_su)
-			Z_Free(ds_su);
-		if (ds_sv)
-			Z_Free(ds_sv);
-		if (ds_sz)
-			Z_Free(ds_sz);
-
-		ds_su = ds_sv = ds_sz = NULL;
-		ds_sup = ds_svp = ds_szp = NULL;
 	}
 
 	memset(scalelight, 0xFF, sizeof(scalelight));
@@ -1012,9 +1002,6 @@ void R_Init(void)
 	R_InitViewBorder();
 	R_SetViewSize(); // setsizeneeded is set true
 
-	//I_OutputMsg("\nR_InitPlanes");
-	R_InitPlanes();
-
 	// this is now done by SCR_Recalc() at the first mode set
 	//I_OutputMsg("\nR_InitLightTables");
 	R_InitLightTables();
@@ -1025,6 +1012,34 @@ void R_Init(void)
 	R_InitDrawNodes();
 
 	framecount = 0;
+}
+
+//
+// R_IsPointInSector
+//
+boolean R_IsPointInSector(sector_t *sector, fixed_t x, fixed_t y)
+{
+	size_t i;
+	line_t *closest = NULL;
+	fixed_t closestdist = INT32_MAX;
+
+	for (i = 0; i < sector->linecount; i++)
+	{
+		vertex_t v;
+		fixed_t dist;
+
+		// find the line closest to the point we're looking for.
+		P_ClosestPointOnLine(x, y, sector->lines[i], &v);
+		dist = R_PointToDist2(0, 0, v.x - x, v.y - y);
+		if (dist < closestdist)
+		{
+			closest = sector->lines[i];
+			closestdist = dist;
+		}
+	}
+
+	// if the side of the closest line is in this sector, we're inside of it.
+	return P_PointOnLineSide(x, y, closest) == 0 ? closest->frontsector == sector : closest->backsector == sector;
 }
 
 //
@@ -1085,6 +1100,7 @@ void R_SetupFrame(player_t *player)
 {
 	camera_t *thiscam;
 	boolean chasecam = R_ViewpointHasChasecam(player);
+	boolean ispaused = paused || P_AutoPause();
 	
 	if (splitscreen && player == &players[secondarydisplayplayer] && player != &players[consoleplayer])
 		thiscam = &camera2;
@@ -1135,6 +1151,30 @@ void R_SetupFrame(player_t *player)
 			}
 		}
 	}
+
+	if (quake.time && !ispaused)
+	{
+		fixed_t ir = quake.intensity>>1;
+
+		if (quake.epicenter) {
+			// Calculate 3D distance from epicenter, using the camera.
+			fixed_t xydist = R_PointToDist2(thiscam->x, thiscam->y, quake.epicenter->x, quake.epicenter->y);
+			fixed_t dist = R_PointToDist2(0, thiscam->z, xydist, quake.epicenter->z);
+
+			// More effect closer to epicenter, outside of radius = no effect
+			if (!quake.radius || dist > quake.radius)
+				ir = 0;
+			else
+				ir = FixedMul(ir, FRACUNIT - FixedDiv(dist, quake.radius));
+		}
+
+		quake.x = M_RandomRange(-ir,ir);
+		quake.y = M_RandomRange(-ir,ir);
+		quake.z = M_RandomRange(-ir,ir);
+	}
+	else if (!ispaused)
+		quake.x = quake.y = quake.z = 0;
+
 	newview->z += quake.z;
 
 	newview->player = player;
@@ -1494,9 +1534,8 @@ void R_RenderPlayerView(player_t *player)
 
 	ps_numsprites.value.i = numvisiblesprites;
 
-	// Add skybox portals caused by sky visplanes.
-	if (cv_skybox.value && skyboxmo[0])
-		Portal_AddSkyboxPortals();
+	// Add portals caused by visplanes.
+	Portal_AddPlanePortals(cv_skybox.value);
 
 	// Portal rendering. Hijacks the BSP traversal.
 	PS_START_TIMING(ps_sw_portaltime);
@@ -1529,9 +1568,21 @@ void R_RenderPlayerView(player_t *player)
 			Mask_Pre(&masks[nummasks - 1]);
 			curdrawsegs = ds_p;
 
-			// Render the BSP from the new viewpoint, and clip
-			// any sprites with the new clipsegs and window.
-			R_RenderBSPNode((INT32)numnodes - 1);
+			if (portal->is_horizon)
+			{
+				// If the portal is a plane or a horizon portal, then we just render a horizon line
+				R_RenderPortalHorizonLine(portal->horizon_sector);
+			}
+			else
+			{
+				// Render the BSP from the new viewpoint, and clip
+				// any sprites with the new clipsegs and window.
+				R_RenderBSPNode((INT32)numnodes - 1);
+			}
+
+			// Don't add skybox portals while already rendering a skybox view, because that'll cause an infinite loop
+			Portal_AddPlanePortals(cv_skybox.value && !portal->is_skybox);
+
 			Mask_Post(&masks[nummasks - 1]);
 
 			R_ClipSprites(ds_p - (masks[nummasks - 1].drawsegs[1] - masks[nummasks - 1].drawsegs[0]), portal);
