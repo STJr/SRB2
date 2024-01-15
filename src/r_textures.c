@@ -326,7 +326,6 @@ UINT8 *R_GenerateTexture(size_t texnum)
 		// If the patch uses transparency, we have to save it this way.
 		if (holey)
 		{
-			texture->holes = true;
 			texture->flip = patch->flip;
 
 			Patch_CalcDataSizes(realpatch, &total_pixels, &total_posts);
@@ -342,7 +341,10 @@ UINT8 *R_GenerateTexture(size_t texnum)
 
 			texturecolumns[texnum] = columns;
 
-			Patch_MakeColumns(realpatch, texture->width, texture->width, blocktex, columns, posts, texture->flip);
+			// Handles flipping as well.
+			// we can't as easily flip the patch vertically sadly though,
+			//  we have wait until the texture itself is drawn to do that
+			Patch_MakeColumns(realpatch, texture->width, texture->width, blocktex, columns, posts, patch->flip & 1);
 
 			goto done;
 		}
@@ -352,7 +354,6 @@ UINT8 *R_GenerateTexture(size_t texnum)
 
 	// multi-patch textures (or 'composite')
 	multipatch:
-	texture->holes = true;
 	texture->flip = 0;
 
 	// To make things easier, I just allocate WxH always
@@ -787,7 +788,6 @@ Rloadflats (INT32 i, INT32 w)
 
 			texture->type = TEXTURETYPE_FLAT;
 			texture->patchcount = 1;
-			texture->holes = false;
 			texture->flip = 0;
 
 			// Allocate information for the texture's patches.
@@ -888,7 +888,6 @@ Rloadtextures (INT32 i, INT32 w)
 
 			texture->type = TEXTURETYPE_SINGLEPATCH;
 			texture->patchcount = 1;
-			texture->holes = false;
 			texture->flip = 0;
 
 			// Allocate information for the texture's patches.

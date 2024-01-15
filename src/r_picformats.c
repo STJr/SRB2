@@ -873,36 +873,19 @@ void *Picture_TextureToFlat(size_t texnum)
 	desttop = converted;
 	deststop = desttop + flatsize;
 
-	if (!texture->holes)
+	for (size_t col = 0; col < (size_t)texture->width; col++, desttop++)
 	{
-		for (size_t col = 0; col < (size_t)texture->width; col++, desttop++)
+		column_t *column = (column_t *)R_GetColumn(texnum, col);
+		for (unsigned i = 0; i < column->num_posts; i++)
 		{
-			source = R_GetColumn(texnum, col)->pixels;
-			dest = desttop;
-			for (size_t ofs = 0; dest < deststop && ofs < (size_t)texture->height; ofs++)
+			post_t *post = &column->posts[i];
+			dest = desttop + (post->topdelta * texture->width);
+			source = column->pixels + post->data_offset;
+			for (size_t ofs = 0; dest < deststop && ofs < post->length; ofs++)
 			{
 				if (source[ofs] != TRANSPARENTPIXEL)
 					*dest = source[ofs];
 				dest += texture->width;
-			}
-		}
-	}
-	else
-	{
-		for (size_t col = 0; col < (size_t)texture->width; col++, desttop++)
-		{
-			column_t *column = (column_t *)R_GetColumn(texnum, col);
-			for (unsigned i = 0; i < column->num_posts; i++)
-			{
-				post_t *post = &column->posts[i];
-				dest = desttop + (post->topdelta * texture->width);
-				source = column->pixels + post->data_offset;
-				for (size_t ofs = 0; dest < deststop && ofs < post->length; ofs++)
-				{
-					if (source[ofs] != TRANSPARENTPIXEL)
-						*dest = source[ofs];
-					dest += texture->width;
-				}
 			}
 		}
 	}

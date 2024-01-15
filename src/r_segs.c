@@ -96,46 +96,6 @@ void R_ClearSegTables(void)
 // R_RenderMaskedSegRange
 // ==========================================================================
 
-// If we have a multi-patch texture on a 2sided wall (rare) then we draw
-//  it using R_DrawColumn, else we draw it using R_DrawMaskedColumn, this
-//  way we don't have to store extra post_t info with each column for
-//  multi-patch textures. They are not normally needed as multi-patch
-//  textures don't have holes in it. At least not for now.
-
-static void R_Render2sidedMultiPatchColumn(column_t *column)
-{
-	INT32 bottomscreen = sprtopscreen + spryscale * lengthcol;
-
-	dc_yl = (sprtopscreen+FRACUNIT-1)>>FRACBITS;
-	dc_yh = (bottomscreen-1)>>FRACBITS;
-
-	if (windowtop != INT32_MAX && windowbottom != INT32_MAX)
-	{
-		dc_yl = ((windowtop + FRACUNIT)>>FRACBITS);
-		dc_yh = (windowbottom - 1)>>FRACBITS;
-	}
-
-	if (dc_yh >= mfloorclip[dc_x])
-		dc_yh =  mfloorclip[dc_x] - 1;
-	if (dc_yl <= mceilingclip[dc_x])
-		dc_yl =  mceilingclip[dc_x] + 1;
-
-	if (dc_yl >= vid.height || dc_yh < 0)
-		return;
-
-	if (dc_yl <= dc_yh && dc_yh < vid.height && dc_yh > 0)
-	{
-		dc_source = column->pixels;
-
-		if (colfunc == colfuncs[BASEDRAWFUNC])
-			(colfuncs[COLDRAWFUNC_TWOSMULTIPATCH])();
-		else if (colfunc == colfuncs[COLDRAWFUNC_FUZZY])
-			(colfuncs[COLDRAWFUNC_TWOSMULTIPATCHTRANS])();
-		else
-			colfunc();
-	}
-}
-
 transnum_t R_GetLinedefTransTable(fixed_t alpha)
 {
 	return (20*(FRACUNIT - alpha - 1) + FRACUNIT) >> (FRACBITS+1);
@@ -211,26 +171,16 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 	rw_scalestep = scalestep;
 	spryscale = scale1 + (x1 - ds->x1)*rw_scalestep;
 
-	// Texture must be cached before setting colfunc_2s,
-	// otherwise texture[texnum]->holes may be false when it shouldn't be
+	// Texture must be cached
 	R_CheckTextureCache(texnum);
-	// handle case where multipatch texture is drawn on a 2sided wall, multi-patch textures
-	// are not stored per-column with post info in SRB2
-	if (textures[texnum]->holes)
+
+	if (textures[texnum]->flip & 2) // vertically flipped?
 	{
-		if (textures[texnum]->flip & 2) // vertically flipped?
-		{
-			colfunc_2s = R_DrawFlippedMaskedColumn;
-			lengthcol = textures[texnum]->height;
-		}
-		else
-			colfunc_2s = R_DrawMaskedColumn; // render the usual 2sided single-patch packed texture
-	}
-	else
-	{
-		colfunc_2s = R_Render2sidedMultiPatchColumn; // render multipatch with no holes (no post_t info)
+		colfunc_2s = R_DrawFlippedMaskedColumn;
 		lengthcol = textures[texnum]->height;
 	}
+	else
+		colfunc_2s = R_DrawMaskedColumn; // render the usual 2sided single-patch packed texture
 
 	// Setup lighting based on the presence/lack-of 3D floors.
 	dc_numlights = 0;
@@ -784,26 +734,16 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 
 	dc_texturemid += offsetvalue;
 
-	// Texture must be cached before setting colfunc_2s,
-	// otherwise texture[texnum]->holes may be false when it shouldn't be
+	// Texture must be cached
 	R_CheckTextureCache(texnum);
-	//faB: handle case where multipatch texture is drawn on a 2sided wall, multi-patch textures
-	//     are not stored per-column with post info anymore in Doom Legacy
-	if (textures[texnum]->holes)
+
+	if (textures[texnum]->flip & 2) // vertically flipped?
 	{
-		if (textures[texnum]->flip & 2) // vertically flipped?
-		{
-			colfunc_2s = R_DrawRepeatFlippedMaskedColumn;
-			lengthcol = textures[texnum]->height;
-		}
-		else
-			colfunc_2s = R_DrawRepeatMaskedColumn; // render the usual 2sided single-patch packed texture
-	}
-	else
-	{
-		colfunc_2s = R_Render2sidedMultiPatchColumn;        //render multipatch with no holes (no post_t info)
+		colfunc_2s = R_DrawRepeatFlippedMaskedColumn;
 		lengthcol = textures[texnum]->height;
 	}
+	else
+		colfunc_2s = R_DrawRepeatMaskedColumn; // render the usual 2sided single-patch packed texture
 
 	// Set heights according to plane, or slope, whichever
 	{
