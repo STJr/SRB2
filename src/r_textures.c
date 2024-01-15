@@ -531,11 +531,14 @@ done:
 
 UINT8 *R_GetFlatForTexture(size_t texnum)
 {
-	texture_t *texture = textures[texnum];
+	if (texnum >= (unsigned)numtextures)
+		return NULL;
 
+	texture_t *texture = textures[texnum];
 	if (texture->flat != NULL)
 		return texture->flat;
 
+	// Special case: Textures that are flats don't need to be converted FROM a texture INTO a flat.
 	if (texture->type == TEXTURETYPE_FLAT)
 	{
 		texpatch_t *patch = &texture->patches[0];
@@ -553,13 +556,11 @@ UINT8 *R_GetFlatForTexture(size_t texnum)
 		else
 #endif
 			texture->flat = pdata;
-
-		return texture->flat;
 	}
+	else
+		texture->flat = (UINT8 *)Picture_TextureToFlat(texnum);
 
-	texture->flat = (UINT8 *)Picture_TextureToFlat(texnum);
-
-	flatmemory += texture->width + texture->height;
+	flatmemory += texture->width * texture->height;
 
 	return texture->flat;
 }
