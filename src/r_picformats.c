@@ -520,13 +520,22 @@ void *Picture_FlatConvert(
 		for (x = 0; x < inwidth; x++)
 		{
 			void *input = NULL;
-			size_t offs = ((y * inwidth) + x);
+			int sx = x;
+			int sy = y;
+
+			if (flags & PICFLAGS_XFLIP)
+				sx = inwidth - x - 1;
+			if (flags & PICFLAGS_YFLIP)
+				sy = inheight - y - 1;
+
+			size_t in_offs = ((sy * inwidth) + sx);
+			size_t out_offs = ((y * inwidth) + x);
 
 			// Read pixel
 			if (Picture_IsPatchFormat(informat))
-				input = Picture_GetPatchPixel(inpatch, informat, x, y, flags);
+				input = Picture_GetPatchPixel(inpatch, informat, sx, sy, 0);
 			else if (Picture_IsFlatFormat(informat))
-				input = (UINT8 *)picture + (offs * (inbpp / 8));
+				input = (UINT8 *)picture + (in_offs * (inbpp / 8));
 			else
 				I_Error("Picture_FlatConvert: unsupported input format!");
 
@@ -541,17 +550,17 @@ void *Picture_FlatConvert(
 					if (inbpp == PICDEPTH_32BPP)
 					{
 						RGBA_t out = *(RGBA_t *)input;
-						f32[offs] = out.rgba;
+						f32[out_offs] = out.rgba;
 					}
 					else if (inbpp == PICDEPTH_16BPP)
 					{
 						RGBA_t out = pMasterPalette[*((UINT16 *)input) & 0xFF];
-						f32[offs] = out.rgba;
+						f32[out_offs] = out.rgba;
 					}
 					else // PICFMT_PATCH
 					{
 						RGBA_t out = pMasterPalette[*((UINT8 *)input) & 0xFF];
-						f32[offs] = out.rgba;
+						f32[out_offs] = out.rgba;
 					}
 					break;
 				}
@@ -562,12 +571,12 @@ void *Picture_FlatConvert(
 					{
 						RGBA_t in = *(RGBA_t *)input;
 						UINT8 out = NearestColor(in.s.red, in.s.green, in.s.blue);
-						f16[offs] = (0xFF00 | out);
+						f16[out_offs] = (0xFF00 | out);
 					}
 					else if (inbpp == PICDEPTH_16BPP)
-						f16[offs] = *(UINT16 *)input;
+						f16[out_offs] = *(UINT16 *)input;
 					else // PICFMT_PATCH
-						f16[offs] = (0xFF00 | *((UINT8 *)input));
+						f16[out_offs] = (0xFF00 | *((UINT8 *)input));
 					break;
 				}
 				case PICFMT_FLAT:
@@ -577,15 +586,15 @@ void *Picture_FlatConvert(
 					{
 						RGBA_t in = *(RGBA_t *)input;
 						UINT8 out = NearestColor(in.s.red, in.s.green, in.s.blue);
-						f8[offs] = out;
+						f8[out_offs] = out;
 					}
 					else if (inbpp == PICDEPTH_16BPP)
 					{
 						UINT16 out = *(UINT16 *)input;
-						f8[offs] = (out & 0xFF);
+						f8[out_offs] = (out & 0xFF);
 					}
 					else // PICFMT_PATCH
-						f8[offs] = *(UINT8 *)input;
+						f8[out_offs] = *(UINT8 *)input;
 					break;
 				}
 				default:
@@ -613,17 +622,18 @@ void *Picture_GetPatchPixel(
 	INT32 inbpp = Picture_FormatBPP(informat);
 	softwarepatch_t *doompatch = (softwarepatch_t *)patch;
 	boolean isdoompatch = Picture_IsDoomPatchFormat(informat);
-	INT16 width;
 
 	if (patch == NULL)
 		I_Error("Picture_GetPatchPixel: patch == NULL");
 
-	width = (isdoompatch ? SHORT(doompatch->width) : patch->width);
+	INT16 width = (isdoompatch ? SHORT(doompatch->width) : patch->width);
+	INT16 height = (isdoompatch ? SHORT(doompatch->height) : patch->height);
 
-	if (x < 0 || x >= width)
+	if (x < 0 || x >= width || y < 0 || y >= height)
 		return NULL;
 
-	INT32 colx = (flags & PICFLAGS_XFLIP) ? (width-1)-x : x;
+	INT32 sx = (flags & PICFLAGS_XFLIP) ? (width-1)-x : x;
+	INT32 sy = (flags & PICFLAGS_YFLIP) ? (height-1)-y : y;
 	UINT8 *s8 = NULL;
 	UINT16 *s16 = NULL;
 	UINT32 *s32 = NULL;
@@ -631,7 +641,7 @@ void *Picture_GetPatchPixel(
 	if (isdoompatch)
 	{
 		INT32 prevdelta = -1;
-		INT32 colofs = LONG(doompatch->columnofs[colx]);
+		INT32 colofs = LONG(doompatch->columnofs[sx]);
 
 		// Column offsets are pointers, so no casting is required.
 		doompost_t *column = (doompost_t *)((UINT8 *)doompatch + colofs);
@@ -643,9 +653,9 @@ void *Picture_GetPatchPixel(
 				topdelta += prevdelta;
 			prevdelta = topdelta;
 
-			size_t ofs = y - topdelta;
+			size_t ofs = sy - topdelta;
 
-			if (y >= topdelta && ofs < column->length)
+			if (sy >= topdelta && ofs < column->length)
 			{
 				s8 = (UINT8 *)(column) + 3;
 				switch (inbpp)
@@ -672,14 +682,14 @@ void *Picture_GetPatchPixel(
 	}
 	else
 	{
-		column_t *column = &patch->columns[colx];
+		column_t *column = &patch->columns[sx];
 		for (unsigned i = 0; i < column->num_posts; i++)
 		{
 			post_t *post = &column->posts[i];
 
-			size_t ofs = y - post->topdelta;
+			size_t ofs = sy - post->topdelta;
 
-			if (y >= (INT32)post->topdelta && ofs < post->length)
+			if (sy >= (INT32)post->topdelta && ofs < post->length)
 			{
 				s8 = column->pixels + post->data_offset;
 				switch (inbpp)
