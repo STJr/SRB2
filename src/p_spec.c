@@ -62,16 +62,11 @@ sectorportal_t *secportals;
   */
 typedef struct
 {
-	SINT8 istexture; ///< ::true for a texture, ::false for a flat
-	INT32 picnum;    ///< The end flat number
-	INT32 basepic;   ///< The start flat number
+	INT32 picnum;    ///< The end texture number
+	INT32 basepic;   ///< The start texture number
 	INT32 numpics;   ///< Number of frames in the animation
 	tic_t speed;     ///< Number of tics for which each frame is shown
 } anim_t;
-
-#if defined(_MSC_VER)
-#pragma pack(1)
-#endif
 
 /** Animated texture definition.
   * Used for loading an ANIMDEFS lump from a wad.
@@ -87,12 +82,8 @@ typedef struct
 	SINT8 istexture; ///< True for a texture, false for a flat.
 	char endname[9]; ///< Name of the last frame, null-terminated.
 	char startname[9]; ///< Name of the first frame, null-terminated.
-	INT32 speed ; ///< Number of tics for which each frame is shown.
+	INT32 speed; ///< Number of tics for which each frame is shown.
 } ATTRPACK animdef_t;
-
-#if defined(_MSC_VER)
-#pragma pack()
-#endif
 
 typedef struct
 {
@@ -138,16 +129,31 @@ static size_t maxanims;
 
 static animdef_t *animdefs = NULL;
 
-// Increase the size of animdefs to make room for a new animation definition
-static void GrowAnimDefs(void)
-{
-	maxanims++;
-	animdefs = (animdef_t *)Z_Realloc(animdefs, sizeof(animdef_t)*(maxanims + 1), PU_STATIC, NULL);
-}
-
 // A prototype; here instead of p_spec.h, so they're "private"
 void P_ParseANIMDEFSLump(INT32 wadNum, UINT16 lumpnum);
 void P_ParseAnimationDefintion(SINT8 istexture);
+
+static boolean P_FindTextureForAnimation(anim_t *anim, animdef_t *animdef)
+{
+	if (R_CheckTextureNumForName(animdef->startname) == -1)
+		return false;
+
+	anim->picnum = R_TextureNumForName(animdef->endname);
+	anim->basepic = R_TextureNumForName(animdef->startname);
+
+	return true;
+}
+
+static boolean P_FindFlatForAnimation(anim_t *anim, animdef_t *animdef)
+{
+	if (R_CheckFlatNumForName(animdef->startname) == -1)
+		return false;
+
+	anim->picnum = R_CheckFlatNumForName(animdef->endname);
+	anim->basepic = R_CheckFlatNumForName(animdef->startname);
+
+	return true;
+}
 
 /** Sets up texture and flat animations.
   *
@@ -198,37 +204,39 @@ void P_InitPicAnims(void)
 	lastanim = anims;
 	for (i = 0; animdefs[i].istexture != -1; i++)
 	{
+		animdef_t *animdef = &animdefs[i];
+
+		// If this animation is for a texture, look for one first, THEN look for a flat
 		if (animdefs[i].istexture)
 		{
-			if (R_CheckTextureNumForName(animdefs[i].startname) == -1)
-				continue;
-
-			lastanim->picnum = R_TextureNumForName(animdefs[i].endname);
-			lastanim->basepic = R_TextureNumForName(animdefs[i].startname);
+			if (!P_FindTextureForAnimation(lastanim, animdef))
+			{
+				if (!P_FindFlatForAnimation(lastanim, animdef))
+					continue;
+			}
 		}
+		// Else, if this animation is for a flat, look for one first, THEN look for a texture
 		else
 		{
-			if (R_CheckFlatNumForName(animdefs[i].startname) == -1)
-				continue;
-
-			lastanim->picnum = R_CheckFlatNumForName(animdefs[i].endname);
-			lastanim->basepic = R_CheckFlatNumForName(animdefs[i].startname);
+			if (!P_FindFlatForAnimation(lastanim, animdef))
+			{
+				if (!P_FindTextureForAnimation(lastanim, animdef))
+					continue;
+			}
 		}
 
-		lastanim->istexture = animdefs[i].istexture;
 		lastanim->numpics = lastanim->picnum - lastanim->basepic + 1;
 
 		if (lastanim->numpics < 2)
 		{
 			free(anims);
 			I_Error("P_InitPicAnims: bad cycle from %s to %s",
-				animdefs[i].startname, animdefs[i].endname);
+				animdef->startname, animdef->endname);
 		}
 
-		lastanim->speed = LONG(animdefs[i].speed);
+		lastanim->speed = animdef->speed;
 		lastanim++;
 	}
-	lastanim->istexture = -1;
 	R_ClearTextureNumCache(false);
 
 	// Clear animdefs now that we're done with it.
@@ -353,7 +361,8 @@ void P_ParseAnimationDefintion(SINT8 istexture)
 	if (i == maxanims)
 	{
 		// Increase the size to make room for the new animation definition
-		GrowAnimDefs();
+		maxanims++;
+		animdefs = (animdef_t *)Z_Realloc(animdefs, sizeof(animdef_t)*(maxanims + 1), PU_STATIC, NULL);
 		strncpy(animdefs[i].startname, animdefsToken, 9);
 	}
 
@@ -439,14 +448,6 @@ void P_ParseAnimationDefintion(SINT8 istexture)
 	}
 	animdefs[i].speed = animSpeed;
 	Z_Free(animdefsToken);
-
-	// Add it as a texture too
-	if (!istexture)
-	{
-		GrowAnimDefs();
-		M_Memcpy(&animdefs[maxanims-1], &animdefs[i], sizeof(animdef_t));
-		animdefs[maxanims-1].istexture = 1;
-	}
 }
 
 //
@@ -5347,8 +5348,7 @@ void P_UpdateSpecials(void)
 		for (INT32 i = 0; i < anim->numpics; i++)
 		{
 			INT32 pic = anim->basepic + ((leveltime/anim->speed + i) % anim->numpics);
-			if (anim->istexture)
-				texturetranslation[anim->basepic+i] = pic;
+			texturetranslation[anim->basepic+i] = pic;
 		}
 	}
 }
