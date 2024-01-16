@@ -29,59 +29,6 @@ void PaletteRemap_SetIdentity(remaptable_t *tr);
 boolean PaletteRemap_IsIdentity(remaptable_t *tr);
 unsigned PaletteRemap_Add(remaptable_t *tr);
 
-boolean PaletteRemap_AddIndexRange(remaptable_t *tr, int start, int end, int pal1, int pal2);
-boolean PaletteRemap_AddColorRange(remaptable_t *tr, int start, int end, int _r1, int _g1, int _b1, int _r2, int _g2, int _b2);
-boolean PaletteRemap_AddDesaturation(remaptable_t *tr, int start, int end, double r1, double g1, double b1, double r2, double g2, double b2);
-boolean PaletteRemap_AddColourisation(remaptable_t *tr, int start, int end, int r, int g, int b);
-boolean PaletteRemap_AddTint(remaptable_t *tr, int start, int end, int r, int g, int b, int amount);
-
-enum PaletteRemapType
-{
-	REMAP_ADD_INDEXRANGE,
-	REMAP_ADD_COLORRANGE,
-	REMAP_ADD_COLOURISATION,
-	REMAP_ADD_DESATURATION,
-	REMAP_ADD_TINT
-};
-
-struct PaletteRemapParseResult
-{
-	int start, end;
-	enum PaletteRemapType type;
-	union
-	{
-		struct
-		{
-			int pal1, pal2;
-		} indexRange;
-		struct
-		{
-			int r1, g1, b1;
-			int r2, g2, b2;
-		} colorRange;
-		struct
-		{
-			double r1, g1, b1;
-			double r2, g2, b2;
-		} desaturation;
-		struct
-		{
-			int r, g, b;
-		} colourisation;
-		struct
-		{
-			int r, g, b, amount;
-		} tint;
-	};
-
-	boolean has_error;
-	char error[4096];
-};
-
-struct PaletteRemapParseResult *PaletteRemap_ParseTranslation(const char *translation);
-
-void PaletteRemap_ApplyResult(remaptable_t *tr, struct PaletteRemapParseResult *data);
-
 int R_FindCustomTranslation(const char *name);
 int R_FindCustomTranslation_CaseInsensitive(const char *name);
 void R_AddCustomTranslation(const char *name, int trnum);

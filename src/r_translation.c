@@ -24,10 +24,58 @@ static remaptable_t **paletteremaps = NULL;
 static unsigned numpaletteremaps = 0;
 
 static int allWhiteRemap = 0;
-static int allBlackRemap = 0;
 static int dashModeRemap = 0;
 
 static void MakeDashModeRemap(void);
+
+static boolean PaletteRemap_AddIndexRange(remaptable_t *tr, int start, int end, int pal1, int pal2);
+static boolean PaletteRemap_AddColorRange(remaptable_t *tr, int start, int end, int r1i, int g1i, int b1i, int r2i, int g2i, int b2i);
+static boolean PaletteRemap_AddDesaturation(remaptable_t *tr, int start, int end, double r1, double g1, double b1, double r2, double g2, double b2);
+static boolean PaletteRemap_AddColourisation(remaptable_t *tr, int start, int end, int r, int g, int b);
+static boolean PaletteRemap_AddTint(remaptable_t *tr, int start, int end, int r, int g, int b, int amount);
+
+enum PaletteRemapType
+{
+	REMAP_ADD_INDEXRANGE,
+	REMAP_ADD_COLORRANGE,
+	REMAP_ADD_COLOURISATION,
+	REMAP_ADD_DESATURATION,
+	REMAP_ADD_TINT
+};
+
+struct PaletteRemapParseResult
+{
+	int start, end;
+	enum PaletteRemapType type;
+	union
+	{
+		struct
+		{
+			int pal1, pal2;
+		} indexRange;
+		struct
+		{
+			int r1, g1, b1;
+			int r2, g2, b2;
+		} colorRange;
+		struct
+		{
+			double r1, g1, b1;
+			double r2, g2, b2;
+		} desaturation;
+		struct
+		{
+			int r, g, b;
+		} colourisation;
+		struct
+		{
+			int r, g, b, amount;
+		} tint;
+	};
+
+	boolean has_error;
+	char error[4096];
+};
 
 void PaletteRemap_Init(void)
 {
@@ -51,8 +99,7 @@ void PaletteRemap_Init(void)
 	// All black
 	remaptable_t *allBlack = PaletteRemap_New();
 	memset(allBlack->remap, 31, NUM_PALETTE_ENTRIES * sizeof(UINT8));
-	allBlackRemap = PaletteRemap_Add(allBlack);
-	R_AddCustomTranslation("AllBlack", allBlackRemap);
+	R_AddCustomTranslation("AllBlack", PaletteRemap_Add(allBlack));
 
 	// Dash mode (TC_DASHMODE)
 	MakeDashModeRemap();
@@ -183,7 +230,7 @@ static boolean IndicesOutOfRange2(int start1, int end1, int start2, int end2)
 	b = swap; \
 }
 
-boolean PaletteRemap_AddIndexRange(remaptable_t *tr, int start, int end, int pal1, int pal2)
+static boolean PaletteRemap_AddIndexRange(remaptable_t *tr, int start, int end, int pal1, int pal2)
 {
 	if (IndicesOutOfRange2(start, end, pal1, pal2))
 		return false;
@@ -211,17 +258,17 @@ boolean PaletteRemap_AddIndexRange(remaptable_t *tr, int start, int end, int pal
 	return true;
 }
 
-boolean PaletteRemap_AddColorRange(remaptable_t *tr, int start, int end, int _r1, int _g1, int _b1, int _r2, int _g2, int _b2)
+static boolean PaletteRemap_AddColorRange(remaptable_t *tr, int start, int end, int r1i, int g1i, int b1i, int r2i, int g2i, int b2i)
 {
 	if (IndicesOutOfRange(start, end))
 		return false;
 
-	double r1 = _r1;
-	double g1 = _g1;
-	double b1 = _b1;
-	double r2 = _r2;
-	double g2 = _g2;
-	double b2 = _b2;
+	double r1 = r1i;
+	double g1 = g1i;
+	double b1 = b1i;
+	double r2 = r2i;
+	double g2 = g2i;
+	double b2 = b2i;
 	double r, g, b;
 	double rs, gs, bs;
 
@@ -268,19 +315,19 @@ boolean PaletteRemap_AddColorRange(remaptable_t *tr, int start, int end, int _r1
 	return true;
 }
 
-#define clamp(val, minval, maxval) max(min(val, maxval), minval)
+#define CLAMP(val, minval, maxval) max(min(val, maxval), minval)
 
-boolean PaletteRemap_AddDesaturation(remaptable_t *tr, int start, int end, double r1, double g1, double b1, double r2, double g2, double b2)
+static boolean PaletteRemap_AddDesaturation(remaptable_t *tr, int start, int end, double r1, double g1, double b1, double r2, double g2, double b2)
 {
 	if (IndicesOutOfRange(start, end))
 		return false;
 
-	r1 = clamp(r1, 0.0, 2.0);
-	g1 = clamp(g1, 0.0, 2.0);
-	b1 = clamp(b1, 0.0, 2.0);
-	r2 = clamp(r2, 0.0, 2.0);
-	g2 = clamp(g2, 0.0, 2.0);
-	b2 = clamp(b2, 0.0, 2.0);
+	r1 = CLAMP(r1, 0.0, 2.0);
+	g1 = CLAMP(g1, 0.0, 2.0);
+	b1 = CLAMP(b1, 0.0, 2.0);
+	r2 = CLAMP(r2, 0.0, 2.0);
+	g2 = CLAMP(g2, 0.0, 2.0);
+	b2 = CLAMP(b2, 0.0, 2.0);
 
 	if (start > end)
 	{
@@ -311,7 +358,11 @@ boolean PaletteRemap_AddDesaturation(remaptable_t *tr, int start, int end, doubl
 	return true;
 }
 
-boolean PaletteRemap_AddColourisation(remaptable_t *tr, int start, int end, int r, int g, int b)
+#undef CLAMP
+
+#undef SWAP
+
+static boolean PaletteRemap_AddColourisation(remaptable_t *tr, int start, int end, int r, int g, int b)
 {
 	if (IndicesOutOfRange(start, end))
 		return false;
@@ -339,7 +390,7 @@ boolean PaletteRemap_AddColourisation(remaptable_t *tr, int start, int end, int 
 	return true;
 }
 
-boolean PaletteRemap_AddTint(remaptable_t *tr, int start, int end, int r, int g, int b, int amount)
+static boolean PaletteRemap_AddTint(remaptable_t *tr, int start, int end, int r, int g, int b, int amount)
 {
 	if (IndicesOutOfRange(start, end))
 		return false;
@@ -396,7 +447,7 @@ static void AddParsedTranslation(unsigned id, int base_translation, struct Palet
 	}
 }
 
-void PaletteRemap_ApplyResult(remaptable_t *tr, struct PaletteRemapParseResult *data)
+static void PaletteRemap_ApplyResult(remaptable_t *tr, struct PaletteRemapParseResult *data)
 {
 	int start = data->start;
 	int end = data->end;
@@ -460,18 +511,14 @@ static boolean StringToNumber(const char *tkn, int *out)
 {
 	char *endPos = NULL;
 
-#ifndef AVOID_ERRNO
 	errno = 0;
-#endif
 
 	int result = strtol(tkn, &endPos, 10);
 	if (endPos == tkn || *endPos != '\0')
 		return false;
 
-#ifndef AVOID_ERRNO
 	if (errno == ERANGE)
 		return false;
-#endif
 
 	*out = result;
 
@@ -489,18 +536,14 @@ static boolean ParseDecimal(tokenizer_t *sc, double *out)
 
 	char *endPos = NULL;
 
-#ifndef AVOID_ERRNO
 	errno = 0;
-#endif
 
 	double result = strtod(tkn, &endPos);
 	if (endPos == tkn || *endPos != '\0')
 		return false;
 
-#ifndef AVOID_ERRNO
 	if (errno == ERANGE)
 		return false;
-#endif
 
 	*out = result;
 
@@ -513,7 +556,7 @@ static struct PaletteRemapParseResult *ThrowError(const char *format, ...)
 
 	va_list argptr;
 	va_start(argptr, format);
-	vsprintf(err->error, format, argptr);
+	vsnprintf(err->error, sizeof err->error, format, argptr);
 	va_end(argptr);
 
 	err->has_error = true;
@@ -734,7 +777,7 @@ static struct PaletteRemapParseResult *PaletteRemap_ParseString(tokenizer_t *sc)
 	return NULL;
 }
 
-struct PaletteRemapParseResult *PaletteRemap_ParseTranslation(const char *translation)
+static struct PaletteRemapParseResult *PaletteRemap_ParseTranslation(const char *translation)
 {
 	tokenizer_t *sc = Tokenizer_Open(translation, 1);
 	struct PaletteRemapParseResult *result = PaletteRemap_ParseString(sc);
