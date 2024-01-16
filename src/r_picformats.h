@@ -104,10 +104,10 @@ typedef struct
 	boolean available;
 } spriteinfo_t;
 
-// Portable Network Graphics
-#define PNG_HEADER_SIZE (8)
+// PNG support
+#define PNG_HEADER_SIZE 8
+
 boolean Picture_IsLumpPNG(const UINT8 *d, size_t s);
-#define Picture_ThrowPNGError(lumpname, wadfilename) I_Error("W_Wad: Lump \"%s\" in file \"%s\" is a .png - please convert to either Doom or Flat (raw) image format.", lumpname, wadfilename); // Fears Of LJ Sonic
 
 #ifndef NO_PNG_LUMPS
 void *Picture_PNGConvert(

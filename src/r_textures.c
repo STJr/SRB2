@@ -285,42 +285,51 @@ UINT8 *R_GenerateTexture(size_t texnum)
 	// so check if there's holes and if not strip the posts.
 	if (texture->patchcount == 1)
 	{
-		boolean holey = false;
-		patch = texture->patches;
+		patch = &texture->patches[0];
 
 		UINT16 wadnum = patch->wad;
-		lumpnum_t lumpnum = patch->lump;
-		size_t lumplength = W_LumpLengthPwad(wadnum, lumpnum);
-		UINT8 *pdata = W_CacheLumpNumPwad(wadnum, lumpnum, PU_CACHE);
-		softwarepatch_t *realpatch = (softwarepatch_t *)pdata;
+		UINT16 lumpnum = patch->lump;
+		UINT8 *pdata;
+		softwarepatch_t *realpatch;
+		boolean holey = false;
 
 #ifndef NO_PNG_LUMPS
+		UINT8 header[PNG_HEADER_SIZE];
+
+		W_ReadLumpHeaderPwad(wadnum, lumpnum, header, PNG_HEADER_SIZE, 0);
+
 		// Not worth converting
-		if (Picture_IsLumpPNG(pdata, lumplength))
+		if (Picture_IsLumpPNG(header, W_LumpLengthPwad(wadnum, lumpnum)))
 			goto multipatch;
 #endif
+
+		pdata = W_CacheLumpNumPwad(wadnum, lumpnum, PU_CACHE);
+		realpatch = (softwarepatch_t *)pdata;
 
 		// Check the patch for holes.
 		if (texture->width > SHORT(realpatch->width) || texture->height > SHORT(realpatch->height))
 			holey = true;
-		UINT8 *colofs = (UINT8 *)realpatch->columnofs;
-		for (x = 0; x < texture->width && !holey; x++)
+		else
 		{
-			doompost_t *col = (doompost_t *)((UINT8 *)realpatch + LONG(*(UINT32 *)&colofs[x<<2]));
-			INT32 topdelta, prevdelta = -1, y = 0;
-			while (col->topdelta != 0xff)
+			UINT8 *colofs = (UINT8 *)realpatch->columnofs;
+			for (x = 0; x < texture->width; x++)
 			{
-				topdelta = col->topdelta;
-				if (topdelta <= prevdelta)
-					topdelta += prevdelta;
-				prevdelta = topdelta;
-				if (topdelta > y)
-					break;
-				y = topdelta + col->length + 1;
-				col = (doompost_t *)((UINT8 *)col + col->length + 4);
+				doompost_t *col = (doompost_t *)((UINT8 *)realpatch + LONG(*(UINT32 *)&colofs[x<<2]));
+				INT32 topdelta, prevdelta = -1, y = 0;
+				while (col->topdelta != 0xff)
+				{
+					topdelta = col->topdelta;
+					if (topdelta <= prevdelta)
+						topdelta += prevdelta;
+					prevdelta = topdelta;
+					if (topdelta > y)
+						break;
+					y = topdelta + col->length + 1;
+					col = (doompost_t *)((UINT8 *)col + col->length + 4);
+				}
+				if (y < texture->height)
+					holey = true; // this texture is HOLEy! D:
 			}
-			if (y < texture->height)
-				holey = true; // this texture is HOLEy! D:
 		}
 
 		// If the patch uses transparency, we have to save it this way.
@@ -345,6 +354,8 @@ UINT8 *R_GenerateTexture(size_t texnum)
 			// we can't as easily flip the patch vertically sadly though,
 			//  we have wait until the texture itself is drawn to do that
 			Patch_MakeColumns(realpatch, texture->width, texture->width, blocktex, columns, posts, patch->flip & 1);
+
+			Z_Free(pdata);
 
 			goto done;
 		}
