@@ -803,7 +803,7 @@ static void R_DrawVisSprite(vissprite_t *vis)
 	fixed_t this_scale = vis->thingscale;
 	INT32 x1, x2;
 	INT64 overflow_test;
-	INT32 lengthcol;
+	unsigned lengthcol;
 
 	if (!patch)
 		return;
