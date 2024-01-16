@@ -901,7 +901,7 @@ void *Picture_TextureToFlat(size_t texnum)
   */
 boolean Picture_IsLumpPNG(const UINT8 *d, size_t s)
 {
-	if (s < 67) // http://web.archive.org/web/20230524232139/http://garethrees.org/2007/11/14/pngcrush/
+	if (s < 67) // https://web.archive.org/web/20230524232139/http://garethrees.org/2007/11/14/pngcrush/
 		return false;
 	// Check for PNG file signature using memcmp
 	// As it may be faster on CPUs with slow unaligned memory access
