@@ -893,26 +893,6 @@ typedef struct
 	// the [0] is &columnofs[width]
 } ATTRPACK softwarepatch_t;
 
-#ifdef _MSC_VER
-#pragma warning(disable :  4200)
-#endif
-
-// a pic is an unmasked block of pixels, stored in horizontal way
-typedef struct
-{
-	INT16 width;
-	UINT8 zero;       // set to 0 allow autodetection of pic_t
-	                 // mode instead of patch or raw
-	UINT8 mode;       // see pic_mode_t above
-	INT16 height;
-	INT16 reserved1; // set to 0
-	UINT8 data[0];
-} ATTRPACK pic_t;
-
-#ifdef _MSC_VER
-#pragma warning(default : 4200)
-#endif
-
 #if defined(_MSC_VER)
 #pragma pack()
 #endif

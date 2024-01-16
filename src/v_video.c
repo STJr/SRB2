@@ -1094,61 +1094,6 @@ void V_DrawBlock(INT32 x, INT32 y, INT32 scrn, INT32 width, INT32 height, const 
 	}
 }
 
-static void V_BlitScaledPic(INT32 px1, INT32 py1, INT32 scrn, pic_t *pic);
-//  Draw a linear pic, scaled, TOTALLY CRAP CODE!!! OPTIMISE AND ASM!!
-//
-void V_DrawScaledPic(INT32 rx1, INT32 ry1, INT32 scrn, INT32 lumpnum)
-{
-#ifdef HWRENDER
-	if (rendermode != render_soft)
-	{
-		HWR_DrawPic(rx1, ry1, lumpnum);
-		return;
-	}
-#endif
-
-	V_BlitScaledPic(rx1, ry1, scrn, W_CacheLumpNum(lumpnum, PU_CACHE));
-}
-
-static void V_BlitScaledPic(INT32 rx1, INT32 ry1, INT32 scrn, pic_t * pic)
-{
-	INT32 dupx, dupy;
-	INT32 x, y;
-	UINT8 *src, *dest;
-	INT32 width, height;
-
-	width = SHORT(pic->width);
-	height = SHORT(pic->height);
-	scrn &= V_PARAMMASK;
-
-	if (pic->mode != 0)
-	{
-		CONS_Debug(DBG_RENDER, "pic mode %d not supported in Software\n", pic->mode);
-		return;
-	}
-
-	dest = screens[scrn] + max(0, ry1 * vid.width) + max(0, rx1);
-	// y cliping to the screen
-	if (ry1 + height * vid.dup >= vid.width)
-		height = (vid.width - ry1) / vid.dup - 1;
-	// WARNING no x clipping (not needed for the moment)
-
-	for (y = max(0, -ry1 / vid.dup); y < height; y++)
-	{
-		for (dupy = vid.dup; dupy; dupy--)
-		{
-			src = pic->data + y * width;
-			for (x = 0; x < width; x++)
-			{
-				for (dupx = vid.dup; dupx; dupx--)
-					*dest++ = *src;
-				src++;
-			}
-			dest += vid.width - vid.dup * width;
-		}
-	}
-}
-
 //
 // Fills a box of pixels with a single color, NOTE: scaled to screen size
 //

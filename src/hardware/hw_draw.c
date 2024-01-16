@@ -653,45 +653,9 @@ void HWR_DrawCroppedPatch(patch_t *gpatch, fixed_t x, fixed_t y, fixed_t pscale,
 		HWD.pfnDrawPolygon(NULL, v, 4, flags);
 }
 
-void HWR_DrawPic(INT32 x, INT32 y, lumpnum_t lumpnum)
-{
-	FOutVector      v[4];
-	const patch_t    *patch;
-
-	// make pic ready in hardware cache
-	patch = HWR_GetPic(lumpnum);
-
-//  3--2
-//  | /|
-//  |/ |
-//  0--1
-
-	v[0].x = v[3].x = 2.0f * (float)x/vid.width - 1;
-	v[2].x = v[1].x = 2.0f * (float)(x + patch->width*FIXED_TO_FLOAT(vid.fdup))/vid.width - 1;
-	v[0].y = v[1].y = 1.0f - 2.0f * (float)y/vid.height;
-	v[2].y = v[3].y = 1.0f - 2.0f * (float)(y + patch->height*FIXED_TO_FLOAT(vid.fdup))/vid.height;
-
-	v[0].z = v[1].z = v[2].z = v[3].z = 1.0f;
-
-	v[0].s = v[3].s = 0;
-	v[2].s = v[1].s = ((GLPatch_t *)patch->hardware)->max_s;
-	v[0].t = v[1].t = 0;
-	v[2].t = v[3].t = ((GLPatch_t *)patch->hardware)->max_t;
-
-
-	//Hurdler: Boris, the same comment as above... but maybe for pics
-	// it not a problem since they don't have any transparent pixel
-	// if I'm right !?
-	// But then, the question is: why not 0 instead of PF_Masked ?
-	// or maybe PF_Environment ??? (like what I said above)
-	// BP: PF_Environment don't change anything ! and 0 is undifined
-	HWD.pfnDrawPolygon(NULL, v, 4, PF_Translucent | PF_NoDepthTest);
-}
-
 // ==========================================================================
 //                                                            V_VIDEO.C STUFF
 // ==========================================================================
-
 
 // --------------------------------------------------------------------------
 // Fills a box of pixels using a flat texture as a pattern
