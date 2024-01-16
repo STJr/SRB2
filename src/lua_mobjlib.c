@@ -710,9 +710,14 @@ static int mobj_set(lua_State *L)
 	}
 	case mobj_translation:
 	{
-		int id = R_FindCustomTranslation(luaL_checkstring(L, 3));
-		if (id != -1)
-			mo->translation = id;
+		if (!lua_isnil(L, 3)) {
+			const char *tr = luaL_checkstring(L, 3);
+			int id = R_FindCustomTranslation(tr);
+			if (id != -1)
+				mo->translation = id;
+			else
+				return luaL_error(L, "invalid translation '%s'.", tr);
+		}
 		else
 			mo->translation = 0;
 		break;
