@@ -256,7 +256,6 @@ boolean R_AddSingleSpriteDef(const char *sprname, spritedef_t *spritedef, UINT16
 	UINT8 frame;
 	UINT8 rotation;
 	lumpinfo_t *lumpinfo;
-	softwarepatch_t patch;
 	UINT16 numadded = 0;
 
 	memset(sprtemp,0xFF, sizeof (sprtemp));
@@ -284,11 +283,8 @@ boolean R_AddSingleSpriteDef(const char *sprname, spritedef_t *spritedef, UINT16
 	{
 		if (memcmp(lumpinfo[l].name,sprname,4)==0)
 		{
-			INT32 width, height;
+			INT16 width, height;
 			INT16 topoffset, leftoffset;
-#ifndef NO_PNG_LUMPS
-			boolean isPNG = false;
-#endif
 
 			frame = R_Char2Frame(lumpinfo[l].name[4]);
 			rotation = R_Char2Rotation(lumpinfo[l].name[5]);
@@ -303,38 +299,12 @@ boolean R_AddSingleSpriteDef(const char *sprname, spritedef_t *spritedef, UINT16
 			if (W_LumpLengthPwad(wadnum,l)<=8)
 				continue;
 
+			// Get the patch's dimensions only
+			if (!W_ReadPatchHeaderPwad(wadnum, l, &width, &height, &topoffset, &leftoffset))
+				continue;
+
 			// store sprite info in lookup tables
 			//FIXME : numspritelumps do not duplicate sprite replacements
-
-#ifndef NO_PNG_LUMPS
-			{
-				UINT8 *png = W_CacheLumpNumPwad(wadnum, l, PU_STATIC);
-				size_t len = W_LumpLengthPwad(wadnum, l);
-
-				if (Picture_IsLumpPNG(png, len))
-				{
-					if (!Picture_PNGDimensions(png, &width, &height, &topoffset, &leftoffset, len))
-					{
-						Z_Free(png);
-						continue;
-					}
-
-					isPNG = true;
-				}
-
-				Z_Free(png);
-			}
-
-			if (!isPNG)
-#endif
-			{
-				W_ReadLumpHeaderPwad(wadnum, l, &patch, sizeof(INT16) * 4, 0);
-				width = (INT32)(SHORT(patch.width));
-				height = (INT32)(SHORT(patch.height));
-				topoffset = (INT16)(SHORT(patch.topoffset));
-				leftoffset = (INT16)(SHORT(patch.leftoffset));
-			}
-
 			spritecachedinfo[numspritelumps].width = width<<FRACBITS;
 			spritecachedinfo[numspritelumps].offset = leftoffset<<FRACBITS;
 			spritecachedinfo[numspritelumps].topoffset = topoffset<<FRACBITS;

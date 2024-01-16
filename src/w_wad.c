@@ -1836,10 +1836,6 @@ size_t W_ReadLumpHeaderPwad(UINT16 wad, UINT16 lump, void *dest, size_t size, si
 		bytesread = fread(dest, 1, size, handle);
 		if (wadfiles[wad]->type == RET_FOLDER)
 			fclose(handle);
-#ifdef NO_PNG_LUMPS
-		if (Picture_IsLumpPNG((UINT8 *)dest, bytesread))
-			Picture_ThrowPNGError(l->fullname, wadfiles[wad]->filename);
-#endif
 		return bytesread;
 	case CM_LZF:		// Is it LZF compressed? Used by ZWADs.
 		{
@@ -1875,10 +1871,6 @@ size_t W_ReadLumpHeaderPwad(UINT16 wad, UINT16 lump, void *dest, size_t size, si
 			M_Memcpy(dest, decData + offset, size);
 			Z_Free(rawData);
 			Z_Free(decData);
-#ifdef NO_PNG_LUMPS
-			if (Picture_IsLumpPNG((UINT8 *)dest, size))
-				Picture_ThrowPNGError(l->fullname, wadfiles[wad]->filename);
-#endif
 			return size;
 #else
 			//I_Error("ZWAD files not supported on this platform.");
@@ -1938,10 +1930,6 @@ size_t W_ReadLumpHeaderPwad(UINT16 wad, UINT16 lump, void *dest, size_t size, si
 			Z_Free(rawData);
 			Z_Free(decData);
 
-#ifdef NO_PNG_LUMPS
-			if (Picture_IsLumpPNG((UINT8 *)dest, size))
-				Picture_ThrowPNGError(l->fullname, wadfiles[wad]->filename);
-#endif
 			return size;
 		}
 #endif
@@ -2097,18 +2085,10 @@ void *W_CacheLumpName(const char *name, INT32 tag)
 //                                         CACHING OF GRAPHIC PATCH RESOURCES
 // ==========================================================================
 
-// Graphic 'patches' are loaded, and if necessary, converted into the format
-// the most useful for the current rendermode. For software renderer, the
-// graphic patches are kept as is. For the hardware renderer, graphic patches
-// are 'unpacked', and are kept into the cache in that unpacked format, and
-// the heap memory cache then acts as a 'level 2' cache just after the
-// graphics card memory.
-
 //
 // Cache a patch into heap memory, convert the patch format as necessary
 //
-
-void *W_CacheSoftwarePatchNumPwad(UINT16 wad, UINT16 lump, INT32 tag)
+static void *W_GetPatchPwad(UINT16 wad, UINT16 lump, INT32 tag)
 {
 	lumpcache_t *lumpcache = NULL;
 
@@ -2126,15 +2106,19 @@ void *W_CacheSoftwarePatchNumPwad(UINT16 wad, UINT16 lump, INT32 tag)
 		W_ReadLumpHeaderPwad(wad, lump, lumpdata, 0, 0);
 		ptr = lumpdata;
 
-#ifndef NO_PNG_LUMPS
 		if (Picture_IsLumpPNG((UINT8 *)lumpdata, len))
 		{
+#ifndef NO_PNG_LUMPS
 			ptr = Picture_PNGConvert((UINT8 *)lumpdata, PICFMT_PATCH, NULL, NULL, NULL, NULL, len, &len, 0);
 			Z_ChangeTag(ptr, tag);
 			Z_SetUser(ptr, &lumpcache[lump]);
+			Z_Free(lumpdata);
 			return lumpcache[lump];
-		}
+#else
+			Picture_ThrowPNGError(W_CheckNameForNumPwad(wad, lump), wadfiles[wad]->filename);
+			return NULL;
 #endif
+		}
 
 		dest = Patch_CreateFromDoomPatch(ptr);
 		Z_Free(ptr);
@@ -2148,30 +2132,19 @@ void *W_CacheSoftwarePatchNumPwad(UINT16 wad, UINT16 lump, INT32 tag)
 	return lumpcache[lump];
 }
 
-void *W_CacheSoftwarePatchNum(lumpnum_t lumpnum, INT32 tag)
-{
-	return W_CacheSoftwarePatchNumPwad(WADFILENUM(lumpnum),LUMPNUM(lumpnum),tag);
-}
-
 void *W_CachePatchNumPwad(UINT16 wad, UINT16 lump, INT32 tag)
 {
-	patch_t *patch;
-
 	if (!TestValidLump(wad, lump))
 		return NULL;
 
-	patch = W_CacheSoftwarePatchNumPwad(wad, lump, tag);
+	patch_t *patch = W_GetPatchPwad(wad, lump, tag);
 
 #ifdef HWRENDER
-	// Software-only compile cache the data without conversion
-	if (rendermode == render_soft || rendermode == render_none)
+	if (rendermode == render_opengl)
+		Patch_CreateGL(patch);
 #endif
-		return (void *)patch;
 
-#ifdef HWRENDER
-	Patch_CreateGL(patch);
 	return (void *)patch;
-#endif
 }
 
 void *W_CachePatchNum(lumpnum_t lumpnum, INT32 tag)
@@ -2185,6 +2158,63 @@ void *W_GetCachedPatchNumPwad(UINT16 wad, UINT16 lump)
 		return NULL;
 
 	return wadfiles[wad]->patchcache[lump];
+}
+
+boolean W_ReadPatchHeaderPwad(UINT16 wadnum, UINT16 lumpnum, INT16 *width, INT16 *height, INT16 *topoffset, INT16 *leftoffset)
+{
+	UINT8 header[PNG_HEADER_SIZE];
+
+	if (!TestValidLump(wadnum, lumpnum))
+		return false;
+
+	W_ReadLumpHeaderPwad(wadnum, lumpnum, header, sizeof header, 0);
+
+	size_t len = W_LumpLengthPwad(wadnum, lumpnum);
+
+	if (Picture_IsLumpPNG(header, len))
+	{
+#ifndef NO_PNG_LUMPS
+		UINT8 *png = W_CacheLumpNumPwad(wadnum, lumpnum, PU_CACHE);
+
+		INT32 pwidth = 0, pheight = 0;
+
+		if (!Picture_PNGDimensions(png, &pwidth, &pheight, topoffset, leftoffset, len))
+		{
+			Z_Free(png);
+			return false;
+		}
+
+		*width = (INT16)pwidth;
+		*height = (INT16)pheight;
+
+		Z_Free(png);
+
+		return true;
+#else
+		Picture_ThrowPNGError(W_CheckNameForNumPwad(wadnum, lumpnum), wadfiles[wadnum]->filename);
+
+		return false;
+#endif
+	}
+
+	softwarepatch_t patch;
+
+	if (!W_ReadLumpHeaderPwad(wadnum, lumpnum, &patch, sizeof(INT16) * 4, 0))
+		return false;
+
+	*width = SHORT(patch.width);
+	*height = SHORT(patch.height);
+	if (topoffset)
+		*topoffset = SHORT(patch.topoffset);
+	if (leftoffset)
+		*leftoffset = SHORT(patch.leftoffset);
+
+	return true;
+}
+
+boolean W_ReadPatchHeader(lumpnum_t lumpnum, INT16 *width, INT16 *height, INT16 *topoffset, INT16 *leftoffset)
+{
+	return W_ReadPatchHeaderPwad(WADFILENUM(lumpnum), LUMPNUM(lumpnum), width, height, topoffset, leftoffset);
 }
 
 void W_UnlockCachedPatch(void *patch)

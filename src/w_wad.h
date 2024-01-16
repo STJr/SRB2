@@ -225,10 +225,8 @@ void *W_CachePatchNumPwad(UINT16 wad, UINT16 lump, INT32 tag);
 void *W_CachePatchNum(lumpnum_t lumpnum, INT32 tag);
 void *W_GetCachedPatchNumPwad(UINT16 wad, UINT16 lump);
 
-// Returns a Software patch.
-// Performs any necessary conversions from PNG images.
-void *W_CacheSoftwarePatchNumPwad(UINT16 wad, UINT16 lump, INT32 tag);
-void *W_CacheSoftwarePatchNum(lumpnum_t lumpnum, INT32 tag);
+boolean W_ReadPatchHeaderPwad(UINT16 wadnum, UINT16 lumpnum, INT16 *width, INT16 *height, INT16 *topoffset, INT16 *leftoffset);
+boolean W_ReadPatchHeader(lumpnum_t lumpnum, INT16 *width, INT16 *height, INT16 *topoffset, INT16 *leftoffset);
 
 void W_UnlockCachedPatch(void *patch);
 

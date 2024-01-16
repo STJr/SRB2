@@ -778,9 +778,6 @@ Rloadflats (INT32 i, INT32 w)
 	UINT16 j, numlumps = 0;
 	UINT16 texstart = 0, texend = 0;
 	UINT32 *list = NULL;
-#ifndef NO_PNG_LUMPS
-	UINT8 header[PNG_HEADER_SIZE];
-#endif
 
 	// Get every lump inside the Flats/ folder
 	if (W_FileHasFolders(wadfiles[w]))
@@ -802,7 +799,7 @@ Rloadflats (INT32 i, INT32 w)
 	for (j = 0; j < numlumps; j++)
 	{
 		UINT16 wadnum = list ? WADFILENUM(list[j]) : (UINT16)w;
-		lumpnum_t lumpnum = list ? LUMPNUM(list[j]) : (texstart + j);
+		UINT16 lumpnum = list ? LUMPNUM(list[j]) : (texstart + j);
 
 		size_t lumplength = W_LumpLengthPwad(wadnum, lumpnum);
 		size_t flatsize = R_GetFlatSize(lumplength);
@@ -810,6 +807,8 @@ Rloadflats (INT32 i, INT32 w)
 		INT16 width = flatsize, height = flatsize;
 
 #ifndef NO_PNG_LUMPS
+		UINT8 header[PNG_HEADER_SIZE];
+
 		W_ReadLumpHeaderPwad(wadnum, lumpnum, header, sizeof header, 0);
 
 		if (Picture_IsLumpPNG(header, lumplength))
@@ -885,43 +884,14 @@ Rloadtextures (INT32 i, INT32 w)
 	for (j = 0; j < numlumps; j++)
 	{
 		UINT16 wadnum = list ? WADFILENUM(list[j]) : (UINT16)w;
-		lumpnum_t lumpnum = list ? LUMPNUM(list[j]) : (texstart + j);
-
-		softwarepatch_t patchlump;
-
-#ifndef NO_PNG_LUMPS
-		size_t lumplength;
-#endif
-
-		W_ReadLumpHeaderPwad(wadnum, lumpnum, &patchlump, PNG_HEADER_SIZE, 0);
-#ifndef NO_PNG_LUMPS
-		lumplength = W_LumpLengthPwad(wadnum, lumpnum);
-#endif
+		UINT16 lumpnum = list ? LUMPNUM(list[j]) : (texstart + j);
 
 		INT16 width = 0, height = 0;
 
-#ifndef NO_PNG_LUMPS
-		if (Picture_IsLumpPNG((UINT8 *)&patchlump, lumplength))
+		if (!W_ReadPatchHeaderPwad(wadnum, lumpnum, &width, &height, NULL, NULL))
 		{
-			INT32 texw, texh;
-			UINT8 *png = W_CacheLumpNumPwad(wadnum, lumpnum, PU_CACHE);
-			if (Picture_PNGDimensions(png, &texw, &texh, NULL, NULL, lumplength))
-			{
-				width = (INT16)width;
-				height = (INT16)height;
-			}
-			else
-			{
-				width = 1;
-				height = 1;
-			}
-			Z_Free(png);
-		}
-		else
-#endif
-		{
-			width = SHORT(patchlump.width);
-			height = SHORT(patchlump.height);
+			width = 1;
+			height = 1;
 		}
 
 		// printf("\"%s\" (wad: %u, lump: %u) is a single patch, dimensions %d x %d\n",W_CheckNameForNumPwad(wadnum,lumpnum),wadnum,lumpnum,width,height);
