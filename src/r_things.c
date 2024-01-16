@@ -308,12 +308,17 @@ boolean R_AddSingleSpriteDef(const char *sprname, spritedef_t *spritedef, UINT16
 
 #ifndef NO_PNG_LUMPS
 			{
-				softwarepatch_t *png = W_CacheLumpNumPwad(wadnum, l, PU_STATIC);
+				UINT8 *png = W_CacheLumpNumPwad(wadnum, l, PU_STATIC);
 				size_t len = W_LumpLengthPwad(wadnum, l);
 
-				if (Picture_IsLumpPNG((UINT8 *)png, len))
+				if (Picture_IsLumpPNG(png, len))
 				{
-					Picture_PNGDimensions((UINT8 *)png, &width, &height, &topoffset, &leftoffset, len);
+					if (!Picture_PNGDimensions(png, &width, &height, &topoffset, &leftoffset, len))
+					{
+						Z_Free(png);
+						continue;
+					}
+
 					isPNG = true;
 				}
 

@@ -958,7 +958,6 @@ static int PNG_ChunkReader(png_structp png_ptr, png_unknown_chunkp chonk)
 static void PNG_error(png_structp PNG, png_const_charp pngtext)
 {
 	CONS_Debug(DBG_RENDER, "libpng error at %p: %s", PNG, pngtext);
-	//I_Error("libpng error at %p: %s", PNG, pngtext);
 }
 
 static void PNG_warn(png_structp PNG, png_const_charp pngtext)
@@ -1025,7 +1024,7 @@ static png_bytep *PNG_Read(
 	png_set_read_fn(png_ptr, &png_io, PNG_IOReader);
 
 	memset(&chunk, 0x00, sizeof(png_chunk_t));
-	chunkname = grAb_chunk; // I want to read a grAb chunk
+	chunkname = grAb_chunk;
 
 	user_chunk_ptr = png_get_user_chunk_ptr(png_ptr);
 	png_set_read_user_chunk_fn(png_ptr, user_chunk_ptr, PNG_ChunkReader);
@@ -1410,13 +1409,17 @@ boolean Picture_PNGDimensions(UINT8 *png, INT32 *width, INT32 *height, INT16 *to
 
 	png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, PNG_error, PNG_warn);
 	if (!png_ptr)
-		I_Error("Picture_PNGDimensions: Couldn't initialize libpng!");
+	{
+		CONS_Alert(CONS_ERROR, "Picture_PNGDimensions: Couldn't initialize libpng!\n");
+		return false;
+	}
 
 	png_info_ptr = png_create_info_struct(png_ptr);
 	if (!png_info_ptr)
 	{
 		png_destroy_read_struct(&png_ptr, NULL, NULL);
-		I_Error("Picture_PNGDimensions: libpng couldn't allocate memory!");
+		CONS_Alert(CONS_ERROR, "Picture_PNGDimensions: libpng couldn't allocate memory!\n");
+		return false;
 	}
 
 #ifdef USE_FAR_KEYWORD
@@ -1426,7 +1429,8 @@ boolean Picture_PNGDimensions(UINT8 *png, INT32 *width, INT32 *height, INT16 *to
 #endif
 	{
 		png_destroy_read_struct(&png_ptr, &png_info_ptr, NULL);
-		I_Error("Picture_PNGDimensions: libpng load error!");
+		CONS_Alert(CONS_ERROR, "Picture_PNGDimensions: libpng load error!\n");
+		return false;
 	}
 #ifdef USE_FAR_KEYWORD
 	png_memcpy(png_jmpbuf(png_ptr), jmpbuf, sizeof jmp_buf);
@@ -1438,7 +1442,7 @@ boolean Picture_PNGDimensions(UINT8 *png, INT32 *width, INT32 *height, INT16 *to
 	png_set_read_fn(png_ptr, &png_io, PNG_IOReader);
 
 	memset(&chunk, 0x00, sizeof(png_chunk_t));
-	chunkname = grAb_chunk; // I want to read a grAb chunk
+	chunkname = grAb_chunk;
 
 	user_chunk_ptr = png_get_user_chunk_ptr(png_ptr);
 	png_set_read_user_chunk_fn(png_ptr, user_chunk_ptr, PNG_ChunkReader);

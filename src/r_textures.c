@@ -816,9 +816,16 @@ Rloadflats (INT32 i, INT32 w)
 		{
 			INT32 texw, texh;
 			UINT8 *flatlump = W_CacheLumpNumPwad(wadnum, lumpnum, PU_CACHE);
-			Picture_PNGDimensions((UINT8 *)flatlump, &texw, &texh, NULL, NULL, lumplength);
-			width = (INT16)width;
-			height = (INT16)height;
+			if (Picture_PNGDimensions((UINT8 *)flatlump, &texw, &texh, NULL, NULL, lumplength))
+			{
+				width = (INT16)width;
+				height = (INT16)height;
+			}
+			else
+			{
+				width = 1;
+				height = 1;
+			}
 			Z_Free(flatlump);
 		}
 #endif
@@ -891,16 +898,23 @@ Rloadtextures (INT32 i, INT32 w)
 		lumplength = W_LumpLengthPwad(wadnum, lumpnum);
 #endif
 
-		INT16 width, height;
+		INT16 width = 0, height = 0;
 
 #ifndef NO_PNG_LUMPS
 		if (Picture_IsLumpPNG((UINT8 *)&patchlump, lumplength))
 		{
 			INT32 texw, texh;
 			UINT8 *png = W_CacheLumpNumPwad(wadnum, lumpnum, PU_CACHE);
-			Picture_PNGDimensions(png, &texw, &texh, NULL, NULL, lumplength);
-			width = (INT16)width;
-			height = (INT16)height;
+			if (Picture_PNGDimensions(png, &texw, &texh, NULL, NULL, lumplength))
+			{
+				width = (INT16)width;
+				height = (INT16)height;
+			}
+			else
+			{
+				width = 1;
+				height = 1;
+			}
 			Z_Free(png);
 		}
 		else

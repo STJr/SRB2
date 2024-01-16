@@ -176,12 +176,11 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 	R_CheckTextureCache(texnum);
 
 	if (textures[texnum]->flip & 2) // vertically flipped?
-	{
 		colfunc_2s = R_DrawFlippedMaskedColumn;
-		lengthcol = textures[texnum]->height;
-	}
 	else
 		colfunc_2s = R_DrawMaskedColumn; // render the usual 2sided single-patch packed texture
+
+	lengthcol = textures[texnum]->height;
 
 	// Setup lighting based on the presence/lack-of 3D floors.
 	dc_numlights = 0;
@@ -740,12 +739,11 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 	R_CheckTextureCache(texnum);
 
 	if (textures[texnum]->flip & 2) // vertically flipped?
-	{
 		colfunc_2s = R_DrawRepeatFlippedMaskedColumn;
-		lengthcol = textures[texnum]->height;
-	}
 	else
 		colfunc_2s = R_DrawRepeatMaskedColumn; // render the usual 2sided single-patch packed texture
+
+	lengthcol = textures[texnum]->height;
 
 	// Set heights according to plane, or slope, whichever
 	{
