@@ -33,6 +33,7 @@ static boolean PaletteRemap_AddColorRange(remaptable_t *tr, int start, int end, 
 static boolean PaletteRemap_AddDesaturation(remaptable_t *tr, int start, int end, double r1, double g1, double b1, double r2, double g2, double b2);
 static boolean PaletteRemap_AddColourisation(remaptable_t *tr, int start, int end, int r, int g, int b);
 static boolean PaletteRemap_AddTint(remaptable_t *tr, int start, int end, int r, int g, int b, int amount);
+static boolean PaletteRemap_AddInvert(remaptable_t *tr, int start, int end);
 
 enum PaletteRemapType
 {
@@ -100,6 +101,12 @@ void PaletteRemap_Init(void)
 	remaptable_t *allBlack = PaletteRemap_New();
 	memset(allBlack->remap, 31, NUM_PALETTE_ENTRIES * sizeof(UINT8));
 	R_AddCustomTranslation("AllBlack", PaletteRemap_Add(allBlack));
+
+	// Invert
+	remaptable_t *invertRemap = PaletteRemap_New();
+	PaletteRemap_SetIdentity(invertRemap);
+	PaletteRemap_AddInvert(invertRemap, 0, 255);
+	R_AddCustomTranslation("Invert", PaletteRemap_Add(invertRemap));
 
 	// Dash mode (TC_DASHMODE)
 	MakeDashModeRemap();
@@ -411,6 +418,23 @@ static boolean PaletteRemap_AddTint(remaptable_t *tr, int start, int end, int r,
 		    (int)br,
 		    (int)bg,
 		    (int)bb
+		);
+	}
+
+	return true;
+}
+
+static boolean PaletteRemap_AddInvert(remaptable_t *tr, int start, int end)
+{
+	if (IndicesOutOfRange(start, end))
+		return false;
+
+	for (int i = start; i < end; ++i)
+	{
+		tr->remap[i] = NearestColor(
+		    255 - tr->remap[pMasterPalette[i].s.red],
+		    255 - tr->remap[pMasterPalette[i].s.green],
+		    255 - tr->remap[pMasterPalette[i].s.blue]
 		);
 	}
 
