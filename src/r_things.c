@@ -634,9 +634,11 @@ INT16 *mceilingclip;
 fixed_t spryscale = 0, sprtopscreen = 0, sprbotscreen = 0;
 fixed_t windowtop = 0, windowbottom = 0;
 
-void R_DrawMaskedColumn(column_t *column)
+void R_DrawMaskedColumn(column_t *column, unsigned lengthcol)
 {
 	fixed_t basetexturemid = dc_texturemid;
+
+	(void)lengthcol;
 
 	for (unsigned i = 0; i < column->num_posts; i++)
 	{
@@ -670,25 +672,17 @@ void R_DrawMaskedColumn(column_t *column)
 			dc_source = column->pixels + post->data_offset;
 			dc_texturemid = basetexturemid - (post->topdelta<<FRACBITS);
 
-			// Drawn by R_DrawColumn.
-			// This stuff is a likely cause of the splitscreen water crash bug.
-			// FIXTHIS: Figure out what "something more proper" is and do it.
-			// quick fix... something more proper should be done!!!
-			if (ylookup[dc_yl])
-				colfunc();
-#ifdef PARANOIA
-			else
-				I_Error("R_DrawMaskedColumn: Invalid ylookup for dc_yl %d", dc_yl);
-#endif
+			colfunc();
 		}
 	}
 
 	dc_texturemid = basetexturemid;
 }
 
-INT32 lengthcol; // column->length : for flipped column function pointers and multi-patch on 2sided wall = texture->height
+static UINT8 *flippedcol = NULL;
+static size_t flippedcolsize = 0;
 
-void R_DrawFlippedMaskedColumn(column_t *column)
+void R_DrawFlippedMaskedColumn(column_t *column, unsigned lengthcol)
 {
 	INT32 topscreen;
 	INT32 bottomscreen;
@@ -698,6 +692,9 @@ void R_DrawFlippedMaskedColumn(column_t *column)
 	for (unsigned i = 0; i < column->num_posts; i++)
 	{
 		post_t *post = &column->posts[i];
+		if (!post->length)
+			continue;
+
 		INT32 topdelta = lengthcol-post->length-post->topdelta;
 		topscreen = sprtopscreen + spryscale*topdelta;
 		bottomscreen = sprbotscreen == INT32_MAX ? topscreen + spryscale*post->length
@@ -725,19 +722,18 @@ void R_DrawFlippedMaskedColumn(column_t *column)
 
 		if (dc_yl <= dc_yh && dc_yh > 0)
 		{
-			dc_source = ZZ_Alloc(post->length);
-			for (s = column->pixels+post->data_offset+post->length, d = dc_source; d < dc_source+post->length; --s)
+			if (post->length > flippedcolsize)
+			{
+				flippedcolsize = post->length;
+				flippedcol = Z_Realloc(flippedcol, flippedcolsize, PU_STATIC, NULL);
+			}
+
+			for (s = column->pixels+post->data_offset+post->length, d = flippedcol; d < flippedcol+post->length; --s)
 				*d++ = *s;
+			dc_source = flippedcol;
 			dc_texturemid = basetexturemid - (topdelta<<FRACBITS);
 
-			// Still drawn by R_DrawColumn.
-			if (ylookup[dc_yl])
-				colfunc();
-#ifdef PARANOIA
-			else
-				I_Error("R_DrawMaskedColumn: Invalid ylookup for dc_yl %d", dc_yl);
-#endif
-			Z_Free(dc_source);
+			colfunc();
 		}
 	}
 
@@ -800,13 +796,14 @@ UINT8 *R_GetSpriteTranslation(vissprite_t *vis)
 static void R_DrawVisSprite(vissprite_t *vis)
 {
 	column_t *column;
-	void (*localcolfunc)(column_t *);
+	void (*localcolfunc)(column_t *, unsigned);
 	INT32 pwidth;
 	fixed_t frac;
 	patch_t *patch = vis->patch;
 	fixed_t this_scale = vis->thingscale;
 	INT32 x1, x2;
 	INT64 overflow_test;
+	INT32 lengthcol;
 
 	if (!patch)
 		return;
@@ -940,7 +937,7 @@ static void R_DrawVisSprite(vissprite_t *vis)
 
 			column = &patch->columns[texturecolumn];
 
-			localcolfunc (column);
+			localcolfunc (column, lengthcol);
 		}
 	}
 	else if (vis->cut & SC_SHEAR)
@@ -954,7 +951,7 @@ static void R_DrawVisSprite(vissprite_t *vis)
 		{
 			column = &patch->columns[frac>>FRACBITS];
 			sprtopscreen = (centeryfrac - FixedMul(dc_texturemid, spryscale));
-			localcolfunc (column);
+			localcolfunc (column, lengthcol);
 		}
 	}
 	else
@@ -967,7 +964,7 @@ static void R_DrawVisSprite(vissprite_t *vis)
 		for (dc_x = vis->x1; dc_x <= vis->x2; dc_x++, frac += vis->xiscale, sprtopscreen += vis->shear.tan)
 		{
 			column = &patch->columns[frac>>FRACBITS];
-			localcolfunc (column);
+			localcolfunc (column, lengthcol);
 		}
 	}
 
@@ -1014,7 +1011,7 @@ static void R_DrawPrecipitationVisSprite(vissprite_t *vis)
 	fixed_t frac = vis->startfrac;
 
 	for (dc_x = vis->x1; dc_x <= vis->x2; dc_x++, frac += vis->xiscale)
-		R_DrawMaskedColumn(&patch->columns[frac>>FRACBITS]);
+		R_DrawMaskedColumn(&patch->columns[frac>>FRACBITS], patch->height);
 
 	colfunc = colfuncs[BASEDRAWFUNC];
 }

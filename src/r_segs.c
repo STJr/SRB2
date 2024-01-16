@@ -109,12 +109,13 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 	fixed_t height, realbot;
 	lightlist_t *light;
 	r_lightlist_t *rlight;
-	void (*colfunc_2s)(column_t *);
+	void (*colfunc_2s)(column_t *, unsigned);
 	line_t *ldef;
 	sector_t *front, *back;
 	INT32 times, repeats;
 	INT64 overflow_test;
 	INT32 range;
+	unsigned lengthcol;
 
 	// Calculate light table.
 	// Use different light tables
@@ -391,7 +392,7 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 					if (windowbottom >= realbot)
 					{
 						windowbottom = realbot;
-						colfunc_2s(col);
+						colfunc_2s(col, lengthcol);
 						for (i++; i < dc_numlights; i++)
 						{
 							rlight = &dc_lightlist[i];
@@ -400,13 +401,13 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 
 						continue;
 					}
-					colfunc_2s(col);
+					colfunc_2s(col, lengthcol);
 					windowtop = windowbottom + 1;
 					dc_colormap = rlight->rcolormap;
 				}
 				windowbottom = realbot;
 				if (windowtop < windowbottom)
-					colfunc_2s(col);
+					colfunc_2s(col, lengthcol);
 
 				spryscale += rw_scalestep;
 				continue;
@@ -428,7 +429,7 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 
 			// draw the texture
 			col = R_GetColumn(texnum, maskedtexturecol[dc_x] >> FRACBITS);
-			colfunc_2s(col);
+			colfunc_2s(col, lengthcol);
 
 			spryscale += rw_scalestep;
 		}
@@ -437,10 +438,10 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 }
 
 // Loop through R_DrawMaskedColumn calls
-static void R_DrawRepeatMaskedColumn(column_t *col)
+static void R_DrawRepeatMaskedColumn(column_t *col, unsigned lengthcol)
 {
 	while (sprtopscreen < sprbotscreen) {
-		R_DrawMaskedColumn(col);
+		R_DrawMaskedColumn(col, lengthcol);
 		if ((INT64)sprtopscreen + dc_texheight*spryscale > (INT64)INT32_MAX) // prevent overflow
 			sprtopscreen = INT32_MAX;
 		else
@@ -448,10 +449,10 @@ static void R_DrawRepeatMaskedColumn(column_t *col)
 	}
 }
 
-static void R_DrawRepeatFlippedMaskedColumn(column_t *col)
+static void R_DrawRepeatFlippedMaskedColumn(column_t *col, unsigned lengthcol)
 {
 	do {
-		R_DrawFlippedMaskedColumn(col);
+		R_DrawFlippedMaskedColumn(col, lengthcol);
 		sprtopscreen += dc_texheight*spryscale;
 	} while (sprtopscreen < sprbotscreen);
 }
@@ -502,8 +503,9 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 	boolean do_texture_skew;
 	INT16 lineflags;
 	fixed_t wall_scalex, wall_scaley;
+	unsigned lengthcol;
 
-	void (*colfunc_2s) (column_t *);
+	void (*colfunc_2s) (column_t *, unsigned);
 
 	// Calculate light table.
 	// Use different light tables
@@ -901,7 +903,7 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 				{
 					windowbottom = sprbotscreen;
 					// draw the texture
-					colfunc_2s (col);
+					colfunc_2s (col, lengthcol);
 					for (i++; i < dc_numlights; i++)
 					{
 						rlight = &dc_lightlist[i];
@@ -912,7 +914,7 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 					continue;
 				}
 				// draw the texture
-				colfunc_2s (col);
+				colfunc_2s (col, lengthcol);
 				if (solid)
 					windowtop = bheight;
 				else
@@ -923,7 +925,7 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 			windowbottom = sprbotscreen;
 			// draw the texture, if there is any space left
 			if (windowtop < windowbottom)
-				colfunc_2s (col);
+				colfunc_2s (col, lengthcol);
 
 			spryscale += rw_scalestep;
 			continue;
@@ -943,7 +945,7 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 			dc_colormap = frontsector->extra_colormap->colormap + (dc_colormap - colormaps);
 
 		// draw the texture
-		colfunc_2s (col);
+		colfunc_2s (col, lengthcol);
 		spryscale += rw_scalestep;
 	}
 	colfunc = colfuncs[BASEDRAWFUNC];
