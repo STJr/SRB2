@@ -732,6 +732,35 @@ void R_FlushTextureCache(void)
 int R_CountTexturesInTEXTURESLump(UINT16 wadNum, UINT16 lumpNum);
 void R_ParseTEXTURESLump(UINT16 wadNum, UINT16 lumpNum, INT32 *index);
 
+static void R_AddSinglePatchTexture(INT32 i, UINT16 wadnum, UINT16 lumpnum, INT16 width, INT16 height, unsigned type)
+{
+	texture_t *texture = Z_Calloc(sizeof(texture_t) + sizeof(texpatch_t), PU_STATIC, NULL);
+
+	// Set texture properties.
+	M_Memcpy(texture->name, W_CheckNameForNumPwad(wadnum, lumpnum), sizeof(texture->name));
+	texture->hash = quickncasehash(texture->name, 8);
+
+	texture->width = width;
+	texture->height = height;
+
+	texture->type = type;
+	texture->patchcount = 1;
+	texture->flip = 0;
+
+	// Allocate information for the texture's patches.
+	texpatch_t *patch = &texture->patches[0];
+
+	patch->originx = patch->originy = 0;
+	patch->wad = wadnum;
+	patch->lump = lumpnum;
+	patch->flip = 0;
+
+	texturewidth[i] = texture->width;
+	textureheight[i] = texture->height << FRACBITS;
+
+	textures[i] = texture;
+}
+
 static INT32
 Rloadflats (INT32 i, INT32 w)
 {
@@ -767,43 +796,26 @@ Rloadflats (INT32 i, INT32 w)
 		size_t lumplength = W_LumpLengthPwad(wadnum, lumpnum);
 		size_t flatsize = R_GetFlatSize(lumplength);
 
-		//CONS_Printf("\n\"%s\" is a flat, dimensions %d x %d",W_CheckNameForNumPwad((UINT16)w,texstart+j),flatsize,flatsize);
-		texture_t *texture = textures[i] = Z_Calloc(sizeof(texture_t) + sizeof(texpatch_t), PU_STATIC, NULL);
-
-		// Set texture properties.
-		M_Memcpy(texture->name, W_CheckNameForNumPwad(wadnum, lumpnum), sizeof(texture->name));
-		texture->hash = quickncasehash(texture->name, 8);
+		INT16 width = flatsize, height = flatsize;
 
 #ifndef NO_PNG_LUMPS
 		W_ReadLumpHeaderPwad(wadnum, lumpnum, header, sizeof header, 0);
 
 		if (Picture_IsLumpPNG(header, lumplength))
 		{
+			INT32 texw, texh;
 			UINT8 *flatlump = W_CacheLumpNumPwad(wadnum, lumpnum, PU_CACHE);
-			INT32 width, height;
-			Picture_PNGDimensions((UINT8 *)flatlump, &width, &height, NULL, NULL, lumplength);
-			texture->width = (INT16)width;
-			texture->height = (INT16)height;
+			Picture_PNGDimensions((UINT8 *)flatlump, &texw, &texh, NULL, NULL, lumplength);
+			width = (INT16)width;
+			height = (INT16)height;
 			Z_Free(flatlump);
 		}
-		else
 #endif
-			texture->width = texture->height = flatsize;
 
-		texture->type = TEXTURETYPE_FLAT;
-		texture->patchcount = 1;
-		texture->flip = 0;
+		// printf("\"%s\" (wad: %u, lump: %u) is a flat, dimensions %d x %d\n",W_CheckNameForNumPwad(wadnum,lumpnum),wadnum,lumpnum,width,height);
 
-		// Allocate information for the texture's patches.
-		texpatch_t *patch = &texture->patches[0];
+		R_AddSinglePatchTexture(i, wadnum, lumpnum, width, height, TEXTURETYPE_FLAT);
 
-		patch->originx = patch->originy = 0;
-		patch->wad = wadnum;
-		patch->lump = lumpnum;
-		patch->flip = 0;
-
-		texturewidth[i] = texture->width;
-		textureheight[i] = texture->height << FRACBITS;
 		i++;
 	}
 
@@ -868,44 +880,29 @@ Rloadtextures (INT32 i, INT32 w)
 		lumplength = W_LumpLengthPwad(wadnum, lumpnum);
 #endif
 
-		//CONS_Printf("\n\"%s\" is a single patch, dimensions %d x %d",W_CheckNameForNumPwad((UINT16)w,texstart+j),patchlump->width, patchlump->height);
-		texture_t *texture = textures[i] = Z_Calloc(sizeof(texture_t) + sizeof(texpatch_t), PU_STATIC, NULL);
-
-		// Set texture properties.
-		M_Memcpy(texture->name, W_CheckNameForNumPwad(wadnum, lumpnum), sizeof(texture->name));
-		texture->hash = quickncasehash(texture->name, 8);
+		INT16 width, height;
 
 #ifndef NO_PNG_LUMPS
 		if (Picture_IsLumpPNG((UINT8 *)&patchlump, lumplength))
 		{
+			INT32 texw, texh;
 			UINT8 *png = W_CacheLumpNumPwad(wadnum, lumpnum, PU_CACHE);
-			INT32 width, height;
-			Picture_PNGDimensions(png, &width, &height, NULL, NULL, lumplength);
-			texture->width = (INT16)width;
-			texture->height = (INT16)height;
+			Picture_PNGDimensions(png, &texw, &texh, NULL, NULL, lumplength);
+			width = (INT16)width;
+			height = (INT16)height;
 			Z_Free(png);
 		}
 		else
 #endif
 		{
-			texture->width = SHORT(patchlump.width);
-			texture->height = SHORT(patchlump.height);
+			width = SHORT(patchlump.width);
+			height = SHORT(patchlump.height);
 		}
 
-		texture->type = TEXTURETYPE_SINGLEPATCH;
-		texture->patchcount = 1;
-		texture->flip = 0;
+		// printf("\"%s\" (wad: %u, lump: %u) is a single patch, dimensions %d x %d\n",W_CheckNameForNumPwad(wadnum,lumpnum),wadnum,lumpnum,width,height);
 
-		// Allocate information for the texture's patches.
-		texpatch_t *patch = &texture->patches[0];
+		R_AddSinglePatchTexture(i, wadnum, lumpnum, width, height, TEXTURETYPE_SINGLEPATCH);
 
-		patch->originx = patch->originy = 0;
-		patch->wad = wadnum;
-		patch->lump = lumpnum;
-		patch->flip = 0;
-
-		texturewidth[i] = texture->width;
-		textureheight[i] = texture->height << FRACBITS;
 		i++;
 	}
 
