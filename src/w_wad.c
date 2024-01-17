@@ -1359,7 +1359,8 @@ void W_GetFolderLumpsPwad(const char *name, UINT16 wad, UINT32 **list, UINT16 *l
 	{
 		if (strnicmp(name, lump_p->fullname, name_length) == 0)
 		{
-			if (strlen(lump_p->fullname) > name_length)
+			if (strlen(lump_p->fullname) > name_length
+				&& lump_p->longname[0] != '\0')
 			{
 				if (!capacity || count >= capacity)
 				{
