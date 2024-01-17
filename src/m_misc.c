@@ -2327,3 +2327,17 @@ UINT32 FNV1a_HashString(const char *message)
 
 	return hash;
 }
+
+UINT32 FNV1a_HashLowercaseString(const char *message)
+{
+	UINT32 hash = FNV1A_OFFSET_BASIS;
+
+	while (*message)
+	{
+		hash ^= tolower(*message);
+		hash *= FNV1A_PRIME;
+		message++;
+	}
+
+	return hash;
+}

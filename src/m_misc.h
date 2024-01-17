@@ -122,6 +122,7 @@ int M_RoundUp(double number);
 // Hashes some message using FNV-1a
 UINT32 FNV1a_Hash(const char *message, size_t size);
 UINT32 FNV1a_HashString(const char *message);
+UINT32 FNV1a_HashLowercaseString(const char *message);
 
 #include "w_wad.h"
 extern char configfile[MAX_WADPATH];

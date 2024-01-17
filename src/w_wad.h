@@ -66,13 +66,25 @@ typedef struct
 {
 	unsigned long position; // filelump_t filepos
 	unsigned long disksize; // filelump_t size
+
 	char name[9];           // filelump_t name[] e.g. "LongEntr"
-	UINT32 hash;
 	char *longname;         //                   e.g. "LongEntryName"
 	char *fullname;         //                   e.g. "Folder/Subfolder/LongEntryName.extension"
 	char *diskpath;         // path to the file  e.g. "/usr/games/srb2/Addon/Folder/Subfolder/LongEntryName.extension"
+							// NOTE: This is NULL if the WAD type != RET_FOLDER
+
+	size_t namelength;      // length of name
+	size_t longnamelength;  // length of longname
+	size_t fullnamelength;  // length of fullname
+
 	size_t size;            // real (uncompressed) size
 	compmethod compression; // lump compression method
+
+	struct {
+		UINT32 name;        // hash of name
+		UINT32 longname;    // hash of longname
+		UINT32 fullname;    // hash of fullname
+	} hash;
 } lumpinfo_t;
 
 // =========================================================================
@@ -168,6 +180,8 @@ void W_InitMultipleFiles(addfilelist_t *list);
 INT32 W_IsPathToFolderValid(const char *path);
 char *W_GetFullFolderPath(const char *path);
 
+UINT32 W_HashLumpName(const char *name);
+
 const char *W_CheckNameForNumPwad(UINT16 wad, UINT16 lump);
 const char *W_CheckNameForNum(lumpnum_t lumpnum);
 
@@ -186,7 +200,6 @@ const char *W_GetFilenameFromFullname(const char *path);
 void W_GetFolderLumpsPwad(const char *name, UINT16 wad, UINT32 **list, UINT16 *list_capacity, UINT16 *numlumps);
 void W_GetFolderLumps(const char *name, UINT32 **list, UINT16 *list_capacity, UINT16 *numlumps);
 
-lumpnum_t W_CheckNumForMap(const char *name);
 lumpnum_t W_CheckNumForName(const char *name);
 lumpnum_t W_CheckNumForLongName(const char *name);
 lumpnum_t W_GetNumForName(const char *name); // like W_CheckNumForName but I_Error on LUMPERROR

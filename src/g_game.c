@@ -855,30 +855,15 @@ const char *G_BuildClassicMapName(INT32 map)
 	return mapname;
 }
 
-static UINT32 G_HashMapNameString(const char *name, size_t name_length)
+static UINT32 G_HashMapNameString(const char *name)
 {
-	UINT32 hash;
-	size_t i;
-
-	char *buffer = malloc(name_length + 1);
-	if (buffer == NULL)
-		return 0;
-
-	for (i = 0; i < name_length; i++)
-		buffer[i] = tolower(name[i]);
-	buffer[i] = '\0';
-
-	hash = FNV1a_HashString(buffer);
-
-	free(buffer);
-
-	return hash;
+	return FNV1a_HashLowercaseString(name);
 }
 
 static void G_MakeMapName(mapname_t *name, const char *string)
 {
 	name->length = strlen(string);
-	name->hash = G_HashMapNameString(string, name->length);
+	name->hash = G_HashMapNameString(string);
 	name->chars = Z_StrDup(string);
 	strupr(name->chars);
 }
@@ -918,13 +903,13 @@ UINT16 G_GetMapNumber(const char *name)
 {
 	size_t name_length = strlen(name);
 
-	return MapIDForHashedString(name, name_length, G_HashMapNameString(name, name_length));
+	return MapIDForHashedString(name, name_length, G_HashMapNameString(name));
 }
 
 UINT16 G_GetMapNumberForNextMap(const char *name)
 {
 	size_t name_length = strlen(name);
-	UINT32 name_hash = G_HashMapNameString(name, name_length);
+	UINT32 name_hash = G_HashMapNameString(name);
 
 	for (UINT16 i = 0; i < NUM_NEXTMAPS; i++)
 	{

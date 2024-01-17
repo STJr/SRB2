@@ -319,6 +319,11 @@ static void W_InvalidateLumpnumCache(void)
 	memset(lumpnumcache, 0, sizeof (lumpnumcache));
 }
 
+UINT32 W_HashLumpName(const char *name)
+{
+	return FNV1a_HashLowercaseString(name);
+}
+
 /** Detect a file type.
  * \todo Actually detect the wad/pkzip headers and whatnot, instead of just checking the extensions.
  */
@@ -343,18 +348,23 @@ static lumpinfo_t* ResGetLumpsStandalone (FILE* handle, UINT16* numlumps, const 
 	fseek(handle, 0, SEEK_END);
 	lumpinfo->size = ftell(handle);
 	fseek(handle, 0, SEEK_SET);
-	strcpy(lumpinfo->name, lumpname);
-	lumpinfo->hash = quickncasehash(lumpname, 8);
+	strlcpy(lumpinfo->name, lumpname, sizeof(lumpinfo->name));
+	lumpinfo->namelength = strlen(lumpinfo->name);
+	lumpinfo->hash.name = W_HashLumpName(lumpname);
 
 	// Allocate the lump's long name.
-	lumpinfo->longname = Z_Malloc(9 * sizeof(char), PU_STATIC, NULL);
+	lumpinfo->longname = Z_Malloc((lumpinfo->namelength + 1) * sizeof(char), PU_STATIC, NULL);
 	strcpy(lumpinfo->longname, lumpname);
-	lumpinfo->longname[8] = '\0';
+	lumpinfo->longname[lumpinfo->namelength] = '\0';
+	lumpinfo->longnamelength = lumpinfo->namelength;
+	lumpinfo->hash.longname = lumpinfo->hash.name;
 
 	// Allocate the lump's full name.
-	lumpinfo->fullname = Z_Malloc(9 * sizeof(char), PU_STATIC, NULL);
+	lumpinfo->fullname = Z_Malloc((lumpinfo->namelength + 1) * sizeof(char), PU_STATIC, NULL);
 	strcpy(lumpinfo->fullname, lumpname);
-	lumpinfo->fullname[8] = '\0';
+	lumpinfo->fullname[lumpinfo->namelength] = '\0';
+	lumpinfo->fullnamelength = lumpinfo->namelength;
+	lumpinfo->hash.fullname = lumpinfo->hash.name;
 
 	*numlumps = 1;
 	return lumpinfo;
@@ -443,17 +453,22 @@ static lumpinfo_t* ResGetLumpsWad (FILE* handle, UINT16* nlmp, const char* filen
 			lump_p->compression = CM_NOCOMPRESSION;
 		memset(lump_p->name, 0x00, 9);
 		strncpy(lump_p->name, fileinfo->name, 8);
-		lump_p->hash = quickncasehash(lump_p->name, 8);
+		lump_p->namelength = strlen(lump_p->name);
+		lump_p->hash.name = W_HashLumpName(lump_p->name);
 
 		// Allocate the lump's long name.
 		lump_p->longname = Z_Malloc(9 * sizeof(char), PU_STATIC, NULL);
 		strncpy(lump_p->longname, fileinfo->name, 8);
 		lump_p->longname[8] = '\0';
+		lump_p->longnamelength = lump_p->namelength;
+		lump_p->hash.longname = lump_p->hash.name;
 
 		// Allocate the lump's full name.
 		lump_p->fullname = Z_Malloc(9 * sizeof(char), PU_STATIC, NULL);
 		strncpy(lump_p->fullname, fileinfo->name, 8);
 		lump_p->fullname[8] = '\0';
+		lump_p->fullnamelength = lump_p->namelength;
+		lump_p->hash.fullname = lump_p->hash.name;
 	}
 	free(fileinfov);
 	*nlmp = numlumps;
@@ -619,13 +634,18 @@ static lumpinfo_t* ResGetLumpsZip (FILE* handle, UINT16* nlmp)
 
 		memset(lump_p->name, '\0', 9); // Making sure they're initialized to 0. Is it necessary?
 		strncpy(lump_p->name, trimname, min(8, dotpos - trimname));
-		lump_p->hash = quickncasehash(lump_p->name, 8);
+		lump_p->namelength = strlen(lump_p->name);
+		lump_p->hash.name = W_HashLumpName(lump_p->name);
 
 		lump_p->longname = Z_Calloc(dotpos - trimname + 1, PU_STATIC, NULL);
 		strlcpy(lump_p->longname, trimname, dotpos - trimname + 1);
+		lump_p->longnamelength = strlen(lump_p->longname);
+		lump_p->hash.longname = W_HashLumpName(lump_p->longname);
 
 		lump_p->fullname = Z_Calloc(zentry.namelen + 1, PU_STATIC, NULL);
 		strncpy(lump_p->fullname, fullname, zentry.namelen);
+		lump_p->fullnamelength = zentry.namelen;
+		lump_p->hash.fullname = W_HashLumpName(lump_p->fullname);
 
 		switch(zentry.compression)
 		{
@@ -1230,13 +1250,15 @@ UINT16 W_CheckNumForNamePwad(const char *name, UINT16 wad, UINT16 startlump)
 	UINT16 i;
 	static char uname[8 + 1];
 	UINT32 hash;
+	size_t namelen;
 
 	if (!TestValidLump(wad,0))
 		return INT16_MAX;
 
 	strlcpy(uname, name, sizeof uname);
 	strupr(uname);
-	hash = quickncasehash(uname, 8);
+	namelen = strlen(uname);
+	hash = W_HashLumpName(uname);
 
 	//
 	// scan forward
@@ -1247,7 +1269,9 @@ UINT16 W_CheckNumForNamePwad(const char *name, UINT16 wad, UINT16 startlump)
 	{
 		lumpinfo_t *lump_p = wadfiles[wad]->lumpinfo + startlump;
 		for (i = startlump; i < wadfiles[wad]->numlumps; i++, lump_p++)
-			if (lump_p->hash == hash && !strncmp(lump_p->name, uname, sizeof(uname) - 1))
+			if (lump_p->namelength == namelen
+				&& lump_p->hash.name == hash
+				&& !strncmp(lump_p->name, uname, sizeof(uname) - 1))
 				return i;
 	}
 
@@ -1264,13 +1288,12 @@ UINT16 W_CheckNumForNamePwad(const char *name, UINT16 wad, UINT16 startlump)
 UINT16 W_CheckNumForLongNamePwad(const char *name, UINT16 wad, UINT16 startlump)
 {
 	UINT16 i;
-	static char uname[256 + 1];
 
 	if (!TestValidLump(wad,0))
 		return INT16_MAX;
 
-	strlcpy(uname, name, sizeof uname);
-	strupr(uname);
+	size_t namelen = strlen(name);
+	UINT32 hash = W_HashLumpName(name);
 
 	//
 	// scan forward
@@ -1281,7 +1304,9 @@ UINT16 W_CheckNumForLongNamePwad(const char *name, UINT16 wad, UINT16 startlump)
 	{
 		lumpinfo_t *lump_p = wadfiles[wad]->lumpinfo + startlump;
 		for (i = startlump; i < wadfiles[wad]->numlumps; i++, lump_p++)
-			if (!strcmp(lump_p->longname, uname))
+			if (lump_p->longnamelength == namelen
+				&& lump_p->hash.name == hash
+				&& !stricmp(lump_p->longname, name))
 				return i;
 	}
 
@@ -1488,49 +1513,6 @@ lumpnum_t W_CheckNumForLongName(const char *name)
 
 		return (i << 16) + check;
 	}
-}
-
-// Look for valid map data through all added files in descendant order.
-// Get a map marker for WADs, and a standalone WAD file lump inside PK3s.
-// TODO: Make it search through cache first, maybe...?
-lumpnum_t W_CheckNumForMap(const char *name)
-{
-	UINT32 hash = quickncasehash(name, 8);
-	UINT16 lumpNum, end;
-	UINT32 i;
-	lumpinfo_t *p;
-	for (i = numwadfiles - 1; i < numwadfiles; i--)
-	{
-		if (wadfiles[i]->type == RET_WAD)
-		{
-			for (lumpNum = 0; lumpNum < wadfiles[i]->numlumps; lumpNum++)
-			{
-				p = wadfiles[i]->lumpinfo + lumpNum;
-				if (p->hash == hash && !strncmp(name, p->name, 8))
-					return (i<<16) + lumpNum;
-			}
-		}
-		else if (W_FileHasFolders(wadfiles[i]))
-		{
-			lumpNum = W_CheckNumForFolderStartPK3("maps/", i, 0);
-			if (lumpNum != INT16_MAX)
-				end = W_CheckNumForFolderEndPK3("maps/", i, lumpNum);
-			else
-				continue;
-			// Now look for the specified map.
-			for (; lumpNum < end; lumpNum++)
-			{
-				p = wadfiles[i]->lumpinfo + lumpNum;
-				if (p->hash == hash && !strnicmp(name, p->name, 8))
-				{
-					const char *extension = strrchr(p->fullname, '.');
-					if (!(extension && stricmp(extension, ".wad")))
-						return (i<<16) + lumpNum;
-				}
-			}
-		}
-	}
-	return LUMPERROR;
 }
 
 //

@@ -842,6 +842,8 @@ lumpinfo_t *getdirectoryfiles(const char *path, UINT16 *nlmp, UINT16 *nfolders)
 		if (strstr(fullname, path))
 			fullname += strlen(path) + 1;
 
+		size_t fullnamelength = strlen(fullname);
+
 		// Get the 8-character long lump name.
 		trimname = strrchr(fullname, '/');
 		if (trimname)
@@ -853,21 +855,30 @@ lumpinfo_t *getdirectoryfiles(const char *path, UINT16 *nlmp, UINT16 *nfolders)
 		{
 			char *dotpos = strrchr(trimname, '.');
 			if (dotpos == NULL)
-				dotpos = fullname + strlen(fullname);
+				dotpos = fullname + fullnamelength;
 
 			strncpy(lump_p->name, trimname, min(8, dotpos - trimname));
 
 			// The name of the file, without the extension.
 			lump_p->longname = Z_Calloc(dotpos - trimname + 1, PU_STATIC, NULL);
 			strlcpy(lump_p->longname, trimname, dotpos - trimname + 1);
+			lump_p->longnamelength = strlen(lump_p->longname);
 		}
-		else
+		else {
 			lump_p->longname = Z_Calloc(1, PU_STATIC, NULL);
+			lump_p->longnamelength = 0;
+		}
 
 		// The complete name of the file, with its extension,
 		// excluding the path of the directory where it resides.
 		lump_p->fullname = Z_StrDup(fullname);
-		lump_p->hash = quickncasehash(lump_p->name, 8);
+
+		lump_p->hash.name = W_HashLumpName(lump_p->name);
+		lump_p->hash.fullname = W_HashLumpName(lump_p->fullname);
+		lump_p->hash.longname = W_HashLumpName(lump_p->longname);
+
+		lump_p->namelength = strlen(lump_p->name);
+		lump_p->fullnamelength = fullnamelength;
 
 		lump_p++;
 		i++;
