@@ -1020,7 +1020,7 @@ static void OP_CycleThings(INT32 amt)
 	if (players[0].mo->eflags & MFE_VERTICALFLIP) // correct z when flipped
 		players[0].mo->z += players[0].mo->height - FixedMul(mobjinfo[op_currentthing].height, players[0].mo->scale);
 	players[0].mo->height = FixedMul(mobjinfo[op_currentthing].height, players[0].mo->scale);
-	P_SetPlayerMobjState(players[0].mo, S_OBJPLACE_DUMMY);
+	P_SetMobjState(players[0].mo, S_OBJPLACE_DUMMY);
 
 	op_currentdoomednum = mobjinfo[op_currentthing].doomednum;
 }
@@ -1529,7 +1529,7 @@ void Command_ObjectPlace_f(void)
 		else
 			OP_CycleThings(0); // sets all necessary height values without cycling op_currentthing
 
-		P_SetPlayerMobjState(players[0].mo, S_OBJPLACE_DUMMY);
+		P_SetMobjState(players[0].mo, S_OBJPLACE_DUMMY);
 	}
 	// Or are we leaving it instead?
 	else
@@ -1543,7 +1543,7 @@ void Command_ObjectPlace_f(void)
 
 		// If still in dummy state, get out of it.
 		if (players[0].mo->state == &states[S_OBJPLACE_DUMMY])
-			P_SetPlayerMobjState(players[0].mo, op_oldstate);
+			P_SetMobjState(players[0].mo, op_oldstate);
 
 		// Reset everything back to how it was before we entered objectplace.
 		P_UnsetThingPosition(players[0].mo);
