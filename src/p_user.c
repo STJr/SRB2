@@ -8850,8 +8850,7 @@ void P_MovePlayer(player_t *player)
 		}
 	}
 
-#ifdef HWRENDER
-	if (rendermode == render_opengl && cv_fovchange.value)
+	if (cv_fovchange.value)
 	{
 		fixed_t speed;
 		const fixed_t runnyspeed = 20*FRACUNIT;
@@ -8871,7 +8870,6 @@ void P_MovePlayer(player_t *player)
 	}
 	else
 		player->fovadd = 0;
-#endif
 
 	// Look for blocks to bust up
 	// Because of BT_TOUCH, we should look for blocks constantly,

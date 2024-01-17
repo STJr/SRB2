@@ -75,6 +75,5 @@ void R_SetupSkyDraw(void)
 */
 void R_SetSkyScale(void)
 {
-	fixed_t difference = vid.fdup-(vid.dup<<FRACBITS);
-	skyscale = FixedDiv(fovtan, vid.fdup+difference);
+	skyscale = FixedDiv(fovtan, FixedDiv(vid.width*FRACUNIT, BASEVIDWIDTH*FRACUNIT));
 }
