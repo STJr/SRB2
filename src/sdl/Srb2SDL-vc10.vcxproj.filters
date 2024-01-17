@@ -339,6 +339,9 @@
     <ClInclude Include="..\m_misc.h">
       <Filter>M_Misc</Filter>
     </ClInclude>
+    <ClInclude Include="..\m_tokenizer.h">
+      <Filter>M_Misc</Filter>
+    </ClInclude>
     <ClInclude Include="..\m_perfstats.h">
       <Filter>M_Misc</Filter>
     </ClInclude>
@@ -535,6 +538,9 @@
       <Filter>R_Rend</Filter>
     </ClInclude>
     <ClInclude Include="..\r_textures.h">
+      <Filter>R_Rend</Filter>
+    </ClInclude>
+    <ClInclude Include="..\r_translation.h">
       <Filter>R_Rend</Filter>
     </ClInclude>
     <ClInclude Include="..\r_portal.h">
@@ -831,6 +837,9 @@
     <ClCompile Include="..\m_misc.c">
       <Filter>M_Misc</Filter>
     </ClCompile>
+    <ClCompile Include="..\m_tokenizer.c">
+      <Filter>M_Misc</Filter>
+    </ClCompile>
     <ClCompile Include="..\m_perfstats.c">
       <Filter>M_Misc</Filter>
     </ClCompile>
@@ -1079,6 +1088,9 @@
       <Filter>R_Rend</Filter>
     </ClCompile>
     <ClCompile Include="..\r_textures.c">
+      <Filter>R_Rend</Filter>
+    </ClCompile>
+    <ClCompile Include="..\r_translation.c">
       <Filter>R_Rend</Filter>
     </ClCompile>
     <ClCompile Include="..\r_portal.c">
