@@ -785,69 +785,6 @@ void P_SwitchSpheresBonusMode(boolean bonustime)
 	}
 }
 
-#ifdef SCANTHINGS
-void P_ScanThings(INT16 mapnum, INT16 wadnum, INT16 lumpnum)
-{
-	size_t i, n;
-	UINT8 *data, *datastart;
-	UINT16 type, maprings;
-	INT16 tol;
-	UINT32 flags;
-
-	tol = mapheaderinfo[mapnum-1]->typeoflevel;
-	if (!(tol & TOL_SP))
-		return;
-	flags = mapheaderinfo[mapnum-1]->levelflags;
-
-	n = W_LumpLengthPwad(wadnum, lumpnum) / (5 * sizeof (INT16));
-	//CONS_Printf("%u map things found!\n", n);
-
-	maprings = 0;
-	data = datastart = W_CacheLumpNumPwad(wadnum, lumpnum, PU_STATIC);
-	for (i = 0; i < n; i++)
-	{
-		data += 3 * sizeof (INT16); // skip x y position, angle
-		type = READUINT16(data) & 4095;
-		data += sizeof (INT16); // skip options
-
-		switch (type)
-		{
-		case 300: // MT_RING
-		case 1800: // MT_COIN
-		case 308: // red team ring
-		case 309: // blue team ring
-			maprings++;
-			break;
-		case 400: // MT_SUPERRINGBOX
-		case 414: // red ring box
-		case 415: // blue ring box
-		case 603: // 10 diagonal rings
-			maprings += 10;
-			break;
-		case 600: // 5 vertical rings
-		case 601: // 5 vertical rings
-		case 602: // 5 diagonal rings
-			maprings += 5;
-			break;
-		case 604: // 8 circle rings
-		case 609: // 16 circle rings & wings
-			maprings += 8;
-			break;
-		case 605: // 16 circle rings
-			maprings += 16;
-			break;
-		case 608: // 8 circle rings & wings
-			maprings += 4;
-			break;
-		}
-	}
-	Z_Free(datastart);
-
-	if (maprings)
-		CONS_Printf("%s has %u rings\n", G_BuildMapName(mapnum), maprings);
-}
-#endif
-
 static void P_SpawnEmeraldHunt(void)
 {
 	INT32 emer[3], num[MAXHUNTEMERALDS], i, randomkey;
