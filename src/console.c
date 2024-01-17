@@ -220,13 +220,16 @@ static char *bindtable[NUMINPUTS];
 static void CONS_Bind_f(void)
 {
 	size_t na;
+	char *newcmd;
+	//size_t newlen = 0;
+	unsigned int i;
 	INT32 key;
 
 	na = COM_Argc();
 
-	if (na != 2 && na != 3)
+	if (na < 2)
 	{
-		CONS_Printf(M_GetText("bind <keyname> [<command>]: create shortcut keys to command(s)\n"));
+		CONS_Printf(M_GetText("bind <keyname> [<command>] [<arg1>] [...]: create shortcut keys to command(s)\n"));
 		CONS_Printf("\x82%s", M_GetText("Bind table :\n"));
 		na = 0;
 		for (key = 0; key < NUMINPUTS; key++)
@@ -250,8 +253,36 @@ static void CONS_Bind_f(void)
 	Z_Free(bindtable[key]);
 	bindtable[key] = NULL;
 
-	if (na == 3)
-		bindtable[key] = Z_StrDup(COM_Argv(2));
+	if (na < 3)
+		return;
+
+	for (i = 2; i < na; ++i)
+	{
+		const char *arg = COM_Argv(i);
+
+		// on the second iteration, and after
+		if (i > 2)
+		{
+			size_t newlen = strlen(bindtable[key]) + strlen(arg) + 1; // new length, allow space for ' ' and '\0'
+			size_t curpos = newcmd - bindtable[key]; // offset from newcmd to original pointer
+
+			newcmd = bindtable[key] = Z_Realloc(bindtable[key], newlen, PU_STATIC, NULL);
+			newcmd += curpos; // reapply offset
+
+			newcmd[0] = ' '; // replace previous '\0' w/ ' '
+			++newcmd; // make sure later strcpy doesnt overwrite ' '
+		}
+		// first iteration
+		else
+			// allocate space for argument and a ' ' or '\0'
+			newcmd = bindtable[key] = Z_Calloc(strlen(arg) + 1, PU_STATIC, NULL);
+
+		// the copy
+		strcpy(newcmd, arg);
+
+		// move window past copied argument for next iteration
+		newcmd += strlen(arg);
+	}
 }
 
 //======================================================================
@@ -937,7 +968,7 @@ boolean CON_Responder(event_t *ev)
 		return false;
 
 	// let go keyup events, don't eat them
-	if (ev->type != ev_keydown && ev->type != ev_console)
+	if (ev->type != ev_keydown && ev->type != ev_text && ev->type != ev_console)
 	{
 		if (ev->key == gamecontrol[GC_CONSOLE][0] || ev->key == gamecontrol[GC_CONSOLE][1])
 			consdown = false;
@@ -952,7 +983,7 @@ boolean CON_Responder(event_t *ev)
 		if (modeattacking || metalrecording || marathonmode)
 			return false;
 
-		if (key == gamecontrol[GC_CONSOLE][0] || key == gamecontrol[GC_CONSOLE][1])
+		if ((key == gamecontrol[GC_CONSOLE][0] || key == gamecontrol[GC_CONSOLE][1]) && !shiftdown)
 		{
 			if (consdown) // ignore repeat
 				return true;
@@ -964,7 +995,7 @@ boolean CON_Responder(event_t *ev)
 		// check other keys only if console prompt is active
 		if (!consoleready && key < NUMINPUTS) // metzgermeister: boundary check!!
 		{
-			if (! menuactive && bindtable[key])
+			if (ev->type == ev_keydown && !menuactive && bindtable[key])
 			{
 				COM_BufAddText(bindtable[key]);
 				COM_BufAddText("\n");
@@ -979,6 +1010,13 @@ boolean CON_Responder(event_t *ev)
 			consoletoggle = true;
 			return true;
 		}
+	}
+
+	if (ev->type == ev_text)
+	{
+		if (!consoletoggle)
+			CON_InputAddChar(key);
+		return true;
 	}
 
 	// Always eat ctrl/shift/alt if console open, so the menu doesn't get ideas
@@ -1295,21 +1333,12 @@ boolean CON_Responder(event_t *ev)
 	else if (key == KEY_KPADSLASH)
 		key = '/';
 
-	if (key >= 'a' && key <= 'z')
-	{
-		if (capslock ^ shiftdown)
-			key = shiftxform[key];
-	}
-	else if (shiftdown)
-		key = shiftxform[key];
-
 	// enter a char into the command prompt
 	if (key < 32 || key > 127)
 		return true;
 
 	if (input_sel != input_cur)
 		CON_InputDelSelection();
-	CON_InputAddChar(key);
 
 	return true;
 }
@@ -1864,9 +1893,9 @@ void CON_Drawer(void)
 
 	if (con_curlines > 0)
 		CON_DrawConsole();
-	else if (gamestate == GS_LEVEL
-	|| gamestate == GS_INTERMISSION || gamestate == GS_ENDING || gamestate == GS_CUTSCENE
-	|| gamestate == GS_CREDITS || gamestate == GS_EVALUATION || gamestate == GS_WAITINGPLAYERS)
+	else if (gamestate == GS_LEVEL || gamestate == GS_INTERMISSION || gamestate == GS_CREDITS
+	|| gamestate == GS_EVALUATION || gamestate == GS_ENDING || gamestate == GS_CUTSCENE
+	|| gamestate == GS_WAITINGPLAYERS || cv_debug)
 		CON_DrawHudlines();
 
 	Unlock_state();
