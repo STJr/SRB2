@@ -8177,7 +8177,7 @@ void P_LoadMapsFromFile(UINT16 wadnum, boolean added_ingame)
 
 			lumpinfo = wadfiles[wadnum]->lumpinfo + LUMPNUM(lumpnum);
 
-			name = M_GetFilenameFromPath(lumpinfo->fullname); // Full lump name, with its extension
+			name = W_GetFilenameFromFullname(lumpinfo->fullname); // Full lump name, with its extension
 
 			// Extension must be .wad
 			if (!M_CheckFilenameExtension(name, "wad"))

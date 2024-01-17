@@ -2389,7 +2389,7 @@ boolean M_IsStringEmpty(const char *s)
 
 const char *M_GetFilenameFromPath(const char *path)
 {
-	const char *slash = strrchr(path, '/');
+	const char *slash = strrchr(path, PATHSEP[0]);
 	if (slash)
 		return slash + 1;
 	return path;

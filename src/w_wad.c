@@ -1339,6 +1339,14 @@ UINT16 W_CheckNumForFolderEndPK3(const char *name, UINT16 wad, UINT16 startlump)
 	return i;
 }
 
+const char *W_GetFilenameFromFullname(const char *path)
+{
+	const char *slash = strrchr(path, '/');
+	if (slash)
+		return slash + 1;
+	return path;
+}
+
 void W_GetFolderLumpsPwad(const char *name, UINT16 wad, UINT32 **list, UINT16 *list_capacity, UINT16 *numlumps)
 {
 	size_t name_length = strlen(name);
