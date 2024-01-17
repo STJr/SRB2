@@ -24,11 +24,10 @@
 
 #include "screen.h" // MAXVIDWIDTH, MAXVIDHEIGHT
 
-#ifdef HWRENDER
-#include "m_aatree.h"
-#endif
-
 #include "taglist.h"
+
+// Amount of colors in the palette
+#define NUM_PALETTE_ENTRIES 256
 
 //
 // ClipWallSegment

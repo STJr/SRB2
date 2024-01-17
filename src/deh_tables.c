@@ -219,6 +219,7 @@ actionpointer_t actionpointers[] =
 	{{A_ChangeColorRelative},    "A_CHANGECOLORRELATIVE"},
 	{{A_ChangeColorAbsolute},    "A_CHANGECOLORABSOLUTE"},
 	{{A_Dye},                    "A_DYE"},
+	{{A_SetTranslation},         "A_SETTRANSLATION"},
 	{{A_MoveRelative},           "A_MOVERELATIVE"},
 	{{A_MoveAbsolute},           "A_MOVEABSOLUTE"},
 	{{A_Thrust},                 "A_THRUST"},

@@ -14,6 +14,7 @@
 #include "fastcmp.h"
 #include "r_data.h"
 #include "r_skins.h"
+#include "r_translation.h"
 #include "p_local.h"
 #include "g_game.h"
 #include "p_setup.h"
@@ -66,6 +67,7 @@ enum mobj_e {
 	mobj_renderflags,
 	mobj_skin,
 	mobj_color,
+	mobj_translation,
 	mobj_blendmode,
 	mobj_bnext,
 	mobj_bprev,
@@ -146,6 +148,7 @@ static const char *const mobj_opt[] = {
 	"renderflags",
 	"skin",
 	"color",
+	"translation",
 	"blendmode",
 	"bnext",
 	"bprev",
@@ -337,6 +340,16 @@ static int mobj_get(lua_State *L)
 		break;
 	case mobj_color:
 		lua_pushinteger(L, mo->color);
+		break;
+	case mobj_translation:
+		if (mo->translation)
+		{
+			const char *name = R_GetCustomTranslationName(mo->translation);
+			if (name)
+				lua_pushstring(L, name);
+			break;
+		}
+		lua_pushnil(L);
 		break;
 	case mobj_blendmode:
 		lua_pushinteger(L, mo->blendmode);
@@ -689,10 +702,24 @@ static int mobj_set(lua_State *L)
 	}
 	case mobj_color:
 	{
-		UINT16 newcolor = (UINT16)luaL_checkinteger(L,3);
+		UINT16 newcolor = (UINT16)luaL_checkinteger(L, 3);
 		if (newcolor >= numskincolors)
 			return luaL_error(L, "mobj.color %d out of range (0 - %d).", newcolor, numskincolors-1);
 		mo->color = newcolor;
+		break;
+	}
+	case mobj_translation:
+	{
+		if (!lua_isnil(L, 3)) {
+			const char *tr = luaL_checkstring(L, 3);
+			int id = R_FindCustomTranslation(tr);
+			if (id != -1)
+				mo->translation = id;
+			else
+				return luaL_error(L, "invalid translation '%s'.", tr);
+		}
+		else
+			mo->translation = 0;
 		break;
 	}
 	case mobj_blendmode:

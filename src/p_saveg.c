@@ -1741,7 +1741,8 @@ typedef enum
 	MD2_FLOORSPRITESLOPE    = 1<<22,
 	MD2_DISPOFFSET          = 1<<23,
 	MD2_DRAWONLYFORPLAYER   = 1<<24,
-	MD2_DONTDRAWFORVIEWMOBJ = 1<<25
+	MD2_DONTDRAWFORVIEWMOBJ = 1<<25,
+	MD2_TRANSLATION         = 1<<26
 } mobj_diff2_t;
 
 typedef enum
@@ -1930,6 +1931,8 @@ static void SaveMobjThinker(const thinker_t *th, const UINT8 type)
 		diff2 |= MD2_CVMEM;
 	if (mobj->color)
 		diff2 |= MD2_COLOR;
+	if (mobj->translation)
+		diff2 |= MD2_TRANSLATION;
 	if (mobj->skin)
 		diff2 |= MD2_SKIN;
 	if (mobj->extravalue1)
@@ -2163,6 +2166,8 @@ static void SaveMobjThinker(const thinker_t *th, const UINT8 type)
 		WRITEUINT32(save_p, mobj->dontdrawforviewmobj->mobjnum);
 	if (diff2 & MD2_DISPOFFSET)
 		WRITEINT32(save_p, mobj->dispoffset);
+	if (diff2 & MD2_TRANSLATION)
+		WRITEUINT16(save_p, mobj->translation);
 
 	WRITEUINT32(save_p, mobj->mobjnum);
 }
@@ -3225,6 +3230,8 @@ static thinker_t* LoadMobjThinker(actionf_p1 thinker)
 		mobj->dispoffset = READINT32(save_p);
 	else
 		mobj->dispoffset = mobj->info->dispoffset;
+	if (diff2 & MD2_TRANSLATION)
+		mobj->translation = READUINT16(save_p);
 
 	if (diff & MD_REDFLAG)
 	{

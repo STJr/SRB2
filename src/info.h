@@ -173,6 +173,7 @@ enum actionnum
 	A_CHANGECOLORRELATIVE,
 	A_CHANGECOLORABSOLUTE,
 	A_DYE,
+	A_SETTRANSLATION,
 	A_MOVERELATIVE,
 	A_MOVEABSOLUTE,
 	A_THRUST,
@@ -445,6 +446,7 @@ void A_SetRandomTics();
 void A_ChangeColorRelative();
 void A_ChangeColorAbsolute();
 void A_Dye();
+void A_SetTranslation();
 void A_MoveRelative();
 void A_MoveAbsolute();
 void A_Thrust();
