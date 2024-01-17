@@ -121,6 +121,7 @@ void G_InitMaps(void);
 UINT16 G_GetMapNumber(const char *name);
 UINT16 G_GetMapNumberForNextMap(const char *name);
 UINT16 G_AddMap(const char *name, UINT32 lumpnum);
+lumpnum_t G_GetMapLumpnum(const char *name);
 boolean G_MapFileExists(const char *name);
 boolean G_IsValidMapName(const char *name);
 

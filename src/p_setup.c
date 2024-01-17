@@ -7015,9 +7015,9 @@ static void P_MakeMapMD5(virtres_t *virt, void *dest)
 	M_Memcpy(dest, &resmd5, 16);
 }
 
-static boolean P_LoadMapFromFile(void)
+static boolean P_LoadMapFromFile(lumpnum_t lumpnum)
 {
-	virtres_t *virt = vres_GetMap(lastloadedmaplumpnum);
+	virtres_t *virt = vres_GetMap(lumpnum);
 	virtlump_t *textmap = vres_Find(virt, "TEXTMAP");
 	size_t i;
 	udmf = textmap != NULL;
@@ -7082,9 +7082,6 @@ void P_SetupLevelSky(INT32 skynum, boolean global)
 	// scale up the old skies, if needed
 	R_SetupSkyDraw();
 }
-
-static const char *maplumpname;
-lumpnum_t lastloadedmaplumpnum; // for comparative savegame
 
 //
 // P_LevelInitStuff
@@ -7722,7 +7719,9 @@ boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate)
 	// 99% of the things already did, so.
 	// Map header should always be in place at this point
 	INT32 i, ranspecialwipe = 0;
-	sector_t *ss;
+	lumpnum_t maplumpnum;
+	const char *maplumpname;
+
 	levelloading = true;
 
 	// This is needed. Don't touch.
@@ -7863,7 +7862,7 @@ boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate)
 
 	LUA_InvalidateLevel();
 
-	for (ss = sectors; sectors+numsectors != ss; ss++)
+	for (sector_t *ss = sectors; sectors+numsectors != ss; ss++)
 	{
 		Z_Free(ss->attached);
 		Z_Free(ss->attachedsolid);
@@ -7892,9 +7891,9 @@ boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate)
 
 	// internal game map
 	maplumpname = G_BuildMapName(gamemap);
-	lastloadedmaplumpnum = W_CheckNumForMap(maplumpname);
-	if (lastloadedmaplumpnum == LUMPERROR)
-		I_Error("Map %s not found.\n", maplumpname);
+	maplumpnum = G_GetMapLumpnum(maplumpname);
+	if (maplumpnum == LUMPERROR)
+		I_Error("Map %s not found\n", maplumpname);
 
 	R_ReInitColormaps(mapheaderinfo[gamemap-1]->palette);
 	CON_SetupBackColormap();
@@ -7910,7 +7909,7 @@ boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate)
 
 	P_InitSlopes();
 
-	if (!P_LoadMapFromFile())
+	if (!P_LoadMapFromFile(maplumpnum))
 		return false;
 
 	// init anything that P_SpawnSlopes/P_LoadThings needs to know

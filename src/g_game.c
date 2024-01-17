@@ -961,6 +961,15 @@ UINT16 G_AddMap(const char *name, UINT32 lumpnum)
 	return numgamemaps;
 }
 
+lumpnum_t G_GetMapLumpnum(const char *name)
+{
+	UINT16 mapnum = G_GetMapNumber(name);
+	if (mapnum == 0)
+		return LUMPERROR;
+
+	return gamemaps[mapnum - 1].lumpnum;
+}
+
 boolean G_MapFileExists(const char *name)
 {
 	UINT16 mapnum = G_GetMapNumber(name);
