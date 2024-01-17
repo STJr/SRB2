@@ -1160,8 +1160,7 @@ void readgametype(MYFILE *f, INT32 num)
 	UINT8 newgtleftcolor, newgtrightcolor;
 	boolean has_desc_colors[2] = { false, false };
 
-	memset(gtconst, 0, sizeof(gtconst));
-	memset(gtdescription, 0, sizeof(gtconst));
+	gtconst[0] = '\0';
 
 	do
 	{
