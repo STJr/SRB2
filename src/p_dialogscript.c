@@ -462,7 +462,7 @@ boolean P_DialogPreprocessOpcode(dialog_t *dialog, UINT8 **cptr, writebuffer_t *
 
 	player_t *player = dialog->player;
 
-	switch (*code)
+	switch (*code++)
 	{
 		case TP_OP_CHARNAME: {
 			char charname[SKINNAMESIZE+1];
