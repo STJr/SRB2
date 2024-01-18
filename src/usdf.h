@@ -20,4 +20,6 @@ char *P_ConvertSOCPageDialog(char *text, size_t *text_length);
 
 INT32 P_ParsePromptBackColor(const char *color);
 
+void USDFParseError(int line, int alerttype, const char *format, ...);
+
 #endif

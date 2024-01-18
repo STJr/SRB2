@@ -38,28 +38,6 @@ static INT32 P_FindTextPromptSlot(const char *name)
 	return -1;
 }
 
-static boolean StringToNumber(const char *tkn, int *out)
-{
-	char *endPos = NULL;
-
-#ifndef AVOID_ERRNO
-	errno = 0;
-#endif
-
-	int result = strtol(tkn, &endPos, 10);
-	if (endPos == tkn || *endPos != '\0')
-		return false;
-
-#ifndef AVOID_ERRNO
-	if (errno == ERANGE)
-		return false;
-#endif
-
-	*out = result;
-
-	return true;
-}
-
 INT32 P_ParsePromptBackColor(const char *color)
 {
 	struct {
@@ -99,37 +77,7 @@ INT32 P_ParsePromptBackColor(const char *color)
 	return -1;
 }
 
-static int ParsePromptTextColor(const char *color)
-{
-	const char *text_colors[] = {
-		"white",
-		"magenta",
-		"yellow",
-		"green",
-		"blue",
-		"red",
-		"gray",
-		"orange",
-		"sky",
-		"purple",
-		"aqua",
-		"peridot",
-		"azure",
-		"brown",
-		"rosy",
-		"invert"
-	};
-
-	for (size_t i = 0; i < sizeof(text_colors) / sizeof(text_colors[0]); i++)
-	{
-		if (stricmp(color, text_colors[i]) == 0)
-			return (int)(i + 128);
-	}
-
-	return -1;
-}
-
-static void ParseError(int line, alerttype_t alerttype, const char *format, ...)
+void USDFParseError(int line, int alerttype, const char *format, ...)
 {
 	char string[8192];
 
@@ -138,14 +86,17 @@ static void ParseError(int line, alerttype_t alerttype, const char *format, ...)
 	vsnprintf(string, sizeof string, format, argptr);
 	va_end(argptr);
 
-	CONS_Alert(alerttype, "While parsing DIALOGUE, line %d: %s\n", line, string);
+	if (line >= 1)
+		CONS_Alert(alerttype, "While parsing DIALOGUE, line %d: %s\n", line, string);
+	else
+		CONS_Alert(alerttype, "%s\n", string);
 }
 
 #define GET_TOKEN() \
 	tkn = sc->get(sc, 0); \
 	if (!tkn) \
 	{ \
-		ParseError(sc->line, CONS_ERROR, "Unexpected EOF"); \
+		USDFParseError(sc->line, CONS_ERROR, "Unexpected EOF"); \
 		goto fail; \
 	}
 
@@ -153,9 +104,9 @@ static void ParseError(int line, alerttype_t alerttype, const char *format, ...)
 	if (!tkn || stricmp(tkn, expected) != 0) \
 	{ \
 		if (tkn) \
-			ParseError(sc->line, CONS_ERROR, "Expected '%s', got '%s'", expected, tkn); \
+			USDFParseError(sc->line, CONS_ERROR, "Expected '%s', got '%s'", expected, tkn); \
 		else \
-			ParseError(sc->line, CONS_ERROR, "Expected '%s', got EOF", expected); \
+			USDFParseError(sc->line, CONS_ERROR, "Expected '%s', got EOF", expected); \
 		goto fail; \
 	}
 
@@ -167,9 +118,9 @@ static void ParseError(int line, alerttype_t alerttype, const char *format, ...)
 
 #define EXPECT_NUMBER(what) \
 	int num = 0; \
-	if (!StringToNumber(tkn, &num)) \
+	if (!M_StringToNumber(tkn, &num)) \
 	{ \
-		ParseError(sc->line, CONS_ERROR, "In " what ": expected a number, got '%s'", tkn); \
+		USDFParseError(sc->line, CONS_ERROR, "In " what ": expected a number, got '%s'", tkn); \
 		goto fail; \
 	}
 
@@ -296,7 +247,7 @@ static char *EscapeStringChars(const char *string, int tokenizer_line)
 						BUFWRITE(out & 0xFF);
 						break;
 					default:
-						ParseError(tokenizer_line, CONS_WARNING, "In string: escape sequence has wrong size");
+						USDFParseError(tokenizer_line, CONS_WARNING, "In string: escape sequence has wrong size");
 						goto fail;
 				}
 
@@ -317,14 +268,14 @@ static char *EscapeStringChars(const char *string, int tokenizer_line)
 
 					if (out > 255)
 					{
-						ParseError(tokenizer_line, CONS_WARNING, "In string: escape sequence is too large");
+						USDFParseError(tokenizer_line, CONS_WARNING, "In string: escape sequence is too large");
 						goto fail;
 					}
 
 					BUFWRITE((char)out);
 				}
 				else
-					ParseError(tokenizer_line, CONS_WARNING, "In string: unknown escape sequence '\\%c'", chr);
+					USDFParseError(tokenizer_line, CONS_WARNING, "In string: unknown escape sequence '\\%c'", chr);
 				break;
 			}
 		}
@@ -341,317 +292,6 @@ fail:
 }
 
 #undef BUFWRITE
-
-static boolean GetCommand(char **command_start, char **command_end, char *start)
-{
-	while (isspace(*start))
-	{
-		if (*start == '\0')
-			return false;
-		start++;
-	}
-
-	char *end = start;
-	while (*end != '}')
-	{
-		if (*end == '\0')
-			return false;
-		if (isspace(*end))
-			break;
-		end++;
-	}
-
-	*command_start = start;
-	*command_end = end;
-
-	return true;
-}
-
-static boolean MatchCommand(const char *match, size_t matchlen, char *tkn, size_t tknlen, char **input)
-{
-	if (tknlen != matchlen)
-		return false;
-
-	char *cmp = tkn;
-	char *cmpEnd = cmp + tknlen;
-	while (cmp < cmpEnd)
-	{
-		if (toupper(*cmp) != *match)
-			return false;
-		cmp++;
-		match++;
-	}
-
-	while (isspace(*cmpEnd))
-		cmpEnd++;
-	*input = cmpEnd;
-	return true;
-}
-
-static char *GetCommandParam(char **input)
-{
-	char *start = *input;
-	if (*start == '}')
-		return NULL;
-
-	char *end = start;
-	while (*end != '}')
-	{
-		if (*end == '\0')
-			return NULL;
-		end++;
-	}
-
-	size_t tknlen = end - start;
-	if (!tknlen)
-		return NULL;
-
-	while (isspace(start[tknlen - 1]))
-	{
-		tknlen--;
-		if (!tknlen)
-			return NULL;
-	}
-
-	char *result = Z_Malloc(tknlen + 1, PU_STATIC, NULL);
-	memcpy(result, start, tknlen);
-	result[tknlen] = '\0';
-
-	*input = end;
-
-	return result;
-}
-
-static void GetCommandEnd(char **input)
-{
-	char *start = *input;
-	if (*start == '}')
-		return;
-
-	char *end = start;
-	while (*end != '}')
-	{
-		if (*end == '\0')
-			return;
-		end++;
-	}
-
-	*input = end;
-}
-
-#define WRITE_CHAR(writechr) M_BufferWrite(bufptr, (UINT8)(writechr))
-#define WRITE_OP(writeop) { \
-	WRITE_CHAR(0xFF); \
-	WRITE_CHAR((writeop)); \
-}
-#define WRITE_NUM(num) { \
-	int n = num; \
-	WRITE_CHAR((n >> 24) & 0xFF); \
-	WRITE_CHAR((n >> 16) & 0xFF); \
-	WRITE_CHAR((n >> 8) & 0xFF); \
-	WRITE_CHAR((n) & 0xFF); \
-}
-#define WRITE_STRING(str) { \
-	size_t maxlen = strlen(str); \
-	if (maxlen > 255) \
-		maxlen = 255; \
-	WRITE_CHAR(maxlen); \
-	M_BufferMemWrite(bufptr, (UINT8*)str, maxlen); \
-}
-
-#define EXPECTED_NUMBER(which) ParseError(tokenizer_line, CONS_WARNING, "Expected integer for command '%s'; got '%s' instead", which, param)
-#define EXPECTED_PARAM(which) ParseError(tokenizer_line, CONS_WARNING, "Expected parameter for command '%s'", which)
-#define IS_COMMAND(match) MatchCommand(match, sizeof(match) - 1, command_start, cmd_len, input)
-
-static boolean CheckIfNonScriptCommand(char *command_start, size_t cmd_len, char **input, writebuffer_t *bufptr, int tokenizer_line);
-
-static void ParseCommand(char **input, writebuffer_t *bufptr, int tokenizer_line)
-{
-	char *command_start = NULL;
-	char *command_end = NULL;
-
-	if (!GetCommand(&command_start, &command_end, *input))
-		return;
-
-	size_t cmd_len = command_end - command_start;
-
-	if (IS_COMMAND("DELAY"))
-	{
-		int delay_frames = 12;
-
-		char *param = GetCommandParam(input);
-		if (param)
-		{
-			if (!StringToNumber(param, &delay_frames))
-				EXPECTED_NUMBER("DELAY");
-
-			Z_Free(param);
-		}
-
-		if (delay_frames > 0)
-		{
-			WRITE_OP(TP_OP_DELAY);
-			WRITE_NUM(delay_frames);
-		}
-	}
-	else if (IS_COMMAND("PAUSE"))
-	{
-		int pause_frames = 12;
-
-		char *param = GetCommandParam(input);
-		if (param)
-		{
-			if (!StringToNumber(param, &pause_frames))
-				EXPECTED_NUMBER("PAUSE");
-
-			Z_Free(param);
-		}
-
-		if (pause_frames > 0)
-		{
-			WRITE_OP(TP_OP_PAUSE);
-			WRITE_NUM(pause_frames);
-		}
-	}
-	else if (IS_COMMAND("SPEED"))
-	{
-		char *param = GetCommandParam(input);
-		if (param)
-		{
-			int speed = 1;
-
-			if (StringToNumber(param, &speed))
-			{
-				if (speed < 0)
-					speed = 0;
-
-				speed--;
-			}
-			else
-				EXPECTED_NUMBER("SPEED");
-
-			Z_Free(param);
-
-			WRITE_OP(TP_OP_SPEED);
-			WRITE_NUM(speed);
-		}
-		else
-			EXPECTED_PARAM("SPEED");
-	}
-	else if (IS_COMMAND("NAME"))
-	{
-		char *param = GetCommandParam(input);
-		if (param)
-		{
-			WRITE_OP(TP_OP_NAME);
-			WRITE_STRING(param);
-
-			Z_Free(param);
-		}
-		else
-			EXPECTED_PARAM("NAME");
-	}
-	else if (IS_COMMAND("ICON"))
-	{
-		char *param = GetCommandParam(input);
-		if (param)
-		{
-			WRITE_OP(TP_OP_ICON);
-			WRITE_STRING(param);
-
-			Z_Free(param);
-		}
-		else
-			EXPECTED_PARAM("ICON");
-	}
-	else if (IS_COMMAND("CHARNAME"))
-	{
-		WRITE_OP(TP_OP_CHARNAME);
-	}
-	else if (IS_COMMAND("PLAYERNAME"))
-	{
-		WRITE_OP(TP_OP_PLAYERNAME);
-	}
-	else if (IS_COMMAND("NEXTPAGE"))
-	{
-		WRITE_OP(TP_OP_NEXTPAGE);
-	}
-	else if (IS_COMMAND("WAIT"))
-	{
-		WRITE_OP(TP_OP_WAIT);
-	}
-	else if (!CheckIfNonScriptCommand(command_start, cmd_len, input, bufptr, tokenizer_line))
-	{
-		ParseError(tokenizer_line, CONS_WARNING, "Unknown command %.*s", (int)cmd_len, command_start);
-	}
-}
-
-static void ParseNonScriptCommand(char **input, writebuffer_t *bufptr, int tokenizer_line)
-{
-	char *command_start = NULL;
-	char *command_end = NULL;
-
-	if (!GetCommand(&command_start, &command_end, *input))
-		return;
-
-	size_t cmd_len = command_end - command_start;
-
-	if (!CheckIfNonScriptCommand(command_start, cmd_len, input, bufptr, tokenizer_line))
-	{
-		ParseError(tokenizer_line, CONS_WARNING, "Unknown command %.*s", (int)cmd_len, command_start);
-	}
-}
-
-static boolean CheckIfNonScriptCommand(char *command_start, size_t cmd_len, char **input, writebuffer_t *bufptr, int tokenizer_line)
-{
-	if (IS_COMMAND("COLOR"))
-	{
-		char *param = GetCommandParam(input);
-		if (param)
-		{
-			int color = ParsePromptTextColor(param);
-			if (color == -1)
-				ParseError(tokenizer_line, CONS_WARNING, "Unknown text color '%s'", param);
-			else
-				WRITE_CHAR((UINT8)color);
-
-			Z_Free(param);
-		}
-		else
-			EXPECTED_PARAM("COLOR");
-	}
-	else
-		return false;
-
-	return true;
-}
-
-#undef IS_COMMAND
-
-static boolean ConvertCutsceneControlCode(UINT8 chr, writebuffer_t *bufptr)
-{
-	if (chr >= 0xA0 && chr <= 0xAF)
-	{
-		WRITE_OP(TP_OP_SPEED);
-		WRITE_NUM(chr - 0xA0);
-		return true;
-	}
-	else if (chr >= 0xB0 && chr <= (0xB0+TICRATE-1))
-	{
-		WRITE_OP(TP_OP_DELAY);
-		WRITE_NUM(chr - 0xAF);
-		return true;
-	}
-
-	return false;
-}
-
-#undef EXPECTED_NUMBER
-#undef EXPECTED_PARAM
-
-#undef WRITE_CHAR
-#undef WRITE_OP
-#undef WRITE_NUM
 
 #define WRITE_TEXTCHAR(writechr) M_BufferWrite(&buf, (UINT8)(writechr))
 
@@ -683,11 +323,9 @@ static char *ParseText(char *text, size_t *text_length, boolean parse_scripts, i
 			input++;
 
 			if (parse_scripts)
-				ParseCommand(&input, &buf, tokenizer_line);
+				P_ParseDialogScriptCommand(&input, &buf, tokenizer_line);
 			else
-				ParseNonScriptCommand(&input, &buf, tokenizer_line);
-
-			GetCommandEnd(&input);
+				P_ParseDialogNonScriptCommand(&input, &buf, tokenizer_line);
 		}
 		else if (chr == 0xFF)
 			; // Just ignore it
@@ -714,7 +352,7 @@ char *P_ConvertSOCPageDialog(char *text, size_t *text_length)
 	{
 		unsigned char chr = *input;
 
-		if (!ConvertCutsceneControlCode((UINT8)chr, &buf))
+		if (!P_WriteDialogScriptForCutsceneTextCode((UINT8)chr, &buf))
 		{
 			if (chr != 0xFF)
 				WRITE_TEXTCHAR(chr);
@@ -924,7 +562,7 @@ static int ParseChoice(textpage_t *page, tokenizer_t *sc, int bracket)
 		}
 		else
 		{
-			ParseError(sc->line, CONS_WARNING, "In choice: Unknown token '%s'", tkn);
+			USDFParseError(sc->line, CONS_WARNING, "In choice: Unknown token '%s'", tkn);
 			IGNORE_FIELD();
 		}
 
@@ -1043,7 +681,7 @@ static int ParsePicture(textpage_t *page, tokenizer_t *sc, int bracket)
 		}
 		else
 		{
-			ParseError(sc->line, CONS_WARNING, "In picture: Unknown token '%s'", tkn);
+			USDFParseError(sc->line, CONS_WARNING, "In picture: Unknown token '%s'", tkn);
 			IGNORE_FIELD();
 		}
 
@@ -1403,7 +1041,7 @@ static int ParsePage(textprompt_t *prompt, tokenizer_t *sc, int bracket)
 				}
 
 				if (page->numchoices == MAX_PROMPT_CHOICES)
-					ParseError(sc->line, CONS_WARNING, "Conversation page exceeded max amount of choices; ignoring any more choices");
+					USDFParseError(sc->line, CONS_WARNING, "Conversation page exceeded max amount of choices; ignoring any more choices");
 			}
 		}
 		else if (CHECK_TOKEN("alignchoices"))
@@ -1441,7 +1079,7 @@ static int ParsePage(textprompt_t *prompt, tokenizer_t *sc, int bracket)
 				}
 
 				if (page->numpics == MAX_PROMPT_PICS)
-					ParseError(sc->line, CONS_WARNING, "Conversation page exceeded max amount of pictures; ignoring any more pictures");
+					USDFParseError(sc->line, CONS_WARNING, "Conversation page exceeded max amount of pictures; ignoring any more pictures");
 			}
 		}
 		else if (CHECK_TOKEN("picturesequence"))
@@ -1541,7 +1179,7 @@ static int ParsePage(textprompt_t *prompt, tokenizer_t *sc, int bracket)
 		}
 		else
 		{
-			ParseError(sc->line, CONS_WARNING, "In page: Unknown token '%s'", tkn);
+			USDFParseError(sc->line, CONS_WARNING, "In page: Unknown token '%s'", tkn);
 			IGNORE_FIELD();
 		}
 
@@ -1617,12 +1255,12 @@ static int ParseConversation(tokenizer_t *sc, int bracket, int tokenizer_line)
 				}
 
 				if (prompt->numpages == MAX_PAGES)
-					ParseError(sc->line, CONS_WARNING, "Conversation exceeded max amount of pages; ignoring any more pages");
+					USDFParseError(sc->line, CONS_WARNING, "Conversation exceeded max amount of pages; ignoring any more pages");
 			}
 		}
 		else
 		{
-			ParseError(sc->line, CONS_WARNING, "In conversation: Unknown token '%s'", tkn);
+			USDFParseError(sc->line, CONS_WARNING, "In conversation: Unknown token '%s'", tkn);
 			GET_TOKEN();
 			if (CHECK_TOKEN("{"))
 			{
@@ -1646,7 +1284,7 @@ static int ParseConversation(tokenizer_t *sc, int bracket, int tokenizer_line)
 	// Now do some verifications
 	if (!prompt->numpages)
 	{
-		ParseError(tokenizer_line, CONS_WARNING, "Conversation has no pages");
+		USDFParseError(tokenizer_line, CONS_WARNING, "Conversation has no pages");
 		goto ignore;
 	}
 

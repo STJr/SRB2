@@ -14,9 +14,358 @@
 #include "d_player.h" // player_t
 #include "r_skins.h" // skins
 #include "g_game.h" // player_names
+#include "m_misc.h"
 #include "m_writebuffer.h"
+#include "usdf.h"
 #include "z_zone.h"
 #include "w_wad.h"
+
+static boolean GetCommand(char **command_start, char **command_end, char *start)
+{
+	while (isspace(*start))
+	{
+		if (*start == '\0')
+			return false;
+		start++;
+	}
+
+	char *end = start;
+	while (*end != '}')
+	{
+		if (*end == '\0')
+			return false;
+		if (isspace(*end))
+			break;
+		end++;
+	}
+
+	*command_start = start;
+	*command_end = end;
+
+	return true;
+}
+
+static boolean MatchCommand(const char *match, size_t matchlen, char *tkn, size_t tknlen, char **input)
+{
+	if (tknlen != matchlen)
+		return false;
+
+	char *cmp = tkn;
+	char *cmpEnd = cmp + tknlen;
+	while (cmp < cmpEnd)
+	{
+		if (toupper(*cmp) != *match)
+			return false;
+		cmp++;
+		match++;
+	}
+
+	while (isspace(*cmpEnd))
+		cmpEnd++;
+	*input = cmpEnd;
+	return true;
+}
+
+static char *GetCommandParam(char **input)
+{
+	char *start = *input;
+	if (*start == '}')
+		return NULL;
+
+	char *end = start;
+	while (*end != '}')
+	{
+		if (*end == '\0')
+			return NULL;
+		end++;
+	}
+
+	size_t tknlen = end - start;
+	if (!tknlen)
+		return NULL;
+
+	while (isspace(start[tknlen - 1]))
+	{
+		tknlen--;
+		if (!tknlen)
+			return NULL;
+	}
+
+	char *result = Z_Malloc(tknlen + 1, PU_STATIC, NULL);
+	memcpy(result, start, tknlen);
+	result[tknlen] = '\0';
+
+	*input = end;
+
+	return result;
+}
+
+static void GetCommandEnd(char **input)
+{
+	char *start = *input;
+	if (*start == '}')
+		return;
+
+	char *end = start;
+	while (*end != '}')
+	{
+		if (*end == '\0')
+			return;
+		end++;
+	}
+
+	*input = end;
+}
+
+#define WRITE_CHAR(writechr) M_BufferWrite(bufptr, (UINT8)(writechr))
+#define WRITE_OP(writeop) { \
+	WRITE_CHAR(0xFF); \
+	WRITE_CHAR((writeop)); \
+}
+#define WRITE_NUM(num) { \
+	int n = num; \
+	WRITE_CHAR((n >> 24) & 0xFF); \
+	WRITE_CHAR((n >> 16) & 0xFF); \
+	WRITE_CHAR((n >> 8) & 0xFF); \
+	WRITE_CHAR((n) & 0xFF); \
+}
+#define WRITE_STRING(str) { \
+	size_t maxlen = strlen(str); \
+	if (maxlen > 255) \
+		maxlen = 255; \
+	WRITE_CHAR(maxlen); \
+	M_BufferMemWrite(bufptr, (UINT8*)str, maxlen); \
+}
+
+#define EXPECTED_NUMBER(which) USDFParseError(tokenizer_line, CONS_WARNING, "Expected integer for command '%s'; got '%s' instead", which, param)
+#define EXPECTED_PARAM(which) USDFParseError(tokenizer_line, CONS_WARNING, "Expected parameter for command '%s'", which)
+#define IS_COMMAND(match) MatchCommand(match, sizeof(match) - 1, command_start, cmd_len, input)
+
+static boolean CheckIfNonScriptCommand(char *command_start, size_t cmd_len, char **input, writebuffer_t *bufptr, int tokenizer_line);
+
+void P_ParseDialogScriptCommand(char **input, writebuffer_t *bufptr, int tokenizer_line)
+{
+	char *command_start = NULL;
+	char *command_end = NULL;
+
+	if (!GetCommand(&command_start, &command_end, *input))
+	{
+		GetCommandEnd(input);
+		return;
+	}
+
+	size_t cmd_len = command_end - command_start;
+
+	if (IS_COMMAND("DELAY"))
+	{
+		int delay_frames = 12;
+
+		char *param = GetCommandParam(input);
+		if (param)
+		{
+			if (!M_StringToNumber(param, &delay_frames))
+				EXPECTED_NUMBER("DELAY");
+
+			Z_Free(param);
+		}
+
+		if (delay_frames > 0)
+		{
+			WRITE_OP(TP_OP_DELAY);
+			WRITE_NUM(delay_frames);
+		}
+	}
+	else if (IS_COMMAND("PAUSE"))
+	{
+		int pause_frames = 12;
+
+		char *param = GetCommandParam(input);
+		if (param)
+		{
+			if (!M_StringToNumber(param, &pause_frames))
+				EXPECTED_NUMBER("PAUSE");
+
+			Z_Free(param);
+		}
+
+		if (pause_frames > 0)
+		{
+			WRITE_OP(TP_OP_PAUSE);
+			WRITE_NUM(pause_frames);
+		}
+	}
+	else if (IS_COMMAND("SPEED"))
+	{
+		char *param = GetCommandParam(input);
+		if (param)
+		{
+			int speed = 1;
+
+			if (M_StringToNumber(param, &speed))
+			{
+				if (speed < 0)
+					speed = 0;
+
+				speed--;
+			}
+			else
+				EXPECTED_NUMBER("SPEED");
+
+			Z_Free(param);
+
+			WRITE_OP(TP_OP_SPEED);
+			WRITE_NUM(speed);
+		}
+		else
+			EXPECTED_PARAM("SPEED");
+	}
+	else if (IS_COMMAND("NAME"))
+	{
+		char *param = GetCommandParam(input);
+		if (param)
+		{
+			WRITE_OP(TP_OP_NAME);
+			WRITE_STRING(param);
+
+			Z_Free(param);
+		}
+		else
+			EXPECTED_PARAM("NAME");
+	}
+	else if (IS_COMMAND("ICON"))
+	{
+		char *param = GetCommandParam(input);
+		if (param)
+		{
+			WRITE_OP(TP_OP_ICON);
+			WRITE_STRING(param);
+
+			Z_Free(param);
+		}
+		else
+			EXPECTED_PARAM("ICON");
+	}
+	else if (IS_COMMAND("CHARNAME"))
+	{
+		WRITE_OP(TP_OP_CHARNAME);
+	}
+	else if (IS_COMMAND("PLAYERNAME"))
+	{
+		WRITE_OP(TP_OP_PLAYERNAME);
+	}
+	else if (IS_COMMAND("NEXTPAGE"))
+	{
+		WRITE_OP(TP_OP_NEXTPAGE);
+	}
+	else if (IS_COMMAND("WAIT"))
+	{
+		WRITE_OP(TP_OP_WAIT);
+	}
+	else if (!CheckIfNonScriptCommand(command_start, cmd_len, input, bufptr, tokenizer_line))
+		USDFParseError(tokenizer_line, CONS_WARNING, "Unknown command %.*s", (int)cmd_len, command_start);
+
+	GetCommandEnd(input);
+}
+
+void P_ParseDialogNonScriptCommand(char **input, writebuffer_t *bufptr, int tokenizer_line)
+{
+	char *command_start = NULL;
+	char *command_end = NULL;
+
+	if (!GetCommand(&command_start, &command_end, *input))
+	{
+		GetCommandEnd(input);
+		return;
+	}
+
+	size_t cmd_len = command_end - command_start;
+
+	if (!CheckIfNonScriptCommand(command_start, cmd_len, input, bufptr, tokenizer_line))
+		USDFParseError(tokenizer_line, CONS_WARNING, "Unknown command %.*s", (int)cmd_len, command_start);
+
+	GetCommandEnd(input);
+}
+
+static int ParsePromptTextColor(const char *color)
+{
+	const char *text_colors[] = {
+		"white",
+		"magenta",
+		"yellow",
+		"green",
+		"blue",
+		"red",
+		"gray",
+		"orange",
+		"sky",
+		"purple",
+		"aqua",
+		"peridot",
+		"azure",
+		"brown",
+		"rosy",
+		"invert"
+	};
+
+	for (size_t i = 0; i < sizeof(text_colors) / sizeof(text_colors[0]); i++)
+	{
+		if (stricmp(color, text_colors[i]) == 0)
+			return (int)(i + 128);
+	}
+
+	return -1;
+}
+
+static boolean CheckIfNonScriptCommand(char *command_start, size_t cmd_len, char **input, writebuffer_t *bufptr, int tokenizer_line)
+{
+	if (IS_COMMAND("COLOR"))
+	{
+		char *param = GetCommandParam(input);
+		if (param)
+		{
+			int color = ParsePromptTextColor(param);
+			if (color == -1)
+				USDFParseError(tokenizer_line, CONS_WARNING, "Unknown text color '%s'", param);
+			else
+				WRITE_CHAR((UINT8)color);
+
+			Z_Free(param);
+		}
+		else
+			EXPECTED_PARAM("COLOR");
+	}
+	else
+		return false;
+
+	return true;
+}
+
+#undef IS_COMMAND
+
+boolean P_WriteDialogScriptForCutsceneTextCode(UINT8 chr, writebuffer_t *bufptr)
+{
+	if (chr >= 0xA0 && chr <= 0xAF)
+	{
+		WRITE_OP(TP_OP_SPEED);
+		WRITE_NUM(chr - 0xA0);
+		return true;
+	}
+	else if (chr >= 0xB0 && chr <= (0xB0+TICRATE-1))
+	{
+		WRITE_OP(TP_OP_DELAY);
+		WRITE_NUM(chr - 0xAF);
+		return true;
+	}
+
+	return false;
+}
+
+#undef EXPECTED_NUMBER
+#undef EXPECTED_PARAM
+
+#undef WRITE_CHAR
+#undef WRITE_OP
+#undef WRITE_NUM
 
 #define READ_NUM(where) { \
 	int temp = 0; \

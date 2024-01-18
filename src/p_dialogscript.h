@@ -36,6 +36,10 @@ enum
 	TP_OP_CONTROL = 0xFF
 };
 
+void P_ParseDialogScriptCommand(char **input, writebuffer_t *bufptr, int tokenizer_line);
+void P_ParseDialogNonScriptCommand(char **input, writebuffer_t *bufptr, int tokenizer_line);
+boolean P_WriteDialogScriptForCutsceneTextCode(UINT8 chr, writebuffer_t *bufptr);
+
 const UINT8 *P_DialogRunOpcode(const UINT8 *code, dialog_t *dialog, textwriter_t *writer);
 boolean P_DialogPreprocessOpcode(dialog_t *dialog, UINT8 **cptr, writebuffer_t *buf);
 int P_DialogSkipOpcode(const UINT8 *code);

@@ -2272,3 +2272,25 @@ int M_RoundUp(double number)
 
 	return (int)number;
 }
+
+boolean M_StringToNumber(const char *str, int *out)
+{
+	char *endPos = NULL;
+
+#ifndef AVOID_ERRNO
+	errno = 0;
+#endif
+
+	int result = strtol(str, &endPos, 10);
+	if (endPos == str || *endPos != '\0')
+		return false;
+
+#ifndef AVOID_ERRNO
+	if (errno == ERANGE)
+		return false;
+#endif
+
+	*out = result;
+
+	return true;
+}
