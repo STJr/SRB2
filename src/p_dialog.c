@@ -506,7 +506,11 @@ void P_SetDialogText(dialog_t *dialog, char *pagetext, size_t textlength)
 
 static void P_DialogStartPage(player_t *player, dialog_t *dialog)
 {
+	dialog->paused = false;
 	dialog->gotonext = false;
+
+	dialog->jumpdown = 0;
+	dialog->spindown = 0;
 
 	// on page mode, number of tics before allowing boost
 	// on timer mode, number of tics until page advances
@@ -780,8 +784,13 @@ static INT16 P_DoEndDialog(player_t *player, dialog_t *dialog, boolean forceexec
 		if (promptwasactive)
 		{
 			if (dialog->blockcontrols)
-				player->mo->reactiontime = TICRATE/4; // prevent jumping right away // \todo account freeze realtime for this)
-			// \todo reset frozen realtime?
+			{
+				player->mo->reactiontime = TICRATE/4; // prevent jumping right away
+				if (dialog->jumpdown)
+					player->pflags |= PF_JUMPDOWN;
+				if (dialog->spindown)
+					player->pflags |= PF_SPINDOWN;
+			}
 		}
 	}
 
@@ -1264,7 +1273,7 @@ void F_TextPromptDrawer(void)
 		return;
 
 	// Draw chevron
-	if (dialog->blockcontrols && !dialog->timetonext && !dialog->showchoices)
+	if (dialog->blockcontrols && (!dialog->timetonext || dialog->paused) && !dialog->showchoices)
 		V_DrawString(textr-8, chevrony + (chevronAnimCounter/5), (draw_flags|snap_flags|V_YELLOWMAP), "\x1B"); // down arrow
 }
 
@@ -1396,7 +1405,7 @@ void P_RunDialog(player_t *player)
 			P_AdvanceToNextPage(player, dialog);
 			return;
 		}
-		else
+		else if (!dialog->paused)
 		{
 			INT32 write = P_DialogWriteText(dialog, writer);
 			if (write == DIALOG_WRITETEXT_TALK)
@@ -1425,14 +1434,38 @@ void P_RunDialog(player_t *player)
 					return;
 				}
 			}
-			else if ((player->cmd.buttons & BT_SPIN) || (player->cmd.buttons & BT_JUMP))
+			else
+			{
+				if (player->cmd.buttons & BT_JUMP)
+				{
+					if (dialog->jumpdown < TICRATE)
+						dialog->jumpdown++;
+				}
+				else
+					dialog->jumpdown = 0;
+
+				if (player->cmd.buttons & BT_SPIN)
+				{
+					if (dialog->spindown < TICRATE)
+						dialog->spindown++;
+				}
+				else
+					dialog->spindown = 0;
+			}
+
+			if (dialog->jumpdown || dialog->spindown)
 			{
 				if (dialog->timetonext > 1)
 					dialog->timetonext--;
 				else if (writer->baseptr) // don't set boost if we just reset the string
 					writer->boostspeed = true; // only after a slight delay
 
-				if (!dialog->timetonext && !dialog->showchoices) // timetonext is 0 when finished generating text
+				if (dialog->paused)
+				{
+					if (dialog->jumpdown == 1 || dialog->spindown == 1)
+						dialog->paused = false;
+				}
+				else if (!dialog->timetonext && !dialog->showchoices) // timetonext is 0 when finished generating text
 					gotonext = true;
 			}
 
@@ -1449,17 +1482,20 @@ void P_RunDialog(player_t *player)
 			dialog->timetonext = !dialog->blockcontrols;
 
 		// generate letter-by-letter text
-		INT32 write = P_DialogWriteText(dialog, writer);
-		if (write != DIALOG_WRITETEXT_DONE)
+		if (!dialog->paused)
 		{
-			if (write == DIALOG_WRITETEXT_TALK && dialog->page->textsfx)
-				P_PlayDialogSound(player, dialog->page->textsfx);
-		}
-		else
-		{
-			if (dialog->blockcontrols && !dialog->showchoices && dialog->numchoices)
-				dialog->showchoices = true;
-			dialog->timetonext = !dialog->blockcontrols;
+			INT32 write = P_DialogWriteText(dialog, writer);
+			if (write != DIALOG_WRITETEXT_DONE)
+			{
+				if (write == DIALOG_WRITETEXT_TALK && dialog->page->textsfx)
+					P_PlayDialogSound(player, dialog->page->textsfx);
+			}
+			else
+			{
+				if (dialog->blockcontrols && !dialog->showchoices && dialog->numchoices)
+					dialog->showchoices = true;
+				dialog->timetonext = !dialog->blockcontrols;
+			}
 		}
 	}
 

@@ -576,6 +576,10 @@ static void ParseCommand(char **input, writebuffer_t *bufptr, int tokenizer_line
 	{
 		WRITE_OP(TP_OP_NEXTPAGE);
 	}
+	else if (IS_COMMAND("WAIT"))
+	{
+		WRITE_OP(TP_OP_WAIT);
+	}
 	else if (!CheckIfNonScriptCommand(command_start, cmd_len, input, bufptr, tokenizer_line))
 	{
 		ParseError(tokenizer_line, CONS_WARNING, "Unknown command %.*s", (int)cmd_len, command_start);

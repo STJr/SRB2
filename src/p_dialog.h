@@ -59,8 +59,13 @@ typedef struct dialog_s
 
 	boolean blockcontrols;
 	boolean gotonext;
+	boolean paused;
+
 	INT32 timetonext;
 	INT16 postexectag;
+
+	tic_t jumpdown;
+	tic_t spindown;
 
 	INT32 picnum;
 	INT32 pictoloop;
