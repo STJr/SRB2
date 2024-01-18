@@ -703,16 +703,13 @@ boolean Picture_IsFlatFormat(pictureformat_t format)
   */
 boolean Picture_CheckIfDoomPatch(softwarepatch_t *patch, size_t size)
 {
-	INT16 width, height;
-	boolean result;
-
 	// minimum length of a valid Doom patch
 	if (size < 13)
 		return false;
 
-	width = SHORT(patch->width);
-	height = SHORT(patch->height);
-	result = (height > 0 && height <= 16384 && width > 0 && width <= 16384);
+	INT16 width = SHORT(patch->width);
+	INT16 height = SHORT(patch->height);
+	boolean result = height > 0 && height <= 16384 && width > 0 && width <= 16384;
 
 	if (result)
 	{
@@ -720,9 +717,7 @@ boolean Picture_CheckIfDoomPatch(softwarepatch_t *patch, size_t size)
 		// check the column directory for extra security. All columns
 		// must begin after the column directory, and none of them must
 		// point past the end of the patch.
-		INT16 x;
-
-		for (x = 0; x < width; x++)
+		for (INT16 x = 0; x < width; x++)
 		{
 			UINT32 ofs = LONG(patch->columnofs[x]);
 

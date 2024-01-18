@@ -2105,32 +2105,36 @@ void *W_CachePatchNum(lumpnum_t lumpnum, INT32 tag)
 	return W_CachePatchNumPwad(WADFILENUM(lumpnum),LUMPNUM(lumpnum),tag);
 }
 
+// Checks if a lump is a valid patch
 boolean W_IsValidPatchNumPwad(UINT16 wad, UINT16 lump)
 {
 	if (!TestValidLump(wad, lump))
 		return false;
 
-	lumpcache_t *lumpcache = wadfiles[wad]->patchcache;
-
-	// Probably is if it's loaded
-	if (lumpcache[lump])
+	// Must be, if it's already loaded
+	if (wadfiles[wad]->patchcache[lump])
 		return true;
-
-	void *lumpdata = W_CacheLumpNumPwad(wad, lump, PU_CACHE);
-	if (!lumpdata)
-		return false;
 
 	size_t len = W_LumpLengthPwad(wad, lump);
 
 #ifndef NO_PNG_LUMPS
-	if (Picture_IsLumpPNG((UINT8 *)lumpdata, len))
+	UINT8 png_header[PNG_HEADER_SIZE];
+
+	if (!W_ReadLumpHeaderPwad(wad, lump, png_header, PNG_HEADER_SIZE, 0))
+		return false;
+
+	if (Picture_IsLumpPNG(png_header, len))
 	{
 		// Maybe it is?
 		return true;
 	}
 #endif
 
-	return Picture_CheckIfDoomPatch(lumpdata, len);
+	void *lumpdata = W_CacheLumpNumPwad(wad, lump, PU_CACHE);
+	if (lumpdata)
+		return Picture_CheckIfDoomPatch(lumpdata, len);
+
+	return false;
 }
 
 boolean W_IsValidPatchNum(lumpnum_t lumpnum)

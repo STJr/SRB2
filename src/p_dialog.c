@@ -326,7 +326,9 @@ void P_SetDialogIcon(dialog_t *dialog, const char *icon)
 
 	strlcpy(dialog->icon, icon, sizeof(dialog->icon));
 
-	dialog->iconlump = W_CheckNumForLongName(icon);
+	lumpnum_t iconlump = W_CheckNumForLongName(icon);
+	if (iconlump != LUMPERROR && W_IsValidPatchNum(iconlump))
+		dialog->iconlump = iconlump;
 }
 
 static void P_DialogGetDispText(char *disptext, const char *text, size_t length)
