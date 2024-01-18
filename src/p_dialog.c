@@ -1164,7 +1164,11 @@ void P_RunDialog(player_t *player)
 				if (dialog->paused)
 				{
 					if (dialog->jumpdown == 1 || dialog->spindown == 1)
+					{
 						dialog->paused = false;
+						dialog->timetonext = TICRATE/10;
+						writer->boostspeed = false;
+					}
 				}
 				else if (!dialog->timetonext && !dialog->showchoices) // timetonext is 0 when finished generating text
 					gotonext = true;

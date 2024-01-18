@@ -405,11 +405,13 @@ const UINT8 *P_DialogRunOpcode(const UINT8 *code, dialog_t *dialog, textwriter_t
 			READ_NUM(num);
 			writer->textcount = num;
 			writer->numtowrite = 0;
+			writer->boostspeed = false;
 			break;
 		case TP_OP_PAUSE:
 			READ_NUM(num);
 			writer->textcount = num;
 			writer->numtowrite = 0;
+			writer->boostspeed = false;
 			writer->paused = true;
 			break;
 		case TP_OP_NEXTPAGE:
@@ -417,6 +419,7 @@ const UINT8 *P_DialogRunOpcode(const UINT8 *code, dialog_t *dialog, textwriter_t
 			break;
 		case TP_OP_WAIT:
 			dialog->paused = true;
+			writer->boostspeed = false;
 			writer->numtowrite = 0;
 			break;
 		case TP_OP_NAME: {
