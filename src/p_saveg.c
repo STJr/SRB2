@@ -4960,22 +4960,26 @@ static void P_NetArchiveDialog(dialog_t *dialog)
 	WRITEUINT32(save_p, dialog->writer.writeptr);
 	WRITEINT32(save_p, dialog->writer.textcount);
 	WRITEINT32(save_p, dialog->writer.textspeed);
+	WRITEUINT8(save_p, (UINT8)dialog->jumpdown);
+	WRITEUINT8(save_p, (UINT8)dialog->spindown);
 	WRITESTRINGN(save_p, dialog->speaker, sizeof(dialog->speaker) - 1);
 	WRITESTRINGN(save_p, dialog->icon, sizeof(dialog->icon) - 1);
 
 	UINT8 flags = 0;
 	if (dialog->gotonext)
-		flags |= 1;
+		flags |= 1<<0;
+	if (dialog->paused)
+		flags |= 1<<1;
 	if (dialog->showchoices)
-		flags |= 2;
+		flags |= 1<<2;
 	if (dialog->selectedchoice)
-		flags |= 4;
+		flags |= 1<<3;
 	if (dialog->iconflip)
-		flags |= 8;
+		flags |= 1<<4;
 	if (dialog->writer.boostspeed)
-		flags |= 16;
+		flags |= 1<<5;
 	if (dialog->writer.paused)
-		flags |= 32;
+		flags |= 1<<6;
 	WRITEUINT8(save_p, flags);
 }
 
@@ -4984,6 +4988,7 @@ static void P_NetUnArchiveDialog(dialog_t *dialog)
 	UINT8 playernum;
 	UINT32 baseptr, writeptr;
 	INT32 textcount, textspeed;
+	tic_t jumpdown, spindown;
 	char speaker[256], icon[256];
 	boolean iconflip, boostspeed, writerpaused;
 
@@ -5017,17 +5022,20 @@ static void P_NetUnArchiveDialog(dialog_t *dialog)
 	writeptr = READUINT32(save_p);
 	textcount = READINT32(save_p);
 	textspeed = READINT32(save_p);
+	jumpdown = (tic_t)READUINT8(save_p);
+	spindown = (tic_t)READUINT8(save_p);
 
 	READSTRINGN(save_p, speaker, sizeof(speaker) - 1);
 	READSTRINGN(save_p, icon, sizeof(icon) - 1);
 
 	UINT8 flags = READUINT8(save_p);
-	dialog->gotonext = (flags & 1) ? true : false;
-	dialog->showchoices = (dialog->numchoices && (flags & 2)) ? true : false;
-	dialog->selectedchoice = (dialog->numchoices && (flags & 4)) ? true : false;
-	iconflip = (flags & 8) ? true : false;
-	boostspeed = (flags & 16) ? true : false;
-	writerpaused = (flags & 32) ? true : false;
+	dialog->gotonext = (flags & (1<<0)) ? true : false;
+	dialog->paused = (flags & (1<<1)) ? true : false;
+	dialog->showchoices = (dialog->numchoices && (flags & (1<<2))) ? true : false;
+	dialog->selectedchoice = (dialog->numchoices && (flags & (1<<3))) ? true : false;
+	iconflip = (flags & (1<<4)) ? true : false;
+	boostspeed = (flags & (1<<5)) ? true : false;
+	writerpaused = (flags & (1<<6)) ? true : false;
 
 	if (dialog->promptnum < 0 || dialog->promptnum >= MAX_PROMPTS || !textprompts[dialog->promptnum])
 		I_Error("Invalid text prompt %d from server", dialog->promptnum);
@@ -5056,6 +5064,9 @@ static void P_NetUnArchiveDialog(dialog_t *dialog)
 	strlcpy(dialog->speaker, speaker, sizeof(dialog->speaker));
 	P_SetDialogIcon(dialog, icon);
 	dialog->iconflip = iconflip;
+
+	dialog->jumpdown = jumpdown;
+	dialog->spindown = spindown;
 
 	dialog->writer.baseptr = baseptr;
 	dialog->writer.writeptr = writeptr;
