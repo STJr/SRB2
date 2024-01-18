@@ -332,7 +332,7 @@ static boolean CheckIfNonScriptCommand(char *command_start, size_t cmd_len, char
 			Z_Free(param);
 		}
 		else
-			EXPECTED_PARAM("COLOR");
+			WRITE_CHAR(128);
 	}
 	else
 		return false;
