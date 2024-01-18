@@ -47,6 +47,10 @@ void P_ResetTextWriter(textwriter_t *writer, const char *basetext, size_t basete
 //  TEXT PROMPTS
 // ==================
 
+static void P_LockPlayerControls(player_t *player);
+static void P_UpdatePromptGfx(dialog_t *dialog);
+static void P_PlayDialogSound(player_t *player, sfxenum_t sound);
+
 static textprompt_t *P_GetTextPromptByID(INT32 promptnum)
 {
 	if (promptnum < 0 || promptnum >= MAX_PROMPTS || !textprompts[promptnum])
@@ -140,7 +144,7 @@ typedef struct
 	} choicesbox;
 } dialog_geometry_t;
 
-static void F_GetPageTextGeometry(dialog_t *dialog, dialog_geometry_t *geo)
+static void GetPageTextGeometry(dialog_t *dialog, dialog_geometry_t *geo)
 {
 	boolean has_icon = dialog->iconlump != LUMPERROR;
 
@@ -223,7 +227,7 @@ static fixed_t F_GetPromptHideHudBound(dialog_t *dialog)
 	else if (dialog->page->hidehud == 2) // hide all
 		return BASEVIDHEIGHT;
 
-	F_GetPageTextGeometry(dialog, &geo);
+	GetPageTextGeometry(dialog, &geo);
 
 	// calc boxheight (see V_DrawPromptBack)
 	boxh = geo.boxh * vid.dup;
@@ -441,7 +445,7 @@ static void P_DialogSetDisplayText(dialog_t *dialog)
 
 	dialog_geometry_t geo;
 
-	F_GetPageTextGeometry(dialog, &geo);
+	GetPageTextGeometry(dialog, &geo);
 
 	V_WordWrapInPlace(geo.textx, geo.textr, 0, dialog->disptext);
 }
@@ -1051,6 +1055,231 @@ void P_GetPromptPageByNamedTag(const char *tag, INT32 *promptnum, INT32 *pagenum
 		CONS_Debug(DBG_GAMELOGIC, "Text prompt: Can't find a page with named tag %s or suffixed tag %s\n", tag, suffixedtag);
 }
 
+void P_RunDialog(player_t *player)
+{
+	if (!player || !player->promptactive)
+		return;
+
+	dialog_t *dialog = P_GetPlayerDialog(player);
+	if (!dialog)
+	{
+		player->promptactive = false;
+		return;
+	}
+
+	player_t *promptplayer = dialog->player;
+	if (!promptplayer)
+		return;
+
+	// for the chevron
+	if (P_IsLocalPlayer(player))
+	{
+		if (--chevronAnimCounter <= 0)
+			chevronAnimCounter = 8;
+	}
+
+	// Don't update if the player is a spectator, or quit the game
+	if (player->spectator || player->quittime)
+		return;
+
+	// Block player controls
+	if (dialog->blockcontrols)
+		P_LockPlayerControls(player);
+
+	// Stop here if this player isn't who started this dialog
+	if (player != promptplayer)
+		return;
+
+	textwriter_t *writer = &dialog->writer;
+
+	writer->boostspeed = false;
+
+	// button handling
+	if (dialog->page->timetonext)
+	{
+		// same procedure as below, just without the button handling
+		if (dialog->timetonext >= 1)
+			dialog->timetonext--;
+
+		if (!dialog->timetonext)
+		{
+			P_AdvanceToNextPage(player, dialog);
+			return;
+		}
+		else if (!dialog->paused)
+		{
+			INT32 write = P_DialogWriteText(dialog, writer);
+			if (write == DIALOG_WRITETEXT_TALK)
+			{
+				if (dialog->page->textsfx)
+					P_PlayDialogSound(player, dialog->page->textsfx);
+			}
+		}
+	}
+	else
+	{
+		if (dialog->blockcontrols)
+		{
+			boolean gotonext = dialog->gotonext;
+
+			// Handle choices
+			if (dialog->showchoices)
+			{
+				if (dialog->selectedchoice)
+				{
+					dialog->selectedchoice = false;
+
+					P_PlayDialogSound(player, sfx_menu1);
+
+					P_ExecuteChoice(player, dialog, &dialog->page->choices[dialog->curchoice]);
+					return;
+				}
+			}
+			else
+			{
+				if (player->cmd.buttons & BT_JUMP)
+				{
+					if (dialog->jumpdown < TICRATE)
+						dialog->jumpdown++;
+				}
+				else
+					dialog->jumpdown = 0;
+
+				if (player->cmd.buttons & BT_SPIN)
+				{
+					if (dialog->spindown < TICRATE)
+						dialog->spindown++;
+				}
+				else
+					dialog->spindown = 0;
+			}
+
+			if (dialog->jumpdown || dialog->spindown)
+			{
+				if (dialog->timetonext > 1)
+					dialog->timetonext--;
+				else if (writer->baseptr) // don't set boost if we just reset the string
+					writer->boostspeed = true; // only after a slight delay
+
+				if (dialog->paused)
+				{
+					if (dialog->jumpdown == 1 || dialog->spindown == 1)
+						dialog->paused = false;
+				}
+				else if (!dialog->timetonext && !dialog->showchoices) // timetonext is 0 when finished generating text
+					gotonext = true;
+			}
+
+			if (gotonext)
+			{
+				if (P_AdvanceToNextPage(player, dialog))
+					P_PlayDialogSound(player, sfx_menu1);
+				return;
+			}
+		}
+
+		// never show the chevron if we can't toggle pages
+		if (!dialog->page->text || !dialog->page->text[0])
+			dialog->timetonext = !dialog->blockcontrols;
+
+		// generate letter-by-letter text
+		if (!dialog->paused)
+		{
+			INT32 write = P_DialogWriteText(dialog, writer);
+			if (write != DIALOG_WRITETEXT_DONE)
+			{
+				if (write == DIALOG_WRITETEXT_TALK && dialog->page->textsfx)
+					P_PlayDialogSound(player, dialog->page->textsfx);
+			}
+			else
+			{
+				if (dialog->blockcontrols && !dialog->showchoices && dialog->numchoices)
+					dialog->showchoices = true;
+				dialog->timetonext = !dialog->blockcontrols;
+			}
+		}
+	}
+
+	P_UpdatePromptGfx(dialog);
+}
+
+static void P_LockPlayerControls(player_t *player)
+{
+	player->powers[pw_nocontrol] = 1;
+
+	if (player->mo && !P_MobjWasRemoved(player->mo))
+	{
+		if (player->mo->state == &states[S_PLAY_STND] && player->mo->tics != -1)
+			player->mo->tics++;
+		else if (player->mo->state == &states[S_PLAY_WAIT])
+			P_SetMobjState(player->mo, S_PLAY_STND);
+	}
+}
+
+static void P_UpdatePromptGfx(dialog_t *dialog)
+{
+	if (!dialog->pics || dialog->picnum < 0 || dialog->picnum >= dialog->numpics)
+		return;
+
+	if (dialog->pictimer <= 0)
+	{
+		boolean persistanimtimer = false;
+
+		if (dialog->picnum < dialog->numpics-1 && dialog->pics[dialog->picnum+1].name[0] != '\0')
+			dialog->picnum++;
+		else if (dialog->picmode == PROMPT_PIC_LOOP)
+			dialog->picnum = dialog->pictoloop;
+		else if (dialog->picmode == PROMPT_PIC_DESTROY)
+			dialog->picnum = -1;
+		else // if (dialog->picmode == PROMPT_PIC_PERSIST)
+			persistanimtimer = true;
+
+		if (!persistanimtimer && dialog->picnum >= 0)
+			dialog->pictimer = dialog->pics[dialog->picnum].duration;
+	}
+	else
+		dialog->pictimer--;
+}
+
+static void P_PlayDialogSound(player_t *player, sfxenum_t sound)
+{
+	if (P_IsLocalPlayer(player) || &players[displayplayer] == player)
+		S_StartSound(NULL, sound);
+}
+
+boolean P_SetCurrentDialogChoice(player_t *player, INT32 choice)
+{
+	if (!player->promptactive)
+		return false;
+
+	dialog_t *dialog = P_GetPlayerDialog(player);
+
+	if (!dialog || choice < 0 || choice >= dialog->numchoices)
+		return false;
+
+	dialog->curchoice = choice;
+
+	P_PlayDialogSound(player, sfx_menu1);
+
+	return true;
+}
+
+boolean P_SelectDialogChoice(player_t *player, INT32 choice)
+{
+	if (!player->promptactive)
+		return false;
+
+	dialog_t *dialog = P_GetPlayerDialog(player);
+
+	if (!dialog || choice < 0 || choice >= dialog->numchoices)
+		return false;
+
+	dialog->curchoice = choice;
+	dialog->selectedchoice = true;
+
+	return true;
+}
+
 static void F_DrawDialogText(INT32 x, INT32 y, INT32 option, const char *string, size_t numchars, boolean do_line_breaks, const UINT8 *highlight)
 {
 	INT32 w, c, cx = x, cy = y, dup, scrwidth, left = 0;
@@ -1201,7 +1430,7 @@ void F_TextPromptDrawer(void)
 	// Data
 	patch_t *patch;
 
-	F_GetPageTextGeometry(dialog, &geo);
+	GetPageTextGeometry(dialog, &geo);
 
 	INT32 boxh = geo.boxh, texty = geo.texty, namey = geo.namey, chevrony = geo.chevrony;
 	INT32 textx = geo.textx, textr = geo.textr;
@@ -1275,229 +1504,4 @@ void F_TextPromptDrawer(void)
 	// Draw chevron
 	if (dialog->blockcontrols && (!dialog->timetonext || dialog->paused) && !dialog->showchoices)
 		V_DrawString(textr-8, chevrony + (chevronAnimCounter/5), (draw_flags|snap_flags|V_YELLOWMAP), "\x1B"); // down arrow
-}
-
-static void P_LockPlayerControls(player_t *player)
-{
-	player->powers[pw_nocontrol] = 1;
-
-	if (player->mo && !P_MobjWasRemoved(player->mo))
-	{
-		if (player->mo->state == &states[S_PLAY_STND] && player->mo->tics != -1)
-			player->mo->tics++;
-		else if (player->mo->state == &states[S_PLAY_WAIT])
-			P_SetMobjState(player->mo, S_PLAY_STND);
-	}
-}
-
-static void P_UpdatePromptGfx(dialog_t *dialog)
-{
-	if (!dialog->pics || dialog->picnum < 0 || dialog->picnum >= dialog->numpics)
-		return;
-
-	if (dialog->pictimer <= 0)
-	{
-		boolean persistanimtimer = false;
-
-		if (dialog->picnum < dialog->numpics-1 && dialog->pics[dialog->picnum+1].name[0] != '\0')
-			dialog->picnum++;
-		else if (dialog->picmode == PROMPT_PIC_LOOP)
-			dialog->picnum = dialog->pictoloop;
-		else if (dialog->picmode == PROMPT_PIC_DESTROY)
-			dialog->picnum = -1;
-		else // if (dialog->picmode == PROMPT_PIC_PERSIST)
-			persistanimtimer = true;
-
-		if (!persistanimtimer && dialog->picnum >= 0)
-			dialog->pictimer = dialog->pics[dialog->picnum].duration;
-	}
-	else
-		dialog->pictimer--;
-}
-
-static void P_PlayDialogSound(player_t *player, sfxenum_t sound)
-{
-	if (P_IsLocalPlayer(player) || &players[displayplayer] == player)
-		S_StartSound(NULL, sound);
-}
-
-boolean P_SetCurrentDialogChoice(player_t *player, INT32 choice)
-{
-	if (!player->promptactive)
-		return false;
-
-	dialog_t *dialog = P_GetPlayerDialog(player);
-
-	if (!dialog || choice < 0 || choice >= dialog->numchoices)
-		return false;
-
-	dialog->curchoice = choice;
-
-	P_PlayDialogSound(player, sfx_menu1);
-
-	return true;
-}
-
-boolean P_SelectDialogChoice(player_t *player, INT32 choice)
-{
-	if (!player->promptactive)
-		return false;
-
-	dialog_t *dialog = P_GetPlayerDialog(player);
-
-	if (!dialog || choice < 0 || choice >= dialog->numchoices)
-		return false;
-
-	dialog->curchoice = choice;
-	dialog->selectedchoice = true;
-
-	return true;
-}
-
-void P_RunDialog(player_t *player)
-{
-	if (!player || !player->promptactive)
-		return;
-
-	dialog_t *dialog = P_GetPlayerDialog(player);
-	if (!dialog)
-	{
-		player->promptactive = false;
-		return;
-	}
-
-	player_t *promptplayer = dialog->player;
-	if (!promptplayer)
-		return;
-
-	// for the chevron
-	if (P_IsLocalPlayer(player))
-	{
-		if (--chevronAnimCounter <= 0)
-			chevronAnimCounter = 8;
-	}
-
-	// Don't update if the player is a spectator, or quit the game
-	if (player->spectator || player->quittime)
-		return;
-
-	// Block player controls
-	if (dialog->blockcontrols)
-		P_LockPlayerControls(player);
-
-	// Stop here if this player isn't who started this dialog
-	if (player != promptplayer)
-		return;
-
-	textwriter_t *writer = &dialog->writer;
-
-	writer->boostspeed = false;
-
-	// button handling
-	if (dialog->page->timetonext)
-	{
-		// same procedure as below, just without the button handling
-		if (dialog->timetonext >= 1)
-			dialog->timetonext--;
-
-		if (!dialog->timetonext)
-		{
-			P_AdvanceToNextPage(player, dialog);
-			return;
-		}
-		else if (!dialog->paused)
-		{
-			INT32 write = P_DialogWriteText(dialog, writer);
-			if (write == DIALOG_WRITETEXT_TALK)
-			{
-				if (dialog->page->textsfx)
-					P_PlayDialogSound(player, dialog->page->textsfx);
-			}
-		}
-	}
-	else
-	{
-		if (dialog->blockcontrols)
-		{
-			boolean gotonext = dialog->gotonext;
-
-			// Handle choices
-			if (dialog->showchoices)
-			{
-				if (dialog->selectedchoice)
-				{
-					dialog->selectedchoice = false;
-
-					P_PlayDialogSound(player, sfx_menu1);
-
-					P_ExecuteChoice(player, dialog, &dialog->page->choices[dialog->curchoice]);
-					return;
-				}
-			}
-			else
-			{
-				if (player->cmd.buttons & BT_JUMP)
-				{
-					if (dialog->jumpdown < TICRATE)
-						dialog->jumpdown++;
-				}
-				else
-					dialog->jumpdown = 0;
-
-				if (player->cmd.buttons & BT_SPIN)
-				{
-					if (dialog->spindown < TICRATE)
-						dialog->spindown++;
-				}
-				else
-					dialog->spindown = 0;
-			}
-
-			if (dialog->jumpdown || dialog->spindown)
-			{
-				if (dialog->timetonext > 1)
-					dialog->timetonext--;
-				else if (writer->baseptr) // don't set boost if we just reset the string
-					writer->boostspeed = true; // only after a slight delay
-
-				if (dialog->paused)
-				{
-					if (dialog->jumpdown == 1 || dialog->spindown == 1)
-						dialog->paused = false;
-				}
-				else if (!dialog->timetonext && !dialog->showchoices) // timetonext is 0 when finished generating text
-					gotonext = true;
-			}
-
-			if (gotonext)
-			{
-				if (P_AdvanceToNextPage(player, dialog))
-					P_PlayDialogSound(player, sfx_menu1);
-				return;
-			}
-		}
-
-		// never show the chevron if we can't toggle pages
-		if (!dialog->page->text || !dialog->page->text[0])
-			dialog->timetonext = !dialog->blockcontrols;
-
-		// generate letter-by-letter text
-		if (!dialog->paused)
-		{
-			INT32 write = P_DialogWriteText(dialog, writer);
-			if (write != DIALOG_WRITETEXT_DONE)
-			{
-				if (write == DIALOG_WRITETEXT_TALK && dialog->page->textsfx)
-					P_PlayDialogSound(player, dialog->page->textsfx);
-			}
-			else
-			{
-				if (dialog->blockcontrols && !dialog->showchoices && dialog->numchoices)
-					dialog->showchoices = true;
-				dialog->timetonext = !dialog->blockcontrols;
-			}
-		}
-	}
-
-	P_UpdatePromptGfx(dialog);
 }

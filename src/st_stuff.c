@@ -2668,12 +2668,6 @@ static boolean ST_doItemFinderIconsAndSound(void)
 //
 static void ST_overlayDrawer(void)
 {
-	if (!st_overlay)
-	{
-		F_TextPromptDrawer();
-		return;
-	}
-
 	// Decide whether to draw the stage title or not
 	boolean stagetitle = false;
 
@@ -2901,13 +2895,16 @@ void ST_Drawer(void)
 
 	st_translucency = cv_translucenthud.value;
 
-	// No deadview!
 	stplyr = &players[displayplayer];
-	ST_overlayDrawer();
 
-	if (splitscreen)
+	if (st_overlay)
 	{
-		stplyr = &players[secondarydisplayplayer];
 		ST_overlayDrawer();
+
+		if (splitscreen)
+		{
+			stplyr = &players[secondarydisplayplayer];
+			ST_overlayDrawer();
+		}
 	}
 }
