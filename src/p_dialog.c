@@ -142,7 +142,7 @@ typedef struct
 
 static void F_GetPageTextGeometry(dialog_t *dialog, dialog_geometry_t *geo)
 {
-	boolean has_icon = dialog->iconlump != LUMPERROR || dialog->icontexture != -1;
+	boolean has_icon = dialog->iconlump != LUMPERROR;
 
 	INT32 pagelines = dialog->page->lines;
 	boolean rightside = has_icon && dialog->page->rightside;
@@ -317,7 +317,6 @@ void P_SetDialogSpeaker(dialog_t *dialog, const char *speaker)
 void P_SetDialogIcon(dialog_t *dialog, const char *icon)
 {
 	dialog->iconlump = LUMPERROR;
-	dialog->icontexture = -1;
 
 	if (!icon || !strlen(icon))
 	{
@@ -327,11 +326,7 @@ void P_SetDialogIcon(dialog_t *dialog, const char *icon)
 
 	strlcpy(dialog->icon, icon, sizeof(dialog->icon));
 
-	lumpnum_t iconlump = W_CheckNumForLongName(icon);
-	if (iconlump == LUMPERROR || !W_IsValidPatchNum(iconlump))
-		dialog->icontexture = R_CheckTextureNumForName(icon);
-	else
-		dialog->iconlump = iconlump;
+	dialog->iconlump = W_CheckNumForLongName(icon);
 }
 
 static void P_DialogGetDispText(char *disptext, const char *text, size_t length)
@@ -1143,11 +1138,6 @@ static void F_DrawDialogIcon(dialog_t *dialog, dialog_geometry_t *geo, INT32 fla
 		width = patch->width;
 		height = patch->height;
 	}
-	else if (dialog->icontexture != -1)
-	{
-		width = textures[dialog->icontexture]->width;
-		height = textures[dialog->icontexture]->height;
-	}
 	else
 		return;
 
@@ -1180,10 +1170,7 @@ static void F_DrawDialogIcon(dialog_t *dialog, dialog_geometry_t *geo, INT32 fla
 		flags |= V_FLIP;
 	}
 
-	if (patch)
-		V_DrawFixedPatch(iconx, icony, scale, flags, patch, NULL);
-	else
-		V_DrawTexture(iconx, icony, scale, scale, flags, texturetranslation[dialog->icontexture]);
+	V_DrawFixedPatch(iconx, icony, scale, flags, patch, NULL);
 }
 
 void F_TextPromptDrawer(void)

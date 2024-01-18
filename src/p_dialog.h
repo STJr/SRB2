@@ -85,7 +85,6 @@ typedef struct dialog_s
 
 	INT32 longestchoice;
 	lumpnum_t iconlump;
-	INT32 icontexture;
 
 	char *disptext;
 	size_t disptextsize;
