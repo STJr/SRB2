@@ -1071,16 +1071,16 @@ void P_RunDialog(player_t *player)
 	if (!promptplayer)
 		return;
 
+	// Don't update if the player is a spectator, or quit the game
+	if (promptplayer->spectator || promptplayer->quittime)
+		return;
+
 	// for the chevron
-	if (P_IsLocalPlayer(player))
+	if (player == &players[displayplayer])
 	{
 		if (--chevronAnimCounter <= 0)
 			chevronAnimCounter = 8;
 	}
-
-	// Don't update if the player is a spectator, or quit the game
-	if (player->spectator || player->quittime)
-		return;
 
 	// Block player controls
 	if (dialog->blockcontrols)
