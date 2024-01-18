@@ -2275,14 +2275,14 @@ int M_RoundUp(double number)
 
 boolean M_StringToNumber(const char *str, int *out)
 {
-	char *endPos = NULL;
+	char *string_end_pos = NULL;
 
 #ifndef AVOID_ERRNO
 	errno = 0;
 #endif
 
-	int result = strtol(str, &endPos, 10);
-	if (endPos == str || *endPos != '\0')
+	int result = strtol(str, &string_end_pos, 10);
+	if (string_end_pos == str || *string_end_pos != '\0')
 		return false;
 
 #ifndef AVOID_ERRNO
