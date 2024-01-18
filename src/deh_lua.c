@@ -573,7 +573,8 @@ static int ScanConstants(lua_State *L, boolean mathlib, const char *word)
 		if (mathlib) return luaL_error(L, "NiGHTS grade '%s' could not be found.\n", word);
 		return 0;
 	}
-	else if (fastncmp("MN_",word,3)) {
+	else if (fastncmp("MN_",word,3))
+	{
 		p = word+3;
 		for (i = 0; i < NUMMENUTYPES; i++)
 			if (fastcmp(p, MENUTYPES_LIST[i])) {
@@ -582,6 +583,17 @@ static int ScanConstants(lua_State *L, boolean mathlib, const char *word)
 			}
 		if (mathlib) return luaL_error(L, "menutype '%s' could not be found.\n", word);
 		return 0;
+	}
+	else if (mathlib && fastncmp("TRANSLATION_",word,12))
+	{
+		p = word+12;
+		int id = R_FindCustomTranslation_CaseInsensitive(p);
+		if (id != -1)
+		{
+			lua_pushinteger(L, id);
+			return 1;
+		}
+		return luaL_error(L, "translation '%s' could not be found.\n", word);
 	}
 
 	// TODO: 2.3: Delete this alias

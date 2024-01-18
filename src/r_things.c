@@ -25,6 +25,7 @@
 #include "i_system.h"
 #include "r_fps.h"
 #include "r_things.h"
+#include "r_translation.h"
 #include "r_patch.h"
 #include "r_patchrotation.h"
 #include "r_picformats.h"
@@ -761,50 +762,46 @@ void R_DrawFlippedMaskedColumn(column_t *column)
 	dc_texturemid = basetexturemid;
 }
 
-boolean R_SpriteIsFlashing(vissprite_t *vis)
+UINT8 *R_GetTranslationForThing(mobj_t *mobj, skincolornum_t color, UINT16 translation)
 {
-	return (!(vis->cut & SC_PRECIP)
-	&& (vis->mobj->flags & (MF_ENEMY|MF_BOSS))
-	&& (vis->mobj->flags2 & MF2_FRET)
-	&& !(vis->mobj->flags & MF_GRENADEBOUNCE)
-	&& (leveltime & 1));
-}
-
-UINT8 *R_GetSpriteTranslation(vissprite_t *vis)
-{
-	if (R_SpriteIsFlashing(vis)) // Bosses "flash"
+	if (R_ThingIsFlashing(mobj)) // Bosses "flash"
 	{
-		if (vis->mobj->type == MT_CYBRAKDEMON || vis->mobj->colorized)
+		if (mobj->type == MT_CYBRAKDEMON || mobj->colorized)
 			return R_GetTranslationColormap(TC_ALLWHITE, 0, GTC_CACHE);
-		else if (vis->mobj->type == MT_METALSONIC_BATTLE)
+		else if (mobj->type == MT_METALSONIC_BATTLE)
 			return R_GetTranslationColormap(TC_METALSONIC, 0, GTC_CACHE);
 		else
-			return R_GetTranslationColormap(TC_BOSS, vis->color, GTC_CACHE);
+			return R_GetTranslationColormap(TC_BOSS, color, GTC_CACHE);
 	}
-	else if (vis->color)
+	else if (translation != 0)
+	{
+		remaptable_t *tr = R_GetTranslationByID(translation);
+		if (tr != NULL)
+			return tr->remap;
+	}
+	else if (color != SKINCOLOR_NONE)
 	{
 		// New colormap stuff for skins Tails 06-07-2002
-		if (!(vis->cut & SC_PRECIP) && vis->mobj->colorized)
-			return R_GetTranslationColormap(TC_RAINBOW, vis->color, GTC_CACHE);
-		else if (!(vis->cut & SC_PRECIP)
-			&& vis->mobj->player && vis->mobj->player->dashmode >= DASHMODE_THRESHOLD
-			&& (vis->mobj->player->charflags & SF_DASHMODE)
+		if (mobj->colorized)
+			return R_GetTranslationColormap(TC_RAINBOW, color, GTC_CACHE);
+		else if (mobj->player && mobj->player->dashmode >= DASHMODE_THRESHOLD
+			&& (mobj->player->charflags & SF_DASHMODE)
 			&& ((leveltime/2) & 1))
 		{
-			if (vis->mobj->player->charflags & SF_MACHINE)
+			if (mobj->player->charflags & SF_MACHINE)
 				return R_GetTranslationColormap(TC_DASHMODE, 0, GTC_CACHE);
 			else
-				return R_GetTranslationColormap(TC_RAINBOW, vis->color, GTC_CACHE);
+				return R_GetTranslationColormap(TC_RAINBOW, color, GTC_CACHE);
 		}
-		else if (!(vis->cut & SC_PRECIP) && vis->mobj->skin && vis->mobj->sprite == SPR_PLAY) // This thing is a player!
+		else if (mobj->skin && mobj->sprite == SPR_PLAY) // This thing is a player!
 		{
-			UINT8 skinnum = ((skin_t*)vis->mobj->skin)->skinnum;
-			return R_GetTranslationColormap(skinnum, vis->color, GTC_CACHE);
+			UINT8 skinnum = ((skin_t*)mobj->skin)->skinnum;
+			return R_GetTranslationColormap(skinnum, color, GTC_CACHE);
 		}
 		else // Use the defaults
-			return R_GetTranslationColormap(TC_DEFAULT, vis->color, GTC_CACHE);
+			return R_GetTranslationColormap(TC_DEFAULT, color, GTC_CACHE);
 	}
-	else if (vis->mobj->sprite == SPR_PLAY) // Looks like a player, but doesn't have a color? Get rid of green sonic syndrome.
+	else if (mobj->sprite == SPR_PLAY) // Looks like a player, but doesn't have a color? Get rid of green sonic syndrome.
 		return R_GetTranslationColormap(TC_DEFAULT, SKINCOLOR_BLUE, GTC_CACHE);
 
 	return NULL;
@@ -852,11 +849,11 @@ static void R_DrawVisSprite(vissprite_t *vis)
 
 	colfunc = colfuncs[BASEDRAWFUNC]; // hack: this isn't resetting properly somewhere.
 	dc_colormap = vis->colormap;
-	dc_translation = R_GetSpriteTranslation(vis);
+	dc_translation = R_GetTranslationForThing(vis->mobj, vis->color, vis->translation);
 
-	if (R_SpriteIsFlashing(vis)) // Bosses "flash"
+	if (R_ThingIsFlashing(vis->mobj)) // Bosses "flash"
 		colfunc = colfuncs[COLDRAWFUNC_TRANS]; // translate certain pixels to white
-	else if (vis->color && vis->transmap) // Color mapping
+	else if (dc_translation && vis->transmap) // Color mapping
 	{
 		colfunc = colfuncs[COLDRAWFUNC_TRANSTRANS];
 		dc_transmap = vis->transmap;
@@ -866,9 +863,7 @@ static void R_DrawVisSprite(vissprite_t *vis)
 		colfunc = colfuncs[COLDRAWFUNC_FUZZY];
 		dc_transmap = vis->transmap;    //Fab : 29-04-98: translucency table
 	}
-	else if (vis->color) // translate green skin to another color
-		colfunc = colfuncs[COLDRAWFUNC_TRANS];
-	else if (vis->mobj->sprite == SPR_PLAY) // Looks like a player, but doesn't have a color? Get rid of green sonic syndrome.
+	else if (dc_translation) // translate green skin to another color
 		colfunc = colfuncs[COLDRAWFUNC_TRANS];
 
 	// Hack: Use a special column function for drop shadows that bypasses
@@ -1403,6 +1398,7 @@ static void R_ProjectDropShadow(mobj_t *thing, vissprite_t *vis, fixed_t scale, 
 
 	shadow->mobj = thing; // Easy access! Tails 06-07-2002
 	shadow->color = thing->color;
+	shadow->translation = 0;
 
 	shadow->x1 = x1 < portalclipstart ? portalclipstart : x1;
 	shadow->x2 = x2 >= portalclipend ? portalclipend-1 : x2;
@@ -2200,6 +2196,11 @@ static void R_ProjectSprite(mobj_t *thing)
 	else
 		vis->color = oldthing->color;
 
+	if ((oldthing->flags2 & MF2_LINKDRAW) && oldthing->tracer && oldthing->translation == 0)
+		vis->translation = oldthing->tracer->translation;
+	else
+		vis->translation = oldthing->translation;
+
 	vis->x1 = x1 < portalclipstart ? portalclipstart : x1;
 	vis->x2 = x2 >= portalclipend ? portalclipend-1 : x2;
 
@@ -2470,6 +2471,7 @@ static void R_ProjectPrecipitationSprite(precipmobj_t *thing)
 	vis->extra_colormap = thing->subsector->sector->extra_colormap;
 	vis->heightsec = thing->subsector->sector->heightsec;
 	vis->color = SKINCOLOR_NONE;
+	vis->translation = 0;
 
 	// Fullbright
 	vis->colormap = colormaps;
@@ -3568,6 +3570,14 @@ boolean R_ThingIsSemiBright(mobj_t *thing)
 boolean R_ThingIsFullDark(mobj_t *thing)
 {
 	return ((thing->frame & FF_BRIGHTMASK) == FF_FULLDARK || (thing->renderflags & RF_BRIGHTMASK) == RF_FULLDARK);
+}
+
+boolean R_ThingIsFlashing(mobj_t *thing)
+{
+	if (thing == NULL)
+		return false;
+
+	return (thing->flags & (MF_ENEMY|MF_BOSS)) && (thing->flags2 & MF2_FRET) && !(thing->flags & MF_GRENADEBOUNCE) && (leveltime & 1);
 }
 
 // Offsets MT_OVERLAY towards the camera at render-time - Works in splitscreen!

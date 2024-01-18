@@ -543,6 +543,9 @@
     <ClInclude Include="..\r_textures.h">
       <Filter>R_Rend</Filter>
     </ClInclude>
+    <ClInclude Include="..\r_translation.h">
+      <Filter>R_Rend</Filter>
+    </ClInclude>
     <ClInclude Include="..\r_portal.h">
       <Filter>R_Rend</Filter>
     </ClInclude>
@@ -1097,6 +1100,9 @@
       <Filter>R_Rend</Filter>
     </ClCompile>
     <ClCompile Include="..\r_textures.c">
+      <Filter>R_Rend</Filter>
+    </ClCompile>
+    <ClCompile Include="..\r_translation.c">
       <Filter>R_Rend</Filter>
     </ClCompile>
     <ClCompile Include="..\r_portal.c">
