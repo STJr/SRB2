@@ -249,6 +249,10 @@ void P_ParseDialogScriptCommand(char **input, writebuffer_t *bufptr, int tokeniz
 	{
 		WRITE_OP(TP_OP_CHARNAME);
 	}
+	else if (IS_COMMAND("SUPERNAME"))
+	{
+		WRITE_OP(TP_OP_SUPERNAME);
+	}
 	else if (IS_COMMAND("PLAYERNAME"))
 	{
 		WRITE_OP(TP_OP_PLAYERNAME);
@@ -440,6 +444,7 @@ const UINT8 *P_DialogRunOpcode(const UINT8 *code, dialog_t *dialog, textwriter_t
 			}
 			break;
 		case TP_OP_CHARNAME:
+		case TP_OP_SUPERNAME:
 		case TP_OP_PLAYERNAME:
 			// Ignore
 			break;
@@ -460,13 +465,19 @@ boolean P_DialogPreprocessOpcode(dialog_t *dialog, UINT8 **cptr, writebuffer_t *
 	switch (*code)
 	{
 		case TP_OP_CHARNAME: {
-			char charname[256];
+			char charname[SKINNAMESIZE+1];
 			strlcpy(charname, skins[player->skin]->realname, sizeof(charname));
 			M_BufferMemWrite(buf, (UINT8 *)charname, strlen(charname));
 			break;
 		}
+		case TP_OP_SUPERNAME: {
+			char supername[SKINNAMESIZE+7];
+			strlcpy(supername, skins[player->skin]->supername, sizeof(supername));
+			M_BufferMemWrite(buf, (UINT8 *)supername, strlen(supername));
+			break;
+		}
 		case TP_OP_PLAYERNAME: {
-			char playername[256];
+			char playername[MAXPLAYERNAME+1];
 			if (netgame)
 				strlcpy(playername, player_names[player-players], sizeof(playername));
 			else
@@ -502,6 +513,7 @@ int P_DialogSkipOpcode(const UINT8 *code)
 		case TP_OP_NEXTPAGE:
 		case TP_OP_WAIT:
 		case TP_OP_CHARNAME:
+		case TP_OP_SUPERNAME:
 		case TP_OP_PLAYERNAME:
 			// Nothing else to read
 			break;
