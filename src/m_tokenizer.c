@@ -21,6 +21,7 @@ tokenizer_t *Tokenizer_Open(const char *inputString, unsigned numTokens)
 	tokenizer->endPos = 0;
 	tokenizer->inputLength = 0;
 	tokenizer->inComment = 0;
+	tokenizer->inString = 0;
 	tokenizer->get = Tokenizer_Read;
 
 	if (numTokens < 1)
@@ -53,7 +54,18 @@ void Tokenizer_Close(tokenizer_t *tokenizer)
 	Z_Free(tokenizer);
 }
 
-static void Tokenizer_DetectComment(tokenizer_t *tokenizer, UINT32 *pos)
+static boolean DetectLineBreak(tokenizer_t *tokenizer, size_t pos)
+{
+	if (tokenizer->input[pos] == '\n')
+	{
+		tokenizer->line++;
+		return true;
+	}
+
+	return false;
+}
+
+static void DetectComment(tokenizer_t *tokenizer, UINT32 *pos)
 {
 	if (tokenizer->inComment)
 		return;
@@ -94,8 +106,31 @@ const char *Tokenizer_Read(tokenizer_t *tokenizer, UINT32 i)
 
 	tokenizer->startPos = tokenizer->endPos;
 
+	// If in a string, return the entire string within quotes, except without the quotes.
+	if (tokenizer->inString == 1)
+	{
+		while (tokenizer->input[tokenizer->endPos] != '"' && tokenizer->endPos < tokenizer->inputLength)
+		{
+			DetectLineBreak(tokenizer, tokenizer->endPos);
+			tokenizer->endPos++;
+		}
+
+		Tokenizer_ReadTokenString(tokenizer, i);
+		tokenizer->inString = 2;
+		return tokenizer->token[i];
+	}
+	// If just ended a string, return only a quotation mark.
+	else if (tokenizer->inString == 2)
+	{
+		tokenizer->endPos = tokenizer->startPos + 1;
+		tokenizer->token[i][0] = tokenizer->input[tokenizer->startPos];
+		tokenizer->token[i][1] = '\0';
+		tokenizer->inString = 0;
+		return tokenizer->token[i];
+	}
+
 	// Try to detect comments now, in case we're pointing right at one
-	Tokenizer_DetectComment(tokenizer, &tokenizer->startPos);
+	DetectComment(tokenizer, &tokenizer->startPos);
 
 	// Find the first non-whitespace char, or else the end of the string trying
 	while ((tokenizer->input[tokenizer->startPos] == ' '
@@ -106,8 +141,10 @@ const char *Tokenizer_Read(tokenizer_t *tokenizer, UINT32 i)
 			|| tokenizer->inComment != 0)
 			&& tokenizer->startPos < tokenizer->inputLength)
 	{
+		boolean inLineBreak = DetectLineBreak(tokenizer, tokenizer->startPos);
+
 		// Try to detect comment endings now
-		if (tokenizer->inComment == 1	&& tokenizer->input[tokenizer->startPos] == '\n')
+		if (tokenizer->inComment == 1 && inLineBreak)
 			tokenizer->inComment = 0; // End of line for a single-line comment
 		else if (tokenizer->inComment == 2
 			&& tokenizer->startPos < tokenizer->inputLength - 1
@@ -120,11 +157,12 @@ const char *Tokenizer_Read(tokenizer_t *tokenizer, UINT32 i)
 		}
 
 		tokenizer->startPos++;
-		Tokenizer_DetectComment(tokenizer, &tokenizer->startPos);
+		DetectComment(tokenizer, &tokenizer->startPos);
 	}
 
 	// If the end of the string is reached, no token is to be read
-	if (tokenizer->startPos == tokenizer->inputLength) {
+	if (tokenizer->startPos == tokenizer->inputLength)
+	{
 		tokenizer->endPos = tokenizer->inputLength;
 		return NULL;
 	}
@@ -136,22 +174,15 @@ const char *Tokenizer_Read(tokenizer_t *tokenizer, UINT32 i)
 			|| tokenizer->input[tokenizer->startPos] == ']'
 			|| tokenizer->input[tokenizer->startPos] == '='
 			|| tokenizer->input[tokenizer->startPos] == ':'
-			|| tokenizer->input[tokenizer->startPos] == '%')
+			|| tokenizer->input[tokenizer->startPos] == '%'
+			|| tokenizer->input[tokenizer->startPos] == '"')
 	{
 		tokenizer->endPos = tokenizer->startPos + 1;
 		tokenizer->token[i][0] = tokenizer->input[tokenizer->startPos];
 		tokenizer->token[i][1] = '\0';
-		return tokenizer->token[i];
-	}
-	// Return entire string within quotes, except without the quotes.
-	else if (tokenizer->input[tokenizer->startPos] == '"')
-	{
-		tokenizer->endPos = ++tokenizer->startPos;
-		while (tokenizer->input[tokenizer->endPos] != '"' && tokenizer->endPos < tokenizer->inputLength)
-			tokenizer->endPos++;
+		if (tokenizer->input[tokenizer->startPos] == '"')
+			tokenizer->inString = 1;
 
-		Tokenizer_ReadTokenString(tokenizer, i);
-		tokenizer->endPos++;
 		return tokenizer->token[i];
 	}
 
@@ -169,12 +200,13 @@ const char *Tokenizer_Read(tokenizer_t *tokenizer, UINT32 i)
 			&& tokenizer->input[tokenizer->endPos] != '='
 			&& tokenizer->input[tokenizer->endPos] != ':'
 			&& tokenizer->input[tokenizer->endPos] != '%'
+			&& tokenizer->input[tokenizer->endPos] != ';'
 			&& tokenizer->inComment == 0)
 			&& tokenizer->endPos < tokenizer->inputLength)
 	{
 		tokenizer->endPos++;
 		// Try to detect comment starts now; if it's in a comment, we don't want it in this token
-		Tokenizer_DetectComment(tokenizer, &tokenizer->endPos);
+		DetectComment(tokenizer, &tokenizer->endPos);
 	}
 
 	Tokenizer_ReadTokenString(tokenizer, i);
@@ -189,7 +221,7 @@ const char *Tokenizer_SRB2Read(tokenizer_t *tokenizer, UINT32 i)
 	tokenizer->startPos = tokenizer->endPos;
 
 	// Try to detect comments now, in case we're pointing right at one
-	Tokenizer_DetectComment(tokenizer, &tokenizer->startPos);
+	DetectComment(tokenizer, &tokenizer->startPos);
 
 	// Find the first non-whitespace char, or else the end of the string trying
 	while ((tokenizer->input[tokenizer->startPos] == ' '
@@ -201,8 +233,10 @@ const char *Tokenizer_SRB2Read(tokenizer_t *tokenizer, UINT32 i)
 			|| tokenizer->inComment != 0)
 			&& tokenizer->startPos < tokenizer->inputLength)
 	{
+		boolean inLineBreak = DetectLineBreak(tokenizer, tokenizer->startPos);
+
 		// Try to detect comment endings now
-		if (tokenizer->inComment == 1	&& tokenizer->input[tokenizer->startPos] == '\n')
+		if (tokenizer->inComment == 1 && inLineBreak)
 			tokenizer->inComment = 0; // End of line for a single-line comment
 		else if (tokenizer->inComment == 2
 			&& tokenizer->startPos < tokenizer->inputLength - 1
@@ -215,7 +249,7 @@ const char *Tokenizer_SRB2Read(tokenizer_t *tokenizer, UINT32 i)
 		}
 
 		tokenizer->startPos++;
-		Tokenizer_DetectComment(tokenizer, &tokenizer->startPos);
+		DetectComment(tokenizer, &tokenizer->startPos);
 	}
 
 	// If the end of the string is reached, no token is to be read
@@ -238,7 +272,10 @@ const char *Tokenizer_SRB2Read(tokenizer_t *tokenizer, UINT32 i)
 	{
 		tokenizer->endPos = ++tokenizer->startPos;
 		while (tokenizer->input[tokenizer->endPos] != '"' && tokenizer->endPos < tokenizer->inputLength)
+		{
+			DetectLineBreak(tokenizer, tokenizer->endPos);
 			tokenizer->endPos++;
+		}
 
 		Tokenizer_ReadTokenString(tokenizer, i);
 		tokenizer->endPos++;
@@ -260,7 +297,7 @@ const char *Tokenizer_SRB2Read(tokenizer_t *tokenizer, UINT32 i)
 	{
 		tokenizer->endPos++;
 		// Try to detect comment starts now; if it's in a comment, we don't want it in this token
-		Tokenizer_DetectComment(tokenizer, &tokenizer->endPos);
+		DetectComment(tokenizer, &tokenizer->endPos);
 	}
 
 	Tokenizer_ReadTokenString(tokenizer, i);
