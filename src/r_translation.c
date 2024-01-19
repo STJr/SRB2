@@ -17,6 +17,7 @@
 #include "z_zone.h"
 #include "w_wad.h"
 #include "m_tokenizer.h"
+#include "m_misc.h"
 
 #include <errno.h>
 
@@ -528,50 +529,26 @@ void R_LoadParsedTranslations(void)
 
 static boolean ExpectToken(tokenizer_t *sc, const char *expect)
 {
-	return strcmp(sc->get(sc, 0), expect) == 0;
-}
-
-static boolean StringToNumber(const char *tkn, int *out)
-{
-	char *endPos = NULL;
-
-	errno = 0;
-
-	int result = strtol(tkn, &endPos, 10);
-	if (endPos == tkn || *endPos != '\0')
+	const char *tkn = sc->get(sc, 0);
+	if (!tkn)
 		return false;
-
-	if (errno == ERANGE)
-		return false;
-
-	*out = result;
-
-	return true;
+	return strcmp(tkn, expect) == 0;
 }
 
 static boolean ParseNumber(tokenizer_t *sc, int *out)
 {
-	return StringToNumber(sc->get(sc, 0), out);
+	const char *tkn = sc->get(sc, 0);
+	if (!tkn)
+		return false;
+	return M_StringToNumber(tkn, out);
 }
 
 static boolean ParseDecimal(tokenizer_t *sc, double *out)
 {
 	const char *tkn = sc->get(sc, 0);
-
-	char *endPos = NULL;
-
-	errno = 0;
-
-	double result = strtod(tkn, &endPos);
-	if (endPos == tkn || *endPos != '\0')
+	if (!tkn)
 		return false;
-
-	if (errno == ERANGE)
-		return false;
-
-	*out = result;
-
-	return true;
+	return M_StringToDecimal(tkn, out);
 }
 
 static struct PaletteRemapParseResult *ThrowError(const char *format, ...)
@@ -615,6 +592,9 @@ static struct PaletteRemapParseResult *PaletteRemap_ParseString(tokenizer_t *sc)
 		return ThrowError("expected '='");
 
 	const char *tkn = sc->get(sc, 0);
+	if (tkn == NULL)
+		return ThrowError("unexpected EOF");
+
 	if (strcmp(tkn, "[") == 0)
 	{
 		// translation using RGB values
@@ -785,7 +765,7 @@ static struct PaletteRemapParseResult *PaletteRemap_ParseString(tokenizer_t *sc)
 	{
 		int pal1, pal2;
 
-		if (!StringToNumber(tkn, &pal1))
+		if (!M_StringToNumber(tkn, &pal1))
 			return ThrowError("expected a number for starting index");
 		if (!ExpectToken(sc, ":"))
 			return ThrowError("expected ':'");
@@ -809,6 +789,13 @@ static struct PaletteRemapParseResult *PaletteRemap_ParseTranslation(const char 
 	return result;
 }
 
+#define CHECK_EOF() \
+	if (!tkn) \
+	{ \
+		CONS_Alert(CONS_ERROR, "Error parsing translation '%s': Unexpected EOF\n", name); \
+		goto fail; \
+	}
+
 void R_ParseTrnslate(INT32 wadNum, UINT16 lumpnum)
 {
 	char *lumpData = (char *)W_CacheLumpNumPwad(wadNum, lumpnum, PU_STATIC);
@@ -827,9 +814,11 @@ void R_ParseTrnslate(INT32 wadNum, UINT16 lumpnum)
 		char *name = Z_StrDup(tkn);
 
 		tkn = sc->get(sc, 0);
+		CHECK_EOF();
 		if (strcmp(tkn, ":") == 0)
 		{
 			tkn = sc->get(sc, 0);
+			CHECK_EOF();
 
 			base_translation = R_FindCustomTranslation(tkn);
 			if (base_translation == -1)
@@ -847,6 +836,15 @@ void R_ParseTrnslate(INT32 wadNum, UINT16 lumpnum)
 			goto fail;
 		}
 		tkn = sc->get(sc, 0);
+		CHECK_EOF();
+
+		if (strcmp(tkn, "\"") != 0)
+		{
+			CONS_Alert(CONS_ERROR, "Error parsing translation '%s': Expected '=', got '%s'\n", name, tkn);
+			goto fail;
+		}
+		tkn = sc->get(sc, 0);
+		CHECK_EOF();
 
 		struct PaletteRemapParseResult *result = NULL;
 		do {
@@ -862,10 +860,15 @@ void R_ParseTrnslate(INT32 wadNum, UINT16 lumpnum)
 			if (!tkn)
 				break;
 
-			if (strcmp(tkn, ",") != 0)
-				break;
+			if (strcmp(tkn, "\"") != 0)
+			{
+				CONS_Alert(CONS_ERROR, "Error parsing translation '%s': Expected '=', got '%s'\n", name, tkn);
+				goto fail;
+			}
 
 			tkn = sc->get(sc, 0);
+			if (!tkn || strcmp(tkn, ",") != 0)
+				break;
 		} while (true);
 
 		// Allocate it and register it
@@ -885,6 +888,8 @@ fail:
 	Tokenizer_Close(sc);
 	Z_Free(text);
 }
+
+#undef CHECK_EOF
 
 typedef struct CustomTranslation
 {
