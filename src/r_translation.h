@@ -15,10 +15,59 @@
 
 #include "doomdef.h"
 
+typedef enum
+{
+	REMAP_ADD_INDEXRANGE,
+	REMAP_ADD_COLORRANGE,
+	REMAP_ADD_COLOURISATION,
+	REMAP_ADD_DESATURATION,
+	REMAP_ADD_TINT,
+	REMAP_ADD_INVERT
+} paletteremaptype_t;
+
+typedef struct
+{
+	int start, end;
+	paletteremaptype_t type;
+	union
+	{
+		struct
+		{
+			int pal1, pal2;
+		} indexRange;
+		struct
+		{
+			int r1, g1, b1;
+			int r2, g2, b2;
+		} colorRange;
+		struct
+		{
+			double r1, g1, b1;
+			double r2, g2, b2;
+		} desaturation;
+		struct
+		{
+			int r, g, b;
+		} colourisation;
+		struct
+		{
+			int r, g, b, amount;
+		} tint;
+	};
+} paletteremap_t;
+
 typedef struct
 {
 	UINT8 remap[256];
 	unsigned num_entries;
+
+	paletteremap_t *sources;
+	unsigned num_sources;
+
+	// A remap is 256 bytes long, and there is a max of 1182.
+	// This means allocating (1182 * 256) bytes, which equals 302592, or ~302kb of memory for every translation.
+	// So we allocate a list instead.
+	UINT8 **skincolor_remap;
 } remaptable_t;
 
 void PaletteRemap_Init(void);
@@ -35,6 +84,7 @@ void R_AddCustomTranslation(const char *name, int trnum);
 const char *R_GetCustomTranslationName(unsigned id);
 unsigned R_NumCustomTranslations(void);
 remaptable_t *R_GetTranslationByID(int id);
+UINT8 *R_GetTranslationRemap(int id, skincolornum_t skincolor, INT32 skinnum);
 boolean R_TranslationIsValid(int id);
 
 void R_ParseTrnslate(INT32 wadNum, UINT16 lumpnum);
