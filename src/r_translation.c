@@ -75,8 +75,7 @@ struct PaletteRemapParseResult
 		} tint;
 	};
 
-	boolean has_error;
-	char error[4096];
+	char *error;
 };
 
 void PaletteRemap_Init(void)
@@ -156,14 +155,6 @@ boolean PaletteRemap_IsIdentity(remaptable_t *tr)
 
 unsigned PaletteRemap_Add(remaptable_t *tr)
 {
-#if 0
-	for (unsigned i = 0; i < numpaletteremaps; i++)
-	{
-		if (PaletteRemap_Equal(tr, paletteremaps[i]))
-			return i;
-	}
-#endif
-
 	numpaletteremaps++;
 	paletteremaps = Z_Realloc(paletteremaps, sizeof(remaptable_t *) * numpaletteremaps, PU_STATIC, NULL);
 	paletteremaps[numpaletteremaps - 1] = tr;
@@ -453,15 +444,13 @@ struct ParsedTranslation
 static struct ParsedTranslation *parsedTranslationListHead = NULL;
 static struct ParsedTranslation *parsedTranslationListTail = NULL;
 
-static void AddParsedTranslation(unsigned id, int base_translation, struct PaletteRemapParseResult *data)
+static void AddParsedTranslation(remaptable_t *remap, remaptable_t *base_translation, struct PaletteRemapParseResult *data)
 {
 	struct ParsedTranslation *node = Z_Calloc(sizeof(struct ParsedTranslation), PU_STATIC, NULL);
 
-	node->remap = paletteremaps[id];
+	node->remap = remap;
 	node->data = data;
-
-	if (base_translation != -1)
-		node->baseTranslation = paletteremaps[base_translation];
+	node->baseTranslation = base_translation;
 
 	if (parsedTranslationListHead == NULL)
 		parsedTranslationListHead = parsedTranslationListTail = node;
@@ -511,12 +500,20 @@ void R_LoadParsedTranslations(void)
 		struct ParsedTranslation *next = node->next;
 
 		remaptable_t *tr = node->remap;
-		PaletteRemap_SetIdentity(tr);
+		if (tr)
+		{
+			if (tr->num_entries == 0)
+			{
+				tr->num_entries = NUM_PALETTE_ENTRIES;
 
-		if (node->baseTranslation)
-			memcpy(tr, node->baseTranslation, sizeof(remaptable_t));
+				PaletteRemap_SetIdentity(tr);
 
-		PaletteRemap_ApplyResult(tr, result);
+				if (node->baseTranslation)
+					memcpy(tr, node->baseTranslation, sizeof(remaptable_t));
+			}
+
+			PaletteRemap_ApplyResult(tr, result);
+		}
 
 		Z_Free(result);
 		Z_Free(node);
@@ -553,14 +550,16 @@ static boolean ParseDecimal(tokenizer_t *sc, double *out)
 
 static struct PaletteRemapParseResult *ThrowError(const char *format, ...)
 {
+	const size_t err_size = 512 * sizeof(char);
+
 	struct PaletteRemapParseResult *err = Z_Calloc(sizeof(struct PaletteRemapParseResult), PU_STATIC, NULL);
+
+	err->error = Z_Calloc(err_size, PU_STATIC, NULL);
 
 	va_list argptr;
 	va_start(argptr, format);
-	vsnprintf(err->error, sizeof err->error, format, argptr);
+	vsnprintf(err->error, err_size, format, argptr);
 	va_end(argptr);
-
-	err->has_error = true;
 
 	return err;
 }
@@ -789,15 +788,119 @@ static struct PaletteRemapParseResult *PaletteRemap_ParseTranslation(const char 
 	return result;
 }
 
+static void PrintError(const char *name, const char *format, ...)
+{
+	char error[256];
+
+	va_list argptr;
+	va_start(argptr, format);
+	vsnprintf(error, sizeof error, format, argptr);
+	va_end(argptr);
+
+	CONS_Alert(CONS_ERROR, "Error parsing translation '%s': %s\n", name, error);
+}
+
 #define CHECK_EOF() \
 	if (!tkn) \
 	{ \
-		CONS_Alert(CONS_ERROR, "Error parsing translation '%s': Unexpected EOF\n", name); \
+		PrintError(name, "Unexpected EOF"); \
 		goto fail; \
 	}
 
+struct NewTranslation
+{
+	int id;
+	char *name;
+	char *base_translation_name;
+	struct PaletteRemapParseResult **results;
+	size_t num_results;
+};
+
+static void AddNewTranslation(struct NewTranslation **list_p, size_t *num, char *name, int id, char *base_translation_name, struct PaletteRemapParseResult *parse_result)
+{
+	struct NewTranslation *list = *list_p;
+
+	size_t count = *num;
+
+	for (size_t i = 0; i < count; i++)
+	{
+		struct NewTranslation *entry = &list[i];
+		if (entry->id == id && strcmp(entry->name, name) == 0)
+		{
+			if (entry->base_translation_name && base_translation_name
+			&& strcmp(entry->base_translation_name, base_translation_name) != 0)
+				continue;
+			entry->num_results++;
+			entry->results = Z_Realloc(entry->results,
+				entry->num_results * sizeof(struct PaletteRemapParseResult **), PU_STATIC, NULL);
+			entry->results[entry->num_results - 1] = parse_result;
+			return;
+		}
+	}
+
+	size_t i = count;
+
+	count++;
+	list = Z_Realloc(list, count * sizeof(struct NewTranslation), PU_STATIC, NULL);
+
+	struct NewTranslation *entry = &list[i];
+	entry->name = name;
+	entry->id = id;
+	entry->base_translation_name = base_translation_name;
+	entry->num_results = 1;
+	entry->results = Z_Realloc(entry->results, 1 * sizeof(struct PaletteRemapParseResult **), PU_STATIC, NULL);
+	entry->results[0] = parse_result;
+
+	*list_p = list;
+	*num = count;
+}
+
+static void PrepareNewTranslations(struct NewTranslation *list, size_t count)
+{
+	if (!list)
+		return;
+
+	for (size_t i = 0; i < count; i++)
+	{
+		struct NewTranslation *entry = &list[i];
+
+		remaptable_t *tr = R_GetTranslationByID(entry->id);
+		if (tr == NULL)
+		{
+			tr = PaletteRemap_New();
+			R_AddCustomTranslation(entry->name, PaletteRemap_Add(tr));
+		}
+
+		remaptable_t *base_translation = NULL;
+		char *base_translation_name = entry->base_translation_name;
+		if (base_translation_name)
+		{
+			int base_translation_id = R_FindCustomTranslation(base_translation_name);
+			if (base_translation_id == -1)
+				PrintError(entry->name, "No translation named '%s'", base_translation_name);
+			else
+				base_translation = R_GetTranslationByID(base_translation_id);
+		}
+
+		// The translation is not generated until later, because the palette may not have been loaded.
+		// We store the result for when it's needed.
+		for (size_t j = 0; j < entry->num_results; j++)
+			AddParsedTranslation(tr, base_translation, entry->results[j]);
+
+		tr->num_entries = 0;
+
+		Z_Free(base_translation_name);
+		Z_Free(entry->results);
+		Z_Free(entry->name);
+	}
+
+	Z_Free(list);
+}
+
 void R_ParseTrnslate(INT32 wadNum, UINT16 lumpnum)
 {
+	tokenizer_t *sc = NULL;
+	const char *tkn = NULL;
 	char *lumpData = (char *)W_CacheLumpNumPwad(wadNum, lumpnum, PU_STATIC);
 	size_t lumpLength = W_LumpLengthPwad(wadNum, lumpnum);
 	char *text = (char *)Z_Malloc((lumpLength + 1), PU_STATIC, NULL);
@@ -805,13 +908,17 @@ void R_ParseTrnslate(INT32 wadNum, UINT16 lumpnum)
 	text[lumpLength] = '\0';
 	Z_Free(lumpData);
 
-	tokenizer_t *sc = Tokenizer_Open(text, 1);
-	const char *tkn = sc->get(sc, 0);
+	sc = Tokenizer_Open(text, 1);
+	tkn = sc->get(sc, 0);
+
+	struct NewTranslation *list = NULL;
+	size_t list_count = 0;
+
 	while (tkn != NULL)
 	{
-		int base_translation = -1;
-
 		char *name = Z_StrDup(tkn);
+
+		char *base_translation_name = NULL;
 
 		tkn = sc->get(sc, 0);
 		CHECK_EOF();
@@ -820,19 +927,15 @@ void R_ParseTrnslate(INT32 wadNum, UINT16 lumpnum)
 			tkn = sc->get(sc, 0);
 			CHECK_EOF();
 
-			base_translation = R_FindCustomTranslation(tkn);
-			if (base_translation == -1)
-			{
-				CONS_Alert(CONS_ERROR, "Error parsing translation '%s': No translation named '%s'\n", name, tkn);
-				goto fail;
-			}
+			base_translation_name = Z_StrDup(tkn);
 
 			tkn = sc->get(sc, 0);
+			CHECK_EOF();
 		}
 
 		if (strcmp(tkn, "=") != 0)
 		{
-			CONS_Alert(CONS_ERROR, "Error parsing translation '%s': Expected '=', got '%s'\n", name, tkn);
+			PrintError(name, "Expected '=', got '%s'", tkn);
 			goto fail;
 		}
 		tkn = sc->get(sc, 0);
@@ -840,52 +943,65 @@ void R_ParseTrnslate(INT32 wadNum, UINT16 lumpnum)
 
 		if (strcmp(tkn, "\"") != 0)
 		{
-			CONS_Alert(CONS_ERROR, "Error parsing translation '%s': Expected '=', got '%s'\n", name, tkn);
+			PrintError(name, "Expected '\"', got '%s'", tkn);
 			goto fail;
 		}
 		tkn = sc->get(sc, 0);
 		CHECK_EOF();
 
-		struct PaletteRemapParseResult *result = NULL;
+		int existing_id = R_FindCustomTranslation(name);
+
+		// Parse all of the translations
 		do {
-			result = PaletteRemap_ParseTranslation(tkn);
-			if (result->has_error)
+			struct PaletteRemapParseResult *parse_result = PaletteRemap_ParseTranslation(tkn);
+			if (parse_result->error)
 			{
-				CONS_Alert(CONS_ERROR, "Error parsing translation '%s': %s\n", name, result->error);
-				Z_Free(result);
+				PrintError(name, "%s", parse_result->error);
+				Z_Free(parse_result->error);
 				goto fail;
+			}
+			else
+			{
+				AddNewTranslation(&list, &list_count, name, existing_id, base_translation_name, parse_result);
 			}
 
 			tkn = sc->get(sc, 0);
-			if (!tkn)
-				break;
-
-			if (strcmp(tkn, "\"") != 0)
+			if (!tkn || strcmp(tkn, "\"") != 0)
 			{
-				CONS_Alert(CONS_ERROR, "Error parsing translation '%s': Expected '=', got '%s'\n", name, tkn);
+				if (tkn)
+					PrintError(name, "Expected '\"', got '%s'", tkn);
+				else
+					PrintError(name, "Expected '\"', got EOF");
 				goto fail;
 			}
 
+			// Get ',' or parse the next line
 			tkn = sc->get(sc, 0);
 			if (!tkn || strcmp(tkn, ",") != 0)
 				break;
+
+			// Get '"'
+			tkn = sc->get(sc, 0);
+			if (!tkn || strcmp(tkn, "\"") != 0)
+			{
+				if (!tkn)
+					PrintError(name, "Expected '\"', got EOF");
+				else
+					PrintError(name, "Expected '\"', got '%s'", tkn);
+				goto fail;
+			}
+			tkn = sc->get(sc, 0);
+			CHECK_EOF();
 		} while (true);
-
-		// Allocate it and register it
-		remaptable_t *tr = PaletteRemap_New();
-		unsigned id = PaletteRemap_Add(tr);
-		R_AddCustomTranslation(name, id);
-
-		// Free this, since it's no longer needed
-		Z_Free(name);
-
-		// The translation is not generated until later, because the palette may not have been loaded.
-		// We store the result for when it's needed.
-		AddParsedTranslation(id, base_translation, result);
 	}
 
 fail:
+	// Now add all of the new translations
+	if (list)
+		PrepareNewTranslations(list, list_count);
+
 	Tokenizer_Close(sc);
+
 	Z_Free(text);
 }
 
