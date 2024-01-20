@@ -64,7 +64,7 @@ typedef struct
 	paletteremap_t *sources;
 	unsigned num_sources;
 
-	// A remap is 256 bytes long, and there is a max of 1182.
+	// A typical remap is 256 bytes long, and there is currently a maximum of 1182 skincolors.
 	// This means allocating (1182 * 256) bytes, which equals 302592, or ~302kb of memory for every translation.
 	// So we allocate a list instead.
 	UINT8 **skincolor_remap;
