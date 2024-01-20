@@ -15,6 +15,8 @@
 
 #include "doomdef.h"
 
+#include "r_draw.h"
+
 typedef enum
 {
 	REMAP_ADD_INDEXRANGE,
@@ -58,16 +60,16 @@ typedef struct
 
 typedef struct
 {
-	UINT8 remap[256];
+	UINT8 remap[NUM_PALETTE_ENTRIES];
 	unsigned num_entries;
 
 	paletteremap_t *sources;
 	unsigned num_sources;
 
-	// A typical remap is 256 bytes long, and there is currently a maximum of 1182 skincolors.
-	// This means allocating (1182 * 256) bytes, which equals 302592, or ~302kb of memory for every translation.
-	// So we allocate a list instead.
-	UINT8 **skincolor_remap;
+	// A typical remap is 256 bytes long, and there is currently a maximum of 1182 skincolors, and 263 possible color cache entries.
+	// This would mean allocating (1182 * 256 * 263) bytes, which equals 79581696 bytes, or ~79mb of memory for every remap.
+	// So instead a few lists are allocated.
+	colorcache_t ***skincolor_remaps;
 } remaptable_t;
 
 void PaletteRemap_Init(void);
@@ -85,6 +87,7 @@ const char *R_GetCustomTranslationName(unsigned id);
 unsigned R_NumCustomTranslations(void);
 remaptable_t *R_GetTranslationByID(int id);
 UINT8 *R_GetTranslationRemap(int id, skincolornum_t skincolor, INT32 skinnum);
+void R_UpdateTranslationRemaps(skincolornum_t skincolor, INT32 skinnum);
 boolean R_TranslationIsValid(int id);
 
 void R_ParseTrnslate(INT32 wadNum, UINT16 lumpnum);

@@ -1103,6 +1103,17 @@ remaptable_t *R_GetTranslationByID(int id)
 	return paletteremaps[id];
 }
 
+static void R_ApplyTranslationRemap(remaptable_t *tr, UINT8 *remap, skincolornum_t skincolor, INT32 skinnum)
+{
+	UINT8 *base_skincolor = R_GetTranslationColormap(skinnum, skincolor, GTC_CACHE);
+
+	for (unsigned i = 0; i < NUM_PALETTE_ENTRIES; i++)
+		remap[i] = base_skincolor[i];
+
+	for (unsigned i = 0; i < tr->num_sources; i++)
+		PaletteRemap_Apply(remap, &tr->sources[i]);
+}
+
 UINT8 *R_GetTranslationRemap(int id, skincolornum_t skincolor, INT32 skinnum)
 {
 	remaptable_t *tr = R_GetTranslationByID(id);
@@ -1112,25 +1123,39 @@ UINT8 *R_GetTranslationRemap(int id, skincolornum_t skincolor, INT32 skinnum)
 	if (!tr->num_sources || skincolor == SKINCOLOR_NONE)
 		return tr->remap;
 
-	if (!tr->skincolor_remap)
-		tr->skincolor_remap = Z_Calloc(NUM_PALETTE_ENTRIES * MAXSKINCOLORS, PU_LEVEL, &tr->skincolor_remap);
+	if (!tr->skincolor_remaps)
+		Z_Calloc(sizeof(*tr->skincolor_remaps) * TT_CACHE_SIZE, PU_LEVEL, &tr->skincolor_remaps);
 
-	if (!tr->skincolor_remap[skincolor])
+	if (!tr->skincolor_remaps[skinnum])
+		tr->skincolor_remaps[skinnum] = Z_Calloc(NUM_PALETTE_ENTRIES * MAXSKINCOLORS, PU_LEVEL, NULL);
+
+	colorcache_t *cache = tr->skincolor_remaps[skinnum][skincolor];
+	if (!cache)
 	{
-		UINT8 *remap = Z_Calloc(NUM_PALETTE_ENTRIES, PU_LEVEL, NULL);
+		cache = Z_Calloc(sizeof(colorcache_t), PU_LEVEL, NULL);
 
-		UINT8 *base_skincolor = R_GetTranslationColormap(skinnum, skincolor, GTC_CACHE);
+		R_ApplyTranslationRemap(tr, cache->colors, skincolor, skinnum);
 
-		for (unsigned i = 0; i < NUM_PALETTE_ENTRIES; i++)
-			remap[i] = base_skincolor[i];
-
-		for (unsigned i = 0; i < tr->num_sources; i++)
-			PaletteRemap_Apply(remap, &tr->sources[i]);
-
-		tr->skincolor_remap[skincolor] = remap;
+		tr->skincolor_remaps[skinnum][skincolor] = cache;
 	}
 
-	return tr->skincolor_remap[skincolor];
+	return cache->colors;
+}
+
+static void R_UpdateTranslation(remaptable_t *tr, skincolornum_t skincolor, INT32 skinnum)
+{
+	if (!tr->num_sources || !tr->skincolor_remaps || !tr->skincolor_remaps[skinnum])
+		return;
+
+	colorcache_t *cache = tr->skincolor_remaps[skinnum][skincolor];
+	if (cache)
+		R_ApplyTranslationRemap(tr, cache->colors, skincolor, skinnum);
+}
+
+void R_UpdateTranslationRemaps(skincolornum_t skincolor, INT32 skinnum)
+{
+	for (unsigned i = 0; i < numpaletteremaps; i++)
+		R_UpdateTranslation(paletteremaps[i], skincolor, skinnum);
 }
 
 boolean R_TranslationIsValid(int id)

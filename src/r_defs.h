@@ -26,9 +26,6 @@
 
 #include "taglist.h"
 
-// Amount of colors in the palette
-#define NUM_PALETTE_ENTRIES 256
-
 //
 // ClipWallSegment
 // Clips the given range of columns
