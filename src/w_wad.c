@@ -1155,10 +1155,12 @@ UINT16 W_InitFolder(const char *path, boolean mainfile, boolean startup)
 	wadfile->foldercount = foldercount;
 	wadfile->lumpinfo = lumpinfo;
 	wadfile->important = important;
-
-	// Irrelevant.
 	wadfile->filesize = 0;
-	memset(wadfile->md5sum, 0x00, 16);
+
+	for (i = 0; i < numlumps; i++)
+		wadfile->filesize += lumpinfo[i].disksize;
+
+	memset(wadfile->md5sum, 0x00, 16); // Irrelevant.
 
 	Z_Calloc(numlumps * sizeof (*wadfile->lumpcache), PU_STATIC, &wadfile->lumpcache);
 	Z_Calloc(numlumps * sizeof (*wadfile->patchcache), PU_STATIC, &wadfile->patchcache);
