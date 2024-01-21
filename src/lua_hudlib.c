@@ -14,6 +14,7 @@
 #include "fastcmp.h"
 #include "r_defs.h"
 #include "r_local.h"
+#include "r_translation.h"
 #include "st_stuff.h" // hudinfo[]
 #include "g_game.h"
 #include "i_video.h" // rendermode
@@ -1125,7 +1126,10 @@ static int libd_getColormap(lua_State *L)
 	INT32 skinnum = TC_DEFAULT;
 	skincolornum_t color = luaL_optinteger(L, 2, 0);
 	UINT8* colormap = NULL;
+	int translation_id = -1;
+
 	HUDONLY
+
 	if (lua_isnoneornil(L, 1))
 		; // defaults to TC_DEFAULT
 	else if (lua_type(L, 1) == LUA_TNUMBER) // skin number
@@ -1144,9 +1148,21 @@ static int libd_getColormap(lua_State *L)
 			skinnum = i;
 	}
 
-	// all was successful above, now we generate the colormap at last!
+	if (!lua_isnoneornil(L, 3))
+	{
+		const char *translation_name = luaL_checkstring(L, 3);
+		translation_id = R_FindCustomTranslation(translation_name);
+		if (translation_id == -1)
+			return luaL_error(L, "invalid translation '%s'.", translation_name);
+	}
 
-	colormap = R_GetTranslationColormap(skinnum, color, GTC_CACHE);
+	// all was successful above, now we generate the colormap at last!
+	if (translation_id != -1)
+		colormap = R_GetTranslationRemap(translation_id, color, skinnum);
+
+	if (colormap == NULL)
+		colormap = R_GetTranslationColormap(skinnum, color, GTC_CACHE);
+
 	LUA_PushUserdata(L, colormap, META_COLORMAP); // push as META_COLORMAP userdata, specifically for patches to use!
 	return 1;
 }

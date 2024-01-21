@@ -2259,6 +2259,44 @@ boolean M_IsStringEmpty(const char *s)
 	return true;
 }
 
+// Converts a string containing a whole number into an int. Returns false if the conversion failed.
+boolean M_StringToNumber(const char *input, int *out)
+{
+	char *end_position = NULL;
+
+	errno = 0;
+
+	int result = strtol(input, &end_position, 10);
+	if (end_position == input || *end_position != '\0')
+		return false;
+
+	if (errno == ERANGE)
+		return false;
+
+	*out = result;
+
+	return true;
+}
+
+// Converts a string containing a number into a double. Returns false if the conversion failed.
+boolean M_StringToDecimal(const char *input, double *out)
+{
+	char *end_position = NULL;
+
+	errno = 0;
+
+	double result = strtod(input, &end_position);
+	if (end_position == input || *end_position != '\0')
+		return false;
+
+	if (errno == ERANGE)
+		return false;
+
+	*out = result;
+
+	return true;
+}
+
 // Rounds off floating numbers and checks for 0 - 255 bounds
 int M_RoundUp(double number)
 {

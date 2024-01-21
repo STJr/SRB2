@@ -764,6 +764,12 @@ void R_DrawFlippedMaskedColumn(column_t *column)
 
 UINT8 *R_GetTranslationForThing(mobj_t *mobj, skincolornum_t color, UINT16 translation)
 {
+	INT32 skinnum = TC_DEFAULT;
+
+	boolean is_player = mobj->skin && mobj->sprite == SPR_PLAY;
+	if (is_player) // This thing is a player!
+		skinnum = ((skin_t*)mobj->skin)->skinnum;
+
 	if (R_ThingIsFlashing(mobj)) // Bosses "flash"
 	{
 		if (mobj->type == MT_CYBRAKDEMON || mobj->colorized)
@@ -775,9 +781,9 @@ UINT8 *R_GetTranslationForThing(mobj_t *mobj, skincolornum_t color, UINT16 trans
 	}
 	else if (translation != 0)
 	{
-		remaptable_t *tr = R_GetTranslationByID(translation);
+		UINT8 *tr = R_GetTranslationRemap(translation, color, skinnum);
 		if (tr != NULL)
-			return tr->remap;
+			return tr;
 	}
 	else if (color != SKINCOLOR_NONE)
 	{
@@ -793,13 +799,8 @@ UINT8 *R_GetTranslationForThing(mobj_t *mobj, skincolornum_t color, UINT16 trans
 			else
 				return R_GetTranslationColormap(TC_RAINBOW, color, GTC_CACHE);
 		}
-		else if (mobj->skin && mobj->sprite == SPR_PLAY) // This thing is a player!
-		{
-			UINT8 skinnum = ((skin_t*)mobj->skin)->skinnum;
+		else
 			return R_GetTranslationColormap(skinnum, color, GTC_CACHE);
-		}
-		else // Use the defaults
-			return R_GetTranslationColormap(TC_DEFAULT, color, GTC_CACHE);
 	}
 	else if (mobj->sprite == SPR_PLAY) // Looks like a player, but doesn't have a color? Get rid of green sonic syndrome.
 		return R_GetTranslationColormap(TC_DEFAULT, SKINCOLOR_BLUE, GTC_CACHE);

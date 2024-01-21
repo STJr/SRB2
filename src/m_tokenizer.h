@@ -24,6 +24,8 @@ typedef struct Tokenizer
 	UINT32 endPos;
 	UINT32 inputLength;
 	UINT8 inComment; // 0 = not in comment, 1 = // Single-line, 2 = /* Multi-line */
+	UINT8 inString; // 0 = not in string, 1 = in string, 2 = just left string
+	int line;
 	const char *(*get)(struct Tokenizer*, UINT32);
 } tokenizer_t;
 
