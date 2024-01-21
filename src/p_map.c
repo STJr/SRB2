@@ -5079,7 +5079,7 @@ fixed_t P_CeilingzAtPos(fixed_t x, fixed_t y, fixed_t z, fixed_t height)
 	return ceilingz;
 }
 
-INT32 P_GetSectorLightAt(sector_t *sector, fixed_t x, fixed_t y, fixed_t z)
+INT32 P_GetSectorLightNumAt(sector_t *sector, fixed_t x, fixed_t y, fixed_t z)
 {
 	if (!sector->numlights)
 		return -1;
@@ -5098,10 +5098,23 @@ INT32 P_GetSectorLightAt(sector_t *sector, fixed_t x, fixed_t y, fixed_t z)
 	return light;
 }
 
+INT32 P_GetLightLevelFromSectorAt(sector_t *sector, fixed_t x, fixed_t y, fixed_t z)
+{
+	if (sector->numlights)
+		return *sector->lightlist[P_GetSectorLightNumAt(sector, x, y, z)].lightlevel;
+	else
+		return sector->lightlevel;
+}
+
+INT32 P_GetSectorLightLevelAt(fixed_t x, fixed_t y, fixed_t z)
+{
+	return P_GetLightLevelFromSectorAt(R_PointInSubsector(x, y)->sector, x, y, z);
+}
+
 extracolormap_t *P_GetColormapFromSectorAt(sector_t *sector, fixed_t x, fixed_t y, fixed_t z)
 {
 	if (sector->numlights)
-		return *sector->lightlist[P_GetSectorLightAt(sector, x, y, z)].extra_colormap;
+		return *sector->lightlist[P_GetSectorLightNumAt(sector, x, y, z)].extra_colormap;
 	else
 		return sector->extra_colormap;
 }

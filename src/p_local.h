@@ -446,7 +446,9 @@ boolean PIT_PushableMoved(mobj_t *thing);
 
 boolean P_DoSpring(mobj_t *spring, mobj_t *object);
 
-INT32 P_GetSectorLightAt(sector_t *sector, fixed_t x, fixed_t y, fixed_t z);
+INT32 P_GetSectorLightNumAt(sector_t *sector, fixed_t x, fixed_t y, fixed_t z);
+INT32 P_GetLightLevelFromSectorAt(sector_t *sector, fixed_t x, fixed_t y, fixed_t z);
+INT32 P_GetSectorLightLevelAt(fixed_t x, fixed_t y, fixed_t z);
 extracolormap_t *P_GetColormapFromSectorAt(sector_t *sector, fixed_t x, fixed_t y, fixed_t z);
 extracolormap_t *P_GetSectorColormapAt(fixed_t x, fixed_t y, fixed_t z);
 
