@@ -1366,6 +1366,15 @@ static void P_LoadSidedefs(UINT8 *data)
 		sd->scalex_top = sd->scalex_mid = sd->scalex_bottom = FRACUNIT;
 		sd->scaley_top = sd->scaley_mid = sd->scaley_bottom = FRACUNIT;
 
+		sd->flags = 0;
+
+		for (unsigned j = 0; j < NUM_WALL_OVERLAYS; j++)
+		{
+			sd->overlays[j].texture = R_TextureNumForName("-");
+			sd->overlays[j].offsetx = sd->overlays[j].offsety = 0;
+			sd->overlays[j].scalex = sd->overlays[j].scaley = FRACUNIT;
+		}
+
 		P_SetSidedefSector(i, (UINT16)SHORT(msd->sector));
 
 		// Special info stored in texture fields!
@@ -1896,6 +1905,24 @@ static void ParseTextmapSectorParameter(UINT32 i, const char *param, const char 
 	}
 }
 
+static void ParseTextmapSidedefOverlay(unsigned which, UINT32 i, const char *param, const char *val)
+{
+	if (fastcmp(param, "texture"))
+		sides[i].overlays[which].texture = R_TextureNumForName(val);
+	else if (fastcmp(param, "offsetx"))
+		sides[i].overlays[which].offsetx = FLOAT_TO_FIXED(atof(val));
+	else if (fastcmp(param, "offsety"))
+		sides[i].overlays[which].offsety = FLOAT_TO_FIXED(atof(val));
+	else if (fastcmp(param, "scalex"))
+		sides[i].overlays[which].scalex = FLOAT_TO_FIXED(atof(val));
+	else if (fastcmp(param, "scaley"))
+		sides[i].overlays[which].scaley = FLOAT_TO_FIXED(atof(val));
+	else if (fastcmp(param, "noskew") && fastcmp("true", val))
+		sides[i].flags |= GET_SIDEFLAG_EDGENOSKEW(which);
+	else if (fastcmp(param, "wrap") && fastcmp("true", val))
+		sides[i].flags |= GET_SIDEFLAG_EDGEWRAP(which);
+}
+
 static void ParseTextmapSidedefParameter(UINT32 i, const char *param, const char *val)
 {
 	if (fastcmp(param, "offsetx"))
@@ -1936,6 +1963,19 @@ static void ParseTextmapSidedefParameter(UINT32 i, const char *param, const char
 		P_SetSidedefSector(i, atol(val));
 	else if (fastcmp(param, "repeatcnt"))
 		sides[i].repeatcnt = atol(val);
+	// Oh God there's a total of 28 fields to read. Uhhh
+	// Okay, so ParseTextmapSidedefOverlay handles the parsing of all the parameters edges have.
+	else if (fastncmp(param, "edge_", 5) && strlen(param) > 5)
+	{
+		if (fastncmp(param, "edge_top_upper_", 15) && strlen(param) > 15)
+			ParseTextmapSidedefOverlay(EDGE_TEXTURE_TOP_UPPER, i, param + 15, val);
+		else if (fastncmp(param, "edge_top_lower_", 15) && strlen(param) > 15)
+			ParseTextmapSidedefOverlay(EDGE_TEXTURE_TOP_LOWER, i, param + 15, val);
+		else if (fastncmp(param, "edge_bottom_upper_", 18) && strlen(param) > 18)
+			ParseTextmapSidedefOverlay(EDGE_TEXTURE_BOTTOM_UPPER, i, param + 18, val);
+		else if (fastncmp(param, "edge_bottom_lower_", 18) && strlen(param) > 18)
+			ParseTextmapSidedefOverlay(EDGE_TEXTURE_BOTTOM_LOWER, i, param + 18, val);
+	}
 }
 
 static void ParseTextmapLinedefParameter(UINT32 i, const char *param, const char *val)
@@ -2020,8 +2060,6 @@ static void ParseTextmapLinedefParameter(UINT32 i, const char *param, const char
 		lines[i].flags |= ML_MIDSOLID;
 	else if (fastcmp(param, "wrapmidtex") && fastcmp("true", val))
 		lines[i].flags |= ML_WRAPMIDTEX;
-	/*else if (fastcmp(param, "effect6") && fastcmp("true", val))
-		lines[i].flags |= ML_EFFECT6;*/
 	else if (fastcmp(param, "nonet") && fastcmp("true", val))
 		lines[i].flags |= ML_NONET;
 	else if (fastcmp(param, "netonly") && fastcmp("true", val))
@@ -2189,6 +2227,24 @@ typedef struct
 	mapthing_t *altview;
 	mapthing_t *angleanchor;
 } sectorspecialthings_t;
+
+static void WriteTextmapEdgeTexture(const char *prefix, unsigned i, side_t *side, FILE *f)
+{
+	if (side->overlays[i].texture > 0 && side->overlays[i].texture < numtextures)
+		fprintf(f, "%s""texture = \"%.*s\";\n", prefix, 8, textures[side->overlays[i].texture]->name);
+	if (side->overlays[i].offsetx != 0)
+		fprintf(f, "%s""offsetx = %f;\n", prefix, FIXED_TO_FLOAT(side->overlays[i].offsetx));
+	if (side->overlays[i].offsety != 0)
+		fprintf(f, "%s""offsety = %f;\n", prefix, FIXED_TO_FLOAT(side->overlays[i].offsety));
+	if (side->overlays[i].scalex != FRACUNIT)
+		fprintf(f, "%s""scalex = %f;\n", prefix, FIXED_TO_FLOAT(side->overlays[i].scalex));
+	if (side->overlays[i].scaley != FRACUNIT)
+		fprintf(f, "%s""scaley = %f;\n", prefix, FIXED_TO_FLOAT(side->overlays[i].scaley));
+	if (side->flags & GET_SIDEFLAG_EDGENOSKEW(i))
+		fprintf(f, "%s""noskew = true;\n", prefix);
+	if (side->flags & GET_SIDEFLAG_EDGEWRAP(i))
+		fprintf(f, "%s""wrap = true;\n", prefix);
+}
 
 static void P_WriteTextmap(void)
 {
@@ -2654,6 +2710,10 @@ static void P_WriteTextmap(void)
 			fprintf(f, "texturemiddle = \"%.*s\";\n", 8, textures[wsides[i].midtexture]->name);
 		if (wsides[i].repeatcnt != 0)
 			fprintf(f, "repeatcnt = %d;\n", wsides[i].repeatcnt);
+		WriteTextmapEdgeTexture("edge_top_upper_", EDGE_TEXTURE_TOP_UPPER, &wsides[i], f);
+		WriteTextmapEdgeTexture("edge_top_lower_", EDGE_TEXTURE_TOP_LOWER, &wsides[i], f);
+		WriteTextmapEdgeTexture("edge_bottom_upper_", EDGE_TEXTURE_BOTTOM_UPPER, &wsides[i], f);
+		WriteTextmapEdgeTexture("edge_bottom_lower_", EDGE_TEXTURE_BOTTOM_LOWER, &wsides[i], f);
 		fprintf(f, "}\n");
 		fprintf(f, "\n");
 	}
@@ -3041,9 +3101,16 @@ static void P_LoadTextmap(void)
 		sd->offsety_top = sd->offsety_mid = sd->offsety_bottom = 0;
 		sd->scalex_top = sd->scalex_mid = sd->scalex_bottom = FRACUNIT;
 		sd->scaley_top = sd->scaley_mid = sd->scaley_bottom = FRACUNIT;
+		sd->flags = 0;
 		sd->toptexture = R_TextureNumForName("-");
 		sd->midtexture = R_TextureNumForName("-");
 		sd->bottomtexture = R_TextureNumForName("-");
+		for (unsigned j = 0; j < NUM_WALL_OVERLAYS; j++)
+		{
+			sd->overlays[j].texture = R_TextureNumForName("-");
+			sd->overlays[j].offsetx = sd->overlays[j].offsety = 0;
+			sd->overlays[j].scalex = sd->overlays[j].scaley = FRACUNIT;
+		}
 		sd->sector = NULL;
 		sd->repeatcnt = 0;
 

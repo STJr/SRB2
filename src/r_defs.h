@@ -555,6 +555,21 @@ typedef enum
 
 #define NO_SIDEDEF 0xFFFFFFFF
 
+enum
+{
+	EDGE_TEXTURE_TOP_UPPER,
+	EDGE_TEXTURE_TOP_LOWER,
+	EDGE_TEXTURE_BOTTOM_UPPER,
+	EDGE_TEXTURE_BOTTOM_LOWER,
+
+	NUM_WALL_OVERLAYS
+};
+
+#define IS_TOP_EDGE_TEXTURE(i) ((i) == EDGE_TEXTURE_TOP_UPPER || (i) == EDGE_TEXTURE_TOP_LOWER)
+#define IS_BOTTOM_EDGE_TEXTURE(i) (!IS_TOP_EDGE_TEXTURE(i))
+#define IS_UPPER_EDGE_TEXTURE(i) ((i) == EDGE_TEXTURE_TOP_UPPER || (i) == EDGE_TEXTURE_BOTTOM_UPPER)
+#define IS_LOWER_EDGE_TEXTURE(i) (!IS_UPPER_EDGE_TEXTURE(i))
+
 typedef struct line_s
 {
 	// Vertices, from v1 to v2.
@@ -595,6 +610,23 @@ typedef struct line_s
 	UINT32 secportal; // transferred sector portal
 } line_t;
 
+// Don't make available to Lua or I will find where you live
+enum
+{
+	SIDEFLAG_EDGENOSKEW1 = 1<<7,
+	SIDEFLAG_EDGENOSKEW2 = 1<<8,
+	SIDEFLAG_EDGENOSKEW3 = 1<<9,
+	SIDEFLAG_EDGENOSKEW4 = 1<<10,
+
+	SIDEFLAG_EDGEWRAP1   = 1<<11,
+	SIDEFLAG_EDGEWRAP2   = 1<<12,
+	SIDEFLAG_EDGEWRAP3   = 1<<13,
+	SIDEFLAG_EDGEWRAP4   = 1<<14
+};
+
+#define GET_SIDEFLAG_EDGENOSKEW(which) (SIDEFLAG_EDGENOSKEW1<<(which))
+#define GET_SIDEFLAG_EDGEWRAP(which) (SIDEFLAG_EDGEWRAP1<<(which))
+
 typedef struct
 {
 	// add this to the calculated texture column
@@ -610,9 +642,18 @@ typedef struct
 	fixed_t scalex_top, scalex_mid, scalex_bottom;
 	fixed_t scaley_top, scaley_mid, scaley_bottom;
 
+	UINT16 flags;
+
 	// Texture indices.
 	// We do not maintain names here.
 	INT32 toptexture, bottomtexture, midtexture;
+
+	// Upper and lower overlays for top and bottom textures
+	struct {
+		INT32 texture;
+		fixed_t offsetx, offsety;
+		fixed_t scalex, scaley;
+	} overlays[NUM_WALL_OVERLAYS];
 
 	// Linedef the sidedef belongs to
 	line_t *line;
@@ -808,6 +849,7 @@ typedef struct drawseg_s
 	INT16 *sprtopclip;
 	INT16 *sprbottomclip;
 	fixed_t *maskedtexturecol;
+	fixed_t *maskedtextureheight; // For handling sloped midtextures
 	fixed_t *invscale;
 
 	struct visplane_s *ffloorplanes[MAXFFLOORS];
@@ -818,8 +860,6 @@ typedef struct drawseg_s
 	fixed_t frontscale[MAXVIDWIDTH];
 
 	UINT8 portalpass; // if > 0 and <= portalrender, do not affect sprite clipping
-
-	fixed_t maskedtextureheight[MAXVIDWIDTH]; // For handling sloped midtextures
 
 	vertex_t leftpos, rightpos; // Used for rendering FOF walls with slopes
 } drawseg_t;

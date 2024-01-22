@@ -3642,7 +3642,7 @@ static void R_DrawMaskedList (drawnode_t* head)
 			R_DoneWithNode(r2);
 			r2 = next;
 		}
-		else if (r2->seg && r2->seg->maskedtexturecol != NULL)
+		else if (r2->seg && r2->seg->maskedtexturecol != NULL && r2->seg->maskedtextureheight != NULL)
 		{
 			next = r2->prev;
 			R_RenderMaskedSegRange(r2->seg, r2->seg->x1, r2->seg->x2);
