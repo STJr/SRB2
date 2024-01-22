@@ -699,6 +699,30 @@ void R_DrawMaskedColumn(column_t *column)
 
 INT32 lengthcol; // column->length : for flipped column function pointers and multi-patch on 2sided wall = texture->height
 
+static UINT8 *flippedcol;
+static size_t flippedcolsize;
+
+void R_DrawFlippedPost(UINT8 *source, unsigned length, void (*drawcolfunc)(void))
+{
+	UINT8 *d, *s;
+
+	if (!length)
+		return;
+
+	if (!flippedcolsize || length > flippedcolsize)
+	{
+		flippedcolsize = length;
+		flippedcol = Z_Realloc(flippedcol, length, PU_STATIC, NULL);
+	}
+
+	dc_source = flippedcol;
+
+	for (s = (UINT8 *)source+length, d = flippedcol; d < flippedcol+length; --s)
+		*d++ = *s;
+
+	drawcolfunc();
+}
+
 void R_DrawFlippedMaskedColumn(column_t *column)
 {
 	INT32 topscreen;
@@ -742,19 +766,10 @@ void R_DrawFlippedMaskedColumn(column_t *column)
 
 		if (dc_yl <= dc_yh && dc_yh > 0)
 		{
-			dc_source = ZZ_Alloc(column->length);
-			for (s = (UINT8 *)column+2+column->length, d = dc_source; d < dc_source+column->length; --s)
-				*d++ = *s;
 			dc_texturemid = basetexturemid - (topdelta<<FRACBITS);
 
 			// Still drawn by R_DrawColumn.
-			if (ylookup[dc_yl])
-				colfunc();
-#ifdef PARANOIA
-			else
-				I_Error("R_DrawMaskedColumn: Invalid ylookup for dc_yl %d", dc_yl);
-#endif
-			Z_Free(dc_source);
+			R_DrawFlippedPost((UINT8 *)column+2, column->length, colfunc);
 		}
 		column = (column_t *)((UINT8 *)column + column->length + 4);
 	}

@@ -49,6 +49,7 @@ extern INT32 lengthcol;
 
 void R_DrawMaskedColumn(column_t *column);
 void R_DrawFlippedMaskedColumn(column_t *column);
+void R_DrawFlippedPost(UINT8 *source, unsigned length, void (*drawcolfunc)(void));
 
 // ----------------
 // SPRITE RENDERING

@@ -157,6 +157,42 @@ static void R_Render2sidedMultiPatchColumn(column_t *column)
 	}
 }
 
+static void R_RenderFlipped2sidedMultiPatchColumn(column_t *column)
+{
+	INT32 topscreen, bottomscreen;
+	void (*drawcolfunc)(void);
+
+	if (colfunc == colfuncs[BASEDRAWFUNC])
+		drawcolfunc = colfuncs[COLDRAWFUNC_TWOSMULTIPATCH];
+	else if (colfunc == colfuncs[COLDRAWFUNC_FUZZY])
+		drawcolfunc = colfuncs[COLDRAWFUNC_TWOSMULTIPATCHTRANS];
+	else
+		drawcolfunc = colfunc;
+
+	topscreen = sprtopscreen;
+	bottomscreen = topscreen + spryscale * lengthcol;
+
+	dc_yl = (sprtopscreen+FRACUNIT-1)>>FRACBITS;
+	dc_yh = (bottomscreen-1)>>FRACBITS;
+
+	if (windowtop != INT32_MAX && windowbottom != INT32_MAX)
+	{
+		dc_yl = ((windowtop + FRACUNIT)>>FRACBITS);
+		dc_yh = (windowbottom - 1)>>FRACBITS;
+	}
+
+	if (dc_yh >= mfloorclip[dc_x])
+		dc_yh =  mfloorclip[dc_x] - 1;
+	if (dc_yl <= mceilingclip[dc_x])
+		dc_yl =  mceilingclip[dc_x] + 1;
+
+	if (dc_yl >= vid.height || dc_yh < 0)
+		return;
+
+	if (dc_yl <= dc_yh && dc_yh < vid.height && dc_yh > 0)
+		R_DrawFlippedPost((UINT8 *)column + 3, lengthcol, drawcolfunc);
+}
+
 transnum_t R_GetLinedefTransTable(fixed_t alpha)
 {
 	return (20*(FRACUNIT - alpha - 1) + FRACUNIT) >> (FRACBITS+1);
@@ -256,6 +292,11 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 	INT32 times, repeats;
 	INT64 overflow_test;
 	INT32 range;
+	UINT8 vertflip;
+
+	fixed_t wall_scaley;
+	fixed_t scalestep;
+	fixed_t scale1;
 
 	// Calculate light table.
 	// Use different light tables
@@ -304,9 +345,17 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 		colfunc = colfuncs[COLDRAWFUNC_FUZZY];
 	}
 
-	fixed_t wall_scaley = sidedef->scaley_mid;
-	fixed_t scalestep = FixedDiv(ds->scalestep, wall_scaley);
-	fixed_t scale1 = FixedDiv(ds->scale1, wall_scaley);
+	vertflip = textures[texnum]->flip & 2;
+
+	wall_scaley = sidedef->scaley_mid;
+	if (wall_scaley < 0)
+	{
+		wall_scaley = -wall_scaley;
+		vertflip = !vertflip;
+	}
+
+	scalestep = FixedDiv(ds->scalestep, wall_scaley);
+	scale1 = FixedDiv(ds->scale1, wall_scaley);
 
 	range = max(ds->x2-ds->x1, 1);
 	rw_scalestep = scalestep;
@@ -319,7 +368,7 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 	// are not stored per-column with post info in SRB2
 	if (textures[texnum]->holes)
 	{
-		if (textures[texnum]->flip & 2) // vertically flipped?
+		if (vertflip) // vertically flipped?
 		{
 			colfunc_2s = R_DrawFlippedMaskedColumn;
 			lengthcol = textures[texnum]->height;
@@ -329,7 +378,12 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 	}
 	else
 	{
-		colfunc_2s = R_Render2sidedMultiPatchColumn; // render multipatch with no holes (no post_t info)
+		// render multipatch with no holes (no post_t info)
+		if (vertflip) // vertically flipped?
+			colfunc_2s = R_RenderFlipped2sidedMultiPatchColumn;
+		else
+			colfunc_2s = R_Render2sidedMultiPatchColumn;
+
 		lengthcol = textures[texnum]->height;
 	}
 
@@ -578,8 +632,12 @@ static void R_RenderExtraTexture(drawseg_t *ds, unsigned which, INT32 x1, INT32 
 	}
 	else
 	{
-		// FIXME: Composite textures don't get flipped vertically
-		colfunc_2s = R_Render2sidedMultiPatchColumn; // render multipatch with no holes (no post_t info)
+		// render multipatch with no holes (no post_t info)
+		if (vertflip) // vertically flipped?
+			colfunc_2s = R_RenderFlipped2sidedMultiPatchColumn;
+		else
+			colfunc_2s = R_Render2sidedMultiPatchColumn;
+
 		lengthcol = textures[texnum]->height;
 	}
 
@@ -845,6 +903,7 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 	boolean do_texture_skew;
 	INT16 lineflags;
 	fixed_t wall_scalex, wall_scaley;
+	UINT8 vertflip;
 
 	void (*colfunc_2s) (column_t *);
 
@@ -871,6 +930,7 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 		lineflags = curline->linedef->flags;
 
 	texnum = R_GetTextureNum(sidedef->midtexture);
+	vertflip = textures[texnum]->flip & 2;
 
 	if (pfloor->fofflags & FOF_TRANSLUCENT)
 	{
@@ -1024,6 +1084,11 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 
 	wall_scalex = FixedDiv(FRACUNIT, sidedef->scalex_mid);
 	wall_scaley = sidedef->scaley_mid;
+	if (wall_scaley < 0)
+	{
+		wall_scaley = -wall_scaley;
+		vertflip = !vertflip;
+	}
 
 	thicksidecol = ffloortexturecolumn;
 
@@ -1085,7 +1150,7 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 	// are not stored per-column with post info in SRB2
 	if (textures[texnum]->holes)
 	{
-		if (textures[texnum]->flip & 2) // vertically flipped?
+		if (vertflip) // vertically flipped?
 		{
 			colfunc_2s = R_DrawRepeatFlippedMaskedColumn;
 			lengthcol = textures[texnum]->height;
@@ -1095,7 +1160,12 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 	}
 	else
 	{
-		colfunc_2s = R_Render2sidedMultiPatchColumn;        //render multipatch with no holes (no post_t info)
+		// render multipatch with no holes (no post_t info)
+		if (vertflip) // vertically flipped?
+			colfunc_2s = R_RenderFlipped2sidedMultiPatchColumn;
+		else
+			colfunc_2s = R_Render2sidedMultiPatchColumn;
+
 		lengthcol = textures[texnum]->height;
 	}
 
@@ -1337,17 +1407,18 @@ static boolean R_FFloorCanClip(visffloor_t *pfloor)
 #define HEIGHTBITS              12
 #define HEIGHTUNIT              (1<<HEIGHTBITS)
 
+static void R_DrawRegularWall(UINT8 *source, INT32 height)
+{
+	dc_source = source;
+	dc_texheight = height;
+	colfunc();
+}
 
-//profile stuff ---------------------------------------------------------
-//#define TIMING
-#ifdef TIMING
-#include "p5prof.h"
-INT64 mycount;
-INT64 mytotal = 0;
-UINT32 nombre = 100000;
-//static   char runtest[10][80];
-#endif
-//profile stuff ---------------------------------------------------------
+static void R_DrawFlippedWall(UINT8 *source, INT32 height)
+{
+	dc_texheight = height;
+	R_DrawFlippedPost(source, (unsigned)height, colfunc);
+}
 
 static void R_RenderSegLoop (void)
 {
@@ -1368,8 +1439,35 @@ static void R_RenderSegLoop (void)
 	INT32     bottom;
 	INT32     i;
 
+	fixed_t topscaley = rw_toptexturescaley;
+	fixed_t midscaley = rw_midtexturescaley;
+	fixed_t bottomscaley = rw_bottomtexturescaley;
+
+	void (*drawtop)(UINT8 *, INT32) = R_DrawRegularWall;
+	void (*drawmiddle)(UINT8 *, INT32) = R_DrawRegularWall;
+	void (*drawbottom)(UINT8 *, INT32) = R_DrawRegularWall;
+
 	fixed_t oldoverlaycolumn[NUM_WALL_OVERLAYS];
 	fixed_t overlaycolumn[NUM_WALL_OVERLAYS];
+
+	if (dc_numlights)
+		colfunc = colfuncs[COLDRAWFUNC_SHADOWED];
+
+	if (toptexture && topscaley < 0)
+	{
+		topscaley = -topscaley;
+		drawtop = R_DrawFlippedWall;
+	}
+	if (midtexture && midscaley < 0)
+	{
+		midscaley = -midscaley;
+		drawmiddle = R_DrawFlippedWall;
+	}
+	if (bottomtexture && bottomscaley < 0)
+	{
+		bottomscaley = -bottomscaley;
+		drawbottom = R_DrawFlippedWall;
+	}
 
 	if (hasoverlaytexture)
 	{
@@ -1589,8 +1687,6 @@ static void R_RenderSegLoop (void)
 					dc_lightlist[i].rcolormap = dc_lightlist[i].extra_colormap->colormap + (xwalllights[pindex] - colormaps);
 				else
 					dc_lightlist[i].rcolormap = xwalllights[pindex];
-
-				colfunc = colfuncs[COLDRAWFUNC_SHADOWED];
 			}
 		}
 
@@ -1607,24 +1703,8 @@ static void R_RenderSegLoop (void)
 				dc_yl = yl;
 				dc_yh = yh;
 				dc_texturemid = rw_midtexturemid;
-				dc_iscale = FixedMul(0xffffffffu / (unsigned)rw_scale, rw_midtexturescaley);
-				dc_source = R_GetColumn(midtexture, offset >> FRACBITS);
-				dc_texheight = textureheight[midtexture]>>FRACBITS;
-
-				//profile stuff ---------------------------------------------------------
-#ifdef TIMING
-				ProfZeroTimer();
-#endif
-				colfunc();
-#ifdef TIMING
-				RDMSR(0x10,&mycount);
-				mytotal += mycount;      //64bit add
-
-				if (nombre--==0)
-					I_Error("R_DrawColumn CPU Spy reports: 0x%d %d\n", *((INT32 *)&mytotal+1),
-						(INT32)mytotal);
-#endif
-				//profile stuff ---------------------------------------------------------
+				dc_iscale = FixedMul(0xffffffffu / (unsigned)rw_scale, midscaley);
+				drawmiddle(R_GetColumn(midtexture, offset >> FRACBITS), textureheight[midtexture]>>FRACBITS);
 
 				// dont draw anything more for this column, since
 				// a midtexture blocks the view
@@ -1676,10 +1756,8 @@ static void R_RenderSegLoop (void)
 						dc_yl = yl;
 						dc_yh = mid;
 						dc_texturemid = rw_toptexturemid;
-						dc_iscale = FixedMul(0xffffffffu / (unsigned)rw_scale, rw_toptexturescaley);
-						dc_source = R_GetColumn(toptexture, offset >> FRACBITS);
-						dc_texheight = textureheight[toptexture]>>FRACBITS;
-						colfunc();
+						dc_iscale = FixedMul(0xffffffffu / (unsigned)rw_scale, topscaley);
+						drawtop(R_GetColumn(toptexture, offset >> FRACBITS), textureheight[toptexture]>>FRACBITS);
 						ceilingclip[rw_x] = (INT16)mid;
 					}
 					else if (!rw_ceilingmarked) // entirely off top of screen
@@ -1724,10 +1802,8 @@ static void R_RenderSegLoop (void)
 						dc_yl = mid;
 						dc_yh = yh;
 						dc_texturemid = rw_bottomtexturemid;
-						dc_iscale = FixedMul(0xffffffffu / (unsigned)rw_scale, rw_bottomtexturescaley);
-						dc_source = R_GetColumn(bottomtexture, offset >> FRACBITS);
-						dc_texheight = textureheight[bottomtexture]>>FRACBITS;
-						colfunc();
+						dc_iscale = FixedMul(0xffffffffu / (unsigned)rw_scale, bottomscaley);
+						drawbottom(R_GetColumn(bottomtexture, offset >> FRACBITS), textureheight[bottomtexture]>>FRACBITS);
 						floorclip[rw_x] = (INT16)mid;
 					}
 					else if (!rw_floormarked)  // entirely off bottom of screen
@@ -1983,7 +2059,7 @@ static void R_AddOverlayTextures(fixed_t ceilingfrontslide, fixed_t floorfrontsl
 			rw_overlay[i].offsetx = sidedef->overlays[i].offsetx;
 			rw_overlay[i].offsety = sidedef->overlays[i].offsety;
 
-			rw_overlay[i].invscalex = FixedDiv(FRACUNIT, rw_overlay[i].scalex);
+			rw_overlay[i].invscalex = FixedDiv(FRACUNIT, abs(rw_overlay[i].scalex));
 
 			if (sidedef->flags & GET_SIDEFLAG_EDGENOSKEW(i))
 			{
@@ -2257,7 +2333,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 
 	rw_midtexturescalex = sidedef->scalex_mid;
 	rw_midtexturescaley = sidedef->scaley_mid;
-	rw_invmidtexturescalex = FixedDiv(FRACUNIT, rw_midtexturescalex);
+	rw_invmidtexturescalex = FixedDiv(FRACUNIT, abs(rw_midtexturescalex));
 
 	if (!backsector)
 	{
@@ -2268,25 +2344,26 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 
 		fixed_t rowoffset = sidedef->rowoffset + sidedef->offsety_mid;
 		fixed_t texheight = textureheight[midtexture];
+		fixed_t scaley = abs(rw_midtexturescaley);
 
 		if (rw_midtexturescaley > 0)
 		{
 			if (linedef->flags & ML_NOSKEW)
 			{
 				if (linedef->flags & ML_DONTPEGBOTTOM)
-					rw_midtexturemid = FixedMul(frontsector->floorheight - viewz, rw_midtexturescaley) + texheight;
+					rw_midtexturemid = FixedMul(frontsector->floorheight - viewz, scaley) + texheight;
 				else
-					rw_midtexturemid = FixedMul(frontsector->ceilingheight - viewz, rw_midtexturescaley);
+					rw_midtexturemid = FixedMul(frontsector->ceilingheight - viewz, scaley);
 			}
 			else if (linedef->flags & ML_DONTPEGBOTTOM)
 			{
-				rw_midtexturemid = FixedMul(worldbottom, rw_midtexturescaley) + texheight;
+				rw_midtexturemid = FixedMul(worldbottom, scaley) + texheight;
 				rw_midtextureslide = floorfrontslide;
 			}
 			else
 			{
 				// top of texture at top
-				rw_midtexturemid = FixedMul(worldtop, rw_midtexturescaley);
+				rw_midtexturemid = FixedMul(worldtop, scaley);
 				rw_midtextureslide = ceilingfrontslide;
 			}
 		}
@@ -2298,19 +2375,19 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 			if (linedef->flags & ML_NOSKEW)
 			{
 				if (linedef->flags & ML_DONTPEGBOTTOM)
-					rw_midtexturemid = FixedMul(frontsector->floorheight - viewz, rw_midtexturescaley);
+					rw_midtexturemid = FixedMul(frontsector->floorheight - viewz, scaley);
 				else
-					rw_midtexturemid = FixedMul(frontsector->ceilingheight - viewz, rw_midtexturescaley) + texheight;
+					rw_midtexturemid = FixedMul(frontsector->ceilingheight - viewz, scaley) + texheight;
 			}
 			else if (linedef->flags & ML_DONTPEGBOTTOM)
 			{
-				rw_midtexturemid = FixedMul(worldbottom, rw_midtexturescaley);
+				rw_midtexturemid = FixedMul(worldbottom, scaley);
 				rw_midtextureslide = floorfrontslide;
 			}
 			else
 			{
 				// top of texture at top
-				rw_midtexturemid = FixedMul(worldtop, rw_midtexturescaley) + texheight;
+				rw_midtexturemid = FixedMul(worldtop, scaley) + texheight;
 				rw_midtextureslide = ceilingfrontslide;
 			}
 		}
@@ -2501,7 +2578,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 			rw_toptexturescalex = sidedef->scalex_top;
 			rw_toptexturescaley = sidedef->scaley_top;
 
-			rw_invtoptexturescalex = FixedDiv(FRACUNIT, rw_toptexturescalex);
+			rw_invtoptexturescalex = FixedDiv(FRACUNIT, abs(rw_toptexturescalex));
 
 			if (rw_toptexturescaley < 0)
 				toprowoffset = -toprowoffset;
@@ -2528,7 +2605,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 				rw_toptextureslide = ceilingbackslide;
 			}
 
-			rw_toptexturemid = FixedMul(rw_toptexturemid, rw_toptexturescaley);
+			rw_toptexturemid = FixedMul(rw_toptexturemid, abs(rw_toptexturescaley));
 		}
 
 		// check BOTTOM TEXTURE
@@ -2541,7 +2618,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 			rw_bottomtexturescalex = sidedef->scalex_bottom;
 			rw_bottomtexturescaley = sidedef->scaley_bottom;
 
-			rw_invbottomtexturescalex = FixedDiv(FRACUNIT, rw_bottomtexturescalex);
+			rw_invbottomtexturescalex = FixedDiv(FRACUNIT, abs(rw_bottomtexturescalex));
 
 			if (rw_bottomtexturescaley < 0)
 				botrowoffset = -botrowoffset;
@@ -2568,7 +2645,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 				rw_bottomtextureslide = floorbackslide;
 			}
 
-			rw_bottomtexturemid = FixedMul(rw_bottomtexturemid, rw_bottomtexturescaley);
+			rw_bottomtexturemid = FixedMul(rw_bottomtexturemid, abs(rw_bottomtexturescaley));
 		}
 
 		rw_toptexturemid += toprowoffset;
@@ -2819,8 +2896,8 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 				}
 			}
 
-			rw_midtexturemid = FixedMul(rw_midtexturemid, rw_midtexturescaley);
-			rw_midtextureback = FixedMul(rw_midtextureback, rw_midtexturescaley);
+			rw_midtexturemid = FixedMul(rw_midtexturemid, abs(rw_midtexturescaley));
+			rw_midtextureback = FixedMul(rw_midtextureback, abs(rw_midtexturescaley));
 
 			rw_midtexturemid += sidedef->rowoffset + sidedef->offsety_mid;
 			rw_midtextureback += sidedef->rowoffset + sidedef->offsety_mid;

@@ -1964,7 +1964,7 @@ static void ParseTextmapSidedefParameter(UINT32 i, const char *param, const char
 	else if (fastcmp(param, "repeatcnt"))
 		sides[i].repeatcnt = atol(val);
 	// Oh God there's a total of 28 fields to read. Uhhh
-	// Okay, so ParseTextmapSidedefOverlay handles the parsing of all the parameters edges have.
+	// Okay, so ParseTextmapSidedefOverlay handles all the parameters edges have.
 	else if (fastncmp(param, "edge_", 5) && strlen(param) > 5)
 	{
 		if (fastncmp(param, "edge_top_upper_", 15) && strlen(param) > 15)
