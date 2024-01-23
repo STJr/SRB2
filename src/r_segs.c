@@ -1424,20 +1424,20 @@ static void R_RenderSegLoop (void)
 {
 	angle_t angle;
 	fixed_t textureoffset;
-	size_t  pindex;
-	INT32     yl;
-	INT32     yh;
+	size_t pindex;
+	INT32 yl;
+	INT32 yh;
 
-	INT32     mid;
+	INT32 mid;
 	fixed_t texturecolumn = 0;
 	fixed_t toptexturecolumn = 0;
 	fixed_t bottomtexturecolumn = 0;
 	fixed_t oldtexturecolumn = -1;
 	fixed_t oldtexturecolumn_top = -1;
 	fixed_t oldtexturecolumn_bottom = -1;
-	INT32     top;
-	INT32     bottom;
-	INT32     i;
+	INT32 top;
+	INT32 bottom;
+	INT32 i;
 
 	fixed_t topscaley = rw_toptexturescaley;
 	fixed_t midscaley = rw_midtexturescaley;
@@ -1838,8 +1838,11 @@ static void R_RenderSegLoop (void)
 		{
 			if (oldtexturecolumn != -1)
 			{
-				rw_midtexturemid += FixedMul(rw_midtextureslide, oldtexturecolumn-texturecolumn);
-				rw_midtextureback += FixedMul(rw_midtexturebackslide, oldtexturecolumn-texturecolumn);
+				INT32 diff = oldtexturecolumn-texturecolumn;
+				if (rw_invmidtexturescalex < 0)
+					diff = -diff;
+				rw_midtexturemid += FixedMul(rw_midtextureslide, diff);
+				rw_midtextureback += FixedMul(rw_midtexturebackslide, diff);
 			}
 
 			oldtexturecolumn = texturecolumn;
@@ -1878,8 +1881,11 @@ static void R_RenderSegLoop (void)
 
 				if (oldoverlaycolumn[i] != -1)
 				{
-					rw_overlay[i].mid += FixedMul(rw_overlay[i].slide, oldoverlaycolumn[i]-overlaycolumn[i]);
-					rw_overlay[i].back += FixedMul(rw_overlay[i].backslide, oldoverlaycolumn[i]-overlaycolumn[i]);
+					INT32 diff = oldoverlaycolumn[i]-overlaycolumn[i];
+					if (rw_overlay[i].scalex < 0)
+						diff = -diff;
+					rw_overlay[i].mid += FixedMul(rw_overlay[i].slide, diff);
+					rw_overlay[i].back += FixedMul(rw_overlay[i].backslide, diff);
 				}
 
 				oldoverlaycolumn[i] = overlaycolumn[i];
@@ -2059,7 +2065,7 @@ static void R_AddOverlayTextures(fixed_t ceilingfrontslide, fixed_t floorfrontsl
 			rw_overlay[i].offsetx = sidedef->overlays[i].offsetx;
 			rw_overlay[i].offsety = sidedef->overlays[i].offsety;
 
-			rw_overlay[i].invscalex = FixedDiv(FRACUNIT, abs(rw_overlay[i].scalex));
+			rw_overlay[i].invscalex = FixedDiv(FRACUNIT, rw_overlay[i].scalex);
 
 			if (sidedef->flags & GET_SIDEFLAG_EDGENOSKEW(i))
 			{
@@ -2333,7 +2339,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 
 	rw_midtexturescalex = sidedef->scalex_mid;
 	rw_midtexturescaley = sidedef->scaley_mid;
-	rw_invmidtexturescalex = FixedDiv(FRACUNIT, abs(rw_midtexturescalex));
+	rw_invmidtexturescalex = FixedDiv(FRACUNIT, rw_midtexturescalex);
 
 	if (!backsector)
 	{
@@ -2578,7 +2584,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 			rw_toptexturescalex = sidedef->scalex_top;
 			rw_toptexturescaley = sidedef->scaley_top;
 
-			rw_invtoptexturescalex = FixedDiv(FRACUNIT, abs(rw_toptexturescalex));
+			rw_invtoptexturescalex = FixedDiv(FRACUNIT, rw_toptexturescalex);
 
 			if (rw_toptexturescaley < 0)
 				toprowoffset = -toprowoffset;
@@ -2618,7 +2624,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 			rw_bottomtexturescalex = sidedef->scalex_bottom;
 			rw_bottomtexturescaley = sidedef->scaley_bottom;
 
-			rw_invbottomtexturescalex = FixedDiv(FRACUNIT, abs(rw_bottomtexturescalex));
+			rw_invbottomtexturescalex = FixedDiv(FRACUNIT, rw_bottomtexturescalex);
 
 			if (rw_bottomtexturescaley < 0)
 				botrowoffset = -botrowoffset;

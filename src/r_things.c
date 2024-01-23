@@ -704,8 +704,6 @@ static size_t flippedcolsize;
 
 void R_DrawFlippedPost(UINT8 *source, unsigned length, void (*drawcolfunc)(void))
 {
-	UINT8 *d, *s;
-
 	if (!length)
 		return;
 
@@ -717,8 +715,8 @@ void R_DrawFlippedPost(UINT8 *source, unsigned length, void (*drawcolfunc)(void)
 
 	dc_source = flippedcol;
 
-	for (s = (UINT8 *)source+length, d = flippedcol; d < flippedcol+length; --s)
-		*d++ = *s;
+	for (UINT8 *s = (UINT8 *)source, *d = flippedcol+length-1; d >= flippedcol; s++)
+		*d-- = *s;
 
 	drawcolfunc();
 }
@@ -729,7 +727,6 @@ void R_DrawFlippedMaskedColumn(column_t *column)
 	INT32 bottomscreen;
 	fixed_t basetexturemid = dc_texturemid;
 	INT32 topdelta, prevdelta = -1;
-	UINT8 *d,*s;
 
 	for (; column->topdelta != 0xff ;)
 	{
@@ -769,7 +766,7 @@ void R_DrawFlippedMaskedColumn(column_t *column)
 			dc_texturemid = basetexturemid - (topdelta<<FRACBITS);
 
 			// Still drawn by R_DrawColumn.
-			R_DrawFlippedPost((UINT8 *)column+2, column->length, colfunc);
+			R_DrawFlippedPost((UINT8 *)column+3, column->length, colfunc);
 		}
 		column = (column_t *)((UINT8 *)column + column->length + 4);
 	}
