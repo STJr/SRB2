@@ -641,7 +641,7 @@ static int lib_pSpawnMobj(lua_State *L)
 	NOHUD
 	INLEVEL
 	NOSPAWNNULL
-	LUA_PushUserdata(L, P_SpawnMobj(x, y, z, type), META_MOBJ);
+	LUA_PushUserdata(L, P_SpawnMobj(x, y, z, type, NULL), META_MOBJ);
 	return 1;
 }
 
@@ -657,7 +657,7 @@ static int lib_pSpawnMobjFromMobj(lua_State *L)
 	NOSPAWNNULL
 	if (!actor)
 		return LUA_ErrInvalid(L, "mobj_t");
-	LUA_PushUserdata(L, P_SpawnMobjFromMobj(actor, x, y, z, type), META_MOBJ);
+	LUA_PushUserdata(L, P_SpawnMobjFromMobj(actor, x, y, z, type, NULL), META_MOBJ);
 	return 1;
 }
 
