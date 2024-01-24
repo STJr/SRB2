@@ -14422,7 +14422,6 @@ void P_FlashPal(player_t *pl, UINT16 type, UINT16 duration)
 //
 mobj_t *P_SpawnMobjFromMobj(mobj_t *mobj, fixed_t xofs, fixed_t yofs, fixed_t zofs, mobjtype_t type)
 {
-	va_list args;
 	mobj_t *newmobj;
 
 	xofs = FixedMul(xofs, mobj->scale);
