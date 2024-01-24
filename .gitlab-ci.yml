@@ -153,8 +153,8 @@ default:
     - - |
           # ccache_stats
           echo -e "\e[0Ksection_start:`date +%s`:ccache_stats[collapsed=true]\r\e[0Kccache statistics:"
-      - ccache --show-stats --verbose || ccache --show-stats
-      - ccache --show-log-stats --verbose || ccache --show-log-stats
+      - ccache --show-stats
+      - ccache --show-log-stats || true
       - |
           # ccahe_stats
           echo -e "\e[0Ksection_end:`date +%s`:ccache_stats\r\e[0K"
@@ -673,8 +673,8 @@ Alpine 3 GCC:
     - - |
           # ccache_stats
           echo -e "\e[0Ksection_start:`date +%s`:ccache_stats[collapsed=true]\r\e[0Kccache statistics:"
-      - ccache --show-stats --verbose || ccache --show-stats
-      - ccache --show-log-stats --verbose || ccache --show-log-stats
+      - ccache --show-stats
+      - ccache --show-log-stats || true
       - |
           # ccahe_stats
           echo -e "\e[0Ksection_end:`date +%s`:ccache_stats\r\e[0K"
