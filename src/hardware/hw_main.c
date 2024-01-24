@@ -1389,12 +1389,12 @@ static void HWR_RenderExtraTexture(unsigned which, v2d_t vs, v2d_t ve, float xcl
 		else
 		{
 			high = max(
-				P_GetSectorCeilingZAt(gl_frontsector, gl_curline->v1->x, gl_curline->v1->y),
-				P_GetSectorCeilingZAt(gl_frontsector, gl_curline->v2->x, gl_curline->v2->y)
+				P_GetSectorCeilingZAt(gl_frontsector, v1x, v1y),
+				P_GetSectorCeilingZAt(gl_frontsector, v2x, v2y)
 			);
 			low = min(
-				P_GetSectorFloorZAt(gl_backsector, gl_curline->v1->x, gl_curline->v1->y),
-				P_GetSectorFloorZAt(gl_backsector, gl_curline->v2->x, gl_curline->v2->y)
+				P_GetSectorFloorZAt(gl_backsector, v1x, v1y),
+				P_GetSectorFloorZAt(gl_backsector, v2x, v2y)
 			);
 		}
 
