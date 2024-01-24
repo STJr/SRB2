@@ -1361,7 +1361,7 @@ static void HWR_RenderExtraTexture(unsigned which, v2d_t vs, v2d_t ve, float xcl
 	{
 		fixed_t high, low;
 
-		if (backsector)
+		if (gl_backsector)
 		{
 			if (IS_TOP_EDGE_TEXTURE(which))
 			{
@@ -1393,8 +1393,8 @@ static void HWR_RenderExtraTexture(unsigned which, v2d_t vs, v2d_t ve, float xcl
 				P_GetSectorCeilingZAt(gl_frontsector, v2x, v2y)
 			);
 			low = min(
-				P_GetSectorFloorZAt(gl_backsector, v1x, v1y),
-				P_GetSectorFloorZAt(gl_backsector, v2x, v2y)
+				P_GetSectorFloorZAt(gl_frontsector, v1x, v1y),
+				P_GetSectorFloorZAt(gl_frontsector, v2x, v2y)
 			);
 		}
 
