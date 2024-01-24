@@ -14420,7 +14420,7 @@ void P_FlashPal(player_t *pl, UINT16 type, UINT16 duration)
 // Spawns an object with offsets relative to the position of another object.
 // Scale, gravity flip, etc. is taken into account automatically.
 //
-mobj_t *P_SpawnMobjFromMobj(mobj_t *mobj, fixed_t xofs, fixed_t yofs, fixed_t zofs, mobjtype_t type, ...)
+mobj_t *P_SpawnMobjFromMobj(mobj_t *mobj, fixed_t xofs, fixed_t yofs, fixed_t zofs, mobjtype_t type)
 {
 	va_list args;
 	mobj_t *newmobj;
@@ -14429,19 +14429,7 @@ mobj_t *P_SpawnMobjFromMobj(mobj_t *mobj, fixed_t xofs, fixed_t yofs, fixed_t zo
 	yofs = FixedMul(yofs, mobj->scale);
 	zofs = FixedMul(zofs, mobj->scale);
 
-	if (type == MT_PLAYER)
-	{
-		player_t *player;
-		// MT_PLAYER requires an additional parameter for the player, so pass that forth.
-		va_start(args, type);
-		player = va_arg(args, player_t *);
-		va_end(args);
-		newmobj = P_SpawnMobj(mobj->x + xofs, mobj->y + yofs, mobj->z + zofs, type, player);
-	}
-	else
-	{
-		newmobj = P_SpawnMobj(mobj->x + xofs, mobj->y + yofs, mobj->z + zofs, type);
-	}
+	newmobj = P_SpawnMobj(mobj->x + xofs, mobj->y + yofs, mobj->z + zofs, type, NULL);
 
 	if (!newmobj)
 		return NULL;
