@@ -1367,6 +1367,24 @@ static void HWR_DoExtraTextureCut(UINT8 intersected, UINT8 which, v2d_t vs, v2d_
 	HWR_GetExtraTextureCoords(which, polytop, polybottom, polytopslope, polybottomslope, *worldtop, *worldbottom, *worldhigh, *worldlow, *worldtopslope, *worldbottomslope, *worldhighslope, *worldlowslope, midtexheight);
 }
 
+static void HWR_SetWallStartCoordsOffset(FOutVector wallVerts[4], float wallx1, float wally1, angle_t wallang, fixed_t wallpush)
+{
+	wallx1 += FixedToFloat(FixedMul(wallpush, FINECOSINE(wallang)));
+	wally1 += FixedToFloat(FixedMul(wallpush, FINESINE(wallang)));
+
+	wallVerts[0].x = wallVerts[3].x = wallx1;
+	wallVerts[0].z = wallVerts[3].z = wally1;
+}
+
+static void HWR_SetWallEndCoordsOffset(FOutVector wallVerts[4], float wallx2, float wally2, angle_t wallang, fixed_t wallpush)
+{
+	wallx2 += FixedToFloat(FixedMul(wallpush, FINECOSINE(wallang)));
+	wally2 += FixedToFloat(FixedMul(wallpush, FINESINE(wallang)));
+
+	wallVerts[2].x = wallVerts[1].x = wallx2;
+	wallVerts[2].z = wallVerts[1].z = wally2;
+}
+
 // Draws an extra texture (sorry for the length)
 static void HWR_RenderExtraTexture(unsigned which, v2d_t vs, v2d_t ve, float xcliplow, float xcliphigh, UINT32 lightnum)
 {
@@ -1378,6 +1396,9 @@ static void HWR_RenderExtraTexture(unsigned which, v2d_t vs, v2d_t ve, float xcl
 	fixed_t v1y = FloatToFixed(vs.y);
 	fixed_t v2x = FloatToFixed(ve.x);
 	fixed_t v2y = FloatToFixed(ve.y);
+
+	angle_t wallang = (R_PointToAngle2(v1x, v1y, v2x, v2y) - ANGLE_90) >> ANGLETOFINESHIFT;
+	fixed_t wallpush = FRACUNIT/4 * which;
 
 	float flength = gl_curline->flength;
 
@@ -1486,10 +1507,8 @@ static void HWR_RenderExtraTexture(unsigned which, v2d_t vs, v2d_t ve, float xcl
 	fixed_t lS = polybottomslope;
 
 	FOutVector wallVerts[4];
-	wallVerts[0].x = wallVerts[3].x = vs.x;
-	wallVerts[0].z = wallVerts[3].z = vs.y;
-	wallVerts[2].x = wallVerts[1].x = ve.x;
-	wallVerts[2].z = wallVerts[1].z = ve.y;
+	HWR_SetWallStartCoordsOffset(wallVerts, vs.x, vs.y, wallang, wallpush);
+	HWR_SetWallEndCoordsOffset(wallVerts, ve.x, ve.y, wallang, wallpush);
 
 	// If this edge extends over a wall that is sloped, it needs to be split
 	UINT8 intersected = 0;
@@ -1567,10 +1586,7 @@ static void HWR_RenderExtraTexture(unsigned which, v2d_t vs, v2d_t ve, float xcl
 				ve.x = ptx;
 				ve.y = pty;
 
-				flength = hypotf(ve.x - vs.x, ve.y - vs.y);
-
-				wallVerts[2].x = wallVerts[1].x = ptx;
-				wallVerts[2].z = wallVerts[1].z = pty;
+				HWR_SetWallEndCoordsOffset(wallVerts, ve.x, ve.y, wallang, wallpush);
 			}
 			else if (intersected == 2)
 			{
@@ -1579,11 +1595,10 @@ static void HWR_RenderExtraTexture(unsigned which, v2d_t vs, v2d_t ve, float xcl
 
 				xcliplowbase += flength * t * FRACUNIT;
 
-				flength = hypotf(ve.x - vs.x, ve.y - vs.y);
-
-				wallVerts[0].x = wallVerts[3].x = ptx;
-				wallVerts[0].z = wallVerts[3].z = pty;
+				HWR_SetWallStartCoordsOffset(wallVerts, vs.x, vs.y, wallang, wallpush);
 			}
+
+			flength = hypotf(ve.x - vs.x, ve.y - vs.y);
 
 			xcliplow = xcliplowbase;
 			xcliphigh = xcliplow + (flength*FRACUNIT);
@@ -1713,8 +1728,7 @@ static void HWR_RenderExtraTexture(unsigned which, v2d_t vs, v2d_t ve, float xcl
 
 			if (intersected == 1)
 			{
-				wallVerts[2].x = wallVerts[1].x = ptx;
-				wallVerts[2].z = wallVerts[1].z = pty;
+				HWR_SetWallEndCoordsOffset(wallVerts, ptx, pty, wallang, wallpush);
 
 				xclipoffset = flength * t * FRACUNIT;
 				xcliphigh = (float)(xcliplow + xclipoffset);
@@ -1722,8 +1736,7 @@ static void HWR_RenderExtraTexture(unsigned which, v2d_t vs, v2d_t ve, float xcl
 			// Left side
 			else if (intersected == 2)
 			{
-				wallVerts[0].x = wallVerts[3].x = ptx;
-				wallVerts[0].z = wallVerts[3].z = pty;
+				HWR_SetWallStartCoordsOffset(wallVerts, ptx, pty, wallang, wallpush);
 
 				xcliplow = (float)(xcliphigh - (flength * (1.0f - t) * FRACUNIT));
 			}
@@ -1787,6 +1800,9 @@ static void HWR_RenderExtraTexture(unsigned which, v2d_t vs, v2d_t ve, float xcl
 	else
 		HWR_ProjectWall(wallVerts, &Surf, blendmode, lightnum, colormap);
 
+	if (!intersected)
+		return;
+
 	// Draw the rest of the wall if it was split
 	if (intersected == 1)
 	{
@@ -1800,14 +1816,10 @@ static void HWR_RenderExtraTexture(unsigned which, v2d_t vs, v2d_t ve, float xcl
 		ve.x = ptx;
 		ve.y = pty;
 	}
-	else
-		return;
 
 	// Redefine the wall X/Y
-	wallVerts[0].x = wallVerts[3].x = vs.x;
-	wallVerts[0].z = wallVerts[3].z = vs.y;
-	wallVerts[2].x = wallVerts[1].x = ve.x;
-	wallVerts[2].z = wallVerts[1].z = ve.y;
+	HWR_SetWallStartCoordsOffset(wallVerts, vs.x, vs.y, wallang, wallpush);
+	HWR_SetWallEndCoordsOffset(wallVerts, ve.x, ve.y, wallang, wallpush);
 
 	v1x = FloatToFixed(vs.x);
 	v1y = FloatToFixed(vs.y);
