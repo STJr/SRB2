@@ -72,6 +72,9 @@ static struct
 	fixed_t offsetx, offsety;
 } rw_overlay[NUM_WALL_OVERLAYS];
 
+static fixed_t oldoverlaycolumn[NUM_WALL_OVERLAYS];
+static fixed_t overlaycolumn[NUM_WALL_OVERLAYS];
+
 // Lactozilla: 3D floor clipping
 static boolean rw_floormarked = false;
 static boolean rw_ceilingmarked = false;
@@ -103,6 +106,10 @@ static INT16 *openings, *lastopening;
 
 static size_t texturecolumntablesize;
 static fixed_t *texturecolumntable, *curtexturecolumntable;
+
+static void R_AddOverlayTextures(sector_t *sec_front, sector_t *sec_back, fixed_t left_top, fixed_t left_bottom, fixed_t left_high, fixed_t left_low, fixed_t ceilingfrontslide, fixed_t floorfrontslide, fixed_t ceilingbackslide, fixed_t floorbackslide);
+
+static void R_StoreOverlayColumn(INT32 x, fixed_t textureoffset);
 
 void R_ClearSegTables(void)
 {
@@ -196,6 +203,84 @@ static void R_RenderFlipped2sidedMultiPatchColumn(column_t *column)
 transnum_t R_GetLinedefTransTable(fixed_t alpha)
 {
 	return (20*(FRACUNIT - alpha - 1) + FRACUNIT) >> (FRACBITS+1);
+}
+
+static INT32 R_GetOverlayTextureRepeats(drawseg_t *ds, unsigned which, sector_t *sec_front, sector_t *sec_back)
+{
+	INT32 repeats = 1;
+
+	if (!(sidedef->overlays[which].flags & SIDEOVERLAYFLAG_WRAP))
+		return repeats;
+
+	fixed_t high, low;
+	fixed_t texheight = textureheight[overlaytexture[which]];
+
+	if (sec_back)
+	{
+		if (IS_TOP_EDGE_TEXTURE(which))
+		{
+			if (sidedef->overlays[which].flags & SIDEOVERLAYFLAG_NOSKEW)
+			{
+				high = sec_front->ceilingheight;
+				low = sec_back->ceilingheight;
+			}
+			else
+			{
+				high = max(
+					P_GetSectorCeilingZAt(sec_front, ds->leftpos.x, ds->leftpos.y),
+					P_GetSectorCeilingZAt(sec_front, ds->rightpos.x, ds->rightpos.y)
+				);
+				low = min(
+					P_GetSectorCeilingZAt(sec_back, ds->leftpos.x, ds->leftpos.y),
+					P_GetSectorCeilingZAt(sec_back, ds->rightpos.x, ds->rightpos.y)
+				);
+			}
+		}
+		else
+		{
+			if (sidedef->overlays[which].flags & SIDEOVERLAYFLAG_NOSKEW)
+			{
+				high = sec_back->floorheight;
+				low = sec_back->floorheight;
+			}
+			else
+			{
+				high = max(
+					P_GetSectorFloorZAt(sec_front, ds->leftpos.x, ds->leftpos.y),
+					P_GetSectorFloorZAt(sec_front, ds->rightpos.x, ds->rightpos.y)
+				);
+				low = min(
+					P_GetSectorFloorZAt(sec_back, ds->leftpos.x, ds->leftpos.y),
+					P_GetSectorFloorZAt(sec_back, ds->rightpos.x, ds->rightpos.y)
+				);
+			}
+		}
+	}
+	else
+	{
+		if (sidedef->overlays[which].flags & SIDEOVERLAYFLAG_NOSKEW)
+		{
+			high = sec_front->ceilingheight;
+			low = sec_front->floorheight;
+		}
+		else
+		{
+			high = max(
+				P_GetSectorCeilingZAt(sec_front, ds->leftpos.x, ds->leftpos.y),
+				P_GetSectorCeilingZAt(sec_front, ds->rightpos.x, ds->rightpos.y)
+			);
+			low = min(
+				P_GetSectorFloorZAt(sec_front, ds->leftpos.x, ds->leftpos.y),
+				P_GetSectorFloorZAt(sec_front, ds->rightpos.x, ds->rightpos.y)
+			);
+		}
+	}
+
+	repeats = (high - low)/texheight;
+	if ((high-low)%texheight)
+		repeats++; // tile an extra time to fill the gap -- Monster Iestyn
+
+	return max(repeats, 1);
 }
 
 // Setup lighting based on the presence/lack-of 3D floors.
@@ -572,7 +657,7 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 }
 
 // Renders a texture right on top of the wall texture
-static void R_RenderExtraTexture(drawseg_t *ds, unsigned which, INT32 x1, INT32 x2)
+static void R_RenderExtraTexture(unsigned which, INT32 x1, INT32 x2, INT32 repeats, drawseg_t *ds)
 {
 	size_t pindex;
 	column_t *col;
@@ -580,7 +665,7 @@ static void R_RenderExtraTexture(drawseg_t *ds, unsigned which, INT32 x1, INT32 
 	fixed_t height, realbot;
 	r_lightlist_t *rlight;
 	void (*colfunc_2s)(column_t *);
-	INT32 times, repeats;
+	INT32 times;
 	INT64 overflow_test;
 	INT32 range;
 
@@ -646,54 +731,6 @@ static void R_RenderExtraTexture(drawseg_t *ds, unsigned which, INT32 x1, INT32 
 
 	mfloorclip = overlayopening[1];
 	mceilingclip = overlayopening[0];
-
-	if (sidedef->overlays[which].flags & SIDEOVERLAYFLAG_WRAP)
-	{
-		fixed_t high, low;
-
-		if (backsector)
-		{
-			if (IS_TOP_EDGE_TEXTURE(which))
-			{
-				high = max(
-					P_GetSectorCeilingZAt(frontsector, ds_p->leftpos.x, ds_p->leftpos.y),
-					P_GetSectorCeilingZAt(frontsector, ds_p->rightpos.x, ds_p->rightpos.y)
-				);
-				low = min(
-					P_GetSectorCeilingZAt(backsector, ds_p->leftpos.x, ds_p->leftpos.y),
-					P_GetSectorCeilingZAt(backsector, ds_p->rightpos.x, ds_p->rightpos.y)
-				);
-			}
-			else
-			{
-				high = max(
-					P_GetSectorFloorZAt(frontsector, ds_p->leftpos.x, ds_p->leftpos.y),
-					P_GetSectorFloorZAt(frontsector, ds_p->rightpos.x, ds_p->rightpos.y)
-				);
-				low = min(
-					P_GetSectorFloorZAt(backsector, ds_p->leftpos.x, ds_p->leftpos.y),
-					P_GetSectorFloorZAt(backsector, ds_p->rightpos.x, ds_p->rightpos.y)
-				);
-			}
-		}
-		else
-		{
-			high = max(
-				P_GetSectorCeilingZAt(frontsector, ds_p->leftpos.x, ds_p->leftpos.y),
-				P_GetSectorCeilingZAt(frontsector, ds_p->rightpos.x, ds_p->rightpos.y)
-			);
-			low = min(
-				P_GetSectorFloorZAt(frontsector, ds_p->leftpos.x, ds_p->leftpos.y),
-				P_GetSectorFloorZAt(frontsector, ds_p->rightpos.x, ds_p->rightpos.y)
-			);
-		}
-
-		repeats = (high - low)/textureheight[texnum];
-		if ((high-low)%textureheight[texnum])
-			repeats++; // tile an extra time to fill the gap -- Monster Iestyn
-	}
-	else
-		repeats = 1;
 
 	for (times = 0; times < repeats; times++)
 	{
@@ -885,8 +922,6 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 	sector_t        tempsec;
 	INT32             templight;
 	INT32             i, p;
-	fixed_t         bottombounds = viewheight << FRACBITS;
-	fixed_t         topbounds = (con_clipviewtop - 1) << FRACBITS;
 	fixed_t         offsetvalue;
 	lightlist_t     *light;
 	r_lightlist_t   *rlight;
@@ -896,7 +931,8 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 	// NOTE: INT64 instead of fixed_t because overflow concerns
 	INT64         top_frac, top_step, bottom_frac, bottom_step;
 	// skew FOF walls with slopes?
-	fixed_t       ffloortextureslide = 0;
+	fixed_t       ffloortextureslide = 0, topslopeslide = 0, bottomslopeslide = 0;
+	angle_t       lineangle;
 	INT32         oldx = -1;
 	fixed_t       left_top, left_bottom; // needed here for slope skewing
 	pslope_t      *skewslope = NULL;
@@ -913,7 +949,7 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 	// OPTIMIZE: get rid of LIGHTSEGSHIFT globally
 
 	curline = ds->curline;
-	backsector = pfloor->target;
+	backsector = NULL;
 	frontsector = curline->frontsector == pfloor->target ? curline->backsector : curline->frontsector;
 	sidedef = &sides[pfloor->master->sidenum[0]];
 
@@ -921,7 +957,7 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 
 	if (pfloor->master->flags & ML_TFERLINE)
 	{
-		size_t linenum = curline->linedef-backsector->lines[0];
+		size_t linenum = curline->linedef-pfloor->target->lines[0];
 		newline = pfloor->master->frontsector->lines[0] + linenum;
 		sidedef = &sides[newline->sidenum[0]];
 		lineflags = newline->flags;
@@ -1134,11 +1170,10 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 			offsetvalue -= FixedMul(*pfloor->topheight - *pfloor->bottomheight, wall_scaley);
 	}
 
+	lineangle = R_PointToAngle2(curline->v1->x, curline->v1->y, curline->v2->x, curline->v2->y);
+
 	if (skewslope)
-	{
-		angle_t lineangle = R_PointToAngle2(curline->v1->x, curline->v1->y, curline->v2->x, curline->v2->y);
 		ffloortextureslide = FixedMul(skewslope->zdelta, FINECOSINE((lineangle-skewslope->xydirection)>>ANGLETOFINESHIFT));
-	}
 
 	dc_texturemid += offsetvalue;
 
@@ -1190,6 +1225,21 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 		bottom_frac += bottom_step * (x1 - ds->x1);
 	}
 
+	hasoverlaytexture = false;
+
+	if (*pfloor->t_slope)
+		topslopeslide = FixedMul((*pfloor->t_slope)->zdelta, FINECOSINE((lineangle-(*pfloor->t_slope)->xydirection)>>ANGLETOFINESHIFT));
+	if (*pfloor->b_slope)
+		bottomslopeslide = FixedMul((*pfloor->b_slope)->zdelta, FINECOSINE((lineangle-(*pfloor->b_slope)->xydirection)>>ANGLETOFINESHIFT));
+
+	R_AddOverlayTextures(pfloor->master->frontsector, NULL, left_top, left_bottom, 0, 0, topslopeslide, bottomslopeslide, 0, 0);
+
+	if (hasoverlaytexture)
+	{
+		for (i = 0; i < NUM_WALL_OVERLAYS; i++)
+			oldoverlaycolumn[i] = -1;
+	}
+
 	// draw the columns
 	for (dc_x = x1; dc_x <= x2; dc_x++)
 	{
@@ -1213,8 +1263,29 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 		top_frac += top_step;
 		bottom_frac += bottom_step;
 
+		if (hasoverlaytexture)
+		{
+#define ALIGN_UPPER(which) \
+			if (overlaytexture[which]) \
+				overlaytextureheight[which][dc_x] = max(rw_overlay[which].mid, rw_overlay[which].back)
+#define ALIGN_LOWER(which) \
+			if (overlaytexture[which]) \
+				overlaytextureheight[which][dc_x] = min(rw_overlay[which].mid, rw_overlay[which].back)
+
+			ALIGN_UPPER(EDGE_TEXTURE_TOP_UPPER);
+			ALIGN_LOWER(EDGE_TEXTURE_BOTTOM_LOWER);
+
+#undef ALIGN_UPPER
+#undef ALIGN_LOWER
+
+			R_StoreOverlayColumn(dc_x, ds->thicksidecol[dc_x]);
+
+			overlayopening[0][dc_x] = max((windowtop + FRACUNIT)>>FRACBITS, mceilingclip[dc_x] + 1);
+			overlayopening[1][dc_x] = min((windowbottom - 1)>>FRACBITS, mfloorclip[dc_x] - 1);
+		}
+
 		// SoM: If column is out of range, why bother with it??
-		if (windowbottom < topbounds || windowtop > bottombounds)
+		if (windowbottom < 0 || windowtop > (viewheight << FRACBITS))
 		{
 			if (dc_numlights)
 			{
@@ -1372,6 +1443,24 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 	}
 	colfunc = colfuncs[BASEDRAWFUNC];
 
+	// Render up to two extra textures when everything is done
+	if (hasoverlaytexture)
+	{
+		INT32 repeats;
+
+		if (overlaytexture[EDGE_TEXTURE_TOP_UPPER])
+		{
+			repeats = R_GetOverlayTextureRepeats(ds, EDGE_TEXTURE_TOP_UPPER, pfloor->master->frontsector, NULL);
+			R_RenderExtraTexture(EDGE_TEXTURE_TOP_UPPER, x1, x2, repeats, ds);
+		}
+
+		if (overlaytexture[EDGE_TEXTURE_BOTTOM_LOWER])
+		{
+			repeats = R_GetOverlayTextureRepeats(ds, EDGE_TEXTURE_BOTTOM_LOWER, pfloor->master->frontsector, NULL);
+			R_RenderExtraTexture(EDGE_TEXTURE_BOTTOM_LOWER, x1, x2, repeats, ds);
+		}
+	}
+
 #undef CLAMPMAX
 #undef CLAMPMIN
 }
@@ -1446,9 +1535,6 @@ static void R_RenderSegLoop (void)
 	void (*drawtop)(UINT8 *, INT32) = R_DrawRegularWall;
 	void (*drawmiddle)(UINT8 *, INT32) = R_DrawRegularWall;
 	void (*drawbottom)(UINT8 *, INT32) = R_DrawRegularWall;
-
-	fixed_t oldoverlaycolumn[NUM_WALL_OVERLAYS];
-	fixed_t overlaycolumn[NUM_WALL_OVERLAYS];
 
 	if (dc_numlights)
 		colfunc = colfuncs[COLDRAWFUNC_SHADOWED];
@@ -1865,31 +1951,7 @@ static void R_RenderSegLoop (void)
 #undef ALIGN_UPPER
 #undef ALIGN_LOWER
 
-			for (i = 0; i < NUM_WALL_OVERLAYS; i++)
-			{
-				fixed_t offset;
-
-				if (!overlaytexture[i])
-					continue;
-
-				offset = sidedef->textureoffset + rw_overlay[i].offsetx;
-				if (rw_overlay[i].scalex < 0)
-					offset = -offset;
-
-				overlaycolumn[i] = FixedDiv(textureoffset, rw_overlay[i].invscalex);
-				overlaytexturecol[i][rw_x] = overlaycolumn[i] + offset;
-
-				if (oldoverlaycolumn[i] != -1)
-				{
-					INT32 diff = oldoverlaycolumn[i]-overlaycolumn[i];
-					if (rw_overlay[i].scalex < 0)
-						diff = -diff;
-					rw_overlay[i].mid += FixedMul(rw_overlay[i].slide, diff);
-					rw_overlay[i].back += FixedMul(rw_overlay[i].backslide, diff);
-				}
-
-				oldoverlaycolumn[i] = overlaycolumn[i];
-			}
+			R_StoreOverlayColumn(rw_x, textureoffset);
 		}
 
 		if (invscale)
@@ -2017,7 +2079,7 @@ static void R_AllocTextureColumnTables(size_t range)
 	}
 }
 
-static void R_AddOverlayTextures(fixed_t ceilingfrontslide, fixed_t floorfrontslide, fixed_t ceilingbackslide, fixed_t floorbackslide)
+static void R_AddOverlayTextures(sector_t *sec_front, sector_t *sec_back, fixed_t left_top, fixed_t left_bottom, fixed_t left_high, fixed_t left_low, fixed_t ceilingfrontslide, fixed_t floorfrontslide, fixed_t ceilingbackslide, fixed_t floorbackslide)
 {
 	INT32 texnums[4] = {
 		R_GetTextureNum(sidedef->overlays[0].texture),
@@ -2026,7 +2088,7 @@ static void R_AddOverlayTextures(fixed_t ceilingfrontslide, fixed_t floorfrontsl
 		R_GetTextureNum(sidedef->overlays[3].texture)
 	};
 
-	if (!backsector)
+	if (!sec_back)
 	{
 		// If one-sided, render just the upper top and the lower bottom overlays
 		overlaytexture[0] = texnums[0];
@@ -2044,21 +2106,7 @@ static void R_AddOverlayTextures(fixed_t ceilingfrontslide, fixed_t floorfrontsl
 	{
 		if (overlaytexture[i] > 0 && overlaytexture[i] < numtextures)
 		{
-			if (!texcoltables)
-			{
-				// allocate space for masked texture tables
-				R_AllocTextureColumnTables(rw_stopx - rw_x);
-
-				texcoltables = true;
-			}
-
-			if (!maskedtexturecol)
-			{
-				ds_p->maskedtexturecol = maskedtexturecol = curtexturecolumntable - rw_x;
-				curtexturecolumntable += rw_stopx - rw_x;
-			}
-
-			maskedtexture = hasoverlaytexture = true;
+			hasoverlaytexture = true;
 
 			rw_overlay[i].scalex = sidedef->overlays[i].scalex;
 			rw_overlay[i].scaley = sidedef->overlays[i].scaley;
@@ -2071,13 +2119,13 @@ static void R_AddOverlayTextures(fixed_t ceilingfrontslide, fixed_t floorfrontsl
 			{
 				if (IS_BOTTOM_EDGE_TEXTURE(i))
 				{
-					rw_overlay[i].mid = frontsector->floorheight;
-					rw_overlay[i].back = backsector ? backsector->floorheight : rw_overlay[i].mid;
+					rw_overlay[i].mid = sec_front->floorheight;
+					rw_overlay[i].back = sec_back ? sec_back->floorheight : rw_overlay[i].mid;
 				}
 				else
 				{
-					rw_overlay[i].mid = frontsector->ceilingheight;
-					rw_overlay[i].back = backsector ? backsector->ceilingheight : rw_overlay[i].mid;
+					rw_overlay[i].mid = sec_front->ceilingheight;
+					rw_overlay[i].back = sec_back ? sec_back->ceilingheight : rw_overlay[i].mid;
 				}
 
 				rw_overlay[i].slide = 0;
@@ -2088,17 +2136,17 @@ static void R_AddOverlayTextures(fixed_t ceilingfrontslide, fixed_t floorfrontsl
 			}
 			else if (IS_BOTTOM_EDGE_TEXTURE(i))
 			{
-				rw_overlay[i].mid = worldbottom;
+				rw_overlay[i].mid = left_bottom;
 				rw_overlay[i].slide = floorfrontslide;
-				rw_overlay[i].back = backsector ? worldlow : rw_overlay[i].mid;
-				rw_overlay[i].backslide = backsector ? floorbackslide : rw_overlay[i].slide;
+				rw_overlay[i].back = sec_back ? left_low : rw_overlay[i].mid;
+				rw_overlay[i].backslide = sec_back ? floorbackslide : rw_overlay[i].slide;
 			}
 			else
 			{
-				rw_overlay[i].mid = worldtop;
+				rw_overlay[i].mid = left_top;
 				rw_overlay[i].slide = ceilingfrontslide;
-				rw_overlay[i].back = backsector ? worldhigh : rw_overlay[i].mid;
-				rw_overlay[i].backslide = backsector ? ceilingbackslide : rw_overlay[i].slide;
+				rw_overlay[i].back = sec_back ? left_high : rw_overlay[i].mid;
+				rw_overlay[i].backslide = sec_back ? ceilingbackslide : rw_overlay[i].slide;
 			}
 
 			rw_overlay[i].mid = FixedMul(rw_overlay[i].mid, abs(rw_overlay[i].scaley));
@@ -2107,6 +2155,35 @@ static void R_AddOverlayTextures(fixed_t ceilingfrontslide, fixed_t floorfrontsl
 			rw_overlay[i].mid += sidedef->rowoffset + rw_overlay[i].offsety;
 			rw_overlay[i].back += sidedef->rowoffset + rw_overlay[i].offsety;
 		}
+	}
+}
+
+static void R_StoreOverlayColumn(INT32 x, fixed_t textureoffset)
+{
+	for (unsigned i = 0; i < NUM_WALL_OVERLAYS; i++)
+	{
+		fixed_t offset;
+
+		if (!overlaytexture[i])
+			continue;
+
+		offset = sidedef->textureoffset + rw_overlay[i].offsetx;
+		if (rw_overlay[i].scalex < 0)
+			offset = -offset;
+
+		overlaycolumn[i] = FixedDiv(textureoffset, rw_overlay[i].invscalex);
+		overlaytexturecol[i][x] = overlaycolumn[i] + offset;
+
+		if (oldoverlaycolumn[i] != -1)
+		{
+			INT32 diff = oldoverlaycolumn[i]-overlaycolumn[i];
+			if (rw_overlay[i].scalex < 0)
+				diff = -diff;
+			rw_overlay[i].mid += FixedMul(rw_overlay[i].slide, diff);
+			rw_overlay[i].back += FixedMul(rw_overlay[i].backslide, diff);
+		}
+
+		oldoverlaycolumn[i] = overlaycolumn[i];
 	}
 }
 
@@ -2914,7 +2991,28 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 
 	// check if extra textures need to be rendered
 	if (segtextured)
-		R_AddOverlayTextures(ceilingfrontslide, floorfrontslide, ceilingbackslide, floorbackslide);
+	{
+		R_AddOverlayTextures(frontsector, backsector, worldtop, worldbottom, worldhigh, worldlow, ceilingfrontslide, floorfrontslide, ceilingbackslide, floorbackslide);
+
+		if (hasoverlaytexture)
+		{
+			if (!texcoltables)
+			{
+				// allocate space for masked texture tables
+				R_AllocTextureColumnTables(rw_stopx - rw_x);
+
+				texcoltables = true;
+			}
+
+			if (!maskedtexturecol)
+			{
+				ds_p->maskedtexturecol = maskedtexturecol = curtexturecolumntable - rw_x;
+				curtexturecolumntable += rw_stopx - rw_x;
+			}
+
+			maskedtexture = true;
+		}
+	}
 
 	// calculate rw_offset (only needed for textured lines)
 	if (segtextured)
@@ -3435,7 +3533,10 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 		for (i = 0; i < NUM_WALL_OVERLAYS; i++)
 		{
 			if (overlaytexture[i])
-				R_RenderExtraTexture(ds_p, i, ds_p->x1, ds_p->x2);
+			{
+				INT32 repeats = R_GetOverlayTextureRepeats(ds_p, i, frontsector, backsector);
+				R_RenderExtraTexture(i, ds_p->x1, ds_p->x2, repeats, ds_p);
+			}
 		}
 	}
 
