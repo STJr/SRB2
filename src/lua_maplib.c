@@ -209,6 +209,10 @@ enum side_e {
 	side_toptexture,
 	side_bottomtexture,
 	side_midtexture,
+	side_edge_top_upper,
+	side_edge_top_lower,
+	side_edge_bottom_upper,
+	side_edge_bottom_lower,
 	side_line,
 	side_sector,
 	side_special,
@@ -237,6 +241,10 @@ static const char *const side_opt[] = {
 	"toptexture",
 	"bottomtexture",
 	"midtexture",
+	"edge_top_upper",
+	"edge_top_lower",
+	"edge_bottom_upper",
+	"edge_bottom_lower",
 	"line",
 	"sector",
 	"special",
@@ -1297,6 +1305,22 @@ static int side_get(lua_State *L)
 	case side_midtexture:
 		lua_pushinteger(L, side->midtexture);
 		return 1;
+	case side_edge_top_upper:
+		LUA_PushUserdata(L, &side->overlays[EDGE_TEXTURE_TOP_UPPER], META_SIDEOVERLAY);
+		return 1;
+	case side_edge_top_lower:
+		if (side->line->backsector == NULL)
+			return 0;
+		LUA_PushUserdata(L, &side->overlays[EDGE_TEXTURE_TOP_LOWER], META_SIDEOVERLAY);
+		return 1;
+	case side_edge_bottom_upper:
+		if (side->line->backsector == NULL)
+			return 0;
+		LUA_PushUserdata(L, &side->overlays[EDGE_TEXTURE_BOTTOM_UPPER], META_SIDEOVERLAY);
+		return 1;
+	case side_edge_bottom_lower:
+		LUA_PushUserdata(L, &side->overlays[EDGE_TEXTURE_BOTTOM_LOWER], META_SIDEOVERLAY);
+		return 1;
 	case side_line:
 		LUA_PushUserdata(L, side->line, META_LINE);
 		return 1;
@@ -1352,6 +1376,10 @@ static int side_set(lua_State *L)
 	case side_sector:
 	case side_special:
 	case side_text:
+	case side_edge_top_upper:
+	case side_edge_top_lower:
+	case side_edge_bottom_upper:
+	case side_edge_bottom_lower:
 		return luaL_error(L, "side_t field " LUA_QS " cannot be set.", side_opt[field]);
 	default:
 		return luaL_error(L, "side_t has no field named " LUA_QS ".", lua_tostring(L, 2));
@@ -1420,6 +1448,129 @@ static int side_num(lua_State *L)
 	side_t *side = *((side_t **)luaL_checkudata(L, 1, META_SIDE));
 	lua_pushinteger(L, side-sides);
 	return 1;
+}
+
+////////////////////
+// side_overlay_t //
+////////////////////
+
+enum sideoverlay_e {
+	sideoverlay_valid = 0,
+	sideoverlay_texture,
+	sideoverlay_offsetx,
+	sideoverlay_offsety,
+	sideoverlay_scalex,
+	sideoverlay_scaley,
+	sideoverlay_noskew,
+	sideoverlay_wrap
+};
+
+static const char *const sideoverlay_opt[] = {
+	"valid",
+	"texture",
+	"offsetx",
+	"offsety",
+	"scalex",
+	"scaley",
+	"noskew",
+	"wrap",
+	NULL};
+
+static int sideoverlay_fields_ref = LUA_NOREF;
+
+static int sideoverlay_get(lua_State *L)
+{
+	side_overlay_t *overlay = *((side_overlay_t **)luaL_checkudata(L, 1, META_SIDEOVERLAY));
+	enum sideoverlay_e field = Lua_optoption(L, 2, sideoverlay_valid, sideoverlay_fields_ref);
+
+	if (!overlay)
+	{
+		if (field == sideoverlay_valid) {
+			lua_pushboolean(L, 0);
+			return 1;
+		}
+		return luaL_error(L, "accessed side_t.overlay doesn't exist anymore.");
+	}
+
+	switch(field)
+	{
+	case sideoverlay_valid:
+		lua_pushboolean(L, 1);
+		return 1;
+	case sideoverlay_texture:
+		lua_pushinteger(L, overlay->texture);
+		return 1;
+	case sideoverlay_offsetx:
+		lua_pushfixed(L, overlay->offsetx);
+		return 1;
+	case sideoverlay_offsety:
+		lua_pushfixed(L, overlay->offsety);
+		return 1;
+	case sideoverlay_scalex:
+		lua_pushfixed(L, overlay->scalex);
+		return 1;
+	case sideoverlay_scaley:
+		lua_pushfixed(L, overlay->scaley);
+		return 1;
+	case sideoverlay_noskew:
+		lua_pushboolean(L, overlay->flags & SIDEOVERLAYFLAG_NOSKEW);
+		return 1;
+	case sideoverlay_wrap:
+		lua_pushboolean(L, overlay->flags & SIDEOVERLAYFLAG_WRAP);
+		return 1;
+	}
+	return 0;
+}
+
+static int sideoverlay_set(lua_State *L)
+{
+	side_overlay_t *overlay = *((side_overlay_t **)luaL_checkudata(L, 1, META_SIDEOVERLAY));
+	enum sideoverlay_e field = Lua_optoption(L, 2, sideoverlay_valid, sideoverlay_fields_ref);
+
+	if (!overlay)
+	{
+		if (field == sideoverlay_valid) {
+			lua_pushboolean(L, 0);
+			return 1;
+		}
+		return luaL_error(L, "accessed side_t.overlay doesn't exist anymore.");
+	}
+
+	switch(field)
+	{
+	case side_valid:
+		return luaL_error(L, "side_t.overlay field " LUA_QS " cannot be set.", side_opt[field]);
+	default:
+		return luaL_error(L, "side_t.overlay has no field named " LUA_QS ".", lua_tostring(L, 2));
+	case sideoverlay_texture:
+		overlay->texture = luaL_checkinteger(L, 3);
+		break;
+	case sideoverlay_offsetx:
+		overlay->offsetx = luaL_checkfixed(L, 3);
+		break;
+	case sideoverlay_offsety:
+		overlay->offsety = luaL_checkfixed(L, 3);
+		break;
+	case sideoverlay_scalex:
+		overlay->scalex = luaL_checkfixed(L, 3);
+		break;
+	case sideoverlay_scaley:
+		overlay->scaley = luaL_checkfixed(L, 3);
+		break;
+	case sideoverlay_noskew:
+		if (luaL_checkboolean(L, 3))
+			overlay->flags |= SIDEOVERLAYFLAG_NOSKEW;
+		else
+			overlay->flags &= ~SIDEOVERLAYFLAG_NOSKEW;
+		break;
+	case sideoverlay_wrap:
+		if (luaL_checkboolean(L, 3))
+			overlay->flags |= SIDEOVERLAYFLAG_WRAP;
+		else
+			overlay->flags &= ~SIDEOVERLAYFLAG_WRAP;
+		break;
+	}
+	return 0;
 }
 
 //////////////
@@ -2991,6 +3142,7 @@ int LUA_MapLib(lua_State *L)
 	LUA_RegisterUserdataMetatable(L, META_LINESTRINGARGS, linestringargs_get, NULL, linestringargs_len);
 	LUA_RegisterUserdataMetatable(L, META_SIDENUM, sidenum_get, NULL, NULL);
 	LUA_RegisterUserdataMetatable(L, META_SIDE, side_get, side_set, side_num);
+	LUA_RegisterUserdataMetatable(L, META_SIDEOVERLAY, sideoverlay_get, sideoverlay_set, NULL);
 	LUA_RegisterUserdataMetatable(L, META_VERTEX, vertex_get, NULL, vertex_num);
 	LUA_RegisterUserdataMetatable(L, META_FFLOOR, ffloor_get, ffloor_set, NULL);
 	LUA_RegisterUserdataMetatable(L, META_BBOX, bbox_get, NULL, NULL);
@@ -3003,6 +3155,7 @@ int LUA_MapLib(lua_State *L)
 	subsector_fields_ref = Lua_CreateFieldTable(L, subsector_opt);
 	line_fields_ref = Lua_CreateFieldTable(L, line_opt);
 	side_fields_ref = Lua_CreateFieldTable(L, side_opt);
+	sideoverlay_fields_ref = Lua_CreateFieldTable(L, sideoverlay_opt);
 	vertex_fields_ref = Lua_CreateFieldTable(L, vertex_opt);
 	ffloor_fields_ref = Lua_CreateFieldTable(L, ffloor_opt);
 	slope_fields_ref = Lua_CreateFieldTable(L, slope_opt);

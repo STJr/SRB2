@@ -175,6 +175,7 @@ static const struct {
 	{META_VERTEX,       "vertex_t"},
 	{META_LINE,         "line_t"},
 	{META_SIDE,         "side_t"},
+	{META_SIDEOVERLAY,  "side_t.overlay"},
 	{META_SUBSECTOR,    "subsector_t"},
 	{META_SECTOR,       "sector_t"},
 	{META_FFLOOR,       "ffloor_t"},

@@ -1244,7 +1244,7 @@ static void HWR_GetExtraTextureCoords(unsigned which, fixed_t *top, fixed_t *bot
 
 	fixed_t rowoffset = FixedDiv(gl_sidedef->rowoffset + gl_sidedef->overlays[which].offsety, abs(gl_sidedef->overlays[which].scaley));
 
-	if (gl_sidedef->flags & GET_SIDEFLAG_EDGENOSKEW(which))
+	if (gl_sidedef->overlays[which].flags & SIDEOVERLAYFLAG_NOSKEW)
 	{
 		if (IS_TOP_EDGE_TEXTURE(which))
 		{
@@ -1357,12 +1357,13 @@ static void HWR_DoExtraTextureCut(UINT8 intersected, UINT8 which, v2d_t vs, v2d_
 	*worldbottom      = P_GetSectorFloorZAt(gl_frontsector, v1x, v1y);
 	*worldbottomslope = P_GetSectorFloorZAt(gl_frontsector, v2x, v2y);
 
-	sector_t *back = gl_backsector ? gl_backsector : gl_frontsector;
-
-	*worldhigh        = P_GetSectorCeilingZAt(back, v1x, v1y);
-	*worldhighslope   = P_GetSectorCeilingZAt(back, v2x, v2y);
-	*worldlow         = P_GetSectorFloorZAt(back, v1x, v1y);
-	*worldlowslope    = P_GetSectorFloorZAt(back, v2x, v2y);
+	if (gl_backsector)
+	{
+		*worldhigh        = P_GetSectorCeilingZAt(gl_backsector, v1x, v1y);
+		*worldhighslope   = P_GetSectorCeilingZAt(gl_backsector, v2x, v2y);
+		*worldlow         = P_GetSectorFloorZAt(gl_backsector, v1x, v1y);
+		*worldlowslope    = P_GetSectorFloorZAt(gl_backsector, v2x, v2y);
+	}
 
 	HWR_GetExtraTextureCoords(which, polytop, polybottom, polytopslope, polybottomslope, *worldtop, *worldbottom, *worldhigh, *worldlow, *worldtopslope, *worldbottomslope, *worldhighslope, *worldlowslope, midtexheight);
 }
@@ -1385,10 +1386,12 @@ static void HWR_SetWallEndCoordsOffset(FOutVector wallVerts[4], float wallx2, fl
 	wallVerts[2].z = wallVerts[1].z = wally2;
 }
 
-// Draws an extra texture (sorry for the length)
+// Draws an extra texture
 static void HWR_RenderExtraTexture(unsigned which, v2d_t vs, v2d_t ve, float xcliplow, float xcliphigh, UINT32 lightnum)
 {
-	INT32 texnum = R_GetTextureNum(gl_sidedef->overlays[which].texture);
+	side_overlay_t *overlay = &gl_sidedef->overlays[which];
+
+	INT32 texnum = R_GetTextureNum(overlay->texture);
 	if (texnum <= 0 || texnum >= numtextures)
 		return;
 
@@ -1402,23 +1405,18 @@ static void HWR_RenderExtraTexture(unsigned which, v2d_t vs, v2d_t ve, float xcl
 
 	float flength = gl_curline->flength;
 
-	sector_t *back = gl_backsector ? gl_backsector : gl_frontsector;
-
 	fixed_t worldtop         = P_GetSectorCeilingZAt(gl_frontsector, v1x, v1y);
 	fixed_t worldtopslope    = P_GetSectorCeilingZAt(gl_frontsector, v2x, v2y);
 	fixed_t worldbottom      = P_GetSectorFloorZAt(gl_frontsector, v1x, v1y);
 	fixed_t worldbottomslope = P_GetSectorFloorZAt(gl_frontsector, v2x, v2y);
 
-	fixed_t worldhigh        = P_GetSectorCeilingZAt(back, v1x, v1y);
-	fixed_t worldhighslope   = P_GetSectorCeilingZAt(back, v2x, v2y);
-	fixed_t worldlow         = P_GetSectorFloorZAt(back, v1x, v1y);
-	fixed_t worldlowslope    = P_GetSectorFloorZAt(back, v2x, v2y);
+	fixed_t worldhigh = 0, worldhighslope = 0, worldlow = 0, worldlowslope = 0;
 
-	fixed_t texheight = FixedDiv(textureheight[texnum], abs(gl_sidedef->overlays[which].scaley));
+	fixed_t texheight = FixedDiv(textureheight[texnum], abs(overlay->scaley));
 
 	INT32 repeats;
 
-	if (gl_sidedef->flags & GET_SIDEFLAG_EDGEWRAP(which))
+	if (overlay->flags & SIDEOVERLAYFLAG_WRAP)
 	{
 		fixed_t high, low;
 
@@ -1467,8 +1465,8 @@ static void HWR_RenderExtraTexture(unsigned which, v2d_t vs, v2d_t ve, float xcl
 		repeats = 1;
 
 	GLMapTexture_t *grTex = HWR_GetTexture(texnum);
-	float xscale = FixedToFloat(gl_sidedef->overlays[which].scalex);
-	float yscale = FixedToFloat(gl_sidedef->overlays[which].scaley);
+	float xscale = FixedToFloat(overlay->scalex);
+	float yscale = FixedToFloat(overlay->scaley);
 
 	float xcliplowbase = xcliplow;
 	float xclipoffset = 0.0f;
@@ -1479,25 +1477,43 @@ static void HWR_RenderExtraTexture(unsigned which, v2d_t vs, v2d_t ve, float xcl
 	// Find the wall's coordinates
 	fixed_t midtexheight = texheight * repeats;
 
+	if (gl_backsector)
+	{
+		worldhigh        = P_GetSectorCeilingZAt(gl_backsector, v1x, v1y);
+		worldhighslope   = P_GetSectorCeilingZAt(gl_backsector, v2x, v2y);
+		worldlow         = P_GetSectorFloorZAt(gl_backsector, v1x, v1y);
+		worldlowslope    = P_GetSectorFloorZAt(gl_backsector, v2x, v2y);
+	}
+
 	HWR_GetExtraTextureCoords(which, &polytop, &polybottom, &polytopslope, &polybottomslope, worldtop, worldbottom, worldhigh, worldlow, worldtopslope, worldbottomslope, worldhighslope, worldlowslope, midtexheight);
 
 	// Find where to cut it
 	fixed_t lowcut, highcut;
 	fixed_t lowcutslope, highcutslope;
 
-	if (IS_TOP_EDGE_TEXTURE(which))
+	if (!gl_backsector)
 	{
-		lowcut = worldhigh;
+		lowcut = worldbottom;
 		highcut = worldtop;
-		lowcutslope = worldhighslope;
+		lowcutslope = worldbottomslope;
 		highcutslope = worldtopslope;
 	}
 	else
 	{
-		lowcut = worldbottom;
-		highcut = worldlow;
-		lowcutslope = worldbottomslope;
-		highcutslope = worldlowslope;
+		if (IS_TOP_EDGE_TEXTURE(which))
+		{
+			lowcut = worldhigh;
+			highcut = worldtop;
+			lowcutslope = worldhighslope;
+			highcutslope = worldtopslope;
+		}
+		else
+		{
+			lowcut = worldbottom;
+			highcut = worldlow;
+			lowcutslope = worldbottomslope;
+			highcutslope = worldlowslope;
+		}
 	}
 
 	// Time to render the wall (or so you thought)
@@ -1605,19 +1621,29 @@ static void HWR_RenderExtraTexture(unsigned which, v2d_t vs, v2d_t ve, float xcl
 
 			HWR_GetExtraTextureCoords(which, &polytop, &polybottom, &polytopslope, &polybottomslope, worldtop, worldbottom, worldhigh, worldlow, worldtopslope, worldbottomslope, worldhighslope, worldlowslope, midtexheight);
 
-			if (IS_TOP_EDGE_TEXTURE(which))
+			if (!gl_backsector)
 			{
-				lowcut = worldhigh;
+				lowcut = worldbottom;
 				highcut = worldtop;
-				lowcutslope = worldhighslope;
+				lowcutslope = worldbottomslope;
 				highcutslope = worldtopslope;
 			}
 			else
 			{
-				lowcut = worldbottom;
-				highcut = worldlow;
-				lowcutslope = worldbottomslope;
-				highcutslope = worldlowslope;
+				if (IS_TOP_EDGE_TEXTURE(which))
+				{
+					lowcut = worldhigh;
+					highcut = worldtop;
+					lowcutslope = worldhighslope;
+					highcutslope = worldtopslope;
+				}
+				else
+				{
+					lowcut = worldbottom;
+					highcut = worldlow;
+					lowcutslope = worldbottomslope;
+					highcutslope = worldlowslope;
+				}
 			}
 
 			h = polytop;
@@ -1773,12 +1799,12 @@ static void HWR_RenderExtraTexture(unsigned which, v2d_t vs, v2d_t ve, float xcl
 	// Left side
 	wallVerts[3].t = texturevpeg * yscale * grTex->scaleY;
 	wallVerts[0].t = (h - l + texturevpeg) * yscale * grTex->scaleY;
-	wallVerts[0].s = wallVerts[3].s = ((xcliplow * xscale) + gl_sidedef->overlays[which].offsetx) * grTex->scaleX;
+	wallVerts[0].s = wallVerts[3].s = ((xcliplow * xscale) + overlay->offsetx) * grTex->scaleX;
 
 	// Right side
 	wallVerts[2].t = texturevpegslope * yscale * grTex->scaleY;
 	wallVerts[1].t = (hS - lS + texturevpegslope) * yscale * grTex->scaleY;
-	wallVerts[2].s = wallVerts[1].s = ((xcliphigh * xscale) + gl_sidedef->overlays[which].offsetx) * grTex->scaleX;
+	wallVerts[2].s = wallVerts[1].s = ((xcliphigh * xscale) + overlay->offsetx) * grTex->scaleX;
 
 	// set top/bottom coords
 	// Take the texture peg into account, rather than changing the offsets past
@@ -1831,10 +1857,13 @@ static void HWR_RenderExtraTexture(unsigned which, v2d_t vs, v2d_t ve, float xcl
 	worldbottom      = P_GetSectorFloorZAt(gl_frontsector, v1x, v1y);
 	worldbottomslope = P_GetSectorFloorZAt(gl_frontsector, v2x, v2y);
 
-	worldhigh        = P_GetSectorCeilingZAt(back, v1x, v1y);
-	worldhighslope   = P_GetSectorCeilingZAt(back, v2x, v2y);
-	worldlow         = P_GetSectorFloorZAt(back, v1x, v1y);
-	worldlowslope    = P_GetSectorFloorZAt(back, v2x, v2y);
+	if (gl_backsector)
+	{
+		worldhigh        = P_GetSectorCeilingZAt(gl_backsector, v1x, v1y);
+		worldhighslope   = P_GetSectorCeilingZAt(gl_backsector, v2x, v2y);
+		worldlow         = P_GetSectorFloorZAt(gl_backsector, v1x, v1y);
+		worldlowslope    = P_GetSectorFloorZAt(gl_backsector, v2x, v2y);
+	}
 
 	HWR_GetExtraTextureCoords(which, &polytop, &polybottom, &polytopslope, &polybottomslope, worldtop, worldbottom, worldhigh, worldlow, worldtopslope, worldbottomslope, worldhighslope, worldlowslope, midtexheight);
 
@@ -1866,12 +1895,12 @@ static void HWR_RenderExtraTexture(unsigned which, v2d_t vs, v2d_t ve, float xcl
 	// Left side
 	wallVerts[3].t = texturevpeg * yscale * grTex->scaleY;
 	wallVerts[0].t = (h - l + texturevpeg) * yscale * grTex->scaleY;
-	wallVerts[0].s = wallVerts[3].s = ((xcliplow * xscale) + gl_sidedef->overlays[which].offsetx) * grTex->scaleX;
+	wallVerts[0].s = wallVerts[3].s = ((xcliplow * xscale) + overlay->offsetx) * grTex->scaleX;
 
 	// Right side
 	wallVerts[2].t = texturevpegslope * yscale * grTex->scaleY;
 	wallVerts[1].t = (hS - lS + texturevpegslope) * yscale * grTex->scaleY;
-	wallVerts[2].s = wallVerts[1].s = ((xcliphigh * xscale) + gl_sidedef->overlays[which].offsetx) * grTex->scaleX;
+	wallVerts[2].s = wallVerts[1].s = ((xcliphigh * xscale) + overlay->offsetx) * grTex->scaleX;
 
 	if (gl_frontsector->numlights)
 		HWR_SplitWall(gl_frontsector, wallVerts, texnum, &Surf, FOF_CUTLEVEL, NULL, blendmode);
@@ -2169,14 +2198,14 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 		if (gl_midtexture)
 			HWR_RenderMidtexture(gl_midtexture, cliplow, cliphigh, worldtop, worldbottom, worldhigh, worldlow, worldtopslope, worldbottomslope, worldhighslope, worldlowslope, lightnum, wallVerts);
 
-		// Render extra textures
-		for (unsigned i = 0; i < NUM_WALL_OVERLAYS; i++)
-			HWR_RenderExtraTexture(i, vs, ve, cliplow, cliphigh, lightnum);
-
-		// Sky culling
-		// No longer so much a mess as before!
 		if (!gl_curline->polyseg) // Don't do it for polyobjects
 		{
+			// Render extra textures
+			for (unsigned i = 0; i < NUM_WALL_OVERLAYS; i++)
+				HWR_RenderExtraTexture(i, vs, ve, cliplow, cliphigh, lightnum);
+
+			// Sky culling
+			// No longer so much a mess as before!
 			if (gl_frontsector->ceilingpic == skyflatnum
 				&& gl_backsector->ceilingpic != skyflatnum) // don't cull if back sector is also sky
 			{
@@ -2255,12 +2284,12 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 			}
 		}
 
-		// Render extra textures
-		for (unsigned i = 0; i < NUM_WALL_OVERLAYS; i++)
-			HWR_RenderExtraTexture(i, vs, ve, cliplow, cliphigh, lightnum);
-
 		if (!gl_curline->polyseg)
 		{
+			// Render extra textures
+			HWR_RenderExtraTexture(EDGE_TEXTURE_TOP_UPPER, vs, ve, cliplow, cliphigh, lightnum);
+			HWR_RenderExtraTexture(EDGE_TEXTURE_BOTTOM_LOWER, vs, ve, cliplow, cliphigh, lightnum);
+
 			if (gl_frontsector->ceilingpic == skyflatnum) // It's a single-sided line with sky for its sector
 			{
 				wallVerts[2].y = wallVerts[3].y = FIXED_TO_FLOAT(INT32_MAX); // draw to top of map space

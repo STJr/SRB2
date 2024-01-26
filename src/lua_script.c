@@ -964,7 +964,11 @@ void LUA_InvalidateLevel(void)
 		LUA_InvalidateUserdata(lines[i].sidenum);
 	}
 	for (i = 0; i < numsides; i++)
+	{
+		for (unsigned j = 0; j < NUM_WALL_OVERLAYS; j++)
+			LUA_InvalidateUserdata(&sides[i].overlays[j]);
 		LUA_InvalidateUserdata(&sides[i]);
+	}
 	for (i = 0; i < numvertexes; i++)
 		LUA_InvalidateUserdata(&vertexes[i]);
 	for (i = 0; i < (size_t)numPolyObjects; i++)

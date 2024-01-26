@@ -1366,13 +1366,12 @@ static void P_LoadSidedefs(UINT8 *data)
 		sd->scalex_top = sd->scalex_mid = sd->scalex_bottom = FRACUNIT;
 		sd->scaley_top = sd->scaley_mid = sd->scaley_bottom = FRACUNIT;
 
-		sd->flags = 0;
-
 		for (unsigned j = 0; j < NUM_WALL_OVERLAYS; j++)
 		{
 			sd->overlays[j].texture = R_TextureNumForName("-");
 			sd->overlays[j].offsetx = sd->overlays[j].offsety = 0;
 			sd->overlays[j].scalex = sd->overlays[j].scaley = FRACUNIT;
+			sd->overlays[j].flags = 0;
 		}
 
 		P_SetSidedefSector(i, (UINT16)SHORT(msd->sector));
@@ -1907,20 +1906,21 @@ static void ParseTextmapSectorParameter(UINT32 i, const char *param, const char 
 
 static void ParseTextmapSidedefOverlay(unsigned which, UINT32 i, const char *param, const char *val)
 {
+	side_overlay_t *overlay = &sides[i].overlays[which];
 	if (fastcmp(param, "texture"))
-		sides[i].overlays[which].texture = R_TextureNumForName(val);
+		overlay->texture = R_TextureNumForName(val);
 	else if (fastcmp(param, "offsetx"))
-		sides[i].overlays[which].offsetx = FLOAT_TO_FIXED(atof(val));
+		overlay->offsetx = FLOAT_TO_FIXED(atof(val));
 	else if (fastcmp(param, "offsety"))
-		sides[i].overlays[which].offsety = FLOAT_TO_FIXED(atof(val));
+		overlay->offsety = FLOAT_TO_FIXED(atof(val));
 	else if (fastcmp(param, "scalex"))
-		sides[i].overlays[which].scalex = FLOAT_TO_FIXED(atof(val));
+		overlay->scalex = FLOAT_TO_FIXED(atof(val));
 	else if (fastcmp(param, "scaley"))
-		sides[i].overlays[which].scaley = FLOAT_TO_FIXED(atof(val));
+		overlay->scaley = FLOAT_TO_FIXED(atof(val));
 	else if (fastcmp(param, "noskew") && fastcmp("true", val))
-		sides[i].flags |= GET_SIDEFLAG_EDGENOSKEW(which);
+		overlay->flags |= SIDEOVERLAYFLAG_NOSKEW;
 	else if (fastcmp(param, "wrap") && fastcmp("true", val))
-		sides[i].flags |= GET_SIDEFLAG_EDGEWRAP(which);
+		overlay->flags |= SIDEOVERLAYFLAG_WRAP;
 }
 
 static void ParseTextmapSidedefParameter(UINT32 i, const char *param, const char *val)
@@ -2240,9 +2240,9 @@ static void WriteTextmapEdgeTexture(const char *prefix, unsigned i, side_t *side
 		fprintf(f, "%s""scalex = %f;\n", prefix, FIXED_TO_FLOAT(side->overlays[i].scalex));
 	if (side->overlays[i].scaley != FRACUNIT)
 		fprintf(f, "%s""scaley = %f;\n", prefix, FIXED_TO_FLOAT(side->overlays[i].scaley));
-	if (side->flags & GET_SIDEFLAG_EDGENOSKEW(i))
+	if (side->overlays[i].flags & SIDEOVERLAYFLAG_NOSKEW)
 		fprintf(f, "%s""noskew = true;\n", prefix);
-	if (side->flags & GET_SIDEFLAG_EDGEWRAP(i))
+	if (side->overlays[i].flags & SIDEOVERLAYFLAG_WRAP)
 		fprintf(f, "%s""wrap = true;\n", prefix);
 }
 
@@ -3101,7 +3101,6 @@ static void P_LoadTextmap(void)
 		sd->offsety_top = sd->offsety_mid = sd->offsety_bottom = 0;
 		sd->scalex_top = sd->scalex_mid = sd->scalex_bottom = FRACUNIT;
 		sd->scaley_top = sd->scaley_mid = sd->scaley_bottom = FRACUNIT;
-		sd->flags = 0;
 		sd->toptexture = R_TextureNumForName("-");
 		sd->midtexture = R_TextureNumForName("-");
 		sd->bottomtexture = R_TextureNumForName("-");
@@ -3110,6 +3109,7 @@ static void P_LoadTextmap(void)
 			sd->overlays[j].texture = R_TextureNumForName("-");
 			sd->overlays[j].offsetx = sd->overlays[j].offsety = 0;
 			sd->overlays[j].scalex = sd->overlays[j].scaley = FRACUNIT;
+			sd->overlays[j].flags = 0;
 		}
 		sd->sector = NULL;
 		sd->repeatcnt = 0;

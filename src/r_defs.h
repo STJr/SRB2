@@ -613,19 +613,17 @@ typedef struct line_s
 // Don't make available to Lua or I will find where you live
 enum
 {
-	SIDEFLAG_EDGENOSKEW1 = 1<<7,
-	SIDEFLAG_EDGENOSKEW2 = 1<<8,
-	SIDEFLAG_EDGENOSKEW3 = 1<<9,
-	SIDEFLAG_EDGENOSKEW4 = 1<<10,
-
-	SIDEFLAG_EDGEWRAP1   = 1<<11,
-	SIDEFLAG_EDGEWRAP2   = 1<<12,
-	SIDEFLAG_EDGEWRAP3   = 1<<13,
-	SIDEFLAG_EDGEWRAP4   = 1<<14
+	SIDEOVERLAYFLAG_NOSKEW = 1<<0,
+	SIDEOVERLAYFLAG_WRAP   = 1<<1
 };
 
-#define GET_SIDEFLAG_EDGENOSKEW(which) (SIDEFLAG_EDGENOSKEW1<<(which))
-#define GET_SIDEFLAG_EDGEWRAP(which) (SIDEFLAG_EDGEWRAP1<<(which))
+typedef struct
+{
+	INT32 texture;
+	fixed_t offsetx, offsety;
+	fixed_t scalex, scaley;
+	UINT8 flags;
+} side_overlay_t;
 
 typedef struct
 {
@@ -642,18 +640,12 @@ typedef struct
 	fixed_t scalex_top, scalex_mid, scalex_bottom;
 	fixed_t scaley_top, scaley_mid, scaley_bottom;
 
-	UINT16 flags;
-
 	// Texture indices.
 	// We do not maintain names here.
 	INT32 toptexture, bottomtexture, midtexture;
 
 	// Upper and lower overlays for top and bottom textures
-	struct {
-		INT32 texture;
-		fixed_t offsetx, offsety;
-		fixed_t scalex, scaley;
-	} overlays[NUM_WALL_OVERLAYS];
+	side_overlay_t overlays[NUM_WALL_OVERLAYS];
 
 	// Linedef the sidedef belongs to
 	line_t *line;

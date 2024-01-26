@@ -647,7 +647,7 @@ static void R_RenderExtraTexture(drawseg_t *ds, unsigned which, INT32 x1, INT32 
 	mfloorclip = overlayopening[1];
 	mceilingclip = overlayopening[0];
 
-	if (sidedef->flags & GET_SIDEFLAG_EDGEWRAP(which))
+	if (sidedef->overlays[which].flags & SIDEOVERLAYFLAG_WRAP)
 	{
 		fixed_t high, low;
 
@@ -683,8 +683,8 @@ static void R_RenderExtraTexture(drawseg_t *ds, unsigned which, INT32 x1, INT32 
 				P_GetSectorCeilingZAt(frontsector, ds_p->rightpos.x, ds_p->rightpos.y)
 			);
 			low = min(
-				P_GetSectorFloorZAt(backsector, ds_p->leftpos.x, ds_p->leftpos.y),
-				P_GetSectorFloorZAt(backsector, ds_p->rightpos.x, ds_p->rightpos.y)
+				P_GetSectorFloorZAt(frontsector, ds_p->leftpos.x, ds_p->leftpos.y),
+				P_GetSectorFloorZAt(frontsector, ds_p->rightpos.x, ds_p->rightpos.y)
 			);
 		}
 
@@ -2029,8 +2029,8 @@ static void R_AddOverlayTextures(fixed_t ceilingfrontslide, fixed_t floorfrontsl
 	if (!backsector)
 	{
 		// If one-sided, render just the upper top and the lower bottom overlays
-		overlaytexture[0] = texnums[0] ? texnums[0] : texnums[2];
-		overlaytexture[3] = texnums[1] ? texnums[1] : texnums[3];
+		overlaytexture[0] = texnums[0];
+		overlaytexture[3] = texnums[3];
 	}
 	else
 	{
@@ -2067,7 +2067,7 @@ static void R_AddOverlayTextures(fixed_t ceilingfrontslide, fixed_t floorfrontsl
 
 			rw_overlay[i].invscalex = FixedDiv(FRACUNIT, rw_overlay[i].scalex);
 
-			if (sidedef->flags & GET_SIDEFLAG_EDGENOSKEW(i))
+			if (sidedef->overlays[i].flags & SIDEOVERLAYFLAG_NOSKEW)
 			{
 				if (IS_BOTTOM_EDGE_TEXTURE(i))
 				{

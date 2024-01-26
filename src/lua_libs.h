@@ -55,6 +55,7 @@ extern boolean ignoregameinputs;
 #define META_SEG "SEG_T*"
 #define META_NODE "NODE_T*"
 #endif
+#define META_SIDEOVERLAY "SIDE_T*OVERLAY"
 #define META_SLOPE "PSLOPE_T*"
 #define META_VECTOR2 "VECTOR2_T"
 #define META_VECTOR3 "VECTOR3_T"
