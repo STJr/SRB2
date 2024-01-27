@@ -915,7 +915,22 @@ enum
 	LD_SDMIDLIGHT    = 1<<19,
 	LD_SDBOTLIGHT    = 1<<20,
 	LD_SDREPEATCNT   = 1<<21,
-	LD_SDFLAGS       = 1<<22
+	LD_SDFLAGS       = 1<<22,
+	LD_SDOVERLAY1    = 1<<23,
+	LD_SDOVERLAY2    = 1<<24,
+	LD_SDOVERLAY3    = 1<<25,
+	LD_SDOVERLAY4    = 1<<26
+};
+
+// sidedef edge flags
+enum
+{
+	LD_EDGETEX    = 1,
+	LD_EDGEOFFX   = 1<<1,
+	LD_EDGEOFFY   = 1<<2,
+	LD_EDGESCALEX = 1<<3,
+	LD_EDGESCALEY = 1<<4,
+	LD_EDGEFLAGS  = 1<<5
 };
 
 static boolean P_AreArgsEqual(const line_t *li, const line_t *spawnli)
@@ -1349,7 +1364,31 @@ static void UnArchiveSectors(void)
 	}
 }
 
-static UINT32 GetSideDiff(const side_t *si, const side_t *spawnsi)
+static UINT8 GetSideEdgeDiff(const side_overlay_t *edge, const side_overlay_t *spawnedge)
+{
+	UINT8 diff = 0;
+	if (edge->texture != spawnedge->texture)
+		diff |= LD_EDGETEX;
+	if (edge->offsetx != spawnedge->offsetx)
+		diff |= LD_EDGEOFFX;
+	if (edge->offsety != spawnedge->offsety)
+		diff |= LD_EDGEOFFY;
+	if (edge->scalex != spawnedge->scalex)
+		diff |= LD_EDGESCALEX;
+	if (edge->scaley != spawnedge->scaley)
+		diff |= LD_EDGESCALEY;
+	if (edge->flags != spawnedge->flags)
+		diff |= LD_EDGEFLAGS;
+	return diff;
+}
+
+static void GetAllSideEdgeDiff(const side_t *si, const side_t *spawnsi, UINT8 edgediff[4])
+{
+	for (unsigned i = 0; i < NUM_WALL_OVERLAYS; i++)
+		edgediff[i] = GetSideEdgeDiff(&si->overlays[i], &spawnsi->overlays[i]);
+}
+
+static UINT32 GetSideDiff(const side_t *si, const side_t *spawnsi, UINT8 edgediff[4])
 {
 	UINT32 diff = 0;
 	if (si->textureoffset != spawnsi->textureoffset)
@@ -1389,10 +1428,36 @@ static UINT32 GetSideDiff(const side_t *si, const side_t *spawnsi)
 		diff |= LD_SDBOTSCALEY;
 	if (si->repeatcnt != spawnsi->repeatcnt)
 		diff |= LD_SDREPEATCNT;
+	if (edgediff[0] != 0)
+		diff |= LD_SDOVERLAY1;
+	if (edgediff[1] != 0)
+		diff |= LD_SDOVERLAY2;
+	if (edgediff[2] != 0)
+		diff |= LD_SDOVERLAY3;
+	if (edgediff[3] != 0)
+		diff |= LD_SDOVERLAY4;
 	return diff;
 }
 
-static void ArchiveSide(const side_t *si, UINT32 diff)
+static void ArchiveSideEdge(const side_overlay_t *edge, UINT8 diff)
+{
+	WRITEUINT8(save_p, diff);
+
+	if (diff & LD_EDGETEX)
+		WRITEINT32(save_p, edge->texture);
+	if (diff & LD_EDGEOFFX)
+		WRITEFIXED(save_p, edge->offsetx);
+	if (diff & LD_EDGEOFFY)
+		WRITEFIXED(save_p, edge->offsety);
+	if (diff & LD_EDGESCALEX)
+		WRITEFIXED(save_p, edge->scalex);
+	if (diff & LD_EDGESCALEY)
+		WRITEFIXED(save_p, edge->scaley);
+	if (diff & LD_EDGEFLAGS)
+		WRITEUINT8(save_p, edge->flags);
+}
+
+static void ArchiveSide(const side_t *si, UINT32 diff, UINT8 edgediff[4])
 {
 	WRITEUINT32(save_p, diff);
 
@@ -1432,6 +1497,14 @@ static void ArchiveSide(const side_t *si, UINT32 diff)
 		WRITEFIXED(save_p, si->scaley_bottom);
 	if (diff & LD_SDREPEATCNT)
 		WRITEINT16(save_p, si->repeatcnt);
+	if (diff & LD_SDOVERLAY1)
+		ArchiveSideEdge(&si->overlays[0], edgediff[0]);
+	if (diff & LD_SDOVERLAY2)
+		ArchiveSideEdge(&si->overlays[1], edgediff[1]);
+	if (diff & LD_SDOVERLAY3)
+		ArchiveSideEdge(&si->overlays[2], edgediff[2]);
+	if (diff & LD_SDOVERLAY4)
+		ArchiveSideEdge(&si->overlays[3], edgediff[3]);
 }
 
 static void ArchiveLines(void)
@@ -1445,6 +1518,9 @@ static void ArchiveLines(void)
 
 	for (i = 0; i < numlines; i++, spawnli++, li++)
 	{
+		UINT8 edgediff1[4] = { 0, 0, 0, 0 };
+		UINT8 edgediff2[4] = { 0, 0, 0, 0 };
+
 		diff = diff2 = 0;
 		side1diff = side2diff = 0;
 
@@ -1468,13 +1544,19 @@ static void ArchiveLines(void)
 
 		if (li->sidenum[0] != NO_SIDEDEF)
 		{
-			side1diff = GetSideDiff(&sides[li->sidenum[0]], &spawnsides[li->sidenum[0]]);
+			side_t *si = &sides[li->sidenum[0]];
+			side_t *spawnsi = &spawnsides[li->sidenum[0]];
+			GetAllSideEdgeDiff(si, spawnsi, edgediff1);
+			side1diff = GetSideDiff(si, spawnsi, edgediff1);
 			if (side1diff)
 				diff |= LD_SIDE1;
 		}
 		if (li->sidenum[1] != NO_SIDEDEF)
 		{
-			side2diff = GetSideDiff(&sides[li->sidenum[1]], &spawnsides[li->sidenum[1]]);
+			side_t *si = &sides[li->sidenum[1]];
+			side_t *spawnsi = &spawnsides[li->sidenum[1]];
+			GetAllSideEdgeDiff(si, spawnsi, edgediff2);
+			side2diff = GetSideDiff(si, spawnsi, edgediff2);
 			if (side2diff)
 				diff |= LD_SIDE2;
 		}
@@ -1520,9 +1602,9 @@ static void ArchiveLines(void)
 				}
 			}
 			if (diff & LD_SIDE1)
-				ArchiveSide(&sides[li->sidenum[0]], side1diff);
+				ArchiveSide(&sides[li->sidenum[0]], side1diff, edgediff1);
 			if (diff & LD_SIDE2)
-				ArchiveSide(&sides[li->sidenum[1]], side2diff);
+				ArchiveSide(&sides[li->sidenum[1]], side2diff, edgediff2);
 			if (diff2 & LD_EXECUTORDELAY)
 				WRITEINT32(save_p, li->executordelay);
 			if (diff2 & LD_TRANSFPORTAL)
@@ -1530,6 +1612,24 @@ static void ArchiveLines(void)
 		}
 	}
 	WRITEUINT32(save_p, 0xffffffff);
+}
+
+static void UnArchiveSideEdge(side_overlay_t *edge)
+{
+	UINT8 diff = READUINT8(save_p);
+
+	if (diff & LD_EDGETEX)
+		edge->texture = READINT32(save_p);
+	if (diff & LD_EDGEOFFX)
+		edge->offsetx = READFIXED(save_p);
+	if (diff & LD_EDGEOFFY)
+		edge->offsety = READFIXED(save_p);
+	if (diff & LD_EDGESCALEX)
+		edge->scalex = READFIXED(save_p);
+	if (diff & LD_EDGESCALEY)
+		edge->scaley = READFIXED(save_p);
+	if (diff & LD_EDGEFLAGS)
+		edge->flags = READUINT8(save_p);
 }
 
 static void UnArchiveSide(side_t *si)
@@ -1572,6 +1672,14 @@ static void UnArchiveSide(side_t *si)
 		si->scaley_bottom = READFIXED(save_p);
 	if (diff & LD_SDREPEATCNT)
 		si->repeatcnt = READINT16(save_p);
+	if (diff & LD_SDOVERLAY1)
+		UnArchiveSideEdge(&si->overlays[0]);
+	if (diff & LD_SDOVERLAY2)
+		UnArchiveSideEdge(&si->overlays[1]);
+	if (diff & LD_SDOVERLAY3)
+		UnArchiveSideEdge(&si->overlays[2]);
+	if (diff & LD_SDOVERLAY4)
+		UnArchiveSideEdge(&si->overlays[3]);
 }
 
 static void UnArchiveLines(void)
