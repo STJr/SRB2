@@ -1406,7 +1406,7 @@ static void HWR_SetWallEndCoordsOffset(FOutVector wallVerts[4], float wallx2, fl
 }
 
 // Draws an extra texture
-static void HWR_RenderExtraTexture(unsigned which, side_t *side, sector_t *sec_front, sector_t *sec_back, ffloor_t *pfloor, v2d_t vs, v2d_t ve, float xcliplow, float xcliphigh, UINT32 lightnum)
+static void HWR_RenderExtraTexture(unsigned which, side_t *side, sector_t *sec_front, sector_t *sec_back, ffloor_t *pfloor, v2d_t vs, v2d_t ve, float xcliplow, float xcliphigh, FSurfaceInfo Surf, FBITFIELD blendmode, UINT32 lightnum)
 {
 	side_overlay_t *overlay = &side->overlays[which];
 
@@ -1761,19 +1761,19 @@ static void HWR_RenderExtraTexture(unsigned which, side_t *side, sector_t *sec_f
 	wallVerts[2].y = FIXED_TO_FLOAT(hS);
 	wallVerts[1].y = FIXED_TO_FLOAT(lS);
 
-	FSurfaceInfo Surf;
-	Surf.PolyColor.s.alpha = 255;
-
-	FUINT blendmode = PF_Masked | PF_Decal;
-
 	extracolormap_t *colormap = gl_frontsector->extra_colormap;
 
 	if (!(h == l && hS == lS))
 	{
 		if (gl_frontsector->numlights)
-			HWR_SplitWall(gl_frontsector, wallVerts, texnum, &Surf, FOF_CUTLEVEL, NULL, blendmode);
+			HWR_SplitWall(gl_frontsector, wallVerts, texnum, &Surf, FOF_CUTLEVEL, pfloor, blendmode);
 		else
-			HWR_ProjectWall(wallVerts, &Surf, blendmode, lightnum, colormap);
+		{
+			if (blendmode != PF_Masked)
+				HWR_AddTransparentWall(wallVerts, &Surf, texnum, blendmode, blendmode & PF_Fog, lightnum, colormap);
+			else
+				HWR_ProjectWall(wallVerts, &Surf, blendmode, lightnum, colormap);
+		}
 	}
 
 	if (!intersected)
@@ -1851,18 +1851,23 @@ static void HWR_RenderExtraTexture(unsigned which, side_t *side, sector_t *sec_f
 	wallVerts[2].s = wallVerts[1].s = ((xcliphigh * xscale) + overlay->offsetx) * grTex->scaleX;
 
 	if (gl_frontsector->numlights)
-		HWR_SplitWall(gl_frontsector, wallVerts, texnum, &Surf, FOF_CUTLEVEL, NULL, blendmode);
+		HWR_SplitWall(gl_frontsector, wallVerts, texnum, &Surf, FOF_CUTLEVEL, pfloor, blendmode);
 	else
-		HWR_ProjectWall(wallVerts, &Surf, blendmode, lightnum, colormap);
+	{
+		if (blendmode != PF_Masked)
+			HWR_AddTransparentWall(wallVerts, &Surf, texnum, blendmode, blendmode & PF_Fog, lightnum, colormap);
+		else
+			HWR_ProjectWall(wallVerts, &Surf, blendmode, lightnum, colormap);
+	}
 }
 
-static void HWR_RenderFFloorExtraTextures(ffloor_t *pfloor, v2d_t vs, v2d_t ve, float xcliplow, float xcliphigh, UINT32 lightnum)
+static void HWR_RenderFFloorExtraTextures(ffloor_t *pfloor, v2d_t vs, v2d_t ve, float xcliplow, float xcliphigh, FSurfaceInfo Surf, FBITFIELD blendmode, UINT32 lightnum)
 {
 	side_t *pside = &sides[pfloor->master->sidenum[0]];
 	sector_t *psector = pfloor->master->frontsector;
 
-	HWR_RenderExtraTexture(EDGE_TEXTURE_TOP_UPPER, pside, psector, NULL, pfloor, vs, ve, xcliplow, xcliphigh, lightnum);
-	HWR_RenderExtraTexture(EDGE_TEXTURE_BOTTOM_LOWER, pside, psector, NULL, pfloor, vs, ve, xcliplow, xcliphigh, lightnum);
+	HWR_RenderExtraTexture(EDGE_TEXTURE_TOP_UPPER, pside, psector, NULL, pfloor, vs, ve, xcliplow, xcliphigh, Surf, blendmode, lightnum);
+	HWR_RenderExtraTexture(EDGE_TEXTURE_BOTTOM_LOWER, pside, psector, NULL, pfloor, vs, ve, xcliplow, xcliphigh, Surf, blendmode, lightnum);
 }
 
 //
@@ -2159,7 +2164,7 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 		{
 			// Render extra textures
 			for (unsigned i = 0; i < NUM_WALL_OVERLAYS; i++)
-				HWR_RenderExtraTexture(i, gl_sidedef, gl_frontsector, gl_backsector, NULL, vs, ve, cliplow, cliphigh, lightnum);
+				HWR_RenderExtraTexture(i, gl_sidedef, gl_frontsector, gl_backsector, NULL, vs, ve, cliplow, cliphigh, Surf, PF_Masked, lightnum);
 
 			// Sky culling
 			// No longer so much a mess as before!
@@ -2244,8 +2249,8 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 		if (!gl_curline->polyseg)
 		{
 			// Render extra textures
-			HWR_RenderExtraTexture(EDGE_TEXTURE_TOP_UPPER, gl_sidedef, gl_frontsector, gl_backsector, NULL, vs, ve, cliplow, cliphigh, lightnum);
-			HWR_RenderExtraTexture(EDGE_TEXTURE_BOTTOM_LOWER, gl_sidedef, gl_frontsector, gl_backsector, NULL, vs, ve, cliplow, cliphigh, lightnum);
+			HWR_RenderExtraTexture(EDGE_TEXTURE_TOP_UPPER, gl_sidedef, gl_frontsector, gl_backsector, NULL, vs, ve, cliplow, cliphigh, Surf, PF_Masked, lightnum);
+			HWR_RenderExtraTexture(EDGE_TEXTURE_BOTTOM_LOWER, gl_sidedef, gl_frontsector, gl_backsector, NULL, vs, ve, cliplow, cliphigh, Surf, PF_Masked, lightnum);
 
 			if (gl_frontsector->ceilingpic == skyflatnum) // It's a single-sided line with sky for its sector
 			{
@@ -2396,10 +2401,10 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 					wallVerts[2].s = wallVerts[1].s = ((cliphigh * xscale) + side->offsetx_mid) * grTex->scaleX;
 				}
 
+				FBITFIELD blendmode;
+
 				if (rover->fofflags & FOF_FOG)
 				{
-					FBITFIELD blendmode;
-
 					blendmode = PF_Fog|PF_NoTexture;
 
 					lightnum = HWR_CalcWallLight(rover->master->frontsector->lightlevel, vs.x, vs.y, ve.x, ve.y);
@@ -2414,7 +2419,7 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 				}
 				else
 				{
-					FBITFIELD blendmode = PF_Masked;
+					blendmode = PF_Masked;
 
 					if ((rover->fofflags & FOF_TRANSLUCENT && !(rover->fofflags & FOF_SPLAT)) || rover->blend)
 					{
@@ -2433,7 +2438,7 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 					}
 				}
 
-				HWR_RenderFFloorExtraTextures(rover, vs, ve, cliplow, cliphigh, lightnum);
+				HWR_RenderFFloorExtraTextures(rover, vs, ve, cliplow, cliphigh, Surf, blendmode, lightnum);
 			}
 		}
 
@@ -2520,10 +2525,10 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 					wallVerts[2].s = wallVerts[1].s = ((cliphigh * xscale) + side->offsetx_mid) * grTex->scaleX;
 				}
 
+				FBITFIELD blendmode;
+
 				if (rover->fofflags & FOF_FOG)
 				{
-					FBITFIELD blendmode;
-
 					blendmode = PF_Fog|PF_NoTexture;
 
 					lightnum = HWR_CalcWallLight(rover->master->frontsector->lightlevel, vs.x, vs.y, ve.x, ve.y);
@@ -2538,7 +2543,7 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 				}
 				else
 				{
-					FBITFIELD blendmode = PF_Masked;
+					blendmode = PF_Masked;
 
 					if ((rover->fofflags & FOF_TRANSLUCENT && !(rover->fofflags & FOF_SPLAT)) || rover->blend)
 					{
@@ -2557,7 +2562,7 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 					}
 				}
 
-				HWR_RenderFFloorExtraTextures(rover, vs, ve, cliplow, cliphigh, lightnum);
+				HWR_RenderFFloorExtraTextures(rover, vs, ve, cliplow, cliphigh, Surf, blendmode, lightnum);
 			}
 		}
 	}

@@ -68,7 +68,8 @@ static struct
 {
 	fixed_t mid, slide;
 	fixed_t back, backslide;
-	fixed_t scalex, scaley, invscalex;
+	fixed_t scalex, scaley;
+	fixed_t invscalex, invscaley;
 	fixed_t offsetx, offsety;
 } rw_overlay[NUM_WALL_OVERLAYS];
 
@@ -657,7 +658,7 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 }
 
 // Renders a texture right on top of the wall texture
-static void R_RenderExtraTexture(unsigned which, INT32 x1, INT32 x2, INT32 repeats, drawseg_t *ds)
+static void R_RenderExtraTexture(unsigned which, INT32 x1, INT32 x2, INT32 repeats, UINT32 blendmode, UINT8 blendlevel, drawseg_t *ds)
 {
 	size_t pindex;
 	column_t *col;
@@ -724,6 +725,26 @@ static void R_RenderExtraTexture(unsigned which, INT32 x1, INT32 x2, INT32 repea
 			colfunc_2s = R_Render2sidedMultiPatchColumn;
 
 		lengthcol = textures[texnum]->height;
+	}
+
+	if (blendmode == AST_FOG)
+	{
+		colfunc = colfuncs[COLDRAWFUNC_FOG];
+		windowtop = frontsector->ceilingheight;
+		windowbottom = frontsector->floorheight;
+	}
+	else if (blendmode)
+	{
+		if (blendlevel == NUMTRANSMAPS || blendmode == AST_MODULATE)
+			dc_transmap = R_GetBlendTable(blendmode, 0);
+		else
+			dc_transmap = R_GetBlendTable(blendmode, blendlevel);
+		colfunc = colfuncs[COLDRAWFUNC_FUZZY];
+	}
+	else if (blendlevel > 0 && blendlevel < 10)
+	{
+		dc_transmap = R_GetTranslucencyTable(blendlevel);
+		colfunc = colfuncs[COLDRAWFUNC_FUZZY];
 	}
 
 	// Setup lighting based on the presence/lack-of 3D floors.
@@ -872,6 +893,8 @@ static void R_RenderExtraTexture(unsigned which, INT32 x1, INT32 x2, INT32 repea
 			spryscale += rw_scalestep;
 		}
 	}
+
+	colfunc = colfuncs[BASEDRAWFUNC];
 }
 
 // Loop through R_DrawMaskedColumn calls
@@ -938,6 +961,7 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 	pslope_t      *skewslope = NULL;
 	boolean do_texture_skew;
 	INT16 lineflags;
+	INT32 blendlevel = 0;
 	fixed_t wall_scalex, wall_scaley;
 	UINT8 vertflip;
 
@@ -974,15 +998,13 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 
 		// Hacked up support for alpha value in software mode Tails 09-24-2002
 		// ...unhacked by toaster 04-01-2021, re-hacked a little by sphere 19-11-2021
-		{
-			INT32 trans = (10*((256+12) - pfloor->alpha))/255;
-			if (trans >= 10)
-				return; // Don't even draw it
-			if (pfloor->blend) // additive, (reverse) subtractive, modulative
-				dc_transmap = R_GetBlendTable(pfloor->blend, trans);
-			else if (!(dc_transmap = R_GetTranslucencyTable(trans)) || trans == 0)
-				fuzzy = false; // Opaque
-		}
+		blendlevel = (10*((256+12) - pfloor->alpha))/255;
+		if (blendlevel >= 10)
+			return; // Don't even draw it
+		if (pfloor->blend) // additive, (reverse) subtractive, modulative
+			dc_transmap = R_GetBlendTable(pfloor->blend, blendlevel);
+		else if (!(dc_transmap = R_GetTranslucencyTable(blendlevel)) || blendlevel == 0)
+			fuzzy = false; // Opaque
 
 		if (fuzzy)
 			colfunc = colfuncs[COLDRAWFUNC_FUZZY];
@@ -1280,8 +1302,8 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 
 			R_StoreOverlayColumn(dc_x, ds->thicksidecol[dc_x]);
 
-			overlayopening[0][dc_x] = max((windowtop + FRACUNIT)>>FRACBITS, mceilingclip[dc_x] + 1);
-			overlayopening[1][dc_x] = min((windowbottom - 1)>>FRACBITS, mfloorclip[dc_x] - 1);
+			overlayopening[0][dc_x] = max(windowtop>>FRACBITS, mceilingclip[dc_x]);
+			overlayopening[1][dc_x] = min(windowbottom>>FRACBITS, mfloorclip[dc_x]);
 		}
 
 		// SoM: If column is out of range, why bother with it??
@@ -1453,7 +1475,7 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 			repeats = R_GetOverlayTextureRepeats(EDGE_TEXTURE_TOP_UPPER, sidedef, overlaytexture[EDGE_TEXTURE_TOP_UPPER],
 				pfloor->master->frontsector, NULL,
 				ds->leftpos.x, ds->leftpos.y, ds->rightpos.x, ds->rightpos.y);
-			R_RenderExtraTexture(EDGE_TEXTURE_TOP_UPPER, x1, x2, repeats, ds);
+			R_RenderExtraTexture(EDGE_TEXTURE_TOP_UPPER, x1, x2, repeats, pfloor->blend, blendlevel, ds);
 		}
 
 		if (overlaytexture[EDGE_TEXTURE_BOTTOM_LOWER])
@@ -1461,7 +1483,7 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 			repeats = R_GetOverlayTextureRepeats(EDGE_TEXTURE_BOTTOM_LOWER, sidedef, overlaytexture[EDGE_TEXTURE_BOTTOM_LOWER],
 				pfloor->master->frontsector, NULL,
 				ds->leftpos.x, ds->leftpos.y, ds->rightpos.x, ds->rightpos.y);
-			R_RenderExtraTexture(EDGE_TEXTURE_BOTTOM_LOWER, x1, x2, repeats, ds);
+			R_RenderExtraTexture(EDGE_TEXTURE_BOTTOM_LOWER, x1, x2, repeats, pfloor->blend, blendlevel, ds);
 		}
 	}
 
@@ -2118,6 +2140,7 @@ static void R_AddOverlayTextures(sector_t *sec_front, sector_t *sec_back, fixed_
 			rw_overlay[i].offsety = sidedef->overlays[i].offsety;
 
 			rw_overlay[i].invscalex = FixedDiv(FRACUNIT, rw_overlay[i].scalex);
+			rw_overlay[i].invscaley = FixedDiv(FRACUNIT, abs(rw_overlay[i].scaley));
 
 			if (sidedef->overlays[i].flags & SIDEOVERLAYFLAG_NOSKEW)
 			{
@@ -2166,17 +2189,15 @@ static void R_StoreOverlayColumn(INT32 x, fixed_t textureoffset)
 {
 	for (unsigned i = 0; i < NUM_WALL_OVERLAYS; i++)
 	{
-		fixed_t offset;
-
 		if (!overlaytexture[i])
 			continue;
 
-		offset = sidedef->textureoffset + rw_overlay[i].offsetx;
+		fixed_t offset = sidedef->textureoffset + rw_overlay[i].offsetx;
 		if (rw_overlay[i].scalex < 0)
 			offset = -offset;
 
-		overlaycolumn[i] = FixedDiv(textureoffset, rw_overlay[i].invscalex);
-		overlaytexturecol[i][x] = overlaycolumn[i] + offset;
+		overlaycolumn[i] = FixedDiv(textureoffset, rw_overlay[i].invscaley);
+		overlaytexturecol[i][x] = FixedDiv(textureoffset, rw_overlay[i].invscalex) + offset;
 
 		if (oldoverlaycolumn[i] != -1)
 		{
@@ -3542,7 +3563,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 					frontsector, backsector,
 					ds_p->leftpos.x, ds_p->leftpos.y, ds_p->rightpos.x, ds_p->rightpos.y);
 
-				R_RenderExtraTexture(i, ds_p->x1, ds_p->x2, repeats, ds_p);
+				R_RenderExtraTexture(i, ds_p->x1, ds_p->x2, repeats, 0, 0, ds_p);
 			}
 		}
 	}
