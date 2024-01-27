@@ -1515,12 +1515,34 @@ static void HWR_RenderExtraTexture(unsigned which, side_t *side, sector_t *sec_f
 		UINT8 clipside = 0;
 
 		// If the wall begins or ends entirely outside of the visible area, it needs to be cut
-		if ((h > highcut && l > highcut)
-		|| (hS > highcutslope && lS > highcutslope))
+		boolean clip_top = false, clip_bottom = false;
+
+		boolean cut_bottom = (h < lowcut && l < lowcut) || (hS < lowcutslope && lS < lowcutslope);
+		boolean cut_top = (h > highcut && l > highcut) || (hS > highcutslope && lS > highcutslope);
+
+		if (IS_BOTTOM_EDGE_TEXTURE(which))
 		{
 			polypos = FixedToFloat(l);
 			polyslope = FixedToFloat(lS);
 
+			if (cut_bottom)
+				clip_bottom = true;
+			else
+				clip_top = cut_top;
+		}
+		else
+		{
+			polypos = FixedToFloat(h);
+			polyslope = FixedToFloat(hS);
+
+			if (cut_top)
+				clip_top = true;
+			else
+				clip_bottom = cut_bottom;
+		}
+
+		if (clip_top)
+		{
 			cutf = FixedToFloat(highcut);
 			cutslopef = FixedToFloat(highcutslope);
 
@@ -1528,13 +1550,11 @@ static void HWR_RenderExtraTexture(unsigned which, side_t *side, sector_t *sec_f
 				clipside = 1;
 			else
 				clipside = 2;
-		}
-		else if ((h < lowcut && l < lowcut)
-		|| (hS < lowcutslope && lS < lowcutslope))
-		{
-			polypos = FixedToFloat(l);
-			polyslope = FixedToFloat(lS);
 
+			clip_top = false;
+		}
+		else if (clip_bottom)
+		{
 			cutf = FixedToFloat(lowcut);
 			cutslopef = FixedToFloat(lowcutslope);
 
@@ -1542,6 +1562,8 @@ static void HWR_RenderExtraTexture(unsigned which, side_t *side, sector_t *sec_f
 				clipside = 1;
 			else
 				clipside = 2;
+
+			clip_bottom = false;
 		}
 
 		if (clipside != 0)
@@ -1604,8 +1626,25 @@ static void HWR_RenderExtraTexture(unsigned which, side_t *side, sector_t *sec_f
 		// Now split this wall
 		boolean clip_low = false;
 
-		if (hS > highcutslope || h > highcut // If the top of the texture is above the top of the wall
-			|| hS < lowcutslope || h < lowcut) // If the top of the texture is under the bottom of the wall
+		cut_bottom = lS > highcutslope || l > highcut || lS < lowcutslope || l < lowcut;
+		cut_top = hS > highcutslope || h > highcut || hS < lowcutslope || h < lowcut;
+
+		if (IS_TOP_EDGE_TEXTURE(which))
+		{
+			if (cut_bottom)
+				clip_bottom = true;
+			else
+				clip_top = cut_top;
+		}
+		else
+		{
+			if (cut_top)
+				clip_top = true;
+			else
+				clip_bottom = cut_bottom;
+		}
+
+		if (clip_top)
 		{
 			polypos = FixedToFloat(h);
 			polyslope = FixedToFloat(hS);
@@ -1640,8 +1679,7 @@ static void HWR_RenderExtraTexture(unsigned which, side_t *side, sector_t *sec_f
 				cutslopef = FixedToFloat(highcutslope);
 			}
 		}
-		else if (lS > highcutslope || l > highcut // If the bottom of the texture is under the top of the wall
-			|| lS < lowcutslope || l < lowcut) // If the bottom of the texture is under the bottom of the wall
+		else if (clip_bottom)
 		{
 			polypos = FixedToFloat(l);
 			polyslope = FixedToFloat(lS);
@@ -1714,19 +1752,13 @@ static void HWR_RenderExtraTexture(unsigned which, side_t *side, sector_t *sec_f
 				xcliplow = (float)(xcliphigh - (flength * (1.0f - t) * FRACUNIT));
 			}
 
-			h = polytop;
-			l = polybottom;
-			hS = polytopslope;
-			lS = polybottomslope;
+			GET_CLIP_HEIGHTS();
 		}
-		// If it didn't intersect, render it normally
-		else
-		{
-			h = max(lowcut, min(highcut, polytop));
-			l = min(highcut, max(polybottom, lowcut));
-			hS = max(lowcutslope, min(highcutslope, polytopslope));
-			lS = min(highcutslope, max(polybottomslope, lowcutslope));
-		}
+
+		h = max(lowcut, min(highcut, polytop));
+		l = min(highcut, max(polybottom, lowcut));
+		hS = max(lowcutslope, min(highcutslope, polytopslope));
+		lS = min(highcutslope, max(polybottomslope, lowcutslope));
 	}
 
 	// PEGGING
