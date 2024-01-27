@@ -1761,20 +1761,29 @@ static void HWR_RenderExtraTexture(unsigned which, side_t *side, sector_t *sec_f
 	wallVerts[2].y = FIXED_TO_FLOAT(hS);
 	wallVerts[1].y = FIXED_TO_FLOAT(lS);
 
+	blendmode |= PF_Decal;
+
 	extracolormap_t *colormap = gl_frontsector->extra_colormap;
 
+#define RENDER_WALL_POLYGON() { \
+	if (gl_frontsector->numlights) \
+	{ \
+		if (!(blendmode & PF_Masked)) \
+			HWR_SplitWall(gl_frontsector, wallVerts, texnum, &Surf, FOF_TRANSLUCENT, pfloor, blendmode); \
+		else \
+			HWR_SplitWall(gl_frontsector, wallVerts, texnum, &Surf, FOF_CUTLEVEL, pfloor, blendmode); \
+	} \
+	else \
+	{ \
+		if (!(blendmode & PF_Masked)) \
+			HWR_AddTransparentWall(wallVerts, &Surf, texnum, blendmode, blendmode & PF_Fog, lightnum, colormap); \
+		else \
+			HWR_ProjectWall(wallVerts, &Surf, blendmode, lightnum, colormap); \
+	} \
+}
+
 	if (!(h == l && hS == lS))
-	{
-		if (gl_frontsector->numlights)
-			HWR_SplitWall(gl_frontsector, wallVerts, texnum, &Surf, FOF_CUTLEVEL, pfloor, blendmode);
-		else
-		{
-			if (blendmode != PF_Masked)
-				HWR_AddTransparentWall(wallVerts, &Surf, texnum, blendmode, blendmode & PF_Fog, lightnum, colormap);
-			else
-				HWR_ProjectWall(wallVerts, &Surf, blendmode, lightnum, colormap);
-		}
-	}
+		RENDER_WALL_POLYGON();
 
 	if (!intersected)
 		return;
@@ -1850,15 +1859,9 @@ static void HWR_RenderExtraTexture(unsigned which, side_t *side, sector_t *sec_f
 	wallVerts[1].t = (hS - lS + texturevpegslope) * yscale * grTex->scaleY;
 	wallVerts[2].s = wallVerts[1].s = ((xcliphigh * xscale) + overlay->offsetx) * grTex->scaleX;
 
-	if (gl_frontsector->numlights)
-		HWR_SplitWall(gl_frontsector, wallVerts, texnum, &Surf, FOF_CUTLEVEL, pfloor, blendmode);
-	else
-	{
-		if (blendmode != PF_Masked)
-			HWR_AddTransparentWall(wallVerts, &Surf, texnum, blendmode, blendmode & PF_Fog, lightnum, colormap);
-		else
-			HWR_ProjectWall(wallVerts, &Surf, blendmode, lightnum, colormap);
-	}
+	RENDER_WALL_POLYGON();
+
+#undef RENDER_WALL_POLYGON
 }
 
 static void HWR_RenderFFloorExtraTextures(ffloor_t *pfloor, v2d_t vs, v2d_t ve, float xcliplow, float xcliphigh, FSurfaceInfo Surf, FBITFIELD blendmode, UINT32 lightnum)
