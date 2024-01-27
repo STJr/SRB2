@@ -205,21 +205,21 @@ transnum_t R_GetLinedefTransTable(fixed_t alpha)
 	return (20*(FRACUNIT - alpha - 1) + FRACUNIT) >> (FRACBITS+1);
 }
 
-static INT32 R_GetOverlayTextureRepeats(drawseg_t *ds, unsigned which, sector_t *sec_front, sector_t *sec_back)
+INT32 R_GetOverlayTextureRepeats(unsigned which, side_t *side, INT32 texnum, sector_t *sec_front, sector_t *sec_back, fixed_t v1x, fixed_t v1y, fixed_t v2x, fixed_t v2y)
 {
 	INT32 repeats = 1;
 
-	if (!(sidedef->overlays[which].flags & SIDEOVERLAYFLAG_WRAP))
+	if (!(side->overlays[which].flags & SIDEOVERLAYFLAG_WRAP))
 		return repeats;
 
 	fixed_t high, low;
-	fixed_t texheight = textureheight[overlaytexture[which]];
+	fixed_t texheight = textureheight[texnum];
 
 	if (sec_back)
 	{
 		if (IS_TOP_EDGE_TEXTURE(which))
 		{
-			if (sidedef->overlays[which].flags & SIDEOVERLAYFLAG_NOSKEW)
+			if (side->overlays[which].flags & SIDEOVERLAYFLAG_NOSKEW)
 			{
 				high = sec_front->ceilingheight;
 				low = sec_back->ceilingheight;
@@ -227,18 +227,18 @@ static INT32 R_GetOverlayTextureRepeats(drawseg_t *ds, unsigned which, sector_t 
 			else
 			{
 				high = max(
-					P_GetSectorCeilingZAt(sec_front, ds->leftpos.x, ds->leftpos.y),
-					P_GetSectorCeilingZAt(sec_front, ds->rightpos.x, ds->rightpos.y)
+					P_GetSectorCeilingZAt(sec_front, v1x, v1y),
+					P_GetSectorCeilingZAt(sec_front, v2x, v2y)
 				);
 				low = min(
-					P_GetSectorCeilingZAt(sec_back, ds->leftpos.x, ds->leftpos.y),
-					P_GetSectorCeilingZAt(sec_back, ds->rightpos.x, ds->rightpos.y)
+					P_GetSectorCeilingZAt(sec_back, v1x, v1y),
+					P_GetSectorCeilingZAt(sec_back, v2x, v2y)
 				);
 			}
 		}
 		else
 		{
-			if (sidedef->overlays[which].flags & SIDEOVERLAYFLAG_NOSKEW)
+			if (side->overlays[which].flags & SIDEOVERLAYFLAG_NOSKEW)
 			{
 				high = sec_back->floorheight;
 				low = sec_back->floorheight;
@@ -246,19 +246,19 @@ static INT32 R_GetOverlayTextureRepeats(drawseg_t *ds, unsigned which, sector_t 
 			else
 			{
 				high = max(
-					P_GetSectorFloorZAt(sec_front, ds->leftpos.x, ds->leftpos.y),
-					P_GetSectorFloorZAt(sec_front, ds->rightpos.x, ds->rightpos.y)
+					P_GetSectorFloorZAt(sec_front, v1x, v1y),
+					P_GetSectorFloorZAt(sec_front, v2x, v2y)
 				);
 				low = min(
-					P_GetSectorFloorZAt(sec_back, ds->leftpos.x, ds->leftpos.y),
-					P_GetSectorFloorZAt(sec_back, ds->rightpos.x, ds->rightpos.y)
+					P_GetSectorFloorZAt(sec_back, v1x, v1y),
+					P_GetSectorFloorZAt(sec_back, v2x, v2y)
 				);
 			}
 		}
 	}
 	else
 	{
-		if (sidedef->overlays[which].flags & SIDEOVERLAYFLAG_NOSKEW)
+		if (side->overlays[which].flags & SIDEOVERLAYFLAG_NOSKEW)
 		{
 			high = sec_front->ceilingheight;
 			low = sec_front->floorheight;
@@ -266,12 +266,12 @@ static INT32 R_GetOverlayTextureRepeats(drawseg_t *ds, unsigned which, sector_t 
 		else
 		{
 			high = max(
-				P_GetSectorCeilingZAt(sec_front, ds->leftpos.x, ds->leftpos.y),
-				P_GetSectorCeilingZAt(sec_front, ds->rightpos.x, ds->rightpos.y)
+				P_GetSectorCeilingZAt(sec_front, v1x, v1y),
+				P_GetSectorCeilingZAt(sec_front, v2x, v2y)
 			);
 			low = min(
-				P_GetSectorFloorZAt(sec_front, ds->leftpos.x, ds->leftpos.y),
-				P_GetSectorFloorZAt(sec_front, ds->rightpos.x, ds->rightpos.y)
+				P_GetSectorFloorZAt(sec_front, v1x, v1y),
+				P_GetSectorFloorZAt(sec_front, v2x, v2y)
 			);
 		}
 	}
@@ -1450,13 +1450,17 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 
 		if (overlaytexture[EDGE_TEXTURE_TOP_UPPER])
 		{
-			repeats = R_GetOverlayTextureRepeats(ds, EDGE_TEXTURE_TOP_UPPER, pfloor->master->frontsector, NULL);
+			repeats = R_GetOverlayTextureRepeats(EDGE_TEXTURE_TOP_UPPER, sidedef, overlaytexture[EDGE_TEXTURE_TOP_UPPER],
+				pfloor->master->frontsector, NULL,
+				ds->leftpos.x, ds->leftpos.y, ds->rightpos.x, ds->rightpos.y);
 			R_RenderExtraTexture(EDGE_TEXTURE_TOP_UPPER, x1, x2, repeats, ds);
 		}
 
 		if (overlaytexture[EDGE_TEXTURE_BOTTOM_LOWER])
 		{
-			repeats = R_GetOverlayTextureRepeats(ds, EDGE_TEXTURE_BOTTOM_LOWER, pfloor->master->frontsector, NULL);
+			repeats = R_GetOverlayTextureRepeats(EDGE_TEXTURE_BOTTOM_LOWER, sidedef, overlaytexture[EDGE_TEXTURE_BOTTOM_LOWER],
+				pfloor->master->frontsector, NULL,
+				ds->leftpos.x, ds->leftpos.y, ds->rightpos.x, ds->rightpos.y);
 			R_RenderExtraTexture(EDGE_TEXTURE_BOTTOM_LOWER, x1, x2, repeats, ds);
 		}
 	}
@@ -3534,7 +3538,10 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 		{
 			if (overlaytexture[i])
 			{
-				INT32 repeats = R_GetOverlayTextureRepeats(ds_p, i, frontsector, backsector);
+				INT32 repeats = R_GetOverlayTextureRepeats(i, sidedef, overlaytexture[i],
+					frontsector, backsector,
+					ds_p->leftpos.x, ds_p->leftpos.y, ds_p->rightpos.x, ds_p->rightpos.y);
+
 				R_RenderExtraTexture(i, ds_p->x1, ds_p->x2, repeats, ds_p);
 			}
 		}
