@@ -268,12 +268,12 @@ void SendWeaponPref2(void);
 
 static CV_PossibleValue_t crosshair_cons_t[] = {{0, "Off"}, {1, "Cross"}, {2, "Angle"}, {3, "Point"}, {0, NULL}};
 static CV_PossibleValue_t joyaxis_cons_t[] = {{0, "None"},
-{1, "X-Axis"}, {2, "Y-Axis"}, {-1, "X-Axis-"}, {-2, "Y-Axis-"},
+{1, "Left Stick X"}, {2, "Left Stick Y"}, {-1, "X-Axis-"}, {-2, "Y-Axis-"},
 #if JOYAXISSET > 1
-{3, "Z-Axis"}, {4, "X-Rudder"}, {-3, "Z-Axis-"}, {-4, "X-Rudder-"},
+{3, "Right Stick X"}, {4, "X-Rudder"}, {-3, "Z-Axis-"}, {-4, "Right Stick Y"},
 #endif
 #if JOYAXISSET > 2
-{5, "Y-Rudder"}, {6, "Z-Rudder"}, {-5, "Y-Rudder-"}, {-6, "Z-Rudder-"},
+{5, "Y-Rudder"}, {6, "RT"}, {-5, "Y-Rudder-"}, {-6, "Z-Rudder-"},
 #endif
 #if JOYAXISSET > 3
 {7, "U-Axis"}, {8, "V-Axis"}, {-7, "U-Axis-"}, {-8, "V-Axis-"},
@@ -397,25 +397,25 @@ consvar_t cv_cam_lockonboss[2] = {
 	CVAR_INIT ("cam2_lockaimassist", "Full", CV_SAVE|CV_ALLOWLUA, lockedassist_cons_t, NULL),
 };
 
-consvar_t cv_moveaxis = CVAR_INIT ("joyaxis_move", "Y-Axis", CV_SAVE, joyaxis_cons_t, NULL);
-consvar_t cv_sideaxis = CVAR_INIT ("joyaxis_side", "X-Axis", CV_SAVE, joyaxis_cons_t, NULL);
-consvar_t cv_lookaxis = CVAR_INIT ("joyaxis_look", "X-Rudder-", CV_SAVE, joyaxis_cons_t, NULL);
-consvar_t cv_turnaxis = CVAR_INIT ("joyaxis_turn", "Z-Axis", CV_SAVE, joyaxis_cons_t, NULL);
+consvar_t cv_moveaxis = CVAR_INIT ("joyaxis_move", "Left Stick Y", CV_SAVE, joyaxis_cons_t, NULL);
+consvar_t cv_sideaxis = CVAR_INIT ("joyaxis_side", "Left Stick X", CV_SAVE, joyaxis_cons_t, NULL);
+consvar_t cv_lookaxis = CVAR_INIT ("joyaxis_look", "Right Stick Y", CV_SAVE, joyaxis_cons_t, NULL);
+consvar_t cv_turnaxis = CVAR_INIT ("joyaxis_turn", "Right Stick X", CV_SAVE, joyaxis_cons_t, NULL);
 consvar_t cv_jumpaxis = CVAR_INIT ("joyaxis_jump", "None", CV_SAVE, joyaxis_cons_t, NULL);
 consvar_t cv_spinaxis = CVAR_INIT ("joyaxis_spin", "None", CV_SAVE, joyaxis_cons_t, NULL);
-consvar_t cv_fireaxis = CVAR_INIT ("joyaxis_fire", "Z-Rudder", CV_SAVE, joyaxis_cons_t, NULL);
-consvar_t cv_firenaxis = CVAR_INIT ("joyaxis_firenormal", "Z-Axis", CV_SAVE, joyaxis_cons_t, NULL);
+consvar_t cv_fireaxis = CVAR_INIT ("joyaxis_fire", "RT", CV_SAVE, joyaxis_cons_t, NULL);
+consvar_t cv_firenaxis = CVAR_INIT ("joyaxis_firenormal", "LT", CV_SAVE, joyaxis_cons_t, NULL);
 consvar_t cv_deadzone = CVAR_INIT ("joy_deadzone", "0.125", CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL);
 consvar_t cv_digitaldeadzone = CVAR_INIT ("joy_digdeadzone", "0.25", CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL);
 
-consvar_t cv_moveaxis2 = CVAR_INIT ("joyaxis2_move", "Y-Axis", CV_SAVE, joyaxis_cons_t, NULL);
-consvar_t cv_sideaxis2 = CVAR_INIT ("joyaxis2_side", "X-Axis", CV_SAVE, joyaxis_cons_t, NULL);
-consvar_t cv_lookaxis2 = CVAR_INIT ("joyaxis2_look", "X-Rudder-", CV_SAVE, joyaxis_cons_t, NULL);
-consvar_t cv_turnaxis2 = CVAR_INIT ("joyaxis2_turn", "Z-Axis", CV_SAVE, joyaxis_cons_t, NULL);
+consvar_t cv_moveaxis2 = CVAR_INIT ("joyaxis2_move", "Left Stick Y", CV_SAVE, joyaxis_cons_t, NULL);
+consvar_t cv_sideaxis2 = CVAR_INIT ("joyaxis2_side", "Left Stick X", CV_SAVE, joyaxis_cons_t, NULL);
+consvar_t cv_lookaxis2 = CVAR_INIT ("joyaxis2_look", "Right Stick Y", CV_SAVE, joyaxis_cons_t, NULL);
+consvar_t cv_turnaxis2 = CVAR_INIT ("joyaxis2_turn", "Right Stick X", CV_SAVE, joyaxis_cons_t, NULL);
 consvar_t cv_jumpaxis2 = CVAR_INIT ("joyaxis2_jump", "None", CV_SAVE, joyaxis_cons_t, NULL);
 consvar_t cv_spinaxis2 = CVAR_INIT ("joyaxis2_spin", "None", CV_SAVE, joyaxis_cons_t, NULL);
-consvar_t cv_fireaxis2 = CVAR_INIT ("joyaxis2_fire", "Z-Rudder", CV_SAVE, joyaxis_cons_t, NULL);
-consvar_t cv_firenaxis2 = CVAR_INIT ("joyaxis2_firenormal", "Z-Axis", CV_SAVE, joyaxis_cons_t, NULL);
+consvar_t cv_fireaxis2 = CVAR_INIT ("joyaxis2_fire", "RT", CV_SAVE, joyaxis_cons_t, NULL);
+consvar_t cv_firenaxis2 = CVAR_INIT ("joyaxis2_firenormal", "LT", CV_SAVE, joyaxis_cons_t, NULL);
 consvar_t cv_deadzone2 = CVAR_INIT ("joy_deadzone2", "0.125", CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL);
 consvar_t cv_digitaldeadzone2 = CVAR_INIT ("joy_digdeadzone2", "0.25", CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL);
 
