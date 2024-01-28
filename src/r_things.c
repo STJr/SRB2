@@ -25,6 +25,7 @@
 #include "i_system.h"
 #include "r_fps.h"
 #include "r_things.h"
+#include "r_translation.h"
 #include "r_patch.h"
 #include "r_patchrotation.h"
 #include "r_picformats.h"
@@ -509,10 +510,6 @@ void R_AddSpriteDefs(UINT16 wadnum)
 
 		if (R_AddSingleSpriteDef(sprnames[i], &sprites[i], wadnum, start, end))
 		{
-#ifdef HWRENDER
-			if (rendermode == render_opengl)
-				HWR_AddSpriteModel(i);
-#endif
 			// if a new sprite was added (not just replaced)
 			addsprites++;
 #ifndef ZDEBUG
@@ -587,14 +584,10 @@ void R_InitSprites(void)
 	}
 	ST_ReloadSkinFaceGraphics();
 
-	//
-	// check if all sprites have frames
-	//
-	/*
-	for (i = 0; i < numsprites; i++)
-		if (sprites[i].numframes < 1)
-			CONS_Debug(DBG_SETUP, "R_InitSprites: sprite %s has no frames at all\n", sprnames[i]);
-	*/
+#ifdef HWRENDER
+	if (rendermode == render_opengl)
+		HWR_LoadModels();
+#endif
 }
 
 //
@@ -769,50 +762,47 @@ void R_DrawFlippedMaskedColumn(column_t *column)
 	dc_texturemid = basetexturemid;
 }
 
-boolean R_SpriteIsFlashing(vissprite_t *vis)
+UINT8 *R_GetTranslationForThing(mobj_t *mobj, skincolornum_t color, UINT16 translation)
 {
-	return (!(vis->cut & SC_PRECIP)
-	&& (vis->mobj->flags & (MF_ENEMY|MF_BOSS))
-	&& (vis->mobj->flags2 & MF2_FRET)
-	&& !(vis->mobj->flags & MF_GRENADEBOUNCE)
-	&& (leveltime & 1));
-}
+	INT32 skinnum = TC_DEFAULT;
 
-UINT8 *R_GetSpriteTranslation(vissprite_t *vis)
-{
-	if (R_SpriteIsFlashing(vis)) // Bosses "flash"
+	boolean is_player = mobj->skin && mobj->sprite == SPR_PLAY;
+	if (is_player) // This thing is a player!
+		skinnum = ((skin_t*)mobj->skin)->skinnum;
+
+	if (R_ThingIsFlashing(mobj)) // Bosses "flash"
 	{
-		if (vis->mobj->type == MT_CYBRAKDEMON || vis->mobj->colorized)
+		if (mobj->type == MT_CYBRAKDEMON || mobj->colorized)
 			return R_GetTranslationColormap(TC_ALLWHITE, 0, GTC_CACHE);
-		else if (vis->mobj->type == MT_METALSONIC_BATTLE)
+		else if (mobj->type == MT_METALSONIC_BATTLE)
 			return R_GetTranslationColormap(TC_METALSONIC, 0, GTC_CACHE);
 		else
-			return R_GetTranslationColormap(TC_BOSS, vis->color, GTC_CACHE);
+			return R_GetTranslationColormap(TC_BOSS, color, GTC_CACHE);
 	}
-	else if (vis->color)
+	else if (translation != 0)
+	{
+		UINT8 *tr = R_GetTranslationRemap(translation, color, skinnum);
+		if (tr != NULL)
+			return tr;
+	}
+	else if (color != SKINCOLOR_NONE)
 	{
 		// New colormap stuff for skins Tails 06-07-2002
-		if (!(vis->cut & SC_PRECIP) && vis->mobj->colorized)
-			return R_GetTranslationColormap(TC_RAINBOW, vis->color, GTC_CACHE);
-		else if (!(vis->cut & SC_PRECIP)
-			&& vis->mobj->player && vis->mobj->player->dashmode >= DASHMODE_THRESHOLD
-			&& (vis->mobj->player->charflags & SF_DASHMODE)
+		if (mobj->colorized)
+			return R_GetTranslationColormap(TC_RAINBOW, color, GTC_CACHE);
+		else if (mobj->player && mobj->player->dashmode >= DASHMODE_THRESHOLD
+			&& (mobj->player->charflags & SF_DASHMODE)
 			&& ((leveltime/2) & 1))
 		{
-			if (vis->mobj->player->charflags & SF_MACHINE)
+			if (mobj->player->charflags & SF_MACHINE)
 				return R_GetTranslationColormap(TC_DASHMODE, 0, GTC_CACHE);
 			else
-				return R_GetTranslationColormap(TC_RAINBOW, vis->color, GTC_CACHE);
+				return R_GetTranslationColormap(TC_RAINBOW, color, GTC_CACHE);
 		}
-		else if (!(vis->cut & SC_PRECIP) && vis->mobj->skin && vis->mobj->sprite == SPR_PLAY) // This thing is a player!
-		{
-			size_t skinnum = (skin_t*)vis->mobj->skin-skins;
-			return R_GetTranslationColormap((INT32)skinnum, vis->color, GTC_CACHE);
-		}
-		else // Use the defaults
-			return R_GetTranslationColormap(TC_DEFAULT, vis->color, GTC_CACHE);
+		else
+			return R_GetTranslationColormap(skinnum, color, GTC_CACHE);
 	}
-	else if (vis->mobj->sprite == SPR_PLAY) // Looks like a player, but doesn't have a color? Get rid of green sonic syndrome.
+	else if (mobj->sprite == SPR_PLAY) // Looks like a player, but doesn't have a color? Get rid of green sonic syndrome.
 		return R_GetTranslationColormap(TC_DEFAULT, SKINCOLOR_BLUE, GTC_CACHE);
 
 	return NULL;
@@ -860,11 +850,11 @@ static void R_DrawVisSprite(vissprite_t *vis)
 
 	colfunc = colfuncs[BASEDRAWFUNC]; // hack: this isn't resetting properly somewhere.
 	dc_colormap = vis->colormap;
-	dc_translation = R_GetSpriteTranslation(vis);
+	dc_translation = R_GetTranslationForThing(vis->mobj, vis->color, vis->translation);
 
-	if (R_SpriteIsFlashing(vis)) // Bosses "flash"
+	if (R_ThingIsFlashing(vis->mobj)) // Bosses "flash"
 		colfunc = colfuncs[COLDRAWFUNC_TRANS]; // translate certain pixels to white
-	else if (vis->color && vis->transmap) // Color mapping
+	else if (dc_translation && vis->transmap) // Color mapping
 	{
 		colfunc = colfuncs[COLDRAWFUNC_TRANSTRANS];
 		dc_transmap = vis->transmap;
@@ -874,9 +864,7 @@ static void R_DrawVisSprite(vissprite_t *vis)
 		colfunc = colfuncs[COLDRAWFUNC_FUZZY];
 		dc_transmap = vis->transmap;    //Fab : 29-04-98: translucency table
 	}
-	else if (vis->color) // translate green skin to another color
-		colfunc = colfuncs[COLDRAWFUNC_TRANS];
-	else if (vis->mobj->sprite == SPR_PLAY) // Looks like a player, but doesn't have a color? Get rid of green sonic syndrome.
+	else if (dc_translation) // translate green skin to another color
 		colfunc = colfuncs[COLDRAWFUNC_TRANS];
 
 	// Hack: Use a special column function for drop shadows that bypasses
@@ -1411,6 +1399,7 @@ static void R_ProjectDropShadow(mobj_t *thing, vissprite_t *vis, fixed_t scale, 
 
 	shadow->mobj = thing; // Easy access! Tails 06-07-2002
 	shadow->color = thing->color;
+	shadow->translation = 0;
 
 	shadow->x1 = x1 < portalclipstart ? portalclipstart : x1;
 	shadow->x2 = x2 >= portalclipend ? portalclipend-1 : x2;
@@ -1635,6 +1624,8 @@ static void R_ProjectSprite(mobj_t *thing)
 	height = interp.height; // Ditto
 
 	// transform the origin point
+	if (thing->type == MT_OVERLAY) // Handle overlays
+		R_ThingOffsetOverlay(thing, &interp.x, &interp.y);
 	tr_x = interp.x - viewx;
 	tr_y = interp.y - viewy;
 
@@ -1980,6 +1971,8 @@ static void R_ProjectSprite(mobj_t *thing)
 		radius = tracer_interp.radius; // For drop shadows
 		height = tracer_interp.height; // Ditto
 
+		if (thing->type == MT_OVERLAY) // Handle overlays
+			R_ThingOffsetOverlay(thing, &tracer_interp.x, &tracer_interp.y);
 		tr_x = (tracer_interp.x + sort_x) - viewx;
 		tr_y = (tracer_interp.y + sort_y) - viewy;
 		tz = FixedMul(tr_x, viewcos) + FixedMul(tr_y, viewsin);
@@ -2134,7 +2127,7 @@ static void R_ProjectSprite(mobj_t *thing)
 
 	if (thing->subsector->sector->numlights)
 	{
-		light = P_GetSectorLightAt(thing->subsector->sector, interp.x, interp.y, splat ? gz : gzt);
+		light = P_GetSectorLightNumAt(thing->subsector->sector, interp.x, interp.y, splat ? gz : gzt);
 
 		INT32 lightnum = (*thing->subsector->sector->lightlist[light].lightlevel >> LIGHTSEGSHIFT);
 		if (lightnum < 0)
@@ -2203,6 +2196,11 @@ static void R_ProjectSprite(mobj_t *thing)
 		vis->color = oldthing->tracer->color;
 	else
 		vis->color = oldthing->color;
+
+	if ((oldthing->flags2 & MF2_LINKDRAW) && oldthing->tracer && oldthing->translation == 0)
+		vis->translation = oldthing->tracer->translation;
+	else
+		vis->translation = oldthing->translation;
 
 	vis->x1 = x1 < portalclipstart ? portalclipstart : x1;
 	vis->x2 = x2 >= portalclipend ? portalclipend-1 : x2;
@@ -2474,6 +2472,7 @@ static void R_ProjectPrecipitationSprite(precipmobj_t *thing)
 	vis->extra_colormap = thing->subsector->sector->extra_colormap;
 	vis->heightsec = thing->subsector->sector->heightsec;
 	vis->color = SKINCOLOR_NONE;
+	vis->translation = 0;
 
 	// Fullbright
 	vis->colormap = colormaps;
@@ -3572,6 +3571,58 @@ boolean R_ThingIsSemiBright(mobj_t *thing)
 boolean R_ThingIsFullDark(mobj_t *thing)
 {
 	return ((thing->frame & FF_BRIGHTMASK) == FF_FULLDARK || (thing->renderflags & RF_BRIGHTMASK) == RF_FULLDARK);
+}
+
+boolean R_ThingIsFlashing(mobj_t *thing)
+{
+	if (thing == NULL)
+		return false;
+
+	return (thing->flags & (MF_ENEMY|MF_BOSS)) && (thing->flags2 & MF2_FRET) && !(thing->flags & MF_GRENADEBOUNCE) && (leveltime & 1);
+}
+
+// Offsets MT_OVERLAY towards the camera at render-time - Works in splitscreen!
+// The &x and &y arguments should be pre-interpolated, and will be modified
+void R_ThingOffsetOverlay(mobj_t *thing, fixed_t *x, fixed_t *y)
+{
+	mobj_t *mobj = thing;
+	INT16 offset = 0; // Offset towards or away from the camera, and how much
+	fixed_t offsetscale = thing->scale; // Occasionally needs to be interpolated
+	angle_t viewingangle;
+	UINT8 looplimit = 255; // Prevent infinite loops - A chain of 255 connected overlays is enough for any sane use case
+
+#ifdef PARANOIA
+	if (P_MobjWasRemoved(mobj) || !x || !y)
+		I_Error("R_ThingOffsetOverlay: thing, x, or y is invalid");
+#endif
+
+	do // Get the overlay's offset
+	{
+		// Does the overlay use FF_ANIMATE? If not, if var1 is non-zero, it's an underlay instead of an overlay
+		if (!(mobj->state->frame & FF_ANIMATE) && mobj->state->var1)
+			offset += 1; // Underlay below the target, away from the camera
+		else
+			offset -= 1; // Overlay on top of the target, towards the camera
+
+		looplimit -= 1;
+		mobj = mobj->target;
+	} while (!P_MobjWasRemoved(mobj) && mobj->type == MT_OVERLAY && looplimit > 0); // Handle overlays following other overlays
+
+	// Does the offset scale need to be interpolated?
+	if (thing->scale != thing->old_scale && R_UsingFrameInterpolation() && !paused)
+	{
+		interpmobjstate_t interp = {0};
+		R_InterpolateMobjState(thing, rendertimefrac, &interp);
+		offsetscale = interp.scale;
+	}
+
+
+	// Get the angle from the camera to the X and Y coordinates
+	viewingangle = R_PointToAngle(*x, *y);
+
+	// Finally, offset the X and Y coordinates towards or away from the camera
+	*x += P_ReturnThrustX(thing, viewingangle, FixedMul(offset * (FRACUNIT/4), offsetscale));
+	*y += P_ReturnThrustY(thing, viewingangle, FixedMul(offset * (FRACUNIT/4), offsetscale));
 }
 
 //

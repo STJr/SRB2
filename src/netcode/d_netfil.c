@@ -180,15 +180,18 @@ UINT8 *PutFileNeeded(UINT16 firstfile)
 		}
 
 		filestatus = 1; // Importance - not really used any more, holds 1 by default for backwards compat with MS
-		folder = (wadfiles[i]->type == RET_FOLDER);
+		folder = wadfiles[i]->type == RET_FOLDER;
 
-		// Store in the upper four bits
-		if (!cv_downloading.value || folder) /// \todo Implement folder downloading.
-			filestatus += (2 << 4); // Won't send
-		else if ((wadfiles[i]->filesize <= (UINT32)cv_maxsend.value * 1024))
-			filestatus += (1 << 4); // Will send if requested
-		// else
-			// filestatus += (0 << 4); -- Won't send, too big
+		if (!folder)
+		{
+			// Store in the upper four bits
+			if (!cv_downloading.value)
+				filestatus += (2 << 4); // Won't send
+			else if (wadfiles[i]->filesize <= (UINT32)cv_maxsend.value * 1024)
+				filestatus += (1 << 4); // Will send if requested
+			// else
+				// filestatus += (0 << 4); -- Won't send, too big
+		}
 
 		WRITEUINT8(p, filestatus);
 		WRITEUINT8(p, folder);
@@ -282,6 +285,12 @@ boolean CL_CheckDownloadable(void)
 	for (UINT8 i = 0; i < fileneedednum; i++)
 		if (fileneeded[i].status != FS_FOUND && fileneeded[i].status != FS_OPEN)
 		{
+			if (fileneeded[i].folder)
+			{
+				dlstatus = 4;
+				break;
+			}
+
 			if (fileneeded[i].willsend == 1)
 				continue;
 
@@ -299,37 +308,50 @@ boolean CL_CheckDownloadable(void)
 		return true;
 
 	// not downloadable, put reason in console
-	CONS_Alert(CONS_NOTICE, M_GetText("You need additional files to connect to this server:\n"));
+	CONS_Alert(CONS_NOTICE, M_GetText("You need additional addons to connect to this server:\n"));
+
 	for (UINT8 i = 0; i < fileneedednum; i++)
-		if (fileneeded[i].status != FS_FOUND && fileneeded[i].status != FS_OPEN)
+	{
+		if (fileneeded[i].folder || (fileneeded[i].status != FS_FOUND && fileneeded[i].status != FS_OPEN))
 		{
-			CONS_Printf(" * \"%s\" (%dK)", fileneeded[i].filename, fileneeded[i].totalsize >> 10);
+			CONS_Printf(" * \"%s\" ", fileneeded[i].filename);
+
+			if (fileneeded[i].folder)
+			{
+				CONS_Printf("(folder)");
+			}
+			else
+			{
+				CONS_Printf("(%dK)", fileneeded[i].totalsize >> 10);
 
 				if (fileneeded[i].status == FS_NOTFOUND)
 					CONS_Printf(M_GetText(" not found, md5: "));
 				else if (fileneeded[i].status == FS_MD5SUMBAD)
 					CONS_Printf(M_GetText(" wrong version, md5: "));
 
-			{
-				INT32 j;
 				char md5tmp[33];
-				for (j = 0; j < 16; j++)
+				for (INT32 j = 0; j < 16; j++)
 					sprintf(&md5tmp[j*2], "%02x", fileneeded[i].md5sum[j]);
 				CONS_Printf("%s", md5tmp);
 			}
+
 			CONS_Printf("\n");
 		}
+	}
 
 	switch (dlstatus)
 	{
 		case 1:
-			CONS_Printf(M_GetText("Some files are larger than the server is willing to send.\n"));
+			CONS_Printf(M_GetText("Some addons are larger than the server is willing to send.\n"));
 			break;
 		case 2:
 			CONS_Printf(M_GetText("The server is not allowing download requests.\n"));
 			break;
 		case 3:
-			CONS_Printf(M_GetText("All files downloadable, but you have chosen to disable downloading locally.\n"));
+			CONS_Printf(M_GetText("All addons downloadable, but you have chosen to disable addon downloading.\n"));
+			break;
+		case 4:
+			CONS_Printf(M_GetText("One or more addons were added as a folder, which the server cannot send.\n"));
 			break;
 	}
 	return false;
@@ -387,7 +409,7 @@ boolean CL_SendFileRequest(void)
 	netbuffer->packettype = PT_REQUESTFILE;
 	p = (char *)netbuffer->u.textcmd;
 	for (INT32 i = 0; i < fileneedednum; i++)
-		if ((fileneeded[i].status == FS_NOTFOUND || fileneeded[i].status == FS_MD5SUMBAD))
+		if (fileneeded[i].status == FS_NOTFOUND || fileneeded[i].status == FS_MD5SUMBAD)
 		{
 			totalfreespaceneeded += fileneeded[i].totalsize;
 
@@ -503,23 +525,27 @@ INT32 CL_CheckFiles(void)
 
 		CONS_Debug(DBG_NETPLAY, "searching for '%s' ", fileneeded[i].filename);
 
-		// Check in already loaded files
-		for (j = mainwads; j < numwadfiles; j++)
-		{
-			nameonly(strcpy(wadfilename, wadfiles[j]->filename));
-			if (!stricmp(wadfilename, fileneeded[i].filename) &&
-				!memcmp(wadfiles[j]->md5sum, fileneeded[i].md5sum, 16))
-			{
-				CONS_Debug(DBG_NETPLAY, "already loaded\n");
-				fileneeded[i].status = FS_OPEN;
-				return 4;
-			}
-		}
-
 		if (fileneeded[i].folder)
-			fileneeded[i].status = findfolder(fileneeded[i].filename);
+		{
+			fileneeded[i].status = FS_NOTFOUND;
+		}
 		else
+		{
+			// Check in already loaded files
+			for (j = mainwads; j < numwadfiles; j++)
+			{
+				nameonly(strcpy(wadfilename, wadfiles[j]->filename));
+				if (!stricmp(wadfilename, fileneeded[i].filename) &&
+					!memcmp(wadfiles[j]->md5sum, fileneeded[i].md5sum, 16))
+				{
+					CONS_Debug(DBG_NETPLAY, "already loaded\n");
+					fileneeded[i].status = FS_OPEN;
+					return 4;
+				}
+			}
+
 			fileneeded[i].status = findfile(fileneeded[i].filename, fileneeded[i].md5sum, true);
+		}
 
 		CONS_Debug(DBG_NETPLAY, "found %d\n", fileneeded[i].status);
 		return 4;

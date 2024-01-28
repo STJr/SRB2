@@ -50,6 +50,7 @@
 #include "p_saveg.h"
 #include "r_main.h"
 #include "r_local.h"
+#include "r_translation.h"
 #include "s_sound.h"
 #include "st_stuff.h"
 #include "v_video.h"
@@ -1429,10 +1430,6 @@ void D_SRB2Main(void)
 	// Make backups of some SOCcable tables.
 	P_BackupTables();
 
-	// Setup character tables
-	// Have to be done here before files are loaded
-	M_InitCharacterTables();
-
 	mainwads = 3; // doesn't include music.dta
 #ifdef USE_PATCH_DTA
 	mainwads++;
@@ -1474,6 +1471,8 @@ void D_SRB2Main(void)
 	//--------------------------------------------------------- CONSOLE
 	// setup loading screen
 	SCR_Startup();
+
+	PaletteRemap_Init();
 
 	HU_Init();
 

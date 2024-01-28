@@ -39,6 +39,7 @@
 #include "../m_cheat.h"
 #include "../f_finale.h"
 #include "../r_things.h" // R_GetShadowZ
+#include "../r_translation.h"
 #include "../d_main.h"
 #include "../p_slopes.h"
 #include "hw_md2.h"
@@ -566,7 +567,7 @@ static void HWR_RenderPlane(subsector_t *subsector, extrasubsector_t *xsub, bool
 
 		for (i = 0; i < subsector->numlines; i++, line++)
 		{
-			if (!line->glseg && line->linedef->special == HORIZONSPECIAL && R_PointOnSegSide(dup_viewx, dup_viewy, line) == 0)
+			if (!line->glseg && line->linedef->special == SPECIAL_HORIZON_LINE && R_PointOnSegSide(dup_viewx, dup_viewy, line) == 0)
 			{
 				P_ClosestPointOnLine(viewx, viewy, line->linedef, &v);
 				dist = FIXED_TO_FLOAT(R_PointToDist(v.x, v.y));
@@ -1139,9 +1140,6 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 		INT32 gl_toptexture = 0, gl_bottomtexture = 0;
 		fixed_t texturevpeg;
 
-		boolean bothceilingssky = false; // turned on if both back and front ceilings are sky
-		boolean bothfloorssky = false; // likewise, but for floors
-
 		SLOPEPARAMS(gl_backsector->c_slope, worldhigh, worldhighslope, gl_backsector->ceilingheight)
 		SLOPEPARAMS(gl_backsector->f_slope, worldlow,  worldlowslope,  gl_backsector->floorheight)
 
@@ -1506,7 +1504,7 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 	else
 	{
 		// Single sided line... Deal only with the middletexture (if one exists)
-		if (gl_midtexture && gl_linedef->special != HORIZONSPECIAL) // (Ignore horizon line for OGL)
+		if (gl_midtexture && gl_linedef->special != SPECIAL_HORIZON_LINE) // (Ignore horizon line for OGL)
 		{
 			grTex = HWR_GetTexture(gl_midtexture);
 			xscale = FixedToFloat(gl_sidedef->scalex_mid);
@@ -1535,7 +1533,7 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 				wallVerts[3].t += (gl_frontsector->ceilingheight - worldtop) * yscale * grTex->scaleY;
 				wallVerts[2].t += (gl_frontsector->ceilingheight - worldtopslope) * yscale * grTex->scaleY;
 				wallVerts[0].t += (gl_frontsector->floorheight - worldbottom) * yscale * grTex->scaleY;
-				wallVerts[1].t += (gl_frontsector->floorheight - worldbottomslope) * yscale * yscale;
+				wallVerts[1].t += (gl_frontsector->floorheight - worldbottomslope) * yscale * grTex->scaleY;
 			} else if (gl_linedef->flags & ML_DONTPEGBOTTOM) {
 				wallVerts[3].t = wallVerts[0].t + ((worldbottom - worldtop) * yscale) * grTex->scaleY;
 				wallVerts[2].t = wallVerts[1].t + ((worldbottomslope - worldtopslope) * yscale) * grTex->scaleY;
@@ -1628,12 +1626,17 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 
 				side_t *side = &sides[rover->master->sidenum[0]];
 
+				INT16 lineflags;
+
 				if (rover->master->flags & ML_TFERLINE)
 				{
 					size_t linenum = gl_curline->linedef-gl_backsector->lines[0];
 					newline = rover->master->frontsector->lines[0] + linenum;
 					side = &sides[newline->sidenum[0]];
+					lineflags = newline->flags;
 				}
+				else
+					lineflags = gl_curline->linedef->flags;
 
 				texnum = R_GetTextureNum(side->midtexture);
 
@@ -1672,13 +1675,13 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 					// ...Oh well, anyway, Lower Unpegged now changes pegging of FOFs like in software
 					// -- Monster Iestyn 26/06/18
 					fixed_t texturevpeg = side->rowoffset + side->offsety_mid;
-					boolean attachtobottom = !!(rover->master->flags & ML_DONTPEGBOTTOM);
+					boolean attachtobottom = !!(lineflags & ML_DONTPEGBOTTOM);
 
 					grTex = HWR_GetTexture(texnum);
 					xscale = FixedToFloat(side->scalex_mid);
 					yscale = FixedToFloat(side->scaley_mid);
 
-					if (!(rover->master->flags & ML_SKEWTD)) // no skewing
+					if (!(lineflags & ML_SKEWTD)) // no skewing
 					{
 						if (attachtobottom)
 							texturevpeg -= (*rover->topheight - *rover->bottomheight) * yscale;
@@ -1885,12 +1888,6 @@ static boolean CheckClip(seg_t * seg, sector_t * afrontsector, sector_t * abacks
 {
 	fixed_t frontf1,frontf2, frontc1, frontc2; // front floor/ceiling ends
 	fixed_t backf1, backf2, backc1, backc2; // back floor ceiling ends
-	boolean bothceilingssky = false, bothfloorssky = false;
-
-	if (abacksector->ceilingpic == skyflatnum && afrontsector->ceilingpic == skyflatnum)
-		bothceilingssky = true;
-	if (abacksector->floorpic == skyflatnum && afrontsector->floorpic == skyflatnum)
-		bothfloorssky = true;
 
 	// GZDoom method of sloped line clipping
 
@@ -2409,6 +2406,7 @@ static void HWR_AddLine(seg_t * line)
 #endif
 
 	gl_backsector = line->backsector;
+	bothceilingssky = bothfloorssky = false;
 
 #ifdef NEWCLIP
 	if (!line->backsector)
@@ -2417,13 +2415,14 @@ static void HWR_AddLine(seg_t * line)
     }
     else
     {
-		boolean bothceilingssky = false, bothfloorssky = false;
-
 		gl_backsector = R_FakeFlat(gl_backsector, &tempsec, NULL, NULL, true);
 
-		if (gl_backsector->ceilingpic == skyflatnum && gl_frontsector->ceilingpic == skyflatnum)
+		if (gl_backsector->ceilingpic == skyflatnum && gl_frontsector->ceilingpic == skyflatnum
+		&& !(P_SectorHasCeilingPortal(gl_backsector) || P_SectorHasCeilingPortal(gl_frontsector)))
 			bothceilingssky = true;
-		if (gl_backsector->floorpic == skyflatnum && gl_frontsector->floorpic == skyflatnum)
+
+		if (gl_backsector->floorpic == skyflatnum && gl_frontsector->floorpic == skyflatnum
+		&& !(P_SectorHasFloorPortal(gl_backsector) || P_SectorHasFloorPortal(gl_frontsector)))
 			bothfloorssky = true;
 
 		if (bothceilingssky && bothfloorssky) // everything's sky? let's save us a bit of time then
@@ -2927,6 +2926,46 @@ static FBITFIELD HWR_RippleBlend(sector_t *sector, ffloor_t *rover, boolean ceil
 	return /*R_IsRipplePlane(sector, rover, ceiling)*/ (rover->fofflags & FOF_RIPPLE) ? PF_Ripple : 0;
 }
 
+//
+// HWR_DoCulling
+// Hardware version of R_DoCulling
+// (see r_main.c)
+static boolean HWR_DoCulling(line_t *cullheight, line_t *viewcullheight, float vz, float bottomh, float toph)
+{
+	float cullplane;
+
+	if (!cullheight)
+		return false;
+
+	cullplane = FIXED_TO_FLOAT(cullheight->frontsector->floorheight);
+	if (cullheight->args[1]) // Group culling
+	{
+		if (!viewcullheight)
+			return false;
+
+		// Make sure this is part of the same group
+		if (viewcullheight->frontsector == cullheight->frontsector)
+		{
+			// OK, we can cull
+			if (vz > cullplane && toph < cullplane) // Cull if below plane
+				return true;
+
+			if (bottomh > cullplane && vz <= cullplane) // Cull if above plane
+				return true;
+		}
+	}
+	else // Quick culling
+	{
+		if (vz > cullplane && toph < cullplane) // Cull if below plane
+			return true;
+
+		if (bottomh > cullplane && vz <= cullplane) // Cull if above plane
+			return true;
+	}
+
+	return false;
+}
+
 // -----------------+
 // HWR_Subsector    : Determine floor/ceiling planes.
 //                  : Add sprites of things in sector.
@@ -2980,64 +3019,16 @@ static void HWR_Subsector(size_t num)
 	}
 
 	//SoM: 4/7/2000: Test to make Boom water work in Hardware mode.
-	gl_frontsector = R_FakeFlat(gl_frontsector, &tempsec, &floorlightlevel,
-								&ceilinglightlevel, false);
-	//FIXME: Use floorlightlevel and ceilinglightlevel insted of lightlevel.
+	gl_frontsector = R_FakeFlat(gl_frontsector, &tempsec, &floorlightlevel, &ceilinglightlevel, false);
 
 	floorcolormap = ceilingcolormap = gl_frontsector->extra_colormap;
 
-	// ------------------------------------------------------------------------
-	// sector lighting, DISABLED because it's done in HWR_StoreWallRange
-	// ------------------------------------------------------------------------
-	/// \todo store a RGBA instead of just intensity, allow coloured sector lighting
-	//light = (FUBYTE)(sub->sector->lightlevel & 0xFF) / 255.0f;
-	//gl_cursectorlight.red   = light;
-	//gl_cursectorlight.green = light;
-	//gl_cursectorlight.blue  = light;
-	//gl_cursectorlight.alpha = light;
-
-// ----- end special tricks -----
 	cullFloorHeight   = P_GetSectorFloorZAt  (gl_frontsector, viewx, viewy);
 	cullCeilingHeight = P_GetSectorCeilingZAt(gl_frontsector, viewx, viewy);
 	locFloorHeight    = P_GetSectorFloorZAt  (gl_frontsector, gl_frontsector->soundorg.x, gl_frontsector->soundorg.y);
 	locCeilingHeight  = P_GetSectorCeilingZAt(gl_frontsector, gl_frontsector->soundorg.x, gl_frontsector->soundorg.y);
 
-	if (gl_frontsector->ffloors)
-	{
-		boolean anyMoved = gl_frontsector->moved;
-
-		if (anyMoved == false)
-		{
-			for (rover = gl_frontsector->ffloors; rover; rover = rover->next)
-			{
-				sector_t *controlSec = &sectors[rover->secnum];
-				if (controlSec->moved == true)
-				{
-					anyMoved = true;
-					break;
-				}
-			}
-		}
-
-		if (anyMoved == true)
-		{
-			gl_frontsector->numlights = sub->sector->numlights = 0;
-			R_Prep3DFloors(gl_frontsector);
-			sub->sector->lightlist = gl_frontsector->lightlist;
-			sub->sector->numlights = gl_frontsector->numlights;
-			sub->sector->moved = gl_frontsector->moved = false;
-		}
-
-		light = R_GetPlaneLight(gl_frontsector, locFloorHeight, false);
-		if (gl_frontsector->floorlightsec == -1 && !gl_frontsector->floorlightabsolute)
-			floorlightlevel = max(0, min(255, *gl_frontsector->lightlist[light].lightlevel + gl_frontsector->floorlightlevel));
-		floorcolormap = *gl_frontsector->lightlist[light].extra_colormap;
-
-		light = R_GetPlaneLight(gl_frontsector, locCeilingHeight, false);
-		if (gl_frontsector->ceilinglightsec == -1 && !gl_frontsector->ceilinglightabsolute)
-			ceilinglightlevel = max(0, min(255, *gl_frontsector->lightlist[light].lightlevel + gl_frontsector->ceilinglightlevel));
-		ceilingcolormap = *gl_frontsector->lightlist[light].extra_colormap;
-	}
+	R_CheckSectorLightLists(sub->sector, gl_frontsector, &floorlightlevel, &ceilinglightlevel, &floorcolormap, &ceilingcolormap);
 
 	sub->sector->extra_colormap = gl_frontsector->extra_colormap;
 
@@ -3101,27 +3092,36 @@ static void HWR_Subsector(size_t num)
 		for (rover = gl_frontsector->ffloors;
 			rover; rover = rover->next)
 		{
-			fixed_t cullHeight, centerHeight;
-
-            // bottom plane
-			cullHeight   = P_GetFFloorBottomZAt(rover, viewx, viewy);
-			centerHeight = P_GetFFloorBottomZAt(rover, gl_frontsector->soundorg.x, gl_frontsector->soundorg.y);
+			fixed_t bottomCullHeight, topCullHeight, centerHeight;
 
 			if (!(rover->fofflags & FOF_EXISTS) || !(rover->fofflags & FOF_RENDERPLANES))
 				continue;
 			if (sub->validcount == validcount)
 				continue;
+			
+			// rendering heights for bottom and top planes
+			bottomCullHeight = P_GetFFloorBottomZAt(rover, viewx, viewy);
+			topCullHeight = P_GetFFloorTopZAt(rover, viewx, viewy);
+			
+			if (gl_frontsector->cullheight)
+			{
+				if (HWR_DoCulling(gl_frontsector->cullheight, viewsector->cullheight, gl_viewz, FIXED_TO_FLOAT(bottomCullHeight), FIXED_TO_FLOAT(topCullHeight)))
+					continue;
+			}
+
+			// bottom plane
+			centerHeight = P_GetFFloorBottomZAt(rover, gl_frontsector->soundorg.x, gl_frontsector->soundorg.y);
 
 			if (centerHeight <= locCeilingHeight &&
 			    centerHeight >= locFloorHeight &&
-			    ((dup_viewz < cullHeight && (rover->fofflags & FOF_BOTHPLANES || !(rover->fofflags & FOF_INVERTPLANES))) ||
-			     (dup_viewz > cullHeight && (rover->fofflags & FOF_BOTHPLANES || rover->fofflags & FOF_INVERTPLANES))))
+			    ((dup_viewz < bottomCullHeight && (rover->fofflags & FOF_BOTHPLANES || !(rover->fofflags & FOF_INVERTPLANES))) ||
+			     (dup_viewz > bottomCullHeight && (rover->fofflags & FOF_BOTHPLANES || rover->fofflags & FOF_INVERTPLANES))))
 			{
 				if (rover->fofflags & FOF_FOG)
 				{
 					UINT8 alpha;
 
-					light = R_GetPlaneLight(gl_frontsector, centerHeight, dup_viewz < cullHeight ? true : false);
+					light = R_GetPlaneLight(gl_frontsector, centerHeight, dup_viewz < bottomCullHeight ? true : false);
 					alpha = HWR_FogBlockAlpha(*gl_frontsector->lightlist[light].lightlevel, rover->master->frontsector->extra_colormap);
 
 					HWR_AddTransparentFloor(0,
@@ -3134,7 +3134,7 @@ static void HWR_Subsector(size_t num)
 				}
 				else if ((rover->fofflags & FOF_TRANSLUCENT && !(rover->fofflags & FOF_SPLAT)) || rover->blend) // SoM: Flags are more efficient
 				{
-					light = R_GetPlaneLight(gl_frontsector, centerHeight, dup_viewz < cullHeight ? true : false);
+					light = R_GetPlaneLight(gl_frontsector, centerHeight, dup_viewz < bottomCullHeight ? true : false);
 
 					HWR_AddTransparentFloor(&levelflats[*rover->bottompic],
 					                       &extrasubsectors[num],
@@ -3148,26 +3148,25 @@ static void HWR_Subsector(size_t num)
 				else
 				{
 					HWR_GetLevelFlat(&levelflats[*rover->bottompic]);
-					light = R_GetPlaneLight(gl_frontsector, centerHeight, dup_viewz < cullHeight ? true : false);
+					light = R_GetPlaneLight(gl_frontsector, centerHeight, dup_viewz < bottomCullHeight ? true : false);
 					HWR_RenderPlane(sub, &extrasubsectors[num], false, *rover->bottomheight, HWR_RippleBlend(gl_frontsector, rover, false)|PF_Occlude, *gl_frontsector->lightlist[light].lightlevel, &levelflats[*rover->bottompic],
 					                rover->master->frontsector, 255, *gl_frontsector->lightlist[light].extra_colormap);
 				}
 			}
 
 			// top plane
-			cullHeight   = P_GetFFloorTopZAt(rover, viewx, viewy);
 			centerHeight = P_GetFFloorTopZAt(rover, gl_frontsector->soundorg.x, gl_frontsector->soundorg.y);
 
 			if (centerHeight >= locFloorHeight &&
 			    centerHeight <= locCeilingHeight &&
-			    ((dup_viewz > cullHeight && (rover->fofflags & FOF_BOTHPLANES || !(rover->fofflags & FOF_INVERTPLANES))) ||
-			     (dup_viewz < cullHeight && (rover->fofflags & FOF_BOTHPLANES || rover->fofflags & FOF_INVERTPLANES))))
+			    ((dup_viewz > topCullHeight && (rover->fofflags & FOF_BOTHPLANES || !(rover->fofflags & FOF_INVERTPLANES))) ||
+			     (dup_viewz < topCullHeight && (rover->fofflags & FOF_BOTHPLANES || rover->fofflags & FOF_INVERTPLANES))))
 			{
 				if (rover->fofflags & FOF_FOG)
 				{
 					UINT8 alpha;
 
-					light = R_GetPlaneLight(gl_frontsector, centerHeight, dup_viewz < cullHeight ? true : false);
+					light = R_GetPlaneLight(gl_frontsector, centerHeight, dup_viewz < topCullHeight ? true : false);
 					alpha = HWR_FogBlockAlpha(*gl_frontsector->lightlist[light].lightlevel, rover->master->frontsector->extra_colormap);
 
 					HWR_AddTransparentFloor(0,
@@ -3180,7 +3179,7 @@ static void HWR_Subsector(size_t num)
 				}
 				else if ((rover->fofflags & FOF_TRANSLUCENT && !(rover->fofflags & FOF_SPLAT)) || rover->blend)
 				{
-					light = R_GetPlaneLight(gl_frontsector, centerHeight, dup_viewz < cullHeight ? true : false);
+					light = R_GetPlaneLight(gl_frontsector, centerHeight, dup_viewz < topCullHeight ? true : false);
 
 					HWR_AddTransparentFloor(&levelflats[*rover->toppic],
 					                        &extrasubsectors[num],
@@ -3194,7 +3193,7 @@ static void HWR_Subsector(size_t num)
 				else
 				{
 					HWR_GetLevelFlat(&levelflats[*rover->toppic]);
-					light = R_GetPlaneLight(gl_frontsector, centerHeight, dup_viewz < cullHeight ? true : false);
+					light = R_GetPlaneLight(gl_frontsector, centerHeight, dup_viewz < topCullHeight ? true : false);
 					HWR_RenderPlane(sub, &extrasubsectors[num], true, *rover->topheight, HWR_RippleBlend(gl_frontsector, rover, false)|PF_Occlude, *gl_frontsector->lightlist[light].lightlevel, &levelflats[*rover->toppic],
 					                  rover->master->frontsector, 255, *gl_frontsector->lightlist[light].extra_colormap);
 				}
@@ -3546,46 +3545,6 @@ static void HWR_LinkDrawHackFinish(void)
 	}
 	// reset list
 	linkdrawcount = 0;
-}
-
-//
-// HWR_DoCulling
-// Hardware version of R_DoCulling
-// (see r_main.c)
-static boolean HWR_DoCulling(line_t *cullheight, line_t *viewcullheight, float vz, float bottomh, float toph)
-{
-	float cullplane;
-
-	if (!cullheight)
-		return false;
-
-	cullplane = FIXED_TO_FLOAT(cullheight->frontsector->floorheight);
-	if (cullheight->args[1]) // Group culling
-	{
-		if (!viewcullheight)
-			return false;
-
-		// Make sure this is part of the same group
-		if (viewcullheight->frontsector == cullheight->frontsector)
-		{
-			// OK, we can cull
-			if (vz > cullplane && toph < cullplane) // Cull if below plane
-				return true;
-
-			if (bottomh > cullplane && vz <= cullplane) // Cull if above plane
-				return true;
-		}
-	}
-	else // Quick culling
-	{
-		if (vz > cullplane && toph < cullplane) // Cull if below plane
-			return true;
-
-		if (bottomh > cullplane && vz <= cullplane) // Cull if above plane
-			return true;
-	}
-
-	return false;
 }
 
 static void HWR_DrawDropShadow(mobj_t *thing, fixed_t scale)
@@ -4988,7 +4947,7 @@ static void HWR_DrawSprites(void)
 
 			if (spr->mobj && spr->mobj->skin && spr->mobj->sprite == SPR_PLAY)
 			{
-				if (!cv_glmodels.value || md2_playermodels[(skin_t*)spr->mobj->skin-skins].notfound || md2_playermodels[(skin_t*)spr->mobj->skin-skins].scale < 0.0f)
+				if (!cv_glmodels.value || !md2_playermodels[((skin_t*)spr->mobj->skin)->skinnum].found || md2_playermodels[((skin_t*)spr->mobj->skin)->skinnum].scale < 0.0f)
 					HWR_DrawSprite(spr);
 				else
 				{
@@ -4998,7 +4957,7 @@ static void HWR_DrawSprites(void)
 			}
 			else
 			{
-				if (!cv_glmodels.value || md2_models[spr->mobj->sprite].notfound || md2_models[spr->mobj->sprite].scale < 0.0f)
+				if (!cv_glmodels.value || !md2_models[spr->mobj->sprite].found || md2_models[spr->mobj->sprite].scale < 0.0f)
 					HWR_DrawSprite(spr);
 				else
 				{
@@ -5106,6 +5065,8 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	boolean vflip = (!(thing->eflags & MFE_VERTICALFLIP) != !R_ThingVerticallyFlipped(thing));
 	boolean mirrored = thing->mirrored;
 	boolean hflip = (!R_ThingHorizontallyFlipped(thing) != !mirrored);
+	skincolornum_t color;
+	UINT16 translation;
 	INT32 dispoffset;
 
 	angle_t ang;
@@ -5161,6 +5122,8 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	spriteyscale = FIXED_TO_FLOAT(interp.spriteyscale);
 
 	// transform the origin point
+	if (thing->type == MT_OVERLAY) // Handle overlays
+		R_ThingOffsetOverlay(thing, &interp.x, &interp.y);
 	tr_x = FIXED_TO_FLOAT(interp.x) - gl_viewx;
 	tr_y = FIXED_TO_FLOAT(interp.y) - gl_viewy;
 
@@ -5173,11 +5136,11 @@ static void HWR_ProjectSprite(mobj_t *thing)
 		if (cv_glmodels.value) //Yellow: Only MD2's dont disappear
 		{
 			if (thing->skin && thing->sprite == SPR_PLAY)
-				md2 = &md2_playermodels[( (skin_t *)thing->skin - skins )];
+				md2 = &md2_playermodels[((skin_t *)thing->skin)->skinnum];
 			else
 				md2 = &md2_models[thing->sprite];
 
-			if (md2->notfound || md2->scale < 0.0f)
+			if (!md2->found || md2->scale < 0.0f)
 				return;
 		}
 		else
@@ -5477,6 +5440,8 @@ static void HWR_ProjectSprite(mobj_t *thing)
 
 		// calculate tz for tracer, same way it is calculated for this sprite
 		// transform the origin point
+		if (thing->tracer->type == MT_OVERLAY) // Handle overlays
+			R_ThingOffsetOverlay(thing->tracer, &tracer_interp.x, &tracer_interp.y);
 		tr_x = FIXED_TO_FLOAT(tracer_interp.x) - gl_viewx;
 		tr_y = FIXED_TO_FLOAT(tracer_interp.y) - gl_viewy;
 
@@ -5533,45 +5498,19 @@ static void HWR_ProjectSprite(mobj_t *thing)
 		vis->gpatch = (patch_t *)W_CachePatchNum(sprframe->lumppat[rot], PU_SPRITE);
 
 	vis->mobj = thing;
+
 	if ((thing->flags2 & MF2_LINKDRAW) && thing->tracer && thing->color == SKINCOLOR_NONE)
-		vis->color = thing->tracer->color;
+		color = thing->tracer->color;
 	else
-		vis->color = thing->color;
+		color = thing->color;
+
+	if ((thing->flags2 & MF2_LINKDRAW) && thing->tracer && thing->translation == 0)
+		translation = thing->tracer->translation;
+	else
+		translation = thing->translation;
 
 	//Hurdler: 25/04/2000: now support colormap in hardware mode
-	if ((vis->mobj->flags & (MF_ENEMY|MF_BOSS)) && (vis->mobj->flags2 & MF2_FRET) && !(vis->mobj->flags & MF_GRENADEBOUNCE) && (leveltime & 1)) // Bosses "flash"
-	{
-		if (vis->mobj->type == MT_CYBRAKDEMON || vis->mobj->colorized)
-			vis->colormap = R_GetTranslationColormap(TC_ALLWHITE, 0, GTC_CACHE);
-		else if (vis->mobj->type == MT_METALSONIC_BATTLE)
-			vis->colormap = R_GetTranslationColormap(TC_METALSONIC, 0, GTC_CACHE);
-		else
-			vis->colormap = R_GetTranslationColormap(TC_BOSS, vis->color, GTC_CACHE);
-	}
-	else if (vis->color)
-	{
-		// New colormap stuff for skins Tails 06-07-2002
-		if (thing->colorized)
-			vis->colormap = R_GetTranslationColormap(TC_RAINBOW, vis->color, GTC_CACHE);
-		else if (thing->player && thing->player->dashmode >= DASHMODE_THRESHOLD
-			&& (thing->player->charflags & SF_DASHMODE)
-			&& ((leveltime/2) & 1))
-		{
-			if (thing->player->charflags & SF_MACHINE)
-				vis->colormap = R_GetTranslationColormap(TC_DASHMODE, 0, GTC_CACHE);
-			else
-				vis->colormap = R_GetTranslationColormap(TC_RAINBOW, vis->color, GTC_CACHE);
-		}
-		else if (thing->skin && thing->sprite == SPR_PLAY) // This thing is a player!
-		{
-			size_t skinnum = (skin_t*)thing->skin-skins;
-			vis->colormap = R_GetTranslationColormap((INT32)skinnum, vis->color, GTC_CACHE);
-		}
-		else
-			vis->colormap = R_GetTranslationColormap(TC_DEFAULT, vis->color ? vis->color : SKINCOLOR_CYAN, GTC_CACHE);
-	}
-	else
-		vis->colormap = NULL;
+	vis->colormap = R_GetTranslationForThing(vis->mobj, color, translation);
 
 	// set top/bottom coords
 	vis->gzt = gzt;
@@ -5697,7 +5636,6 @@ static void HWR_ProjectPrecipitationSprite(precipmobj_t *thing)
 	vis->gpatch = (patch_t *)W_CachePatchNum(sprframe->lumppat[rot], PU_SPRITE);
 	vis->flip = flip;
 	vis->mobj = (mobj_t *)thing;
-	vis->color = SKINCOLOR_NONE;
 
 	vis->colormap = NULL;
 
@@ -5928,7 +5866,7 @@ static void HWR_DrawSkyBackground(player_t *player)
 	if (cv_glskydome.value)
 	{
 		FTransform dometransform;
-		const float fpov = FIXED_TO_FLOAT(cv_fov.value+player->fovadd);
+		const float fpov = FixedToFloat(R_GetPlayerFov(player));
 		postimg_t *type;
 
 		if (splitscreen && player == &players[secondarydisplayplayer])
@@ -6162,7 +6100,7 @@ static void HWR_SetShaderState(void)
 // ==========================================================================
 void HWR_RenderSkyboxView(INT32 viewnumber, player_t *player)
 {
-	const float fpov = FIXED_TO_FLOAT(cv_fov.value+player->fovadd);
+	const float fpov = FixedToFloat(R_GetPlayerFov(player));
 	postimg_t *type;
 
 	if (splitscreen && player == &players[secondarydisplayplayer])
@@ -6289,35 +6227,6 @@ void HWR_RenderSkyboxView(INT32 viewnumber, player_t *player)
 
 	HWR_RenderBSPNode((INT32)numnodes-1);
 
-#ifndef NEWCLIP
-	// Make a viewangle int so we can render things based on mouselook
-	if (player == &players[consoleplayer])
-		viewangle = localaiming;
-	else if (splitscreen && player == &players[secondarydisplayplayer])
-		viewangle = localaiming2;
-
-	// Handle stuff when you are looking farther up or down.
-	if ((gl_aimingangle || cv_fov.value+player->fovadd > 90*FRACUNIT))
-	{
-		dup_viewangle += ANGLE_90;
-		HWR_ClearClipSegs();
-		HWR_RenderBSPNode((INT32)numnodes-1); //left
-
-		dup_viewangle += ANGLE_90;
-		if (((INT32)gl_aimingangle > ANGLE_45 || (INT32)gl_aimingangle<-ANGLE_45))
-		{
-			HWR_ClearClipSegs();
-			HWR_RenderBSPNode((INT32)numnodes-1); //back
-		}
-
-		dup_viewangle += ANGLE_90;
-		HWR_ClearClipSegs();
-		HWR_RenderBSPNode((INT32)numnodes-1); //right
-
-		dup_viewangle += ANGLE_90;
-	}
-#endif
-
 	if (cv_glbatching.value)
 		HWR_RenderBatches();
 
@@ -6363,7 +6272,7 @@ void HWR_RenderSkyboxView(INT32 viewnumber, player_t *player)
 // ==========================================================================
 void HWR_RenderPlayerView(INT32 viewnumber, player_t *player)
 {
-	const float fpov = FIXED_TO_FLOAT(cv_fov.value+player->fovadd);
+	const float fpov = FixedToFloat(R_GetPlayerFov(player));
 	postimg_t *type;
 
 	const boolean skybox = (skyboxmo[0] && cv_skybox.value); // True if there's a skybox object and skyboxes are on
@@ -6515,35 +6424,6 @@ void HWR_RenderPlayerView(INT32 viewnumber, player_t *player)
 
 	HWR_RenderBSPNode((INT32)numnodes-1);
 
-#ifndef NEWCLIP
-	// Make a viewangle int so we can render things based on mouselook
-	if (player == &players[consoleplayer])
-		viewangle = localaiming;
-	else if (splitscreen && player == &players[secondarydisplayplayer])
-		viewangle = localaiming2;
-
-	// Handle stuff when you are looking farther up or down.
-	if ((gl_aimingangle || cv_fov.value+player->fovadd > 90*FRACUNIT))
-	{
-		dup_viewangle += ANGLE_90;
-		HWR_ClearClipSegs();
-		HWR_RenderBSPNode((INT32)numnodes-1); //left
-
-		dup_viewangle += ANGLE_90;
-		if (((INT32)gl_aimingangle > ANGLE_45 || (INT32)gl_aimingangle<-ANGLE_45))
-		{
-			HWR_ClearClipSegs();
-			HWR_RenderBSPNode((INT32)numnodes-1); //back
-		}
-
-		dup_viewangle += ANGLE_90;
-		HWR_ClearClipSegs();
-		HWR_RenderBSPNode((INT32)numnodes-1); //right
-
-		dup_viewangle += ANGLE_90;
-	}
-#endif
-
 	PS_STOP_TIMING(ps_bsptime);
 
 	if (cv_glbatching.value)
@@ -6634,7 +6514,6 @@ CV_PossibleValue_t glanisotropicmode_cons_t[] = {{1, "MIN"}, {16, "MAX"}, {0, NU
 
 consvar_t cv_glshaders = CVAR_INIT ("gr_shaders", "On", CV_SAVE, glshaders_cons_t, NULL);
 consvar_t cv_glallowshaders = CVAR_INIT ("gr_allowclientshaders", "On", CV_NETVAR, CV_OnOff, NULL);
-consvar_t cv_fovchange = CVAR_INIT ("gr_fovchange", "Off", CV_SAVE, CV_OnOff, NULL);
 
 #ifdef ALAM_LIGHTING
 consvar_t cv_gldynamiclighting = CVAR_INIT ("gr_dynamiclighting", "On", CV_SAVE, CV_OnOff, NULL);
@@ -6677,8 +6556,6 @@ static void CV_glanisotropic_OnChange(void)
 //added by Hurdler: console varibale that are saved
 void HWR_AddCommands(void)
 {
-	CV_RegisterVar(&cv_fovchange);
-
 #ifdef ALAM_LIGHTING
 	CV_RegisterVar(&cv_glstaticlighting);
 	CV_RegisterVar(&cv_gldynamiclighting);

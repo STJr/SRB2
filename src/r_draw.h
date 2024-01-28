@@ -117,6 +117,27 @@ enum
 	TC_DEFAULT
 };
 
+// Amount of colors in the palette
+#define NUM_PALETTE_ENTRIES 256
+
+typedef struct colorcache_s
+{
+	UINT8 colors[NUM_PALETTE_ENTRIES];
+} colorcache_t;
+
+enum
+{
+	DEFAULT_TT_CACHE_INDEX = MAXSKINS,
+	BOSS_TT_CACHE_INDEX,
+	METALSONIC_TT_CACHE_INDEX,
+	ALLWHITE_TT_CACHE_INDEX,
+	RAINBOW_TT_CACHE_INDEX,
+	BLINK_TT_CACHE_INDEX,
+	DASHMODE_TT_CACHE_INDEX,
+
+	TT_CACHE_SIZE
+};
+
 // Custom player skin translation
 // Initialize color translation tables, for player rendering etc.
 UINT8* R_GetTranslationColormap(INT32 skinnum, skincolornum_t color, UINT8 flags);
@@ -146,7 +167,7 @@ UINT8 *R_GetBlendTable(int style, INT32 alphalevel);
 boolean R_BlendLevelVisible(INT32 blendmode, INT32 alphalevel);
 
 // Color ramp modification should force a recache
-extern UINT8 skincolor_modified[];
+extern boolean skincolor_modified[];
 
 void R_InitViewBuffer(INT32 width, INT32 height);
 void R_InitViewBorder(void);

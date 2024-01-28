@@ -59,6 +59,7 @@
 #include "r_textures.h"
 #include "r_patch.h"
 #include "r_picformats.h"
+#include "r_translation.h"
 #include "i_time.h"
 #include "i_system.h"
 #include "i_video.h" // rendermode
@@ -829,6 +830,16 @@ static void W_ReadFileShaders(wadfile_t *wadfile)
 #endif
 }
 
+static void W_LoadTrnslateLumps(UINT16 w)
+{
+	UINT16 lump = W_CheckNumForNamePwad("TRNSLATE", w, 0);
+	while (lump != INT16_MAX)
+	{
+		R_ParseTrnslate(w, lump);
+		lump = W_CheckNumForNamePwad("TRNSLATE", (UINT16)w, lump + 1);
+	}
+}
+
 //  Allocate a wadfile, setup the lumpinfo (directory) and
 //  lumpcache, add the wadfile to the current active wadfiles
 //
@@ -978,6 +989,9 @@ UINT16 W_InitFile(const char *filename, boolean mainfile, boolean startup)
 
 	// Read shaders from file
 	W_ReadFileShaders(wadfile);
+
+	// The below hack makes me load this here.
+	W_LoadTrnslateLumps(numwadfiles - 1);
 
 	// TODO: HACK ALERT - Load Lua & SOC stuff right here. I feel like this should be out of this place, but... Let's stick with this for now.
 	switch (wadfile->type)
@@ -1141,10 +1155,12 @@ UINT16 W_InitFolder(const char *path, boolean mainfile, boolean startup)
 	wadfile->foldercount = foldercount;
 	wadfile->lumpinfo = lumpinfo;
 	wadfile->important = important;
-
-	// Irrelevant.
 	wadfile->filesize = 0;
-	memset(wadfile->md5sum, 0x00, 16);
+
+	for (i = 0; i < numlumps; i++)
+		wadfile->filesize += lumpinfo[i].disksize;
+
+	memset(wadfile->md5sum, 0x00, 16); // Irrelevant.
 
 	Z_Calloc(numlumps * sizeof (*wadfile->lumpcache), PU_STATIC, &wadfile->lumpcache);
 	Z_Calloc(numlumps * sizeof (*wadfile->patchcache), PU_STATIC, &wadfile->patchcache);

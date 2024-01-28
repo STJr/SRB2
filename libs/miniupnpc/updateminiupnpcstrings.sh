@@ -1,11 +1,22 @@
 #! /bin/sh
-# $Id: updateminiupnpcstrings.sh,v 1.7 2011/01/04 11:41:53 nanard Exp $
+# $Id: updateminiupnpcstrings.sh,v 1.10 2022/10/16 05:28:15 nanard Exp $
 # project miniupnp : http://miniupnp.free.fr/
-# (c) 2009 Thomas Bernard
+# (c) 2009-2021 Thomas Bernard
 
 FILE=miniupnpcstrings.h
-TMPFILE=miniupnpcstrings.h.tmp
 TEMPLATE_FILE=${FILE}.in
+
+if [ -n "$1" ] ; then
+  FILE="$1"
+fi
+if [ -n "$2" ] ; then
+  TEMPLATE_FILE="$2"
+fi
+TMPFILE=`mktemp -t miniupnpcstringsXXXXXX`
+if [ ! -f "$TMPFILE" ] ; then
+	echo "mktemp failure"
+	exit 1
+fi
 
 # detecting the OS name and version
 OS_NAME=`uname -s`
@@ -14,11 +25,14 @@ if [ -f /etc/debian_version ]; then
 	OS_NAME=Debian
 	OS_VERSION=`cat /etc/debian_version`
 fi
+
 # use lsb_release (Linux Standard Base) when available
 LSB_RELEASE=`which lsb_release`
 if [ 0 -eq $? -a -x "${LSB_RELEASE}" ]; then
-	OS_NAME=`${LSB_RELEASE} -i -s`
-	OS_VERSION=`${LSB_RELEASE} -r -s`
+	# On NixOS, lsb_release returns strings such as "NixOS" (with quotes),
+	# so we need to stript them with the following xargs trick:
+	OS_NAME=`${LSB_RELEASE} -i -s | xargs echo`
+	OS_VERSION=`${LSB_RELEASE} -r -s | xargs echo`
 	case $OS_NAME in
 		Debian)
 			#OS_VERSION=`${LSB_RELEASE} -c -s`
@@ -49,5 +63,5 @@ sed -e "$EXPR" < $TEMPLATE_FILE > $TMPFILE
 EXPR="s|MINIUPNPC_VERSION_STRING \".*\"|MINIUPNPC_VERSION_STRING \"${MINIUPNPC_VERSION}\"|"
 echo "setting MINIUPNPC_VERSION_STRING macro value to ${MINIUPNPC_VERSION} in $FILE."
 sed -e "$EXPR" < $TMPFILE > $FILE
-rm $TMPFILE
+rm $TMPFILE && echo "$TMPFILE deleted"
 
