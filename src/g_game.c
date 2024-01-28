@@ -273,7 +273,7 @@ static CV_PossibleValue_t joyaxis_cons_t[] = {{0, "None"},
 {3, "Right Stick X"}, {4, "X-Rudder"}, {-3, "Z-Axis-"}, {-4, "Right Stick Y"},
 #endif
 #if JOYAXISSET > 2
-{5, "Y-Rudder"}, {6, "RT"}, {-5, "Y-Rudder-"}, {-6, "Z-Rudder-"},
+{5, "LT"}, {6, "RT"}, {-5, "Y-Rudder-"}, {-6, "Z-Rudder-"},
 #endif
 #if JOYAXISSET > 3
 {7, "U-Axis"}, {8, "V-Axis"}, {-7, "U-Axis-"}, {-8, "V-Axis-"},
