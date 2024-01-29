@@ -117,6 +117,8 @@ enum
 	TC_DEFAULT
 };
 
+INT32 R_SkinTranslationToCacheIndex(INT32 translation);
+
 // Amount of colors in the palette
 #define NUM_PALETTE_ENTRIES 256
 
