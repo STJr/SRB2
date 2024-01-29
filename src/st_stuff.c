@@ -1785,45 +1785,48 @@ static void ST_drawNightsRecords(void)
 
 static void ST_drawNiGHTSLink(void)
 {
-	static INT32 prevsel[2] = {0, 0}, prevtime[2] = {0, 0};
-	const UINT8 q = ((splitscreen && stplyr == &players[secondarydisplayplayer]) ? 1 : 0);
-	INT32 sel = ((stplyr->linkcount-1) / 5) % NUMLINKCOLORS, aflag = V_PERPLAYER, mag = ((stplyr->linkcount-1 >= 300) ? (stplyr->linkcount-1 >= 600) ? 2 : 1 : 0);
-	skincolornum_t colornum;
-	fixed_t x, y, scale;
-
-	if (sel != prevsel[q])
+	if (stplyr->linkcount != 0) // Don't show a faint 4294967295 link, even when debugging
 	{
-		prevsel[q] = sel;
-		prevtime[q] = 2 + mag;
+		static INT32 prevsel[2] = {0, 0}, prevtime[2] = {0, 0};
+		const UINT8 q = ((splitscreen && stplyr == &players[secondarydisplayplayer]) ? 1 : 0);
+		INT32 sel = ((stplyr->linkcount-1) / 5) % NUMLINKCOLORS, aflag = V_PERPLAYER, mag = ((stplyr->linkcount-1 >= 300) ? (stplyr->linkcount-1 >= 600) ? 2 : 1 : 0);
+		skincolornum_t colornum;
+		fixed_t x, y, scale;
+
+		if (sel != prevsel[q])
+		{
+			prevsel[q] = sel;
+			prevtime[q] = 2 + mag;
+		}
+
+		if (stplyr->powers[pw_nights_linkfreeze] && (!(stplyr->powers[pw_nights_linkfreeze] & 2) || (stplyr->powers[pw_nights_linkfreeze] > flashingtics)))
+			colornum = SKINCOLOR_ICY;
+		else
+			colornum = linkColor[mag][sel];
+
+		aflag |= ((stplyr->linktimer < (UINT32)nightslinktics/3)
+		? (9 - 9*stplyr->linktimer/(nightslinktics/3)) << V_ALPHASHIFT
+		: 0);
+
+		y = (160+11)<<FRACBITS;
+		aflag |= V_SNAPTOBOTTOM;
+
+		x = (160+4)<<FRACBITS;
+
+		if (prevtime[q])
+		{
+			scale = ((32 + prevtime[q])<<FRACBITS)/32;
+			prevtime[q]--;
+		}
+		else
+			scale = FRACUNIT;
+
+		y -= (11*scale);
+
+		ST_DrawNightsOverlayNum(x-(4*scale), y, scale, aflag, (stplyr->linkcount-1), nightsnum, colornum);
+		V_DrawFixedPatch(x+(4*scale), y, scale, aflag, nightslink,
+			colornum == 0 ? colormaps : R_GetTranslationColormap(TC_DEFAULT, colornum, GTC_CACHE));
 	}
-
-	if (stplyr->powers[pw_nights_linkfreeze] && (!(stplyr->powers[pw_nights_linkfreeze] & 2) || (stplyr->powers[pw_nights_linkfreeze] > flashingtics)))
-		colornum = SKINCOLOR_ICY;
-	else
-		colornum = linkColor[mag][sel];
-
-	aflag |= ((stplyr->linktimer < (UINT32)nightslinktics/3)
-	? (9 - 9*stplyr->linktimer/(nightslinktics/3)) << V_ALPHASHIFT
-	: 0);
-
-	y = (160+11)<<FRACBITS;
-	aflag |= V_SNAPTOBOTTOM;
-
-	x = (160+4)<<FRACBITS;
-
-	if (prevtime[q])
-	{
-		scale = ((32 + prevtime[q])<<FRACBITS)/32;
-		prevtime[q]--;
-	}
-	else
-		scale = FRACUNIT;
-
-	y -= (11*scale);
-
-	ST_DrawNightsOverlayNum(x-(4*scale), y, scale, aflag, (stplyr->linkcount-1), nightsnum, colornum);
-	V_DrawFixedPatch(x+(4*scale), y, scale, aflag, nightslink,
-		colornum == 0 ? colormaps : R_GetTranslationColormap(TC_DEFAULT, colornum, GTC_CACHE));
 
 	// Show remaining link time left in debug
 	if (cv_debug & DBG_NIGHTSBASIC)
@@ -1854,13 +1857,15 @@ static void ST_drawNiGHTSHUD(void)
 		for (dfill = 0; dfill < stplyr->drillmeter/20 && dfill < 96; ++dfill)
 			V_DrawScaledPatch(locx + 2 + dfill, locy + 3, V_PERPLAYER|V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_HUDTRANS, drillfill[fillpatch]);
 
-		// Display actual drill amount and bumper time
+		// Display actual flyangle, drill amount, and bumper time
 		if (!splitscreen && (cv_debug & DBG_NIGHTSBASIC))
 		{
+			V_DrawString(locx, locy - 16, V_MONOSPACE, va("ANGLE: %3d", stplyr->flyangle));
+
 			if (stplyr->bumpertime)
 				V_DrawString(locx, locy - 8, V_REDMAP|V_MONOSPACE, va("BUMPER: 0.%02d", G_TicsToCentiseconds(stplyr->bumpertime)));
 			else
-				V_DrawString(locx, locy - 8, V_MONOSPACE, va("Drill: %3d%%", (stplyr->drillmeter*100)/(96*20)));
+				V_DrawString(locx, locy - 8, V_MONOSPACE, va("DRILL: %3d%%", (stplyr->drillmeter*100)/(96*20)));
 		}
 	}
 

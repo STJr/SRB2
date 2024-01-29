@@ -1201,7 +1201,7 @@ void R_SetupFrame(player_t *player)
 		newview->x += quake.x;
 		newview->y += quake.y;
 
-		if (r_viewmobj->subsector)
+		if (!P_MobjWasRemoved(r_viewmobj) && r_viewmobj->subsector)
 			newview->sector = r_viewmobj->subsector->sector;
 		else
 			newview->sector = R_PointInSubsector(newview->x, newview->y)->sector;

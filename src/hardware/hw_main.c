@@ -2351,17 +2351,22 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 
 				side_t *side = &sides[rover->master->sidenum[0]];
 
-				INT16 lineflags;
+				boolean do_texture_skew;
+				boolean dont_peg_bottom;
 
 				if (rover->master->flags & ML_TFERLINE)
 				{
 					size_t linenum = gl_curline->linedef-gl_backsector->lines[0];
 					newline = rover->master->frontsector->lines[0] + linenum;
 					side = &sides[newline->sidenum[0]];
-					lineflags = newline->flags;
+					do_texture_skew = newline->flags & ML_SKEWTD;
+					dont_peg_bottom = newline->flags & ML_DONTPEGBOTTOM;
 				}
 				else
-					lineflags = gl_curline->linedef->flags;
+				{
+					do_texture_skew = rover->master->flags & ML_SKEWTD;
+					dont_peg_bottom = gl_curline->linedef->flags & ML_DONTPEGBOTTOM;
+				}
 
 				texnum = R_GetTextureNum(side->midtexture);
 
@@ -2400,15 +2405,14 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 					// ...Oh well, anyway, Lower Unpegged now changes pegging of FOFs like in software
 					// -- Monster Iestyn 26/06/18
 					fixed_t texturevpeg = side->rowoffset + side->offsety_mid;
-					boolean attachtobottom = !!(lineflags & ML_DONTPEGBOTTOM);
 
 					grTex = HWR_GetTexture(texnum);
 					xscale = FixedToFloat(side->scalex_mid);
 					yscale = FixedToFloat(side->scaley_mid);
 
-					if (!(lineflags & ML_SKEWTD)) // no skewing
+					if (!do_texture_skew) // no skewing
 					{
-						if (attachtobottom)
+						if (dont_peg_bottom)
 							texturevpeg -= (*rover->topheight - *rover->bottomheight) * yscale;
 
 						wallVerts[3].t = (((*rover->topheight - h) * yscale) + texturevpeg) * grTex->scaleY;
@@ -2418,7 +2422,7 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 					}
 					else
 					{
-						if (!attachtobottom) // skew by top
+						if (!dont_peg_bottom) // skew by top
 						{
 							wallVerts[3].t = wallVerts[2].t = texturevpeg * grTex->scaleY;
 							wallVerts[0].t = (((h - l) * yscale) + texturevpeg) * grTex->scaleY;

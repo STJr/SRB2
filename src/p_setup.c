@@ -8042,6 +8042,18 @@ boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate)
 	{
 		clientGamedata->mapvisited[gamemap-1] |= MV_VISITED;
 		serverGamedata->mapvisited[gamemap-1] |= MV_VISITED;
+
+		M_SilentUpdateUnlockablesAndEmblems(serverGamedata);
+
+		if (M_UpdateUnlockablesAndExtraEmblems(clientGamedata))
+		{
+			S_StartSound(NULL, sfx_s3k68);
+			G_SaveGameData(clientGamedata);
+		}
+		else if (!reloadinggamestate)
+		{
+			G_SaveGameData(clientGamedata);
+		}
 	}
 
 	levelloading = false;
