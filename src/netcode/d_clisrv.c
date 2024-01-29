@@ -415,16 +415,6 @@ static void Got_KickCmd(UINT8 **p, INT32 playernum)
 
 	//CONS_Printf("\x82%s ", player_names[pnum]);
 
-	// If a verified admin banned someone, the server needs to know about it.
-	// If the playernum isn't zero (the server) then the server needs to record the ban.
-	if (server && playernum && (msg == KICK_MSG_BANNED || msg == KICK_MSG_CUSTOM_BAN))
-	{
-		if (I_Ban && !I_Ban(playernode[(INT32)pnum]))
-			CONS_Alert(CONS_WARNING, M_GetText("Too many bans! Geez, that's a lot of people you're excluding...\n"));
-		else
-			Ban_Add(reason);
-	}
-
 	switch (msg)
 	{
 		case KICK_MSG_GO_AWAY:
@@ -498,6 +488,16 @@ static void Got_KickCmd(UINT8 **p, INT32 playernum)
 			HU_AddChatText(va("\x82*%s has left the game (Inactive for too long)", player_names[pnum]), false);
 			kickreason = KR_TIMEOUT;
 			break;
+	}
+
+	// If a verified admin banned someone, the server needs to know about it.
+	// If the playernum isn't zero (the server) then the server needs to record the ban.
+	if (server && playernum && (msg == KICK_MSG_BANNED || msg == KICK_MSG_CUSTOM_BAN))
+	{
+		if (I_Ban && !I_Ban(playernode[(INT32)pnum]))
+			CONS_Alert(CONS_WARNING, M_GetText("Too many bans! Geez, that's a lot of people you're excluding...\n"));
+		else
+			Ban_Add(msg == KICK_MSG_CUSTOM_BAN ? reason : NULL);
 	}
 
 	if (pnum == consoleplayer)
