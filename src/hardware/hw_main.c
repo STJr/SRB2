@@ -1372,7 +1372,7 @@ static void HWR_SetWallEndCoordsOffset(FOutVector wallVerts[4], float wallx2, fl
 }
 
 // Draws an extra texture
-static void HWR_RenderExtraTexture(unsigned which, side_t *side, sector_t *sec_front, sector_t *sec_back, ffloor_t *pfloor, polyobj_t *polyobj, v2d_t vs, v2d_t ve, float xcliplow, float xcliphigh, FSurfaceInfo Surf, FBITFIELD blendmode, UINT32 lightnum)
+static void HWR_RenderExtraTexture(unsigned which, side_t *side, sector_t *sec_front, sector_t *sec_back, ffloor_t *pfloor, polyobj_t *polyobj, v2d_t vs, v2d_t ve, float xcliplow, float xcliphigh, FSurfaceInfo Surf, FBITFIELD blendmode)
 {
 	side_overlay_t *overlay = &side->overlays[which];
 
@@ -1769,9 +1769,8 @@ static void HWR_RenderExtraTexture(unsigned which, side_t *side, sector_t *sec_f
 
 	blendmode |= PF_Decal;
 
-	extracolormap_t *colormap = gl_frontsector->extra_colormap;
-
 #define RENDER_WALL_POLYGON() { \
+	extracolormap_t *colormap = gl_frontsector->extra_colormap; \
 	if (gl_frontsector->numlights) \
 	{ \
 		if (!(blendmode & PF_Masked)) \
@@ -1781,6 +1780,7 @@ static void HWR_RenderExtraTexture(unsigned which, side_t *side, sector_t *sec_f
 	} \
 	else \
 	{ \
+		UINT32 lightnum = HWR_CalcWallLight(gl_frontsector->lightlevel, vs.x, vs.y, ve.x, ve.y); \
 		if (!(blendmode & PF_Masked)) \
 			HWR_AddTransparentWall(wallVerts, &Surf, texnum, blendmode, blendmode & PF_Fog, lightnum, colormap); \
 		else \
@@ -1872,13 +1872,13 @@ static void HWR_RenderExtraTexture(unsigned which, side_t *side, sector_t *sec_f
 #undef RENDER_WALL_POLYGON
 }
 
-static void HWR_RenderFFloorExtraTextures(ffloor_t *pfloor, v2d_t vs, v2d_t ve, float xcliplow, float xcliphigh, FSurfaceInfo Surf, FBITFIELD blendmode, UINT32 lightnum)
+static void HWR_RenderFFloorExtraTextures(ffloor_t *pfloor, v2d_t vs, v2d_t ve, float xcliplow, float xcliphigh, FSurfaceInfo Surf, FBITFIELD blendmode)
 {
 	side_t *pside = &sides[pfloor->master->sidenum[0]];
 	sector_t *psector = pfloor->master->frontsector;
 
-	HWR_RenderExtraTexture(EDGE_TEXTURE_TOP_UPPER, pside, psector, NULL, pfloor, NULL, vs, ve, xcliplow, xcliphigh, Surf, blendmode, lightnum);
-	HWR_RenderExtraTexture(EDGE_TEXTURE_BOTTOM_LOWER, pside, psector, NULL, pfloor, NULL, vs, ve, xcliplow, xcliphigh, Surf, blendmode, lightnum);
+	HWR_RenderExtraTexture(EDGE_TEXTURE_TOP_UPPER, pside, psector, NULL, pfloor, NULL, vs, ve, xcliplow, xcliphigh, Surf, blendmode);
+	HWR_RenderExtraTexture(EDGE_TEXTURE_BOTTOM_LOWER, pside, psector, NULL, pfloor, NULL, vs, ve, xcliplow, xcliphigh, Surf, blendmode);
 }
 
 //
@@ -2175,7 +2175,7 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 		{
 			// Render extra textures
 			for (unsigned i = 0; i < NUM_WALL_OVERLAYS; i++)
-				HWR_RenderExtraTexture(i, gl_sidedef, gl_frontsector, gl_backsector, NULL, NULL, vs, ve, cliplow, cliphigh, Surf, PF_Masked, lightnum);
+				HWR_RenderExtraTexture(i, gl_sidedef, gl_frontsector, gl_backsector, NULL, NULL, vs, ve, cliplow, cliphigh, Surf, PF_Masked);
 
 			// Sky culling
 			// No longer so much a mess as before!
@@ -2200,8 +2200,8 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 		else
 		{
 			// Render extra textures
-			HWR_RenderExtraTexture(EDGE_TEXTURE_TOP_UPPER, gl_sidedef, gl_curline->frontsector, gl_curline->backsector, NULL, gl_curline->polyseg, vs, ve, cliplow, cliphigh, Surf, PF_Masked, lightnum);
-			HWR_RenderExtraTexture(EDGE_TEXTURE_BOTTOM_LOWER, gl_sidedef, gl_curline->frontsector, gl_curline->backsector, NULL, gl_curline->polyseg, vs, ve, cliplow, cliphigh, Surf, PF_Masked, lightnum);
+			HWR_RenderExtraTexture(EDGE_TEXTURE_TOP_UPPER, gl_sidedef, gl_curline->frontsector, gl_curline->backsector, NULL, gl_curline->polyseg, vs, ve, cliplow, cliphigh, Surf, PF_Masked);
+			HWR_RenderExtraTexture(EDGE_TEXTURE_BOTTOM_LOWER, gl_sidedef, gl_curline->frontsector, gl_curline->backsector, NULL, gl_curline->polyseg, vs, ve, cliplow, cliphigh, Surf, PF_Masked);
 		}
 	}
 	else
@@ -2266,8 +2266,8 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 		if (!gl_curline->polyseg)
 		{
 			// Render extra textures
-			HWR_RenderExtraTexture(EDGE_TEXTURE_TOP_UPPER, gl_sidedef, gl_frontsector, gl_backsector, NULL, NULL, vs, ve, cliplow, cliphigh, Surf, PF_Masked, lightnum);
-			HWR_RenderExtraTexture(EDGE_TEXTURE_BOTTOM_LOWER, gl_sidedef, gl_frontsector, gl_backsector, NULL, NULL, vs, ve, cliplow, cliphigh, Surf, PF_Masked, lightnum);
+			HWR_RenderExtraTexture(EDGE_TEXTURE_TOP_UPPER, gl_sidedef, gl_frontsector, gl_backsector, NULL, NULL, vs, ve, cliplow, cliphigh, Surf, PF_Masked);
+			HWR_RenderExtraTexture(EDGE_TEXTURE_BOTTOM_LOWER, gl_sidedef, gl_frontsector, gl_backsector, NULL, NULL, vs, ve, cliplow, cliphigh, Surf, PF_Masked);
 
 			if (gl_frontsector->ceilingpic == skyflatnum) // It's a single-sided line with sky for its sector
 			{
@@ -2459,7 +2459,7 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 					}
 				}
 
-				HWR_RenderFFloorExtraTextures(rover, vs, ve, cliplow, cliphigh, Surf, blendmode, lightnum);
+				HWR_RenderFFloorExtraTextures(rover, vs, ve, cliplow, cliphigh, Surf, blendmode);
 			}
 		}
 
@@ -2583,7 +2583,7 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 					}
 				}
 
-				HWR_RenderFFloorExtraTextures(rover, vs, ve, cliplow, cliphigh, Surf, blendmode, lightnum);
+				HWR_RenderFFloorExtraTextures(rover, vs, ve, cliplow, cliphigh, Surf, blendmode);
 			}
 		}
 	}
