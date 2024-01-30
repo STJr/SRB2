@@ -372,7 +372,7 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 	size_t pindex;
 	column_t *col;
 	INT32 texnum, i;
-	fixed_t height, realbot;
+	fixed_t height, realbot = 0;
 	r_lightlist_t *rlight;
 	void (*colfunc_2s)(column_t *);
 	line_t *ldef;
@@ -592,25 +592,24 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 
 			// Clip texture if it's a polyobject side
 			if (curline->polyseg)
-			{
 				texture_bottom = max(backsector->floorheight - viewz, texture_bottom); // Change this when polyobjects support slopes
-				windowtop = sprtopscreen;
+
+			// set wall bounds if there is a light list, or if this is a polyobject side
+			if (dc_numlights || curline->polyseg)
+			{
 				realbot = centeryfrac - FixedMul(texture_bottom, spryscale);
+				windowtop = sprtopscreen;
 				windowbottom = realbot;
 			}
 
-			// calculate lighting
+			dc_iscale = FixedMul(ds->invscale[dc_x], wall_scaley);
+
+			col = (column_t *)((UINT8 *)R_GetColumn(texnum, (maskedtexturecol[dc_x] >> FRACBITS)) - 3);
+
+			// draw light list if there is one
 			if (dc_numlights)
 			{
-				dc_iscale = FixedMul(ds->invscale[dc_x], wall_scaley);
-
-				windowtop = sprtopscreen;
-				windowbottom = realbot;
-
 				sprbotscreen = INT32_MAX;
-
-				// draw the texture
-				col = (column_t *)((UINT8 *)R_GetColumn(texnum, (maskedtexturecol[dc_x] >> FRACBITS)) - 3);
 
 				for (i = 0; i < dc_numlights; i++)
 				{
@@ -674,19 +673,14 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 
 			// calculate lighting
 			pindex = FixedMul(spryscale, LIGHTRESOLUTIONFIX)>>LIGHTSCALESHIFT;
-
 			if (pindex >= MAXLIGHTSCALE)
 				pindex = MAXLIGHTSCALE - 1;
 
 			dc_colormap = walllights[pindex];
-
 			if (frontsector->extra_colormap)
 				dc_colormap = frontsector->extra_colormap->colormap + (dc_colormap - colormaps);
 
-			dc_iscale = FixedMul(ds->invscale[dc_x], wall_scaley);
-
 			// draw the texture
-			col = (column_t *)((UINT8 *)R_GetColumn(texnum, (maskedtexturecol[dc_x] >> FRACBITS)) - 3);
 			colfunc_2s(col);
 
 			spryscale += rw_scalestep;
