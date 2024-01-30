@@ -1,6 +1,6 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
-// Copyright (C) 1999-2024 by Sonic Team Junior.
+// Copyright (C) 2024 by Sonic Team Junior.
 // Copyright (C) 2009 by Stephen McGranahan.
 //
 // This program is free software distributed under the

@@ -2609,9 +2609,11 @@ static int slope_set(lua_State *L)
 			slope->o.z = luaL_checkfixed(L, -1);
 		else
 			slope->o.z = 0;
-		slope->dorigin.x = FixedToDouble(slope->o.x);
-		slope->dorigin.y = FixedToDouble(slope->o.y);
-		slope->dorigin.z = FixedToDouble(slope->o.z);
+		DVector3_Load(&slope->dorigin,
+			FixedToDouble(slope->o.x),
+			FixedToDouble(slope->o.y),
+			FixedToDouble(slope->o.z)
+		);
 		lua_pop(L, 1);
 		break;
 	}

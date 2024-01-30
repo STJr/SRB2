@@ -663,6 +663,7 @@ static void R_DrawSkyPlane(visplane_t *pl)
 // Returns the height of the sloped plane at (x, y) as a double
 static double R_GetSlopeZAt(const pslope_t *slope, fixed_t x, fixed_t y)
 {
+	// If you want to reimplement this using just the equation constants, use this instead:
 	// (d + a*x + b*y) * -(1.0 / c)
 
 	double px = FixedToDouble(x) - slope->dorigin.x;
@@ -712,11 +713,11 @@ void R_SetSlopePlane(pslope_t *slope, fixed_t xpos, fixed_t ypos, fixed_t zpos, 
 		return;
 	}
 
-	// slope_v is the v direction vector in view space
+	// the v direction vector in view space
 	slope_v.x = cos(ang);
 	slope_v.z = sin(ang);
 
-	// slope_u is the u direction vector in view space
+	// the u direction vector in view space
 	slope_u.x = sin(ang);
 	slope_u.z = -cos(ang);
 
@@ -754,11 +755,11 @@ void R_SetScaledSlopePlane(pslope_t *slope, fixed_t xpos, fixed_t ypos, fixed_t 
 	float xscale = FixedToFloat(xs);
 	float yscale = FixedToFloat(ys);
 
-	// m is the v direction vector in view space
+	// the v direction vector in view space
 	slope_v.x = yscale * cos(ang);
 	slope_v.z = yscale * sin(ang);
 
-	// n is the u direction vector in view space
+	// the u direction vector in view space
 	slope_u.x = xscale * sin(ang);
 	slope_u.z = -xscale * cos(ang);
 

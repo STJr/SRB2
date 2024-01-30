@@ -1,6 +1,6 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
-// Copyright (C) 2004      by Stephen McGranahan
+// Copyright (C) 2009      by Stephen McGranahan.
 // Copyright (C) 2015-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
@@ -38,17 +38,17 @@ void P_CalculateSlopeNormal(pslope_t *slope) {
 static void CalculateVectors(pslope_t *slope, dvector3_t *dnormal)
 {
 	double hyp = hypot(dnormal->x, dnormal->y);
-	if (fpclassify(hyp) == FP_ZERO)
+
+	if (fpclassify(hyp) == FP_NORMAL)
 	{
-		slope->dnormdir.x = slope->dnormdir.y = 0.0;
-		slope->dzdelta = 0.0;
+		slope->dnormdir.x = -dnormal->x / hyp;
+		slope->dnormdir.y = -dnormal->y / hyp;
+		slope->dzdelta = hyp / dnormal->z;
 	}
 	else
 	{
-		slope->dnormdir.x = -(dnormal->x / hyp);
-		slope->dnormdir.y = -(dnormal->y / hyp);
-
-		slope->dzdelta = hyp / dnormal->z;
+		slope->dnormdir.x = slope->dnormdir.y = 0.0;
+		slope->dzdelta = 0.0;
 	}
 }
 
