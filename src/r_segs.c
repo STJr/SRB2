@@ -108,8 +108,10 @@ static INT16 *openings, *lastopening;
 static size_t texturecolumntablesize;
 static fixed_t *texturecolumntable, *curtexturecolumntable;
 
-static void R_AddOverlayTextures(sector_t *sec_front, sector_t *sec_back, fixed_t left_top, fixed_t left_bottom, fixed_t left_high, fixed_t left_low, fixed_t ceilingfrontslide, fixed_t floorfrontslide, fixed_t ceilingbackslide, fixed_t floorbackslide);
-
+static void R_AddOverlayTextures(sector_t *sec_front, sector_t *sec_back, fixed_t left_top, fixed_t left_bottom, fixed_t left_high, fixed_t left_low, fixed_t ceilingfrontslide, fixed_t floorfrontslide, fixed_t ceilingbackslide, fixed_t floorbackslide, boolean noskew);
+static void R_RenderExtraTexture(unsigned which, INT32 x1, INT32 x2, INT32 repeats, UINT32 blendmode, UINT8 blendlevel, drawseg_t *ds);
+static void R_DoMaskedOverlayColumn(INT32 x, fixed_t textureoffset, fixed_t cliptop, fixed_t clipbottom);
+static void R_RenderMaskedOverlayTextures(drawseg_t *ds, INT32 x1, INT32 x2, sector_t *sec_front, sector_t *sec_back, UINT32 blendmode, UINT8 blendlevel);
 static void R_StoreOverlayColumn(INT32 x, fixed_t textureoffset);
 
 void R_ClearSegTables(void)
@@ -383,6 +385,7 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 	fixed_t wall_scaley;
 	fixed_t scalestep;
 	fixed_t scale1;
+	fixed_t texture_top, texture_bottom;
 
 	// Calculate light table.
 	// Use different light tables
@@ -473,6 +476,27 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 		lengthcol = textures[texnum]->height;
 	}
 
+	hasoverlaytexture = false;
+
+	if (curline->polyseg)
+	{
+		// Change this when polyobjects support slopes
+		fixed_t overlay_top = min(frontsector->ceilingheight, backsector->ceilingheight) - viewz;
+		fixed_t overlay_bottom = max(frontsector->floorheight, backsector->floorheight) - viewz;
+
+		R_AddOverlayTextures(frontsector, NULL,
+			overlay_top, overlay_bottom,
+			0, 0,
+			0, 0, 0, 0,
+			false);
+
+		if (hasoverlaytexture)
+		{
+			for (i = 0; i < NUM_WALL_OVERLAYS; i++)
+				oldoverlaycolumn[i] = -1;
+		}
+	}
+
 	// Setup lighting based on the presence/lack-of 3D floors.
 	R_PrepareMaskedSegLightlist(ds, range);
 
@@ -541,6 +565,9 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 			else
 				dc_texturemid -= (textureheight[texnum])*times;
 
+			if (hasoverlaytexture)
+				R_DoMaskedOverlayColumn(dc_x, maskedtexturecol[dc_x], INT32_MAX, INT32_MAX);
+
 			// Check for overflows first
 			overflow_test = (INT64)centeryfrac - (((INT64)dc_texturemid*spryscale)>>FRACBITS);
 			if (overflow_test < 0) overflow_test = -overflow_test;
@@ -559,27 +586,40 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 				continue;
 			}
 
+			texture_top = dc_texturemid;
+			texture_bottom = texture_top - textureheight[texnum];
+
+			sprtopscreen = centeryfrac - FixedMul(texture_top, spryscale);
+
+			// Clip texture if it's a polyobject side
+			if (curline->polyseg)
+			{
+				texture_bottom = max(backsector->floorheight - viewz, texture_bottom); // Change this when polyobjects support slopes
+				windowtop = sprtopscreen;
+				realbot = centeryfrac - FixedMul(texture_bottom, spryscale);
+				windowbottom = realbot;
+			}
+
 			// calculate lighting
 			if (dc_numlights)
 			{
-				lighttable_t **xwalllights;
-
-				sprbotscreen = INT32_MAX;
-				sprtopscreen = windowtop = (centeryfrac - FixedMul(dc_texturemid, spryscale));
-
-				realbot = FixedMul(textureheight[texnum], spryscale) + sprtopscreen;
 				dc_iscale = FixedMul(ds->invscale[dc_x], wall_scaley);
 
+				windowtop = sprtopscreen;
 				windowbottom = realbot;
+
+				sprbotscreen = INT32_MAX;
 
 				// draw the texture
 				col = (column_t *)((UINT8 *)R_GetColumn(texnum, (maskedtexturecol[dc_x] >> FRACBITS)) - 3);
 
 				for (i = 0; i < dc_numlights; i++)
 				{
+					lighttable_t **xwalllights;
+
 					rlight = &dc_lightlist[i];
 
-					if ((rlight->flags & FOF_NOSHADE))
+					if (rlight->flags & FOF_NOSHADE)
 						continue;
 
 					if (rlight->lightnum < 0)
@@ -644,7 +684,6 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 			if (frontsector->extra_colormap)
 				dc_colormap = frontsector->extra_colormap->colormap + (dc_colormap - colormaps);
 
-			sprtopscreen = centeryfrac - FixedMul(dc_texturemid, spryscale);
 			dc_iscale = FixedMul(ds->invscale[dc_x], wall_scaley);
 
 			// draw the texture
@@ -655,6 +694,10 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 		}
 	}
 	colfunc = colfuncs[BASEDRAWFUNC];
+
+	// Render up to two extra textures when everything is done
+	if (hasoverlaytexture)
+		R_RenderMaskedOverlayTextures(ds, x1, x2, frontsector, backsector, 0, curline->polyseg->translucency);
 }
 
 // Renders a texture right on top of the wall texture
@@ -746,6 +789,8 @@ static void R_RenderExtraTexture(unsigned which, INT32 x1, INT32 x2, INT32 repea
 		dc_transmap = R_GetTranslucencyTable(blendlevel);
 		colfunc = colfuncs[COLDRAWFUNC_FUZZY];
 	}
+	else
+		colfunc = colfuncs[BASEDRAWFUNC];
 
 	// Setup lighting based on the presence/lack-of 3D floors.
 	R_PrepareMaskedSegLightlist(ds, range);
@@ -1255,7 +1300,7 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 	if (*pfloor->b_slope)
 		bottomslopeslide = FixedMul((*pfloor->b_slope)->zdelta, FINECOSINE((lineangle-(*pfloor->b_slope)->xydirection)>>ANGLETOFINESHIFT));
 
-	R_AddOverlayTextures(pfloor->master->frontsector, NULL, left_top, left_bottom, 0, 0, topslopeslide, bottomslopeslide, 0, 0);
+	R_AddOverlayTextures(pfloor->master->frontsector, NULL, left_top, left_bottom, 0, 0, topslopeslide, bottomslopeslide, 0, 0, sidedef->overlays[i].flags & SIDEOVERLAYFLAG_NOSKEW);
 
 	if (hasoverlaytexture)
 	{
@@ -1287,25 +1332,7 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 		bottom_frac += bottom_step;
 
 		if (hasoverlaytexture)
-		{
-#define ALIGN_UPPER(which) \
-			if (overlaytexture[which]) \
-				overlaytextureheight[which][dc_x] = max(rw_overlay[which].mid, rw_overlay[which].back)
-#define ALIGN_LOWER(which) \
-			if (overlaytexture[which]) \
-				overlaytextureheight[which][dc_x] = min(rw_overlay[which].mid, rw_overlay[which].back)
-
-			ALIGN_UPPER(EDGE_TEXTURE_TOP_UPPER);
-			ALIGN_LOWER(EDGE_TEXTURE_BOTTOM_LOWER);
-
-#undef ALIGN_UPPER
-#undef ALIGN_LOWER
-
-			R_StoreOverlayColumn(dc_x, ds->thicksidecol[dc_x]);
-
-			overlayopening[0][dc_x] = max(windowtop>>FRACBITS, mceilingclip[dc_x]);
-			overlayopening[1][dc_x] = min(windowbottom>>FRACBITS, mfloorclip[dc_x]);
-		}
+			R_DoMaskedOverlayColumn(dc_x, ds->thicksidecol[dc_x], windowtop, windowbottom);
 
 		// SoM: If column is out of range, why bother with it??
 		if (windowbottom < 0 || windowtop > (viewheight << FRACBITS))
@@ -1468,25 +1495,7 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 
 	// Render up to two extra textures when everything is done
 	if (hasoverlaytexture)
-	{
-		INT32 repeats;
-
-		if (overlaytexture[EDGE_TEXTURE_TOP_UPPER])
-		{
-			repeats = R_GetOverlayTextureRepeats(EDGE_TEXTURE_TOP_UPPER, sidedef, overlaytexture[EDGE_TEXTURE_TOP_UPPER],
-				pfloor->master->frontsector, NULL,
-				ds->leftpos.x, ds->leftpos.y, ds->rightpos.x, ds->rightpos.y);
-			R_RenderExtraTexture(EDGE_TEXTURE_TOP_UPPER, x1, x2, repeats, pfloor->blend, blendlevel, ds);
-		}
-
-		if (overlaytexture[EDGE_TEXTURE_BOTTOM_LOWER])
-		{
-			repeats = R_GetOverlayTextureRepeats(EDGE_TEXTURE_BOTTOM_LOWER, sidedef, overlaytexture[EDGE_TEXTURE_BOTTOM_LOWER],
-				pfloor->master->frontsector, NULL,
-				ds->leftpos.x, ds->leftpos.y, ds->rightpos.x, ds->rightpos.y);
-			R_RenderExtraTexture(EDGE_TEXTURE_BOTTOM_LOWER, x1, x2, repeats, pfloor->blend, blendlevel, ds);
-		}
-	}
+		R_RenderMaskedOverlayTextures(ds, x1, x2, pfloor->master->frontsector, NULL, pfloor->blend, blendlevel);
 
 #undef CLAMPMAX
 #undef CLAMPMIN
@@ -2106,7 +2115,7 @@ static void R_AllocTextureColumnTables(size_t range)
 	}
 }
 
-static void R_AddOverlayTextures(sector_t *sec_front, sector_t *sec_back, fixed_t left_top, fixed_t left_bottom, fixed_t left_high, fixed_t left_low, fixed_t ceilingfrontslide, fixed_t floorfrontslide, fixed_t ceilingbackslide, fixed_t floorbackslide)
+static void R_AddOverlayTextures(sector_t *sec_front, sector_t *sec_back, fixed_t left_top, fixed_t left_bottom, fixed_t left_high, fixed_t left_low, fixed_t ceilingfrontslide, fixed_t floorfrontslide, fixed_t ceilingbackslide, fixed_t floorbackslide, boolean noskew)
 {
 	INT32 texnums[4] = {
 		R_GetTextureNum(sidedef->overlays[0].texture),
@@ -2143,7 +2152,7 @@ static void R_AddOverlayTextures(sector_t *sec_front, sector_t *sec_back, fixed_
 			rw_overlay[i].invscalex = FixedDiv(FRACUNIT, rw_overlay[i].scalex);
 			rw_overlay[i].invscaley = FixedDiv(FRACUNIT, abs(rw_overlay[i].scaley));
 
-			if (sidedef->overlays[i].flags & SIDEOVERLAYFLAG_NOSKEW)
+			if (noskew)
 			{
 				if (IS_BOTTOM_EDGE_TEXTURE(i))
 				{
@@ -2186,6 +2195,34 @@ static void R_AddOverlayTextures(sector_t *sec_front, sector_t *sec_back, fixed_
 	}
 }
 
+static void R_DoMaskedOverlayColumn(INT32 x, fixed_t textureoffset, fixed_t cliptop, fixed_t clipbottom)
+{
+#define ALIGN_UPPER(which) \
+	if (overlaytexture[which]) \
+		overlaytextureheight[which][x] = max(rw_overlay[which].mid, rw_overlay[which].back)
+#define ALIGN_LOWER(which) \
+	if (overlaytexture[which]) \
+		overlaytextureheight[which][x] = min(rw_overlay[which].mid, rw_overlay[which].back)
+
+	ALIGN_UPPER(EDGE_TEXTURE_TOP_UPPER);
+	ALIGN_LOWER(EDGE_TEXTURE_BOTTOM_LOWER);
+
+#undef ALIGN_UPPER
+#undef ALIGN_LOWER
+
+	R_StoreOverlayColumn(x, textureoffset);
+
+	if (clipbottom == INT32_MAX)
+		overlayopening[0][x] = mceilingclip[dc_x];
+	else
+		overlayopening[0][x] = max(cliptop>>FRACBITS, mceilingclip[dc_x]);
+
+	if (clipbottom == INT32_MAX)
+		overlayopening[1][x] = mfloorclip[dc_x];
+	else
+		overlayopening[1][x] = min(clipbottom>>FRACBITS, mfloorclip[dc_x]);
+}
+
 static void R_StoreOverlayColumn(INT32 x, fixed_t textureoffset)
 {
 	for (unsigned i = 0; i < NUM_WALL_OVERLAYS; i++)
@@ -2210,6 +2247,27 @@ static void R_StoreOverlayColumn(INT32 x, fixed_t textureoffset)
 		}
 
 		oldoverlaycolumn[i] = overlaycolumn[i];
+	}
+}
+
+static void R_RenderMaskedOverlayTextures(drawseg_t *ds, INT32 x1, INT32 x2, sector_t *sec_front, sector_t *sec_back, UINT32 blendmode, UINT8 blendlevel)
+{
+	INT32 repeats;
+
+	if (overlaytexture[EDGE_TEXTURE_TOP_UPPER])
+	{
+		repeats = R_GetOverlayTextureRepeats(EDGE_TEXTURE_TOP_UPPER, sidedef, overlaytexture[EDGE_TEXTURE_TOP_UPPER],
+			sec_front, sec_back,
+			ds->leftpos.x, ds->leftpos.y, ds->rightpos.x, ds->rightpos.y);
+		R_RenderExtraTexture(EDGE_TEXTURE_TOP_UPPER, x1, x2, repeats, blendmode, blendlevel, ds);
+	}
+
+	if (overlaytexture[EDGE_TEXTURE_BOTTOM_LOWER])
+	{
+		repeats = R_GetOverlayTextureRepeats(EDGE_TEXTURE_BOTTOM_LOWER, sidedef, overlaytexture[EDGE_TEXTURE_BOTTOM_LOWER],
+			sec_front, sec_back,
+			ds->leftpos.x, ds->leftpos.y, ds->rightpos.x, ds->rightpos.y);
+		R_RenderExtraTexture(EDGE_TEXTURE_BOTTOM_LOWER, x1, x2, repeats, blendmode, blendlevel, ds);
 	}
 }
 
@@ -3016,9 +3074,13 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 	segtextured = midtexture || toptexture || bottomtexture || maskedtexture || (numthicksides > 0);
 
 	// check if extra textures need to be rendered
-	if (segtextured)
+	// Not done for polyobjects at this stage
+	if (segtextured && !curline->polyseg)
 	{
-		R_AddOverlayTextures(frontsector, backsector, worldtop, worldbottom, worldhigh, worldlow, ceilingfrontslide, floorfrontslide, ceilingbackslide, floorbackslide);
+		R_AddOverlayTextures(frontsector, backsector,
+			worldtop, worldbottom, worldhigh, worldlow,
+			ceilingfrontslide, floorfrontslide, ceilingbackslide, floorbackslide,
+			sidedef->overlays[i].flags & SIDEOVERLAYFLAG_NOSKEW);
 
 		if (hasoverlaytexture)
 		{
