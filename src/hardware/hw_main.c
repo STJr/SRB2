@@ -1420,7 +1420,7 @@ static void HWR_RenderExtraTexture(unsigned which, side_t *side, sector_t *sec_f
 	fixed_t v2y = FloatToFixed(ve.y);
 
 	angle_t wallang = (R_PointToAngle2(v1x, v1y, v2x, v2y) - ANGLE_90) >> ANGLETOFINESHIFT;
-	fixed_t wallpush = FRACUNIT/4 * which;
+	fixed_t wallpush = FRACUNIT/64 * which;
 
 	float flength = gl_curline->flength;
 
