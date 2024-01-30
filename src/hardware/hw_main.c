@@ -1225,7 +1225,7 @@ static void HWR_RenderMidtexture(INT32 gl_midtexture, float cliplow, float cliph
 		HWR_ProjectWall(wallVerts, &Surf, blendmode, lightnum, colormap);
 }
 
-static void HWR_GetExtraTextureCoords(unsigned which, side_t *side, sector_t *sec_front, sector_t *sec_back, fixed_t *top, fixed_t *bottom, fixed_t *topslope, fixed_t *bottomslope, fixed_t worldtop, fixed_t worldbottom, fixed_t worldhigh, fixed_t worldlow, fixed_t worldtopslope, fixed_t worldbottomslope, fixed_t worldhighslope, fixed_t worldlowslope, fixed_t midtexheight)
+static void HWR_GetExtraTextureCoords(unsigned which, side_t *side, sector_t *sec_front, sector_t *sec_back, fixed_t *top, fixed_t *bottom, fixed_t *topslope, fixed_t *bottomslope, fixed_t frontcoords[4], fixed_t backcoords[4], fixed_t midtexheight)
 {
 	fixed_t polytop, polybottom;
 	fixed_t polytopslope, polybottomslope;
@@ -1279,16 +1279,16 @@ static void HWR_GetExtraTextureCoords(unsigned which, side_t *side, sector_t *se
 	{
 		if (IS_UPPER_EDGE_TEXTURE(which))
 		{
-			polytop = worldtop + rowoffset;
-			polybottom = worldtop - midtexheight;
-			polytopslope = worldtopslope + rowoffset;
-			polybottomslope = worldtopslope - midtexheight;
+			polytop = frontcoords[0] + rowoffset;
+			polybottom = frontcoords[0] - midtexheight;
+			polytopslope = frontcoords[1] + rowoffset;
+			polybottomslope = frontcoords[1] - midtexheight;
 		}
 		else
 		{
-			polybottom = worldhigh + rowoffset;
+			polybottom = backcoords[0] + rowoffset;
 			polytop = polybottom + midtexheight;
-			polybottomslope = worldhighslope + rowoffset;
+			polybottomslope = backcoords[1] + rowoffset;
 			polytopslope = polybottomslope + midtexheight;
 		}
 	}
@@ -1296,16 +1296,16 @@ static void HWR_GetExtraTextureCoords(unsigned which, side_t *side, sector_t *se
 	{
 		if (IS_UPPER_EDGE_TEXTURE(which))
 		{
-			polytop = worldlow + rowoffset;
-			polybottom = worldlow - midtexheight;
-			polytopslope = worldlowslope + rowoffset;
-			polybottomslope = worldlowslope - midtexheight;
+			polytop = backcoords[2] + rowoffset;
+			polybottom = backcoords[2] - midtexheight;
+			polytopslope = backcoords[3] + rowoffset;
+			polybottomslope = backcoords[3] - midtexheight;
 		}
 		else
 		{
-			polybottom = worldbottom + rowoffset;
+			polybottom = frontcoords[2] + rowoffset;
 			polytop = polybottom + midtexheight;
-			polybottomslope = worldbottomslope + rowoffset;
+			polybottomslope = frontcoords[3] + rowoffset;
 			polytopslope = polybottomslope + midtexheight;
 		}
 	}
@@ -1316,13 +1316,13 @@ static void HWR_GetExtraTextureCoords(unsigned which, side_t *side, sector_t *se
 	*bottomslope = polybottomslope;
 }
 
-#define GET_MAP_HEIGHTS() \
+#define GET_MAP_HEIGHTS(x1, y1, x2, y2) \
 	if (pfloor) \
 	{ \
-		worldtop         = P_GetFFloorTopZAt(pfloor, v1x, v1y); \
-		worldtopslope    = P_GetFFloorTopZAt(pfloor, v2x, v2y); \
-		worldbottom      = P_GetFFloorBottomZAt(pfloor, v1x, v1y); \
-		worldbottomslope = P_GetFFloorBottomZAt(pfloor, v2x, v2y); \
+		worldtop         = P_GetFFloorTopZAt(pfloor, x1, y1); \
+		worldtopslope    = P_GetFFloorTopZAt(pfloor, x2, y2); \
+		worldbottom      = P_GetFFloorBottomZAt(pfloor, x1, y1); \
+		worldbottomslope = P_GetFFloorBottomZAt(pfloor, x2, y2); \
 	} \
 	else if (polyobj) \
 	{ \
@@ -1332,62 +1332,25 @@ static void HWR_GetExtraTextureCoords(unsigned which, side_t *side, sector_t *se
 	} \
 	else \
 	{ \
-		worldtop         = P_GetSectorCeilingZAt(sec_front, v1x, v1y); \
-		worldtopslope    = P_GetSectorCeilingZAt(sec_front, v2x, v2y); \
-		worldbottom      = P_GetSectorFloorZAt(sec_front, v1x, v1y); \
-		worldbottomslope = P_GetSectorFloorZAt(sec_front, v2x, v2y); \
+		worldtop         = P_GetSectorCeilingZAt(sec_front, x1, y1); \
+		worldtopslope    = P_GetSectorCeilingZAt(sec_front, x2, y2); \
+		worldbottom      = P_GetSectorFloorZAt(sec_front, x1, y1); \
+		worldbottomslope = P_GetSectorFloorZAt(sec_front, x2, y2); \
 		if (sec_back) \
 		{ \
-			worldhigh        = P_GetSectorCeilingZAt(sec_back, v1x, v1y); \
-			worldhighslope   = P_GetSectorCeilingZAt(sec_back, v2x, v2y); \
-			worldlow         = P_GetSectorFloorZAt(sec_back, v1x, v1y); \
-			worldlowslope    = P_GetSectorFloorZAt(sec_back, v2x, v2y); \
+			worldhigh        = P_GetSectorCeilingZAt(sec_back, x1, y1); \
+			worldhighslope   = P_GetSectorCeilingZAt(sec_back, x2, y2); \
+			worldlow         = P_GetSectorFloorZAt(sec_back, x1, y1); \
+			worldlowslope    = P_GetSectorFloorZAt(sec_back, x2, y2); \
 		} \
 	}
 
-static void HWR_DoExtraTextureCut(UINT8 intersected, UINT8 which, side_t *side, sector_t *sec_front, sector_t *sec_back, ffloor_t *pfloor, polyobj_t *polyobj, v2d_t vs, v2d_t ve, float t, fixed_t midtexheight, fixed_t *polytop, fixed_t *polytopslope, fixed_t *polybottom, fixed_t *polybottomslope, float *ptx, float *pty, fixed_t *top, fixed_t *bottom, fixed_t *high, fixed_t *low, fixed_t *topslope, fixed_t *bottomslope, fixed_t *highslope, fixed_t *lowslope)
-{
-	fixed_t v1x = FloatToFixed(vs.x);
-	fixed_t v1y = FloatToFixed(vs.y);
-	fixed_t v2x = FloatToFixed(ve.x);
-	fixed_t v2y = FloatToFixed(ve.y);
-
-	*ptx = vs.x + (ve.x - vs.x)*t;
-	*pty = vs.y + (ve.y - vs.y)*t;
-
-	// Right side
-	if (intersected == 1)
-	{
-		v2x = FloatToFixed(*ptx);
-		v2y = FloatToFixed(*pty);
-	}
-	// Left side
-	else if (intersected == 2)
-	{
-		v1x = FloatToFixed(*ptx);
-		v1y = FloatToFixed(*pty);
-	}
-
-	// Get new coordinates based on this split
-	fixed_t worldtop = 0, worldtopslope = 0, worldbottom = 0, worldbottomslope = 0;
-	fixed_t worldhigh = 0, worldhighslope = 0, worldlow = 0, worldlowslope = 0;
-
-	GET_MAP_HEIGHTS();
-
-	*top = worldtop;
-	*topslope = worldtopslope;
-	*bottom = worldbottom;
-	*bottomslope = worldbottomslope;
-
-	if (sec_back)
-	{
-		*high = worldhigh;
-		*highslope = worldhighslope;
-		*low = worldlow;
-		*lowslope = worldlowslope;
-	}
-
-	HWR_GetExtraTextureCoords(which, side, sec_front, sec_back, polytop, polybottom, polytopslope, polybottomslope, worldtop, worldbottom, worldhigh, worldlow, worldtopslope, worldbottomslope, worldhighslope, worldlowslope, midtexheight);
+#define GET_EXTRA_TEXTURE_COORDS() {\
+	fixed_t frontcoords[4] = { worldtop, worldtopslope, worldbottom, worldbottomslope }; \
+	fixed_t backcoords[4] = { worldhigh, worldhighslope, worldlow, worldlowslope }; \
+	HWR_GetExtraTextureCoords(which, side, sec_front, sec_back, \
+		&polytop, &polybottom, &polytopslope, &polybottomslope, \
+		frontcoords, backcoords, midtexheight); \
 }
 
 static void HWR_SetWallStartCoordsOffset(FOutVector wallVerts[4], float wallx1, float wally1, angle_t wallang, fixed_t wallpush)
@@ -1447,9 +1410,9 @@ static void HWR_RenderExtraTexture(unsigned which, side_t *side, sector_t *sec_f
 	// Find the wall's coordinates
 	fixed_t midtexheight = texheight * repeats;
 
-	GET_MAP_HEIGHTS();
+	GET_MAP_HEIGHTS(v1x, v1y, v2x, v2y);
 
-	HWR_GetExtraTextureCoords(which, side, sec_front, sec_back, &polytop, &polybottom, &polytopslope, &polybottomslope, worldtop, worldbottom, worldhigh, worldlow, worldtopslope, worldbottomslope, worldhighslope, worldlowslope, midtexheight);
+	GET_EXTRA_TEXTURE_COORDS();
 
 	// Find where to cut it
 	fixed_t lowcut, highcut;
@@ -1591,17 +1554,15 @@ static void HWR_RenderExtraTexture(unsigned which, side_t *side, sector_t *sec_f
 
 		if (intersected)
 		{
-			HWR_DoExtraTextureCut(intersected, which, side, sec_front, sec_back, pfloor, polyobj, vs, ve, t, midtexheight,
-				&polytop, &polytopslope, &polybottom, &polybottomslope,
-				&ptx, &pty,
-				&worldtop, &worldbottom, &worldhigh, &worldlow,
-				&worldtopslope, &worldbottomslope, &worldhighslope, &worldlowslope
-			);
+			ptx = vs.x + (ve.x - vs.x)*t;
+			pty = vs.y + (ve.y - vs.y)*t;
 
 			if (intersected == 1)
 			{
 				ve.x = ptx;
 				ve.y = pty;
+
+				GET_MAP_HEIGHTS(v1x, v1y, FloatToFixed(ptx), FloatToFixed(pty));
 
 				HWR_SetWallEndCoordsOffset(wallVerts, ve.x, ve.y, wallang, wallpush);
 			}
@@ -1609,6 +1570,8 @@ static void HWR_RenderExtraTexture(unsigned which, side_t *side, sector_t *sec_f
 			{
 				vs.x = ptx;
 				vs.y = pty;
+
+				GET_MAP_HEIGHTS(FloatToFixed(ptx), FloatToFixed(pty), v2x, v2y);
 
 				xcliplowbase += flength * t * FRACUNIT;
 
@@ -1620,7 +1583,7 @@ static void HWR_RenderExtraTexture(unsigned which, side_t *side, sector_t *sec_f
 			xcliplow = xcliplowbase;
 			xcliphigh = xcliplow + (flength*FRACUNIT);
 
-			HWR_GetExtraTextureCoords(which, side, sec_front, sec_back, &polytop, &polybottom, &polytopslope, &polybottomslope, worldtop, worldbottom, worldhigh, worldlow, worldtopslope, worldbottomslope, worldhighslope, worldlowslope, midtexheight);
+			GET_EXTRA_TEXTURE_COORDS();
 
 			GET_CLIP_HEIGHTS();
 
@@ -1739,16 +1702,14 @@ static void HWR_RenderExtraTexture(unsigned which, side_t *side, sector_t *sec_f
 		// If it did, split the wall
 		if (intersected)
 		{
-			HWR_DoExtraTextureCut(intersected, which, side, sec_front, sec_back, pfloor, polyobj, vs, ve, t, midtexheight,
-				&polytop, &polytopslope, &polybottom, &polybottomslope,
-				&ptx, &pty,
-				&worldtop, &worldbottom, &worldhigh, &worldlow,
-				&worldtopslope, &worldbottomslope, &worldhighslope, &worldlowslope
-			);
+			ptx = vs.x + (ve.x - vs.x)*t;
+			pty = vs.y + (ve.y - vs.y)*t;
 
 			if (intersected == 1)
 			{
 				HWR_SetWallEndCoordsOffset(wallVerts, ptx, pty, wallang, wallpush);
+
+				GET_MAP_HEIGHTS(v1x, v1y, FloatToFixed(ptx), FloatToFixed(pty));
 
 				xclipoffset = flength * t * FRACUNIT;
 				xcliphigh = (float)(xcliplow + xclipoffset);
@@ -1758,8 +1719,12 @@ static void HWR_RenderExtraTexture(unsigned which, side_t *side, sector_t *sec_f
 			{
 				HWR_SetWallStartCoordsOffset(wallVerts, ptx, pty, wallang, wallpush);
 
+				GET_MAP_HEIGHTS(FloatToFixed(ptx), FloatToFixed(pty), v2x, v2y);
+
 				xcliplow = (float)(xcliphigh - (flength * (1.0f - t) * FRACUNIT));
 			}
+
+			GET_EXTRA_TEXTURE_COORDS();
 
 			GET_CLIP_HEIGHTS();
 		}
@@ -1852,11 +1817,13 @@ static void HWR_RenderExtraTexture(unsigned which, side_t *side, sector_t *sec_f
 	v2x = FloatToFixed(ve.x);
 	v2y = FloatToFixed(ve.y);
 
-	GET_MAP_HEIGHTS();
+	GET_MAP_HEIGHTS(v1x, v1y, v2x, v2y);
 
 #undef GET_MAP_HEIGHTS
 
-	HWR_GetExtraTextureCoords(which, side, sec_front, sec_back, &polytop, &polybottom, &polytopslope, &polybottomslope, worldtop, worldbottom, worldhigh, worldlow, worldtopslope, worldbottomslope, worldhighslope, worldlowslope, midtexheight);
+	GET_EXTRA_TEXTURE_COORDS();
+
+#undef GET_EXTRA_TEXTURE_COORDS
 
 	GET_CLIP_HEIGHTS();
 
