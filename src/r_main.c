@@ -1023,26 +1023,43 @@ void R_Init(void)
 boolean R_IsPointInSector(sector_t *sector, fixed_t x, fixed_t y)
 {
 	size_t i;
-	line_t *closest = NULL;
-	fixed_t closestdist = INT32_MAX;
+	size_t passes = 0;
 
 	for (i = 0; i < sector->linecount; i++)
 	{
-		vertex_t v;
-		fixed_t dist;
+		line_t *line = sector->lines[i];
+		vertex_t *v1, *v2;
 
-		// find the line closest to the point we're looking for.
-		P_ClosestPointOnLine(x, y, sector->lines[i], &v);
-		dist = R_PointToDist2(0, 0, v.x - x, v.y - y);
-		if (dist < closestdist)
+		if (line->frontsector == line->backsector)
+			continue;
+
+		v1 = line->v1;
+		v2 = line->v2;
+
+		// make sure v1 is below v2
+		if (v1->y > v2->y)
 		{
-			closest = sector->lines[i];
-			closestdist = dist;
+			vertex_t *tmp = v1;
+			v1 = v2;
+			v2 = tmp;
+		}
+		else if (v1->y == v2->y)
+			// horizontal line, we can't match this
+			continue;
+
+		if (v1->y < y && y <= v2->y)
+		{
+			// if the y axis in inside the line, find the point where we intersect on the x axis...
+			fixed_t vx = v1->x + (INT64)(v2->x - v1->x) * (y - v1->y) / (v2->y - v1->y);
+
+			// ...and if that point is to the left of the point, count it as inside.
+			if (vx < x)
+				passes++;
 		}
 	}
 
-	// if the side of the closest line is in this sector, we're inside of it.
-	return P_PointOnLineSide(x, y, closest) == 0 ? closest->frontsector == sector : closest->backsector == sector;
+	// and odd number of passes means we're inside the polygon.
+	return passes % 2;
 }
 
 //
