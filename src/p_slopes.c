@@ -14,6 +14,7 @@
 #include "r_defs.h"
 #include "r_state.h"
 #include "m_bbox.h"
+#include "m_vector.h"
 #include "z_zone.h"
 #include "p_local.h"
 #include "p_spec.h"
@@ -32,6 +33,36 @@ void P_CalculateSlopeNormal(pslope_t *slope) {
 	slope->normal.z = FINECOSINE(slope->zangle>>ANGLETOFINESHIFT);
 	slope->normal.x = FixedMul(FINESINE(slope->zangle>>ANGLETOFINESHIFT), slope->d.x);
 	slope->normal.y = FixedMul(FINESINE(slope->zangle>>ANGLETOFINESHIFT), slope->d.y);
+}
+
+static void CalculateVectors(pslope_t *slope, dvector3_t *dnormal)
+{
+	double hyp = hypot(dnormal->x, dnormal->y);
+	if (fpclassify(hyp) == FP_ZERO)
+	{
+		slope->dnormdir.x = slope->dnormdir.y = 0.0;
+		slope->dzdelta = 0.0;
+	}
+	else
+	{
+		slope->dnormdir.x = -(dnormal->x / hyp);
+		slope->dnormdir.y = -(dnormal->y / hyp);
+
+		slope->dzdelta = hyp / dnormal->z;
+	}
+}
+
+void P_RecalculateSlopeVectors(pslope_t *slope)
+{
+	dvector3_t dnormal;
+
+	dnormal.x = FixedToDouble(slope->normal.x);
+	dnormal.y = FixedToDouble(slope->normal.y);
+	dnormal.z = FixedToDouble(slope->normal.z);
+
+	DVector3_Load(&slope->dorigin, FixedToDouble(slope->o.x), FixedToDouble(slope->o.y), FixedToDouble(slope->o.z));
+
+	CalculateVectors(slope, &dnormal);
 }
 
 /// Setup slope via 3 vertexes.
@@ -89,22 +120,31 @@ static void ReconfigureViaVertexes (pslope_t *slope, const vector3_t v1, const v
 		slope->xydirection = R_PointToAngle2(0, 0, slope->d.x, slope->d.y)+ANGLE_180;
 		slope->zangle = InvAngle(R_PointToAngle2(0, 0, FRACUNIT, slope->zdelta));
 	}
+
+	P_RecalculateSlopeVectors(slope);
 }
 
 /// Setup slope via constants.
-static void ReconfigureViaConstants (pslope_t *slope, const fixed_t a, const fixed_t b, const fixed_t c, const fixed_t d)
+static void ReconfigureViaConstants (pslope_t *slope, const double pa, const double pb, const double pc, const double pd)
 {
 	fixed_t m;
 	fixed_t o = 0;
-	vector3_t *normal = &slope->normal;
+	double d_o = 0.0;
+
+	fixed_t a = DoubleToFixed(pa), b = DoubleToFixed(pb), c = DoubleToFixed(pc), d = DoubleToFixed(pd);
 
 	if (c)
+	{
+		d_o = abs(c) <= FRACUNIT ? -(pd * (1.0 / pc)) : -(pd / pc);
 		o = abs(c) <= FRACUNIT ? -FixedMul(d, FixedDiv(FRACUNIT, c)) : -FixedDiv(d, c);
+	}
 
 	// Set origin.
 	FV3_Load(&slope->o, 0, 0, o);
 
 	// Get slope's normal.
+	vector3_t *normal = &slope->normal;
+
 	FV3_Load(normal, a, b, c);
 	FV3_Normalize(normal);
 
@@ -123,6 +163,17 @@ static void ReconfigureViaConstants (pslope_t *slope, const fixed_t a, const fix
 	// Get angles
 	slope->xydirection = R_PointToAngle2(0, 0, slope->d.x, slope->d.y)+ANGLE_180;
 	slope->zangle = InvAngle(R_PointToAngle2(0, 0, FRACUNIT, slope->zdelta));
+
+	dvector3_t dnormal;
+
+	DVector3_Load(&dnormal, pa, pb, pc);
+	DVector3_Normalize(&dnormal);
+	if (dnormal.z < 0)
+		DVector3_Negate(&dnormal);
+
+	DVector3_Load(&slope->dorigin, 0, 0, d_o);
+
+	CalculateVectors(slope, &dnormal);
 }
 
 /// Recalculate dynamic slopes.
@@ -162,6 +213,7 @@ void T_DynamicSlopeLine (dynlineplanethink_t* th)
 		slope->zdelta = FixedDiv(zdelta, th->extent);
 		slope->zangle = R_PointToAngle2(0, 0, th->extent, -zdelta);
 		P_CalculateSlopeNormal(slope);
+		P_RecalculateSlopeVectors(slope);
 	}
 }
 
@@ -695,7 +747,7 @@ pslope_t *P_SlopeById(UINT16 id)
 }
 
 /// Creates a new slope from equation constants.
-pslope_t *MakeViaEquationConstants(const fixed_t a, const fixed_t b, const fixed_t c, const fixed_t d)
+pslope_t *P_MakeSlopeViaEquationConstants(const double a, const double b, const double c, const double d)
 {
 	pslope_t* ret = Slope_Add(0);
 
