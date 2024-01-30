@@ -444,6 +444,7 @@ static void line_SpawnViaLine(const int linenum, const boolean spawnthinker)
 			fslope->xydirection = R_PointToAngle2(origin.x, origin.y, point.x, point.y);
 
 			P_CalculateSlopeNormal(fslope);
+			P_RecalculateSlopeVectors(fslope);
 
 			if (spawnthinker && (flags & SL_DYNAMIC))
 				P_AddDynLineSlopeThinker(fslope, DP_FRONTFLOOR, line, extent);
@@ -461,6 +462,7 @@ static void line_SpawnViaLine(const int linenum, const boolean spawnthinker)
 			cslope->xydirection = R_PointToAngle2(origin.x, origin.y, point.x, point.y);
 
 			P_CalculateSlopeNormal(cslope);
+			P_RecalculateSlopeVectors(cslope);
 
 			if (spawnthinker && (flags & SL_DYNAMIC))
 				P_AddDynLineSlopeThinker(cslope, DP_FRONTCEIL, line, extent);
@@ -501,6 +503,7 @@ static void line_SpawnViaLine(const int linenum, const boolean spawnthinker)
 			fslope->xydirection = R_PointToAngle2(origin.x, origin.y, point.x, point.y);
 
 			P_CalculateSlopeNormal(fslope);
+			P_RecalculateSlopeVectors(fslope);
 
 			if (spawnthinker && (flags & SL_DYNAMIC))
 				P_AddDynLineSlopeThinker(fslope, DP_BACKFLOOR, line, extent);
@@ -518,6 +521,7 @@ static void line_SpawnViaLine(const int linenum, const boolean spawnthinker)
 			cslope->xydirection = R_PointToAngle2(origin.x, origin.y, point.x, point.y);
 
 			P_CalculateSlopeNormal(cslope);
+			P_RecalculateSlopeVectors(cslope);
 
 			if (spawnthinker && (flags & SL_DYNAMIC))
 				P_AddDynLineSlopeThinker(cslope, DP_BACKCEIL, line, extent);
