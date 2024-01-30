@@ -29,13 +29,14 @@ pslope_t *slopelist = NULL;
 UINT16 slopecount = 0;
 
 // Calculate line normal
-void P_CalculateSlopeNormal(pslope_t *slope) {
+void P_CalculateSlopeNormal(pslope_t *slope)
+{
 	slope->normal.z = FINECOSINE(slope->zangle>>ANGLETOFINESHIFT);
 	slope->normal.x = FixedMul(FINESINE(slope->zangle>>ANGLETOFINESHIFT), slope->d.x);
 	slope->normal.y = FixedMul(FINESINE(slope->zangle>>ANGLETOFINESHIFT), slope->d.y);
 }
 
-static void CalculateVectors(pslope_t *slope, dvector3_t *dnormal)
+static void CalculateNormalDir(pslope_t *slope, dvector3_t *dnormal)
 {
 	double hyp = hypot(dnormal->x, dnormal->y);
 
@@ -52,17 +53,14 @@ static void CalculateVectors(pslope_t *slope, dvector3_t *dnormal)
 	}
 }
 
-void P_RecalculateSlopeVectors(pslope_t *slope)
+void P_CalculateSlopeVectors(pslope_t *slope)
 {
 	dvector3_t dnormal;
 
-	dnormal.x = FixedToDouble(slope->normal.x);
-	dnormal.y = FixedToDouble(slope->normal.y);
-	dnormal.z = FixedToDouble(slope->normal.z);
-
+	DVector3_Load(&dnormal, FixedToDouble(slope->normal.x), FixedToDouble(slope->normal.y), FixedToDouble(slope->normal.z));
 	DVector3_Load(&slope->dorigin, FixedToDouble(slope->o.x), FixedToDouble(slope->o.y), FixedToDouble(slope->o.z));
 
-	CalculateVectors(slope, &dnormal);
+	CalculateNormalDir(slope, &dnormal);
 }
 
 /// Setup slope via 3 vertexes.
@@ -121,7 +119,7 @@ static void ReconfigureViaVertexes (pslope_t *slope, const vector3_t v1, const v
 		slope->zangle = InvAngle(R_PointToAngle2(0, 0, FRACUNIT, slope->zdelta));
 	}
 
-	P_RecalculateSlopeVectors(slope);
+	P_CalculateSlopeVectors(slope);
 }
 
 /// Setup slope via constants.
@@ -173,7 +171,7 @@ static void ReconfigureViaConstants (pslope_t *slope, const double pa, const dou
 
 	DVector3_Load(&slope->dorigin, 0, 0, d_o);
 
-	CalculateVectors(slope, &dnormal);
+	CalculateNormalDir(slope, &dnormal);
 }
 
 /// Recalculate dynamic slopes.
@@ -212,8 +210,8 @@ void T_DynamicSlopeLine (dynlineplanethink_t* th)
 	if (slope->zdelta != FixedDiv(zdelta, th->extent)) {
 		slope->zdelta = FixedDiv(zdelta, th->extent);
 		slope->zangle = R_PointToAngle2(0, 0, th->extent, -zdelta);
+		slope->moved = true;
 		P_CalculateSlopeNormal(slope);
-		P_RecalculateSlopeVectors(slope);
 	}
 }
 
@@ -444,7 +442,7 @@ static void line_SpawnViaLine(const int linenum, const boolean spawnthinker)
 			fslope->xydirection = R_PointToAngle2(origin.x, origin.y, point.x, point.y);
 
 			P_CalculateSlopeNormal(fslope);
-			P_RecalculateSlopeVectors(fslope);
+			P_CalculateSlopeVectors(fslope);
 
 			if (spawnthinker && (flags & SL_DYNAMIC))
 				P_AddDynLineSlopeThinker(fslope, DP_FRONTFLOOR, line, extent);
@@ -462,7 +460,7 @@ static void line_SpawnViaLine(const int linenum, const boolean spawnthinker)
 			cslope->xydirection = R_PointToAngle2(origin.x, origin.y, point.x, point.y);
 
 			P_CalculateSlopeNormal(cslope);
-			P_RecalculateSlopeVectors(cslope);
+			P_CalculateSlopeVectors(cslope);
 
 			if (spawnthinker && (flags & SL_DYNAMIC))
 				P_AddDynLineSlopeThinker(cslope, DP_FRONTCEIL, line, extent);
@@ -503,7 +501,7 @@ static void line_SpawnViaLine(const int linenum, const boolean spawnthinker)
 			fslope->xydirection = R_PointToAngle2(origin.x, origin.y, point.x, point.y);
 
 			P_CalculateSlopeNormal(fslope);
-			P_RecalculateSlopeVectors(fslope);
+			P_CalculateSlopeVectors(fslope);
 
 			if (spawnthinker && (flags & SL_DYNAMIC))
 				P_AddDynLineSlopeThinker(fslope, DP_BACKFLOOR, line, extent);
@@ -521,7 +519,7 @@ static void line_SpawnViaLine(const int linenum, const boolean spawnthinker)
 			cslope->xydirection = R_PointToAngle2(origin.x, origin.y, point.x, point.y);
 
 			P_CalculateSlopeNormal(cslope);
-			P_RecalculateSlopeVectors(cslope);
+			P_CalculateSlopeVectors(cslope);
 
 			if (spawnthinker && (flags & SL_DYNAMIC))
 				P_AddDynLineSlopeThinker(cslope, DP_BACKCEIL, line, extent);

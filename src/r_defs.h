@@ -349,6 +349,8 @@ typedef struct pslope_s
 
 	double dzdelta;
 
+	boolean moved : 1;
+
 	UINT8 flags; // Slope options
 } pslope_t;
 

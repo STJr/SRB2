@@ -631,7 +631,7 @@ void R_ApplyLevelInterpolators(fixed_t frac)
 			R_LerpVector3(&interp->dynslope.oldo, &interp->dynslope.bako, frac, &interp->dynslope.slope->o);
 			R_LerpVector2(&interp->dynslope.oldd, &interp->dynslope.bakd, frac, &interp->dynslope.slope->d);
 			interp->dynslope.slope->zdelta = R_LerpFixed(interp->dynslope.oldzdelta, interp->dynslope.bakzdelta, frac);
-			P_RecalculateSlopeVectors(interp->dynslope.slope);
+			interp->dynslope.slope->moved = true;
 			break;
 		}
 	}

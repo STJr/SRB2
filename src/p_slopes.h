@@ -51,7 +51,7 @@ typedef enum
 void P_LinkSlopeThinkers (void);
 
 void P_CalculateSlopeNormal(pslope_t *slope);
-void P_RecalculateSlopeVectors(pslope_t *slope);
+void P_CalculateSlopeVectors(pslope_t *slope);
 void P_InitSlopes(void);
 void P_SpawnSlopes(const boolean fromsave);
 
