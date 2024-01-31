@@ -1968,6 +1968,9 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 	if (gl_backsector)
 	{
 		INT32 gl_toptexture = 0, gl_bottomtexture = 0;
+
+		boolean has_top = false, has_bottom = false;
+
 		fixed_t texturevpeg;
 
 		SLOPEPARAMS(gl_backsector->c_slope, worldhigh, worldhighslope, gl_backsector->ceilingheight)
@@ -2079,6 +2082,8 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 				HWR_AddTransparentWall(wallVerts, &Surf, gl_toptexture, PF_Environment, false, lightnum, colormap);
 			else
 				HWR_ProjectWall(wallVerts, &Surf, PF_Masked, lightnum, colormap);
+
+			has_top = true;
 		}
 
 		// check BOTTOM TEXTURE
@@ -2164,6 +2169,8 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 				HWR_AddTransparentWall(wallVerts, &Surf, gl_bottomtexture, PF_Environment, false, lightnum, colormap);
 			else
 				HWR_ProjectWall(wallVerts, &Surf, PF_Masked, lightnum, colormap);
+
+			has_bottom = true;
 		}
 
 		// Render midtexture if there's one
@@ -2174,7 +2181,14 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 		{
 			// Render extra textures
 			for (unsigned i = 0; i < NUM_WALL_OVERLAYS; i++)
+			{
+				if (IS_TOP_EDGE_TEXTURE(i) && !has_top)
+					continue;
+				if (IS_BOTTOM_EDGE_TEXTURE(i) && !has_bottom)
+					continue;
+
 				HWR_RenderExtraTexture(i, gl_sidedef, gl_frontsector, gl_backsector, NULL, NULL, vs, ve, cliplow, cliphigh, Surf, PF_Masked);
+			}
 
 			// Sky culling
 			// No longer so much a mess as before!

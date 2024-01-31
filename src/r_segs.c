@@ -285,8 +285,6 @@ INT32 R_GetOverlayTextureRepeats(unsigned which, side_t *side, INT32 texnum, sec
 // Setup lighting based on the presence/lack-of 3D floors.
 static void R_PrepareMaskedSegLightlist(drawseg_t *ds, INT32 range)
 {
-	lightlist_t *light;
-	r_lightlist_t *rlight;
 	INT32 lightnum;
 
 	dc_numlights = 0;
@@ -294,7 +292,7 @@ static void R_PrepareMaskedSegLightlist(drawseg_t *ds, INT32 range)
 	if (frontsector->numlights)
 	{
 		dc_numlights = frontsector->numlights;
-		if (dc_numlights >= dc_maxlights)
+		if (dc_numlights > dc_maxlights)
 		{
 			dc_maxlights = dc_numlights;
 			dc_lightlist = Z_Realloc(dc_lightlist, sizeof (*dc_lightlist) * dc_maxlights, PU_STATIC, NULL);
@@ -302,20 +300,14 @@ static void R_PrepareMaskedSegLightlist(drawseg_t *ds, INT32 range)
 
 		for (INT32 i = 0; i < dc_numlights; i++)
 		{
-			fixed_t leftheight, rightheight;
-			light = &frontsector->lightlist[i];
-			rlight = &dc_lightlist[i];
-			leftheight  = P_GetLightZAt(light, ds-> leftpos.x, ds-> leftpos.y);
-			rightheight = P_GetLightZAt(light, ds->rightpos.x, ds->rightpos.y);
-
-			leftheight  -= viewz;
-			rightheight -= viewz;
+			lightlist_t *light = &frontsector->lightlist[i];
+			r_lightlist_t *rlight = &dc_lightlist[i];
+			fixed_t leftheight  = P_GetLightZAt(light, ds-> leftpos.x, ds-> leftpos.y) - viewz;
+			fixed_t rightheight = P_GetLightZAt(light, ds->rightpos.x, ds->rightpos.y) - viewz;
 
 			rlight->height     = (centeryfrac) - FixedMul(leftheight , ds->scale1);
 			rlight->heightstep = (centeryfrac) - FixedMul(rightheight, ds->scale2);
 			rlight->heightstep = (rlight->heightstep-rlight->height)/(range);
-			//if (x1 > ds->x1)
-				//rlight->height -= (x1 - ds->x1)*rlight->heightstep;
 			rlight->startheight = rlight->height; // keep starting value here to reset for each repeat
 			rlight->lightlevel = *light->lightlevel;
 			rlight->extra_colormap = *light->extra_colormap;
@@ -469,6 +461,8 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 		return;
 	}
 
+	dc_transmap = NULL;
+
 	if (blendmode == AST_FOG)
 	{
 		colfunc = colfuncs[COLDRAWFUNC_FOG];
@@ -479,7 +473,7 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 	{
 		if (blendmode)
 			dc_transmap = R_GetBlendTable(blendmode, blendlevel);
-		else
+		else if (blendlevel > 0 && blendlevel < 10)
 			dc_transmap = R_GetTranslucencyTable(blendlevel);
 
 		if (dc_transmap)
@@ -3265,7 +3259,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 	if (frontsector->numlights)
 	{
 		dc_numlights = frontsector->numlights;
-		if (dc_numlights >= dc_maxlights)
+		if (dc_numlights > dc_maxlights)
 		{
 			dc_maxlights = dc_numlights;
 			dc_lightlist = Z_Realloc(dc_lightlist, sizeof (*dc_lightlist) * dc_maxlights, PU_STATIC, NULL);
