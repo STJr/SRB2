@@ -565,6 +565,33 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 
 	for (times = 0; times < repeats; times++)
 	{
+		fixed_t left_top = 0, left_bottom = 0;
+		fixed_t right_top = 0, right_bottom = 0;
+		fixed_t top_step = 0, bottom_step = 0;
+
+		// Get left and right ends of wall for clipping it
+		if (ldef->flags & ML_CLIPMIDTEX)
+		{
+			// For this to work correctly with polyobjects, it needs to use its own back sector, rather than the seg's front sector
+			sector_t *sec_front = curline->polyseg ?
+				curline->polyseg->lines[0]->backsector :
+				frontsector;
+
+			// calculate both left ends
+			left_top    = P_GetSectorCeilingZAt(sec_front, ds->leftpos.x, ds->leftpos.y) - viewz;
+			left_bottom = P_GetSectorFloorZAt(sec_front, ds->leftpos.x, ds->leftpos.y) - viewz;
+
+			// calculate right ends now
+			right_top    = P_GetSectorCeilingZAt(sec_front, ds->rightpos.x, ds->rightpos.y) - viewz;
+			right_bottom = P_GetSectorFloorZAt(sec_front, ds->rightpos.x, ds->rightpos.y) - viewz;
+
+			top_step = (right_top - left_top) / range;
+			bottom_step = (right_bottom - left_bottom) / range;
+
+			left_top += top_step * (x1 - ds->x1);
+			left_bottom += bottom_step * (x1 - ds->x1);
+		}
+
 		if (times > 0)
 		{
 			rw_scalestep = scalestep;
@@ -585,7 +612,7 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 		{
 			dc_texturemid = ds->maskedtextureheight[dc_x];
 
-			if (curline->linedef->flags & ML_MIDPEG)
+			if (ldef->flags & ML_MIDPEG)
 				dc_texturemid += (textureheight[texnum])*times + textureheight[texnum];
 			else
 				dc_texturemid -= (textureheight[texnum])*times;
@@ -614,15 +641,17 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 			texture_top = dc_texturemid;
 			texture_bottom = texture_top - textureheight[texnum];
 
-			sprtopscreen = centeryfrac - FixedMul(texture_top, spryscale);
-
-			// Clip texture if it's a polyobject side
-			if (curline->polyseg)
+			// If the texture is meant to be clipped
+			if (ldef->flags & ML_CLIPMIDTEX)
 			{
-				// For this to work correctly, it needs to use the polyobject's sector, rather than the seg's back sector
-				// Change this when polyobjects support slopes
-				texture_bottom = max(curline->polyseg->lines[0]->backsector->floorheight - viewz, texture_bottom);
+				texture_top = min(left_top, texture_top);
+				texture_bottom = max(left_bottom, texture_bottom);
+
+				left_top += top_step;
+				left_bottom += bottom_step;
 			}
+
+			sprtopscreen = centeryfrac - FixedMul(texture_top, spryscale);
 
 			// set wall bounds if there is a light list, or if this is a polyobject side
 			if (dc_numlights || curline->polyseg)

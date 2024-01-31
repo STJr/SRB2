@@ -146,7 +146,9 @@ enum
 	// Bounce off walls!
 	ML_BOUNCY        = 1<<14,
 
-	ML_TFERLINE      = 1<<15
+	ML_TFERLINE      = 1<<15,
+
+	ML_CLIPMIDTEX    = 1<<16
 };
 
 // Sector definition, from editing.

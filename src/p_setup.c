@@ -1963,8 +1963,7 @@ static void ParseTextmapSidedefParameter(UINT32 i, const char *param, const char
 		P_SetSidedefSector(i, atol(val));
 	else if (fastcmp(param, "repeatcnt"))
 		sides[i].repeatcnt = atol(val);
-	// Oh God there's a total of 28 fields to read. Uhhh
-	// Okay, so ParseTextmapSidedefOverlay handles all the parameters edges have.
+	// Parse edge fields
 	else if (fastncmp(param, "edge_", 5) && strlen(param) > 5)
 	{
 		if (fastncmp(param, "edge_top_upper_", 15) && strlen(param) > 15)
@@ -2058,6 +2057,8 @@ static void ParseTextmapLinedefParameter(UINT32 i, const char *param, const char
 		lines[i].flags |= ML_MIDPEG;
 	else if (fastcmp(param, "midsolid") && fastcmp("true", val))
 		lines[i].flags |= ML_MIDSOLID;
+	else if (fastcmp(param, "clipmidtex") && fastcmp("true", val))
+		lines[i].flags |= ML_CLIPMIDTEX;
 	else if (fastcmp(param, "wrapmidtex") && fastcmp("true", val))
 		lines[i].flags |= ML_WRAPMIDTEX;
 	else if (fastcmp(param, "nonet") && fastcmp("true", val))

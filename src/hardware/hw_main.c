@@ -1159,10 +1159,20 @@ static void HWR_RenderMidtexture(INT32 gl_midtexture, float cliplow, float cliph
 	}
 
 	// The cut-off values of a linedef can always be constant, since every line has an absoulute front and or back sector
-	lowcut = popenbottom;
-	highcut = popentop;
-	lowcutslope = popenbottomslope;
-	highcutslope = popentopslope;
+	if (gl_curline->polyseg && !(gl_linedef->flags & ML_CLIPMIDTEX))
+	{
+		lowcut = polybottom;
+		highcut = polytop;
+		lowcutslope = polybottomslope;
+		highcutslope = polytopslope;
+	}
+	else
+	{
+		lowcut = popenbottom;
+		highcut = popentop;
+		lowcutslope = popenbottomslope;
+		highcutslope = popentopslope;
+	}
 
 	fixed_t h = min(highcut, polytop);
 	fixed_t l = max(polybottom, lowcut);
