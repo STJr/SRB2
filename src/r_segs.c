@@ -481,10 +481,13 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 	if (curline->polyseg)
 	{
 		// Change this when polyobjects support slopes
-		fixed_t overlay_top = min(frontsector->ceilingheight, backsector->ceilingheight) - viewz;
-		fixed_t overlay_bottom = max(frontsector->floorheight, backsector->floorheight) - viewz;
+		sector_t *sec_front = curline->polyseg->lines[0]->frontsector;
+		sector_t *sec_back = curline->polyseg->lines[0]->backsector;
 
-		R_AddOverlayTextures(frontsector, backsector,
+		fixed_t overlay_top = min(sec_front->ceilingheight, sec_back->ceilingheight) - viewz;
+		fixed_t overlay_bottom = max(sec_front->floorheight, sec_back->floorheight) - viewz;
+
+		R_AddOverlayTextures(sec_front, sec_back,
 			overlay_top, overlay_bottom,
 			overlay_top, overlay_bottom,
 			0, 0, 0, 0);
@@ -503,6 +506,8 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 
 	mfloorclip = ds->sprbottomclip;
 	mceilingclip = ds->sprtopclip;
+
+	sprbotscreen = INT32_MAX;
 
 	if (frontsector->heightsec != -1)
 		front = &sectors[frontsector->heightsec];
@@ -592,7 +597,11 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 
 			// Clip texture if it's a polyobject side
 			if (curline->polyseg)
-				texture_bottom = max(backsector->floorheight - viewz, texture_bottom); // Change this when polyobjects support slopes
+			{
+				// For this to work correctly, it needs to use the polyobject's sector, instead of the line's back sector
+				// Change this when polyobjects support slopes
+				texture_bottom = max(curline->polyseg->lines[0]->backsector->floorheight - viewz, texture_bottom);
+			}
 
 			// set wall bounds if there is a light list, or if this is a polyobject side
 			if (dc_numlights || curline->polyseg)
@@ -609,8 +618,6 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 			// draw light list if there is one
 			if (dc_numlights)
 			{
-				sprbotscreen = INT32_MAX;
-
 				for (i = 0; i < dc_numlights; i++)
 				{
 					lighttable_t **xwalllights;
@@ -2204,18 +2211,10 @@ static void R_AddOverlayTextures(sector_t *sec_front, sector_t *sec_back, fixed_
 
 static void R_DoMaskedOverlayColumn(INT32 x, fixed_t textureoffset, fixed_t cliptop, fixed_t clipbottom)
 {
-#define ALIGN_UPPER(which) \
-	if (overlaytexture[which]) \
-		overlaytextureheight[which][x] = max(rw_overlay[which].mid, rw_overlay[which].back)
-#define ALIGN_LOWER(which) \
-	if (overlaytexture[which]) \
-		overlaytextureheight[which][x] = min(rw_overlay[which].mid, rw_overlay[which].back)
-
-	ALIGN_UPPER(EDGE_TEXTURE_TOP_UPPER);
-	ALIGN_LOWER(EDGE_TEXTURE_BOTTOM_LOWER);
-
-#undef ALIGN_UPPER
-#undef ALIGN_LOWER
+	if (overlaytexture[EDGE_TEXTURE_TOP_UPPER])
+		overlaytextureheight[EDGE_TEXTURE_TOP_UPPER][x] = rw_overlay[EDGE_TEXTURE_TOP_UPPER].mid;
+	if (overlaytexture[EDGE_TEXTURE_BOTTOM_LOWER])
+		overlaytextureheight[EDGE_TEXTURE_BOTTOM_LOWER][x] = rw_overlay[EDGE_TEXTURE_BOTTOM_LOWER].mid;
 
 	R_StoreOverlayColumn(x, textureoffset);
 

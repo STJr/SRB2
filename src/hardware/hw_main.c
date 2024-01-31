@@ -1760,8 +1760,6 @@ static void HWR_RenderExtraTexture(unsigned which, side_t *side, sector_t *sec_f
 	wallVerts[2].s = wallVerts[1].s = ((xcliphigh * xscale) + overlay->offsetx) * grTex->scaleX;
 
 	// set top/bottom coords
-	// Take the texture peg into account, rather than changing the offsets past
-	// where the polygon might not be.
 	wallVerts[3].y = FIXED_TO_FLOAT(h);
 	wallVerts[0].y = FIXED_TO_FLOAT(l);
 	wallVerts[2].y = FIXED_TO_FLOAT(hS);
@@ -1837,6 +1835,7 @@ static void HWR_RenderExtraTexture(unsigned which, side_t *side, sector_t *sec_f
 	if (h == l && hS == lS)
 		return;
 
+	// set top/bottom coords
 	wallVerts[3].y = FixedToFloat(h);
 	wallVerts[0].y = FixedToFloat(l);
 	wallVerts[2].y = FixedToFloat(hS);
@@ -2200,8 +2199,9 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 		else
 		{
 			// Render extra textures
-			HWR_RenderExtraTexture(EDGE_TEXTURE_TOP_UPPER, gl_sidedef, gl_curline->frontsector, gl_curline->backsector, NULL, gl_curline->polyseg, vs, ve, cliplow, cliphigh, Surf, PF_Masked);
-			HWR_RenderExtraTexture(EDGE_TEXTURE_BOTTOM_LOWER, gl_sidedef, gl_curline->frontsector, gl_curline->backsector, NULL, gl_curline->polyseg, vs, ve, cliplow, cliphigh, Surf, PF_Masked);
+			polyobj_t *polyobj = gl_curline->polyseg;
+			HWR_RenderExtraTexture(EDGE_TEXTURE_TOP_UPPER, gl_sidedef, polyobj->lines[0]->frontsector, polyobj->lines[0]->backsector, NULL, polyobj, vs, ve, cliplow, cliphigh, Surf, PF_Masked);
+			HWR_RenderExtraTexture(EDGE_TEXTURE_BOTTOM_LOWER, gl_sidedef, polyobj->lines[0]->frontsector, polyobj->lines[0]->backsector, NULL, polyobj, vs, ve, cliplow, cliphigh, Surf, PF_Masked);
 		}
 	}
 	else
