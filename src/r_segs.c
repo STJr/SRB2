@@ -543,7 +543,6 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 	lightlist_t     *light;
 	r_lightlist_t   *rlight;
 	INT32           range;
-	line_t          *newline = NULL;
 	// Render FOF sides kinda like normal sides, with the frac and step and everything
 	// NOTE: INT64 instead of fixed_t because overflow concerns
 	INT64         top_frac, top_step, bottom_frac, bottom_step;
@@ -553,7 +552,7 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 	fixed_t       left_top, left_bottom; // needed here for slope skewing
 	pslope_t      *skewslope = NULL;
 	boolean do_texture_skew;
-	INT16 lineflags;
+	boolean dont_peg_bottom;
 	fixed_t wall_scalex, wall_scaley;
 
 	void (*colfunc_2s) (column_t *);
@@ -573,12 +572,16 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 	if (pfloor->master->flags & ML_TFERLINE)
 	{
 		size_t linenum = curline->linedef-backsector->lines[0];
-		newline = pfloor->master->frontsector->lines[0] + linenum;
+		line_t *newline = pfloor->master->frontsector->lines[0] + linenum;
 		sidedef = &sides[newline->sidenum[0]];
-		lineflags = newline->flags;
+		do_texture_skew = newline->flags & ML_SKEWTD;
+		dont_peg_bottom = newline->flags & ML_DONTPEGBOTTOM;
 	}
 	else
-		lineflags = curline->linedef->flags;
+	{
+		do_texture_skew = pfloor->master->flags & ML_SKEWTD;
+		dont_peg_bottom = curline->linedef->flags & ML_DONTPEGBOTTOM;
+	}
 
 	texnum = R_GetTextureNum(sidedef->midtexture);
 
@@ -756,8 +759,6 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 	left_top    = P_GetFFloorTopZAt   (pfloor, ds->leftpos.x, ds->leftpos.y) - viewz;
 	left_bottom = P_GetFFloorBottomZAt(pfloor, ds->leftpos.x, ds->leftpos.y) - viewz;
 
-	do_texture_skew = lineflags & ML_SKEWTD;
-
 	if (do_texture_skew)
 	{
 		skewslope = *pfloor->t_slope; // skew using top slope by default
@@ -768,7 +769,7 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 
 	offsetvalue = sidedef->rowoffset + sidedef->offsety_mid;
 
-	if (lineflags & ML_DONTPEGBOTTOM)
+	if (dont_peg_bottom)
 	{
 		if (do_texture_skew)
 		{
