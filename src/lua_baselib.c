@@ -222,6 +222,8 @@ static const struct {
 
 	{META_KEYEVENT,     "keyevent_t"},
 	{META_MOUSE,        "mouse_t"},
+	
+	{META_INTERCEPT,	"intercept_t"},
 	{NULL,              NULL}
 };
 

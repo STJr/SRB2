@@ -62,6 +62,7 @@ static lua_CFunction liblist[] = {
 	LUA_HudLib, // HUD stuff
 	LUA_ColorLib, // general color functions
 	LUA_InputLib, // inputs
+	LUA_InterceptLib, // intercept_t
 	NULL
 };
 

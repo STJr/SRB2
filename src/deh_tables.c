@@ -25,6 +25,7 @@
 #include "g_game.h" // Joystick axes (for lua)
 #include "i_joy.h"
 #include "g_input.h" // Game controls (for lua)
+#include "p_maputl.h" // P_PathTraverse constants (for lua)
 
 #include "deh_tables.h"
 
@@ -5797,6 +5798,11 @@ struct int_const_s const INT_CONST[] = {
 	{"MB_BUTTON8",MB_BUTTON8},
 	{"MB_SCROLLUP",MB_SCROLLUP},
 	{"MB_SCROLLDOWN",MB_SCROLLDOWN},
+	
+	// P_PathTraverse constants
+	{"PT_ADDLINES",PT_ADDLINES},
+	{"PT_ADDTHINGS",PT_ADDTHINGS},
+	{"PT_EARLYOUT",PT_EARLYOUT},
 
 	{NULL,0}
 };

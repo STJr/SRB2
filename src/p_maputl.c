@@ -1170,7 +1170,7 @@ static boolean P_TraverseIntercepts(traverser_t func, fixed_t maxfrac)
 
 		if (dist > maxfrac)
 			return true; // Checked everything in range.
-
+		
 		if (!func(in))
 			return false; // Don't bother going farther.
 
