@@ -1631,7 +1631,7 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 
 				if (rover->master->flags & ML_TFERLINE)
 				{
-					size_t linenum = min(gl_curline->linedef-gl_backsector->lines[0], rover->master->frontsector->linecount);
+					size_t linenum = min((size_t)(gl_curline->linedef-gl_backsector->lines[0]), rover->master->frontsector->linecount);
 					newline = rover->master->frontsector->lines[0] + linenum;
 					side = &sides[newline->sidenum[0]];
 					do_texture_skew = newline->flags & ML_SKEWTD;
@@ -1785,7 +1785,7 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 
 				if (rover->master->flags & ML_TFERLINE)
 				{
-					size_t linenum = min(gl_curline->linedef-gl_backsector->lines[0], rover->master->frontsector->linecount);
+					size_t linenum = min((size_t)(gl_curline->linedef-gl_backsector->lines[0]), rover->master->frontsector->linecount);
 					newline = rover->master->frontsector->lines[0] + linenum;
 					side = &sides[newline->sidenum[0]];
 				}

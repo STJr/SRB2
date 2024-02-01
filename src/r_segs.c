@@ -571,7 +571,7 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 
 	if (pfloor->master->flags & ML_TFERLINE)
 	{
-		size_t linenum = min(curline->linedef-backsector->lines[0], pfloor->master->frontsector->linecount);
+		size_t linenum = min((size_t)(curline->linedef-backsector->lines[0]), pfloor->master->frontsector->linecount);
 		line_t *newline = pfloor->master->frontsector->lines[0] + linenum;
 		sidedef = &sides[newline->sidenum[0]];
 		do_texture_skew = newline->flags & ML_SKEWTD;
