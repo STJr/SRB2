@@ -52,10 +52,7 @@ static boolean Lua_PathTraverser(intercept_t *in)
 	
 	traverse = lua_toboolean(gL, -2);
 	lua_pop(gL, 1);
-	//lua_settop(gL, 0);
 	
-	//CONS_Printf("%d\n", in->isaline);
-	//CONS_Printf("%s\n", in->isaline ? "true" : "false");
 	return traverse;
 }
 
@@ -98,8 +95,8 @@ static int intercept_get(lua_State *L)
 static int lib_pPathTraverse(lua_State *L)
 {
 	fixed_t px1 = luaL_checkfixed(L, 1);
-	fixed_t px2 = luaL_checkfixed(L, 2);
-	fixed_t py1 = luaL_checkfixed(L, 3);
+	fixed_t py1 = luaL_checkfixed(L, 2);
+	fixed_t px2 = luaL_checkfixed(L, 3);
 	fixed_t py2 = luaL_checkfixed(L, 4);
 	INT32 flags = (INT32)luaL_checkinteger(L, 5);
 	luaL_checktype(L, 6, LUA_TFUNCTION);
