@@ -126,6 +126,7 @@ extern GLint			screen_width;
 extern GLint			screen_height;
 extern GLbyte			screen_depth;
 extern GLint			maximumAnisotropy;
+extern boolean 			supportMipMap;
 
 /**	\brief OpenGL flags for video driver
 */

@@ -189,6 +189,11 @@ boolean OglSdlSurface(INT32 w, INT32 h)
 	else
 		maximumAnisotropy = 1;
 
+	if (atof((const char*)gl_version) >= 1.4)
+		supportMipMap = true;
+	else
+		supportMipMap = false;
+
 	SetupGLFunc4();
 
 	glanisotropicmode_cons_t[1].value = maximumAnisotropy;
