@@ -155,6 +155,7 @@ boolean OglSdlSurface(INT32 w, INT32 h)
 {
 	INT32 cbpp = cv_scr_depth.value < 16 ? 16 : cv_scr_depth.value;
 	static boolean first_init = false;
+	static int majorGL = 0, minorGL = 0;
 
 	oglflags = 0;
 
@@ -189,7 +190,8 @@ boolean OglSdlSurface(INT32 w, INT32 h)
 	else
 		maximumAnisotropy = 1;
 
-	if (atof((const char*)gl_version) >= 1.4)
+	if (sscanf((const char*)gl_version, "%d.%d", &majorGL, &minorGL)
+		&& (!(majorGL == 1 && minorGL <= 3)))
 		supportMipMap = true;
 	else
 		supportMipMap = false;
