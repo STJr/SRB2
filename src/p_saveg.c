@@ -1428,6 +1428,8 @@ static UINT32 GetSideDiff(const side_t *si, const side_t *spawnsi, UINT8 edgedif
 		diff |= LD_SDBOTSCALEY;
 	if (si->repeatcnt != spawnsi->repeatcnt)
 		diff |= LD_SDREPEATCNT;
+	if (si->flags != spawnsi->flags)
+		diff |= LD_SDFLAGS;
 	if (edgediff[0] != 0)
 		diff |= LD_SDOVERLAY1;
 	if (edgediff[1] != 0)
@@ -1497,6 +1499,8 @@ static void ArchiveSide(const side_t *si, UINT32 diff, UINT8 edgediff[4])
 		WRITEFIXED(save_p, si->scaley_bottom);
 	if (diff & LD_SDREPEATCNT)
 		WRITEINT16(save_p, si->repeatcnt);
+	if (diff & LD_SDFLAGS)
+		WRITEUINT16(save_p, si->flags);
 	if (diff & LD_SDOVERLAY1)
 		ArchiveSideEdge(&si->overlays[0], edgediff[0]);
 	if (diff & LD_SDOVERLAY2)
@@ -1672,6 +1676,8 @@ static void UnArchiveSide(side_t *si)
 		si->scaley_bottom = READFIXED(save_p);
 	if (diff & LD_SDREPEATCNT)
 		si->repeatcnt = READINT16(save_p);
+	if (diff & LD_SDFLAGS)
+		si->flags = READUINT16(save_p);
 	if (diff & LD_SDOVERLAY1)
 		UnArchiveSideEdge(&si->overlays[0]);
 	if (diff & LD_SDOVERLAY2)

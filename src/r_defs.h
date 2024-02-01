@@ -610,10 +610,16 @@ typedef struct line_s
 } line_t;
 
 // Don't make available to Lua or I will find where you live
+typedef enum
+{
+	SIDEFLAG_HASEDGETEXTURES = 1
+} sideflags_t;
+
 enum
 {
 	SIDEOVERLAYFLAG_NOSKEW = 1<<0,
-	SIDEOVERLAYFLAG_WRAP   = 1<<1
+	SIDEOVERLAYFLAG_NOCLIP = 1<<1,
+	SIDEOVERLAYFLAG_WRAP   = 1<<2
 };
 
 typedef struct
@@ -622,9 +628,10 @@ typedef struct
 	fixed_t offsetx, offsety;
 	fixed_t scalex, scaley;
 	UINT8 flags;
+	struct side_s *side;
 } side_overlay_t;
 
-typedef struct
+typedef struct side_s
 {
 	// add this to the calculated texture column
 	fixed_t textureoffset;
@@ -632,12 +639,15 @@ typedef struct
 	// add this to the calculated texture top
 	fixed_t rowoffset;
 
-	// per-texture offsets for UDMF
+	// per-texture offsets
 	fixed_t offsetx_top, offsetx_mid, offsetx_bottom;
 	fixed_t offsety_top, offsety_mid, offsety_bottom;
 
+	// per-texture scale
 	fixed_t scalex_top, scalex_mid, scalex_bottom;
 	fixed_t scaley_top, scaley_mid, scaley_bottom;
+
+	UINT16 flags;
 
 	// Texture indices.
 	// We do not maintain names here.
@@ -766,9 +776,6 @@ typedef struct seg_s
 	lightmap_t *lightmaps; // for static lightmap
 #endif
 
-	// Why slow things down by calculating lightlists for every thick side?
-	size_t numlights;
-	r_lightlist_t *rlights;
 	polyobj_t *polyseg;
 	boolean dontrenderme;
 	boolean glseg;

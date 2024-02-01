@@ -407,33 +407,26 @@ angle_t R_PointToAngleEx(INT32 x2, INT32 y2, INT32 x1, INT32 y1)
 		0;
 }
 
-//
-// R_ScaleFromGlobalAngle
-// Returns the texture mapping scale for the current line (horizontal span)
-//  at the given angle.
-// rw_distance must be calculated first.
-//
-// killough 5/2/98: reformatted, cleaned up
-//
-// note: THIS IS USED ONLY FOR WALLS!
-fixed_t R_ScaleFromGlobalAngle(angle_t visangle)
+line_t *R_GetFFloorLine(const seg_t *seg, const ffloor_t *pfloor)
 {
-	angle_t anglea = ANGLE_90 + (visangle-viewangle);
-	angle_t angleb = ANGLE_90 + (visangle-rw_normalangle);
-	fixed_t den = FixedMul(rw_distance, FINESINE(anglea>>ANGLETOFINESHIFT));
-	// proff 11/06/98: Changed for high-res
-	fixed_t num = FixedMul(projectiony, FINESINE(angleb>>ANGLETOFINESHIFT));
-
-	if (den > num>>16)
+	if (pfloor->master->flags & ML_TFERLINE)
 	{
-		num = FixedDiv(num, den);
-		if (num > 64*FRACUNIT)
-			return 64*FRACUNIT;
-		if (num < 256)
-			return 256;
-		return num;
+		size_t linenum = seg->linedef - pfloor->target->lines[0];
+		return pfloor->master->frontsector->lines[0] + linenum;
 	}
-	return 64*FRACUNIT;
+	else
+		return pfloor->master;
+}
+
+side_t *R_GetFFloorSide(const seg_t *seg, const ffloor_t *pfloor)
+{
+	if (pfloor->master->flags & ML_TFERLINE)
+	{
+		line_t *newline = R_GetFFloorLine(seg, pfloor);
+		return &sides[newline->sidenum[0]];
+	}
+	else
+		return &sides[pfloor->master->sidenum[0]];
 }
 
 //

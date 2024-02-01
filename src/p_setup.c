@@ -1331,6 +1331,18 @@ static void P_WriteTics(INT32 tics, char **target)
 	P_WriteDuplicateText(text, target);
 }
 
+static void P_InitSideEdges(side_t *sd)
+{
+	for (unsigned j = 0; j < NUM_WALL_OVERLAYS; j++)
+	{
+		sd->overlays[j].texture = R_TextureNumForName("-");
+		sd->overlays[j].offsetx = sd->overlays[j].offsety = 0;
+		sd->overlays[j].scalex = sd->overlays[j].scaley = FRACUNIT;
+		sd->overlays[j].flags = 0;
+		sd->overlays[j].side = sd;
+	}
+}
+
 static void P_LoadSidedefs(UINT8 *data)
 {
 	mapsidedef_t *msd = (mapsidedef_t*)data;
@@ -1366,13 +1378,7 @@ static void P_LoadSidedefs(UINT8 *data)
 		sd->scalex_top = sd->scalex_mid = sd->scalex_bottom = FRACUNIT;
 		sd->scaley_top = sd->scaley_mid = sd->scaley_bottom = FRACUNIT;
 
-		for (unsigned j = 0; j < NUM_WALL_OVERLAYS; j++)
-		{
-			sd->overlays[j].texture = R_TextureNumForName("-");
-			sd->overlays[j].offsetx = sd->overlays[j].offsety = 0;
-			sd->overlays[j].scalex = sd->overlays[j].scaley = FRACUNIT;
-			sd->overlays[j].flags = 0;
-		}
+		P_InitSideEdges(sd);
 
 		P_SetSidedefSector(i, (UINT16)SHORT(msd->sector));
 
@@ -1908,7 +1914,11 @@ static void ParseTextmapSidedefOverlay(unsigned which, UINT32 i, const char *par
 {
 	side_overlay_t *overlay = &sides[i].overlays[which];
 	if (fastcmp(param, "texture"))
+	{
 		overlay->texture = R_TextureNumForName(val);
+		if (overlay->texture)
+			sides[i].flags |= SIDEFLAG_HASEDGETEXTURES;
+	}
 	else if (fastcmp(param, "offsetx"))
 		overlay->offsetx = FLOAT_TO_FIXED(atof(val));
 	else if (fastcmp(param, "offsety"))
@@ -1919,6 +1929,8 @@ static void ParseTextmapSidedefOverlay(unsigned which, UINT32 i, const char *par
 		overlay->scaley = FLOAT_TO_FIXED(atof(val));
 	else if (fastcmp(param, "noskew") && fastcmp("true", val))
 		overlay->flags |= SIDEOVERLAYFLAG_NOSKEW;
+	else if (fastcmp(param, "noclip") && fastcmp("true", val))
+		overlay->flags |= SIDEOVERLAYFLAG_NOCLIP;
 	else if (fastcmp(param, "wrap") && fastcmp("true", val))
 		overlay->flags |= SIDEOVERLAYFLAG_WRAP;
 }
@@ -2243,6 +2255,8 @@ static void WriteTextmapEdgeTexture(const char *prefix, unsigned i, side_t *side
 		fprintf(f, "%s""scaley = %f;\n", prefix, FIXED_TO_FLOAT(side->overlays[i].scaley));
 	if (side->overlays[i].flags & SIDEOVERLAYFLAG_NOSKEW)
 		fprintf(f, "%s""noskew = true;\n", prefix);
+	if (side->overlays[i].flags & SIDEOVERLAYFLAG_NOCLIP)
+		fprintf(f, "%s""noclip = true;\n", prefix);
 	if (side->overlays[i].flags & SIDEOVERLAYFLAG_WRAP)
 		fprintf(f, "%s""wrap = true;\n", prefix);
 }
@@ -3105,15 +3119,10 @@ static void P_LoadTextmap(void)
 		sd->toptexture = R_TextureNumForName("-");
 		sd->midtexture = R_TextureNumForName("-");
 		sd->bottomtexture = R_TextureNumForName("-");
-		for (unsigned j = 0; j < NUM_WALL_OVERLAYS; j++)
-		{
-			sd->overlays[j].texture = R_TextureNumForName("-");
-			sd->overlays[j].offsetx = sd->overlays[j].offsety = 0;
-			sd->overlays[j].scalex = sd->overlays[j].scaley = FRACUNIT;
-			sd->overlays[j].flags = 0;
-		}
 		sd->sector = NULL;
 		sd->repeatcnt = 0;
+
+		P_InitSideEdges(sd);
 
 		TextmapParse(sidesPos[i], i, ParseTextmapSidedefParameter);
 
@@ -3407,8 +3416,6 @@ static void P_InitializeSeg(seg_t *seg)
 	seg->lightmaps = NULL; // list of static lightmap for this seg
 #endif
 
-	seg->numlights = 0;
-	seg->rlights = NULL;
 	seg->polyseg = NULL;
 	seg->dontrenderme = false;
 }

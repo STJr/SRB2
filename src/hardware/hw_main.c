@@ -1198,12 +1198,12 @@ static void HWR_RenderMidtexture(INT32 gl_midtexture, float cliplow, float cliph
 	// Left side
 	wallVerts[3].t = texturevpeg * yscale * grTex->scaleY;
 	wallVerts[0].t = (h - l + texturevpeg) * yscale * grTex->scaleY;
-	wallVerts[0].s = wallVerts[3].s = ((cliplow * xscale) + gl_sidedef->offsetx_mid) * grTex->scaleX;
+	wallVerts[0].s = wallVerts[3].s = ((cliplow * xscale) + gl_sidedef->textureoffset + gl_sidedef->offsetx_mid) * grTex->scaleX;
 
 	// Right side
 	wallVerts[2].t = texturevpegslope * yscale * grTex->scaleY;
 	wallVerts[1].t = (hS - lS + texturevpegslope) * yscale * grTex->scaleY;
-	wallVerts[2].s = wallVerts[1].s = ((cliphigh * xscale) + gl_sidedef->offsetx_mid) * grTex->scaleX;
+	wallVerts[2].s = wallVerts[1].s = ((cliphigh * xscale) + gl_sidedef->textureoffset + gl_sidedef->offsetx_mid) * grTex->scaleX;
 
 	// set top/bottom coords
 	// Take the texture peg into account, rather than changing the offsets past
@@ -1429,11 +1429,23 @@ static void HWR_RenderExtraTexture(unsigned which, side_t *side, sector_t *sec_f
 	fixed_t lowcutslope, highcutslope;
 
 #define GET_CLIP_HEIGHTS() \
-	if (polyobj) \
+	if ((pfloor || polyobj) && (overlay->flags & SIDEOVERLAYFLAG_NOCLIP)) \
 	{ \
-		/* Overlay textures on poly objects aren't clipped */ \
 		lowcut = lowcutslope = INT32_MIN; \
 		highcut = highcutslope = INT32_MAX; \
+	} \
+	else if (polyobj) \
+	{ \
+		if (R_GetTextureNum(gl_sidedef->midtexture)) \
+		{ \
+			lowcut = lowcutslope = sec_back->floorheight; \
+			highcut = highcutslope = sec_back->ceilingheight; \
+		} \
+		else \
+		{ \
+			lowcut = lowcutslope = INT32_MIN; \
+			highcut = highcutslope = INT32_MAX; \
+		} \
 	} \
 	else if (!sec_back) \
 	{ \
@@ -1762,12 +1774,12 @@ static void HWR_RenderExtraTexture(unsigned which, side_t *side, sector_t *sec_f
 	// Left side
 	wallVerts[3].t = texturevpeg * yscale * grTex->scaleY;
 	wallVerts[0].t = (h - l + texturevpeg) * yscale * grTex->scaleY;
-	wallVerts[0].s = wallVerts[3].s = ((xcliplow * xscale) + overlay->offsetx) * grTex->scaleX;
+	wallVerts[0].s = wallVerts[3].s = ((xcliplow * xscale) + gl_sidedef->textureoffset + overlay->offsetx) * grTex->scaleX;
 
 	// Right side
 	wallVerts[2].t = texturevpegslope * yscale * grTex->scaleY;
 	wallVerts[1].t = (hS - lS + texturevpegslope) * yscale * grTex->scaleY;
-	wallVerts[2].s = wallVerts[1].s = ((xcliphigh * xscale) + overlay->offsetx) * grTex->scaleX;
+	wallVerts[2].s = wallVerts[1].s = ((xcliphigh * xscale) + gl_sidedef->textureoffset + overlay->offsetx) * grTex->scaleX;
 
 	// set top/bottom coords
 	wallVerts[3].y = FIXED_TO_FLOAT(h);
@@ -1869,12 +1881,12 @@ static void HWR_RenderExtraTexture(unsigned which, side_t *side, sector_t *sec_f
 	// Left side
 	wallVerts[3].t = texturevpeg * yscale * grTex->scaleY;
 	wallVerts[0].t = (h - l + texturevpeg) * yscale * grTex->scaleY;
-	wallVerts[0].s = wallVerts[3].s = ((xcliplow * xscale) + overlay->offsetx) * grTex->scaleX;
+	wallVerts[0].s = wallVerts[3].s = ((xcliplow * xscale) + gl_sidedef->textureoffset + overlay->offsetx) * grTex->scaleX;
 
 	// Right side
 	wallVerts[2].t = texturevpegslope * yscale * grTex->scaleY;
 	wallVerts[1].t = (hS - lS + texturevpegslope) * yscale * grTex->scaleY;
-	wallVerts[2].s = wallVerts[1].s = ((xcliphigh * xscale) + overlay->offsetx) * grTex->scaleX;
+	wallVerts[2].s = wallVerts[1].s = ((xcliphigh * xscale) + gl_sidedef->textureoffset + overlay->offsetx) * grTex->scaleX;
 
 	RENDER_WALL_POLYGON();
 
@@ -1883,7 +1895,7 @@ static void HWR_RenderExtraTexture(unsigned which, side_t *side, sector_t *sec_f
 
 static void HWR_RenderFFloorExtraTextures(ffloor_t *pfloor, v2d_t vs, v2d_t ve, float xcliplow, float xcliphigh, FSurfaceInfo Surf, FBITFIELD blendmode)
 {
-	side_t *pside = &sides[pfloor->master->sidenum[0]];
+	side_t *pside = R_GetFFloorSide(gl_curline, pfloor);
 	sector_t *psector = pfloor->master->frontsector;
 
 	HWR_RenderExtraTexture(EDGE_TEXTURE_TOP_UPPER, pside, psector, NULL, pfloor, NULL, vs, ve, xcliplow, xcliphigh, Surf, blendmode);
@@ -1961,9 +1973,8 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 	wallVerts[2].z = wallVerts[1].z = ve.y;
 
 	// x offset the texture
-	fixed_t texturehpeg = gl_sidedef->textureoffset + gl_curline->offset;
-	float cliplow = (float)texturehpeg;
-	float cliphigh = (float)(texturehpeg + (gl_curline->flength*FRACUNIT));
+	float cliplow = (float)gl_curline->offset;
+	float cliphigh = cliplow + (gl_curline->flength * FRACUNIT);
 
 	UINT32 lightnum = HWR_CalcWallLight(gl_frontsector->lightlevel, vs.x, vs.y, ve.x, ve.y);
 	extracolormap_t *colormap = gl_frontsector->extra_colormap;
@@ -2013,7 +2024,7 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 			xscale = FixedToFloat(abs(gl_sidedef->scalex_top));
 			yscale = FixedToFloat(abs(gl_sidedef->scaley_top));
 
-			fixed_t offsetx_top = gl_sidedef->offsetx_top;
+			fixed_t offsetx_top = gl_sidedef->textureoffset + gl_sidedef->offsetx_top;
 
 			float left = cliplow * xscale;
 			float right = cliphigh * xscale;
@@ -2024,15 +2035,17 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 				offsetx_top = -offsetx_top;
 			}
 
-			fixed_t texheight = FixedDiv(textureheight[gl_toptexture], abs(gl_sidedef->scaley_top));
+			fixed_t texheight = textureheight[gl_toptexture];
+			fixed_t texheightscaled = FixedDiv(texheight, abs(gl_sidedef->scaley_top));
 
 			// PEGGING
+			// FIXME: This is probably not correct?
 			if (gl_linedef->flags & ML_DONTPEGTOP)
 				texturevpeg = 0;
 			else if (gl_linedef->flags & ML_SKEWTD)
 				texturevpeg = worldhigh + texheight - worldtop;
 			else
-				texturevpeg = gl_backsector->ceilingheight + texheight - gl_frontsector->ceilingheight;
+				texturevpeg = gl_backsector->ceilingheight + texheightscaled - gl_frontsector->ceilingheight;
 
 			texturevpeg *= yscale;
 
@@ -2042,7 +2055,7 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 				texturevpeg += gl_sidedef->rowoffset + gl_sidedef->offsety_top;
 
 			// This is so that it doesn't overflow and screw up the wall, it doesn't need to go higher than the texture's height anyway
-			texturevpeg %= texheight;
+			texturevpeg %= texheightscaled;
 
 			wallVerts[3].t = wallVerts[2].t = texturevpeg * grTex->scaleY;
 			wallVerts[0].t = wallVerts[1].t = (texturevpeg + (gl_frontsector->ceilingheight - gl_backsector->ceilingheight) * yscale) * grTex->scaleY;
@@ -2103,7 +2116,7 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 			xscale = FixedToFloat(abs(gl_sidedef->scalex_bottom));
 			yscale = FixedToFloat(abs(gl_sidedef->scaley_bottom));
 
-			fixed_t offsetx_bottom = gl_sidedef->offsetx_bottom;
+			fixed_t offsetx_bottom = gl_sidedef->textureoffset + gl_sidedef->offsetx_bottom;
 
 			float left = cliplow * xscale;
 			float right = cliphigh * xscale;
@@ -2252,8 +2265,8 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 
 			wallVerts[3].t = wallVerts[2].t = texturevpeg * grTex->scaleY;
 			wallVerts[0].t = wallVerts[1].t = (texturevpeg + gl_frontsector->ceilingheight - gl_frontsector->floorheight) * grTex->scaleY;
-			wallVerts[0].s = wallVerts[3].s = ((cliplow * xscale) + gl_sidedef->offsetx_mid) * grTex->scaleX;
-			wallVerts[2].s = wallVerts[1].s = ((cliphigh * xscale) + gl_sidedef->offsetx_mid) * grTex->scaleX;
+			wallVerts[0].s = wallVerts[3].s = ((cliplow * xscale) + gl_sidedef->textureoffset + gl_sidedef->offsetx_mid) * grTex->scaleX;
+			wallVerts[2].s = wallVerts[1].s = ((cliphigh * xscale) + gl_sidedef->textureoffset + gl_sidedef->offsetx_mid) * grTex->scaleX;
 
 			// Texture correction for slopes
 			if (gl_linedef->flags & ML_NOSKEW) {
@@ -2320,8 +2333,9 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 		// Used for height comparisons and etc across FOFs and slopes
 		fixed_t high1, highslope1, low1, lowslope1;
 
+		fixed_t texturehpeg = gl_sidedef->textureoffset + gl_sidedef->offsetx_mid;
+
 		INT32 texnum;
-		line_t * newline = NULL; // Multi-Property FOF
 
 		lowcut = max(worldbottom, worldlow);
 		highcut = min(worldtop, worldhigh);
@@ -2355,16 +2369,14 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 				if ((high1 < lowcut && highslope1 < lowcutslope) || (low1 > highcut && lowslope1 > highcutslope))
 					continue;
 
-				side_t *side = &sides[rover->master->sidenum[0]];
+				side_t *side = R_GetFFloorSide(gl_curline, rover);
 
 				boolean do_texture_skew;
 				boolean dont_peg_bottom;
 
 				if (rover->master->flags & ML_TFERLINE)
 				{
-					size_t linenum = gl_curline->linedef-gl_backsector->lines[0];
-					newline = rover->master->frontsector->lines[0] + linenum;
-					side = &sides[newline->sidenum[0]];
+					line_t *newline = R_GetFFloorLine(gl_curline, rover);
 					do_texture_skew = newline->flags & ML_SKEWTD;
 					dont_peg_bottom = newline->flags & ML_DONTPEGBOTTOM;
 				}
@@ -2442,8 +2454,8 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 						}
 					}
 
-					wallVerts[0].s = wallVerts[3].s = ((cliplow * xscale) + side->offsetx_mid) * grTex->scaleX;
-					wallVerts[2].s = wallVerts[1].s = ((cliphigh * xscale) + side->offsetx_mid) * grTex->scaleX;
+					wallVerts[0].s = wallVerts[3].s = ((cliplow * xscale) + texturehpeg + side->offsetx_mid) * grTex->scaleX;
+					wallVerts[2].s = wallVerts[1].s = ((cliphigh * xscale) + texturehpeg + side->offsetx_mid) * grTex->scaleX;
 				}
 
 				FBITFIELD blendmode;
@@ -2514,13 +2526,21 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 				if ((high1 < lowcut && highslope1 < lowcutslope) || (low1 > highcut && lowslope1 > highcutslope))
 					continue;
 
-				side_t *side = &sides[rover->master->sidenum[0]];
+				side_t *side = R_GetFFloorSide(gl_curline, rover);
+
+				boolean do_texture_skew;
+				boolean dont_peg_bottom;
 
 				if (rover->master->flags & ML_TFERLINE)
 				{
-					size_t linenum = gl_curline->linedef-gl_backsector->lines[0];
-					newline = rover->master->frontsector->lines[0] + linenum;
-					side = &sides[newline->sidenum[0]];
+					line_t *newline = R_GetFFloorLine(gl_curline, rover);
+					do_texture_skew = newline->flags & ML_SKEWTD;
+					dont_peg_bottom = newline->flags & ML_DONTPEGBOTTOM;
+				}
+				else
+				{
+					do_texture_skew = rover->master->flags & ML_SKEWTD;
+					dont_peg_bottom = gl_curline->linedef->flags & ML_DONTPEGBOTTOM;
 				}
 
 				texnum = R_GetTextureNum(side->midtexture);
@@ -2557,17 +2577,43 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 				}
 				else
 				{
+					// Wow, how was this missing from OpenGL for so long?
+					// ...Oh well, anyway, Lower Unpegged now changes pegging of FOFs like in software
+					// -- Monster Iestyn 26/06/18
+					fixed_t texturevpeg = side->rowoffset + side->offsety_mid;
+
 					grTex = HWR_GetTexture(texnum);
 					xscale = FixedToFloat(side->scalex_mid);
 					yscale = FixedToFloat(side->scaley_mid);
 
-					fixed_t diff = (*rover->topheight - h) * yscale;
+					if (!do_texture_skew) // no skewing
+					{
+						if (dont_peg_bottom)
+							texturevpeg -= (*rover->topheight - *rover->bottomheight) * yscale;
 
-					wallVerts[3].t = wallVerts[2].t = (diff + side->rowoffset + side->offsety_mid) * grTex->scaleY;
-					wallVerts[0].t = wallVerts[1].t = (((h - l) * yscale) + (diff + side->rowoffset + side->offsety_mid)) * grTex->scaleY;
+						wallVerts[3].t = (((*rover->topheight - h) * yscale) + texturevpeg) * grTex->scaleY;
+						wallVerts[2].t = (((*rover->topheight - hS) * yscale) + texturevpeg) * grTex->scaleY;
+						wallVerts[0].t = (((*rover->topheight - l) * yscale) + texturevpeg) * grTex->scaleY;
+						wallVerts[1].t = (((*rover->topheight - lS) * yscale) + texturevpeg) * grTex->scaleY;
+					}
+					else
+					{
+						if (!dont_peg_bottom) // skew by top
+						{
+							wallVerts[3].t = wallVerts[2].t = texturevpeg * grTex->scaleY;
+							wallVerts[0].t = (((h - l) * yscale) + texturevpeg) * grTex->scaleY;
+							wallVerts[1].t = (((hS - lS) * yscale) + texturevpeg) * grTex->scaleY;
+						}
+						else // skew by bottom
+						{
+							wallVerts[0].t = wallVerts[1].t = texturevpeg * grTex->scaleY;
+							wallVerts[3].t = wallVerts[0].t - ((h - l) * yscale) * grTex->scaleY;
+							wallVerts[2].t = wallVerts[1].t - ((hS - lS) * yscale) * grTex->scaleY;
+						}
+					}
 
-					wallVerts[0].s = wallVerts[3].s = ((cliplow * xscale) + side->offsetx_mid) * grTex->scaleX;
-					wallVerts[2].s = wallVerts[1].s = ((cliphigh * xscale) + side->offsetx_mid) * grTex->scaleX;
+					wallVerts[0].s = wallVerts[3].s = ((cliplow * xscale) + texturehpeg + side->offsetx_mid) * grTex->scaleX;
+					wallVerts[2].s = wallVerts[1].s = ((cliphigh * xscale) + texturehpeg + side->offsetx_mid) * grTex->scaleX;
 				}
 
 				FBITFIELD blendmode;

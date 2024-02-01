@@ -2752,6 +2752,66 @@ static void R_SortVisSprites(vissprite_t* vsprsortedhead, UINT32 start, UINT32 e
 	}
 }
 
+static fixed_t R_GetHighestSidedefTexture(side_t *side)
+{
+	fixed_t highest = INT32_MIN;
+
+	for (unsigned i = 0; i < NUM_WALL_OVERLAYS; i++)
+	{
+		INT32 texnum = R_GetTextureNum(side->overlays[i].texture);
+		if (texnum <= 0 || texnum >= numtextures)
+			continue;
+
+		fixed_t high = side->rowoffset + side->overlays[i].offsety;
+		if (high > highest)
+			highest = high;
+	}
+
+	if (highest <= 0)
+		return 0;
+
+	return highest;
+}
+
+static fixed_t R_GetLowestSidedefTexture(side_t *side)
+{
+	fixed_t lowest = INT32_MIN;
+
+	for (unsigned i = 0; i < NUM_WALL_OVERLAYS; i++)
+	{
+		INT32 texnum = R_GetTextureNum(side->overlays[i].texture);
+		if (texnum <= 0 || texnum >= numtextures)
+			continue;
+
+		fixed_t low = side->rowoffset + side->overlays[i].offsety + FixedMul(textureheight[texnum], FixedDiv(FRACUNIT, abs(side->overlays[i].scaley)));
+		if (low > lowest)
+			lowest = low;
+	}
+
+	if (lowest <= 0)
+		return 0;
+
+	return lowest;
+}
+
+static fixed_t R_GetFFloorTopZAt(const drawseg_t *ds, const ffloor_t *pfloor, fixed_t x, fixed_t y)
+{
+	side_t *side = R_GetFFloorSide(ds->curline, pfloor);
+	if (side->flags & SIDEFLAG_HASEDGETEXTURES)
+		return P_GetFFloorTopZAt(pfloor, x, y) + R_GetHighestSidedefTexture(side);
+
+	return P_GetFFloorTopZAt(pfloor, x, y);
+}
+
+static fixed_t R_GetFFloorBottomZAt(const drawseg_t *ds, const ffloor_t *pfloor, fixed_t x, fixed_t y)
+{
+	side_t *side = R_GetFFloorSide(ds->curline, pfloor);
+	if (side->flags & SIDEFLAG_HASEDGETEXTURES)
+		return P_GetFFloorBottomZAt(pfloor, x, y) - R_GetLowestSidedefTexture(side);
+
+	return P_GetFFloorBottomZAt(pfloor, x, y);
+}
+
 //
 // R_CreateDrawNodes
 // Creates and sorts a list of drawnodes for the scene being rendered.
@@ -2950,10 +3010,10 @@ static void R_CreateDrawNodes(maskcount_t* mask, drawnode_t* head, boolean temps
 				if (scale <= rover->sortscale)
 					continue;
 
-				topplaneobjectz = P_GetFFloorTopZAt   (r2->ffloor, rover->gx, rover->gy);
-				topplanecameraz = P_GetFFloorTopZAt   (r2->ffloor,     viewx,     viewy);
-				botplaneobjectz = P_GetFFloorBottomZAt(r2->ffloor, rover->gx, rover->gy);
-				botplanecameraz = P_GetFFloorBottomZAt(r2->ffloor,     viewx,     viewy);
+				topplaneobjectz = R_GetFFloorTopZAt   (r2->thickseg, r2->ffloor, rover->gx, rover->gy);
+				topplanecameraz = R_GetFFloorTopZAt   (r2->thickseg, r2->ffloor,     viewx,     viewy);
+				botplaneobjectz = R_GetFFloorBottomZAt(r2->thickseg, r2->ffloor, rover->gx, rover->gy);
+				botplanecameraz = R_GetFFloorBottomZAt(r2->thickseg, r2->ffloor,     viewx,     viewy);
 
 				if ((topplanecameraz > viewz && botplanecameraz < viewz) ||
 				    (topplanecameraz < viewz && rover->gzt < topplaneobjectz) ||

@@ -1462,6 +1462,7 @@ enum sideoverlay_e {
 	sideoverlay_scalex,
 	sideoverlay_scaley,
 	sideoverlay_noskew,
+	sideoverlay_noclip,
 	sideoverlay_wrap
 };
 
@@ -1473,6 +1474,7 @@ static const char *const sideoverlay_opt[] = {
 	"scalex",
 	"scaley",
 	"noskew",
+	"noclip",
 	"wrap",
 	NULL};
 
@@ -1515,6 +1517,9 @@ static int sideoverlay_get(lua_State *L)
 	case sideoverlay_noskew:
 		lua_pushboolean(L, overlay->flags & SIDEOVERLAYFLAG_NOSKEW);
 		return 1;
+	case sideoverlay_noclip:
+		lua_pushboolean(L, overlay->flags & SIDEOVERLAYFLAG_NOCLIP);
+		return 1;
 	case sideoverlay_wrap:
 		lua_pushboolean(L, overlay->flags & SIDEOVERLAYFLAG_WRAP);
 		return 1;
@@ -1544,6 +1549,8 @@ static int sideoverlay_set(lua_State *L)
 		return luaL_error(L, "side_t.overlay has no field named " LUA_QS ".", lua_tostring(L, 2));
 	case sideoverlay_texture:
 		overlay->texture = luaL_checkinteger(L, 3);
+		if (overlay->texture)
+			overlay->side->flags |= SIDEFLAG_HASEDGETEXTURES;
 		break;
 	case sideoverlay_offsetx:
 		overlay->offsetx = luaL_checkfixed(L, 3);
@@ -1562,6 +1569,12 @@ static int sideoverlay_set(lua_State *L)
 			overlay->flags |= SIDEOVERLAYFLAG_NOSKEW;
 		else
 			overlay->flags &= ~SIDEOVERLAYFLAG_NOSKEW;
+		break;
+	case sideoverlay_noclip:
+		if (luaL_checkboolean(L, 3))
+			overlay->flags |= SIDEOVERLAYFLAG_NOCLIP;
+		else
+			overlay->flags &= ~SIDEOVERLAYFLAG_NOCLIP;
 		break;
 	case sideoverlay_wrap:
 		if (luaL_checkboolean(L, 3))

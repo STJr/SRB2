@@ -81,12 +81,14 @@ angle_t R_PointToAngleEx(INT32 x2, INT32 y2, INT32 x1, INT32 y1);
 fixed_t R_PointToDist(fixed_t x, fixed_t y);
 fixed_t R_PointToDist2(fixed_t px2, fixed_t py2, fixed_t px1, fixed_t py1);
 
-fixed_t R_ScaleFromGlobalAngle(angle_t visangle);
 boolean R_IsPointInSector(sector_t *sector, fixed_t x, fixed_t y);
 subsector_t *R_PointInSubsector(fixed_t x, fixed_t y);
 subsector_t *R_PointInSubsectorOrNull(fixed_t x, fixed_t y);
 
 boolean R_DoCulling(line_t *cullheight, line_t *viewcullheight, fixed_t vz, fixed_t bottomh, fixed_t toph);
+
+line_t *R_GetFFloorLine(const seg_t *seg, const ffloor_t *pfloor);
+side_t *R_GetFFloorSide(const seg_t *seg, const ffloor_t *pfloor);
 
 // Render stats
 

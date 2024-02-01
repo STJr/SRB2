@@ -64,7 +64,7 @@ static struct
 	fixed_t mid, slide;
 	fixed_t back, backslide;
 	fixed_t scalex, scaley;
-	fixed_t invscalex, invscaley;
+	fixed_t invscalex;
 	fixed_t offsetx, offsety;
 } rw_overlay[NUM_WALL_OVERLAYS];
 
@@ -617,9 +617,6 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 			else
 				dc_texturemid -= (textureheight[texnum])*times;
 
-			if (hasoverlaytexture && times == 0)
-				R_DoMaskedOverlayColumn(dc_x, maskedtexturecol[dc_x], INT32_MAX, INT32_MAX);
-
 			// Check for overflows first
 			overflow_test = (INT64)centeryfrac - (((INT64)dc_texturemid*spryscale)>>FRACBITS);
 			if (overflow_test < 0) overflow_test = -overflow_test;
@@ -652,6 +649,9 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 			}
 
 			sprtopscreen = centeryfrac - FixedMul(texture_top, spryscale);
+
+			if (hasoverlaytexture && times == 0)
+				R_DoMaskedOverlayColumn(dc_x, maskedtexturecol[dc_x], sprtopscreen, centeryfrac - FixedMul(texture_bottom, spryscale));
 
 			// set wall bounds if there is a light list, or if this is a polyobject side
 			if (dc_numlights || curline->polyseg)
@@ -845,9 +845,6 @@ static void R_RenderExtraTexture(unsigned which, INT32 x1, INT32 x2, INT32 repea
 	// Setup lighting based on the presence/lack-of 3D floors.
 	R_PrepareMaskedSegLightlist(ds, range);
 
-	mfloorclip = overlayopening[1];
-	mceilingclip = overlayopening[0];
-
 	for (times = 0; times < repeats; times++)
 	{
 		if (times > 0)
@@ -1025,6 +1022,11 @@ static boolean R_IsFFloorTranslucent(visffloor_t *pfloor)
 	return false;
 }
 
+static fixed_t R_GetSlopeTextureSlide(pslope_t *slope, angle_t lineangle)
+{
+	return FixedMul(slope->zdelta, FINECOSINE((lineangle-slope->xydirection)>>ANGLETOFINESHIFT));
+}
+
 //
 // R_RenderThickSideRange
 // Renders all the thick sides in the given range.
@@ -1050,11 +1052,12 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 	// skew FOF walls with slopes?
 	fixed_t       ffloortextureslide = 0, topslopeslide = 0, bottomslopeslide = 0;
 	angle_t       lineangle;
-	INT32         oldx = -1;
+	fixed_t       oldtexturecolumn = -1;
 	fixed_t       left_top, left_bottom; // needed here for slope skewing
 	pslope_t      *skewslope = NULL;
 	boolean do_texture_skew;
 	boolean dont_peg_bottom;
+	fixed_t wall_offsetx;
 	fixed_t wall_scalex, wall_scaley;
 	INT32 blendlevel = 0;
 	UINT8 vertflip;
@@ -1069,15 +1072,13 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 	curline = ds->curline;
 	backsector = NULL;
 	frontsector = curline->frontsector == pfloor->target ? curline->backsector : curline->frontsector;
-	sidedef = &sides[pfloor->master->sidenum[0]];
+	sidedef = R_GetFFloorSide(curline, pfloor);
 
 	colfunc = colfuncs[BASEDRAWFUNC];
 
 	if (pfloor->master->flags & ML_TFERLINE)
 	{
-		size_t linenum = curline->linedef-pfloor->target->lines[0];
-		line_t *newline = pfloor->master->frontsector->lines[0] + linenum;
-		sidedef = &sides[newline->sidenum[0]];
+		line_t *newline = R_GetFFloorLine(curline, pfloor);
 		do_texture_skew = newline->flags & ML_SKEWTD;
 		dont_peg_bottom = newline->flags & ML_DONTPEGBOTTOM;
 	}
@@ -1248,15 +1249,17 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 
 	thicksidecol = ffloortexturecolumn;
 
+	wall_offsetx = ds->offsetx + sidedef->offsetx_mid;
+
 	if (wall_scalex == FRACUNIT)
 	{
 		for (INT32 x = x1; x <= x2; x++)
-			thicksidecol[x] = ds->thicksidecol[x] + ds->offsetx;
+			thicksidecol[x] = ds->thicksidecol[x];
 	}
 	else
 	{
 		for (INT32 x = x1; x <= x2; x++)
-			thicksidecol[x] = FixedDiv(ds->thicksidecol[x], wall_scalex) + ds->offsetx;
+			thicksidecol[x] = FixedDiv(ds->thicksidecol[x], wall_scalex);
 	}
 
 	mfloorclip = ds->sprbottomclip;
@@ -1291,7 +1294,7 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 	lineangle = R_PointToAngle2(curline->v1->x, curline->v1->y, curline->v2->x, curline->v2->y);
 
 	if (skewslope)
-		ffloortextureslide = FixedMul(skewslope->zdelta, FINECOSINE((lineangle-skewslope->xydirection)>>ANGLETOFINESHIFT));
+		ffloortextureslide = FixedMul(R_GetSlopeTextureSlide(skewslope, lineangle), wall_scaley);
 
 	dc_texturemid += offsetvalue;
 
@@ -1348,9 +1351,9 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 	if (hasoverlaytexture)
 	{
 		if (*pfloor->t_slope)
-			topslopeslide = FixedMul((*pfloor->t_slope)->zdelta, FINECOSINE((lineangle-(*pfloor->t_slope)->xydirection)>>ANGLETOFINESHIFT));
+			topslopeslide = R_GetSlopeTextureSlide(*pfloor->t_slope, lineangle);
 		if (*pfloor->b_slope)
-			bottomslopeslide = FixedMul((*pfloor->b_slope)->zdelta, FINECOSINE((lineangle-(*pfloor->b_slope)->xydirection)>>ANGLETOFINESHIFT));
+			bottomslopeslide = R_GetSlopeTextureSlide(*pfloor->b_slope, lineangle);
 
 		R_AddOverlayTextures(pfloor->master->frontsector, NULL, left_top, left_bottom, 0, 0, topslopeslide, bottomslopeslide, 0, 0);
 
@@ -1364,9 +1367,9 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 		// skew FOF walls
 		if (ffloortextureslide)
 		{
-			if (oldx != -1)
-				dc_texturemid += FixedMul(ffloortextureslide, thicksidecol[oldx]-thicksidecol[dc_x]);
-			oldx = dc_x;
+			if (oldtexturecolumn != -1)
+				dc_texturemid += FixedMul(ffloortextureslide, oldtexturecolumn-ds->thicksidecol[dc_x]);
+			oldtexturecolumn = ds->thicksidecol[dc_x];
 		}
 
 		// Calculate bounds
@@ -1404,7 +1407,7 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 		dc_iscale = FixedMul(0xffffffffu / (unsigned)spryscale, wall_scaley);
 
 		// Get data for the column
-		col = (column_t *)((UINT8 *)R_GetColumn(texnum, (thicksidecol[dc_x] >> FRACBITS)) - 3);
+		col = (column_t *)((UINT8 *)R_GetColumn(texnum, ((thicksidecol[dc_x] + wall_offsetx) >> FRACBITS)) - 3);
 
 		// SoM: New code does not rely on R_DrawColumnShadowed_8 which
 		// will (hopefully) put less strain on the stack.
@@ -1939,8 +1942,8 @@ static void R_RenderSegLoop (void)
 					ceilingclip[rw_x] = topclip;
 
 				if (oldtexturecolumn_top != -1)
-					rw_toptexturemid += FixedMul(rw_toptextureslide, oldtexturecolumn_top-toptexturecolumn);
-				oldtexturecolumn_top = toptexturecolumn;
+					rw_toptexturemid += FixedMul(rw_toptextureslide, oldtexturecolumn_top-textureoffset);
+				oldtexturecolumn_top = textureoffset;
 			}
 			else if (markceiling && (!rw_ceilingmarked)) // no top wall
 				ceilingclip[rw_x] = topclip;
@@ -1985,8 +1988,8 @@ static void R_RenderSegLoop (void)
 					floorclip[rw_x] = bottomclip;
 
 				if (oldtexturecolumn_bottom != -1)
-					rw_bottomtexturemid += FixedMul(rw_bottomtextureslide, oldtexturecolumn_bottom-bottomtexturecolumn);
-				oldtexturecolumn_bottom = bottomtexturecolumn;
+					rw_bottomtexturemid += FixedMul(rw_bottomtextureslide, oldtexturecolumn_bottom-textureoffset);
+				oldtexturecolumn_bottom = textureoffset;
 			}
 			else if (markfloor && (!rw_floormarked)) // no bottom wall
 				floorclip[rw_x] = bottomclip;
@@ -2010,14 +2013,14 @@ static void R_RenderSegLoop (void)
 		{
 			if (oldtexturecolumn != -1)
 			{
-				INT32 diff = oldtexturecolumn-texturecolumn;
+				INT32 diff = oldtexturecolumn-textureoffset;
 				if (rw_invmidtexturescalex < 0)
 					diff = -diff;
 				rw_midtexturemid += FixedMul(rw_midtextureslide, diff);
 				rw_midtextureback += FixedMul(rw_midtexturebackslide, diff);
 			}
 
-			oldtexturecolumn = texturecolumn;
+			oldtexturecolumn = textureoffset;
 		}
 
 		if (hasoverlaytexture)
@@ -2167,6 +2170,9 @@ static void R_AllocTextureColumnTables(size_t range)
 
 static boolean R_CheckExtraTextures(boolean onesided)
 {
+	if (!(sidedef->flags & SIDEFLAG_HASEDGETEXTURES))
+		return false;
+
 	INT32 texnums[4] = {
 		R_GetTextureNum(sidedef->overlays[0].texture),
 		R_GetTextureNum(sidedef->overlays[1].texture),
@@ -2214,7 +2220,6 @@ static void R_AddOverlayTextures(sector_t *sec_front, sector_t *sec_back, fixed_
 			rw_overlay[i].offsety = sidedef->overlays[i].offsety;
 
 			rw_overlay[i].invscalex = FixedDiv(FRACUNIT, rw_overlay[i].scalex);
-			rw_overlay[i].invscaley = FixedDiv(FRACUNIT, abs(rw_overlay[i].scaley));
 
 			if (sidedef->overlays[i].flags & SIDEOVERLAYFLAG_NOSKEW)
 			{
@@ -2267,6 +2272,9 @@ static void R_AddOverlayTextures(sector_t *sec_front, sector_t *sec_back, fixed_
 			rw_overlay[i].mid = FixedMul(rw_overlay[i].mid, abs(rw_overlay[i].scaley));
 			rw_overlay[i].back = FixedMul(rw_overlay[i].back, abs(rw_overlay[i].scaley));
 
+			rw_overlay[i].slide = FixedMul(rw_overlay[i].slide, abs(rw_overlay[i].scaley));
+			rw_overlay[i].backslide = FixedMul(rw_overlay[i].backslide, abs(rw_overlay[i].scaley));
+
 			rw_overlay[i].mid += sidedef->rowoffset + rw_overlay[i].offsety;
 			rw_overlay[i].back += sidedef->rowoffset + rw_overlay[i].offsety;
 		}
@@ -2304,13 +2312,13 @@ static void R_StoreOverlayColumn(INT32 x, fixed_t textureoffset)
 		if (rw_overlay[i].scalex < 0)
 			offset = -offset;
 
-		overlaycolumn[i] = FixedDiv(textureoffset, rw_overlay[i].invscaley);
+		overlaycolumn[i] = textureoffset;
 		overlaytexturecol[i][x] = FixedDiv(textureoffset, rw_overlay[i].invscalex) + offset;
 
 		if (oldoverlaycolumn[i] != -1)
 		{
 			INT32 diff = oldoverlaycolumn[i]-overlaycolumn[i];
-			if (rw_overlay[i].scalex < 0)
+			if (rw_overlay[i].invscalex < 0)
 				diff = -diff;
 			rw_overlay[i].mid += FixedMul(rw_overlay[i].slide, diff);
 			rw_overlay[i].back += FixedMul(rw_overlay[i].backslide, diff);
@@ -2320,25 +2328,62 @@ static void R_StoreOverlayColumn(INT32 x, fixed_t textureoffset)
 	}
 }
 
+static void R_RenderSingleOverlayTexture(unsigned which, drawseg_t *ds, INT32 x1, INT32 x2, sector_t *sec_front, sector_t *sec_back, UINT32 blendmode, UINT8 blendlevel)
+{
+	if (!overlaytexture[which])
+		return;
+
+	INT32 repeats = R_GetOverlayTextureRepeats(which, sidedef, overlaytexture[which],
+		sec_front, sec_back,
+		ds->leftpos.x, ds->leftpos.y, ds->rightpos.x, ds->rightpos.y);
+
+	if (sidedef->overlays[which].flags & SIDEOVERLAYFLAG_NOCLIP)
+	{
+		mfloorclip = ds->sprbottomclip;
+		mceilingclip = ds->sprtopclip;
+	}
+	else
+	{
+		mfloorclip = overlayopening[1];
+		mceilingclip = overlayopening[0];
+	}
+
+	R_RenderExtraTexture(which, x1, x2, repeats, blendmode, blendlevel, ds);
+}
+
 static void R_RenderMaskedOverlayTextures(drawseg_t *ds, INT32 x1, INT32 x2, sector_t *sec_front, sector_t *sec_back, UINT32 blendmode, UINT8 blendlevel)
 {
-	INT32 repeats;
+	R_RenderSingleOverlayTexture(EDGE_TEXTURE_TOP_UPPER, ds, x1, x2, sec_front, sec_back, blendmode, blendlevel);
+	R_RenderSingleOverlayTexture(EDGE_TEXTURE_BOTTOM_LOWER, ds, x1, x2, sec_front, sec_back, blendmode, blendlevel);
+}
 
-	if (overlaytexture[EDGE_TEXTURE_TOP_UPPER])
-	{
-		repeats = R_GetOverlayTextureRepeats(EDGE_TEXTURE_TOP_UPPER, sidedef, overlaytexture[EDGE_TEXTURE_TOP_UPPER],
-			sec_front, sec_back,
-			ds->leftpos.x, ds->leftpos.y, ds->rightpos.x, ds->rightpos.y);
-		R_RenderExtraTexture(EDGE_TEXTURE_TOP_UPPER, x1, x2, repeats, blendmode, blendlevel, ds);
-	}
+//
+// R_ScaleFromGlobalAngle
+// Returns the texture mapping scale for the current line (horizontal span)
+//  at the given angle.
+// rw_distance must be calculated first.
+//
+// killough 5/2/98: reformatted, cleaned up
+//
+// note: THIS IS USED ONLY FOR WALLS!
+static fixed_t R_ScaleFromGlobalAngle(angle_t visangle)
+{
+	angle_t anglea = ANGLE_90 + (visangle-viewangle);
+	angle_t angleb = ANGLE_90 + (visangle-rw_normalangle);
+	fixed_t den = FixedMul(rw_distance, FINESINE(anglea>>ANGLETOFINESHIFT));
+	// proff 11/06/98: Changed for high-res
+	fixed_t num = FixedMul(projectiony, FINESINE(angleb>>ANGLETOFINESHIFT));
 
-	if (overlaytexture[EDGE_TEXTURE_BOTTOM_LOWER])
+	if (den > num>>16)
 	{
-		repeats = R_GetOverlayTextureRepeats(EDGE_TEXTURE_BOTTOM_LOWER, sidedef, overlaytexture[EDGE_TEXTURE_BOTTOM_LOWER],
-			sec_front, sec_back,
-			ds->leftpos.x, ds->leftpos.y, ds->rightpos.x, ds->rightpos.y);
-		R_RenderExtraTexture(EDGE_TEXTURE_BOTTOM_LOWER, x1, x2, repeats, blendmode, blendlevel, ds);
+		num = FixedDiv(num, den);
+		if (num > 64*FRACUNIT)
+			return 64*FRACUNIT;
+		if (num < 256)
+			return 256;
+		return num;
 	}
+	return 64*FRACUNIT;
 }
 
 //
@@ -2555,16 +2600,19 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 		angle_t lineangle = R_PointToAngle2(curline->v1->x, curline->v1->y, curline->v2->x, curline->v2->y);
 
 		if (frontsector->f_slope)
-			floorfrontslide = FixedMul(frontsector->f_slope->zdelta, FINECOSINE((lineangle-frontsector->f_slope->xydirection)>>ANGLETOFINESHIFT));
+			floorfrontslide = R_GetSlopeTextureSlide(frontsector->f_slope, lineangle);
 
 		if (frontsector->c_slope)
-			ceilingfrontslide = FixedMul(frontsector->c_slope->zdelta, FINECOSINE((lineangle-frontsector->c_slope->xydirection)>>ANGLETOFINESHIFT));
+			ceilingfrontslide = R_GetSlopeTextureSlide(frontsector->c_slope, lineangle);
 
-		if (backsector && backsector->f_slope)
-			floorbackslide = FixedMul(backsector->f_slope->zdelta, FINECOSINE((lineangle-backsector->f_slope->xydirection)>>ANGLETOFINESHIFT));
+		if (backsector)
+		{
+			if (backsector->f_slope)
+				floorbackslide = R_GetSlopeTextureSlide(backsector->f_slope, lineangle);
 
-		if (backsector && backsector->c_slope)
-			ceilingbackslide = FixedMul(backsector->c_slope->zdelta, FINECOSINE((lineangle-backsector->c_slope->xydirection)>>ANGLETOFINESHIFT));
+			if (backsector->c_slope)
+				ceilingbackslide = R_GetSlopeTextureSlide(backsector->c_slope, lineangle);
+		}
 	}
 
 	rw_midtexturescalex = sidedef->scalex_mid;
@@ -2594,13 +2642,13 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 			else if (linedef->flags & ML_DONTPEGBOTTOM)
 			{
 				rw_midtexturemid = FixedMul(worldbottom, scaley) + texheight;
-				rw_midtextureslide = floorfrontslide;
+				rw_midtextureslide = FixedMul(floorfrontslide, scaley);
 			}
 			else
 			{
 				// top of texture at top
 				rw_midtexturemid = FixedMul(worldtop, scaley);
-				rw_midtextureslide = ceilingfrontslide;
+				rw_midtextureslide = FixedMul(ceilingfrontslide, scaley);
 			}
 		}
 		else
@@ -2618,13 +2666,13 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 			else if (linedef->flags & ML_DONTPEGBOTTOM)
 			{
 				rw_midtexturemid = FixedMul(worldbottom, scaley);
-				rw_midtextureslide = floorfrontslide;
+				rw_midtextureslide = FixedMul(floorfrontslide, scaley);
 			}
 			else
 			{
 				// top of texture at top
 				rw_midtexturemid = FixedMul(worldtop, scaley) + texheight;
-				rw_midtextureslide = ceilingfrontslide;
+				rw_midtextureslide = FixedMul(ceilingfrontslide, scaley);
 			}
 		}
 
@@ -2833,15 +2881,16 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 			{
 				// top of texture at top
 				rw_toptexturemid = worldtop;
-				rw_toptextureslide = ceilingfrontslide;
+				rw_toptextureslide = FixedMul(ceilingfrontslide, abs(rw_toptexturescaley));
 			}
 			else
 			{
 				rw_toptexturemid = worldhigh + texheight;
-				rw_toptextureslide = ceilingbackslide;
+				rw_toptextureslide = FixedMul(ceilingbackslide, abs(rw_toptexturescaley));
 			}
 
 			rw_toptexturemid = FixedMul(rw_toptexturemid, abs(rw_toptexturescaley));
+			rw_toptexturemid += toprowoffset;
 		}
 
 		// check BOTTOM TEXTURE
@@ -2872,20 +2921,18 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 				// bottom of texture at bottom
 				// top of texture at top
 				rw_bottomtexturemid = worldbottom;
-				rw_bottomtextureslide = floorfrontslide;
+				rw_bottomtextureslide = FixedMul(floorfrontslide, abs(rw_bottomtexturescaley));
 			}
 			else
 			{
 				// top of texture at top
 				rw_bottomtexturemid = worldlow;
-				rw_bottomtextureslide = floorbackslide;
+				rw_bottomtextureslide = FixedMul(floorbackslide, abs(rw_bottomtexturescaley));
 			}
 
 			rw_bottomtexturemid = FixedMul(rw_bottomtexturemid, abs(rw_bottomtexturescaley));
+			rw_bottomtexturemid += botrowoffset;
 		}
-
-		rw_toptexturemid += toprowoffset;
-		rw_bottomtexturemid += botrowoffset;
 
 		// allocate space for masked texture tables
 		R_AllocTextureColumnTables(rw_stopx - start);
@@ -3135,6 +3182,9 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 
 			rw_midtexturemid = FixedMul(rw_midtexturemid, abs(rw_midtexturescaley));
 			rw_midtextureback = FixedMul(rw_midtextureback, abs(rw_midtexturescaley));
+
+			rw_midtextureslide = FixedMul(rw_midtextureslide, abs(rw_midtexturescaley));
+			rw_midtexturebackslide = FixedMul(rw_midtexturebackslide, abs(rw_midtexturescaley));
 
 			rw_midtexturemid += sidedef->rowoffset + sidedef->offsety_mid;
 			rw_midtextureback += sidedef->rowoffset + sidedef->offsety_mid;
@@ -3686,6 +3736,9 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 	// Render up to four extra textures when everything is done
 	if (hasoverlaytexture)
 	{
+		mfloorclip = overlayopening[1];
+		mceilingclip = overlayopening[0];
+
 		for (i = 0; i < NUM_WALL_OVERLAYS; i++)
 		{
 			if (overlaytexture[i])
