@@ -1290,9 +1290,9 @@ static void HWR_GetExtraTextureCoords(unsigned which, side_t *side, sector_t *se
 		if (IS_UPPER_EDGE_TEXTURE(which))
 		{
 			polytop = frontcoords[0] + rowoffset;
-			polybottom = frontcoords[0] - midtexheight;
+			polybottom = polytop - midtexheight;
 			polytopslope = frontcoords[1] + rowoffset;
-			polybottomslope = frontcoords[1] - midtexheight;
+			polybottomslope = polytopslope - midtexheight;
 		}
 		else
 		{
@@ -1307,9 +1307,9 @@ static void HWR_GetExtraTextureCoords(unsigned which, side_t *side, sector_t *se
 		if (IS_UPPER_EDGE_TEXTURE(which))
 		{
 			polytop = backcoords[2] + rowoffset;
-			polybottom = backcoords[2] - midtexheight;
+			polybottom = polytop - midtexheight;
 			polytopslope = backcoords[3] + rowoffset;
-			polybottomslope = backcoords[3] - midtexheight;
+			polybottomslope = polytopslope - midtexheight;
 		}
 		else
 		{
