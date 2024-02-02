@@ -1975,6 +1975,10 @@ static void ParseTextmapSidedefParameter(UINT32 i, const char *param, const char
 		P_SetSidedefSector(i, atol(val));
 	else if (fastcmp(param, "repeatcnt"))
 		sides[i].repeatcnt = atol(val);
+	else if (fastcmp(param, "clipmidtex") && fastcmp("true", val))
+		sides[i].flags |= SIDEFLAG_CLIP_MIDTEX;
+	else if (fastcmp(param, "wrapmidtex") && fastcmp("true", val))
+		sides[i].flags |= SIDEFLAG_WRAP_MIDTEX;
 	// Parse edge fields
 	else if (fastncmp(param, "edge_", 5) && strlen(param) > 5)
 	{
@@ -2725,6 +2729,10 @@ static void P_WriteTextmap(void)
 			fprintf(f, "texturemiddle = \"%.*s\";\n", 8, textures[wsides[i].midtexture]->name);
 		if (wsides[i].repeatcnt != 0)
 			fprintf(f, "repeatcnt = %d;\n", wsides[i].repeatcnt);
+		if (wsides[i].flags & SIDEFLAG_CLIP_MIDTEX)
+			fprintf(f, "clipmidtex = true;\n");
+		if (wsides[i].flags & SIDEFLAG_WRAP_MIDTEX)
+			fprintf(f, "wrapmidtex = true;\n");
 		WriteTextmapEdgeTexture("edge_top_upper_", EDGE_TEXTURE_TOP_UPPER, &wsides[i], f);
 		WriteTextmapEdgeTexture("edge_top_lower_", EDGE_TEXTURE_TOP_LOWER, &wsides[i], f);
 		WriteTextmapEdgeTexture("edge_bottom_upper_", EDGE_TEXTURE_BOTTOM_UPPER, &wsides[i], f);

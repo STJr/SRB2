@@ -612,7 +612,10 @@ typedef struct line_s
 // Don't make available to Lua or I will find where you live
 typedef enum
 {
-	SIDEFLAG_HASEDGETEXTURES = 1
+	SIDEFLAG_CLIP_MIDTEX     = 1<<4, // Like the line counterpart, but only for this side.
+	SIDEFLAG_WRAP_MIDTEX     = 1<<5, // Like the line counterpart, but only for this side.
+
+	SIDEFLAG_HASEDGETEXTURES = 1<<13 // Side has an edge texture applied (so that the renderer can quickly skip all relevant code)
 } sideflags_t;
 
 enum

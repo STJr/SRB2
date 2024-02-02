@@ -498,6 +498,7 @@ void P_LineOpening(line_t *linedef, mobj_t *mobj)
 			fixed_t textop, texbottom, texheight;
 			fixed_t texmid, delta1, delta2;
 			INT32 texnum = R_GetTextureNum(side->midtexture); // make sure the texture is actually valid
+			boolean wrapmidtex = linedef->flags & ML_WRAPMIDTEX || side->flags & SIDEFLAG_WRAP_MIDTEX;
 
 			if (texnum) {
 				// Get the midtexture's height
@@ -508,7 +509,7 @@ void P_LineOpening(line_t *linedef, mobj_t *mobj)
 				// don't remove this code unless solid midtextures
 				// on non-solid polyobjects should NEVER happen in the future
 				if (linedef->polyobj && (linedef->polyobj->flags & POF_TESTHEIGHT)) {
-					if (linedef->flags & ML_WRAPMIDTEX && !side->repeatcnt) { // "infinite" repeat
+					if (wrapmidtex && !side->repeatcnt) { // "infinite" repeat
 						texbottom = back->floorheight + side->rowoffset + side->offsety_mid;
 						textop = back->ceilingheight + side->rowoffset + side->offsety_mid;
 					} else if (linedef->flags & ML_MIDTEX) {
@@ -521,7 +522,7 @@ void P_LineOpening(line_t *linedef, mobj_t *mobj)
 				} else
 #endif
 				{
-					if (linedef->flags & ML_WRAPMIDTEX && !side->repeatcnt) { // "infinite" repeat
+					if (wrapmidtex && !side->repeatcnt) { // "infinite" repeat
 						texbottom = openbottom + side->rowoffset + side->offsety_mid;
 						textop = opentop + side->rowoffset + side->offsety_mid;
 					} else if (linedef->flags & ML_MIDPEG) {

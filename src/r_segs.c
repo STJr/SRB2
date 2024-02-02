@@ -375,7 +375,8 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 	fixed_t wall_scaley;
 	fixed_t scalestep;
 	fixed_t scale1;
-	fixed_t texture_top, texture_bottom;
+	fixed_t texture_top, texture_bottom, texture_height;
+	boolean clipmidtex;
 
 	// Calculate light table.
 	// Use different light tables
@@ -540,9 +541,12 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 	else
 		back = backsector;
 
+	clipmidtex = (ldef->flags & ML_CLIPMIDTEX) || (sidedef->flags & SIDEFLAG_CLIP_MIDTEX);
+	texture_height = FixedDiv(textureheight[texnum], wall_scaley);
+
 	if (sidedef->repeatcnt)
 		repeats = 1 + sidedef->repeatcnt;
-	else if (ldef->flags & ML_WRAPMIDTEX)
+	else if ((ldef->flags & ML_WRAPMIDTEX) || (sidedef->flags & SIDEFLAG_WRAP_MIDTEX))
 	{
 		fixed_t high, low;
 
@@ -556,8 +560,8 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 		else
 			low = back->floorheight;
 
-		repeats = (high - low)/textureheight[texnum];
-		if ((high-low)%textureheight[texnum])
+		repeats = (high - low)/texture_height;
+		if ((high-low)%texture_height)
 			repeats++; // tile an extra time to fill the gap -- Monster Iestyn
 	}
 	else
@@ -570,7 +574,7 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 		fixed_t top_step = 0, bottom_step = 0;
 
 		// Get left and right ends of wall for clipping it
-		if (ldef->flags & ML_CLIPMIDTEX)
+		if (clipmidtex)
 		{
 			// For this to work correctly with polyobjects, it needs to use its own back sector, rather than the seg's front sector
 			sector_t *sec_front = curline->polyseg ?
@@ -607,56 +611,62 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 
 		dc_texheight = textureheight[texnum]>>FRACBITS;
 
+		boolean do_overlay_column = hasoverlaytexture && times == 0;
+
 		// draw the columns
 		for (dc_x = x1; dc_x <= x2; dc_x++)
 		{
 			dc_texturemid = ds->maskedtextureheight[dc_x];
 
 			if (ldef->flags & ML_MIDPEG)
-				dc_texturemid += (textureheight[texnum])*times + textureheight[texnum];
+				dc_texturemid += textureheight[texnum]*times + textureheight[texnum];
 			else
-				dc_texturemid -= (textureheight[texnum])*times;
+				dc_texturemid -= textureheight[texnum]*times;
 
 			// Check for overflows first
 			overflow_test = (INT64)centeryfrac - (((INT64)dc_texturemid*spryscale)>>FRACBITS);
 			if (overflow_test < 0) overflow_test = -overflow_test;
 			if ((UINT64)overflow_test&0xFFFFFFFF80000000ULL)
 			{
-				// Eh, no, go away, don't waste our time
-				if (dc_numlights)
+				if (do_overlay_column)
+					R_DoMaskedOverlayColumn(dc_x, maskedtexturecol[dc_x], INT32_MAX, INT32_MAX);
+				// Skip this column
+				for (i = 0; i < dc_numlights; i++)
 				{
-					for (i = 0; i < dc_numlights; i++)
-					{
-						rlight = &dc_lightlist[i];
-						rlight->height += rlight->heightstep;
-					}
+					rlight = &dc_lightlist[i];
+					rlight->height += rlight->heightstep;
 				}
 				spryscale += rw_scalestep;
+				if (clipmidtex)
+				{
+					left_top += top_step;
+					left_bottom += bottom_step;
+				}
 				continue;
 			}
 
 			texture_top = dc_texturemid;
-			texture_bottom = texture_top - textureheight[texnum];
+			texture_bottom = texture_top - texture_height;
 
 			// If the texture is meant to be clipped
-			if (ldef->flags & ML_CLIPMIDTEX)
+			if (clipmidtex)
 			{
-				texture_top = min(left_top, texture_top);
-				texture_bottom = max(left_bottom, texture_bottom);
+				texture_top = min(FixedMul(left_top, wall_scaley), texture_top);
+				texture_bottom = max(FixedMul(left_bottom, wall_scaley), texture_bottom);
 
 				left_top += top_step;
 				left_bottom += bottom_step;
 			}
 
 			sprtopscreen = centeryfrac - FixedMul(texture_top, spryscale);
+			realbot = centeryfrac - FixedMul(texture_bottom, spryscale);
 
-			if (hasoverlaytexture && times == 0)
-				R_DoMaskedOverlayColumn(dc_x, maskedtexturecol[dc_x], sprtopscreen, centeryfrac - FixedMul(texture_bottom, spryscale));
+			if (do_overlay_column)
+				R_DoMaskedOverlayColumn(dc_x, maskedtexturecol[dc_x], sprtopscreen, realbot);
 
-			// set wall bounds if there is a light list, or if this is a polyobject side
-			if (dc_numlights || curline->polyseg)
+			// set wall bounds if necessary
+			if (dc_numlights || clipmidtex)
 			{
-				realbot = centeryfrac - FixedMul(texture_bottom, spryscale);
 				windowtop = sprtopscreen;
 				windowbottom = realbot;
 			}
@@ -684,7 +694,7 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 					else
 						xwalllights = scalelight[rlight->lightnum];
 
-					pindex = FixedMul(spryscale, LIGHTRESOLUTIONFIX)>>LIGHTSCALESHIFT;
+					pindex = FixedMul(FixedMul(spryscale, wall_scaley), LIGHTRESOLUTIONFIX)>>LIGHTSCALESHIFT;
 
 					if (pindex >= MAXLIGHTSCALE)
 						pindex = MAXLIGHTSCALE - 1;
@@ -729,7 +739,7 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 			}
 
 			// calculate lighting
-			pindex = FixedMul(spryscale, LIGHTRESOLUTIONFIX)>>LIGHTSCALESHIFT;
+			pindex = FixedMul(FixedMul(spryscale, wall_scaley), LIGHTRESOLUTIONFIX)>>LIGHTSCALESHIFT;
 			if (pindex >= MAXLIGHTSCALE)
 				pindex = MAXLIGHTSCALE - 1;
 
@@ -920,7 +930,7 @@ static void R_RenderExtraTexture(unsigned which, INT32 x1, INT32 x2, INT32 repea
 					else
 						xwalllights = scalelight[rlight->lightnum];
 
-					pindex = FixedMul(spryscale, LIGHTRESOLUTIONFIX)>>LIGHTSCALESHIFT;
+					pindex = FixedMul(FixedMul(spryscale, wall_scaley), LIGHTRESOLUTIONFIX)>>LIGHTSCALESHIFT;
 
 					if (pindex >= MAXLIGHTSCALE)
 						pindex = MAXLIGHTSCALE - 1;
@@ -965,7 +975,7 @@ static void R_RenderExtraTexture(unsigned which, INT32 x1, INT32 x2, INT32 repea
 			}
 
 			// calculate lighting
-			pindex = FixedMul(spryscale, LIGHTRESOLUTIONFIX)>>LIGHTSCALESHIFT;
+			pindex = FixedMul(FixedMul(spryscale, wall_scaley), LIGHTRESOLUTIONFIX)>>LIGHTSCALESHIFT;
 
 			if (pindex >= MAXLIGHTSCALE)
 				pindex = MAXLIGHTSCALE - 1;
