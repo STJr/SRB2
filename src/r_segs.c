@@ -2363,6 +2363,8 @@ static void R_RenderSingleOverlayTexture(unsigned which, drawseg_t *ds, INT32 x1
 
 static void R_RenderMaskedOverlayTextures(drawseg_t *ds, INT32 x1, INT32 x2, sector_t *sec_front, sector_t *sec_back, UINT32 blendmode, UINT8 blendlevel)
 {
+	frontsector = curline->frontsector;
+
 	R_RenderSingleOverlayTexture(EDGE_TEXTURE_TOP_UPPER, ds, x1, x2, sec_front, sec_back, blendmode, blendlevel);
 	R_RenderSingleOverlayTexture(EDGE_TEXTURE_BOTTOM_LOWER, ds, x1, x2, sec_front, sec_back, blendmode, blendlevel);
 }
