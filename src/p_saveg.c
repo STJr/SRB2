@@ -3221,6 +3221,8 @@ static thinker_t* LoadMobjThinker(actionf_p1 thinker)
 		slope->normal.x = READFIXED(save_p);
 		slope->normal.y = READFIXED(save_p);
 		slope->normal.z = READFIXED(save_p);
+
+		slope->moved = true;
 	}
 	if (diff2 & MD2_DRAWONLYFORPLAYER)
 		mobj->drawonlyforplayer = &players[READUINT8(save_p)];

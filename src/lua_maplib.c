@@ -2609,12 +2609,18 @@ static int slope_set(lua_State *L)
 			slope->o.z = luaL_checkfixed(L, -1);
 		else
 			slope->o.z = 0;
+		DVector3_Load(&slope->dorigin,
+			FixedToDouble(slope->o.x),
+			FixedToDouble(slope->o.y),
+			FixedToDouble(slope->o.z)
+		);
 		lua_pop(L, 1);
 		break;
 	}
-	case slope_zdelta: { // zdelta, this is temp until i figure out wtf to do
+	case slope_zdelta: { // zdelta
 		slope->zdelta = luaL_checkfixed(L, 3);
 		slope->zangle = R_PointToAngle2(0, 0, FRACUNIT, -slope->zdelta);
+		slope->dzdelta = FixedToDouble(slope->zdelta);
 		P_CalculateSlopeNormal(slope);
 		break;
 	}
@@ -2624,6 +2630,7 @@ static int slope_set(lua_State *L)
 			return luaL_error(L, "invalid zangle for slope!");
 		slope->zangle = zangle;
 		slope->zdelta = -FINETANGENT(((slope->zangle+ANGLE_90)>>ANGLETOFINESHIFT) & 4095);
+		slope->dzdelta = FixedToDouble(slope->zdelta);
 		P_CalculateSlopeNormal(slope);
 		break;
 	}
@@ -2631,6 +2638,8 @@ static int slope_set(lua_State *L)
 		slope->xydirection = luaL_checkangle(L, 3);
 		slope->d.x = -FINECOSINE((slope->xydirection>>ANGLETOFINESHIFT) & FINEMASK);
 		slope->d.y = -FINESINE((slope->xydirection>>ANGLETOFINESHIFT) & FINEMASK);
+		slope->dnormdir.x = FixedToDouble(slope->d.x);
+		slope->dnormdir.y = FixedToDouble(slope->d.y);
 		P_CalculateSlopeNormal(slope);
 		break;
 	}

@@ -113,8 +113,9 @@ UINT8 *ds_source; // points to the start of a flat
 UINT8 *ds_transmap; // one of the translucency tables
 
 // Vectors for Software's tilted slope drawers
-floatv3_t ds_su, ds_sv, ds_sz, ds_slopelight;
-float focallengthf, zeroheight;
+dvector3_t ds_su, ds_sv, ds_sz, ds_slopelight;
+double zeroheight;
+float focallengthf;
 
 /**	\brief Variable flat sizes
 */
