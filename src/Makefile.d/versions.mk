@@ -84,6 +84,9 @@ endif
  WFLAGS+=-Wnested-externs
 #WFLAGS+=-Wunreachable-code
  WFLAGS+=-Winline
+ifdef DEBUGMODE
+ WFLAGS+=-Wno-error=inline
+endif
 ifdef GCC43
  WFLAGS+=-funit-at-a-time
  WFLAGS+=-Wlogical-op

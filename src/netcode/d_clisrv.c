@@ -415,16 +415,6 @@ static void Got_KickCmd(UINT8 **p, INT32 playernum)
 
 	//CONS_Printf("\x82%s ", player_names[pnum]);
 
-	// If a verified admin banned someone, the server needs to know about it.
-	// If the playernum isn't zero (the server) then the server needs to record the ban.
-	if (server && playernum && (msg == KICK_MSG_BANNED || msg == KICK_MSG_CUSTOM_BAN))
-	{
-		if (I_Ban && !I_Ban(playernode[(INT32)pnum]))
-			CONS_Alert(CONS_WARNING, M_GetText("Too many bans! Geez, that's a lot of people you're excluding...\n"));
-		else
-			Ban_Add(reason);
-	}
-
 	switch (msg)
 	{
 		case KICK_MSG_GO_AWAY:
@@ -498,6 +488,16 @@ static void Got_KickCmd(UINT8 **p, INT32 playernum)
 			HU_AddChatText(va("\x82*%s has left the game (Inactive for too long)", player_names[pnum]), false);
 			kickreason = KR_TIMEOUT;
 			break;
+	}
+
+	// If a verified admin banned someone, the server needs to know about it.
+	// If the playernum isn't zero (the server) then the server needs to record the ban.
+	if (server && playernum && (msg == KICK_MSG_BANNED || msg == KICK_MSG_CUSTOM_BAN))
+	{
+		if (I_Ban && !I_Ban(playernode[(INT32)pnum]))
+			CONS_Alert(CONS_WARNING, M_GetText("Too many bans! Geez, that's a lot of people you're excluding...\n"));
+		else
+			Ban_Add(msg == KICK_MSG_CUSTOM_BAN ? reason : NULL);
 	}
 
 	if (pnum == consoleplayer)
@@ -1280,6 +1280,7 @@ static void UpdatePingTable(void)
 	}
 }
 
+// Handle idle and disconnected player timers
 static void IdleUpdate(void)
 {
 	INT32 i;
@@ -1302,7 +1303,26 @@ static void IdleUpdate(void)
 			}
 		}
 		else
+		{
 			players[i].lastinputtime = 0;
+
+			if (players[i].quittime && playeringame[i])
+			{
+				players[i].quittime++;
+
+				if (players[i].quittime == 30 * TICRATE && G_TagGametype())
+					P_CheckSurvivors();
+
+				if (server && players[i].quittime >= (tic_t)FixedMul(cv_rejointimeout.value, 60 * TICRATE)
+				&& !(players[i].quittime % TICRATE))
+				{
+					if (D_NumNodes(true) > 0)
+						SendKick(i, KICK_MSG_PLAYER_QUIT);
+					else // If the server is empty, don't send a NetXCmd - that would wake an idling dedicated server
+						CL_RemovePlayer(i, KICK_MSG_PLAYER_QUIT);
+				}
+			}
+		}
 	}
 }
 
@@ -1517,7 +1537,7 @@ void NetUpdate(void)
 
 	nowtime /= NEWTICRATERATIO;
 
-	if (nowtime > resptime)
+	if (nowtime != resptime)
 	{
 		resptime = nowtime;
 #ifdef HAVE_THREADS
@@ -1623,12 +1643,15 @@ INT32 D_NumPlayers(void)
 	return num;
 }
 
-/** Returns the number of nodes on the server.
+/** Returns the number of currently-connected nodes in a netgame.
+  * Not necessarily equivalent to D_NumPlayers() minus D_NumBots().
+  *
+  * \param skiphost Skip the server's own node.
   */
-INT32 D_NumNodes(void)
+INT32 D_NumNodes(boolean skiphost)
 {
 	INT32 num = 0;
-	for (INT32 ix = 0; ix < MAXNETNODES; ix++)
+	for (INT32 ix = skiphost ? 1 : 0; ix < MAXNETNODES; ix++)
 		if (netnodes[ix].ingame)
 			num++;
 	return num;

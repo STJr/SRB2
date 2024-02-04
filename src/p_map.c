@@ -3405,36 +3405,41 @@ static boolean P_IsClimbingValid(player_t *player, angle_t angle)
 	return false;
 }
 
-static boolean PTR_LineIsBlocking(line_t *li)
+//
+// P_LineIsBlocking
+//
+// Determines if line would block mo's movement
+//
+boolean P_LineIsBlocking(mobj_t *mo, line_t *li)
 {
 	// one-sided linedefs are always solid to sliding movement.
 	if (!li->backsector)
-		return !P_PointOnLineSide(slidemo->x, slidemo->y, li);
+		return !P_PointOnLineSide(mo->x, mo->y, li);
 
-	if (!(slidemo->flags & MF_MISSILE))
+	if (!(mo->flags & MF_MISSILE))
 	{
 		if (li->flags & ML_IMPASSIBLE)
 			return true;
 
-		if ((slidemo->flags & (MF_ENEMY|MF_BOSS)) && li->flags & ML_BLOCKMONSTERS)
+		if ((mo->flags & (MF_ENEMY|MF_BOSS)) && li->flags & ML_BLOCKMONSTERS)
 			return true;
 	}
 
 	// set openrange, opentop, openbottom
-	P_LineOpening(li, slidemo);
+	P_LineOpening(li, mo);
 
-	if (openrange < slidemo->height)
+	if (openrange < mo->height)
 		return true; // doesn't fit
 
-	if (opentop - slidemo->z < slidemo->height)
+	if (opentop - mo->z < mo->height)
 		return true; // mobj is too high
 
-	if (openbottom - slidemo->z > FixedMul(MAXSTEPMOVE, slidemo->scale))
+	if (openbottom - mo->z > FixedMul(MAXSTEPMOVE, mo->scale))
 		return true; // too big a step up
 
-	if (slidemo->player
-		&& openrange < P_GetPlayerHeight(slidemo->player)
-		&& !P_PlayerCanEnterSpinGaps(slidemo->player))
+	if (mo->player
+		&& openrange < P_GetPlayerHeight(mo->player)
+		&& !P_PlayerCanEnterSpinGaps(mo->player))
 			return true; // nonspin character should not take this path
 
 	return false;
@@ -3477,7 +3482,7 @@ static void PTR_GlideClimbTraverse(line_t *li)
 	}
 
 	// see about climbing on the wall
-	if (!(checkline->flags & ML_NOCLIMB) && checkline->special != HORIZONSPECIAL)
+	if (!(checkline->flags & ML_NOCLIMB) && checkline->special != SPECIAL_HORIZON_LINE)
 	{
 		boolean canclimb;
 		angle_t climbangle, climbline;
@@ -3538,7 +3543,7 @@ static boolean PTR_SlideTraverse(intercept_t *in)
 
 	li = in->d.line;
 
-	if (!PTR_LineIsBlocking(li))
+	if (!P_LineIsBlocking(slidemo, li))
 		return true;
 
 	// the line blocks movement,
@@ -5074,7 +5079,7 @@ fixed_t P_CeilingzAtPos(fixed_t x, fixed_t y, fixed_t z, fixed_t height)
 	return ceilingz;
 }
 
-INT32 P_GetSectorLightAt(sector_t *sector, fixed_t x, fixed_t y, fixed_t z)
+INT32 P_GetSectorLightNumAt(sector_t *sector, fixed_t x, fixed_t y, fixed_t z)
 {
 	if (!sector->numlights)
 		return -1;
@@ -5093,10 +5098,23 @@ INT32 P_GetSectorLightAt(sector_t *sector, fixed_t x, fixed_t y, fixed_t z)
 	return light;
 }
 
+INT32 P_GetLightLevelFromSectorAt(sector_t *sector, fixed_t x, fixed_t y, fixed_t z)
+{
+	if (sector->numlights)
+		return *sector->lightlist[P_GetSectorLightNumAt(sector, x, y, z)].lightlevel;
+	else
+		return sector->lightlevel;
+}
+
+INT32 P_GetSectorLightLevelAt(fixed_t x, fixed_t y, fixed_t z)
+{
+	return P_GetLightLevelFromSectorAt(R_PointInSubsector(x, y)->sector, x, y, z);
+}
+
 extracolormap_t *P_GetColormapFromSectorAt(sector_t *sector, fixed_t x, fixed_t y, fixed_t z)
 {
 	if (sector->numlights)
-		return *sector->lightlist[P_GetSectorLightAt(sector, x, y, z)].extra_colormap;
+		return *sector->lightlist[P_GetSectorLightNumAt(sector, x, y, z)].extra_colormap;
 	else
 		return sector->extra_colormap;
 }

@@ -25,6 +25,7 @@
 // demoplaying back and demo recording
 extern boolean demoplayback, titledemo, demorecording, timingdemo;
 extern tic_t demostarttime;
+extern UINT16 demoversion;
 
 typedef enum
 {

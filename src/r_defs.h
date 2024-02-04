@@ -16,6 +16,7 @@
 
 // Some more or less basic data types we depend on.
 #include "m_fixed.h"
+#include "m_vector.h"
 
 // We rely on the thinker data struct to handle sound origins in sectors.
 #include "d_think.h"
@@ -23,10 +24,6 @@
 #include "p_mobj.h"
 
 #include "screen.h" // MAXVIDWIDTH, MAXVIDHEIGHT
-
-#ifdef HWRENDER
-#include "m_aatree.h"
-#endif
 
 #include "taglist.h"
 
@@ -211,6 +208,34 @@ typedef enum
 	BT_STRONG,
 } busttype_e;
 
+typedef enum
+{
+	SECPORTAL_LINE,    // Works similar to a line portal
+	SECPORTAL_SKYBOX,  // Uses the skybox object as the reference view
+	SECPORTAL_PLANE,   // Eternity Engine's plane portal type
+	SECPORTAL_HORIZON, // Eternity Engine's horizon portal type
+	SECPORTAL_OBJECT,  // Uses an object as the reference view
+	SECPORTAL_FLOOR,   // Uses a sector as the reference view; the view height is aligned with the sector's floor
+	SECPORTAL_CEILING, // Uses a sector as the reference view; the view height is aligned with the sector's ceiling
+	SECPORTAL_NONE = 0xFF
+} secportaltype_e;
+
+typedef struct sectorportal_s
+{
+	secportaltype_e type;
+	union {
+		struct {
+			struct line_s *start;
+			struct line_s *dest;
+		} line;
+		struct sector_s *sector;
+		struct mobj_s *mobj;
+	};
+	struct {
+		fixed_t x, y;
+	} origin;
+} sectorportal_t;
+
 typedef struct ffloor_s
 {
 	fixed_t *topheight;
@@ -318,6 +343,13 @@ typedef struct pslope_s
 	// This values only check and must be updated if the slope itself is modified
 	angle_t zangle;		/// Precomputed angle of the plane going up from the ground (not measured in degrees).
 	angle_t xydirection;/// Precomputed angle of the normal's projection on the XY plane.
+
+	dvector3_t dorigin;
+	dvector3_t dnormdir;
+
+	double dzdelta;
+
+	boolean moved : 1;
 
 	UINT8 flags; // Slope options
 } pslope_t;
@@ -505,6 +537,10 @@ typedef struct sector_s
 
 	// colormap structure
 	extracolormap_t *spawn_extra_colormap;
+
+	// portals
+	UINT32 portal_floor;
+	UINT32 portal_ceiling;
 } sector_t;
 
 //
@@ -518,7 +554,9 @@ typedef enum
 	ST_NEGATIVE
 } slopetype_t;
 
-#define HORIZONSPECIAL 41
+#define SPECIAL_HORIZON_LINE 41
+
+#define SPECIAL_SECTOR_SETPORTAL 6
 
 #define NUMLINEARGS 10
 #define NUMLINESTRINGARGS 2
@@ -561,6 +599,8 @@ typedef struct line_s
 	polyobj_t *polyobj; // Belongs to a polyobject?
 
 	INT16 callcount; // no. of calls left before triggering, for the "X calls" linedef specials, defaults to 0
+
+	UINT32 secportal; // transferred sector portal
 } line_t;
 
 typedef struct
