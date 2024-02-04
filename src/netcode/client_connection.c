@@ -634,7 +634,7 @@ static const char *GetPrintableFileSize(UINT64 filesize)
 	if (filesize >= 1024*1024)
 		snprintf(downloadsize, sizeof(downloadsize), "%.2fMiB", (double)filesize / (1024*1024));
 	else if (filesize < 1024)
-		snprintf(downloadsize, sizeof(downloadsize), "%luB", filesize);
+		snprintf(downloadsize, sizeof(downloadsize), "%sB", sizeu1(filesize));
 	else
 		snprintf(downloadsize, sizeof(downloadsize), "%.2fKiB", (double)filesize / 1024);
 

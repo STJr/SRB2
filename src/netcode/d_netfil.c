@@ -10,6 +10,10 @@
 /// \file  d_netfil.c
 /// \brief Transfer a file using HSendPacket.
 
+#ifdef HAVE_CURL
+#include <curl/curl.h>
+#endif
+
 #include <stdio.h>
 #include <sys/stat.h>
 
@@ -52,10 +56,6 @@
 #include "../filesrch.h"
 
 #include <errno.h>
-
-#ifdef HAVE_CURL
-#include <curl/curl.h>
-#endif
 
 // Prototypes
 static boolean AddFileToSendQueue(INT32 node, UINT8 fileid);
@@ -1633,7 +1633,11 @@ boolean CURLPrepareFile(const char* url, int dfilenum)
 		curl_easy_setopt(http_handle, CURLOPT_URL, va("%s/%s?md5=%s", url, curl_realname, md5tmp));
 
 		// Only allow HTTP and HTTPS
+#if (LIBCURL_VERSION_MAJOR <= 7) && (LIBCURL_VERSION_MINOR < 85)
+		curl_easy_setopt(http_handle, CURLOPT_PROTOCOLS, CURLPROTO_HTTP|CURLPROTO_HTTPS);
+#else
 		curl_easy_setopt(http_handle, CURLOPT_PROTOCOLS_STR, "http,https");
+#endif
 
 		// Set user agent, as some servers won't accept invalid user agents.
 		curl_easy_setopt(http_handle, CURLOPT_USERAGENT, va("Sonic Robo Blast 2/v%d.%d", VERSION, SUBVERSION));
