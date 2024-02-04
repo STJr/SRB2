@@ -58,6 +58,7 @@ static lua_CFunction liblist[] = {
 	LUA_PolyObjLib, // polyobj_t
 	LUA_BlockmapLib, // blockmap stuff
 	LUA_HudLib, // HUD stuff
+	LUA_ColorLib, // general color functions
 	LUA_InputLib, // inputs
 	NULL
 };
@@ -415,9 +416,11 @@ int LUA_PushGlobals(lua_State *L, const char *word)
 	} else if (fastcmp(word, "stagefailed")) {
 		lua_pushboolean(L, stagefailed);
 		return 1;
+	// TODO: 2.3: Deprecated (moved to the input library)
 	} else if (fastcmp(word, "mouse")) {
 		LUA_PushUserdata(L, &mouse, META_MOUSE);
 		return 1;
+	// TODO: 2.3: Deprecated (moved to the input library)
 	} else if (fastcmp(word, "mouse2")) {
 		LUA_PushUserdata(L, &mouse2, META_MOUSE);
 		return 1;
@@ -576,8 +579,7 @@ static void LUA_ClearState(void)
 
 	// lock the global namespace
 	lua_getmetatable(L, LUA_GLOBALSINDEX);
-		lua_pushcfunction(L, setglobals);
-		lua_setfield(L, -2, "__newindex");
+		LUA_SetCFunctionField(L, "__newindex", setglobals);
 		lua_newtable(L);
 		lua_setfield(L, -2, "__metatable");
 	lua_pop(L, 1);
@@ -602,64 +604,114 @@ void LUA_ClearExtVars(void)
 INT32 lua_lumploading = 0;
 
 // Load a script from a MYFILE
-static inline void LUA_LoadFile(MYFILE *f, char *name, boolean noresults)
+static inline boolean LUA_LoadFile(MYFILE *f, char *name)
 {
 	int errorhandlerindex;
+	boolean success;
 
 	if (!name)
 		name = wadfiles[f->wad]->filename;
+
 	CONS_Printf("Loading Lua script from %s\n", name);
+
 	if (!gL) // Lua needs to be initialized
 		LUA_ClearState();
+
 	lua_pushinteger(gL, f->wad);
 	lua_setfield(gL, LUA_REGISTRYINDEX, "WAD");
+
+	lua_pushcfunction(gL, LUA_GetErrorMessage);
+	errorhandlerindex = lua_gettop(gL);
+
+	success = !luaL_loadbuffer(gL, f->data, f->size, va("@%s",name));
+
+	if (!success) {
+		CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL,-1));
+		lua_pop(gL,1);
+	}
+
+	lua_gc(gL, LUA_GCCOLLECT, 0);
+	lua_remove(gL, errorhandlerindex);
+
+	return success;
+}
+
+// Runs a script loaded by LUA_LoadFile.
+static inline void LUA_DoFile(boolean noresults)
+{
+	int errorhandlerindex;
+
+	if (!gL) // LUA_LoadFile should've allocated gL for us!
+		return;
 
 	lua_lumploading++; // turn on loading flag
 
 	lua_pushcfunction(gL, LUA_GetErrorMessage);
-	errorhandlerindex = lua_gettop(gL);
-	if (luaL_loadbuffer(gL, f->data, f->size, va("@%s",name)) || lua_pcall(gL, 0, noresults ? 0 : LUA_MULTRET, lua_gettop(gL) - 1)) {
+	lua_insert(gL, -2); // move the function we're calling to the top.
+	errorhandlerindex = lua_gettop(gL) - 1;
+
+	if (lua_pcall(gL, 0, noresults ? 0 : LUA_MULTRET, lua_gettop(gL) - 1)) {
 		CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL,-1));
 		lua_pop(gL,1);
 	}
+
 	lua_gc(gL, LUA_GCCOLLECT, 0);
 	lua_remove(gL, errorhandlerindex);
 
 	lua_lumploading--; // turn off again
 }
 
-// Load a script from a lump
-void LUA_LoadLump(UINT16 wad, UINT16 lump, boolean noresults)
+static inline MYFILE *LUA_GetFile(UINT16 wad, UINT16 lump, char **name)
 {
-	MYFILE f;
-	char *name;
+	MYFILE *f = Z_Malloc(sizeof(MYFILE), PU_LUA, NULL);
 	size_t len;
-	f.wad = wad;
-	f.size = W_LumpLengthPwad(wad, lump);
-	f.data = Z_Malloc(f.size, PU_LUA, NULL);
-	W_ReadLumpPwad(wad, lump, f.data);
-	f.curpos = f.data;
+
+	f->wad = wad;
+	f->size = W_LumpLengthPwad(wad, lump);
+	f->data = Z_Malloc(f->size, PU_LUA, NULL);
+	W_ReadLumpPwad(wad, lump, f->data);
+	f->curpos = f->data;
 
 	len = strlen(wadfiles[wad]->filename); // length of file name
 
 	if (wadfiles[wad]->type == RET_LUA)
 	{
-		name = malloc(len+1);
-		strcpy(name, wadfiles[wad]->filename);
+		*name = malloc(len+1);
+		strcpy(*name, wadfiles[wad]->filename);
 	}
 	else // If it's not a .lua file, copy the lump name in too.
 	{
 		lumpinfo_t *lump_p = &wadfiles[wad]->lumpinfo[lump];
 		len += 1 + strlen(lump_p->fullname); // length of file name, '|', and lump name
-		name = malloc(len+1);
-		sprintf(name, "%s|%s", wadfiles[wad]->filename, lump_p->fullname);
-		name[len] = '\0';
+		*name = malloc(len+1);
+		sprintf(*name, "%s|%s", wadfiles[wad]->filename, lump_p->fullname);
+		(*name)[len] = '\0'; // annoying that index takes priority over dereference, but w/e
 	}
 
-	LUA_LoadFile(&f, name, noresults); // actually load file!
+	return f;
+}
+
+// Load a script from a lump
+boolean LUA_LoadLump(UINT16 wad, UINT16 lump)
+{
+	char *name = NULL;
+	MYFILE *f = LUA_GetFile(wad, lump, &name);
+	boolean success = LUA_LoadFile(f, name); // actually load file!
 
 	free(name);
-	Z_Free(f.data);
+
+	Z_Free(f->data);
+	Z_Free(f);
+
+	return success;
+}
+
+void LUA_DoLump(UINT16 wad, UINT16 lump, boolean noresults)
+{
+	boolean success = LUA_LoadLump(wad, lump);
+
+	if (success)
+		LUA_DoFile(noresults); // run it
 }
 
 #ifdef LUA_ALLOW_BYTECODE
@@ -1813,20 +1865,107 @@ void LUA_PushTaggableObjectArray
 	lua_newuserdata(L, 0);
 		lua_createtable(L, 0, 2);
 			lua_createtable(L, 0, 2);
-				lua_pushcfunction(L, iterator);
-				lua_setfield(L, -2, "iterate");
+				LUA_SetCFunctionField(L, "iterate", iterator);
 
 				LUA_InsertTaggroupIterator(L, garray,
 						max_elements, element_array, sizeof_element, meta);
 
 				lua_createtable(L, 0, 1);
-					lua_pushcfunction(L, indexer);
-					lua_setfield(L, -2, "__index");
+					LUA_SetCFunctionField(L, "__index", indexer);
 				lua_setmetatable(L, -2);
 			lua_setfield(L, -2, "__index");
 
-			lua_pushcfunction(L, counter);
-			lua_setfield(L, -2, "__len");
+			LUA_SetCFunctionField(L, "__len", counter);
 		lua_setmetatable(L, -2);
 	lua_setglobal(L, field);
+}
+
+static void SetBasicMetamethods(
+	lua_State *L,
+	lua_CFunction get,
+	lua_CFunction set,
+	lua_CFunction len
+)
+{
+	if (get)
+		LUA_SetCFunctionField(L, "__index", get);
+	if (set)
+		LUA_SetCFunctionField(L, "__newindex", set);
+	if (len)
+		LUA_SetCFunctionField(L, "__len", len);
+}
+
+void LUA_SetCFunctionField(lua_State *L, const char *name, lua_CFunction value)
+{
+	lua_pushcfunction(L, value);
+	lua_setfield(L, -2, name);
+}
+
+void LUA_RegisterUserdataMetatable(
+	lua_State *L,
+	const char *name,
+	lua_CFunction get,
+	lua_CFunction set,
+	lua_CFunction len
+)
+{
+	luaL_newmetatable(L, name);
+	SetBasicMetamethods(L, get, set, len);
+	lua_pop(L, 1);
+}
+
+// If keep is true, leaves the metatable on the stack.
+// Otherwise, the stack size remains unchanged.
+void LUA_CreateAndSetMetatable(
+	lua_State *L,
+	lua_CFunction get,
+	lua_CFunction set,
+	lua_CFunction len,
+	boolean keep
+)
+{
+	lua_newtable(L);
+	SetBasicMetamethods(L, get, set, len);
+
+	lua_pushvalue(L, -1);
+	lua_setmetatable(L, -3);
+
+	if (!keep)
+		lua_pop(L, 1);
+}
+
+// If keep is true, leaves the userdata and metatable on the stack.
+// Otherwise, the stack size remains unchanged.
+void LUA_CreateAndSetUserdataField(
+	lua_State *L,
+	int index,
+	const char *name,
+	lua_CFunction get,
+	lua_CFunction set,
+	lua_CFunction len,
+	boolean keep
+)
+{
+	if (index < 0 && index > LUA_REGISTRYINDEX)
+		index -= 3;
+
+	lua_newuserdata(L, 0);
+	LUA_CreateAndSetMetatable(L, get, set, len, true);
+
+	lua_pushvalue(L, -2);
+	lua_setfield(L, index, name);
+
+	if (!keep)
+		lua_pop(L, 2);
+}
+
+void LUA_RegisterGlobalUserdata(
+	lua_State *L,
+	const char *name,
+	lua_CFunction get,
+	lua_CFunction set,
+	lua_CFunction len
+)
+{
+	LUA_CreateAndSetUserdataField(L, LUA_GLOBALSINDEX, name, get, set, len, false);
 }

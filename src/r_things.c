@@ -138,8 +138,7 @@ static void R_InstallSpriteLump(UINT16 wad,            // graphics patch
 #ifdef ROTSPRITE
 	for (r = 0; r < 16; r++)
 	{
-		sprtemp[frame].rotated[0][r] = NULL;
-		sprtemp[frame].rotated[1][r] = NULL;
+		sprtemp[frame].rotated[r] = NULL;
 	}
 #endif
 
@@ -337,6 +336,11 @@ boolean R_AddSingleSpriteDef(const char *sprname, spritedef_t *spritedef, UINT16
 			spritecachedinfo[numspritelumps].height = height<<FRACBITS;
 
 			// BP: we cannot use special tric in hardware mode because feet in ground caused by z-buffer
+			// Monster Iestyn (21 Sep 2023): the above comment no longer makes sense in context!!! So I give an explanation here!
+			// FEETADJUST was originally an OpenGL-exclusive hack from Doom Legacy to avoid the player's feet being clipped as
+			// a result of rendering partially under the ground, but sometime before SRB2 2.1's release this was changed to apply
+			// to the software renderer as well.
+			// TODO: kill FEETADJUST altogether somehow and somehow fix OpenGL not to clip sprites that are partially underground (if possible)?
 			spritecachedinfo[numspritelumps].topoffset += FEETADJUST;
 
 			//----------------------------------------------------
@@ -1316,8 +1320,8 @@ static void R_ProjectDropShadow(mobj_t *thing, vissprite_t *vis, fixed_t scale, 
 	patch_t *patch;
 	fixed_t xscale, yscale, shadowxscale, shadowyscale, shadowskew, x1, x2;
 	INT32 heightsec, phs;
-	INT32 light = 0;
-	fixed_t scalemul; UINT8 trans;
+	fixed_t scalemul;
+	UINT8 trans;
 	fixed_t floordiff;
 	fixed_t groundz;
 	pslope_t *groundslope;
@@ -1433,27 +1437,7 @@ static void R_ProjectDropShadow(mobj_t *thing, vissprite_t *vis, fixed_t scale, 
 	if (thing->renderflags & RF_NOCOLORMAPS)
 		shadow->extra_colormap = NULL;
 	else
-	{
-		if (thing->subsector->sector->numlights)
-		{
-			INT32 lightnum;
-			light = thing->subsector->sector->numlights - 1;
-
-			// R_GetPlaneLight won't work on sloped lights!
-			for (lightnum = 1; lightnum < thing->subsector->sector->numlights; lightnum++) {
-				fixed_t h = P_GetLightZAt(&thing->subsector->sector->lightlist[lightnum], interp.x, interp.y);
-				if (h <= shadow->gzt) {
-					light = lightnum - 1;
-					break;
-				}
-			}
-		}
-
-		if (thing->subsector->sector->numlights)
-			shadow->extra_colormap = *thing->subsector->sector->lightlist[light].extra_colormap;
-		else
-			shadow->extra_colormap = thing->subsector->sector->extra_colormap;
-	}
+		shadow->extra_colormap = P_GetColormapFromSectorAt(thing->subsector->sector, interp.x, interp.y, shadow->gzt);
 
 	shadow->transmap = R_GetTranslucencyTable(trans + 1);
 	shadow->colormap = scalelight[0][0]; // full dark!
@@ -1794,7 +1778,7 @@ static void R_ProjectSprite(mobj_t *thing)
 			rollangle = R_GetRollAngle(spriterotangle);
 		}
 
-		rotsprite = Patch_GetRotatedSprite(sprframe, (thing->frame & FF_FRAMEMASK), rot, flip, false, sprinfo, rollangle);
+		rotsprite = Patch_GetRotatedSprite(sprframe, (thing->frame & FF_FRAMEMASK), rot, flip, sprinfo, rollangle);
 
 		if (rotsprite != NULL)
 		{
@@ -2150,21 +2134,9 @@ static void R_ProjectSprite(mobj_t *thing)
 
 	if (thing->subsector->sector->numlights)
 	{
-		INT32 lightnum;
-		fixed_t top = (splat) ? gz : gzt;
-		light = thing->subsector->sector->numlights - 1;
+		light = P_GetSectorLightAt(thing->subsector->sector, interp.x, interp.y, splat ? gz : gzt);
 
-		// R_GetPlaneLight won't work on sloped lights!
-		for (lightnum = 1; lightnum < thing->subsector->sector->numlights; lightnum++) {
-			fixed_t h = P_GetLightZAt(&thing->subsector->sector->lightlist[lightnum], interp.x, interp.y);
-			if (h <= top) {
-				light = lightnum - 1;
-				break;
-			}
-		}
-		//light = R_GetPlaneLight(thing->subsector->sector, gzt, false);
-		lightnum = (*thing->subsector->sector->lightlist[light].lightlevel >> LIGHTSEGSHIFT);
-
+		INT32 lightnum = (*thing->subsector->sector->lightlist[light].lightlevel >> LIGHTSEGSHIFT);
 		if (lightnum < 0)
 			spritelights = scalelight[0];
 		else if (lightnum >= LIGHTLEVELS)
@@ -3201,8 +3173,8 @@ static boolean R_CheckSpriteVisible(vissprite_t *spr, INT32 x1, INT32 x2)
 	INT16 sz = spr->sz;
 	INT16 szt = spr->szt;
 
-	fixed_t texturemid, yscale, scalestep = spr->scalestep;
-	INT32 height;
+	fixed_t texturemid = 0, yscale = 0, scalestep = spr->scalestep; // "= 0" pleases the compiler
+	INT32 height = 0;
 
 	if (scalestep)
 	{

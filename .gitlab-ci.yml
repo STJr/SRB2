@@ -1,16 +1,9 @@
-default:
-  image: debian:stable-slim
-
-stages:          # List of stages for jobs, and their order of execution
-  - build
-
 variables:
   GIT_STRATEGY: clone
   GIT_CLONE_PATH: $CI_BUILDS_DIR/$CI_CONCURRENT_ID/$CI_PROJECT_PATH
 
-.job_template: &job_build # This job runs in the build stage, which runs first.
-
-  stage: build
+default:
+  image: git.do.srb2.org:5050/stjr/srb2ci/srb2ci:stable
 
   cache:
     - key: ccache-$CI_PROJECT_PATH_SLUG-$CI_JOB_NAME_SLUG
@@ -24,6 +17,11 @@ variables:
     - key: apt-$CI_JOB_IMAGE
       paths:
         - apt-cache
+      unprotect: true
+
+    - key: apk-$CI_JOB_IMAGE
+      paths:
+        - apk-cache
       unprotect: true
 
   before_script:
@@ -96,7 +94,7 @@ variables:
     - - |
           # apt_common
           echo -e "\e[0Ksection_start:`date +%s`:apt_common[collapsed=true]\r\e[0KInstalling common packages"
-      - apt-get install make git ccache
+      - apt-get install make git ccache nasm
       - |
           # apt_common
           echo -e "\e[0Ksection_end:`date +%s`:apt_common\r\e[0K"
@@ -137,6 +135,12 @@ variables:
           # ccache_reset
           echo -e "\e[0Ksection_end:`date +%s`:ccache_reset\r\e[0K"
 
+  artifacts:
+    paths:
+      - "bin/"
+      - "src/comptime.h"
+    name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-$CI_JOB_NAME_SLUG"
+
   after_script:
     - - |
            # apt_clean
@@ -155,8 +159,14 @@ variables:
           # ccahe_stats
           echo -e "\e[0Ksection_end:`date +%s`:ccache_stats\r\e[0K"
 
+stages:
+  - build
+
 Debian testing GCC:
-  <<: *job_build
+  stage: build
+
+  when: manual
+
   image: debian:testing-slim
 
   allow_failure: true
@@ -165,11 +175,12 @@ Debian testing GCC:
     paths:
       - "bin/"
       - "src/comptime.h"
-    expose_as: "Debian GCC testing"
+    expose_as: "testing-gcc"
     name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-testing-gcc"
 
   variables:
     CC: gcc
+    LDFLAGS: -Wl,-fuse-ld=gold
 
   script:
     - - |
@@ -197,12 +208,15 @@ Debian testing GCC:
           echo -e "\e[0Ksection_end:`date +%s`:make\r\e[0K"
 
 Windows x86:
-  <<: *job_build
+  stage: build
+
+  when: on_success
 
   artifacts:
     paths:
       - "bin/"
       - "src/comptime.h"
+    expose_as: "Win32"
     name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-Win32"
 
   variables:
@@ -220,13 +234,15 @@ Windows x86:
     - - |
           # make
           echo -e "\e[0Ksection_start:`date +%s`:make[collapsed=false]\r\e[0KCompiling SRB2"
-      - make --directory=src --keep-going CCACHE=1 ERRORMODE=1 MINGW=1 || make --directory=src --keep-going CCACHE=1 ERRORMODE=1 MINGW=1
+      - make --directory=src --keep-going CCACHE=1 ERRORMODE=1 MINGW=1 SDL=1 || make --directory=src --keep-going CCACHE=1 ERRORMODE=1 MINGW=1 SDL=1
       - |
           # make
           echo -e "\e[0Ksection_end:`date +%s`:make\r\e[0K"
 
 Debian stable:amd64:
-  <<: *job_build
+  stage: build
+
+  when: on_success
 
   artifacts:
     paths:
@@ -237,6 +253,7 @@ Debian stable:amd64:
 
   variables:
     CC: x86_64-linux-gnu-gcc
+    LDFLAGS: -Wl,-fuse-ld=gold
     OBJCOPY: x86_64-linux-gnu-objcopy
     OBJDUMP: x86_64-linux-gnu-objdump
     PKG_CONFIG_PATH: /usr/lib/x86_64-linux-gnu/pkgconfig
@@ -267,7 +284,9 @@ Debian stable:amd64:
           echo -e "\e[0Ksection_end:`date +%s`:make\r\e[0K"
 
 Debian stable:i386:
-  <<: *job_build
+  stage: build
+
+  when: manual
 
   artifacts:
     paths:
@@ -308,7 +327,9 @@ Debian stable:i386:
           echo -e "\e[0Ksection_end:`date +%s`:make\r\e[0K"
 
 Debian stable:arm64:
-  <<: *job_build
+  stage: build
+
+  when: manual
 
   artifacts:
     paths:
@@ -319,6 +340,7 @@ Debian stable:arm64:
 
   variables:
     CC: aarch64-linux-gnu-gcc
+    LDFLAGS: -Wl,-fuse-ld=gold
     OBJCOPY: aarch64-linux-gnu-objcopy
     OBJDUMP: aarch64-linux-gnu-objdump
     PKG_CONFIG_PATH: /usr/lib/aarch64-linux-gnu/pkgconfig
@@ -343,13 +365,15 @@ Debian stable:arm64:
     - - |
           # make
           echo -e "\e[0Ksection_start:`date +%s`:make[collapsed=false]\r\e[0KCompiling SRB2"
-      - make --directory=src --keep-going CCACHE=1 ERRORMODE=1 LINUX64=1 ERRORMODE=1 NONX86=1 || make --directory=src --keep-going CCACHE=1 ERRORMODE=1 LINUX64=1 NONX86=1
+      - make --directory=src --keep-going CCACHE=1 ERRORMODE=1 LINUX64=1 ERRORMODE=1 NONX86=1 ARM64=1 || make --directory=src --keep-going CCACHE=1 ERRORMODE=1 LINUX64=1 NONX86=1 ARM64=1
       - |
           # make
           echo -e "\e[0Ksection_end:`date +%s`:make\r\e[0K"
 
 Windows x64:
-  <<: *job_build
+  stage: build
+
+  when: manual
 
   artifacts:
     paths:
@@ -373,13 +397,15 @@ Windows x64:
     - - |
           # make
           echo -e "\e[0Ksection_start:`date +%s`:make[collapsed=false]\r\e[0KCompiling SRB2"
-      - make --directory=src --keep-going CCACHE=1 ERRORMODE=1 MINGW64=1 || make --directory=src --keep-going CCACHE=1 ERRORMODE=1 MINGW64=1
+      - make --directory=src --keep-going CCACHE=1 ERRORMODE=1 MINGW64=1 SDL=1 || make --directory=src --keep-going CCACHE=1 ERRORMODE=1 MINGW64=1 SDL=1
       - |
           # make
           echo -e "\e[0Ksection_end:`date +%s`:make\r\e[0K"
 
 Debian stable Clang:
-  <<: *job_build
+  stage: build
+
+  when: manual
 
   allow_failure: true
 
@@ -387,12 +413,14 @@ Debian stable Clang:
     paths:
       - "bin/"
       - "src/comptime.h"
-    expose_as: "Debian Clang"
+    expose_as: "clang"
     name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-clang"
 
   variables:
     CC: clang
+    WFLAGS: -Wno-cast-align
     CFLAGS: -Wno-cast-align
+    LDFLAGS: -Wl,-fuse-ld=gold
 
   script:
     - - |
@@ -419,8 +447,53 @@ Debian stable Clang:
           # make
           echo -e "\e[0Ksection_end:`date +%s`:make\r\e[0K"
 
+Debian stable musl:
+  stage: build
+
+  when: manual
+
+  allow_failure: true
+
+  artifacts:
+    paths:
+      - "bin/"
+      - "src/comptime.h"
+    expose_as: "musl"
+    name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-musl"
+
+  variables:
+    CC: musl-gcc
+    LDD: musl-ldd
+
+  script:
+    - - |
+          # apt_toolchain
+          echo -e "\e[0Ksection_start:`date +%s`:apt_toolchain[collapsed=true]\r\e[0KInstalling toolchain packages"
+      - apt-get install gcc
+      - |
+          # apt_toolchain
+          echo -e "\e[0Ksection_end:`date +%s`:apt_toolchain\r\e[0K"
+
+    - - |
+          # apt_development
+          echo -e "\e[0Ksection_start:`date +%s`:apt_development[collapsed=true]\r\e[0KInstalling development packages"
+      - apt-get install musl-tools
+      - |
+          # apt_development
+          echo -e "\e[0Ksection_end:`date +%s`:apt_development\r\e[0K"
+
+    - - |
+          # make
+          echo -e "\e[0Ksection_start:`date +%s`:make[collapsed=false]\r\e[0KCompiling SRB2"
+      - make --directory=src --keep-going CCACHE=1 ERRORMODE=1 NONX86=1 SDL=0 NOHW=1 NOZLIB=1 NOCURL=1 NOGME=1 NOOPENMPT=1 || make --directory=src --keep-going CCACHE=1 ERRORMODE=1 NONX86=1 SDL=0 NOHW=1 NOZLIB=1 NOCURL=1 NOGME=1 NOOPENMPT=1
+      - |
+          # make
+          echo -e "\e[0Ksection_end:`date +%s`:make\r\e[0K"
+
 Debian testing Clang:
   extends: Debian stable Clang
+
+  when: manual
 
   image: debian:testing-slim
 
@@ -428,9 +501,160 @@ Debian testing Clang:
     paths:
       - "bin/"
       - "src/comptime.h"
-    expose_as: "Debina Clang testing"
+    expose_as: "testing-clang"
     name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-testing-clang"
 
   variables:
     CC: clang
+    WFLAGS: -Wno-cast-align -Wno-deprecated-non-prototype
     CFLAGS: -Wno-cast-align -Wno-deprecated-non-prototype
+    LDFLAGS: -Wl,-fuse-ld=gold
+
+Debian testing musl:
+  extends: Debian stable musl
+
+  when: manual
+
+  image: debian:testing-slim
+
+  artifacts:
+    paths:
+      - "bin/"
+      - "src/comptime.h"
+    expose_as: "testing-musl"
+    name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-testing-musl"
+
+  variables:
+    CC: musl-gcc
+    LDD: musl-ldd
+    LDFLAGS: -Wl,-fuse-ld=gold
+
+Alpine 3 GCC:
+  stage: build
+
+  when: on_success
+
+  image: alpine:3
+
+  allow_failure: true
+
+  artifacts:
+    paths:
+      - "bin/"
+      - "src/comptime.h"
+    expose_as: "Apline-3"
+    name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-Apline-3"
+
+  before_script:
+    - - |
+          # apk_cache
+          echo -e "\e[0Ksection_start:`date +%s`:apk_cache[collapsed=true]\r\e[0KUpdating APK listing"
+      - export APK_CACHE_DIR=`pwd`/apk-cache
+      - mkdir --parents --verbose $APK_CACHE_DIR/
+      - ln -sf /etc/apk/cache $APK_CACHE_DIR
+      - |
+          # apk_cache
+          echo -e "\e[0Ksection_end:`date +%s`:apk_cache\r\e[0K"
+
+    - - |
+          # apk_update
+          echo -e "\e[0Ksection_start:`date +%s`:apk_update[collapsed=true]\r\e[0KUpdating APK listing"
+      - apk update
+      - |
+          # apk_update
+          echo -e "\e[0Ksection_end:`date +%s`:apk_update\r\e[0K"
+
+    - - |
+          # apk_upgrade
+          echo -e "\e[0Ksection_start:`date +%s`:apk_upgrade[collapsed=true]\r\e[0KUpdating existing packages"
+      - apk upgrade
+      - |
+          # apk_update
+          echo -e "\e[0Ksection_end:`date +%s`:apk_upgrade\r\e[0K"
+
+    - - |
+          # apk_common
+          echo -e "\e[0Ksection_start:`date +%s`:apk_common[collapsed=true]\r\e[0KInstalling common packages"
+      - apk add make git ccache nasm
+      - |
+          # apk_common
+          echo -e "\e[0Ksection_end:`date +%s`:apk_common\r\e[0K"
+
+    - - |
+          # ccache_config
+          echo -e "\e[0Ksection_start:`date +%s`:ccache_config[collapsed=true]\r\e[0KSetting up ccache config"
+      - mkdir --parents --verbose ~/.ccache/
+      - touch ~/.ccache/ccache.conf
+      - |
+          # cache.conf
+          echo Adding ccache configution option
+      - |
+          # base_dir
+          echo base_dir = $PWD                  | tee -a ~/.ccache/ccache.conf
+      - |
+          # cache_dir
+          echo cache_dir = $PWD/ccache          | tee -a ~/.ccache/ccache.conf
+      - |
+          # compiler_check
+          echo compiler_check = content         | tee -a ~/.ccache/ccache.conf
+      - |
+          # stats_log
+          echo stats_log = $PWD/ccache_statslog | tee -a ~/.ccache/ccache.conf
+      - |
+          # max_size
+          echo max_size = 50M                   | tee -a ~/.ccache/ccache.conf
+      - |
+          # ccache_config
+          echo -e "\e[0Ksection_end:`date +%s`:ccache_config\r\e[0K"
+
+    - - |
+          # cache_reset
+          echo -e "\e[0Ksection_start:`date +%s`:ccache_reset[collapsed=true]\r\e[0KResetting ccache statistics"
+      - ccache --zero-stats
+      - ccache --show-stats
+      - |
+          # ccache_reset
+          echo -e "\e[0Ksection_end:`date +%s`:ccache_reset\r\e[0K"
+
+  script:
+    - - |
+          # apk_toolchain
+          echo -e "\e[0Ksection_start:`date +%s`:apk_toolchain[collapsed=true]\r\e[0KInstalling toolchain packages"
+      - apk add gcc
+      - |
+          # apk_toolchain
+          echo -e "\e[0Ksection_end:`date +%s`:apk_toolchain\r\e[0K"
+
+    - - |
+          # apk_development
+          echo -e "\e[0Ksection_start:`date +%s`:apk_development[collapsed=true]\r\e[0KInstalling development packages"
+      - apk add musl-dev sdl2_mixer-dev libpng-dev curl-dev libgme-dev libopenmpt-dev
+      - |
+          # apk_development
+          echo -e "\e[0Ksection_end:`date +%s`:apk_development\r\e[0K"
+
+    - - |
+          # make
+          echo -e "\e[0Ksection_start:`date +%s`:make[collapsed=false]\r\e[0KCompiling SRB2"
+      - make --directory=src --keep-going CCACHE=1 ERRORMODE=1 NONX86=1 NOEXECINFO=1 || make --directory=src --keep-going CCACHE=1 ERRORMODE=1 NONX86=1 NOEXECINFO=1
+      - |
+          # make
+          echo -e "\e[0Ksection_end:`date +%s`:make\r\e[0K"
+
+  after_script:
+    - - |
+           # apk_clean
+           echo -e "\e[0Ksection_start:`date +%s`:apk_clean[collapsed=true]\r\e[0KCleaning of unneeded APK packages"
+      - apk cache clean
+      - |
+          # apk_clean
+          echo -e "\e[0Ksection_end:`date +%s`:apk_clean\r\e[0K"
+
+    - - |
+          # ccache_stats
+          echo -e "\e[0Ksection_start:`date +%s`:ccache_stats[collapsed=true]\r\e[0Kccache statistics:"
+      - ccache --show-stats --verbose
+      - ccache --show-log-stats --verbose
+      - |
+          # ccahe_stats
+          echo -e "\e[0Ksection_end:`date +%s`:ccache_stats\r\e[0K"
