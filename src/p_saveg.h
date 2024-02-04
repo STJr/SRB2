@@ -18,7 +18,7 @@
 #pragma interface
 #endif
 
-#define NEWSKINSAVES (INT16_MAX) // Purely for backwards compatibility, remove this for 2.3
+#define NEWSKINSAVES (INT16_MAX) // TODO: 2.3: Delete (Purely for backwards compatibility)
 
 // Persistent storage/archiving.
 // These are the load / save game routines.

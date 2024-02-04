@@ -35,15 +35,19 @@ enum sector_e {
 	sector_floorpic,
 	sector_floorxoffset,
 	sector_flooryoffset,
-	sector_floorangle,	
+	sector_floorxscale,
+	sector_flooryscale,
+	sector_floorangle,
 	sector_ceilingpic,
 	sector_ceilingxoffset,
 	sector_ceilingyoffset,
+	sector_ceilingxscale,
+	sector_ceilingyscale,
 	sector_ceilingangle,
 	sector_lightlevel,
 	sector_floorlightlevel,
 	sector_floorlightabsolute,
-	sector_floorlightsec,	
+	sector_floorlightsec,
 	sector_ceilinglightlevel,
 	sector_ceilinglightabsolute,
 	sector_ceilinglightsec,
@@ -57,6 +61,7 @@ enum sector_e {
 	sector_ffloors,
 	sector_fslope,
 	sector_cslope,
+	sector_colormap,
 	sector_flags,
 	sector_specialflags,
 	sector_damagetype,
@@ -73,18 +78,22 @@ static const char *const sector_opt[] = {
 	"floorpic",
 	"floorxoffset",
 	"flooryoffset",
+	"floorxscale",
+	"flooryscale",
 	"floorangle",
 	"ceilingpic",
 	"ceilingxoffset",
 	"ceilingyoffset",
-	"ceilingangle",	
+	"ceilingxscale",
+	"ceilingyscale",
+	"ceilingangle",
 	"lightlevel",
 	"floorlightlevel",
 	"floorlightabsolute",
 	"floorlightsec",
 	"ceilinglightlevel",
 	"ceilinglightabsolute",
-	"ceilinglightsec",	
+	"ceilinglightsec",
 	"special",
 	"tag",
 	"taglist",
@@ -95,6 +104,7 @@ static const char *const sector_opt[] = {
 	"ffloors",
 	"f_slope",
 	"c_slope",
+	"colormap",
 	"flags",
 	"specialflags",
 	"damagetype",
@@ -186,8 +196,16 @@ enum side_e {
 	side_offsety_top,
 	side_offsetx_mid,
 	side_offsety_mid,
+	side_offsetx_bottom,
 	side_offsetx_bot,
+	side_offsety_bottom,
 	side_offsety_bot,
+	side_scalex_top,
+	side_scaley_top,
+	side_scalex_mid,
+	side_scaley_mid,
+	side_scalex_bottom,
+	side_scaley_bottom,
 	side_toptexture,
 	side_bottomtexture,
 	side_midtexture,
@@ -206,8 +224,16 @@ static const char *const side_opt[] = {
 	"offsety_top",
 	"offsetx_mid",
 	"offsety_mid",
+	"offsetx_bottom",
 	"offsetx_bot",
+	"offsety_bottom",
 	"offsety_bot",
+	"scalex_top",
+	"scaley_top",
+	"scalex_mid",
+	"scaley_mid",
+	"scalex_bottom",
+	"scaley_bottom",
 	"toptexture",
 	"bottomtexture",
 	"midtexture",
@@ -247,8 +273,16 @@ enum ffloor_e {
 	ffloor_topheight,
 	ffloor_toppic,
 	ffloor_toplightlevel,
+	ffloor_topxoffs,
+	ffloor_topyoffs,
+	ffloor_topxscale,
+	ffloor_topyscale,
 	ffloor_bottomheight,
 	ffloor_bottompic,
+	ffloor_bottomxoffs,
+	ffloor_bottomyoffs,
+	ffloor_bottomxscale,
+	ffloor_bottomyscale,
 	ffloor_tslope,
 	ffloor_bslope,
 	ffloor_sector,
@@ -273,8 +307,16 @@ static const char *const ffloor_opt[] = {
 	"topheight",
 	"toppic",
 	"toplightlevel",
+	"topxoffs",
+	"topyoffs",
+	"topxscale",
+	"topyscale",
 	"bottomheight",
 	"bottompic",
+	"bottomxoffs",
+	"bottomyoffs",
+	"bottomxscale",
+	"bottomyscale",
 	"t_slope",
 	"b_slope",
 	"sector", // secnum pushed as control sector userdata
@@ -654,20 +696,20 @@ static int sector_get(lua_State *L)
 		return 1;
 	}
 	case sector_floorxoffset:
-	{
 		lua_pushfixed(L, sector->floorxoffset);
 		return 1;
-	}
 	case sector_flooryoffset:
-	{
 		lua_pushfixed(L, sector->flooryoffset);
 		return 1;
-	}
-	case sector_floorangle: 
-	{
+	case sector_floorxscale:
+		lua_pushfixed(L, sector->floorxscale);
+		return 1;
+	case sector_flooryscale:
+		lua_pushfixed(L, sector->flooryscale);
+		return 1;
+	case sector_floorangle:
 		lua_pushangle(L, sector->floorangle);
 		return 1;
-	}	
 	case sector_ceilingpic: // ceilingpic
 	{
 		levelflat_t *levelflat = &levelflats[sector->ceilingpic];
@@ -678,20 +720,20 @@ static int sector_get(lua_State *L)
 		return 1;
 	}
 	case sector_ceilingxoffset:
-	{
 		lua_pushfixed(L, sector->ceilingxoffset);
 		return 1;
-	}
 	case sector_ceilingyoffset:
-	{
 		lua_pushfixed(L, sector->ceilingyoffset);
 		return 1;
-	}
+	case sector_ceilingxscale:
+		lua_pushfixed(L, sector->ceilingxscale);
+		return 1;
+	case sector_ceilingyscale:
+		lua_pushfixed(L, sector->ceilingyscale);
+		return 1;
 	case sector_ceilingangle:
-	{
 		lua_pushangle(L, sector->ceilingangle);
 		return 1;
-	}	
 	case sector_lightlevel:
 		lua_pushinteger(L, sector->lightlevel);
 		return 1;
@@ -703,7 +745,7 @@ static int sector_get(lua_State *L)
 		return 1;
 	case sector_floorlightsec:
 		lua_pushinteger(L, sector->floorlightsec);
-		return 1;		
+		return 1;
 	case sector_ceilinglightlevel:
 		lua_pushinteger(L, sector->ceilinglightlevel);
 		return 1;
@@ -712,7 +754,7 @@ static int sector_get(lua_State *L)
 		return 1;
 	case sector_ceilinglightsec:
 		lua_pushinteger(L, sector->ceilinglightsec);
-		return 1;		
+		return 1;
 	case sector_special:
 		lua_pushinteger(L, sector->special);
 		return 1;
@@ -750,6 +792,9 @@ static int sector_get(lua_State *L)
 		return 1;
 	case sector_cslope: // c_slope
 		LUA_PushUserdata(L, sector->c_slope, META_SLOPE);
+		return 1;
+	case sector_colormap: // extra_colormap
+		LUA_PushUserdata(L, sector->extra_colormap, META_EXTRACOLORMAP);
 		return 1;
 	case sector_flags: // flags
 		lua_pushinteger(L, sector->flags);
@@ -840,9 +885,15 @@ static int sector_set(lua_State *L)
 	case sector_flooryoffset:
 		sector->flooryoffset = luaL_checkfixed(L, 3);
 		break;
+	case sector_floorxscale:
+		sector->floorxscale = luaL_checkfixed(L, 3);
+		break;
+	case sector_flooryscale:
+		sector->flooryscale = luaL_checkfixed(L, 3);
+		break;
 	case sector_floorangle:
 		sector->floorangle = luaL_checkangle(L, 3);
-		break;				
+		break;
 	case sector_ceilingpic:
 		sector->ceilingpic = P_AddLevelFlatRuntime(luaL_checkstring(L, 3));
 		break;
@@ -851,6 +902,12 @@ static int sector_set(lua_State *L)
 		break;
 	case sector_ceilingyoffset:
 		sector->ceilingyoffset = luaL_checkfixed(L, 3);
+		break;
+	case sector_ceilingxscale:
+		sector->ceilingxscale = luaL_checkfixed(L, 3);
+		break;
+	case sector_ceilingyscale:
+		sector->ceilingyscale = luaL_checkfixed(L, 3);
 		break;
 	case sector_ceilingangle:
 		sector->ceilingangle = luaL_checkangle(L, 3);
@@ -866,7 +923,7 @@ static int sector_set(lua_State *L)
 		break;
 	case sector_floorlightsec:
 		sector->floorlightsec = (INT32)luaL_checkinteger(L, 3);
-		break;		
+		break;
 	case sector_ceilinglightlevel:
 		sector->ceilinglightlevel = (INT16)luaL_checkinteger(L, 3);
 		break;
@@ -875,7 +932,7 @@ static int sector_set(lua_State *L)
 		break;
 	case sector_ceilinglightsec:
 		sector->ceilinglightsec = (INT32)luaL_checkinteger(L, 3);
-		break;		
+		break;
 	case sector_special:
 		sector->special = (INT16)luaL_checkinteger(L, 3);
 		break;
@@ -1043,17 +1100,7 @@ static int line_get(lua_State *L)
 		lua_pushinteger(L, line->special);
 		return 1;
 	case line_tag:
-		// HELLO
-		// THIS IS LJ SONIC
-		// HOW IS YOUR DAY?
-		// BY THE WAY WHEN 2.3 OR 3.0 OR 4.0 OR SRB3 OR SRB4 OR WHATEVER IS OUT
-		// YOU SHOULD REMEMBER TO CHANGE THIS SO IT ALWAYS RETURNS A UNSIGNED VALUE
-		// HAVE A NICE DAY
-		//
-		//
-		//
-		//
-		// you are ugly
+		// TODO: 2.3: Always return a unsigned value
 		lua_pushinteger(L, Tag_FGet(&line->tags));
 		return 1;
 	case line_taglist:
@@ -1072,7 +1119,7 @@ static int line_get(lua_State *L)
 		LUA_PushUserdata(L, &sides[line->sidenum[0]], META_SIDE);
 		return 1;
 	case line_backside: // backside
-		if (line->sidenum[1] == 0xffff)
+		if (line->sidenum[1] == NO_SIDEDEF)
 			return 0;
 		LUA_PushUserdata(L, &sides[line->sidenum[1]], META_SIDE);
 		return 1;
@@ -1108,6 +1155,7 @@ static int line_get(lua_State *L)
 	case line_polyobj:
 		LUA_PushUserdata(L, line->polyobj, META_POLYOBJ);
 		return 1;
+	// TODO: 2.3: Delete
 	case line_text:
 		{
 			if (udmf)
@@ -1147,7 +1195,7 @@ static int line_num(lua_State *L)
 
 static int sidenum_get(lua_State *L)
 {
-	UINT16 *sidenum = *((UINT16 **)luaL_checkudata(L, 1, META_SIDENUM));
+	UINT32 *sidenum = *((UINT32 **)luaL_checkudata(L, 1, META_SIDENUM));
 	int i;
 	lua_settop(L, 2);
 	if (!lua_isnumber(L, 2))
@@ -1214,11 +1262,31 @@ static int side_get(lua_State *L)
 	case side_offsety_mid:
 		lua_pushfixed(L, side->offsety_mid);
 		return 1;
+	case side_offsetx_bottom:
 	case side_offsetx_bot:
-		lua_pushfixed(L, side->offsetx_bot);
+		lua_pushfixed(L, side->offsetx_bottom);
 		return 1;
+	case side_offsety_bottom:
 	case side_offsety_bot:
-		lua_pushfixed(L, side->offsety_bot);
+		lua_pushfixed(L, side->offsety_bottom);
+		return 1;
+	case side_scalex_top:
+		lua_pushfixed(L, side->scalex_top);
+		return 1;
+	case side_scaley_top:
+		lua_pushfixed(L, side->scaley_top);
+		return 1;
+	case side_scalex_mid:
+		lua_pushfixed(L, side->scalex_mid);
+		return 1;
+	case side_scaley_mid:
+		lua_pushfixed(L, side->scaley_mid);
+		return 1;
+	case side_scalex_bottom:
+		lua_pushfixed(L, side->scalex_bottom);
+		return 1;
+	case side_scaley_bottom:
+		lua_pushfixed(L, side->scaley_bottom);
 		return 1;
 	case side_toptexture:
 		lua_pushinteger(L, side->toptexture);
@@ -1241,8 +1309,12 @@ static int side_get(lua_State *L)
 	case side_repeatcnt:
 		lua_pushinteger(L, side->repeatcnt);
 		return 1;
+	// TODO: 2.3: Delete
 	case side_text:
 		{
+			boolean isfrontside;
+			size_t sidei = side-sides;
+
 			if (udmf)
 			{
 				LUA_Deprecated(L, "(sidedef_t).text", "(sidedef_t).line.stringargs");
@@ -1250,7 +1322,7 @@ static int side_get(lua_State *L)
 				return 1;
 			}
 
-			boolean isfrontside = side->line->sidenum[0] == side-sides;
+			isfrontside = side->line->sidenum[0] == sidei;
 
 			lua_pushstring(L, side->line->stringargs[isfrontside ? 0 : 1]);
 			return 1;
@@ -1302,10 +1374,30 @@ static int side_set(lua_State *L)
 		side->offsety_mid = luaL_checkfixed(L, 3);
 		break;
 	case side_offsetx_bot:
-		side->offsetx_bot = luaL_checkfixed(L, 3);
+	case side_offsetx_bottom:
+		side->offsetx_bottom = luaL_checkfixed(L, 3);
 		break;
 	case side_offsety_bot:
-		side->offsety_bot = luaL_checkfixed(L, 3);
+	case side_offsety_bottom:
+		side->offsety_bottom = luaL_checkfixed(L, 3);
+		break;
+	case side_scalex_top:
+		side->scalex_top = luaL_checkfixed(L, 3);
+		break;
+	case side_scaley_top:
+		side->scaley_top = luaL_checkfixed(L, 3);
+		break;
+	case side_scalex_mid:
+		side->scalex_mid = luaL_checkfixed(L, 3);
+		break;
+	case side_scaley_mid:
+		side->scaley_mid = luaL_checkfixed(L, 3);
+		break;
+	case side_scalex_bottom:
+		side->scalex_bottom = luaL_checkfixed(L, 3);
+		break;
+	case side_scaley_bottom:
+		side->scaley_bottom = luaL_checkfixed(L, 3);
 		break;
 	case side_toptexture:
 		side->toptexture = luaL_checkinteger(L, 3);
@@ -2122,6 +2214,18 @@ static int ffloor_get(lua_State *L)
 	case ffloor_toplightlevel:
 		lua_pushinteger(L, *ffloor->toplightlevel);
 		return 1;
+	case ffloor_topxoffs:
+		lua_pushfixed(L, *ffloor->topxoffs);
+		return 1;
+	case ffloor_topyoffs:
+		lua_pushfixed(L, *ffloor->topyoffs);
+		return 1;
+	case ffloor_topxscale:
+		lua_pushfixed(L, *ffloor->topxscale);
+		return 1;
+	case ffloor_topyscale:
+		lua_pushfixed(L, *ffloor->topyscale);
+		return 1;
 	case ffloor_bottomheight:
 		lua_pushfixed(L, *ffloor->bottomheight);
 		return 1;
@@ -2133,6 +2237,18 @@ static int ffloor_get(lua_State *L)
 		lua_pushlstring(L, levelflat->name, i);
 		return 1;
 	}
+	case ffloor_bottomxoffs:
+		lua_pushfixed(L, *ffloor->bottomxoffs);
+		return 1;
+	case ffloor_bottomyoffs:
+		lua_pushfixed(L, *ffloor->bottomyoffs);
+		return 1;
+	case ffloor_bottomxscale:
+		lua_pushfixed(L, *ffloor->bottomxscale);
+		return 1;
+	case ffloor_bottomyscale:
+		lua_pushfixed(L, *ffloor->bottomyscale);
+		return 1;
 	case ffloor_tslope:
 		LUA_PushUserdata(L, *ffloor->t_slope, META_SLOPE);
 		return 1;
@@ -2317,6 +2433,18 @@ static int ffloor_set(lua_State *L)
 	case ffloor_toplightlevel:
 		*ffloor->toplightlevel = (INT16)luaL_checkinteger(L, 3);
 		break;
+	case ffloor_topxoffs:
+		*ffloor->topxoffs = luaL_checkfixed(L, 3);
+		break;
+	case ffloor_topyoffs:
+		*ffloor->topyoffs = luaL_checkfixed(L, 3);
+		break;
+	case ffloor_topxscale:
+		*ffloor->topxscale = luaL_checkfixed(L, 3);
+		break;
+	case ffloor_topyscale:
+		*ffloor->topyscale = luaL_checkfixed(L, 3);
+		break;
 	case ffloor_bottomheight: { // bottomheight
 		boolean flag;
 		fixed_t lastpos = *ffloor->bottomheight;
@@ -2334,6 +2462,18 @@ static int ffloor_set(lua_State *L)
 	}
 	case ffloor_bottompic:
 		*ffloor->bottompic = P_AddLevelFlatRuntime(luaL_checkstring(L, 3));
+		break;
+	case ffloor_bottomxoffs:
+		*ffloor->bottomxoffs = luaL_checkfixed(L, 3);
+		break;
+	case ffloor_bottomyoffs:
+		*ffloor->bottomyoffs = luaL_checkfixed(L, 3);
+		break;
+	case ffloor_bottomxscale:
+		*ffloor->bottomxscale = luaL_checkfixed(L, 3);
+		break;
+	case ffloor_bottomyscale:
+		*ffloor->bottomyscale = luaL_checkfixed(L, 3);
 		break;
 	case ffloor_fofflags: {
 		ffloortype_e oldflags = ffloor->fofflags; // store FOF's old flags
@@ -2469,12 +2609,18 @@ static int slope_set(lua_State *L)
 			slope->o.z = luaL_checkfixed(L, -1);
 		else
 			slope->o.z = 0;
+		DVector3_Load(&slope->dorigin,
+			FixedToDouble(slope->o.x),
+			FixedToDouble(slope->o.y),
+			FixedToDouble(slope->o.z)
+		);
 		lua_pop(L, 1);
 		break;
 	}
-	case slope_zdelta: { // zdelta, this is temp until i figure out wtf to do
+	case slope_zdelta: { // zdelta
 		slope->zdelta = luaL_checkfixed(L, 3);
 		slope->zangle = R_PointToAngle2(0, 0, FRACUNIT, -slope->zdelta);
+		slope->dzdelta = FixedToDouble(slope->zdelta);
 		P_CalculateSlopeNormal(slope);
 		break;
 	}
@@ -2484,6 +2630,7 @@ static int slope_set(lua_State *L)
 			return luaL_error(L, "invalid zangle for slope!");
 		slope->zangle = zangle;
 		slope->zdelta = -FINETANGENT(((slope->zangle+ANGLE_90)>>ANGLETOFINESHIFT) & 4095);
+		slope->dzdelta = FixedToDouble(slope->zdelta);
 		P_CalculateSlopeNormal(slope);
 		break;
 	}
@@ -2491,6 +2638,8 @@ static int slope_set(lua_State *L)
 		slope->xydirection = luaL_checkangle(L, 3);
 		slope->d.x = -FINECOSINE((slope->xydirection>>ANGLETOFINESHIFT) & FINEMASK);
 		slope->d.y = -FINESINE((slope->xydirection>>ANGLETOFINESHIFT) & FINEMASK);
+		slope->dnormdir.x = FixedToDouble(slope->d.x);
+		slope->dnormdir.y = FixedToDouble(slope->d.y);
 		P_CalculateSlopeNormal(slope);
 		break;
 	}
@@ -2843,169 +2992,35 @@ static int mapheaderinfo_get(lua_State *L)
 
 int LUA_MapLib(lua_State *L)
 {
-	luaL_newmetatable(L, META_SECTORLINES);
-		lua_pushcfunction(L, sectorlines_get);
-		lua_setfield(L, -2, "__index");
-
-		lua_pushcfunction(L, sectorlines_num);
-		lua_setfield(L, -2, "__len");
-	lua_pop(L, 1);
-
-	luaL_newmetatable(L, META_SECTOR);
-		lua_pushcfunction(L, sector_get);
-		lua_setfield(L, -2, "__index");
-
-		lua_pushcfunction(L, sector_set);
-		lua_setfield(L, -2, "__newindex");
-
-		lua_pushcfunction(L, sector_num);
-		lua_setfield(L, -2, "__len");
-	lua_pop(L, 1);
+	LUA_RegisterUserdataMetatable(L, META_SECTORLINES, sectorlines_get, NULL, sectorlines_num);
+	LUA_RegisterUserdataMetatable(L, META_SECTOR, sector_get, sector_set, sector_num);
+	LUA_RegisterUserdataMetatable(L, META_SUBSECTOR, subsector_get, NULL, subsector_num);
+	LUA_RegisterUserdataMetatable(L, META_LINE, line_get, NULL, line_num);
+	LUA_RegisterUserdataMetatable(L, META_LINEARGS, lineargs_get, NULL, lineargs_len);
+	LUA_RegisterUserdataMetatable(L, META_LINESTRINGARGS, linestringargs_get, NULL, linestringargs_len);
+	LUA_RegisterUserdataMetatable(L, META_SIDENUM, sidenum_get, NULL, NULL);
+	LUA_RegisterUserdataMetatable(L, META_SIDE, side_get, side_set, side_num);
+	LUA_RegisterUserdataMetatable(L, META_VERTEX, vertex_get, NULL, vertex_num);
+	LUA_RegisterUserdataMetatable(L, META_FFLOOR, ffloor_get, ffloor_set, NULL);
+	LUA_RegisterUserdataMetatable(L, META_BBOX, bbox_get, NULL, NULL);
+	LUA_RegisterUserdataMetatable(L, META_SLOPE, slope_get, slope_set, NULL);
+	LUA_RegisterUserdataMetatable(L, META_VECTOR2, vector2_get, NULL, NULL);
+	LUA_RegisterUserdataMetatable(L, META_VECTOR3, vector3_get, NULL, NULL);
+	LUA_RegisterUserdataMetatable(L, META_MAPHEADER, mapheaderinfo_get, NULL, NULL);
 
 	sector_fields_ref = Lua_CreateFieldTable(L, sector_opt);
-
-	luaL_newmetatable(L, META_SUBSECTOR);
-		lua_pushcfunction(L, subsector_get);
-		lua_setfield(L, -2, "__index");
-
-		lua_pushcfunction(L, subsector_num);
-		lua_setfield(L, -2, "__len");
-	lua_pop(L, 1);
-
 	subsector_fields_ref = Lua_CreateFieldTable(L, subsector_opt);
-
-	luaL_newmetatable(L, META_LINE);
-		lua_pushcfunction(L, line_get);
-		lua_setfield(L, -2, "__index");
-
-		lua_pushcfunction(L, line_num);
-		lua_setfield(L, -2, "__len");
-	lua_pop(L, 1);
-
 	line_fields_ref = Lua_CreateFieldTable(L, line_opt);
-
-	luaL_newmetatable(L, META_LINEARGS);
-		lua_pushcfunction(L, lineargs_get);
-		lua_setfield(L, -2, "__index");
-
-		lua_pushcfunction(L, lineargs_len);
-		lua_setfield(L, -2, "__len");
-	lua_pop(L, 1);
-
-	luaL_newmetatable(L, META_LINESTRINGARGS);
-		lua_pushcfunction(L, linestringargs_get);
-		lua_setfield(L, -2, "__index");
-
-		lua_pushcfunction(L, linestringargs_len);
-		lua_setfield(L, -2, "__len");
-	lua_pop(L, 1);
-
-	luaL_newmetatable(L, META_SIDENUM);
-		lua_pushcfunction(L, sidenum_get);
-		lua_setfield(L, -2, "__index");
-	lua_pop(L, 1);
-
-	luaL_newmetatable(L, META_SIDE);
-		lua_pushcfunction(L, side_get);
-		lua_setfield(L, -2, "__index");
-
-		lua_pushcfunction(L, side_set);
-		lua_setfield(L, -2, "__newindex");
-
-		lua_pushcfunction(L, side_num);
-		lua_setfield(L, -2, "__len");
-	lua_pop(L, 1);
-
 	side_fields_ref = Lua_CreateFieldTable(L, side_opt);
-
-	luaL_newmetatable(L, META_VERTEX);
-		lua_pushcfunction(L, vertex_get);
-		lua_setfield(L, -2, "__index");
-
-		lua_pushcfunction(L, vertex_num);
-		lua_setfield(L, -2, "__len");
-	lua_pop(L, 1);
-
 	vertex_fields_ref = Lua_CreateFieldTable(L, vertex_opt);
-
-	luaL_newmetatable(L, META_FFLOOR);
-		lua_pushcfunction(L, ffloor_get);
-		lua_setfield(L, -2, "__index");
-
-		lua_pushcfunction(L, ffloor_set);
-		lua_setfield(L, -2, "__newindex");
-	lua_pop(L, 1);
-
 	ffloor_fields_ref = Lua_CreateFieldTable(L, ffloor_opt);
-
-#ifdef HAVE_LUA_SEGS
-	luaL_newmetatable(L, META_SEG);
-		lua_pushcfunction(L, seg_get);
-		lua_setfield(L, -2, "__index");
-
-		lua_pushcfunction(L, seg_num);
-		lua_setfield(L, -2, "__len");
-	lua_pop(L, 1);
-
-	seg_fields_ref = Lua_CreateFieldTable(L, seg_opt);
-
-	luaL_newmetatable(L, META_NODE);
-		lua_pushcfunction(L, node_get);
-		lua_setfield(L, -2, "__index");
-
-		lua_pushcfunction(L, node_num);
-		lua_setfield(L, -2, "__len");
-	lua_pop(L, 1);
-
-	node_fields_ref = Lua_CreateFieldTable(L, node_opt);
-
-	luaL_newmetatable(L, META_NODEBBOX);
-		//lua_pushcfunction(L, nodebbox_get);
-		//lua_setfield(L, -2, "__index");
-		lua_pushcfunction(L, nodebbox_call);
-		lua_setfield(L, -2, "__call");
-	lua_pop(L, 1);
-
-	luaL_newmetatable(L, META_NODECHILDREN);
-		lua_pushcfunction(L, nodechildren_get);
-		lua_setfield(L, -2, "__index");
-	lua_pop(L, 1);
-#endif
-
-	luaL_newmetatable(L, META_BBOX);
-		lua_pushcfunction(L, bbox_get);
-		lua_setfield(L, -2, "__index");
-	lua_pop(L, 1);
-
-	luaL_newmetatable(L, META_SLOPE);
-		lua_pushcfunction(L, slope_get);
-		lua_setfield(L, -2, "__index");
-
-		lua_pushcfunction(L, slope_set);
-		lua_setfield(L, -2, "__newindex");
-	lua_pop(L, 1);
-
 	slope_fields_ref = Lua_CreateFieldTable(L, slope_opt);
-
-	luaL_newmetatable(L, META_VECTOR2);
-		lua_pushcfunction(L, vector2_get);
-		lua_setfield(L, -2, "__index");
-	lua_pop(L, 1);
-
-	luaL_newmetatable(L, META_VECTOR3);
-		lua_pushcfunction(L, vector3_get);
-		lua_setfield(L, -2, "__index");
-	lua_pop(L, 1);
-
-	luaL_newmetatable(L, META_MAPHEADER);
-		lua_pushcfunction(L, mapheaderinfo_get);
-		lua_setfield(L, -2, "__index");
-
-		//lua_pushcfunction(L, mapheaderinfo_num);
-		//lua_setfield(L, -2, "__len");
-	lua_pop(L, 1);
-
 	mapheaderinfo_fields_ref = Lua_CreateFieldTable(L, mapheaderinfo_opt);
+
+	LUA_RegisterGlobalUserdata(L, "subsectors", lib_getSubsector, NULL, lib_numsubsectors);
+	LUA_RegisterGlobalUserdata(L, "sides", lib_getSide, NULL, lib_numsides);
+	LUA_RegisterGlobalUserdata(L, "vertexes", lib_getVertex, NULL, lib_numvertexes);
+	LUA_RegisterGlobalUserdata(L, "mapheaderinfo", lib_getMapheaderinfo, NULL, lib_nummapheaders);
 
 	LUA_PushTaggableObjectArray(L, "sectors",
 			lib_iterateSectors,
@@ -3015,16 +3030,6 @@ int LUA_MapLib(lua_State *L)
 			&numsectors, &sectors,
 			sizeof (sector_t), META_SECTOR);
 
-	lua_newuserdata(L, 0);
-		lua_createtable(L, 0, 2);
-			lua_pushcfunction(L, lib_getSubsector);
-			lua_setfield(L, -2, "__index");
-
-			lua_pushcfunction(L, lib_numsubsectors);
-			lua_setfield(L, -2, "__len");
-		lua_setmetatable(L, -2);
-	lua_setglobal(L, "subsectors");
-
 	LUA_PushTaggableObjectArray(L, "lines",
 			lib_iterateLines,
 			lib_getLine,
@@ -3033,56 +3038,22 @@ int LUA_MapLib(lua_State *L)
 			&numlines, &lines,
 			sizeof (line_t), META_LINE);
 
-	lua_newuserdata(L, 0);
-		lua_createtable(L, 0, 2);
-			lua_pushcfunction(L, lib_getSide);
-			lua_setfield(L, -2, "__index");
-
-			lua_pushcfunction(L, lib_numsides);
-			lua_setfield(L, -2, "__len");
-		lua_setmetatable(L, -2);
-	lua_setglobal(L, "sides");
-
-	lua_newuserdata(L, 0);
-		lua_createtable(L, 0, 2);
-			lua_pushcfunction(L, lib_getVertex);
-			lua_setfield(L, -2, "__index");
-
-			lua_pushcfunction(L, lib_numvertexes);
-			lua_setfield(L, -2, "__len");
-		lua_setmetatable(L, -2);
-	lua_setglobal(L, "vertexes");
-
 #ifdef HAVE_LUA_SEGS
-	lua_newuserdata(L, 0);
-		lua_createtable(L, 0, 2);
-			lua_pushcfunction(L, lib_getSeg);
-			lua_setfield(L, -2, "__index");
+	LUA_RegisterUserdataMetatable(L, META_SEG, seg_get, NULL, seg_num);
+	LUA_RegisterUserdataMetatable(L, META_NODE, node_get, NULL, node_num);
+	LUA_RegisterUserdataMetatable(L, META_NODECHILDREN, nodechildren_get, NULL, NULL);
 
-			lua_pushcfunction(L, lib_numsegs);
-			lua_setfield(L, -2, "__len");
-		lua_setmetatable(L, -2);
-	lua_setglobal(L, "segs");
+	seg_fields_ref = Lua_CreateFieldTable(L, seg_opt);
+	node_fields_ref = Lua_CreateFieldTable(L, node_opt);
 
-	lua_newuserdata(L, 0);
-		lua_createtable(L, 0, 2);
-			lua_pushcfunction(L, lib_getNode);
-			lua_setfield(L, -2, "__index");
+	luaL_newmetatable(L, META_NODEBBOX);
+		//LUA_SetCFunctionField(L, "__index", nodebbox_get);
+		LUA_SetCFunctionField(L, "__call", nodebbox_call);
+	lua_pop(L, 1);
 
-			lua_pushcfunction(L, lib_numnodes);
-			lua_setfield(L, -2, "__len");
-		lua_setmetatable(L, -2);
-	lua_setglobal(L, "nodes");
+	LUA_RegisterGlobalUserdata(L, "segs", lib_getSeg, NULL, lib_numsegs);
+	LUA_RegisterGlobalUserdata(L, "nodes", lib_getNode, NULL, lib_numnodes);
 #endif
 
-	lua_newuserdata(L, 0);
-		lua_createtable(L, 0, 2);
-			lua_pushcfunction(L, lib_getMapheaderinfo);
-			lua_setfield(L, -2, "__index");
-
-			lua_pushcfunction(L, lib_nummapheaders);
-			lua_setfield(L, -2, "__len");
-		lua_setmetatable(L, -2);
-	lua_setglobal(L, "mapheaderinfo");
 	return 0;
 }
