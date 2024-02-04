@@ -1445,17 +1445,15 @@ void PT_FileFragment(SINT8 node, INT32 netconsole)
 					netbuffer->packettype = PT_HASLUAFILE;
 					HSendPacket(servernode, true, 0, 0);
 					FreeFileNeeded();
-
-					CONS_Printf(M_GetText("Downloaded \"%s\"\n"), filename);
 				}
 				else
 				{
 					filedownload.completednum++;
 					filedownload.completedsize += file->totalsize;
 					filedownload.remaining--;
-
-					CONS_Printf(M_GetText("Finished download of addon \"%s\"\n"), filename);
 				}
+
+				CONS_Printf(M_GetText("Finished download of \"%s\"\n"), filename);
 			}
 		}
 		else // Already received
@@ -1741,7 +1739,7 @@ void CURLGetFile(void)
 			{
 				fclose(curl_curfile->file);
 
-				CONS_Printf(M_GetText("Finished download of addon \"%s\"\n"), filename);
+				CONS_Printf(M_GetText("Finished download of \"%s\"\n"), filename);
 
 				if (checkfilemd5(curl_curfile->filename, curl_curfile->md5sum) == FS_MD5SUMBAD)
 				{
