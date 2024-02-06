@@ -770,6 +770,22 @@ UINT8 *R_GetTranslationForThing(mobj_t *mobj, skincolornum_t color, UINT16 trans
 	if (is_player) // This thing is a player!
 		skinnum = ((skin_t*)mobj->skin)->skinnum;
 
+	if (color != SKINCOLOR_NONE)
+	{
+		// New colormap stuff for skins Tails 06-07-2002
+		if (mobj->colorized)
+			skinnum = TC_RAINBOW;
+		else if (mobj->player && mobj->player->dashmode >= DASHMODE_THRESHOLD
+			&& (mobj->player->charflags & SF_DASHMODE)
+			&& ((leveltime/2) & 1))
+		{
+			if (mobj->player->charflags & SF_MACHINE)
+				skinnum = TC_DASHMODE;
+			else
+				skinnum = TC_RAINBOW;
+		}
+	}
+
 	if (R_ThingIsFlashing(mobj)) // Bosses "flash"
 	{
 		if (mobj->type == MT_CYBRAKDEMON || mobj->colorized)
@@ -786,22 +802,7 @@ UINT8 *R_GetTranslationForThing(mobj_t *mobj, skincolornum_t color, UINT16 trans
 			return tr;
 	}
 	else if (color != SKINCOLOR_NONE)
-	{
-		// New colormap stuff for skins Tails 06-07-2002
-		if (mobj->colorized)
-			return R_GetTranslationColormap(TC_RAINBOW, color, GTC_CACHE);
-		else if (mobj->player && mobj->player->dashmode >= DASHMODE_THRESHOLD
-			&& (mobj->player->charflags & SF_DASHMODE)
-			&& ((leveltime/2) & 1))
-		{
-			if (mobj->player->charflags & SF_MACHINE)
-				return R_GetTranslationColormap(TC_DASHMODE, 0, GTC_CACHE);
-			else
-				return R_GetTranslationColormap(TC_RAINBOW, color, GTC_CACHE);
-		}
-		else
-			return R_GetTranslationColormap(skinnum, color, GTC_CACHE);
-	}
+		return R_GetTranslationColormap(skinnum, color, GTC_CACHE);
 	else if (mobj->sprite == SPR_PLAY) // Looks like a player, but doesn't have a color? Get rid of green sonic syndrome.
 		return R_GetTranslationColormap(TC_DEFAULT, SKINCOLOR_BLUE, GTC_CACHE);
 
