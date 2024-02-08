@@ -138,7 +138,7 @@ INT32 *blockmaplump; // Big blockmap
 // origin of block map
 fixed_t bmaporgx, bmaporgy;
 // for thing chains
-mobj_t **blocklinks;
+blocknode_t **blocklinks;
 
 // REJECT
 // For fast sight rejection.
@@ -7868,6 +7868,8 @@ boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate)
 		Z_Free(ss->attached);
 		Z_Free(ss->attachedsolid);
 	}
+
+	P_ClearBlockNodes();
 
 	// Clear pointers that would be left dangling by the purge
 	R_FlushTranslationColormapCache();

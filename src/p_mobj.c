@@ -9455,7 +9455,7 @@ static inline boolean PIT_PushThing(mobj_t *thing)
 
 static void P_PointPushThink(mobj_t *mobj)
 {
-	INT32 xl, xh, yl, yh, bx, by;
+	INT32 xl, xh, yl, yh;
 	fixed_t radius;
 
 	if (!mobj->spawnpoint)
@@ -9470,9 +9470,8 @@ static void P_PointPushThink(mobj_t *mobj)
 	xh = (unsigned)(mobj->x + radius - bmaporgx + MAXRADIUS)>>MAPBLOCKSHIFT;
 	yl = (unsigned)(mobj->y - radius - bmaporgy - MAXRADIUS)>>MAPBLOCKSHIFT;
 	yh = (unsigned)(mobj->y + radius - bmaporgy + MAXRADIUS)>>MAPBLOCKSHIFT;
-	for (bx = xl; bx <= xh; bx++)
-		for (by = yl; by <= yh; by++)
-			P_BlockThingsIterator(bx, by, PIT_PushThing);
+
+	P_DoBlockThingsIterate(xl, yl, xh, yh, PIT_PushThing);
 }
 
 static boolean P_MobjRegularThink(mobj_t *mobj)

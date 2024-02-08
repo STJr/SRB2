@@ -5821,15 +5821,12 @@ void A_MinusDigging(mobj_t *actor)
 		fixed_t yl = (unsigned)(actor->y - radius - bmaporgy) >> MAPBLOCKSHIFT;
 		fixed_t xh = (unsigned)(actor->x + radius - bmaporgx) >> MAPBLOCKSHIFT;
 		fixed_t xl = (unsigned)(actor->x - radius - bmaporgx) >> MAPBLOCKSHIFT;
-		fixed_t bx, by;
 
 		BMBOUNDFIX(xl, xh, yl, yh);
 
 		minus = actor;
 
-		for (bx = xl; bx <= xh; bx++)
-			for (by = yl; by <= yh; by++)
-				P_BlockThingsIterator(bx, by, PIT_MinusCarry);
+		P_DoBlockThingsIterate(xl, yl, xh, yh, PIT_MinusCarry);
 	}
 	else
 	{
@@ -13889,7 +13886,7 @@ void A_DustDevilThink(mobj_t *actor)
 {
 	fixed_t scale = actor->scale;
 	mobj_t *layer = actor->tracer;
-	INT32 bx, by, xl, xh, yl, yh;
+	INT32 xl, xh, yl, yh;
 	fixed_t radius = actor->radius;
 
 	if (LUA_CallAction(A_DUSTDEVILTHINK, actor))
@@ -13953,9 +13950,7 @@ void A_DustDevilThink(mobj_t *actor)
 
 	dustdevil = actor;
 
-	for (bx = xl; bx <= xh; bx++)
-		for (by = yl; by <= yh; by++)
-			P_BlockThingsIterator(bx, by, PIT_DustDevilLaunch);
+	P_DoBlockThingsIterate(xl, yl, xh, yh, PIT_DustDevilLaunch);
 
 	//Whirlwind sound effect.
 	if (leveltime % 70 == 0)
@@ -14035,7 +14030,6 @@ static boolean PIT_TNTExplode(mobj_t *nearby)
 void A_TNTExplode(mobj_t *actor)
 {
 	INT32 locvar1 = var1;
-	INT32 x, y;
 	INT32 xl, xh, yl, yh;
 	static mappoint_t epicenter = {0,0,0};
 
@@ -14072,9 +14066,7 @@ void A_TNTExplode(mobj_t *actor)
 
 	barrel = actor;
 
-	for (x = xl; x <= xh; x++)
-		for (y = yl; y <= yh; y++)
-			P_BlockThingsIterator(x, y, PIT_TNTExplode);
+	P_DoBlockThingsIterate(xl, yl, xh, yh, PIT_TNTExplode);
 
 	// cause a quake -- P_StartQuake does not exist yet
 	epicenter.x = actor->x;
