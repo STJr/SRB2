@@ -292,8 +292,10 @@
     <ClInclude Include="..\m_fixed.h" />
     <ClInclude Include="..\m_menu.h" />
     <ClInclude Include="..\m_misc.h" />
+    <ClInclude Include="..\m_tokenizer.h" />
     <ClInclude Include="..\m_perfstats.h" />
     <ClInclude Include="..\m_queue.h" />
+    <ClInclude Include="..\m_vector.h" />
     <ClInclude Include="..\m_random.h" />
     <ClInclude Include="..\m_swap.h" />
     <ClInclude Include="..\netcode\client_connection.h" />
@@ -342,6 +344,7 @@
     <ClInclude Include="..\r_state.h" />
     <ClInclude Include="..\r_textures.h" />
     <ClInclude Include="..\r_things.h" />
+    <ClInclude Include="..\r_translation.h" />
     <ClInclude Include="..\screen.h" />
     <ClInclude Include="..\snake.h" />
     <ClInclude Include="..\sounds.h" />
@@ -468,8 +471,10 @@
     <ClCompile Include="..\m_fixed.c" />
     <ClCompile Include="..\m_menu.c" />
     <ClCompile Include="..\m_misc.c" />
+    <ClCompile Include="..\m_tokenizer.c" />
     <ClCompile Include="..\m_perfstats.c" />
     <ClCompile Include="..\m_queue.c" />
+    <ClCompile Include="..\m_vector.c" />
     <ClCompile Include="..\m_random.c" />
     <ClCompile Include="..\netcode\client_connection.c" />
     <ClCompile Include="..\netcode\commands.c" />
@@ -530,6 +535,7 @@
     <ClCompile Include="..\r_splats.c" />
     <ClCompile Include="..\r_textures.c" />
     <ClCompile Include="..\r_things.c" />
+    <ClCompile Include="..\r_translation.c" />
     <ClCompile Include="..\screen.c" />
     <ClCompile Include="..\snake.c" />
     <ClCompile Include="..\sounds.c" />
