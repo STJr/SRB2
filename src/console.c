@@ -983,7 +983,7 @@ boolean CON_Responder(event_t *ev)
 		if (modeattacking || metalrecording || marathonmode)
 			return false;
 
-		if ((key == gamecontrol[GC_CONSOLE][0] || key == gamecontrol[GC_CONSOLE][1]) && !shiftdown)
+		if (ev->type == ev_keydown && ((key == gamecontrol[GC_CONSOLE][0] || key == gamecontrol[GC_CONSOLE][1]) && !shiftdown))
 		{
 			if (consdown) // ignore repeat
 				return true;
