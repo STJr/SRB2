@@ -26,9 +26,15 @@
 #include "r_main.h"
 #include "r_fps.h"
 #include "i_video.h" // rendermode
+#include "netcode/net_command.h"
+#include "netcode/server_connection.h"
 
 // Object place
 #include "m_cheat.h"
+
+#ifdef PARANOIA
+#include "deh_tables.h" // MOBJTYPE_LIST
+#endif
 
 tic_t leveltime;
 
@@ -211,7 +217,50 @@ void P_AddThinker(const thinklistnum_t n, thinker_t *thinker)
 	thlist[n].prev = thinker;
 
 	thinker->references = 0;    // killough 11/98: init reference counter to 0
+	thinker->cachable = n == THINK_MOBJ;
+
+#ifdef PARANOIA
+	thinker->debug_mobjtype = MT_NULL;
+#endif
 }
+
+#ifdef PARANOIA
+static const char *MobjTypeName(const mobj_t *mobj)
+{
+	mobjtype_t type;
+	actionf_p1 p1 = mobj->thinker.function.acp1;
+
+	if (p1 == (actionf_p1)P_MobjThinker)
+		type = mobj->type;
+	else if (p1 == (actionf_p1)P_RemoveThinkerDelayed && mobj->thinker.debug_mobjtype != MT_NULL)
+		type = mobj->thinker.debug_mobjtype;
+	else
+		return "<Not a mobj>";
+
+	if (type < 0 || type >= NUMMOBJTYPES || (type >= MT_FIRSTFREESLOT && !FREE_MOBJS[type - MT_FIRSTFREESLOT]))
+		return "<Invalid mobj type>";
+	else if (type >= MT_FIRSTFREESLOT)
+		return FREE_MOBJS[type - MT_FIRSTFREESLOT]; // This doesn't include "MT_"...
+	else
+		return MOBJTYPE_LIST[type];
+}
+
+static const char *MobjThinkerName(const mobj_t *mobj)
+{
+	actionf_p1 p1 = mobj->thinker.function.acp1;
+
+	if (p1 == (actionf_p1)P_MobjThinker)
+	{
+		return "P_MobjThinker";
+	}
+	else if (p1 == (actionf_p1)P_RemoveThinkerDelayed)
+	{
+		return "P_RemoveThinkerDelayed";
+	}
+
+	return "<Unknown Thinker>";
+}
+#endif
 
 //
 // killough 11/98:
@@ -234,20 +283,34 @@ static thinker_t *currentthinker;
 void P_RemoveThinkerDelayed(thinker_t *thinker)
 {
 	thinker_t *next;
-#ifdef PARANOIA
-#define BEENAROUNDBIT (0x40000000) // has to be sufficiently high that it's unlikely to happen in regular gameplay. If you change this, pay attention to the bit pattern of INT32_MIN.
-	if (thinker->references & ~BEENAROUNDBIT)
+
+	if (thinker->references != 0)
 	{
-		if (thinker->references & BEENAROUNDBIT) // Usually gets cleared up in one frame; what's going on here, then?
-			CONS_Printf("Number of potentially faulty references: %d\n", (thinker->references & ~BEENAROUNDBIT));
-		thinker->references |= BEENAROUNDBIT;
+#ifdef PARANOIA
+		if (thinker->debug_time > leveltime)
+		{
+			thinker->debug_time = leveltime + 2; // do not print errors again
+		}
+		// Removed mobjs can be the target of another mobj. In
+		// that case, the other mobj will manage its reference
+		// to the removed mobj in P_MobjThinker. However, if
+		// the removed mobj is removed after the other object
+		// thinks, the reference management is delayed by one
+		// tic.
+		else if (thinker->debug_time < leveltime)
+		{
+			CONS_Printf(
+					"PARANOIA/P_RemoveThinkerDelayed: %p %s references=%d\n",
+					(void*)thinker,
+					MobjTypeName((mobj_t*)thinker),
+					thinker->references
+			);
+
+			thinker->debug_time = leveltime + 2; // do not print this error again
+		}
+#endif
 		return;
 	}
-#undef BEENAROUNDBIT
-#else
-	if (thinker->references)
-		return;
-#endif
 
 	/* Remove from main thinker list */
 	next = thinker->next;
@@ -258,7 +321,16 @@ void P_RemoveThinkerDelayed(thinker_t *thinker)
 	(next->prev = currentthinker = thinker->prev)->next = next;
 
 	R_DestroyLevelInterpolators(thinker);
-	Z_Free(thinker);
+	if (thinker->cachable)
+	{
+		// put cachable thinkers in the mobj cache, so we can avoid allocations
+		((mobj_t *)thinker)->hnext = mobjcache;
+		mobjcache = (mobj_t *)thinker;
+	}
+	else
+	{
+		Z_Free(thinker);
+	}
 }
 
 //
@@ -291,12 +363,45 @@ void P_RemoveThinker(thinker_t *thinker)
  * references, and delay removal until the count is 0.
  */
 
-mobj_t *P_SetTarget(mobj_t **mop, mobj_t *targ)
+mobj_t *P_SetTarget2(mobj_t **mop, mobj_t *targ
+#ifdef PARANOIA
+		, const char *source_file, int source_line
+#endif
+)
 {
-	if (*mop)              // If there was a target already, decrease its refcount
+	if (*mop) // If there was a target already, decrease its refcount
+	{
 		(*mop)->thinker.references--;
-if ((*mop = targ) != NULL) // Set new target and if non-NULL, increase its counter
+
+#ifdef PARANOIA
+		if ((*mop)->thinker.references < 0)
+		{
+			CONS_Printf(
+					"PARANOIA/P_SetTarget: %p %s %s references=%d, references go negative! (%s:%d)\n",
+					(void*)*mop,
+					MobjTypeName(*mop),
+					MobjThinkerName(*mop),
+					(*mop)->thinker.references,
+					source_file,
+					source_line
+			);
+		}
+
+		(*mop)->thinker.debug_time = leveltime;
+#endif
+	}
+
+	if (targ != NULL) // Set new target and if non-NULL, increase its counter
+	{
 		targ->thinker.references++;
+
+#ifdef PARANOIA
+		targ->thinker.debug_time = leveltime;
+#endif
+	}
+
+	*mop = targ;
+
 	return targ;
 }
 
@@ -596,24 +701,10 @@ void P_Ticker(boolean run)
 {
 	INT32 i;
 
-	// Increment jointime and quittime even if paused
+	// Increment jointime even if paused
 	for (i = 0; i < MAXPLAYERS; i++)
 		if (playeringame[i])
-		{
 			players[i].jointime++;
-
-			if (players[i].quittime)
-			{
-				players[i].quittime++;
-
-				if (players[i].quittime == 30 * TICRATE && G_TagGametype())
-					P_CheckSurvivors();
-
-				if (server && players[i].quittime >= (tic_t)FixedMul(cv_rejointimeout.value, 60 * TICRATE)
-				&& !(players[i].quittime % TICRATE))
-					SendKick(i, KICK_MSG_PLAYER_QUIT);
-			}
-		}
 
 	if (objectplacing)
 	{
@@ -664,7 +755,9 @@ void P_Ticker(boolean run)
 		ps_lua_mobjhooks.value.i = 0;
 		ps_checkposition_calls.value.i = 0;
 
-		LUA_HOOK(PreThinkFrame);
+		PS_START_TIMING(ps_lua_prethinkframe_time);
+		LUA_HookPreThinkFrame();
+		PS_STOP_TIMING(ps_lua_prethinkframe_time);
 
 		PS_START_TIMING(ps_playerthink_time);
 		for (i = 0; i < MAXPLAYERS; i++)
@@ -749,16 +842,7 @@ void P_Ticker(boolean run)
 			countdown2--;
 
 		if (quake.time)
-		{
-			fixed_t ir = quake.intensity>>1;
-			/// \todo Calculate distance from epicenter if set and modulate the intensity accordingly based on radius.
-			quake.x = M_RandomRange(-ir,ir);
-			quake.y = M_RandomRange(-ir,ir);
-			quake.z = M_RandomRange(-ir,ir);
 			--quake.time;
-		}
-		else
-			quake.x = quake.y = quake.z = 0;
 
 		if (metalplayback)
 			G_ReadMetalTic(metalplayback);
@@ -771,7 +855,9 @@ void P_Ticker(boolean run)
 		if (modeattacking)
 			G_GhostTicker();
 
-		LUA_HOOK(PostThinkFrame);
+		PS_START_TIMING(ps_lua_postthinkframe_time);
+		LUA_HookPostThinkFrame();
+		PS_STOP_TIMING(ps_lua_postthinkframe_time);
 	}
 
 	if (run)

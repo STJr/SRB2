@@ -1407,7 +1407,6 @@ static void R_ParseSpriteInfoFrame(spriteinfo_t *info)
 	UINT8 frameFrame = 0xFF;
 	INT16 frameXPivot = 0;
 	INT16 frameYPivot = 0;
-	rotaxis_t frameRotAxis = 0;
 
 	// Sprite identifier
 	sprinfoToken = M_GetToken(NULL);
@@ -1458,12 +1457,6 @@ static void R_ParseSpriteInfoFrame(spriteinfo_t *info)
 				{
 					Z_Free(sprinfoToken);
 					sprinfoToken = M_GetToken(NULL);
-					if ((stricmp(sprinfoToken, "X")==0) || (stricmp(sprinfoToken, "XAXIS")==0) || (stricmp(sprinfoToken, "ROLL")==0))
-						frameRotAxis = ROTAXIS_X;
-					else if ((stricmp(sprinfoToken, "Y")==0) || (stricmp(sprinfoToken, "YAXIS")==0) || (stricmp(sprinfoToken, "PITCH")==0))
-						frameRotAxis = ROTAXIS_Y;
-					else if ((stricmp(sprinfoToken, "Z")==0) || (stricmp(sprinfoToken, "ZAXIS")==0) || (stricmp(sprinfoToken, "YAW")==0))
-						frameRotAxis = ROTAXIS_Z;
 				}
 				Z_Free(sprinfoToken);
 
@@ -1480,7 +1473,6 @@ static void R_ParseSpriteInfoFrame(spriteinfo_t *info)
 	// set fields
 	info->pivot[frameFrame].x = frameXPivot;
 	info->pivot[frameFrame].y = frameYPivot;
-	info->pivot[frameFrame].rotaxis = frameRotAxis;
 }
 
 //
@@ -1497,7 +1489,7 @@ static void R_ParseSpriteInfo(boolean spr2)
 	spritenum_t sprnum = NUMSPRITES;
 	playersprite_t spr2num = NUMPLAYERSPRITES;
 	INT32 i;
-	INT32 skinnumbers[MAXSKINS];
+	UINT8 *skinnumbers = NULL;
 	INT32 foundskins = 0;
 
 	// Sprite name
@@ -1595,7 +1587,9 @@ static void R_ParseSpriteInfo(boolean spr2)
 				if (skinnum == -1)
 					I_Error("Error parsing SPRTINFO lump: Unknown skin \"%s\"", skinName);
 
-				skinnumbers[foundskins] = skinnum;
+				if (skinnumbers == NULL)
+					skinnumbers = Z_Malloc(sizeof(UINT8) * numskins, PU_STATIC, NULL);
+				skinnumbers[foundskins] = (UINT8)skinnum;
 				foundskins++;
 			}
 			else if (stricmp(sprinfoToken, "FRAME")==0)
@@ -1608,8 +1602,7 @@ static void R_ParseSpriteInfo(boolean spr2)
 						I_Error("Error parsing SPRTINFO lump: No skins specified in this sprite2 definition");
 					for (i = 0; i < foundskins; i++)
 					{
-						size_t skinnum = skinnumbers[i];
-						skin_t *skin = &skins[skinnum];
+						skin_t *skin = skins[skinnumbers[i]];
 						spriteinfo_t *sprinfo = skin->sprinfo;
 						M_Memcpy(&sprinfo[spr2num], info, sizeof(spriteinfo_t));
 					}
@@ -1633,8 +1626,11 @@ static void R_ParseSpriteInfo(boolean spr2)
 	{
 		I_Error("Error parsing SPRTINFO lump: Expected \"{\" for sprite \"%s\", got \"%s\"",newSpriteName,sprinfoToken);
 	}
+
 	Z_Free(sprinfoToken);
 	Z_Free(info);
+	if (skinnumbers)
+		Z_Free(skinnumbers);
 }
 
 //

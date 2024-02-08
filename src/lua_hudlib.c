@@ -14,6 +14,7 @@
 #include "fastcmp.h"
 #include "r_defs.h"
 #include "r_local.h"
+#include "r_translation.h"
 #include "st_stuff.h" // hudinfo[]
 #include "g_game.h"
 #include "i_video.h" // rendermode
@@ -95,6 +96,8 @@ static const char *const patch_opt[] = {
 	"topoffset",
 	NULL};
 
+static int patch_fields_ref = LUA_NOREF;
+
 // alignment types for v.drawString
 enum align {
 	align_left = 0,
@@ -167,6 +170,7 @@ enum cameraf {
 	camera_x,
 	camera_y,
 	camera_z,
+	camera_reset,
 	camera_angle,
 	camera_subsector,
 	camera_floorz,
@@ -185,6 +189,7 @@ static const char *const camera_opt[] = {
 	"x",
 	"y",
 	"z",
+	"reset",
 	"angle",
 	"subsector",
 	"floorz",
@@ -195,6 +200,8 @@ static const char *const camera_opt[] = {
 	"momy",
 	"momz",
 	NULL};
+
+static int camera_fields_ref = LUA_NOREF;
 
 static int lib_getHudInfo(lua_State *L)
 {
@@ -276,9 +283,8 @@ static int colormap_get(lua_State *L)
 static int patch_get(lua_State *L)
 {
 	patch_t *patch = *((patch_t **)luaL_checkudata(L, 1, META_PATCH));
-	enum patch field = luaL_checkoption(L, 2, NULL, patch_opt);
+	enum patch field = Lua_optoption(L, 2, -1, patch_fields_ref);
 
-	// patches are invalidated when switching renderers
 	if (!patch) {
 		if (field == patch_valid) {
 			lua_pushboolean(L, 0);
@@ -316,7 +322,7 @@ static int patch_set(lua_State *L)
 static int camera_get(lua_State *L)
 {
 	camera_t *cam = *((camera_t **)luaL_checkudata(L, 1, META_CAMERA));
-	enum cameraf field = luaL_checkoption(L, 2, NULL, camera_opt);
+	enum cameraf field = Lua_optoption(L, 2, -1, camera_fields_ref);
 
 	// cameras should always be valid unless I'm a nutter
 	I_Assert(cam != NULL);
@@ -337,6 +343,9 @@ static int camera_get(lua_State *L)
 		break;
 	case camera_z:
 		lua_pushinteger(L, cam->z);
+		break;
+	case camera_reset:
+		lua_pushboolean(L, cam->reset);
 		break;
 	case camera_angle:
 		lua_pushinteger(L, cam->angle);
@@ -372,7 +381,7 @@ static int camera_get(lua_State *L)
 static int camera_set(lua_State *L)
 {
 	camera_t *cam = *((camera_t **)luaL_checkudata(L, 1, META_CAMERA));
-	enum cameraf field = luaL_checkoption(L, 2, NULL, camera_opt);
+	enum cameraf field = Lua_optoption(L, 2, -1, camera_fields_ref);
 
 	I_Assert(cam != NULL);
 
@@ -384,6 +393,9 @@ static int camera_set(lua_State *L)
 	case camera_x:
 	case camera_y:
 		return luaL_error(L, LUA_QL("camera_t") " field " LUA_QS " should not be set directly. Use " LUA_QL("P_TryCameraMove") " or " LUA_QL("P_TeleportCameraMove") " instead.", camera_opt[field]);
+	case camera_reset:
+		cam->reset = luaL_checkboolean(L, 3);
+		break;
 	case camera_chase: {
 		INT32 chase = luaL_checkboolean(L, 3);
 		if (cam == &camera)
@@ -432,7 +444,7 @@ static int camera_set(lua_State *L)
 		cam->momz = luaL_checkfixed(L, 3);
 		break;
 	default:
-		return luaL_error(L, LUA_QL("camera_t") " has no field named " LUA_QS, camera_opt[field]);
+		return luaL_error(L, LUA_QL("camera_t") " has no field named " LUA_QS ".", lua_tostring(L, 2));
 	}
 	return 0;
 }
@@ -514,7 +526,7 @@ static int libd_getSpritePatch(lua_State *L)
 		INT32 rot = R_GetRollAngle(rollangle);
 
 		if (rot) {
-			patch_t *rotsprite = Patch_GetRotatedSprite(sprframe, frame, angle, sprframe->flip & (1<<angle), true, &spriteinfo[i], rot);
+			patch_t *rotsprite = Patch_GetRotatedSprite(sprframe, frame, angle, sprframe->flip & (1<<angle), &spriteinfo[i], rot);
 			LUA_PushUserdata(L, rotsprite, META_PATCH);
 			lua_pushboolean(L, false);
 			lua_pushboolean(L, true);
@@ -554,7 +566,7 @@ static int libd_getSprite2Patch(lua_State *L)
 	{
 		const char *name = luaL_checkstring(L, 1);
 		for (i = 0; i < numskins; i++)
-			if (fastcmp(skins[i].name, name))
+			if (fastcmp(skins[i]->name, name))
 				break;
 		if (i >= numskins)
 			return 0;
@@ -596,9 +608,9 @@ static int libd_getSprite2Patch(lua_State *L)
 	if (super)
 		j |= FF_SPR2SUPER;
 
-	j = P_GetSkinSprite2(&skins[i], j, NULL); // feed skin and current sprite2 through to change sprite2 used if necessary
+	j = P_GetSkinSprite2(skins[i], j, NULL); // feed skin and current sprite2 through to change sprite2 used if necessary
 
-	sprdef = &skins[i].sprites[j];
+	sprdef = &skins[i]->sprites[j];
 
 	// set frame number
 	frame = luaL_optinteger(L, 2, 0);
@@ -626,7 +638,7 @@ static int libd_getSprite2Patch(lua_State *L)
 		INT32 rot = R_GetRollAngle(rollangle);
 
 		if (rot) {
-			patch_t *rotsprite = Patch_GetRotatedSprite(sprframe, frame, angle, sprframe->flip & (1<<angle), true, &skins[i].sprinfo[j], rot);
+			patch_t *rotsprite = Patch_GetRotatedSprite(sprframe, frame, angle, sprframe->flip & (1<<angle), &skins[i]->sprinfo[j], rot);
 			LUA_PushUserdata(L, rotsprite, META_PATCH);
 			lua_pushboolean(L, false);
 			lua_pushboolean(L, true);
@@ -1114,7 +1126,10 @@ static int libd_getColormap(lua_State *L)
 	INT32 skinnum = TC_DEFAULT;
 	skincolornum_t color = luaL_optinteger(L, 2, 0);
 	UINT8* colormap = NULL;
+	int translation_id = -1;
+
 	HUDONLY
+
 	if (lua_isnoneornil(L, 1))
 		; // defaults to TC_DEFAULT
 	else if (lua_type(L, 1) == LUA_TNUMBER) // skin number
@@ -1133,9 +1148,21 @@ static int libd_getColormap(lua_State *L)
 			skinnum = i;
 	}
 
-	// all was successful above, now we generate the colormap at last!
+	if (!lua_isnoneornil(L, 3))
+	{
+		const char *translation_name = luaL_checkstring(L, 3);
+		translation_id = R_FindCustomTranslation(translation_name);
+		if (translation_id == -1)
+			return luaL_error(L, "invalid translation '%s'.", translation_name);
+	}
 
-	colormap = R_GetTranslationColormap(skinnum, color, GTC_CACHE);
+	// all was successful above, now we generate the colormap at last!
+	if (translation_id != -1)
+		colormap = R_GetTranslationRemap(translation_id, color, skinnum);
+
+	if (colormap == NULL)
+		colormap = R_GetTranslationColormap(skinnum, color, GTC_CACHE);
+
 	LUA_PushUserdata(L, colormap, META_COLORMAP); // push as META_COLORMAP userdata, specifically for patches to use!
 	return 1;
 }
@@ -1151,6 +1178,45 @@ static int libd_getStringColormap(lua_State *L)
 		return 1;
 	}
 	return 0;
+}
+
+static int libd_getSectorColormap(lua_State *L)
+{
+	boolean has_sector = false;
+	sector_t *sector = NULL;
+	if (!lua_isnoneornil(L, 1))
+	{
+		has_sector = true;
+		sector = *((sector_t **)luaL_checkudata(L, 1, META_SECTOR));
+	}
+	fixed_t x = luaL_checkfixed(L, 2);
+	fixed_t y = luaL_checkfixed(L, 3);
+	fixed_t z = luaL_checkfixed(L, 4);
+	int lightlevel = luaL_optinteger(L, 5, 255);
+	UINT8 *colormap = NULL;
+	extracolormap_t *exc = NULL;
+
+	INLEVEL
+	HUDONLY
+
+	if (has_sector && !sector)
+		return LUA_ErrInvalid(L, "sector_t");
+
+	if (sector)
+		exc = P_GetColormapFromSectorAt(sector, x, y, z);
+	else
+		exc = P_GetSectorColormapAt(x, y, z);
+
+	if (exc)
+		colormap = exc->colormap;
+	else
+		colormap = colormaps;
+
+	lightlevel = 255 - min(max(lightlevel, 0), 255);
+	lightlevel >>= 3;
+
+	LUA_PushUserdata(L, colormap + (lightlevel * 256), META_COLORMAP);
+	return 1;
 }
 
 static int libd_fadeScreen(lua_State *L)
@@ -1203,19 +1269,11 @@ static int libd_height(lua_State *L)
 	return 1;
 }
 
-static int libd_dupx(lua_State *L)
+static int libd_dup(lua_State *L)
 {
 	HUDONLY
-	lua_pushinteger(L, vid.dupx); // push integral scale (patch scale)
-	lua_pushfixed(L, vid.fdupx); // push fixed point scale (position scale)
-	return 2;
-}
-
-static int libd_dupy(lua_State *L)
-{
-	HUDONLY
-	lua_pushinteger(L, vid.dupy); // push integral scale (patch scale)
-	lua_pushfixed(L, vid.fdupy); // push fixed point scale (position scale)
+	lua_pushinteger(L, vid.dup); // push integral scale (patch scale)
+	lua_pushfixed(L, vid.fdup); // push fixed point scale (position scale)
 	return 2;
 }
 
@@ -1252,8 +1310,6 @@ static int libd_RandomKey(lua_State *L)
 	INT32 a = (INT32)luaL_checkinteger(L, 1);
 
 	HUDONLY
-	if (a > 65536)
-		LUA_UsageWarning(L, "v.RandomKey: range > 65536 is undefined behavior");
 	lua_pushinteger(L, M_RandomKey(a));
 	return 1;
 }
@@ -1264,13 +1320,6 @@ static int libd_RandomRange(lua_State *L)
 	INT32 b = (INT32)luaL_checkinteger(L, 2);
 
 	HUDONLY
-	if (b < a) {
-		INT32 c = a;
-		a = b;
-		b = c;
-	}
-	if ((b-a+1) > 65536)
-		LUA_UsageWarning(L, "v.RandomRange: range > 65536 is undefined behavior");
 	lua_pushinteger(L, M_RandomRange(a, b));
 	return 1;
 }
@@ -1316,6 +1365,7 @@ static luaL_Reg lib_draw[] = {
 	{"getSprite2Patch", libd_getSprite2Patch},
 	{"getColormap", libd_getColormap},
 	{"getStringColormap", libd_getStringColormap},
+	{"getSectorColormap", libd_getSectorColormap},
 	// drawing
 	{"draw", libd_draw},
 	{"drawScaled", libd_drawScaled},
@@ -1344,8 +1394,8 @@ static luaL_Reg lib_draw[] = {
 	// properties
 	{"width", libd_width},
 	{"height", libd_height},
-	{"dupx", libd_dupx},
-	{"dupy", libd_dupy},
+	{"dupx", libd_dup},
+	{"dupy", libd_dup},
 	{"renderer", libd_renderer},
 	{"localTransFlag", libd_getlocaltransflag},
 	{"userTransFlag", libd_getusertransflag},
@@ -1410,47 +1460,15 @@ int LUA_HudLib(lua_State *L)
 	luaL_register(L, NULL, lib_draw);
 	lib_draw_ref = luaL_ref(L, LUA_REGISTRYINDEX);
 
-	luaL_newmetatable(L, META_HUDINFO);
-		lua_pushcfunction(L, hudinfo_get);
-		lua_setfield(L, -2, "__index");
+	LUA_RegisterUserdataMetatable(L, META_HUDINFO, hudinfo_get, hudinfo_set, hudinfo_num);
+	LUA_RegisterUserdataMetatable(L, META_COLORMAP, colormap_get, NULL, NULL);
+	LUA_RegisterUserdataMetatable(L, META_PATCH, patch_get, patch_set, NULL);
+	LUA_RegisterUserdataMetatable(L, META_CAMERA, camera_get, camera_set, NULL);
 
-		lua_pushcfunction(L, hudinfo_set);
-		lua_setfield(L, -2, "__newindex");
+	patch_fields_ref = Lua_CreateFieldTable(L, patch_opt);
+	camera_fields_ref = Lua_CreateFieldTable(L, camera_opt);
 
-		lua_pushcfunction(L, hudinfo_num);
-		lua_setfield(L, -2, "__len");
-	lua_pop(L,1);
-
-	lua_newuserdata(L, 0);
-		lua_createtable(L, 0, 2);
-			lua_pushcfunction(L, lib_getHudInfo);
-			lua_setfield(L, -2, "__index");
-
-			lua_pushcfunction(L, lib_hudinfolen);
-			lua_setfield(L, -2, "__len");
-		lua_setmetatable(L, -2);
-	lua_setglobal(L, "hudinfo");
-
-	luaL_newmetatable(L, META_COLORMAP);
-		lua_pushcfunction(L, colormap_get);
-		lua_setfield(L, -2, "__index");
-	lua_pop(L,1);
-
-	luaL_newmetatable(L, META_PATCH);
-		lua_pushcfunction(L, patch_get);
-		lua_setfield(L, -2, "__index");
-
-		lua_pushcfunction(L, patch_set);
-		lua_setfield(L, -2, "__newindex");
-	lua_pop(L,1);
-
-	luaL_newmetatable(L, META_CAMERA);
-		lua_pushcfunction(L, camera_get);
-		lua_setfield(L, -2, "__index");
-
-		lua_pushcfunction(L, camera_set);
-		lua_setfield(L, -2, "__newindex");
-	lua_pop(L,1);
+	LUA_RegisterGlobalUserdata(L, "hudinfo", lib_getHudInfo, NULL, lib_hudinfolen);
 
 	luaL_register(L, "hud", lib_hud);
 	return 0;
@@ -1488,7 +1506,6 @@ void LUA_SetHudHook(int hook, huddrawlist_h list)
 			break;
 
 		case HUD_HOOK(intermission):
-			lua_pushboolean(gL, intertype == int_spec &&
-					stagefailed);
+			lua_pushboolean(gL, stagefailed);
 	}
 }

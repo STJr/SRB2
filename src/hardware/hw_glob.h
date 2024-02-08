@@ -74,13 +74,12 @@ typedef struct gl_vissprite_s
 	float spritexscale, spriteyscale;
 	float spritexoffset, spriteyoffset;
 
-	skincolornum_t color;
-
 	UINT32 renderflags;
 	UINT8 rotateflags;
 
 	boolean flip, vflip;
 	boolean precip; // Tails 08-25-2002
+	boolean bbox;
 	boolean rotated;
 	UINT8 translucency;       //alpha level 0-255
 

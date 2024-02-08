@@ -302,6 +302,8 @@ typedef void (APIENTRY * PFNglDisable) (GLenum cap);
 static PFNglDisable pglDisable;
 typedef void (APIENTRY * PFNglGetFloatv) (GLenum pname, GLfloat *params);
 static PFNglGetFloatv pglGetFloatv;
+typedef void (APIENTRY * PFNglPolygonMode) (GLenum, GLenum);
+static PFNglPolygonMode pglPolygonMode;
 
 /* Depth Buffer */
 typedef void (APIENTRY * PFNglClearDepth) (GLclampd depth);
@@ -476,6 +478,7 @@ boolean SetupGLfunc(void)
 	GETOPENGLFUNC(pglGetFloatv, glGetFloatv)
 	GETOPENGLFUNC(pglGetIntegerv, glGetIntegerv)
 	GETOPENGLFUNC(pglGetString, glGetString)
+	GETOPENGLFUNC(pglPolygonMode, glPolygonMode)
 
 	GETOPENGLFUNC(pglClearDepth, glClearDepth)
 	GETOPENGLFUNC(pglDepthFunc, glDepthFunc)
@@ -697,7 +700,7 @@ static GLRGBAFloat shader_defaultcolor = {1.0f, 1.0f, 1.0f, 1.0f};
 #define GLSL_SOFTWARE_TINT_EQUATION \
 	"if (tint_color.a > 0.0) {\n" \
 		"float color_bright = sqrt((base_color.r * base_color.r) + (base_color.g * base_color.g) + (base_color.b * base_color.b));\n" \
-		"float strength = sqrt(9.0 * tint_color.a);\n" \
+		"float strength = sqrt(tint_color.a);\n" \
 		"final_color.r = clamp((color_bright * (tint_color.r * strength)) + (base_color.r * (1.0 - strength)), 0.0, 1.0);\n" \
 		"final_color.g = clamp((color_bright * (tint_color.g * strength)) + (base_color.g * (1.0 - strength)), 0.0, 1.0);\n" \
 		"final_color.b = clamp((color_bright * (tint_color.b * strength)) + (base_color.b * (1.0 - strength)), 0.0, 1.0);\n" \
@@ -1030,6 +1033,12 @@ EXPORT void HWRAPI(LoadCustomShader) (int number, char *code, size_t size, boole
 EXPORT void HWRAPI(SetShader) (int type)
 {
 #ifdef GL_SHADERS
+	if (type == SHADER_NONE)
+	{
+		UnSetShader();
+		return;
+	}
+
 	if (gl_allowshaders != HWD_SHADEROPTION_OFF)
 	{
 		gl_shader_t *shader = gl_shaderstate.current;
@@ -2290,7 +2299,7 @@ EXPORT void HWRAPI(DrawPolygon) (FSurfaceInfo *pSurf, FOutVector *pOutVerts, FUI
 
 	pglVertexPointer(3, GL_FLOAT, sizeof(FOutVector), &pOutVerts[0].x);
 	pglTexCoordPointer(2, GL_FLOAT, sizeof(FOutVector), &pOutVerts[0].s);
-	pglDrawArrays(GL_TRIANGLE_FAN, 0, iNumPts);
+	pglDrawArrays(PolyFlags & PF_WireFrame ? GL_LINES : GL_TRIANGLE_FAN, 0, iNumPts);
 
 	if (PolyFlags & PF_RemoveYWrap)
 		pglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
@@ -2466,6 +2475,10 @@ EXPORT void HWRAPI(SetSpecialState) (hwdspecialstate_t IdState, INT32 Value)
 			anisotropic_filter = min(Value,maximumAnisotropy);
 			if (maximumAnisotropy)
 				Flush(); //??? if we want to change filter mode by texture, remove this
+			break;
+
+		case HWD_SET_WIREFRAME:
+			pglPolygonMode(GL_FRONT_AND_BACK, Value ? GL_LINE : GL_FILL);
 			break;
 
 		default:
@@ -2673,7 +2686,7 @@ EXPORT void HWRAPI(CreateModelVBOs) (model_t *model)
 
 #define BUFFER_OFFSET(i) ((void*)(i))
 
-static void DrawModelEx(model_t *model, INT32 frameIndex, float duration, float tics, INT32 nextFrameIndex, FTransform *pos, float scale, UINT8 flipped, UINT8 hflipped, FSurfaceInfo *Surface)
+static void DrawModelEx(model_t *model, INT32 frameIndex, float duration, float tics, INT32 nextFrameIndex, FTransform *pos, float hscale, float vscale, UINT8 flipped, UINT8 hflipped, FSurfaceInfo *Surface)
 {
 	static GLRGBAFloat poly = {0,0,0,0};
 	static GLRGBAFloat tint = {0,0,0,0};
@@ -2697,10 +2710,11 @@ static void DrawModelEx(model_t *model, INT32 frameIndex, float duration, float 
 #endif
 
 	// Affect input model scaling
-	scale *= 0.5f;
-	scalex = scale;
-	scaley = scale;
-	scalez = scale;
+	hscale *= 0.5f;
+	vscale *= 0.5f;
+	scalex = hscale;
+	scaley = vscale;
+	scalez = hscale;
 
 	if (duration > 0.0 && tics >= 0.0) // don't interpolate if instantaneous or infinite in length
 	{
@@ -2776,7 +2790,6 @@ static void DrawModelEx(model_t *model, INT32 frameIndex, float duration, float 
 	pglEnable(GL_CULL_FACE);
 	pglEnable(GL_NORMALIZE);
 
-#ifdef USE_FTRANSFORM_MIRROR
 	// flipped is if the object is vertically flipped
 	// hflipped is if the object is horizontally flipped
 	// pos->flip is if the screen is flipped vertically
@@ -2789,17 +2802,6 @@ static void DrawModelEx(model_t *model, INT32 frameIndex, float duration, float 
 		else
 			pglCullFace(GL_BACK);
 	}
-#else
-	// pos->flip is if the screen is flipped too
-	if (flipped ^ hflipped ^ pos->flip) // If one or three of these are active, but not two, invert the model's culling
-	{
-		pglCullFace(GL_FRONT);
-	}
-	else
-	{
-		pglCullFace(GL_BACK);
-	}
-#endif
 
 	pglPushMatrix(); // should be the same as glLoadIdentity
 	//Hurdler: now it seems to work
@@ -2809,22 +2811,14 @@ static void DrawModelEx(model_t *model, INT32 frameIndex, float duration, float 
 	if (hflipped)
 		scalez = -scalez;
 
-#ifdef USE_FTRANSFORM_ANGLEZ
-	pglRotatef(pos->anglez, 0.0f, 0.0f, -1.0f); // rotate by slope from Kart
-#endif
-	pglRotatef(pos->angley, 0.0f, -1.0f, 0.0f);
+	pglRotatef(pos->anglez, 0.0f, 0.0f, -1.0f);
 	pglRotatef(pos->anglex, 1.0f, 0.0f, 0.0f);
+	pglRotatef(pos->angley, 0.0f, -1.0f, 0.0f);
 
 	if (pos->roll)
 	{
-		float roll = (1.0f * pos->rollflip);
 		pglTranslatef(pos->centerx, pos->centery, 0);
-		if (pos->rotaxis == 2) // Z
-			pglRotatef(pos->rollangle, 0.0f, 0.0f, roll);
-		else if (pos->rotaxis == 1) // Y
-			pglRotatef(pos->rollangle, 0.0f, roll, 0.0f);
-		else // X
-			pglRotatef(pos->rollangle, roll, 0.0f, 0.0f);
+		pglRotatef(pos->rollangle, pos->rollx, 0.0f, pos->rollz);
 		pglTranslatef(-pos->centerx, -pos->centery, 0);
 	}
 
@@ -2978,9 +2972,9 @@ static void DrawModelEx(model_t *model, INT32 frameIndex, float duration, float 
 // -----------------+
 // HWRAPI DrawModel : Draw a model
 // -----------------+
-EXPORT void HWRAPI(DrawModel) (model_t *model, INT32 frameIndex, float duration, float tics, INT32 nextFrameIndex, FTransform *pos, float scale, UINT8 flipped, UINT8 hflipped, FSurfaceInfo *Surface)
+EXPORT void HWRAPI(DrawModel) (model_t *model, INT32 frameIndex, float duration, float tics, INT32 nextFrameIndex, FTransform *pos, float hscale, float vscale, UINT8 flipped, UINT8 hflipped, FSurfaceInfo *Surface)
 {
-	DrawModelEx(model, frameIndex, duration, tics, nextFrameIndex, pos, scale, flipped, hflipped, Surface);
+	DrawModelEx(model, frameIndex, duration, tics, nextFrameIndex, pos, hscale, vscale, flipped, hflipped, Surface);
 }
 
 // -----------------+
@@ -2997,13 +2991,9 @@ EXPORT void HWRAPI(SetTransform) (FTransform *stransform)
 	if (stransform)
 	{
 		used_fov = stransform->fovxangle;
-#ifdef USE_FTRANSFORM_MIRROR
-		// mirroring from Kart
 		if (stransform->mirror)
 			pglScalef(-stransform->scalex, stransform->scaley, -stransform->scalez);
-		else
-#endif
-		if (stransform->flip)
+		else if (stransform->flip)
 			pglScalef(stransform->scalex, -stransform->scaley, -stransform->scalez);
 		else
 			pglScalef(stransform->scalex, stransform->scaley, -stransform->scalez);

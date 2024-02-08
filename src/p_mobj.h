@@ -122,7 +122,7 @@ typedef enum
 	MF_AMBIENT          = 1<<10,
 	// Slide this object when it hits a wall.
 	MF_SLIDEME          = 1<<11,
-	// Player cheat.
+	// Don't collide with walls or solid objects. Two MF_NOCLIP objects can't touch each other at all!
 	MF_NOCLIP           = 1<<12,
 	// Allow moves to any height, no gravity. For active floaters.
 	MF_FLOAT            = 1<<13,
@@ -292,7 +292,7 @@ typedef struct mobj_s
 	angle_t angle, pitch, roll; // orientation
 	angle_t old_angle, old_pitch, old_roll; // orientation interpolation
 	angle_t old_angle2, old_pitch2, old_roll2;
-	angle_t rollangle;
+	angle_t spriteroll, old_spriteroll, old_spriteroll2;
 	spritenum_t sprite; // used to find patch_t and flip value
 	UINT32 frame; // frame number, plus bits see p_pspr.h
 	UINT8 sprite2; // player sprites
@@ -331,9 +331,16 @@ typedef struct mobj_s
 	UINT16 eflags; // extra flags
 
 	void *skin; // overrides 'sprite' when non-NULL (for player bodies to 'remember' the skin)
+
 	// Player and mobj sprites in multiplayer modes are modified
 	//  using an internal color lookup table for re-indexing.
-	UINT16 color; // This replaces MF_TRANSLATION. Use 0 for default (no translation).
+	UINT16 color;
+
+	// This replaces MF_TRANSLATION. Use 0 for default (no translation).
+	UINT16 translation;
+
+	struct player_s *drawonlyforplayer; // If set, hides the mobj for everyone except this player and their spectators
+	struct mobj_s *dontdrawforviewmobj; // If set, hides the mobj if dontdrawforviewmobj is the current camera (first-person player or awayviewmobj)
 
 	// Interaction info, by BLOCKMAP.
 	// Links in blocks (if needed).
@@ -429,7 +436,7 @@ typedef struct precipmobj_s
 	angle_t angle, pitch, roll; // orientation
 	angle_t old_angle, old_pitch, old_roll; // orientation interpolation
 	angle_t old_angle2, old_pitch2, old_roll2;
-	angle_t rollangle;
+	angle_t spriteroll, old_spriteroll, old_spriteroll2;
 	spritenum_t sprite; // used to find patch_t and flip value
 	UINT32 frame; // frame number, plus bits see p_pspr.h
 	UINT8 sprite2; // player sprites
@@ -489,7 +496,7 @@ void P_MovePlayerToSpawn(INT32 playernum, mapthing_t *mthing);
 void P_MovePlayerToStarpost(INT32 playernum);
 void P_AfterPlayerSpawn(INT32 playernum);
 
-fixed_t P_GetMobjSpawnHeight(const mobjtype_t mobjtype, const fixed_t x, const fixed_t y, const fixed_t dz, const fixed_t offset, const boolean flip, const fixed_t scale);
+fixed_t P_GetMobjSpawnHeight(const mobjtype_t mobjtype, const fixed_t x, const fixed_t y, const fixed_t dz, const fixed_t offset, const boolean flip, const fixed_t scale, const boolean absolutez);
 fixed_t P_GetMapThingSpawnHeight(const mobjtype_t mobjtype, const mapthing_t* mthing, const fixed_t x, const fixed_t y);
 
 mobj_t *P_SpawnMapThing(mapthing_t *mthing);

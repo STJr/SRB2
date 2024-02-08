@@ -51,14 +51,15 @@
 #include "filesrch.h"
 
 #include "d_main.h"
-#include "d_netfil.h"
-#include "d_clisrv.h"
+#include "netcode/d_netfil.h"
+#include "netcode/d_clisrv.h"
 #include "dehacked.h"
 #include "r_defs.h"
 #include "r_data.h"
 #include "r_textures.h"
 #include "r_patch.h"
 #include "r_picformats.h"
+#include "r_translation.h"
 #include "i_time.h"
 #include "i_system.h"
 #include "i_video.h" // rendermode
@@ -201,14 +202,14 @@ FILE *W_OpenWadFile(const char **filename, boolean useerrors)
 }
 
 // Look for all DEHACKED and Lua scripts inside a PK3 archive.
-static inline void W_LoadDehackedLumpsPK3(UINT16 wadnum, boolean mainfile)
+static void W_LoadDehackedLumpsPK3(UINT16 wadnum, boolean mainfile)
 {
 	UINT16 posStart, posEnd;
 
 	posStart = W_CheckNumForFullNamePK3("Init.lua", wadnum, 0);
 	if (posStart != INT16_MAX)
 	{
-		LUA_LoadLump(wadnum, posStart, true);
+		LUA_DoLump(wadnum, posStart, true);
 	}
 	else
 	{
@@ -217,7 +218,7 @@ static inline void W_LoadDehackedLumpsPK3(UINT16 wadnum, boolean mainfile)
 		{
 			posEnd = W_CheckNumForFolderEndPK3("Lua/", wadnum, posStart);
 			for (; posStart < posEnd; posStart++)
-				LUA_LoadLump(wadnum, posStart, true);
+				LUA_DoLump(wadnum, posStart, true);
 		}
 	}
 
@@ -241,7 +242,7 @@ static inline void W_LoadDehackedLumpsPK3(UINT16 wadnum, boolean mainfile)
 }
 
 // search for all DEHACKED lump in all wads and load it
-static inline void W_LoadDehackedLumps(UINT16 wadnum, boolean mainfile)
+static void W_LoadDehackedLumps(UINT16 wadnum, boolean mainfile)
 {
 	UINT16 lump;
 
@@ -250,7 +251,7 @@ static inline void W_LoadDehackedLumps(UINT16 wadnum, boolean mainfile)
 		lumpinfo_t *lump_p = wadfiles[wadnum]->lumpinfo;
 		for (lump = 0; lump < wadfiles[wadnum]->numlumps; lump++, lump_p++)
 			if (memcmp(lump_p->name,"LUA_",4)==0)
-				LUA_LoadLump(wadnum, lump, true);
+				LUA_DoLump(wadnum, lump, true);
 	}
 
 	{
@@ -305,7 +306,7 @@ static inline void W_LoadDehackedLumps(UINT16 wadnum, boolean mainfile)
   * \param resblock resulting MD5 checksum
   * \return 0 if MD5 checksum was made, and is at resblock, 1 if error was found
   */
-static inline INT32 W_MakeFileMD5(const char *filename, void *resblock)
+static INT32 W_MakeFileMD5(const char *filename, void *resblock)
 {
 #ifdef NOMD5
 	(void)filename;
@@ -829,6 +830,16 @@ static void W_ReadFileShaders(wadfile_t *wadfile)
 #endif
 }
 
+static void W_LoadTrnslateLumps(UINT16 w)
+{
+	UINT16 lump = W_CheckNumForNamePwad("TRNSLATE", w, 0);
+	while (lump != INT16_MAX)
+	{
+		R_ParseTrnslate(w, lump);
+		lump = W_CheckNumForNamePwad("TRNSLATE", (UINT16)w, lump + 1);
+	}
+}
+
 //  Allocate a wadfile, setup the lumpinfo (directory) and
 //  lumpcache, add the wadfile to the current active wadfiles
 //
@@ -972,12 +983,15 @@ UINT16 W_InitFile(const char *filename, boolean mainfile, boolean startup)
 	// add the wadfile
 	//
 	CONS_Printf(M_GetText("Added file %s (%u lumps)\n"), filename, numlumps);
-	wadfiles = Z_Realloc(wadfiles, sizeof(wadfile_t) * (numwadfiles + 1), PU_STATIC, NULL);
+	wadfiles = Z_Realloc(wadfiles, sizeof(wadfile_t *) * (numwadfiles + 1), PU_STATIC, NULL);
 	wadfiles[numwadfiles] = wadfile;
 	numwadfiles++; // must come BEFORE W_LoadDehackedLumps, so any addfile called by COM_BufInsertText called by Lua doesn't overwrite what we just loaded
 
 	// Read shaders from file
 	W_ReadFileShaders(wadfile);
+
+	// The below hack makes me load this here.
+	W_LoadTrnslateLumps(numwadfiles - 1);
 
 	// TODO: HACK ALERT - Load Lua & SOC stuff right here. I feel like this should be out of this place, but... Let's stick with this for now.
 	switch (wadfile->type)
@@ -993,7 +1007,7 @@ UINT16 W_InitFile(const char *filename, boolean mainfile, boolean startup)
 		DEH_LoadDehackedLumpPwad(numwadfiles - 1, 0, mainfile);
 		break;
 	case RET_LUA:
-		LUA_LoadLump(numwadfiles - 1, 0, true);
+		LUA_DoLump(numwadfiles - 1, 0, true);
 		break;
 	default:
 		break;
@@ -1141,15 +1155,18 @@ UINT16 W_InitFolder(const char *path, boolean mainfile, boolean startup)
 	wadfile->foldercount = foldercount;
 	wadfile->lumpinfo = lumpinfo;
 	wadfile->important = important;
-
-	// Irrelevant.
 	wadfile->filesize = 0;
-	memset(wadfile->md5sum, 0x00, 16);
+
+	for (i = 0; i < numlumps; i++)
+		wadfile->filesize += lumpinfo[i].disksize;
+
+	memset(wadfile->md5sum, 0x00, 16); // Irrelevant.
 
 	Z_Calloc(numlumps * sizeof (*wadfile->lumpcache), PU_STATIC, &wadfile->lumpcache);
 	Z_Calloc(numlumps * sizeof (*wadfile->patchcache), PU_STATIC, &wadfile->patchcache);
 
 	CONS_Printf(M_GetText("Added folder %s (%u files, %u folders)\n"), fn, numlumps, foldercount);
+	wadfiles = Z_Realloc(wadfiles, sizeof(wadfile_t *) * (numwadfiles + 1), PU_STATIC, NULL);
 	wadfiles[numwadfiles] = wadfile;
 	numwadfiles++;
 
@@ -1956,7 +1973,7 @@ void *W_CacheLumpNumForce(lumpnum_t lumpnum, INT32 tag)
 // return false.
 //
 // no outside code uses the PWAD form, for now
-static inline boolean W_IsLumpCachedPWAD(UINT16 wad, UINT16 lump, void *ptr)
+static boolean W_IsLumpCachedPWAD(UINT16 wad, UINT16 lump, void *ptr)
 {
 	void *lcache;
 
@@ -1988,7 +2005,7 @@ boolean W_IsLumpCached(lumpnum_t lumpnum, void *ptr)
 // return false.
 //
 // no outside code uses the PWAD form, for now
-static inline boolean W_IsPatchCachedPWAD(UINT16 wad, UINT16 lump, void *ptr)
+static boolean W_IsPatchCachedPWAD(UINT16 wad, UINT16 lump, void *ptr)
 {
 	void *lcache;
 

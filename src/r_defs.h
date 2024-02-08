@@ -16,6 +16,7 @@
 
 // Some more or less basic data types we depend on.
 #include "m_fixed.h"
+#include "m_vector.h"
 
 // We rely on the thinker data struct to handle sound origins in sectors.
 #include "d_think.h"
@@ -23,10 +24,6 @@
 #include "p_mobj.h"
 
 #include "screen.h" // MAXVIDWIDTH, MAXVIDHEIGHT
-
-#ifdef HWRENDER
-#include "m_aatree.h"
-#endif
 
 #include "taglist.h"
 
@@ -52,6 +49,9 @@ typedef struct
 // from darkening PLAYPAL to all black.
 // Could even use more than 32 levels.
 typedef UINT8 lighttable_t;
+
+#define NUM_PALETTE_ENTRIES 256
+#define DEFAULT_STARTTRANSCOLOR 96
 
 #define CMF_FADEFULLBRIGHTSPRITES  1
 #define CMF_FOG 4
@@ -208,6 +208,34 @@ typedef enum
 	BT_STRONG,
 } busttype_e;
 
+typedef enum
+{
+	SECPORTAL_LINE,    // Works similar to a line portal
+	SECPORTAL_SKYBOX,  // Uses the skybox object as the reference view
+	SECPORTAL_PLANE,   // Eternity Engine's plane portal type
+	SECPORTAL_HORIZON, // Eternity Engine's horizon portal type
+	SECPORTAL_OBJECT,  // Uses an object as the reference view
+	SECPORTAL_FLOOR,   // Uses a sector as the reference view; the view height is aligned with the sector's floor
+	SECPORTAL_CEILING, // Uses a sector as the reference view; the view height is aligned with the sector's ceiling
+	SECPORTAL_NONE = 0xFF
+} secportaltype_e;
+
+typedef struct sectorportal_s
+{
+	secportaltype_e type;
+	union {
+		struct {
+			struct line_s *start;
+			struct line_s *dest;
+		} line;
+		struct sector_s *sector;
+		struct mobj_s *mobj;
+	};
+	struct {
+		fixed_t x, y;
+	} origin;
+} sectorportal_t;
+
 typedef struct ffloor_s
 {
 	fixed_t *topheight;
@@ -215,12 +243,16 @@ typedef struct ffloor_s
 	INT16 *toplightlevel;
 	fixed_t *topxoffs;
 	fixed_t *topyoffs;
+	fixed_t *topxscale;
+	fixed_t *topyscale;
 	angle_t *topangle;
 
 	fixed_t *bottomheight;
 	INT32 *bottompic;
 	fixed_t *bottomxoffs;
 	fixed_t *bottomyoffs;
+	fixed_t *bottomxscale;
+	fixed_t *bottomyscale;
 	angle_t *bottomangle;
 
 	// Pointers to pointers. Yup.
@@ -311,6 +343,13 @@ typedef struct pslope_s
 	// This values only check and must be updated if the slope itself is modified
 	angle_t zangle;		/// Precomputed angle of the plane going up from the ground (not measured in degrees).
 	angle_t xydirection;/// Precomputed angle of the normal's projection on the XY plane.
+
+	dvector3_t dorigin;
+	dvector3_t dnormdir;
+
+	double dzdelta;
+
+	boolean moved : 1;
 
 	UINT8 flags; // Slope options
 } pslope_t;
@@ -423,12 +462,16 @@ typedef struct sector_s
 	void *fadecolormapdata; // fade colormap thinker
 
 	// floor and ceiling texture offsets
-	fixed_t floor_xoffs, floor_yoffs;
-	fixed_t ceiling_xoffs, ceiling_yoffs;
+	fixed_t floorxoffset, flooryoffset;
+	fixed_t ceilingxoffset, ceilingyoffset;
+
+	// floor and ceiling texture scale
+	fixed_t floorxscale, flooryscale;
+	fixed_t ceilingxscale, ceilingyscale;
 
 	// flat angle
-	angle_t floorpic_angle;
-	angle_t ceilingpic_angle;
+	angle_t floorangle;
+	angle_t ceilingangle;
 
 	INT32 heightsec; // other sector, or -1 if no other sector
 	INT32 camsec; // used for camera clipping
@@ -494,6 +537,10 @@ typedef struct sector_s
 
 	// colormap structure
 	extracolormap_t *spawn_extra_colormap;
+
+	// portals
+	UINT32 portal_floor;
+	UINT32 portal_ceiling;
 } sector_t;
 
 //
@@ -507,10 +554,14 @@ typedef enum
 	ST_NEGATIVE
 } slopetype_t;
 
-#define HORIZONSPECIAL 41
+#define SPECIAL_HORIZON_LINE 41
+
+#define SPECIAL_SECTOR_SETPORTAL 6
 
 #define NUMLINEARGS 10
 #define NUMLINESTRINGARGS 2
+
+#define NO_SIDEDEF 0xFFFFFFFF
 
 typedef struct line_s
 {
@@ -529,7 +580,7 @@ typedef struct line_s
 	char *stringargs[NUMLINESTRINGARGS];
 
 	// Visual appearance: sidedefs.
-	UINT16 sidenum[2]; // sidenum[1] will be 0xffff if one-sided
+	UINT32 sidenum[2]; // sidenum[1] will be NO_SIDEDEF if one-sided
 	fixed_t alpha; // translucency
 	UINT8 blendmode; // blendmode
 	INT32 executordelay;
@@ -547,8 +598,9 @@ typedef struct line_s
 	size_t validcount; // if == validcount, already checked
 	polyobj_t *polyobj; // Belongs to a polyobject?
 
-	char *text; // a concatenation of all front and back texture names, for linedef specials that require a string.
 	INT16 callcount; // no. of calls left before triggering, for the "X calls" linedef specials, defaults to 0
+
+	UINT32 secportal; // transferred sector portal
 } line_t;
 
 typedef struct
@@ -558,6 +610,13 @@ typedef struct
 
 	// add this to the calculated texture top
 	fixed_t rowoffset;
+
+	// per-texture offsets for UDMF
+	fixed_t offsetx_top, offsetx_mid, offsetx_bottom;
+	fixed_t offsety_top, offsety_mid, offsety_bottom;
+
+	fixed_t scalex_top, scalex_mid, scalex_bottom;
+	fixed_t scaley_top, scaley_mid, scaley_bottom;
 
 	// Texture indices.
 	// We do not maintain names here.
@@ -571,8 +630,6 @@ typedef struct
 
 	INT16 special; // the special of the linedef this side belongs to
 	INT16 repeatcnt; // # of times to repeat midtexture
-
-	char *text; // a concatenation of all top, bottom, and mid texture names, for linedef specials that require a string.
 
 	extracolormap_t *colormap_data; // storage for colormaps; not applied to sectors.
 } side_t;
@@ -753,15 +810,18 @@ typedef struct drawseg_s
 	fixed_t bsilheight; // do not clip sprites above this
 	fixed_t tsilheight; // do not clip sprites below this
 
+	fixed_t offsetx;
+
 	// Pointers to lists for sprite clipping, all three adjusted so [x1] is first value.
 	INT16 *sprtopclip;
 	INT16 *sprbottomclip;
-	INT16 *maskedtexturecol;
+	fixed_t *maskedtexturecol;
+	fixed_t *invscale;
 
 	struct visplane_s *ffloorplanes[MAXFFLOORS];
 	INT32 numffloorplanes;
 	struct ffloor_s *thicksides[MAXFFLOORS];
-	INT16 *thicksidecol;
+	fixed_t *thicksidecol;
 	INT32 numthicksides;
 	fixed_t frontscale[MAXVIDWIDTH];
 
@@ -921,7 +981,7 @@ typedef struct
 	UINT16 flip;
 
 #ifdef ROTSPRITE
-	rotsprite_t *rotated[2][16]; // Rotated patches
+	rotsprite_t *rotated[16]; // Rotated patches
 #endif
 } spriteframe_t;
 

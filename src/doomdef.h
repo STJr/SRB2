@@ -56,7 +56,6 @@
 #endif
 
 #ifdef _WINDOWS
-#define NONET
 #if !defined (HWRENDER) && !defined (NOHW)
 #define HWRENDER
 #endif
@@ -107,6 +106,22 @@
 FILE *fopenfile(const char*, const char*);
 
 //#define NOMD5
+
+// If you don't disable ALL debug first, you get ALL debug enabled
+#if !defined (NDEBUG)
+#ifndef PACKETDROP
+#define PACKETDROP
+#endif
+#ifndef PARANOIA
+#define PARANOIA
+#endif
+#ifndef RANGECHECK
+#define RANGECHECK
+#endif
+#ifndef ZDEBUG
+#define ZDEBUG
+#endif
+#endif
 
 // Uncheck this to compile debugging code
 //#define RANGECHECK
@@ -226,9 +241,16 @@ extern char logfilename[1024];
 // NOTE: it needs more than this to increase the number of players...
 
 #define MAXPLAYERS 32
-#define MAXSKINS 32
-#define PLAYERSMASK (MAXPLAYERS-1)
 #define MAXPLAYERNAME 21
+#define PLAYERSMASK (MAXPLAYERS-1)
+
+// Don't make MAXSKINS higher than 256, since skin numbers are used with an
+// UINT8 in various parts of the codebase. If you do anyway, the data type
+// of those variables will have to be changed into at least an UINT16.
+// This change must affect code such as demo recording and playback,
+// and the structure of some networking packets and commands.
+#define MAXSKINS 256
+#define MAXCHARACTERSLOTS (MAXSKINS * 3) // Should be higher than MAXSKINS.
 
 #define COLORRAMPSIZE 16
 #define MAXCOLORNAME 32
@@ -261,66 +283,111 @@ typedef enum
 	// Desaturated
 	SKINCOLOR_AETHER,
 	SKINCOLOR_SLATE,
+	SKINCOLOR_MOONSTONE,
 	SKINCOLOR_BLUEBELL,
 	SKINCOLOR_PINK,
+	SKINCOLOR_ROSEWOOD,
 	SKINCOLOR_YOGURT,
+	SKINCOLOR_LATTE,
 	SKINCOLOR_BROWN,
+	SKINCOLOR_BOULDER,
 	SKINCOLOR_BRONZE,
+	SKINCOLOR_SEPIA,
+	SKINCOLOR_ECRU,
 	SKINCOLOR_TAN,
 	SKINCOLOR_BEIGE,
+	SKINCOLOR_ROSEBUSH,
 	SKINCOLOR_MOSS,
 	SKINCOLOR_AZURE,
+	SKINCOLOR_EGGPLANT,
 	SKINCOLOR_LAVENDER,
 
 	// Viv's vivid colours (toast 21/07/17)
+	// Tweaks & additions (Lach, sphere, Alice, MotorRoach 26/10/22)
 	SKINCOLOR_RUBY,
+	SKINCOLOR_CHERRY,
 	SKINCOLOR_SALMON,
+	SKINCOLOR_PEPPER,
 	SKINCOLOR_RED,
 	SKINCOLOR_CRIMSON,
 	SKINCOLOR_FLAME,
+	SKINCOLOR_GARNET,
 	SKINCOLOR_KETCHUP,
 	SKINCOLOR_PEACHY,
 	SKINCOLOR_QUAIL,
+	SKINCOLOR_FOUNDATION,
 	SKINCOLOR_SUNSET,
 	SKINCOLOR_COPPER,
 	SKINCOLOR_APRICOT,
 	SKINCOLOR_ORANGE,
 	SKINCOLOR_RUST,
+	SKINCOLOR_TANGERINE,
+	SKINCOLOR_TOPAZ,
 	SKINCOLOR_GOLD,
 	SKINCOLOR_SANDY,
+	SKINCOLOR_GOLDENROD,
 	SKINCOLOR_YELLOW,
 	SKINCOLOR_OLIVE,
+	SKINCOLOR_PEAR,
+	SKINCOLOR_LEMON,
 	SKINCOLOR_LIME,
 	SKINCOLOR_PERIDOT,
 	SKINCOLOR_APPLE,
+	SKINCOLOR_HEADLIGHT,
+	SKINCOLOR_CHARTREUSE,
 	SKINCOLOR_GREEN,
 	SKINCOLOR_FOREST,
-	SKINCOLOR_EMERALD,
+	SKINCOLOR_SHAMROCK,
+	SKINCOLOR_JADE,
 	SKINCOLOR_MINT,
+	SKINCOLOR_MASTER,
+	SKINCOLOR_EMERALD,
 	SKINCOLOR_SEAFOAM,
+	SKINCOLOR_ISLAND,
+	SKINCOLOR_BOTTLE,
 	SKINCOLOR_AQUA,
 	SKINCOLOR_TEAL,
+	SKINCOLOR_OCEAN,
 	SKINCOLOR_WAVE,
 	SKINCOLOR_CYAN,
+	SKINCOLOR_TURQUOISE,
+	SKINCOLOR_AQUAMARINE,
 	SKINCOLOR_SKY,
+	SKINCOLOR_MARINE,
 	SKINCOLOR_CERULEAN,
+	SKINCOLOR_DREAM,
 	SKINCOLOR_ICY,
+	SKINCOLOR_DAYBREAK,
 	SKINCOLOR_SAPPHIRE, // sweet mother, i cannot weave – slender aphrodite has overcome me with longing for a girl
+	SKINCOLOR_ARCTIC,
 	SKINCOLOR_CORNFLOWER,
 	SKINCOLOR_BLUE,
 	SKINCOLOR_COBALT,
+	SKINCOLOR_MIDNIGHT,
+	SKINCOLOR_GALAXY,
 	SKINCOLOR_VAPOR,
 	SKINCOLOR_DUSK,
+	SKINCOLOR_MAJESTY,
 	SKINCOLOR_PASTEL,
 	SKINCOLOR_PURPLE,
+	SKINCOLOR_NOBLE,
+	SKINCOLOR_FUCHSIA,
 	SKINCOLOR_BUBBLEGUM,
+	SKINCOLOR_SIBERITE,
 	SKINCOLOR_MAGENTA,
 	SKINCOLOR_NEON,
 	SKINCOLOR_VIOLET,
+	SKINCOLOR_ROYAL,
 	SKINCOLOR_LILAC,
+	SKINCOLOR_MAUVE,
+	SKINCOLOR_EVENTIDE,
 	SKINCOLOR_PLUM,
 	SKINCOLOR_RASPBERRY,
+	SKINCOLOR_TAFFY,
 	SKINCOLOR_ROSY,
+	SKINCOLOR_FANCY,
+	SKINCOLOR_SANGRIA,
+	SKINCOLOR_VOLCANIC,
 
 	FIRSTSUPERCOLOR,
 
@@ -481,13 +548,14 @@ extern char liveeventbackup[256];
 #define M_GetText(x) (x)
 #endif
 void M_StartupLocale(void);
-extern void *(*M_Memcpy)(void* dest, const void* src, size_t n) FUNCNONNULL;
+void *M_Memcpy(void* dest, const void* src, size_t n);
 char *va(const char *format, ...) FUNCPRINTF;
 char *M_GetToken(const char *inputString);
 void M_UnGetToken(void);
 void M_TokenizerOpen(const char *inputString);
 void M_TokenizerClose(void);
 const char *M_TokenizerRead(UINT32 i);
+const char *M_TokenizerReadZDoom(UINT32 i);
 UINT32 M_TokenizerGetEndPos(void);
 void M_TokenizerSetEndPos(UINT32 newPos);
 char *sizeu1(size_t num);
@@ -592,7 +660,16 @@ UINT32 quickncasehash (const char *p, size_t n)
 #define PUNCTUATION "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~"
 
 // Compile date and time and revision.
-extern const char *compdate, *comptime, *comprevision, *compbranch;
+extern const char
+	*compdate,
+	*comptime,
+	*comprevision,
+	*compbranch,
+	*compnote,
+	*comptype;
+extern int
+	compuncommitted,
+	compoptimized;
 
 // Disabled code and code under testing
 // None of these that are disabled in the normal build are guaranteed to work perfectly
@@ -662,7 +739,7 @@ extern const char *compdate, *comptime, *comprevision, *compbranch;
 /// Maintain compatibility with older 2.2 demos
 #define OLD22DEMOCOMPAT
 
-#if defined (HAVE_CURL) && ! defined (NONET)
+#ifdef HAVE_CURL
 #define MASTERSERVER
 #else
 #undef UPDATE_ALERT

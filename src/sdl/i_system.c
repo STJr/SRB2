@@ -23,12 +23,6 @@
 /// \file
 /// \brief SRB2 system stuff for SDL
 
-#ifdef CMAKECONFIG
-#include "config.h"
-#else
-#include "../config.h.in"
-#endif
-
 #include <signal.h>
 
 #ifdef _WIN32
@@ -41,6 +35,18 @@ typedef DWORD (WINAPI *p_timeGetTime) (void);
 typedef UINT (WINAPI *p_timeEndPeriod) (UINT);
 typedef HANDLE (WINAPI *p_OpenFileMappingA) (DWORD, BOOL, LPCSTR);
 typedef LPVOID (WINAPI *p_MapViewOfFile) (HANDLE, DWORD, DWORD, DWORD, SIZE_T);
+
+// This is for RtlGenRandom.
+#define SystemFunction036 NTAPI SystemFunction036
+#include <ntsecapi.h>
+#undef SystemFunction036
+
+// A little more than the minimum sleep duration on Windows.
+// May be incorrect for other platforms, but we don't currently have a way to
+// query the scheduler granularity. SDL will do what's needed to make this as
+// low as possible though.
+#define MIN_SLEEP_DURATION_MS 2.1
+
 #endif
 #include <stdio.h>
 #include <stdlib.h>
@@ -90,7 +96,7 @@ typedef LPVOID (WINAPI *p_MapViewOfFile) (HANDLE, DWORD, DWORD, DWORD, SIZE_T);
 #include <kvm.h>
 #endif
 #include <nlist.h>
-#include <sys/vmmeter.h>
+#include <sys/sysctl.h>
 #endif
 #endif
 
@@ -138,7 +144,9 @@ typedef LPVOID (WINAPI *p_MapViewOfFile) (HANDLE, DWORD, DWORD, DWORD, SIZE_T);
 #endif
 
 #if defined (__unix__) || defined(__APPLE__) || defined (UNIXCOMMON)
+#ifndef NOEXECINFO
 #include <execinfo.h>
+#endif
 #include <time.h>
 #define UNIXBACKTRACE
 #endif
@@ -187,7 +195,8 @@ static char returnWadPath[256];
 #include "../i_system.h"
 #include "../i_threads.h"
 #include "../screen.h" //vid.WndParent
-#include "../d_net.h"
+#include "../netcode/d_net.h"
+#include "../netcode/commands.h"
 #include "../g_game.h"
 #include "../filesrch.h"
 #include "endtxt.h"
@@ -208,7 +217,7 @@ static char returnWadPath[256];
 
 #if !defined(NOMUMBLE) && defined(HAVE_MUMBLE)
 // Mumble context string
-#include "../d_clisrv.h"
+#include "../netcode/d_clisrv.h"
 #include "../byteptr.h"
 #endif
 
@@ -259,21 +268,26 @@ UINT8 keyboard_started = false;
 
 #ifdef UNIXBACKTRACE
 #define STDERR_WRITE(string) if (fd != -1) I_OutputMsg("%s", string)
-#define CRASHLOG_WRITE(string) if (fd != -1) write(fd, string, strlen(string))
+#define CRASHLOG_WRITE(string) if (fd != -1) junk = write(fd, string, strlen(string))
 #define CRASHLOG_STDERR_WRITE(string) \
 	if (fd != -1)\
-		write(fd, string, strlen(string));\
+		junk = write(fd, string, strlen(string));\
 	I_OutputMsg("%s", string)
 
 static void write_backtrace(INT32 signal)
 {
 	int fd = -1;
+#ifndef NOEXECINFO
 	size_t size;
+#endif
 	time_t rawtime;
 	struct tm timeinfo;
+	ssize_t junk;
 
 	enum { BT_SIZE = 1024, STR_SIZE = 32 };
+#ifndef NOEXECINFO
 	void *array[BT_SIZE];
+#endif
 	char timestr[STR_SIZE];
 
 	const char *error = "An error occurred within SRB2! Send this stack trace to someone who can help!\n";
@@ -306,15 +320,17 @@ static void write_backtrace(INT32 signal)
 	CRASHLOG_WRITE(strsignal(signal));
 	CRASHLOG_WRITE("\n"); // Newline for the signal name
 
+#ifndef NOEXECINFO
 	CRASHLOG_STDERR_WRITE("\nBacktrace:\n");
 
 	// Flood the output and log with the backtrace
 	size = backtrace(array, BT_SIZE);
 	backtrace_symbols_fd(array, size, fd);
 	backtrace_symbols_fd(array, size, STDERR_FILENO);
+#endif
 
 	CRASHLOG_WRITE("\n"); // Write another newline to the log so it looks nice :)
-
+	(void)junk;
 	close(fd);
 }
 #undef STDERR_WRITE
@@ -325,56 +341,90 @@ static void write_backtrace(INT32 signal)
 static void I_ReportSignal(int num, int coredumped)
 {
 	//static char msg[] = "oh no! back to reality!\r\n";
-	const char *      sigmsg;
-	char msg[128];
+	const char *sigmsg, *signame;
+	char ttl[128];
+	char sigttl[512] = "Process killed by signal: ";
+	const char *reportmsg = "\n\nTo help us figure out the cause, you can visit our official Discord server\nwhere you will find more instructions on how to submit a crash report.\n\nSorry for the inconvenience!";
 
 	switch (num)
 	{
 //	case SIGINT:
-//		sigmsg = "SIGINT - interrupted";
+//		sigttl = "SIGINT"
+//		sigmsg = "SRB2 was interrupted prematurely by the user.";
 //		break;
 	case SIGILL:
-		sigmsg = "SIGILL - illegal instruction - invalid function image";
+		sigmsg = "SRB2 has attempted to execute an illegal instruction and needs to close.";
+		signame = "SIGILL"; // illegal instruction - invalid function image
 		break;
 	case SIGFPE:
-		sigmsg = "SIGFPE - mathematical exception";
+		sigmsg = "SRB2 has encountered a mathematical exception and needs to close.";
+		signame = "SIGFPE"; // mathematical exception
 		break;
 	case SIGSEGV:
-		sigmsg = "SIGSEGV - segment violation";
+		sigmsg = "SRB2 has attempted to access a memory location that it shouldn't and needs to close.";
+		signame = "SIGSEGV"; // segment violation
 		break;
 //	case SIGTERM:
-//		sigmsg = "SIGTERM - Software termination signal from kill";
+//		sigmsg = "SRB2 was terminated by a kill signal.";
+//		sigttl = "SIGTERM"; // Software termination signal from kill
 //		break;
 //	case SIGBREAK:
-//		sigmsg = "SIGBREAK - Ctrl-Break sequence";
+//		sigmsg = "SRB2 was terminated by a Ctrl-Break sequence.";
+//		sigttl = "SIGBREAK" // Ctrl-Break sequence
 //		break;
 	case SIGABRT:
-		sigmsg = "SIGABRT - abnormal termination triggered by abort call";
+		sigmsg = "SRB2 was terminated by an abort signal.";
+		signame = "SIGABRT"; // abnormal termination triggered by abort call
 		break;
 	default:
-		sprintf(msg,"signal number %d", num);
+		sigmsg = "SRB2 was terminated by an unknown signal.";
+
+		sprintf(ttl, "number %d", num);
 		if (coredumped)
-			sigmsg = 0;
+			signame = 0;
 		else
-			sigmsg = msg;
+			signame = ttl;
 	}
 
 	if (coredumped)
 	{
-		if (sigmsg)
-			sprintf(msg, "%s (core dumped)", sigmsg);
+		if (signame)
+			sprintf(ttl, "%s (core dumped)", signame);
 		else
-			strcat(msg, " (core dumped)");
+			strcat(ttl, " (core dumped)");
 
-		sigmsg = msg;
+		signame = ttl;
 	}
 
-	I_OutputMsg("\nProcess killed by signal: %s\n\n", sigmsg);
+	strcat(sigttl, signame);
+	I_OutputMsg("%s\n", sigttl);
 
-	if (!M_CheckParm("-dedicated"))
-		SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR,
-			"Process killed by signal",
-			sigmsg, NULL);
+	if (M_CheckParm("-dedicated"))
+		return;
+
+	const SDL_MessageBoxButtonData buttons[] = {
+		{ SDL_MESSAGEBOX_BUTTON_RETURNKEY_DEFAULT, 0,		"OK" },
+		{ 										0, 1,  "Discord" },
+	};
+
+	const SDL_MessageBoxData messageboxdata = {
+		SDL_MESSAGEBOX_ERROR, /* .flags */
+		NULL, /* .window */
+		sigttl, /* .title */
+		va("%s %s", sigmsg, reportmsg), /* .message */
+		SDL_arraysize(buttons), /* .numbuttons */
+		buttons, /* .buttons */
+		NULL /* .colorScheme */
+	};
+
+	int buttonid;
+
+	SDL_ShowMessageBox(&messageboxdata, &buttonid);
+
+#if SDL_VERSION_ATLEAST(2,0,14)
+	if (buttonid == 1)
+		SDL_OpenURL("https://www.srb2.org/discord");
+#endif
 }
 
 #ifndef NEWSIGNALHANDLER
@@ -572,6 +622,7 @@ void I_GetConsoleEvents(void)
 		return;
 
 	ev.type = ev_console;
+	ev.key = 0;
 	if (read(STDIN_FILENO, &key, 1) == -1 || !key)
 		return;
 
@@ -598,9 +649,10 @@ void I_GetConsoleEvents(void)
 		}
 		else return;
 	}
-	else
+	else if (tty_con.cursor < sizeof (tty_con.buffer))
 	{
 		// push regular character
+		ev.type = ev_text;
 		ev.key = tty_con.buffer[tty_con.cursor] = key;
 		tty_con.cursor++;
 		// print the current line (this is differential)
@@ -2229,8 +2281,54 @@ void I_Sleep(UINT32 ms)
 	SDL_Delay(ms);
 }
 
+void I_SleepDuration(precise_t duration)
+{
+#if defined(__linux__) || defined(__FreeBSD__)
+	UINT64 precision = I_GetPrecisePrecision();
+	struct timespec ts = {
+		.tv_sec = duration / precision,
+		.tv_nsec = duration * 1000000000 / precision % 1000000000,
+	};
+	int status;
+	do status = clock_nanosleep(CLOCK_MONOTONIC, 0, &ts, &ts);
+	while (status == EINTR);
+#else
+	UINT64 precision = I_GetPrecisePrecision();
+	INT32 sleepvalue = cv_sleep.value;
+	UINT64 delaygranularity;
+	precise_t cur;
+	precise_t dest;
+
+	{
+		double gran = round(((double)(precision / 1000) * sleepvalue * MIN_SLEEP_DURATION_MS));
+		delaygranularity = (UINT64)gran;
+	}
+
+	cur = I_GetPreciseTime();
+	dest = cur + duration;
+
+	// the reason this is not dest > cur is because the precise counter may wrap
+	// two's complement arithmetic is our friend here, though!
+	// e.g. cur 0xFFFFFFFFFFFFFFFE = -2, dest 0x0000000000000001 = 1
+	// 0x0000000000000001 - 0xFFFFFFFFFFFFFFFE = 3
+	while ((INT64)(dest - cur) > 0)
+	{
+		// If our cv_sleep value exceeds the remaining sleep duration, use the
+		// hard sleep function.
+		if (sleepvalue > 0 && (dest - cur) > delaygranularity)
+		{
+			I_Sleep(sleepvalue);
+		}
+
+		// Otherwise, this is a spinloop.
+
+		cur = I_GetPreciseTime();
+	}
+#endif
+}
+
 #ifdef NEWSIGNALHANDLER
-static void newsignalhandler_Warn(const char *pr)
+ATTRNORETURN static FUNCNORETURN void newsignalhandler_Warn(const char *pr)
 {
 	char text[128];
 
@@ -2322,7 +2420,10 @@ INT32 I_StartupSystem(void)
 #endif
 	I_StartupConsole();
 #ifdef NEWSIGNALHANDLER
-	I_Fork();
+	// This is useful when debugging. It lets GDB attach to
+	// the correct process easily.
+	if (!M_CheckParm("-nofork"))
+		I_Fork();
 #endif
 	I_RegisterSignals();
 	I_OutputMsg("Compiled for SDL version: %d.%d.%d\n",
@@ -2349,9 +2450,7 @@ void I_Quit(void)
 	SDLforceUngrabMouse();
 	quiting = SDL_FALSE;
 	M_SaveConfig(NULL); //save game config, cvars..
-#ifndef NONET
 	D_SaveBan(); // save the ban list
-#endif
 	G_SaveGameData(clientGamedata); // Tails 12-08-2002
 	//added:16-02-98: when recording a demo, should exit using 'q' key,
 	//        but sometimes we forget and use 'F10'.. so save here too.
@@ -2466,9 +2565,7 @@ void I_Error(const char *error, ...)
 	// ---
 
 	M_SaveConfig(NULL); // save game config, cvars..
-#ifndef NONET
 	D_SaveBan(); // save the ban list
-#endif
 	G_SaveGameData(clientGamedata); // Tails 12-08-2002
 
 	// Shutdown. Here might be other errors.
@@ -2608,9 +2705,10 @@ void I_ShutdownSystem(void)
 {
 	INT32 c;
 
-#ifndef NEWSIGNALHANDLER
-	I_ShutdownConsole();
+#ifdef NEWSIGNALHANDLER
+	if (M_CheckParm("-nofork"))
 #endif
+		I_ShutdownConsole();
 
 	for (c = MAX_QUIT_FUNCS-1; c >= 0; c--)
 		if (quit_funcs[c])
@@ -2739,6 +2837,38 @@ INT32 I_PutEnv(char *variable)
 	return SDL_putenv(variable);
 #else
 	return putenv(variable);
+#endif
+}
+
+size_t I_GetRandomBytes(char *destination, size_t count)
+{
+#if defined (__unix__) || defined (UNIXCOMMON) || defined(__APPLE__)
+	FILE *rndsource;
+	size_t actual_bytes;
+
+	if (!(rndsource = fopen("/dev/urandom", "r")))
+		if (!(rndsource = fopen("/dev/random", "r")))
+			actual_bytes = 0;
+
+	if (rndsource)
+	{
+		actual_bytes = fread(destination, 1, count, rndsource);
+		fclose(rndsource);
+	}
+
+	if (actual_bytes == 0)
+		I_OutputMsg("I_GetRandomBytes(): couldn't get any random bytes");
+
+	return actual_bytes;
+#elif defined (_WIN32)
+	if (RtlGenRandom(destination, count))
+		return count;
+
+	I_OutputMsg("I_GetRandomBytes(): couldn't get any random bytes");
+	return 0;
+#else
+	#warning SDL I_GetRandomBytes is not implemented on this platform.
+	return 0;
 #endif
 }
 
@@ -2965,40 +3095,17 @@ static long get_entry(const char* name, const char* buf)
 size_t I_GetFreeMem(size_t *total)
 {
 #ifdef FREEBSD
-	struct vmmeter sum;
-	kvm_t *kd;
-	struct nlist namelist[] =
-	{
-#define X_SUM   0
-		{"_cnt"},
-		{NULL}
-	};
-	if ((kd = kvm_open(NULL, NULL, NULL, O_RDONLY, "kvm_open")) == NULL)
-	{
-		if (total)
-			*total = 0L;
-		return 0;
-	}
-	if (kvm_nlist(kd, namelist) != 0)
-	{
-		kvm_close (kd);
-		if (total)
-			*total = 0L;
-		return 0;
-	}
-	if (kvm_read(kd, namelist[X_SUM].n_value, &sum,
-		sizeof (sum)) != sizeof (sum))
-	{
-		kvm_close(kd);
-		if (total)
-			*total = 0L;
-		return 0;
-	}
-	kvm_close(kd);
+	u_int v_free_count, v_page_size, v_page_count;
+	size_t size = sizeof(v_free_count);
+	sysctlbyname("vm.stats.vm.v_free_count", &v_free_count, &size, NULL, 0);
+	size = sizeof(v_page_size);
+	sysctlbyname("vm.stats.vm.v_page_size", &v_page_size, &size, NULL, 0);
+	size = sizeof(v_page_count);
+	sysctlbyname("vm.stats.vm.v_page_count", &v_page_count, &size, NULL, 0);
 
 	if (total)
-		*total = sum.v_page_count * sum.v_page_size;
-	return sum.v_free_count * sum.v_page_size;
+		*total = v_page_count * v_page_size;
+	return v_free_count * v_page_size;
 #elif defined (SOLARIS)
 	/* Just guess */
 	if (total)

@@ -187,25 +187,31 @@ static inline int lib_freeslot(lua_State *L)
 // Arguments: mobj_t actor, int var1, int var2
 static int action_call(lua_State *L)
 {
-	//actionf_t *action = lua_touserdata(L,lua_upvalueindex(1));
 	actionf_t *action = *((actionf_t **)luaL_checkudata(L, 1, META_ACTION));
 	mobj_t *actor = *((mobj_t **)luaL_checkudata(L, 2, META_MOBJ));
+
 	var1 = (INT32)luaL_optinteger(L, 3, 0);
 	var2 = (INT32)luaL_optinteger(L, 4, 0);
+
 	if (!actor)
+	{
 		return LUA_ErrInvalid(L, "mobj_t");
+	}
+
 	action->acp1(actor);
 	return 0;
 }
 
 // Hardcoded A_Action name to call for super() or NULL if super() would be invalid.
 // Set in lua_infolib.
-const char *superactions[MAXRECURSION];
-UINT8 superstack = 0;
+const char *luaactions[MAX_ACTION_RECURSION];
+UINT8 luaactionstack = 0;
 
 static int lib_dummysuper(lua_State *L)
 {
-	return luaL_error(L, "Can't call super() outside of hardcode-replacing A_Action functions being called by state changes!"); // convoluted, I know. @_@;;
+	// TODO: Now that the restriction on only being allowed in state changes was lifted,
+	// it'd be nice to have super extend to Lua A_ functions too :)
+	return luaL_error(L, "Can't call super() outside of hardcode-replacing A_Action functions!");
 }
 
 static void CacheAndPushConstant(lua_State *L, const char *name, lua_Integer value)
@@ -271,8 +277,8 @@ static int ScanConstants(lua_State *L, boolean mathlib, const char *word)
 	}
 	else if (fastncmp("MTF_", word, 4)) {
 		p = word+4;
-		for (i = 0; i < 4; i++)
-			if (MAPTHINGFLAG_LIST[i] && fastcmp(p, MAPTHINGFLAG_LIST[i])) {
+		for (i = 0; MAPTHINGFLAG_LIST[i]; i++)
+			if (fastcmp(p, MAPTHINGFLAG_LIST[i])) {
 				CacheAndPushConstant(L, word, ((lua_Integer)1<<i));
 				return 1;
 			}
@@ -291,7 +297,8 @@ static int ScanConstants(lua_State *L, boolean mathlib, const char *word)
 			CacheAndPushConstant(L, word, (lua_Integer)PF_FULLSTASIS);
 			return 1;
 		}
-		else if (fastcmp(p, "USEDOWN")) // Remove case when 2.3 nears release...
+		// TODO: 2.3: Delete this alias
+		else if (fastcmp(p, "USEDOWN"))
 		{
 			CacheAndPushConstant(L, word, (lua_Integer)PF_SPINDOWN);
 			return 1;
@@ -566,7 +573,8 @@ static int ScanConstants(lua_State *L, boolean mathlib, const char *word)
 		if (mathlib) return luaL_error(L, "NiGHTS grade '%s' could not be found.\n", word);
 		return 0;
 	}
-	else if (fastncmp("MN_",word,3)) {
+	else if (fastncmp("MN_",word,3))
+	{
 		p = word+3;
 		for (i = 0; i < NUMMENUTYPES; i++)
 			if (fastcmp(p, MENUTYPES_LIST[i])) {
@@ -576,12 +584,24 @@ static int ScanConstants(lua_State *L, boolean mathlib, const char *word)
 		if (mathlib) return luaL_error(L, "menutype '%s' could not be found.\n", word);
 		return 0;
 	}
+	else if (mathlib && fastncmp("TRANSLATION_",word,12))
+	{
+		p = word+12;
+		int id = R_FindCustomTranslation_CaseInsensitive(p);
+		if (id != -1)
+		{
+			lua_pushinteger(L, id);
+			return 1;
+		}
+		return luaL_error(L, "translation '%s' could not be found.\n", word);
+	}
 
-	if (fastcmp(word, "BT_USE")) // Remove case when 2.3 nears release...
+	// TODO: 2.3: Delete this alias
+	if (fastcmp(word, "BT_USE"))
 	{
 		CacheAndPushConstant(L, word, (lua_Integer)BT_SPIN);
 		return 1;
-	}
+	} 
 
 	for (i = 0; INT_CONST[i].n; i++)
 		if (fastcmp(word,INT_CONST[i].n)) {
@@ -592,59 +612,114 @@ static int ScanConstants(lua_State *L, boolean mathlib, const char *word)
 	return 0;
 }
 
-static inline int lib_getenum(lua_State *L)
+FUNCINLINE static ATTRINLINE int getEnum(lua_State *L, boolean mathlib, const char *word)
 {
-	const char *word;
 	fixed_t i;
-	boolean mathlib = lua_toboolean(L, lua_upvalueindex(1));
-	if (lua_type(L,2) != LUA_TSTRING)
-		return 0;
-	word = lua_tostring(L,2);
 
 	// check actions, super and globals first, as they don't have _G caching implemented
 	// so they benefit from being checked first
 
 	if (!mathlib && fastncmp("A_",word,2)) {
 		char *caps;
-		// Try to get a Lua action first.
-		/// \todo Push a closure that sets superactions[] and superstack.
+
+		// Hardcoded actions come first.
+		// Trying to call them will invoke LUA_CallAction, which will handle super properly.
+		// Retrieving them from this metatable allows them to be case-insensitive!
+		for (i = 0; actionpointers[i].name; i++)
+		{
+			if (fasticmp(word, actionpointers[i].name))
+			{
+				// We push the actionf_t* itself as userdata!
+				LUA_PushUserdata(L, &actionpointers[i].action, META_ACTION);
+				return 1;
+			}
+		}
+
+		// Now try to get Lua actions.
+		/// \todo Push a closure that sets luaactions[] and luaactionstack.
+		/// This would be part one of a step to get super functions working for custom A_ functions.
+		/// Custom functions.
 		lua_getfield(L, LUA_REGISTRYINDEX, LREG_ACTIONS);
+
 		// actions are stored in all uppercase.
 		caps = Z_StrDup(word);
 		strupr(caps);
 		lua_getfield(L, -1, caps);
 		Z_Free(caps);
+
 		if (!lua_isnil(L, -1))
+		{
 			return 1; // Success! :D That was easy.
+		}
+
 		// Welp, that failed.
 		lua_pop(L, 2); // pop nil and LREG_ACTIONS
-
-		// Hardcoded actions as callable Lua functions!
-		// Retrieving them from this metatable allows them to be case-insensitive!
-		for (i = 0; actionpointers[i].name; i++)
-			if (fasticmp(word, actionpointers[i].name)) {
-				// We push the actionf_t* itself as userdata!
-				LUA_PushUserdata(L, &actionpointers[i].action, META_ACTION);
-				return 1;
-			}
 		return 0;
 	}
 	else if (!mathlib && fastcmp("super",word))
 	{
-		if (!superstack)
+		if (!luaactionstack)
 		{
+			// Not in A_ action routine
 			lua_pushcfunction(L, lib_dummysuper);
 			return 1;
 		}
+
 		for (i = 0; actionpointers[i].name; i++)
-			if (fasticmp(superactions[superstack-1], actionpointers[i].name)) {
+		{
+			if (fasticmp(luaactions[luaactionstack-1], actionpointers[i].name))
+			{
 				LUA_PushUserdata(L, &actionpointers[i].action, META_ACTION);
 				return 1;
 			}
-		return 0;
+		}
+
+		// Not a hardcoded A_ action.
+		lua_pushcfunction(L, lib_dummysuper);
+		return 1;
 	}
 	else if ((!mathlib && LUA_PushGlobals(L, word)) || ScanConstants(L, mathlib, word))
 		return 1;
+
+	return -1;
+}
+
+static int constants_get(lua_State *L)
+{
+	const char *key;
+	int ret;
+
+	if (!lua_isstring(L, 2))
+		return 0;
+
+	key = luaL_checkstring(L, 2);
+
+	// In Lua, mathlib is never there
+	ret = getEnum(L, false, key);
+
+	if (ret != -1)
+		// Don't allow A_* or super.
+		// All userdata is meant to be considered global variables,
+		// so no need to get more specific than "is it userdata?"
+		if (!lua_isuserdata(L, -1) && !lua_isfunction(L, -1))
+			return ret;
+
+	return 0;
+}
+
+static inline int lib_getenum(lua_State *L)
+{
+	const char *word;
+	int ret;
+	boolean mathlib = lua_toboolean(L, lua_upvalueindex(1));
+	if (lua_type(L,2) != LUA_TSTRING)
+		return 0;
+	word = lua_tostring(L,2);
+
+	ret = getEnum(L, mathlib, word);
+
+	if (ret != -1)
+		return ret;
 
 	if (mathlib) return luaL_error(L, "constant '%s' could not be parsed.\n", word);
 
@@ -745,9 +820,17 @@ int LUA_SOCLib(lua_State *L)
 	lua_register(L,"getActionName",lib_getActionName);
 
 	luaL_newmetatable(L, META_ACTION);
-		lua_pushcfunction(L, action_call);
-		lua_setfield(L, -2, "__call");
+		LUA_SetCFunctionField(L, "__call", action_call);
 	lua_pop(L, 1);
+
+	// Allow access to constants without forcing the use of name comparison checks Lua-side
+	// This table will not access global variables, only constants
+	lua_newuserdata(L, 0);
+		lua_createtable(L, 0, 2);
+			lua_pushcfunction(L, constants_get);
+			lua_setfield(L, -2, "__index");
+		lua_setmetatable(L, -2);
+	lua_setglobal(L, "constants");
 
 	return 0;
 }

@@ -34,7 +34,7 @@
 #include "doomdef.h"
 #include "am_map.h"
 #include "console.h"
-#include "d_net.h"
+#include "netcode/d_net.h"
 #include "f_finale.h"
 #include "g_game.h"
 #include "hu_stuff.h"
@@ -50,17 +50,18 @@
 #include "p_saveg.h"
 #include "r_main.h"
 #include "r_local.h"
+#include "r_translation.h"
 #include "s_sound.h"
 #include "st_stuff.h"
 #include "v_video.h"
 #include "w_wad.h"
 #include "z_zone.h"
 #include "d_main.h"
-#include "d_netfil.h"
+#include "netcode/d_netfil.h"
 #include "m_cheat.h"
 #include "y_inter.h"
 #include "p_local.h" // chasecam
-#include "mserv.h" // ms_RoomId
+#include "netcode/mserv.h" // ms_RoomId
 #include "m_misc.h" // screenshot functionality
 #include "deh_tables.h" // Dehacked list test
 #include "m_cond.h" // condition initialization
@@ -70,6 +71,8 @@
 #include "filesrch.h" // refreshdirmenu
 #include "g_input.h" // tutorial mode control scheming
 #include "m_perfstats.h"
+#include "m_random.h"
+#include "command.h"
 
 #ifdef CMAKECONFIG
 #include "config.h"
@@ -190,19 +193,19 @@ void D_ProcessEvents(void)
 		ev = &events[eventtail];
 
 		// Set mouse buttons early in case event is eaten later
-		if (ev->type == ev_keydown || ev->type == ev_keyup)
+		if (ev->type == ev_keydown || ev->type == ev_keyup || ev->type == ev_text)
 		{
 			// Mouse buttons
 			if ((UINT32)(ev->key - KEY_MOUSE1) < MOUSEBUTTONS)
 			{
-				if (ev->type == ev_keydown)
+				if (ev->type == ev_keydown || ev->type == ev_text)
 					mouse.buttons |= 1 << (ev->key - KEY_MOUSE1);
 				else
 					mouse.buttons &= ~(1 << (ev->key - KEY_MOUSE1));
 			}
 			else if ((UINT32)(ev->key - KEY_2MOUSE1) < MOUSEBUTTONS)
 			{
-				if (ev->type == ev_keydown)
+				if (ev->type == ev_keydown || ev->type == ev_text)
 					mouse2.buttons |= 1 << (ev->key - KEY_2MOUSE1);
 				else
 					mouse2.buttons &= ~(1 << (ev->key - KEY_2MOUSE1));
@@ -458,6 +461,13 @@ static void D_Display(void)
 
 		case GS_WAITINGPLAYERS:
 			// The clientconnect drawer is independent...
+			if (netgame)
+			{
+				// I don't think HOM from nothing drawing is independent...
+				F_WaitingPlayersDrawer();
+				HU_Erase();
+				HU_Drawer();
+			}
 		case GS_DEDICATEDSERVER:
 		case GS_NULL:
 			break;
@@ -972,6 +982,7 @@ void D_StartTitle(void)
 	emeralds = 0;
 	memset(&luabanks, 0, sizeof(luabanks));
 	lastmaploaded = 0;
+	pickedchar = R_SkinAvailable(cv_defaultskin.string);
 
 	// In case someone exits out at the same time they start a time attack run,
 	// reset modeattacking
@@ -1208,6 +1219,15 @@ D_ConvertVersionNumbers (void)
 #endif
 }
 
+static void Command_assert(void)
+{
+#if !defined(NDEBUG) || defined(PARANOIA)
+	CONS_Printf("Yes, assertions are enabled.\n");
+#else
+	CONS_Printf("No, assertions are NOT enabled.\n");
+#endif
+}
+
 //
 // D_SRB2Main
 //
@@ -1220,6 +1240,11 @@ void D_SRB2Main(void)
 
 	/* break the version string into version numbers, for netplay */
 	D_ConvertVersionNumbers();
+
+	if (!strcmp(compbranch, ""))
+	{
+		compbranch = "detached HEAD";
+	}
 
 	// Print GPL notice for our console users (Linux)
 	CONS_Printf(
@@ -1334,11 +1359,12 @@ void D_SRB2Main(void)
 	snprintf(addonsdir, sizeof addonsdir, "%s%s%s", srb2home, PATHSEP, "addons");
 	I_mkdir(addonsdir, 0755);
 
-	// rand() needs seeded regardless of password
-	srand((unsigned int)time(NULL));
-	rand();
-	rand();
-	rand();
+	// seed M_Random because it is necessary; seed P_Random for scripts that
+	// might want to use random numbers immediately at start
+	if (!M_RandomSeedFromOS())
+		M_RandomSeed((UINT32)time(NULL)); // less good but serviceable
+
+	P_SetRandSeed(M_RandomizedSeed());
 
 	if (M_CheckParm("-password") && M_IsNextParm())
 		D_SetPassword(M_GetNextParm());
@@ -1355,6 +1381,8 @@ void D_SRB2Main(void)
 
 	// Do this up here so that WADs loaded through the command line can use ExecCfg
 	COM_Init();
+
+	COM_AddCommand("assert", Command_assert, COM_LUA);
 
 	// Add any files specified on the command line with
 	// "-file <file>" or "-folder <folder>" to the add-on list
@@ -1402,10 +1430,6 @@ void D_SRB2Main(void)
 	// Make backups of some SOCcable tables.
 	P_BackupTables();
 
-	// Setup character tables
-	// Have to be done here before files are loaded
-	M_InitCharacterTables();
-
 	mainwads = 3; // doesn't include music.dta
 #ifdef USE_PATCH_DTA
 	mainwads++;
@@ -1447,6 +1471,8 @@ void D_SRB2Main(void)
 	//--------------------------------------------------------- CONSOLE
 	// setup loading screen
 	SCR_Startup();
+
+	PaletteRemap_Init();
 
 	HU_Init();
 
@@ -1587,6 +1613,9 @@ void D_SRB2Main(void)
 	if (D_CheckNetGame())
 		autostart = true;
 
+	if (!dedicated)
+		pickedchar = R_SkinAvailable(cv_defaultskin.string);
+
 	// check for a driver that wants intermission stats
 	// start the apropriate game based on parms
 	if (M_CheckParm("-metal"))
@@ -1711,14 +1740,15 @@ void D_SRB2Main(void)
 			// Prevent warping to nonexistent levels
 			if (W_CheckNumForName(G_BuildMapName(pstartmap)) == LUMPERROR)
 				I_Error("Could not warp to %s (map not found)\n", G_BuildMapName(pstartmap));
-			// Prevent warping to locked levels
-			// ... unless you're in a dedicated server.  Yes, technically this means you can view any level by
-			// running a dedicated server and joining it yourself, but that's better than making dedicated server's
-			// lives hell.
-			else if (!dedicated && M_MapLocked(pstartmap, serverGamedata))
-				I_Error("You need to unlock this level before you can warp to it!\n");
 			else
 			{
+				if (M_CampaignWarpIsCheat(gametype, pstartmap, serverGamedata))
+				{
+					// If you're warping via command line, you know what you're doing.
+					// No need to I_Error over this.
+					G_SetUsedCheats(false);
+				}
+
 				D_MapChange(pstartmap, gametype, ultimatemode, true, 0, false, false);
 			}
 		}

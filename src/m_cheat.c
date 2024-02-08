@@ -19,7 +19,7 @@
 #include "r_local.h"
 #include "p_local.h"
 #include "p_setup.h"
-#include "d_net.h"
+#include "netcode/d_net.h"
 
 #include "m_cheat.h"
 #include "m_menu.h"
@@ -1019,7 +1019,7 @@ static void OP_CycleThings(INT32 amt)
 	if (players[0].mo->eflags & MFE_VERTICALFLIP) // correct z when flipped
 		players[0].mo->z += players[0].mo->height - FixedMul(mobjinfo[op_currentthing].height, players[0].mo->scale);
 	players[0].mo->height = FixedMul(mobjinfo[op_currentthing].height, players[0].mo->scale);
-	P_SetPlayerMobjState(players[0].mo, S_OBJPLACE_DUMMY);
+	P_SetMobjState(players[0].mo, S_OBJPLACE_DUMMY);
 
 	op_currentdoomednum = mobjinfo[op_currentthing].doomednum;
 }
@@ -1102,6 +1102,8 @@ static mapthing_t *OP_CreateNewMapThing(player_t *player, UINT16 type, boolean c
 
 	mt->options = (mt->z << ZSHIFT) | (UINT16)cv_opflags.value;
 	mt->scale = player->mo->scale;
+	mt->spritexscale = player->mo->spritexscale;
+	mt->spriteyscale = player->mo->spriteyscale;
 	memset(mt->args, 0, NUMMAPTHINGARGS*sizeof(*mt->args));
 	memset(mt->stringargs, 0x00, NUMMAPTHINGSTRINGARGS*sizeof(*mt->stringargs));
 	mt->pitch = mt->roll = 0;
@@ -1526,7 +1528,7 @@ void Command_ObjectPlace_f(void)
 		else
 			OP_CycleThings(0); // sets all necessary height values without cycling op_currentthing
 
-		P_SetPlayerMobjState(players[0].mo, S_OBJPLACE_DUMMY);
+		P_SetMobjState(players[0].mo, S_OBJPLACE_DUMMY);
 	}
 	// Or are we leaving it instead?
 	else
@@ -1540,7 +1542,7 @@ void Command_ObjectPlace_f(void)
 
 		// If still in dummy state, get out of it.
 		if (players[0].mo->state == &states[S_OBJPLACE_DUMMY])
-			P_SetPlayerMobjState(players[0].mo, op_oldstate);
+			P_SetMobjState(players[0].mo, op_oldstate);
 
 		// Reset everything back to how it was before we entered objectplace.
 		P_UnsetThingPosition(players[0].mo);

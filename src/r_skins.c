@@ -18,6 +18,7 @@
 #include "st_stuff.h"
 #include "w_wad.h"
 #include "z_zone.h"
+#include "m_menu.h"
 #include "m_misc.h"
 #include "info.h" // spr2names
 #include "i_video.h" // rendermode
@@ -32,13 +33,7 @@
 #endif
 
 INT32 numskins = 0;
-skin_t skins[MAXSKINS];
-
-// FIXTHIS: don't work because it must be inistilised before the config load
-//#define SKINVALUES
-#ifdef SKINVALUES
-CV_PossibleValue_t skin_cons_t[MAXSKINS+1];
-#endif
+skin_t **skins = NULL;
 
 //
 // P_GetSkinSprite2
@@ -105,7 +100,7 @@ static void Sk_SetDefaultValue(skin_t *skin)
 	//
 	memset(skin, 0, sizeof (skin_t));
 	snprintf(skin->name,
-		sizeof skin->name, "skin %u", (UINT32)(skin-skins));
+		sizeof skin->name, "skin %u", (UINT32)(skin->skinnum));
 	skin->name[sizeof skin->name - 1] = '\0';
 	skin->wadnum = INT16_MAX;
 
@@ -113,6 +108,7 @@ static void Sk_SetDefaultValue(skin_t *skin)
 
 	strcpy(skin->realname, "Someone");
 	strcpy(skin->hudname, "???");
+	strcpy(skin->supername, "Someone super");
 
 	skin->starttranscolor = 96;
 	skin->prefcolor = SKINCOLOR_GREEN;
@@ -148,6 +144,8 @@ static void Sk_SetDefaultValue(skin_t *skin)
 	skin->contspeed = 17;
 	skin->contangle = 0;
 
+	skin->natkcolor = SKINCOLOR_NONE;
+
 	for (i = 0; i < sfx_skinsoundslot0; i++)
 		if (S_sfx[i].skinsound != -1)
 			skin->soundsid[S_sfx[i].skinsound] = i;
@@ -158,16 +156,6 @@ static void Sk_SetDefaultValue(skin_t *skin)
 //
 void R_InitSkins(void)
 {
-#ifdef SKINVALUES
-	INT32 i;
-
-	for (i = 0; i <= MAXSKINS; i++)
-	{
-		skin_cons_t[i].value = 0;
-		skin_cons_t[i].strvalue = NULL;
-	}
-#endif
-
 	// no default skin!
 	numskins = 0;
 }
@@ -190,7 +178,8 @@ UINT32 R_GetSkinAvailabilities(void)
 			// This crash is impossible to trigger as is,
 			// but it could happen if MAXUNLOCKABLES is ever made higher than 32,
 			// and someone makes a mod that has 33+ unlockable characters. :V
-			I_Error("Too many unlockable characters\n");
+			// 2022/03/15: MAXUNLOCKABLES is now higher than 32
+			I_Error("Too many unlockable characters! (maximum is 32)\n");
 			return 0;
 		}
 
@@ -289,7 +278,7 @@ boolean R_SkinUsable(INT32 playernum, INT32 skinnum)
 	}
 }
 
-// returns true if the skin name is found (loaded from pwad)
+// returns the skin number if the skin name is found (loaded from pwad)
 // warning return -1 if not found
 INT32 R_SkinAvailable(const char *name)
 {
@@ -298,16 +287,31 @@ INT32 R_SkinAvailable(const char *name)
 	for (i = 0; i < numskins; i++)
 	{
 		// search in the skin list
-		if (stricmp(skins[i].name,name)==0)
+		if (!stricmp(skins[i]->name,name))
 			return i;
 	}
+	return -1;
+}
+
+INT32 R_GetForcedSkin(INT32 playernum)
+{
+	if (netgame && cv_forceskin.value >= 0 && R_SkinUsable(playernum, cv_forceskin.value))
+		return cv_forceskin.value;
+
+	if (mapheaderinfo[gamemap-1] && mapheaderinfo[gamemap-1]->forcecharacter[0] != '\0')
+	{
+		INT32 skinnum = R_SkinAvailable(mapheaderinfo[gamemap-1]->forcecharacter);
+		if (skinnum != -1 && R_SkinUsable(playernum, skinnum))
+			return skinnum;
+	}
+
 	return -1;
 }
 
 // Auxillary function that actually sets the skin
 static void SetSkin(player_t *player, INT32 skinnum)
 {
-	skin_t *skin = &skins[skinnum];
+	skin_t *skin = skins[skinnum];
 	UINT16 newcolor = 0;
 
 	player->skin = skinnum;
@@ -345,10 +349,6 @@ static void SetSkin(player_t *player, INT32 skinnum)
 
 	if (!(cv_debug || devparm) && !(netgame || multiplayer || demoplayback))
 	{
-		if (player == &players[consoleplayer])
-			CV_StealthSetValue(&cv_playercolor, skin->prefcolor);
-		else if (player == &players[secondarydisplayplayer])
-			CV_StealthSetValue(&cv_playercolor2, skin->prefcolor);
 		player->skincolor = newcolor = skin->prefcolor;
 		if (player->bot && botingame)
 		{
@@ -368,7 +368,7 @@ static void SetSkin(player_t *player, INT32 skinnum)
 		fixed_t radius = FixedMul(skin->radius, player->mo->scale);
 		if ((player->powers[pw_carry] == CR_NIGHTSMODE) && (skin->sprites[SPR2_NFLY].numframes == 0)) // If you don't have a sprite for flying horizontally, use the default NiGHTS skin.
 		{
-			skin = &skins[DEFAULTNIGHTSSKIN];
+			skin = skins[DEFAULTNIGHTSSKIN];
 			player->followitem = skin->followitem;
 			if (!(cv_debug || devparm) && !(netgame || multiplayer || demoplayback))
 				newcolor = skin->prefcolor; // will be updated in thinker to flashing
@@ -379,7 +379,7 @@ static void SetSkin(player_t *player, INT32 skinnum)
 		P_SetScale(player->mo, player->mo->scale);
 		player->mo->radius = radius;
 
-		P_SetPlayerMobjState(player->mo, player->mo->state-states); // Prevent visual errors when switching between skins with differing number of frames
+		P_SetMobjState(player->mo, player->mo->state-states); // Prevent visual errors when switching between skins with differing number of frames
 	}
 }
 
@@ -534,7 +534,7 @@ static void R_LoadSkinSprites(UINT16 wadnum, UINT16 *lump, UINT16 *lastlump, ski
 		R_AddSingleSpriteDef(spr2names[sprite2], &skin->sprites[sprite2], wadnum, *lump, *lastlump);
 
 	if (skin->sprites[0].numframes == 0)
-		I_Error("R_LoadSkinSprites: no frames found for sprite SPR2_%s\n", spr2names[0]);
+		CONS_Alert(CONS_ERROR, M_GetText("No frames found for sprite SPR2_%s\n"), spr2names[0]);
 }
 
 // returns whether found appropriate property
@@ -590,7 +590,6 @@ static boolean R_ProcessPatchableFields(skin_t *skin, char *stoken, char *value)
 		UINT16 color = R_GetSuperColorByName(value);
 		skin->supercolor = (color ? color : SKINCOLOR_SUPERGOLD1);
 	}
-
 #define GETFLOAT(field) else if (!stricmp(stoken, #field)) skin->field = FLOAT_TO_FIXED(atof(value));
 	GETFLOAT(jumpfactor)
 	GETFLOAT(highresscale)
@@ -630,6 +629,9 @@ static boolean R_ProcessPatchableFields(skin_t *skin, char *stoken, char *value)
 	GETFLAG(CANBUSTWALLS)
 	GETFLAG(NOSHIELDABILITY)
 #undef GETFLAG
+
+	else if (!stricmp(stoken, "natkcolor"))
+		skin->natkcolor = R_GetColorByName(value); // SKINCOLOR_NONE is allowed here
 
 	else // let's check if it's a sound, otherwise error out
 	{
@@ -681,7 +683,7 @@ void R_AddSkins(UINT16 wadnum, boolean mainfile)
 	char *value;
 	size_t size;
 	skin_t *skin;
-	boolean hudname, realname;
+	boolean hudname, realname, supername;
 
 	//
 	// search for all skin markers in pwad
@@ -708,10 +710,12 @@ void R_AddSkins(UINT16 wadnum, boolean mainfile)
 		buf2[size] = '\0';
 
 		// set defaults
-		skin = &skins[numskins];
+		skins = Z_Realloc(skins, sizeof(skin_t*) * (numskins + 1), PU_STATIC, NULL);
+		skin = skins[numskins] = Z_Calloc(sizeof(skin_t), PU_STATIC, NULL);
 		Sk_SetDefaultValue(skin);
+		skin->skinnum = numskins;
 		skin->wadnum = wadnum;
-		hudname = realname = false;
+		hudname = realname = supername = false;
 		// parse
 		stoken = strtok (buf2, "\r\n= ");
 		while (stoken)
@@ -754,7 +758,7 @@ void R_AddSkins(UINT16 wadnum, boolean mainfile)
 					Z_Free(value2);
 				}
 
-				// copy to hudname and fullname as a default.
+				// copy to hudname, realname, and supername as a default.
 				if (!realname)
 				{
 					STRBUFCPY(skin->realname, skin->name);
@@ -770,6 +774,19 @@ void R_AddSkins(UINT16 wadnum, boolean mainfile)
 					strupr(skin->hudname);
 					SYMBOLCONVERT(skin->hudname)
 				}
+				if (!supername)
+				{
+					char superstring[SKINNAMESIZE+7];
+					strcpy(superstring, "Super ");
+					strlcat(superstring, skin->name, sizeof(superstring));
+					STRBUFCPY(skin->supername, superstring);
+				}
+			}
+			else if (!stricmp(stoken, "supername"))
+			{ // Super name (eg. "Super Knuckles")
+				supername = true;
+				STRBUFCPY(skin->supername, value);
+				SYMBOLCONVERT(skin->supername)
 			}
 			else if (!stricmp(stoken, "realname"))
 			{ // Display name (eg. "Knuckles")
@@ -778,6 +795,13 @@ void R_AddSkins(UINT16 wadnum, boolean mainfile)
 				SYMBOLCONVERT(skin->realname)
 				if (!hudname)
 					HUDNAMEWRITE(skin->realname);
+				if (!supername) //copy over default to capitalise the name
+				{
+					char superstring[SKINNAMESIZE+7];
+					strcpy(superstring, "Super ");
+					strlcat(superstring, skin->realname, sizeof(superstring));
+					STRBUFCPY(skin->supername, superstring);
+				}
 			}
 			else if (!stricmp(stoken, "hudname"))
 			{ // Life icon name (eg. "K.T.E")
@@ -803,15 +827,6 @@ next_token:
 
 		if (mainfile == false)
 			CONS_Printf(M_GetText("Added skin '%s'\n"), skin->name);
-#ifdef SKINVALUES
-		skin_cons_t[numskins].value = numskins;
-		skin_cons_t[numskins].strvalue = skin->name;
-#endif
-
-#ifdef HWRENDER
-		if (rendermode == render_opengl)
-			HWR_AddPlayerModel(numskins);
-#endif
 
 		numskins++;
 	}
@@ -830,7 +845,7 @@ void R_PatchSkins(UINT16 wadnum, boolean mainfile)
 	char *value;
 	size_t size;
 	skin_t *skin;
-	boolean noskincomplain, realname, hudname;
+	boolean noskincomplain, realname, hudname, supername;
 
 	//
 	// search for all skin patch markers in pwad
@@ -854,7 +869,7 @@ void R_PatchSkins(UINT16 wadnum, boolean mainfile)
 		buf2[size] = '\0';
 
 		skin = NULL;
-		noskincomplain = realname = hudname = false;
+		noskincomplain = realname = hudname = supername = false;
 
 		/*
 		Parse. Has more phases than the parser in R_AddSkins because it needs to have the patching name first (no default skin name is acceptible for patching, unlike skin creation)
@@ -882,7 +897,7 @@ void R_PatchSkins(UINT16 wadnum, boolean mainfile)
 					strlwr(value);
 					skinnum = R_SkinAvailable(value);
 					if (skinnum != -1)
-						skin = &skins[skinnum];
+						skin = skins[skinnum];
 					else
 					{
 						CONS_Debug(DBG_SETUP, "R_PatchSkins: unknown skin name in P_SKIN lump# %d(%s) in WAD %s\n", lump, W_CheckNameForNumPwad(wadnum,lump), wadfiles[wadnum]->filename);
@@ -893,13 +908,26 @@ void R_PatchSkins(UINT16 wadnum, boolean mainfile)
 			else // Get the properties!
 			{
 				// Some of these can't go in R_ProcessPatchableFields because they have side effects for future lines.
-				if (!stricmp(stoken, "realname"))
+				if (!stricmp(stoken, "supername"))
+				{ // Super name (eg. "Super Knuckles")
+					supername = true;
+					STRBUFCPY(skin->supername, value);
+					SYMBOLCONVERT(skin->supername)
+				}
+				else if (!stricmp(stoken, "realname"))
 				{ // Display name (eg. "Knuckles")
 					realname = true;
 					STRBUFCPY(skin->realname, value);
 					SYMBOLCONVERT(skin->realname)
 					if (!hudname)
 						HUDNAMEWRITE(skin->realname);
+					if (!supername) //copy over default to capitalise the name
+					{
+						char superstring[SKINNAMESIZE+7];
+						strcpy(superstring, "Super ");
+						strlcat(superstring, skin->realname, sizeof(superstring));
+						STRBUFCPY(skin->supername, superstring);
+					}
 				}
 				else if (!stricmp(stoken, "hudname"))
 				{ // Life icon name (eg. "K.T.E")
@@ -1020,7 +1048,7 @@ static void R_RefreshSprite2ForWad(UINT16 wadnum, UINT8 start_spr2)
 				strlwr(value);
 				skinnum = R_SkinAvailable(value);
 				if (skinnum != -1)
-					skin = &skins[skinnum];
+					skin = skins[skinnum];
 				else
 				{
 					CONS_Debug(DBG_SETUP, "R_RefreshSprite2ForWad: unknown skin name in P_SKIN lump# %d(%s) in WAD %s\n", lump, W_CheckNameForNumPwad(wadnum,lump), wadfiles[wadnum]->filename);

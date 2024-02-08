@@ -31,12 +31,14 @@
 /// The skin_t struct
 typedef struct
 {
-	char name[SKINNAMESIZE+1]; // INT16 descriptive name of the skin
+	char name[SKINNAMESIZE+1]; // name of the skin
+	UINT8 skinnum;
 	UINT16 wadnum;
 	skinflags_t flags;
 
-	char realname[SKINNAMESIZE+1]; // Display name for level completion.
+	char realname[SKINNAMESIZE+1]; // Display name for level completion
 	char hudname[SKINNAMESIZE+1]; // HUD name to display (officially exactly 5 characters long)
+	char supername[SKINNAMESIZE+7]; // Super name to display when collecting all emeralds
 
 	UINT8 ability; // ability definition
 	UINT8 ability2; // secondary ability definition
@@ -69,6 +71,7 @@ typedef struct
 	UINT16 prefcolor;
 	UINT16 supercolor;
 	UINT16 prefoppositecolor; // if 0 use tables instead
+	UINT16 natkcolor; //Color for Nights Attack Menu
 
 	fixed_t highresscale; // scale of highres, default is 0.5
 	UINT8 contspeed; // continue screen animation speed
@@ -84,7 +87,7 @@ typedef struct
 
 /// Externs
 extern INT32 numskins;
-extern skin_t skins[MAXSKINS];
+extern skin_t **skins;
 
 /// Function prototypes
 void R_InitSkins(void);
@@ -95,6 +98,7 @@ void SetPlayerSkinByNum(INT32 playernum,INT32 skinnum); // Tails 03-16-2002
 boolean R_SkinUsable(INT32 playernum, INT32 skinnum);
 UINT32 R_GetSkinAvailabilities(void);
 INT32 R_SkinAvailable(const char *name);
+INT32 R_GetForcedSkin(INT32 playernum);
 void R_AddSkins(UINT16 wadnum, boolean mainfile);
 void R_PatchSkins(UINT16 wadnum, boolean mainfile);
 

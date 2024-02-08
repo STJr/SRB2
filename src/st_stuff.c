@@ -54,8 +54,8 @@ UINT16 objectsdrawn = 0;
 // STATUS BAR DATA
 //
 
-patch_t *faceprefix[MAXSKINS]; // face status patches
-patch_t *superprefix[MAXSKINS]; // super face status patches
+patch_t **faceprefix; // face status patches
+patch_t **superprefix; // super face status patches
 
 // ------------------------------------------
 //             status bar overlay
@@ -135,8 +135,6 @@ static patch_t *gotrflag;
 static patch_t *gotbflag;
 static patch_t *fnshico;
 
-static boolean facefreed[MAXPLAYERS];
-
 hudinfo_t hudinfo[NUMHUDITEMS] =
 {
 	{  16, 176, V_SNAPTOLEFT|V_SNAPTOBOTTOM}, // HUD_LIVES
@@ -170,6 +168,15 @@ hudinfo_t hudinfo[NUMHUDITEMS] =
 
 static huddrawlist_h luahuddrawlist_game[2];
 static huddrawlist_h luahuddrawlist_titlecard;
+
+// NiGHTS link colors; 3 sets with increasingly fancy colors (1 to 299, 300 to 599, 600 and above)
+skincolornum_t linkColor[3][NUMLINKCOLORS] = {
+{SKINCOLOR_SHAMROCK, SKINCOLOR_AQUA, SKINCOLOR_SKY, SKINCOLOR_BLUE, SKINCOLOR_PURPLE, SKINCOLOR_MAGENTA,
+ SKINCOLOR_ROSY, SKINCOLOR_RED, SKINCOLOR_ORANGE, SKINCOLOR_GOLD, SKINCOLOR_YELLOW, SKINCOLOR_PERIDOT},
+{SKINCOLOR_EMERALD, SKINCOLOR_OCEAN, SKINCOLOR_AQUAMARINE, SKINCOLOR_SAPPHIRE, SKINCOLOR_GALAXY, SKINCOLOR_SIBERITE,
+ SKINCOLOR_TAFFY, SKINCOLOR_RUBY, SKINCOLOR_GARNET, SKINCOLOR_TOPAZ, SKINCOLOR_LEMON, SKINCOLOR_LIME},
+{SKINCOLOR_ISLAND, SKINCOLOR_TURQUOISE, SKINCOLOR_DREAM, SKINCOLOR_DAYBREAK, SKINCOLOR_VAPOR, SKINCOLOR_FUCHSIA,
+ SKINCOLOR_VIOLET, SKINCOLOR_EVENTIDE, SKINCOLOR_KETCHUP, SKINCOLOR_FOUNDATION, SKINCOLOR_HEADLIGHT, SKINCOLOR_CHARTREUSE}};
 
 //
 // STATUS BAR CODE
@@ -360,14 +367,14 @@ void ST_LoadGraphics(void)
 // made separate so that skins code can reload custom face graphics
 void ST_LoadFaceGraphics(INT32 skinnum)
 {
-	if (skins[skinnum].sprites[SPR2_XTRA].numframes > XTRA_LIFEPIC)
+	if (skins[skinnum]->sprites[SPR2_XTRA].numframes > XTRA_LIFEPIC)
 	{
-		spritedef_t *sprdef = &skins[skinnum].sprites[SPR2_XTRA];
+		spritedef_t *sprdef = &skins[skinnum]->sprites[SPR2_XTRA];
 		spriteframe_t *sprframe = &sprdef->spriteframes[XTRA_LIFEPIC];
 		faceprefix[skinnum] = W_CachePatchNum(sprframe->lumppat[0], PU_HUDGFX);
-		if (skins[skinnum].sprites[(SPR2_XTRA|FF_SPR2SUPER)].numframes > XTRA_LIFEPIC)
+		if (skins[skinnum]->sprites[(SPR2_XTRA|FF_SPR2SUPER)].numframes > XTRA_LIFEPIC)
 		{
-			sprdef = &skins[skinnum].sprites[SPR2_XTRA|FF_SPR2SUPER];
+			sprdef = &skins[skinnum]->sprites[SPR2_XTRA|FF_SPR2SUPER];
 			sprframe = &sprdef->spriteframes[0];
 			superprefix[skinnum] = W_CachePatchNum(sprframe->lumppat[0], PU_HUDGFX);
 		}
@@ -376,12 +383,20 @@ void ST_LoadFaceGraphics(INT32 skinnum)
 	}
 	else
 		faceprefix[skinnum] = superprefix[skinnum] = W_CachePatchName("MISSING", PU_HUDGFX); // ditto
-	facefreed[skinnum] = false;
 }
 
 void ST_ReloadSkinFaceGraphics(void)
 {
 	INT32 i;
+
+	Z_Free(faceprefix);
+	Z_Free(superprefix);
+
+	if (!numskins)
+		return;
+
+	faceprefix = Z_Malloc(sizeof(patch_t *) * numskins, PU_STATIC, NULL);
+	superprefix = Z_Malloc(sizeof(patch_t *) * numskins, PU_STATIC, NULL);
 
 	for (i = 0; i < numskins; i++)
 		ST_LoadFaceGraphics(i);
@@ -425,11 +440,6 @@ lumpnum_t st_borderpatchnum;
 
 void ST_Init(void)
 {
-	INT32 i;
-
-	for (i = 0; i < MAXPLAYERS; i++)
-		facefreed[i] = true;
-
 	if (dedicated)
 		return;
 
@@ -505,10 +515,10 @@ static void ST_drawDebugInfo(void)
 
 #define VFLAGS V_MONOSPACE|V_SNAPTOTOP|V_SNAPTORIGHT
 
-	if ((moviemode == MM_GIF && cv_gif_downscale.value) || vid.dupx == 1)
+	if ((moviemode == MM_GIF && cv_gif_downscale.value) || vid.dup == 1)
 	{
 		textfunc = V_DrawRightAlignedString;
-		lowh = ((vid.height/vid.dupy) - 16);
+		lowh = ((vid.height/vid.dup) - 16);
 	}
 	else
 	{
@@ -807,7 +817,7 @@ static inline void ST_drawRings(void)
 static void ST_drawLivesArea(void)
 {
 	INT32 v_colmap = V_YELLOWMAP, livescount;
-	boolean notgreyedout;
+	boolean notgreyedout = false;
 
 	if (!stplyr->skincolor)
 		return; // Just joined a server, skin isn't loaded yet!
@@ -818,6 +828,8 @@ static void ST_drawLivesArea(void)
 	// face background
 	V_DrawSmallScaledPatch(hudinfo[HUD_LIVES].x, hudinfo[HUD_LIVES].y,
 		hudinfo[HUD_LIVES].f|V_PERPLAYER|V_HUDTRANS, livesback);
+
+	UINT16 facecolor = P_GetPlayerColor(stplyr);
 
 	// face
 	if (stplyr->spectator)
@@ -848,10 +860,10 @@ static void ST_drawLivesArea(void)
 			}
 		}
 	}
-	else if (stplyr->skincolor)
+	else if (facecolor)
 	{
 		// skincolor face
-		UINT8 *colormap = R_GetTranslationColormap(stplyr->skin, stplyr->skincolor, GTC_CACHE);
+		UINT8 *colormap = R_GetTranslationColormap(stplyr->skin, facecolor, GTC_CACHE);
 		V_DrawSmallMappedPatch(hudinfo[HUD_LIVES].x, hudinfo[HUD_LIVES].y,
 			hudinfo[HUD_LIVES].f|V_PERPLAYER|V_HUDTRANS, faceprefix[stplyr->skin], colormap);
 	}
@@ -860,39 +872,36 @@ static void ST_drawLivesArea(void)
 	if (metalrecording)
 	{
 		if (((2*leveltime)/TICRATE) & 1)
+		{
 			V_DrawRightAlignedString(hudinfo[HUD_LIVES].x+58, hudinfo[HUD_LIVES].y+8,
 				hudinfo[HUD_LIVES].f|V_PERPLAYER|V_REDMAP|V_HUDTRANS, "REC");
+		}
 	}
 	// Spectator
 	else if (stplyr->spectator)
+	{
 		v_colmap = V_GRAYMAP;
-	// Tag
-	else if (gametyperules & GTR_TAG)
-	{
-		if (stplyr->pflags & PF_TAGIT)
-		{
-			V_DrawRightAlignedString(hudinfo[HUD_LIVES].x+58, hudinfo[HUD_LIVES].y+8, V_HUDTRANS|hudinfo[HUD_LIVES].f|V_PERPLAYER, "IT!");
-			v_colmap = V_ORANGEMAP;
-		}
 	}
-	// Team name
-	else if (G_GametypeHasTeams())
-	{
-		if (stplyr->ctfteam == 1)
-		{
-			V_DrawRightAlignedString(hudinfo[HUD_LIVES].x+58, hudinfo[HUD_LIVES].y+8, V_HUDTRANS|hudinfo[HUD_LIVES].f|V_PERPLAYER, "RED");
-			v_colmap = V_REDMAP;
-		}
-		else if (stplyr->ctfteam == 2)
-		{
-			V_DrawRightAlignedString(hudinfo[HUD_LIVES].x+58, hudinfo[HUD_LIVES].y+8, V_HUDTRANS|hudinfo[HUD_LIVES].f|V_PERPLAYER, "BLUE");
-			v_colmap = V_BLUEMAP;
-		}
-	}
-	// Lives number
 	else
 	{
-		boolean candrawlives = true;
+		boolean candrawlives = false;
+
+		// Set the player's name color.
+		if (G_TagGametype() && (stplyr->pflags & PF_TAGIT))
+		{
+			v_colmap = V_ORANGEMAP;
+		}
+		else if (G_GametypeHasTeams())
+		{
+			if (stplyr->ctfteam == 1)
+			{
+				v_colmap = V_REDMAP;
+			}
+			else if (stplyr->ctfteam == 2)
+			{
+				v_colmap = V_BLUEMAP;
+			}
+		}
 
 		// Co-op and Competition, normal life counter
 		if (G_GametypeUsesLives())
@@ -928,12 +937,15 @@ static void ST_drawLivesArea(void)
 				livescount = (((netgame || multiplayer) && G_GametypeUsesCoopLives() && cv_cooplives.value == 0) ? INFLIVES : stplyr->lives);
 				notgreyedout = true;
 			}
+
+			candrawlives = true;
 		}
 		// Infinity symbol (Race)
 		else if (G_PlatformGametype() && !(gametyperules & GTR_LIVES))
 		{
 			livescount = INFLIVES;
 			notgreyedout = true;
+			candrawlives = true;
 		}
 		// Otherwise nothing, sorry.
 		// Special Stages keep not showing lives,
@@ -942,8 +954,6 @@ static void ST_drawLivesArea(void)
 		// cannot show up because Special Stages
 		// still have the GTR_LIVES gametype rule
 		// by default.
-		else
-			candrawlives = false;
 
 		// Draw the lives counter here.
 		if (candrawlives)
@@ -951,8 +961,10 @@ static void ST_drawLivesArea(void)
 			// x
 			V_DrawScaledPatch(hudinfo[HUD_LIVES].x+22, hudinfo[HUD_LIVES].y+10, hudinfo[HUD_LIVES].f|V_PERPLAYER|V_HUDTRANS, stlivex);
 			if (livescount == INFLIVES)
+			{
 				V_DrawCharacter(hudinfo[HUD_LIVES].x+50, hudinfo[HUD_LIVES].y+8,
 					'\x16' | 0x80 | hudinfo[HUD_LIVES].f|V_PERPLAYER|V_HUDTRANS, false);
+			}
 			else
 			{
 				if (stplyr->playerstate == PST_DEAD && !(stplyr->spectator) && (livescount || stplyr->deadtimer < (TICRATE<<1)) && !(stplyr->pflags & PF_FINISHED))
@@ -963,19 +975,38 @@ static void ST_drawLivesArea(void)
 					hudinfo[HUD_LIVES].f|V_PERPLAYER|(notgreyedout ? V_HUDTRANS : V_HUDTRANSHALF), va("%d",livescount));
 			}
 		}
+		else
+		{
+			// Draw team name instead of lives, if possible.
+			if (G_TagGametype() && (stplyr->pflags & PF_TAGIT))
+			{
+				V_DrawRightAlignedString(hudinfo[HUD_LIVES].x+58, hudinfo[HUD_LIVES].y+8, V_HUDTRANS|hudinfo[HUD_LIVES].f|V_PERPLAYER, "IT!");
+			}
+			else if (G_GametypeHasTeams())
+			{
+				if (stplyr->ctfteam == 1)
+				{
+					V_DrawRightAlignedString(hudinfo[HUD_LIVES].x+58, hudinfo[HUD_LIVES].y+8, V_HUDTRANS|hudinfo[HUD_LIVES].f|V_PERPLAYER, "RED");
+				}
+				else if (stplyr->ctfteam == 2)
+				{
+					V_DrawRightAlignedString(hudinfo[HUD_LIVES].x+58, hudinfo[HUD_LIVES].y+8, V_HUDTRANS|hudinfo[HUD_LIVES].f|V_PERPLAYER, "BLUE");
+				}
+			}
+		}
 #undef ST_drawLivesX
 	}
 
 	// name
 	v_colmap |= (V_HUDTRANS|hudinfo[HUD_LIVES].f|V_PERPLAYER);
-	if (strlen(skins[stplyr->skin].hudname) <= 5)
-		V_DrawRightAlignedString(hudinfo[HUD_LIVES].x+58, hudinfo[HUD_LIVES].y, v_colmap, skins[stplyr->skin].hudname);
-	else if (V_StringWidth(skins[stplyr->skin].hudname, v_colmap) <= 48)
-		V_DrawString(hudinfo[HUD_LIVES].x+18, hudinfo[HUD_LIVES].y, v_colmap, skins[stplyr->skin].hudname);
-	else if (V_ThinStringWidth(skins[stplyr->skin].hudname, v_colmap) <= 40)
-		V_DrawRightAlignedThinString(hudinfo[HUD_LIVES].x+58, hudinfo[HUD_LIVES].y, v_colmap, skins[stplyr->skin].hudname);
+	if (strlen(skins[stplyr->skin]->hudname) <= 5)
+		V_DrawRightAlignedString(hudinfo[HUD_LIVES].x+58, hudinfo[HUD_LIVES].y, v_colmap, skins[stplyr->skin]->hudname);
+	else if (V_StringWidth(skins[stplyr->skin]->hudname, v_colmap) <= 48)
+		V_DrawString(hudinfo[HUD_LIVES].x+18, hudinfo[HUD_LIVES].y, v_colmap, skins[stplyr->skin]->hudname);
+	else if (V_ThinStringWidth(skins[stplyr->skin]->hudname, v_colmap) <= 40)
+		V_DrawRightAlignedThinString(hudinfo[HUD_LIVES].x+58, hudinfo[HUD_LIVES].y, v_colmap, skins[stplyr->skin]->hudname);
 	else
-		V_DrawThinString(hudinfo[HUD_LIVES].x+18, hudinfo[HUD_LIVES].y, v_colmap, skins[stplyr->skin].hudname);
+		V_DrawThinString(hudinfo[HUD_LIVES].x+18, hudinfo[HUD_LIVES].y, v_colmap, skins[stplyr->skin]->hudname);
 
 	// Power Stones collected
 	if (G_RingSlingerGametype() && LUA_HudEnabled(hud_powerstones))
@@ -1003,7 +1034,8 @@ static void ST_drawLivesArea(void)
 
 static void ST_drawInput(void)
 {
-	const INT32 accent = V_SNAPTOLEFT|V_SNAPTOBOTTOM|(stplyr->skincolor ? skincolors[stplyr->skincolor].ramp[4] : 0);
+	UINT16 color = P_GetPlayerColor(stplyr);
+	const INT32 accent = V_SNAPTOLEFT|V_SNAPTOBOTTOM|(color ? skincolors[color].ramp[4] : 0);
 	INT32 col;
 	UINT8 offs;
 
@@ -1756,79 +1788,50 @@ static void ST_drawNightsRecords(void)
 	}
 }
 
-// 2.0-1: [21:42] <+Rob> Beige - Lavender - Steel Blue - Peach - Orange - Purple - Silver - Yellow - Pink - Red - Blue - Green - Cyan - Gold
-/*#define NUMLINKCOLORS 14
-static skincolornum_t linkColor[NUMLINKCOLORS] =
-{SKINCOLOR_BEIGE,  SKINCOLOR_LAVENDER, SKINCOLOR_AZURE, SKINCOLOR_PEACH, SKINCOLOR_ORANGE,
- SKINCOLOR_MAGENTA, SKINCOLOR_SILVER, SKINCOLOR_SUPERGOLD4, SKINCOLOR_PINK,  SKINCOLOR_RED,
- SKINCOLOR_BLUE, SKINCOLOR_GREEN, SKINCOLOR_CYAN, SKINCOLOR_GOLD};*/
-
-// 2.2 indev list: (unix time 1470866042) <Rob> Emerald, Aqua, Cyan, Blue, Pastel, Purple, Magenta, Rosy, Red, Orange, Gold, Yellow, Peridot
-/*#define NUMLINKCOLORS 13
-static skincolornum_t linkColor[NUMLINKCOLORS] =
-{SKINCOLOR_EMERALD, SKINCOLOR_AQUA, SKINCOLOR_CYAN, SKINCOLOR_BLUE, SKINCOLOR_PASTEL,
- SKINCOLOR_PURPLE, SKINCOLOR_MAGENTA, SKINCOLOR_ROSY, SKINCOLOR_RED,  SKINCOLOR_ORANGE,
- SKINCOLOR_GOLD, SKINCOLOR_YELLOW, SKINCOLOR_PERIDOT};*/
-
-// 2.2 indev list again: [19:59:52] <baldobo> Ruby > Red > Flame > Sunset > Orange > Gold > Yellow > Lime > Green > Aqua  > cyan > Sky > Blue > Pastel > Purple > Bubblegum > Magenta > Rosy > repeat
-// [20:00:25] <baldobo> Also Icy for the link freeze text color
-// [20:04:03] <baldobo> I would start it on lime
-/*#define NUMLINKCOLORS 18
-static skincolornum_t linkColor[NUMLINKCOLORS] =
-{SKINCOLOR_LIME, SKINCOLOR_EMERALD, SKINCOLOR_AQUA, SKINCOLOR_CYAN, SKINCOLOR_SKY,
- SKINCOLOR_SAPPHIRE, SKINCOLOR_PASTEL, SKINCOLOR_PURPLE, SKINCOLOR_BUBBLEGUM, SKINCOLOR_MAGENTA,
- SKINCOLOR_ROSY, SKINCOLOR_RUBY, SKINCOLOR_RED, SKINCOLOR_FLAME, SKINCOLOR_SUNSET,
- SKINCOLOR_ORANGE, SKINCOLOR_GOLD, SKINCOLOR_YELLOW};*/
-
-// 2.2+ list for real this time: https://wiki.srb2.org/wiki/User:Rob/Sandbox (check history around 31/10/17, spoopy)
-#define NUMLINKCOLORS 12
-static skincolornum_t linkColor[2][NUMLINKCOLORS] = {
-{SKINCOLOR_EMERALD, SKINCOLOR_AQUA, SKINCOLOR_SKY, SKINCOLOR_BLUE, SKINCOLOR_PURPLE, SKINCOLOR_MAGENTA,
- SKINCOLOR_ROSY, SKINCOLOR_RED, SKINCOLOR_ORANGE, SKINCOLOR_GOLD, SKINCOLOR_YELLOW, SKINCOLOR_PERIDOT},
-{SKINCOLOR_SEAFOAM, SKINCOLOR_CYAN, SKINCOLOR_WAVE, SKINCOLOR_SAPPHIRE, SKINCOLOR_VAPOR, SKINCOLOR_BUBBLEGUM,
- SKINCOLOR_VIOLET, SKINCOLOR_RUBY, SKINCOLOR_FLAME, SKINCOLOR_SUNSET, SKINCOLOR_SANDY, SKINCOLOR_LIME}};
-
 static void ST_drawNiGHTSLink(void)
 {
-	static INT32 prevsel[2] = {0, 0}, prevtime[2] = {0, 0};
-	const UINT8 q = ((splitscreen && stplyr == &players[secondarydisplayplayer]) ? 1 : 0);
-	INT32 sel = ((stplyr->linkcount-1) / 5) % NUMLINKCOLORS, aflag = V_PERPLAYER, mag = ((stplyr->linkcount-1 >= 300) ? 1 : 0);
-	skincolornum_t colornum;
-	fixed_t x, y, scale;
-
-	if (sel != prevsel[q])
+	if (stplyr->linkcount != 0) // Don't show a faint 4294967295 link, even when debugging
 	{
-		prevsel[q] = sel;
-		prevtime[q] = 2 + mag;
+		static INT32 prevsel[2] = {0, 0}, prevtime[2] = {0, 0};
+		const UINT8 q = ((splitscreen && stplyr == &players[secondarydisplayplayer]) ? 1 : 0);
+		INT32 sel = ((stplyr->linkcount-1) / 5) % NUMLINKCOLORS, aflag = V_PERPLAYER, mag = ((stplyr->linkcount-1 >= 300) ? (stplyr->linkcount-1 >= 600) ? 2 : 1 : 0);
+		skincolornum_t colornum;
+		fixed_t x, y, scale;
+
+		if (sel != prevsel[q])
+		{
+			prevsel[q] = sel;
+			prevtime[q] = 2 + mag;
+		}
+
+		if (stplyr->powers[pw_nights_linkfreeze] && (!(stplyr->powers[pw_nights_linkfreeze] & 2) || (stplyr->powers[pw_nights_linkfreeze] > flashingtics)))
+			colornum = SKINCOLOR_ICY;
+		else
+			colornum = linkColor[mag][sel];
+
+		aflag |= ((stplyr->linktimer < (UINT32)nightslinktics/3)
+		? (9 - 9*stplyr->linktimer/(nightslinktics/3)) << V_ALPHASHIFT
+		: 0);
+
+		y = (160+11)<<FRACBITS;
+		aflag |= V_SNAPTOBOTTOM;
+
+		x = (160+4)<<FRACBITS;
+
+		if (prevtime[q])
+		{
+			scale = ((32 + prevtime[q])<<FRACBITS)/32;
+			prevtime[q]--;
+		}
+		else
+			scale = FRACUNIT;
+
+		y -= (11*scale);
+
+		ST_DrawNightsOverlayNum(x-(4*scale), y, scale, aflag, (stplyr->linkcount-1), nightsnum, colornum);
+		V_DrawFixedPatch(x+(4*scale), y, scale, aflag, nightslink,
+			colornum == 0 ? colormaps : R_GetTranslationColormap(TC_DEFAULT, colornum, GTC_CACHE));
 	}
-
-	if (stplyr->powers[pw_nights_linkfreeze] && (!(stplyr->powers[pw_nights_linkfreeze] & 2) || (stplyr->powers[pw_nights_linkfreeze] > flashingtics)))
-		colornum = SKINCOLOR_ICY;
-	else
-		colornum = linkColor[mag][sel];
-
-	aflag |= ((stplyr->linktimer < (UINT32)nightslinktics/3)
-	? (9 - 9*stplyr->linktimer/(nightslinktics/3)) << V_ALPHASHIFT
-	: 0);
-
-	y = (160+11)<<FRACBITS;
-	aflag |= V_SNAPTOBOTTOM;
-
-	x = (160+4)<<FRACBITS;
-
-	if (prevtime[q])
-	{
-		scale = ((32 + prevtime[q])<<FRACBITS)/32;
-		prevtime[q]--;
-	}
-	else
-		scale = FRACUNIT;
-
-	y -= (11*scale);
-
-	ST_DrawNightsOverlayNum(x-(4*scale), y, scale, aflag, (stplyr->linkcount-1), nightsnum, colornum);
-	V_DrawFixedPatch(x+(4*scale), y, scale, aflag, nightslink,
-		colornum == 0 ? colormaps : R_GetTranslationColormap(TC_DEFAULT, colornum, GTC_CACHE));
 
 	// Show remaining link time left in debug
 	if (cv_debug & DBG_NIGHTSBASIC)
@@ -1859,13 +1862,15 @@ static void ST_drawNiGHTSHUD(void)
 		for (dfill = 0; dfill < stplyr->drillmeter/20 && dfill < 96; ++dfill)
 			V_DrawScaledPatch(locx + 2 + dfill, locy + 3, V_PERPLAYER|V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_HUDTRANS, drillfill[fillpatch]);
 
-		// Display actual drill amount and bumper time
+		// Display actual flyangle, drill amount, and bumper time
 		if (!splitscreen && (cv_debug & DBG_NIGHTSBASIC))
 		{
+			V_DrawString(locx, locy - 16, V_MONOSPACE, va("ANGLE: %3d", stplyr->flyangle));
+
 			if (stplyr->bumpertime)
 				V_DrawString(locx, locy - 8, V_REDMAP|V_MONOSPACE, va("BUMPER: 0.%02d", G_TicsToCentiseconds(stplyr->bumpertime)));
 			else
-				V_DrawString(locx, locy - 8, V_MONOSPACE, va("Drill: %3d%%", (stplyr->drillmeter*100)/(96*20)));
+				V_DrawString(locx, locy - 8, V_MONOSPACE, va("DRILL: %3d%%", (stplyr->drillmeter*100)/(96*20)));
 		}
 	}
 
@@ -2113,7 +2118,7 @@ static void ST_drawNiGHTSHUD(void)
 			V_DrawString(160 + numbersize + 8, 24, V_SNAPTOTOP|((realnightstime < 10) ? V_REDMAP : V_YELLOWMAP), va("%02d", G_TicsToCentiseconds(stplyr->nightstime)));
 	}
 
-	if (oldspecialstage)
+	if (oldspecialstage && LUA_HudEnabled(hud_nightsrecords))
 	{
 		if (leveltime < 5*TICRATE)
 		{
@@ -2521,6 +2526,8 @@ num:
 static INT32 ST_drawEmeraldHuntIcon(mobj_t *hunt, patch_t **patches, INT32 offset)
 {
 	INT32 interval, i;
+	if (stplyr->mo == NULL)
+		return 0;  // player just joined after spectating, can happen on custom gamemodes.
 	UINT32 dist = ((UINT32)P_AproxDistance(P_AproxDistance(stplyr->mo->x - hunt->x, stplyr->mo->y - hunt->y), stplyr->mo->z - hunt->z))>>FRACBITS;
 
 	if (dist < 128)

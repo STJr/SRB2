@@ -3,6 +3,7 @@
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
 // Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 2009 by Stephen McGranahan.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -20,50 +21,6 @@
 #endif
 #include "doomdef.h"
 #include "m_fixed.h"
-
-#ifdef __USE_C_FIXEDMUL__
-
-/**	\brief	The FixedMul function
-
-	\param	a	fixed_t number
-	\param	b	fixed_t number
-
-	\return	a*b>>FRACBITS
-
-*/
-fixed_t FixedMul(fixed_t a, fixed_t b)
-{
-	// Need to cast to unsigned before shifting to avoid undefined behaviour
-	// for negative integers
-	return (fixed_t)(((UINT64)((INT64)a * b)) >> FRACBITS);
-}
-
-#endif //__USE_C_FIXEDMUL__
-
-#ifdef __USE_C_FIXEDDIV__
-/**	\brief	The FixedDiv2 function
-
-	\param	a	fixed_t number
-	\param	b	fixed_t number
-
-	\return	a/b * FRACUNIT
-
-*/
-fixed_t FixedDiv2(fixed_t a, fixed_t b)
-{
-	INT64 ret;
-
-	if (b == 0)
-		I_Error("FixedDiv: divide by zero");
-
-	ret = (((INT64)a * FRACUNIT)) / b;
-
-	if ((ret > INT32_MAX) || (ret < INT32_MIN))
-		I_Error("FixedDiv: divide by zero");
-	return (fixed_t)ret;
-}
-
-#endif // __USE_C_FIXEDDIV__
 
 fixed_t FixedSqrt(fixed_t x)
 {
