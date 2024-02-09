@@ -3526,7 +3526,7 @@ static void PTR_GlideClimbTraverse(line_t *li)
 	}
 }
 
-boolean PTR_SlideTraverse(intercept_t *in)
+static boolean PTR_SlideTraverse(intercept_t *in)
 {
 	line_t *li;
 

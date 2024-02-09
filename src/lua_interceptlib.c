@@ -50,10 +50,10 @@ static boolean Lua_PathTraverser(intercept_t *in)
 	LUA_PushUserdata(gL, in, META_INTERCEPT);
 	LUA_Call(gL, 1, 1, -3);
 	
-	traverse = lua_toboolean(gL, -2);
+	traverse = lua_toboolean(gL, -1);
 	lua_pop(gL, 1);
 	
-	return traverse;
+	return !traverse; // Stay consistent with the MobjMoveCollide hook
 }
 
 static int intercept_get(lua_State *L)

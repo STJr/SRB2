@@ -446,8 +446,6 @@ boolean PIT_PushableMoved(mobj_t *thing);
 
 boolean P_DoSpring(mobj_t *spring, mobj_t *object);
 
-boolean PTR_SlideTraverse(intercept_t *in);
-
 INT32 P_GetSectorLightNumAt(sector_t *sector, fixed_t x, fixed_t y, fixed_t z);
 INT32 P_GetLightLevelFromSectorAt(sector_t *sector, fixed_t x, fixed_t y, fixed_t z);
 INT32 P_GetSectorLightLevelAt(fixed_t x, fixed_t y, fixed_t z);
