@@ -5514,7 +5514,10 @@ static void HWR_ProjectSprite(mobj_t *thing)
 		translation = thing->translation;
 
 	//Hurdler: 25/04/2000: now support colormap in hardware mode
-	vis->colormap = R_GetTranslationForThing(vis->mobj, color, translation);
+	if ((thing->flags2 & MF2_LINKDRAW) && thing->tracer)
+		vis->colormap = R_GetTranslationForThing(thing->tracer, color, translation);
+	else
+		vis->colormap = R_GetTranslationForThing(thing, color, translation);
 
 	// set top/bottom coords
 	vis->gzt = gzt;

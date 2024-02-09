@@ -66,13 +66,10 @@ extern boolean ds_powersoftwo, ds_solidcolor, ds_fog;
 extern UINT8 *ds_source;
 extern UINT8 *ds_transmap;
 
-typedef struct {
-	float x, y, z;
-} floatv3_t;
-
 // Vectors for Software's tilted slope drawers
-extern floatv3_t ds_su, ds_sv, ds_sz, ds_slopelight;
-extern float focallengthf, zeroheight;
+extern dvector3_t ds_su, ds_sv, ds_sz, ds_slopelight;
+extern double zeroheight;
+extern float focallengthf;
 
 // Variable flat sizes
 extern UINT32 nflatxshift;
@@ -116,6 +113,8 @@ enum
 
 	TC_DEFAULT
 };
+
+INT32 R_SkinTranslationToCacheIndex(INT32 translation);
 
 // Amount of colors in the palette
 #define NUM_PALETTE_ENTRIES 256

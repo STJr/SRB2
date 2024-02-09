@@ -16,6 +16,7 @@
 
 // Some more or less basic data types we depend on.
 #include "m_fixed.h"
+#include "m_vector.h"
 
 // We rely on the thinker data struct to handle sound origins in sectors.
 #include "d_think.h"
@@ -342,6 +343,13 @@ typedef struct pslope_s
 	// This values only check and must be updated if the slope itself is modified
 	angle_t zangle;		/// Precomputed angle of the plane going up from the ground (not measured in degrees).
 	angle_t xydirection;/// Precomputed angle of the normal's projection on the XY plane.
+
+	dvector3_t dorigin;
+	dvector3_t dnormdir;
+
+	double dzdelta;
+
+	boolean moved : 1;
 
 	UINT8 flags; // Slope options
 } pslope_t;

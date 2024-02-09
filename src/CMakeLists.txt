@@ -37,6 +37,7 @@ add_executable(SRB2SDL2 MACOSX_BUNDLE WIN32
 	m_random.c
 	m_tokenizer.c
 	m_queue.c
+	m_vector.c
 	info.c
 	p_ceilng.c
 	p_enemy.c

@@ -295,6 +295,7 @@
     <ClInclude Include="..\m_tokenizer.h" />
     <ClInclude Include="..\m_perfstats.h" />
     <ClInclude Include="..\m_queue.h" />
+    <ClInclude Include="..\m_vector.h" />
     <ClInclude Include="..\m_random.h" />
     <ClInclude Include="..\m_swap.h" />
     <ClInclude Include="..\netcode\client_connection.h" />
@@ -474,6 +475,7 @@
     <ClCompile Include="..\m_tokenizer.c" />
     <ClCompile Include="..\m_perfstats.c" />
     <ClCompile Include="..\m_queue.c" />
+    <ClCompile Include="..\m_vector.c" />
     <ClCompile Include="..\m_random.c" />
     <ClCompile Include="..\netcode\client_connection.c" />
     <ClCompile Include="..\netcode\commands.c" />

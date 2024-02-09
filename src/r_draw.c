@@ -113,8 +113,9 @@ UINT8 *ds_source; // points to the start of a flat
 UINT8 *ds_transmap; // one of the translucency tables
 
 // Vectors for Software's tilted slope drawers
-floatv3_t ds_su, ds_sv, ds_sz, ds_slopelight;
-float focallengthf, zeroheight;
+dvector3_t ds_su, ds_sv, ds_sz, ds_slopelight;
+double zeroheight;
+float focallengthf;
 
 /**	\brief Variable flat sizes
 */
@@ -129,7 +130,7 @@ static colorcache_t **translationtablecache[TT_CACHE_SIZE] = {NULL};
 
 boolean skincolor_modified[MAXSKINCOLORS];
 
-static INT32 SkinToCacheIndex(INT32 translation)
+INT32 R_SkinTranslationToCacheIndex(INT32 translation)
 {
 	switch (translation)
 	{
@@ -556,7 +557,7 @@ UINT8* R_GetTranslationColormap(INT32 skinnum, skincolornum_t color, UINT8 flags
 	else if (skinnum <= TC_DEFAULT)
 	{
 		// Do default translation
-		index = SkinToCacheIndex(skinnum);
+		index = R_SkinTranslationToCacheIndex(skinnum);
 	}
 	else
 		I_Error("Invalid translation %d", skinnum);

@@ -31,6 +31,7 @@ m_perfstats.c
 m_random.c
 m_tokenizer.c
 m_queue.c
+m_vector.c
 info.c
 p_ceilng.c
 p_enemy.c

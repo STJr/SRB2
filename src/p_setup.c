@@ -138,7 +138,7 @@ INT32 *blockmaplump; // Big blockmap
 // origin of block map
 fixed_t bmaporgx, bmaporgy;
 // for thing chains
-mobj_t **blocklinks;
+blocknode_t **blocklinks;
 
 // REJECT
 // For fast sight rejection.
@@ -1650,15 +1650,15 @@ textmap_colormap_t textmap_colormap = { false, 0, 25, 0, 25, 0, 31, 0 };
 
 typedef enum
 {
-    PD_A = 1,
-    PD_B = 1<<1,
-    PD_C = 1<<2,
-    PD_D = 1<<3,
+	PD_A = 1,
+	PD_B = 1<<1,
+	PD_C = 1<<2,
+	PD_D = 1<<3,
 } planedef_t;
 
 typedef struct textmap_plane_s {
-    UINT8 defined;
-    fixed_t a, b, c, d;
+	UINT8 defined;
+	double a, b, c, d;
 } textmap_plane_t;
 
 textmap_plane_t textmap_planefloor = {0, 0, 0, 0, 0};
@@ -1719,42 +1719,42 @@ static void ParseTextmapSectorParameter(UINT32 i, const char *param, const char 
 	else if (fastcmp(param, "floorplane_a"))
 	{
 		textmap_planefloor.defined |= PD_A;
-		textmap_planefloor.a = FLOAT_TO_FIXED(atof(val));
+		textmap_planefloor.a = atof(val);
 	}
 	else if (fastcmp(param, "floorplane_b"))
 	{
 		textmap_planefloor.defined |= PD_B;
-		textmap_planefloor.b = FLOAT_TO_FIXED(atof(val));
+		textmap_planefloor.b = atof(val);
 	}
 	else if (fastcmp(param, "floorplane_c"))
 	{
 		textmap_planefloor.defined |= PD_C;
-		textmap_planefloor.c = FLOAT_TO_FIXED(atof(val));
+		textmap_planefloor.c = atof(val);
 	}
 	else if (fastcmp(param, "floorplane_d"))
 	{
 		textmap_planefloor.defined |= PD_D;
-		textmap_planefloor.d = FLOAT_TO_FIXED(atof(val));
+		textmap_planefloor.d = atof(val);
 	}
 	else if (fastcmp(param, "ceilingplane_a"))
 	{
 		textmap_planeceiling.defined |= PD_A;
-		textmap_planeceiling.a = FLOAT_TO_FIXED(atof(val));
+		textmap_planeceiling.a = atof(val);
 	}
 	else if (fastcmp(param, "ceilingplane_b"))
 	{
 		textmap_planeceiling.defined |= PD_B;
-		textmap_planeceiling.b = FLOAT_TO_FIXED(atof(val));
+		textmap_planeceiling.b = atof(val);
 	}
 	else if (fastcmp(param, "ceilingplane_c"))
 	{
 		textmap_planeceiling.defined |= PD_C;
-		textmap_planeceiling.c = FLOAT_TO_FIXED(atof(val));
+		textmap_planeceiling.c = atof(val);
 	}
 	else if (fastcmp(param, "ceilingplane_d"))
 	{
 		textmap_planeceiling.defined |= PD_D;
-		textmap_planeceiling.d = FLOAT_TO_FIXED(atof(val));
+		textmap_planeceiling.d = atof(val);
 	}
 	else if (fastcmp(param, "lightcolor"))
 	{
@@ -2992,13 +2992,13 @@ static void P_LoadTextmap(void)
 
 		if (textmap_planefloor.defined == (PD_A|PD_B|PD_C|PD_D))
 		{
-			sc->f_slope = MakeViaEquationConstants(textmap_planefloor.a, textmap_planefloor.b, textmap_planefloor.c, textmap_planefloor.d);
+			sc->f_slope = P_MakeSlopeViaEquationConstants(textmap_planefloor.a, textmap_planefloor.b, textmap_planefloor.c, textmap_planefloor.d);
 			sc->hasslope = true;
 		}
 
 		if (textmap_planeceiling.defined == (PD_A|PD_B|PD_C|PD_D))
 		{
-			sc->c_slope = MakeViaEquationConstants(textmap_planeceiling.a, textmap_planeceiling.b, textmap_planeceiling.c, textmap_planeceiling.d);
+			sc->c_slope = P_MakeSlopeViaEquationConstants(textmap_planeceiling.a, textmap_planeceiling.b, textmap_planeceiling.c, textmap_planeceiling.d);
 			sc->hasslope = true;
 		}
 
@@ -7869,6 +7869,8 @@ boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate)
 		Z_Free(ss->attachedsolid);
 	}
 
+	P_ClearBlockNodes();
+
 	// Clear pointers that would be left dangling by the purge
 	R_FlushTranslationColormapCache();
 
@@ -7912,6 +7914,24 @@ boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate)
 
 	if (!P_LoadMapFromFile())
 		return false;
+
+	if (!demoplayback)
+	{
+		clientGamedata->mapvisited[gamemap-1] |= MV_VISITED;
+		serverGamedata->mapvisited[gamemap-1] |= MV_VISITED;
+
+		M_SilentUpdateUnlockablesAndEmblems(serverGamedata);
+
+		if (M_UpdateUnlockablesAndExtraEmblems(clientGamedata))
+		{
+			S_StartSound(NULL, sfx_s3k68);
+			G_SaveGameData(clientGamedata);
+		}
+		else if (!reloadinggamestate)
+		{
+			G_SaveGameData(clientGamedata);
+		}
+	}
 
 	// init anything that P_SpawnSlopes/P_LoadThings needs to know
 	P_InitSpecials();
@@ -7970,24 +7990,6 @@ boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate)
 
 	nextmapoverride = 0;
 	skipstats = 0;
-
-	if (!demoplayback)
-	{
-		clientGamedata->mapvisited[gamemap-1] |= MV_VISITED;
-		serverGamedata->mapvisited[gamemap-1] |= MV_VISITED;
-
-		M_SilentUpdateUnlockablesAndEmblems(serverGamedata);
-
-		if (M_UpdateUnlockablesAndExtraEmblems(clientGamedata))
-		{
-			S_StartSound(NULL, sfx_s3k68);
-			G_SaveGameData(clientGamedata);
-		}
-		else if (!reloadinggamestate)
-		{
-			G_SaveGameData(clientGamedata);
-		}
-	}
 
 	levelloading = false;
 
