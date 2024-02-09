@@ -114,6 +114,23 @@ typedef LPVOID (WINAPI *p_MapViewOfFile) (HANDLE, DWORD, DWORD, DWORD, SIZE_T);
 #define NEWSIGNALHANDLER
 #endif
 
+#ifndef NOMUMBLE
+#ifdef __linux__ // need -lrt
+#include <sys/mman.h>
+#ifdef MAP_FAILED
+#define HAVE_SHM
+#endif
+#include <wchar.h>
+#endif
+
+#ifdef _WIN32
+#define HAVE_MUMBLE
+#define WINMUMBLE
+#elif defined (HAVE_SHM)
+#define HAVE_MUMBLE
+#endif
+#endif // NOMUMBLE
+
 #ifndef O_BINARY
 #define O_BINARY 0
 #endif
@@ -197,6 +214,12 @@ static char returnWadPath[256];
 #endif
 
 #include "../d_main.h"
+
+#if !defined(NOMUMBLE) && defined(HAVE_MUMBLE)
+// Mumble context string
+#include "../d_clisrv.h"
+#include "../byteptr.h"
+#endif
 
 /**	\brief	The JoyReset function
 
@@ -1683,6 +1706,134 @@ const char *I_GetJoyName(INT32 joyindex)
 	return joyname;
 }
 
+#ifndef NOMUMBLE
+#ifdef HAVE_MUMBLE
+// Best Mumble positional audio settings:
+// Minimum distance 3.0 m
+// Bloom 175%
+// Maximum distance 80.0 m
+// Minimum volume 50%
+#define DEG2RAD (0.017453292519943295769236907684883l) // TAU/360 or PI/180
+#define MUMBLEUNIT (64.0f) // FRACUNITS in a Meter
+
+static struct {
+#ifdef WINMUMBLE
+	UINT32 uiVersion;
+	DWORD uiTick;
+#else
+	Uint32 uiVersion;
+	Uint32 uiTick;
+#endif
+	float fAvatarPosition[3];
+	float fAvatarFront[3];
+	float fAvatarTop[3]; // defaults to Y-is-up (only used for leaning)
+	wchar_t name[256]; // game name
+	float fCameraPosition[3];
+	float fCameraFront[3];
+	float fCameraTop[3]; // defaults to Y-is-up (only used for leaning)
+	wchar_t identity[256]; // player id
+#ifdef WINMUMBLE
+	UINT32 context_len;
+#else
+	Uint32 context_len;
+#endif
+	unsigned char context[256]; // server/team
+	wchar_t description[2048]; // game description
+} *mumble = NULL;
+#endif // HAVE_MUMBLE
+
+static void I_SetupMumble(void)
+{
+#ifdef WINMUMBLE
+	HANDLE hMap = OpenFileMappingW(FILE_MAP_ALL_ACCESS, FALSE, L"MumbleLink");
+	if (!hMap)
+		return;
+
+	mumble = MapViewOfFile(hMap, FILE_MAP_ALL_ACCESS, 0, 0, sizeof(*mumble));
+	if (!mumble)
+		CloseHandle(hMap);
+#elif defined (HAVE_SHM)
+	int shmfd;
+	char memname[256];
+
+	snprintf(memname, 256, "/MumbleLink.%d", getuid());
+	shmfd = shm_open(memname, O_RDWR, S_IRUSR | S_IWUSR);
+
+	if(shmfd < 0)
+		return;
+
+	mumble = mmap(NULL, sizeof(*mumble), PROT_READ | PROT_WRITE, MAP_SHARED, shmfd, 0);
+	if (mumble == MAP_FAILED)
+		mumble = NULL;
+#endif
+}
+
+void I_UpdateMumble(const mobj_t *mobj, const listener_t listener)
+{
+#ifdef HAVE_MUMBLE
+	double angle;
+	fixed_t anglef;
+
+	if (!mumble)
+		return;
+
+	if(mumble->uiVersion != 2) {
+		wcsncpy(mumble->name, L"SRB2 "VERSIONSTRINGW, 256);
+		wcsncpy(mumble->description, L"Sonic Robo Blast 2 with integrated Mumble Link support.", 2048);
+		mumble->uiVersion = 2;
+	}
+	mumble->uiTick++;
+
+	if (!netgame || gamestate != GS_LEVEL) { // Zero out, but never delink.
+		mumble->fAvatarPosition[0] = mumble->fAvatarPosition[1] = mumble->fAvatarPosition[2] = 0.0f;
+		mumble->fAvatarFront[0] = 1.0f;
+		mumble->fAvatarFront[1] = mumble->fAvatarFront[2] = 0.0f;
+		mumble->fCameraPosition[0] = mumble->fCameraPosition[1] = mumble->fCameraPosition[2] = 0.0f;
+		mumble->fCameraFront[0] = 1.0f;
+		mumble->fCameraFront[1] = mumble->fCameraFront[2] = 0.0f;
+		return;
+	}
+
+	{
+		UINT8 *p = mumble->context;
+		WRITEMEM(p, server_context, 8);
+		WRITEINT16(p, gamemap);
+		mumble->context_len = (UINT32)(p - mumble->context);
+	}
+
+	if (mobj) {
+		mumble->fAvatarPosition[0] = FIXED_TO_FLOAT(mobj->x) / MUMBLEUNIT;
+		mumble->fAvatarPosition[1] = FIXED_TO_FLOAT(mobj->z) / MUMBLEUNIT;
+		mumble->fAvatarPosition[2] = FIXED_TO_FLOAT(mobj->y) / MUMBLEUNIT;
+
+		anglef = AngleFixed(mobj->angle);
+		angle = FIXED_TO_FLOAT(anglef)*DEG2RAD;
+		mumble->fAvatarFront[0] = (float)cos(angle);
+		mumble->fAvatarFront[1] = 0.0f;
+		mumble->fAvatarFront[2] = (float)sin(angle);
+	} else {
+		mumble->fAvatarPosition[0] = mumble->fAvatarPosition[1] = mumble->fAvatarPosition[2] = 0.0f;
+		mumble->fAvatarFront[0] = 1.0f;
+		mumble->fAvatarFront[1] = mumble->fAvatarFront[2] = 0.0f;
+	}
+
+	mumble->fCameraPosition[0] = FIXED_TO_FLOAT(listener.x) / MUMBLEUNIT;
+	mumble->fCameraPosition[1] = FIXED_TO_FLOAT(listener.z) / MUMBLEUNIT;
+	mumble->fCameraPosition[2] = FIXED_TO_FLOAT(listener.y) / MUMBLEUNIT;
+
+	anglef = AngleFixed(listener.angle);
+	angle = FIXED_TO_FLOAT(anglef)*DEG2RAD;
+	mumble->fCameraFront[0] = (float)cos(angle);
+	mumble->fCameraFront[1] = 0.0f;
+	mumble->fCameraFront[2] = (float)sin(angle);
+#else
+	(void)mobj;
+	(void)listener;
+#endif // HAVE_MUMBLE
+}
+#undef WINMUMBLE
+#endif // NOMUMBLE
+
 #ifdef HAVE_TERMIOS
 
 void I_GetMouseEvents(void)
@@ -2281,6 +2432,9 @@ INT32 I_StartupSystem(void)
 	 SDLlinked.major, SDLlinked.minor, SDLlinked.patch);
 	if (SDL_Init(0) < 0)
 		I_Error("SRB2: SDL System Error: %s", SDL_GetError()); //Alam: Oh no....
+#ifndef NOMUMBLE
+	I_SetupMumble();
+#endif
 	return 0;
 }
 
