@@ -217,7 +217,7 @@ static char returnWadPath[256];
 
 #if !defined(NOMUMBLE) && defined(HAVE_MUMBLE)
 // Mumble context string
-#include "../d_clisrv.h"
+#include "../netcode/d_clisrv.h"
 #include "../byteptr.h"
 #endif
 
