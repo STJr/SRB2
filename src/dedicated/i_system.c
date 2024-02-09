@@ -220,6 +220,8 @@ static boolean framebuffer = false;
 static size_t num_exit_funcs;
 static void (*exit_funcs[MAX_EXIT_FUNCS])(void);
 
+static boolean is_quitting = false;
+
 #ifdef __linux__
 #define MEMINFO_FILE "/proc/meminfo"
 #define MEMTOTAL "MemTotal:"
@@ -457,6 +459,10 @@ ticcmd_t *I_BaseTiccmd2(void)
 
 FUNCNORETURN static void I_QuitStatus(int status)
 {
+	if (is_quitting)
+		abort();
+
+	is_quitting = true;
 	M_SaveConfig(NULL); //save game config, cvars..
 	D_SaveBan(); // save the ban list
 	G_SaveGameData(clientGamedata); // Tails 12-08-2002
