@@ -31,7 +31,7 @@ LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
 #define CREATEPROCESS_MANIFEST_RESOURCE_ID 1
 #endif
 
-CREATEPROCESS_MANIFEST_RESOURCE_ID RT_MANIFEST srb2win.exe.manifest
+/* CREATEPROCESS_MANIFEST_RESOURCE_ID RT_MANIFEST srb2win.exe.manifest */
 
 /////////////////////////////////////////////////////////////////////////////
 //
