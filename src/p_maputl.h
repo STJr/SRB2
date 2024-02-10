@@ -63,6 +63,39 @@ void P_LineOpening(line_t *plinedef, mobj_t *mobj);
 boolean P_BlockLinesIterator(INT32 x, INT32 y, boolean(*func)(line_t *));
 boolean P_BlockThingsIterator(INT32 x, INT32 y, boolean(*func)(mobj_t *));
 
+void P_ClearBlockNodes(void);
+
+typedef struct
+{
+	mobj_t *mobj;
+	int next;
+} bthingit_hash_entry_t;
+
+#define NUM_BTHINGIT_BUCKETS 32
+#define NUM_BTHINGIT_FIXEDHASH 10
+
+typedef struct bthingit_s
+{
+	int x1, y1, x2, y2;
+	int curx, cury;
+	blocknode_t *block;
+
+	int buckets[NUM_BTHINGIT_BUCKETS];
+	bthingit_hash_entry_t fixedhash[NUM_BTHINGIT_FIXEDHASH];
+	int numfixedhash;
+
+	bthingit_hash_entry_t *dynhash;
+	size_t dynhashcount;
+	size_t dynhashcapacity;
+
+	struct bthingit_s *freechain;
+} bthingit_t;
+
+bthingit_t *P_NewBlockThingsIterator(int x1, int y1, int x2, int y2);
+mobj_t *P_BlockThingsIteratorNext(bthingit_t *it, boolean centeronly);
+void P_FreeBlockThingsIterator(bthingit_t *it);
+boolean P_DoBlockThingsIterate(int x1, int y1, int x2, int y2, boolean (*func)(mobj_t *));
+
 #define PT_ADDLINES     1
 #define PT_ADDTHINGS    2
 #define PT_EARLYOUT     4
