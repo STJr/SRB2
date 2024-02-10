@@ -1,8 +1,7 @@
 CPMAddPackage(
 	NAME openmpt
 	VERSION 0.4.30
-	GIT_TAG libopenmpt-0.4.30
-	GITHUB_REPOSITORY "OpenMPT/openmpt"
+	URL "https://github.com/OpenMPT/openmpt/archive/refs/tags/libopenmpt-0.4.30.zip"
 	DOWNLOAD_ONLY ON
 )
 

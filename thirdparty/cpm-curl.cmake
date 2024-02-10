@@ -3,8 +3,6 @@ set(
 
 	"BUILD_CURL_EXE OFF"
 	"BUILD_SHARED_LIBS ${SRB2_CONFIG_SHARED_INTERNAL_LIBRARIES}"
-	"BUILD_STATIC_CURL ON"
-	"BUILD_STATIC_LIBS ON"
 	"CURL_DISABLE_TESTS ON"
 	"HTTP_ONLY ON"
 	"CURL_DISABLE_CRYPTO_AUTH ON"
@@ -29,10 +27,9 @@ if(${CMAKE_SYSTEM} MATCHES Linux)
 endif()
 
 CPMAddPackage(
-	NAME CURL
-	VERSION 8.6.0
-	GIT_TAG "curl-8_6_0"
-	GITHUB_REPOSITORY "curl/curl"
+	NAME curl
+	VERSION 7.86.0
+	URL "https://github.com/curl/curl/archive/refs/tags/curl-7_86_0.zip"
 	EXCLUDE_FROM_ALL ON
 	OPTIONS ${internal_curl_options}
 )
