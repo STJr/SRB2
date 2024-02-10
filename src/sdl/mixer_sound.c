@@ -49,7 +49,7 @@
 #pragma warning(default : 4214 4244)
 #endif
 
-#ifdef HAVE_MIXERX
+#ifdef USE_SDL_MIXER_X
 #include "SDL_mixer_ext.h"
 #else
 #include "SDL_mixer.h"

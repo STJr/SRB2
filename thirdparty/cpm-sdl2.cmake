@@ -1,8 +1,10 @@
 CPMAddPackage(
 	NAME SDL2
 	GITHUB_REPOSITORY libsdl-org/SDL
+	VERSION 2.30.0
 	GIT_TAG release-2.30.0
 	OPTIONS
+		"BUILD_SHARED_LIBS OFF"
 		"SDL_SHARED OFF"
 		"SDL_STATIC ON"
 		"SDL_TEST OFF"
@@ -10,9 +12,11 @@ CPMAddPackage(
 		"SDL2_DISABLE_INSTALL ON"
 		"SDL_STATIC_PIC ON"
 		"SDL_WERROR OFF"
+		"TEST_STATIC OFF"
 )
 find_package(SDL2 REQUIRED)
 
+#if(SDL2_ADDED)
 	file(GLOB SDL2_HEADERS "${SDL2_SOURCE_DIR}/include/*.h")
 
 	# Create a target that copies headers at build time, when they change
@@ -29,3 +33,4 @@ find_package(SDL2 REQUIRED)
 	set (SDL2_INCLUDE_DIR ${SDL2_SOURCE_DIR}/include)
 
 include_directories(${SDL2_INCLUDE_DIR})
+#endif()
