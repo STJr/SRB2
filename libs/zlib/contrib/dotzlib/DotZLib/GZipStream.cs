@@ -246,7 +246,7 @@ namespace DotZLib
         }
 
         /// <summary>
-        ///  Not supported.
+        ///  Not suppported.
         /// </summary>
         /// <param name="offset"></param>
         /// <param name="origin"></param>
@@ -268,7 +268,7 @@ namespace DotZLib
         }
 
         /// <summary>
-        /// Gets/sets the current position in the <c>GZipStream</c>. Not supported.
+        /// Gets/sets the current position in the <c>GZipStream</c>. Not suppported.
         /// </summary>
         /// <remarks>In this implementation this property is not supported</remarks>
         /// <exception cref="NotSupportedException">Always thrown</exception>
@@ -285,7 +285,7 @@ namespace DotZLib
         }
 
         /// <summary>
-        /// Gets the size of the stream. Not supported.
+        /// Gets the size of the stream. Not suppported.
         /// </summary>
         /// <remarks>In this implementation this property is not supported</remarks>
         /// <exception cref="NotSupportedException">Always thrown</exception>

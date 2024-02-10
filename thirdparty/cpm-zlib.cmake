@@ -1,7 +1,7 @@
 CPMAddPackage(
 	NAME ZLIB
-	VERSION 1.3.1
-	URL "https://github.com/madler/zlib/archive/refs/tags/v1.3.1.zip"
+	VERSION 1.2.13
+	URL "https://github.com/madler/zlib/archive/refs/tags/v1.2.13.zip"
 	EXCLUDE_FROM_ALL
 	DOWNLOAD_ONLY YES
 )

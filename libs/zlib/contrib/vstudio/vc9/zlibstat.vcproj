@@ -47,7 +47,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="..\..\.."
+				AdditionalIncludeDirectories="..\..\..;..\..\masmx86"
 				PreprocessorDefinitions="WIN32;ZLIB_WINAPI;_CRT_NONSTDC_NO_DEPRECATE;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_WARNINGS"
 				ExceptionHandling="0"
 				RuntimeLibrary="1"
@@ -121,7 +121,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="..\..\.."
+				AdditionalIncludeDirectories="..\..\..;..\..\masmx86"
 				PreprocessorDefinitions="ZLIB_WINAPI;_CRT_NONSTDC_NO_DEPRECATE;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_WARNINGS;WIN64"
 				ExceptionHandling="0"
 				RuntimeLibrary="3"
@@ -195,7 +195,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="..\..\.."
+				AdditionalIncludeDirectories="..\..\..;..\..\masmx86"
 				PreprocessorDefinitions="ZLIB_WINAPI;_CRT_NONSTDC_NO_DEPRECATE;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_WARNINGS;WIN64"
 				ExceptionHandling="0"
 				RuntimeLibrary="3"
@@ -268,8 +268,8 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				InlineFunctionExpansion="1"
-				AdditionalIncludeDirectories="..\..\.."
-				PreprocessorDefinitions="WIN32;ZLIB_WINAPI;_CRT_NONSTDC_NO_DEPRECATE;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_WARNINGS"
+				AdditionalIncludeDirectories="..\..\..;..\..\masmx86"
+				PreprocessorDefinitions="WIN32;ZLIB_WINAPI;_CRT_NONSTDC_NO_DEPRECATE;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_WARNINGS;ASMV;ASMINF"
 				StringPooling="true"
 				ExceptionHandling="0"
 				RuntimeLibrary="0"
@@ -295,6 +295,7 @@
 			<Tool
 				Name="VCLibrarianTool"
 				AdditionalOptions="/MACHINE:X86 /NODEFAULTLIB"
+				AdditionalDependencies="..\..\masmx86\match686.obj ..\..\masmx86\inffas32.obj "
 				OutputFile="$(OutDir)\zlibstat.lib"
 				SuppressStartupBanner="true"
 			/>
@@ -342,8 +343,8 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				InlineFunctionExpansion="1"
-				AdditionalIncludeDirectories="..\..\.."
-				PreprocessorDefinitions="ZLIB_WINAPI;_CRT_NONSTDC_NO_DEPRECATE;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_WARNINGS;WIN64"
+				AdditionalIncludeDirectories="..\..\..;..\..\masmx86"
+				PreprocessorDefinitions="ZLIB_WINAPI;_CRT_NONSTDC_NO_DEPRECATE;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_WARNINGS;ASMV;ASMINF;WIN64"
 				StringPooling="true"
 				ExceptionHandling="0"
 				RuntimeLibrary="2"
@@ -369,6 +370,7 @@
 			<Tool
 				Name="VCLibrarianTool"
 				AdditionalOptions="/MACHINE:AMD64 /NODEFAULTLIB"
+				AdditionalDependencies="..\..\masmx64\gvmat64.obj ..\..\masmx64\inffasx64.obj "
 				OutputFile="$(OutDir)\zlibstat.lib"
 				SuppressStartupBanner="true"
 			/>
@@ -416,7 +418,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				InlineFunctionExpansion="1"
-				AdditionalIncludeDirectories="..\..\.."
+				AdditionalIncludeDirectories="..\..\..;..\..\masmx86"
 				PreprocessorDefinitions="ZLIB_WINAPI;_CRT_NONSTDC_NO_DEPRECATE;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_WARNINGS;WIN64"
 				StringPooling="true"
 				ExceptionHandling="0"
@@ -489,7 +491,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				InlineFunctionExpansion="1"
-				AdditionalIncludeDirectories="..\..\.."
+				AdditionalIncludeDirectories="..\..\..;..\..\masmx86"
 				PreprocessorDefinitions="WIN32;ZLIB_WINAPI;_CRT_NONSTDC_NO_DEPRECATE;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_WARNINGS"
 				StringPooling="true"
 				ExceptionHandling="0"
@@ -563,7 +565,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				InlineFunctionExpansion="1"
-				AdditionalIncludeDirectories="..\..\.."
+				AdditionalIncludeDirectories="..\..\..;..\..\masmx86"
 				PreprocessorDefinitions="ZLIB_WINAPI;_CRT_NONSTDC_NO_DEPRECATE;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_WARNINGS;WIN64"
 				StringPooling="true"
 				ExceptionHandling="0"
@@ -637,7 +639,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				InlineFunctionExpansion="1"
-				AdditionalIncludeDirectories="..\..\.."
+				AdditionalIncludeDirectories="..\..\..;..\..\masmx86"
 				PreprocessorDefinitions="ZLIB_WINAPI;_CRT_NONSTDC_NO_DEPRECATE;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_WARNINGS;WIN64"
 				StringPooling="true"
 				ExceptionHandling="0"
@@ -729,6 +731,58 @@
 			<File
 				RelativePath="..\..\..\infback.c"
 				>
+			</File>
+			<File
+				RelativePath="..\..\masmx64\inffas8664.c"
+				>
+				<FileConfiguration
+					Name="Debug|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug|Itanium"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Itanium"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="ReleaseWithoutAsm|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="ReleaseWithoutAsm|Itanium"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\..\..\inffast.c"
