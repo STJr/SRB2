@@ -1,7 +1,7 @@
 
 /* pngtest.c - a simple test program to test libpng
  *
- * Copyright (c) 2018-2024 Cosmin Truta
+ * Copyright (c) 2018-2019 Cosmin Truta
  * Copyright (c) 1998-2002,2004,2006-2018 Glenn Randers-Pehrson
  * Copyright (c) 1996-1997 Andreas Dilger
  * Copyright (c) 1995-1996 Guy Eric Schalnat, Group 42, Inc.
@@ -524,7 +524,7 @@ PNGCBAPI png_debug_malloc(png_structp png_ptr, png_alloc_size_t size)
     */
 
    if (size == 0)
-      return NULL;
+      return (NULL);
 
    /* This calls the library allocator twice, once to get the requested
       buffer and once to get a new free list entry. */
@@ -565,7 +565,7 @@ PNGCBAPI png_debug_malloc(png_structp png_ptr, png_alloc_size_t size)
          printf("png_malloc %lu bytes at %p\n", (unsigned long)size,
              pinfo->pointer);
 
-      return (png_voidp)pinfo->pointer;
+      return (png_voidp)(pinfo->pointer);
    }
 }
 
@@ -698,9 +698,9 @@ read_user_chunk_callback(png_struct *png_ptr, png_unknown_chunkp chunk)
       png_error(png_ptr, "lost user chunk pointer");
 
    /* Return one of the following:
-    *    return -n;  chunk had an error
-    *    return 0;   did not recognize
-    *    return n;   success
+    *    return (-n);  chunk had an error
+    *    return (0);  did not recognize
+    *    return (n);  success
     *
     * The unknown chunk structure contains the chunk data:
     * png_byte name[5];
@@ -715,38 +715,38 @@ read_user_chunk_callback(png_struct *png_ptr, png_unknown_chunkp chunk)
       {
          /* Found sTER chunk */
          if (chunk->size != 1)
-            return -1; /* Error return */
+            return (-1); /* Error return */
 
          if (chunk->data[0] != 0 && chunk->data[0] != 1)
-            return -1;  /* Invalid mode */
+            return (-1);  /* Invalid mode */
 
          if (set_location(png_ptr, my_user_chunk_data, have_sTER) != 0)
          {
             my_user_chunk_data->sTER_mode=chunk->data[0];
-            return 1;
+            return (1);
          }
 
          else
-            return 0; /* duplicate sTER - give it to libpng */
+            return (0); /* duplicate sTER - give it to libpng */
       }
 
    if (chunk->name[0] != 118 || chunk->name[1] != 112 ||    /* v  p */
        chunk->name[2] !=  65 || chunk->name[3] != 103)      /* A  g */
-      return 0; /* Did not recognize */
+      return (0); /* Did not recognize */
 
    /* Found ImageMagick vpAg chunk */
 
    if (chunk->size != 9)
-      return -1; /* Error return */
+      return (-1); /* Error return */
 
    if (set_location(png_ptr, my_user_chunk_data, have_vpAg) == 0)
-      return 0;  /* duplicate vpAg */
+      return (0);  /* duplicate vpAg */
 
    my_user_chunk_data->vpAg_width = png_get_uint_31(png_ptr, chunk->data);
    my_user_chunk_data->vpAg_height = png_get_uint_31(png_ptr, chunk->data + 4);
    my_user_chunk_data->vpAg_units = chunk->data[8];
 
-   return 1;
+   return (1);
 }
 
 #ifdef PNG_WRITE_SUPPORTED
@@ -875,6 +875,10 @@ test_one_file(const char *inname, const char *outname)
    volatile int num_passes;
    int pass;
    int bit_depth, color_type;
+#ifdef PNG_APNG_SUPPORTED
+   png_uint_32 num_frames;
+   png_uint_32 num_plays;
+#endif
 
    row_buf = NULL;
    error_parameters.file_name = inname;
@@ -882,14 +886,14 @@ test_one_file(const char *inname, const char *outname)
    if ((fpin = fopen(inname, "rb")) == NULL)
    {
       fprintf(STDERR, "Could not find input file %s\n", inname);
-      return 1;
+      return (1);
    }
 
    if ((fpout = fopen(outname, "wb")) == NULL)
    {
       fprintf(STDERR, "Could not open output file %s\n", outname);
       FCLOSE(fpin);
-      return 1;
+      return (1);
    }
 
    pngtest_debug("Allocating read and write structures");
@@ -948,7 +952,7 @@ test_one_file(const char *inname, const char *outname)
 #endif
       FCLOSE(fpin);
       FCLOSE(fpout);
-      return 1;
+      return (1);
    }
 
 #ifdef PNG_WRITE_SUPPORTED
@@ -968,7 +972,7 @@ test_one_file(const char *inname, const char *outname)
       png_destroy_write_struct(&write_ptr, &write_info_ptr);
       FCLOSE(fpin);
       FCLOSE(fpout);
-      return 1;
+      return (1);
    }
 #endif
 #endif
@@ -1383,6 +1387,22 @@ test_one_file(const char *inname, const char *outname)
       }
    }
 #endif
+
+#ifdef PNG_APNG_SUPPORTED
+   if (png_get_valid(read_ptr, read_info_ptr, PNG_INFO_acTL))
+   {
+      if (png_get_acTL(read_ptr, read_info_ptr, &num_frames, &num_plays))
+      {
+         png_byte is_hidden;
+         pngtest_debug2("Handling acTL chunks (frames %ld, plays %ld)",
+                    num_frames, num_plays);
+         png_set_acTL(write_ptr, write_info_ptr, num_frames, num_plays);
+         is_hidden = png_get_first_frame_is_hidden(read_ptr, read_info_ptr);
+         png_set_first_frame_is_hidden(write_ptr, write_info_ptr, is_hidden);
+      }
+   }
+#endif
+
 #ifdef PNG_WRITE_UNKNOWN_CHUNKS_SUPPORTED
    {
       png_unknown_chunkp unknowns;
@@ -1462,6 +1482,110 @@ test_one_file(const char *inname, const char *outname)
    t_stop = (float)clock();
    t_misc += (t_stop - t_start);
    t_start = t_stop;
+#endif
+#ifdef PNG_APNG_SUPPORTED
+   if (png_get_valid(read_ptr, read_info_ptr, PNG_INFO_acTL))
+   {
+      png_uint_32 frame;
+      for (frame = 0; frame < num_frames; frame++)
+      {
+         png_uint_32 frame_width;
+         png_uint_32 frame_height;
+         png_uint_32 x_offset;
+         png_uint_32 y_offset;
+         png_uint_16 delay_num;
+         png_uint_16 delay_den;
+         png_byte dispose_op;
+         png_byte blend_op;
+         png_read_frame_head(read_ptr, read_info_ptr);
+         if (png_get_valid(read_ptr, read_info_ptr, PNG_INFO_fcTL))
+         {
+            png_get_next_frame_fcTL(read_ptr, read_info_ptr,
+                                    &frame_width, &frame_height,
+                                    &x_offset, &y_offset,
+                                    &delay_num, &delay_den,
+                                    &dispose_op, &blend_op);
+         }
+         else
+         {
+            frame_width = width;
+            frame_height = height;
+            x_offset = 0;
+            y_offset = 0;
+            delay_num = 1;
+            delay_den = 1;
+            dispose_op = PNG_DISPOSE_OP_NONE;
+            blend_op = PNG_BLEND_OP_SOURCE;
+         }
+#ifdef PNG_WRITE_APNG_SUPPORTED
+         png_write_frame_head(write_ptr, write_info_ptr, (png_bytepp)&row_buf,
+                              frame_width, frame_height,
+                              x_offset, y_offset,
+                              delay_num, delay_den,
+                              dispose_op, blend_op);
+#endif
+         for (pass = 0; pass < num_passes; pass++)
+         {
+#           ifdef calc_pass_height
+               png_uint_32 pass_height;
+
+               if (num_passes == 7) /* interlaced */
+               {
+                  if (PNG_PASS_COLS(frame_width, pass) > 0)
+                     pass_height = PNG_PASS_ROWS(frame_height, pass);
+
+                  else
+                     pass_height = 0;
+               }
+
+               else /* not interlaced */
+                  pass_height = frame_height;
+#           else
+#              define pass_height frame_height
+#           endif
+
+            pngtest_debug1("Writing row data for pass %d", pass);
+            for (y = 0; y < pass_height; y++)
+            {
+#ifndef SINGLE_ROWBUF_ALLOC
+               pngtest_debug2("Allocating row buffer (pass %d, y = %u)...", pass, y);
+
+               row_buf = (png_bytep)png_malloc(read_ptr,
+                  png_get_rowbytes(read_ptr, read_info_ptr));
+
+               pngtest_debug2("\t0x%08lx (%lu bytes)", (unsigned long)row_buf,
+                  (unsigned long)png_get_rowbytes(read_ptr, read_info_ptr));
+
+#endif /* !SINGLE_ROWBUF_ALLOC */
+               png_read_rows(read_ptr, (png_bytepp)&row_buf, NULL, 1);
+
+#ifdef PNG_WRITE_SUPPORTED
+#ifdef PNGTEST_TIMING
+               t_stop = (float)clock();
+               t_decode += (t_stop - t_start);
+               t_start = t_stop;
+#endif
+               png_write_rows(write_ptr, (png_bytepp)&row_buf, 1);
+#ifdef PNGTEST_TIMING
+               t_stop = (float)clock();
+               t_encode += (t_stop - t_start);
+               t_start = t_stop;
+#endif
+#endif /* PNG_WRITE_SUPPORTED */
+
+#ifndef SINGLE_ROWBUF_ALLOC
+               pngtest_debug2("Freeing row buffer (pass %d, y = %u)", pass, y);
+               png_free(read_ptr, row_buf);
+               row_buf = NULL;
+#endif /* !SINGLE_ROWBUF_ALLOC */
+            }
+         }
+#ifdef PNG_WRITE_APNG_SUPPORTED
+         png_write_frame_tail(write_ptr, write_info_ptr);
+#endif
+      }
+   }
+   else
 #endif
    for (pass = 0; pass < num_passes; pass++)
    {
@@ -1656,16 +1780,16 @@ test_one_file(const char *inname, const char *outname)
 
    pngtest_debug("Destroying data structs");
 #ifdef SINGLE_ROWBUF_ALLOC
-   pngtest_debug("Destroying row_buf for read_ptr");
+   pngtest_debug("destroying row_buf for read_ptr");
    png_free(read_ptr, row_buf);
    row_buf = NULL;
 #endif /* SINGLE_ROWBUF_ALLOC */
-   pngtest_debug("Destroying read_ptr, read_info_ptr, end_info_ptr");
+   pngtest_debug("destroying read_ptr, read_info_ptr, end_info_ptr");
    png_destroy_read_struct(&read_ptr, &read_info_ptr, &end_info_ptr);
 #ifdef PNG_WRITE_SUPPORTED
-   pngtest_debug("Destroying write_end_info_ptr");
+   pngtest_debug("destroying write_end_info_ptr");
    png_destroy_info_struct(write_ptr, &write_end_info_ptr);
-   pngtest_debug("Destroying write_ptr, write_info_ptr");
+   pngtest_debug("destroying write_ptr, write_info_ptr");
    png_destroy_write_struct(&write_ptr, &write_info_ptr);
 #endif
    pngtest_debug("Destruction complete.");
@@ -1686,7 +1810,7 @@ test_one_file(const char *inname, const char *outname)
           inname, error_count, warning_count);
 
       if (strict != 0)
-         return 1;
+         return (1);
    }
 
 #  ifdef PNG_WRITE_SUPPORTED
@@ -1704,21 +1828,21 @@ test_one_file(const char *inname, const char *outname)
           inname, warning_count);
 
       if (strict != 0)
-         return 1;
+         return (1);
    }
 
    pngtest_debug("Opening files for comparison");
    if ((fpin = fopen(inname, "rb")) == NULL)
    {
       fprintf(STDERR, "Could not find file %s\n", inname);
-      return 1;
+      return (1);
    }
 
    if ((fpout = fopen(outname, "rb")) == NULL)
    {
       fprintf(STDERR, "Could not find file %s\n", outname);
       FCLOSE(fpin);
-      return 1;
+      return (1);
    }
 
 #if defined (PNG_WRITE_SUPPORTED) /* else nothing was written */ &&\
@@ -1757,10 +1881,10 @@ test_one_file(const char *inname, const char *outname)
             FCLOSE(fpout);
 
             if (strict != 0 && unsupported_chunks == 0)
-              return 1;
+              return (1);
 
             else
-              return 0;
+              return (0);
          }
 
          if (num_in == 0)
@@ -1794,10 +1918,10 @@ test_one_file(const char *inname, const char *outname)
              * can be exactly the same size!
              */
             if (strict != 0 && unsupported_chunks == 0)
-              return 1;
+              return (1);
 
             else
-              return 0;
+              return (0);
          }
       }
    }
@@ -1806,7 +1930,7 @@ test_one_file(const char *inname, const char *outname)
    FCLOSE(fpin);
    FCLOSE(fpout);
 
-   return 0;
+   return (0);
 }
 
 /* Input and output filenames */
@@ -2155,4 +2279,4 @@ main(void)
 #endif
 
 /* Generate a compiler error if there is an old png.h in the search path. */
-typedef png_libpng_version_1_6_42 Your_png_h_is_not_version_1_6_42;
+typedef png_libpng_version_1_6_37 Your_png_h_is_not_version_1_6_37;

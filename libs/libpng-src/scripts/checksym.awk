@@ -1,5 +1,4 @@
 #!/bin/awk -f
-
 # Check a list of symbols against the master definition
 # (official) list.  Arguments:
 #

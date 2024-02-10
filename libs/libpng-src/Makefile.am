@@ -1,6 +1,6 @@
 # Makefile.am, the source file for Makefile.in (and hence Makefile), is
 #
-# Copyright (c) 2018-2024 Cosmin Truta
+# Copyright (c) 2018 Cosmin Truta
 # Copyright (c) 2004-2016 Glenn Randers-Pehrson
 #
 # This code is released under the libpng license.
@@ -9,24 +9,16 @@
 
 PNGLIB_BASENAME= libpng@PNGLIB_MAJOR@@PNGLIB_MINOR@
 
-ACLOCAL_AMFLAGS = -I scripts/autoconf
+ACLOCAL_AMFLAGS = -I scripts
 
 # test programs - run on make check, make distcheck
-if ENABLE_TESTS
 check_PROGRAMS= pngtest pngunknown pngstest pngvalid pngimage pngcp
 if HAVE_CLOCK_GETTIME
 check_PROGRAMS += timepng
 endif
-else
-check_PROGRAMS=
-endif
 
 # Utilities - installed
-if ENABLE_TOOLS
 bin_PROGRAMS= pngfix png-fix-itxt
-else
-bin_PROGRAMS=
-endif
 
 # This ensures that pnglibconf.h gets built at the start of 'make all' or
 # 'make check', but it does not add dependencies to the individual programs,
@@ -38,7 +30,6 @@ endif
 # always wrong and always very confusing.
 BUILT_SOURCES = pnglibconf.h
 
-if ENABLE_TESTS
 pngtest_SOURCES = pngtest.c
 pngtest_LDADD = libpng@PNGLIB_MAJOR@@PNGLIB_MINOR@.la
 
@@ -57,22 +48,19 @@ pngimage_LDADD = libpng@PNGLIB_MAJOR@@PNGLIB_MINOR@.la
 timepng_SOURCES = contrib/libtests/timepng.c
 timepng_LDADD = libpng@PNGLIB_MAJOR@@PNGLIB_MINOR@.la
 
-pngcp_SOURCES = contrib/tools/pngcp.c
-pngcp_LDADD = libpng@PNGLIB_MAJOR@@PNGLIB_MINOR@.la
-endif
-
-if ENABLE_TOOLS
 pngfix_SOURCES = contrib/tools/pngfix.c
 pngfix_LDADD = libpng@PNGLIB_MAJOR@@PNGLIB_MINOR@.la
 
 png_fix_itxt_SOURCES = contrib/tools/png-fix-itxt.c
-endif
+
+pngcp_SOURCES = contrib/tools/pngcp.c
+pngcp_LDADD = libpng@PNGLIB_MAJOR@@PNGLIB_MINOR@.la
 
 # Generally these are single line shell scripts to run a test with a particular
 # set of parameters:
-if ENABLE_TESTS
 TESTS =\
-   tests/pngtest-all\
+   tests/pngtest\
+   tests/pngtest-badpngs\
    tests/pngvalid-gamma-16-to-8 tests/pngvalid-gamma-alpha-mode\
    tests/pngvalid-gamma-background tests/pngvalid-gamma-expand16-alpha-mode\
    tests/pngvalid-gamma-expand16-background\
@@ -88,7 +76,6 @@ TESTS =\
    tests/pngunknown-discard tests/pngunknown-if-safe tests/pngunknown-sAPI\
    tests/pngunknown-sTER tests/pngunknown-save tests/pngunknown-vpAg\
    tests/pngimage-quick tests/pngimage-full
-endif
 
 # man pages
 dist_man_MANS= libpng.3 libpngpf.3 png.5
@@ -117,13 +104,6 @@ libpng@PNGLIB_MAJOR@@PNGLIB_MINOR@_la_SOURCES += mips/mips_init.c\
 	mips/filter_msa_intrinsics.c
 endif
 
-if PNG_MIPS_MMI
-if !PNG_MIPS_MSA
-libpng@PNGLIB_MAJOR@@PNGLIB_MINOR@_la_SOURCES += mips/mips_init.c
-endif
-libpng@PNGLIB_MAJOR@@PNGLIB_MINOR@_la_SOURCES += mips/filter_mmi_inline_assembly.c
-endif
-
 if PNG_INTEL_SSE
 libpng@PNGLIB_MAJOR@@PNGLIB_MINOR@_la_SOURCES += intel/intel_init.c\
 	intel/filter_sse2_intrinsics.c
@@ -132,15 +112,6 @@ endif
 if PNG_POWERPC_VSX
 libpng@PNGLIB_MAJOR@@PNGLIB_MINOR@_la_SOURCES += powerpc/powerpc_init.c\
         powerpc/filter_vsx_intrinsics.c
-endif
-
-if PNG_LOONGARCH_LSX
-noinst_LTLIBRARIES= libpng@PNGLIB_MAJOR@@PNGLIB_MINOR@lsx.la
-libpng@PNGLIB_MAJOR@@PNGLIB_MINOR@lsx_la_SOURCES = loongarch/loongarch_lsx_init.c\
-	loongarch/filter_lsx_intrinsics.c
-libpng@PNGLIB_MAJOR@@PNGLIB_MINOR@lsx_la_CFLAGS = -mlsx
-libpng@PNGLIB_MAJOR@@PNGLIB_MINOR@_la_LIBADD = libpng@PNGLIB_MAJOR@@PNGLIB_MINOR@lsx.la
-# libpng@PNGLIB_MAJOR@@PNGLIB_MINOR@_la_DEPENDENCIES = libpng@PNGLIB_MAJOR@@PNGLIB_MINOR@lsx.la
 endif
 
 nodist_libpng@PNGLIB_MAJOR@@PNGLIB_MINOR@_la_SOURCES = pnglibconf.h
@@ -163,10 +134,6 @@ else
   libpng@PNGLIB_MAJOR@@PNGLIB_MINOR@_la_DEPENDENCIES = libpng.sym
 endif
 
-if PNG_LOONGARCH_LSX
-  libpng@PNGLIB_MAJOR@@PNGLIB_MINOR@_la_DEPENDENCIES += libpng@PNGLIB_MAJOR@@PNGLIB_MINOR@lsx.la
-endif
-
 #distribute headers in /usr/include/libpng/*
 pkgincludedir= $(includedir)/$(PNGLIB_BASENAME)
 pkginclude_HEADERS= png.h pngconf.h
@@ -183,7 +150,7 @@ pkgconfig_DATA = libpng@PNGLIB_MAJOR@@PNGLIB_MINOR@.pc
 EXTRA_DIST= \
 	ANNOUNCE AUTHORS CHANGES INSTALL LICENSE README TODO TRADEMARK \
 	pngtest.png pngbar.png pngnow.png pngbar.jpg autogen.sh \
-	${srcdir}/ci ${srcdir}/contrib ${srcdir}/projects ${srcdir}/scripts \
+	${srcdir}/contrib ${srcdir}/projects ${srcdir}/scripts \
 	$(TESTS) $(XFAIL_TESTS) tests/pngstest \
 	CMakeLists.txt example.c libpng-manual.txt
 

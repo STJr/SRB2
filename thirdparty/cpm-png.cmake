@@ -1,7 +1,7 @@
 CPMAddPackage(
 	NAME png
-	VERSION 1.6.42
-	URL "https://github.com/glennrp/libpng/archive/refs/tags/v1.6.42.zip"
+	VERSION 1.6.38
+	URL "https://github.com/glennrp/libpng/archive/refs/tags/v1.6.38.zip"
 	# png cmake build is broken on msys/mingw32
 	DOWNLOAD_ONLY YES
 )

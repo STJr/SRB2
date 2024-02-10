@@ -1,7 +1,7 @@
 
 /* pngunknown.c - test the read side unknown chunk handling
  *
- * Copyright (c) 2021 Cosmin Truta
+ * Last changed in libpng 1.6.32 [August 24, 2017]
  * Copyright (c) 2015,2017 Glenn Randers-Pehrson
  * Written by John Cunningham Bowler
  *
@@ -370,9 +370,7 @@ find_by_flag(png_uint_32 flag)
 {
    int i = NINFO;
 
-   while (--i >= 0)
-      if (chunk_info[i].flag == flag)
-         return i;
+   while (--i >= 0) if (chunk_info[i].flag == flag) return i;
 
    fprintf(stderr, "pngunknown: internal error\n");
    exit(4);
@@ -549,30 +547,27 @@ read_callback(png_structp pp, png_unknown_chunkp pc)
 
       case PNG_HANDLE_CHUNK_AS_DEFAULT:
       case PNG_HANDLE_CHUNK_NEVER:
-         discard = 1; /*handled; discard*/
+         discard = 1/*handled; discard*/;
          break;
 
       case PNG_HANDLE_CHUNK_IF_SAFE:
       case PNG_HANDLE_CHUNK_ALWAYS:
-         discard = 0; /*not handled; keep*/
+         discard = 0/*not handled; keep*/;
          break;
    }
 
    /* Also store information about this chunk in the display, the relevant flag
     * is set if the chunk is to be kept ('not handled'.)
     */
-   if (chunk >= 0)
+   if (chunk >= 0) if (!discard) /* stupidity to stop a GCC warning */
    {
-      if (!discard) /* stupidity to stop a GCC warning */
-      {
-         png_uint_32 flag = chunk_info[chunk].flag;
+      png_uint_32 flag = chunk_info[chunk].flag;
 
-         if (pc->location & PNG_AFTER_IDAT)
-            d->after_IDAT |= flag;
+      if (pc->location & PNG_AFTER_IDAT)
+         d->after_IDAT |= flag;
 
-         else
-            d->before_IDAT |= flag;
-      }
+      else
+         d->before_IDAT |= flag;
    }
 
    /* However if there is no support to store unknown chunks don't ask libpng to
@@ -846,9 +841,8 @@ check(FILE *fp, int argc, const char **argv, png_uint_32p flags/*out*/,
             {
                png_uint_32 y;
 
-               for (y=0; y<height; ++y)
-                  if (PNG_ROW_IN_INTERLACE_PASS(y, ipass))
-                     png_read_row(d->png_ptr, NULL, NULL);
+               for (y=0; y<height; ++y) if (PNG_ROW_IN_INTERLACE_PASS(y, ipass))
+                  png_read_row(d->png_ptr, NULL, NULL);
             }
          }
       } /* interlaced */
@@ -1097,15 +1091,15 @@ perform_one_test_safe(FILE *fp, int argc, const char **argv,
 
 static const char *standard_tests[] =
 {
-   "discard", "default=discard", NULL,
-   "save", "default=save", NULL,
-   "if-safe", "default=if-safe", NULL,
-   "vpAg", "vpAg=if-safe", NULL,
-   "sTER", "sTER=if-safe", NULL,
-   "IDAT", "default=discard", "IDAT=save", NULL,
-   "sAPI", "bKGD=save", "cHRM=save", "gAMA=save", "all=discard", "iCCP=save",
-      "sBIT=save", "sRGB=save", "eXIf=save", NULL,
-   NULL /*end*/
+ "discard", "default=discard", 0,
+ "save", "default=save", 0,
+ "if-safe", "default=if-safe", 0,
+ "vpAg", "vpAg=if-safe", 0,
+ "sTER", "sTER=if-safe", 0,
+ "IDAT", "default=discard", "IDAT=save", 0,
+ "sAPI", "bKGD=save", "cHRM=save", "gAMA=save", "all=discard", "iCCP=save",
+   "sBIT=save", "sRGB=save", "eXIf=save", 0,
+ 0/*end*/
 };
 
 static PNG_NORETURN void
@@ -1121,7 +1115,7 @@ int
 main(int argc, const char **argv)
 {
    FILE *fp;
-   png_uint_32 default_flags[4]; /*valid,unknown{before,after}*/
+   png_uint_32 default_flags[4/*valid,unknown{before,after}*/];
    int strict = 0, default_tests = 0;
    const char *count_argv = "default=save";
    const char *touch_file = NULL;
@@ -1159,9 +1153,8 @@ main(int argc, const char **argv)
    /* GCC BUG: if (default_tests && argc != 1) triggers some weird GCC argc
     * optimization which causes warnings with -Wstrict-overflow!
     */
-   else if (default_tests)
-      if (argc != 1)
-         usage(d.program, "extra arguments");
+   else if (default_tests) if (argc != 1)
+      usage(d.program, "extra arguments");
 
    /* The name of the test file is the last argument; remove it. */
    d.file = argv[--argc];
@@ -1223,11 +1216,7 @@ main(int argc, const char **argv)
          const char *result;
          int arg_count = 0;
 
-         while (*next != NULL)
-         {
-            ++next;
-            ++arg_count;
-         }
+         while (*next) ++next, ++arg_count;
 
          perform_one_test_safe(fp, arg_count, test, default_flags, &d,
             this_test);
