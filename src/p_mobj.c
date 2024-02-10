@@ -11784,7 +11784,6 @@ void P_SpawnPlayer(INT32 playernum)
     // MT_PLAYER cannot be removed, so this shouldn't be able to return NULL.
 	mobj = P_SpawnMobj(0, 0, 0, MT_PLAYER, p);
 	I_Assert(mobj != NULL);
-	p->mo = mobj;
 
 	mobj->angle = 0;
 
