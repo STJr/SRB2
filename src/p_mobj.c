@@ -10865,6 +10865,7 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type, ...)
 		// when spawning MT_PLAYER, set mobj->player before calling MobjSpawn hook to prevent P_RemoveMobj from succeeding on player mobj.
 		va_start(args, type);
 		mobj->player = va_arg(args, player_t *);
+		mobj->player->mo = mobj;
 		va_end(args);
 	}
 
@@ -11783,7 +11784,6 @@ void P_SpawnPlayer(INT32 playernum)
     // MT_PLAYER cannot be removed, so this shouldn't be able to return NULL.
 	mobj = P_SpawnMobj(0, 0, 0, MT_PLAYER, p);
 	I_Assert(mobj != NULL);
-	p->mo = mobj;
 
 	mobj->angle = 0;
 
