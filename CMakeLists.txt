@@ -45,13 +45,30 @@ set(CPACK_PACKAGE_INSTALL_DIRECTORY "CMake ${CMAKE_VERSION_MAJOR}.${CMAKE_VERSIO
 SET(CPACK_OUTPUT_FILE_PREFIX package)
 include(CPack)
 
-option(CPM_USE_LOCAL_PACKAGES "Try `find_package` before downloading dependencies" ON)
+# Options
+
+if("${CMAKE_SYSTEM_NAME}" MATCHES Linux)
+	set(SRB2_CONFIG_SYSTEM_LIBRARIES_DEFAULT ON)
+else()
+	set(SRB2_CONFIG_SYSTEM_LIBRARIES_DEFAULT OFF)
+endif()
 
 # Clang tidy options will be ignored if CMAKE_<LANG>_CLANG_TIDY are set.
 option(SRB2_CONFIG_ENABLE_CLANG_TIDY_C "Enable default clang-tidy check configuration for C" OFF)
 option(SRB2_CONFIG_ENABLE_CLANG_TIDY_CXX "Enable default clang-tidy check configuration for C++" OFF)
-
+option(
+	SRB2_CONFIG_SYSTEM_LIBRARIES
+	"Link dependencies using CMake's find_package and do not use internal builds"
+	${SRB2_CONFIG_SYSTEM_LIBRARIES_DEFAULT}
+)
 option(SRB2_CONFIG_ENABLE_TESTS "Build the test suite" ON)
+# This option isn't recommended for distribution builds and probably won't work (yet).
+cmake_dependent_option(
+	SRB2_CONFIG_SHARED_INTERNAL_LIBRARIES
+	"Use dynamic libraries when compiling internal dependencies"
+	OFF "NOT SRB2_CONFIG_SYSTEM_LIBRARIES"
+	OFF
+)
 option(SRB2_CONFIG_HWRENDER "Enable hardware render (OpenGL) support" ON)
 option(SRB2_CONFIG_STATIC_OPENGL "Enable static linking GL (do not do this)" OFF)
 option(SRB2_CONFIG_ERRORMODE "Compile C code with warnings treated as errors." OFF)
@@ -107,6 +124,20 @@ endif()
 
 # Dependencies
 add_subdirectory(thirdparty)
+
+if("${SRB2_CONFIG_SYSTEM_LIBRARIES}")
+	find_package(ZLIB REQUIRED)
+	find_package(PNG REQUIRED)
+	find_package(SDL2 REQUIRED)
+	find_package(SDL2_mixer REQUIRED)
+	find_package(CURL REQUIRED)
+	find_package(OPENMPT REQUIRED)
+
+	# libgme defaults to "Nuked" YM2612 emulator, which is
+	# very SLOW. The system library probably uses the
+	# default so just always build it.
+	#find_package(GME REQUIRED)
+endif()
 
 if(${PROJECT_SOURCE_DIR} MATCHES ${PROJECT_BINARY_DIR})
 	message(FATAL_ERROR "In-source builds will bring you a world of pain. Please make a separate directory to invoke CMake from.")

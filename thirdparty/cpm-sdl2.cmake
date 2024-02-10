@@ -1,31 +1,13 @@
 CPMAddPackage(
 	NAME SDL2
-	GITHUB_REPOSITORY libsdl-org/SDL
-	GIT_TAG release-2.30.0
+	VERSION 2.30.0
+	URL "https://github.com/libsdl-org/SDL/archive/refs/tags/release-2.30.0.zip"
+	EXCLUDE_FROM_ALL ON
 	OPTIONS
-		"SDL_SHARED OFF"
-		"SDL_STATIC ON"
+		"BUILD_SHARED_LIBS ${SRB2_CONFIG_SHARED_INTERNAL_LIBRARIES}"
+		"SDL_SHARED ${SRB2_CONFIG_SHARED_INTERNAL_LIBRARIES}"
+		"SDL_STATIC ${NOT_SRB2_CONFIG_SHARED_INTERNAL_LIBRARIES}"
 		"SDL_TEST OFF"
 		"SDL2_DISABLE_SDL2MAIN ON"
 		"SDL2_DISABLE_INSTALL ON"
-		"SDL_STATIC_PIC ON"
-		"SDL_WERROR OFF"
 )
-find_package(SDL2 REQUIRED)
-
-	file(GLOB SDL2_HEADERS "${SDL2_SOURCE_DIR}/include/*.h")
-
-	# Create a target that copies headers at build time, when they change
-	add_custom_target(sdl_copy_headers_in_build_dir
-			COMMAND ${CMAKE_COMMAND} -E copy_directory "${SDL2_SOURCE_DIR}/include" "${CMAKE_BINARY_DIR}/SDLHeaders/SDL2"
-			DEPENDS ${SDL2_HEADERS})
-
-	# Make SDL depend from it
-	add_dependencies(SDL2-static sdl_copy_headers_in_build_dir)
-
-	# And add the directory where headers have been copied as an interface include dir
-	target_include_directories(SDL2-static INTERFACE "${CMAKE_BINARY_DIR}/SDLHeaders")
-
-	set (SDL2_INCLUDE_DIR ${SDL2_SOURCE_DIR}/include)
-
-include_directories(${SDL2_INCLUDE_DIR})
