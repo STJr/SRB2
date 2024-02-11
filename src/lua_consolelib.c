@@ -30,6 +30,12 @@ return luaL_error(L, "HUD rendering code should not call this function!");
 
 static consvar_t *this_cvar;
 
+static void clear_lua_stack(void)
+{
+	if (gL) // check if Lua is actually turned on first, you dummmy -- Monster Iestyn 04/07/18
+		lua_settop(gL, 0); // clear stack
+}
+
 void Got_Luacmd(UINT8 **cp, INT32 playernum)
 {
 	UINT8 i, argc, flags;
@@ -74,6 +80,13 @@ void Got_Luacmd(UINT8 **cp, INT32 playernum)
 
 	lua_remove(gL, -2); // pop command info table
 
+	if (!lua_checkstack(gL, argc)) // player + command arguments
+	{
+		clear_lua_stack();
+		CONS_Alert(CONS_WARNING, "lua command stack overflow from %s (%d, need %d more)\n", player_names[playernum], lua_gettop(gL), argc);
+		return;
+	}
+
 	LUA_PushUserdata(gL, &players[playernum], META_PLAYER);
 	for (i = 1; i < argc; i++)
 	{
@@ -85,8 +98,7 @@ void Got_Luacmd(UINT8 **cp, INT32 playernum)
 
 deny:
 	//must be hacked/buggy client
-	if (gL) // check if Lua is actually turned on first, you dummmy -- Monster Iestyn 04/07/18
-		lua_settop(gL, 0); // clear stack
+	clear_lua_stack();
 
 	CONS_Alert(CONS_WARNING, M_GetText("Illegal lua command received from %s\n"), player_names[playernum]);
 	if (server)
