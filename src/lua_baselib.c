@@ -44,6 +44,21 @@ return luaL_error(L, "HUD rendering code should not call this function!");\
 else if (hook_cmd_running)\
 return luaL_error(L, "CMD building code should not call this function!");
 
+#define NOSPAWNNULL if (type >= NUMMOBJTYPES)\
+return luaL_error(L, "mobj type %d out of range (0 - %d)", type, NUMMOBJTYPES-1);\
+else if (type == MT_NULL)\
+{\
+	if (!nospawnnull_seen) {\
+		nospawnnull_seen = true;\
+		CONS_Alert(CONS_WARNING,"Spawning an \"MT_NULL\" mobj is deprecated and will be removed.\nUse \"MT_RAY\" instead.\n");\
+	}\
+type = MT_RAY;\
+}
+static boolean nospawnnull_seen = false; // TODO: 2.3: Delete
+// TODO: 2.3: Use the below NOSPAWNNULL define instead. P_SpawnMobj used to say "if MT_NULL, use MT_RAY instead", so the above define maintains Lua script compatibility until v2.3
+/*#define NOSPAWNNULL if (type <= MT_NULL || type >= NUMMOBJTYPES)\
+return luaL_error(L, "mobj type %d out of range (1 - %d)", type, NUMMOBJTYPES-1);*/
+
 boolean luaL_checkboolean(lua_State *L, int narg) {
 	luaL_checktype(L, narg, LUA_TBOOLEAN);
 	return lua_toboolean(L, narg);
@@ -625,8 +640,7 @@ static int lib_pSpawnMobj(lua_State *L)
 	mobjtype_t type = luaL_checkinteger(L, 4);
 	NOHUD
 	INLEVEL
-	if (type >= NUMMOBJTYPES)
-		return luaL_error(L, "mobj type %d out of range (0 - %d)", type, NUMMOBJTYPES-1);
+	NOSPAWNNULL
 	LUA_PushUserdata(L, P_SpawnMobj(x, y, z, type), META_MOBJ);
 	return 1;
 }
@@ -640,10 +654,9 @@ static int lib_pSpawnMobjFromMobj(lua_State *L)
 	mobjtype_t type = luaL_checkinteger(L, 5);
 	NOHUD
 	INLEVEL
+	NOSPAWNNULL
 	if (!actor)
 		return LUA_ErrInvalid(L, "mobj_t");
-	if (type >= NUMMOBJTYPES)
-		return luaL_error(L, "mobj type %d out of range (0 - %d)", type, NUMMOBJTYPES-1);
 	LUA_PushUserdata(L, P_SpawnMobjFromMobj(actor, x, y, z, type), META_MOBJ);
 	return 1;
 }
@@ -708,10 +721,9 @@ static int lib_pSpawnMissile(lua_State *L)
 	mobjtype_t type = luaL_checkinteger(L, 3);
 	NOHUD
 	INLEVEL
+	NOSPAWNNULL
 	if (!source || !dest)
 		return LUA_ErrInvalid(L, "mobj_t");
-	if (type >= NUMMOBJTYPES)
-		return luaL_error(L, "mobj type %d out of range (0 - %d)", type, NUMMOBJTYPES-1);
 	LUA_PushUserdata(L, P_SpawnMissile(source, dest, type), META_MOBJ);
 	return 1;
 }
@@ -726,10 +738,9 @@ static int lib_pSpawnXYZMissile(lua_State *L)
 	fixed_t z = luaL_checkfixed(L, 6);
 	NOHUD
 	INLEVEL
+	NOSPAWNNULL
 	if (!source || !dest)
 		return LUA_ErrInvalid(L, "mobj_t");
-	if (type >= NUMMOBJTYPES)
-		return luaL_error(L, "mobj type %d out of range (0 - %d)", type, NUMMOBJTYPES-1);
 	LUA_PushUserdata(L, P_SpawnXYZMissile(source, dest, type, x, y, z), META_MOBJ);
 	return 1;
 }
@@ -746,10 +757,9 @@ static int lib_pSpawnPointMissile(lua_State *L)
 	fixed_t z = luaL_checkfixed(L, 8);
 	NOHUD
 	INLEVEL
+	NOSPAWNNULL
 	if (!source)
 		return LUA_ErrInvalid(L, "mobj_t");
-	if (type >= NUMMOBJTYPES)
-		return luaL_error(L, "mobj type %d out of range (0 - %d)", type, NUMMOBJTYPES-1);
 	LUA_PushUserdata(L, P_SpawnPointMissile(source, xa, ya, za, type, x, y, z), META_MOBJ);
 	return 1;
 }
@@ -764,10 +774,9 @@ static int lib_pSpawnAlteredDirectionMissile(lua_State *L)
 	INT32 shiftingAngle = (INT32)luaL_checkinteger(L, 5);
 	NOHUD
 	INLEVEL
+	NOSPAWNNULL
 	if (!source)
 		return LUA_ErrInvalid(L, "mobj_t");
-	if (type >= NUMMOBJTYPES)
-		return luaL_error(L, "mobj type %d out of range (0 - %d)", type, NUMMOBJTYPES-1);
 	LUA_PushUserdata(L, P_SpawnAlteredDirectionMissile(source, type, x, y, z, shiftingAngle), META_MOBJ);
 	return 1;
 }
@@ -795,10 +804,9 @@ static int lib_pSPMAngle(lua_State *L)
 	UINT32 flags2 = (UINT32)luaL_optinteger(L, 5, 0);
 	NOHUD
 	INLEVEL
+	NOSPAWNNULL
 	if (!source)
 		return LUA_ErrInvalid(L, "mobj_t");
-	if (type >= NUMMOBJTYPES)
-		return luaL_error(L, "mobj type %d out of range (0 - %d)", type, NUMMOBJTYPES-1);
 	LUA_PushUserdata(L, P_SPMAngle(source, type, angle, allowaim, flags2), META_MOBJ);
 	return 1;
 }
@@ -810,10 +818,9 @@ static int lib_pSpawnPlayerMissile(lua_State *L)
 	UINT32 flags2 = (UINT32)luaL_optinteger(L, 3, 0);
 	NOHUD
 	INLEVEL
+	NOSPAWNNULL
 	if (!source)
 		return LUA_ErrInvalid(L, "mobj_t");
-	if (type >= NUMMOBJTYPES)
-		return luaL_error(L, "mobj type %d out of range (0 - %d)", type, NUMMOBJTYPES-1);
 	LUA_PushUserdata(L, P_SpawnPlayerMissile(source, type, flags2), META_MOBJ);
 	return 1;
 }
@@ -844,8 +851,7 @@ static int lib_pWeaponOrPanel(lua_State *L)
 {
 	mobjtype_t type = luaL_checkinteger(L, 1);
 	//HUDSAFE
-	if (type >= NUMMOBJTYPES)
-		return luaL_error(L, "mobj type %d out of range (0 - %d)", type, NUMMOBJTYPES-1);
+	NOSPAWNNULL
 	lua_pushboolean(L, P_WeaponOrPanel(type));
 	return 1;
 }
@@ -888,8 +894,7 @@ static int lib_pSpawnParaloop(lua_State *L)
 	boolean spawncenter = lua_optboolean(L, 9);
 	NOHUD
 	INLEVEL
-	if (type >= NUMMOBJTYPES)
-		return luaL_error(L, "mobj type %d out of range (0 - %d)", type, NUMMOBJTYPES-1);
+	NOSPAWNNULL
 	if (nstate >= NUMSTATES)
 		return luaL_error(L, "state %d out of range (0 - %d)", nstate, NUMSTATES-1);
 	P_SpawnParaloop(x, y, z, radius, number, type, nstate, rotangle, spawncenter);
@@ -1761,10 +1766,9 @@ static int lib_pSpawnSpinMobj(lua_State *L)
 	mobjtype_t type = luaL_checkinteger(L, 2);
 	NOHUD
 	INLEVEL
+	NOSPAWNNULL
 	if (!player)
 		return LUA_ErrInvalid(L, "player_t");
-	if (type >= NUMMOBJTYPES)
-		return luaL_error(L, "mobj type %d out of range (0 - %d)", type, NUMMOBJTYPES-1);
 	P_SpawnSpinMobj(player, type);
 	return 0;
 }
@@ -2710,12 +2714,11 @@ static int lib_pFadeLight(lua_State *L)
 
 static int lib_pIsFlagAtBase(lua_State *L)
 {
-	mobjtype_t flag = luaL_checkinteger(L, 1);
+	mobjtype_t type = luaL_checkinteger(L, 1);
 	//HUDSAFE
 	INLEVEL
-	if (flag >= NUMMOBJTYPES)
-		return luaL_error(L, "mobj type %d out of range (0 - %d)", flag, NUMMOBJTYPES-1);
-	lua_pushboolean(L, P_IsFlagAtBase(flag));
+	NOSPAWNNULL
+	lua_pushboolean(L, P_IsFlagAtBase(type));
 	return 1;
 }
 
