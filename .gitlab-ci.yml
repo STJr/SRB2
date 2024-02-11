@@ -463,8 +463,8 @@ Debian testing Clang:
 
   variables:
     CC: clang
-    WFLAGS: -Wno-cast-align -Wno-deprecated-non-prototype
-    CFLAGS: -Wno-cast-align -Wno-deprecated-non-prototype
+    WFLAGS: -Wno-cast-align -Wno-deprecated-non-prototype -Wno-single-bit-bitfield-constant-conversion
+    CFLAGS: -Wno-cast-align -Wno-deprecated-non-prototype -Wno-single-bit-bitfield-constant-conversion
     LDFLAGS: -Wl,-fuse-ld=gold
 
 Alpine 3 GCC:
