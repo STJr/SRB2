@@ -3425,7 +3425,7 @@ boolean M_Responder(event_t *ev)
 			// ignore ev_keydown events if the key maps to a character, since
 			// the ev_text event will follow immediately after in that case.
 			if (ev->type == ev_keydown && ch >= 32 && ch <= 127)
-				return false;
+				return true;
 
 			if (M_ChangeStringCvar(ch))
 				return true;
