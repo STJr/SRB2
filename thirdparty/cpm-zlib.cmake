@@ -1,7 +1,7 @@
 CPMAddPackage(
 	NAME zlib
 	VERSION 1.3.1
-	GITHUB_REPOSITORY madler/zlib
+	GITHUB_REPOSITORY "madler/zlib"
 	GIT_TAG v1.3.1
 	EXCLUDE_FROM_ALL
 	OPTIONS

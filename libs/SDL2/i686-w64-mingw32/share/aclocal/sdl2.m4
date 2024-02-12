@@ -9,8 +9,9 @@
 # * also look for SDL2.framework under Mac OS X
 # * removed HP/UX 9 support.
 # * updated for newer autoconf.
+# * (v3) use $PKG_CONFIG for pkg-config cross-compiling support
 
-# serial 2
+# serial 3
 
 dnl AM_PATH_SDL2([MINIMUM-VERSION, [ACTION-IF-FOUND [, ACTION-IF-NOT-FOUND]]])
 dnl Test for SDL, and define SDL_CFLAGS and SDL_LIBS
@@ -54,7 +55,7 @@ AC_ARG_VAR(SDL2_FRAMEWORK, [Path to SDL2.framework])
 
   if test "x$sdl_pc" = xyes ; then
     no_sdl=""
-    SDL2_CONFIG="pkg-config sdl2"
+    SDL2_CONFIG="$PKG_CONFIG sdl2"
   else
     as_save_PATH="$PATH"
     if test "x$prefix" != xNONE && test "$cross_compiling" != yes; then
@@ -70,8 +71,8 @@ AC_ARG_VAR(SDL2_FRAMEWORK, [Path to SDL2.framework])
         sdl_framework=$SDL2_FRAMEWORK
       else
         for d in / ~/ /System/; do
-          if test -d "$dLibrary/Frameworks/SDL2.framework"; then
-            sdl_framework="$dLibrary/Frameworks/SDL2.framework"
+          if test -d "${d}Library/Frameworks/SDL2.framework"; then
+            sdl_framework="${d}Library/Frameworks/SDL2.framework"
           fi
         done
       fi
