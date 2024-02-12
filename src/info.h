@@ -173,6 +173,7 @@ enum actionnum
 	A_CHANGECOLORRELATIVE,
 	A_CHANGECOLORABSOLUTE,
 	A_DYE,
+	A_SETTRANSLATION,
 	A_MOVERELATIVE,
 	A_MOVEABSOLUTE,
 	A_THRUST,
@@ -445,6 +446,7 @@ void A_SetRandomTics();
 void A_ChangeColorRelative();
 void A_ChangeColorAbsolute();
 void A_Dye();
+void A_SetTranslation();
 void A_MoveRelative();
 void A_MoveAbsolute();
 void A_Thrust();
@@ -580,8 +582,7 @@ typedef enum sprite
 	SPR_NULL, // invisible object
 	SPR_UNKN,
 
-	SPR_THOK, // Spin trail mobj
-	SPR_THKE, // Thok boom effect
+	SPR_THOK, // Thok! mobj
 	SPR_PLAY,
 
 	// Enemies
@@ -1183,9 +1184,8 @@ typedef enum state
 	S_XDEATHSTATE,
 	S_RAISESTATE,
 
-	// Thok boom effect and spin trail
+	// Thok
 	S_THOK,
-	S_THOKEFFECT,
 
 	// Player
 	S_PLAY_STND,
@@ -4394,8 +4394,7 @@ typedef enum mobj_type
 	MT_NULL,
 	MT_UNKNOWN,
 
-	MT_THOK, // Spin trail mobj
-	MT_THOKEFFECT, // Thok boom effect
+	MT_THOK, // Thok! mobj
 	MT_PLAYER,
 	MT_TAILSOVERLAY, // c:
 	MT_METALJETFUME,
@@ -5126,7 +5125,7 @@ typedef enum mobj_type
 	MT_POLYANCHOR,
 	MT_POLYSPAWN,
 
-	// Skybox objects
+	// Portal objects
 	MT_SKYBOX,
 
 	// Debris

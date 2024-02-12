@@ -701,24 +701,10 @@ void P_Ticker(boolean run)
 {
 	INT32 i;
 
-	// Increment jointime and quittime even if paused
+	// Increment jointime even if paused
 	for (i = 0; i < MAXPLAYERS; i++)
 		if (playeringame[i])
-		{
 			players[i].jointime++;
-
-			if (players[i].quittime)
-			{
-				players[i].quittime++;
-
-				if (players[i].quittime == 30 * TICRATE && G_TagGametype())
-					P_CheckSurvivors();
-
-				if (server && players[i].quittime >= (tic_t)FixedMul(cv_rejointimeout.value, 60 * TICRATE)
-				&& !(players[i].quittime % TICRATE))
-					SendKick(i, KICK_MSG_PLAYER_QUIT);
-			}
-		}
 
 	if (objectplacing)
 	{
@@ -769,7 +755,9 @@ void P_Ticker(boolean run)
 		ps_lua_mobjhooks.value.i = 0;
 		ps_checkposition_calls.value.i = 0;
 
-		LUA_HOOK(PreThinkFrame);
+		PS_START_TIMING(ps_lua_prethinkframe_time);
+		LUA_HookPreThinkFrame();
+		PS_STOP_TIMING(ps_lua_prethinkframe_time);
 
 		PS_START_TIMING(ps_playerthink_time);
 		for (i = 0; i < MAXPLAYERS; i++)
@@ -867,7 +855,9 @@ void P_Ticker(boolean run)
 		if (modeattacking)
 			G_GhostTicker();
 
-		LUA_HOOK(PostThinkFrame);
+		PS_START_TIMING(ps_lua_postthinkframe_time);
+		LUA_HookPostThinkFrame();
+		PS_STOP_TIMING(ps_lua_postthinkframe_time);
 	}
 
 	if (run)

@@ -86,7 +86,6 @@ extern boolean ignoregameinputs;
 #define META_PATCH "PATCH_T*"
 #define META_COLORMAP "COLORMAP"
 #define META_EXTRACOLORMAP "EXTRACOLORMAP_T*"
-#define META_LIGHTTABLE "LIGHTTABLE_T*"
 #define META_CAMERA "CAMERA_T*"
 
 #define META_ACTION "ACTIONF_T*"

@@ -23,6 +23,16 @@
 #include <windows.h>
 #endif
 #include <sys/stat.h>
+
+#ifndef S_ISLNK
+#define IGNORE_SYMLINKS
+#endif
+
+#ifndef IGNORE_SYMLINKS
+#include <unistd.h>
+#include <libgen.h>
+#include <limits.h>
+#endif
 #include <string.h>
 
 #include "filesrch.h"
@@ -461,6 +471,9 @@ filestatus_t filesearch(char *filename, const char *startpath, const UINT8 *want
 		}
 		else if (!strcasecmp(searchname, dent->d_name))
 		{
+#ifndef IGNORE_SYMLINKS
+			struct stat statbuf;
+#endif
 			switch (checkfilemd5(searchpath, wantedmd5sum))
 			{
 				case FS_FOUND:
@@ -468,6 +481,19 @@ filestatus_t filesearch(char *filename, const char *startpath, const UINT8 *want
 						strcpy(filename,searchpath);
 					else
 						strcpy(filename,dent->d_name);
+#ifndef IGNORE_SYMLINKS
+					if (lstat(filename, &statbuf) != -1)
+					{
+						if (S_ISLNK(statbuf.st_mode))
+						{
+							char *tempbuf = realpath(filename, NULL);
+							if (!tempbuf)
+								I_Error("Error parsing link %s: %s", filename, strerror(errno));
+							strncpy(filename, tempbuf, MAX_WADPATH);
+							free(tempbuf);
+						}
+					}
+#endif
 					retval = FS_FOUND;
 					found = 1;
 					break;
@@ -591,7 +617,8 @@ INT32 samepaths(const char *path1, const char *path2)
 	if (stat1.st_dev == stat2.st_dev)
 	{
 #if !defined(_WIN32)
-		return (stat1.st_ino == stat2.st_ino);
+		if (stat1.st_ino == stat2.st_ino)
+			return 1;
 #else
 		// The above doesn't work on NTFS or FAT.
 		HANDLE file1 = CreateFileA(path1, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
@@ -619,6 +646,8 @@ INT32 samepaths(const char *path1, const char *path2)
 		// I'll just use EIO...
 		if (!GetFileInformationByHandle(file1, &file1info))
 		{
+			CloseHandle(file1);
+			CloseHandle(file2);
 #ifndef AVOID_ERRNO
 			direrror = EIO;
 #endif
@@ -634,16 +663,19 @@ INT32 samepaths(const char *path1, const char *path2)
 			return -2;
 		}
 
+		int status = 0;
+
 		if (file1info.dwVolumeSerialNumber == file2info.dwVolumeSerialNumber
 		&& file1info.nFileIndexLow == file2info.nFileIndexLow
 		&& file1info.nFileIndexHigh == file2info.nFileIndexHigh)
 		{
-			CloseHandle(file1);
-			CloseHandle(file2);
-			return 1;
+			status = 1;
 		}
 
-		return 0;
+		CloseHandle(file1);
+		CloseHandle(file2);
+
+		return status;
 #endif
 	}
 
@@ -810,6 +842,7 @@ lumpinfo_t *getdirectoryfiles(const char *path, UINT16 *nlmp, UINT16 *nfolders)
 
 		lump_p->diskpath = Z_StrDup(dirpath); // Path in the filesystem to the file
 		lump_p->compression = CM_NOCOMPRESSION; // Lump is uncompressed
+		lump_p->size = lump_p->disksize = fsstat.st_size;
 
 		// Remove the directory's path.
 		fullname = lump_p->diskpath;

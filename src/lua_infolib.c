@@ -22,6 +22,7 @@
 #include "r_patch.h"
 #include "r_picformats.h"
 #include "r_things.h"
+#include "r_translation.h"
 #include "r_draw.h" // R_GetColorByName
 #include "doomstat.h" // luabanks[]
 
@@ -29,9 +30,6 @@
 #include "lua_libs.h"
 #include "lua_hud.h" // hud_running errors
 #include "lua_hook.h" // hook_cmd_running errors
-
-extern CV_PossibleValue_t Color_cons_t[];
-extern UINT8 skincolor_modified[];
 
 boolean LUA_CallAction(enum actionnum actionnum, mobj_t *actor);
 state_t *astate;

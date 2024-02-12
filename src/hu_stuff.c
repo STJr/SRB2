@@ -714,10 +714,12 @@ static void Got_Saycmd(UINT8 **p, INT32 playernum)
 	// Clean up message a bit
 	// If you use a \r character, you can remove your name
 	// from before the text and then pretend to be someone else!
+	// If you use a \n character, you can create a new line in
+	// the log and then pretend to be someone else as well!
 	ptr = msg;
 	while (*ptr != '\0')
 	{
-		if (*ptr == '\r')
+		if (*ptr == '\r' || *ptr == '\n')
 			*ptr = ' ';
 
 		ptr++;
@@ -2116,7 +2118,7 @@ void HU_Erase(void)
 //                   IN-LEVEL MULTIPLAYER RANKINGS
 //======================================================================
 
-#define supercheckdef (!(players[tab[i].num].charflags & SF_NOSUPERSPRITES) && ((players[tab[i].num].powers[pw_super] && players[tab[i].num].mo && (players[tab[i].num].mo->state < &states[S_PLAY_SUPER_TRANS1] || players[tab[i].num].mo->state >= &states[S_PLAY_SUPER_TRANS6])) || (players[tab[i].num].powers[pw_carry] == CR_NIGHTSMODE && skins[players[tab[i].num].skin].flags & SF_SUPER)))
+#define supercheckdef (!(players[tab[i].num].charflags & SF_NOSUPERSPRITES) && ((players[tab[i].num].powers[pw_super] && players[tab[i].num].mo && (players[tab[i].num].mo->state < &states[S_PLAY_SUPER_TRANS1] || players[tab[i].num].mo->state >= &states[S_PLAY_SUPER_TRANS6])) || (players[tab[i].num].powers[pw_carry] == CR_NIGHTSMODE && skins[players[tab[i].num].skin]->flags & SF_SUPER)))
 #define greycheckdef (players[tab[i].num].spectator || players[tab[i].num].playerstate == PST_DEAD || (G_IsSpecialStage(gamemap) && players[tab[i].num].exiting))
 
 //

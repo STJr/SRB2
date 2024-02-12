@@ -219,6 +219,7 @@ actionpointer_t actionpointers[] =
 	{{A_ChangeColorRelative},    "A_CHANGECOLORRELATIVE"},
 	{{A_ChangeColorAbsolute},    "A_CHANGECOLORABSOLUTE"},
 	{{A_Dye},                    "A_DYE"},
+	{{A_SetTranslation},         "A_SETTRANSLATION"},
 	{{A_MoveRelative},           "A_MOVERELATIVE"},
 	{{A_MoveAbsolute},           "A_MOVEABSOLUTE"},
 	{{A_Thrust},                 "A_THRUST"},
@@ -370,9 +371,8 @@ const char *const STATE_LIST[] = { // array length left dynamic for sanity testi
 	"S_XDEATHSTATE",
 	"S_RAISESTATE",
 
-	// Thok effect and spin trail
+	// Thok
 	"S_THOK",
-	"S_THOKEFFECT",
 
 	// Player
 	"S_PLAY_STND",
@@ -3561,8 +3561,7 @@ const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for sanity t
 	"MT_NULL",
 	"MT_UNKNOWN",
 
-	"MT_THOK", // Spin trail mobj
-	"MT_THOKEFFECT", // Thok boom effect
+	"MT_THOK", // Thok! mobj
 	"MT_PLAYER",
 	"MT_TAILSOVERLAY", // c:
 	"MT_METALJETFUME",
@@ -4293,7 +4292,7 @@ const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for sanity t
 	"MT_POLYANCHOR",
 	"MT_POLYSPAWN",
 
-	// Skybox objects
+	// Portal objects
 	"MT_SKYBOX",
 
 	// Debris

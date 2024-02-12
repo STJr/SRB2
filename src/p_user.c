@@ -19,6 +19,7 @@
 #include "d_event.h"
 #include "netcode/d_net.h"
 #include "netcode/net_command.h"
+#include "g_demo.h" // demoplayback, demoversion
 #include "g_game.h"
 #include "p_local.h"
 #include "r_fps.h"
@@ -685,8 +686,8 @@ static void P_DeNightserizePlayer(player_t *player)
 
 	player->mo->flags &= ~MF_NOGRAVITY;
 
-	player->mo->skin = &skins[player->skin];
-	player->followitem = skins[player->skin].followitem;
+	player->mo->skin = skins[player->skin];
+	player->followitem = skins[player->skin]->followitem;
 	player->mo->color = P_GetPlayerColor(player);
 	G_GhostAddColor(GHC_RETURNSKIN);
 
@@ -786,12 +787,12 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 		player->mo->height = P_GetPlayerHeight(player); // Just to make sure jumping into the drone doesn't result in a squashed hitbox.
 		player->oldscale = player->mo->scale;
 
-		if (skins[player->skin].sprites[SPR2_NFLY].numframes == 0) // If you don't have a sprite for flying horizontally, use the default NiGHTS skin.
+		if (skins[player->skin]->sprites[SPR2_NFLY].numframes == 0) // If you don't have a sprite for flying horizontally, use the default NiGHTS skin.
 		{
-			player->mo->skin = &skins[DEFAULTNIGHTSSKIN];
+			player->mo->skin = skins[DEFAULTNIGHTSSKIN];
 			if (!(cv_debug || devparm) && !(netgame || multiplayer || demoplayback))
-				player->mo->color = skins[DEFAULTNIGHTSSKIN].prefcolor;
-			player->followitem = skins[DEFAULTNIGHTSSKIN].followitem;
+				player->mo->color = skins[DEFAULTNIGHTSSKIN]->prefcolor;
+			player->followitem = skins[DEFAULTNIGHTSSKIN]->followitem;
 			G_GhostAddColor(GHC_NIGHTSSKIN);
 		}
 	}
@@ -2047,6 +2048,7 @@ mobj_t *P_SpawnGhostMobj(mobj_t *mobj)
 	}
 
 	ghost->color = mobj->color;
+	ghost->translation = mobj->translation;
 	ghost->colorized = mobj->colorized; // alternatively, "true" for sonic advance style colourisation
 
 	ghost->angle = (mobj->player ? mobj->player->drawangle : mobj->angle);
@@ -2122,19 +2124,7 @@ void P_SpawnThokMobj(player_t *player)
 
 	if (type == MT_GHOST)
 		mobj = P_SpawnGhostMobj(player->mo); // virtually does everything here for us
-	else if (type == MT_THOKEFFECT) // Thok boom effect for Sonic
-	{
-		mobj = P_SpawnMobjFromMobj(player->mo, 0, 0, FixedDiv(player->mo->height, player->mo->scale)*3/4, type);
-		mobj->angle = player->mo->angle + ANGLE_90;
-		mobj->fuse = 7;
-		mobj->scale = player->mo->scale / 3;
-		mobj->destscale = 10 * player->mo->scale;
-		mobj->colorized = true;
-		mobj->color = player->mo->color;
-		mobj->momx = -player->mo->momx / 2;
-		mobj->momy = -player->mo->momy / 2;
-	}
-	else // Normal thok object handling
+	else
 	{
 		if (player->mo->eflags & MFE_VERTICALFLIP)
 			zheight = player->mo->z + player->mo->height + FixedDiv(P_GetPlayerHeight(player) - player->mo->height, 3*FRACUNIT) - FixedMul(mobjinfo[type].height, player->mo->scale);
@@ -3821,6 +3811,8 @@ static boolean PIT_CheckSolidsTeeter(mobj_t *thing)
 	if (abs(thing->x - teeterer->x) >= blockdist || abs(thing->y - teeterer->y) >= blockdist)
 		return true; // didn't hit it
 
+	highesttop = INT32_MIN;
+
 	if (teeterer->eflags & MFE_VERTICALFLIP)
 	{
 		if (thingtop < teeterer->z)
@@ -4124,13 +4116,8 @@ static void P_DoTeeter(player_t *player)
 			teeteryl = teeteryh = player->mo->y;
 			couldteeter = false;
 			solidteeter = teeter;
-			for (by = yl; by <= yh; by++)
-				for (bx = xl; bx <= xh; bx++)
-				{
-					highesttop = INT32_MIN;
-					if (!P_BlockThingsIterator(bx, by, PIT_CheckSolidsTeeter))
-						goto teeterdone; // we've found something that stops us teetering at all, how about we stop already
-				}
+			if (!P_DoBlockThingsIterate(xl, yl, xh, yh, PIT_CheckSolidsTeeter))
+				goto teeterdone; // we've found something that stops us teetering at all
 teeterdone:
 			teeter = solidteeter;
 			P_SetTarget(&tmthing, oldtmthing); // restore old tmthing, goodness knows what the game does with this before mobj thinkers
@@ -4421,7 +4408,7 @@ static void P_DoSuperStuff(player_t *player)
 
 		player->mo->color = (player->pflags & PF_GODMODE && cv_debug == 0)
 		? (SKINCOLOR_SUPERSILVER1 + 5*(((signed)leveltime >> 1) % 7)) // A wholesome easter egg.
-		: skins[player->skin].supercolor + abs( ( (player->powers[pw_super] >> 1) % 9) - 4); // This is where super flashing is handled.
+		: skins[player->skin]->supercolor + abs( ( (player->powers[pw_super] >> 1) % 9) - 4); // This is where super flashing is handled.
 
 		G_GhostAddColor(GHC_SUPER);
 
@@ -4486,7 +4473,7 @@ boolean P_SuperReady(player_t *player, boolean transform)
 //
 // Jump routine for the player
 //
-void P_DoJump(player_t *player, boolean soundandstate)
+void P_DoJump(player_t *player, boolean soundandstate, boolean allowflip)
 {
 	fixed_t factor;
 	const fixed_t dist6 = FixedMul(FixedDiv(player->speed, player->mo->scale), player->actionspd)/20;
@@ -4659,7 +4646,7 @@ void P_DoJump(player_t *player, boolean soundandstate)
 	if (player->charflags & SF_NOJUMPDAMAGE)
 		player->pflags &= ~PF_SPINNING;
 
-	if (P_InJumpFlipSector(player->mo)) // Flip gravity on jump?
+	if (allowflip && P_InJumpFlipSector(player->mo)) // Flip gravity on jump?
 	{
 		player->mo->flags2 ^= MF2_OBJECTFLIP;
 		S_StartSound(player->mo, sfx_s3k73); // Play gravity flip sound
@@ -4880,7 +4867,7 @@ static void P_DoSpinAbility(player_t *player, ticcmd_t *cmd)
 #if 0
 					if ((player->charability == CA_TWINSPIN) && (player->speed > FixedMul(player->runspeed, player->mo->scale)))
 					{
-						P_DoJump(player, false);
+						P_DoJump(player, false, false);
 						player->pflags &= ~PF_STARTJUMP;
 						player->mo->momz = FixedMul(player->mo->momz, 3*FRACUNIT/2); // NOT 1.5 times the jump height, but 2.25 times.
 						P_SetMobjState(player->mo, S_PLAY_TWINSPIN);
@@ -4960,7 +4947,7 @@ void P_DoJumpShield(player_t *player)
 		return;
 
 	player->pflags &= ~PF_JUMPED;
-	P_DoJump(player, false);
+	P_DoJump(player, false, true);
 	player->secondjump = 0;
 	player->pflags |= PF_THOKKED|PF_SHIELDABILITY;
 	player->pflags &= ~(PF_STARTJUMP|PF_SPINNING|PF_BOUNCING);
@@ -5006,7 +4993,7 @@ void P_DoBubbleBounce(player_t *player)
 	player->pflags &= ~(PF_JUMPED|PF_NOJUMPDAMAGE|PF_SHIELDABILITY);
 	S_StartSound(player->mo, sfx_s3k44);
 	P_MobjCheckWater(player->mo);
-	P_DoJump(player, false);
+	P_DoJump(player, false, false);
 	if (player->charflags & SF_NOJUMPSPIN)
 		P_SetMobjState(player->mo, S_PLAY_FALL);
 	else
@@ -5036,7 +5023,7 @@ void P_DoAbilityBounce(player_t *player, boolean changemomz)
 		else if (player->mo->eflags & MFE_UNDERWATER)
 			prevmomz /= 2;
 
-		P_DoJump(player, false);
+		P_DoJump(player, false, false);
 		player->pflags &= ~(PF_STARTJUMP|PF_JUMPED);
 		minmomz = FixedMul(player->mo->momz, 3*FRACUNIT/2);
 
@@ -5409,7 +5396,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 		// Jump S3&K style while in quicksand.
 		else if (P_InQuicksand(player->mo))
 		{
-			P_DoJump(player, true);
+			P_DoJump(player, true, false);
 			player->secondjump = 0;
 			player->pflags &= ~PF_THOKKED;
 		}
@@ -5422,7 +5409,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 		// can't jump while in air, can't jump while jumping
 		else if (onground || player->climbing || player->powers[pw_carry])
 		{
-			P_DoJump(player, true);
+			P_DoJump(player, true, true);
 			player->secondjump = 0;
 			player->pflags &= ~PF_THOKKED;
 		}
@@ -5452,7 +5439,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 						if ((player->charability == CA_JUMPTHOK) && !(player->pflags & PF_THOKKED))
 						{
 							player->pflags &= ~PF_JUMPED;
-							P_DoJump(player, false);
+							P_DoJump(player, false, true);
 						}
 
 						P_InstaThrust(player->mo, player->mo->angle, FixedMul(actionspd, player->mo->scale));
@@ -5561,7 +5548,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 					{
 						player->pflags |= PF_THOKKED;
 						player->pflags &= ~(PF_JUMPED|PF_SPINNING);
-						P_DoJump(player, true);
+						P_DoJump(player, true, true);
 						player->secondjump++;
 					}
 					break;
@@ -6004,6 +5991,7 @@ static void P_2dMovement(player_t *player)
 		else if (player->rmomx > -topspeed && cmd->sidemove < 0)
 			P_Thrust(player->mo, movepushangle, movepushforward);
 	}
+	player->mo->friction = ORIG_FRICTION; //katsy: reset player friction AFTER movement code
 }
 
 //#define OLD_MOVEMENT_CODE 1
@@ -6076,7 +6064,7 @@ static void P_3dMovement(player_t *player)
 	// Monster Iestyn - 04-11-13
 	// Quadrants are stupid, excessive and broken, let's do this a much simpler way!
 	// Get delta angle from rmom angle and player angle first
-	dangle = R_PointToAngle2(0,0, player->rmomx, player->rmomy) - player->mo->angle;
+	dangle = R_PointToAngle2(0,0, player->rmomx, player->rmomy) - (cmd->angleturn<<16);
 	if (dangle > ANGLE_180) //flip to keep to one side
 		dangle = InvAngle(dangle);
 
@@ -6325,6 +6313,7 @@ static void P_3dMovement(player_t *player)
 			player->mo->momy = tempmomy + player->cmomy;
 		}
 	}
+	player->mo->friction = ORIG_FRICTION; //katsy: reset player friction AFTER movement code
 }
 
 //
@@ -7534,49 +7523,46 @@ static void P_NiGHTSMovement(player_t *player)
 				newangle = 270;
 		}
 		else // AngleFixed(R_PointToAngle2()) results in slight inaccuracy! Don't use it unless movement is on both axises.
+		{
 			newangle = (INT16)FixedInt(AngleFixed(R_PointToAngle2(0,0, cmd->sidemove*FRACUNIT, cmd->forwardmove*FRACUNIT)));
+
+			if (cmd->forwardmove == -36 && cmd->sidemove == 35 && !(demoplayback && demoversion < 0x0011))
+				newangle = 315; // Hack to compensate for directly down-right returning 314, not 315
+		}
 
 		newangle -= player->viewrollangle / ANG1;
 
 		if (newangle < 0 && moved)
 			newangle = (INT16)(360+newangle);
-	}
 
-	if (player->pflags & PF_DRILLING)
-		thrustfactor = 2;
-	else
-	{
-		thrustfactor = 8;
-
-		// Decelerate while turning normally.
-		if (moved && player->flyangle != newangle && player->speed > 12000)
-			player->speed -= 60;
-	}
-
-	for (i = 0; i < thrustfactor; i++)
-	{
 		if (moved && player->flyangle != newangle)
 		{
-			INT32 anglediff = (((newangle-player->flyangle)+360)%360);
-			INT32 angledif2 = (((player->flyangle-newangle)+360)%360);
+			// "player->flyangle" is our current angle, "newangle" is where we want to go
+			INT32 anglediff = ((newangle - player->flyangle) + 360) % 360; // "+360" and then "%360" wraps it to 0-359
 
-			// player->flyangle is the one to move
-			// newangle is the "move to"
-			if (anglediff == 0 && angledif2 == 0)
-				break;
+			// How sharply can we turn?
+			if (player->pflags & PF_DRILLING)
+				thrustfactor = 2;
+			else
+			{
+				thrustfactor = 8;
+				if (player->speed > 12000) // Decelerate while turning normally
+					player->speed -= 60;
+			}
 
-			if (anglediff>angledif2)
-				player->flyangle--;
-			else // if (anglediff<angledif2)
-				player->flyangle++;
+			// Now, turn!
+			if (anglediff <= thrustfactor || anglediff >= (360-thrustfactor))
+				player->flyangle = newangle;
+			else if (anglediff <= 180)
+				player->flyangle += thrustfactor;
+			else
+				player->flyangle -= thrustfactor;
+
+			player->flyangle = (player->flyangle + 360) % 360; // Buff out negatives, >360 angles...
 		}
-
-		// Buff out negatives, >360 angles...
-		player->flyangle = ((player->flyangle + 360) % 360);
 	}
 
-	if (!(player->speed)
-		&& cmd->forwardmove == 0)
+	if (player->speed == 0 && cmd->forwardmove == 0 && (cmd->sidemove == 0 || (demoplayback && demoversion < 0x0011)))
 		still = true;
 
 	// No more bumper braking
@@ -7736,6 +7722,9 @@ static void P_NiGHTSMovement(player_t *player)
 				else
 					visangle += 180;
 			}
+
+			if (player->mo->eflags & MFE_VERTICALFLIP) // Flip the roll angle in reverse gravity
+				visangle *= -1;
 
 			rollangle = FixedAngle(visangle<<FRACBITS);
 		}
@@ -8863,8 +8852,7 @@ void P_MovePlayer(player_t *player)
 		}
 	}
 
-#ifdef HWRENDER
-	if (rendermode == render_opengl && cv_fovchange.value)
+	if (cv_fovchange.value)
 	{
 		fixed_t speed;
 		const fixed_t runnyspeed = 20*FRACUNIT;
@@ -8884,7 +8872,6 @@ void P_MovePlayer(player_t *player)
 	}
 	else
 		player->fovadd = 0;
-#endif
 
 	// Look for blocks to bust up
 	// Because of BT_TOUCH, we should look for blocks constantly,
@@ -11645,7 +11632,7 @@ void P_DoMetalJetFume(player_t *player, mobj_t *fume)
 	if (resetinterp) R_ResetMobjInterpolationState(fume);
 
 	// If dashmode is high enough, spawn a trail
-	if (player->normalspeed >= skins[player->skin].normalspeed*2)
+	if (player->normalspeed >= skins[player->skin]->normalspeed*2)
 	{
 		mobj_t *ghost = P_SpawnGhostMobj(fume);
 		if (!P_MobjWasRemoved(ghost))
@@ -11906,7 +11893,7 @@ void P_PlayerThink(player_t *player)
 			if (!total || ((4*exiting)/total) >= numneeded)
 			{
 				if (server)
-					D_SendExitLevel(false);
+					SendNetXCmd(XD_EXITLEVEL, NULL, 0);
 			}
 			else
 				player->exiting = 3;
@@ -11914,7 +11901,7 @@ void P_PlayerThink(player_t *player)
 		else
 		{
 			if (server)
-				D_SendExitLevel(false);
+				SendNetXCmd(XD_EXITLEVEL, NULL, 0);
 		}
 	}
 
@@ -12519,25 +12506,25 @@ void P_PlayerThink(player_t *player)
 		{
 			if (prevdashmode >= DASHMODE_THRESHOLD)
 			{
-				player->normalspeed = skins[player->skin].normalspeed; // Reset to default if not capable of entering dash mode.
-				player->jumpfactor = skins[player->skin].jumpfactor;
+				player->normalspeed = skins[player->skin]->normalspeed; // Reset to default if not capable of entering dash mode.
+				player->jumpfactor = skins[player->skin]->jumpfactor;
 				if (player->powers[pw_strong] & STR_DASH)
 					player->powers[pw_strong] = STR_NONE;
 			}
 		}
 		else if (P_IsObjectOnGround(player->mo)) // Activate dash mode if we're on the ground.
 		{
-			if (player->normalspeed < skins[player->skin].normalspeed*2) // If the player normalspeed is not currently at normalspeed*2 in dash mode, add speed each tic
+			if (player->normalspeed < skins[player->skin]->normalspeed*2) // If the player normalspeed is not currently at normalspeed*2 in dash mode, add speed each tic
 				player->normalspeed += FRACUNIT/5; // Enter Dash Mode smoothly.
 
-			if (player->jumpfactor < FixedMul(skins[player->skin].jumpfactor, 5*FRACUNIT/4)) // Boost jump height.
+			if (player->jumpfactor < FixedMul(skins[player->skin]->jumpfactor, 5*FRACUNIT/4)) // Boost jump height.
 				player->jumpfactor += FRACUNIT/300;
 
 			if ((player->charflags & SF_MACHINE) && (!(player->powers[pw_strong] == STR_METAL)))
 					player->powers[pw_strong] = STR_METAL;
 		}
 
-		if (player->normalspeed >= skins[player->skin].normalspeed*2)
+		if (player->normalspeed >= skins[player->skin]->normalspeed*2)
 		{
 			mobj_t *ghost = P_SpawnGhostMobj(player->mo); // Spawns afterimages
 			if (!P_MobjWasRemoved(ghost))
@@ -12552,8 +12539,8 @@ void P_PlayerThink(player_t *player)
 	{
 		if (dashmode >= DASHMODE_THRESHOLD) // catch getting the flag!
 		{
-			player->normalspeed = skins[player->skin].normalspeed;
-			player->jumpfactor = skins[player->skin].jumpfactor;
+			player->normalspeed = skins[player->skin]->normalspeed;
+			player->jumpfactor = skins[player->skin]->jumpfactor;
 			S_StartSound(player->mo, sfx_kc65);
 			if (player->powers[pw_strong] & STR_DASH)
 				player->powers[pw_strong] = STR_NONE;
