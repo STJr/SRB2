@@ -355,8 +355,12 @@ static int mobj_get(lua_State *L)
 		lua_pushinteger(L, mo->blendmode);
 		break;
 	case mobj_bnext:
-		LUA_PushUserdata(L, mo->bnext, META_MOBJ);
-		break;
+		if (mo->blocknode && mo->blocknode->bnext) {
+			LUA_PushUserdata(L, mo->blocknode->bnext->mobj, META_MOBJ);
+			break;
+		}
+		else
+			return 0;
 	case mobj_bprev:
 		// bprev -- same deal as sprev above, but for the blockmap.
 		return UNIMPLEMENTED;
@@ -669,7 +673,6 @@ static int mobj_set(lua_State *L)
 				sector_list = NULL;
 			}
 			mo->snext = NULL, mo->sprev = NULL;
-			mo->bnext = NULL, mo->bprev = NULL;
 			P_SetThingPosition(mo);
 		}
 		else

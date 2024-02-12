@@ -19,9 +19,9 @@
 #include "i_video.h"
 #include "r_plane.h"
 #include "p_spec.h"
+#include "p_slopes.h"
 #include "r_state.h"
 #include "z_zone.h"
-#include "console.h" // con_startup_loadprogress
 #include "m_perfstats.h" // ps_metric_t
 #ifdef HWRENDER
 #include "hardware/hw_main.h" // for cv_glshearing
@@ -646,6 +646,7 @@ void R_ApplyLevelInterpolators(fixed_t frac)
 			R_LerpVector3(&interp->dynslope.oldo, &interp->dynslope.bako, frac, &interp->dynslope.slope->o);
 			R_LerpVector2(&interp->dynslope.oldd, &interp->dynslope.bakd, frac, &interp->dynslope.slope->d);
 			interp->dynslope.slope->zdelta = R_LerpFixed(interp->dynslope.oldzdelta, interp->dynslope.bakzdelta, frac);
+			interp->dynslope.slope->moved = true;
 			break;
 		}
 	}

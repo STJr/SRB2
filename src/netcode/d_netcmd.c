@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -606,6 +606,7 @@ void D_RegisterServerCommands(void)
 	CV_RegisterVar(&cv_blamecfail);
 	CV_RegisterVar(&cv_dedicatedidletime);
 	CV_RegisterVar(&cv_idletime);
+	CV_RegisterVar(&cv_httpsource);
 
 	COM_AddCommand("ping", Command_Ping_f, COM_LUA);
 	CV_RegisterVar(&cv_nettimeout);
@@ -4068,7 +4069,7 @@ static void ExitMove_OnChange(void)
 				if (players[i].mo->target && players[i].mo->target->type == MT_SIGN)
 					P_SetTarget(&players[i].mo->target, NULL);
 
-				if (players[i].pflags & PF_FINISHED)
+				if (players[i].pflags & PF_FINISHED && !(players[i].exiting))
 					P_GiveFinishFlags(&players[i]);
 			}
 

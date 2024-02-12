@@ -428,25 +428,9 @@ static void HWR_RenderPlane(subsector_t *subsector, extrasubsector_t *xsub, bool
 	// set texture for polygon
 	if (levelflat != NULL)
 	{
-		if (levelflat->type == LEVELFLAT_FLAT)
-		{
-			size_t len = W_LumpLength(levelflat->u.flat.lumpnum);
-			unsigned flatflag = R_GetFlatSize(len);
-			fflatwidth = fflatheight = (float)flatflag;
-		}
-		else
-		{
-			if (levelflat->type == LEVELFLAT_TEXTURE)
-			{
-				fflatwidth = textures[levelflat->u.texture.num]->width;
-				fflatheight = textures[levelflat->u.texture.num]->height;
-			}
-			else if (levelflat->type == LEVELFLAT_PATCH || levelflat->type == LEVELFLAT_PNG)
-			{
-				fflatwidth = levelflat->width;
-				fflatheight = levelflat->height;
-			}
-		}
+		texture_t *texture = textures[R_GetTextureNumForFlat(levelflat)];
+		fflatwidth = texture->width;
+		fflatheight = texture->height;
 	}
 	else // set no texture
 		HWR_SetCurrentTexture(NULL);
@@ -3504,25 +3488,9 @@ static void HWR_RenderPolyObjectPlane(polyobj_t *polysector, boolean isceiling, 
 	// set texture for polygon
 	if (levelflat != NULL)
 	{
-		if (levelflat->type == LEVELFLAT_FLAT)
-		{
-			size_t len = W_LumpLength(levelflat->u.flat.lumpnum);
-			unsigned flatflag = R_GetFlatSize(len);
-			fflatwidth = fflatheight = (float)flatflag;
-		}
-		else
-		{
-			if (levelflat->type == LEVELFLAT_TEXTURE)
-			{
-				fflatwidth = textures[levelflat->u.texture.num]->width;
-				fflatheight = textures[levelflat->u.texture.num]->height;
-			}
-			else if (levelflat->type == LEVELFLAT_PATCH || levelflat->type == LEVELFLAT_PNG)
-			{
-				fflatwidth = levelflat->width;
-				fflatheight = levelflat->height;
-			}
-		}
+		texture_t *texture = textures[R_GetTextureNumForFlat(levelflat)];
+		fflatwidth = texture->width;
+		fflatheight = texture->height;
 	}
 	else // set no texture
 		HWR_SetCurrentTexture(NULL);
@@ -3569,8 +3537,6 @@ static void HWR_RenderPolyObjectPlane(polyobj_t *polysector, boolean isceiling, 
 		}
 	}
 
-	anglef = ANG2RAD(InvAngle(angle));
-
 	for (i = 0; i < (INT32)nrPlaneVerts; i++,v3d++)
 	{
 		// Go from the polysector's original vertex locations
@@ -3583,6 +3549,8 @@ static void HWR_RenderPolyObjectPlane(polyobj_t *polysector, boolean isceiling, 
 		{
 			tempxsow = v3d->s;
 			tempytow = v3d->t;
+
+			anglef = ANG2RAD(InvAngle(angle));
 
 			v3d->s = (tempxsow * cos(anglef)) - (tempytow * sin(anglef));
 			v3d->t = (tempxsow * sin(anglef)) + (tempytow * cos(anglef));
@@ -6273,7 +6241,10 @@ static void HWR_ProjectSprite(mobj_t *thing)
 		translation = thing->translation;
 
 	//Hurdler: 25/04/2000: now support colormap in hardware mode
-	vis->colormap = R_GetTranslationForThing(vis->mobj, color, translation);
+	if ((thing->flags2 & MF2_LINKDRAW) && thing->tracer)
+		vis->colormap = R_GetTranslationForThing(thing->tracer, color, translation);
+	else
+		vis->colormap = R_GetTranslationForThing(thing, color, translation);
 
 	// set top/bottom coords
 	vis->gzt = gzt;

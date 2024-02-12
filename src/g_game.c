@@ -3339,7 +3339,7 @@ void G_AddPlayer(INT32 playernum)
 		p->lives = cv_startinglives.value;
 
 	if ((countplayers && !notexiting) || G_IsSpecialStage(gamemap))
-		P_DoPlayerExit(p);
+		P_DoPlayerExit(p, false);
 }
 
 boolean G_EnoughPlayersFinished(void)
@@ -3872,12 +3872,13 @@ static INT16 RandMap(UINT32 tolflags, INT16 pprevmap)
 //
 // G_UpdateVisited
 //
-static void G_UpdateVisited(gamedata_t *data, player_t *player, boolean silent)
+static void G_UpdateVisited(gamedata_t *data, player_t *player, boolean global)
 {
 	// Update visitation flags?
 	if (!demoplayback
 		&& G_CoopGametype() // Campaign mode
-		&& !stagefailed) // Did not fail the stage
+		&& !stagefailed // Did not fail the stage
+		&& (global || player->pflags & PF_FINISHED)) // Actually beat the stage
 	{
 		UINT8 earnedEmblems;
 		UINT16 totalrings = 0;
@@ -3915,12 +3916,12 @@ static void G_UpdateVisited(gamedata_t *data, player_t *player, boolean silent)
 				data->mapvisited[gamemap-1] |= MV_ALLEMERALDS;
 		}
 
-		if ((earnedEmblems = M_CompletionEmblems(data)) && !silent)
+		if ((earnedEmblems = M_CompletionEmblems(data)) && !global)
 		{
 			CONS_Printf(M_GetText("\x82" "Earned %hu emblem%s for level completion.\n"), (UINT16)earnedEmblems, earnedEmblems > 1 ? "s" : "");
 		}
 
-		if (silent)
+		if (global)
 		{
 			M_CheckLevelEmblems(data);
 		}
@@ -4612,6 +4613,8 @@ void G_LoadGameData(gamedata_t *data)
 // Saves the main data file, which stores information such as emblems found, etc.
 void G_SaveGameData(gamedata_t *data)
 {
+	UINT8 *data_p;
+
 	size_t length;
 	INT32 i, j;
 	UINT8 btemp;
@@ -4621,8 +4624,8 @@ void G_SaveGameData(gamedata_t *data)
 	if (!data->loaded)
 		return; // If never loaded (-nodata), don't save
 
-	save_p = savebuffer = (UINT8 *)malloc(GAMEDATASIZE);
-	if (!save_p)
+	data_p = savebuffer = (UINT8 *)malloc(GAMEDATASIZE);
+	if (!data_p)
 	{
 		CONS_Alert(CONS_ERROR, M_GetText("No more free memory for saving game data\n"));
 		return;
@@ -4631,20 +4634,20 @@ void G_SaveGameData(gamedata_t *data)
 	if (usedCheats)
 	{
 		free(savebuffer);
-		save_p = savebuffer = NULL;
+		savebuffer = NULL;
 		return;
 	}
 
 	// Version test
-	WRITEUINT32(save_p, GAMEDATA_ID);
+	WRITEUINT32(data_p, GAMEDATA_ID);
 
-	WRITEUINT32(save_p, data->totalplaytime);
+	WRITEUINT32(data_p, data->totalplaytime);
 
-	WRITEUINT32(save_p, quickncasehash(timeattackfolder, sizeof timeattackfolder));
+	WRITEUINT32(data_p, quickncasehash(timeattackfolder, sizeof timeattackfolder));
 
 	// TODO put another cipher on these things? meh, I don't care...
 	for (i = 0; i < NUMMAPS; i++)
-		WRITEUINT8(save_p, (data->mapvisited[i] & MV_MAX));
+		WRITEUINT8(data_p, (data->mapvisited[i] & MV_MAX));
 
 	// To save space, use one bit per collected/achieved/unlocked flag
 	for (i = 0; i < MAXEMBLEMS;)
@@ -4652,7 +4655,7 @@ void G_SaveGameData(gamedata_t *data)
 		btemp = 0;
 		for (j = 0; j < 8 && j+i < MAXEMBLEMS; ++j)
 			btemp |= (data->collected[j+i] << j);
-		WRITEUINT8(save_p, btemp);
+		WRITEUINT8(data_p, btemp);
 		i += j;
 	}
 	for (i = 0; i < MAXEXTRAEMBLEMS;)
@@ -4660,7 +4663,7 @@ void G_SaveGameData(gamedata_t *data)
 		btemp = 0;
 		for (j = 0; j < 8 && j+i < MAXEXTRAEMBLEMS; ++j)
 			btemp |= (data->extraCollected[j+i] << j);
-		WRITEUINT8(save_p, btemp);
+		WRITEUINT8(data_p, btemp);
 		i += j;
 	}
 	for (i = 0; i < MAXUNLOCKABLES;)
@@ -4668,7 +4671,7 @@ void G_SaveGameData(gamedata_t *data)
 		btemp = 0;
 		for (j = 0; j < 8 && j+i < MAXUNLOCKABLES; ++j)
 			btemp |= (data->unlocked[j+i] << j);
-		WRITEUINT8(save_p, btemp);
+		WRITEUINT8(data_p, btemp);
 		i += j;
 	}
 	for (i = 0; i < MAXCONDITIONSETS;)
@@ -4676,30 +4679,30 @@ void G_SaveGameData(gamedata_t *data)
 		btemp = 0;
 		for (j = 0; j < 8 && j+i < MAXCONDITIONSETS; ++j)
 			btemp |= (data->achieved[j+i] << j);
-		WRITEUINT8(save_p, btemp);
+		WRITEUINT8(data_p, btemp);
 		i += j;
 	}
 
-	WRITEUINT32(save_p, data->timesBeaten);
-	WRITEUINT32(save_p, data->timesBeatenWithEmeralds);
-	WRITEUINT32(save_p, data->timesBeatenUltimate);
+	WRITEUINT32(data_p, data->timesBeaten);
+	WRITEUINT32(data_p, data->timesBeatenWithEmeralds);
+	WRITEUINT32(data_p, data->timesBeatenUltimate);
 
 	// Main records
 	for (i = 0; i < NUMMAPS; i++)
 	{
 		if (data->mainrecords[i])
 		{
-			WRITEUINT32(save_p, data->mainrecords[i]->score);
-			WRITEUINT32(save_p, data->mainrecords[i]->time);
-			WRITEUINT16(save_p, data->mainrecords[i]->rings);
+			WRITEUINT32(data_p, data->mainrecords[i]->score);
+			WRITEUINT32(data_p, data->mainrecords[i]->time);
+			WRITEUINT16(data_p, data->mainrecords[i]->rings);
 		}
 		else
 		{
-			WRITEUINT32(save_p, 0);
-			WRITEUINT32(save_p, 0);
-			WRITEUINT16(save_p, 0);
+			WRITEUINT32(data_p, 0);
+			WRITEUINT32(data_p, 0);
+			WRITEUINT16(data_p, 0);
 		}
-		WRITEUINT8(save_p, 0); // compat
+		WRITEUINT8(data_p, 0); // compat
 	}
 
 	// NiGHTS records
@@ -4707,25 +4710,25 @@ void G_SaveGameData(gamedata_t *data)
 	{
 		if (!data->nightsrecords[i] || !data->nightsrecords[i]->nummares)
 		{
-			WRITEUINT8(save_p, 0);
+			WRITEUINT8(data_p, 0);
 			continue;
 		}
 
-		WRITEUINT8(save_p, data->nightsrecords[i]->nummares);
+		WRITEUINT8(data_p, data->nightsrecords[i]->nummares);
 
 		for (curmare = 0; curmare < (data->nightsrecords[i]->nummares + 1); ++curmare)
 		{
-			WRITEUINT32(save_p, data->nightsrecords[i]->score[curmare]);
-			WRITEUINT8(save_p, data->nightsrecords[i]->grade[curmare]);
-			WRITEUINT32(save_p, data->nightsrecords[i]->time[curmare]);
+			WRITEUINT32(data_p, data->nightsrecords[i]->score[curmare]);
+			WRITEUINT8(data_p, data->nightsrecords[i]->grade[curmare]);
+			WRITEUINT32(data_p, data->nightsrecords[i]->time[curmare]);
 		}
 	}
 
-	length = save_p - savebuffer;
+	length = data_p - savebuffer;
 
 	FIL_WriteFile(va(pandf, srb2home, gamedatafilename), savebuffer, length);
 	free(savebuffer);
-	save_p = savebuffer = NULL;
+	savebuffer = NULL;
 }
 
 #define VERSIONSIZE 16

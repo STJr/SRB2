@@ -113,8 +113,9 @@ UINT8 *ds_source; // points to the start of a flat
 UINT8 *ds_transmap; // one of the translucency tables
 
 // Vectors for Software's tilted slope drawers
-floatv3_t ds_su, ds_sv, ds_sz, ds_slopelight;
-float focallengthf, zeroheight;
+dvector3_t ds_su, ds_sv, ds_sz, ds_slopelight;
+double zeroheight;
+float focallengthf;
 
 /**	\brief Variable flat sizes
 */
@@ -129,7 +130,7 @@ static colorcache_t **translationtablecache[TT_CACHE_SIZE] = {NULL};
 
 boolean skincolor_modified[MAXSKINCOLORS];
 
-static INT32 SkinToCacheIndex(INT32 translation)
+INT32 R_SkinTranslationToCacheIndex(INT32 translation)
 {
 	switch (translation)
 	{
@@ -434,6 +435,7 @@ static void R_RainbowColormap(UINT8 *dest_colormap, UINT16 skincolor)
 static void R_GenerateTranslationColormap(UINT8 *dest_colormap, INT32 translation, UINT16 color, INT32 starttranscolor)
 {
 	INT32 i, skinramplength;
+	remaptable_t *tr;
 
 	// Handle a couple of simple special cases
 	if (translation < TC_DEFAULT)
@@ -442,7 +444,7 @@ static void R_GenerateTranslationColormap(UINT8 *dest_colormap, INT32 translatio
 		{
 			case TC_ALLWHITE:
 			case TC_DASHMODE:
-				remaptable_t *tr = R_GetBuiltInTranslation((SINT8)translation);
+				tr = R_GetBuiltInTranslation((SINT8)translation);
 				if (tr)
 				{
 					memcpy(dest_colormap, tr->remap, NUM_PALETTE_ENTRIES);
@@ -556,7 +558,7 @@ UINT8* R_GetTranslationColormap(INT32 skinnum, skincolornum_t color, UINT8 flags
 	else if (skinnum <= TC_DEFAULT)
 	{
 		// Do default translation
-		index = SkinToCacheIndex(skinnum);
+		index = R_SkinTranslationToCacheIndex(skinnum);
 	}
 	else
 		I_Error("Invalid translation %d", skinnum);

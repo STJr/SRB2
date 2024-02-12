@@ -983,7 +983,7 @@ boolean CON_Responder(event_t *ev)
 		if (modeattacking || metalrecording || marathonmode)
 			return false;
 
-		if ((key == gamecontrol[GC_CONSOLE][0] || key == gamecontrol[GC_CONSOLE][1]) && !shiftdown)
+		if (ev->type == ev_keydown && ((key == gamecontrol[GC_CONSOLE][0] || key == gamecontrol[GC_CONSOLE][1]) && !shiftdown))
 		{
 			if (consdown) // ignore repeat
 				return true;
@@ -1780,10 +1780,10 @@ static void CON_DrawBackpic(void)
 	// then fill the sides with a solid color.
 	if (x > 0)
 	{
-		column_t *column = (column_t *)((UINT8 *)(con_backpic->columns) + (con_backpic->columnofs[0]));
-		if (!column->topdelta)
+		column_t *column = &con_backpic->columns[0];
+		if (column->num_posts && !column->posts[0].topdelta)
 		{
-			UINT8 *source = (UINT8 *)(column) + 3;
+			UINT8 *source = column->pixels;
 			INT32 color = (source[0] | V_NOSCALESTART);
 			// left side
 			V_DrawFill(0, 0, x, con_curlines, color);
