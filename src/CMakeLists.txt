@@ -35,7 +35,9 @@ add_executable(SRB2SDL2 MACOSX_BUNDLE WIN32
 	m_misc.c
 	m_perfstats.c
 	m_random.c
+	m_tokenizer.c
 	m_queue.c
+	m_vector.c
 	info.c
 	p_ceilng.c
 	p_enemy.c
@@ -68,6 +70,7 @@ add_executable(SRB2SDL2 MACOSX_BUNDLE WIN32
 	r_things.c
 	r_bbox.c
 	r_textures.c
+	r_translation.c
 	r_patch.c
 	r_patchrotation.c
 	r_picformats.c
@@ -99,6 +102,7 @@ add_executable(SRB2SDL2 MACOSX_BUNDLE WIN32
 	lua_blockmaplib.c
 	lua_hudlib.c
 	lua_hudlib_drawlist.c
+	lua_colorlib.c
 	lua_inputlib.c
 )
 
@@ -253,6 +257,7 @@ target_compile_options(SRB2SDL2 PRIVATE
 		-Winline
 		-Wformat-y2k
 		-Wformat-security
+		-fwrapv
 
 		$<$<VERSION_LESS:$<C_COMPILER_VERSION>,2.9.5>:
 			-Wno-div-by-zero
@@ -276,7 +281,7 @@ target_compile_options(SRB2SDL2 PRIVATE
 
 		$<$<VERSION_GREATER_EQUAL:$<C_COMPILER_VERSION>,4.5.0>:
 			-Wlogical-op
-			-Wno-error=array-bounds
+			#-Wno-error=array-bounds
 		>
 
 		$<$<VERSION_GREATER_EQUAL:$<C_COMPILER_VERSION>,4.6.0>:
@@ -322,6 +327,7 @@ target_compile_options(SRB2SDL2 PRIVATE
 		-Wno-error=non-literal-null-conversion
 		-Wno-error=constant-conversion
 		-Wno-error=unused-but-set-variable
+		-fwrapv
 	>
 
 	# C, MSVC
@@ -374,6 +380,11 @@ if(SRB2_CONFIG_MOBJCONSISTANCY)
 endif()
 if(SRB2_CONFIG_PACKETDROP)
 	target_compile_definitions(SRB2SDL2 PRIVATE -DPACKETDROP)
+endif()
+if(SRB2_CONFIG_EXECINFO)
+else()
+	target_compile_definitions(SRB2SDL2 PRIVATE -DNOEXECINFO)
+	message(STATUS "You have disabled stack trace dump support")
 endif()
 if(SRB2_CONFIG_ZDEBUG)
 	target_compile_definitions(SRB2SDL2 PRIVATE -DZDEBUG)

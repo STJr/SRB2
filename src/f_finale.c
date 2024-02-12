@@ -1327,7 +1327,7 @@ void F_CreditDrawer(void)
 			y += 12<<FRACBITS;
 			break;
 		}
-		if (FixedMul(y,vid.dupy) > vid.height)
+		if (FixedMul(y,vid.dup) > vid.height)
 			break;
 	}
 }
@@ -1362,7 +1362,7 @@ void F_CreditTicker(void)
 			case 1: y += 30<<FRACBITS; break;
 			default: y += 12<<FRACBITS; break;
 		}
-		if (FixedMul(y,vid.dupy) > vid.height)
+		if (FixedMul(y,vid.dup) > vid.height)
 			break;
 	}
 
@@ -1603,9 +1603,9 @@ void F_GameEvaluationDrawer(void)
 		rtatext = (marathonmode & MA_INGAME) ? "In-game timer" : "RTA timer";
 		cuttext = (marathonmode & MA_NOCUTSCENES) ? "" : " w/ cutscenes";
 		if (botskin)
-			endingtext = va("%s & %s, %s%s", skins[players[consoleplayer].skin].realname, skins[botskin-1].realname, rtatext, cuttext);
+			endingtext = va("%s & %s, %s%s", skins[players[consoleplayer].skin]->realname, skins[botskin-1]->realname, rtatext, cuttext);
 		else
-			endingtext = va("%s, %s%s", skins[players[consoleplayer].skin].realname, rtatext, cuttext);
+			endingtext = va("%s, %s%s", skins[players[consoleplayer].skin]->realname, rtatext, cuttext);
 		V_DrawCenteredString(BASEVIDWIDTH/2, 182, V_SNAPTOBOTTOM|(ultimatemode ? V_REDMAP : V_YELLOWMAP), endingtext);
 	}
 }
@@ -1719,9 +1719,9 @@ static void F_CacheEnding(void)
 		UINT8 skinnum = players[consoleplayer].skin;
 		spritedef_t *sprdef;
 		spriteframe_t *sprframe;
-		if (skins[skinnum].sprites[SPR2_XTRA].numframes > (XTRA_ENDING+2))
+		if (skins[skinnum]->sprites[SPR2_XTRA].numframes > (XTRA_ENDING+2))
 		{
-			sprdef = &skins[skinnum].sprites[SPR2_XTRA];
+			sprdef = &skins[skinnum]->sprites[SPR2_XTRA];
 			// character head, skin specific
 			sprframe = &sprdef->spriteframes[XTRA_ENDING];
 			endfwrk[0] = W_CachePatchNum(sprframe->lumppat[0], PU_PATCH_LOWPRIORITY);
@@ -2082,7 +2082,7 @@ void F_EndingDrawer(void)
 		if (goodending && finalecount >= TICRATE && finalecount < INFLECTIONPOINT)
 		{
 			INT32 workingtime = finalecount - TICRATE;
-			fixed_t radius = ((vid.width/vid.dupx)*(INFLECTIONPOINT - TICRATE - workingtime))/(INFLECTIONPOINT - TICRATE);
+			fixed_t radius = ((vid.width/vid.dup)*(INFLECTIONPOINT - TICRATE - workingtime))/(INFLECTIONPOINT - TICRATE);
 			angle_t fa;
 			INT32 eemeralds_cur[4];
 			char patchname[7] = "CEMGx0";
@@ -2167,7 +2167,7 @@ void F_EndingDrawer(void)
 		boolean donttouch = false;
 		const char *str;
 		if (goodending)
-			str = va("[S] %s: Engage.", skins[players[consoleplayer].skin].realname);
+			str = va("[S] %s: Engage.", skins[players[consoleplayer].skin]->realname);
 		else
 			str = "[S] Eggman: Abscond.";
 
@@ -2287,7 +2287,6 @@ void F_InitMenuPresValues(void)
 void F_SkyScroll(const char *patchname)
 {
 	INT32 x, basey = 0;
-	INT32 dupz = (vid.dupx < vid.dupy ? vid.dupx : vid.dupy);
 	patch_t *pat;
 
 	if (rendermode == render_none)
@@ -2315,17 +2314,17 @@ void F_SkyScroll(const char *patchname)
 	curbgy %= pat->height * 16;
 
 	// Ooh, fancy frame interpolation
-	x     = ((curbgx*dupz) + FixedInt((rendertimefrac-FRACUNIT) * curbgxspeed*dupz)) / 16;
-	basey = ((curbgy*dupz) + FixedInt((rendertimefrac-FRACUNIT) * curbgyspeed*dupz)) / 16;
+	x     = ((curbgx*vid.dup) + FixedInt((rendertimefrac-FRACUNIT) * curbgxspeed*vid.dup)) / 16;
+	basey = ((curbgy*vid.dup) + FixedInt((rendertimefrac-FRACUNIT) * curbgyspeed*vid.dup)) / 16;
 
 	if (x     > 0) // Make sure that we don't leave the left or top sides empty
-		x     -= pat->width  * dupz;
+		x     -= pat->width  * vid.dup;
 	if (basey > 0)
-		basey -= pat->height * dupz;
+		basey -= pat->height * vid.dup;
 
-	for (; x < vid.width; x += pat->width * dupz)
+	for (; x < vid.width; x += pat->width * vid.dup)
 	{
-		for (INT32 y = basey; y < vid.height; y += pat->height * dupz)
+		for (INT32 y = basey; y < vid.height; y += pat->height * vid.dup)
 			V_DrawScaledPatch(x, y, V_NOSCALESTART, pat);
 	}
 
@@ -2603,7 +2602,7 @@ static void F_LoadAlacroixGraphics(SINT8 newttscale)
 
 static void F_FigureActiveTtScale(void)
 {
-	SINT8 newttscale = max(1, min(6, vid.dupx));
+	SINT8 newttscale = max(1, min(6, vid.dup));
 	SINT8 oldttscale = activettscale;
 
 	if (newttscale == testttscale)
@@ -3555,7 +3554,7 @@ void F_StartContinue(void)
 	S_ChangeMusicInternal("_conti", false);
 	S_StopSounds();
 
-	contskins[0] = &skins[players[consoleplayer].skin];
+	contskins[0] = skins[players[consoleplayer].skin];
 	cont_spr2[0][0] = P_GetSkinSprite2(contskins[0], SPR2_CNT1, NULL);
 	cont_spr2[0][2] = contskins[0]->contangle & 7;
 	contcolormaps[0] = R_GetTranslationColormap(players[consoleplayer].skin, players[consoleplayer].skincolor, GTC_CACHE);
@@ -3571,7 +3570,7 @@ void F_StartContinue(void)
 		else // HACK
 			secondplaya = 1;
 
-		contskins[1] = &skins[players[secondplaya].skin];
+		contskins[1] = skins[players[secondplaya].skin];
 		cont_spr2[1][0] = P_GetSkinSprite2(contskins[1], SPR2_CNT4, NULL);
 		cont_spr2[1][2] = (contskins[1]->contangle >> 3) & 7;
 		contcolormaps[1] = R_GetTranslationColormap(players[secondplaya].skin, players[secondplaya].skincolor, GTC_CACHE);
@@ -4095,7 +4094,7 @@ static fixed_t F_GetPromptHideHudBound(void)
 	F_GetPageTextGeometry(&pagelines, &rightside, &boxh, &texth, &texty, &namey, &chevrony, &textx, &textr);
 
 	// calc boxheight (see V_DrawPromptBack)
-	boxh *= vid.dupy;
+	boxh *= vid.dup;
 	boxh = (boxh * 4) + (boxh/2)*5; // 4 lines of space plus gaps between and some leeway
 
 	// return a coordinate to check
@@ -4525,7 +4524,7 @@ void F_TextPromptDrawer(void)
 			if (players[j].mo->state == states+S_PLAY_STND && players[j].mo->tics != -1)\
 				players[j].mo->tics++;\
 			else if (players[j].mo->state == states+S_PLAY_WAIT)\
-				P_SetPlayerMobjState(players[j].mo, S_PLAY_STND);\
+				P_SetMobjState(players[j].mo, S_PLAY_STND);\
 		}\
 	}
 

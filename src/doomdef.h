@@ -109,10 +109,18 @@ FILE *fopenfile(const char*, const char*);
 
 // If you don't disable ALL debug first, you get ALL debug enabled
 #if !defined (NDEBUG)
+#ifndef PACKETDROP
 #define PACKETDROP
+#endif
+#ifndef PARANOIA
 #define PARANOIA
+#endif
+#ifndef RANGECHECK
 #define RANGECHECK
+#endif
+#ifndef ZDEBUG
 #define ZDEBUG
+#endif
 #endif
 
 // Uncheck this to compile debugging code
@@ -233,9 +241,16 @@ extern char logfilename[1024];
 // NOTE: it needs more than this to increase the number of players...
 
 #define MAXPLAYERS 32
-#define MAXSKINS 32
-#define PLAYERSMASK (MAXPLAYERS-1)
 #define MAXPLAYERNAME 21
+#define PLAYERSMASK (MAXPLAYERS-1)
+
+// Don't make MAXSKINS higher than 256, since skin numbers are used with an
+// UINT8 in various parts of the codebase. If you do anyway, the data type
+// of those variables will have to be changed into at least an UINT16.
+// This change must affect code such as demo recording and playback,
+// and the structure of some networking packets and commands.
+#define MAXSKINS 256
+#define MAXCHARACTERSLOTS (MAXSKINS * 3) // Should be higher than MAXSKINS.
 
 #define COLORRAMPSIZE 16
 #define MAXCOLORNAME 32
@@ -533,13 +548,14 @@ extern char liveeventbackup[256];
 #define M_GetText(x) (x)
 #endif
 void M_StartupLocale(void);
-extern void *(*M_Memcpy)(void* dest, const void* src, size_t n) FUNCNONNULL;
+void *M_Memcpy(void* dest, const void* src, size_t n);
 char *va(const char *format, ...) FUNCPRINTF;
 char *M_GetToken(const char *inputString);
 void M_UnGetToken(void);
 void M_TokenizerOpen(const char *inputString);
 void M_TokenizerClose(void);
 const char *M_TokenizerRead(UINT32 i);
+const char *M_TokenizerReadZDoom(UINT32 i);
 UINT32 M_TokenizerGetEndPos(void);
 void M_TokenizerSetEndPos(UINT32 newPos);
 char *sizeu1(size_t num);
@@ -716,9 +732,6 @@ extern int
 #ifndef HAVE_PNG
 #define NO_PNG_LUMPS
 #endif
-
-/// Render flats on walls
-#define WALLFLATS
 
 /// Maintain compatibility with older 2.2 demos
 #define OLD22DEMOCOMPAT
