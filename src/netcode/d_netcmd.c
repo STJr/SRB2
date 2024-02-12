@@ -4069,7 +4069,7 @@ static void ExitMove_OnChange(void)
 				if (players[i].mo->target && players[i].mo->target->type == MT_SIGN)
 					P_SetTarget(&players[i].mo->target, NULL);
 
-				if (players[i].pflags & PF_FINISHED)
+				if (players[i].pflags & PF_FINISHED && !(players[i].exiting))
 					P_GiveFinishFlags(&players[i]);
 			}
 
