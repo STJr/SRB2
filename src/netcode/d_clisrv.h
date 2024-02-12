@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -48,7 +48,7 @@ typedef enum
 	KR_TIMEOUT       = 4, //Connection Timeout
 	KR_BAN           = 5, //Banned by server
 	KR_LEAVE         = 6, //Quit the game
-
+	KR_IDLE          = 7, //Remained still for too long
 } kickreason_t;
 
 /* the max number of name changes in some time period */
@@ -73,7 +73,8 @@ extern UINT32 realpingtable[MAXPLAYERS];
 extern UINT32 playerpingtable[MAXPLAYERS];
 extern tic_t servermaxping;
 
-extern consvar_t cv_netticbuffer, cv_resynchattempts, cv_blamecfail, cv_playbackspeed, cv_dedicatedidletime;
+extern consvar_t cv_netticbuffer, cv_resynchattempts, cv_blamecfail, cv_playbackspeed, cv_idletime, cv_dedicatedidletime;
+extern consvar_t cv_httpsource;
 
 // Used in d_net, the only dependence
 void D_ClientServerInit(void);
@@ -121,14 +122,15 @@ extern char motd[254], server_context[8];
 extern UINT8 playernode[MAXPLAYERS];
 
 INT32 D_NumPlayers(void);
+INT32 D_NumNodes(boolean skiphost);
 INT32 D_NumBots(void);
 
 tic_t GetLag(INT32 node);
 
 void D_MD5PasswordPass(const UINT8 *buffer, size_t len, const char *salt, void *dest);
 
-extern UINT8 adminpassmd5[16];
-extern boolean adminpasswordset;
+extern UINT8 (*adminpassmd5)[16];
+extern UINT32 adminpasscount;
 
 extern boolean hu_stopped;
 
