@@ -486,6 +486,8 @@ static int lib_iterateSectorThinglist(lua_State *L)
 	if (!lua_isnil(L, 1))
 	{
 		thing = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
+		if (P_MobjWasRemoved(thing))
+			return luaL_error(L, "current entry in thinglist was removed; avoid calling P_RemoveMobj on entries!");
 		thing = thing->snext;
 	}
 	else

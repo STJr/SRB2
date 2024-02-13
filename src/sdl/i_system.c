@@ -3256,4 +3256,10 @@ const CPUInfoFlags *I_CPUInfo(void)
 
 // note CPUAFFINITY code used to reside here
 void I_RegisterSysCommands(void) {}
+
+const char *I_GetSysName(void)
+{
+	return SDL_GetPlatform();
+}
+
 #endif

@@ -502,9 +502,6 @@ typedef enum
 // at game start
 void P_InitPicAnims(void);
 
-// at map load (sectors)
-void P_SetupLevelFlatAnims(void);
-
 // at map load
 void P_InitSpecials(void);
 void P_ApplyFlatAlignment(sector_t* sector, angle_t flatangle, fixed_t xoffs, fixed_t yoffs, boolean floor, boolean ceiling);
