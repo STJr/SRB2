@@ -94,7 +94,7 @@ default:
     - - |
           # apt_common
           echo -e "\e[0Ksection_start:`date +%s`:apt_common[collapsed=true]\r\e[0KInstalling common packages"
-      - apt-get install make git ccache nasm cmake
+      - apt-get install make git ccache nasm cmake ca-certificate
       - |
           # apt_common
           echo -e "\e[0Ksection_end:`date +%s`:apt_common\r\e[0K"
@@ -580,6 +580,8 @@ Debian testing Clang:
   extends: Debian stable Clang
 
   when: manual
+
+  allow_failure: true
 
   image: debian:testing-slim
 
