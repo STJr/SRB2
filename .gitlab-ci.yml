@@ -528,7 +528,7 @@ Debian stable Clang:
 
   when: on_success
 
-  allow_failure: true
+  allow_failure: false
 
   artifacts:
     paths:
@@ -539,8 +539,8 @@ Debian stable Clang:
 
   variables:
     CC: clang
-    WFLAGS: -Wno-cast-align -Wno-implicit-const-int-float-conversion
-    CFLAGS: -Wno-cast-align -Wno-implicit-const-int-float-conversion
+    WFLAGS: -Wno-cast-align -Wno-implicit-const-int-float-conversion -Werror
+    CFLAGS: -Wno-cast-align -Wno-implicit-const-int-float-conversion -Werror
     LDFLAGS: -Wl,-fuse-ld=gold
 
   script:
@@ -592,8 +592,8 @@ Debian testing Clang:
 
   variables:
     CC: clang
-    WFLAGS: -Wno-cast-align -Wno-implicit-const-int-float-conversion -Wno-deprecated-non-prototype -Wno-single-bit-bitfield-constant-conversion
-    CFLAGS: -Wno-cast-align -Wno-implicit-const-int-float-conversion -Wno-deprecated-non-prototype -Wno-single-bit-bitfield-constant-conversion
+    WFLAGS: -Wno-cast-align -Wno-implicit-const-int-float-conversion -Werror -Wno-deprecated-non-prototype -Wno-single-bit-bitfield-constant-conversion
+    CFLAGS: -Wno-cast-align -Wno-implicit-const-int-float-conversion -Werror -Wno-deprecated-non-prototype -Wno-single-bit-bitfield-constant-conversion
     LDFLAGS: -Wl,-fuse-ld=gold
 
 Alpine 3 GCC:
