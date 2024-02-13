@@ -1522,6 +1522,50 @@ size_t I_GetRandomBytes(char *destination, size_t count)
 
 void I_RegisterSysCommands(void){}
 
+char const *I_GetSysName(void)
+{
+	// reference: https://sourceforge.net/p/predef/wiki/OperatingSystems/
+#if defined(_WIN32) || defined(__CYGWIN__)
+	return "Windows";
+#elif defined(__APPLE__)
+	return "Mac OS";
+#elif defined(__linux__)
+	return "Linux";
+#elif defined(__FreeBSD__)
+	return "FreeBSD";
+#elif defined(__OpenBSD__)
+	return "OpenBSD";
+#elif defined(__NetBSD__)
+	return "NetBSD";
+#elif defined(__DragonFly__)
+	return "DragonFly BSD";
+#elif defined(__gnu_hurd__)
+	return "GNU Hurd"; // for anyone mental enough to set up an SRB2 server on GNU Hurd
+#elif defined(__hpux)
+	return "HP-UX";
+#elif defined(EPLAN9)
+	return "Plan 9";
+#elif defined(__HAIKU__)
+	return "Haiku";
+#elif defined(__BEOS__)
+	return "BeOS";
+#elif defined(__minix)
+	return "Minix";
+#elif defined(__sun)
+#if defined(__SVR4) || defined(__srv4__)
+	return "Solaris"; // this would be so cursed...
+#else
+	return "SunOS";
+#endif
+#elif defined(_AIX)
+	return "AIX";
+#elif defined(__SYLLABLE__)
+	return "SyllableOS"; // RIP SyllableOS, i still miss you ;-;
+#else
+	return "Unknown";
+#endif
+}
+
 void I_GetCursorPosition(INT32 *x, INT32 *y)
 {
 	(void)x;
