@@ -526,7 +526,7 @@ Windows x64:
 Debian stable Clang:
   stage: build
 
-  when: manual
+  when: on_success
 
   allow_failure: true
 
@@ -561,9 +561,17 @@ Debian stable Clang:
           echo -e "\e[0Ksection_end:`date +%s`:apt_development\r\e[0K"
 
     - - |
+          # cmake
+          echo -e "\e[0Ksection_start:`date +%s`:cmake[collapsed=false]\r\e[0KBuilding Makefiles"
+      - cmake -B build.clang -D CPM_USE_LOCAL_PACKAGES:BOOL=ON -D SRB2_CONFIG_ENABLE_TESTS:BOOL=OFF -D SRB2_CONFIG_SYSTEM_LIBRARIES:BOOL=ON -G "Unix Makefiles"
+      - |
+          # cmake
+          echo -e "\e[0Ksection_end:`date +%s`:cmake\r\e[0K"
+
+    - - |
           # make
           echo -e "\e[0Ksection_start:`date +%s`:make[collapsed=false]\r\e[0KCompiling SRB2"
-      - make --directory=src --keep-going CCACHE=1 ERRORMODE=1 NONX86=1 || make --directory=src --keep-going CCACHE=1 ERRORMODE=1 NONX86=1
+      - make --directory=build.clang --keep-going || make --directory=src --keep-going
       - |
           # make
           echo -e "\e[0Ksection_end:`date +%s`:make\r\e[0K"
