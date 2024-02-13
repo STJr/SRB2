@@ -532,8 +532,8 @@ Debian stable Clang:
 
   artifacts:
     paths:
-      - "bin/"
-      - "src/comptime.h"
+      - "build.clang/bin/"
+      - "build.clang/src/comptime.h"
     expose_as: "clang"
     name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-clang"
 
@@ -587,8 +587,8 @@ Debian testing Clang:
 
   artifacts:
     paths:
-      - "bin/"
-      - "src/comptime.h"
+      - "build.clang/bin/"
+      - "build.clang/src/comptime.h"
     expose_as: "testing-clang"
     name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-testing-clang"
 
