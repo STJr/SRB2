@@ -220,7 +220,7 @@ static char *bindtable[NUMINPUTS];
 static void CONS_Bind_f(void)
 {
 	size_t na;
-	char *newcmd;
+	char *newcmd = NULL;
 	//size_t newlen = 0;
 	unsigned int i;
 	INT32 key;
