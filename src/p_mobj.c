@@ -10063,9 +10063,10 @@ static void P_MonitorFuseThink(mobj_t *mobj)
 {
 	mobj_t *newmobj;
 
-	// Special case for ALL monitors.
+	// Special case for ALL monitors outside of co-op.
 	// If a box's speed is nonzero, it's allowed to respawn as a WRM/SRM.
-	if (mobj->info->speed != 0 && (mobj->flags2 & (MF2_AMBUSH|MF2_STRONGBOX)))
+	if (!G_CoopGametype() && mobj->info->speed != 0
+		&& (mobj->flags2 & (MF2_AMBUSH|MF2_STRONGBOX)))
 	{
 		mobjtype_t spawnchance[64];
 		INT32 numchoices = 0, i = 0;
@@ -10855,16 +10856,26 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type, ...)
 
 	// Set shadowscale here, before spawn hook so that Lua can change it
 	mobj->shadowscale = P_DefaultMobjShadowScale(mobj);
+	
+	// A monitor can't respawn if we're not in multiplayer,
+	// or if we're in co-op and it's score or a 1up
+	if (mobj->flags & MF_MONITOR && (!(netgame || multiplayer)
+	|| (G_CoopGametype()
+		&& (mobj->type == MT_1UP_BOX
+		|| mobj->type == MT_SCORE1K_BOX
+		|| mobj->type == MT_SCORE10K_BOX)
+	)))
+		mobj->flags2 |= MF2_DONTRESPAWN;
 
 	if (!(mobj->flags & MF_NOTHINK))
 		P_AddThinker(THINK_MOBJ, &mobj->thinker);
-
 
 	if (type == MT_PLAYER)
 	{
 		// when spawning MT_PLAYER, set mobj->player before calling MobjSpawn hook to prevent P_RemoveMobj from succeeding on player mobj.
 		va_start(args, type);
 		mobj->player = va_arg(args, player_t *);
+		mobj->player->mo = mobj;
 		va_end(args);
 	}
 
@@ -11783,7 +11794,6 @@ void P_SpawnPlayer(INT32 playernum)
     // MT_PLAYER cannot be removed, so this shouldn't be able to return NULL.
 	mobj = P_SpawnMobj(0, 0, 0, MT_PLAYER, p);
 	I_Assert(mobj != NULL);
-	p->mo = mobj;
 
 	mobj->angle = 0;
 
@@ -11889,7 +11899,7 @@ void P_AfterPlayerSpawn(INT32 playernum)
 	if (CheckForReverseGravity)
 		P_CheckGravity(mobj, false);
 
-	if (p->pflags & PF_FINISHED)
+	if (p->pflags & PF_FINISHED && !(p->exiting))
 		P_GiveFinishFlags(p);
 }
 

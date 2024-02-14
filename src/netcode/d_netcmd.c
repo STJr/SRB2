@@ -3812,18 +3812,7 @@ static void Command_Version_f(void)
 #endif
 
 	// OS
-	// Would be nice to use SDL_GetPlatform for this
-#if defined (_WIN32) || defined (_WIN64)
-	CONS_Printf("Windows ");
-#elif defined(__linux__)
-	CONS_Printf("Linux ");
-#elif defined(MACOSX)
-	CONS_Printf("macOS ");
-#elif defined(UNIXCOMMON)
-	CONS_Printf("Unix (Common) ");
-#else
-	CONS_Printf("Other OS ");
-#endif
+	CONS_Printf("%s ", I_GetSysName());
 
 	// Bitness
 	if (sizeof(void*) == 4)
@@ -4069,7 +4058,7 @@ static void ExitMove_OnChange(void)
 				if (players[i].mo->target && players[i].mo->target->type == MT_SIGN)
 					P_SetTarget(&players[i].mo->target, NULL);
 
-				if (players[i].pflags & PF_FINISHED)
+				if (players[i].pflags & PF_FINISHED && !(players[i].exiting))
 					P_GiveFinishFlags(&players[i]);
 			}
 

@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.3 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.5 FATAL_ERROR)
 
 set(CMAKE_BINARY_DIR "${BINARY_DIR}")
 set(CMAKE_CURRENT_BINARY_DIR "${BINARY_DIR}")
