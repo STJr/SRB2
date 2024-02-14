@@ -155,6 +155,10 @@ if (UNIX)
 	target_compile_definitions(SRB2SDL2 PRIVATE -DUNIXCOMMON)
 endif()
 
+if (BSD MATCHES "FreeBSD")
+	target_compile_definitions(SRB2SDL2 PRIVATE -DFREEBSD)
+endif()
+
 if(CMAKE_COMPILER_IS_GNUCC)
 	find_program(OBJCOPY objcopy)
 endif()
