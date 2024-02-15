@@ -393,16 +393,42 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 	}
 
 	player = toucher->player;
-	I_Assert(player != NULL); // Only players can touch stuff!
 
-	if (player->spectator)
-		return;
+	if (player)
+	{
+		if (player->spectator)
+			return;
 
-	// Ignore multihits in "ouchie" mode
-	if (special->flags & (MF_ENEMY|MF_BOSS) && special->flags2 & MF2_FRET)
-		return;
+		// Ignore multihits in "ouchie" mode
+		if (special->flags & (MF_ENEMY | MF_BOSS) && special->flags2 & MF2_FRET)
+			return;
 
-	if (LUA_HookTouchSpecial(special, toucher) || P_MobjWasRemoved(special))
+		if (LUA_HookTouchSpecial(special, toucher) || P_MobjWasRemoved(special))
+			return;
+	}
+
+	if (special->type == MT_STEAM && (player || (toucher->flags & MF_PUSHABLE)))
+	{
+		fixed_t speed = special->info->mass; // conveniently, both fans and gas jets use this for the vertical thrust
+		SINT8 flipval = P_MobjFlip(special); // virtually everything here centers around the thruster's gravity, not the object's!
+
+		if (special->state != &states[S_STEAM1]) // Only when it bursts
+			return;
+
+		toucher->eflags |= MFE_SPRUNG;
+		toucher->momz = flipval * FixedMul(speed, FixedSqrt(FixedMul(special->scale, toucher->scale))); // scale the speed with both objects' scales, just like with springs!
+
+		if (player)
+		{
+			P_ResetPlayer(player);
+			if (player->panim != PA_FALL)
+				P_SetMobjState(toucher, S_PLAY_FALL);
+		}
+
+		return; // Don't collect it!
+	}
+
+	if (!player) // Only players can touch stuff!
 		return;
 
 	// 0 = none, 1 = elemental pierce, 2 = bubble bounce
@@ -1879,20 +1905,6 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			}
 			return;
 
-		case MT_STEAM: // Steam
-			fixed_t speed = special->info->mass; // conveniently, both fans and gas jets use this for the vertical thrust
-			SINT8 flipval = P_MobjFlip(special); // virtually everything here centers around the thruster's gravity, not the object's!
-
-			if (special->state != &states[S_STEAM1]) // Only when it bursts
-				break;
-
-			toucher->eflags |= MFE_SPRUNG;
-			toucher->momz = flipval * FixedMul(speed, FixedSqrt(FixedMul(special->scale, toucher->scale))); // scale the speed with both objects' scales, just like with springs!
-
-			P_ResetPlayer(player);
-			if (player->panim != PA_FALL)
-				P_SetMobjState(toucher, S_PLAY_FALL);
-			return;
 		default: // SOC or script pickup
 			if (player->bot && player->bot != BOT_MPAI)
 				return;

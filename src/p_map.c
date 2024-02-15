@@ -1468,13 +1468,13 @@ static unsigned PIT_DoCheckThing(mobj_t *thing)
 	}
 
 	// check for special pickup
-	if (thing->flags & MF_SPECIAL && tmthing->player)
+	if (thing->flags & MF_SPECIAL)
 	{
 		P_TouchSpecialThing(thing, tmthing, true); // can remove thing
 		return CHECKTHING_COLLIDE;
 	}
 	// check again for special pickup
-	if (tmthing->flags & MF_SPECIAL && thing->player)
+	if (tmthing->flags & MF_SPECIAL)
 	{
 		P_TouchSpecialThing(tmthing, thing, true); // can remove thing
 		return CHECKTHING_COLLIDE;
@@ -4210,81 +4210,6 @@ void P_RadiusAttack(mobj_t *spot, mobj_t *source, fixed_t damagedist, UINT8 dama
 	bombsightcheck = sightcheck;
 
 	P_DoBlockThingsIterate(xl, yl, xh, yh, PIT_RadiusAttack);
-}
-
-//
-// PIT_SteamBurst
-// Scan nearby players and MF2_PUSHABLEs for bursting with steam
-// 'bombsource' is the steam object
-//
-static boolean PIT_SteamBurst(mobj_t *thing)
-{
-	fixed_t dx, dy, dist;
-
-	if (thing == bombsource) // ignore the self
-		return true;
-
-	if (!((thing->player && thing->player->playerstate == PST_LIVE) || (thing->flags & MF_PUSHABLE)))
-		return true;
-
-	dx = abs(thing->x - bombspot->x);
-	dy = abs(thing->y - bombspot->y);
-
-	dist = P_AproxDistance(dx, dy);
-
-	if (dist > thing->radius + bombsource->radius)
-		return true; // out of XY range
-
-	fixed_t zdist;
-	if (bombsource->eflags & MFE_VERTICALFLIP)
-	{
-		if (thing->z > bombsource->z + bombsource->height)
-			return;
-		zdist = (bombsource->z + bombsource->height) - (thing->z + thing->height);
-	}
-	else
-	{
-		if (thing->z + thing->height < bombsource->z)
-			return;
-		zdist = thing->z - bombsource->z;
-	}
-
-	dist -= thing->radius;
-
-	if (dist < 0)
-		dist = 0;
-
-	if (dist >= bombdamage)
-		return true; // out of range
-
-	if (thing->floorz > bombspot->z && bombspot->ceilingz < thing->z)
-		return true;
-
-	if (thing->ceilingz < bombspot->z && bombspot->floorz > thing->z)
-		return true;
-
-	if (!bombsightcheck || P_CheckSight(thing, bombspot))
-	{	// must be in direct path
-		P_DamageMobj(thing, bombspot, bombsource, 1, bombdamagetype); // Tails 01-11-2001
-	}
-
-	return true;
-}
-
-void P_SteamBurst(mobj_t *source, fixed_t checkDist)
-{
-	INT32 xl, xh, yl, yh;
-	fixed_t dist;
-
-	dist = FixedMul(source->radius, source->scale) + MAXRADIUS;
-	yh = (unsigned)(source->y + dist - bmaporgy) >> MAPBLOCKSHIFT;
-	yl = (unsigned)(source->y - dist - bmaporgy) >> MAPBLOCKSHIFT;
-	xh = (unsigned)(source->x + dist - bmaporgx) >> MAPBLOCKSHIFT;
-	xl = (unsigned)(source->x - dist - bmaporgx) >> MAPBLOCKSHIFT;
-
-	BMBOUNDFIX(xl, xh, yl, yh);
-
-	P_DoBlockThingsIterate(xl, yl, xh, yh, PIT_SteamBurst);
 }
 
 //
