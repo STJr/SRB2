@@ -1281,6 +1281,9 @@ void F_CreditDrawer(void)
 	UINT8 colornum;
 	const UINT8 *colormap;
 
+	// compensation for y on non-green resolutions, used to prevent text from disappearing before reaching the top
+	UINT16 compy = (vid.height - (BASEVIDHEIGHT * vid.dup)) / 2;
+
 	if (players[consoleplayer].skincolor)
 		colornum = players[consoleplayer].skincolor;
 	else
@@ -1302,9 +1305,6 @@ void F_CreditDrawer(void)
 
 	// Dim the background
 	V_DrawFadeScreen(0xFF00, 16);
-
-	// compensation for y on non-green resolutions, used to prevent text from disappearing before reaching the top
-	int compy = vid.height - BASEVIDHEIGHT;
 
 	// Draw credits text on top
 	for (i = 0; credits[i]; i++)
