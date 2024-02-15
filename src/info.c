@@ -7493,12 +7493,12 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		sfx_steam1,     // deathsound
 		0,              // speed
 		32*FRACUNIT,    // radius
-		1*FRACUNIT,     // height
+		16*FRACUNIT,    // height
 		0,              // display offset
 		20*FRACUNIT,    // mass
 		0,              // damage
 		sfx_None,       // activesound
-		MF_SOLID,       // flags
+		MF_SPECIAL,     // flags
 		S_NULL          // raisestate
 	},
 

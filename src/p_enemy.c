@@ -5177,7 +5177,7 @@ void A_SetSolidSteam(mobj_t *actor)
 		return;
 
 	actor->flags &= ~MF_NOCLIP;
-	actor->flags |= MF_SOLID;
+	actor->flags |= MF_SPECIAL;
 	if (!(actor->flags2 & MF2_AMBUSH))
 	{
 		if (P_RandomChance(FRACUNIT/8))
@@ -5207,7 +5207,7 @@ void A_UnsetSolidSteam(mobj_t *actor)
 	if (LUA_CallAction(A_UNSETSOLIDSTEAM, actor))
 		return;
 
-	actor->flags &= ~MF_SOLID;
+	actor->flags &= ~MF_SPECIAL;
 	actor->flags |= MF_NOCLIP;
 }
 

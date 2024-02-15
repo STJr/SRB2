@@ -502,7 +502,7 @@ springstate:
 	return final;
 }
 
-static void P_DoFanAndGasJet(mobj_t *spring, mobj_t *object)
+static void P_DoFan(mobj_t *spring, mobj_t *object)
 {
 	player_t *p = object->player; // will be NULL if not a player
 	fixed_t zdist; // distance between bottoms
@@ -550,22 +550,6 @@ static void P_DoFanAndGasJet(mobj_t *spring, mobj_t *object)
 				P_SetMobjState(object, S_PLAY_FALL);
 				P_SetTarget(&object->tracer, spring);
 				p->powers[pw_carry] = CR_FAN;
-			}
-			break;
-		case MT_STEAM: // Steam
-			if (zdist > FixedMul(16*FRACUNIT, spring->scale))
-				break;
-			if (spring->state != &states[S_STEAM1]) // Only when it bursts
-				break;
-
-			object->eflags |= MFE_SPRUNG;
-			object->momz = flipval*FixedMul(speed, FixedSqrt(FixedMul(spring->scale, object->scale))); // scale the speed with both objects' scales, just like with springs!
-
-			if (p)
-			{
-				P_ResetPlayer(p);
-				if (p->panim != PA_FALL)
-					P_SetMobjState(object, S_PLAY_FALL);
 			}
 			break;
 		default:
@@ -1578,15 +1562,15 @@ static unsigned PIT_DoCheckThing(mobj_t *thing)
 
 	if (thing->flags & MF_PUSHABLE)
 	{
-		if (tmthing->type == MT_FAN || tmthing->type == MT_STEAM)
-			P_DoFanAndGasJet(tmthing, thing);
+		if (tmthing->type == MT_FAN)
+			P_DoFan(tmthing, thing);
 	}
 
 	if (tmthing->flags & MF_PUSHABLE)
 	{
-		if (thing->type == MT_FAN || thing->type == MT_STEAM)
+		if (thing->type == MT_FAN)
 		{
-			P_DoFanAndGasJet(thing, tmthing);
+			P_DoFan(thing, tmthing);
 			return CHECKTHING_COLLIDE;
 		}
 		else if (thing->flags & MF_SPRING)
@@ -1679,8 +1663,8 @@ static unsigned PIT_DoCheckThing(mobj_t *thing)
 			}
 		}
 
-		if (tmthing->type == MT_FAN || tmthing->type == MT_STEAM)
-			P_DoFanAndGasJet(tmthing, thing);
+		if (tmthing->type == MT_FAN)
+			P_DoFan(tmthing, thing);
 	}
 
 	if (tmthing->player) // Is the moving/interacting object the player?
@@ -1688,8 +1672,8 @@ static unsigned PIT_DoCheckThing(mobj_t *thing)
 		if (!tmthing->health)
 			return CHECKTHING_IGNORE;
 
-		if (thing->type == MT_FAN || thing->type == MT_STEAM)
-			P_DoFanAndGasJet(thing, tmthing);
+		if (thing->type == MT_FAN)
+			P_DoFan(thing, tmthing);
 		else if (thing->flags & MF_SPRING && tmthing->player->powers[pw_carry] != CR_MINECART)
 		{
 			if ( thing->z <= tmthing->z + tmthing->height
@@ -1755,8 +1739,8 @@ static unsigned PIT_DoCheckThing(mobj_t *thing)
 	// not solid not blocked
 	unsigned collide = CHECKTHING_NOCOLLIDE;
 
-	if ((tmthing->flags & MF_SPRING || tmthing->type == MT_STEAM || tmthing->type == MT_SPIKE || tmthing->type == MT_WALLSPIKE) && (thing->player))
-		; // springs, gas jets and springs should never be able to step up onto a player
+	if ((tmthing->flags & MF_SPRING || tmthing->type == MT_SPIKE || tmthing->type == MT_WALLSPIKE) && (thing->player))
+		; // springs should never be able to step up onto a player
 	// z checking at last
 	// Treat noclip things as non-solid!
 	else if ((thing->flags & (MF_SOLID|MF_NOCLIP)) == MF_SOLID
