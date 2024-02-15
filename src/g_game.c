@@ -4621,6 +4621,9 @@ void G_SaveGameData(gamedata_t *data)
 
 	INT32 curmare;
 
+	if (!data)
+		return; // data struct not valid
+
 	if (!data->loaded)
 		return; // If never loaded (-nodata), don't save
 

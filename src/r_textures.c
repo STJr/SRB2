@@ -472,7 +472,7 @@ UINT8 *R_GenerateTexture(size_t texnum)
 
 	for (x = 0; x < texture->width; x++)
 	{
-		post_t *post;
+		post_t *post = NULL;
 		boolean was_opaque = false;
 
 		column_t *column = &temp_columns[x];
