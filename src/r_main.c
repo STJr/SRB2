@@ -318,7 +318,6 @@ angle_t R_PointToAngle(fixed_t x, fixed_t y)
 }
 
 // This version uses 64-bit variables to avoid overflows with large values.
-// Currently used only by OpenGL rendering.
 angle_t R_PointToAngle64(INT64 x, INT64 y)
 {
 	return (y -= viewy, (x -= viewx) || y) ?
@@ -384,56 +383,26 @@ fixed_t R_PointToDist(fixed_t x, fixed_t y)
 	return R_PointToDist2(viewx, viewy, x, y);
 }
 
-angle_t R_PointToAngleEx(INT32 x2, INT32 y2, INT32 x1, INT32 y1)
+line_t *R_GetFFloorLine(const seg_t *seg, const ffloor_t *pfloor)
 {
-	INT64 dx = x1-x2;
-	INT64 dy = y1-y2;
-	if (dx < INT32_MIN || dx > INT32_MAX || dy < INT32_MIN || dy > INT32_MAX)
+	if (pfloor->master->flags & ML_TFERLINE)
 	{
-		x1 = (int)(dx / 2 + x2);
-		y1 = (int)(dy / 2 + y2);
+		size_t linenum = seg->linedef - pfloor->target->lines[0];
+		return pfloor->master->frontsector->lines[0] + linenum;
 	}
-	return (y1 -= y2, (x1 -= x2) || y1) ?
-	x1 >= 0 ?
-	y1 >= 0 ?
-		(x1 > y1) ? tantoangle[SlopeDivEx(y1,x1)] :                            // octant 0
-		ANGLE_90-tantoangle[SlopeDivEx(x1,y1)] :                               // octant 1
-		x1 > (y1 = -y1) ? 0-tantoangle[SlopeDivEx(y1,x1)] :                    // octant 8
-		ANGLE_270+tantoangle[SlopeDivEx(x1,y1)] :                              // octant 7
-		y1 >= 0 ? (x1 = -x1) > y1 ? ANGLE_180-tantoangle[SlopeDivEx(y1,x1)] :  // octant 3
-		ANGLE_90 + tantoangle[SlopeDivEx(x1,y1)] :                             // octant 2
-		(x1 = -x1) > (y1 = -y1) ? ANGLE_180+tantoangle[SlopeDivEx(y1,x1)] :    // octant 4
-		ANGLE_270-tantoangle[SlopeDivEx(x1,y1)] :                              // octant 5
-		0;
+	else
+		return pfloor->master;
 }
 
-//
-// R_ScaleFromGlobalAngle
-// Returns the texture mapping scale for the current line (horizontal span)
-//  at the given angle.
-// rw_distance must be calculated first.
-//
-// killough 5/2/98: reformatted, cleaned up
-//
-// note: THIS IS USED ONLY FOR WALLS!
-fixed_t R_ScaleFromGlobalAngle(angle_t visangle)
+side_t *R_GetFFloorSide(const seg_t *seg, const ffloor_t *pfloor)
 {
-	angle_t anglea = ANGLE_90 + (visangle-viewangle);
-	angle_t angleb = ANGLE_90 + (visangle-rw_normalangle);
-	fixed_t den = FixedMul(rw_distance, FINESINE(anglea>>ANGLETOFINESHIFT));
-	// proff 11/06/98: Changed for high-res
-	fixed_t num = FixedMul(projectiony, FINESINE(angleb>>ANGLETOFINESHIFT));
-
-	if (den > num>>16)
+	if (pfloor->master->flags & ML_TFERLINE)
 	{
-		num = FixedDiv(num, den);
-		if (num > 64*FRACUNIT)
-			return 64*FRACUNIT;
-		if (num < 256)
-			return 256;
-		return num;
+		line_t *newline = R_GetFFloorLine(seg, pfloor);
+		return &sides[newline->sidenum[0]];
 	}
-	return 64*FRACUNIT;
+	else
+		return &sides[pfloor->master->sidenum[0]];
 }
 
 //
