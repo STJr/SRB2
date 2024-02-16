@@ -3280,13 +3280,21 @@ static boolean P_TagDamage(mobj_t *target, mobj_t *inflictor, mobj_t *source, IN
 }
 
 //
-// P_PlayerCanHurtPlayer
+// P_CanPlayerHurtPlayer
 //
 // Is it permissible for a player to hurt another player?
 // This should be the definitive global function to determine if pain is allowed. :)
 //
-boolean P_PlayerCanHurtPlayer(player_t *target, mobj_t *inflictor, player_t *source, UINT8 damagetype)
+boolean P_CanPlayerHurtPlayer(player_t *target, mobj_t *inflictor, player_t *source, UINT8 damagetype)
 {
+	I_Assert(target != NULL);
+	I_Assert(source != NULL);
+	I_Assert(inflictor != NULL);
+
+	// MT_LHRT should return true here, because we want it to go through the 'damage' process
+	if (inflictor->type == MT_LHRT)
+		return true;
+
 	if (!(damagetype & DMG_CANHURTSELF))
 	{
 		// You can't kill yourself, idiot...
@@ -3319,9 +3327,6 @@ boolean P_PlayerCanHurtPlayer(player_t *target, mobj_t *inflictor, player_t *sou
 		if (!(cv_friendlyfire.value || (gametyperules & GTR_FRIENDLYFIRE) || (damagetype & DMG_CANHURTSELF)) && (target->pflags & PF_TAGIT) == (source->pflags & PF_TAGIT))
 			return false;
 
-		if (inflictor->type == MT_LHRT)
-			return false;
-
 		return true;
 	}
 	else if (damagetype & DMG_CANHURTSELF)
@@ -3333,9 +3338,6 @@ boolean P_PlayerCanHurtPlayer(player_t *target, mobj_t *inflictor, player_t *sou
 		if (!(cv_friendlyfire.value || (gametyperules & GTR_FRIENDLYFIRE)) && target->ctfteam == source->ctfteam)
 			return false;
 	}
-
-	if (inflictor->type == MT_LHRT)
-		return false;
 
 	return true;
 }

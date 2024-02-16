@@ -506,7 +506,7 @@ void P_RemoveShield(player_t *player);
 void P_SpecialStageDamage(player_t *player, mobj_t *inflictor, mobj_t *source);
 boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 damage, UINT8 damagetype);
 void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damagetype);
-boolean P_PlayerCanHurtPlayer(player_t *target, mobj_t *inflictor, player_t *source, UINT8 damagetype);
+boolean P_CanPlayerHurtPlayer(player_t *target, mobj_t *inflictor, player_t *source, UINT8 damagetype);
 void P_PlayerRingBurst(player_t *player, INT32 num_rings); /// \todo better fit in p_user.c
 void P_PlayerWeaponPanelBurst(player_t *player);
 void P_PlayerWeaponAmmoBurst(player_t *player);
