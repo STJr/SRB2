@@ -147,7 +147,7 @@ static void R_DrawFlippedColumnInCache(column_t *column, UINT8 *cache, texpatch_
 
 		if (count > 0)
 		{
-			for (; dest < cache + position + count; --source)
+			for (; dest < cache + position + count; --source, is_opaque++)
 			{
 				*dest++ = *source;
 				*is_opaque = true;
@@ -191,7 +191,7 @@ static void R_DrawBlendColumnInCache(column_t *column, UINT8 *cache, texpatch_t 
 
 		if (count > 0)
 		{
-			for (; dest < cache + position + count; source++, dest++)
+			for (; dest < cache + position + count; source++, dest++, is_opaque++)
 			{
 				*dest = ASTBlendPaletteIndexes(*dest, *source, originPatch->style, originPatch->alpha);
 				*is_opaque = true;
@@ -235,7 +235,7 @@ static void R_DrawBlendFlippedColumnInCache(column_t *column, UINT8 *cache, texp
 
 		if (count > 0)
 		{
-			for (; dest < cache + position + count; --source, dest++)
+			for (; dest < cache + position + count; --source, dest++, is_opaque++)
 			{
 				*dest = ASTBlendPaletteIndexes(*dest, *source, originPatch->style, originPatch->alpha);
 				*is_opaque = true;
@@ -472,7 +472,7 @@ UINT8 *R_GenerateTexture(size_t texnum)
 
 	for (x = 0; x < texture->width; x++)
 	{
-		post_t *post;
+		post_t *post = NULL;
 		boolean was_opaque = false;
 
 		column_t *column = &temp_columns[x];

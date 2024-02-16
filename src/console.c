@@ -220,7 +220,7 @@ static char *bindtable[NUMINPUTS];
 static void CONS_Bind_f(void)
 {
 	size_t na;
-	char *newcmd;
+	char *newcmd = NULL;
 	//size_t newlen = 0;
 	unsigned int i;
 	INT32 key;
@@ -1339,6 +1339,8 @@ boolean CON_Responder(event_t *ev)
 
 	if (input_sel != input_cur)
 		CON_InputDelSelection();
+	if (ev->type == ev_console)
+		CON_InputAddChar(key);
 
 	return true;
 }

@@ -1096,8 +1096,6 @@ bthingit_t *P_NewBlockThingsIterator(int x1, int y1, int x2, int y2)
 		return NULL;
 
 	block = GetBlockmapBlock(x1, y1);
-	if (!block)
-		return NULL;
 
 	if (freeiters != NULL)
 	{
@@ -1189,12 +1187,12 @@ mobj_t *P_BlockThingsIteratorNext(bthingit_t *it, boolean centeronly)
 							if (!it->dynhash)
 							{
 								it->dynhashcapacity = 50;
-								Z_Calloc(it->dynhashcapacity * sizeof(it->dynhashcapacity), PU_LEVEL, &it->dynhash);
+								Z_Calloc(it->dynhashcapacity * sizeof(*it->dynhash), PU_LEVEL, &it->dynhash);
 							}
 							if (it->dynhashcount == it->dynhashcapacity)
 							{
 								it->dynhashcapacity *= 2;
-								it->dynhash = Z_Realloc(it->dynhash, it->dynhashcapacity * sizeof(it->dynhashcapacity), PU_LEVEL, &it->dynhash);
+								it->dynhash = Z_Realloc(it->dynhash, it->dynhashcapacity * sizeof(*it->dynhash), PU_LEVEL, &it->dynhash);
 							}
 							i = (int)it->dynhashcount;
 							it->dynhashcount++;
