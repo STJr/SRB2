@@ -3279,6 +3279,67 @@ static boolean P_TagDamage(mobj_t *target, mobj_t *inflictor, mobj_t *source, IN
 	return true;
 }
 
+//
+// P_PlayerCanHurtPlayer
+//
+// Is it permissible for a player to hurt another player?
+// This should be the definitive global function to determine if pain is allowed. :)
+//
+boolean P_PlayerCanHurtPlayer(player_t *target, mobj_t *inflictor, player_t *source, UINT8 damagetype)
+{
+	if (!(damagetype & DMG_CANHURTSELF))
+	{
+		// You can't kill yourself, idiot...
+		if (source == target)
+			return false;
+
+		// In COOP/RACE, you can't hurt other players unless cv_friendlyfire is on
+		if (!(cv_friendlyfire.value || (gametyperules & GTR_FRIENDLYFIRE)) && (gametyperules & GTR_FRIENDLY))
+			return false;
+	}
+
+	// Tag handling
+	if (G_TagGametype())
+	{
+		// If flashing or invulnerable, ignore the tag,
+		if (target->powers[pw_flashing] || target->powers[pw_invulnerability])
+			return false;
+
+		// Don't allow any damage before the round starts.
+		if (leveltime <= hidetime * TICRATE)
+			return false;
+
+		// Ignore IT players shooting each other, unless friendlyfire is on.
+		if ((target->pflags & PF_TAGIT && !((cv_friendlyfire.value || (gametyperules & GTR_FRIENDLYFIRE) || (damagetype & DMG_CANHURTSELF))
+			&& source->pflags & PF_TAGIT)))
+			return false;
+
+		// Don't allow players on the same team to hurt one another,
+		// unless cv_friendlyfire is on.
+		if (!(cv_friendlyfire.value || (gametyperules & GTR_FRIENDLYFIRE) || (damagetype & DMG_CANHURTSELF)) && (target->pflags & PF_TAGIT) == (source->pflags & PF_TAGIT))
+			return false;
+
+		if (inflictor->type == MT_LHRT)
+			return false;
+
+		return true;
+	}
+	else if (damagetype & DMG_CANHURTSELF)
+		return true;
+	else if (G_GametypeHasTeams()) // CTF + Team Match
+	{
+		// Don't allow players on the same team to hurt one another,
+		// unless cv_friendlyfire is on.
+		if (!(cv_friendlyfire.value || (gametyperules & GTR_FRIENDLYFIRE)) && target->ctfteam == source->ctfteam)
+			return false;
+	}
+
+	if (inflictor->type == MT_LHRT)
+		return false;
+
+	return true;
+}
+
 static boolean P_PlayerHitsPlayer(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 damage, UINT8 damagetype)
 {
 	player_t *player = target->player;
