@@ -14,6 +14,7 @@
 #include "fastcmp.h"
 #include "r_defs.h"
 #include "r_local.h"
+#include "r_translation.h"
 #include "st_stuff.h" // hudinfo[]
 #include "g_game.h"
 #include "i_video.h" // rendermode
@@ -1125,7 +1126,10 @@ static int libd_getColormap(lua_State *L)
 	INT32 skinnum = TC_DEFAULT;
 	skincolornum_t color = luaL_optinteger(L, 2, 0);
 	UINT8* colormap = NULL;
+	int translation_id = -1;
+
 	HUDONLY
+
 	if (lua_isnoneornil(L, 1))
 		; // defaults to TC_DEFAULT
 	else if (lua_type(L, 1) == LUA_TNUMBER) // skin number
@@ -1144,9 +1148,21 @@ static int libd_getColormap(lua_State *L)
 			skinnum = i;
 	}
 
-	// all was successful above, now we generate the colormap at last!
+	if (!lua_isnoneornil(L, 3))
+	{
+		const char *translation_name = luaL_checkstring(L, 3);
+		translation_id = R_FindCustomTranslation(translation_name);
+		if (translation_id == -1)
+			return luaL_error(L, "invalid translation '%s'.", translation_name);
+	}
 
-	colormap = R_GetTranslationColormap(skinnum, color, GTC_CACHE);
+	// all was successful above, now we generate the colormap at last!
+	if (translation_id != -1)
+		colormap = R_GetTranslationRemap(translation_id, color, skinnum);
+
+	if (colormap == NULL)
+		colormap = R_GetTranslationColormap(skinnum, color, GTC_CACHE);
+
 	LUA_PushUserdata(L, colormap, META_COLORMAP); // push as META_COLORMAP userdata, specifically for patches to use!
 	return 1;
 }
@@ -1162,6 +1178,45 @@ static int libd_getStringColormap(lua_State *L)
 		return 1;
 	}
 	return 0;
+}
+
+static int libd_getSectorColormap(lua_State *L)
+{
+	boolean has_sector = false;
+	sector_t *sector = NULL;
+	if (!lua_isnoneornil(L, 1))
+	{
+		has_sector = true;
+		sector = *((sector_t **)luaL_checkudata(L, 1, META_SECTOR));
+	}
+	fixed_t x = luaL_checkfixed(L, 2);
+	fixed_t y = luaL_checkfixed(L, 3);
+	fixed_t z = luaL_checkfixed(L, 4);
+	int lightlevel = luaL_optinteger(L, 5, 255);
+	UINT8 *colormap = NULL;
+	extracolormap_t *exc = NULL;
+
+	INLEVEL
+	HUDONLY
+
+	if (has_sector && !sector)
+		return LUA_ErrInvalid(L, "sector_t");
+
+	if (sector)
+		exc = P_GetColormapFromSectorAt(sector, x, y, z);
+	else
+		exc = P_GetSectorColormapAt(x, y, z);
+
+	if (exc)
+		colormap = exc->colormap;
+	else
+		colormap = colormaps;
+
+	lightlevel = 255 - min(max(lightlevel, 0), 255);
+	lightlevel >>= 3;
+
+	LUA_PushUserdata(L, colormap + (lightlevel * 256), META_COLORMAP);
+	return 1;
 }
 
 static int libd_fadeScreen(lua_State *L)
@@ -1310,6 +1365,7 @@ static luaL_Reg lib_draw[] = {
 	{"getSprite2Patch", libd_getSprite2Patch},
 	{"getColormap", libd_getColormap},
 	{"getStringColormap", libd_getStringColormap},
+	{"getSectorColormap", libd_getSectorColormap},
 	// drawing
 	{"draw", libd_draw},
 	{"drawScaled", libd_drawScaled},

@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -127,6 +127,8 @@ static void SV_SendServerInfo(INT32 node, tic_t servertime)
 
 	memset(netbuffer->u.serverinfo.maptitle, 0, sizeof netbuffer->u.serverinfo.maptitle);
 
+	memset(netbuffer->u.serverinfo.httpsource, 0, MAX_MIRROR_LENGTH);
+
 	if (mapheaderinfo[gamemap-1] && *mapheaderinfo[gamemap-1]->lvlttl)
 	{
 		char *read = mapheaderinfo[gamemap-1]->lvlttl, *writ = netbuffer->u.serverinfo.maptitle;
@@ -152,6 +154,17 @@ static void SV_SendServerInfo(INT32 node, tic_t servertime)
 
 	if (mapheaderinfo[gamemap-1])
 		netbuffer->u.serverinfo.actnum = mapheaderinfo[gamemap-1]->actnum;
+
+	const char *httpurl = cv_httpsource.string;
+	size_t mirror_length = strlen(httpurl);
+	if (mirror_length > MAX_MIRROR_LENGTH)
+		mirror_length = MAX_MIRROR_LENGTH;
+
+	if (snprintf(netbuffer->u.serverinfo.httpsource, mirror_length+1, "%s", httpurl) < 0)
+		// If there's an encoding error, send nothing, we accept that the above may be truncated
+		strncpy(netbuffer->u.serverinfo.httpsource, "", mirror_length);
+
+	netbuffer->u.serverinfo.httpsource[MAX_MIRROR_LENGTH-1] = '\0';
 
 	p = PutFileNeeded(0);
 

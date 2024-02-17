@@ -138,7 +138,7 @@ INT32 *blockmaplump; // Big blockmap
 // origin of block map
 fixed_t bmaporgx, bmaporgy;
 // for thing chains
-mobj_t **blocklinks;
+blocknode_t **blocklinks;
 
 // REJECT
 // For fast sight rejection.
@@ -536,20 +536,14 @@ levelflat_t *foundflats;
 //SoM: Other files want this info.
 size_t P_PrecacheLevelFlats(void)
 {
-	lumpnum_t lump;
 	size_t i;
 
 	//SoM: 4/18/2000: New flat code to make use of levelflats.
 	flatmemory = 0;
 	for (i = 0; i < numlevelflats; i++)
 	{
-		if (levelflats[i].type == LEVELFLAT_FLAT)
-		{
-			lump = levelflats[i].u.flat.lumpnum;
-			if (devparm)
-				flatmemory += W_LumpLength(lump);
-			R_GetFlat(lump);
-		}
+		if (levelflats[i].type != LEVELFLAT_NONE)
+			R_GetFlat(&levelflats[i]);
 	}
 	return flatmemory;
 }
@@ -561,19 +555,8 @@ or NULL if we want to allocate it now.
 static INT32
 Ploadflat (levelflat_t *levelflat, const char *flatname, boolean resize)
 {
-#ifndef NO_PNG_LUMPS
-	UINT8         buffer[8];
-#endif
-
-	lumpnum_t    flatnum;
-	int       texturenum;
-	UINT8     *flatpatch;
-	size_t    lumplength;
-
-	size_t i;
-
 	// Scan through the already found flats, return if it matches.
-	for (i = 0; i < numlevelflats; i++)
+	for (size_t i = 0; i < numlevelflats; i++)
 	{
 		if (strnicmp(levelflat[i].name, flatname, 8) == 0)
 			return i;
@@ -597,64 +580,35 @@ Ploadflat (levelflat_t *levelflat, const char *flatname, boolean resize)
 	strlcpy(levelflat->name, flatname, sizeof (levelflat->name));
 	strupr(levelflat->name);
 
-	/* If we can't find a flat, try looking for a texture! */
-	if (( flatnum = R_GetFlatNumForName(levelflat->name) ) == LUMPERROR)
-	{
-		if (( texturenum = R_CheckTextureNumForName(levelflat->name) ) == -1)
-		{
-			// check for REDWALL
-			if (( texturenum = R_CheckTextureNumForName("REDWALL") ) != -1)
-				goto texturefound;
-			// check for REDFLR
-			else if (( flatnum = R_GetFlatNumForName("REDFLR") ) != LUMPERROR)
-				goto flatfound;
-			// nevermind
-			levelflat->type = LEVELFLAT_NONE;
-		}
-		else
-		{
-texturefound:
-			levelflat->type = LEVELFLAT_TEXTURE;
-			levelflat->u.texture.    num = texturenum;
-			levelflat->u.texture.lastnum = texturenum;
-			/* start out unanimated */
-			levelflat->u.texture.basenum = -1;
-		}
-	}
-	else
-	{
-flatfound:
-		/* This could be a flat, patch, or PNG. */
-		flatpatch = W_CacheLumpNum(flatnum, PU_CACHE);
-		lumplength = W_LumpLength(flatnum);
-		if (Picture_CheckIfDoomPatch((softwarepatch_t *)flatpatch, lumplength))
-			levelflat->type = LEVELFLAT_PATCH;
-		else
-		{
-#ifndef NO_PNG_LUMPS
-			/*
-			Only need eight bytes for PNG headers.
-			FIXME: Put this elsewhere.
-			*/
-			W_ReadLumpHeader(flatnum, buffer, 8, 0);
-			if (Picture_IsLumpPNG(buffer, lumplength))
-				levelflat->type = LEVELFLAT_PNG;
-			else
-#endif/*NO_PNG_LUMPS*/
-				levelflat->type = LEVELFLAT_FLAT;/* phew */
-		}
-		if (flatpatch)
-			Z_Free(flatpatch);
+	levelflat->type = LEVELFLAT_TEXTURE;
 
-		levelflat->u.flat.    lumpnum = flatnum;
-		levelflat->u.flat.baselumpnum = LUMPERROR;
+	// Look for a flat
+	int texturenum = R_CheckFlatNumForName(levelflat->name);
+	if (texturenum <= 0)
+	{
+		// If we can't find a flat, try looking for a texture!
+		texturenum = R_CheckTextureNumForName(levelflat->name);
+		if (texturenum <= 0)
+		{
+			// Use "not found" texture
+			texturenum = R_CheckTextureNumForName("REDWALL");
+
+			// Give up?
+			if (texturenum <= 0)
+			{
+				levelflat->type = LEVELFLAT_NONE;
+				texturenum = -1;
+			}
+		}
 	}
+
+	levelflat->texture_id = texturenum;
 
 #ifndef ZDEBUG
 	CONS_Debug(DBG_SETUP, "flat #%03d: %s\n", atoi(sizeu1(numlevelflats)), levelflat->name);
 #endif
 
-	return ( numlevelflats++ );
+	return numlevelflats++;
 }
 
 // Auxiliary function. Find a flat in the active wad files,
@@ -1586,15 +1540,15 @@ textmap_colormap_t textmap_colormap = { false, 0, 25, 0, 25, 0, 31, 0 };
 
 typedef enum
 {
-    PD_A = 1,
-    PD_B = 1<<1,
-    PD_C = 1<<2,
-    PD_D = 1<<3,
+	PD_A = 1,
+	PD_B = 1<<1,
+	PD_C = 1<<2,
+	PD_D = 1<<3,
 } planedef_t;
 
 typedef struct textmap_plane_s {
-    UINT8 defined;
-    fixed_t a, b, c, d;
+	UINT8 defined;
+	double a, b, c, d;
 } textmap_plane_t;
 
 textmap_plane_t textmap_planefloor = {0, 0, 0, 0, 0};
@@ -1655,42 +1609,42 @@ static void ParseTextmapSectorParameter(UINT32 i, const char *param, const char 
 	else if (fastcmp(param, "floorplane_a"))
 	{
 		textmap_planefloor.defined |= PD_A;
-		textmap_planefloor.a = FLOAT_TO_FIXED(atof(val));
+		textmap_planefloor.a = atof(val);
 	}
 	else if (fastcmp(param, "floorplane_b"))
 	{
 		textmap_planefloor.defined |= PD_B;
-		textmap_planefloor.b = FLOAT_TO_FIXED(atof(val));
+		textmap_planefloor.b = atof(val);
 	}
 	else if (fastcmp(param, "floorplane_c"))
 	{
 		textmap_planefloor.defined |= PD_C;
-		textmap_planefloor.c = FLOAT_TO_FIXED(atof(val));
+		textmap_planefloor.c = atof(val);
 	}
 	else if (fastcmp(param, "floorplane_d"))
 	{
 		textmap_planefloor.defined |= PD_D;
-		textmap_planefloor.d = FLOAT_TO_FIXED(atof(val));
+		textmap_planefloor.d = atof(val);
 	}
 	else if (fastcmp(param, "ceilingplane_a"))
 	{
 		textmap_planeceiling.defined |= PD_A;
-		textmap_planeceiling.a = FLOAT_TO_FIXED(atof(val));
+		textmap_planeceiling.a = atof(val);
 	}
 	else if (fastcmp(param, "ceilingplane_b"))
 	{
 		textmap_planeceiling.defined |= PD_B;
-		textmap_planeceiling.b = FLOAT_TO_FIXED(atof(val));
+		textmap_planeceiling.b = atof(val);
 	}
 	else if (fastcmp(param, "ceilingplane_c"))
 	{
 		textmap_planeceiling.defined |= PD_C;
-		textmap_planeceiling.c = FLOAT_TO_FIXED(atof(val));
+		textmap_planeceiling.c = atof(val);
 	}
 	else if (fastcmp(param, "ceilingplane_d"))
 	{
 		textmap_planeceiling.defined |= PD_D;
-		textmap_planeceiling.d = FLOAT_TO_FIXED(atof(val));
+		textmap_planeceiling.d = atof(val);
 	}
 	else if (fastcmp(param, "lightcolor"))
 	{
@@ -2928,13 +2882,13 @@ static void P_LoadTextmap(void)
 
 		if (textmap_planefloor.defined == (PD_A|PD_B|PD_C|PD_D))
 		{
-			sc->f_slope = MakeViaEquationConstants(textmap_planefloor.a, textmap_planefloor.b, textmap_planefloor.c, textmap_planefloor.d);
+			sc->f_slope = P_MakeSlopeViaEquationConstants(textmap_planefloor.a, textmap_planefloor.b, textmap_planefloor.c, textmap_planefloor.d);
 			sc->hasslope = true;
 		}
 
 		if (textmap_planeceiling.defined == (PD_A|PD_B|PD_C|PD_D))
 		{
-			sc->c_slope = MakeViaEquationConstants(textmap_planeceiling.a, textmap_planeceiling.b, textmap_planeceiling.c, textmap_planeceiling.d);
+			sc->c_slope = P_MakeSlopeViaEquationConstants(textmap_planeceiling.a, textmap_planeceiling.b, textmap_planeceiling.c, textmap_planeceiling.d);
 			sc->hasslope = true;
 		}
 
@@ -3173,9 +3127,6 @@ static boolean P_LoadMapData(const virtres_t *virt)
 	// copy table for global usage
 	levelflats = M_Memcpy(Z_Calloc(numlevelflats * sizeof (*levelflats), PU_LEVEL, NULL), foundflats, numlevelflats * sizeof (levelflat_t));
 	free(foundflats);
-
-	// search for animated flats and set up
-	P_SetupLevelFlatAnims();
 
 	return true;
 }
@@ -7806,6 +7757,8 @@ boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate)
 		Z_Free(ss->attachedsolid);
 	}
 
+	P_ClearBlockNodes();
+
 	// Clear pointers that would be left dangling by the purge
 	R_FlushTranslationColormapCache();
 
@@ -7849,6 +7802,24 @@ boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate)
 
 	if (!P_LoadMapFromFile(maplumpnum))
 		return false;
+
+	if (!demoplayback)
+	{
+		clientGamedata->mapvisited[gamemap-1] |= MV_VISITED;
+		serverGamedata->mapvisited[gamemap-1] |= MV_VISITED;
+
+		M_SilentUpdateUnlockablesAndEmblems(serverGamedata);
+
+		if (M_UpdateUnlockablesAndExtraEmblems(clientGamedata))
+		{
+			S_StartSound(NULL, sfx_s3k68);
+			G_SaveGameData(clientGamedata);
+		}
+		else if (!reloadinggamestate)
+		{
+			G_SaveGameData(clientGamedata);
+		}
+	}
 
 	// init anything that P_SpawnSlopes/P_LoadThings needs to know
 	P_InitSpecials();
@@ -7907,12 +7878,6 @@ boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate)
 
 	nextmapoverride = 0;
 	skipstats = 0;
-
-	if (!demoplayback)
-	{
-		clientGamedata->mapvisited[gamemap-1] |= MV_VISITED;
-		serverGamedata->mapvisited[gamemap-1] |= MV_VISITED;
-	}
 
 	levelloading = false;
 

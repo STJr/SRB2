@@ -483,7 +483,7 @@ static int spriteinfo_set(lua_State *L)
 		}
 	}
 	else
-		return luaL_error(L, va("Field %s does not exist in spriteinfo_t", field));
+		return luaL_error(L, "Field %s does not exist in spriteinfo_t", field);
 
 	return 0;
 }
@@ -577,7 +577,7 @@ static int framepivot_get(lua_State *L)
 		lua_pushinteger(L, 0);
 	}
 	else
-		return luaL_error(L, va("Field %s does not exist in spriteframepivot_t", field));
+		return luaL_error(L, "Field %s does not exist in spriteframepivot_t", field);
 
 	return 1;
 }
@@ -604,7 +604,7 @@ static int framepivot_set(lua_State *L)
 	else if (fastcmp("rotaxis", field))
 		LUA_UsageWarning(L, "\"rotaxis\" is deprecated and will be removed.")
 	else
-		return luaL_error(L, va("Field %s does not exist in spriteframepivot_t", field));
+		return luaL_error(L, "Field %s does not exist in spriteframepivot_t", field);
 
 	return 0;
 }
@@ -1663,7 +1663,7 @@ static void setRamp(lua_State *L, skincolor_t* c) {
 	lua_pushnil(L);
 	for (i=0; i<COLORRAMPSIZE; i++) {
 		if (lua_objlen(L,-2)!=COLORRAMPSIZE) {
-			luaL_error(L, LUA_QL("skincolor_t") " field 'ramp' must be %d entries long; got %d.", COLORRAMPSIZE, lua_objlen(L,-2));
+			luaL_error(L, LUA_QL("skincolor_t") " field 'ramp' must be %d entries long; got %d.", COLORRAMPSIZE, luaL_getn(L,-2));
 			break;
 		}
 		if (lua_next(L, -2) != 0) {
@@ -1900,32 +1900,6 @@ static int colorramp_len(lua_State *L)
 	return 1;
 }
 
-//////////////////////
-// TRANSLATION INFO //
-//////////////////////
-
-// Arbitrary translations[] table index -> colormap_t *
-static int lib_getTranslation(lua_State *L)
-{
-	lua_remove(L, 1);
-
-	const char *name = luaL_checkstring(L, 1);
-	remaptable_t *tr = R_GetTranslationByID(R_FindCustomTranslation(name));
-	if (tr)
-		LUA_PushUserdata(L, &tr->remap, META_COLORMAP);
-	else
-		lua_pushnil(L);
-
-	return 1;
-}
-
-// #translations -> R_NumCustomTranslations()
-static int lib_translationslen(lua_State *L)
-{
-	lua_pushinteger(L, R_NumCustomTranslations());
-	return 1;
-}
-
 //////////////////////////////
 //
 // Now push all these functions into the Lua state!
@@ -1958,7 +1932,6 @@ int LUA_InfoLib(lua_State *L)
 	LUA_RegisterGlobalUserdata(L, "spr2defaults", lib_getSpr2default, lib_setSpr2default, lib_spr2namelen);
 	LUA_RegisterGlobalUserdata(L, "states", lib_getState, lib_setState, lib_statelen);
 	LUA_RegisterGlobalUserdata(L, "mobjinfo", lib_getMobjInfo, lib_setMobjInfo, lib_mobjinfolen);
-	LUA_RegisterGlobalUserdata(L, "translations", lib_getTranslation, NULL, lib_translationslen);
 	LUA_RegisterGlobalUserdata(L, "skincolors", lib_getSkinColor, lib_setSkinColor, lib_skincolorslen);
 	LUA_RegisterGlobalUserdata(L, "spriteinfo", lib_getSpriteInfo, lib_setSpriteInfo, lib_spriteinfolen);
 	LUA_RegisterGlobalUserdata(L, "sfxinfo", lib_getSfxInfo, lib_setSfxInfo, lib_sfxlen);

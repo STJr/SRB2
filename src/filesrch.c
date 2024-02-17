@@ -617,7 +617,8 @@ INT32 samepaths(const char *path1, const char *path2)
 	if (stat1.st_dev == stat2.st_dev)
 	{
 #if !defined(_WIN32)
-		return (stat1.st_ino == stat2.st_ino);
+		if (stat1.st_ino == stat2.st_ino)
+			return 1;
 #else
 		// The above doesn't work on NTFS or FAT.
 		HANDLE file1 = CreateFileA(path1, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
@@ -645,6 +646,8 @@ INT32 samepaths(const char *path1, const char *path2)
 		// I'll just use EIO...
 		if (!GetFileInformationByHandle(file1, &file1info))
 		{
+			CloseHandle(file1);
+			CloseHandle(file2);
 #ifndef AVOID_ERRNO
 			direrror = EIO;
 #endif
@@ -660,16 +663,19 @@ INT32 samepaths(const char *path1, const char *path2)
 			return -2;
 		}
 
+		int status = 0;
+
 		if (file1info.dwVolumeSerialNumber == file2info.dwVolumeSerialNumber
 		&& file1info.nFileIndexLow == file2info.nFileIndexLow
 		&& file1info.nFileIndexHigh == file2info.nFileIndexHigh)
 		{
-			CloseHandle(file1);
-			CloseHandle(file2);
-			return 1;
+			status = 1;
 		}
 
-		return 0;
+		CloseHandle(file1);
+		CloseHandle(file2);
+
+		return status;
 #endif
 	}
 
@@ -836,6 +842,7 @@ lumpinfo_t *getdirectoryfiles(const char *path, UINT16 *nlmp, UINT16 *nfolders)
 
 		lump_p->diskpath = Z_StrDup(dirpath); // Path in the filesystem to the file
 		lump_p->compression = CM_NOCOMPRESSION; // Lump is uncompressed
+		lump_p->size = lump_p->disksize = fsstat.st_size;
 
 		// Remove the directory's path.
 		fullname = lump_p->diskpath;

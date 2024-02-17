@@ -19,6 +19,7 @@
 #include "d_event.h"
 #include "netcode/d_net.h"
 #include "netcode/net_command.h"
+#include "g_demo.h" // demoplayback, demoversion
 #include "g_game.h"
 #include "p_local.h"
 #include "r_fps.h"
@@ -892,7 +893,7 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 			players[i].marescore = 0;
 
 			players[i].spheres = players[i].rings = 0;
-			P_DoPlayerExit(&players[i]);
+			P_DoPlayerExit(&players[i], true);
 		}
 	}
 	else if (oldmare != player->mare)
@@ -2258,7 +2259,7 @@ void P_DoPlayerFinish(player_t *player)
 // P_DoPlayerExit
 //
 // Player exits the map via sector trigger
-void P_DoPlayerExit(player_t *player)
+void P_DoPlayerExit(player_t *player, boolean finishedflag)
 {
 	if (player->exiting)
 		return;
@@ -2279,7 +2280,11 @@ void P_DoPlayerExit(player_t *player)
 			player->exiting = (14*TICRATE)/5 + 1;
 	}
 	else
+	{
 		player->exiting = (14*TICRATE)/5 + 2; // Accidental death safeguard???
+		if (finishedflag)
+			player->pflags |= PF_FINISHED; // Give PF_FINISHED as proof of a true finish
+	}
 
 	//player->pflags &= ~PF_GLIDING;
 	if (player->climbing)
@@ -3801,6 +3806,8 @@ static boolean PIT_CheckSolidsTeeter(mobj_t *thing)
 	if (abs(thing->x - teeterer->x) >= blockdist || abs(thing->y - teeterer->y) >= blockdist)
 		return true; // didn't hit it
 
+	highesttop = INT32_MIN;
+
 	if (teeterer->eflags & MFE_VERTICALFLIP)
 	{
 		if (thingtop < teeterer->z)
@@ -4104,13 +4111,8 @@ static void P_DoTeeter(player_t *player)
 			teeteryl = teeteryh = player->mo->y;
 			couldteeter = false;
 			solidteeter = teeter;
-			for (by = yl; by <= yh; by++)
-				for (bx = xl; bx <= xh; bx++)
-				{
-					highesttop = INT32_MIN;
-					if (!P_BlockThingsIterator(bx, by, PIT_CheckSolidsTeeter))
-						goto teeterdone; // we've found something that stops us teetering at all, how about we stop already
-				}
+			if (!P_DoBlockThingsIterate(xl, yl, xh, yh, PIT_CheckSolidsTeeter))
+				goto teeterdone; // we've found something that stops us teetering at all
 teeterdone:
 			teeter = solidteeter;
 			P_SetTarget(&tmthing, oldtmthing); // restore old tmthing, goodness knows what the game does with this before mobj thinkers
@@ -7516,49 +7518,46 @@ static void P_NiGHTSMovement(player_t *player)
 				newangle = 270;
 		}
 		else // AngleFixed(R_PointToAngle2()) results in slight inaccuracy! Don't use it unless movement is on both axises.
+		{
 			newangle = (INT16)FixedInt(AngleFixed(R_PointToAngle2(0,0, cmd->sidemove*FRACUNIT, cmd->forwardmove*FRACUNIT)));
+
+			if (cmd->forwardmove == -36 && cmd->sidemove == 35 && !(demoplayback && demoversion < 0x0011))
+				newangle = 315; // Hack to compensate for directly down-right returning 314, not 315
+		}
 
 		newangle -= player->viewrollangle / ANG1;
 
 		if (newangle < 0 && moved)
 			newangle = (INT16)(360+newangle);
-	}
 
-	if (player->pflags & PF_DRILLING)
-		thrustfactor = 2;
-	else
-	{
-		thrustfactor = 8;
-
-		// Decelerate while turning normally.
-		if (moved && player->flyangle != newangle && player->speed > 12000)
-			player->speed -= 60;
-	}
-
-	for (i = 0; i < thrustfactor; i++)
-	{
 		if (moved && player->flyangle != newangle)
 		{
-			INT32 anglediff = (((newangle-player->flyangle)+360)%360);
-			INT32 angledif2 = (((player->flyangle-newangle)+360)%360);
+			// "player->flyangle" is our current angle, "newangle" is where we want to go
+			INT32 anglediff = ((newangle - player->flyangle) + 360) % 360; // "+360" and then "%360" wraps it to 0-359
 
-			// player->flyangle is the one to move
-			// newangle is the "move to"
-			if (anglediff == 0 && angledif2 == 0)
-				break;
+			// How sharply can we turn?
+			if (player->pflags & PF_DRILLING)
+				thrustfactor = 2;
+			else
+			{
+				thrustfactor = 8;
+				if (player->speed > 12000) // Decelerate while turning normally
+					player->speed -= 60;
+			}
 
-			if (anglediff>angledif2)
-				player->flyangle--;
-			else // if (anglediff<angledif2)
-				player->flyangle++;
+			// Now, turn!
+			if (anglediff <= thrustfactor || anglediff >= (360-thrustfactor))
+				player->flyangle = newangle;
+			else if (anglediff <= 180)
+				player->flyangle += thrustfactor;
+			else
+				player->flyangle -= thrustfactor;
+
+			player->flyangle = (player->flyangle + 360) % 360; // Buff out negatives, >360 angles...
 		}
-
-		// Buff out negatives, >360 angles...
-		player->flyangle = ((player->flyangle + 360) % 360);
 	}
 
-	if (!(player->speed)
-		&& cmd->forwardmove == 0)
+	if (player->speed == 0 && cmd->forwardmove == 0 && (cmd->sidemove == 0 || (demoplayback && demoversion < 0x0011)))
 		still = true;
 
 	// No more bumper braking
@@ -7718,6 +7717,9 @@ static void P_NiGHTSMovement(player_t *player)
 				else
 					visangle += 180;
 			}
+
+			if (player->mo->eflags & MFE_VERTICALFLIP) // Flip the roll angle in reverse gravity
+				visangle *= -1;
 
 			rollangle = FixedAngle(visangle<<FRACBITS);
 		}
@@ -8845,8 +8847,7 @@ void P_MovePlayer(player_t *player)
 		}
 	}
 
-#ifdef HWRENDER
-	if (rendermode == render_opengl && cv_fovchange.value)
+	if (cv_fovchange.value)
 	{
 		fixed_t speed;
 		const fixed_t runnyspeed = 20*FRACUNIT;
@@ -8866,7 +8867,6 @@ void P_MovePlayer(player_t *player)
 	}
 	else
 		player->fovadd = 0;
-#endif
 
 	// Look for blocks to bust up
 	// Because of BT_TOUCH, we should look for blocks constantly,
@@ -11905,7 +11905,7 @@ void P_PlayerThink(player_t *player)
 		if (((gametyperules & GTR_FRIENDLY) && cv_exitmove.value) && !G_EnoughPlayersFinished())
 			player->exiting = 0;
 		else
-			P_DoPlayerExit(player);
+			P_DoPlayerExit(player, false);
 	}
 
 	// check water content, set stuff in mobj
@@ -11954,7 +11954,7 @@ void P_PlayerThink(player_t *player)
 	}
 
 	// Synchronizes the "real" amount of time spent in the level.
-	if (!player->exiting && !stoppedclock)
+	if (!player->exiting && !(player->pflags & PF_FINISHED) && !stoppedclock)
 	{
 		if (gametyperules & GTR_RACE)
 		{
