@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -108,6 +108,9 @@ static void Color_OnChange(void);
 static void Color2_OnChange(void);
 static void DummyConsvar_OnChange(void);
 static void SoundTest_OnChange(void);
+
+static boolean Skin_CanChange(const char *valstr);
+static boolean Skin2_CanChange(const char *valstr);
 
 #ifdef NETGAME_DEVMODE
 static void Fishcake_OnChange(void);
@@ -228,7 +231,6 @@ consvar_t cv_seenames = CVAR_INIT ("seenames", "Ally/Foe", CV_SAVE|CV_ALLOWLUA, 
 consvar_t cv_allowseenames = CVAR_INIT ("allowseenames", "Yes", CV_SAVE|CV_NETVAR|CV_ALLOWLUA, CV_YesNo, NULL);
 
 // names
-static char *lastskinnames[2];
 consvar_t cv_playername = CVAR_INIT ("name", "Sonic", CV_SAVE|CV_CALL|CV_NOINIT, NULL, Name_OnChange);
 consvar_t cv_playername2 = CVAR_INIT ("name2", "Tails", CV_SAVE|CV_CALL|CV_NOINIT, NULL, Name2_OnChange);
 // player colors
@@ -236,8 +238,8 @@ UINT16 lastgoodcolor = SKINCOLOR_BLUE, lastgoodcolor2 = SKINCOLOR_BLUE;
 consvar_t cv_playercolor = CVAR_INIT ("color", "Blue", CV_CALL|CV_NOINIT|CV_ALLOWLUA, Color_cons_t, Color_OnChange);
 consvar_t cv_playercolor2 = CVAR_INIT ("color2", "Orange", CV_CALL|CV_NOINIT|CV_ALLOWLUA, Color_cons_t, Color2_OnChange);
 // player's skin, saved for commodity, when using a favorite skins wad..
-consvar_t cv_skin = CVAR_INIT ("skin", DEFAULTSKIN, CV_CALL|CV_NOINIT|CV_ALLOWLUA, NULL, Skin_OnChange);
-consvar_t cv_skin2 = CVAR_INIT ("skin2", DEFAULTSKIN2, CV_CALL|CV_NOINIT|CV_ALLOWLUA, NULL, Skin2_OnChange);
+consvar_t cv_skin = CVAR_INIT_WITH_CALLBACKS ("skin", DEFAULTSKIN, CV_CALL|CV_NOINIT|CV_ALLOWLUA, NULL, Skin_OnChange, Skin_CanChange);
+consvar_t cv_skin2 = CVAR_INIT_WITH_CALLBACKS ("skin2", DEFAULTSKIN2, CV_CALL|CV_NOINIT|CV_ALLOWLUA, NULL, Skin2_OnChange, Skin2_CanChange);
 
 // saved versions of the above six
 consvar_t cv_defaultplayercolor = CVAR_INIT ("defaultcolor", "Blue", CV_SAVE, Color_cons_t, NULL);
@@ -391,6 +393,9 @@ consvar_t cv_ps_descriptor = CVAR_INIT ("ps_descriptor", "Average", 0, ps_descri
 
 consvar_t cv_freedemocamera = CVAR_INIT("freedemocamera", "Off", CV_SAVE, CV_OnOff, NULL);
 
+// NOTE: this should be in hw_main.c, but we can't put it there as it breaks dedicated build
+consvar_t cv_glallowshaders = CVAR_INIT ("gr_allowclientshaders", "On", CV_NETVAR, CV_OnOff, NULL);
+
 char timedemo_name[256];
 boolean timedemo_csv;
 char timedemo_csv_id[256];
@@ -524,6 +529,8 @@ void D_RegisterServerCommands(void)
 	// for master server connection
 	AddMServCommands();
 
+	CV_RegisterVar(&cv_glallowshaders);
+
 	// p_mobj.c
 	CV_RegisterVar(&cv_itemrespawntime);
 	CV_RegisterVar(&cv_itemrespawn);
@@ -604,6 +611,7 @@ void D_RegisterServerCommands(void)
 	CV_RegisterVar(&cv_blamecfail);
 	CV_RegisterVar(&cv_dedicatedidletime);
 	CV_RegisterVar(&cv_idletime);
+	CV_RegisterVar(&cv_httpsource);
 
 	COM_AddCommand("ping", Command_Ping_f, COM_LUA);
 	CV_RegisterVar(&cv_nettimeout);
@@ -1825,7 +1833,7 @@ static void Command_Map_f(void)
 		return;
 	}
 
-	option_force    =   COM_CheckPartialParm("-f");
+	option_force    =   COM_CheckPartialParm("-f") || (cv_debug || devparm);
 	option_gametype =   COM_CheckPartialParm("-g");
 	newresetplayers = ! COM_CheckParm("-noresetplayers");
 
@@ -3809,18 +3817,7 @@ static void Command_Version_f(void)
 #endif
 
 	// OS
-	// Would be nice to use SDL_GetPlatform for this
-#if defined (_WIN32) || defined (_WIN64)
-	CONS_Printf("Windows ");
-#elif defined(__linux__)
-	CONS_Printf("Linux ");
-#elif defined(MACOSX)
-	CONS_Printf("macOS ");
-#elif defined(UNIXCOMMON)
-	CONS_Printf("Unix (Common) ");
-#else
-	CONS_Printf("Other OS ");
-#endif
+	CONS_Printf("%s ", I_GetSysName());
 
 	// Bitness
 	if (sizeof(void*) == 4)
@@ -4066,7 +4063,7 @@ static void ExitMove_OnChange(void)
 				if (players[i].mo->target && players[i].mo->target->type == MT_SIGN)
 					P_SetTarget(&players[i].mo->target, NULL);
 
-				if (players[i].pflags & PF_FINISHED)
+				if (players[i].pflags & PF_FINISHED && !(players[i].exiting))
 					P_GiveFinishFlags(&players[i]);
 			}
 
@@ -4495,37 +4492,62 @@ static void Command_Mapmd5_f(void)
 		CONS_Printf(M_GetText("You must be in a level to use this.\n"));
 }
 
-void D_SendExitLevel(boolean cheat)
-{
-	UINT8 buf[8];
-	UINT8 *buf_p = buf;
-
-	WRITEUINT8(buf_p, cheat);
-
-	SendNetXCmd(XD_EXITLEVEL, &buf, buf_p - buf);
-}
-
 static void Command_ExitLevel_f(void)
 {
 	if (!(server || (IsPlayerAdmin(consoleplayer))))
 		CONS_Printf(M_GetText("Only the server or a remote admin can use this.\n"));
 	else if (( gamestate != GS_LEVEL && gamestate != GS_CREDITS ) || demoplayback)
 		CONS_Printf(M_GetText("You must be in a level to use this.\n"));
+	else if (usedCheats)
+		SendNetXCmd(XD_EXITLEVEL, NULL, 0); // Does it matter if it's a cheat if we've used one already?
+	else if (!(splitscreen || multiplayer || cv_debug))
+		CONS_Printf(M_GetText("Cheats must be enabled to force a level exit in single player.\n"));
 	else
-		D_SendExitLevel(true);
+	{
+		if (G_IsSpecialStage(gamemap) // If you wanna give up that emerald then go right ahead!
+			|| gamestate == GS_CREDITS) // Somebody hasn't heard of the credits skip button...
+		{
+			SendNetXCmd(XD_EXITLEVEL, NULL, 0);
+			return;
+		}
+		
+		// Allow exiting without cheating if at least one player beat the level
+		// Consistent with just setting playersforexit to one
+		if (splitscreen || multiplayer)
+		{
+			INT32 i;
+			for (i = 0; i < MAXPLAYERS; i++)
+			{
+				if (!playeringame[i] || players[i].spectator || players[i].bot)
+					continue;
+				if (players[i].quittime > 30 * TICRATE)
+					continue;
+				if (players[i].lives <= 0)
+					continue;
+		
+				if ((players[i].pflags & PF_FINISHED) || players[i].exiting)
+				{
+					SendNetXCmd(XD_EXITLEVEL, NULL, 0);
+					return;
+				}
+			}
+		}
+		
+		// Only consider it a cheat if we're not allowed to go to the next map
+		if (M_CampaignWarpIsCheat(gametype, G_GetNextMap(true, true) + 1, serverGamedata))
+			CONS_Alert(CONS_NOTICE, M_GetText("Cheats must be enabled to force exit to a locked level!\n"));
+		else
+			SendNetXCmd(XD_EXITLEVEL, NULL, 0);
+	}
 }
 
 static void Got_ExitLevelcmd(UINT8 **cp, INT32 playernum)
 {
-	boolean cheat = false;
-
-	cheat = (boolean)READUINT8(*cp);
+	(void)cp;
 
 	// Ignore duplicate XD_EXITLEVEL commands.
 	if (gameaction == ga_completed)
-	{
 		return;
-	}
 
 	if (playernum != serverplayer && !IsPlayerAdmin(playernum))
 	{
@@ -4533,11 +4555,6 @@ static void Got_ExitLevelcmd(UINT8 **cp, INT32 playernum)
 		if (server)
 			SendKick(playernum, KICK_MSG_CON_FAIL | KICK_MSG_KEEP_BODY);
 		return;
-	}
-
-	if (G_CoopGametype() && cheat)
-	{
-		G_SetUsedCheats(false);
 	}
 
 	G_ExitLevel();
@@ -4772,6 +4789,41 @@ static void Name2_OnChange(void)
 		SendNameAndColor2();
 }
 
+static boolean Skin_CanChange(const char *valstr)
+{
+	(void)valstr;
+
+	if (!Playing())
+		return true; // do whatever you want
+
+	if (!(multiplayer || netgame)) // In single player.
+		return true;
+
+	if (CanChangeSkin(consoleplayer) && !P_PlayerMoving(consoleplayer))
+		return true;
+	else
+	{
+		CONS_Alert(CONS_NOTICE, M_GetText("You can't change your skin at the moment.\n"));
+		return false;
+	}
+}
+
+static boolean Skin2_CanChange(const char *valstr)
+{
+	(void)valstr;
+
+	if (!Playing() || !splitscreen)
+		return true; // do whatever you want
+
+	if (CanChangeSkin(secondarydisplayplayer) && !P_PlayerMoving(secondarydisplayplayer))
+		return true;
+	else
+	{
+		CONS_Alert(CONS_NOTICE, M_GetText("You can't change your skin at the moment.\n"));
+		return false;
+	}
+}
+
 /** Sends a skin change for the console player, unless that player is moving.
   * \sa cv_skin, Skin2_OnChange, Color_OnChange
   * \author Graue <graue@oceanbase.org>
@@ -4779,10 +4831,7 @@ static void Name2_OnChange(void)
 static void Skin_OnChange(void)
 {
 	if (!Playing())
-		return; // do whatever you want
-
-	if (lastskinnames[0] == NULL)
-		lastskinnames[0] = Z_StrDup(cv_skin.string);
+		return;
 
 	if (!(multiplayer || netgame)) // In single player.
 	{
@@ -4798,17 +4847,7 @@ static void Skin_OnChange(void)
 		return;
 	}
 
-	if (CanChangeSkin(consoleplayer) && !P_PlayerMoving(consoleplayer))
-	{
-		SendNameAndColor();
-		Z_Free(lastskinnames[0]);
-		lastskinnames[0] = Z_StrDup(cv_skin.string);
-	}
-	else
-	{
-		CONS_Alert(CONS_NOTICE, M_GetText("You can't change your skin at the moment.\n"));
-		CV_StealthSet(&cv_skin, lastskinnames[0]);
-	}
+	SendNameAndColor();
 }
 
 /** Sends a skin change for the secondary splitscreen player, unless that
@@ -4819,22 +4858,9 @@ static void Skin_OnChange(void)
 static void Skin2_OnChange(void)
 {
 	if (!Playing() || !splitscreen)
-		return; // do whatever you want
+		return;
 
-	if (lastskinnames[1] == NULL)
-		lastskinnames[1] = Z_StrDup(cv_skin2.string);
-
-	if (CanChangeSkin(secondarydisplayplayer) && !P_PlayerMoving(secondarydisplayplayer))
-	{
-		SendNameAndColor2();
-		Z_Free(lastskinnames[1]);
-		lastskinnames[1] = Z_StrDup(cv_skin.string);
-	}
-	else
-	{
-		CONS_Alert(CONS_NOTICE, M_GetText("You can't change your skin at the moment.\n"));
-		CV_StealthSet(&cv_skin2, lastskinnames[1]);
-	}
+	SendNameAndColor2();
 }
 
 /** Sends a color change for the console player, unless that player is moving.

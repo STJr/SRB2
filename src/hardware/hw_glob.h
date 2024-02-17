@@ -74,8 +74,6 @@ typedef struct gl_vissprite_s
 	float spritexscale, spriteyscale;
 	float spritexoffset, spriteyoffset;
 
-	skincolornum_t color;
-
 	UINT32 renderflags;
 	UINT8 rotateflags;
 

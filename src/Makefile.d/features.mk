@@ -49,12 +49,13 @@ ifndef NOUPNP
 MINIUPNPC_PKGCONFIG?=miniupnpc
 $(eval $(call Use_pkg_config,MINIUPNPC))
 HAVE_MINIUPNPC=1
-opts+=-DHAVE_MINIUPNP
+opts+=-DHAVE_MINIUPNPC
 endif
 
 # (Valgrind is a memory debugger.)
 ifdef VALGRIND
 VALGRIND_PKGCONFIG?=valgrind
+VALGRIND_LDFLAGS=
 $(eval $(call Use_pkg_config,VALGRIND))
 ZDEBUG=1
 opts+=-DHAVE_VALGRIND

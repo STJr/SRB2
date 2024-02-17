@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -116,6 +116,8 @@ consvar_t cv_playbackspeed = CVAR_INIT ("playbackspeed", "1", 0, playbackspeed_c
 consvar_t cv_idletime = CVAR_INIT ("idletime", "0", CV_SAVE, CV_Unsigned, NULL);
 consvar_t cv_dedicatedidletime = CVAR_INIT ("dedicatedidletime", "10", CV_SAVE, CV_Unsigned, NULL);
 
+consvar_t cv_httpsource = CVAR_INIT ("http_source", "", CV_SAVE, NULL, NULL);
+
 void ResetNode(INT32 node)
 {
 	memset(&netnodes[node], 0, sizeof(*netnodes));
@@ -153,11 +155,14 @@ void CL_Reset(void)
 	FreeFileNeeded();
 	fileneedednum = 0;
 
-	totalfilesrequestednum = 0;
-	totalfilesrequestedsize = 0;
 	firstconnectattempttime = 0;
 	serverisfull = false;
 	connectiontimeout = (tic_t)cv_nettimeout.value; //reset this temporary hack
+
+	filedownload.remaining = 0;
+	filedownload.http_failed = false;
+	filedownload.http_running = false;
+	filedownload.http_source[0] = '\0';
 
 	// D_StartTitle should get done now, but the calling function will handle it
 }
@@ -415,16 +420,6 @@ static void Got_KickCmd(UINT8 **p, INT32 playernum)
 
 	//CONS_Printf("\x82%s ", player_names[pnum]);
 
-	// If a verified admin banned someone, the server needs to know about it.
-	// If the playernum isn't zero (the server) then the server needs to record the ban.
-	if (server && playernum && (msg == KICK_MSG_BANNED || msg == KICK_MSG_CUSTOM_BAN))
-	{
-		if (I_Ban && !I_Ban(playernode[(INT32)pnum]))
-			CONS_Alert(CONS_WARNING, M_GetText("Too many bans! Geez, that's a lot of people you're excluding...\n"));
-		else
-			Ban_Add(reason);
-	}
-
 	switch (msg)
 	{
 		case KICK_MSG_GO_AWAY:
@@ -498,6 +493,16 @@ static void Got_KickCmd(UINT8 **p, INT32 playernum)
 			HU_AddChatText(va("\x82*%s has left the game (Inactive for too long)", player_names[pnum]), false);
 			kickreason = KR_TIMEOUT;
 			break;
+	}
+
+	// If a verified admin banned someone, the server needs to know about it.
+	// If the playernum isn't zero (the server) then the server needs to record the ban.
+	if (server && playernum && (msg == KICK_MSG_BANNED || msg == KICK_MSG_CUSTOM_BAN))
+	{
+		if (I_Ban && !I_Ban(playernode[(INT32)pnum]))
+			CONS_Alert(CONS_WARNING, M_GetText("Too many bans! Geez, that's a lot of people you're excluding...\n"));
+		else
+			Ban_Add(msg == KICK_MSG_CUSTOM_BAN ? reason : NULL);
 	}
 
 	if (pnum == consoleplayer)
@@ -892,6 +897,74 @@ static void PT_Login(SINT8 node, INT32 netconsole)
 #endif
 }
 
+/** Add a login for HTTP downloads. If the
+  * user/password is missing, remove it.
+  *
+  * \sa Command_list_http_logins
+  */
+static void Command_set_http_login (void)
+{
+	HTTP_login  *login;
+	HTTP_login **prev_next;
+
+	if (COM_Argc() < 2)
+	{
+		CONS_Printf(
+				"set_http_login <URL> [user:password]: Set or remove a login to "
+				"authenticate HTTP downloads.\n"
+		);
+		return;
+	}
+
+	login = CURLGetLogin(COM_Argv(1), &prev_next);
+
+	if (COM_Argc() == 2)
+	{
+		if (login)
+		{
+			(*prev_next) = login->next;
+			CONS_Printf("Login for '%s' removed.\n", login->url);
+			Z_Free(login);
+		}
+	}
+	else
+	{
+		if (login)
+			Z_Free(login->auth);
+		else
+		{
+			login = ZZ_Alloc(sizeof *login);
+			login->url = Z_StrDup(COM_Argv(1));
+		}
+
+		login->auth = Z_StrDup(COM_Argv(2));
+
+		login->next = curl_logins;
+		curl_logins = login;
+	}
+}
+
+/** List logins for HTTP downloads.
+  *
+  * \sa Command_set_http_login
+  */
+static void Command_list_http_logins (void)
+{
+	HTTP_login *login;
+
+	for (
+			login = curl_logins;
+			login;
+			login = login->next
+	){
+		CONS_Printf(
+				"'%s' -> '%s'\n",
+				login->url,
+				login->auth
+		);
+	}
+}
+
 static void PT_AskLuaFile(SINT8 node)
 {
 	if (server && luafiletransfers && luafiletransfers->nodestatus[node] == LFTNS_ASKED)
@@ -1280,6 +1353,7 @@ static void UpdatePingTable(void)
 	}
 }
 
+// Handle idle and disconnected player timers
 static void IdleUpdate(void)
 {
 	INT32 i;
@@ -1302,7 +1376,26 @@ static void IdleUpdate(void)
 			}
 		}
 		else
+		{
 			players[i].lastinputtime = 0;
+
+			if (players[i].quittime && playeringame[i])
+			{
+				players[i].quittime++;
+
+				if (players[i].quittime == 30 * TICRATE && G_TagGametype())
+					P_CheckSurvivors();
+
+				if (server && players[i].quittime >= (tic_t)FixedMul(cv_rejointimeout.value, 60 * TICRATE)
+				&& !(players[i].quittime % TICRATE))
+				{
+					if (D_NumNodes(true) > 0)
+						SendKick(i, KICK_MSG_PLAYER_QUIT);
+					else // If the server is empty, don't send a NetXCmd - that would wake an idling dedicated server
+						CL_RemovePlayer(i, KICK_MSG_PLAYER_QUIT);
+				}
+			}
+		}
 	}
 }
 
@@ -1548,6 +1641,8 @@ void D_ClientServerInit(void)
 	COM_AddCommand("reloadbans", Command_ReloadBan, COM_LUA);
 	COM_AddCommand("connect", Command_connect, COM_LUA);
 	COM_AddCommand("nodes", Command_Nodes, COM_LUA);
+	COM_AddCommand("set_http_login", Command_set_http_login, 0);
+	COM_AddCommand("list_http_logins", Command_list_http_logins, 0);
 	COM_AddCommand("resendgamestate", Command_ResendGamestate, COM_LUA);
 #ifdef PACKETDROP
 	COM_AddCommand("drop", Command_Drop, COM_LUA);
@@ -1623,12 +1718,15 @@ INT32 D_NumPlayers(void)
 	return num;
 }
 
-/** Returns the number of nodes on the server.
+/** Returns the number of currently-connected nodes in a netgame.
+  * Not necessarily equivalent to D_NumPlayers() minus D_NumBots().
+  *
+  * \param skiphost Skip the server's own node.
   */
-INT32 D_NumNodes(void)
+INT32 D_NumNodes(boolean skiphost)
 {
 	INT32 num = 0;
-	for (INT32 ix = 0; ix < MAXNETNODES; ix++)
+	for (INT32 ix = skiphost ? 1 : 0; ix < MAXNETNODES; ix++)
 		if (netnodes[ix].ingame)
 			num++;
 	return num;

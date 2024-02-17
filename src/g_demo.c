@@ -55,7 +55,7 @@ static UINT8 *demobuffer = NULL;
 static UINT8 *demo_p, *demotime_p;
 static UINT8 *demoend;
 static UINT8 demoflags;
-static UINT16 demoversion;
+UINT16 demoversion;
 boolean singledemo; // quit after playing a demo from cmdline
 boolean demo_start; // don't start playing demo right away
 boolean demo_forwardmove_rng; // old demo backwards compatibility
@@ -98,7 +98,7 @@ demoghost *ghosts = NULL;
 // DEMO RECORDING
 //
 
-#define DEMOVERSION 0x0010
+#define DEMOVERSION 0x0011
 #define DEMOHEADER  "\xF0" "SRB2Replay" "\x0F"
 
 #define DF_GHOST        0x01 // This demo contains ghost data too!
@@ -801,19 +801,6 @@ void G_GhostTicker(void)
 						if (!P_MobjWasRemoved(mobj))
 							mobj->frame = (mobj->frame & ~FF_FRAMEMASK)|tr_trans60<<FF_TRANSSHIFT; // P_SpawnGhostMobj sets trans50, we want trans60
 					}
-					else if (type == MT_THOKEFFECT)
-					{
-						mobj = P_SpawnMobjFromMobj(g->mo, 0, 0, FixedDiv(g->mo->height, g->mo->scale)*3/4, type);
-						mobj->angle = g->mo->angle + ANGLE_90;
-						mobj->fuse = 7;
-						mobj->scale = g->mo->scale / 3;
-						mobj->destscale = 10 * g->mo->scale;
-						mobj->colorized = true;
-						mobj->color = g->mo->color;
-						mobj->momx = -g->mo->momx / 2;
-						mobj->momy = -g->mo->momy / 2;
-					}
-
 					else
 					{
 						mobj = P_SpawnMobjFromMobj(g->mo, 0, 0, -FixedDiv(FixedMul(g->mo->info->height, g->mo->scale) - g->mo->height,3*FRACUNIT), MT_THOK);
@@ -929,7 +916,7 @@ void G_GhostTicker(void)
 						follow->colorized = true;
 
 					if (followtic & FZT_SKIN)
-						follow->skin = &skins[READUINT8(g->p)];
+						follow->skin = skins[READUINT8(g->p)];
 				}
 			}
 			if (follow)
@@ -1120,18 +1107,6 @@ void G_ReadMetalTic(mobj_t *metal)
 				{
 					mobj = P_SpawnGhostMobj(metal); // does a large portion of the work for us
 				}
-				else if (type == MT_THOKEFFECT)
-				{
-					mobj = P_SpawnMobjFromMobj(metal, 0, 0, FixedDiv(metal->height, metal->scale)*3/4, type);
-					mobj->angle = metal->angle + ANGLE_90;
-					mobj->fuse = 7;
-					mobj->scale = metal->scale / 3;
-					mobj->destscale = 10 * metal->scale;
-					mobj->colorized = true;
-					mobj->color = metal->color;
-					mobj->momx = -metal->momx / 2;
-					mobj->momy = -metal->momy / 2;
-				}
 				else
 				{
 					mobj = P_SpawnMobjFromMobj(metal, 0, 0, -FixedDiv(FixedMul(metal->info->height, metal->scale) - metal->height,3*FRACUNIT), MT_THOK);
@@ -1199,7 +1174,7 @@ void G_ReadMetalTic(mobj_t *metal)
 						follow->colorized = true;
 
 					if (followtic & FZT_SKIN)
-						follow->skin = &skins[READUINT8(metal_p)];
+						follow->skin = skins[READUINT8(metal_p)];
 				}
 			}
 			if (follow)
