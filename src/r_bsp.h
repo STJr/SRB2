@@ -38,6 +38,8 @@ extern boolean horizonline;
 
 extern INT32 doorclosed;
 
+extern UINT8 solidcol[MAXVIDWIDTH];
+
 // BSP?
 void R_ClearClipSegs(void);
 void R_PortalClearClipSegs(INT32 start, INT32 end);

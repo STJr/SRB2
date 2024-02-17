@@ -973,6 +973,8 @@ static boolean R_FFloorCanClip(visffloor_t *pfloor)
 	return (cv_ffloorclip.value && !R_IsFFloorTranslucent(pfloor) && !pfloor->polyobj);
 }
 
+static boolean didsolidcol; // True if at least one column was marked solid
+
 //
 // R_RenderSegLoop
 // Draws zero, one, or two textures (and possibly a masked
@@ -1389,6 +1391,12 @@ static void R_RenderSegLoop (void)
 				floorclip[rw_x] = bottomclip;
 		}
 
+		if ((markceiling || markfloor) && (floorclip[rw_x] <= ceilingclip[rw_x] + 1))
+		{
+			solidcol[rw_x] = 1;
+			didsolidcol = true;
+		}
+
 		if (maskedtexturecol)
 			maskedtexturecol[rw_x] = texturecolumn + rw_offsetx;
 
@@ -1442,6 +1450,76 @@ static void R_RenderSegLoop (void)
 
 			ffloor[i].f_clip[rw_x] = ffloor[i].c_clip[rw_x] = (INT16)((ffloor[i].b_frac >> HEIGHTBITS) & 0xFFFF);
 			ffloor[i].b_frac += ffloor[i].b_step;
+		}
+
+		rw_scale += rw_scalestep;
+		topfrac += topstep;
+		bottomfrac += bottomstep;
+	}
+}
+
+static void R_MarkSegBounds(void)
+{
+	INT32 top, bottom;
+	INT16 topclip, bottomclip;
+
+	for (; rw_x < rw_stopx; rw_x++)
+	{
+		// mark floor / ceiling areas
+		INT32 yl = (topfrac+HEIGHTUNIT-1)>>HEIGHTBITS;
+		INT32 yh = bottomfrac>>HEIGHTBITS;
+
+		// Mark ceiling
+		top = ceilingclip[rw_x]+1;
+
+		// no space above wall?
+		if (yl < top)
+			yl = top;
+
+		if (markceiling)
+		{
+			if (yl > floorclip[rw_x])
+				bottom = floorclip[rw_x] - 1;
+			else
+				bottom = yl - 1;
+
+			if (ceilingplane && top <= bottom)
+				R_ExpandPlaneY(ceilingplane, rw_x, top, bottom);
+		}
+
+		// Mark floor
+		bottom = floorclip[rw_x]-1;
+
+		// no space below floor?
+		if (yh > bottom)
+			yh = bottom;
+
+		if (markfloor)
+		{
+			if (yh < ceilingclip[rw_x])
+				top = ceilingclip[rw_x] + 1;
+			else
+				top = yh + 1;
+
+			if (floorplane && top <= bottom)
+				R_ExpandPlaneY(floorplane, rw_x, top, bottom);
+		}
+
+		frontscale[rw_x] = rw_scale;
+
+		topclip = (yl >= 0) ? ((yl > viewheight) ? (INT16)viewheight : (INT16)((INT16)yl - 1)) : -1;
+		bottomclip = (yh < viewheight) ? ((yh < -1) ? -1 : (INT16)((INT16)yh + 1)) : (INT16)viewheight;
+
+		if (markceiling) // no top wall
+			ceilingclip[rw_x] = topclip;
+
+		if (markfloor) // no bottom wall
+			floorclip[rw_x] = bottomclip;
+
+		if ((markceiling || markfloor) && (floorclip[rw_x] <= ceilingclip[rw_x] + 1))
+		{
+			solidcol[rw_x] = 1;
+			didsolidcol = true;
 		}
 
 		rw_scale += rw_scalestep;
@@ -2784,17 +2862,51 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 		}
 	}
 
-	rw_silhouette = &(ds_p->silhouette);
-	rw_tsilheight = &(ds_p->tsilheight);
-	rw_bsilheight = &(ds_p->bsilheight);
+	didsolidcol = false;
 
-	R_RenderSegLoop();
+	if (!segtextured && !numffloors)
+	{
+		if (markfloor || markceiling)
+			R_MarkSegBounds();
+		else
+		{
+			for (; rw_x < rw_stopx; rw_x++)
+			{
+				frontscale[rw_x] = rw_scale;
+				rw_scale += rw_scalestep;
+			}
+		}
+	}
+	else
+	{
+		rw_silhouette = &ds_p->silhouette;
+		rw_tsilheight = &ds_p->tsilheight;
+		rw_bsilheight = &ds_p->bsilheight;
+
+		R_RenderSegLoop();
+	}
+
 	colfunc = colfuncs[BASEDRAWFUNC];
 
 	if (portalline) // if curline is a portal, set portalrender for drawseg
 		ds_p->portalpass = portalrender+1;
 	else
 		ds_p->portalpass = 0;
+
+	// cph - if a column was made solid by this wall, we _must_ save full clipping info
+	if (backsector && didsolidcol)
+	{
+		if (!(ds_p->silhouette & SIL_BOTTOM))
+		{
+			ds_p->silhouette |= SIL_BOTTOM;
+			ds_p->bsilheight = backsector->f_slope ? INT32_MAX : backsector->floorheight;
+		}
+		if (!(ds_p->silhouette & SIL_TOP))
+		{
+			ds_p->silhouette |= SIL_TOP;
+			ds_p->tsilheight = backsector->c_slope ? INT32_MIN : backsector->ceilingheight;
+		}
+	}
 
 	// save sprite clipping info
 	if (maskedtexture || (ds_p->silhouette & (SIL_TOP | SIL_BOTTOM)))
