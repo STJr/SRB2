@@ -1280,7 +1280,7 @@ static unsigned PIT_DoCheckThing(mobj_t *thing)
 		{
 			// Don't hit yourself, and if a player, don't hit bots
 			if (thing == tmthing->target
-				|| (thing->player && tmthing->target->player && !P_CanPlayerHurtPlayer(thing->player, tmthing, tmthing->target->player, 0)))
+				|| (thing->player && tmthing->target->player && (thing->player->bot == BOT_2PAI || thing->player->bot == BOT_2PHUMAN)))
 				return CHECKTHING_IGNORE;
 
 			if (thing->type != MT_PLAYER)
