@@ -1516,7 +1516,7 @@ static void R_MarkSegBounds(void)
 		if (markfloor) // no bottom wall
 			floorclip[rw_x] = bottomclip;
 
-		if ((markceiling || markfloor) && (floorclip[rw_x] <= ceilingclip[rw_x] + 1))
+		if (floorclip[rw_x] <= ceilingclip[rw_x] + 1)
 		{
 			solidcol[rw_x] = 1;
 			didsolidcol = true;
