@@ -153,8 +153,8 @@ default:
     - - |
           # ccache_stats
           echo -e "\e[0Ksection_start:`date +%s`:ccache_stats[collapsed=true]\r\e[0Kccache statistics:"
-      - ccache --show-stats --verbose
-      - ccache --show-log-stats --verbose
+      - ccache --show-stats
+      - ccache --show-log-stats || true
       - |
           # ccahe_stats
           echo -e "\e[0Ksection_end:`date +%s`:ccache_stats\r\e[0K"
@@ -283,6 +283,47 @@ Debian stable:amd64:
           # make
           echo -e "\e[0Ksection_end:`date +%s`:make\r\e[0K"
 
+Debian oldstable:amd64:
+  extends: Debian stable:amd64
+
+  when: manual
+
+  image: git.do.srb2.org:5050/stjr/srb2ci/srb2ci:oldstable
+
+  allow_failure: true
+
+  artifacts:
+    paths:
+      - "bin/"
+      - "src/comptime.h"
+    expose_as: "Debian old amd64"
+    name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-old-x86-64"
+
+  script:
+    - - |
+          # apt_toolchain
+          echo -e "\e[0Ksection_start:`date +%s`:apt_toolchain[collapsed=true]\r\e[0KInstalling toolchain packages"
+      - apt-get install gcc-x86-64-linux-gnu || apt-get install gcc
+      - |
+          # apt_toolchain
+          echo -e "\e[0Ksection_end:`date +%s`:apt_toolchain\r\e[0K"
+
+    - - |
+          # apt_development
+          echo -e "\e[0Ksection_start:`date +%s`:apt_development[collapsed=true]\r\e[0KInstalling development packages"
+      - apt-get install libsdl2-mixer-dev:amd64 libpng-dev:amd64 libcurl4-openssl-dev:amd64 libopenmpt-dev:amd64 libminiupnpc-dev:amd64
+      - |
+          # apt_development
+          echo -e "\e[0Ksection_end:`date +%s`:apt_development\r\e[0K"
+
+    - - |
+          # make
+          echo -e "\e[0Ksection_start:`date +%s`:make[collapsed=false]\r\e[0KCompiling SRB2"
+      - make --directory=src --keep-going CCACHE=1 ERRORMODE=1 LINUX64=1 NOGME=1 || make --directory=src --keep-going CCACHE=1 ERRORMODE=1 LINUX64=1 NOGME=1
+      - |
+          # make
+          echo -e "\e[0Ksection_end:`date +%s`:make\r\e[0K"
+
 Debian stable:i386:
   stage: build
 
@@ -366,6 +407,86 @@ Debian stable:arm64:
           # make
           echo -e "\e[0Ksection_start:`date +%s`:make[collapsed=false]\r\e[0KCompiling SRB2"
       - make --directory=src --keep-going CCACHE=1 ERRORMODE=1 LINUX64=1 ERRORMODE=1 NONX86=1 ARM64=1 || make --directory=src --keep-going CCACHE=1 ERRORMODE=1 LINUX64=1 NONX86=1 ARM64=1
+      - |
+          # make
+          echo -e "\e[0Ksection_end:`date +%s`:make\r\e[0K"
+
+Debian oldstable:arm64:
+  extends: Debian stable:arm64
+
+  when: manual
+
+  image: git.do.srb2.org:5050/stjr/srb2ci/srb2ci:oldstable
+
+  allow_failure: true
+
+  artifacts:
+    paths:
+      - "bin/"
+      - "src/comptime.h"
+    expose_as: "Debian old arm64"
+    name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-old-aarch64"
+
+  script:
+    - - |
+          # apt_toolchain
+          echo -e "\e[0Ksection_start:`date +%s`:apt_toolchain[collapsed=true]\r\e[0KInstalling toolchain packages"
+      - apt-get install gcc-aarch64-linux-gnu || apt-get install gcc
+      - |
+          # apt_toolchain
+          echo -e "\e[0Ksection_end:`date +%s`:apt_toolchain\r\e[0K"
+
+    - - |
+          # apt_development
+          echo -e "\e[0Ksection_start:`date +%s`:apt_development[collapsed=true]\r\e[0KInstalling development packages"
+      - apt-get install libsdl2-mixer-dev:arm64 libpng-dev:arm64 libcurl4-openssl-dev:arm64 libopenmpt-dev:arm64 libminiupnpc-dev:arm64
+      - |
+          # apt_development
+          echo -e "\e[0Ksection_end:`date +%s`:apt_development\r\e[0K"
+
+    - - |
+          # make
+          echo -e "\e[0Ksection_start:`date +%s`:make[collapsed=false]\r\e[0KCompiling SRB2"
+      - make --directory=src --keep-going CCACHE=1 ERRORMODE=1 LINUX64=1 ERRORMODE=1 NONX86=1 ARM64=1 NOGME=1 || make --directory=src --keep-going CCACHE=1 ERRORMODE=1 LINUX64=1 NONX86=1 ARM64=1 NOGME=1
+      - |
+          # make
+          echo -e "\e[0Ksection_end:`date +%s`:make\r\e[0K"
+
+batocera:arm64:
+  extends: Debian stable:arm64
+
+  when: manual
+
+  allow_failure: true
+
+  artifacts:
+    paths:
+      - "bin/"
+      - "src/comptime.h"
+    expose_as: "Debian old arm64"
+    name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-batocera-aarch64"
+
+  script:
+    - - |
+          # apt_toolchain
+          echo -e "\e[0Ksection_start:`date +%s`:apt_toolchain[collapsed=true]\r\e[0KInstalling toolchain packages"
+      - apt-get install gcc-aarch64-linux-gnu || apt-get install gcc
+      - |
+          # apt_toolchain
+          echo -e "\e[0Ksection_end:`date +%s`:apt_toolchain\r\e[0K"
+
+    - - |
+          # apt_development
+          echo -e "\e[0Ksection_start:`date +%s`:apt_development[collapsed=true]\r\e[0KInstalling development packages"
+      - apt-get install libsdl2-mixer-dev:arm64 libpng-dev:arm64 libcurl4-openssl-dev:arm64 libopenmpt-dev:arm64 libminiupnpc-dev:arm64
+      - |
+          # apt_development
+          echo -e "\e[0Ksection_end:`date +%s`:apt_development\r\e[0K"
+
+    - - |
+          # make
+          echo -e "\e[0Ksection_start:`date +%s`:make[collapsed=false]\r\e[0KCompiling SRB2"
+      - make --directory=src --keep-going CCACHE=1 ERRORMODE=1 LINUX64=1 ERRORMODE=1 NONX86=1 ARM64=1 NOGME=1 || make --directory=src --keep-going CCACHE=1 ERRORMODE=1 LINUX64=1 NONX86=1 ARM64=1 NOGME=1
       - |
           # make
           echo -e "\e[0Ksection_end:`date +%s`:make\r\e[0K"
@@ -463,8 +584,8 @@ Debian testing Clang:
 
   variables:
     CC: clang
-    WFLAGS: -Wno-cast-align -Wno-deprecated-non-prototype
-    CFLAGS: -Wno-cast-align -Wno-deprecated-non-prototype
+    WFLAGS: -Wno-cast-align -Wno-deprecated-non-prototype -Wno-single-bit-bitfield-constant-conversion
+    CFLAGS: -Wno-cast-align -Wno-deprecated-non-prototype -Wno-single-bit-bitfield-constant-conversion
     LDFLAGS: -Wl,-fuse-ld=gold
 
 Alpine 3 GCC:
@@ -596,3 +717,38 @@ Alpine 3 GCC:
       - |
           # ccahe_stats
           echo -e "\e[0Ksection_end:`date +%s`:ccache_stats\r\e[0K"
+
+Alpine 3 GCC Dedicated:
+  extends: Alpine 3 GCC
+
+  artifacts:
+    paths:
+      - "bin/"
+      - "src/comptime.h"
+    expose_as: "Apline-3-Dedicated"
+    name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-Apline-3-Dedicated"
+
+  script:
+    - - |
+          # apk_toolchain
+          echo -e "\e[0Ksection_start:`date +%s`:apk_toolchain[collapsed=true]\r\e[0KInstalling toolchain packages"
+      - apk add gcc
+      - |
+          # apk_toolchain
+          echo -e "\e[0Ksection_end:`date +%s`:apk_toolchain\r\e[0K"
+
+    - - |
+          # apk_development
+          echo -e "\e[0Ksection_start:`date +%s`:apk_development[collapsed=true]\r\e[0KInstalling development packages"
+      - apk add musl-dev libpng-dev curl-dev
+      - |
+          # apk_development
+          echo -e "\e[0Ksection_end:`date +%s`:apk_development\r\e[0K"
+
+    - - |
+          # make
+          echo -e "\e[0Ksection_start:`date +%s`:make[collapsed=false]\r\e[0KCompiling SRB2"
+      - make --directory=src --keep-going CCACHE=1 ERRORMODE=1 NONX86=1 NOEXECINFO=1 DEDICATED=1 || make --directory=src --keep-going CCACHE=1 ERRORMODE=1 NONX86=1 NOEXECINFO=1 DEDICATED=1
+      - |
+          # make
+          echo -e "\e[0Ksection_end:`date +%s`:make\r\e[0K"

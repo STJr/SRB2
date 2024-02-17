@@ -42,9 +42,7 @@ enum
 	TEXTURETYPE_UNKNOWN,
 	TEXTURETYPE_SINGLEPATCH,
 	TEXTURETYPE_COMPOSITE,
-#ifdef WALLFLATS
-	TEXTURETYPE_FLAT,
-#endif
+	TEXTURETYPE_FLAT
 };
 
 // A texture_t describes a rectangular texture,
@@ -55,9 +53,8 @@ typedef struct
 	// Keep name for switch changing, etc.
 	char name[8];
 	UINT32 hash;
-	UINT8 type; // TEXTURETYPE_
+	UINT8 type; // TEXTURETYPE_*
 	INT16 width, height;
-	boolean holes;
 	UINT8 flip; // 1 = flipx, 2 = flipy, 3 = both
 	void *flat; // The texture, as a flat.
 
@@ -72,7 +69,7 @@ extern texture_t **textures;
 extern INT32 *texturewidth;
 extern fixed_t *textureheight; // needed for texture pegging
 
-extern UINT32 **texturecolumnofs; // column offset lookup table for each texture
+extern column_t **texturecolumns; // columns for each texture
 extern UINT8 **texturecache; // graphics data for each generated full-size texture
 
 // Load TEXTURES definitions, create lookup tables
@@ -82,15 +79,16 @@ void R_FlushTextureCache(void);
 
 // Texture generation
 UINT8 *R_GenerateTexture(size_t texnum);
-UINT8 *R_GenerateTextureAsFlat(size_t texnum);
+UINT8 *R_GetFlatForTexture(size_t texnum);
 INT32 R_GetTextureNum(INT32 texnum);
 void R_CheckTextureCache(INT32 tex);
 void R_ClearTextureNumCache(boolean btell);
 
 // Retrieve texture data.
-void *R_GetLevelFlat(levelflat_t *levelflat);
-UINT8 *R_GetColumn(fixed_t tex, INT32 col);
-void *R_GetFlat(lumpnum_t flatnum);
+column_t *R_GetColumn(fixed_t tex, INT32 col);
+void *R_GetFlat(levelflat_t *levelflat);
+
+INT32 R_GetTextureNumForFlat(levelflat_t *levelflat);
 
 boolean R_CheckPowersOfTwo(void);
 boolean R_CheckSolidColorFlat(void);
@@ -102,7 +100,7 @@ void R_SetFlatVars(size_t length);
 // Returns the texture number for the texture name.
 INT32 R_TextureNumForName(const char *name);
 INT32 R_CheckTextureNumForName(const char *name);
-lumpnum_t R_GetFlatNumForName(const char *name);
+INT32 R_CheckFlatNumForName(const char *name);
 
 // Returns the texture name for the texture number (in case you ever needed it)
 const char *R_CheckTextureNameForNum(INT32 num);

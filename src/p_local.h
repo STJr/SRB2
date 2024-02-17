@@ -189,7 +189,7 @@ void P_DoPityCheck(player_t *player);
 void P_PlayerThink(player_t *player);
 void P_PlayerAfterThink(player_t *player);
 void P_DoPlayerFinish(player_t *player);
-void P_DoPlayerExit(player_t *player);
+void P_DoPlayerExit(player_t *player, boolean finishedflag);
 void P_NightserizePlayer(player_t *player, INT32 ptime);
 
 void P_InstaThrust(mobj_t *mo, angle_t angle, fixed_t move);
@@ -462,7 +462,7 @@ extern INT32 bmapwidth;
 extern INT32 bmapheight; // in mapblocks
 extern fixed_t bmaporgx;
 extern fixed_t bmaporgy; // origin of block map
-extern mobj_t **blocklinks; // for thing chains
+extern blocknode_t **blocklinks; // for thing chains
 
 //
 // P_INTER
