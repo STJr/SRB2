@@ -714,10 +714,12 @@ static void Got_Saycmd(UINT8 **p, INT32 playernum)
 	// Clean up message a bit
 	// If you use a \r character, you can remove your name
 	// from before the text and then pretend to be someone else!
+	// If you use a \n character, you can create a new line in
+	// the log and then pretend to be someone else as well!
 	ptr = msg;
 	while (*ptr != '\0')
 	{
-		if (*ptr == '\r')
+		if (*ptr == '\r' || *ptr == '\n')
 			*ptr = ' ';
 
 		ptr++;

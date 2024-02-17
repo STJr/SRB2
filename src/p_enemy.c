@@ -23,6 +23,7 @@
 #include "m_random.h"
 #include "m_misc.h"
 #include "r_skins.h"
+#include "r_translation.h"
 #include "i_video.h"
 #include "z_zone.h"
 #include "lua_hook.h"
@@ -196,6 +197,7 @@ void A_SetRandomTics(mobj_t *actor);
 void A_ChangeColorRelative(mobj_t *actor);
 void A_ChangeColorAbsolute(mobj_t *actor);
 void A_Dye(mobj_t *actor);
+void A_SetTranslation(mobj_t *actor);
 void A_MoveRelative(mobj_t *actor);
 void A_MoveAbsolute(mobj_t *actor);
 void A_Thrust(mobj_t *actor);
@@ -4006,7 +4008,7 @@ static void P_DoBossVictory(mobj_t *mo)
 		{
 			if (!playeringame[i])
 				continue;
-			P_DoPlayerExit(&players[i]);
+			P_DoPlayerExit(&players[i], true);
 		}
 	}
 	else
@@ -5803,15 +5805,12 @@ void A_MinusDigging(mobj_t *actor)
 		fixed_t yl = (unsigned)(actor->y - radius - bmaporgy) >> MAPBLOCKSHIFT;
 		fixed_t xh = (unsigned)(actor->x + radius - bmaporgx) >> MAPBLOCKSHIFT;
 		fixed_t xl = (unsigned)(actor->x - radius - bmaporgx) >> MAPBLOCKSHIFT;
-		fixed_t bx, by;
 
 		BMBOUNDFIX(xl, xh, yl, yh);
 
 		minus = actor;
 
-		for (bx = xl; bx <= xh; bx++)
-			for (by = yl; by <= yh; by++)
-				P_BlockThingsIterator(bx, by, PIT_MinusCarry);
+		P_DoBlockThingsIterate(xl, yl, xh, yh, PIT_MinusCarry);
 	}
 	else
 	{
@@ -9201,6 +9200,26 @@ void A_Dye(mobj_t *actor)
 	}
 }
 
+// Function: A_SetTranslation
+//
+// Description: Changes the translation of an actor.
+//
+// var1 = translation ID
+// var2 = unused
+//
+void A_SetTranslation(mobj_t *actor)
+{
+	INT32 locvar1 = var1;
+
+	if (LUA_CallAction(A_SETTRANSLATION, actor))
+		return;
+
+	if (R_TranslationIsValid(locvar1))
+		actor->translation = (UINT32)locvar1;
+	else
+		actor->translation = 0;
+}
+
 // Function: A_MoveRelative
 //
 // Description: Moves an object (wrapper for P_Thrust)
@@ -10970,7 +10989,7 @@ void A_ForceWin(mobj_t *actor)
 	{
 		if (!playeringame[i])
 			continue;
-		P_DoPlayerExit(&players[i]);
+		P_DoPlayerExit(&players[i], true);
 	}
 }
 
@@ -13849,7 +13868,7 @@ void A_DustDevilThink(mobj_t *actor)
 {
 	fixed_t scale = actor->scale;
 	mobj_t *layer = actor->tracer;
-	INT32 bx, by, xl, xh, yl, yh;
+	INT32 xl, xh, yl, yh;
 	fixed_t radius = actor->radius;
 
 	if (LUA_CallAction(A_DUSTDEVILTHINK, actor))
@@ -13914,9 +13933,7 @@ void A_DustDevilThink(mobj_t *actor)
 
 	dustdevil = actor;
 
-	for (bx = xl; bx <= xh; bx++)
-		for (by = yl; by <= yh; by++)
-			P_BlockThingsIterator(bx, by, PIT_DustDevilLaunch);
+	P_DoBlockThingsIterate(xl, yl, xh, yh, PIT_DustDevilLaunch);
 
 	//Whirlwind sound effect.
 	if (leveltime % 70 == 0)
@@ -13996,7 +14013,6 @@ static boolean PIT_TNTExplode(mobj_t *nearby)
 void A_TNTExplode(mobj_t *actor)
 {
 	INT32 locvar1 = var1;
-	INT32 x, y;
 	INT32 xl, xh, yl, yh;
 	static mappoint_t epicenter = {0,0,0};
 
@@ -14033,9 +14049,7 @@ void A_TNTExplode(mobj_t *actor)
 
 	barrel = actor;
 
-	for (x = xl; x <= xh; x++)
-		for (y = yl; y <= yh; y++)
-			P_BlockThingsIterator(x, y, PIT_TNTExplode);
+	P_DoBlockThingsIterate(xl, yl, xh, yh, PIT_TNTExplode);
 
 	// cause a quake -- P_StartQuake does not exist yet
 	epicenter.x = actor->x;
