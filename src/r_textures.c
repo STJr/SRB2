@@ -540,9 +540,9 @@ done:
 	return blocktex;
 }
 
-UINT8 *R_GetFlatForTexture(size_t texnum)
+UINT8 *R_GetFlatForTexture(INT32 texnum)
 {
-	if (texnum >= (unsigned)numtextures)
+	if (texnum < 0 || texnum >= numtextures)
 		return NULL;
 
 	texture_t *texture = textures[texnum];
@@ -585,12 +585,13 @@ UINT8 *R_GetFlatForTexture(size_t texnum)
 //
 // Returns the actual texture id that we should use.
 // This can either be texnum, the current frame for texnum's anim (if animated),
-// or 0 if not valid.
+// or NO_TEXTURE_NUM if not valid.
 //
 INT32 R_GetTextureNum(INT32 texnum)
 {
 	if (texnum < 0 || texnum >= numtextures)
-		return 0;
+		return NO_TEXTURE_NUM;
+
 	return texturetranslation[texnum];
 }
 
@@ -619,6 +620,9 @@ column_t *R_GetColumn(fixed_t tex, INT32 col)
 
 INT32 R_GetTextureNumForFlat(levelflat_t *levelflat)
 {
+	if (levelflat->texture_id == NO_TEXTURE_NUM)
+		return NO_TEXTURE_NUM;
+
 	return texturetranslation[levelflat->texture_id];
 }
 
@@ -1566,7 +1570,7 @@ INT32 R_CheckTextureNumForName(const char *name)
 
 	// "NoTexture" marker.
 	if (name[0] == '-')
-		return 0;
+		return NO_TEXTURE_NUM;
 
 	hash = quickncasehash(name, 8);
 
@@ -1582,7 +1586,7 @@ INT32 R_CheckTextureNumForName(const char *name)
 			return i;
 		}
 
-	return -1;
+	return NO_TEXTURE_NUM;
 }
 
 //
@@ -1593,9 +1597,9 @@ INT32 R_CheckTextureNumForName(const char *name)
 //
 const char *R_CheckTextureNameForNum(INT32 num)
 {
-	if (num > 0 && num < numtextures)
+	if (num >= 0 && num < numtextures)
 		return textures[num]->name;
-	
+
 	return "-";
 }
 
@@ -1608,8 +1612,11 @@ const char *R_TextureNameForNum(INT32 num)
 {
 	const char *result = R_CheckTextureNameForNum(num);
 
+#if 0
+	// No, why???
 	if (strcmp(result, "-") == 0)
 		return "REDWALL";
+#endif
 
 	return result;
 }
@@ -1617,23 +1624,27 @@ const char *R_TextureNameForNum(INT32 num)
 //
 // R_TextureNumForName
 //
-// Calls R_CheckTextureNumForName, aborts with error message.
+// Calls R_CheckTextureNumForName, returns REDWALL if not found.
 //
 INT32 R_TextureNumForName(const char *name)
 {
-	const INT32 i = R_CheckTextureNumForName(name);
+	// "NoTexture" marker.
+	if (name[0] == '-')
+		return NO_TEXTURE_NUM;
 
-	if (i == -1)
-	{
-		static INT32 redwall = -2;
-		CONS_Debug(DBG_SETUP, "WARNING: R_TextureNumForName: %.8s not found\n", name);
-		if (redwall == -2)
-			redwall = R_CheckTextureNumForName("REDWALL");
-		if (redwall != -1)
-			return redwall;
-		return 1;
-	}
-	return i;
+	// If R_CheckTextureNumForName returns NO_TEXTURE_NUM we use a fallback texture
+	INT32 i = R_CheckTextureNumForName(name);
+	if (i != NO_TEXTURE_NUM)
+		return i;
+
+	// Texture wasn't found, use REDWALL
+	CONS_Debug(DBG_SETUP, "WARNING: R_TextureNumForName: %.8s not found\n", name);
+
+	i = R_CheckTextureNumForName("REDWALL");
+	if (i != NO_TEXTURE_NUM)
+		return i;
+
+	return 0; // Give up and return texture #1
 }
 
 // Like R_CheckTextureNumForName, but only looks in the flat namespace specifically.
@@ -1644,7 +1655,7 @@ INT32 R_CheckFlatNumForName(const char *name)
 
 	// "NoTexture" marker.
 	if (name[0] == '-')
-		return 0;
+		return NO_TEXTURE_NUM;
 
 	hash = quickncasehash(name, 8);
 
@@ -1659,5 +1670,5 @@ INT32 R_CheckFlatNumForName(const char *name)
 			return i;
 		}
 
-	return -1;
+	return NO_TEXTURE_NUM;
 }

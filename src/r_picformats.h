@@ -76,7 +76,7 @@ void *Picture_GetPatchPixel(
 	INT32 x, INT32 y,
 	pictureflags_t flags);
 
-void *Picture_TextureToFlat(size_t texnum);
+void *Picture_TextureToFlat(INT32 texnum);
 
 INT32 Picture_FormatBPP(pictureformat_t format);
 boolean Picture_IsPatchFormat(pictureformat_t format);

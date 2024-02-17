@@ -225,9 +225,9 @@ static INT32 R_DoorClosed(void)
 	backsector->ceilingheight <= backsector->floorheight
 
 	// preserve a kind of transparent door/lift special effect:
-	&& (backsector->ceilingheight >= frontsector->ceilingheight || curline->sidedef->toptexture)
+	&& (backsector->ceilingheight >= frontsector->ceilingheight || (curline->sidedef->toptexture != NO_TEXTURE_NUM))
 
-	&& (backsector->floorheight <= frontsector->floorheight || curline->sidedef->bottomtexture);
+	&& (backsector->floorheight <= frontsector->floorheight || (curline->sidedef->bottomtexture != NO_TEXTURE_NUM));
 }
 
 //
@@ -383,7 +383,7 @@ boolean R_IsEmptyLine(seg_t *line, sector_t *front, sector_t *back)
 		&& back->f_slope == front->f_slope
 		&& back->c_slope == front->c_slope
 		&& back->lightlevel == front->lightlevel
-		&& !line->sidedef->midtexture
+		&& line->sidedef->midtexture == NO_TEXTURE_NUM
 		// Check offsets and scale too!
 		&& back->floorxoffset == front->floorxoffset
 		&& back->flooryoffset == front->flooryoffset
@@ -532,7 +532,7 @@ static void R_AddLine(seg_t *line)
 	if (bothceilingssky && bothfloorssky) // everything's sky? let's save us a bit of time then
 	{
 		if (!line->polyseg &&
-			!line->sidedef->midtexture
+			line->sidedef->midtexture == NO_TEXTURE_NUM
 			&& ((!frontsector->ffloors && !backsector->ffloors)
 				|| Tag_Compare(&frontsector->tags, &backsector->tags)))
 			return; // line is empty, don't even bother
@@ -566,8 +566,8 @@ static void R_AddLine(seg_t *line)
 
 			// Check for automap fix. Store in doorclosed for r_segs.c
 			doorclosed = (backc1 <= backf1 && backc2 <= backf2
-			&& ((backc1 >= frontc1 && backc2 >= frontc2) || curline->sidedef->toptexture)
-			&& ((backf1 <= frontf1 && backf2 >= frontf2) || curline->sidedef->bottomtexture));
+			&& ((backc1 >= frontc1 && backc2 >= frontc2) || (curline->sidedef->toptexture != NO_TEXTURE_NUM))
+			&& ((backf1 <= frontf1 && backf2 >= frontf2) || (curline->sidedef->bottomtexture != NO_TEXTURE_NUM)));
 
 			if (doorclosed)
 				goto clipsolid;

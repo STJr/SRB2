@@ -847,7 +847,7 @@ boolean Picture_CheckIfDoomPatch(softwarepatch_t *patch, size_t size)
   * \param texnum The texture number.
   * \return The converted flat.
   */
-void *Picture_TextureToFlat(size_t texnum)
+void *Picture_TextureToFlat(INT32 texnum)
 {
 	texture_t *texture;
 
@@ -856,7 +856,7 @@ void *Picture_TextureToFlat(size_t texnum)
 	UINT8 *desttop, *dest, *deststop;
 	UINT8 *source;
 
-	if (texnum >= (unsigned)numtextures)
+	if (texnum < 0 || texnum >= numtextures)
 		I_Error("Picture_TextureToFlat: invalid texture number!");
 
 	// Check the texture cache

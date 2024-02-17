@@ -1003,7 +1003,11 @@ void R_DrawSinglePlane(visplane_t *pl)
 		if (ds_source == NULL)
 			return;
 
-		texture_t *texture = textures[R_GetTextureNumForFlat(levelflat)];
+		INT32 texnum = R_GetTextureNumForFlat(levelflat);
+		if (texnum == NO_TEXTURE_NUM)
+			return;
+
+		texture_t *texture = textures[texnum];
 		ds_flatwidth = texture->width;
 		ds_flatheight = texture->height;
 

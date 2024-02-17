@@ -847,11 +847,11 @@ static fixed_t P_FindShortestUpperAround(INT32 secnum)
 		if (twoSided(secnum, i))
 		{
 			side = getSide(secnum,i,0);
-			if (side->toptexture > 0)
+			if (side->toptexture != NO_TEXTURE_NUM)
 				if (textureheight[side->toptexture] < minsize)
 					minsize = textureheight[side->toptexture];
 			side = getSide(secnum,i,1);
-			if (side->toptexture > 0)
+			if (side->toptexture != NO_TEXTURE_NUM)
 				if (textureheight[side->toptexture] < minsize)
 					minsize = textureheight[side->toptexture];
 		}
@@ -2856,18 +2856,18 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 					if (line->args[1] != TMSD_BACK)
 					{
 						this = &sides[lines[linenum].sidenum[0]];
-						if (always || this->toptexture) this->toptexture = setfront->toptexture;
-						if (always || this->midtexture) this->midtexture = setfront->midtexture;
-						if (always || this->bottomtexture) this->bottomtexture = setfront->bottomtexture;
+						if (always || this->toptexture != NO_TEXTURE_NUM) this->toptexture = setfront->toptexture;
+						if (always || this->midtexture != NO_TEXTURE_NUM) this->midtexture = setfront->midtexture;
+						if (always || this->bottomtexture != NO_TEXTURE_NUM) this->bottomtexture = setfront->bottomtexture;
 					}
 
 					// Back side
 					if (line->args[1] != TMSD_FRONT && lines[linenum].sidenum[1] != NO_SIDEDEF)
 					{
 						this = &sides[lines[linenum].sidenum[1]];
-						if (always || this->toptexture) this->toptexture = setback->toptexture;
-						if (always || this->midtexture) this->midtexture = setback->midtexture;
-						if (always || this->bottomtexture) this->bottomtexture = setback->bottomtexture;
+						if (always || this->toptexture != NO_TEXTURE_NUM) this->toptexture = setback->toptexture;
+						if (always || this->midtexture != NO_TEXTURE_NUM) this->midtexture = setback->midtexture;
+						if (always || this->bottomtexture != NO_TEXTURE_NUM) this->bottomtexture = setback->bottomtexture;
 					}
 				}
 			}

@@ -1316,7 +1316,7 @@ static void HWR_AddLightMapForLine(int lightnum, seg_t *line)
 	if ( lgl_backsector->ceilingpic == gl_frontsector->ceilingpic
 	  && lgl_backsector->floorpic == gl_frontsector->floorpic
 	  && lgl_backsector->lightlevel == gl_frontsector->lightlevel
-	  && lgl_curline->sidedef->midtexture == 0)
+	  && lgl_curline->sidedef->midtexture == NO_TEXTURE_NUM)
 	{
 		return;
 	}

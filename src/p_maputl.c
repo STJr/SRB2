@@ -499,7 +499,7 @@ void P_LineOpening(line_t *linedef, mobj_t *mobj)
 			fixed_t texmid, delta1, delta2;
 			INT32 texnum = R_GetTextureNum(side->midtexture); // make sure the texture is actually valid
 
-			if (texnum) {
+			if (texnum != NO_TEXTURE_NUM) {
 				// Get the midtexture's height
 				texheight = textures[texnum]->height << FRACBITS;
 

@@ -27,6 +27,8 @@
 
 #include "taglist.h"
 
+#define NO_TEXTURE_NUM -1
+
 //
 // ClipWallSegment
 // Clips the given range of columns

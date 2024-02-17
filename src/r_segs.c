@@ -123,10 +123,13 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 	// OPTIMIZE: get rid of LIGHTSEGSHIFT globally
 	curline = ds->curline;
 
-	frontsector = curline->frontsector;
-	backsector = curline->backsector;
 	sidedef = curline->sidedef;
 	texnum = R_GetTextureNum(sidedef->midtexture);
+	if (texnum == NO_TEXTURE_NUM)
+		return;
+
+	frontsector = curline->frontsector;
+	backsector = curline->backsector;
 	windowbottom = windowtop = sprbotscreen = INT32_MAX;
 
 	ldef = curline->linedef;
@@ -532,6 +535,8 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 	}
 
 	texnum = R_GetTextureNum(sidedef->midtexture);
+	if (texnum == NO_TEXTURE_NUM)
+		return;
 
 	if (pfloor->fofflags & FOF_TRANSLUCENT)
 	{
@@ -1015,11 +1020,11 @@ static void R_RenderSegLoop (void)
 	INT32     bottom;
 	INT32     i;
 
-	if (midtexture)
+	if (midtexture != NO_TEXTURE_NUM)
 		R_CheckTextureCache(midtexture);
-	if (toptexture)
+	if (toptexture != NO_TEXTURE_NUM)
 		R_CheckTextureCache(toptexture);
-	if (bottomtexture)
+	if (bottomtexture != NO_TEXTURE_NUM)
 		R_CheckTextureCache(bottomtexture);
 
 	for (; rw_x < rw_stopx; rw_x++)
@@ -1242,7 +1247,7 @@ static void R_RenderSegLoop (void)
 		frontscale[rw_x] = rw_scale;
 
 		// draw the wall tiers
-		if (midtexture)
+		if (midtexture != NO_TEXTURE_NUM)
 		{
 			// single sided line
 			if (yl <= yh && yh >= 0 && yl < viewheight)
@@ -1293,7 +1298,7 @@ static void R_RenderSegLoop (void)
 			INT16 bottomclip = (yh < viewheight) ? ((yh < -1) ? -1 : (INT16)((INT16)yh + 1)) : (INT16)viewheight;
 
 			// two sided line
-			if (toptexture)
+			if (toptexture != NO_TEXTURE_NUM)
 			{
 				// top wall
 				mid = pixhigh>>HEIGHTBITS;
@@ -1340,7 +1345,7 @@ static void R_RenderSegLoop (void)
 			else if (markceiling && (!rw_ceilingmarked)) // no top wall
 				ceilingclip[rw_x] = topclip;
 
-			if (bottomtexture)
+			if (bottomtexture != NO_TEXTURE_NUM)
 			{
 				// bottom wall
 				mid = (pixlow+HEIGHTUNIT-1)>>HEIGHTBITS;
@@ -1403,7 +1408,7 @@ static void R_RenderSegLoop (void)
 				maskedtextureheight[rw_x] = min(rw_midtexturemid, rw_midtextureback);
 		}
 
-		if (midtexture || maskedtextureheight)
+		if (midtexture != NO_TEXTURE_NUM || maskedtextureheight)
 		{
 			if (oldtexturecolumn != -1)
 			{
@@ -1704,7 +1709,8 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 	worldbottom -= viewz;
 	worldbottomslope -= viewz;
 
-	midtexture = toptexture = bottomtexture = maskedtexture = 0;
+	midtexture = toptexture = bottomtexture = NO_TEXTURE_NUM;
+	maskedtexture = false;
 	ds_p->maskedtexturecol = NULL;
 	ds_p->numthicksides = numthicksides = 0;
 	ds_p->thicksidecol = NULL;
@@ -1752,6 +1758,8 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 	rw_midtexturescaley = sidedef->scaley_mid;
 	rw_invmidtexturescalex = FixedDiv(FRACUNIT, rw_midtexturescalex);
 
+	segtextured = false;
+
 	if (!backsector)
 	{
 		midtexture = R_GetTextureNum(sidedef->midtexture);
@@ -1759,56 +1767,61 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 		// a single sided line is terminal, so it must mark ends
 		markfloor = markceiling = true;
 
-		fixed_t rowoffset = sidedef->rowoffset + sidedef->offsety_mid;
-		fixed_t texheight = textureheight[midtexture];
-
-		if (rw_midtexturescaley > 0)
+		if (midtexture != NO_TEXTURE_NUM) // tsk tsk
 		{
-			if (linedef->flags & ML_NOSKEW)
+			fixed_t rowoffset = sidedef->rowoffset + sidedef->offsety_mid;
+			fixed_t texheight = textureheight[midtexture];
+
+			if (rw_midtexturescaley > 0)
 			{
-				if (linedef->flags & ML_DONTPEGBOTTOM)
-					rw_midtexturemid = FixedMul(frontsector->floorheight - viewz, rw_midtexturescaley) + texheight;
+				if (linedef->flags & ML_NOSKEW)
+				{
+					if (linedef->flags & ML_DONTPEGBOTTOM)
+						rw_midtexturemid = FixedMul(frontsector->floorheight - viewz, rw_midtexturescaley) + texheight;
+					else
+						rw_midtexturemid = FixedMul(frontsector->ceilingheight - viewz, rw_midtexturescaley);
+				}
+				else if (linedef->flags & ML_DONTPEGBOTTOM)
+				{
+					rw_midtexturemid = FixedMul(worldbottom, rw_midtexturescaley) + texheight;
+					rw_midtextureslide = floorfrontslide;
+				}
 				else
-					rw_midtexturemid = FixedMul(frontsector->ceilingheight - viewz, rw_midtexturescaley);
-			}
-			else if (linedef->flags & ML_DONTPEGBOTTOM)
-			{
-				rw_midtexturemid = FixedMul(worldbottom, rw_midtexturescaley) + texheight;
-				rw_midtextureslide = floorfrontslide;
+				{
+					// top of texture at top
+					rw_midtexturemid = FixedMul(worldtop, rw_midtexturescaley);
+					rw_midtextureslide = ceilingfrontslide;
+				}
 			}
 			else
 			{
-				// top of texture at top
-				rw_midtexturemid = FixedMul(worldtop, rw_midtexturescaley);
-				rw_midtextureslide = ceilingfrontslide;
-			}
-		}
-		else
-		{
-			// Upside down
-			rowoffset = -rowoffset;
+				// Upside down
+				rowoffset = -rowoffset;
 
-			if (linedef->flags & ML_NOSKEW)
-			{
-				if (linedef->flags & ML_DONTPEGBOTTOM)
-					rw_midtexturemid = FixedMul(frontsector->floorheight - viewz, rw_midtexturescaley);
+				if (linedef->flags & ML_NOSKEW)
+				{
+					if (linedef->flags & ML_DONTPEGBOTTOM)
+						rw_midtexturemid = FixedMul(frontsector->floorheight - viewz, rw_midtexturescaley);
+					else
+						rw_midtexturemid = FixedMul(frontsector->ceilingheight - viewz, rw_midtexturescaley) + texheight;
+				}
+				else if (linedef->flags & ML_DONTPEGBOTTOM)
+				{
+					rw_midtexturemid = FixedMul(worldbottom, rw_midtexturescaley);
+					rw_midtextureslide = floorfrontslide;
+				}
 				else
-					rw_midtexturemid = FixedMul(frontsector->ceilingheight - viewz, rw_midtexturescaley) + texheight;
+				{
+					// top of texture at top
+					rw_midtexturemid = FixedMul(worldtop, rw_midtexturescaley) + texheight;
+					rw_midtextureslide = ceilingfrontslide;
+				}
 			}
-			else if (linedef->flags & ML_DONTPEGBOTTOM)
-			{
-				rw_midtexturemid = FixedMul(worldbottom, rw_midtexturescaley);
-				rw_midtextureslide = floorfrontslide;
-			}
-			else
-			{
-				// top of texture at top
-				rw_midtexturemid = FixedMul(worldtop, rw_midtexturescaley) + texheight;
-				rw_midtextureslide = ceilingfrontslide;
-			}
-		}
 
-		rw_midtexturemid += rowoffset;
+			rw_midtexturemid += rowoffset;
+
+			segtextured = true;
+		}
 
 		ds_p->silhouette = SIL_BOTH;
 		ds_p->sprtopclip = screenheightarray;
@@ -1982,14 +1995,16 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 			}
 		}
 
-		fixed_t toprowoffset = sidedef->rowoffset + sidedef->offsety_top;
-		fixed_t botrowoffset = sidedef->rowoffset + sidedef->offsety_bottom;
-
 		// check TOP TEXTURE
 		if (!bothceilingssky // never draw the top texture if on
 			&& (worldhigh < worldtop || worldhighslope < worldtopslope))
 		{
 			toptexture = R_GetTextureNum(sidedef->toptexture);
+		}
+
+		if (toptexture != NO_TEXTURE_NUM)
+		{
+			fixed_t toprowoffset = sidedef->rowoffset + sidedef->offsety_top;
 
 			rw_toptexturescalex = sidedef->scalex_top;
 			rw_toptexturescaley = sidedef->scaley_top;
@@ -2022,14 +2037,21 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 			}
 
 			rw_toptexturemid = FixedMul(rw_toptexturemid, rw_toptexturescaley);
+			rw_toptexturemid += toprowoffset;
+
+			segtextured = true;
 		}
 
 		// check BOTTOM TEXTURE
 		if (!bothfloorssky // never draw the bottom texture if on
-			&& (worldlow > worldbottom || worldlowslope > worldbottomslope)) // Only if VISIBLE!!!
+			&& (worldlow > worldbottom || worldlowslope > worldbottomslope))
 		{
-			// bottom texture
 			bottomtexture = R_GetTextureNum(sidedef->bottomtexture);
+		}
+
+		if (bottomtexture != NO_TEXTURE_NUM)
+		{
+			fixed_t botrowoffset = sidedef->rowoffset + sidedef->offsety_bottom;
 
 			rw_bottomtexturescalex = sidedef->scalex_bottom;
 			rw_bottomtexturescaley = sidedef->scaley_bottom;
@@ -2062,10 +2084,10 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 			}
 
 			rw_bottomtexturemid = FixedMul(rw_bottomtexturemid, rw_bottomtexturescaley);
-		}
+			rw_bottomtexturemid += botrowoffset;
 
-		rw_toptexturemid += toprowoffset;
-		rw_bottomtexturemid += botrowoffset;
+			segtextured = true;
+		}
 
 		// allocate space for masked texture tables
 		R_AllocTextureColumnTables(rw_stopx - start);
@@ -2260,10 +2282,13 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 			}
 
 			ds_p->numthicksides = numthicksides = i;
+
+			if (numthicksides > 0)
+				segtextured = true;
 		}
 
 		// masked midtexture
-		if (sidedef->midtexture > 0 && sidedef->midtexture < numtextures)
+		if (sidedef->midtexture >= 0 && sidedef->midtexture < numtextures)
 		{
 			ds_p->maskedtexturecol = maskedtexturecol = curtexturecolumntable - rw_x;
 			curtexturecolumntable += rw_stopx - rw_x;
@@ -2271,6 +2296,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 			maskedtextureheight = ds_p->maskedtextureheight; // note to red, this == &(ds_p->maskedtextureheight[0])
 
 			maskedtexture = true;
+			segtextured = true;
 
 			if (curline->polyseg)
 			{
@@ -2321,8 +2347,6 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 	}
 
 	// calculate rw_offset (only needed for textured lines)
-	segtextured = midtexture || toptexture || bottomtexture || maskedtexture || (numthicksides > 0);
-
 	if (segtextured)
 	{
 		fixed_t sideoffset = sidedef->textureoffset;
@@ -2536,7 +2560,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 		worldhighslope >>= 4;
 		worldlowslope >>= 4;
 
-		if (toptexture)
+		if (toptexture != NO_TEXTURE_NUM)
 		{
 			pixhigh = (centeryfrac>>4) - FixedMul (worldhigh, rw_scale);
 			pixhighstep = -FixedMul (rw_scalestep,worldhigh);
@@ -2547,7 +2571,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 			}
 		}
 
-		if (bottomtexture)
+		if (bottomtexture != NO_TEXTURE_NUM)
 		{
 			pixlow = (centeryfrac>>4) - FixedMul (worldlow, rw_scale);
 			pixlowstep = -FixedMul (rw_scalestep,worldlow);
@@ -2730,7 +2754,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 
 		// Don't mark ceiling flat lines for polys unless this line has an upper texture, otherwise we get flat leakage pulling downward
 		// (If it DOES have an upper texture and we do this, the ceiling won't render at all)
-		if (curline->polyseg && !curline->sidedef->toptexture)
+		if (curline->polyseg && curline->sidedef->toptexture == NO_TEXTURE_NUM)
 			markceiling = false;
 	}
 
@@ -2744,7 +2768,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 
 		// Don't mark floor flat lines for polys unless this line has a lower texture, otherwise we get flat leakage pulling upward
 		// (If it DOES have a lower texture and we do this, the floor won't render at all)
-		if (curline->polyseg && !curline->sidedef->bottomtexture)
+		if (curline->polyseg && curline->sidedef->bottomtexture == NO_TEXTURE_NUM)
 			markfloor = false;
 	}
 
@@ -2819,12 +2843,12 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 	if (maskedtexture && !(ds_p->silhouette & SIL_TOP))
 	{
 		ds_p->silhouette |= SIL_TOP;
-		ds_p->tsilheight = (sidedef->midtexture > 0 && sidedef->midtexture < numtextures) ? INT32_MIN : INT32_MAX;
+		ds_p->tsilheight = (sidedef->midtexture >= 0 && sidedef->midtexture < numtextures) ? INT32_MIN : INT32_MAX;
 	}
 	if (maskedtexture && !(ds_p->silhouette & SIL_BOTTOM))
 	{
 		ds_p->silhouette |= SIL_BOTTOM;
-		ds_p->bsilheight = (sidedef->midtexture > 0 && sidedef->midtexture < numtextures) ? INT32_MAX : INT32_MIN;
+		ds_p->bsilheight = (sidedef->midtexture >= 0 && sidedef->midtexture < numtextures) ? INT32_MAX : INT32_MIN;
 	}
 	ds_p++;
 }

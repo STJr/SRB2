@@ -585,20 +585,20 @@ Ploadflat (levelflat_t *levelflat, const char *flatname, boolean resize)
 
 	// Look for a flat
 	int texturenum = R_CheckFlatNumForName(levelflat->name);
-	if (texturenum <= 0)
+	if (texturenum == NO_TEXTURE_NUM)
 	{
 		// If we can't find a flat, try looking for a texture!
 		texturenum = R_CheckTextureNumForName(levelflat->name);
-		if (texturenum <= 0)
+		if (texturenum == NO_TEXTURE_NUM)
 		{
 			// Use "not found" texture
 			texturenum = R_CheckTextureNumForName("REDWALL");
 
 			// Give up?
-			if (texturenum <= 0)
+			if (texturenum == NO_TEXTURE_NUM)
 			{
 				levelflat->type = LEVELFLAT_NONE;
-				texturenum = -1;
+				texturenum = NO_TEXTURE_NUM;
 			}
 		}
 	}
@@ -1331,12 +1331,12 @@ static void P_LoadSidedefs(UINT8 *data)
 				// SoM: R_CreateColormap will only create a colormap in software mode...
 				// Perhaps we should just call it instead of doing the calculations here.
 				sd->colormap_data = R_CreateColormapFromLinedef(msd->toptexture, msd->midtexture, msd->bottomtexture);
-				sd->toptexture = sd->midtexture = sd->bottomtexture = 0;
+				sd->toptexture = sd->midtexture = sd->bottomtexture = NO_TEXTURE_NUM;
 				break;
 
 			case 413: // Change music
 			{
-				sd->toptexture = sd->midtexture = sd->bottomtexture = 0;
+				sd->toptexture = sd->midtexture = sd->bottomtexture = NO_TEXTURE_NUM;
 
 				if (!isfrontside)
 					break;
@@ -1379,7 +1379,7 @@ static void P_LoadSidedefs(UINT8 *data)
 			case 4: // Speed pad parameters
 			case 414: // Play SFX
 			{
-				sd->toptexture = sd->midtexture = sd->bottomtexture = 0;
+				sd->toptexture = sd->midtexture = sd->bottomtexture = NO_TEXTURE_NUM;
 
 				if (!isfrontside)
 					break;
@@ -1421,7 +1421,7 @@ static void P_LoadSidedefs(UINT8 *data)
 			{
 				char process[8*3+1];
 				memset(process,0,8*3+1);
-				sd->toptexture = sd->midtexture = sd->bottomtexture = 0;
+				sd->toptexture = sd->midtexture = sd->bottomtexture = NO_TEXTURE_NUM;
 				if (msd->toptexture[0] == '-' && msd->toptexture[1] == '\0')
 					break;
 				else
@@ -2600,11 +2600,11 @@ static void P_WriteTextmap(void)
 			fprintf(f, "scalex_bottom = %f;\n", FIXED_TO_FLOAT(wsides[i].scalex_bottom));
 		if (wsides[i].scaley_bottom != FRACUNIT)
 			fprintf(f, "scaley_bottom = %f;\n", FIXED_TO_FLOAT(wsides[i].scaley_bottom));
-		if (wsides[i].toptexture > 0 && wsides[i].toptexture < numtextures)
+		if (wsides[i].toptexture >= 0 && wsides[i].toptexture < numtextures)
 			fprintf(f, "texturetop = \"%.*s\";\n", 8, textures[wsides[i].toptexture]->name);
-		if (wsides[i].bottomtexture > 0 && wsides[i].bottomtexture < numtextures)
+		if (wsides[i].bottomtexture >= 0 && wsides[i].bottomtexture < numtextures)
 			fprintf(f, "texturebottom = \"%.*s\";\n", 8, textures[wsides[i].bottomtexture]->name);
-		if (wsides[i].midtexture > 0 && wsides[i].midtexture < numtextures)
+		if (wsides[i].midtexture >= 0 && wsides[i].midtexture < numtextures)
 			fprintf(f, "texturemiddle = \"%.*s\";\n", 8, textures[wsides[i].midtexture]->name);
 		if (wsides[i].repeatcnt != 0)
 			fprintf(f, "repeatcnt = %d;\n", wsides[i].repeatcnt);

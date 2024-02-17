@@ -829,12 +829,13 @@ void HWR_GetLevelFlat(levelflat_t *levelflat)
 		return;
 	}
 
-	INT32 texturenum = texturetranslation[levelflat->texture_id];
-	if (texturenum <= 0)
+	if (levelflat->texture_id == NO_TEXTURE_NUM)
 	{
 		HWR_SetCurrentTexture(NULL);
 		return;
 	}
+
+	INT32 texturenum = texturetranslation[levelflat->texture_id];
 
 	GLMapTexture_t *grtex = &gl_flats[texturenum];
 	GLMipmap_t *grMipmap = &grtex->mipmap;
