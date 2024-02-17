@@ -900,9 +900,9 @@ boolean I_SetSongSpeed(float speed)
 
 UINT32 I_GetSongLength(void)
 {
+#ifdef HAVE_GME
 	INT32 length;
 
-#ifdef HAVE_GME
 	if (gme)
 	{
 		gme_info_t *info;
