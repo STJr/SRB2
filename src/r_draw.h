@@ -61,19 +61,15 @@ extern fixed_t ds_xfrac, ds_yfrac, ds_xstep, ds_ystep;
 extern INT32 ds_waterofs, ds_bgofs;
 
 extern UINT16 ds_flatwidth, ds_flatheight;
-extern boolean ds_powersoftwo, ds_solidcolor;
+extern boolean ds_powersoftwo, ds_solidcolor, ds_fog;
 
 extern UINT8 *ds_source;
 extern UINT8 *ds_transmap;
 
-typedef struct {
-	float x, y, z;
-} floatv3_t;
-
 // Vectors for Software's tilted slope drawers
-extern floatv3_t *ds_su, *ds_sv, *ds_sz;
-extern floatv3_t *ds_sup, *ds_svp, *ds_szp;
-extern float focallengthf, zeroheight;
+extern dvector3_t ds_su, ds_sv, ds_sz, ds_slopelight;
+extern double zeroheight;
+extern float focallengthf;
 
 // Variable flat sizes
 extern UINT32 nflatxshift;
@@ -118,6 +114,29 @@ enum
 	TC_DEFAULT
 };
 
+INT32 R_SkinTranslationToCacheIndex(INT32 translation);
+
+// Amount of colors in the palette
+#define NUM_PALETTE_ENTRIES 256
+
+typedef struct colorcache_s
+{
+	UINT8 colors[NUM_PALETTE_ENTRIES];
+} colorcache_t;
+
+enum
+{
+	DEFAULT_TT_CACHE_INDEX = MAXSKINS,
+	BOSS_TT_CACHE_INDEX,
+	METALSONIC_TT_CACHE_INDEX,
+	ALLWHITE_TT_CACHE_INDEX,
+	RAINBOW_TT_CACHE_INDEX,
+	BLINK_TT_CACHE_INDEX,
+	DASHMODE_TT_CACHE_INDEX,
+
+	TT_CACHE_SIZE
+};
+
 // Custom player skin translation
 // Initialize color translation tables, for player rendering etc.
 UINT8* R_GetTranslationColormap(INT32 skinnum, skincolornum_t color, UINT8 flags);
@@ -147,7 +166,7 @@ UINT8 *R_GetBlendTable(int style, INT32 alphalevel);
 boolean R_BlendLevelVisible(INT32 blendmode, INT32 alphalevel);
 
 // Color ramp modification should force a recache
-extern UINT8 skincolor_modified[];
+extern boolean skincolor_modified[];
 
 void R_InitViewBuffer(INT32 width, INT32 height);
 void R_InitViewBorder(void);
@@ -173,12 +192,8 @@ void R_DrawTranslucentColumn_8(void);
 void R_DrawDropShadowColumn_8(void);
 void R_DrawTranslatedColumn_8(void);
 void R_DrawTranslatedTranslucentColumn_8(void);
-void R_Draw2sMultiPatchColumn_8(void);
-void R_Draw2sMultiPatchTranslucentColumn_8(void);
 void R_DrawFogColumn_8(void);
 void R_DrawColumnShadowed_8(void);
-
-#define PLANELIGHTFLOAT (BASEVIDWIDTH * BASEVIDWIDTH / vid.width / zeroheight / 21.0f * FIXED_TO_FLOAT(fovtan))
 
 void R_DrawSpan_8(void);
 void R_DrawTranslucentSpan_8(void);

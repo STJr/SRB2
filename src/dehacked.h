@@ -61,4 +61,5 @@ typedef struct
 #define myfeof(a) (a->data + a->size <= a->curpos)
 char *myfgets(char *buf, size_t bufsize, MYFILE *f);
 char *myhashfgets(char *buf, size_t bufsize, MYFILE *f);
+void ignorelinesuntilhash(MYFILE *f);
 #endif
