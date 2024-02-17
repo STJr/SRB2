@@ -26,7 +26,7 @@ packet versions.
 If you change the struct or the meaning of a field
 therein, increment this number.
 */
-#define PACKETVERSION 5
+#define PACKETVERSION 6
 
 // Network play related stuff.
 // There is a data struct that stores network
@@ -226,7 +226,7 @@ typedef struct
 	tic_t time;
 	tic_t leveltime;
 	char servername[MAXSERVERNAME];
-	char mapname[8];
+	char mapname[24];
 	char maptitle[33];
 	unsigned char mapmd5[16];
 	UINT8 actnum;
