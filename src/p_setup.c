@@ -594,12 +594,11 @@ Ploadflat (levelflat_t *levelflat, const char *flatname, boolean resize)
 			// Use "not found" texture
 			texturenum = R_CheckTextureNumForName("REDWALL");
 
+			CONS_Debug(DBG_SETUP, "WARNING: P_AddLevelFlat: %s not found\n", levelflat->name);
+
 			// Give up?
 			if (texturenum == NO_TEXTURE_NUM)
-			{
 				levelflat->type = LEVELFLAT_NONE;
-				texturenum = NO_TEXTURE_NUM;
-			}
 		}
 	}
 
