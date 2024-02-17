@@ -10294,6 +10294,8 @@ void P_MobjThinker(mobj_t *mobj)
 		P_SetTarget(&mobj->hnext, NULL);
 	if (mobj->hprev && P_MobjWasRemoved(mobj->hprev))
 		P_SetTarget(&mobj->hprev, NULL);
+	if (mobj->dontdrawforviewmobj && P_MobjWasRemoved(mobj->dontdrawforviewmobj))
+		P_SetTarget(&mobj->dontdrawforviewmobj, NULL);
 
 	mobj->eflags &= ~(MFE_PUSHED|MFE_SPRUNG);
 
