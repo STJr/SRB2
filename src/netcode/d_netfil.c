@@ -1640,7 +1640,7 @@ boolean CURLPrepareFile(const char* url, int dfilenum)
 #endif
 
 		// Set user agent, as some servers won't accept invalid user agents.
-		curl_easy_setopt(http_handle, CURLOPT_USERAGENT, va("Sonic Robo Blast 2/v%d.%d", VERSION, SUBVERSION));
+		curl_easy_setopt(http_handle, CURLOPT_USERAGENT, va("Sonic Robo Blast 2/%s", VERSIONSTRING));
 
 		// Authenticate if the user so wishes
 		login = CURLGetLogin(url, NULL);
