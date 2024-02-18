@@ -17,7 +17,7 @@
 #include "r_state.h"
 #include "z_zone.h"
 #include "m_random.h"
-#include "d_netcmd.h"
+#include "netcode/d_netcmd.h"
 
 /** Removes any active lighting effects in a sector.
   *

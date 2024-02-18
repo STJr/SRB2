@@ -169,6 +169,20 @@ static void ignorelines(MYFILE *f)
 	Z_Free(s);
 }
 
+void ignorelinesuntilhash(MYFILE *f)
+{
+	char *s = Z_Malloc(MAXLINELEN, PU_STATIC, NULL);
+	do
+	{
+		if (myfgets(s, MAXLINELEN, f))
+		{
+			if (s[0] == '#')
+				break;
+		}
+	} while (!myfeof(f));
+	Z_Free(s);
+}
+
 static void DEH_LoadDehackedFile(MYFILE *f, boolean mainfile)
 {
 	char *s = Z_Malloc(MAXLINELEN, PU_STATIC, NULL);
@@ -226,13 +240,7 @@ static void DEH_LoadDehackedFile(MYFILE *f, boolean mainfile)
 				i = 0;
 			if (fastcmp(word, "CHARACTER"))
 			{
-				if (i >= 0 && i < 32)
-					readPlayer(f, i);
-				else
-				{
-					deh_warning("Character %d out of range (0 - 31)", i);
-					ignorelines(f);
-				}
+				readPlayer(f, i);
 				continue;
 			}
 			else if (fastcmp(word, "EMBLEM"))
