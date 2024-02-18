@@ -215,7 +215,6 @@ static const struct {
 	{META_PATCH,        "patch_t"},
 	{META_COLORMAP,     "colormap"},
 	{META_EXTRACOLORMAP,"extracolormap_t"},
-	{META_LIGHTTABLE,   "lighttable_t"},
 	{META_CAMERA,       "camera_t"},
 
 	{META_ACTION,       "action"},
@@ -1586,11 +1585,12 @@ static int lib_pDoPlayerFinish(lua_State *L)
 static int lib_pDoPlayerExit(lua_State *L)
 {
 	player_t *player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
+	boolean finishedflag = lua_opttrueboolean(L, 2);
 	NOHUD
 	INLEVEL
 	if (!player)
 		return LUA_ErrInvalid(L, "player_t");
-	P_DoPlayerExit(player);
+	P_DoPlayerExit(player, finishedflag);
 	return 0;
 }
 
@@ -2086,6 +2086,28 @@ static int lib_pCeilingzAtPos(lua_State *L)
 	//HUDSAFE
 	INLEVEL
 	lua_pushfixed(L, P_CeilingzAtPos(x, y, z, height));
+	return 1;
+}
+
+static int lib_pGetSectorLightLevelAt(lua_State *L)
+{
+	boolean has_sector = false;
+	sector_t *sector = NULL;
+	if (!lua_isnoneornil(L, 1))
+	{
+		has_sector = true;
+		sector = *((sector_t **)luaL_checkudata(L, 1, META_SECTOR));
+	}
+	fixed_t x = luaL_checkfixed(L, 2);
+	fixed_t y = luaL_checkfixed(L, 3);
+	fixed_t z = luaL_checkfixed(L, 4);
+	INLEVEL
+	if (has_sector && !sector)
+		return LUA_ErrInvalid(L, "sector_t");
+	if (sector)
+		lua_pushinteger(L, P_GetLightLevelFromSectorAt(sector, x, y, z));
+	else
+		lua_pushinteger(L, P_GetSectorLightLevelAt(x, y, z));
 	return 1;
 }
 
@@ -4408,6 +4430,7 @@ static luaL_Reg lib[] = {
 	{"P_RadiusAttack",lib_pRadiusAttack},
 	{"P_FloorzAtPos",lib_pFloorzAtPos},
 	{"P_CeilingzAtPos",lib_pCeilingzAtPos},
+	{"P_GetSectorLightLevelAt",lib_pGetSectorLightLevelAt},
 	{"P_GetSectorColormapAt",lib_pGetSectorColormapAt},
 	{"P_DoSpring",lib_pDoSpring},
 	{"P_TouchSpecialThing",lib_pTouchSpecialThing},

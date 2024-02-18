@@ -652,7 +652,6 @@ void I_GetConsoleEvents(void)
 	else if (tty_con.cursor < sizeof (tty_con.buffer))
 	{
 		// push regular character
-		ev.type = ev_text;
 		ev.key = tty_con.buffer[tty_con.cursor] = key;
 		tty_con.cursor++;
 		// print the current line (this is differential)
@@ -3256,4 +3255,10 @@ const CPUInfoFlags *I_CPUInfo(void)
 
 // note CPUAFFINITY code used to reside here
 void I_RegisterSysCommands(void) {}
+
+const char *I_GetSysName(void)
+{
+	return SDL_GetPlatform();
+}
+
 #endif

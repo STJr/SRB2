@@ -419,8 +419,7 @@ enum extracolormap_e {
 	extracolormap_fade_alpha,
 	extracolormap_fade_color,
 	extracolormap_fade_start,
-	extracolormap_fade_end,
-	extracolormap_colormap
+	extracolormap_fade_end
 };
 
 static const char *const extracolormap_opt[] = {
@@ -436,13 +435,15 @@ static const char *const extracolormap_opt[] = {
 	"fade_color",
 	"fade_start",
 	"fade_end",
-	"colormap",
 	NULL};
 
 static int extracolormap_get(lua_State *L)
 {
 	extracolormap_t *exc = *((extracolormap_t **)luaL_checkudata(L, 1, META_EXTRACOLORMAP));
 	enum extracolormap_e field = luaL_checkoption(L, 2, NULL, extracolormap_opt);
+
+	if (!exc)
+		return LUA_ErrInvalid(L, "extracolormap_t");
 
 	switch (field)
 	{
@@ -488,9 +489,6 @@ static int extracolormap_get(lua_State *L)
 	case extracolormap_fade_end:
 		lua_pushinteger(L, exc->fadeend);
 		break;
-	case extracolormap_colormap:
-		LUA_PushUserdata(L, exc->colormap, META_LIGHTTABLE);
-		break;
 	}
 	return 1;
 }
@@ -514,6 +512,9 @@ static int extracolormap_set(lua_State *L)
 {
 	extracolormap_t *exc = *((extracolormap_t **)luaL_checkudata(L, 1, META_EXTRACOLORMAP));
 	enum extracolormap_e field = luaL_checkoption(L, 2, NULL, extracolormap_opt);
+
+	if (!exc)
+		return LUA_ErrInvalid(L, "extracolormap_t");
 
 	UINT8 r = R_GetRgbaR(exc->rgba);
 	UINT8 g = R_GetRgbaG(exc->rgba);
@@ -584,8 +585,6 @@ static int extracolormap_set(lua_State *L)
 			return luaL_error(L, "fade end %d out of range (0 - 31)", val);
 		exc->fadeend = val;
 		break;
-	case extracolormap_colormap:
-		return luaL_error(L, LUA_QL("extracolormap_t") " field " LUA_QS " should not be set directly.", extracolormap_opt[field]);
 	}
 
 #undef val
@@ -599,46 +598,9 @@ static int extracolormap_set(lua_State *L)
 	return 0;
 }
 
-static int lighttable_get(lua_State *L)
-{
-	void **userdata;
-
-	lighttable_t *table = *((lighttable_t **)luaL_checkudata(L, 1, META_LIGHTTABLE));
-	UINT32 row = luaL_checkinteger(L, 2);
-	if (row < 1 || row > 34)
-		return luaL_error(L, "lighttable row %d out of range (1 - %d)", row, 34);
-
-	userdata = lua_newuserdata(L, sizeof(void *));
-	*userdata = &table[256 * (row - 1)];
-	luaL_getmetatable(L, META_COLORMAP);
-	lua_setmetatable(L, -2);
-
-	return 1;
-}
-
-static int lighttable_len(lua_State *L)
-{
-	lua_pushinteger(L, NUM_PALETTE_ENTRIES);
-	return 1;
-}
-
 int LUA_ColorLib(lua_State *L)
 {
-	luaL_newmetatable(L, META_EXTRACOLORMAP);
-		lua_pushcfunction(L, extracolormap_get);
-		lua_setfield(L, -2, "__index");
-
-		lua_pushcfunction(L, extracolormap_set);
-		lua_setfield(L, -2, "__newindex");
-	lua_pop(L, 1);
-
-	luaL_newmetatable(L, META_LIGHTTABLE);
-		lua_pushcfunction(L, lighttable_get);
-		lua_setfield(L, -2, "__index");
-
-		lua_pushcfunction(L, lighttable_len);
-		lua_setfield(L, -2, "__len");
-	lua_pop(L, 1);
+	LUA_RegisterUserdataMetatable(L, META_EXTRACOLORMAP, extracolormap_get, extracolormap_set, NULL);
 
 	luaL_register(L, "color", color_lib);
 

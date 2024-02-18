@@ -404,7 +404,7 @@ static void R_RasterizeFloorSplat(floorsplat_t *pSplat, vector2_t *verts, visspr
 	}
 
 	ds_colormap = vis->colormap;
-	ds_translation = R_GetSpriteTranslation(vis);
+	ds_translation = R_GetTranslationForThing(vis->mobj, vis->color, vis->translation);
 	if (ds_translation == NULL)
 		ds_translation = colormaps;
 
