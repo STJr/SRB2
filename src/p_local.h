@@ -189,7 +189,7 @@ void P_DoPityCheck(player_t *player);
 void P_PlayerThink(player_t *player);
 void P_PlayerAfterThink(player_t *player);
 void P_DoPlayerFinish(player_t *player);
-void P_DoPlayerExit(player_t *player);
+void P_DoPlayerExit(player_t *player, boolean finishedflag);
 void P_NightserizePlayer(player_t *player, INT32 ptime);
 
 void P_InstaThrust(mobj_t *mo, angle_t angle, fixed_t move);
@@ -204,7 +204,7 @@ void P_NukeEnemies(mobj_t *inflictor, mobj_t *source, fixed_t radius);
 void P_Earthquake(mobj_t *inflictor, mobj_t *source, fixed_t radius);
 boolean P_HomingAttack(mobj_t *source, mobj_t *enemy); /// \todo doesn't belong in p_user
 boolean P_SuperReady(player_t *player, boolean transform);
-void P_DoJump(player_t *player, boolean soundandstate);
+void P_DoJump(player_t *player, boolean soundandstate, boolean allowflip);
 void P_DoSpinDashDust(player_t *player);
 #define P_AnalogMove(player) (P_ControlStyle(player) == CS_LMAOGALOG)
 boolean P_TransferToNextMare(player_t *player);
@@ -424,6 +424,7 @@ boolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, boolean allowdropoff);
 boolean P_Move(mobj_t *actor, fixed_t speed);
 boolean P_SetOrigin(mobj_t *thing, fixed_t x, fixed_t y, fixed_t z);
 boolean P_MoveOrigin(mobj_t *thing, fixed_t x, fixed_t y, fixed_t z);
+boolean P_LineIsBlocking(mobj_t *mo, line_t *li);
 void P_SlideMove(mobj_t *mo);
 void P_BounceMove(mobj_t *mo);
 boolean P_CheckSight(mobj_t *t1, mobj_t *t2);
@@ -445,7 +446,9 @@ boolean PIT_PushableMoved(mobj_t *thing);
 
 boolean P_DoSpring(mobj_t *spring, mobj_t *object);
 
-INT32 P_GetSectorLightAt(sector_t *sector, fixed_t x, fixed_t y, fixed_t z);
+INT32 P_GetSectorLightNumAt(sector_t *sector, fixed_t x, fixed_t y, fixed_t z);
+INT32 P_GetLightLevelFromSectorAt(sector_t *sector, fixed_t x, fixed_t y, fixed_t z);
+INT32 P_GetSectorLightLevelAt(fixed_t x, fixed_t y, fixed_t z);
 extracolormap_t *P_GetColormapFromSectorAt(sector_t *sector, fixed_t x, fixed_t y, fixed_t z);
 extracolormap_t *P_GetSectorColormapAt(fixed_t x, fixed_t y, fixed_t z);
 
@@ -459,7 +462,7 @@ extern INT32 bmapwidth;
 extern INT32 bmapheight; // in mapblocks
 extern fixed_t bmaporgx;
 extern fixed_t bmaporgy; // origin of block map
-extern mobj_t **blocklinks; // for thing chains
+extern blocknode_t **blocklinks; // for thing chains
 
 //
 // P_INTER

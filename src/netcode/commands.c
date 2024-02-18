@@ -274,7 +274,9 @@ void Command_BanIP(void)
 
 	if (server) // Only the server can use this, otherwise does nothing.
 	{
+		char *addrbuf = NULL;
 		const char *address = (COM_Argv(1));
+		const char *mask = strchr(address, '/');
 		const char *reason;
 
 		if (COM_Argc() == 2)
@@ -282,8 +284,16 @@ void Command_BanIP(void)
 		else
 			reason = COM_Argv(2);
 
+		if (mask != NULL)
+		{
+			addrbuf = Z_Malloc(mask - address + 1, PU_STATIC, NULL);
+			memcpy(addrbuf, address, mask - address);
+			addrbuf[mask - address] = '\0';
+			address = addrbuf;
+			mask++;
+		}
 
-		if (I_SetBanAddress && I_SetBanAddress(address, NULL))
+		if (I_SetBanAddress && I_SetBanAddress(address, mask))
 		{
 			if (reason)
 				CONS_Printf("Banned IP address %s for: %s\n", address, reason);
@@ -295,8 +305,9 @@ void Command_BanIP(void)
 		}
 		else
 		{
-			return;
+			CONS_Printf("Unable to apply ban: address in malformed or invalid, or too many bans are applied\n");
 		}
+		Z_Free(addrbuf);
 	}
 }
 

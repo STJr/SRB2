@@ -165,7 +165,22 @@
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <MinimalRebuild>false</MinimalRebuild>
       <LanguageStandard>stdcpp17</LanguageStandard>
+      <PreprocessorDefinitions>HAVE_CURL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>..\..\libs\curl\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
+    <CustomBuild>
+      <Command />
+    </CustomBuild>
+    <CustomBuild>
+      <Message />
+    </CustomBuild>
+    <CustomBuild>
+      <Outputs />
+    </CustomBuild>
+    <Link>
+      <AdditionalDependencies>libcurl.dll.a;libz32.a;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>..\..\libs\zlib\win32;..\..\libs\curl\lib32;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+    </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -175,7 +190,50 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
       <DisableSpecificWarnings>4244;4267;4146;4003</DisableSpecificWarnings>
+      <PreprocessorDefinitions>HAVE_CURL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>..\libs\curl\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
+    <CustomBuild>
+      <Command />
+    </CustomBuild>
+    <CustomBuild>
+      <Message />
+    </CustomBuild>
+    <CustomBuild>
+      <Outputs />
+    </CustomBuild>
+    <Link>
+      <AdditionalDependencies>libcurl.dll.a;libz32.a;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>..\libs\zlib\win32;..\libs\curl\lib32;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <TreatWarningAsError>false</TreatWarningAsError>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <MinimalRebuild>false</MinimalRebuild>
+      <DisableSpecificWarnings>4244;4267;4146</DisableSpecificWarnings>
+      <PreprocessorDefinitions>HAVE_CURL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>..\libs\curl\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalModuleDependencies>..\libs\curl\lib64;%(AdditionalModuleDependencies)</AdditionalModuleDependencies>
+    </ClCompile>
+    <Link>
+      <AdditionalDependencies>libcurl.a;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>..\libs\curl\lib64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <PreprocessorDefinitions>HAVE_CURL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <Link>
+      <AdditionalDependencies>libcurl.a;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>..\libs\curl\lib64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+    </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\libs\libpng-src\projects\visualc10\libpng.vcxproj">
@@ -292,8 +350,10 @@
     <ClInclude Include="..\m_fixed.h" />
     <ClInclude Include="..\m_menu.h" />
     <ClInclude Include="..\m_misc.h" />
+    <ClInclude Include="..\m_tokenizer.h" />
     <ClInclude Include="..\m_perfstats.h" />
     <ClInclude Include="..\m_queue.h" />
+    <ClInclude Include="..\m_vector.h" />
     <ClInclude Include="..\m_random.h" />
     <ClInclude Include="..\m_swap.h" />
     <ClInclude Include="..\netcode\client_connection.h" />
@@ -312,7 +372,6 @@
     <ClInclude Include="..\netcode\server_connection.h" />
     <ClInclude Include="..\netcode\tic_command.h" />
     <ClInclude Include="..\p5prof.h" />
-    <ClInclude Include="..\p_haptic.h" />
     <ClInclude Include="..\p_local.h" />
     <ClInclude Include="..\p_maputl.h" />
     <ClInclude Include="..\p_mobj.h" />
@@ -342,6 +401,7 @@
     <ClInclude Include="..\r_state.h" />
     <ClInclude Include="..\r_textures.h" />
     <ClInclude Include="..\r_things.h" />
+    <ClInclude Include="..\r_translation.h" />
     <ClInclude Include="..\screen.h" />
     <ClInclude Include="..\snake.h" />
     <ClInclude Include="..\sounds.h" />
@@ -397,6 +457,7 @@
     <ClCompile Include="..\blua\lmem.c" />
     <ClCompile Include="..\blua\lobject.c" />
     <ClCompile Include="..\blua\lopcodes.c" />
+    <ClCompile Include="..\blua\loslib.c" />
     <ClCompile Include="..\blua\lparser.c" />
     <ClCompile Include="..\blua\lstate.c" />
     <ClCompile Include="..\blua\lstring.c" />
@@ -435,6 +496,8 @@
     <ClCompile Include="..\hardware\hw_md3load.c" />
     <ClCompile Include="..\hardware\hw_model.c" />
     <ClCompile Include="..\hardware\r_opengl\r_opengl.c" />
+    <ClCompile Include="..\lua_colorlib.c" />
+    <ClCompile Include="..\r_bbox.c" />
     <ClCompile Include="..\u_list.c" />
     <ClCompile Include="..\hu_stuff.c" />
     <ClCompile Include="..\info.c" />
@@ -468,8 +531,10 @@
     <ClCompile Include="..\m_fixed.c" />
     <ClCompile Include="..\m_menu.c" />
     <ClCompile Include="..\m_misc.c" />
+    <ClCompile Include="..\m_tokenizer.c" />
     <ClCompile Include="..\m_perfstats.c" />
     <ClCompile Include="..\m_queue.c" />
+    <ClCompile Include="..\m_vector.c" />
     <ClCompile Include="..\m_random.c" />
     <ClCompile Include="..\netcode\client_connection.c" />
     <ClCompile Include="..\netcode\commands.c" />
@@ -490,7 +555,6 @@
     <ClCompile Include="..\p_ceilng.c" />
     <ClCompile Include="..\p_enemy.c" />
     <ClCompile Include="..\p_floor.c" />
-    <ClCompile Include="..\p_haptic.c" />
     <ClCompile Include="..\p_inter.c" />
     <ClCompile Include="..\p_lights.c" />
     <ClCompile Include="..\p_map.c" />
@@ -530,6 +594,7 @@
     <ClCompile Include="..\r_splats.c" />
     <ClCompile Include="..\r_textures.c" />
     <ClCompile Include="..\r_things.c" />
+    <ClCompile Include="..\r_translation.c" />
     <ClCompile Include="..\screen.c" />
     <ClCompile Include="..\snake.c" />
     <ClCompile Include="..\sounds.c" />
@@ -561,7 +626,6 @@
     <ClCompile Include="IMG_xpm.c">
       <ExcludedFromBuild>true</ExcludedFromBuild>
     </ClCompile>
-    <ClCompile Include="i_gamepad.c" />
     <ClCompile Include="i_main.c" />
     <ClCompile Include="i_net.c" />
     <ClCompile Include="i_system.c" />

@@ -35,7 +35,9 @@ add_executable(SRB2SDL2 MACOSX_BUNDLE WIN32
 	m_misc.c
 	m_perfstats.c
 	m_random.c
+	m_tokenizer.c
 	m_queue.c
+	m_vector.c
 	info.c
 	p_ceilng.c
 	p_enemy.c
@@ -68,6 +70,7 @@ add_executable(SRB2SDL2 MACOSX_BUNDLE WIN32
 	r_things.c
 	r_bbox.c
 	r_textures.c
+	r_translation.c
 	r_patch.c
 	r_patchrotation.c
 	r_picformats.c

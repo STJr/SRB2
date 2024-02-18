@@ -1604,9 +1604,9 @@ void F_GameEvaluationDrawer(void)
 		rtatext = (marathonmode & MA_INGAME) ? "In-game timer" : "RTA timer";
 		cuttext = (marathonmode & MA_NOCUTSCENES) ? "" : " w/ cutscenes";
 		if (botskin)
-			endingtext = va("%s & %s, %s%s", skins[players[consoleplayer].skin].realname, skins[botskin-1].realname, rtatext, cuttext);
+			endingtext = va("%s & %s, %s%s", skins[players[consoleplayer].skin]->realname, skins[botskin-1]->realname, rtatext, cuttext);
 		else
-			endingtext = va("%s, %s%s", skins[players[consoleplayer].skin].realname, rtatext, cuttext);
+			endingtext = va("%s, %s%s", skins[players[consoleplayer].skin]->realname, rtatext, cuttext);
 		V_DrawCenteredString(BASEVIDWIDTH/2, 182, V_SNAPTOBOTTOM|(ultimatemode ? V_REDMAP : V_YELLOWMAP), endingtext);
 	}
 }
@@ -1720,9 +1720,9 @@ static void F_CacheEnding(void)
 		UINT8 skinnum = players[consoleplayer].skin;
 		spritedef_t *sprdef;
 		spriteframe_t *sprframe;
-		if (skins[skinnum].sprites[SPR2_XTRA].numframes > (XTRA_ENDING+2))
+		if (skins[skinnum]->sprites[SPR2_XTRA].numframes > (XTRA_ENDING+2))
 		{
-			sprdef = &skins[skinnum].sprites[SPR2_XTRA];
+			sprdef = &skins[skinnum]->sprites[SPR2_XTRA];
 			// character head, skin specific
 			sprframe = &sprdef->spriteframes[XTRA_ENDING];
 			endfwrk[0] = W_CachePatchNum(sprframe->lumppat[0], PU_PATCH_LOWPRIORITY);
@@ -2168,7 +2168,7 @@ void F_EndingDrawer(void)
 		boolean donttouch = false;
 		const char *str;
 		if (goodending)
-			str = va("[S] %s: Engage.", skins[players[consoleplayer].skin].realname);
+			str = va("[S] %s: Engage.", skins[players[consoleplayer].skin]->realname);
 		else
 			str = "[S] Eggman: Abscond.";
 
@@ -3562,6 +3562,7 @@ void F_StartContinue(void)
 
 	contPlayers[0] = &players[consoleplayer];
 	contskins[0] = &skins[players[consoleplayer].skin];
+
 	cont_spr2[0][0] = P_GetSkinSprite2(contskins[0], SPR2_CNT1, NULL);
 	cont_spr2[0][2] = contskins[0]->contangle & 7;
 	contColors[0] = players[consoleplayer].skincolor;
@@ -3580,6 +3581,7 @@ void F_StartContinue(void)
 
 		contPlayers[1] = &players[secondplaya];
 		contskins[1] = &skins[players[secondplaya].skin];
+
 		cont_spr2[1][0] = P_GetSkinSprite2(contskins[1], SPR2_CNT4, NULL);
 		cont_spr2[1][2] = (contskins[1]->contangle >> 3) & 7;
 		contColors[1] = players[secondplaya].skincolor;
@@ -3662,6 +3664,8 @@ static void F_DrawContinueCharacter(INT32 dx, INT32 dy, UINT8 n)
 //
 void F_ContinueDrawer(void)
 {
+	spritedef_t *sprdef;
+	spriteframe_t *sprframe;
 	patch_t *patch;
 	INT32 i, x = (BASEVIDWIDTH>>1), ncontinues = players[consoleplayer].continues;
 	char numbuf[9] = "CONTNUM*";
@@ -3760,12 +3764,21 @@ void F_ContinueDrawer(void)
 	else if (lift[0] > TICRATE+5)
 		lift[0] = TICRATE+5;
 
+#define drawchar(dx, dy, n)	{\
+								sprdef = &contskins[n]->sprites[cont_spr2[n][0]];\
+								sprframe = &sprdef->spriteframes[cont_spr2[n][1]];\
+								patch = W_CachePatchNum(sprframe->lumppat[cont_spr2[n][2]], PU_PATCH_LOWPRIORITY);\
+								V_DrawFixedPatch((dx), (dy), contskins[n]->highresscale, (sprframe->flip & (1<<cont_spr2[n][2])) ? V_FLIP : 0, patch, contcolormaps[n]);\
+							}
+
 	if (offsy < 0)
-		F_DrawContinueCharacter((BASEVIDWIDTH<<(FRACBITS-1))-offsx, ((140-lift[0])<<FRACBITS)-offsy, 0);
+		drawchar((BASEVIDWIDTH<<(FRACBITS-1))-offsx, ((140-lift[0])<<FRACBITS)-offsy, 0);
 	if (contskins[1])
-		F_DrawContinueCharacter((BASEVIDWIDTH<<(FRACBITS-1))+offsx, ((140-lift[1])<<FRACBITS)+offsy, 1);
+		drawchar((BASEVIDWIDTH<<(FRACBITS-1))+offsx, ((140-lift[1])<<FRACBITS)+offsy, 1);
 	if (offsy >= 0)
-		F_DrawContinueCharacter((BASEVIDWIDTH<<(FRACBITS-1))-offsx, ((140-lift[0])<<FRACBITS)-offsy, 0);
+		drawchar((BASEVIDWIDTH<<(FRACBITS-1))-offsx, ((140-lift[0])<<FRACBITS)-offsy, 0);
+
+#undef drawchar
 
 	if (timetonext > (11*TICRATE))
 		V_DrawFadeScreen(31, timetonext-(11*TICRATE));
