@@ -62,11 +62,11 @@
 #
 # Netplay incompatible
 # --------------------
-# NONET=1 - Disable online capability.
 # NOMD5=1 - Disable MD5 checksum (validation tool).
 # NOPOSTPROCESSING=1 - ?
 # MOBJCONSISTANCY=1 - ??
 # PACKETDROP=1 - ??
+# NOEXECINFO=1 - Disable stack trace dump support
 # DEBUGMODE=1 - Enable various debugging capabilities.
 #               Also disables optimizations.
 # NOZLIB=1 - Disable some compression capability. Implies
@@ -165,7 +165,7 @@ sources:=
 makedir:=../make
 
 # -DCOMPVERSION: flag to use comptime.h
-opts:=-DCOMPVERSION -g
+opts:=-DCOMPVERSION -g -fwrapv
 libs:=
 
 # This is a list of variables names, of which if defined,
@@ -187,6 +187,7 @@ objdir:=$(makedir)/objs
 sources+=\
 	$(call List,Sourcefile)\
 	$(call List,blua/Sourcefile)\
+	$(call List,netcode/Sourcefile)\
 
 depends:=$(basename $(filter %.c %.s,$(sources)))
 objects:=$(basename $(filter %.c %.s %.nas,$(sources)))

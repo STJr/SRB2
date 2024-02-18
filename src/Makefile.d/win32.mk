@@ -17,7 +17,11 @@ sources+=win32/Srb2win.rc
 opts+=-DSTDC_HEADERS
 libs+=-ladvapi32 -lkernel32 -lmsvcrt -luser32
 
+ifndef DEDICATED
+ifndef DUMMY
 SDL?=1
+endif
+endif
 
 ifndef NOHW
 opts+=-DUSE_WGL_SWAP
@@ -30,13 +34,6 @@ ifdef NO_IPV6
 libs+=-lwsock32
 else
 libs+=-lws2_32
-endif
-endif
-
-ifndef NONET
-ifndef MINGW64 # miniupnc is broken with MINGW64
-opts+=-I../libs -DSTATIC_MINIUPNPC
-libs+=-L../libs/miniupnpc/mingw$(32) -lws2_32 -liphlpapi
 endif
 endif
 
@@ -102,3 +99,8 @@ lib:=../libs/curl
 CURL_opts:=-I$(lib)/include
 CURL_libs:=-L$(lib)/lib$(32) -lcurl
 $(eval $(call _set,CURL))
+
+lib:=../libs/miniupnpc
+MINIUPNPC_opts:=-I$(lib)/include -DMINIUPNP_STATICLIB
+MINIUPNPC_libs:=-L$(lib)/mingw$(32) -lminiupnpc -lws2_32 -liphlpapi
+$(eval $(call _set,MINIUPNPC))

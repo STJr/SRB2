@@ -1471,7 +1471,7 @@ void I_SetMusicVolume(UINT8 volume)
 	(void)volume;
 }
 
-boolean I_SetSongTrack(int track)
+boolean I_SetSongTrack(INT32 track)
 {
 	(void)track;
 	return false;

@@ -877,14 +877,17 @@ static void Polyobj_carryThings(polyobj_t *po, fixed_t dx, fixed_t dy)
 		for (x = po->blockbox[BOXLEFT]; x <= po->blockbox[BOXRIGHT]; ++x)
 		{
 			mobj_t *mo;
+			blocknode_t *block;
 
 			if (x < 0 || y < 0 || x >= bmapwidth || y >= bmapheight)
 				continue;
 
-			mo = blocklinks[y * bmapwidth + x];
+			block = blocklinks[y * bmapwidth + x];
 
-			for (; mo; mo = mo->bnext)
+			for (; block; block = block->mnext)
 			{
+				mo = block->mobj;
+
 				if (mo->lastlook == pomovecount)
 					continue;
 
@@ -937,10 +940,12 @@ static INT32 Polyobj_clipThings(polyobj_t *po, line_t *line)
 		{
 			if (!(x < 0 || y < 0 || x >= bmapwidth || y >= bmapheight))
 			{
-				mobj_t *mo = blocklinks[y * bmapwidth + x];
+				mobj_t *mo = NULL;
+				blocknode_t *block = blocklinks[y * bmapwidth + x];
 
-				for (; mo; mo = mo->bnext)
+				for (; block; block = block->mnext)
 				{
+					mo = block->mobj;
 
 					// Don't scroll objects that aren't affected by gravity
 					if (mo->flags & MF_NOGRAVITY)
@@ -1109,14 +1114,17 @@ static void Polyobj_rotateThings(polyobj_t *po, vector2_t origin, angle_t delta,
 		for (x = po->blockbox[BOXLEFT]; x <= po->blockbox[BOXRIGHT]; ++x)
 		{
 			mobj_t *mo;
+			blocknode_t *block;
 
 			if (x < 0 || y < 0 || x >= bmapwidth || y >= bmapheight)
 				continue;
 
-			mo = blocklinks[y * bmapwidth + x];
+			block = blocklinks[y * bmapwidth + x];
 
-			for (; mo; mo = mo->bnext)
+			for (; block; block = block->mnext)
 			{
+				mo = block->mobj;
+
 				if (mo->lastlook == pomovecount)
 					continue;
 
@@ -1243,6 +1251,8 @@ boolean Polyobj_rotate(polyobj_t *po, angle_t delta, boolean turnplayers, boolea
 // Returns NULL if no such polyobject exists.
 polyobj_t *Polyobj_GetForNum(INT32 id)
 {
+	if (numPolyObjects == 0)
+		return NULL;
 	INT32 curidx  = PolyObjects[id % numPolyObjects].first;
 
 	while (curidx != numPolyObjects && PolyObjects[curidx].id != id)
