@@ -2530,8 +2530,14 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 		{
 			P_SetTarget(&target->target, source);
 			source->player->numboxes++;
-			if (cv_itemrespawn.value && gametype != GT_COOP && (modifiedgame || netgame || multiplayer))
-				target->fuse = cv_itemrespawntime.value*TICRATE + 2; // Random box generation
+			// Set respawn
+			if (!(target->flags2 & MF2_DONTRESPAWN))
+			{
+				if (!(netgame || multiplayer))
+					target->fuse = atoi(cv_itemrespawntime.defaultvalue)*TICRATE + 2; 
+				else if (cv_itemrespawn.value)
+					target->fuse = cv_itemrespawntime.value*TICRATE + 2;
+			}
 		}
 
 		// Award Score Tails

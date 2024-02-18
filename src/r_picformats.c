@@ -376,7 +376,7 @@ void *Picture_PatchConvert(
 	// Write columns
 	for (INT32 x = 0; x < inwidth; x++)
 	{
-		post_t *post;
+		post_t *post = NULL;
 		size_t post_data_offset = 0;
 		boolean was_opaque = false;
 

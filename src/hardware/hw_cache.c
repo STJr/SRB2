@@ -823,18 +823,13 @@ void HWR_GetRawFlat(lumpnum_t flatlumpnum)
 
 void HWR_GetLevelFlat(levelflat_t *levelflat)
 {
-	if (levelflat->type == LEVELFLAT_NONE)
+	if (levelflat->type == LEVELFLAT_NONE || levelflat->texture_id < 0)
 	{
 		HWR_SetCurrentTexture(NULL);
 		return;
 	}
 
 	INT32 texturenum = texturetranslation[levelflat->texture_id];
-	if (texturenum <= 0)
-	{
-		HWR_SetCurrentTexture(NULL);
-		return;
-	}
 
 	GLMapTexture_t *grtex = &gl_flats[texturenum];
 	GLMipmap_t *grMipmap = &grtex->mipmap;

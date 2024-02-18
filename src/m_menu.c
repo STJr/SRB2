@@ -10535,7 +10535,7 @@ static void M_StartTimeAttackReplay(INT32 choice)
 // Player has selected the "REPLAY" from the time attack screen
 static void M_ReplayTimeAttack(INT32 choice)
 {
-	const char *which;
+	const char *which = NULL;
 	UINT8 error = DFILE_ERROR_NONE;
 
 	if (currentMenu == &SP_ReplayDef)
