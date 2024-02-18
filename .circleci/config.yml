@@ -5,13 +5,8 @@ jobs:
     docker:
       - image: cimg/base:current
         environment:
-          CC: ccache gcc -m32
-          PKG_CONFIG_LIBDIR: /usr/lib/i386-linux-gnu/pkgconfig
-          LIBGME_CFLAGS: -I/usr/include
-          LIBGME_LDFLAGS: -lgme
+          CC: ccache gcc
           CCACHE_COMPRESS: true
-          WFLAGS: -Wno-unsuffixed-float-constants
-          GCC81: true
       #- image: ubuntu:trusty
       #  environment:
       #    CC: ccache gcc -m32
@@ -24,15 +19,10 @@ jobs:
     resource_class: large
     steps:
       - run:
-          name: Add i386 arch
-          command: sudo dpkg --add-architecture i386
-      - run:
           name: Add STJr PPA
           command: |
             sudo apt-get -qq update
-            sudo apt-get -qq -y install dirmngr
-            sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 0B1702D71499D9C25F986507F240F4449D3B0EC6
-            echo "deb http://ppa.launchpad.net/stjr/srb2/ubuntu trusty main" | sudo tee -a /etc/apt/sources.list
+            sudo apt-get -qq install apt-utils
       - run:
           name: Make APT cache folder
           command: mkdir -p /home/circleci/.cache/apt/archives/partial
@@ -49,11 +39,8 @@ jobs:
           keys:
             - v1-SRB2-APT
       - run:
-         name: Uninstall amd64 SDK
-         command: sudo apt-get -o Dir::Cache="/home/circleci/.cache/apt" -qq -y --no-install-recommends remove libcurl4-openssl-dev:amd64
-      - run:
-          name: Install i386 SDK
-          command: sudo apt-get -o Dir::Cache="/home/circleci/.cache/apt" -qq -y --no-install-recommends install git build-essential libpng-dev:i386 libsdl2-mixer-dev:i386 libgme-dev:i386 libcurl4-openssl-dev:i386 libopenmpt-dev:i386 gettext ccache wget gcc-multilib upx openssh-client
+          name: Install SDK
+          command: sudo apt-get -o Dir::Cache="/home/circleci/.cache/apt" -qq -y --no-install-recommends install git build-essential libpng-dev libsdl2-mixer-dev libgme-dev libcurl4-openssl-dev libopenmpt-dev libminiupnpc-dev gettext ccache wget gcc-multilib upx openssh-client
       - run:
           name: make md5sum
           command: sudo find /home/circleci/.cache/apt/archives -type f -print0 | sort -z | sudo xargs -r0 md5sum > /home/circleci/.cache/apt_archives.md5
@@ -63,27 +50,18 @@ jobs:
             - /home/circleci/.cache/apt
       - checkout
       - run:
-          name: Compile without network support
-          command: make -C src LINUX=1 ERRORMODE=1 -k NONET=1 -j4
-      - run:
-          name: wipe build
-          command: make -C src LINUX=1 cleandep
-      - run:
-          name: rebuild depend
-          command: make -C src LINUX=1 clean
-      - run:
           name: make master depend file
-          command: find make/linux/SDL/deps/ -type f -print0 | sort -z | xargs -r0 cat > make/linux/SDL.deps
+          command: find make/linux64/SDL/deps/ -type f -print0 | sort -z | xargs -r0 cat > make/linux64/SDL.deps
       - restore_cache:
           keys:
-            - v1-SRB2-{{ .Branch }}-{{ checksum "make/linux/SDL.deps" }}
+            - v1-SRB2-{{ .Branch }}-{{ checksum "make/linux64/SDL.deps" }}
       - run:
           name: Compile
-          command: make -C src LINUX=1 ERRORMODE=1 -k -j4
+          command: make -C src LINUX64=1 ERRORMODE=1 -k -j4
       - store_artifacts:
           path: /home/circleci/SRB2/bin/
           destination: bin
       - save_cache:
-          key: v1-SRB2-{{ .Branch }}-{{ checksum "make/linux/SDL.deps" }}
+          key: v1-SRB2-{{ .Branch }}-{{ checksum "make/linux64/SDL.deps" }}
           paths:
             - /home/circleci/.ccache

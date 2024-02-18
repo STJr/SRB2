@@ -105,199 +105,6 @@ void R_DrawColumn_8(void)
 	}
 }
 
-void R_Draw2sMultiPatchColumn_8(void)
-{
-	INT32 count;
-	register UINT8 *dest;
-	register fixed_t frac;
-	fixed_t fracstep;
-
-	count = dc_yh - dc_yl;
-
-	if (count < 0) // Zero length, column does not exceed a pixel.
-		return;
-
-#ifdef RANGECHECK
-	if ((unsigned)dc_x >= (unsigned)vid.width || dc_yl < 0 || dc_yh >= vid.height)
-		return;
-#endif
-
-	// Framebuffer destination address.
-	// Use ylookup LUT to avoid multiply with ScreenWidth.
-	// Use columnofs LUT for subwindows?
-
-	//dest = ylookup[dc_yl] + columnofs[dc_x];
-	dest = &topleft[dc_yl*vid.width + dc_x];
-
-	count++;
-
-	// Determine scaling, which is the only mapping to be done.
-	fracstep = dc_iscale;
-	//frac = dc_texturemid + (dc_yl - centery)*fracstep;
-	frac = (dc_texturemid + FixedMul((dc_yl << FRACBITS) - centeryfrac, fracstep))*(!dc_hires);
-
-	// Inner loop that does the actual texture mapping, e.g. a DDA-like scaling.
-	// This is as fast as it gets.
-	{
-		register const UINT8 *source = dc_source;
-		register const lighttable_t *colormap = dc_colormap;
-		register INT32 heightmask = dc_texheight-1;
-		register UINT8 val;
-		if (dc_texheight & heightmask)   // not a power of 2 -- killough
-		{
-			heightmask++;
-			heightmask <<= FRACBITS;
-
-			if (frac < 0)
-				while ((frac += heightmask) <  0);
-			else
-				while (frac >= heightmask)
-					frac -= heightmask;
-
-			do
-			{
-				// Re-map color indices from wall texture column
-				//  using a lighting/special effects LUT.
-				// heightmask is the Tutti-Frutti fix
-				val = source[frac>>FRACBITS];
-
-				if (val != TRANSPARENTPIXEL)
-					*dest = colormap[val];
-
-				dest += vid.width;
-
-				// Avoid overflow.
-				if (fracstep > 0x7FFFFFFF - frac)
-					frac += fracstep - heightmask;
-				else
-					frac += fracstep;
-
-				while (frac >= heightmask)
-					frac -= heightmask;
-			} while (--count);
-		}
-		else
-		{
-			while ((count -= 2) >= 0) // texture height is a power of 2
-			{
-				val = source[(frac>>FRACBITS) & heightmask];
-				if (val != TRANSPARENTPIXEL)
-					*dest = colormap[val];
-				dest += vid.width;
-				frac += fracstep;
-				val = source[(frac>>FRACBITS) & heightmask];
-				if (val != TRANSPARENTPIXEL)
-					*dest = colormap[val];
-				dest += vid.width;
-				frac += fracstep;
-			}
-			if (count & 1)
-			{
-				val = source[(frac>>FRACBITS) & heightmask];
-				if (val != TRANSPARENTPIXEL)
-					*dest = colormap[val];
-			}
-		}
-	}
-}
-
-void R_Draw2sMultiPatchTranslucentColumn_8(void)
-{
-	INT32 count;
-	register UINT8 *dest;
-	register fixed_t frac;
-	fixed_t fracstep;
-
-	count = dc_yh - dc_yl;
-
-	if (count < 0) // Zero length, column does not exceed a pixel.
-		return;
-
-#ifdef RANGECHECK
-	if ((unsigned)dc_x >= (unsigned)vid.width || dc_yl < 0 || dc_yh >= vid.height)
-		return;
-#endif
-
-	// Framebuffer destination address.
-	// Use ylookup LUT to avoid multiply with ScreenWidth.
-	// Use columnofs LUT for subwindows?
-
-	//dest = ylookup[dc_yl] + columnofs[dc_x];
-	dest = &topleft[dc_yl*vid.width + dc_x];
-
-	count++;
-
-	// Determine scaling, which is the only mapping to be done.
-	fracstep = dc_iscale;
-	//frac = dc_texturemid + (dc_yl - centery)*fracstep;
-	frac = (dc_texturemid + FixedMul((dc_yl << FRACBITS) - centeryfrac, fracstep))*(!dc_hires);
-
-	// Inner loop that does the actual texture mapping, e.g. a DDA-like scaling.
-	// This is as fast as it gets.
-	{
-		register const UINT8 *source = dc_source;
-		register const UINT8 *transmap = dc_transmap;
-		register const lighttable_t *colormap = dc_colormap;
-		register INT32 heightmask = dc_texheight-1;
-		register UINT8 val;
-		if (dc_texheight & heightmask)   // not a power of 2 -- killough
-		{
-			heightmask++;
-			heightmask <<= FRACBITS;
-
-			if (frac < 0)
-				while ((frac += heightmask) <  0);
-			else
-				while (frac >= heightmask)
-					frac -= heightmask;
-
-			do
-			{
-				// Re-map color indices from wall texture column
-				//  using a lighting/special effects LUT.
-				// heightmask is the Tutti-Frutti fix
-				val = source[frac>>FRACBITS];
-
-				if (val != TRANSPARENTPIXEL)
-					*dest = *(transmap + (colormap[val]<<8) + (*dest));
-
-				dest += vid.width;
-
-				// Avoid overflow.
-				if (fracstep > 0x7FFFFFFF - frac)
-					frac += fracstep - heightmask;
-				else
-					frac += fracstep;
-
-				while (frac >= heightmask)
-					frac -= heightmask;
-			} while (--count);
-		}
-		else
-		{
-			while ((count -= 2) >= 0) // texture height is a power of 2
-			{
-				val = source[(frac>>FRACBITS) & heightmask];
-				if (val != TRANSPARENTPIXEL)
-					*dest = *(transmap + (colormap[val]<<8) + (*dest));
-				dest += vid.width;
-				frac += fracstep;
-				val = source[(frac>>FRACBITS) & heightmask];
-				if (val != TRANSPARENTPIXEL)
-					*dest = *(transmap + (colormap[val]<<8) + (*dest));
-				dest += vid.width;
-				frac += fracstep;
-			}
-			if (count & 1)
-			{
-				val = source[(frac>>FRACBITS) & heightmask];
-				if (val != TRANSPARENTPIXEL)
-					*dest = *(transmap + (colormap[val]<<8) + (*dest));
-			}
-		}
-	}
-}
-
 /**	\brief The R_DrawShadeColumn_8 function
 	Experiment to make software go faster. Taken from the Boom source
 */
@@ -676,12 +483,11 @@ void R_DrawTiltedSpan_8(void)
 	double endz, endu, endv;
 	UINT32 stepu, stepv;
 
-	iz = ds_szp->z + ds_szp->y*(centery-ds_y) + ds_szp->x*(ds_x1-centerx);
+	iz = ds_sz.z + ds_sz.y*(centery-ds_y) + ds_sz.x*(ds_x1-centerx);
+	uz = ds_su.z + ds_su.y*(centery-ds_y) + ds_su.x*(ds_x1-centerx);
+	vz = ds_sv.z + ds_sv.y*(centery-ds_y) + ds_sv.x*(ds_x1-centerx);
 
-	CALC_SLOPE_LIGHT
-
-	uz = ds_sup->z + ds_sup->y*(centery-ds_y) + ds_sup->x*(ds_x1-centerx);
-	vz = ds_svp->z + ds_svp->y*(centery-ds_y) + ds_svp->x*(ds_x1-centerx);
+	R_CalcSlopeLight();
 
 	dest = ylookup[ds_y] + columnofs[ds_x1];
 	source = ds_source;
@@ -700,18 +506,18 @@ void R_DrawTiltedSpan_8(void)
 
 		*dest = colormap[source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)]];
 		dest++;
-		iz += ds_szp->x;
-		uz += ds_sup->x;
-		vz += ds_svp->x;
+		iz += ds_sz.x;
+		uz += ds_su.x;
+		vz += ds_sv.x;
 	} while (--width >= 0);
 #else
 	startz = 1.f/iz;
 	startu = uz*startz;
 	startv = vz*startz;
 
-	izstep = ds_szp->x * SPANSIZE;
-	uzstep = ds_sup->x * SPANSIZE;
-	vzstep = ds_svp->x * SPANSIZE;
+	izstep = ds_sz.x * SPANSIZE;
+	uzstep = ds_su.x * SPANSIZE;
+	vzstep = ds_sv.x * SPANSIZE;
 	//x1 = 0;
 	width++;
 
@@ -753,9 +559,9 @@ void R_DrawTiltedSpan_8(void)
 		else
 		{
 			double left = width;
-			iz += ds_szp->x * left;
-			uz += ds_sup->x * left;
-			vz += ds_svp->x * left;
+			iz += ds_sz.x * left;
+			uz += ds_su.x * left;
+			vz += ds_sv.x * left;
 
 			endz = 1.f/iz;
 			endu = uz*endz;
@@ -799,12 +605,11 @@ void R_DrawTiltedTranslucentSpan_8(void)
 	double endz, endu, endv;
 	UINT32 stepu, stepv;
 
-	iz = ds_szp->z + ds_szp->y*(centery-ds_y) + ds_szp->x*(ds_x1-centerx);
+	iz = ds_sz.z + ds_sz.y*(centery-ds_y) + ds_sz.x*(ds_x1-centerx);
+	uz = ds_su.z + ds_su.y*(centery-ds_y) + ds_su.x*(ds_x1-centerx);
+	vz = ds_sv.z + ds_sv.y*(centery-ds_y) + ds_sv.x*(ds_x1-centerx);
 
-	CALC_SLOPE_LIGHT
-
-	uz = ds_sup->z + ds_sup->y*(centery-ds_y) + ds_sup->x*(ds_x1-centerx);
-	vz = ds_svp->z + ds_svp->y*(centery-ds_y) + ds_svp->x*(ds_x1-centerx);
+	R_CalcSlopeLight();
 
 	dest = ylookup[ds_y] + columnofs[ds_x1];
 	source = ds_source;
@@ -822,18 +627,18 @@ void R_DrawTiltedTranslucentSpan_8(void)
 		colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
 		*dest = *(ds_transmap + (colormap[source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)]] << 8) + *dest);
 		dest++;
-		iz += ds_szp->x;
-		uz += ds_sup->x;
-		vz += ds_svp->x;
+		iz += ds_sz.x;
+		uz += ds_su.x;
+		vz += ds_sv.x;
 	} while (--width >= 0);
 #else
 	startz = 1.f/iz;
 	startu = uz*startz;
 	startv = vz*startz;
 
-	izstep = ds_szp->x * SPANSIZE;
-	uzstep = ds_sup->x * SPANSIZE;
-	vzstep = ds_svp->x * SPANSIZE;
+	izstep = ds_sz.x * SPANSIZE;
+	uzstep = ds_su.x * SPANSIZE;
+	vzstep = ds_sv.x * SPANSIZE;
 	//x1 = 0;
 	width++;
 
@@ -875,9 +680,9 @@ void R_DrawTiltedTranslucentSpan_8(void)
 		else
 		{
 			double left = width;
-			iz += ds_szp->x * left;
-			uz += ds_sup->x * left;
-			vz += ds_svp->x * left;
+			iz += ds_sz.x * left;
+			uz += ds_su.x * left;
+			vz += ds_sv.x * left;
 
 			endz = 1.f/iz;
 			endu = uz*endz;
@@ -922,12 +727,11 @@ void R_DrawTiltedWaterSpan_8(void)
 	double endz, endu, endv;
 	UINT32 stepu, stepv;
 
-	iz = ds_szp->z + ds_szp->y*(centery-ds_y) + ds_szp->x*(ds_x1-centerx);
+	iz = ds_sz.z + ds_sz.y*(centery-ds_y) + ds_sz.x*(ds_x1-centerx);
+	uz = ds_su.z + ds_su.y*(centery-ds_y) + ds_su.x*(ds_x1-centerx);
+	vz = ds_sv.z + ds_sv.y*(centery-ds_y) + ds_sv.x*(ds_x1-centerx);
 
-	CALC_SLOPE_LIGHT
-
-	uz = ds_sup->z + ds_sup->y*(centery-ds_y) + ds_sup->x*(ds_x1-centerx);
-	vz = ds_svp->z + ds_svp->y*(centery-ds_y) + ds_svp->x*(ds_x1-centerx);
+	R_CalcSlopeLight();
 
 	dest = ylookup[ds_y] + columnofs[ds_x1];
 	dsrc = screens[1] + (ds_y+ds_bgofs)*vid.width + ds_x1;
@@ -946,18 +750,18 @@ void R_DrawTiltedWaterSpan_8(void)
 		colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
 		*dest = *(ds_transmap + (colormap[source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)]] << 8) + *dsrc++);
 		dest++;
-		iz += ds_szp->x;
-		uz += ds_sup->x;
-		vz += ds_svp->x;
+		iz += ds_sz.x;
+		uz += ds_su.x;
+		vz += ds_sv.x;
 	} while (--width >= 0);
 #else
 	startz = 1.f/iz;
 	startu = uz*startz;
 	startv = vz*startz;
 
-	izstep = ds_szp->x * SPANSIZE;
-	uzstep = ds_sup->x * SPANSIZE;
-	vzstep = ds_svp->x * SPANSIZE;
+	izstep = ds_sz.x * SPANSIZE;
+	uzstep = ds_su.x * SPANSIZE;
+	vzstep = ds_sv.x * SPANSIZE;
 	//x1 = 0;
 	width++;
 
@@ -999,9 +803,9 @@ void R_DrawTiltedWaterSpan_8(void)
 		else
 		{
 			double left = width;
-			iz += ds_szp->x * left;
-			uz += ds_sup->x * left;
-			vz += ds_svp->x * left;
+			iz += ds_sz.x * left;
+			uz += ds_su.x * left;
+			vz += ds_sv.x * left;
 
 			endz = 1.f/iz;
 			endu = uz*endz;
@@ -1044,12 +848,11 @@ void R_DrawTiltedSplat_8(void)
 	double endz, endu, endv;
 	UINT32 stepu, stepv;
 
-	iz = ds_szp->z + ds_szp->y*(centery-ds_y) + ds_szp->x*(ds_x1-centerx);
+	iz = ds_sz.z + ds_sz.y*(centery-ds_y) + ds_sz.x*(ds_x1-centerx);
+	uz = ds_su.z + ds_su.y*(centery-ds_y) + ds_su.x*(ds_x1-centerx);
+	vz = ds_sv.z + ds_sv.y*(centery-ds_y) + ds_sv.x*(ds_x1-centerx);
 
-	CALC_SLOPE_LIGHT
-
-	uz = ds_sup->z + ds_sup->y*(centery-ds_y) + ds_sup->x*(ds_x1-centerx);
-	vz = ds_svp->z + ds_svp->y*(centery-ds_y) + ds_svp->x*(ds_x1-centerx);
+	R_CalcSlopeLight();
 
 	dest = ylookup[ds_y] + columnofs[ds_x1];
 	source = ds_source;
@@ -1071,18 +874,18 @@ void R_DrawTiltedSplat_8(void)
 			*dest = colormap[val];
 
 		dest++;
-		iz += ds_szp->x;
-		uz += ds_sup->x;
-		vz += ds_svp->x;
+		iz += ds_sz.x;
+		uz += ds_su.x;
+		vz += ds_sv.x;
 	} while (--width >= 0);
 #else
 	startz = 1.f/iz;
 	startu = uz*startz;
 	startv = vz*startz;
 
-	izstep = ds_szp->x * SPANSIZE;
-	uzstep = ds_sup->x * SPANSIZE;
-	vzstep = ds_svp->x * SPANSIZE;
+	izstep = ds_sz.x * SPANSIZE;
+	uzstep = ds_su.x * SPANSIZE;
+	vzstep = ds_sv.x * SPANSIZE;
 	//x1 = 0;
 	width++;
 
@@ -1128,9 +931,9 @@ void R_DrawTiltedSplat_8(void)
 		else
 		{
 			double left = width;
-			iz += ds_szp->x * left;
-			uz += ds_sup->x * left;
-			vz += ds_svp->x * left;
+			iz += ds_sz.x * left;
+			uz += ds_su.x * left;
+			vz += ds_sv.x * left;
 
 			endz = 1.f/iz;
 			endu = uz*endz;
@@ -1613,9 +1416,9 @@ void R_DrawTiltedFloorSprite_8(void)
 	double endz, endu, endv;
 	UINT32 stepu, stepv;
 
-	iz = ds_szp->z + ds_szp->y*(centery-ds_y) + ds_szp->x*(ds_x1-centerx);
-	uz = ds_sup->z + ds_sup->y*(centery-ds_y) + ds_sup->x*(ds_x1-centerx);
-	vz = ds_svp->z + ds_svp->y*(centery-ds_y) + ds_svp->x*(ds_x1-centerx);
+	iz = ds_sz.z + ds_sz.y*(centery-ds_y) + ds_sz.x*(ds_x1-centerx);
+	uz = ds_su.z + ds_su.y*(centery-ds_y) + ds_su.x*(ds_x1-centerx);
+	vz = ds_sv.z + ds_sv.y*(centery-ds_y) + ds_sv.x*(ds_x1-centerx);
 
 	dest = ylookup[ds_y] + columnofs[ds_x1];
 	source = (UINT16 *)ds_source;
@@ -1626,9 +1429,9 @@ void R_DrawTiltedFloorSprite_8(void)
 	startu = uz*startz;
 	startv = vz*startz;
 
-	izstep = ds_szp->x * SPANSIZE;
-	uzstep = ds_sup->x * SPANSIZE;
-	vzstep = ds_svp->x * SPANSIZE;
+	izstep = ds_sz.x * SPANSIZE;
+	uzstep = ds_su.x * SPANSIZE;
+	vzstep = ds_sv.x * SPANSIZE;
 	//x1 = 0;
 	width++;
 
@@ -1673,9 +1476,9 @@ void R_DrawTiltedFloorSprite_8(void)
 		else
 		{
 			double left = width;
-			iz += ds_szp->x * left;
-			uz += ds_sup->x * left;
-			vz += ds_svp->x * left;
+			iz += ds_sz.x * left;
+			uz += ds_su.x * left;
+			vz += ds_sv.x * left;
 
 			endz = 1.f/iz;
 			endu = uz*endz;
@@ -1722,9 +1525,9 @@ void R_DrawTiltedTranslucentFloorSprite_8(void)
 	double endz, endu, endv;
 	UINT32 stepu, stepv;
 
-	iz = ds_szp->z + ds_szp->y*(centery-ds_y) + ds_szp->x*(ds_x1-centerx);
-	uz = ds_sup->z + ds_sup->y*(centery-ds_y) + ds_sup->x*(ds_x1-centerx);
-	vz = ds_svp->z + ds_svp->y*(centery-ds_y) + ds_svp->x*(ds_x1-centerx);
+	iz = ds_sz.z + ds_sz.y*(centery-ds_y) + ds_sz.x*(ds_x1-centerx);
+	uz = ds_su.z + ds_su.y*(centery-ds_y) + ds_su.x*(ds_x1-centerx);
+	vz = ds_sv.z + ds_sv.y*(centery-ds_y) + ds_sv.x*(ds_x1-centerx);
 
 	dest = ylookup[ds_y] + columnofs[ds_x1];
 	source = (UINT16 *)ds_source;
@@ -1735,9 +1538,9 @@ void R_DrawTiltedTranslucentFloorSprite_8(void)
 	startu = uz*startz;
 	startv = vz*startz;
 
-	izstep = ds_szp->x * SPANSIZE;
-	uzstep = ds_sup->x * SPANSIZE;
-	vzstep = ds_svp->x * SPANSIZE;
+	izstep = ds_sz.x * SPANSIZE;
+	uzstep = ds_su.x * SPANSIZE;
+	vzstep = ds_sv.x * SPANSIZE;
 	//x1 = 0;
 	width++;
 
@@ -1782,9 +1585,9 @@ void R_DrawTiltedTranslucentFloorSprite_8(void)
 		else
 		{
 			double left = width;
-			iz += ds_szp->x * left;
-			uz += ds_sup->x * left;
-			vz += ds_svp->x * left;
+			iz += ds_sz.x * left;
+			uz += ds_su.x * left;
+			vz += ds_sv.x * left;
 
 			endz = 1.f/iz;
 			endu = uz*endz;
@@ -2013,9 +1816,7 @@ void R_DrawTiltedFogSpan_8(void)
 
 	UINT8 *dest = ylookup[ds_y] + columnofs[ds_x1];
 
-	double iz = ds_szp->z + ds_szp->y*(centery-ds_y) + ds_szp->x*(ds_x1-centerx);
-
-	CALC_SLOPE_LIGHT
+	R_CalcSlopeLight();
 
 	do
 	{
@@ -2067,9 +1868,7 @@ void R_DrawTiltedSolidColorSpan_8(void)
 	UINT8 source = ds_source[0];
 	UINT8 *dest = ylookup[ds_y] + columnofs[ds_x1];
 
-	double iz = ds_szp->z + ds_szp->y*(centery-ds_y) + ds_szp->x*(ds_x1-centerx);
-
-	CALC_SLOPE_LIGHT
+	R_CalcSlopeLight();
 
 	do
 	{
@@ -2088,9 +1887,7 @@ void R_DrawTiltedTransSolidColorSpan_8(void)
 	UINT8 source = ds_source[0];
 	UINT8 *dest = ylookup[ds_y] + columnofs[ds_x1];
 
-	double iz = ds_szp->z + ds_szp->y*(centery-ds_y) + ds_szp->x*(ds_x1-centerx);
-
-	CALC_SLOPE_LIGHT
+	R_CalcSlopeLight();
 
 	do
 	{
@@ -2131,9 +1928,7 @@ void R_DrawTiltedWaterSolidColorSpan_8(void)
 	UINT8 *dest = ylookup[ds_y] + columnofs[ds_x1];
 	UINT8 *dsrc = screens[1] + (ds_y+ds_bgofs)*vid.width + ds_x1;
 
-	double iz = ds_szp->z + ds_szp->y*(centery-ds_y) + ds_szp->x*(ds_x1-centerx);
-
-	CALC_SLOPE_LIGHT
+	R_CalcSlopeLight();
 
 	do
 	{
