@@ -300,6 +300,10 @@ init_upnpc_once(struct upnpdata *upnpuserdata)
 	int upnp_error = -2;
 	int scope_id = 0;
 	int status_code = 0;
+
+	memset(&urls, 0, sizeof(struct UPNPUrls));
+	memset(&data, 0, sizeof(struct IGDdatas));
+
 	CONS_Printf(M_GetText("Looking for UPnP Internet Gateway Device\n"));
 	devlist = upnpDiscoverDevices(deviceTypes, 500, NULL, NULL, 0, false, 2, &upnp_error, 0);
 	if (devlist)
@@ -327,8 +331,6 @@ init_upnpc_once(struct upnpdata *upnpuserdata)
 			parserootdesc(descXML, descXMLsize, &data);
 			free(descXML);
 			descXML = NULL;
-			memset(&urls, 0, sizeof(struct UPNPUrls));
-			memset(&data, 0, sizeof(struct IGDdatas));
 			GetUPNPUrls(&urls, &data, dev->descURL, status_code);
 			I_AddExitFunc(I_ShutdownUPnP);
 		}
