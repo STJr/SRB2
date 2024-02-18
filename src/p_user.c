@@ -4536,7 +4536,7 @@ void P_RevertSuperForm(player_t *player)
 	}
 
 	if (player->mo->sprite2 & FF_SPR2SUPER)
-		P_SetPlayerMobjState(player->mo, player->mo->state-states);
+		P_SetMobjState(player->mo, player->mo->state-states);
 }
 
 //
