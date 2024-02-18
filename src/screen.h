@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2022 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -59,19 +59,19 @@ typedef struct viddef_s
 	} u;
 	INT32 recalc; // if true, recalc vid-based stuff
 	UINT8 *direct; // linear frame buffer, or vga base mem.
-	INT32 dupx, dupy; // scale 1, 2, 3 value for menus & overlays
-	INT32/*fixed_t*/ fdupx, fdupy; // same as dupx, dupy, but exact value when aspect ratio isn't 320/200
+	INT32 dup; // scale 1, 2, 3 value for menus & overlays
+	INT32/*fixed_t*/ fdup; // same as dup, but exact value when aspect ratio isn't 320/200
 	INT32 bpp; // BYTES per pixel: 1 = 256color, 2 = highcolor
 
 	INT32 baseratio; // Used to get the correct value for lighting walls
 
 	// for Win32 version
 	DNWH WndParent; // handle of the application's window
-	UINT8 smalldupx, smalldupy; // factor for a little bit of scaling
-	UINT8 meddupx, meddupy; // factor for moderate, but not full, scaling
+	UINT8 smalldup; // factor for a little bit of scaling
+	UINT8 meddup; // factor for moderate, but not full, scaling
 #ifdef HWRENDER
-	INT32/*fixed_t*/ fsmalldupx, fsmalldupy;
-	INT32/*fixed_t*/ fmeddupx, fmeddupy;
+	INT32/*fixed_t*/ fsmalldup;
+	INT32/*fixed_t*/ fmeddup;
 	INT32 glstate;
 #endif
 } viddef_t;
@@ -126,8 +126,6 @@ enum
 	COLDRAWFUNC_SHADE,
 	COLDRAWFUNC_SHADOWED,
 	COLDRAWFUNC_TRANSTRANS,
-	COLDRAWFUNC_TWOSMULTIPATCH,
-	COLDRAWFUNC_TWOSMULTIPATCHTRANS,
 	COLDRAWFUNC_FOG,
 
 	COLDRAWFUNC_MAX
@@ -155,7 +153,15 @@ enum
 	SPANDRAWFUNC_WATER,
 	SPANDRAWFUNC_TILTEDWATER,
 
+	SPANDRAWFUNC_SOLID,
+	SPANDRAWFUNC_TRANSSOLID,
+	SPANDRAWFUNC_TILTEDSOLID,
+	SPANDRAWFUNC_TILTEDTRANSSOLID,
+	SPANDRAWFUNC_WATERSOLID,
+	SPANDRAWFUNC_TILTEDWATERSOLID,
+
 	SPANDRAWFUNC_FOG,
+	SPANDRAWFUNC_TILTEDFOG,
 
 	SPANDRAWFUNC_MAX
 };
@@ -164,23 +170,14 @@ extern void (*spanfunc)(void);
 extern void (*spanfuncs[SPANDRAWFUNC_MAX])(void);
 extern void (*spanfuncs_npo2[SPANDRAWFUNC_MAX])(void);
 
-// -----
-// CPUID
-// -----
-extern boolean R_ASM;
-extern boolean R_486;
-extern boolean R_586;
-extern boolean R_MMX;
-extern boolean R_3DNow;
-extern boolean R_MMXExt;
-extern boolean R_SSE2;
-
 // ----------------
 // screen variables
 // ----------------
 extern viddef_t vid;
 extern INT32 setmodeneeded; // mode number to set if needed, or 0
 extern UINT8 setrenderneeded;
+
+extern double averageFPS;
 
 void SCR_ChangeRenderer(void);
 
@@ -189,9 +186,12 @@ extern CV_PossibleValue_t cv_renderer_t[];
 extern INT32 scr_bpp;
 extern UINT8 *scr_borderpatch; // patch used to fill the view borders
 
-extern consvar_t cv_scr_width, cv_scr_height, cv_scr_depth, cv_renderview, cv_renderer, cv_fullscreen;
+extern consvar_t cv_scr_width, cv_scr_height, cv_scr_width_w, cv_scr_height_w, cv_scr_depth, cv_fullscreen;
+extern consvar_t cv_renderview, cv_renderer;
+extern consvar_t cv_renderhitbox, cv_renderhitboxinterpolation, cv_renderhitboxgldepth;
 // wait for page flipping to end or not
 extern consvar_t cv_vidwait;
+extern consvar_t cv_timescale;
 
 // Initialize the screen
 void SCR_Startup(void);
@@ -210,6 +210,8 @@ void SCR_CheckDefaultMode(void);
 
 // Set the mode number which is saved in the config
 void SCR_SetDefaultMode(void);
+
+void SCR_CalculateFPS(void);
 
 FUNCMATH boolean SCR_IsAspectCorrect(INT32 width, INT32 height);
 

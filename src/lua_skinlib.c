@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2014-2016 by John "JTE" Muniz.
-// Copyright (C) 2014-2022 by Sonic Team Junior.
+// Copyright (C) 2014-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -25,6 +25,7 @@ enum skin {
 	skin_flags,
 	skin_realname,
 	skin_hudname,
+	skin_supername,
 	skin_ability,
 	skin_ability2,
 	skin_thokitem,
@@ -53,8 +54,10 @@ enum skin {
 	skin_contspeed,
 	skin_contangle,
 	skin_soundsid,
-	skin_sprites
+	skin_sprites,
+	skin_natkcolor
 };
+
 static const char *const skin_opt[] = {
 	"valid",
 	"name",
@@ -62,6 +65,7 @@ static const char *const skin_opt[] = {
 	"flags",
 	"realname",
 	"hudname",
+	"supername",
 	"ability",
 	"ability2",
 	"thokitem",
@@ -91,14 +95,17 @@ static const char *const skin_opt[] = {
 	"contangle",
 	"soundsid",
 	"sprites",
+	"natkcolor",
 	NULL};
 
 #define UNIMPLEMENTED luaL_error(L, LUA_QL("skin_t") " field " LUA_QS " is not implemented for Lua and cannot be accessed.", skin_opt[field])
 
+static int skin_fields_ref = LUA_NOREF;
+
 static int skin_get(lua_State *L)
 {
 	skin_t *skin = *((skin_t **)luaL_checkudata(L, 1, META_SKIN));
-	enum skin field = luaL_checkoption(L, 2, NULL, skin_opt);
+	enum skin field = Lua_optoption(L, 2, -1, skin_fields_ref);
 
 	// skins are always valid, only added, never removed
 	I_Assert(skin != NULL);
@@ -122,6 +129,9 @@ static int skin_get(lua_State *L)
 		break;
 	case skin_hudname:
 		lua_pushstring(L, skin->hudname);
+		break;
+	case skin_supername:
+		lua_pushstring(L, skin->supername);
 		break;
 	case skin_ability:
 		lua_pushinteger(L, skin->ability);
@@ -210,6 +220,9 @@ static int skin_get(lua_State *L)
 	case skin_sprites:
 		LUA_PushUserdata(L, skin->sprites, META_SKINSPRITES);
 		break;
+	case skin_natkcolor:
+		lua_pushinteger(L, skin->natkcolor);
+		break;
 	}
 	return 1;
 }
@@ -226,7 +239,7 @@ static int skin_num(lua_State *L)
 	// skins are always valid, only added, never removed
 	I_Assert(skin != NULL);
 
-	lua_pushinteger(L, skin-skins);
+	lua_pushinteger(L, skin->skinnum);
 	return 1;
 }
 
@@ -245,14 +258,14 @@ static int lib_iterateSkins(lua_State *L)
 	lua_remove(L, 1); // state is unused.
 
 	if (!lua_isnil(L, 1))
-		i = (INT32)(*((skin_t **)luaL_checkudata(L, 1, META_SKIN)) - skins) + 1;
+		i = (INT32)((*((skin_t **)luaL_checkudata(L, 1, META_SKIN)))->skinnum) + 1;
 	else
 		i = 0;
 
 	// skins are always valid, only added, never removed
 	if (i < numskins)
 	{
-		LUA_PushUserdata(L, &skins[i], META_SKIN);
+		LUA_PushUserdata(L, skins[i], META_SKIN);
 		return 1;
 	}
 
@@ -272,7 +285,7 @@ static int lib_getSkin(lua_State *L)
 			return luaL_error(L, "skins[] index %d out of range (0 - %d)", i, MAXSKINS-1);
 		if (i >= numskins)
 			return 0;
-		LUA_PushUserdata(L, &skins[i], META_SKIN);
+		LUA_PushUserdata(L, skins[i], META_SKIN);
 		return 1;
 	}
 
@@ -287,9 +300,9 @@ static int lib_getSkin(lua_State *L)
 
 	// find skin by name
 	for (i = 0; i < numskins; i++)
-		if (fastcmp(skins[i].name, field))
+		if (fastcmp(skins[i]->name, field))
 		{
-			LUA_PushUserdata(L, &skins[i], META_SKIN);
+			LUA_PushUserdata(L, skins[i], META_SKIN);
 			return 1;
 		}
 
@@ -331,13 +344,13 @@ static const char *const sprites_opt[] = {
 // skin.sprites[i] -> sprites[i]
 static int lib_getSkinSprite(lua_State *L)
 {
-	spritedef_t *sprites = *(spritedef_t **)luaL_checkudata(L, 1, META_SKINSPRITES);
+	spritedef_t *sksprites = *(spritedef_t **)luaL_checkudata(L, 1, META_SKINSPRITES);
 	playersprite_t i = luaL_checkinteger(L, 2);
 
 	if (i < 0 || i >= NUMPLAYERSPRITES*2)
 		return luaL_error(L, LUA_QL("skin_t") " field 'sprites' index %d out of range (0 - %d)", i, (NUMPLAYERSPRITES*2)-1);
 
-	LUA_PushUserdata(L, &sprites[i], META_SKINSPRITESLIST);
+	LUA_PushUserdata(L, &sksprites[i], META_SKINSPRITESLIST);
 	return 1;
 }
 
@@ -365,47 +378,14 @@ static int sprite_get(lua_State *L)
 
 int LUA_SkinLib(lua_State *L)
 {
-	luaL_newmetatable(L, META_SKIN);
-		lua_pushcfunction(L, skin_get);
-		lua_setfield(L, -2, "__index");
+	LUA_RegisterUserdataMetatable(L, META_SKIN, skin_get, skin_set, skin_num);
+	LUA_RegisterUserdataMetatable(L, META_SOUNDSID, soundsid_get, NULL, soundsid_num);
+	LUA_RegisterUserdataMetatable(L, META_SKINSPRITES, lib_getSkinSprite, NULL, lib_numSkinsSprites);
+	LUA_RegisterUserdataMetatable(L, META_SKINSPRITESLIST, sprite_get, NULL, NULL);
 
-		lua_pushcfunction(L, skin_set);
-		lua_setfield(L, -2, "__newindex");
+	skin_fields_ref = Lua_CreateFieldTable(L, skin_opt);
 
-		lua_pushcfunction(L, skin_num);
-		lua_setfield(L, -2, "__len");
-	lua_pop(L,1);
-
-	luaL_newmetatable(L, META_SOUNDSID);
-		lua_pushcfunction(L, soundsid_get);
-		lua_setfield(L, -2, "__index");
-
-		lua_pushcfunction(L, soundsid_num);
-		lua_setfield(L, -2, "__len");
-	lua_pop(L,1);
-
-	luaL_newmetatable(L, META_SKINSPRITES);
-		lua_pushcfunction(L, lib_getSkinSprite);
-		lua_setfield(L, -2, "__index");
-
-		lua_pushcfunction(L, lib_numSkinsSprites);
-		lua_setfield(L, -2, "__len");
-	lua_pop(L,1);
-
-	luaL_newmetatable(L, META_SKINSPRITESLIST);
-		lua_pushcfunction(L, sprite_get);
-		lua_setfield(L, -2, "__index");
-	lua_pop(L,1);
-
-	lua_newuserdata(L, 0);
-		lua_createtable(L, 0, 2);
-			lua_pushcfunction(L, lib_getSkin);
-			lua_setfield(L, -2, "__index");
-
-			lua_pushcfunction(L, lib_numSkins);
-			lua_setfield(L, -2, "__len");
-		lua_setmetatable(L, -2);
-	lua_setglobal(L, "skins");
+	LUA_RegisterGlobalUserdata(L, "skins", lib_getSkin, NULL, lib_numSkins);
 
 	return 0;
 }

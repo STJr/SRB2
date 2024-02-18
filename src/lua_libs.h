@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2012-2016 by John "JTE" Muniz.
-// Copyright (C) 2012-2022 by Sonic Team Junior.
+// Copyright (C) 2012-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -13,6 +13,7 @@
 extern lua_State *gL;
 
 extern boolean mousegrabbedbylua;
+extern boolean ignoregameinputs;
 
 #define MUTABLE_TAGS
 
@@ -84,6 +85,7 @@ extern boolean mousegrabbedbylua;
 #define META_HUDINFO "HUDINFO_T*"
 #define META_PATCH "PATCH_T*"
 #define META_COLORMAP "COLORMAP"
+#define META_EXTRACOLORMAP "EXTRACOLORMAP_T*"
 #define META_CAMERA "CAMERA_T*"
 
 #define META_ACTION "ACTIONF_T*"
@@ -111,4 +113,5 @@ int LUA_TagLib(lua_State *L);
 int LUA_PolyObjLib(lua_State *L);
 int LUA_BlockmapLib(lua_State *L);
 int LUA_HudLib(lua_State *L);
+int LUA_ColorLib(lua_State *L);
 int LUA_InputLib(lua_State *L);

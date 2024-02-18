@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2022 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -18,7 +18,7 @@
 #pragma interface
 #endif
 
-#define NEWSKINSAVES (INT16_MAX) // Purely for backwards compatibility, remove this for 2.3
+#define NEWSKINSAVES (INT16_MAX) // TODO: 2.3: Delete (Purely for backwards compatibility)
 
 // Persistent storage/archiving.
 // These are the load / save game routines.

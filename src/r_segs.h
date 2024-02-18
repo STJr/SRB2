@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2022 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -22,5 +22,6 @@ transnum_t R_GetLinedefTransTable(fixed_t alpha);
 void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2);
 void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pffloor);
 void R_StoreWallRange(INT32 start, INT32 stop);
+void R_ClearSegTables(void);
 
 #endif

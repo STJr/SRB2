@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2022 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -54,7 +54,6 @@ UINT8 *HWR_GetScreenshot(void);
 boolean HWR_Screenshot(const char *pathname);
 
 void HWR_AddCommands(void);
-void HWR_AddSessionCommands(void);
 void transform(float *cx, float *cy, float *cz);
 INT32 HWR_GetTextureUsed(void);
 void HWR_DoPostProcessor(player_t *player);
@@ -98,7 +97,6 @@ extern consvar_t cv_glmodelinterpolation;
 extern consvar_t cv_glmodellighting;
 extern consvar_t cv_glfiltermode;
 extern consvar_t cv_glanisotropicmode;
-extern consvar_t cv_fovchange;
 extern consvar_t cv_glsolvetjoin;
 extern consvar_t cv_glshearing;
 extern consvar_t cv_glspritebillboarding;
@@ -108,6 +106,8 @@ extern consvar_t cv_glslopecontrast;
 
 extern consvar_t cv_glbatching;
 
+extern consvar_t cv_glwireframe;
+
 extern float gl_viewwidth, gl_viewheight, gl_baseviewwindowy;
 
 extern float gl_viewwindowx, gl_basewindowcentery;
@@ -115,6 +115,7 @@ extern float gl_viewwindowx, gl_basewindowcentery;
 // BP: big hack for a test in lighting ref : 1249753487AB
 extern fixed_t *hwbbox;
 extern FTransform atransform;
+extern float gl_viewsin, gl_viewcos;
 
 
 // Render stats

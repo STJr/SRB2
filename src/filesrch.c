@@ -23,10 +23,20 @@
 #include <windows.h>
 #endif
 #include <sys/stat.h>
+
+#ifndef S_ISLNK
+#define IGNORE_SYMLINKS
+#endif
+
+#ifndef IGNORE_SYMLINKS
+#include <unistd.h>
+#include <libgen.h>
+#include <limits.h>
+#endif
 #include <string.h>
 
 #include "filesrch.h"
-#include "d_netfil.h"
+#include "netcode/d_netfil.h"
 #include "m_misc.h"
 #include "z_zone.h"
 #include "m_menu.h" // Addons_option_Onchange
@@ -39,6 +49,7 @@
 
 #define SUFFIX	"*"
 #define	SLASH	"\\"
+#define	S_ISREG(m)	(((m) & S_IFMT) == S_IFREG)
 #define	S_ISDIR(m)	(((m) & S_IFMT) == S_IFDIR)
 
 #ifndef INVALID_FILE_ATTRIBUTES
@@ -307,6 +318,39 @@ closedir (DIR * dirp)
 }
 #endif
 
+// fopen but it REALLY only works on regular files
+// Turns out, on linux, anyway, you can fopen directories
+// in read mode. (It's supposed to fail in write mode
+// though!!)
+FILE *fopenfile(const char *path, const char *mode)
+{
+	FILE *h = fopen(path, mode);
+
+	if (h != NULL)
+	{
+		struct stat st;
+		int eno;
+
+		if (fstat(fileno(h), &st) == -1)
+		{
+			eno = errno;
+		}
+		else if (!S_ISREG(st.st_mode))
+		{
+			eno = EACCES; // set some kinda error
+		}
+		else
+		{
+			return h; // ok
+		}
+
+		fclose(h);
+		errno = eno;
+	}
+
+	return NULL;
+}
+
 static CV_PossibleValue_t addons_cons_t[] = {{0, "Default"},
 #if 1
 												{1, "HOME"}, {2, "SRB2"},
@@ -399,9 +443,19 @@ filestatus_t filesearch(char *filename, const char *startpath, const UINT8 *want
 		// okay, now we actually want searchpath to incorporate d_name
 		strcpy(&searchpath[searchpathindex[depthleft]],dent->d_name);
 
+#if defined(__linux__) || defined(__FreeBSD__)
+		if (dent->d_type == DT_UNKNOWN)
+			if (lstat(searchpath,&fsstat) == 0 && S_ISDIR(fsstat.st_mode))
+				dent->d_type = DT_DIR;
+
+		// Linux and FreeBSD has a special field for file type on dirent, so use that to speed up lookups.
+		// FIXME: should we also follow symlinks?
+		if (dent->d_type == DT_DIR && depthleft)
+#else
 		if (stat(searchpath,&fsstat) < 0) // do we want to follow symlinks? if not: change it to lstat
 			; // was the file (re)moved? can't stat it
 		else if (S_ISDIR(fsstat.st_mode) && depthleft)
+#endif
 		{
 			searchpathindex[--depthleft] = strlen(searchpath) + 1;
 			dirhandle[depthleft] = opendir(searchpath);
@@ -417,6 +471,9 @@ filestatus_t filesearch(char *filename, const char *startpath, const UINT8 *want
 		}
 		else if (!strcasecmp(searchname, dent->d_name))
 		{
+#ifndef IGNORE_SYMLINKS
+			struct stat statbuf;
+#endif
 			switch (checkfilemd5(searchpath, wantedmd5sum))
 			{
 				case FS_FOUND:
@@ -424,6 +481,19 @@ filestatus_t filesearch(char *filename, const char *startpath, const UINT8 *want
 						strcpy(filename,searchpath);
 					else
 						strcpy(filename,dent->d_name);
+#ifndef IGNORE_SYMLINKS
+					if (lstat(filename, &statbuf) != -1)
+					{
+						if (S_ISLNK(statbuf.st_mode))
+						{
+							char *tempbuf = realpath(filename, NULL);
+							if (!tempbuf)
+								I_Error("Error parsing link %s: %s", filename, strerror(errno));
+							strncpy(filename, tempbuf, MAX_WADPATH);
+							free(tempbuf);
+						}
+					}
+#endif
 					retval = FS_FOUND;
 					found = 1;
 					break;
@@ -547,7 +617,8 @@ INT32 samepaths(const char *path1, const char *path2)
 	if (stat1.st_dev == stat2.st_dev)
 	{
 #if !defined(_WIN32)
-		return (stat1.st_ino == stat2.st_ino);
+		if (stat1.st_ino == stat2.st_ino)
+			return 1;
 #else
 		// The above doesn't work on NTFS or FAT.
 		HANDLE file1 = CreateFileA(path1, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
@@ -575,6 +646,8 @@ INT32 samepaths(const char *path1, const char *path2)
 		// I'll just use EIO...
 		if (!GetFileInformationByHandle(file1, &file1info))
 		{
+			CloseHandle(file1);
+			CloseHandle(file2);
 #ifndef AVOID_ERRNO
 			direrror = EIO;
 #endif
@@ -590,16 +663,19 @@ INT32 samepaths(const char *path1, const char *path2)
 			return -2;
 		}
 
+		int status = 0;
+
 		if (file1info.dwVolumeSerialNumber == file2info.dwVolumeSerialNumber
 		&& file1info.nFileIndexLow == file2info.nFileIndexLow
 		&& file1info.nFileIndexHigh == file2info.nFileIndexHigh)
 		{
-			CloseHandle(file1);
-			CloseHandle(file2);
-			return 1;
+			status = 1;
 		}
 
-		return 0;
+		CloseHandle(file1);
+		CloseHandle(file2);
+
+		return status;
 #endif
 	}
 
@@ -766,6 +842,7 @@ lumpinfo_t *getdirectoryfiles(const char *path, UINT16 *nlmp, UINT16 *nfolders)
 
 		lump_p->diskpath = Z_StrDup(dirpath); // Path in the filesystem to the file
 		lump_p->compression = CM_NOCOMPRESSION; // Lump is uncompressed
+		lump_p->size = lump_p->disksize = fsstat.st_size;
 
 		// Remove the directory's path.
 		fullname = lump_p->diskpath;
@@ -797,6 +874,7 @@ lumpinfo_t *getdirectoryfiles(const char *path, UINT16 *nlmp, UINT16 *nfolders)
 		// The complete name of the file, with its extension,
 		// excluding the path of the directory where it resides.
 		lump_p->fullname = Z_StrDup(fullname);
+		lump_p->hash = quickncasehash(lump_p->name, 8);
 
 		lump_p++;
 		i++;

@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2022 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -19,7 +19,7 @@
 #include "r_local.h"
 #include "p_local.h"
 #include "p_setup.h"
-#include "d_net.h"
+#include "netcode/d_net.h"
 
 #include "m_cheat.h"
 #include "m_menu.h"
@@ -72,19 +72,16 @@ static UINT8 cheatf_ultimate(void)
 
 static UINT8 cheatf_warp(void)
 {
-	if (modifiedgame)
-		return 0;
-
 	if (menuactive && currentMenu != &MainDef)
 		return 0; // Only on the main menu!
 
 	S_StartSound(0, sfx_itemup);
 
 	// Temporarily unlock stuff.
-	G_SetGameModified(false);
-	unlockables[31].unlocked = true; // credits
-	unlockables[30].unlocked = true; // sound test
-	unlockables[28].unlocked = true; // level select
+	G_SetUsedCheats(false);
+	clientGamedata->unlocked[31] = true; // credits
+	clientGamedata->unlocked[30] = true; // sound test
+	clientGamedata->unlocked[28] = true; // level select
 
 	// Refresh secrets menu existing.
 	M_ClearMenus(true);
@@ -97,18 +94,15 @@ static UINT8 cheatf_devmode(void)
 {
 	UINT8 i;
 
-	if (modifiedgame)
-		return 0;
-
 	if (menuactive && currentMenu != &MainDef)
 		return 0; // Only on the main menu!
 
 	S_StartSound(0, sfx_itemup);
 
 	// Just unlock all the things and turn on -debug and console devmode.
-	G_SetGameModified(false);
+	G_SetUsedCheats(false);
 	for (i = 0; i < MAXUNLOCKABLES; i++)
-		unlockables[i].unlocked = true;
+		clientGamedata->unlocked[i] = true;
 	devparm = true;
 	cv_debug |= 0x8000;
 
@@ -244,7 +238,7 @@ boolean cht_Responder(event_t *ev)
 }
 
 // Console cheat commands rely on these a lot...
-#define REQUIRE_PANDORA if (!M_SecretUnlocked(SECRET_PANDORA) && !cv_debug)\
+#define REQUIRE_PANDORA if (!M_SecretUnlocked(SECRET_PANDORA, serverGamedata) && !cv_debug)\
 { CONS_Printf(M_GetText("You haven't earned this yet.\n")); return; }
 
 #define REQUIRE_DEVMODE if (!cv_debug)\
@@ -275,7 +269,7 @@ void Command_CheatNoClip_f(void)
 	plyr->pflags ^= PF_NOCLIP;
 	CONS_Printf(M_GetText("No Clipping %s\n"), plyr->pflags & PF_NOCLIP ? M_GetText("On") : M_GetText("Off"));
 
-	G_SetGameModified(multiplayer);
+	G_SetUsedCheats(false);
 }
 
 void Command_CheatGod_f(void)
@@ -290,7 +284,7 @@ void Command_CheatGod_f(void)
 	plyr->pflags ^= PF_GODMODE;
 	CONS_Printf(M_GetText("Cheese Mode %s\n"), plyr->pflags & PF_GODMODE ? M_GetText("On") : M_GetText("Off"));
 
-	G_SetGameModified(multiplayer);
+	G_SetUsedCheats(false);
 }
 
 void Command_CheatNoTarget_f(void)
@@ -305,7 +299,7 @@ void Command_CheatNoTarget_f(void)
 	plyr->pflags ^= PF_INVIS;
 	CONS_Printf(M_GetText("SEP Field %s\n"), plyr->pflags & PF_INVIS ? M_GetText("On") : M_GetText("Off"));
 
-	G_SetGameModified(multiplayer);
+	G_SetUsedCheats(false);
 }
 
 void Command_Scale_f(void)
@@ -475,7 +469,7 @@ void Command_RTeleport_f(void)
 	CONS_Printf(M_GetText("Teleporting by %d, %d, %d...\n"), intx, inty, FixedInt((intz-p->mo->z)));
 
 	P_MapStart();
-	if (!P_TeleportMove(p->mo, p->mo->x+intx*FRACUNIT, p->mo->y+inty*FRACUNIT, intz))
+	if (!P_SetOrigin(p->mo, p->mo->x+intx*FRACUNIT, p->mo->y+inty*FRACUNIT, intz))
 		CONS_Alert(CONS_WARNING, M_GetText("Unable to teleport to that spot!\n"));
 	else
 		S_StartSound(p->mo, sfx_mixup);
@@ -696,7 +690,7 @@ void Command_Teleport_f(void)
 	}
 
 	P_MapStart();
-	if (!P_TeleportMove(p->mo, intx, inty, intz))
+	if (!P_SetOrigin(p->mo, intx, inty, intz))
 		CONS_Alert(CONS_WARNING, M_GetText("Unable to teleport to that spot!\n"));
 	else
 		S_StartSound(p->mo, sfx_mixup);
@@ -879,7 +873,7 @@ void Command_Devmode_f(void)
 		return;
 	}
 
-	G_SetGameModified(multiplayer);
+	G_SetUsedCheats(false);
 }
 
 void Command_Setrings_f(void)
@@ -905,7 +899,7 @@ void Command_Setrings_f(void)
 			// no totalsphere addition to revert
 		}
 
-		G_SetGameModified(multiplayer);
+		G_SetUsedCheats(false);
 	}
 }
 
@@ -928,7 +922,7 @@ void Command_Setlives_f(void)
 			P_GivePlayerLives(&players[consoleplayer], atoi(COM_Argv(1)));
 		}
 
-		G_SetGameModified(multiplayer);
+		G_SetUsedCheats(false);
 	}
 }
 
@@ -955,7 +949,7 @@ void Command_Setcontinues_f(void)
 
 		players[consoleplayer].continues = numcontinues;
 
-		G_SetGameModified(multiplayer);
+		G_SetUsedCheats(false);
 	}
 }
 
@@ -1004,7 +998,7 @@ static void OP_CycleThings(INT32 amt)
 		} while
 		(mobjinfo[op_currentthing].doomednum == -1
 			|| op_currentthing == MT_NIGHTSDRONE
-			|| mobjinfo[op_currentthing].flags & MF_NOSECTOR
+			|| mobjinfo[op_currentthing].flags & (MF_AMBIENT|MF_NOSECTOR)
 			|| (states[mobjinfo[op_currentthing].spawnstate].sprite == SPR_NULL
 			 && states[mobjinfo[op_currentthing].seestate].sprite == SPR_NULL)
 		);
@@ -1025,7 +1019,7 @@ static void OP_CycleThings(INT32 amt)
 	if (players[0].mo->eflags & MFE_VERTICALFLIP) // correct z when flipped
 		players[0].mo->z += players[0].mo->height - FixedMul(mobjinfo[op_currentthing].height, players[0].mo->scale);
 	players[0].mo->height = FixedMul(mobjinfo[op_currentthing].height, players[0].mo->scale);
-	P_SetPlayerMobjState(players[0].mo, S_OBJPLACE_DUMMY);
+	P_SetMobjState(players[0].mo, S_OBJPLACE_DUMMY);
 
 	op_currentdoomednum = mobjinfo[op_currentthing].doomednum;
 }
@@ -1104,13 +1098,23 @@ static mapthing_t *OP_CreateNewMapThing(player_t *player, UINT16 type, boolean c
 		fixed_t fheight = P_GetSectorFloorZAt(sec, mt->x << FRACBITS, mt->y << FRACBITS);
 		mt->z = (UINT16)((player->mo->z - fheight)>>FRACBITS);
 	}
+
 	mt->angle = (INT16)(FixedInt(AngleFixed(player->mo->angle)));
 
-	mt->options = (mt->z << ZSHIFT) | (UINT16)cv_opflags.value;
+	mt->options = (UINT16)cv_opflags.value;
 	mt->scale = player->mo->scale;
+	mt->spritexscale = player->mo->spritexscale;
+	mt->spriteyscale = player->mo->spriteyscale;
 	memset(mt->args, 0, NUMMAPTHINGARGS*sizeof(*mt->args));
 	memset(mt->stringargs, 0x00, NUMMAPTHINGSTRINGARGS*sizeof(*mt->stringargs));
 	mt->pitch = mt->roll = 0;
+
+	// Ignore offsets
+	if (mt->type == MT_EMBLEM)
+		mt->args[1] = 1;
+	else
+		mt->args[0] = 1;
+
 	return mt;
 }
 
@@ -1315,13 +1319,13 @@ void OP_ObjectplaceMovement(player_t *player)
 	if (cmd->forwardmove != 0)
 	{
 		P_Thrust(player->mo, player->mo->angle, (cmd->forwardmove*player->mo->scale/MAXPLMOVE)*cv_speed.value);
-		P_TeleportMove(player->mo, player->mo->x+player->mo->momx, player->mo->y+player->mo->momy, player->mo->z);
+		P_MoveOrigin(player->mo, player->mo->x+player->mo->momx, player->mo->y+player->mo->momy, player->mo->z);
 		player->mo->momx = player->mo->momy = 0;
 	}
 	if (cmd->sidemove != 0)
 	{
 		P_Thrust(player->mo, player->mo->angle-ANGLE_90, (cmd->sidemove*player->mo->scale/MAXPLMOVE)*cv_speed.value);
-		P_TeleportMove(player->mo, player->mo->x+player->mo->momx, player->mo->y+player->mo->momy, player->mo->z);
+		P_MoveOrigin(player->mo, player->mo->x+player->mo->momx, player->mo->y+player->mo->momy, player->mo->z);
 		player->mo->momx = player->mo->momy = 0;
 	}
 
@@ -1446,7 +1450,7 @@ void Command_ObjectPlace_f(void)
 	REQUIRE_SINGLEPLAYER;
 	REQUIRE_NOULTIMATE;
 
-	G_SetGameModified(multiplayer);
+	G_SetUsedCheats(false);
 
 	silent = COM_CheckParm("-silent");
 
@@ -1532,7 +1536,7 @@ void Command_ObjectPlace_f(void)
 		else
 			OP_CycleThings(0); // sets all necessary height values without cycling op_currentthing
 
-		P_SetPlayerMobjState(players[0].mo, S_OBJPLACE_DUMMY);
+		P_SetMobjState(players[0].mo, S_OBJPLACE_DUMMY);
 	}
 	// Or are we leaving it instead?
 	else
@@ -1546,7 +1550,7 @@ void Command_ObjectPlace_f(void)
 
 		// If still in dummy state, get out of it.
 		if (players[0].mo->state == &states[S_OBJPLACE_DUMMY])
-			P_SetPlayerMobjState(players[0].mo, op_oldstate);
+			P_SetMobjState(players[0].mo, op_oldstate);
 
 		// Reset everything back to how it was before we entered objectplace.
 		P_UnsetThingPosition(players[0].mo);

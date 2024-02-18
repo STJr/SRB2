@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2022 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -13,10 +13,11 @@
 
 #include "doomdef.h"
 #include "p_local.h"
+#include "r_fps.h"
 #include "r_main.h"
 #include "s_sound.h"
 #include "z_zone.h"
-#include "d_netcmd.h"
+#include "netcode/d_netcmd.h"
 
 // ==========================================================================
 //                              CEILINGS
@@ -334,6 +335,9 @@ INT32 EV_DoCeiling(mtag_t tag, line_t *line, ceiling_e type)
 
 		ceiling->type = type;
 		firstone = 0;
+
+		// interpolation
+		R_CreateInterpolator_SectorPlane(&ceiling->thinker, sec, true);
 	}
 	return rtn;
 }
@@ -398,6 +402,10 @@ INT32 EV_DoCrush(mtag_t tag, line_t *line, ceiling_e type)
 		}
 
 		ceiling->type = type;
+
+		// interpolation
+		R_CreateInterpolator_SectorPlane(&ceiling->thinker, sec, false);
+		R_CreateInterpolator_SectorPlane(&ceiling->thinker, sec, true);
 	}
 	return rtn;
 }

@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2022 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -40,9 +40,9 @@ extern boolean gamedataadded;
 extern boolean titlechanged;
 extern boolean introchanged;
 
-#define MAXRECURSION 30
-extern const char *superactions[MAXRECURSION];
-extern UINT8 superstack;
+#define MAX_ACTION_RECURSION 30
+extern const char *luaactions[MAX_ACTION_RECURSION];
+extern UINT8 luaactionstack;
 
 // If the dehacked patch does not match this version, we throw a warning
 #define PATCHVERSION 220
@@ -61,4 +61,5 @@ typedef struct
 #define myfeof(a) (a->data + a->size <= a->curpos)
 char *myfgets(char *buf, size_t bufsize, MYFILE *f);
 char *myhashfgets(char *buf, size_t bufsize, MYFILE *f);
+void ignorelinesuntilhash(MYFILE *f);
 #endif

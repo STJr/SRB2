@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2022 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -61,7 +61,7 @@ static boolean con_started = false; // console has been initialised
 static boolean con_forcepic = true; // at startup toggle console translucency when first off
        boolean con_recalc;          // set true when screen size has changed
 
-static tic_t con_tick; // console ticker for anim or blinking prompt cursor
+static tic_t con_tick; // console ticker for blinking prompt cursor
                         // con_scrollup should use time (currenttime - lasttime)..
 
 static boolean consoletoggle; // true when console key pushed, ticker will handle
@@ -72,8 +72,8 @@ static INT32 con_curlines;  // vid lines currently used by console
 
        INT32 con_clipviewtop; // (useless)
 
-static INT32 con_hudlines;        // number of console heads up message lines
-static INT32 con_hudtime[MAXHUDLINES];      // remaining time of display for hud msg lines
+static UINT8  con_hudlines;             // number of console heads up message lines
+static UINT32 con_hudtime[MAXHUDLINES]; // remaining time of display for hud msg lines
 
        INT32 con_clearlines;      // top screen lines to refresh when view reduced
        boolean con_hudupdate;   // when messages scroll, we need a backgrnd refresh
@@ -110,6 +110,7 @@ static void CON_RecalcSize(void);
 static void CON_ChangeHeight(void);
 
 static void CON_DrawBackpic(void);
+static void CONS_height_Change(void);
 static void CONS_hudlines_Change(void);
 static void CONS_backcolor_Change(void);
 
@@ -119,16 +120,19 @@ static void CONS_backcolor_Change(void);
 #ifdef macintosh
 #define CON_BUFFERSIZE 4096 // my compiler can't handle local vars >32k
 #else
-#define CON_BUFFERSIZE 16384
+#define CON_BUFFERSIZE 32768
 #endif
 
 static char con_buffer[CON_BUFFERSIZE];
 
 // how many seconds the hud messages lasts on the screen
-static consvar_t cons_msgtimeout = CVAR_INIT ("con_hudtime", "5", CV_SAVE, CV_Unsigned, NULL);
+// CV_Unsigned can overflow when multiplied by TICRATE later, so let's use a 3-year limit instead
+static CV_PossibleValue_t hudtime_cons_t[] = {{0, "MIN"}, {99999999, "MAX"}, {0, NULL}};
+static consvar_t cons_hudtime = CVAR_INIT ("con_hudtime", "5", CV_SAVE, hudtime_cons_t, NULL);
 
 // number of lines displayed on the HUD
-static consvar_t cons_hudlines = CVAR_INIT ("con_hudlines", "5", CV_CALL|CV_SAVE, CV_Unsigned, CONS_hudlines_Change);
+static CV_PossibleValue_t hudlines_cons_t[] = {{0, "MIN"}, {MAXHUDLINES, "MAX"}, {0, NULL}};
+static consvar_t cons_hudlines = CVAR_INIT ("con_hudlines", "5", CV_CALL|CV_SAVE, hudlines_cons_t, CONS_hudlines_Change);
 
 // number of lines console move per frame
 // (con_speed needs a limit, apparently)
@@ -136,7 +140,7 @@ static CV_PossibleValue_t speed_cons_t[] = {{0, "MIN"}, {64, "MAX"}, {0, NULL}};
 static consvar_t cons_speed = CVAR_INIT ("con_speed", "8", CV_SAVE, speed_cons_t, NULL);
 
 // percentage of screen height to use for console
-static consvar_t cons_height = CVAR_INIT ("con_height", "50", CV_SAVE, CV_Unsigned, NULL);
+static consvar_t cons_height = CVAR_INIT ("con_height", "50", CV_CALL|CV_SAVE, CV_Unsigned, CONS_height_Change);
 
 static CV_PossibleValue_t backpic_cons_t[] = {{0, "translucent"}, {1, "picture"}, {0, NULL}};
 // whether to use console background picture, or translucent mode
@@ -156,6 +160,18 @@ consvar_t cons_backcolor = CVAR_INIT ("con_backcolor", "Green", CV_CALL|CV_SAVE,
 
 static void CON_Print(char *msg);
 
+// Change the console height on demand
+//
+static void CONS_height_Change(void)
+{
+	Lock_state();
+
+	if (con_destlines > 0 && !con_startup) // If the console is open (as in, not using "bind")...
+		CON_ChangeHeight(); // ...update its height now, not only when it's closed and re-opened
+
+	Unlock_state();
+}
+
 //
 //
 static void CONS_hudlines_Change(void)
@@ -167,11 +183,6 @@ static void CONS_hudlines_Change(void)
 	// Clear the currently displayed lines
 	for (i = 0; i < con_hudlines; i++)
 		con_hudtime[i] = 0;
-
-	if (cons_hudlines.value < 1)
-		cons_hudlines.value = 1;
-	else if (cons_hudlines.value > MAXHUDLINES)
-		cons_hudlines.value = MAXHUDLINES;
 
 	con_hudlines = cons_hudlines.value;
 
@@ -209,13 +220,16 @@ static char *bindtable[NUMINPUTS];
 static void CONS_Bind_f(void)
 {
 	size_t na;
+	char *newcmd = NULL;
+	//size_t newlen = 0;
+	unsigned int i;
 	INT32 key;
 
 	na = COM_Argc();
 
-	if (na != 2 && na != 3)
+	if (na < 2)
 	{
-		CONS_Printf(M_GetText("bind <keyname> [<command>]: create shortcut keys to command(s)\n"));
+		CONS_Printf(M_GetText("bind <keyname> [<command>] [<arg1>] [...]: create shortcut keys to command(s)\n"));
 		CONS_Printf("\x82%s", M_GetText("Bind table :\n"));
 		na = 0;
 		for (key = 0; key < NUMINPUTS; key++)
@@ -239,8 +253,36 @@ static void CONS_Bind_f(void)
 	Z_Free(bindtable[key]);
 	bindtable[key] = NULL;
 
-	if (na == 3)
-		bindtable[key] = Z_StrDup(COM_Argv(2));
+	if (na < 3)
+		return;
+
+	for (i = 2; i < na; ++i)
+	{
+		const char *arg = COM_Argv(i);
+
+		// on the second iteration, and after
+		if (i > 2)
+		{
+			size_t newlen = strlen(bindtable[key]) + strlen(arg) + 1; // new length, allow space for ' ' and '\0'
+			size_t curpos = newcmd - bindtable[key]; // offset from newcmd to original pointer
+
+			newcmd = bindtable[key] = Z_Realloc(bindtable[key], newlen, PU_STATIC, NULL);
+			newcmd += curpos; // reapply offset
+
+			newcmd[0] = ' '; // replace previous '\0' w/ ' '
+			++newcmd; // make sure later strcpy doesnt overwrite ' '
+		}
+		// first iteration
+		else
+			// allocate space for argument and a ' ' or '\0'
+			newcmd = bindtable[key] = Z_Calloc(strlen(arg) + 1, PU_STATIC, NULL);
+
+		// the copy
+		strcpy(newcmd, arg);
+
+		// move window past copied argument for next iteration
+		newcmd += strlen(arg);
+	}
 }
 
 //======================================================================
@@ -382,16 +424,16 @@ static void CON_SetupColormaps(void)
 
 	//                      0x1       0x3                           0x9                           0xF
 	colset(magentamap, 177, 177, 178, 178, 178, 180, 180, 180, 182, 182, 182, 182, 184, 184, 184, 185);
-	colset(yellowmap,   82,  82,  73,  73,  73,  64,  64,  64,  66,  66,  66,  66,  67,  67,  67,  68);
-	colset(lgreenmap,   96,  96,  98,  98,  98, 101, 101, 101, 104, 104, 104, 104, 106, 106, 106, 107);
-	colset(bluemap,    146, 146, 147, 147, 147, 149, 149, 149, 152, 152, 152, 152, 155, 155, 155, 157);
-	colset(redmap,      32,  32,  33,  33,  33,  35,  35,  35,  39,  39,  39,  39,  42,  42,  42,  44);
+	colset(yellowmap,   82,  82,  73,  73,  73,  74,  74,  74,  66,  66,  66,  66,  67,  67,  67,  68);
+	colset(lgreenmap,   96,  96,  98,  98,  98, 100, 100, 100, 103, 103, 103, 103, 105, 105, 105, 107);
+	colset(bluemap,    146, 146, 147, 147, 147, 148, 148, 148, 149, 149, 149, 149, 150, 150, 150, 151);
+	colset(redmap,      32,  32,  33,  33,  33,  34,  34,  34,  35,  35,  35,  35,  37,  37,  37,  39);
 	colset(graymap,      8,   9,  10,  11,  12,  13,  14,  15,  16,  17,  18,  19,  20,  21,  22,  23);
 	colset(orangemap,   50,  50,  52,  52,  52,  54,  54,  54,  56,  56,  56,  56,  59,  59,  59,  60);
 	colset(skymap,     129, 129, 130, 130, 130, 131, 131, 131, 133, 133, 133, 133, 135, 135, 135, 136);
 	colset(purplemap,  160, 160, 161, 161, 161, 162, 162, 162, 163, 163, 163, 163, 164, 164, 164, 165);
 	colset(aquamap,    120, 120, 121, 121, 121, 122, 122, 122, 123, 123, 123, 123, 124, 124, 124, 125);
-	colset(peridotmap,  72,  72, 188, 188, 189, 189, 189, 189, 190, 190, 190, 190, 191, 191, 191,  94);
+	colset(peridotmap,  73,  73, 188, 188, 188, 189, 189, 189, 190, 190, 190, 190, 191, 191, 191,  94);
 	colset(azuremap,   144, 144, 145, 145, 145, 146, 146, 146, 170, 170, 170, 170, 171, 171, 171, 172);
 	colset(brownmap,   219, 219, 221, 221, 221, 222, 222, 222, 224, 224, 224, 224, 227, 227, 227, 229);
 	colset(rosymap,    200, 200, 201, 201, 201, 202, 202, 202, 203, 203, 203, 203, 204, 204, 204, 205);
@@ -443,7 +485,7 @@ void CON_Init(void)
 
 	// register our commands
 	//
-	COM_AddCommand("cls", CONS_Clear_f);
+	COM_AddCommand("cls", CONS_Clear_f, 0);
 	//COM_AddCommand("english", CONS_English_f);
 	// set console full screen for game startup MAKE SURE VID_Init() done !!!
 	Lock_state();
@@ -464,13 +506,13 @@ void CON_Init(void)
 
 		Unlock_state();
 
-		CV_RegisterVar(&cons_msgtimeout);
+		CV_RegisterVar(&cons_hudtime);
 		CV_RegisterVar(&cons_hudlines);
 		CV_RegisterVar(&cons_speed);
 		CV_RegisterVar(&cons_height);
 		CV_RegisterVar(&cons_backpic);
 		CV_RegisterVar(&cons_backcolor);
-		COM_AddCommand("bind", CONS_Bind_f);
+		COM_AddCommand("bind", CONS_Bind_f, 0);
 	}
 	else
 	{
@@ -532,13 +574,13 @@ static void CON_RecalcSize(void)
 		con_scalefactor = 1;
 		break;
 	case V_SMALLSCALEPATCH:
-		con_scalefactor = vid.smalldupx;
+		con_scalefactor = vid.smalldup;
 		break;
 	case V_MEDSCALEPATCH:
-		con_scalefactor = vid.meddupx;
+		con_scalefactor = vid.meddup;
 		break;
 	default:	// Full scaling
-		con_scalefactor = vid.dupx;
+		con_scalefactor = vid.dup;
 		break;
 	}
 
@@ -643,32 +685,38 @@ static void CON_ChangeHeight(void)
 //
 static void CON_MoveConsole(void)
 {
-	fixed_t conspeed;
+	static fixed_t fracmovement = 0;
 
 	Lock_state();
-
-	conspeed = FixedDiv(cons_speed.value*vid.fdupy, FRACUNIT);
 
 	// instant
 	if (!cons_speed.value)
 	{
 		con_curlines = con_destlines;
+		Unlock_state();
 		return;
 	}
 
-	// up/down move to dest
-	if (con_curlines < con_destlines)
+	// Not instant - Increment fracmovement fractionally
+	fracmovement += FixedMul(cons_speed.value*vid.fdup, renderdeltatics);
+
+	if (con_curlines < con_destlines) // Move the console downwards
 	{
-		con_curlines += FixedInt(conspeed);
-		if (con_curlines > con_destlines)
-			con_curlines = con_destlines;
+		con_curlines += FixedInt(fracmovement); // Move by fracmovement's integer value
+		if (con_curlines > con_destlines) // If we surpassed the destination...
+			con_curlines = con_destlines; // ...clamp to it!
 	}
-	else if (con_curlines > con_destlines)
+	else // Move the console upwards
 	{
-		con_curlines -= FixedInt(conspeed);
+		con_curlines -= FixedInt(fracmovement);
 		if (con_curlines < con_destlines)
 			con_curlines = con_destlines;
+
+		if (con_destlines == 0) // If the console is being closed, not just moved up...
+			con_tick = 0; // ...don't show the blinking cursor
 	}
+
+	fracmovement %= FRACUNIT; // Reset fracmovement's integer value, but keep the fraction
 
 	Unlock_state();
 }
@@ -752,10 +800,6 @@ void CON_Ticker(void)
 			CON_ChangeHeight();
 	}
 
-	// console movement
-	if (con_destlines != con_curlines)
-		CON_MoveConsole();
-
 	// clip the view, so that the part under the console is not drawn
 	con_clipviewtop = -1;
 	if (cons_backpic.value) // clip only when using an opaque background
@@ -777,9 +821,8 @@ void CON_Ticker(void)
 	// make overlay messages disappear after a while
 	for (i = 0; i < con_hudlines; i++)
 	{
-		con_hudtime[i]--;
-		if (con_hudtime[i] < 0)
-			con_hudtime[i] = 0;
+		if (con_hudtime[i])
+			con_hudtime[i]--;
 	}
 
 	Unlock_state();
@@ -909,7 +952,8 @@ boolean CON_Responder(event_t *ev)
 	static UINT8 consdown = false; // console is treated differently due to rare usage
 
 	// sequential completions a la 4dos
-	static char completion[80];
+	static char completioncmd[80 + sizeof("find ")] = "find ";
+	static char *completion = &completioncmd[sizeof("find ")-1];
 
 	static INT32 skips;
 
@@ -924,7 +968,7 @@ boolean CON_Responder(event_t *ev)
 		return false;
 
 	// let go keyup events, don't eat them
-	if (ev->type != ev_keydown && ev->type != ev_console)
+	if (ev->type != ev_keydown && ev->type != ev_text && ev->type != ev_console)
 	{
 		if (ev->key == gamecontrol[GC_CONSOLE][0] || ev->key == gamecontrol[GC_CONSOLE][1])
 			consdown = false;
@@ -939,7 +983,7 @@ boolean CON_Responder(event_t *ev)
 		if (modeattacking || metalrecording || marathonmode)
 			return false;
 
-		if (key == gamecontrol[GC_CONSOLE][0] || key == gamecontrol[GC_CONSOLE][1])
+		if (ev->type == ev_keydown && ((key == gamecontrol[GC_CONSOLE][0] || key == gamecontrol[GC_CONSOLE][1]) && !shiftdown))
 		{
 			if (consdown) // ignore repeat
 				return true;
@@ -951,7 +995,7 @@ boolean CON_Responder(event_t *ev)
 		// check other keys only if console prompt is active
 		if (!consoleready && key < NUMINPUTS) // metzgermeister: boundary check!!
 		{
-			if (! menuactive && bindtable[key])
+			if (ev->type == ev_keydown && !menuactive && bindtable[key])
 			{
 				COM_BufAddText(bindtable[key]);
 				COM_BufAddText("\n");
@@ -966,6 +1010,13 @@ boolean CON_Responder(event_t *ev)
 			consoletoggle = true;
 			return true;
 		}
+	}
+
+	if (ev->type == ev_text)
+	{
+		if (!consoletoggle)
+			CON_InputAddChar(key);
+		return true;
 	}
 
 	// Always eat ctrl/shift/alt if console open, so the menu doesn't get ideas
@@ -1045,36 +1096,14 @@ boolean CON_Responder(event_t *ev)
 		// show all cvars/commands that match what we have inputted
 		if (key == KEY_TAB)
 		{
-			size_t i, len;
-
 			if (!completion[0])
 			{
 				if (!input_len || input_len >= 40 || strchr(inputlines[inputline], ' '))
 					return true;
 				strcpy(completion, inputlines[inputline]);
 			}
-			len = strlen(completion);
-
-			//first check commands
-			CONS_Printf("\nCommands:\n");
-			for (i = 0, cmd = COM_CompleteCommand(completion, i); cmd; cmd = COM_CompleteCommand(completion, ++i))
-				CONS_Printf("  \x83" "%s" "\x80" "%s\n", completion, cmd+len);
-			if (i == 0) CONS_Printf("  (none)\n");
-
-			//now we move on to CVARs
-			CONS_Printf("Variables:\n");
-			for (i = 0, cmd = CV_CompleteVar(completion, i); cmd; cmd = CV_CompleteVar(completion, ++i))
-				CONS_Printf("  \x83" "%s" "\x80" "%s\n", completion, cmd+len);
-			if (i == 0) CONS_Printf("  (none)\n");
-
-			//and finally aliases
-			CONS_Printf("Aliases:\n");
-			for (i = 0, cmd = COM_CompleteAlias(completion, i); cmd; cmd = COM_CompleteAlias(completion, ++i))
-				CONS_Printf("  \x83" "%s" "\x80" "%s\n", completion, cmd+len);
-			if (i == 0) CONS_Printf("  (none)\n");
-
+			COM_BufInsertText(completioncmd);
 			completion[0] = 0;
-
 			return true;
 		}
 		// ---
@@ -1304,21 +1333,14 @@ boolean CON_Responder(event_t *ev)
 	else if (key == KEY_KPADSLASH)
 		key = '/';
 
-	if (key >= 'a' && key <= 'z')
-	{
-		if (capslock ^ shiftdown)
-			key = shiftxform[key];
-	}
-	else if (shiftdown)
-		key = shiftxform[key];
-
 	// enter a char into the command prompt
 	if (key < 32 || key > 127)
 		return true;
 
 	if (input_sel != input_cur)
 		CON_InputDelSelection();
-	CON_InputAddChar(key);
+	if (ev->type == ev_console)
+		CON_InputAddChar(key);
 
 	return true;
 }
@@ -1328,7 +1350,8 @@ boolean CON_Responder(event_t *ev)
 static void CON_Linefeed(void)
 {
 	// set time for heads up messages
-	con_hudtime[con_cy%con_hudlines] = cons_msgtimeout.value*TICRATE;
+	if (con_hudlines)
+		con_hudtime[con_cy%con_hudlines] = cons_hudtime.value*TICRATE;
 
 	con_cy++;
 	con_cx = 0;
@@ -1684,7 +1707,7 @@ static void CON_DrawHudlines(void)
 	INT32 charwidth = 8 * con_scalefactor;
 	INT32 charheight = 8 * con_scalefactor;
 
-	if (con_hudlines <= 0)
+	if (!con_hudlines)
 		return;
 
 	if (chat_on && OLDCHAT)
@@ -1692,7 +1715,7 @@ static void CON_DrawHudlines(void)
 	else
 		y = 0;
 
-	for (i = con_cy - con_hudlines+1; i <= con_cy; i++)
+	for (i = con_cy - con_hudlines; i <= con_cy; i++)
 	{
 		size_t c;
 		INT32 x;
@@ -1751,18 +1774,18 @@ static void CON_DrawBackpic(void)
 	con_backpic = W_CachePatchNum(piclump, PU_PATCH);
 
 	// Center the backpic, and draw a vertically cropped patch.
-	w = (con_backpic->width * vid.dupx);
+	w = con_backpic->width * vid.dup;
 	x = (vid.width / 2) - (w / 2);
-	h = con_curlines/vid.dupy;
+	h = con_curlines/vid.dup;
 
 	// If the patch doesn't fill the entire screen,
 	// then fill the sides with a solid color.
 	if (x > 0)
 	{
-		column_t *column = (column_t *)((UINT8 *)(con_backpic->columns) + (con_backpic->columnofs[0]));
-		if (!column->topdelta)
+		column_t *column = &con_backpic->columns[0];
+		if (column->num_posts && !column->posts[0].topdelta)
 		{
-			UINT8 *source = (UINT8 *)(column) + 3;
+			UINT8 *source = column->pixels;
 			INT32 color = (source[0] | V_NOSCALESTART);
 			// left side
 			V_DrawFill(0, 0, x, con_curlines, color);
@@ -1809,41 +1832,41 @@ static void CON_DrawConsole(void)
 	}
 
 	// draw console text lines from top to bottom
-	if (con_curlines < minheight)
-		return;
-
-	i = con_cy - con_scrollup;
-
-	// skip the last empty line due to the cursor being at the start of a new line
-	i--;
-
-	i -= (con_curlines - minheight) / charheight;
-
-	if (rendermode == render_none) return;
-
-	for (y = (con_curlines-minheight) % charheight; y <= con_curlines-minheight; y += charheight, i++)
+	if (con_curlines >= minheight)
 	{
-		INT32 x;
-		size_t c;
+		i = con_cy - con_scrollup;
 
-		p = (UINT8 *)&con_buffer[((i > 0 ? i : 0)%con_totallines)*con_width];
+		// skip the last empty line due to the cursor being at the start of a new line
+		i--;
 
-		for (c = 0, x = charwidth; c < con_width; c++, x += charwidth, p++)
+		i -= (con_curlines - minheight) / charheight;
+
+		if (rendermode == render_none) return;
+
+		for (y = (con_curlines-minheight) % charheight; y <= con_curlines-minheight; y += charheight, i++)
 		{
-			while (*p & 0x80)
+			INT32 x;
+			size_t c;
+
+			p = (UINT8 *)&con_buffer[((i > 0 ? i : 0)%con_totallines)*con_width];
+
+			for (c = 0, x = charwidth; c < con_width; c++, x += charwidth, p++)
 			{
-				charflags = (*p & 0x7f) << V_CHARCOLORSHIFT;
-				p++;
-				c++;
+				while (*p & 0x80)
+				{
+					charflags = (*p & 0x7f) << V_CHARCOLORSHIFT;
+					p++;
+					c++;
+				}
+				if (c >= con_width)
+					break;
+				V_DrawCharacter(x, y, (INT32)(*p) | charflags | cv_constextsize.value | V_NOSCALESTART, true);
 			}
-			if (c >= con_width)
-				break;
-			V_DrawCharacter(x, y, (INT32)(*p) | charflags | cv_constextsize.value | V_NOSCALESTART, true);
 		}
 	}
 
 	// draw prompt if enough place (not while game startup)
-	if ((con_curlines == con_destlines) && (con_curlines >= minheight) && !con_startup)
+	if ((con_curlines >= (minheight-charheight)) && !con_startup)
 		CON_DrawInput();
 }
 
@@ -1866,11 +1889,15 @@ void CON_Drawer(void)
 			CON_ClearHUD();
 	}
 
+	// console movement
+	if (con_curlines != con_destlines)
+		CON_MoveConsole();
+
 	if (con_curlines > 0)
 		CON_DrawConsole();
-	else if (gamestate == GS_LEVEL
-	|| gamestate == GS_INTERMISSION || gamestate == GS_ENDING || gamestate == GS_CUTSCENE
-	|| gamestate == GS_CREDITS || gamestate == GS_EVALUATION)
+	else if (gamestate == GS_LEVEL || gamestate == GS_INTERMISSION || gamestate == GS_CREDITS
+	|| gamestate == GS_EVALUATION || gamestate == GS_ENDING || gamestate == GS_CUTSCENE
+	|| gamestate == GS_WAITINGPLAYERS || cv_debug)
 		CON_DrawHudlines();
 
 	Unlock_state();

@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2022 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -169,6 +169,20 @@ static void ignorelines(MYFILE *f)
 	Z_Free(s);
 }
 
+void ignorelinesuntilhash(MYFILE *f)
+{
+	char *s = Z_Malloc(MAXLINELEN, PU_STATIC, NULL);
+	do
+	{
+		if (myfgets(s, MAXLINELEN, f))
+		{
+			if (s[0] == '#')
+				break;
+		}
+	} while (!myfeof(f));
+	Z_Free(s);
+}
+
 static void DEH_LoadDehackedFile(MYFILE *f, boolean mainfile)
 {
 	char *s = Z_Malloc(MAXLINELEN, PU_STATIC, NULL);
@@ -226,13 +240,7 @@ static void DEH_LoadDehackedFile(MYFILE *f, boolean mainfile)
 				i = 0;
 			if (fastcmp(word, "CHARACTER"))
 			{
-				if (i >= 0 && i < 32)
-					readPlayer(f, i);
-				else
-				{
-					deh_warning("Character %d out of range (0 - 31)", i);
-					ignorelines(f);
-				}
+				readPlayer(f, i);
 				continue;
 			}
 			else if (fastcmp(word, "EMBLEM"))
@@ -575,7 +583,7 @@ static void DEH_LoadDehackedFile(MYFILE *f, boolean mainfile)
 	} // end while
 
 	if (gamedataadded)
-		G_LoadGameData();
+		G_LoadGameData(clientGamedata);
 
 	if (gamestate == GS_TITLESCREEN)
 	{

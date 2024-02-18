@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2022 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -30,10 +30,12 @@
 #include "hw_md2.h"
 #include "../d_main.h"
 #include "../r_bsp.h"
+#include "../r_fps.h"
 #include "../r_main.h"
 #include "../m_misc.h"
 #include "../w_wad.h"
 #include "../z_zone.h"
+#include "../r_state.h"
 #include "../r_things.h"
 #include "../r_draw.h"
 #include "../p_tick.h"
@@ -71,7 +73,8 @@
 #endif
 
 md2_t md2_models[NUMSPRITES];
-md2_t md2_playermodels[MAXSKINS];
+md2_t *md2_playermodels = NULL;
+size_t md2_numplayermodels = 0;
 
 
 /*
@@ -376,7 +379,7 @@ static void md2_loadTexture(md2_t *model)
 			Z_Free(grPatch->mipmap->data);
 	}
 	else
-		model->grpatch = patch = Patch_Create(NULL, 0, NULL);
+		model->grpatch = patch = Patch_Create(0, 0);
 
 	if (!patch->hardware)
 		Patch_AllocateHardwarePatch(patch);
@@ -441,7 +444,7 @@ static void md2_loadBlendTexture(md2_t *model)
 			Z_Free(grPatch->mipmap->data);
 	}
 	else
-		model->blendgrpatch = patch = Patch_Create(NULL, 0, NULL);
+		model->blendgrpatch = patch = Patch_Create(0, 0);
 
 	if (!patch->hardware)
 		Patch_AllocateHardwarePatch(patch);
@@ -483,24 +486,7 @@ static boolean nomd2s = false;
 void HWR_InitModels(void)
 {
 	size_t i;
-	INT32 s;
-	FILE *f;
-	char name[24], filename[32];
-	float scale, offset;
-	size_t prefixlen;
 
-	CONS_Printf("HWR_InitModels()...\n");
-	for (s = 0; s < MAXSKINS; s++)
-	{
-		md2_playermodels[s].scale = -1.0f;
-		md2_playermodels[s].model = NULL;
-		md2_playermodels[s].grpatch = NULL;
-		md2_playermodels[s].notexturefile = false;
-		md2_playermodels[s].noblendfile = false;
-		md2_playermodels[s].skin = -1;
-		md2_playermodels[s].notfound = true;
-		md2_playermodels[s].error = false;
-	}
 	for (i = 0; i < NUMSPRITES; i++)
 	{
 		md2_models[i].scale = -1.0f;
@@ -508,9 +494,46 @@ void HWR_InitModels(void)
 		md2_models[i].grpatch = NULL;
 		md2_models[i].notexturefile = false;
 		md2_models[i].noblendfile = false;
-		md2_models[i].skin = -1;
-		md2_models[i].notfound = true;
+		md2_models[i].found = false;
 		md2_models[i].error = false;
+	}
+
+	if (numsprites && numskins)
+		HWR_LoadModels();
+}
+
+void HWR_LoadModels(void)
+{
+	size_t i;
+	INT32 s;
+	FILE *f;
+
+	char name[26], filename[32];
+	// name[24] is used to check for names in the models.dat file that match with sprites or player skins
+	// sprite names are always 4 characters long, and names is for player skins can be up to 19 characters long
+	// PLAYERMODELPREFIX is 6 characters long
+	float scale, offset;
+	size_t prefixlen;
+
+	if (nomd2s)
+		return;
+
+	// realloc player models table
+	if (numskins != (INT32)md2_numplayermodels)
+	{
+		md2_numplayermodels = (size_t)numskins;
+		md2_playermodels = Z_Realloc(md2_playermodels, sizeof(md2_t) * md2_numplayermodels, PU_STATIC, NULL);
+
+		for (s = 0; s < numskins; s++)
+		{
+			md2_playermodels[s].scale = -1.0f;
+			md2_playermodels[s].model = NULL;
+			md2_playermodels[s].grpatch = NULL;
+			md2_playermodels[s].notexturefile = false;
+			md2_playermodels[s].noblendfile = false;
+			md2_playermodels[s].found = false;
+			md2_playermodels[s].error = false;
+		}
 	}
 
 	// read the models.dat file
@@ -536,23 +559,24 @@ void HWR_InitModels(void)
 		char *skinname = name;
 		size_t len = strlen(name);
 
-		// check for the player model prefix.
+		// Check for the player model prefix.
 		if (!strnicmp(name, PLAYERMODELPREFIX, prefixlen) && (len > prefixlen))
 		{
 			skinname += prefixlen;
 			goto addskinmodel;
 		}
 
-		// add sprite model
-		if (len == 4) // must be 4 characters long exactly. otherwise it's not a sprite name.
+		// Add sprite models.
+		// Must be 4 characters long exactly. Otherwise, it's not a sprite name.
+		if (len == 4)
 		{
-			for (i = 0; i < NUMSPRITES; i++)
+			for (i = 0; i < numsprites; i++)
 			{
 				if (stricmp(name, sprnames[i]) == 0)
 				{
 					md2_models[i].scale = scale;
 					md2_models[i].offset = offset;
-					md2_models[i].notfound = false;
+					md2_models[i].found = true;
 					strcpy(md2_models[i].filename, filename);
 					goto modelfound;
 				}
@@ -560,137 +584,24 @@ void HWR_InitModels(void)
 		}
 
 addskinmodel:
-		// add player model
-		for (s = 0; s < MAXSKINS; s++)
+		// Add player models.
+		for (s = 0; s < numskins; s++)
 		{
-			if (stricmp(skinname, skins[s].name) == 0)
+			if (stricmp(skinname, skins[s]->name) == 0)
 			{
-				md2_playermodels[s].skin = s;
 				md2_playermodels[s].scale = scale;
 				md2_playermodels[s].offset = offset;
-				md2_playermodels[s].notfound = false;
+				md2_playermodels[s].found = true;
 				strcpy(md2_playermodels[s].filename, filename);
 				goto modelfound;
 			}
 		}
 
 modelfound:
-		// move on to next line...
+		// Move on to the next line...
 		continue;
 	}
-	fclose(f);
-}
 
-void HWR_AddPlayerModel(int skin) // For skins that were added after startup
-{
-	FILE *f;
-	char name[24], filename[32];
-	float scale, offset;
-	size_t prefixlen;
-
-	if (nomd2s)
-		return;
-
-	//CONS_Printf("HWR_AddPlayerModel()...\n");
-
-	// read the models.dat file
-	//Filename checking fixed ~Monster Iestyn and Golden
-	f = fopen(va("%s"PATHSEP"%s", srb2home, "models.dat"), "rt");
-
-	if (!f)
-	{
-		f = fopen(va("%s"PATHSEP"%s", srb2path, "models.dat"), "rt");
-		if (!f)
-		{
-			CONS_Printf("%s %s\n", M_GetText("Error while loading models.dat:"), strerror(errno));
-			nomd2s = true;
-			return;
-		}
-	}
-
-	// length of the player model prefix
-	prefixlen = strlen(PLAYERMODELPREFIX);
-
-	// Check for any models that match the names of player skins!
-	while (fscanf(f, "%25s %31s %f %f", name, filename, &scale, &offset) == 4)
-	{
-		char *skinname = name;
-		size_t len = strlen(name);
-
-		// ignore the player model prefix.
-		if (!strnicmp(name, PLAYERMODELPREFIX, prefixlen) && (len > prefixlen))
-			skinname += prefixlen;
-
-		if (stricmp(skinname, skins[skin].name) == 0)
-		{
-			md2_playermodels[skin].skin = skin;
-			md2_playermodels[skin].scale = scale;
-			md2_playermodels[skin].offset = offset;
-			md2_playermodels[skin].notfound = false;
-			strcpy(md2_playermodels[skin].filename, filename);
-			goto playermodelfound;
-		}
-	}
-
-	md2_playermodels[skin].notfound = true;
-playermodelfound:
-	fclose(f);
-}
-
-void HWR_AddSpriteModel(size_t spritenum) // For sprites that were added after startup
-{
-	FILE *f;
-	// name[24] is used to check for names in the models.dat file that match with sprites or player skins
-	// sprite names are always 4 characters long, and names is for player skins can be up to 19 characters long
-	// PLAYERMODELPREFIX is 6 characters long
-	char name[24], filename[32];
-	float scale, offset;
-
-	if (nomd2s)
-		return;
-
-	if (spritenum == SPR_PLAY) // Handled already NEWMD2: Per sprite, per-skin check
-		return;
-
-	// Read the models.dat file
-	//Filename checking fixed ~Monster Iestyn and Golden
-	f = fopen(va("%s"PATHSEP"%s", srb2home, "models.dat"), "rt");
-
-	if (!f)
-	{
-		f = fopen(va("%s"PATHSEP"%s", srb2path, "models.dat"), "rt");
-		if (!f)
-		{
-			CONS_Printf("%s %s\n", M_GetText("Error while loading models.dat:"), strerror(errno));
-			nomd2s = true;
-			return;
-		}
-	}
-
-	// Check for any models that match the names of sprite names!
-	while (fscanf(f, "%25s %31s %f %f", name, filename, &scale, &offset) == 4)
-	{
-		// length of the sprite name
-		size_t len = strlen(name);
-		if (len != 4) // must be 4 characters long exactly. otherwise it's not a sprite name.
-			continue;
-
-		// check for the player model prefix.
-		if (!strnicmp(name, PLAYERMODELPREFIX, strlen(PLAYERMODELPREFIX)))
-			continue; // that's not a sprite...
-
-		if (stricmp(name, sprnames[spritenum]) == 0)
-		{
-			md2_models[spritenum].scale = scale;
-			md2_models[spritenum].offset = offset;
-			md2_models[spritenum].notfound = false;
-			strcpy(md2_models[spritenum].filename, filename);
-			goto spritemodelfound;
-		}
-	}
-
-	md2_models[spritenum].notfound = true;
-spritemodelfound:
 	fclose(f);
 }
 
@@ -1139,13 +1050,10 @@ static void HWR_GetBlendedTexture(patch_t *patch, patch_t *blendpatch, INT32 ski
 	Z_ChangeTag(newMipmap->data, PU_HWRMODELTEXTURE_UNLOCKED);
 }
 
-#define NORMALFOG 0x00000000
-#define FADEFOG 0x19000000
-
 static boolean HWR_AllowModel(mobj_t *mobj)
 {
 	// Signpost overlay. Not needed.
-	if (mobj->state-states == S_PLAY_SIGN)
+	if (mobj->sprite2 == SPR2_SIGN || mobj->state-states == S_PLAY_SIGN)
 		return false;
 
 	// Otherwise, render the model.
@@ -1338,17 +1246,24 @@ boolean HWR_DrawModel(gl_vissprite_t *spr)
 	{
 		patch_t *gpatch, *blendgpatch;
 		GLPatch_t *hwrPatch = NULL, *hwrBlendPatch = NULL;
-		INT32 durs = spr->mobj->state->tics;
-		INT32 tics = spr->mobj->tics;
+		float durs = (float)spr->mobj->state->tics;
+		float tics = (float)spr->mobj->tics;
 		const boolean papersprite = (R_ThingIsPaperSprite(spr->mobj) && !R_ThingIsFloorSprite(spr->mobj));
 		const UINT8 flip = (UINT8)(!(spr->mobj->eflags & MFE_VERTICALFLIP) != !R_ThingVerticallyFlipped(spr->mobj));
 		const UINT8 hflip = (UINT8)(!(spr->mobj->mirrored) != !R_ThingHorizontallyFlipped(spr->mobj));
 		spritedef_t *sprdef;
 		spriteframe_t *sprframe;
-		spriteinfo_t *sprinfo;
-		angle_t ang;
 		INT32 mod;
-		float finalscale;
+		interpmobjstate_t interp;
+
+		if (R_UsingFrameInterpolation() && !paused)
+		{
+			R_InterpolateMobjState(spr->mobj, rendertimefrac, &interp);
+		}
+		else
+		{
+			R_InterpolateMobjState(spr->mobj, FRACUNIT, &interp);
+		}
 
 		// Apparently people don't like jump frames like that, so back it goes
 		//if (tics > durs)
@@ -1375,14 +1290,12 @@ boolean HWR_DrawModel(gl_vissprite_t *spr)
 		// 2. draw model with correct position, rotation,...
 		if (spr->mobj->skin && spr->mobj->sprite == SPR_PLAY) // Use the player MD2 list if the mobj has a skin and is using the player sprites
 		{
-			md2 = &md2_playermodels[(skin_t*)spr->mobj->skin-skins];
-			md2->skin = (skin_t*)spr->mobj->skin-skins;
-			sprinfo = &((skin_t *)spr->mobj->skin)->sprinfo[spr->mobj->sprite2];
+			UINT8 skinnum = ((skin_t*)spr->mobj->skin)->skinnum;
+			md2 = &md2_playermodels[skinnum];
 		}
 		else
 		{
 			md2 = &md2_models[spr->mobj->sprite];
-			sprinfo = &spriteinfo[spr->mobj->sprite];
 		}
 
 		// texture loading before model init, so it knows if sprite graphics are used, which
@@ -1444,7 +1357,6 @@ boolean HWR_DrawModel(gl_vissprite_t *spr)
 		}
 
 		//HWD.pfnSetBlend(blend); // This seems to actually break translucency?
-		finalscale = md2->scale;
 		//Hurdler: arf, I don't like that implementation at all... too much crappy
 
 		if (gpatch && hwrPatch && hwrPatch->mipmap->format) // else if meant that if a texture couldn't be loaded, it would just end up using something else's texture
@@ -1474,7 +1386,7 @@ boolean HWR_DrawModel(gl_vissprite_t *spr)
 						skinnum = TC_RAINBOW;
 				}
 				else if (spr->mobj->skin && spr->mobj->sprite == SPR_PLAY)
-					skinnum = (INT32)((skin_t*)spr->mobj->skin-skins);
+					skinnum = ((skin_t*)spr->mobj->skin)->skinnum;
 				else
 					skinnum = TC_DEFAULT;
 			}
@@ -1498,8 +1410,8 @@ boolean HWR_DrawModel(gl_vissprite_t *spr)
 		if (spr->mobj->frame & FF_ANIMATE)
 		{
 			// set duration and tics to be the correct values for FF_ANIMATE states
-			durs = spr->mobj->state->var2;
-			tics = spr->mobj->anim_duration;
+			durs = (float)spr->mobj->state->var2;
+			tics = (float)spr->mobj->anim_duration;
 		}
 
 		frame = (spr->mobj->frame & FF_FRAMEMASK);
@@ -1523,7 +1435,11 @@ boolean HWR_DrawModel(gl_vissprite_t *spr)
 		}
 
 #ifdef USE_MODEL_NEXTFRAME
-#define INTERPOLERATION_LIMIT TICRATE/4
+		// Interpolate the model interpolation. (lol)
+		tics -= FixedToFloat(rendertimefrac);
+
+#define INTERPOLERATION_LIMIT (TICRATE * 0.25f)
+
 		if (cv_glmodelinterpolation.value && tics <= durs && tics <= INTERPOLERATION_LIMIT)
 		{
 			if (durs > INTERPOLERATION_LIMIT)
@@ -1571,14 +1487,16 @@ boolean HWR_DrawModel(gl_vissprite_t *spr)
 #undef INTERPOLERATION_LIMIT
 #endif
 
+		if (spr->mobj->type == MT_OVERLAY) // Handle overlays
+			R_ThingOffsetOverlay(spr->mobj, &interp.x, &interp.y);
 		//Hurdler: it seems there is still a small problem with mobj angle
-		p.x = FIXED_TO_FLOAT(spr->mobj->x);
-		p.y = FIXED_TO_FLOAT(spr->mobj->y)+md2->offset;
+		p.x = FIXED_TO_FLOAT(interp.x);
+		p.y = FIXED_TO_FLOAT(interp.y)+md2->offset;
 
 		if (flip)
-			p.z = FIXED_TO_FLOAT(spr->mobj->z + spr->mobj->height);
+			p.z = FIXED_TO_FLOAT(interp.z + interp.height);
 		else
-			p.z = FIXED_TO_FLOAT(spr->mobj->z);
+			p.z = FIXED_TO_FLOAT(interp.z);
 
 		if (spr->mobj->skin && spr->mobj->sprite == SPR_PLAY)
 			sprdef = &((skin_t *)spr->mobj->skin)->sprites[spr->mobj->sprite2];
@@ -1589,74 +1507,66 @@ boolean HWR_DrawModel(gl_vissprite_t *spr)
 
 		if (sprframe->rotate || papersprite)
 		{
-			fixed_t anglef = AngleFixed(spr->mobj->angle);
-
-			if (spr->mobj->player)
-				anglef = AngleFixed(spr->mobj->player->drawangle);
+			fixed_t anglef = AngleFixed(interp.angle);
 
 			p.angley = FIXED_TO_FLOAT(anglef);
 		}
 		else
 		{
-			const fixed_t anglef = AngleFixed((R_PointToAngle(spr->mobj->x, spr->mobj->y))-ANGLE_180);
+			const fixed_t anglef = AngleFixed((R_PointToAngle(interp.x, interp.y))-ANGLE_180);
 			p.angley = FIXED_TO_FLOAT(anglef);
 		}
 
-		p.rollangle = 0.0f;
-		p.rollflip = 1;
-		p.rotaxis = 0;
-		if (spr->mobj->rollangle)
 		{
-			fixed_t anglef = AngleFixed(spr->mobj->rollangle);
-			p.rollangle = FIXED_TO_FLOAT(anglef);
-			p.roll = true;
+			fixed_t anglef = AngleFixed(R_ModelRotationAngle(&interp));
 
-			// rotation pivot
-			p.centerx = FIXED_TO_FLOAT(spr->mobj->radius/2);
-			p.centery = FIXED_TO_FLOAT(spr->mobj->height/(flip ? -2 : 2));
+			p.rollangle = 0.0f;
 
-			// rotation axis
-			if (sprinfo->available)
-				p.rotaxis = (UINT8)(sprinfo->pivot[(spr->mobj->frame & FF_FRAMEMASK)].rotaxis);
+			if (anglef)
+			{
+				fixed_t camAngleDiff = AngleFixed(viewangle) - FLOAT_TO_FIXED(p.angley); // dumb reconversion back, I know
 
-			// for NiGHTS specifically but should work everywhere else
-			ang = R_PointToAngle (spr->mobj->x, spr->mobj->y) - (spr->mobj->player ? spr->mobj->player->drawangle : spr->mobj->angle);
-			if ((sprframe->rotate & SRF_RIGHT) && (ang < ANGLE_180)) // See from right
-				p.rollflip = 1;
-			else if ((sprframe->rotate & SRF_LEFT) && (ang >= ANGLE_180)) // See from left
-				p.rollflip = -1;
+				p.rollangle = FIXED_TO_FLOAT(anglef);
+				p.roll = true;
 
-			if (flip)
-				p.rollflip *= -1;
+				// rotation pivot
+				p.centerx = FIXED_TO_FLOAT(interp.radius / 2);
+				p.centery = FIXED_TO_FLOAT(interp.height / 2);
+
+				// rotation axes relative to camera
+				p.rollx = FIXED_TO_FLOAT(FINECOSINE(FixedAngle(camAngleDiff) >> ANGLETOFINESHIFT));
+				p.rollz = FIXED_TO_FLOAT(FINESINE(FixedAngle(camAngleDiff) >> ANGLETOFINESHIFT));
+			}
 		}
 
-		p.anglex = 0.0f;
-
-#ifdef USE_FTRANSFORM_ANGLEZ
-		// Slope rotation from Kart
-		p.anglez = 0.0f;
-		if (spr->mobj->standingslope)
-		{
-			fixed_t tempz = spr->mobj->standingslope->normal.z;
-			fixed_t tempy = spr->mobj->standingslope->normal.y;
-			fixed_t tempx = spr->mobj->standingslope->normal.x;
-			fixed_t tempangle = AngleFixed(R_PointToAngle2(0, 0, FixedSqrt(FixedMul(tempy, tempy) + FixedMul(tempz, tempz)), tempx));
-			p.anglez = FIXED_TO_FLOAT(tempangle);
-			tempangle = -AngleFixed(R_PointToAngle2(0, 0, tempz, tempy));
-			p.anglex = FIXED_TO_FLOAT(tempangle);
-		}
+#if 0
+		p.anglez = FIXED_TO_FLOAT(AngleFixed(interp.pitch));
+		p.anglex = FIXED_TO_FLOAT(AngleFixed(interp.roll));
+#else
+		p.anglez = 0.f;
+		p.anglex = 0.f;
 #endif
-
-		// SRB2CBTODO: MD2 scaling support
-		finalscale *= FIXED_TO_FLOAT(spr->mobj->scale);
 
 		p.flip = atransform.flip;
-#ifdef USE_FTRANSFORM_MIRROR
-		p.mirror = atransform.mirror; // from Kart
-#endif
+		p.mirror = atransform.mirror;
 
 		HWD.pfnSetShader(SHADER_MODEL);	// model shader
-		HWD.pfnDrawModel(md2->model, frame, durs, tics, nextFrame, &p, finalscale, flip, hflip, &Surf);
+		{
+			float this_scale = FIXED_TO_FLOAT(interp.scale);
+
+			float xs = this_scale * FIXED_TO_FLOAT(interp.spritexscale);
+			float ys = this_scale * FIXED_TO_FLOAT(interp.spriteyscale);
+
+			float ox = xs * FIXED_TO_FLOAT(interp.spritexoffset);
+			float oy = ys * FIXED_TO_FLOAT(interp.spriteyoffset);
+
+			// offset perpendicular to the camera angle
+			p.x -= ox * gl_viewsin;
+			p.y += ox * gl_viewcos;
+			p.z += oy;
+
+			HWD.pfnDrawModel(md2->model, frame, durs, tics, nextFrame, &p, md2->scale * xs, md2->scale * ys, flip, hflip, &Surf);
+		}
 	}
 
 	return true;

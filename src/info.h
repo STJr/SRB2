@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2022 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -18,6 +18,7 @@
 #include "d_think.h"
 #include "sounds.h"
 #include "m_fixed.h"
+#include "dehacked.h" // MAX_ACTION_RECURSION
 
 // deh_tables.c now has lists for the more named enums! PLEASE keep them up to date!
 // For great modding!!
@@ -151,6 +152,7 @@ enum actionnum
 	A_BOSS3TAKEDAMAGE,
 	A_BOSS3PATH,
 	A_BOSS3SHOCKTHINK,
+	A_SHOCKWAVE,
 	A_LINEDEFEXECUTE,
 	A_LINEDEFEXECUTEFROMARG,
 	A_PLAYSEESOUND,
@@ -171,6 +173,7 @@ enum actionnum
 	A_CHANGECOLORRELATIVE,
 	A_CHANGECOLORABSOLUTE,
 	A_DYE,
+	A_SETTRANSLATION,
 	A_MOVERELATIVE,
 	A_MOVEABSOLUTE,
 	A_THRUST,
@@ -415,6 +418,7 @@ void A_Boss1Spikeballs();
 void A_Boss3TakeDamage();
 void A_Boss3Path();
 void A_Boss3ShockThink();
+void A_Shockwave();
 void A_LinedefExecute();
 void A_LinedefExecuteFromArg();
 void A_PlaySeeSound();
@@ -442,6 +446,7 @@ void A_SetRandomTics();
 void A_ChangeColorRelative();
 void A_ChangeColorAbsolute();
 void A_Dye();
+void A_SetTranslation();
 void A_MoveRelative();
 void A_MoveAbsolute();
 void A_Thrust();
@@ -564,10 +569,10 @@ void A_DragonWing();
 void A_DragonSegment();
 void A_ChangeHeight();
 
-extern boolean actionsoverridden[NUMACTIONS];
+extern int actionsoverridden[NUMACTIONS][MAX_ACTION_RECURSION];
 
 // ratio of states to sprites to mobj types is roughly 6 : 1 : 1
-#define NUMMOBJFREESLOTS 512
+#define NUMMOBJFREESLOTS 1024
 #define NUMSPRITEFREESLOTS NUMMOBJFREESLOTS
 #define NUMSTATEFREESLOTS (NUMMOBJFREESLOTS*8)
 
@@ -794,6 +799,7 @@ typedef enum sprite
 	SPR_BMCH, // Big Mace Chain
 	SPR_SMCE, // Small Mace
 	SPR_BMCE, // Big Mace
+	SPR_BSPB, // Blue spring on a ball
 	SPR_YSPB, // Yellow spring on a ball
 	SPR_RSPB, // Red spring on a ball
 	SPR_SFBR, // Small Firebar
@@ -2740,6 +2746,13 @@ typedef enum state
 	S_BIGMACE,
 	S_SMALLGRABCHAIN,
 	S_BIGGRABCHAIN,
+
+	// Blue spring on a ball
+	S_BLUESPRINGBALL,
+	S_BLUESPRINGBALL2,
+	S_BLUESPRINGBALL3,
+	S_BLUESPRINGBALL4,
+	S_BLUESPRINGBALL5,
 
 	// Yellow spring on a ball
 	S_YELLOWSPRINGBALL,
@@ -4719,6 +4732,7 @@ typedef enum mobj_type
 	MT_BIGMACE, // Big Mace
 	MT_SMALLGRABCHAIN, // Small Grab Chain
 	MT_BIGGRABCHAIN, // Big Grab Chain
+	MT_BLUESPRINGBALL, // Blue spring on a ball
 	MT_YELLOWSPRINGBALL, // Yellow spring on a ball
 	MT_REDSPRINGBALL, // Red spring on a ball
 	MT_SMALLFIREBAR, // Small Firebar
@@ -5111,7 +5125,7 @@ typedef enum mobj_type
 	MT_POLYANCHOR,
 	MT_POLYSPAWN,
 
-	// Skybox objects
+	// Portal objects
 	MT_SKYBOX,
 
 	// Debris

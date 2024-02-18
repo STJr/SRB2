@@ -1,6 +1,6 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
-// Copyright (C) 2014-2022 by Sonic Team Junior.
+// Copyright (C) 2014-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -108,6 +108,7 @@ static UINT32 fading_timer;
 static UINT32 fading_duration;
 static INT32 fading_id;
 static void (*fading_callback)(void);
+static boolean fading_do_callback;
 static boolean fading_nocleanup;
 
 #ifdef HAVE_GME
@@ -213,7 +214,10 @@ static void var_cleanup(void)
 	// HACK: See music_loop, where we want the fade timing to proceed after a non-looping
 	// song has stopped playing
 	if (!fading_nocleanup)
+	{
 		fading_callback = NULL;
+		fading_do_callback = false;
+	}
 	else
 		fading_nocleanup = false; // use it once, set it back immediately
 
@@ -330,6 +334,13 @@ void I_ShutdownSound(void)
 
 void I_UpdateSound(void)
 {
+	if (fading_do_callback)
+	{
+		if (fading_callback)
+			(*fading_callback)();
+		fading_callback = NULL;
+		fading_do_callback = false;
+	}
 }
 
 /// ------------------------
@@ -654,9 +665,8 @@ static UINT32 get_adjusted_position(UINT32 position)
 
 static void do_fading_callback(void)
 {
-	if (fading_callback)
-		(*fading_callback)();
-	fading_callback = NULL;
+	// TODO: Should I use a mutex here or something?
+	fading_do_callback = true;
 }
 
 /// ------------------------
@@ -749,8 +759,8 @@ static void mix_gme(void *udata, Uint8 *stream, int len)
 		music_volume = 18;
 
 	// apply volume to stream
-	for (i = 0, p = (short *)stream; i < len/2; i++, p++)
-		*p = ((INT32)*p) * (music_volume*internal_volume/100)*2 / 40;
+	for (i = 0, p = (short *)stream; i < len / 2; i++, p++)
+		*p = ((INT32)*p) * music_volume * internal_volume / 100 / 20;
 }
 #endif
 
@@ -773,8 +783,8 @@ static void mix_openmpt(void *udata, Uint8 *stream, int len)
 		music_volume = 18;
 
 	// apply volume to stream
-	for (i = 0, p = (short *)stream; i < len/2; i++, p++)
-		*p = ((INT32)*p) * (music_volume*internal_volume/100)*2 / 40;
+	for (i = 0, p = (short *)stream; i < len / 2; i++, p++)
+		*p = ((INT32)*p) * music_volume * internal_volume / 100 / 20;
 }
 #endif
 
@@ -1431,7 +1441,7 @@ void I_SetMusicVolume(UINT8 volume)
 	Mix_VolumeMusic(get_real_volume(music_volume));
 }
 
-boolean I_SetSongTrack(int track)
+boolean I_SetSongTrack(INT32 track)
 {
 #ifdef HAVE_GME
 	// If the specified track is within the number of tracks playing, then change it

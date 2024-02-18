@@ -1,8 +1,8 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 2018-2022 by Jaime "Lactozilla" Passos.
-// Copyright (C) 2019-2022 by Sonic Team Junior.
+// Copyright (C) 2018-2023 by Jaime "Lactozilla" Passos.
+// Copyright (C) 2019-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -42,8 +42,9 @@ typedef enum
 
 typedef enum
 {
-	PICFLAGS_XFLIP = 1,
-	PICFLAGS_YFLIP = 1<<1
+	PICFLAGS_XFLIP                = 1,
+	PICFLAGS_YFLIP                = 1<<1,
+	PICFLAGS_USE_TRANSPARENTPIXEL = 1<<2
 } pictureflags_t;
 
 enum
@@ -62,20 +63,20 @@ void *Picture_Convert(
 
 void *Picture_PatchConvert(
 	pictureformat_t informat, void *picture, pictureformat_t outformat,
-	size_t insize, size_t *outsize,
-	INT16 inwidth, INT16 inheight, INT16 inleftoffset, INT16 intopoffset,
+	size_t *outsize,
+	INT32 inwidth, INT32 inheight, INT32 inleftoffset, INT32 intopoffset,
 	pictureflags_t flags);
 void *Picture_FlatConvert(
 	pictureformat_t informat, void *picture, pictureformat_t outformat,
-	size_t insize, size_t *outsize,
-	INT16 inwidth, INT16 inheight, INT16 inleftoffset, INT16 intopoffset,
+	size_t *outsize,
+	INT32 inwidth, INT32 inheight,
 	pictureflags_t flags);
 void *Picture_GetPatchPixel(
 	patch_t *patch, pictureformat_t informat,
 	INT32 x, INT32 y,
 	pictureflags_t flags);
 
-void *Picture_TextureToFlat(size_t trickytex);
+void *Picture_TextureToFlat(size_t texnum);
 
 INT32 Picture_FormatBPP(pictureformat_t format);
 boolean Picture_IsPatchFormat(pictureformat_t format);
@@ -95,7 +96,6 @@ typedef enum
 typedef struct
 {
 	INT32 x, y;
-	rotaxis_t rotaxis;
 } spriteframepivot_t;
 
 typedef struct
@@ -104,10 +104,10 @@ typedef struct
 	boolean available;
 } spriteinfo_t;
 
-// Portable Network Graphics
-#define PNG_HEADER_SIZE (8)
+// PNG support
+#define PNG_HEADER_SIZE 8
+
 boolean Picture_IsLumpPNG(const UINT8 *d, size_t s);
-#define Picture_ThrowPNGError(lumpname, wadfilename) I_Error("W_Wad: Lump \"%s\" in file \"%s\" is a .png - please convert to either Doom or Flat (raw) image format.", lumpname, wadfilename); // Fears Of LJ Sonic
 
 #ifndef NO_PNG_LUMPS
 void *Picture_PNGConvert(

@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2022 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -20,6 +20,10 @@
 extern mobj_t *skyboxmo[2]; // current skybox mobjs: 0 = viewpoint, 1 = centerpoint
 extern mobj_t *skyboxviewpnts[16]; // array of MT_SKYBOX viewpoint mobjs
 extern mobj_t *skyboxcenterpnts[16]; // array of MT_SKYBOX centerpoint mobjs
+
+extern size_t secportalcount;
+extern size_t secportalcapacity;
+extern sectorportal_t *secportals;
 
 // Amount (dx, dy) vector linedef is shifted right to get scroll amount
 #define SCROLL_SHIFT 5
@@ -256,6 +260,13 @@ typedef enum
 
 typedef enum
 {
+	TMG_NORMAL  = 0,
+	TMG_REVERSE = 1,
+	TMG_TEMPREVERSE = 2,
+} textmapgravity_t;
+
+typedef enum
+{
 	TMNP_FASTEST   = 0,
 	TMNP_SLOWEST   = 1,
 	TMNP_TRIGGERER = 2,
@@ -465,6 +476,20 @@ typedef enum
 	TMB_MODULATE        = 4,
 } textmapblendmodes_t;
 
+typedef enum
+{
+	TMSECPORTAL_NORMAL = 0,
+	TMSECPORTAL_COPIED = 1,
+	TMSECPORTAL_SKYBOX = 2,
+	TMSECPORTAL_PLANE = 3,
+	TMSECPORTAL_HORIZON = 4,
+	TMSECPORTAL_COPY_PORTAL_TO_LINE = 5,
+	TMSECPORTAL_INTERACTIVE = 6, // unimplemented
+	// The two portal types below are new to SRB2
+	TMSECPORTAL_SECTOR = 7,
+	TMSECPORTAL_OBJECT = 8
+} textmapsecportaltype_t;
+
 // GETSECSPECIAL (specialval, section)
 //
 // Pulls out the special # from a particular section.
@@ -477,9 +502,6 @@ typedef enum
 // at game start
 void P_InitPicAnims(void);
 
-// at map load (sectors)
-void P_SetupLevelFlatAnims(void);
-
 // at map load
 void P_InitSpecials(void);
 void P_ApplyFlatAlignment(sector_t* sector, angle_t flatangle, fixed_t xoffs, fixed_t yoffs, boolean floor, boolean ceiling);
@@ -489,6 +511,7 @@ void P_SpawnSpecials(boolean fromnetsave);
 // every tic
 void P_UpdateSpecials(void);
 sector_t *P_MobjTouchingSectorSpecial(mobj_t *mo, INT32 section, INT32 number);
+sector_t *P_ThingOnSpecial3DFloor(mobj_t *mo);
 sector_t *P_MobjTouchingSectorSpecialFlag(mobj_t *mo, sectorspecialflags_t flag);
 sector_t *P_PlayerTouchingSectorSpecial(player_t *player, INT32 section, INT32 number);
 sector_t *P_PlayerTouchingSectorSpecialFlag(player_t *player, sectorspecialflags_t flag);
@@ -513,13 +536,26 @@ INT32 P_FindMinSurroundingLight(sector_t *sector, INT32 max);
 void P_SetupSignExit(player_t *player);
 boolean P_IsFlagAtBase(mobjtype_t flag);
 
+void P_InitSectorPortals(void);
+UINT32 P_NewSectorPortal(void);
+
+boolean P_IsSectorPortalValid(sectorportal_t *secportal);
+
+sectorportal_t *P_SectorGetFloorPortal(sector_t *sector);
+sectorportal_t *P_SectorGetCeilingPortal(sector_t *sector);
+
+boolean P_SectorHasPortal(sector_t *sector);
+boolean P_SectorHasFloorPortal(sector_t *sector);
+boolean P_SectorHasCeilingPortal(sector_t *sector);
+boolean P_CompareSectorPortals(sectorportal_t *a, sectorportal_t *b);
+
 boolean P_IsMobjTouchingSectorPlane(mobj_t *mo, sector_t *sec);
 boolean P_IsMobjTouching3DFloor(mobj_t *mo, ffloor_t *ffloor, sector_t *sec);
 boolean P_IsMobjTouchingPolyobj(mobj_t *mo, polyobj_t *po, sector_t *polysec);
 
 void P_SwitchWeather(INT32 weathernum);
 
-boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller);
+void P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller);
 void P_LinedefExecute(INT16 tag, mobj_t *actor, sector_t *caller);
 void P_RunNightserizeExecutors(mobj_t *actor);
 void P_RunDeNightserizeExecutors(mobj_t *actor);
@@ -887,7 +923,7 @@ typedef struct
 
 typedef enum
 {
-	ok,
+	planeok,
 	crushed,
 	pastdest
 } result_e;

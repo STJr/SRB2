@@ -1,8 +1,8 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2022 by Sonic Team Junior.
-// Copyright (C) 2020-2022 by Nev3r.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 2020-2023 by Nev3r.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -180,10 +180,10 @@ void Taggroup_Add (taggroup_t *garray[], const mtag_t tag, size_t id)
 	if (Taggroup_Find(group, id) != (size_t)-1)
 		return;
 
-	if (! in_bit_array(tags_available, tag))
+	if (! in_bit_array(tags_available, (UINT16)tag))
 	{
 		num_tags++;
-		set_bit_array(tags_available, tag);
+		set_bit_array(tags_available, (UINT16)tag);
 	}
 
 	// Create group if empty.
@@ -220,10 +220,10 @@ static void Taggroup_Add_Init(taggroup_t *garray[], const mtag_t tag, size_t id)
 
 	group = garray[(UINT16)tag];
 
-	if (! in_bit_array(tags_available, tag))
+	if (! in_bit_array(tags_available, (UINT16)tag))
 	{
 		num_tags++;
-		set_bit_array(tags_available, tag);
+		set_bit_array(tags_available, (UINT16)tag);
 	}
 
 	// Create group if empty.
@@ -271,7 +271,7 @@ void Taggroup_Remove (taggroup_t *garray[], const mtag_t tag, size_t id)
 	if (group->count == 1 && total_elements_with_tag(tag) == 1)
 	{
 		num_tags--;
-		unset_bit_array(tags_available, tag);
+		unset_bit_array(tags_available, (UINT16)tag);
 	}
 
 	// Strip away taggroup if no elements left.
@@ -472,5 +472,5 @@ mtag_t Tag_NextUnused(mtag_t start)
 		start++;
 	}
 
-	return MAXTAGS;
+	return (mtag_t)MAXTAGS;
 }

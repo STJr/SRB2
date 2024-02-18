@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2022 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -25,10 +25,21 @@
 // demoplaying back and demo recording
 extern boolean demoplayback, titledemo, demorecording, timingdemo;
 extern tic_t demostarttime;
+extern UINT16 demoversion;
+
+typedef enum
+{
+	DFILE_OVERRIDE_NONE = 0, // Show errors normally
+	DFILE_OVERRIDE_LOAD, // Forcefully load demo, add files beforehand
+	DFILE_OVERRIDE_SKIP, // Forcefully load demo, skip file list
+} demo_file_override_e;
+
+extern demo_file_override_e demofileoverride;
 
 // Quit after playing a demo from cmdline.
 extern boolean singledemo;
 extern boolean demo_start;
+extern boolean demo_forwardmove_rng;
 extern boolean demosynced;
 
 extern mobj_t *metalplayback;
@@ -52,6 +63,18 @@ typedef enum
 	GHC_NIGHTSSKIN, // not actually a colour
 	GHC_RETURNSKIN // ditto
 } ghostcolor_t;
+
+// G_CheckDemoExtraFiles: checks if our loaded WAD list matches the demo's.
+typedef enum
+{
+	DFILE_ERROR_NONE = 0, // No file error
+	DFILE_ERROR_NOTLOADED, // Files are not loaded, but can be without a restart.
+	DFILE_ERROR_OUTOFORDER, // Files are loaded, but out of order.
+	DFILE_ERROR_INCOMPLETEOUTOFORDER, // Some files are loaded out of order, but others are not.
+	DFILE_ERROR_CANNOTLOAD, // Files are missing and cannot be loaded.
+	DFILE_ERROR_EXTRAFILES, // Extra files outside of the replay's file list are loaded.
+	DFILE_ERROR_NOTDEMO = UINT8_MAX, // This replay isn't even a replay...
+} demo_file_error_e;
 
 // Record/playback tics
 void G_ReadDemoTiccmd(ticcmd_t *cmd, INT32 playernum);
@@ -83,5 +106,6 @@ ATTRNORETURN void FUNCNORETURN G_StopMetalRecording(boolean kill);
 void G_StopDemo(void);
 boolean G_CheckDemoStatus(void);
 INT32 G_ConvertOldFrameFlags(INT32 frame);
+UINT8 G_CheckDemoForError(char *defdemoname);
 
 #endif // __G_DEMO__
