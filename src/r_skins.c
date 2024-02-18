@@ -144,6 +144,8 @@ static void Sk_SetDefaultValue(skin_t *skin)
 	skin->contspeed = 17;
 	skin->contangle = 0;
 
+	skin->natkcolor = SKINCOLOR_NONE;
+
 	for (i = 0; i < sfx_skinsoundslot0; i++)
 		if (S_sfx[i].skinsound != -1)
 			skin->soundsid[S_sfx[i].skinsound] = i;
@@ -588,7 +590,6 @@ static boolean R_ProcessPatchableFields(skin_t *skin, char *stoken, char *value)
 		UINT16 color = R_GetSuperColorByName(value);
 		skin->supercolor = (color ? color : SKINCOLOR_SUPERGOLD1);
 	}
-
 #define GETFLOAT(field) else if (!stricmp(stoken, #field)) skin->field = FLOAT_TO_FIXED(atof(value));
 	GETFLOAT(jumpfactor)
 	GETFLOAT(highresscale)
@@ -628,6 +629,9 @@ static boolean R_ProcessPatchableFields(skin_t *skin, char *stoken, char *value)
 	GETFLAG(CANBUSTWALLS)
 	GETFLAG(NOSHIELDABILITY)
 #undef GETFLAG
+
+	else if (!stricmp(stoken, "natkcolor"))
+		skin->natkcolor = R_GetColorByName(value); // SKINCOLOR_NONE is allowed here
 
 	else // let's check if it's a sound, otherwise error out
 	{

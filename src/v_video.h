@@ -178,9 +178,6 @@ void V_DrawContinueIcon(INT32 x, INT32 y, INT32 flags, INT32 skinnum, UINT16 ski
 // Draw a linear block of pixels into the view buffer.
 void V_DrawBlock(INT32 x, INT32 y, INT32 scrn, INT32 width, INT32 height, const UINT8 *src);
 
-// draw a pic_t, SCALED
-void V_DrawScaledPic (INT32 px1, INT32 py1, INT32 scrn, INT32 lumpnum);
-
 // fill a box with a single color
 void V_DrawFill(INT32 x, INT32 y, INT32 w, INT32 h, INT32 c);
 void V_DrawFillConsoleMap(INT32 x, INT32 y, INT32 w, INT32 h, INT32 c);

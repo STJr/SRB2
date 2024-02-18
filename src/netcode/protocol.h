@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -26,7 +26,7 @@ packet versions.
 If you change the struct or the meaning of a field
 therein, increment this number.
 */
-#define PACKETVERSION 4
+#define PACKETVERSION 5
 
 // Network play related stuff.
 // There is a data struct that stores network
@@ -200,6 +200,7 @@ enum {
 
 #define MAXSERVERNAME 32
 #define MAXFILENEEDED 915
+#define MAX_MIRROR_LENGTH 256
 
 // This packet is too large
 typedef struct
@@ -230,6 +231,7 @@ typedef struct
 	unsigned char mapmd5[16];
 	UINT8 actnum;
 	UINT8 iszone;
+	char httpsource[MAX_MIRROR_LENGTH];
 	UINT8 fileneeded[MAXFILENEEDED]; // is filled with writexxx (byteptr.h)
 } ATTRPACK serverinfo_pak;
 
