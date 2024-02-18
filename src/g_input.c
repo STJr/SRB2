@@ -576,9 +576,7 @@ static const char *gamecontrolname[NUM_GAMECONTROLS] =
 	"weapon5",
 	"weapon6",
 	"weapon7",
-	"weapon8",
-	"weapon9",
-	"weapon10",
+	"shield",
 	"fire",
 	"firenormal",
 	"tossflag",
@@ -693,6 +691,7 @@ void G_DefineDefaultControls(void)
 	gamecontroldefault[gcs_fps][GC_CENTERVIEW ][0] = KEY_LCTRL;
 	gamecontroldefault[gcs_fps][GC_JUMP       ][0] = KEY_SPACE;
 	gamecontroldefault[gcs_fps][GC_SPIN       ][0] = KEY_LSHIFT;
+	gamecontroldefault[gcs_fps][GC_SHIELD     ][0] = KEY_LALT;
 	gamecontroldefault[gcs_fps][GC_FIRE       ][0] = KEY_RCTRL;
 	gamecontroldefault[gcs_fps][GC_FIRE       ][1] = KEY_MOUSE1+0;
 	gamecontroldefault[gcs_fps][GC_FIRENORMAL ][0] = KEY_RALT;
@@ -713,6 +712,7 @@ void G_DefineDefaultControls(void)
 	gamecontroldefault[gcs_platform][GC_CENTERVIEW ][0] = KEY_END;
 	gamecontroldefault[gcs_platform][GC_JUMP       ][0] = KEY_SPACE;
 	gamecontroldefault[gcs_platform][GC_SPIN       ][0] = KEY_LSHIFT;
+	gamecontroldefault[gcs_platform][GC_SHIELD     ][0] = KEY_LALT;
 	gamecontroldefault[gcs_platform][GC_FIRE       ][0] = 's';
 	gamecontroldefault[gcs_platform][GC_FIRE       ][1] = KEY_MOUSE1+0;
 	gamecontroldefault[gcs_platform][GC_FIRENORMAL ][0] = 'w';
@@ -728,9 +728,6 @@ void G_DefineDefaultControls(void)
 		gamecontroldefault[i][GC_WEPSLOT5     ][0] = '5';
 		gamecontroldefault[i][GC_WEPSLOT6     ][0] = '6';
 		gamecontroldefault[i][GC_WEPSLOT7     ][0] = '7';
-		gamecontroldefault[i][GC_WEPSLOT8     ][0] = '8';
-		gamecontroldefault[i][GC_WEPSLOT9     ][0] = '9';
-		gamecontroldefault[i][GC_WEPSLOT10    ][0] = '0';
 		gamecontroldefault[i][GC_TOSSFLAG     ][0] = '\'';
 		gamecontroldefault[i][GC_CAMTOGGLE    ][0] = 'v';
 		gamecontroldefault[i][GC_CAMRESET     ][0] = 'r';
@@ -749,15 +746,15 @@ void G_DefineDefaultControls(void)
 		gamecontroldefault[i][GC_CUSTOM1      ][1] = KEY_JOY1+1; // B
 		gamecontroldefault[i][GC_CUSTOM2      ][1] = KEY_JOY1+3; // Y
 		gamecontroldefault[i][GC_CUSTOM3      ][1] = KEY_JOY1+8; // Left Stick
-		gamecontroldefault[i][GC_CAMTOGGLE    ][1] = KEY_JOY1+4; // LB
+		gamecontroldefault[i][GC_SHIELD       ][1] = KEY_JOY1+4; // LB
 		gamecontroldefault[i][GC_CENTERVIEW   ][1] = KEY_JOY1+5; // RB
-		gamecontroldefault[i][GC_SCREENSHOT   ][1] = KEY_JOY1+6; // Back
+		gamecontroldefault[i][GC_SCORES       ][1] = KEY_JOY1+6; // Back
 		gamecontroldefault[i][GC_SYSTEMMENU   ][0] = KEY_JOY1+7; // Start
 		gamecontroldefault[i][GC_WEAPONPREV   ][1] = KEY_HAT1+2; // D-Pad Left
 		gamecontroldefault[i][GC_WEAPONNEXT   ][1] = KEY_HAT1+3; // D-Pad Right
 		gamecontroldefault[i][GC_VIEWPOINTNEXT][1] = KEY_JOY1+9; // Right Stick
 		gamecontroldefault[i][GC_TOSSFLAG     ][1] = KEY_HAT1+0; // D-Pad Up
-		gamecontroldefault[i][GC_SCORES       ][1] = KEY_HAT1+1; // D-Pad Down
+		gamecontroldefault[i][GC_CAMTOGGLE    ][1] = KEY_HAT1+1; // D-Pad Down
 
 		// Second player controls only have joypad defaults
 		gamecontrolbisdefault[i][GC_JUMP         ][1] = KEY_2JOY1+0; // A
@@ -765,15 +762,15 @@ void G_DefineDefaultControls(void)
 		gamecontrolbisdefault[i][GC_CUSTOM1      ][1] = KEY_2JOY1+1; // B
 		gamecontrolbisdefault[i][GC_CUSTOM2      ][1] = KEY_2JOY1+3; // Y
 		gamecontrolbisdefault[i][GC_CUSTOM3      ][1] = KEY_2JOY1+8; // Left Stick
-		gamecontrolbisdefault[i][GC_CAMTOGGLE    ][1] = KEY_2JOY1+4; // LB
+		gamecontrolbisdefault[i][GC_SHIELD       ][1] = KEY_2JOY1+4; // LB
 		gamecontrolbisdefault[i][GC_CENTERVIEW   ][1] = KEY_2JOY1+5; // RB
-		gamecontrolbisdefault[i][GC_SCREENSHOT   ][1] = KEY_2JOY1+6; // Back
+		//gamecontrolbisdefault[i][GC_SCORES       ][1] = KEY_2JOY1+6; // Back
 		//gamecontrolbisdefault[i][GC_SYSTEMMENU   ][0] = KEY_2JOY1+7; // Start
 		gamecontrolbisdefault[i][GC_WEAPONPREV   ][1] = KEY_2HAT1+2; // D-Pad Left
 		gamecontrolbisdefault[i][GC_WEAPONNEXT   ][1] = KEY_2HAT1+3; // D-Pad Right
 		gamecontrolbisdefault[i][GC_VIEWPOINTNEXT][1] = KEY_2JOY1+9; // Right Stick
 		gamecontrolbisdefault[i][GC_TOSSFLAG     ][1] = KEY_2HAT1+0; // D-Pad Up
-		//gamecontrolbisdefault[i][GC_SCORES       ][1] = KEY_2HAT1+1; // D-Pad Down
+		gamecontrolbisdefault[i][GC_CAMTOGGLE    ][1] = KEY_2HAT1+1; // D-Pad Down
 	}
 }
 
@@ -1004,6 +1001,7 @@ static void setcontrol(INT32 (*gc)[2])
 
 	// TODO: 2.3: Delete the "use" alias
 	namectrl = (stricmp(COM_Argv(1), "use")) ? COM_Argv(1) : "spin";
+		
 
 	for (numctrl = 0; numctrl < NUM_GAMECONTROLS && stricmp(namectrl, gamecontrolname[numctrl]);
 		numctrl++)

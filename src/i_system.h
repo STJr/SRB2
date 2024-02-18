@@ -335,4 +335,8 @@ void I_GetCursorPosition(INT32 *x, INT32 *y);
 */
 void I_SetMouseGrab(boolean grab);
 
+/** \brief Returns the system name.
+*/
+const char *I_GetSysName(void);
+
 #endif

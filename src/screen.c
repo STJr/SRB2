@@ -101,14 +101,6 @@ UINT8 *scr_borderpatch; // flat used to fill the reduced view borders set at ST_
 //  Short and Tall sky drawer, for the current color mode
 void (*walldrawerfunc)(void);
 
-boolean R_486 = false;
-boolean R_586 = false;
-boolean R_MMX = false;
-boolean R_SSE = false;
-boolean R_3DNow = false;
-boolean R_MMXExt = false;
-boolean R_SSE2 = false;
-
 void SCR_SetDrawFuncs(void)
 {
 	//
@@ -127,8 +119,6 @@ void SCR_SetDrawFuncs(void)
 		colfuncs[COLDRAWFUNC_SHADE] = R_DrawShadeColumn_8;
 		colfuncs[COLDRAWFUNC_SHADOWED] = R_DrawColumnShadowed_8;
 		colfuncs[COLDRAWFUNC_TRANSTRANS] = R_DrawTranslatedTranslucentColumn_8;
-		colfuncs[COLDRAWFUNC_TWOSMULTIPATCH] = R_Draw2sMultiPatchColumn_8;
-		colfuncs[COLDRAWFUNC_TWOSMULTIPATCHTRANS] = R_Draw2sMultiPatchTranslucentColumn_8;
 		colfuncs[COLDRAWFUNC_FOG] = R_DrawFogColumn_8;
 
 		spanfuncs[SPANDRAWFUNC_TRANS] = R_DrawTranslucentSpan_8;
@@ -228,48 +218,6 @@ void SCR_SetMode(void)
 //
 void SCR_Startup(void)
 {
-	const CPUInfoFlags *RCpuInfo = I_CPUInfo();
-	if (!M_CheckParm("-NOCPUID") && RCpuInfo)
-	{
-#if defined (__i386__) || defined (_M_IX86) || defined (__WATCOMC__)
-		R_486 = true;
-#endif
-		if (RCpuInfo->RDTSC)
-			R_586 = true;
-		if (RCpuInfo->MMX)
-			R_MMX = true;
-		if (RCpuInfo->AMD3DNow)
-			R_3DNow = true;
-		if (RCpuInfo->MMXExt)
-			R_MMXExt = true;
-		if (RCpuInfo->SSE)
-			R_SSE = true;
-		if (RCpuInfo->SSE2)
-			R_SSE2 = true;
-		CONS_Printf("CPU Info: 486: %i, 586: %i, MMX: %i, 3DNow: %i, MMXExt: %i, SSE2: %i\n", R_486, R_586, R_MMX, R_3DNow, R_MMXExt, R_SSE2);
-	}
-
-	if (M_CheckParm("-486"))
-		R_486 = true;
-	if (M_CheckParm("-586"))
-		R_586 = true;
-	if (M_CheckParm("-MMX"))
-		R_MMX = true;
-	if (M_CheckParm("-3DNow"))
-		R_3DNow = true;
-	if (M_CheckParm("-MMXExt"))
-		R_MMXExt = true;
-
-	if (M_CheckParm("-SSE"))
-		R_SSE = true;
-	if (M_CheckParm("-noSSE"))
-		R_SSE = false;
-
-	if (M_CheckParm("-SSE2"))
-		R_SSE2 = true;
-
-	M_SetupMemcpy();
-
 	if (dedicated)
 	{
 		V_Init();
@@ -555,7 +503,7 @@ void SCR_ClosedCaptions(void)
 {
 	UINT8 i;
 	boolean gamestopped = (paused || P_AutoPause());
-	INT32 basey = BASEVIDHEIGHT;
+	INT32 basey = BASEVIDHEIGHT - 20;
 
 	if (gamestate != wipegamestate)
 		return;
@@ -575,7 +523,8 @@ void SCR_ClosedCaptions(void)
 
 	for (i = 0; i < NUMCAPTIONS; i++)
 	{
-		INT32 flags, y;
+		INT32 flags;
+		fixed_t y;
 		char dot;
 		boolean music;
 
@@ -588,14 +537,19 @@ void SCR_ClosedCaptions(void)
 			continue;
 
 		flags = V_SNAPTORIGHT|V_SNAPTOBOTTOM|V_ALLOWLOWERCASE;
-		y = basey-((i + 2)*10);
+		y = (basey-(i*10)) * FRACUNIT;
 
 		if (closedcaptions[i].b)
 		{
-			y -= closedcaptions[i].b * vid.dup;
 			if (renderisnewtic)
-			{
 				closedcaptions[i].b--;
+
+			if (closedcaptions[i].b) // If the caption hasn't reached its final destination...
+			{
+				y -= closedcaptions[i].b * 4 * FRACUNIT; // ...move it per tic...
+				y += (rendertimefrac % FRACUNIT) * 4; // ...and interpolate it per frame
+				// We have to modulo it by FRACUNIT, so that it won't be a tic ahead with interpolation disabled
+				// Unlike everything else, captions are (intentionally) interpolated from T to T+1 instead of T-1 to T
 			}
 		}
 
@@ -609,7 +563,7 @@ void SCR_ClosedCaptions(void)
 		else
 			dot = ' ';
 
-		V_DrawRightAlignedString(BASEVIDWIDTH - 20, y, flags,
+		V_DrawRightAlignedStringAtFixed((BASEVIDWIDTH-20) * FRACUNIT, y, flags,
 			va("%c [%s]", dot, (closedcaptions[i].s->caption[0] ? closedcaptions[i].s->caption : closedcaptions[i].s->name)));
 	}
 }

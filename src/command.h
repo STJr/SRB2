@@ -136,6 +136,7 @@ typedef struct consvar_s //NULL, NULL, 0, NULL, NULL |, 0, NULL, NULL, 0, 0, NUL
 	INT32 flags;            // flags see cvflags_t above
 	CV_PossibleValue_t *PossibleValue; // table of possible values
 	void (*func)(void);   // called on change, if CV_CALL set
+	boolean (*can_change)(const char*);   // called before change, if CV_CALL set
 	INT32 value;            // for INT32 and fixed_t
 	const char *string;   // value in string
 	char *zstring;        // Either NULL or same as string.
@@ -158,6 +159,9 @@ typedef struct consvar_s //NULL, NULL, 0, NULL, NULL |, 0, NULL, NULL, 0, 0, NUL
 
 /* name, defaultvalue, flags, PossibleValue, func */
 #define CVAR_INIT( ... ) \
+{ __VA_ARGS__, NULL, 0, NULL, NULL, {0, {NULL}}, 0U, (char)0, NULL }
+
+#define CVAR_INIT_WITH_CALLBACKS( ... ) \
 { __VA_ARGS__, 0, NULL, NULL, {0, {NULL}}, 0U, (char)0, NULL }
 
 #ifdef OLD22DEMOCOMPAT

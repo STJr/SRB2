@@ -65,6 +65,8 @@ endif
 
 ifeq ($(SDL), 1)
 include Makefile.d/sdl.mk
+else ifeq ($(DEDICATED), 1)
+include Makefile.d/dedicated.mk
 else
 include Makefile.d/dummy.mk
 endif

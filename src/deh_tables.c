@@ -219,6 +219,7 @@ actionpointer_t actionpointers[] =
 	{{A_ChangeColorRelative},    "A_CHANGECOLORRELATIVE"},
 	{{A_ChangeColorAbsolute},    "A_CHANGECOLORABSOLUTE"},
 	{{A_Dye},                    "A_DYE"},
+	{{A_SetTranslation},         "A_SETTRANSLATION"},
 	{{A_MoveRelative},           "A_MOVERELATIVE"},
 	{{A_MoveAbsolute},           "A_MOVEABSOLUTE"},
 	{{A_Thrust},                 "A_THRUST"},
@@ -4291,7 +4292,7 @@ const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for sanity t
 	"MT_POLYANCHOR",
 	"MT_POLYSPAWN",
 
-	// Skybox objects
+	// Portal objects
 	"MT_SKYBOX",
 
 	// Debris
@@ -5576,7 +5577,8 @@ struct int_const_s const INT_CONST[] = {
 	{"ROTAXIS_Z",ROTAXIS_Z},
 
 	// Buttons (ticcmd_t)
-	{"BT_WEAPONMASK",BT_WEAPONMASK}, //our first four bits.
+	{"BT_WEAPONMASK",BT_WEAPONMASK}, //our first three bits.
+	{"BT_SHIELD",BT_SHIELD},
 	{"BT_WEAPONNEXT",BT_WEAPONNEXT},
 	{"BT_WEAPONPREV",BT_WEAPONPREV},
 	{"BT_ATTACK",BT_ATTACK}, // shoot rings
@@ -5756,9 +5758,7 @@ struct int_const_s const INT_CONST[] = {
 	{"GC_WEPSLOT5",GC_WEPSLOT5},
 	{"GC_WEPSLOT6",GC_WEPSLOT6},
 	{"GC_WEPSLOT7",GC_WEPSLOT7},
-	{"GC_WEPSLOT8",GC_WEPSLOT8},
-	{"GC_WEPSLOT9",GC_WEPSLOT9},
-	{"GC_WEPSLOT10",GC_WEPSLOT10},
+	{"GC_SHIELD",GC_SHIELD},
 	{"GC_FIRE",GC_FIRE},
 	{"GC_FIRENORMAL",GC_FIRENORMAL},
 	{"GC_TOSSFLAG",GC_TOSSFLAG},

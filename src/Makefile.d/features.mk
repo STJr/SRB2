@@ -5,7 +5,7 @@
 passthru_opts+=\
 	NO_IPV6 NOHW NOMD5 NOPOSTPROCESSING\
 	MOBJCONSISTANCY PACKETDROP ZDEBUG\
-	HAVE_MINIUPNPC\
+	NOUPNP NOEXECINFO\
 
 # build with debugging information
 ifdef DEBUGMODE
@@ -45,13 +45,17 @@ $(eval $(call Configure,CURL,$(CURLCONFIG)))
 opts+=-DHAVE_CURL
 endif
 
-ifdef HAVE_MINIUPNPC
-libs+=-lminiupnpc
+ifndef NOUPNP
+MINIUPNPC_PKGCONFIG?=miniupnpc
+$(eval $(call Use_pkg_config,MINIUPNPC))
+HAVE_MINIUPNPC=1
+opts+=-DHAVE_MINIUPNPC
 endif
 
 # (Valgrind is a memory debugger.)
 ifdef VALGRIND
 VALGRIND_PKGCONFIG?=valgrind
+VALGRIND_LDFLAGS=
 $(eval $(call Use_pkg_config,VALGRIND))
 ZDEBUG=1
 opts+=-DHAVE_VALGRIND
