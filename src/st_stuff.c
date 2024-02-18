@@ -134,6 +134,7 @@ static patch_t *minicaps;
 static patch_t *gotrflag;
 static patch_t *gotbflag;
 static patch_t *fnshico;
+static patch_t *fireflower;
 
 hudinfo_t hudinfo[NUMHUDITEMS] =
 {
@@ -314,6 +315,8 @@ void ST_LoadGraphics(void)
 	invincibility = W_CachePatchName("TVIVICON", PU_HUDGFX);
 	sneakers = W_CachePatchName("TVSSICON", PU_HUDGFX);
 	gravboots = W_CachePatchName("TVGVICON", PU_HUDGFX);
+
+	fireflower = W_CachePatchName("GOTFFLOW", PU_HUDGFX);
 
 	tagico = W_CachePatchName("TAGICO", PU_HUDGFX);
 	gotrflag = W_CachePatchName("GOTRFLAG", PU_HUDGFX);
@@ -1508,7 +1511,7 @@ static void ST_drawPowerupHUD(void)
 	UINT16 invulntime = 0;
 	INT32 offs = hudinfo[HUD_POWERUPS].x;
 	const UINT8 q = ((splitscreen && stplyr == &players[secondarydisplayplayer]) ? 1 : 0);
-	static INT32 flagoffs[2] = {0, 0}, shieldoffs[2] = {0, 0}, finishoffs[2] = {0, 0};
+	static INT32 flagoffs[2] = {0, 0}, shieldoffs[2] = {0, 0}, finishoffs[2] = {0, 0}, stackoffs[2] = {0,0};
 
 	if (F_GetPromptHideHud(hudinfo[HUD_POWERUPS].y))
 		return;
@@ -1582,6 +1585,22 @@ static void ST_drawPowerupHUD(void)
 	}
 
 	offs -= shieldoffs[q];
+
+	//Fire Flower "shield"
+	if ((stplyr->powers[pw_shield] & SH_FIREFLOWER) == SH_FIREFLOWER)
+	{
+		stackoffs[q] = ICONSEP;
+		V_DrawSmallScaledPatch(offs, hudinfo[HUD_POWERUPS].y, V_PERPLAYER|hudinfo[HUD_POWERUPS].f|V_HUDTRANS, fireflower);
+	}
+	else if (stackoffs[q])
+	{
+		if (stackoffs[q] > 1)
+			stackoffs[q] = 2*stackoffs[q]/3;
+		else
+			stackoffs[q] = 0;
+	}
+
+	offs -= stackoffs[q];
 
 // ---------
 // CTF flags

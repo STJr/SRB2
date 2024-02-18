@@ -4048,7 +4048,7 @@ static void P_DoBossVictory(mobj_t *mo)
 		{
 			if (!playeringame[i])
 				continue;
-			P_DoPlayerExit(&players[i]);
+			P_DoPlayerExit(&players[i], true);
 		}
 	}
 	else
@@ -11054,7 +11054,7 @@ void A_ForceWin(mobj_t *actor)
 	{
 		if (!playeringame[i])
 			continue;
-		P_DoPlayerExit(&players[i]);
+		P_DoPlayerExit(&players[i], true);
 	}
 }
 

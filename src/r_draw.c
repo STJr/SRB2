@@ -435,6 +435,7 @@ static void R_RainbowColormap(UINT8 *dest_colormap, UINT16 skincolor)
 static void R_GenerateTranslationColormap(UINT8 *dest_colormap, INT32 translation, UINT16 color, INT32 starttranscolor)
 {
 	INT32 i, skinramplength;
+	remaptable_t *tr;
 
 	// Handle a couple of simple special cases
 	if (translation < TC_DEFAULT)
@@ -443,7 +444,7 @@ static void R_GenerateTranslationColormap(UINT8 *dest_colormap, INT32 translatio
 		{
 			case TC_ALLWHITE:
 			case TC_DASHMODE:
-				remaptable_t *tr = R_GetBuiltInTranslation((SINT8)translation);
+				tr = R_GetBuiltInTranslation((SINT8)translation);
 				if (tr)
 				{
 					memcpy(dest_colormap, tr->remap, NUM_PALETTE_ENTRIES);
