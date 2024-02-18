@@ -759,8 +759,8 @@ static void mix_gme(void *udata, Uint8 *stream, int len)
 		music_volume = 18;
 
 	// apply volume to stream
-	for (i = 0, p = (short *)stream; i < len/2; i++, p++)
-		*p = ((INT32)*p) * (music_volume*internal_volume/100)*2 / 40;
+	for (i = 0, p = (short *)stream; i < len / 2; i++, p++)
+		*p = ((INT32)*p) * music_volume * internal_volume / 100 / 20;
 }
 #endif
 
@@ -783,8 +783,8 @@ static void mix_openmpt(void *udata, Uint8 *stream, int len)
 		music_volume = 18;
 
 	// apply volume to stream
-	for (i = 0, p = (short *)stream; i < len/2; i++, p++)
-		*p = ((INT32)*p) * (music_volume*internal_volume/100)*2 / 40;
+	for (i = 0, p = (short *)stream; i < len / 2; i++, p++)
+		*p = ((INT32)*p) * music_volume * internal_volume / 100 / 20;
 }
 #endif
 
@@ -1441,7 +1441,7 @@ void I_SetMusicVolume(UINT8 volume)
 	Mix_VolumeMusic(get_real_volume(music_volume));
 }
 
-boolean I_SetSongTrack(int track)
+boolean I_SetSongTrack(INT32 track)
 {
 #ifdef HAVE_GME
 	// If the specified track is within the number of tracks playing, then change it

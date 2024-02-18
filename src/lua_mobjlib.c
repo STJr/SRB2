@@ -14,6 +14,7 @@
 #include "fastcmp.h"
 #include "r_data.h"
 #include "r_skins.h"
+#include "r_translation.h"
 #include "p_local.h"
 #include "g_game.h"
 #include "p_setup.h"
@@ -66,6 +67,7 @@ enum mobj_e {
 	mobj_renderflags,
 	mobj_skin,
 	mobj_color,
+	mobj_translation,
 	mobj_blendmode,
 	mobj_bnext,
 	mobj_bprev,
@@ -146,6 +148,7 @@ static const char *const mobj_opt[] = {
 	"renderflags",
 	"skin",
 	"color",
+	"translation",
 	"blendmode",
 	"bnext",
 	"bprev",
@@ -338,12 +341,26 @@ static int mobj_get(lua_State *L)
 	case mobj_color:
 		lua_pushinteger(L, mo->color);
 		break;
+	case mobj_translation:
+		if (mo->translation)
+		{
+			const char *name = R_GetCustomTranslationName(mo->translation);
+			if (name)
+				lua_pushstring(L, name);
+			break;
+		}
+		lua_pushnil(L);
+		break;
 	case mobj_blendmode:
 		lua_pushinteger(L, mo->blendmode);
 		break;
 	case mobj_bnext:
-		LUA_PushUserdata(L, mo->bnext, META_MOBJ);
-		break;
+		if (mo->blocknode && mo->blocknode->bnext) {
+			LUA_PushUserdata(L, mo->blocknode->bnext->mobj, META_MOBJ);
+			break;
+		}
+		else
+			return 0;
 	case mobj_bprev:
 		// bprev -- same deal as sprev above, but for the blockmap.
 		return UNIMPLEMENTED;
@@ -641,10 +658,7 @@ static int mobj_set(lua_State *L)
 		mo->tics = luaL_checkinteger(L, 3);
 		break;
 	case mobj_state: // set state by enum
-		if (mo->player)
-			P_SetPlayerMobjState(mo, luaL_checkinteger(L, 3));
-		else
-			P_SetMobjState(mo, luaL_checkinteger(L, 3));
+		P_SetMobjState(mo, luaL_checkinteger(L, 3));
 		break;
 	case mobj_flags: // special handling for MF_NOBLOCKMAP and MF_NOSECTOR
 	{
@@ -659,7 +673,6 @@ static int mobj_set(lua_State *L)
 				sector_list = NULL;
 			}
 			mo->snext = NULL, mo->sprev = NULL;
-			mo->bnext = NULL, mo->bprev = NULL;
 			P_SetThingPosition(mo);
 		}
 		else
@@ -682,20 +695,34 @@ static int mobj_set(lua_State *L)
 		strlcpy(skin, luaL_checkstring(L, 3), sizeof skin);
 		strlwr(skin); // all skin names are lowercase
 		for (i = 0; i < numskins; i++)
-			if (fastcmp(skins[i].name, skin))
+			if (fastcmp(skins[i]->name, skin))
 			{
 				if (!mo->player || R_SkinUsable(mo->player-players, i))
-					mo->skin = &skins[i];
+					mo->skin = skins[i];
 				return 0;
 			}
 		return luaL_error(L, "mobj.skin '%s' not found!", skin);
 	}
 	case mobj_color:
 	{
-		UINT16 newcolor = (UINT16)luaL_checkinteger(L,3);
+		UINT16 newcolor = (UINT16)luaL_checkinteger(L, 3);
 		if (newcolor >= numskincolors)
 			return luaL_error(L, "mobj.color %d out of range (0 - %d).", newcolor, numskincolors-1);
 		mo->color = newcolor;
+		break;
+	}
+	case mobj_translation:
+	{
+		if (!lua_isnil(L, 3)) {
+			const char *tr = luaL_checkstring(L, 3);
+			int id = R_FindCustomTranslation(tr);
+			if (id != -1)
+				mo->translation = id;
+			else
+				return luaL_error(L, "invalid translation '%s'.", tr);
+		}
+		else
+			mo->translation = 0;
 		break;
 	}
 	case mobj_blendmode:
@@ -976,6 +1003,9 @@ static int mapthing_get(lua_State *L)
 		return 0;
 	}
 
+	if (field == (enum mapthing_e)-1)
+		return LUA_ErrInvalid(L, "fields");
+
 	switch (field)
 	{
 		case mapthing_valid:
@@ -1034,7 +1064,7 @@ static int mapthing_get(lua_State *L)
 			break;
 		default:
 			if (devparm)
-				return luaL_error(L, LUA_QL("mapthing_t") " has no field named " LUA_QS, field);
+				return luaL_error(L, "%s %s", LUA_QL("mapthing_t"), va("has no field named: %ui", field));
 			else
 				return 0;
 	}
@@ -1050,6 +1080,9 @@ static int mapthing_set(lua_State *L)
 
 	if (!mt)
 		return luaL_error(L, "accessed mapthing_t doesn't exist anymore.");
+
+	if (field == (enum mapthing_e)-1)
+		return LUA_ErrInvalid(L, "fields");
 
 	if (hud_running)
 		return luaL_error(L, "Do not alter mapthing_t in HUD rendering code!");
@@ -1108,7 +1141,7 @@ static int mapthing_set(lua_State *L)
 			mt->mobj = *((mobj_t **)luaL_checkudata(L, 3, META_MOBJ));
 			break;
 		default:
-			return luaL_error(L, LUA_QL("mapthing_t") " has no field named " LUA_QS, field);
+			return luaL_error(L, "%s %s", LUA_QL("mapthing_t"), va("has no field named: %ui", field));
 	}
 
 	return 0;
@@ -1163,43 +1196,12 @@ static int lib_nummapthings(lua_State *L)
 
 int LUA_MobjLib(lua_State *L)
 {
-	luaL_newmetatable(L, META_MOBJ);
-		lua_pushcfunction(L, mobj_get);
-		lua_setfield(L, -2, "__index");
-
-		lua_pushcfunction(L, mobj_set);
-		lua_setfield(L, -2, "__newindex");
-	lua_pop(L,1);
+	LUA_RegisterUserdataMetatable(L, META_MOBJ, mobj_get, mobj_set, NULL);
+	LUA_RegisterUserdataMetatable(L, META_THINGARGS, thingargs_get, NULL, thingargs_len);
+	LUA_RegisterUserdataMetatable(L, META_THINGSTRINGARGS, thingstringargs_get, NULL, thingstringargs_len);
+	LUA_RegisterUserdataMetatable(L, META_MAPTHING, mapthing_get, mapthing_set, mapthing_num);
 
 	mobj_fields_ref = Lua_CreateFieldTable(L, mobj_opt);
-
-	luaL_newmetatable(L, META_THINGARGS);
-		lua_pushcfunction(L, thingargs_get);
-		lua_setfield(L, -2, "__index");
-
-		lua_pushcfunction(L, thingargs_len);
-		lua_setfield(L, -2, "__len");
-	lua_pop(L, 1);
-
-	luaL_newmetatable(L, META_THINGSTRINGARGS);
-		lua_pushcfunction(L, thingstringargs_get);
-		lua_setfield(L, -2, "__index");
-
-		lua_pushcfunction(L, thingstringargs_len);
-		lua_setfield(L, -2, "__len");
-	lua_pop(L, 1);
-
-	luaL_newmetatable(L, META_MAPTHING);
-		lua_pushcfunction(L, mapthing_get);
-		lua_setfield(L, -2, "__index");
-
-		lua_pushcfunction(L, mapthing_set);
-		lua_setfield(L, -2, "__newindex");
-
-		lua_pushcfunction(L, mapthing_num);
-		lua_setfield(L, -2, "__len");
-	lua_pop(L,1);
-
 	mapthing_fields_ref = Lua_CreateFieldTable(L, mapthing_opt);
 
 	LUA_PushTaggableObjectArray(L, "mapthings",

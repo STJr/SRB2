@@ -35,6 +35,7 @@
 #include "../m_misc.h"
 #include "../w_wad.h"
 #include "../z_zone.h"
+#include "../r_state.h"
 #include "../r_things.h"
 #include "../r_draw.h"
 #include "../p_tick.h"
@@ -72,7 +73,8 @@
 #endif
 
 md2_t md2_models[NUMSPRITES];
-md2_t md2_playermodels[MAXSKINS];
+md2_t *md2_playermodels = NULL;
+size_t md2_numplayermodels = 0;
 
 
 /*
@@ -377,7 +379,7 @@ static void md2_loadTexture(md2_t *model)
 			Z_Free(grPatch->mipmap->data);
 	}
 	else
-		model->grpatch = patch = Patch_Create(NULL, 0, NULL);
+		model->grpatch = patch = Patch_Create(0, 0);
 
 	if (!patch->hardware)
 		Patch_AllocateHardwarePatch(patch);
@@ -442,7 +444,7 @@ static void md2_loadBlendTexture(md2_t *model)
 			Z_Free(grPatch->mipmap->data);
 	}
 	else
-		model->blendgrpatch = patch = Patch_Create(NULL, 0, NULL);
+		model->blendgrpatch = patch = Patch_Create(0, 0);
 
 	if (!patch->hardware)
 		Patch_AllocateHardwarePatch(patch);
@@ -484,24 +486,7 @@ static boolean nomd2s = false;
 void HWR_InitModels(void)
 {
 	size_t i;
-	INT32 s;
-	FILE *f;
-	char name[26], filename[32];
-	float scale, offset;
-	size_t prefixlen;
 
-	CONS_Printf("HWR_InitModels()...\n");
-	for (s = 0; s < MAXSKINS; s++)
-	{
-		md2_playermodels[s].scale = -1.0f;
-		md2_playermodels[s].model = NULL;
-		md2_playermodels[s].grpatch = NULL;
-		md2_playermodels[s].notexturefile = false;
-		md2_playermodels[s].noblendfile = false;
-		md2_playermodels[s].skin = -1;
-		md2_playermodels[s].notfound = true;
-		md2_playermodels[s].error = false;
-	}
 	for (i = 0; i < NUMSPRITES; i++)
 	{
 		md2_models[i].scale = -1.0f;
@@ -509,9 +494,46 @@ void HWR_InitModels(void)
 		md2_models[i].grpatch = NULL;
 		md2_models[i].notexturefile = false;
 		md2_models[i].noblendfile = false;
-		md2_models[i].skin = -1;
-		md2_models[i].notfound = true;
+		md2_models[i].found = false;
 		md2_models[i].error = false;
+	}
+
+	if (numsprites && numskins)
+		HWR_LoadModels();
+}
+
+void HWR_LoadModels(void)
+{
+	size_t i;
+	INT32 s;
+	FILE *f;
+
+	char name[26], filename[32];
+	// name[24] is used to check for names in the models.dat file that match with sprites or player skins
+	// sprite names are always 4 characters long, and names is for player skins can be up to 19 characters long
+	// PLAYERMODELPREFIX is 6 characters long
+	float scale, offset;
+	size_t prefixlen;
+
+	if (nomd2s)
+		return;
+
+	// realloc player models table
+	if (numskins != (INT32)md2_numplayermodels)
+	{
+		md2_numplayermodels = (size_t)numskins;
+		md2_playermodels = Z_Realloc(md2_playermodels, sizeof(md2_t) * md2_numplayermodels, PU_STATIC, NULL);
+
+		for (s = 0; s < numskins; s++)
+		{
+			md2_playermodels[s].scale = -1.0f;
+			md2_playermodels[s].model = NULL;
+			md2_playermodels[s].grpatch = NULL;
+			md2_playermodels[s].notexturefile = false;
+			md2_playermodels[s].noblendfile = false;
+			md2_playermodels[s].found = false;
+			md2_playermodels[s].error = false;
+		}
 	}
 
 	// read the models.dat file
@@ -537,23 +559,24 @@ void HWR_InitModels(void)
 		char *skinname = name;
 		size_t len = strlen(name);
 
-		// check for the player model prefix.
+		// Check for the player model prefix.
 		if (!strnicmp(name, PLAYERMODELPREFIX, prefixlen) && (len > prefixlen))
 		{
 			skinname += prefixlen;
 			goto addskinmodel;
 		}
 
-		// add sprite model
-		if (len == 4) // must be 4 characters long exactly. otherwise it's not a sprite name.
+		// Add sprite models.
+		// Must be 4 characters long exactly. Otherwise, it's not a sprite name.
+		if (len == 4)
 		{
-			for (i = 0; i < NUMSPRITES; i++)
+			for (i = 0; i < numsprites; i++)
 			{
 				if (stricmp(name, sprnames[i]) == 0)
 				{
 					md2_models[i].scale = scale;
 					md2_models[i].offset = offset;
-					md2_models[i].notfound = false;
+					md2_models[i].found = true;
 					strcpy(md2_models[i].filename, filename);
 					goto modelfound;
 				}
@@ -561,137 +584,24 @@ void HWR_InitModels(void)
 		}
 
 addskinmodel:
-		// add player model
-		for (s = 0; s < MAXSKINS; s++)
+		// Add player models.
+		for (s = 0; s < numskins; s++)
 		{
-			if (stricmp(skinname, skins[s].name) == 0)
+			if (stricmp(skinname, skins[s]->name) == 0)
 			{
-				md2_playermodels[s].skin = s;
 				md2_playermodels[s].scale = scale;
 				md2_playermodels[s].offset = offset;
-				md2_playermodels[s].notfound = false;
+				md2_playermodels[s].found = true;
 				strcpy(md2_playermodels[s].filename, filename);
 				goto modelfound;
 			}
 		}
 
 modelfound:
-		// move on to next line...
+		// Move on to the next line...
 		continue;
 	}
-	fclose(f);
-}
 
-void HWR_AddPlayerModel(int skin) // For skins that were added after startup
-{
-	FILE *f;
-	char name[26], filename[32];
-	float scale, offset;
-	size_t prefixlen;
-
-	if (nomd2s)
-		return;
-
-	//CONS_Printf("HWR_AddPlayerModel()...\n");
-
-	// read the models.dat file
-	//Filename checking fixed ~Monster Iestyn and Golden
-	f = fopen(va("%s"PATHSEP"%s", srb2home, "models.dat"), "rt");
-
-	if (!f)
-	{
-		f = fopen(va("%s"PATHSEP"%s", srb2path, "models.dat"), "rt");
-		if (!f)
-		{
-			CONS_Printf("%s %s\n", M_GetText("Error while loading models.dat:"), strerror(errno));
-			nomd2s = true;
-			return;
-		}
-	}
-
-	// length of the player model prefix
-	prefixlen = strlen(PLAYERMODELPREFIX);
-
-	// Check for any models that match the names of player skins!
-	while (fscanf(f, "%25s %31s %f %f", name, filename, &scale, &offset) == 4)
-	{
-		char *skinname = name;
-		size_t len = strlen(name);
-
-		// ignore the player model prefix.
-		if (!strnicmp(name, PLAYERMODELPREFIX, prefixlen) && (len > prefixlen))
-			skinname += prefixlen;
-
-		if (stricmp(skinname, skins[skin].name) == 0)
-		{
-			md2_playermodels[skin].skin = skin;
-			md2_playermodels[skin].scale = scale;
-			md2_playermodels[skin].offset = offset;
-			md2_playermodels[skin].notfound = false;
-			strcpy(md2_playermodels[skin].filename, filename);
-			goto playermodelfound;
-		}
-	}
-
-	md2_playermodels[skin].notfound = true;
-playermodelfound:
-	fclose(f);
-}
-
-void HWR_AddSpriteModel(size_t spritenum) // For sprites that were added after startup
-{
-	FILE *f;
-	// name[24] is used to check for names in the models.dat file that match with sprites or player skins
-	// sprite names are always 4 characters long, and names is for player skins can be up to 19 characters long
-	// PLAYERMODELPREFIX is 6 characters long
-	char name[26], filename[32];
-	float scale, offset;
-
-	if (nomd2s)
-		return;
-
-	if (spritenum == SPR_PLAY) // Handled already NEWMD2: Per sprite, per-skin check
-		return;
-
-	// Read the models.dat file
-	//Filename checking fixed ~Monster Iestyn and Golden
-	f = fopen(va("%s"PATHSEP"%s", srb2home, "models.dat"), "rt");
-
-	if (!f)
-	{
-		f = fopen(va("%s"PATHSEP"%s", srb2path, "models.dat"), "rt");
-		if (!f)
-		{
-			CONS_Printf("%s %s\n", M_GetText("Error while loading models.dat:"), strerror(errno));
-			nomd2s = true;
-			return;
-		}
-	}
-
-	// Check for any models that match the names of sprite names!
-	while (fscanf(f, "%25s %31s %f %f", name, filename, &scale, &offset) == 4)
-	{
-		// length of the sprite name
-		size_t len = strlen(name);
-		if (len != 4) // must be 4 characters long exactly. otherwise it's not a sprite name.
-			continue;
-
-		// check for the player model prefix.
-		if (!strnicmp(name, PLAYERMODELPREFIX, strlen(PLAYERMODELPREFIX)))
-			continue; // that's not a sprite...
-
-		if (stricmp(name, sprnames[spritenum]) == 0)
-		{
-			md2_models[spritenum].scale = scale;
-			md2_models[spritenum].offset = offset;
-			md2_models[spritenum].notfound = false;
-			strcpy(md2_models[spritenum].filename, filename);
-			goto spritemodelfound;
-		}
-	}
-
-	md2_models[spritenum].notfound = true;
-spritemodelfound:
 	fclose(f);
 }
 
@@ -1140,9 +1050,6 @@ static void HWR_GetBlendedTexture(patch_t *patch, patch_t *blendpatch, INT32 ski
 	Z_ChangeTag(newMipmap->data, PU_HWRMODELTEXTURE_UNLOCKED);
 }
 
-#define NORMALFOG 0x00000000
-#define FADEFOG 0x19000000
-
 static boolean HWR_AllowModel(mobj_t *mobj)
 {
 	// Signpost overlay. Not needed.
@@ -1383,8 +1290,8 @@ boolean HWR_DrawModel(gl_vissprite_t *spr)
 		// 2. draw model with correct position, rotation,...
 		if (spr->mobj->skin && spr->mobj->sprite == SPR_PLAY) // Use the player MD2 list if the mobj has a skin and is using the player sprites
 		{
-			md2 = &md2_playermodels[(skin_t*)spr->mobj->skin-skins];
-			md2->skin = (skin_t*)spr->mobj->skin-skins;
+			UINT8 skinnum = ((skin_t*)spr->mobj->skin)->skinnum;
+			md2 = &md2_playermodels[skinnum];
 		}
 		else
 		{
@@ -1479,7 +1386,7 @@ boolean HWR_DrawModel(gl_vissprite_t *spr)
 						skinnum = TC_RAINBOW;
 				}
 				else if (spr->mobj->skin && spr->mobj->sprite == SPR_PLAY)
-					skinnum = (INT32)((skin_t*)spr->mobj->skin-skins);
+					skinnum = ((skin_t*)spr->mobj->skin)->skinnum;
 				else
 					skinnum = TC_DEFAULT;
 			}
@@ -1580,6 +1487,8 @@ boolean HWR_DrawModel(gl_vissprite_t *spr)
 #undef INTERPOLERATION_LIMIT
 #endif
 
+		if (spr->mobj->type == MT_OVERLAY) // Handle overlays
+			R_ThingOffsetOverlay(spr->mobj, &interp.x, &interp.y);
 		//Hurdler: it seems there is still a small problem with mobj angle
 		p.x = FIXED_TO_FLOAT(interp.x);
 		p.y = FIXED_TO_FLOAT(interp.y)+md2->offset;

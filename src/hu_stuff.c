@@ -19,7 +19,9 @@
 #include "m_cond.h" // emblems
 #include "m_misc.h" // word jumping
 
-#include "d_clisrv.h"
+#include "netcode/d_clisrv.h"
+#include "netcode/net_command.h"
+#include "netcode/gamestate.h"
 
 #include "g_game.h"
 #include "g_input.h"
@@ -78,6 +80,7 @@ patch_t *tallinfin;
 
 static player_t *plr;
 boolean chat_on; // entering a chat message?
+boolean chat_on_first_event; // blocker for first chat input event
 static char w_chat[HU_MAXMSGLEN + 1];
 static size_t c_input = 0; // let's try to make the chat input less shitty.
 static boolean headsupactive = false;
@@ -174,14 +177,12 @@ static huddrawlist_h luahuddrawlist_scores;
 
 static tic_t resynch_ticker = 0;
 
-#ifndef NONET
 // just after
 static void Command_Say_f(void);
 static void Command_Sayto_f(void);
 static void Command_Sayteam_f(void);
 static void Command_CSay_f(void);
 static void Got_Saycmd(UINT8 **p, INT32 playernum);
-#endif
 
 void HU_LoadGraphics(void)
 {
@@ -290,13 +291,11 @@ void HU_SetFontProperties(fontdef_t *font, INT32 kerning, UINT32 spacewidth, UIN
 //
 void HU_Init(void)
 {
-#ifndef NONET
 	COM_AddCommand("say", Command_Say_f, COM_LUA);
 	COM_AddCommand("sayto", Command_Sayto_f, COM_LUA);
 	COM_AddCommand("sayteam", Command_Sayteam_f, COM_LUA);
 	COM_AddCommand("csay", Command_CSay_f, COM_LUA);
 	RegisterNetXCmd(XD_SAY, Got_Saycmd);
-#endif
 
 	// set shift translation table
 	shiftxform = english_shiftxform;
@@ -325,8 +324,6 @@ void HU_Start(void)
 //======================================================================
 //                            EXECUTION
 //======================================================================
-
-#ifndef NONET
 
 // EVERY CHANGE IN THIS SCRIPT IS LOL XD! BY VINCYTM
 
@@ -375,11 +372,9 @@ static void HU_removeChatText_Log(void)
 	}
 	chat_nummsg_log--; // lost 1 msg.
 }
-#endif
 
 void HU_AddChatText(const char *text, boolean playsound)
 {
-#ifndef NONET
 	if (playsound && cv_consolechat.value != 2) // Don't play the sound if we're using hidden chat.
 		S_StartSound(NULL, sfx_radio);
 	// reguardless of our preferences, put all of this in the chat buffer in case we decide to change from oldchat mid-game.
@@ -401,13 +396,7 @@ void HU_AddChatText(const char *text, boolean playsound)
 		CONS_Printf("%s\n", text);
 	else			// if we aren't, still save the message to log.txt
 		CON_LogMessage(va("%s\n", text));
-#else
-	(void)playsound;
-	CONS_Printf("%s\n", text);
-#endif
 }
-
-#ifndef NONET
 
 /** Runs a say command, sending an ::XD_SAY message.
   * A say command consists of a signed 8-bit integer for the target, an
@@ -593,7 +582,9 @@ static void Command_CSay_f(void)
 
 	DoSayCommand(0, 1, HU_CSAY);
 }
-static tic_t stop_spamming[MAXPLAYERS];
+
+static tic_t spam_tokens[MAXPLAYERS] = { 1 }; // fill the buffer with 1 so the motd can be sent.
+static tic_t spam_tics[MAXPLAYERS];
 
 /** Receives a message, processing an ::XD_SAY command.
   * \sa DoSayCommand
@@ -645,14 +636,14 @@ static void Got_Saycmd(UINT8 **p, INT32 playernum)
 	// before we do anything, let's verify the guy isn't spamming, get this easier on us.
 
 	//if (stop_spamming[playernum] != 0 && cv_chatspamprotection.value && !(flags & HU_CSAY))
-	if (stop_spamming[playernum] != 0 && consoleplayer != playernum && cv_chatspamprotection.value && !(flags & HU_CSAY))
+	if (spam_tokens[playernum] <= 0 && cv_chatspamprotection.value && !(flags & HU_CSAY))
 	{
 		CONS_Debug(DBG_NETPLAY,"Received SAY cmd too quickly from Player %d (%s), assuming as spam and blocking message.\n", playernum+1, player_names[playernum]);
-		stop_spamming[playernum] = 4;
+		spam_tics[playernum] = 0;
 		spam_eatmsg = 1;
 	}
 	else
-		stop_spamming[playernum] = 4; // you can hold off for 4 tics, can you?
+		spam_tokens[playernum] -= 1;
 
 	// run the lua hook even if we were supposed to eat the msg, netgame consistency goes first.
 
@@ -686,10 +677,12 @@ static void Got_Saycmd(UINT8 **p, INT32 playernum)
 	// Clean up message a bit
 	// If you use a \r character, you can remove your name
 	// from before the text and then pretend to be someone else!
+	// If you use a \n character, you can create a new line in
+	// the log and then pretend to be someone else as well!
 	ptr = msg;
 	while (*ptr != '\0')
 	{
-		if (*ptr == '\r')
+		if (*ptr == '\r' || *ptr == '\n')
 			*ptr = ' ';
 
 		ptr++;
@@ -828,12 +821,29 @@ static void Got_Saycmd(UINT8 **p, INT32 playernum)
 #endif
 }
 
-#endif
-
 //
 //
 void HU_Ticker(void)
 {
+	// do this server-side, too
+	if (netgame)
+	{
+		size_t i = 0;
+
+		// handle spam while we're at it:
+		for(; (i<MAXPLAYERS); i++)
+		{
+			if (spam_tokens[i] < (tic_t)cv_chatspamburst.value)
+			{
+				if (++spam_tics[i] >= (tic_t)cv_chatspamspeed.value)
+				{
+					spam_tokens[i]++;
+					spam_tics[i] = 0;
+				}
+			}
+		}
+	}
+
 	if (dedicated)
 		return;
 
@@ -845,7 +855,6 @@ void HU_Ticker(void)
 	else
 		hu_showscores = false;
 
-#ifndef NONET
 	if (chat_on)
 	{
 		// count down the scroll timer.
@@ -857,13 +866,6 @@ void HU_Ticker(void)
 	{
 		size_t i = 0;
 
-		// handle spam while we're at it:
-		for(; (i<MAXPLAYERS); i++)
-		{
-			if (stop_spamming[i] > 0)
-				stop_spamming[i]--;
-		}
-
 		// handle chat timers
 		for (i=0; (i<chat_nummsg_min); i++)
 		{
@@ -873,15 +875,12 @@ void HU_Ticker(void)
 				HU_removeChatText_Mini();
 		}
 	}
-#endif
 
 	if (cechotimer > 0) --cechotimer;
 
 	if (hu_redownloadinggamestate)
 		resynch_ticker++;
 }
-
-#ifndef NONET
 
 static boolean teamtalk = false;
 static boolean justscrolleddown;
@@ -990,8 +989,6 @@ static void HU_sendChatMessage(void)
 	}
 }
 
-#endif
-
 void HU_clearChatChars(void)
 {
 	memset(w_chat, '\0', sizeof(w_chat));
@@ -1006,11 +1003,9 @@ void HU_clearChatChars(void)
 //
 boolean HU_Responder(event_t *ev)
 {
-#ifndef NONET
 	INT32 c=0;
-#endif
 
-	if (ev->type != ev_keydown)
+	if (ev->type != ev_keydown && ev->type != ev_text)
 		return false;
 
 	// only KeyDown events now...
@@ -1035,16 +1030,19 @@ boolean HU_Responder(event_t *ev)
 			return false;
 	}*/	//We don't actually care about that unless we get splitscreen netgames. :V
 
-#ifndef NONET
 	c = (INT32)ev->key;
 
 	if (!chat_on)
 	{
+		if (ev->type == ev_text)
+			return false;
+
 		// enter chat mode
 		if ((ev->key == gamecontrol[GC_TALKKEY][0] || ev->key == gamecontrol[GC_TALKKEY][1])
 			&& netgame && !OLD_MUTE) // check for old chat mute, still let the players open the chat incase they want to scroll otherwise.
 		{
 			chat_on = true;
+			chat_on_first_event = false;
 			w_chat[0] = 0;
 			teamtalk = false;
 			chat_scrollmedown = true;
@@ -1055,6 +1053,7 @@ boolean HU_Responder(event_t *ev)
 			&& netgame && !OLD_MUTE)
 		{
 			chat_on = true;
+			chat_on_first_event = false;
 			w_chat[0] = 0;
 			teamtalk = G_GametypeHasTeams(); // Don't teamtalk if we don't have teams.
 			chat_scrollmedown = true;
@@ -1064,6 +1063,31 @@ boolean HU_Responder(event_t *ev)
 	}
 	else // if chat_on
 	{
+		if (!chat_on_first_event)
+		{
+			// since the text event is sent immediately after the keydown event,
+			// we need to make sure that nothing is displayed once the chat
+			// opens, otherwise a 't' would be outputted.
+			chat_on_first_event = true;
+			return true;
+		}
+
+		if (ev->type == ev_text)
+		{
+			if ((c < FONTSTART || c > FONTEND || !hu_font.chars[c-FONTSTART])
+				&& c != ' ') // Allow spaces, of course
+			{
+				return false;
+			}
+
+			if (CHAT_MUTE || strlen(w_chat) >= HU_MAXMSGLEN)
+				return true;
+
+			memmove(&w_chat[c_input + 1], &w_chat[c_input], strlen(w_chat) - c_input + 1);
+			w_chat[c_input] = c;
+			c_input++;
+			return true;
+		}
 
 		// Ignore modifier keys
 		// Note that we do this here so users can still set
@@ -1073,23 +1097,8 @@ boolean HU_Responder(event_t *ev)
 		 || ev->key == KEY_LALT || ev->key == KEY_RALT)
 			return true;
 
-		c = (INT32)ev->key;
-
-		// I know this looks very messy but this works. If it ain't broke, don't fix it!
-		// shift LETTERS to uppercase if we have capslock or are holding shift
-		if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z'))
-		{
-			if (shiftdown ^ capslock)
-				c = shiftxform[c];
-		}
-		else // if we're holding shift we should still shift non letter symbols
-		{
-			if (shiftdown)
-				c = shiftxform[c];
-		}
-
 		// pasting. pasting is cool. chat is a bit limited, though :(
-		if ((c == 'v' || c == 'V') && ctrldown)
+		if (c == 'v' && ctrldown)
 		{
 			const char *paste;
 			size_t chatlen;
@@ -1157,16 +1166,6 @@ boolean HU_Responder(event_t *ev)
 			else
 				c_input++;
 		}
-		else if ((c >= FONTSTART && c <= FONTEND && hu_font.chars[c-FONTSTART])
-			|| c == ' ') // Allow spaces, of course
-		{
-			if (CHAT_MUTE || strlen(w_chat) >= HU_MAXMSGLEN)
-				return true;
-
-			memmove(&w_chat[c_input + 1], &w_chat[c_input], strlen(w_chat) - c_input + 1);
-			w_chat[c_input] = c;
-			c_input++;
-		}
 		else if (c == KEY_BACKSPACE)
 		{
 			if (CHAT_MUTE || c_input <= 0)
@@ -1185,7 +1184,6 @@ boolean HU_Responder(event_t *ev)
 
 		return true;
 	}
-#endif
 
 	return false;
 }
@@ -1194,8 +1192,6 @@ boolean HU_Responder(event_t *ev)
 //======================================================================
 //                         HEADS UP DRAWING
 //======================================================================
-
-#ifndef NONET
 
 // 30/7/18: chaty is now the distance at which the lowest point of the chat will be drawn if that makes any sense.
 
@@ -1570,7 +1566,6 @@ static void HU_DrawChat_Old(void)
 		}
 	}
 }
-#endif
 
 // Draw crosshairs at the exact center of the view.
 // In splitscreen, crosshairs are stretched vertically to compensate for V_PERPLAYER squishing them.
@@ -1695,7 +1690,6 @@ static void HU_DrawDemoInfo(void)
 //
 void HU_Drawer(void)
 {
-#ifndef NONET
 	// draw chat string plus cursor
 	if (chat_on)
 	{
@@ -1712,7 +1706,6 @@ void HU_Drawer(void)
 		if (!OLDCHAT && cv_consolechat.value < 2 && netgame) // Don't display minimized chat if you set the mode to Window (Hidden)
 			HU_drawMiniChat(); // draw messages in a cool fashion.
 	}
-#endif
 
 	if (cechotimer)
 		HU_DrawCEcho();
@@ -1867,7 +1860,7 @@ void HU_Erase(void)
 //                   IN-LEVEL MULTIPLAYER RANKINGS
 //======================================================================
 
-#define supercheckdef (!(players[tab[i].num].charflags & SF_NOSUPERSPRITES) && ((players[tab[i].num].powers[pw_super] && players[tab[i].num].mo && (players[tab[i].num].mo->state < &states[S_PLAY_SUPER_TRANS1] || players[tab[i].num].mo->state >= &states[S_PLAY_SUPER_TRANS6])) || (players[tab[i].num].powers[pw_carry] == CR_NIGHTSMODE && skins[players[tab[i].num].skin].flags & SF_SUPER)))
+#define supercheckdef (!(players[tab[i].num].charflags & SF_NOSUPERSPRITES) && ((players[tab[i].num].powers[pw_super] && players[tab[i].num].mo && (players[tab[i].num].mo->state < &states[S_PLAY_SUPER_TRANS1] || players[tab[i].num].mo->state >= &states[S_PLAY_SUPER_TRANS6])) || (players[tab[i].num].powers[pw_carry] == CR_NIGHTSMODE && skins[players[tab[i].num].skin]->flags & SF_SUPER)))
 #define greycheckdef (players[tab[i].num].spectator || players[tab[i].num].playerstate == PST_DEAD || (G_IsSpecialStage(gamemap) && players[tab[i].num].exiting))
 
 //

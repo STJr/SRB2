@@ -84,6 +84,9 @@ endif
  WFLAGS+=-Wnested-externs
 #WFLAGS+=-Wunreachable-code
  WFLAGS+=-Winline
+ifdef DEBUGMODE
+ WFLAGS+=-Wno-error=inline
+endif
 ifdef GCC43
  WFLAGS+=-funit-at-a-time
  WFLAGS+=-Wlogical-op
@@ -116,7 +119,7 @@ ifdef GCC43
  #WFLAGS+=-Wno-error=clobbered
 endif
 ifdef GCC44
- WFLAGS+=-Wno-error=array-bounds
+#WFLAGS+=-Wno-error=array-bounds
 endif
 ifdef GCC46
  WFLAGS+=-Wno-error=suggest-attribute=noreturn
