@@ -1740,7 +1740,7 @@ static unsigned PIT_DoCheckThing(mobj_t *thing)
 	unsigned collide = CHECKTHING_NOCOLLIDE;
 
 	if ((tmthing->flags & MF_SPRING || tmthing->type == MT_SPIKE || tmthing->type == MT_WALLSPIKE) && (thing->player))
-		; // springs should never be able to step up onto a player
+		; // springs and spikes should never be able to step up onto a player
 	// z checking at last
 	// Treat noclip things as non-solid!
 	else if ((thing->flags & (MF_SOLID|MF_NOCLIP)) == MF_SOLID
