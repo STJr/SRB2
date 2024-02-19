@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2012-2016 by John "JTE" Muniz.
-// Copyright (C) 2012-2022 by Sonic Team Junior.
+// Copyright (C) 2012-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -74,10 +74,6 @@ automatically.
 	X (PlayerCanEnterSpinGaps),\
 	X (KeyDown),\
 	X (KeyUp),\
-	X (GamepadButtonDown),\
-	X (GamepadButtonUp),\
-	X (GamepadAdded),\
-	X (GamepadRemoved),\
 
 #define STRING_HOOK_LIST(X) \
 	X (BotAI),/* B_BuildTailsTiccmd by skin name */\
@@ -129,10 +125,10 @@ void LUA_HookBool(boolean value, int hook);
 int  LUA_HookPlayer(player_t *, int hook);
 int  LUA_HookTiccmd(player_t *, ticcmd_t *, int hook);
 int  LUA_HookKey(event_t *event, int hook); // Hooks for key events
-int  LUA_HookGamepadButton(event_t *event, int hook);
-void LUA_HookGamepadEvent(UINT8 which, int hook);
 
+void LUA_HookPreThinkFrame(void);
 void LUA_HookThinkFrame(void);
+void LUA_HookPostThinkFrame(void);
 int  LUA_HookMobjLineCollide(mobj_t *, line_t *);
 int  LUA_HookTouchSpecial(mobj_t *special, mobj_t *toucher);
 int  LUA_HookShouldDamage(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 damage, UINT8 damagetype);

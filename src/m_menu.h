@@ -3,7 +3,7 @@
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
 // Copyright (C) 2011-2016 by Matthew "Kaito Sinclaire" Walsh.
-// Copyright (C) 1999-2022 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -20,7 +20,7 @@
 #include "command.h"
 #include "f_finale.h" // for ttmode_enum
 #include "i_threads.h"
-#include "mserv.h"
+#include "netcode/mserv.h"
 #include "r_things.h" // for SKINNAMESIZE
 
 // Compatibility with old-style named NiGHTS replay files.
@@ -74,7 +74,7 @@ typedef enum
 	MN_MP_SERVER,
 	MN_MP_CONNECT,
 	MN_MP_ROOM,
-	MN_MP_PLAYERSETUP, // MP_PlayerSetupDef shared with SPLITSCREEN if #defined NONET
+	MN_MP_PLAYERSETUP,
 	MN_MP_SERVER_OPTIONS,
 
 	// Options
@@ -200,8 +200,8 @@ void M_Drawer(void);
 // Called by D_SRB2Main, loads the config file.
 void M_Init(void);
 
-// Called by D_SRB2Main also, sets up the playermenu and description tables.
-void M_InitCharacterTables(void);
+// Called by deh_soc.c, sets up the playermenu and description tables.
+void M_InitCharacterTables(INT32 num);
 
 // Called by intro code to force menu up upon a keypress,
 // does nothing if menu is already up.
@@ -223,9 +223,8 @@ typedef enum
 {
 	MM_NOTHING = 0, // is just displayed until the user do someting
 	MM_YESNO,       // routine is called with only 'y' or 'n' in param
-	MM_KEYHANDLER,  // the same of above but without 'y' or 'n' restriction
-	MM_EVENTHANDLER // the same of above but routine is void routine(event_t *)
-	                // (ex: set control)
+	MM_EVENTHANDLER // the same of above but without 'y' or 'n' restriction
+	                // and routine is void routine(event_t *) (ex: set control)
 } menumessagetype_t;
 void M_StartMessage(const char *string, void *routine, menumessagetype_t itemtype);
 
@@ -362,11 +361,9 @@ extern menu_t *currentMenu;
 extern menu_t MainDef;
 extern menu_t SP_LoadDef;
 
-// Call when a gamepad is connected or disconnected
-void M_UpdateGamepadMenu(void);
-
-// Returns true if the player is on the gamepad selection menu
-boolean M_OnGamepadMenu(void);
+// Call upon joystick hotplug
+void M_SetupJoystickMenu(INT32 choice);
+extern menu_t OP_JoystickSetDef;
 
 // Stuff for customizing the player select screen
 typedef struct
@@ -378,10 +375,8 @@ typedef struct
 	patch_t *charpic;
 	UINT8 prev;
 	UINT8 next;
-
-	// new character select
 	char displayname[SKINNAMESIZE+1];
-	SINT8 skinnum[2];
+	INT16 skinnum[2];
 	UINT16 oppositecolor;
 	char nametag[8];
 	patch_t *namepic;
@@ -434,7 +429,8 @@ typedef struct
 	INT32 gamemap;
 } saveinfo_t;
 
-extern description_t description[MAXSKINS];
+extern description_t *description;
+extern INT32 numdescriptions;
 
 extern consvar_t cv_showfocuslost;
 extern consvar_t cv_newgametype, cv_nextmap, cv_chooseskin, cv_serversort;
@@ -485,6 +481,8 @@ void M_MoveColorBefore(UINT16 color, UINT16 targ);
 void M_MoveColorAfter(UINT16 color, UINT16 targ);
 UINT16 M_GetColorBefore(UINT16 color);
 UINT16 M_GetColorAfter(UINT16 color);
+UINT16 M_GetColorIndex(UINT16 color);
+menucolor_t* M_GetColorFromIndex(UINT16 index);
 void M_InitPlayerSetupColors(void);
 void M_FreePlayerSetupColors(void);
 
@@ -541,19 +539,6 @@ void M_FreePlayerSetupColors(void);
 	NULL\
 }
 
-#define GAMEPADMENUSTYLE(id, header, source, prev, x, y)\
-{\
-	id,\
-	header,\
-	sizeof(source)/sizeof(menuitem_t),\
-	prev,\
-	source,\
-	M_DrawGamepadMenu,\
-	x, y,\
-	0,\
-	NULL\
-}
-
 #define MAPPLATTERMENUSTYLE(id, header, source)\
 {\
 	id,\
@@ -574,7 +559,7 @@ void M_FreePlayerSetupColors(void);
 	sizeof (source)/sizeof (menuitem_t),\
 	prev,\
 	source,\
-	M_DrawControlConfigMenu,\
+	M_DrawControl,\
 	24, 40,\
 	0,\
 	NULL\

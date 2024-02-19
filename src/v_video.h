@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2022 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -36,7 +36,7 @@ cv_rsaturation, cv_ysaturation, cv_gsaturation, cv_csaturation, cv_bsaturation, 
 // Allocates buffer screens, call before R_Init.
 void V_Init(void);
 
-// Recalculates the viddef (dupx, dupy, etc.) according to the current screen resolution.
+// Recalculates the viddef (dup, fdup, etc.) according to the current screen resolution.
 void V_Recalc(void);
 
 // Color look-up table
@@ -177,9 +177,6 @@ void V_DrawContinueIcon(INT32 x, INT32 y, INT32 flags, INT32 skinnum, UINT16 ski
 
 // Draw a linear block of pixels into the view buffer.
 void V_DrawBlock(INT32 x, INT32 y, INT32 scrn, INT32 width, INT32 height, const UINT8 *src);
-
-// draw a pic_t, SCALED
-void V_DrawScaledPic (INT32 px1, INT32 py1, INT32 scrn, INT32 lumpnum);
 
 // fill a box with a single color
 void V_DrawFill(INT32 x, INT32 y, INT32 w, INT32 h, INT32 c);

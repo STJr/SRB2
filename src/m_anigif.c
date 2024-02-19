@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 2013-2016 by Matthew "Kaito Sinclaire" Walsh.
 // Copyright (C) 2013      by "Ninji".
-// Copyright (C) 2013-2022 by Sonic Team Junior.
+// Copyright (C) 2013-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -462,7 +462,7 @@ static void GIF_headwrite(void)
 	// Image width/height
 	if (gif_downscale)
 	{
-		scrbuf_downscaleamt = vid.dupx;
+		scrbuf_downscaleamt = vid.dup;
 		rwidth = (vid.width / scrbuf_downscaleamt);
 		rheight = (vid.height / scrbuf_downscaleamt);
 	}

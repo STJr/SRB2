@@ -5,7 +5,7 @@ Ver=3
 IsCpp=0
 Type=0
 UnitCount=279
-Folders=A_Asm,B_Bot,BLUA,D_Doom,F_Frame,G_Game,H_Hud,Hw_Hardware,Hw_Hardware/r_opengl,I_Interface,I_Interface/Dummy,I_Interface/SDL,I_Interface/Win32,LUA,M_Misc,P_Play,R_Rend,S_Sounds,W_Wad
+Folders=B_Bot,BLUA,D_Doom,F_Frame,G_Game,H_Hud,Hw_Hardware,Hw_Hardware/r_opengl,I_Interface,I_Interface/Dummy,I_Interface/SDL,I_Interface/Win32,LUA,M_Misc,P_Play,R_Rend,S_Sounds,W_Wad
 CommandLine=
 CompilerSettings=00000000000100000111e1
 PchHead=-1
@@ -1473,36 +1473,6 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit149]
-FileName=src\tmap.nas
-Folder=A_Asm
-Compile=0
-CompileCpp=0
-Link=0
-Priority=1000
-OverrideBuildCmd=1
-BuildCmd=nasm.exe -g -o $@ -f win32 src/tmap.nas
-
-[Unit150]
-FileName=src\asm_defs.inc
-Folder=A_Asm
-Compile=0
-CompileCpp=0
-Link=0
-Priority=1000
-OverrideBuildCmd=0
-BuildCmd=
-
-[Unit151]
-FileName=src\vid_copy.s
-Folder=A_Asm
-Compile=1
-CompileCpp=0
-Link=1
-Priority=1000
-OverrideBuildCmd=1
-BuildCmd=$(CC) $(CFLAGS) -x assembler-with-cpp -c src/vid_copy.s -o $@
-
 [Unit152]
 FileName=src\y_inter.h
 Folder=H_Hud
@@ -1542,26 +1512,6 @@ Link=1
 Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
-
-[Unit156]
-FileName=src\p5prof.h
-Folder=A_Asm
-Compile=1
-CompileCpp=0
-Link=1
-Priority=1000
-OverrideBuildCmd=0
-BuildCmd=
-
-[Unit157]
-FileName=src\tmap_mmx.nas
-Folder=A_Asm
-Compile=0
-CompileCpp=0
-Link=0
-Priority=1000
-OverrideBuildCmd=1
-BuildCmd=nasm.exe -g -o $@ -f win32 src/tmap_mmx.nas
 
 [Unit159]
 FileName=src\lzf.h

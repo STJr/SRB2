@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2022 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -30,6 +30,12 @@ typedef struct portal_s
 	fixed_t viewz;
 	angle_t viewangle;
 
+	// For horizon portals
+	boolean is_horizon;
+	sector_t *horizon_sector;
+
+	boolean is_skybox;
+
 	UINT8 pass;			/**< Keeps track of the portal's recursion depth. */
 	INT32 clipline;		/**< Optional clipline for line-based portals. */
 
@@ -49,13 +55,13 @@ extern line_t *portalclipline;
 extern sector_t *portalcullsector;
 extern INT32 portalclipstart, portalclipend;
 
-void Portal_InitList	(void);
-void Portal_Remove		(portal_t* portal);
-void Portal_Add2Lines	(const INT32 line1, const INT32 line2, const INT32 x1, const INT32 x2);
-void Portal_AddSkybox	(const visplane_t* plane);
+void Portal_InitList		(void);
+void Portal_Remove			(portal_t* portal);
+void Portal_Add2Lines		(const INT32 line1, const INT32 line2, const INT32 x1, const INT32 x2);
+void Portal_AddTransferred	(UINT32 secportalnum, const INT32 x1, const INT32 x2);
 
 void Portal_ClipRange (portal_t* portal);
 void Portal_ClipApply (const portal_t* portal);
 
-void Portal_AddSkyboxPortals (void);
+void Portal_AddPlanePortals (boolean add_skyboxes);
 #endif

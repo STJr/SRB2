@@ -53,11 +53,15 @@ else()
 	set(SRB2_CONFIG_SYSTEM_LIBRARIES_DEFAULT OFF)
 endif()
 
+# Clang tidy options will be ignored if CMAKE_<LANG>_CLANG_TIDY are set.
+option(SRB2_CONFIG_ENABLE_CLANG_TIDY_C "Enable default clang-tidy check configuration for C" OFF)
+option(SRB2_CONFIG_ENABLE_CLANG_TIDY_CXX "Enable default clang-tidy check configuration for C++" OFF)
 option(
 	SRB2_CONFIG_SYSTEM_LIBRARIES
 	"Link dependencies using CMake's find_package and do not use internal builds"
 	${SRB2_CONFIG_SYSTEM_LIBRARIES_DEFAULT}
 )
+option(SRB2_CONFIG_ENABLE_TESTS "Build the test suite" ON)
 # This option isn't recommended for distribution builds and probably won't work (yet).
 cmake_dependent_option(
 	SRB2_CONFIG_SHARED_INTERNAL_LIBRARIES
@@ -71,10 +75,30 @@ option(SRB2_CONFIG_ERRORMODE "Compile C code with warnings treated as errors." O
 option(SRB2_CONFIG_DEBUGMODE "Compile with PARANOIA, ZDEBUG, RANGECHECK and PACKETDROP defined." OFF)
 option(SRB2_CONFIG_MOBJCONSISTANCY "Compile with MOBJCONSISTANCY defined." OFF)
 option(SRB2_CONFIG_PACKETDROP "Compile with PACKETDROP defined." OFF)
+option(SRB2_CONFIG_EXECINFO "Enable stack trace dump support." ON)
 option(SRB2_CONFIG_ZDEBUG "Compile with ZDEBUG defined." OFF)
 # SRB2_CONFIG_PROFILEMODE is probably superceded by some CMake setting.
 option(SRB2_CONFIG_PROFILEMODE "Compile for profiling (GCC only)." OFF)
 set(SRB2_CONFIG_ASSET_DIRECTORY "" CACHE PATH "Path to directory that contains all asset files for the installer. If set, assets will be part of installation and cpack.")
+
+if(SRB2_CONFIG_ENABLE_TESTS)
+	# https://github.com/catchorg/Catch2
+	CPMAddPackage(
+		NAME Catch2
+		VERSION 3.4.0
+		GITHUB_REPOSITORY catchorg/Catch2
+		OPTIONS
+			"CATCH_INSTALL_DOCS OFF"
+	)
+	list(APPEND CMAKE_MODULE_PATH "${Catch2_SOURCE_DIR}/extras")
+	include(CTest)
+	include(Catch)
+	add_executable(srb2tests)
+	# To add tests, use target_sources to add individual test files to the target in subdirs.
+	target_link_libraries(srb2tests PRIVATE Catch2::Catch2 Catch2::Catch2WithMain)
+	target_compile_features(srb2tests PRIVATE c_std_11 cxx_std_17)
+	catch_discover_tests(srb2tests)
+endif()
 
 # Enable CCache
 # (Set USE_CCACHE=ON to use, CCACHE_OPTIONS for options)
@@ -108,7 +132,11 @@ if("${SRB2_CONFIG_SYSTEM_LIBRARIES}")
 	find_package(SDL2_mixer REQUIRED)
 	find_package(CURL REQUIRED)
 	find_package(OPENMPT REQUIRED)
-	find_package(GME REQUIRED)
+
+	# libgme defaults to "Nuked" YM2612 emulator, which is
+	# very SLOW. The system library probably uses the
+	# default so just always build it.
+	#find_package(GME REQUIRED)
 endif()
 
 if(${PROJECT_SOURCE_DIR} MATCHES ${PROJECT_BINARY_DIR})
@@ -118,13 +146,6 @@ endif()
 if ((${SRB2_USE_CCACHE}) AND (${CMAKE_C_COMPILER} MATCHES "clang"))
 	message(WARNING "Using clang and CCache: You may want to set environment variable CCACHE_CPP2=yes to prevent include errors during compile.")
 endif()
-
-# Add sources from Sourcefile
-function(target_sourcefile type)
-	file(STRINGS Sourcefile list
-		REGEX "[-0-9A-Za-z_]+\.${type}")
-	target_sources(SRB2SDL2 PRIVATE ${list})
-endfunction()
 
 # bitness check
 set(SRB2_SYSTEM_BITS 0)
@@ -144,7 +165,8 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
 set(CMAKE_PDB_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
 
 # Set EXE names so the assets CMakeLists can refer to its target
-set(SRB2_SDL2_EXE_NAME srb2 CACHE STRING "Executable binary output name")
+set(SRB2_SDL2_EXE_NAME "" CACHE STRING "Override executable binary output name")
+set(SRB2_SDL2_EXE_SUFFIX "" CACHE STRING "Optional executable suffix, separated by an underscore")
 
 include_directories(${CMAKE_CURRENT_BINARY_DIR}/src)
 
@@ -152,11 +174,37 @@ add_subdirectory(src)
 add_subdirectory(assets)
 
 
-## config.h generation
 set(GIT_EXECUTABLE "git" CACHE FILEPATH "Path to git binary")
 include(GitUtilities)
-git_latest_commit(SRB2_COMP_COMMIT "${CMAKE_SOURCE_DIR}")
-git_current_branch(SRB2_GIT_BRANCH "${CMAKE_SOURCE_DIR}")
-set(SRB2_COMP_BRANCH "${SRB2_GIT_BRANCH}")
-set(SRB2_COMP_REVISION "${SRB2_COMP_COMMIT}")
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/src/config.h)
+
+if("${SRB2_SDL2_EXE_NAME}" STREQUAL "")
+	# cause a reconfigure if the branch changes
+	get_git_dir(SRB2_GIT_DIR)
+	configure_file("${SRB2_GIT_DIR}/HEAD" HEAD COPYONLY)
+
+	git_current_branch(SRB2_GIT_REVISION)
+
+	if("${SRB2_GIT_REVISION}" STREQUAL "")
+		# use abbreviated commit hash if on detached HEAD
+		git_latest_commit(SRB2_GIT_REVISION)
+	endif()
+
+	if("${CMAKE_SYSTEM_NAME}" MATCHES "Windows")
+		list(APPEND EXE_NAME_PARTS "srb2win")
+	elseif("${CMAKE_SYSTEM_NAME}" MATCHES "Linux")
+		list(APPEND EXE_NAME_PARTS "lsdlsrb2")
+	else()
+		list(APPEND EXE_NAME_PARTS "srb2")
+	endif()
+
+	if(NOT "${SRB2_GIT_REVISION}" STREQUAL "master")
+		list(APPEND EXE_NAME_PARTS ${SRB2_GIT_REVISION})
+	endif()
+else()
+	list(APPEND EXE_NAME_PARTS ${SRB2_SDL2_EXE_NAME})
+endif()
+
+list(APPEND EXE_NAME_PARTS ${SRB2_SDL2_EXE_SUFFIX})
+
+list(JOIN EXE_NAME_PARTS "_" EXE_NAME)
+set_target_properties(SRB2SDL2 PROPERTIES OUTPUT_NAME ${EXE_NAME})

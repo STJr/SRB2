@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2022 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -35,9 +35,6 @@ extern lumpnum_t lastloadedmaplumpnum; // for comparative savegame
 enum
 {
 	LEVELFLAT_NONE,/* HOM time my friend */
-	LEVELFLAT_FLAT,
-	LEVELFLAT_PATCH,
-	LEVELFLAT_PNG,
 	LEVELFLAT_TEXTURE,
 };
 
@@ -47,41 +44,8 @@ enum
 typedef struct
 {
 	char name[9]; // resource name from wad
-
-	UINT8  type;
-	union
-	{
-		struct
-		{
-			lumpnum_t     lumpnum; // lump number of the flat
-			// for flat animation
-			lumpnum_t baselumpnum;
-		}
-		flat;
-		struct
-		{
-			INT32             num;
-			INT32         lastnum; // texture number of the flat
-			// for flat animation
-			INT32         basenum;
-		}
-		texture;
-	}
-	u;
-
-	UINT16 width, height;
-
-	// for flat animation
-	INT32 animseq; // start pos. in the anim sequence
-	INT32 numpics;
-	INT32 speed;
-
-	// for textures
-	UINT8 *picture;
-#ifdef HWRENDER
-	void *mipmap;
-	void *mippic;
-#endif
+	UINT8 type;
+	INT32 texture_id;
 } levelflat_t;
 
 extern size_t numlevelflats;

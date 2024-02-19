@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2022 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -51,14 +51,15 @@
 #include "filesrch.h"
 
 #include "d_main.h"
-#include "d_netfil.h"
-#include "d_clisrv.h"
+#include "netcode/d_netfil.h"
+#include "netcode/d_clisrv.h"
 #include "dehacked.h"
 #include "r_defs.h"
 #include "r_data.h"
 #include "r_textures.h"
 #include "r_patch.h"
 #include "r_picformats.h"
+#include "r_translation.h"
 #include "i_time.h"
 #include "i_system.h"
 #include "i_video.h" // rendermode
@@ -201,14 +202,14 @@ FILE *W_OpenWadFile(const char **filename, boolean useerrors)
 }
 
 // Look for all DEHACKED and Lua scripts inside a PK3 archive.
-static inline void W_LoadDehackedLumpsPK3(UINT16 wadnum, boolean mainfile)
+static void W_LoadDehackedLumpsPK3(UINT16 wadnum, boolean mainfile)
 {
 	UINT16 posStart, posEnd;
 
 	posStart = W_CheckNumForFullNamePK3("Init.lua", wadnum, 0);
 	if (posStart != INT16_MAX)
 	{
-		LUA_LoadLump(wadnum, posStart, true);
+		LUA_DoLump(wadnum, posStart, true);
 	}
 	else
 	{
@@ -217,7 +218,7 @@ static inline void W_LoadDehackedLumpsPK3(UINT16 wadnum, boolean mainfile)
 		{
 			posEnd = W_CheckNumForFolderEndPK3("Lua/", wadnum, posStart);
 			for (; posStart < posEnd; posStart++)
-				LUA_LoadLump(wadnum, posStart, true);
+				LUA_DoLump(wadnum, posStart, true);
 		}
 	}
 
@@ -241,7 +242,7 @@ static inline void W_LoadDehackedLumpsPK3(UINT16 wadnum, boolean mainfile)
 }
 
 // search for all DEHACKED lump in all wads and load it
-static inline void W_LoadDehackedLumps(UINT16 wadnum, boolean mainfile)
+static void W_LoadDehackedLumps(UINT16 wadnum, boolean mainfile)
 {
 	UINT16 lump;
 
@@ -250,7 +251,7 @@ static inline void W_LoadDehackedLumps(UINT16 wadnum, boolean mainfile)
 		lumpinfo_t *lump_p = wadfiles[wadnum]->lumpinfo;
 		for (lump = 0; lump < wadfiles[wadnum]->numlumps; lump++, lump_p++)
 			if (memcmp(lump_p->name,"LUA_",4)==0)
-				LUA_LoadLump(wadnum, lump, true);
+				LUA_DoLump(wadnum, lump, true);
 	}
 
 	{
@@ -305,7 +306,7 @@ static inline void W_LoadDehackedLumps(UINT16 wadnum, boolean mainfile)
   * \param resblock resulting MD5 checksum
   * \return 0 if MD5 checksum was made, and is at resblock, 1 if error was found
   */
-static inline INT32 W_MakeFileMD5(const char *filename, void *resblock)
+static INT32 W_MakeFileMD5(const char *filename, void *resblock)
 {
 #ifdef NOMD5
 	(void)filename;
@@ -829,6 +830,16 @@ static void W_ReadFileShaders(wadfile_t *wadfile)
 #endif
 }
 
+static void W_LoadTrnslateLumps(UINT16 w)
+{
+	UINT16 lump = W_CheckNumForNamePwad("TRNSLATE", w, 0);
+	while (lump != INT16_MAX)
+	{
+		R_ParseTrnslate(w, lump);
+		lump = W_CheckNumForNamePwad("TRNSLATE", (UINT16)w, lump + 1);
+	}
+}
+
 //  Allocate a wadfile, setup the lumpinfo (directory) and
 //  lumpcache, add the wadfile to the current active wadfiles
 //
@@ -972,12 +983,15 @@ UINT16 W_InitFile(const char *filename, boolean mainfile, boolean startup)
 	// add the wadfile
 	//
 	CONS_Printf(M_GetText("Added file %s (%u lumps)\n"), filename, numlumps);
-	wadfiles = Z_Realloc(wadfiles, sizeof(wadfile_t) * (numwadfiles + 1), PU_STATIC, NULL);
+	wadfiles = Z_Realloc(wadfiles, sizeof(wadfile_t *) * (numwadfiles + 1), PU_STATIC, NULL);
 	wadfiles[numwadfiles] = wadfile;
 	numwadfiles++; // must come BEFORE W_LoadDehackedLumps, so any addfile called by COM_BufInsertText called by Lua doesn't overwrite what we just loaded
 
 	// Read shaders from file
 	W_ReadFileShaders(wadfile);
+
+	// The below hack makes me load this here.
+	W_LoadTrnslateLumps(numwadfiles - 1);
 
 	// TODO: HACK ALERT - Load Lua & SOC stuff right here. I feel like this should be out of this place, but... Let's stick with this for now.
 	switch (wadfile->type)
@@ -993,7 +1007,7 @@ UINT16 W_InitFile(const char *filename, boolean mainfile, boolean startup)
 		DEH_LoadDehackedLumpPwad(numwadfiles - 1, 0, mainfile);
 		break;
 	case RET_LUA:
-		LUA_LoadLump(numwadfiles - 1, 0, true);
+		LUA_DoLump(numwadfiles - 1, 0, true);
 		break;
 	default:
 		break;
@@ -1035,7 +1049,7 @@ UINT16 W_InitFolder(const char *path, boolean mainfile, boolean startup)
 		return W_InitFileError(path, startup);
 	}
 
-	important = 0; /// \todo Implement a W_VerifyFolder.
+	important = 1; /// \todo Implement a W_VerifyFolder.
 
 	// Remove path delimiters.
 	p = path + (strlen(path) - 1);
@@ -1141,15 +1155,18 @@ UINT16 W_InitFolder(const char *path, boolean mainfile, boolean startup)
 	wadfile->foldercount = foldercount;
 	wadfile->lumpinfo = lumpinfo;
 	wadfile->important = important;
-
-	// Irrelevant.
 	wadfile->filesize = 0;
-	memset(wadfile->md5sum, 0x00, 16);
+
+	for (i = 0; i < numlumps; i++)
+		wadfile->filesize += lumpinfo[i].disksize;
+
+	memset(wadfile->md5sum, 0x00, 16); // Irrelevant.
 
 	Z_Calloc(numlumps * sizeof (*wadfile->lumpcache), PU_STATIC, &wadfile->lumpcache);
 	Z_Calloc(numlumps * sizeof (*wadfile->patchcache), PU_STATIC, &wadfile->patchcache);
 
 	CONS_Printf(M_GetText("Added folder %s (%u files, %u folders)\n"), fn, numlumps, foldercount);
+	wadfiles = Z_Realloc(wadfiles, sizeof(wadfile_t *) * (numwadfiles + 1), PU_STATIC, NULL);
 	wadfiles[numwadfiles] = wadfile;
 	numwadfiles++;
 
@@ -1332,6 +1349,74 @@ UINT16 W_CheckNumForFolderEndPK3(const char *name, UINT16 wad, UINT16 startlump)
 			break;
 	}
 	return i;
+}
+
+void W_GetFolderLumpsPwad(const char *name, UINT16 wad, UINT32 **list, UINT16 *list_capacity, UINT16 *numlumps)
+{
+	size_t name_length = strlen(name);
+	lumpinfo_t *lump_p = wadfiles[wad]->lumpinfo;
+
+	UINT16 capacity = list_capacity ? *list_capacity : 0;
+	UINT16 count = *numlumps;
+
+	for (UINT16 i = 0; i < wadfiles[wad]->numlumps; i++, lump_p++)
+	{
+		if (strnicmp(name, lump_p->fullname, name_length) == 0)
+		{
+			if (strlen(lump_p->fullname) > name_length
+				&& lump_p->longname[0] != '\0')
+			{
+				if (!capacity || count >= capacity)
+				{
+					capacity = capacity ? (capacity * 2) : 16;
+					*list = Z_Realloc(*list, capacity * sizeof(UINT32), PU_STATIC, NULL);
+				}
+
+				(*list)[count] = (wad << 16) + i;
+				count++;
+			}
+		}
+	}
+
+	if (list_capacity)
+		(*list_capacity) = capacity;
+	(*numlumps) = count;
+}
+
+void W_GetFolderLumps(const char *name, UINT32 **list, UINT16 *list_capacity, UINT16 *numlumps)
+{
+	for (UINT16 i = 0; i < numwadfiles; i++)
+		W_GetFolderLumpsPwad(name, i, list, list_capacity, numlumps);
+}
+
+UINT32 W_CountFolderLumpsPwad(const char *name, UINT16 wad)
+{
+	size_t name_length = strlen(name);
+	lumpinfo_t *lump_p = wadfiles[wad]->lumpinfo;
+
+	UINT32 count = 0;
+
+	for (UINT16 i = 0; i < wadfiles[wad]->numlumps; i++, lump_p++)
+	{
+		if (strnicmp(name, lump_p->fullname, name_length) == 0)
+		{
+			if (strlen(lump_p->fullname) > name_length
+				&& lump_p->longname[0] != '\0')
+				count++;
+		}
+	}
+
+	return count;
+}
+
+UINT32 W_CountFolderLumps(const char *name)
+{
+	UINT32 count = 0;
+
+	for (UINT16 i = 0; i < numwadfiles; i++)
+		count += W_CountFolderLumpsPwad(name, i);
+
+	return count;
 }
 
 // In a PK3 type of resource file, it looks for an entry with the specified full name.
@@ -1683,6 +1768,10 @@ void zerr(int ret)
 }
 #endif
 
+#ifdef NO_PNG_LUMPS
+#define Picture_ThrowPNGError(lumpname, wadfilename) I_Error("W_Wad: Lump \"%s\" in file \"%s\" is a .png - please convert to either Doom or Flat (raw) image format.", lumpname, wadfilename)
+#endif
+
 /** Reads bytes from the head of a lump.
   * Note: If the lump is compressed, the whole thing has to be read anyway.
   *
@@ -1763,10 +1852,6 @@ size_t W_ReadLumpHeaderPwad(UINT16 wad, UINT16 lump, void *dest, size_t size, si
 		bytesread = fread(dest, 1, size, handle);
 		if (wadfiles[wad]->type == RET_FOLDER)
 			fclose(handle);
-#ifdef NO_PNG_LUMPS
-		if (Picture_IsLumpPNG((UINT8 *)dest, bytesread))
-			Picture_ThrowPNGError(l->fullname, wadfiles[wad]->filename);
-#endif
 		return bytesread;
 	case CM_LZF:		// Is it LZF compressed? Used by ZWADs.
 		{
@@ -1802,10 +1887,6 @@ size_t W_ReadLumpHeaderPwad(UINT16 wad, UINT16 lump, void *dest, size_t size, si
 			M_Memcpy(dest, decData + offset, size);
 			Z_Free(rawData);
 			Z_Free(decData);
-#ifdef NO_PNG_LUMPS
-			if (Picture_IsLumpPNG((UINT8 *)dest, size))
-				Picture_ThrowPNGError(l->fullname, wadfiles[wad]->filename);
-#endif
 			return size;
 #else
 			//I_Error("ZWAD files not supported on this platform.");
@@ -1865,10 +1946,6 @@ size_t W_ReadLumpHeaderPwad(UINT16 wad, UINT16 lump, void *dest, size_t size, si
 			Z_Free(rawData);
 			Z_Free(decData);
 
-#ifdef NO_PNG_LUMPS
-			if (Picture_IsLumpPNG((UINT8 *)dest, size))
-				Picture_ThrowPNGError(l->fullname, wadfiles[wad]->filename);
-#endif
 			return size;
 		}
 #endif
@@ -1956,7 +2033,7 @@ void *W_CacheLumpNumForce(lumpnum_t lumpnum, INT32 tag)
 // return false.
 //
 // no outside code uses the PWAD form, for now
-static inline boolean W_IsLumpCachedPWAD(UINT16 wad, UINT16 lump, void *ptr)
+static boolean W_IsLumpCachedPWAD(UINT16 wad, UINT16 lump, void *ptr)
 {
 	void *lcache;
 
@@ -1987,8 +2064,7 @@ boolean W_IsLumpCached(lumpnum_t lumpnum, void *ptr)
 // If a patch is already cached return true, otherwise
 // return false.
 //
-// no outside code uses the PWAD form, for now
-static inline boolean W_IsPatchCachedPWAD(UINT16 wad, UINT16 lump, void *ptr)
+boolean W_IsPatchCachedPwad(UINT16 wad, UINT16 lump, void *ptr)
 {
 	void *lcache;
 
@@ -2010,7 +2086,7 @@ static inline boolean W_IsPatchCachedPWAD(UINT16 wad, UINT16 lump, void *ptr)
 
 boolean W_IsPatchCached(lumpnum_t lumpnum, void *ptr)
 {
-	return W_IsPatchCachedPWAD(WADFILENUM(lumpnum),LUMPNUM(lumpnum), ptr);
+	return W_IsPatchCachedPwad(WADFILENUM(lumpnum),LUMPNUM(lumpnum), ptr);
 }
 
 // ==========================================================================
@@ -2025,18 +2101,10 @@ void *W_CacheLumpName(const char *name, INT32 tag)
 //                                         CACHING OF GRAPHIC PATCH RESOURCES
 // ==========================================================================
 
-// Graphic 'patches' are loaded, and if necessary, converted into the format
-// the most useful for the current rendermode. For software renderer, the
-// graphic patches are kept as is. For the hardware renderer, graphic patches
-// are 'unpacked', and are kept into the cache in that unpacked format, and
-// the heap memory cache then acts as a 'level 2' cache just after the
-// graphics card memory.
-
 //
 // Cache a patch into heap memory, convert the patch format as necessary
 //
-
-void *W_CacheSoftwarePatchNumPwad(UINT16 wad, UINT16 lump, INT32 tag)
+static void *W_GetPatchPwad(UINT16 wad, UINT16 lump, INT32 tag)
 {
 	lumpcache_t *lumpcache = NULL;
 
@@ -2054,15 +2122,25 @@ void *W_CacheSoftwarePatchNumPwad(UINT16 wad, UINT16 lump, INT32 tag)
 		W_ReadLumpHeaderPwad(wad, lump, lumpdata, 0, 0);
 		ptr = lumpdata;
 
-#ifndef NO_PNG_LUMPS
 		if (Picture_IsLumpPNG((UINT8 *)lumpdata, len))
-			ptr = Picture_PNGConvert((UINT8 *)lumpdata, PICFMT_DOOMPATCH, NULL, NULL, NULL, NULL, len, &len, 0);
+		{
+#ifndef NO_PNG_LUMPS
+			ptr = Picture_PNGConvert((UINT8 *)lumpdata, PICFMT_PATCH, NULL, NULL, NULL, NULL, len, &len, 0);
+			Z_ChangeTag(ptr, tag);
+			Z_SetUser(ptr, &lumpcache[lump]);
+			Z_Free(lumpdata);
+			return lumpcache[lump];
+#else
+			Picture_ThrowPNGError(W_CheckNameForNumPwad(wad, lump), wadfiles[wad]->filename);
+			return NULL;
 #endif
+		}
 
-		dest = Z_Calloc(sizeof(patch_t), tag, &lumpcache[lump]);
-		Patch_Create(ptr, len, dest);
-
+		dest = Patch_CreateFromDoomPatch(ptr);
 		Z_Free(ptr);
+
+		Z_ChangeTag(dest, tag);
+		Z_SetUser(dest, &lumpcache[lump]);
 	}
 	else
 		Z_ChangeTag(lumpcache[lump], tag);
@@ -2070,35 +2148,89 @@ void *W_CacheSoftwarePatchNumPwad(UINT16 wad, UINT16 lump, INT32 tag)
 	return lumpcache[lump];
 }
 
-void *W_CacheSoftwarePatchNum(lumpnum_t lumpnum, INT32 tag)
-{
-	return W_CacheSoftwarePatchNumPwad(WADFILENUM(lumpnum),LUMPNUM(lumpnum),tag);
-}
-
 void *W_CachePatchNumPwad(UINT16 wad, UINT16 lump, INT32 tag)
 {
-	patch_t *patch;
-
 	if (!TestValidLump(wad, lump))
 		return NULL;
 
-	patch = W_CacheSoftwarePatchNumPwad(wad, lump, tag);
+	patch_t *patch = W_GetPatchPwad(wad, lump, tag);
 
 #ifdef HWRENDER
-	// Software-only compile cache the data without conversion
-	if (rendermode == render_soft || rendermode == render_none)
+	if (rendermode == render_opengl)
+		Patch_CreateGL(patch);
 #endif
-		return (void *)patch;
 
-#ifdef HWRENDER
-	Patch_CreateGL(patch);
 	return (void *)patch;
-#endif
 }
 
 void *W_CachePatchNum(lumpnum_t lumpnum, INT32 tag)
 {
 	return W_CachePatchNumPwad(WADFILENUM(lumpnum),LUMPNUM(lumpnum),tag);
+}
+
+void *W_GetCachedPatchNumPwad(UINT16 wad, UINT16 lump)
+{
+	if (!TestValidLump(wad, lump))
+		return NULL;
+
+	return wadfiles[wad]->patchcache[lump];
+}
+
+boolean W_ReadPatchHeaderPwad(UINT16 wadnum, UINT16 lumpnum, INT16 *width, INT16 *height, INT16 *topoffset, INT16 *leftoffset)
+{
+	UINT8 header[PNG_HEADER_SIZE];
+
+	if (!TestValidLump(wadnum, lumpnum))
+		return false;
+
+	W_ReadLumpHeaderPwad(wadnum, lumpnum, header, sizeof header, 0);
+
+	size_t len = W_LumpLengthPwad(wadnum, lumpnum);
+
+	if (Picture_IsLumpPNG(header, len))
+	{
+#ifndef NO_PNG_LUMPS
+		UINT8 *png = W_CacheLumpNumPwad(wadnum, lumpnum, PU_CACHE);
+
+		INT32 pwidth = 0, pheight = 0;
+
+		if (!Picture_PNGDimensions(png, &pwidth, &pheight, topoffset, leftoffset, len))
+		{
+			Z_Free(png);
+			return false;
+		}
+
+		*width = (INT16)pwidth;
+		*height = (INT16)pheight;
+
+		Z_Free(png);
+
+		return true;
+#else
+		Picture_ThrowPNGError(W_CheckNameForNumPwad(wadnum, lumpnum), wadfiles[wadnum]->filename);
+
+		return false;
+#endif
+	}
+
+	softwarepatch_t patch;
+
+	if (!W_ReadLumpHeaderPwad(wadnum, lumpnum, &patch, sizeof(INT16) * 4, 0))
+		return false;
+
+	*width = SHORT(patch.width);
+	*height = SHORT(patch.height);
+	if (topoffset)
+		*topoffset = SHORT(patch.topoffset);
+	if (leftoffset)
+		*leftoffset = SHORT(patch.leftoffset);
+
+	return true;
+}
+
+boolean W_ReadPatchHeader(lumpnum_t lumpnum, INT16 *width, INT16 *height, INT16 *topoffset, INT16 *leftoffset)
+{
+	return W_ReadPatchHeaderPwad(WADFILENUM(lumpnum), LUMPNUM(lumpnum), width, height, topoffset, leftoffset);
 }
 
 void W_UnlockCachedPatch(void *patch)

@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2022 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -53,10 +53,6 @@ INT32 numffloors;
 #define visplane_hash(picnum,lightlevel,height) \
   ((unsigned)((picnum)*3+(lightlevel)+(height)*7) & VISPLANEHASHMASK)
 
-//SoM: 3/23/2000: Use boom opening limit removal
-size_t maxopenings;
-INT16 *openings, *lastopening; /// \todo free leak
-
 //
 // Clip values are the solid pixel bounding the range.
 //  floorclip starts out SCREENHEIGHT
@@ -87,22 +83,15 @@ static fixed_t planeheight;
 fixed_t yslopetab[MAXVIDHEIGHT*16];
 fixed_t *yslope;
 
-fixed_t cachedheight[MAXVIDHEIGHT];
-fixed_t cacheddistance[MAXVIDHEIGHT];
-fixed_t cachedxstep[MAXVIDHEIGHT];
-fixed_t cachedystep[MAXVIDHEIGHT];
-
 static fixed_t xoffs, yoffs;
-static floatv3_t ds_slope_origin, ds_slope_u, ds_slope_v;
+static dvector3_t slope_origin, slope_u, slope_v;
+static dvector3_t slope_lightu, slope_lightv;
 
-//
-// R_InitPlanes
-// Only at game startup.
-//
-void R_InitPlanes(void)
-{
-	// FIXME: unused
-}
+static void CalcSlopePlaneVectors(visplane_t *pl, fixed_t xoff, fixed_t yoff);
+static void CalcSlopeLightVectors(pslope_t *slope, fixed_t xpos, fixed_t ypos, double height, float ang, angle_t plangle);
+
+static void DoSlopeCrossProducts(void);
+static void DoSlopeLightCrossProduct(void);
 
 //
 // Water ripple effect
@@ -163,37 +152,28 @@ static void R_MapPlane(INT32 y, INT32 x1, INT32 x2)
 	planecos = FINECOSINE(angle);
 	planesin = FINESINE(angle);
 
-	if (planeheight != cachedheight[y])
+	// [RH] Notice that I dumped the caching scheme used by Doom.
+	// It did not offer any appreciable speedup.
+	distance = FixedMul(planeheight, yslope[y]);
+	span = abs(centery - y);
+
+	if (span) // Don't divide by zero
 	{
-		cachedheight[y] = planeheight;
-		cacheddistance[y] = distance = FixedMul(planeheight, yslope[y]);
-		span = abs(centery - y);
-
-		if (span) // Don't divide by zero
-		{
-			ds_xstep = FixedMul(planesin, planeheight) / span;
-			ds_ystep = FixedMul(planecos, planeheight) / span;
-		}
-		else
-			ds_xstep = ds_ystep = FRACUNIT;
-
-		cachedxstep[y] = ds_xstep;
-		cachedystep[y] = ds_ystep;
+		ds_xstep = FixedMul(planesin, planeheight) / span;
+		ds_ystep = FixedMul(planecos, planeheight) / span;
+		ds_xstep = FixedMul(currentplane->xscale, ds_xstep);
+		ds_ystep = FixedMul(currentplane->yscale, ds_ystep);
 	}
 	else
-	{
-		distance = cacheddistance[y];
-		ds_xstep = cachedxstep[y];
-		ds_ystep = cachedystep[y];
-	}
+		ds_xstep = ds_ystep = FRACUNIT;
 
 	// [RH] Instead of using the xtoviewangle array, I calculated the fractional values
 	// at the middle of the screen, then used the calculated ds_xstep and ds_ystep
 	// to step from those to the proper texture coordinate to start drawing at.
 	// That way, the texture coordinate is always calculated by its position
 	// on the screen and not by its position relative to the edge of the visplane.
-	ds_xfrac = xoffs + FixedMul(planecos, distance) + (x1 - centerx) * ds_xstep;
-	ds_yfrac = yoffs - FixedMul(planesin, distance) + (x1 - centerx) * ds_ystep;
+	ds_xfrac = xoffs + FixedMul(currentplane->xscale, FixedMul(planecos, distance)) + (x1 - centerx) * ds_xstep;
+	ds_yfrac = yoffs - FixedMul(currentplane->yscale, FixedMul(planesin, distance)) + (x1 - centerx) * ds_ystep;
 
 	// Water ripple effect
 	if (planeripple.active)
@@ -242,9 +222,9 @@ static void R_MapTiltedPlane(INT32 y, INT32 x1, INT32 x2)
 	{
 		ds_bgofs = R_CalculateRippleOffset(y);
 
-		ds_sup = &ds_su[y];
-		ds_svp = &ds_sv[y];
-		ds_szp = &ds_sz[y];
+		R_CalculatePlaneRipple(currentplane->viewangle + currentplane->plangle);
+
+		CalcSlopePlaneVectors(currentplane, (xoffs + planeripple.xfrac), (yoffs + planeripple.yfrac));
 
 		ds_bgofs >>= FRACBITS;
 
@@ -279,10 +259,7 @@ static void R_MapFogPlane(INT32 y, INT32 x1, INT32 x2)
 	if (x1 >= vid.width)
 		x1 = vid.width - 1;
 
-	if (planeheight != cachedheight[y])
-		distance = FixedMul(planeheight, yslope[y]);
-	else
-		distance = cacheddistance[y];
+	distance = FixedMul(planeheight, yslope[y]);
 
 	pindex = distance >> LIGHTZSHIFT;
 	if (pindex >= MAXLIGHTZ)
@@ -365,11 +342,6 @@ void R_ClearPlanes(void)
 	{
 		freehead = &(*freehead)->next;
 	}
-
-	lastopening = openings;
-
-	// texture calculation
-	memset(cachedheight, 0, sizeof (cachedheight));
 }
 
 static visplane_t *new_visplane(unsigned hash)
@@ -396,17 +368,19 @@ static visplane_t *new_visplane(unsigned hash)
 //              Same height, same flattexture, same lightlevel.
 //              If not, allocates another of them.
 //
-visplane_t *R_FindPlane(fixed_t height, INT32 picnum, INT32 lightlevel,
-	fixed_t xoff, fixed_t yoff, angle_t plangle, extracolormap_t *planecolormap,
-	ffloor_t *pfloor, polyobj_t *polyobj, pslope_t *slope)
+visplane_t *R_FindPlane(sector_t *sector, fixed_t height, INT32 picnum, INT32 lightlevel,
+	fixed_t xoff, fixed_t yoff, fixed_t xscale, fixed_t yscale,
+	angle_t plangle, extracolormap_t *planecolormap,
+	ffloor_t *pfloor, polyobj_t *polyobj, pslope_t *slope, sectorportal_t *portalsector)
 {
 	visplane_t *check;
 	unsigned hash;
 
 	if (!slope) // Don't mess with this right now if a slope is involved
 	{
-		xoff += viewx;
-		yoff -= viewy;
+		xoff += FixedMul(viewx, xscale);
+		yoff -= FixedMul(viewy, yscale);
+
 		if (plangle != 0)
 		{
 			// Add the view offset, rotated by the plane angle.
@@ -447,16 +421,17 @@ visplane_t *R_FindPlane(fixed_t height, INT32 picnum, INT32 lightlevel,
 		hash = visplane_hash(picnum, lightlevel, height);
 		for (check = visplanes[hash]; check; check = check->next)
 		{
-			if (polyobj != check->polyobj)
-				continue;
 			if (height == check->height && picnum == check->picnum
 				&& lightlevel == check->lightlevel
 				&& xoff == check->xoffs && yoff == check->yoffs
+				&& xscale == check->xscale && yscale == check->yscale
 				&& planecolormap == check->extra_colormap
 				&& check->viewx == viewx && check->viewy == viewy && check->viewz == viewz
 				&& check->viewangle == viewangle
 				&& check->plangle == plangle
-				&& check->slope == slope)
+				&& check->slope == slope
+				&& check->polyobj == polyobj
+				&& P_CompareSectorPortals(check->portalsector, portalsector))
 			{
 				return check;
 			}
@@ -476,6 +451,8 @@ visplane_t *R_FindPlane(fixed_t height, INT32 picnum, INT32 lightlevel,
 	check->maxx = -1;
 	check->xoffs = xoff;
 	check->yoffs = yoff;
+	check->xscale = xscale;
+	check->yscale = yscale;
 	check->extra_colormap = planecolormap;
 	check->ffloor = pfloor;
 	check->viewx = viewx;
@@ -483,6 +460,8 @@ visplane_t *R_FindPlane(fixed_t height, INT32 picnum, INT32 lightlevel,
 	check->viewz = viewz;
 	check->viewangle = viewangle;
 	check->plangle = plangle;
+	check->sector = sector;
+	check->portalsector = portalsector;
 	check->polyobj = polyobj;
 	check->slope = slope;
 
@@ -552,6 +531,8 @@ visplane_t *R_CheckPlane(visplane_t *pl, INT32 start, INT32 stop)
 		new_pl->lightlevel = pl->lightlevel;
 		new_pl->xoffs = pl->xoffs;
 		new_pl->yoffs = pl->yoffs;
+		new_pl->xscale = pl->xscale;
+		new_pl->yscale = pl->yscale;
 		new_pl->extra_colormap = pl->extra_colormap;
 		new_pl->ffloor = pl->ffloor;
 		new_pl->viewx = pl->viewx;
@@ -559,8 +540,10 @@ visplane_t *R_CheckPlane(visplane_t *pl, INT32 start, INT32 stop)
 		new_pl->viewz = pl->viewz;
 		new_pl->viewangle = pl->viewangle;
 		new_pl->plangle = pl->plangle;
+		new_pl->sector = pl->sector;
 		new_pl->polyobj = pl->polyobj;
 		new_pl->slope = pl->slope;
+		new_pl->portalsector = pl->portalsector;
 		pl = new_pl;
 		pl->minx = start;
 		pl->maxx = stop;
@@ -641,59 +624,53 @@ void R_DrawPlanes(void)
 //
 static void R_DrawSkyPlane(visplane_t *pl)
 {
-	INT32 x;
-	INT32 angle;
+	INT32 texture = texturetranslation[skytexture];
 
 	// Reset column drawer function (note: couldn't we just call walldrawerfunc directly?)
 	// (that is, unless we'll need to switch drawers in future for some reason)
 	colfunc = colfuncs[BASEDRAWFUNC];
 
-	// use correct aspect ratio scale
 	dc_iscale = skyscale;
 
-	// Sky is always drawn full bright,
-	//  i.e. colormaps[0] is used.
-	// Because of this hack, sky is not affected
-	//  by sector colormaps (INVUL inverse mapping is not implemented in SRB2 so is irrelevant).
 	dc_colormap = colormaps;
 	dc_texturemid = skytexturemid;
-	dc_texheight = textureheight[skytexture]
-		>>FRACBITS;
-	for (x = pl->minx; x <= pl->maxx; x++)
+	dc_texheight = textureheight[texture]>>FRACBITS;
+
+	R_CheckTextureCache(texture);
+
+	for (INT32 x = pl->minx; x <= pl->maxx; x++)
 	{
 		dc_yl = pl->top[x];
 		dc_yh = pl->bottom[x];
 
 		if (dc_yl <= dc_yh)
 		{
-			angle = (pl->viewangle + xtoviewangle[x])>>ANGLETOSKYSHIFT;
+			INT32 angle = (pl->viewangle + xtoviewangle[x])>>ANGLETOSKYSHIFT;
 			dc_iscale = FixedMul(skyscale, FINECOSINE(xtoviewangle[x]>>ANGLETOFINESHIFT));
 			dc_x = x;
-			dc_source =
-				R_GetColumn(texturetranslation[skytexture],
-					-angle); // get negative of angle for each column to display sky correct way round! --Monster Iestyn 27/01/18
+			dc_source = R_GetColumn(texture, -angle)->pixels; // get negative of angle for each column to display sky correct way round! --Monster Iestyn 27/01/18
 			colfunc();
 		}
 	}
 }
 
-// Returns the height of the sloped plane at (x, y) as a 32.16 fixed_t
-static INT64 R_GetSlopeZAt(const pslope_t *slope, fixed_t x, fixed_t y)
+// Returns the height of the sloped plane at (x, y) as a double
+static double R_GetSlopeZAt(const pslope_t *slope, fixed_t x, fixed_t y)
 {
-	INT64 x64 = ((INT64)x - (INT64)slope->o.x);
-	INT64 y64 = ((INT64)y - (INT64)slope->o.y);
+	// If you want to reimplement this using just the equation constants, use this instead:
+	// (d + a*x + b*y) * -(1.0 / c)
 
-	x64 = (x64 * (INT64)slope->d.x) / FRACUNIT;
-	y64 = (y64 * (INT64)slope->d.y) / FRACUNIT;
+	double px = FixedToDouble(x) - slope->dorigin.x;
+	double py = FixedToDouble(y) - slope->dorigin.y;
 
-	return (INT64)slope->o.z + ((x64 + y64) * (INT64)slope->zdelta) / FRACUNIT;
+	double dist = (px * slope->dnormdir.x) + (py * slope->dnormdir.y);
+
+	return slope->dorigin.z + (dist * slope->dzdelta);
 }
 
 // Sets the texture origin vector of the sloped plane.
 static void R_SetSlopePlaneOrigin(pslope_t *slope, fixed_t xpos, fixed_t ypos, fixed_t zpos, fixed_t xoff, fixed_t yoff, fixed_t angle)
 {
-	floatv3_t *p = &ds_slope_origin;
-
 	INT64 vx = (INT64)xpos + (INT64)xoff;
 	INT64 vy = (INT64)ypos - (INT64)yoff;
 
@@ -701,125 +678,167 @@ static void R_SetSlopePlaneOrigin(pslope_t *slope, fixed_t xpos, fixed_t ypos, f
 	float vyf = vy / (float)FRACUNIT;
 	float ang = ANG2RAD(ANGLE_270 - angle);
 
-	// p is the texture origin in view space
+	// slope_origin is the texture origin in view space
 	// Don't add in the offsets at this stage, because doing so can result in
 	// errors if the flat is rotated.
-	p->x = vxf * cos(ang) - vyf * sin(ang);
-	p->z = vxf * sin(ang) + vyf * cos(ang);
-	p->y = (R_GetSlopeZAt(slope, -xoff, yoff) - zpos) / (float)FRACUNIT;
+	slope_origin.x = vxf * cos(ang) - vyf * sin(ang);
+	slope_origin.z = vxf * sin(ang) + vyf * cos(ang);
+	slope_origin.y = R_GetSlopeZAt(slope, -xoff, yoff) - FixedToDouble(zpos);
 }
 
 // This function calculates all of the vectors necessary for drawing a sloped plane.
 void R_SetSlopePlane(pslope_t *slope, fixed_t xpos, fixed_t ypos, fixed_t zpos, fixed_t xoff, fixed_t yoff, angle_t angle, angle_t plangle)
 {
-	// Potentially override other stuff for now cus we're mean. :< But draw a slope plane!
 	// I copied ZDoom's code and adapted it to SRB2... -Red
-	floatv3_t *m = &ds_slope_v, *n = &ds_slope_u;
-	fixed_t height, temp;
+	double height, z_at_xy;
 	float ang;
 
+	if (slope->moved)
+	{
+		P_CalculateSlopeVectors(slope);
+		slope->moved = false;
+	}
+
 	R_SetSlopePlaneOrigin(slope, xpos, ypos, zpos, xoff, yoff, angle);
-	height = P_GetSlopeZAt(slope, xpos, ypos);
-	zeroheight = FixedToFloat(height - zpos);
+	height = R_GetSlopeZAt(slope, xpos, ypos);
+	zeroheight = height - FixedToDouble(zpos);
 
-	// m is the v direction vector in view space
 	ang = ANG2RAD(ANGLE_180 - (angle + plangle));
-	m->x = cos(ang);
-	m->z = sin(ang);
 
-	// n is the u direction vector in view space
-	n->x = sin(ang);
-	n->z = -cos(ang);
+	CalcSlopeLightVectors(slope, xpos, ypos, height, ang, plangle);
+
+	if (ds_solidcolor || ds_fog)
+	{
+		DoSlopeLightCrossProduct();
+		return;
+	}
+
+	// the v direction vector in view space
+	slope_v.x = cos(ang);
+	slope_v.z = sin(ang);
+
+	// the u direction vector in view space
+	slope_u.x = sin(ang);
+	slope_u.z = -cos(ang);
 
 	plangle >>= ANGLETOFINESHIFT;
-	temp = P_GetSlopeZAt(slope, xpos + FINESINE(plangle), ypos + FINECOSINE(plangle));
-	m->y = FixedToFloat(temp - height);
-	temp = P_GetSlopeZAt(slope, xpos + FINECOSINE(plangle), ypos - FINESINE(plangle));
-	n->y = FixedToFloat(temp - height);
+	z_at_xy = R_GetSlopeZAt(slope, xpos + FINESINE(plangle), ypos + FINECOSINE(plangle));
+	slope_v.y = z_at_xy - height;
+	z_at_xy = R_GetSlopeZAt(slope, xpos + FINECOSINE(plangle), ypos - FINESINE(plangle));
+	slope_u.y = z_at_xy - height;
+
+	DoSlopeCrossProducts();
+	DoSlopeLightCrossProduct();
 }
 
 // This function calculates all of the vectors necessary for drawing a sloped and scaled plane.
 void R_SetScaledSlopePlane(pslope_t *slope, fixed_t xpos, fixed_t ypos, fixed_t zpos, fixed_t xs, fixed_t ys, fixed_t xoff, fixed_t yoff, angle_t angle, angle_t plangle)
 {
-	floatv3_t *m = &ds_slope_v, *n = &ds_slope_u;
-	fixed_t height, temp;
+	double height, z_at_xy;
+	float ang;
+
+	if (slope->moved)
+	{
+		P_CalculateSlopeVectors(slope);
+		slope->moved = false;
+	}
+
+	R_SetSlopePlaneOrigin(slope, xpos, ypos, zpos, xoff, yoff, angle);
+	height = R_GetSlopeZAt(slope, xpos, ypos);
+	zeroheight = height - FixedToDouble(zpos);
+
+	ang = ANG2RAD(ANGLE_180 - (angle + plangle));
+
+	CalcSlopeLightVectors(slope, xpos, ypos, height, ang, plangle);
+
+	if (ds_solidcolor || ds_fog)
+	{
+		DoSlopeLightCrossProduct();
+		return;
+	}
 
 	float xscale = FixedToFloat(xs);
 	float yscale = FixedToFloat(ys);
-	float ang;
 
-	R_SetSlopePlaneOrigin(slope, xpos, ypos, zpos, xoff, yoff, angle);
-	height = P_GetSlopeZAt(slope, xpos, ypos);
-	zeroheight = FixedToFloat(height - zpos);
+	// the v direction vector in view space
+	slope_v.x = yscale * cos(ang);
+	slope_v.z = yscale * sin(ang);
 
-	// m is the v direction vector in view space
-	ang = ANG2RAD(ANGLE_180 - (angle + plangle));
-	m->x = yscale * cos(ang);
-	m->z = yscale * sin(ang);
-
-	// n is the u direction vector in view space
-	n->x = xscale * sin(ang);
-	n->z = -xscale * cos(ang);
+	// the u direction vector in view space
+	slope_u.x = xscale * sin(ang);
+	slope_u.z = -xscale * cos(ang);
 
 	ang = ANG2RAD(plangle);
-	temp = P_GetSlopeZAt(slope, xpos + FloatToFixed(yscale * sin(ang)), ypos + FloatToFixed(yscale * cos(ang)));
-	m->y = FixedToFloat(temp - height);
-	temp = P_GetSlopeZAt(slope, xpos + FloatToFixed(xscale * cos(ang)), ypos - FloatToFixed(xscale * sin(ang)));
-	n->y = FixedToFloat(temp - height);
+	z_at_xy = R_GetSlopeZAt(slope, xpos + FloatToFixed(yscale * sin(ang)), ypos + FloatToFixed(yscale * cos(ang)));
+	slope_v.y = z_at_xy - height;
+	z_at_xy = R_GetSlopeZAt(slope, xpos + FloatToFixed(xscale * cos(ang)), ypos - FloatToFixed(xscale * sin(ang)));
+	slope_u.y = z_at_xy - height;
+
+	DoSlopeCrossProducts();
+	DoSlopeLightCrossProduct();
 }
 
-void R_CalculateSlopeVectors(void)
+static void CalcSlopeLightVectors(pslope_t *slope, fixed_t xpos, fixed_t ypos, double height, float ang, angle_t plangle)
 {
-	float sfmult = 65536.f;
+	double z_at_xy;
 
-	// Eh. I tried making this stuff fixed-point and it exploded on me. Here's a macro for the only floating-point vector function I recall using.
-#define CROSS(d, v1, v2) \
-d->x = (v1.y * v2.z) - (v1.z * v2.y);\
-d->y = (v1.z * v2.x) - (v1.x * v2.z);\
-d->z = (v1.x * v2.y) - (v1.y * v2.x)
-	CROSS(ds_sup, ds_slope_origin, ds_slope_v);
-	CROSS(ds_svp, ds_slope_origin, ds_slope_u);
-	CROSS(ds_szp, ds_slope_v, ds_slope_u);
-#undef CROSS
+	slope_lightv.x = cos(ang);
+	slope_lightv.z = sin(ang);
 
-	ds_sup->z *= focallengthf;
-	ds_svp->z *= focallengthf;
-	ds_szp->z *= focallengthf;
+	slope_lightu.x = sin(ang);
+	slope_lightu.z = -cos(ang);
+
+	plangle >>= ANGLETOFINESHIFT;
+	z_at_xy = R_GetSlopeZAt(slope, xpos + FINESINE(plangle), ypos + FINECOSINE(plangle));
+	slope_lightv.y = z_at_xy - height;
+	z_at_xy = R_GetSlopeZAt(slope, xpos + FINECOSINE(plangle), ypos - FINESINE(plangle));
+	slope_lightu.y = z_at_xy - height;
+}
+
+static void DoSlopeCrossProducts(void)
+{
+	DVector3_Cross(&slope_origin, &slope_v, &ds_su);
+	DVector3_Cross(&slope_origin, &slope_u, &ds_sv);
+	DVector3_Cross(&slope_v, &slope_u, &ds_sz);
+
+	ds_su.z *= focallengthf;
+	ds_sv.z *= focallengthf;
+	ds_sz.z *= focallengthf;
 
 	if (ds_solidcolor)
 		return;
 
 	// Premultiply the texture vectors with the scale factors
+	float sfmult = 65536.f;
+
 	if (ds_powersoftwo)
-		sfmult *= (1 << nflatshiftup);
+		sfmult *= 1 << nflatshiftup;
 
-	ds_sup->x *= sfmult;
-	ds_sup->y *= sfmult;
-	ds_sup->z *= sfmult;
-	ds_svp->x *= sfmult;
-	ds_svp->y *= sfmult;
-	ds_svp->z *= sfmult;
+	ds_su.x *= sfmult;
+	ds_su.y *= sfmult;
+	ds_su.z *= sfmult;
+	ds_sv.x *= sfmult;
+	ds_sv.y *= sfmult;
+	ds_sv.z *= sfmult;
 }
 
-void R_SetTiltedSpan(INT32 span)
+static void DoSlopeLightCrossProduct(void)
 {
-	if (ds_su == NULL)
-		ds_su = Z_Malloc(sizeof(*ds_su) * vid.height, PU_STATIC, NULL);
-	if (ds_sv == NULL)
-		ds_sv = Z_Malloc(sizeof(*ds_sv) * vid.height, PU_STATIC, NULL);
-	if (ds_sz == NULL)
-		ds_sz = Z_Malloc(sizeof(*ds_sz) * vid.height, PU_STATIC, NULL);
+	DVector3_Cross(&slope_lightv, &slope_lightu, &ds_slopelight);
 
-	ds_sup = &ds_su[span];
-	ds_svp = &ds_sv[span];
-	ds_szp = &ds_sz[span];
+	ds_slopelight.z *= focallengthf;
 }
 
-static void R_SetSlopePlaneVectors(visplane_t *pl, INT32 y, fixed_t xoff, fixed_t yoff)
+static void CalcSlopePlaneVectors(visplane_t *pl, fixed_t xoff, fixed_t yoff)
 {
-	R_SetTiltedSpan(y);
-	R_SetSlopePlane(pl->slope, pl->viewx, pl->viewy, pl->viewz, xoff, yoff, pl->viewangle, pl->plangle);
-	R_CalculateSlopeVectors();
+	if (!ds_fog && (pl->xscale != FRACUNIT || pl->yscale != FRACUNIT))
+	{
+		R_SetScaledSlopePlane(pl->slope, pl->viewx, pl->viewy, pl->viewz,
+			FixedDiv(FRACUNIT, pl->xscale), FixedDiv(FRACUNIT, pl->yscale),
+			FixedDiv(xoff, pl->xscale), FixedDiv(yoff, pl->yscale), pl->viewangle, pl->plangle);
+	}
+	else
+		R_SetSlopePlane(pl->slope, pl->viewx, pl->viewy, pl->viewz, xoff, yoff, pl->viewangle, pl->plangle);
 }
 
 static inline void R_AdjustSlopeCoordinates(vector3_t *origin)
@@ -856,7 +875,6 @@ void R_DrawSinglePlane(visplane_t *pl)
 	INT32 light = 0;
 	INT32 x, stop;
 	ffloor_t *rover;
-	boolean fog = false;
 	INT32 spanfunctype = BASEDRAWFUNC;
 	void (*mapfunc)(INT32, INT32, INT32);
 
@@ -869,6 +887,8 @@ void R_DrawSinglePlane(visplane_t *pl)
 		R_DrawSkyPlane(pl);
 		return;
 	}
+
+	ds_powersoftwo = ds_solidcolor = ds_fog = false;
 
 	planeripple.active = false;
 
@@ -934,13 +954,13 @@ void R_DrawSinglePlane(visplane_t *pl)
 			}
 			else if (pl->ffloor->fofflags & FOF_FOG)
 			{
-				fog = true;
+				ds_fog = true;
 				spanfunctype = SPANDRAWFUNC_FOG;
 				light = (pl->lightlevel >> LIGHTSEGSHIFT);
 			}
 			else light = (pl->lightlevel >> LIGHTSEGSHIFT);
 
-			if (pl->ffloor->fofflags & FOF_RIPPLE && !fog)
+			if (pl->ffloor->fofflags & FOF_RIPPLE && !ds_fog)
 			{
 				planeripple.active = true;
 
@@ -968,9 +988,7 @@ void R_DrawSinglePlane(visplane_t *pl)
 			light = (pl->lightlevel >> LIGHTSEGSHIFT);
 	}
 
-	ds_powersoftwo = ds_solidcolor = false;
-
-	if (fog)
+	if (ds_fog)
 	{
 		// Since all fog planes do is apply a colormap, it's not required
 		// to know any information about their textures.
@@ -980,37 +998,21 @@ void R_DrawSinglePlane(visplane_t *pl)
 	{
 		levelflat_t *levelflat = &levelflats[pl->picnum];
 
-		/* :james: */
-		switch (levelflat->type)
-		{
-			case LEVELFLAT_NONE:
-				return;
-			case LEVELFLAT_FLAT:
-				ds_source = (UINT8 *)R_GetFlat(levelflat->u.flat.lumpnum);
-				R_SetFlatVars(W_LumpLength(levelflat->u.flat.lumpnum));
-				if (R_CheckSolidColorFlat())
-					ds_solidcolor = true;
-				else
-					ds_powersoftwo = true;
-				break;
-			default:
-				ds_source = (UINT8 *)R_GetLevelFlat(levelflat);
-				if (!ds_source)
-					return;
-				else if (R_CheckSolidColorFlat())
-					ds_solidcolor = true;
-				else if (R_CheckPowersOfTwo())
-				{
-					R_SetFlatVars(ds_flatwidth * ds_flatheight);
-					ds_powersoftwo = true;
-				}
-		}
+		// Get the texture
+		ds_source = (UINT8 *)R_GetFlat(levelflat);
+		if (ds_source == NULL)
+			return;
 
-		// Don't mess with angle on slopes! We'll handle this ourselves later
-		if (!pl->slope && viewangle != pl->viewangle+pl->plangle)
+		texture_t *texture = textures[R_GetTextureNumForFlat(levelflat)];
+		ds_flatwidth = texture->width;
+		ds_flatheight = texture->height;
+
+		if (R_CheckSolidColorFlat())
+			ds_solidcolor = true;
+		else if (R_CheckPowersOfTwo())
 		{
-			memset(cachedheight, 0, sizeof (cachedheight));
-			viewangle = pl->viewangle+pl->plangle;
+			R_SetFlatVars(ds_flatwidth * ds_flatheight);
+			ds_powersoftwo = true;
 		}
 
 		mapfunc = R_MapPlane;
@@ -1043,13 +1045,13 @@ void R_DrawSinglePlane(visplane_t *pl)
 
 	if (pl->slope)
 	{
-		if (fog)
+		if (ds_fog)
 			mapfunc = R_MapTiltedFogPlane;
 		else
 		{
 			mapfunc = R_MapTiltedPlane;
 
-			if (!pl->plangle && !ds_solidcolor)
+			if (!pl->plangle && !ds_solidcolor && pl->xscale == FRACUNIT && pl->yscale == FRACUNIT)
 			{
 				if (ds_powersoftwo)
 					R_AdjustSlopeCoordinates(&pl->slope->o);
@@ -1058,21 +1060,10 @@ void R_DrawSinglePlane(visplane_t *pl)
 			}
 		}
 
-		if (planeripple.active)
-		{
+		if (!ds_fog && planeripple.active)
 			planeheight = abs(P_GetSlopeZAt(pl->slope, pl->viewx, pl->viewy) - pl->viewz);
-
-			R_PlaneBounds(pl);
-
-			for (x = pl->high; x < pl->low; x++)
-			{
-				ds_bgofs = R_CalculateRippleOffset(x);
-				R_CalculatePlaneRipple(pl->viewangle + pl->plangle);
-				R_SetSlopePlaneVectors(pl, x, (xoffs + planeripple.xfrac), (yoffs + planeripple.yfrac));
-			}
-		}
 		else
-			R_SetSlopePlaneVectors(pl, 0, xoffs, yoffs);
+			CalcSlopePlaneVectors(pl, xoffs, yoffs);
 
 		switch (spanfunctype)
 		{

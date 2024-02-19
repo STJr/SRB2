@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2022 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -49,10 +49,13 @@ typedef struct visplane_s
 	INT32 high, low; // R_PlaneBounds should set these.
 
 	fixed_t xoffs, yoffs; // Scrolling flats.
+	fixed_t xscale, yscale;
 
+	sector_t *sector;
 	struct ffloor_s *ffloor;
 	polyobj_t *polyobj;
 	pslope_t *slope;
+	sectorportal_t *portalsector;
 } visplane_t;
 
 extern visplane_t *visplanes[MAXVISPLANES];
@@ -60,26 +63,19 @@ extern visplane_t *floorplane;
 extern visplane_t *ceilingplane;
 
 // Visplane related.
-extern INT16 *lastopening, *openings;
-extern size_t maxopenings;
-
 extern INT16 floorclip[MAXVIDWIDTH], ceilingclip[MAXVIDWIDTH];
 extern fixed_t frontscale[MAXVIDWIDTH], yslopetab[MAXVIDHEIGHT*16];
-extern fixed_t cachedheight[MAXVIDHEIGHT];
-extern fixed_t cacheddistance[MAXVIDHEIGHT];
-extern fixed_t cachedxstep[MAXVIDHEIGHT];
-extern fixed_t cachedystep[MAXVIDHEIGHT];
 
 extern fixed_t *yslope;
 extern lighttable_t **planezlight;
 
-void R_InitPlanes(void);
 void R_ClearPlanes(void);
 void R_ClearFFloorClips (void);
 
 void R_DrawPlanes(void);
-visplane_t *R_FindPlane(fixed_t height, INT32 picnum, INT32 lightlevel, fixed_t xoff, fixed_t yoff, angle_t plangle,
-	extracolormap_t *planecolormap, ffloor_t *ffloor, polyobj_t *polyobj, pslope_t *slope);
+visplane_t *R_FindPlane(sector_t *sector, fixed_t height, INT32 picnum, INT32 lightlevel,
+	fixed_t xoff, fixed_t yoff, fixed_t xscale, fixed_t yscale, angle_t plangle,
+	extracolormap_t *planecolormap, ffloor_t *ffloor, polyobj_t *polyobj, pslope_t *slope, sectorportal_t *portalsector);
 visplane_t *R_CheckPlane(visplane_t *pl, INT32 start, INT32 stop);
 void R_ExpandPlane(visplane_t *pl, INT32 start, INT32 stop);
 void R_PlaneBounds(visplane_t *plane);
@@ -90,10 +86,6 @@ void R_DrawSinglePlane(visplane_t *pl);
 // Calculates the slope vectors needed for tilted span drawing.
 void R_SetSlopePlane(pslope_t *slope, fixed_t xpos, fixed_t ypos, fixed_t zpos, fixed_t xoff, fixed_t yoff, angle_t angle, angle_t plangle);
 void R_SetScaledSlopePlane(pslope_t *slope, fixed_t xpos, fixed_t ypos, fixed_t zpos, fixed_t xs, fixed_t ys, fixed_t xoff, fixed_t yoff, angle_t angle, angle_t plangle);
-void R_CalculateSlopeVectors(void);
-
-// Sets the slope vector pointers for the current tilted span.
-void R_SetTiltedSpan(INT32 span);
 
 typedef struct planemgr_s
 {

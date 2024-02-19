@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2012-2016 by John "JTE" Muniz.
-// Copyright (C) 2012-2022 by Sonic Team Junior.
+// Copyright (C) 2012-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -30,13 +30,11 @@
 // TODO add some distinction between fixed numbers and integer numbers
 // for at least the purpose of printing and maybe math.
 #define luaL_checkfixed(L, i) luaL_checkinteger(L, i)
-#define luaL_optfixed(L, i, o) luaL_optinteger(L, i, o)
 #define lua_pushfixed(L, f) lua_pushinteger(L, f)
 
 // angle_t casting
 // TODO deal with signedness
 #define luaL_checkangle(L, i) ((angle_t)luaL_checkinteger(L, i))
-#define luaL_optangle(L, i, o) ((angle_t)luaL_optinteger(L, i, o))
 #define lua_pushangle(L, a) lua_pushinteger(L, a)
 
 #ifdef _DEBUG
@@ -47,7 +45,8 @@ extern INT32 lua_lumploading; // is LUA_LoadLump being called?
 
 int LUA_GetErrorMessage(lua_State *L);
 int LUA_Call(lua_State *L, int nargs, int nresults, int errorhandlerindex);
-void LUA_LoadLump(UINT16 wad, UINT16 lump, boolean noresults);
+boolean LUA_LoadLump(UINT16 wad, UINT16 lump);
+void LUA_DoLump(UINT16 wad, UINT16 lump, boolean noresults);
 #ifdef LUA_ALLOW_BYTECODE
 void LUA_DumpFile(const char *filename);
 #endif
@@ -59,8 +58,8 @@ int LUA_PushGlobals(lua_State *L, const char *word);
 int LUA_CheckGlobals(lua_State *L, const char *word);
 void Got_Luacmd(UINT8 **cp, INT32 playernum); // lua_consolelib.c
 void LUA_CVarChanged(void *cvar); // lua_consolelib.c
-int Lua_optoption(lua_State *L, int narg,
-	const char *def, const char *const lst[]);
+int Lua_optoption(lua_State *L, int narg, int def, int list_ref);
+int Lua_CreateFieldTable(lua_State *L, const char *const lst[]);
 void LUA_HookNetArchive(lua_CFunction archFunc);
 
 void LUA_PushTaggableObjectArray
@@ -74,6 +73,42 @@ void LUA_PushTaggableObjectArray
 		void * element_array,
 		size_t sizeof_element,
 		const char *meta);
+
+void LUA_SetCFunctionField(lua_State *L, const char *name, lua_CFunction value);
+
+void LUA_RegisterUserdataMetatable(
+	lua_State *L,
+	const char *name,
+	lua_CFunction get,
+	lua_CFunction set,
+	lua_CFunction len
+);
+
+void LUA_CreateAndSetMetatable(
+	lua_State *L,
+	lua_CFunction get,
+	lua_CFunction set,
+	lua_CFunction len,
+	boolean keep
+);
+
+void LUA_CreateAndSetUserdataField(
+	lua_State *L,
+	int index,
+	const char *name,
+	lua_CFunction get,
+	lua_CFunction set,
+	lua_CFunction len,
+	boolean keep
+);
+
+void LUA_RegisterGlobalUserdata(
+	lua_State *L,
+	const char *name,
+	lua_CFunction get,
+	lua_CFunction set,
+	lua_CFunction len
+);
 
 void LUA_InsertTaggroupIterator
 (		lua_State *L,

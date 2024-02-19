@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2022 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -20,23 +20,23 @@
 // Command buffer & command execution
 //===================================
 
-/* Lua command registration flags. */
-enum
+/* Command registration flags. */
+typedef enum
 {
 	COM_ADMIN       = 1,
 	COM_SPLITSCREEN = 2,
 	COM_LOCAL       = 4,
-};
 
-/* Command buffer flags. */
-enum
-{
-	COM_SAFE = 1,
-};
+	// COM_BufInsertText etc: can only access cvars
+	// with CV_ALLOWLUA set.
+	// COM_AddCommand: without this flag, the command
+	// CANNOT be run from Lua.
+	COM_LUA         = 8,
+} com_flags_t;
 
 typedef void (*com_func_t)(void);
 
-void COM_AddCommand(const char *name, com_func_t func);
+void COM_AddCommand(const char *name, com_func_t func, com_flags_t flags);
 int COM_AddLuaCommand(const char *name);
 
 size_t COM_Argc(void);
@@ -53,11 +53,11 @@ const char *COM_CompleteAlias(const char *partial, INT32 skips);
 
 // insert at queu (at end of other command)
 #define COM_BufAddText(s) COM_BufAddTextEx(s, 0)
-void COM_BufAddTextEx(const char *btext, int flags);
+void COM_BufAddTextEx(const char *btext, com_flags_t flags);
 
 // insert in head (before other command)
 #define COM_BufInsertText(s) COM_BufInsertTextEx(s, 0)
-void COM_BufInsertTextEx(const char *btext, int flags);
+void COM_BufInsertTextEx(const char *btext, com_flags_t flags);
 
 // don't bother inserting, just do immediately
 void COM_ImmedExecute(const char *ptext);
@@ -89,7 +89,7 @@ void VS_Free(vsbuf_t *buf);
 void VS_Clear(vsbuf_t *buf);
 void *VS_GetSpace(vsbuf_t *buf, size_t length);
 void VS_Write(vsbuf_t *buf, const void *data, size_t length);
-void VS_WriteEx(vsbuf_t *buf, const void *data, size_t length, int flags);
+void VS_WriteEx(vsbuf_t *buf, const void *data, size_t length, com_flags_t flags);
 void VS_Print(vsbuf_t *buf, const char *data); // strcats onto the sizebuf
 
 //==================
@@ -120,7 +120,7 @@ typedef enum
 	                 // can only be set when we have the pointer to it
                    // used on menus
 	CV_CHEAT = 2048, // Don't let this be used in multiplayer unless cheats are on.
-	CV_NOLUA = 4096,/* don't let this be called from Lua */
+	CV_ALLOWLUA = 4096,/* Let this be called from Lua */
 } cvflags_t;
 
 typedef struct CV_PossibleValue_s
@@ -136,6 +136,7 @@ typedef struct consvar_s //NULL, NULL, 0, NULL, NULL |, 0, NULL, NULL, 0, 0, NUL
 	INT32 flags;            // flags see cvflags_t above
 	CV_PossibleValue_t *PossibleValue; // table of possible values
 	void (*func)(void);   // called on change, if CV_CALL set
+	boolean (*can_change)(const char*);   // called before change, if CV_CALL set
 	INT32 value;            // for INT32 and fixed_t
 	const char *string;   // value in string
 	char *zstring;        // Either NULL or same as string.
@@ -158,6 +159,9 @@ typedef struct consvar_s //NULL, NULL, 0, NULL, NULL |, 0, NULL, NULL, 0, 0, NUL
 
 /* name, defaultvalue, flags, PossibleValue, func */
 #define CVAR_INIT( ... ) \
+{ __VA_ARGS__, NULL, 0, NULL, NULL, {0, {NULL}}, 0U, (char)0, NULL }
+
+#define CVAR_INIT_WITH_CALLBACKS( ... ) \
 { __VA_ARGS__, 0, NULL, NULL, {0, {NULL}}, 0U, (char)0, NULL }
 
 #ifdef OLD22DEMOCOMPAT
@@ -177,6 +181,7 @@ extern CV_PossibleValue_t CV_OnOff[];
 extern CV_PossibleValue_t CV_YesNo[];
 extern CV_PossibleValue_t CV_Unsigned[];
 extern CV_PossibleValue_t CV_Natural[];
+extern CV_PossibleValue_t CV_TrueFalse[];
 
 // Filter consvars by version
 extern consvar_t cv_execversion;

@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2012-2016 by John "JTE" Muniz.
-// Copyright (C) 2012-2022 by Sonic Team Junior.
+// Copyright (C) 2012-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -125,6 +125,7 @@ static int lib_fixeddiv(lua_State *L)
 	return 1;
 }
 
+// TODO: 2.3: Delete
 static int lib_fixedrem(lua_State *L)
 {
 	LUA_Deprecated(L, "FixedRem(a, b)", "a % b");

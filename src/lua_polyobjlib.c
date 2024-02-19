@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
-// Copyright (C) 2020-2022 by Iestyn "Monster Iestyn" Jealous.
-// Copyright (C) 2020-2022 by Sonic Team Junior.
+// Copyright (C) 2020-2023 by Iestyn "Monster Iestyn" Jealous.
+// Copyright (C) 2020-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -447,41 +447,10 @@ static int lib_numPolyObjects(lua_State *L)
 
 int LUA_PolyObjLib(lua_State *L)
 {
-	luaL_newmetatable(L, META_POLYOBJVERTICES);
-		lua_pushcfunction(L, polyobjvertices_get);
-		lua_setfield(L, -2, "__index");
+	LUA_RegisterUserdataMetatable(L, META_POLYOBJVERTICES, polyobjvertices_get, NULL, polyobjvertices_num);
+	LUA_RegisterUserdataMetatable(L, META_POLYOBJLINES, polyobjlines_get, NULL, polyobjlines_num);
+	LUA_RegisterUserdataMetatable(L, META_POLYOBJ, polyobj_get, polyobj_set, polyobj_num);
 
-		lua_pushcfunction(L, polyobjvertices_num);
-		lua_setfield(L, -2, "__len");
-	lua_pop(L, 1);
-
-	luaL_newmetatable(L, META_POLYOBJLINES);
-		lua_pushcfunction(L, polyobjlines_get);
-		lua_setfield(L, -2, "__index");
-
-		lua_pushcfunction(L, polyobjlines_num);
-		lua_setfield(L, -2, "__len");
-	lua_pop(L, 1);
-
-	luaL_newmetatable(L, META_POLYOBJ);
-		lua_pushcfunction(L, polyobj_get);
-		lua_setfield(L, -2, "__index");
-
-		lua_pushcfunction(L, polyobj_set);
-		lua_setfield(L, -2, "__newindex");
-
-		lua_pushcfunction(L, polyobj_num);
-		lua_setfield(L, -2, "__len");
-	lua_pop(L,1);
-
-	lua_newuserdata(L, 0);
-		lua_createtable(L, 0, 2);
-			lua_pushcfunction(L, lib_getPolyObject);
-			lua_setfield(L, -2, "__index");
-
-			lua_pushcfunction(L, lib_numPolyObjects);
-			lua_setfield(L, -2, "__len");
-		lua_setmetatable(L, -2);
-	lua_setglobal(L, "polyobjects");
+	LUA_RegisterGlobalUserdata(L, "polyobjects", lib_getPolyObject, NULL, lib_numPolyObjects);
 	return 0;
 }

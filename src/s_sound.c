@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2022 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -289,8 +289,8 @@ void S_RegisterSoundStuff(void)
 	CV_RegisterVar(&cv_miditimiditypath);
 #endif
 
-	COM_AddCommand("tunes", Command_Tunes_f);
-	COM_AddCommand("restartaudio", Command_RestartAudio_f);
+	COM_AddCommand("tunes", Command_Tunes_f, COM_LUA);
+	COM_AddCommand("restartaudio", Command_RestartAudio_f, COM_LUA);
 }
 
 static void SetChannelsNum(void)
@@ -513,7 +513,7 @@ void S_StartCaption(sfxenum_t sfx_id, INT32 cnum, UINT16 lifespan)
 	closedcaptions[set].c = ((cnum == -1) ? NULL : &channels[cnum]);
 	closedcaptions[set].s = sfx;
 	closedcaptions[set].t = lifespan;
-	closedcaptions[set].b = 2; // bob
+	closedcaptions[set].b = 3; // bob
 }
 
 void S_StartSoundAtVolume(const void *origin_p, sfxenum_t sfx_id, INT32 volume)
@@ -1692,6 +1692,7 @@ UINT8 soundtestpage = 1;
 //
 boolean S_PrepareSoundTest(void)
 {
+	gamedata_t *data = clientGamedata;
 	musicdef_t *def;
 	INT32 pos = numsoundtestdefs = 0;
 
@@ -1717,9 +1718,9 @@ boolean S_PrepareSoundTest(void)
 		if (!(def->soundtestpage & soundtestpage))
 			continue;
 		soundtestdefs[pos++] = def;
-		if (def->soundtestcond > 0 && !(mapvisited[def->soundtestcond-1] & MV_BEATEN))
+		if (def->soundtestcond > 0 && !(data->mapvisited[def->soundtestcond-1] & MV_BEATEN))
 			continue;
-		if (def->soundtestcond < 0 && !M_Achieved(-1-def->soundtestcond))
+		if (def->soundtestcond < 0 && !M_Achieved(-1-def->soundtestcond, data))
 			continue;
 		def->allowed = true;
 	}

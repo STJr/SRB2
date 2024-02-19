@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2022 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -118,11 +118,11 @@ typedef enum
 	// Don't apply gravity (every tic); object will float, keeping current height
 	//  or changing it actively.
 	MF_NOGRAVITY        = 1<<9,
-	// This object is an ambient sound. Obsolete, but keep this around for backwards compatibility.
+	// This object is an ambient sound.
 	MF_AMBIENT          = 1<<10,
 	// Slide this object when it hits a wall.
 	MF_SLIDEME          = 1<<11,
-	// Player cheat.
+	// Don't collide with walls or solid objects. Two MF_NOCLIP objects can't touch each other at all!
 	MF_NOCLIP           = 1<<12,
 	// Allow moves to any height, no gravity. For active floaters.
 	MF_FLOAT            = 1<<13,
@@ -273,6 +273,19 @@ typedef enum {
 	PCF_THUNK = 32,
 } precipflag_t;
 
+// [RH] Like msecnode_t, but for the blockmap
+typedef struct blocknode_s
+{
+	struct mobj_s *mobj;
+
+	int blockindex;     // index into blocklinks for the block this node is in
+
+	struct blocknode_s **mprev; // previous actor in this block
+	struct blocknode_s *mnext;  // next actor in this block
+	struct blocknode_s **bprev; // previous block this actor is in
+	struct blocknode_s *bnext;  // next block this actor is in
+} blocknode_t;
+
 // Map Object definition.
 typedef struct mobj_s
 {
@@ -292,7 +305,7 @@ typedef struct mobj_s
 	angle_t angle, pitch, roll; // orientation
 	angle_t old_angle, old_pitch, old_roll; // orientation interpolation
 	angle_t old_angle2, old_pitch2, old_roll2;
-	angle_t rollangle;
+	angle_t spriteroll, old_spriteroll, old_spriteroll2;
 	spritenum_t sprite; // used to find patch_t and flip value
 	UINT32 frame; // frame number, plus bits see p_pspr.h
 	UINT8 sprite2; // player sprites
@@ -331,14 +344,20 @@ typedef struct mobj_s
 	UINT16 eflags; // extra flags
 
 	void *skin; // overrides 'sprite' when non-NULL (for player bodies to 'remember' the skin)
+
 	// Player and mobj sprites in multiplayer modes are modified
 	//  using an internal color lookup table for re-indexing.
-	UINT16 color; // This replaces MF_TRANSLATION. Use 0 for default (no translation).
+	UINT16 color;
+
+	// This replaces MF_TRANSLATION. Use 0 for default (no translation).
+	UINT16 translation;
+
+	struct player_s *drawonlyforplayer; // If set, hides the mobj for everyone except this player and their spectators
+	struct mobj_s *dontdrawforviewmobj; // If set, hides the mobj if dontdrawforviewmobj is the current camera (first-person player or awayviewmobj)
 
 	// Interaction info, by BLOCKMAP.
 	// Links in blocks (if needed).
-	struct mobj_s *bnext;
-	struct mobj_s **bprev; // killough 8/11/98: change to ptr-to-ptr
+	blocknode_t *blocknode;
 
 	// Additional pointers for NiGHTS hoops
 	struct mobj_s *hnext;
@@ -399,6 +418,7 @@ typedef struct mobj_s
 	boolean colorized; // Whether the mobj uses the rainbow colormap
 	boolean mirrored; // The object's rotations will be mirrored left to right, e.g., see frame AL from the right and AR from the left
 	fixed_t shadowscale; // If this object casts a shadow, and the size relative to radius
+	INT32 dispoffset; // copy of info->dispoffset, so mobjs can be sorted independently of their type
 
 	// WARNING: New fields must be added separately to savegame and Lua.
 } mobj_t;
@@ -428,7 +448,7 @@ typedef struct precipmobj_s
 	angle_t angle, pitch, roll; // orientation
 	angle_t old_angle, old_pitch, old_roll; // orientation interpolation
 	angle_t old_angle2, old_pitch2, old_roll2;
-	angle_t rollangle;
+	angle_t spriteroll, old_spriteroll, old_spriteroll2;
 	spritenum_t sprite; // used to find patch_t and flip value
 	UINT32 frame; // frame number, plus bits see p_pspr.h
 	UINT8 sprite2; // player sprites
@@ -488,7 +508,7 @@ void P_MovePlayerToSpawn(INT32 playernum, mapthing_t *mthing);
 void P_MovePlayerToStarpost(INT32 playernum);
 void P_AfterPlayerSpawn(INT32 playernum);
 
-fixed_t P_GetMobjSpawnHeight(const mobjtype_t mobjtype, const fixed_t x, const fixed_t y, const fixed_t dz, const fixed_t offset, const boolean flip, const fixed_t scale);
+fixed_t P_GetMobjSpawnHeight(const mobjtype_t mobjtype, const fixed_t x, const fixed_t y, const fixed_t dz, const fixed_t offset, const boolean flip, const fixed_t scale, const boolean absolutez);
 fixed_t P_GetMapThingSpawnHeight(const mobjtype_t mobjtype, const mapthing_t* mthing, const fixed_t x, const fixed_t y);
 
 mobj_t *P_SpawnMapThing(mapthing_t *mthing);

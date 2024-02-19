@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2022 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -109,8 +109,17 @@ const char * M_Ftrim (double);
 // Returns true if the string is empty.
 boolean M_IsStringEmpty(const char *s);
 
+// Converts a string containing a whole number into an int. Returns false if the conversion failed.
+boolean M_StringToNumber(const char *input, int *out);
+
+// Converts a string containing a number into a double. Returns false if the conversion failed.
+boolean M_StringToDecimal(const char *input, double *out);
+
 // counting bits, for weapon ammo code, usually
 FUNCMATH UINT8 M_CountBits(UINT32 num, UINT8 size);
+
+// Rounds off floating numbers and checks for 0 - 255 bounds
+int M_RoundUp(double number);
 
 #include "w_wad.h"
 extern char configfile[MAX_WADPATH];

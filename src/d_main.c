@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2022 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -34,7 +34,7 @@
 #include "doomdef.h"
 #include "am_map.h"
 #include "console.h"
-#include "d_net.h"
+#include "netcode/d_net.h"
 #include "f_finale.h"
 #include "g_game.h"
 #include "hu_stuff.h"
@@ -43,7 +43,6 @@
 #include "i_time.h"
 #include "i_threads.h"
 #include "i_video.h"
-#include "i_gamepad.h"
 #include "m_argv.h"
 #include "m_menu.h"
 #include "m_misc.h"
@@ -51,17 +50,18 @@
 #include "p_saveg.h"
 #include "r_main.h"
 #include "r_local.h"
+#include "r_translation.h"
 #include "s_sound.h"
 #include "st_stuff.h"
 #include "v_video.h"
 #include "w_wad.h"
 #include "z_zone.h"
 #include "d_main.h"
-#include "d_netfil.h"
+#include "netcode/d_netfil.h"
 #include "m_cheat.h"
 #include "y_inter.h"
 #include "p_local.h" // chasecam
-#include "mserv.h" // ms_RoomId
+#include "netcode/mserv.h" // ms_RoomId
 #include "m_misc.h" // screenshot functionality
 #include "deh_tables.h" // Dehacked list test
 #include "m_cond.h" // condition initialization
@@ -71,6 +71,8 @@
 #include "filesrch.h" // refreshdirmenu
 #include "g_input.h" // tutorial mode control scheming
 #include "m_perfstats.h"
+#include "m_random.h"
+#include "command.h"
 
 #ifdef CMAKECONFIG
 #include "config.h"
@@ -191,19 +193,19 @@ void D_ProcessEvents(void)
 		ev = &events[eventtail];
 
 		// Set mouse buttons early in case event is eaten later
-		if (ev->type == ev_keydown || ev->type == ev_keyup)
+		if (ev->type == ev_keydown || ev->type == ev_keyup || ev->type == ev_text)
 		{
 			// Mouse buttons
 			if ((UINT32)(ev->key - KEY_MOUSE1) < MOUSEBUTTONS)
 			{
-				if (ev->type == ev_keydown)
+				if (ev->type == ev_keydown || ev->type == ev_text)
 					mouse.buttons |= 1 << (ev->key - KEY_MOUSE1);
 				else
 					mouse.buttons &= ~(1 << (ev->key - KEY_MOUSE1));
 			}
 			else if ((UINT32)(ev->key - KEY_2MOUSE1) < MOUSEBUTTONS)
 			{
-				if (ev->type == ev_keydown)
+				if (ev->type == ev_keydown || ev->type == ev_text)
 					mouse2.buttons |= 1 << (ev->key - KEY_2MOUSE1);
 				else
 					mouse2.buttons &= ~(1 << (ev->key - KEY_2MOUSE1));
@@ -459,6 +461,13 @@ static void D_Display(void)
 
 		case GS_WAITINGPLAYERS:
 			// The clientconnect drawer is independent...
+			if (netgame)
+			{
+				// I don't think HOM from nothing drawing is independent...
+				F_WaitingPlayersDrawer();
+				HU_Erase();
+				HU_Drawer();
+			}
 		case GS_DEDICATEDSERVER:
 		case GS_NULL:
 			break;
@@ -973,6 +982,7 @@ void D_StartTitle(void)
 	emeralds = 0;
 	memset(&luabanks, 0, sizeof(luabanks));
 	lastmaploaded = 0;
+	pickedchar = R_SkinAvailable(cv_defaultskin.string);
 
 	// In case someone exits out at the same time they start a time attack run,
 	// reset modeattacking
@@ -987,7 +997,6 @@ void D_StartTitle(void)
 	G_SetGametype(GT_COOP);
 	paused = false;
 	advancedemo = false;
-	P_StopRumble(NULL);
 	F_InitMenuPresValues();
 	F_StartTitleScreen();
 
@@ -1210,6 +1219,15 @@ D_ConvertVersionNumbers (void)
 #endif
 }
 
+static void Command_assert(void)
+{
+#if !defined(NDEBUG) || defined(PARANOIA)
+	CONS_Printf("Yes, assertions are enabled.\n");
+#else
+	CONS_Printf("No, assertions are NOT enabled.\n");
+#endif
+}
+
 //
 // D_SRB2Main
 //
@@ -1223,10 +1241,15 @@ void D_SRB2Main(void)
 	/* break the version string into version numbers, for netplay */
 	D_ConvertVersionNumbers();
 
+	if (!strcmp(compbranch, ""))
+	{
+		compbranch = "detached HEAD";
+	}
+
 	// Print GPL notice for our console users (Linux)
 	CONS_Printf(
 	"\n\nSonic Robo Blast 2\n"
-	"Copyright (C) 1998-2022 by Sonic Team Junior\n\n"
+	"Copyright (C) 1998-2023 by Sonic Team Junior\n\n"
 	"This program comes with ABSOLUTELY NO WARRANTY.\n\n"
 	"This is free software, and you are welcome to redistribute it\n"
 	"and/or modify it under the terms of the GNU General Public License\n"
@@ -1272,7 +1295,7 @@ void D_SRB2Main(void)
 #endif
 
 	// for dedicated server
-#if !defined (_WINDOWS) //already check in win_main.c
+#if !defined (_WINDOWS) && !defined (DEDICATED) //already check in win_main.c
 	dedicated = M_CheckParm("-dedicated") != 0;
 #endif
 
@@ -1336,11 +1359,12 @@ void D_SRB2Main(void)
 	snprintf(addonsdir, sizeof addonsdir, "%s%s%s", srb2home, PATHSEP, "addons");
 	I_mkdir(addonsdir, 0755);
 
-	// rand() needs seeded regardless of password
-	srand((unsigned int)time(NULL));
-	rand();
-	rand();
-	rand();
+	// seed M_Random because it is necessary; seed P_Random for scripts that
+	// might want to use random numbers immediately at start
+	if (!M_RandomSeedFromOS())
+		M_RandomSeed((UINT32)time(NULL)); // less good but serviceable
+
+	P_SetRandSeed(M_RandomizedSeed());
 
 	if (M_CheckParm("-password") && M_IsNextParm())
 		D_SetPassword(M_GetNextParm());
@@ -1352,8 +1376,13 @@ void D_SRB2Main(void)
 	CONS_Printf("Z_Init(): Init zone memory allocation daemon. \n");
 	Z_Init();
 
+	clientGamedata = M_NewGameDataStruct();
+	serverGamedata = M_NewGameDataStruct();
+
 	// Do this up here so that WADs loaded through the command line can use ExecCfg
 	COM_Init();
+
+	COM_AddCommand("assert", Command_assert, COM_LUA);
 
 	// Add any files specified on the command line with
 	// "-file <file>" or "-folder <folder>" to the add-on list
@@ -1398,15 +1427,8 @@ void D_SRB2Main(void)
 	CONS_Printf("I_InitializeTime()...\n");
 	I_InitializeTime();
 
-	// Initializes the game logic side of gamepads
-	G_InitGamepads();
-
 	// Make backups of some SOCcable tables.
 	P_BackupTables();
-
-	// Setup character tables
-	// Have to be done here before files are loaded
-	M_InitCharacterTables();
 
 	mainwads = 3; // doesn't include music.dta
 #ifdef USE_PATCH_DTA
@@ -1450,15 +1472,14 @@ void D_SRB2Main(void)
 	// setup loading screen
 	SCR_Startup();
 
+	PaletteRemap_Init();
+
 	HU_Init();
 
 	CON_Init();
 
 	D_RegisterServerCommands();
 	D_RegisterClientCommands(); // be sure that this is called before D_CheckNetGame
-
-	I_InitGamepads();
-
 	R_RegisterEngineStuff();
 	S_RegisterSoundStuff();
 
@@ -1481,7 +1502,15 @@ void D_SRB2Main(void)
 	//--------------------------------------------------------- CONFIG.CFG
 	M_FirstLoadConfig(); // WARNING : this do a "COM_BufExecute()"
 
-	G_LoadGameData();
+	if (M_CheckParm("-gamedata") && M_IsNextParm())
+	{
+		// Moved from G_LoadGameData itself, as it would cause some crazy
+		// confusion issues when loading mods.
+		strlcpy(gamedatafilename, M_GetNextParm(), sizeof gamedatafilename);
+	}
+
+	G_LoadGameData(clientGamedata);
+	M_CopyGameData(serverGamedata, clientGamedata);
 
 #if defined (__unix__) || defined (UNIXCOMMON) || defined (HAVE_SDL)
 	VID_PrepareModeList(); // Regenerate Modelist according to cv_fullscreen
@@ -1508,7 +1537,7 @@ void D_SRB2Main(void)
 		else
 		{
 			if (!M_CheckParm("-server"))
-				G_SetGameModified(true);
+				G_SetUsedCheats(true);
 			autostart = true;
 		}
 	}
@@ -1583,6 +1612,9 @@ void D_SRB2Main(void)
 	CONS_Printf("D_CheckNetGame(): Checking network game status.\n");
 	if (D_CheckNetGame())
 		autostart = true;
+
+	if (!dedicated)
+		pickedchar = R_SkinAvailable(cv_defaultskin.string);
 
 	// check for a driver that wants intermission stats
 	// start the apropriate game based on parms
@@ -1708,14 +1740,15 @@ void D_SRB2Main(void)
 			// Prevent warping to nonexistent levels
 			if (W_CheckNumForName(G_BuildMapName(pstartmap)) == LUMPERROR)
 				I_Error("Could not warp to %s (map not found)\n", G_BuildMapName(pstartmap));
-			// Prevent warping to locked levels
-			// ... unless you're in a dedicated server.  Yes, technically this means you can view any level by
-			// running a dedicated server and joining it yourself, but that's better than making dedicated server's
-			// lives hell.
-			else if (!dedicated && M_MapLocked(pstartmap))
-				I_Error("You need to unlock this level before you can warp to it!\n");
 			else
 			{
+				if (M_CampaignWarpIsCheat(gametype, pstartmap, serverGamedata))
+				{
+					// If you're warping via command line, you know what you're doing.
+					// No need to I_Error over this.
+					G_SetUsedCheats(false);
+				}
+
 				D_MapChange(pstartmap, gametype, ultimatemode, true, 0, false, false);
 			}
 		}
@@ -1784,4 +1817,86 @@ const char *D_Home(void)
 #endif// _WIN32
 	if (usehome) return userhome;
 	else return NULL;
+}
+
+static boolean check_top_dir(const char **path, const char *top)
+{
+	// empty string does NOT match
+	if (!strcmp(top, ""))
+		return false;
+
+	if (!startswith(*path, top))
+		return false;
+
+	*path += strlen(top);
+
+	// if it doesn't already end with a path separator,
+	// check if a separator follows
+	if (!endswith(top, PATHSEP))
+	{
+		if (startswith(*path, PATHSEP))
+			*path += strlen(PATHSEP);
+		else
+			return false;
+	}
+
+	return true;
+}
+
+static int cmp_strlen_desc(const void *a, const void *b)
+{
+	return ((int)strlen(*(const char*const*)b) - (int)strlen(*(const char*const*)a));
+}
+
+boolean D_IsPathAllowed(const char *path)
+{
+	const char *paths[] = {
+		srb2home,
+		srb2path,
+		cv_addons_folder.string
+	};
+
+	const size_t n_paths = sizeof paths / sizeof *paths;
+
+	size_t i;
+
+	// Sort folder paths by longest to shortest so
+	// overlapping paths work. E.g.:
+	// Path 1: /home/james/.srb2/addons
+	// Path 2: /home/james/.srb2
+	qsort(paths, n_paths, sizeof *paths, cmp_strlen_desc);
+
+	// These paths are allowed to be absolute
+	// path is offset so ".." can be checked only in the
+	// rest of the path
+	for (i = 0; i < n_paths; ++i)
+	{
+		if (check_top_dir(&path, paths[i]))
+			break;
+	}
+
+	// Only if none of the presets matched
+	if (i == n_paths)
+	{
+		// Cannot be an absolute path
+		if (M_IsPathAbsolute(path))
+			return false;
+	}
+
+	// Cannot traverse upwards
+	if (strstr(path, ".."))
+		return false;
+
+	return true;
+}
+
+boolean D_CheckPathAllowed(const char *path, const char *why)
+{
+	if (!D_IsPathAllowed(path))
+	{
+		CONS_Alert(CONS_WARNING, "%s: %s, location is not allowed\n", why, path);
+		return false;
+	}
+
+	return true;
 }
