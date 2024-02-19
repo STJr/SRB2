@@ -1134,10 +1134,10 @@ boolean I_InitTcpDriver(void)
 	{
 		I_AddExitFunc(I_ShutdownTcpDriver);
 #ifdef HAVE_MINIUPNPC
-		if (M_CheckParm("-noUPnP"))
-			UPNP_support = false;
-		else
+		if (M_CheckParm("-useUPnP"))
 			I_InitUPnP();
+		else
+			UPNP_support = false;
 #endif
 	}
 	return init_tcp_driver;
