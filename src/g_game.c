@@ -1143,7 +1143,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 	boolean strafeisturn; // Simple controls only
 	player_t *player = &players[ssplayer == 2 ? secondarydisplayplayer : consoleplayer];
 	camera_t *thiscam = ((ssplayer == 1 || player->bot == BOT_2PHUMAN) ? &camera : &camera2);
-	consvar_t *chasecamcv = (ssplayer == 1 ? &cv_chasecam : &cv_chasecam2);
+	//consvar_t *chasecamcv = (ssplayer == 1 ? &cv_chasecam : &cv_chasecam2);
 	angle_t *myangle = (ssplayer == 1 ? &localangle : &localangle2);
 	INT32 *myaiming = (ssplayer == 1 ? &localaiming : &localaiming2);
 
