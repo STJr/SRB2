@@ -34,46 +34,28 @@ typedef UINT8 (*blockmap_func)(lua_State *, INT32, INT32, mobj_t *);
 static boolean blockfuncerror = false; // errors should only print once per search blockmap call
 
 // Helper function for "objects" search
-static UINT8 lib_searchBlockmap_Objects(lua_State *L, INT32 x, INT32 y, mobj_t *thing)
+static UINT8 lib_searchBlockmap_Objects(lua_State *L, mobj_t *thing, mobj_t *mobj)
 {
-	mobj_t *mobj, *bnext = NULL;
-
-	if (x < 0 || y < 0 || x >= bmapwidth || y >= bmapheight)
-		return 0;
-
-	// Check interaction with the objects in the blockmap.
-	for (mobj = blocklinks[y*bmapwidth + x]; mobj; mobj = bnext)
-	{
-		P_SetTarget(&bnext, mobj->bnext); // We want to note our reference to bnext here incase it is MF_NOTHINK and gets removed!
-		if (mobj == thing)
-			continue; // our thing just found itself, so move on
-		lua_pushvalue(L, 1); // push function
-		LUA_PushUserdata(L, thing, META_MOBJ);
-		LUA_PushUserdata(L, mobj, META_MOBJ);
-		if (lua_pcall(gL, 2, 1, 0)) {
-			if (!blockfuncerror || cv_debug & DBG_LUA)
-				CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL, -1));
-			lua_pop(gL, 1);
-			blockfuncerror = true;
-			P_SetTarget(&bnext, NULL);
-			return 0; // *shrugs*
-		}
-		if (!lua_isnil(gL, -1))
-		{ // if nil, continue
-			P_SetTarget(&bnext, NULL);
-			if (lua_toboolean(gL, -1))
-				return 2; // stop whole search
-			else
-				return 1; // stop block search
-		}
+	lua_pushvalue(L, 1); // push function
+	LUA_PushUserdata(L, thing, META_MOBJ);
+	LUA_PushUserdata(L, mobj, META_MOBJ);
+	if (lua_pcall(gL, 2, 1, 0)) {
+		if (!blockfuncerror || cv_debug & DBG_LUA)
+			CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL, -1));
 		lua_pop(gL, 1);
-		if (P_MobjWasRemoved(thing) // func just popped our thing, cannot continue.
-		|| (bnext && P_MobjWasRemoved(bnext))) // func just broke blockmap chain, cannot continue.
-		{
-			P_SetTarget(&bnext, NULL);
-			return (P_MobjWasRemoved(thing)) ? 2 : 1;
-		}
+		blockfuncerror = true;
+		return 0; // *shrugs*
 	}
+	if (!lua_isnil(gL, -1))
+	{ // if nil, continue
+		if (lua_toboolean(gL, -1))
+			return 2; // stop whole search
+		else
+			return 1; // stop block search
+	}
+	lua_pop(gL, 1);
+	if (P_MobjWasRemoved(thing)) // func just popped our thing, cannot continue.
+		return P_MobjWasRemoved(thing) ? 2 : 1;
 	return 0;
 }
 
@@ -233,6 +215,7 @@ static int lib_searchBlockmap(lua_State *L)
 	boolean retval = true;
 	UINT8 funcret = 0;
 	blockmap_func searchFunc;
+	boolean searchObjects = false;
 
 	lua_remove(L, 1); // remove searchtype, stack is now function, mobj, [x1, x2, y1, y2]
 	luaL_checktype(L, 1, LUA_TFUNCTION);
@@ -241,7 +224,8 @@ static int lib_searchBlockmap(lua_State *L)
 	{
 		case 0: // "objects"
 		default:
-			searchFunc = lib_searchBlockmap_Objects;
+			searchObjects = true;
+			searchFunc = NULL;
 			break;
 		case 1: // "lines"
 			searchFunc = lib_searchBlockmap_Lines;
@@ -286,24 +270,61 @@ static int lib_searchBlockmap(lua_State *L)
 	BMBOUNDFIX(xl, xh, yl, yh);
 
 	blockfuncerror = false; // reset
-	validcount++;
-	for (bx = xl; bx <= xh; bx++)
-		for (by = yl; by <= yh; by++)
-		{
-			funcret = searchFunc(L, bx, by, mobj);
-			// return value of searchFunc determines searchFunc's return value and/or when to stop
-			if (funcret == 2){ // stop whole search
-				lua_pushboolean(L, false); // return false
-				return 1;
+
+	if (!searchObjects) {
+		validcount++;
+
+		for (bx = xl; bx <= xh; bx++)
+			for (by = yl; by <= yh; by++)
+			{
+				funcret = searchFunc(L, bx, by, mobj);
+
+				// return value of searchFunc determines searchFunc's return value and/or when to stop
+				if (funcret == 2) { // stop whole search
+					lua_pushboolean(L, false); // return false
+					return 1;
+				}
+				else if (funcret == 1) // search was interrupted for this block
+					retval = false; // this changes the return value, but doesn't stop the whole search
+
+				// else don't do anything, continue as normal
+				if (P_MobjWasRemoved(mobj)) { // ...unless the original object was removed
+					lua_pushboolean(L, false); // in which case we have to stop now regardless
+					return 1;
+				}
 			}
-			else if (funcret == 1) // search was interrupted for this block
-				retval = false; // this changes the return value, but doesn't stop the whole search
-			// else don't do anything, continue as normal
-			if (P_MobjWasRemoved(mobj)){ // ...unless the original object was removed
-				lua_pushboolean(L, false); // in which case we have to stop now regardless
-				return 1;
+	}
+	else {
+		bthingit_t *it = P_NewBlockThingsIterator(xl, yl, xh, yh);
+		if (!it) {
+			lua_pushboolean(L, false);
+			return 1;
+		}
+
+		mobj_t *itmobj = NULL;
+
+		do
+		{
+			itmobj = P_BlockThingsIteratorNext(it, false);
+			if (itmobj)
+			{
+				if (mobj == itmobj)
+					continue; // our thing just found itself, so move on
+
+				funcret = lib_searchBlockmap_Objects(L, mobj, itmobj);
+				if (funcret == 2 || P_MobjWasRemoved(mobj)) {
+					retval = false;
+					break;
+				}
+				else if (funcret == 1)
+					retval = false;
 			}
 		}
+		while (itmobj != NULL);
+
+		P_FreeBlockThingsIterator(it);
+	}
+
 	lua_pushboolean(L, retval);
 	return 1;
 }

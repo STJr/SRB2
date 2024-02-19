@@ -300,6 +300,30 @@ static void Lua_OnChange(void)
 	lua_remove(gL, 1); // remove LUA_GetErrorMessage
 }
 
+static boolean Lua_CanChange(const char *valstr)
+{
+	lua_pushcfunction(gL, LUA_GetErrorMessage);
+	lua_insert(gL, 1); // Because LUA_Call wants it at index 1.
+
+	// From CV_CanChange registry field, get the function for this cvar by name.
+	lua_getfield(gL, LUA_REGISTRYINDEX, "CV_CanChange");
+	I_Assert(lua_istable(gL, -1));
+	lua_pushlightuserdata(gL, this_cvar);
+	lua_rawget(gL, -2); // get function
+
+	LUA_RawPushUserdata(gL, this_cvar);
+	lua_pushstring(gL, valstr);
+
+	boolean result;
+
+	LUA_Call(gL, 2, 1, 1); // call function(cvar, valstr)
+	result = lua_toboolean(gL, -1);
+	lua_pop(gL, 1); // pop CV_CanChange table
+	lua_remove(gL, 1); // remove LUA_GetErrorMessage
+
+	return result;
+}
+
 static int lib_cvRegisterVar(lua_State *L)
 {
 	const char *k;
@@ -458,6 +482,20 @@ static int lib_cvRegisterVar(lua_State *L)
 			lua_pop(L, 1);
 			cvar->func = Lua_OnChange;
 		}
+		else if (cvar->flags & CV_CALL && (k && fasticmp(k, "can_change")))
+		{
+			if (!lua_isfunction(L, 4))
+			{
+				TYPEERROR("func", LUA_TFUNCTION)
+			}
+			lua_getfield(L, LUA_REGISTRYINDEX, "CV_CanChange");
+			I_Assert(lua_istable(L, 5));
+			lua_pushlightuserdata(L, cvar);
+			lua_pushvalue(L, 4);
+			lua_rawset(L, 5);
+			lua_pop(L, 1);
+			cvar->can_change = Lua_CanChange;
+		}
 		lua_pop(L, 1);
 	}
 
@@ -479,9 +517,9 @@ static int lib_cvRegisterVar(lua_State *L)
 		return luaL_error(L, M_GetText("Variable %s has CV_NOINIT without CV_CALL"), cvar->name);
 	}
 
-	if ((cvar->flags & CV_CALL) && !cvar->func)
+	if ((cvar->flags & CV_CALL) && !(cvar->func || cvar->can_change))
 	{
-		return luaL_error(L, M_GetText("Variable %s has CV_CALL without a function"), cvar->name);
+		return luaL_error(L, M_GetText("Variable %s has CV_CALL without any callbacks"), cvar->name);
 	}
 
 	cvar->flags |= CV_ALLOWLUA;
@@ -672,6 +710,8 @@ int LUA_ConsoleLib(lua_State *L)
 	lua_setfield(L, LUA_REGISTRYINDEX, "CV_PossibleValue");
 	lua_newtable(L);
 	lua_setfield(L, LUA_REGISTRYINDEX, "CV_OnChange");
+	lua_newtable(L);
+	lua_setfield(L, LUA_REGISTRYINDEX, "CV_CanChange");
 
 	// Push opaque CV_PossibleValue pointers
 	// Because I don't care enough to bother.
