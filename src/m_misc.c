@@ -2270,6 +2270,8 @@ boolean M_StringOnlyHasDigits(const char *s)
 		if (!isdigit(*s++))
 			return false;
 	}
+
+	return true;
 }
 
 // Converts a string containing a whole number into an int. Returns false if the conversion failed.
