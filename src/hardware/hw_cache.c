@@ -121,7 +121,7 @@ static void HWR_DrawColumnInCache(const column_t *patchcol, UINT8 *block, GLMipm
 					memcpy(dest, &texelu16, sizeof(UINT16));
 					break;
 				case 3:
-					colortemp = V_GetColor(texel);
+					colortemp = palette[texel];
 					if ((originPatch != NULL) && (originPatch->style != AST_COPY))
 					{
 						RGBA_t rgbatexel;
@@ -131,7 +131,7 @@ static void HWR_DrawColumnInCache(const column_t *patchcol, UINT8 *block, GLMipm
 					memcpy(dest, &colortemp, sizeof(RGBA_t)-sizeof(UINT8));
 					break;
 				case 4:
-					colortemp = V_GetColor(texel);
+					colortemp = palette[texel];
 					colortemp.s.alpha = alpha;
 					if ((originPatch != NULL) && (originPatch->style != AST_COPY))
 					{
@@ -225,7 +225,7 @@ static void HWR_DrawFlippedColumnInCache(const column_t *patchcol, UINT8 *block,
 					memcpy(dest, &texelu16, sizeof(UINT16));
 					break;
 				case 3:
-					colortemp = V_GetColor(texel);
+					colortemp = palette[texel];
 					if ((originPatch != NULL) && (originPatch->style != AST_COPY))
 					{
 						RGBA_t rgbatexel;
@@ -235,7 +235,7 @@ static void HWR_DrawFlippedColumnInCache(const column_t *patchcol, UINT8 *block,
 					memcpy(dest, &colortemp, sizeof(RGBA_t)-sizeof(UINT8));
 					break;
 				case 4:
-					colortemp = V_GetColor(texel);
+					colortemp = palette[texel];
 					colortemp.s.alpha = alpha;
 					if ((originPatch != NULL) && (originPatch->style != AST_COPY))
 					{
@@ -830,18 +830,13 @@ void HWR_GetRawFlat(lumpnum_t flatlumpnum)
 
 void HWR_GetLevelFlat(levelflat_t *levelflat)
 {
-	if (levelflat->type == LEVELFLAT_NONE)
+	if (levelflat->type == LEVELFLAT_NONE || levelflat->texture_id < 0)
 	{
 		HWR_SetCurrentTexture(NULL);
 		return;
 	}
 
 	INT32 texturenum = texturetranslation[levelflat->texture_id];
-	if (texturenum <= 0)
-	{
-		HWR_SetCurrentTexture(NULL);
-		return;
-	}
 
 	GLMapTexture_t *grtex = &gl_flats[texturenum];
 	GLMipmap_t *grMipmap = &grtex->mipmap;
