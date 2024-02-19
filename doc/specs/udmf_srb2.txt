@@ -1,8 +1,9 @@
 ===============================================================================
 Universal Doom Map Format Sonic Robo Blast 2 extensions v1.0 19.02.2024
 
-
-    Copyright (c) 2024 Sonic Team Junior.
+    Copyright (c) 2024 Sonic Team Junior
+       uses Universal Doom Map Format Specification v1.1 as a template,
+       original document Copyright (c) 2009 James Haley.
     Permission is granted to copy, distribute and/or modify this document
     under the terms of the GNU Free Documentation License, Version 1.2
     or any later version published by the Free Software Foundation;
