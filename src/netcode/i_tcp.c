@@ -304,7 +304,7 @@ init_upnpc_once(struct upnpdata *upnpuserdata)
 	memset(&urls, 0, sizeof(struct UPNPUrls));
 	memset(&data, 0, sizeof(struct IGDdatas));
 
-	CONS_Printf(M_GetText("Looking for UPnP Internet Gateway Device\n"));
+	I_OutputMsg(M_GetText("Looking for UPnP Internet Gateway Device\n"));
 	devlist = upnpDiscoverDevices(deviceTypes, 500, NULL, NULL, 0, false, 2, &upnp_error, 0);
 	if (devlist)
 	{
@@ -320,11 +320,11 @@ init_upnpc_once(struct upnpdata *upnpuserdata)
 		if (!dev)
 			dev = devlist; /* defaulting to first device */
 
-		CONS_Printf(M_GetText("Found UPnP device:\n desc: %s\n st: %s\n"),
+		I_OutputMsg(M_GetText("Found UPnP device:\n desc: %s\n st: %s\n"),
 		           dev->descURL, dev->st);
 
 		UPNP_GetValidIGD(devlist, &urls, &data, lanaddr, sizeof(lanaddr));
-		CONS_Printf(M_GetText("Local LAN IP address: %s\n"), lanaddr);
+		I_OutputMsg(M_GetText("Local LAN IP address: %s\n"), lanaddr);
 		descXML = miniwget(dev->descURL, &descXMLsize, scope_id, &status_code);
 		if (descXML)
 		{
@@ -339,7 +339,7 @@ init_upnpc_once(struct upnpdata *upnpuserdata)
 	}
 	else if (upnp_error == UPNPDISCOVER_SOCKET_ERROR)
 	{
-		CONS_Printf(M_GetText("No UPnP devices discovered\n"));
+		I_OutputMsg(M_GetText("No UPnP devices discovered\n"));
 	}
 	upnpuserdata->upnpc_started =1;
 }
