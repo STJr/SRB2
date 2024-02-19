@@ -29,9 +29,6 @@ EXPORT boolean HWRAPI(Init) (void);
 #ifndef HAVE_SDL
 EXPORT void HWRAPI(Shutdown) (void);
 #endif
-#ifdef _WINDOWS
-EXPORT void HWRAPI(GetModeList) (vmode_t **pvidmodes, INT32 *numvidmodes);
-#endif
 EXPORT void HWRAPI(SetPalette) (RGBA_t *ppal);
 EXPORT void HWRAPI(FinishUpdate) (INT32 waitvbl);
 EXPORT void HWRAPI(Draw2DLine) (F2DCoord *v1, F2DCoord *v2, RGBA_t Color);

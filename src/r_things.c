@@ -941,7 +941,6 @@ static void R_DrawVisSprite(vissprite_t *vis)
 	}
 
 	colfunc = colfuncs[BASEDRAWFUNC];
-	dc_hires = 0;
 
 	vis->x1 = x1;
 	vis->x2 = x2;
@@ -3011,9 +3010,6 @@ void R_InitDrawNodes(void)
 //
 // R_DrawSprite
 //
-//Fab : 26-04-98:
-// NOTE : uses con_clipviewtop, so that when console is on,
-//        don't draw the part of sprites hidden under the console
 static void R_DrawSprite(vissprite_t *spr)
 {
 	mfloorclip = spr->clipbot;

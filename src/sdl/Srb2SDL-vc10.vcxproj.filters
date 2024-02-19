@@ -976,9 +976,6 @@
     <ClCompile Include="..\r_draw.c">
       <Filter>R_Rend</Filter>
     </ClCompile>
-    <ClCompile Include="..\r_draw16.c">
-      <Filter>R_Rend</Filter>
-    </ClCompile>
     <ClCompile Include="..\r_draw8.c">
       <Filter>R_Rend</Filter>
     </ClCompile>
