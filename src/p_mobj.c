@@ -1525,6 +1525,14 @@ fixed_t P_GetMobjGravity(mobj_t *mo)
 				case MT_WATERDROP:
 				case MT_CYBRAKDEMON:
 					gravityadd >>= 1;
+				case MT_ROLLOUTROCK:
+					// If a player has gravity boots and its riding a rollout rock, the rock should copy the player's gravity
+					if (mo->tracer && mo->tracer->player && mo->tracer->player->powers[pw_gravityboots])
+					{
+						gravityadd = -gravityadd;
+						mo->eflags ^= MFE_VERTICALFLIP;
+					}
+					break;
 				default:
 					break;
 			}
