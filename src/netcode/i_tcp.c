@@ -134,6 +134,7 @@ typedef union
 #include "d_netfil.h"
 #include "i_tcp.h"
 #include "../m_argv.h"
+#include "../i_threads.h"
 
 #include "../doomstat.h"
 
@@ -263,12 +264,33 @@ static const char* inet_ntopA(short af, const void *cp, char *buf, socklen_t len
 
 #ifdef HAVE_MINIUPNPC // based on old XChat patch
 static void I_ShutdownUPnP(void);
+static void I_InitUPnP(void);
+I_mutex upnp_mutex;
 static struct UPNPUrls urls;
 static struct IGDdatas data;
 static char lanaddr[64];
-
-static inline void I_InitUPnP(void)
+struct upnpdata
 {
+	int upnpc_started;
+};
+static struct upnpdata *upnpuser;
+static void init_upnpc_once(struct upnpdata *upnpdata);
+
+static void I_InitUPnP(void)
+{
+	upnpuser = malloc(sizeof *upnpuser);
+	upnpuser->upnpc_started = 0;
+	I_spawn_thread("init_upnpc_once", (I_thread_fn)init_upnpc_once, upnpuser);
+}
+
+static void
+init_upnpc_once(struct upnpdata *upnpuserdata)
+{
+
+	if (upnpuserdata->upnpc_started != 0)
+		return;
+
+	I_lock_mutex(&upnp_mutex);
 	const char * const deviceTypes[] = {
 		"urn:schemas-upnp-org:device:InternetGatewayDevice:2",
 		"urn:schemas-upnp-org:device:InternetGatewayDevice:1",
@@ -278,6 +300,10 @@ static inline void I_InitUPnP(void)
 	int upnp_error = -2;
 	int scope_id = 0;
 	int status_code = 0;
+
+	memset(&urls, 0, sizeof(struct UPNPUrls));
+	memset(&data, 0, sizeof(struct IGDdatas));
+
 	CONS_Printf(M_GetText("Looking for UPnP Internet Gateway Device\n"));
 	devlist = upnpDiscoverDevices(deviceTypes, 500, NULL, NULL, 0, false, 2, &upnp_error, 0);
 	if (devlist)
@@ -305,41 +331,47 @@ static inline void I_InitUPnP(void)
 			parserootdesc(descXML, descXMLsize, &data);
 			free(descXML);
 			descXML = NULL;
-			memset(&urls, 0, sizeof(struct UPNPUrls));
-			memset(&data, 0, sizeof(struct IGDdatas));
 			GetUPNPUrls(&urls, &data, dev->descURL, status_code);
 			I_AddExitFunc(I_ShutdownUPnP);
 		}
 		freeUPNPDevlist(devlist);
+		I_unlock_mutex(upnp_mutex);
 	}
 	else if (upnp_error == UPNPDISCOVER_SOCKET_ERROR)
 	{
 		CONS_Printf(M_GetText("No UPnP devices discovered\n"));
 	}
+	upnpuserdata->upnpc_started =1;
 }
 
 static inline void I_UPnP_add(const char * addr, const char *port, const char * servicetype)
 {
+	I_lock_mutex(&upnp_mutex);
 	if (addr == NULL)
 		addr = lanaddr;
 	if (!urls.controlURL || urls.controlURL[0] == '\0')
 		return;
 	UPNP_AddPortMapping(urls.controlURL, data.first.servicetype,
 	                    port, port, addr, "SRB2", servicetype, NULL, NULL);
+	I_unlock_mutex(upnp_mutex);
 }
 
 static inline void I_UPnP_rem(const char *port, const char * servicetype)
 {
+	I_lock_mutex(&upnp_mutex);
 	if (!urls.controlURL || urls.controlURL[0] == '\0')
 		return;
 	UPNP_DeletePortMapping(urls.controlURL, data.first.servicetype,
 	                       port, servicetype, NULL);
+	I_unlock_mutex(upnp_mutex);
 }
 
 static void I_ShutdownUPnP(void)
 {
 	I_UPnP_rem(serverport_name, "UDP");
+	I_lock_mutex(&upnp_mutex);
 	FreeUPNPUrls(&urls);
+	I_unlock_mutex(upnp_mutex);
 }
 #endif
 

@@ -612,9 +612,7 @@ typedef struct player_s
 	tic_t jointime; // Timer when player joins game to change skin/color
 	tic_t quittime; // Time elapsed since user disconnected, zero if connected
 	tic_t lastinputtime; // the last tic the player has made any input
-#ifdef HWRENDER
 	fixed_t fovadd; // adjust FOV for hw rendering
-#endif
 } player_t;
 
 // Values for dashmode
