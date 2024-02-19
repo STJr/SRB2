@@ -46,6 +46,7 @@
 #define  _CREATE_DLL_  // necessary for Unix AND Windows
 #include "../../doomdef.h"
 #include "../hw_drv.h"
+#include "../../z_zone.h"
 
 // ==========================================================================
 //                                                                DEFINITIONS

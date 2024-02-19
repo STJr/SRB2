@@ -9,4 +9,5 @@ hw_md2load.c
 hw_md3load.c
 hw_model.c
 hw_batching.c
+hw_shaders.c
 r_opengl/r_opengl.c

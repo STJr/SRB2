@@ -2329,9 +2329,9 @@ boolean P_CheckDeathPitCollide(mobj_t *mo)
 	if (mo->player && mo->player->pflags & PF_GODMODE)
 		return false;
 
-	if (((mo->z <= mo->subsector->sector->floorheight
+	if (((mo->z <= mo->floorz
 		&& ((mo->subsector->sector->flags & MSF_TRIGGERSPECIAL_HEADBUMP) || !(mo->eflags & MFE_VERTICALFLIP)) && (mo->subsector->sector->flags & MSF_FLIPSPECIAL_FLOOR))
-	|| (mo->z + mo->height >= mo->subsector->sector->ceilingheight
+	|| (mo->z + mo->height >= mo->ceilingz
 		&& ((mo->subsector->sector->flags & MSF_TRIGGERSPECIAL_HEADBUMP) || (mo->eflags & MFE_VERTICALFLIP)) && (mo->subsector->sector->flags & MSF_FLIPSPECIAL_CEILING)))
 	&& (mo->subsector->sector->damagetype == SD_DEATHPITTILT
 	|| mo->subsector->sector->damagetype == SD_DEATHPITNOTILT))
