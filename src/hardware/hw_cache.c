@@ -823,7 +823,7 @@ void HWR_GetRawFlat(lumpnum_t flatlumpnum)
 
 void HWR_GetLevelFlat(levelflat_t *levelflat)
 {
-	if (levelflat->type == LEVELFLAT_NONE)
+	if (levelflat->type == LEVELFLAT_NONE || levelflat->texture_id < 0)
 	{
 		HWR_SetCurrentTexture(NULL);
 		return;

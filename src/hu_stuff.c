@@ -620,7 +620,7 @@ static void Command_CSay_f(void)
 	DoSayCommand(0, 1, HU_CSAY);
 }
 
-static tic_t spam_tokens[MAXPLAYERS];
+static tic_t spam_tokens[MAXPLAYERS] = { 1 }; // fill the buffer with 1 so the motd can be sent.
 static tic_t spam_tics[MAXPLAYERS];
 
 /** Receives a message, processing an ::XD_SAY command.
