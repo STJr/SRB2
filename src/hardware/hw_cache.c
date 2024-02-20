@@ -758,10 +758,15 @@ static void GetMapTexture(INT32 tex, GLMapTexture_t *grtex, GLMipmap_t *mipmap)
 
 GLMapTexture_t *HWR_GetTexture(INT32 tex)
 {
+	if (tex < 0 || tex >= (signed)gl_numtextures)
+	{
 #ifdef PARANOIA
-	if ((unsigned)tex >= gl_numtextures)
-		I_Error("HWR_GetTexture: tex >= numtextures\n");
+		I_Error("HWR_GetTexture: Invalid texture ID %d", tex);
+#else
+		HWR_SetCurrentTexture(NULL);
+		return;
 #endif
+	}
 
 	GLMapTexture_t *grtex = &gl_textures[tex];
 
