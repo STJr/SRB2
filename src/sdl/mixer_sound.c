@@ -140,7 +140,7 @@ static void Midiplayer_Onchange(void)
 			restart = true;
 	}
 
-	if (stricmp(Mix_GetSoundFonts(), cv_midisoundfontpath.string))
+	if (!Mix_GetSoundFonts() || stricmp(Mix_GetSoundFonts(), cv_midisoundfontpath.string))
 	{
 		if (!Mix_SetSoundFonts(cv_midisoundfontpath.string)) // == 0 means error
 			CONS_Alert(CONS_ERROR, "Sound font error: %s", Mix_GetError());
@@ -159,7 +159,7 @@ static void MidiSoundfontPath_Onchange(void)
 	if (Mix_GetMidiPlayer() != MIDI_Fluidsynth || (I_SongType() != MU_NONE && I_SongType() != MU_MID_EX))
 		return;
 
-	if (stricmp(Mix_GetSoundFonts(), cv_midisoundfontpath.string))
+	if (!Mix_GetSoundFonts() || stricmp(Mix_GetSoundFonts(), cv_midisoundfontpath.string))
 	{
 		char *miditoken;
 		char *source = strdup(cv_midisoundfontpath.string);
@@ -1198,7 +1198,7 @@ boolean I_LoadSong(char *data, size_t len)
 #ifdef HAVE_MIXERX
 	if (Mix_GetMidiPlayer() != cv_midiplayer.value)
 		Mix_SetMidiPlayer(cv_midiplayer.value);
-	if (stricmp(Mix_GetSoundFonts(), cv_midisoundfontpath.string))
+	if (!Mix_GetSoundFonts() || stricmp(Mix_GetSoundFonts(), cv_midisoundfontpath.string))
 		Mix_SetSoundFonts(cv_midisoundfontpath.string);
 	Mix_Timidity_addToPathList(cv_miditimiditypath.string); // this overwrites previous custom path
 #endif
