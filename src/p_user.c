@@ -1,3 +1,4 @@
+
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
@@ -11306,7 +11307,7 @@ void P_DoTailsOverlay(player_t *player, mobj_t *tails)
 	fixed_t backwards = -1*FRACUNIT;
 	boolean doswim = (player->panim == PA_ABILITY && (player->mo->eflags & MFE_UNDERWATER));
 	boolean doroll = (player->panim == PA_ROLL || (player->panim == PA_JUMP && !(player->charflags & SF_NOJUMPSPIN)) || doswim);
-	angle_t rollangle;
+	angle_t rollangle = 0;
 	boolean panimchange;
 	INT32 ticnum = 0;
 	statenum_t chosenstate;
@@ -12088,7 +12089,7 @@ void P_PlayerThink(player_t *player)
 	// deez New User eXperiences.
 	{
 		angle_t oldang = player->drawangle, diff = 0;
-		UINT8 factor;
+		UINT8 factor = 0;
 		// Directionchar!
 		// Camera angle stuff.
 		if (player->exiting // no control, no modification
