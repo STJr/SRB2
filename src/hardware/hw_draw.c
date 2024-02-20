@@ -30,6 +30,7 @@
 #include "../st_stuff.h"
 #include "../p_local.h" // stplyr
 #include "../g_game.h" // players
+#include "../f_finale.h" // fade color factors
 
 #include <fcntl.h>
 #include "../i_video.h"  // for rendermode != render_glide
@@ -127,6 +128,7 @@ void HWR_DrawStretchyFixedPatch(patch_t *gpatch, fixed_t x, fixed_t y, fixed_t p
 	float cy = FIXED_TO_FLOAT(y);
 	UINT8 alphalevel = ((option & V_ALPHAMASK) >> V_ALPHASHIFT);
 	UINT8 blendmode = ((option & V_BLENDMASK) >> V_BLENDSHIFT);
+	UINT8 opacity = 0xFF;
 	GLPatch_t *hwrPatch;
 
 //  3--2
@@ -144,6 +146,14 @@ void HWR_DrawStretchyFixedPatch(patch_t *gpatch, fixed_t x, fixed_t y, fixed_t p
 		HWR_GetMappedPatch(gpatch, colormap);
 
 	hwrPatch = ((GLPatch_t *)gpatch->hardware);
+
+	if (alphalevel)
+	{
+		if (alphalevel == 10) opacity = softwaretranstogl_lo[st_translucency]; // V_HUDTRANSHALF
+		else if (alphalevel == 11) opacity = softwaretranstogl[st_translucency]; // V_HUDTRANS
+		else if (alphalevel == 12) opacity = softwaretranstogl_hi[st_translucency]; // V_HUDTRANSDOUBLE
+		else opacity = softwaretranstogl[10-alphalevel];
+	}
 
 	dup = (float)vid.dup;
 
@@ -261,13 +271,13 @@ void HWR_DrawStretchyFixedPatch(patch_t *gpatch, fixed_t x, fixed_t y, fixed_t p
 			// if it's meant to cover the whole screen, black out the rest (ONLY IF TOP LEFT ISN'T TRANSPARENT)
 			// cx and cy are possibly *slightly* off from float maths
 			// This is done before here compared to software because we directly alter cx and cy to centre
-			if (cx >= -0.1f && cx <= 0.1f && gpatch->width == BASEVIDWIDTH && cy >= -0.1f && cy <= 0.1f && gpatch->height == BASEVIDHEIGHT)
+			if (opacity == 0xFF && cx >= -0.1f && cx <= 0.1f && gpatch->width == BASEVIDWIDTH && cy >= -0.1f && cy <= 0.1f && gpatch->height == BASEVIDHEIGHT)
 			{
-				const column_t *column = (const column_t *)((const UINT8 *)(gpatch->columns) + (gpatch->columnofs[0]));
-				if (!column->topdelta)
+				const column_t *column = &gpatch->columns[0];
+				if (column->num_posts && !column->posts[0].topdelta)
 				{
-					const UINT8 *source = (const UINT8 *)(column) + 3;
-					HWR_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, (column->topdelta == 0xff ? 31 : source[0]));
+					const UINT8 *source = column->pixels;
+					HWR_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, source[0]);
 				}
 			}
 			// centre screen
@@ -345,11 +355,7 @@ void HWR_DrawStretchyFixedPatch(patch_t *gpatch, fixed_t x, fixed_t y, fixed_t p
 	{
 		FSurfaceInfo Surf;
 		Surf.PolyColor.s.red = Surf.PolyColor.s.green = Surf.PolyColor.s.blue = 0xff;
-
-		if (alphalevel == 10) Surf.PolyColor.s.alpha = softwaretranstogl_lo[st_translucency]; // V_HUDTRANSHALF
-		else if (alphalevel == 11) Surf.PolyColor.s.alpha = softwaretranstogl[st_translucency]; // V_HUDTRANS
-		else if (alphalevel == 12) Surf.PolyColor.s.alpha = softwaretranstogl_hi[st_translucency]; // V_HUDTRANSDOUBLE
-		else Surf.PolyColor.s.alpha = softwaretranstogl[10-alphalevel];
+		Surf.PolyColor.s.alpha = opacity;
 		flags |= PF_Modulated;
 		HWD.pfnDrawPolygon(&Surf, v, 4, flags);
 	}
@@ -648,45 +654,9 @@ void HWR_DrawCroppedPatch(patch_t *gpatch, fixed_t x, fixed_t y, fixed_t pscale,
 		HWD.pfnDrawPolygon(NULL, v, 4, flags);
 }
 
-void HWR_DrawPic(INT32 x, INT32 y, lumpnum_t lumpnum)
-{
-	FOutVector      v[4];
-	const patch_t    *patch;
-
-	// make pic ready in hardware cache
-	patch = HWR_GetPic(lumpnum);
-
-//  3--2
-//  | /|
-//  |/ |
-//  0--1
-
-	v[0].x = v[3].x = 2.0f * (float)x/vid.width - 1;
-	v[2].x = v[1].x = 2.0f * (float)(x + patch->width*FIXED_TO_FLOAT(vid.fdup))/vid.width - 1;
-	v[0].y = v[1].y = 1.0f - 2.0f * (float)y/vid.height;
-	v[2].y = v[3].y = 1.0f - 2.0f * (float)(y + patch->height*FIXED_TO_FLOAT(vid.fdup))/vid.height;
-
-	v[0].z = v[1].z = v[2].z = v[3].z = 1.0f;
-
-	v[0].s = v[3].s = 0;
-	v[2].s = v[1].s = ((GLPatch_t *)patch->hardware)->max_s;
-	v[0].t = v[1].t = 0;
-	v[2].t = v[3].t = ((GLPatch_t *)patch->hardware)->max_t;
-
-
-	//Hurdler: Boris, the same comment as above... but maybe for pics
-	// it not a problem since they don't have any transparent pixel
-	// if I'm right !?
-	// But then, the question is: why not 0 instead of PF_Masked ?
-	// or maybe PF_Environment ??? (like what I said above)
-	// BP: PF_Environment don't change anything ! and 0 is undifined
-	HWD.pfnDrawPolygon(NULL, v, 4, PF_Translucent | PF_NoDepthTest);
-}
-
 // ==========================================================================
 //                                                            V_VIDEO.C STUFF
 // ==========================================================================
-
 
 // --------------------------------------------------------------------------
 // Fills a box of pixels using a flat texture as a pattern
@@ -738,6 +708,7 @@ void HWR_FadeScreenMenuBack(UINT16 color, UINT8 strength)
 {
 	FOutVector  v[4];
 	FSurfaceInfo Surf;
+	FBITFIELD poly_flags = PF_NoTexture|PF_Modulated|PF_NoDepthTest;
 
 	v[0].x = v[3].x = -1.0f;
 	v[2].x = v[1].x =  1.0f;
@@ -750,17 +721,59 @@ void HWR_FadeScreenMenuBack(UINT16 color, UINT8 strength)
 	v[0].t = v[1].t = 1.0f;
 	v[2].t = v[3].t = 0.0f;
 
-	if (color & 0xFF00) // Do COLORMAP fade.
+	if (color & 0xFF00) // Special fade options
 	{
-		Surf.PolyColor.rgba = UINT2RGBA(0x01010160);
-		Surf.PolyColor.s.alpha = (strength*8);
+		UINT16 option = color & 0x0F00;
+		if (option == 0x0A00 || option == 0x0B00) // Tinted fades
+		{
+			INT32 r, g, b;
+			int fade = strength * 8;
+
+			r = FADEREDFACTOR*fade/10;
+			g = FADEGREENFACTOR*fade/10;
+			b = FADEBLUEFACTOR*fade/10;
+
+			Surf.PolyColor.s.red = min(r, 255);
+			Surf.PolyColor.s.green = min(g, 255);
+			Surf.PolyColor.s.blue = min(b, 255);
+			Surf.PolyColor.s.alpha = 255;
+
+			if (option == 0x0A00) // Tinted subtractive fade
+				poly_flags |= PF_ReverseSubtract;
+			else if (option == 0x0B00) // Tinted additive fade
+				poly_flags |= PF_Additive;
+		}
+		else // COLORMAP fade
+		{
+			if (HWR_ShouldUsePaletteRendering())
+			{
+				const hwdscreentexture_t scr_tex = HWD_SCREENTEXTURE_GENERIC2;
+
+				Surf.LightTableId = HWR_GetLightTableID(NULL);
+				Surf.LightInfo.light_level = strength;
+				HWD.pfnMakeScreenTexture(scr_tex);
+				HWD.pfnSetShader(HWR_GetShaderFromTarget(SHADER_UI_COLORMAP_FADE));
+				HWD.pfnDrawScreenTexture(scr_tex, &Surf, PF_ColorMapped|PF_NoDepthTest);
+				HWD.pfnUnSetShader();
+
+				return;
+			}
+			else
+			{
+				Surf.PolyColor.rgba = UINT2RGBA(0x01010160);
+				Surf.PolyColor.s.alpha = (strength*8);
+				poly_flags |= PF_Translucent;
+			}
+		}
 	}
 	else // Do TRANSMAP** fade.
 	{
-		Surf.PolyColor.rgba = V_GetColor(color).rgba;
+		RGBA_t *palette = HWR_GetTexturePalette();
+		Surf.PolyColor.rgba = palette[color&0xFF].rgba;
 		Surf.PolyColor.s.alpha = softwaretranstogl[strength];
+		poly_flags |= PF_Translucent;
 	}
-	HWD.pfnDrawPolygon(&Surf, v, 4, PF_NoTexture|PF_Modulated|PF_Translucent|PF_NoDepthTest);
+	HWD.pfnDrawPolygon(&Surf, v, 4, poly_flags);
 }
 
 // -----------------+
@@ -928,7 +941,8 @@ void HWR_DrawFadeFill(INT32 x, INT32 y, INT32 w, INT32 h, INT32 color, UINT16 ac
 	}
 	else // Do TRANSMAP** fade.
 	{
-		Surf.PolyColor.rgba = V_GetColor(actualcolor).rgba;
+		RGBA_t *palette = HWR_GetTexturePalette();
+		Surf.PolyColor.rgba = palette[actualcolor&0xFF].rgba;
 		Surf.PolyColor.s.alpha = softwaretranstogl[strength];
 	}
 	HWD.pfnDrawPolygon(&Surf, v, 4, PF_NoTexture|PF_Modulated|PF_Translucent|PF_NoDepthTest);
@@ -1133,8 +1147,9 @@ void HWR_drawAMline(const fline_t *fl, INT32 color)
 {
 	F2DCoord v1, v2;
 	RGBA_t color_rgba;
+	RGBA_t *palette = HWR_GetTexturePalette();
 
-	color_rgba = V_GetColor(color);
+	color_rgba = palette[color&0xFF];
 
 	v1.x = ((float)fl->a.x-(vid.width/2.0f))*(2.0f/vid.width);
 	v1.y = ((float)fl->a.y-(vid.height/2.0f))*(2.0f/vid.height);
@@ -1319,6 +1334,8 @@ void HWR_DrawFill(INT32 x, INT32 y, INT32 w, INT32 h, INT32 color)
 	FOutVector v[4];
 	FSurfaceInfo Surf;
 	float fx, fy, fw, fh;
+	RGBA_t *palette = HWR_GetTexturePalette();
+	UINT8 alphalevel = ((color & V_ALPHAMASK) >> V_ALPHASHIFT);
 
 	UINT8 perplayershuffle = 0;
 
@@ -1404,7 +1421,7 @@ void HWR_DrawFill(INT32 x, INT32 y, INT32 w, INT32 h, INT32 color)
 	{
 		if (x == 0 && y == 0 && w == BASEVIDWIDTH && h == BASEVIDHEIGHT)
 		{
-			RGBA_t rgbaColour = V_GetColor(color);
+			RGBA_t rgbaColour = palette[color&0xFF];
 			FRGBAFloat clearColour;
 			clearColour.red = (float)rgbaColour.s.red / 255;
 			clearColour.green = (float)rgbaColour.s.green / 255;
@@ -1481,10 +1498,18 @@ void HWR_DrawFill(INT32 x, INT32 y, INT32 w, INT32 h, INT32 color)
 	v[0].t = v[1].t = 0.0f;
 	v[2].t = v[3].t = 1.0f;
 
-	Surf.PolyColor = V_GetColor(color);
+	Surf.PolyColor = palette[color&0xFF];
+
+	if (alphalevel)
+	{
+		if (alphalevel == 10) Surf.PolyColor.s.alpha = softwaretranstogl_lo[st_translucency]; // V_HUDTRANSHALF
+		else if (alphalevel == 11) Surf.PolyColor.s.alpha = softwaretranstogl[st_translucency]; // V_HUDTRANS
+		else if (alphalevel == 12) Surf.PolyColor.s.alpha = softwaretranstogl_hi[st_translucency]; // V_HUDTRANSDOUBLE
+		else Surf.PolyColor.s.alpha = softwaretranstogl[10-alphalevel];
+	}
 
 	HWD.pfnDrawPolygon(&Surf, v, 4,
-		PF_Modulated|PF_NoTexture|PF_NoDepthTest);
+		PF_Modulated|PF_NoTexture|PF_NoDepthTest|PF_Translucent);
 }
 
 #ifdef HAVE_PNG
@@ -1561,11 +1586,12 @@ static inline boolean saveTGA(const char *file_name, void *buffer,
 UINT8 *HWR_GetScreenshot(void)
 {
 	UINT8 *buf = malloc(vid.width * vid.height * 3 * sizeof (*buf));
+	int tex = HWR_ShouldUsePaletteRendering() ? HWD_SCREENTEXTURE_GENERIC3 : HWD_SCREENTEXTURE_GENERIC2;
 
 	if (!buf)
 		return NULL;
 	// returns 24bit 888 RGB
-	HWD.pfnReadRect(0, 0, vid.width, vid.height, vid.width * 3, (void *)buf);
+	HWD.pfnReadScreenTexture(tex, (void *)buf);
 	return buf;
 }
 
@@ -1573,6 +1599,7 @@ boolean HWR_Screenshot(const char *pathname)
 {
 	boolean ret;
 	UINT8 *buf = malloc(vid.width * vid.height * 3 * sizeof (*buf));
+	int tex = HWR_ShouldUsePaletteRendering() ? HWD_SCREENTEXTURE_GENERIC3 : HWD_SCREENTEXTURE_GENERIC2;
 
 	if (!buf)
 	{
@@ -1581,7 +1608,7 @@ boolean HWR_Screenshot(const char *pathname)
 	}
 
 	// returns 24bit 888 RGB
-	HWD.pfnReadRect(0, 0, vid.width, vid.height, vid.width * 3, (void *)buf);
+	HWD.pfnReadScreenTexture(tex, (void *)buf);
 
 #ifdef USE_PNG
 	ret = M_SavePNG(pathname, buf, vid.width, vid.height, NULL);

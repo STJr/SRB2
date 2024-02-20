@@ -38,6 +38,8 @@
 #include "doomstat.h"
 #include "g_state.h"
 
+#include "hu_stuff.h"
+
 lua_State *gL = NULL;
 
 // List of internal libraries to load from SRB2
@@ -58,6 +60,7 @@ static lua_CFunction liblist[] = {
 	LUA_PolyObjLib, // polyobj_t
 	LUA_BlockmapLib, // blockmap stuff
 	LUA_HudLib, // HUD stuff
+	LUA_ColorLib, // general color functions
 	LUA_InputLib, // inputs
 	NULL
 };
@@ -431,6 +434,9 @@ int LUA_PushGlobals(lua_State *L, const char *word)
 			return 0;
 		LUA_PushUserdata(L, &camera2, META_CAMERA);
 		return 1;
+	} else if (fastcmp(word, "chatactive")) {
+		lua_pushboolean(L, chat_on);
+		return 1;
 	}
 	return 0;
 }
@@ -603,64 +609,114 @@ void LUA_ClearExtVars(void)
 INT32 lua_lumploading = 0;
 
 // Load a script from a MYFILE
-static inline void LUA_LoadFile(MYFILE *f, char *name, boolean noresults)
+static inline boolean LUA_LoadFile(MYFILE *f, char *name)
 {
 	int errorhandlerindex;
+	boolean success;
 
 	if (!name)
 		name = wadfiles[f->wad]->filename;
+
 	CONS_Printf("Loading Lua script from %s\n", name);
+
 	if (!gL) // Lua needs to be initialized
 		LUA_ClearState();
+
 	lua_pushinteger(gL, f->wad);
 	lua_setfield(gL, LUA_REGISTRYINDEX, "WAD");
+
+	lua_pushcfunction(gL, LUA_GetErrorMessage);
+	errorhandlerindex = lua_gettop(gL);
+
+	success = !luaL_loadbuffer(gL, f->data, f->size, va("@%s",name));
+
+	if (!success) {
+		CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL,-1));
+		lua_pop(gL,1);
+	}
+
+	lua_gc(gL, LUA_GCCOLLECT, 0);
+	lua_remove(gL, errorhandlerindex);
+
+	return success;
+}
+
+// Runs a script loaded by LUA_LoadFile.
+static inline void LUA_DoFile(boolean noresults)
+{
+	int errorhandlerindex;
+
+	if (!gL) // LUA_LoadFile should've allocated gL for us!
+		return;
 
 	lua_lumploading++; // turn on loading flag
 
 	lua_pushcfunction(gL, LUA_GetErrorMessage);
-	errorhandlerindex = lua_gettop(gL);
-	if (luaL_loadbuffer(gL, f->data, f->size, va("@%s",name)) || lua_pcall(gL, 0, noresults ? 0 : LUA_MULTRET, lua_gettop(gL) - 1)) {
+	lua_insert(gL, -2); // move the function we're calling to the top.
+	errorhandlerindex = lua_gettop(gL) - 1;
+
+	if (lua_pcall(gL, 0, noresults ? 0 : LUA_MULTRET, lua_gettop(gL) - 1)) {
 		CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL,-1));
 		lua_pop(gL,1);
 	}
+
 	lua_gc(gL, LUA_GCCOLLECT, 0);
 	lua_remove(gL, errorhandlerindex);
 
 	lua_lumploading--; // turn off again
 }
 
-// Load a script from a lump
-void LUA_LoadLump(UINT16 wad, UINT16 lump, boolean noresults)
+static inline MYFILE *LUA_GetFile(UINT16 wad, UINT16 lump, char **name)
 {
-	MYFILE f;
-	char *name;
+	MYFILE *f = Z_Malloc(sizeof(MYFILE), PU_LUA, NULL);
 	size_t len;
-	f.wad = wad;
-	f.size = W_LumpLengthPwad(wad, lump);
-	f.data = Z_Malloc(f.size, PU_LUA, NULL);
-	W_ReadLumpPwad(wad, lump, f.data);
-	f.curpos = f.data;
+
+	f->wad = wad;
+	f->size = W_LumpLengthPwad(wad, lump);
+	f->data = Z_Malloc(f->size, PU_LUA, NULL);
+	W_ReadLumpPwad(wad, lump, f->data);
+	f->curpos = f->data;
 
 	len = strlen(wadfiles[wad]->filename); // length of file name
 
 	if (wadfiles[wad]->type == RET_LUA)
 	{
-		name = malloc(len+1);
-		strcpy(name, wadfiles[wad]->filename);
+		*name = malloc(len+1);
+		strcpy(*name, wadfiles[wad]->filename);
 	}
 	else // If it's not a .lua file, copy the lump name in too.
 	{
 		lumpinfo_t *lump_p = &wadfiles[wad]->lumpinfo[lump];
 		len += 1 + strlen(lump_p->fullname); // length of file name, '|', and lump name
-		name = malloc(len+1);
-		sprintf(name, "%s|%s", wadfiles[wad]->filename, lump_p->fullname);
-		name[len] = '\0';
+		*name = malloc(len+1);
+		sprintf(*name, "%s|%s", wadfiles[wad]->filename, lump_p->fullname);
+		(*name)[len] = '\0'; // annoying that index takes priority over dereference, but w/e
 	}
 
-	LUA_LoadFile(&f, name, noresults); // actually load file!
+	return f;
+}
+
+// Load a script from a lump
+boolean LUA_LoadLump(UINT16 wad, UINT16 lump)
+{
+	char *name = NULL;
+	MYFILE *f = LUA_GetFile(wad, lump, &name);
+	boolean success = LUA_LoadFile(f, name); // actually load file!
 
 	free(name);
-	Z_Free(f.data);
+
+	Z_Free(f->data);
+	Z_Free(f);
+
+	return success;
+}
+
+void LUA_DoLump(UINT16 wad, UINT16 lump, boolean noresults)
+{
+	boolean success = LUA_LoadLump(wad, lump);
+
+	if (success)
+		LUA_DoFile(noresults); // run it
 }
 
 #ifdef LUA_ALLOW_BYTECODE
@@ -891,6 +947,8 @@ void LUA_InvalidateLevel(void)
 		LUA_InvalidateUserdata(&sectors[i]);
 		LUA_InvalidateUserdata(&sectors[i].lines);
 		LUA_InvalidateUserdata(&sectors[i].tags);
+		if (sectors[i].extra_colormap)
+			LUA_InvalidateUserdata(sectors[i].extra_colormap);
 		if (sectors[i].ffloors)
 		{
 			for (rover = sectors[i].ffloors; rover; rover = rover->next)
@@ -1345,7 +1403,7 @@ static UINT8 ArchiveValue(int TABLESINDEX, int myindex)
 		{
 			skin_t *skin = *((skin_t **)lua_touserdata(gL, myindex));
 			WRITEUINT8(save_p, ARCH_SKIN);
-			WRITEUINT8(save_p, skin - skins); // UINT8 because MAXSKINS is only 32
+			WRITEUINT8(save_p, skin->skinnum); // UINT8 because MAXSKINS must be <= 256
 			break;
 		}
 		default:
@@ -1442,8 +1500,11 @@ static void ArchiveTables(void)
 		{
 			// Write key
 			e = ArchiveValue(TABLESINDEX, -2); // key should be either a number or a string, ArchiveValue can handle this.
-			if (e == 2) // invalid key type (function, thread, lightuserdata, or anything we don't recognise)
+			if (e == 1)
+				n++; // the table contained a new table we'll have to archive. :(
+			else if (e == 2) // invalid key type (function, thread, lightuserdata, or anything we don't recognise)
 				CONS_Alert(CONS_ERROR, "Index '%s' (%s) of table %d could not be archived!\n", lua_tostring(gL, -2), luaL_typename(gL, -2), i);
+
 			// Write value
 			e = ArchiveValue(TABLESINDEX, -1);
 			if (e == 1)
@@ -1595,7 +1656,7 @@ static UINT8 UnArchiveValue(int TABLESINDEX)
 		LUA_PushUserdata(gL, READUINT16(save_p) == 1 ? &mouse : &mouse2, META_MOUSE);
 		break;
 	case ARCH_SKIN:
-		LUA_PushUserdata(gL, &skins[READUINT8(save_p)], META_SKIN);
+		LUA_PushUserdata(gL, skins[READUINT8(save_p)], META_SKIN);
 		break;
 	case ARCH_TEND:
 		return 1;
@@ -1658,10 +1719,15 @@ static void UnArchiveTables(void)
 		lua_rawgeti(gL, TABLESINDEX, i);
 		while (true)
 		{
-			if (UnArchiveValue(TABLESINDEX) == 1) // read key
+			UINT8 e = UnArchiveValue(TABLESINDEX); // read key
+			if (e == 1) // End of table
 				break;
+			else if (e == 2) // Key contains a new table
+				n++;
+
 			if (UnArchiveValue(TABLESINDEX) == 2) // read value
 				n++;
+
 			if (lua_isnil(gL, -2)) // if key is nil (if a function etc was accidentally saved)
 			{
 				CONS_Alert(CONS_ERROR, "A nil key in table %d was found! (Invalid key type or corrupted save?)\n", i);

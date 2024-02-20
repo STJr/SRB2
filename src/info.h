@@ -173,6 +173,7 @@ enum actionnum
 	A_CHANGECOLORRELATIVE,
 	A_CHANGECOLORABSOLUTE,
 	A_DYE,
+	A_SETTRANSLATION,
 	A_MOVERELATIVE,
 	A_MOVEABSOLUTE,
 	A_THRUST,
@@ -300,7 +301,7 @@ enum actionnum
 extern int actionsoverridden[NUMACTIONS][MAX_ACTION_RECURSION];
 
 // ratio of states to sprites to mobj types is roughly 6 : 1 : 1
-#define NUMMOBJFREESLOTS 512
+#define NUMMOBJFREESLOTS 1024
 #define NUMSPRITEFREESLOTS NUMMOBJFREESLOTS
 #define NUMSTATEFREESLOTS (NUMMOBJFREESLOTS*8)
 
@@ -4854,7 +4855,7 @@ typedef enum mobj_type
 	MT_POLYANCHOR,
 	MT_POLYSPAWN,
 
-	// Skybox objects
+	// Portal objects
 	MT_SKYBOX,
 
 	// Debris

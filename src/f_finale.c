@@ -297,7 +297,7 @@ static void F_NewCutscene(const char *basetext)
 	cutscene_basetext = basetext;
 	memset(cutscene_disptext,0,sizeof(cutscene_disptext));
 	cutscene_writeptr = cutscene_baseptr = 0;
-	cutscene_textspeed = 9;
+	cutscene_textspeed = 8;
 	cutscene_textcount = TICRATE/2;
 }
 
@@ -313,22 +313,22 @@ const char *introtext[NUMINTROSCENES];
 static tic_t introscenetime[NUMINTROSCENES] =
 {
 	5*TICRATE,	// STJr Presents
-	11*TICRATE + (TICRATE/2),	// Two months had passed since...
-	15*TICRATE + (TICRATE/2),	// As it was about to drain the rings...
-	14*TICRATE,					// What Sonic, Tails, and Knuckles...
-	18*TICRATE,					// About once every year, a strange...
-	19*TICRATE + (TICRATE/2),	// Curses! Eggman yelled. That ridiculous...
-	19*TICRATE + (TICRATE/4),	// It was only later that he had an idea...
-	10*TICRATE + (TICRATE/2),	// Before beginning his scheme, Eggman decided to give Sonic...
-	16*TICRATE,					// We're ready to fire in 15 seconds, the robot said...
-	16*TICRATE,					// Meanwhile, Sonic was tearing across the zones...
+	10*TICRATE + (TICRATE/2),	// Two months had passed since...
+	12*TICRATE + ((TICRATE/4) * 3),	// As it was about to drain the rings...
+	12*TICRATE + (TICRATE/4),					// What Sonic, Tails, and Knuckles...
+	16*TICRATE,					// About once every year, a strange...
+	20*TICRATE + (TICRATE/2),	// Curses! Eggman yelled. That ridiculous...
+	18*TICRATE + (TICRATE/4),	// It was only later that he had an idea...
+	9*TICRATE + (TICRATE/2),	// Before beginning his scheme, Eggman decided to give Sonic...
+	14*TICRATE,					// We're ready to fire in 15 seconds, the robot said...
+	14*TICRATE + (TICRATE/2),	// Meanwhile, Sonic was tearing across the zones...
 	16*TICRATE + (TICRATE/2),	// Sonic knew he was getting closer to the city...
-	17*TICRATE,					// Greenflower City was gone...
-	 7*TICRATE,					// You're not quite as dead as we thought, huh?...
+	11*TICRATE + (TICRATE/2),	// Greenflower City was gone...
+	 8*TICRATE,					// You're not quite as dead as we thought, huh?...
 	 8*TICRATE,					// We'll see... let's give you a quick warm up...
 	18*TICRATE + (TICRATE/2),	// Eggman took this as his cue and blasted off...
-	16*TICRATE,					// Easy! We go find Eggman and stop his...
-	25*TICRATE,					// I'm just finding what mission obje...
+	15*TICRATE,					// Easy! We go find Eggman and stop his...
+	23*TICRATE,					// I'm just finding what mission obje...
 };
 
 // custom intros
@@ -1603,9 +1603,9 @@ void F_GameEvaluationDrawer(void)
 		rtatext = (marathonmode & MA_INGAME) ? "In-game timer" : "RTA timer";
 		cuttext = (marathonmode & MA_NOCUTSCENES) ? "" : " w/ cutscenes";
 		if (botskin)
-			endingtext = va("%s & %s, %s%s", skins[players[consoleplayer].skin].realname, skins[botskin-1].realname, rtatext, cuttext);
+			endingtext = va("%s & %s, %s%s", skins[players[consoleplayer].skin]->realname, skins[botskin-1]->realname, rtatext, cuttext);
 		else
-			endingtext = va("%s, %s%s", skins[players[consoleplayer].skin].realname, rtatext, cuttext);
+			endingtext = va("%s, %s%s", skins[players[consoleplayer].skin]->realname, rtatext, cuttext);
 		V_DrawCenteredString(BASEVIDWIDTH/2, 182, V_SNAPTOBOTTOM|(ultimatemode ? V_REDMAP : V_YELLOWMAP), endingtext);
 	}
 }
@@ -1719,9 +1719,9 @@ static void F_CacheEnding(void)
 		UINT8 skinnum = players[consoleplayer].skin;
 		spritedef_t *sprdef;
 		spriteframe_t *sprframe;
-		if (skins[skinnum].sprites[SPR2_XTRA].numframes > (XTRA_ENDING+2))
+		if (skins[skinnum]->sprites[SPR2_XTRA].numframes > (XTRA_ENDING+2))
 		{
-			sprdef = &skins[skinnum].sprites[SPR2_XTRA];
+			sprdef = &skins[skinnum]->sprites[SPR2_XTRA];
 			// character head, skin specific
 			sprframe = &sprdef->spriteframes[XTRA_ENDING];
 			endfwrk[0] = W_CachePatchNum(sprframe->lumppat[0], PU_PATCH_LOWPRIORITY);
@@ -2167,7 +2167,7 @@ void F_EndingDrawer(void)
 		boolean donttouch = false;
 		const char *str;
 		if (goodending)
-			str = va("[S] %s: Engage.", skins[players[consoleplayer].skin].realname);
+			str = va("[S] %s: Engage.", skins[players[consoleplayer].skin]->realname);
 		else
 			str = "[S] Eggman: Abscond.";
 
@@ -3554,7 +3554,7 @@ void F_StartContinue(void)
 	S_ChangeMusicInternal("_conti", false);
 	S_StopSounds();
 
-	contskins[0] = &skins[players[consoleplayer].skin];
+	contskins[0] = skins[players[consoleplayer].skin];
 	cont_spr2[0][0] = P_GetSkinSprite2(contskins[0], SPR2_CNT1, NULL);
 	cont_spr2[0][2] = contskins[0]->contangle & 7;
 	contcolormaps[0] = R_GetTranslationColormap(players[consoleplayer].skin, players[consoleplayer].skincolor, GTC_CACHE);
@@ -3570,7 +3570,7 @@ void F_StartContinue(void)
 		else // HACK
 			secondplaya = 1;
 
-		contskins[1] = &skins[players[secondplaya].skin];
+		contskins[1] = skins[players[secondplaya].skin];
 		cont_spr2[1][0] = P_GetSkinSprite2(contskins[1], SPR2_CNT4, NULL);
 		cont_spr2[1][2] = (contskins[1]->contangle >> 3) & 7;
 		contcolormaps[1] = R_GetTranslationColormap(players[secondplaya].skin, players[secondplaya].skincolor, GTC_CACHE);
@@ -4524,7 +4524,7 @@ void F_TextPromptDrawer(void)
 			if (players[j].mo->state == states+S_PLAY_STND && players[j].mo->tics != -1)\
 				players[j].mo->tics++;\
 			else if (players[j].mo->state == states+S_PLAY_WAIT)\
-				P_SetPlayerMobjState(players[j].mo, S_PLAY_STND);\
+				P_SetMobjState(players[j].mo, S_PLAY_STND);\
 		}\
 	}
 

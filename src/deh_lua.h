@@ -20,6 +20,7 @@
 #include "m_misc.h"
 #include "p_local.h"
 #include "st_stuff.h"
+#include "r_translation.h"
 #include "fastcmp.h"
 #include "lua_script.h"
 #include "lua_libs.h"

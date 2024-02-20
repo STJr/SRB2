@@ -22,6 +22,7 @@
 #include "r_patch.h"
 #include "r_picformats.h"
 #include "r_things.h"
+#include "r_translation.h"
 #include "r_draw.h" // R_GetColorByName
 #include "doomstat.h" // luabanks[]
 
@@ -31,7 +32,8 @@
 #include "lua_hook.h" // hook_cmd_running errors
 
 extern CV_PossibleValue_t Color_cons_t[];
-extern UINT8 skincolor_modified[];
+
+boolean LUA_CallAction(enum actionnum actionnum, mobj_t *actor);
 
 state_t *astate;
 
@@ -572,7 +574,7 @@ static int spriteinfo_set(lua_State *L)
 		}
 	}
 	else
-		return luaL_error(L, va("Field %s does not exist in spriteinfo_t", field));
+		return luaL_error(L, "Field %s does not exist in spriteinfo_t", field);
 
 	return 0;
 }
@@ -666,7 +668,7 @@ static int framepivot_get(lua_State *L)
 		lua_pushinteger(L, 0);
 	}
 	else
-		return luaL_error(L, va("Field %s does not exist in spriteframepivot_t", field));
+		return luaL_error(L, "Field %s does not exist in spriteframepivot_t", field);
 
 	return 1;
 }
@@ -693,7 +695,7 @@ static int framepivot_set(lua_State *L)
 	else if (fastcmp("rotaxis", field))
 		LUA_UsageWarning(L, "\"rotaxis\" is deprecated and will be removed.")
 	else
-		return luaL_error(L, va("Field %s does not exist in spriteframepivot_t", field));
+		return luaL_error(L, "Field %s does not exist in spriteframepivot_t", field);
 
 	return 0;
 }
@@ -1823,7 +1825,7 @@ static void setRamp(lua_State *L, skincolor_t* c) {
 	lua_pushnil(L);
 	for (i=0; i<COLORRAMPSIZE; i++) {
 		if (lua_objlen(L,-2)!=COLORRAMPSIZE) {
-			luaL_error(L, LUA_QL("skincolor_t") " field 'ramp' must be %d entries long; got %d.", COLORRAMPSIZE, lua_objlen(L,-2));
+			luaL_error(L, LUA_QL("skincolor_t") " field 'ramp' must be %d entries long; got %d.", COLORRAMPSIZE, luaL_getn(L,-2));
 			break;
 		}
 		if (lua_next(L, -2) != 0) {

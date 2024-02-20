@@ -50,6 +50,7 @@ boolean LUA_CallAction(enum actionnum actionnum, mobj_t *actor, action_val_t *ar
 boolean LUA_ValueIsValidActionVal(lua_State *L, int i);
 void LUA_ValueToActionVal(lua_State *L, int i, action_val_t *val);
 void LUA_LoadLump(UINT16 wad, UINT16 lump, boolean noresults);
+void LUA_DoLump(UINT16 wad, UINT16 lump, boolean noresults);
 #ifdef LUA_ALLOW_BYTECODE
 void LUA_DumpFile(const char *filename);
 #endif

@@ -126,10 +126,12 @@ static CV_PossibleValue_t drawdist_precip_cons_t[] = {
 	{1024, "1024"},	{1536, "1536"},	{2048, "2048"},
 	{0, "None"},	{0, NULL}};
 
-static CV_PossibleValue_t fov_cons_t[] = {{60*FRACUNIT, "MIN"}, {179*FRACUNIT, "MAX"}, {0, NULL}};
+static CV_PossibleValue_t fov_cons_t[] = {{MINFOV*FRACUNIT, "MIN"}, {MAXFOV*FRACUNIT, "MAX"}, {0, NULL}};
 static CV_PossibleValue_t translucenthud_cons_t[] = {{0, "MIN"}, {10, "MAX"}, {0, NULL}};
 static CV_PossibleValue_t maxportals_cons_t[] = {{0, "MIN"}, {12, "MAX"}, {0, NULL}}; // lmao rendering 32 portals, you're a card
 static CV_PossibleValue_t homremoval_cons_t[] = {{0, "No"}, {1, "Yes"}, {2, "Flash"}, {0, NULL}};
+
+static void R_SetFov(fixed_t playerfov);
 
 static void Fov_OnChange(void);
 static void ChaseCam_OnChange(void);
@@ -157,8 +159,8 @@ consvar_t cv_translucency = CVAR_INIT ("translucency", "On", CV_SAVE, CV_OnOff, 
 consvar_t cv_drawdist = CVAR_INIT ("drawdist", "Infinite", CV_SAVE, drawdist_cons_t, NULL);
 consvar_t cv_drawdist_nights = CVAR_INIT ("drawdist_nights", "2048", CV_SAVE, drawdist_cons_t, NULL);
 consvar_t cv_drawdist_precip = CVAR_INIT ("drawdist_precip", "1024", CV_SAVE, drawdist_precip_cons_t, NULL);
-//consvar_t cv_precipdensity = CVAR_INIT ("precipdensity", "Moderate", CV_SAVE, precipdensity_cons_t, NULL);
-consvar_t cv_fov = CVAR_INIT ("fov", "90", CV_FLOAT|CV_CALL, fov_cons_t, Fov_OnChange);
+consvar_t cv_fov = CVAR_INIT ("fov", "90", CV_SAVE|CV_FLOAT|CV_CALL, fov_cons_t, Fov_OnChange);
+consvar_t cv_fovchange = CVAR_INIT ("fovchange", "Off", CV_SAVE, CV_OnOff, NULL);
 
 // Okay, whoever said homremoval causes a performance hit should be shot.
 consvar_t cv_homremoval = CVAR_INIT ("homremoval", "No", CV_SAVE, homremoval_cons_t, NULL);
@@ -206,10 +208,6 @@ void SplitScreen_OnChange(void)
 }
 static void Fov_OnChange(void)
 {
-	// Shouldn't be needed with render parity?
-	//if ((netgame || multiplayer) && !cv_debug && cv_fov.value != 90*FRACUNIT)
-	//	CV_Set(&cv_fov, cv_fov.defaultvalue);
-
 	R_SetViewSize();
 }
 
@@ -356,7 +354,7 @@ angle_t R_PointToAngle2(fixed_t pviewx, fixed_t pviewy, fixed_t x, fixed_t y)
 fixed_t R_PointToDist2(fixed_t px2, fixed_t py2, fixed_t px1, fixed_t py1)
 {
 	angle_t angle;
-	fixed_t dx, dy, dist;
+	ufixed_t dx, dy, dist;
 
 	dx = abs(px1 - px2);
 	dy = abs(py1 - py2);
@@ -900,12 +898,10 @@ void R_SetViewSize(void)
 //
 void R_ExecuteSetViewSize(void)
 {
-	fixed_t dy;
 	INT32 i;
 	INT32 j;
 	INT32 level;
 	INT32 startmapl;
-	angle_t fov;
 
 	setsizeneeded = false;
 
@@ -928,46 +924,13 @@ void R_ExecuteSetViewSize(void)
 	centerxfrac = centerx<<FRACBITS;
 	centeryfrac = centery<<FRACBITS;
 
-	fov = FixedAngle(cv_fov.value/2) + ANGLE_90;
-	fovtan = FixedMul(FINETANGENT(fov >> ANGLETOFINESHIFT), viewmorph.zoomneeded);
-	if (splitscreen == 1) // Splitscreen FOV should be adjusted to maintain expected vertical view
-		fovtan = 17*fovtan/10;
-
-	projection = projectiony = FixedDiv(centerxfrac, fovtan);
+	R_SetFov(cv_fov.value);
 
 	R_InitViewBuffer(scaledviewwidth, viewheight);
-
-	R_InitTextureMapping();
 
 	// thing clipping
 	for (i = 0; i < viewwidth; i++)
 		screenheightarray[i] = (INT16)viewheight;
-
-	// setup sky scaling
-	R_SetSkyScale();
-
-	// planes
-	if (rendermode == render_soft)
-	{
-		// this is only used for planes rendering in software mode
-		j = viewheight*16;
-		for (i = 0; i < j; i++)
-		{
-			dy = (i - viewheight*8)<<FRACBITS;
-			dy = FixedMul(abs(dy), fovtan);
-			yslopetab[i] = FixedDiv(centerx*FRACUNIT, dy);
-		}
-
-		if (ds_su)
-			Z_Free(ds_su);
-		if (ds_sv)
-			Z_Free(ds_sv);
-		if (ds_sz)
-			Z_Free(ds_sz);
-
-		ds_su = ds_sv = ds_sz = NULL;
-		ds_sup = ds_svp = ds_szp = NULL;
-	}
 
 	memset(scalelight, 0xFF, sizeof(scalelight));
 
@@ -998,6 +961,36 @@ void R_ExecuteSetViewSize(void)
 	am_recalc = true;
 }
 
+fixed_t R_GetPlayerFov(player_t *player)
+{
+	fixed_t fov = cv_fov.value + player->fovadd;
+	return max(MINFOV*FRACUNIT, min(fov, MAXFOV*FRACUNIT));
+}
+
+static void R_SetFov(fixed_t playerfov)
+{
+	angle_t fov = FixedAngle(playerfov/2) + ANGLE_90;
+	fovtan = FixedMul(FINETANGENT(fov >> ANGLETOFINESHIFT), viewmorph.zoomneeded);
+	if (splitscreen == 1) // Splitscreen FOV should be adjusted to maintain expected vertical view
+		fovtan = 17*fovtan/10;
+
+	// this is only used for planes rendering in software mode
+	INT32 j = viewheight*16;
+	for (INT32 i = 0; i < j; i++)
+	{
+		fixed_t dy = (i - viewheight*8)<<FRACBITS;
+		dy = FixedMul(abs(dy), fovtan);
+		yslopetab[i] = FixedDiv(centerx*FRACUNIT, dy);
+	}
+
+	projection = projectiony = FixedDiv(centerxfrac, fovtan);
+
+	R_InitTextureMapping();
+
+	// setup sky scaling
+	R_SetSkyScale();
+}
+
 //
 // R_Init
 //
@@ -1012,9 +1005,6 @@ void R_Init(void)
 	R_InitViewBorder();
 	R_SetViewSize(); // setsizeneeded is set true
 
-	//I_OutputMsg("\nR_InitPlanes");
-	R_InitPlanes();
-
 	// this is now done by SCR_Recalc() at the first mode set
 	//I_OutputMsg("\nR_InitLightTables");
 	R_InitLightTables();
@@ -1025,6 +1015,51 @@ void R_Init(void)
 	R_InitDrawNodes();
 
 	framecount = 0;
+}
+
+//
+// R_IsPointInSector
+//
+boolean R_IsPointInSector(sector_t *sector, fixed_t x, fixed_t y)
+{
+	size_t i;
+	size_t passes = 0;
+
+	for (i = 0; i < sector->linecount; i++)
+	{
+		line_t *line = sector->lines[i];
+		vertex_t *v1, *v2;
+
+		if (line->frontsector == line->backsector)
+			continue;
+
+		v1 = line->v1;
+		v2 = line->v2;
+
+		// make sure v1 is below v2
+		if (v1->y > v2->y)
+		{
+			vertex_t *tmp = v1;
+			v1 = v2;
+			v2 = tmp;
+		}
+		else if (v1->y == v2->y)
+			// horizontal line, we can't match this
+			continue;
+
+		if (v1->y < y && y <= v2->y)
+		{
+			// if the y axis in inside the line, find the point where we intersect on the x axis...
+			fixed_t vx = v1->x + (INT64)(v2->x - v1->x) * (y - v1->y) / (v2->y - v1->y);
+
+			// ...and if that point is to the left of the point, count it as inside.
+			if (vx < x)
+				passes++;
+		}
+	}
+
+	// and odd number of passes means we're inside the polygon.
+	return passes % 2;
 }
 
 //
@@ -1183,7 +1218,7 @@ void R_SetupFrame(player_t *player)
 		newview->x += quake.x;
 		newview->y += quake.y;
 
-		if (r_viewmobj->subsector)
+		if (!P_MobjWasRemoved(r_viewmobj) && r_viewmobj->subsector)
 			newview->sector = r_viewmobj->subsector->sector;
 		else
 			newview->sector = R_PointInSubsector(newview->x, newview->y)->sector;
@@ -1462,6 +1497,8 @@ static void Mask_Post (maskcount_t* m)
 // I mean, there is a win16lock() or something that lasts all the rendering,
 // so maybe we should release screen lock before each netupdate below..?
 
+static fixed_t viewfov[2];
+
 void R_RenderPlayerView(player_t *player)
 {
 	INT32			nummasks	= 1;
@@ -1473,6 +1510,19 @@ void R_RenderPlayerView(player_t *player)
 			V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31); // No HOM effect!
 		else //'development' HOM removal -- makes it blindingly obvious if HOM is spotted.
 			V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 32+(timeinmap&15));
+	}
+
+	fixed_t fov = R_GetPlayerFov(player);
+
+	if (player == &players[displayplayer] && viewfov[0] != fov)
+	{
+		viewfov[0] = fov;
+		R_SetFov(fov);
+	}
+	else if (player == &players[secondarydisplayplayer] && viewfov[1] != fov)
+	{
+		viewfov[1] = fov;
+		R_SetFov(fov);
 	}
 
 	R_SetupFrame(player);
@@ -1519,9 +1569,8 @@ void R_RenderPlayerView(player_t *player)
 
 	ps_numsprites.value.i = numvisiblesprites;
 
-	// Add skybox portals caused by sky visplanes.
-	if (cv_skybox.value && skyboxmo[0])
-		Portal_AddSkyboxPortals();
+	// Add portals caused by visplanes.
+	Portal_AddPlanePortals(cv_skybox.value);
 
 	// Portal rendering. Hijacks the BSP traversal.
 	PS_START_TIMING(ps_sw_portaltime);
@@ -1554,9 +1603,21 @@ void R_RenderPlayerView(player_t *player)
 			Mask_Pre(&masks[nummasks - 1]);
 			curdrawsegs = ds_p;
 
-			// Render the BSP from the new viewpoint, and clip
-			// any sprites with the new clipsegs and window.
-			R_RenderBSPNode((INT32)numnodes - 1);
+			if (portal->is_horizon)
+			{
+				// If the portal is a plane or a horizon portal, then we just render a horizon line
+				R_RenderPortalHorizonLine(portal->horizon_sector);
+			}
+			else
+			{
+				// Render the BSP from the new viewpoint, and clip
+				// any sprites with the new clipsegs and window.
+				R_RenderBSPNode((INT32)numnodes - 1);
+			}
+
+			// Don't add skybox portals while already rendering a skybox view, because that'll cause an infinite loop
+			Portal_AddPlanePortals(cv_skybox.value && !portal->is_skybox);
+
 			Mask_Post(&masks[nummasks - 1]);
 
 			R_ClipSprites(ds_p - (masks[nummasks - 1].drawsegs[1] - masks[nummasks - 1].drawsegs[0]), portal);
@@ -1600,6 +1661,7 @@ void R_RegisterEngineStuff(void)
 	CV_RegisterVar(&cv_drawdist);
 	CV_RegisterVar(&cv_drawdist_nights);
 	CV_RegisterVar(&cv_drawdist_precip);
+	CV_RegisterVar(&cv_fovchange);
 	CV_RegisterVar(&cv_fov);
 
 	CV_RegisterVar(&cv_chasecam);
