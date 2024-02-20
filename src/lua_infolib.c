@@ -33,8 +33,6 @@
 
 extern CV_PossibleValue_t Color_cons_t[];
 
-boolean LUA_CallAction(enum actionnum actionnum, mobj_t *actor);
-
 state_t *astate;
 
 boolean LUA_ValueIsValidActionVal(lua_State *L, int i)

@@ -682,6 +682,7 @@ playersprite_t spr2defaults[NUMPLAYERSPRITES] = {
 	0, // SPR2_XTRA (should never be referenced)
 };
 
+// Doesn't work with VC
 #define STATE(sprite, frame, duration, action, var1, var2, nextstate) \
 	{ sprite, frame, duration, action, { ACTION_INTEGER_VAL(var1), ACTION_INTEGER_VAL(var2) }, nextstate }
 

@@ -3518,7 +3518,7 @@ void R_ThingOffsetOverlay(mobj_t *thing, fixed_t *x, fixed_t *y)
 	do // Get the overlay's offset
 	{
 		// Does the overlay use FF_ANIMATE? If not, if var1 is non-zero, it's an underlay instead of an overlay
-		if (!(mobj->state->frame & FF_ANIMATE) && mobj->state->var1)
+		if (!(mobj->state->frame & FF_ANIMATE) && Action_ValueToInteger(mobj->state->vars[0]))
 			offset += 1; // Underlay below the target, away from the camera
 		else
 			offset -= 1; // Overlay on top of the target, towards the camera

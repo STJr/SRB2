@@ -175,6 +175,7 @@ void A_SetRandomTics(mobj_t *actor, action_val_t *args, unsigned argcount);
 void A_ChangeColorRelative(mobj_t *actor, action_val_t *args, unsigned argcount);
 void A_ChangeColorAbsolute(mobj_t *actor, action_val_t *args, unsigned argcount);
 void A_Dye(mobj_t *actor, action_val_t *args, unsigned argcount);
+void A_SetTranslation(mobj_t *actor, action_val_t *args, unsigned argcount);
 void A_MoveRelative(mobj_t *actor, action_val_t *args, unsigned argcount);
 void A_MoveAbsolute(mobj_t *actor, action_val_t *args, unsigned argcount);
 void A_Thrust(mobj_t *actor, action_val_t *args, unsigned argcount);

@@ -6917,32 +6917,6 @@ void P_RunOverlays(void)
 			continue;
 		}
 
-		if (!splitscreen /*&& rendermode != render_soft*/)
-		{
-			angle_t viewingangle;
-
-			if (players[displayplayer].awayviewtics && players[displayplayer].awayviewmobj != NULL && !P_MobjWasRemoved(players[displayplayer].awayviewmobj))
-				viewingangle = R_PointToAngle2(mo->target->x, mo->target->y, players[displayplayer].awayviewmobj->x, players[displayplayer].awayviewmobj->y);
-			else if (!camera.chase && players[displayplayer].mo)
-				viewingangle = R_PointToAngle2(mo->target->x, mo->target->y, players[displayplayer].mo->x, players[displayplayer].mo->y);
-			else
-				viewingangle = R_PointToAngle2(mo->target->x, mo->target->y, camera.x, camera.y);
-
-			if (!(mo->state->frame & FF_ANIMATE))
-			{
-				INT32 var1 = Action_ValueToInteger(mo->state->vars[0]);
-				if (var1)
-					viewingangle += ANGLE_180;
-			}
-			destx = mo->target->x + P_ReturnThrustX(mo->target, viewingangle, FixedMul(FRACUNIT/4, mo->scale));
-			desty = mo->target->y + P_ReturnThrustY(mo->target, viewingangle, FixedMul(FRACUNIT/4, mo->scale));
-		}
-		else
-		{
-			destx = mo->target->x;
-			desty = mo->target->y;
-		}
-
 		mo->eflags = (mo->eflags & ~MFE_VERTICALFLIP) | (mo->target->eflags & MFE_VERTICALFLIP);
 		mo->scale = mo->destscale = mo->target->scale;
 		mo->old_scale = mo->target->old_scale;
@@ -6965,21 +6939,22 @@ void P_RunOverlays(void)
 		mo->height = mo->target->height;
 		if (mo->eflags & MFE_VERTICALFLIP)
 		{
-			mo->z         = (mo->target->z     + mo->target->height - mo->height) - zoffs;
+			mo->z         = mo->target->z     + mo->target->height - mo->height - zoffs;
 			if (mo->scale == mo->old_scale)
 				mo->old_z = mo->target->old_z + mo->target->height - mo->height - zoffs;
 			else // Interpolate height scale changes - mo and mo->target have the same scales here, so don't interpolate them individually
 				mo->old_z = mo->target->old_z + FixedMul(mo->target->height - mo->height, FixedDiv(mo->old_scale, mo->scale)) - zoffs;
 		}
 		else
-			mo->z = mo->target->z + zoffs;
-		if (Action_ValueToInteger(mo->state->vars[0]))
 		{
 			mo->z     = mo->target->z     + zoffs;
 			mo->old_z = mo->target->old_z + zoffs;
 		}
-		if (!(mo->state->frame & FF_ANIMATE) && Action_ValueToInteger(mo->state->vars[0]))
-			P_SetUnderlayPosition(mo);
+		if (!(mo->state->frame & FF_ANIMATE))
+		{
+			if (Action_ValueToInteger(mo->state->vars[0]))
+				P_SetUnderlayPosition(mo);
+		}
 		else
 			P_SetThingPosition(mo);
 		P_CheckPosition(mo, mo->x, mo->y);

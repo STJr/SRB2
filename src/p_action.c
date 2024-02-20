@@ -2909,7 +2909,7 @@ void A_1upThinker(mobj_t *actor, action_val_t *args, unsigned argcount)
 		}
 	}
 
-	if (closestplayer == -1 || skins[players[closestplayer].skin].sprites[SPR2_LIFE].numframes == 0)
+	if (closestplayer == -1 || skins[players[closestplayer].skin]->sprites[SPR2_LIFE].numframes == 0)
 	{ // Closest player not found (no players in game?? may be empty dedicated server!), or does not have correct sprite.
 		if (actor->tracer)
 		{
@@ -3285,7 +3285,7 @@ static void P_DoBossVictory(mobj_t *mo)
 		{
 			if (!playeringame[i])
 				continue;
-			P_DoPlayerExit(&players[i]);
+			P_DoPlayerExit(&players[i], false );
 		}
 	}
 	else
@@ -8534,6 +8534,26 @@ void A_Dye(mobj_t *actor, action_val_t *args, unsigned argcount)
 	}
 }
 
+// Function: A_SetTranslation
+//
+// Description: Changes the translation of an actor.
+//
+// var1 = translation ID
+// var2 = unused
+//
+void A_SetTranslation(mobj_t *actor, action_val_t *args, unsigned argcount)
+{
+	INT32 locvar1 = GET_ARG(GetInteger, 0);
+
+	if (LUA_CallAction(A_SETTRANSLATION, actor, args, argcount))
+		return;
+
+	if (R_TranslationIsValid(locvar1))
+		actor->translation = (UINT32)locvar1;
+	else
+		actor->translation = 0;
+}
+
 // Function: A_MoveRelative
 //
 // Description: Moves an object (wrapper for P_Thrust)
@@ -10297,7 +10317,7 @@ void A_ForceWin(mobj_t *actor, action_val_t *args, unsigned argcount)
 	{
 		if (!playeringame[i])
 			continue;
-		P_DoPlayerExit(&players[i]);
+		P_DoPlayerExit(&players[i], false);
 	}
 }
 
