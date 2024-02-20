@@ -19,9 +19,9 @@
 #include "i_video.h"
 #include "r_plane.h"
 #include "p_spec.h"
+#include "p_slopes.h"
 #include "r_state.h"
 #include "z_zone.h"
-#include "console.h" // con_startup_loadprogress
 #include "m_perfstats.h" // ps_metric_t
 #ifdef HWRENDER
 #include "hardware/hw_main.h" // for cv_glshearing
@@ -292,6 +292,8 @@ void R_InterpolateMobjState(mobj_t *mobj, fixed_t frac, interpmobjstate_t *out)
 		out->y = mobj->y;
 		out->z = mobj->z;
 		out->scale = mobj->scale;
+		out->radius = mobj->radius;
+		out->height = mobj->height;
 		out->subsector = mobj->subsector;
 		out->angle = mobj->player ? mobj->player->drawangle : mobj->angle;
 		out->pitch = mobj->pitch;
@@ -307,9 +309,21 @@ void R_InterpolateMobjState(mobj_t *mobj, fixed_t frac, interpmobjstate_t *out)
 	out->x = R_LerpFixed(mobj->old_x, mobj->x, frac);
 	out->y = R_LerpFixed(mobj->old_y, mobj->y, frac);
 	out->z = R_LerpFixed(mobj->old_z, mobj->z, frac);
-	out->scale = mobj->resetinterp ? mobj->scale : R_LerpFixed(mobj->old_scale, mobj->scale, frac);
 	out->spritexscale = mobj->resetinterp ? mobj->spritexscale : R_LerpFixed(mobj->old_spritexscale, mobj->spritexscale, frac);
 	out->spriteyscale = mobj->resetinterp ? mobj->spriteyscale : R_LerpFixed(mobj->old_spriteyscale, mobj->spriteyscale, frac);
+
+	if (mobj->scale == mobj->old_scale) // Tiny optimisation - scale is usually unchanging, so let's skip a lerp, two FixedMuls, and two FixedDivs
+	{
+		out->scale = mobj->scale;
+		out->radius = mobj->radius;
+		out->height = mobj->height;
+	}
+	else
+	{
+		out->scale = R_LerpFixed(mobj->old_scale, mobj->scale, frac);
+		out->radius = FixedMul(mobj->radius, FixedDiv(out->scale, mobj->scale));
+		out->height = FixedMul(mobj->height, FixedDiv(out->scale, mobj->scale));
+	}
 
 	// Sprite offsets are not interpolated until we have a way to interpolate them explicitly in Lua.
 	// It seems existing mods visually break more often than not if it is interpolated.
@@ -340,6 +354,8 @@ void R_InterpolatePrecipMobjState(precipmobj_t *mobj, fixed_t frac, interpmobjst
 		out->y = mobj->y;
 		out->z = mobj->z;
 		out->scale = FRACUNIT;
+		out->radius = mobj->radius;
+		out->height = mobj->height;
 		out->subsector = mobj->subsector;
 		out->angle = mobj->angle;
 		out->pitch = mobj->angle;
@@ -356,6 +372,8 @@ void R_InterpolatePrecipMobjState(precipmobj_t *mobj, fixed_t frac, interpmobjst
 	out->y = R_LerpFixed(mobj->old_y, mobj->y, frac);
 	out->z = R_LerpFixed(mobj->old_z, mobj->z, frac);
 	out->scale = FRACUNIT;
+	out->radius = mobj->radius;
+	out->height = mobj->height;
 	out->spritexscale = R_LerpFixed(mobj->old_spritexscale, mobj->spritexscale, frac);
 	out->spriteyscale = R_LerpFixed(mobj->old_spriteyscale, mobj->spriteyscale, frac);
 	out->spritexoffset = R_LerpFixed(mobj->old_spritexoffset, mobj->spritexoffset, frac);
@@ -464,6 +482,7 @@ void R_CreateInterpolator_Polyobj(thinker_t *thinker, polyobj_t *polyobj)
 
 	interp->polyobj.oldcx = interp->polyobj.bakcx = polyobj->centerPt.x;
 	interp->polyobj.oldcy = interp->polyobj.bakcy = polyobj->centerPt.y;
+	interp->polyobj.oldangle = interp->polyobj.bakangle = polyobj->angle;
 }
 
 void R_CreateInterpolator_DynSlope(thinker_t *thinker, pslope_t *slope)
@@ -485,6 +504,15 @@ void R_InitializeLevelInterpolators(void)
 	levelinterpolators_len = 0;
 	levelinterpolators_size = 0;
 	levelinterpolators = NULL;
+}
+
+static void RecalculatePolyobjectSegAngles(polyobj_t *polyobj)
+{
+	for (size_t i = 0; i < polyobj->segCount; i++)
+	{
+		seg_t *seg = polyobj->segs[i];
+		seg->angle = R_PointToAngle2(seg->v1->x, seg->v1->y, seg->v2->x, seg->v2->y);
+	}
 }
 
 static void UpdateLevelInterpolatorState(levelinterpolator_t *interp)
@@ -517,10 +545,13 @@ static void UpdateLevelInterpolatorState(levelinterpolator_t *interp)
 			interp->polyobj.bakvertices[i * 2    ] = interp->polyobj.polyobj->vertices[i]->x;
 			interp->polyobj.bakvertices[i * 2 + 1] = interp->polyobj.polyobj->vertices[i]->y;
 		}
+		RecalculatePolyobjectSegAngles(interp->polyobj.polyobj);
 		interp->polyobj.oldcx = interp->polyobj.bakcx;
 		interp->polyobj.oldcy = interp->polyobj.bakcy;
+		interp->polyobj.oldangle = interp->polyobj.bakangle;
 		interp->polyobj.bakcx = interp->polyobj.polyobj->centerPt.x;
 		interp->polyobj.bakcy = interp->polyobj.polyobj->centerPt.y;
+		interp->polyobj.bakangle = interp->polyobj.polyobj->angle;
 		break;
 	case LVLINTERP_DynSlope:
 		FV3_Copy(&interp->dynslope.oldo, &interp->dynslope.bako);
@@ -606,13 +637,16 @@ void R_ApplyLevelInterpolators(fixed_t frac)
 				interp->polyobj.polyobj->vertices[ii]->x = R_LerpFixed(interp->polyobj.oldvertices[ii * 2    ], interp->polyobj.bakvertices[ii * 2    ], frac);
 				interp->polyobj.polyobj->vertices[ii]->y = R_LerpFixed(interp->polyobj.oldvertices[ii * 2 + 1], interp->polyobj.bakvertices[ii * 2 + 1], frac);
 			}
+			RecalculatePolyobjectSegAngles(interp->polyobj.polyobj);
 			interp->polyobj.polyobj->centerPt.x = R_LerpFixed(interp->polyobj.oldcx, interp->polyobj.bakcx, frac);
 			interp->polyobj.polyobj->centerPt.y = R_LerpFixed(interp->polyobj.oldcy, interp->polyobj.bakcy, frac);
+			interp->polyobj.polyobj->angle = R_LerpAngle(interp->polyobj.oldangle, interp->polyobj.bakangle, frac);
 			break;
 		case LVLINTERP_DynSlope:
 			R_LerpVector3(&interp->dynslope.oldo, &interp->dynslope.bako, frac, &interp->dynslope.slope->o);
 			R_LerpVector2(&interp->dynslope.oldd, &interp->dynslope.bakd, frac, &interp->dynslope.slope->d);
 			interp->dynslope.slope->zdelta = R_LerpFixed(interp->dynslope.oldzdelta, interp->dynslope.bakzdelta, frac);
+			interp->dynslope.slope->moved = true;
 			break;
 		}
 	}
@@ -661,8 +695,10 @@ void R_RestoreLevelInterpolators(void)
 				interp->polyobj.polyobj->vertices[ii]->x = interp->polyobj.bakvertices[ii * 2    ];
 				interp->polyobj.polyobj->vertices[ii]->y = interp->polyobj.bakvertices[ii * 2 + 1];
 			}
+			RecalculatePolyobjectSegAngles(interp->polyobj.polyobj);
 			interp->polyobj.polyobj->centerPt.x = interp->polyobj.bakcx;
 			interp->polyobj.polyobj->centerPt.y = interp->polyobj.bakcy;
+			interp->polyobj.polyobj->angle = interp->polyobj.bakangle;
 			break;
 		case LVLINTERP_DynSlope:
 			FV3_Copy(&interp->dynslope.slope->o, &interp->dynslope.bako);

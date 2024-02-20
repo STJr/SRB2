@@ -54,7 +54,6 @@ UINT8 *HWR_GetScreenshot(void);
 boolean HWR_Screenshot(const char *pathname);
 
 void HWR_AddCommands(void);
-void HWR_AddSessionCommands(void);
 void transform(float *cx, float *cy, float *cz);
 INT32 HWR_GetTextureUsed(void);
 void HWR_DoPostProcessor(player_t *player);
@@ -62,11 +61,11 @@ void HWR_StartScreenWipe(void);
 void HWR_EndScreenWipe(void);
 void HWR_DrawIntermissionBG(void);
 void HWR_DoWipe(UINT8 wipenum, UINT8 scrnnum);
-void HWR_DoTintedWipe(UINT8 wipenum, UINT8 scrnnum);
 void HWR_MakeScreenFinalTexture(void);
 void HWR_DrawScreenFinalTexture(int width, int height);
 
 // This stuff is put here so models can use them
+boolean HWR_UseShader(void);
 void HWR_Lighting(FSurfaceInfo *Surface, INT32 light_level, extracolormap_t *colormap);
 UINT8 HWR_FogBlockAlpha(INT32 light, extracolormap_t *colormap); // Let's see if this can work
 
@@ -75,13 +74,7 @@ FBITFIELD HWR_GetBlendModeFlag(INT32 style);
 FBITFIELD HWR_SurfaceBlend(INT32 style, INT32 transtablenum, FSurfaceInfo *pSurf);
 FBITFIELD HWR_TranstableToAlpha(INT32 transtablenum, FSurfaceInfo *pSurf);
 
-boolean HWR_CompileShaders(void);
-
-void HWR_LoadAllCustomShaders(void);
-void HWR_LoadCustomShadersFromFile(UINT16 wadnum, boolean PK3);
-const char *HWR_GetShaderName(INT32 shader);
-
-extern customshaderxlat_t shaderxlat[];
+boolean HWR_ShouldUsePaletteRendering(void);
 
 extern CV_PossibleValue_t glanisotropicmode_cons_t[];
 
@@ -98,15 +91,17 @@ extern consvar_t cv_glmodelinterpolation;
 extern consvar_t cv_glmodellighting;
 extern consvar_t cv_glfiltermode;
 extern consvar_t cv_glanisotropicmode;
-extern consvar_t cv_fovchange;
 extern consvar_t cv_glsolvetjoin;
 extern consvar_t cv_glshearing;
 extern consvar_t cv_glspritebillboarding;
 extern consvar_t cv_glskydome;
 extern consvar_t cv_glfakecontrast;
 extern consvar_t cv_glslopecontrast;
-
 extern consvar_t cv_glbatching;
+extern consvar_t cv_glpaletterendering;
+extern consvar_t cv_glpalettedepth;
+
+extern consvar_t cv_glwireframe;
 
 extern float gl_viewwidth, gl_viewheight, gl_baseviewwindowy;
 

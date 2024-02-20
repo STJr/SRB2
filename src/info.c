@@ -250,6 +250,7 @@ char sprnames[NUMSPRITES + 1][5] =
 	"BMCH", // Big Mace Chain
 	"SMCE", // Small Mace
 	"BMCE", // Big Mace
+	"BSPB", // Blue spring on a ball
 	"YSPB", // Yellow spring on a ball
 	"RSPB", // Red spring on a ball
 	"SFBR", // Small Firebar
@@ -2296,6 +2297,13 @@ state_t states[NUMSTATES] =
 	{SPR_BMCE, 0, -1, {NULL}, 0, 0, S_NULL}, // S_BIGMACE
 	{SPR_SMCH, 1, -1, {NULL}, 0, 0, S_NULL}, // S_SMALLGRABCHAIN
 	{SPR_BMCH, 1, -1, {NULL}, 0, 0, S_NULL}, // S_BIGGRABCHAIN
+
+	// Blue spring on a ball
+	{SPR_BSPB, 0, -1, {NULL},   0, 0, S_NULL},            // S_BLUESPRINGBALL
+	{SPR_BSPB, 4,  4, {A_Pain}, 0, 0, S_BLUESPRINGBALL3}, // S_BLUESPRINGBALL2
+	{SPR_BSPB, 3,  1, {NULL},   0, 0, S_BLUESPRINGBALL4}, // S_BLUESPRINGBALL3
+	{SPR_BSPB, 2,  1, {NULL},   0, 0, S_BLUESPRINGBALL5}, // S_BLUESPRINGBALL4
+	{SPR_BSPB, 1,  1, {NULL},   0, 0, S_BLUESPRINGBALL},  // S_BLUESPRINGBALL5
 
 	// Yellow spring on a ball
 	{SPR_YSPB, 0, -1, {NULL},   0, 0, S_NULL},              // S_YELLOWSPRINGBALL
@@ -11677,6 +11685,33 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		sfx_None,       // activesound
 		MF_SCENERY|MF_SPECIAL|MF_NOGRAVITY, // flags
 		S_NULL          // raisestate
+	},
+
+	{            // MT_BLUESPRINGBALL
+		1133,           // doomednum
+		S_BLUESPRINGBALL, // spawnstate
+		1000,           // spawnhealth
+		S_BLUESPRINGBALL2, // seestate
+		sfx_None,       // seesound
+		0,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_spring,     // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		24*FRACUNIT,    // speed
+		17*FRACUNIT,    // radius
+		34*FRACUNIT,    // height
+		1,              // display offset
+		11*FRACUNIT,    // mass
+		0,              // damage
+		sfx_mswing,     // activesound
+		MF_SCENERY|MF_SPRING|MF_NOGRAVITY, // flags
+		S_BLUESPRINGBALL2 // raisestate
 	},
 
 	{            // MT_YELLOWSPRINGBALL
@@ -21756,7 +21791,7 @@ void P_PatchInfoTables(void)
 	INT32 i;
 	char *tempname;
 
-#if NUMSPRITEFREESLOTS > 1000
+#if NUMSPRITEFREESLOTS > 9999 //tempname numbering actually starts at SPR_FIRSTFREESLOT, so the limit is actually 9999 + SPR_FIRSTFREESLOT-1, but the preprocessor doesn't understand enums, so its left at 9999 for safety
 "Update P_PatchInfoTables, you big dumb head"
 #endif
 
@@ -21764,8 +21799,8 @@ void P_PatchInfoTables(void)
 	for (i = SPR_FIRSTFREESLOT; i <= SPR_LASTFREESLOT; i++)
 	{
 		tempname = sprnames[i];
-		tempname[0] = 'F';
-		tempname[1] = (char)('0' + (char)((i-SPR_FIRSTFREESLOT+1)/100));
+		tempname[0] = (char)('0' + (char)((i-SPR_FIRSTFREESLOT+1)/1000));
+		tempname[1] = (char)('0' + (char)(((i-SPR_FIRSTFREESLOT+1)/100)%10));
 		tempname[2] = (char)('0' + (char)(((i-SPR_FIRSTFREESLOT+1)/10)%10));
 		tempname[3] = (char)('0' + (char)((i-SPR_FIRSTFREESLOT+1)%10));
 		tempname[4] = '\0';

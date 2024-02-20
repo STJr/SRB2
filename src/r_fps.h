@@ -63,6 +63,8 @@ typedef struct {
 	angle_t roll;
 	angle_t spriteroll;
 	fixed_t scale;
+	fixed_t radius;
+	fixed_t height;
 	fixed_t spritexscale;
 	fixed_t spriteyscale;
 	fixed_t spritexoffset;
@@ -106,6 +108,7 @@ typedef struct levelinterpolator_s {
 			fixed_t *bakvertices;
 			size_t vertices_size;
 			fixed_t oldcx, oldcy, bakcx, bakcy;
+			angle_t oldangle, bakangle;
 		} polyobj;
 		struct {
 			pslope_t *slope;
