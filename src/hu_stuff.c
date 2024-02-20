@@ -496,10 +496,10 @@ static void DoSayCommand(SINT8 target, size_t usedargs, UINT8 flags)
 		// what we're gonna do now is check if the player exists
 		// with that logic, characters 4 and 5 are our numbers:
 		const char *newmsg;
-		char playernum[3];
+		char playernum[3+1];
 		INT32 spc = 1; // used if playernum[1] is a space.
 
-		strncpy(playernum, msg+3, 3);
+		strncpy(playernum, msg+3, sizeof(playernum)-1);
 		// check for undesirable characters in our "number"
 		if (((playernum[0] < '0') || (playernum[0] > '9')) || ((playernum[1] < '0') || (playernum[1] > '9')))
 		{
@@ -969,7 +969,7 @@ static void HU_sendChatMessage(void)
 	if (strlen(msg) > 4 && strnicmp(msg, "/pm", 3) == 0) // used /pm
 	{
 		INT32 spc = 1; // used if playernum[1] is a space.
-		char playernum[3];
+		char playernum[3+1];
 		const char *newmsg;
 
 		// what we're gonna do now is check if the player exists
@@ -982,7 +982,7 @@ static void HU_sendChatMessage(void)
 			return;
 		}
 
-		strncpy(playernum, msg+3, 3);
+		strncpy(playernum, msg+3, sizeof(playernum)-1);
 		// check for undesirable characters in our "number"
 		if (!(isdigit(playernum[0]) && isdigit(playernum[1])))
 		{
@@ -1679,13 +1679,14 @@ static void HU_DrawChat(void)
 			// filter: (code needs optimization pls help I'm bad with C)
 			if (w_chat[3])
 			{
-				char playernum[3];
+				char playernum[3+1];
 				UINT32 n;
 				// right, that's half important: (w_chat[4] may be a space since /pm0 msg is perfectly acceptable!)
 				if ( ( ((w_chat[3] != 0) && ((w_chat[3] < '0') || (w_chat[3] > '9'))) || ((w_chat[4] != 0) && (((w_chat[4] < '0') || (w_chat[4] > '9'))))) && (w_chat[4] != ' '))
 					break;
 
-				strncpy(playernum, w_chat+3, 3);
+				strncpy(playernum, w_chat+3, sizeof(playernum)-1);
+				playernum[3] = 0;
 				n = atoi(playernum); // turn that into a number
 				// special cases:
 
@@ -3052,7 +3053,7 @@ void HU_DoCEcho(const char *msg)
 {
 	I_OutputMsg("%s\n", msg); // print to log
 
-	strncpy(cechotext, msg, sizeof(cechotext));
+	strncpy(cechotext, msg, sizeof(cechotext)-1);
 	strncat(cechotext, "\\", sizeof(cechotext) - strlen(cechotext) - 1);
 	cechotext[sizeof(cechotext) - 1] = '\0';
 	cechotimer = cechoduration;

@@ -310,9 +310,7 @@ target_compile_options(SRB2SDL2 PRIVATE
 
 		$<$<VERSION_GREATER_EQUAL:$<C_COMPILER_VERSION>,8.1.0>:
 			-Wno-error=format-overflow
-			-Wno-error=stringop-truncation
 			-Wno-format-overflow
-			-Wno-stringop-truncation
 			-Wno-error=multistatement-macros
 		>
 
