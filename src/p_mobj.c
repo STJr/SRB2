@@ -2329,12 +2329,15 @@ boolean P_CheckDeathPitCollide(mobj_t *mo)
 	if (mo->player && mo->player->pflags & PF_GODMODE)
 		return false;
 
-	if (((mo->z <= mo->subsector->sector->floorheight
+	fixed_t sectorFloor = P_GetSectorFloorZAt(mo->subsector->sector, mo->x, mo->y);
+	fixed_t sectorCeiling = P_GetSectorCeilingZAt(mo->subsector->sector, mo->x, mo->y);
+
+	if (((mo->z <= sectorFloor
 		&& ((mo->subsector->sector->flags & MSF_TRIGGERSPECIAL_HEADBUMP) || !(mo->eflags & MFE_VERTICALFLIP)) && (mo->subsector->sector->flags & MSF_FLIPSPECIAL_FLOOR))
-	|| (mo->z + mo->height >= mo->subsector->sector->ceilingheight
-		&& ((mo->subsector->sector->flags & MSF_TRIGGERSPECIAL_HEADBUMP) || (mo->eflags & MFE_VERTICALFLIP)) && (mo->subsector->sector->flags & MSF_FLIPSPECIAL_CEILING)))
-	&& (mo->subsector->sector->damagetype == SD_DEATHPITTILT
-	|| mo->subsector->sector->damagetype == SD_DEATHPITNOTILT))
+		|| (mo->z + mo->height >= sectorCeiling
+			&& ((mo->subsector->sector->flags & MSF_TRIGGERSPECIAL_HEADBUMP) || (mo->eflags & MFE_VERTICALFLIP)) && (mo->subsector->sector->flags & MSF_FLIPSPECIAL_CEILING)))
+		&& (mo->subsector->sector->damagetype == SD_DEATHPITTILT
+			|| mo->subsector->sector->damagetype == SD_DEATHPITNOTILT))
 		return true;
 
 	return false;
