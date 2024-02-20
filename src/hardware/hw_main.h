@@ -45,7 +45,6 @@ void HWR_CreateStaticLightmaps(INT32 bspnum);
 void HWR_DrawFill(INT32 x, INT32 y, INT32 w, INT32 h, INT32 color);
 void HWR_DrawFadeFill(INT32 x, INT32 y, INT32 w, INT32 h, INT32 color, UINT16 actualcolor, UINT8 strength);
 void HWR_DrawConsoleFill(INT32 x, INT32 y, INT32 w, INT32 h, INT32 color, UINT32 actualcolor);	// Lat: separate flags from color since color needs to be an uint to work right.
-void HWR_DrawPic(INT32 x,INT32 y,lumpnum_t lumpnum);
 
 UINT8 *HWR_GetScreenshot(void);
 boolean HWR_Screenshot(const char *pathname);
