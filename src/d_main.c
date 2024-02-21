@@ -1664,10 +1664,10 @@ void D_SRB2Main(void)
 		if (M_CheckParm("-playdemo"))
 		{
 			singledemo = true; // quit after one demo
-			G_DeferedPlayDemo(tmp, M_CheckParm("-allowdemodesync") != 0);
+			G_DeferedPlayDemo(tmp);
 		}
 		else
-			G_TimeDemo(tmp, M_CheckParm("-allowdemodesync") != 0);
+			G_TimeDemo(tmp);
 
 		G_SetGamestate(GS_NULL);
 		wipegamestate = GS_NULL;

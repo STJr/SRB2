@@ -10529,7 +10529,6 @@ static void M_StartTimeAttackReplay(INT32 choice)
 	{
 		M_ClearMenus(true);
 		modeattacking = ATTACKING_RECORD; // set modeattacking before G_DoPlayDemo so the map loader knows
-		demoallowdesync = false;
 		G_DoPlayDemo(ra_demoname);
 	}
 }

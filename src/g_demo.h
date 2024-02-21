@@ -35,7 +35,7 @@ typedef enum
 } demo_file_override_e;
 
 extern demo_file_override_e demofileoverride;
-extern boolean demoallowdesync;
+extern consvar_t cv_resyncdemo;
 
 // Quit after playing a demo from cmdline.
 extern boolean singledemo;
@@ -95,9 +95,9 @@ void G_WriteMetalTic(mobj_t *metal);
 void G_SaveMetal(UINT8 **buffer);
 void G_LoadMetal(UINT8 **buffer);
 
-void G_DeferedPlayDemo(const char *demo, boolean allowdesync);
+void G_DeferedPlayDemo(const char *demo);
 void G_DoPlayDemo(char *defdemoname);
-void G_TimeDemo(const char *name, boolean allowdesync);
+void G_TimeDemo(const char *name);
 void G_AddGhost(char *defdemoname);
 void G_FreeGhosts(void);
 void G_DoPlayMetal(void);

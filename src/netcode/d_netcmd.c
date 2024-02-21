@@ -675,6 +675,7 @@ void D_RegisterClientCommands(void)
 	COM_AddCommand("timedemo", Command_Timedemo_f, 0);
 	COM_AddCommand("stopdemo", Command_Stopdemo_f, COM_LUA);
 	COM_AddCommand("playintro", Command_Playintro_f, COM_LUA);
+	CV_RegisterVar(&cv_resyncdemo);
 
 	COM_AddCommand("resetcamera", Command_ResetCamera_f, COM_LUA);
 
@@ -1596,8 +1597,6 @@ static void Command_Playdemo_f(void)
 		demofileoverride = DFILE_OVERRIDE_SKIP;
 	}
 
-	demoallowdesync = COM_CheckParm("-allowdesync");
-
 	// Internal if no extension, external if one exists
 	// If external, convert the file name to a path in SRB2's home directory
 	if (FIL_CheckExtension(name))
@@ -1645,7 +1644,7 @@ static void Command_Timedemo_f(void)
 
 	CONS_Printf(M_GetText("Timing demo '%s'.\n"), timedemo_name);
 
-	G_TimeDemo(timedemo_name, COM_CheckParm("-allowdesync"));
+	G_TimeDemo(timedemo_name);
 }
 
 // stop current demo
