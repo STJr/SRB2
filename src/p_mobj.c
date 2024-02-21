@@ -1120,11 +1120,14 @@ fixed_t P_MobjFloorZ(sector_t *sector, sector_t *boundsec, fixed_t x, fixed_t y,
 		testy += y;
 
 		// If the highest point is in the sector, then we have it easy! Just get the Z at that point
-		if (R_IsPointInSector(boundsec ? boundsec : sector, testx, testy))
+//		if (R_IsPointInSector(boundsec ? boundsec : sector, testx, testy))
+//			return P_GetSlopeZAt(slope, testx, testy);
+
+		if (R_PointInSubsector(testx, testy)->sector == (boundsec ? boundsec : sector)) // Faster
 			return P_GetSlopeZAt(slope, testx, testy);
 
 		// If boundsec is set, we're looking for specials. In that case, iterate over every line in this sector to find the TRUE highest/lowest point
-		if (perfect) {
+		if (perfect && boundsec) {
 			size_t i;
 			line_t *ld;
 			fixed_t bbox[4];
@@ -1196,11 +1199,14 @@ fixed_t P_MobjCeilingZ(sector_t *sector, sector_t *boundsec, fixed_t x, fixed_t 
 		testy += y;
 
 		// If the highest point is in the sector, then we have it easy! Just get the Z at that point
-		if (R_IsPointInSector(boundsec ? boundsec : sector, testx, testy))
+//		if (R_IsPointInSector(boundsec ? boundsec : sector, testx, testy))
+//			return P_GetSlopeZAt(slope, testx, testy);
+
+		if (R_PointInSubsector(testx, testy)->sector == (boundsec ? boundsec : sector)) // Faster
 			return P_GetSlopeZAt(slope, testx, testy);
 
 		// If boundsec is set, we're looking for specials. In that case, iterate over every line in this sector to find the TRUE highest/lowest point
-		if (perfect) {
+		if (perfect && boundsec) {
 			size_t i;
 			line_t *ld;
 			fixed_t bbox[4];
