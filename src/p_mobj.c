@@ -2179,8 +2179,8 @@ boolean P_CheckDeathPitCollide(mobj_t *mo)
 	if (mo->player && mo->player->pflags & PF_GODMODE)
 		return false;
 
-	fixed_t sectorFloor = P_MobjFloorZ(mo->subsector->sector, mo->subsector->sector, mo->x, mo->y, mo->radius, NULL, false, true);
-	fixed_t sectorCeiling = P_MobjCeilingZ(mo->subsector->sector, mo->subsector->sector, mo->x, mo->y, mo->radius, NULL, true, true);
+	fixed_t sectorFloor = P_GetSpecialBottomZ(mo, mo->subsector->sector, mo->subsector->sector);
+	fixed_t sectorCeiling = P_GetSpecialTopZ(mo, mo->subsector->sector, mo->subsector->sector);
 
 	if (((mo->z <= sectorFloor
 		&& ((mo->subsector->sector->flags & MSF_TRIGGERSPECIAL_HEADBUMP) || !(mo->eflags & MFE_VERTICALFLIP)) && (mo->subsector->sector->flags & MSF_FLIPSPECIAL_FLOOR))
