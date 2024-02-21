@@ -51,6 +51,7 @@ boolean demorecording;
 boolean demoplayback;
 boolean titledemo; // Title Screen demo can be cancelled by any key
 demo_file_override_e demofileoverride;
+boolean demoallowdesync = false; // Allow demo files to de-sync
 static UINT8 *demobuffer = NULL;
 static UINT8 *demo_p, *demotime_p;
 static UINT8 *demoend;
@@ -660,11 +661,14 @@ void G_ConsGhostTic(void)
 			CONS_Alert(CONS_WARNING, M_GetText("Demo playback has desynced!\n"));
 		demosynced = false;
 
-		P_UnsetThingPosition(testmo);
-		testmo->x = oldghost.x;
-		testmo->y = oldghost.y;
-		P_SetThingPosition(testmo);
-		testmo->z = oldghost.z;
+		if (!demoallowdesync)
+		{
+			P_UnsetThingPosition(testmo);
+			testmo->x = oldghost.x;
+			testmo->y = oldghost.y;
+			P_SetThingPosition(testmo);
+			testmo->z = oldghost.z;
+		}
 	}
 
 	if (*demo_p == DEMOMARKER)
@@ -1975,7 +1979,7 @@ UINT8 G_CmpDemoTime(char *oldname, char *newname)
 //
 // G_PlayDemo
 //
-void G_DeferedPlayDemo(const char *name)
+void G_DeferedPlayDemo(const char *name, boolean allowdesync)
 {
 	COM_BufAddText("playdemo \"");
 	COM_BufAddText(name);
@@ -2633,7 +2637,7 @@ void G_FreeGhosts(void)
 //
 static INT32 restorecv_vidwait;
 
-void G_TimeDemo(const char *name)
+void G_TimeDemo(const char *name, boolean allowdesync)
 {
 	nodrawers = M_CheckParm("-nodraw");
 	noblit = M_CheckParm("-noblit");
@@ -2644,7 +2648,7 @@ void G_TimeDemo(const char *name)
 	singletics = true;
 	framecount = 0;
 	demostarttime = I_GetTime();
-	G_DeferedPlayDemo(name);
+	G_DeferedPlayDemo(name, allowdesync);
 }
 
 void G_DoPlayMetal(void)

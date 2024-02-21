@@ -3513,6 +3513,7 @@ void F_TitleScreenTicker(boolean run)
 
 		titledemo = true;
 		demofileoverride = DFILE_OVERRIDE_NONE;
+		demoallowdesync = false;
 		G_DoPlayDemo(dname);
 	}
 }
