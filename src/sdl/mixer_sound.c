@@ -147,8 +147,11 @@ static void Midiplayer_Onchange(void)
 		else
 			restart = true;
 	}
-
+#if SDL_MIXER_VERSION_ATLEAST(2,5,0)
+	Mix_SetTimidityCfg(cv_miditimiditypath.string);
+#else
 	Mix_Timidity_addToPathList(cv_miditimiditypath.string);
+#endif
 
 	if (restart)
 		S_StartEx(true);
@@ -286,7 +289,11 @@ void I_StartupSound(void)
 #ifdef HAVE_MIXERX
 	Mix_SetMidiPlayer(cv_midiplayer.value);
 	Mix_SetSoundFonts(cv_midisoundfontpath.string);
+#if SDL_MIXER_VERSION_ATLEAST(2,5,0)
+	Mix_SetTimidityCfg(cv_miditimiditypath.string);
+#else
 	Mix_Timidity_addToPathList(cv_miditimiditypath.string);
+#endif
 #endif
 #if SDL_MIXER_VERSION_ATLEAST(1,2,11)
 	Mix_Init(MIX_INIT_FLAC|MIX_INIT_MP3|MIX_INIT_OGG|MIX_INIT_MOD);
@@ -942,7 +949,12 @@ UINT32 I_GetSongLength(void)
 	else
 	{
 #ifdef HAVE_MIXERX
+#if SDL_MIXER_VERSION_ATLEAST(2,5,0)
+		double xlength = Mix_MusicDuration(music);
+#else
 		double xlength = Mix_GetMusicTotalTime(music);
+#endif
+
 		if (xlength >= 0)
 			return (UINT32)(xlength*1000);
 #endif
@@ -1200,7 +1212,11 @@ boolean I_LoadSong(char *data, size_t len)
 		Mix_SetMidiPlayer(cv_midiplayer.value);
 	if (!Mix_GetSoundFonts() || stricmp(Mix_GetSoundFonts(), cv_midisoundfontpath.string))
 		Mix_SetSoundFonts(cv_midisoundfontpath.string);
+#if SDL_MIXER_VERSION_ATLEAST(2,5,0)
+	Mix_SetTimidityCfg(cv_miditimiditypath.string);
+#else
 	Mix_Timidity_addToPathList(cv_miditimiditypath.string); // this overwrites previous custom path
+#endif
 #endif
 
 #ifdef HAVE_OPENMPT
