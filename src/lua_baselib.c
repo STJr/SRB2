@@ -3661,13 +3661,7 @@ enum musicdef_e
 	musicdef_name,
 	musicdef_title,
 	musicdef_alttitle,
-	musicdef_authors,
-	musicdef_soundtestpage,
-	musicdef_soundtestcond,
-	musicdef_stoppingtics,
-	musicdef_bpm,
-	musicdef_loop_ms,
-	musicdef_allowed
+	musicdef_authors
 };
 
 static const char *const musicdef_opt[] = {
@@ -3675,12 +3669,6 @@ static const char *const musicdef_opt[] = {
 	"title",
 	"alttitle",
 	"authors",
-	"soundtestpage",
-	"soundtestcond",
-	"stoppingtics",
-	"bpm",
-	"loop_ms",
-	"allowed",
 	NULL,
 };
 
@@ -3708,24 +3696,6 @@ static int musicdef_get(lua_State *L)
 		break;
 	case musicdef_authors:
 		lua_pushstring(L, musicdef->authors);
-		break;
-	case musicdef_soundtestpage:
-		lua_pushinteger(L, musicdef->soundtestpage);
-		break;
-	case musicdef_soundtestcond:
-		lua_pushinteger(L, musicdef->soundtestcond);
-		break;
-	case musicdef_stoppingtics:
-		lua_pushinteger(L, musicdef->stoppingtics);
-		break;
-	case musicdef_bpm:
-		lua_pushfixed(L, musicdef->bpm);
-		break;
-	case musicdef_loop_ms:
-		lua_pushinteger(L, musicdef->loop_ms);
-		break;
-	case musicdef_allowed:
-		lua_pushboolean(L, musicdef->allowed);
 		break;
 	default:
 		lua_getfield(L, LUA_REGISTRYINDEX, LREG_EXTVARS);
