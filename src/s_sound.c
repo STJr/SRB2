@@ -1801,6 +1801,18 @@ UINT32 S_GetMusicLength(void)
 	return I_GetSongLength();
 }
 
+musicdef_t *S_MusicInfo(void)
+{
+	musicdef_t *def;
+	for (def = musicdefstart; def; def = def->next)
+	{
+		if (strcasecmp(def->name, music_name) == 0)
+			return def;
+	}
+
+	return NULL;
+}
+
 boolean S_SetMusicLoopPoint(UINT32 looppoint)
 {
 	return I_SetSongLoopPoint(looppoint);

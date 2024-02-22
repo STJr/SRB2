@@ -172,6 +172,8 @@ static const struct {
 	{META_SKINSPRITES,  "skin_t.sprites"},
 	{META_SKINSPRITESLIST,  "skin_t.sprites[]"},
 
+	{META_MUSICDEF,     "musicdef_t"},
+
 	{META_VERTEX,       "vertex_t"},
 	{META_LINE,         "line_t"},
 	{META_SIDE,         "side_t"},
@@ -3654,6 +3656,102 @@ static int lib_sResumeMusic(lua_State *L)
 	return 1;
 }
 
+enum musicdef_e
+{
+	musicdef_name,
+	musicdef_title,
+	musicdef_alttitle,
+	musicdef_authors,
+	musicdef_soundtestpage,
+	musicdef_soundtestcond,
+	musicdef_stoppingtics,
+	musicdef_bpm,
+	musicdef_loop_ms,
+	musicdef_allowed
+};
+
+static const char *const musicdef_opt[] = {
+	"name",
+	"title",
+	"alttitle",
+	"authors",
+	"soundtestpage",
+	"soundtestcond",
+	"stoppingtics",
+	"bpm",
+	"loop_ms",
+	"allowed",
+	NULL,
+};
+
+static int musicdef_fields_ref = LUA_NOREF;
+
+static int musicdef_get(lua_State *L)
+{
+	musicdef_t *musicdef = *((musicdef_t **)luaL_checkudata(L, 1, META_MUSICDEF));
+	enum musicdef_e field = Lua_optoption(L, 2, -1, musicdef_fields_ref);
+	lua_settop(L, 2);
+
+	if (!musicdef)
+		return LUA_ErrInvalid(L, "musicdef_t");
+
+	switch (field)
+	{
+	case musicdef_name:
+		lua_pushstring(L, musicdef->name);
+		break;
+	case musicdef_title:
+		lua_pushstring(L, musicdef->title);
+		break;
+	case musicdef_alttitle:
+		lua_pushstring(L, musicdef->alttitle);
+		break;
+	case musicdef_authors:
+		lua_pushstring(L, musicdef->authors);
+		break;
+	case musicdef_soundtestpage:
+		lua_pushinteger(L, musicdef->soundtestpage);
+		break;
+	case musicdef_soundtestcond:
+		lua_pushinteger(L, musicdef->soundtestcond);
+		break;
+	case musicdef_stoppingtics:
+		lua_pushinteger(L, musicdef->stoppingtics);
+		break;
+	case musicdef_bpm:
+		lua_pushfixed(L, musicdef->bpm);
+		break;
+	case musicdef_loop_ms:
+		lua_pushinteger(L, musicdef->loop_ms);
+		break;
+	case musicdef_allowed:
+		lua_pushboolean(L, musicdef->allowed);
+		break;
+	default:
+		lua_getfield(L, LUA_REGISTRYINDEX, LREG_EXTVARS);
+		I_Assert(lua_istable(L, -1));
+		lua_pushlightuserdata(L, musicdef);
+		lua_rawget(L, -2);
+		if (!lua_istable(L, -1)) { // no extra values table
+			CONS_Debug(DBG_LUA, M_GetText("'%s' has no extvars table or field named '%s'; returning nil.\n"), "musicdef_t", lua_tostring(L, 2));
+			return 0;
+		}
+		lua_pushvalue(L, 2); // field name
+		lua_gettable(L, -2);
+		if (lua_isnil(L, -1)) // no value for this field
+			CONS_Debug(DBG_LUA, M_GetText("'%s' has no field named '%s'; returning nil.\n"), "musicdef_t", lua_tostring(L, 2));
+		break;
+	}
+
+	return 1;
+}
+
+static int lib_sMusicInfo(lua_State *L)
+{
+	LUA_PushUserdata(L, S_MusicInfo(), META_MUSICDEF);
+	return 1;
+}
+
 // G_GAME
 ////////////
 
@@ -4531,6 +4629,7 @@ static luaL_Reg lib[] = {
 	{"S_GetMusicLoopPoint",lib_sGetMusicLoopPoint},
 	{"S_PauseMusic",lib_sPauseMusic},
 	{"S_ResumeMusic", lib_sResumeMusic},
+	{"S_MusicInfo", lib_sMusicInfo},
 
 	// g_game
 	{"G_AddGametype", lib_gAddGametype},
@@ -4569,6 +4668,11 @@ static luaL_Reg lib[] = {
 
 int LUA_BaseLib(lua_State *L)
 {
+	// musicdef_t
+	// Sound should have its whole own file for Lua, but this will do for now.
+	LUA_RegisterUserdataMetatable(L, META_MUSICDEF, musicdef_get, NULL, NULL);
+	musicdef_fields_ref = Lua_CreateFieldTable(L, musicdef_opt);
+
 	// Set metatable for string
 	lua_pushliteral(L, "");  // dummy string
 	lua_getmetatable(L, -1);  // get string metatable

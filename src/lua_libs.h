@@ -45,6 +45,8 @@ extern boolean ignoregameinputs;
 #define META_SKINSPRITES "SKIN_T*SPRITES"
 #define META_SKINSPRITESLIST "SKIN_T*SPRITES[]"
 
+#define META_MUSICDEF "MUSICDEF_T*"
+
 #define META_VERTEX "VERTEX_T*"
 #define META_LINE "LINE_T*"
 #define META_SIDE "SIDE_T*"
