@@ -15,10 +15,13 @@
 tokenizer_t *Tokenizer_Open(const char *inputString, size_t len, unsigned numTokens)
 {
 	tokenizer_t *tokenizer = Z_Malloc(sizeof(tokenizer_t), PU_STATIC, NULL);
-	const size_t lenpan = len+1;
+	const size_t lenpan = 2;
 
-	tokenizer->zdup = malloc(lenpan);
-	tokenizer->zdup[len] = 0x00;
+	tokenizer->zdup = malloc(len+lenpan);
+	for (size_t i = 0; i < lenpan; i++)
+	{
+		tokenizer->zdup[len+i] = 0x00;
+	}
 
 	tokenizer->input = M_Memcpy(tokenizer->zdup, inputString, len);
 	tokenizer->startPos = 0;
