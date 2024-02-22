@@ -3964,23 +3964,25 @@ stairstep:
 		mo->momy = tmymove;
 	}
 
+	const fixed_t tmradius = mo->radius > 8 ? mo->radius : 8;
+
 	do {
-		if (tmxmove > mo->radius) {
-			newx = mo->x + mo->radius;
-			tmxmove -= mo->radius;
-		} else if (tmxmove < -mo->radius) {
-			newx = mo->x - mo->radius;
-			tmxmove += mo->radius;
+		if (tmxmove > tmradius) {
+			newx = mo->x + tmradius;
+			tmxmove -= tmradius;
+		} else if (tmxmove < -tmradius) {
+			newx = mo->x - tmradius;
+			tmxmove += tmradius;
 		} else {
 			newx = mo->x + tmxmove;
 			tmxmove = 0;
 		}
-		if (tmymove > mo->radius) {
-			newy = mo->y + mo->radius;
-			tmymove -= mo->radius;
-		} else if (tmymove < -mo->radius) {
-			newy = mo->y - mo->radius;
-			tmymove += mo->radius;
+		if (tmymove > tmradius) {
+			newy = mo->y + tmradius;
+			tmymove -= tmradius;
+		} else if (tmymove < -tmradius) {
+			newy = mo->y - tmradius;
+			tmymove += tmradius;
 		} else {
 			newy = mo->y + tmymove;
 			tmymove = 0;
