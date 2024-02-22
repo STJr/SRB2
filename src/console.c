@@ -120,7 +120,7 @@ static void CONS_backcolor_Change(void);
 #ifdef macintosh
 #define CON_BUFFERSIZE 4096 // my compiler can't handle local vars >32k
 #else
-#define CON_BUFFERSIZE 16384
+#define CON_BUFFERSIZE 32768
 #endif
 
 static char con_buffer[CON_BUFFERSIZE];

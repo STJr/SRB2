@@ -193,6 +193,8 @@ static void R_DrawBlendColumnInCache(column_t *column, UINT8 *cache, texpatch_t 
 		{
 			for (; dest < cache + position + count; source++, dest++, is_opaque++)
 			{
+				if (originPatch->alpha <= ASTTextureBlendingThreshold[1] && !(*is_opaque))
+					continue;
 				*dest = ASTBlendPaletteIndexes(*dest, *source, originPatch->style, originPatch->alpha);
 				*is_opaque = true;
 			}
@@ -237,6 +239,8 @@ static void R_DrawBlendFlippedColumnInCache(column_t *column, UINT8 *cache, texp
 		{
 			for (; dest < cache + position + count; --source, dest++, is_opaque++)
 			{
+				if (originPatch->alpha <= ASTTextureBlendingThreshold[1] && !(*is_opaque))
+					continue;
 				*dest = ASTBlendPaletteIndexes(*dest, *source, originPatch->style, originPatch->alpha);
 				*is_opaque = true;
 			}
