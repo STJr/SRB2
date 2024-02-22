@@ -552,7 +552,7 @@ void *M_Memcpy(void* dest, const void* src, size_t n);
 char *va(const char *format, ...) FUNCPRINTF;
 char *M_GetToken(const char *inputString);
 void M_UnGetToken(void);
-void M_TokenizerOpen(const char *inputString);
+void M_TokenizerOpen(const char *inputString, size_t len);
 void M_TokenizerClose(void);
 const char *M_TokenizerRead(UINT32 i);
 const char *M_TokenizerReadZDoom(UINT32 i);
