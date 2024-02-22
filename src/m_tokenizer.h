@@ -16,7 +16,7 @@
 
 typedef struct Tokenizer
 {
-	void *zdup;
+	char *zdup;
 	const char *input;
 	unsigned numTokens;
 	UINT32 *capacity;
