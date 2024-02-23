@@ -3718,7 +3718,8 @@ static int musicdef_get(lua_State *L)
 
 static int lib_sMusicInfo(lua_State *L)
 {
-	LUA_PushUserdata(L, S_MusicInfo(), META_MUSICDEF);
+	const char *music_name = lua_tolstring(L, 1, NULL);
+	LUA_PushUserdata(L, S_MusicInfo(music_name), META_MUSICDEF);
 	return 1;
 }
 

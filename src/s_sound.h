@@ -221,7 +221,7 @@ boolean S_PrepareSoundTest(void);
 UINT32 S_GetMusicLength(void);
 
 // Get MUSICDEF of Music
-musicdef_t *S_MusicInfo(void);
+musicdef_t *S_MusicInfo(const char *name);
 
 // Set LoopPoint of Music
 boolean S_SetMusicLoopPoint(UINT32 looppoint);
