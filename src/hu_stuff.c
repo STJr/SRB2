@@ -489,7 +489,7 @@ static void DoSayCommand(SINT8 target, size_t usedargs, UINT8 flags)
 		strlcat(msg, COM_Argv(ix + usedargs), msgspace);
 	}
 
-	if (!FilterPM(msg, &target)) // check for /pm + a valid target
+	if (!FilterPM(msg, target)) // check for /pm + a valid target
 		return;
 
 	buf[0] = target;
@@ -796,7 +796,7 @@ static void Got_Saycmd(UINT8 **p, INT32 playernum)
 #endif
 }
 
-static boolean FilterPM(char *msg, SINT8 target)
+boolean FilterPM(char *msg, SINT8 target)
 {
 	if (strlen(msg) > 4 && strnicmp(msg, "/pm", 3) == 0) // used /pm
 	{
@@ -942,7 +942,7 @@ static void HU_sendChatMessage(void)
 		return;
 	}
 
-	if (!FilterPM(msg, &target)) // check for /pm + a valid target
+	if (!FilterPM(msg, target)) // check for /pm + a valid target
 		return;
 	
 	if (ci > 2) // don't send target+flags+empty message.

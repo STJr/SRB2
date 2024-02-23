@@ -74,6 +74,7 @@ typedef struct
 
 // some functions
 void HU_AddChatText(const char *text, boolean playsound);
+boolean FilterPM(char *msg, SINT8 target);
 
 // set true when entering a chat message
 extern boolean chat_on;
