@@ -480,8 +480,6 @@ static void DoSayCommand(SINT8 target, size_t usedargs, UINT8 flags)
 	if(dedicated && !(flags & HU_CSAY))
 		flags |= HU_SERVER_SAY;
 
-	buf[0] = target;
-	buf[1] = flags;
 	msg[0] = '\0';
 
 	for (ix = 0; ix < numwords; ix++)
@@ -491,51 +489,11 @@ static void DoSayCommand(SINT8 target, size_t usedargs, UINT8 flags)
 		strlcat(msg, COM_Argv(ix + usedargs), msgspace);
 	}
 
-	if (strlen(msg) > 4 && strnicmp(msg, "/pm", 3) == 0) // used /pm
-	{
-		// what we're gonna do now is check if the player exists
-		// with that logic, characters 4 and 5 are our numbers:
-		const char *newmsg;
-		char playernum[3];
-		INT32 spc = 1; // used if playernum[1] is a space.
+	if (!FilterPM(msg, &target)) // check for /pm + a valid target
+		return;
 
-		strncpy(playernum, msg+3, 3);
-		// check for undesirable characters in our "number"
-		if (((playernum[0] < '0') || (playernum[0] > '9')) || ((playernum[1] < '0') || (playernum[1] > '9')))
-		{
-			// check if playernum[1] is a space
-			if (playernum[1] == ' ')
-				spc = 0;
-			// let it slide
-			else
-			{
-				HU_AddChatText("\x82NOTICE: \x80Invalid command format. Correct format is \'/pm<playernum> \'.", false);
-				return;
-			}
-		}
-		// I'm very bad at C, I swear I am, additional checks eww!
-		if (spc != 0 && msg[5] != ' ')
-		{
-			HU_AddChatText("\x82NOTICE: \x80Invalid command format. Correct format is \'/pm<playernum> \'.", false);
-			return;
-		}
-
-		target = atoi(playernum); // turn that into a number
-		//CONS_Printf("%d\n", target);
-
-		// check for target player, if it doesn't exist then we can't send the message!
-		if (target < MAXPLAYERS && (playeringame[target] || target == 0)) // player exists or is dedicated host
-			target++; // even though playernums are from 0 to 31, target is 1 to 32, so up that by 1 to have it work!
-		else
-		{
-			HU_AddChatText(va("\x82NOTICE: \x80Player %d does not exist.", target), false); // same
-			return;
-		}
-		buf[0] = target;
-		newmsg = msg+5+spc;
-		strlcpy(msg, newmsg, HU_MAXMSGLEN + 1);
-	}
-
+	buf[0] = target;
+	buf[1] = flags;
 	SendNetXCmd(XD_SAY, buf, strlen(msg) + 1 + msg-buf);
 }
 
@@ -838,6 +796,44 @@ static void Got_Saycmd(UINT8 **p, INT32 playernum)
 #endif
 }
 
+static boolean FilterPM(char *msg, SINT8 target)
+{
+	if (strlen(msg) > 4 && strnicmp(msg, "/pm", 3) == 0) // used /pm
+	{
+		const char *newmsg;
+		char playernum[3];
+
+		if (target == -1) // don't allow PMs in team chat, they would be broadcast to everyone anyway
+		{
+			HU_AddChatText(va("%sCannot send sayto in Say-Team.", "\x85"), false);
+			return false;
+		}
+
+		strncpy(playernum, msg+3, 3);
+		// check for undesirable characters in our "number"
+		if (!isdigit(playernum[0]) || (!isdigit(playernum[1]) && playernum[1] != ' '))
+		{
+			HU_AddChatText("\x82NOTICE: \x80Invalid command format. Correct format is \'/pm<playernum> \'.", false);
+			return false;
+		}
+
+		target = atoi(playernum); // turn that into a number
+
+		if (target < MAXPLAYERS && (playeringame[target] || target == 0)) // check if target player exists or is dedicated host
+			target++; // even though playernums are from 0 to 31, target is 1 to 32, so up that by 1 to have it work!
+		else
+		{
+			HU_AddChatText(va("\x82NOTICE: \x80Player %d does not exist.", target), false); // same
+			return false;
+		}
+
+		newmsg = msg + 5 + (playernum[1] == ' ' ? 0 : 1);
+		strlcpy(msg, newmsg, HU_MAXMSGLEN + 1);
+	}
+
+	return true;
+}
+
 //
 //
 void HU_Ticker(void)
@@ -921,7 +917,7 @@ static void HU_sendChatMessage(void)
 	char buf[2 + HU_MAXMSGLEN + 1];
 	char *msg = &buf[2];
 	size_t ci;
-	INT32 target = 0;
+	SINT8 target = teamtalk ? -1 : 0;
 
 	// if our message was nothing but spaces, don't send it.
 	if (HU_chatboxContainsOnlySpaces())
@@ -946,61 +942,12 @@ static void HU_sendChatMessage(void)
 		return;
 	}
 
-	if (strlen(msg) > 4 && strnicmp(msg, "/pm", 3) == 0) // used /pm
-	{
-		INT32 spc = 1; // used if playernum[1] is a space.
-		char playernum[3];
-		const char *newmsg;
-
-		// what we're gonna do now is check if the player exists
-		// with that logic, characters 4 and 5 are our numbers:
-
-		// teamtalk can't send PMs, just don't send it, else everyone would be able to see it, and no one wants to see your sex RP sicko.
-		if (teamtalk)
-		{
-			HU_AddChatText(va("%sCannot send sayto in Say-Team.", "\x85"), false);
-			return;
-		}
-
-		strncpy(playernum, msg+3, 3);
-		// check for undesirable characters in our "number"
-		if (!(isdigit(playernum[0]) && isdigit(playernum[1])))
-		{
-			// check if playernum[1] is a space
-			if (playernum[1] == ' ')
-				spc = 0;
-				// let it slide
-			else
-			{
-				HU_AddChatText("\x82NOTICE: \x80Invalid command format. Correct format is \'/pm<player num> \'.", false);
-				return;
-			}
-		}
-		// I'm very bad at C, I swear I am, additional checks eww!
-		if (spc != 0 && msg[5] != ' ')
-		{
-			HU_AddChatText("\x82NOTICE: \x80Invalid command format. Correct format is \'/pm<player num> \'.", false);
-			return;
-		}
-
-		target = atoi(playernum); // turn that into a number
-
-		// check for target player, if it doesn't exist then we can't send the message!
-		if (target < MAXPLAYERS && playeringame[target]) // player exists
-			target++; // even though playernums are from 0 to 31, target is 1 to 32, so up that by 1 to have it work!
-		else
-		{
-			HU_AddChatText(va("\x82NOTICE: \x80Player %d does not exist.", target), false); // same
-			return;
-		}
-
-		// we need to get rid of the /pm<player num>
-		newmsg = msg+5+spc;
-		strlcpy(msg, newmsg, HU_MAXMSGLEN + 1);
-	}
+	if (!FilterPM(msg, &target)) // check for /pm + a valid target
+		return;
+	
 	if (ci > 2) // don't send target+flags+empty message.
 	{
-		buf[0] = teamtalk ? -1 : target; // target
+		buf[0] = target;
 		buf[1] = 0; // flags
 		SendNetXCmd(XD_SAY, buf, 2 + strlen(&buf[2]) + 1);
 	}
@@ -1653,47 +1600,22 @@ static void HU_DrawChat(void)
 		}
 #endif
 
-		i = 0;
-		for(i=0; (i<MAXPLAYERS); i++)
+		for(i = 0; i < MAXPLAYERS; i++)
 		{
 			// filter: (code needs optimization pls help I'm bad with C)
 			if (w_chat[3])
 			{
 				char playernum[3];
 				UINT32 n;
-				// right, that's half important: (w_chat[4] may be a space since /pm0 msg is perfectly acceptable!)
-				if ( ( ((w_chat[3] != 0) && ((w_chat[3] < '0') || (w_chat[3] > '9'))) || ((w_chat[4] != 0) && (((w_chat[4] < '0') || (w_chat[4] > '9'))))) && (w_chat[4] != ' '))
+				if ((w_chat[3] != 0 && !isdigit(w_chat[3])) || (w_chat[4] != 0  && w_chat[4] != ' ' && !isdigit(w_chat[4])))
 					break;
 
 				strncpy(playernum, w_chat+3, 3);
-				n = atoi(playernum); // turn that into a number
-				// special cases:
-
-				if ((n == 0) && !(w_chat[4] == '0'))
-				{
-					if (!(i<10))
-						continue;
-				}
-				else if ((n == 1) && !(w_chat[3] == '0'))
-				{
-					if (!((i == 1) || ((i >= 10) && (i <= 19))))
-						continue;
-				}
-				else if ((n == 2) && !(w_chat[3] == '0'))
-				{
-					if (!((i == 2) || ((i >= 20) && (i <= 29))))
-						continue;
-				}
-				else if ((n == 3) && !(w_chat[3] == '0'))
-				{
-					if (!((i == 3) || ((i >= 30) && (i <= 31))))
-						continue;
-				}
-				else	// general case.
-				{
-					if (i != n)
-						continue;
-				}
+				n = atoi(playernum);
+				if (n < 10 && ((i >= 10 && n != i/10) || (i < 10 && n != i)))
+					continue;
+				else if (n >= 10 && n != i)
+					continue;
 			}
 
 			if (playeringame[i] || i == 0) // dedicated server host is not in-game but still valid
