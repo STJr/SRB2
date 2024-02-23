@@ -524,7 +524,7 @@ static void DoSayCommand(SINT8 target, size_t usedargs, UINT8 flags)
 		//CONS_Printf("%d\n", target);
 
 		// check for target player, if it doesn't exist then we can't send the message!
-		if (target < MAXPLAYERS && playeringame[target]) // player exists
+		if (target < MAXPLAYERS && (playeringame[target] || target == 0)) // player exists or is dedicated host
 			target++; // even though playernums are from 0 to 31, target is 1 to 32, so up that by 1 to have it work!
 		else
 		{
@@ -632,10 +632,8 @@ static void Got_Saycmd(UINT8 **p, INT32 playernum)
 	SINT8 target;
 	UINT8 flags;
 	const char *dispname;
-	char *msg;
-	boolean action = false;
-	char *ptr;
-	INT32 spam_eatmsg = 0;
+	char *msg, *ptr;
+	boolean action = false, spam_eatmsg = false;
 
 	CONS_Debug(DBG_NETPLAY,"Received SAY cmd from Player %d (%s)\n", playernum+1, player_names[playernum]);
 
@@ -655,35 +653,28 @@ static void Got_Saycmd(UINT8 **p, INT32 playernum)
 	}
 
 	//check for invalid characters (0x80 or above)
+	for (size_t i = 0; i < strlen(msg); i++)
 	{
-		size_t i;
-		const size_t j = strlen(msg);
-		for (i = 0; i < j; i++)
+		if (msg[i] & 0x80)
 		{
-			if (msg[i] & 0x80)
-			{
-				CONS_Alert(CONS_WARNING, M_GetText("Illegal say command received from %s containing invalid characters\n"), player_names[playernum]);
-				if (server)
-					SendKick(playernum, KICK_MSG_CON_FAIL | KICK_MSG_KEEP_BODY);
-				return;
-			}
+			CONS_Alert(CONS_WARNING, M_GetText("Illegal say command received from %s containing invalid characters\n"), player_names[playernum]);
+			if (server)
+				SendKick(playernum, KICK_MSG_CON_FAIL | KICK_MSG_KEEP_BODY);
+			return;
 		}
 	}
 
 	// before we do anything, let's verify the guy isn't spamming, get this easier on us.
-
-	//if (stop_spamming[playernum] != 0 && cv_chatspamprotection.value && !(flags & HU_CSAY))
 	if (spam_tokens[playernum] <= 0 && cv_chatspamprotection.value && !(flags & HU_CSAY))
 	{
 		CONS_Debug(DBG_NETPLAY,"Received SAY cmd too quickly from Player %d (%s), assuming as spam and blocking message.\n", playernum+1, player_names[playernum]);
 		spam_tics[playernum] = 0;
-		spam_eatmsg = 1;
+		spam_eatmsg = true;
 	}
 	else
 		spam_tokens[playernum] -= 1;
 
 	// run the lua hook even if we were supposed to eat the msg, netgame consistency goes first.
-
 	if (LUA_HookPlayerMsg(playernum, target, flags, msg))
 		return;
 
@@ -707,22 +698,17 @@ static void Got_Saycmd(UINT8 **p, INT32 playernum)
 	}
 
 	if (flags & HU_SERVER_SAY)
-		dispname = "SERVER";
+		dispname = "~SERVER";
 	else
 		dispname = player_names[playernum];
 
 	// Clean up message a bit
-	// If you use a \r character, you can remove your name
-	// from before the text and then pretend to be someone else!
-	// If you use a \n character, you can create a new line in
-	// the log and then pretend to be someone else as well!
-	ptr = msg;
-	while (*ptr != '\0')
+	// If you use a \r character, you can remove your name from before the text and then pretend to be someone else!
+	// If you use a \n character, you can create a new line in the log and then pretend to be someone else as well!
+	for (ptr = msg; *ptr != '\0'; ptr++)
 	{
 		if (*ptr == '\r' || *ptr == '\n')
 			*ptr = ' ';
-
-		ptr++;
 	}
 
 	// Show messages sent by you, to you, to your team, or to everyone:
@@ -735,7 +721,7 @@ static void Got_Saycmd(UINT8 **p, INT32 playernum)
 		char *tempchar = NULL;
 
 		// player is a spectator?
-        if (players[playernum].spectator)
+		if (players[playernum].spectator)
 		{
 			cstart = "\x86";    // grey name
 			textcolor = "\x86";
@@ -743,18 +729,12 @@ static void Got_Saycmd(UINT8 **p, INT32 playernum)
 		else if (target == -1) // say team
 		{
 			if (players[playernum].ctfteam == 1) // red
-			{
-				cstart = "\x85";
-				textcolor = "\x85";
-			}
+				cstart = textcolor = "\x85";
 			else // blue
-			{
-				cstart = "\x84";
-				textcolor = "\x84";
-			}
+				cstart = textcolor = "\x84";
 		}
 		else
-        {
+		{
 			UINT16 chatcolor = skincolors[players[playernum].skincolor].chatcolor;
 
 			if (!chatcolor || chatcolor%0x1000 || chatcolor>V_INVERTMAP)
@@ -789,7 +769,7 @@ static void Got_Saycmd(UINT8 **p, INT32 playernum)
 				cstart = "\x8e";
 			else if (chatcolor == V_INVERTMAP)
 				cstart = "\x8f";
-        }
+	}
 		prefix = cstart;
 
 		// Give admins and remote admins their symbols.
@@ -823,7 +803,7 @@ static void Got_Saycmd(UINT8 **p, INT32 playernum)
 		else if (target > 0) // By you, to another player
 		{
 			// Use target's name.
-			dispname = player_names[target-1];
+			dispname = (target == 1 && !playeringame[target-1]) ? "~SERVER" : player_names[target-1];
 			prefix = "\x82[TO]";
 			cstart = "\x82";
 			fmt2 = "%s<%s%s>%s\x80 %s%s";
@@ -1716,10 +1696,10 @@ static void HU_DrawChat(void)
 				}
 			}
 
-			if (playeringame[i])
+			if (playeringame[i] || i == 0) // dedicated server host is not in-game but still valid
 			{
 				char name[MAXPLAYERNAME+1];
-				strlcpy(name, player_names[i], 7); // shorten name to 7 characters.
+				strlcpy(name, !playeringame[i] ? "SERVER" : player_names[i], 7); // shorten name to 7 characters.
 				V_DrawFillConsoleMap(chatx+ boxw + 2, p_dispy- (6*count), 48, 6, 239 | V_SNAPTOBOTTOM | V_SNAPTOLEFT); // fill it like the chat so the text doesn't become hard to read because of the hud.
 				V_DrawSmallString(chatx+ boxw + 4, p_dispy- (6*count), V_SNAPTOBOTTOM|V_SNAPTOLEFT|V_ALLOWLOWERCASE, va("\x82%d\x80 - %s", i, name));
 				count++;
