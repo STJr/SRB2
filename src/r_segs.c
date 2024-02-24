@@ -187,7 +187,7 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 	if (frontsector->numlights)
 	{
 		dc_numlights = frontsector->numlights;
-		if (dc_numlights >= dc_maxlights)
+		if (dc_numlights > dc_maxlights)
 		{
 			dc_maxlights = dc_numlights;
 			dc_lightlist = Z_Realloc(dc_lightlist, sizeof (*dc_lightlist) * dc_maxlights, PU_STATIC, NULL);
@@ -343,7 +343,6 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 			{
 				lighttable_t **xwalllights;
 
-				sprbotscreen = INT32_MAX;
 				sprtopscreen = windowtop = (centeryfrac - FixedMul(dc_texturemid, spryscale));
 
 				realbot = FixedMul(textureheight[texnum], spryscale) + sprtopscreen;
@@ -450,10 +449,13 @@ static void R_DrawRepeatMaskedColumn(column_t *col, unsigned lengthcol)
 
 static void R_DrawRepeatFlippedMaskedColumn(column_t *col, unsigned lengthcol)
 {
-	do {
+	while (sprtopscreen < sprbotscreen) {
 		R_DrawFlippedMaskedColumn(col, lengthcol);
-		sprtopscreen += dc_texheight*spryscale;
-	} while (sprtopscreen < sprbotscreen);
+		if ((INT64)sprtopscreen + (INT64)dc_texheight*spryscale > (INT64)INT32_MAX) // prevent overflow
+			sprtopscreen = INT32_MAX;
+		else
+			sprtopscreen += dc_texheight*spryscale;
+	}
 }
 
 // Returns true if a fake floor is translucent.
@@ -739,10 +741,25 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 	// Texture must be cached
 	R_CheckTextureCache(texnum);
 
-	if (textures[texnum]->flip & 2) // vertically flipped?
-		colfunc_2s = R_DrawRepeatFlippedMaskedColumn;
+	if (dc_numlights)
+	{
+		// If there is a lightlist we can simply use either R_DrawMaskedColumn or R_DrawFlippedMaskedColumn
+		// since windowtop and windowbottom are used
+		if (textures[texnum]->flip & 2) // vertically flipped?
+			colfunc_2s = R_DrawFlippedMaskedColumn;
+		else
+			colfunc_2s = R_DrawMaskedColumn;
+	}
 	else
-		colfunc_2s = R_DrawRepeatMaskedColumn; // render the usual 2sided single-patch packed texture
+	{
+		// If there is no light list, windowtop and windowbottom are not used,
+		// so R_DrawMaskedColumn or R_DrawFlippedMaskedColumn need to be called
+		// multiple times for a single column.
+		if (textures[texnum]->flip & 2) // vertically flipped?
+			colfunc_2s = R_DrawRepeatFlippedMaskedColumn;
+		else
+			colfunc_2s = R_DrawRepeatMaskedColumn;
+	}
 
 	lengthcol = textures[texnum]->height;
 
@@ -819,14 +836,13 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 			lighttable_t **xwalllights;
 			fixed_t height;
 			fixed_t bheight = 0;
-			INT32 solid = 0;
-			INT32 lighteffect = 0;
+			boolean lighteffect = false;
 
 			for (i = 0; i < dc_numlights; i++)
 			{
 				// Check if the current light effects the colormap/lightlevel
 				rlight = &dc_lightlist[i];
-				lighteffect = !(dc_lightlist[i].flags & FOF_NOSHADE);
+				lighteffect = !(rlight->flags & FOF_NOSHADE);
 				if (lighteffect)
 				{
 					lightnum = rlight->lightnum;
@@ -859,11 +875,11 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 					}
 				}
 
-				solid = 0; // don't carry over solid-cutting flag from the previous light
-
 				// Check if the current light can cut the current 3D floor.
+				boolean solid = false;
+
 				if (rlight->flags & FOF_CUTSOLIDS && !(pfloor->fofflags & FOF_EXTRA))
-					solid = 1;
+					solid = true;
 				else if (rlight->flags & FOF_CUTEXTRA && pfloor->fofflags & FOF_EXTRA)
 				{
 					if (rlight->flags & FOF_EXTRA)
@@ -871,13 +887,13 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 						// The light is from an extra 3D floor... Check the flags so
 						// there are no undesired cuts.
 						if ((rlight->flags & (FOF_FOG|FOF_SWIMMABLE)) == (pfloor->fofflags & (FOF_FOG|FOF_SWIMMABLE)))
-							solid = 1;
+							solid = true;
 					}
 					else
-						solid = 1;
+						solid = true;
 				}
 				else
-					solid = 0;
+					solid = false;
 
 				height = rlight->height;
 				rlight->height += rlight->heightstep;
@@ -1021,6 +1037,9 @@ static void R_RenderSegLoop (void)
 		R_CheckTextureCache(toptexture);
 	if (bottomtexture)
 		R_CheckTextureCache(bottomtexture);
+
+	if (dc_numlights)
+		colfunc = colfuncs[COLDRAWFUNC_SHADOWED];
 
 	for (; rw_x < rw_stopx; rw_x++)
 	{
@@ -1234,8 +1253,6 @@ static void R_RenderSegLoop (void)
 					dc_lightlist[i].rcolormap = dc_lightlist[i].extra_colormap->colormap + (xwalllights[pindex] - colormaps);
 				else
 					dc_lightlist[i].rcolormap = xwalllights[pindex];
-
-				colfunc = colfuncs[COLDRAWFUNC_SHADOWED];
 			}
 		}
 
@@ -2440,7 +2457,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 	if (frontsector->numlights)
 	{
 		dc_numlights = frontsector->numlights;
-		if (dc_numlights >= dc_maxlights)
+		if (dc_numlights > dc_maxlights)
 		{
 			dc_maxlights = dc_numlights;
 			dc_lightlist = Z_Realloc(dc_lightlist, sizeof (*dc_lightlist) * dc_maxlights, PU_STATIC, NULL);
