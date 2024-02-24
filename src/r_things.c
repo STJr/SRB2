@@ -1537,7 +1537,7 @@ static void R_ProjectSprite(mobj_t *thing)
 	// uncapped/interpolation
 	interpmobjstate_t interp = {0};
 
-	if (!cv_renderthings.value)
+	if (!r_renderthings)
 		return;
 
 	// do interpolation
@@ -2694,7 +2694,7 @@ static void R_CreateDrawNodes(maskcount_t* mask, drawnode_t* head, boolean temps
 	// Add the 3D floors, thicksides, and masked textures...
 	for (ds = drawsegs + mask->drawsegs[1]; ds-- > drawsegs + mask->drawsegs[0];)
 	{
-		if (ds->numthicksides && cv_renderwalls.value)
+		if (ds->numthicksides && r_renderwalls)
 		{
 			for (i = 0; i < ds->numthicksides; i++)
 			{
@@ -2713,19 +2713,19 @@ static void R_CreateDrawNodes(maskcount_t* mask, drawnode_t* head, boolean temps
 			else {
 				// Put it in!
 				entry = R_CreateDrawNode(head);
-				if (cv_renderwalls.value)
+				if (r_renderwalls)
 					entry->seg = ds;
-				if (cv_renderfloors.value)
+				if (r_renderfloors)
 					entry->plane = plane;
 			}
 			ds->curline->polyseg->visplane = NULL;
 		}
-		if (ds->maskedtexturecol && cv_renderwalls.value)
+		if (ds->maskedtexturecol && r_renderwalls)
 		{
 			entry = R_CreateDrawNode(head);
 			entry->seg = ds;
 		}
-		if (ds->numffloorplanes && cv_renderfloors.value)
+		if (ds->numffloorplanes && r_renderfloors)
 		{
 			for (i = 0; i < ds->numffloorplanes; i++)
 			{

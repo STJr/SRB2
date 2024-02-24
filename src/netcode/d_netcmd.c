@@ -662,6 +662,13 @@ void D_RegisterClientCommands(void)
 	for (i = 0; i < MAXPLAYERS; i++)
 		sprintf(player_names[i], "Player %d", 1 + i);
 
+	CV_RegisterVar(&cv_gravity);
+	CV_RegisterVar(&cv_tailspickup);
+	CV_RegisterVar(&cv_allowmlook);
+	CV_RegisterVar(&cv_flipcam);
+	CV_RegisterVar(&cv_flipcam2);
+	CV_RegisterVar(&cv_movebob);
+
 	if (dedicated)
 		return;
 
@@ -889,13 +896,6 @@ void D_RegisterClientCommands(void)
 
 	// screen.c
 	CV_RegisterVar(&cv_fullscreen);
-	CV_RegisterVar(&cv_renderview);
-	CV_RegisterVar(&cv_renderhitboxinterpolation);
-	CV_RegisterVar(&cv_renderhitboxgldepth);
-	CV_RegisterVar(&cv_renderhitbox);
-	CV_RegisterVar(&cv_renderwalls);
-	CV_RegisterVar(&cv_renderfloors);
-	CV_RegisterVar(&cv_renderthings);
 	CV_RegisterVar(&cv_renderer);
 	CV_RegisterVar(&cv_scr_depth);
 	CV_RegisterVar(&cv_scr_width);
@@ -916,8 +916,6 @@ void D_RegisterClientCommands(void)
 	CV_RegisterVar(&cv_opflags);
 	CV_RegisterVar(&cv_ophoopflags);
 	CV_RegisterVar(&cv_mapthingnum);
-//	CV_RegisterVar(&cv_grid);
-//	CV_RegisterVar(&cv_snapto);
 
 	CV_RegisterVar(&cv_freedemocamera);
 

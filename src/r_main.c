@@ -66,6 +66,10 @@ sector_t *viewsector;
 player_t *viewplayer;
 mobj_t *r_viewmobj;
 
+boolean r_renderwalls;
+boolean r_renderfloors;
+boolean r_renderthings;
+
 fixed_t rendertimefrac;
 fixed_t renderdeltatics;
 boolean renderisnewtic;
@@ -149,8 +153,6 @@ consvar_t cv_flipcam2 = CVAR_INIT ("flipcam2", "No", CV_SAVE|CV_CALL|CV_NOINIT, 
 
 consvar_t cv_shadow = CVAR_INIT ("shadow", "On", CV_SAVE, CV_OnOff, NULL);
 consvar_t cv_skybox = CVAR_INIT ("skybox", "On", CV_SAVE, CV_OnOff, NULL);
-consvar_t cv_ffloorclip = CVAR_INIT ("r_ffloorclip", "On", CV_SAVE, CV_OnOff, NULL);
-consvar_t cv_spriteclip = CVAR_INIT ("r_spriteclip", "On", CV_SAVE, CV_OnOff, NULL);
 consvar_t cv_allowmlook = CVAR_INIT ("allowmlook", "Yes", CV_NETVAR|CV_ALLOWLUA, CV_YesNo, NULL);
 consvar_t cv_showhud = CVAR_INIT ("showhud", "Yes", CV_CALL|CV_ALLOWLUA,  CV_YesNo, R_SetViewSize);
 consvar_t cv_translucenthud = CVAR_INIT ("translucenthud", "10", CV_SAVE, translucenthud_cons_t, NULL);
@@ -161,11 +163,16 @@ consvar_t cv_drawdist_nights = CVAR_INIT ("drawdist_nights", "2048", CV_SAVE, dr
 consvar_t cv_drawdist_precip = CVAR_INIT ("drawdist_precip", "1024", CV_SAVE, drawdist_precip_cons_t, NULL);
 consvar_t cv_fov = CVAR_INIT ("fov", "90", CV_SAVE|CV_FLOAT|CV_CALL, fov_cons_t, Fov_OnChange);
 consvar_t cv_fovchange = CVAR_INIT ("fovchange", "Off", CV_SAVE, CV_OnOff, NULL);
-
-// Okay, whoever said homremoval causes a performance hit should be shot.
-consvar_t cv_homremoval = CVAR_INIT ("homremoval", "No", CV_SAVE, homremoval_cons_t, NULL);
-
 consvar_t cv_maxportals = CVAR_INIT ("maxportals", "2", CV_SAVE, maxportals_cons_t, NULL);
+
+consvar_t cv_renderview = CVAR_INIT ("renderview", "On", 0, CV_OnOff, NULL);
+consvar_t cv_renderwalls = CVAR_INIT ("r_renderwalls", "On", 0, CV_OnOff, NULL);
+consvar_t cv_renderfloors = CVAR_INIT ("r_renderfloors", "On", 0, CV_OnOff, NULL);
+consvar_t cv_renderthings = CVAR_INIT ("r_renderthings", "On", 0, CV_OnOff, NULL);
+consvar_t cv_ffloorclip = CVAR_INIT ("r_ffloorclip", "On", 0, CV_OnOff, NULL);
+consvar_t cv_spriteclip = CVAR_INIT ("r_spriteclip", "On", 0, CV_OnOff, NULL);
+
+consvar_t cv_homremoval = CVAR_INIT ("homremoval", "No", CV_SAVE, homremoval_cons_t, NULL);
 
 consvar_t cv_renderstats = CVAR_INIT ("renderstats", "Off", 0, CV_OnOff, NULL);
 
@@ -1613,17 +1620,11 @@ void R_RenderPlayerView(player_t *player)
 
 void R_RegisterEngineStuff(void)
 {
-	CV_RegisterVar(&cv_gravity);
-	CV_RegisterVar(&cv_tailspickup);
-	CV_RegisterVar(&cv_allowmlook);
-	CV_RegisterVar(&cv_homremoval);
-	CV_RegisterVar(&cv_flipcam);
-	CV_RegisterVar(&cv_flipcam2);
-
-	// Enough for dedicated server
+	// Do nothing for dedicated server
 	if (dedicated)
 		return;
 
+	CV_RegisterVar(&cv_homremoval);
 	CV_RegisterVar(&cv_translucency);
 	CV_RegisterVar(&cv_drawdist);
 	CV_RegisterVar(&cv_drawdist_nights);
@@ -1636,6 +1637,13 @@ void R_RegisterEngineStuff(void)
 
 	CV_RegisterVar(&cv_shadow);
 	CV_RegisterVar(&cv_skybox);
+	CV_RegisterVar(&cv_renderview);
+	CV_RegisterVar(&cv_renderhitboxinterpolation);
+	CV_RegisterVar(&cv_renderhitboxgldepth);
+	CV_RegisterVar(&cv_renderhitbox);
+	CV_RegisterVar(&cv_renderwalls);
+	CV_RegisterVar(&cv_renderfloors);
+	CV_RegisterVar(&cv_renderthings);
 	CV_RegisterVar(&cv_ffloorclip);
 	CV_RegisterVar(&cv_spriteclip);
 
@@ -1673,8 +1681,6 @@ void R_RegisterEngineStuff(void)
 	CV_RegisterVar(&cv_translucenthud);
 
 	CV_RegisterVar(&cv_maxportals);
-
-	CV_RegisterVar(&cv_movebob);
 
 	// Frame interpolation/uncapped
 	CV_RegisterVar(&cv_fpscap);

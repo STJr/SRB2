@@ -339,6 +339,9 @@ static void HWR_RenderPlane(subsector_t *subsector, extrasubsector_t *xsub, bool
 	static FOutVector *planeVerts = NULL;
 	static UINT16 numAllocedPlaneVerts = 0;
 
+	if (!r_renderfloors)
+		return;
+
 	// no convex poly were generated for this subsector
 	if (!xsub->planepoly)
 		return;
@@ -482,9 +485,6 @@ static void HWR_RenderPlane(subsector_t *subsector, extrasubsector_t *xsub, bool
 
 		PolyFlags |= PF_ColorMapped;
 	}
-
-	if (!cv_renderfloors.value)
-		return;
 
 	HWR_ProcessPolygon(&Surf, planeVerts, nrPlaneVerts, PolyFlags, shader, false);
 
@@ -668,7 +668,7 @@ static void HWR_ProjectWall(FOutVector *wallVerts, FSurfaceInfo *pSurf, FBITFIEL
 {
 	INT32 shader = SHADER_NONE;
 
-	if (!cv_renderwalls.value)
+	if (!r_renderwalls)
 		return;
 
 	HWR_Lighting(pSurf, lightlevel, wallcolormap);
@@ -709,7 +709,7 @@ static void HWR_SplitWall(sector_t *sector, FOutVector *wallVerts, INT32 texnum,
 	FUINT lightnum = HWR_CalcWallLight(sector->lightlevel, v1x, v1y, v2x, v2y);
 	extracolormap_t *colormap = NULL;
 
-	if (!cv_renderwalls.value)
+	if (!r_renderwalls)
 		return;
 
 	realtop = top = wallVerts[3].y;
@@ -2108,13 +2108,8 @@ static void HWR_RenderPolyObjectPlane(polyobj_t *polysector, boolean isceiling, 
 	static FOutVector *planeVerts = NULL;
 	static UINT16 numAllocedPlaneVerts = 0;
 
-	if (nrPlaneVerts < 3)   // Not even a triangle?
+	if (!r_renderfloors || nrPlaneVerts < 3)   // Not even a triangle?
 		return;
-	else if (nrPlaneVerts > (size_t)UINT16_MAX) // FIXME: exceeds plVerts size
-	{
-		CONS_Debug(DBG_RENDER, "polygon size of %s exceeds max value of %d vertices\n", sizeu1(nrPlaneVerts), UINT16_MAX);
-		return;
-	}
 
 	// Allocate plane-vertex buffer if we need to
 	if (!planeVerts || nrPlaneVerts > numAllocedPlaneVerts)
@@ -4286,7 +4281,7 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	// uncapped/interpolation
 	interpmobjstate_t interp = {0};
 
-	if (!cv_renderthings.value)
+	if (!r_renderthings)
 		return;
 
 	if (!thing)
@@ -5831,7 +5826,7 @@ void HWR_AddTransparentWall(FOutVector *wallVerts, FSurfaceInfo *pSurf, INT32 te
 {
 	static size_t allocedwalls = 0;
 
-	if (!cv_renderwalls.value)
+	if (!r_renderwalls)
 		return;
 
 	// Force realloc if buffer has been freed
@@ -5862,7 +5857,7 @@ void HWR_RenderWall(FOutVector *wallVerts, FSurfaceInfo *pSurf, FBITFIELD blend,
 
 	INT32 shader = SHADER_NONE;
 
-	if (!cv_renderwalls.value)
+	if (!r_renderwalls)
 		return;
 
 	// Lighting is done here instead so that fog isn't drawn incorrectly on transparent walls after sorting

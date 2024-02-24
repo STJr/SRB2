@@ -1066,7 +1066,7 @@ static void R_RenderSegLoop (void)
 		drawbottom = R_DrawFlippedWall;
 	}
 
-	if (!cv_renderwalls.value)
+	if (!r_renderwalls)
 	{
 		drawtop = R_DrawNoWall;
 		drawmiddle = R_DrawNoWall;

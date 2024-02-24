@@ -119,12 +119,18 @@ extern consvar_t cv_chasecam, cv_chasecam2;
 extern consvar_t cv_flipcam, cv_flipcam2;
 
 extern consvar_t cv_shadow;
-extern consvar_t cv_ffloorclip, cv_spriteclip;
 extern consvar_t cv_translucency;
 extern consvar_t cv_drawdist, cv_drawdist_nights, cv_drawdist_precip;
 extern consvar_t cv_fov, cv_fovchange;
 extern consvar_t cv_skybox;
-extern consvar_t cv_tailspickup;
+extern consvar_t cv_renderview;
+extern consvar_t cv_renderhitbox, cv_renderhitboxinterpolation, cv_renderhitboxgldepth;
+extern consvar_t cv_renderwalls, cv_renderfloors, cv_renderthings;
+extern consvar_t cv_ffloorclip, cv_spriteclip;
+
+extern boolean r_renderwalls;
+extern boolean r_renderfloors;
+extern boolean r_renderthings;
 
 // Called by startup code.
 void R_Init(void);

@@ -603,7 +603,7 @@ void R_DrawPlanes(void)
 	visplane_t *pl;
 	INT32 i;
 
-	if (!cv_renderfloors.value)
+	if (!r_renderfloors)
 		return;
 
 	R_UpdatePlaneRipple();
