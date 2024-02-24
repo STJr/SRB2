@@ -76,7 +76,7 @@ void HWR_SetCurrentTexture(GLMipmap_t *texture)
 // If batching is enabled, this function collects the polygon data and the chosen texture
 // for later use in HWR_RenderBatches. Otherwise the rendering backend is used to
 // render the polygon immediately.
-void HWR_ProcessPolygon(FSurfaceInfo *pSurf, FOutVector *pOutVerts, FUINT iNumPts, FBITFIELD PolyFlags, int shader, boolean horizonSpecial)
+void HWR_ProcessPolygon(FSurfaceInfo *pSurf, FOutVector *pOutVerts, FUINT iNumPts, FBITFIELD PolyFlags, int shader_target, boolean horizonSpecial)
 {
     if (currently_batching)
 	{
@@ -114,7 +114,7 @@ void HWR_ProcessPolygon(FSurfaceInfo *pSurf, FOutVector *pOutVerts, FUINT iNumPt
 		polygonArray[polygonArraySize].numVerts = iNumPts;
 		polygonArray[polygonArraySize].polyFlags = PolyFlags;
 		polygonArray[polygonArraySize].texture = current_texture;
-		polygonArray[polygonArraySize].shader = shader;
+		polygonArray[polygonArraySize].shader = (shader_target != -1) ? HWR_GetShaderFromTarget(shader_target) : shader_target;
 		polygonArray[polygonArraySize].horizonSpecial = horizonSpecial;
 		// default to polygonArraySize so we don't lose order on horizon lines
 		// (yes, it's supposed to be negative, since we're sorting in that direction)
@@ -134,7 +134,7 @@ void HWR_ProcessPolygon(FSurfaceInfo *pSurf, FOutVector *pOutVerts, FUINT iNumPt
 			DIGEST(hash, pSurf->PolyColor.rgba);
 			if (cv_glshaders.value && gl_shadersavailable)
 			{
-				DIGEST(hash, shader);
+				DIGEST(hash, shader_target);
 				DIGEST(hash, pSurf->TintColor.rgba);
 				DIGEST(hash, pSurf->FadeColor.rgba);
 				DIGEST(hash, pSurf->LightInfo.light_level);
@@ -151,10 +151,9 @@ void HWR_ProcessPolygon(FSurfaceInfo *pSurf, FOutVector *pOutVerts, FUINT iNumPt
 	}
 	else
 	{
-        if (shader)
-            HWD.pfnSetShader(shader);
-        HWD.pfnDrawPolygon(pSurf, pOutVerts, iNumPts, PolyFlags);
-    }
+		HWD.pfnSetShader((shader_target != SHADER_NONE) ? HWR_GetShaderFromTarget(shader_target) : shader_target);
+		HWD.pfnDrawPolygon(pSurf, pOutVerts, iNumPts, PolyFlags);
+	}
 }
 
 static int comparePolygons(const void *p1, const void *p2)
