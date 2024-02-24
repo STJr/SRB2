@@ -741,25 +741,10 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 	// Texture must be cached
 	R_CheckTextureCache(texnum);
 
-	if (dc_numlights)
-	{
-		// If there is a lightlist we can simply use either R_DrawMaskedColumn or R_DrawFlippedMaskedColumn
-		// since windowtop and windowbottom are used
-		if (textures[texnum]->flip & 2) // vertically flipped?
-			colfunc_2s = R_DrawFlippedMaskedColumn;
-		else
-			colfunc_2s = R_DrawMaskedColumn;
-	}
+	if (textures[texnum]->flip & 2) // vertically flipped?
+		colfunc_2s = R_DrawRepeatFlippedMaskedColumn;
 	else
-	{
-		// If there is no light list, windowtop and windowbottom are not used,
-		// so R_DrawMaskedColumn or R_DrawFlippedMaskedColumn need to be called
-		// multiple times for a single column.
-		if (textures[texnum]->flip & 2) // vertically flipped?
-			colfunc_2s = R_DrawRepeatFlippedMaskedColumn;
-		else
-			colfunc_2s = R_DrawRepeatMaskedColumn;
-	}
+		colfunc_2s = R_DrawRepeatMaskedColumn;
 
 	lengthcol = textures[texnum]->height;
 
@@ -803,6 +788,8 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 		if      (bottom_frac > (INT64)CLAMPMAX) sprbotscreen = windowbottom = CLAMPMAX;
 		else if (bottom_frac > (INT64)CLAMPMIN) sprbotscreen = windowbottom = (fixed_t)bottom_frac;
 		else                                    sprbotscreen = windowbottom = CLAMPMIN;
+
+		fixed_t bottomclip = sprbotscreen;
 
 		top_frac += top_step;
 		bottom_frac += bottom_step;
@@ -909,14 +896,14 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 					if (lighteffect)
 						dc_colormap = rlight->rcolormap;
 					if (solid && windowtop < bheight)
-						windowtop = bheight;
+						sprtopscreen = windowtop = bheight;
 					continue;
 				}
 
-				windowbottom = height;
-				if (windowbottom >= sprbotscreen)
+				sprbotscreen = windowbottom = height;
+				if (windowbottom >= bottomclip)
 				{
-					windowbottom = sprbotscreen;
+					sprbotscreen = windowbottom = bottomclip;
 					// draw the texture
 					colfunc_2s (col, lengthcol);
 					for (i++; i < dc_numlights; i++)
@@ -934,10 +921,11 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 					windowtop = bheight;
 				else
 					windowtop = windowbottom + 1;
+				sprtopscreen = windowtop;
 				if (lighteffect)
 					dc_colormap = rlight->rcolormap;
 			}
-			windowbottom = sprbotscreen;
+			sprbotscreen = windowbottom = bottomclip;
 			// draw the texture, if there is any space left
 			if (windowtop < windowbottom)
 				colfunc_2s (col, lengthcol);

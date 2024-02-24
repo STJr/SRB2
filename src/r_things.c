@@ -628,8 +628,10 @@ void R_DrawMaskedColumn(column_t *column, unsigned lengthcol)
 
 		if (windowtop != INT32_MAX && windowbottom != INT32_MAX)
 		{
-			dc_yl = (windowtop + FRACUNIT - 1)>>FRACBITS;
-			dc_yh = (windowbottom - 1)>>FRACBITS;
+			if (windowtop > topscreen)
+				dc_yl = (windowtop + FRACUNIT - 1)>>FRACBITS;
+			if (windowbottom < bottomscreen)
+				dc_yh = (windowbottom - 1)>>FRACBITS;
 		}
 
 		if (dc_yh >= mfloorclip[dc_x])
@@ -679,8 +681,10 @@ void R_DrawFlippedMaskedColumn(column_t *column, unsigned lengthcol)
 
 		if (windowtop != INT32_MAX && windowbottom != INT32_MAX)
 		{
-			dc_yl = (windowtop + FRACUNIT - 1)>>FRACBITS;
-			dc_yh = (windowbottom - 1)>>FRACBITS;
+			if (windowtop > topscreen)
+				dc_yl = (windowtop + FRACUNIT - 1)>>FRACBITS;
+			if (windowbottom < bottomscreen)
+				dc_yh = (windowbottom - 1)>>FRACBITS;
 		}
 
 		if (dc_yh >= mfloorclip[dc_x])
