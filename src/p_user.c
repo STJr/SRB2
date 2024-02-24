@@ -11107,7 +11107,8 @@ static void P_MinecartThink(player_t *player)
 	fa = (minecart->angle >> ANGLETOFINESHIFT) & FINEMASK;
 	if (!P_TryMove(minecart, minecart->x + FINECOSINE(fa), minecart->y + FINESINE(fa), true))
 	{
-		P_KillMobj(minecart, NULL, NULL, 0);
+		if (!P_MobjWasRemoved(minecart))
+			P_KillMobj(minecart, NULL, NULL, 0);
 		return;
 	}
 
@@ -12461,7 +12462,7 @@ void P_PlayerThink(player_t *player)
 			player->texttimer = 4*TICRATE;
 			player->textvar = NTV_GETSPHERES; // GET n SPHERES/CHIPS!
 
-			if (player->capsule && player->capsule->health != player->capsule->spawnpoint->args[1])
+			if (!P_MobjWasRemoved(player->capsule) && player->capsule->health != player->capsule->spawnpoint->args[1])
 				player->textvar = NTV_GETMORESPHERES; // GET n MORE SPHERES/CHIPS!
 		}
 	}

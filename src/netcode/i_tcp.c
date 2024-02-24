@@ -265,7 +265,7 @@ static const char* inet_ntopA(short af, const void *cp, char *buf, socklen_t len
 #ifdef HAVE_MINIUPNPC // based on old XChat patch
 static void I_ShutdownUPnP(void);
 static void I_InitUPnP(void);
-I_mutex upnp_mutex;
+static I_mutex upnp_mutex;
 static struct UPNPUrls urls;
 static struct IGDdatas data;
 static char lanaddr[64];
@@ -300,7 +300,11 @@ init_upnpc_once(struct upnpdata *upnpuserdata)
 	int upnp_error = -2;
 	int scope_id = 0;
 	int status_code = 0;
-	CONS_Printf(M_GetText("Looking for UPnP Internet Gateway Device\n"));
+
+	memset(&urls, 0, sizeof(struct UPNPUrls));
+	memset(&data, 0, sizeof(struct IGDdatas));
+
+	I_OutputMsg(M_GetText("Looking for UPnP Internet Gateway Device\n"));
 	devlist = upnpDiscoverDevices(deviceTypes, 500, NULL, NULL, 0, false, 2, &upnp_error, 0);
 	if (devlist)
 	{
@@ -316,39 +320,37 @@ init_upnpc_once(struct upnpdata *upnpuserdata)
 		if (!dev)
 			dev = devlist; /* defaulting to first device */
 
-		CONS_Printf(M_GetText("Found UPnP device:\n desc: %s\n st: %s\n"),
+		I_OutputMsg(M_GetText("Found UPnP device:\n desc: %s\n st: %s\n"),
 		           dev->descURL, dev->st);
 
 		UPNP_GetValidIGD(devlist, &urls, &data, lanaddr, sizeof(lanaddr));
-		CONS_Printf(M_GetText("Local LAN IP address: %s\n"), lanaddr);
+		I_OutputMsg(M_GetText("Local LAN IP address: %s\n"), lanaddr);
 		descXML = miniwget(dev->descURL, &descXMLsize, scope_id, &status_code);
 		if (descXML)
 		{
 			parserootdesc(descXML, descXMLsize, &data);
 			free(descXML);
 			descXML = NULL;
-			memset(&urls, 0, sizeof(struct UPNPUrls));
-			memset(&data, 0, sizeof(struct IGDdatas));
 			GetUPNPUrls(&urls, &data, dev->descURL, status_code);
 			I_AddExitFunc(I_ShutdownUPnP);
 		}
 		freeUPNPDevlist(devlist);
-		I_unlock_mutex(upnp_mutex);
 	}
 	else if (upnp_error == UPNPDISCOVER_SOCKET_ERROR)
 	{
-		CONS_Printf(M_GetText("No UPnP devices discovered\n"));
+		I_OutputMsg(M_GetText("No UPnP devices discovered\n"));
 	}
+	I_unlock_mutex(upnp_mutex);
 	upnpuserdata->upnpc_started =1;
 }
 
 static inline void I_UPnP_add(const char * addr, const char *port, const char * servicetype)
 {
+	if (!urls.controlURL || urls.controlURL[0] == '\0')
+		return;
 	I_lock_mutex(&upnp_mutex);
 	if (addr == NULL)
 		addr = lanaddr;
-	if (!urls.controlURL || urls.controlURL[0] == '\0')
-		return;
 	UPNP_AddPortMapping(urls.controlURL, data.first.servicetype,
 	                    port, port, addr, "SRB2", servicetype, NULL, NULL);
 	I_unlock_mutex(upnp_mutex);
@@ -356,9 +358,9 @@ static inline void I_UPnP_add(const char * addr, const char *port, const char * 
 
 static inline void I_UPnP_rem(const char *port, const char * servicetype)
 {
-	I_lock_mutex(&upnp_mutex);
 	if (!urls.controlURL || urls.controlURL[0] == '\0')
 		return;
+	I_lock_mutex(&upnp_mutex);
 	UPNP_DeletePortMapping(urls.controlURL, data.first.servicetype,
 	                       port, servicetype, NULL);
 	I_unlock_mutex(upnp_mutex);
@@ -1132,10 +1134,10 @@ boolean I_InitTcpDriver(void)
 	{
 		I_AddExitFunc(I_ShutdownTcpDriver);
 #ifdef HAVE_MINIUPNPC
-		if (M_CheckParm("-noUPnP"))
-			UPNP_support = false;
-		else
+		if (M_CheckParm("-useUPnP"))
 			I_InitUPnP();
+		else
+			UPNP_support = false;
 #endif
 	}
 	return init_tcp_driver;
