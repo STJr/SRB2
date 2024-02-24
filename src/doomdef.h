@@ -244,12 +244,12 @@ extern char logfilename[1024];
 #define MAXPLAYERNAME 21
 #define PLAYERSMASK (MAXPLAYERS-1)
 
-// Don't make MAXSKINS higher than 256, since skin numbers are used with an
-// UINT8 in various parts of the codebase. If you do anyway, the data type
-// of those variables will have to be changed into at least an UINT16.
+// Don't make MAXSKINS higher than 255, since skin numbers are used with an UINT8 in
+// various parts of the codebase, and one number is reserved. If you do anyway,
+// the data type of those variables will have to be changed into at least an UINT16.
 // This change must affect code such as demo recording and playback,
 // and the structure of some networking packets and commands.
-#define MAXSKINS 256
+#define MAXSKINS 255
 #define MAXCHARACTERSLOTS (MAXSKINS * 3) // Should be higher than MAXSKINS.
 
 #define COLORRAMPSIZE 16
