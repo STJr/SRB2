@@ -1168,6 +1168,7 @@ UINT16 W_InitFolder(const char *path, boolean mainfile, boolean startup)
 	numwadfiles++;
 
 	W_ReadFileShaders(wadfile);
+	W_LoadTrnslateLumps(numwadfiles - 1);
 	W_LoadDehackedLumpsPK3(numwadfiles - 1, mainfile);
 	W_InvalidateLumpnumCache();
 
