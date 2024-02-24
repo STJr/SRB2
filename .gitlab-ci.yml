@@ -764,3 +764,81 @@ Alpine 3 GCC Dedicated:
       - |
           # make
           echo -e "\e[0Ksection_end:`date +%s`:make\r\e[0K"
+
+osxcross x86_64:
+  stage: build
+
+  when: manual
+
+  allow_failure: true
+
+  artifacts:
+    name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-clang"
+
+  variables:
+    OSXCROSS_HOST: x86_64-apple-darwin21.4
+    LD: x86_64-apple-darwin21.4-ld
+
+  script:
+    - - |
+          # apt_development
+          echo -e "\e[0Ksection_start:`date +%s`:macports_development[collapsed=true]\r\e[0KInstalling development packages"
+      - osxcross-macports install curl libopenmpt libsdl2_mixer
+      - |
+          # apt_development
+          echo -e "\e[0Ksection_end:`date +%s`:macports_development\r\e[0K"
+
+    - - |
+          # make
+          echo -e "\e[0Ksection_start:`date +%s`:make[collapsed=false]\r\e[0KBuilding Makefiles"
+      - cmake -B build.osxcross --toolchain /osxcross/toolchain.cmake -D CPM_USE_LOCAL_PACKAGES:BOOL=ON -D OPENMPT_INCLUDE_DIR:PATH="/osxcross/macports/pkgs/opt/local/include" -D SDL2_INCLUDE_DIR:PATH="/osxcross/macports/pkgs/opt/local/lib" -D SRB2_CONFIG_ENABLE_TESTS:BOOL=OFF -D SRB2_CONFIG_SYSTEM_LIBRARIES:BOOL=ON -D SRB2_USE_LIBGME:BOOL=OFF -G "Unix Makefiles"
+      - |
+          # make
+          echo -e "\e[0Ksection_end:`date +%s`:make\r\e[0K"
+
+    - - |
+          # make
+          echo -e "\e[0Ksection_start:`date +%s`:make[collapsed=false]\r\e[0KCompiling SRB2"
+      - make --directory=build.osxcross--keep-going CCACHE=1 ERRORMODE=1 NONX86=1 || make --directory=src --keep-going CCACHE=1 ERRORMODE=1 NONX86=1
+      - |
+          # make
+          echo -e "\e[0Ksection_end:`date +%s`:make\r\e[0K"
+
+osxcross arm64:
+  stage: build
+
+  when: manual
+
+  allow_failure: true
+
+  artifacts:
+    name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-clang"
+
+  variables:
+    OSXCROSS_HOST: arm64-apple-darwin21.4
+    LD: arm64-apple-darwin21.4-ld
+
+  script:
+    - - |
+          # apt_development
+          echo -e "\e[0Ksection_start:`date +%s`:macports_development[collapsed=true]\r\e[0KInstalling development packages"
+      - osxcross-macports install --arm64 curl libopenmpt libsdl2_mixer
+      - |
+          # apt_development
+          echo -e "\e[0Ksection_end:`date +%s`:macports_development\r\e[0K"
+
+    - - |
+          # make
+          echo -e "\e[0Ksection_start:`date +%s`:make[collapsed=false]\r\e[0KBuilding Makefiles"
+      - cmake -B build.osxcross --toolchain /osxcross/toolchain.cmake -D CPM_USE_LOCAL_PACKAGES:BOOL=ON -D OPENMPT_INCLUDE_DIR:PATH="/osxcross/macports/pkgs/opt/local/include" -D SDL2_INCLUDE_DIR:PATH="/osxcross/macports/pkgs/opt/local/lib" -D SRB2_CONFIG_ENABLE_TESTS:BOOL=OFF -D SRB2_CONFIG_SYSTEM_LIBRARIES:BOOL=ON -D SRB2_USE_LIBGME:BOOL=OFF -G "Unix Makefiles"
+      - |
+          # make
+          echo -e "\e[0Ksection_end:`date +%s`:make\r\e[0K"
+
+    - - |
+          # make
+          echo -e "\e[0Ksection_start:`date +%s`:make[collapsed=false]\r\e[0KCompiling SRB2"
+      - make --directory=build.osxcross--keep-going CCACHE=1 ERRORMODE=1 NONX86=1 || make --directory=src --keep-going CCACHE=1 ERRORMODE=1 NONX86=1
+      - |
+          # make
+          echo -e "\e[0Ksection_end:`date +%s`:make\r\e[0K"
