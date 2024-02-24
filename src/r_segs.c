@@ -447,7 +447,7 @@ static void R_DrawRepeatMaskedColumn(column_t *col, unsigned lengthcol)
 {
 	while (sprtopscreen < sprbotscreen) {
 		R_DrawMaskedColumn(col, lengthcol);
-		if ((INT64)sprtopscreen + dc_texheight*spryscale > (INT64)INT32_MAX) // prevent overflow
+		if ((INT64)sprtopscreen + (INT64)dc_texheight*spryscale > (INT64)INT32_MAX) // prevent overflow
 			sprtopscreen = INT32_MAX;
 		else
 			sprtopscreen += dc_texheight*spryscale;
@@ -1014,6 +1014,12 @@ static void R_DrawFlippedWall(UINT8 *source, INT32 height)
 	R_DrawFlippedPost(source, (unsigned)height, colfunc);
 }
 
+static void R_DrawNoWall(UINT8 *source, INT32 height)
+{
+	(void)source;
+	(void)height;
+}
+
 static void R_RenderSegLoop (void)
 {
 	angle_t angle;
@@ -1058,6 +1064,13 @@ static void R_RenderSegLoop (void)
 	{
 		bottomscaley = -bottomscaley;
 		drawbottom = R_DrawFlippedWall;
+	}
+
+	if (!cv_renderwalls.value)
+	{
+		drawtop = R_DrawNoWall;
+		drawmiddle = R_DrawNoWall;
+		drawbottom = R_DrawNoWall;
 	}
 
 	if (midtexture)

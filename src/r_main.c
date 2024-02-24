@@ -970,8 +970,6 @@ void R_Init(void)
 	//I_OutputMsg("\nR_InitData");
 	R_InitData();
 
-	//I_OutputMsg("\nR_InitViewBorder");
-	R_InitViewBorder();
 	R_SetViewSize(); // setsizeneeded is set true
 
 	// this is now done by SCR_Recalc() at the first mode set
@@ -1332,7 +1330,7 @@ void R_SkyboxFrame(player_t *player)
 			newview->z += campos.z * -mh->skybox_scalez;
 	}
 
-	if (r_viewmobj->subsector)
+	if (!P_MobjWasRemoved(r_viewmobj) && r_viewmobj->subsector)
 		newview->sector = r_viewmobj->subsector->sector;
 	else
 		newview->sector = R_PointInSubsector(newview->x, newview->y)->sector;

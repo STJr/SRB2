@@ -227,8 +227,8 @@ void ST_doPaletteStuff(void)
 		palette = 0;
 
 #ifdef HWRENDER
-	if (rendermode == render_opengl)
-		palette = 0; // No flashpals here in OpenGL
+	if (rendermode == render_opengl && !HWR_ShouldUsePaletteRendering())
+		palette = 0; // Don't set the palette to a flashpal in OpenGL's truecolor mode
 #endif
 
 	if (palette != st_palette)
@@ -252,10 +252,6 @@ void ST_UnloadGraphics(void)
 void ST_LoadGraphics(void)
 {
 	int i;
-
-	// SRB2 border patch
-	// st_borderpatchnum = W_GetNumForName("GFZFLR01");
-	// scr_borderpatch = W_CacheLumpNum(st_borderpatchnum, PU_HUDGFX);
 
 	// the original Doom uses 'STF' as base name for all face graphics
 	// Graue 04-08-2004: face/name graphics are now indexed by skins
@@ -1945,7 +1941,7 @@ static void ST_drawNiGHTSHUD(void)
 		total_ringcount = stplyr->spheres;
 	}
 
-	if (stplyr->capsule)
+	if (!P_MobjWasRemoved(stplyr->capsule))
 	{
 		INT32 amount;
 		const INT32 length = 88;
@@ -2893,7 +2889,7 @@ void ST_Drawer(void)
 	//25/08/99: Hurdler: palette changes is done for all players,
 	//                   not only player1! That's why this part
 	//                   of code is moved somewhere else.
-	if (rendermode == render_soft)
+	if (rendermode == render_soft || HWR_ShouldUsePaletteRendering())
 #endif
 		if (rendermode != render_none) ST_doPaletteStuff();
 

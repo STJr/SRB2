@@ -94,7 +94,7 @@ default:
     - - |
           # apt_common
           echo -e "\e[0Ksection_start:`date +%s`:apt_common[collapsed=true]\r\e[0KInstalling common packages"
-      - apt-get install make git ccache nasm
+      - apt-get install make git ccache nasm cmake ca-certificates
       - |
           # apt_common
           echo -e "\e[0Ksection_end:`date +%s`:apt_common\r\e[0K"
@@ -526,21 +526,22 @@ Windows x64:
 Debian stable Clang:
   stage: build
 
-  when: manual
+  when: on_success
 
-  allow_failure: true
+  allow_failure: false
 
   artifacts:
     paths:
-      - "bin/"
-      - "src/comptime.h"
+      - "build.clang/bin/"
+      - "build.clang/src/comptime.h"
     expose_as: "clang"
     name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-clang"
 
   variables:
     CC: clang
-    WFLAGS: -Wno-cast-align
-    CFLAGS: -Wno-cast-align
+    CXX: clang
+    WFLAGS: -Wno-cast-align -Wno-implicit-const-int-float-conversion -Werror
+    CFLAGS: -Wno-cast-align -Wno-implicit-const-int-float-conversion -Werror
     LDFLAGS: -Wl,-fuse-ld=gold
 
   script:
@@ -561,9 +562,17 @@ Debian stable Clang:
           echo -e "\e[0Ksection_end:`date +%s`:apt_development\r\e[0K"
 
     - - |
+          # cmake
+          echo -e "\e[0Ksection_start:`date +%s`:cmake[collapsed=false]\r\e[0KBuilding Makefiles"
+      - cmake -B build.clang -D CPM_USE_LOCAL_PACKAGES:BOOL=ON -D SRB2_CONFIG_ENABLE_TESTS:BOOL=OFF -D SRB2_CONFIG_SYSTEM_LIBRARIES:BOOL=ON -G "Unix Makefiles"
+      - |
+          # cmake
+          echo -e "\e[0Ksection_end:`date +%s`:cmake\r\e[0K"
+
+    - - |
           # make
           echo -e "\e[0Ksection_start:`date +%s`:make[collapsed=false]\r\e[0KCompiling SRB2"
-      - make --directory=src --keep-going CCACHE=1 ERRORMODE=1 NONX86=1 || make --directory=src --keep-going CCACHE=1 ERRORMODE=1 NONX86=1
+      - make --directory=build.clang --keep-going || make --directory=src --keep-going
       - |
           # make
           echo -e "\e[0Ksection_end:`date +%s`:make\r\e[0K"
@@ -573,19 +582,22 @@ Debian testing Clang:
 
   when: manual
 
+  allow_failure: true
+
   image: debian:testing-slim
 
   artifacts:
     paths:
-      - "bin/"
-      - "src/comptime.h"
+      - "build.clang/bin/"
+      - "build.clang/src/comptime.h"
     expose_as: "testing-clang"
     name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-testing-clang"
 
   variables:
     CC: clang
-    WFLAGS: -Wno-cast-align -Wno-deprecated-non-prototype -Wno-single-bit-bitfield-constant-conversion
-    CFLAGS: -Wno-cast-align -Wno-deprecated-non-prototype -Wno-single-bit-bitfield-constant-conversion
+    CXX: clang
+    WFLAGS: -Wno-cast-align -Wno-implicit-const-int-float-conversion -Werror -Wno-deprecated-non-prototype -Wno-single-bit-bitfield-constant-conversion
+    CFLAGS: -Wno-cast-align -Wno-implicit-const-int-float-conversion -Werror -Wno-deprecated-non-prototype -Wno-single-bit-bitfield-constant-conversion
     LDFLAGS: -Wl,-fuse-ld=gold
 
 Alpine 3 GCC:

@@ -951,7 +951,6 @@ static void R_DrawVisSprite(vissprite_t *vis)
 	}
 
 	colfunc = colfuncs[BASEDRAWFUNC];
-	dc_hires = 0;
 
 	vis->x1 = x1;
 	vis->x2 = x2;
@@ -1537,6 +1536,9 @@ static void R_ProjectSprite(mobj_t *thing)
 
 	// uncapped/interpolation
 	interpmobjstate_t interp = {0};
+
+	if (!cv_renderthings.value)
+		return;
 
 	// do interpolation
 	if (R_UsingFrameInterpolation() && !paused)
@@ -2692,7 +2694,7 @@ static void R_CreateDrawNodes(maskcount_t* mask, drawnode_t* head, boolean temps
 	// Add the 3D floors, thicksides, and masked textures...
 	for (ds = drawsegs + mask->drawsegs[1]; ds-- > drawsegs + mask->drawsegs[0];)
 	{
-		if (ds->numthicksides)
+		if (ds->numthicksides && cv_renderwalls.value)
 		{
 			for (i = 0; i < ds->numthicksides; i++)
 			{
@@ -2711,17 +2713,19 @@ static void R_CreateDrawNodes(maskcount_t* mask, drawnode_t* head, boolean temps
 			else {
 				// Put it in!
 				entry = R_CreateDrawNode(head);
-				entry->plane = plane;
-				entry->seg = ds;
+				if (cv_renderwalls.value)
+					entry->seg = ds;
+				if (cv_renderfloors.value)
+					entry->plane = plane;
 			}
 			ds->curline->polyseg->visplane = NULL;
 		}
-		if (ds->maskedtexturecol)
+		if (ds->maskedtexturecol && cv_renderwalls.value)
 		{
 			entry = R_CreateDrawNode(head);
 			entry->seg = ds;
 		}
-		if (ds->numffloorplanes)
+		if (ds->numffloorplanes && cv_renderfloors.value)
 		{
 			for (i = 0; i < ds->numffloorplanes; i++)
 			{
@@ -3021,9 +3025,6 @@ void R_InitDrawNodes(void)
 //
 // R_DrawSprite
 //
-//Fab : 26-04-98:
-// NOTE : uses con_clipviewtop, so that when console is on,
-//        don't draw the part of sprites hidden under the console
 static void R_DrawSprite(vissprite_t *spr)
 {
 	mfloorclip = spr->clipbot;
@@ -3191,9 +3192,6 @@ static void R_ClipVisSprite(vissprite_t *spr, INT32 x1, INT32 x2, portal_t* port
 				(lowscale < spr->sortscale &&
 				 !R_PointOnSegSide (spr->gx, spr->gy, ds->curline)))
 			{
-				// masked mid texture?
-				/*if (ds->maskedtexturecol)
-					R_RenderMaskedSegRange (ds, r1, r2);*/
 				// seg is behind sprite
 				continue;
 			}
