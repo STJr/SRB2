@@ -564,7 +564,7 @@ Debian stable Clang:
     - - |
           # cmake
           echo -e "\e[0Ksection_start:`date +%s`:cmake[collapsed=false]\r\e[0KBuilding Makefiles"
-      - cmake -B build.clang -D CPM_USE_LOCAL_PACKAGES:BOOL=ON -D SRB2_CONFIG_ENABLE_TESTS:BOOL=OFF -D SRB2_CONFIG_SYSTEM_LIBRARIES:BOOL=ON -G "Unix Makefiles"
+      - cmake -B build.clang -DCPM_USE_LOCAL_PACKAGES:BOOL=ON -DSRB2_CONFIG_ENABLE_TESTS:BOOL=OFF -DSRB2_CONFIG_SYSTEM_LIBRARIES:BOOL=ON -DSRB2_USE_LIBGME:BOOL=OFF -G "Unix Makefiles"
       - |
           # cmake
           echo -e "\e[0Ksection_end:`date +%s`:cmake\r\e[0K"
@@ -572,7 +572,7 @@ Debian stable Clang:
     - - |
           # make
           echo -e "\e[0Ksection_start:`date +%s`:make[collapsed=false]\r\e[0KCompiling SRB2"
-      - make --directory=build.clang --keep-going || make --directory=src --keep-going
+      - make --directory=build.clang --keep-going || make --directory=build.clang --keep-going
       - |
           # make
           echo -e "\e[0Ksection_end:`date +%s`:make\r\e[0K"
@@ -795,7 +795,7 @@ osxcross x86_64:
     - - |
           # make
           echo -e "\e[0Ksection_start:`date +%s`:make[collapsed=false]\r\e[0KBuilding Makefiles"
-      - cmake -B build.osxcross --toolchain /osxcross/toolchain.cmake -D CPM_USE_LOCAL_PACKAGES:BOOL=ON -D OPENMPT_INCLUDE_DIR:PATH="/osxcross/macports/pkgs/opt/local/include" -D SDL2_INCLUDE_DIR:PATH="/osxcross/macports/pkgs/opt/local/lib" -D SRB2_CONFIG_ENABLE_TESTS:BOOL=OFF -D SRB2_CONFIG_SYSTEM_LIBRARIES:BOOL=ON -D SRB2_USE_LIBGME:BOOL=OFF -G "Unix Makefiles"
+      - cmake -B build.osxcross --toolchain /osxcross/toolchain.cmake -DCPM_USE_LOCAL_PACKAGES:BOOL=ON -DOPENMPT_INCLUDE_DIR:PATH="/osxcross/macports/pkgs/opt/local/include" -DSDL2_INCLUDE_DIR:PATH="/osxcross/macports/pkgs/opt/local/lib" -DSRB2_CONFIG_ENABLE_TESTS:BOOL=OFF -DSRB2_CONFIG_SYSTEM_LIBRARIES:BOOL=ON -DSRB2_USE_LIBGME:BOOL=OFF -G "Unix Makefiles"
       - |
           # make
           echo -e "\e[0Ksection_end:`date +%s`:make\r\e[0K"
@@ -803,7 +803,7 @@ osxcross x86_64:
     - - |
           # make
           echo -e "\e[0Ksection_start:`date +%s`:make[collapsed=false]\r\e[0KCompiling SRB2"
-      - make --directory=build.osxcross --keep-going CCACHE=1 ERRORMODE=1 NONX86=1 || make --directory=src --keep-going CCACHE=1 ERRORMODE=1 NONX86=1
+      - make --directory=build.osxcross --keep-going || make --directory=build.osxcross --keep-going
       - |
           # make
           echo -e "\e[0Ksection_end:`date +%s`:make\r\e[0K"
@@ -838,7 +838,7 @@ osxcross arm64:
     - - |
           # make
           echo -e "\e[0Ksection_start:`date +%s`:make[collapsed=false]\r\e[0KBuilding Makefiles"
-      - cmake -B build.osxcross --toolchain /osxcross/toolchain.cmake -D CPM_USE_LOCAL_PACKAGES:BOOL=ON -D OPENMPT_INCLUDE_DIR:PATH="/osxcross/macports/pkgs/opt/local/include" -D SDL2_INCLUDE_DIR:PATH="/osxcross/macports/pkgs/opt/local/lib" -D SRB2_CONFIG_ENABLE_TESTS:BOOL=OFF -D SRB2_CONFIG_SYSTEM_LIBRARIES:BOOL=ON -D SRB2_USE_LIBGME:BOOL=OFF -G "Unix Makefiles"
+      - cmake -B build.osxcross --toolchain /osxcross/toolchain.cmake -DCPM_USE_LOCAL_PACKAGES:BOOL=ON -DOPENMPT_INCLUDE_DIR:PATH="/osxcross/macports/pkgs/opt/local/include" -DSDL2_INCLUDE_DIR:PATH="/osxcross/macports/pkgs/opt/local/lib" -DSRB2_CONFIG_ENABLE_TESTS:BOOL=OFF -DSRB2_CONFIG_SYSTEM_LIBRARIES:BOOL=ON -DSRB2_USE_LIBGME:BOOL=OFF -G "Unix Makefiles"
       - |
           # make
           echo -e "\e[0Ksection_end:`date +%s`:make\r\e[0K"
@@ -846,7 +846,7 @@ osxcross arm64:
     - - |
           # make
           echo -e "\e[0Ksection_start:`date +%s`:make[collapsed=false]\r\e[0KCompiling SRB2"
-      - make --directory=build.osxcross --keep-going CCACHE=1 ERRORMODE=1 NONX86=1 || make --directory=src --keep-going CCACHE=1 ERRORMODE=1 NONX86=1
+      - make --directory=build.osxcross --keep-going || make --directory=build.osxcross --keep-going
       - |
           # make
           echo -e "\e[0Ksection_end:`date +%s`:make\r\e[0K"
