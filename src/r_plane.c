@@ -881,6 +881,9 @@ void R_DrawSinglePlane(visplane_t *pl)
 	if (!(pl->minx <= pl->maxx))
 		return;
 
+	if (!cv_renderfloors.value)
+		return;
+
 	// sky flat
 	if (pl->picnum == skyflatnum)
 	{

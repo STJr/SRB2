@@ -117,6 +117,9 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 	INT32 range;
 	unsigned lengthcol;
 
+	if (!cv_renderwalls.value)
+		return;
+
 	// Calculate light table.
 	// Use different light tables
 	//   for horizontal / vertical / diagonal. Diagonal?
@@ -504,6 +507,9 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 	unsigned lengthcol;
 
 	void (*colfunc_2s) (column_t *, unsigned);
+
+	if (!cv_renderwalls.value)
+		return;
 
 	// Calculate light table.
 	// Use different light tables
@@ -1247,29 +1253,32 @@ static void R_RenderSegLoop (void)
 			// single sided line
 			if (yl <= yh && yh >= 0 && yl < viewheight)
 			{
-				fixed_t offset = texturecolumn + rw_offsetx;
+				if (cv_renderwalls.value)
+				{
+					fixed_t offset = texturecolumn + rw_offsetx;
 
-				dc_yl = yl;
-				dc_yh = yh;
-				dc_texturemid = rw_midtexturemid;
-				dc_iscale = FixedMul(0xffffffffu / (unsigned)rw_scale, rw_midtexturescaley);
-				dc_source = R_GetColumn(midtexture, offset >> FRACBITS)->pixels;
-				dc_texheight = textureheight[midtexture]>>FRACBITS;
+					dc_yl = yl;
+					dc_yh = yh;
+					dc_texturemid = rw_midtexturemid;
+					dc_iscale = FixedMul(0xffffffffu / (unsigned)rw_scale, rw_midtexturescaley);
+					dc_source = R_GetColumn(midtexture, offset >> FRACBITS)->pixels;
+					dc_texheight = textureheight[midtexture]>>FRACBITS;
 
-				//profile stuff ---------------------------------------------------------
+					//profile stuff ---------------------------------------------------------
 #ifdef TIMING
-				ProfZeroTimer();
+					ProfZeroTimer();
 #endif
-				colfunc();
+					colfunc();
 #ifdef TIMING
-				RDMSR(0x10,&mycount);
-				mytotal += mycount;      //64bit add
+					RDMSR(0x10,&mycount);
+					mytotal += mycount;      //64bit add
 
-				if (nombre--==0)
-					I_Error("R_DrawColumn CPU Spy reports: 0x%d %d\n", *((INT32 *)&mytotal+1),
-						(INT32)mytotal);
+					if (nombre--==0)
+						I_Error("R_DrawColumn CPU Spy reports: 0x%d %d\n", *((INT32 *)&mytotal+1),
+							(INT32)mytotal);
 #endif
-				//profile stuff ---------------------------------------------------------
+					//profile stuff ---------------------------------------------------------
+				}
 
 				// dont draw anything more for this column, since
 				// a midtexture blocks the view
@@ -1313,18 +1322,21 @@ static void R_RenderSegLoop (void)
 					}
 					else if (mid >= 0) // safe to draw top texture
 					{
-						fixed_t offset = rw_offset_top;
-						if (rw_toptexturescalex < 0)
-							offset = -offset;
-						offset = toptexturecolumn + offset;
+						if (cv_renderwalls.value)
+						{
+							fixed_t offset = rw_offset_top;
+							if (rw_toptexturescalex < 0)
+								offset = -offset;
+							offset = toptexturecolumn + offset;
 
-						dc_yl = yl;
-						dc_yh = mid;
-						dc_texturemid = rw_toptexturemid;
-						dc_iscale = FixedMul(0xffffffffu / (unsigned)rw_scale, rw_toptexturescaley);
-						dc_source = R_GetColumn(toptexture, offset >> FRACBITS)->pixels;
-						dc_texheight = textureheight[toptexture]>>FRACBITS;
-						colfunc();
+							dc_yl = yl;
+							dc_yh = mid;
+							dc_texturemid = rw_toptexturemid;
+							dc_iscale = FixedMul(0xffffffffu / (unsigned)rw_scale, rw_toptexturescaley);
+							dc_source = R_GetColumn(toptexture, offset >> FRACBITS)->pixels;
+							dc_texheight = textureheight[toptexture]>>FRACBITS;
+							colfunc();
+						}
 						ceilingclip[rw_x] = (INT16)mid;
 					}
 					else if (!rw_ceilingmarked) // entirely off top of screen
@@ -1361,18 +1373,21 @@ static void R_RenderSegLoop (void)
 					}
 					else if (mid < viewheight) // safe to draw bottom texture
 					{
-						fixed_t offset = rw_offset_bottom;
-						if (rw_bottomtexturescalex < 0)
-							offset = -offset;
-						offset = bottomtexturecolumn + offset;
+						if (cv_renderwalls.value)
+						{
+							fixed_t offset = rw_offset_bottom;
+							if (rw_bottomtexturescalex < 0)
+								offset = -offset;
+							offset = bottomtexturecolumn + offset;
 
-						dc_yl = mid;
-						dc_yh = yh;
-						dc_texturemid = rw_bottomtexturemid;
-						dc_iscale = FixedMul(0xffffffffu / (unsigned)rw_scale, rw_bottomtexturescaley);
-						dc_source = R_GetColumn(bottomtexture, offset >> FRACBITS)->pixels;
-						dc_texheight = textureheight[bottomtexture]>>FRACBITS;
-						colfunc();
+							dc_yl = mid;
+							dc_yh = yh;
+							dc_texturemid = rw_bottomtexturemid;
+							dc_iscale = FixedMul(0xffffffffu / (unsigned)rw_scale, rw_bottomtexturescaley);
+							dc_source = R_GetColumn(bottomtexture, offset >> FRACBITS)->pixels;
+							dc_texheight = textureheight[bottomtexture]>>FRACBITS;
+							colfunc();
+						}
 						floorclip[rw_x] = (INT16)mid;
 					}
 					else if (!rw_floormarked)  // entirely off bottom of screen
