@@ -25,6 +25,7 @@
 #include "i_system.h"
 #include "r_fps.h"
 #include "r_things.h"
+#include "r_translation.h"
 #include "r_patch.h"
 #include "r_patchrotation.h"
 #include "r_picformats.h"
@@ -256,7 +257,6 @@ boolean R_AddSingleSpriteDef(const char *sprname, spritedef_t *spritedef, UINT16
 	UINT8 frame;
 	UINT8 rotation;
 	lumpinfo_t *lumpinfo;
-	softwarepatch_t patch;
 	UINT16 numadded = 0;
 
 	memset(sprtemp,0xFF, sizeof (sprtemp));
@@ -284,11 +284,8 @@ boolean R_AddSingleSpriteDef(const char *sprname, spritedef_t *spritedef, UINT16
 	{
 		if (memcmp(lumpinfo[l].name,sprname,4)==0)
 		{
-			INT32 width, height;
+			INT16 width, height;
 			INT16 topoffset, leftoffset;
-#ifndef NO_PNG_LUMPS
-			boolean isPNG = false;
-#endif
 
 			frame = R_Char2Frame(lumpinfo[l].name[4]);
 			rotation = R_Char2Rotation(lumpinfo[l].name[5]);
@@ -303,33 +300,12 @@ boolean R_AddSingleSpriteDef(const char *sprname, spritedef_t *spritedef, UINT16
 			if (W_LumpLengthPwad(wadnum,l)<=8)
 				continue;
 
+			// Get the patch's dimensions only
+			if (!W_ReadPatchHeaderPwad(wadnum, l, &width, &height, &topoffset, &leftoffset))
+				continue;
+
 			// store sprite info in lookup tables
 			//FIXME : numspritelumps do not duplicate sprite replacements
-
-#ifndef NO_PNG_LUMPS
-			{
-				softwarepatch_t *png = W_CacheLumpNumPwad(wadnum, l, PU_STATIC);
-				size_t len = W_LumpLengthPwad(wadnum, l);
-
-				if (Picture_IsLumpPNG((UINT8 *)png, len))
-				{
-					Picture_PNGDimensions((UINT8 *)png, &width, &height, &topoffset, &leftoffset, len);
-					isPNG = true;
-				}
-
-				Z_Free(png);
-			}
-
-			if (!isPNG)
-#endif
-			{
-				W_ReadLumpHeaderPwad(wadnum, l, &patch, sizeof(INT16) * 4, 0);
-				width = (INT32)(SHORT(patch.width));
-				height = (INT32)(SHORT(patch.height));
-				topoffset = (INT16)(SHORT(patch.topoffset));
-				leftoffset = (INT16)(SHORT(patch.leftoffset));
-			}
-
 			spritecachedinfo[numspritelumps].width = width<<FRACBITS;
 			spritecachedinfo[numspritelumps].offset = leftoffset<<FRACBITS;
 			spritecachedinfo[numspritelumps].topoffset = topoffset<<FRACBITS;
@@ -634,25 +610,18 @@ INT16 *mceilingclip;
 fixed_t spryscale = 0, sprtopscreen = 0, sprbotscreen = 0;
 fixed_t windowtop = 0, windowbottom = 0;
 
-void R_DrawMaskedColumn(column_t *column)
+void R_DrawMaskedColumn(column_t *column, unsigned lengthcol)
 {
-	INT32 topscreen;
-	INT32 bottomscreen;
-	fixed_t basetexturemid;
-	INT32 topdelta, prevdelta = 0;
+	fixed_t basetexturemid = dc_texturemid;
 
-	basetexturemid = dc_texturemid;
+	(void)lengthcol;
 
-	for (; column->topdelta != 0xff ;)
+	for (unsigned i = 0; i < column->num_posts; i++)
 	{
-		// calculate unclipped screen coordinates
-		// for post
-		topdelta = column->topdelta;
-		if (topdelta <= prevdelta)
-			topdelta += prevdelta;
-		prevdelta = topdelta;
-		topscreen = sprtopscreen + spryscale*topdelta;
-		bottomscreen = topscreen + spryscale*column->length;
+		post_t *post = &column->posts[i];
+
+		INT32 topscreen = sprtopscreen + spryscale*post->topdelta;
+		INT32 bottomscreen = topscreen + spryscale*post->length;
 
 		dc_yl = (topscreen+FRACUNIT-1)>>FRACBITS;
 		dc_yh = (bottomscreen-1)>>FRACBITS;
@@ -676,48 +645,36 @@ void R_DrawMaskedColumn(column_t *column)
 
 		if (dc_yl <= dc_yh && dc_yh > 0)
 		{
-			dc_source = (UINT8 *)column + 3;
-			dc_texturemid = basetexturemid - (topdelta<<FRACBITS);
+			dc_source = column->pixels + post->data_offset;
+			dc_texturemid = basetexturemid - (post->topdelta<<FRACBITS);
 
-			// Drawn by R_DrawColumn.
-			// This stuff is a likely cause of the splitscreen water crash bug.
-			// FIXTHIS: Figure out what "something more proper" is and do it.
-			// quick fix... something more proper should be done!!!
-			if (ylookup[dc_yl])
-				colfunc();
-#ifdef PARANOIA
-			else
-				I_Error("R_DrawMaskedColumn: Invalid ylookup for dc_yl %d", dc_yl);
-#endif
+			colfunc();
 		}
-		column = (column_t *)((UINT8 *)column + column->length + 4);
 	}
 
 	dc_texturemid = basetexturemid;
 }
 
-INT32 lengthcol; // column->length : for flipped column function pointers and multi-patch on 2sided wall = texture->height
+static UINT8 *flippedcol = NULL;
+static size_t flippedcolsize = 0;
 
-void R_DrawFlippedMaskedColumn(column_t *column)
+void R_DrawFlippedMaskedColumn(column_t *column, unsigned lengthcol)
 {
 	INT32 topscreen;
 	INT32 bottomscreen;
 	fixed_t basetexturemid = dc_texturemid;
-	INT32 topdelta, prevdelta = -1;
 	UINT8 *d,*s;
 
-	for (; column->topdelta != 0xff ;)
+	for (unsigned i = 0; i < column->num_posts; i++)
 	{
-		// calculate unclipped screen coordinates
-		// for post
-		topdelta = column->topdelta;
-		if (topdelta <= prevdelta)
-			topdelta += prevdelta;
-		prevdelta = topdelta;
-		topdelta = lengthcol-column->length-topdelta;
+		post_t *post = &column->posts[i];
+		if (!post->length)
+			continue;
+
+		INT32 topdelta = lengthcol-post->length-post->topdelta;
 		topscreen = sprtopscreen + spryscale*topdelta;
-		bottomscreen = sprbotscreen == INT32_MAX ? topscreen + spryscale*column->length
-		                                      : sprbotscreen + spryscale*column->length;
+		bottomscreen = sprbotscreen == INT32_MAX ? topscreen + spryscale*post->length
+		                                      : sprbotscreen + spryscale*post->length;
 
 		dc_yl = (topscreen+FRACUNIT-1)>>FRACBITS;
 		dc_yh = (bottomscreen-1)>>FRACBITS;
@@ -741,70 +698,66 @@ void R_DrawFlippedMaskedColumn(column_t *column)
 
 		if (dc_yl <= dc_yh && dc_yh > 0)
 		{
-			dc_source = ZZ_Alloc(column->length);
-			for (s = (UINT8 *)column+2+column->length, d = dc_source; d < dc_source+column->length; --s)
+			if (post->length > flippedcolsize)
+			{
+				flippedcolsize = post->length;
+				flippedcol = Z_Realloc(flippedcol, flippedcolsize, PU_STATIC, NULL);
+			}
+
+			for (s = column->pixels+post->data_offset+post->length, d = flippedcol; d < flippedcol+post->length; --s)
 				*d++ = *s;
+			dc_source = flippedcol;
 			dc_texturemid = basetexturemid - (topdelta<<FRACBITS);
 
-			// Still drawn by R_DrawColumn.
-			if (ylookup[dc_yl])
-				colfunc();
-#ifdef PARANOIA
-			else
-				I_Error("R_DrawMaskedColumn: Invalid ylookup for dc_yl %d", dc_yl);
-#endif
-			Z_Free(dc_source);
+			colfunc();
 		}
-		column = (column_t *)((UINT8 *)column + column->length + 4);
 	}
 
 	dc_texturemid = basetexturemid;
 }
 
-boolean R_SpriteIsFlashing(vissprite_t *vis)
+UINT8 *R_GetTranslationForThing(mobj_t *mobj, skincolornum_t color, UINT16 translation)
 {
-	return (!(vis->cut & SC_PRECIP)
-	&& (vis->mobj->flags & (MF_ENEMY|MF_BOSS))
-	&& (vis->mobj->flags2 & MF2_FRET)
-	&& !(vis->mobj->flags & MF_GRENADEBOUNCE)
-	&& (leveltime & 1));
-}
+	INT32 skinnum = TC_DEFAULT;
 
-UINT8 *R_GetSpriteTranslation(vissprite_t *vis)
-{
-	if (R_SpriteIsFlashing(vis)) // Bosses "flash"
-	{
-		if (vis->mobj->type == MT_CYBRAKDEMON || vis->mobj->colorized)
-			return R_GetTranslationColormap(TC_ALLWHITE, 0, GTC_CACHE);
-		else if (vis->mobj->type == MT_METALSONIC_BATTLE)
-			return R_GetTranslationColormap(TC_METALSONIC, 0, GTC_CACHE);
-		else
-			return R_GetTranslationColormap(TC_BOSS, vis->color, GTC_CACHE);
-	}
-	else if (vis->color)
+	boolean is_player = mobj->skin && mobj->sprite == SPR_PLAY;
+	if (is_player) // This thing is a player!
+		skinnum = ((skin_t*)mobj->skin)->skinnum;
+
+	if (color != SKINCOLOR_NONE)
 	{
 		// New colormap stuff for skins Tails 06-07-2002
-		if (!(vis->cut & SC_PRECIP) && vis->mobj->colorized)
-			return R_GetTranslationColormap(TC_RAINBOW, vis->color, GTC_CACHE);
-		else if (!(vis->cut & SC_PRECIP)
-			&& vis->mobj->player && vis->mobj->player->dashmode >= DASHMODE_THRESHOLD
-			&& (vis->mobj->player->charflags & SF_DASHMODE)
+		if (mobj->colorized)
+			skinnum = TC_RAINBOW;
+		else if (mobj->player && mobj->player->dashmode >= DASHMODE_THRESHOLD
+			&& (mobj->player->charflags & SF_DASHMODE)
 			&& ((leveltime/2) & 1))
 		{
-			if (vis->mobj->player->charflags & SF_MACHINE)
-				return R_GetTranslationColormap(TC_DASHMODE, 0, GTC_CACHE);
+			if (mobj->player->charflags & SF_MACHINE)
+				skinnum = TC_DASHMODE;
 			else
-				return R_GetTranslationColormap(TC_RAINBOW, vis->color, GTC_CACHE);
+				skinnum = TC_RAINBOW;
 		}
-		else if (!(vis->cut & SC_PRECIP) && vis->mobj->skin && vis->mobj->sprite == SPR_PLAY) // This thing is a player!
-		{
-			UINT8 skinnum = ((skin_t*)vis->mobj->skin)->skinnum;
-			return R_GetTranslationColormap(skinnum, vis->color, GTC_CACHE);
-		}
-		else // Use the defaults
-			return R_GetTranslationColormap(TC_DEFAULT, vis->color, GTC_CACHE);
 	}
-	else if (vis->mobj->sprite == SPR_PLAY) // Looks like a player, but doesn't have a color? Get rid of green sonic syndrome.
+
+	if (R_ThingIsFlashing(mobj)) // Bosses "flash"
+	{
+		if (mobj->type == MT_CYBRAKDEMON || mobj->colorized)
+			return R_GetTranslationColormap(TC_ALLWHITE, 0, GTC_CACHE);
+		else if (mobj->type == MT_METALSONIC_BATTLE)
+			return R_GetTranslationColormap(TC_METALSONIC, 0, GTC_CACHE);
+		else
+			return R_GetTranslationColormap(TC_BOSS, color, GTC_CACHE);
+	}
+	else if (translation != 0)
+	{
+		UINT8 *tr = R_GetTranslationRemap(translation, color, skinnum);
+		if (tr != NULL)
+			return tr;
+	}
+	else if (color != SKINCOLOR_NONE)
+		return R_GetTranslationColormap(skinnum, color, GTC_CACHE);
+	else if (mobj->sprite == SPR_PLAY) // Looks like a player, but doesn't have a color? Get rid of green sonic syndrome.
 		return R_GetTranslationColormap(TC_DEFAULT, SKINCOLOR_BLUE, GTC_CACHE);
 
 	return NULL;
@@ -817,14 +770,14 @@ UINT8 *R_GetSpriteTranslation(vissprite_t *vis)
 static void R_DrawVisSprite(vissprite_t *vis)
 {
 	column_t *column;
-	void (*localcolfunc)(column_t *);
-	INT32 texturecolumn;
+	void (*localcolfunc)(column_t *, unsigned);
 	INT32 pwidth;
 	fixed_t frac;
 	patch_t *patch = vis->patch;
 	fixed_t this_scale = vis->thingscale;
 	INT32 x1, x2;
 	INT64 overflow_test;
+	unsigned lengthcol;
 
 	if (!patch)
 		return;
@@ -852,11 +805,11 @@ static void R_DrawVisSprite(vissprite_t *vis)
 
 	colfunc = colfuncs[BASEDRAWFUNC]; // hack: this isn't resetting properly somewhere.
 	dc_colormap = vis->colormap;
-	dc_translation = R_GetSpriteTranslation(vis);
+	dc_translation = R_GetTranslationForThing(vis->mobj, vis->color, vis->translation);
 
-	if (R_SpriteIsFlashing(vis)) // Bosses "flash"
+	if (R_ThingIsFlashing(vis->mobj)) // Bosses "flash"
 		colfunc = colfuncs[COLDRAWFUNC_TRANS]; // translate certain pixels to white
-	else if (vis->color && vis->transmap) // Color mapping
+	else if (dc_translation && vis->transmap) // Color mapping
 	{
 		colfunc = colfuncs[COLDRAWFUNC_TRANSTRANS];
 		dc_transmap = vis->transmap;
@@ -866,9 +819,7 @@ static void R_DrawVisSprite(vissprite_t *vis)
 		colfunc = colfuncs[COLDRAWFUNC_FUZZY];
 		dc_transmap = vis->transmap;    //Fab : 29-04-98: translucency table
 	}
-	else if (vis->color) // translate green skin to another color
-		colfunc = colfuncs[COLDRAWFUNC_TRANS];
-	else if (vis->mobj->sprite == SPR_PLAY) // Looks like a player, but doesn't have a color? Get rid of green sonic syndrome.
+	else if (dc_translation) // translate green skin to another color
 		colfunc = colfuncs[COLDRAWFUNC_TRANS];
 
 	// Hack: Use a special column function for drop shadows that bypasses
@@ -945,7 +896,7 @@ static void R_DrawVisSprite(vissprite_t *vis)
 		for (dc_x = vis->x1; dc_x <= vis->x2; dc_x++, spryscale += scalestep)
 		{
 			angle_t angle = ((vis->centerangle + xtoviewangle[dc_x]) >> ANGLETOFINESHIFT) & 0xFFF;
-			texturecolumn = (vis->paperoffset - FixedMul(FINETANGENT(angle), vis->paperdistance)) / horzscale;
+			INT32 texturecolumn = (vis->paperoffset - FixedMul(FINETANGENT(angle), vis->paperdistance)) / horzscale;
 
 			if (texturecolumn < 0 || texturecolumn >= pwidth)
 				continue;
@@ -956,9 +907,9 @@ static void R_DrawVisSprite(vissprite_t *vis)
 			sprtopscreen = (centeryfrac - FixedMul(dc_texturemid, spryscale));
 			dc_iscale = (0xffffffffu / (unsigned)spryscale);
 
-			column = (column_t *)((UINT8 *)patch->columns + (patch->columnofs[texturecolumn]));
+			column = &patch->columns[texturecolumn];
 
-			localcolfunc (column);
+			localcolfunc (column, lengthcol);
 		}
 	}
 	else if (vis->cut & SC_SHEAR)
@@ -970,17 +921,9 @@ static void R_DrawVisSprite(vissprite_t *vis)
 		// Vertically sheared sprite
 		for (dc_x = vis->x1; dc_x <= vis->x2; dc_x++, frac += vis->xiscale, dc_texturemid -= vis->shear.tan)
 		{
-#ifdef RANGECHECK
-			texturecolumn = frac>>FRACBITS;
-			if (texturecolumn < 0 || texturecolumn >= pwidth)
-				I_Error("R_DrawSpriteRange: bad texturecolumn at %d from end", vis->x2 - dc_x);
-			column = (column_t *)((UINT8 *)patch->columns + (patch->columnofs[texturecolumn]));
-#else
-			column = (column_t *)((UINT8 *)patch->columns + (patch->columnofs[frac>>FRACBITS]));
-#endif
-
+			column = &patch->columns[frac>>FRACBITS];
 			sprtopscreen = (centeryfrac - FixedMul(dc_texturemid, spryscale));
-			localcolfunc (column);
+			localcolfunc (column, lengthcol);
 		}
 	}
 	else
@@ -992,15 +935,8 @@ static void R_DrawVisSprite(vissprite_t *vis)
 		// Non-paper drawing loop
 		for (dc_x = vis->x1; dc_x <= vis->x2; dc_x++, frac += vis->xiscale, sprtopscreen += vis->shear.tan)
 		{
-#ifdef RANGECHECK
-			texturecolumn = frac>>FRACBITS;
-			if (texturecolumn < 0 || texturecolumn >= pwidth)
-				I_Error("R_DrawSpriteRange: bad texturecolumn at %d from end", vis->x2 - dc_x);
-			column = (column_t *)((UINT8 *)patch->columns + (patch->columnofs[texturecolumn]));
-#else
-			column = (column_t *)((UINT8 *)patch->columns + (patch->columnofs[frac>>FRACBITS]));
-#endif
-			localcolfunc (column);
+			column = &patch->columns[frac>>FRACBITS];
+			localcolfunc (column, lengthcol);
 		}
 	}
 
@@ -1014,21 +950,12 @@ static void R_DrawVisSprite(vissprite_t *vis)
 // Special precipitation drawer Tails 08-18-2002
 static void R_DrawPrecipitationVisSprite(vissprite_t *vis)
 {
-	column_t *column;
-#ifdef RANGECHECK
-	INT32 texturecolumn;
-#endif
-	fixed_t frac;
-	patch_t *patch;
-	INT64 overflow_test;
-
-	//Fab : R_InitSprites now sets a wad lump number
-	patch = vis->patch;
+	patch_t *patch = vis->patch;
 	if (!patch)
 		return;
 
 	// Check for overflow
-	overflow_test = (INT64)centeryfrac - (((INT64)vis->texturemid*vis->scale)>>FRACBITS);
+	INT64 overflow_test = (INT64)centeryfrac - (((INT64)vis->texturemid*vis->scale)>>FRACBITS);
 	if (overflow_test < 0) overflow_test = -overflow_test;
 	if ((UINT64)overflow_test&0xFFFFFFFF80000000ULL) return; // fixed point mult would overflow
 
@@ -1044,31 +971,19 @@ static void R_DrawPrecipitationVisSprite(vissprite_t *vis)
 	dc_texturemid = vis->texturemid;
 	dc_texheight = 0;
 
-	frac = vis->startfrac;
 	spryscale = vis->scale;
 	sprtopscreen = centeryfrac - FixedMul(dc_texturemid,spryscale);
 	windowtop = windowbottom = sprbotscreen = INT32_MAX;
 
 	if (vis->x1 < 0)
 		vis->x1 = 0;
-
 	if (vis->x2 >= vid.width)
 		vis->x2 = vid.width-1;
 
+	fixed_t frac = vis->startfrac;
+
 	for (dc_x = vis->x1; dc_x <= vis->x2; dc_x++, frac += vis->xiscale)
-	{
-#ifdef RANGECHECK
-		texturecolumn = frac>>FRACBITS;
-
-		if (texturecolumn < 0 || texturecolumn >= patch->width)
-			I_Error("R_DrawPrecipitationSpriteRange: bad texturecolumn");
-
-		column = (column_t *)((UINT8 *)patch->columns + (patch->columnofs[texturecolumn]));
-#else
-		column = (column_t *)((UINT8 *)patch->columns + (patch->columnofs[frac>>FRACBITS]));
-#endif
-		R_DrawMaskedColumn(column);
-	}
+		R_DrawMaskedColumn(&patch->columns[frac>>FRACBITS], patch->height);
 
 	colfunc = colfuncs[BASEDRAWFUNC];
 }
@@ -1403,6 +1318,7 @@ static void R_ProjectDropShadow(mobj_t *thing, vissprite_t *vis, fixed_t scale, 
 
 	shadow->mobj = thing; // Easy access! Tails 06-07-2002
 	shadow->color = thing->color;
+	shadow->translation = 0;
 
 	shadow->x1 = x1 < portalclipstart ? portalclipstart : x1;
 	shadow->x2 = x2 >= portalclipend ? portalclipend-1 : x2;
@@ -1611,6 +1527,9 @@ static void R_ProjectSprite(mobj_t *thing)
 
 	// uncapped/interpolation
 	interpmobjstate_t interp = {0};
+
+	if (!cv_renderthings.value)
+		return;
 
 	// do interpolation
 	if (R_UsingFrameInterpolation() && !paused)
@@ -2130,7 +2049,7 @@ static void R_ProjectSprite(mobj_t *thing)
 
 	if (thing->subsector->sector->numlights)
 	{
-		light = P_GetSectorLightAt(thing->subsector->sector, interp.x, interp.y, splat ? gz : gzt);
+		light = P_GetSectorLightNumAt(thing->subsector->sector, interp.x, interp.y, splat ? gz : gzt);
 
 		INT32 lightnum = (*thing->subsector->sector->lightlist[light].lightlevel >> LIGHTSEGSHIFT);
 		if (lightnum < 0)
@@ -2199,6 +2118,11 @@ static void R_ProjectSprite(mobj_t *thing)
 		vis->color = oldthing->tracer->color;
 	else
 		vis->color = oldthing->color;
+
+	if ((oldthing->flags2 & MF2_LINKDRAW) && oldthing->tracer && oldthing->translation == 0)
+		vis->translation = oldthing->tracer->translation;
+	else
+		vis->translation = oldthing->translation;
 
 	vis->x1 = x1 < portalclipstart ? portalclipstart : x1;
 	vis->x2 = x2 >= portalclipend ? portalclipend-1 : x2;
@@ -2470,6 +2394,7 @@ static void R_ProjectPrecipitationSprite(precipmobj_t *thing)
 	vis->extra_colormap = thing->subsector->sector->extra_colormap;
 	vis->heightsec = thing->subsector->sector->heightsec;
 	vis->color = SKINCOLOR_NONE;
+	vis->translation = 0;
 
 	// Fullbright
 	vis->colormap = colormaps;
@@ -3493,7 +3418,7 @@ boolean R_ThingVisible (mobj_t *thing)
 		(thing->sprite == SPR_NULL) || // Don't draw null-sprites
 		(thing->flags2 & MF2_DONTDRAW) || // Don't draw MF2_LINKDRAW objects
 		(thing->drawonlyforplayer && thing->drawonlyforplayer != viewplayer) || // Don't draw other players' personal objects
-		(r_viewmobj && (
+		(!P_MobjWasRemoved(r_viewmobj) && (
 		  (r_viewmobj == thing) || // Don't draw first-person players or awayviewmobj objects
 		  (r_viewmobj->player && r_viewmobj->player->followmobj == thing) || // Don't draw first-person players' followmobj
 		  (r_viewmobj == thing->dontdrawforviewmobj) // Don't draw objects that are hidden for the current view
@@ -3568,6 +3493,14 @@ boolean R_ThingIsSemiBright(mobj_t *thing)
 boolean R_ThingIsFullDark(mobj_t *thing)
 {
 	return ((thing->frame & FF_BRIGHTMASK) == FF_FULLDARK || (thing->renderflags & RF_BRIGHTMASK) == RF_FULLDARK);
+}
+
+boolean R_ThingIsFlashing(mobj_t *thing)
+{
+	if (thing == NULL)
+		return false;
+
+	return (thing->flags & (MF_ENEMY|MF_BOSS)) && (thing->flags2 & MF2_FRET) && !(thing->flags & MF_GRENADEBOUNCE) && (leveltime & 1);
 }
 
 // Offsets MT_OVERLAY towards the camera at render-time - Works in splitscreen!

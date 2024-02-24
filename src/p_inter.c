@@ -1397,11 +1397,14 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			i = 0;
 			for (; special->type == MT_HOOP; special = special->hnext)
 			{
-				special->fuse = 11;
-				special->movedir = i;
-				special->extravalue1 = special->target->extravalue1;
-				special->extravalue2 = special->target->extravalue2;
-				special->target->threshold = 4242;
+				if (!P_MobjWasRemoved(special->target))
+				{
+					special->fuse = 11;
+					special->movedir = i;
+					special->extravalue1 = special->target->extravalue1;
+					special->extravalue2 = special->target->extravalue2;
+					special->target->threshold = 4242;
+				}
 				i++;
 			}
 			// Make the collision detectors disappear.
@@ -2244,7 +2247,7 @@ void P_CheckTimeLimit(void)
 		}
 
 		if (server)
-			D_SendExitLevel(false);
+			SendNetXCmd(XD_EXITLEVEL, NULL, 0);
 	}
 
 	//Optional tie-breaker for Match/CTF
@@ -2307,11 +2310,11 @@ void P_CheckTimeLimit(void)
 			}
 		}
 		if (server)
-			D_SendExitLevel(false);
+			SendNetXCmd(XD_EXITLEVEL, NULL, 0);
 	}
 
 	if (server)
-		D_SendExitLevel(false);
+		SendNetXCmd(XD_EXITLEVEL, NULL, 0);
 }
 
 /** Checks if a player's score is over the pointlimit and the round should end.
@@ -2340,7 +2343,7 @@ void P_CheckPointLimit(void)
 		if ((UINT32)cv_pointlimit.value <= redscore || (UINT32)cv_pointlimit.value <= bluescore)
 		{
 			if (server)
-				D_SendExitLevel(false);
+				SendNetXCmd(XD_EXITLEVEL, NULL, 0);
 		}
 	}
 	else
@@ -2353,7 +2356,7 @@ void P_CheckPointLimit(void)
 			if ((UINT32)cv_pointlimit.value <= players[i].score)
 			{
 				if (server)
-					D_SendExitLevel(false);
+					SendNetXCmd(XD_EXITLEVEL, NULL, 0);
 				return;
 			}
 		}
@@ -2397,7 +2400,7 @@ void P_CheckSurvivors(void)
 		{
 			CONS_Printf(M_GetText("The IT player has left the game.\n"));
 			if (server)
-				D_SendExitLevel(false);
+				SendNetXCmd(XD_EXITLEVEL, NULL, 0);
 
 			return;
 		}
@@ -2417,7 +2420,7 @@ void P_CheckSurvivors(void)
 			{
 				CONS_Printf(M_GetText("All players have been tagged!\n"));
 				if (server)
-					D_SendExitLevel(false);
+					SendNetXCmd(XD_EXITLEVEL, NULL, 0);
 			}
 
 			return;
@@ -2429,7 +2432,7 @@ void P_CheckSurvivors(void)
 		{
 			CONS_Printf(M_GetText("There are no players able to become IT.\n"));
 			if (server)
-				D_SendExitLevel(false);
+				SendNetXCmd(XD_EXITLEVEL, NULL, 0);
 		}
 
 		return;
@@ -2441,7 +2444,7 @@ void P_CheckSurvivors(void)
 	{
 		CONS_Printf(M_GetText("All players have been tagged!\n"));
 		if (server)
-			D_SendExitLevel(false);
+			SendNetXCmd(XD_EXITLEVEL, NULL, 0);
 	}
 }
 
@@ -2530,8 +2533,14 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 		{
 			P_SetTarget(&target->target, source);
 			source->player->numboxes++;
-			if (cv_itemrespawn.value && gametype != GT_COOP && (modifiedgame || netgame || multiplayer))
-				target->fuse = cv_itemrespawntime.value*TICRATE + 2; // Random box generation
+			// Set respawn
+			if (!(target->flags2 & MF2_DONTRESPAWN))
+			{
+				if (!(netgame || multiplayer))
+					target->fuse = atoi(cv_itemrespawntime.defaultvalue)*TICRATE + 2; 
+				else if (cv_itemrespawn.value)
+					target->fuse = cv_itemrespawntime.value*TICRATE + 2;
+			}
 		}
 
 		// Award Score Tails

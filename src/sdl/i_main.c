@@ -41,7 +41,7 @@
 #endif
 
 #if defined (_WIN32) && !defined (main)
-//#define SDLMAIN
+#define SDLMAIN
 #endif
 
 #ifdef SDLMAIN

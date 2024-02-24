@@ -20,6 +20,7 @@
 #include "m_misc.h"
 #include "r_data.h"
 #include "r_textures.h"
+#include "r_translation.h"
 #include "r_patch.h"
 #include "r_picformats.h"
 #include "w_wad.h"
@@ -29,6 +30,10 @@
 #include "f_finale.h" // wipes
 #include "byteptr.h"
 #include "dehacked.h"
+
+#ifdef HWRENDER
+#include "hardware/hw_glob.h" // HWR_ClearLightTables
+#endif
 
 //
 // Graphics.
@@ -425,6 +430,9 @@ void R_ClearColormaps(void)
 {
 	// Purged by PU_LEVEL, just overwrite the pointer
 	extra_colormaps = R_CreateDefaultColormap(true);
+#ifdef HWRENDER
+	HWR_ClearLightTables();
+#endif
 }
 
 //
@@ -1216,6 +1224,9 @@ void R_InitData(void)
 		CONS_Printf("InitHighColor...\n");
 		R_Init8to16();
 	}
+
+	CONS_Printf("R_LoadParsedTranslations()...\n");
+	R_LoadParsedTranslations();
 
 	CONS_Printf("R_LoadTextures()...\n");
 	R_LoadTextures();
