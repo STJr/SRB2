@@ -1527,6 +1527,9 @@ static void R_ProjectSprite(mobj_t *thing)
 	// uncapped/interpolation
 	interpmobjstate_t interp = {0};
 
+	if (!cv_renderthings.value)
+		return;
+
 	// do interpolation
 	if (R_UsingFrameInterpolation() && !paused)
 	{
