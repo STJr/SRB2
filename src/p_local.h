@@ -113,14 +113,6 @@ typedef struct camera_s
 	fixed_t momx, momy, momz;
 } camera_t;
 
-typedef enum
-{
-	SUPERREADY_CLASSIC, // Two-button play mode, when Spin and Shield are bound to the same button (pressed on the same tic)
-	SUPERREADY_TRANSFORM,
-	SUPERREADY_DETRANSFORM,
-	NUMSUPERREADY
-} superready_t;
-
 extern camera_t camera, camera2;
 extern consvar_t cv_cam_dist, cv_cam_still, cv_cam_height;
 extern consvar_t cv_cam_speed, cv_cam_rotate, cv_cam_rotspeed, cv_cam_turnmultiplier, cv_cam_orbit, cv_cam_adjust;
@@ -211,7 +203,7 @@ mobj_t *P_LookForEnemies(player_t *player, boolean nonenemies, boolean bullet);
 void P_NukeEnemies(mobj_t *inflictor, mobj_t *source, fixed_t radius);
 void P_Earthquake(mobj_t *inflictor, mobj_t *source, fixed_t radius);
 boolean P_HomingAttack(mobj_t *source, mobj_t *enemy); /// \todo doesn't belong in p_user
-boolean P_SuperReady(player_t *player, superready_t type);
+boolean P_SuperReady(player_t *player, boolean transform);
 void P_DoJump(player_t *player, boolean soundandstate, boolean allowflip);
 void P_DoSpinDashDust(player_t *player);
 #define P_AnalogMove(player) (P_ControlStyle(player) == CS_LMAOGALOG)

@@ -1712,14 +1712,12 @@ static int lib_pResetCamera(lua_State *L)
 static int lib_pSuperReady(lua_State *L)
 {
 	player_t *player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
-	superready_t type = luaL_optinteger(L, 2, SUPERREADY_CLASSIC);
+	boolean transform = (boolean)lua_opttrueboolean(L, 2);
 	//HUDSAFE
 	INLEVEL
 	if (!player)
 		return LUA_ErrInvalid(L, "player_t");
-	if (type < 0 || type >= NUMSUPERREADY)
-		return luaL_error(L, "superready type %d out of range (0 - %d)", type, NUMSUPERREADY-1);
-	lua_pushboolean(L, P_SuperReady(player, type));
+	lua_pushboolean(L, P_SuperReady(player, transform));
 	return 1;
 }
 

@@ -4431,47 +4431,18 @@ static void P_DoSuperStuff(player_t *player)
 //
 // Returns true if player is ready to transform or detransform
 //
-boolean P_SuperReady(player_t *player, superready_t type)
+boolean P_SuperReady(player_t *player, boolean transform)
 {
-	switch (type) // Transformation-type-specific checks
-	{
-		case SUPERREADY_CLASSIC:
-			// Pressed Spin and Shield on the same tic? Then you've probably bound them to the same button,
-			// so let's match the earlier Spin-only button behaviour to still support two-button play
-			if (!player->powers[pw_super]
-			&& !player->powers[pw_invulnerability]
-			&& !player->powers[pw_tailsfly]
-			&& (player->charflags & SF_SUPER)
-			&& (player->pflags & PF_JUMPED)
-			&& !(player->powers[pw_shield] & SH_NOSTACK)
-			&& !(maptol & TOL_NIGHTS)
-			&& ALL7EMERALDS(emeralds)
-			&& (player->rings >= 50))
-				return true;
-			else
-				return false;
-			break;
+	if (!transform &&
+	(player->powers[pw_super] < TICRATE*3/2
+	|| !G_CoopGametype())) // No turning back in competitive!
+		return false;
+	else if (transform
+	&& (player->powers[pw_super]
+	|| !ALL7EMERALDS(emeralds)
+	|| !(player->rings >= 50)))
+		return false;
 
-		case SUPERREADY_TRANSFORM:
-			// Turning Super by pressing Shield?
-			if (player->powers[pw_super]
-			|| !ALL7EMERALDS(emeralds)
-			|| !(player->rings >= 50))
-				return false;
-			break;
-
-		case SUPERREADY_DETRANSFORM:
-			// Reverting from Super by pressing Shield?
-			if ((player->powers[pw_super] < TICRATE*3/2) // No spamming the transformation sound!
-			|| !G_CoopGametype()) // No turning back in competitive!
-				return false;
-			break;
-
-		default: // "type" is an enum, so having a case for every enum value pleases the compiler
-			break;
-	}
-
-	// These checks apply to both SUPERREADY_TRANSFORM and SUPERREADY_DETRANSFORM
 	if (player->mo
 	&& !player->powers[pw_tailsfly]
 	&& !player->powers[pw_carry]
@@ -5335,7 +5306,8 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd, boolean spinshieldhac
 			;
 		else if (cmd->buttons & BT_SPIN)
 		{
-			if (spinshieldhack && !(player->pflags & PF_SPINDOWN) && P_SuperReady(player, SUPERREADY_CLASSIC))
+			if (spinshieldhack && !(player->pflags & PF_SPINDOWN) && P_SuperReady(player, true)
+			&& !player->powers[pw_invulnerability] && !(player->powers[pw_shield] & SH_NOSTACK)) // These two checks are no longer in P_SuperReady
 			{
 				// If you're using two-button play, can turn Super and aren't already,
 				// and you don't have a shield, then turn Super!
@@ -8827,11 +8799,11 @@ void P_MovePlayer(player_t *player)
 		if ((cmd->buttons & BT_SHIELD) && !(player->pflags & PF_SHIELDDOWN) && !spinshieldhack)
 		{
 			// Transform into super if we can!
-			if (P_SuperReady(player, SUPERREADY_TRANSFORM))
+			if (P_SuperReady(player, true))
 				P_DoSuperTransformation(player, false);
 
 			// Detransform from super if we can!
-			else if (P_SuperReady(player, SUPERREADY_DETRANSFORM))
+			else if (P_SuperReady(player, false))
 				P_DoSuperDetransformation(player);
 		}
 	}
