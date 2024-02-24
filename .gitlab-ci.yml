@@ -533,7 +533,7 @@ Debian stable Clang:
   artifacts:
     paths:
       - "build.clang/bin/"
-      - "build.clang/src/comptime.h"
+      - "build.clang/src/config.h"
     expose_as: "clang"
     name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-clang"
 
@@ -589,7 +589,7 @@ Debian testing Clang:
   artifacts:
     paths:
       - "build.clang/bin/"
-      - "build.clang/src/comptime.h"
+      - "build.clang/src/config.h"
     expose_as: "testing-clang"
     name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-testing-clang"
 
@@ -773,6 +773,10 @@ osxcross x86_64:
   allow_failure: true
 
   artifacts:
+    paths:
+      - "build.osxcross/bin/"
+      - "build.osxcross/src/config.h"
+    expose_as: "Mac x86_64"
     name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-clang"
 
   variables:
@@ -799,7 +803,7 @@ osxcross x86_64:
     - - |
           # make
           echo -e "\e[0Ksection_start:`date +%s`:make[collapsed=false]\r\e[0KCompiling SRB2"
-      - make --directory=build.osxcross--keep-going CCACHE=1 ERRORMODE=1 NONX86=1 || make --directory=src --keep-going CCACHE=1 ERRORMODE=1 NONX86=1
+      - make --directory=build.osxcross --keep-going CCACHE=1 ERRORMODE=1 NONX86=1 || make --directory=src --keep-going CCACHE=1 ERRORMODE=1 NONX86=1
       - |
           # make
           echo -e "\e[0Ksection_end:`date +%s`:make\r\e[0K"
@@ -812,6 +816,10 @@ osxcross arm64:
   allow_failure: true
 
   artifacts:
+    paths:
+      - "build.osxcross/bin/"
+      - "build.osxcross/src/config.h"
+    expose_as: "Mac arm64"
     name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-clang"
 
   variables:
@@ -838,7 +846,7 @@ osxcross arm64:
     - - |
           # make
           echo -e "\e[0Ksection_start:`date +%s`:make[collapsed=false]\r\e[0KCompiling SRB2"
-      - make --directory=build.osxcross--keep-going CCACHE=1 ERRORMODE=1 NONX86=1 || make --directory=src --keep-going CCACHE=1 ERRORMODE=1 NONX86=1
+      - make --directory=build.osxcross --keep-going CCACHE=1 ERRORMODE=1 NONX86=1 || make --directory=src --keep-going CCACHE=1 ERRORMODE=1 NONX86=1
       - |
           # make
           echo -e "\e[0Ksection_end:`date +%s`:make\r\e[0K"
