@@ -1712,12 +1712,14 @@ static int lib_pResetCamera(lua_State *L)
 static int lib_pSuperReady(lua_State *L)
 {
 	player_t *player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
-	boolean transform = (boolean)lua_opttrueboolean(L, 2);
+	superready_t type = luaL_optinteger(L, 2, SUPERREADY_CLASSIC);
 	//HUDSAFE
 	INLEVEL
 	if (!player)
 		return LUA_ErrInvalid(L, "player_t");
-	lua_pushboolean(L, P_SuperReady(player, transform));
+	if (type < 0 || type >= NUMSUPERREADY)
+		return luaL_error(L, "superready type %d out of range (0 - %d)", type, NUMSUPERREADY-1);
+	lua_pushboolean(L, P_SuperReady(player, type));
 	return 1;
 }
 
@@ -2494,6 +2496,17 @@ static int lib_pDoSuperTransformation(lua_State *L)
 	if (!player)
 		return LUA_ErrInvalid(L, "player_t");
 	P_DoSuperTransformation(player, giverings);
+	return 0;
+}
+
+static int lib_pDoSuperDetransformation(lua_State *L)
+{
+	player_t *player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
+	NOHUD
+	INLEVEL
+	if (!player)
+		return LUA_ErrInvalid(L, "player_t");
+	P_DoSuperDetransformation(player);
 	return 0;
 }
 
@@ -4450,6 +4463,7 @@ static luaL_Reg lib[] = {
 	{"P_VectorInstaThrust",lib_pVectorInstaThrust},
 	{"P_SetMobjStateNF",lib_pSetMobjStateNF},
 	{"P_DoSuperTransformation",lib_pDoSuperTransformation},
+	{"P_DoSuperDetransformation",lib_pDoSuperDetransformation},
 	{"P_ExplodeMissile",lib_pExplodeMissile},
 	{"P_MobjTouchingSectorSpecial",lib_pMobjTouchingSectorSpecial},
 	{"P_ThingOnSpecial3DFloor",lib_pThingOnSpecial3DFloor},

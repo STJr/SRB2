@@ -1001,7 +1001,6 @@ static void setcontrol(INT32 (*gc)[2])
 
 	// TODO: 2.3: Delete the "use" alias
 	namectrl = (stricmp(COM_Argv(1), "use")) ? COM_Argv(1) : "spin";
-		
 
 	for (numctrl = 0; numctrl < NUM_GAMECONTROLS && stricmp(namectrl, gamecontrolname[numctrl]);
 		numctrl++)
