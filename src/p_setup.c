@@ -1525,6 +1525,12 @@ static boolean TextmapCount(size_t size)
 	numvertexes = 0;
 	numsectors = 0;
 
+	if(!tkn)
+	{
+		CONS_Alert(CONS_ERROR, "No text in lump!\n");
+		return true;
+	}
+
 	// Look for namespace at the beginning.
 	if (!fastcmp(tkn, "namespace"))
 	{
@@ -3109,7 +3115,12 @@ static boolean P_LoadMapData(const virtres_t *virt)
 	if (udmf) // Count how many entries for each type we got in textmap.
 	{
 		virtlump_t *textmap = vres_Find(virt, "TEXTMAP");
-		M_TokenizerOpen((char *)textmap->data);
+		if (textmap->size == 0)
+		{
+			CONS_Alert(CONS_ERROR, "Emtpy TEXTMAP Lump!\n");
+			return false;
+		}
+		M_TokenizerOpen((char *)textmap->data, textmap->size);
 		if (!TextmapCount(textmap->size))
 		{
 			M_TokenizerClose();

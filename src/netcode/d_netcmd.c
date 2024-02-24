@@ -893,6 +893,9 @@ void D_RegisterClientCommands(void)
 	CV_RegisterVar(&cv_renderhitboxinterpolation);
 	CV_RegisterVar(&cv_renderhitboxgldepth);
 	CV_RegisterVar(&cv_renderhitbox);
+	CV_RegisterVar(&cv_renderwalls);
+	CV_RegisterVar(&cv_renderfloors);
+	CV_RegisterVar(&cv_renderthings);
 	CV_RegisterVar(&cv_renderer);
 	CV_RegisterVar(&cv_scr_depth);
 	CV_RegisterVar(&cv_scr_width);

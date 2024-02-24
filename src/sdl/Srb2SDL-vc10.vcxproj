@@ -573,9 +573,6 @@
     <ClCompile Include="..\r_bsp.c" />
     <ClCompile Include="..\r_data.c" />
     <ClCompile Include="..\r_draw.c" />
-    <ClCompile Include="..\r_draw16.c">
-      <ExcludedFromBuild>true</ExcludedFromBuild>
-    </ClCompile>
     <ClCompile Include="..\r_draw8.c">
       <ExcludedFromBuild>true</ExcludedFromBuild>
     </ClCompile>
