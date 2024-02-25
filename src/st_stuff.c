@@ -134,6 +134,7 @@ static patch_t *minicaps;
 static patch_t *gotrflag;
 static patch_t *gotbflag;
 static patch_t *fnshico;
+static patch_t *fireflower;
 
 hudinfo_t hudinfo[NUMHUDITEMS] =
 {
@@ -226,8 +227,8 @@ void ST_doPaletteStuff(void)
 		palette = 0;
 
 #ifdef HWRENDER
-	if (rendermode == render_opengl)
-		palette = 0; // No flashpals here in OpenGL
+	if (rendermode == render_opengl && !HWR_ShouldUsePaletteRendering())
+		palette = 0; // Don't set the palette to a flashpal in OpenGL's truecolor mode
 #endif
 
 	if (palette != st_palette)
@@ -251,10 +252,6 @@ void ST_UnloadGraphics(void)
 void ST_LoadGraphics(void)
 {
 	int i;
-
-	// SRB2 border patch
-	// st_borderpatchnum = W_GetNumForName("GFZFLR01");
-	// scr_borderpatch = W_CacheLumpNum(st_borderpatchnum, PU_HUDGFX);
 
 	// the original Doom uses 'STF' as base name for all face graphics
 	// Graue 04-08-2004: face/name graphics are now indexed by skins
@@ -314,6 +311,8 @@ void ST_LoadGraphics(void)
 	invincibility = W_CachePatchName("TVIVICON", PU_HUDGFX);
 	sneakers = W_CachePatchName("TVSSICON", PU_HUDGFX);
 	gravboots = W_CachePatchName("TVGVICON", PU_HUDGFX);
+
+	fireflower = W_CachePatchName("GOTFFLOW", PU_HUDGFX);
 
 	tagico = W_CachePatchName("TAGICO", PU_HUDGFX);
 	gotrflag = W_CachePatchName("GOTRFLAG", PU_HUDGFX);
@@ -1508,7 +1507,7 @@ static void ST_drawPowerupHUD(void)
 	UINT16 invulntime = 0;
 	INT32 offs = hudinfo[HUD_POWERUPS].x;
 	const UINT8 q = ((splitscreen && stplyr == &players[secondarydisplayplayer]) ? 1 : 0);
-	static INT32 flagoffs[2] = {0, 0}, shieldoffs[2] = {0, 0}, finishoffs[2] = {0, 0};
+	static INT32 flagoffs[2] = {0, 0}, shieldoffs[2] = {0, 0}, finishoffs[2] = {0, 0}, stackoffs[2] = {0,0};
 
 	if (F_GetPromptHideHud(hudinfo[HUD_POWERUPS].y))
 		return;
@@ -1582,6 +1581,22 @@ static void ST_drawPowerupHUD(void)
 	}
 
 	offs -= shieldoffs[q];
+
+	//Fire Flower "shield"
+	if ((stplyr->powers[pw_shield] & SH_FIREFLOWER) == SH_FIREFLOWER)
+	{
+		stackoffs[q] = ICONSEP;
+		V_DrawSmallScaledPatch(offs, hudinfo[HUD_POWERUPS].y, V_PERPLAYER|hudinfo[HUD_POWERUPS].f|V_HUDTRANS, fireflower);
+	}
+	else if (stackoffs[q])
+	{
+		if (stackoffs[q] > 1)
+			stackoffs[q] = 2*stackoffs[q]/3;
+		else
+			stackoffs[q] = 0;
+	}
+
+	offs -= stackoffs[q];
 
 // ---------
 // CTF flags
@@ -1926,7 +1941,7 @@ static void ST_drawNiGHTSHUD(void)
 		total_ringcount = stplyr->spheres;
 	}
 
-	if (stplyr->capsule)
+	if (!P_MobjWasRemoved(stplyr->capsule))
 	{
 		INT32 amount;
 		const INT32 length = 88;
@@ -2874,7 +2889,7 @@ void ST_Drawer(void)
 	//25/08/99: Hurdler: palette changes is done for all players,
 	//                   not only player1! That's why this part
 	//                   of code is moved somewhere else.
-	if (rendermode == render_soft)
+	if (rendermode == render_soft || HWR_ShouldUsePaletteRendering())
 #endif
 		if (rendermode != render_none) ST_doPaletteStuff();
 

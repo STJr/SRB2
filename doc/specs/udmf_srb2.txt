@@ -1,0 +1,311 @@
+===============================================================================
+Universal Doom Map Format Sonic Robo Blast 2 extensions v1.0 19.02.2024
+
+    Copyright (c) 2024 Sonic Team Junior
+       uses Universal Doom Map Format Specification v1.1 as a template,
+       original document Copyright (c) 2009 James Haley.
+    Permission is granted to copy, distribute and/or modify this document
+    under the terms of the GNU Free Documentation License, Version 1.2
+    or any later version published by the Free Software Foundation;
+    with no Invariant Sections, no Front-Cover Texts, and no Back-Cover Texts.
+
+===============================================================================
+
+This document discusses the UDMF implementation found in Sonic Robo Blast 2's engine.
+
+=======================================
+I. Grammar / Syntax
+=======================================
+
+    No changes.
+
+=======================================
+II. Implementation Semantics
+=======================================
+
+------------------------------------
+II.A : Storage and Retrieval of Data
+------------------------------------
+
+    No changes.
+
+-----------------------------------
+II.B : Storage Within Archive Files
+-----------------------------------
+
+    No changes.
+
+--------------------------------
+II.C : Implementation Dependence
+--------------------------------
+
+The SRB2 engine only supports the following namespace:
+    "srb2"
+
+The engine is allowed to refuse maps with an unsupported namespace,
+or emit a warning.
+
+=======================================
+III. Standardized Fields
+=======================================
+
+The SRB2 engine ignores any user-defined fields.
+All boolean fields default to false unless mentioned otherwise.
+
+Sonic Robo Blast 2 defines the following standardized fields:
+
+   vertex
+   {
+      x = <float>;        // X coordinate. No valid default.
+      y = <float>;        // Y coordinate. No valid default.
+      zfloor = <float>;   // Floor height at this vertex. Only applies to triangular sectors
+      zceiling = <float>; // Ceiling height at this vertex. Only applies to triangular sectors
+   }
+
+   linedef
+   {
+      id      = <integer>;        // ID of line. Interpreted as tag.
+      moreids = <string>;         // Additional line IDs, specified as a space separated list of numbers (e.g. "2 666 1003 4505")
+
+      v1 = <integer>;             // Index of first vertex. No valid default.
+      v2 = <integer>;             // Index of second vertex. No valid default.
+
+      blocking      = <bool>;     // Line blocks things.
+      blockmonsters = <bool>;     // Line blocks enemies.
+      twosided      = <bool>;     // Line is 2S.
+      dontpegtop    = <bool>;     // Upper texture unpegged.
+      dontpegbottom = <bool>;     // Lower texture unpegged.
+      skewtd        = <bool>;     // Upper and lower textures are skewed.
+      noclimb       = <bool>;     // Line is not climbable.
+      noskew        = <bool>;     // Middle texture is not skewed.
+      midpeg        = <bool>;     // Middle texture is pegged.
+      midsolid      = <bool>;     // Middle texture is solid.
+      wrapmidtex    = <bool>;     // Line's mid textures are wrapped.
+      nonet         = <bool>;     // Special only takes effect in singleplayer games.
+      netonly       = <bool>;     // Special only takes effect in multiplayer games.
+      bouncy        = <bool>;     // Line is bouncy.
+      transfer      = <bool>;     // In 3D floor sides, uses the sidedef properties of the control sector.
+
+      alpha       = <float>;      // Translucency of this line. Default is 1.0
+      renderstyle = <string>;     // Render style. Can be:
+                                  // - "translucent"
+                                  // - "add"
+                                  // - "subtract"
+                                  // - "reversesubtract"
+                                  // - "modulate"
+                                  // - "fog"
+                                  // Default is "translucent".
+
+      special    = <integer>; // Linedef action. Default = 0.
+      arg0       = <integer>; // Argument 0. Default = 0.
+      arg1       = <integer>; // Argument 1. Default = 0.
+      arg2       = <integer>; // Argument 2. Default = 0.
+      arg3       = <integer>; // Argument 3. Default = 0.
+      arg4       = <integer>; // Argument 4. Default = 0.
+      arg5       = <integer>; // Argument 5. Default = 0.
+      arg6       = <integer>; // Argument 6. Default = 0.
+      arg7       = <integer>; // Argument 7. Default = 0.
+      arg8       = <integer>; // Argument 8. Default = 0.
+      arg9       = <integer>; // Argument 9. Default = 0.
+      stringarg0 = <string>;  // String argument 0.
+      stringarg1 = <string>;  // String argument 1.
+
+      sidefront = <integer>; // Sidedef 1 index. No valid default.
+      sideback  = <integer>; // Sidedef 2 index. Default = -1.
+
+      comment = <string>; // A comment. Implementors should attach no special
+                          // semantic meaning to this field.
+   }
+
+   sidedef
+   {
+      offsetx = <integer>; // X offset. Default = 0.
+      offsety = <integer>; // Y offset. Default = 0.
+
+      texturetop    = <string>; // Upper texture. Default = "-".
+      texturebottom = <string>; // Lower texture. Default = "-".
+      texturemiddle = <string>; // Middle texture. Default = "-".
+
+      repeatcnt = <string>; // Number of middle texture repetitions. Default = 0
+
+      sector = <integer>; // Sector index. No valid default.
+
+      scalex_top = <float>;            // X scale for upper texture. Default = 1.0.
+      scaley_top = <float>;            // Y scale for upper texture. Default = 1.0.
+      scalex_mid = <float>;            // X scale for mid texture. Default = 1.0.
+      scaley_mid = <float>;            // Y scale for mid texture. Default = 1.0.
+      scalex_bottom = <float>;         // X scale for lower texture. Default = 1.0.
+      scaley_bottom = <float>;         // Y scale for lower texture. Default = 1.0.
+      offsetx_top = <float>;           // X offset for upper texture. Default = 0.0.
+      offsety_top = <float>;           // Y offset for upper texture. Default = 0.0.
+      offsetx_mid = <float>;           // X offset for mid texture. Default = 0.0.
+      offsety_mid = <float>;           // Y offset for mid texture. Default = 0.0.
+      offsetx_bottom = <float>;        // X offset for lower texture. Default = 0.0.
+      offsety_bottom = <float>;        // Y offset for lower texture. Default = 0.0.
+
+      comment = <string>; // A comment. Implementors should attach no special
+                          // semantic meaning to this field.
+   }
+
+   sector
+   {
+      heightfloor   = <integer>; // Floor height. Default = 0.
+      heightceiling = <integer>; // Ceiling height. Default = 0.
+
+      texturefloor   = <string>; // Floor flat. No valid default.
+      textureceiling = <string>; // Ceiling flat. No valid default.
+
+      lightlevel = <integer>;         // Light level. Default = 255.
+      lightfloor = <integer>;         // The floor's light level. Default is 0.
+      lightceiling = <integer>;       // The ceiling's light level. Default is 0.
+      lightfloorabsolute = <bool>;    // true = 'lightfloor' is an absolute value. Default is
+                                      // relative to the owning sector's light level.
+      lightceilingabsolute = <bool>;  // true = 'lightceiling' is an absolute value. Default is
+                                      // relative to the owning sector's light level.
+
+      special = <integer>; // Sector special. Default = 0.
+      id      = <integer>; // Sector tag/id. Default = 0.
+      moreids = <string>;  // Additional sector IDs/tags, specified as a space separated list of numbers (e.g. "2 666 1003 4505")
+
+      xpanningfloor = <float>;        // X texture offset of floor texture. Default = 0.0.
+      ypanningfloor = <float>;        // Y texture offset of floor texture. Default = 0.0.
+      xpanningceiling = <float>;      // X texture offset of ceiling texture. Default = 0.0.
+      ypanningceiling = <float>;      // Y texture offset of ceiling texture. Default = 0.0.
+      xscalefloor = <float>;          // X texture scale of floor texture. Default = 1.0.
+      yscalefloor = <float>;          // Y texture scale of floor texture. Default = 1.0.
+      xscaleceiling = <float>;        // X texture scale of ceiling texture. Default = 1.0.
+      yscaleceiling = <float>;        // Y texture scale of ceiling texture. Default = 1.0.
+      rotationfloor = <float>;        // Rotation of floor texture in degrees. Default = 0.0.
+      rotationceiling = <float>;      // Rotation of ceiling texture in degrees. Default = 0.0.
+      ceilingplane_a = <float>;       // Define the plane equation for the sector's ceiling. Default is a horizontal plane at 'heightceiling'.
+      ceilingplane_b = <float>;       // 'heightceiling' will still be used to calculate texture alignment.
+      ceilingplane_c = <float>;       // The plane equation will only be used if all 4 values are given.
+      ceilingplane_d = <float>;       // The plane is defined as a*x + b*y + c*z + d = 0 with the normal vector pointing downward.
+      floorplane_a = <float>;         // Define the plane equation for the sector's floor. Default is a horizontal plane at 'heightfloor'.
+      floorplane_b = <float>;         // 'heightfloor' will still be used to calculate texture alignment.
+      floorplane_c = <float>;         // The plane equation will only be used if all 4 values are given.
+      floorplane_d = <float>;         // The plane is defined as a*x + b*y + c*z + d = 0 with the normal vector pointing upward.
+
+      lightcolor          = <integer>;      // Sector's light color as RRGGBB value. Default = 0x000000.
+      lightalpha          = <integer>;      // Sector's light opacity. Default = 25.
+      fadecolor           = <integer>;      // Sector's fog color as RRGGBB value. Default = 0x000000.
+      fadealpha           = <integer>;      // Sector's fog opacity. Default = 25.
+      fadestart           = <integer>;      // Sector's fading range start. Default = 0.
+      fadeend             = <integer>;      // Sector's fading range end. Default = 31.
+      colormapfog         = <bool>;         // Sector's colormap uses fog lighting.
+      colormapfadesprites = <bool>;         // Sector's colormap affects full-bright sprites.
+      colormapprotected   = <bool>;         // Sector's colormap is not affected by colormap change specials.
+
+      flipspecial_nofloor     = <bool>;     // Trigger effects that require a plane touch are not executed when the floor is touched.
+      flipspecial_ceiling     = <bool>;     // Trigger effects that require a plane touch are executed when the ceiling is touched.
+      triggerspecial_touch    = <bool>;     // Trigger effects are executed anywhere in the sector.
+      triggerspecial_headbump = <bool>;     // Trigger effects are executed if the top of the triggerer object touches a plane.
+      triggerline_plane       = <bool>;     // Trigger effects require a plane touch to be executed.
+      triggerline_mobj        = <bool>;     // Trigger effects can be executed by non-pushable objects.
+
+      invertprecip   = <bool>;         // Inverts the precipitation effect; if the sector is considered to be indoors,
+                                       // precipitation is generated, and if the sector is considered to be outdoors,
+                                       // precipitation is not generated.
+      gravityflip        = <bool>;     // Sector flips any objects in it, if the sector has negative gravity.
+      heatwave           = <bool>;     // Sector has the heat wave effect.
+      noclipcamera       = <bool>;     // Sector is not tangible to the camera.
+      outerspace         = <bool>;     // Sector has the space countdown effect.
+      doublestepup       = <bool>;     // Sector has half the vertical height needed for objects to walk into it.
+      nostepdown         = <bool>;     // Sector has the staircase effect disabled.
+      speedpad           = <bool>;     // Sector is a speed pad.
+      starpostactivator  = <bool>;     // Sector activates any Star Posts in it when walked into by a plyer.
+      exit               = <bool>;     // Sector is an exit sector.
+      specialstagepit    = <bool>;     // Sector is a Special Stage pit.
+      returnflag         = <bool>;     // Sector returns any Capture the Flag flags that come in contact with it to their respective bases.
+      redteambase        = <bool>;     // Sector is a Red Team base.
+      blueteambase       = <bool>;     // Sector is Blue Team base.
+      fan                = <bool>;     // Sector is a fan sector.
+      supertransform     = <bool>;     // Sector transforms any players that come in contact with it into their 'super' mode.
+      forcespin          = <bool>;     // Sector forces any players that come in contact with it to roll.
+      zoomtubestart      = <bool>;     // Sector is the starting point of a zoom tube path.
+      zoomtubeend        = <bool>;     // Sector is the ending point of a zoom tube path.
+      finishline         = <bool>;     // Sector is a Circuit finish line.
+      ropehang           = <bool>;     // Sector is a rope hang. Must be applied to a 3D floor.
+      jumpflip           = <bool>;     // Sector flips the gravity of players who jump from it.
+      gravityoverride    = <bool>;     // Reverse gravity effect is only applied when an object is in the sector.
+
+      friction            = <float>;   // Sector's friction factor.
+      gravity             = <float>;   // Sector's gravity. Default is 1.0.
+      damagetype          = <integer>; // Damage type for sector damage. Can be:
+                                       // - "None"
+                                       // - "Generic"
+                                       // - "Water"
+                                       // - "Fire"
+                                       // - "Lava"
+                                       // - "Electric"
+                                       // - "Spike"
+                                       // - "DeathPitTilt"
+                                       // - "DeathPitNoTilt"
+                                       // - "Instakill"
+                                       // - "SpecialStage"
+                                       // Default = "None".
+      triggertag          = <integer>; // Tag to trigger when this sector is entered. Default = 0.
+      triggerer           = <string>;  // Who can execute the trigger tag when this sector is entered. Can be:
+                                       // - "Player"
+                                       // - "AllPlayers"
+                                       // - "Mobj"
+                                       // Default = "Player".
+
+      comment = <string>; // A comment. Implementors should attach no special
+                          // semantic meaning to this field.
+   }
+
+   thing
+   {
+      id      = <integer>; // Thing ID. Default = 0.
+      moreids = <string>;  // Additional thing IDs, specified as a space separated list of numbers (e.g. "2 666 1003 4505")
+
+      x = <float>; // X coordinate. No valid default.
+      y = <float>; // Y coordinate. No valid default.
+
+      height = <float>; // Z height relative to floor.
+                        // Relative to ceiling if flip = true.
+                        // Absolute if absolutez = true.
+                        // Default = 0.
+
+      angle     = <integer>; // Map angle of thing in degrees. Default = 0 (East).
+      pitch     = <integer>; // Pitch of thing in degrees. Default = 0 (horizontal).
+      roll      = <integer>; // Roll of thing in degrees. Default = 0.
+      scalex    = <float>;   // Horizontal visual scaling on thing. Default = 1.0.
+      scaley    = <float>;   // Vertical visual scaling on thing. Default = 1.0.
+      scale     = <float>;   // Vertical and horizontal visual scaling on thing. Default = 1.0.
+      mobjscale = <float>;   // Physical scale of the thing. Default = 1.0.
+
+      type = <integer>; // Thing type. No valid default.
+
+      flip       = <bool>; // Thing spawns flipped, on the ceiling.
+      absolutez  = <bool>; // If true, the thing height is absolute, instead of being relative to the floor or ceiling.
+
+      arg0       = <integer>; // Argument 0. Default = 0.
+      arg1       = <integer>; // Argument 1. Default = 0.
+      arg2       = <integer>; // Argument 2. Default = 0.
+      arg3       = <integer>; // Argument 3. Default = 0.
+      arg4       = <integer>; // Argument 4. Default = 0.
+      arg5       = <integer>; // Argument 5. Default = 0.
+      arg6       = <integer>; // Argument 6. Default = 0.
+      arg7       = <integer>; // Argument 7. Default = 0.
+      arg8       = <integer>; // Argument 8. Default = 0.
+      arg9       = <integer>; // Argument 9. Default = 0.
+      stringarg0 = <string>;  // String argument 0.
+      stringarg1 = <string>;  // String argument 1.
+
+      comment = <string>; // A comment. Implementors should attach no special
+                          // semantic meaning to this field.
+   }
+
+
+=======================================
+Changelog
+=======================================
+
+1.0: 19.02.2024
+Initial version.
+
+===============================================================================
+EOF
+===============================================================================

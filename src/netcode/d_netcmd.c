@@ -393,6 +393,9 @@ consvar_t cv_ps_descriptor = CVAR_INIT ("ps_descriptor", "Average", 0, ps_descri
 
 consvar_t cv_freedemocamera = CVAR_INIT("freedemocamera", "Off", CV_SAVE, CV_OnOff, NULL);
 
+// NOTE: this should be in hw_main.c, but we can't put it there as it breaks dedicated build
+consvar_t cv_glallowshaders = CVAR_INIT ("gr_allowcustomshaders", "On", CV_NETVAR, CV_OnOff, NULL);
+
 char timedemo_name[256];
 boolean timedemo_csv;
 char timedemo_csv_id[256];
@@ -525,6 +528,8 @@ void D_RegisterServerCommands(void)
 
 	// for master server connection
 	AddMServCommands();
+
+	CV_RegisterVar(&cv_glallowshaders);
 
 	// p_mobj.c
 	CV_RegisterVar(&cv_itemrespawntime);
@@ -888,6 +893,9 @@ void D_RegisterClientCommands(void)
 	CV_RegisterVar(&cv_renderhitboxinterpolation);
 	CV_RegisterVar(&cv_renderhitboxgldepth);
 	CV_RegisterVar(&cv_renderhitbox);
+	CV_RegisterVar(&cv_renderwalls);
+	CV_RegisterVar(&cv_renderfloors);
+	CV_RegisterVar(&cv_renderthings);
 	CV_RegisterVar(&cv_renderer);
 	CV_RegisterVar(&cv_scr_depth);
 	CV_RegisterVar(&cv_scr_width);
@@ -3812,18 +3820,7 @@ static void Command_Version_f(void)
 #endif
 
 	// OS
-	// Would be nice to use SDL_GetPlatform for this
-#if defined (_WIN32) || defined (_WIN64)
-	CONS_Printf("Windows ");
-#elif defined(__linux__)
-	CONS_Printf("Linux ");
-#elif defined(MACOSX)
-	CONS_Printf("macOS ");
-#elif defined(UNIXCOMMON)
-	CONS_Printf("Unix (Common) ");
-#else
-	CONS_Printf("Other OS ");
-#endif
+	CONS_Printf("%s ", I_GetSysName());
 
 	// Bitness
 	if (sizeof(void*) == 4)
@@ -4069,7 +4066,7 @@ static void ExitMove_OnChange(void)
 				if (players[i].mo->target && players[i].mo->target->type == MT_SIGN)
 					P_SetTarget(&players[i].mo->target, NULL);
 
-				if (players[i].pflags & PF_FINISHED)
+				if (players[i].pflags & PF_FINISHED && !(players[i].exiting))
 					P_GiveFinishFlags(&players[i]);
 			}
 
@@ -4669,15 +4666,28 @@ static void Command_Cheats_f(void)
 			CV_ResetCheatNetVars();
 		return;
 	}
+	else if (COM_CheckParm("on"))
+	{
+		if (!(server || (IsPlayerAdmin(consoleplayer))))
+			CONS_Printf(M_GetText("Only the server or a remote admin can use this.\n"));
+		else
+			G_SetUsedCheats(false);
+		return;
+	}
+	
+	if (usedCheats)
+		CONS_Printf(M_GetText("Cheats are enabled, the game cannot be saved.\n"));
+	else
+		CONS_Printf(M_GetText("Cheats are disabled, the game can be saved.\n"));
 
 	if (CV_CheatsEnabled())
 	{
-		CONS_Printf(M_GetText("At least one CHEAT-marked variable has been changed -- Cheats are enabled.\n"));
+		CONS_Printf(M_GetText("At least one CHEAT-marked variable has been changed.\n"));
 		if (server || (IsPlayerAdmin(consoleplayer)))
 			CONS_Printf(M_GetText("Type CHEATS OFF to reset all cheat variables to default.\n"));
 	}
 	else
-		CONS_Printf(M_GetText("No CHEAT-marked variables are changed -- Cheats are disabled.\n"));
+		CONS_Printf(M_GetText("No CHEAT-marked variables are changed.\n"));
 }
 
 #ifdef _DEBUG

@@ -1586,11 +1586,12 @@ static int lib_pDoPlayerFinish(lua_State *L)
 static int lib_pDoPlayerExit(lua_State *L)
 {
 	player_t *player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
+	boolean finishedflag = lua_opttrueboolean(L, 2);
 	NOHUD
 	INLEVEL
 	if (!player)
 		return LUA_ErrInvalid(L, "player_t");
-	P_DoPlayerExit(player);
+	P_DoPlayerExit(player, finishedflag);
 	return 0;
 }
 

@@ -1098,15 +1098,23 @@ static mapthing_t *OP_CreateNewMapThing(player_t *player, UINT16 type, boolean c
 		fixed_t fheight = P_GetSectorFloorZAt(sec, mt->x << FRACBITS, mt->y << FRACBITS);
 		mt->z = (UINT16)((player->mo->z - fheight)>>FRACBITS);
 	}
+
 	mt->angle = (INT16)(FixedInt(AngleFixed(player->mo->angle)));
 
-	mt->options = (mt->z << ZSHIFT) | (UINT16)cv_opflags.value;
+	mt->options = (UINT16)cv_opflags.value;
 	mt->scale = player->mo->scale;
 	mt->spritexscale = player->mo->spritexscale;
 	mt->spriteyscale = player->mo->spriteyscale;
 	memset(mt->args, 0, NUMMAPTHINGARGS*sizeof(*mt->args));
 	memset(mt->stringargs, 0x00, NUMMAPTHINGSTRINGARGS*sizeof(*mt->stringargs));
 	mt->pitch = mt->roll = 0;
+
+	// Ignore offsets
+	if (mt->type == MT_EMBLEM)
+		mt->args[1] = 1;
+	else
+		mt->args[0] = 1;
+
 	return mt;
 }
 
