@@ -10503,6 +10503,9 @@ void P_MobjThinker(mobj_t *mobj)
 
 				mobj->frame &= ~FF_TRANSMASK;
 				mobj->frame |= value << FF_TRANSSHIFT;
+				
+				// TODO: Consider replacing the above with the commented-out line of code below
+				//mobj->alpha = FixedDiv(mobj->fuse, mobj->info->damage);
 			}
 			break;
 		default:
@@ -10838,6 +10841,7 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type, ...)
 
 	// Sprite rendering
 	mobj->blendmode = AST_TRANSLUCENT;
+	mobj->alpha = FRACUNIT;
 	mobj->spritexscale = mobj->spriteyscale = mobj->scale;
 	mobj->spritexoffset = mobj->spriteyoffset = 0;
 	mobj->floorspriteslope = NULL;
