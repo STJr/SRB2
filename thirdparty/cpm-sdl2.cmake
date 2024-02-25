@@ -20,8 +20,9 @@ endif()
 
 CPMAddPackage(
 	NAME SDL2
-	VERSION 2.24.2
-	URL "https://github.com/libsdl-org/SDL/archive/refs/tags/release-2.24.2.zip"
+	VERSION 2.28.5
+	GITHUB_REPOSITORY "libsdl-org/SDL"
+	GIT_TAG release-2.28.5
 	EXCLUDE_FROM_ALL ON
 	OPTIONS ${internal_sdl2_options}
 )

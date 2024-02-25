@@ -8,7 +8,7 @@
 // See the 'LICENSE' file for more details.
 //-----------------------------------------------------------------------------
 /// \file  screen.h
-/// \brief Handles multiple resolutions, 8bpp/16bpp(highcolor) modes
+/// \brief Handles multiple resolutions
 
 #ifndef __SCREEN_H__
 #define __SCREEN_H__
@@ -59,19 +59,19 @@ typedef struct viddef_s
 	} u;
 	INT32 recalc; // if true, recalc vid-based stuff
 	UINT8 *direct; // linear frame buffer, or vga base mem.
-	INT32 dupx, dupy; // scale 1, 2, 3 value for menus & overlays
-	INT32/*fixed_t*/ fdupx, fdupy; // same as dupx, dupy, but exact value when aspect ratio isn't 320/200
-	INT32 bpp; // BYTES per pixel: 1 = 256color, 2 = highcolor
+	INT32 dup; // scale 1, 2, 3 value for menus & overlays
+	INT32/*fixed_t*/ fdup; // same as dup, but exact value when aspect ratio isn't 320/200
+	INT32 bpp; // BYTES per pixel: 1 = 256color
 
 	INT32 baseratio; // Used to get the correct value for lighting walls
 
 	// for Win32 version
 	DNWH WndParent; // handle of the application's window
-	UINT8 smalldupx, smalldupy; // factor for a little bit of scaling
-	UINT8 meddupx, meddupy; // factor for moderate, but not full, scaling
+	UINT8 smalldup; // factor for a little bit of scaling
+	UINT8 meddup; // factor for moderate, but not full, scaling
 #ifdef HWRENDER
-	INT32/*fixed_t*/ fsmalldupx, fsmalldupy;
-	INT32/*fixed_t*/ fmeddupx, fmeddupy;
+	INT32/*fixed_t*/ fsmalldup;
+	INT32/*fixed_t*/ fmeddup;
 	INT32 glstate;
 #endif
 } viddef_t;
@@ -82,35 +82,6 @@ enum
 	VID_GL_LIBRARY_LOADED     = 1,
 	VID_GL_LIBRARY_ERROR      = -1,
 };
-
-// internal additional info for vesa modes only
-typedef struct
-{
-	INT32 vesamode; // vesa mode number plus LINEAR_MODE bit
-	void *plinearmem; // linear address of start of frame buffer
-} vesa_extra_t;
-// a video modes from the video modes list,
-// note: video mode 0 is always standard VGA320x200.
-typedef struct vmode_s
-{
-	struct vmode_s *pnext;
-	char *name;
-	UINT32 width, height;
-	UINT32 rowbytes; // bytes per scanline
-	UINT32 bytesperpixel; // 1 for 256c, 2 for highcolor
-	INT32 windowed; // if true this is a windowed mode
-	INT32 numpages;
-	vesa_extra_t *pextradata; // vesa mode extra data
-#ifdef _WIN32
-	INT32 (WINAPI *setmode)(viddef_t *lvid, struct vmode_s *pcurrentmode);
-#else
-	INT32 (*setmode)(viddef_t *lvid, struct vmode_s *pcurrentmode);
-#endif
-	INT32 misc; // misc for display driver (r_opengl.dll etc)
-} vmode_t;
-
-#define NUMSPECIALMODES  4
-extern vmode_t specialmodes[NUMSPECIALMODES];
 
 // ---------------------------------------------
 // color mode dependent drawer function pointers
@@ -126,8 +97,6 @@ enum
 	COLDRAWFUNC_SHADE,
 	COLDRAWFUNC_SHADOWED,
 	COLDRAWFUNC_TRANSTRANS,
-	COLDRAWFUNC_TWOSMULTIPATCH,
-	COLDRAWFUNC_TWOSMULTIPATCHTRANS,
 	COLDRAWFUNC_FOG,
 
 	COLDRAWFUNC_MAX
@@ -172,17 +141,6 @@ extern void (*spanfunc)(void);
 extern void (*spanfuncs[SPANDRAWFUNC_MAX])(void);
 extern void (*spanfuncs_npo2[SPANDRAWFUNC_MAX])(void);
 
-// -----
-// CPUID
-// -----
-extern boolean R_ASM;
-extern boolean R_486;
-extern boolean R_586;
-extern boolean R_MMX;
-extern boolean R_3DNow;
-extern boolean R_MMXExt;
-extern boolean R_SSE2;
-
 // ----------------
 // screen variables
 // ----------------
@@ -197,9 +155,9 @@ void SCR_ChangeRenderer(void);
 extern CV_PossibleValue_t cv_renderer_t[];
 
 extern INT32 scr_bpp;
-extern UINT8 *scr_borderpatch; // patch used to fill the view borders
 
 extern consvar_t cv_scr_width, cv_scr_height, cv_scr_width_w, cv_scr_height_w, cv_scr_depth, cv_fullscreen;
+extern consvar_t cv_renderwalls, cv_renderfloors, cv_renderthings;
 extern consvar_t cv_renderview, cv_renderer;
 extern consvar_t cv_renderhitbox, cv_renderhitboxinterpolation, cv_renderhitboxgldepth;
 // wait for page flipping to end or not

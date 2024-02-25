@@ -26,6 +26,8 @@
 #include "r_main.h"
 #include "r_fps.h"
 #include "i_video.h" // rendermode
+#include "netcode/net_command.h"
+#include "netcode/server_connection.h"
 
 // Object place
 #include "m_cheat.h"
@@ -215,6 +217,7 @@ void P_AddThinker(const thinklistnum_t n, thinker_t *thinker)
 	thlist[n].prev = thinker;
 
 	thinker->references = 0;    // killough 11/98: init reference counter to 0
+	thinker->cachable = n == THINK_MOBJ;
 
 #ifdef PARANOIA
 	thinker->debug_mobjtype = MT_NULL;
@@ -224,21 +227,22 @@ void P_AddThinker(const thinklistnum_t n, thinker_t *thinker)
 #ifdef PARANOIA
 static const char *MobjTypeName(const mobj_t *mobj)
 {
+	mobjtype_t type;
 	actionf_p1 p1 = mobj->thinker.function.acp1;
 
 	if (p1 == (actionf_p1)P_MobjThinker)
-	{
-		return MOBJTYPE_LIST[mobj->type];
-	}
-	else if (p1 == (actionf_p1)P_RemoveThinkerDelayed)
-	{
-		if (mobj->thinker.debug_mobjtype != MT_NULL)
-		{
-			return MOBJTYPE_LIST[mobj->thinker.debug_mobjtype];
-		}
-	}
+		type = mobj->type;
+	else if (p1 == (actionf_p1)P_RemoveThinkerDelayed && mobj->thinker.debug_mobjtype != MT_NULL)
+		type = mobj->thinker.debug_mobjtype;
+	else
+		return "<Not a mobj>";
 
-	return "<Not a mobj>";
+	if (type < 0 || type >= NUMMOBJTYPES || (type >= MT_FIRSTFREESLOT && !FREE_MOBJS[type - MT_FIRSTFREESLOT]))
+		return "<Invalid mobj type>";
+	else if (type >= MT_FIRSTFREESLOT)
+		return FREE_MOBJS[type - MT_FIRSTFREESLOT]; // This doesn't include "MT_"...
+	else
+		return MOBJTYPE_LIST[type];
 }
 
 static const char *MobjThinkerName(const mobj_t *mobj)
@@ -317,7 +321,16 @@ void P_RemoveThinkerDelayed(thinker_t *thinker)
 	(next->prev = currentthinker = thinker->prev)->next = next;
 
 	R_DestroyLevelInterpolators(thinker);
-	Z_Free(thinker);
+	if (thinker->cachable)
+	{
+		// put cachable thinkers in the mobj cache, so we can avoid allocations
+		((mobj_t *)thinker)->hnext = mobjcache;
+		mobjcache = (mobj_t *)thinker;
+	}
+	else
+	{
+		Z_Free(thinker);
+	}
 }
 
 //
@@ -688,24 +701,10 @@ void P_Ticker(boolean run)
 {
 	INT32 i;
 
-	// Increment jointime and quittime even if paused
+	// Increment jointime even if paused
 	for (i = 0; i < MAXPLAYERS; i++)
 		if (playeringame[i])
-		{
 			players[i].jointime++;
-
-			if (players[i].quittime)
-			{
-				players[i].quittime++;
-
-				if (players[i].quittime == 30 * TICRATE && G_TagGametype())
-					P_CheckSurvivors();
-
-				if (server && players[i].quittime >= (tic_t)FixedMul(cv_rejointimeout.value, 60 * TICRATE)
-				&& !(players[i].quittime % TICRATE))
-					SendKick(i, KICK_MSG_PLAYER_QUIT);
-			}
-		}
 
 	if (objectplacing)
 	{
@@ -756,7 +755,9 @@ void P_Ticker(boolean run)
 		ps_lua_mobjhooks.value.i = 0;
 		ps_checkposition_calls.value.i = 0;
 
-		LUA_HOOK(PreThinkFrame);
+		PS_START_TIMING(ps_lua_prethinkframe_time);
+		LUA_HookPreThinkFrame();
+		PS_STOP_TIMING(ps_lua_prethinkframe_time);
 
 		PS_START_TIMING(ps_playerthink_time);
 		for (i = 0; i < MAXPLAYERS; i++)
@@ -841,18 +842,9 @@ void P_Ticker(boolean run)
 			countdown2--;
 
 		if (quake.time)
-		{
-			fixed_t ir = quake.intensity>>1;
-			/// \todo Calculate distance from epicenter if set and modulate the intensity accordingly based on radius.
-			quake.x = M_RandomRange(-ir,ir);
-			quake.y = M_RandomRange(-ir,ir);
-			quake.z = M_RandomRange(-ir,ir);
 			--quake.time;
-		}
-		else
-			quake.x = quake.y = quake.z = 0;
 
-		if (metalplayback)
+		if (!P_MobjWasRemoved(metalplayback))
 			G_ReadMetalTic(metalplayback);
 		if (metalrecording)
 			G_WriteMetalTic(players[consoleplayer].mo);
@@ -863,7 +855,9 @@ void P_Ticker(boolean run)
 		if (modeattacking)
 			G_GhostTicker();
 
-		LUA_HOOK(PostThinkFrame);
+		PS_START_TIMING(ps_lua_postthinkframe_time);
+		LUA_HookPostThinkFrame();
+		PS_STOP_TIMING(ps_lua_postthinkframe_time);
 	}
 
 	if (run)

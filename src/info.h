@@ -173,6 +173,7 @@ enum actionnum
 	A_CHANGECOLORRELATIVE,
 	A_CHANGECOLORABSOLUTE,
 	A_DYE,
+	A_SETTRANSLATION,
 	A_MOVERELATIVE,
 	A_MOVEABSOLUTE,
 	A_THRUST,
@@ -445,6 +446,7 @@ void A_SetRandomTics();
 void A_ChangeColorRelative();
 void A_ChangeColorAbsolute();
 void A_Dye();
+void A_SetTranslation();
 void A_MoveRelative();
 void A_MoveAbsolute();
 void A_Thrust();
@@ -570,7 +572,7 @@ void A_ChangeHeight();
 extern int actionsoverridden[NUMACTIONS][MAX_ACTION_RECURSION];
 
 // ratio of states to sprites to mobj types is roughly 6 : 1 : 1
-#define NUMMOBJFREESLOTS 512
+#define NUMMOBJFREESLOTS 1024
 #define NUMSPRITEFREESLOTS NUMMOBJFREESLOTS
 #define NUMSTATEFREESLOTS (NUMMOBJFREESLOTS*8)
 
@@ -797,6 +799,7 @@ typedef enum sprite
 	SPR_BMCH, // Big Mace Chain
 	SPR_SMCE, // Small Mace
 	SPR_BMCE, // Big Mace
+	SPR_BSPB, // Blue spring on a ball
 	SPR_YSPB, // Yellow spring on a ball
 	SPR_RSPB, // Red spring on a ball
 	SPR_SFBR, // Small Firebar
@@ -2743,6 +2746,13 @@ typedef enum state
 	S_BIGMACE,
 	S_SMALLGRABCHAIN,
 	S_BIGGRABCHAIN,
+
+	// Blue spring on a ball
+	S_BLUESPRINGBALL,
+	S_BLUESPRINGBALL2,
+	S_BLUESPRINGBALL3,
+	S_BLUESPRINGBALL4,
+	S_BLUESPRINGBALL5,
 
 	// Yellow spring on a ball
 	S_YELLOWSPRINGBALL,
@@ -4722,6 +4732,7 @@ typedef enum mobj_type
 	MT_BIGMACE, // Big Mace
 	MT_SMALLGRABCHAIN, // Small Grab Chain
 	MT_BIGGRABCHAIN, // Big Grab Chain
+	MT_BLUESPRINGBALL, // Blue spring on a ball
 	MT_YELLOWSPRINGBALL, // Yellow spring on a ball
 	MT_REDSPRINGBALL, // Red spring on a ball
 	MT_SMALLFIREBAR, // Small Firebar
@@ -5114,7 +5125,7 @@ typedef enum mobj_type
 	MT_POLYANCHOR,
 	MT_POLYSPAWN,
 
-	// Skybox objects
+	// Portal objects
 	MT_SKYBOX,
 
 	// Debris

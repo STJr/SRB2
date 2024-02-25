@@ -46,7 +46,7 @@ void R_DrawSpan_NPO2_8 (void)
 
 	source = ds_source;
 	colormap = ds_colormap;
-	dest = ylookup[ds_y] + columnofs[ds_x1];
+	dest = &topleft[ds_y*vid.width + ds_x1];
 
 	if (dest+8 > deststop)
 		return;
@@ -114,14 +114,13 @@ void R_DrawTiltedSpan_NPO2_8(void)
 	struct libdivide_u32_t x_divider = libdivide_u32_gen(ds_flatwidth);
 	struct libdivide_u32_t y_divider = libdivide_u32_gen(ds_flatheight);
 
-	iz = ds_szp->z + ds_szp->y*(centery-ds_y) + ds_szp->x*(ds_x1-centerx);
+	iz = ds_sz.z + ds_sz.y*(centery-ds_y) + ds_sz.x*(ds_x1-centerx);
+	uz = ds_su.z + ds_su.y*(centery-ds_y) + ds_su.x*(ds_x1-centerx);
+	vz = ds_sv.z + ds_sv.y*(centery-ds_y) + ds_sv.x*(ds_x1-centerx);
 
-	CALC_SLOPE_LIGHT
+	R_CalcSlopeLight();
 
-	uz = ds_sup->z + ds_sup->y*(centery-ds_y) + ds_sup->x*(ds_x1-centerx);
-	vz = ds_svp->z + ds_svp->y*(centery-ds_y) + ds_svp->x*(ds_x1-centerx);
-
-	dest = ylookup[ds_y] + columnofs[ds_x1];
+	dest = &topleft[ds_y*vid.width + ds_x1];
 	source = ds_source;
 	//colormap = ds_colormap;
 
@@ -154,18 +153,18 @@ void R_DrawTiltedSpan_NPO2_8(void)
 			*dest = colormap[source[((y * ds_flatwidth) + x)]];
 		}
 		dest++;
-		iz += ds_szp->x;
-		uz += ds_sup->x;
-		vz += ds_svp->x;
+		iz += ds_sz.x;
+		uz += ds_su.x;
+		vz += ds_sv.x;
 	} while (--width >= 0);
 #else
 	startz = 1.f/iz;
 	startu = uz*startz;
 	startv = vz*startz;
 
-	izstep = ds_szp->x * SPANSIZE;
-	uzstep = ds_sup->x * SPANSIZE;
-	vzstep = ds_svp->x * SPANSIZE;
+	izstep = ds_sz.x * SPANSIZE;
+	uzstep = ds_su.x * SPANSIZE;
+	vzstep = ds_sv.x * SPANSIZE;
 	//x1 = 0;
 	width++;
 
@@ -239,9 +238,9 @@ void R_DrawTiltedSpan_NPO2_8(void)
 		else
 		{
 			double left = width;
-			iz += ds_szp->x * left;
-			uz += ds_sup->x * left;
-			vz += ds_svp->x * left;
+			iz += ds_sz.x * left;
+			uz += ds_su.x * left;
+			vz += ds_sv.x * left;
 
 			endz = 1.f/iz;
 			endu = uz*endz;
@@ -304,14 +303,13 @@ void R_DrawTiltedTranslucentSpan_NPO2_8(void)
 	struct libdivide_u32_t x_divider = libdivide_u32_gen(ds_flatwidth);
 	struct libdivide_u32_t y_divider = libdivide_u32_gen(ds_flatheight);
 
-	iz = ds_szp->z + ds_szp->y*(centery-ds_y) + ds_szp->x*(ds_x1-centerx);
+	iz = ds_sz.z + ds_sz.y*(centery-ds_y) + ds_sz.x*(ds_x1-centerx);
+	uz = ds_su.z + ds_su.y*(centery-ds_y) + ds_su.x*(ds_x1-centerx);
+	vz = ds_sv.z + ds_sv.y*(centery-ds_y) + ds_sv.x*(ds_x1-centerx);
 
-	CALC_SLOPE_LIGHT
+	R_CalcSlopeLight();
 
-	uz = ds_sup->z + ds_sup->y*(centery-ds_y) + ds_sup->x*(ds_x1-centerx);
-	vz = ds_svp->z + ds_svp->y*(centery-ds_y) + ds_svp->x*(ds_x1-centerx);
-
-	dest = ylookup[ds_y] + columnofs[ds_x1];
+	dest = &topleft[ds_y*vid.width + ds_x1];
 	source = ds_source;
 	//colormap = ds_colormap;
 
@@ -343,18 +341,18 @@ void R_DrawTiltedTranslucentSpan_NPO2_8(void)
 			*dest = *(ds_transmap + (colormap[source[((y * ds_flatwidth) + x)]] << 8) + *dest);
 		}
 		dest++;
-		iz += ds_szp->x;
-		uz += ds_sup->x;
-		vz += ds_svp->x;
+		iz += ds_sz.x;
+		uz += ds_su.x;
+		vz += ds_sv.x;
 	} while (--width >= 0);
 #else
 	startz = 1.f/iz;
 	startu = uz*startz;
 	startv = vz*startz;
 
-	izstep = ds_szp->x * SPANSIZE;
-	uzstep = ds_sup->x * SPANSIZE;
-	vzstep = ds_svp->x * SPANSIZE;
+	izstep = ds_sz.x * SPANSIZE;
+	uzstep = ds_su.x * SPANSIZE;
+	vzstep = ds_sv.x * SPANSIZE;
 	//x1 = 0;
 	width++;
 
@@ -428,9 +426,9 @@ void R_DrawTiltedTranslucentSpan_NPO2_8(void)
 		else
 		{
 			double left = width;
-			iz += ds_szp->x * left;
-			uz += ds_sup->x * left;
-			vz += ds_svp->x * left;
+			iz += ds_sz.x * left;
+			uz += ds_su.x * left;
+			vz += ds_sv.x * left;
 
 			endz = 1.f/iz;
 			endu = uz*endz;
@@ -492,14 +490,13 @@ void R_DrawTiltedSplat_NPO2_8(void)
 	struct libdivide_u32_t x_divider = libdivide_u32_gen(ds_flatwidth);
 	struct libdivide_u32_t y_divider = libdivide_u32_gen(ds_flatheight);
 
-	iz = ds_szp->z + ds_szp->y*(centery-ds_y) + ds_szp->x*(ds_x1-centerx);
+	iz = ds_sz.z + ds_sz.y*(centery-ds_y) + ds_sz.x*(ds_x1-centerx);
+	uz = ds_su.z + ds_su.y*(centery-ds_y) + ds_su.x*(ds_x1-centerx);
+	vz = ds_sv.z + ds_sv.y*(centery-ds_y) + ds_sv.x*(ds_x1-centerx);
 
-	CALC_SLOPE_LIGHT
+	R_CalcSlopeLight();
 
-	uz = ds_sup->z + ds_sup->y*(centery-ds_y) + ds_sup->x*(ds_x1-centerx);
-	vz = ds_svp->z + ds_svp->y*(centery-ds_y) + ds_svp->x*(ds_x1-centerx);
-
-	dest = ylookup[ds_y] + columnofs[ds_x1];
+	dest = &topleft[ds_y*vid.width + ds_x1];
 	source = ds_source;
 	//colormap = ds_colormap;
 
@@ -536,18 +533,18 @@ void R_DrawTiltedSplat_NPO2_8(void)
 			*dest = colormap[val];
 
 		dest++;
-		iz += ds_szp->x;
-		uz += ds_sup->x;
-		vz += ds_svp->x;
+		iz += ds_sz.x;
+		uz += ds_su.x;
+		vz += ds_sv.x;
 	} while (--width >= 0);
 #else
 	startz = 1.f/iz;
 	startu = uz*startz;
 	startv = vz*startz;
 
-	izstep = ds_szp->x * SPANSIZE;
-	uzstep = ds_sup->x * SPANSIZE;
-	vzstep = ds_svp->x * SPANSIZE;
+	izstep = ds_sz.x * SPANSIZE;
+	uzstep = ds_su.x * SPANSIZE;
+	vzstep = ds_sv.x * SPANSIZE;
 	//x1 = 0;
 	width++;
 
@@ -625,9 +622,9 @@ void R_DrawTiltedSplat_NPO2_8(void)
 		else
 		{
 			double left = width;
-			iz += ds_szp->x * left;
-			uz += ds_sup->x * left;
-			vz += ds_svp->x * left;
+			iz += ds_sz.x * left;
+			uz += ds_su.x * left;
+			vz += ds_sv.x * left;
 
 			endz = 1.f/iz;
 			endu = uz*endz;
@@ -693,7 +690,7 @@ void R_DrawSplat_NPO2_8 (void)
 
 	source = ds_source;
 	colormap = ds_colormap;
-	dest = ylookup[ds_y] + columnofs[ds_x1];
+	dest = &topleft[ds_y*vid.width + ds_x1];
 
 	fixedwidth = ds_flatwidth << FRACBITS;
 	fixedheight = ds_flatheight << FRACBITS;
@@ -761,7 +758,7 @@ void R_DrawTranslucentSplat_NPO2_8 (void)
 
 	source = ds_source;
 	colormap = ds_colormap;
-	dest = ylookup[ds_y] + columnofs[ds_x1];
+	dest = &topleft[ds_y*vid.width + ds_x1];
 
 	fixedwidth = ds_flatwidth << FRACBITS;
 	fixedheight = ds_flatheight << FRACBITS;
@@ -831,7 +828,7 @@ void R_DrawFloorSprite_NPO2_8 (void)
 	source = (UINT16 *)ds_source;
 	colormap = ds_colormap;
 	translation = ds_translation;
-	dest = ylookup[ds_y] + columnofs[ds_x1];
+	dest = &topleft[ds_y*vid.width + ds_x1];
 
 	fixedwidth = ds_flatwidth << FRACBITS;
 	fixedheight = ds_flatheight << FRACBITS;
@@ -901,7 +898,7 @@ void R_DrawTranslucentFloorSprite_NPO2_8 (void)
 	source = (UINT16 *)ds_source;
 	colormap = ds_colormap;
 	translation = ds_translation;
-	dest = ylookup[ds_y] + columnofs[ds_x1];
+	dest = &topleft[ds_y*vid.width + ds_x1];
 
 	fixedwidth = ds_flatwidth << FRACBITS;
 	fixedheight = ds_flatheight << FRACBITS;
@@ -970,11 +967,11 @@ void R_DrawTiltedFloorSprite_NPO2_8(void)
 	struct libdivide_u32_t x_divider = libdivide_u32_gen(ds_flatwidth);
 	struct libdivide_u32_t y_divider = libdivide_u32_gen(ds_flatheight);
 
-	iz = ds_szp->z + ds_szp->y*(centery-ds_y) + ds_szp->x*(ds_x1-centerx);
-	uz = ds_sup->z + ds_sup->y*(centery-ds_y) + ds_sup->x*(ds_x1-centerx);
-	vz = ds_svp->z + ds_svp->y*(centery-ds_y) + ds_svp->x*(ds_x1-centerx);
+	iz = ds_sz.z + ds_sz.y*(centery-ds_y) + ds_sz.x*(ds_x1-centerx);
+	uz = ds_su.z + ds_su.y*(centery-ds_y) + ds_su.x*(ds_x1-centerx);
+	vz = ds_sv.z + ds_sv.y*(centery-ds_y) + ds_sv.x*(ds_x1-centerx);
 
-	dest = ylookup[ds_y] + columnofs[ds_x1];
+	dest = &topleft[ds_y*vid.width + ds_x1];
 	source = (UINT16 *)ds_source;
 	colormap = ds_colormap;
 	translation = ds_translation;
@@ -983,9 +980,9 @@ void R_DrawTiltedFloorSprite_NPO2_8(void)
 	startu = uz*startz;
 	startv = vz*startz;
 
-	izstep = ds_szp->x * SPANSIZE;
-	uzstep = ds_sup->x * SPANSIZE;
-	vzstep = ds_svp->x * SPANSIZE;
+	izstep = ds_sz.x * SPANSIZE;
+	uzstep = ds_su.x * SPANSIZE;
+	vzstep = ds_sv.x * SPANSIZE;
 	//x1 = 0;
 	width++;
 
@@ -1060,9 +1057,9 @@ void R_DrawTiltedFloorSprite_NPO2_8(void)
 		else
 		{
 			double left = width;
-			iz += ds_szp->x * left;
-			uz += ds_sup->x * left;
-			vz += ds_svp->x * left;
+			iz += ds_sz.x * left;
+			uz += ds_su.x * left;
+			vz += ds_sv.x * left;
 
 			endz = 1.f/iz;
 			endu = uz*endz;
@@ -1126,11 +1123,11 @@ void R_DrawTiltedTranslucentFloorSprite_NPO2_8(void)
 	struct libdivide_u32_t x_divider = libdivide_u32_gen(ds_flatwidth);
 	struct libdivide_u32_t y_divider = libdivide_u32_gen(ds_flatheight);
 
-	iz = ds_szp->z + ds_szp->y*(centery-ds_y) + ds_szp->x*(ds_x1-centerx);
-	uz = ds_sup->z + ds_sup->y*(centery-ds_y) + ds_sup->x*(ds_x1-centerx);
-	vz = ds_svp->z + ds_svp->y*(centery-ds_y) + ds_svp->x*(ds_x1-centerx);
+	iz = ds_sz.z + ds_sz.y*(centery-ds_y) + ds_sz.x*(ds_x1-centerx);
+	uz = ds_su.z + ds_su.y*(centery-ds_y) + ds_su.x*(ds_x1-centerx);
+	vz = ds_sv.z + ds_sv.y*(centery-ds_y) + ds_sv.x*(ds_x1-centerx);
 
-	dest = ylookup[ds_y] + columnofs[ds_x1];
+	dest = &topleft[ds_y*vid.width + ds_x1];
 	source = (UINT16 *)ds_source;
 	colormap = ds_colormap;
 	translation = ds_translation;
@@ -1139,9 +1136,9 @@ void R_DrawTiltedTranslucentFloorSprite_NPO2_8(void)
 	startu = uz*startz;
 	startv = vz*startz;
 
-	izstep = ds_szp->x * SPANSIZE;
-	uzstep = ds_sup->x * SPANSIZE;
-	vzstep = ds_svp->x * SPANSIZE;
+	izstep = ds_sz.x * SPANSIZE;
+	uzstep = ds_su.x * SPANSIZE;
+	vzstep = ds_sv.x * SPANSIZE;
 	//x1 = 0;
 	width++;
 
@@ -1216,9 +1213,9 @@ void R_DrawTiltedTranslucentFloorSprite_NPO2_8(void)
 		else
 		{
 			double left = width;
-			iz += ds_szp->x * left;
-			uz += ds_sup->x * left;
-			vz += ds_svp->x * left;
+			iz += ds_sz.x * left;
+			uz += ds_su.x * left;
+			vz += ds_sv.x * left;
 
 			endz = 1.f/iz;
 			endu = uz*endz;
@@ -1281,7 +1278,7 @@ void R_DrawTranslucentSpan_NPO2_8 (void)
 
 	source = ds_source;
 	colormap = ds_colormap;
-	dest = ylookup[ds_y] + columnofs[ds_x1];
+	dest = &topleft[ds_y*vid.width + ds_x1];
 
 	fixedwidth = ds_flatwidth << FRACBITS;
 	fixedheight = ds_flatheight << FRACBITS;
@@ -1345,7 +1342,7 @@ void R_DrawWaterSpan_NPO2_8(void)
 
 	source = ds_source;
 	colormap = ds_colormap;
-	dest = ylookup[ds_y] + columnofs[ds_x1];
+	dest = &topleft[ds_y*vid.width + ds_x1];
 	dsrc = screens[1] + (ds_y+ds_bgofs)*vid.width + ds_x1;
 
 	fixedwidth = ds_flatwidth << FRACBITS;
@@ -1411,14 +1408,13 @@ void R_DrawTiltedWaterSpan_NPO2_8(void)
 	struct libdivide_u32_t x_divider = libdivide_u32_gen(ds_flatwidth);
 	struct libdivide_u32_t y_divider = libdivide_u32_gen(ds_flatheight);
 
-	iz = ds_szp->z + ds_szp->y*(centery-ds_y) + ds_szp->x*(ds_x1-centerx);
+	iz = ds_sz.z + ds_sz.y*(centery-ds_y) + ds_sz.x*(ds_x1-centerx);
+	uz = ds_su.z + ds_su.y*(centery-ds_y) + ds_su.x*(ds_x1-centerx);
+	vz = ds_sv.z + ds_sv.y*(centery-ds_y) + ds_sv.x*(ds_x1-centerx);
 
-	CALC_SLOPE_LIGHT
+	R_CalcSlopeLight();
 
-	uz = ds_sup->z + ds_sup->y*(centery-ds_y) + ds_sup->x*(ds_x1-centerx);
-	vz = ds_svp->z + ds_svp->y*(centery-ds_y) + ds_svp->x*(ds_x1-centerx);
-
-	dest = ylookup[ds_y] + columnofs[ds_x1];
+	dest = &topleft[ds_y*vid.width + ds_x1];
 	dsrc = screens[1] + (ds_y+ds_bgofs)*vid.width + ds_x1;
 	source = ds_source;
 	//colormap = ds_colormap;
@@ -1451,18 +1447,18 @@ void R_DrawTiltedWaterSpan_NPO2_8(void)
 			*dest = *(ds_transmap + (colormap[source[((y * ds_flatwidth) + x)]] << 8) + *dsrc++);
 		}
 		dest++;
-		iz += ds_szp->x;
-		uz += ds_sup->x;
-		vz += ds_svp->x;
+		iz += ds_sz.x;
+		uz += ds_su.x;
+		vz += ds_sv.x;
 	} while (--width >= 0);
 #else
 	startz = 1.f/iz;
 	startu = uz*startz;
 	startv = vz*startz;
 
-	izstep = ds_szp->x * SPANSIZE;
-	uzstep = ds_sup->x * SPANSIZE;
-	vzstep = ds_svp->x * SPANSIZE;
+	izstep = ds_sz.x * SPANSIZE;
+	uzstep = ds_su.x * SPANSIZE;
+	vzstep = ds_sv.x * SPANSIZE;
 	//x1 = 0;
 	width++;
 
@@ -1536,9 +1532,9 @@ void R_DrawTiltedWaterSpan_NPO2_8(void)
 		else
 		{
 			double left = width;
-			iz += ds_szp->x * left;
-			uz += ds_sup->x * left;
-			vz += ds_svp->x * left;
+			iz += ds_sz.x * left;
+			uz += ds_su.x * left;
+			vz += ds_sv.x * left;
 
 			endz = 1.f/iz;
 			endu = uz*endz;

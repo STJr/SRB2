@@ -45,7 +45,8 @@ extern INT32 lua_lumploading; // is LUA_LoadLump being called?
 
 int LUA_GetErrorMessage(lua_State *L);
 int LUA_Call(lua_State *L, int nargs, int nresults, int errorhandlerindex);
-void LUA_LoadLump(UINT16 wad, UINT16 lump, boolean noresults);
+boolean LUA_LoadLump(UINT16 wad, UINT16 lump);
+void LUA_DoLump(UINT16 wad, UINT16 lump, boolean noresults);
 #ifdef LUA_ALLOW_BYTECODE
 void LUA_DumpFile(const char *filename);
 #endif
@@ -72,6 +73,42 @@ void LUA_PushTaggableObjectArray
 		void * element_array,
 		size_t sizeof_element,
 		const char *meta);
+
+void LUA_SetCFunctionField(lua_State *L, const char *name, lua_CFunction value);
+
+void LUA_RegisterUserdataMetatable(
+	lua_State *L,
+	const char *name,
+	lua_CFunction get,
+	lua_CFunction set,
+	lua_CFunction len
+);
+
+void LUA_CreateAndSetMetatable(
+	lua_State *L,
+	lua_CFunction get,
+	lua_CFunction set,
+	lua_CFunction len,
+	boolean keep
+);
+
+void LUA_CreateAndSetUserdataField(
+	lua_State *L,
+	int index,
+	const char *name,
+	lua_CFunction get,
+	lua_CFunction set,
+	lua_CFunction len,
+	boolean keep
+);
+
+void LUA_RegisterGlobalUserdata(
+	lua_State *L,
+	const char *name,
+	lua_CFunction get,
+	lua_CFunction set,
+	lua_CFunction len
+);
 
 void LUA_InsertTaggroupIterator
 (		lua_State *L,

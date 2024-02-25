@@ -36,9 +36,6 @@ UINT8 ASTBlendPaletteIndexes(UINT8 background, UINT8 foreground, int style, UINT
 
 extern INT32 ASTTextureBlendingThreshold[2];
 
-extern INT16 color8to16[256]; // remap color index to highcolor
-extern INT16 *hicolormaps; // remap high colors to high colors..
-
 extern CV_PossibleValue_t Color_cons_t[];
 
 // I/O, setting up the stuff.
@@ -92,6 +89,7 @@ typedef enum
 	TMCF_OVERRIDE     = 1<<13,
 } textmapcolormapflags_t;
 
+void R_GenerateLightTable(extracolormap_t *extra_colormap, boolean uselookup);
 lighttable_t *R_CreateLightTable(extracolormap_t *extra_colormap);
 extracolormap_t * R_CreateColormapFromLinedef(char *p1, char *p2, char *p3);
 extracolormap_t* R_CreateColormap(INT32 rgba, INT32 fadergba, UINT8 fadestart, UINT8 fadeend, UINT8 flags);
