@@ -501,7 +501,7 @@ static void
 Update_parameters (void)
 {
 #ifdef MASTERSERVER
-	int registered;
+	int registered = 0;
 	int delayed;
 
 	if (Online())

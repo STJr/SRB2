@@ -52,22 +52,21 @@ mobj_t *skyboxmo[2]; // current skybox mobjs: 0 = viewpoint, 1 = centerpoint
 mobj_t *skyboxviewpnts[16]; // array of MT_SKYBOX viewpoint mobjs
 mobj_t *skyboxcenterpnts[16]; // array of MT_SKYBOX centerpoint mobjs
 
+size_t secportalcount;
+size_t secportalcapacity;
+sectorportal_t *secportals;
+
 /** Animated texture descriptor
   * This keeps track of an animated texture or an animated flat.
   * \sa P_UpdateSpecials, P_InitPicAnims, animdef_t
   */
 typedef struct
 {
-	SINT8 istexture; ///< ::true for a texture, ::false for a flat
-	INT32 picnum;    ///< The end flat number
-	INT32 basepic;   ///< The start flat number
+	INT32 picnum;    ///< The end texture number
+	INT32 basepic;   ///< The start texture number
 	INT32 numpics;   ///< Number of frames in the animation
 	tic_t speed;     ///< Number of tics for which each frame is shown
 } anim_t;
-
-#if defined(_MSC_VER)
-#pragma pack(1)
-#endif
 
 /** Animated texture definition.
   * Used for loading an ANIMDEFS lump from a wad.
@@ -83,12 +82,8 @@ typedef struct
 	SINT8 istexture; ///< True for a texture, false for a flat.
 	char endname[9]; ///< Name of the last frame, null-terminated.
 	char startname[9]; ///< Name of the first frame, null-terminated.
-	INT32 speed ; ///< Number of tics for which each frame is shown.
+	INT32 speed; ///< Number of tics for which each frame is shown.
 } ATTRPACK animdef_t;
-
-#if defined(_MSC_VER)
-#pragma pack()
-#endif
 
 typedef struct
 {
@@ -134,16 +129,31 @@ static size_t maxanims;
 
 static animdef_t *animdefs = NULL;
 
-// Increase the size of animdefs to make room for a new animation definition
-static void GrowAnimDefs(void)
-{
-	maxanims++;
-	animdefs = (animdef_t *)Z_Realloc(animdefs, sizeof(animdef_t)*(maxanims + 1), PU_STATIC, NULL);
-}
-
 // A prototype; here instead of p_spec.h, so they're "private"
 void P_ParseANIMDEFSLump(INT32 wadNum, UINT16 lumpnum);
 void P_ParseAnimationDefintion(SINT8 istexture);
+
+static boolean P_FindTextureForAnimation(anim_t *anim, animdef_t *animdef)
+{
+	if (R_CheckTextureNumForName(animdef->startname) == -1)
+		return false;
+
+	anim->picnum = R_TextureNumForName(animdef->endname);
+	anim->basepic = R_TextureNumForName(animdef->startname);
+
+	return true;
+}
+
+static boolean P_FindFlatForAnimation(anim_t *anim, animdef_t *animdef)
+{
+	if (R_CheckFlatNumForName(animdef->startname) == -1)
+		return false;
+
+	anim->picnum = R_CheckFlatNumForName(animdef->endname);
+	anim->basepic = R_CheckFlatNumForName(animdef->startname);
+
+	return true;
+}
 
 /** Sets up texture and flat animations.
   *
@@ -152,7 +162,6 @@ void P_ParseAnimationDefintion(SINT8 istexture);
   *
   * Issues an error if any animation cycles are invalid.
   *
-  * \sa P_FindAnimatedFlat, P_SetupLevelFlatAnims
   * \author Steven McGranahan (original), Shadow Hog (had to rewrite it to handle multiple WADs), JTE (had to rewrite it to handle multiple WADs _correctly_)
   */
 void P_InitPicAnims(void)
@@ -195,37 +204,39 @@ void P_InitPicAnims(void)
 	lastanim = anims;
 	for (i = 0; animdefs[i].istexture != -1; i++)
 	{
+		animdef_t *animdef = &animdefs[i];
+
+		// If this animation is for a texture, look for one first, THEN look for a flat
 		if (animdefs[i].istexture)
 		{
-			if (R_CheckTextureNumForName(animdefs[i].startname) == -1)
-				continue;
-
-			lastanim->picnum = R_TextureNumForName(animdefs[i].endname);
-			lastanim->basepic = R_TextureNumForName(animdefs[i].startname);
+			if (!P_FindTextureForAnimation(lastanim, animdef))
+			{
+				if (!P_FindFlatForAnimation(lastanim, animdef))
+					continue;
+			}
 		}
+		// Else, if this animation is for a flat, look for one first, THEN look for a texture
 		else
 		{
-			if ((W_CheckNumForName(animdefs[i].startname)) == LUMPERROR)
-				continue;
-
-			lastanim->picnum = R_GetFlatNumForName(animdefs[i].endname);
-			lastanim->basepic = R_GetFlatNumForName(animdefs[i].startname);
+			if (!P_FindFlatForAnimation(lastanim, animdef))
+			{
+				if (!P_FindTextureForAnimation(lastanim, animdef))
+					continue;
+			}
 		}
 
-		lastanim->istexture = animdefs[i].istexture;
 		lastanim->numpics = lastanim->picnum - lastanim->basepic + 1;
 
 		if (lastanim->numpics < 2)
 		{
 			free(anims);
 			I_Error("P_InitPicAnims: bad cycle from %s to %s",
-				animdefs[i].startname, animdefs[i].endname);
+				animdef->startname, animdef->endname);
 		}
 
-		lastanim->speed = LONG(animdefs[i].speed);
+		lastanim->speed = animdef->speed;
 		lastanim++;
 	}
-	lastanim->istexture = -1;
 	R_ClearTextureNumCache(false);
 
 	// Clear animdefs now that we're done with it.
@@ -350,7 +361,8 @@ void P_ParseAnimationDefintion(SINT8 istexture)
 	if (i == maxanims)
 	{
 		// Increase the size to make room for the new animation definition
-		GrowAnimDefs();
+		maxanims++;
+		animdefs = (animdef_t *)Z_Realloc(animdefs, sizeof(animdef_t)*(maxanims + 1), PU_STATIC, NULL);
 		strncpy(animdefs[i].startname, animdefsToken, 9);
 	}
 
@@ -436,83 +448,6 @@ void P_ParseAnimationDefintion(SINT8 istexture)
 	}
 	animdefs[i].speed = animSpeed;
 	Z_Free(animdefsToken);
-
-#ifdef WALLFLATS
-	// hehe... uhh.....
-	if (!istexture)
-	{
-		GrowAnimDefs();
-		M_Memcpy(&animdefs[maxanims-1], &animdefs[i], sizeof(animdef_t));
-		animdefs[maxanims-1].istexture = 1;
-	}
-#endif
-}
-
-/** Checks for flats in levelflats that are part of a flat animation sequence
-  * and sets them up for animation.
-  *
-  * \param animnum Index into ::anims to find flats for.
-  * \sa P_SetupLevelFlatAnims
-  */
-static inline void P_FindAnimatedFlat(INT32 animnum)
-{
-	size_t i;
-	lumpnum_t startflatnum, endflatnum;
-	levelflat_t *foundflats;
-
-	foundflats = levelflats;
-	startflatnum = anims[animnum].basepic;
-	endflatnum = anims[animnum].picnum;
-
-	// note: high word of lumpnum is the wad number
-	if ((startflatnum>>16) != (endflatnum>>16))
-		I_Error("AnimatedFlat start %s not in same wad as end %s\n",
-			animdefs[animnum].startname, animdefs[animnum].endname);
-
-	//
-	// now search through the levelflats if this anim flat sequence is used
-	//
-	for (i = 0; i < numlevelflats; i++, foundflats++)
-	{
-		// is that levelflat from the flat anim sequence ?
-		if ((anims[animnum].istexture) && (foundflats->type == LEVELFLAT_TEXTURE)
-			&& ((UINT16)foundflats->u.texture.num >= startflatnum && (UINT16)foundflats->u.texture.num <= endflatnum))
-		{
-			foundflats->u.texture.basenum = startflatnum;
-			foundflats->animseq = foundflats->u.texture.num - startflatnum;
-			foundflats->numpics = endflatnum - startflatnum + 1;
-			foundflats->speed = anims[animnum].speed;
-
-			CONS_Debug(DBG_SETUP, "animflat: #%03d name:%.8s animseq:%d numpics:%d speed:%d\n",
-					atoi(sizeu1(i)), foundflats->name, foundflats->animseq,
-					foundflats->numpics,foundflats->speed);
-		}
-		else if ((!anims[animnum].istexture) && (foundflats->type == LEVELFLAT_FLAT)
-			&& (foundflats->u.flat.lumpnum >= startflatnum && foundflats->u.flat.lumpnum <= endflatnum))
-		{
-			foundflats->u.flat.baselumpnum = startflatnum;
-			foundflats->animseq = foundflats->u.flat.lumpnum - startflatnum;
-			foundflats->numpics = endflatnum - startflatnum + 1;
-			foundflats->speed = anims[animnum].speed;
-
-			CONS_Debug(DBG_SETUP, "animflat: #%03d name:%.8s animseq:%d numpics:%d speed:%d\n",
-					atoi(sizeu1(i)), foundflats->name, foundflats->animseq,
-					foundflats->numpics,foundflats->speed);
-		}
-	}
-}
-
-/** Sets up all flats used in a level.
-  *
-  * \sa P_InitPicAnims, P_FindAnimatedFlat
-  */
-void P_SetupLevelFlatAnims(void)
-{
-	INT32 i;
-
-	// the original game flat anim sequences
-	for (i = 0; anims[i].istexture != -1; i++)
-		P_FindAnimatedFlat(i);
 }
 
 //
@@ -3670,7 +3605,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 					{
 						if (!playeringame[i])
 							continue;
-						P_DoPlayerExit(&players[i]);
+						P_DoPlayerExit(&players[i], true);
 					}
 				}
 			}
@@ -3724,7 +3659,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 					{
 						if (!playeringame[i])
 							continue;
-						P_DoPlayerExit(&players[i]);
+						P_DoPlayerExit(&players[i], true);
 					}
 				}
 			}
@@ -4486,7 +4421,7 @@ static void P_ProcessEggCapsule(player_t *player, sector_t *sector)
 	{
 		if (!playeringame[i])
 			continue;
-		P_DoPlayerExit(&players[i]);
+		P_DoPlayerExit(&players[i], true);
 	}
 }
 
@@ -4796,7 +4731,7 @@ static void P_ProcessFinishLine(player_t *player)
 			HU_DoCEcho("FINISHED!");
 		}
 
-		P_DoPlayerExit(player);
+		P_DoPlayerExit(player, true);
 	}
 }
 
@@ -5401,13 +5336,6 @@ void P_CheckMobjTrigger(mobj_t *mobj, boolean pushable)
   */
 void P_UpdateSpecials(void)
 {
-	anim_t *anim;
-	INT32 i;
-	INT32 pic;
-	size_t j;
-
-	levelflat_t *foundflats; // for flat animation
-
 	// LEVEL TIMER
 	P_CheckTimeLimit();
 
@@ -5415,37 +5343,18 @@ void P_UpdateSpecials(void)
 	P_CheckPointLimit();
 
 	// ANIMATE TEXTURES
-	for (anim = anims; anim < lastanim; anim++)
+	for (anim_t *anim = anims; anim < lastanim; anim++)
 	{
-		for (i = 0; i < anim->numpics; i++)
+		for (INT32 i = 0; i < anim->numpics; i++)
 		{
-			pic = anim->basepic + ((leveltime/anim->speed + i) % anim->numpics);
-			if (anim->istexture)
-				texturetranslation[anim->basepic+i] = pic;
-		}
-	}
-
-	// ANIMATE FLATS
-	/// \todo do not check the non-animate flat.. link the animated ones?
-	/// \note its faster than the original anywaysince it animates only
-	///    flats used in the level, and there's usually very few of them
-	foundflats = levelflats;
-	for (j = 0; j < numlevelflats; j++, foundflats++)
-	{
-		if (foundflats->speed) // it is an animated flat
-		{
-			// update the levelflat texture number
-			if ((foundflats->type == LEVELFLAT_TEXTURE) && (foundflats->u.texture.basenum != -1))
-				foundflats->u.texture.num = foundflats->u.texture.basenum + ((leveltime/foundflats->speed + foundflats->animseq) % foundflats->numpics);
-			// update the levelflat lump number
-			else if ((foundflats->type == LEVELFLAT_FLAT) && (foundflats->u.flat.baselumpnum != LUMPERROR))
-				foundflats->u.flat.lumpnum = foundflats->u.flat.baselumpnum + ((leveltime/foundflats->speed + foundflats->animseq) % foundflats->numpics);
+			INT32 pic = anim->basepic + ((leveltime/anim->speed + i) % anim->numpics);
+			texturetranslation[anim->basepic+i] = pic;
 		}
 	}
 }
 
 //
-// Floor over floors (FOFs), 3Dfloors, 3Dblocks, fake floors (ffloors), rovers, or whatever you want to call them
+// 3D floors
 //
 
 /** Gets the ID number for a 3Dfloor in its target sector.
@@ -6199,6 +6108,196 @@ fixed_t P_GetSectorGravityFactor(sector_t *sec)
 		return sec->gravity;
 }
 
+void P_InitSectorPortals(void)
+{
+	secportalcount = 0;
+	secportalcapacity = 0;
+	secportals = NULL;
+}
+
+UINT32 P_NewSectorPortal(void)
+{
+	size_t i = secportalcount++;
+	if (i == UINT32_MAX)
+		I_Error("Too many sector portals");
+
+	if (secportalcapacity == 0 || secportalcount == secportalcapacity)
+	{
+		secportalcapacity = secportalcapacity ? (secportalcapacity * 2) : 16;
+		secportals = Z_Realloc(secportals, secportalcapacity * sizeof(sectorportal_t), PU_LEVEL, NULL);
+	}
+
+	secportals[i].type = SECPORTAL_NONE;
+
+	return (UINT32)i;
+}
+
+boolean P_IsSectorPortalValid(sectorportal_t *secportal)
+{
+	if (secportal == NULL)
+		return false;
+
+	switch (secportal->type)
+	{
+	case SECPORTAL_LINE:
+	case SECPORTAL_FLOOR:
+	case SECPORTAL_CEILING:
+		return true;
+	case SECPORTAL_OBJECT:
+		return secportal->mobj && !P_MobjWasRemoved(secportal->mobj);
+	case SECPORTAL_SKYBOX:
+		return skyboxmo[0] && !P_MobjWasRemoved(skyboxmo[0]);
+	case SECPORTAL_PLANE:
+	case SECPORTAL_HORIZON:
+		return true;
+	default:
+		return false;
+	}
+}
+
+boolean P_SectorHasPortal(sector_t *sector)
+{
+	return P_SectorHasFloorPortal(sector) || P_SectorHasCeilingPortal(sector);
+}
+
+sectorportal_t *P_SectorGetFloorPortal(sector_t *sector)
+{
+	UINT32 num = sector->portal_floor;
+	if (num >= secportalcount)
+		return NULL;
+
+	return &secportals[num];
+}
+
+sectorportal_t *P_SectorGetCeilingPortal(sector_t *sector)
+{
+	UINT32 num = sector->portal_ceiling;
+	if (num >= secportalcount)
+		return NULL;
+
+	return &secportals[num];
+}
+
+boolean P_SectorHasFloorPortal(sector_t *sector)
+{
+	return P_IsSectorPortalValid(P_SectorGetFloorPortal(sector));
+}
+
+boolean P_SectorHasCeilingPortal(sector_t *sector)
+{
+	return P_IsSectorPortalValid(P_SectorGetCeilingPortal(sector));
+}
+
+boolean P_CompareSectorPortals(sectorportal_t *a, sectorportal_t *b)
+{
+	if (a == NULL && b == NULL)
+		return true;
+	else if (!a || !b)
+		return false;
+	else if (a->type != b->type)
+		return false;
+
+	switch (a->type)
+	{
+	case SECPORTAL_LINE:
+		return a->line.start == b->line.start && a->line.dest == b->line.dest;
+	case SECPORTAL_FLOOR:
+	case SECPORTAL_CEILING:
+		return a->sector == b->sector;
+	case SECPORTAL_OBJECT:
+		return a->mobj == b->mobj;
+	default:
+		return true;
+	}
+}
+
+static mobj_t *P_GetMobjByTag(INT32 tag)
+{
+	INT32 mtnum = -1;
+
+	TAG_ITER_THINGS(tag, mtnum)
+	{
+		mobj_t *mo = mapthings[mtnum].mobj;
+		if (mo)
+			return mo;
+	}
+
+	return NULL;
+}
+
+static void P_DoPortalCopyFromLine(sector_t *dest_sector, int plane_type, int tag)
+{
+	INT32 secnum = -1;
+	TAG_ITER_SECTORS(tag, secnum)
+	{
+		sector_t *src_sector = &sectors[secnum];
+		if (plane_type == TMP_FLOOR || plane_type == TMP_BOTH)
+			dest_sector->portal_floor = src_sector->portal_floor;
+		if (plane_type == TMP_CEILING || plane_type == TMP_BOTH)
+			dest_sector->portal_ceiling = src_sector->portal_ceiling;
+	}
+}
+
+static sectorportal_t *P_SectorGetPortalOrCreate(sector_t *sector, UINT32 *num, UINT32 *result)
+{
+	sectorportal_t *secportal = NULL;
+
+	if (*num >= secportalcount)
+	{
+		*num = P_NewSectorPortal();
+		secportal = &secportals[*num];
+		secportal->origin.x = sector->soundorg.x;
+		secportal->origin.y = sector->soundorg.y;
+		*result = *num;
+	}
+	else
+	{
+		*result = *num;
+		secportal = &secportals[*num];
+	}
+
+	return secportal;
+}
+
+static sectorportal_t *P_SectorGetFloorPortalOrCreate(sector_t *sector, UINT32 *result)
+{
+	return P_SectorGetPortalOrCreate(sector, &sector->portal_floor, result);
+}
+
+static sectorportal_t *P_SectorGetCeilingPortalOrCreate(sector_t *sector, UINT32 *result)
+{
+	return P_SectorGetPortalOrCreate(sector, &sector->portal_ceiling, result);
+}
+
+static void P_CopySectorPortalToLines(UINT32 portal_num, int sector_tag)
+{
+	for (size_t i = 0; i < numlines; i++)
+	{
+		if (lines[i].special != SPECIAL_SECTOR_SETPORTAL)
+			continue;
+
+		if (lines[i].args[1] != TMSECPORTAL_COPY_PORTAL_TO_LINE)
+			continue;
+
+		if (lines[i].args[3] != sector_tag)
+			continue;
+
+		if (lines[i].args[0] != 0)
+		{
+			INT32 linenum = -1;
+			TAG_ITER_LINES(lines[i].args[0], linenum)
+			{
+				lines[linenum].secportal = portal_num;
+			}
+		}
+		else
+		{
+			// Just transfer it to this line
+			lines[i].secportal = portal_num;
+		}
+	}
+}
+
 /** After the map has loaded, scans for specials that spawn 3Dfloors and
   * thinkers.
   *
@@ -6364,6 +6463,146 @@ void P_SpawnSpecials(boolean fromnetsave)
 				TAG_ITER_SECTORS(Tag_FGet(&lines[i].tags), s)
 					P_AddCameraScanner(&sectors[sec], &sectors[s], R_PointToAngle2(lines[i].v2->x, lines[i].v2->y, lines[i].v1->x, lines[i].v1->y));
 				break;
+
+			case SPECIAL_SECTOR_SETPORTAL: // Sector portal
+			{
+				int target_sector_tag = lines[i].args[0];
+				int portal_type = lines[i].args[1];
+				int plane_type = lines[i].args[2];
+				int misc = lines[i].args[3];
+
+				boolean floor, ceiling;
+				if (plane_type == TMP_BOTH)
+					floor = ceiling = true;
+				else
+				{
+					floor = plane_type == TMP_FLOOR;
+					ceiling = plane_type == TMP_CEILING;
+				}
+
+				UINT32 portal_num = UINT32_MAX;
+
+				// Eternity's floor and horizon portal types
+				if (portal_type == TMSECPORTAL_PLANE || portal_type == TMSECPORTAL_HORIZON)
+				{
+					secportaltype_e type = portal_type == TMSECPORTAL_HORIZON ? SECPORTAL_HORIZON : SECPORTAL_PLANE;
+					if (floor)
+					{
+						sectorportal_t *floorportal = P_SectorGetFloorPortalOrCreate(lines[i].frontsector, &portal_num);
+						floorportal->type = type;
+						floorportal->sector = lines[i].frontsector;
+						P_CopySectorPortalToLines(portal_num, target_sector_tag);
+					}
+					if (ceiling)
+					{
+						sectorportal_t *ceilportal = P_SectorGetCeilingPortalOrCreate(lines[i].frontsector, &portal_num);
+						ceilportal->type = type;
+						ceilportal->sector = lines[i].frontsector;
+						P_CopySectorPortalToLines(portal_num, target_sector_tag);
+					}
+					break;
+				}
+
+				INT32 s1 = -1;
+
+				TAG_ITER_SECTORS(target_sector_tag, s1)
+				{
+					sector_t *target_sector = &sectors[s1];
+
+					// Line portal
+					if (portal_type == TMSECPORTAL_NORMAL)
+					{
+						INT32 linenum = -1;
+						TAG_ITER_LINES(misc, linenum)
+						{
+							if (lines[linenum].special == SPECIAL_SECTOR_SETPORTAL
+							&& lines[linenum].args[0] == target_sector_tag
+							&& lines[linenum].args[1] == portal_type
+							&& lines[linenum].args[2] == plane_type
+							&& lines[linenum].args[3] == 1)
+							{
+								if (floor)
+								{
+									sectorportal_t *floorportal = P_SectorGetFloorPortalOrCreate(target_sector, &portal_num);
+									floorportal->type = SECPORTAL_LINE;
+									floorportal->line.start = &lines[i];
+									floorportal->line.dest = &lines[linenum];
+									P_CopySectorPortalToLines(portal_num, target_sector_tag);
+								}
+								if (ceiling)
+								{
+									sectorportal_t *ceilportal = P_SectorGetCeilingPortalOrCreate(target_sector, &portal_num);
+									ceilportal->type = SECPORTAL_LINE;
+									ceilportal->line.start = &lines[i];
+									ceilportal->line.dest = &lines[linenum];
+									P_CopySectorPortalToLines(portal_num, target_sector_tag);
+								}
+							}
+						}
+					}
+					// Skybox portal
+					else if (portal_type == TMSECPORTAL_SKYBOX)
+					{
+						if (floor)
+						{
+							sectorportal_t *floorportal = P_SectorGetFloorPortalOrCreate(target_sector, &portal_num);
+							floorportal->type = SECPORTAL_SKYBOX;
+							P_CopySectorPortalToLines(portal_num, target_sector_tag);
+						}
+						if (ceiling)
+						{
+							sectorportal_t *ceilportal = P_SectorGetCeilingPortalOrCreate(target_sector, &portal_num);
+							ceilportal->type = SECPORTAL_SKYBOX;
+							P_CopySectorPortalToLines(portal_num, target_sector_tag);
+						}
+					}
+					// Plane portal
+					else if (portal_type == TMSECPORTAL_SECTOR)
+					{
+						INT32 s2 = -1;
+						TAG_ITER_SECTORS(misc, s2) // Sector tag to make a portal to
+						{
+							sector_t *view_sector = &sectors[s2];
+							if (floor)
+							{
+								sectorportal_t *floorportal = P_SectorGetFloorPortalOrCreate(target_sector, &portal_num);
+								floorportal->type = SECPORTAL_CEILING;
+								floorportal->sector = view_sector;
+								P_CopySectorPortalToLines(portal_num, target_sector_tag);
+							}
+							if (ceiling)
+							{
+								sectorportal_t *ceilportal = P_SectorGetCeilingPortalOrCreate(target_sector, &portal_num);
+								ceilportal->type = SECPORTAL_FLOOR;
+								ceilportal->sector = view_sector;
+								P_CopySectorPortalToLines(portal_num, target_sector_tag);
+							}
+						}
+					}
+					// Use mobj as viewpoint
+					else if (portal_type == TMSECPORTAL_OBJECT)
+					{
+						mobj_t *mobj = P_GetMobjByTag(misc);
+						if (!mobj)
+							break;
+						if (floor)
+						{
+							sectorportal_t *floorportal = P_SectorGetFloorPortalOrCreate(target_sector, &portal_num);
+							floorportal->type = SECPORTAL_OBJECT;
+							P_SetTarget(&floorportal->mobj, mobj);
+							P_CopySectorPortalToLines(portal_num, target_sector_tag);
+						}
+						if (ceiling)
+						{
+							sectorportal_t *ceilportal = P_SectorGetCeilingPortalOrCreate(target_sector, &portal_num);
+							ceilportal->type = SECPORTAL_OBJECT;
+							P_SetTarget(&ceilportal->mobj, mobj);
+							P_CopySectorPortalToLines(portal_num, target_sector_tag);
+						}
+					}
+				}
+				break;
+			}
 
 			case 7: // Flat alignment - redone by toast
 			{
@@ -7140,10 +7379,6 @@ void P_SpawnSpecials(boolean fromnetsave)
 		}
 	}
 
-
-
-
-
 	// Allocate each list
 	for (i = 0; i < numsectors; i++)
 		if(secthinkers[i].thinkers)
@@ -7169,6 +7404,33 @@ void P_SpawnSpecials(boolean fromnetsave)
 			case 32: // Polyobj_RotDisplace
 				PolyRotDisplace(&lines[i]);
 				break;
+		}
+	}
+
+	// Copy portals
+	for (i = 0; i < numlines; i++)
+	{
+		if (lines[i].special != SPECIAL_SECTOR_SETPORTAL)
+			continue;
+
+		int portal_type = lines[i].args[1];
+		if (portal_type != TMSECPORTAL_COPIED)
+			continue;
+
+		int target_sector_tag = lines[i].args[0];
+		int plane_type = lines[i].args[2];
+		int tag_to_copy = lines[i].args[3];
+
+		if (plane_type == 3)
+			plane_type = TMP_BOTH;
+
+		if (target_sector_tag == 0)
+			P_DoPortalCopyFromLine(lines[i].frontsector, plane_type, tag_to_copy);
+		else
+		{
+			INT32 s1 = -1;
+			TAG_ITER_SECTORS(target_sector_tag, s1)
+				P_DoPortalCopyFromLine(&sectors[s1], plane_type, tag_to_copy);
 		}
 	}
 
