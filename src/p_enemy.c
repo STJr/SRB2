@@ -5816,7 +5816,7 @@ void A_MinusDigging(mobj_t *actor)
 		P_SetMobjState(par, actor->info->raisestate);
 		if (P_MobjWasRemoved(par))
 			return;
-		P_SetScale(par, actor->scale*2);
+		P_SetScale(par, actor->scale*2, false);
 		par->old_scale = par->scale;
 		if (actor->eflags & MFE_VERTICALFLIP)
 			par->eflags |= MFE_VERTICALFLIP;
