@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 1997-2024 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2023 Sam Lantinga <slouken@libsdl.org>
   Copyright 2022 Collabora Ltd.
 
   This software is provided 'as-is', without any express or implied
@@ -28,13 +28,13 @@ GetNearbyFilename(const char *file)
 
     base = SDL_GetBasePath();
 
-    if (base) {
+    if (base != NULL) {
         SDL_RWops *rw;
         size_t len = SDL_strlen(base) + SDL_strlen(file) + 1;
 
         path = SDL_malloc(len);
 
-        if (!path) {
+        if (path == NULL) {
             SDL_free(base);
             SDL_OutOfMemory();
             return NULL;
@@ -54,7 +54,7 @@ GetNearbyFilename(const char *file)
     }
 
     path = SDL_strdup(file);
-    if (!path) {
+    if (path == NULL) {
         SDL_OutOfMemory();
     }
     return path;
@@ -72,10 +72,10 @@ GetNearbyFilename(const char *file)
 char *
 GetResourceFilename(const char *user_specified, const char *def)
 {
-    if (user_specified) {
+    if (user_specified != NULL) {
         char *ret = SDL_strdup(user_specified);
 
-        if (!ret) {
+        if (ret == NULL) {
             SDL_OutOfMemory();
         }
 
@@ -105,12 +105,12 @@ LoadTexture(SDL_Renderer *renderer, const char *file, SDL_bool transparent,
 
     path = GetNearbyFilename(file);
 
-    if (path) {
+    if (path != NULL) {
         file = path;
     }
 
     temp = SDL_LoadBMP(file);
-    if (!temp) {
+    if (temp == NULL) {
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Couldn't load %s: %s", file, SDL_GetError());
     } else {
         /* Set transparent pixel as the pixel at (0,0) */
@@ -137,16 +137,16 @@ LoadTexture(SDL_Renderer *renderer, const char *file, SDL_bool transparent,
             }
         }
 
-        if (width_out) {
+        if (width_out != NULL) {
             *width_out = temp->w;
         }
 
-        if (height_out) {
+        if (height_out != NULL) {
             *height_out = temp->h;
         }
 
         texture = SDL_CreateTextureFromSurface(renderer, temp);
-        if (!texture) {
+        if (texture == NULL) {
             SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Couldn't create texture: %s\n", SDL_GetError());
         }
     }
