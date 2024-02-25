@@ -40,10 +40,6 @@ extern rendermode_t rendermode;
 */
 extern rendermode_t chosenrendermode;
 
-/**	\brief use highcolor modes if true
-*/
-extern boolean highcolor;
-
 /**	\brief setup video mode
 */
 void I_StartupGraphics(void);
@@ -108,8 +104,8 @@ void VID_CheckGLLoaded(rendermode_t oldrender);
 	\return	name of video mode
 */
 const char *VID_GetModeName(INT32 modenum);
-void VID_PrepareModeList(void); /// note hack for SDL
 
+void VID_PrepareModeList(void);
 
 /**	\brief can video system do fullscreen
 */
