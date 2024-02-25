@@ -228,8 +228,8 @@ Sonic Robo Blast 2 defines the following standardized fields:
       ropehang           = <bool>;     // Sector is a rope hang. Must be applied to a 3D floor.
       jumpflip           = <bool>;     // Sector flips the gravity of players who jump from it.
       gravityoverride    = <bool>;     // Reverse gravity effect is only applied when an object is in the sector.
-	  nophysics_floor    = <bool>;     // Disables floor slope physics if created through a plane equation.
-	  nophysics_ceiling  = <bool>;     // Disables ceiling slope physics if created through a plane equation.
+      nophysics_floor    = <bool>;     // Disables floor slope physics if created through a plane equation.
+      nophysics_ceiling  = <bool>;     // Disables ceiling slope physics if created through a plane equation.
 
       friction            = <float>;   // Sector's friction factor.
       gravity             = <float>;   // Sector's gravity. Default is 1.0.
