@@ -1363,7 +1363,7 @@ static void IdleUpdate(void)
 
 	for (i = 1; i < MAXPLAYERS; i++)
 	{
-		if (cv_idletime.value && playeringame[i] && playernode[i] != UINT8_MAX && !players[i].quittime && !players[i].spectator && !players[i].bot && !IsPlayerAdmin(i) && i != serverplayer && gamestate == GS_LEVEL)
+		if (cv_idletime.value && playeringame[i] && playernode[i] != UINT8_MAX && !players[i].quittime && !players[i].spectator && !players[i].bot && !IsPlayerAdmin(i) && i != serverplayer && gamestate == GS_LEVEL && !(players[i].pflags & PF_FINISHED))
 		{
 			if (players[i].cmd.forwardmove || players[i].cmd.sidemove || players[i].cmd.buttons)
 				players[i].lastinputtime = 0;
