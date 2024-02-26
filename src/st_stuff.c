@@ -1552,10 +1552,12 @@ static void ST_drawPowerupHUD(void)
 		if ((stplyr->powers[pw_shield] & SH_NOSTACK & ~SH_FORCEHP) == SH_FORCE)
 		{
 			UINT8 i, max = (stplyr->powers[pw_shield] & SH_FORCEHP);
-			for (i = 0; i <= max; i++)
+			for (i = 0; i <= max && i < 2; i++) // only layer two icons, otherwise it becomes hard to read
 			{
-				V_DrawSmallScaledPatch(offs-(i<<1), hudinfo[HUD_POWERUPS].y-(i<<1), (V_PERPLAYER|hudinfo[HUD_POWERUPS].f)|((i == max) ? V_HUDTRANS : V_HUDTRANSHALF), forceshield);
+				V_DrawSmallScaledPatch(offs-(i<<1), hudinfo[HUD_POWERUPS].y-(i<<1), (V_PERPLAYER|hudinfo[HUD_POWERUPS].f)|((i == 1 || i == max) ? V_HUDTRANS : V_HUDTRANSHALF), forceshield);
 			}
+			if (i < max + 1) // if the shield has more than 2 hits, show the extra n hits as "+n"
+				V_DrawRightAlignedThinString(offs + 16, hudinfo[HUD_POWERUPS].y, V_PERPLAYER|hudinfo[HUD_POWERUPS].f|V_HUDTRANS, va("+%d", max + 1 - i));
 		}
 		else
 		{
