@@ -16,6 +16,7 @@
 
 typedef struct Tokenizer
 {
+	char *zdup;
 	const char *input;
 	unsigned numTokens;
 	UINT32 *capacity;
@@ -29,7 +30,7 @@ typedef struct Tokenizer
 	const char *(*get)(struct Tokenizer*, UINT32);
 } tokenizer_t;
 
-tokenizer_t *Tokenizer_Open(const char *inputString, unsigned numTokens);
+tokenizer_t *Tokenizer_Open(const char *inputString, size_t len, unsigned numTokens);
 void Tokenizer_Close(tokenizer_t *tokenizer);
 
 const char *Tokenizer_Read(tokenizer_t *tokenizer, UINT32 i);

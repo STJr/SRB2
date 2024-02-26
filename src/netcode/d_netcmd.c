@@ -209,6 +209,7 @@ static CV_PossibleValue_t matchboxes_cons_t[] = {{0, "Normal"}, {1, "Mystery"}, 
 static CV_PossibleValue_t chances_cons_t[] = {{0, "MIN"}, {9, "MAX"}, {0, NULL}};
 static CV_PossibleValue_t pause_cons_t[] = {{0, "Server"}, {1, "All"}, {0, NULL}};
 
+consvar_t cv_showinput = CVAR_INIT ("showinput", "Off", CV_ALLOWLUA, CV_OnOff, NULL);
 consvar_t cv_showinputjoy = CVAR_INIT ("showinputjoy", "Off", CV_ALLOWLUA, CV_OnOff, NULL);
 
 #ifdef NETGAME_DEVMODE
@@ -736,6 +737,7 @@ void D_RegisterClientCommands(void)
 	CV_RegisterVar(&cv_timetic);
 	CV_RegisterVar(&cv_powerupdisplay);
 	CV_RegisterVar(&cv_itemfinder);
+	CV_RegisterVar(&cv_showinput);
 	CV_RegisterVar(&cv_showinputjoy);
 
 	// time attack ghost options are also saved to config
@@ -893,6 +895,9 @@ void D_RegisterClientCommands(void)
 	CV_RegisterVar(&cv_renderhitboxinterpolation);
 	CV_RegisterVar(&cv_renderhitboxgldepth);
 	CV_RegisterVar(&cv_renderhitbox);
+	CV_RegisterVar(&cv_renderwalls);
+	CV_RegisterVar(&cv_renderfloors);
+	CV_RegisterVar(&cv_renderthings);
 	CV_RegisterVar(&cv_renderer);
 	CV_RegisterVar(&cv_scr_depth);
 	CV_RegisterVar(&cv_scr_width);
@@ -908,7 +913,7 @@ void D_RegisterClientCommands(void)
 
 	// ingame object placing
 	COM_AddCommand("objectplace", Command_ObjectPlace_f, COM_LUA);
-	//COM_AddCommand("writethings", Command_Writethings_f);
+	COM_AddCommand("writethings", Command_Writethings_f, COM_LUA);
 	CV_RegisterVar(&cv_speed);
 	CV_RegisterVar(&cv_opflags);
 	CV_RegisterVar(&cv_ophoopflags);
