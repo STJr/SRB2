@@ -149,6 +149,10 @@ static void Command_Teamchange_f(void);
 static void Command_Teamchange2_f(void);
 static void Command_ServerTeamChange_f(void);
 
+static void Command_MutePlayer_f(void);
+static void Command_UnmutePlayer_f(void);
+static void Got_MutePlayer(UINT8 **cp, INT32 playernum);
+
 static void Command_Clearscores_f(void);
 
 // Remote Administration
@@ -487,6 +491,10 @@ void D_RegisterServerCommands(void)
 
 	RegisterNetXCmd(XD_TEAMCHANGE, Got_Teamchange);
 	COM_AddCommand("serverchangeteam", Command_ServerTeamChange_f, COM_LUA);
+
+	RegisterNetXCmd(XD_MUTEPLAYER, Got_MutePlayer);
+	COM_AddCommand("muteplayer", Command_MutePlayer_f, COM_LUA);
+	COM_AddCommand("unmuteplayer", Command_UnmutePlayer_f, COM_LUA);
 
 	RegisterNetXCmd(XD_CLEARSCORES, Got_Clearscores);
 	COM_AddCommand("clearscores", Command_Clearscores_f, COM_LUA);
@@ -1315,7 +1323,7 @@ static void SendNameAndColor(void)
 		CV_StealthSet(&cv_playername, player_names[consoleplayer]);
 		HU_AddChatText("\x85*You must wait to change your name again", false);
 	}
-	else if (cv_mute.value && !(server || IsPlayerAdmin(consoleplayer)))
+	else if ((cv_mute.value || players[consoleplayer].muted) && !(server || IsPlayerAdmin(consoleplayer)))
 		CV_StealthSet(&cv_playername, player_names[consoleplayer]);
 	else // Cleanup name if changing it
 		CleanupPlayerName(consoleplayer, cv_playername.zstring);
@@ -2488,6 +2496,91 @@ static void Command_Teamchange2_f(void)
 
 	usvalue = SHORT(NetPacket.value.l|NetPacket.value.b);
 	SendNetXCmd2(XD_TEAMCHANGE, &usvalue, sizeof(usvalue));
+}
+
+static void MutePlayer(boolean mute)
+{
+	UINT8 data[2];
+	if (!(server || (IsPlayerAdmin(consoleplayer))))
+	{
+		CONS_Printf(M_GetText("Only the server or a remote admin can use this.\n"));
+		return;
+	}
+
+	if (COM_Argc() < 2)
+	{
+		CONS_Printf(M_GetText("muteplayer <playernum>: mute a player\n"));
+		return;
+	}
+
+	data[0] = atoi(COM_Argv(1));
+	if (data[0] >= MAXPLAYERS || !playeringame[data[0]])
+	{
+		CONS_Alert(CONS_NOTICE, M_GetText("There is no player %u!\n"), (unsigned int)data[0]);
+		return;
+	}
+
+	if (players[data[0]].muted && mute)
+	{
+		CONS_Printf(M_GetText("%s is already muted!\n"), player_names[data[0]]);
+		return;
+	}
+	else if (!players[data[0]].muted && !mute)
+	{
+		CONS_Printf(M_GetText("%s is not muted!\n"), player_names[data[0]]);
+		return;
+	}
+
+	data[1] = mute;
+	SendNetXCmd(XD_MUTEPLAYER, &data, sizeof(data));
+}
+
+static void Command_MutePlayer_f(void)
+{
+	MutePlayer(true);
+}
+
+static void Command_UnmutePlayer_f(void)
+{
+	MutePlayer(false);
+}
+
+static void Got_MutePlayer(UINT8 **cp, INT32 playernum)
+{
+	UINT8 player = READUINT8(*cp);
+	UINT8 muted = READUINT8(*cp);
+	if (playernum != serverplayer && !IsPlayerAdmin(playernum))
+	{
+		CONS_Alert(CONS_WARNING, M_GetText("Illegal mute received from player %s\n"), player_names[playernum]);
+		if (server)
+			SendKick(playernum, KICK_MSG_CON_FAIL | KICK_MSG_KEEP_BODY);
+		return;
+	}
+
+	if (player >= MAXPLAYERS || !playeringame[player])
+	{
+		CONS_Alert(CONS_WARNING, M_GetText("Illegal mute received from player %s\n"), player_names[playernum]);
+		if (server)
+			SendKick(playernum, KICK_MSG_CON_FAIL | KICK_MSG_KEEP_BODY);
+		return;
+	}
+
+	if (!players[player].muted && muted)
+	{
+		if (player == consoleplayer)
+			CONS_Printf(M_GetText("You have been muted.\n"));
+		else
+			CONS_Printf(M_GetText("%s has been muted.\n"), player_names[player]);
+	}
+	else if (players[player].muted && !muted)
+	{
+		if (player == consoleplayer)
+			CONS_Printf(M_GetText("You are no longer muted.\n"));
+		else
+			CONS_Printf(M_GetText("%s is no longer muted.\n"), player_names[player]);
+	}
+
+	players[player].muted = muted;
 }
 
 static void Command_ServerTeamChange_f(void)
@@ -4787,7 +4880,7 @@ static void ForceSkin_OnChange(void)
 //Allows the player's name to be changed if cv_mute is off.
 static void Name_OnChange(void)
 {
-	if (cv_mute.value && !(server || IsPlayerAdmin(consoleplayer)))
+	if ((cv_mute.value || players[consoleplayer].muted) && !(server || IsPlayerAdmin(consoleplayer)))
 	{
 		CONS_Alert(CONS_NOTICE, M_GetText("You may not change your name when chat is muted.\n"));
 		CV_StealthSet(&cv_playername, player_names[consoleplayer]);
@@ -4798,7 +4891,7 @@ static void Name_OnChange(void)
 
 static void Name2_OnChange(void)
 {
-	if (cv_mute.value) //Secondary player can't be admin.
+	if (cv_mute.value || players[consoleplayer].muted) //Secondary player can't be admin.
 	{
 		CONS_Alert(CONS_NOTICE, M_GetText("You may not change your name when chat is muted.\n"));
 		CV_StealthSet(&cv_playername2, player_names[secondarydisplayplayer]);
