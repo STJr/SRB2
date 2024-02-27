@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 1997-2024 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2023 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -288,8 +288,7 @@ ConfigureBinding(const SDL_GameControllerExtendedBind *pBinding)
         SDL_Log("Configuring button binding for button %d\n", pBinding->value.button);
         break;
     case SDL_CONTROLLER_BINDTYPE_AXIS:
-        SDL_Log("Configuring axis binding for axis %d %d/%d committed = %s\n", pBinding->value.axis.axis, pBinding->value.axis.axis_min, pBinding->value.axis.axis_max,
-                pBinding->committed ? "true" : "false");
+        SDL_Log("Configuring axis binding for axis %d %d/%d committed = %s\n", pBinding->value.axis.axis, pBinding->value.axis.axis_min, pBinding->value.axis.axis_max, pBinding->committed ? "true" : "false");
         break;
     case SDL_CONTROLLER_BINDTYPE_HAT:
         SDL_Log("Configuring hat binding for hat %d %d\n", pBinding->value.hat.hat, pBinding->value.hat.hat_mask);
@@ -730,13 +729,13 @@ int main(int argc, char *argv[])
     window = SDL_CreateWindow("Game Controller Map", SDL_WINDOWPOS_CENTERED,
                               SDL_WINDOWPOS_CENTERED, SCREEN_WIDTH,
                               SCREEN_HEIGHT, 0);
-    if (!window) {
+    if (window == NULL) {
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Couldn't create window: %s\n", SDL_GetError());
         return 2;
     }
 
     screen = SDL_CreateRenderer(window, -1, 0);
-    if (!screen) {
+    if (screen == NULL) {
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Couldn't create renderer: %s\n", SDL_GetError());
         return 2;
     }
@@ -767,7 +766,7 @@ int main(int argc, char *argv[])
         name = SDL_JoystickNameForIndex(i);
         SDL_Log("Joystick %d: %s\n", i, name ? name : "Unknown Joystick");
         joystick = SDL_JoystickOpen(i);
-        if (!joystick) {
+        if (joystick == NULL) {
             SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "SDL_JoystickOpen(%d) failed: %s\n", i,
                          SDL_GetError());
         } else {
@@ -793,7 +792,7 @@ int main(int argc, char *argv[])
         }
     }
     joystick = SDL_JoystickOpen(joystick_index);
-    if (!joystick) {
+    if (joystick == NULL) {
         SDL_Log("Couldn't open joystick %d: %s\n", joystick_index, SDL_GetError());
     } else {
         WatchJoystick(joystick);
