@@ -502,53 +502,53 @@ springstate:
 	return final;
 }
 
-static void P_DoFan(mobj_t *spring, mobj_t *object)
+static void P_DoFan(mobj_t *fan, mobj_t *object)
 {
 	player_t *p = object->player; // will be NULL if not a player
 	fixed_t zdist; // distance between bottoms
-	fixed_t speed = spring->info->mass; // conveniently, both fans and gas jets use this for the vertical thrust
-	SINT8 flipval = P_MobjFlip(spring); // virtually everything here centers around the thruster's gravity, not the object's!
+	fixed_t speed = fan->info->mass; // fans use this for the vertical thrust
+	SINT8 flipval = P_MobjFlip(fan); // virtually everything here centers around the thruster's gravity, not the object's!
 
-	if (p && object->state == &states[object->info->painstate]) // can't use fans and gas jets when player is in pain!
+	if (p && object->state == &states[object->info->painstate]) // can't use fans when player is in pain!
 		return;
 
 	// is object's top below thruster's position? if not, calculate distance between their bottoms
-	if (spring->eflags & MFE_VERTICALFLIP)
+	if (fan->eflags & MFE_VERTICALFLIP)
 	{
-		if (object->z > spring->z + spring->height)
+		if (object->z > fan->z + fan->height)
 			return;
-		zdist = (spring->z + spring->height) - (object->z + object->height);
+		zdist = (fan->z + fan->height) - (object->z + object->height);
 	}
 	else
 	{
-		if (object->z + object->height < spring->z)
+		if (object->z + object->height < fan->z)
 			return;
-		zdist = object->z - spring->z;
+		zdist = object->z - fan->z;
 	}
 
 	object->standingslope = NULL; // No launching off at silly angles for you.
 
-	switch (spring->type)
+	switch (fan->type)
 	{
 		case MT_FAN: // fan
-			if (zdist > (spring->health << FRACBITS)) // max z distance determined by health (set by map thing args[0])
+			if (zdist > (fan->health << FRACBITS)) // max z distance determined by health (set by map thing args[0])
 				break;
-			if (flipval*object->momz >= FixedMul(speed, spring->scale)) // if object's already moving faster than your best, don't bother
+			if (flipval*object->momz >= FixedMul(speed, fan->scale)) // if object's already moving faster than your best, don't bother
 				break;
 			if (p && (p->climbing || p->pflags & PF_GLIDING)) // doesn't affect Knux when he's using his abilities!
 				break;
 
-			object->momz += flipval*FixedMul(speed/4, spring->scale);
+			object->momz += flipval*FixedMul(speed/4, fan->scale);
 
 			// limit the speed if too high
-			if (flipval*object->momz > FixedMul(speed, spring->scale))
-				object->momz = flipval*FixedMul(speed, spring->scale);
+			if (flipval*object->momz > FixedMul(speed, fan->scale))
+				object->momz = flipval*FixedMul(speed, fan->scale);
 
 			if (p && !p->powers[pw_tailsfly] && !p->powers[pw_carry]) // doesn't reset anim for Tails' flight
 			{
 				P_ResetPlayer(p);
 				P_SetMobjState(object, S_PLAY_FALL);
-				P_SetTarget(&object->tracer, spring);
+				P_SetTarget(&object->tracer, fan);
 				p->powers[pw_carry] = CR_FAN;
 			}
 			break;
