@@ -81,9 +81,9 @@ UINT16 P_ApplySuperFlagToSprite2(UINT16 spr2, mobj_t *mobj)
 {
 	if (mobj->player)
 	{
-		if (mobj->player->charflags & SF_NOSUPERSPRITES)
+		if (mobj->player->charflags & SF_NOSUPERSPRITES || (mobj->player->powers[pw_carry] == CR_NIGHTSMODE && (mobj->player->charflags & SF_NONIGHTSSUPER)))
 			spr2 &= ~SPR2F_SUPER;
-		else if (mobj->player->powers[pw_super])
+		else if (mobj->player->powers[pw_super] || (mobj->player->powers[pw_carry] == CR_NIGHTSMODE && (mobj->player->charflags & SF_SUPER)))
 			spr2 |= SPR2F_SUPER;
 	}
 

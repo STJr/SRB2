@@ -173,6 +173,7 @@ enum actionnum
 	A_CHANGECOLORRELATIVE,
 	A_CHANGECOLORABSOLUTE,
 	A_DYE,
+	A_SETTRANSLATION,
 	A_MOVERELATIVE,
 	A_MOVEABSOLUTE,
 	A_THRUST,
@@ -445,6 +446,7 @@ void A_SetRandomTics();
 void A_ChangeColorRelative();
 void A_ChangeColorAbsolute();
 void A_Dye();
+void A_SetTranslation();
 void A_MoveRelative();
 void A_MoveAbsolute();
 void A_Thrust();
@@ -570,7 +572,7 @@ void A_ChangeHeight();
 extern int actionsoverridden[NUMACTIONS][MAX_ACTION_RECURSION];
 
 // ratio of states to sprites to mobj types is roughly 6 : 1 : 1
-#define NUMMOBJFREESLOTS 512
+#define NUMMOBJFREESLOTS 1024
 #define NUMSPRITEFREESLOTS NUMMOBJFREESLOTS
 #define NUMSTATEFREESLOTS (NUMMOBJFREESLOTS*8)
 

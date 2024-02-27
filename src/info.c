@@ -648,13 +648,13 @@ playersprite_t spr2defaults[NUMPLAYERSPRITES] = {
 
 	0, // SPR2_TRNS,
 
-	SPR2F_SUPER|SPR2_STND, // SPR2_NSTD,
-	SPR2F_SUPER|SPR2_FALL, // SPR2_NFLT,
+	SPR2_STND, // SPR2_NSTD,
+	SPR2_FALL, // SPR2_NFLT,
 	0, // SPR2_NFLY, (will never be referenced unless skin 0 lacks this)
 	SPR2_NFLY, // SPR2_NDRL,
-	SPR2F_SUPER|SPR2_STUN, // SPR2_NSTN,
+	SPR2_STUN, // SPR2_NSTN,
 	SPR2_NSTN, // SPR2_NPUL,
-	SPR2F_SUPER|SPR2_ROLL, // SPR2_NATK,
+	SPR2_ROLL, // SPR2_NATK,
 
 	0, // SPR2_TAL0, (this will look mighty stupid but oh well)
 	SPR2_TAL0, // SPR2_TAL1,
@@ -21791,7 +21791,7 @@ void P_PatchInfoTables(void)
 	INT32 i;
 	char *tempname;
 
-#if NUMSPRITEFREESLOTS > 1000
+#if NUMSPRITEFREESLOTS > 9999 //tempname numbering actually starts at SPR_FIRSTFREESLOT, so the limit is actually 9999 + SPR_FIRSTFREESLOT-1, but the preprocessor doesn't understand enums, so its left at 9999 for safety
 "Update P_PatchInfoTables, you big dumb head"
 #endif
 
@@ -21799,8 +21799,8 @@ void P_PatchInfoTables(void)
 	for (i = SPR_FIRSTFREESLOT; i <= SPR_LASTFREESLOT; i++)
 	{
 		tempname = sprnames[i];
-		tempname[0] = 'F';
-		tempname[1] = (char)('0' + (char)((i-SPR_FIRSTFREESLOT+1)/100));
+		tempname[0] = (char)('0' + (char)((i-SPR_FIRSTFREESLOT+1)/1000));
+		tempname[1] = (char)('0' + (char)(((i-SPR_FIRSTFREESLOT+1)/100)%10));
 		tempname[2] = (char)('0' + (char)(((i-SPR_FIRSTFREESLOT+1)/10)%10));
 		tempname[3] = (char)('0' + (char)((i-SPR_FIRSTFREESLOT+1)%10));
 		tempname[4] = '\0';

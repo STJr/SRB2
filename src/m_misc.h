@@ -109,6 +109,12 @@ const char * M_Ftrim (double);
 // Returns true if the string is empty.
 boolean M_IsStringEmpty(const char *s);
 
+// Converts a string containing a whole number into an int. Returns false if the conversion failed.
+boolean M_StringToNumber(const char *input, int *out);
+
+// Converts a string containing a number into a double. Returns false if the conversion failed.
+boolean M_StringToDecimal(const char *input, double *out);
+
 // counting bits, for weapon ammo code, usually
 FUNCMATH UINT8 M_CountBits(UINT32 num, UINT8 size);
 
