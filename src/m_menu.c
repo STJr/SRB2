@@ -12214,7 +12214,7 @@ static menucolor_t *M_GridIndexToMenuColor(UINT16 index)
 	}
 }
 
-static void M_SetPlayerSetupFollowItem()
+static void M_SetPlayerSetupFollowItem(void)
 {
 	const mobjtype_t followitem = skins[setupm_fakeskin]->followitem;
 
@@ -12223,7 +12223,7 @@ static void M_SetPlayerSetupFollowItem()
 		case MT_TAILSOVERLAY:
 		{
 			const state_t *state = &states[S_TAILSOVERLAY_MINUS30DEGREES];
-			const UINT8 sprite2 = P_GetSkinSprite2(&skins[setupm_fakeskin], state->frame & FF_FRAMEMASK, NULL);
+			const UINT8 sprite2 = P_GetSkinSprite2(skins[setupm_fakeskin], state->frame & FF_FRAMEMASK, NULL);
 
 			if (state->sprite != SPR_PLAY)
 				break;
@@ -12663,7 +12663,7 @@ static void M_HandleSetupMultiPlayer(INT32 choice)
 						setupm_fakeskin = numskins-1;
 				}
 				while ((prev_setupm_fakeskin != setupm_fakeskin) && !(R_SkinUsable(-1, setupm_fakeskin)));
-				multi_spr2 = P_GetSkinSprite2(&skins[setupm_fakeskin], SPR2_WALK, NULL);
+				multi_spr2 = P_GetSkinSprite2(skins[setupm_fakeskin], SPR2_WALK, NULL);
 				M_SetPlayerSetupFollowItem();
 			}
 			else if (itemOn == 2) // player color
@@ -12704,7 +12704,7 @@ static void M_HandleSetupMultiPlayer(INT32 choice)
 						setupm_fakeskin = 0;
 				}
 				while ((prev_setupm_fakeskin != setupm_fakeskin) && !(R_SkinUsable(-1, setupm_fakeskin)));
-				multi_spr2 = P_GetSkinSprite2(&skins[setupm_fakeskin], SPR2_WALK, NULL);
+				multi_spr2 = P_GetSkinSprite2(skins[setupm_fakeskin], SPR2_WALK, NULL);
 				M_SetPlayerSetupFollowItem();
 			}
 			else if (itemOn == 2) // player color
@@ -12855,7 +12855,7 @@ static void M_SetupMultiPlayer(INT32 choice)
 
 	MP_PlayerSetupMenu[2].status = (IT_KEYHANDLER|IT_STRING);
 
-	multi_spr2 = P_GetSkinSprite2(&skins[setupm_fakeskin], SPR2_WALK, NULL);
+	multi_spr2 = P_GetSkinSprite2(skins[setupm_fakeskin], SPR2_WALK, NULL);
 	M_SetPlayerSetupFollowItem();
 
 	// allocate and/or clear Lua player setup draw list
@@ -12900,7 +12900,7 @@ static void M_SetupMultiPlayer2(INT32 choice)
 
 	MP_PlayerSetupMenu[2].status = (IT_KEYHANDLER|IT_STRING);
 
-	multi_spr2 = P_GetSkinSprite2(&skins[setupm_fakeskin], SPR2_WALK, NULL);
+	multi_spr2 = P_GetSkinSprite2(skins[setupm_fakeskin], SPR2_WALK, NULL);
 	M_SetPlayerSetupFollowItem();
 
 	// allocate and/or clear Lua player setup draw list
