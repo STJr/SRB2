@@ -170,6 +170,7 @@ static void P_NetArchivePlayers(void)
 		WRITEUINT8(save_p, players[i].panim);
 		WRITEUINT8(save_p, players[i].stronganim);
 		WRITEUINT8(save_p, players[i].spectator);
+		WRITEUINT8(save_p, players[i].muted);
 
 		WRITEUINT16(save_p, players[i].flashpal);
 		WRITEUINT16(save_p, players[i].flashcount);
@@ -399,6 +400,7 @@ static void P_NetUnArchivePlayers(void)
 		players[i].panim = READUINT8(save_p);
 		players[i].stronganim = READUINT8(save_p);
 		players[i].spectator = READUINT8(save_p);
+		players[i].muted = READUINT8(save_p);
 
 		players[i].flashpal = READUINT16(save_p);
 		players[i].flashcount = READUINT16(save_p);
@@ -1748,7 +1750,8 @@ typedef enum
 	MD2_FLOORSPRITESLOPE    = 1<<22,
 	MD2_DISPOFFSET          = 1<<23,
 	MD2_DRAWONLYFORPLAYER   = 1<<24,
-	MD2_DONTDRAWFORVIEWMOBJ = 1<<25
+	MD2_DONTDRAWFORVIEWMOBJ = 1<<25,
+	MD2_TRANSLATION         = 1<<26
 } mobj_diff2_t;
 
 typedef enum
@@ -1937,6 +1940,8 @@ static void SaveMobjThinker(const thinker_t *th, const UINT8 type)
 		diff2 |= MD2_CVMEM;
 	if (mobj->color)
 		diff2 |= MD2_COLOR;
+	if (mobj->translation)
+		diff2 |= MD2_TRANSLATION;
 	if (mobj->skin)
 		diff2 |= MD2_SKIN;
 	if (mobj->extravalue1)
@@ -2170,6 +2175,8 @@ static void SaveMobjThinker(const thinker_t *th, const UINT8 type)
 		WRITEUINT32(save_p, mobj->dontdrawforviewmobj->mobjnum);
 	if (diff2 & MD2_DISPOFFSET)
 		WRITEINT32(save_p, mobj->dispoffset);
+	if (diff2 & MD2_TRANSLATION)
+		WRITEUINT16(save_p, mobj->translation);
 
 	WRITEUINT32(save_p, mobj->mobjnum);
 }
@@ -3223,6 +3230,8 @@ static thinker_t* LoadMobjThinker(actionf_p1 thinker)
 		slope->normal.x = READFIXED(save_p);
 		slope->normal.y = READFIXED(save_p);
 		slope->normal.z = READFIXED(save_p);
+
+		slope->moved = true;
 	}
 	if (diff2 & MD2_DRAWONLYFORPLAYER)
 		mobj->drawonlyforplayer = &players[READUINT8(save_p)];
@@ -3232,6 +3241,8 @@ static thinker_t* LoadMobjThinker(actionf_p1 thinker)
 		mobj->dispoffset = READINT32(save_p);
 	else
 		mobj->dispoffset = mobj->info->dispoffset;
+	if (diff2 & MD2_TRANSLATION)
+		mobj->translation = READUINT16(save_p);
 
 	if (diff & MD_REDFLAG)
 	{

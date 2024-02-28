@@ -274,6 +274,19 @@ typedef enum {
 	PCF_THUNK = 32,
 } precipflag_t;
 
+// [RH] Like msecnode_t, but for the blockmap
+typedef struct blocknode_s
+{
+	struct mobj_s *mobj;
+
+	int blockindex;     // index into blocklinks for the block this node is in
+
+	struct blocknode_s **mprev; // previous actor in this block
+	struct blocknode_s *mnext;  // next actor in this block
+	struct blocknode_s **bprev; // previous block this actor is in
+	struct blocknode_s *bnext;  // next block this actor is in
+} blocknode_t;
+
 // Map Object definition.
 typedef struct mobj_s
 {
@@ -332,16 +345,20 @@ typedef struct mobj_s
 	UINT16 eflags; // extra flags
 
 	void *skin; // overrides 'sprite' when non-NULL (for player bodies to 'remember' the skin)
+
 	// Player and mobj sprites in multiplayer modes are modified
 	//  using an internal color lookup table for re-indexing.
-	UINT16 color; // This replaces MF_TRANSLATION. Use 0 for default (no translation).
+	UINT16 color;
+
+	// This replaces MF_TRANSLATION. Use 0 for default (no translation).
+	UINT16 translation;
+
 	struct player_s *drawonlyforplayer; // If set, hides the mobj for everyone except this player and their spectators
 	struct mobj_s *dontdrawforviewmobj; // If set, hides the mobj if dontdrawforviewmobj is the current camera (first-person player or awayviewmobj)
 
 	// Interaction info, by BLOCKMAP.
 	// Links in blocks (if needed).
-	struct mobj_s *bnext;
-	struct mobj_s **bprev; // killough 8/11/98: change to ptr-to-ptr
+	blocknode_t *blocknode;
 
 	// Additional pointers for NiGHTS hoops
 	struct mobj_s *hnext;

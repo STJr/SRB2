@@ -35,7 +35,9 @@ add_executable(SRB2SDL2 MACOSX_BUNDLE WIN32
 	m_misc.c
 	m_perfstats.c
 	m_random.c
+	m_tokenizer.c
 	m_queue.c
+	m_vector.c
 	info.c
 	p_ceilng.c
 	p_enemy.c
@@ -68,6 +70,7 @@ add_executable(SRB2SDL2 MACOSX_BUNDLE WIN32
 	r_things.c
 	r_bbox.c
 	r_textures.c
+	r_translation.c
 	r_patch.c
 	r_patchrotation.c
 	r_picformats.c
@@ -151,6 +154,10 @@ if (UNIX)
 	target_compile_definitions(SRB2SDL2 PRIVATE -DUNIXCOMMON)
 endif()
 
+if (BSD MATCHES "FreeBSD")
+	target_compile_definitions(SRB2SDL2 PRIVATE -DFREEBSD)
+endif()
+
 if(CMAKE_COMPILER_IS_GNUCC)
 	find_program(OBJCOPY objcopy)
 endif()
@@ -166,11 +173,13 @@ if("${CMAKE_SYSTEM_NAME}" MATCHES "Darwin")
 	target_compile_definitions(SRB2SDL2 PRIVATE -DMACOSX)
 endif()
 
-target_link_libraries(SRB2SDL2 PRIVATE gme)
-target_compile_definitions(SRB2SDL2 PRIVATE -DHAVE_GME)
-if(NOT "${SRB2_CONFIG_SYSTEM_LIBRARIES}")
-	# this sucks but gme doesn't use modern cmake to delineate public headers
-	target_include_directories(SRB2SDL2 PRIVATE "${libgme_SOURCE_DIR}")
+if("${SRB2_CONFIG_USE_GME}")
+	target_link_libraries(SRB2SDL2 PRIVATE gme)
+	target_compile_definitions(SRB2SDL2 PRIVATE -DHAVE_GME)
+	if(NOT "${SRB2_CONFIG_SYSTEM_LIBRARIES}")
+		# this sucks but gme doesn't use modern cmake to delineate public headers
+		target_include_directories(SRB2SDL2 PRIVATE "${libgme_SOURCE_DIR}")
+	endif()
 endif()
 
 target_link_libraries(SRB2SDL2 PRIVATE openmpt)

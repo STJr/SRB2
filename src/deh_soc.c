@@ -1170,8 +1170,6 @@ void readgametype(MYFILE *f, INT32 num)
 
 	gtconst[0] = '\0';
 
-	strcpy(gtdescription, "???");
-
 	do
 	{
 		if (myfgets(s, MAXLINELEN, f))

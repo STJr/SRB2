@@ -831,7 +831,7 @@ void P_Ticker(boolean run)
 		if (quake.time)
 			--quake.time;
 
-		if (metalplayback)
+		if (!P_MobjWasRemoved(metalplayback))
 			G_ReadMetalTic(metalplayback);
 		if (metalrecording)
 			G_WriteMetalTic(players[consoleplayer].mo);
