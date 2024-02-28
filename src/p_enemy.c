@@ -541,7 +541,7 @@ boolean P_Move(mobj_t *actor, fixed_t speed)
 
 	if (!P_TryMove(actor, tryx, tryy, false))
 	{
-		if (actor->flags & MF_FLOAT && floatok)
+		if (!P_MobjWasRemoved(actor) && actor->flags & MF_FLOAT && floatok)
 		{
 			// must adjust height
 			if (actor->z < tmfloorz)
@@ -585,6 +585,7 @@ void P_NewChaseDir(mobj_t *actor)
 	dirtype_t d[3];
 	dirtype_t tdir = DI_NODIR, olddir, turnaround;
 
+	I_Assert(!P_MobjWasRemoved(actor));
 	I_Assert(actor->target != NULL);
 	I_Assert(!P_MobjWasRemoved(actor->target));
 
@@ -623,7 +624,7 @@ void P_NewChaseDir(mobj_t *actor)
 		dirtype_t newdir = diags[((deltay < 0)<<1) + (deltax > 0)];
 
 		actor->movedir = newdir;
-		if ((newdir != turnaround) && P_TryWalk(actor))
+		if ((newdir != turnaround) && (P_TryWalk(actor) || P_MobjWasRemoved(actor)))
 			return;
 	}
 
@@ -644,7 +645,7 @@ void P_NewChaseDir(mobj_t *actor)
 	{
 		actor->movedir = d[1];
 
-		if (P_TryWalk(actor))
+		if (P_TryWalk(actor) || P_MobjWasRemoved(actor))
 			return; // either moved forward or attacked
 	}
 
@@ -652,7 +653,7 @@ void P_NewChaseDir(mobj_t *actor)
 	{
 		actor->movedir = d[2];
 
-		if (P_TryWalk(actor))
+		if (P_TryWalk(actor) || P_MobjWasRemoved(actor))
 			return;
 	}
 
@@ -661,7 +662,7 @@ void P_NewChaseDir(mobj_t *actor)
 	{
 		actor->movedir =olddir;
 
-		if (P_TryWalk(actor))
+		if (P_TryWalk(actor) || P_MobjWasRemoved(actor))
 			return;
 	}
 
@@ -674,7 +675,7 @@ void P_NewChaseDir(mobj_t *actor)
 			{
 				actor->movedir = tdir;
 
-				if (P_TryWalk(actor))
+				if (P_TryWalk(actor) || P_MobjWasRemoved(actor))
 					return;
 			}
 		}
@@ -687,7 +688,7 @@ void P_NewChaseDir(mobj_t *actor)
 			{
 				actor->movedir = tdir;
 
-				if (P_TryWalk(actor))
+				if (P_TryWalk(actor) || P_MobjWasRemoved(actor))
 					return;
 			}
 		}
@@ -697,7 +698,7 @@ void P_NewChaseDir(mobj_t *actor)
 	{
 		actor->movedir = turnaround;
 
-		if (P_TryWalk(actor))
+		if (P_TryWalk(actor) || P_MobjWasRemoved(actor))
 			return;
 	}
 
@@ -1099,7 +1100,7 @@ nomissile:
 		return; // got a new target
 
 	// chase towards player
-	if (--actor->movecount < 0 || !P_Move(actor, actor->info->speed))
+	if (--actor->movecount < 0 || (!P_Move(actor, actor->info->speed) && !P_MobjWasRemoved(actor)))
 		P_NewChaseDir(actor);
 }
 
@@ -1187,7 +1188,7 @@ nomissile:
 		return; // got a new target
 
 	// chase towards player
-	if (--actor->movecount < 0 || !P_Move(actor, actor->info->speed))
+	if (--actor->movecount < 0 || (!P_Move(actor, actor->info->speed) && !P_MobjWasRemoved(actor)))
 		P_NewChaseDir(actor);
 }
 
@@ -1266,7 +1267,8 @@ void A_FaceStabRev(mobj_t *actor)
 		else
 		{
 			P_TryMove(actor, actor->x - P_ReturnThrustX(actor, actor->angle, 2<<FRACBITS), actor->y - P_ReturnThrustY(actor, actor->angle, 2<<FRACBITS), false);
-			P_FaceStabFlume(actor);
+			if (!P_MobjWasRemoved(actor))
+				P_FaceStabFlume(actor);
 		}
 	}
 }
@@ -1332,8 +1334,9 @@ void A_FaceStabHurl(mobj_t *actor)
 
 				while (step > 0)
 				{
-					if (!hwork->hnext)
+					if (P_MobjWasRemoved(hwork->hnext))
 						P_SetTarget(&hwork->hnext, P_SpawnMobjFromMobj(actor, 0, 0, 0, MT_FACESTABBERSPEAR));
+
 					if (!P_MobjWasRemoved(hwork->hnext))
 					{
 						hwork = hwork->hnext;
@@ -1342,6 +1345,20 @@ void A_FaceStabHurl(mobj_t *actor)
 						P_SetScale(hwork, hwork->destscale);
 						hwork->fuse = 2;
 						P_MoveOrigin(hwork, actor->x + xo*(15-step), actor->y + yo*(15-step), actor->z + (actor->height - hwork->height)/2 + (P_MobjFlip(actor)*(8<<FRACBITS)));
+						if (P_MobjWasRemoved(hwork))
+						{
+							// if one of the sections are removed, erase the entire damn thing.
+							mobj_t *hnext = actor->hnext;
+							hwork = actor;
+							do
+							{
+								hnext = hwork->hnext;
+								P_RemoveMobj(hwork);
+								hwork = hnext;
+							}
+							while (!P_MobjWasRemoved(hwork));
+							return;
+						}
 					}
 					step -= NUMGRADS;
 				}
@@ -1358,11 +1375,14 @@ void A_FaceStabHurl(mobj_t *actor)
 #undef NUMGRADS
 #undef NUMSTEPS
 			}
+			if (P_MobjWasRemoved(actor))
+				return;
 		}
 	}
 
 	P_SetMobjState(actor, locvar2);
-	actor->reactiontime = actor->info->reactiontime;
+	if (!P_MobjWasRemoved(actor))
+		actor->reactiontime = actor->info->reactiontime;
 }
 
 // Function: A_FaceStabMiss
@@ -1392,6 +1412,8 @@ void A_FaceStabMiss(mobj_t *actor)
 		actor->y + P_ReturnThrustY(actor, actor->angle, actor->extravalue2<<FRACBITS),
 		false))
 	{
+		if (P_MobjWasRemoved(actor))
+			return;
 		actor->extravalue2 = 0;
 		P_SetMobjState(actor, locvar2);
 	}
@@ -1424,6 +1446,8 @@ void A_StatueBurst(mobj_t *actor)
 	P_SetTarget(&new->target, actor->target);
 	if (locvar2)
 		P_SetMobjState(new, (statenum_t)locvar2);
+	if (P_MobjWasRemoved(new))
+		return;
 	S_StartSound(new, new->info->attacksound);
 	S_StopSound(actor);
 	S_StartSound(actor, sfx_s3k96);
@@ -1519,7 +1543,7 @@ void A_JetJawChomp(mobj_t *actor)
 	}
 
 	// chase towards player
-	if (--actor->movecount < 0 || !P_Move(actor, actor->info->speed))
+	if (--actor->movecount < 0 || (!P_Move(actor, actor->info->speed) && !P_MobjWasRemoved(actor)))
 		P_NewChaseDir(actor);
 }
 
@@ -1940,14 +1964,15 @@ void A_SharpChase(mobj_t *actor)
 		}
 
 		// chase towards player
-		if (--actor->movecount < 0 || !P_Move(actor, actor->info->speed))
+		if (--actor->movecount < 0 || (!P_Move(actor, actor->info->speed) && !P_MobjWasRemoved(actor)))
 			P_NewChaseDir(actor);
 	}
 	else
 	{
 		actor->threshold = actor->info->painchance;
 		P_SetMobjState(actor, actor->info->missilestate);
-		S_StartSound(actor, actor->info->attacksound);
+		if (!P_MobjWasRemoved(actor))
+			S_StartSound(actor, actor->info->attacksound);
 	}
 }
 
@@ -2033,6 +2058,8 @@ void A_CrushstaceanWalk(mobj_t *actor)
 		false)
 	|| (actor->reactiontime-- <= 0))
 	{
+		if (P_MobjWasRemoved(actor))
+			return;
 		actor->flags2 ^= MF2_AMBUSH;
 		P_SetTarget(&actor->target, NULL);
 		P_SetMobjState(actor, locvar2);
@@ -2214,6 +2241,8 @@ void A_CrushclawLaunch(mobj_t *actor)
 		true)
 		&& !locvar1)
 	{
+		if (P_MobjWasRemoved(actor))
+			return;
 		actor->extravalue1 = 0;
 		actor->extravalue2 = FixedHypot(actor->x - actor->target->x, actor->y - actor->target->y)>>FRACBITS;
 		P_SetMobjState(actor, locvar2);
@@ -2222,6 +2251,8 @@ void A_CrushclawLaunch(mobj_t *actor)
 	}
 	else
 	{
+		if (P_MobjWasRemoved(actor))
+			return;
 		actor->z = actor->target->z;
 		if ((!locvar1 && (actor->extravalue2 > 256)) || (locvar1 && (actor->extravalue2 < 16)))
 		{
@@ -2647,7 +2678,7 @@ nomissile:
 		return; // got a new target
 
 	// chase towards player
-	if (--actor->movecount < 0 || !P_Move(actor, actor->info->speed))
+	if (--actor->movecount < 0 || (!P_Move(actor, actor->info->speed) && !P_MobjWasRemoved(actor)))
 		P_NewChaseDir(actor);
 }
 
@@ -5787,7 +5818,11 @@ void A_MinusDigging(mobj_t *actor)
 	if (P_AproxDistance(actor->x - actor->target->x, actor->y - actor->target->y) < actor->radius*2)
 	{
 		P_SetMobjState(actor, actor->info->meleestate);
+		if (P_MobjWasRemoved(actor))
+			return;
 		P_TryMove(actor, actor->target->x, actor->target->y, false);
+		if (P_MobjWasRemoved(actor))
+			return;
 		S_StartSound(actor, actor->info->attacksound);
 
 		// Spawn growing dirt pile.
@@ -5795,6 +5830,8 @@ void A_MinusDigging(mobj_t *actor)
 		if (P_MobjWasRemoved(par))
 			return;
 		P_SetMobjState(par, actor->info->raisestate);
+		if (P_MobjWasRemoved(par))
+			return;
 		P_SetScale(par, actor->scale*2);
 		if (actor->eflags & MFE_VERTICALFLIP)
 			par->eflags |= MFE_VERTICALFLIP;
@@ -5808,6 +5845,8 @@ void A_MinusDigging(mobj_t *actor)
 	// Move
 	var1 = 3;
 	A_Chase(actor);
+	if (P_MobjWasRemoved(actor))
+		return;
 
 	// Carry over shit, maybe
 	if (P_MobjWasRemoved(actor->tracer) || !actor->tracer->health)
@@ -5831,7 +5870,7 @@ void A_MinusDigging(mobj_t *actor)
 	{
 		if (P_TryMove(actor->tracer, actor->x, actor->y, false))
 			actor->tracer->z = mz;
-		else
+		else if (!P_MobjWasRemoved(actor))
 			P_SetTarget(&actor->tracer, NULL);
 	}
 }
@@ -7304,7 +7343,7 @@ nomissile:
 	// chase towards player
 	if (P_AproxDistance(actor->target->x-actor->x, actor->target->y-actor->y) > actor->radius+actor->target->radius)
 	{
-		if (--actor->movecount < 0 || !P_Move(actor, actor->info->speed))
+		if (--actor->movecount < 0 || (!P_Move(actor, actor->info->speed) && !P_MobjWasRemoved(actor)))
 			P_NewChaseDir(actor);
 	}
 	// too close, don't want to chase.
@@ -7661,7 +7700,7 @@ void A_Boss7Chase(mobj_t *actor)
 	if (leveltime & 1)
 	{
 		// chase towards player
-		if (--actor->movecount < 0 || !P_Move(actor, actor->info->speed))
+		if (--actor->movecount < 0 || (!P_Move(actor, actor->info->speed) && !P_MobjWasRemoved(actor)))
 			P_NewChaseDir(actor);
 	}
 }
@@ -8119,6 +8158,8 @@ void A_GuardChase(mobj_t *actor)
 			false)
 		&& speed > 0) // can't be the same check as previous so that P_TryMove gets to happen.
 		{
+			if (P_MobjWasRemoved(actor))
+				return;
 			INT32 direction = actor->spawnpoint ? actor->spawnpoint->args[0] : TMGD_BACK;
 
 			switch (direction)
@@ -8135,6 +8176,8 @@ void A_GuardChase(mobj_t *actor)
 					break;
 			}
 		}
+		if (P_MobjWasRemoved(actor))
+			return;
 
 		if (actor->extravalue1 < actor->info->speed)
 			actor->extravalue1++;
@@ -8171,7 +8214,11 @@ void A_GuardChase(mobj_t *actor)
 		// chase towards player
 		if (--actor->movecount < 0 || !P_Move(actor, (actor->flags2 & MF2_AMBUSH) ? actor->info->speed * 2 : actor->info->speed))
 		{
+			if (P_MobjWasRemoved(actor))
+				return;
 			P_NewChaseDir(actor);
+			if (P_MobjWasRemoved(actor))
+				return;
 			actor->movecount += 5; // Increase tics before change in direction allowed.
 		}
 	}
@@ -8639,6 +8686,9 @@ void A_LinedefExecuteFromArg(mobj_t *actor)
 void A_PlaySeeSound(mobj_t *actor)
 {
 	if (LUA_CallAction(A_PLAYSEESOUND, actor))
+		return;
+
+	if (P_MobjWasRemoved(actor))
 		return;
 
 	if (actor->info->seesound)
@@ -11735,7 +11785,13 @@ void A_BrakChase(mobj_t *actor)
 
 	// chase towards player
 	if (--actor->movecount < 0 || !P_Move(actor, actor->info->speed))
+	{
+		if (P_MobjWasRemoved(actor))
+			return;
 		P_NewChaseDir(actor);
+		if (P_MobjWasRemoved(actor))
+			return;
+	}
 
 	// Optionally play a sound effect
 	if (locvar2 > 0 && locvar2 < NUMSFX)
@@ -13314,6 +13370,8 @@ void A_DoNPCSkid(mobj_t *actor)
 	if ((FixedHypot(actor->momx, actor->momy) < locvar2)
 	|| !P_TryMove(actor, actor->x + actor->momx, actor->y + actor->momy, false))
 	{
+		if (P_MobjWasRemoved(actor))
+			return;
 		actor->momx = actor->momy = 0;
 		P_SetMobjState(actor, locvar1);
 		return;
@@ -13856,6 +13914,8 @@ static boolean PIT_DustDevilLaunch(mobj_t *thing)
 				y = dustdevil->y;
 			}
 			P_TryMove(thing, x - thing->momx, y - thing->momy, true);
+			if (P_MobjWasRemoved(thing))
+				return false;
 		}
 		else
 		{ //Player on the top of the tornado.
@@ -14260,6 +14320,8 @@ static void P_SnapperLegPlace(mobj_t *mo)
 
 	seg->z = mo->z + ((mo->eflags & MFE_VERTICALFLIP) ? (((mo->height<<1)/3) - seg->height) : mo->height/3);
 	P_TryMove(seg, mo->x + FixedMul(c, rad) + necklen*c, mo->y + FixedMul(s, rad) + necklen*s, true);
+	if (P_MobjWasRemoved(seg))
+		return;
 	seg->angle = a;
 
 	// Move as many legs as available.
@@ -14281,6 +14343,8 @@ static void P_SnapperLegPlace(mobj_t *mo)
 			y = s*o2 - c*o1;
 			seg->z = mo->z + (((mo->eflags & MFE_VERTICALFLIP) ? (mo->height - seg->height) : 0));
 			P_TryMove(seg, mo->x + x, mo->y + y, true);
+			if (P_MobjWasRemoved(seg))
+				return;
 			P_SetMobjState(seg, seg->info->raisestate);
 		}
 		else
@@ -14424,6 +14488,8 @@ void A_SnapperThinker(mobj_t *actor)
 		s = FINESINE(fa);
 
 		P_TryMove(actor, actor->x + c*speed, actor->y + s*speed, false);
+		if (P_MobjWasRemoved(actor))
+			return;
 
 		// The snapper spawns dust if going fast!
 		if (actor->reactiontime < 4)

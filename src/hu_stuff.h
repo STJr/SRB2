@@ -71,8 +71,8 @@ typedef struct
 #else
 #define OLDCHAT (cv_consolechat.value == 1 || dedicated || vid.width < 640 || splitscreen)
 #endif
-#define CHAT_MUTE (cv_mute.value && !(server || IsPlayerAdmin(consoleplayer)))	// this still allows to open the chat but not to type. That's used for scrolling and whatnot.
-#define OLD_MUTE (OLDCHAT && cv_mute.value && !(server || IsPlayerAdmin(consoleplayer)))	// this is used to prevent oldchat from opening when muted.
+#define CHAT_MUTE ((cv_mute.value || players[consoleplayer].muted) && !(server || IsPlayerAdmin(consoleplayer)))	// this still allows to open the chat but not to type. That's used for scrolling and whatnot.
+#define OLD_MUTE (OLDCHAT && (cv_mute.value || players[consoleplayer].muted) && !(server || IsPlayerAdmin(consoleplayer)))	// this is used to prevent oldchat from opening when muted.
 
 // some functions
 void HU_AddChatText(const char *text, boolean playsound);
@@ -110,7 +110,6 @@ boolean HU_Responder(event_t *ev);
 void HU_Ticker(void);
 void HU_Drawer(void);
 char HU_dequeueChatChar(void);
-void HU_Erase(void);
 void HU_clearChatChars(void);
 void HU_drawPing(INT32 x, INT32 y, UINT32 ping, boolean notext, INT32 flags);	// Lat': Ping drawer for scoreboard.
 void HU_DrawTabRankings(INT32 x, INT32 y, playersort_t *tab, INT32 scorelines, INT32 whiteplayer);

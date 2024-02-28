@@ -648,13 +648,13 @@ playersprite_t spr2defaults[NUMPLAYERSPRITES] = {
 
 	0, // SPR2_TRNS,
 
-	FF_SPR2SUPER|SPR2_STND, // SPR2_NSTD,
-	FF_SPR2SUPER|SPR2_FALL, // SPR2_NFLT,
+	SPR2_STND, // SPR2_NSTD,
+	SPR2_FALL, // SPR2_NFLT,
 	0, // SPR2_NFLY, (will never be referenced unless skin 0 lacks this)
 	SPR2_NFLY, // SPR2_NDRL,
-	FF_SPR2SUPER|SPR2_STUN, // SPR2_NSTN,
+	SPR2_STUN, // SPR2_NSTN,
 	SPR2_NSTN, // SPR2_NPUL,
-	FF_SPR2SUPER|SPR2_ROLL, // SPR2_NATK,
+	SPR2_ROLL, // SPR2_NATK,
 
 	0, // SPR2_TAL0, (this will look mighty stupid but oh well)
 	SPR2_TAL0, // SPR2_TAL1,

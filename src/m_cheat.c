@@ -1433,14 +1433,22 @@ void OP_ObjectplaceMovement(player_t *player)
 //
 // Objectplace related commands.
 //
-/*void Command_Writethings_f(void)
+void Command_Writethings_f(void)
 {
 	REQUIRE_INLEVEL;
 	REQUIRE_SINGLEPLAYER;
 	REQUIRE_OBJECTPLACE;
 
-	P_WriteThings();
-}*/
+	if (COM_Argc() > 1)
+	{
+		P_WriteThings(COM_Argv(1));
+	}
+	else
+	{
+		CONS_Printf(M_GetText("writethings <filename>: write out map things to a file, .txt or .lmp automatically appended.\n"));
+		return;
+	}
+}
 
 void Command_ObjectPlace_f(void)
 {

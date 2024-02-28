@@ -1384,11 +1384,14 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			i = 0;
 			for (; special->type == MT_HOOP; special = special->hnext)
 			{
-				special->fuse = 11;
-				special->movedir = i;
-				special->extravalue1 = special->target->extravalue1;
-				special->extravalue2 = special->target->extravalue2;
-				special->target->threshold = 4242;
+				if (!P_MobjWasRemoved(special->target))
+				{
+					special->fuse = 11;
+					special->movedir = i;
+					special->extravalue1 = special->target->extravalue1;
+					special->extravalue2 = special->target->extravalue2;
+					special->target->threshold = 4242;
+				}
 				i++;
 			}
 			// Make the collision detectors disappear.
