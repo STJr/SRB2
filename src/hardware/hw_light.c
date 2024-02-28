@@ -1055,7 +1055,7 @@ void HWR_DoCoronasLighting(FOutVector *outVerts, gl_vissprite_t *spr)
 		light[3].y = cy+size*1.33f+p_lspr->light_yoffset;
 		light[3].s = 0.0f;   light[3].t = 1.0f;
 
-		HWR_GetPic(coronalumpnum);  /// \todo use different coronas
+		// HWR_GetPic(coronalumpnum);  /// \todo use different coronas
 
 		HWD.pfnDrawPolygon (&Surf, light, 4, PF_Modulated | PF_Additive | PF_Corona | PF_NoDepthTest);
 	}
@@ -1071,7 +1071,7 @@ void HWR_DrawCoronas(void)
 	if (!cv_glcoronas.value || dynlights->nb <= 0 || coronalumpnum == LUMPERROR)
 		return;
 
-	HWR_GetPic(coronalumpnum);  /// \todo use different coronas
+	// HWR_GetPic(coronalumpnum);  /// \todo use different coronas
 	for (j = 0;j < dynlights->nb;j++)
 	{
 		FOutVector      light[4];

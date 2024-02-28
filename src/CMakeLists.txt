@@ -173,11 +173,13 @@ if("${CMAKE_SYSTEM_NAME}" MATCHES "Darwin")
 	target_compile_definitions(SRB2SDL2 PRIVATE -DMACOSX)
 endif()
 
-target_link_libraries(SRB2SDL2 PRIVATE gme)
-target_compile_definitions(SRB2SDL2 PRIVATE -DHAVE_GME)
-if(NOT "${SRB2_CONFIG_SYSTEM_LIBRARIES}")
-	# this sucks but gme doesn't use modern cmake to delineate public headers
-	target_include_directories(SRB2SDL2 PRIVATE "${libgme_SOURCE_DIR}")
+if("${SRB2_CONFIG_USE_GME}")
+	target_link_libraries(SRB2SDL2 PRIVATE gme)
+	target_compile_definitions(SRB2SDL2 PRIVATE -DHAVE_GME)
+	if(NOT "${SRB2_CONFIG_SYSTEM_LIBRARIES}")
+		# this sucks but gme doesn't use modern cmake to delineate public headers
+		target_include_directories(SRB2SDL2 PRIVATE "${libgme_SOURCE_DIR}")
+	endif()
 endif()
 
 target_link_libraries(SRB2SDL2 PRIVATE openmpt)
