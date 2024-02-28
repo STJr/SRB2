@@ -739,6 +739,7 @@ static int mobj_set(lua_State *L)
 		break;
 	}
 	case mobj_alpha:
+	{
 		INT32 alpha = (INT32)luaL_checkinteger(L, 3);
 		if (alpha < 0)
 			alpha = 0;
@@ -746,6 +747,7 @@ static int mobj_set(lua_State *L)
 			alpha = FRACUNIT;
 		mo->alpha = alpha;
 		break;
+	}
 	case mobj_bnext:
 		return NOSETPOS;
 	case mobj_bprev:
