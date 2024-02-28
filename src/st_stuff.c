@@ -2821,14 +2821,14 @@ static void ST_overlayDrawer(void)
 		|| ((splitscreen && stplyr == &players[secondarydisplayplayer]) && !camera2.chase))
 		{
 			ST_drawFirstPersonHUD();
-			if (cv_powerupdisplay.value)
+			if (cv_powerupdisplay.value && LUA_HudEnabled(hud_powerups))
 				ST_drawPowerupHUD();  // same as it ever was...
 		}
-		else if (cv_powerupdisplay.value == 2)
+		else if (cv_powerupdisplay.value == 2 && LUA_HudEnabled(hud_powerups))
 			ST_drawPowerupHUD();  // same as it ever was...
 		
 	}
-	else if (!(netgame || multiplayer) && cv_powerupdisplay.value == 2)
+	else if (!(netgame || multiplayer) && cv_powerupdisplay.value == 2 && LUA_HudEnabled(hud_powerups))
 		ST_drawPowerupHUD(); // same as it ever was...
 
 	if (!(netgame || multiplayer) || !hu_showscores)
