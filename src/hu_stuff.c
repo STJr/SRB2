@@ -465,9 +465,12 @@ static void DoSayCommand(SINT8 target, size_t usedargs, UINT8 flags)
 	numwords = COM_Argc() - usedargs;
 	I_Assert(numwords > 0);
 
-	if (CHAT_MUTE) // TODO: Per Player mute.
+	if (CHAT_MUTE)
 	{
-		HU_AddChatText(va("%s>ERROR: The chat is muted. You can't say anything.", "\x85"), false);
+		if (cv_mute.value)
+			HU_AddChatText(va("%s>ERROR: The chat is muted. You can't say anything.", "\x85"), false);
+		else
+			HU_AddChatText(va("%s>ERROR: You have been muted. You can't say anything.", "\x85"), false);
 		return;
 	}
 
@@ -644,9 +647,9 @@ static void Got_Saycmd(UINT8 **p, INT32 playernum)
 	msg = (char *)*p;
 	SKIPSTRINGL(*p, HU_MAXMSGLEN + 1);
 
-	if ((cv_mute.value || flags & (HU_CSAY|HU_SERVER_SAY)) && playernum != serverplayer && !(IsPlayerAdmin(playernum)))
+	if ((cv_mute.value || players[playernum].muted || flags & (HU_CSAY|HU_SERVER_SAY)) && playernum != serverplayer && !(IsPlayerAdmin(playernum)))
 	{
-		CONS_Alert(CONS_WARNING, cv_mute.value ?
+		CONS_Alert(CONS_WARNING, (cv_mute.value || players[playernum].muted) ?
 			M_GetText("Illegal say command received from %s while muted\n") : M_GetText("Illegal csay command received from non-admin %s\n"),
 			player_names[playernum]);
 		if (server)
@@ -962,7 +965,10 @@ static void HU_sendChatMessage(void)
 	// last minute mute check
 	if (CHAT_MUTE)
 	{
-		HU_AddChatText(va("%s>ERROR: The chat is muted. You can't say anything.", "\x85"), false);
+		if (cv_mute.value)
+			HU_AddChatText(va("%s>ERROR: The chat is muted. You can't say anything.", "\x85"), false);
+		else
+			HU_AddChatText(va("%s>ERROR: You have been muted. You can't say anything.", "\x85"), false);
 		return;
 	}
 
@@ -1567,7 +1573,6 @@ static void HU_DrawChat(void)
 	INT32 cflag = 0;
 	const char *ntalk = "Say: ", *ttalk = "Team: ";
 	const char *talk = ntalk;
-	const char *mute = "Chat has been muted.";
 
 #ifdef NETSPLITSCREEN
 	if (splitscreen)
@@ -1594,7 +1599,10 @@ static void HU_DrawChat(void)
 
 	if (CHAT_MUTE)
 	{
-		talk = mute;
+		if (cv_mute.value)
+			talk = "Chat has been muted.";
+		else
+			talk = "You have been muted.";
 		typelines = 1;
 		cflag = V_GRAYMAP; // set text in gray if chat is muted.
 	}

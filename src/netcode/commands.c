@@ -41,6 +41,8 @@ typedef struct banreason_s
 static banreason_t *reasontail = NULL; //last entry, use prev
 static banreason_t *reasonhead = NULL; //1st entry, use next
 
+static boolean bans_loaded = false;
+
 void Ban_Add(const char *reason)
 {
 	banreason_t *reasonlist = malloc(sizeof(*reasonlist));
@@ -85,6 +87,8 @@ void Ban_Load_File(boolean warning)
 	if (!I_ClearBans)
 		return;
 
+	bans_loaded = true;
+
 	f = fopen(va("%s"PATHSEP"%s", srb2home, "ban.txt"), "r");
 
 	if (!f)
@@ -123,6 +127,12 @@ void D_SaveBan(void)
 	banreason_t *reasonlist = reasonhead;
 	const char *address, *mask;
 	const char *path = va("%s"PATHSEP"%s", srb2home, "ban.txt");
+
+	if (!bans_loaded)
+	{
+		// don't save bans if they were never loaded.
+		return;
+	}
 
 	if (!reasonhead)
 	{

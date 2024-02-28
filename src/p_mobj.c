@@ -402,9 +402,9 @@ static boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 				UINT16 stateframe = st->frame;
 
 				// Add/Remove FF_SPR2SUPER based on certain conditions
-				if (player->charflags & SF_NOSUPERSPRITES)
+				if (player->charflags & SF_NOSUPERSPRITES || (player->powers[pw_carry] == CR_NIGHTSMODE && (player->charflags & SF_NONIGHTSSUPER)))
 					stateframe = stateframe & ~FF_SPR2SUPER;
-				else if (player->powers[pw_super])
+				else if (player->powers[pw_super] || (player->powers[pw_carry] == CR_NIGHTSMODE && (player->charflags & SF_SUPER)))
 					stateframe = stateframe | FF_SPR2SUPER;
 
 				if (stateframe & FF_SPR2SUPER)
