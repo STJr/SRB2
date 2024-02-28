@@ -12,11 +12,18 @@
 #include "m_tokenizer.h"
 #include "z_zone.h"
 
-tokenizer_t *Tokenizer_Open(const char *inputString, unsigned numTokens)
+tokenizer_t *Tokenizer_Open(const char *inputString, size_t len, unsigned numTokens)
 {
 	tokenizer_t *tokenizer = Z_Malloc(sizeof(tokenizer_t), PU_STATIC, NULL);
+	const size_t lenpan = 2;
 
-	tokenizer->input = inputString;
+	tokenizer->zdup = malloc(len+lenpan);
+	for (size_t i = 0; i < lenpan; i++)
+	{
+		tokenizer->zdup[len+i] = 0x00;
+	}
+
+	tokenizer->input = M_Memcpy(tokenizer->zdup, inputString, len);
 	tokenizer->startPos = 0;
 	tokenizer->endPos = 0;
 	tokenizer->inputLength = 0;
@@ -51,6 +58,7 @@ void Tokenizer_Close(tokenizer_t *tokenizer)
 		Z_Free(tokenizer->token[i]);
 	Z_Free(tokenizer->capacity);
 	Z_Free(tokenizer->token);
+	free(tokenizer->zdup);
 	Z_Free(tokenizer);
 }
 
