@@ -1714,7 +1714,7 @@ const char *I_GetJoyName(INT32 joyindex)
 	{
 		tempname = SDL_JoystickNameForIndex(joyindex);
 		if (tempname)
-			strncpy(joyname, tempname, 255);
+			strncpy(joyname, tempname, sizeof(joyname)-1);
 	}
 	return joyname;
 }
