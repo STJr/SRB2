@@ -19,11 +19,13 @@ enum hud {
 	hud_stagetitle = 0,
 	hud_textspectator,
 	hud_crosshair,
+	hud_powerups,
 	// Singleplayer / Co-op
 	hud_score,
 	hud_time,
 	hud_rings,
 	hud_lives,
+	hud_input,
 	// Match / CTF / Tag / Ringslinger
 	hud_weaponrings,
 	hud_powerstones,
