@@ -3428,10 +3428,8 @@ boolean R_ThingVisible (mobj_t *thing)
 		(thing->sprite == SPR_NULL) || // Don't draw null-sprites
 		(thing->flags2 & MF2_DONTDRAW) || // Don't draw MF2_LINKDRAW objects
 		(thing->drawonlyforplayer && thing->drawonlyforplayer != viewplayer) || // Don't draw other players' personal objects
-		//(thing->alpha == 0) || // Don't draw objects with an alpha of 0
 		((rendermode == render_soft && R_GetTransmapFromAlpha(thing->alpha, (thing->frame & FF_TRANSMASK)>>FF_TRANSSHIFT) >= 10) ||
-		(rendermode == render_opengl && thing->alpha == 0)) || // TODO: Maybe rethink this
-		//(rendermode == render_soft && R_GetTransmapFromAlpha(thing->alpha, (thing->frame & FF_TRANSMASK)>>FF_TRANSSHIFT) >= 10) ||
+		(rendermode == render_opengl && thing->alpha == 0)) ||
 		(!P_MobjWasRemoved(r_viewmobj) && (
 		  (r_viewmobj == thing) || // Don't draw first-person players or awayviewmobj objects
 		  (r_viewmobj->player && r_viewmobj->player->followmobj == thing) || // Don't draw first-person players' followmobj

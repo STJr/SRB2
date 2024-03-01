@@ -10493,6 +10493,7 @@ void P_MobjThinker(mobj_t *mobj)
 		case MT_GRENADEPICKUP:
 			if (mobj->health == 0) // Fading tile
 			{
+				// TODO: Maybe use mobj->alpha instead of messing with frame flags
 				INT32 value = mobj->info->damage/10;
 				value = mobj->fuse/value;
 				value = 10-value;
@@ -10503,9 +10504,6 @@ void P_MobjThinker(mobj_t *mobj)
 
 				mobj->frame &= ~FF_TRANSMASK;
 				mobj->frame |= value << FF_TRANSSHIFT;
-				
-				// TODO: Consider replacing the above with the commented-out line of code below
-				//mobj->alpha = FixedDiv(mobj->fuse, mobj->info->damage);
 			}
 			break;
 		default:
