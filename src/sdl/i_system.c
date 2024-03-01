@@ -2857,7 +2857,7 @@ size_t I_GetRandomBytes(char *destination, size_t count)
 {
 #if defined (__unix__) || defined (UNIXCOMMON) || defined(__APPLE__)
 	FILE *rndsource;
-	size_t actual_bytes;
+	size_t actual_bytes = 0;
 
 	if (!(rndsource = fopen("/dev/urandom", "r")))
 		if (!(rndsource = fopen("/dev/random", "r")))
