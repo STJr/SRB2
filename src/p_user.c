@@ -4978,7 +4978,7 @@ void P_DoJumpShield(player_t *player)
 	}
 	else
 	{
-		player->pflags &= ~(PF_JUMPED|PF_NOJUMPDAMAGE);
+		player->pflags |= PF_NOJUMPDAMAGE;
 		P_SetMobjState(player->mo, S_PLAY_FALL);
 		S_StartSound(player->mo, sfx_wdjump);
 	}
@@ -11106,7 +11106,8 @@ static void P_MinecartThink(player_t *player)
 	fa = (minecart->angle >> ANGLETOFINESHIFT) & FINEMASK;
 	if (!P_TryMove(minecart, minecart->x + FINECOSINE(fa), minecart->y + FINESINE(fa), true))
 	{
-		P_KillMobj(minecart, NULL, NULL, 0);
+		if (!P_MobjWasRemoved(minecart))
+			P_KillMobj(minecart, NULL, NULL, 0);
 		return;
 	}
 
@@ -12460,7 +12461,7 @@ void P_PlayerThink(player_t *player)
 			player->texttimer = 4*TICRATE;
 			player->textvar = 2; // GET n RINGS!
 
-			if (player->capsule && player->capsule->health != player->capsule->spawnpoint->angle)
+			if (!P_MobjWasRemoved(player->capsule) && player->capsule->health != player->capsule->spawnpoint->angle)
 				player->textvar++; // GET n MORE RINGS!
 		}
 	}
@@ -13199,7 +13200,7 @@ void P_ForceLocalAngle(player_t *player, angle_t angle)
 boolean P_PlayerFullbright(player_t *player)
 {
 	return (player->powers[pw_super]
-		|| ((player->powers[pw_carry] == CR_NIGHTSMODE && (((skin_t *)player->mo->skin)->flags & (SF_SUPER|SF_NONIGHTSSUPER)) == SF_SUPER) // Super colours? Super bright!
+		|| ((player->powers[pw_carry] == CR_NIGHTSMODE && (player->charflags & (SF_SUPER|SF_NONIGHTSSUPER)) == SF_SUPER) // Super colours? Super bright!
 		&& (player->exiting
 			|| !(player->mo->state >= &states[S_PLAY_NIGHTS_TRANS1]
 			&& player->mo->state < &states[S_PLAY_NIGHTS_TRANS6])))); // Note the < instead of <=
