@@ -134,7 +134,7 @@ HMS_on_read (char *s, size_t _1, size_t n, void *userdata)
 	return n;
 }
 
-static struct HMS_buffer *
+FUNCDEBUG static struct HMS_buffer *
 HMS_connect (int proto, const char *format, ...)
 {
 	va_list ap;
