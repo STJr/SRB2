@@ -1276,7 +1276,7 @@ static void R_ProjectDropShadow(mobj_t *thing, vissprite_t *vis, fixed_t scale, 
 	floordiff = abs((isflipped ? interp.height : 0) + interp.z - groundz);
 
 	trans = floordiff / (100*FRACUNIT) + 3;
-	trans = R_GetTransmapFromAlpha(thing->alpha, trans);
+	trans = R_GetTransmapFromAlpha((UINT32)thing->alpha, trans);
 	if (trans >= 9) return;
 
 	scalemul = FixedMul(FRACUNIT - floordiff/640, scale);
@@ -1963,9 +1963,9 @@ static void R_ProjectSprite(mobj_t *thing)
 		trans = 0;
 	
 	if ((oldthing->flags2 & MF2_LINKDRAW) && oldthing->tracer)
-		trans = R_GetTransmapFromAlpha(oldthing->tracer->alpha, trans);
+		trans = R_GetTransmapFromAlpha((UINT32)oldthing->tracer->alpha, trans);
 	else
-		trans = R_GetTransmapFromAlpha(oldthing->alpha, trans);
+		trans = R_GetTransmapFromAlpha((UINT32)oldthing->alpha, trans);
 
 	// Check if this sprite needs to be rendered like a shadow
 	shadowdraw = (!!(thing->renderflags & RF_SHADOWDRAW) && !(papersprite || splat));
@@ -3428,7 +3428,7 @@ boolean R_ThingVisible (mobj_t *thing)
 		(thing->sprite == SPR_NULL) || // Don't draw null-sprites
 		(thing->flags2 & MF2_DONTDRAW) || // Don't draw MF2_LINKDRAW objects
 		(thing->drawonlyforplayer && thing->drawonlyforplayer != viewplayer) || // Don't draw other players' personal objects
-		((rendermode == render_soft && R_GetTransmapFromAlpha(thing->alpha, (thing->frame & FF_TRANSMASK)>>FF_TRANSSHIFT) >= 10) ||
+		((rendermode == render_soft && R_GetTransmapFromAlpha((UINT32)thing->alpha, (thing->frame & FF_TRANSMASK)>>FF_TRANSSHIFT) >= 10) ||
 		(rendermode == render_opengl && thing->alpha == 0)) ||
 		(!P_MobjWasRemoved(r_viewmobj) && (
 		  (r_viewmobj == thing) || // Don't draw first-person players or awayviewmobj objects

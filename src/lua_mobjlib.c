@@ -357,7 +357,7 @@ static int mobj_get(lua_State *L)
 		lua_pushinteger(L, mo->blendmode);
 		break;
 	case mobj_alpha:
-		lua_pushinteger(L, mo->alpha);
+		lua_pushfixed(L, mo->alpha);
 		break;
 	case mobj_bnext:
 		if (mo->blocknode && mo->blocknode->bnext) {
@@ -740,7 +740,7 @@ static int mobj_set(lua_State *L)
 	}
 	case mobj_alpha:
 	{
-		INT32 alpha = (INT32)luaL_checkinteger(L, 3);
+		fixed_t alpha = luaL_checkfixed(L, 3);
 		if (alpha < 0)
 			alpha = 0;
 		else if (alpha > FRACUNIT)
