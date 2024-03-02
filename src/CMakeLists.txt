@@ -246,6 +246,7 @@ target_compile_options(SRB2SDL2 PRIVATE
 	# This is a direct translation from versions.mk
 	$<$<AND:$<COMPILE_LANGUAGE:C>,$<C_COMPILER_ID:GNU>>:
 		-Wall
+		-Wextra
 		-Wno-trigraphs
 		-W # Was controlled by RELAXWARNINGS
 		-Wfloat-equal
@@ -313,11 +314,7 @@ target_compile_options(SRB2SDL2 PRIVATE
 
 		$<$<VERSION_GREATER_EQUAL:$<C_COMPILER_VERSION>,8.1.0>:
 			-Wno-error=format-overflow
-			-Wno-error=stringop-truncation
-			-Wno-error=stringop-overflow
 			-Wno-format-overflow
-			-Wno-stringop-truncation
-			-Wno-stringop-overflow
 			-Wno-error=multistatement-macros
 		>
 
@@ -330,7 +327,9 @@ target_compile_options(SRB2SDL2 PRIVATE
 	$<$<AND:$<COMPILE_LANGUAGE:C>,$<OR:$<C_COMPILER_ID:AppleClang>,$<C_COMPILER_ID:Clang>>>:
 		-Wall
 		-Wno-absolute-value
+		-Wextra
 		-Wno-trigraphs
+		-Wconditional-uninitialized
 		-Wno-error=non-literal-null-conversion
 		-Wno-error=constant-conversion
 		-Wno-error=unused-but-set-variable
@@ -347,6 +346,9 @@ target_compile_options(SRB2SDL2 PRIVATE
 	# C++, GNU, Clang and Apple Clang
 	$<$<AND:$<COMPILE_LANGUAGE:CXX>,$<OR:$<C_COMPILER_ID:GNU>,$<C_COMPILER_ID:AppleClang>,$<C_COMPILER_ID:Clang>>>:
 		-Wall
+		-Wextra
+		-Wno-trigraphs
+		-Wconditional-uninitialized
 	>
 
 	# C++, MSVC
