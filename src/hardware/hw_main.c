@@ -3000,7 +3000,7 @@ static void HWR_SplitSprite(gl_vissprite_t *spr)
 	// co-ordinates
 	memcpy(wallVerts, baseWallVerts, sizeof(baseWallVerts));
 	
-	UINT32 newalpha = spr->mobj->alpha;
+	fixed_t newalpha = spr->mobj->alpha;
 
 	// if sprite has linkdraw, then dont write to z-buffer (by not using PF_Occlude)
 	// this will result in sprites drawn afterwards to be drawn on top like intended when using linkdraw.
@@ -3495,7 +3495,7 @@ static void HWR_DrawSprite(gl_vissprite_t *spr)
 		FBITFIELD blend = 0;
 		FBITFIELD occlusion;
 		boolean use_linkdraw_hack = false;
-		UINT32 newalpha = spr->mobj->alpha;
+		fixed_t newalpha = spr->mobj->alpha;
 
 		// if sprite has linkdraw, then dont write to z-buffer (by not using PF_Occlude)
 		// this will result in sprites drawn afterwards to be drawn on top like intended when using linkdraw.
