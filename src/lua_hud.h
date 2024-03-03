@@ -19,6 +19,7 @@ enum hud {
 	hud_stagetitle = 0,
 	hud_textspectator,
 	hud_crosshair,
+	hud_powerups,
 	// Singleplayer / Co-op
 	hud_score,
 	hud_time,
