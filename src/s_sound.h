@@ -238,7 +238,7 @@ UINT32 S_GetMusicPosition(void);
 
 typedef struct musicstack_s
 {
-	char musname[7];
+	char musname[7+1];
 	UINT16 musflags;
 	boolean looping;
 	UINT32 position;

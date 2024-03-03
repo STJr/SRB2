@@ -41,12 +41,6 @@ typedef LPVOID (WINAPI *p_MapViewOfFile) (HANDLE, DWORD, DWORD, DWORD, SIZE_T);
 #include <ntsecapi.h>
 #undef SystemFunction036
 
-// A little more than the minimum sleep duration on Windows.
-// May be incorrect for other platforms, but we don't currently have a way to
-// query the scheduler granularity. SDL will do what's needed to make this as
-// low as possible though.
-#define MIN_SLEEP_DURATION_MS 2.1
-
 #endif
 #include <stdio.h>
 #include <stdlib.h>
@@ -108,8 +102,11 @@ typedef LPVOID (WINAPI *p_MapViewOfFile) (HANDLE, DWORD, DWORD, DWORD, SIZE_T);
 #endif
 #endif
 
-#if defined (__unix__) || (defined (UNIXCOMMON) && !defined (__APPLE__))
+#if defined(UNIXCOMMON)
 #include <poll.h>
+#endif
+
+#if defined (__unix__) || (defined (UNIXCOMMON) && !defined (__APPLE__))
 #include <errno.h>
 #include <sys/wait.h>
 #define NEWSIGNALHANDLER
@@ -221,6 +218,12 @@ static char returnWadPath[256];
 #include "../netcode/d_clisrv.h"
 #include "../byteptr.h"
 #endif
+
+// A little more than the minimum sleep duration on Windows.
+// May be incorrect for other platforms, but we don't currently have a way to
+// query the scheduler granularity. SDL will do what's needed to make this as
+// low as possible though.
+#define MIN_SLEEP_DURATION_MS 2.1
 
 /**	\brief	The JoyReset function
 
@@ -1711,7 +1714,7 @@ const char *I_GetJoyName(INT32 joyindex)
 	{
 		tempname = SDL_JoystickNameForIndex(joyindex);
 		if (tempname)
-			strncpy(joyname, tempname, 255);
+			strncpy(joyname, tempname, sizeof(joyname)-1);
 	}
 	return joyname;
 }
@@ -2854,7 +2857,7 @@ size_t I_GetRandomBytes(char *destination, size_t count)
 {
 #if defined (__unix__) || defined (UNIXCOMMON) || defined(__APPLE__)
 	FILE *rndsource;
-	size_t actual_bytes;
+	size_t actual_bytes = 0;
 
 	if (!(rndsource = fopen("/dev/urandom", "r")))
 		if (!(rndsource = fopen("/dev/random", "r")))
