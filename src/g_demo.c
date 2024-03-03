@@ -1654,7 +1654,7 @@ static void G_LoadDemoExtraFiles(UINT8 **pp, UINT16 this_demo_version)
 	UINT16 totalfiles;
 	char filename[MAX_WADPATH];
 	UINT8 md5sum[16];
-	filestatus_t ncs;
+	filestatus_t ncs = FS_NOTFOUND;
 	boolean toomany = false;
 	boolean alreadyloaded;
 	UINT16 i, j;

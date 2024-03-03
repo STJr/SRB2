@@ -5412,7 +5412,7 @@ void G_FreeMapSearch(mapsearchfreq_t *freq, INT32 freqc)
 INT32 G_FindMapByNameOrCode(const char *mapname, char **realmapnamep)
 {
 	boolean usemapcode = false;
-	INT32 newmapnum;
+	INT32 newmapnum = -1;
 	size_t mapnamelen = strlen(mapname);
 	char *p;
 

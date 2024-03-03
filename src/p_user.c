@@ -4967,7 +4967,7 @@ void P_DoJumpShield(player_t *player)
 	}
 	else
 	{
-		player->pflags &= ~(PF_JUMPED|PF_NOJUMPDAMAGE);
+		player->pflags |= PF_NOJUMPDAMAGE;
 		P_SetMobjState(player->mo, S_PLAY_FALL);
 		S_StartSound(player->mo, sfx_wdjump);
 	}
@@ -11311,7 +11311,7 @@ void P_DoTailsOverlay(player_t *player, mobj_t *tails)
 	fixed_t backwards = -1*FRACUNIT;
 	boolean doswim = (player->panim == PA_ABILITY && (player->mo->eflags & MFE_UNDERWATER));
 	boolean doroll = (player->panim == PA_ROLL || (player->panim == PA_JUMP && !(player->charflags & SF_NOJUMPSPIN)) || doswim);
-	angle_t rollangle;
+	angle_t rollangle = 0;
 	boolean panimchange;
 	INT32 ticnum = 0;
 	statenum_t chosenstate;
@@ -12093,7 +12093,7 @@ void P_PlayerThink(player_t *player)
 	// deez New User eXperiences.
 	{
 		angle_t oldang = player->drawangle, diff = 0;
-		UINT8 factor;
+		UINT8 factor = 0;
 		// Directionchar!
 		// Camera angle stuff.
 		if (player->exiting // no control, no modification
@@ -13209,7 +13209,7 @@ void P_ForceLocalAngle(player_t *player, angle_t angle)
 boolean P_PlayerFullbright(player_t *player)
 {
 	return (player->powers[pw_super]
-		|| ((player->powers[pw_carry] == CR_NIGHTSMODE && (((skin_t *)player->mo->skin)->flags & (SF_SUPER|SF_NONIGHTSSUPER)) == SF_SUPER) // Super colours? Super bright!
+		|| ((player->powers[pw_carry] == CR_NIGHTSMODE && (player->charflags & (SF_SUPER|SF_NONIGHTSSUPER)) == SF_SUPER) // Super colours? Super bright!
 		&& (player->exiting
 			|| !(player->mo->state >= &states[S_PLAY_NIGHTS_TRANS1]
 			&& player->mo->state < &states[S_PLAY_NIGHTS_TRANS6])))); // Note the < instead of <=
