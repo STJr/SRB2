@@ -312,17 +312,12 @@ static int lib_searchBlockmap(lua_State *L)
 					continue; // our thing just found itself, so move on
 
 				funcret = lib_searchBlockmap_Objects(L, mobj, itmobj);
-				if (funcret == 2) {
-					lua_pushboolean(L, false);
-					return 1;
-				}
-				else if (funcret == 1)
-					retval = false;
-
-				if (P_MobjWasRemoved(mobj)) {
+				if (funcret == 2 || P_MobjWasRemoved(mobj)) {
 					retval = false;
 					break;
 				}
+				else if (funcret == 1)
+					retval = false;
 			}
 		}
 		while (itmobj != NULL);

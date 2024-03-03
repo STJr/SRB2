@@ -402,9 +402,9 @@ static boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 				UINT16 stateframe = st->frame;
 
 				// Add/Remove FF_SPR2SUPER based on certain conditions
-				if (player->charflags & SF_NOSUPERSPRITES)
+				if (player->charflags & SF_NOSUPERSPRITES || (player->powers[pw_carry] == CR_NIGHTSMODE && (player->charflags & SF_NONIGHTSSUPER)))
 					stateframe = stateframe & ~FF_SPR2SUPER;
-				else if (player->powers[pw_super])
+				else if (player->powers[pw_super] || (player->powers[pw_carry] == CR_NIGHTSMODE && (player->charflags & SF_SUPER)))
 					stateframe = stateframe | FF_SPR2SUPER;
 
 				if (stateframe & FF_SPR2SUPER)
@@ -2118,7 +2118,7 @@ void P_RingXYMovement(mobj_t *mo)
 	I_Assert(mo != NULL);
 	I_Assert(!P_MobjWasRemoved(mo));
 
-	if (!P_SceneryTryMove(mo, mo->x + mo->momx, mo->y + mo->momy))
+	if (!P_SceneryTryMove(mo, mo->x + mo->momx, mo->y + mo->momy) && !P_MobjWasRemoved(mo))
 		P_SlideMove(mo);
 }
 
@@ -2132,8 +2132,10 @@ void P_SceneryXYMovement(mobj_t *mo)
 	oldx = mo->x;
 	oldy = mo->y;
 
-	if (!P_SceneryTryMove(mo, mo->x + mo->momx, mo->y + mo->momy))
+	if (!P_SceneryTryMove(mo, mo->x + mo->momx, mo->y + mo->momy) && !P_MobjWasRemoved(mo))
 		P_SlideMove(mo);
+	if (P_MobjWasRemoved(mo))
+		return;
 
 	if ((!(mo->eflags & MFE_VERTICALFLIP) && mo->z > mo->floorz) || (mo->eflags & MFE_VERTICALFLIP && mo->z+mo->height < mo->ceilingz))
 		return; // no friction when airborne
@@ -2329,12 +2331,15 @@ boolean P_CheckDeathPitCollide(mobj_t *mo)
 	if (mo->player && mo->player->pflags & PF_GODMODE)
 		return false;
 
-	if (((mo->z <= mo->subsector->sector->floorheight
+	fixed_t sectorFloor = P_GetSectorFloorZAt(mo->subsector->sector, mo->x, mo->y);
+	fixed_t sectorCeiling = P_GetSectorCeilingZAt(mo->subsector->sector, mo->x, mo->y);
+
+	if (((mo->z <= sectorFloor
 		&& ((mo->subsector->sector->flags & MSF_TRIGGERSPECIAL_HEADBUMP) || !(mo->eflags & MFE_VERTICALFLIP)) && (mo->subsector->sector->flags & MSF_FLIPSPECIAL_FLOOR))
-	|| (mo->z + mo->height >= mo->subsector->sector->ceilingheight
-		&& ((mo->subsector->sector->flags & MSF_TRIGGERSPECIAL_HEADBUMP) || (mo->eflags & MFE_VERTICALFLIP)) && (mo->subsector->sector->flags & MSF_FLIPSPECIAL_CEILING)))
-	&& (mo->subsector->sector->damagetype == SD_DEATHPITTILT
-	|| mo->subsector->sector->damagetype == SD_DEATHPITNOTILT))
+		|| (mo->z + mo->height >= sectorCeiling
+			&& ((mo->subsector->sector->flags & MSF_TRIGGERSPECIAL_HEADBUMP) || (mo->eflags & MFE_VERTICALFLIP)) && (mo->subsector->sector->flags & MSF_FLIPSPECIAL_CEILING)))
+		&& (mo->subsector->sector->damagetype == SD_DEATHPITTILT
+			|| mo->subsector->sector->damagetype == SD_DEATHPITNOTILT))
 		return true;
 
 	return false;
@@ -3914,6 +3919,8 @@ static void P_PlayerMobjThinker(mobj_t *mobj)
 	}
 	else
 		P_TryMove(mobj, mobj->x, mobj->y, true);
+	if (P_MobjWasRemoved(mobj))
+		return;
 
 	P_CheckCrumblingPlatforms(mobj);
 
@@ -4708,6 +4715,8 @@ static void P_Boss4PinchSpikeballs(mobj_t *mobj, angle_t angle, fixed_t dz)
 		{
 			seg->z = bz + (dz*(9-s));
 			P_TryMove(seg, workx + (dx*s), worky + (dy*s), true);
+			if (P_MobjWasRemoved(seg))
+				return;
 		}
 		angle += ANGLE_MAX/3;
 	}
@@ -4945,6 +4954,8 @@ static void P_Boss4Thinker(mobj_t *mobj)
 				(mobj->spawnpoint->x<<FRACBITS) - P_ReturnThrustX(mobj, mobj->angle, mobj->movefactor),
 				(mobj->spawnpoint->y<<FRACBITS) - P_ReturnThrustY(mobj, mobj->angle, mobj->movefactor),
 				true);
+		if (P_MobjWasRemoved(mobj))
+			return;
 
 		P_Boss4PinchSpikeballs(mobj, FixedAngle(mobj->movecount), mobj->z - mobj->watertop - mobjinfo[MT_EGGMOBILE4_MACE].height - mobj->height/2);
 
@@ -5514,6 +5525,8 @@ static void P_Boss9Thinker(mobj_t *mobj)
 	{
 		P_InstaThrust(mobj, mobj->angle, -4*FRACUNIT);
 		P_TryMove(mobj, mobj->x+mobj->momx, mobj->y+mobj->momy, true);
+		if (P_MobjWasRemoved(mobj))
+			return;
 		mobj->momz -= gravity;
 		if (mobj->z < mobj->watertop || mobj->z < (mobj->floorz + 16*FRACUNIT))
 		{
@@ -5862,6 +5875,8 @@ static void P_Boss9Thinker(mobj_t *mobj)
 					P_InstaThrust(mobj, mobj->angle, 30*FRACUNIT);
 				if (!P_TryMove(mobj, mobj->x+mobj->momx, mobj->y+mobj->momy, true))
 				{ // Hit a wall? Find a direction to bounce
+					if (P_MobjWasRemoved(mobj))
+						return;
 					mobj->threshold--;
 					if (!mobj->threshold) { // failed bounce!
 						S_StartSound(mobj, sfx_mspogo);
@@ -5902,6 +5917,8 @@ static void P_Boss9Thinker(mobj_t *mobj)
 			P_InstaThrust(mobj, mobj->angle, -speed);
 			while (!P_TryMove(mobj, mobj->x+mobj->momx, mobj->y+mobj->momy, true) && tries++ < 16)
 			{
+				if (P_MobjWasRemoved(mobj))
+					return;
 				S_StartSound(mobj, sfx_mspogo);
 				P_BounceMove(mobj);
 				mobj->angle = R_PointToAngle2(mobj->momx, mobj->momy,0,0);
@@ -7501,6 +7518,8 @@ static void P_RosySceneryThink(mobj_t *mobj)
 			fixed_t x = mobj->x, y = mobj->y, z = mobj->z;
 			angle_t angletoplayer = R_PointToAngle2(x, y, mobj->target->x, mobj->target->y);
 			boolean allowed = P_TryMove(mobj, mobj->target->x, mobj->target->y, false);
+			if (P_MobjWasRemoved(mobj))
+				return;
 
 			P_UnsetThingPosition(mobj);
 			mobj->x = x;
@@ -8064,7 +8083,8 @@ static void P_MobjSceneryThink(mobj_t *mobj)
 		break;
 	}
 
-	P_SceneryThinker(mobj);
+	if (!P_MobjWasRemoved(mobj))
+		P_SceneryThinker(mobj);
 }
 
 static boolean P_MobjPushableThink(mobj_t *mobj)
@@ -10063,9 +10083,10 @@ static void P_MonitorFuseThink(mobj_t *mobj)
 {
 	mobj_t *newmobj;
 
-	// Special case for ALL monitors.
+	// Special case for ALL monitors outside of co-op.
 	// If a box's speed is nonzero, it's allowed to respawn as a WRM/SRM.
-	if (mobj->info->speed != 0 && (mobj->flags2 & (MF2_AMBUSH|MF2_STRONGBOX)))
+	if (!G_CoopGametype() && mobj->info->speed != 0
+		&& (mobj->flags2 & (MF2_AMBUSH|MF2_STRONGBOX)))
 	{
 		mobjtype_t spawnchance[64];
 		INT32 numchoices = 0, i = 0;
@@ -10293,6 +10314,8 @@ void P_MobjThinker(mobj_t *mobj)
 		P_SetTarget(&mobj->hnext, NULL);
 	if (mobj->hprev && P_MobjWasRemoved(mobj->hprev))
 		P_SetTarget(&mobj->hprev, NULL);
+	if (mobj->dontdrawforviewmobj && P_MobjWasRemoved(mobj->dontdrawforviewmobj))
+		P_SetTarget(&mobj->dontdrawforviewmobj, NULL);
 
 	mobj->eflags &= ~(MFE_PUSHED|MFE_SPRUNG);
 
@@ -10423,6 +10446,8 @@ void P_MobjThinker(mobj_t *mobj)
 		|| mobj->type == MT_CANNONBALLDECOR
 		|| mobj->type == MT_FALLINGROCK) {
 		P_TryMove(mobj, mobj->x, mobj->y, true); // Sets mo->standingslope correctly
+		if (P_MobjWasRemoved(mobj))
+			return;
 		//if (mobj->standingslope) CONS_Printf("slope physics on mobj\n");
 		P_ButteredSlope(mobj);
 	}
@@ -10524,6 +10549,8 @@ void P_PushableThinker(mobj_t *mobj)
 	// it has to be pushable RIGHT NOW for this part to happen
 	if (mobj->flags & MF_PUSHABLE && !(mobj->momx || mobj->momy))
 		P_TryMove(mobj, mobj->x, mobj->y, true);
+	if (P_MobjWasRemoved(mobj))
+		return;
 
 	if (mobj->type == MT_MINECART && mobj->health)
 	{
@@ -10855,18 +10882,28 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type, ...)
 
 	// Set shadowscale here, before spawn hook so that Lua can change it
 	mobj->shadowscale = P_DefaultMobjShadowScale(mobj);
-
-	if (!(mobj->flags & MF_NOTHINK))
-		P_AddThinker(THINK_MOBJ, &mobj->thinker);
-
+	
+	// A monitor can't respawn if we're not in multiplayer,
+	// or if we're in co-op and it's score or a 1up
+	if (mobj->flags & MF_MONITOR && (!(netgame || multiplayer)
+	|| (G_CoopGametype()
+		&& (mobj->type == MT_1UP_BOX
+		|| mobj->type == MT_SCORE1K_BOX
+		|| mobj->type == MT_SCORE10K_BOX)
+	)))
+		mobj->flags2 |= MF2_DONTRESPAWN;
 
 	if (type == MT_PLAYER)
 	{
 		// when spawning MT_PLAYER, set mobj->player before calling MobjSpawn hook to prevent P_RemoveMobj from succeeding on player mobj.
 		va_start(args, type);
 		mobj->player = va_arg(args, player_t *);
+		mobj->player->mo = mobj;
 		va_end(args);
 	}
+
+	if (!(mobj->flags & MF_NOTHINK) || (titlemapinaction && mobj->type == MT_ALTVIEWMAN))
+		P_AddThinker(THINK_MOBJ, &mobj->thinker);
 
 	// increment mobj reference, so we don't get a dangling reference in case MobjSpawn calls P_RemoveMobj
 	mobj->thinker.references++;
@@ -11783,7 +11820,6 @@ void P_SpawnPlayer(INT32 playernum)
     // MT_PLAYER cannot be removed, so this shouldn't be able to return NULL.
 	mobj = P_SpawnMobj(0, 0, 0, MT_PLAYER, p);
 	I_Assert(mobj != NULL);
-	p->mo = mobj;
 
 	mobj->angle = 0;
 
@@ -11889,7 +11925,7 @@ void P_AfterPlayerSpawn(INT32 playernum)
 	if (CheckForReverseGravity)
 		P_CheckGravity(mobj, false);
 
-	if (p->pflags & PF_FINISHED)
+	if (p->pflags & PF_FINISHED && !(p->exiting))
 		P_GiveFinishFlags(p);
 }
 
@@ -14017,7 +14053,8 @@ boolean P_CheckMissileSpawn(mobj_t *th)
 
 	if (!P_TryMove(th, th->x, th->y, true))
 	{
-		P_ExplodeMissile(th);
+		if (!P_MobjWasRemoved(th))
+			P_ExplodeMissile(th);
 		return false;
 	}
 	return true;

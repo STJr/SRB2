@@ -379,7 +379,7 @@ static void md2_loadTexture(md2_t *model)
 			Z_Free(grPatch->mipmap->data);
 	}
 	else
-		model->grpatch = patch = Patch_Create(NULL, 0, NULL);
+		model->grpatch = patch = Patch_Create(0, 0);
 
 	if (!patch->hardware)
 		Patch_AllocateHardwarePatch(patch);
@@ -390,8 +390,6 @@ static void md2_loadTexture(md2_t *model)
 	if (!grPatch->mipmap->downloaded && !grPatch->mipmap->data)
 	{
 		int w = 0, h = 0;
-		UINT32 size;
-		RGBA_t *image;
 
 #ifdef HAVE_PNG
 		grPatch->mipmap->format = PNG_Load(filename, &w, &h, grPatch);
@@ -412,13 +410,19 @@ static void md2_loadTexture(md2_t *model)
 		grPatch->mipmap->width = (UINT16)w;
 		grPatch->mipmap->height = (UINT16)h;
 
-		// Lactozilla: Apply colour cube
-		image = grPatch->mipmap->data;
-		size = w*h;
-		while (size--)
+		// for palette rendering, color cube is applied in post-processing instead of here
+		if (!HWR_ShouldUsePaletteRendering())
 		{
-			V_CubeApply(&image->s.red, &image->s.green, &image->s.blue);
-			image++;
+			UINT32 size;
+			RGBA_t *image;
+			// Lactozilla: Apply colour cube
+			image = grPatch->mipmap->data;
+			size = w*h;
+			while (size--)
+			{
+				V_CubeApply(&image->s.red, &image->s.green, &image->s.blue);
+				image++;
+			}
 		}
 	}
 	HWD.pfnSetTexture(grPatch->mipmap);
@@ -444,7 +448,7 @@ static void md2_loadBlendTexture(md2_t *model)
 			Z_Free(grPatch->mipmap->data);
 	}
 	else
-		model->blendgrpatch = patch = Patch_Create(NULL, 0, NULL);
+		model->blendgrpatch = patch = Patch_Create(0, 0);
 
 	if (!patch->hardware)
 		Patch_AllocateHardwarePatch(patch);
@@ -1550,7 +1554,8 @@ boolean HWR_DrawModel(gl_vissprite_t *spr)
 		p.flip = atransform.flip;
 		p.mirror = atransform.mirror;
 
-		HWD.pfnSetShader(SHADER_MODEL);	// model shader
+		if (HWR_UseShader())
+			HWD.pfnSetShader(HWR_GetShaderFromTarget(SHADER_MODEL));
 		{
 			float this_scale = FIXED_TO_FLOAT(interp.scale);
 
