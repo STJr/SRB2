@@ -465,9 +465,12 @@ static void DoSayCommand(SINT8 target, size_t usedargs, UINT8 flags)
 	numwords = COM_Argc() - usedargs;
 	I_Assert(numwords > 0);
 
-	if (CHAT_MUTE) // TODO: Per Player mute.
+	if (CHAT_MUTE)
 	{
-		HU_AddChatText(va("%s>ERROR: The chat is muted. You can't say anything.", "\x85"), false);
+		if (cv_mute.value)
+			HU_AddChatText(va("%s>ERROR: The chat is muted. You can't say anything.", "\x85"), false);
+		else
+			HU_AddChatText(va("%s>ERROR: You have been muted. You can't say anything.", "\x85"), false);
 		return;
 	}
 
@@ -496,10 +499,10 @@ static void DoSayCommand(SINT8 target, size_t usedargs, UINT8 flags)
 		// what we're gonna do now is check if the player exists
 		// with that logic, characters 4 and 5 are our numbers:
 		const char *newmsg;
-		char playernum[3];
+		char playernum[3+1];
 		INT32 spc = 1; // used if playernum[1] is a space.
 
-		strncpy(playernum, msg+3, 3);
+		strncpy(playernum, msg+3, sizeof(playernum)-1);
 		// check for undesirable characters in our "number"
 		if (((playernum[0] < '0') || (playernum[0] > '9')) || ((playernum[1] < '0') || (playernum[1] > '9')))
 		{
@@ -644,9 +647,9 @@ static void Got_Saycmd(UINT8 **p, INT32 playernum)
 	msg = (char *)*p;
 	SKIPSTRINGL(*p, HU_MAXMSGLEN + 1);
 
-	if ((cv_mute.value || flags & (HU_CSAY|HU_SERVER_SAY)) && playernum != serverplayer && !(IsPlayerAdmin(playernum)))
+	if ((cv_mute.value || players[playernum].muted || flags & (HU_CSAY|HU_SERVER_SAY)) && playernum != serverplayer && !(IsPlayerAdmin(playernum)))
 	{
-		CONS_Alert(CONS_WARNING, cv_mute.value ?
+		CONS_Alert(CONS_WARNING, (cv_mute.value || players[playernum].muted) ?
 			M_GetText("Illegal say command received from %s while muted\n") : M_GetText("Illegal csay command received from non-admin %s\n"),
 			player_names[playernum]);
 		if (server)
@@ -962,14 +965,17 @@ static void HU_sendChatMessage(void)
 	// last minute mute check
 	if (CHAT_MUTE)
 	{
-		HU_AddChatText(va("%s>ERROR: The chat is muted. You can't say anything.", "\x85"), false);
+		if (cv_mute.value)
+			HU_AddChatText(va("%s>ERROR: The chat is muted. You can't say anything.", "\x85"), false);
+		else
+			HU_AddChatText(va("%s>ERROR: You have been muted. You can't say anything.", "\x85"), false);
 		return;
 	}
 
 	if (strlen(msg) > 4 && strnicmp(msg, "/pm", 3) == 0) // used /pm
 	{
 		INT32 spc = 1; // used if playernum[1] is a space.
-		char playernum[3];
+		char playernum[3+1];
 		const char *newmsg;
 
 		// what we're gonna do now is check if the player exists
@@ -982,7 +988,7 @@ static void HU_sendChatMessage(void)
 			return;
 		}
 
-		strncpy(playernum, msg+3, 3);
+		strncpy(playernum, msg+3, sizeof(playernum)-1);
 		// check for undesirable characters in our "number"
 		if (!(isdigit(playernum[0]) && isdigit(playernum[1])))
 		{
@@ -1567,7 +1573,6 @@ static void HU_DrawChat(void)
 	INT32 cflag = 0;
 	const char *ntalk = "Say: ", *ttalk = "Team: ";
 	const char *talk = ntalk;
-	const char *mute = "Chat has been muted.";
 
 #ifdef NETSPLITSCREEN
 	if (splitscreen)
@@ -1594,7 +1599,10 @@ static void HU_DrawChat(void)
 
 	if (CHAT_MUTE)
 	{
-		talk = mute;
+		if (cv_mute.value)
+			talk = "Chat has been muted.";
+		else
+			talk = "You have been muted.";
 		typelines = 1;
 		cflag = V_GRAYMAP; // set text in gray if chat is muted.
 	}
@@ -1679,13 +1687,14 @@ static void HU_DrawChat(void)
 			// filter: (code needs optimization pls help I'm bad with C)
 			if (w_chat[3])
 			{
-				char playernum[3];
+				char playernum[3+1];
 				UINT32 n;
 				// right, that's half important: (w_chat[4] may be a space since /pm0 msg is perfectly acceptable!)
 				if ( ( ((w_chat[3] != 0) && ((w_chat[3] < '0') || (w_chat[3] > '9'))) || ((w_chat[4] != 0) && (((w_chat[4] < '0') || (w_chat[4] > '9'))))) && (w_chat[4] != ' '))
 					break;
 
-				strncpy(playernum, w_chat+3, 3);
+				strncpy(playernum, w_chat+3, sizeof(playernum)-1);
+				playernum[3] = 0;
 				n = atoi(playernum); // turn that into a number
 				// special cases:
 
@@ -2042,76 +2051,6 @@ void HU_Drawer(void)
 		else if (strength > 0)
 			V_DrawFadeScreen(0, strength);
 	}
-}
-
-//======================================================================
-//                 HUD MESSAGES CLEARING FROM SCREEN
-//======================================================================
-
-// Clear old messages from the borders around the view window
-// (only for reduced view, refresh the borders when needed)
-//
-// startline: y coord to start clear,
-// clearlines: how many lines to clear.
-//
-static INT32 oldclearlines;
-
-void HU_Erase(void)
-{
-	INT32 topline, bottomline;
-	INT32 y, yoffset;
-
-#ifdef HWRENDER
-	// clear hud msgs on double buffer (OpenGL mode)
-	boolean secondframe;
-	static INT32 secondframelines;
-#endif
-
-	if (con_clearlines == oldclearlines && !con_hudupdate && !chat_on)
-		return;
-
-#ifdef HWRENDER
-	// clear the other frame in double-buffer modes
-	secondframe = (con_clearlines != oldclearlines);
-	if (secondframe)
-		secondframelines = oldclearlines;
-#endif
-
-	// clear the message lines that go away, so use _oldclearlines_
-	bottomline = oldclearlines;
-	oldclearlines = con_clearlines;
-	if (chat_on && OLDCHAT)
-		if (bottomline < 8)
-			bottomline = 8; // only do it for consolechat. consolechat is gay.
-
-	if (automapactive || viewwindowx == 0) // hud msgs don't need to be cleared
-		return;
-
-	// software mode copies view border pattern & beveled edges from the backbuffer
-	if (rendermode == render_soft)
-	{
-		topline = 0;
-		for (y = topline, yoffset = y*vid.width; y < bottomline; y++, yoffset += vid.width)
-		{
-			if (y < viewwindowy || y >= viewwindowy + viewheight)
-				R_VideoErase(yoffset, vid.width); // erase entire line
-			else
-			{
-				R_VideoErase(yoffset, viewwindowx); // erase left border
-				// erase right border
-				R_VideoErase(yoffset + viewwindowx + viewwidth, viewwindowx);
-			}
-		}
-		con_hudupdate = false; // if it was set..
-	}
-#ifdef HWRENDER
-	else if (rendermode != render_none)
-	{
-		// refresh just what is needed from the view borders
-		HWR_DrawViewBorder(secondframelines);
-		con_hudupdate = secondframe;
-	}
-#endif
 }
 
 //======================================================================
@@ -3052,7 +2991,7 @@ void HU_DoCEcho(const char *msg)
 {
 	I_OutputMsg("%s\n", msg); // print to log
 
-	strncpy(cechotext, msg, sizeof(cechotext));
+	strncpy(cechotext, msg, sizeof(cechotext)-1);
 	strncat(cechotext, "\\", sizeof(cechotext) - strlen(cechotext) - 1);
 	cechotext[sizeof(cechotext) - 1] = '\0';
 	cechotimer = cechoduration;

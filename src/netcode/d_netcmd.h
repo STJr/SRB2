@@ -147,6 +147,7 @@ typedef enum
 	XD_LUACMD,      // 22
 	XD_LUAVAR,      // 23
 	XD_LUAFILE,     // 24
+	XD_MUTEPLAYER,  // 25
 	MAXNETXCMD
 } netxcmd_t;
 

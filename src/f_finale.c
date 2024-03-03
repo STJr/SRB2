@@ -1281,6 +1281,9 @@ void F_CreditDrawer(void)
 	UINT8 colornum;
 	const UINT8 *colormap;
 
+	// compensation for y on non-green resolutions, used to prevent text from disappearing before reaching the top
+	UINT16 compy = (vid.height - (BASEVIDHEIGHT * vid.dup)) / 2;
+
 	if (players[consoleplayer].skincolor)
 		colornum = players[consoleplayer].skincolor;
 	else
@@ -1312,17 +1315,17 @@ void F_CreditDrawer(void)
 			y += 80<<FRACBITS;
 			break;
 		case 1:
-			if (y>>FRACBITS > -20)
+			if (y>>FRACBITS > -20-compy)
 				V_DrawCreditString((160 - (V_CreditStringWidth(&credits[i][1])>>1))<<FRACBITS, y, 0, &credits[i][1]);
 			y += 30<<FRACBITS;
 			break;
 		case 2:
-			if (y>>FRACBITS > -10)
+			if (y>>FRACBITS > -10-compy)
 				V_DrawStringAtFixed((BASEVIDWIDTH-V_StringWidth(&credits[i][1], V_ALLOWLOWERCASE|V_YELLOWMAP))<<FRACBITS>>1, y, V_ALLOWLOWERCASE|V_YELLOWMAP, &credits[i][1]);
 			y += 12<<FRACBITS;
 			break;
 		default:
-			if (y>>FRACBITS > -10)
+			if (y>>FRACBITS > -10-compy)
 				V_DrawStringAtFixed(32<<FRACBITS, y, V_ALLOWLOWERCASE, credits[i]);
 			y += 12<<FRACBITS;
 			break;
@@ -4384,11 +4387,10 @@ void F_GetPromptPageByNamedTag(const char *tag, INT32 *promptnum, INT32 *pagenum
 	if (!tag || !tag[0])
 		return;
 
-	strncpy(suffixedtag, tag, 33);
-	suffixedtag[32] = 0;
+	strncpy(suffixedtag, tag, sizeof(suffixedtag)-1);
 
 	if (tutorialmode)
-		suffixed = F_GetTextPromptTutorialTag(suffixedtag, 33);
+		suffixed = F_GetTextPromptTutorialTag(suffixedtag, sizeof(suffixedtag)-1);
 
 	for (*promptnum = 0 + tutorialpromptnum; *promptnum < MAX_PROMPTS; (*promptnum)++)
 	{
