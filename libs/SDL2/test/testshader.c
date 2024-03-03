@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 1997-2024 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2023 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -109,36 +109,36 @@ static ShaderData shaders[NUM_SHADERS] = {
       "}" },
 };
 
-static PFNGLATTACHOBJECTARBPROC pglAttachObjectARB;
-static PFNGLCOMPILESHADERARBPROC pglCompileShaderARB;
-static PFNGLCREATEPROGRAMOBJECTARBPROC pglCreateProgramObjectARB;
-static PFNGLCREATESHADEROBJECTARBPROC pglCreateShaderObjectARB;
-static PFNGLDELETEOBJECTARBPROC pglDeleteObjectARB;
-static PFNGLGETINFOLOGARBPROC pglGetInfoLogARB;
-static PFNGLGETOBJECTPARAMETERIVARBPROC pglGetObjectParameterivARB;
-static PFNGLGETUNIFORMLOCATIONARBPROC pglGetUniformLocationARB;
-static PFNGLLINKPROGRAMARBPROC pglLinkProgramARB;
-static PFNGLSHADERSOURCEARBPROC pglShaderSourceARB;
-static PFNGLUNIFORM1IARBPROC pglUniform1iARB;
-static PFNGLUSEPROGRAMOBJECTARBPROC pglUseProgramObjectARB;
+static PFNGLATTACHOBJECTARBPROC glAttachObjectARB;
+static PFNGLCOMPILESHADERARBPROC glCompileShaderARB;
+static PFNGLCREATEPROGRAMOBJECTARBPROC glCreateProgramObjectARB;
+static PFNGLCREATESHADEROBJECTARBPROC glCreateShaderObjectARB;
+static PFNGLDELETEOBJECTARBPROC glDeleteObjectARB;
+static PFNGLGETINFOLOGARBPROC glGetInfoLogARB;
+static PFNGLGETOBJECTPARAMETERIVARBPROC glGetObjectParameterivARB;
+static PFNGLGETUNIFORMLOCATIONARBPROC glGetUniformLocationARB;
+static PFNGLLINKPROGRAMARBPROC glLinkProgramARB;
+static PFNGLSHADERSOURCEARBPROC glShaderSourceARB;
+static PFNGLUNIFORM1IARBPROC glUniform1iARB;
+static PFNGLUSEPROGRAMOBJECTARBPROC glUseProgramObjectARB;
 
 static SDL_bool CompileShader(GLhandleARB shader, const char *source)
 {
     GLint status = 0;
 
-    pglShaderSourceARB(shader, 1, &source, NULL);
-    pglCompileShaderARB(shader);
-    pglGetObjectParameterivARB(shader, GL_OBJECT_COMPILE_STATUS_ARB, &status);
+    glShaderSourceARB(shader, 1, &source, NULL);
+    glCompileShaderARB(shader);
+    glGetObjectParameterivARB(shader, GL_OBJECT_COMPILE_STATUS_ARB, &status);
     if (status == 0) {
         GLint length = 0;
         char *info;
 
-        pglGetObjectParameterivARB(shader, GL_OBJECT_INFO_LOG_LENGTH_ARB, &length);
+        glGetObjectParameterivARB(shader, GL_OBJECT_INFO_LOG_LENGTH_ARB, &length);
         info = (char *)SDL_malloc((size_t)length + 1);
-        if (!info) {
+        if (info == NULL) {
             SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Out of memory!");
         } else {
-            pglGetInfoLogARB(shader, length, NULL, info);
+            glGetInfoLogARB(shader, length, NULL, info);
             SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Failed to compile shader:\n%s\n%s", source, info);
             SDL_free(info);
         }
@@ -152,21 +152,21 @@ static SDL_bool LinkProgram(ShaderData *data)
 {
     GLint status = 0;
 
-    pglAttachObjectARB(data->program, data->vert_shader);
-    pglAttachObjectARB(data->program, data->frag_shader);
-    pglLinkProgramARB(data->program);
+    glAttachObjectARB(data->program, data->vert_shader);
+    glAttachObjectARB(data->program, data->frag_shader);
+    glLinkProgramARB(data->program);
 
-    pglGetObjectParameterivARB(data->program, GL_OBJECT_LINK_STATUS_ARB, &status);
+    glGetObjectParameterivARB(data->program, GL_OBJECT_LINK_STATUS_ARB, &status);
     if (status == 0) {
         GLint length = 0;
         char *info;
 
-        pglGetObjectParameterivARB(data->program, GL_OBJECT_INFO_LOG_LENGTH_ARB, &length);
+        glGetObjectParameterivARB(data->program, GL_OBJECT_INFO_LOG_LENGTH_ARB, &length);
         info = (char *)SDL_malloc((size_t)length + 1);
-        if (!info) {
+        if (info == NULL) {
             SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Out of memory!");
         } else {
-            pglGetInfoLogARB(data->program, length, NULL, info);
+            glGetInfoLogARB(data->program, length, NULL, info);
             SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Failed to link program:\n%s", info);
             SDL_free(info);
         }
@@ -185,16 +185,16 @@ static SDL_bool CompileShaderProgram(ShaderData *data)
     glGetError();
 
     /* Create one program object to rule them all */
-    data->program = pglCreateProgramObjectARB();
+    data->program = glCreateProgramObjectARB();
 
     /* Create the vertex shader */
-    data->vert_shader = pglCreateShaderObjectARB(GL_VERTEX_SHADER_ARB);
+    data->vert_shader = glCreateShaderObjectARB(GL_VERTEX_SHADER_ARB);
     if (!CompileShader(data->vert_shader, data->vert_source)) {
         return SDL_FALSE;
     }
 
     /* Create the fragment shader */
-    data->frag_shader = pglCreateShaderObjectARB(GL_FRAGMENT_SHADER_ARB);
+    data->frag_shader = glCreateShaderObjectARB(GL_FRAGMENT_SHADER_ARB);
     if (!CompileShader(data->frag_shader, data->frag_source)) {
         return SDL_FALSE;
     }
@@ -205,16 +205,16 @@ static SDL_bool CompileShaderProgram(ShaderData *data)
     }
 
     /* Set up some uniform variables */
-    pglUseProgramObjectARB(data->program);
+    glUseProgramObjectARB(data->program);
     for (i = 0; i < num_tmus_bound; ++i) {
         char tex_name[5];
         (void)SDL_snprintf(tex_name, SDL_arraysize(tex_name), "tex%d", i);
-        location = pglGetUniformLocationARB(data->program, tex_name);
+        location = glGetUniformLocationARB(data->program, tex_name);
         if (location >= 0) {
-            pglUniform1iARB(location, i);
+            glUniform1iARB(location, i);
         }
     }
-    pglUseProgramObjectARB(0);
+    glUseProgramObjectARB(0);
 
     return (glGetError() == GL_NO_ERROR) ? SDL_TRUE : SDL_FALSE;
 }
@@ -222,9 +222,9 @@ static SDL_bool CompileShaderProgram(ShaderData *data)
 static void DestroyShaderProgram(ShaderData *data)
 {
     if (shaders_supported) {
-        pglDeleteObjectARB(data->vert_shader);
-        pglDeleteObjectARB(data->frag_shader);
-        pglDeleteObjectARB(data->program);
+        glDeleteObjectARB(data->vert_shader);
+        glDeleteObjectARB(data->frag_shader);
+        glDeleteObjectARB(data->program);
     }
 }
 
@@ -238,30 +238,30 @@ static SDL_bool InitShaders()
         SDL_GL_ExtensionSupported("GL_ARB_shading_language_100") &&
         SDL_GL_ExtensionSupported("GL_ARB_vertex_shader") &&
         SDL_GL_ExtensionSupported("GL_ARB_fragment_shader")) {
-        pglAttachObjectARB = (PFNGLATTACHOBJECTARBPROC)SDL_GL_GetProcAddress("glAttachObjectARB");
-        pglCompileShaderARB = (PFNGLCOMPILESHADERARBPROC)SDL_GL_GetProcAddress("glCompileShaderARB");
-        pglCreateProgramObjectARB = (PFNGLCREATEPROGRAMOBJECTARBPROC)SDL_GL_GetProcAddress("glCreateProgramObjectARB");
-        pglCreateShaderObjectARB = (PFNGLCREATESHADEROBJECTARBPROC)SDL_GL_GetProcAddress("glCreateShaderObjectARB");
-        pglDeleteObjectARB = (PFNGLDELETEOBJECTARBPROC)SDL_GL_GetProcAddress("glDeleteObjectARB");
-        pglGetInfoLogARB = (PFNGLGETINFOLOGARBPROC)SDL_GL_GetProcAddress("glGetInfoLogARB");
-        pglGetObjectParameterivARB = (PFNGLGETOBJECTPARAMETERIVARBPROC)SDL_GL_GetProcAddress("glGetObjectParameterivARB");
-        pglGetUniformLocationARB = (PFNGLGETUNIFORMLOCATIONARBPROC)SDL_GL_GetProcAddress("glGetUniformLocationARB");
-        pglLinkProgramARB = (PFNGLLINKPROGRAMARBPROC)SDL_GL_GetProcAddress("glLinkProgramARB");
-        pglShaderSourceARB = (PFNGLSHADERSOURCEARBPROC)SDL_GL_GetProcAddress("glShaderSourceARB");
-        pglUniform1iARB = (PFNGLUNIFORM1IARBPROC)SDL_GL_GetProcAddress("glUniform1iARB");
-        pglUseProgramObjectARB = (PFNGLUSEPROGRAMOBJECTARBPROC)SDL_GL_GetProcAddress("glUseProgramObjectARB");
-        if (pglAttachObjectARB &&
-            pglCompileShaderARB &&
-            pglCreateProgramObjectARB &&
-            pglCreateShaderObjectARB &&
-            pglDeleteObjectARB &&
-            pglGetInfoLogARB &&
-            pglGetObjectParameterivARB &&
-            pglGetUniformLocationARB &&
-            pglLinkProgramARB &&
-            pglShaderSourceARB &&
-            pglUniform1iARB &&
-            pglUseProgramObjectARB) {
+        glAttachObjectARB = (PFNGLATTACHOBJECTARBPROC)SDL_GL_GetProcAddress("glAttachObjectARB");
+        glCompileShaderARB = (PFNGLCOMPILESHADERARBPROC)SDL_GL_GetProcAddress("glCompileShaderARB");
+        glCreateProgramObjectARB = (PFNGLCREATEPROGRAMOBJECTARBPROC)SDL_GL_GetProcAddress("glCreateProgramObjectARB");
+        glCreateShaderObjectARB = (PFNGLCREATESHADEROBJECTARBPROC)SDL_GL_GetProcAddress("glCreateShaderObjectARB");
+        glDeleteObjectARB = (PFNGLDELETEOBJECTARBPROC)SDL_GL_GetProcAddress("glDeleteObjectARB");
+        glGetInfoLogARB = (PFNGLGETINFOLOGARBPROC)SDL_GL_GetProcAddress("glGetInfoLogARB");
+        glGetObjectParameterivARB = (PFNGLGETOBJECTPARAMETERIVARBPROC)SDL_GL_GetProcAddress("glGetObjectParameterivARB");
+        glGetUniformLocationARB = (PFNGLGETUNIFORMLOCATIONARBPROC)SDL_GL_GetProcAddress("glGetUniformLocationARB");
+        glLinkProgramARB = (PFNGLLINKPROGRAMARBPROC)SDL_GL_GetProcAddress("glLinkProgramARB");
+        glShaderSourceARB = (PFNGLSHADERSOURCEARBPROC)SDL_GL_GetProcAddress("glShaderSourceARB");
+        glUniform1iARB = (PFNGLUNIFORM1IARBPROC)SDL_GL_GetProcAddress("glUniform1iARB");
+        glUseProgramObjectARB = (PFNGLUSEPROGRAMOBJECTARBPROC)SDL_GL_GetProcAddress("glUseProgramObjectARB");
+        if (glAttachObjectARB &&
+            glCompileShaderARB &&
+            glCreateProgramObjectARB &&
+            glCreateShaderObjectARB &&
+            glDeleteObjectARB &&
+            glGetInfoLogARB &&
+            glGetObjectParameterivARB &&
+            glGetUniformLocationARB &&
+            glLinkProgramARB &&
+            glShaderSourceARB &&
+            glUniform1iARB &&
+            glUseProgramObjectARB) {
             shaders_supported = SDL_TRUE;
         }
     }
@@ -329,7 +329,7 @@ SDL_GL_LoadTexture(SDL_Surface *surface, GLfloat *texcoord)
                                  0x00FF0000, 0x0000FF00, 0x000000FF
 #endif
     );
-    if (!image) {
+    if (image == NULL) {
         return 0;
     }
 
@@ -420,7 +420,7 @@ void DrawGLScene(SDL_Window *window, GLuint texture, GLfloat *texcoord)
     glBindTexture(GL_TEXTURE_2D, texture);
     glColor3f(1.0f, 1.0f, 1.0f);
     if (shaders_supported) {
-        pglUseProgramObjectARB(shaders[current_shader].program);
+        glUseProgramObjectARB(shaders[current_shader].program);
     }
 
     glBegin(GL_QUADS); /* start drawing a polygon (4 sided) */
@@ -435,7 +435,7 @@ void DrawGLScene(SDL_Window *window, GLuint texture, GLfloat *texcoord)
     glEnd();                        /* done with the polygon */
 
     if (shaders_supported) {
-        pglUseProgramObjectARB(0);
+        glUseProgramObjectARB(0);
     }
     glDisable(GL_TEXTURE_2D);
 
@@ -462,7 +462,7 @@ int main(int argc, char **argv)
 
     /* Create a 640x480 OpenGL screen */
     window = SDL_CreateWindow("Shader Demo", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 640, 480, SDL_WINDOW_OPENGL);
-    if (!window) {
+    if (window == NULL) {
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Unable to create OpenGL window: %s\n", SDL_GetError());
         SDL_Quit();
         exit(2);
@@ -475,7 +475,7 @@ int main(int argc, char **argv)
     }
 
     surface = SDL_LoadBMP("icon.bmp");
-    if (!surface) {
+    if (surface == NULL) {
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Unable to load icon.bmp: %s\n", SDL_GetError());
         SDL_Quit();
         exit(3);

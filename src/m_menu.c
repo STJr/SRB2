@@ -1406,18 +1406,19 @@ static menuitem_t OP_OpenGLOptionsMenu[] =
 
 	{IT_HEADER, NULL, "General", NULL, 51},
 	{IT_STRING|IT_CVAR,         NULL, "Shaders",             &cv_glshaders,            63},
-	{IT_STRING|IT_CVAR,         NULL, "Lack of perspective", &cv_glshearing,           73},
-	{IT_STRING|IT_CVAR,         NULL, "Field of view",       &cv_fov,                  83},
+	{IT_STRING|IT_CVAR,         NULL, "Palette rendering",   &cv_glpaletterendering,   73},
+	{IT_STRING|IT_CVAR,         NULL, "Lack of perspective", &cv_glshearing,           83},
+	{IT_STRING|IT_CVAR,         NULL, "Field of view",       &cv_fov,                  93},
 
-	{IT_HEADER, NULL, "Miscellaneous", NULL, 102},
-	{IT_STRING|IT_CVAR,         NULL, "Bit depth",           &cv_scr_depth,           114},
-	{IT_STRING|IT_CVAR,         NULL, "Texture filter",      &cv_glfiltermode,        124},
-	{IT_STRING|IT_CVAR,         NULL, "Anisotropic",         &cv_glanisotropicmode,   134},
+	{IT_HEADER, NULL, "Miscellaneous", NULL, 112},
+	{IT_STRING|IT_CVAR,         NULL, "Bit depth",           &cv_scr_depth,           124},
+	{IT_STRING|IT_CVAR,         NULL, "Texture filter",      &cv_glfiltermode,        134},
+	{IT_STRING|IT_CVAR,         NULL, "Anisotropic",         &cv_glanisotropicmode,   144},
 #ifdef ALAM_LIGHTING
-	{IT_SUBMENU|IT_STRING,      NULL, "Lighting...",         &OP_OpenGLLightingDef,   144},
+	{IT_SUBMENU|IT_STRING,      NULL, "Lighting...",         &OP_OpenGLLightingDef,   154},
 #endif
 #if defined (_WINDOWS) && (!(defined (__unix__) || defined (UNIXCOMMON) || defined (HAVE_SDL)))
-	{IT_STRING|IT_CVAR,         NULL, "Fullscreen",          &cv_fullscreen,          154},
+	{IT_STRING|IT_CVAR,         NULL, "Fullscreen",          &cv_fullscreen,          164},
 #endif
 };
 
@@ -2691,7 +2692,7 @@ static boolean MIT_SetCurTitlePics(UINT32 menutype, INT32 level, INT32 *retval, 
 			curhidepics = menupres[menutype].hidetitlepics;
 			curttmode = menupres[menutype].ttmode;
 			curttscale = (menupres[menutype].ttscale != UINT8_MAX ? menupres[menutype].ttscale : ttscale);
-			strncpy(curttname, menupres[menutype].ttname, 9);
+			strncpy(curttname, menupres[menutype].ttname, sizeof(curttname)-1);
 			curttx = (menupres[menutype].ttx != INT16_MAX ? menupres[menutype].ttx : ttx);
 			curtty = (menupres[menutype].tty != INT16_MAX ? menupres[menutype].tty : tty);
 			curttloop = (menupres[menutype].ttloop != INT16_MAX ? menupres[menutype].ttloop : ttloop);
@@ -4098,53 +4099,6 @@ void M_DrawTextBox(INT32 x, INT32 y, INT32 width, INT32 boxlines)
 {
 	// Solid color textbox.
 	V_DrawFill(x+5, y+5, width*8+6, boxlines*8+6, 159);
-	//V_DrawFill(x+8, y+8, width*8, boxlines*8, 31);
-/*
-	patch_t *p;
-	INT32 cx, cy, n;
-	INT32 step, boff;
-
-	step = 8;
-	boff = 8;
-
-	// draw left side
-	cx = x;
-	cy = y;
-	V_DrawScaledPatch(cx, cy, 0, W_CachePatchNum(viewborderlump[BRDR_TL], PU_PATCH));
-	cy += boff;
-	p = W_CachePatchNum(viewborderlump[BRDR_L], PU_PATCH);
-	for (n = 0; n < boxlines; n++)
-	{
-		V_DrawScaledPatch(cx, cy, 0, p);
-		cy += step;
-	}
-	V_DrawScaledPatch(cx, cy, 0, W_CachePatchNum(viewborderlump[BRDR_BL], PU_PATCH));
-
-	// draw middle
-	V_DrawFlatFill(x + boff, y + boff, width*step, boxlines*step, st_borderpatchnum);
-
-	cx += boff;
-	cy = y;
-	while (width > 0)
-	{
-		V_DrawScaledPatch(cx, cy, 0, W_CachePatchNum(viewborderlump[BRDR_T], PU_PATCH));
-		V_DrawScaledPatch(cx, y + boff + boxlines*step, 0, W_CachePatchNum(viewborderlump[BRDR_B], PU_PATCH));
-		width--;
-		cx += step;
-	}
-
-	// draw right side
-	cy = y;
-	V_DrawScaledPatch(cx, cy, 0, W_CachePatchNum(viewborderlump[BRDR_TR], PU_PATCH));
-	cy += boff;
-	p = W_CachePatchNum(viewborderlump[BRDR_R], PU_PATCH);
-	for (n = 0; n < boxlines; n++)
-	{
-		V_DrawScaledPatch(cx, cy, 0, p);
-		cy += step;
-	}
-	V_DrawScaledPatch(cx, cy, 0, W_CachePatchNum(viewborderlump[BRDR_BR], PU_PATCH));
-*/
 }
 
 //
@@ -11281,7 +11235,8 @@ static void M_DrawRoomMenu(void)
 			if (dot_frame < 0)
 				dot_frame = 0;
 
-			strncpy(&text[dot_frame], "...", min(dots, 3 - dot_frame));
+			if (dot_frame != 3)
+				strncpy(&text[dot_frame], "...", min(dots, 3 - dot_frame));
 		}
 
 		frame += renderdeltatics;
@@ -13672,23 +13627,14 @@ static void M_VideoModeMenu(INT32 choice)
 
 	memset(modedescs, 0, sizeof(modedescs));
 
-#if defined (__unix__) || defined (UNIXCOMMON) || defined (HAVE_SDL)
 	VID_PrepareModeList(); // FIXME: hack
-#endif
+
 	vidm_nummodes = 0;
 	vidm_selected = 0;
 	nummodes = VID_NumModes();
 
-#ifdef _WINDOWS
-	// clean that later: skip windowed mode 0, video modes menu only shows FULL SCREEN modes
-	if (nummodes <= NUMSPECIALMODES)
-		i = 0; // unless we have nothing
-	else
-		i = NUMSPECIALMODES;
-#else
-	// DOS does not skip mode 0, because mode 0 is ALWAYS present
 	i = 0;
-#endif
+
 	for (; i < nummodes && vidm_nummodes < MAXMODEDESCS; i++)
 	{
 		desc = VID_GetModeName(i);

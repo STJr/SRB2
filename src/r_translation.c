@@ -556,7 +556,7 @@ static boolean ParseDecimal(tokenizer_t *sc, double *out)
 	return M_StringToDecimal(tkn, out);
 }
 
-static struct PaletteRemapParseResult *ThrowError(const char *format, ...)
+FUNCPRINTF static struct PaletteRemapParseResult *ThrowError(const char *format, ...)
 {
 	const size_t err_size = 512 * sizeof(char);
 
@@ -784,15 +784,15 @@ static struct PaletteRemapParseResult *PaletteRemap_ParseString(tokenizer_t *sc)
 	return NULL;
 }
 
-static struct PaletteRemapParseResult *PaletteRemap_ParseTranslation(const char *translation)
+static struct PaletteRemapParseResult *PaletteRemap_ParseTranslation(const char *translation, size_t len)
 {
-	tokenizer_t *sc = Tokenizer_Open(translation, 1);
+	tokenizer_t *sc = Tokenizer_Open(translation, len, 1);
 	struct PaletteRemapParseResult *result = PaletteRemap_ParseString(sc);
 	Tokenizer_Close(sc);
 	return result;
 }
 
-static void PrintError(const char *name, const char *format, ...)
+FUNCDEBUG static void PrintError(const char *name, const char *format, ...)
 {
 	char error[256];
 
@@ -918,7 +918,7 @@ void R_ParseTrnslate(INT32 wadNum, UINT16 lumpnum)
 	text[lumpLength] = '\0';
 	Z_Free(lumpData);
 
-	sc = Tokenizer_Open(text, 1);
+	sc = Tokenizer_Open(text, lumpLength, 1);
 	tkn = sc->get(sc, 0);
 
 	struct NewTranslation *list = NULL;
@@ -963,7 +963,7 @@ void R_ParseTrnslate(INT32 wadNum, UINT16 lumpnum)
 
 		// Parse all of the translations
 		do {
-			struct PaletteRemapParseResult *parse_result = PaletteRemap_ParseTranslation(tkn);
+			struct PaletteRemapParseResult *parse_result = PaletteRemap_ParseTranslation(tkn, strlen(tkn));
 			if (parse_result->error)
 			{
 				PrintError(name, "%s", parse_result->error);
