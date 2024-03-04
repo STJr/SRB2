@@ -1423,8 +1423,8 @@ static int power_len(lua_State *L)
 	return 1;
 }
 
-#define NOFIELD luaL_error(L, LUA_QL("ticcmd_t") " has no field named " LUA_QS, field)
-#define NOSET luaL_error(L, LUA_QL("ticcmd_t") " field " LUA_QS " should not be set directly.", ticcmd_opt[field])
+#define NOFIELD luaL_error(L, "%s %s", LUA_QL("ticcmd_t"), va("has no field named %ui", field))
+#define NOSET luaL_error(L, LUA_QL("ticcmd_t") " field %s should not be set directly.", ticcmd_opt[field])
 
 enum ticcmd_e
 {
@@ -1454,6 +1454,9 @@ static int ticcmd_get(lua_State *L)
 	enum ticcmd_e field = Lua_optoption(L, 2, -1, ticcmd_fields_ref);
 	if (!cmd)
 		return LUA_ErrInvalid(L, "player_t");
+
+	if (field == (enum ticcmd_e)-1)
+		return LUA_ErrInvalid(L, "fields");
 
 	switch (field)
 	{
@@ -1488,6 +1491,9 @@ static int ticcmd_set(lua_State *L)
 	enum ticcmd_e field = Lua_optoption(L, 2, -1, ticcmd_fields_ref);
 	if (!cmd)
 		return LUA_ErrInvalid(L, "ticcmd_t");
+
+	if (field == (enum ticcmd_e)-1)
+		return LUA_ErrInvalid(L, "fields");
 
 	if (hud_running)
 		return luaL_error(L, "Do not alter player_t in HUD rendering code!");

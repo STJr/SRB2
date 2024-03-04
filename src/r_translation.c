@@ -784,9 +784,9 @@ static struct PaletteRemapParseResult *PaletteRemap_ParseString(tokenizer_t *sc)
 	return NULL;
 }
 
-static struct PaletteRemapParseResult *PaletteRemap_ParseTranslation(const char *translation)
+static struct PaletteRemapParseResult *PaletteRemap_ParseTranslation(const char *translation, size_t len)
 {
-	tokenizer_t *sc = Tokenizer_Open(translation, 1);
+	tokenizer_t *sc = Tokenizer_Open(translation, len, 1);
 	struct PaletteRemapParseResult *result = PaletteRemap_ParseString(sc);
 	Tokenizer_Close(sc);
 	return result;
@@ -918,7 +918,7 @@ void R_ParseTrnslate(INT32 wadNum, UINT16 lumpnum)
 	text[lumpLength] = '\0';
 	Z_Free(lumpData);
 
-	sc = Tokenizer_Open(text, 1);
+	sc = Tokenizer_Open(text, lumpLength, 1);
 	tkn = sc->get(sc, 0);
 
 	struct NewTranslation *list = NULL;
@@ -963,7 +963,7 @@ void R_ParseTrnslate(INT32 wadNum, UINT16 lumpnum)
 
 		// Parse all of the translations
 		do {
-			struct PaletteRemapParseResult *parse_result = PaletteRemap_ParseTranslation(tkn);
+			struct PaletteRemapParseResult *parse_result = PaletteRemap_ParseTranslation(tkn, strlen(tkn));
 			if (parse_result->error)
 			{
 				PrintError(name, "%s", parse_result->error);
@@ -1126,17 +1126,19 @@ UINT8 *R_GetTranslationRemap(int id, skincolornum_t skincolor, INT32 skinnum)
 	if (!tr->skincolor_remaps)
 		Z_Calloc(sizeof(*tr->skincolor_remaps) * TT_CACHE_SIZE, PU_LEVEL, &tr->skincolor_remaps);
 
-	if (!tr->skincolor_remaps[skinnum])
-		tr->skincolor_remaps[skinnum] = Z_Calloc(NUM_PALETTE_ENTRIES * MAXSKINCOLORS, PU_LEVEL, NULL);
+	INT32 index = R_SkinTranslationToCacheIndex(skinnum);
 
-	colorcache_t *cache = tr->skincolor_remaps[skinnum][skincolor];
+	if (!tr->skincolor_remaps[index])
+		tr->skincolor_remaps[index] = Z_Calloc(NUM_PALETTE_ENTRIES * (MAXSKINCOLORS - 1), PU_LEVEL, NULL);
+
+	colorcache_t *cache = tr->skincolor_remaps[index][skincolor - 1];
 	if (!cache)
 	{
 		cache = Z_Calloc(sizeof(colorcache_t), PU_LEVEL, NULL);
 
 		R_ApplyTranslationRemap(tr, cache->colors, skincolor, skinnum);
 
-		tr->skincolor_remaps[skinnum][skincolor] = cache;
+		tr->skincolor_remaps[index][skincolor - 1] = cache;
 	}
 
 	return cache->colors;

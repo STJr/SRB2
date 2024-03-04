@@ -206,5 +206,10 @@ void I_GetCursorPosition(INT32 *x, INT32 *y)
 	(void)y;
 }
 
+const char *I_GetSysName(void)
+{
+	return NULL;
+}
+
 #include "../sdl/dosstr.c"
 
