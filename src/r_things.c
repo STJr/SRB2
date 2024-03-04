@@ -658,12 +658,31 @@ void R_DrawMaskedColumn(column_t *column, unsigned lengthcol)
 static UINT8 *flippedcol = NULL;
 static size_t flippedcolsize = 0;
 
+void R_DrawFlippedPost(UINT8 *source, unsigned length, void (*drawcolfunc)(void))
+{
+	if (!length)
+		return;
+
+	if (!flippedcolsize || length > flippedcolsize)
+	{
+		flippedcolsize = length;
+		flippedcol = Z_Realloc(flippedcol, length, PU_STATIC, NULL);
+	}
+
+	dc_source = flippedcol;
+
+	for (UINT8 *s = (UINT8 *)source, *d = flippedcol+length-1; d >= flippedcol; s++)
+		*d-- = *s;
+
+	drawcolfunc();
+}
+
 void R_DrawFlippedMaskedColumn(column_t *column, unsigned lengthcol)
 {
 	INT32 topscreen;
 	INT32 bottomscreen;
 	fixed_t basetexturemid = dc_texturemid;
-	UINT8 *d,*s;
+	INT32 topdelta;
 
 	for (unsigned i = 0; i < column->num_posts; i++)
 	{
@@ -671,7 +690,7 @@ void R_DrawFlippedMaskedColumn(column_t *column, unsigned lengthcol)
 		if (!post->length)
 			continue;
 
-		INT32 topdelta = lengthcol-post->length-post->topdelta;
+		topdelta = lengthcol-post->length-post->topdelta;
 		topscreen = sprtopscreen + spryscale*topdelta;
 		bottomscreen = sprbotscreen == INT32_MAX ? topscreen + spryscale*post->length
 		                                      : sprbotscreen + spryscale*post->length;
@@ -698,18 +717,9 @@ void R_DrawFlippedMaskedColumn(column_t *column, unsigned lengthcol)
 
 		if (dc_yl <= dc_yh && dc_yh > 0)
 		{
-			if (post->length > flippedcolsize)
-			{
-				flippedcolsize = post->length;
-				flippedcol = Z_Realloc(flippedcol, flippedcolsize, PU_STATIC, NULL);
-			}
-
-			for (s = column->pixels+post->data_offset+post->length, d = flippedcol; d < flippedcol+post->length; --s)
-				*d++ = *s;
-			dc_source = flippedcol;
 			dc_texturemid = basetexturemid - (topdelta<<FRACBITS);
 
-			colfunc();
+			R_DrawFlippedPost(column->pixels + post->data_offset, post->length, colfunc);
 		}
 	}
 
@@ -1527,7 +1537,7 @@ static void R_ProjectSprite(mobj_t *thing)
 	// uncapped/interpolation
 	interpmobjstate_t interp = {0};
 
-	if (!cv_renderthings.value)
+	if (!r_renderthings)
 		return;
 
 	// do interpolation
@@ -2684,7 +2694,7 @@ static void R_CreateDrawNodes(maskcount_t* mask, drawnode_t* head, boolean temps
 	// Add the 3D floors, thicksides, and masked textures...
 	for (ds = drawsegs + mask->drawsegs[1]; ds-- > drawsegs + mask->drawsegs[0];)
 	{
-		if (ds->numthicksides)
+		if (ds->numthicksides && r_renderwalls)
 		{
 			for (i = 0; i < ds->numthicksides; i++)
 			{
@@ -2703,17 +2713,19 @@ static void R_CreateDrawNodes(maskcount_t* mask, drawnode_t* head, boolean temps
 			else {
 				// Put it in!
 				entry = R_CreateDrawNode(head);
-				entry->plane = plane;
-				entry->seg = ds;
+				if (r_renderwalls)
+					entry->seg = ds;
+				if (r_renderfloors)
+					entry->plane = plane;
 			}
 			ds->curline->polyseg->visplane = NULL;
 		}
-		if (ds->maskedtexturecol)
+		if (ds->maskedtexturecol && r_renderwalls)
 		{
 			entry = R_CreateDrawNode(head);
 			entry->seg = ds;
 		}
-		if (ds->numffloorplanes)
+		if (ds->numffloorplanes && r_renderfloors)
 		{
 			for (i = 0; i < ds->numffloorplanes; i++)
 			{
@@ -3180,9 +3192,6 @@ static void R_ClipVisSprite(vissprite_t *spr, INT32 x1, INT32 x2, portal_t* port
 				(lowscale < spr->sortscale &&
 				 !R_PointOnSegSide (spr->gx, spr->gy, ds->curline)))
 			{
-				// masked mid texture?
-				/*if (ds->maskedtexturecol)
-					R_RenderMaskedSegRange (ds, r1, r2);*/
 				// seg is behind sprite
 				continue;
 			}

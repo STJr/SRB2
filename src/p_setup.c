@@ -3328,8 +3328,6 @@ static void P_InitializeSeg(seg_t *seg)
 	seg->lightmaps = NULL; // list of static lightmap for this seg
 #endif
 
-	seg->numlights = 0;
-	seg->rlights = NULL;
 	seg->polyseg = NULL;
 	seg->dontrenderme = false;
 }

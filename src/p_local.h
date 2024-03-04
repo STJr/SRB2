@@ -283,7 +283,6 @@ void P_PlayJingleMusic(player_t *player, const char *musname, UINT16 musflags, b
 extern mapthing_t *itemrespawnque[ITEMQUESIZE];
 extern tic_t itemrespawntime[ITEMQUESIZE];
 extern size_t iquehead, iquetail;
-extern consvar_t cv_gravity, cv_movebob;
 
 mobjtype_t P_GetMobjtype(UINT16 mthingtype);
 
