@@ -180,7 +180,7 @@ FUNCPRINTF void GL_DBG_Printf(const char *format, ...)
 // GL_MSG_Warning   : Raises a warning.
 // -----------------+
 
-static void GL_MSG_Warning(const char *format, ...)
+FUNCPRINTF static void GL_MSG_Warning(const char *format, ...)
 {
 	char str[4096] = "";
 	va_list arglist;
@@ -203,7 +203,7 @@ static void GL_MSG_Warning(const char *format, ...)
 // GL_MSG_Error     : Raises an error.
 // -----------------+
 
-static void GL_MSG_Error(const char *format, ...)
+FUNCPRINTF static void GL_MSG_Error(const char *format, ...)
 {
 	char str[4096] = "";
 	va_list arglist;
