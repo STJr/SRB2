@@ -59,7 +59,7 @@ static void HWR_ProjectSprite(mobj_t *thing);
 static void HWR_ProjectPrecipitationSprite(precipmobj_t *thing);
 static void HWR_ProjectBoundingBox(mobj_t *thing);
 
-void HWR_AddTransparentFloor(levelflat_t *levelflat, extrasubsector_t *xsub, boolean isceiling, fixed_t fixedheight, INT32 lightlevel, INT32 alpha, sector_t *FOFSector, FBITFIELD blend, boolean fogplane, extracolormap_t *planecolormap);
+void HWR_AddTransparentFloor(levelflat_t *levelflat, extrasubsector_t *xsub, boolean isceiling, fixed_t fixedheight, INT32 lightlevel, INT32 alpha, sector_t *FOFSector, FBITFIELD blend, boolean fogplane, boolean chromakeyed, extracolormap_t *planecolormap);
 void HWR_AddTransparentPolyobjectFloor(levelflat_t *levelflat, polyobj_t *polysector, boolean isceiling, fixed_t fixedheight,
                              INT32 lightlevel, INT32 alpha, sector_t *FOFSector, FBITFIELD blend, extracolormap_t *planecolormap);
 
@@ -339,6 +339,9 @@ static void HWR_RenderPlane(subsector_t *subsector, extrasubsector_t *xsub, bool
 	static FOutVector *planeVerts = NULL;
 	static UINT16 numAllocedPlaneVerts = 0;
 
+	if (!r_renderfloors)
+		return;
+
 	// no convex poly were generated for this subsector
 	if (!xsub->planepoly)
 		return;
@@ -482,9 +485,6 @@ static void HWR_RenderPlane(subsector_t *subsector, extrasubsector_t *xsub, bool
 
 		PolyFlags |= PF_ColorMapped;
 	}
-
-	if (!cv_renderfloors.value)
-		return;
 
 	HWR_ProcessPolygon(&Surf, planeVerts, nrPlaneVerts, PolyFlags, shader, false);
 
@@ -668,7 +668,7 @@ static void HWR_ProjectWall(FOutVector *wallVerts, FSurfaceInfo *pSurf, FBITFIEL
 {
 	INT32 shader = SHADER_NONE;
 
-	if (!cv_renderwalls.value)
+	if (!r_renderwalls)
 		return;
 
 	HWR_Lighting(pSurf, lightlevel, wallcolormap);
@@ -709,7 +709,7 @@ static void HWR_SplitWall(sector_t *sector, FOutVector *wallVerts, INT32 texnum,
 	FUINT lightnum = HWR_CalcWallLight(sector->lightlevel, v1x, v1y, v2x, v2y);
 	extracolormap_t *colormap = NULL;
 
-	if (!cv_renderwalls.value)
+	if (!r_renderwalls)
 		return;
 
 	realtop = top = wallVerts[3].y;
@@ -914,6 +914,191 @@ static boolean HWR_BlendMidtextureSurface(FSurfaceInfo *pSurf)
 	return true;
 }
 
+static void HWR_RenderMidtexture(INT32 gl_midtexture, float cliplow, float cliphigh, fixed_t worldtop, fixed_t worldbottom, fixed_t worldhigh, fixed_t worldlow, fixed_t worldtopslope, fixed_t worldbottomslope, fixed_t worldhighslope, fixed_t worldlowslope, UINT32 lightnum, FOutVector *inWallVerts)
+{
+	FOutVector wallVerts[4];
+
+	FSurfaceInfo Surf;
+	Surf.PolyColor.s.alpha = 255;
+
+	// Determine if it's visible
+	if (!HWR_BlendMidtextureSurface(&Surf))
+		return;
+
+	fixed_t texheight = FixedDiv(textureheight[gl_midtexture], abs(gl_sidedef->scaley_mid));
+	INT32 repeats;
+
+	if (gl_sidedef->repeatcnt)
+		repeats = 1 + gl_sidedef->repeatcnt;
+	else if (gl_linedef->flags & ML_WRAPMIDTEX)
+	{
+		fixed_t high, low;
+
+		if (gl_frontsector->ceilingheight > gl_backsector->ceilingheight)
+			high = gl_backsector->ceilingheight;
+		else
+			high = gl_frontsector->ceilingheight;
+
+		if (gl_frontsector->floorheight > gl_backsector->floorheight)
+			low = gl_frontsector->floorheight;
+		else
+			low = gl_backsector->floorheight;
+
+		repeats = (high - low) / texheight;
+		if ((high - low) % texheight)
+			repeats++; // tile an extra time to fill the gap -- Monster Iestyn
+	}
+	else
+		repeats = 1;
+
+	GLMapTexture_t *grTex = HWR_GetTexture(gl_midtexture);
+	float xscale = FixedToFloat(gl_sidedef->scalex_mid);
+	float yscale = FixedToFloat(gl_sidedef->scaley_mid);
+
+	// SoM: a little note: popentop and popenbottom
+	// record the limits the texture can be displayed in.
+	// polytop and polybottom, are the ideal (i.e. unclipped)
+	// heights of the polygon, and h & l, are the final (clipped)
+	// poly coords.
+	fixed_t popentop, popenbottom, polytop, polybottom, lowcut, highcut;
+	fixed_t popentopslope, popenbottomslope, polytopslope, polybottomslope, lowcutslope, highcutslope;
+
+	// NOTE: With polyobjects, whenever you need to check the properties of the polyobject sector it belongs to,
+	// you must use the linedef's backsector to be correct
+	// From CB
+	if (gl_curline->polyseg)
+	{
+		// Change this when polyobjects support slopes
+		popentop = popentopslope = gl_curline->backsector->ceilingheight;
+		popenbottom = popenbottomslope = gl_curline->backsector->floorheight;
+	}
+	else
+	{
+		popentop = min(worldtop, worldhigh);
+		popenbottom = max(worldbottom, worldlow);
+		popentopslope = min(worldtopslope, worldhighslope);
+		popenbottomslope = max(worldbottomslope, worldlowslope);
+	}
+
+	// Find the wall's coordinates
+	fixed_t midtexheight = texheight * repeats;
+
+	fixed_t rowoffset = FixedDiv(gl_sidedef->rowoffset + gl_sidedef->offsety_mid, abs(gl_sidedef->scaley_mid));
+
+	// Texture is not skewed
+	if (gl_linedef->flags & ML_NOSKEW)
+	{
+		// Peg it to the floor
+		if (gl_linedef->flags & ML_MIDPEG)
+		{
+			polybottom = max(gl_frontsector->floorheight, gl_backsector->floorheight) + rowoffset;
+			polytop = polybottom + midtexheight;
+		}
+		// Peg it to the ceiling
+		else
+		{
+			polytop = min(gl_frontsector->ceilingheight, gl_backsector->ceilingheight) + rowoffset;
+			polybottom = polytop - midtexheight;
+		}
+
+		// The right side's coordinates are the the same as the left side
+		polytopslope = polytop;
+		polybottomslope = polybottom;
+	}
+	// Skew the texture, but peg it to the floor
+	else if (gl_linedef->flags & ML_MIDPEG)
+	{
+		polybottom = popenbottom + rowoffset;
+		polytop = polybottom + midtexheight;
+		polybottomslope = popenbottomslope + rowoffset;
+		polytopslope = polybottomslope + midtexheight;
+	}
+	// Skew it according to the ceiling's slope
+	else
+	{
+		polytop = popentop + rowoffset;
+		polybottom = polytop - midtexheight;
+		polytopslope = popentopslope + rowoffset;
+		polybottomslope = polytopslope - midtexheight;
+	}
+
+	// The cut-off values of a linedef can always be constant, since every line has an absoulute front and or back sector
+	if (gl_curline->polyseg)
+	{
+		lowcut = polybottom;
+		highcut = polytop;
+		lowcutslope = polybottomslope;
+		highcutslope = polytopslope;
+	}
+	else
+	{
+		lowcut = popenbottom;
+		highcut = popentop;
+		lowcutslope = popenbottomslope;
+		highcutslope = popentopslope;
+	}
+
+	fixed_t h = min(highcut, polytop);
+	fixed_t l = max(polybottom, lowcut);
+	fixed_t hS = min(highcutslope, polytopslope);
+	fixed_t lS = max(polybottomslope, lowcutslope);
+
+	// PEGGING
+	fixed_t texturevpeg, texturevpegslope;
+
+	if (gl_linedef->flags & ML_MIDPEG)
+	{
+		texturevpeg = midtexheight - h + polybottom;
+		texturevpegslope = midtexheight - hS + polybottomslope;
+	}
+	else
+	{
+		texturevpeg = polytop - h;
+		texturevpegslope = polytopslope - hS;
+	}
+
+	memcpy(wallVerts, inWallVerts, sizeof(wallVerts));
+
+	// Left side
+	wallVerts[3].t = texturevpeg * yscale * grTex->scaleY;
+	wallVerts[0].t = (h - l + texturevpeg) * yscale * grTex->scaleY;
+	wallVerts[0].s = wallVerts[3].s = ((cliplow * xscale) + gl_sidedef->textureoffset + gl_sidedef->offsetx_mid) * grTex->scaleX;
+
+	// Right side
+	wallVerts[2].t = texturevpegslope * yscale * grTex->scaleY;
+	wallVerts[1].t = (hS - lS + texturevpegslope) * yscale * grTex->scaleY;
+	wallVerts[2].s = wallVerts[1].s = ((cliphigh * xscale) + gl_sidedef->textureoffset + gl_sidedef->offsetx_mid) * grTex->scaleX;
+
+	// set top/bottom coords
+	// Take the texture peg into account, rather than changing the offsets past
+	// where the polygon might not be.
+	wallVerts[3].y = FIXED_TO_FLOAT(h);
+	wallVerts[0].y = FIXED_TO_FLOAT(l);
+	wallVerts[2].y = FIXED_TO_FLOAT(hS);
+	wallVerts[1].y = FIXED_TO_FLOAT(lS);
+
+	// TODO: Actually use the surface's flags so that I don't have to do this
+	FUINT blendmode = Surf.PolyFlags;
+
+	// Render midtextures on two-sided lines with a z-buffer offset.
+	// This will cause the midtexture appear on top, if a FOF overlaps with it.
+	blendmode |= PF_Decal;
+
+	extracolormap_t *colormap = gl_frontsector->extra_colormap;
+
+	if (gl_frontsector->numlights)
+	{
+		if (!(blendmode & PF_Masked))
+			HWR_SplitWall(gl_frontsector, wallVerts, gl_midtexture, &Surf, FOF_TRANSLUCENT, NULL, blendmode);
+		else
+			HWR_SplitWall(gl_frontsector, wallVerts, gl_midtexture, &Surf, FOF_CUTLEVEL, NULL, blendmode);
+	}
+	else if (!(blendmode & PF_Masked))
+		HWR_AddTransparentWall(wallVerts, &Surf, gl_midtexture, blendmode, false, lightnum, colormap);
+	else
+		HWR_ProjectWall(wallVerts, &Surf, blendmode, lightnum, colormap);
+}
+
 // Sort of like GLWall::Process in GZDoom
 static void HWR_ProcessSeg(void)
 {
@@ -979,9 +1164,8 @@ static void HWR_ProcessSeg(void)
 	wallVerts[2].z = wallVerts[1].z = ve.y;
 
 	// x offset the texture
-	fixed_t texturehpeg = gl_sidedef->textureoffset + gl_curline->offset;
-	float cliplow = (float)texturehpeg;
-	float cliphigh = (float)(texturehpeg + (gl_curline->flength*FRACUNIT));
+	float cliplow = (float)gl_curline->offset;
+	float cliphigh = cliplow + (gl_curline->flength * FRACUNIT);
 
 	FUINT lightnum = gl_frontsector->lightlevel;
 	extracolormap_t *colormap = gl_frontsector->extra_colormap;
@@ -997,6 +1181,7 @@ static void HWR_ProcessSeg(void)
 	if (gl_backsector)
 	{
 		INT32 gl_toptexture = 0, gl_bottomtexture = 0;
+
 		fixed_t texturevpeg;
 
 		SLOPEPARAMS(gl_backsector->c_slope, worldhigh, worldhighslope, gl_backsector->ceilingheight)
@@ -1026,30 +1211,46 @@ static void HWR_ProcessSeg(void)
 		if ((worldhighslope < worldtopslope || worldhigh < worldtop) && gl_toptexture)
 		{
 			grTex = HWR_GetTexture(gl_toptexture);
-			xscale = FixedToFloat(gl_sidedef->scalex_top);
-			yscale = FixedToFloat(gl_sidedef->scaley_top);
+			xscale = FixedToFloat(abs(gl_sidedef->scalex_top));
+			yscale = FixedToFloat(abs(gl_sidedef->scaley_top));
 
-			fixed_t texheight = FixedDiv(textureheight[gl_toptexture], gl_sidedef->scaley_top);
+			fixed_t offsetx_top = gl_sidedef->textureoffset + gl_sidedef->offsetx_top;
+
+			float left = cliplow * xscale;
+			float right = cliphigh * xscale;
+			if (gl_sidedef->scalex_top < 0)
+			{
+				left = -left;
+				right = -right;
+				offsetx_top = -offsetx_top;
+			}
+
+			fixed_t texheight = textureheight[gl_toptexture];
+			fixed_t texheightscaled = FixedDiv(texheight, abs(gl_sidedef->scaley_top));
 
 			// PEGGING
+			// FIXME: This is probably not correct?
 			if (gl_linedef->flags & ML_DONTPEGTOP)
 				texturevpeg = 0;
 			else if (gl_linedef->flags & ML_SKEWTD)
 				texturevpeg = worldhigh + texheight - worldtop;
 			else
-				texturevpeg = gl_backsector->ceilingheight + texheight - gl_frontsector->ceilingheight;
+				texturevpeg = gl_backsector->ceilingheight + texheightscaled - gl_frontsector->ceilingheight;
 
 			texturevpeg *= yscale;
 
-			texturevpeg += gl_sidedef->rowoffset + gl_sidedef->offsety_top;
+			if (gl_sidedef->scaley_top < 0)
+				texturevpeg -= gl_sidedef->rowoffset + gl_sidedef->offsety_top;
+			else
+				texturevpeg += gl_sidedef->rowoffset + gl_sidedef->offsety_top;
 
 			// This is so that it doesn't overflow and screw up the wall, it doesn't need to go higher than the texture's height anyway
-			texturevpeg %= texheight;
+			texturevpeg %= texheightscaled;
 
 			wallVerts[3].t = wallVerts[2].t = texturevpeg * grTex->scaleY;
 			wallVerts[0].t = wallVerts[1].t = (texturevpeg + (gl_frontsector->ceilingheight - gl_backsector->ceilingheight) * yscale) * grTex->scaleY;
-			wallVerts[0].s = wallVerts[3].s = ((cliplow * xscale) + gl_sidedef->offsetx_top) * grTex->scaleX;
-			wallVerts[2].s = wallVerts[1].s = ((cliphigh * xscale) + gl_sidedef->offsetx_top) * grTex->scaleX;
+			wallVerts[0].s = wallVerts[3].s = (left + offsetx_top) * grTex->scaleX;
+			wallVerts[2].s = wallVerts[1].s = (right + offsetx_top) * grTex->scaleX;
 
 			// Adjust t value for sloped walls
 			if (!(gl_linedef->flags & ML_SKEWTD))
@@ -1074,6 +1275,14 @@ static void HWR_ProcessSeg(void)
 				wallVerts[2].t = wallVerts[1].t - (worldtopslope - worldhighslope) * yscale * grTex->scaleY;
 			}
 
+			if (gl_sidedef->scaley_top < 0)
+			{
+				wallVerts[0].t = -wallVerts[0].t;
+				wallVerts[1].t = -wallVerts[1].t;
+				wallVerts[2].t = -wallVerts[2].t;
+				wallVerts[3].t = -wallVerts[3].t;
+			}
+
 			// set top/bottom coords
 			wallVerts[3].y = FIXED_TO_FLOAT(worldtop);
 			wallVerts[0].y = FIXED_TO_FLOAT(worldhigh);
@@ -1092,8 +1301,19 @@ static void HWR_ProcessSeg(void)
 		if ((worldlowslope > worldbottomslope || worldlow > worldbottom) && gl_bottomtexture)
 		{
 			grTex = HWR_GetTexture(gl_bottomtexture);
-			xscale = FixedToFloat(gl_sidedef->scalex_bottom);
-			yscale = FixedToFloat(gl_sidedef->scaley_bottom);
+			xscale = FixedToFloat(abs(gl_sidedef->scalex_bottom));
+			yscale = FixedToFloat(abs(gl_sidedef->scaley_bottom));
+
+			fixed_t offsetx_bottom = gl_sidedef->textureoffset + gl_sidedef->offsetx_bottom;
+
+			float left = cliplow * xscale;
+			float right = cliphigh * xscale;
+			if (gl_sidedef->scalex_bottom < 0)
+			{
+				left = -left;
+				right = -right;
+				offsetx_bottom = -offsetx_bottom;
+			}
 
 			// PEGGING
 			if (!(gl_linedef->flags & ML_DONTPEGBOTTOM))
@@ -1105,15 +1325,18 @@ static void HWR_ProcessSeg(void)
 
 			texturevpeg *= yscale;
 
-			texturevpeg += gl_sidedef->rowoffset + gl_sidedef->offsety_bottom;
+			if (gl_sidedef->scaley_bottom < 0)
+				texturevpeg -= gl_sidedef->rowoffset + gl_sidedef->offsety_bottom;
+			else
+				texturevpeg += gl_sidedef->rowoffset + gl_sidedef->offsety_bottom;
 
 			// This is so that it doesn't overflow and screw up the wall, it doesn't need to go higher than the texture's height anyway
-			texturevpeg %= FixedDiv(textureheight[gl_bottomtexture], gl_sidedef->scaley_bottom);
+			texturevpeg %= FixedDiv(textureheight[gl_bottomtexture], abs(gl_sidedef->scaley_bottom));
 
 			wallVerts[3].t = wallVerts[2].t = texturevpeg * grTex->scaleY;
 			wallVerts[0].t = wallVerts[1].t = (texturevpeg + (gl_backsector->floorheight - gl_frontsector->floorheight) * yscale) * grTex->scaleY;
-			wallVerts[0].s = wallVerts[3].s = ((cliplow * xscale) + gl_sidedef->offsetx_bottom) * grTex->scaleX;
-			wallVerts[2].s = wallVerts[1].s = ((cliphigh * xscale) + gl_sidedef->offsetx_bottom) * grTex->scaleX;
+			wallVerts[0].s = wallVerts[3].s = (left + offsetx_bottom) * grTex->scaleX;
+			wallVerts[2].s = wallVerts[1].s = (right + offsetx_bottom) * grTex->scaleX;
 
 			// Adjust t value for sloped walls
 			if (!(gl_linedef->flags & ML_SKEWTD))
@@ -1137,6 +1360,14 @@ static void HWR_ProcessSeg(void)
 				wallVerts[1].t = (texturevpeg + (worldlowslope - worldbottomslope) * yscale) * grTex->scaleY;
 			}
 
+			if (gl_sidedef->scaley_bottom < 0)
+			{
+				wallVerts[0].t = -wallVerts[0].t;
+				wallVerts[1].t = -wallVerts[1].t;
+				wallVerts[2].t = -wallVerts[2].t;
+				wallVerts[3].t = -wallVerts[3].t;
+			}
+
 			// set top/bottom coords
 			wallVerts[3].y = FIXED_TO_FLOAT(worldlow);
 			wallVerts[0].y = FIXED_TO_FLOAT(worldbottom);
@@ -1151,196 +1382,14 @@ static void HWR_ProcessSeg(void)
 				HWR_ProjectWall(wallVerts, &Surf, PF_Masked, lightnum, colormap);
 		}
 
-		// Render midtexture if there's one. Determine if it's visible first, though
-		if (gl_midtexture && HWR_BlendMidtextureSurface(&Surf))
-		{
-			sector_t *front, *back;
-			fixed_t texheight = FixedDiv(textureheight[gl_midtexture], gl_sidedef->scaley_mid);
-			INT32 repeats;
+		// Render midtexture if there's one
+		if (gl_midtexture)
+			HWR_RenderMidtexture(gl_midtexture, cliplow, cliphigh, worldtop, worldbottom, worldhigh, worldlow, worldtopslope, worldbottomslope, worldhighslope, worldlowslope, lightnum, wallVerts);
 
-			if (gl_linedef->frontsector->heightsec != -1)
-				front = &sectors[gl_linedef->frontsector->heightsec];
-			else
-				front = gl_linedef->frontsector;
-
-			if (gl_linedef->backsector->heightsec != -1)
-				back = &sectors[gl_linedef->backsector->heightsec];
-			else
-				back = gl_linedef->backsector;
-
-			if (gl_sidedef->repeatcnt)
-				repeats = 1 + gl_sidedef->repeatcnt;
-			else if (gl_linedef->flags & ML_WRAPMIDTEX)
-			{
-				fixed_t high, low;
-
-				if (front->ceilingheight > back->ceilingheight)
-					high = back->ceilingheight;
-				else
-					high = front->ceilingheight;
-
-				if (front->floorheight > back->floorheight)
-					low = front->floorheight;
-				else
-					low = back->floorheight;
-
-				repeats = (high - low) / texheight;
-				if ((high - low) % texheight)
-					repeats++; // tile an extra time to fill the gap -- Monster Iestyn
-			}
-			else
-				repeats = 1;
-
-			grTex = HWR_GetTexture(gl_midtexture);
-			xscale = FixedToFloat(gl_sidedef->scalex_mid);
-			yscale = FixedToFloat(gl_sidedef->scaley_mid);
-
-			// SoM: a little note: popentop and popenbottom
-			// record the limits the texture can be displayed in.
-			// polytop and polybottom, are the ideal (i.e. unclipped)
-			// heights of the polygon, and h & l, are the final (clipped)
-			// poly coords.
-			fixed_t popentop, popenbottom, polytop, polybottom, lowcut, highcut;
-			fixed_t popentopslope, popenbottomslope, polytopslope, polybottomslope, lowcutslope, highcutslope;
-
-			// NOTE: With polyobjects, whenever you need to check the properties of the polyobject sector it belongs to,
-			// you must use the linedef's backsector to be correct
-			// From CB
-			if (gl_curline->polyseg)
-			{
-				popentop = popentopslope = back->ceilingheight;
-				popenbottom = popenbottomslope = back->floorheight;
-			}
-			else
-			{
-				popentop = min(worldtop, worldhigh);
-				popenbottom = max(worldbottom, worldlow);
-				popentopslope = min(worldtopslope, worldhighslope);
-				popenbottomslope = max(worldbottomslope, worldlowslope);
-			}
-
-			// Find the wall's coordinates
-			fixed_t midtexheight = texheight * repeats;
-
-			fixed_t rowoffset = FixedDiv(gl_sidedef->rowoffset + gl_sidedef->offsety_mid, gl_sidedef->scaley_mid);
-
-			// Texture is not skewed
-			if (gl_linedef->flags & ML_NOSKEW)
-			{
-				// Peg it to the floor
-				if (gl_linedef->flags & ML_MIDPEG)
-				{
-					polybottom = max(front->floorheight, back->floorheight) + rowoffset;
-					polytop = polybottom + midtexheight;
-				}
-				// Peg it to the ceiling
-				else
-				{
-					polytop = min(front->ceilingheight, back->ceilingheight) + rowoffset;
-					polybottom = polytop - midtexheight;
-				}
-
-				// The right side's coordinates are the the same as the left side
-				polytopslope = polytop;
-				polybottomslope = polybottom;
-			}
-			// Skew the texture, but peg it to the floor
-			else if (gl_linedef->flags & ML_MIDPEG)
-			{
-				polybottom = popenbottom + rowoffset;
-				polytop = polybottom + midtexheight;
-				polybottomslope = popenbottomslope + rowoffset;
-				polytopslope = polybottomslope + midtexheight;
-			}
-			// Skew it according to the ceiling's slope
-			else
-			{
-				polytop = popentop + rowoffset;
-				polybottom = polytop - midtexheight;
-				polytopslope = popentopslope + rowoffset;
-				polybottomslope = polytopslope - midtexheight;
-			}
-
-			// CB
-			// NOTE: With polyobjects, whenever you need to check the properties of the polyobject sector it belongs to,
-			// you must use the linedef's backsector to be correct
-			if (gl_curline->polyseg)
-			{
-				lowcut = polybottom;
-				highcut = polytop;
-				lowcutslope = polybottomslope;
-				highcutslope = polytopslope;
-			}
-			else
-			{
-				// The cut-off values of a linedef can always be constant, since every line has an absoulute front and or back sector
-				lowcut = popenbottom;
-				highcut = popentop;
-				lowcutslope = popenbottomslope;
-				highcutslope = popentopslope;
-			}
-
-			h = min(highcut, polytop);
-			l = max(polybottom, lowcut);
-			hS = min(highcutslope, polytopslope);
-			lS = max(polybottomslope, lowcutslope);
-
-			// PEGGING
-			fixed_t texturevpegslope;
-
-			if (gl_linedef->flags & ML_MIDPEG)
-			{
-				texturevpeg = midtexheight - h + polybottom;
-				texturevpegslope = midtexheight - hS + polybottomslope;
-			}
-			else
-			{
-				texturevpeg = polytop - h;
-				texturevpegslope = polytopslope - hS;
-			}
-
-			// Left side
-			wallVerts[3].t = texturevpeg * yscale * grTex->scaleY;
-			wallVerts[0].t = (h - l + texturevpeg) * yscale * grTex->scaleY;
-			wallVerts[0].s = wallVerts[3].s = ((cliplow * xscale) + gl_sidedef->offsetx_mid) * grTex->scaleX;
-
-			// Right side
-			wallVerts[2].t = texturevpegslope * yscale * grTex->scaleY;
-			wallVerts[1].t = (hS - lS + texturevpegslope) * yscale * grTex->scaleY;
-			wallVerts[2].s = wallVerts[1].s = ((cliphigh * xscale) + gl_sidedef->offsetx_mid) * grTex->scaleX;
-
-			// set top/bottom coords
-			// Take the texture peg into account, rather than changing the offsets past
-			// where the polygon might not be.
-			wallVerts[3].y = FIXED_TO_FLOAT(h);
-			wallVerts[0].y = FIXED_TO_FLOAT(l);
-			wallVerts[2].y = FIXED_TO_FLOAT(hS);
-			wallVerts[1].y = FIXED_TO_FLOAT(lS);
-
-			// TODO: Actually use the surface's flags so that I don't have to do this
-			FUINT blendmode = Surf.PolyFlags;
-
-			// Render midtextures on two-sided lines with a z-buffer offset.
-			// This will cause the midtexture appear on top, if a FOF overlaps with it.
-			blendmode |= PF_Decal;
-
-			if (gl_frontsector->numlights)
-			{
-				if (!(blendmode & PF_Masked))
-					HWR_SplitWall(gl_frontsector, wallVerts, gl_midtexture, &Surf, FOF_TRANSLUCENT, NULL, blendmode);
-				else
-					HWR_SplitWall(gl_frontsector, wallVerts, gl_midtexture, &Surf, FOF_CUTLEVEL, NULL, blendmode);
-			}
-			else if (!(blendmode & PF_Masked))
-				HWR_AddTransparentWall(wallVerts, &Surf, gl_midtexture, blendmode, false, lightnum, colormap);
-			else
-				HWR_ProjectWall(wallVerts, &Surf, blendmode, lightnum, colormap);
-		}
-
-		// Sky culling
-		// No longer so much a mess as before!
 		if (!gl_curline->polyseg) // Don't do it for polyobjects
 		{
+			// Sky culling
+			// No longer so much a mess as before!
 			if (gl_frontsector->ceilingpic == skyflatnum
 				&& gl_backsector->ceilingpic != skyflatnum) // don't cull if back sector is also sky
 			{
@@ -1384,8 +1433,8 @@ static void HWR_ProcessSeg(void)
 
 			wallVerts[3].t = wallVerts[2].t = texturevpeg * grTex->scaleY;
 			wallVerts[0].t = wallVerts[1].t = (texturevpeg + gl_frontsector->ceilingheight - gl_frontsector->floorheight) * grTex->scaleY;
-			wallVerts[0].s = wallVerts[3].s = ((cliplow * xscale) + gl_sidedef->offsetx_mid) * grTex->scaleX;
-			wallVerts[2].s = wallVerts[1].s = ((cliphigh * xscale) + gl_sidedef->offsetx_mid) * grTex->scaleX;
+			wallVerts[0].s = wallVerts[3].s = ((cliplow * xscale) + gl_sidedef->textureoffset + gl_sidedef->offsetx_mid) * grTex->scaleX;
+			wallVerts[2].s = wallVerts[1].s = ((cliphigh * xscale) + gl_sidedef->textureoffset + gl_sidedef->offsetx_mid) * grTex->scaleX;
 
 			// Texture correction for slopes
 			if (gl_linedef->flags & ML_NOSKEW) {
@@ -1448,8 +1497,9 @@ static void HWR_ProcessSeg(void)
 		// Used for height comparisons and etc across FOFs and slopes
 		fixed_t high1, highslope1, low1, lowslope1;
 
+		fixed_t texturehpeg = gl_sidedef->textureoffset + gl_sidedef->offsetx_mid;
+
 		INT32 texnum;
-		line_t * newline = NULL; // Multi-Property FOF
 
 		lowcut = max(worldbottom, worldlow);
 		highcut = min(worldtop, worldhigh);
@@ -1483,16 +1533,14 @@ static void HWR_ProcessSeg(void)
 				if ((high1 < lowcut && highslope1 < lowcutslope) || (low1 > highcut && lowslope1 > highcutslope))
 					continue;
 
-				side_t *side = &sides[rover->master->sidenum[0]];
+				side_t *side = R_GetFFloorSide(gl_curline, rover);
 
 				boolean do_texture_skew;
 				boolean dont_peg_bottom;
 
 				if (rover->master->flags & ML_TFERLINE)
 				{
-					size_t linenum = gl_curline->linedef-gl_backsector->lines[0];
-					newline = rover->master->frontsector->lines[0] + linenum;
-					side = &sides[newline->sidenum[0]];
+					line_t *newline = R_GetFFloorLine(gl_curline, rover);
 					do_texture_skew = newline->flags & ML_SKEWTD;
 					dont_peg_bottom = newline->flags & ML_DONTPEGBOTTOM;
 				}
@@ -1570,14 +1618,14 @@ static void HWR_ProcessSeg(void)
 						}
 					}
 
-					wallVerts[0].s = wallVerts[3].s = ((cliplow * xscale) + side->offsetx_mid) * grTex->scaleX;
-					wallVerts[2].s = wallVerts[1].s = ((cliphigh * xscale) + side->offsetx_mid) * grTex->scaleX;
+					wallVerts[0].s = wallVerts[3].s = ((cliplow * xscale) + texturehpeg + side->offsetx_mid) * grTex->scaleX;
+					wallVerts[2].s = wallVerts[1].s = ((cliphigh * xscale) + texturehpeg + side->offsetx_mid) * grTex->scaleX;
 				}
+
+				FBITFIELD blendmode;
 
 				if (rover->fofflags & FOF_FOG)
 				{
-					FBITFIELD blendmode;
-
 					blendmode = PF_Fog|PF_NoTexture;
 
 					lightnum = rover->master->frontsector->lightlevel;
@@ -1593,7 +1641,7 @@ static void HWR_ProcessSeg(void)
 				}
 				else
 				{
-					FBITFIELD blendmode = PF_Masked;
+					blendmode = PF_Masked;
 
 					if ((rover->fofflags & FOF_TRANSLUCENT && !(rover->fofflags & FOF_SPLAT)) || rover->blend)
 					{
@@ -1641,13 +1689,21 @@ static void HWR_ProcessSeg(void)
 				if ((high1 < lowcut && highslope1 < lowcutslope) || (low1 > highcut && lowslope1 > highcutslope))
 					continue;
 
-				side_t *side = &sides[rover->master->sidenum[0]];
+				side_t *side = R_GetFFloorSide(gl_curline, rover);
+
+				boolean do_texture_skew;
+				boolean dont_peg_bottom;
 
 				if (rover->master->flags & ML_TFERLINE)
 				{
-					size_t linenum = gl_curline->linedef-gl_backsector->lines[0];
-					newline = rover->master->frontsector->lines[0] + linenum;
-					side = &sides[newline->sidenum[0]];
+					line_t *newline = R_GetFFloorLine(gl_curline, rover);
+					do_texture_skew = newline->flags & ML_SKEWTD;
+					dont_peg_bottom = newline->flags & ML_DONTPEGBOTTOM;
+				}
+				else
+				{
+					do_texture_skew = rover->master->flags & ML_SKEWTD;
+					dont_peg_bottom = gl_curline->linedef->flags & ML_DONTPEGBOTTOM;
 				}
 
 				texnum = R_GetTextureNum(side->midtexture);
@@ -1684,23 +1740,49 @@ static void HWR_ProcessSeg(void)
 				}
 				else
 				{
+					// Wow, how was this missing from OpenGL for so long?
+					// ...Oh well, anyway, Lower Unpegged now changes pegging of FOFs like in software
+					// -- Monster Iestyn 26/06/18
+					fixed_t texturevpeg = side->rowoffset + side->offsety_mid;
+
 					grTex = HWR_GetTexture(texnum);
 					xscale = FixedToFloat(side->scalex_mid);
 					yscale = FixedToFloat(side->scaley_mid);
 
-					fixed_t diff = (*rover->topheight - h) * yscale;
+					if (!do_texture_skew) // no skewing
+					{
+						if (dont_peg_bottom)
+							texturevpeg -= (*rover->topheight - *rover->bottomheight) * yscale;
 
-					wallVerts[3].t = wallVerts[2].t = (diff + side->rowoffset + side->offsety_mid) * grTex->scaleY;
-					wallVerts[0].t = wallVerts[1].t = (((h - l) * yscale) + (diff + side->rowoffset + side->offsety_mid)) * grTex->scaleY;
+						wallVerts[3].t = (((*rover->topheight - h) * yscale) + texturevpeg) * grTex->scaleY;
+						wallVerts[2].t = (((*rover->topheight - hS) * yscale) + texturevpeg) * grTex->scaleY;
+						wallVerts[0].t = (((*rover->topheight - l) * yscale) + texturevpeg) * grTex->scaleY;
+						wallVerts[1].t = (((*rover->topheight - lS) * yscale) + texturevpeg) * grTex->scaleY;
+					}
+					else
+					{
+						if (!dont_peg_bottom) // skew by top
+						{
+							wallVerts[3].t = wallVerts[2].t = texturevpeg * grTex->scaleY;
+							wallVerts[0].t = (((h - l) * yscale) + texturevpeg) * grTex->scaleY;
+							wallVerts[1].t = (((hS - lS) * yscale) + texturevpeg) * grTex->scaleY;
+						}
+						else // skew by bottom
+						{
+							wallVerts[0].t = wallVerts[1].t = texturevpeg * grTex->scaleY;
+							wallVerts[3].t = wallVerts[0].t - ((h - l) * yscale) * grTex->scaleY;
+							wallVerts[2].t = wallVerts[1].t - ((hS - lS) * yscale) * grTex->scaleY;
+						}
+					}
 
-					wallVerts[0].s = wallVerts[3].s = ((cliplow * xscale) + side->offsetx_mid) * grTex->scaleX;
-					wallVerts[2].s = wallVerts[1].s = ((cliphigh * xscale) + side->offsetx_mid) * grTex->scaleX;
+					wallVerts[0].s = wallVerts[3].s = ((cliplow * xscale) + texturehpeg + side->offsetx_mid) * grTex->scaleX;
+					wallVerts[2].s = wallVerts[1].s = ((cliphigh * xscale) + texturehpeg + side->offsetx_mid) * grTex->scaleX;
 				}
+
+				FBITFIELD blendmode;
 
 				if (rover->fofflags & FOF_FOG)
 				{
-					FBITFIELD blendmode;
-
 					blendmode = PF_Fog|PF_NoTexture;
 
 					lightnum = rover->master->frontsector->lightlevel;
@@ -1716,7 +1798,7 @@ static void HWR_ProcessSeg(void)
 				}
 				else
 				{
-					FBITFIELD blendmode = PF_Masked;
+					blendmode = PF_Masked;
 
 					if ((rover->fofflags & FOF_TRANSLUCENT && !(rover->fofflags & FOF_SPLAT)) || rover->blend)
 					{
@@ -1994,36 +2076,14 @@ static boolean HWR_CheckBBox(fixed_t *bspcoord)
 static inline void HWR_AddPolyObjectSegs(void)
 {
 	size_t i, j;
-	seg_t *gl_fakeline = Z_Calloc(sizeof(seg_t), PU_STATIC, NULL);
-	polyvertex_t *pv1 = Z_Calloc(sizeof(polyvertex_t), PU_STATIC, NULL);
-	polyvertex_t *pv2 = Z_Calloc(sizeof(polyvertex_t), PU_STATIC, NULL);
 
 	// Sort through all the polyobjects
 	for (i = 0; i < numpolys; ++i)
 	{
 		// Render the polyobject's lines
 		for (j = 0; j < po_ptrs[i]->segCount; ++j)
-		{
-			// Copy the info of a polyobject's seg, then convert it to OpenGL floating point
-			M_Memcpy(gl_fakeline, po_ptrs[i]->segs[j], sizeof(seg_t));
-
-			// Now convert the line to float and add it to be rendered
-			pv1->x = FIXED_TO_FLOAT(gl_fakeline->v1->x);
-			pv1->y = FIXED_TO_FLOAT(gl_fakeline->v1->y);
-			pv2->x = FIXED_TO_FLOAT(gl_fakeline->v2->x);
-			pv2->y = FIXED_TO_FLOAT(gl_fakeline->v2->y);
-
-			gl_fakeline->pv1 = pv1;
-			gl_fakeline->pv2 = pv2;
-
-			HWR_AddLine(gl_fakeline);
-		}
+			HWR_AddLine(po_ptrs[i]->segs[j]);
 	}
-
-	// Free temporary data no longer needed
-	Z_Free(pv2);
-	Z_Free(pv1);
-	Z_Free(gl_fakeline);
 }
 
 static void HWR_RenderPolyObjectPlane(polyobj_t *polysector, boolean isceiling, fixed_t fixedheight,
@@ -2048,13 +2108,8 @@ static void HWR_RenderPolyObjectPlane(polyobj_t *polysector, boolean isceiling, 
 	static FOutVector *planeVerts = NULL;
 	static UINT16 numAllocedPlaneVerts = 0;
 
-	if (nrPlaneVerts < 3)   // Not even a triangle?
+	if (!r_renderfloors || nrPlaneVerts < 3)   // Not even a triangle?
 		return;
-	else if (nrPlaneVerts > (size_t)UINT16_MAX) // FIXME: exceeds plVerts size
-	{
-		CONS_Debug(DBG_RENDER, "polygon size of %s exceeds max value of %d vertices\n", sizeu1(nrPlaneVerts), UINT16_MAX);
-		return;
-	}
 
 	// Allocate plane-vertex buffer if we need to
 	if (!planeVerts || nrPlaneVerts > numAllocedPlaneVerts)
@@ -2197,7 +2252,7 @@ static void HWR_AddPolyObjectPlanes(void)
 			}
 			else
 			{
-				HWR_GetLevelFlat(&levelflats[polyobjsector->floorpic]);
+				HWR_GetLevelFlat(&levelflats[polyobjsector->floorpic], false);
 				HWR_RenderPolyObjectPlane(po_ptrs[i], false, polyobjsector->floorheight, PF_Occlude,
 										(light == -1 ? gl_frontsector->lightlevel : *gl_frontsector->lightlist[light].lightlevel), &levelflats[polyobjsector->floorpic],
 										polyobjsector, 255, (light == -1 ? gl_frontsector->extra_colormap : *gl_frontsector->lightlist[light].extra_colormap));
@@ -2220,7 +2275,7 @@ static void HWR_AddPolyObjectPlanes(void)
 			}
 			else
 			{
-				HWR_GetLevelFlat(&levelflats[polyobjsector->ceilingpic]);
+				HWR_GetLevelFlat(&levelflats[polyobjsector->ceilingpic], false);
 				HWR_RenderPolyObjectPlane(po_ptrs[i], true, polyobjsector->ceilingheight, PF_Occlude,
 				                          (light == -1 ? gl_frontsector->lightlevel : *gl_frontsector->lightlist[light].lightlevel), &levelflats[polyobjsector->ceilingpic],
 				                          polyobjsector, 255, (light == -1 ? gl_frontsector->extra_colormap : *gl_frontsector->lightlist[light].extra_colormap));
@@ -2350,7 +2405,7 @@ static void HWR_Subsector(size_t num)
 		{
 			if (sub->validcount != validcount)
 			{
-				HWR_GetLevelFlat(&levelflats[gl_frontsector->floorpic]);
+				HWR_GetLevelFlat(&levelflats[gl_frontsector->floorpic], false);
 				HWR_RenderPlane(sub, &extrasubsectors[num], false,
 					// Hack to make things continue to work around slopes.
 					locFloorHeight == cullFloorHeight ? locFloorHeight : gl_frontsector->floorheight,
@@ -2366,7 +2421,7 @@ static void HWR_Subsector(size_t num)
 		{
 			if (sub->validcount != validcount)
 			{
-				HWR_GetLevelFlat(&levelflats[gl_frontsector->ceilingpic]);
+				HWR_GetLevelFlat(&levelflats[gl_frontsector->ceilingpic], false);
 				HWR_RenderPlane(sub, &extrasubsectors[num], true,
 					// Hack to make things continue to work around slopes.
 					locCeilingHeight == cullCeilingHeight ? locCeilingHeight : gl_frontsector->ceilingheight,
@@ -2424,7 +2479,7 @@ static void HWR_Subsector(size_t num)
 					                       *rover->bottomheight,
 					                       *gl_frontsector->lightlist[light].lightlevel,
 					                       alpha, rover->master->frontsector, PF_Fog|PF_NoTexture,
-										   true, rover->master->frontsector->extra_colormap);
+										   true, false, rover->master->frontsector->extra_colormap);
 				}
 				else if ((rover->fofflags & FOF_TRANSLUCENT && !(rover->fofflags & FOF_SPLAT)) || rover->blend) // SoM: Flags are more efficient
 				{
@@ -2437,11 +2492,11 @@ static void HWR_Subsector(size_t num)
 					                       *gl_frontsector->lightlist[light].lightlevel,
 					                       max(0, min(rover->alpha, 255)), rover->master->frontsector,
 					                       HWR_RippleBlend(gl_frontsector, rover, false) | (rover->blend ? HWR_GetBlendModeFlag(rover->blend) : PF_Translucent),
-					                       false, *gl_frontsector->lightlist[light].extra_colormap);
+					                       false, rover->fofflags & FOF_SPLAT, *gl_frontsector->lightlist[light].extra_colormap);
 				}
 				else
 				{
-					HWR_GetLevelFlat(&levelflats[*rover->bottompic]);
+					HWR_GetLevelFlat(&levelflats[*rover->bottompic], rover->fofflags & FOF_SPLAT);
 					light = R_GetPlaneLight(gl_frontsector, centerHeight, viewz < bottomCullHeight ? true : false);
 					HWR_RenderPlane(sub, &extrasubsectors[num], false, *rover->bottomheight, HWR_RippleBlend(gl_frontsector, rover, false)|PF_Occlude, *gl_frontsector->lightlist[light].lightlevel, &levelflats[*rover->bottompic],
 					                rover->master->frontsector, 255, *gl_frontsector->lightlist[light].extra_colormap);
@@ -2469,7 +2524,7 @@ static void HWR_Subsector(size_t num)
 					                       *rover->topheight,
 					                       *gl_frontsector->lightlist[light].lightlevel,
 					                       alpha, rover->master->frontsector, PF_Fog|PF_NoTexture,
-										   true, rover->master->frontsector->extra_colormap);
+										   true, false, rover->master->frontsector->extra_colormap);
 				}
 				else if ((rover->fofflags & FOF_TRANSLUCENT && !(rover->fofflags & FOF_SPLAT)) || rover->blend)
 				{
@@ -2482,11 +2537,11 @@ static void HWR_Subsector(size_t num)
 					                        *gl_frontsector->lightlist[light].lightlevel,
 					                        max(0, min(rover->alpha, 255)), rover->master->frontsector,
 					                        HWR_RippleBlend(gl_frontsector, rover, false) | (rover->blend ? HWR_GetBlendModeFlag(rover->blend) : PF_Translucent),
-					                        false, *gl_frontsector->lightlist[light].extra_colormap);
+					                        false, rover->fofflags & FOF_SPLAT, *gl_frontsector->lightlist[light].extra_colormap);
 				}
 				else
 				{
-					HWR_GetLevelFlat(&levelflats[*rover->toppic]);
+					HWR_GetLevelFlat(&levelflats[*rover->toppic], rover->fofflags & FOF_SPLAT);
 					light = R_GetPlaneLight(gl_frontsector, centerHeight, viewz < topCullHeight ? true : false);
 					HWR_RenderPlane(sub, &extrasubsectors[num], true, *rover->topheight, HWR_RippleBlend(gl_frontsector, rover, false)|PF_Occlude, *gl_frontsector->lightlist[light].lightlevel, &levelflats[*rover->toppic],
 					                  rover->master->frontsector, 255, *gl_frontsector->lightlist[light].extra_colormap);
@@ -3780,6 +3835,7 @@ typedef struct
 	sector_t *FOFSector;
 	FBITFIELD blend;
 	boolean fogplane;
+	boolean chromakeyed;
 	extracolormap_t *planecolormap;
 	INT32 drawcount;
 } planeinfo_t;
@@ -3821,7 +3877,7 @@ static INT32 drawcount = 0;
 #define MAX_TRANSPARENTFLOOR 512
 
 // This will likely turn into a copy of HWR_Add3DWater and replace it.
-void HWR_AddTransparentFloor(levelflat_t *levelflat, extrasubsector_t *xsub, boolean isceiling, fixed_t fixedheight, INT32 lightlevel, INT32 alpha, sector_t *FOFSector, FBITFIELD blend, boolean fogplane, extracolormap_t *planecolormap)
+void HWR_AddTransparentFloor(levelflat_t *levelflat, extrasubsector_t *xsub, boolean isceiling, fixed_t fixedheight, INT32 lightlevel, INT32 alpha, sector_t *FOFSector, FBITFIELD blend, boolean fogplane, boolean chromakeyed, extracolormap_t *planecolormap)
 {
 	static size_t allocedplanes = 0;
 
@@ -3844,6 +3900,7 @@ void HWR_AddTransparentFloor(levelflat_t *levelflat, extrasubsector_t *xsub, boo
 	planeinfo[numplanes].FOFSector = FOFSector;
 	planeinfo[numplanes].blend = blend;
 	planeinfo[numplanes].fogplane = fogplane;
+	planeinfo[numplanes].chromakeyed = chromakeyed;
 	planeinfo[numplanes].planecolormap = planecolormap;
 	planeinfo[numplanes].drawcount = drawcount++;
 
@@ -4010,7 +4067,7 @@ static void HWR_CreateDrawNodes(void)
 			gl_frontsector = NULL;
 
 			if (!(sortnode[sortindex[i]].plane->blend & PF_NoTexture))
-				HWR_GetLevelFlat(sortnode[sortindex[i]].plane->levelflat);
+				HWR_GetLevelFlat(sortnode[sortindex[i]].plane->levelflat, sortnode[sortindex[i]].plane->chromakeyed);
 			HWR_RenderPlane(NULL, sortnode[sortindex[i]].plane->xsub, sortnode[sortindex[i]].plane->isceiling, sortnode[sortindex[i]].plane->fixedheight, sortnode[sortindex[i]].plane->blend, sortnode[sortindex[i]].plane->lightlevel,
 				sortnode[sortindex[i]].plane->levelflat, sortnode[sortindex[i]].plane->FOFSector, sortnode[sortindex[i]].plane->alpha, sortnode[sortindex[i]].plane->planecolormap);
 		}
@@ -4019,9 +4076,11 @@ static void HWR_CreateDrawNodes(void)
 			// We aren't traversing the BSP tree, so make gl_frontsector null to avoid crashes.
 			gl_frontsector = NULL;
 
+			polyobj_t *po = sortnode[sortindex[i]].polyplane->polysector;
+
 			if (!(sortnode[sortindex[i]].polyplane->blend & PF_NoTexture))
-				HWR_GetLevelFlat(sortnode[sortindex[i]].polyplane->levelflat);
-			HWR_RenderPolyObjectPlane(sortnode[sortindex[i]].polyplane->polysector, sortnode[sortindex[i]].polyplane->isceiling, sortnode[sortindex[i]].polyplane->fixedheight, sortnode[sortindex[i]].polyplane->blend, sortnode[sortindex[i]].polyplane->lightlevel,
+				HWR_GetLevelFlat(sortnode[sortindex[i]].polyplane->levelflat, po->flags & POF_SPLAT);
+			HWR_RenderPolyObjectPlane(po, sortnode[sortindex[i]].polyplane->isceiling, sortnode[sortindex[i]].polyplane->fixedheight, sortnode[sortindex[i]].polyplane->blend, sortnode[sortindex[i]].polyplane->lightlevel,
 				sortnode[sortindex[i]].polyplane->levelflat, sortnode[sortindex[i]].polyplane->FOFSector, sortnode[sortindex[i]].polyplane->alpha, sortnode[sortindex[i]].polyplane->planecolormap);
 		}
 		else if (sortnode[sortindex[i]].wall)
@@ -4226,7 +4285,7 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	// uncapped/interpolation
 	interpmobjstate_t interp = {0};
 
-	if (!cv_renderthings.value)
+	if (!r_renderthings)
 		return;
 
 	if (!thing)
@@ -5500,7 +5559,7 @@ static void HWR_TogglePaletteRendering(void)
 			// The textures will still be converted to RGBA by r_opengl.
 			// This however makes hw_cache use paletted blending for composite textures!
 			// (patchformat is not touched)
-			textureformat = GL_TEXFMT_P_8;
+			textureformat = GL_TEXFMT_AP_88;
 
 			HWR_SetMapPalette();
 			HWR_SetPalette(pLocalPalette);
@@ -5771,7 +5830,7 @@ void HWR_AddTransparentWall(FOutVector *wallVerts, FSurfaceInfo *pSurf, INT32 te
 {
 	static size_t allocedwalls = 0;
 
-	if (!cv_renderwalls.value)
+	if (!r_renderwalls)
 		return;
 
 	// Force realloc if buffer has been freed
@@ -5802,7 +5861,7 @@ void HWR_RenderWall(FOutVector *wallVerts, FSurfaceInfo *pSurf, FBITFIELD blend,
 
 	INT32 shader = SHADER_NONE;
 
-	if (!cv_renderwalls.value)
+	if (!r_renderwalls)
 		return;
 
 	// Lighting is done here instead so that fog isn't drawn incorrectly on transparent walls after sorting

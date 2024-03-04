@@ -603,6 +603,9 @@ void R_DrawPlanes(void)
 	visplane_t *pl;
 	INT32 i;
 
+	if (!r_renderfloors)
+		return;
+
 	R_UpdatePlaneRipple();
 
 	for (i = 0; i < MAXVISPLANES; i++, pl++)
@@ -879,9 +882,6 @@ void R_DrawSinglePlane(visplane_t *pl)
 	void (*mapfunc)(INT32, INT32, INT32);
 
 	if (!(pl->minx <= pl->maxx))
-		return;
-
-	if (!cv_renderfloors.value)
 		return;
 
 	// sky flat
