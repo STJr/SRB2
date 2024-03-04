@@ -41,11 +41,13 @@ static const char *const hud_disable_options[] = {
 	"stagetitle",
 	"textspectator",
 	"crosshair",
+	"powerups",
 
 	"score",
 	"time",
 	"rings",
 	"lives",
+	"input",
 
 	"weaponrings",
 	"powerstones",
@@ -68,6 +70,10 @@ static const char *const hud_disable_options[] = {
 	"intermissionmessages",
 	"intermissionemeralds",
 	NULL};
+
+// you know, let's actually make sure that the table is synced.
+// because fuck knows how many times this has happened at this point. :v
+I_StaticAssert(sizeof(hud_disable_options) / sizeof(*hud_disable_options) == hud_MAX+1);
 
 enum hudinfo {
 	hudinfo_x = 0,

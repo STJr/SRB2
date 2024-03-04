@@ -1071,9 +1071,9 @@ static menuitem_t OP_ChangeControlsMenu[] =
 	{IT_CALL | IT_STRING2, NULL, "Move Backward",    M_ChangeControl, GC_BACKWARD    },
 	{IT_CALL | IT_STRING2, NULL, "Move Left",        M_ChangeControl, GC_STRAFELEFT  },
 	{IT_CALL | IT_STRING2, NULL, "Move Right",       M_ChangeControl, GC_STRAFERIGHT },
-	{IT_CALL | IT_STRING2, NULL, "Jump",             M_ChangeControl, GC_JUMP      },
-	{IT_CALL | IT_STRING2, NULL, "Spin",             M_ChangeControl, GC_SPIN     },
-	{IT_CALL | IT_STRING2, NULL, "Shield",           M_ChangeControl, GC_SHIELD    },
+	{IT_CALL | IT_STRING2, NULL, "Jump",             M_ChangeControl, GC_JUMP        },
+	{IT_CALL | IT_STRING2, NULL, "Spin",             M_ChangeControl, GC_SPIN        },
+	{IT_CALL | IT_STRING2, NULL, "Shield Ability",   M_ChangeControl, GC_SHIELD      },
 	{IT_HEADER, NULL, "Camera", NULL, 0},
 	{IT_SPACE, NULL, NULL, NULL, 0}, // padding
 	{IT_CALL | IT_STRING2, NULL, "Look Up",        M_ChangeControl, GC_LOOKUP      },
@@ -1122,13 +1122,15 @@ static menuitem_t OP_ChangeControlsMenu[] =
 
 static menuitem_t OP_Joystick1Menu[] =
 {
-	{IT_STRING | IT_CALL,  NULL, "Select Gamepad...", M_Setup1PJoystickMenu, 10},
-	{IT_STRING | IT_CVAR,  NULL, "Move \x17 Axis"    , &cv_moveaxis         , 30},
-	{IT_STRING | IT_CVAR,  NULL, "Move \x18 Axis"    , &cv_sideaxis         , 40},
-	{IT_STRING | IT_CVAR,  NULL, "Camera \x17 Axis"  , &cv_lookaxis         , 50},
-	{IT_STRING | IT_CVAR,  NULL, "Camera \x18 Axis"  , &cv_turnaxis         , 60},
-	{IT_STRING | IT_CVAR,  NULL, "Jump Axis"         , &cv_jumpaxis         , 70},
-	{IT_STRING | IT_CVAR,  NULL, "Spin Axis"         , &cv_spinaxis         , 80},
+	{IT_STRING | IT_CALL,  NULL, "Select Gamepad...", M_Setup1PJoystickMenu,  0},
+
+	{IT_STRING | IT_CVAR,  NULL, "Move \x17 Axis"    , &cv_moveaxis         , 20},
+	{IT_STRING | IT_CVAR,  NULL, "Move \x18 Axis"    , &cv_sideaxis         , 30},
+	{IT_STRING | IT_CVAR,  NULL, "Camera \x17 Axis"  , &cv_lookaxis         , 40},
+	{IT_STRING | IT_CVAR,  NULL, "Camera \x18 Axis"  , &cv_turnaxis         , 50},
+	{IT_STRING | IT_CVAR,  NULL, "Jump Axis"         , &cv_jumpaxis         , 60},
+	{IT_STRING | IT_CVAR,  NULL, "Spin Axis"         , &cv_spinaxis         , 70},
+	{IT_STRING | IT_CVAR,  NULL, "Shield Axis"       , &cv_shieldaxis       , 80},
 	{IT_STRING | IT_CVAR,  NULL, "Fire Axis"         , &cv_fireaxis         , 90},
 	{IT_STRING | IT_CVAR,  NULL, "Fire Normal Axis"  , &cv_firenaxis        ,100},
 
@@ -1140,13 +1142,15 @@ static menuitem_t OP_Joystick1Menu[] =
 
 static menuitem_t OP_Joystick2Menu[] =
 {
-	{IT_STRING | IT_CALL,  NULL, "Select Gamepad...", M_Setup2PJoystickMenu, 10},
-	{IT_STRING | IT_CVAR,  NULL, "Move \x17 Axis"    , &cv_moveaxis2        , 30},
-	{IT_STRING | IT_CVAR,  NULL, "Move \x18 Axis"    , &cv_sideaxis2        , 40},
-	{IT_STRING | IT_CVAR,  NULL, "Camera \x17 Axis"  , &cv_lookaxis2        , 50},
-	{IT_STRING | IT_CVAR,  NULL, "Camera \x18 Axis"  , &cv_turnaxis2        , 60},
-	{IT_STRING | IT_CVAR,  NULL, "Jump Axis"         , &cv_jumpaxis2        , 70},
-	{IT_STRING | IT_CVAR,  NULL, "Spin Axis"         , &cv_spinaxis2        , 80},
+	{IT_STRING | IT_CALL,  NULL, "Select Gamepad...", M_Setup2PJoystickMenu,  0},
+
+	{IT_STRING | IT_CVAR,  NULL, "Move \x17 Axis"    , &cv_moveaxis2        , 20},
+	{IT_STRING | IT_CVAR,  NULL, "Move \x18 Axis"    , &cv_sideaxis2        , 30},
+	{IT_STRING | IT_CVAR,  NULL, "Camera \x17 Axis"  , &cv_lookaxis2        , 40},
+	{IT_STRING | IT_CVAR,  NULL, "Camera \x18 Axis"  , &cv_turnaxis2        , 50},
+	{IT_STRING | IT_CVAR,  NULL, "Jump Axis"         , &cv_jumpaxis2        , 60},
+	{IT_STRING | IT_CVAR,  NULL, "Spin Axis"         , &cv_spinaxis2        , 70},
+	{IT_STRING | IT_CVAR,  NULL, "Shield Axis"       , &cv_shieldaxis2      , 80},
 	{IT_STRING | IT_CVAR,  NULL, "Fire Axis"         , &cv_fireaxis2        , 90},
 	{IT_STRING | IT_CVAR,  NULL, "Fire Normal Axis"  , &cv_firenaxis2       ,100},
 
@@ -2695,7 +2699,7 @@ static boolean MIT_SetCurTitlePics(UINT32 menutype, INT32 level, INT32 *retval, 
 			curhidepics = menupres[menutype].hidetitlepics;
 			curttmode = menupres[menutype].ttmode;
 			curttscale = (menupres[menutype].ttscale != UINT8_MAX ? menupres[menutype].ttscale : ttscale);
-			strncpy(curttname, menupres[menutype].ttname, 9);
+			strncpy(curttname, menupres[menutype].ttname, sizeof(curttname)-1);
 			curttx = (menupres[menutype].ttx != INT16_MAX ? menupres[menutype].ttx : ttx);
 			curtty = (menupres[menutype].tty != INT16_MAX ? menupres[menutype].tty : tty);
 			curttloop = (menupres[menutype].ttloop != INT16_MAX ? menupres[menutype].ttloop : ttloop);
@@ -3429,7 +3433,7 @@ boolean M_Responder(event_t *ev)
 			// ignore ev_keydown events if the key maps to a character, since
 			// the ev_text event will follow immediately after in that case.
 			if (ev->type == ev_keydown && ch >= 32 && ch <= 127)
-				return false;
+				return true;
 
 			if (M_ChangeStringCvar(ch))
 				return true;
@@ -11238,7 +11242,8 @@ static void M_DrawRoomMenu(void)
 			if (dot_frame < 0)
 				dot_frame = 0;
 
-			strncpy(&text[dot_frame], "...", min(dots, 3 - dot_frame));
+			if (dot_frame != 3)
+				strncpy(&text[dot_frame], "...", min(dots, 3 - dot_frame));
 		}
 
 		frame += renderdeltatics;
