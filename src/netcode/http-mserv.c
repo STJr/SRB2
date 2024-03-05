@@ -146,7 +146,7 @@ static void HMS_check_args_once(void)
 	hms_args_checked = true;
 }
 
-static struct HMS_buffer *
+FUNCDEBUG static struct HMS_buffer *
 HMS_connect (int proto, const char *format, ...)
 {
 	va_list ap;

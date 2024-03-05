@@ -25,6 +25,10 @@
 
 #include "screen.h" // MAXVIDWIDTH, MAXVIDHEIGHT
 
+#ifdef HWRENDER
+#include "m_aatree.h"
+#endif
+
 #include "taglist.h"
 
 //
@@ -68,6 +72,11 @@ typedef struct extracolormap_s
 	INT32 fadergba; // The colour the colourmaps fade to
 
 	lighttable_t *colormap;
+
+#ifdef HWRENDER
+	// The id of the hardware lighttable. Zero means it does not exist yet.
+	UINT32 gl_lighttable_id;
+#endif
 
 #ifdef EXTRACOLORMAPLUMPS
 	lumpnum_t lump; // for colormap lump matching, init to LUMPERROR
@@ -742,9 +751,6 @@ typedef struct seg_s
 	lightmap_t *lightmaps; // for static lightmap
 #endif
 
-	// Why slow things down by calculating lightlists for every thick side?
-	size_t numlights;
-	r_lightlist_t *rlights;
 	polyobj_t *polyseg;
 	boolean dontrenderme;
 	boolean glseg;
@@ -775,14 +781,26 @@ typedef struct
 {
 	UINT8 topdelta; // -1 is the last post in a column
 	UINT8 length;   // length data bytes follows
-} ATTRPACK post_t;
+} ATTRPACK doompost_t;
 
 #if defined(_MSC_VER)
 #pragma pack()
 #endif
 
-// column_t is a list of 0 or more post_t, (UINT8)-1 terminated
-typedef post_t column_t;
+typedef struct
+{
+	unsigned topdelta;
+	unsigned length;
+	size_t data_offset;
+} post_t;
+
+// column_t is a list of 0 or more post_t
+typedef struct
+{
+	unsigned num_posts;
+	post_t *posts;
+	UINT8 *pixels;
+} column_t;
 
 //
 // OTHER TYPES
@@ -816,6 +834,7 @@ typedef struct drawseg_s
 	INT16 *sprtopclip;
 	INT16 *sprbottomclip;
 	fixed_t *maskedtexturecol;
+	fixed_t *maskedtextureheight; // For handling sloped midtextures
 	fixed_t *invscale;
 
 	struct visplane_s *ffloorplanes[MAXFFLOORS];
@@ -827,19 +846,8 @@ typedef struct drawseg_s
 
 	UINT8 portalpass; // if > 0 and <= portalrender, do not affect sprite clipping
 
-	fixed_t maskedtextureheight[MAXVIDWIDTH]; // For handling sloped midtextures
-
 	vertex_t leftpos, rightpos; // Used for rendering FOF walls with slopes
 } drawseg_t;
-
-typedef enum
-{
-	PALETTE         = 0,  // 1 byte is the index in the doom palette (as usual)
-	INTENSITY       = 1,  // 1 byte intensity
-	INTENSITY_ALPHA = 2,  // 2 byte: alpha then intensity
-	RGB24           = 3,  // 24 bit rgb
-	RGBA32          = 4,  // 32 bit rgba
-} pic_mode_t;
 
 #ifdef ROTSPRITE
 typedef struct
@@ -859,8 +867,9 @@ typedef struct
 	INT16 width, height;
 	INT16 leftoffset, topoffset;
 
-	INT32 *columnofs; // Column offsets. This is relative to patch->columns
-	UINT8 *columns; // Software column data
+	UINT8 *pixels;
+	column_t *columns;
+	post_t *posts;
 
 	void *hardware; // OpenGL patch, allocated whenever necessary
 	void *flats[4]; // The patch as flats
@@ -883,26 +892,6 @@ typedef struct
 	INT32 columnofs[8];     // only [width] used
 	// the [0] is &columnofs[width]
 } ATTRPACK softwarepatch_t;
-
-#ifdef _MSC_VER
-#pragma warning(disable :  4200)
-#endif
-
-// a pic is an unmasked block of pixels, stored in horizontal way
-typedef struct
-{
-	INT16 width;
-	UINT8 zero;       // set to 0 allow autodetection of pic_t
-	                 // mode instead of patch or raw
-	UINT8 mode;       // see pic_mode_t above
-	INT16 height;
-	INT16 reserved1; // set to 0
-	UINT8 data[0];
-} ATTRPACK pic_t;
-
-#ifdef _MSC_VER
-#pragma warning(default : 4200)
-#endif
 
 #if defined(_MSC_VER)
 #pragma pack()

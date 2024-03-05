@@ -4834,6 +4834,7 @@ const char *const POWERS_LIST[] = {
 
 const char *const HUDITEMS_LIST[] = {
 	"LIVES",
+	"INPUT",
 
 	"RINGS",
 	"RINGSNUM",
@@ -5737,6 +5738,7 @@ struct int_const_s const INT_CONST[] = {
 	{"JA_DIGITAL",JA_DIGITAL},
 	{"JA_JUMP",JA_JUMP},
 	{"JA_SPIN",JA_SPIN},
+	{"JA_SHIELD",JA_SHIELD},
 	{"JA_FIRE",JA_FIRE},
 	{"JA_FIRENORMAL",JA_FIRENORMAL},
 	{"JOYAXISRANGE",JOYAXISRANGE},

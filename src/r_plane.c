@@ -603,6 +603,9 @@ void R_DrawPlanes(void)
 	visplane_t *pl;
 	INT32 i;
 
+	if (!r_renderfloors)
+		return;
+
 	R_UpdatePlaneRipple();
 
 	for (i = 0; i < MAXVISPLANES; i++, pl++)
@@ -624,37 +627,31 @@ void R_DrawPlanes(void)
 //
 static void R_DrawSkyPlane(visplane_t *pl)
 {
-	INT32 x;
-	INT32 angle;
+	INT32 texture = texturetranslation[skytexture];
 
-	// Reset column drawer function (note: couldn't we just call walldrawerfunc directly?)
+	// Reset column drawer function (note: couldn't we just call colfuncs[BASEDRAWFUNC] directly?)
 	// (that is, unless we'll need to switch drawers in future for some reason)
 	colfunc = colfuncs[BASEDRAWFUNC];
 
-	// use correct aspect ratio scale
 	dc_iscale = skyscale;
 
-	// Sky is always drawn full bright,
-	//  i.e. colormaps[0] is used.
-	// Because of this hack, sky is not affected
-	//  by sector colormaps (INVUL inverse mapping is not implemented in SRB2 so is irrelevant).
 	dc_colormap = colormaps;
 	dc_texturemid = skytexturemid;
-	dc_texheight = textureheight[skytexture]
-		>>FRACBITS;
-	for (x = pl->minx; x <= pl->maxx; x++)
+	dc_texheight = textureheight[texture]>>FRACBITS;
+
+	R_CheckTextureCache(texture);
+
+	for (INT32 x = pl->minx; x <= pl->maxx; x++)
 	{
 		dc_yl = pl->top[x];
 		dc_yh = pl->bottom[x];
 
 		if (dc_yl <= dc_yh)
 		{
-			angle = (pl->viewangle + xtoviewangle[x])>>ANGLETOSKYSHIFT;
+			INT32 angle = (pl->viewangle + xtoviewangle[x])>>ANGLETOSKYSHIFT;
 			dc_iscale = FixedMul(skyscale, FINECOSINE(xtoviewangle[x]>>ANGLETOFINESHIFT));
 			dc_x = x;
-			dc_source =
-				R_GetColumn(texturetranslation[skytexture],
-					-angle); // get negative of angle for each column to display sky correct way round! --Monster Iestyn 27/01/18
+			dc_source = R_GetColumn(texture, -angle)->pixels; // get negative of angle for each column to display sky correct way round! --Monster Iestyn 27/01/18
 			colfunc();
 		}
 	}
@@ -1004,30 +1001,21 @@ void R_DrawSinglePlane(visplane_t *pl)
 	{
 		levelflat_t *levelflat = &levelflats[pl->picnum];
 
-		/* :james: */
-		switch (levelflat->type)
+		// Get the texture
+		ds_source = (UINT8 *)R_GetFlat(levelflat);
+		if (ds_source == NULL)
+			return;
+
+		texture_t *texture = textures[R_GetTextureNumForFlat(levelflat)];
+		ds_flatwidth = texture->width;
+		ds_flatheight = texture->height;
+
+		if (R_CheckSolidColorFlat())
+			ds_solidcolor = true;
+		else if (R_CheckPowersOfTwo())
 		{
-			case LEVELFLAT_NONE:
-				return;
-			case LEVELFLAT_FLAT:
-				ds_source = (UINT8 *)R_GetFlat(levelflat->u.flat.lumpnum);
-				R_SetFlatVars(W_LumpLength(levelflat->u.flat.lumpnum));
-				if (R_CheckSolidColorFlat())
-					ds_solidcolor = true;
-				else
-					ds_powersoftwo = true;
-				break;
-			default:
-				ds_source = (UINT8 *)R_GetLevelFlat(levelflat);
-				if (!ds_source)
-					return;
-				else if (R_CheckSolidColorFlat())
-					ds_solidcolor = true;
-				else if (R_CheckPowersOfTwo())
-				{
-					R_SetFlatVars(ds_flatwidth * ds_flatheight);
-					ds_powersoftwo = true;
-				}
+			R_SetFlatVars(ds_flatwidth * ds_flatheight);
+			ds_powersoftwo = true;
 		}
 
 		mapfunc = R_MapPlane;

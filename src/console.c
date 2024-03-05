@@ -70,13 +70,8 @@ static boolean consoleready;  // console prompt is ready
        INT32 con_destlines; // vid lines used by console at final position
 static INT32 con_curlines;  // vid lines currently used by console
 
-       INT32 con_clipviewtop; // (useless)
-
 static UINT8  con_hudlines;             // number of console heads up message lines
 static UINT32 con_hudtime[MAXHUDLINES]; // remaining time of display for hud msg lines
-
-       INT32 con_clearlines;      // top screen lines to refresh when view reduced
-       boolean con_hudupdate;   // when messages scroll, we need a backgrnd refresh
 
 // console text output
 static char *con_line;          // console text output current line
@@ -120,7 +115,7 @@ static void CONS_backcolor_Change(void);
 #ifdef macintosh
 #define CON_BUFFERSIZE 4096 // my compiler can't handle local vars >32k
 #else
-#define CON_BUFFERSIZE 16384
+#define CON_BUFFERSIZE 32768
 #endif
 
 static char con_buffer[CON_BUFFERSIZE];
@@ -220,7 +215,7 @@ static char *bindtable[NUMINPUTS];
 static void CONS_Bind_f(void)
 {
 	size_t na;
-	char *newcmd;
+	char *newcmd = NULL;
 	//size_t newlen = 0;
 	unsigned int i;
 	INT32 key;
@@ -472,9 +467,6 @@ void CON_Init(void)
 	CON_SetupColormaps();
 
 	Lock_state();
-
-	//note: CON_Ticker should always execute at least once before D_Display()
-	con_clipviewtop = -1; // -1 does not clip
 
 	con_hudlines = atoi(cons_hudlines.defaultvalue);
 
@@ -751,7 +743,6 @@ void CON_ToggleOff(void)
 	con_curlines = 0;
 	CON_ClearHUD();
 	con_forcepic = 0;
-	con_clipviewtop = -1; // remove console clipping of view
 
 	I_UpdateMouseGrab();
 
@@ -798,18 +789,6 @@ void CON_Ticker(void)
 		}
 		else
 			CON_ChangeHeight();
-	}
-
-	// clip the view, so that the part under the console is not drawn
-	con_clipviewtop = -1;
-	if (cons_backpic.value) // clip only when using an opaque background
-	{
-		if (con_curlines > 0)
-			con_clipviewtop = con_curlines - viewwindowy - 1 - 10;
-		// NOTE: BIG HACK::SUBTRACT 10, SO THAT WATER DON'T COPY LINES OF THE CONSOLE
-		//       WINDOW!!! (draw some more lines behind the bottom of the console)
-		if (con_clipviewtop < 0)
-			con_clipviewtop = -1; // maybe not necessary, provided it's < 0
 	}
 
 	// check if console ready for prompt
@@ -881,12 +860,6 @@ static void CON_InputDelSelection(void)
 	size_t start, end, len;
 
 	Lock_state();
-
-	if (!input_cur)
-	{
-		Unlock_state();
-		return;
-	}
 
 	if (input_cur > input_sel)
 	{
@@ -1339,6 +1312,8 @@ boolean CON_Responder(event_t *ev)
 
 	if (input_sel != input_cur)
 		CON_InputDelSelection();
+	if (ev->type == ev_console)
+		CON_InputAddChar(key);
 
 	return true;
 }
@@ -1356,9 +1331,6 @@ static void CON_Linefeed(void)
 
 	con_line = &con_buffer[(con_cy%con_totallines)*con_width];
 	memset(con_line, ' ', con_width);
-
-	// make sure the view borders are refreshed if hud messages scroll
-	con_hudupdate = true; // see HU_Erase()
 }
 
 // Outputs text into the console text buffer
@@ -1747,9 +1719,6 @@ static void CON_DrawHudlines(void)
 		//V_DrawCharacter(x, y, (p[c]&0xff) | cv_constextsize.value | V_NOSCALESTART, true);
 		y += charheight;
 	}
-
-	// top screen lines that might need clearing when view is reduced
-	con_clearlines = y; // this is handled by HU_Erase();
 }
 
 // Lactozilla: Draws the console's background picture.
@@ -1780,10 +1749,10 @@ static void CON_DrawBackpic(void)
 	// then fill the sides with a solid color.
 	if (x > 0)
 	{
-		column_t *column = (column_t *)((UINT8 *)(con_backpic->columns) + (con_backpic->columnofs[0]));
-		if (!column->topdelta)
+		column_t *column = &con_backpic->columns[0];
+		if (column->num_posts && !column->posts[0].topdelta)
 		{
-			UINT8 *source = (UINT8 *)(column) + 3;
+			UINT8 *source = column->pixels;
 			INT32 color = (source[0] | V_NOSCALESTART);
 			// left side
 			V_DrawFill(0, 0, x, con_curlines, color);
@@ -1814,10 +1783,6 @@ static void CON_DrawConsole(void)
 
 	if (con_curlines <= 0)
 		return;
-
-	//FIXME: refresh borders only when console bg is translucent
-	con_clearlines = con_curlines; // clear console draw from view borders
-	con_hudupdate = true; // always refresh while console is on
 
 	// draw console background
 	if (cons_backpic.value || con_forcepic)

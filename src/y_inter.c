@@ -579,9 +579,9 @@ void Y_IntermissionDrawer(void)
 		{
 			if (LUA_HudEnabled(hud_intermissiontitletext))
 			{
-				const char *ringtext = "\x82" "get 50 rings then";
+				const char *ringtext = "\x82" "get 50 rings, then";
 				const char *tut1text = "\x82" "press " "\x80" "shield";
-				const char *tut2text = "\x82" "to " "\x80" "transform";
+				const char *tut2text = "\x82" "to transform";
 				ttheight = 8;
 				V_DrawLevelTitle(data.spec.passedx1 + xoffset1, ttheight, 0, data.spec.passed1);
 				ttheight += V_LevelNameHeight(data.spec.passed3) + 2;
@@ -2043,7 +2043,7 @@ static void Y_AwardCoopBonuses(void)
 	y_bonus_t localbonuses[4];
 
 	// set score/total first
-	data.coop.total = players[consoleplayer].recordscore;
+	data.coop.total = (players[consoleplayer].pflags & PF_FINISHED) ? players[consoleplayer].recordscore : 0;
 	data.coop.score = players[consoleplayer].score;
 	data.coop.gotperfbonus = -1;
 	memset(data.coop.bonuses, 0, sizeof(data.coop.bonuses));
@@ -2060,7 +2060,12 @@ static void Y_AwardCoopBonuses(void)
 
 		for (j = 0; j < 4; ++j) // Set bonuses
 		{
-			(bonuses_list[bonusnum][j])(&players[i], &localbonuses[j]);
+			//Set the bonus, but only if we actually finished
+			if (players[i].pflags & PF_FINISHED)
+				(bonuses_list[bonusnum][j])(&players[i], &localbonuses[j]);
+			else
+				Y_SetNullBonus(&players[i], &localbonuses[j]);
+			
 			players[i].score += localbonuses[j].points;
 			if (players[i].score > MAXSCORE)
 				players[i].score = MAXSCORE;
