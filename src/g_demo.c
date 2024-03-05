@@ -98,7 +98,7 @@ demoghost *ghosts = NULL;
 // DEMO RECORDING
 //
 
-#define DEMOVERSION 0x0011
+#define DEMOVERSION 0x0012
 #define DEMOHEADER  "\xF0" "SRB2Replay" "\x0F"
 
 #define DF_GHOST        0x01 // This demo contains ghost data too!
@@ -183,7 +183,11 @@ void G_ReadDemoTiccmd(ticcmd_t *cmd, INT32 playernum)
 	if (ziptic & ZT_ANGLE)
 		oldcmd.angleturn = READINT16(demo_p);
 	if (ziptic & ZT_BUTTONS)
+	{
 		oldcmd.buttons = (oldcmd.buttons & (BT_CAMLEFT|BT_CAMRIGHT)) | (READUINT16(demo_p) & ~(BT_CAMLEFT|BT_CAMRIGHT));
+		if (demoversion < 0x0012 && oldcmd.buttons & BT_SPIN)
+			oldcmd.buttons |= BT_SHIELD; // Copy BT_SPIN to BT_SHIELD for pre-Shield-button demos
+	}
 	if (ziptic & ZT_AIMING)
 		oldcmd.aiming = READINT16(demo_p);
 	if (ziptic & ZT_LATENCY)
@@ -771,7 +775,7 @@ void G_GhostTicker(void)
 			{
 				g->mo->destscale = READFIXED(g->p);
 				if (g->mo->destscale != g->mo->scale)
-					P_SetScale(g->mo, g->mo->destscale);
+					P_SetScale(g->mo, g->mo->destscale, false);
 			}
 			if (xziptic & EZT_THOKMASK)
 			{ // Let's only spawn ONE of these per frame, thanks.
@@ -810,7 +814,7 @@ void G_GhostTicker(void)
 							mobj->frame = (states[mobjinfo[type].spawnstate].frame & FF_FRAMEMASK) | tr_trans60<<FF_TRANSSHIFT;
 							mobj->color = g->mo->color;
 							mobj->skin = g->mo->skin;
-							P_SetScale(mobj, (mobj->destscale = g->mo->scale));
+							P_SetScale(mobj, g->mo->scale, true);
 
 							if (type == MT_THOK) // spintrail-specific modification for MT_THOK
 							{
@@ -926,7 +930,7 @@ void G_GhostTicker(void)
 				else
 					follow->destscale = g->mo->destscale;
 				if (follow->destscale != follow->scale)
-					P_SetScale(follow, follow->destscale);
+					P_SetScale(follow, follow->destscale, false);
 
 				P_UnsetThingPosition(follow);
 				temp = (g->version < 0x000e) ? READINT16(g->p)<<8 : READFIXED(g->p);
@@ -1079,7 +1083,7 @@ void G_ReadMetalTic(mobj_t *metal)
 		{
 			metal->destscale = READFIXED(metal_p);
 			if (metal->destscale != metal->scale)
-				P_SetScale(metal, metal->destscale);
+				P_SetScale(metal, metal->destscale, false);
 		}
 		if (xziptic & EZT_THOKMASK)
 		{ // Let's only spawn ONE of these per frame, thanks.
@@ -1117,7 +1121,7 @@ void G_ReadMetalTic(mobj_t *metal)
 						mobj->angle = metal->angle;
 						mobj->color = metal->color;
 						mobj->skin = metal->skin;
-						P_SetScale(mobj, (mobj->destscale = metal->scale));
+						P_SetScale(mobj, metal->scale, true);
 
 						if (type == MT_THOK) // spintrail-specific modification for MT_THOK
 						{
@@ -1184,7 +1188,7 @@ void G_ReadMetalTic(mobj_t *metal)
 				else
 					follow->destscale = metal->destscale;
 				if (follow->destscale != follow->scale)
-					P_SetScale(follow, follow->destscale);
+					P_SetScale(follow, follow->destscale, false);
 
 				P_UnsetThingPosition(follow);
 				temp = (metalversion < 0x000e) ? READINT16(metal_p)<<8 : READFIXED(metal_p);

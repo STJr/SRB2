@@ -1382,10 +1382,9 @@ void R_RenderPortalHorizonLine(sector_t *sector)
 		|| frontsector->ceilingpic == skyflatnum
 		|| (frontsector->heightsec != -1 && sectors[frontsector->heightsec].floorpic == skyflatnum))
 	{
-		ceilingplane = R_FindPlane(frontsector, frontsector->ceilingheight, frontsector->ceilingpic,
-			ceilinglightlevel, frontsector->ceilingxoffset, frontsector->ceilingxscale, frontsector->ceilingyscale,
-			frontsector->ceilingyoffset, frontsector->ceilingangle,
-			ceilingcolormap, NULL, NULL, NULL, NULL);
+		ceilingplane = R_FindPlane(frontsector, frontsector->ceilingheight, frontsector->ceilingpic, ceilinglightlevel,
+			frontsector->ceilingxoffset, frontsector->ceilingyoffset, frontsector->ceilingxscale, frontsector->ceilingyscale,
+			frontsector->ceilingangle, ceilingcolormap, NULL, NULL, NULL, NULL);
 	}
 	else
 		ceilingplane = NULL;
