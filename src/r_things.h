@@ -48,6 +48,7 @@ extern fixed_t windowbottom;
 
 void R_DrawMaskedColumn(column_t *column, unsigned lengthcol);
 void R_DrawFlippedMaskedColumn(column_t *column, unsigned lengthcol);
+void R_DrawFlippedPost(UINT8 *source, unsigned length, void (*drawcolfunc)(void));
 
 // ----------------
 // SPRITE RENDERING
