@@ -1961,10 +1961,10 @@ char *V_FontWordWrap(INT32 x, INT32 w, INT32 option, fixed_t scale, const char *
 	switch (option & V_SPACINGMASK)
 	{
 		case V_MONOSPACE:
-			spacewidth = font.spacewidth*2;
+			spacewidth = font.charwidth;
 			/* FALLTHRU */
 		case V_OLDSPACING:
-			charwidth = font.spacewidth*2;
+			charwidth = font.charwidth;
 			break;
 		case V_6WIDTHSPACE:
 			spacewidth = 6;
@@ -2057,10 +2057,10 @@ void V_DrawFontStringAtFixed(fixed_t x, fixed_t y, INT32 option, fixed_t pscale,
 	switch (option & V_SPACINGMASK) // TODO: 2.3: drop support for these crusty flags
 	{
 		case V_MONOSPACE:
-			spacewidth = font.spacewidth*2;
+			spacewidth = font.charwidth;
 			/* FALLTHRU */
 		case V_OLDSPACING:
-			charwidth = font.spacewidth*2;
+			charwidth = font.charwidth;
 			break;
 		case V_6WIDTHSPACE:
 			spacewidth = 6;
@@ -2432,10 +2432,10 @@ INT32 V_FontStringWidth(const char *string, INT32 option, fontdef_t font)
 	switch (option & V_SPACINGMASK)
 	{
 		case V_MONOSPACE:
-			spacewidth = font.spacewidth*2;
+			spacewidth = font.charwidth;
 			/* FALLTHRU */
 		case V_OLDSPACING:
-			charwidth = font.spacewidth*2;
+			charwidth = font.charwidth;
 			break;
 		case V_6WIDTHSPACE:
 			spacewidth = 6;

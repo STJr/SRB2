@@ -200,13 +200,13 @@ void HU_LoadGraphics(void)
 	HU_LoadFontCharacters(&ntb_font,  "NTFNT");
 	HU_LoadFontCharacters(&nto_font,  "NTFNO");
 
-	// Set kerning, space width & line spacing for each font
-	HU_SetFontProperties(&hu_font, 0, 4, 12);
-	HU_SetFontProperties(&tny_font, 0, 2, 12);
-	HU_SetFontProperties(&cred_font, 0, 16, 16);
-	HU_SetFontProperties(&lt_font, 0, 16, 20);
-	HU_SetFontProperties(&ntb_font, 2, 4, 21);
-	HU_SetFontProperties(&nto_font, 0, 4, 21);
+	// For each font, set kerning, space width, character width and line spacing
+	HU_SetFontProperties(&hu_font,   0,  4,  8, 12);
+	HU_SetFontProperties(&tny_font,  0,  2,  4, 12);
+	HU_SetFontProperties(&cred_font, 0, 16, 16, 16);
+	HU_SetFontProperties(&lt_font,   0, 16, 20, 20);
+	HU_SetFontProperties(&ntb_font,  2,  4, 20, 21);
+	HU_SetFontProperties(&nto_font,  0,  4, 20, 21);
 
 	//cache numbers too!
 	for (i = 0; i < 10; i++)
@@ -279,10 +279,11 @@ void HU_LoadFontCharacters(fontdef_t *font, const char *prefix)
 		}
 }
 
-void HU_SetFontProperties(fontdef_t *font, INT32 kerning, UINT32 spacewidth, UINT32 linespacing)
+void HU_SetFontProperties(fontdef_t *font, INT32 kerning, UINT32 spacewidth, UINT32 charwidth, UINT32 linespacing)
 {
 	font->kerning = kerning;
 	font->spacewidth = spacewidth;
+	font->charwidth = charwidth;
 	font->linespacing = linespacing;
 }
 
