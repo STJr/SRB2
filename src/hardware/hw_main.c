@@ -5953,7 +5953,7 @@ void HWR_DoPostProcessor(player_t *player)
 		if (*type == postimg_water)
 		{
 			WAVELENGTH = 5;
-			AMPLITUDE = 20;
+			AMPLITUDE = 40;
 			FREQUENCY = 8;
 		}
 		else
