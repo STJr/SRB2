@@ -371,9 +371,11 @@ void ST_LoadFaceGraphics(INT32 skinnum)
 		spritedef_t *sprdef = &skins[skinnum]->sprites[SPR2_XTRA];
 		spriteframe_t *sprframe = &sprdef->spriteframes[XTRA_LIFEPIC];
 		faceprefix[skinnum] = W_CachePatchNum(sprframe->lumppat[0], PU_HUDGFX);
-		if (skins[skinnum]->sprites[(SPR2_XTRA|FF_SPR2SUPER)].numframes > XTRA_LIFEPIC)
+
+		spritedef_t *super_sprdef = P_GetSkinSpritedef(skins[skinnum], SPR2_XTRA|SPR2F_SUPER);
+		if (super_sprdef->numframes > XTRA_LIFEPIC)
 		{
-			sprdef = &skins[skinnum]->sprites[SPR2_XTRA|FF_SPR2SUPER];
+			sprdef = super_sprdef;
 			sprframe = &sprdef->spriteframes[0];
 			superprefix[skinnum] = W_CachePatchNum(sprframe->lumppat[0], PU_HUDGFX);
 		}

@@ -1078,30 +1078,47 @@ static boolean HWR_CanInterpolateSprite2(modelspr2frames_t *spr2frame)
 	return spr2frame->interpolate;
 }
 
-//
-// HWR_GetModelSprite2 (see P_GetSkinSprite2)
-// For non-super players, tries each sprite2's immediate predecessor until it finds one with a number of frames or ends up at standing.
-// For super players, does the same as above - but tries the super equivalent for each sprite2 before the non-super version.
-//
-
-static UINT8 HWR_GetModelSprite2(md2_t *md2, skin_t *skin, UINT8 spr2, player_t *player)
+static modelspr2frames_t *HWR_GetModelSprite2Frames(md2_t *md2, UINT16 spr2)
 {
-	UINT8 super = 0, i = 0;
+	if (!md2 || !md2->model)
+		return NULL;
 
-	if (!md2 || !md2->model || !md2->model->spr2frames || !skin)
-		return 0;
+	boolean is_super = spr2 & SPR2F_SUPER;
 
-	if ((playersprite_t)(spr2 & ~FF_SPR2SUPER) >= free_spr2)
-		return 0;
+	spr2 &= SPR2F_MASK;
 
-	while (!md2->model->spr2frames[spr2].numframes
-		&& spr2 != SPR2_STND
-		&& ++i != 32) // recursion limiter
+	if (spr2 >= free_spr2)
+		return NULL;
+
+	if (is_super)
 	{
-		if (spr2 & FF_SPR2SUPER)
+		modelspr2frames_t *frames = md2->model->superspr2frames;
+		if (frames && md2->model->superspr2frames[spr2].numframes)
+			return &md2->model->superspr2frames[spr2];
+	}
+
+	if (md2->model->spr2frames)
+		return &md2->model->spr2frames[spr2];
+
+	return NULL;
+}
+
+static modelspr2frames_t *HWR_GetModelSprite2(md2_t *md2, skin_t *skin, UINT16 spr2, player_t *player)
+{
+	UINT16 super = 0;
+	UINT8 i = 0;
+
+	if (!md2 || !md2->model || !skin)
+		return HWR_GetModelSprite2Frames(md2, 0);
+
+	while (!HWR_GetModelSprite2Frames(md2, spr2)
+		&& spr2 != SPR2_STND
+		&& ++i < 32) // recursion limiter
+	{
+		if (spr2 & SPR2F_SUPER)
 		{
-			super = FF_SPR2SUPER;
-			spr2 &= ~FF_SPR2SUPER;
+			super = SPR2F_SUPER;
+			spr2 &= ~SPR2F_SUPER;
 			continue;
 		}
 
@@ -1130,9 +1147,9 @@ static UINT8 HWR_GetModelSprite2(md2_t *md2, skin_t *skin, UINT8 spr2, player_t 
 	}
 
 	if (i >= 32) // probably an infinite loop...
-		return 0;
+		spr2 = 0;
 
-	return spr2;
+	return HWR_GetModelSprite2Frames(md2, spr2);
 }
 
 // Adjust texture coords of model to fit into a patch's max_s and max_t
@@ -1188,7 +1205,7 @@ boolean HWR_DrawModel(gl_vissprite_t *spr)
 	char filename[64];
 	INT32 frame = 0;
 	INT32 nextFrame = -1;
-	UINT8 spr2 = 0;
+	modelspr2frames_t *spr2frames = NULL;
 	FTransform p;
 	FSurfaceInfo Surf;
 
@@ -1418,18 +1435,24 @@ boolean HWR_DrawModel(gl_vissprite_t *spr)
 			tics = (float)spr->mobj->anim_duration;
 		}
 
+		if (spr->mobj->skin && spr->mobj->sprite == SPR_PLAY)
+			sprdef = P_GetSkinSpritedef(spr->mobj->skin, spr->mobj->sprite2);
+		else
+			sprdef = &sprites[spr->mobj->sprite];
+
 		frame = (spr->mobj->frame & FF_FRAMEMASK);
-		if (spr->mobj->skin && spr->mobj->sprite == SPR_PLAY && md2->model->spr2frames)
+		if (spr->mobj->skin && spr->mobj->sprite == SPR_PLAY)
+			spr2frames = HWR_GetModelSprite2(md2, spr->mobj->skin, spr->mobj->sprite2, spr->mobj->player);
+		if (spr2frames)
 		{
-			spr2 = HWR_GetModelSprite2(md2, spr->mobj->skin, spr->mobj->sprite2, spr->mobj->player);
-			mod = md2->model->spr2frames[spr2].numframes;
+			mod = spr2frames->numframes;
 #ifndef DONTHIDEDIFFANIMLENGTH // by default, different anim length is masked by the mod
-			if (mod > (INT32)((skin_t *)spr->mobj->skin)->sprites[spr2].numframes)
-				mod = ((skin_t *)spr->mobj->skin)->sprites[spr2].numframes;
+			if (mod > (INT32)sprdef->numframes)
+				mod = sprdef->numframes;
 #endif
 			if (!mod)
 				mod = 1;
-			frame = md2->model->spr2frames[spr2].frames[frame%mod];
+			frame = spr2frames->frames[frame % mod];
 		}
 		else
 		{
@@ -1449,13 +1472,18 @@ boolean HWR_DrawModel(gl_vissprite_t *spr)
 			if (durs > INTERPOLERATION_LIMIT)
 				durs = INTERPOLERATION_LIMIT;
 
-			if (spr->mobj->skin && spr->mobj->sprite == SPR_PLAY && md2->model->spr2frames)
+			if (spr2frames)
 			{
-				if (HWR_CanInterpolateSprite2(&md2->model->spr2frames[spr2])
+				UINT16 next_spr2 = P_GetStateSprite2(&states[spr->mobj->state->nextstate]);
+
+				// Add or remove SPR2F_SUPER based on certain conditions
+				next_spr2 = P_ApplySuperFlagToSprite2(next_spr2, spr->mobj);
+
+				if (HWR_CanInterpolateSprite2(spr2frames)
 					&& (spr->mobj->frame & FF_ANIMATE
 					|| (spr->mobj->state->nextstate != S_NULL
 					&& states[spr->mobj->state->nextstate].sprite == SPR_PLAY
-					&& ((P_GetSkinSprite2(spr->mobj->skin, (((spr->mobj->player && spr->mobj->player->powers[pw_super]) ? FF_SPR2SUPER : 0)|states[spr->mobj->state->nextstate].frame) & FF_FRAMEMASK, spr->mobj->player) == spr->mobj->sprite2)))))
+					&& ((P_GetSkinSprite2(spr->mobj->skin, next_spr2, spr->mobj->player) == spr->mobj->sprite2)))))
 				{
 					nextFrame = (spr->mobj->frame & FF_FRAMEMASK) + 1;
 					if (nextFrame >= mod)
@@ -1466,7 +1494,7 @@ boolean HWR_DrawModel(gl_vissprite_t *spr)
 							nextFrame = 0;
 					}
 					if (frame || !(spr->mobj->state->frame & FF_SPR2ENDSTATE))
-						nextFrame = md2->model->spr2frames[spr2].frames[nextFrame];
+						nextFrame = spr2frames->frames[nextFrame];
 					else
 						nextFrame = -1;
 				}
@@ -1501,11 +1529,6 @@ boolean HWR_DrawModel(gl_vissprite_t *spr)
 			p.z = FIXED_TO_FLOAT(interp.z + interp.height);
 		else
 			p.z = FIXED_TO_FLOAT(interp.z);
-
-		if (spr->mobj->skin && spr->mobj->sprite == SPR_PLAY)
-			sprdef = &((skin_t *)spr->mobj->skin)->sprites[spr->mobj->sprite2];
-		else
-			sprdef = &sprites[spr->mobj->sprite];
 
 		sprframe = &sprdef->spriteframes[spr->mobj->frame & FF_FRAMEMASK];
 

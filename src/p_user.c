@@ -1400,7 +1400,7 @@ void P_DoSuperDetransformation(player_t *player)
 	if (!G_CoopGametype())
 		player->powers[pw_flashing] = flashingtics-1;
 
-	if (player->mo->sprite2 & FF_SPR2SUPER)
+	if (player->mo->sprite2 & SPR2F_SUPER)
 		P_SetMobjState(player->mo, player->mo->state-states);
 
 	// Inform the netgame that the champion has fallen in the heat of battle.
@@ -11417,10 +11417,10 @@ void P_DoTailsOverlay(player_t *player, mobj_t *tails)
 	}
 	else
 	{
-		if (tails->state != states+chosenstate)
+		if (tails->state != &states[chosenstate])
 		{
 			if (states[chosenstate].sprite == SPR_PLAY)
-				tails->sprite2 = P_GetSkinSprite2(((skin_t *)tails->skin), (states[chosenstate].frame & FF_FRAMEMASK), player);
+				tails->sprite2 = P_GetSkinSprite2(((skin_t *)tails->skin), P_GetStateSprite2(&states[chosenstate]), player);
 			P_SetMobjState(tails, chosenstate);
 		}
 	}
