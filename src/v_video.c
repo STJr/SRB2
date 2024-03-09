@@ -2112,41 +2112,12 @@ void V_DrawFontStringAtFixed(fixed_t x, fixed_t y, INT32 option, fixed_t pscale,
 
 void V_DrawAlignedFontStringAtFixed(fixed_t x, fixed_t y, INT32 option, fixed_t pscale, fixed_t vscale, const char *string, fontdef_t font, enum string_align align)
 {
-	char line[MAXLINELEN];
-	size_t i, start = 0;
+	char *text = strdup(string);
+	char* line = xstrtok(text, "\n");
 	fixed_t lx = x, ly = y;
 
-	while (*(string+start))
+	while (line)
 	{
-		for (i = 0; i < strlen(string+start); i++)
-		{
-			if (*(string+start+i) == '\n')
-			{
-				memset(line, 0, MAXLINELEN);
-				if (i >= MAXLINELEN) 
-				{
-					CONS_Printf("V_DrawAlignedFontStringAtFixed: a line exceeds max. length %d (string: %s)\n", MAXLINELEN, string);
-					return;
-				}
-				strncpy(line,string + start, i);
-				line[i] = '\0';
-				start += i + 1;
-				i = (size_t)-1; //added : 07-02-98 : damned!
-				break;
-			}
-		}
-
-		if (i == strlen(string + start))
-		{
-			if (i >= MAXLINELEN) 
-			{
-				CONS_Printf("V_DrawAlignedFontStringAtFixed: a line exceeds max. length %d (string: %s)\n", MAXLINELEN, string);
-				return;
-			}
-			strcpy(line, string + start);
-			start += i;
-		}
-
 		switch(align)
 		{
 			case alignleft:
@@ -2163,6 +2134,8 @@ void V_DrawAlignedFontStringAtFixed(fixed_t x, fixed_t y, INT32 option, fixed_t 
 		V_DrawFontStringAtFixed(lx, ly, option, pscale, vscale, line, font);
 
 		ly += FixedMul(((option & V_RETURN8) ? 8 : font.linespacing)<<FRACBITS, vscale);
+
+		line = xstrtok(NULL, "\n");
 	}
 }
 
