@@ -1435,12 +1435,6 @@ static void R_RenderSegLoop (void)
 				floorclip[rw_x] = bottomclip;
 		}
 
-		if ((markceiling || markfloor) && (floorclip[rw_x] <= ceilingclip[rw_x] + 1))
-		{
-			solidcol[rw_x] = 1;
-			didsolidcol = true;
-		}
-
 		if (maskedtexturecol)
 			maskedtexturecol[rw_x] = texturecolumn + rw_offsetx;
 
@@ -1503,8 +1497,6 @@ static void R_RenderSegLoop (void)
 		topfrac += topstep;
 		bottomfrac += bottomstep;
 	}
-
-	colfunc = colfuncs[BASEDRAWFUNC];
 }
 
 // Uses precalculated seg->length
@@ -2915,29 +2907,13 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 	rw_tsilheight = &(ds_p->tsilheight);
 	rw_bsilheight = &(ds_p->bsilheight);
 
-	didsolidcol = false;
-
 	R_RenderSegLoop();
+	colfunc = colfuncs[BASEDRAWFUNC];
 
 	if (portalline) // if curline is a portal, set portalrender for drawseg
 		ds_p->portalpass = portalrender+1;
 	else
 		ds_p->portalpass = 0;
-
-	// cph - if a column was made solid by this wall, we _must_ save full clipping info
-	if (backsector && didsolidcol)
-	{
-		if (!(ds_p->silhouette & SIL_BOTTOM))
-		{
-			ds_p->silhouette |= SIL_BOTTOM;
-			ds_p->bsilheight = backsector->f_slope ? INT32_MAX : backsector->floorheight;
-		}
-		if (!(ds_p->silhouette & SIL_TOP))
-		{
-			ds_p->silhouette |= SIL_TOP;
-			ds_p->tsilheight = backsector->c_slope ? INT32_MIN : backsector->ceilingheight;
-		}
-	}
 
 	// save sprite clipping info
 	if (maskedtexture || (ds_p->silhouette & (SIL_TOP | SIL_BOTTOM)))
