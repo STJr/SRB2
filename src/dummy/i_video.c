@@ -19,13 +19,6 @@ void I_SetPalette(RGBA_t *palette)
 	(void)palette;
 }
 
-void VID_SetSize(INT32 width, INT32 height)
-{
-	(void)width;
-	(void)height;
-	return 0;
-}
-
 boolean VID_CheckRenderer(void)
 {
 	return false;

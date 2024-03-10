@@ -106,8 +106,8 @@ UINT32 I_GetSongLength(void)
 
 boolean I_SetSongLoopPoint(UINT32 looppoint)
 {
-        (void)looppoint;
-        return false;
+	(void)looppoint;
+	return false;
 }
 
 UINT32 I_GetSongLoopPoint(void)
@@ -117,13 +117,13 @@ UINT32 I_GetSongLoopPoint(void)
 
 boolean I_SetSongPosition(UINT32 position)
 {
-    (void)position;
-    return false;
+	(void)position;
+	return false;
 }
 
 UINT32 I_GetSongPosition(void)
 {
-    return 0;
+	return 0;
 }
 
 /// ------------------------
@@ -208,7 +208,7 @@ boolean I_FadeOutStopSong(UINT32 ms)
 
 boolean I_FadeInPlaySong(UINT32 ms, boolean looping)
 {
-        (void)ms;
-        (void)looping;
-        return false;
+	(void)ms;
+	(void)looping;
+	return false;
 }
