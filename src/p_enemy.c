@@ -4189,8 +4189,6 @@ static void P_DoBoss5Death(mobj_t *mo)
 			if (!P_MobjWasRemoved(pole))
 			{
 				P_SetScale(pole, 2*FRACUNIT, true);
-				pole->momx = P_ReturnThrustX(pole, pole->angle, speed);
-				pole->momy = P_ReturnThrustY(pole, pole->angle, speed);
 				P_SetTarget(&pole->tracer, P_SpawnMobj(
 					pole->x, pole->y,
 					pole->z - 256*FRACUNIT,
@@ -4199,9 +4197,6 @@ static void P_DoBoss5Death(mobj_t *mo)
 				{
 					pole->tracer->flags |= MF_NOCLIPTHING;
 					P_SetScale(pole->tracer, 2*FRACUNIT, true);
-					pole->angle = pole->tracer->angle = mo->tracer->angle;
-					pole->tracer->momx = pole->momx;
-					pole->tracer->momy = pole->momy;
 
 					P_SetTarget(&pole->tracer->tracer, P_SpawnMobj(
 						pole->x + P_ReturnThrustX(pole, mo->tracer->angle, FRACUNIT),
@@ -4210,7 +4205,12 @@ static void P_DoBoss5Death(mobj_t *mo)
 						MT_FSGNA));
 					if (!P_MobjWasRemoved(pole->tracer->tracer))
 					{
+						pole->angle = pole->tracer->angle = mo->tracer->angle;
 						pole->tracer->tracer->angle = pole->angle - ANGLE_90;
+						pole->momx = P_ReturnThrustX(pole, pole->angle, speed);
+						pole->momy = P_ReturnThrustY(pole, pole->angle, speed);
+						pole->tracer->momx = pole->momx;
+						pole->tracer->momy = pole->momy;
 						pole->tracer->tracer->momx = pole->momx;
 						pole->tracer->tracer->momy = pole->momy;
 					}
