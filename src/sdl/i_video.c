@@ -1385,8 +1385,6 @@ void I_FinishUpdate(void)
 		OglSdlFinishUpdate(cv_vidwait.value);
 	}
 #endif
-
-	exposevideo = SDL_FALSE;
 }
 
 //
@@ -1811,33 +1809,30 @@ static void Impl_InitOpenGL(void)
 	HWD.pfnSetTexture       = hwSym("SetTexture",NULL);
 	HWD.pfnUpdateTexture    = hwSym("UpdateTexture",NULL);
 	HWD.pfnDeleteTexture    = hwSym("DeleteTexture",NULL);
-	HWD.pfnReadRect         = hwSym("ReadRect",NULL);
+	HWD.pfnReadScreenTexture= hwSym("ReadScreenTexture",NULL);
 	HWD.pfnGClipRect        = hwSym("GClipRect",NULL);
 	HWD.pfnClearMipMapCache = hwSym("ClearMipMapCache",NULL);
 	HWD.pfnSetSpecialState  = hwSym("SetSpecialState",NULL);
-	HWD.pfnSetPalette       = hwSym("SetPalette",NULL);
+	HWD.pfnSetTexturePalette= hwSym("SetTexturePalette",NULL);
 	HWD.pfnGetTextureUsed   = hwSym("GetTextureUsed",NULL);
 	HWD.pfnDrawModel        = hwSym("DrawModel",NULL);
 	HWD.pfnCreateModelVBOs  = hwSym("CreateModelVBOs",NULL);
 	HWD.pfnSetTransform     = hwSym("SetTransform",NULL);
 	HWD.pfnPostImgRedraw    = hwSym("PostImgRedraw",NULL);
 	HWD.pfnFlushScreenTextures=hwSym("FlushScreenTextures",NULL);
-	HWD.pfnStartScreenWipe  = hwSym("StartScreenWipe",NULL);
-	HWD.pfnEndScreenWipe    = hwSym("EndScreenWipe",NULL);
 	HWD.pfnDoScreenWipe     = hwSym("DoScreenWipe",NULL);
-	HWD.pfnDrawIntermissionBG=hwSym("DrawIntermissionBG",NULL);
+	HWD.pfnDrawScreenTexture= hwSym("DrawScreenTexture",NULL);
 	HWD.pfnMakeScreenTexture= hwSym("MakeScreenTexture",NULL);
-	HWD.pfnMakeScreenFinalTexture=hwSym("MakeScreenFinalTexture",NULL);
 	HWD.pfnDrawScreenFinalTexture=hwSym("DrawScreenFinalTexture",NULL);
-	
-	HWD.pfnCompileShaders   = hwSym("CompileShaders",NULL);
-	HWD.pfnCleanShaders     = hwSym("CleanShaders",NULL);
+
+	HWD.pfnInitShaders      = hwSym("InitShaders",NULL);
+	HWD.pfnLoadShader       = hwSym("LoadShader",NULL);
+	HWD.pfnCompileShader    = hwSym("CompileShader",NULL);
 	HWD.pfnSetShader        = hwSym("SetShader",NULL);
 	HWD.pfnUnSetShader      = hwSym("UnSetShader",NULL);
 
 	HWD.pfnSetShaderInfo    = hwSym("SetShaderInfo",NULL);
-	HWD.pfnLoadCustomShader = hwSym("LoadCustomShader",NULL);
-	
+
 	HWD.pfnSetPaletteLookup = hwSym("SetPaletteLookup",NULL);
 	HWD.pfnCreateLightTable = hwSym("CreateLightTable",NULL);
 	HWD.pfnClearLightTables = hwSym("ClearLightTables",NULL);

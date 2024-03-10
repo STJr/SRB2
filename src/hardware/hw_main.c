@@ -82,7 +82,6 @@ static sector_t *gl_backsector;
 FTransform atransform;
 // duplicates of the main code, set after R_SetupFrame() passed them into sharedstruct,
 // copied here for local use
-static fixed_t dup_viewx, dup_viewy, dup_viewz;
 static angle_t dup_viewangle;
 
 static float gl_viewx, gl_viewy, gl_viewz;
@@ -93,7 +92,6 @@ static float gl_viewludsin, gl_viewludcos; // look up down kik test
 static float gl_fovlud;
 
 static angle_t gl_aimingangle;
-static float HWR_GetFOV(player_t *player);
 static void HWR_SetTransformAiming(FTransform *trans, player_t *player, boolean skybox);
 
 // Render stats
@@ -5174,21 +5172,6 @@ void HWR_SetViewSize(void)
 	HWD.pfnFlushScreenTextures();
 }
 
-float HWR_GetFOV(player_t *player)
-{
-	float fov = FixedToFloat(R_GetFOV() + player->fovadd);
-
-	// Adjust field of view to the aspect ratio
-	if (cv_fovadjust.value)
-	{
-		fixed_t ftan = FloatToFixed(tan(fov * M_PI / 360));
-		ftan = R_AdjustFOV(ftan);
-		fov = atan(FixedToFloat(ftan)) * 360 / M_PI;
-	}
-
-	return fov;
-}
-
 // Set view aiming, for the sky dome, the skybox,
 // and the normal view, all with a single function.
 static void HWR_SetTransformAiming(FTransform *trans, player_t *player, boolean skybox)
@@ -5294,7 +5277,7 @@ static void HWR_SetupView(player_t *player, INT32 viewnumber, float fpov, boolea
 // ==========================================================================
 // Same as rendering the player view, but from the skybox object
 // ==========================================================================
-void HWR_RenderSkyboxView(INT32 viewnumber, player_t *player)
+static void HWR_RenderSkyboxView(INT32 viewnumber, player_t *player)
 {
 	const float fpov = FixedToFloat(R_GetPlayerFov(player));
 
@@ -5386,7 +5369,7 @@ void HWR_RenderSkyboxView(INT32 viewnumber, player_t *player)
 // ==========================================================================
 //
 // ==========================================================================
-void HWR_RenderPlayerView(player_t *player)
+void HWR_RenderPlayerView(INT32 viewnumber, player_t *player)
 {
 	const float fpov = FixedToFloat(R_GetPlayerFov(player));
 
@@ -5407,7 +5390,7 @@ void HWR_RenderPlayerView(player_t *player)
 
 	PS_START_TIMING(ps_hw_skyboxtime);
 	if (skybox && drawsky) // If there's a skybox and we should be drawing the sky, draw the skybox
-		HWR_RenderSkyboxView(player); // This is drawn before everything else so it is placed behind
+		HWR_RenderSkyboxView(viewnumber, player); // This is drawn before everything else so it is placed behind
 	PS_STOP_TIMING(ps_hw_skyboxtime);
 
 	HWR_SetupView(player, viewnumber, fpov, false);

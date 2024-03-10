@@ -53,7 +53,7 @@ typedef struct viddef_s
 
 	INT32 dup; // scale 1, 2, 3 value for menus & overlays
 	INT32/*fixed_t*/ fdup; // same as dup, but exact value when aspect ratio isn't 320/200
-	INT32 bpp; // BYTES per pixel: 1 = 256color
+	INT32 bpp; // BYTES per pixel: 1 = 256color, 2 = highcolor
 
 	INT32 baseratio; // Used to get the correct value for lighting walls
 
@@ -61,9 +61,6 @@ typedef struct viddef_s
 	DNWH WndParent; // handle of the application's window
 	UINT8 smalldup; // factor for a little bit of scaling
 	UINT8 meddup; // factor for moderate, but not full, scaling
-
-	INT32 fdup; // same as dupx, dupy, but exact value when aspect ratio isn't 320/200
-	INT32 bpp; // BYTES per pixel: 1 = 256color, 2 = highcolor
 
 	struct {
 		INT32 width;

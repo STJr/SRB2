@@ -487,7 +487,7 @@ static void D_Display(void)
 					objectsdrawn = 0;
 	#ifdef HWRENDER
 					if (rendermode != render_soft)
-						HWR_RenderPlayerView(&players[displayplayer]);
+						HWR_RenderPlayerView(0, &players[displayplayer]);
 					else
 	#endif
 					if (rendermode != render_none)
@@ -499,7 +499,7 @@ static void D_Display(void)
 				{
 	#ifdef HWRENDER
 					if (rendermode != render_soft)
-						HWR_RenderPlayerView(&players[secondarydisplayplayer]);
+						HWR_RenderPlayerView(1, &players[secondarydisplayplayer]);
 					else
 #endif
 					if (rendermode != render_none)

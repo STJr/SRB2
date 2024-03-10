@@ -2876,7 +2876,6 @@ EXPORT void HWRAPI(PostImgRedraw) (float points[SCREENVERTS][SCREENVERTS][2])
 	INT32 x, y;
 	float float_x, float_y, float_nextx, float_nexty;
 	float xfix, yfix;
-	INT32 texsize = 512;
 
 	const float blackBack[16] =
 	{
@@ -2971,7 +2970,6 @@ EXPORT void HWRAPI(FlushScreenTextures) (void)
 EXPORT void HWRAPI(DrawScreenTexture)(int tex, FSurfaceInfo *surf, FBITFIELD polyflags)
 {
 	float xfix, yfix;
-	INT32 texsize = 512;
 
 	const float screenVerts[12] =
 	{
@@ -3020,7 +3018,6 @@ EXPORT void HWRAPI(DrawScreenTexture)(int tex, FSurfaceInfo *surf, FBITFIELD pol
 EXPORT void HWRAPI(DoScreenWipe)(int wipeStart, int wipeEnd, FSurfaceInfo *surf,
 		FBITFIELD polyFlags)
 {
-	INT32 texsize = 512;
 	float xfix, yfix;
 
 	INT32 fademaskdownloaded = tex_downloaded; // the fade mask that has been set
@@ -3127,7 +3124,6 @@ EXPORT void HWRAPI(DoScreenWipe)(int wipeStart, int wipeEnd, FSurfaceInfo *surf,
 // Create a texture from the screen.
 EXPORT void HWRAPI(MakeScreenTexture) (int tex)
 {
-	INT32 texsize = 512;
 	boolean firstTime = (screenTextures[tex] == 0);
 
 	// look for power of two that is large enough for the screen
@@ -3153,36 +3149,12 @@ EXPORT void HWRAPI(MakeScreenTexture) (int tex)
 	tex_downloaded = screenTextures[tex];
 }
 
-EXPORT void HWRAPI(MakeScreenFinalTexture) (void)
-{
-	boolean firstTime = (finalScreenTexture == 0);
-
-	// Create screen texture
-	if (firstTime)
-		pglGenTextures(1, &finalScreenTexture);
-	pglBindTexture(GL_TEXTURE_2D, finalScreenTexture);
-
-	if (firstTime)
-	{
-		pglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-		pglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-		Clamp2D(GL_TEXTURE_WRAP_S);
-		Clamp2D(GL_TEXTURE_WRAP_T);
-		pglCopyTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 0, 0, texsize, texsize, 0);
-	}
-	else
-		pglCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, texsize, texsize);
-
-	tex_downloaded = finalScreenTexture;
-}
-
 EXPORT void HWRAPI(DrawScreenFinalTexture)(int tex, int width, int height)
 {
 	float xfix, yfix;
 	float origaspect, newaspect;
 	float xoff = 1, yoff = 1; // xoffset and yoffset for the polygon to have black bars around the screen
 	FRGBAFloat clearColour;
-	INT32 texsize = 512;
 
 	float off[12];
 	float fix[8];
