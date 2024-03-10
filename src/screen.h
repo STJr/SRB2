@@ -8,7 +8,7 @@
 // See the 'LICENSE' file for more details.
 //-----------------------------------------------------------------------------
 /// \file  screen.h
-/// \brief Handles multiple resolutions, 8bpp/16bpp(highcolor) modes
+/// \brief Handles multiple resolutions
 
 #ifndef __SCREEN_H__
 #define __SCREEN_H__
@@ -52,6 +52,13 @@ typedef struct viddef_s
 	INT32 recalc; // if true, recalc vid-based stuff
 
 	INT32 dup; // scale 1, 2, 3 value for menus & overlays
+	INT32/*fixed_t*/ fdup; // same as dup, but exact value when aspect ratio isn't 320/200
+	INT32 bpp; // BYTES per pixel: 1 = 256color
+
+	INT32 baseratio; // Used to get the correct value for lighting walls
+
+	// for Win32 version
+	DNWH WndParent; // handle of the application's window
 	UINT8 smalldup; // factor for a little bit of scaling
 	UINT8 meddup; // factor for moderate, but not full, scaling
 
@@ -168,6 +175,7 @@ extern CV_PossibleValue_t cv_renderer_t[];
 extern INT32 scr_bpp;
 
 extern consvar_t cv_scr_width, cv_scr_height, cv_scr_width_w, cv_scr_height_w, cv_scr_depth, cv_fullscreen;
+extern consvar_t cv_renderwalls, cv_renderfloors, cv_renderthings;
 extern consvar_t cv_renderview, cv_renderer;
 extern consvar_t cv_renderhitbox, cv_renderhitboxinterpolation, cv_renderhitboxgldepth;
 // wait for page flipping to end or not

@@ -40,10 +40,6 @@ extern rendermode_t rendermode;
 */
 extern rendermode_t chosenrendermode;
 
-/**	\brief use highcolor modes if true
-*/
-extern boolean highcolor;
-
 /**	\brief setup video mode
 */
 void I_StartupGraphics(void);

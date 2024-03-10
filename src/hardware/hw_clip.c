@@ -327,7 +327,8 @@ angle_t gld_FrustumAngle(float render_fov, angle_t tiltangle)
 
 	float tilt = (float)fabs(((double)(int)tiltangle) / ANG1);
 
-	float render_multiplier = 48.0f / RMUL;
+	float render_fovratio = (float)BASEVIDWIDTH / (float)BASEVIDHEIGHT; // SRB2CBTODO: NEWCLIPTODO: Is this right?
+	float render_multiplier = 64.0f / render_fovratio / RMUL;
 
 	if (tilt > 90.0f)
 	{

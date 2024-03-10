@@ -473,8 +473,6 @@ static void D_Display(void)
 	{
 		wipegamestate = gamestate;
 
-		// clean up border stuff
-		// see if the border needs to be initially drawn
 		if (gamestate == GS_LEVEL || (gamestate == GS_TITLESCREEN && titlemapinaction && curbghide && (!hidetitlemap)))
 		{
 			// draw the view directly
@@ -503,7 +501,7 @@ static void D_Display(void)
 					if (rendermode != render_soft)
 						HWR_RenderPlayerView(&players[secondarydisplayplayer]);
 					else
-	#endif
+#endif
 					if (rendermode != render_none)
 					{
 						viewwindowy = vid.height / 2;
@@ -514,6 +512,8 @@ static void D_Display(void)
 
 						viewwindowy = 0;
 					}
+
+					viewwindowy = 0;
 				}
 
 				// Image postprocessing effect

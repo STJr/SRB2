@@ -18,7 +18,6 @@
 #include "doomdef.h"
 #include "doomstat.h"
 #include "r_local.h"
-#include "r_splats.h"
 #include "r_translation.h"
 #include "st_stuff.h" // need ST_HEIGHT
 #include "i_video.h"
@@ -39,7 +38,7 @@
 
 /**	\brief view info
 */
-INT32 viewwidth, viewheight, viewwindowx, viewwindowy;
+INT32 viewwidth, scaledviewwidth, viewheight, viewwindowx, viewwindowy;
 
 UINT8 *topleft;
 
@@ -754,11 +753,3 @@ static void R_CalcSlopeLight(void)
 
 #include "r_draw8.c"
 #include "r_draw8_npo2.c"
-
-// ==========================================================================
-//                   INCLUDE 16bpp DRAWING CODE HERE
-// ==========================================================================
-
-#ifdef HIGHCOLOR
-#include "r_draw16.c"
-#endif

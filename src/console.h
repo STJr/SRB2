@@ -34,9 +34,6 @@ extern boolean con_startup;
 // needs explicit screen refresh until we are in the main game loop
 extern boolean con_refresh;
 
-// top clip value for view render: do not draw part of view hidden by console
-extern INT32 con_clipviewtop;
-
 // 0 means console if off, or moving out
 extern INT32 con_destlines;
 

@@ -207,17 +207,5 @@ void R_DrawTiltedTransSolidColorSpan_8(void);
 void R_DrawWaterSolidColorSpan_8(void);
 void R_DrawTiltedWaterSolidColorSpan_8(void);
 
-// ------------------
-// 16bpp DRAWING CODE
-// ------------------
-
-#ifdef HIGHCOLOR
-void R_DrawColumn_16(void);
-void R_DrawWallColumn_16(void);
-void R_DrawTranslucentColumn_16(void);
-void R_DrawTranslatedColumn_16(void);
-void R_DrawSpan_16(void);
-#endif
-
 // =========================================================================
 #endif  // __R_DRAW__

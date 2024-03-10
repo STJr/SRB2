@@ -90,8 +90,6 @@
 rendermode_t rendermode = render_soft;
 rendermode_t chosenrendermode = render_none; // set by command line arguments
 
-boolean highcolor = false;
-
 static void VidWaitChanged(void);
 
 // synchronize page flipping with screen refresh
@@ -1375,8 +1373,20 @@ void I_FinishUpdate(void)
 	}
 #ifdef HWRENDER
 	else if (rendermode == render_opengl)
+	{
+		// Final postprocess step of palette rendering, after everything else has been drawn.
+		if (HWR_ShouldUsePaletteRendering())
+		{
+			HWD.pfnMakeScreenTexture(HWD_SCREENTEXTURE_GENERIC2);
+			HWD.pfnSetShader(HWR_GetShaderFromTarget(SHADER_PALETTE_POSTPROCESS));
+			HWD.pfnDrawScreenTexture(HWD_SCREENTEXTURE_GENERIC2, NULL, 0);
+			HWD.pfnUnSetShader();
+		}
 		OglSdlFinishUpdate(cv_vidwait.value);
+	}
 #endif
+
+	exposevideo = SDL_FALSE;
 }
 
 //
@@ -1819,6 +1829,7 @@ static void Impl_InitOpenGL(void)
 	HWD.pfnMakeScreenTexture= hwSym("MakeScreenTexture",NULL);
 	HWD.pfnMakeScreenFinalTexture=hwSym("MakeScreenFinalTexture",NULL);
 	HWD.pfnDrawScreenFinalTexture=hwSym("DrawScreenFinalTexture",NULL);
+	
 	HWD.pfnCompileShaders   = hwSym("CompileShaders",NULL);
 	HWD.pfnCleanShaders     = hwSym("CleanShaders",NULL);
 	HWD.pfnSetShader        = hwSym("SetShader",NULL);
@@ -1826,6 +1837,11 @@ static void Impl_InitOpenGL(void)
 
 	HWD.pfnSetShaderInfo    = hwSym("SetShaderInfo",NULL);
 	HWD.pfnLoadCustomShader = hwSym("LoadCustomShader",NULL);
+	
+	HWD.pfnSetPaletteLookup = hwSym("SetPaletteLookup",NULL);
+	HWD.pfnCreateLightTable = hwSym("CreateLightTable",NULL);
+	HWD.pfnClearLightTables = hwSym("ClearLightTables",NULL);
+	HWD.pfnSetScreenPalette = hwSym("SetScreenPalette",NULL);
 
 	if (HWD.pfnInit())
 		vid.glstate = VID_GL_LIBRARY_LOADED;

@@ -384,13 +384,14 @@ void V_CubeApply(UINT8 *red, UINT8 *green, UINT8 *blue)
 
 const char *R_GetPalname(UINT16 num)
 {
-	static char palname[9];
-	char newpal[9] = "PLAYPAL";
+	static char palname[8+1];
+	char newpal[9] = "PLAYPAL\0";
 
 	if (num > 0 && num <= 10000)
 		snprintf(newpal, 8, "PAL%04u", num-1);
 
-	strncpy(palname, newpal, 8);
+	strncpy(palname, newpal, sizeof(palname)-1);
+	palname[8] = 0;
 	return palname;
 }
 
