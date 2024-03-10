@@ -35,30 +35,87 @@
 INT32 numskins = 0;
 skin_t **skins = NULL;
 
-//
-// P_GetSkinSprite2
-// For non-super players, tries each sprite2's immediate predecessor until it finds one with a number of frames or ends up at standing.
-// For super players, does the same as above - but tries the super equivalent for each sprite2 before the non-super version.
-//
-
-UINT8 P_GetSkinSprite2(skin_t *skin, UINT8 spr2, player_t *player)
+// Gets the animation ID of a state
+UINT16 P_GetStateSprite2(state_t *state)
 {
-	UINT8 super = 0, i = 0;
+	if (state->sprite2)
+		return state->sprite2;
+	else
+	{
+		// Transform the state frame into an animation ID
+		UINT32 stateframe = state->frame & FF_FRAMEMASK;
+		UINT16 spr2 = stateframe & ~FF_SPR2SUPER;
+
+		if (stateframe & FF_SPR2SUPER)
+			spr2 |= SPR2F_SUPER;
+
+		return spr2;
+	}
+}
+
+// Gets the starting frame of an animation
+UINT16 P_GetSprite2StateFrame(state_t *state)
+{
+	if (state->sprite2)
+		return state->frame & FF_FRAMEMASK;
+	else
+		return 0;
+}
+
+// Checks if a state should use the "super" variant of the animation
+boolean P_IsStateSprite2Super(state_t *state)
+{
+	if (state->sprite2)
+	{
+		if (state->sprite2 & SPR2F_SUPER)
+			return true;
+	}
+	else if (state->frame & FF_SPR2SUPER)
+		return true;
+
+	return false;
+}
+
+// Applies SPR2F_SUPER to an animation based on the actor's state
+UINT16 P_ApplySuperFlagToSprite2(UINT16 spr2, mobj_t *mobj)
+{
+	if (mobj->player)
+	{
+		if (mobj->player->charflags & SF_NOSUPERSPRITES || (mobj->player->powers[pw_carry] == CR_NIGHTSMODE && (mobj->player->charflags & SF_NONIGHTSSUPER)))
+			spr2 &= ~SPR2F_SUPER;
+		else if (mobj->player->powers[pw_super] || (mobj->player->powers[pw_carry] == CR_NIGHTSMODE && (mobj->player->charflags & SF_SUPER)))
+			spr2 |= SPR2F_SUPER;
+	}
+
+	if (spr2 & SPR2F_SUPER)
+	{
+		if (mobj->eflags & MFE_FORCENOSUPER)
+			spr2 &= ~SPR2F_SUPER;
+	}
+	else if (mobj->eflags & MFE_FORCESUPER)
+		spr2 |= SPR2F_SUPER;
+
+	return spr2;
+}
+
+// For non-super players, this tries each sprite2's immediate predecessor until it finds one with a number of frames or ends up at standing.
+// For super players, does the same as above - but tries the super equivalent for each sprite2 before the non-super version.
+UINT16 P_GetSkinSprite2(skin_t *skin, UINT16 spr2, player_t *player)
+{
+	UINT16 super = 0;
+	UINT8 i = 0;
 
 	if (!skin)
 		return 0;
 
-	if ((playersprite_t)(spr2 & ~FF_SPR2SUPER) >= free_spr2)
-		return 0;
-
-	while (!skin->sprites[spr2].numframes
+	while (!P_IsValidSprite2(skin, spr2)
 		&& spr2 != SPR2_STND
 		&& ++i < 32) // recursion limiter
 	{
-		if (spr2 & FF_SPR2SUPER)
+		if (spr2 & SPR2F_SUPER)
 		{
-			super = FF_SPR2SUPER;
-			spr2 &= ~FF_SPR2SUPER;
+			super = SPR2F_SUPER;
+			spr2 &= ~SPR2F_SUPER;
 			continue;
 		}
 
@@ -90,6 +147,51 @@ UINT8 P_GetSkinSprite2(skin_t *skin, UINT8 spr2, player_t *player)
 		return 0;
 
 	return spr2;
+}
+
+// Gets the spritedef of a skin animation
+spritedef_t *P_GetSkinSpritedef(skin_t *skin, UINT16 spr2)
+{
+	if (!skin)
+		return NULL;
+
+	boolean is_super = spr2 & SPR2F_SUPER;
+
+	spr2 &= SPR2F_MASK;
+
+	if (spr2 >= free_spr2)
+		return NULL;
+
+	if (is_super)
+		return &skin->super.sprites[spr2];
+	else
+		return &skin->sprites[spr2];
+}
+
+// Gets the spriteinfo of a skin animation
+spriteinfo_t *P_GetSkinSpriteInfo(skin_t *skin, UINT16 spr2)
+{
+	if (!skin)
+		return NULL;
+
+	boolean is_super = spr2 & SPR2F_SUPER;
+
+	spr2 &= SPR2F_MASK;
+
+	if (spr2 >= free_spr2)
+		return NULL;
+
+	if (is_super)
+		return &skin->super.sprinfo[spr2];
+	else
+		return &skin->sprinfo[spr2];
+}
+
+// Checks if a skin animation is valid
+boolean P_IsValidSprite2(skin_t *skin, UINT16 spr2)
+{
+	spritedef_t *sprdef = P_GetSkinSpritedef(skin, spr2);
+	return sprdef && sprdef->numframes;
 }
 
 static void Sk_SetDefaultValue(skin_t *skin)
@@ -376,7 +478,7 @@ static void SetSkin(player_t *player, INT32 skinnum)
 		player->mo->skin = skin;
 		if (newcolor)
 			player->mo->color = newcolor;
-		P_SetScale(player->mo, player->mo->scale);
+		P_SetScale(player->mo, player->mo->scale, false);
 		player->mo->radius = radius;
 
 		P_SetMobjState(player->mo, player->mo->state-states); // Prevent visual errors when switching between skins with differing number of frames
@@ -500,10 +602,10 @@ static UINT16 W_CheckForPatchSkinMarkerInPwad(UINT16 wadid, UINT16 startlump)
 	return INT16_MAX; // not found
 }
 
-static void R_LoadSkinSprites(UINT16 wadnum, UINT16 *lump, UINT16 *lastlump, skin_t *skin, UINT8 start_spr2)
+static void R_LoadSkinSprites(UINT16 wadnum, UINT16 *lump, UINT16 *lastlump, skin_t *skin, UINT16 start_spr2)
 {
 	UINT16 newlastlump;
-	UINT8 sprite2;
+	UINT16 sprite2;
 
 	*lump += 1; // start after S_SKIN
 	*lastlump = W_CheckNumForNamePwad("S_END",wadnum,*lump); // stop at S_END
@@ -523,7 +625,7 @@ static void R_LoadSkinSprites(UINT16 wadnum, UINT16 *lump, UINT16 *lastlump, ski
 		newlastlump++;
 		// load all sprite sets we are aware of... for super!
 		for (sprite2 = start_spr2; sprite2 < free_spr2; sprite2++)
-			R_AddSingleSpriteDef(spr2names[sprite2], &skin->sprites[FF_SPR2SUPER|sprite2], wadnum, newlastlump, *lastlump);
+			R_AddSingleSpriteDef(spr2names[sprite2], &skin->super.sprites[sprite2], wadnum, newlastlump, *lastlump);
 
 		newlastlump--;
 		*lastlump = newlastlump; // okay, make the normal sprite set loading end there

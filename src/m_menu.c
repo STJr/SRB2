@@ -1069,9 +1069,9 @@ static menuitem_t OP_ChangeControlsMenu[] =
 	{IT_CALL | IT_STRING2, NULL, "Move Backward",    M_ChangeControl, GC_BACKWARD    },
 	{IT_CALL | IT_STRING2, NULL, "Move Left",        M_ChangeControl, GC_STRAFELEFT  },
 	{IT_CALL | IT_STRING2, NULL, "Move Right",       M_ChangeControl, GC_STRAFERIGHT },
-	{IT_CALL | IT_STRING2, NULL, "Jump",             M_ChangeControl, GC_JUMP      },
-	{IT_CALL | IT_STRING2, NULL, "Spin",             M_ChangeControl, GC_SPIN     },
-	{IT_CALL | IT_STRING2, NULL, "Shield",           M_ChangeControl, GC_SHIELD    },
+	{IT_CALL | IT_STRING2, NULL, "Jump",             M_ChangeControl, GC_JUMP        },
+	{IT_CALL | IT_STRING2, NULL, "Spin",             M_ChangeControl, GC_SPIN        },
+	{IT_CALL | IT_STRING2, NULL, "Shield Ability",   M_ChangeControl, GC_SHIELD      },
 	{IT_HEADER, NULL, "Camera", NULL, 0},
 	{IT_SPACE, NULL, NULL, NULL, 0}, // padding
 	{IT_CALL | IT_STRING2, NULL, "Look Up",        M_ChangeControl, GC_LOOKUP      },
@@ -1120,13 +1120,15 @@ static menuitem_t OP_ChangeControlsMenu[] =
 
 static menuitem_t OP_Joystick1Menu[] =
 {
-	{IT_STRING | IT_CALL,  NULL, "Select Gamepad...", M_Setup1PJoystickMenu, 10},
-	{IT_STRING | IT_CVAR,  NULL, "Move \x17 Axis"    , &cv_moveaxis         , 30},
-	{IT_STRING | IT_CVAR,  NULL, "Move \x18 Axis"    , &cv_sideaxis         , 40},
-	{IT_STRING | IT_CVAR,  NULL, "Camera \x17 Axis"  , &cv_lookaxis         , 50},
-	{IT_STRING | IT_CVAR,  NULL, "Camera \x18 Axis"  , &cv_turnaxis         , 60},
-	{IT_STRING | IT_CVAR,  NULL, "Jump Axis"         , &cv_jumpaxis         , 70},
-	{IT_STRING | IT_CVAR,  NULL, "Spin Axis"         , &cv_spinaxis         , 80},
+	{IT_STRING | IT_CALL,  NULL, "Select Gamepad...", M_Setup1PJoystickMenu,  0},
+
+	{IT_STRING | IT_CVAR,  NULL, "Move \x17 Axis"    , &cv_moveaxis         , 20},
+	{IT_STRING | IT_CVAR,  NULL, "Move \x18 Axis"    , &cv_sideaxis         , 30},
+	{IT_STRING | IT_CVAR,  NULL, "Camera \x17 Axis"  , &cv_lookaxis         , 40},
+	{IT_STRING | IT_CVAR,  NULL, "Camera \x18 Axis"  , &cv_turnaxis         , 50},
+	{IT_STRING | IT_CVAR,  NULL, "Jump Axis"         , &cv_jumpaxis         , 60},
+	{IT_STRING | IT_CVAR,  NULL, "Spin Axis"         , &cv_spinaxis         , 70},
+	{IT_STRING | IT_CVAR,  NULL, "Shield Axis"       , &cv_shieldaxis       , 80},
 	{IT_STRING | IT_CVAR,  NULL, "Fire Axis"         , &cv_fireaxis         , 90},
 	{IT_STRING | IT_CVAR,  NULL, "Fire Normal Axis"  , &cv_firenaxis        ,100},
 
@@ -1138,13 +1140,15 @@ static menuitem_t OP_Joystick1Menu[] =
 
 static menuitem_t OP_Joystick2Menu[] =
 {
-	{IT_STRING | IT_CALL,  NULL, "Select Gamepad...", M_Setup2PJoystickMenu, 10},
-	{IT_STRING | IT_CVAR,  NULL, "Move \x17 Axis"    , &cv_moveaxis2        , 30},
-	{IT_STRING | IT_CVAR,  NULL, "Move \x18 Axis"    , &cv_sideaxis2        , 40},
-	{IT_STRING | IT_CVAR,  NULL, "Camera \x17 Axis"  , &cv_lookaxis2        , 50},
-	{IT_STRING | IT_CVAR,  NULL, "Camera \x18 Axis"  , &cv_turnaxis2        , 60},
-	{IT_STRING | IT_CVAR,  NULL, "Jump Axis"         , &cv_jumpaxis2        , 70},
-	{IT_STRING | IT_CVAR,  NULL, "Spin Axis"         , &cv_spinaxis2        , 80},
+	{IT_STRING | IT_CALL,  NULL, "Select Gamepad...", M_Setup2PJoystickMenu,  0},
+
+	{IT_STRING | IT_CVAR,  NULL, "Move \x17 Axis"    , &cv_moveaxis2        , 20},
+	{IT_STRING | IT_CVAR,  NULL, "Move \x18 Axis"    , &cv_sideaxis2        , 30},
+	{IT_STRING | IT_CVAR,  NULL, "Camera \x17 Axis"  , &cv_lookaxis2        , 40},
+	{IT_STRING | IT_CVAR,  NULL, "Camera \x18 Axis"  , &cv_turnaxis2        , 50},
+	{IT_STRING | IT_CVAR,  NULL, "Jump Axis"         , &cv_jumpaxis2        , 60},
+	{IT_STRING | IT_CVAR,  NULL, "Spin Axis"         , &cv_spinaxis2        , 70},
+	{IT_STRING | IT_CVAR,  NULL, "Shield Axis"       , &cv_shieldaxis2      , 80},
 	{IT_STRING | IT_CVAR,  NULL, "Fire Axis"         , &cv_fireaxis2        , 90},
 	{IT_STRING | IT_CVAR,  NULL, "Fire Normal Axis"  , &cv_firenaxis2       ,100},
 
@@ -3424,7 +3428,7 @@ boolean M_Responder(event_t *ev)
 			// ignore ev_keydown events if the key maps to a character, since
 			// the ev_text event will follow immediately after in that case.
 			if (ev->type == ev_keydown && ch >= 32 && ch <= 127)
-				return false;
+				return true;
 
 			if (M_ChangeStringCvar(ch))
 				return true;
@@ -4950,22 +4954,6 @@ static void M_DrawCenteredMenu(void)
 	}
 }
 
-//
-// M_StringHeight
-//
-// Find string height from hu_font chars
-//
-static inline size_t M_StringHeight(const char *string)
-{
-	size_t h = 8, i;
-
-	for (i = 0; i < strlen(string); i++)
-		if (string[i] == '\n')
-			h += 8;
-
-	return h;
-}
-
 // ==========================================================================
 // Extraneous menu patching functions
 // ==========================================================================
@@ -6083,56 +6071,16 @@ menu_t MessageDef =
 	NULL
 };
 
-
-void M_StartMessage(const char *string, void *routine,
-	menumessagetype_t itemtype)
+void M_StartMessage(const char *string, void *routine, menumessagetype_t itemtype)
 {
-	size_t max = 0, start = 0, i, strlines;
-	static char *message = NULL;
+	static char *message;
 	Z_Free(message);
-	message = Z_StrDup(string);
+	message = V_WordWrap(0,0,V_ALLOWLOWERCASE,string);
 	DEBFILE(message);
-
-	// Rudementary word wrapping.
-	// Simple and effective. Does not handle nonuniform letter sizes, colors, etc. but who cares.
-	strlines = 0;
-	for (i = 0; message[i]; i++)
-	{
-		if (message[i] == ' ')
-		{
-			start = i;
-			max += 4;
-		}
-		else if (message[i] == '\n')
-		{
-			strlines = i;
-			start = 0;
-			max = 0;
-			continue;
-		}
-		else
-			max += 8;
-
-		// Start trying to wrap if presumed length exceeds the screen width.
-		if (max >= BASEVIDWIDTH && start > 0)
-		{
-			message[start] = '\n';
-			max -= (start-strlines)*8;
-			strlines = start;
-			start = 0;
-		}
-	}
-
-	start = 0;
-	max = 0;
 
 	M_StartControlPanel(); // can't put menuactive to true
 
-	if (currentMenu == &MessageDef) // Prevent recursion
-		MessageDef.prevMenu = &MainDef;
-	else
-		MessageDef.prevMenu = currentMenu;
-
+	MessageDef.prevMenu = (currentMenu == &MessageDef) ? &MainDef : currentMenu; // Prevent recursion
 	MessageDef.menuitems[0].text     = message;
 	MessageDef.menuitems[0].alphaKey = (UINT8)itemtype;
 	if (!routine && itemtype != MM_NOTHING) itemtype = MM_NOTHING;
@@ -6151,50 +6099,16 @@ void M_StartMessage(const char *string, void *routine,
 			MessageDef.menuitems[0].itemaction = routine;
 			break;
 	}
-	//added : 06-02-98: now draw a textbox around the message
-	// compute lenght max and the numbers of lines
-	for (strlines = 0; *(message+start); strlines++)
-	{
-		for (i = 0;i < strlen(message+start);i++)
-		{
-			if (*(message+start+i) == '\n')
-			{
-				if (i > max)
-					max = i;
-				start += i;
-				i = (size_t)-1; //added : 07-02-98 : damned!
-				start++;
-				break;
-			}
-		}
+	MessageDef.x = (INT16)((BASEVIDWIDTH  - V_StringWidth(message, 0)-32)/2);
+	MessageDef.y = (INT16)((BASEVIDHEIGHT - V_StringHeight(message, V_RETURN8))/2);
 
-		if (i == strlen(message+start))
-			start += i;
-	}
-
-	MessageDef.x = (INT16)((BASEVIDWIDTH  - 8*max-16)/2);
-	MessageDef.y = (INT16)((BASEVIDHEIGHT - M_StringHeight(message))/2);
-
-	MessageDef.lastOn = (INT16)((strlines<<8)+max);
-
-	//M_SetupNextMenu();
 	currentMenu = &MessageDef;
 	itemOn = 0;
 }
 
-#define MAXMSGLINELEN 256
-
 static void M_DrawMessageMenu(void)
 {
-	INT32 y = currentMenu->y;
-	size_t i, start = 0;
-	INT16 max;
-	char string[MAXMSGLINELEN];
-	INT32 mlines;
 	const char *msg = currentMenu->menuitems[0].text;
-
-	mlines = currentMenu->lastOn>>8;
-	max = (INT16)((UINT8)(currentMenu->lastOn & 0xFF)*8);
 
 	// hack: draw RA background in RA menus
 	if (gamestate == GS_TIMEATTACK)
@@ -6219,51 +6133,8 @@ static void M_DrawMessageMenu(void)
 			V_DrawFadeScreen(0xFF00, curfadevalue);
 	}
 
-	M_DrawTextBox(currentMenu->x, y - 8, (max+7)>>3, mlines);
-
-	while (*(msg+start))
-	{
-		size_t len = strlen(msg+start);
-
-		for (i = 0; i < len; i++)
-		{
-			if (*(msg+start+i) == '\n')
-			{
-				memset(string, 0, MAXMSGLINELEN);
-				if (i >= MAXMSGLINELEN)
-				{
-					CONS_Printf("M_DrawMessageMenu: too long segment in %s\n", msg);
-					return;
-				}
-				else
-				{
-					strncpy(string,msg+start, i);
-					string[i] = '\0';
-					start += i;
-					i = (size_t)-1; //added : 07-02-98 : damned!
-					start++;
-				}
-				break;
-			}
-		}
-
-		if (i == strlen(msg+start))
-		{
-			if (i >= MAXMSGLINELEN)
-			{
-				CONS_Printf("M_DrawMessageMenu: too long segment in %s\n", msg);
-				return;
-			}
-			else
-			{
-				strcpy(string, msg + start);
-				start += i;
-			}
-		}
-
-		V_DrawString((BASEVIDWIDTH - V_StringWidth(string, 0))/2,y,V_ALLOWLOWERCASE,string);
-		y += 8; //hu_font[0]->height;
-	}
+	M_DrawTextBox(currentMenu->x, currentMenu->y - 8, 2+V_StringWidth(msg, 0)/8, V_StringHeight(msg, V_RETURN8)/8);
+	V_DrawCenteredString(BASEVIDWIDTH/2, currentMenu->y, V_ALLOWLOWERCASE|V_RETURN8, msg);
 }
 
 // default message handler
@@ -7950,7 +7821,7 @@ static void M_DrawSoundTest(void)
 				{
 					V_DrawFill(165+140-9, y-4, 8, 16, 150);
 					//V_DrawCharacter(165+140-8, y, '\x19' | V_YELLOWMAP, false);
-					V_DrawFixedPatch((165+140-9)<<FRACBITS, (y<<FRACBITS)-(bounce*4), FRACUNIT, 0, hu_font['\x19'-HU_FONTSTART], V_GetStringColormap(V_YELLOWMAP));
+					V_DrawFixedPatch((165+140-9)<<FRACBITS, (y<<FRACBITS)-(bounce*4), FRACUNIT, 0, hu_font.chars['\x19'-FONTSTART], V_GetStringColormap(V_YELLOWMAP));
 				}
 			}
 			t++;
@@ -12050,7 +11921,7 @@ static void M_HandleConnectIP(INT32 choice)
 
 static fixed_t    multi_tics;
 static UINT8      multi_frame;
-static UINT8      multi_spr2;
+static UINT16     multi_spr2;
 static boolean    multi_paused;
 static boolean    multi_invcolor;
 

@@ -687,12 +687,31 @@ void R_DrawMaskedColumn(column_t *column, unsigned lengthcol)
 static UINT8 *flippedcol = NULL;
 static size_t flippedcolsize = 0;
 
+void R_DrawFlippedPost(UINT8 *source, unsigned length, void (*drawcolfunc)(void))
+{
+	if (!length)
+		return;
+
+	if (!flippedcolsize || length > flippedcolsize)
+	{
+		flippedcolsize = length;
+		flippedcol = Z_Realloc(flippedcol, length, PU_STATIC, NULL);
+	}
+
+	dc_source = flippedcol;
+
+	for (UINT8 *s = (UINT8 *)source, *d = flippedcol+length-1; d >= flippedcol; s++)
+		*d-- = *s;
+
+	drawcolfunc();
+}
+
 void R_DrawFlippedMaskedColumn(column_t *column, unsigned lengthcol)
 {
 	INT32 topscreen;
 	INT32 bottomscreen;
 	fixed_t basetexturemid = dc_texturemid;
-	UINT8 *d,*s;
+	INT32 topdelta;
 
 	for (unsigned i = 0; i < column->num_posts; i++)
 	{
@@ -700,7 +719,7 @@ void R_DrawFlippedMaskedColumn(column_t *column, unsigned lengthcol)
 		if (!post->length)
 			continue;
 
-		INT32 topdelta = lengthcol-post->length-post->topdelta;
+		topdelta = lengthcol-post->length-post->topdelta;
 		topscreen = sprtopscreen + spryscale*topdelta;
 		bottomscreen = sprbotscreen == INT32_MAX ? topscreen + spryscale*post->length
 		                                      : sprbotscreen + spryscale*post->length;
@@ -727,21 +746,9 @@ void R_DrawFlippedMaskedColumn(column_t *column, unsigned lengthcol)
 
 		if (dc_yl <= dc_yh && dc_yh > 0)
 		{
-			if (post->length > flippedcolsize)
-			{
-				flippedcolsize = post->length;
-				flippedcol = Z_Realloc(flippedcol, flippedcolsize, PU_STATIC, NULL);
-			}
-
-			for (s = column->pixels+post->data_offset+post->length, d = flippedcol; d < flippedcol+post->length; --s)
-				*d++ = *s;
-			dc_source = flippedcol;
 			dc_texturemid = basetexturemid - (topdelta<<FRACBITS);
 
-			// Still drawn by R_DrawColumn.
-			colfunc();
-
-			Z_Free(dc_source);
+	R_DrawFlippedPost(column->pixels + post->data_offset, post->length, colfunc);
 		}
 	}
 
@@ -1564,7 +1571,7 @@ static void R_ProjectSprite(mobj_t *thing)
 	// uncapped/interpolation
 	interpmobjstate_t interp = {0};
 
-	if (!cv_renderthings.value)
+	if (!r_renderthings)
 		return;
 
 	// do interpolation
@@ -1606,20 +1613,22 @@ static void R_ProjectSprite(mobj_t *thing)
 	// decide which patch to use for sprite relative to player
 #ifdef RANGECHECK
 	if ((size_t)(thing->sprite) >= numsprites)
-		I_Error("R_ProjectSprite: invalid sprite number %d ", thing->sprite);
+		I_Error("R_ProjectSprite: invalid sprite number %d", thing->sprite);
 #endif
 
-	frame = thing->frame&FF_FRAMEMASK;
+	frame = thing->frame & FF_FRAMEMASK;
 
 	//Fab : 02-08-98: 'skin' override spritedef currently used for skin
 	if (thing->skin && thing->sprite == SPR_PLAY)
 	{
-		sprdef = &((skin_t *)thing->skin)->sprites[thing->sprite2];
+		sprdef = P_GetSkinSpritedef(thing->skin, thing->sprite2);
 #ifdef ROTSPRITE
-		sprinfo = &((skin_t *)thing->skin)->sprinfo[thing->sprite2];
+		sprinfo = P_GetSkinSpriteInfo(thing->skin, thing->sprite2);
 #endif
-		if (frame >= sprdef->numframes) {
-			CONS_Alert(CONS_ERROR, M_GetText("R_ProjectSprite: invalid skins[\"%s\"].sprites[%sSPR2_%s] frame %s\n"), ((skin_t *)thing->skin)->name, ((thing->sprite2 & FF_SPR2SUPER) ? "FF_SPR2SUPER|": ""), spr2names[(thing->sprite2 & ~FF_SPR2SUPER)], sizeu5(frame));
+
+		if (frame >= sprdef->numframes)
+		{
+			CONS_Alert(CONS_ERROR, M_GetText("R_ProjectSprite: invalid skins[\"%s\"].sprites[SPR2_%s] %sframe %s\n"), ((skin_t *)thing->skin)->name, spr2names[thing->sprite2 & SPR2F_MASK], (thing->sprite2 & SPR2F_SUPER) ? "super ": "", sizeu5(frame));
 			thing->sprite = states[S_UNKNOWN].sprite;
 			thing->frame = states[S_UNKNOWN].frame;
 			sprdef = &sprites[thing->sprite];
@@ -2721,7 +2730,7 @@ static void R_CreateDrawNodes(maskcount_t* mask, drawnode_t* head, boolean temps
 	// Add the 3D floors, thicksides, and masked textures...
 	for (ds = drawsegs + mask->drawsegs[1]; ds-- > drawsegs + mask->drawsegs[0];)
 	{
-		if (ds->numthicksides)
+		if (ds->numthicksides && r_renderwalls)
 		{
 			for (i = 0; i < ds->numthicksides; i++)
 			{
@@ -2740,17 +2749,19 @@ static void R_CreateDrawNodes(maskcount_t* mask, drawnode_t* head, boolean temps
 			else {
 				// Put it in!
 				entry = R_CreateDrawNode(head);
-				entry->plane = plane;
-				entry->seg = ds;
+				if (r_renderwalls)
+					entry->seg = ds;
+				if (r_renderfloors)
+					entry->plane = plane;
 			}
 			ds->curline->polyseg->visplane = NULL;
 		}
-		if (ds->maskedtexturecol)
+		if (ds->maskedtexturecol && r_renderwalls)
 		{
 			entry = R_CreateDrawNode(head);
 			entry->seg = ds;
 		}
-		if (ds->numffloorplanes)
+		if (ds->numffloorplanes && r_renderfloors)
 		{
 			for (i = 0; i < ds->numffloorplanes; i++)
 			{
@@ -3217,9 +3228,6 @@ static void R_ClipVisSprite(vissprite_t *spr, INT32 x1, INT32 x2, portal_t* port
 				(lowscale < spr->sortscale &&
 				 !R_PointOnSegSide (spr->gx, spr->gy, ds->curline)))
 			{
-				// masked mid texture?
-				/*if (ds->maskedtexturecol)
-					R_RenderMaskedSegRange (ds, r1, r2);*/
 				// seg is behind sprite
 				continue;
 			}

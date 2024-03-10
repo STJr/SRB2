@@ -101,6 +101,7 @@ typedef struct model_s
 	char *frameNames;
 	boolean interpolate[256];
 	modelspr2frames_t *spr2frames;
+	modelspr2frames_t *superspr2frames;
 
 	// the max_s and max_t values that the uvs are currently adjusted to
 	// (if a sprite is used as a texture)

@@ -740,9 +740,6 @@ typedef struct seg_s
 	lightmap_t *lightmaps; // for static lightmap
 #endif
 
-	// Why slow things down by calculating lightlists for every thick side?
-	size_t numlights;
-	r_lightlist_t *rlights;
 	polyobj_t *polyseg;
 	boolean dontrenderme;
 	boolean glseg;
@@ -826,6 +823,7 @@ typedef struct drawseg_s
 	INT16 *sprtopclip;
 	INT16 *sprbottomclip;
 	fixed_t *maskedtexturecol;
+	fixed_t *maskedtextureheight; // For handling sloped midtextures
 	fixed_t *invscale;
 
 	struct visplane_s *ffloorplanes[MAXFFLOORS];
@@ -836,8 +834,6 @@ typedef struct drawseg_s
 	fixed_t *frontscale;
 
 	UINT8 portalpass; // if > 0 and <= portalrender, do not affect sprite clipping
-
-	fixed_t *maskedtextureheight; // For handling sloped midtextures
 
 	vertex_t leftpos, rightpos; // Used for rendering FOF walls with slopes
 } drawseg_t;

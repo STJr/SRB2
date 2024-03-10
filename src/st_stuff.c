@@ -371,9 +371,11 @@ void ST_LoadFaceGraphics(INT32 skinnum)
 		spritedef_t *sprdef = &skins[skinnum]->sprites[SPR2_XTRA];
 		spriteframe_t *sprframe = &sprdef->spriteframes[XTRA_LIFEPIC];
 		faceprefix[skinnum] = W_CachePatchNum(sprframe->lumppat[0], PU_HUDGFX);
-		if (skins[skinnum]->sprites[(SPR2_XTRA|FF_SPR2SUPER)].numframes > XTRA_LIFEPIC)
+
+		spritedef_t *super_sprdef = P_GetSkinSpritedef(skins[skinnum], SPR2_XTRA|SPR2F_SUPER);
+		if (super_sprdef->numframes > XTRA_LIFEPIC)
 		{
-			sprdef = &skins[skinnum]->sprites[SPR2_XTRA|FF_SPR2SUPER];
+			sprdef = super_sprdef;
 			sprframe = &sprdef->spriteframes[0];
 			superprefix[skinnum] = W_CachePatchNum(sprframe->lumppat[0], PU_HUDGFX);
 		}
@@ -503,7 +505,7 @@ static void ST_DrawNightsOverlayNum(fixed_t x /* right border */, fixed_t y, fix
 static void ST_drawDebugInfo(void)
 {
 	INT32 height = 0, h = 8, w = 18, lowh;
-	void (*textfunc)(INT32, INT32, INT32, const char *);
+	fixed_t textscale = FRACUNIT/2;
 
 	if (!(stplyr->mo && cv_debug))
 		return;
@@ -512,12 +514,12 @@ static void ST_drawDebugInfo(void)
 
 	if ((moviemode == MM_GIF && cv_gif_downscale.value) || vid.dup == 1)
 	{
-		textfunc = V_DrawRightAlignedString;
+		textscale = FRACUNIT;
 		lowh = ((vid.height/vid.dup) - 16);
 	}
 	else
 	{
-		textfunc = V_DrawRightAlignedSmallString;
+		textscale = FRACUNIT/2;
 		h /= 2;
 		w /= 2;
 		lowh = 0;
@@ -528,10 +530,10 @@ static void ST_drawDebugInfo(void)
 								V_DrawRightAlignedThinString(320,  8+lowh, VFLAGS|V_REDMAP, "SOME INFO NOT VISIBLE");\
 								return;\
 							}\
-							textfunc(320, height, VFLAGS, str);\
+							V_DrawAlignedFontString(320, height, VFLAGS, textscale, textscale, str, hu_font, alignright);\
 							height += h;
 
-#define V_DrawDebugFlag(f, str) textfunc(width, height, VFLAGS|f, str);\
+#define V_DrawDebugFlag(f, str) V_DrawAlignedFontString(width, height, VFLAGS|f, textscale, textscale, str, hu_font, alignright);\
 								width -= w
 
 	if (cv_debug & DBG_MEMORY)
@@ -1167,8 +1169,10 @@ static void ST_drawInput(void)
 	V_DrawFill(x+16+(xoffs), y+(yoffs)-offs, 10, 10, col);\
 	V_DrawCharacter(x+16+1+(xoffs), y+1+(yoffs)-offs, hudinfo[HUD_INPUT].f|symb, false)
 
-	drawbutt( 4,-3, BT_JUMP, 'J');
-	drawbutt(15,-3, BT_SPIN, 'S');
+	drawbutt( 4,-3, BT_JUMP,   'J' );
+	drawbutt(15,-3, BT_SPIN,   'S' );
+	drawbutt(26,-3, BT_SHIELD, '\0'); // Instead of a wide 'J' or 'S', we'll draw a thin "SH" for Shield
+	V_DrawThinString(x+16+26, y+2+(-3)-offs, hudinfo[HUD_LIVES].f, "SH");
 
 	V_DrawFill(x+16+4, y+8, 21, 10, hudinfo[HUD_INPUT].f|20); // sundial backing
 	if (stplyr->mo)
@@ -1545,13 +1549,16 @@ static void ST_drawPowerupHUD(void)
 	{
 		shieldoffs[q] = ICONSEP;
 
-		if ((stplyr->powers[pw_shield] & SH_NOSTACK & ~SH_FORCEHP) == SH_FORCE)
+		if ((stplyr->powers[pw_shield] & SH_NOSTACK & ~SH_FORCEHP) == SH_FORCE
+		&& (stplyr->powers[pw_shield] & SH_FORCEHP) > 0) // Special handling for >1HP Force Shields
 		{
-			UINT8 i, max = (stplyr->powers[pw_shield] & SH_FORCEHP);
-			for (i = 0; i <= max; i++)
-			{
-				V_DrawSmallScaledPatch(offs-(i<<1), hudinfo[HUD_POWERUPS].y-(i<<1), (V_PERPLAYER|hudinfo[HUD_POWERUPS].f)|((i == max) ? V_HUDTRANS : V_HUDTRANSHALF), forceshield);
-			}
+			UINT8 max = (stplyr->powers[pw_shield] & SH_FORCEHP);
+
+			V_DrawSmallScaledPatch(offs,   hudinfo[HUD_POWERUPS].y,   V_PERPLAYER|hudinfo[HUD_POWERUPS].f|V_HUDTRANSHALF, forceshield);
+			V_DrawSmallScaledPatch(offs-2, hudinfo[HUD_POWERUPS].y-2, V_PERPLAYER|hudinfo[HUD_POWERUPS].f|V_HUDTRANS,     forceshield);
+
+			if (max > 1) // if the shield has more than 2 hits, show the extra n hits as "+n"
+				V_DrawRightAlignedThinString(offs+16, hudinfo[HUD_POWERUPS].y, V_PERPLAYER|hudinfo[HUD_POWERUPS].f|V_HUDTRANS, va("+%d", max - 1));
 		}
 		else
 		{
@@ -1561,6 +1568,7 @@ static void ST_drawPowerupHUD(void)
 				case SH_ELEMENTAL:   p = watershield;   break;
 				case SH_ARMAGEDDON:  p = bombshield;    break;
 				case SH_ATTRACT:     p = ringshield;    break;
+				case SH_FORCE:       p = forceshield;   break;
 				case SH_PITY:        p = pityshield;    break;
 				case SH_PINK:        p = pinkshield;    break;
 				case SH_FLAMEAURA:   p = flameshield;   break;

@@ -817,6 +817,10 @@ void R_ResetMobjInterpolationState(mobj_t *mobj)
 	mobj->old_roll2 = mobj->old_roll;
 	mobj->old_spriteroll2 = mobj->old_spriteroll;
 	mobj->old_scale2 = mobj->old_scale;
+	mobj->old_spritexscale2 = mobj->old_spritexscale;
+	mobj->old_spriteyscale2 = mobj->old_spriteyscale;
+	mobj->old_spritexoffset2 = mobj->old_spritexoffset;
+	mobj->old_spriteyoffset2 = mobj->old_spriteyoffset;
 	mobj->old_x = mobj->x;
 	mobj->old_y = mobj->y;
 	mobj->old_z = mobj->z;
@@ -853,6 +857,10 @@ void R_ResetPrecipitationMobjInterpolationState(precipmobj_t *mobj)
 	mobj->old_pitch2 = mobj->old_pitch;
 	mobj->old_roll2 = mobj->old_roll;
 	mobj->old_spriteroll2 = mobj->old_spriteroll;
+	mobj->old_spritexscale2 = mobj->old_spritexscale;
+	mobj->old_spriteyscale2 = mobj->old_spriteyscale;
+	mobj->old_spritexoffset2 = mobj->old_spritexoffset;
+	mobj->old_spriteyoffset2 = mobj->old_spriteyoffset;
 	mobj->old_x = mobj->x;
 	mobj->old_y = mobj->y;
 	mobj->old_z = mobj->z;

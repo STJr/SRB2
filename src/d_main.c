@@ -476,6 +476,18 @@ static void D_Display(void)
 		if (gamestate == GS_LEVEL || (gamestate == GS_TITLESCREEN && titlemapinaction && curbghide && (!hidetitlemap)))
 		{
 			// draw the view directly
+			if (cv_debug)
+			{
+				r_renderwalls = cv_renderwalls.value;
+				r_renderfloors = cv_renderfloors.value;
+				r_renderthings = cv_renderthings.value;
+			}
+			else
+			{
+				r_renderwalls = true;
+				r_renderfloors = true;
+				r_renderthings = true;
+			}
 
 			if (!automapactive && !dedicated && cv_renderview.value)
 			{
