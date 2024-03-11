@@ -308,7 +308,7 @@ typedef struct mobj_s
 	angle_t spriteroll, old_spriteroll, old_spriteroll2;
 	spritenum_t sprite; // used to find patch_t and flip value
 	UINT32 frame; // frame number, plus bits see p_pspr.h
-	UINT8 sprite2; // player sprites
+	UINT16 sprite2; // player sprites
 	UINT16 anim_duration; // for FF_ANIMATE states
 
 	UINT32 renderflags; // render flags
@@ -452,7 +452,7 @@ typedef struct precipmobj_s
 	angle_t spriteroll, old_spriteroll, old_spriteroll2;
 	spritenum_t sprite; // used to find patch_t and flip value
 	UINT32 frame; // frame number, plus bits see p_pspr.h
-	UINT8 sprite2; // player sprites
+	UINT16 sprite2; // player sprites
 	UINT16 anim_duration; // for FF_ANIMATE states
 
 	UINT32 renderflags; // render flags

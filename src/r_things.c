@@ -1588,20 +1588,22 @@ static void R_ProjectSprite(mobj_t *thing)
 	// decide which patch to use for sprite relative to player
 #ifdef RANGECHECK
 	if ((size_t)(thing->sprite) >= numsprites)
-		I_Error("R_ProjectSprite: invalid sprite number %d ", thing->sprite);
+		I_Error("R_ProjectSprite: invalid sprite number %d", thing->sprite);
 #endif
 
-	frame = thing->frame&FF_FRAMEMASK;
+	frame = thing->frame & FF_FRAMEMASK;
 
 	//Fab : 02-08-98: 'skin' override spritedef currently used for skin
 	if (thing->skin && thing->sprite == SPR_PLAY)
 	{
-		sprdef = &((skin_t *)thing->skin)->sprites[thing->sprite2];
+		sprdef = P_GetSkinSpritedef(thing->skin, thing->sprite2);
 #ifdef ROTSPRITE
-		sprinfo = &((skin_t *)thing->skin)->sprinfo[thing->sprite2];
+		sprinfo = P_GetSkinSpriteInfo(thing->skin, thing->sprite2);
 #endif
-		if (frame >= sprdef->numframes) {
-			CONS_Alert(CONS_ERROR, M_GetText("R_ProjectSprite: invalid skins[\"%s\"].sprites[%sSPR2_%s] frame %s\n"), ((skin_t *)thing->skin)->name, ((thing->sprite2 & FF_SPR2SUPER) ? "FF_SPR2SUPER|": ""), spr2names[(thing->sprite2 & ~FF_SPR2SUPER)], sizeu5(frame));
+
+		if (frame >= sprdef->numframes)
+		{
+			CONS_Alert(CONS_ERROR, M_GetText("R_ProjectSprite: invalid skins[\"%s\"].sprites[SPR2_%s] %sframe %s\n"), ((skin_t *)thing->skin)->name, spr2names[thing->sprite2 & SPR2F_MASK], (thing->sprite2 & SPR2F_SUPER) ? "super ": "", sizeu5(frame));
 			thing->sprite = states[S_UNKNOWN].sprite;
 			thing->frame = states[S_UNKNOWN].frame;
 			sprdef = &sprites[thing->sprite];
