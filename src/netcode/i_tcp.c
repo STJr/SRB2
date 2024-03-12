@@ -265,7 +265,7 @@ static const char* inet_ntopA(short af, const void *cp, char *buf, socklen_t len
 #ifdef HAVE_MINIUPNPC // based on old XChat patch
 static void I_ShutdownUPnP(void);
 static void I_InitUPnP(void);
-I_mutex upnp_mutex;
+static I_mutex upnp_mutex;
 static struct UPNPUrls urls;
 static struct IGDdatas data;
 static char lanaddr[64];
@@ -335,22 +335,22 @@ init_upnpc_once(struct upnpdata *upnpuserdata)
 			I_AddExitFunc(I_ShutdownUPnP);
 		}
 		freeUPNPDevlist(devlist);
-		I_unlock_mutex(upnp_mutex);
 	}
 	else if (upnp_error == UPNPDISCOVER_SOCKET_ERROR)
 	{
 		I_OutputMsg(M_GetText("No UPnP devices discovered\n"));
 	}
+	I_unlock_mutex(upnp_mutex);
 	upnpuserdata->upnpc_started =1;
 }
 
 static inline void I_UPnP_add(const char * addr, const char *port, const char * servicetype)
 {
+	if (!urls.controlURL || urls.controlURL[0] == '\0')
+		return;
 	I_lock_mutex(&upnp_mutex);
 	if (addr == NULL)
 		addr = lanaddr;
-	if (!urls.controlURL || urls.controlURL[0] == '\0')
-		return;
 	UPNP_AddPortMapping(urls.controlURL, data.first.servicetype,
 	                    port, port, addr, "SRB2", servicetype, NULL, NULL);
 	I_unlock_mutex(upnp_mutex);
@@ -358,9 +358,9 @@ static inline void I_UPnP_add(const char * addr, const char *port, const char * 
 
 static inline void I_UPnP_rem(const char *port, const char * servicetype)
 {
-	I_lock_mutex(&upnp_mutex);
 	if (!urls.controlURL || urls.controlURL[0] == '\0')
 		return;
+	I_lock_mutex(&upnp_mutex);
 	UPNP_DeletePortMapping(urls.controlURL, data.first.servicetype,
 	                       port, servicetype, NULL);
 	I_unlock_mutex(upnp_mutex);

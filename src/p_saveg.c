@@ -170,6 +170,7 @@ static void P_NetArchivePlayers(void)
 		WRITEUINT8(save_p, players[i].panim);
 		WRITEUINT8(save_p, players[i].stronganim);
 		WRITEUINT8(save_p, players[i].spectator);
+		WRITEUINT8(save_p, players[i].muted);
 
 		WRITEUINT16(save_p, players[i].flashpal);
 		WRITEUINT16(save_p, players[i].flashcount);
@@ -399,6 +400,7 @@ static void P_NetUnArchivePlayers(void)
 		players[i].panim = READUINT8(save_p);
 		players[i].stronganim = READUINT8(save_p);
 		players[i].spectator = READUINT8(save_p);
+		players[i].muted = READUINT8(save_p);
 
 		players[i].flashpal = READUINT16(save_p);
 		players[i].flashcount = READUINT16(save_p);
@@ -1880,7 +1882,7 @@ static void SaveMobjThinker(const thinker_t *th, const UINT8 type)
 		diff |= MD_TICS;
 	if (mobj->sprite != mobj->state->sprite)
 		diff |= MD_SPRITE;
-	if (mobj->sprite == SPR_PLAY && mobj->sprite2 != (mobj->state->frame&FF_FRAMEMASK))
+	if (mobj->sprite == SPR_PLAY && mobj->sprite2 != P_GetStateSprite2(mobj->state))
 		diff |= MD_SPRITE;
 	if (mobj->frame != mobj->state->frame)
 		diff |= MD_FRAME;
@@ -2064,7 +2066,7 @@ static void SaveMobjThinker(const thinker_t *th, const UINT8 type)
 	if (diff & MD_SPRITE) {
 		WRITEUINT16(save_p, mobj->sprite);
 		if (mobj->sprite == SPR_PLAY)
-			WRITEUINT8(save_p, mobj->sprite2);
+			WRITEUINT16(save_p, mobj->sprite2);
 	}
 	if (diff & MD_FRAME)
 	{
@@ -3094,12 +3096,12 @@ static thinker_t* LoadMobjThinker(actionf_p1 thinker)
 	if (diff & MD_SPRITE) {
 		mobj->sprite = READUINT16(save_p);
 		if (mobj->sprite == SPR_PLAY)
-			mobj->sprite2 = READUINT8(save_p);
+			mobj->sprite2 = READUINT16(save_p);
 	}
 	else {
 		mobj->sprite = mobj->state->sprite;
 		if (mobj->sprite == SPR_PLAY)
-			mobj->sprite2 = mobj->state->frame&FF_FRAMEMASK;
+			mobj->sprite2 = P_GetStateSprite2(mobj->state);
 	}
 	if (diff & MD_FRAME)
 	{

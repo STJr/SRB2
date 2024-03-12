@@ -877,13 +877,31 @@ static void P_SpawnMapThings(boolean spawnemblems)
 		P_SpawnEmeraldHunt();
 }
 
+static void P_WriteTextmap_Things(FILE *f, const mapthing_t *wmapthings); // proto
+
 // Experimental groovy write function!
-/*void P_WriteThings(void)
+void P_WriteThings(const char *filepath)
 {
 	size_t i, length;
 	mapthing_t *mt;
 	UINT8 *savebuffer, *savebuf_p;
 	INT16 temp;
+
+	if (udmf)
+	{
+		FILE *f = fopen(va("%s.txt", filepath), "w");
+		if (!f)
+		{
+			CONS_Alert(CONS_ERROR, M_GetText("Couldn't write to file %s\n"), filepath);
+			return;
+		}
+
+		P_WriteTextmap_Things(f, mapthings);
+		fclose(f);
+
+		CONS_Printf(M_GetText("%s.txt saved.\n"), filepath);
+		return;
+	}
 
 	savebuf_p = savebuffer = (UINT8 *)malloc(nummapthings * sizeof (mapthing_t));
 
@@ -908,12 +926,12 @@ static void P_SpawnMapThings(boolean spawnemblems)
 
 	length = savebuf_p - savebuffer;
 
-	FIL_WriteFile(va("newthings%d.lmp", gamemap), savebuffer, length);
+	FIL_WriteFile(va("%s.lmp", filepath), savebuffer, length);
 	free(savebuffer);
 	savebuf_p = NULL;
 
-	CONS_Printf(M_GetText("newthings%d.lmp saved.\n"), gamemap);
-}*/
+	CONS_Printf(M_GetText("%s.lmp saved.\n"), filepath);
+}
 
 //
 // MAP LOADING FUNCTIONS
@@ -1524,6 +1542,12 @@ static boolean TextmapCount(size_t size)
 	numsides = 0;
 	numvertexes = 0;
 	numsectors = 0;
+
+	if(!tkn)
+	{
+		CONS_Alert(CONS_ERROR, "No text in lump!\n");
+		return true;
+	}
 
 	// Look for namespace at the beginning.
 	if (!fastcmp(tkn, "namespace"))
@@ -2144,6 +2168,60 @@ typedef struct
 	mapthing_t *angleanchor;
 } sectorspecialthings_t;
 
+static void P_WriteTextmap_Things(FILE *f, const mapthing_t *wmapthings)
+{
+	size_t i, j;
+	mtag_t firsttag;
+
+	// Actual writing
+	for (i = 0; i < nummapthings; i++)
+	{
+		fprintf(f, "thing // %s\n", sizeu1(i));
+		fprintf(f, "{\n");
+		firsttag = Tag_FGet(&wmapthings[i].tags);
+		if (firsttag != 0)
+			fprintf(f, "id = %d;\n", firsttag);
+		if (wmapthings[i].tags.count > 1)
+		{
+			fprintf(f, "moreids = \"");
+			for (j = 1; j < wmapthings[i].tags.count; j++)
+			{
+				if (j > 1)
+					fprintf(f, " ");
+				fprintf(f, "%d", wmapthings[i].tags.tags[j]);
+			}
+			fprintf(f, "\";\n");
+		}
+		fprintf(f, "x = %d;\n", wmapthings[i].x);
+		fprintf(f, "y = %d;\n", wmapthings[i].y);
+		if (wmapthings[i].z != 0)
+			fprintf(f, "height = %d;\n", wmapthings[i].z);
+		fprintf(f, "angle = %d;\n", wmapthings[i].angle);
+		if (wmapthings[i].pitch != 0)
+			fprintf(f, "pitch = %d;\n", wmapthings[i].pitch);
+		if (wmapthings[i].roll != 0)
+			fprintf(f, "roll = %d;\n", wmapthings[i].roll);
+		if (wmapthings[i].type != 0)
+			fprintf(f, "type = %d;\n", wmapthings[i].type);
+		if (wmapthings[i].spritexscale != FRACUNIT)
+			fprintf(f, "scalex = %f;\n", FIXED_TO_FLOAT(wmapthings[i].spritexscale));
+		if (wmapthings[i].spriteyscale != FRACUNIT)
+			fprintf(f, "scaley = %f;\n", FIXED_TO_FLOAT(wmapthings[i].spriteyscale));
+		if (wmapthings[i].scale != FRACUNIT)
+			fprintf(f, "mobjscale = %f;\n", FIXED_TO_FLOAT(wmapthings[i].scale));
+		if (wmapthings[i].options & MTF_OBJECTFLIP)
+			fprintf(f, "flip = true;\n");
+		for (j = 0; j < NUMMAPTHINGARGS; j++)
+			if (wmapthings[i].args[j] != 0)
+				fprintf(f, "arg%s = %d;\n", sizeu1(j), wmapthings[i].args[j]);
+		for (j = 0; j < NUMMAPTHINGSTRINGARGS; j++)
+			if (mapthings[i].stringargs[j])
+				fprintf(f, "stringarg%s = \"%s\";\n", sizeu1(j), mapthings[i].stringargs[j]);
+		fprintf(f, "}\n");
+		fprintf(f, "\n");
+	}
+}
+
 static void P_WriteTextmap(void)
 {
 	size_t i, j;
@@ -2411,52 +2489,7 @@ static void P_WriteTextmap(void)
 	}
 
 	fprintf(f, "namespace = \"srb2\";\n");
-	for (i = 0; i < nummapthings; i++)
-	{
-		fprintf(f, "thing // %s\n", sizeu1(i));
-		fprintf(f, "{\n");
-		firsttag = Tag_FGet(&wmapthings[i].tags);
-		if (firsttag != 0)
-			fprintf(f, "id = %d;\n", firsttag);
-		if (wmapthings[i].tags.count > 1)
-		{
-			fprintf(f, "moreids = \"");
-			for (j = 1; j < wmapthings[i].tags.count; j++)
-			{
-				if (j > 1)
-					fprintf(f, " ");
-				fprintf(f, "%d", wmapthings[i].tags.tags[j]);
-			}
-			fprintf(f, "\";\n");
-		}
-		fprintf(f, "x = %d;\n", wmapthings[i].x);
-		fprintf(f, "y = %d;\n", wmapthings[i].y);
-		if (wmapthings[i].z != 0)
-			fprintf(f, "height = %d;\n", wmapthings[i].z);
-		fprintf(f, "angle = %d;\n", wmapthings[i].angle);
-		if (wmapthings[i].pitch != 0)
-			fprintf(f, "pitch = %d;\n", wmapthings[i].pitch);
-		if (wmapthings[i].roll != 0)
-			fprintf(f, "roll = %d;\n", wmapthings[i].roll);
-		if (wmapthings[i].type != 0)
-			fprintf(f, "type = %d;\n", wmapthings[i].type);
-		if (wmapthings[i].spritexscale != FRACUNIT)
-			fprintf(f, "scalex = %f;\n", FIXED_TO_FLOAT(wmapthings[i].spritexscale));
-		if (wmapthings[i].spriteyscale != FRACUNIT)
-			fprintf(f, "scaley = %f;\n", FIXED_TO_FLOAT(wmapthings[i].spriteyscale));
-		if (wmapthings[i].scale != FRACUNIT)
-			fprintf(f, "mobjscale = %f;\n", FIXED_TO_FLOAT(wmapthings[i].scale));
-		if (wmapthings[i].options & MTF_OBJECTFLIP)
-			fprintf(f, "flip = true;\n");
-		for (j = 0; j < NUMMAPTHINGARGS; j++)
-			if (wmapthings[i].args[j] != 0)
-				fprintf(f, "arg%s = %d;\n", sizeu1(j), wmapthings[i].args[j]);
-		for (j = 0; j < NUMMAPTHINGSTRINGARGS; j++)
-			if (mapthings[i].stringargs[j])
-				fprintf(f, "stringarg%s = \"%s\";\n", sizeu1(j), mapthings[i].stringargs[j]);
-		fprintf(f, "}\n");
-		fprintf(f, "\n");
-	}
+	P_WriteTextmap_Things(f, wmapthings);
 
 	for (i = 0; i < numvertexes; i++)
 	{
@@ -3109,7 +3142,12 @@ static boolean P_LoadMapData(const virtres_t *virt)
 	if (udmf) // Count how many entries for each type we got in textmap.
 	{
 		virtlump_t *textmap = vres_Find(virt, "TEXTMAP");
-		M_TokenizerOpen((char *)textmap->data);
+		if (textmap->size == 0)
+		{
+			CONS_Alert(CONS_ERROR, "Emtpy TEXTMAP Lump!\n");
+			return false;
+		}
+		M_TokenizerOpen((char *)textmap->data, textmap->size);
 		if (!TextmapCount(textmap->size))
 		{
 			M_TokenizerClose();
@@ -3290,8 +3328,6 @@ static void P_InitializeSeg(seg_t *seg)
 	seg->lightmaps = NULL; // list of static lightmap for this seg
 #endif
 
-	seg->numlights = 0;
-	seg->rlights = NULL;
 	seg->polyseg = NULL;
 	seg->dontrenderme = false;
 }

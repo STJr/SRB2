@@ -1078,9 +1078,6 @@ typedef enum sprite
 	NUMSPRITES
 } spritenum_t;
 
-// Make sure to be conscious of FF_FRAMEMASK and the fact sprite2 is stored as a UINT8 whenever you change this table.
-// Currently, FF_FRAMEMASK is 0xff, or 255 - but the second half is used by FF_SPR2SUPER, so the limitation is 0x7f.
-// Since this is zero-based, there can be at most 128 different SPR2_'s without changing that.
 typedef enum playersprite
 {
 	SPR2_STND = 0,
@@ -1160,15 +1157,17 @@ typedef enum playersprite
 	SPR2_XTRA, // stuff that isn't in-map - "would this ever need an md2 or variable length animation?"
 
 	SPR2_FIRSTFREESLOT,
-	SPR2_LASTFREESLOT = 0x7f,
+	SPR2_LASTFREESLOT = 1024, // Do not make higher than SPR2F_MASK (currently 0x3FF) plus one
 	NUMPLAYERSPRITES
 } playersprite_t;
 
-// SPR2_XTRA
-#define XTRA_LIFEPIC    0                 // Life icon patch
-#define XTRA_CHARSEL    1                 // Character select picture
-#define XTRA_CONTINUE   2                 // Continue icon
-#define XTRA_ENDING     3                 // Ending finale patches
+enum
+{
+	XTRA_LIFEPIC,
+	XTRA_CHARSEL,
+	XTRA_CONTINUE,
+	XTRA_ENDING
+};
 
 typedef enum state
 {
@@ -4380,6 +4379,7 @@ typedef struct
 	INT32 var1;
 	INT32 var2;
 	statenum_t nextstate;
+	UINT16 sprite2;
 } state_t;
 
 extern state_t states[NUMSTATES];

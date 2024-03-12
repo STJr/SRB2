@@ -36,9 +36,6 @@ UINT8 ASTBlendPaletteIndexes(UINT8 background, UINT8 foreground, int style, UINT
 
 extern INT32 ASTTextureBlendingThreshold[2];
 
-extern INT16 color8to16[256]; // remap color index to highcolor
-extern INT16 *hicolormaps; // remap high colors to high colors..
-
 extern CV_PossibleValue_t Color_cons_t[];
 
 // I/O, setting up the stuff.

@@ -2734,7 +2734,7 @@ increment_move
 				tryy = y;
 		}
 
-		if (!P_CheckPosition(thing, tryx, tryy))
+		if (!P_CheckPosition(thing, tryx, tryy) || P_MobjWasRemoved(thing))
 			return false; // solid wall or thing
 
 		if (!(thing->flags & MF_NOCLIP))
@@ -2958,6 +2958,7 @@ boolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, boolean allowdropoff)
 boolean P_SceneryTryMove(mobj_t *thing, fixed_t x, fixed_t y)
 {
 	fixed_t tryx, tryy;
+	I_Assert(!P_MobjWasRemoved(thing));
 
 	tryx = thing->x;
 	tryy = thing->y;
@@ -2975,7 +2976,7 @@ boolean P_SceneryTryMove(mobj_t *thing, fixed_t x, fixed_t y)
 		else
 			tryy = y;
 
-		if (!P_CheckPosition(thing, tryx, tryy))
+		if (!P_CheckPosition(thing, tryx, tryy) || P_MobjWasRemoved(thing))
 			return false; // solid wall or thing
 
 		if (!(thing->flags & MF_NOCLIP))
@@ -3714,6 +3715,12 @@ static void P_CheckLavaWall(mobj_t *mo, sector_t *sec)
 	}
 }
 
+static inline void P_StairStepSlideMove(mobj_t *mo)
+{
+	if (!P_TryMove(mo, mo->x, mo->y + mo->momy, true) && !P_MobjWasRemoved(mo)) //Allow things to drop off.
+		P_TryMove(mo, mo->x + mo->momx, mo->y, true);
+}
+
 //
 // P_SlideMove
 // The momx / momy move is bad, so try to slide
@@ -3734,6 +3741,8 @@ void P_SlideMove(mobj_t *mo)
 	static line_t junk; // fake linedef
 
 	memset(&junk, 0x00, sizeof(junk));
+
+	I_Assert(!P_MobjWasRemoved(mo));
 
 	if (tmhitthing && mo->z + mo->height > tmhitthing->z && mo->z < tmhitthing->z + tmhitthing->height)
 	{
@@ -3869,7 +3878,10 @@ void P_SlideMove(mobj_t *mo)
 
 retry:
 	if ((++hitcount == 3) || papercol)
-		goto stairstep; // don't loop forever
+	{
+		P_StairStepSlideMove(mo);
+		return;
+	}
 
 	// trace along the three leading corners
 	if (mo->momx > 0)
@@ -3921,9 +3933,7 @@ papercollision:
 	if (bestslidefrac == FRACUNIT+1)
 	{
 		// the move must have hit the middle, so stairstep
-stairstep:
-		if (!P_TryMove(mo, mo->x, mo->y + mo->momy, true)) //Allow things to drop off.
-			P_TryMove(mo, mo->x + mo->momx, mo->y, true);
+		P_StairStepSlideMove(mo);
 		return;
 	}
 
@@ -3935,7 +3945,13 @@ stairstep:
 		newy = FixedMul(mo->momy, bestslidefrac);
 
 		if (!P_TryMove(mo, mo->x + newx, mo->y + newy, true))
-			goto stairstep;
+		{
+			if (!P_MobjWasRemoved(mo))
+				P_StairStepSlideMove(mo);
+			return;
+		}
+		if (P_MobjWasRemoved(mo))
+			return;
 	}
 
 	// Now continue along the wall.
@@ -3986,11 +4002,13 @@ stairstep:
 			tmymove = 0;
 		}
 		if (!P_TryMove(mo, newx, newy, true)) {
-			if (success)
+			if (success || P_MobjWasRemoved(mo))
 				return; // Good enough!!
 			else
 				goto retry;
 		}
+		if (P_MobjWasRemoved(mo))
+			return;
 		success = true;
 	} while(tmxmove || tmymove);
 }
