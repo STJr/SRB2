@@ -2725,12 +2725,17 @@ static void P_WriteTextmap(void)
 			fprintf(f, "rotationfloor = %f;\n", FIXED_TO_FLOAT(AngleFixed(wsectors[i].floorangle)));
 		if (wsectors[i].ceilingangle != 0)
 			fprintf(f, "rotationceiling = %f;\n", FIXED_TO_FLOAT(AngleFixed(wsectors[i].ceilingangle)));
-        if (wsectors[i].extra_colormap)
+		if (wsectors[i].extra_colormap)
 		{
 			INT32 lightcolor = P_RGBAToColor(wsectors[i].extra_colormap->rgba);
 			UINT8 lightalpha = R_GetRgbaA(wsectors[i].extra_colormap->rgba);
 			INT32 fadecolor = P_RGBAToColor(wsectors[i].extra_colormap->fadergba);
 			UINT8 fadealpha = R_GetRgbaA(wsectors[i].extra_colormap->fadergba);
+
+			// For now, convert alpha from new (0-255) to old 'A-Z' (0-25) range
+			// TODO: remove this limitation in a backwards-compatible way (UDMF versioning?)
+			lightalpha /= 10;
+			fadealpha /= 10;
 
 			if (lightcolor != 0)
 				fprintf(f, "lightcolor = %d;\n", lightcolor);
@@ -2993,7 +2998,8 @@ static void P_LoadTextmap(void)
 		P_InitializeSector(sc);
 		if (textmap_colormap.used)
 		{
-			// Convert alpha values from old 0-25 (A-Z) range to 0-255 range
+			// Convert alpha values from old 'A-Z' (0-25) range to new UINT8 (0-255) range
+			// TODO: remove this limitation in a backwards-compatible way (UDMF versioning?)
 			UINT8 lightalpha = (textmap_colormap.lightalpha * 102) / 10;
 			UINT8 fadealpha = (textmap_colormap.fadealpha * 102) / 10;
 			
