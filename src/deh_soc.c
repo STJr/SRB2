@@ -1543,6 +1543,12 @@ void readlevelheader(MYFILE *f, INT32 num)
 				P_AddGradesForMare((INT16)(num-1), mare-1, word2);
 			}
 
+			// NiGHTS time limits (per mare)
+			else if (fastncmp(word, "NIGHTSTIME", 10))
+			{
+				P_AddNiGHTSTimes((INT16)(num-1), word2);
+			}
+
 			// Strings that can be truncated
 			else if (fastcmp(word, "SELECTHEADING"))
 			{

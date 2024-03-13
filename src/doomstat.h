@@ -335,6 +335,7 @@ typedef struct
 	INT32 sstimer;              ///< Timer for special stages.
 	UINT32 ssspheres;           ///< Sphere requirement in special stages.
 	fixed_t gravity;            ///< Map-wide gravity.
+	UINT16 nightstimer[8];      ///< Per-mare time limits for NiGHTS stages.
 
 	// Title card.
 	char ltzzpatch[8+1];        ///< Zig zag patch.

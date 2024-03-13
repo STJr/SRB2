@@ -358,6 +358,8 @@ static void P_ClearSingleMapHeaderInfo(INT16 i)
 	mapheaderinfo[num]->marathonnext = 0;
 	mapheaderinfo[num]->startrings = 0;
 	mapheaderinfo[num]->sstimer = 90;
+	for (UINT8 n = 0; n < 8; n++)
+		mapheaderinfo[num]->nightstimer[n] = 0;
 	mapheaderinfo[num]->ssspheres = 1;
 	mapheaderinfo[num]->gravity = FRACUNIT/2;
 	mapheaderinfo[num]->keywords[0] = '\0';
@@ -523,6 +525,29 @@ UINT32 P_GetScoreForGradeOverall(INT16 map, UINT8 grade)
 	for (i = 0; i < mares; ++i)
 			score += P_GetScoreForGrade(map, i, grade);
 	return score;
+}
+
+void P_AddNiGHTSTimes(INT16 i, char *gtext)
+{
+	char *spos = gtext;
+	
+	for (UINT8 n = 0; n < 8; n++)
+	{
+		if (spos != NULL)
+		{
+			mapheaderinfo[i]->nightstimer[n] = atoi(spos);
+			CONS_Debug(DBG_SETUP, "%u ", atoi(spos));
+			// Grab next comma
+			spos = strchr(spos, ',');
+			if (spos)
+				++spos;
+		}
+		else
+		{
+			mapheaderinfo[i]->nightstimer[n] = 0;
+		}
+	}
+
 }
 
 //

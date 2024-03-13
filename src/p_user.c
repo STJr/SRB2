@@ -776,7 +776,7 @@ static void P_DeNightserizePlayer(player_t *player)
 // NiGHTS Time!
 void P_NightserizePlayer(player_t *player, INT32 nighttime)
 {
-	UINT8 oldmare, oldmarelap, oldmarebonuslap;
+	UINT8 oldmare, oldmarelap, oldmarebonuslap, newmare;
 
 	// Bots can't be NiGHTSerized, silly!1 :P
 	if (player->bot)
@@ -796,6 +796,11 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 			G_GhostAddColor(GHC_NIGHTSSKIN);
 		}
 	}
+
+	// Use mare-specific time limit if specified
+	newmare = P_FindLowestMare();
+	if (mapheaderinfo[gamemap-1]->nightstimer[newmare] > 0)
+		nighttime = mapheaderinfo[gamemap-1]->nightstimer[newmare];
 
 	player->pflags &= ~(PF_SPINDOWN|PF_JUMPDOWN|PF_ATTACKDOWN|PF_SHIELDDOWN|PF_STARTDASH|PF_GLIDING|PF_JUMPED|PF_NOJUMPDAMAGE|PF_THOKKED|PF_SHIELDABILITY|PF_SPINNING|PF_DRILLING);
 	player->homing = 0;
