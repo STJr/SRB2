@@ -1030,7 +1030,7 @@ boolean P_BlockThingsIterator(INT32 x, INT32 y, boolean (*func)(mobj_t *), mobj_
 	blocknode_t *block;
 	
 	boolean checkthing = false;
-	if (thing != NULL) // TODO: Use P_MobjWasRemoved here?
+	if (thing)
 		checkthing = true;
 
 	if (x < 0 || y < 0 || x >= bmapwidth || y >= bmapheight)
