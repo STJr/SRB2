@@ -61,7 +61,7 @@ extern ffloor_t *openfloorrover, *openceilingrover;
 void P_LineOpening(line_t *plinedef, mobj_t *mobj);
 
 boolean P_BlockLinesIterator(INT32 x, INT32 y, boolean(*func)(line_t *));
-boolean P_BlockThingsIterator(INT32 x, INT32 y, boolean(*func)(mobj_t *));
+boolean P_BlockThingsIterator(INT32 x, INT32 y, boolean(*func)(mobj_t *), mobj_t *thing);
 
 void P_ClearBlockNodes(void);
 
@@ -94,7 +94,7 @@ typedef struct bthingit_s
 bthingit_t *P_NewBlockThingsIterator(int x1, int y1, int x2, int y2);
 mobj_t *P_BlockThingsIteratorNext(bthingit_t *it, boolean centeronly);
 void P_FreeBlockThingsIterator(bthingit_t *it);
-boolean P_DoBlockThingsIterate(int x1, int y1, int x2, int y2, boolean (*func)(mobj_t *));
+boolean P_DoBlockThingsIterate(int x1, int y1, int x2, int y2, boolean (*func)(mobj_t *), mobj_t *thing);
 
 #define PT_ADDLINES     1
 #define PT_ADDTHINGS    2

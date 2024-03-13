@@ -4115,7 +4115,7 @@ static void P_DoTeeter(player_t *player)
 			teeteryl = teeteryh = player->mo->y;
 			couldteeter = false;
 			solidteeter = teeter;
-			if (!P_DoBlockThingsIterate(xl, yl, xh, yh, PIT_CheckSolidsTeeter))
+			if (!P_DoBlockThingsIterate(xl, yl, xh, yh, PIT_CheckSolidsTeeter, tmthing))
 				goto teeterdone; // we've found something that stops us teetering at all
 teeterdone:
 			teeter = solidteeter;

@@ -5851,7 +5851,7 @@ void A_MinusDigging(mobj_t *actor)
 
 		minus = actor;
 
-		P_DoBlockThingsIterate(xl, yl, xh, yh, PIT_MinusCarry);
+		P_DoBlockThingsIterate(xl, yl, xh, yh, PIT_MinusCarry, minus);
 	}
 	else
 	{
@@ -13995,7 +13995,7 @@ void A_DustDevilThink(mobj_t *actor)
 
 	dustdevil = actor;
 
-	P_DoBlockThingsIterate(xl, yl, xh, yh, PIT_DustDevilLaunch);
+	P_DoBlockThingsIterate(xl, yl, xh, yh, PIT_DustDevilLaunch, dustdevil);
 
 	//Whirlwind sound effect.
 	if (leveltime % 70 == 0)
@@ -14111,7 +14111,7 @@ void A_TNTExplode(mobj_t *actor)
 
 	barrel = actor;
 
-	P_DoBlockThingsIterate(xl, yl, xh, yh, PIT_TNTExplode);
+	P_DoBlockThingsIterate(xl, yl, xh, yh, PIT_TNTExplode, barrel);
 
 	// cause a quake -- P_StartQuake does not exist yet
 	epicenter.x = actor->x;

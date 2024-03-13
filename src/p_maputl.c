@@ -1024,10 +1024,14 @@ boolean P_BlockLinesIterator(INT32 x, INT32 y, boolean (*func)(line_t *))
 //
 // P_BlockThingsIterator
 //
-boolean P_BlockThingsIterator(INT32 x, INT32 y, boolean (*func)(mobj_t *))
+boolean P_BlockThingsIterator(INT32 x, INT32 y, boolean (*func)(mobj_t *), mobj_t *thing)
 {
 	mobj_t *mobj;
 	blocknode_t *block;
+	
+	boolean checkthing = false;
+	if (thing != NULL) // TODO: Use P_MobjWasRemoved here?
+		checkthing = true;
 
 	if (x < 0 || y < 0 || x >= bmapwidth || y >= bmapheight)
 		return true;
@@ -1039,20 +1043,20 @@ boolean P_BlockThingsIterator(INT32 x, INT32 y, boolean (*func)(mobj_t *))
 
 		if (!func(mobj))
 			return false;
-		if (P_MobjWasRemoved(tmthing)) // func just broke blockmap chain, cannot continue.
+		if (checkthing && P_MobjWasRemoved(thing)) // func just broke blockmap chain, cannot continue.
 			return true;
 	}
 
 	return true;
 }
 
-boolean P_DoBlockThingsIterate(int x1, int y1, int x2, int y2, boolean (*func)(mobj_t *))
+boolean P_DoBlockThingsIterate(int x1, int y1, int x2, int y2, boolean (*func)(mobj_t *), mobj_t *thing)
 {
 	boolean status = true;
 
 	for (INT32 bx = x1; bx <= x2; bx++)
 		for (INT32 by = y1; by <= y2; by++)
-			if (!P_BlockThingsIterator(bx, by, func))
+			if (!P_BlockThingsIterator(bx, by, func, thing))
 				status = false;
 
 	return status;
@@ -1534,7 +1538,7 @@ boolean P_PathTraverse(fixed_t px1, fixed_t py1, fixed_t px2, fixed_t py2,
 				return false; // early out
 
 		if (flags & PT_ADDTHINGS)
-			if (!P_BlockThingsIterator(mapx, mapy, PIT_AddThingIntercepts))
+			if (!P_BlockThingsIterator(mapx, mapy, PIT_AddThingIntercepts, NULL))
 				return false; // early out
 		
 		// both coordinates reached the end, so end the traversing.
@@ -1578,9 +1582,9 @@ boolean P_PathTraverse(fixed_t px1, fixed_t py1, fixed_t px2, fixed_t py2,
 				
 				if (flags & PT_ADDTHINGS)
 				{
-					if (!P_BlockThingsIterator(mapx + mapxstep, mapy, PIT_AddThingIntercepts))
+					if (!P_BlockThingsIterator(mapx + mapxstep, mapy, PIT_AddThingIntercepts, NULL))
 						return false; // early out
-					if (!P_BlockThingsIterator(mapx, mapy + mapystep, PIT_AddThingIntercepts))
+					if (!P_BlockThingsIterator(mapx, mapy + mapystep, PIT_AddThingIntercepts, NULL))
 						return false; // early out
 				}
 				

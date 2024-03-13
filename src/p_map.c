@@ -2267,7 +2267,7 @@ boolean P_CheckPosition(mobj_t *thing, fixed_t x, fixed_t y)
 		for (bx = xl; bx <= xh; bx++)
 			for (by = yl; by <= yh; by++)
 			{
-				if (!P_BlockThingsIterator(bx, by, PIT_CheckThing))
+				if (!P_BlockThingsIterator(bx, by, PIT_CheckThing, tmthing))
 					blockval = false;
 				else
 					tmhitthing = tmfloorthing;
@@ -2883,7 +2883,7 @@ boolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, boolean allowdropoff)
 		standx = x;
 		standy = y;
 
-		P_DoBlockThingsIterate(xl, yl, xh, yh, PIT_PushableMoved);
+		P_DoBlockThingsIterate(xl, yl, xh, yh, PIT_PushableMoved, thing);
 	}
 
 	// Link the thing into its new position
@@ -4227,7 +4227,7 @@ void P_RadiusAttack(mobj_t *spot, mobj_t *source, fixed_t damagedist, UINT8 dama
 	bombdamagetype = damagetype;
 	bombsightcheck = sightcheck;
 
-	P_DoBlockThingsIterate(xl, yl, xh, yh, PIT_RadiusAttack);
+	P_DoBlockThingsIterate(xl, yl, xh, yh, PIT_RadiusAttack, bombspot);
 }
 
 //
