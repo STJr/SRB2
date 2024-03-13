@@ -1755,22 +1755,23 @@ static void ST_drawNightsRecords(void)
 
 	switch (stplyr->textvar)
 	{
-		case 1: // A "Bonus Time Start" by any other name...
+		case NTV_BONUSTIMESTART: // A "Bonus Time Start" by any other name...
 		{
 			V_DrawCenteredString(BASEVIDWIDTH/2, 52, V_GREENMAP|aflag, M_GetText("GET TO THE GOAL!"));
 			V_DrawCenteredString(BASEVIDWIDTH/2, 60,            aflag, M_GetText("SCORE MULTIPLIER START!"));
 
 			if (stplyr->finishedtime)
 			{
-				V_DrawString(BASEVIDWIDTH/2 - 48, 140, aflag, "TIME:");
-				V_DrawString(BASEVIDWIDTH/2 - 48, 148, aflag, "BONUS:");
-				V_DrawRightAlignedString(BASEVIDWIDTH/2 + 48, 140, V_ORANGEMAP|aflag, va("%d", (stplyr->startedtime - stplyr->finishedtime)/TICRATE));
-				V_DrawRightAlignedString(BASEVIDWIDTH/2 + 48, 148, V_ORANGEMAP|aflag, va("%d", (stplyr->finishedtime/TICRATE) * 100));
+				tic_t maretime = stplyr->startedtime - stplyr->finishedtime;
+				V_DrawString(BASEVIDWIDTH/2 - 48, 140, V_YELLOWMAP|aflag, "TIME:");
+				V_DrawString(BASEVIDWIDTH/2 - 48, 148, V_YELLOWMAP|aflag, "BONUS:");
+				V_DrawRightAlignedString(BASEVIDWIDTH/2 + 48, 140, aflag, va("%i:%02i.%02i", G_TicsToMinutes(maretime,true), G_TicsToSeconds(maretime), G_TicsToCentiseconds(maretime)));
+				V_DrawRightAlignedString(BASEVIDWIDTH/2 + 48, 148, aflag, va("%d", (stplyr->finishedtime/TICRATE) * 100));
 			}
 			break;
 		}
-		case 2: // Get n Spheres
-		case 3: // Get n more Spheres
+		case NTV_GETSPHERES: // Get n Spheres
+		case NTV_GETMORESPHERES: // Get n more Spheres
 		{
 			if (!stplyr->capsule)
 				return;
@@ -1778,31 +1779,37 @@ static void ST_drawNightsRecords(void)
 			// Yes, this string is an abomination.
 			V_DrawCenteredString(BASEVIDWIDTH/2, 60, aflag,
 								 va(M_GetText("\x80GET\x82 %d\x80 %s%s%s!"), stplyr->capsule->health,
-									(stplyr->textvar == 3) ? M_GetText("MORE ") : "",
+									(stplyr->textvar == NTV_GETMORESPHERES) ? M_GetText("MORE ") : "",
 									(G_IsSpecialStage(gamemap)) ? "SPHERE" : "CHIP",
 									(stplyr->capsule->health > 1) ? "S" : ""));
 			break;
 		}
-		case 4: // End Bonus
+		case NTV_BONUSTIMEEND: // End Bonus
 		{
-			V_DrawString(BASEVIDWIDTH/2 - 56, 140, aflag, (G_IsSpecialStage(gamemap)) ? "SPHERES:" : "CHIPS:");
-			V_DrawString(BASEVIDWIDTH/2 - 56, 148, aflag, "BONUS:");
-			V_DrawRightAlignedString(BASEVIDWIDTH/2 + 56, 140, V_ORANGEMAP|aflag, va("%d", stplyr->finishedspheres));
-			V_DrawRightAlignedString(BASEVIDWIDTH/2 + 56, 148, V_ORANGEMAP|aflag, va("%d", stplyr->finishedspheres * 50));
-			ST_DrawNightsOverlayNum((BASEVIDWIDTH/2 + 56)<<FRACBITS, 160<<FRACBITS, FRACUNIT, aflag, stplyr->lastmarescore, nightsnum, SKINCOLOR_AZURE);
+			V_DrawString(BASEVIDWIDTH/2 - 48, 132, V_YELLOWMAP|aflag, "TIME:");
+			V_DrawString(BASEVIDWIDTH/2 - 48, 140, V_YELLOWMAP|aflag, (G_IsSpecialStage(gamemap)) ? "SPHERES:" : "CHIPS:");
+			V_DrawString(BASEVIDWIDTH/2 - 48, 148, V_YELLOWMAP|aflag, "BONUS:");
+			V_DrawRightAlignedString(BASEVIDWIDTH/2 + 48, 132, aflag, va("%i:%02i.%02i", G_TicsToMinutes(stplyr->lastmaretime,true), G_TicsToSeconds(stplyr->lastmaretime), G_TicsToCentiseconds(stplyr->lastmaretime)));
+			V_DrawRightAlignedString(BASEVIDWIDTH/2 + 48, 140, aflag, va("%d", stplyr->finishedspheres));
+			V_DrawRightAlignedString(BASEVIDWIDTH/2 + 48, 148, aflag, va("%d", stplyr->finishedspheres * 50));
+			ST_DrawNightsOverlayNum((BASEVIDWIDTH/2 + 48)<<FRACBITS, 160<<FRACBITS, FRACUNIT, aflag, stplyr->lastmarescore, nightsnum, SKINCOLOR_AZURE);
+
+			// If this is a multi-mare map, display the mare number.
+			if (stplyr->lastmare || P_FindLowestMare() < UINT8_MAX)
+				V_DrawLevelActNum(BASEVIDWIDTH/2 - 80, 128 + 3, aflag, stplyr->lastmare + 1);
 
 			// If new record, say so!
 			if (!(netgame || multiplayer) && G_GetBestNightsScore(gamemap, stplyr->lastmare + 1, clientGamedata) <= stplyr->lastmarescore)
 			{
 				if (stplyr->texttimer & 16)
-					V_DrawCenteredString(BASEVIDWIDTH/2, 184, V_YELLOWMAP|aflag, "* NEW RECORD *");
+					V_DrawCenteredString(BASEVIDWIDTH/2, 184, aflag, "\x85* \x82NEW RECORD \x85*\x80");
 			}
 
 			if (P_HasGrades(gamemap, stplyr->lastmare + 1))
 			{
 				UINT8 grade = P_GetGrade(stplyr->lastmarescore, gamemap, stplyr->lastmare);
-				if (modeattacking || grade >= GRADE_A)
-					V_DrawTranslucentPatch(BASEVIDWIDTH/2 + 60, 160, aflag, ngradeletters[grade]);
+				if (modeattacking || !G_IsSpecialStage(gamemap) || grade >= GRADE_A)
+					V_DrawTranslucentPatch(BASEVIDWIDTH/2 + 60, 128, aflag, ngradeletters[grade]);
 			}
 			break;
 		}
@@ -1912,7 +1919,7 @@ static void ST_drawNiGHTSHUD(void)
 	// Link drawing
 	if (!oldspecialstage
 	// Don't display when the score is showing (it popping up for a split second when exiting a map is intentional)
-	&& !(stplyr->texttimer && stplyr->textvar == 4)
+	&& !(stplyr->texttimer && stplyr->textvar == NTV_BONUSTIMEEND)
 	&& LUA_HudEnabled(hud_nightslink)
 	&& ((cv_debug & DBG_NIGHTSBASIC) || stplyr->linkcount > 1)) // When debugging, show "0 Link".
 	{
@@ -1959,7 +1966,7 @@ static void ST_drawNiGHTSHUD(void)
 		INT32 amount;
 		const INT32 length = 88;
 
-		origamount = stplyr->capsule->spawnpoint->angle;
+		origamount = stplyr->capsule->spawnpoint->args[1];
 		I_Assert(origamount > 0); // should not happen now
 
 		ST_DrawTopLeftOverlayPatch(72, 8, nbracket);

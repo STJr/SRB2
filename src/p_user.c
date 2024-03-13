@@ -872,7 +872,7 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 				continue;
 
 			players[i].texttimer = (3 * TICRATE) - 10;
-			players[i].textvar = 4; // Score and grades
+			players[i].textvar = NTV_BONUSTIMEEND; // Score and grades
 			players[i].lastmare = players[i].mare;
 			players[i].lastmarelap = players[i].marelap;
 			players[i].lastmarebonuslap = players[i].marebonuslap;
@@ -890,7 +890,8 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 			}
 
 			// Add score to leaderboards now
-			G_AddTempNightsRecords(player, players[i].marescore, leveltime - player->marebegunat, players[i].mare + 1);
+			player->lastmaretime = leveltime - player->marebegunat;
+			G_AddTempNightsRecords(player, players[i].marescore, player->lastmaretime, players[i].mare + 1);
 
 			// transfer scores anyway
 			players[i].totalmarescore += players[i].marescore;
@@ -911,12 +912,13 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 		player->lastmarelap = oldmarelap;
 		player->lastmarebonuslap = oldmarebonuslap;
 		player->texttimer = 4*TICRATE;
-		player->textvar = 4; // Score and grades
+		player->textvar = NTV_BONUSTIMEEND; // Score and grades
 		player->finishedspheres = (INT16)(player->spheres);
 		player->finishedrings = (INT16)(player->rings);
-
+		
 		// Add score to temp leaderboards
-		G_AddTempNightsRecords(player, player->marescore, leveltime - player->marebegunat, (UINT8)(oldmare + 1));
+		player->lastmaretime = leveltime - player->marebegunat;
+		G_AddTempNightsRecords(player, player->marescore, player->lastmaretime, (UINT8)(oldmare + 1));
 
 		// Starting a new mare, transfer scores
 		player->totalmarescore += player->marescore;
@@ -929,7 +931,7 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 	}
 	else
 	{
-		player->textvar = 5; // Nothing, just tells it to go to the GET n RINGS/SPHERES text in a bit
+		player->textvar = NTV_NONE; // Nothing, just tells it to go to the GET n RINGS/SPHERES text in a bit
 		player->texttimer = 40;
 
 		// Don't show before title card
@@ -7010,7 +7012,7 @@ static void P_DoNiGHTSCapsule(player_t *player)
 					{
 						players[i].bonustime = true;
 						players[i].texttimer = 4*TICRATE;
-						players[i].textvar = 1; // Time Bonus
+						players[i].textvar = NTV_BONUSTIMESTART; // Time Bonus
 						players[i].finishedtime = players[i].nightstime;
 						if (!G_IsSpecialStage(gamemap))
 							P_AddPlayerScore(&players[i], (players[i].finishedtime/TICRATE) * 100);
@@ -7094,12 +7096,12 @@ static void P_DoNiGHTSCapsule(player_t *player)
 			{
 				S_StartScreamSound(player->mo, sfx_lose);
 				player->texttimer = 4*TICRATE;
-				player->textvar = 3; // Get more rings!
+				player->textvar = NTV_GETMORESPHERES; // Get more spheres/chips!
 				player->capsule->reactiontime = 0;
 				player->capsule->extravalue1 = player->capsule->cvmem =\
 				 player->capsule->cusval = player->capsule->movecount =\
 				 player->capsule->lastlook = player->capsule->extravalue2 = -1;
-				P_RunNightsCapsuleTouchExecutors(player->mo, false, false); // run capsule exit executors, and we lacked rings
+				P_RunNightsCapsuleTouchExecutors(player->mo, false, false); // run capsule exit executors, and we lacked spheres/chips
 			}
 		}
 	}
@@ -12453,13 +12455,13 @@ void P_PlayerThink(player_t *player)
 	if (player->texttimer)
 	{
 		--player->texttimer;
-		if (!player->texttimer && !player->exiting && player->textvar >= 4)
+		if (!player->texttimer && !player->exiting && (player->textvar == NTV_NONE || player->textvar == NTV_BONUSTIMEEND))
 		{
 			player->texttimer = 4*TICRATE;
-			player->textvar = 2; // GET n RINGS!
+			player->textvar = NTV_GETSPHERES; // GET n SPHERES/CHIPS!
 
-			if (!P_MobjWasRemoved(player->capsule) && player->capsule->health != player->capsule->spawnpoint->angle)
-				player->textvar++; // GET n MORE RINGS!
+			if (!P_MobjWasRemoved(player->capsule) && player->capsule->health != player->capsule->spawnpoint->args[1])
+				player->textvar = NTV_GETMORESPHERES; // GET n MORE SPHERES/CHIPS!
 		}
 	}
 
