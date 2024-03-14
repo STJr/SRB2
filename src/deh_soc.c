@@ -440,12 +440,15 @@ void readfreeslots(MYFILE *f)
 				S_AddSoundFx(word, false, 0, false);
 			else if (fastcmp(type, "SPR"))
 			{
+				if (strlen(word) > MAXSPRITENAME)
+					I_Error("Sprite name is longer than %d characters\n", strlen(word));
+
 				for (i = SPR_FIRSTFREESLOT; i <= SPR_LASTFREESLOT; i++)
 				{
 					if (used_spr[(i-SPR_FIRSTFREESLOT)/8] & (1<<(i%8)))
 						continue; // Already allocated, next.
 					// Found a free slot!
-					strncpy(sprnames[i],word,4);
+					strcpy(sprnames[i], word);
 					used_spr[(i-SPR_FIRSTFREESLOT)/8] |= 1<<(i%8); // Okay, this sprite slot has been named now.
 					// Lua needs to update the value in _G if it exists
 					LUA_UpdateSprName(word, i);
@@ -4178,7 +4181,7 @@ spritenum_t get_sprite(const char *word)
 	if (fastncmp("SPR_",word,4))
 		word += 4; // take off the SPR_
 	for (i = 0; i < NUMSPRITES; i++)
-		if (memcmp(word,sprnames[i],4)==0)
+		if (!strcmp(word, sprnames[i]))
 			return i;
 	deh_warning("Couldn't find sprite named 'SPR_%s'",word);
 	return SPR_NULL;
