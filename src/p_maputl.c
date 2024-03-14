@@ -1026,8 +1026,8 @@ boolean P_BlockLinesIterator(INT32 x, INT32 y, boolean (*func)(line_t *))
 //
 boolean P_BlockThingsIterator(INT32 x, INT32 y, boolean (*func)(mobj_t *), mobj_t *thing)
 {
-	mobj_t *mobj;
-	blocknode_t *block;
+	mobj_t *bnext = NULL;
+	blocknode_t *block, *next = NULL;
 	
 	boolean checkthing = false;
 	if (thing)
@@ -1037,15 +1037,27 @@ boolean P_BlockThingsIterator(INT32 x, INT32 y, boolean (*func)(mobj_t *), mobj_
 		return true;
 
 	// Check interaction with the objects in the blockmap.
-	for (block = blocklinks[y*bmapwidth + x]; block; block = block->mnext)
+	for (block = blocklinks[y*bmapwidth + x]; block; block = next)
 	{
-		mobj = block->mobj;
+		next = block->mnext;
+		if (next)
+			P_SetTarget(&bnext, next->mobj); // We want to note our reference to bnext here in case it is MF_NOTHINK and gets removed!
 
-		if (!func(mobj))
+		if (!func(block->mobj))
+		{
+			P_SetTarget(&bnext, NULL);
 			return false;
-		if (checkthing && P_MobjWasRemoved(thing)) // func just broke blockmap chain, cannot continue.
+		}
+
+		if ((checkthing && P_MobjWasRemoved(thing)) // func just popped our tmthing, cannot continue.
+		|| (bnext && P_MobjWasRemoved(bnext))) // func just broke blockmap chain, cannot continue.
+		{
+			P_SetTarget(&bnext, NULL);
 			return true;
+		}
 	}
+
+	P_SetTarget(&bnext, NULL);
 
 	return true;
 }
