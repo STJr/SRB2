@@ -740,7 +740,7 @@ void LUA_UpdateSprName(const char *name, lua_Integer value)
 
 	if (!lua_isnil(gL, -1))
 	{
-		lua_pushstring(gL, name);
+		lua_pushstring(gL, fullname);
 		lua_pushinteger(gL, value);
 		lua_rawset(gL, LUA_GLOBALSINDEX);
 	}
