@@ -442,26 +442,75 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 }
 
 // Loop through R_DrawMaskedColumn calls
+static fixed_t repeatscroll = 0;
+
 static void R_DrawRepeatMaskedColumn(column_t *col, unsigned lengthcol)
 {
-	while (sprtopscreen < sprbotscreen) {
-		R_DrawMaskedColumn(col, lengthcol);
-		if ((INT64)sprtopscreen + (INT64)dc_texheight*spryscale > (INT64)INT32_MAX) // prevent overflow
-			sprtopscreen = INT32_MAX;
-		else
-			sprtopscreen += dc_texheight*spryscale;
+	fixed_t topscreen = sprtopscreen;
+	fixed_t bottomscreen = sprbotscreen;
+
+	fixed_t texheight = dc_texheight*spryscale;
+
+	fixed_t scroll = -repeatscroll;
+	if (scroll < 0)
+	{
+		scroll = -FixedMul((abs(scroll) % (dc_texheight*FRACUNIT)), spryscale);
+		bottomscreen += texheight; // Draw an extra time
 	}
+	else if (scroll)
+	{
+		scroll = FixedMul(scroll % (dc_texheight*FRACUNIT), spryscale);
+		topscreen -= texheight; // Draw an extra time
+	}
+
+	while (topscreen < bottomscreen)
+	{
+		sprtopscreen = topscreen + scroll;
+
+		R_DrawMaskedColumn(col, lengthcol);
+
+		if ((INT64)topscreen + (INT64)texheight > (INT64)INT32_MAX) // prevent overflow
+			break;
+
+		topscreen += texheight;
+	}
+
+	sprtopscreen = sprbotscreen;
 }
 
 static void R_DrawRepeatFlippedMaskedColumn(column_t *col, unsigned lengthcol)
 {
-	while (sprtopscreen < sprbotscreen) {
-		R_DrawFlippedMaskedColumn(col, lengthcol);
-		if ((INT64)sprtopscreen + (INT64)dc_texheight*spryscale > (INT64)INT32_MAX) // prevent overflow
-			sprtopscreen = INT32_MAX;
-		else
-			sprtopscreen += dc_texheight*spryscale;
+	fixed_t topscreen = sprtopscreen;
+	fixed_t bottomscreen = sprbotscreen;
+
+	fixed_t texheight = dc_texheight*spryscale;
+
+	fixed_t scroll = -repeatscroll;
+	if (scroll < 0)
+	{
+		scroll = -FixedMul((abs(scroll) % (dc_texheight*FRACUNIT)), spryscale);
+		bottomscreen += texheight; // Draw an extra time
 	}
+	else if (scroll)
+	{
+		scroll = FixedMul(scroll % (dc_texheight*FRACUNIT), spryscale);
+		topscreen -= texheight; // Draw an extra time
+	}
+
+	while (topscreen < bottomscreen)
+	{
+		sprtopscreen = topscreen + scroll;
+		sprbotscreen = bottomscreen + scroll;
+
+		R_DrawFlippedMaskedColumn(col, lengthcol);
+
+		if ((INT64)topscreen + (INT64)texheight > (INT64)INT32_MAX) // prevent overflow
+			break;
+
+		topscreen += texheight;
+	}
+
+	sprtopscreen = sprbotscreen;
 }
 
 // Returns true if a fake floor is translucent.
@@ -497,7 +546,6 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 	sector_t        tempsec;
 	INT32             templight;
 	INT32             i, p;
-	fixed_t         offsetvalue;
 	lightlist_t     *light;
 	r_lightlist_t   *rlight;
 	INT32           range;
@@ -734,7 +782,7 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 	else
 		dc_texturemid = FixedMul(*pfloor->topheight - viewz, wall_scaley);
 
-	offsetvalue = sidedef->rowoffset + sidedef->offsety_mid;
+	repeatscroll = sidedef->rowoffset + sidedef->offsety_mid;
 
 	if (dont_peg_bottom)
 	{
@@ -744,7 +792,7 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 			dc_texturemid = FixedMul(left_bottom, wall_scaley);
 		}
 		else
-			offsetvalue -= FixedMul(*pfloor->topheight - *pfloor->bottomheight, wall_scaley);
+			repeatscroll -= FixedMul(*pfloor->topheight - *pfloor->bottomheight, wall_scaley);
 	}
 
 	if (skewslope)
@@ -753,7 +801,7 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 		ffloortextureslide = FixedMul(R_GetSlopeTextureSlide(skewslope, lineangle), wall_scaley);
 	}
 
-	dc_texturemid += offsetvalue;
+	dc_texturemid += repeatscroll;
 
 	// Texture must be cached
 	R_CheckTextureCache(texnum);
