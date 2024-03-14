@@ -4865,7 +4865,7 @@ void A_AttractChase(mobj_t *actor)
 	else
 		actor->flags2 &= ~MF2_DONTDRAW;
 
-	// Turn flingrings back into regular rings if attracted.
+	// Turn rings into flingrings if shield is lost or out of range
 	if (actor->tracer && actor->tracer->player
 		&& !(actor->tracer->player->powers[pw_shield] & SH_PROTECTELECTRIC) && actor->info->reactiontime && actor->type != (mobjtype_t)actor->info->reactiontime)
 	{
@@ -4897,8 +4897,9 @@ void A_AttractChase(mobj_t *actor)
 	// If a FlingRing gets attracted by a shield, change it into a normal ring.
 	if (actor->type == (mobjtype_t)actor->info->reactiontime)
 	{
-		P_SpawnMobj(actor->x, actor->y, actor->z, actor->info->painchance);
-		P_RemoveMobj(actor);
+		actor->type = mobjinfo[actor->type].painchance; // Become the regular version of the fling object.
+		actor->flags = mobjinfo[actor->type].flags;		// Reset actor flags.
+		P_SetMobjState(actor, actor->info->spawnstate); // Go to regular object's spawn state.
 		return;
 	}
 
