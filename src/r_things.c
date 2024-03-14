@@ -480,9 +480,6 @@ void R_AddSpriteDefs(UINT16 wadnum)
 	//
 	for (i = 0; i < numsprites; i++)
 	{
-		if (sprnames[i][4] && wadnum >= (UINT16)sprnames[i][4])
-			continue;
-
 		if (R_AddSingleSpriteDef(sprnames[i], &sprites[i], wadnum, start, end))
 		{
 			// if a new sprite was added (not just replaced)

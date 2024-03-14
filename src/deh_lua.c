@@ -59,23 +59,14 @@ static inline int lib_freeslot(lua_State *L)
 		}
 		else if (fastcmp(type, "SPR"))
 		{
-			char wad;
 			spritenum_t j;
-			lua_getfield(L, LUA_REGISTRYINDEX, "WAD");
-			wad = (char)lua_tointeger(L, -1);
-			lua_pop(L, 1);
 			for (j = SPR_FIRSTFREESLOT; j <= SPR_LASTFREESLOT; j++)
 			{
 				if (used_spr[(j-SPR_FIRSTFREESLOT)/8] & (1<<(j%8)))
-				{
-					if (!sprnames[j][4] && memcmp(sprnames[j],word,4)==0)
-						sprnames[j][4] = wad;
 					continue; // Already allocated, next.
-				}
 				// Found a free slot!
 				CONS_Printf("Sprite SPR_%s allocated.\n",word);
 				strncpy(sprnames[j],word,4);
-				//sprnames[j][4] = 0;
 				used_spr[(j-SPR_FIRSTFREESLOT)/8] |= 1<<(j%8); // Okay, this sprite slot has been named now.
 				// Lua needs to update the value in _G if it exists
 				LUA_UpdateSprName(word, j);
@@ -456,7 +447,7 @@ static int ScanConstants(lua_State *L, boolean mathlib, const char *word)
 	else if (fastncmp("SPR_",word,4)) {
 		p = word+4;
 		for (i = 0; i < NUMSPRITES; i++)
-			if (!sprnames[i][4] && fastncmp(p,sprnames[i],4)) {
+			if (fastncmp(p,sprnames[i],4)) {
 				// updating overridden sprnames is not implemented for soc parser,
 				// so don't use cache
 				if (mathlib)

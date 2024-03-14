@@ -443,14 +443,9 @@ void readfreeslots(MYFILE *f)
 				for (i = SPR_FIRSTFREESLOT; i <= SPR_LASTFREESLOT; i++)
 				{
 					if (used_spr[(i-SPR_FIRSTFREESLOT)/8] & (1<<(i%8)))
-					{
-						if (!sprnames[i][4] && memcmp(sprnames[i],word,4)==0)
-							sprnames[i][4] = (char)f->wad;
 						continue; // Already allocated, next.
-					}
 					// Found a free slot!
 					strncpy(sprnames[i],word,4);
-					//sprnames[i][4] = 0;
 					used_spr[(i-SPR_FIRSTFREESLOT)/8] |= 1<<(i%8); // Okay, this sprite slot has been named now.
 					// Lua needs to update the value in _G if it exists
 					LUA_UpdateSprName(word, i);
@@ -4183,7 +4178,7 @@ spritenum_t get_sprite(const char *word)
 	if (fastncmp("SPR_",word,4))
 		word += 4; // take off the SPR_
 	for (i = 0; i < NUMSPRITES; i++)
-		if (!sprnames[i][4] && memcmp(word,sprnames[i],4)==0)
+		if (memcmp(word,sprnames[i],4)==0)
 			return i;
 	deh_warning("Couldn't find sprite named 'SPR_%s'",word);
 	return SPR_NULL;
