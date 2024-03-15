@@ -238,6 +238,40 @@ static void R_InstallSpriteLump(UINT16 wad,            // graphics patch
 		sprtemp[frame].flip &= ~(1<<rotation);
 }
 
+static boolean GetFramesAndRotationsFromLumpName(
+	const char *name,
+	UINT8 *ret_frame,
+	UINT8 *ret_rotation,
+	UINT8 *ret_frame2,
+	UINT8 *ret_rotation2
+)
+{
+	size_t namelen = strlen(name);
+
+	if (namelen != 6 && namelen != 8)
+		return false;
+
+	*ret_frame = R_Char2Frame(name[4]);
+	*ret_rotation = R_Char2Rotation(name[5]);
+	if (*ret_frame >= 64)
+		return false;
+
+	if (namelen == 8)
+	{
+		*ret_frame2 = R_Char2Frame(name[6]);
+		*ret_rotation2 = R_Char2Rotation(name[7]);
+		if (*ret_frame2 >= 64)
+			return false;
+	}
+	else
+	{
+		*ret_frame2 = 255;
+		*ret_rotation2 = 255;
+	}
+
+	return true;
+}
+
 // Install a single sprite, given its identifying name (4 chars)
 //
 // (originally part of R_AddSpriteDefs)
@@ -254,8 +288,6 @@ static void R_InstallSpriteLump(UINT16 wad,            // graphics patch
 boolean R_AddSingleSpriteDef(const char *sprname, spritedef_t *spritedef, UINT16 wadnum, UINT16 startlump, UINT16 endlump)
 {
 	UINT16 l;
-	UINT8 frame;
-	UINT8 rotation;
 	lumpinfo_t *lumpinfo;
 	UINT16 numadded = 0;
 
@@ -286,11 +318,12 @@ boolean R_AddSingleSpriteDef(const char *sprname, spritedef_t *spritedef, UINT16
 		{
 			INT16 width, height;
 			INT16 topoffset, leftoffset;
+			UINT8 frame, frame2;
+			UINT8 rotation, rotation2;
 
-			frame = R_Char2Frame(lumpinfo[l].name[4]);
-			rotation = R_Char2Rotation(lumpinfo[l].name[5]);
+			boolean good = GetFramesAndRotationsFromLumpName(lumpinfo[l].name, &frame, &rotation, &frame2, &rotation2);
 
-			if (frame >= 64 || rotation == 255) // Give an actual NAME error -_-...
+			if (!good) // Give an actual NAME error -_-...
 			{
 				CONS_Alert(CONS_WARNING, M_GetText("Bad sprite name: %s\n"), W_CheckNameForNumPwad(wadnum,l));
 				continue;
@@ -322,19 +355,8 @@ boolean R_AddSingleSpriteDef(const char *sprname, spritedef_t *spritedef, UINT16
 			//----------------------------------------------------
 
 			R_InstallSpriteLump(wadnum, l, numspritelumps, frame, rotation, 0);
-
-			if (lumpinfo[l].name[6])
-			{
-				frame = R_Char2Frame(lumpinfo[l].name[6]);
-				rotation = R_Char2Rotation(lumpinfo[l].name[7]);
-
-				if (frame >= 64 || rotation == 255) // Give an actual NAME error -_-...
-				{
-					CONS_Alert(CONS_WARNING, M_GetText("Bad sprite name: %s\n"), W_CheckNameForNumPwad(wadnum,l));
-					continue;
-				}
-				R_InstallSpriteLump(wadnum, l, numspritelumps, frame, rotation, 1);
-			}
+			if (frame2 != 255)
+				R_InstallSpriteLump(wadnum, l, numspritelumps, frame2, rotation2, 1);
 
 			if (++numspritelumps >= max_spritelumps)
 			{
@@ -377,7 +399,7 @@ boolean R_AddSingleSpriteDef(const char *sprname, spritedef_t *spritedef, UINT16
 	//
 	//  some checks to help development
 	//
-	for (frame = 0; frame < maxframe; frame++)
+	for (UINT8 frame = 0; frame < maxframe; frame++)
 	{
 		switch (sprtemp[frame].rotate)
 		{
@@ -399,7 +421,7 @@ boolean R_AddSingleSpriteDef(const char *sprname, spritedef_t *spritedef, UINT16
 
 			default:
 			// must have all 8/16 frames
-				rotation = ((sprtemp[frame].rotate & SRF_3DGE) ? 16 : 8);
+				UINT8 rotation = ((sprtemp[frame].rotate & SRF_3DGE) ? 16 : 8);
 				while (rotation--)
 				// we test the patch lump, or the id lump whatever
 				// if it was not loaded the two are LUMPERROR
