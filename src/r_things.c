@@ -253,14 +253,14 @@ static boolean GetFramesAndRotationsFromLumpName(
 
 	*ret_frame = R_Char2Frame(name[4]);
 	*ret_rotation = R_Char2Rotation(name[5]);
-	if (*ret_frame >= 64)
+	if (*ret_frame >= 64 || *ret_rotation == 255)
 		return false;
 
 	if (namelen == 8)
 	{
 		*ret_frame2 = R_Char2Frame(name[6]);
 		*ret_rotation2 = R_Char2Rotation(name[7]);
-		if (*ret_frame2 >= 64)
+		if (*ret_frame2 >= 64 || *ret_rotation2 == 255)
 			return false;
 	}
 	else
