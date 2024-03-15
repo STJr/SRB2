@@ -359,8 +359,8 @@ static int PopPivotTable(spriteinfo_t *info, lua_State *L, int stk)
 			default:
 				TYPEERROR("pivot frame", LUA_TNUMBER, lua_type(L, stk+1));
 		}
-		if ((idx < 0) || (idx >= 64))
-			return luaL_error(L, "pivot frame %d out of range (0 - %d)", idx, 63);
+		if ((idx < 0) || (idx >= MAXFRAMENUM))
+			return luaL_error(L, "pivot frame %d out of range (0 - %d)", idx, MAXFRAMENUM - 1);
 		// the values in pivot[] are also tables
 		if (PopPivotSubTable(info->pivot, L, stk+2, idx))
 			info->available = true;
@@ -555,7 +555,7 @@ static int pivotlist_set(lua_State *L)
 
 static int pivotlist_num(lua_State *L)
 {
-	lua_pushinteger(L, 64);
+	lua_pushinteger(L, MAXFRAMENUM);
 	return 1;
 }
 

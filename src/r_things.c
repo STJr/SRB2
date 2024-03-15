@@ -77,7 +77,7 @@ spriteinfo_t spriteinfo[NUMSPRITES];
 spritedef_t *sprites;
 size_t numsprites;
 
-static spriteframe_t sprtemp[64];
+static spriteframe_t sprtemp[MAXFRAMENUM];
 static size_t maxframe;
 static const char *spritename;
 
@@ -248,9 +248,9 @@ static void R_InstallSpriteLump(UINT16 wad,            // graphics patch
 
 static boolean GetFramesAndRotationsFromShortLumpName(
 	const char *name,
-	UINT8 *ret_frame,
+	INT32 *ret_frame,
 	UINT8 *ret_rotation,
-	UINT8 *ret_frame2,
+	INT32 *ret_frame2,
 	UINT8 *ret_rotation2
 )
 {
@@ -273,7 +273,7 @@ static boolean GetFramesAndRotationsFromShortLumpName(
 	}
 	else
 	{
-		*ret_frame2 = 255;
+		*ret_frame2 = -1;
 		*ret_rotation2 = 255;
 	}
 
@@ -282,9 +282,9 @@ static boolean GetFramesAndRotationsFromShortLumpName(
 
 static boolean GetFramesAndRotationsFromLongLumpName(
 	const char *name,
-	UINT8 *ret_frame,
+	INT32 *ret_frame,
 	UINT8 *ret_rotation,
-	UINT8 *ret_frame2,
+	INT32 *ret_frame2,
 	UINT8 *ret_rotation2
 )
 {
@@ -305,10 +305,10 @@ static boolean GetFramesAndRotationsFromLongLumpName(
 
 	*ret_frame = atoi(framepart);
 	*ret_rotation = R_Char2Rotation(*(underscore + 1));
-	if (*ret_frame >= 64 || *ret_rotation == 255)
+	if (*ret_frame >= MAXFRAMENUM || *ret_rotation == 255)
 		return false;
 
-	*ret_frame2 = 255;
+	*ret_frame2 = -1;
 	*ret_rotation2 = 255;
 
 	return true;
@@ -404,7 +404,7 @@ boolean R_AddSingleSpriteDef(const char *sprname, spritedef_t *spritedef, UINT16
 		{
 			INT16 width, height;
 			INT16 topoffset, leftoffset;
-			UINT8 frame, frame2;
+			INT32 frame, frame2;
 			UINT8 rotation, rotation2;
 
 			boolean good = longname ?
@@ -443,7 +443,7 @@ boolean R_AddSingleSpriteDef(const char *sprname, spritedef_t *spritedef, UINT16
 			//----------------------------------------------------
 
 			R_InstallSpriteLump(wadnum, l, numspritelumps, frame, rotation, 0);
-			if (frame2 != 255)
+			if (frame2 != -1)
 				R_InstallSpriteLump(wadnum, l, numspritelumps, frame2, rotation2, 1);
 
 			if (++numspritelumps >= max_spritelumps)
