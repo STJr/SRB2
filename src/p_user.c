@@ -1089,6 +1089,17 @@ void P_ResetPlayer(player_t *player)
 			else
 				player->mo->tracer->momz += 1;
 
+			// Restore MF2_OBJECTFLIP / MFE_VERTICALFLIP
+			if (player->mo->tracer->extravalue1 & MF2_OBJECTFLIP)
+				player->mo->tracer->flags2 |= MF2_OBJECTFLIP;
+			else
+				player->mo->tracer->flags2 &= ~MF2_OBJECTFLIP;
+
+			if (player->mo->tracer->extravalue2 & MFE_VERTICALFLIP)
+				player->mo->tracer->eflags |= MFE_VERTICALFLIP;
+			else
+				player->mo->tracer->eflags &= ~MFE_VERTICALFLIP;
+
 			P_SetTarget(&player->mo->tracer->tracer, NULL);
 		}
 		P_SetTarget(&player->mo->tracer, NULL);
@@ -4573,6 +4584,17 @@ void P_DoJump(player_t *player, boolean soundandstate, boolean allowflip)
 					player->mo->tracer->momz -= 1;
 				else
 					player->mo->tracer->momz += 1;
+
+				// Restore MF2_OBJECTFLIP / MFE_VERTICALFLIP
+				if (player->mo->tracer->extravalue1 & MF2_OBJECTFLIP)
+					player->mo->tracer->flags2 |= MF2_OBJECTFLIP;
+				else
+					player->mo->tracer->flags2 &= ~MF2_OBJECTFLIP;
+
+				if (player->mo->tracer->extravalue2 & MFE_VERTICALFLIP)
+					player->mo->tracer->eflags |= MFE_VERTICALFLIP;
+				else
+					player->mo->tracer->eflags &= ~MFE_VERTICALFLIP;
 
 				player->mo->tracer->flags |= MF_PUSHABLE;
 				P_SetTarget(&player->mo->tracer->tracer, NULL);
