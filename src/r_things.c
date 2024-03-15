@@ -429,14 +429,10 @@ boolean R_AddSingleSpriteDef(const char *sprname, spritedef_t *spritedef, UINT16
 	return true;
 }
 
-//
-// Search for sprites replacements in a wad whose names are in namelist
-//
-void R_AddSpriteDefs(UINT16 wadnum)
+static void AddShortSpriteDefs(UINT16 wadnum, size_t *ptr_spritesadded, size_t *ptr_framesadded)
 {
-	size_t i, addsprites = 0;
+	size_t i;
 	UINT16 start, end;
-	char wadname[MAX_WADPATH];
 
 	// Find the sprites section in this resource file.
 	switch (wadfiles[wadnum]->type)
@@ -474,7 +470,6 @@ void R_AddSpriteDefs(UINT16 wadnum)
 		return;
 	}
 
-
 	//
 	// scan through lumps, for each sprite, find all the sprite frames
 	//
@@ -483,15 +478,29 @@ void R_AddSpriteDefs(UINT16 wadnum)
 		if (R_AddSingleSpriteDef(sprnames[i], &sprites[i], wadnum, start, end))
 		{
 			// if a new sprite was added (not just replaced)
-			addsprites++;
+			(*ptr_spritesadded)++;
 #ifndef ZDEBUG
 			CONS_Debug(DBG_SETUP, "sprite %s set in pwad %d\n", sprnames[i], wadnum);
 #endif
 		}
 	}
 
+	*ptr_framesadded += end - start;
+}
+
+//
+// Search for sprites replacements in a wad whose names are in namelist
+//
+void R_AddSpriteDefs(UINT16 wadnum)
+{
+	char wadname[MAX_WADPATH];
+	size_t spritesadded = 0;
+	size_t framesadded = 0;
+
+	AddShortSpriteDefs(wadnum, &spritesadded, &framesadded);
+
 	nameonly(strcpy(wadname, wadfiles[wadnum]->filename));
-	CONS_Printf(M_GetText("%s added %d frames in %s sprites\n"), wadname, end-start, sizeu1(addsprites));
+	CONS_Printf(M_GetText("%s added %d frames in %s sprites\n"), wadname, framesadded, sizeu1(spritesadded));
 }
 
 //
