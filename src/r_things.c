@@ -272,6 +272,47 @@ static boolean GetFramesAndRotationsFromLumpName(
 	return true;
 }
 
+// Some checks to help development
+static void CheckFrame(const char *sprname)
+{
+	for (UINT8 frame = 0; frame < maxframe; frame++)
+	{
+		spriteframe_t *spriteframe = &sprtemp[frame];
+
+		switch (spriteframe->rotate)
+		{
+		case SRF_NONE:
+			// no rotations were found for that frame at all
+			I_Error("R_AddSingleSpriteDef: No patches found for %s frame %c", sprname, R_Frame2Char(frame));
+			break;
+
+		case SRF_SINGLE:
+			// only the first rotation is needed
+			break;
+
+		case SRF_2D: // both Left and Right rotations
+			// we test to see whether the left and right slots are present
+			if ((spriteframe->lumppat[2] == LUMPERROR) || (spriteframe->lumppat[6] == LUMPERROR))
+				I_Error("R_AddSingleSpriteDef: Sprite %s frame %c is missing rotations (L-R mode)",
+				sprname, R_Frame2Char(frame));
+			break;
+
+		default:
+			// must have all 8/16 frames
+			UINT8 rotation = ((spriteframe->rotate & SRF_3DGE) ? 16 : 8);
+			while (rotation--)
+			{
+				// we test the patch lump, or the id lump whatever
+				// if it was not loaded the two are LUMPERROR
+				if (spriteframe->lumppat[rotation] == LUMPERROR)
+					I_Error("R_AddSingleSpriteDef: Sprite %s frame %c is missing rotations (1-%c mode)",
+							sprname, R_Frame2Char(frame), ((spriteframe->rotate & SRF_3DGE) ? 'G' : '8'));
+			}
+			break;
+		}
+	}
+}
+
 // Install a single sprite, given its identifying name (4 chars)
 //
 // (originally part of R_AddSpriteDefs)
@@ -396,41 +437,7 @@ boolean R_AddSingleSpriteDef(const char *sprname, spritedef_t *spritedef, UINT16
 
 	maxframe++;
 
-	//
-	//  some checks to help development
-	//
-	for (UINT8 frame = 0; frame < maxframe; frame++)
-	{
-		switch (sprtemp[frame].rotate)
-		{
-			case SRF_NONE:
-			// no rotations were found for that frame at all
-			I_Error("R_AddSingleSpriteDef: No patches found for %s frame %c", sprname, R_Frame2Char(frame));
-			break;
-
-			case SRF_SINGLE:
-			// only the first rotation is needed
-			break;
-
-			case SRF_2D: // both Left and Right rotations
-			// we test to see whether the left and right slots are present
-			if ((sprtemp[frame].lumppat[2] == LUMPERROR) || (sprtemp[frame].lumppat[6] == LUMPERROR))
-				I_Error("R_AddSingleSpriteDef: Sprite %s frame %c is missing rotations (L-R mode)",
-				sprname, R_Frame2Char(frame));
-			break;
-
-			default:
-			// must have all 8/16 frames
-				UINT8 rotation = ((sprtemp[frame].rotate & SRF_3DGE) ? 16 : 8);
-				while (rotation--)
-				// we test the patch lump, or the id lump whatever
-				// if it was not loaded the two are LUMPERROR
-				if (sprtemp[frame].lumppat[rotation] == LUMPERROR)
-					I_Error("R_AddSingleSpriteDef: Sprite %s frame %c is missing rotations (1-%c mode)",
-					        sprname, R_Frame2Char(frame), ((sprtemp[frame].rotate & SRF_3DGE) ? 'G' : '8'));
-			break;
-		}
-	}
+	CheckFrame(sprname);
 
 	// allocate space for the frames present and copy sprtemp to it
 	if (spritedef->numframes &&             // has been allocated
