@@ -66,12 +66,12 @@ static inline int lib_freeslot(lua_State *L)
 
 			for (j = SPR_FIRSTFREESLOT; j <= SPR_LASTFREESLOT; j++)
 			{
-				if (used_spr[(j-SPR_FIRSTFREESLOT)/8] & (1<<(j%8)))
+				if (in_bit_array(used_spr, j - SPR_FIRSTFREESLOT))
 					continue; // Already allocated, next.
 				// Found a free slot!
 				CONS_Printf("Sprite SPR_%s allocated.\n",word);
 				strcpy(sprnames[j], word);
-				used_spr[(j-SPR_FIRSTFREESLOT)/8] |= 1<<(j%8); // Okay, this sprite slot has been named now.
+				set_bit_array(used_spr, j - SPR_FIRSTFREESLOT); // Okay, this sprite slot has been named now.
 				// Lua needs to update the value in _G if it exists
 				LUA_UpdateSprName(word, j);
 				lua_pushinteger(L, j);

@@ -445,11 +445,11 @@ void readfreeslots(MYFILE *f)
 
 				for (i = SPR_FIRSTFREESLOT; i <= SPR_LASTFREESLOT; i++)
 				{
-					if (used_spr[(i-SPR_FIRSTFREESLOT)/8] & (1<<(i%8)))
+					if (in_bit_array(used_spr, i - SPR_FIRSTFREESLOT))
 						continue; // Already allocated, next.
 					// Found a free slot!
 					strcpy(sprnames[i], word);
-					used_spr[(i-SPR_FIRSTFREESLOT)/8] |= 1<<(i%8); // Okay, this sprite slot has been named now.
+					set_bit_array(used_spr, i - SPR_FIRSTFREESLOT); // Okay, this sprite slot has been named now.
 					// Lua needs to update the value in _G if it exists
 					LUA_UpdateSprName(word, i);
 					break;
