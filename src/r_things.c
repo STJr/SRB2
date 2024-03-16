@@ -137,9 +137,7 @@ static void R_InstallSpriteLump(UINT16 wad,            // graphics patch
 	char cn = R_Frame2Char(frame), cr = R_Rotation2Char(rotation); // for debugging
 
 	INT32 r;
-	lumpnum_t lumppat = wad;
-	lumppat <<= 16;
-	lumppat += lump;
+	lumpnum_t lumppat = (wad << 16) + lump;
 
 	if (maxframe ==(size_t)-1 || frame > maxframe)
 		maxframe = frame;
