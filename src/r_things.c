@@ -625,7 +625,7 @@ void R_AddSpriteDefs(UINT16 wadnum)
 	AddLongSpriteDefs(wadnum, &spritesadded, &framesadded);
 
 	nameonly(strcpy(wadname, wadfiles[wadnum]->filename));
-	CONS_Printf(M_GetText("%s added %s frames in %s sprites\n"), wadname, sizeu1(framesadded), sizeu1(spritesadded));
+	CONS_Printf(M_GetText("%s added %s frames in %s sprites\n"), wadname, sizeu1(framesadded), sizeu2(spritesadded));
 }
 
 //
