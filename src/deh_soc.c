@@ -441,7 +441,7 @@ void readfreeslots(MYFILE *f)
 			else if (fastcmp(type, "SPR"))
 			{
 				if (strlen(word) > MAXSPRITENAME)
-					I_Error("Sprite name is longer than %d characters\n", strlen(word));
+					I_Error("Sprite name is longer than %s characters\n", sizeu1(strlen(word)));
 
 				for (i = SPR_FIRSTFREESLOT; i <= SPR_LASTFREESLOT; i++)
 				{

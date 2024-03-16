@@ -62,7 +62,7 @@ static inline int lib_freeslot(lua_State *L)
 			spritenum_t j;
 
 			if (strlen(word) > MAXSPRITENAME)
-				return luaL_error(L, "Sprite name is longer than %d characters\n", strlen(word));
+				return luaL_error(L, "Sprite name is longer than %s characters\n", sizeu1(strlen(word)));
 
 			for (j = SPR_FIRSTFREESLOT; j <= SPR_LASTFREESLOT; j++)
 			{
