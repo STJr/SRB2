@@ -317,7 +317,7 @@ static boolean GetFramesAndRotationsFromLongLumpName(
 // Some checks to help development
 static void CheckFrame(const char *sprname)
 {
-	for (UINT8 frame = 0; frame < maxframe; frame++)
+	for (UINT32 frame = 0; frame < maxframe; frame++)
 	{
 		spriteframe_t *spriteframe = &sprtemp[frame];
 
