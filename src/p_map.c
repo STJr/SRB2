@@ -1057,9 +1057,6 @@ static unsigned PIT_DoCheckThing(mobj_t *thing)
 			if (!P_IsObjectOnGround(thing))
 				thing->momz += tmthing->momz;
 
-			thing->extravalue1 = thing->flags2;
-			thing->extravalue2 = thing->eflags;
-
 			return CHECKTHING_COLLIDE;
 		}
 	}

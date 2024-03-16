@@ -14799,11 +14799,17 @@ void A_RolloutRock(mobj_t *actor)
 
 	if (!actor->tracer || P_MobjWasRemoved(actor->tracer) || !actor->tracer->health)
 		actor->flags |= MF_PUSHABLE;
+	else if (actor->tracer->eflags & MFE_VERTICALFLIP)
+	{
+		actor->flags2 |= MF2_OBJECTFLIP;
+		actor->eflags |= MFE_VERTICALFLIP;
+	}
 	else
 	{
-		actor->flags2 = (actor->flags2 & ~MF2_OBJECTFLIP) | (actor->tracer->flags2 & MF2_OBJECTFLIP);
-		actor->eflags = (actor->eflags & ~MFE_VERTICALFLIP) | (actor->tracer->eflags & MFE_VERTICALFLIP);
+		actor->flags2 &= ~MF2_OBJECTFLIP;
+		actor->eflags &= ~MFE_VERTICALFLIP;
 	}
+
 
 	actor->friction = FRACUNIT; // turns out riding on solids sucks, so let's just make it easier on ourselves
 
