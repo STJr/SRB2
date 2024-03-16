@@ -450,17 +450,19 @@ static int ScanConstants(lua_State *L, boolean mathlib, const char *word)
 	}
 	else if (fastncmp("SPR_",word,4)) {
 		p = word+4;
-		for (i = 0; i < NUMSPRITES; i++)
-			if (fastcmp(p,sprnames[i])) {
-				// updating overridden sprnames is not implemented for soc parser,
-				// so don't use cache
-				if (mathlib)
-					lua_pushinteger(L, i);
-				else
-					CacheAndPushConstant(L, word, i);
-				return 1;
-			}
-		if (mathlib) return luaL_error(L, "sprite '%s' could not be found.\n", word);
+		i = R_GetSpriteNumByName(p);
+		if (i != NUMSPRITES)
+		{
+			// updating overridden sprnames is not implemented for soc parser,
+			// so don't use cache
+			if (mathlib)
+				lua_pushinteger(L, i);
+			else
+				CacheAndPushConstant(L, word, i);
+			return 1;
+		}
+		else if (mathlib)
+			return luaL_error(L, "sprite '%s' could not be found.\n", word);
 		return 0;
 	}
 	else if (fastncmp("SPR2_",word,5)) {

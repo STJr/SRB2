@@ -1592,16 +1592,9 @@ static void R_ParseSpriteInfo(boolean spr2)
 
 	if (!spr2)
 	{
-		for (i = 0; i <= NUMSPRITES; i++)
-		{
-			if (i == NUMSPRITES)
-				I_Error("Error parsing SPRTINFO lump: Unknown sprite name \"%s\"", newSpriteName);
-			if (!strcmp(newSpriteName, sprnames[i]))
-			{
-				sprnum = i;
-				break;
-			}
-		}
+		sprnum = R_GetSpriteNumByName(newSpriteName);
+		if (sprnum == NUMSPRITES)
+			I_Error("Error parsing SPRTINFO lump: Unknown sprite name \"%s\"", newSpriteName);
 	}
 	else
 	{

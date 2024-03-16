@@ -4180,9 +4180,9 @@ spritenum_t get_sprite(const char *word)
 		return atoi(word);
 	if (fastncmp("SPR_",word,4))
 		word += 4; // take off the SPR_
-	for (i = 0; i < NUMSPRITES; i++)
-		if (!strcmp(word, sprnames[i]))
-			return i;
+	i = R_GetSpriteNumByName(word);
+	if (i != NUMSPRITES)
+		return i;
 	deh_warning("Couldn't find sprite named 'SPR_%s'",word);
 	return SPR_NULL;
 }
