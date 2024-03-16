@@ -340,15 +340,17 @@ static void CheckFrame(const char *sprname)
 			break;
 
 		default:
-			// must have all 8/16 frames
-			UINT8 rotation = ((spriteframe->rotate & SRF_3DGE) ? 16 : 8);
-			while (rotation--)
 			{
-				// we test the patch lump, or the id lump whatever
-				// if it was not loaded the two are LUMPERROR
-				if (spriteframe->lumppat[rotation] == LUMPERROR)
-					I_Error("R_AddSingleSpriteDef: Sprite %s frame %d (%c) is missing rotations (1-%c mode)",
-							sprname, frame, R_Frame2Char(frame), ((spriteframe->rotate & SRF_3DGE) ? 'G' : '8'));
+				// must have all 8/16 frames
+				UINT8 rotation = ((spriteframe->rotate & SRF_3DGE) ? 16 : 8);
+				while (rotation--)
+				{
+					// we test the patch lump, or the id lump whatever
+					// if it was not loaded the two are LUMPERROR
+					if (spriteframe->lumppat[rotation] == LUMPERROR)
+						I_Error("R_AddSingleSpriteDef: Sprite %s frame %d (%c) is missing rotations (1-%c mode)",
+								sprname, frame, R_Frame2Char(frame), ((spriteframe->rotate & SRF_3DGE) ? 'G' : '8'));
+				}
 			}
 			break;
 		}
