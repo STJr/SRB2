@@ -400,7 +400,7 @@ boolean R_AddSingleSpriteDef(const char *sprname, spritedef_t *spritedef, UINT16
 	{
 		// For long sprites, the startlump-endlump range only includes
 		// relevant lumps, so no check needed in that case
-		if (longname || !memcmp(lumpinfo[l].name, sprname, 4))
+		if (longname || (strlen(sprname) == 4 && !memcmp(lumpinfo[l].name, sprname, 4)))
 		{
 			INT16 width, height;
 			INT16 topoffset, leftoffset;
