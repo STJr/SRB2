@@ -312,6 +312,38 @@ static boolean GetFramesAndRotationsFromLongLumpName(
 	return true;
 }
 
+static UINT8 GetOppositeRotation(UINT8 rotation, UINT8 flags)
+{
+	if (flags & ~SRF_3DMASK)
+		I_Error("GetOppositeRotation: rotation type not supported");
+
+	UINT8 numrotations = (flags == SRF_3D) ? 8 : 16;
+	return (rotation == 1) ? 1 : numrotations + 2 - rotation;
+}
+
+static void MirrorMissingRotations(void)
+{
+	for (UINT32 framenum = 0; framenum < maxframe; framenum++)
+	{
+		spriteframe_t *frame = &sprtemp[framenum];
+
+		if (!(frame->rotate & SRF_3DMASK))
+			continue;
+
+		UINT8 numrotations = frame->rotate == SRF_3D ? 8 : 16;
+
+		for (UINT8 rotation = 1; rotation <= numrotations; rotation++)
+		{
+			if (frame->lumppat[rotation - 1] != LUMPERROR)
+				continue;
+
+			UINT8 baserotation = GetOppositeRotation(rotation, frame->rotate);
+			UINT32 lumpnum = frame->lumppat[baserotation - 1];
+			R_InstallSpriteLump(WADFILENUM(lumpnum), LUMPNUM(lumpnum), frame->lumpid[baserotation], framenum, rotation, 1);
+		}
+	}
+}
+
 // Some checks to help development
 static void CheckFrame(const char *sprname)
 {
@@ -483,6 +515,9 @@ boolean R_AddSingleSpriteDef(const char *sprname, spritedef_t *spritedef, UINT16
 	}
 
 	maxframe++;
+
+	if (longname)
+		MirrorMissingRotations();
 
 	CheckFrame(sprname);
 
