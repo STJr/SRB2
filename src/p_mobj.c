@@ -195,6 +195,61 @@ static void P_CyclePlayerMobjState(mobj_t *mobj)
 	}
 }
 
+static panim_t GetPlayerAnimationFromState(statenum_t state)
+{
+	switch(state)
+	{
+	case S_PLAY_STND:
+	case S_PLAY_WAIT:
+	case S_PLAY_NIGHTS_STAND:
+		return PA_IDLE;
+	case S_PLAY_EDGE:
+		return PA_EDGE;
+	case S_PLAY_WALK:
+	case S_PLAY_SKID:
+	case S_PLAY_FLOAT:
+		return PA_WALK;
+	case S_PLAY_RUN:
+	case S_PLAY_FLOAT_RUN:
+		return PA_RUN;
+	case S_PLAY_DASH:
+		return PA_DASH;
+	case S_PLAY_PAIN:
+	case S_PLAY_STUN:
+		return PA_PAIN;
+	case S_PLAY_ROLL:
+	//case S_PLAY_SPINDASH: -- everyone can ROLL thanks to zoom tubes...
+	case S_PLAY_NIGHTS_ATTACK:
+		return PA_ROLL;
+	case S_PLAY_JUMP:
+		return PA_JUMP;
+	case S_PLAY_SPRING:
+		return PA_SPRING;
+	case S_PLAY_FALL:
+	case S_PLAY_NIGHTS_FLOAT:
+		return PA_FALL;
+	case S_PLAY_FLY:
+	case S_PLAY_FLY_TIRED:
+	case S_PLAY_SWIM:
+	case S_PLAY_GLIDE:
+	case S_PLAY_BOUNCE:
+	case S_PLAY_BOUNCE_LANDING:
+	case S_PLAY_TWINSPIN:
+		return PA_ABILITY;
+	case S_PLAY_SPINDASH: // ...but the act of SPINDASHING is charability2 specific.
+	case S_PLAY_FIRE:
+	case S_PLAY_FIRE_FINISH:
+	case S_PLAY_MELEE:
+	case S_PLAY_MELEE_FINISH:
+	case S_PLAY_MELEE_LANDING:
+		return PA_ABILITY2;
+	case S_PLAY_RIDE:
+		return PA_RIDE;
+	default:
+		return PA_ETC;
+	}
+}
+
 //
 // P_SetPlayerMobjState
 // Returns true if the mobj is still present.
@@ -254,73 +309,7 @@ static boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 		P_DoPityCheck(player);
 	}
 
-	// Set animation state
-	// The pflags version of this was just as convoluted.
-	switch(state)
-	{
-	case S_PLAY_STND:
-	case S_PLAY_WAIT:
-	case S_PLAY_NIGHTS_STAND:
-		player->panim = PA_IDLE;
-		break;
-	case S_PLAY_EDGE:
-		player->panim = PA_EDGE;
-		break;
-	case S_PLAY_WALK:
-	case S_PLAY_SKID:
-	case S_PLAY_FLOAT:
-		player->panim = PA_WALK;
-		break;
-	case S_PLAY_RUN:
-	case S_PLAY_FLOAT_RUN:
-		player->panim = PA_RUN;
-		break;
-	case S_PLAY_DASH:
-		player->panim = PA_DASH;
-		break;
-	case S_PLAY_PAIN:
-	case S_PLAY_STUN:
-		player->panim = PA_PAIN;
-		break;
-	case S_PLAY_ROLL:
-	//case S_PLAY_SPINDASH: -- everyone can ROLL thanks to zoom tubes...
-	case S_PLAY_NIGHTS_ATTACK:
-		player->panim = PA_ROLL;
-		break;
-	case S_PLAY_JUMP:
-		player->panim = PA_JUMP;
-		break;
-	case S_PLAY_SPRING:
-		player->panim = PA_SPRING;
-		break;
-	case S_PLAY_FALL:
-	case S_PLAY_NIGHTS_FLOAT:
-		player->panim = PA_FALL;
-		break;
-	case S_PLAY_FLY:
-	case S_PLAY_FLY_TIRED:
-	case S_PLAY_SWIM:
-	case S_PLAY_GLIDE:
-	case S_PLAY_BOUNCE:
-	case S_PLAY_BOUNCE_LANDING:
-	case S_PLAY_TWINSPIN:
-		player->panim = PA_ABILITY;
-		break;
-	case S_PLAY_SPINDASH: // ...but the act of SPINDASHING is charability2 specific.
-	case S_PLAY_FIRE:
-	case S_PLAY_FIRE_FINISH:
-	case S_PLAY_MELEE:
-	case S_PLAY_MELEE_FINISH:
-	case S_PLAY_MELEE_LANDING:
-		player->panim = PA_ABILITY2;
-		break;
-	case S_PLAY_RIDE:
-		player->panim = PA_RIDE;
-		break;
-	default:
-		player->panim = PA_ETC;
-		break;
-	}
+	player->panim = GetPlayerAnimationFromState(state);
 
 	if (recursion++) // if recursion detected,
 		memset(seenstate = tempstate, 0, sizeof tempstate); // clear state table
