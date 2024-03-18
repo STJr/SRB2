@@ -82,6 +82,7 @@
 #include "version.h"
 #include "doomtype.h"
 
+#include <assert.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -648,6 +649,7 @@ UINT32 quickncasehash (const char *p, size_t n)
 #else
 #define I_Assert(e) ((void)0)
 #endif
+#define I_StaticAssert(e) static_assert(e, "Static assertion failed: " #e)
 
 // The character that separates pathnames. Forward slash on
 // most systems, but reverse solidus (\) on Windows.
@@ -708,13 +710,6 @@ extern int
 
 /// Experimental attempts at preventing MF_PAPERCOLLISION objects from getting stuck in walls.
 //#define PAPER_COLLISIONCORRECTION
-
-/// FINALLY some real clipping that doesn't make walls dissappear AND speeds the game up
-/// (that was the original comment from SRB2CB, sadly it is a lie and actually slows game down)
-/// on the bright side it fixes some weird issues with translucent walls
-/// \note	SRB2CB port.
-///      	SRB2CB itself ported this from PrBoom+
-#define NEWCLIP
 
 /// OpenGL shaders
 #define GL_SHADERS

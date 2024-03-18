@@ -4834,6 +4834,7 @@ const char *const POWERS_LIST[] = {
 
 const char *const HUDITEMS_LIST[] = {
 	"LIVES",
+	"INPUT",
 
 	"RINGS",
 	"RINGSNUM",
@@ -5094,6 +5095,10 @@ struct int_const_s const INT_CONST[] = {
 	{"RF_SHADOWDRAW",RF_SHADOWDRAW},
 	{"RF_SHADOWEFFECTS",RF_SHADOWEFFECTS},
 	{"RF_DROPSHADOW",RF_DROPSHADOW},
+
+	// Animation flags
+	{"SPR2F_MASK",SPR2F_MASK},
+	{"SPR2F_SUPER",SPR2F_SUPER},
 
 	// Level flags
 	{"LF_SCRIPTISFILE",LF_SCRIPTISFILE},
@@ -5737,6 +5742,7 @@ struct int_const_s const INT_CONST[] = {
 	{"JA_DIGITAL",JA_DIGITAL},
 	{"JA_JUMP",JA_JUMP},
 	{"JA_SPIN",JA_SPIN},
+	{"JA_SHIELD",JA_SHIELD},
 	{"JA_FIRE",JA_FIRE},
 	{"JA_FIRENORMAL",JA_FIRENORMAL},
 	{"JOYAXISRANGE",JOYAXISRANGE},

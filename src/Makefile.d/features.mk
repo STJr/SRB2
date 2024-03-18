@@ -22,8 +22,6 @@ ifndef NOMD5
 sources+=md5.c
 endif
 
-ifndef NOZLIB
-ifndef NOPNG
 ifdef PNG_PKGCONFIG
 $(eval $(call Use_pkg_config,PNG_PKGCONFIG))
 else
@@ -36,8 +34,6 @@ opts+=-D_LARGEFILE64_SOURCE
 endif
 opts+=-DHAVE_PNG
 sources+=apng.c
-endif
-endif
 
 ifndef NOCURL
 CURLCONFIG?=curl-config

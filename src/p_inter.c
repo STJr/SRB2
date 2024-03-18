@@ -392,17 +392,50 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 		}
 	}
 
-	player = toucher->player;
-	I_Assert(player != NULL); // Only players can touch stuff!
-
-	if (player->spectator)
-		return;
-
 	// Ignore multihits in "ouchie" mode
-	if (special->flags & (MF_ENEMY|MF_BOSS) && special->flags2 & MF2_FRET)
+	if (special->flags & (MF_ENEMY | MF_BOSS) && special->flags2 & MF2_FRET)
 		return;
 
-	if (LUA_HookTouchSpecial(special, toucher) || P_MobjWasRemoved(special))
+	player = toucher->player;
+
+	if (player)
+	{
+		if (player->spectator)
+			return;
+
+		// Some hooks may assume that the toucher is a player, so we keep it in here.
+		if (LUA_HookTouchSpecial(special, toucher) || P_MobjWasRemoved(special))
+			return;
+	}
+
+	if (player || (toucher->flags & MF_PUSHABLE)) // Special area for objects that are interactable by both player AND MF_PUSHABLE.
+	{
+		if (special->type == MT_STEAM)
+		{
+			if (player && player->mo->state == &states[player->mo->info->painstate]) // can't use gas jets when player is in pain!
+				return;
+
+			fixed_t speed = special->info->mass; // gas jets use this for the vertical thrust
+			SINT8 flipval = P_MobjFlip(special); // virtually everything here centers around the thruster's gravity, not the object's!
+
+			if (special->state != &states[S_STEAM1]) // Only when it bursts
+				return;
+
+			toucher->eflags |= MFE_SPRUNG;
+			toucher->momz = flipval * FixedMul(speed, FixedSqrt(FixedMul(special->scale, toucher->scale))); // scale the speed with both objects' scales, just like with springs!
+
+			if (player)
+			{
+				P_ResetPlayer(player);
+				if (player->panim != PA_FALL)
+					P_SetMobjState(toucher, S_PLAY_FALL);
+			}
+
+			return; // Don't collect it!
+		}
+	}
+
+	if (!player) // Only players can touch stuff!
 		return;
 
 	// 0 = none, 1 = elemental pierce, 2 = bubble bounce
@@ -1881,6 +1914,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				toucher->tracer->flags2 = (toucher->tracer->flags2 & ~MF2_AMBUSH) | destambush;
 			}
 			return;
+
 		default: // SOC or script pickup
 			if (player->bot && player->bot != BOT_MPAI)
 				return;
@@ -2774,8 +2808,7 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 				mo = P_SpawnMobj(target->x, target->y, target->z, MT_EXTRALARGEBUBBLE);
 			if (P_MobjWasRemoved(mo))
 				break;
-			mo->destscale = target->scale;
-			P_SetScale(mo, mo->destscale);
+			P_SetScale(mo, target->scale, true);
 			P_SetMobjState(mo, mo->info->raisestate);
 			break;
 
@@ -3966,8 +3999,7 @@ void P_PlayerRingBurst(player_t *player, INT32 num_rings)
 		mo->fuse = 8*TICRATE;
 		P_SetTarget(&mo->target, player->mo);
 
-		mo->destscale = player->mo->scale;
-		P_SetScale(mo, player->mo->scale);
+		P_SetScale(mo, player->mo->scale, true);
 
 		// Angle offset by player angle, then slightly offset by amount of rings
 		fa = ((i*FINEANGLES/16) + va - ((num_rings-1)*FINEANGLES/32)) & FINEMASK;
@@ -4103,8 +4135,7 @@ void P_PlayerWeaponPanelBurst(player_t *player)
 		mo->flags &= ~(MF_NOGRAVITY|MF_NOCLIPHEIGHT);
 		P_SetTarget(&mo->target, player->mo);
 		mo->fuse = 12*TICRATE;
-		mo->destscale = player->mo->scale;
-		P_SetScale(mo, player->mo->scale);
+		P_SetScale(mo, player->mo->scale, true);
 
 		// Angle offset by player angle
 		fa = ((i*FINEANGLES/16) + (player->mo->angle>>ANGLETOFINESHIFT)) & FINEMASK;
@@ -4192,8 +4223,7 @@ void P_PlayerWeaponAmmoBurst(player_t *player)
 		player->powers[power] = 0;
 		mo->fuse = 12*TICRATE;
 
-		mo->destscale = player->mo->scale;
-		P_SetScale(mo, player->mo->scale);
+		P_SetScale(mo, player->mo->scale, true);
 
 		// Angle offset by player angle
 		fa = ((i*FINEANGLES/16) + (player->mo->angle>>ANGLETOFINESHIFT)) & FINEMASK;
@@ -4240,8 +4270,7 @@ void P_PlayerWeaponPanelOrAmmoBurst(player_t *player)
 			mo->flags &= ~(MF_NOGRAVITY|MF_NOCLIPHEIGHT); \
 			P_SetTarget(&mo->target, player->mo); \
 			mo->fuse = 12*TICRATE; \
-			mo->destscale = player->mo->scale; \
-			P_SetScale(mo, player->mo->scale); \
+			P_SetScale(mo, player->mo->scale, true); \
 			mo->momx = FixedMul(FINECOSINE(fa),ns); \
 			if (!(twodlevel || (player->mo->flags2 & MF2_TWOD))) \
 				mo->momy = FixedMul(FINESINE(fa),ns); \
@@ -4263,8 +4292,7 @@ void P_PlayerWeaponPanelOrAmmoBurst(player_t *player)
 			mo->flags &= ~(MF_NOGRAVITY|MF_NOCLIPHEIGHT); \
 			P_SetTarget(&mo->target, player->mo); \
 			mo->fuse = 12*TICRATE; \
-			mo->destscale = player->mo->scale; \
-			P_SetScale(mo, player->mo->scale); \
+			P_SetScale(mo, player->mo->scale, true); \
 			mo->momx = FixedMul(FINECOSINE(fa),ns); \
 			if (!(twodlevel || (player->mo->flags2 & MF2_TWOD))) \
 				mo->momy = FixedMul(FINESINE(fa),ns); \
