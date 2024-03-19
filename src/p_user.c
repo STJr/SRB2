@@ -8273,7 +8273,7 @@ void P_MovePlayer(player_t *player)
 	{
 		// If the player is in dashmode, here's their peelout.
 		if (player->charflags & SF_DASHMODE && player->dashmode >= DASHMODE_THRESHOLD && player->panim == PA_RUN && !player->skidtime && (onground || ((player->charability == CA_FLOAT || player->charability == CA_SLOWFALL) && player->secondjump == 1) || player->powers[pw_super]))
-			P_SetMobjState (player->mo, S_PLAY_DASH);
+			P_SetMobjState(player->mo, S_PLAY_DASH);
 		// If the player is moving fast enough,
 		// break into a run!
 		else if (player->speed >= runspd && player->panim == PA_WALK && !player->skidtime
@@ -8287,11 +8287,11 @@ void P_MovePlayer(player_t *player)
 
 		// Floating at slow speeds has its own special animation.
 		else if ((((player->charability == CA_FLOAT || player->charability == CA_SLOWFALL) && player->secondjump == 1) || player->powers[pw_super]) && player->panim == PA_IDLE && !onground)
-			P_SetMobjState (player->mo, S_PLAY_FLOAT);
+			P_SetMobjState(player->mo, S_PLAY_FLOAT);
 
 		// Otherwise, just walk.
 		else if ((player->rmomx || player->rmomy) && player->panim == PA_IDLE)
-			P_SetMobjState (player->mo, S_PLAY_WALK);
+			P_SetMobjState(player->mo, S_PLAY_WALK);
 	}
 
 	// If your peelout animation is playing, and you're
