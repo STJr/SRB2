@@ -2234,7 +2234,7 @@ boolean P_ZMovement(mobj_t *mo)
 		else if (!onground)
 			P_SlopeLaunch(mo);
 	}
-	
+
 	if (!mo->player && P_CheckDeathPitCollide(mo) && mo->health
 	&& !(mo->flags & MF_NOCLIPHEIGHT) && !(mo->flags2 & MF2_BOSSDEAD))
 	{
@@ -2927,7 +2927,7 @@ boolean P_SceneryZMovement(mobj_t *mo)
 		mo->eflags &= ~MFE_APPLYPMOMZ;
 	}
 	mo->z += mo->momz;
-	
+
 	if (!mo->player && P_CheckDeathPitCollide(mo) && mo->health
 	&& !(mo->flags & MF_NOCLIPHEIGHT) && !(mo->flags2 & MF2_BOSSDEAD))
 	{
@@ -10719,7 +10719,7 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type, ...)
 
 	// Set shadowscale here, before spawn hook so that Lua can change it
 	mobj->shadowscale = P_DefaultMobjShadowScale(mobj);
-	
+
 	// A monitor can't respawn if we're not in multiplayer,
 	// or if we're in co-op and it's score or a 1up
 	if (mobj->flags & MF_MONITOR && (!(netgame || multiplayer)

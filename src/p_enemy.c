@@ -4192,7 +4192,7 @@ static void P_DoBoss5Death(mobj_t *mo)
 				pole->angle = mo->tracer->angle;
 				pole->momx = P_ReturnThrustX(pole, pole->angle, speed);
 				pole->momy = P_ReturnThrustY(pole, pole->angle, speed);
-				
+
 				P_SetTarget(&pole->tracer, P_SpawnMobj(
 					pole->x, pole->y,
 					pole->z - 256*FRACUNIT,
@@ -8601,7 +8601,7 @@ void A_Shockwave(mobj_t *actor)
 		ang += interval;
 		sprev = shock;
 	}
-	
+
 	S_StartSound(actor, shock->info->seesound);
 }
 

@@ -915,7 +915,7 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 		player->textvar = NTV_BONUSTIMEEND; // Score and grades
 		player->finishedspheres = (INT16)(player->spheres);
 		player->finishedrings = (INT16)(player->rings);
-		
+
 		// Add score to temp leaderboards
 		player->lastmaretime = leveltime - player->marebegunat;
 		G_AddTempNightsRecords(player, player->marescore, player->lastmaretime, (UINT8)(oldmare + 1));
@@ -5186,7 +5186,7 @@ static boolean P_PlayerShieldThink(player_t *player, ticcmd_t *cmd, mobj_t *lock
 						if (!P_MobjWasRemoved(visual))
 						{
 							P_SetTarget(&visual->target, lockonshield);
-						visual->drawonlyforplayer = player; // Hide it from the other player in splitscreen, and yourself when spectating
+							visual->drawonlyforplayer = player; // Hide it from the other player in splitscreen, and yourself when spectating
 							P_SetMobjStateNF(visual, visual->info->spawnstate+1);
 						}
 					}
@@ -8777,7 +8777,7 @@ void P_MovePlayer(player_t *player)
 	if (!(player->mo->momz || player->mo->momx || player->mo->momy) && !(player->mo->eflags & MFE_GOOWATER)
 	&& player->panim == PA_IDLE && !(player->powers[pw_carry]))
 		P_DoTeeter(player);
-	
+
 	// Toss a flag
 	if (G_GametypeHasTeams() && (cmd->buttons & BT_TOSSFLAG) && !(player->powers[pw_super]) && !(player->tossdelay))
 	{
