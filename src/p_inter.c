@@ -1819,7 +1819,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 
 			if (!player->climbing)
 			{
-				if (player->bot && player->bot != BOT_MPAI && toucher->state-states != S_PLAY_GASP)
+				if (player->bot && player->bot != BOT_MPAI && !P_IsPlayerInState(player, S_PLAY_GASP))
 					S_StartSound(toucher, special->info->deathsound); // Force it to play a sound for bots
 				P_SetMobjState(toucher, S_PLAY_GASP);
 				P_ResetPlayer(player);

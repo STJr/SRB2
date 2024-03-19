@@ -294,11 +294,11 @@ static boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 	{
 		if (state == S_PLAY_JUMP)
 		{
-			if (player->mo->state-states == S_PLAY_WALK)
+			if (P_IsPlayerInState(player, S_PLAY_WALK))
 				return P_SetPlayerMobjState(mobj, S_PLAY_FLOAT);
 			return true;
 		}
-		else if (player->mo->state-states == S_PLAY_FLOAT && state == S_PLAY_STND)
+		else if (P_IsPlayerInState(player, S_PLAY_FLOAT) && state == S_PLAY_STND)
 			return true;
 	}
 	// You were in pain state after taking a hit, and you're moving out of pain state now?
@@ -3720,7 +3720,7 @@ static void P_PlayerMobjThinker(mobj_t *mobj)
 	// momentum movement
 	mobj->eflags &= ~MFE_JUSTSTEPPEDDOWN;
 
-	if (mobj->state-states == S_PLAY_BOUNCE_LANDING)
+	if (P_IsPlayerInState(mobj->player, S_PLAY_BOUNCE_LANDING))
 		goto animonly; // no need for checkposition - doesn't move at ALL
 
 	// Zoom tube

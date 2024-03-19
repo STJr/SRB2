@@ -4677,7 +4677,7 @@ static void P_ProcessZoomTube(player_t *player, mtag_t sectag, boolean end)
 	player->pflags &= ~(PF_JUMPED|PF_NOJUMPDAMAGE|PF_GLIDING|PF_BOUNCING|PF_SLIDING|PF_CANCARRY);
 	player->climbing = 0;
 
-	if (player->mo->state-states != S_PLAY_ROLL)
+	if (!P_IsPlayerInState(player, S_PLAY_ROLL))
 	{
 		P_SetMobjState(player->mo, S_PLAY_ROLL);
 		S_StartSound(player->mo, sfx_spin);

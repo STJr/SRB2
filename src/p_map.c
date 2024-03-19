@@ -3040,7 +3040,7 @@ static boolean P_ThingHeightClip(mobj_t *thing)
 	if (tmfloorz > oldfloorz+thing->height)
 		return true;
 
-	bouncing = thing->player && thing->state-states == S_PLAY_BOUNCE_LANDING && P_IsObjectOnGround(thing);
+	bouncing = thing->player && P_IsPlayerInState(thing->player, S_PLAY_BOUNCE_LANDING) && P_IsObjectOnGround(thing);
 
 	if ((onfloor || bouncing) && !(thing->flags & MF_NOGRAVITY) && floormoved)
 	{
