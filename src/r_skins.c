@@ -28,6 +28,7 @@
 #include "p_local.h"
 #include "dehacked.h" // get_number (for thok)
 #include "m_cond.h"
+#include "deh_tables.h"
 #ifdef HWRENDER
 #include "hardware/hw_md2.h"
 #endif
@@ -773,6 +774,90 @@ static boolean R_ProcessPatchableFields(skin_t *skin, char *stoken, char *value)
 	return true;
 }
 
+// e.g. "RUN" => S_PLAY_RUN, "RUN1" => S_PLAY_RUN, "RUN8" => S_PLAY_RUN
+static statenum_t GetCanonicalPlayerStateNumByName(const char *name)
+{
+	if (startswith(name, "STAND"))               return S_PLAY_STND;
+	else if (startswith(name, "STND"))           return S_PLAY_STND;
+	else if (startswith(name, "WAIT"))           return S_PLAY_WAIT;
+	else if (startswith(name, "WALK"))           return S_PLAY_WALK;
+	else if (startswith(name, "SKID"))           return S_PLAY_SKID;
+	else if (startswith(name, "RUN"))            return S_PLAY_RUN;
+	else if (startswith(name, "DASH"))           return S_PLAY_DASH;
+	else if (startswith(name, "PAIN"))           return S_PLAY_PAIN;
+	else if (startswith(name, "STUN"))           return S_PLAY_STUN;
+	else if (startswith(name, "DEAD"))           return S_PLAY_DEAD;
+	else if (startswith(name, "DRWN"))           return S_PLAY_DRWN;
+	else if (startswith(name, "ROLL"))           return S_PLAY_ROLL;
+	else if (startswith(name, "GASP"))           return S_PLAY_GASP;
+	else if (startswith(name, "JUMP"))           return S_PLAY_JUMP;
+	else if (startswith(name, "SPRING"))         return S_PLAY_SPRING;
+	else if (startswith(name, "FALL"))           return S_PLAY_FALL;
+	else if (startswith(name, "EDGE"))           return S_PLAY_EDGE;
+	else if (startswith(name, "RIDE"))           return S_PLAY_RIDE;
+	else if (startswith(name, "SPINDASH"))       return S_PLAY_SPINDASH;
+	else if (startswith(name, "FLY"))            return S_PLAY_FLY;
+	else if (startswith(name, "SWIM"))           return S_PLAY_SWIM;
+	else if (startswith(name, "FLY_TIRED"))      return S_PLAY_FLY_TIRED;
+	else if (startswith(name, "GLIDE"))          return S_PLAY_GLIDE;
+	else if (startswith(name, "GLIDE_LANDING"))  return S_PLAY_GLIDE_LANDING;
+	else if (startswith(name, "CLING"))          return S_PLAY_CLING;
+	else if (startswith(name, "CLIMB"))          return S_PLAY_CLIMB;
+	else if (startswith(name, "FLOAT"))          return S_PLAY_FLOAT;
+	else if (startswith(name, "FLOAT_RUN"))      return S_PLAY_FLOAT_RUN;
+	else if (startswith(name, "BOUNCE"))         return S_PLAY_BOUNCE;
+	else if (startswith(name, "BOUNCE_LANDING")) return S_PLAY_BOUNCE_LANDING;
+	else if (startswith(name, "FIRE"))           return S_PLAY_FIRE;
+	else if (startswith(name, "FIRE_FINISH"))    return S_PLAY_FIRE_FINISH;
+	else if (startswith(name, "TWINSPIN"))       return S_PLAY_TWINSPIN;
+	else if (startswith(name, "MELEE"))          return S_PLAY_MELEE;
+	else if (startswith(name, "MELEE_FINISH"))   return S_PLAY_MELEE_FINISH;
+	else if (startswith(name, "MELEE_LANDING"))  return S_PLAY_MELEE_LANDING;
+	else if (startswith(name, "NIGHTS_STAND"))   return S_PLAY_NIGHTS_STAND;
+	else if (startswith(name, "NIGHTS_FLOAT"))   return S_PLAY_NIGHTS_FLOAT;
+	else if (startswith(name, "NIGHTS_FLY"))     return S_PLAY_NIGHTS_FLY;
+	else if (startswith(name, "NIGHTS_DRILL"))   return S_PLAY_NIGHTS_DRILL;
+	else if (startswith(name, "NIGHTS_STUN"))    return S_PLAY_NIGHTS_STUN;
+	else if (startswith(name, "NIGHTS_PULL"))    return S_PLAY_NIGHTS_PULL;
+	else if (startswith(name, "NIGHTS_ATTACK"))  return S_PLAY_NIGHTS_ATTACK;
+	else return S_NULL;
+}
+
+static void CacheCustomSkinStates(skin_t *skin)
+{
+	SIMPLEHASH_CLEAR(skin->defaulttocustomstate, hashentry_int32_int32_t)
+	SIMPLEHASH_CLEAR(skin->customtodefaultstate, hashentry_int32_int32_t)
+
+	char *skinstateprefix = va("SKIN_%s_", skin->name);
+	strupr(skinstateprefix);
+	size_t skinstateprefixlen = strlen(skinstateprefix);
+
+	for (INT32 state = S_FIRSTFREESLOT; state <= S_LASTFREESLOT; state++)
+	{
+		const char *statename = FREE_STATES[state - S_FIRSTFREESLOT];
+
+		if (!statename)
+			continue;
+		if (strncmp(statename, skinstateprefix, skinstateprefixlen))
+			continue;
+
+		statenum_t defaultstate = GetCanonicalPlayerStateNumByName(&statename[skinstateprefixlen]);
+		if (defaultstate)
+		{
+			CONS_Printf("custom skin state: %s => %s\n", &statename[skinstateprefixlen], statename);
+
+			// If a default state is overriden by multiple custom states, use the first one as reference
+			// e.g. WALK+WALK2+WALK3+WALK4 instead of just WALK
+			statenum_t alreadyoverriden;
+			SIMPLEHASH_FIND_INT(skin->defaulttocustomstate, hashentry_int32_int32_t, defaultstate, S_NULL, alreadyoverriden)
+			if (!alreadyoverriden)
+				SIMPLEHASH_REPLACE_INT(skin->defaulttocustomstate, hashentry_int32_int32_t, defaultstate, state)
+
+			SIMPLEHASH_REPLACE_INT(skin->customtodefaultstate, hashentry_int32_int32_t, state, defaultstate)
+		}
+	}
+}
+
 //
 // Find skin sprites, sounds & optional status bar face, & add them
 //
@@ -926,6 +1011,8 @@ next_token:
 		//ST_LoadFaceGraphics(numskins); -- nah let's do this elsewhere
 
 		R_FlushTranslationColormapCache();
+
+		CacheCustomSkinStates(skin);
 
 		if (mainfile == false)
 			CONS_Printf(M_GetText("Added skin '%s'\n"), skin->name);

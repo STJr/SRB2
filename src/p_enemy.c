@@ -6378,7 +6378,7 @@ void A_UnidusBall(mobj_t *actor)
 	else if (locvar1 == 2)
 	{
 		boolean skull = (actor->target->flags2 & MF2_SKULLFLY) == MF2_SKULLFLY;
-		if (actor->target->state == &states[actor->target->info->painstate])
+		if (P_IsMobjInPainState(actor->target))
 		{
 			P_KillMobj(actor, NULL, NULL, 0);
 			return;

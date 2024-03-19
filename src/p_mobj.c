@@ -36,6 +36,7 @@
 #include "p_slopes.h"
 #include "f_finale.h"
 #include "m_cond.h"
+#include "simple_hashmap.h"
 #include "netcode/net_command.h"
 
 static CV_PossibleValue_t CV_BobSpeed[] = {{0, "MIN"}, {4*FRACUNIT, "MAX"}, {0, NULL}};
@@ -195,9 +196,9 @@ static void P_CyclePlayerMobjState(mobj_t *mobj)
 	}
 }
 
-static panim_t GetPlayerAnimationFromState(statenum_t state)
+static panim_t GetPlayerAnimationFromState(player_t *player, statenum_t state)
 {
-	switch(state)
+	switch(P_GetCanonicalPlayerState(player, state))
 	{
 	case S_PLAY_STND:
 	case S_PLAY_WAIT:
@@ -273,6 +274,12 @@ static boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 		I_Error("P_SetPlayerMobjState used for non-player mobj. Use P_SetMobjState instead!\n(Mobj type: %d, State: %d)", mobj->type, state);
 #endif
 
+	// If the state has been overriden for this skin, use the replacement instead
+	statenum_t customskinstate;
+	SIMPLEHASH_FIND_INT(skins[player->skin]->defaulttocustomstate, hashentry_int32_int32_t, state, S_NULL, customskinstate)
+	if (customskinstate)
+		state = customskinstate;
+
 	// Catch falling for nojumpspin
 	if ((state == S_PLAY_JUMP) && (player->charflags & SF_NOJUMPSPIN) && (P_MobjFlip(mobj)*mobj->momz < 0))
 		return P_SetPlayerMobjState(mobj, S_PLAY_FALL);
@@ -302,14 +309,16 @@ static boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 			return true;
 	}
 	// You were in pain state after taking a hit, and you're moving out of pain state now?
-	else if (mobj->state == &states[mobj->info->painstate] && player->powers[pw_flashing] == flashingtics && state != mobj->info->painstate)
+	else if (P_IsPlayerInState(player, S_PLAY_PAIN)
+	&& player->powers[pw_flashing] == flashingtics
+	&& P_GetCanonicalPlayerState(player, state) != S_PLAY_PAIN)
 	{
 		// Start flashing, since you've landed.
 		player->powers[pw_flashing] = flashingtics-1;
 		P_DoPityCheck(player);
 	}
 
-	player->panim = GetPlayerAnimationFromState(state);
+	player->panim = GetPlayerAnimationFromState(player, state);
 
 	if (recursion++) // if recursion detected,
 		memset(seenstate = tempstate, 0, sizeof tempstate); // clear state table
@@ -14338,4 +14347,12 @@ mobj_t *P_SpawnMobjFromMobj(mobj_t *mobj, fixed_t xofs, fixed_t yofs, fixed_t zo
 	newmobj->old_spriteyoffset = mobj->old_spriteyoffset;
 
 	return newmobj;
+}
+
+boolean P_IsMobjInPainState(mobj_t *mobj)
+{
+	if (mobj->player)
+		return P_IsPlayerInState(mobj->player, S_PLAY_PAIN);
+	else
+		return (mobj->state == &states[mobj->info->painstate]);
 }

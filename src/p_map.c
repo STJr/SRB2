@@ -509,7 +509,7 @@ static void P_DoFan(mobj_t *fan, mobj_t *object)
 	fixed_t speed = fan->info->mass; // fans use this for the vertical thrust
 	SINT8 flipval = P_MobjFlip(fan); // virtually everything here centers around the thruster's gravity, not the object's!
 
-	if (p && object->state == &states[object->info->painstate]) // can't use fans when player is in pain!
+	if (p && P_IsPlayerInState(p, S_PLAY_PAIN)) // can't use fans when player is in pain!
 		return;
 
 	// is object's top below thruster's position? if not, calculate distance between their bottoms

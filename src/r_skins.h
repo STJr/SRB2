@@ -20,6 +20,7 @@
 #include "r_patch.h"
 #include "r_picformats.h" // spriteinfo_t
 #include "r_defs.h" // spritedef_t
+#include "simple_hashmap.h"
 
 /// Defaults
 #define SKINNAMESIZE 16
@@ -88,6 +89,9 @@ typedef struct
 		spritedef_t sprites[NUMPLAYERSPRITES];
 		spriteinfo_t sprinfo[NUMPLAYERSPRITES];
 	} super;
+
+	hashentry_int32_int32_t *defaulttocustomstate; // e.g. S_PLAY_WALK => S_SKIN_BIGTHECAT_WALK
+	hashentry_int32_int32_t *customtodefaultstate; // e.g. S_SKIN_BIGTHECAT_WALK => S_PLAY_WALK
 } skin_t;
 
 /// Externs

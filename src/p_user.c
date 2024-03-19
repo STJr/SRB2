@@ -47,6 +47,7 @@
 #include "m_cheat.h"
 // Thok camera snap (ctrl-f "chalupa")
 #include "g_input.h"
+#include "simple_hashmap.h"
 
 #ifdef HW3SOUND
 #include "hardware/hw3sound.h"
@@ -967,9 +968,20 @@ pflags_t P_GetJumpFlags(player_t *player)
 		return (PF_JUMPED|PF_NOJUMPDAMAGE);
 	return PF_JUMPED;
 }
+
+// If the state is a custom state for the player's skin, retrieve its "canonical" state
+// e.g. S_SKIN_BIGTHECAT_WALK => S_PLAY_WALK
+statenum_t P_GetCanonicalPlayerState(player_t *player, statenum_t state)
+{
+	skin_t *skin = skins[player->skin];
+	statenum_t mappedstate;
+	SIMPLEHASH_FIND_INT(skin->customtodefaultstate, hashentry_int32_int32_t, state, state, mappedstate)
+	return mappedstate;
+}
+
 boolean P_IsPlayerInState(player_t *player, statenum_t state)
 {
-	return (player->mo->state == &states[state]);
+	return (P_GetCanonicalPlayerState(player, player->mo->state - states) == state);
 }
 
 boolean P_IsPlayerInSuperTransformationState(player_t *player)
@@ -1020,7 +1032,7 @@ void P_DoPlayerPain(player_t *player, mobj_t *source, mobj_t *inflictor)
 		fixed_t fallbackspeed;
 
 		P_ResetPlayer(player);
-		P_SetMobjState(player->mo, player->mo->info->painstate);
+		P_SetMobjState(player->mo, S_PLAY_PAIN);
 
 		if (player->mo->eflags & MFE_VERTICALFLIP)
 			player->mo->z--;
@@ -12796,7 +12808,7 @@ void P_PlayerAfterThink(player_t *player)
 		S_StartSound(NULL, sfx_wepchg);
 
 	if ((player->pflags & PF_SLIDING) && ((player->pflags & (PF_JUMPED|PF_NOJUMPDAMAGE)) != PF_JUMPED))
-		P_SetMobjState(player->mo, player->mo->info->painstate);
+		P_SetMobjState(player->mo, S_PLAY_PAIN);
 
 	/* if (player->powers[pw_carry] == CR_NONE && player->mo->tracer && !player->homing)
 		P_SetTarget(&player->mo->tracer, NULL);
@@ -13235,7 +13247,7 @@ boolean P_PlayerCanEnterSpinGaps(player_t *player)
 boolean P_PlayerShouldUseSpinHeight(player_t *player)
 {
 	return ((player->pflags & (PF_SPINNING|PF_SLIDING|PF_GLIDING))
-		|| (player->mo->state == &states[player->mo->info->painstate])
+		|| P_IsPlayerInState(player, S_PLAY_PAIN)
 		|| (player->panim == PA_ROLL)
 		|| ((player->powers[pw_tailsfly] || (player->charability == CA_FLY && P_IsPlayerInState(player, S_PLAY_FLY_TIRED)))
 			&& !(player->charflags & SF_NOJUMPSPIN))

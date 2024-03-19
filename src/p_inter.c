@@ -412,7 +412,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 	{
 		if (special->type == MT_STEAM)
 		{
-			if (player && player->mo->state == &states[player->mo->info->painstate]) // can't use gas jets when player is in pain!
+			if (player && P_IsPlayerInState(player, S_PLAY_PAIN)) // can't use gas jets when player is in pain!
 				return;
 
 			fixed_t speed = special->info->mass; // gas jets use this for the vertical thrust
@@ -2571,7 +2571,7 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 			if (!(target->flags2 & MF2_DONTRESPAWN))
 			{
 				if (!(netgame || multiplayer))
-					target->fuse = atoi(cv_itemrespawntime.defaultvalue)*TICRATE + 2; 
+					target->fuse = atoi(cv_itemrespawntime.defaultvalue)*TICRATE + 2;
 				else if (cv_itemrespawn.value)
 					target->fuse = cv_itemrespawntime.value*TICRATE + 2;
 			}
