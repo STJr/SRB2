@@ -3640,7 +3640,7 @@ void P_SpecialStageDamage(player_t *player, mobj_t *inflictor, mobj_t *source)
 		if (player->nightstime > 5*TICRATE)
 			player->nightstime -= 5*TICRATE;
 		else
-			player->nightstime = 0;
+			player->nightstime = 1;
 	}
 
 	P_DoPlayerPain(player, inflictor, source);
