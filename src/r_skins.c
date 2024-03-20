@@ -844,8 +844,6 @@ static void CacheCustomSkinStates(skin_t *skin)
 		statenum_t defaultstate = GetCanonicalPlayerStateNumByName(&statename[skinstateprefixlen]);
 		if (defaultstate)
 		{
-			CONS_Printf("custom skin state: %s => %s\n", &statename[skinstateprefixlen], statename);
-
 			// If a default state is overriden by multiple custom states, use the first one as reference
 			// e.g. WALK+WALK2+WALK3+WALK4 instead of just WALK
 			statenum_t alreadyoverriden;
