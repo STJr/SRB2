@@ -1149,6 +1149,8 @@ next_token:
 
 		R_FlushTranslationColormapCache();
 
+		CacheCustomSkinStates(skin);
+
 		if (mainfile == false)
 			CONS_Printf(M_GetText("Patched skin '%s'\n"), skin->name);
 	}
