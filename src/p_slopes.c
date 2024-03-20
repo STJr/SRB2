@@ -810,10 +810,10 @@ void P_InitSlopes(void)
 // Returns the height of the sloped plane at (x, y) as a fixed_t
 fixed_t P_GetSlopeZAt(const pslope_t *slope, fixed_t x, fixed_t y)
 {
-	fixed_t dist = FixedMul(x - slope->o.x, slope->d.x) +
-	               FixedMul(y - slope->o.y, slope->d.y);
+	fixed_t dist = FixedMul(x - slope->o.x, slope->d.x) / 2 +
+	               FixedMul(y - slope->o.y, slope->d.y) / 2;
 
-	return slope->o.z + FixedMul(dist, slope->zdelta);
+	return slope->o.z + FixedMul(dist, slope->zdelta) * 2;
 }
 
 // Like P_GetSlopeZAt but falls back to z if slope is NULL
