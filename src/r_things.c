@@ -327,7 +327,7 @@ static void MirrorMissingRotations(void)
 	{
 		spriteframe_t *frame = &sprtemp[framenum];
 
-		if (!(frame->rotate & SRF_3DMASK))
+		if (frame->rotate == SRF_NONE || !(frame->rotate & SRF_3DMASK))
 			continue;
 
 		UINT8 numrotations = frame->rotate == SRF_3D ? 8 : 16;
