@@ -3038,13 +3038,13 @@ static const char *locateWad(void)
 	}
 
 #ifndef NOHOME
-	// find in $HOME/.srb2
-	I_OutputMsg(",HOME/.srb2");
+	// find in $HOME
+	I_OutputMsg(",HOME/" DEFAULTDIR);
 	if ((envstr = I_GetEnv("HOME")) != NULL)
 	{
-		char *tmp = malloc(strlen(envstr) + sizeof("/.srb2"));
+		char *tmp = malloc(strlen(envstr) + sizeof(DEFAULTDIR));
 		strcpy(tmp, envstr);
-		strcat(tmp, "/.srb2");
+		strcat(tmp, DEFAULTDIR);
 		SEARCHWAD(envstr);
 		free(tmp);
 	}
