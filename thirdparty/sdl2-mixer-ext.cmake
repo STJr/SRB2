@@ -1,0 +1,39 @@
+if(TARGET SDL2_mixer_ext_Static)
+    return()
+endif()
+
+message(STATUS "Third-party: creating target 'SDL2_mixer_ext::SDL2_mixer_ext'")
+
+set(SDL_MIXER_X_SHARED ${SRB2_CONFIG_SHARED_INTERNAL_LIBRARIES} CACHE BOOL "" FORCE)
+set(SDL_MIXER_X_STATIC ${NOT_SRB2_CONFIG_SHARED_INTERNAL_LIBRARIES} CACHE BOOL "" FORCE)
+set(SDL_MIXER_X_DISABLE_INSTALL ON CACHE BOOL "" FORCE)
+set(USE_SYSTEM_SDL2 ON CACHE BOOL "" FORCE)
+set(SDL2_INCLUDE_PATH ${SDL2_INCLUDE_DIR} CACHE PATH "" FORCE)
+set(USE_XMP OFF CACHE PATH "" FORCE)
+
+set(
+	internal_SDL2_mixer_ext_options
+		"SDL_MIXER_X_SHARED ${SRB2_CONFIG_SHARED_INTERNAL_LIBRARIES}"
+		"SDL_MIXER_X_STATIC ${NOT_SRB2_CONFIG_SHARED_INTERNAL_LIBRARIES}"
+		"SDL_MIXER_X_DISABLE_INSTALL ON"
+		"USE_SYSTEM_SDL2 ON"
+		"USE_XMP OFF"
+)
+
+if(${CMAKE_SYSTEM} MATCHES Windows)
+	#list(APPEND internal_SDL2_mixer_ext_options "DOWNLOAD_AUDIO_CODECS_DEPENDENCY ON")
+	#set(DOWNLOAD_AUDIO_CODECS_DEPENDENCY ON CACHE BOOL "" FORCE)
+endif()
+
+include(FetchContent)
+
+
+FetchContent_Declare(
+	SDL2_mixer_ext
+	OPTIONS ${internal_SDL2_mixer_ext_options}
+	GIT_TAG "2.6.0-1"
+	GIT_REPOSITORY "https://github.com/STJr/SDL-Mixer-X.git"
+)
+
+FetchContent_MakeAvailable(SDL2_mixer_ext)
+
