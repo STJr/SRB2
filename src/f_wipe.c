@@ -529,6 +529,7 @@ boolean F_TryColormapFade(UINT8 wipecolor)
   */
 void F_RunWipe(UINT8 wipetype, boolean drawMenu)
 {
+	CON_ToggleOff();//turn off console for the wipe
 #ifdef NOWIPE
 	(void)wipetype;
 	(void)drawMenu;
