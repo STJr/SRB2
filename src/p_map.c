@@ -3488,7 +3488,7 @@ static void PTR_GlideClimbTraverse(line_t *li)
 		canclimb = (li->backsector ? P_IsClimbingValid(slidemo->player, climbangle) : true);
 
 		if (((!slidemo->player->climbing && abs((signed)(slidemo->angle - ANGLE_90 - climbline)) < ANGLE_45)
-			|| (slidemo->player->climbing == 1 && abs((signed)(slidemo->angle - climbline)) < ANGLE_135))
+			|| (slidemo->player->climbing == 1 && abs((signed)(slidemo->angle - climbangle)) < ANGLE_135))
 			&& canclimb)
 		{
 			slidemo->angle = climbangle;
