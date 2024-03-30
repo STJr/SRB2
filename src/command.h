@@ -121,6 +121,7 @@ typedef enum
                    // used on menus
 	CV_CHEAT = 2048, // Don't let this be used in multiplayer unless cheats are on.
 	CV_ALLOWLUA = 4096,/* Let this be called from Lua */
+	CV_NOMENU = 8192, // Lua exclusive flag, to give choice to modders regarding custom options menu.
 } cvflags_t;
 
 typedef struct CV_PossibleValue_s

@@ -22,6 +22,11 @@
 #include "lua_libs.h"
 #include "lua_hud.h" // hud_running errors
 
+// Included for the custom options menu
+#include "netcode/d_netfil.h"
+#include "m_menu.h"
+#include "w_wad.h"
+
 // for functions not allowed in hud.add hooks
 #define NOHUD if (hud_running)\
 return luaL_error(L, "HUD rendering code should not call this function!");
@@ -335,6 +340,9 @@ static int lib_cvRegisterVar(lua_State *L)
 	cvar = ZZ_Calloc(sizeof(consvar_t));
 	LUA_PushUserdata(L, cvar, META_CVAR);
 
+	const char* category = NULL;
+	const char* menu_name = NULL;
+
 #define FIELDERROR(f, e) luaL_error(L, "bad value for " LUA_QL(f) " in table passed to " LUA_QL("CV_RegisterVar") " (%s)", e);
 #define TYPEERROR(f, t) FIELDERROR(f, va("%s expected, got %s", lua_typename(L, t), luaL_typename(L, -1)))
 
@@ -382,7 +390,7 @@ static int lib_cvRegisterVar(lua_State *L)
 		{
 			if (lua_islightuserdata(L, 4))
 			{
-				CV_PossibleValue_t *pv = lua_touserdata(L, 4);
+				CV_PossibleValue_t* pv = lua_touserdata(L, 4);
 				if (pv == CV_OnOff || pv == CV_YesNo || pv == CV_Unsigned || pv == CV_Natural || pv == CV_TrueFalse)
 					cvar->PossibleValue = pv;
 				else
@@ -397,9 +405,9 @@ static int lib_cvRegisterVar(lua_State *L)
 				// being used for multiple cvars will be converted and stored multiple times.
 				// So maybe instead it should be a seperate function which must be run beforehand or something.
 				size_t count = 0;
-				CV_PossibleValue_t *cvpv;
+				CV_PossibleValue_t* cvpv;
 
-				const char * const MINMAX[2] = {"MIN", "MAX"};
+				const char* const MINMAX[2] = { "MIN", "MAX" };
 				int minmax_unset = 3;
 
 				lua_pushnil(L);
@@ -412,7 +420,7 @@ static int lib_cvRegisterVar(lua_State *L)
 				lua_getfield(L, LUA_REGISTRYINDEX, "CV_PossibleValue");
 				I_Assert(lua_istable(L, 5));
 				lua_pushlightuserdata(L, cvar);
-				cvpv = lua_newuserdata(L, sizeof(CV_PossibleValue_t) * (count+1));
+				cvpv = lua_newuserdata(L, sizeof(CV_PossibleValue_t) * (count + 1));
 				lua_rawset(L, 5);
 				lua_pop(L, 1); // pop CV_PossibleValue registry table
 
@@ -421,25 +429,25 @@ static int lib_cvRegisterVar(lua_State *L)
 				while (lua_next(L, 4))
 				{
 					INT32 n;
-					const char * strval;
+					const char* strval;
 
 					// stack: [...] PossibleValue table, index, value
 					//                       4             5      6
 					if (lua_type(L, 5) != LUA_TSTRING
-					|| lua_type(L, 6) != LUA_TNUMBER)
+						|| lua_type(L, 6) != LUA_TNUMBER)
 						FIELDERROR("PossibleValue", "custom PossibleValue table requires a format of string=integer, i.e. {MIN=0, MAX=9999}");
 
 					strval = lua_tostring(L, 5);
 
 					if (
-							stricmp(strval, MINMAX[n=0]) == 0 ||
-							stricmp(strval, MINMAX[n=1]) == 0
-					){
+						stricmp(strval, MINMAX[n = 0]) == 0 ||
+						stricmp(strval, MINMAX[n = 1]) == 0
+						) {
 						/* need to shift forward */
 						if (minmax_unset == 3)
 						{
 							memmove(&cvpv[2], &cvpv[0],
-									i * sizeof *cvpv);
+								i * sizeof * cvpv);
 							i += 2;
 						}
 						cvpv[n].strvalue = MINMAX[n];
@@ -482,7 +490,7 @@ static int lib_cvRegisterVar(lua_State *L)
 			lua_pop(L, 1);
 			cvar->func = Lua_OnChange;
 		}
-		else if (cvar->flags & CV_CALL && (k && fasticmp(k, "can_change")))
+		else if (cvar->flags & CV_CALL && (i == 6 || (k && fasticmp(k, "can_change"))))
 		{
 			if (!lua_isfunction(L, 4))
 			{
@@ -496,6 +504,19 @@ static int lib_cvRegisterVar(lua_State *L)
 			lua_pop(L, 1);
 			cvar->can_change = Lua_CanChange;
 		}
+		else if (((i == 5 && !(cvar->flags & CV_CALL))
+			|| (cvar->flags & CV_CALL && i == 7))
+			|| (k && fasticmp(k, "category")))
+		{
+			category = lua_isnoneornil(L, 4) ? NULL : lua_tostring(L, 4);
+		}
+		else if (((i == 6 && !(cvar->flags & CV_CALL))
+			|| (cvar->flags & CV_CALL && i == 8))
+			|| (k && fasticmp(k, "displayname")))
+		{
+			menu_name = lua_isnoneornil(L, 4) ? NULL : lua_tostring(L, 4);
+		}
+
 		lua_pop(L, 1);
 	}
 
@@ -530,6 +551,24 @@ static int lib_cvRegisterVar(lua_State *L)
 	if (cvar->flags & CV_MODIFIED)
 	{
 		return luaL_error(L, "failed to register cvar (probable conflict with internal variable/command names)");
+	}
+
+	if (!((cvar->flags & CV_NOMENU)
+		|| (cvar->flags & CV_HIDEN))
+		|| (cvar->flags & CV_NOSHOWHELP))
+	{
+		if (!category)
+		{
+			char* temp = strdup(wadfiles[numwadfiles - 1]->filename);
+			nameonly(temp);
+
+			category = temp;
+		}
+
+		if (menu_name && menu_name[0] != '\0')
+			M_FreeslotIntoCustomMenu(cvar, category, menu_name);
+		else
+			M_FreeslotIntoCustomMenu(cvar, category, cvar->name);
 	}
 
 	// return cvar userdata

@@ -48,6 +48,7 @@
 #include "p_setup.h"
 #include "f_finale.h"
 #include "lua_hook.h"
+#include "lua_libs.h"
 
 #ifdef HWRENDER
 #include "hardware/hw_main.h"
@@ -316,6 +317,7 @@ menu_t OP_P1ControlsDef, OP_P2ControlsDef, OP_MouseOptionsDef;
 menu_t OP_Mouse2OptionsDef, OP_Joystick1Def, OP_Joystick2Def;
 menu_t OP_CameraOptionsDef, OP_Camera2OptionsDef;
 menu_t OP_PlaystyleDef;
+menu_t OP_AddonCustomOptionsDef;
 static void M_VideoModeMenu(INT32 choice);
 static void M_Setup1PControlsMenu(INT32 choice);
 static void M_Setup2PControlsMenu(INT32 choice);
@@ -349,6 +351,7 @@ static void M_EraseData(INT32 choice);
 
 static void M_Addons(INT32 choice);
 static void M_AddonsOptions(INT32 choice);
+static void M_AddonsCvarOptions(INT32 choice);
 static patch_t *addonsp[NUM_EXT+5];
 
 #define addonmenusize 9 // number of items actually displayed in the addons menu view, formerly (2*numaddonsshown + 1)
@@ -1037,6 +1040,7 @@ static menuitem_t OP_MainMenu[] =
 	{IT_CALL    | IT_STRING, NULL, "Server Options...",    M_ServerOptions,     80},
 
 	{IT_SUBMENU | IT_STRING, NULL, "Data Options...",      &OP_DataOptionsDef, 100},
+	{IT_CALL	| IT_STRING, NULL, "Custom Options...",	   M_AddonsCvarOptions,110},
 };
 
 static menuitem_t OP_P1ControlsMenu[] =
@@ -1648,6 +1652,9 @@ static menuitem_t OP_MonitorToggleMenu[] =
 	{IT_STRING|IT_CVAR|IT_CV_INVISSLIDER, NULL, "Eggman Box",        &cv_eggmanbox,    140},
 };
 
+#define MAXADDONOPTIONS 999
+menuitem_t OP_AddonOptionsSlots[MAXADDONOPTIONS];
+
 // ==========================================================================
 // ALL MENU DEFINITIONS GO HERE
 // ==========================================================================
@@ -2217,6 +2224,23 @@ menu_t OP_ScreenshotOptionsDef =
 	0,
 	NULL
 };
+
+INT16 addoncvarpos = 0;
+
+static void M_AddonsCvarOptions(INT32 choice)
+{
+	(void)choice;
+
+	if (addoncvarpos)
+		M_SetupNextMenu(&OP_AddonCustomOptionsDef);
+	else
+		M_StartMessage(M_GetText("No Custom Option was found.\nTry to load any Addon!\n(Press a key)\n"), NULL, MM_NOTHING);
+}
+
+menu_t OP_AddonCustomOptionsDef = DEFAULTSCROLLMENUSTYLE(
+	MTREE3(MN_OP_MAIN, MN_OP_DATA, MN_OP_ADDONS),
+	"M_ADDONS", OP_AddonOptionsSlots, &OP_MainDef, 30, 30);
+
 
 menu_t OP_AddonsOptionsDef = DEFAULTMENUSTYLE(
 	MTREE3(MN_OP_MAIN, MN_OP_DATA, MN_OP_ADDONS),
@@ -6914,6 +6938,58 @@ static void M_SelectableClearMenus(INT32 choice)
 	(void)choice;
 	M_ClearMenus(true);
 }
+
+#define CCVHEIGHT 5
+#define CCVHEIGHTHEADER 1
+#define CCVHEIGHTHEADERAFTER 6
+
+UINT16 addonvaralphakey = 4;
+INT16 addonlastheaderpos = 0;
+
+INT32 CVARSETUP;
+
+void M_FreeslotIntoCustomMenu(consvar_t* cvar, const char* category, const char* name)
+{
+	if (addoncvarpos == INT16_MAX)
+		return;
+
+	if (addoncvarpos >= MAXADDONOPTIONS - 2)
+	{
+		CONS_Printf("Failed to register the console variable '%s' into the menu. Custom Options menu most likely reached the hard limit.\n", name);
+		addoncvarpos = INT16_MAX;
+		return;
+	}
+
+	if (!CVARSETUP)
+	{
+		CONS_Printf("Custom Options menu initiation.\n");
+		for (CVARSETUP = 0; CVARSETUP < MAXADDONOPTIONS; ++CVARSETUP)
+			OP_AddonOptionsSlots[CVARSETUP] = (menuitem_t){ IT_DISABLED, NULL, "", 0, INT16_MAX };
+	}
+
+	if (category && ((addoncvarpos == 0 && category[0] != '\0') || !fasticmp(category, OP_AddonOptionsSlots[addonlastheaderpos].text)))
+	{
+		addonlastheaderpos = addoncvarpos;
+		addonvaralphakey += CCVHEIGHTHEADER;
+
+		OP_AddonOptionsSlots[addoncvarpos] = (menuitem_t){ IT_HEADER, NULL, Z_StrDup(category), NULL, addonvaralphakey };
+		addonvaralphakey += CCVHEIGHTHEADERAFTER;
+
+
+		++addoncvarpos;
+	}
+
+	if (cvar->PossibleValue && fasticmp(cvar->PossibleValue[0].strvalue, "MIN"))
+		OP_AddonOptionsSlots[addoncvarpos] = (menuitem_t){ IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, Z_StrDup(name), cvar, addonvaralphakey };
+	else if (cvar->flags & CV_FLOAT)
+		OP_AddonOptionsSlots[addoncvarpos] = (menuitem_t){ IT_STRING | IT_CVAR | IT_CV_FLOATSLIDER, NULL, Z_StrDup(name), cvar, addonvaralphakey };
+	else
+		OP_AddonOptionsSlots[addoncvarpos] = (menuitem_t){ IT_STRING | IT_CVAR, NULL, Z_StrDup(name), cvar, addonvaralphakey };
+
+	addonvaralphakey += CCVHEIGHT;
+	++addoncvarpos;
+}
+
 
 // ======
 // CHEATS
