@@ -5221,7 +5221,7 @@ static void HWR_SetTransformAiming(FTransform *trans, player_t *player, boolean 
 	if (cv_glshearing.value == 1 || (cv_glshearing.value == 2 && R_IsViewpointThirdPerson(player, skybox)))
 	{
 		fixed_t fixedaiming = AIMINGTODY(aimingangle);
-		trans->viewaiming = FIXED_TO_FLOAT(fixedaiming);
+		trans->viewaiming = FIXED_TO_FLOAT(fixedaiming) * (vid.width / vid.height) / (BASEVIDWIDTH / BASEVIDHEIGHT);
 		trans->shearing = true;
 		gl_aimingangle = 0;
 	}
