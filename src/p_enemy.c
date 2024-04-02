@@ -4189,8 +4189,10 @@ static void P_DoBoss5Death(mobj_t *mo)
 			if (!P_MobjWasRemoved(pole))
 			{
 				P_SetScale(pole, 2*FRACUNIT, true);
+				pole->angle = mo->tracer->angle;
 				pole->momx = P_ReturnThrustX(pole, pole->angle, speed);
 				pole->momy = P_ReturnThrustY(pole, pole->angle, speed);
+				
 				P_SetTarget(&pole->tracer, P_SpawnMobj(
 					pole->x, pole->y,
 					pole->z - 256*FRACUNIT,
@@ -4199,7 +4201,7 @@ static void P_DoBoss5Death(mobj_t *mo)
 				{
 					pole->tracer->flags |= MF_NOCLIPTHING;
 					P_SetScale(pole->tracer, 2*FRACUNIT, true);
-					pole->angle = pole->tracer->angle = mo->tracer->angle;
+					pole->tracer->angle = mo->tracer->angle;
 					pole->tracer->momx = pole->momx;
 					pole->tracer->momy = pole->momy;
 
@@ -5192,7 +5194,7 @@ void A_SetSolidSteam(mobj_t *actor)
 		return;
 
 	actor->flags &= ~MF_NOCLIP;
-	actor->flags |= MF_SOLID;
+	actor->flags |= MF_SPECIAL;
 	if (!(actor->flags2 & MF2_AMBUSH))
 	{
 		if (P_RandomChance(FRACUNIT/8))
@@ -5222,7 +5224,7 @@ void A_UnsetSolidSteam(mobj_t *actor)
 	if (LUA_CallAction(A_UNSETSOLIDSTEAM, actor))
 		return;
 
-	actor->flags &= ~MF_SOLID;
+	actor->flags &= ~MF_SPECIAL;
 	actor->flags |= MF_NOCLIP;
 }
 
