@@ -278,17 +278,20 @@ static boolean GetFramesAndRotationsFromShortLumpName(
 	return true;
 }
 
-static boolean GetFramesAndRotationsFromLongLumpName(
+static boolean GetSingleFrameAndRotation(
 	const char *name,
+	size_t len,
 	INT32 *ret_frame,
-	UINT8 *ret_rotation,
-	INT32 *ret_frame2,
-	UINT8 *ret_rotation2
+	UINT8 *ret_rotation
 )
 {
 	const char *underscore = strchr(name, '_');
 
-	size_t framelen = underscore ? (size_t)(underscore - name) : strlen(name);
+	// Found but past the part of the name we are parsing
+	if ((size_t)(underscore - name) >= len)
+		underscore = NULL;
+
+	size_t framelen = underscore ? (size_t)(underscore - name) : len;
 	if (framelen < 1 || framelen > 4)
 		return false;
 
@@ -304,8 +307,36 @@ static boolean GetFramesAndRotationsFromLongLumpName(
 	if (*ret_frame >= MAXFRAMENUM || *ret_rotation == 255)
 		return false;
 
-	*ret_frame2 = -1;
-	*ret_rotation2 = 255;
+	return true;
+}
+
+static boolean GetFramesAndRotationsFromLongLumpName(
+	const char *name,
+	INT32 *ret_frame,
+	UINT8 *ret_rotation,
+	INT32 *ret_frame2,
+	UINT8 *ret_rotation2
+)
+{
+	const char *plus = strchr(name, '+');
+
+	if (plus)
+	{
+		size_t len1 = plus - name;
+
+		if (!GetSingleFrameAndRotation(name, len1, ret_frame, ret_rotation))
+			return false;
+		if (!GetSingleFrameAndRotation(plus + 1, strlen(name) - len1 - 1, ret_frame2, ret_rotation2))
+			return false;
+	}
+	else
+	{
+		if (!GetSingleFrameAndRotation(name, strlen(name), ret_frame, ret_rotation))
+			return false;
+
+		*ret_frame2 = -1;
+		*ret_rotation2 = 255;
+	}
 
 	return true;
 }
@@ -444,7 +475,7 @@ boolean R_AddSingleSpriteDef(const char *sprname, spritedef_t *spritedef, UINT16
 			UINT8 rotation, rotation2;
 
 			boolean good = longname ?
-				GetFramesAndRotationsFromLongLumpName(lumpinfo[l].name, &frame, &rotation, &frame2, &rotation2) :
+				GetFramesAndRotationsFromLongLumpName(lumpinfo[l].longname, &frame, &rotation, &frame2, &rotation2) :
 				GetFramesAndRotationsFromShortLumpName(lumpinfo[l].name, &frame, &rotation, &frame2, &rotation2);
 
 			if (!good) // Give an actual NAME error -_-...
