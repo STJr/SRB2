@@ -287,10 +287,8 @@ static boolean GetFramesAndRotationsFromLongLumpName(
 )
 {
 	const char *underscore = strchr(name, '_');
-	if (!underscore)
-		return false;
 
-	size_t framelen = underscore - name;
+	size_t framelen = underscore ? (size_t)(underscore - name) : strlen(name);
 	if (framelen < 1 || framelen > 4)
 		return false;
 
@@ -302,7 +300,7 @@ static boolean GetFramesAndRotationsFromLongLumpName(
 			return false;
 
 	*ret_frame = atoi(framepart);
-	*ret_rotation = R_Char2Rotation(*(underscore + 1));
+	*ret_rotation = underscore ? R_Char2Rotation(*(underscore + 1)) : 0;
 	if (*ret_frame >= MAXFRAMENUM || *ret_rotation == 255)
 		return false;
 
