@@ -355,7 +355,10 @@ static void CheckFrame(const char *sprname)
 		{
 		case SRF_NONE:
 			// no rotations were found for that frame at all
-			I_Error("R_AddSingleSpriteDef: No patches found for %s frame %d (%c)", sprname, frame, R_Frame2Char(frame));
+			if (frame < 64)
+				I_Error("R_AddSingleSpriteDef: No patches found for %s frame %d (%c)", sprname, frame, R_Frame2Char(frame));
+			else
+				I_Error("R_AddSingleSpriteDef: No patches found for %s frame %d", sprname, frame);
 			break;
 
 		case SRF_SINGLE:
