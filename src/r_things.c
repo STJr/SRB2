@@ -431,7 +431,7 @@ boolean R_AddSingleSpriteDef(const char *sprname, spritedef_t *spritedef, UINT16
 
 	for (l = startlump; l < endlump; l++)
 	{
-		if (W_IsLumpFolder(wadnum, l))
+		if (longname && W_IsLumpFolder(wadnum, l))
 			I_Error("R_AddSingleSpriteDef: all frame lumps for a sprite should be contained inside a single folder\n");
 
 		// For long sprites, the startlump-endlump range only includes
