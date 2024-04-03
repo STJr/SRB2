@@ -700,9 +700,11 @@ static void initdirpath(char *dirpath, size_t *dirpathindex, int depthleft)
 }
 
 //sortdir by name? 
-static int lumpnamecompare( const void *A, const void *B )
+static int lumpnamecompare(const void *A, const void *B)
 {
-	return strcmp( (((lumpinfo_t *)A)->fullname), (((lumpinfo_t *)B)->fullname));
+	const lumpinfo_t *pA = A;
+	const lumpinfo_t *pB = B;
+	return strcmp((pA->fullname), (pB->fullname));
 
 }
 
@@ -897,7 +899,7 @@ lumpinfo_t *getdirectoryfiles(const char *path, UINT16 *nlmp, UINT16 *nfolders)
 	free(dirhandle);
 
 	//sort files and directories
-	qsort ( lumpinfo, numlumps, sizeof( lumpinfo_t ), lumpnamecompare );
+	qsort (lumpinfo, numlumps, sizeof(lumpinfo_t), lumpnamecompare);
 
 	(*nlmp) = numlumps;
 	return lumpinfo;
