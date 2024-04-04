@@ -278,19 +278,20 @@ static boolean GetFramesAndRotationsFromShortLumpName(
 	return true;
 }
 
-static boolean GetFramesAndRotationsFromLongLumpName(
+static boolean GetSingleFrameAndRotation(
 	const char *name,
+	size_t len,
 	INT32 *ret_frame,
-	UINT8 *ret_rotation,
-	INT32 *ret_frame2,
-	UINT8 *ret_rotation2
+	UINT8 *ret_rotation
 )
 {
 	const char *underscore = strchr(name, '_');
-	if (!underscore)
-		return false;
 
-	size_t framelen = underscore - name;
+	// Found but past the part of the name we are parsing
+	if ((size_t)(underscore - name) >= len)
+		underscore = NULL;
+
+	size_t framelen = underscore ? (size_t)(underscore - name) : len;
 	if (framelen < 1 || framelen > 4)
 		return false;
 
@@ -302,12 +303,40 @@ static boolean GetFramesAndRotationsFromLongLumpName(
 			return false;
 
 	*ret_frame = atoi(framepart);
-	*ret_rotation = R_Char2Rotation(*(underscore + 1));
+	*ret_rotation = underscore ? R_Char2Rotation(*(underscore + 1)) : 0;
 	if (*ret_frame >= MAXFRAMENUM || *ret_rotation == 255)
 		return false;
 
-	*ret_frame2 = -1;
-	*ret_rotation2 = 255;
+	return true;
+}
+
+static boolean GetFramesAndRotationsFromLongLumpName(
+	const char *name,
+	INT32 *ret_frame,
+	UINT8 *ret_rotation,
+	INT32 *ret_frame2,
+	UINT8 *ret_rotation2
+)
+{
+	const char *plus = strchr(name, '+');
+
+	if (plus)
+	{
+		size_t len1 = plus - name;
+
+		if (!GetSingleFrameAndRotation(name, len1, ret_frame, ret_rotation))
+			return false;
+		if (!GetSingleFrameAndRotation(plus + 1, strlen(name) - len1 - 1, ret_frame2, ret_rotation2))
+			return false;
+	}
+	else
+	{
+		if (!GetSingleFrameAndRotation(name, strlen(name), ret_frame, ret_rotation))
+			return false;
+
+		*ret_frame2 = -1;
+		*ret_rotation2 = 255;
+	}
 
 	return true;
 }
@@ -327,7 +356,7 @@ static void MirrorMissingRotations(void)
 	{
 		spriteframe_t *frame = &sprtemp[framenum];
 
-		if (!(frame->rotate & SRF_3DMASK))
+		if (frame->rotate == SRF_NONE || !(frame->rotate & SRF_3DMASK))
 			continue;
 
 		UINT8 numrotations = frame->rotate == SRF_3D ? 8 : 16;
@@ -355,7 +384,10 @@ static void CheckFrame(const char *sprname)
 		{
 		case SRF_NONE:
 			// no rotations were found for that frame at all
-			I_Error("R_AddSingleSpriteDef: No patches found for %s frame %d (%c)", sprname, frame, R_Frame2Char(frame));
+			if (frame < 64)
+				I_Error("R_AddSingleSpriteDef: No patches found for %s frame %d (%c)", sprname, frame, R_Frame2Char(frame));
+			else
+				I_Error("R_AddSingleSpriteDef: No patches found for %s frame %d", sprname, frame);
 			break;
 
 		case SRF_SINGLE:
@@ -430,6 +462,9 @@ boolean R_AddSingleSpriteDef(const char *sprname, spritedef_t *spritedef, UINT16
 
 	for (l = startlump; l < endlump; l++)
 	{
+		if (longname && W_IsLumpFolder(wadnum, l))
+			I_Error("R_AddSingleSpriteDef: all frame lumps for a sprite should be contained inside a single folder\n");
+
 		// For long sprites, the startlump-endlump range only includes
 		// relevant lumps, so no check needed in that case
 		if (longname || (strlen(sprname) == 4 && !memcmp(lumpinfo[l].name, sprname, 4)))
@@ -440,7 +475,7 @@ boolean R_AddSingleSpriteDef(const char *sprname, spritedef_t *spritedef, UINT16
 			UINT8 rotation, rotation2;
 
 			boolean good = longname ?
-				GetFramesAndRotationsFromLongLumpName(lumpinfo[l].name, &frame, &rotation, &frame2, &rotation2) :
+				GetFramesAndRotationsFromLongLumpName(lumpinfo[l].longname, &frame, &rotation, &frame2, &rotation2) :
 				GetFramesAndRotationsFromShortLumpName(lumpinfo[l].name, &frame, &rotation, &frame2, &rotation2);
 
 			if (!good) // Give an actual NAME error -_-...
