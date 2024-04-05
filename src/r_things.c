@@ -679,7 +679,6 @@ static void AddLongSpriteDefs(UINT16 wadnum, size_t *ptr_spritesadded, size_t *p
 		char *sprname = W_GetLumpFolderNamePK3(wadnum, lumpnum);
 		strupr(sprname);
 		sprnum = R_GetSpriteNumByName(sprname);
-		Z_Free(sprname);
 
 		if (sprnum != NUMSPRITES && R_AddSingleSpriteDef(sprname, &sprites[sprnum], wadnum, folderstart, folderend, true))
 		{
@@ -689,6 +688,8 @@ static void AddLongSpriteDefs(UINT16 wadnum, size_t *ptr_spritesadded, size_t *p
 			CONS_Debug(DBG_SETUP, "long sprite %s set in pwad %d\n", sprname, wadnum);
 #endif
 		}
+
+		Z_Free(sprname);
 
 		lumpnum = folderend;
 	}
