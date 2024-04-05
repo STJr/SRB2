@@ -3030,6 +3030,9 @@ static int lib_rFrame2Char(lua_State *L)
 	//HUDSAFE
 
 	c[0] = R_Frame2Char(ch);
+	if (c[0] == '\xFF')
+		return luaL_error(L, "frame %u cannot be represented by a character", ch);
+
 	c[1] = 0;
 
 	lua_pushstring(L, c);

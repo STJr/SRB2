@@ -59,24 +59,19 @@ static inline int lib_freeslot(lua_State *L)
 		}
 		else if (fastcmp(type, "SPR"))
 		{
-			char wad;
 			spritenum_t j;
-			lua_getfield(L, LUA_REGISTRYINDEX, "WAD");
-			wad = (char)lua_tointeger(L, -1);
-			lua_pop(L, 1);
+
+			if (strlen(word) > MAXSPRITENAME)
+				return luaL_error(L, "Sprite name is longer than %d characters\n", MAXSPRITENAME);
+
 			for (j = SPR_FIRSTFREESLOT; j <= SPR_LASTFREESLOT; j++)
 			{
-				if (used_spr[(j-SPR_FIRSTFREESLOT)/8] & (1<<(j%8)))
-				{
-					if (!sprnames[j][4] && memcmp(sprnames[j],word,4)==0)
-						sprnames[j][4] = wad;
+				if (in_bit_array(used_spr, j - SPR_FIRSTFREESLOT))
 					continue; // Already allocated, next.
-				}
 				// Found a free slot!
 				CONS_Printf("Sprite SPR_%s allocated.\n",word);
-				strncpy(sprnames[j],word,4);
-				//sprnames[j][4] = 0;
-				used_spr[(j-SPR_FIRSTFREESLOT)/8] |= 1<<(j%8); // Okay, this sprite slot has been named now.
+				strcpy(sprnames[j], word);
+				set_bit_array(used_spr, j - SPR_FIRSTFREESLOT); // Okay, this sprite slot has been named now.
 				// Lua needs to update the value in _G if it exists
 				LUA_UpdateSprName(word, j);
 				lua_pushinteger(L, j);
@@ -455,17 +450,19 @@ static int ScanConstants(lua_State *L, boolean mathlib, const char *word)
 	}
 	else if (fastncmp("SPR_",word,4)) {
 		p = word+4;
-		for (i = 0; i < NUMSPRITES; i++)
-			if (!sprnames[i][4] && fastncmp(p,sprnames[i],4)) {
-				// updating overridden sprnames is not implemented for soc parser,
-				// so don't use cache
-				if (mathlib)
-					lua_pushinteger(L, i);
-				else
-					CacheAndPushConstant(L, word, i);
-				return 1;
-			}
-		if (mathlib) return luaL_error(L, "sprite '%s' could not be found.\n", word);
+		i = R_GetSpriteNumByName(p);
+		if (i != NUMSPRITES)
+		{
+			// updating overridden sprnames is not implemented for soc parser,
+			// so don't use cache
+			if (mathlib)
+				lua_pushinteger(L, i);
+			else
+				CacheAndPushConstant(L, word, i);
+			return 1;
+		}
+		else if (mathlib)
+			return luaL_error(L, "sprite '%s' could not be found.\n", word);
 		return 0;
 	}
 	else if (fastncmp("SPR2_",word,5)) {
@@ -738,18 +735,18 @@ static inline int lib_getenum(lua_State *L)
 // If a sprname has been "cached" to _G, update it to a new value.
 void LUA_UpdateSprName(const char *name, lua_Integer value)
 {
-	char fullname[9] = "SPR_XXXX";
+	char fullname[4 + MAXSPRITENAME + 1] = "SPR_";
 
 	if (!gL)
 		return;
 
-	strncpy(&fullname[4], name, 4);
+	strcpy(&fullname[4], name);
 	lua_pushstring(gL, fullname);
 	lua_rawget(gL, LUA_GLOBALSINDEX);
 
 	if (!lua_isnil(gL, -1))
 	{
-		lua_pushstring(gL, name);
+		lua_pushstring(gL, fullname);
 		lua_pushinteger(gL, value);
 		lua_rawset(gL, LUA_GLOBALSINDEX);
 	}

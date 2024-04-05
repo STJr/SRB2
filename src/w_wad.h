@@ -180,6 +180,8 @@ UINT16 W_CheckNumForMarkerStartPwad(const char *name, UINT16 wad, UINT16 startlu
 UINT16 W_CheckNumForFullNamePK3(const char *name, UINT16 wad, UINT16 startlump);
 UINT16 W_CheckNumForFolderStartPK3(const char *name, UINT16 wad, UINT16 startlump);
 UINT16 W_CheckNumForFolderEndPK3(const char *name, UINT16 wad, UINT16 startlump);
+char *W_GetLumpFolderPathPK3(UINT16 wad, UINT16 lump);
+char *W_GetLumpFolderNamePK3(UINT16 wad, UINT16 lump);
 
 void W_GetFolderLumpsPwad(const char *name, UINT16 wad, UINT32 **list, UINT16 *list_capacity, UINT16 *numlumps);
 void W_GetFolderLumps(const char *name, UINT32 **list, UINT16 *list_capacity, UINT16 *numlumps);

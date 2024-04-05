@@ -88,12 +88,12 @@ static int lib_getSprname(lua_State *L)
 	else if (lua_isstring(L, 1))
 	{
 		const char *name = lua_tostring(L, 1);
-		for (i = 0; i < NUMSPRITES; i++)
-			if (fastcmp(name, sprnames[i]))
-			{
-				lua_pushinteger(L, i);
-				return 1;
-			}
+		i = R_GetSpriteNumByName(name);
+		if (i != NUMSPRITES)
+		{
+			lua_pushinteger(L, i);
+			return 1;
+		}
 	}
 	return 0;
 }
@@ -245,22 +245,15 @@ static int lib_getSpriteInfo(lua_State *L)
 	if (lua_isstring(L, 1))
 	{
 		const char *name = lua_tostring(L, 1);
-		INT32 spr;
-		for (spr = 0; spr < NUMSPRITES; spr++)
-		{
-			if (fastcmp(name, sprnames[spr]))
-			{
-				i = spr;
-				break;
-			}
-		}
-		if (i == NUMSPRITES)
+		INT32 spr = R_GetSpriteNumByName(name);
+		if (spr == NUMSPRITES)
 		{
 			char *check;
 			i = strtol(name, &check, 10);
 			if (check == name || *check != '\0')
 				return luaL_error(L, "unknown sprite name %s", name);
 		}
+		i = spr;
 	}
 	else
 		i = luaL_checkinteger(L, 1);
@@ -359,8 +352,8 @@ static int PopPivotTable(spriteinfo_t *info, lua_State *L, int stk)
 			default:
 				TYPEERROR("pivot frame", LUA_TNUMBER, lua_type(L, stk+1));
 		}
-		if ((idx < 0) || (idx >= 64))
-			return luaL_error(L, "pivot frame %d out of range (0 - %d)", idx, 63);
+		if ((idx < 0) || (idx >= MAXFRAMENUM))
+			return luaL_error(L, "pivot frame %d out of range (0 - %d)", idx, MAXFRAMENUM - 1);
 		// the values in pivot[] are also tables
 		if (PopPivotSubTable(info->pivot, L, stk+2, idx))
 			info->available = true;
@@ -555,7 +548,7 @@ static int pivotlist_set(lua_State *L)
 
 static int pivotlist_num(lua_State *L)
 {
-	lua_pushinteger(L, 64);
+	lua_pushinteger(L, MAXFRAMENUM);
 	return 1;
 }
 
