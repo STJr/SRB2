@@ -136,6 +136,12 @@ static void R_InstallSpriteLump(UINT16 wad,            // graphics patch
 {
 	char cn = R_Frame2Char(frame), cr = R_Rotation2Char(rotation); // for debugging
 
+	char framedescription[256];
+	if (cn != '\xFF')
+		sprintf(framedescription, "%s frame %d (%c)", spritename, frame, cn);
+	else
+		sprintf(framedescription, "%s frame %d", spritename, frame);
+
 	INT32 r;
 	lumpnum_t lumppat = (wad << 16) + lump;
 
@@ -153,9 +159,9 @@ static void R_InstallSpriteLump(UINT16 wad,            // graphics patch
 	{
 		// the lump should be used for all rotations
 		if (sprtemp[frame].rotate == SRF_SINGLE)
-			CONS_Debug(DBG_SETUP, "R_InitSprites: Sprite %s frame %d (%c) has multiple rot = 0 lump\n", spritename, frame, cn);
+			CONS_Debug(DBG_SETUP, "R_InitSprites: Sprite %s has multiple rot = 0 lump\n", framedescription);
 		else if (sprtemp[frame].rotate != SRF_NONE) // Let's bundle 1-8/16 and L/R rotations into one debug message.
-			CONS_Debug(DBG_SETUP, "R_InitSprites: Sprite %s frame %d (%c) has rotations and a rot = 0 lump\n", spritename, frame, cn);
+			CONS_Debug(DBG_SETUP, "R_InitSprites: Sprite %s has rotations and a rot = 0 lump\n", framedescription);
 
 		sprtemp[frame].rotate = SRF_SINGLE;
 		for (r = 0; r < 16; r++)
@@ -175,15 +181,15 @@ static void R_InstallSpriteLump(UINT16 wad,            // graphics patch
 		if (sprtemp[frame].rotate == SRF_NONE)
 			sprtemp[frame].rotate = SRF_SINGLE;
 		else if (sprtemp[frame].rotate == SRF_SINGLE)
-			CONS_Debug(DBG_SETUP, "R_InitSprites: Sprite %s frame %d (%c) has L/R rotations and a rot = 0 lump\n", spritename, frame, cn);
+			CONS_Debug(DBG_SETUP, "R_InitSprites: Sprite %s has L/R rotations and a rot = 0 lump\n", framedescription);
 		else if (sprtemp[frame].rotate == SRF_3D)
-			CONS_Debug(DBG_SETUP, "R_InitSprites: Sprite %s frame %d (%c) has both L/R and 1-8 rotations\n", spritename, frame, cn);
+			CONS_Debug(DBG_SETUP, "R_InitSprites: Sprite %s has both L/R and 1-8 rotations\n", framedescription);
 		else if (sprtemp[frame].rotate == SRF_3DGE)
-			CONS_Debug(DBG_SETUP, "R_InitSprites: Sprite %s frame %d (%c) has both L/R and 1-G rotations\n", spritename, frame, cn);
+			CONS_Debug(DBG_SETUP, "R_InitSprites: Sprite %s has both L/R and 1-G rotations\n", framedescription);
 		else if ((sprtemp[frame].rotate & SRF_LEFT) && (rotation == ROT_L))
-			CONS_Debug(DBG_SETUP, "R_InitSprites: Sprite %s frame %d (%c) has multiple L rotations\n", spritename, frame, cn);
+			CONS_Debug(DBG_SETUP, "R_InitSprites: Sprite %s has multiple L rotations\n", framedescription);
 		else if ((sprtemp[frame].rotate & SRF_RIGHT) && (rotation == ROT_R))
-			CONS_Debug(DBG_SETUP, "R_InitSprites: Sprite %s frame %d (%c) has multiple R rotations\n", spritename, frame, cn);
+			CONS_Debug(DBG_SETUP, "R_InitSprites: Sprite %s has multiple R rotations\n", framedescription);
 
 		sprtemp[frame].rotate |= ((rotation == ROT_R) ? SRF_RIGHT : SRF_LEFT);
 		if ((sprtemp[frame].rotate & SRF_2D) == SRF_2D)
@@ -210,9 +216,9 @@ static void R_InstallSpriteLump(UINT16 wad,            // graphics patch
 	if (sprtemp[frame].rotate == SRF_NONE)
 		sprtemp[frame].rotate = SRF_SINGLE;
 	else if (sprtemp[frame].rotate == SRF_SINGLE)
-		CONS_Debug(DBG_SETUP, "R_InitSprites: Sprite %s frame %d (%c) has 1-8/G rotations and a rot = 0 lump\n", spritename, frame, cn);
+		CONS_Debug(DBG_SETUP, "R_InitSprites: Sprite %s has 1-8/G rotations and a rot = 0 lump\n", framedescription);
 	else if (sprtemp[frame].rotate & SRF_2D)
-		CONS_Debug(DBG_SETUP, "R_InitSprites: Sprite %s frame %d (%c) has both L/R and 1-8/G rotations\n", spritename, frame, cn);
+		CONS_Debug(DBG_SETUP, "R_InitSprites: Sprite %s has both L/R and 1-8/G rotations\n", framedescription);
 
 	// make 0 based
 	rotation--;
@@ -232,7 +238,12 @@ static void R_InstallSpriteLump(UINT16 wad,            // graphics patch
 	}
 
 	if (sprtemp[frame].lumppat[rotation] != LUMPERROR)
-		CONS_Debug(DBG_SETUP, "R_InitSprites: Sprite %s: %d_%c (%c%c) has two lumps mapped to it\n", spritename, frame, cr, cn, cr);
+	{
+		if (cn != '\xFF')
+			CONS_Debug(DBG_SETUP, "R_InitSprites: Sprite %s: %d_%c (%c%c) has two lumps mapped to it\n", spritename, frame, cr, cn, cr);
+		else
+			CONS_Debug(DBG_SETUP, "R_InitSprites: Sprite %s: %d_%c has two lumps mapped to it\n", spritename, frame, cr);
+	}
 
 	// lumppat & lumpid are the same for original Doom, but different
 	// when using sprites in pwad : the lumppat points the new graphics
@@ -380,14 +391,17 @@ static void CheckFrame(const char *sprname)
 	{
 		spriteframe_t *spriteframe = &sprtemp[frame];
 
+		char framedescription[256];
+		if (frame < 64)
+			sprintf(framedescription, "%s frame %d (%c)", sprname, frame, R_Frame2Char(frame));
+		else
+			sprintf(framedescription, "%s frame %d", sprname, frame);
+
 		switch (spriteframe->rotate)
 		{
 		case SRF_NONE:
 			// no rotations were found for that frame at all
-			if (frame < 64)
-				I_Error("R_AddSingleSpriteDef: No patches found for %s frame %d (%c)", sprname, frame, R_Frame2Char(frame));
-			else
-				I_Error("R_AddSingleSpriteDef: No patches found for %s frame %d", sprname, frame);
+			I_Error("R_AddSingleSpriteDef: No patches found for %s", framedescription);
 			break;
 
 		case SRF_SINGLE:
@@ -397,8 +411,8 @@ static void CheckFrame(const char *sprname)
 		case SRF_2D: // both Left and Right rotations
 			// we test to see whether the left and right slots are present
 			if ((spriteframe->lumppat[2] == LUMPERROR) || (spriteframe->lumppat[6] == LUMPERROR))
-				I_Error("R_AddSingleSpriteDef: Sprite %s frame %d (%c) is missing rotations (L-R mode)",
-				sprname, frame, R_Frame2Char(frame));
+				I_Error("R_AddSingleSpriteDef: Sprite %s is missing rotations (L-R mode)",
+				framedescription);
 			break;
 
 		default:
@@ -410,8 +424,8 @@ static void CheckFrame(const char *sprname)
 					// we test the patch lump, or the id lump whatever
 					// if it was not loaded the two are LUMPERROR
 					if (spriteframe->lumppat[rotation] == LUMPERROR)
-						I_Error("R_AddSingleSpriteDef: Sprite %s frame %d (%c) is missing rotations (1-%c mode)",
-								sprname, frame, R_Frame2Char(frame), ((spriteframe->rotate & SRF_3DGE) ? 'G' : '8'));
+						I_Error("R_AddSingleSpriteDef: Sprite %s is missing rotations (1-%c mode)",
+								framedescription, ((spriteframe->rotate & SRF_3DGE) ? 'G' : '8'));
 				}
 			}
 			break;
