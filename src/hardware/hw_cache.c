@@ -302,7 +302,7 @@ static void HWR_DrawPatchInCache(GLMipmap_t *mipmap,
 	blockmodulo = pblockwidth*bpp;
 
 	// Draw each column to the block cache
-	*block = mipmap->data;
+	*block = (UINT8)mipmap->data;
 
 	for (int x = 0; x < pwidth; x++, block += bpp, xfrac += xfracstep)
 	{
