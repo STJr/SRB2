@@ -276,7 +276,6 @@ static void HWR_DrawPatchInCache(GLMipmap_t *mipmap,
 	INT32 pwidth, INT32 pheight,
 	const patch_t *realpatch)
 {
-	INT32 ncols;
 	fixed_t xfrac, xfracstep;
 	fixed_t yfracstep, scale_y;
 	UINT8 *block = mipmap->data;
@@ -288,8 +287,6 @@ static void HWR_DrawPatchInCache(GLMipmap_t *mipmap,
 		return;
 
 	palette = HWR_GetTexturePalette();
-
-	ncols = pwidth;
 
 	// source advance
 	xfrac = 0;
