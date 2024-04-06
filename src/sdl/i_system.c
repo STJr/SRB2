@@ -2316,7 +2316,7 @@ void I_SleepDuration(precise_t duration)
 	int status;
 	do status = clock_nanosleep(CLOCK_MONOTONIC, 0, &ts, &ts);
 	while (status == EINTR);
-#else
+#elif defined (MIN_SLEEP_DURATION_MS)
 	UINT64 precision = I_GetPrecisePrecision();
 	INT32 sleepvalue = cv_sleep.value;
 	UINT64 delaygranularity;

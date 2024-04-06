@@ -492,9 +492,7 @@ static int libd_getSpritePatch(lua_State *L)
 	else if (lua_isstring(L, 1)) // sprite prefix name given, e.g. "THOK"
 	{
 		const char *name = lua_tostring(L, 1);
-		for (i = 0; i < NUMSPRITES; i++)
-			if (fastcmp(name, sprnames[i]))
-				break;
+		i = R_GetSpriteNumByName(name);
 		if (i >= NUMSPRITES)
 			return 0;
 	}

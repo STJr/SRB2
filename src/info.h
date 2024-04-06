@@ -575,6 +575,7 @@ extern int actionsoverridden[NUMACTIONS][MAX_ACTION_RECURSION];
 #define NUMMOBJFREESLOTS 1024
 #define NUMSPRITEFREESLOTS NUMMOBJFREESLOTS
 #define NUMSTATEFREESLOTS (NUMMOBJFREESLOTS*8)
+#define MAXSPRITENAME 64
 
 // Hey, moron! If you change this table, don't forget about sprnames in info.c and the sprite lights in hw_light.c!
 typedef enum sprite
@@ -4383,8 +4384,8 @@ typedef struct
 } state_t;
 
 extern state_t states[NUMSTATES];
-extern char sprnames[NUMSPRITES + 1][5];
-extern char spr2names[NUMPLAYERSPRITES][5];
+extern char sprnames[NUMSPRITES + 1][MAXSPRITENAME + 1];
+extern char spr2names[NUMPLAYERSPRITES][MAXSPRITENAME + 1];
 extern playersprite_t spr2defaults[NUMPLAYERSPRITES];
 extern state_t *astate;
 extern playersprite_t free_spr2;

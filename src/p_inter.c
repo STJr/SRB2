@@ -1365,7 +1365,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			}
 			break;
 		case MT_NIGHTSEXTRATIME:
-			if ((player->bot && player->bot != BOT_MPAI) || !(player->powers[pw_carry] == CR_NIGHTSMODE))
+			if ((player->bot && player->bot != BOT_MPAI) || !(player->powers[pw_carry] == CR_NIGHTSMODE || (G_IsSpecialStage(gamemap) && !(maptol & TOL_NIGHTS))))
 				return;
 			if (!G_IsSpecialStage(gamemap))
 			{
@@ -1377,7 +1377,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			else
 			{
 				for (i = 0; i < MAXPLAYERS; i++)
-					if (playeringame[i] && players[i].powers[pw_carry] == CR_NIGHTSMODE)
+					if (playeringame[i] && (player->powers[pw_carry] == CR_NIGHTSMODE || (G_IsSpecialStage(gamemap) && !(maptol & TOL_NIGHTS))))
 					{
 						players[i].nightstime += special->info->speed;
 						players[i].startedtime += special->info->speed;
@@ -3640,7 +3640,7 @@ void P_SpecialStageDamage(player_t *player, mobj_t *inflictor, mobj_t *source)
 		if (player->nightstime > 5*TICRATE)
 			player->nightstime -= 5*TICRATE;
 		else
-			player->nightstime = 0;
+			player->nightstime = 1;
 	}
 
 	P_DoPlayerPain(player, inflictor, source);
