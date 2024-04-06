@@ -94,7 +94,10 @@ extern consvar_t cv_inttime, cv_coopstarposts, cv_cooplives, cv_advancemap, cv_p
 extern consvar_t cv_overtime;
 extern consvar_t cv_startinglives;
 
-// for F_finale.c
+extern consvar_t cv_gravity, cv_movebob;
+extern consvar_t cv_tailspickup;
+
+// for f_finale.c
 extern consvar_t cv_rollingdemos;
 
 extern consvar_t cv_ringslinger, cv_soundtest;
@@ -104,7 +107,6 @@ extern consvar_t cv_specialrings, cv_powerstones, cv_matchboxes, cv_competitionb
 extern consvar_t cv_maxping;
 extern consvar_t cv_pingtimeout;
 extern consvar_t cv_showping;
-
 
 extern consvar_t cv_skipmapcheck;
 
@@ -147,6 +149,7 @@ typedef enum
 	XD_LUACMD,      // 22
 	XD_LUAVAR,      // 23
 	XD_LUAFILE,     // 24
+	XD_MUTEPLAYER,  // 25
 	MAXNETXCMD
 } netxcmd_t;
 
@@ -201,7 +204,6 @@ void D_SendPlayerConfig(void);
 void Command_ExitGame_f(void);
 void Command_Retry_f(void);
 void D_GameTypeChanged(INT32 lastgametype); // not a real _OnChange function anymore
-void D_SendExitLevel(boolean cheat);
 void D_MapChange(INT32 pmapnum, INT32 pgametype, boolean pultmode, boolean presetplayers, INT32 pdelay, boolean pskipprecutscene, boolean pfromlevelselect);
 boolean IsPlayerAdmin(INT32 playernum);
 void SetAdminPlayer(INT32 playernum);
@@ -209,6 +211,7 @@ void ClearAdminPlayers(void);
 void RemoveAdminPlayer(INT32 playernum);
 void ItemFinder_OnChange(void);
 void D_SetPassword(const char *pw);
+void D_ClearPassword(void);
 
 // used for the player setup menu
 UINT8 CanChangeSkin(INT32 playernum);

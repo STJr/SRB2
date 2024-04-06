@@ -1019,7 +1019,7 @@ static void OP_CycleThings(INT32 amt)
 	if (players[0].mo->eflags & MFE_VERTICALFLIP) // correct z when flipped
 		players[0].mo->z += players[0].mo->height - FixedMul(mobjinfo[op_currentthing].height, players[0].mo->scale);
 	players[0].mo->height = FixedMul(mobjinfo[op_currentthing].height, players[0].mo->scale);
-	P_SetPlayerMobjState(players[0].mo, S_OBJPLACE_DUMMY);
+	P_SetMobjState(players[0].mo, S_OBJPLACE_DUMMY);
 
 	op_currentdoomednum = mobjinfo[op_currentthing].doomednum;
 }
@@ -1098,15 +1098,23 @@ static mapthing_t *OP_CreateNewMapThing(player_t *player, UINT16 type, boolean c
 		fixed_t fheight = P_GetSectorFloorZAt(sec, mt->x << FRACBITS, mt->y << FRACBITS);
 		mt->z = (UINT16)((player->mo->z - fheight)>>FRACBITS);
 	}
+
 	mt->angle = (INT16)(FixedInt(AngleFixed(player->mo->angle)));
 
-	mt->options = (mt->z << ZSHIFT) | (UINT16)cv_opflags.value;
+	mt->options = (UINT16)cv_opflags.value;
 	mt->scale = player->mo->scale;
 	mt->spritexscale = player->mo->spritexscale;
 	mt->spriteyscale = player->mo->spriteyscale;
 	memset(mt->args, 0, NUMMAPTHINGARGS*sizeof(*mt->args));
 	memset(mt->stringargs, 0x00, NUMMAPTHINGSTRINGARGS*sizeof(*mt->stringargs));
 	mt->pitch = mt->roll = 0;
+
+	// Ignore offsets
+	if (mt->type == MT_EMBLEM)
+		mt->args[1] = 1;
+	else
+		mt->args[0] = 1;
+
 	return mt;
 }
 
@@ -1424,14 +1432,22 @@ void OP_ObjectplaceMovement(player_t *player)
 //
 // Objectplace related commands.
 //
-/*void Command_Writethings_f(void)
+void Command_Writethings_f(void)
 {
 	REQUIRE_INLEVEL;
 	REQUIRE_SINGLEPLAYER;
 	REQUIRE_OBJECTPLACE;
 
-	P_WriteThings();
-}*/
+	if (COM_Argc() > 1)
+	{
+		P_WriteThings(COM_Argv(1));
+	}
+	else
+	{
+		CONS_Printf(M_GetText("writethings <filename>: write out map things to a file, .txt or .lmp automatically appended.\n"));
+		return;
+	}
+}
 
 void Command_ObjectPlace_f(void)
 {
@@ -1528,7 +1544,7 @@ void Command_ObjectPlace_f(void)
 		else
 			OP_CycleThings(0); // sets all necessary height values without cycling op_currentthing
 
-		P_SetPlayerMobjState(players[0].mo, S_OBJPLACE_DUMMY);
+		P_SetMobjState(players[0].mo, S_OBJPLACE_DUMMY);
 	}
 	// Or are we leaving it instead?
 	else
@@ -1542,7 +1558,7 @@ void Command_ObjectPlace_f(void)
 
 		// If still in dummy state, get out of it.
 		if (players[0].mo->state == &states[S_OBJPLACE_DUMMY])
-			P_SetPlayerMobjState(players[0].mo, op_oldstate);
+			P_SetMobjState(players[0].mo, op_oldstate);
 
 		// Reset everything back to how it was before we entered objectplace.
 		P_UnsetThingPosition(players[0].mo);

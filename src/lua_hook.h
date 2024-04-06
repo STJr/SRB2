@@ -86,6 +86,8 @@ automatically.
 	X (title),/* titlescreen */\
 	X (titlecard),\
 	X (intermission),\
+	X (continue),\
+	X (playersetup),\
 
 /*
 I chose to access the hook enums through a macro as well. This could provide
@@ -117,6 +119,13 @@ extern boolean hook_cmd_running;
 
 void LUA_HookVoid(int hook);
 void LUA_HookHUD(int hook, huddrawlist_h drawlist);
+int LUA_HookCharacterHUD
+(
+	int hook, huddrawlist_h drawlist, player_t *player,
+	fixed_t x, fixed_t y, fixed_t scale,
+	INT32 skinIndex, UINT8 sprite2, UINT8 frame, UINT8 rotation, skincolornum_t color,
+	INT32 ticker, boolean mode
+);
 
 int  LUA_HookMobj(mobj_t *, int hook);
 int  LUA_Hook2Mobj(mobj_t *, mobj_t *, int hook);
@@ -126,7 +135,9 @@ int  LUA_HookPlayer(player_t *, int hook);
 int  LUA_HookTiccmd(player_t *, ticcmd_t *, int hook);
 int  LUA_HookKey(event_t *event, int hook); // Hooks for key events
 
+void LUA_HookPreThinkFrame(void);
 void LUA_HookThinkFrame(void);
+void LUA_HookPostThinkFrame(void);
 int  LUA_HookMobjLineCollide(mobj_t *, line_t *);
 int  LUA_HookTouchSpecial(mobj_t *special, mobj_t *toucher);
 int  LUA_HookShouldDamage(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 damage, UINT8 damagetype);

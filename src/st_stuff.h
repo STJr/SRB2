@@ -42,7 +42,7 @@ void ST_UnloadGraphics(void);
 void ST_LoadGraphics(void);
 
 // face load graphics, called when skin changes
-void ST_LoadFaceGraphics(INT32 playernum);
+void ST_LoadFaceGraphics(INT32 skinnum);
 void ST_ReloadSkinFaceGraphics(void);
 
 void ST_doPaletteStuff(void);
@@ -76,8 +76,8 @@ extern patch_t *sboscore;
 extern patch_t *sbotime;
 extern patch_t *sbocolon;
 extern patch_t *sboperiod;
-extern patch_t *faceprefix[MAXSKINS]; // face status patches
-extern patch_t *superprefix[MAXSKINS]; // super face status patches
+extern patch_t **faceprefix; // face status patches
+extern patch_t **superprefix; // super face status patches
 extern patch_t *livesback;
 extern patch_t *stlivex;
 extern patch_t *ngradeletters[7];
@@ -92,6 +92,7 @@ typedef struct
 typedef enum
 {
 	HUD_LIVES,
+	HUD_INPUT,
 
 	HUD_RINGS,
 	HUD_RINGSNUM,

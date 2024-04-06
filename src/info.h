@@ -173,6 +173,7 @@ enum actionnum
 	A_CHANGECOLORRELATIVE,
 	A_CHANGECOLORABSOLUTE,
 	A_DYE,
+	A_SETTRANSLATION,
 	A_MOVERELATIVE,
 	A_MOVEABSOLUTE,
 	A_THRUST,
@@ -445,6 +446,7 @@ void A_SetRandomTics();
 void A_ChangeColorRelative();
 void A_ChangeColorAbsolute();
 void A_Dye();
+void A_SetTranslation();
 void A_MoveRelative();
 void A_MoveAbsolute();
 void A_Thrust();
@@ -570,9 +572,10 @@ void A_ChangeHeight();
 extern int actionsoverridden[NUMACTIONS][MAX_ACTION_RECURSION];
 
 // ratio of states to sprites to mobj types is roughly 6 : 1 : 1
-#define NUMMOBJFREESLOTS 512
+#define NUMMOBJFREESLOTS 1024
 #define NUMSPRITEFREESLOTS NUMMOBJFREESLOTS
 #define NUMSTATEFREESLOTS (NUMMOBJFREESLOTS*8)
+#define MAXSPRITENAME 64
 
 // Hey, moron! If you change this table, don't forget about sprnames in info.c and the sprite lights in hw_light.c!
 typedef enum sprite
@@ -1076,9 +1079,6 @@ typedef enum sprite
 	NUMSPRITES
 } spritenum_t;
 
-// Make sure to be conscious of FF_FRAMEMASK and the fact sprite2 is stored as a UINT8 whenever you change this table.
-// Currently, FF_FRAMEMASK is 0xff, or 255 - but the second half is used by FF_SPR2SUPER, so the limitation is 0x7f.
-// Since this is zero-based, there can be at most 128 different SPR2_'s without changing that.
 typedef enum playersprite
 {
 	SPR2_STND = 0,
@@ -1158,15 +1158,17 @@ typedef enum playersprite
 	SPR2_XTRA, // stuff that isn't in-map - "would this ever need an md2 or variable length animation?"
 
 	SPR2_FIRSTFREESLOT,
-	SPR2_LASTFREESLOT = 0x7f,
+	SPR2_LASTFREESLOT = 1024, // Do not make higher than SPR2F_MASK (currently 0x3FF) plus one
 	NUMPLAYERSPRITES
 } playersprite_t;
 
-// SPR2_XTRA
-#define XTRA_LIFEPIC    0                 // Life icon patch
-#define XTRA_CHARSEL    1                 // Character select picture
-#define XTRA_CONTINUE   2                 // Continue icon
-#define XTRA_ENDING     3                 // Ending finale patches
+enum
+{
+	XTRA_LIFEPIC,
+	XTRA_CHARSEL,
+	XTRA_CONTINUE,
+	XTRA_ENDING
+};
 
 typedef enum state
 {
@@ -4378,11 +4380,12 @@ typedef struct
 	INT32 var1;
 	INT32 var2;
 	statenum_t nextstate;
+	UINT16 sprite2;
 } state_t;
 
 extern state_t states[NUMSTATES];
-extern char sprnames[NUMSPRITES + 1][5];
-extern char spr2names[NUMPLAYERSPRITES][5];
+extern char sprnames[NUMSPRITES + 1][MAXSPRITENAME + 1];
+extern char spr2names[NUMPLAYERSPRITES][MAXSPRITENAME + 1];
 extern playersprite_t spr2defaults[NUMPLAYERSPRITES];
 extern state_t *astate;
 extern playersprite_t free_spr2;
@@ -5123,7 +5126,7 @@ typedef enum mobj_type
 	MT_POLYANCHOR,
 	MT_POLYSPAWN,
 
-	// Skybox objects
+	// Portal objects
 	MT_SKYBOX,
 
 	// Debris

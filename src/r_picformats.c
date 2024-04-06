@@ -375,7 +375,7 @@ void *Picture_PatchConvert(
 	// Write columns
 	for (INT32 x = 0; x < inwidth; x++)
 	{
-		post_t *post;
+		post_t *post = NULL;
 		size_t post_data_offset = 0;
 		boolean was_opaque = false;
 
@@ -539,13 +539,22 @@ void *Picture_FlatConvert(
 		for (x = 0; x < inwidth; x++)
 		{
 			void *input = NULL;
-			size_t offs = ((y * inwidth) + x);
+			int sx = x;
+			int sy = y;
+
+			if (flags & PICFLAGS_XFLIP)
+				sx = inwidth - x - 1;
+			if (flags & PICFLAGS_YFLIP)
+				sy = inheight - y - 1;
+
+			size_t in_offs = ((sy * inwidth) + sx);
+			size_t out_offs = ((y * inwidth) + x);
 
 			// Read pixel
 			if (Picture_IsPatchFormat(informat))
-				input = Picture_GetPatchPixel(inpatch, informat, x, y, flags);
+				input = Picture_GetPatchPixel(inpatch, informat, sx, sy, 0);
 			else if (Picture_IsFlatFormat(informat))
-				input = (UINT8 *)picture + (offs * (inbpp / 8));
+				input = (UINT8 *)picture + (in_offs * (inbpp / 8));
 			else
 				I_Error("Picture_FlatConvert: unsupported input format!");
 
@@ -560,17 +569,17 @@ void *Picture_FlatConvert(
 					if (inbpp == PICDEPTH_32BPP)
 					{
 						RGBA_t out = *(RGBA_t *)input;
-						f32[offs] = out.rgba;
+						f32[out_offs] = out.rgba;
 					}
 					else if (inbpp == PICDEPTH_16BPP)
 					{
 						RGBA_t out = pMasterPalette[*((UINT16 *)input) & 0xFF];
-						f32[offs] = out.rgba;
+						f32[out_offs] = out.rgba;
 					}
 					else // PICFMT_PATCH
 					{
 						RGBA_t out = pMasterPalette[*((UINT8 *)input) & 0xFF];
-						f32[offs] = out.rgba;
+						f32[out_offs] = out.rgba;
 					}
 					break;
 				}
@@ -581,12 +590,12 @@ void *Picture_FlatConvert(
 					{
 						RGBA_t in = *(RGBA_t *)input;
 						UINT8 out = NearestColor(in.s.red, in.s.green, in.s.blue);
-						f16[offs] = (0xFF00 | out);
+						f16[out_offs] = (0xFF00 | out);
 					}
 					else if (inbpp == PICDEPTH_16BPP)
-						f16[offs] = *(UINT16 *)input;
+						f16[out_offs] = *(UINT16 *)input;
 					else // PICFMT_PATCH
-						f16[offs] = (0xFF00 | *((UINT8 *)input));
+						f16[out_offs] = (0xFF00 | *((UINT8 *)input));
 					break;
 				}
 				case PICFMT_FLAT:
@@ -596,15 +605,15 @@ void *Picture_FlatConvert(
 					{
 						RGBA_t in = *(RGBA_t *)input;
 						UINT8 out = NearestColor(in.s.red, in.s.green, in.s.blue);
-						f8[offs] = out;
+						f8[out_offs] = out;
 					}
 					else if (inbpp == PICDEPTH_16BPP)
 					{
 						UINT16 out = *(UINT16 *)input;
-						f8[offs] = (out & 0xFF);
+						f8[out_offs] = (out & 0xFF);
 					}
 					else // PICFMT_PATCH
-						f8[offs] = *(UINT8 *)input;
+						f8[out_offs] = *(UINT8 *)input;
 					break;
 				}
 				default:
@@ -632,17 +641,18 @@ void *Picture_GetPatchPixel(
 	INT32 inbpp = Picture_FormatBPP(informat);
 	softwarepatch_t *doompatch = (softwarepatch_t *)patch;
 	boolean isdoompatch = Picture_IsDoomPatchFormat(informat);
-	INT16 width;
 
 	if (patch == NULL)
 		I_Error("Picture_GetPatchPixel: patch == NULL");
 
-	width = (isdoompatch ? SHORT(doompatch->width) : patch->width);
+	INT16 width = (isdoompatch ? SHORT(doompatch->width) : patch->width);
+	INT16 height = (isdoompatch ? SHORT(doompatch->height) : patch->height);
 
-	if (x < 0 || x >= width)
+	if (x < 0 || x >= width || y < 0 || y >= height)
 		return NULL;
 
-	INT32 colx = (flags & PICFLAGS_XFLIP) ? (width-1)-x : x;
+	INT32 sx = (flags & PICFLAGS_XFLIP) ? (width-1)-x : x;
+	INT32 sy = (flags & PICFLAGS_YFLIP) ? (height-1)-y : y;
 	UINT8 *s8 = NULL;
 	UINT16 *s16 = NULL;
 	UINT32 *s32 = NULL;
@@ -650,7 +660,7 @@ void *Picture_GetPatchPixel(
 	if (isdoompatch)
 	{
 		INT32 prevdelta = -1;
-		INT32 colofs = LONG(doompatch->columnofs[colx]);
+		INT32 colofs = LONG(doompatch->columnofs[sx]);
 
 		// Column offsets are pointers, so no casting is required.
 		doompost_t *column = (doompost_t *)((UINT8 *)doompatch + colofs);
@@ -662,9 +672,9 @@ void *Picture_GetPatchPixel(
 				topdelta += prevdelta;
 			prevdelta = topdelta;
 
-			size_t ofs = y - topdelta;
+			size_t ofs = sy - topdelta;
 
-			if (y >= topdelta && ofs < column->length)
+			if (sy >= topdelta && ofs < column->length)
 			{
 				s8 = (UINT8 *)(column) + 3;
 				switch (inbpp)
@@ -691,14 +701,14 @@ void *Picture_GetPatchPixel(
 	}
 	else
 	{
-		column_t *column = &patch->columns[colx];
+		column_t *column = &patch->columns[sx];
 		for (unsigned i = 0; i < column->num_posts; i++)
 		{
 			post_t *post = &column->posts[i];
 
-			size_t ofs = y - post->topdelta;
+			size_t ofs = sy - post->topdelta;
 
-			if (y >= (INT32)post->topdelta && ofs < post->length)
+			if (sy >= (INT32)post->topdelta && ofs < post->length)
 			{
 				s8 = column->pixels + post->data_offset;
 				switch (inbpp)
@@ -882,36 +892,19 @@ void *Picture_TextureToFlat(size_t texnum)
 	desttop = converted;
 	deststop = desttop + flatsize;
 
-	if (!texture->holes)
+	for (size_t col = 0; col < (size_t)texture->width; col++, desttop++)
 	{
-		for (size_t col = 0; col < (size_t)texture->width; col++, desttop++)
+		column_t *column = (column_t *)R_GetColumn(texnum, col);
+		for (unsigned i = 0; i < column->num_posts; i++)
 		{
-			source = R_GetColumn(texnum, col)->pixels;
-			dest = desttop;
-			for (size_t ofs = 0; dest < deststop && ofs < (size_t)texture->height; ofs++)
+			post_t *post = &column->posts[i];
+			dest = desttop + (post->topdelta * texture->width);
+			source = column->pixels + post->data_offset;
+			for (size_t ofs = 0; dest < deststop && ofs < post->length; ofs++)
 			{
 				if (source[ofs] != TRANSPARENTPIXEL)
 					*dest = source[ofs];
 				dest += texture->width;
-			}
-		}
-	}
-	else
-	{
-		for (size_t col = 0; col < (size_t)texture->width; col++, desttop++)
-		{
-			column_t *column = (column_t *)R_GetColumn(texnum, col);
-			for (unsigned i = 0; i < column->num_posts; i++)
-			{
-				post_t *post = &column->posts[i];
-				dest = desttop + (post->topdelta * texture->width);
-				source = column->pixels + post->data_offset;
-				for (size_t ofs = 0; dest < deststop && ofs < post->length; ofs++)
-				{
-					if (source[ofs] != TRANSPARENTPIXEL)
-						*dest = source[ofs];
-					dest += texture->width;
-				}
 			}
 		}
 	}
@@ -927,7 +920,7 @@ void *Picture_TextureToFlat(size_t texnum)
   */
 boolean Picture_IsLumpPNG(const UINT8 *d, size_t s)
 {
-	if (s < 67) // http://garethrees.org/2007/11/14/pngcrush/
+	if (s < 67) // https://web.archive.org/web/20230524232139/http://garethrees.org/2007/11/14/pngcrush/
 		return false;
 	// Check for PNG file signature using memcmp
 	// As it may be faster on CPUs with slow unaligned memory access
@@ -984,7 +977,6 @@ static int PNG_ChunkReader(png_structp png_ptr, png_unknown_chunkp chonk)
 static void PNG_error(png_structp PNG, png_const_charp pngtext)
 {
 	CONS_Debug(DBG_RENDER, "libpng error at %p: %s", PNG, pngtext);
-	//I_Error("libpng error at %p: %s", PNG, pngtext);
 }
 
 static void PNG_warn(png_structp PNG, png_const_charp pngtext)
@@ -1051,7 +1043,7 @@ static png_bytep *PNG_Read(
 	png_set_read_fn(png_ptr, &png_io, PNG_IOReader);
 
 	memset(&chunk, 0x00, sizeof(png_chunk_t));
-	chunkname = grAb_chunk; // I want to read a grAb chunk
+	chunkname = grAb_chunk;
 
 	user_chunk_ptr = png_get_user_chunk_ptr(png_ptr);
 	png_set_read_user_chunk_fn(png_ptr, user_chunk_ptr, PNG_ChunkReader);
@@ -1436,13 +1428,17 @@ boolean Picture_PNGDimensions(UINT8 *png, INT32 *width, INT32 *height, INT16 *to
 
 	png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, PNG_error, PNG_warn);
 	if (!png_ptr)
-		I_Error("Picture_PNGDimensions: Couldn't initialize libpng!");
+	{
+		CONS_Alert(CONS_ERROR, "Picture_PNGDimensions: Couldn't initialize libpng!\n");
+		return false;
+	}
 
 	png_info_ptr = png_create_info_struct(png_ptr);
 	if (!png_info_ptr)
 	{
 		png_destroy_read_struct(&png_ptr, NULL, NULL);
-		I_Error("Picture_PNGDimensions: libpng couldn't allocate memory!");
+		CONS_Alert(CONS_ERROR, "Picture_PNGDimensions: libpng couldn't allocate memory!\n");
+		return false;
 	}
 
 #ifdef USE_FAR_KEYWORD
@@ -1452,7 +1448,8 @@ boolean Picture_PNGDimensions(UINT8 *png, INT32 *width, INT32 *height, INT16 *to
 #endif
 	{
 		png_destroy_read_struct(&png_ptr, &png_info_ptr, NULL);
-		I_Error("Picture_PNGDimensions: libpng load error!");
+		CONS_Alert(CONS_ERROR, "Picture_PNGDimensions: libpng load error!\n");
+		return false;
 	}
 #ifdef USE_FAR_KEYWORD
 	png_memcpy(png_jmpbuf(png_ptr), jmpbuf, sizeof jmp_buf);
@@ -1464,7 +1461,7 @@ boolean Picture_PNGDimensions(UINT8 *png, INT32 *width, INT32 *height, INT16 *to
 	png_set_read_fn(png_ptr, &png_io, PNG_IOReader);
 
 	memset(&chunk, 0x00, sizeof(png_chunk_t));
-	chunkname = grAb_chunk; // I want to read a grAb chunk
+	chunkname = grAb_chunk;
 
 	user_chunk_ptr = png_get_user_chunk_ptr(png_ptr);
 	png_set_read_user_chunk_fn(png_ptr, user_chunk_ptr, PNG_ChunkReader);
@@ -1592,11 +1589,11 @@ static void R_ParseSpriteInfo(boolean spr2)
 	spriteinfo_t *info;
 	char *sprinfoToken;
 	size_t sprinfoTokenLength;
-	char newSpriteName[5]; // no longer dynamically allocated
+	char newSpriteName[MAXSPRITENAME + 1]; // no longer dynamically allocated
 	spritenum_t sprnum = NUMSPRITES;
 	playersprite_t spr2num = NUMPLAYERSPRITES;
 	INT32 i;
-	INT32 skinnumbers[MAXSKINS];
+	UINT8 *skinnumbers = NULL;
 	INT32 foundskins = 0;
 
 	// Sprite name
@@ -1606,31 +1603,17 @@ static void R_ParseSpriteInfo(boolean spr2)
 		I_Error("Error parsing SPRTINFO lump: Unexpected end of file where sprite name should be");
 	}
 	sprinfoTokenLength = strlen(sprinfoToken);
-	if (sprinfoTokenLength != 4)
-	{
-		I_Error("Error parsing SPRTINFO lump: Sprite name \"%s\" isn't 4 characters long",sprinfoToken);
-	}
-	else
-	{
-		memset(&newSpriteName, 0, 5);
-		M_Memcpy(newSpriteName, sprinfoToken, sprinfoTokenLength);
-		// ^^ we've confirmed that the token is == 4 characters so it will never overflow a 5 byte char buffer
-		strupr(newSpriteName); // Just do this now so we don't have to worry about it
-	}
+	if (sprinfoTokenLength > MAXSPRITENAME)
+		I_Error("Error parsing SPRTINFO lump: Sprite name \"%s\" is longer than %d characters", sprinfoToken, MAXSPRITENAME);
+	strcpy(newSpriteName, sprinfoToken);
+	strupr(newSpriteName); // Just do this now so we don't have to worry about it
 	Z_Free(sprinfoToken);
 
 	if (!spr2)
 	{
-		for (i = 0; i <= NUMSPRITES; i++)
-		{
-			if (i == NUMSPRITES)
-				I_Error("Error parsing SPRTINFO lump: Unknown sprite name \"%s\"", newSpriteName);
-			if (!memcmp(newSpriteName,sprnames[i],4))
-			{
-				sprnum = i;
-				break;
-			}
-		}
+		sprnum = R_GetSpriteNumByName(newSpriteName);
+		if (sprnum == NUMSPRITES)
+			I_Error("Error parsing SPRTINFO lump: Unknown sprite name \"%s\"", newSpriteName);
 	}
 	else
 	{
@@ -1694,7 +1677,9 @@ static void R_ParseSpriteInfo(boolean spr2)
 				if (skinnum == -1)
 					I_Error("Error parsing SPRTINFO lump: Unknown skin \"%s\"", skinName);
 
-				skinnumbers[foundskins] = skinnum;
+				if (skinnumbers == NULL)
+					skinnumbers = Z_Malloc(sizeof(UINT8) * numskins, PU_STATIC, NULL);
+				skinnumbers[foundskins] = (UINT8)skinnum;
 				foundskins++;
 			}
 			else if (stricmp(sprinfoToken, "FRAME")==0)
@@ -1707,8 +1692,7 @@ static void R_ParseSpriteInfo(boolean spr2)
 						I_Error("Error parsing SPRTINFO lump: No skins specified in this sprite2 definition");
 					for (i = 0; i < foundskins; i++)
 					{
-						size_t skinnum = skinnumbers[i];
-						skin_t *skin = &skins[skinnum];
+						skin_t *skin = skins[skinnumbers[i]];
 						spriteinfo_t *sprinfo = skin->sprinfo;
 						M_Memcpy(&sprinfo[spr2num], info, sizeof(spriteinfo_t));
 					}
@@ -1732,8 +1716,11 @@ static void R_ParseSpriteInfo(boolean spr2)
 	{
 		I_Error("Error parsing SPRTINFO lump: Expected \"{\" for sprite \"%s\", got \"%s\"",newSpriteName,sprinfoToken);
 	}
+
 	Z_Free(sprinfoToken);
 	Z_Free(info);
+	if (skinnumbers)
+		Z_Free(skinnumbers);
 }
 
 //

@@ -53,9 +53,8 @@ typedef struct
 	// Keep name for switch changing, etc.
 	char name[8];
 	UINT32 hash;
-	UINT8 type; // TEXTURETYPE_
+	UINT8 type; // TEXTURETYPE_*
 	INT16 width, height;
-	boolean holes;
 	UINT8 flip; // 1 = flipx, 2 = flipy, 3 = both
 	void *flat; // The texture, as a flat.
 

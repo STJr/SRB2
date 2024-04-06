@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -43,11 +43,45 @@ tic_t firstconnectattempttime = 0;
 UINT8 mynode;
 static void *snake = NULL;
 
-static void CL_DrawConnectionStatusBox(void)
+static boolean IsDownloadingFile(void)
+{
+	if (cl_mode == CL_DOWNLOADFILES || cl_mode == CL_DOWNLOADHTTPFILES)
+		return filedownload.current != -1;
+
+	return false;
+}
+
+static void DrawConnectionStatusBox(void)
 {
 	M_DrawTextBox(BASEVIDWIDTH/2-128-8, BASEVIDHEIGHT-16-8, 32, 1);
-	if (cl_mode != CL_CONFIRMCONNECT)
-		V_DrawCenteredString(BASEVIDWIDTH/2, BASEVIDHEIGHT-16-16, V_YELLOWMAP, "Press ESC to abort");
+
+	if (cl_mode == CL_CONFIRMCONNECT || IsDownloadingFile())
+		return;
+
+	V_DrawCenteredString(BASEVIDWIDTH/2, BASEVIDHEIGHT-16-16, V_YELLOWMAP, "Press ESC to abort");
+}
+
+static void DrawFileProgress(fileneeded_t *file, int y)
+{
+	Net_GetNetStat();
+
+	INT32 dldlength = (INT32)((file->currentsize/(double)file->totalsize) * 256);
+	if (dldlength > 256)
+		dldlength = 256;
+	V_DrawFill(BASEVIDWIDTH/2-128, y, 256, 8, 111);
+	V_DrawFill(BASEVIDWIDTH/2-128, y, dldlength, 8, 96);
+
+	const char *progress_str;
+	if (file->totalsize >= 1024*1024)
+		progress_str = va(" %.2fMiB/%.2fMiB", (double)file->currentsize / (1024*1024), (double)file->totalsize / (1024*1024));
+	else if (file->totalsize < 1024)
+		progress_str = va(" %4uB/%4uB", file->currentsize, file->totalsize);
+	else
+		progress_str = va(" %.2fKiB/%.2fKiB", (double)file->currentsize / 1024, (double)file->totalsize / 1024);
+
+	V_DrawString(BASEVIDWIDTH/2-128, y, V_20TRANS|V_ALLOWLOWERCASE, progress_str);
+
+	V_DrawRightAlignedString(BASEVIDWIDTH/2+128, y, V_20TRANS|V_MONOSPACE, va("%3.1fK/s ", ((double)getbps)/1024));
 }
 
 //
@@ -55,21 +89,21 @@ static void CL_DrawConnectionStatusBox(void)
 //
 // Keep the local client informed of our status.
 //
-static inline void CL_DrawConnectionStatus(void)
+static void CL_DrawConnectionStatus(void)
 {
 	INT32 ccstime = I_GetTime();
 
 	// Draw background fade
 	V_DrawFadeScreen(0xFF00, 16); // force default
 
-	if (cl_mode != CL_DOWNLOADFILES && cl_mode != CL_LOADFILES)
+	if (cl_mode != CL_DOWNLOADFILES && cl_mode != CL_DOWNLOADHTTPFILES && cl_mode != CL_LOADFILES)
 	{
 		INT32 animtime = ((ccstime / 4) & 15) + 16;
 		UINT8 palstart;
 		const char *cltext;
 
 		// Draw the bottom box.
-		CL_DrawConnectionStatusBox();
+		DrawConnectionStatusBox();
 
 		if (cl_mode == CL_SEARCHING)
 			palstart = 32; // Red
@@ -78,33 +112,20 @@ static inline void CL_DrawConnectionStatus(void)
 		else
 			palstart = 96; // Green
 
-		if (!(cl_mode == CL_DOWNLOADSAVEGAME && lastfilenum != -1))
+		if (!(cl_mode == CL_DOWNLOADSAVEGAME && filedownload.current != -1))
 			for (INT32 i = 0; i < 16; ++i) // 15 pal entries total.
 				V_DrawFill((BASEVIDWIDTH/2-128) + (i * 16), BASEVIDHEIGHT-16, 16, 8, palstart + ((animtime - i) & 15));
 
 		switch (cl_mode)
 		{
 			case CL_DOWNLOADSAVEGAME:
-				if (fileneeded && lastfilenum != -1)
+				if (fileneeded && filedownload.current != -1)
 				{
-					UINT32 currentsize = fileneeded[lastfilenum].currentsize;
-					UINT32 totalsize = fileneeded[lastfilenum].totalsize;
-					INT32 dldlength;
+					fileneeded_t *file = &fileneeded[filedownload.current];
 
 					cltext = M_GetText("Downloading game state...");
-					Net_GetNetStat();
 
-					dldlength = (INT32)((currentsize/(double)totalsize) * 256);
-					if (dldlength > 256)
-						dldlength = 256;
-					V_DrawFill(BASEVIDWIDTH/2-128, BASEVIDHEIGHT-16, 256, 8, 111);
-					V_DrawFill(BASEVIDWIDTH/2-128, BASEVIDHEIGHT-16, dldlength, 8, 96);
-
-					V_DrawString(BASEVIDWIDTH/2-128, BASEVIDHEIGHT-16, V_20TRANS|V_MONOSPACE,
-						va(" %4uK/%4uK",currentsize>>10,totalsize>>10));
-
-					V_DrawRightAlignedString(BASEVIDWIDTH/2+128, BASEVIDHEIGHT-16, V_20TRANS|V_MONOSPACE,
-						va("%3.1fK/s ", ((double)getbps)/1024));
+					DrawFileProgress(file, BASEVIDHEIGHT-16);
 				}
 				else
 					cltext = M_GetText("Waiting to download game state...");
@@ -156,12 +177,11 @@ static inline void CL_DrawConnectionStatus(void)
 			V_DrawFill(BASEVIDWIDTH/2-128, BASEVIDHEIGHT-16, 256, 8, 111);
 			V_DrawFill(BASEVIDWIDTH/2-128, BASEVIDHEIGHT-16, totalfileslength, 8, 96);
 			V_DrawCenteredString(BASEVIDWIDTH/2, BASEVIDHEIGHT-16, V_20TRANS|V_MONOSPACE,
-				va(" %2u/%2u Files",loadcompletednum,fileneedednum));
+				va(" %2u/%2u files",loadcompletednum,fileneedednum));
 		}
-		else if (lastfilenum != -1)
+		else if (filedownload.current != -1)
 		{
-			INT32 dldlength;
-			static char tempname[28];
+			char tempname[28];
 			fileneeded_t *file;
 			char *filename;
 
@@ -169,24 +189,16 @@ static inline void CL_DrawConnectionStatus(void)
 				Snake_Draw(snake);
 
 			// Draw the bottom box.
-			CL_DrawConnectionStatusBox();
+			DrawConnectionStatusBox();
 
 			if (fileneeded)
 			{
-				file = &fileneeded[lastfilenum];
+				file = &fileneeded[filedownload.current];
 				filename = file->filename;
 			}
 			else
 				return;
 
-			Net_GetNetStat();
-			dldlength = (INT32)((file->currentsize/(double)file->totalsize) * 256);
-			if (dldlength > 256)
-				dldlength = 256;
-			V_DrawFill(BASEVIDWIDTH/2-128, BASEVIDHEIGHT-16, 256, 8, 111);
-			V_DrawFill(BASEVIDWIDTH/2-128, BASEVIDHEIGHT-16, dldlength, 8, 96);
-
-			memset(tempname, 0, sizeof(tempname));
 			// offset filename to just the name only part
 			filename += strlen(filename) - nameonlylength(filename);
 
@@ -199,22 +211,56 @@ static inline void CL_DrawConnectionStatus(void)
 			}
 			else // we can copy the whole thing in safely
 			{
-				strncpy(tempname, filename, sizeof(tempname)-1);
+				strlcpy(tempname, filename, sizeof(tempname));
 			}
 
-			V_DrawCenteredString(BASEVIDWIDTH/2, BASEVIDHEIGHT-16-24, V_YELLOWMAP,
-				va(M_GetText("Downloading \"%s\""), tempname));
-			V_DrawString(BASEVIDWIDTH/2-128, BASEVIDHEIGHT-16, V_20TRANS|V_MONOSPACE,
-				va(" %4uK/%4uK",fileneeded[lastfilenum].currentsize>>10,file->totalsize>>10));
-			V_DrawRightAlignedString(BASEVIDWIDTH/2+128, BASEVIDHEIGHT-16, V_20TRANS|V_MONOSPACE,
-				va("%3.1fK/s ", ((double)getbps)/1024));
+			// Lactozilla: Disabled, see below change
+			// (also it doesn't really fit on a typical SRB2 screen)
+#if 0
+			const char *download_str = cl_mode == CL_DOWNLOADHTTPFILES
+				? M_GetText("HTTP downloading \"%s\"")
+				: M_GetText("Downloading \"%s\"");
+#else
+			const char *download_str = M_GetText("Downloading \"%s\"");
+#endif
+
+			V_DrawCenteredString(BASEVIDWIDTH/2, BASEVIDHEIGHT-16-24, V_ALLOWLOWERCASE|V_YELLOWMAP,
+				va(download_str, tempname));
+
+			// Rusty: actually lets do this instead
+			if (cl_mode == CL_DOWNLOADHTTPFILES)
+			{
+				const char *http_source = filedownload.http_source;
+
+				if (strlen(http_source) > sizeof(tempname)-1) // too long to display fully
+				{
+					size_t endhalfpos = strlen(http_source)-10;
+					// display as first 14 chars + ... + last 10 chars
+					// which should add up to 27 if our math(s) is correct
+					snprintf(tempname, sizeof(tempname), "%.14s...%.10s", http_source, http_source+endhalfpos);
+				}
+				else // we can copy the whole thing in safely
+				{
+					strlcpy(tempname, http_source, sizeof(tempname));
+				}
+
+				V_DrawCenteredString(BASEVIDWIDTH/2, BASEVIDHEIGHT-16-16, V_ALLOWLOWERCASE|V_YELLOWMAP,
+					va(M_GetText("from %s"), tempname));
+			}
+			else
+			{
+				V_DrawCenteredString(BASEVIDWIDTH/2, BASEVIDHEIGHT-16-16, V_ALLOWLOWERCASE|V_YELLOWMAP,
+					M_GetText("from the server"));
+			}
+
+			DrawFileProgress(file, BASEVIDHEIGHT-16);
 		}
 		else
 		{
 			if (snake)
 				Snake_Draw(snake);
 
-			CL_DrawConnectionStatusBox();
+			DrawConnectionStatusBox();
 			V_DrawCenteredString(BASEVIDWIDTH/2, BASEVIDHEIGHT-16-24, V_YELLOWMAP,
 				M_GetText("Waiting to download files..."));
 		}
@@ -261,7 +307,7 @@ boolean CL_SendJoin(void)
 	else
 		player2name = cv_playername2.zstring;
 
-	strncpy(netbuffer->u.clientcfg.names[0], cv_playername.zstring, MAXPLAYERNAME);
+	strncpy(netbuffer->u.clientcfg.names[0], cv_playername.zstring, sizeof(netbuffer->u.clientcfg.names[0])-1);
 	strncpy(netbuffer->u.clientcfg.names[1], player2name, MAXPLAYERNAME);
 
 	return HSendPacket(servernode, true, 0, sizeof (clientconfig_pak));
@@ -479,23 +525,98 @@ void CL_UpdateServerList(boolean internetsearch, INT32 room)
 #endif // MASTERSERVER
 }
 
+static boolean IsFileDownloadable(fileneeded_t *file)
+{
+	return file->status == FS_NOTFOUND || file->status == FS_MD5SUMBAD;
+}
+
+static boolean UseDirectDownloader(void)
+{
+	return filedownload.http_source[0] == '\0' || filedownload.http_failed;
+}
+
+static void DoLoadFiles(void)
+{
+	Snake_Free(&snake);
+
+	cl_mode = CL_LOADFILES;
+}
+
+static void AbortConnection(void)
+{
+	Snake_Free(&snake);
+
+	D_QuitNetGame();
+	CL_Reset();
+	D_StartTitle();
+
+	// Will be reset by caller. Signals refusal.
+	cl_mode = CL_ABORTED;
+}
+
+static void BeginDownload(boolean direct)
+{
+	filedownload.current = 0;
+	filedownload.remaining = 0;
+
+	for (int i = 0; i < fileneedednum; i++)
+	{
+		// Lactozilla: Rusty had fixed this SLIGHTLY incorrectly.
+		// Since [redacted] doesn't HAVE its own file transmission code - it spins an HTTP server - it wasn't
+		// instantly obvious to us where to do this, and we didn't want to check the original implementation.
+		if (fileneeded[i].status == FS_FALLBACK)
+			fileneeded[i].status = FS_NOTFOUND;
+
+		if (IsFileDownloadable(&fileneeded[i]))
+			filedownload.remaining++;
+	}
+
+	if (!filedownload.remaining)
+	{
+		DoLoadFiles();
+		return;
+	}
+
+	if (!direct)
+	{
+		cl_mode = CL_DOWNLOADHTTPFILES;
+		Snake_Allocate(&snake);
+
+		// Discard any paused downloads
+		CL_AbortDownloadResume();
+	}
+	else
+	{
+		// do old LEGACY request
+		if (CL_SendFileRequest())
+		{
+			cl_mode = CL_DOWNLOADFILES;
+
+			// don't alloc snake if already alloced
+			if (!snake)
+				Snake_Allocate(&snake);
+		}
+		else
+		{
+			AbortConnection();
+
+			// why was this its own cl_mode_t?
+			M_StartMessage(M_GetText(
+				"The direct downloader encountered an error.\n"
+				"See the logfile for more info.\n\n"
+				"Press ESC\n"
+			), NULL, MM_NOTHING);
+		}
+	}
+}
+
 static void M_ConfirmConnect(event_t *ev)
 {
 	if (ev->type == ev_keydown)
 	{
 		if (ev->key == ' ' || ev->key == 'y' || ev->key == KEY_ENTER || ev->key == KEY_JOY1)
 		{
-			if (totalfilesrequestednum > 0)
-			{
-				if (CL_SendFileRequest())
-				{
-					cl_mode = CL_DOWNLOADFILES;
-					Snake_Allocate(&snake);
-				}
-			}
-			else
-				cl_mode = CL_LOADFILES;
-
+			BeginDownload(UseDirectDownloader());
 			M_ClearMenus(true);
 		}
 		else if (ev->key == 'n' || ev->key == KEY_ESCAPE || ev->key == KEY_JOY1 + 3)
@@ -506,22 +627,122 @@ static void M_ConfirmConnect(event_t *ev)
 	}
 }
 
+static const char *GetPrintableFileSize(UINT64 filesize)
+{
+	static char downloadsize[32];
+
+	if (filesize >= 1024*1024)
+		snprintf(downloadsize, sizeof(downloadsize), "%.2fMiB", (double)filesize / (1024*1024));
+	else if (filesize < 1024)
+		snprintf(downloadsize, sizeof(downloadsize), "%sB", sizeu1(filesize));
+	else
+		snprintf(downloadsize, sizeof(downloadsize), "%.2fKiB", (double)filesize / 1024);
+
+	return downloadsize;
+}
+
+static void ShowDownloadConsentMessage(void)
+{
+	UINT64 totalsize = 0;
+
+	filedownload.completednum = 0;
+	filedownload.completedsize = 0;
+
+	if (fileneeded == NULL)
+		I_Error("CL_FinishedFileList: fileneeded == NULL");
+
+	for (int i = 0; i < fileneedednum; i++)
+	{
+		if (IsFileDownloadable(&fileneeded[i]))
+			totalsize += fileneeded[i].totalsize;
+	}
+
+	const char *downloadsize = GetPrintableFileSize(totalsize);
+
+	if (serverisfull)
+		M_StartMessage(va(M_GetText(
+			"This server is full!\n"
+			"Download of %s of additional\ncontent is required to join.\n"
+			"\n"
+			"You may download server addons,\nand wait for a slot.\n"
+			"\n"
+			"Press ENTER to continue\nor ESC to cancel.\n"
+		), downloadsize), M_ConfirmConnect, MM_EVENTHANDLER);
+	else
+		M_StartMessage(va(M_GetText(
+			"Download of %s of additional\ncontent is required to join.\n"
+			"\n"
+			"Press ENTER to continue\nor ESC to cancel.\n"
+		), downloadsize), M_ConfirmConnect, MM_EVENTHANDLER);
+
+	cl_mode = CL_CONFIRMCONNECT;
+	curfadevalue = 0;
+}
+
+static const char *GetDirectDownloadFailReason(UINT8 dlstatus)
+{
+	switch (dlstatus)
+	{
+		case DLSTATUS_TOOLARGE:
+			return M_GetText("Some addons are larger than the server is willing to send.");
+		case DLSTATUS_WONTSEND:
+			return M_GetText("The server is not allowing download requests.");
+		case DLSTATUS_NODOWNLOAD:
+			return M_GetText("All addons downloadable, but you have chosen to disable addon downloading.");
+		case DLSTATUS_FOLDER:
+			return M_GetText("One or more addons were added as a folder, which the server cannot send.");
+	}
+
+	return "Unknown reason";
+}
+
+static void HandleDirectDownloadFail(UINT8 dlstatus)
+{
+	// not downloadable, put reason in console
+	CONS_Alert(CONS_NOTICE, M_GetText("You need additional addons to connect to this server:\n"));
+
+	for (UINT8 i = 0; i < fileneedednum; i++)
+	{
+		if (fileneeded[i].folder || (fileneeded[i].status != FS_FOUND && fileneeded[i].status != FS_OPEN))
+		{
+			CONS_Printf(" * \"%s\" ", fileneeded[i].filename);
+
+			if (fileneeded[i].folder)
+			{
+				CONS_Printf("(folder)");
+			}
+			else
+			{
+				CONS_Printf("(%s)", GetPrintableFileSize(fileneeded[i].totalsize));
+
+				if (fileneeded[i].status == FS_NOTFOUND)
+					CONS_Printf(M_GetText(" not found, md5: "));
+				else if (fileneeded[i].status == FS_MD5SUMBAD)
+					CONS_Printf(M_GetText(" wrong version, md5: "));
+
+				char md5tmp[33];
+				for (INT32 j = 0; j < 16; j++)
+					sprintf(&md5tmp[j*2], "%02x", fileneeded[i].md5sum[j]);
+				CONS_Printf("%s", md5tmp);
+			}
+
+			CONS_Printf("\n");
+		}
+	}
+
+	CONS_Printf("%s\n", GetDirectDownloadFailReason(dlstatus));
+}
+
 static boolean CL_FinishedFileList(void)
 {
-	INT32 i;
-	char *downloadsize = NULL;
-
-	//CONS_Printf(M_GetText("Checking files...\n"));
-	i = CL_CheckFiles();
+	INT32 i = CL_CheckFiles();
 	if (i == 4) // still checking ...
 	{
 		return true;
 	}
 	else if (i == 3) // too many files
 	{
-		D_QuitNetGame();
-		CL_Reset();
-		D_StartTitle();
+		AbortConnection();
 		M_StartMessage(M_GetText(
 			"You have too many WAD files loaded\n"
 			"to add ones the server is using.\n"
@@ -532,15 +753,15 @@ static boolean CL_FinishedFileList(void)
 	}
 	else if (i == 2) // cannot join for some reason
 	{
-		D_QuitNetGame();
-		CL_Reset();
-		D_StartTitle();
+		AbortConnection();
 		M_StartMessage(M_GetText(
-			"You have the wrong addons loaded.\n\n"
+			"You have the wrong addons loaded.\n"
+			"\n"
 			"To play on this server, restart\n"
 			"the game and don't load any addons.\n"
 			"SRB2 will automatically add\n"
-			"everything you need when you join.\n\n"
+			"everything you need when you join.\n"
+			"\n"
 			"Press ESC\n"
 		), NULL, MM_NOTHING);
 		return false;
@@ -566,63 +787,38 @@ static boolean CL_FinishedFileList(void)
 	{
 		// must download something
 		// can we, though?
-		if (!CL_CheckDownloadable()) // nope!
+		// Rusty: always check downloadable
+		UINT8 status = CL_CheckDownloadable(UseDirectDownloader());
+		if (status != DLSTATUS_OK)
 		{
-			D_QuitNetGame();
-			CL_Reset();
-			D_StartTitle();
+			HandleDirectDownloadFail(status);
+			AbortConnection();
 			M_StartMessage(M_GetText(
 				"An error occurred when trying to\n"
 				"download missing addons.\n"
 				"(This is almost always a problem\n"
-				"with the server, not your game.)\n\n"
+				"with the server, not your game.)\n"
+				"\n"
 				"See the console or log file\n"
-				"for additional details.\n\n"
+				"for additional details.\n"
+				"\n"
 				"Press ESC\n"
 			), NULL, MM_NOTHING);
 			return false;
 		}
 
-		downloadcompletednum = 0;
-		downloadcompletedsize = 0;
-		totalfilesrequestednum = 0;
-		totalfilesrequestedsize = 0;
-
-		if (fileneeded == NULL)
-			I_Error("CL_FinishedFileList: fileneeded == NULL");
-
-		for (i = 0; i < fileneedednum; i++)
-			if (fileneeded[i].status == FS_NOTFOUND || fileneeded[i].status == FS_MD5SUMBAD)
-			{
-				totalfilesrequestednum++;
-				totalfilesrequestedsize += fileneeded[i].totalsize;
-			}
-
-		if (totalfilesrequestedsize>>20 >= 100)
-			downloadsize = Z_StrDup(va("%uM",totalfilesrequestedsize>>20));
+		if (!filedownload.http_failed)
+		{
+			// show download consent modal ONCE!
+			ShowDownloadConsentMessage();
+		}
 		else
-			downloadsize = Z_StrDup(va("%uK",totalfilesrequestedsize>>10));
-
-		if (serverisfull)
-			M_StartMessage(va(M_GetText(
-				"This server is full!\n"
-				"Download of %s additional content\nis required to join.\n"
-				"\n"
-				"You may download, load server addons,\nand wait for a slot.\n"
-				"\n"
-				"Press ENTER to continue\nor ESC to cancel.\n"
-			), downloadsize), M_ConfirmConnect, MM_EVENTHANDLER);
-		else
-			M_StartMessage(va(M_GetText(
-				"Download of %s additional content\nis required to join.\n"
-				"\n"
-				"Press ENTER to continue\nor ESC to cancel.\n"
-			), downloadsize), M_ConfirmConnect, MM_EVENTHANDLER);
-
-		Z_Free(downloadsize);
-		cl_mode = CL_CONFIRMCONNECT;
-		curfadevalue = 0;
+		{
+			// do a direct download
+			BeginDownload(true);
+		}
 	}
+
 	return true;
 }
 
@@ -734,14 +930,17 @@ static boolean CL_ServerConnectionSearchTicker(tic_t *asksent)
 				if (reason)
 				{
 					char *message = Z_StrDup(reason);
-					D_QuitNetGame();
-					CL_Reset();
-					D_StartTitle();
+					AbortConnection();
 					M_StartMessage(message, NULL, MM_NOTHING);
 					Z_Free(message);
 					return false;
 				}
 			}
+
+			if (serverlist[i].info.httpsource[0])
+				strlcpy(filedownload.http_source, serverlist[i].info.httpsource, MAX_MIRROR_LENGTH);
+			else
+				filedownload.http_source[0] = '\0';
 
 			D_ParseFileneeded(info->fileneedednum, info->fileneeded, 0);
 
@@ -771,6 +970,42 @@ static boolean CL_ServerConnectionSearchTicker(tic_t *asksent)
 	}
 
 	return true;
+}
+
+static void HandleHTTPDownloadFail(void)
+{
+	char filename[MAX_WADPATH];
+
+	CONS_Alert(CONS_WARNING, M_GetText("One or more addons failed to download:\n"));
+
+	for (int i = 0; i < fileneedednum; i++)
+	{
+		if (fileneeded[i].failed == FDOWNLOAD_FAIL_NONE)
+			continue;
+
+		strlcpy(filename, fileneeded[i].filename, sizeof filename);
+		nameonly(filename);
+
+		CONS_Printf(" * \"%s\" (%s)", filename, GetPrintableFileSize(fileneeded[i].totalsize));
+
+		if (fileneeded[i].failed == FDOWNLOAD_FAIL_NOTFOUND)
+			CONS_Printf(M_GetText(" not found, md5: "));
+		else if (fileneeded[i].failed == FDOWNLOAD_FAIL_MD5SUMBAD)
+			CONS_Printf(M_GetText(" wrong version, md5: "));
+		else
+			CONS_Printf(M_GetText(" other error, md5: "));
+
+		char md5tmp[33];
+		for (INT32 j = 0; j < 16; j++)
+			snprintf(&md5tmp[j*2], sizeof(md5tmp), "%02x", fileneeded[i].md5sum[j]);
+		CONS_Printf("%s\n", md5tmp);
+
+		fileneeded[i].failed = FDOWNLOAD_FAIL_NONE;
+	}
+
+	CONS_Printf(M_GetText("Falling back to direct downloader.\n"));
+
+	cl_mode = CL_CHECKFILES;
 }
 
 /** Called by CL_ConnectToServer
@@ -810,21 +1045,43 @@ static boolean CL_ServerConnectionTicker(const char *tmpsave, tic_t *oldtic, tic
 			if (!CL_FinishedFileList())
 				return false;
 			break;
-		case CL_DOWNLOADFILES:
+
+		case CL_DOWNLOADHTTPFILES:
 			waitmore = false;
-			for (INT32 i = 0; i < fileneedednum; i++)
-				if (fileneeded[i].status == FS_DOWNLOADING
-					|| fileneeded[i].status == FS_REQUESTED)
+			for (int i = filedownload.current; i < fileneedednum; i++)
+			{
+				if (IsFileDownloadable(&fileneeded[i]))
 				{
+					if (!filedownload.http_running)
+					{
+						if (!CURLPrepareFile(filedownload.http_source, i))
+							HandleHTTPDownloadFail();
+					}
 					waitmore = true;
 					break;
 				}
+			}
+
+			// Rusty TODO: multithread
+			if (filedownload.http_running)
+				CURLGetFile();
+
 			if (waitmore)
 				break; // exit the case
 
-			Snake_Free(&snake);
-
-			cl_mode = CL_LOADFILES;
+			// Done downloading files
+			if (!filedownload.remaining)
+			{
+				if (filedownload.http_failed)
+					HandleHTTPDownloadFail();
+				else
+					DoLoadFiles();
+			}
+			break;
+		case CL_DOWNLOADFILES:
+			// Done downloading files
+			if (!filedownload.remaining)
+				DoLoadFiles();
 			break;
 		case CL_LOADFILES:
 			if (CL_LoadServerFiles())
@@ -839,10 +1096,7 @@ static boolean CL_ServerConnectionTicker(const char *tmpsave, tic_t *oldtic, tic
 			if (firstconnectattempttime + NEWTICRATE*300 < I_GetTime() && !server)
 			{
 				CONS_Printf(M_GetText("5 minute wait time exceeded.\n"));
-				CONS_Printf(M_GetText("Network game synchronization aborted.\n"));
-				D_QuitNetGame();
-				CL_Reset();
-				D_StartTitle();
+				AbortConnection();
 				M_StartMessage(M_GetText(
 					"5 minute wait time exceeded.\n"
 					"You may retry connection.\n"
@@ -914,15 +1168,12 @@ static boolean CL_ServerConnectionTicker(const char *tmpsave, tic_t *oldtic, tic
 			CONS_Printf(M_GetText("Network game synchronization aborted.\n"));
 			M_StartMessage(M_GetText("Network game synchronization aborted.\n\nPress ESC\n"), NULL, MM_NOTHING);
 
-			Snake_Free(&snake);
+			AbortConnection();
 
-			D_QuitNetGame();
-			CL_Reset();
-			D_StartTitle();
 			memset(gamekeydown, 0, NUMKEYS);
 			return false;
 		}
-		else if (cl_mode == CL_DOWNLOADFILES && snake)
+		else if ((cl_mode == CL_DOWNLOADFILES || cl_mode == CL_DOWNLOADHTTPFILES) && snake)
 			Snake_Update(snake);
 
 		if (client && (cl_mode == CL_DOWNLOADFILES || cl_mode == CL_DOWNLOADSAVEGAME))
@@ -973,7 +1224,7 @@ void CL_ConnectToServer(void)
 
 	sprintf(tmpsave, "%s" PATHSEP TMPSAVENAME, srb2home);
 
-	lastfilenum = -1;
+	filedownload.current = -1;
 
 	cl_mode = CL_SEARCHING;
 
@@ -1121,14 +1372,9 @@ void PT_ServerRefuse(SINT8 node)
 		M_StartMessage(va(M_GetText("Server refuses connection\n\nReason:\n%s"),
 			reason), NULL, MM_NOTHING);
 
-		D_QuitNetGame();
-		CL_Reset();
-		D_StartTitle();
+		AbortConnection();
 
 		free(reason);
-
-		// Will be reset by caller. Signals refusal.
-		cl_mode = CL_ABORTED;
 	}
 }
 

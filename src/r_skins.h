@@ -31,7 +31,8 @@
 /// The skin_t struct
 typedef struct
 {
-	char name[SKINNAMESIZE+1]; // INT16 descriptive name of the skin
+	char name[SKINNAMESIZE+1]; // name of the skin
+	UINT8 skinnum;
 	UINT16 wadnum;
 	skinflags_t flags;
 
@@ -70,6 +71,7 @@ typedef struct
 	UINT16 prefcolor;
 	UINT16 supercolor;
 	UINT16 prefoppositecolor; // if 0 use tables instead
+	UINT16 natkcolor; //Color for Nights Attack Menu
 
 	fixed_t highresscale; // scale of highres, default is 0.5
 	UINT8 contspeed; // continue screen animation speed
@@ -78,14 +80,19 @@ typedef struct
 	// specific sounds per skin
 	sfxenum_t soundsid[NUMSKINSOUNDS]; // sound # in S_sfx table
 
+	spritedef_t sprites[NUMPLAYERSPRITES];
+	spriteinfo_t sprinfo[NUMPLAYERSPRITES];
+
 	// contains super versions too
-	spritedef_t sprites[NUMPLAYERSPRITES*2];
-	spriteinfo_t sprinfo[NUMPLAYERSPRITES*2];
+	struct {
+		spritedef_t sprites[NUMPLAYERSPRITES];
+		spriteinfo_t sprinfo[NUMPLAYERSPRITES];
+	} super;
 } skin_t;
 
 /// Externs
 extern INT32 numskins;
-extern skin_t skins[MAXSKINS];
+extern skin_t **skins;
 
 /// Function prototypes
 void R_InitSkins(void);
@@ -100,7 +107,14 @@ INT32 R_GetForcedSkin(INT32 playernum);
 void R_AddSkins(UINT16 wadnum, boolean mainfile);
 void R_PatchSkins(UINT16 wadnum, boolean mainfile);
 
-UINT8 P_GetSkinSprite2(skin_t *skin, UINT8 spr2, player_t *player);
+UINT16 P_GetStateSprite2(state_t *state);
+UINT16 P_GetSprite2StateFrame(state_t *state);
+UINT16 P_GetSkinSprite2(skin_t *skin, UINT16 spr2, player_t *player);
+UINT16 P_ApplySuperFlagToSprite2(UINT16 spr2, mobj_t *mobj);
+spritedef_t *P_GetSkinSpritedef(skin_t *skin, UINT16 spr2);
+spriteinfo_t *P_GetSkinSpriteInfo(skin_t *skin, UINT16 spr2);
+boolean P_IsValidSprite2(skin_t *skin, UINT16 spr2);
+boolean P_IsStateSprite2Super(state_t *state);
 
 void R_RefreshSprite2(void);
 

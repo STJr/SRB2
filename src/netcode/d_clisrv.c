@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -90,8 +90,8 @@ INT16 consistancy[BACKUPTICS];
 // true when a player is connecting or disconnecting so that the gameplay has stopped in its tracks
 boolean hu_stopped = false;
 
-UINT8 adminpassmd5[16];
-boolean adminpasswordset = false;
+UINT8 (*adminpassmd5)[16];
+UINT32 adminpasscount = 0;
 
 tic_t neededtic;
 SINT8 servernode = 0; // the number of the server node
@@ -115,6 +115,8 @@ consvar_t cv_playbackspeed = CVAR_INIT ("playbackspeed", "1", 0, playbackspeed_c
 
 consvar_t cv_idletime = CVAR_INIT ("idletime", "0", CV_SAVE, CV_Unsigned, NULL);
 consvar_t cv_dedicatedidletime = CVAR_INIT ("dedicatedidletime", "10", CV_SAVE, CV_Unsigned, NULL);
+
+consvar_t cv_httpsource = CVAR_INIT ("http_source", "", CV_SAVE, NULL, NULL);
 
 void ResetNode(INT32 node)
 {
@@ -153,11 +155,14 @@ void CL_Reset(void)
 	FreeFileNeeded();
 	fileneedednum = 0;
 
-	totalfilesrequestednum = 0;
-	totalfilesrequestedsize = 0;
 	firstconnectattempttime = 0;
 	serverisfull = false;
 	connectiontimeout = (tic_t)cv_nettimeout.value; //reset this temporary hack
+
+	filedownload.remaining = 0;
+	filedownload.http_failed = false;
+	filedownload.http_running = false;
+	filedownload.http_source[0] = '\0';
 
 	// D_StartTitle should get done now, but the calling function will handle it
 }
@@ -415,16 +420,6 @@ static void Got_KickCmd(UINT8 **p, INT32 playernum)
 
 	//CONS_Printf("\x82%s ", player_names[pnum]);
 
-	// If a verified admin banned someone, the server needs to know about it.
-	// If the playernum isn't zero (the server) then the server needs to record the ban.
-	if (server && playernum && (msg == KICK_MSG_BANNED || msg == KICK_MSG_CUSTOM_BAN))
-	{
-		if (I_Ban && !I_Ban(playernode[(INT32)pnum]))
-			CONS_Alert(CONS_WARNING, M_GetText("Too many bans! Geez, that's a lot of people you're excluding...\n"));
-		else
-			Ban_Add(reason);
-	}
-
 	switch (msg)
 	{
 		case KICK_MSG_GO_AWAY:
@@ -498,6 +493,16 @@ static void Got_KickCmd(UINT8 **p, INT32 playernum)
 			HU_AddChatText(va("\x82*%s has left the game (Inactive for too long)", player_names[pnum]), false);
 			kickreason = KR_TIMEOUT;
 			break;
+	}
+
+	// If a verified admin banned someone, the server needs to know about it.
+	// If the playernum isn't zero (the server) then the server needs to record the ban.
+	if (server && playernum && (msg == KICK_MSG_BANNED || msg == KICK_MSG_CUSTOM_BAN))
+	{
+		if (I_Ban && !I_Ban(playernode[(INT32)pnum]))
+			CONS_Alert(CONS_WARNING, M_GetText("Too many bans! Geez, that's a lot of people you're excluding...\n"));
+		else
+			Ban_Add(msg == KICK_MSG_CUSTOM_BAN ? reason : NULL);
 	}
 
 	if (pnum == consoleplayer)
@@ -862,29 +867,102 @@ static void PT_Login(SINT8 node, INT32 netconsole)
 
 #ifndef NOMD5
 	UINT8 finalmd5[16];/* Well, it's the cool thing to do? */
+	UINT32 i;
 
 	if (doomcom->datalength < 16)/* ignore partial sends */
 		return;
 
-	if (!adminpasswordset)
+	if (adminpasscount == 0)
 	{
 		CONS_Printf(M_GetText("Password from %s failed (no password set).\n"), player_names[netconsole]);
 		return;
 	}
 
-	// Do the final pass to compare with the sent md5
-	D_MD5PasswordPass(adminpassmd5, 16, va("PNUM%02d", netconsole), &finalmd5);
-
-	if (!memcmp(netbuffer->u.md5sum, finalmd5, 16))
+	for (i = 0; i < adminpasscount; i++)
 	{
-		CONS_Printf(M_GetText("%s passed authentication.\n"), player_names[netconsole]);
-		COM_BufInsertText(va("promote %d\n", netconsole)); // do this immediately
+		// Do the final pass to compare with the sent md5
+		D_MD5PasswordPass(adminpassmd5[i], 16, va("PNUM%02d", netconsole), &finalmd5);
+
+		if (!memcmp(netbuffer->u.md5sum, finalmd5, 16))
+		{
+			CONS_Printf(M_GetText("%s passed authentication.\n"), player_names[netconsole]);
+			COM_BufInsertText(va("promote %d\n", netconsole)); // do this immediately
+			return;
+		}
 	}
-	else
-		CONS_Printf(M_GetText("Password from %s failed.\n"), player_names[netconsole]);
+
+	CONS_Printf(M_GetText("Password from %s failed.\n"), player_names[netconsole]);
 #else
 	(void)netconsole;
 #endif
+}
+
+/** Add a login for HTTP downloads. If the
+  * user/password is missing, remove it.
+  *
+  * \sa Command_list_http_logins
+  */
+static void Command_set_http_login (void)
+{
+	HTTP_login  *login;
+	HTTP_login **prev_next;
+
+	if (COM_Argc() < 2)
+	{
+		CONS_Printf(
+				"set_http_login <URL> [user:password]: Set or remove a login to "
+				"authenticate HTTP downloads.\n"
+		);
+		return;
+	}
+
+	login = CURLGetLogin(COM_Argv(1), &prev_next);
+
+	if (COM_Argc() == 2)
+	{
+		if (login)
+		{
+			(*prev_next) = login->next;
+			CONS_Printf("Login for '%s' removed.\n", login->url);
+			Z_Free(login);
+		}
+	}
+	else
+	{
+		if (login)
+			Z_Free(login->auth);
+		else
+		{
+			login = ZZ_Alloc(sizeof *login);
+			login->url = Z_StrDup(COM_Argv(1));
+		}
+
+		login->auth = Z_StrDup(COM_Argv(2));
+
+		login->next = curl_logins;
+		curl_logins = login;
+	}
+}
+
+/** List logins for HTTP downloads.
+  *
+  * \sa Command_set_http_login
+  */
+static void Command_list_http_logins (void)
+{
+	HTTP_login *login;
+
+	for (
+			login = curl_logins;
+			login;
+			login = login->next
+	){
+		CONS_Printf(
+				"'%s' -> '%s'\n",
+				login->url,
+				login->auth
+		);
+	}
 }
 
 static void PT_AskLuaFile(SINT8 node)
@@ -1275,6 +1353,7 @@ static void UpdatePingTable(void)
 	}
 }
 
+// Handle idle and disconnected player timers
 static void IdleUpdate(void)
 {
 	INT32 i;
@@ -1283,7 +1362,7 @@ static void IdleUpdate(void)
 
 	for (i = 1; i < MAXPLAYERS; i++)
 	{
-		if (cv_idletime.value && playeringame[i] && playernode[i] != UINT8_MAX && !players[i].quittime && !players[i].spectator && !players[i].bot && !IsPlayerAdmin(i) && i != serverplayer)
+		if (cv_idletime.value && playeringame[i] && playernode[i] != UINT8_MAX && !players[i].quittime && !players[i].spectator && !players[i].bot && !IsPlayerAdmin(i) && i != serverplayer && gamestate == GS_LEVEL)
 		{
 			if (players[i].cmd.forwardmove || players[i].cmd.sidemove || players[i].cmd.buttons)
 				players[i].lastinputtime = 0;
@@ -1297,7 +1376,26 @@ static void IdleUpdate(void)
 			}
 		}
 		else
+		{
 			players[i].lastinputtime = 0;
+
+			if (players[i].quittime && playeringame[i])
+			{
+				players[i].quittime++;
+
+				if (players[i].quittime == 30 * TICRATE && G_TagGametype())
+					P_CheckSurvivors();
+
+				if (server && players[i].quittime >= (tic_t)FixedMul(cv_rejointimeout.value, 60 * TICRATE)
+				&& !(players[i].quittime % TICRATE))
+				{
+					if (D_NumNodes(true) > 0)
+						SendKick(i, KICK_MSG_PLAYER_QUIT);
+					else // If the server is empty, don't send a NetXCmd - that would wake an idling dedicated server
+						CL_RemovePlayer(i, KICK_MSG_PLAYER_QUIT);
+				}
+			}
+		}
 	}
 }
 
@@ -1512,7 +1610,7 @@ void NetUpdate(void)
 
 	nowtime /= NEWTICRATERATIO;
 
-	if (nowtime > resptime)
+	if (nowtime != resptime)
 	{
 		resptime = nowtime;
 #ifdef HAVE_THREADS
@@ -1543,6 +1641,8 @@ void D_ClientServerInit(void)
 	COM_AddCommand("reloadbans", Command_ReloadBan, COM_LUA);
 	COM_AddCommand("connect", Command_connect, COM_LUA);
 	COM_AddCommand("nodes", Command_Nodes, COM_LUA);
+	COM_AddCommand("set_http_login", Command_set_http_login, 0);
+	COM_AddCommand("list_http_logins", Command_list_http_logins, 0);
 	COM_AddCommand("resendgamestate", Command_ResendGamestate, COM_LUA);
 #ifdef PACKETDROP
 	COM_AddCommand("drop", Command_Drop, COM_LUA);
@@ -1614,6 +1714,20 @@ INT32 D_NumPlayers(void)
 	INT32 num = 0;
 	for (INT32 ix = 0; ix < MAXPLAYERS; ix++)
 		if (playeringame[ix])
+			num++;
+	return num;
+}
+
+/** Returns the number of currently-connected nodes in a netgame.
+  * Not necessarily equivalent to D_NumPlayers() minus D_NumBots().
+  *
+  * \param skiphost Skip the server's own node.
+  */
+INT32 D_NumNodes(boolean skiphost)
+{
+	INT32 num = 0;
+	for (INT32 ix = skiphost ? 1 : 0; ix < MAXNETNODES; ix++)
+		if (netnodes[ix].ingame)
 			num++;
 	return num;
 }
