@@ -279,7 +279,6 @@ static void HWR_DrawPatchInCache(GLMipmap_t *mipmap,
 	INT32 ncols;
 	fixed_t xfrac, xfracstep;
 	fixed_t yfracstep, scale_y;
-	const column_t *patchcol;
 	UINT8 *block = mipmap->data;
 	INT32 bpp;
 	INT32 blockmodulo;
@@ -293,20 +292,20 @@ static void HWR_DrawPatchInCache(GLMipmap_t *mipmap,
 	ncols = pwidth;
 
 	// source advance
-	fixed_t xfrac = 0;
-	fixed_t xfracstep = FRACUNIT;
-	fixed_t yfracstep = FRACUNIT;
-	fixed_t scale_y   = FRACUNIT;
+	xfrac = 0;
+	xfracstep = FRACUNIT;
+	yfracstep = FRACUNIT;
+	scale_y   = FRACUNIT;
 
-	INT32 bpp = format2bpp(mipmap->format);
+	bpp = format2bpp(mipmap->format);
 	if (bpp < 1 || bpp > 4)
 		I_Error("HWR_DrawPatchInCache: no drawer defined for this bpp (%d)\n",bpp);
 
 	// NOTE: should this actually be pblockwidth*bpp?
-	INT32 blockmodulo = pblockwidth*bpp;
+	blockmodulo = pblockwidth*bpp;
 
 	// Draw each column to the block cache
-	UINT8 *block = mipmap->data;
+	*block = mipmap->data;
 
 	for (int x = 0; x < pwidth; x++, block += bpp, xfrac += xfracstep)
 	{
