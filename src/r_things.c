@@ -148,12 +148,10 @@ static void R_InstallSpriteLump(UINT16 wad,            // graphics patch
 	if (maxframe ==(size_t)-1 || frame > maxframe)
 		maxframe = frame;
 
-#ifdef ROTSPRITE
 	for (r = 0; r < 16; r++)
 	{
 		sprtemp[frame].rotated[r] = NULL;
 	}
-#endif
 
 	if (rotation == 0)
 	{
@@ -731,22 +729,18 @@ static vissprite_t *visspritechunks[MAXVISSPRITES >> VISSPRITECHUNKBITS] = {NULL
 void R_InitSprites(void)
 {
 	size_t i;
-#ifdef ROTSPRITE
 	INT32 angle;
 	float fa;
-#endif
 
 	for (i = 0; i < MAXVIDWIDTH; i++)
 		negonearray[i] = -1;
 
-#ifdef ROTSPRITE
 	for (angle = 1; angle < ROTANGLES; angle++)
 	{
 		fa = ANG2RAD(FixedAngle((ROTANGDIFF * angle)<<FRACBITS));
 		rollcosang[angle] = FLOAT_TO_FIXED(cos(-fa));
 		rollsinang[angle] = FLOAT_TO_FIXED(sin(-fa));
 	}
-#endif
 
 	//
 	// count the number of sprite names, and allocate sprites table
@@ -1700,9 +1694,7 @@ static void R_ProjectSprite(mobj_t *thing)
 
 	spritedef_t *sprdef;
 	spriteframe_t *sprframe;
-#ifdef ROTSPRITE
 	spriteinfo_t *sprinfo;
-#endif
 	size_t lump;
 
 	size_t frame, rot;
@@ -1747,11 +1739,9 @@ static void R_ProjectSprite(mobj_t *thing)
 	fixed_t spr_width, spr_height;
 	fixed_t spr_offset, spr_topoffset;
 
-#ifdef ROTSPRITE
 	patch_t *rotsprite = NULL;
 	INT32 rollangle = 0;
 	angle_t spriterotangle = 0;
-#endif
 
 	// uncapped/interpolation
 	interpmobjstate_t interp = {0};
@@ -1807,9 +1797,7 @@ static void R_ProjectSprite(mobj_t *thing)
 	if (thing->skin && thing->sprite == SPR_PLAY)
 	{
 		sprdef = P_GetSkinSpritedef(thing->skin, thing->sprite2);
-#ifdef ROTSPRITE
 		sprinfo = P_GetSkinSpriteInfo(thing->skin, thing->sprite2);
-#endif
 
 		if (frame >= sprdef->numframes)
 		{
@@ -1817,18 +1805,14 @@ static void R_ProjectSprite(mobj_t *thing)
 			thing->sprite = states[S_UNKNOWN].sprite;
 			thing->frame = states[S_UNKNOWN].frame;
 			sprdef = &sprites[thing->sprite];
-#ifdef ROTSPRITE
 			sprinfo = &spriteinfo[thing->sprite];
-#endif
 			frame = thing->frame&FF_FRAMEMASK;
 		}
 	}
 	else
 	{
 		sprdef = &sprites[thing->sprite];
-#ifdef ROTSPRITE
 		sprinfo = &spriteinfo[thing->sprite];
-#endif
 
 		if (frame >= sprdef->numframes)
 		{
@@ -1905,7 +1889,6 @@ static void R_ProjectSprite(mobj_t *thing)
 	//     than lumpid for sprites-in-pwad : the graphics are patched
 	patch = W_CachePatchNum(sprframe->lumppat[rot], PU_SPRITE);
 
-#ifdef ROTSPRITE
 	spriterotangle = R_SpriteRotationAngle(&interp);
 
 	if (spriterotangle != 0
@@ -1938,7 +1921,6 @@ static void R_ProjectSprite(mobj_t *thing)
 			flip = 0;
 		}
 	}
-#endif
 
 	flip = !flip != !hflip;
 

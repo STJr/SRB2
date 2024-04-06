@@ -2447,11 +2447,11 @@ static void HWR_Subsector(size_t num)
 				continue;
 			if (sub->validcount == validcount)
 				continue;
-			
+
 			// rendering heights for bottom and top planes
 			bottomCullHeight = P_GetFFloorBottomZAt(rover, viewx, viewy);
 			topCullHeight = P_GetFFloorTopZAt(rover, viewx, viewy);
-			
+
 			if (gl_frontsector->cullheight)
 			{
 				if (HWR_DoCulling(gl_frontsector->cullheight, viewsector->cullheight, gl_viewz, FIXED_TO_FLOAT(bottomCullHeight), FIXED_TO_FLOAT(topCullHeight)))
@@ -3291,7 +3291,7 @@ static void HWR_DrawBoundingBox(gl_vissprite_t *vis)
 		v[15].y = v[16].y = v[17].y = v[21].y = v[22].y = v[23].y = vis->gzt; // top
 
 	Surf.PolyColor = V_GetColor(R_GetBoundingBoxColor(vis->mobj));
-	
+
 	HWR_ProcessPolygon(&Surf, v, 24, (cv_renderhitboxgldepth.value ? 0 : PF_NoDepthTest)|PF_Modulated|PF_NoTexture|PF_WireFrame, SHADER_NONE, false);
 }
 
@@ -4254,9 +4254,7 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	float gz, gzt;
 	spritedef_t *sprdef;
 	spriteframe_t *sprframe;
-#ifdef ROTSPRITE
 	spriteinfo_t *sprinfo;
-#endif
 	md2_t *md2;
 	size_t lumpoff;
 	unsigned rot;
@@ -4276,11 +4274,9 @@ static void HWR_ProjectSprite(mobj_t *thing)
 
 	fixed_t spr_width, spr_height;
 	fixed_t spr_offset, spr_topoffset;
-#ifdef ROTSPRITE
 	patch_t *rotsprite = NULL;
 	INT32 rollangle = 0;
 	angle_t spriterotangle = 0;
-#endif
 
 	// uncapped/interpolation
 	interpmobjstate_t interp = {0};
@@ -4365,16 +4361,12 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	if (thing->skin && thing->sprite == SPR_PLAY)
 	{
 		sprdef = P_GetSkinSpritedef(thing->skin, thing->sprite2);
-#ifdef ROTSPRITE
 		sprinfo = P_GetSkinSpriteInfo(thing->skin, thing->sprite2);
-#endif
 	}
 	else
 	{
 		sprdef = &sprites[thing->sprite];
-#ifdef ROTSPRITE
 		sprinfo = &spriteinfo[thing->sprite];
-#endif
 	}
 
 	if (rot >= sprdef->numframes)
@@ -4384,9 +4376,7 @@ static void HWR_ProjectSprite(mobj_t *thing)
 		thing->sprite = states[S_UNKNOWN].sprite;
 		thing->frame = states[S_UNKNOWN].frame;
 		sprdef = &sprites[thing->sprite];
-#ifdef ROTSPRITE
 		sprinfo = &spriteinfo[thing->sprite];
-#endif
 		rot = thing->frame&FF_FRAMEMASK;
 		thing->state->sprite = thing->sprite;
 		thing->state->frame = thing->frame;
@@ -4451,7 +4441,6 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	spr_offset = spritecachedinfo[lumpoff].offset;
 	spr_topoffset = spritecachedinfo[lumpoff].topoffset;
 
-#ifdef ROTSPRITE
 	spriterotangle = R_SpriteRotationAngle(&interp);
 
 	if (spriterotangle != 0
@@ -4481,7 +4470,6 @@ static void HWR_ProjectSprite(mobj_t *thing)
 			flip = 0;
 		}
 	}
-#endif
 
 	if (thing->renderflags & RF_ABSOLUTEOFFSETS)
 	{
@@ -4689,14 +4677,12 @@ static void HWR_ProjectSprite(mobj_t *thing)
 
 	vis->rotated = false;
 
-#ifdef ROTSPRITE
 	if (rotsprite)
 	{
 		vis->gpatch = (patch_t *)rotsprite;
 		vis->rotated = true;
 	}
 	else
-#endif
 		vis->gpatch = (patch_t *)W_CachePatchNum(sprframe->lumppat[rot], PU_SPRITE);
 
 	vis->mobj = thing;

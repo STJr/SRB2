@@ -851,13 +851,11 @@ typedef struct drawseg_s
 	vertex_t leftpos, rightpos; // Used for rendering FOF walls with slopes
 } drawseg_t;
 
-#ifdef ROTSPRITE
 typedef struct
 {
 	INT32 angles;
 	void **patches;
 } rotsprite_t;
-#endif
 
 // Patches.
 // A patch holds one or more columns.
@@ -876,9 +874,7 @@ typedef struct
 	void *hardware; // OpenGL patch, allocated whenever necessary
 	void *flats[4]; // The patch as flats
 
-#ifdef ROTSPRITE
 	rotsprite_t *rotated; // Rotated patches
-#endif
 } patch_t;
 
 #if defined(_MSC_VER)
@@ -971,9 +967,7 @@ typedef struct
 	// Flip bits (1 = flip) to use for view angles 0-7/15.
 	UINT16 flip;
 
-#ifdef ROTSPRITE
 	rotsprite_t *rotated[16]; // Rotated patches
-#endif
 } spriteframe_t;
 
 #define MAXFRAMENUM 256

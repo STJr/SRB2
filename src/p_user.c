@@ -915,7 +915,7 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 		player->textvar = NTV_BONUSTIMEEND; // Score and grades
 		player->finishedspheres = (INT16)(player->spheres);
 		player->finishedrings = (INT16)(player->rings);
-		
+
 		// Add score to temp leaderboards
 		player->lastmaretime = leveltime - player->marebegunat;
 		G_AddTempNightsRecords(player, player->marescore, player->lastmaretime, (UINT8)(oldmare + 1));
@@ -7377,7 +7377,7 @@ static void P_NiGHTSMovement(player_t *player)
 		else
 			player->mo->momz = 0;
 
-#if 0//def ROTSPRITE
+#if 0
 		if (!(player->charflags & SF_NONIGHTSROTATION) && player->mo->momz)
 		{
 			if (player->mo->state != &states[S_PLAY_NIGHTS_DRILL])
@@ -8766,7 +8766,7 @@ void P_MovePlayer(player_t *player)
 	if (!(player->mo->momz || player->mo->momx || player->mo->momy) && !(player->mo->eflags & MFE_GOOWATER)
 	&& player->panim == PA_IDLE && !(player->powers[pw_carry]))
 		P_DoTeeter(player);
-	
+
 	// Toss a flag
 	if (G_GametypeHasTeams() && (cmd->buttons & BT_TOSSFLAG) && !(player->powers[pw_super]) && !(player->tossdelay))
 	{

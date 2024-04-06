@@ -15,7 +15,6 @@
 #include "w_wad.h"
 #include "r_main.h" // R_PointToAngle
 
-#ifdef ROTSPRITE
 fixed_t rollcosang[ROTANGLES];
 fixed_t rollsinang[ROTANGLES];
 
@@ -285,4 +284,3 @@ void RotatedPatch_DoRotation(rotsprite_t *rotsprite, patch_t *patch, INT32 angle
 	rotated->leftoffset = ox;
 	rotated->topoffset = oy;
 }
-#endif

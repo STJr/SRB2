@@ -522,7 +522,6 @@ static int libd_getSpritePatch(lua_State *L)
 	if (angle >= ((sprframe->rotate & SRF_3DGE) ? 16 : 8)) // out of range?
 		return 0;
 
-#ifdef ROTSPRITE
 	if (lua_isnumber(L, 4))
 	{
 		// rotsprite?????
@@ -537,7 +536,6 @@ static int libd_getSpritePatch(lua_State *L)
 			return 3;
 		}
 	}
-#endif
 
 	// push both the patch and it's "flip" value
 	LUA_PushUserdata(L, W_CachePatchNum(sprframe->lumppat[angle], PU_SPRITE), META_PATCH);
@@ -633,7 +631,6 @@ static int libd_getSprite2Patch(lua_State *L)
 	if (angle >= ((sprframe->rotate & SRF_3DGE) ? 16 : 8)) // out of range?
 		return 0;
 
-#ifdef ROTSPRITE
 	if (lua_isnumber(L, 4))
 	{
 		// rotsprite?????
@@ -648,7 +645,6 @@ static int libd_getSprite2Patch(lua_State *L)
 			return 3;
 		}
 	}
-#endif
 
 	// push both the patch and it's "flip" value
 	LUA_PushUserdata(L, W_CachePatchNum(sprframe->lumppat[angle], PU_SPRITE), META_PATCH);
