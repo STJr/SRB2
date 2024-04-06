@@ -1466,10 +1466,10 @@ void readlevelheader(MYFILE *f, INT32 num)
 				{
 					mobjtype_t tmpflickies[MAXFLICKIES];
 
-					for (header->numFlickies = 0;
-					((header->numFlickies < MAXFLICKIES) && FLICKYTYPES[header->numFlickies].type);
-					header->numFlickies++)
-						tmpflickies[header->numFlickies] = FLICKYTYPES[header->numFlickies].type;
+					UINT8 n;
+					for (n = 0; n < MAXFLICKIES && FLICKYTYPES[n].type; n++)
+						tmpflickies[n] = FLICKYTYPES[n].type;
+					header->numFlickies = n;
 
 					if (header->numFlickies) // just in case...
 					{
