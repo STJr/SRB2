@@ -256,71 +256,54 @@ static boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 
 	// Set animation state
 	// The pflags version of this was just as convoluted.
-	switch(state)
-	{
-	case S_PLAY_STND:
-	case S_PLAY_WAIT:
-	case S_PLAY_NIGHTS_STAND:
+	if (state == S_PLAY_STND
+	|| state == S_PLAY_WAIT
+	|| state == S_PLAY_NIGHTS_STAND)
 		player->panim = PA_IDLE;
-		break;
-	case S_PLAY_EDGE:
+	else if (state == S_PLAY_EDGE)
 		player->panim = PA_EDGE;
-		break;
-	case S_PLAY_WALK:
-	case S_PLAY_SKID:
-	case S_PLAY_FLOAT:
+	else if (state == S_PLAY_WALK
+	|| state == S_PLAY_SKID
+	|| state == S_PLAY_FLOAT)
 		player->panim = PA_WALK;
-		break;
-	case S_PLAY_RUN:
-	case S_PLAY_FLOAT_RUN:
+	else if (state == S_PLAY_RUN
+	|| state == S_PLAY_FLOAT_RUN)
 		player->panim = PA_RUN;
-		break;
-	case S_PLAY_DASH:
+	else if (state == S_PLAY_DASH)
 		player->panim = PA_DASH;
-		break;
-	case S_PLAY_PAIN:
-	case S_PLAY_STUN:
+	else if (state == S_PLAY_PAIN
+	|| state == S_PLAY_STUN)
 		player->panim = PA_PAIN;
-		break;
-	case S_PLAY_ROLL:
-	//case S_PLAY_SPINDASH: -- everyone can ROLL thanks to zoom tubes...
-	case S_PLAY_NIGHTS_ATTACK:
+	else if (state == S_PLAY_ROLL
+	//|| state == S_PLAY_SPINDASH -- everyone can ROLL thanks to zoom tubes...
+	|| state == S_PLAY_NIGHTS_ATTACK)
 		player->panim = PA_ROLL;
-		break;
-	case S_PLAY_JUMP:
+	else if (state == S_PLAY_JUMP)
 		player->panim = PA_JUMP;
-		break;
-	case S_PLAY_SPRING:
+	else if (state == S_PLAY_SPRING)
 		player->panim = PA_SPRING;
-		break;
-	case S_PLAY_FALL:
-	case S_PLAY_NIGHTS_FLOAT:
+	else if (state == S_PLAY_FALL
+	|| state == S_PLAY_NIGHTS_FLOAT)
 		player->panim = PA_FALL;
-		break;
-	case S_PLAY_FLY:
-	case S_PLAY_FLY_TIRED:
-	case S_PLAY_SWIM:
-	case S_PLAY_GLIDE:
-	case S_PLAY_BOUNCE:
-	case S_PLAY_BOUNCE_LANDING:
-	case S_PLAY_TWINSPIN:
+	else if (state == S_PLAY_FLY
+	|| state == S_PLAY_FLY_TIRED
+	|| state == S_PLAY_SWIM
+	|| state == S_PLAY_GLIDE
+	|| state == S_PLAY_BOUNCE
+	|| state == S_PLAY_BOUNCE_LANDING
+	|| state == S_PLAY_TWINSPIN)
 		player->panim = PA_ABILITY;
-		break;
-	case S_PLAY_SPINDASH: // ...but the act of SPINDASHING is charability2 specific.
-	case S_PLAY_FIRE:
-	case S_PLAY_FIRE_FINISH:
-	case S_PLAY_MELEE:
-	case S_PLAY_MELEE_FINISH:
-	case S_PLAY_MELEE_LANDING:
+	else if (state == S_PLAY_SPINDASH // ...but the act of SPINDASHING is charability2 specific
+	|| state == S_PLAY_FIRE
+	|| state == S_PLAY_FIRE_FINISH
+	|| state == S_PLAY_MELEE
+	|| state == S_PLAY_MELEE_FINISH
+	|| state == S_PLAY_MELEE_LANDING)
 		player->panim = PA_ABILITY2;
-		break;
-	case S_PLAY_RIDE:
+	else if (state == S_PLAY_RIDE)
 		player->panim = PA_RIDE;
-		break;
-	default:
+	else
 		player->panim = PA_ETC;
-		break;
-	}
 
 	if (recursion++) // if recursion detected,
 		memset(seenstate = tempstate, 0, sizeof tempstate); // clear state table
@@ -2245,7 +2228,7 @@ boolean P_ZMovement(mobj_t *mo)
 		else if (!onground)
 			P_SlopeLaunch(mo);
 	}
-	
+
 	if (!mo->player && P_CheckDeathPitCollide(mo) && mo->health
 	&& !(mo->flags & MF_NOCLIPHEIGHT) && !(mo->flags2 & MF2_BOSSDEAD))
 	{
@@ -2938,7 +2921,7 @@ boolean P_SceneryZMovement(mobj_t *mo)
 		mo->eflags &= ~MFE_APPLYPMOMZ;
 	}
 	mo->z += mo->momz;
-	
+
 	if (!mo->player && P_CheckDeathPitCollide(mo) && mo->health
 	&& !(mo->flags & MF_NOCLIPHEIGHT) && !(mo->flags2 & MF2_BOSSDEAD))
 	{
@@ -7347,19 +7330,12 @@ static void P_RosySceneryThink(mobj_t *mobj)
 		targonground = (P_IsObjectOnGround(mobj->target) && (player->panim == PA_IDLE || player->panim == PA_WALK || player->panim == PA_RUN) && player->mo->z == mobj->z);
 		love = (player->skin == 0 || player->skin == 5);
 
-		switch (stat)
-		{
-		case S_ROSY_IDLE1:
-		case S_ROSY_IDLE2:
-		case S_ROSY_IDLE3:
-		case S_ROSY_IDLE4:
+		if (stat == S_ROSY_IDLE1
+		|| stat == S_ROSY_IDLE2
+		|| stat == S_ROSY_IDLE3
+		|| stat == S_ROSY_IDLE4)
 			dojump = true;
-			break;
-		case S_ROSY_JUMP:
-		case S_ROSY_PAIN:
-			// handled above
-			break;
-		case S_ROSY_WALK:
+		else if (stat == S_ROSY_WALK)
 		{
 			fixed_t x = mobj->x, y = mobj->y, z = mobj->z;
 			angle_t angletoplayer = R_PointToAngle2(x, y, mobj->target->x, mobj->target->y);
@@ -7423,8 +7399,8 @@ static void P_RosySceneryThink(mobj_t *mobj)
 			else
 				dojump = true;
 		}
-		break;
-		case S_ROSY_HUG:
+		else if (stat == S_ROSY_HUG)
+		{
 			if (targonground)
 			{
 				player->pflags |= PF_STASIS;
@@ -7446,8 +7422,9 @@ static void P_RosySceneryThink(mobj_t *mobj)
 				A_DoNPCPain(mobj);
 				mobj->cvmem -= TICRATE;
 			}
-			break;
-		case S_ROSY_STND:
+		}
+		else if (stat == S_ROSY_STND)
+		{
 			if ((pdist > (mobj->radius + mobj->target->radius + 3*(mobj->scale + mobj->target->scale))))
 				P_SetMobjState(mobj, (stat = S_ROSY_WALK));
 			else if (!targonground)
@@ -7465,10 +7442,6 @@ static void P_RosySceneryThink(mobj_t *mobj)
 					mobj->target->momy = mobj->momy;
 				}
 			}
-			break;
-		case S_ROSY_UNHAPPY:
-		default:
-			break;
 		}
 
 		if (stat == S_ROSY_HUG)
@@ -10730,7 +10703,7 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type, ...)
 
 	// Set shadowscale here, before spawn hook so that Lua can change it
 	mobj->shadowscale = P_DefaultMobjShadowScale(mobj);
-	
+
 	// A monitor can't respawn if we're not in multiplayer,
 	// or if we're in co-op and it's score or a 1up
 	if (mobj->flags & MF_MONITOR && (!(netgame || multiplayer)

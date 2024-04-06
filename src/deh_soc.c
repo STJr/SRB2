@@ -457,7 +457,7 @@ void readfreeslots(MYFILE *f)
 			}
 			else if (fastcmp(type, "S"))
 			{
-				for (i = 0; i < NUMSTATEFREESLOTS; i++)
+				for (i = 0; i < NUMSTATES; i++)
 					if (!FREE_STATES[i]) {
 						FREE_STATES[i] = Z_Malloc(strlen(word)+1, PU_STATIC, NULL);
 						strcpy(FREE_STATES[i],word);
@@ -466,7 +466,7 @@ void readfreeslots(MYFILE *f)
 			}
 			else if (fastcmp(type, "MT"))
 			{
-				for (i = 0; i < NUMMOBJFREESLOTS; i++)
+				for (i = 0; i < NUMMOBJTYPES; i++)
 					if (!FREE_MOBJS[i]) {
 						FREE_MOBJS[i] = Z_Malloc(strlen(word)+1, PU_STATIC, NULL);
 						strcpy(FREE_MOBJS[i],word);
@@ -1468,7 +1468,7 @@ void readlevelheader(MYFILE *f, INT32 num)
 
 					UINT8 n;
 					for (n = 0; n < MAXFLICKIES && FLICKYTYPES[n].type; n++)
-						tmpflickies[n] = FLICKYTYPES[n].type;
+						tmpflickies[n] = GetMobjTypeByName(FLICKYTYPES[n].type);
 					header->numFlickies = n;
 
 					if (header->numFlickies) // just in case...
@@ -4122,15 +4122,12 @@ mobjtype_t get_mobjtype(const char *word)
 		return atoi(word);
 	if (fastncmp("MT_",word,3))
 		word += 3; // take off the MT_
-	for (i = 0; i < NUMMOBJFREESLOTS; i++) {
+	for (i = 0; i < NUMMOBJTYPES; i++) {
 		if (!FREE_MOBJS[i])
 			break;
 		if (fastcmp(word, FREE_MOBJS[i]))
-			return MT_FIRSTFREESLOT+i;
-	}
-	for (i = 0; i < MT_FIRSTFREESLOT; i++)
-		if (fastcmp(word, MOBJTYPE_LIST[i]+3))
 			return i;
+	}
 	deh_warning("Couldn't find mobjtype named 'MT_%s'",word);
 	return MT_NULL;
 }
@@ -4142,15 +4139,12 @@ statenum_t get_state(const char *word)
 		return atoi(word);
 	if (fastncmp("S_",word,2))
 		word += 2; // take off the S_
-	for (i = 0; i < NUMSTATEFREESLOTS; i++) {
+	for (i = 0; i < NUMSTATES; i++) {
 		if (!FREE_STATES[i])
 			break;
 		if (fastcmp(word, FREE_STATES[i]))
-			return S_FIRSTFREESLOT+i;
-	}
-	for (i = 0; i < S_FIRSTFREESLOT; i++)
-		if (fastcmp(word, STATE_LIST[i]+2))
 			return i;
+	}
 	deh_warning("Couldn't find state named 'S_%s'",word);
 	return S_NULL;
 }

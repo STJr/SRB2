@@ -84,31 +84,31 @@ static inline int lib_freeslot(lua_State *L)
 		else if (fastcmp(type, "S"))
 		{
 			statenum_t i;
-			for (i = 0; i < NUMSTATEFREESLOTS; i++)
+			for (i = 0; i < NUMSTATES; i++)
 				if (!FREE_STATES[i]) {
 					CONS_Printf("State S_%s allocated.\n",word);
 					FREE_STATES[i] = Z_Malloc(strlen(word)+1, PU_STATIC, NULL);
 					strcpy(FREE_STATES[i],word);
-					lua_pushinteger(L, S_FIRSTFREESLOT + i);
+					lua_pushinteger(L, i);
 					r++;
 					break;
 				}
-			if (i == NUMSTATEFREESLOTS)
+			if (i == NUMSTATES)
 				CONS_Alert(CONS_WARNING, "Ran out of free State slots!\n");
 		}
 		else if (fastcmp(type, "MT"))
 		{
 			mobjtype_t i;
-			for (i = 0; i < NUMMOBJFREESLOTS; i++)
+			for (i = 0; i < NUMMOBJTYPES; i++)
 				if (!FREE_MOBJS[i]) {
 					CONS_Printf("MobjType MT_%s allocated.\n",word);
 					FREE_MOBJS[i] = Z_Malloc(strlen(word)+1, PU_STATIC, NULL);
 					strcpy(FREE_MOBJS[i],word);
-					lua_pushinteger(L, MT_FIRSTFREESLOT + i);
+					lua_pushinteger(L, i);
 					r++;
 					break;
 				}
-			if (i == NUMMOBJFREESLOTS)
+			if (i == NUMMOBJTYPES)
 				CONS_Alert(CONS_WARNING, "Ran out of free MobjType slots!\n");
 		}
 		else if (fastcmp(type, "SKINCOLOR"))
@@ -416,36 +416,26 @@ static int ScanConstants(lua_State *L, boolean mathlib, const char *word)
 	}
 	else if (fastncmp("S_",word,2)) {
 		p = word+2;
-		for (i = 0; i < NUMSTATEFREESLOTS; i++) {
+		for (i = 0; i < NUMSTATES; i++) {
 			if (!FREE_STATES[i])
 				break;
 			if (fastcmp(p, FREE_STATES[i])) {
-				CacheAndPushConstant(L, word, S_FIRSTFREESLOT+i);
-				return 1;
-			}
-		}
-		for (i = 0; i < S_FIRSTFREESLOT; i++)
-			if (fastcmp(p, STATE_LIST[i]+2)) {
 				CacheAndPushConstant(L, word, i);
 				return 1;
 			}
+		}
 		return luaL_error(L, "state '%s' does not exist.\n", word);
 	}
 	else if (fastncmp("MT_",word,3)) {
 		p = word+3;
-		for (i = 0; i < NUMMOBJFREESLOTS; i++) {
+		for (i = 0; i < NUMMOBJTYPES; i++) {
 			if (!FREE_MOBJS[i])
 				break;
 			if (fastcmp(p, FREE_MOBJS[i])) {
-				CacheAndPushConstant(L, word, MT_FIRSTFREESLOT+i);
-				return 1;
-			}
-		}
-		for (i = 0; i < MT_FIRSTFREESLOT; i++)
-			if (fastcmp(p, MOBJTYPE_LIST[i]+3)) {
 				CacheAndPushConstant(L, word, i);
 				return 1;
 			}
+		}
 		return luaL_error(L, "mobjtype '%s' does not exist.\n", word);
 	}
 	else if (fastncmp("SPR_",word,4)) {

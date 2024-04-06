@@ -65,6 +65,7 @@
 #include "i_video.h" // rendermode
 #include "md5.h"
 #include "lua_script.h"
+#include "deh_tables.h"
 #ifdef SCANTHINGS
 #include "p_setup.h" // P_ScanThings
 #endif
@@ -205,6 +206,12 @@ FILE *W_OpenWadFile(const char **filename, boolean useerrors)
 static void W_LoadDehackedLumpsPK3(UINT16 wadnum, boolean mainfile)
 {
 	UINT16 posStart, posEnd;
+
+	if (!deh_loaded)
+	{
+		initfreeslots();
+		deh_loaded = true;
+	}
 
 	posStart = W_CheckNumForFullNamePK3("Init.lua", wadnum, 0);
 	if (posStart != INT16_MAX)
@@ -1011,6 +1018,7 @@ UINT16 W_InitFile(const char *filename, boolean mainfile, boolean startup)
 	}
 
 	W_InvalidateLumpnumCache();
+	CacheInfoConstants();
 	return wadfile->numlumps;
 }
 
@@ -1171,6 +1179,8 @@ UINT16 W_InitFolder(const char *path, boolean mainfile, boolean startup)
 	W_LoadTrnslateLumps(numwadfiles - 1);
 	W_LoadDehackedLumpsPK3(numwadfiles - 1, mainfile);
 	W_InvalidateLumpnumCache();
+
+	CacheInfoConstants();
 
 	return wadfile->numlumps;
 }

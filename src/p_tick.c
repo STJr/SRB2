@@ -33,7 +33,7 @@
 #include "m_cheat.h"
 
 #ifdef PARANOIA
-#include "deh_tables.h" // MOBJTYPE_LIST
+#include "deh_tables.h"
 #endif
 
 tic_t leveltime;
@@ -237,12 +237,10 @@ static const char *MobjTypeName(const mobj_t *mobj)
 	else
 		return "<Not a mobj>";
 
-	if (type < 0 || type >= NUMMOBJTYPES || (type >= MT_FIRSTFREESLOT && !FREE_MOBJS[type - MT_FIRSTFREESLOT]))
+	if (type < 0 || type >= NUMMOBJTYPES || !FREE_MOBJS[type])
 		return "<Invalid mobj type>";
-	else if (type >= MT_FIRSTFREESLOT)
-		return FREE_MOBJS[type - MT_FIRSTFREESLOT]; // This doesn't include "MT_"...
 	else
-		return MOBJTYPE_LIST[type];
+		return FREE_MOBJS[type]; // This doesn't include "MT_"...
 }
 
 static const char *MobjThinkerName(const mobj_t *mobj)

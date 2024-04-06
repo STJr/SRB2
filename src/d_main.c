@@ -1164,6 +1164,8 @@ static void IdentifyVersion(void)
 	snprintf(configfile, sizeof configfile, "%s" PATHSEP CONFIGFILENAME, srb2waddir);
 	configfile[sizeof configfile - 1] = '\0';
 
+	D_AddFile(&startupwadfiles, va(pandf,srb2waddir, "info.pk3"));
+
 	// Load the IWAD
 	if (srb2wad != NULL && FIL_ReadFileOK(srb2wad))
 		D_AddFile(&startupwadfiles, srb2wad);
@@ -1444,11 +1446,11 @@ void D_SRB2Main(void)
 #ifndef DEVELOP // md5s last updated 22/02/20 (ddmmyy)
 
 	// Check MD5s of autoloaded files
-	W_VerifyFileMD5(0, ASSET_HASH_SRB2_PK3); // srb2.pk3
-	W_VerifyFileMD5(1, ASSET_HASH_ZONES_PK3); // zones.pk3
-	W_VerifyFileMD5(2, ASSET_HASH_PLAYER_DTA); // player.dta
+	W_VerifyFileMD5(1, ASSET_HASH_SRB2_PK3); // srb2.pk3
+	W_VerifyFileMD5(2, ASSET_HASH_ZONES_PK3); // zones.pk3
+	W_VerifyFileMD5(3, ASSET_HASH_PLAYER_DTA); // player.dta
 #ifdef USE_PATCH_DTA
-	W_VerifyFileMD5(3, ASSET_HASH_PATCH_PK3); // patch.pk3
+	W_VerifyFileMD5(4, ASSET_HASH_PATCH_PK3); // patch.pk3
 #endif
 	// don't check music.dta because people like to modify it, and it doesn't matter if they do
 	// ...except it does if they slip maps in there, and that's what W_VerifyNMUSlumps is for.
