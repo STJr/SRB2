@@ -405,7 +405,6 @@ void readfreeslots(MYFILE *f)
 {
 	char *s = Z_Malloc(MAXLINELEN, PU_STATIC, NULL);
 	char *word,*type;
-	char *tmp;
 	int i;
 
 	do
@@ -415,10 +414,13 @@ void readfreeslots(MYFILE *f)
 			if (s[0] == '\n')
 				break;
 
-			tmp = strchr(s, '#');
-			if (tmp)
-				*tmp = '\0';
-			if (s == tmp)
+			char *hashtag = strchr(s, '#');
+			char *space = strchr(s, ' ');
+			if (hashtag)
+				*hashtag = '\0';
+			if (space)
+				*space = '\0';
+			if (s == hashtag || s == space)
 				continue; // Skip comment lines, but don't break.
 
 			type = strtok(s, "_");
