@@ -468,11 +468,10 @@ static char* HWR_PrependVersionDirective(const char* source, UINT32 version_inde
 	const UINT32 source_len = strlen(source);
 
 	char* result = Z_Malloc(source_len + version_len + 1, PU_STATIC, NULL);
-
 	strcpy(result, version_directives[version_index]);
-    strcpy(result + version_len, source);
+	strcpy(result + version_len, source);
 
-    return result;
+	return result;
 }
 
 static void HWR_ReplaceVersionInplace(char* shader, UINT32 version_index)
@@ -514,6 +513,7 @@ static void HWR_TryToCompileShaderWithImplicitVersion(INT32 shader_index, INT32 
 
 		if(!vert_shader_version_exists) {
 			// first time reallocation would have to be made
+
 			if(i == 0) {
 				void* old = (void*)gl_shaders[shader_index].vertex;
 				vert_shader = gl_shaders[shader_index].vertex = HWR_PrependVersionDirective(vert_shader, i);
