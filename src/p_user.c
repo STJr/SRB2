@@ -8812,6 +8812,8 @@ void P_MovePlayer(player_t *player)
 			player->mo->height = P_GetPlayerSpinHeight(player);
 			atspinheight = true;
 		}
+		else if (player->powers[pw_carry] == CR_PLAYER || player->powers[pw_carry] == CR_PTERABYTE) // You're slightly shorter while being carried
+			player->mo->height = FixedDiv(P_GetPlayerHeight(player), FixedDiv(14*FRACUNIT,10*FRACUNIT));
 		else
 			player->mo->height = P_GetPlayerHeight(player);
 
@@ -12829,9 +12831,9 @@ void P_PlayerAfterThink(player_t *player)
 				else
 				{
 					if (tails->player)
-						P_TryMove(player->mo, tails->x + P_ReturnThrustX(tails, tails->player->drawangle, 4*FRACUNIT), tails->y + P_ReturnThrustY(tails, tails->player->drawangle, 4*FRACUNIT), true);
+						P_TryMove(player->mo, tails->x + P_ReturnThrustX(tails, tails->player->drawangle, 4*tails->scale), tails->y + P_ReturnThrustY(tails, tails->player->drawangle, 4*tails->scale), true);
 					else
-						P_TryMove(player->mo, tails->x + P_ReturnThrustX(tails, tails->angle, 4*FRACUNIT), tails->y + P_ReturnThrustY(tails, tails->angle, 4*FRACUNIT), true);
+						P_TryMove(player->mo, tails->x + P_ReturnThrustX(tails, tails->angle, 4*tails->scale), tails->y + P_ReturnThrustY(tails, tails->angle, 4*tails->scale), true);
 					player->mo->momx = tails->momx;
 					player->mo->momy = tails->momy;
 					player->mo->momz = tails->momz;
@@ -12845,7 +12847,7 @@ void P_PlayerAfterThink(player_t *player)
 						P_SetPlayerAngle(player, player->mo->angle);
 				}
 
-				if (P_AproxDistance(player->mo->x - tails->x, player->mo->y - tails->y) > player->mo->radius)
+				if (P_AproxDistance(player->mo->x - tails->x, player->mo->y - tails->y) > tails->radius)
 					player->powers[pw_carry] = CR_NONE;
 
 				if (player->powers[pw_carry] == CR_PLAYER)
@@ -13066,7 +13068,7 @@ void P_PlayerAfterThink(player_t *player)
 				player->mo->momy = ptera->momy;
 				player->mo->momz = ptera->momz;
 
-				if (P_AproxDistance(player->mo->x - ptera->x - ptera->watertop, player->mo->y - ptera->y - ptera->waterbottom) > player->mo->radius)
+				if (P_AproxDistance(player->mo->x - ptera->x - ptera->watertop, player->mo->y - ptera->y - ptera->waterbottom) > ptera->radius)
 					goto dropoff;
 
 				ptera->watertop >>= 1;
