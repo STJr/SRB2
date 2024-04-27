@@ -405,7 +405,6 @@ void readfreeslots(MYFILE *f)
 {
 	char *s = Z_Malloc(MAXLINELEN, PU_STATIC, NULL);
 	char *word,*type;
-	char *tmp;
 	int i;
 
 	do
@@ -415,10 +414,13 @@ void readfreeslots(MYFILE *f)
 			if (s[0] == '\n')
 				break;
 
-			tmp = strchr(s, '#');
-			if (tmp)
-				*tmp = '\0';
-			if (s == tmp)
+			char *hashtag = strchr(s, '#');
+			char *space = strchr(s, ' ');
+			if (hashtag)
+				*hashtag = '\0';
+			if (space)
+				*space = '\0';
+			if (s == hashtag || s == space)
 				continue; // Skip comment lines, but don't break.
 
 			type = strtok(s, "_");
@@ -440,18 +442,16 @@ void readfreeslots(MYFILE *f)
 				S_AddSoundFx(word, false, 0, false);
 			else if (fastcmp(type, "SPR"))
 			{
+				if (strlen(word) > MAXSPRITENAME)
+					I_Error("Sprite name is longer than %d characters\n", MAXSPRITENAME);
+
 				for (i = SPR_FIRSTFREESLOT; i <= SPR_LASTFREESLOT; i++)
 				{
-					if (used_spr[(i-SPR_FIRSTFREESLOT)/8] & (1<<(i%8)))
-					{
-						if (!sprnames[i][4] && memcmp(sprnames[i],word,4)==0)
-							sprnames[i][4] = (char)f->wad;
+					if (in_bit_array(used_spr, i - SPR_FIRSTFREESLOT))
 						continue; // Already allocated, next.
-					}
 					// Found a free slot!
-					strncpy(sprnames[i],word,4);
-					//sprnames[i][4] = 0;
-					used_spr[(i-SPR_FIRSTFREESLOT)/8] |= 1<<(i%8); // Okay, this sprite slot has been named now.
+					strcpy(sprnames[i], word);
+					set_bit_array(used_spr, i - SPR_FIRSTFREESLOT); // Okay, this sprite slot has been named now.
 					// Lua needs to update the value in _G if it exists
 					LUA_UpdateSprName(word, i);
 					break;
@@ -4182,9 +4182,9 @@ spritenum_t get_sprite(const char *word)
 		return atoi(word);
 	if (fastncmp("SPR_",word,4))
 		word += 4; // take off the SPR_
-	for (i = 0; i < NUMSPRITES; i++)
-		if (!sprnames[i][4] && memcmp(word,sprnames[i],4)==0)
-			return i;
+	i = R_GetSpriteNumByName(word);
+	if (i != NUMSPRITES)
+		return i;
 	deh_warning("Couldn't find sprite named 'SPR_%s'",word);
 	return SPR_NULL;
 }

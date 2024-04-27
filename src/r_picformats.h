@@ -100,7 +100,7 @@ typedef struct
 
 typedef struct
 {
-	spriteframepivot_t pivot[64];
+	spriteframepivot_t pivot[MAXFRAMENUM];
 	boolean available;
 } spriteinfo_t;
 
