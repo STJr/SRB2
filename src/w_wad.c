@@ -1349,6 +1349,47 @@ UINT16 W_CheckNumForFolderEndPK3(const char *name, UINT16 wad, UINT16 startlump)
 	return i;
 }
 
+char *W_GetLumpFolderPathPK3(UINT16 wad, UINT16 lump)
+{
+	const char *fullname = wadfiles[wad]->lumpinfo[lump].fullname;
+
+	const char *slash = strrchr(fullname, '/');
+	INT32 pathlen = slash ? slash - fullname : 0;
+
+	char *path = Z_Calloc(pathlen + 1, PU_STATIC, NULL);
+	strncpy(path, fullname, pathlen);
+
+	return path;
+}
+
+char *W_GetLumpFolderNamePK3(UINT16 wad, UINT16 lump)
+{
+	const char *fullname = wadfiles[wad]->lumpinfo[lump].fullname;
+	size_t start, end;
+
+	INT32 i = strlen(fullname);
+
+	i--;
+	while (i >= 0 && fullname[i] != '/')
+		i--;
+	if (i < 0)
+		return NULL;
+	end = i;
+
+	i--;
+	while (i >= 0 && fullname[i] != '/')
+		i--;
+	if (i < 0)
+		return NULL;
+	start = i + 1;
+
+	size_t namelen = end - start;
+	char *foldername = Z_Calloc(namelen + 1, PU_STATIC, NULL);
+	strncpy(foldername, fullname + start, namelen);
+
+	return foldername;
+}
+
 void W_GetFolderLumpsPwad(const char *name, UINT16 wad, UINT32 **list, UINT16 *list_capacity, UINT16 *numlumps)
 {
 	size_t name_length = strlen(name);
