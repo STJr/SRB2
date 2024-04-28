@@ -19,6 +19,10 @@
 #include "r_textures.h"
 #include "m_perfstats.h" // ps_metric_t
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 //
 // POV related.
 //
@@ -158,4 +162,9 @@ void R_RenderPlayerView(player_t *player);
 
 // add commands related to engine, at game startup
 void R_RegisterEngineStuff(void);
+
+#ifdef __cplusplus
+} // extern "C"
+#endif
+
 #endif

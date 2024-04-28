@@ -111,6 +111,8 @@ Environment::Environment()
 	// 181 to 189: Implemented by ACSVM
 
 	// 203 to 217: Implemented by ACSVM
+	addCodeDataACS0(220, {"",        2, addCallFunc(CallFunc_Sin)});
+	addCodeDataACS0(221, {"",        2, addCallFunc(CallFunc_Cos)});
 
 	// 225 to 243: Implemented by ACSVM
 
@@ -178,8 +180,11 @@ Environment::Environment()
 	addFuncDataACS0( 321, addCallFunc(CallFunc_SetObjectDye));
 	addFuncDataACS0( 322, addCallFunc(CallFunc_Teleport));
 	addFuncDataACS0( 323, addCallFunc(CallFunc_SetViewpoint));
-	addFuncDataACS0( 324, addCallFunc(CallFunc_TrackObjectAngle));
-	addFuncDataACS0( 325, addCallFunc(CallFunc_StopTrackingObjectAngle));
+	// addFuncDataACS0( 324, addCallFunc(CallFunc_SpawnObject));
+	addFuncDataACS0( 325, addCallFunc(CallFunc_TrackObjectAngle));
+	addFuncDataACS0( 326, addCallFunc(CallFunc_StopTrackingObjectAngle));
+	// addFuncDataACS0( 327, addCallFunc(CallFunc_GiveShield));
+	// addFuncDataACS0( 328, addCallFunc(CallFunc_GivePowerUp));
 
 	addFuncDataACS0( 500, addCallFunc(CallFunc_CameraWait));
 	addFuncDataACS0( 503, addCallFunc(CallFunc_SetLineRenderStyle));
@@ -190,6 +195,19 @@ Environment::Environment()
 	addFuncDataACS0( 509, addCallFunc(CallFunc_MusicStopAll));
 	addFuncDataACS0( 510, addCallFunc(CallFunc_MusicRestore));
 	addFuncDataACS0( 512, addCallFunc(CallFunc_MusicDim));
+
+	// addFuncDataACS0( 600, addCallFunc(CallFunc_StartConversation));
+
+	addFuncDataACS0( 700, addCallFunc(CallFunc_Tan));
+	addFuncDataACS0( 701, addCallFunc(CallFunc_Arcsin));
+	addFuncDataACS0( 702, addCallFunc(CallFunc_Arccos));
+	addFuncDataACS0( 703, addCallFunc(CallFunc_Hypot));
+	addFuncDataACS0( 704, addCallFunc(CallFunc_Sqrt));
+	addFuncDataACS0( 705, addCallFunc(CallFunc_Floor));
+	addFuncDataACS0( 706, addCallFunc(CallFunc_Ceil));
+	addFuncDataACS0( 707, addCallFunc(CallFunc_Round));
+	addFuncDataACS0( 710, addCallFunc(CallFunc_InvAngle));
+	addFuncDataACS0( 711, addCallFunc(CallFunc_OppositeColor));
 }
 
 ACSVM::Thread *Environment::allocThread()

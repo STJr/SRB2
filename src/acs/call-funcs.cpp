@@ -33,6 +33,7 @@
 #include "../d_player.h"
 #include "../r_defs.h"
 #include "../r_state.h"
+#include "../r_main.h"
 #include "../p_polyobj.h"
 #include "../taglist.h"
 #include "../p_local.h"
@@ -43,6 +44,7 @@
 #include "../hu_stuff.h"
 #include "../s_sound.h"
 #include "../r_textures.h"
+#include "../m_fixed.h"
 #include "../m_cond.h"
 #include "../r_skins.h"
 #include "../z_zone.h"
@@ -3554,6 +3556,200 @@ bool CallFunc_SetThingProperty(ACSVM::Thread *thread, const ACSVM::Word *argV, A
 	}
 
 	thread->dataStk.push(0);
+
+	return false;
+}
+
+/*--------------------------------------------------
+	static angle_t ACS_GetAngle(int angle)
+
+		Converts a fixed-point angle to a Doom angle.
+--------------------------------------------------*/
+static angle_t ACS_GetAngle(int angle)
+{
+	return FixedAngle(angle * 360);
+}
+
+/*--------------------------------------------------
+	static void ACS_PushAngle(ACSVM::Thread *thread, angle_t angle)
+
+		Pushes an angle to the stack (really a fixed-point number.)
+--------------------------------------------------*/
+static void ACS_PushAngle(ACSVM::Thread *thread, angle_t angle)
+{
+	thread->dataStk.push(FixedDiv(AngleFixed(angle), 360*FRACUNIT));
+}
+
+/*--------------------------------------------------
+	bool CallFunc_Sin(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::Word argC)
+
+		Returns the sine of a fixed-point number.
+--------------------------------------------------*/
+bool CallFunc_Sin(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::Word argC)
+{
+	(void)argC;
+	ACS_PushAngle(thread, FINESINE((ACS_GetAngle(argV[0])>>ANGLETOFINESHIFT) & FINEMASK));
+	return false;
+}
+
+/*--------------------------------------------------
+	bool CallFunc_Cos(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::Word argC)
+
+		Returns the cosine of a fixed-point number.
+--------------------------------------------------*/
+bool CallFunc_Cos(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::Word argC)
+{
+	(void)argC;
+	ACS_PushAngle(thread, FINECOSINE((ACS_GetAngle(argV[0])>>ANGLETOFINESHIFT) & FINEMASK));
+	return false;
+}
+
+/*--------------------------------------------------
+	bool CallFunc_Tan(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::Word argC)
+
+		Returns the tangent of a fixed-point number.
+--------------------------------------------------*/
+bool CallFunc_Tan(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::Word argC)
+{
+	(void)argC;
+	ACS_PushAngle(thread, FINETANGENT(((ACS_GetAngle(argV[0])+ANGLE_90)>>ANGLETOFINESHIFT) & 4095));
+	return false;
+}
+
+/*--------------------------------------------------
+	bool CallFunc_Asin(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::Word argC)
+
+		Returns arcsin(x), where x is a fixed-point number.
+--------------------------------------------------*/
+bool CallFunc_Arcsin(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::Word argC)
+{
+	(void)argC;
+	ACS_PushAngle(thread, -FixedAcos(argV[0]) + ANGLE_90);
+	return false;
+}
+
+/*--------------------------------------------------
+	bool CallFunc_Acos(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::Word argC)
+
+		Returns arccos(x), where x is a fixed-point number.
+--------------------------------------------------*/
+bool CallFunc_Arccos(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::Word argC)
+{
+	(void)argC;
+	ACS_PushAngle(thread, FixedAcos(argV[0]));
+	return false;
+}
+
+/*--------------------------------------------------
+	bool CallFunc_Hypot(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::Word argC)
+
+		Returns hypot(x, y), where x and y are fixed-point numbers.
+--------------------------------------------------*/
+bool CallFunc_Hypot(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::Word argC)
+{
+	(void)argC;
+	thread->dataStk.push(R_PointToDist2(0, 0, argV[0], argV[1]));
+	return false;
+}
+
+/*--------------------------------------------------
+	bool CallFunc_Sqrt(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::Word argC)
+
+		Returns the square root of a fixed-point number.
+--------------------------------------------------*/
+bool CallFunc_Sqrt(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::Word argC)
+{
+	(void)argC;
+
+	int x = argV[0];
+
+	fixed_t result = 0;
+
+	if (x < 0)
+	{
+		CONS_Alert(CONS_WARNING, "Sqrt: square root domain error\n");
+	}
+	else
+	{
+		result = FixedSqrt(x);
+	}
+
+	thread->dataStk.push(result);
+
+	return false;
+}
+
+/*--------------------------------------------------
+	bool CallFunc_Floor(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::Word argC)
+
+		Returns floor(x), where x is a fixed-point number.
+--------------------------------------------------*/
+bool CallFunc_Floor(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::Word argC)
+{
+	(void)argC;
+	thread->dataStk.push(FixedFloor(argV[0]));
+	return false;
+}
+
+/*--------------------------------------------------
+	bool CallFunc_Ceil(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::Word argC)
+
+		Returns ceil(x), where x is a fixed-point number.
+--------------------------------------------------*/
+bool CallFunc_Ceil(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::Word argC)
+{
+	(void)argC;
+	thread->dataStk.push(FixedCeil(argV[0]));
+	return false;
+}
+
+/*--------------------------------------------------
+	bool CallFunc_Round(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::Word argC)
+
+		Returns round(x), where x is a fixed-point number.
+--------------------------------------------------*/
+bool CallFunc_Round(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::Word argC)
+{
+	(void)argC;
+	thread->dataStk.push(FixedRound(argV[0]));
+	return false;
+}
+
+/*--------------------------------------------------
+	bool CallFunc_InvAngle(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::Word argC)
+
+		Returns the inverse of an angle.
+--------------------------------------------------*/
+bool CallFunc_InvAngle(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::Word argC)
+{
+	(void)argC;
+	ACS_PushAngle(thread, InvAngle(ACS_GetAngle(argV[0])));
+	return false;
+}
+
+/*--------------------------------------------------
+	bool CallFunc_OppositeColor(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::Word argC)
+
+		Returns the opposite of a color.
+--------------------------------------------------*/
+bool CallFunc_OppositeColor(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::Word argC)
+{
+	(void)argC;
+
+	int color = argV[0];
+
+	int result = 0;
+
+	if (color < 1 || color >= numskincolors)
+	{
+		CONS_Alert(CONS_WARNING, "OppositeColor: out of range\n");
+	}
+	else
+	{
+		result = skincolors[color].invcolor;
+	}
+
+	thread->dataStk.push(result);
 
 	return false;
 }

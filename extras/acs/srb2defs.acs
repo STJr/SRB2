@@ -29,7 +29,7 @@
 #define GAME_HIDEANDSEEK        6
 #define GAME_CTF                7
 
-// Actor properties you can get/set -----------------------------------------
+// Actor properties you can get/set
 
 #define APROP_X             0
 #define APROP_Y             1
@@ -146,7 +146,7 @@
 #define SECPROP_Arg0Str              25
 #define SECPROP_Arg1Str              26
 
-// Render Styles ------------------------------------------------------------
+// Render styles
 
 #define STYLE_Copy            0   // Just copy the image to the screen
 #define STYLE_Translucent     1   // Draw translucent
@@ -183,19 +183,20 @@
 #define SECSPAC_FloorMissile           1024      // when a projectile touches the floor of this sector
 #define SECSPAC_CeilingMissile         2048      // when a projectile touches the ceiling of this sector
 
-// Teams -----------------------------------------------------------
+// Teams
 
 #define NO_TEAM                 0
 #define TEAM_RED                1
 #define TEAM_BLUE               2
 
 // Bot types
+
 #define BOT_NONE    0
 #define BOT_2PAI    1
 #define BOT_2PHUMAN 2
 #define BOT_MPAI    3
 
-// Colors ----------------------------------------------------------
+// Colors
 
 #define SKINCOLOR_NONE 0
 #define SKINCOLOR_WHITE 1

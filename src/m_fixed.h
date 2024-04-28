@@ -20,6 +20,10 @@
 #include <stdlib.h>
 #endif
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /*!
   \brief bits of the fraction
 */
@@ -356,5 +360,9 @@ const vector4_t *FM_MultMatrixVec4(const matrix_t *matrix, const vector4_t *vec,
 void FM_MultMatrix(matrix_t *dest, const matrix_t *multme);
 void FM_Translate(matrix_t *dest, fixed_t x, fixed_t y, fixed_t z);
 void FM_Scale(matrix_t *dest, fixed_t x, fixed_t y, fixed_t z);
+
+#ifdef __cplusplus
+} // extern "C"
+#endif
 
 #endif //m_fixed.h
