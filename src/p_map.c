@@ -389,7 +389,6 @@ boolean P_DoSpring(mobj_t *spring, mobj_t *object)
 	{
 		INT32 pflags;
 		UINT8 secondjump;
-		boolean washoming;
 
 		if (spring->flags & MF_ENEMY) // Spring shells
 			P_SetTarget(&spring->target, object);
@@ -421,7 +420,7 @@ boolean P_DoSpring(mobj_t *spring, mobj_t *object)
 		{
 			boolean wasSpindashing = object->player->dashspeed > 0 && (object->player->charability2 == CA2_SPINDASH);
 
-			pflags = object->player->pflags & (PF_STARTJUMP | PF_JUMPED | PF_NOJUMPDAMAGE | PF_SPINNING | PF_THOKKED | PF_BOUNCING); // I still need these.
+			pflags = object->player->pflags & (PF_STARTJUMP | PF_JUMPED | PF_NOJUMPDAMAGE | PF_SPINNING | PF_BOUNCING); // I still need these.
 
 			if (wasSpindashing) // Ensure we're in the rolling state, and not spindash.
 				P_SetMobjState(object, S_PLAY_ROLL);
@@ -433,7 +432,6 @@ boolean P_DoSpring(mobj_t *spring, mobj_t *object)
 			}
 		}
 		secondjump = object->player->secondjump;
-		washoming = object->player->homing;
 		P_ResetPlayer(object->player);
 
 		if (spring->info->painchance == 1) // For all those ancient, SOC'd abilities.
@@ -445,8 +443,6 @@ boolean P_DoSpring(mobj_t *spring, mobj_t *object)
 		{
 			object->player->pflags |= (pflags &~ PF_STARTJUMP);
 			object->player->secondjump = secondjump;
-			if (washoming)
-				object->player->pflags &= ~PF_THOKKED;
 		}
 		else if (!vertispeed)
 		{
