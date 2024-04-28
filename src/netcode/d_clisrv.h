@@ -129,7 +129,8 @@ tic_t GetLag(INT32 node);
 
 void D_MD5PasswordPass(const UINT8 *buffer, size_t len, const char *salt, void *dest);
 
-extern UINT8 (*adminpassmd5)[16];
+extern char *reqpass;
+extern char **adminpass;
 extern UINT32 adminpasscount;
 
 extern boolean hu_stopped;

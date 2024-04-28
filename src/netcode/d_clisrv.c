@@ -90,8 +90,11 @@ INT16 consistancy[BACKUPTICS];
 // true when a player is connecting or disconnecting so that the gameplay has stopped in its tracks
 boolean hu_stopped = false;
 
-UINT8 (*adminpassmd5)[16];
+char *reqpass;
+char **adminpass;
 UINT32 adminpasscount = 0;
+char adminsalt[MAXPLAYERS][9];
+I_StaticAssert(sizeof(netbuffer->u.salt) == sizeof(adminsalt[0]));
 
 tic_t neededtic;
 SINT8 servernode = 0; // the number of the server node
@@ -865,22 +868,65 @@ static void PT_ServerShutdown(SINT8 node)
 	M_StartMessage(M_GetText("Server has shutdown\n\nPress Esc\n"), NULL, MM_NOTHING);
 }
 
-static void PT_Login(SINT8 node, INT32 netconsole)
+static void PT_Login(SINT8 node)
 {
-	(void)node;
-
 	if (client)
 		return;
 
 #ifndef NOMD5
+	// I_GetRandomBytes should get it's data from a CSPRNG, so it's safe to use it here.
+	I_GetRandomBytes(adminsalt[node], sizeof(adminsalt[node]));
+	adminsalt[node][8] = '\0'; // convenience
+	netbuffer->packettype = PT_LOGINCHALLENGE;
+	memcpy(netbuffer->u.salt, adminsalt[node], sizeof(adminsalt[node]));
+	HSendPacket(node, true, 0, sizeof(adminsalt[node]));
+#else
+	(void)node;
+#endif
+}
+
+static void PT_LoginChallenge(SINT8 node)
+{
+#ifndef NOMD5
+	if (node != servernode)
+		return;
+
+	if ((size_t)doomcom->datalength < sizeof(netbuffer->u.salt))/* ignore partial sends */
+		return;
+
+	if (reqpass == NULL)
+		return; // got PT_LOGINCHALLENGE but we didn't request a login
+
+	D_MD5PasswordPass((const UINT8 *)reqpass, strlen(reqpass), netbuffer->u.salt, &netbuffer->u.md5sum);
+	Z_Free(reqpass);
+	reqpass = NULL;
+
+	netbuffer->packettype = PT_LOGINAUTH;
+	HSendPacket(servernode, true, 0, 16);
+#else
+	(void)node;
+#endif
+}
+
+static void PT_LoginAuth(SINT8 node, INT32 netconsole)
+{
+#ifndef NOMD5
 	UINT8 finalmd5[16];/* Well, it's the cool thing to do? */
 	UINT32 i;
+	if (client)
+		return;
 
 	if (doomcom->datalength < 16)/* ignore partial sends */
 		return;
 
+	if (adminsalt[node][0] == 0)
+	{
+		CONS_Printf(M_GetText("Password from %s failed (no login request).\n"), player_names[netconsole]);
+		return;
+	}
 	if (adminpasscount == 0)
 	{
+		adminsalt[node][0] = 0;
 		CONS_Printf(M_GetText("Password from %s failed (no password set).\n"), player_names[netconsole]);
 		return;
 	}
@@ -888,18 +934,21 @@ static void PT_Login(SINT8 node, INT32 netconsole)
 	for (i = 0; i < adminpasscount; i++)
 	{
 		// Do the final pass to compare with the sent md5
-		D_MD5PasswordPass(adminpassmd5[i], 16, va("PNUM%02d", netconsole), &finalmd5);
+		D_MD5PasswordPass((const UINT8 *)adminpass[i], strlen(adminpass[i]), adminsalt[node], finalmd5);
 
 		if (!memcmp(netbuffer->u.md5sum, finalmd5, 16))
 		{
+			adminsalt[node][0] = 0;
 			CONS_Printf(M_GetText("%s passed authentication.\n"), player_names[netconsole]);
 			COM_BufInsertText(va("promote %d\n", netconsole)); // do this immediately
 			return;
 		}
 	}
 
+	adminsalt[node][0] = 0;
 	CONS_Printf(M_GetText("Password from %s failed.\n"), player_names[netconsole]);
 #else
+	(void)node;
 	(void)netconsole;
 #endif
 }
@@ -1207,7 +1256,8 @@ static void HandlePacketFromPlayer(SINT8 node)
 		case PT_BASICKEEPALIVE     : PT_BasicKeepAlive     (node, netconsole); break;
 		case PT_TEXTCMD            : PT_TextCmd            (node, netconsole); break;
 		case PT_TEXTCMD2           : PT_TextCmd            (node, netconsole); break;
-		case PT_LOGIN              : PT_Login              (node, netconsole); break;
+		case PT_LOGIN              : PT_Login              (node            ); break;
+		case PT_LOGINAUTH          : PT_LoginAuth          (node, netconsole); break;
 		case PT_CLIENTQUIT         : PT_ClientQuit         (node, netconsole); break;
 		case PT_CANRECEIVEGAMESTATE: PT_CanReceiveGamestate(node            ); break;
 		case PT_ASKLUAFILE         : PT_AskLuaFile         (node            ); break;
@@ -1221,6 +1271,7 @@ static void HandlePacketFromPlayer(SINT8 node)
 		case PT_FILEFRAGMENT       : PT_FileFragment       (node, netconsole); break;
 		case PT_FILEACK            : PT_FileAck            (node            ); break;
 		case PT_FILERECEIVED       : PT_FileReceived       (node            ); break;
+		case PT_LOGINCHALLENGE     : PT_LoginChallenge     (node            ); break;
 		case PT_WILLRESENDGAMESTATE: PT_WillResendGamestate(node            ); break;
 		case PT_SENDINGLUAFILE     : PT_SendingLuaFile     (node            ); break;
 		case PT_SERVERSHUTDOWN     : PT_ServerShutdown     (node            ); break;
@@ -1895,6 +1946,7 @@ tic_t GetLag(INT32 node)
 
 void D_MD5PasswordPass(const UINT8 *buffer, size_t len, const char *salt, void *dest)
 {
+	// FIXME: replace with SHA-256, since MD5 is busted.
 #ifdef NOMD5
 	(void)buffer;
 	(void)len;

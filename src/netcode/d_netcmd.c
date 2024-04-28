@@ -2959,14 +2959,17 @@ static void Got_Teamchange(UINT8 **cp, INT32 playernum)
 
 void D_SetPassword(const char *pw)
 {
-	adminpassmd5 = Z_Realloc(adminpassmd5, sizeof(*adminpassmd5) * ++adminpasscount, PU_STATIC, NULL);
-	D_MD5PasswordPass((const UINT8 *)pw, strlen(pw), BASESALT, &adminpassmd5[adminpasscount-1]);
+	adminpass = Z_Realloc(adminpass, sizeof(*adminpass) * ++adminpasscount, PU_STATIC, NULL);
+	adminpass[adminpasscount-1] = Z_StrDup(pw);
 }
 
 void D_ClearPassword(void)
 {
-	Z_Free(adminpassmd5);
-	adminpassmd5 = NULL;
+	UINT32 i;
+	for (i = 0; i < adminpasscount; i++)
+		Z_Free(adminpass[i]);
+	Z_Free(adminpass);
+	adminpass = NULL;
 	adminpasscount = 0;
 }
 
@@ -3034,18 +3037,16 @@ static void Command_Login_f(void)
 		return;
 	}
 
+	if (reqpass)
+		Z_Free(reqpass);
+
 	pw = COM_Argv(1);
-
-	// Do the base pass to get what the server has (or should?)
-	D_MD5PasswordPass((const UINT8 *)pw, strlen(pw), BASESALT, &netbuffer->u.md5sum);
-
-	// Do the final pass to get the comparison the server will come up with
-	D_MD5PasswordPass(netbuffer->u.md5sum, 16, va("PNUM%02d", consoleplayer), &netbuffer->u.md5sum);
+	reqpass = Z_StrDup(pw);
 
 	CONS_Printf(M_GetText("Sending login... (Notice only given if password is correct.)\n"));
 
 	netbuffer->packettype = PT_LOGIN;
-	HSendPacket(servernode, true, 0, 16);
+	HSendPacket(servernode, true, 0, 0);
 #endif
 }
 

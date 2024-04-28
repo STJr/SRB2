@@ -89,6 +89,8 @@ typedef enum
 	PT_CLIENTJOIN,    // Client wants to join; used in start game.
 
 	PT_LOGIN,         // Login attempt from the client.
+	PT_LOGINCHALLENGE,// Challenge request sent to the client.
+	PT_LOGINAUTH,     // Challenge response from the client.
 
 	PT_TELLFILESNEEDED, // Client, to server: "what other files do I need starting from this number?"
 	PT_MOREFILESNEEDED, // Server, to client: "you need these (+ more on top of those)"
@@ -306,6 +308,7 @@ typedef struct
 		fileack_pak fileack;
 		UINT8 filereceived;
 		clientconfig_pak clientcfg;
+		char salt[9];
 		UINT8 md5sum[16];
 		serverinfo_pak serverinfo;
 		serverrefuse_pak serverrefuse;
