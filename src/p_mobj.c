@@ -13474,7 +13474,7 @@ void P_CopyMapThingSpecialFieldsToMobj(const mapthing_t *mthing, mobj_t *mobj)
 {
 	size_t arg = SIZE_MAX;
 
-	P_SetThingTID(mobj, mthing->tid);
+	P_SetThingTID(mobj, Tag_FGet(&mthing->tags));
 
 	mobj->special = mthing->special;
 

@@ -160,21 +160,26 @@ Environment::Environment()
 
 	addFuncDataACS0( 300, addCallFunc(CallFunc_CountEnemies));
 	addFuncDataACS0( 301, addCallFunc(CallFunc_CountPushables));
-	addFuncDataACS0( 303, addCallFunc(CallFunc_HaveUnlockable));
+	// addFuncDataACS0( 302, addCallFunc(CallFunc_SkinAvailable));
+	addFuncDataACS0( 303, addCallFunc(CallFunc_HasUnlockable));
 	addFuncDataACS0( 304, addCallFunc(CallFunc_PlayerSkin));
-	addFuncDataACS0( 305, addCallFunc(CallFunc_GetObjectDye));
-	addFuncDataACS0( 306, addCallFunc(CallFunc_PlayerEmeralds));
-	addFuncDataACS0( 307, addCallFunc(CallFunc_PlayerLap));
-	addFuncDataACS0( 308, addCallFunc(CallFunc_LowestLap));
+	addFuncDataACS0( 305, addCallFunc(CallFunc_PlayerEmeralds));
+	addFuncDataACS0( 306, addCallFunc(CallFunc_PlayerBot));
+	addFuncDataACS0( 307, addCallFunc(CallFunc_PlayerExiting));
+	addFuncDataACS0( 308, addCallFunc(CallFunc_PlayerLap));
 	addFuncDataACS0( 309, addCallFunc(CallFunc_RingSlingerMode));
 	addFuncDataACS0( 310, addCallFunc(CallFunc_TeamGame));
-	addFuncDataACS0( 311, addCallFunc(CallFunc_RecordAttack));
-	addFuncDataACS0( 312, addCallFunc(CallFunc_SetObjectDye));
-	addFuncDataACS0( 313, addCallFunc(CallFunc_CaptureTheFlagMode));
-	addFuncDataACS0( 315, addCallFunc(CallFunc_PlayerBot));
-	addFuncDataACS0( 316, addCallFunc(CallFunc_ModeAttacking));
-	addFuncDataACS0( 317, addCallFunc(CallFunc_NiGHTSAttack));
-	addFuncDataACS0( 320, addCallFunc(CallFunc_PlayerExiting));
+	addFuncDataACS0( 311, addCallFunc(CallFunc_CaptureTheFlagMode));
+	addFuncDataACS0( 312, addCallFunc(CallFunc_RecordAttack));
+	addFuncDataACS0( 313, addCallFunc(CallFunc_NiGHTSAttack));
+	addFuncDataACS0( 314, addCallFunc(CallFunc_ModeAttacking));
+	addFuncDataACS0( 315, addCallFunc(CallFunc_LowestLap));
+	addFuncDataACS0( 320, addCallFunc(CallFunc_GetObjectDye));
+	addFuncDataACS0( 321, addCallFunc(CallFunc_SetObjectDye));
+	addFuncDataACS0( 322, addCallFunc(CallFunc_Teleport));
+	addFuncDataACS0( 323, addCallFunc(CallFunc_SetViewpoint));
+	addFuncDataACS0( 324, addCallFunc(CallFunc_TrackObjectAngle));
+	addFuncDataACS0( 325, addCallFunc(CallFunc_StopTrackingObjectAngle));
 
 	addFuncDataACS0( 500, addCallFunc(CallFunc_CameraWait));
 	addFuncDataACS0( 503, addCallFunc(CallFunc_SetLineRenderStyle));

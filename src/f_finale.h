@@ -19,6 +19,10 @@
 #include "d_event.h"
 #include "p_mobj.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 //
 // FINALE
 //
@@ -232,5 +236,9 @@ enum
 	WIPEFINALSHIFT = (wipe_level_final-wipe_level_toblack)
 };
 extern UINT8 wipedefs[NUMWIPEDEFS];
+
+#ifdef __cplusplus
+} // extern "C"
+#endif
 
 #endif

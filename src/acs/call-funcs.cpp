@@ -25,6 +25,7 @@
 #include "../d_think.h"
 #include "../p_mobj.h"
 #include "../p_tick.h"
+#include "../f_finale.h"
 #include "../w_wad.h"
 #include "../m_misc.h"
 #include "../m_random.h"
@@ -549,11 +550,12 @@ bool CallFunc_ThingCount(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::
 		if (success == false)
 		{
 			// Exit early.
-
 			CONS_Alert(CONS_WARNING,
 				"Couldn't find object type \"%s\" for ThingCount.\n",
 				className
 			);
+
+			thread->dataStk.push(0);
 
 			return false;
 		}
@@ -908,11 +910,12 @@ bool CallFunc_SectorSound(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM:
 		if (success == false)
 		{
 			// Exit early.
-
 			CONS_Alert(CONS_WARNING,
 				"Couldn't find sfx named \"%s\" for SectorSound.\n",
 				sfxName
 			);
+
+			thread->dataStk.push(0);
 
 			return false;
 		}
@@ -966,11 +969,12 @@ bool CallFunc_AmbientSound(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM
 		if (success == false)
 		{
 			// Exit early.
-
 			CONS_Alert(CONS_WARNING,
 				"Couldn't find sfx named \"%s\" for AmbientSound.\n",
 				sfxName
 			);
+
+			thread->dataStk.push(0);
 
 			return false;
 		}
@@ -1106,10 +1110,11 @@ bool CallFunc_SetLineSpecial(ACSVM::Thread *thread, const ACSVM::Word *argV, ACS
 --------------------------------------------------*/
 bool CallFunc_ChangeSky(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::Word argC)
 {
-	(void)thread;
 	(void)argC;
 
 	P_SetupLevelSky(argV[0], argV[1]);
+
+	thread->dataStk.push(0);
 
 	return false;
 }
@@ -1152,11 +1157,12 @@ bool CallFunc_ThingSound(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::
 		if (success == false)
 		{
 			// Exit early.
-
 			CONS_Alert(CONS_WARNING,
-				"Couldn't find sfx named \"%s\" for AmbientSound.\n",
+				"Couldn't find sfx named \"%s\" for ThingSound.\n",
 				sfxName
 			);
+
+			thread->dataStk.push(0);
 
 			return false;
 		}
@@ -1467,11 +1473,11 @@ bool CallFunc_CountPushables(ACSVM::Thread *thread, const ACSVM::Word *argV, ACS
 }
 
 /*--------------------------------------------------
-	bool CallFunc_HaveUnlockable(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::Word argC)
+	bool CallFunc_HasUnlockable(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::Word argC)
 
-		Returns if an unlockable has been gotten.
+		Returns if something was unlocked.
 --------------------------------------------------*/
-bool CallFunc_HaveUnlockable(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::Word argC)
+bool CallFunc_HasUnlockable(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::Word argC)
 {
 	UINT32 id = 0;
 	bool unlocked = false;
@@ -1535,7 +1541,6 @@ bool CallFunc_PlayerBot(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::W
 		&& (info->mo != NULL && P_MobjWasRemoved(info->mo) == false)
 		&& (info->mo->player != NULL))
 	{
-
 		thread->dataStk.push(info->mo->player->bot);
 		return false;
 	}
@@ -1613,6 +1618,138 @@ bool CallFunc_GetObjectDye(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM
 	}
 
 	thread->dataStk.push(~env->getString( skincolors[dye].name )->idx);
+	return false;
+}
+
+/*--------------------------------------------------
+	bool CallFunc_Teleport(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::Word argC)
+
+		Teleports the activating actor.
+--------------------------------------------------*/
+bool CallFunc_Teleport(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::Word argC)
+{
+	mobj_t *mobj = P_FindMobjFromTID(argV[0], NULL, NULL);
+	mobj_t *dest = P_FindMobjFromTID(argV[1], NULL, NULL);
+
+	if (mobj != NULL && dest != mobj)
+	{
+		boolean silent = argC >= 3 ? (argV[2] != 0) : false;
+
+		P_Teleport(mobj, dest->x, dest->y, dest->z, dest->angle, !silent, false);
+
+		if (!silent)
+			S_StartSound(dest, sfx_mixup); // Play the 'bowrwoosh!' sound
+	}
+
+	thread->dataStk.push(0);
+
+	return false;
+}
+
+/*--------------------------------------------------
+	bool CallFunc_SetViewpoint(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::Word argC)
+
+		Switches the current viewpoint to another actor.
+--------------------------------------------------*/
+bool CallFunc_SetViewpoint(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::Word argC)
+{
+	auto info = &static_cast<Thread *>(thread)->info;
+
+	if ((info != NULL) && (info->mo != NULL && P_MobjWasRemoved(info->mo) == false))
+	{
+		mobj_t *altview = P_FindMobjFromTID(argV[0], NULL, info->mo);
+		if (!altview)
+		{
+			thread->dataStk.push(0);
+
+			return false;
+		}
+
+		// If titlemap, set the camera ref for title's thinker
+		// This is not revoked until overwritten; awayviewtics is ignored
+		if (titlemapinaction)
+		{
+			titlemapcameraref = altview;
+			titlemapcameraref->cusval = altview->pitch;
+		}
+		else
+		{
+			player_t *player = info->mo->player;
+			if (!player)
+			{
+				thread->dataStk.push(0);
+
+				return false;
+			}
+
+			if (!player->awayviewtics || player->awayviewmobj != altview)
+			{
+				P_SetTarget(&player->awayviewmobj, altview);
+
+				if (player == &players[displayplayer])
+					P_ResetCamera(player, &camera); // reset p1 camera on p1 getting an awayviewmobj
+				else if (splitscreen && player == &players[secondarydisplayplayer])
+					P_ResetCamera(player, &camera2);  // reset p2 camera on p2 getting an awayviewmobj
+			}
+
+			player->awayviewaiming = altview->pitch;
+			player->awayviewtics = argC > 1 ? argV[1] : -1;
+		}
+	}
+
+	thread->dataStk.push(0);
+
+	return false;
+}
+
+/*--------------------------------------------------
+	bool CallFunc_TrackObjectAngle(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::Word argC)
+
+		Implementation of linedef type 457.
+--------------------------------------------------*/
+bool CallFunc_TrackObjectAngle(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::Word argC)
+{
+	mobj_t *mobj = P_FindMobjFromTID(argV[0], NULL, NULL);
+	mobj_t *anchormo = P_FindMobjFromTID(argV[1], NULL, NULL);
+	if (mobj != NULL && anchormo != NULL && P_MobjWasRemoved(mobj) == false && P_MobjWasRemoved(anchormo) == false)
+	{
+		INT32 failureangle = FixedAngle((std::min(std::max(abs((int)argV[2]), 0), 360))*FRACUNIT);
+		INT32 failureexectag = argV[3];
+		INT32 failuredelay = argC >= 5 ? abs((int)argV[4]) : 0;
+		boolean persist = argC >= 6 ? (argV[5] == 0) : false;
+
+		mobj->eflags |= MFE_TRACERANGLE;
+		P_SetTarget(&mobj->tracer, anchormo);
+		mobj->lastlook = persist; // don't disable behavior after first failure
+		mobj->extravalue1 = failureangle; // angle to exceed for failure state
+		mobj->extravalue2 = failureexectag; // exec tag for failure state (angle is not within range)
+		mobj->cusval = mobj->cvmem = failuredelay; // cusval = tics to allow failure before line trigger; cvmem = decrement timer
+	}
+
+	thread->dataStk.push(0);
+
+	return false;
+}
+
+/*--------------------------------------------------
+	bool CallFunc_StopTrackingObjectAngle(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::Word argC)
+
+		Implementation of linedef type 458.
+--------------------------------------------------*/
+bool CallFunc_StopTrackingObjectAngle(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::Word argC)
+{
+	(void)argC;
+
+	mobj_t *mobj = P_FindMobjFromTID(argV[0], NULL, NULL);
+	if (mobj != NULL && P_MobjWasRemoved(mobj) == false && (mobj->eflags & MFE_TRACERANGLE))
+	{
+		mobj->eflags &= ~MFE_TRACERANGLE;
+		P_SetTarget(&mobj->tracer, NULL);
+		mobj->lastlook = mobj->cvmem = mobj->cusval = mobj->extravalue1 = mobj->extravalue2 = 0;
+	}
+
+	thread->dataStk.push(0);
+
 	return false;
 }
 
@@ -1786,7 +1923,6 @@ bool CallFunc_SetLineRenderStyle(ACSVM::Thread *thread, const ACSVM::Word *argV,
 
 	INT32 lineId = -1;
 
-	(void)thread;
 	(void)argC;
 
 	tag = argV[0];
@@ -1866,16 +2002,17 @@ bool CallFunc_MapWarp(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::Wor
 	if (nextmap == 0)
 	{
 		CONS_Alert(CONS_WARNING, "MapWarp level %s is not valid or loaded.\n", levelName);
-		return false;
 	}
+	else
+	{
+		nextmapoverride = nextmap;
 
-	nextmapoverride = nextmap;
+		if (argV[1] == 0)
+			skipstats = 1;
 
-	if (argV[1] == 0)
-		skipstats = 1;
-
-	if (server)
-		SendNetXCmd(XD_EXITLEVEL, NULL, 0);
+		if (server)
+			SendNetXCmd(XD_EXITLEVEL, NULL, 0);
+	}
 
 	thread->dataStk.push(0);
 
@@ -1942,7 +2079,6 @@ bool CallFunc_AddBot(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::Word
 --------------------------------------------------*/
 bool CallFunc_ExitLevel(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::Word argC)
 {
-	(void)thread;
 	(void)argV;
 	(void)argC;
 
@@ -1953,6 +2089,8 @@ bool CallFunc_ExitLevel(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::W
 
 	if (server)
 		SendNetXCmd(XD_EXITLEVEL, NULL, 0);
+
+	thread->dataStk.push(0);
 
 	return false;
 }
@@ -1972,6 +2110,8 @@ bool CallFunc_MusicPlay(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::W
 
 	if (argC > 1 && argV[1] && !ACS_ActivatorIsLocal(thread))
 	{
+		thread->dataStk.push(0);
+
 		return false;
 	}
 
@@ -1994,6 +2134,8 @@ bool CallFunc_MusicStopAll(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM
 
 	if (argC > 0 && argV[0] && !ACS_ActivatorIsLocal(thread))
 	{
+		thread->dataStk.push(0);
+
 		return false;
 	}
 
@@ -2028,7 +2170,6 @@ bool CallFunc_MusicRestore(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM
 --------------------------------------------------*/
 bool CallFunc_MusicDim(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::Word argC)
 {
-	(void)thread;
 	(void)argC;
 
 	// 0: int fade time (ms) - time to fade between full volume and silence
@@ -2091,7 +2232,6 @@ static INT32 NextLine(mtag_t tag, size_t *iterate, INT32 activatorID)
 
 bool CallFunc_GetLineProperty(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::Word argC)
 {
-	(void)thread;
 	(void)argC;
 
 	auto info = &static_cast<Thread *>(thread)->info;
@@ -2175,7 +2315,6 @@ bool CallFunc_GetLineProperty(ACSVM::Thread *thread, const ACSVM::Word *argV, AC
 
 bool CallFunc_SetLineProperty(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::Word argC)
 {
-	(void)thread;
 	(void)argC;
 
 	auto info = &static_cast<Thread *>(thread)->info;
@@ -2312,7 +2451,6 @@ enum
 
 bool CallFunc_GetSideProperty(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::Word argC)
 {
-	(void)thread;
 	(void)argC;
 
 	auto info = &static_cast<Thread *>(thread)->info;
@@ -2418,7 +2556,6 @@ bool CallFunc_GetSideProperty(ACSVM::Thread *thread, const ACSVM::Word *argV, AC
 
 bool CallFunc_SetSideProperty(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::Word argC)
 {
-	(void)thread;
 	(void)argC;
 
 	auto info = &static_cast<Thread *>(thread)->info;
@@ -2663,7 +2800,6 @@ static INT32 NextSector(mtag_t tag, size_t *iterate, INT32 activatorID)
 
 bool CallFunc_GetSectorProperty(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::Word argC)
 {
-	(void)thread;
 	(void)argC;
 
 	auto info = &static_cast<Thread *>(thread)->info;
@@ -2764,7 +2900,6 @@ bool CallFunc_GetSectorProperty(ACSVM::Thread *thread, const ACSVM::Word *argV, 
 
 bool CallFunc_SetSectorProperty(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::Word argC)
 {
-	(void)thread;
 	(void)argC;
 
 	auto info = &static_cast<Thread *>(thread)->info;
@@ -2961,7 +3096,6 @@ enum
 
 bool CallFunc_GetThingProperty(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::Word argC)
 {
-	(void)thread;
 	(void)argC;
 
 	auto info = &static_cast<Thread *>(thread)->info;
@@ -3163,7 +3297,6 @@ bool CallFunc_GetThingProperty(ACSVM::Thread *thread, const ACSVM::Word *argV, A
 
 bool CallFunc_SetThingProperty(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::Word argC)
 {
-	(void)thread;
 	(void)argC;
 
 	auto info = &static_cast<Thread *>(thread)->info;

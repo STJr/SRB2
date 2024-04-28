@@ -1544,7 +1544,6 @@ static void P_LoadThings(UINT8 *data)
 		mt->type = READUINT16(data);
 		mt->options = READUINT16(data);
 		mt->extrainfo = (UINT8)(mt->type >> 12);
-		mt->tid = 0;
 		Tag_FSet(&mt->tags, 0);
 		mt->scale = FRACUNIT;
 		mt->spritexscale = mt->spriteyscale = FRACUNIT;
@@ -2120,10 +2119,7 @@ static void ParseTextmapLinedefParameter(UINT32 i, const char *param, const char
 static void ParseTextmapThingParameter(UINT32 i, const char *param, const char *val)
 {
 	if (fastcmp(param, "id"))
-	{
-		mapthings[i].tid = atol(val);
 		Tag_FSet(&mapthings[i].tags, atol(val));
-	}
 	else if (fastcmp(param, "moreids"))
 	{
 		const char* id = val;
@@ -2318,14 +2314,16 @@ typedef struct
 static void P_WriteTextmap_Things(FILE *f, const mapthing_t *wmapthings)
 {
 	size_t i, j;
+	mtag_t firsttag;
 
 	// Actual writing
 	for (i = 0; i < nummapthings; i++)
 	{
 		fprintf(f, "thing // %s\n", sizeu1(i));
 		fprintf(f, "{\n");
-		if (wmapthings[i].tid != 0)
-			fprintf(f, "id = %d;\n", wmapthings[i].tid);
+		firsttag = Tag_FGet(&wmapthings[i].tags);
+		if (firsttag != 0)
+			fprintf(f, "id = %d;\n", firsttag);
 		if (wmapthings[i].tags.count > 1)
 		{
 			fprintf(f, "moreids = \"");
@@ -3275,7 +3273,6 @@ static void P_LoadTextmap(void)
 		mt->options = 0;
 		mt->z = 0;
 		mt->extrainfo = 0;
-		mt->tid = 0;
 		Tag_FSet(&mt->tags, 0);
 		mt->scale = FRACUNIT;
 		mt->spritexscale = mt->spriteyscale = FRACUNIT;

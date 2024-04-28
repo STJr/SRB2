@@ -244,7 +244,6 @@ typedef struct
 	UINT16 options;
 	INT16 z;
 	UINT8 extrainfo;
-	mtag_t tid;
 	taglist_t tags;
 	fixed_t scale;
 	fixed_t spritexscale, spriteyscale;
