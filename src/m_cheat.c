@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -1105,9 +1105,6 @@ static mapthing_t *OP_CreateNewMapThing(player_t *player, UINT16 type, boolean c
 	mt->scale = player->mo->scale;
 	mt->spritexscale = player->mo->spritexscale;
 	mt->spriteyscale = player->mo->spriteyscale;
-	memset(mt->args, 0, NUMMAPTHINGARGS*sizeof(*mt->args));
-	memset(mt->stringargs, 0x00, NUMMAPTHINGSTRINGARGS*sizeof(*mt->stringargs));
-	mt->pitch = mt->roll = 0;
 
 	// Ignore offsets
 	if (mt->type == MT_EMBLEM)

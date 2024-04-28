@@ -4,7 +4,7 @@
 // Copyright (C) 1998-2000 by DooM Legacy Team.
 // Copyright (C) 2012-2016 by Matthew "Kaito Sinclaire" Walsh.
 // Copyright (C) 2022-2023 by tertu marybig.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -19,8 +19,11 @@
 #include "doomtype.h"
 #include "m_fixed.h"
 
-//#define DEBUGRANDOM
+#ifdef __cplusplus
+extern "C" {
+#endif
 
+//#define DEBUGRANDOM
 
 // M_Random functions pull random numbers of various types that aren't network synced.
 // P_Random functions pulls random bytes from a PRNG that is network synced.
@@ -74,5 +77,9 @@ UINT32 P_GetInitSeed(void);
 void P_SetRandSeed(UINT32 seed);
 #endif
 UINT32 M_RandomizedSeed(void);
+
+#ifdef __cplusplus
+} // extern "C"
+#endif
 
 #endif

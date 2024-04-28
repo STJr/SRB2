@@ -43,7 +43,6 @@ platform=cygwin
 else ifdef MINGW
 ifdef MINGW64
 NONX86=1
-NOASM=1
 # MINGW64 should not necessarily imply X86_64=1,
 # but we make that assumption elsewhere
 # Once that changes, remove this

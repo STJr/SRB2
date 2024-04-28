@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 // Copyright (C) 2020-2023 by Nev3r.
 //
 // This program is free software distributed under the
@@ -11,10 +11,14 @@
 /// \file  taglist.h
 /// \brief Tag iteration and reading functions and macros' declarations.
 
-#ifndef __R_TAGLIST__
-#define __R_TAGLIST__
+#ifndef __TAGLIST_H__
+#define __TAGLIST_H__
 
 #include "doomtype.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 typedef INT16 mtag_t;
 #define MAXTAGS UINT16_MAX
@@ -127,4 +131,8 @@ Notes:
 If no elements are found for a given tag, the loop inside won't be executed.
 */
 
-#endif //__R_TAGLIST__
+#ifdef __cplusplus
+} // extern "C"
+#endif
+
+#endif // __TAGLIST_H__

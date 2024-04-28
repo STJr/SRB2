@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2006      by James Haley
-// Copyright (C) 2006-2023 by Sonic Team Junior.
+// Copyright (C) 2006-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -17,6 +17,10 @@
 #include "m_dllist.h"
 #include "p_mobj.h"
 #include "r_defs.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 //
 // Defines
@@ -411,6 +415,8 @@ extern polyobj_t *PolyObjects;
 extern INT32 numPolyObjects;
 extern polymaplink_t **polyblocklinks; // polyobject blockmap
 
+#ifdef __cplusplus
+} // extern "C"
 #endif
 
-// EOF
+#endif

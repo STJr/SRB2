@@ -1001,6 +1001,8 @@ void LUA_InvalidateMapthings(void)
 		LUA_InvalidateUserdata(&mapthings[i].tags);
 		LUA_InvalidateUserdata(mapthings[i].args);
 		LUA_InvalidateUserdata(mapthings[i].stringargs);
+		LUA_InvalidateUserdata(mapthings[i].script_args);
+		LUA_InvalidateUserdata(mapthings[i].script_stringargs);
 	}
 }
 

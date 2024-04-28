@@ -414,6 +414,26 @@ static int ScanConstants(lua_State *L, boolean mathlib, const char *word)
 		if (mathlib) return luaL_error(L, "sector triggerer '%s' could not be found.\n", word);
 		return 0;
 	}
+	else if (fastncmp("SPAC_", word, 3)) {
+		p = word + 5;
+		for (i = 0; SPAC_LIST[i]; i++)
+			if (fastcmp(p, SPAC_LIST[i])) {
+				lua_pushinteger(L, i);
+				return 1;
+			}
+		if (mathlib) return luaL_error(L, "line activation '%s' could not be found.\n", word);
+		return 0;
+	}
+	else if (fastncmp("SECSPAC_", word, 3)) {
+		p = word + 8;
+		for (i = 0; SECSPAC_LIST[i]; i++)
+			if (fastcmp(p, SECSPAC_LIST[i])) {
+				lua_pushinteger(L, i);
+				return 1;
+			}
+		if (mathlib) return luaL_error(L, "sector activation '%s' could not be found.\n", word);
+		return 0;
+	}
 	else if (fastncmp("S_",word,2)) {
 		p = word+2;
 		for (i = 0; i < NUMSTATEFREESLOTS; i++) {

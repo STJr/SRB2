@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -67,7 +67,10 @@ void SV_SendSaveGame(INT32 node, boolean resending)
 	}
 
 	// Leave room for the uncompressed length.
-	save_p = savebuffer + sizeof(UINT32);
+	save_length = SAVEGAMESIZE;
+	save_start = savebuffer;
+	save_end = savebuffer + save_length;
+	save_p = save_start + sizeof(UINT32);
 
 	P_SaveNetGame(resending);
 
@@ -75,7 +78,6 @@ void SV_SendSaveGame(INT32 node, boolean resending)
 	if (length > SAVEGAMESIZE)
 	{
 		free(savebuffer);
-		save_p = NULL;
 		I_Error("Savegame buffer overrun");
 	}
 
@@ -112,7 +114,8 @@ void SV_SendSaveGame(INT32 node, boolean resending)
 	}
 
 	AddRamToSendQueue(node, buffertosend, length, SF_RAM, 0);
-	save_p = NULL;
+	save_p = save_start = save_end = NULL;
+	save_length = 0;
 
 	// Remember when we started sending the savegame so we can handle timeouts
 	netnodes[node].sendingsavegame = true;
@@ -184,7 +187,10 @@ void CL_LoadReceivedSavegame(boolean reloading)
 		return;
 	}
 
-	save_p = savebuffer;
+	save_length = length;
+	save_start = savebuffer;
+	save_end = save_start + save_length;
+	save_p = save_start;
 
 	// Decompress saved game if necessary.
 	decompressedlen = READUINT32(save_p);
@@ -193,7 +199,11 @@ void CL_LoadReceivedSavegame(boolean reloading)
 		UINT8 *decompressedbuffer = Z_Malloc(decompressedlen, PU_STATIC, NULL);
 		lzf_decompress(save_p, length - sizeof(UINT32), decompressedbuffer, decompressedlen);
 		Z_Free(savebuffer);
-		save_p = savebuffer = decompressedbuffer;
+
+		save_length = decompressedlen;
+		save_start = decompressedbuffer;
+		save_end = save_start + save_length;
+		save_p = savebuffer = save_start;
 	}
 
 	paused = false;
@@ -220,7 +230,8 @@ void CL_LoadReceivedSavegame(boolean reloading)
 
 	// done
 	Z_Free(savebuffer);
-	save_p = NULL;
+	save_p = save_start = save_end = NULL;
+	save_length = 0;
 	if (unlink(tmpsave) == -1)
 		CONS_Alert(CONS_ERROR, M_GetText("Can't delete %s\n"), tmpsave);
 	consistancy[gametic%BACKUPTICS] = Consistancy();

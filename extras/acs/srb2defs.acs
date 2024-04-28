@@ -1,0 +1,357 @@
+// Copyright (C) 2024 Russell's Smart Interfaces
+
+#define TRUE                    1
+#define FALSE                   0
+#define ON                      1
+#define OFF                     0
+#define YES                     1
+#define NO                      0
+
+#define FRACUNIT                65536
+#define TICRATE                 35
+
+#define LINE_FRONT              0
+#define LINE_BACK               1
+
+#define SIDE_FRONT              0
+#define SIDE_BACK               1
+
+#define TEXTURE_TOP             0
+#define TEXTURE_MIDDLE          1
+#define TEXTURE_BOTTOM          2
+
+#define GAME_COOPERATIVE        0
+#define GAME_COMPETITION        1
+#define GAME_RACE               2
+#define GAME_MATCH              3
+#define GAME_TEAMMATCH          4
+#define GAME_TAG                5
+#define GAME_HIDEANDSEEK        6
+#define GAME_CTF                7
+
+// Actor properties you can get/set -----------------------------------------
+
+#define APROP_X             0
+#define APROP_Y             1
+#define APROP_Z             2
+#define APROP_Type          3
+#define APROP_Angle         4
+#define APROP_Pitch         5
+#define APROP_Roll          6
+#define APROP_SpriteRoll    7
+#define APROP_Frame         8
+#define APROP_Sprite        9
+#define APROP_Sprite2       10
+#define APROP_RenderFlags   11
+#define APROP_SpriteXScale  12
+#define APROP_SpriteYScale  13
+#define APROP_SpriteXOffset 14
+#define APROP_SpriteYOffset 15
+#define APROP_FloorZ        16
+#define APROP_CeilingZ      17
+#define APROP_Radius        18
+#define APROP_Height        19
+#define APROP_MomX          20
+#define APROP_MomY          21
+#define APROP_MomZ          22
+#define APROP_Tics          23
+#define APROP_State         24
+#define APROP_Flags         25
+#define APROP_Flags2        26
+#define APROP_ExtraFlags    27
+#define APROP_Skin          28
+#define APROP_Color         29
+#define APROP_Health        30
+#define APROP_MoveDir       31
+#define APROP_MoveCount     32
+#define APROP_ReactionTime  33
+#define APROP_Threshold     34
+#define APROP_LastLook      35
+#define APROP_Friction      36
+#define APROP_MoveFactor    37
+#define APROP_Fuse          38
+#define APROP_WaterTop      39
+#define APROP_WaterBottom   40
+#define APROP_Scale         41
+#define APROP_DestScale     42
+#define APROP_ScaleSpeed    43
+#define APROP_ExtraValue1   44
+#define APROP_ExtraValue2   45
+#define APROP_CustomVal     46
+#define APROP_CustomValMem  47
+#define APROP_Colorized     48
+#define APROP_Mirrored      49
+#define APROP_ShadowScale   50
+#define APROP_DispOffset    51
+#define APROP_Target        52
+#define APROP_Tracer        53
+#define APROP_HNext         54
+#define APROP_HPrev         55
+
+// Line properties
+
+#define LINEPROP_Flags      0
+#define LINEPROP_Alpha      1
+#define LINEPROP_Style      2
+#define LINEPROP_Activation 3
+#define LINEPROP_Action     4
+#define LINEPROP_Arg0       5
+#define LINEPROP_Arg1       6
+#define LINEPROP_Arg2       7
+#define LINEPROP_Arg3       8
+#define LINEPROP_Arg4       9
+#define LINEPROP_Arg5       10
+#define LINEPROP_Arg6       11
+#define LINEPROP_Arg7       12
+#define LINEPROP_Arg8       13
+#define LINEPROP_Arg9       14
+#define LINEPROP_Arg0Str    15
+#define LINEPROP_Arg1Str    16
+
+// Side properties
+
+#define SIDEPROP_XOffset       0
+#define SIDEPROP_YOffset       1
+#define SIDEPROP_TopTexture    2
+#define SIDEPROP_BottomTexture 3
+#define SIDEPROP_MidTexture    4
+#define SIDEPROP_RepeatCount   5
+
+// Sector properties
+
+#define SECPROP_FloorHeight          1
+#define SECPROP_CeilingHeight        2
+#define SECPROP_FloorPic             3
+#define SECPROP_CeilingPic           4
+#define SECPROP_LightLevel           5
+#define SECPROP_FloorLightLevel      6
+#define SECPROP_CeilingLightLevel    7
+#define SECPROP_FloorLightAbsolute   8
+#define SECPROP_CeilingLightAbsolute 9
+#define SECPROP_Flags                10
+#define SECPROP_SpecialFlags         11
+#define SECPROP_Gravity              12
+#define SECPROP_Activation           13
+#define SECPROP_Action               14
+#define SECPROP_Arg0                 15
+#define SECPROP_Arg1                 16
+#define SECPROP_Arg2                 17
+#define SECPROP_Arg3                 18
+#define SECPROP_Arg4                 19
+#define SECPROP_Arg5                 20
+#define SECPROP_Arg6                 21
+#define SECPROP_Arg7                 22
+#define SECPROP_Arg8                 23
+#define SECPROP_Arg9                 24
+#define SECPROP_Arg0Str              25
+#define SECPROP_Arg1Str              26
+
+// Render Styles ------------------------------------------------------------
+
+#define STYLE_Copy            0   // Just copy the image to the screen
+#define STYLE_Translucent     1   // Draw translucent
+#define STYLE_Add             2   // Draw additive
+#define STYLE_Subtract        3   // Draw subtractive
+#define STYLE_ReverseSubtract 4   // Draw reverse subtractive
+#define STYLE_Modulate        5   // Draw multiplicative
+#define STYLE_Fog             7   // Draw reverse subtractive
+
+// Line activation flags
+
+#define SPAC_None           0
+#define SPAC_Repeat         1       // repeatable
+#define SPAC_Cross          2       // when player crosses line
+#define SPAC_MCross         4       // when monster crosses line
+#define SPAC_PCross         8       // when projectile crosses line
+#define SPAC_Push           16      // when player pushes line
+#define SPAC_MPush          32      // monsters can push
+#define SPAC_Impact         64      // when projectile hits line
+
+// Sector activation flags
+
+#define SECSPAC_None                   0
+#define SECSPAC_OnceSpecial            1         // special action is activated once
+#define SECSPAC_RepeatSpecial          2         // special action is repeatable
+#define SECSPAC_ContinuousSpecial      4         // special action is activated continously
+#define SECSPAC_Enter                  8         // when a player enters this sector
+#define SECSPAC_Floor                  16        // when a player touches the floor of this sector
+#define SECSPAC_Ceiling                32        // when a player touches the ceiling of this sector
+#define SECSPAC_EnterMonster           64        // when an enemy enters this sector
+#define SECSPAC_FLOORMonster           128       // when an enemy touches the floor of this sector
+#define SECSPAC_CeilingMonster         256       // when an enemy touches the ceiling of this sector
+#define SECSPAC_EnterMissile           512       // when a projectile enters this sector
+#define SECSPAC_FloorMissile           1024      // when a projectile touches the floor of this sector
+#define SECSPAC_CeilingMissile         2048      // when a projectile touches the ceiling of this sector
+
+// Teams -----------------------------------------------------------
+
+#define NO_TEAM                 0
+#define TEAM_RED                1
+#define TEAM_BLUE               2
+
+// Bot types
+#define BOT_NONE    0
+#define BOT_2PAI    1
+#define BOT_2PHUMAN 2
+#define BOT_MPAI    3
+
+// Colors ----------------------------------------------------------
+
+#define SKINCOLOR_NONE 0
+#define SKINCOLOR_WHITE 1
+#define SKINCOLOR_BONE 2
+#define SKINCOLOR_CLOUDY 3
+#define SKINCOLOR_GREY 4
+#define SKINCOLOR_SILVER 5
+#define SKINCOLOR_CARBON 6
+#define SKINCOLOR_JET 7
+#define SKINCOLOR_BLACK 8
+#define SKINCOLOR_AETHER 9
+#define SKINCOLOR_SLATE 10
+#define SKINCOLOR_MOONSTONE 11
+#define SKINCOLOR_BLUEBELL 12
+#define SKINCOLOR_PINK 13
+#define SKINCOLOR_ROSEWOOD 14
+#define SKINCOLOR_YOGURT 15
+#define SKINCOLOR_LATTE 16
+#define SKINCOLOR_BROWN 17
+#define SKINCOLOR_BOULDER 18
+#define SKINCOLOR_BRONZE 19
+#define SKINCOLOR_SEPIA 20
+#define SKINCOLOR_ECRU 21
+#define SKINCOLOR_TAN 22
+#define SKINCOLOR_BEIGE 23
+#define SKINCOLOR_ROSEBUSH 24
+#define SKINCOLOR_MOSS 25
+#define SKINCOLOR_AZURE 26
+#define SKINCOLOR_EGGPLANT 27
+#define SKINCOLOR_LAVENDER 28
+#define SKINCOLOR_RUBY 29
+#define SKINCOLOR_CHERRY 30
+#define SKINCOLOR_SALMON 31
+#define SKINCOLOR_PEPPER 32
+#define SKINCOLOR_RED 33
+#define SKINCOLOR_CRIMSON 34
+#define SKINCOLOR_FLAME 35
+#define SKINCOLOR_GARNET 36
+#define SKINCOLOR_KETCHUP 37
+#define SKINCOLOR_PEACHY 38
+#define SKINCOLOR_QUAIL 39
+#define SKINCOLOR_FOUNDATION 40
+#define SKINCOLOR_SUNSET 41
+#define SKINCOLOR_COPPER 42
+#define SKINCOLOR_APRICOT 43
+#define SKINCOLOR_ORANGE 44
+#define SKINCOLOR_RUST 45
+#define SKINCOLOR_TANGERINE 46
+#define SKINCOLOR_TOPAZ 47
+#define SKINCOLOR_GOLD 48
+#define SKINCOLOR_SANDY 49
+#define SKINCOLOR_GOLDENROD 50
+#define SKINCOLOR_YELLOW 51
+#define SKINCOLOR_OLIVE 52
+#define SKINCOLOR_PEAR 53
+#define SKINCOLOR_LEMON 54
+#define SKINCOLOR_LIME 55
+#define SKINCOLOR_PERIDOT 56
+#define SKINCOLOR_APPLE 57
+#define SKINCOLOR_HEADLIGHT 58
+#define SKINCOLOR_CHARTREUSE 59
+#define SKINCOLOR_GREEN 60
+#define SKINCOLOR_FOREST 61
+#define SKINCOLOR_SHAMROCK 62
+#define SKINCOLOR_JADE 63
+#define SKINCOLOR_MINT 64
+#define SKINCOLOR_MASTER 65
+#define SKINCOLOR_EMERALD 66
+#define SKINCOLOR_SEAFOAM 67
+#define SKINCOLOR_ISLAND 68
+#define SKINCOLOR_BOTTLE 69
+#define SKINCOLOR_AQUA 70
+#define SKINCOLOR_TEAL 71
+#define SKINCOLOR_OCEAN 72
+#define SKINCOLOR_WAVE 73
+#define SKINCOLOR_CYAN 74
+#define SKINCOLOR_TURQUOISE 75
+#define SKINCOLOR_AQUAMARINE 76
+#define SKINCOLOR_SKY 77
+#define SKINCOLOR_MARINE 78
+#define SKINCOLOR_CERULEAN 79
+#define SKINCOLOR_DREAM 80
+#define SKINCOLOR_ICY 81
+#define SKINCOLOR_DAYBREAK 82
+#define SKINCOLOR_SAPPHIRE 83
+#define SKINCOLOR_ARCTIC 84
+#define SKINCOLOR_CORNFLOWER 85
+#define SKINCOLOR_BLUE 86
+#define SKINCOLOR_COBALT 87
+#define SKINCOLOR_MIDNIGHT 88
+#define SKINCOLOR_GALAXY 89
+#define SKINCOLOR_VAPOR 90
+#define SKINCOLOR_DUSK 91
+#define SKINCOLOR_MAJESTY 92
+#define SKINCOLOR_PASTEL 93
+#define SKINCOLOR_PURPLE 94
+#define SKINCOLOR_NOBLE 95
+#define SKINCOLOR_FUCHSIA 96
+#define SKINCOLOR_BUBBLEGUM 97
+#define SKINCOLOR_SIBERITE 98
+#define SKINCOLOR_MAGENTA 99
+#define SKINCOLOR_NEON 100
+#define SKINCOLOR_VIOLET 101
+#define SKINCOLOR_ROYAL 102
+#define SKINCOLOR_LILAC 103
+#define SKINCOLOR_MAUVE 104
+#define SKINCOLOR_EVENTIDE 105
+#define SKINCOLOR_PLUM 106
+#define SKINCOLOR_RASPBERRY 107
+#define SKINCOLOR_TAFFY 108
+#define SKINCOLOR_ROSY 109
+#define SKINCOLOR_FANCY 110
+#define SKINCOLOR_SANGRIA 111
+#define SKINCOLOR_VOLCANIC 112
+#define SKINCOLOR_SUPERSILVER1 113
+#define SKINCOLOR_SUPERSILVER2 114
+#define SKINCOLOR_SUPERSILVER3 115
+#define SKINCOLOR_SUPERSILVER4 116
+#define SKINCOLOR_SUPERSILVER5 117
+#define SKINCOLOR_SUPERRED1 118
+#define SKINCOLOR_SUPERRED2 119
+#define SKINCOLOR_SUPERRED3 120
+#define SKINCOLOR_SUPERRED4 121
+#define SKINCOLOR_SUPERRED5 122
+#define SKINCOLOR_SUPERORANGE1 123
+#define SKINCOLOR_SUPERORANGE2 124
+#define SKINCOLOR_SUPERORANGE3 125
+#define SKINCOLOR_SUPERORANGE4 126
+#define SKINCOLOR_SUPERORANGE5 127
+#define SKINCOLOR_SUPERGOLD1 128
+#define SKINCOLOR_SUPERGOLD2 129
+#define SKINCOLOR_SUPERGOLD3 130
+#define SKINCOLOR_SUPERGOLD4 131
+#define SKINCOLOR_SUPERGOLD5 132
+#define SKINCOLOR_SUPERPERIDOT1 133
+#define SKINCOLOR_SUPERPERIDOT2 134
+#define SKINCOLOR_SUPERPERIDOT3 135
+#define SKINCOLOR_SUPERPERIDOT4 136
+#define SKINCOLOR_SUPERPERIDOT5 137
+#define SKINCOLOR_SUPERSKY1 138
+#define SKINCOLOR_SUPERSKY2 139
+#define SKINCOLOR_SUPERSKY3 140
+#define SKINCOLOR_SUPERSKY4 141
+#define SKINCOLOR_SUPERSKY5 142
+#define SKINCOLOR_SUPERPURPLE1 143
+#define SKINCOLOR_SUPERPURPLE2 144
+#define SKINCOLOR_SUPERPURPLE3 145
+#define SKINCOLOR_SUPERPURPLE4 146
+#define SKINCOLOR_SUPERPURPLE5 147
+#define SKINCOLOR_SUPERRUST1 148
+#define SKINCOLOR_SUPERRUST2 149
+#define SKINCOLOR_SUPERRUST3 150
+#define SKINCOLOR_SUPERRUST4 151
+#define SKINCOLOR_SUPERRUST5 152
+#define SKINCOLOR_SUPERTAN1 153
+#define SKINCOLOR_SUPERTAN2 154
+#define SKINCOLOR_SUPERTAN3 155
+#define SKINCOLOR_SUPERTAN4 156
+#define SKINCOLOR_SUPERTAN5 157

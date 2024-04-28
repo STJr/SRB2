@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -22,6 +22,7 @@
 #include "st_stuff.h"
 #include "hu_stuff.h"
 #include "lua_hook.h"
+#include "acs/interface.h"
 #include "m_cond.h" // unlockables, emblems, etc
 #include "p_setup.h"
 #include "m_cheat.h" // objectplace
@@ -2543,6 +2544,8 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 	if (LUA_HookMobjDeath(target, inflictor, source, damagetype) || P_MobjWasRemoved(target))
 		return;
 
+	P_ActivateThingSpecial(target, source);
+
 	// Let EVERYONE know what happened to a player! 01-29-2002 Tails
 	if (target->player && !target->player->spectator)
 	{
@@ -2780,6 +2783,8 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 				}
 			}
 		}
+
+		ACS_RunPlayerDeathScript(target->player);
 	}
 
 	if (source && target && target->player && source->player)

@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -42,6 +42,7 @@
 #include "st_stuff.h"
 #include "lua_script.h"
 #include "lua_hook.h"
+#include "acs/interface.h"
 #include "b_bot.h"
 // Objectplace
 #include "m_cheat.h"
@@ -966,6 +967,52 @@ pflags_t P_GetJumpFlags(player_t *player)
 	if (player->charflags & SF_NOJUMPDAMAGE)
 		return (PF_JUMPED|PF_NOJUMPDAMAGE);
 	return PF_JUMPED;
+}
+
+UINT8 P_FindLowestLap(void)
+{
+	INT32 i;
+	UINT8 lowest = UINT8_MAX;
+
+	if (!circuitmap)
+		return 0;
+
+	for (i = 0; i < MAXPLAYERS; i++)
+	{
+		if (!playeringame[i] || players[i].spectator)
+			continue;
+
+		if (lowest == UINT8_MAX || players[i].laps < lowest)
+		{
+			lowest = players[i].laps;
+		}
+	}
+
+	CONS_Debug(DBG_GAMELOGIC, "Lowest laps found: %d\n", lowest);
+
+	return lowest;
+}
+
+UINT8 P_FindHighestLap(void)
+{
+	INT32 i;
+	UINT8 highest = 0;
+
+	if (!circuitmap)
+		return 0;
+
+	for (i = 0; i < MAXPLAYERS; i++)
+	{
+		if (!playeringame[i] || players[i].spectator)
+			continue;
+
+		if (players[i].laps > highest)
+			highest = players[i].laps;
+	}
+
+	CONS_Debug(DBG_GAMELOGIC, "Highest laps found: %d\n", highest);
+
+	return highest;
 }
 
 //
@@ -2316,6 +2363,7 @@ void P_DoPlayerExit(player_t *player, boolean finishedflag)
 	player->powers[pw_underwater] = 0;
 	player->powers[pw_spacetime] = 0;
 	P_RestoreMusic(player);
+	ACS_RunPlayerFinishScript(player);
 }
 
 boolean P_InSpaceSector(mobj_t *mo) // Returns true if you are in space

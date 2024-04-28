@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2012-2016 by John "JTE" Muniz.
-// Copyright (C) 2012-2023 by Sonic Team Junior.
+// Copyright (C) 2012-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -216,8 +216,14 @@ static const struct {
 	{META_LINEARGS,     "line_t.args"},
 	{META_LINESTRINGARGS, "line_t.stringargs"},
 
+	{META_SECTORARGS,     "sector_t.args"},
+	{META_SECTORSTRINGARGS, "sector_t.stringargs"},
+
 	{META_THINGARGS,     "mapthing.args"},
 	{META_THINGSTRINGARGS, "mapthing.stringargs"},
+
+	{META_THINGSPECIALARGS,     "mapthing.specialargs"},
+	{META_THINGSPECIALSTRINGARGS, "mapthing.specialstringargs"},
 #ifdef HAVE_LUA_SEGS
 	{META_NODEBBOX,     "node_t.bbox"},
 	{META_NODECHILDREN, "node_t.children"},
@@ -3860,80 +3866,32 @@ static int lib_gAddGametype(lua_State *L)
 // Partly lifted from Got_AddPlayer
 static int lib_gAddPlayer(lua_State *L)
 {
-	INT16 i, newplayernum;
-	player_t *newplayer;
-	SINT8 skinnum = 0, bot;
+	const char *skinname = NULL;
+	UINT16 skincolor = SKINCOLOR_NONE;
+	const char *botname = NULL;
+	SINT8 bottype;
 
-	for (i = 0; i < MAXPLAYERS; i++)
-	{
-		if (!playeringame[i])
-			break;
-	}
+	// Read the skin argument
+	if (!lua_isnoneornil(L, 1))
+		skinname = luaL_checkstring(L, 1);
 
-	if (i >= MAXPLAYERS)
-	{
+	// Read the color
+	if (!lua_isnoneornil(L, 2))
+		skincolor = R_GetColorByName(luaL_checkstring(L, 2));
+
+	// Read the bot name, if given
+	if (!lua_isnoneornil(L, 3))
+		botname = luaL_checkstring(L, 3);
+
+	bottype = luaL_optinteger(L, 4, 3);
+
+	INT16 playernum = B_AddBot(skinname, skincolor, botname, bottype);
+	if (playernum < 0) {
 		lua_pushnil(L);
 		return 1;
 	}
 
-	newplayernum = i;
-
-	CL_ClearPlayer(newplayernum);
-
-	playeringame[newplayernum] = true;
-	G_AddPlayer(newplayernum);
-	newplayer = &players[newplayernum];
-
-	newplayer->jointime = 0;
-	newplayer->quittime = 0;
-	newplayer->lastinputtime = 0;
-
-	// Read the skin argument (defaults to Sonic)
-	if (!lua_isnoneornil(L, 1))
-	{
-		skinnum = R_SkinAvailable(luaL_checkstring(L, 1));
-		skinnum = skinnum < 0 ? 0 : skinnum;
-	}
-
-	// Read the color (defaults to skin prefcolor)
-	if (!lua_isnoneornil(L, 2))
-		newplayer->skincolor = R_GetColorByName(luaL_checkstring(L, 2));
-	else
-		newplayer->skincolor = skins[skinnum]->prefcolor;
-
-	// Set the bot default name as the skin
-	strcpy(player_names[newplayernum], skins[skinnum]->realname);
-
-	// Read the bot name, if given
-	if (!lua_isnoneornil(L, 3))
-		strlcpy(player_names[newplayernum], luaL_checkstring(L, 3), sizeof(*player_names));
-
-	bot = luaL_optinteger(L, 4, 3);
-	newplayer->bot = (bot >= BOT_NONE && bot <= BOT_MPAI) ? bot : BOT_MPAI;
-
-	// If our bot is a 2P type, we'll need to set its leader so it can spawn
-	if (newplayer->bot == BOT_2PAI || newplayer->bot == BOT_2PHUMAN)
-		B_UpdateBotleader(newplayer);
-
-	// Set the skin (can't do this until AFTER bot type is set!)
-	SetPlayerSkinByNum(newplayernum, skinnum);
-
-	if (netgame)
-	{
-		char joinmsg[256];
-
-		// Truncate bot name
-		player_names[newplayernum][sizeof(*player_names) - 8] = '\0'; // The length of colored [BOT] + 1
-
-		strcpy(joinmsg, M_GetText("\x82*Bot %s has joined the game (player %d)"));
-		strcpy(joinmsg, va(joinmsg, player_names[newplayernum], newplayernum));
-		HU_AddChatText(joinmsg, false);
-
-		// Append blue [BOT] tag at the end
-		strlcat(player_names[newplayernum], "\x84[BOT]\x80", sizeof(*player_names));
-	}
-
-	LUA_PushUserdata(L, newplayer, META_PLAYER);
+	LUA_PushUserdata(L, &players[playernum], META_PLAYER);
 	return 1;
 }
 

@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -16,8 +16,8 @@
 
 #include "doomdef.h"
 
-#ifdef __GNUG__
-#pragma interface
+#ifdef __cplusplus
+extern "C" {
 #endif
 
 extern tic_t leveltime;
@@ -31,6 +31,8 @@ void P_PreTicker(INT32 frames);
 void P_DoTeamscrambling(void);
 void P_RemoveThinkerDelayed(thinker_t *thinker); //killed
 
+extern UINT32 thinker_era;
+
 mobj_t *P_SetTarget2(mobj_t **mo, mobj_t *target
 #ifdef PARANOIA
 		, const char *source_file, int source_line
@@ -41,6 +43,10 @@ mobj_t *P_SetTarget2(mobj_t **mo, mobj_t *target
 #define P_SetTarget(...) P_SetTarget2(__VA_ARGS__, __FILE__, __LINE__)
 #else
 #define P_SetTarget P_SetTarget2
+#endif
+
+#ifdef __cplusplus
+} // extern "C"
 #endif
 
 #endif

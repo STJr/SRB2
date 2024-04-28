@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -411,6 +411,48 @@ typedef enum
 
 typedef enum
 {
+	// Mask to get trigger type.
+	SECSPAC_TRIGGERMASK			= 0x0000000F,
+
+	// Special action is activated once.
+	SECSPAC_ONCESPECIAL			= 0x00000000,
+
+	// Special action is repeatable.
+	SECSPAC_REPEATSPECIAL		= 0x00000001,
+
+	// Special action is activated continously.
+	SECSPAC_CONTINUOUSSPECIAL	= 0x00000002,
+
+	// When a player enters this sector.
+	SECSPAC_ENTER				= 0x00000010,
+
+	// When a player touches the floor of this sector.
+	SECSPAC_FLOOR				= 0x00000020,
+
+	// When a player touches the ceiling of this sector.
+	SECSPAC_CEILING				= 0x00000040,
+
+	// When an enemy enters this sector.
+	SECSPAC_ENTERMONSTER		= 0x00000080,
+
+	// When an enemy touches the floor of this sector.
+	SECSPAC_FLOORMONSTER		= 0x00000100,
+
+	// When an enemy touches the ceiling of this sector.
+	SECSPAC_CEILINGMONSTER		= 0x00000200,
+
+	// When a projectile enters this sector.
+	SECSPAC_ENTERMISSILE		= 0x00000400,
+
+	// When a projectile touches the floor of this sector.
+	SECSPAC_FLOORMISSILE		= 0x00000800,
+
+	// When a projectile touches the ceiling of this sector.
+	SECSPAC_CEILINGMISSILE		= 0x00001000,
+} sectoractionflags_t;
+
+typedef enum
+{
 	SD_NONE = 0,
 	SD_GENERIC = 1,
 	SD_WATER = 2,
@@ -552,6 +594,12 @@ typedef struct sector_s
 	// portals
 	UINT32 portal_floor;
 	UINT32 portal_ceiling;
+
+	// Action specials
+	INT16 action;
+	INT32 args[NUM_SCRIPT_ARGS];
+	char *stringargs[NUM_SCRIPT_STRINGARGS];
+	sectoractionflags_t activation;
 } sector_t;
 
 //
@@ -569,9 +617,6 @@ typedef enum
 
 #define SPECIAL_SECTOR_SETPORTAL 6
 
-#define NUMLINEARGS 10
-#define NUMLINESTRINGARGS 2
-
 #define NO_SIDEDEF 0xFFFFFFFF
 
 typedef struct line_s
@@ -585,10 +630,11 @@ typedef struct line_s
 
 	// Animation related.
 	INT16 flags;
+	UINT32 activation;
 	INT16 special;
 	taglist_t tags;
-	INT32 args[NUMLINEARGS];
-	char *stringargs[NUMLINESTRINGARGS];
+	INT32 args[NUM_SCRIPT_ARGS];
+	char *stringargs[NUM_SCRIPT_STRINGARGS];
 
 	// Visual appearance: sidedefs.
 	UINT32 sidenum[2]; // sidenum[1] will be NO_SIDEDEF if one-sided
@@ -632,6 +678,9 @@ typedef struct
 	// Texture indices.
 	// We do not maintain names here.
 	INT32 toptexture, bottomtexture, midtexture;
+
+	// Interpolator installed? (R_CreateInterpolator_SideScroll)
+	boolean acs_interpolated;
 
 	// Linedef the sidedef belongs to
 	line_t *line;
@@ -900,7 +949,7 @@ typedef struct
 #endif
 
 // Possible alpha types for a patch.
-enum patchalphastyle {AST_COPY, AST_TRANSLUCENT, AST_ADD, AST_SUBTRACT, AST_REVERSESUBTRACT, AST_MODULATE, AST_OVERLAY, AST_FOG};
+typedef enum patchalphastyle { AST_COPY, AST_TRANSLUCENT, AST_ADD, AST_SUBTRACT, AST_REVERSESUBTRACT, AST_MODULATE, AST_OVERLAY, AST_FOG } patchalphastyle_t;
 
 typedef enum
 {

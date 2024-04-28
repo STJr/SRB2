@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -23,6 +23,10 @@
 #ifdef HAVE_OPENMPT
 #include "libopenmpt/libopenmpt.h"
 extern openmpt_module *openmpt_mhandle;
+#endif
+
+#ifdef __cplusplus
+extern "C" {
 #endif
 
 // mask used to indicate sound origin is player item pickup
@@ -327,6 +331,10 @@ void S_StopSoundByNum(sfxenum_t sfxnum);
 #ifndef HW3SOUND
 #define S_StartAttackSound S_StartSound
 #define S_StartScreamSound S_StartSound
+#endif
+
+#ifdef __cplusplus
+} // extern "C"
 #endif
 
 #endif

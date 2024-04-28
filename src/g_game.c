@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -52,6 +52,8 @@
 
 #include "lua_hud.h"
 #include "lua_libs.h"
+
+#include "acs/interface.h"
 
 gameaction_t gameaction;
 gamestate_t gamestate = GS_NULL;
@@ -2614,6 +2616,7 @@ void G_PlayerReborn(INT32 player, boolean betweenmaps)
 	boolean spectator;
 	boolean outofcoop;
 	boolean removing;
+	boolean enteredgame;
 	INT16 bot;
 	SINT8 pity;
 	INT16 rings;
@@ -2630,6 +2633,7 @@ void G_PlayerReborn(INT32 player, boolean betweenmaps)
 	quittime = players[player].quittime;
 	spectator = players[player].spectator;
 	outofcoop = players[player].outofcoop;
+	enteredgame = players[player].enteredgame;
 	removing = players[player].removing;
 	pflags = (players[player].pflags & (PF_FLIPCAM|PF_ANALOGMODE|PF_DIRECTIONCHAR|PF_AUTOBRAKE|PF_TAGIT|PF_GAMETYPEOVER));
 	playerangleturn = players[player].angleturn;
@@ -2708,6 +2712,7 @@ void G_PlayerReborn(INT32 player, boolean betweenmaps)
 	p->spectator = spectator;
 	p->outofcoop = outofcoop;
 	p->removing = removing;
+	p->enteredgame = enteredgame;
 	p->angleturn = playerangleturn;
 	p->oldrelangleturn = oldrelangleturn;
 
@@ -2801,6 +2806,11 @@ void G_PlayerReborn(INT32 player, boolean betweenmaps)
 
 	if (p->mare == 255)
 		p->mare = 0;
+
+	if (!p->spectator && p->enteredgame)
+	{
+		ACS_RunPlayerRespawnScript(p);
+	}
 }
 
 //
@@ -4279,6 +4289,8 @@ static void G_DoStartContinue(void)
 	I_Assert(!netgame && !multiplayer);
 
 	G_PlayerFinishLevel(consoleplayer); // take away cards and stuff
+
+	ACS_RunGameOverScript();
 
 	F_StartContinue();
 	gameaction = ga_nothing;

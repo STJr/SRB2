@@ -4607,6 +4607,35 @@ const char *const TO_LIST[] = {
 	NULL
 };
 
+// Line activation flags
+const char *const SPAC_LIST[] = {
+	"REPEATSPECIAL",
+	"CROSS",
+	"CROSSMONSTER",
+	"CROSSMISSILE",
+	"PUSH",
+	"PUSHMONSTER",
+	"IMPACT",
+	NULL
+};
+
+// Sector activation flags
+const char *const SECSPAC_LIST[] = {
+	"ONCESPECIAL",
+	"REPEATSPECIAL",
+	"CONTINUOUSSPECIAL",
+	"ENTER",
+	"FLOOR",
+	"CEILING",
+	"ENTERMONSTER",
+	"FLOORMONSTER",
+	"CEILINGMONSTER",
+	"ENTERMISSILE",
+	"FLOORMISSILE",
+	"CEILINGMISSILE",
+	NULL
+};
+
 const char *COLOR_ENUMS[] = {
 	"NONE",			// SKINCOLOR_NONE,
 

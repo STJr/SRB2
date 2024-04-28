@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -34,10 +34,14 @@
 #include "r_sky.h"
 #include "p_polyobj.h"
 #include "lua_script.h"
+#include "acs/interface.h"
 #include "p_slopes.h"
 
 savedata_t savedata;
 UINT8 *save_p;
+UINT8 *save_start;
+UINT8 *save_end;
+size_t save_length;
 
 // Block UINT32s to attempt to ensure that the correct data is
 // being sent and received
@@ -879,6 +883,35 @@ static void P_NetUnArchiveWaypoints(void)
 #define SD_GRAVITY     0x01
 #define SD_FLOORPORTAL 0x02
 #define SD_CEILPORTAL  0x04
+#define SD_ACTION      0x08
+#define SD_ARGS        0x10
+#define SD_STRINGARGS  0x20
+#define SD_ACTIVATION  0x40
+
+static boolean P_SectorArgsEqual(const sector_t *sc, const sector_t *spawnsc)
+{
+	UINT8 i;
+	for (i = 0; i < NUM_SCRIPT_ARGS; i++)
+		if (sc->args[i] != spawnsc->args[i])
+			return false;
+
+	return true;
+}
+
+static boolean P_SectorStringArgsEqual(const sector_t *sc, const sector_t *spawnsc)
+{
+	UINT8 i;
+	for (i = 0; i < NUM_SCRIPT_STRINGARGS; i++)
+	{
+		if (!sc->stringargs[i])
+			return !spawnsc->stringargs[i];
+
+		if (strcmp(sc->stringargs[i], spawnsc->stringargs[i]))
+			return false;
+	}
+
+	return true;
+}
 
 // diff1 flags
 #define LD_FLAG          0x01
@@ -893,6 +926,7 @@ static void P_NetUnArchiveWaypoints(void)
 // diff2 flags
 #define LD_EXECUTORDELAY 0x01
 #define LD_TRANSFPORTAL  0x02
+#define LD_ACTIVATION    0x04
 
 // sidedef flags
 enum
@@ -925,7 +959,7 @@ enum
 static boolean P_AreArgsEqual(const line_t *li, const line_t *spawnli)
 {
 	UINT8 i;
-	for (i = 0; i < NUMLINEARGS; i++)
+	for (i = 0; i < NUM_SCRIPT_ARGS; i++)
 		if (li->args[i] != spawnli->args[i])
 			return false;
 
@@ -935,7 +969,7 @@ static boolean P_AreArgsEqual(const line_t *li, const line_t *spawnli)
 static boolean P_AreStringArgsEqual(const line_t *li, const line_t *spawnli)
 {
 	UINT8 i;
-	for (i = 0; i < NUMLINESTRINGARGS; i++)
+	for (i = 0; i < NUM_SCRIPT_STRINGARGS; i++)
 	{
 		if (!li->stringargs[i])
 			return !spawnli->stringargs[i];
@@ -1112,6 +1146,14 @@ static void ArchiveSectors(void)
 			diff5 |= SD_FLOORPORTAL;
 		if (ss->portal_ceiling != spawnss->portal_ceiling)
 			diff5 |= SD_CEILPORTAL;
+		if (ss->action != spawnss->action)
+			diff5 |= SD_ACTION;
+		if (!P_SectorArgsEqual(ss, spawnss))
+			diff5 |= SD_ARGS;
+		if (!P_SectorStringArgsEqual(ss, spawnss))
+			diff5 |= SD_STRINGARGS;
+		if (ss->activation != spawnss->activation)
+			diff5 |= SD_ACTIVATION;
 
 		if (ss->ffloors && CheckFFloorDiff(ss))
 			diff |= SD_FFLOORS;
@@ -1210,6 +1252,33 @@ static void ArchiveSectors(void)
 				WRITEUINT32(save_p, ss->portal_floor);
 			if (diff5 & SD_CEILPORTAL)
 				WRITEUINT32(save_p, ss->portal_ceiling);
+			if (diff5 & SD_ACTION)
+				WRITEINT16(save_p, ss->action);
+			if (diff5 & SD_ARGS)
+			{
+				for (j = 0; j < NUM_SCRIPT_ARGS; j++)
+					WRITEINT32(save_p, ss->args[j]);
+			}
+			if (diff5 & SD_STRINGARGS)
+			{
+				for (j = 0; j < NUM_SCRIPT_STRINGARGS; j++)
+				{
+					size_t len, k;
+
+					if (!ss->stringargs[j])
+					{
+						WRITEINT32(save_p, 0);
+						continue;
+					}
+
+					len = strlen(ss->stringargs[j]);
+					WRITEINT32(save_p, len);
+					for (k = 0; k < len; k++)
+						WRITECHAR(save_p, ss->stringargs[j][k]);
+				}
+			}
+			if (diff5 & SD_ACTIVATION)
+				WRITEUINT32(save_p, ss->activation);
 			if (diff & SD_FFLOORS)
 				ArchiveFFloors(ss);
 		}
@@ -1347,6 +1416,35 @@ static void UnArchiveSectors(void)
 			sectors[i].portal_floor = READUINT32(save_p);
 		if (diff5 & SD_CEILPORTAL)
 			sectors[i].portal_ceiling = READUINT32(save_p);
+		if (diff5 & SD_ACTION)
+			sectors[i].action = READINT16(save_p);
+		if (diff5 & SD_ARGS)
+		{
+			for (j = 0; j < NUM_SCRIPT_ARGS; j++)
+				sectors[i].args[j] = READINT32(save_p);
+		}
+		if (diff5 & SD_STRINGARGS)
+		{
+			for (j = 0; j < NUM_SCRIPT_STRINGARGS; j++)
+			{
+				size_t len = READINT32(save_p);
+				size_t k;
+
+				if (!len)
+				{
+					Z_Free(sectors[i].stringargs[j]);
+					sectors[i].stringargs[j] = NULL;
+					continue;
+				}
+
+				sectors[i].stringargs[j] = Z_Realloc(sectors[i].stringargs[j], len + 1, PU_LEVEL, NULL);
+				for (k = 0; k < len; k++)
+					sectors[i].stringargs[j][k] = READCHAR(save_p);
+				sectors[i].stringargs[j][len] = '\0';
+			}
+		}
+		if (diff5 & SD_ACTIVATION)
+			sectors[i].activation = READUINT32(save_p);
 
 		if (diff & SD_FFLOORS)
 			UnArchiveFFloors(&sectors[i]);
@@ -1470,6 +1568,9 @@ static void ArchiveLines(void)
 		if (li->secportal != spawnli->secportal)
 			diff2 |= LD_TRANSFPORTAL;
 
+		if (li->activation != spawnli->activation)
+			diff2 |= LD_ACTIVATION;
+
 		if (li->sidenum[0] != NO_SIDEDEF)
 		{
 			side1diff = GetSideDiff(&sides[li->sidenum[0]], &spawnsides[li->sidenum[0]]);
@@ -1501,13 +1602,13 @@ static void ArchiveLines(void)
 			if (diff & LD_ARGS)
 			{
 				UINT8 j;
-				for (j = 0; j < NUMLINEARGS; j++)
+				for (j = 0; j < NUM_SCRIPT_ARGS; j++)
 					WRITEINT32(save_p, li->args[j]);
 			}
 			if (diff & LD_STRINGARGS)
 			{
 				UINT8 j;
-				for (j = 0; j < NUMLINESTRINGARGS; j++)
+				for (j = 0; j < NUM_SCRIPT_STRINGARGS; j++)
 				{
 					size_t len, k;
 
@@ -1531,6 +1632,8 @@ static void ArchiveLines(void)
 				WRITEINT32(save_p, li->executordelay);
 			if (diff2 & LD_TRANSFPORTAL)
 				WRITEUINT32(save_p, li->secportal);
+			if (diff2 & LD_ACTIVATION)
+				WRITEUINT32(save_p, li->activation);
 		}
 	}
 	WRITEUINT32(save_p, 0xffffffff);
@@ -1609,13 +1712,13 @@ static void UnArchiveLines(void)
 		if (diff & LD_ARGS)
 		{
 			UINT8 j;
-			for (j = 0; j < NUMLINEARGS; j++)
+			for (j = 0; j < NUM_SCRIPT_ARGS; j++)
 				li->args[j] = READINT32(save_p);
 		}
 		if (diff & LD_STRINGARGS)
 		{
 			UINT8 j;
-			for (j = 0; j < NUMLINESTRINGARGS; j++)
+			for (j = 0; j < NUM_SCRIPT_STRINGARGS; j++)
 			{
 				size_t len = READINT32(save_p);
 				size_t k;
@@ -1641,6 +1744,8 @@ static void UnArchiveLines(void)
 			li->executordelay = READINT32(save_p);
 		if (diff2 & LD_TRANSFPORTAL)
 			li->secportal = READUINT32(save_p);
+		if (diff2 & LD_ACTIVATION)
+			li->activation = READUINT32(save_p);
 	}
 }
 
@@ -1681,6 +1786,53 @@ static void P_NetUnArchiveWorld(void)
 //
 // Thinkers
 //
+
+static boolean P_ThingArgsEqual(const mobj_t *mobj, const mapthing_t *mapthing)
+{
+	UINT8 i;
+	for (i = 0; i < NUM_MAPTHING_ARGS; i++)
+		if (mobj->thing_args[i] != mapthing->args[i])
+			return false;
+
+	return true;
+}
+
+static boolean P_ThingStringArgsEqual(const mobj_t *mobj, const mapthing_t *mapthing)
+{
+	UINT8 i;
+	for (i = 0; i < NUM_MAPTHING_STRINGARGS; i++)
+	{
+		if (!mobj->thing_stringargs[i])
+			return !mapthing->stringargs[i];
+
+		if (strcmp(mobj->thing_stringargs[i], mapthing->stringargs[i]))
+			return false;
+	}
+
+	return true;
+}
+
+static boolean P_ThingScriptEqual(const mobj_t *mobj, const mapthing_t *mapthing)
+{
+	UINT8 i;
+	if (mobj->special != mapthing->special)
+		return false;
+
+	for (i = 0; i < NUM_SCRIPT_ARGS; i++)
+		if (mobj->script_args[i] != mapthing->script_args[i])
+			return false;
+
+	for (i = 0; i < NUM_SCRIPT_STRINGARGS; i++)
+	{
+		if (!mobj->script_stringargs[i])
+			return !mapthing->script_stringargs[i];
+
+		if (strcmp(mobj->script_stringargs[i], mapthing->script_stringargs[i]))
+			return false;
+	}
+
+	return true;
+}
 
 typedef enum
 {
@@ -1746,7 +1898,11 @@ typedef enum
 	MD2_DISPOFFSET          = 1<<23,
 	MD2_DRAWONLYFORPLAYER   = 1<<24,
 	MD2_DONTDRAWFORVIEWMOBJ = 1<<25,
-	MD2_TRANSLATION         = 1<<26
+	MD2_TRANSLATION         = 1<<26,
+	MD2_ARGS                = 1<<27,
+	MD2_STRINGARGS          = 1<<28,
+	MD2_TID                 = 1<<29,
+	MD2_SPECIAL             = 1<<30
 } mobj_diff2_t;
 
 typedef enum
@@ -1843,6 +1999,8 @@ static void SaveMobjThinker(const thinker_t *th, const UINT8 type)
 	if (mobj->type == MT_HOOPCENTER && mobj->threshold == 4242)
 		return;
 
+	diff2 = 0;
+
 	if (mobj->spawnpoint && mobj->info->doomednum != -1)
 	{
 		// spawnpoint is not modified but we must save it since it is an identifier
@@ -1857,11 +2015,61 @@ static void SaveMobjThinker(const thinker_t *th, const UINT8 type)
 
 		if (mobj->info->doomednum != mobj->spawnpoint->type)
 			diff |= MD_TYPE;
+
+		if (!P_ThingArgsEqual(mobj, mobj->spawnpoint))
+			diff2 |= MD2_ARGS;
+
+		if (!P_ThingStringArgsEqual(mobj, mobj->spawnpoint))
+			diff2 |= MD2_STRINGARGS;
+
+		if (!P_ThingScriptEqual(mobj, mobj->spawnpoint))
+			diff2 |= MD2_SPECIAL;
 	}
 	else
+	{
 		diff = MD_POS | MD_TYPE; // not a map spawned thing so make it from scratch
 
-	diff2 = 0;
+		for (unsigned j = 0; j < NUM_MAPTHING_ARGS; j++)
+		{
+			if (mobj->thing_args[j] != 0)
+			{
+				diff2 |= MD2_ARGS;
+				break;
+			}
+		}
+
+		for (unsigned j = 0; j < NUM_MAPTHING_STRINGARGS; j++)
+		{
+			if (mobj->thing_stringargs[j] != NULL)
+			{
+				diff2 |= MD2_STRINGARGS;
+				break;
+			}
+		}
+
+		if (mobj->special != 0)
+		{
+			diff2 |= MD2_SPECIAL;
+		}
+
+		for (unsigned j = 0; j < NUM_SCRIPT_ARGS; j++)
+		{
+			if (mobj->script_args[j] != 0)
+			{
+				diff2 |= MD2_SPECIAL;
+				break;
+			}
+		}
+
+		for (unsigned j = 0; j < NUM_SCRIPT_STRINGARGS; j++)
+		{
+			if (mobj->script_stringargs[j] != NULL)
+			{
+				diff2 |= MD2_SPECIAL;
+				break;
+			}
+		}
+	}
 
 	// not the default but the most probable
 	if (mobj->momx != 0 || mobj->momy != 0 || mobj->momz != 0 || mobj->pmomz !=0)
@@ -5039,6 +5247,32 @@ static inline boolean P_UnArchiveLuabanksAndConsistency(void)
 	return true;
 }
 
+static void DoACSArchive(void)
+{
+	savebuffer_t save;
+	save.buffer = save_start;
+	save.end = save_end;
+	save.p = save_p;
+	save.size = save_length;
+
+	ACS_Archive(&save);
+
+	save_p = save.p;
+}
+
+static void DoACSUnArchive(void)
+{
+	savebuffer_t save;
+	save.buffer = save_start;
+	save.end = save_end;
+	save.p = save_p;
+	save.size = save_length;
+
+	ACS_UnArchive(&save);
+
+	save_p = save.p;
+}
+
 void P_SaveGame(INT16 mapnum)
 {
 	P_ArchiveMisc(mapnum);
@@ -5079,6 +5313,8 @@ void P_SaveNetGame(boolean resending)
 		P_NetArchiveWaypoints();
 		P_NetArchiveSectorPortals();
 	}
+
+	DoACSArchive();
 	LUA_Archive();
 
 	P_ArchiveLuabanksAndConsistency();
@@ -5122,6 +5358,8 @@ boolean P_LoadNetGame(boolean reloading)
 		P_RelinkPointers();
 		P_FinishMobjs();
 	}
+
+	DoACSUnArchive();
 	LUA_UnArchive();
 
 	// This is stupid and hacky, but maybe it'll work!

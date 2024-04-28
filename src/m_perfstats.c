@@ -1,6 +1,6 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
-// Copyright (C) 2020-2023 by Sonic Team Junior.
+// Copyright (C) 2020-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -70,6 +70,8 @@ ps_metric_t ps_lua_thinkframe_time = {0};
 ps_metric_t ps_lua_postthinkframe_time = {0};
 
 ps_metric_t ps_lua_mobjhooks = {0};
+
+ps_metric_t ps_acs_time = {0};
 
 ps_metric_t ps_otherlogictime = {0};
 
@@ -163,6 +165,7 @@ perfstatrow_t gamelogic_rows[] = {
 	{" lprethinkf", " LUAh_PreThinkFrame:", &ps_lua_prethinkframe_time, PS_TIME|PS_LEVEL},
 	{" lthinkf", " LUAh_ThinkFrame:", &ps_lua_thinkframe_time, PS_TIME|PS_LEVEL},
 	{" lpostthinkf", " LUAh_PostThinkFrame:", &ps_lua_postthinkframe_time, PS_TIME|PS_LEVEL},
+	{" acstick", " ACS_Tick:", &ps_acs_time, PS_TIME|PS_LEVEL},
 	{" other  ", " Other:          ", &ps_otherlogictime, PS_TIME|PS_LEVEL},
 	{0}
 };
@@ -629,7 +632,8 @@ void PS_UpdateTickStats(void)
 				ps_thinkertime.value.p -
 				ps_lua_prethinkframe_time.value.p -
 				ps_lua_thinkframe_time.value.p -
-				ps_lua_postthinkframe_time.value.p;
+				ps_lua_postthinkframe_time.value.p -
+				ps_acs_time.value.p;
 
 			PS_CountThinkers();
 		}

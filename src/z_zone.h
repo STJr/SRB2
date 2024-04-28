@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -17,6 +17,10 @@
 #include <stdio.h>
 #include "doomdef.h"
 #include "doomtype.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #ifdef __GNUC__ // __attribute__ ((X))
 #if (__GNUC__ > 4) || (__GNUC__ == 4 && (__GNUC_MINOR__ >= 3 || (__GNUC_MINOR__ == 2 && __GNUC_PATCHLEVEL__ >= 5)))
@@ -152,6 +156,9 @@ size_t Z_TagsUsage(INT32 lowtag, INT32 hightag);
 // Miscellaneous functions
 //
 char *Z_StrDup(const char *in);
-#define Z_Unlock(p) (void)p // TODO: remove this now that NDS code has been removed
+
+#ifdef __cplusplus
+} // extern "C"
+#endif
 
 #endif

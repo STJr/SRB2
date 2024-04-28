@@ -70,6 +70,8 @@ extern const char *const MSF_LIST[]; // Sector flags
 extern const char *const SSF_LIST[]; // Sector special flags
 extern const char *const SD_LIST[]; // Sector damagetype
 extern const char *const TO_LIST[]; // Sector triggerer
+extern const char *const SPAC_LIST[]; // Line activation flags
+extern const char *const SECSPAC_LIST[]; // Sector activation flags
 extern const char *COLOR_ENUMS[];
 extern const char *const POWERS_LIST[];
 extern const char *const HUDITEMS_LIST[];

@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2012-2016 by John "JTE" Muniz.
-// Copyright (C) 2012-2023 by Sonic Team Junior.
+// Copyright (C) 2012-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -71,8 +71,12 @@ extern boolean ignoregameinputs;
 #define META_SIDENUM "LINE_T*SIDENUM"
 #define META_LINEARGS "LINE_T*ARGS"
 #define META_LINESTRINGARGS "LINE_T*STRINGARGS"
+#define META_SECTORARGS "SECTOR_T*ARGS"
+#define META_SECTORSTRINGARGS "SECTOR_T*STRINGARGS"
 #define META_THINGARGS "MAPTHING_T*ARGS"
 #define META_THINGSTRINGARGS "MAPTHING_T*STRINGARGS"
+#define META_THINGSPECIALARGS "MAPTHING_T*SPECIALARGS"
+#define META_THINGSPECIALSTRINGARGS "MAPTHING_T*SPECIALSTRINGARGS"
 #define META_POLYOBJVERTICES "POLYOBJ_T*VERTICES"
 #define META_POLYOBJLINES "POLYOBJ_T*LINES"
 #ifdef HAVE_LUA_SEGS

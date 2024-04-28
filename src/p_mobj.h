@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -27,6 +27,10 @@
 // States are tied to finite states are tied to animation frames.
 // Needs precompiled tables/data structures.
 #include "info.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 //
 // NOTES: mobj_t
@@ -343,6 +347,10 @@ typedef struct mobj_s
 	UINT32 flags2; // MF2_ flags
 	UINT16 eflags; // extra flags
 
+	mtag_t tid;
+	struct mobj_s *tid_next;
+	struct mobj_s **tid_prev; // killough 8/11/98: change to ptr-to-ptr
+
 	void *skin; // overrides 'sprite' when non-NULL (for player bodies to 'remember' the skin)
 
 	// Player and mobj sprites in multiplayer modes are modified
@@ -419,6 +427,13 @@ typedef struct mobj_s
 	boolean mirrored; // The object's rotations will be mirrored left to right, e.g., see frame AL from the right and AR from the left
 	fixed_t shadowscale; // If this object casts a shadow, and the size relative to radius
 	INT32 dispoffset; // copy of info->dispoffset, so mobjs can be sorted independently of their type
+
+	INT32 thing_args[NUM_MAPTHING_ARGS];
+	char *thing_stringargs[NUM_MAPTHING_STRINGARGS];
+
+	INT16 special;
+	INT32 script_args[NUM_SCRIPT_ARGS];
+	char *script_stringargs[NUM_SCRIPT_STRINGARGS];
 
 	// WARNING: New fields must be added separately to savegame and Lua.
 } mobj_t;
@@ -512,6 +527,7 @@ fixed_t P_GetMobjSpawnHeight(const mobjtype_t mobjtype, const fixed_t x, const f
 fixed_t P_GetMapThingSpawnHeight(const mobjtype_t mobjtype, const mapthing_t* mthing, const fixed_t x, const fixed_t y);
 
 mobj_t *P_SpawnMapThing(mapthing_t *mthing);
+void P_CopyMapThingSpecialFieldsToMobj(const mapthing_t *mthing, mobj_t *mobj);
 void P_SpawnHoop(mapthing_t *mthing);
 void P_SetBonusTime(mobj_t *mobj);
 void P_SpawnItemPattern(mapthing_t *mthing, boolean bonustime);
@@ -547,4 +563,9 @@ extern UINT16 emeraldspawndelay;
 extern INT32 numstarposts;
 extern UINT16 bossdisabled;
 extern boolean stoppedclock;
+
+#ifdef __cplusplus
+} // extern "C"
+#endif
+
 #endif

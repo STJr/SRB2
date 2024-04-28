@@ -33,7 +33,16 @@ II.A : Storage and Retrieval of Data
 II.B : Storage Within Archive Files
 -----------------------------------
 
-    No changes.
+In addition to the base specification SRB2 recognizes the following lumps
+between the TEXTMAP and ENDMAP lumps:
+
+    BEHAVIOR = contains compiled ACS code
+    ZNODES = Nodes (must be stored as extended GL nodes.)
+    BLOCKMAP = blockmap. It is recommended not to include this lump in UDMF maps.
+    REJECT = reject table. It is recommended not to include this lump in UDMF maps.
+
+    Lumps starting with 'SCRIPT' are guaranteed to be ignored by SRB2 so they
+    can be used to store ACS and dialogue script sources.
 
 --------------------------------
 II.C : Implementation Dependence
@@ -44,6 +53,12 @@ The SRB2 engine only supports the following namespace:
 
 The engine is allowed to refuse maps with an unsupported namespace,
 or emit a warning.
+
+Additionally, maps may include a "version" field, represented as an integer.
+This must be increased by one whenever backwards-incompatible changes are introduced.
+
+The highest version currently supported by the engine is:
+    0
 
 =======================================
 III. Standardized Fields
@@ -85,6 +100,14 @@ Sonic Robo Blast 2 defines the following standardized fields:
       netonly       = <bool>;     // Special only takes effect in multiplayer games.
       bouncy        = <bool>;     // Line is bouncy.
       transfer      = <bool>;     // In 3D floor sides, uses the sidedef properties of the control sector.
+
+      playercross   = <bool>;     // Special activates when a player crosses this line.
+      monstercross  = <bool>;     // Special activates when an enemy or boss crosses this line.
+      missilecross  = <bool>;     // Special activates when a projectile crosses this line.
+      playerpush    = <bool>;     // Special activates when a player pushes this line.
+      monsterpush   = <bool>;     // Special activates when an enemy or boss pushed this line.
+      impact        = <bool>;     // Special activates when a projectile hits this line.
+      repeatspecial = <bool>;     // Special is repeatable.
 
       alpha       = <float>;      // Translucency of this line. Default is 1.0
       renderstyle = <string>;     // Render style. Can be:
@@ -203,6 +226,18 @@ Sonic Robo Blast 2 defines the following standardized fields:
       triggerline_plane       = <bool>;     // Trigger effects require a plane touch to be executed.
       triggerline_mobj        = <bool>;     // Trigger effects can be executed by non-pushable objects.
 
+      playerenter       = <bool>;     // Special activates when a player enters this sector.
+      playerfloor       = <bool>;     // Special activates when a player's feet touches the sector's floor.
+      playerceiling     = <bool>;     // Special activates when a player's head touches the sector's ceiling.
+      monsterenter      = <bool>;     // Special activates when an enemy or boss enters this sector.
+      monsterfloor      = <bool>;     // Special activates when an enemy or boss's feet touches the sector's floor.
+      monsterceiling    = <bool>;     // Special activates when an enemy or boss's head touches the sector's ceiling.
+      missileenter      = <bool>;     // Special activates when a missile enters this sector.
+      missilefloor      = <bool>;     // Special activates when a missile hits the sector's floor.
+      missileceiling    = <bool>;     // Special activates when a missile hits the sector's ceiling.
+      repeatspecial     = <bool>;     // Special is repeatable.
+      continuousspecial = <bool>;     // Special is activated continuously.
+
       invertprecip   = <bool>;         // Inverts the precipitation effect; if the sector is considered to be indoors,
                                        // precipitation is generated, and if the sector is considered to be outdoors,
                                        // precipitation is not generated.
@@ -296,6 +331,20 @@ Sonic Robo Blast 2 defines the following standardized fields:
       stringarg0 = <string>;  // String argument 0.
       stringarg1 = <string>;  // String argument 1.
 
+      special          = <integer>; // Special. Default = 0.
+      scriptarg0       = <integer>; // Special argument 0. Default = 0.
+      scriptarg1       = <integer>; // Special argument 1. Default = 0.
+      scriptarg2       = <integer>; // Special argument 2. Default = 0.
+      scriptarg3       = <integer>; // Special argument 3. Default = 0.
+      scriptarg4       = <integer>; // Special argument 4. Default = 0.
+      scriptarg5       = <integer>; // Special argument 5. Default = 0.
+      scriptarg6       = <integer>; // Special argument 6. Default = 0.
+      scriptarg7       = <integer>; // Special argument 7. Default = 0.
+      scriptarg8       = <integer>; // Special argument 8. Default = 0.
+      scriptarg9       = <integer>; // Special argument 9. Default = 0.
+      scriptstringarg0 = <string>;  // Special string argument 0.
+      scriptstringarg1 = <string>;  // Special string argument 1.
+
       comment = <string>; // A comment. Implementors should attach no special
                           // semantic meaning to this field.
    }
@@ -304,6 +353,10 @@ Sonic Robo Blast 2 defines the following standardized fields:
 =======================================
 Changelog
 =======================================
+
+1.1: 25.04.2024
+Added activation parameters for lines and sectors.
+Added special and script arguments for things.
 
 1.0: 19.02.2024
 Initial version.

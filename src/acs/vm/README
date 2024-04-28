@@ -1,0 +1,121 @@
+ACS Virtual Machine (ACSVM)
+
+ACS VM library and standalone interpreter. Intended to be suitable for use in
+Doom-based video game engines to implement Hexen ACS or ZDoom ACS bytecode
+execution. It is focused on being usable for implementing existing extensions
+and new functions (whether through new instructions or CallFunc indexes) while
+having performance suitable to the complex ACS-based mods that have come into
+existence.
+
+
+===============================================================================
+Integrating ACSVM
+===============================================================================
+
+Although it can be used as an external library, ACSVM is also written so that
+it can be integrated directly into the repository of projects using it without
+needing to change any of the ACSVM files.
+
+It is enough to copy ACSVM's root into the root of the target repository, such
+that acsvm/CMakeLists.txt exists. Only the subdirectories of desired components
+(usually just ACSVM) need to be included. The CMakeLists.txt will automatically
+disable the omitted components.
+
+In your root CMakeLists.txt, all that is needed is:
+  set(ACSVM_NOFLAGS ON)
+  set(ACSVM_SHARED OFF)
+  add_subdirectory(acsvm)
+And the enabled components (again, usually just acsvm) will be available for
+use in target_link_libraries.
+
+
+===============================================================================
+Usage Overview
+===============================================================================
+
+===========================================================
+Getting Started
+===========================================================
+
+To use ACSVM, you will need to define a class that inherits from
+ACSVM::Environment. By overriding the various virtuals you can configure the
+different aspects of ACS loading and interpretation. But the absolute minimal
+usage only requires overriding loadModule:
+  class Env : public ACSVM::Environment
+  {
+  protected:
+    virtual void loadModule(ACSVM::Module *module);
+  };
+
+Which is implemented by using the module's name to locate the corresponding
+bytecode and passing that to module->readBytecode. The default behavior of
+getModuleName is to just set the ModuleName's string. This can be used to
+implement bytecode directly from files:
+  void Env::loadModule(ACSVM::Module *module)
+  {
+    std::ifstream in{module->name.s->str,
+       std::ios_base::in | std::ios_base::binary};
+
+    if(!in) throw ACSVM::ReadError("file open failure");
+
+    std::vector<ACSVM::Byte> data;
+
+    for(int c; c = in.get(), in;)
+      data.push_back(c);
+
+    module->readBytecode(data.data(), data.size());
+  }
+In a Doom engine, this would most likely use lumps, instead. Either by doing
+the lookup in loadModule, or by overriding getModuleName to turn the input
+string into a lump number.
+
+To actually initialize the environment and load some modules, you can use:
+  void EnvInit(Environment &env, char const *const *namev, std::size_t namec)
+  {
+    // Load modules.
+    std::vector<ACSVM::Module *> modules;
+    for(std::size_t i = 1; i < namec; ++i)
+      modules.push_back(env.getModule(env.getModuleName(namev[i])));
+
+    // Create and activate scopes.
+    ACSVM::GlobalScope *global = env.getGlobalScope(0);  global->active = true;
+    ACSVM::HubScope    *hub    = global->getHubScope(0); hub   ->active = true;
+    ACSVM::MapScope    *map    = hub->getMapScope(0);    map   ->active = true;
+
+    // Register modules with map scope.
+    map->addModules(modules.data(), modules.size());
+
+    // Start Open scripts.
+    map->scriptStartType(1, {});
+  }
+
+And then a simple interpreter loop:
+   while(env.hasActiveThread())
+   {
+      std::chrono::duration<double> rate{1.0 / 35};
+      auto time = std::chrono::steady_clock::now() + rate;
+
+      env.exec();
+
+      std::this_thread::sleep_until(time);
+   }
+Note that if you already have a game loop, you only need to call env.exec once
+per simulation frame.
+
+Finally, you will need to register instruction and callfunc functions to
+actually interface with the larger environment. At the least, it is useful to
+implement the EndPrint (86) instruction:
+  bool CF_EndPrint(ACSVM::Thread *thread, ACSVM::Word const *, ACSVM::Word)
+  {
+    std::cout << thread->printBuf.data() << '\n';
+    thread->printBuf.drop();
+    return false;
+  }
+
+  Environment::Environment()
+  {
+    addCodeDataACS0(86, {"", 0, addCallFunc(CF_EndPrint)});
+  }
+Most of the other ACS printing logic is already handled by ACSVM, so this is
+enough to display simple Print messages.
+

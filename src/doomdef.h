@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -106,6 +106,10 @@
 
 FILE *fopenfile(const char*, const char*);
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 //#define NOMD5
 
 // If you don't disable ALL debug first, you get ALL debug enabled
@@ -151,10 +155,10 @@ extern char logfilename[1024];
 // VERSIONSTRING_RC is for the resource-definition script used by windows builds
 #else
 #ifdef BETAVERSION
-#define VERSIONSTRING "v"SRB2VERSION" "BETAVERSION
+#define VERSIONSTRING "v" SRB2VERSION " " BETAVERSION
 #define VERSIONSTRING_RC SRB2VERSION " " BETAVERSION "\0"
 #else
-#define VERSIONSTRING "v"SRB2VERSION
+#define VERSIONSTRING "v" SRB2VERSION
 #define VERSIONSTRING_RC SRB2VERSION "\0"
 #endif
 // Hey! If you change this, add 1 to the MODVERSION below!
@@ -235,6 +239,8 @@ extern char logfilename[1024];
 #define GETMINOREXECVERSION(v) (v >> 16)
 #define GETEXECVERSION(major,minor) (major + (minor << 16))
 #define EXECVERSION GETEXECVERSION(MAJOREXECVERSION, MINOREXECVERSION)
+
+#define UDMF_CURRENT_VERSION 0
 
 // =========================================================================
 
@@ -620,11 +626,13 @@ UINT32 quickncasehash (const char *p, size_t n)
 	return x;
 }
 
+#ifndef __cplusplus
 #ifndef min // Double-Check with WATTCP-32's cdefs.h
 #define min(x, y) (((x) < (y)) ? (x) : (y))
 #endif
 #ifndef max // Double-Check with WATTCP-32's cdefs.h
 #define max(x, y) (((x) > (y)) ? (x) : (y))
+#endif
 #endif
 
 // Max gamepad/joysticks that can be detected/used.
@@ -735,6 +743,10 @@ extern int
 #define MASTERSERVER
 #else
 #undef UPDATE_ALERT
+#endif
+
+#ifdef __cplusplus
+} // extern "C"
 #endif
 
 #endif // __DOOMDEF__

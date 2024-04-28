@@ -183,10 +183,11 @@ objdir:=$(makedir)/objs
 sources+=\
 	$(call List,Sourcefile)\
 	$(call List,blua/Sourcefile)\
+	$(call List,acs/Sourcefile)\
 	$(call List,netcode/Sourcefile)\
 
-depends:=$(basename $(filter %.c %.s,$(sources)))
-objects:=$(basename $(filter %.c %.s %.nas,$(sources)))
+depends:=$(basename $(filter %.c %.cpp,$(sources)))
+objects:=$(basename $(filter %.c %.cpp,$(sources)))
 
 depends:=$(depends:%=$(depdir)/%.d)
 
@@ -251,7 +252,6 @@ opts+=$(foreach v,$(passthru_opts),$(if $($(v)),-D$(v)))
 
 opts+=$(WFLAGS) $(CPPFLAGS) $(CFLAGS)
 libs+=$(LDFLAGS)
-asflags:=$(ASFLAGS) -x assembler-with-cpp
 
 cc=$(CC)
 
@@ -355,7 +355,7 @@ endif
 endef
 
 $(eval $(call _recipe,c))
-$(eval $(call _recipe,s,$(asflags)))
+$(eval $(call _recipe,cpp))
 
 # compiling recipe template
 # 1: target file suffix
@@ -368,7 +368,7 @@ $(objdir)/%.$(1) : %.$(2) | $$$$(@D)/
 endef
 
 $(eval $(call _recipe,o,c,$(cc) -c -o $$@ $$<))
-$(eval $(call _recipe,o,s,$(cc) $(asflags) -c -o $$@ $$<))
+$(eval $(call _recipe,o,cpp,$(cc) -c -o $$@ $$<))
 $(eval $(call _recipe,res,rc,$(windres) -i $$< -o $$@))
 
 _rm=$(.)$(rmrf) $(call Windows_path,$(1))

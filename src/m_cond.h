@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2012-2016 by Matthew "Kaito Sinclaire" Walsh.
-// Copyright (C) 2012-2023 by Sonic Team Junior.
+// Copyright (C) 2012-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -15,6 +15,10 @@
 
 #include "doomdef.h"
 #include "doomdata.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 // --------
 // Typedefs
@@ -249,6 +253,7 @@ UINT8 M_CompletionEmblems(gamedata_t *data);
 void M_SilentUpdateSkinAvailabilites(void);
 
 // Checking unlockable status
+boolean M_CheckNetUnlockByID(UINT16 unlockid);
 UINT8 M_AnySecretUnlocked(gamedata_t *data);
 UINT8 M_SecretUnlocked(INT32 type, gamedata_t *data);
 UINT8 M_MapLocked(INT32 mapnum, gamedata_t *data);
@@ -274,5 +279,9 @@ INT32 M_UnlockableSkinNum(unlockable_t *unlock);
 INT32 M_EmblemSkinNum(emblem_t *emblem);
 
 #define M_Achieved(a, data) ((a) >= MAXCONDITIONSETS || data->achieved[a])
+
+#ifdef __cplusplus
+} // extern "C"
+#endif
 
 #endif

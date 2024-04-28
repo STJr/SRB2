@@ -24,4 +24,11 @@ FUNCINLINE static ATTRINLINE boolean fastncmp(const char *s, const char *c, UINT
 	return !l; // make sure you reached the end
 }
 
+// case-insensitive of the above
+FUNCINLINE static ATTRINLINE boolean fastnicmp(const char *s, const char *c, UINT16 l)
+{
+	for (; *s && toupper(*s) == toupper(*c) && --l; s++, c++) ;
+	return !l; // make sure you reached the end
+}
+
 #endif

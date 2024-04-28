@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -17,6 +17,10 @@
 #include "doomdata.h"
 #include "doomstat.h"
 #include "r_defs.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 // map md5, sent to players via PT_SERVERINFO
 extern unsigned char mapmd5[16];
@@ -88,5 +92,9 @@ UINT8 P_HasGrades(INT16 map, UINT8 mare);
 UINT32 P_GetScoreForGrade(INT16 map, UINT8 mare, UINT8 grade);
 UINT32 P_GetScoreForGradeOverall(INT16 map, UINT8 grade);
 void P_AddNiGHTSTimes(INT16 i, char *gtext);
+
+#ifdef __cplusplus
+} // extern "C"
+#endif
 
 #endif

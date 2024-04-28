@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -20,6 +20,10 @@
 #include "r_patch.h"
 #include "r_picformats.h" // spriteinfo_t
 #include "r_defs.h" // spritedef_t
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /// Defaults
 #define SKINNAMESIZE 16
@@ -117,5 +121,9 @@ boolean P_IsValidSprite2(skin_t *skin, UINT16 spr2);
 boolean P_IsStateSprite2Super(state_t *state);
 
 void R_RefreshSprite2(void);
+
+#ifdef __cplusplus
+} // extern "C"
+#endif
 
 #endif //__R_SKINS__

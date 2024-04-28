@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -13,6 +13,10 @@
 
 #ifndef __TABLES__
 #define __TABLES__
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #ifdef LINUX
 #include <math.h>
@@ -119,5 +123,9 @@ matrix_t *FM_RotateZ(matrix_t *dest, angle_t rad);
 #define FINESINE(n) (finesine[n]>>(FINE_FRACBITS-FRACBITS))
 #define FINECOSINE(n) (finecosine[n]>>(FINE_FRACBITS-FRACBITS))
 #define FINETANGENT(n) (finetangent[n]>>(FINE_FRACBITS-FRACBITS))
+
+#ifdef __cplusplus
+} // extern "C"
+#endif
 
 #endif

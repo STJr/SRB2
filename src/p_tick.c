@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -21,8 +21,9 @@
 #include "m_random.h"
 #include "lua_script.h"
 #include "lua_hook.h"
+#include "acs/interface.h"
 #include "m_perfstats.h"
-#include "i_system.h" // I_GetPreciseTime
+#include "i_system.h"
 #include "r_main.h"
 #include "r_fps.h"
 #include "i_video.h" // rendermode
@@ -37,6 +38,8 @@
 #endif
 
 tic_t leveltime;
+
+UINT32 thinker_era = 0;
 
 //
 // THINKERS
@@ -200,8 +203,20 @@ void Command_CountMobjs_f(void)
 void P_InitThinkers(void)
 {
 	UINT8 i;
+
+	P_InvalidateThinkersWithoutInit();
+
 	for (i = 0; i < NUM_THINKERLISTS; i++)
 		thlist[i].prev = thlist[i].next = &thlist[i];
+}
+
+//
+// P_InvalidateThinkersWithoutInit
+//
+
+void P_InvalidateThinkersWithoutInit(void)
+{
+	thinker_era++;
 }
 
 // Adds a new thinker at the end of the list.
@@ -443,6 +458,9 @@ static inline void P_RunThinkers(void)
 		PS_STOP_TIMING(ps_thlist_times[i]);
 	}
 
+	PS_START_TIMING(ps_acs_time);
+	ACS_Tick();
+	PS_STOP_TIMING(ps_acs_time);
 }
 
 //

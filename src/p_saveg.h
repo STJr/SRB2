@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -14,8 +14,8 @@
 #ifndef __P_SAVEG__
 #define __P_SAVEG__
 
-#ifdef __GNUG__
-#pragma interface
+#ifdef __cplusplus
+extern "C" {
 #endif
 
 #define NEWSKINSAVES (INT16_MAX) // TODO: 2.3: Delete (Purely for backwards compatibility)
@@ -32,6 +32,14 @@ mobj_t *P_FindNewPosition(UINT32 oldposition);
 
 typedef struct
 {
+	UINT8 *buffer;
+	UINT8 *p;
+	UINT8 *end;
+	size_t size;
+} savebuffer_t;
+
+typedef struct
+{
 	UINT8 skin;
 	UINT8 botskin;
 	INT32 score;
@@ -43,5 +51,12 @@ typedef struct
 
 extern savedata_t savedata;
 extern UINT8 *save_p;
+extern UINT8 *save_start;
+extern UINT8 *save_end;
+extern size_t save_length;
+
+#ifdef __cplusplus
+} // extern "C"
+#endif
 
 #endif

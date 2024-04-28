@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -8651,7 +8651,7 @@ void A_LinedefExecuteFromArg(mobj_t *actor)
 	if (!actor->spawnpoint)
 		return;
 
-	if (locvar1 < 0 || locvar1 > NUMMAPTHINGARGS)
+	if (locvar1 < 0 || locvar1 > NUM_MAPTHING_ARGS)
 	{
 		CONS_Debug(DBG_GAMELOGIC, "A_LinedefExecuteFromArg: Invalid mapthing arg %d\n", locvar1);
 		return;

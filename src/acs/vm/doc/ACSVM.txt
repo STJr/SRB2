@@ -1,0 +1,1212 @@
+###############################################################################
+ACSVM Library Specification
+###############################################################################
+
+===============================================================================
+Types <ACSVM/ACSVM/Types.hpp>
+===============================================================================
+
+Synopsis:
+  using Byte = unsigned char;
+
+  using DWord = std::uint64_t;
+  using SDWord = std::int64_t;
+  using SWord = std::int32_t;
+  using Word = std::uint32_t;
+
+  using CallFunc = bool (*)(Thread *thread, Word const *argv, Word argc);
+
+===============================================================================
+Deferred Actions <ACSVM/ACSVM/Action.hpp>
+===============================================================================
+
+===========================================================
+ACSVM::ScopeID
+===========================================================
+
+Synopsis:
+  #include <ACSVM/ACSVM/Action.hpp>
+  class ScopeID
+  {
+  public:
+    ScopeID() = default;
+    ScopeID(Word global, Word hub, Word map);
+
+    bool operator == (ScopeID const &id) const;
+    bool operator != (ScopeID const &id) const;
+
+    Word global;
+    Word hub;
+    Word map;
+  };
+
+===============================================================================
+Arrays <ACSVM/ACSVM/Array.hpp>
+===============================================================================
+
+===========================================================
+ACSVM::Array
+===========================================================
+
+Synopsis:
+  #include <ACSVM/ACSVM/Array.hpp>
+  class Array
+  {
+  public:
+    Array();
+    Array(Array const &) = delete;
+    Array(Array &&array);
+    ~Array();
+
+    Word &operator [] (Word idx);
+
+    void clear();
+
+    Word find(Word idx) const;
+
+    void lockStrings(Environment *env) const;
+
+    void unlockStrings(Environment *env) const;
+  };
+
+===============================================================================
+Codes <ACSVM/ACSVM/Code.hpp>
+===============================================================================
+
+===========================================================
+ACSVM::Code
+===========================================================
+
+Synopsis:
+  #include <ACSVM/ACSVM/Code.hpp>
+  enum class Code
+  {
+      /* ... */
+      None
+  };
+
+===========================================================
+ACSVM::Func
+===========================================================
+
+Synopsis:
+  #include <ACSVM/ACSVM/Code.hpp>
+  enum class Func
+  {
+    /* ... */
+    None
+  };
+
+===========================================================
+ACSVM::KillType
+===========================================================
+
+Synopsis:
+  #include <ACSVM/ACSVM/Code.hpp>
+  enum class KillType
+  {
+    None,
+    OutOfBounds,
+    UnknownCode,
+    UnknownFunc,
+    BranchLimit,
+  };
+
+===============================================================================
+Code Data <ACSVM/ACSVM/CodeData.hpp>
+===============================================================================
+
+===========================================================
+ACSVM::CodeDataACS0
+===========================================================
+
+Synopsis:
+  #include <ACSVM/ACSVM/CodeData.hpp>
+  class CodeDataACS0
+  {
+  public:
+    CodeDataACS0(char const *args, Code transCode, Word stackArgC,
+      Word transFunc = 0);
+    CodeDataACS0(char const *args, Word stackArgC, Word transFunc);
+
+    char const *args;
+    std::size_t argc;
+
+    Word stackArgC;
+
+    Code transCode;
+
+    Word transFunc;
+  };
+
+===========================================================
+ACSVM::FuncDataACS0
+===========================================================
+
+Synopsis:
+  #include <ACSVM/ACSVM/CodeData.hpp>
+  class FuncDataACS0
+  {
+  public:
+    using TransCode = std::pair<Word, Code>;
+
+
+    FuncDataACS0(FuncDataACS0 const &data);
+    FuncDataACS0(FuncDataACS0 &&data);
+    FuncDataACS0(Word transFunc);
+    FuncDataACS0(Word transFunc, std::initializer_list<TransCode> transCodes);
+    ~FuncDataACS0();
+
+    FuncDataACS0 &operator = (FuncDataACS0 const &) = delete;
+    FuncDataACS0 &operator = (FuncDataACS0 &&data);
+
+    Word transFunc;
+  };
+
+===============================================================================
+Environment <ACSVM/ACSVM/Environment.hpp>
+===============================================================================
+
+===========================================================
+ACSVM::Environment
+===========================================================
+
+Synopsis:
+  #include <ACSVM/ACSVM/Environment.hpp>
+  class Environment
+  {
+  public:
+    Environment();
+    virtual ~Environment();
+
+    Word addCallFunc(CallFunc func);
+
+    void addCodeDataACS0(Word code, CodeDataACS0 &&data);
+
+    void addFuncDataACS0(Word func, FuncDataACS0 &&data);
+
+    virtual bool checkLock(Thread *thread, Word lock, bool door);
+
+    virtual bool checkTag(Word type, Word tag);
+
+    void collectStrings();
+
+    virtual void exec();
+
+    void freeGlobalScope(GlobalScope *scope);
+
+    void freeModule(Module *module);
+
+    GlobalScope *getGlobalScope(Word id);
+
+    Module *getModule(ModuleName const &name);
+
+    ModuleName getModuleName(char const *str);
+    virtual ModuleName getModuleName(char const *str, std::size_t len);
+
+    String *getString(Word idx);
+    String *getString(char const *first, char const *last);
+    String *getString(char const *str);
+    String *getString(char const *str, std::size_t len);
+    String *getString(StringData const *data);
+
+    bool hasActiveThread() const;
+
+    virtual void loadState(Serial &in);
+
+    virtual void printArray(PrintBuf &buf, Array const &array, Word index,
+      Word limit);
+
+    virtual void printKill(Thread *thread, Word type, Word data);
+
+    virtual ModuleName readModuleName(Serial &in) const;
+
+    String *readString(Serial &in) const;
+
+    virtual void refStrings();
+
+    virtual void resetStrings();
+
+    virtual void saveState(Serial &out) const;
+
+    virtual void writeModuleName(Serial &out, ModuleName const &name) const;
+
+    void writeString(Serial &out, String const *in) const;
+
+    StringTable stringTable;
+
+    Word scriptLocRegC;
+
+
+    static void PrintArrayChar(PrintBuf &buf, Array const &array, Word index,
+      Word limit);
+
+    static void PrintArrayUTF8(PrintBuf &buf, Array const &array, Word index,
+      Word limit);
+
+    static constexpr Word ScriptLocRegCDefault;
+
+  protected:
+    virtual Thread *allocThread();
+
+    virtual Word callSpecImpl(Thread *thread, Word spec, Word const *argV,
+      Word argC);
+
+    virtual void loadModule(Module *module) = 0;
+  };
+
+Description:
+  Represents an execution environment.
+
+-----------------------------------------------------------
+ACSVM::Environment::Environment
+-----------------------------------------------------------
+
+Synopsis:
+  Environment();
+
+Description:
+  Constructs the Environment object.
+
+-----------------------------------------------------------
+ACSVM::Environment::~Environment
+-----------------------------------------------------------
+
+Synopsis:
+  ~Environment();
+
+Description:
+  Destructs the Environment object.
+
+-----------------------------------------------------------
+ACSVM::Environment::addCallFunc
+-----------------------------------------------------------
+
+Synopsis:
+  Word addCallFunc(CallFunc func);
+
+Description:
+  Adds a function callback for scripts and returns its index.
+
+Returns:
+  Added function's index.
+
+-----------------------------------------------------------
+ACSVM::Environment::addCodeDataACS0
+-----------------------------------------------------------
+
+Synopsis:
+  void addCodeDataACS0(Word code, CodeDataACS0 &&data);
+
+Description:
+  Adds a translation from instruction code for ACS0 and derived bytecode.
+
+-----------------------------------------------------------
+ACSVM::Environment::addFuncDataACS0
+-----------------------------------------------------------
+
+Synopsis:
+  void addFuncDataACS0(Word func, FuncDataACS0 &&data);
+
+Description:
+  Adds a translation from callfunc func for ACS0 and derived bytecode.
+
+-----------------------------------------------------------
+ACSVM::Environment::checkLock
+-----------------------------------------------------------
+
+Synopsis:
+  virtual bool checkLock(Thread *thread, Word lock, bool door);
+
+Description:
+  Called to check if a given lock number can be used from a given thread. The
+  lock number has no internal semantics, and is passed from the user source
+  unaltered.
+
+  The base implementation always return false.
+
+Returns:
+  True if the lock is open for that thread, false otherwise.
+
+-----------------------------------------------------------
+ACSVM::Environment::checkTag
+-----------------------------------------------------------
+
+Synopsis:
+  virtual bool checkTag(Word type, Word tag);
+
+Description:
+  Called to check if a given tag is inactive. The tag type and number both have
+  no internal semantics, and are passed from the user source unaltered.
+
+  The base implementation always returns false.
+
+Returns:
+  True if the tag is inactive, false otherwise.
+
+-----------------------------------------------------------
+ACSVM::Environment::collectStrings
+-----------------------------------------------------------
+
+Synopsis:
+  void collectStrings();
+
+Description:
+  Performs a full scan of the environment and frees strings that are no longer
+  in use.
+
+-----------------------------------------------------------
+ACSVM::Environment::exec
+-----------------------------------------------------------
+
+Synopsis:
+  virtual void exec();
+
+Description:
+  Performs a single execution cycle. Deferred script actions will be applied,
+  and active threads will execute until they terminate or enter a wait state.
+
+-----------------------------------------------------------
+ACSVM::Environment::freeGlobalScope
+-----------------------------------------------------------
+
+Synopsis:
+  void freeGlobalScope(GlobalScope *scope);
+
+Description:
+  Destructs and deallocates a contained GlobalScope object.
+
+-----------------------------------------------------------
+ACSVM::Environment::freeModule
+-----------------------------------------------------------
+
+Synopsis:
+  void freeModule(Module *module);
+
+Description:
+  Destructs and deallocates a contained Module object.
+
+  If any other modules reference the freed module, they must also be freed.
+
+-----------------------------------------------------------
+ACSVM::Environment::getGlobalScope
+-----------------------------------------------------------
+
+Synopsis:
+  GlobalScope *getGlobalScope(Word id);
+
+Description:
+  Retrieves a GlobalScope object by its identifier number. If it does not
+  exist, it will be created.
+
+Returns:
+  GlobalScope object with given id.
+
+-----------------------------------------------------------
+ACSVM::Environment::getModule
+-----------------------------------------------------------
+
+Synopsis:
+  Module *getModule(ModuleName const &name);
+
+Description:
+  Retrieves a Module object by name. If it does not exist or is not loaded, it
+  will be created and loaded as needed.
+
+Returns:
+  Module object with given name.
+
+-----------------------------------------------------------
+ACSVM::Environment::getModuleName
+-----------------------------------------------------------
+
+Synopsis:
+  ModuleName getModuleName(char const *str);
+  virtual ModuleName getModuleName(char const *str, std::size_t len);
+
+Description:
+  Generates a ModuleName from an input string. The first form calls the second,
+  using the null-terminated length of the input string.
+
+  The base implementation converts the input string into a String object for
+  ModuleName::s, leaving the other ModuleName fields set to 0.
+
+Returns:
+  ModuleName object formed from input string.
+
+-----------------------------------------------------------
+ACSVM::Environment::getScriptType
+-----------------------------------------------------------
+
+Synopsis:
+  virtual std::pair<Word, Word> getScriptTypeACS0(Word name);
+  virtual Word getScriptTypeACSE(Word type);
+
+Description:
+  Translates a bytecode script type into an internal type.
+
+  First form takes the script number and must return the type and name.
+
+  The base implementation of the first form translates by dividing by 1000. The
+  second form returns the type unaltered.
+
+Returns:
+  Translated script type or (type, name) pair.
+
+-----------------------------------------------------------
+ACSVM::Environment::getString
+-----------------------------------------------------------
+
+Synopsis:
+  String *getString(Word idx);
+  String *getString(char const *first, char const *last);
+  String *getString(char const *str);
+  String *getString(char const *str, std::size_t len);
+  String *getString(StringData const *data);
+
+Description:
+  First form returns a String object as if by calling (&stringTable[~idx]).
+
+  Second, third, and fourth forms create a StringData from input to find or
+  create an entry in stringTable.
+
+  Fifth form uses the supplied StringData object to find or create an entry in
+  stringTable. If data is null, null is returned. This is intended primarily
+  for resetting strings after deserialization.
+
+Returns:
+  First form returns the String object with the given index. All other forms
+  return a String object with the same data as the input.
+
+  Fifth form will return null if input is null, and non-null otherwise. All
+  other forms never return null.
+
+-----------------------------------------------------------
+ACSVM::Environment::hasActiveThread
+-----------------------------------------------------------
+
+Synopsis:
+  bool hasActiveThread() const;
+
+Description:
+  Checks for any active threads. A thread is considered active if it has any
+  state other than ThreadState::Inactive. So this will include threads that are
+  delayed, waiting for a condition (script or tag), or set to stop during the
+  next execution cycle.
+
+Returns:
+  True if there are any active threads, false otherwise.
+
+-----------------------------------------------------------
+ACSVM::Environment::loadState
+-----------------------------------------------------------
+
+Synopsis:
+  virtual void loadState(Serial &in);
+
+Description:
+  Restores the environment state from a previously serialized instance. If in
+  does not contain a byte stream generated by a previous call to saveState, the
+  behavior is undefined.
+
+-----------------------------------------------------------
+ACSVM::Environment::printArray
+-----------------------------------------------------------
+
+Synopsis:
+  virtual void printArray(PrintBuf &buf, Array const &array, Word index,
+    Word limit);
+
+Description:
+  Called to write a null-terminated character subsequence from an Array object
+  to a print buffer.
+
+  The base implementation calls PrintArrayChar.
+
+-----------------------------------------------------------
+ACSVM::Environment::printKill
+-----------------------------------------------------------
+
+Synopsis:
+  virtual void printKill(Thread *thread, Word type, Word data);
+
+Description:
+  Called when a thread encounters an error and must terminate. This includes
+  executing Code::Kill or calling Func::Kill. When calling by ACSVM itself, the
+  type parameter has a value from the KillType enumeration.
+
+  This function is expected to return normally, and the caller will handle
+  thread termination.
+
+  The base implementation prints kill information to std::cerr.
+
+-----------------------------------------------------------
+ACSVM::Environment::readModuleName
+-----------------------------------------------------------
+
+Synopsis:
+  virtual ModuleName readModuleName(Serial &in) const;
+
+Description:
+  Called to read a ModuleName from a serialized environment.
+
+  The base implementation reads the s and i members, leaving the p member null.
+
+Returns:
+  Deserialized ModuleName.
+
+-----------------------------------------------------------
+ACSVM::Environment::readString
+-----------------------------------------------------------
+
+Synopsis:
+  String *readString(Serial &in) const;
+
+Description:
+  Reads a String by index from a serialized Environment. If the written String
+  pointer was null, this function returns a null pointer.
+
+Returns:
+  Deserialized String.
+
+-----------------------------------------------------------
+ACSVM::Environment::refStrings
+-----------------------------------------------------------
+
+Synopsis:
+  virtual void refStrings();
+
+Description:
+  Called by collectStrings to mark contained strings as referenced.
+
+  The base implementation marks strings of all contained objects, as well as
+  performs an exhaustive scan of VM memory for string indexes.
+
+-----------------------------------------------------------
+ACSVM::Environment::resetStrings
+-----------------------------------------------------------
+
+Synopsis:
+  virtual void resetStrings();
+
+Description:
+  Called by loadState after reading the new StringTable to reset any String
+  pointers to the corresponding entry in the read table.
+
+  The base implementation resets strings of all contained objects.
+
+-----------------------------------------------------------
+ACSVM::Environment::saveState
+-----------------------------------------------------------
+
+Synopsis:
+  virtual void saveState(Serial &out) const;
+
+Description:
+  Serializes the environment state, which can be restored with a call to
+  loadState.
+
+-----------------------------------------------------------
+ACSVM::Environment::writeModuleName
+-----------------------------------------------------------
+
+Synopsis:
+  virtual void writeModuleName(Serial &out,
+    ModuleName const &name) const;
+
+Description:
+  Called to write a ModuleName.
+
+  The base implementation writes the s and i members.
+
+-----------------------------------------------------------
+ACSVM::Environment::writeString
+-----------------------------------------------------------
+
+Synopsis:
+  void writeString(Serial &out, String const *in) const;
+
+Description:
+  Writes a String by index. If in is null, a null pointer will be returned by
+  the corresponding call to readString.
+
+===============================================================================
+Errors <ACSVM/ACSVM/Error.hpp>
+===============================================================================
+
+===========================================================
+ACSVM::ReadError
+===========================================================
+
+Synopsis:
+  #include <ACSVM/ACSVM/Error.hpp>
+  class ReadError : public std::exception
+  {
+  public:
+    ReadError(char const *msg = "ACSVM::ReadError");
+
+    virtual char const *what() const noexcept;
+  };
+
+===============================================================================
+Modules <ACSVM/ACSVM/Module.hpp>
+===============================================================================
+
+===========================================================
+ACSVM::ModuleName
+===========================================================
+
+Synopsis:
+  #include <ACSVM/ACSVM/Module.hpp>
+  class ModuleName
+  {
+  public:
+    ModuleName(String *s, void *p, std::size_t i);
+
+    bool operator == (ModuleName const &name) const;
+    bool operator != (ModuleName const &name) const;
+
+    std::size_t hash() const;
+
+    String     *s;
+    void       *p;
+    std::size_t i;
+  };
+
+===========================================================
+ACSVM::Module
+===========================================================
+
+Synopsis:
+  #include <ACSVM/ACSVM/Module.hpp>
+  class Module
+  {
+  public:
+    void readBytecode(Byte const *data, std::size_t size);
+
+    Environment *env;
+    ModuleName   name;
+
+    bool isACS0;
+    bool loaded;
+
+
+    static constexpr std::uint32_t ChunkID(char c0, char c1, char c2, char c3);
+
+    static constexpr std::uint32_t ChunkID(char const (&s)[5]);
+  };
+
+===============================================================================
+Print Buffers <ACSVM/ACSVM/PrintBuf.hpp>
+===============================================================================
+
+===========================================================
+ACSVM::PrintBuf
+===========================================================
+
+Synopsis:
+  #include <ACSVM/ACSVM/PrintBuf.hpp>
+  class PrintBuf
+  {
+  public:
+    PrintBuf();
+    ~PrintBuf();
+
+    void clear();
+
+    char const *data() const;
+    char const *dataFull() const;
+
+    void drop();
+
+    void format(char const *fmt, ...);
+    void formatv(char const *fmt, std::va_list arg);
+
+    char *getBuf(std::size_t count);
+
+    char *getLoadBuf(std::size_t countFull, std::size_t count);
+
+    void push();
+
+    void put(char c);
+    void put(char const *s);
+    void put(char const *s, std::size_t n);
+
+    void reserve(std::size_t count);
+
+    std::size_t size() const;
+    std::size_t sizeFull() const;
+  };
+
+===============================================================================
+Scopes <ACSVM/ACSVM/Scope.hpp>
+===============================================================================
+
+===========================================================
+ACSVM::GlobalScope
+===========================================================
+
+Synopsis:
+  #include <ACSVM/ACSVM/Scope.hpp>
+  class GlobalScope
+  {
+  public:
+    static constexpr std::size_t ArrC = 256;
+    static constexpr std::size_t RegC = 256;
+
+
+    void freeHubScope(HubScope *scope);
+
+    HubScope *getHubScope(Word id);
+
+    bool hasActiveThread() const;
+
+    void lockStrings() const;
+
+    void reset();
+
+    void unlockStrings() const;
+
+    Environment *const env;
+    Word         const id;
+
+    Array arrV[ArrC];
+    Word  regV[RegC];
+
+    bool active;
+  };
+
+===========================================================
+ACSVM::HubScope
+===========================================================
+
+Synopsis:
+  #include <ACSVM/ACSVM/Scope.hpp>
+  class HubScope
+  {
+  public:
+    static constexpr std::size_t ArrC = 256;
+    static constexpr std::size_t RegC = 256;
+
+
+    void freeMapScope(MapScope *scope);
+
+    MapScope *getMapScope(Word id);
+
+    bool hasActiveThread() const;
+
+    void lockStrings() const;
+
+    void reset();
+
+    void unlockStrings() const;
+
+    Environment *const env;
+    GlobalScope *const global;
+    Word         const id;
+
+    Array arrV[ArrC];
+    Word  regV[RegC];
+
+    bool active;
+  };
+
+===========================================================
+ACSVM::MapScope
+===========================================================
+
+Synopsis:
+  #include <ACSVM/ACSVM/Scope.hpp>
+  class MapScope
+  {
+  public:
+    using ScriptStartFunc = void (*)(Thread *);
+    using ScriptStartFuncC = MapScope_ScriptStartFuncC;
+
+    class ScriptStartInfo;
+
+
+    void addModules(Module *const *moduleV, std::size_t moduleC);
+
+    Script *findScript(ScriptName name);
+
+    ModuleScope *getModuleScope(Module *module);
+
+    String *getString(Word idx) const;
+
+    bool hasActiveThread() const;
+
+    bool hasModules() const;
+
+    bool isScriptActive(Script *script);
+
+   void loadState(Serial &in);
+
+    void lockStrings() const;
+
+    void reset();
+
+    void saveState(Serial &out) const;
+
+    bool scriptPause(Script *script);
+    bool scriptPause(ScriptName name, ScopeID scope);
+    bool scriptStart(Script *script, ScriptStartInfo const &info);
+    bool scriptStart(ScriptName name, ScopeID scope,
+      ScriptStartInfo const &info);
+    bool scriptStartForced(Script *script, ScriptStartInfo const &info);
+    bool scriptStartForced(ScriptName name, ScopeID scope,
+      ScriptStartInfo const &info);
+    Word scriptStartResult(Script *script, ScriptStartInfo const &info);
+    Word scriptStartResult(ScriptName name, ScriptStartInfo const &info);
+    Word scriptStartType(Word type, ScriptStartInfo const &info);
+    Word scriptStartTypeForced(Word type, ScriptStartInfo const &info);
+    bool scriptStop(Script *script);
+    bool scriptStop(ScriptName name, ScopeID scope);
+
+    void unlockStrings() const;
+
+    Environment *const env;
+    HubScope    *const hub;
+    Word         const id;
+
+    bool active;
+    bool clampCallSpec;
+  };
+
+===========================================================
+ACSVM::MapScope::ScriptStartInfo
+===========================================================
+
+Synopsis:
+  #include <ACSVM/ACSVM/Scope.hpp>
+  class ScriptStartInfo
+  {
+  public:
+    ScriptStartInfo();
+    ScriptStartInfo(Word const *argV, std::size_t argC,
+       ThreadInfo const *info = nullptr, ScriptStartFunc func = nullptr);
+    ScriptStartInfo(Word const *argV, std::size_t argC,
+       ThreadInfo const *info, ScriptStartFuncC func);
+
+    Word       const *argV;
+    ScriptStartFunc   func;
+    ScriptStartFuncC  funcc;
+    ThreadInfo const *info;
+    std::size_t       argC;
+  };
+
+===========================================================
+ACSVM::ModuleScope
+===========================================================
+
+Synopsis:
+  #include <ACSVM/ACSVM/Scope.hpp>
+  class ModuleScope
+  {
+  public:
+    static constexpr std::size_t ArrC = 256;
+    static constexpr std::size_t RegC = 256;
+
+
+    void lockStrings() const;
+
+    void unlockStrings() const;
+
+    Environment *const env;
+    MapScope    *const map;
+    Module      *const module;
+
+    Array *arrV[ArrC];
+    Word  *regV[RegC];
+  };
+
+===============================================================================
+Scripts <ACSVM/ACSVM/Script.hpp>
+===============================================================================
+
+===========================================================
+ACSVM::ScriptName
+===========================================================
+
+Synopsis:
+  #include <ACSVM/ACSVM/Script.hpp>
+  class ScriptName
+  {
+  public:
+    ScriptName();
+    ScriptName(String *s);
+    ScriptName(String *s, Word i);
+    ScriptName(Word i);
+
+    String *s;
+    Word    i;
+  };
+
+===========================================================
+ACSVM::Script
+===========================================================
+
+Synopsis:
+  #include <ACSVM/ACSVM/Script.hpp>
+  class Script
+  {
+  public:
+    explicit Script(Module *module);
+    ~Script();
+
+    Module *const module;
+
+    ScriptName name;
+
+    Word argC;
+    Word codeIdx;
+    Word flags;
+    Word locArrC;
+    Word locRegC;
+    Word type;
+
+    bool flagClient : 1;
+    bool flagNet    : 1;
+  };
+
+===============================================================================
+Stacks <ACSVM/ACSVM/Stack.hpp>
+===============================================================================
+
+===========================================================
+ACSVM::Stack
+===========================================================
+
+Synopsis:
+  #include <ACSVM/ACSVM/Stack.hpp>
+  template<typename T>
+  class Stack
+  {
+  public:
+    Stack();
+    ~Stack();
+
+    T &operator [] (std::size_t idx);
+
+    T       *begin();
+    T const *begin() const;
+
+    void clear();
+
+    void drop();
+    void drop(std::size_t n);
+
+    bool empty() const;
+
+    T       *end();
+    T const *end() const;
+
+    void push(T const &value);
+    void push(T      &&value);
+
+    void reserve(std::size_t count);
+
+    std::size_t size() const;
+  };
+
+===============================================================================
+Locals Storage <ACSVM/ACSVM/Store.hpp>
+===============================================================================
+
+===========================================================
+ACSVM::Store
+===========================================================
+
+Synopsis:
+  #include <ACSVM/ACSVM/Store.hpp>
+  template<typename T>
+  class Store
+  {
+  public:
+    Store();
+    ~Store();
+
+    T &operator [] (std::size_t idx);
+
+    void alloc(std::size_t count);
+
+    void allocLoad(std::size_t countFull, std::size_t count);
+
+    T       *begin();
+    T const *begin() const;
+
+    T       *beginFull();
+    T const *beginFull() const;
+
+    void clear();
+
+    T const *dataFull() const;
+
+    T       *end();
+    T const *end() const;
+
+    void free(std::size_t count);
+
+    std::size_t size() const;
+
+    std::size_t sizeFull() const;
+  };
+
+===============================================================================
+Strings <ACSVM/ACSVM/String.hpp>
+===============================================================================
+
+===========================================================
+ACSVM::StringData
+===========================================================
+
+Synopsis:
+  #include <ACSVM/ACSVM/String.hpp>
+  class StringData
+  {
+  public:
+    StringData(char const *first, char const *last);
+    StringData(char const *str, std::size_t len);
+    StringData(char const *str, std::size_t len, std::size_t hash);
+
+    bool operator == (StringData const &r) const;
+
+    char const *const str;
+    std::size_t const len;
+    std::size_t const hash;
+  };
+
+===========================================================
+ACSVM::String
+===========================================================
+
+Synopsis:
+  #include <ACSVM/ACSVM/String.hpp>
+  class String : public StringData
+  {
+  public:
+    std::size_t lock;
+
+    Word const idx;
+    Word const len0;
+
+    bool ref;
+
+    char get(std::size_t i) const;
+  };
+
+===========================================================
+ACSVM::StringTable
+===========================================================
+
+Synopsis:
+  #include <ACSVM/ACSVM/String.hpp>
+  class StringTable
+  {
+  public:
+    StringTable();
+    StringTable(StringTable &&table);
+    ~StringTable();
+
+    String &operator [] (Word idx) const;
+    String &operator [] (StringData const &data);
+
+    void clear();
+
+    void collectBegin();
+    void collectEnd();
+
+    String &getNone();
+
+    std::size_t size() const;
+  };
+
+===============================================================================
+Threads <ACSVM/ACSVM/Thread.hpp>
+===============================================================================
+
+===========================================================
+ACSVM::ThreadState
+===========================================================
+
+Synopsis:
+  #include <ACSVM/ACSVM/Thread.hpp>
+  class ThreadState
+  {
+  public:
+    enum State
+    {
+      Inactive,
+      Running,
+      Stopped,
+      Paused,
+      WaitScrI,
+      WaitScrS,
+      WaitTag,
+    };
+
+
+    ThreadState();
+    ThreadState(State state);
+    ThreadState(State state, Word data);
+    ThreadState(State state, Word data, Word type);
+
+    bool operator == (State s) const;
+    bool operator != (State s) const;
+
+    State state;
+    Word data;
+    Word type;
+  };
+
+===========================================================
+ACSVM::ThreadInfo
+===========================================================
+
+Synopsis:
+  #include <ACSVM/ACSVM/Thread.hpp>
+  class ThreadInfo
+  {
+  public:
+    virtual ~ThreadInfo() {}
+  };
+
+===========================================================
+ACSVM::Thread
+===========================================================
+
+Synopsis:
+  #include <ACSVM/ACSVM/Thread.hpp>
+  class Thread
+  {
+  public:
+    virtual ThreadInfo const *getInfo() const;
+
+    virtual void lockStrings() const;
+
+    virtual void unlockStrings() const;
+
+    Environment *const env;
+
+    Stack<CallFrame> callStk;
+    Stack<Word>      dataStk;
+    Store<Array>     localArr;
+    Store<Word>      localReg;
+    PrintBuf         printBuf;
+    ThreadState      state;
+
+    Word  const *codePtr;
+    Module      *module;
+    GlobalScope *scopeGbl;
+    HubScope    *scopeHub;
+    MapScope    *scopeMap;
+    ModuleScope *scopeMod;
+    Script      *script;
+    Word         delay;
+    Word         result;
+  };
+
+###############################################################################
+EOF
+###############################################################################
+

@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -25,6 +25,11 @@
 
 #include "taglist.h"
 #include "m_fixed.h" // See the mapthing_t scale.
+
+// Number of args for ACS scripts.
+// Increasing this requires you to also update the ACS compiler.
+#define NUM_SCRIPT_ARGS 10
+#define NUM_SCRIPT_STRINGARGS 2
 
 //
 // Map level types.
@@ -146,6 +151,30 @@ typedef struct
 
 #define ML_TFERLINE         32768
 
+enum
+{
+	// Special action is repeatable.
+	SPAC_REPEATSPECIAL = 0x00000001,
+
+	// Activates when crossed by a player.
+	SPAC_CROSS         = 0x00000002,
+
+	// Activates when crossed by an enemy.
+	SPAC_CROSSMONSTER  = 0x00000004,
+
+	// Activates when crossed by a projectile.
+	SPAC_CROSSMISSILE  = 0x00000008,
+
+	// Activates when bumped by a player.
+	SPAC_PUSH          = 0x00000010,
+
+	// Activates when bumped by an enemy.
+	SPAC_PUSHMONSTER   = 0x00000020,
+
+	// Activates when bumped by a missile.
+	SPAC_IMPACT        = 0x00000040,
+};
+
 // Sector definition, from editing.
 typedef struct
 {
@@ -200,8 +229,10 @@ typedef struct
 #pragma pack()
 #endif
 
-#define NUMMAPTHINGARGS 10
-#define NUMMAPTHINGSTRINGARGS 2
+// Number of args for thing behaviors.
+// These are safe to increase at any time.
+#define NUM_MAPTHING_ARGS 10
+#define NUM_MAPTHING_STRINGARGS 2
 
 // Thing definition, position, orientation and type,
 // plus visibility flags and attributes.
@@ -213,11 +244,15 @@ typedef struct
 	UINT16 options;
 	INT16 z;
 	UINT8 extrainfo;
+	mtag_t tid;
 	taglist_t tags;
 	fixed_t scale;
 	fixed_t spritexscale, spriteyscale;
-	INT32 args[NUMMAPTHINGARGS];
-	char *stringargs[NUMMAPTHINGSTRINGARGS];
+	INT32 args[NUM_MAPTHING_ARGS];
+	char *stringargs[NUM_MAPTHING_STRINGARGS];
+	INT16 special;
+	INT32 script_args[NUM_SCRIPT_ARGS];
+	char *script_stringargs[NUM_SCRIPT_STRINGARGS];
 	struct mobj_s *mobj;
 } mapthing_t;
 

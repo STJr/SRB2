@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2022 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -14,7 +14,12 @@
 #define __D_NET_COMMAND__
 
 #include "d_clisrv.h"
+
 #include "../doomtype.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 // Must be a power of two
 #define TEXTCMD_HASH_SIZE 4
@@ -62,5 +67,9 @@ void CL_CopyNetCommandsFromServerPacket(tic_t tic, UINT8 **buf);
 void CL_SendNetCommands(void);
 void SendKick(UINT8 playernum, UINT8 msg);
 void SendKicksForNode(SINT8 node, UINT8 msg);
+
+#ifdef __cplusplus
+} // extern "C"
+#endif
 
 #endif

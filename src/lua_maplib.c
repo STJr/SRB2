@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2012-2016 by John "JTE" Muniz.
-// Copyright (C) 2012-2023 by Sonic Team Junior.
+// Copyright (C) 2012-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -69,6 +69,10 @@ enum sector_e {
 	sector_triggerer,
 	sector_friction,
 	sector_gravity,
+	sector_action,
+	sector_args,
+	sector_stringargs,
+	sector_activation,
 };
 
 static const char *const sector_opt[] = {
@@ -112,6 +116,10 @@ static const char *const sector_opt[] = {
 	"triggerer",
 	"friction",
 	"gravity",
+	"action",
+	"args",
+	"stringargs",
+	"activation",
 	NULL};
 
 static int sector_fields_ref = LUA_NOREF;
@@ -142,6 +150,7 @@ enum line_e {
 	line_dy,
 	line_angle,
 	line_flags,
+	line_activation,
 	line_special,
 	line_tag,
 	line_taglist,
@@ -168,6 +177,7 @@ static const char *const line_opt[] = {
 	"dy",
 	"angle",
 	"flags",
+	"activation",
 	"special",
 	"tag",
 	"taglist",
@@ -662,6 +672,42 @@ static int sectorlines_num(lua_State *L)
 // sector_t //
 //////////////
 
+// args, i -> args[i]
+static int sectorargs_get(lua_State *L)
+{
+	INT32 *args = *((INT32**)luaL_checkudata(L, 1, META_SECTORARGS));
+	int i = luaL_checkinteger(L, 2);
+	if (i < 0 || i >= NUM_SCRIPT_ARGS)
+		return luaL_error(L, LUA_QL("sector_t.args") " index cannot be %d", i);
+	lua_pushinteger(L, args[i]);
+	return 1;
+}
+
+// #args -> NUM_SCRIPT_ARGS
+static int sectorargs_len(lua_State* L)
+{
+	lua_pushinteger(L, NUM_SCRIPT_ARGS);
+	return 1;
+}
+
+// stringargs, i -> stringargs[i]
+static int sectorstringargs_get(lua_State *L)
+{
+	char **stringargs = *((char***)luaL_checkudata(L, 1, META_SECTORSTRINGARGS));
+	int i = luaL_checkinteger(L, 2);
+	if (i < 0 || i >= NUM_SCRIPT_STRINGARGS)
+		return luaL_error(L, LUA_QL("sector_t.stringargs") " index cannot be %d", i);
+	lua_pushstring(L, stringargs[i]);
+	return 1;
+}
+
+// #stringargs -> NUM_SCRIPT_STRINGARGS
+static int sectorstringargs_len(lua_State *L)
+{
+	lua_pushinteger(L, NUM_SCRIPT_STRINGARGS);
+	return 1;
+}
+
 static int sector_get(lua_State *L)
 {
 	sector_t *sector = *((sector_t **)luaL_checkudata(L, 1, META_SECTOR));
@@ -819,6 +865,18 @@ static int sector_get(lua_State *L)
 	case sector_gravity: // gravity
 		lua_pushfixed(L, sector->gravity);
 		return 1;
+	case sector_action: // action
+		lua_pushinteger(L, (INT16)sector->action);
+		return 1;
+	case sector_args:
+		LUA_PushUserdata(L, sector->args, META_SECTORARGS);
+		return 1;
+	case sector_stringargs:
+		LUA_PushUserdata(L, sector->stringargs, META_SECTORSTRINGARGS);
+		return 1;
+	case sector_activation:
+		lua_pushinteger(L, sector->activation);
+		return 1;
 	}
 	return 0;
 }
@@ -847,6 +905,8 @@ static int sector_set(lua_State *L)
 	case sector_fslope: // f_slope
 	case sector_cslope: // c_slope
 	case sector_friction: // friction
+	case sector_args: // args
+	case sector_stringargs: // stringargs
 		return luaL_error(L, "sector_t field " LUA_QS " cannot be set.", sector_opt[field]);
 	default:
 		return luaL_error(L, "sector_t has no field named " LUA_QS ".", lua_tostring(L, 2));
@@ -962,6 +1022,12 @@ static int sector_set(lua_State *L)
 	case sector_gravity:
 		sector->gravity = luaL_checkfixed(L, 3);
 		break;
+	case sector_action:
+		sector->action = (INT16)luaL_checkinteger(L, 3);
+		break;
+	case sector_activation:
+		sector->activation = luaL_checkinteger(L, 3);
+		break;
 	}
 	return 0;
 }
@@ -1030,16 +1096,16 @@ static int lineargs_get(lua_State *L)
 {
 	INT32 *args = *((INT32**)luaL_checkudata(L, 1, META_LINEARGS));
 	int i = luaL_checkinteger(L, 2);
-	if (i < 0 || i >= NUMLINEARGS)
+	if (i < 0 || i >= NUM_SCRIPT_ARGS)
 		return luaL_error(L, LUA_QL("line_t.args") " index cannot be %d", i);
 	lua_pushinteger(L, args[i]);
 	return 1;
 }
 
-// #args -> NUMLINEARGS
+// #args -> NUM_SCRIPT_ARGS
 static int lineargs_len(lua_State* L)
 {
-	lua_pushinteger(L, NUMLINEARGS);
+	lua_pushinteger(L, NUM_SCRIPT_ARGS);
 	return 1;
 }
 
@@ -1048,16 +1114,16 @@ static int linestringargs_get(lua_State *L)
 {
 	char **stringargs = *((char***)luaL_checkudata(L, 1, META_LINESTRINGARGS));
 	int i = luaL_checkinteger(L, 2);
-	if (i < 0 || i >= NUMLINESTRINGARGS)
+	if (i < 0 || i >= NUM_SCRIPT_STRINGARGS)
 		return luaL_error(L, LUA_QL("line_t.stringargs") " index cannot be %d", i);
 	lua_pushstring(L, stringargs[i]);
 	return 1;
 }
 
-// #stringargs -> NUMLINESTRINGARGS
+// #stringargs -> NUM_SCRIPT_STRINGARGS
 static int linestringargs_len(lua_State *L)
 {
-	lua_pushinteger(L, NUMLINESTRINGARGS);
+	lua_pushinteger(L, NUM_SCRIPT_STRINGARGS);
 	return 1;
 }
 
@@ -1097,6 +1163,9 @@ static int line_get(lua_State *L)
 		return 1;
 	case line_flags:
 		lua_pushinteger(L, line->flags);
+		return 1;
+	case line_activation:
+		lua_pushinteger(L, line->activation);
 		return 1;
 	case line_special:
 		lua_pushinteger(L, line->special);
@@ -3000,6 +3069,8 @@ int LUA_MapLib(lua_State *L)
 	LUA_RegisterUserdataMetatable(L, META_LINE, line_get, NULL, line_num);
 	LUA_RegisterUserdataMetatable(L, META_LINEARGS, lineargs_get, NULL, lineargs_len);
 	LUA_RegisterUserdataMetatable(L, META_LINESTRINGARGS, linestringargs_get, NULL, linestringargs_len);
+	LUA_RegisterUserdataMetatable(L, META_SECTORARGS, sectorargs_get, NULL, sectorargs_len);
+	LUA_RegisterUserdataMetatable(L, META_SECTORSTRINGARGS, sectorstringargs_get, NULL, sectorstringargs_len);
 	LUA_RegisterUserdataMetatable(L, META_SIDENUM, sidenum_get, NULL, NULL);
 	LUA_RegisterUserdataMetatable(L, META_SIDE, side_get, side_set, side_num);
 	LUA_RegisterUserdataMetatable(L, META_VERTEX, vertex_get, NULL, vertex_num);

@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -16,6 +16,12 @@
 
 #ifndef __P_SPEC__
 #define __P_SPEC__
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#include "r_defs.h"
 
 extern mobj_t *skyboxmo[2]; // current skybox mobjs: 0 = viewpoint, 1 = centerpoint
 extern mobj_t *skyboxviewpnts[16]; // array of MT_SKYBOX viewpoint mobjs
@@ -517,10 +523,12 @@ sector_t *P_PlayerTouchingSectorSpecial(player_t *player, INT32 section, INT32 n
 sector_t *P_PlayerTouchingSectorSpecialFlag(player_t *player, sectorspecialflags_t flag);
 void P_PlayerInSpecialSector(player_t *player);
 void P_CheckMobjTrigger(mobj_t *mobj, boolean pushable);
+void P_CheckMobjTouchingSectorActions(mobj_t *mobj, boolean continuous, boolean sectorchanged);
 sector_t *P_FindPlayerTrigger(player_t *player, line_t *sourceline);
 boolean P_IsPlayerValid(size_t playernum);
 boolean P_CanPlayerTrigger(size_t playernum);
 void P_ProcessSpecialSector(player_t *player, sector_t *sector, sector_t *roversector);
+void P_CheckSectorTransitionalEffects(mobj_t *thing, sector_t *prevsec, boolean wasgrounded);
 
 fixed_t P_FindLowestFloorSurrounding(sector_t *sec);
 fixed_t P_FindHighestFloorSurrounding(sector_t *sec);
@@ -532,6 +540,28 @@ fixed_t P_FindLowestCeilingSurrounding(sector_t *sec);
 fixed_t P_FindHighestCeilingSurrounding(sector_t *sec);
 
 INT32 P_FindMinSurroundingLight(sector_t *sector, INT32 max);
+
+void P_CrossSpecialLine(line_t *line, INT32 side, mobj_t *thing);
+void P_PushSpecialLine(line_t *line, mobj_t *thing);
+void P_ActivateThingSpecial(mobj_t *mo, mobj_t *source);
+
+mobj_t* P_FindObjectTypeFromTag(mobjtype_t type, mtag_t tag);
+
+//
+// Special activation info
+//
+typedef struct
+{
+	mobj_t *mo;
+	line_t *line;
+	UINT8 side;
+	sector_t *sector;
+	polyobj_t *po;
+	boolean fromLineSpecial; // Backwards compat for ACS
+} activator_t;
+
+boolean P_CanActivateSpecial(INT16 special);
+boolean P_ProcessSpecial(activator_t *activator, INT16 special, INT32 *args, char **stringargs);
 
 void P_SetupSignExit(player_t *player);
 boolean P_IsFlagAtBase(mobjtype_t flag);
@@ -1116,5 +1146,9 @@ typedef struct
 void T_PlaneDisplace(planedisplace_t *pd);
 
 void P_CalcHeight(player_t *player);
+
+#ifdef __cplusplus
+} // extern "C"
+#endif
 
 #endif

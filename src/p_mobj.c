@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -1748,7 +1748,10 @@ void P_XYMovement(mobj_t *mo)
 		}
 		else if (P_MobjWasRemoved(mo))
 			return;
-		else if (mo->flags & MF_BOUNCE)
+
+		P_PushSpecialLine(blockingline, mo);
+
+		if (mo->flags & MF_BOUNCE)
 		{
 			P_BounceMove(mo);
 			xmove = ymove = 0;
@@ -10169,6 +10172,12 @@ void P_MobjThinker(mobj_t *mobj)
 
 	tmfloorthing = tmhitthing = NULL;
 
+	if (udmf)
+	{
+		// Check for continuous sector special actions
+		P_CheckMobjTouchingSectorActions(mobj, true, true);
+	}
+
 	// Sector flag MSF_TRIGGERLINE_MOBJ allows ANY mobj to trigger a linedef exec
 	P_CheckMobjTrigger(mobj, false);
 
@@ -11252,6 +11261,8 @@ void P_RemoveMobj(mobj_t *mobj)
 	if (mobj->spawnpoint)
 		mobj->spawnpoint->mobj = NULL;
 
+	P_RemoveThingTID(mobj);
+	P_DeleteMobjStringArgs(mobj);
 	R_RemoveMobjInterpolator(mobj);
 
 	// free block
@@ -13459,6 +13470,65 @@ static void P_SetAmbush(mapthing_t *mthing, mobj_t *mobj)
 	mobj->flags2 |= MF2_AMBUSH;
 }
 
+void P_CopyMapThingSpecialFieldsToMobj(const mapthing_t *mthing, mobj_t *mobj)
+{
+	size_t arg = SIZE_MAX;
+
+	P_SetThingTID(mobj, mthing->tid);
+
+	mobj->special = mthing->special;
+
+	for (arg = 0; arg < NUM_MAPTHING_ARGS; arg++)
+	{
+		mobj->thing_args[arg] = mthing->args[arg];
+	}
+
+	for (arg = 0; arg < NUM_MAPTHING_STRINGARGS; arg++)
+	{
+		size_t len = 0;
+
+		if (mthing->stringargs[arg])
+		{
+			len = strlen(mthing->stringargs[arg]);
+		}
+
+		if (len == 0)
+		{
+			Z_Free(mobj->thing_stringargs[arg]);
+			mobj->thing_stringargs[arg] = NULL;
+			continue;
+		}
+
+		mobj->thing_stringargs[arg] = Z_Realloc(mobj->thing_stringargs[arg], len + 1, PU_LEVEL, NULL);
+		M_Memcpy(mobj->thing_stringargs[arg], mthing->stringargs[arg], len + 1);
+	}
+
+	for (arg = 0; arg < NUM_SCRIPT_ARGS; arg++)
+	{
+		mobj->script_args[arg] = mthing->script_args[arg];
+	}
+
+	for (arg = 0; arg < NUM_SCRIPT_STRINGARGS; arg++)
+	{
+		size_t len = 0;
+
+		if (mthing->script_stringargs[arg])
+		{
+			len = strlen(mthing->script_stringargs[arg]);
+		}
+
+		if (len == 0)
+		{
+			Z_Free(mobj->script_stringargs[arg]);
+			mobj->script_stringargs[arg] = NULL;
+			continue;
+		}
+
+		mobj->script_stringargs[arg] = Z_Realloc(mobj->script_stringargs[arg], len + 1, PU_LEVEL, NULL);
+		M_Memcpy(mobj->script_stringargs[arg], mthing->script_stringargs[arg], len + 1);
+	}
+}
+
 static mobj_t *P_SpawnMobjFromMapThing(mapthing_t *mthing, fixed_t x, fixed_t y, fixed_t z, mobjtype_t i)
 {
 	mobj_t *mobj = NULL;
@@ -13475,6 +13545,8 @@ static mobj_t *P_SpawnMobjFromMapThing(mapthing_t *mthing, fixed_t x, fixed_t y,
 
 	mobj->spritexscale = mthing->spritexscale;
 	mobj->spriteyscale = mthing->spriteyscale;
+
+	P_CopyMapThingSpecialFieldsToMobj(mthing, mobj);
 
 	if (!P_SetupSpawnedMapThing(mthing, mobj, &doangle))
 		return mobj;
@@ -14349,4 +14421,151 @@ mobj_t *P_SpawnMobjFromMobj(mobj_t *mobj, fixed_t xofs, fixed_t yofs, fixed_t zo
 	newmobj->old_spriteyoffset = mobj->old_spriteyoffset;
 
 	return newmobj;
+}
+
+//
+// P_GetMobjHead & P_GetMobjFeet
+// Returns the top and bottom of an object, follows appearance, not physics,
+// in reverse gravity.
+//
+
+fixed_t P_GetMobjHead(mobj_t *mobj)
+{
+	return P_IsObjectFlipped(mobj) ? mobj->z : mobj->z + mobj->height;
+}
+
+fixed_t P_GetMobjFeet(mobj_t *mobj)
+{
+	/*
+	            /   |
+	           /    |
+	 /--\-----/     |
+	( ( (         ( |
+	 \--------------/
+	*/
+
+	return P_IsObjectFlipped(mobj) ? mobj->z + mobj->height : mobj->z;
+}
+
+//
+// Thing IDs / tags
+//
+// TODO: Replace this system with taglist_t instead.
+// The issue is that those require a static numbered ID
+// to determine which struct it belongs to, which mobjs
+// don't really have.
+//
+
+#define TID_HASH_CHAINS (131)
+static mobj_t *TID_Hash[TID_HASH_CHAINS];
+
+//
+// P_InitTIDHash
+// Initializes mobj tag hash array
+//
+void P_InitTIDHash(void)
+{
+	memset(TID_Hash, 0, TID_HASH_CHAINS * sizeof(mobj_t *));
+}
+
+//
+// P_SetThingTID
+// Adds a mobj to the hash array
+//
+void P_SetThingTID(mobj_t *mo, mtag_t tid)
+{
+	INT32 key = 0;
+
+	if (tid == 0)
+	{
+		if (mo->tid != 0)
+		{
+			P_RemoveThingTID(mo);
+		}
+
+		return;
+	}
+
+	mo->tid = tid;
+
+	// Insert at the head of this chain
+	key = tid % TID_HASH_CHAINS;
+
+	mo->tid_next = TID_Hash[key];
+	mo->tid_prev = &TID_Hash[key];
+	TID_Hash[key] = mo;
+
+	// Connect to any existing things in chain
+	if (mo->tid_next != NULL)
+	{
+		mo->tid_next->tid_prev = &(mo->tid_next);
+	}
+}
+
+//
+// P_RemoveThingTID
+// Removes a mobj from the hash array
+//
+void P_RemoveThingTID(mobj_t *mo)
+{
+	if (mo->tid != 0 && mo->tid_prev != NULL)
+	{
+		// Fix the gap this would leave.
+		*(mo->tid_prev) = mo->tid_next;
+
+		if (mo->tid_next != NULL)
+		{
+			mo->tid_next->tid_prev = mo->tid_prev;
+		}
+	}
+
+	// Remove TID.
+	mo->tid = 0;
+}
+
+//
+// P_FindMobjFromTID
+// Mobj tag search function.
+//
+mobj_t *P_FindMobjFromTID(mtag_t tid, mobj_t *i, mobj_t *activator)
+{
+	if (tid == 0)
+	{
+		// 0 grabs the activator, if applicable,
+		// for some ACS functions.
+
+		if (i != NULL)
+		{
+			// Don't do more than once.
+			return NULL;
+		}
+
+		return activator;
+	}
+
+	i = (i != NULL) ? i->tid_next : TID_Hash[tid % TID_HASH_CHAINS];
+
+	while (i != NULL && i->tid != tid)
+	{
+		i = i->tid_next;
+	}
+
+	return i;
+}
+
+void P_DeleteMobjStringArgs(mobj_t *mobj)
+{
+	size_t i = SIZE_MAX;
+
+	for (i = 0; i < NUM_MAPTHING_STRINGARGS; i++)
+	{
+		Z_Free(mobj->thing_stringargs[i]);
+		mobj->thing_stringargs[i] = NULL;
+	}
+
+	for (i = 0; i < NUM_SCRIPT_STRINGARGS; i++)
+	{
+		Z_Free(mobj->script_stringargs[i]);
+		mobj->script_stringargs[i] = NULL;
+	}
 }

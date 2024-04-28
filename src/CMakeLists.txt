@@ -150,6 +150,7 @@ set(SRB2_CONFIG_DEV_BUILD OFF CACHE BOOL
 	"Compile a development build of SRB2.")
 
 add_subdirectory(blua)
+add_subdirectory(acs)
 add_subdirectory(netcode)
 
 # OS macros
@@ -326,7 +327,6 @@ target_compile_options(SRB2SDL2 PRIVATE
 		-Wno-absolute-value
 		-Wextra
 		-Wno-trigraphs
-		-Wconditional-uninitialized
 		-Wno-error=non-literal-null-conversion
 		-Wno-error=constant-conversion
 		-Wno-error=unused-but-set-variable
@@ -345,7 +345,6 @@ target_compile_options(SRB2SDL2 PRIVATE
 		-Wall
 		-Wextra
 		-Wno-trigraphs
-		-Wconditional-uninitialized
 	>
 
 	# C++, MSVC

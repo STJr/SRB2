@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2012-2016 by John "JTE" Muniz.
-// Copyright (C) 2012-2023 by Sonic Team Junior.
+// Copyright (C) 2012-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -102,7 +102,13 @@ enum mobj_e {
 	mobj_colorized,
 	mobj_mirrored,
 	mobj_shadowscale,
-	mobj_dispoffset
+	mobj_dispoffset,
+	mobj_tid,
+	mobj_args,
+	mobj_stringargs,
+	mobj_special,
+	mobj_specialargs,
+	mobj_specialstringargs
 };
 
 static const char *const mobj_opt[] = {
@@ -184,6 +190,12 @@ static const char *const mobj_opt[] = {
 	"mirrored",
 	"shadowscale",
 	"dispoffset",
+	"tid",
+	"args",
+	"stringargs",
+	"special",
+	"specialargs",
+	"specialstringargs",
 	NULL};
 
 #define UNIMPLEMENTED luaL_error(L, LUA_QL("mobj_t") " field " LUA_QS " is not implemented for Lua and cannot be accessed.", mobj_opt[field])
@@ -480,6 +492,24 @@ static int mobj_get(lua_State *L)
 		break;
 	case mobj_dispoffset:
 		lua_pushinteger(L, mo->dispoffset);
+		break;
+	case mobj_tid:
+		lua_pushinteger(L, mo->tid);
+		break;
+	case mobj_args:
+		LUA_PushUserdata(L, mo->thing_args, META_THINGARGS);
+		break;
+	case mobj_stringargs:
+		LUA_PushUserdata(L, mo->thing_stringargs, META_THINGSTRINGARGS);
+		break;
+	case mobj_special:
+		lua_pushinteger(L, mo->special);
+		break;
+	case mobj_specialargs:
+		LUA_PushUserdata(L, mo->script_args, META_THINGSPECIALARGS);
+		break;
+	case mobj_specialstringargs:
+		LUA_PushUserdata(L, mo->script_stringargs, META_THINGSPECIALSTRINGARGS);
 		break;
 	default: // extra custom variables in Lua memory
 		lua_getfield(L, LUA_REGISTRYINDEX, LREG_EXTVARS);
@@ -876,6 +906,17 @@ static int mobj_set(lua_State *L)
 	case mobj_dispoffset:
 		mo->dispoffset = luaL_checkinteger(L, 3);
 		break;
+	case mobj_tid:
+		P_SetThingTID(mo, luaL_checkinteger(L, 3));
+		break;
+	case mobj_special:
+		mo->special = luaL_checkinteger(L, 3);
+		break;
+	case mobj_args:
+	case mobj_stringargs:
+	case mobj_specialargs:
+	case mobj_specialstringargs:
+		return NOSET;
 	default:
 		lua_getfield(L, LUA_REGISTRYINDEX, LREG_EXTVARS);
 		I_Assert(lua_istable(L, -1));
@@ -909,16 +950,16 @@ static int thingargs_get(lua_State *L)
 {
 	INT32 *args = *((INT32**)luaL_checkudata(L, 1, META_THINGARGS));
 	int i = luaL_checkinteger(L, 2);
-	if (i < 0 || i >= NUMMAPTHINGARGS)
+	if (i < 0 || i >= NUM_MAPTHING_ARGS)
 		return luaL_error(L, LUA_QL("mapthing_t.args") " index cannot be %d", i);
 	lua_pushinteger(L, args[i]);
 	return 1;
 }
 
-// #args -> NUMMAPTHINGARGS
+// #args -> NUM_MAPTHING_ARGS
 static int thingargs_len(lua_State* L)
 {
-	lua_pushinteger(L, NUMMAPTHINGARGS);
+	lua_pushinteger(L, NUM_MAPTHING_ARGS);
 	return 1;
 }
 
@@ -927,16 +968,52 @@ static int thingstringargs_get(lua_State *L)
 {
 	char **stringargs = *((char***)luaL_checkudata(L, 1, META_THINGSTRINGARGS));
 	int i = luaL_checkinteger(L, 2);
-	if (i < 0 || i >= NUMMAPTHINGSTRINGARGS)
+	if (i < 0 || i >= NUM_MAPTHING_STRINGARGS)
 		return luaL_error(L, LUA_QL("mapthing_t.stringargs") " index cannot be %d", i);
 	lua_pushstring(L, stringargs[i]);
 	return 1;
 }
 
-// #stringargs -> NUMMAPTHINGSTRINGARGS
+// #stringargs -> NUM_MAPTHING_STRINGARGS
 static int thingstringargs_len(lua_State *L)
 {
-	lua_pushinteger(L, NUMMAPTHINGSTRINGARGS);
+	lua_pushinteger(L, NUM_MAPTHING_STRINGARGS);
+	return 1;
+}
+
+// args, i -> args[i]
+static int thingspecialargs_get(lua_State *L)
+{
+	INT32 *args = *((INT32**)luaL_checkudata(L, 1, META_THINGSPECIALARGS));
+	int i = luaL_checkinteger(L, 2);
+	if (i < 0 || i >= NUM_SCRIPT_ARGS)
+		return luaL_error(L, LUA_QL("mapthing_t.specialargs") " index cannot be %d", i);
+	lua_pushinteger(L, args[i]);
+	return 1;
+}
+
+// #args -> NUM_SCRIPT_ARGS
+static int thingspecialargs_len(lua_State* L)
+{
+	lua_pushinteger(L, NUM_SCRIPT_ARGS);
+	return 1;
+}
+
+// stringargs, i -> stringargs[i]
+static int thingspecialstringargs_get(lua_State *L)
+{
+	char **stringargs = *((char***)luaL_checkudata(L, 1, META_THINGSPECIALSTRINGARGS));
+	int i = luaL_checkinteger(L, 2);
+	if (i < 0 || i >= NUM_SCRIPT_STRINGARGS)
+		return luaL_error(L, LUA_QL("mapthing_t.specialstringargs") " index cannot be %d", i);
+	lua_pushstring(L, stringargs[i]);
+	return 1;
+}
+
+// #stringargs -> NUM_SCRIPT_STRINGARGS
+static int thingspecialstringargs_len(lua_State *L)
+{
+	lua_pushinteger(L, NUM_SCRIPT_STRINGARGS);
 	return 1;
 }
 
@@ -958,6 +1035,9 @@ enum mapthing_e {
 	mapthing_taglist,
 	mapthing_args,
 	mapthing_stringargs,
+	mapthing_special,
+	mapthing_specialargs,
+	mapthing_specialstringargs,
 	mapthing_mobj,
 };
 
@@ -979,6 +1059,9 @@ const char *const mapthing_opt[] = {
 	"taglist",
 	"args",
 	"stringargs",
+	"special",
+	"specialargs",
+	"specialstringargs",
 	"mobj",
 	NULL,
 };
@@ -1056,6 +1139,15 @@ static int mapthing_get(lua_State *L)
 			break;
 		case mapthing_stringargs:
 			LUA_PushUserdata(L, mt->stringargs, META_THINGSTRINGARGS);
+			break;
+		case mapthing_special:
+			lua_pushinteger(L, mt->special);
+			break;
+		case mapthing_specialargs:
+			LUA_PushUserdata(L, mt->script_args, META_THINGSPECIALARGS);
+			break;
+		case mapthing_specialstringargs:
+			LUA_PushUserdata(L, mt->script_stringargs, META_THINGSPECIALSTRINGARGS);
 			break;
 		case mapthing_mobj:
 			LUA_PushUserdata(L, mt->mobj, META_MOBJ);
@@ -1135,6 +1227,17 @@ static int mapthing_set(lua_State *L)
 			break;
 		case mapthing_taglist:
 			return LUA_ErrSetDirectly(L, "mapthing_t", "taglist");
+		case mapthing_special:
+			mt->special = (INT16)luaL_checkinteger(L, 3);
+			break;
+		case mapthing_args:
+			return LUA_ErrSetDirectly(L, "mapthing_t", "args");
+		case mapthing_stringargs:
+			return LUA_ErrSetDirectly(L, "mapthing_t", "stringargs");
+		case mapthing_specialargs:
+			return LUA_ErrSetDirectly(L, "mapthing_t", "specialargs");
+		case mapthing_specialstringargs:
+			return LUA_ErrSetDirectly(L, "mapthing_t", "specialstringargs");
 		case mapthing_mobj:
 			mt->mobj = *((mobj_t **)luaL_checkudata(L, 3, META_MOBJ));
 			break;
@@ -1197,6 +1300,8 @@ int LUA_MobjLib(lua_State *L)
 	LUA_RegisterUserdataMetatable(L, META_MOBJ, mobj_get, mobj_set, NULL);
 	LUA_RegisterUserdataMetatable(L, META_THINGARGS, thingargs_get, NULL, thingargs_len);
 	LUA_RegisterUserdataMetatable(L, META_THINGSTRINGARGS, thingstringargs_get, NULL, thingstringargs_len);
+	LUA_RegisterUserdataMetatable(L, META_THINGSPECIALARGS, thingspecialargs_get, NULL, thingspecialargs_len);
+	LUA_RegisterUserdataMetatable(L, META_THINGSPECIALSTRINGARGS, thingspecialstringargs_get, NULL, thingspecialstringargs_len);
 	LUA_RegisterUserdataMetatable(L, META_MAPTHING, mapthing_get, mapthing_set, mapthing_num);
 
 	mobj_fields_ref = Lua_CreateFieldTable(L, mobj_opt);

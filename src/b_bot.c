@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2007-2016 by John "JTE" Muniz.
-// Copyright (C) 2011-2023 by Sonic Team Junior.
+// Copyright (C) 2011-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -14,10 +14,88 @@
 #include "d_player.h"
 #include "g_game.h"
 #include "r_main.h"
+#include "r_skins.h"
+#include "hu_stuff.h"
 #include "p_local.h"
 #include "b_bot.h"
 #include "lua_hook.h"
 #include "i_system.h" // I_BaseTiccmd
+
+INT16 B_AddBot(const char *skinname, UINT16 skincolor, const char *name, SINT8 type)
+{
+	INT16 i, newplayernum;
+	player_t *newplayer;
+	SINT8 skinnum = 0;
+
+	for (i = 0; i < MAXPLAYERS; i++)
+	{
+		if (!playeringame[i])
+			break;
+	}
+
+	if (i >= MAXPLAYERS)
+	{
+		return -1;
+	}
+
+	newplayernum = i;
+
+	CL_ClearPlayer(newplayernum);
+
+	playeringame[newplayernum] = true;
+	G_AddPlayer(newplayernum);
+	newplayer = &players[newplayernum];
+
+	newplayer->jointime = 0;
+	newplayer->quittime = 0;
+	newplayer->lastinputtime = 0;
+
+	// Set the skin (defaults to Sonic)
+	if (skinname)
+	{
+		skinnum = R_SkinAvailable(skinname);
+		skinnum = skinnum < 0 ? 0 : skinnum;
+	}
+
+	// Set the color (defaults to skin prefcolor)
+	if (skincolor == SKINCOLOR_NONE)
+		newplayer->skincolor = skins[skinnum]->prefcolor;
+	else
+		newplayer->skincolor = skincolor;
+
+	// Set the bot default name as the skin
+	strcpy(player_names[newplayernum], skins[skinnum]->realname);
+
+	// Read the bot name, if given
+	if (name != NULL)
+		strlcpy(player_names[newplayernum], name, sizeof(*player_names));
+
+	newplayer->bot = (type >= BOT_NONE && type <= BOT_MPAI) ? type : BOT_MPAI;
+
+	// If our bot is a 2P type, we'll need to set its leader so it can spawn
+	if (newplayer->bot == BOT_2PAI || newplayer->bot == BOT_2PHUMAN)
+		B_UpdateBotleader(newplayer);
+
+	// Set the skin (can't do this until AFTER bot type is set!)
+	SetPlayerSkinByNum(newplayernum, skinnum);
+
+	if (netgame)
+	{
+		char joinmsg[256];
+
+		// Truncate bot name
+		player_names[newplayernum][sizeof(*player_names) - 8] = '\0'; // The length of colored [BOT] + 1
+
+		strcpy(joinmsg, M_GetText("\x82*Bot %s has joined the game (player %d)"));
+		strcpy(joinmsg, va(joinmsg, player_names[newplayernum], newplayernum));
+		HU_AddChatText(joinmsg, false);
+
+		// Append blue [BOT] tag at the end
+		strlcat(player_names[newplayernum], "\x84[BOT]\x80", sizeof(*player_names));
+	}
+
+	return newplayernum;
+}
 
 void B_UpdateBotleader(player_t *player)
 {
