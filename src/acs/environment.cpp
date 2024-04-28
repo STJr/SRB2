@@ -160,7 +160,6 @@ Environment::Environment()
 
 	addFuncDataACS0( 300, addCallFunc(CallFunc_CountEnemies));
 	addFuncDataACS0( 301, addCallFunc(CallFunc_CountPushables));
-	// addFuncDataACS0( 302, addCallFunc(CallFunc_Dummy1));
 	addFuncDataACS0( 303, addCallFunc(CallFunc_HaveUnlockable));
 	addFuncDataACS0( 304, addCallFunc(CallFunc_PlayerSkin));
 	addFuncDataACS0( 305, addCallFunc(CallFunc_GetObjectDye));
@@ -175,35 +174,17 @@ Environment::Environment()
 	addFuncDataACS0( 315, addCallFunc(CallFunc_PlayerBot));
 	addFuncDataACS0( 316, addCallFunc(CallFunc_ModeAttacking));
 	addFuncDataACS0( 317, addCallFunc(CallFunc_NiGHTSAttack));
-	// addFuncDataACS0( 318, addCallFunc(CallFunc_Dummy3));
-	// addFuncDataACS0( 319, addCallFunc(CallFunc_Dummy4));
 	addFuncDataACS0( 320, addCallFunc(CallFunc_PlayerExiting));
 
 	addFuncDataACS0( 500, addCallFunc(CallFunc_CameraWait));
-	// addFuncDataACS0( 501, addCallFunc(CallFunc_Dummy5));
-	// addFuncDataACS0( 502, addCallFunc(CallFunc_Dummy6));
 	addFuncDataACS0( 503, addCallFunc(CallFunc_SetLineRenderStyle));
 	addFuncDataACS0( 504, addCallFunc(CallFunc_MapWarp));
 	addFuncDataACS0( 505, addCallFunc(CallFunc_AddBot));
-	// addFuncDataACS0( 506, addCallFunc(CallFunc_Dummy7));
 	addFuncDataACS0( 507, addCallFunc(CallFunc_ExitLevel));
 	addFuncDataACS0( 508, addCallFunc(CallFunc_MusicPlay));
 	addFuncDataACS0( 509, addCallFunc(CallFunc_MusicStopAll));
 	addFuncDataACS0( 510, addCallFunc(CallFunc_MusicRestore));
-	// addFuncDataACS0( 511, addCallFunc(CallFunc_Dummy9));
 	addFuncDataACS0( 512, addCallFunc(CallFunc_MusicDim));
-
-	// addFuncDataACS0( 600, addCallFunc(CallFunc_Dummy10));
-	// addFuncDataACS0( 601, addCallFunc(CallFunc_Dummy11));
-	// addFuncDataACS0( 602, addCallFunc(CallFunc_Dummy12));
-	// addFuncDataACS0( 603, addCallFunc(CallFunc_Dummy13));
-	// addFuncDataACS0( 604, addCallFunc(CallFunc_Dummy14));
-	// addFuncDataACS0( 605, addCallFunc(CallFunc_Dummy15));
-
-	// addFuncDataACS0( 700, addCallFunc(CallFunc_AddMessage));
-	// addFuncDataACS0( 701, addCallFunc(CallFunc_AddMessageForPlayer));
-	// addFuncDataACS0( 702, addCallFunc(CallFunc_Dummy16));
-	// addFuncDataACS0( 703, addCallFunc(CallFunc_Dummy17));
 }
 
 ACSVM::Thread *Environment::allocThread()

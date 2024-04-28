@@ -1869,7 +1869,7 @@ bool CallFunc_MapWarp(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::Wor
 		return false;
 	}
 
-	nextmapoverride = (nextmap + 1);
+	nextmapoverride = nextmap;
 
 	if (argV[1] == 0)
 		skipstats = 1;
@@ -3424,40 +3424,3 @@ bool CallFunc_SetThingProperty(ACSVM::Thread *thread, const ACSVM::Word *argV, A
 
 	return false;
 }
-
-//not needed
-#if 0
-bool CallFunc_AddMessage(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::Word argC)
-{
-	(void)argC;
-
-	ACSVM::MapScope *map = thread->scopeMap;
-
-	CONS_Printf(map->getString(argV[0])->str);
-
-	thread->dataStk.push(0);
-
-	return false;
-}
-
-bool CallFunc_AddMessageForPlayer(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::Word argC)
-{
-	(void)argC;
-
-	ACSVM::MapScope *map = thread->scopeMap;
-
-	auto info = &static_cast<Thread *>(thread)->info;
-
-	if ((info != NULL)
-		&& (info->mo != NULL && P_MobjWasRemoved(info->mo) == false)
-		&& (info->mo->player != NULL))
-	{
-		if (ACS_ActivatorIsLocal(thread))
-			CONS_Printf(map->getString(argV[0])->str);
-	}
-
-	thread->dataStk.push(0);
-
-	return false;
-}
-#endif

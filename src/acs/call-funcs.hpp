@@ -107,9 +107,4 @@ bool CallFunc_SetSectorProperty(ACSVM::Thread *thread, const ACSVM::Word *argV, 
 bool CallFunc_GetThingProperty(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::Word argC);
 bool CallFunc_SetThingProperty(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::Word argC);
 
-#if 0
-bool CallFunc_AddMessage(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::Word argC);
-bool CallFunc_AddMessageForPlayer(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::Word argC);
-#endif
-
 #endif // __SRB2_ACS_CALL_FUNCS_HPP__

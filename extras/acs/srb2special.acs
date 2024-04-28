@@ -37,8 +37,6 @@ special
 	-509:MusicStopAll(0,1),
 	-510:MusicRestore(0),
 	-512:MusicDim(1),
-	// -700:AddMessage(1),
-	// -701:AddMessageForPlayer(1),
 
 	// SRB2 linedef types (400-499)
 	// Not all are implemented
@@ -57,7 +55,6 @@ special
 	420:Light_Fade(3,6),
 	421:StopLightingEffect(1),
 	// 422:SwitchToCutAwayView(2), // should be reimplemented to search by TID
-	// 423:ChangeSky(1,2), // already implemented
 	424:Weather_Change(1,2),
 	425:Thing_ChangeState(1),
 	426:Thing_Stop(0,1),
@@ -91,12 +88,11 @@ special
 	// 457:Thing_TrackAngle(4,5), // should be reimplemented to search by TID
 	// 458:Thing_StopTrackingAngle(0),
 	// 459:StartConversation(), // to reimplement
-	460:AwardRings(2),
+	460:AwardRings(1,2),
 	// 461:Thing_Spawn(2), // to reimplement
 	462:StopTimer(0),
-	// 463:Thing_Dye(1), // Reimplemented as SetObjectDye
 	464:TriggerEggCapsule(1,2),
-	// 466:SetLevelFailureState(0,1), // to reimplement
+	466:SetLevelFailureState(1),
 	475:ACS_NamedExecute(1,10),
 	476:ACS_NamedExecuteAlways(1,10),
 	477:ACS_NamedSuspend(1),
