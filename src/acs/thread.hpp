@@ -35,12 +35,16 @@ namespace srb2::acs {
 //
 enum acs_scriptType_e
 {
-	ACS_ST_OPEN			=  1, // OPEN: Runs once when the level starts.
-	ACS_ST_RESPAWN		=  2, // RESPAWN: Runs when a player respawns.
-	ACS_ST_DEATH		=  3, // DEATH: Runs when a player dies.
-	ACS_ST_ENTER		=  4, // ENTER: Runs when a player enters the game; both on start of the level, and when un-spectating.
-	ACS_ST_GAMEOVER		=  5, // GAMEOVER: Runs when the level ends due to a losing condition and no player has an extra life.
-	ACS_ST_FINISH		=  6, // FINISH: Runs when a player finishes
+	ACS_ST_OPEN         =  1,  // OPEN: Runs once when the level starts.
+	ACS_ST_RESPAWN      =  2,  // RESPAWN: Runs when a player respawns.
+	ACS_ST_DEATH        =  3,  // DEATH: Runs when a player dies.
+	ACS_ST_ENTER        =  4,  // ENTER: Runs when a player enters the game; both on start of the level, and when un-spectating.
+	ACS_ST_PICKUP       =  5,  // PICKUP: Runs when a player picks up a flag. (Skulltag)
+	ACS_ST_BLUERETURN   =  6,  // BLUERETURN: Runs when the blue flag returns to its base. (Skulltag)
+	ACS_ST_REDRETURN    =  7,  // REDRETURN: Runs when the red flag returns to its base. (Skulltag)
+	ACS_ST_EVENT        =  16, // EVENT: Runs when certain game events happen. (Zandronum)
+	ACS_ST_GAMEOVER	    =  19, // GAMEOVER: Runs when the player gets a game over. (SRB2)
+	ACS_ST_FINISH       =  20  // FINISH: Runs when a player finishes the level. (SRB2)
 };
 
 //
@@ -50,7 +54,7 @@ enum acs_tagType_e
 {
 	ACS_TAGTYPE_POLYOBJ,
 	ACS_TAGTYPE_SECTOR,
-	ACS_TAGTYPE_CAMERA,
+	ACS_TAGTYPE_CAMERA
 };
 
 class ThreadInfo : public ACSVM::ThreadInfo

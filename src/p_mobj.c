@@ -1260,6 +1260,40 @@ fixed_t P_MobjCeilingZ(sector_t *sector, sector_t *boundsec, fixed_t x, fixed_t 
 		return sector->ceilingheight;
 }
 
+INT32 P_FloorPicAtPos(fixed_t x, fixed_t y, fixed_t z, fixed_t height)
+{
+	sector_t *sector = R_PointInSubsector(x, y)->sector;
+
+	INT32 floorpic = sector->floorpic;
+
+	if (sector->ffloors)
+	{
+		ffloor_t *best = NULL;
+		fixed_t thingtop = z + height;
+
+		for (ffloor_t *rover = sector->ffloors; rover; rover = rover->next)
+		{
+			if (!(rover->fofflags & FOF_EXISTS))
+				continue;
+
+			fixed_t topheight = P_GetFFloorTopZAt(rover, x, y);
+			fixed_t bottomheight = P_GetFFloorBottomZAt(rover, x, y);
+
+			fixed_t delta1 = z - (bottomheight + ((topheight - bottomheight)/2));
+			fixed_t delta2 = thingtop - (bottomheight + ((topheight - bottomheight)/2));
+			if (topheight > P_GetFFloorTopZAt(best, x, y) && abs(delta1) < abs(delta2))
+			{
+				best = rover;
+			}
+		}
+
+		if (best)
+			floorpic = *best->toppic;
+	}
+
+	return floorpic;
+}
+
 static void P_PlayerFlip(mobj_t *mo)
 {
 	if (!mo->player)

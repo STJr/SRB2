@@ -98,6 +98,7 @@ Environment::Environment()
 	addCodeDataACS0(119, {"",        0, addCallFunc(CallFunc_PlayerTeam)});
 
 	// 136 to 137: Implemented by ACSVM
+	addCodeDataACS0(149, {"",        6, addCallFunc(CallFunc_SpawnObject)});
 
 	// 157: Implemented by ACSVM
 
@@ -105,29 +106,43 @@ Environment::Environment()
 	addCodeDataACS0(174, {"BB",      0, addCallFunc(CallFunc_Random)});
 	// 175 to 179: Implemented by ACSVM
 
+	addCodeDataACS0(180, {"",        7, addCallFunc(CallFunc_SetObjectSpecial)});
+
 	// 181 to 189: Implemented by ACSVM
+	addCodeDataACS0(196, {"",        1, addCallFunc(CallFunc_GetObjectX)});
+	addCodeDataACS0(197, {"",        1, addCallFunc(CallFunc_GetObjectY)});
+	addCodeDataACS0(198, {"",        1, addCallFunc(CallFunc_GetObjectZ)});
 
 	// 203 to 217: Implemented by ACSVM
 	addCodeDataACS0(220, {"",        2, addCallFunc(CallFunc_Sin)});
 	addCodeDataACS0(221, {"",        2, addCallFunc(CallFunc_Cos)});
 
 	// 225 to 243: Implemented by ACSVM
-
+	addCodeDataACS0(245, {"",        3, addCallFunc(CallFunc_SetThingProperty)});
+	addCodeDataACS0(246, {"",        2, addCallFunc(CallFunc_GetThingProperty)});
 	addCodeDataACS0(247, {"",        0, addCallFunc(CallFunc_PlayerNumber)});
 	addCodeDataACS0(248, {"",        0, addCallFunc(CallFunc_ActivatorTID)});
 
 	// 253: Implemented by ACSVM
 
 	// 256 to 257: Implemented by ACSVM
+	addCodeDataACS0(259, {"",        1, addCallFunc(CallFunc_GetObjectFloorZ)});
 
 	// 263: Implemented by ACSVM
+	addCodeDataACS0(260, {"",        1, addCallFunc(CallFunc_GetObjectAngle)});
 	addCodeDataACS0(266, {"",        2, addCallFunc(CallFunc_ChangeSky)}); // reimplements linedef type 423
 	addCodeDataACS0(270, {"",        0, addCallFunc(CallFunc_EndLog)});
 	// 273 to 275: Implemented by ACSVM
+	addCodeDataACS0(276, {"",        2, addCallFunc(CallFunc_SetObjectAngle)});
+	addCodeDataACS0(282, {"",        1, addCallFunc(CallFunc_GetObjectCeilingZ)});
 
 	// 291 to 325: Implemented by ACSVM
 
 	// 330: Implemented by ACSVM
+	addCodeDataACS0(331, {"",        1, addCallFunc(CallFunc_GetObjectPitch)});
+	addCodeDataACS0(332, {"",        1, addCallFunc(CallFunc_SetObjectPitch)});
+	addCodeDataACS0(334, {"",        1, addCallFunc(CallFunc_SetObjectState)});
+	addCodeDataACS0(340, {"",        1, addCallFunc(CallFunc_GetObjectLightLevel)});
 
 	// 349 to 361: Implemented by ACSVM
 
@@ -146,8 +161,6 @@ Environment::Environment()
 	addFuncDataACS0(   7, addCallFunc(CallFunc_GetSideProperty));
 	addFuncDataACS0(   8, addCallFunc(CallFunc_SetSideProperty));
 	// addFuncDataACS0(   9, addCallFunc(CallFunc_GetSideUserProperty));
-	addFuncDataACS0(  10, addCallFunc(CallFunc_GetThingProperty));
-	addFuncDataACS0(  11, addCallFunc(CallFunc_SetThingProperty));
 	// addFuncDataACS0(  12, addCallFunc(CallFunc_GetThingUserProperty));
 	// addFuncDataACS0(  13, addCallFunc(CallFunc_GetPlayerProperty));
 	// addFuncDataACS0(  14, addCallFunc(CallFunc_SetPlayerProperty));
@@ -160,6 +173,22 @@ Environment::Environment()
 	addFuncDataACS0( 120, addCallFunc(CallFunc_PlayerRings));
 	addFuncDataACS0( 122, addCallFunc(CallFunc_PlayerScore));
 	addFuncDataACS0( 123, addCallFunc(CallFunc_PlayerSuper));
+
+	addFuncDataACS0( 200, addCallFunc(CallFunc_GetObjectVelX));
+	addFuncDataACS0( 201, addCallFunc(CallFunc_GetObjectVelY));
+	addFuncDataACS0( 202, addCallFunc(CallFunc_GetObjectVelZ));
+	addFuncDataACS0( 203, addCallFunc(CallFunc_GetObjectRoll));
+	addFuncDataACS0( 204, addCallFunc(CallFunc_GetObjectFloorTexture));
+	addFuncDataACS0( 205, addCallFunc(CallFunc_CheckObjectState));
+	addFuncDataACS0( 206, addCallFunc(CallFunc_CheckObjectFlag));
+	addFuncDataACS0( 207, addCallFunc(CallFunc_GetObjectClass));
+	addFuncDataACS0( 208, addCallFunc(CallFunc_GetObjectDye));
+
+	addFuncDataACS0( 209, addCallFunc(CallFunc_SetObjectVelocity));
+	addFuncDataACS0( 210, addCallFunc(CallFunc_SetObjectRoll));
+	addFuncDataACS0( 211, addCallFunc(CallFunc_SetObjectFlag));
+	addFuncDataACS0( 212, addCallFunc(CallFunc_SetObjectClass));
+	addFuncDataACS0( 213, addCallFunc(CallFunc_SetObjectDye));
 
 	addFuncDataACS0( 300, addCallFunc(CallFunc_CountEnemies));
 	addFuncDataACS0( 301, addCallFunc(CallFunc_CountPushables));
@@ -177,11 +206,8 @@ Environment::Environment()
 	addFuncDataACS0( 313, addCallFunc(CallFunc_NiGHTSAttack));
 	addFuncDataACS0( 314, addCallFunc(CallFunc_ModeAttacking));
 	addFuncDataACS0( 315, addCallFunc(CallFunc_LowestLap));
-	addFuncDataACS0( 320, addCallFunc(CallFunc_GetObjectDye));
-	addFuncDataACS0( 321, addCallFunc(CallFunc_SetObjectDye));
 	addFuncDataACS0( 322, addCallFunc(CallFunc_Teleport));
 	addFuncDataACS0( 323, addCallFunc(CallFunc_SetViewpoint));
-	// addFuncDataACS0( 324, addCallFunc(CallFunc_SpawnObject));
 	addFuncDataACS0( 325, addCallFunc(CallFunc_TrackObjectAngle));
 	addFuncDataACS0( 326, addCallFunc(CallFunc_StopTrackingObjectAngle));
 	addFuncDataACS0( 327, addCallFunc(CallFunc_CheckPowerUp));
@@ -191,6 +217,17 @@ Environment::Environment()
 	addFuncDataACS0( 331, addCallFunc(CallFunc_TakeAmmo));
 	addFuncDataACS0( 332, addCallFunc(CallFunc_DoSuperTransformation));
 	addFuncDataACS0( 333, addCallFunc(CallFunc_DoSuperDetransformation));
+	addFuncDataACS0( 334, addCallFunc(CallFunc_GiveRings));
+	addFuncDataACS0( 335, addCallFunc(CallFunc_GiveSpheres));
+	addFuncDataACS0( 336, addCallFunc(CallFunc_GiveLives));
+	addFuncDataACS0( 337, addCallFunc(CallFunc_GiveScore));
+	addFuncDataACS0( 338, addCallFunc(CallFunc_DropFlag));
+	addFuncDataACS0( 339, addCallFunc(CallFunc_TossFlag));
+	addFuncDataACS0( 340, addCallFunc(CallFunc_DropEmeralds));
+	addFuncDataACS0( 341, addCallFunc(CallFunc_TossEmeralds));
+	addFuncDataACS0( 342, addCallFunc(CallFunc_PlayerHoldingFlag));
+	addFuncDataACS0( 343, addCallFunc(CallFunc_PlayerIsIt));
+	addFuncDataACS0( 344, addCallFunc(CallFunc_PlayerFinished));
 
 	addFuncDataACS0( 500, addCallFunc(CallFunc_CameraWait));
 	addFuncDataACS0( 503, addCallFunc(CallFunc_SetLineRenderStyle));

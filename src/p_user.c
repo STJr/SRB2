@@ -2315,6 +2315,7 @@ void P_DoPlayerFinish(player_t *player)
 	player->powers[pw_underwater] = 0;
 	player->powers[pw_spacetime] = 0;
 	P_RestoreMusic(player);
+	ACS_RunPlayerFinishScript(player);
 }
 
 //

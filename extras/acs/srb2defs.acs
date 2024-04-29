@@ -31,62 +31,46 @@
 
 // Actor properties you can get/set
 
-#define APROP_X             0
-#define APROP_Y             1
-#define APROP_Z             2
-#define APROP_Type          3
-#define APROP_Angle         4
-#define APROP_Pitch         5
-#define APROP_Roll          6
-#define APROP_SpriteRoll    7
-#define APROP_Frame         8
-#define APROP_Sprite        9
-#define APROP_Sprite2       10
-#define APROP_RenderFlags   11
-#define APROP_SpriteXScale  12
-#define APROP_SpriteYScale  13
-#define APROP_SpriteXOffset 14
-#define APROP_SpriteYOffset 15
-#define APROP_FloorZ        16
-#define APROP_CeilingZ      17
-#define APROP_Radius        18
-#define APROP_Height        19
-#define APROP_MomX          20
-#define APROP_MomY          21
-#define APROP_MomZ          22
-#define APROP_Tics          23
-#define APROP_State         24
-#define APROP_Flags         25
-#define APROP_Flags2        26
-#define APROP_ExtraFlags    27
-#define APROP_Skin          28
-#define APROP_Color         29
-#define APROP_Health        30
-#define APROP_MoveDir       31
-#define APROP_MoveCount     32
-#define APROP_ReactionTime  33
-#define APROP_Threshold     34
-#define APROP_LastLook      35
-#define APROP_Friction      36
-#define APROP_MoveFactor    37
-#define APROP_Fuse          38
-#define APROP_WaterTop      39
-#define APROP_WaterBottom   40
-#define APROP_Scale         41
-#define APROP_DestScale     42
-#define APROP_ScaleSpeed    43
-#define APROP_ExtraValue1   44
-#define APROP_ExtraValue2   45
-#define APROP_CustomVal     46
-#define APROP_CustomValMem  47
-#define APROP_Colorized     48
-#define APROP_Mirrored      49
-#define APROP_ShadowScale   50
-#define APROP_DispOffset    51
-#define APROP_Target        52
-#define APROP_Tracer        53
-#define APROP_HNext         54
-#define APROP_HPrev         55
+#define APROP_Frame         0
+#define APROP_Sprite        1
+#define APROP_Sprite2       2
+#define APROP_RenderFlags   3
+#define APROP_SpriteXScale  4
+#define APROP_SpriteYScale  5
+#define APROP_SpriteXOffset 6
+#define APROP_SpriteYOffset 7
+#define APROP_SpriteRoll    8
+#define APROP_Radius        9
+#define APROP_Height        10
+#define APROP_Tics          11
+#define APROP_Skin          12
+#define APROP_Color         13
+#define APROP_Health        14
+#define APROP_MoveDir       15
+#define APROP_MoveCount     16
+#define APROP_ReactionTime  17
+#define APROP_Threshold     18
+#define APROP_LastLook      19
+#define APROP_Friction      20
+#define APROP_MoveFactor    21
+#define APROP_Fuse          22
+#define APROP_WaterTop      23
+#define APROP_WaterBottom   24
+#define APROP_Scale         25
+#define APROP_DestScale     26
+#define APROP_ScaleSpeed    27
+#define APROP_ExtraValue1   28
+#define APROP_ExtraValue2   29
+#define APROP_CustomVal     30
+#define APROP_CustomValMem  31
+#define APROP_Colorized     32
+#define APROP_Mirrored      33
+#define APROP_ShadowScale   34
+#define APROP_DispOffset    35
+#define APROP_Target        36
+#define APROP_Tracer        37
+#define APROP_HNext         38
+#define APROP_HPrev         39
 
 // Line properties
 
@@ -236,6 +220,11 @@
 #define NO_TEAM                 0
 #define TEAM_RED                1
 #define TEAM_BLUE               2
+
+// Team flags
+
+#define TEAMFLAG_RED  (1 << 0)
+#define TEAMFLAG_BLUE (1 << 1)
 
 // Weapons
 

@@ -314,7 +314,6 @@ boolean P_CheckSkyHit(mobj_t *mo, line_t *line);
 void P_PushableThinker(mobj_t *mobj);
 void P_SceneryThinker(mobj_t *mobj);
 
-
 fixed_t P_MobjFloorZ(sector_t *sector, sector_t *boundsec, fixed_t x, fixed_t y, fixed_t radius, line_t *line, boolean lowest, boolean perfect);
 fixed_t P_MobjCeilingZ(sector_t *sector, sector_t *boundsec, fixed_t x, fixed_t y, fixed_t radius, line_t *line, boolean lowest, boolean perfect);
 #define P_GetFloorZ(mobj, sector, x, y, line) P_MobjFloorZ(sector, NULL, x, y, mobj->radius, line, false, false)
@@ -323,6 +322,8 @@ fixed_t P_MobjCeilingZ(sector_t *sector, sector_t *boundsec, fixed_t x, fixed_t 
 #define P_GetFOFBottomZ(mobj, sector, fof, x, y, line) P_MobjFloorZ(sectors + fof->secnum, sector, x, y, mobj->radius, line, true, false)
 #define P_GetSpecialBottomZ(mobj, src, bound) P_MobjFloorZ(src, bound, mobj->x, mobj->y, mobj->radius, NULL, src != bound, true)
 #define P_GetSpecialTopZ(mobj, src, bound) P_MobjCeilingZ(src, bound, mobj->x, mobj->y, mobj->radius, NULL, src == bound, true)
+
+INT32 P_FloorPicAtPos(fixed_t x, fixed_t y, fixed_t z, fixed_t height);
 
 #define P_CameraGetFloorZ(mobj, sector, x, y, line) P_MobjFloorZ(sector, NULL, x, y, mobj->radius, line, false, false)
 #define P_CameraGetCeilingZ(mobj, sector, x, y, line) P_MobjCeilingZ(sector, NULL, x, y, mobj->radius, line, true, false)

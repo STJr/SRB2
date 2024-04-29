@@ -4290,8 +4290,6 @@ static void G_DoStartContinue(void)
 
 	G_PlayerFinishLevel(consoleplayer); // take away cards and stuff
 
-	ACS_RunGameOverScript();
-
 	F_StartContinue();
 	gameaction = ga_nothing;
 }
