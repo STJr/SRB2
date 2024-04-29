@@ -96,9 +96,6 @@ Environment::Environment()
 	// Skulltag p-codes begin here
 	addCodeDataACS0(118, {"",        0, addCallFunc(CallFunc_IsNetworkGame)});
 	addCodeDataACS0(119, {"",        0, addCallFunc(CallFunc_PlayerTeam)});
-	addCodeDataACS0(120, {"",        0, addCallFunc(CallFunc_PlayerRings)});
-
-	addCodeDataACS0(122, {"",        0, addCallFunc(CallFunc_PlayerScore)});
 
 	// 136 to 137: Implemented by ACSVM
 
@@ -160,10 +157,14 @@ Environment::Environment()
 	addFuncDataACS0( 100, addCallFunc(CallFunc_strcmp));
 	addFuncDataACS0( 101, addCallFunc(CallFunc_strcasecmp));
 
+	addFuncDataACS0( 120, addCallFunc(CallFunc_PlayerRings));
+	addFuncDataACS0( 122, addCallFunc(CallFunc_PlayerScore));
+	addFuncDataACS0( 123, addCallFunc(CallFunc_PlayerSuper));
+
 	addFuncDataACS0( 300, addCallFunc(CallFunc_CountEnemies));
 	addFuncDataACS0( 301, addCallFunc(CallFunc_CountPushables));
-	// addFuncDataACS0( 302, addCallFunc(CallFunc_SkinAvailable));
-	addFuncDataACS0( 303, addCallFunc(CallFunc_HasUnlockable));
+	addFuncDataACS0( 302, addCallFunc(CallFunc_HasUnlockable));
+	addFuncDataACS0( 303, addCallFunc(CallFunc_SkinUnlocked));
 	addFuncDataACS0( 304, addCallFunc(CallFunc_PlayerSkin));
 	addFuncDataACS0( 305, addCallFunc(CallFunc_PlayerEmeralds));
 	addFuncDataACS0( 306, addCallFunc(CallFunc_PlayerBot));
@@ -183,13 +184,19 @@ Environment::Environment()
 	// addFuncDataACS0( 324, addCallFunc(CallFunc_SpawnObject));
 	addFuncDataACS0( 325, addCallFunc(CallFunc_TrackObjectAngle));
 	addFuncDataACS0( 326, addCallFunc(CallFunc_StopTrackingObjectAngle));
-	// addFuncDataACS0( 327, addCallFunc(CallFunc_GiveShield));
-	// addFuncDataACS0( 328, addCallFunc(CallFunc_GivePowerUp));
+	addFuncDataACS0( 327, addCallFunc(CallFunc_CheckPowerUp));
+	addFuncDataACS0( 328, addCallFunc(CallFunc_GivePowerUp));
+	addFuncDataACS0( 329, addCallFunc(CallFunc_CheckAmmo));
+	addFuncDataACS0( 330, addCallFunc(CallFunc_GiveAmmo));
+	addFuncDataACS0( 331, addCallFunc(CallFunc_TakeAmmo));
+	addFuncDataACS0( 332, addCallFunc(CallFunc_DoSuperTransformation));
+	addFuncDataACS0( 333, addCallFunc(CallFunc_DoSuperDetransformation));
 
 	addFuncDataACS0( 500, addCallFunc(CallFunc_CameraWait));
 	addFuncDataACS0( 503, addCallFunc(CallFunc_SetLineRenderStyle));
 	addFuncDataACS0( 504, addCallFunc(CallFunc_MapWarp));
 	addFuncDataACS0( 505, addCallFunc(CallFunc_AddBot));
+	addFuncDataACS0( 506, addCallFunc(CallFunc_RemoveBot));
 	addFuncDataACS0( 507, addCallFunc(CallFunc_ExitLevel));
 	addFuncDataACS0( 508, addCallFunc(CallFunc_MusicPlay));
 	addFuncDataACS0( 509, addCallFunc(CallFunc_MusicStopAll));

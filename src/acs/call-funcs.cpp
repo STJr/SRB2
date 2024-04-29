@@ -169,7 +169,7 @@ static bool ACS_GetSpriteFromString(const char *word, spritenum_t *type)
 
 	for (int i = 0; i < NUMSPRITES; i++)
 	{
-		if (fastncmp(word, sprnames[i], 4))
+		if (strcmp(word, sprnames[i]) == 0)
 		{
 			*type = static_cast<spritenum_t>(i);
 			return true;
@@ -1270,6 +1270,30 @@ bool CallFunc_PlayerScore(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM:
 }
 
 /*--------------------------------------------------
+	bool CallFunc_PlayerScore(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::Word argC)
+
+		Returns if the activating player is super.
+--------------------------------------------------*/
+bool CallFunc_PlayerSuper(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::Word argC)
+{
+	auto info = &static_cast<Thread *>(thread)->info;
+	bool super = false;
+
+	(void)argV;
+	(void)argC;
+
+	if ((info != NULL)
+		&& (info->mo != NULL && P_MobjWasRemoved(info->mo) == false)
+		&& (info->mo->player != NULL))
+	{
+		super = (info->mo->player->powers[pw_super] != 0);
+	}
+
+	thread->dataStk.push(super);
+	return false;
+}
+
+/*--------------------------------------------------
 	bool CallFunc_PlayerNumber(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::Word argC)
 
 		Returns the activating player's ID.
@@ -1495,6 +1519,33 @@ bool CallFunc_HasUnlockable(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSV
 	else
 	{
 		unlocked = M_CheckNetUnlockByID(id);
+	}
+
+	thread->dataStk.push(unlocked);
+	return false;
+}
+
+/*--------------------------------------------------
+	bool CallFunc_SkinUnlocked(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::Word argC)
+
+		Checks if a certain skin has been unlocked.
+--------------------------------------------------*/
+bool CallFunc_SkinUnlocked(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::Word argC)
+{
+	bool unlocked = false;
+	auto info = &static_cast<Thread *>(thread)->info;
+
+	(void)argC;
+
+	if ((info != NULL)
+		&& (info->mo != NULL && P_MobjWasRemoved(info->mo) == false)
+		&& (info->mo->player != NULL))
+	{
+		INT32 skinNum;
+		if (ACS_GetSkinFromString(thread->scopeMap->getString( argV[0] )->str, &skinNum) == true)
+		{
+			unlocked = R_SkinUsable(info->mo->player - players, skinNum);
+		}
 	}
 
 	thread->dataStk.push(unlocked);
@@ -2070,6 +2121,38 @@ bool CallFunc_AddBot(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::Word
 	}
 
 	thread->dataStk.push(B_AddBot(skinname, skincolor, botname, bottype));
+
+	return false;
+}
+
+/*--------------------------------------------------
+	bool CallFunc_RemoveBot(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::Word argC)
+
+		Removes a bot.
+--------------------------------------------------*/
+bool CallFunc_RemoveBot(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::Word argC)
+{
+	(void)argC;
+
+	int playernum = argV[0];
+
+	if (playernum < 0 || playernum >= MAXPLAYERS)
+	{
+		CONS_Alert(CONS_WARNING, "RemoveBot player %d out of range (expected 0 - %d).\n", playernum, MAXPLAYERS-1);
+	}
+	else if (playeringame[playernum])
+	{
+		if (players[playernum].bot == BOT_NONE)
+		{
+			CONS_Alert(CONS_WARNING, "RemoveBot cannot remove human\n");
+		}
+		else
+		{
+			players[playernum].removing = true;
+		}
+	}
+
+	thread->dataStk.push(0);
 
 	return false;
 }
@@ -3157,9 +3240,7 @@ bool CallFunc_GetThingProperty(ACSVM::Thread *thread, const ACSVM::Word *argV, A
 #define PROP_SPR(x, y) \
 	case x: \
 	{ \
-		char crunched[5] = {0}; \
-		strncpy(crunched, sprnames[ mobj->y ], 4); \
-		value = static_cast<INT32>( ~env->getString( crunched )->idx ); \
+		value = static_cast<INT32>( ~env->getString( sprnames[ mobj->y ] )->idx ); \
 		break; \
 	}
 
@@ -3560,6 +3641,442 @@ bool CallFunc_SetThingProperty(ACSVM::Thread *thread, const ACSVM::Word *argV, A
 	return false;
 }
 
+enum
+{
+	POWER_INVULNERABILITY,
+	POWER_SNEAKERS,
+	POWER_FLASHING,
+	POWER_SHIELD,
+	POWER_TAILSFLY,
+	POWER_UNDERWATER,
+	POWER_SPACETIME,
+	POWER_GRAVITYBOOTS,
+	POWER_EMERALDS,
+	POWER_NIGHTS_SUPERLOOP,
+	POWER_NIGHTS_HELPER,
+	POWER_NIGHTS_LINKFREEZE,
+	POWER_AUTOMATICRING,
+	POWER_BOUNCERING,
+	POWER_SCATTERRING,
+	POWER_GRENADERING,
+	POWER_EXPLOSIONRING,
+	POWER_RAILRING,
+	POWER__MAX
+};
+
+/*--------------------------------------------------
+	bool CallFunc_CheckPowerUp(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::Word argC)
+
+		Checks the amount of the activator's given power-up.
+--------------------------------------------------*/
+bool CallFunc_CheckPowerUp(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::Word argC)
+{
+	(void)argC;
+
+	INT32 value = 0;
+
+	auto info = &static_cast<Thread *>(thread)->info;
+
+	if ((info != NULL)
+		&& (info->mo != NULL && P_MobjWasRemoved(info->mo) == false)
+		&& (info->mo->player != NULL))
+	{
+		INT32 property = argV[0];
+
+		player_t *player = info->mo->player;
+
+#define POWER(x, y) \
+	case x: \
+	{ \
+		value = player->powers[y]; \
+		break; \
+	}
+
+#define WEAPON(x, y) \
+	case x: \
+	{ \
+		value = (player->ringweapons & y) != 0; \
+		break; \
+	}
+
+		switch (property)
+		{
+			POWER(POWER_INVULNERABILITY, pw_invulnerability)
+			POWER(POWER_SNEAKERS, pw_sneakers)
+			POWER(POWER_FLASHING, pw_flashing)
+			POWER(POWER_SHIELD, pw_shield)
+			POWER(POWER_TAILSFLY, pw_tailsfly)
+			POWER(POWER_UNDERWATER, pw_underwater)
+			POWER(POWER_SPACETIME, pw_spacetime)
+			POWER(POWER_GRAVITYBOOTS, pw_gravityboots)
+			POWER(POWER_EMERALDS, pw_emeralds)
+			POWER(POWER_NIGHTS_SUPERLOOP, pw_nights_superloop)
+			POWER(POWER_NIGHTS_HELPER, pw_nights_helper)
+			POWER(POWER_NIGHTS_LINKFREEZE, pw_nights_linkfreeze)
+			WEAPON(POWER_AUTOMATICRING, WEP_AUTO)
+			WEAPON(POWER_BOUNCERING, WEP_BOUNCE)
+			WEAPON(POWER_SCATTERRING, WEP_SCATTER)
+			WEAPON(POWER_GRENADERING, WEP_GRENADE)
+			WEAPON(POWER_EXPLOSIONRING, WEP_EXPLODE)
+			WEAPON(POWER_RAILRING, WEP_RAIL)
+			default:
+			{
+				CONS_Alert(CONS_WARNING, "CheckPowerUp type %d out of range (expected 0 - %d).\n", property, POWER__MAX-1);
+				break;
+			}
+		}
+
+#undef POWER
+#undef WEAPON
+	}
+
+	thread->dataStk.push(value);
+
+	return false;
+}
+
+/*--------------------------------------------------
+	static void ACS_SetPowerUp(player_t *player, INT32 property, const ACSVM::Word *argV, ACSVM::Word argC)
+
+		Helper for CallFunc_GivePowerUp.
+--------------------------------------------------*/
+static void ACS_SetPowerUp(player_t *player, INT32 property, const ACSVM::Word *argV, ACSVM::Word argC)
+{
+#define POWER(x, y, z) \
+	case x: \
+	{ \
+		if (argC >= 2) \
+			player->powers[y] = argV[1]; \
+		else \
+			player->powers[y] = z; \
+		break; \
+	}
+
+#define WEAPON(x, y) \
+	case x: \
+	{ \
+		if (argC >= 2 && (argV[1] > 0)) \
+			player->ringweapons |= y; \
+		else \
+			player->ringweapons &= ~y; \
+		break; \
+	}
+
+	switch (property)
+	{
+		POWER(POWER_INVULNERABILITY, pw_invulnerability, invulntics)
+		POWER(POWER_SNEAKERS, pw_sneakers, sneakertics)
+		POWER(POWER_FLASHING, pw_flashing, flashingtics)
+		POWER(POWER_SHIELD, pw_shield, 0)
+		POWER(POWER_TAILSFLY, pw_tailsfly, tailsflytics)
+		POWER(POWER_UNDERWATER, pw_underwater, underwatertics)
+		POWER(POWER_SPACETIME, pw_spacetime, spacetimetics)
+		POWER(POWER_GRAVITYBOOTS, pw_gravityboots, 20*TICRATE)
+		POWER(POWER_EMERALDS, pw_emeralds, 0)
+		POWER(POWER_NIGHTS_SUPERLOOP, pw_nights_superloop, 0)
+		POWER(POWER_NIGHTS_HELPER, pw_nights_helper, 0)
+		POWER(POWER_NIGHTS_LINKFREEZE, pw_nights_linkfreeze, 0)
+		WEAPON(POWER_AUTOMATICRING, WEP_AUTO)
+		WEAPON(POWER_BOUNCERING, WEP_BOUNCE)
+		WEAPON(POWER_SCATTERRING, WEP_SCATTER)
+		WEAPON(POWER_GRENADERING, WEP_GRENADE)
+		WEAPON(POWER_EXPLOSIONRING, WEP_EXPLODE)
+		WEAPON(POWER_RAILRING, WEP_RAIL)
+		default:
+		{
+			CONS_Alert(CONS_WARNING, "GivePowerUp type %d out of range (expected 0 - %d).\n", property, POWER__MAX-1);
+			break;
+		}
+	}
+
+	// Give the player a shield
+	if (property == POWER_SHIELD && player->powers[pw_shield] != SH_NONE)
+	{
+		P_SpawnShieldOrb(player);
+	}
+
+#undef POWER
+#undef AMMO
+}
+
+/*--------------------------------------------------
+	bool CallFunc_GivePowerUp(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::Word argC)
+
+		Awards a power-up to the activator.
+		Like GiveInventory, if this is called with no activator, this awards the power-up to all players.
+--------------------------------------------------*/
+bool CallFunc_GivePowerUp(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::Word argC)
+{
+	auto info = &static_cast<Thread *>(thread)->info;
+
+	INT32 property = argV[0];
+
+	if ((info != NULL)
+		&& (info->mo != NULL && P_MobjWasRemoved(info->mo) == false)
+		&& (info->mo->player != NULL))
+	{
+		ACS_SetPowerUp(info->mo->player, property, argV, argC);
+	}
+	else
+	{
+		for (UINT8 i = 0; i < MAXPLAYERS; i++)
+		{
+			if (playeringame[i])
+				ACS_SetPowerUp(&players[i], property, argV, argC);
+		}
+	}
+
+	thread->dataStk.push(0);
+
+	return false;
+}
+
+enum
+{
+	WEAPON_AUTO,
+	WEAPON_BOUNCE,
+	WEAPON_SCATTER,
+	WEAPON_GRENADE,
+	WEAPON_EXPLODE,
+	WEAPON_RAIL,
+	WEAPON__MAX
+};
+
+/*--------------------------------------------------
+	bool CallFunc_CheckAmmo(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::Word argC)
+
+		Checks the ammo of the activator's weapon.
+--------------------------------------------------*/
+bool CallFunc_CheckAmmo(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::Word argC)
+{
+	(void)argC;
+
+	INT32 value = 0;
+
+	auto info = &static_cast<Thread *>(thread)->info;
+
+	if ((info != NULL)
+		&& (info->mo != NULL && P_MobjWasRemoved(info->mo) == false)
+		&& (info->mo->player != NULL))
+	{
+		INT32 weapon = argV[0];
+
+		player_t *player = info->mo->player;
+
+#define AMMO(x, y) \
+	case x: \
+	{ \
+		value = player->powers[y]; \
+		break; \
+	}
+
+		switch (weapon)
+		{
+			AMMO(WEAPON_AUTO, pw_automaticring)
+			AMMO(WEAPON_BOUNCE, pw_bouncering)
+			AMMO(WEAPON_SCATTER, pw_scatterring)
+			AMMO(WEAPON_GRENADE, pw_grenadering)
+			AMMO(WEAPON_EXPLODE, pw_explosionring)
+			AMMO(WEAPON_RAIL, pw_railring)
+			default:
+			{
+				CONS_Alert(CONS_WARNING, "GiveAmmo weapon %d out of range (expected 0 - %d).\n", weapon, WEAPON__MAX-1);
+				break;
+			}
+		}
+
+#undef AMMO
+	}
+
+	thread->dataStk.push(value);
+
+	return false;
+}
+
+/*--------------------------------------------------
+	static void ACS_GiveAmmo(player_t *player, INT32 weapon, INT32 value)
+
+		Helper for CallFunc_GiveAmmo/CallFunc_TakeAmmo.
+--------------------------------------------------*/
+static bool ACS_GiveAmmo(player_t *player, INT32 weapon, INT32 value)
+{
+#define AMMO(x, y) \
+	case x: \
+	{ \
+		player->powers[y] += value; \
+		return true; \
+	}
+
+	switch (weapon)
+	{
+		AMMO(WEAPON_AUTO, pw_automaticring)
+		AMMO(WEAPON_BOUNCE, pw_bouncering)
+		AMMO(WEAPON_SCATTER, pw_scatterring)
+		AMMO(WEAPON_GRENADE, pw_grenadering)
+		AMMO(WEAPON_EXPLODE, pw_explosionring)
+		AMMO(WEAPON_RAIL, pw_railring)
+	}
+
+#undef AMMO
+
+	return false;
+}
+
+/*--------------------------------------------------
+	bool CallFunc_GiveAmmo(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::Word argC)
+
+		Gives ammo to the activator.
+		Like GiveInventory, if this is called with no activator, this awards ammo to all players.
+--------------------------------------------------*/
+bool CallFunc_GiveAmmo(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::Word argC)
+{
+	auto info = &static_cast<Thread *>(thread)->info;
+
+	INT32 weapon = argV[0];
+	INT32 value = argC >= 2 ? (argV[1]) : 0;
+
+	bool fail = false;
+
+	if ((info != NULL)
+		&& (info->mo != NULL && P_MobjWasRemoved(info->mo) == false)
+		&& (info->mo->player != NULL))
+	{
+		fail = !ACS_GiveAmmo(info->mo->player, weapon, value);
+	}
+	else
+	{
+		for (UINT8 i = 0; i < MAXPLAYERS; i++)
+		{
+			if (playeringame[i])
+			{
+				if (!ACS_GiveAmmo(&players[i], weapon, value))
+				{
+					fail = true;
+					break;
+				}
+			}
+		}
+	}
+
+	if (fail)
+	{
+		CONS_Alert(CONS_WARNING, "GiveAmmo weapon %d out of range (expected 0 - %d).\n", weapon, WEAPON__MAX-1);
+	}
+
+	thread->dataStk.push(0);
+
+	return false;
+}
+
+/*--------------------------------------------------
+	bool CallFunc_TakeAmmo(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::Word argC)
+
+		Takes ammo from the activator.
+		Like TakeInventory, if this is called with no activator, this takes ammo from all players.
+--------------------------------------------------*/
+bool CallFunc_TakeAmmo(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::Word argC)
+{
+	auto info = &static_cast<Thread *>(thread)->info;
+
+	INT32 weapon = argV[0];
+	INT32 value = argC >= 2 ? (argV[1]) : 0;
+
+	bool fail = false;
+
+	if ((info != NULL)
+		&& (info->mo != NULL && P_MobjWasRemoved(info->mo) == false)
+		&& (info->mo->player != NULL))
+	{
+		fail = !ACS_GiveAmmo(info->mo->player, weapon, -value);
+	}
+	else
+	{
+		for (UINT8 i = 0; i < MAXPLAYERS; i++)
+		{
+			if (playeringame[i])
+			{
+				if (!ACS_GiveAmmo(&players[i], weapon, -value))
+				{
+					fail = true;
+					break;
+				}
+			}
+		}
+	}
+
+	if (fail)
+	{
+		CONS_Alert(CONS_WARNING, "TakeAmmo weapon %d out of range (expected 0 - %d).\n", weapon, WEAPON__MAX-1);
+	}
+
+	thread->dataStk.push(0);
+
+	return false;
+}
+
+/*--------------------------------------------------
+	bool CallFunc_DoSuperTransformation(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::Word argC)
+
+		Turns the activator super.
+--------------------------------------------------*/
+bool CallFunc_DoSuperTransformation(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::Word argC)
+{
+	auto info = &static_cast<Thread *>(thread)->info;
+
+	bool giverings = argC >= 2 ? (argV[1] != 0) : false;
+
+	if ((info != NULL)
+		&& (info->mo != NULL && P_MobjWasRemoved(info->mo) == false)
+		&& (info->mo->player != NULL))
+	{
+		P_DoSuperTransformation(info->mo->player, giverings);
+	}
+	else
+	{
+		for (UINT8 i = 0; i < MAXPLAYERS; i++)
+		{
+			if (playeringame[i])
+				P_DoSuperTransformation(&players[i], giverings);
+		}
+	}
+
+	thread->dataStk.push(0);
+
+	return false;
+}
+
+/*--------------------------------------------------
+	bool CallFunc_DoSuperTransformation(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::Word argC)
+
+		Detransforms the activator if super.
+--------------------------------------------------*/
+bool CallFunc_DoSuperDetransformation(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::Word argC)
+{
+	(void)argV;
+	(void)argC;
+
+	auto info = &static_cast<Thread *>(thread)->info;
+
+	if ((info != NULL)
+		&& (info->mo != NULL && P_MobjWasRemoved(info->mo) == false)
+		&& (info->mo->player != NULL))
+	{
+		P_DoSuperDetransformation(info->mo->player);
+	}
+	else
+	{
+		for (UINT8 i = 0; i < MAXPLAYERS; i++)
+		{
+			if (playeringame[i])
+				P_DoSuperDetransformation(&players[i]);
+		}
+	}
+
+	thread->dataStk.push(0);
+
+	return false;
+}
+
 /*--------------------------------------------------
 	static angle_t ACS_GetAngle(int angle)
 
@@ -3742,7 +4259,7 @@ bool CallFunc_OppositeColor(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSV
 
 	if (color < 1 || color >= numskincolors)
 	{
-		CONS_Alert(CONS_WARNING, "OppositeColor: out of range\n");
+		CONS_Alert(CONS_WARNING, "OppositeColor color %d out of range (expected 1 - %d).\n", color, numskincolors-1);
 	}
 	else
 	{

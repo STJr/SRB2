@@ -183,11 +183,68 @@
 #define SECSPAC_FloorMissile           1024      // when a projectile touches the floor of this sector
 #define SECSPAC_CeilingMissile         2048      // when a projectile touches the ceiling of this sector
 
+// Player powers
+
+#define POWER_INVULNERABILITY   0
+#define POWER_SNEAKERS          1
+#define POWER_FLASHING          2
+#define POWER_SHIELD            3
+#define POWER_TAILSFLY          4
+#define POWER_UNDERWATER        5
+#define POWER_SPACETIME         6
+#define POWER_GRAVITYBOOTS      7
+#define POWER_EMERALDS          8
+#define POWER_NIGHTS_SUPERLOOP  9
+#define POWER_NIGHTS_HELPER     10
+#define POWER_NIGHTS_LINKFREEZE 11
+#define POWER_AUTOMATICRING     12
+#define POWER_BOUNCERING        13
+#define POWER_SCATTERRING       14
+#define POWER_GRENADERING       15
+#define POWER_EXPLOSIONRING     16
+#define POWER_RAILRING          17
+
+// Player shields
+
+#define SHIELD_NONE            0
+#define SHIELD_PITY            1
+#define SHIELD_WHIRLWIND       2
+#define SHIELD_ARMAGEDDON      3
+#define SHIELD_PINK            4
+
+#define SHIELD_PROTECTFIRE     0x400
+#define SHIELD_PROTECTWATER    0x800
+#define SHIELD_PROTECTELECTRIC 0x1000
+#define SHIELD_PROTECTSPIKE    0x2000
+
+#define SHIELD_ATTRACT         (SHIELD_PITY | SHIELD_PROTECTELECTRIC)
+#define SHIELD_ELEMENTAL       (SHIELD_PITY | SHIELD_PROTECTFIRE | SHIELD_PROTECTWATER)
+#define SHIELD_FLAMEAURA       (SHIELD_PITY | SHIELD_PROTECTFIRE)
+#define SHIELD_BUBBLEWRAP      (SHIELD_PITY | SHIELD_PROTECTWATER)
+#define SHIELD_THUNDERCOIN     (SHIELD_WHIRLWIND | SHIELD_PROTECTELECTRIC)
+
+#define SHIELD_FORCE           0x100
+#define SHIELD_FIREFLOWER      0x200
+
+#define SHIELD_STACK           SHIELD_FIREFLOWER
+#define SHIELD_NOSTACK         (~SHIELD_STACK)
+
+#define SHIELD_FORCEHP         0xFF
+
 // Teams
 
 #define NO_TEAM                 0
 #define TEAM_RED                1
 #define TEAM_BLUE               2
+
+// Weapons
+
+#define WEAPON_AUTO    0
+#define WEAPON_BOUNCE  1
+#define WEAPON_SCATTER 2
+#define WEAPON_GRENADE 3
+#define WEAPON_EXPLODE 4
+#define WEAPON_RAIL    5
 
 // Bot types
 
