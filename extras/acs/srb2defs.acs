@@ -164,6 +164,57 @@
 #define SECSPAC_FloorMissile           1024      // when a projectile touches the floor of this sector
 #define SECSPAC_CeilingMissile         2048      // when a projectile touches the ceiling of this sector
 
+// Sector planes
+
+#define SECPLANE_FLOOR   0
+#define SECPLANE_CEILING 1
+#define SECPLANE_BOTH    2
+
+// Tag options
+
+#define TAG_ADD          0
+#define TAG_REMOVE       1
+#define TAG_REPLACEFIRST 2
+#define TAG_TRIGGERTAG   3
+
+// Light copy options
+
+#define COPYLIGHT_NOSECTOR  (1 << 0)
+#define COPYLIGHT_NOFLOOR   (1 << 1)
+#define COPYLIGHT_NOCEILING (1 << 2)
+
+// Colormap fade options
+
+#define COLORMAPCHANGE_RELATIVE     (1 << 0)
+#define COLORMAPCHANGE_SUBLIGHTR    (1 << 1)
+#define COLORMAPCHANGE_SUBLIGHTG    (1 << 2)
+#define COLORMAPCHANGE_SUBLIGHTB    (1 << 3)
+#define COLORMAPCHANGE_SUBLIGHTA    (1 << 4)
+#define COLORMAPCHANGE_SUBFADER     (1 << 5)
+#define COLORMAPCHANGE_SUBFADEG     (1 << 6)
+#define COLORMAPCHANGE_SUBFADEB     (1 << 7)
+#define COLORMAPCHANGE_SUBFADEA     (1 << 8)
+#define COLORMAPCHANGE_SUBFADESTART (1 << 9)
+#define COLORMAPCHANGE_SUBFADEEND   (1 << 10)
+#define COLORMAPCHANGE_IGNOREFLAGS  (1 << 11)
+#define COLORMAPCHANGE_FROMBLACK    (1 << 12)
+#define COLORMAPCHANGE_OVERRIDE     (1 << 13)
+
+// Weather
+
+#define WEATHER_NONE            0
+#define WEATHER_STORM           1
+#define WEATHER_SNOW            2
+#define WEATHER_RAIN            3
+#define WEATHER_STORM_NORAIN    5
+#define WEATHER_STORM_NOSTRIKES 6
+
+// Skybox change options
+
+#define SKYBOXCHANGE_VIEWPOINT   0
+#define SKYBOXCHANGE_CENTERPOINT 1
+#define SKYBOXCHANGE_BOTHPOINTS  2
+
 // Player powers
 
 #define POWER_INVULNERABILITY   0
