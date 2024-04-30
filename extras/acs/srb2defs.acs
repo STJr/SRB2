@@ -215,6 +215,35 @@
 #define SKYBOXCHANGE_CENTERPOINT 1
 #define SKYBOXCHANGE_BOTHPOINTS  2
 
+// Light fade options
+
+#define LIGHTFADE_RELATIVE (1 << 0)
+#define LIGHTFADE_OVERRIDE (1 << 1)
+#define LIGHTFADE_TICBASED (1 << 2)
+
+// Strobe light options
+
+#define STROBELIGHT_USETARGET (1 << 0)
+#define STROBELIGHT_SYNC      (1 << 1)
+
+// 3D floor crumble options
+
+#define CRUMBLE3DFLOOR_NORESPAWN          (1 << 0)
+#define CRUMBLE3DFLOOR_CHECKNORESPAWNFLAG (1 << 1)
+
+// 3D floor fade options
+
+#define FADE3DFLOOR_RELATIVE          (1 << 0)
+#define FADE3DFLOOR_OVERRIDE          (1 << 1)
+#define FADE3DFLOOR_TICBASED          (1 << 2)
+#define FADE3DFLOOR_IGNORECOLLISION   (1 << 3)
+#define FADE3DFLOOR_GHOSTFADE         (1 << 4)
+#define FADE3DFLOOR_DONTDOTRANSLUCENT (1 << 5)
+#define FADE3DFLOOR_DONTDOEXISTENCE   (1 << 6)
+#define FADE3DFLOOR_DONTDOLIGHTING    (1 << 7)
+#define FADE3DFLOOR_DONTDOCOLORMAP    (1 << 8)
+#define FADE3DFLOOR_USEEXACTALPHA     (1 << 9)
+
 // Player powers
 
 #define POWER_INVULNERABILITY   0
