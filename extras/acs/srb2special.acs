@@ -26,6 +26,7 @@ special
 	-211:SetActorFlag(2,3),
 	-212:SetActorClass(2),
 	-213:SetActorDye(2),
+	-214:SpawnForced(4,6),
 	-300:CountEnemies(2),
 	-301:CountPushables(2),
 	-302:HasUnlockable(1),

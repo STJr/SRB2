@@ -14370,6 +14370,45 @@ mobj_t *P_SPMAngle(mobj_t *source, mobjtype_t type, angle_t angle, UINT8 allowai
 }
 
 //
+// P_SpawnMissileAtSpeeds
+// Fires missile at angle and X/Y speeds
+//
+mobj_t *P_SpawnMissileAtSpeeds(mobj_t *source, mobjtype_t type, angle_t angle, fixed_t hspeed, fixed_t vspeed, boolean useGravity)
+{
+	fixed_t x = source->x;
+	fixed_t y = source->y;
+	fixed_t z;
+
+	if (source->eflags & MFE_VERTICALFLIP)
+		z = source->z + 2*source->height/3 - FixedMul(mobjinfo[type].height, source->scale);
+	else
+		z = source->z + source->height/3;
+
+	mobj_t *th = P_SpawnMobj(x, y, z, type);
+	if (P_MobjWasRemoved(th))
+		return NULL;
+
+	if (source->eflags & MFE_VERTICALFLIP)
+		th->flags2 |= MF2_OBJECTFLIP;
+
+	P_SetScale(th, source->scale, true);
+	P_SetTarget(&th->target, source);
+
+	th->angle = angle;
+	th->momx = FixedMul(FixedMul(hspeed, FINECOSINE(angle>>ANGLETOFINESHIFT)), th->scale);
+	th->momy = FixedMul(FixedMul(hspeed, FINESINE(angle>>ANGLETOFINESHIFT)), th->scale);
+	th->momz = FixedMul(vspeed, th->scale);
+
+	if (useGravity)
+		th->flags &= ~MF_NOGRAVITY;
+
+	if (P_CheckMissileSpawn(th))
+		return th;
+
+	return NULL;
+}
+
+//
 // P_FlashPal
 // Flashes a player's palette.  ARMAGEDDON BLASTS!
 //

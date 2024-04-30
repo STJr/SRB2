@@ -134,6 +134,7 @@ Environment::Environment()
 	addCodeDataACS0(270, {"",        0, addCallFunc(CallFunc_EndLog)});
 	// 273 to 275: Implemented by ACSVM
 	addCodeDataACS0(276, {"",        2, addCallFunc(CallFunc_SetObjectAngle)});
+	addCodeDataACS0(280, {"",        7, addCallFunc(CallFunc_SpawnProjectile)});
 	addCodeDataACS0(282, {"",        1, addCallFunc(CallFunc_GetObjectCeilingZ)});
 
 	// 291 to 325: Implemented by ACSVM
@@ -189,6 +190,7 @@ Environment::Environment()
 	addFuncDataACS0( 211, addCallFunc(CallFunc_SetObjectFlag));
 	addFuncDataACS0( 212, addCallFunc(CallFunc_SetObjectClass));
 	addFuncDataACS0( 213, addCallFunc(CallFunc_SetObjectDye));
+	addFuncDataACS0( 214, addCallFunc(CallFunc_SpawnObjectForced));
 
 	addFuncDataACS0( 300, addCallFunc(CallFunc_CountEnemies));
 	addFuncDataACS0( 301, addCallFunc(CallFunc_CountPushables));

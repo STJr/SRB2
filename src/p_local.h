@@ -342,6 +342,7 @@ mobj_t *P_SpawnXYZMissile(mobj_t *source, mobj_t *dest, mobjtype_t type, fixed_t
 mobj_t *P_SpawnPointMissile(mobj_t *source, fixed_t xa, fixed_t ya, fixed_t za, mobjtype_t type, fixed_t x, fixed_t y, fixed_t z);
 mobj_t *P_SpawnAlteredDirectionMissile(mobj_t *source, mobjtype_t type, fixed_t x, fixed_t y, fixed_t z, INT32 shiftingAngle);
 mobj_t *P_SPMAngle(mobj_t *source, mobjtype_t type, angle_t angle, UINT8 aimtype, UINT32 flags2);
+mobj_t *P_SpawnMissileAtSpeeds(mobj_t *source, mobjtype_t type, angle_t angle, fixed_t hspeed, fixed_t vspeed, boolean useGravity);
 #define P_SpawnPlayerMissile(s,t,f) P_SPMAngle(s,t,s->angle,true,f)
 #define P_SpawnNameFinder(s,t) P_SPMAngle(s,t,s->angle,true,0)
 void P_ColorTeamMissile(mobj_t *missile, player_t *source);

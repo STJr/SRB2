@@ -578,6 +578,27 @@ static UINT32 ACS_SectorTagThingCounter(mtag_t sectorTag, sector_t *activator, m
 }
 
 /*--------------------------------------------------
+	static bool ACS_IsLocationValid(mobj_t *mobj, fixed_t x, fixed_t y, fixed_t z)
+
+		Helper function for CallFunc_SpawnObject and CallFunc_SetObjectPosition.
+		Checks if the given coordinates are valid for an actor to exist in.
+--------------------------------------------------*/
+static bool ACS_IsLocationValid(mobj_t *mobj, fixed_t x, fixed_t y, fixed_t z)
+{
+	if (P_CheckPosition(mobj, x, y) == true)
+	{
+		fixed_t floorz = P_FloorzAtPos(x, y, z, mobj->height);
+		fixed_t ceilingz = P_CeilingzAtPos(x, y, z, mobj->height);
+		if (z >= floorz && (z + mobj->height) <= ceilingz)
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
+/*--------------------------------------------------
 	bool CallFunc_Random(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::Word argC)
 
 		ACS wrapper for P_RandomRange.
@@ -1792,6 +1813,42 @@ bool CallFunc_SetViewpoint(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM
 }
 
 /*--------------------------------------------------
+	static bool ACS_SpawnObject(player_t *player, INT32 property, const ACSVM::Word *argV, ACSVM::Word argC)
+
+		Helper function for CallFunc_SpawnObject and CallFunc_SpawnObjectForced.
+--------------------------------------------------*/
+static bool ACS_SpawnObject(mobjtype_t mobjType, bool forceSpawn, const ACSVM::Word *argV, ACSVM::Word argC)
+{
+	fixed_t x = argV[1];
+	fixed_t y = argV[2];
+	fixed_t z = argV[3];
+
+	mobj_t *mobj = P_SpawnMobj(x, y, z, mobjType);
+
+	if (P_MobjWasRemoved(mobj))
+	{
+		return false;
+	}
+	else if (!forceSpawn && ACS_IsLocationValid(mobj, x, y, z) == false)
+	{
+		P_RemoveMobj(mobj);
+
+		return false;
+	}
+	else
+	{
+		// Spawned successfully
+		if (argC >= 5)
+			P_SetThingTID(mobj, argV[4]);
+
+		if (argC >= 6)
+			mobj->angle = ACS_FixedToAngle(argV[5]);
+	}
+
+	return true;
+}
+
+/*--------------------------------------------------
 	bool CallFunc_SpawnObject(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::Word argC)
 
 		Spawns an actor.
@@ -1803,7 +1860,7 @@ bool CallFunc_SpawnObject(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM:
 	{
 		CONS_Alert(CONS_WARNING, "Spawn actor class was not provided.\n");
 
-		NO_RETURN(thread);
+		thread->dataStk.push(0);
 
 		return false;
 	}
@@ -1811,6 +1868,8 @@ bool CallFunc_SpawnObject(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM:
 	const char *className = str->str;
 
 	mobjtype_t mobjType = MT_NULL;
+
+	int numSpawned = 0;
 
 	if (ACS_GetMobjTypeFromString(className, &mobjType) == false)
 	{
@@ -1821,29 +1880,52 @@ bool CallFunc_SpawnObject(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM:
 	}
 	else
 	{
-		fixed_t x = argV[1];
-		fixed_t y = argV[2];
-		fixed_t z = argV[3];
-
-		mobj_t *mobj = P_SpawnMobj(x, y, z, mobjType);
-		if (!P_MobjWasRemoved(mobj))
-		{
-			if (argC >= 5)
-				P_SetThingTID(mobj, argV[4]);
-
-			if (argC >= 6)
-				mobj->angle = ACS_FixedToAngle(argV[5]);
-		}
-		else
-		{
-			CONS_Alert(CONS_WARNING,
-				"Spawn: Couldn't spawn actor class \"%s\".\n",
-				className
-			);
-		}
+		if (ACS_SpawnObject(mobjType, false, argV, argC) == true)
+			numSpawned = 1;
 	}
 
-	NO_RETURN(thread);
+	thread->dataStk.push(numSpawned);
+
+	return false;
+}
+
+/*--------------------------------------------------
+	bool CallFunc_SpawnObjectForced(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::Word argC)
+
+		Spawns an actor, even in locations where it would not normally be able to exist.
+--------------------------------------------------*/
+bool CallFunc_SpawnObjectForced(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::Word argC)
+{
+	ACSVM::String *str = thread->scopeMap->getString( argV[0] );
+	if (!str->str || str->len == 0)
+	{
+		CONS_Alert(CONS_WARNING, "SpawnForced actor class was not provided.\n");
+
+		thread->dataStk.push(0);
+
+		return false;
+	}
+
+	const char *className = str->str;
+
+	mobjtype_t mobjType = MT_NULL;
+
+	int numSpawned = 0;
+
+	if (ACS_GetMobjTypeFromString(className, &mobjType) == false)
+	{
+		CONS_Alert(CONS_WARNING,
+			"Couldn't find actor class \"%s\" for SpawnForced.\n",
+			className
+		);
+	}
+	else
+	{
+		if (ACS_SpawnObject(mobjType, true, argV, argC) == true)
+			numSpawned = 1;
+	}
+
+	thread->dataStk.push(numSpawned);
 
 	return false;
 }
@@ -2569,11 +2651,9 @@ bool CallFunc_SetObjectPosition(ACSVM::Thread *thread, const ACSVM::Word *argV, 
 	fixed_t y = argV[2];
 	fixed_t z = argV[3];
 
-	if (mobj != NULL && P_MobjWasRemoved(mobj) == false && P_CheckPosition(mobj, x, y) == true)
+	if (mobj != NULL && P_MobjWasRemoved(mobj) == false)
 	{
-		fixed_t floorz = P_FloorzAtPos(x, y, z, mobj->height);
-		fixed_t ceilingz = P_CeilingzAtPos(x, y, z, mobj->height);
-		if (z >= floorz && (z + mobj->height) <= ceilingz)
+		if (ACS_IsLocationValid(mobj, x, y, z))
 		{
 			P_SetOrigin(mobj, x, y, z);
 			success = true;
@@ -4516,7 +4596,7 @@ bool CallFunc_CheckPowerUp(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM
 /*--------------------------------------------------
 	static void ACS_SetPowerUp(player_t *player, INT32 property, const ACSVM::Word *argV, ACSVM::Word argC)
 
-		Helper for CallFunc_GivePowerUp.
+		Helper function for CallFunc_GivePowerUp.
 --------------------------------------------------*/
 static void ACS_SetPowerUp(player_t *player, INT32 property, const ACSVM::Word *argV, ACSVM::Word argC)
 {
@@ -4674,7 +4754,7 @@ bool CallFunc_CheckAmmo(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::W
 /*--------------------------------------------------
 	static void ACS_GiveAmmo(player_t *player, INT32 weapon, INT32 value)
 
-		Helper for CallFunc_GiveAmmo/CallFunc_TakeAmmo.
+		Helper function for CallFunc_GiveAmmo/CallFunc_TakeAmmo.
 --------------------------------------------------*/
 static bool ACS_GiveAmmo(player_t *player, INT32 weapon, INT32 value)
 {
@@ -5196,6 +5276,58 @@ bool CallFunc_PlayerFinished(ACSVM::Thread *thread, const ACSVM::Word *argV, ACS
 	}
 
 	thread->dataStk.push(finished);
+
+	return false;
+}
+
+/*--------------------------------------------------
+	bool CallFunc_SpawnProjectile(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::Word argC)
+
+		Spawns a projectile. Yeah...
+--------------------------------------------------*/
+bool CallFunc_SpawnProjectile(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::Word argC)
+{
+	(void)argC;
+
+	auto info = &static_cast<Thread *>(thread)->info;
+
+	mobj_t *mobj = P_FindMobjFromTID(argV[0], NULL, info->mo);
+	if (mobj != NULL && P_MobjWasRemoved(mobj) == false)
+	{
+		ACSVM::String *str = thread->scopeMap->getString( argV[1] );
+		if (!str->str || str->len == 0)
+		{
+			CONS_Alert(CONS_WARNING, "SpawnProjectile projectile class was not provided.\n");
+
+			NO_RETURN(thread);
+
+			return false;
+		}
+
+		const char *className = str->str;
+
+		mobjtype_t mobjType = MT_NULL;
+
+		if (ACS_GetMobjTypeFromString(className, &mobjType) == false)
+		{
+			CONS_Alert(CONS_WARNING,
+				"Couldn't find actor class \"%s\" for SpawnProjectile.\n",
+				className
+			);
+
+			NO_RETURN(thread);
+
+			return false;
+		}
+
+		mobj_t *missile = P_SpawnMissileAtSpeeds(mobj, mobjType, ACS_FixedToAngle(argV[2]), argV[3], argV[4], argV[5] != 0);
+		if (missile && argV[6] != 0)
+		{
+			P_SetThingTID(mobj, argV[6]);
+		}
+	}
+
+	NO_RETURN(thread);
 
 	return false;
 }
