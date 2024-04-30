@@ -2001,7 +2001,7 @@ bool CallFunc_TrackObjectAngle(ACSVM::Thread *thread, const ACSVM::Word *argV, A
 	mobj_t *anchormo = P_FindMobjFromTID(argV[1], NULL, NULL);
 	if (mobj != NULL && anchormo != NULL && P_MobjWasRemoved(mobj) == false && P_MobjWasRemoved(anchormo) == false)
 	{
-		INT32 failureangle = FixedAngle((std::min(std::max(abs((int)argV[2]), 0), 360))*FRACUNIT);
+		angle_t failureangle = ACS_FixedToAngle(argV[2]);
 		INT32 failureexectag = argV[3];
 		INT32 failuredelay = argC >= 5 ? abs((int)argV[4]) : 0;
 		boolean persist = argC >= 6 ? (argV[5] == 0) : false;
