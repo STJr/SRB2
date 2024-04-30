@@ -68,7 +68,7 @@ special
 	-500:CameraWait(1),
 	-503:SetLineRenderStyle(3),
 	-504:MapWarp(2),
-	-505:AddBot(1, 4),
+	-505:AddBot(1,4),
 	-506:RemoveBot(1),
 	-507:ExitLevel(0,1),
 	-508:MusicPlay(1,2),

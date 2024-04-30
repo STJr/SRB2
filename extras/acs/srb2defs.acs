@@ -131,14 +131,11 @@
 #define SECPROP_Arg1Str              26
 
 // Render styles
-
-#define STYLE_Copy            0   // Just copy the image to the screen
-#define STYLE_Translucent     1   // Draw translucent
-#define STYLE_Add             2   // Draw additive
-#define STYLE_Subtract        3   // Draw subtractive
-#define STYLE_ReverseSubtract 4   // Draw reverse subtractive
-#define STYLE_Modulate        5   // Draw multiplicative
-#define STYLE_Fog             7   // Draw reverse subtractive
+#define STYLE_Translucent     0   // Draw translucent
+#define STYLE_Add             1   // Draw additive
+#define STYLE_Subtract        2   // Draw subtractive
+#define STYLE_ReverseSubtract 3   // Draw reverse subtractive
+#define STYLE_Modulate        4   // Draw multiplicative
 
 // Line activation flags
 
