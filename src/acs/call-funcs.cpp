@@ -667,6 +667,14 @@ bool CallFunc_ThingCount(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::
 			return false;
 		}
 	}
+	else
+	{
+		CONS_Alert(CONS_WARNING, "ThingCount actor class was not provided.\n");
+
+		NO_RETURN(thread);
+
+		return false;
+	}
 
 	tid = argV[1];
 
@@ -737,6 +745,8 @@ bool CallFunc_TagWait(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::Wor
 		ACS_TAGTYPE_SECTOR
 	};
 
+	NO_RETURN(thread);
+
 	return true; // Execution interrupted
 }
 
@@ -755,6 +765,8 @@ bool CallFunc_PolyWait(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::Wo
 		argV[0],
 		ACS_TAGTYPE_POLYOBJ
 	};
+
+	NO_RETURN(thread);
 
 	return true; // Execution interrupted
 }
@@ -808,6 +820,8 @@ bool CallFunc_ChangeFloor(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM:
 		sec->floorpic = P_AddLevelFlatRuntime(texName);
 	}
 
+	NO_RETURN(thread);
+
 	return false;
 }
 
@@ -838,6 +852,8 @@ bool CallFunc_ChangeCeiling(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSV
 		sector_t *sec = &sectors[secnum];
 		sec->ceilingpic = P_AddLevelFlatRuntime(texName);
 	}
+
+	NO_RETURN(thread);
 
 	return false;
 }
@@ -878,6 +894,8 @@ bool CallFunc_ClearLineSpecial(ACSVM::Thread *thread, const ACSVM::Word *argV, A
 		info->line->special = 0;
 	}
 
+	NO_RETURN(thread);
+
 	return false;
 }
 
@@ -902,6 +920,9 @@ bool CallFunc_EndPrint(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::Wo
 	}
 
 	thread->printBuf.drop();
+
+	NO_RETURN(thread);
+
 	return false;
 }
 
@@ -1042,6 +1063,9 @@ bool CallFunc_SectorSound(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM:
 	}
 
 	S_StartSoundAtVolume(origin, sfxId, vol);
+
+	NO_RETURN(thread);
+
 	return false;
 }
 
@@ -1090,6 +1114,9 @@ bool CallFunc_AmbientSound(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM
 	vol = argV[1];
 
 	S_StartSoundAtVolume(NULL, sfxId, vol);
+
+	NO_RETURN(thread);
+
 	return false;
 }
 
@@ -1166,6 +1193,8 @@ bool CallFunc_SetLineTexture(ACSVM::Thread *thread, const ACSVM::Word *argV, ACS
 		}
 	}
 
+	NO_RETURN(thread);
+
 	return false;
 }
 
@@ -1206,6 +1235,8 @@ bool CallFunc_SetLineSpecial(ACSVM::Thread *thread, const ACSVM::Word *argV, ACS
 			line->args[i] = argV[i + 2];
 		}
 	}
+
+	NO_RETURN(thread);
 
 	return false;
 }
@@ -1282,6 +1313,8 @@ bool CallFunc_ThingSound(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::
 		S_StartSoundAtVolume(mobj, sfxId, vol);
 	}
 
+	NO_RETURN(thread);
+
 	return false;
 }
 
@@ -1300,6 +1333,9 @@ bool CallFunc_EndPrintBold(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM
 	HU_DoCEcho(thread->printBuf.data());
 
 	thread->printBuf.drop();
+
+	NO_RETURN(thread);
+
 	return false;
 }
 /*--------------------------------------------------
@@ -1461,6 +1497,9 @@ bool CallFunc_EndLog(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::Word
 		CONS_Printf("%s\n", thread->printBuf.data());
 
 	thread->printBuf.drop();
+
+	NO_RETURN(thread);
+
 	return false;
 }
 
@@ -3061,12 +3100,44 @@ bool CallFunc_SetObjectDye(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM
 
 	auto info = &static_cast<Thread *>(thread)->info;
 
+	ACSVM::String *str = thread->scopeMap->getString(argV[1]);
+
+	skincolornum_t colorToSet = SKINCOLOR_NONE;
+
+	if (str->len > 0)
+	{
+		const char *colorName = str->str;
+
+		bool success = ACS_GetColorFromString(colorName, &colorToSet);
+
+		if (success == false)
+		{
+			// Exit early.
+			CONS_Alert(CONS_WARNING,
+				"Couldn't find color \"%s\" for SetActorDye.\n",
+				colorName
+			);
+
+			NO_RETURN(thread);
+
+			return false;
+		}
+	}
+	else
+	{
+		CONS_Alert(CONS_WARNING, "SetActorDye color was not provided.\n");
+
+		NO_RETURN(thread);
+
+		return false;
+	}
+
 	mobj_t *mobj = nullptr;
 
 	while ((mobj = P_FindMobjFromTID(argV[0], mobj, info->mo)) != nullptr)
 	{
 		var1 = 0;
-		var2 = argV[1];
+		var2 = colorToSet;
 		A_Dye(info->mo);
 	}
 
@@ -3193,7 +3264,7 @@ bool CallFunc_AddBot(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::Word
 	ACSVM::String *nameStr = nullptr;
 	const char *botname = NULL;
 
-	UINT16 skincolor = SKINCOLOR_NONE;
+	skincolornum_t skincolor = SKINCOLOR_NONE;
 
 	SINT8 bottype = BOT_MPAI;
 
@@ -3204,7 +3275,26 @@ bool CallFunc_AddBot(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::Word
 
 	// Get skincolor
 	if (argC >= 2)
-		skincolor = std::clamp(static_cast<int>(argV[1]), (int)SKINCOLOR_NONE, (int)(MAXSKINCOLORS - 1));
+	{
+		ACSVM::String *colorStr = thread->scopeMap->getString(argV[1]);
+
+		const char *colorName = colorStr->str;
+
+		bool success = ACS_GetColorFromString(colorName, &skincolor);
+
+		if (success == false)
+		{
+			// Exit early.
+			CONS_Alert(CONS_WARNING,
+				"Couldn't find color \"%s\" for AddBot.\n",
+				colorName
+			);
+
+			NO_RETURN(thread);
+
+			return false;
+		}
+	}
 
 	// Get type
 	if (argC >= 3)
@@ -5547,20 +5637,44 @@ bool CallFunc_OppositeColor(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSV
 {
 	(void)argC;
 
-	int color = argV[0];
+	Environment *env = &ACSEnv;
 
-	int result = 0;
+	ACSVM::String *str = thread->scopeMap->getString(argV[0]);
 
-	if (color < 1 || color >= numskincolors)
+	skincolornum_t invColor = SKINCOLOR_NONE;
+
+	if (str->len > 0)
 	{
-		CONS_Alert(CONS_WARNING, "OppositeColor color %d out of range (expected 1 - %d).\n", color, numskincolors-1);
+		skincolornum_t color = SKINCOLOR_NONE;
+
+		const char *colorName = str->str;
+
+		bool success = ACS_GetColorFromString(colorName, &color);
+
+		if (success == false)
+		{
+			// Exit early.
+			CONS_Alert(CONS_WARNING,
+				"Couldn't find color \"%s\" for OppositeColor.\n",
+				colorName
+			);
+
+			NO_RETURN(thread);
+
+			return false;
+		}
+
+		invColor = static_cast<skincolornum_t>(skincolors[color].invcolor);
 	}
 	else
 	{
-		result = skincolors[color].invcolor;
+		CONS_Alert(CONS_WARNING, "OppositeColor color was not provided.\n");
+
+		NO_RETURN(thread);
+
+		return false;
 	}
 
-	thread->dataStk.push(result);
-
+	thread->dataStk.push(~env->getString( skincolors[invColor].name )->idx);
 	return false;
 }
