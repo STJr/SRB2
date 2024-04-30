@@ -228,8 +228,8 @@
 
 // 3D floor crumble options
 
-#define CRUMBLE3DFLOOR_NORESPAWN          (1 << 0)
-#define CRUMBLE3DFLOOR_CHECKNORESPAWNFLAG (1 << 1)
+#define CRUMBLE3DFLOOR_NORESPAWN        (1 << 0)
+#define CRUMBLE3DFLOOR_CHECKRESPAWNFLAG (1 << 1)
 
 // 3D floor fade options
 
