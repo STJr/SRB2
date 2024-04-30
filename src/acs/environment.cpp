@@ -233,6 +233,8 @@ Environment::Environment()
 	addFuncDataACS0( 342, addCallFunc(CallFunc_PlayerHoldingFlag));
 	addFuncDataACS0( 343, addCallFunc(CallFunc_PlayerIsIt));
 	addFuncDataACS0( 344, addCallFunc(CallFunc_PlayerFinished));
+	addFuncDataACS0( 345, addCallFunc(CallFunc_Check2DMode));
+	addFuncDataACS0( 346, addCallFunc(CallFunc_Set2DMode));
 
 	addFuncDataACS0( 500, addCallFunc(CallFunc_CameraWait));
 	addFuncDataACS0( 503, addCallFunc(CallFunc_SetLineRenderStyle));

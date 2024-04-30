@@ -1939,6 +1939,58 @@ bool CallFunc_SpawnObjectForced(ACSVM::Thread *thread, const ACSVM::Word *argV, 
 }
 
 /*--------------------------------------------------
+	bool CallFunc_SpawnProjectile(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::Word argC)
+
+		Spawns a projectile.
+--------------------------------------------------*/
+bool CallFunc_SpawnProjectile(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::Word argC)
+{
+	(void)argC;
+
+	auto info = &static_cast<Thread *>(thread)->info;
+
+	mobj_t *mobj = P_FindMobjFromTID(argV[0], NULL, info->mo);
+	if (mobj != NULL && P_MobjWasRemoved(mobj) == false)
+	{
+		ACSVM::String *str = thread->scopeMap->getString( argV[1] );
+		if (!str->str || str->len == 0)
+		{
+			CONS_Alert(CONS_WARNING, "SpawnProjectile projectile class was not provided.\n");
+
+			NO_RETURN(thread);
+
+			return false;
+		}
+
+		const char *className = str->str;
+
+		mobjtype_t mobjType = MT_NULL;
+
+		if (ACS_GetMobjTypeFromString(className, &mobjType) == false)
+		{
+			CONS_Alert(CONS_WARNING,
+				"Couldn't find actor class \"%s\" for SpawnProjectile.\n",
+				className
+			);
+
+			NO_RETURN(thread);
+
+			return false;
+		}
+
+		mobj_t *missile = P_SpawnMissileAtSpeeds(mobj, mobjType, ACS_FixedToAngle(argV[2]), argV[3], argV[4], argV[5] != 0);
+		if (missile && argV[6] != 0)
+		{
+			P_SetThingTID(mobj, argV[6]);
+		}
+	}
+
+	NO_RETURN(thread);
+
+	return false;
+}
+
+/*--------------------------------------------------
 	bool CallFunc_TrackObjectAngle(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::Word argC)
 
 		Implementation of linedef type 457.
@@ -1982,6 +2034,57 @@ bool CallFunc_StopTrackingObjectAngle(ACSVM::Thread *thread, const ACSVM::Word *
 		mobj->eflags &= ~MFE_TRACERANGLE;
 		P_SetTarget(&mobj->tracer, NULL);
 		mobj->lastlook = mobj->cvmem = mobj->cusval = mobj->extravalue1 = mobj->extravalue2 = 0;
+	}
+
+	NO_RETURN(thread);
+
+	return false;
+}
+
+/*--------------------------------------------------
+	bool CallFunc_Check2DMode(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::Word argC)
+
+		Checks if the activator is in 2D mode.
+--------------------------------------------------*/
+bool CallFunc_Check2DMode(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::Word argC)
+{
+	(void)argV;
+	(void)argC;
+
+	auto info = &static_cast<Thread *>(thread)->info;
+
+	bool in2DMode = false;
+
+	if ((info != NULL)
+		&& (info->mo != NULL && P_MobjWasRemoved(info->mo) == false))
+	{
+		if (info->mo->flags2 & MF2_TWOD)
+			in2DMode = true;
+	}
+
+	thread->dataStk.push(in2DMode);
+
+	return false;
+}
+
+/*--------------------------------------------------
+	bool CallFunc_Set2DMode(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::Word argC)
+
+		Implementation of linedef type 432.
+--------------------------------------------------*/
+bool CallFunc_Set2DMode(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::Word argC)
+{
+	(void)argC;
+
+	auto info = &static_cast<Thread *>(thread)->info;
+
+	if ((info != NULL)
+		&& (info->mo != NULL && P_MobjWasRemoved(info->mo) == false))
+	{
+		if (argV[0] != 0)
+			info->mo->flags2 |= MF2_TWOD;
+		else
+			info->mo->flags2 &= ~MF2_TWOD;
 	}
 
 	NO_RETURN(thread);
@@ -5284,58 +5387,6 @@ bool CallFunc_PlayerFinished(ACSVM::Thread *thread, const ACSVM::Word *argV, ACS
 	}
 
 	thread->dataStk.push(finished);
-
-	return false;
-}
-
-/*--------------------------------------------------
-	bool CallFunc_SpawnProjectile(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::Word argC)
-
-		Spawns a projectile.
---------------------------------------------------*/
-bool CallFunc_SpawnProjectile(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::Word argC)
-{
-	(void)argC;
-
-	auto info = &static_cast<Thread *>(thread)->info;
-
-	mobj_t *mobj = P_FindMobjFromTID(argV[0], NULL, info->mo);
-	if (mobj != NULL && P_MobjWasRemoved(mobj) == false)
-	{
-		ACSVM::String *str = thread->scopeMap->getString( argV[1] );
-		if (!str->str || str->len == 0)
-		{
-			CONS_Alert(CONS_WARNING, "SpawnProjectile projectile class was not provided.\n");
-
-			NO_RETURN(thread);
-
-			return false;
-		}
-
-		const char *className = str->str;
-
-		mobjtype_t mobjType = MT_NULL;
-
-		if (ACS_GetMobjTypeFromString(className, &mobjType) == false)
-		{
-			CONS_Alert(CONS_WARNING,
-				"Couldn't find actor class \"%s\" for SpawnProjectile.\n",
-				className
-			);
-
-			NO_RETURN(thread);
-
-			return false;
-		}
-
-		mobj_t *missile = P_SpawnMissileAtSpeeds(mobj, mobjType, ACS_FixedToAngle(argV[2]), argV[3], argV[4], argV[5] != 0);
-		if (missile && argV[6] != 0)
-		{
-			P_SetThingTID(mobj, argV[6]);
-		}
-	}
-
-	NO_RETURN(thread);
 
 	return false;
 }
