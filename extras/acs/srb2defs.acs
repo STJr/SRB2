@@ -212,6 +212,16 @@
 
 #define SHIELD_FORCEHP         0xFF
 
+// Emeralds
+
+#define EMERALD1                (1 << 0)
+#define EMERALD2                (1 << 1)
+#define EMERALD3                (1 << 2)
+#define EMERALD4                (1 << 3)
+#define EMERALD5                (1 << 4)
+#define EMERALD6                (1 << 5)
+#define EMERALD7                (1 << 6)
+
 // Teams
 
 #define NO_TEAM                 0

@@ -1686,24 +1686,28 @@ bool CallFunc_PlayerSkin(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::
 /*--------------------------------------------------
 	bool CallFunc_PlayerBot(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::Word argC)
 
-		Returns the activating player's bot status.
+		Returns the given player's bot status.
 --------------------------------------------------*/
 bool CallFunc_PlayerBot(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::Word argC)
 {
-	auto info = &static_cast<Thread *>(thread)->info;
-
-	(void)argV;
 	(void)argC;
 
-	if ((info != NULL)
-		&& (info->mo != NULL && P_MobjWasRemoved(info->mo) == false)
-		&& (info->mo->player != NULL))
+	INT32 playernum = argV[0];
+
+	bool isBot = false;
+
+	if (playernum < 0 || playernum >= MAXPLAYERS)
 	{
-		thread->dataStk.push(info->mo->player->bot);
-		return false;
+		CONS_Alert(CONS_WARNING, "PlayerBot player %d out of range (expected 0 - %d).\n", playernum, MAXPLAYERS-1);
+	}
+	else
+	{
+		if (players[playernum].bot != BOT_NONE)
+			isBot = true;
 	}
 
-	thread->dataStk.push(false);
+	thread->dataStk.push(isBot);
+
 	return false;
 }
 
@@ -1714,20 +1718,24 @@ bool CallFunc_PlayerBot(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::W
 --------------------------------------------------*/
 bool CallFunc_PlayerExiting(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::Word argC)
 {
-	auto info = &static_cast<Thread *>(thread)->info;
-
-	(void)argV;
 	(void)argC;
 
-	if ((info != NULL)
-		&& (info->mo != NULL && P_MobjWasRemoved(info->mo) == false)
-		&& (info->mo->player != NULL))
+	INT32 playernum = argV[0];
+
+	bool exiting = false;
+
+	if (playernum < 0 || playernum >= MAXPLAYERS)
 	{
-		thread->dataStk.push((info->mo->player->exiting != 0));
-		return false;
+		CONS_Alert(CONS_WARNING, "PlayerExiting player %d out of range (expected 0 - %d).\n", playernum, MAXPLAYERS-1);
+	}
+	else
+	{
+		if (players[playernum].exiting != 0)
+			exiting = true;
 	}
 
-	thread->dataStk.push(false);
+	thread->dataStk.push(exiting);
+
 	return false;
 }
 
@@ -5255,7 +5263,7 @@ bool CallFunc_PlayerIsIt(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::
 /*--------------------------------------------------
 	bool CallFunc_PlayerFinished(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::Word argC)
 
-		Checks if the activator finished the level.
+		Checks if the given player finished the level.
 --------------------------------------------------*/
 bool CallFunc_PlayerFinished(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::Word argC)
 {
@@ -5283,7 +5291,7 @@ bool CallFunc_PlayerFinished(ACSVM::Thread *thread, const ACSVM::Word *argV, ACS
 /*--------------------------------------------------
 	bool CallFunc_SpawnProjectile(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::Word argC)
 
-		Spawns a projectile. Yeah...
+		Spawns a projectile.
 --------------------------------------------------*/
 bool CallFunc_SpawnProjectile(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::Word argC)
 {
