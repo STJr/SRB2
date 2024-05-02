@@ -502,70 +502,54 @@ springstate:
 	return final;
 }
 
-static void P_DoFanAndGasJet(mobj_t *spring, mobj_t *object)
+static void P_DoFan(mobj_t *fan, mobj_t *object)
 {
 	player_t *p = object->player; // will be NULL if not a player
 	fixed_t zdist; // distance between bottoms
-	fixed_t speed = spring->info->mass; // conveniently, both fans and gas jets use this for the vertical thrust
-	SINT8 flipval = P_MobjFlip(spring); // virtually everything here centers around the thruster's gravity, not the object's!
+	fixed_t speed = fan->info->mass; // fans use this for the vertical thrust
+	SINT8 flipval = P_MobjFlip(fan); // virtually everything here centers around the thruster's gravity, not the object's!
 
-	if (p && object->state == &states[object->info->painstate]) // can't use fans and gas jets when player is in pain!
+	if (p && object->state == &states[object->info->painstate]) // can't use fans when player is in pain!
 		return;
 
 	// is object's top below thruster's position? if not, calculate distance between their bottoms
-	if (spring->eflags & MFE_VERTICALFLIP)
+	if (fan->eflags & MFE_VERTICALFLIP)
 	{
-		if (object->z > spring->z + spring->height)
+		if (object->z > fan->z + fan->height)
 			return;
-		zdist = (spring->z + spring->height) - (object->z + object->height);
+		zdist = (fan->z + fan->height) - (object->z + object->height);
 	}
 	else
 	{
-		if (object->z + object->height < spring->z)
+		if (object->z + object->height < fan->z)
 			return;
-		zdist = object->z - spring->z;
+		zdist = object->z - fan->z;
 	}
 
 	object->standingslope = NULL; // No launching off at silly angles for you.
 
-	switch (spring->type)
+	switch (fan->type)
 	{
 		case MT_FAN: // fan
-			if (zdist > (spring->health << FRACBITS)) // max z distance determined by health (set by map thing args[0])
+			if (zdist > (fan->health << FRACBITS)) // max z distance determined by health (set by map thing args[0])
 				break;
-			if (flipval*object->momz >= FixedMul(speed, spring->scale)) // if object's already moving faster than your best, don't bother
+			if (flipval*object->momz >= FixedMul(speed, fan->scale)) // if object's already moving faster than your best, don't bother
 				break;
 			if (p && (p->climbing || p->pflags & PF_GLIDING)) // doesn't affect Knux when he's using his abilities!
 				break;
 
-			object->momz += flipval*FixedMul(speed/4, spring->scale);
+			object->momz += flipval*FixedMul(speed/4, fan->scale);
 
 			// limit the speed if too high
-			if (flipval*object->momz > FixedMul(speed, spring->scale))
-				object->momz = flipval*FixedMul(speed, spring->scale);
+			if (flipval*object->momz > FixedMul(speed, fan->scale))
+				object->momz = flipval*FixedMul(speed, fan->scale);
 
 			if (p && !p->powers[pw_tailsfly] && !p->powers[pw_carry]) // doesn't reset anim for Tails' flight
 			{
 				P_ResetPlayer(p);
 				P_SetMobjState(object, S_PLAY_FALL);
-				P_SetTarget(&object->tracer, spring);
+				P_SetTarget(&object->tracer, fan);
 				p->powers[pw_carry] = CR_FAN;
-			}
-			break;
-		case MT_STEAM: // Steam
-			if (zdist > FixedMul(16*FRACUNIT, spring->scale))
-				break;
-			if (spring->state != &states[S_STEAM1]) // Only when it bursts
-				break;
-
-			object->eflags |= MFE_SPRUNG;
-			object->momz = flipval*FixedMul(speed, FixedSqrt(FixedMul(spring->scale, object->scale))); // scale the speed with both objects' scales, just like with springs!
-
-			if (p)
-			{
-				P_ResetPlayer(p);
-				if (p->panim != PA_FALL)
-					P_SetMobjState(object, S_PLAY_FALL);
 			}
 			break;
 		default:
@@ -1484,13 +1468,13 @@ static unsigned PIT_DoCheckThing(mobj_t *thing)
 	}
 
 	// check for special pickup
-	if (thing->flags & MF_SPECIAL && tmthing->player)
+	if (thing->flags & MF_SPECIAL)
 	{
 		P_TouchSpecialThing(thing, tmthing, true); // can remove thing
 		return CHECKTHING_COLLIDE;
 	}
 	// check again for special pickup
-	if (tmthing->flags & MF_SPECIAL && thing->player)
+	if (tmthing->flags & MF_SPECIAL)
 	{
 		P_TouchSpecialThing(tmthing, thing, true); // can remove thing
 		return CHECKTHING_COLLIDE;
@@ -1578,15 +1562,15 @@ static unsigned PIT_DoCheckThing(mobj_t *thing)
 
 	if (thing->flags & MF_PUSHABLE)
 	{
-		if (tmthing->type == MT_FAN || tmthing->type == MT_STEAM)
-			P_DoFanAndGasJet(tmthing, thing);
+		if (tmthing->type == MT_FAN)
+			P_DoFan(tmthing, thing);
 	}
 
 	if (tmthing->flags & MF_PUSHABLE)
 	{
-		if (thing->type == MT_FAN || thing->type == MT_STEAM)
+		if (thing->type == MT_FAN)
 		{
-			P_DoFanAndGasJet(thing, tmthing);
+			P_DoFan(thing, tmthing);
 			return CHECKTHING_COLLIDE;
 		}
 		else if (thing->flags & MF_SPRING)
@@ -1679,8 +1663,8 @@ static unsigned PIT_DoCheckThing(mobj_t *thing)
 			}
 		}
 
-		if (tmthing->type == MT_FAN || tmthing->type == MT_STEAM)
-			P_DoFanAndGasJet(tmthing, thing);
+		if (tmthing->type == MT_FAN)
+			P_DoFan(tmthing, thing);
 	}
 
 	if (tmthing->player) // Is the moving/interacting object the player?
@@ -1688,8 +1672,8 @@ static unsigned PIT_DoCheckThing(mobj_t *thing)
 		if (!tmthing->health)
 			return CHECKTHING_IGNORE;
 
-		if (thing->type == MT_FAN || thing->type == MT_STEAM)
-			P_DoFanAndGasJet(thing, tmthing);
+		if (thing->type == MT_FAN)
+			P_DoFan(thing, tmthing);
 		else if (thing->flags & MF_SPRING && tmthing->player->powers[pw_carry] != CR_MINECART)
 		{
 			if ( thing->z <= tmthing->z + tmthing->height
@@ -1755,8 +1739,8 @@ static unsigned PIT_DoCheckThing(mobj_t *thing)
 	// not solid not blocked
 	unsigned collide = CHECKTHING_NOCOLLIDE;
 
-	if ((tmthing->flags & MF_SPRING || tmthing->type == MT_STEAM || tmthing->type == MT_SPIKE || tmthing->type == MT_WALLSPIKE) && (thing->player))
-		; // springs, gas jets and springs should never be able to step up onto a player
+	if ((tmthing->flags & MF_SPRING || tmthing->type == MT_SPIKE || tmthing->type == MT_WALLSPIKE) && (thing->player))
+		; // springs and spikes should never be able to step up onto a player
 	// z checking at last
 	// Treat noclip things as non-solid!
 	else if ((thing->flags & (MF_SOLID|MF_NOCLIP)) == MF_SOLID
@@ -2734,7 +2718,7 @@ increment_move
 				tryy = y;
 		}
 
-		if (!P_CheckPosition(thing, tryx, tryy))
+		if (!P_CheckPosition(thing, tryx, tryy) || P_MobjWasRemoved(thing))
 			return false; // solid wall or thing
 
 		if (!(thing->flags & MF_NOCLIP))
@@ -2958,6 +2942,7 @@ boolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, boolean allowdropoff)
 boolean P_SceneryTryMove(mobj_t *thing, fixed_t x, fixed_t y)
 {
 	fixed_t tryx, tryy;
+	I_Assert(!P_MobjWasRemoved(thing));
 
 	tryx = thing->x;
 	tryy = thing->y;
@@ -2975,7 +2960,7 @@ boolean P_SceneryTryMove(mobj_t *thing, fixed_t x, fixed_t y)
 		else
 			tryy = y;
 
-		if (!P_CheckPosition(thing, tryx, tryy))
+		if (!P_CheckPosition(thing, tryx, tryy) || P_MobjWasRemoved(thing))
 			return false; // solid wall or thing
 
 		if (!(thing->flags & MF_NOCLIP))
@@ -3714,6 +3699,12 @@ static void P_CheckLavaWall(mobj_t *mo, sector_t *sec)
 	}
 }
 
+static inline void P_StairStepSlideMove(mobj_t *mo)
+{
+	if (!P_TryMove(mo, mo->x, mo->y + mo->momy, true) && !P_MobjWasRemoved(mo)) //Allow things to drop off.
+		P_TryMove(mo, mo->x + mo->momx, mo->y, true);
+}
+
 //
 // P_SlideMove
 // The momx / momy move is bad, so try to slide
@@ -3734,6 +3725,8 @@ void P_SlideMove(mobj_t *mo)
 	static line_t junk; // fake linedef
 
 	memset(&junk, 0x00, sizeof(junk));
+
+	I_Assert(!P_MobjWasRemoved(mo));
 
 	if (tmhitthing && mo->z + mo->height > tmhitthing->z && mo->z < tmhitthing->z + tmhitthing->height)
 	{
@@ -3869,7 +3862,10 @@ void P_SlideMove(mobj_t *mo)
 
 retry:
 	if ((++hitcount == 3) || papercol)
-		goto stairstep; // don't loop forever
+	{
+		P_StairStepSlideMove(mo);
+		return;
+	}
 
 	// trace along the three leading corners
 	if (mo->momx > 0)
@@ -3921,9 +3917,7 @@ papercollision:
 	if (bestslidefrac == FRACUNIT+1)
 	{
 		// the move must have hit the middle, so stairstep
-stairstep:
-		if (!P_TryMove(mo, mo->x, mo->y + mo->momy, true)) //Allow things to drop off.
-			P_TryMove(mo, mo->x + mo->momx, mo->y, true);
+		P_StairStepSlideMove(mo);
 		return;
 	}
 
@@ -3935,7 +3929,13 @@ stairstep:
 		newy = FixedMul(mo->momy, bestslidefrac);
 
 		if (!P_TryMove(mo, mo->x + newx, mo->y + newy, true))
-			goto stairstep;
+		{
+			if (!P_MobjWasRemoved(mo))
+				P_StairStepSlideMove(mo);
+			return;
+		}
+		if (P_MobjWasRemoved(mo))
+			return;
 	}
 
 	// Now continue along the wall.
@@ -3986,11 +3986,13 @@ stairstep:
 			tmymove = 0;
 		}
 		if (!P_TryMove(mo, newx, newy, true)) {
-			if (success)
+			if (success || P_MobjWasRemoved(mo))
 				return; // Good enough!!
 			else
 				goto retry;
 		}
+		if (P_MobjWasRemoved(mo))
+			return;
 		success = true;
 	} while(tmxmove || tmymove);
 }

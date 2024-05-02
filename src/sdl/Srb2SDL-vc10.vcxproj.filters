@@ -751,6 +751,12 @@
     <ClCompile Include="..\hardware\hw_model.c">
       <Filter>Hw_Hardware</Filter>
     </ClCompile>
+    <ClCompile Include="..\hardware\hw_shaders.c">
+      <Filter>Hw_Hardware</Filter>
+    </ClCompile>
+    <ClCompile Include="..\hardware\u_list.c">
+      <Filter>Hw_Hardware</Filter>
+    </ClCompile>
     <ClCompile Include="..\filesrch.c">
       <Filter>I_Interface</Filter>
     </ClCompile>
@@ -974,9 +980,6 @@
       <Filter>R_Rend</Filter>
     </ClCompile>
     <ClCompile Include="..\r_draw.c">
-      <Filter>R_Rend</Filter>
-    </ClCompile>
-    <ClCompile Include="..\r_draw16.c">
       <Filter>R_Rend</Filter>
     </ClCompile>
     <ClCompile Include="..\r_draw8.c">

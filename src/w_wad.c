@@ -821,10 +821,7 @@ static void W_ReadFileShaders(wadfile_t *wadfile)
 {
 #ifdef HWRENDER
 	if (rendermode == render_opengl && (vid.glstate == VID_GL_LIBRARY_LOADED))
-	{
 		HWR_LoadCustomShadersFromFile(numwadfiles - 1, W_FileHasFolders(wadfile));
-		HWR_CompileShaders();
-	}
 #else
 	(void)wadfile;
 #endif
@@ -1171,6 +1168,7 @@ UINT16 W_InitFolder(const char *path, boolean mainfile, boolean startup)
 	numwadfiles++;
 
 	W_ReadFileShaders(wadfile);
+	W_LoadTrnslateLumps(numwadfiles - 1);
 	W_LoadDehackedLumpsPK3(numwadfiles - 1, mainfile);
 	W_InvalidateLumpnumCache();
 
@@ -1349,6 +1347,47 @@ UINT16 W_CheckNumForFolderEndPK3(const char *name, UINT16 wad, UINT16 startlump)
 			break;
 	}
 	return i;
+}
+
+char *W_GetLumpFolderPathPK3(UINT16 wad, UINT16 lump)
+{
+	const char *fullname = wadfiles[wad]->lumpinfo[lump].fullname;
+
+	const char *slash = strrchr(fullname, '/');
+	INT32 pathlen = slash ? slash - fullname : 0;
+
+	char *path = Z_Calloc(pathlen + 1, PU_STATIC, NULL);
+	strncpy(path, fullname, pathlen);
+
+	return path;
+}
+
+char *W_GetLumpFolderNamePK3(UINT16 wad, UINT16 lump)
+{
+	const char *fullname = wadfiles[wad]->lumpinfo[lump].fullname;
+	size_t start, end;
+
+	INT32 i = strlen(fullname);
+
+	i--;
+	while (i >= 0 && fullname[i] != '/')
+		i--;
+	if (i < 0)
+		return NULL;
+	end = i;
+
+	i--;
+	while (i >= 0 && fullname[i] != '/')
+		i--;
+	if (i < 0)
+		return NULL;
+	start = i + 1;
+
+	size_t namelen = end - start;
+	char *foldername = Z_Calloc(namelen + 1, PU_STATIC, NULL);
+	strncpy(foldername, fullname + start, namelen);
+
+	return foldername;
 }
 
 void W_GetFolderLumpsPwad(const char *name, UINT16 wad, UINT32 **list, UINT16 *list_capacity, UINT16 *numlumps)
@@ -2707,7 +2746,7 @@ virtres_t* vres_GetMap(lumpnum_t lumpnum)
 		UINT8 *wadData = W_CacheLumpNum(lumpnum, PU_LEVEL);
 		filelump_t *fileinfo = (filelump_t *)(wadData + ((wadinfo_t *)wadData)->infotableofs);
 		numlumps = ((wadinfo_t *)wadData)->numlumps;
-		vlumps = Z_Malloc(sizeof(virtlump_t)*numlumps, PU_LEVEL, NULL);
+		vlumps = Z_Calloc(sizeof(virtlump_t)*numlumps, PU_LEVEL, NULL);
 
 		// Build the lumps.
 		for (i = 0; i < numlumps; i++)
@@ -2731,7 +2770,7 @@ virtres_t* vres_GetMap(lumpnum_t lumpnum)
 				break;
 		numlumps++;
 
-		vlumps = Z_Malloc(sizeof(virtlump_t)*numlumps, PU_LEVEL, NULL);
+		vlumps = Z_Calloc(sizeof(virtlump_t)*numlumps, PU_LEVEL, NULL);
 		for (i = 0; i < numlumps; i++, lumpnum++)
 		{
 			vlumps[i].size = W_LumpLength(lumpnum);

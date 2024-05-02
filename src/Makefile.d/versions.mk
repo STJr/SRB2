@@ -135,11 +135,7 @@ ifdef GCC71
 endif
 ifdef GCC81
  WFLAGS+=-Wno-error=format-overflow
- WFLAGS+=-Wno-error=stringop-truncation
- WFLAGS+=-Wno-error=stringop-overflow
  WFLAGS+=-Wno-format-overflow
- WFLAGS+=-Wno-stringop-truncation
- WFLAGS+=-Wno-stringop-overflow
  WFLAGS+=-Wno-error=multistatement-macros
 endif
 

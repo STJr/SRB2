@@ -66,6 +66,10 @@ sector_t *viewsector;
 player_t *viewplayer;
 mobj_t *r_viewmobj;
 
+boolean r_renderwalls;
+boolean r_renderfloors;
+boolean r_renderthings;
+
 fixed_t rendertimefrac;
 fixed_t renderdeltatics;
 boolean renderisnewtic;
@@ -149,8 +153,6 @@ consvar_t cv_flipcam2 = CVAR_INIT ("flipcam2", "No", CV_SAVE|CV_CALL|CV_NOINIT, 
 
 consvar_t cv_shadow = CVAR_INIT ("shadow", "On", CV_SAVE, CV_OnOff, NULL);
 consvar_t cv_skybox = CVAR_INIT ("skybox", "On", CV_SAVE, CV_OnOff, NULL);
-consvar_t cv_ffloorclip = CVAR_INIT ("r_ffloorclip", "On", CV_SAVE, CV_OnOff, NULL);
-consvar_t cv_spriteclip = CVAR_INIT ("r_spriteclip", "On", CV_SAVE, CV_OnOff, NULL);
 consvar_t cv_allowmlook = CVAR_INIT ("allowmlook", "Yes", CV_NETVAR|CV_ALLOWLUA, CV_YesNo, NULL);
 consvar_t cv_showhud = CVAR_INIT ("showhud", "Yes", CV_CALL|CV_ALLOWLUA,  CV_YesNo, R_SetViewSize);
 consvar_t cv_translucenthud = CVAR_INIT ("translucenthud", "10", CV_SAVE, translucenthud_cons_t, NULL);
@@ -161,11 +163,16 @@ consvar_t cv_drawdist_nights = CVAR_INIT ("drawdist_nights", "2048", CV_SAVE, dr
 consvar_t cv_drawdist_precip = CVAR_INIT ("drawdist_precip", "1024", CV_SAVE, drawdist_precip_cons_t, NULL);
 consvar_t cv_fov = CVAR_INIT ("fov", "90", CV_SAVE|CV_FLOAT|CV_CALL, fov_cons_t, Fov_OnChange);
 consvar_t cv_fovchange = CVAR_INIT ("fovchange", "Off", CV_SAVE, CV_OnOff, NULL);
-
-// Okay, whoever said homremoval causes a performance hit should be shot.
-consvar_t cv_homremoval = CVAR_INIT ("homremoval", "No", CV_SAVE, homremoval_cons_t, NULL);
-
 consvar_t cv_maxportals = CVAR_INIT ("maxportals", "2", CV_SAVE, maxportals_cons_t, NULL);
+
+consvar_t cv_renderview = CVAR_INIT ("renderview", "On", 0, CV_OnOff, NULL);
+consvar_t cv_renderwalls = CVAR_INIT ("r_renderwalls", "On", 0, CV_OnOff, NULL);
+consvar_t cv_renderfloors = CVAR_INIT ("r_renderfloors", "On", 0, CV_OnOff, NULL);
+consvar_t cv_renderthings = CVAR_INIT ("r_renderthings", "On", 0, CV_OnOff, NULL);
+consvar_t cv_ffloorclip = CVAR_INIT ("r_ffloorclip", "On", 0, CV_OnOff, NULL);
+consvar_t cv_spriteclip = CVAR_INIT ("r_spriteclip", "On", 0, CV_OnOff, NULL);
+
+consvar_t cv_homremoval = CVAR_INIT ("homremoval", "No", CV_SAVE, homremoval_cons_t, NULL);
 
 consvar_t cv_renderstats = CVAR_INIT ("renderstats", "Off", 0, CV_OnOff, NULL);
 
@@ -318,7 +325,6 @@ angle_t R_PointToAngle(fixed_t x, fixed_t y)
 }
 
 // This version uses 64-bit variables to avoid overflows with large values.
-// Currently used only by OpenGL rendering.
 angle_t R_PointToAngle64(INT64 x, INT64 y)
 {
 	return (y -= viewy, (x -= viewx) || y) ?
@@ -382,29 +388,6 @@ fixed_t R_PointToDist2(fixed_t px2, fixed_t py2, fixed_t px1, fixed_t py1)
 fixed_t R_PointToDist(fixed_t x, fixed_t y)
 {
 	return R_PointToDist2(viewx, viewy, x, y);
-}
-
-angle_t R_PointToAngleEx(INT32 x2, INT32 y2, INT32 x1, INT32 y1)
-{
-	INT64 dx = x1-x2;
-	INT64 dy = y1-y2;
-	if (dx < INT32_MIN || dx > INT32_MAX || dy < INT32_MIN || dy > INT32_MAX)
-	{
-		x1 = (int)(dx / 2 + x2);
-		y1 = (int)(dy / 2 + y2);
-	}
-	return (y1 -= y2, (x1 -= x2) || y1) ?
-	x1 >= 0 ?
-	y1 >= 0 ?
-		(x1 > y1) ? tantoangle[SlopeDivEx(y1,x1)] :                            // octant 0
-		ANGLE_90-tantoangle[SlopeDivEx(x1,y1)] :                               // octant 1
-		x1 > (y1 = -y1) ? 0-tantoangle[SlopeDivEx(y1,x1)] :                    // octant 8
-		ANGLE_270+tantoangle[SlopeDivEx(x1,y1)] :                              // octant 7
-		y1 >= 0 ? (x1 = -x1) > y1 ? ANGLE_180-tantoangle[SlopeDivEx(y1,x1)] :  // octant 3
-		ANGLE_90 + tantoangle[SlopeDivEx(x1,y1)] :                             // octant 2
-		(x1 = -x1) > (y1 = -y1) ? ANGLE_180+tantoangle[SlopeDivEx(y1,x1)] :    // octant 4
-		ANGLE_270-tantoangle[SlopeDivEx(x1,y1)] :                              // octant 5
-		0;
 }
 
 line_t *R_GetFFloorLine(const seg_t *seg, const ffloor_t *pfloor)
@@ -994,8 +977,6 @@ void R_Init(void)
 	//I_OutputMsg("\nR_InitData");
 	R_InitData();
 
-	//I_OutputMsg("\nR_InitViewBorder");
-	R_InitViewBorder();
 	R_SetViewSize(); // setsizeneeded is set true
 
 	// this is now done by SCR_Recalc() at the first mode set
@@ -1356,7 +1337,7 @@ void R_SkyboxFrame(player_t *player)
 			newview->z += campos.z * -mh->skybox_scalez;
 	}
 
-	if (r_viewmobj->subsector)
+	if (!P_MobjWasRemoved(r_viewmobj) && r_viewmobj->subsector)
 		newview->sector = r_viewmobj->subsector->sector;
 	else
 		newview->sector = R_PointInSubsector(newview->x, newview->y)->sector;
@@ -1639,17 +1620,11 @@ void R_RenderPlayerView(player_t *player)
 
 void R_RegisterEngineStuff(void)
 {
-	CV_RegisterVar(&cv_gravity);
-	CV_RegisterVar(&cv_tailspickup);
-	CV_RegisterVar(&cv_allowmlook);
-	CV_RegisterVar(&cv_homremoval);
-	CV_RegisterVar(&cv_flipcam);
-	CV_RegisterVar(&cv_flipcam2);
-
-	// Enough for dedicated server
+	// Do nothing for dedicated server
 	if (dedicated)
 		return;
 
+	CV_RegisterVar(&cv_homremoval);
 	CV_RegisterVar(&cv_translucency);
 	CV_RegisterVar(&cv_drawdist);
 	CV_RegisterVar(&cv_drawdist_nights);
@@ -1662,6 +1637,13 @@ void R_RegisterEngineStuff(void)
 
 	CV_RegisterVar(&cv_shadow);
 	CV_RegisterVar(&cv_skybox);
+	CV_RegisterVar(&cv_renderview);
+	CV_RegisterVar(&cv_renderhitboxinterpolation);
+	CV_RegisterVar(&cv_renderhitboxgldepth);
+	CV_RegisterVar(&cv_renderhitbox);
+	CV_RegisterVar(&cv_renderwalls);
+	CV_RegisterVar(&cv_renderfloors);
+	CV_RegisterVar(&cv_renderthings);
 	CV_RegisterVar(&cv_ffloorclip);
 	CV_RegisterVar(&cv_spriteclip);
 
@@ -1699,8 +1681,6 @@ void R_RegisterEngineStuff(void)
 	CV_RegisterVar(&cv_translucenthud);
 
 	CV_RegisterVar(&cv_maxportals);
-
-	CV_RegisterVar(&cv_movebob);
 
 	// Frame interpolation/uncapped
 	CV_RegisterVar(&cv_fpscap);

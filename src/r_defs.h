@@ -25,6 +25,10 @@
 
 #include "screen.h" // MAXVIDWIDTH, MAXVIDHEIGHT
 
+#ifdef HWRENDER
+#include "m_aatree.h"
+#endif
+
 #include "taglist.h"
 
 //
@@ -68,6 +72,11 @@ typedef struct extracolormap_s
 	INT32 fadergba; // The colour the colourmaps fade to
 
 	lighttable_t *colormap;
+
+#ifdef HWRENDER
+	// The id of the hardware lighttable. Zero means it does not exist yet.
+	UINT32 gl_lighttable_id;
+#endif
 
 #ifdef EXTRACOLORMAPLUMPS
 	lumpnum_t lump; // for colormap lump matching, init to LUMPERROR
@@ -396,6 +405,8 @@ typedef enum
 	SSF_ROPEHANG = 1<<18,
 	SSF_JUMPFLIP = 1<<19,
 	SSF_GRAVITYOVERRIDE = 1<<20, // combine with MSF_GRAVITYFLIP
+	SSF_NOPHYSICSFLOOR = 1<<21,
+	SSF_NOPHYSICSCEILING = 1<<22,
 } sectorspecialflags_t;
 
 typedef enum
@@ -885,15 +896,6 @@ typedef struct drawseg_s
 	vertex_t leftpos, rightpos; // Used for rendering FOF walls with slopes
 } drawseg_t;
 
-typedef enum
-{
-	PALETTE         = 0,  // 1 byte is the index in the doom palette (as usual)
-	INTENSITY       = 1,  // 1 byte intensity
-	INTENSITY_ALPHA = 2,  // 2 byte: alpha then intensity
-	RGB24           = 3,  // 24 bit rgb
-	RGBA32          = 4,  // 32 bit rgba
-} pic_mode_t;
-
 #ifdef ROTSPRITE
 typedef struct
 {
@@ -1018,6 +1020,8 @@ typedef struct
 	rotsprite_t *rotated[16]; // Rotated patches
 #endif
 } spriteframe_t;
+
+#define MAXFRAMENUM 256
 
 //
 // A sprite definition:  a number of animation frames.
