@@ -2233,9 +2233,7 @@ static void R_StoreOverlayColumn(INT32 x, fixed_t textureoffset)
 
 		if (oldoverlaycolumn[i] != -1)
 		{
-			INT32 diff = oldoverlaycolumn[i]-overlaycolumn[i];
-			if (rw_overlay[i].invscalex < 0)
-				diff = -diff;
+			INT32 diff = oldoverlaycolumn[i] - overlaycolumn[i];
 			rw_overlay[i].mid += FixedMul(rw_overlay[i].slide, diff);
 			rw_overlay[i].back += FixedMul(rw_overlay[i].backslide, diff);
 		}
