@@ -1,5 +1,5 @@
 ===============================================================================
-Universal Doom Map Format Sonic Robo Blast 2 extensions v1.0 19.02.2024
+Universal Doom Map Format Sonic Robo Blast 2 extensions v1.1 03.05.2024
 
     Copyright (c) 2024 Sonic Team Junior
        uses Universal Doom Map Format Specification v1.1 as a template,
@@ -80,6 +80,7 @@ Sonic Robo Blast 2 defines the following standardized fields:
       noskew        = <bool>;     // Middle texture is not skewed.
       midpeg        = <bool>;     // Middle texture is pegged.
       midsolid      = <bool>;     // Middle texture is solid.
+      clipmidtex    = <bool>;     // Line's mid textures are clipped to floor and ceiling.
       wrapmidtex    = <bool>;     // Line's mid textures are wrapped.
       nonet         = <bool>;     // Special only takes effect in singleplayer games.
       netonly       = <bool>;     // Special only takes effect in multiplayer games.
@@ -142,6 +143,8 @@ Sonic Robo Blast 2 defines the following standardized fields:
       offsety_mid = <float>;           // Y offset for mid texture. Default = 0.0.
       offsetx_bottom = <float>;        // X offset for lower texture. Default = 0.0.
       offsety_bottom = <float>;        // Y offset for lower texture. Default = 0.0.
+
+      clipmidtex = <bool>;             // Side's mid textures are clipped to floor and ceiling.
 
       comment = <string>; // A comment. Implementors should attach no special
                           // semantic meaning to this field.
@@ -304,6 +307,9 @@ Sonic Robo Blast 2 defines the following standardized fields:
 =======================================
 Changelog
 =======================================
+
+1.1: 03.05.2024
+Added clipmidtex property to lines and sides.
 
 1.0: 19.02.2024
 Initial version.

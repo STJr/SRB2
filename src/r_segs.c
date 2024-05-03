@@ -114,6 +114,8 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 	fixed_t wall_scaley;
 	fixed_t scalestep;
 	fixed_t scale1;
+	fixed_t texture_top, texture_bottom, texture_height;
+	boolean clipmidtex;
 
 	// Calculate light table.
 	// Use different light tables
@@ -276,6 +278,9 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 	else
 		back = backsector;
 
+	clipmidtex = (ldef->flags & ML_CLIPMIDTEX) || (sidedef->flags & SIDEFLAG_CLIP_MIDTEX);
+	texture_height = FixedDiv(textureheight[texnum], wall_scaley);
+
 	if (sidedef->repeatcnt)
 		repeats = 1 + sidedef->repeatcnt;
 	else if (ldef->flags & ML_WRAPMIDTEX)
@@ -292,8 +297,8 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 		else
 			low = back->floorheight;
 
-		repeats = (high - low)/textureheight[texnum];
-		if ((high-low)%textureheight[texnum])
+		repeats = (high - low)/texture_height;
+		if ((high-low)%texture_height)
 			repeats++; // tile an extra time to fill the gap -- Monster Iestyn
 	}
 	else
@@ -301,6 +306,33 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 
 	for (times = 0; times < repeats; times++)
 	{
+		fixed_t left_top = 0, left_bottom = 0;
+		fixed_t right_top = 0, right_bottom = 0;
+		fixed_t top_step = 0, bottom_step = 0;
+
+		// Get left and right ends of wall for clipping it
+		if (clipmidtex)
+		{
+			// For this to work correctly with polyobjects, it needs to use its own back sector, rather than the seg's front sector
+			sector_t *sec_front = curline->polyseg ?
+				curline->polyseg->lines[0]->backsector :
+				frontsector;
+
+			// calculate both left ends
+			left_top    = P_GetSectorCeilingZAt(sec_front, ds->leftpos.x, ds->leftpos.y) - viewz;
+			left_bottom = P_GetSectorFloorZAt(sec_front, ds->leftpos.x, ds->leftpos.y) - viewz;
+
+			// calculate right ends now
+			right_top    = P_GetSectorCeilingZAt(sec_front, ds->rightpos.x, ds->rightpos.y) - viewz;
+			right_bottom = P_GetSectorFloorZAt(sec_front, ds->rightpos.x, ds->rightpos.y) - viewz;
+
+			top_step = (right_top - left_top) / range;
+			bottom_step = (right_bottom - left_bottom) / range;
+
+			left_top += top_step * (x1 - ds->x1);
+			left_bottom += bottom_step * (x1 - ds->x1);
+		}
+
 		if (times > 0)
 		{
 			rw_scalestep = scalestep;
@@ -321,7 +353,7 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 		{
 			dc_texturemid = ds->maskedtextureheight[dc_x];
 
-			if (curline->linedef->flags & ML_MIDPEG)
+			if (ldef->flags & ML_MIDPEG)
 				dc_texturemid += (textureheight[texnum])*times + textureheight[texnum];
 			else
 				dc_texturemid -= (textureheight[texnum])*times;
@@ -341,29 +373,53 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 					}
 				}
 				spryscale += rw_scalestep;
+				if (clipmidtex)
+				{
+					left_top += top_step;
+					left_bottom += bottom_step;
+				}
 				continue;
 			}
 
-			// calculate lighting
+			texture_top = dc_texturemid;
+			texture_bottom = texture_top - texture_height;
+
+			// If the texture is meant to be clipped
+			if (clipmidtex)
+			{
+				texture_top = min(FixedMul(left_top, wall_scaley), texture_top);
+				texture_bottom = max(FixedMul(left_bottom, wall_scaley), texture_bottom);
+
+				left_top += top_step;
+				left_bottom += bottom_step;
+			}
+
+			// NB: sprtopscreen needs to start where dc_texturemid does, so that R_DrawMaskedColumn works correctly.
+			// windowtop however is set so that the column gets clipped properly.
+			sprtopscreen = centeryfrac - FixedMul(dc_texturemid, spryscale);
+			realbot = centeryfrac - FixedMul(texture_bottom, spryscale);
+
+			// set wall bounds if necessary
+			if (dc_numlights || clipmidtex)
+			{
+				windowtop = centeryfrac - FixedMul(texture_top, spryscale);
+				windowbottom = realbot;
+			}
+
+			dc_iscale = FixedMul(ds->invscale[dc_x], wall_scaley);
+
+			col = R_GetColumn(texnum, maskedtexturecol[dc_x] >> FRACBITS);
+
+			// draw light list if there is one
 			if (dc_numlights)
 			{
-				lighttable_t **xwalllights;
-
-				sprtopscreen = windowtop = (centeryfrac - FixedMul(dc_texturemid, spryscale));
-
-				realbot = FixedMul(textureheight[texnum], spryscale) + sprtopscreen;
-				dc_iscale = FixedMul(ds->invscale[dc_x], wall_scaley);
-
-				windowbottom = realbot;
-
-				// draw the texture
-				col = R_GetColumn(texnum, maskedtexturecol[dc_x] >> FRACBITS);
-
 				for (i = 0; i < dc_numlights; i++)
 				{
+					lighttable_t **xwalllights;
+
 					rlight = &dc_lightlist[i];
 
-					if ((rlight->flags & FOF_NOSHADE))
+					if (rlight->flags & FOF_NOSHADE)
 						continue;
 
 					if (rlight->lightnum < 0)
@@ -373,7 +429,7 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 					else
 						xwalllights = scalelight[rlight->lightnum];
 
-					pindex = FixedMul(spryscale, LIGHTRESOLUTIONFIX)>>LIGHTSCALESHIFT;
+					pindex = FixedMul(FixedMul(spryscale, wall_scaley), LIGHTRESOLUTIONFIX)>>LIGHTSCALESHIFT;
 
 					if (pindex >= MAXLIGHTSCALE)
 						pindex = MAXLIGHTSCALE - 1;
@@ -418,7 +474,7 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 			}
 
 			// calculate lighting
-			pindex = FixedMul(spryscale, LIGHTRESOLUTIONFIX)>>LIGHTSCALESHIFT;
+			pindex = FixedMul(FixedMul(spryscale, wall_scaley), LIGHTRESOLUTIONFIX)>>LIGHTSCALESHIFT;
 
 			if (pindex >= MAXLIGHTSCALE)
 				pindex = MAXLIGHTSCALE - 1;
@@ -428,11 +484,7 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 			if (frontsector->extra_colormap)
 				dc_colormap = frontsector->extra_colormap->colormap + (dc_colormap - colormaps);
 
-			sprtopscreen = centeryfrac - FixedMul(dc_texturemid, spryscale);
-			dc_iscale = FixedMul(ds->invscale[dc_x], wall_scaley);
-
 			// draw the texture
-			col = R_GetColumn(texnum, maskedtexturecol[dc_x] >> FRACBITS);
 			colfunc_2s(col, lengthcol);
 
 			spryscale += rw_scalestep;

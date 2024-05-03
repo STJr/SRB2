@@ -213,6 +213,7 @@ enum side_e {
 	side_sector,
 	side_special,
 	side_repeatcnt,
+	side_clipmidtex,
 	side_text
 };
 
@@ -241,6 +242,7 @@ static const char *const side_opt[] = {
 	"sector",
 	"special",
 	"repeatcnt",
+	"clipmidtex",
 	"text",
 	NULL};
 
@@ -1311,6 +1313,9 @@ static int side_get(lua_State *L)
 	case side_repeatcnt:
 		lua_pushinteger(L, side->repeatcnt);
 		return 1;
+	case side_clipmidtex:
+		lua_pushinteger(L, side->flags & SIDEFLAG_CLIP_MIDTEX);
+		return 1;
 	// TODO: 2.3: Delete
 	case side_text:
 		{
@@ -1412,6 +1417,12 @@ static int side_set(lua_State *L)
 		break;
 	case side_repeatcnt:
 		side->repeatcnt = luaL_checkinteger(L, 3);
+		break;
+	case side_clipmidtex:
+		if (luaL_checkboolean(L, 3))
+			side->flags |= SIDEFLAG_CLIP_MIDTEX;
+		else
+			side->flags &= ~SIDEFLAG_CLIP_MIDTEX;
 		break;
 	}
 	return 0;

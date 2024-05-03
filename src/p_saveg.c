@@ -1393,6 +1393,8 @@ static UINT32 GetSideDiff(const side_t *si, const side_t *spawnsi)
 		diff |= LD_SDBOTSCALEY;
 	if (si->repeatcnt != spawnsi->repeatcnt)
 		diff |= LD_SDREPEATCNT;
+	if (si->flags != spawnsi->flags)
+		diff |= LD_SDFLAGS;
 	return diff;
 }
 
@@ -1436,6 +1438,8 @@ static void ArchiveSide(const side_t *si, UINT32 diff)
 		WRITEFIXED(save_p, si->scaley_bottom);
 	if (diff & LD_SDREPEATCNT)
 		WRITEINT16(save_p, si->repeatcnt);
+	if (diff & LD_SDFLAGS)
+		WRITEUINT16(save_p, si->flags);
 }
 
 static void ArchiveLines(void)
@@ -1493,7 +1497,7 @@ static void ArchiveLines(void)
 			if (diff & LD_DIFF2)
 				WRITEUINT8(save_p, diff2);
 			if (diff & LD_FLAG)
-				WRITEINT16(save_p, li->flags);
+				WRITEUINT32(save_p, li->flags);
 			if (diff & LD_SPECIAL)
 				WRITEINT16(save_p, li->special);
 			if (diff & LD_CLLCOUNT)
@@ -1576,6 +1580,8 @@ static void UnArchiveSide(side_t *si)
 		si->scaley_bottom = READFIXED(save_p);
 	if (diff & LD_SDREPEATCNT)
 		si->repeatcnt = READINT16(save_p);
+	if (diff & LD_SDFLAGS)
+		si->flags = READUINT16(save_p);
 }
 
 static void UnArchiveLines(void)
@@ -1601,7 +1607,7 @@ static void UnArchiveLines(void)
 		li = &lines[i];
 
 		if (diff & LD_FLAG)
-			li->flags = READINT16(save_p);
+			li->flags = READUINT32(save_p);
 		if (diff & LD_SPECIAL)
 			li->special = READINT16(save_p);
 		if (diff & LD_CLLCOUNT)

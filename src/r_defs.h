@@ -584,7 +584,7 @@ typedef struct line_s
 	angle_t angle; // Precalculated angle between dx and dy
 
 	// Animation related.
-	INT16 flags;
+	UINT32 flags;
 	INT16 special;
 	taglist_t tags;
 	INT32 args[NUMLINEARGS];
@@ -614,6 +614,12 @@ typedef struct line_s
 	UINT32 secportal; // transferred sector portal
 } line_t;
 
+// Don't make available to Lua or I will find where you live
+typedef enum
+{
+	SIDEFLAG_CLIP_MIDTEX     = 1 << 0, // Like the line counterpart, but only for this side.
+} sideflags_t;
+
 typedef struct
 {
 	// add this to the calculated texture column
@@ -622,12 +628,15 @@ typedef struct
 	// add this to the calculated texture top
 	fixed_t rowoffset;
 
-	// per-texture offsets for UDMF
+	// per-texture offsets
 	fixed_t offsetx_top, offsetx_mid, offsetx_bottom;
 	fixed_t offsety_top, offsety_mid, offsety_bottom;
 
 	fixed_t scalex_top, scalex_mid, scalex_bottom;
 	fixed_t scaley_top, scaley_mid, scaley_bottom;
+
+	// Rendering-related flags
+	UINT16 flags;
 
 	// Texture indices.
 	// We do not maintain names here.
