@@ -420,14 +420,13 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 	rw_scalestep = scalestep;
 	spryscale = scale1 + (x1 - ds->x1)*rw_scalestep;
 
-	// Texture must be cached before setting colfunc_2s,
-	// otherwise texture[texnum]->holes may be false when it shouldn't be
+	// Texture must be cached
 	R_CheckTextureCache(texnum);
 
 	if (vertflip) // vertically flipped?
 		colfunc_2s = R_DrawFlippedMaskedColumn;
 	else
-		colfunc_2s = R_DrawMaskedColumn; // render the usual 2sided single-patch packed texture
+		colfunc_2s = R_DrawMaskedColumn;
 
 	lengthcol = textures[texnum]->height;
 
@@ -564,7 +563,9 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 				left_bottom += bottom_step;
 			}
 
-			sprtopscreen = centeryfrac - FixedMul(texture_top, spryscale);
+			// NB: sprtopscreen needs to start where dc_texturemid does, so that R_DrawMaskedColumn works correctly.
+			// windowtop however is set so that the column gets clipped properly.
+			sprtopscreen = centeryfrac - FixedMul(dc_texturemid, spryscale);
 			realbot = centeryfrac - FixedMul(texture_bottom, spryscale);
 
 			if (do_overlay_column)
@@ -573,7 +574,7 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 			// set wall bounds if necessary
 			if (dc_numlights || clipmidtex)
 			{
-				windowtop = sprtopscreen;
+				windowtop = centeryfrac - FixedMul(texture_top, spryscale);
 				windowbottom = realbot;
 			}
 
@@ -710,14 +711,13 @@ static void R_RenderExtraTexture(unsigned which, INT32 x1, INT32 x2, INT32 repea
 	rw_scalestep = scalestep;
 	spryscale = scale1 + (x1 - ds->x1)*rw_scalestep;
 
-	// Texture must be cached before setting colfunc_2s,
-	// otherwise texture[texnum]->holes may be false when it shouldn't be
+	// Texture must be cached
 	R_CheckTextureCache(texnum);
 
 	if (vertflip) // vertically flipped?
 		colfunc_2s = R_DrawFlippedMaskedColumn;
 	else
-		colfunc_2s = R_DrawMaskedColumn; // render the usual 2sided single-patch packed texture
+		colfunc_2s = R_DrawMaskedColumn;
 
 	lengthcol = textures[texnum]->height;
 

@@ -1375,6 +1375,8 @@ static void P_LoadSidedefs(UINT8 *data)
 		sd->scalex_top = sd->scalex_mid = sd->scalex_bottom = FRACUNIT;
 		sd->scaley_top = sd->scaley_mid = sd->scaley_bottom = FRACUNIT;
 
+		sd->flags = 0;
+
 		P_InitSideEdges(sd);
 
 		P_SetSidedefSector(i, (UINT16)SHORT(msd->sector));
@@ -2690,6 +2692,8 @@ static void P_WriteTextmap(void)
 			fprintf(f, "midpeg = true;\n");
 		if (wlines[i].flags & ML_MIDSOLID)
 			fprintf(f, "midsolid = true;\n");
+		if (wlines[i].flags & ML_CLIPMIDTEX)
+			fprintf(f, "clipmidtex = true;\n");
 		if (wlines[i].flags & ML_WRAPMIDTEX)
 			fprintf(f, "wrapmidtex = true;\n");
 		if (wlines[i].flags & ML_NONET)
@@ -3155,6 +3159,7 @@ static void P_LoadTextmap(void)
 		sd->bottomtexture = R_TextureNumForName("-");
 		sd->sector = NULL;
 		sd->repeatcnt = 0;
+		sd->flags = 0;
 
 		P_InitSideEdges(sd);
 
