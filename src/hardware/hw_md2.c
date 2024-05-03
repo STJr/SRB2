@@ -571,19 +571,15 @@ void HWR_LoadModels(void)
 		}
 
 		// Add sprite models.
-		// Must be 4 characters long exactly. Otherwise, it's not a sprite name.
-		if (len == 4)
+		for (i = 0; i < numsprites; i++)
 		{
-			for (i = 0; i < numsprites; i++)
+			if (stricmp(name, sprnames[i]) == 0)
 			{
-				if (stricmp(name, sprnames[i]) == 0)
-				{
-					md2_models[i].scale = scale;
-					md2_models[i].offset = offset;
-					md2_models[i].found = true;
-					strcpy(md2_models[i].filename, filename);
-					goto modelfound;
-				}
+				md2_models[i].scale = scale;
+				md2_models[i].offset = offset;
+				md2_models[i].found = true;
+				strcpy(md2_models[i].filename, filename);
+				goto modelfound;
 			}
 		}
 
