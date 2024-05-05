@@ -11842,15 +11842,21 @@ static void M_HandleConnectIP(INT32 choice)
 					case KEY_INS:
 					case 'c':
 					case 'C': // ctrl+c, ctrl+insert, copying
-						I_ClipboardCopy(setupm_ip, l);
-						S_StartSound(NULL,sfx_menu1); // Tails
+						if (l != 0) // Don't replace the clipboard without any text
+						{
+							I_ClipboardCopy(setupm_ip, l);
+							S_StartSound(NULL,sfx_menu1); // Tails
+						}
 						break;
 
 					case 'x':
 					case 'X': // ctrl+x, cutting
-						I_ClipboardCopy(setupm_ip, l);
-						S_StartSound(NULL,sfx_menu1); // Tails
-						setupm_ip[0] = 0;
+						if (l != 0) // Don't replace the clipboard without any text
+						{
+							I_ClipboardCopy(setupm_ip, l);
+							S_StartSound(NULL,sfx_menu1); // Tails
+							setupm_ip[0] = 0;
+						}
 						break;
 
 					default: // otherwise do nothing
@@ -11874,9 +11880,12 @@ static void M_HandleConnectIP(INT32 choice)
 							break;
 						}
 					case KEY_DEL: // shift+delete, cutting
-						I_ClipboardCopy(setupm_ip, l);
-						S_StartSound(NULL,sfx_menu1); // Tails
-						setupm_ip[0] = 0;
+						if (l != 0) // Don't replace the clipboard without any text
+						{
+							I_ClipboardCopy(setupm_ip, l);
+							S_StartSound(NULL,sfx_menu1); // Tails
+							setupm_ip[0] = 0;
+						}
 						break;
 					default: // otherwise do nothing.
 						break;

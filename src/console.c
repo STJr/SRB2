@@ -1036,7 +1036,7 @@ boolean CON_Responder(event_t *ev)
 	}
 	else if (key == KEY_BACKSPACE)
 	{
-		if (ctrldown)
+		if (ctrldown && input_cur != 0)
 		{
 			input_sel = M_JumpWordReverse(inputlines[inputline], input_cur);
 			CON_InputDelSelection();
@@ -1094,7 +1094,9 @@ boolean CON_Responder(event_t *ev)
 
 		if (key == 'x' || key == 'X')
 		{
-			if (input_sel > input_cur)
+			if (input_sel == input_cur) // Don't replace the clipboard without a text selection
+				return true;
+			else if (input_sel > input_cur)
 				I_ClipboardCopy(&inputlines[inputline][input_cur], input_sel-input_cur);
 			else
 				I_ClipboardCopy(&inputlines[inputline][input_sel], input_cur-input_sel);
@@ -1104,7 +1106,9 @@ boolean CON_Responder(event_t *ev)
 		}
 		else if (key == 'c' || key == 'C')
 		{
-			if (input_sel > input_cur)
+			if (input_sel == input_cur) // Don't replace the clipboard without a text selection
+				return true;
+			else if (input_sel > input_cur)
 				I_ClipboardCopy(&inputlines[inputline][input_cur], input_sel-input_cur);
 			else
 				I_ClipboardCopy(&inputlines[inputline][input_sel], input_cur-input_sel);
