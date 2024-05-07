@@ -12,7 +12,7 @@ SRB2 uses various third-party libraries, including SDL, SDL Mixer, and their dep
 
 SOURCE CODE
 
-You may obtain the source code for SRB2, including the source code for specific version releases, at the following web sites:
+You may obtain the source code for SRB2, including the source code for specific version releases, at the following websites:
 
 STJr GitLab:
 https://git.do.srb2.org/STJr/SRB2
@@ -22,7 +22,7 @@ https://github.com/STJr/SRB2
 
 CONTACT
 
-You may contact Sonic Team Junior via the following web sites:
+You may contact Sonic Team Junior via the following websites:
 
 SRB2 Message Board:
 https://mb.srb2.org
@@ -39,7 +39,7 @@ https://facebook.com/SonicRoboBlast2
 
 COPYRIGHT AND DISCLAIMER
 
-Design and content in Sonic Robo Blast 2 is copyright 1998-2023 by Sonic Team Jr.
+Design and content in Sonic Robo Blast 2 is copyright ©️ 1998-2024 by Sonic Team Jr.
 
 All original material in this game is copyrighted by their respective owners, and no copyright infringement is intended. Sonic Team Jr. is in no way affiliated with SEGA or Sonic Team, and we do not claim ownership of any of SEGA's intellectual property used in SRB2.
 
