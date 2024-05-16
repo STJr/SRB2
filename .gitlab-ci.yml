@@ -4,6 +4,7 @@ include:
 
 variables:
   GIT_CLONE_PATH: $CI_BUILDS_DIR/$CI_CONCURRENT_ID/$CI_PROJECT_PATH
+  GIT_DEPTH: 20
 
 stages:
   - build
