@@ -112,7 +112,7 @@
           echo stats_log = $PWD/ccache_statslog | tee --append ~/.ccache/ccache.conf
       - |
           # max_size
-          echo max_size = 50M                   | tee --append ~/.ccache/ccache.conf
+          echo max_size = 300M                  | tee --append ~/.ccache/ccache.conf
       - |
           # ccache_config
           echo -e "\e[0Ksection_end:`date +%s`:ccache_config\r\e[0K"
