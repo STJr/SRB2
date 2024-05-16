@@ -12,7 +12,7 @@
 
     - key: apt-$CI_JOB_IMAGE
       paths:
-        - apt-cache
+        - build/apt-cache
       unprotect: true
 
   before_script:
@@ -37,7 +37,7 @@
     - - |
           # apt_conf
           echo -e "\e[0Ksection_start:`date +%s`:apt_conf[collapsed=true]\r\e[0KSetting up APT conf"
-      - export APT_CACHE_DIR=`pwd`/apt-cache
+      - export APT_CACHE_DIR=$CI_PROJECT_DIR/build/apt-cache
       - mkdir --parents --verbose $APT_CACHE_DIR/partial/
       - touch /etc/apt/apt.conf.d/99build
       - |
