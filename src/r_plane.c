@@ -942,12 +942,19 @@ void R_DrawSinglePlane(visplane_t *pl)
 				// ...unhacked by toaster 04-01-2021, re-hacked a little by sphere 19-11-2021
 				{
 					INT32 trans = (10*((256+12) - pl->ffloor->alpha))/255;
-					if (trans >= 10)
-						return; // Don't even draw it
 					if (pl->ffloor->blend) // additive, (reverse) subtractive, modulative
+					{
+						if (!R_BlendLevelVisible(pl->ffloor->blend, trans))
+							return; // Don't even draw it
 						ds_transmap = R_GetBlendTable(pl->ffloor->blend, trans);
-					else if (!(ds_transmap = R_GetTranslucencyTable(trans)) || trans == 0)
-						spanfunctype = SPANDRAWFUNC_SPLAT; // Opaque, but allow transparent flat pixels
+					}
+					else
+					{
+						if (!R_BlendLevelVisible(AST_TRANSLUCENT, trans))
+							return; // Don't even draw it
+						if (!(ds_transmap = R_GetTranslucencyTable(trans)) || trans == 0)
+							spanfunctype = SPANDRAWFUNC_SPLAT; // Opaque, but allow transparent flat pixels
+					}
 				}
 
 				if ((spanfunctype == SPANDRAWFUNC_SPLAT) || (pl->extra_colormap && (pl->extra_colormap->flags & CMF_FOG)))

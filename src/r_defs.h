@@ -649,6 +649,8 @@ typedef struct
 	INT32 texture;
 	fixed_t offsetx, offsety;
 	fixed_t scalex, scaley;
+	UINT8 blendmode;
+	fixed_t alpha;
 	UINT8 flags;
 	struct side_s *side;
 } side_overlay_t;

@@ -147,41 +147,53 @@ Sonic Robo Blast 2 defines the following standardized fields:
       clipmidtex = <bool>;             // Side's mid textures are clipped to floor and ceiling.
       wrapmidtex = <bool>;             // Side's mid textures are wrapped.
 
-      edge_top_upper_texture = <string>; // Top edge texture of the upper wall. Default = "-".
-      edge_top_upper_offsetx = <float>;  // X offset for the top edge of the upper wall. Default = 0.0.
-      edge_top_upper_offsety = <float>;  // Y offset for the top edge of the upper wall. Default = 0.0.
-      edge_top_upper_scalex  = <float>;  // X scale for the top edge of the upper wall. Default = 1.0.
-      edge_top_upper_scaley  = <float>;  // Y scale for the top edge of the upper wall. Default = 1.0.
-      edge_top_upper_noskew  = <bool>;   // Disables skewing of the top edge of the upper wall.
-      edge_top_upper_noclip  = <bool>;   // Top edge texture extends outside the upper wall (displays like a mid texture.)
-      edge_top_upper_wrap    = <bool>;   // Top edge texture of the upper wall wraps.
+      edge_top_upper_texture     = <string>; // Top edge texture of the upper wall. Default = "-".
+      edge_top_upper_offsetx     = <float>;  // X offset for the top edge of the upper wall. Default = 0.0.
+      edge_top_upper_offsety     = <float>;  // Y offset for the top edge of the upper wall. Default = 0.0.
+      edge_top_upper_scalex      = <float>;  // X scale for the top edge of the upper wall. Default = 1.0.
+      edge_top_upper_scaley      = <float>;  // Y scale for the top edge of the upper wall. Default = 1.0.
+      edge_top_upper_noskew      = <bool>;   // Disables skewing of the top edge of the upper wall.
+      edge_top_upper_noclip      = <bool>;   // Top edge texture extends outside the upper wall (displays like a mid texture.)
+      edge_top_upper_wrap        = <bool>;   // Top edge texture of the upper wall wraps.
+      edge_top_upper_alpha       = <float>;  // Translucency of this edge. Default is 1.0
+      edge_top_upper_renderstyle = <string>; // Render style of this edge. Can be "translucent", "add", "subtract",
+                                             // "reversesubtract", "modulate", or "fog". Default is "translucent".
 
-      edge_top_lower_texture = <string>; // Bottom edge texture of the upper wall. Default = "-".
-      edge_top_lower_offsetx = <float>;  // X offset for the bottom edge of the upper wall. Default = 0.0.
-      edge_top_lower_offsety = <float>;  // Y offset for the bottom edge of the upper wall. Default = 0.0.
-      edge_top_lower_scalex  = <float>;  // X scale for the bottom edge of the upper wall. Default = 1.0.
-      edge_top_lower_scaley  = <float>;  // Y scale for the bottom edge of the upper wall. Default = 1.0.
-      edge_top_lower_noskew  = <bool>;   // Disables skewing of the bottom edge of the upper wall.
-      edge_top_lower_noclip  = <bool>;   // Bottom edge texture extends outside the upper wall (displays like a mid texture.)
-      edge_top_lower_wrap    = <bool>;   // Bottom edge texture of the upper wall wraps.
+      edge_top_lower_texture     = <string>; // Bottom edge texture of the upper wall. Default = "-".
+      edge_top_lower_offsetx     = <float>;  // X offset for the bottom edge of the upper wall. Default = 0.0.
+      edge_top_lower_offsety     = <float>;  // Y offset for the bottom edge of the upper wall. Default = 0.0.
+      edge_top_lower_scalex      = <float>;  // X scale for the bottom edge of the upper wall. Default = 1.0.
+      edge_top_lower_scaley      = <float>;  // Y scale for the bottom edge of the upper wall. Default = 1.0.
+      edge_top_lower_noskew      = <bool>;   // Disables skewing of the bottom edge of the upper wall.
+      edge_top_lower_noclip      = <bool>;   // Bottom edge texture extends outside the upper wall (displays like a mid texture.)
+      edge_top_lower_wrap        = <bool>;   // Bottom edge texture of the upper wall wraps.
+      edge_top_lower_alpha       = <float>;  // Translucency of this edge. Default is 1.0
+      edge_top_lower_renderstyle = <string>; // Render style of this edge. Can be "translucent", "add", "subtract",
+                                             // "reversesubtract", "modulate", or "fog". Default is "translucent".
 
-      edge_bottom_upper_texture = <string>; // Top edge texture of the lower wall. Default = "-".
-      edge_bottom_upper_offsetx = <float>;  // X offset for the top edge of the lower wall. Default = 0.0.
-      edge_bottom_upper_offsety = <float>;  // Y offset for the top edge of the lower wall. Default = 0.0.
-      edge_bottom_upper_scalex  = <float>;  // X scale for the top edge of the lower wall. Default = 1.0.
-      edge_bottom_upper_scaley  = <float>;  // Y scale for the top edge of the lower wall. Default = 1.0.
-      edge_bottom_upper_noskew  = <bool>;   // Disables skewing of the top edge of the lower wall.
-      edge_bottom_upper_noclip  = <bool>;   // Top edge texture extends outside the lower wall (displays like a mid texture.)
-      edge_bottom_upper_wrap    = <bool>;   // Top edge texture of the lower wall wraps.
+      edge_bottom_upper_texture     = <string>; // Top edge texture of the lower wall. Default = "-".
+      edge_bottom_upper_offsetx     = <float>;  // X offset for the top edge of the lower wall. Default = 0.0.
+      edge_bottom_upper_offsety     = <float>;  // Y offset for the top edge of the lower wall. Default = 0.0.
+      edge_bottom_upper_scalex      = <float>;  // X scale for the top edge of the lower wall. Default = 1.0.
+      edge_bottom_upper_scaley      = <float>;  // Y scale for the top edge of the lower wall. Default = 1.0.
+      edge_bottom_upper_noskew      = <bool>;   // Disables skewing of the top edge of the lower wall.
+      edge_bottom_upper_noclip      = <bool>;   // Top edge texture extends outside the lower wall (displays like a mid texture.)
+      edge_bottom_upper_wrap        = <bool>;   // Top edge texture of the lower wall wraps.
+      edge_bottom_upper_alpha       = <float>;  // Translucency of this edge. Default is 1.0
+      edge_bottom_upper_renderstyle = <string>; // Render style of this edge. Can be "translucent", "add", "subtract",
+                                                // "reversesubtract", "modulate", or "fog". Default is "translucent".
 
-      edge_bottom_lower_texture = <string>; // Bottom edge texture of the lower wall. Default = "-".
-      edge_bottom_lower_offsetx = <float>;  // X offset for the bottom edge of the lower wall. Default = 0.0.
-      edge_bottom_lower_offsety = <float>;  // Y offset for the bottom edge of the lower wall. Default = 0.0.
-      edge_bottom_lower_scalex  = <float>;  // X scale for the bottom edge of the lower wall. Default = 1.0.
-      edge_bottom_lower_scaley  = <float>;  // Y scale for the bottom edge of the lower wall. Default = 1.0.
-      edge_bottom_lower_noskew  = <bool>;   // Disables skewing of the bottom edge of the lower wall.
-      edge_bottom_lower_noclip  = <bool>;   // Bottom edge texture extends outside the lower wall (displays like a mid texture.)
-      edge_bottom_lower_wrap    = <bool>;   // Bottom edge texture of the lower wall wraps.
+      edge_bottom_lower_texture     = <string>; // Bottom edge texture of the lower wall. Default = "-".
+      edge_bottom_lower_offsetx     = <float>;  // X offset for the bottom edge of the lower wall. Default = 0.0.
+      edge_bottom_lower_offsety     = <float>;  // Y offset for the bottom edge of the lower wall. Default = 0.0.
+      edge_bottom_lower_scalex      = <float>;  // X scale for the bottom edge of the lower wall. Default = 1.0.
+      edge_bottom_lower_scaley      = <float>;  // Y scale for the bottom edge of the lower wall. Default = 1.0.
+      edge_bottom_lower_noskew      = <bool>;   // Disables skewing of the bottom edge of the lower wall.
+      edge_bottom_lower_noclip      = <bool>;   // Bottom edge texture extends outside the lower wall (displays like a mid texture.)
+      edge_bottom_lower_wrap        = <bool>;   // Bottom edge texture of the lower wall wraps.
+      edge_bottom_lower_alpha       = <float>;  // Translucency of this edge. Default is 1.0
+      edge_bottom_lower_renderstyle = <string>; // Render style of this edge. Can be "translucent", "add", "subtract",
+                                                // "reversesubtract", "modulate", or "fog". Default is "translucent".
 
       comment = <string>; // A comment. Implementors should attach no special
                           // semantic meaning to this field.

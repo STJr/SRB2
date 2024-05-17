@@ -906,7 +906,7 @@ static boolean HWR_BlendMidtextureSurface(FSurfaceInfo *pSurf)
 			blendmode = HWR_TranstableToAlpha(gl_curline->polyseg->translucency, pSurf);
 	}
 
-	if (blendmode != PF_Masked && pSurf->PolyColor.s.alpha == 0x00)
+	if ((blendmode == PF_Translucent || blendmode == PF_Additive || blendmode == PF_ReverseSubtract) && pSurf->PolyColor.s.alpha == 0x00)
 		return false;
 
 	pSurf->PolyFlags = blendmode;
@@ -1243,6 +1243,35 @@ static void HWR_SetWallEndCoordsOffset(FOutVector wallVerts[4], float wallx2, fl
 
 	wallVerts[2].x = wallVerts[1].x = wallx2;
 	wallVerts[2].z = wallVerts[1].z = wally2;
+}
+
+static boolean HWR_BlendExtraTextureSurface(side_overlay_t *overlay, FSurfaceInfo *pSurf)
+{
+	FUINT blendmode = PF_Masked;
+
+	if (gl_curline->polyseg && gl_curline->polyseg->translucency > 0)
+	{
+		return HWR_BlendMidtextureSurface(pSurf);
+	}
+
+	pSurf->PolyColor.s.alpha = 0xFF;
+
+	if (overlay->blendmode && overlay->blendmode != AST_FOG)
+	{
+		if (overlay->alpha >= 0 && overlay->alpha < FRACUNIT)
+			blendmode = HWR_SurfaceBlend(overlay->blendmode, R_GetLinedefTransTable(overlay->alpha), pSurf);
+		else
+			blendmode = HWR_GetBlendModeFlag(overlay->blendmode);
+	}
+	else if (overlay->alpha >= 0 && overlay->alpha < FRACUNIT)
+		blendmode = HWR_TranstableToAlpha(R_GetLinedefTransTable(overlay->alpha), pSurf);
+
+	if ((blendmode == PF_Translucent || blendmode == PF_Additive || blendmode == PF_ReverseSubtract) && pSurf->PolyColor.s.alpha == 0x00)
+		return false;
+
+	pSurf->PolyFlags = blendmode;
+
+	return true;
 }
 
 // Draws an extra texture
@@ -1757,13 +1786,30 @@ static void HWR_RenderExtraTexture(unsigned which, side_t *side, sector_t *sec_f
 #undef RENDER_WALL_POLYGON
 }
 
-static void HWR_RenderFFloorExtraTextures(ffloor_t *pfloor, v2d_t vs, v2d_t ve, float xcliplow, float xcliphigh, FSurfaceInfo Surf, FBITFIELD blendmode)
+static void HWR_RenderFFloorExtraTextures(ffloor_t *pfloor, v2d_t vs, v2d_t ve, float xcliplow, float xcliphigh, boolean use_3dfloor_blend, FSurfaceInfo Surf, FBITFIELD blendmode)
 {
 	side_t *pside = R_GetFFloorSide(gl_curline, pfloor);
 	sector_t *psector = pfloor->master->frontsector;
 
-	HWR_RenderExtraTexture(EDGE_TEXTURE_TOP_UPPER, pside, psector, NULL, pfloor, NULL, vs, ve, xcliplow, xcliphigh, Surf, blendmode);
-	HWR_RenderExtraTexture(EDGE_TEXTURE_BOTTOM_LOWER, pside, psector, NULL, pfloor, NULL, vs, ve, xcliplow, xcliphigh, Surf, blendmode);
+	if (use_3dfloor_blend)
+	{
+		if ((blendmode == PF_Translucent || blendmode == PF_Additive || blendmode == PF_ReverseSubtract) && Surf.PolyColor.s.alpha == 0x00)
+			return;
+
+		HWR_RenderExtraTexture(EDGE_TEXTURE_TOP_UPPER, pside, psector, NULL, pfloor, NULL, vs, ve, xcliplow, xcliphigh, Surf, blendmode);
+		HWR_RenderExtraTexture(EDGE_TEXTURE_BOTTOM_LOWER, pside, psector, NULL, pfloor, NULL, vs, ve, xcliplow, xcliphigh, Surf, blendmode);
+	}
+	else
+	{
+		if (HWR_BlendExtraTextureSurface(&pside->overlays[EDGE_TEXTURE_TOP_UPPER], &Surf))
+		{
+			HWR_RenderExtraTexture(EDGE_TEXTURE_TOP_UPPER, pside, psector, NULL, pfloor, NULL, vs, ve, xcliplow, xcliphigh, Surf, Surf.PolyFlags);
+		}
+		if (HWR_BlendExtraTextureSurface(&pside->overlays[EDGE_TEXTURE_BOTTOM_LOWER], &Surf))
+		{
+			HWR_RenderExtraTexture(EDGE_TEXTURE_BOTTOM_LOWER, pside, psector, NULL, pfloor, NULL, vs, ve, xcliplow, xcliphigh, Surf, Surf.PolyFlags);
+		}
+	}
 }
 
 // Sort of like GLWall::Process in GZDoom
@@ -2059,7 +2105,8 @@ static void HWR_ProcessSeg(void)
 		if (gl_midtexture)
 			HWR_RenderMidtexture(gl_midtexture, cliplow, cliphigh, worldtop, worldbottom, worldhigh, worldlow, worldtopslope, worldbottomslope, worldhighslope, worldlowslope, lightnum, wallVerts);
 
-		if (!gl_curline->polyseg) // Don't do it for polyobjects
+		// Don't do this for polyobjects
+		if (!gl_curline->polyseg)
 		{
 			// Render extra textures
 			for (unsigned i = 0; i < NUM_WALL_OVERLAYS; i++)
@@ -2069,7 +2116,11 @@ static void HWR_ProcessSeg(void)
 				if (IS_BOTTOM_EDGE_TEXTURE(i) && !has_bottom)
 					continue;
 
-				HWR_RenderExtraTexture(i, gl_sidedef, gl_frontsector, gl_backsector, NULL, NULL, vs, ve, cliplow, cliphigh, Surf, PF_Masked);
+				FSurfaceInfo edgeSurf;
+				if (HWR_BlendExtraTextureSurface(&gl_sidedef->overlays[i], &edgeSurf))
+				{
+					HWR_RenderExtraTexture(i, gl_sidedef, gl_frontsector, gl_backsector, NULL, NULL, vs, ve, cliplow, cliphigh, edgeSurf, edgeSurf.PolyFlags);
+				}
 			}
 
 			// Sky culling
@@ -2094,10 +2145,18 @@ static void HWR_ProcessSeg(void)
 		}
 		else
 		{
-			// Render extra textures
+			// Render extra textures for a polyobject side
 			polyobj_t *polyobj = gl_curline->polyseg;
-			HWR_RenderExtraTexture(EDGE_TEXTURE_TOP_UPPER, gl_sidedef, polyobj->lines[0]->frontsector, polyobj->lines[0]->backsector, NULL, polyobj, vs, ve, cliplow, cliphigh, Surf, PF_Masked);
-			HWR_RenderExtraTexture(EDGE_TEXTURE_BOTTOM_LOWER, gl_sidedef, polyobj->lines[0]->frontsector, polyobj->lines[0]->backsector, NULL, polyobj, vs, ve, cliplow, cliphigh, Surf, PF_Masked);
+
+			FSurfaceInfo edgeSurf;
+			if (HWR_BlendExtraTextureSurface(&gl_sidedef->overlays[EDGE_TEXTURE_TOP_UPPER], &edgeSurf))
+			{
+				HWR_RenderExtraTexture(EDGE_TEXTURE_TOP_UPPER, gl_sidedef, polyobj->lines[0]->frontsector, polyobj->lines[0]->backsector, NULL, polyobj, vs, ve, cliplow, cliphigh, edgeSurf, edgeSurf.PolyFlags);
+			}
+			if (HWR_BlendExtraTextureSurface(&gl_sidedef->overlays[EDGE_TEXTURE_BOTTOM_LOWER], &edgeSurf))
+			{
+				HWR_RenderExtraTexture(EDGE_TEXTURE_BOTTOM_LOWER, gl_sidedef, polyobj->lines[0]->frontsector, polyobj->lines[0]->backsector, NULL, polyobj, vs, ve, cliplow, cliphigh, edgeSurf, edgeSurf.PolyFlags);
+			}
 		}
 	}
 	else
@@ -2162,8 +2221,15 @@ static void HWR_ProcessSeg(void)
 		if (!gl_curline->polyseg)
 		{
 			// Render extra textures
-			HWR_RenderExtraTexture(EDGE_TEXTURE_TOP_UPPER, gl_sidedef, gl_frontsector, gl_backsector, NULL, NULL, vs, ve, cliplow, cliphigh, Surf, PF_Masked);
-			HWR_RenderExtraTexture(EDGE_TEXTURE_BOTTOM_LOWER, gl_sidedef, gl_frontsector, gl_backsector, NULL, NULL, vs, ve, cliplow, cliphigh, Surf, PF_Masked);
+			FSurfaceInfo edgeSurf;
+			if (HWR_BlendExtraTextureSurface(&gl_sidedef->overlays[EDGE_TEXTURE_TOP_UPPER], &edgeSurf))
+			{
+				HWR_RenderExtraTexture(EDGE_TEXTURE_TOP_UPPER, gl_sidedef, gl_frontsector, gl_backsector, NULL, NULL, vs, ve, cliplow, cliphigh, edgeSurf, edgeSurf.PolyFlags);
+			}
+			if (HWR_BlendExtraTextureSurface(&gl_sidedef->overlays[EDGE_TEXTURE_BOTTOM_LOWER], &edgeSurf))
+			{
+				HWR_RenderExtraTexture(EDGE_TEXTURE_BOTTOM_LOWER, gl_sidedef, gl_frontsector, gl_backsector, NULL, NULL, vs, ve, cliplow, cliphigh, edgeSurf, edgeSurf.PolyFlags);
+			}
 
 			if (gl_frontsector->ceilingpic == skyflatnum) // It's a single-sided line with sky for its sector
 			{
@@ -2319,6 +2385,8 @@ static void HWR_ProcessSeg(void)
 
 				FBITFIELD blendmode;
 
+				boolean use_3dfloor_blend = false;
+
 				if (rover->fofflags & FOF_FOG)
 				{
 					blendmode = PF_Fog|PF_NoTexture;
@@ -2328,6 +2396,8 @@ static void HWR_ProcessSeg(void)
 					lightnum = colormap ? lightnum : HWR_CalcWallLight(lightnum, vs.x, vs.y, ve.x, ve.y);
 
 					Surf.PolyColor.s.alpha = HWR_FogBlockAlpha(rover->master->frontsector->lightlevel, rover->master->frontsector->extra_colormap);
+
+					use_3dfloor_blend = true;
 
 					if (gl_frontsector->numlights)
 						HWR_SplitWall(gl_frontsector, wallVerts, 0, &Surf, rover->fofflags, rover, blendmode);
@@ -2342,6 +2412,9 @@ static void HWR_ProcessSeg(void)
 					{
 						blendmode = rover->blend ? HWR_GetBlendModeFlag(rover->blend) : PF_Translucent;
 						Surf.PolyColor.s.alpha = max(0, min(rover->alpha, 255));
+
+						if (blendmode != PF_Masked && !(blendmode == PF_Translucent && Surf.PolyColor.s.alpha == 255))
+							use_3dfloor_blend = true;
 					}
 
 					if (gl_frontsector->numlights)
@@ -2355,7 +2428,7 @@ static void HWR_ProcessSeg(void)
 					}
 				}
 
-				HWR_RenderFFloorExtraTextures(rover, vs, ve, cliplow, cliphigh, Surf, blendmode);
+				HWR_RenderFFloorExtraTextures(rover, vs, ve, cliplow, cliphigh, use_3dfloor_blend, Surf, blendmode);
 			}
 		}
 
@@ -2478,6 +2551,8 @@ static void HWR_ProcessSeg(void)
 
 				FBITFIELD blendmode;
 
+				boolean use_3dfloor_blend = false;
+
 				if (rover->fofflags & FOF_FOG)
 				{
 					blendmode = PF_Fog|PF_NoTexture;
@@ -2487,6 +2562,8 @@ static void HWR_ProcessSeg(void)
 					lightnum = colormap ? lightnum : HWR_CalcWallLight(lightnum, vs.x, vs.y, ve.x, ve.y);
 
 					Surf.PolyColor.s.alpha = HWR_FogBlockAlpha(rover->master->frontsector->lightlevel, rover->master->frontsector->extra_colormap);
+
+					use_3dfloor_blend = true;
 
 					if (gl_backsector->numlights)
 						HWR_SplitWall(gl_backsector, wallVerts, 0, &Surf, rover->fofflags, rover, blendmode);
@@ -2501,6 +2578,9 @@ static void HWR_ProcessSeg(void)
 					{
 						blendmode = rover->blend ? HWR_GetBlendModeFlag(rover->blend) : PF_Translucent;
 						Surf.PolyColor.s.alpha = max(0, min(rover->alpha, 255));
+
+						if (blendmode != PF_Masked && !(blendmode == PF_Translucent && Surf.PolyColor.s.alpha == 255))
+							use_3dfloor_blend = true;
 					}
 
 					if (gl_backsector->numlights)
@@ -2514,7 +2594,7 @@ static void HWR_ProcessSeg(void)
 					}
 				}
 
-				HWR_RenderFFloorExtraTextures(rover, vs, ve, cliplow, cliphigh, Surf, blendmode);
+				HWR_RenderFFloorExtraTextures(rover, vs, ve, cliplow, cliphigh, use_3dfloor_blend, Surf, blendmode);
 			}
 		}
 	}

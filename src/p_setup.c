@@ -1335,6 +1335,8 @@ static void P_InitSideEdges(side_t *sd)
 		sd->overlays[j].texture = R_TextureNumForName("-");
 		sd->overlays[j].offsetx = sd->overlays[j].offsety = 0;
 		sd->overlays[j].scalex = sd->overlays[j].scaley = FRACUNIT;
+		sd->overlays[j].alpha = FRACUNIT;
+		sd->overlays[j].blendmode = AST_COPY;
 		sd->overlays[j].flags = 0;
 		sd->overlays[j].side = sd;
 	}
@@ -1936,6 +1938,23 @@ static void ParseTextmapSidedefOverlay(unsigned which, UINT32 i, const char *par
 		overlay->scalex = FLOAT_TO_FIXED(atof(val));
 	else if (fastcmp(param, "scaley"))
 		overlay->scaley = FLOAT_TO_FIXED(atof(val));
+	else if (fastcmp(param, "alpha"))
+		overlay->alpha = FLOAT_TO_FIXED(atof(val));
+	else if (fastcmp(param, "renderstyle"))
+	{
+		if (fastcmp(val, "translucent"))
+			overlay->blendmode = AST_COPY;
+		else if (fastcmp(val, "add"))
+			overlay->blendmode = AST_ADD;
+		else if (fastcmp(val, "subtract"))
+			overlay->blendmode = AST_SUBTRACT;
+		else if (fastcmp(val, "reversesubtract"))
+			overlay->blendmode = AST_REVERSESUBTRACT;
+		else if (fastcmp(val, "modulate"))
+			overlay->blendmode = AST_MODULATE;
+		else if (fastcmp(val, "fog"))
+			overlay->blendmode = AST_FOG;
+	}
 	else if (fastcmp(param, "noskew") && fastcmp("true", val))
 		overlay->flags |= SIDEOVERLAYFLAG_NOSKEW;
 	else if (fastcmp(param, "noclip") && fastcmp("true", val))
@@ -2055,7 +2074,7 @@ static void ParseTextmapLinedefParameter(UINT32 i, const char *param, const char
 			lines[i].blendmode = AST_REVERSESUBTRACT;
 		else if (fastcmp(val, "modulate"))
 			lines[i].blendmode = AST_MODULATE;
-		if (fastcmp(val, "fog"))
+		else if (fastcmp(val, "fog"))
 			lines[i].blendmode = AST_FOG;
 	}
 	else if (fastcmp(param, "executordelay"))
@@ -2266,6 +2285,31 @@ static void WriteTextmapEdgeTexture(const char *prefix, unsigned i, side_t *side
 		fprintf(f, "%s""scalex = %f;\n", prefix, FIXED_TO_FLOAT(side->overlays[i].scalex));
 	if (side->overlays[i].scaley != FRACUNIT)
 		fprintf(f, "%s""scaley = %f;\n", prefix, FIXED_TO_FLOAT(side->overlays[i].scaley));
+	if (side->overlays[i].alpha != FRACUNIT)
+		fprintf(f, "%s""alpha = %f;\n", prefix, FIXED_TO_FLOAT(side->overlays[i].alpha));
+	if (side->overlays[i].blendmode != AST_COPY)
+	{
+		switch (side->overlays[i].blendmode)
+		{
+			case AST_ADD:
+				fprintf(f, "%s""renderstyle = \"add\";\n", prefix);
+				break;
+			case AST_SUBTRACT:
+				fprintf(f, "%s""renderstyle = \"subtract\";\n", prefix);
+				break;
+			case AST_REVERSESUBTRACT:
+				fprintf(f, "%s""renderstyle = \"reversesubtract\";\n", prefix);
+				break;
+			case AST_MODULATE:
+				fprintf(f, "%s""renderstyle = \"modulate\";\n", prefix);
+				break;
+			case AST_FOG:
+				fprintf(f, "%s""renderstyle = \"fog\";\n", prefix);
+				break;
+			default:
+				break;
+		}
+	}
 	if (side->overlays[i].flags & SIDEOVERLAYFLAG_NOSKEW)
 		fprintf(f, "%s""noskew = true;\n", prefix);
 	if (side->overlays[i].flags & SIDEOVERLAYFLAG_NOCLIP)

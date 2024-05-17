@@ -1485,6 +1485,8 @@ enum sideoverlay_e {
 	sideoverlay_offsety,
 	sideoverlay_scalex,
 	sideoverlay_scaley,
+	sideoverlay_alpha,
+	sideoverlay_blendmode,
 	sideoverlay_noskew,
 	sideoverlay_noclip,
 	sideoverlay_wrap
@@ -1497,6 +1499,8 @@ static const char *const sideoverlay_opt[] = {
 	"offsety",
 	"scalex",
 	"scaley",
+	"alpha",
+	"blendmode",
 	"noskew",
 	"noclip",
 	"wrap",
@@ -1537,6 +1541,12 @@ static int sideoverlay_get(lua_State *L)
 		return 1;
 	case sideoverlay_scaley:
 		lua_pushfixed(L, overlay->scaley);
+		return 1;
+	case sideoverlay_alpha:
+		lua_pushfixed(L, overlay->alpha);
+		return 1;
+	case sideoverlay_blendmode:
+		lua_pushinteger(L, overlay->blendmode);
 		return 1;
 	case sideoverlay_noskew:
 		lua_pushboolean(L, overlay->flags & SIDEOVERLAYFLAG_NOSKEW);
@@ -1588,6 +1598,17 @@ static int sideoverlay_set(lua_State *L)
 	case sideoverlay_scaley:
 		overlay->scaley = luaL_checkfixed(L, 3);
 		break;
+	case sideoverlay_alpha:
+		overlay->alpha = min(max(0, luaL_checkfixed(L, 3)), FRACUNIT);
+		break;
+	case sideoverlay_blendmode:
+	{
+		INT32 blendmode = luaL_checkinteger(L, 3);
+		if (blendmode < 0 || blendmode > AST_OVERLAY)
+			return luaL_error(L, "blendmode %d out of range (0 - %d).", blendmode, AST_OVERLAY);
+		overlay->blendmode = (UINT8)blendmode;
+		break;
+	}
 	case sideoverlay_noskew:
 		if (luaL_checkboolean(L, 3))
 			overlay->flags |= SIDEOVERLAYFLAG_NOSKEW;

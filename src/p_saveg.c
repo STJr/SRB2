@@ -934,7 +934,9 @@ enum
 	LD_EDGEOFFY   = 1<<2,
 	LD_EDGESCALEX = 1<<3,
 	LD_EDGESCALEY = 1<<4,
-	LD_EDGEFLAGS  = 1<<5
+	LD_EDGEALPHA  = 1<<5,
+	LD_EDGEBLEND  = 1<<6,
+	LD_EDGEFLAGS  = 1<<7
 };
 
 static boolean P_AreArgsEqual(const line_t *li, const line_t *spawnli)
@@ -1381,6 +1383,10 @@ static UINT8 GetSideEdgeDiff(const side_overlay_t *edge, const side_overlay_t *s
 		diff |= LD_EDGESCALEX;
 	if (edge->scaley != spawnedge->scaley)
 		diff |= LD_EDGESCALEY;
+	if (edge->alpha != spawnedge->alpha)
+		diff |= LD_EDGEALPHA;
+	if (edge->blendmode != spawnedge->blendmode)
+		diff |= LD_EDGEBLEND;
 	if (edge->flags != spawnedge->flags)
 		diff |= LD_EDGEFLAGS;
 	return diff;
@@ -1459,6 +1465,10 @@ static void ArchiveSideEdge(const side_overlay_t *edge, UINT8 diff)
 		WRITEFIXED(save_p, edge->scalex);
 	if (diff & LD_EDGESCALEY)
 		WRITEFIXED(save_p, edge->scaley);
+	if (diff & LD_EDGEALPHA)
+		WRITEFIXED(save_p, edge->alpha);
+	if (diff & LD_EDGEBLEND)
+		WRITEUINT8(save_p, edge->blendmode);
 	if (diff & LD_EDGEFLAGS)
 		WRITEUINT8(save_p, edge->flags);
 }
@@ -1636,6 +1646,10 @@ static void UnArchiveSideEdge(side_overlay_t *edge)
 		edge->scalex = READFIXED(save_p);
 	if (diff & LD_EDGESCALEY)
 		edge->scaley = READFIXED(save_p);
+	if (diff & LD_EDGEALPHA)
+		edge->alpha = READFIXED(save_p);
+	if (diff & LD_EDGEBLEND)
+		edge->blendmode = READUINT8(save_p);
 	if (diff & LD_EDGEFLAGS)
 		edge->flags = READUINT8(save_p);
 }

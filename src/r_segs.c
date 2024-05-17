@@ -319,26 +319,18 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 
 	if (blendmode != AST_FOG)
 	{
-		if (blendmode)
-		{
-			if (ldef->alpha == NUMTRANSMAPS || blendmode == AST_MODULATE)
-				blendlevel = 0;
-			else
-				blendlevel = R_GetLinedefTransTable(ldef->alpha);
-		}
-		else if (ldef->alpha > 0 && ldef->alpha < FRACUNIT)
-			blendlevel = R_GetLinedefTransTable(ldef->alpha);
+		blendlevel = R_GetLinedefTransTable(ldef->alpha);
 	}
 
 	if (curline->polyseg && curline->polyseg->translucency > 0)
 	{
-		if (curline->polyseg->translucency >= NUMTRANSMAPS)
-			return;
-
 		// Polyobjects reset the line's blendmode
 		blendmode = 0;
 		blendlevel = curline->polyseg->translucency;
 	}
+
+	if (!R_BlendLevelVisible(blendmode ? blendmode : AST_TRANSLUCENT, blendlevel))
+		return;
 
 	hasoverlaytexture = false;
 
@@ -729,14 +721,17 @@ static void R_RenderExtraTexture(unsigned which, INT32 x1, INT32 x2, INT32 repea
 	}
 	else if (blendmode)
 	{
-		if (blendlevel == NUMTRANSMAPS || blendmode == AST_MODULATE)
-			dc_transmap = R_GetBlendTable(blendmode, 0);
-		else
-			dc_transmap = R_GetBlendTable(blendmode, blendlevel);
+		if (!R_BlendLevelVisible(blendmode, blendlevel))
+			return;
+
+		dc_transmap = R_GetBlendTable(blendmode, blendlevel);
 		colfunc = colfuncs[COLDRAWFUNC_FUZZY];
 	}
-	else if (blendlevel > 0 && blendlevel < 10)
+	else if (blendlevel > 0)
 	{
+		if (!R_BlendLevelVisible(AST_TRANSLUCENT, blendlevel))
+			return;
+
 		dc_transmap = R_GetTranslucencyTable(blendlevel);
 		colfunc = colfuncs[COLDRAWFUNC_FUZZY];
 	}
@@ -996,21 +991,30 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 	texnum = R_GetTextureNum(sidedef->midtexture);
 	vertflip = textures[texnum]->flip & 2;
 
+	dc_transmap = NULL;
+
 	if (pfloor->fofflags & FOF_TRANSLUCENT)
 	{
-		boolean fuzzy = true;
-
 		// Hacked up support for alpha value in software mode Tails 09-24-2002
 		// ...unhacked by toaster 04-01-2021, re-hacked a little by sphere 19-11-2021
 		blendlevel = (10*((256+12) - pfloor->alpha))/255;
-		if (blendlevel >= 10)
-			return; // Don't even draw it
-		if (pfloor->blend) // additive, (reverse) subtractive, modulative
-			dc_transmap = R_GetBlendTable(pfloor->blend, blendlevel);
-		else if (!(dc_transmap = R_GetTranslucencyTable(blendlevel)) || blendlevel == 0)
-			fuzzy = false; // Opaque
 
-		if (fuzzy)
+		if (pfloor->blend) // additive, (reverse) subtractive, modulative
+		{
+			if (!R_BlendLevelVisible(pfloor->blend, blendlevel))
+				return;
+
+			dc_transmap = R_GetBlendTable(pfloor->blend, blendlevel);
+		}
+		else
+		{
+			if (!R_BlendLevelVisible(AST_TRANSLUCENT, blendlevel))
+				return;
+			else if (blendlevel > 0)
+				dc_transmap = R_GetTranslucencyTable(blendlevel);
+		}
+
+		if (dc_transmap)
 			colfunc = colfuncs[COLDRAWFUNC_FUZZY];
 	}
 	else if (pfloor->fofflags & FOF_FOG)
@@ -2260,6 +2264,14 @@ static void R_RenderSingleOverlayTexture(unsigned which, drawseg_t *ds, INT32 x1
 	{
 		mfloorclip = overlayopening[1];
 		mceilingclip = overlayopening[0];
+	}
+
+	if (blendmode == 0 && blendlevel == 0)
+	{
+		blendmode = sidedef->overlays[which].blendmode;
+
+		if (blendmode != AST_FOG)
+			blendlevel = R_GetLinedefTransTable(sidedef->overlays[which].alpha);
 	}
 
 	R_RenderExtraTexture(which, x1, x2, repeats, blendmode, blendlevel, ds);
@@ -3655,7 +3667,13 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 					frontsector, backsector,
 					ds_p->leftpos.x, ds_p->leftpos.y, ds_p->rightpos.x, ds_p->rightpos.y);
 
-				R_RenderExtraTexture(i, ds_p->x1, ds_p->x2, repeats, 0, 0, ds_p);
+				UINT32 blendmode = sidedef->overlays[i].blendmode;
+				UINT8 blendlevel = 0;
+
+				if (blendmode != AST_FOG)
+					blendlevel = R_GetLinedefTransTable(sidedef->overlays[i].alpha);
+
+				R_RenderExtraTexture(i, ds_p->x1, ds_p->x2, repeats, blendmode, blendlevel, ds_p);
 			}
 		}
 	}
