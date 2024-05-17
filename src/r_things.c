@@ -1055,7 +1055,11 @@ static void R_DrawVisSprite(vissprite_t *vis)
 	// invalid memory access crashes caused by R_ProjectDropShadow putting wrong values
 	// in dc_texturemid and dc_iscale when the shadow is sloped.
 	if (vis->cut & SC_SHADOW)
+	{
+		if (dc_transmap == NULL)
+			return;
 		colfunc = R_DrawDropShadowColumn_8;
+	}
 
 	if (vis->extra_colormap && !(vis->renderflags & RF_NOCOLORMAPS))
 	{
