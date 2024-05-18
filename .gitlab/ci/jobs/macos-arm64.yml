@@ -1,0 +1,44 @@
+osxcross arm64:
+  extends: .srb2ci
+
+  stage: build
+
+  when: manual
+
+  allow_failure: true
+
+  artifacts:
+    paths:
+      - "build.osxcross/bin/"
+      - "build.osxcross/src/config.h"
+    expose_as: "Mac arm64"
+    name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-clang"
+
+  variables:
+    OSXCROSS_HOST: arm64-apple-darwin21.4
+    LD: arm64-apple-darwin21.4-ld
+
+  script:
+    - - |
+          # apt_development
+          echo -e "\e[0Ksection_start:`date +%s`:macports_development[collapsed=true]\r\e[0KInstalling development packages"
+      - osxcross-macports install --arm64 curl libopenmpt libsdl2_mixer
+      - |
+          # apt_development
+          echo -e "\e[0Ksection_end:`date +%s`:macports_development\r\e[0K"
+
+    - - |
+          # cmake
+          echo -e "\e[0Ksection_start:`date +%s`:cmake[collapsed=false]\r\e[0KBuilding Makefiles"
+      - cmake -B build.osxcross --toolchain /osxcross/toolchain.cmake -DCPM_USE_LOCAL_PACKAGES:BOOL=ON -DOPENMPT_INCLUDE_DIR:PATH="/osxcross/macports/pkgs/opt/local/include" -DSDL2_INCLUDE_DIR:PATH="/osxcross/macports/pkgs/opt/local/lib" -DSRB2_CONFIG_ENABLE_TESTS:BOOL=OFF -DSRB2_CONFIG_SYSTEM_LIBRARIES:BOOL=ON -DSRB2_CONFIG_USE_GME:BOOL=OFF -G "Unix Makefiles"
+      - |
+          # make
+          echo -e "\e[0Ksection_end:`date +%s`:make\r\e[0K"
+
+    - - |
+          # make
+          echo -e "\e[0Ksection_start:`date +%s`:make[collapsed=false]\r\e[0KCompiling SRB2"
+      - make --directory=build.osxcross --keep-going || make --directory=build.osxcross --keep-going
+      - |
+          # make
+          echo -e "\e[0Ksection_end:`date +%s`:make\r\e[0K"
