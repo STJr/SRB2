@@ -382,6 +382,8 @@ static INT32 Impl_SDL_Scancode_To_Keycode(SDL_Scancode code)
 
 static boolean ShouldIgnoreMouse(void)
 {
+	if (cv_alwaysgrabmouse.value)
+		return false;
 	if (menuactive)
 		return !M_MouseNeeded();
 	if (paused || con_destlines || chat_on)
