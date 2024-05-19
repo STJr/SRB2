@@ -859,11 +859,10 @@ fixed_t P_GetLightZAt(const lightlist_t *light, fixed_t x, fixed_t y)
 // When given a vector, rotates it and aligns it to a slope
 void P_QuantizeMomentumToSlope(vector3_t *momentum, pslope_t *slope)
 {
-	vector3_t axis; // Fuck you, C90.
-
 	if (slope->flags & SL_NOPHYSICS)
 		return; // No physics, no quantizing.
 
+	vector3_t axis;
 	axis.x = -slope->d.y;
 	axis.y = slope->d.x;
 	axis.z = 0;
@@ -877,9 +876,91 @@ void P_QuantizeMomentumToSlope(vector3_t *momentum, pslope_t *slope)
 // When given a vector, rotates and aligns it to a flat surface (from being relative to a given slope)
 void P_ReverseQuantizeMomentumToSlope(vector3_t *momentum, pslope_t *slope)
 {
-	slope->zangle = InvAngle(slope->zangle);
-	P_QuantizeMomentumToSlope(momentum, slope);
-	slope->zangle = InvAngle(slope->zangle);
+	if (slope->flags & SL_NOPHYSICS)
+		return; // No physics, no quantizing.
+
+	vector3_t axis;
+	axis.x = -slope->d.y;
+	axis.y = slope->d.x;
+	axis.z = 0;
+
+	FV3_Rotate(momentum, &axis, InvAngle(slope->zangle) >> ANGLETOFINESHIFT);
+}
+
+angle_t P_GetStandingSlopeZAngle(pslope_t *slope, line_t *line)
+{
+	angle_t zangle = slope->zangle;
+
+	if (line)
+	{
+		zangle = R_PointToAngle2(0, P_GetSlopeZAt(slope, line->v1->x, line->v1->y),
+			R_PointToDist2(line->v1->x, line->v1->y, line->v2->x, line->v2->y), P_GetSlopeZAt(slope, line->v2->x, line->v2->y));
+	}
+
+	return zangle;
+}
+
+angle_t P_GetStandingSlopeDirection(pslope_t *slope, line_t *line)
+{
+	angle_t xydirection = slope->xydirection;
+
+	if (line)
+	{
+		xydirection = R_PointToAngle2(line->v1->x, line->v1->y, line->v2->x, line->v2->y);
+	}
+
+	return xydirection;
+}
+
+angle_t P_GetObjectStandingSlopeZAngle(mobj_t *mo)
+{
+	return P_GetStandingSlopeZAngle(mo->standingslope, mo->standingline);
+}
+
+angle_t P_GetObjectStandingSlopeDirection(mobj_t *mo)
+{
+	return P_GetStandingSlopeDirection(mo->standingslope, mo->standingline);
+}
+
+static void QuantizeMomentumToSlope(pslope_t *slope, line_t *line, vector3_t *momentum, boolean reverse)
+{
+	if (!slope || slope->flags & SL_NOPHYSICS)
+		return;
+
+	angle_t zangle = P_GetStandingSlopeZAngle(slope, line);
+
+	if (reverse)
+		zangle = InvAngle(zangle);
+
+	vector3_t axis;
+	axis.z = 0;
+
+	if (line)
+	{
+		fixed_t len = R_PointToDist2(0, 0, line->dx, line->dy);
+		axis.x = FixedDiv(line->dy, len);
+		axis.y = -FixedDiv(line->dx, len);
+	}
+	else
+	{
+		axis.x = -slope->d.y;
+		axis.y = slope->d.x;
+	}
+
+	FV3_Rotate(momentum, &axis, zangle >> ANGLETOFINESHIFT);
+}
+
+// Given a vector of the object's momentum, rotates it and aligns it to the slope the object is standing on
+void P_QuantizeObjectMomentumToSlope(mobj_t *mo, vector3_t *momentum)
+{
+	QuantizeMomentumToSlope(mo->standingslope, mo->standingline, momentum, false);
+}
+
+// Given a vector of the object's momentum, rotates and aligns it to a flat surface
+// (from being relative to the slope the object is standing on)
+void P_ReverseQuantizeObjectMomentumToSlope(mobj_t *mo, vector3_t *momentum)
+{
+	QuantizeMomentumToSlope(mo->standingslope, mo->standingline, momentum, true);
 }
 
 //
@@ -899,7 +980,7 @@ void P_SlopeLaunch(mobj_t *mo)
 		slopemom.x = mo->momx;
 		slopemom.y = mo->momy;
 		slopemom.z = mo->momz*2;
-		P_QuantizeMomentumToSlope(&slopemom, mo->standingslope);
+		P_QuantizeObjectMomentumToSlope(mo, &slopemom);
 
 		mo->momx = slopemom.x;
 		mo->momy = slopemom.y;
@@ -919,7 +1000,7 @@ void P_SlopeLaunch(mobj_t *mo)
 // It would be nice to have a single function that does everything necessary for slope-to-wall transfer.
 // However, it needs to be seperated out in P_XYMovement to take into account momentum before and after hitting the wall.
 // This just performs the necessary calculations for getting the base vertical momentum; the horizontal is already reasonably calculated by P_SlideMove.
-fixed_t P_GetWallTransferMomZ(mobj_t *mo, pslope_t *slope)
+fixed_t P_GetWallTransferMomZ(mobj_t *mo, pslope_t *slope, line_t *line)
 {
 	vector3_t slopemom, axis;
 	angle_t ang;
@@ -927,18 +1008,30 @@ fixed_t P_GetWallTransferMomZ(mobj_t *mo, pslope_t *slope)
 	if (slope->flags & SL_NOPHYSICS)
 		return 0;
 
+	angle_t zangle = P_GetStandingSlopeZAngle(slope, line);
+
 	// If there's physics, time for launching.
 	// Doesn't kill the vertical momentum as much as P_SlopeLaunch does.
-	ang = slope->zangle + ANG15*((slope->zangle > 0) ? 1 : -1);
+	ang = zangle + ANG15*((zangle > 0) ? 1 : -1);
 	if (ang > ANGLE_90 && ang < ANGLE_180)
-		ang = ((slope->zangle > 0) ? ANGLE_90 : InvAngle(ANGLE_90)); // hard cap of directly upwards
+		ang = ((zangle > 0) ? ANGLE_90 : InvAngle(ANGLE_90)); // hard cap of directly upwards
 
 	slopemom.x = mo->momx;
 	slopemom.y = mo->momy;
 	slopemom.z = 3*(mo->momz/2);
 
-	axis.x = -slope->d.y;
-	axis.y = slope->d.x;
+	if (line)
+	{
+		fixed_t len = R_PointToDist2(0, 0, line->dx, line->dy);
+		axis.x = FixedDiv(line->dy, len);
+		axis.y = -FixedDiv(line->dx, len);
+	}
+	else
+	{
+		axis.x = -slope->d.y;
+		axis.y = slope->d.x;
+	}
+
 	axis.z = 0;
 
 	FV3_Rotate(&slopemom, &axis, ang >> ANGLETOFINESHIFT);
@@ -947,7 +1040,7 @@ fixed_t P_GetWallTransferMomZ(mobj_t *mo, pslope_t *slope)
 }
 
 // Function to help handle landing on slopes
-void P_HandleSlopeLanding(mobj_t *thing, pslope_t *slope)
+void P_HandleSlopeLanding(mobj_t *thing, pslope_t *slope, line_t *line)
 {
 	vector3_t mom; // Ditto.
 	if (slope->flags & SL_NOPHYSICS || (slope->normal.x == 0 && slope->normal.y == 0)) { // No physics, no need to make anything complicated.
@@ -966,12 +1059,13 @@ void P_HandleSlopeLanding(mobj_t *thing, pslope_t *slope)
 	mom.y = thing->momy;
 	mom.z = thing->momz*2;
 
-	P_ReverseQuantizeMomentumToSlope(&mom, slope);
+	QuantizeMomentumToSlope(slope, line, &mom, true);
 
 	if (P_MobjFlip(thing)*mom.z < 0) { // falling, land on slope
 		thing->momx = mom.x;
 		thing->momy = mom.y;
 		thing->standingslope = slope;
+		thing->standingline = line;
 		P_SetPitchRollFromSlope(thing, slope);
 		if (!thing->player || !(thing->player->pflags & PF_BOUNCING))
 			thing->momz = -P_MobjFlip(thing);
@@ -983,6 +1077,7 @@ void P_HandleSlopeLanding(mobj_t *thing, pslope_t *slope)
 void P_ButteredSlope(mobj_t *mo)
 {
 	fixed_t thrust;
+	angle_t zangle, xydirection;
 
 	if (!mo->standingslope)
 		return;
@@ -1001,12 +1096,15 @@ void P_ButteredSlope(mobj_t *mo)
 			return; // Allow the player to stand still on slopes below a certain steepness
 	}
 
-	thrust = FINESINE(mo->standingslope->zangle>>ANGLETOFINESHIFT) * 3 / 2 * (mo->eflags & MFE_VERTICALFLIP ? 1 : -1);
+	zangle = P_GetStandingSlopeZAngle(mo->standingslope, mo->standingline);
+	xydirection = P_GetStandingSlopeDirection(mo->standingslope, mo->standingline);
+
+	thrust = FINESINE(zangle>>ANGLETOFINESHIFT) * 3 / 2 * (mo->eflags & MFE_VERTICALFLIP ? 1 : -1);
 
 	if (mo->player && (mo->player->pflags & PF_SPINNING)) {
 		fixed_t mult = 0;
 		if (mo->momx || mo->momy) {
-			angle_t angle = R_PointToAngle2(0, 0, mo->momx, mo->momy) - mo->standingslope->xydirection;
+			angle_t angle = R_PointToAngle2(0, 0, mo->momx, mo->momy) - xydirection;
 
 			if (P_MobjFlip(mo) * mo->standingslope->zdelta < 0)
 				angle ^= ANGLE_180;
@@ -1027,5 +1125,5 @@ void P_ButteredSlope(mobj_t *mo)
 	// ... and its friction against the ground for good measure (divided by original friction to keep behaviour for normal slopes the same).
 	thrust = FixedMul(thrust, FixedDiv(mo->friction, ORIG_FRICTION));
 
-	P_Thrust(mo, mo->standingslope->xydirection, thrust);
+	P_Thrust(mo, xydirection, thrust);
 }

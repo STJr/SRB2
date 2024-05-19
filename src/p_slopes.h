@@ -84,9 +84,15 @@ fixed_t P_GetLightZAt(const lightlist_t *light, fixed_t x, fixed_t y);
 // Lots of physics-based bullshit
 void P_QuantizeMomentumToSlope(vector3_t *momentum, pslope_t *slope);
 void P_ReverseQuantizeMomentumToSlope(vector3_t *momentum, pslope_t *slope);
+void P_QuantizeObjectMomentumToSlope(mobj_t *mo, vector3_t *momentum);
+void P_ReverseQuantizeObjectMomentumToSlope(mobj_t *mo, vector3_t *momentum);
+angle_t P_GetStandingSlopeZAngle(pslope_t *slope, line_t *line);
+angle_t P_GetStandingSlopeDirection(pslope_t *slope, line_t *line);
+angle_t P_GetObjectStandingSlopeZAngle(mobj_t *mo);
+angle_t P_GetObjectStandingSlopeDirection(mobj_t *mo);
 void P_SlopeLaunch(mobj_t *mo);
-fixed_t P_GetWallTransferMomZ(mobj_t *mo, pslope_t *slope);
-void P_HandleSlopeLanding(mobj_t *thing, pslope_t *slope);
+fixed_t P_GetWallTransferMomZ(mobj_t *mo, pslope_t *slope, line_t *line);
+void P_HandleSlopeLanding(mobj_t *thing, pslope_t *slope, line_t *line);
 void P_ButteredSlope(mobj_t *mo);
 
 pslope_t *P_MakeSlopeViaEquationConstants(const double a, const double b, const double c, const double d);

@@ -55,6 +55,7 @@ mobj_t *tmfloorthing; // the thing corresponding to tmfloorz or NULL if tmfloorz
 mobj_t *tmhitthing; // the solid thing you bumped into (for collisions)
 ffloor_t *tmfloorrover, *tmceilingrover;
 pslope_t *tmfloorslope, *tmceilingslope;
+line_t *tmfloorline, *tmceilingline;
 
 // keep track of the line that lowers the ceiling,
 // so missiles don't explode against sky hack walls
@@ -1760,6 +1761,7 @@ static unsigned PIT_DoCheckThing(mobj_t *thing)
 					tmfloorz = thing->z + thing->height;
 					tmfloorrover = NULL;
 					tmfloorslope = NULL;
+					tmfloorline = NULL;
 				}
 				return CHECKTHING_COLLIDE;
 			}
@@ -1779,6 +1781,7 @@ static unsigned PIT_DoCheckThing(mobj_t *thing)
 				tmfloorz = tmceilingz = topz; // block while in air
 				tmceilingrover = NULL;
 				tmceilingslope = NULL;
+				tmceilingline = NULL;
 				tmfloorthing = thing; // needed for side collision
 
 				collide = CHECKTHING_COLLIDE;
@@ -1788,6 +1791,7 @@ static unsigned PIT_DoCheckThing(mobj_t *thing)
 				tmceilingz = topz;
 				tmceilingrover = NULL;
 				tmceilingslope = NULL;
+				tmceilingline = NULL;
 				tmfloorthing = thing; // thing we may stand on
 
 				collide = CHECKTHING_COLLIDE;
@@ -1805,6 +1809,7 @@ static unsigned PIT_DoCheckThing(mobj_t *thing)
 					tmceilingz = thing->z;
 					tmceilingrover = NULL;
 					tmceilingslope = NULL;
+					tmceilingline = NULL;
 				}
 				return CHECKTHING_COLLIDE;
 			}
@@ -1824,6 +1829,7 @@ static unsigned PIT_DoCheckThing(mobj_t *thing)
 				tmfloorz = tmceilingz = topz; // block while in air
 				tmfloorrover = NULL;
 				tmfloorslope = NULL;
+				tmfloorline = NULL;
 				tmfloorthing = thing; // needed for side collision
 
 				collide = CHECKTHING_COLLIDE;
@@ -1833,6 +1839,7 @@ static unsigned PIT_DoCheckThing(mobj_t *thing)
 				tmfloorz = topz;
 				tmfloorrover = NULL;
 				tmfloorslope = NULL;
+				tmfloorline = NULL;
 				tmfloorthing = thing; // thing we may stand on
 
 				collide = CHECKTHING_COLLIDE;
@@ -2000,6 +2007,7 @@ static boolean PIT_CheckLine(line_t *ld)
 		ceilingline = ld;
 		tmceilingrover = openceilingrover;
 		tmceilingslope = opentopslope;
+		tmceilingline = opentopline;
 	}
 
 	if (openbottom > tmfloorz)
@@ -2007,6 +2015,7 @@ static boolean PIT_CheckLine(line_t *ld)
 		tmfloorz = openbottom;
 		tmfloorrover = openfloorrover;
 		tmfloorslope = openbottomslope;
+		tmfloorline = openbottomline;
 	}
 
 	if (highceiling > tmdrpoffceilz)
@@ -2057,6 +2066,8 @@ boolean P_CheckPosition(mobj_t *thing, fixed_t x, fixed_t y)
 	tmceilingz = P_GetCeilingZ(thing, newsubsec->sector, x, y, NULL); //newsubsec->sector->ceilingheight;
 	tmfloorrover = NULL;
 	tmceilingrover = NULL;
+	tmfloorline = NULL;
+	tmceilingline = NULL;
 	tmfloorslope = newsubsec->sector->f_slope;
 	tmceilingslope = newsubsec->sector->c_slope;
 
@@ -2642,6 +2653,8 @@ boolean PIT_PushableMoved(mobj_t *thing)
 		ffloor_t *oldceilrover = tmceilingrover;
 		pslope_t *oldfslope = tmfloorslope;
 		pslope_t *oldcslope = tmceilingslope;
+		line_t *oldfline = tmfloorline;
+		line_t *oldcline = tmceilingline;
 
 		// Move the player
 		P_TryMove(thing, thing->x+stand->momx, thing->y+stand->momy, true);
@@ -2658,6 +2671,8 @@ boolean PIT_PushableMoved(mobj_t *thing)
 		tmceilingrover = oldceilrover;
 		tmfloorslope = oldfslope;
 		tmceilingslope = oldcslope;
+		tmfloorline = oldfline;
+		tmceilingline = oldcline;
 		thing->momz = stand->momz;
 	}
 	else
@@ -2899,11 +2914,12 @@ boolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, boolean allowdropoff)
 		// Assign thing's standingslope if needed
 		if (thing->z <= tmfloorz && !(thing->eflags & MFE_VERTICALFLIP)) {
 			if (!startingonground && tmfloorslope)
-				P_HandleSlopeLanding(thing, tmfloorslope);
+				P_HandleSlopeLanding(thing, tmfloorslope, tmfloorline);
 
 			if (thing->momz <= 0)
 			{
 				thing->standingslope = tmfloorslope;
+				thing->standingline = tmfloorline;
 				P_SetPitchRollFromSlope(thing, thing->standingslope);
 
 				if (thing->momz == 0 && thing->player && !startingonground)
@@ -2912,11 +2928,12 @@ boolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, boolean allowdropoff)
 		}
 		else if (thing->z+thing->height >= tmceilingz && (thing->eflags & MFE_VERTICALFLIP)) {
 			if (!startingonground && tmceilingslope)
-				P_HandleSlopeLanding(thing, tmceilingslope);
+				P_HandleSlopeLanding(thing, tmceilingslope, tmceilingline);
 
 			if (thing->momz >= 0)
 			{
 				thing->standingslope = tmceilingslope;
+				thing->standingline = tmceilingline;
 				P_SetPitchRollFromSlope(thing, thing->standingslope);
 
 				if (thing->momz == 0 && thing->player && !startingonground)
@@ -2924,8 +2941,12 @@ boolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, boolean allowdropoff)
 			}
 		}
 	}
-	else // don't set standingslope if you're not going to clip against it
+	else
+	{
+		// don't set standingslope or standingline if you're not going to clip against them
 		thing->standingslope = NULL;
+		thing->standingline = NULL;
+	}
 
 	thing->x = x;
 	thing->y = y;

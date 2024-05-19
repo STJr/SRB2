@@ -280,6 +280,7 @@ fixed_t P_InterceptVector(divline_t *v2, divline_t *v1)
 fixed_t opentop, openbottom, openrange, lowfloor, highceiling;
 pslope_t *opentopslope, *openbottomslope;
 ffloor_t *openfloorrover, *openceilingrover;
+line_t *opentopline, *openbottomline;
 
 // P_CameraLineOpening
 // P_LineOpening, but for camera
@@ -440,6 +441,8 @@ void P_LineOpening(line_t *linedef, mobj_t *mobj)
 	I_Assert(back != NULL);
 
 	openfloorrover = openceilingrover = NULL;
+	opentopline = openbottomline = NULL;
+
 	if (linedef->polyobj)
 	{
 		// set these defaults so that polyobjects don't interfere with collision above or below them
@@ -544,6 +547,7 @@ void P_LineOpening(line_t *linedef, mobj_t *mobj)
 						if ((linedef->flags & ML_MIDPEG) != 0) {
 							opentopslope = openbottomslope;
 						}
+						opentopline = linedef;
 					}
 				} else { // Above
 					if (openbottom < textop) {
@@ -551,6 +555,7 @@ void P_LineOpening(line_t *linedef, mobj_t *mobj)
 						if ((linedef->flags & ML_MIDPEG) == 0) {
 							openbottomslope = opentopslope;
 						}
+						openbottomline = linedef;
 					}
 				}
 			}

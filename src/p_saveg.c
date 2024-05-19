@@ -1746,7 +1746,8 @@ typedef enum
 	MD2_DISPOFFSET          = 1<<23,
 	MD2_DRAWONLYFORPLAYER   = 1<<24,
 	MD2_DONTDRAWFORVIEWMOBJ = 1<<25,
-	MD2_TRANSLATION         = 1<<26
+	MD2_TRANSLATION         = 1<<26,
+	MD2_STANDINGLINE        = 1<<27
 } mobj_diff2_t;
 
 typedef enum
@@ -1953,6 +1954,8 @@ static void SaveMobjThinker(const thinker_t *th, const UINT8 type)
 		diff2 |= MD2_CEILINGROVER;
 	if (mobj->standingslope)
 		diff2 |= MD2_SLOPE;
+	if (mobj->standingline)
+		diff2 |= MD2_STANDINGLINE;
 	if (mobj->colorized)
 		diff2 |= MD2_COLORIZED;
 	if (mobj->mirrored)
@@ -2125,6 +2128,8 @@ static void SaveMobjThinker(const thinker_t *th, const UINT8 type)
 		WRITEUINT32(save_p, mobj->hprev->mobjnum);
 	if (diff2 & MD2_SLOPE)
 		WRITEUINT16(save_p, mobj->standingslope->id);
+	if (diff2 & MD2_STANDINGLINE)
+		WRITEUINT32(save_p, SaveLine(mobj->standingline));
 	if (diff2 & MD2_COLORIZED)
 		WRITEUINT8(save_p, mobj->colorized);
 	if (diff2 & MD2_MIRRORED)
@@ -3181,6 +3186,8 @@ static thinker_t* LoadMobjThinker(actionf_p1 thinker)
 		mobj->hprev = (mobj_t *)(size_t)READUINT32(save_p);
 	if (diff2 & MD2_SLOPE)
 		mobj->standingslope = P_SlopeById(READUINT16(save_p));
+	if (diff2 & MD2_STANDINGLINE)
+		mobj->standingline = LoadLine(READUINT32(save_p));
 	if (diff2 & MD2_COLORIZED)
 		mobj->colorized = READUINT8(save_p);
 	if (diff2 & MD2_MIRRORED)
