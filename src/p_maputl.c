@@ -501,7 +501,7 @@ void P_LineOpening(line_t *linedef, mobj_t *mobj)
 
 			if (texnum) {
 				// Get the midtexture's height
-				texheight = textures[texnum]->height << FRACBITS;
+				texheight = FixedDiv(textureheight[texnum], abs(side->scaley_mid));
 
 				// Set texbottom and textop to the Z coordinates of the texture's boundaries
 #if 0
