@@ -821,8 +821,8 @@ Rloadflats (INT32 i, INT32 w)
 			UINT8 *flatlump = W_CacheLumpNumPwad(wadnum, lumpnum, PU_CACHE);
 			if (Picture_PNGDimensions((UINT8 *)flatlump, &texw, &texh, NULL, NULL, lumplength))
 			{
-				width = (INT16)width;
-				height = (INT16)height;
+				width = (INT16)texw;
+				height = (INT16)texh;
 			}
 			else
 			{
