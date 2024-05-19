@@ -500,6 +500,20 @@ void P_LineOpening(line_t *linedef, mobj_t *mobj)
 			INT32 texnum = R_GetTextureNum(side->midtexture); // make sure the texture is actually valid
 
 			if (texnum) {
+				fixed_t midopentop, midopenbottom;
+
+				if (linedef->flags & ML_NOSKEW)
+				{
+					// Use the sector's actual heights if the midtexture is not skewed
+					midopentop = min(front->ceilingheight, back->ceilingheight);
+					midopenbottom = max(front->floorheight, back->floorheight);
+				}
+				else
+				{
+					midopentop = opentop;
+					midopenbottom = openbottom;
+				}
+
 				// Get the midtexture's height
 				texheight = textures[texnum]->height << FRACBITS;
 
@@ -522,13 +536,13 @@ void P_LineOpening(line_t *linedef, mobj_t *mobj)
 #endif
 				{
 					if (linedef->flags & ML_WRAPMIDTEX && !side->repeatcnt) { // "infinite" repeat
-						texbottom = openbottom + side->rowoffset + side->offsety_mid;
-						textop = opentop + side->rowoffset + side->offsety_mid;
+						texbottom = midopenbottom + side->rowoffset + side->offsety_mid;
+						textop = midopentop + side->rowoffset + side->offsety_mid;
 					} else if (linedef->flags & ML_MIDPEG) {
-						texbottom = openbottom + side->rowoffset + side->offsety_mid;
+						texbottom = midopenbottom + side->rowoffset + side->offsety_mid;
 						textop = texbottom + texheight*(side->repeatcnt+1);
 					} else {
-						textop = opentop + side->rowoffset + side->offsety_mid;
+						textop = midopentop + side->rowoffset + side->offsety_mid;
 						texbottom = textop - texheight*(side->repeatcnt+1);
 					}
 				}
@@ -539,11 +553,17 @@ void P_LineOpening(line_t *linedef, mobj_t *mobj)
 				delta2 = abs(thingtop - texmid);
 
 				if (delta1 > delta2) { // Below
-					if (opentop > texbottom)
+					if (opentop > texbottom) {
 						opentop = texbottom;
+						if (linedef->flags & ML_NOSKEW)
+							opentopslope = NULL; // Object is not actually on a slope
+					}
 				} else { // Above
-					if (openbottom < textop)
+					if (openbottom < textop) {
 						openbottom = textop;
+						if (linedef->flags & ML_NOSKEW)
+							openbottomslope = NULL; // Object is not actually on a slope
+					}
 				}
 			}
 		}
