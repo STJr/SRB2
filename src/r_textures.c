@@ -1068,6 +1068,98 @@ void R_LoadTexturesPwad(UINT16 wadnum)
 	R_FinishLoadingTextures(newtextures);
 }
 
+static lumpnum_t W_GetTexPatchLumpNum(const char *name)
+{
+	// Flats as a texture patch crashes horribly, and flats
+	// can share the same name as textures.
+
+	// But even if they worked, we want to prioritize:
+	// Patches -> Textures -> anything else
+
+	enum
+	{
+		USE_PATCHES,
+		USE_TEXTURES,
+		USE__MAX,
+	};
+
+	lumpnum_t lump = LUMPERROR;
+	INT32 lump_type_it;
+	
+
+	for (lump_type_it = 0; lump_type_it < USE__MAX; lump_type_it++)
+	{
+		INT32 i;
+
+		for (i = numwadfiles - 1; i >= 0; i--) // Scan wad files backwards so patched lumps take precedent
+		{
+			lumpnum_t start = LUMPERROR;
+			lumpnum_t end = LUMPERROR;
+
+			switch (wadfiles[i]->type)
+			{
+				case RET_WAD:
+					if (lump_type_it == USE_PATCHES)
+					{
+						if ((start = W_CheckNumForMarkerStartPwad("P_START", (UINT16)i, 0)) == INT16_MAX)
+							continue;
+						else if ((end = W_CheckNumForNamePwad("P_END", (UINT16)i, start)) == INT16_MAX)
+							continue;
+					}
+					else if (lump_type_it == USE_TEXTURES)
+					{
+						if ((start = W_CheckNumForMarkerStartPwad("TX_START", (UINT16)i, 0)) == INT16_MAX)
+							continue;
+						else if ((end = W_CheckNumForNamePwad("TX_END", (UINT16)i, start)) == INT16_MAX)
+							continue;
+					}
+					break;
+				case RET_PK3:
+				case RET_FOLDER:
+					if (lump_type_it == USE_PATCHES)
+					{
+						if ((start = W_CheckNumForFolderStartPK3("Patches/", i, 0)) == INT16_MAX)
+							continue;
+						if ((end = W_CheckNumForFolderEndPK3("Patches/", i, start)) == INT16_MAX)
+							continue;
+					}
+					else if (lump_type_it == USE_TEXTURES)
+					{
+						if ((start = W_CheckNumForFolderStartPK3("Textures/", i, 0)) == INT16_MAX)
+							continue;
+						if ((end = W_CheckNumForFolderEndPK3("Textures/", i, start)) == INT16_MAX)
+							continue;
+					}
+					break;
+				default:
+					continue;
+			}
+
+			// Now find lump with specified name in that range.
+			lump = W_CheckNumForNamePwad(name, (UINT16)i, start);
+			if (lump < end)
+			{
+				lump += (i<<16); // found it, in our constraints
+				break;
+			}
+			lump = LUMPERROR;
+		}
+
+		if (lump != LUMPERROR)
+		{
+			break;
+		}
+	}
+
+	if (lump == LUMPERROR)
+	{
+		// Use whatever else you can find.
+		return W_GetNumForName(name);
+	}
+
+	return lump;
+}
+
 static texpatch_t *R_ParsePatch(boolean actuallyLoadPatch)
 {
 	char *texturesToken;
@@ -1240,13 +1332,13 @@ static texpatch_t *R_ParsePatch(boolean actuallyLoadPatch)
 	if (actuallyLoadPatch == true)
 	{
 		// Check lump exists
-		patchLumpNum = W_GetNumForName(patchName);
+		patchLumpNum = W_GetTexPatchLumpNum(patchName);
 		// If so, allocate memory for texpatch_t and fill 'er up
 		resultPatch = (texpatch_t *)Z_Malloc(sizeof(texpatch_t),PU_STATIC,NULL);
 		resultPatch->originx = patchXPos;
 		resultPatch->originy = patchYPos;
-		resultPatch->lump = patchLumpNum & 65535;
-		resultPatch->wad = patchLumpNum>>16;
+		resultPatch->lump = LUMPNUM(patchLumpNum);
+		resultPatch->wad = WADFILENUM(patchLumpNum);
 		resultPatch->flip = flip;
 		resultPatch->alpha = alpha;
 		resultPatch->style = style;
