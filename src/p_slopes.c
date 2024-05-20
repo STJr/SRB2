@@ -852,6 +852,7 @@ fixed_t P_GetLightZAt(const lightlist_t *light, fixed_t x, fixed_t y)
 	return light->slope ? P_GetSlopeZAt(light->slope, x, y) : light->height;
 }
 
+
 //
 // P_QuantizeMomentumToSlope
 //
@@ -886,8 +887,6 @@ void P_ReverseQuantizeMomentumToSlope(vector3_t *momentum, pslope_t *slope)
 	FV3_Rotate(momentum, &axis, InvAngle(slope->zangle) >> ANGLETOFINESHIFT);
 }
 
-// Returns the angle of the slope plane.
-// If line is provided, a new calculation is performed as if the slope were on the top or bottom of a solid midtexture.
 angle_t P_GetStandingSlopeZAngle(pslope_t *slope, line_t *line)
 {
 	angle_t zangle = slope->zangle;
@@ -901,23 +900,28 @@ angle_t P_GetStandingSlopeZAngle(pslope_t *slope, line_t *line)
 	return zangle;
 }
 
-// Returns the angle of the projected normal of slope plane.
-// If line is provided, this simply returns the line's angle.
 angle_t P_GetStandingSlopeDirection(pslope_t *slope, line_t *line)
 {
 	angle_t xydirection = slope->xydirection;
 
 	if (line)
 	{
-		xydirection = line->angle;
+		xydirection = R_PointToAngle2(line->v1->x, line->v1->y, line->v2->x, line->v2->y);
 	}
 
 	return xydirection;
 }
 
-// When given a vector, rotates it and aligns it to either a slope, or a flat surface relative to the slope.
-// If line is provided, this calculation is performed as if the slope were on the top or bottom of a solid midtexture.
-// See also: P_QuantizeMomentumToSlope
+angle_t P_GetObjectStandingSlopeZAngle(mobj_t *mo)
+{
+	return P_GetStandingSlopeZAngle(mo->standingslope, mo->standingline);
+}
+
+angle_t P_GetObjectStandingSlopeDirection(mobj_t *mo)
+{
+	return P_GetStandingSlopeDirection(mo->standingslope, mo->standingline);
+}
+
 static void QuantizeMomentumToSlope(pslope_t *slope, line_t *line, vector3_t *momentum, boolean reverse)
 {
 	if (!slope || slope->flags & SL_NOPHYSICS)
@@ -957,18 +961,6 @@ void P_QuantizeObjectMomentumToSlope(mobj_t *mo, vector3_t *momentum)
 void P_ReverseQuantizeObjectMomentumToSlope(mobj_t *mo, vector3_t *momentum)
 {
 	QuantizeMomentumToSlope(mo->standingslope, mo->standingline, momentum, true);
-}
-
-// Wrapper for P_GetStandingSlopeZAngle.
-angle_t P_GetObjectStandingSlopeZAngle(mobj_t *mo)
-{
-	return P_GetStandingSlopeZAngle(mo->standingslope, mo->standingline);
-}
-
-// Wrapper for P_GetObjectStandingSlopeDirection.
-angle_t P_GetObjectStandingSlopeDirection(mobj_t *mo)
-{
-	return P_GetStandingSlopeDirection(mo->standingslope, mo->standingline);
 }
 
 //
@@ -1050,6 +1042,7 @@ fixed_t P_GetWallTransferMomZ(mobj_t *mo, pslope_t *slope, line_t *line)
 // Function to help handle landing on slopes
 void P_HandleSlopeLanding(mobj_t *thing, pslope_t *slope, line_t *line)
 {
+	vector3_t mom; // Ditto.
 	if (slope->flags & SL_NOPHYSICS || (slope->normal.x == 0 && slope->normal.y == 0)) { // No physics, no need to make anything complicated.
 		if (P_MobjFlip(thing)*(thing->momz) < 0) // falling, land on slope
 		{
@@ -1062,7 +1055,6 @@ void P_HandleSlopeLanding(mobj_t *thing, pslope_t *slope, line_t *line)
 		return;
 	}
 
-	vector3_t mom;
 	mom.x = thing->momx;
 	mom.y = thing->momy;
 	mom.z = thing->momz*2;
