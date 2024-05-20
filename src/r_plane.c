@@ -603,6 +603,9 @@ void R_DrawPlanes(void)
 	visplane_t *pl;
 	INT32 i;
 
+	if (!r_renderfloors)
+		return;
+
 	R_UpdatePlaneRipple();
 
 	for (i = 0; i < MAXVISPLANES; i++, pl++)
@@ -626,7 +629,7 @@ static void R_DrawSkyPlane(visplane_t *pl)
 {
 	INT32 texture = texturetranslation[skytexture];
 
-	// Reset column drawer function (note: couldn't we just call walldrawerfunc directly?)
+	// Reset column drawer function (note: couldn't we just call colfuncs[BASEDRAWFUNC] directly?)
 	// (that is, unless we'll need to switch drawers in future for some reason)
 	colfunc = colfuncs[BASEDRAWFUNC];
 

@@ -184,6 +184,9 @@ static fixed_t char_scroll = 0;
 
 static tic_t keydown = 0;
 
+// Lua
+static huddrawlist_h luahuddrawlist_playersetup;
+
 //
 // PROTOTYPES
 //
@@ -1068,9 +1071,9 @@ static menuitem_t OP_ChangeControlsMenu[] =
 	{IT_CALL | IT_STRING2, NULL, "Move Backward",    M_ChangeControl, GC_BACKWARD    },
 	{IT_CALL | IT_STRING2, NULL, "Move Left",        M_ChangeControl, GC_STRAFELEFT  },
 	{IT_CALL | IT_STRING2, NULL, "Move Right",       M_ChangeControl, GC_STRAFERIGHT },
-	{IT_CALL | IT_STRING2, NULL, "Jump",             M_ChangeControl, GC_JUMP      },
-	{IT_CALL | IT_STRING2, NULL, "Spin",             M_ChangeControl, GC_SPIN     },
-	{IT_CALL | IT_STRING2, NULL, "Shield",           M_ChangeControl, GC_SHIELD    },
+	{IT_CALL | IT_STRING2, NULL, "Jump",             M_ChangeControl, GC_JUMP        },
+	{IT_CALL | IT_STRING2, NULL, "Spin",             M_ChangeControl, GC_SPIN        },
+	{IT_CALL | IT_STRING2, NULL, "Shield Ability",   M_ChangeControl, GC_SHIELD      },
 	{IT_HEADER, NULL, "Camera", NULL, 0},
 	{IT_SPACE, NULL, NULL, NULL, 0}, // padding
 	{IT_CALL | IT_STRING2, NULL, "Look Up",        M_ChangeControl, GC_LOOKUP      },
@@ -1119,13 +1122,15 @@ static menuitem_t OP_ChangeControlsMenu[] =
 
 static menuitem_t OP_Joystick1Menu[] =
 {
-	{IT_STRING | IT_CALL,  NULL, "Select Gamepad...", M_Setup1PJoystickMenu, 10},
-	{IT_STRING | IT_CVAR,  NULL, "Move \x17 Axis"    , &cv_moveaxis         , 30},
-	{IT_STRING | IT_CVAR,  NULL, "Move \x18 Axis"    , &cv_sideaxis         , 40},
-	{IT_STRING | IT_CVAR,  NULL, "Camera \x17 Axis"  , &cv_lookaxis         , 50},
-	{IT_STRING | IT_CVAR,  NULL, "Camera \x18 Axis"  , &cv_turnaxis         , 60},
-	{IT_STRING | IT_CVAR,  NULL, "Jump Axis"         , &cv_jumpaxis         , 70},
-	{IT_STRING | IT_CVAR,  NULL, "Spin Axis"         , &cv_spinaxis         , 80},
+	{IT_STRING | IT_CALL,  NULL, "Select Gamepad...", M_Setup1PJoystickMenu,  0},
+
+	{IT_STRING | IT_CVAR,  NULL, "Move \x17 Axis"    , &cv_moveaxis         , 20},
+	{IT_STRING | IT_CVAR,  NULL, "Move \x18 Axis"    , &cv_sideaxis         , 30},
+	{IT_STRING | IT_CVAR,  NULL, "Camera \x17 Axis"  , &cv_lookaxis         , 40},
+	{IT_STRING | IT_CVAR,  NULL, "Camera \x18 Axis"  , &cv_turnaxis         , 50},
+	{IT_STRING | IT_CVAR,  NULL, "Jump Axis"         , &cv_jumpaxis         , 60},
+	{IT_STRING | IT_CVAR,  NULL, "Spin Axis"         , &cv_spinaxis         , 70},
+	{IT_STRING | IT_CVAR,  NULL, "Shield Axis"       , &cv_shieldaxis       , 80},
 	{IT_STRING | IT_CVAR,  NULL, "Fire Axis"         , &cv_fireaxis         , 90},
 	{IT_STRING | IT_CVAR,  NULL, "Fire Normal Axis"  , &cv_firenaxis        ,100},
 
@@ -1137,13 +1142,15 @@ static menuitem_t OP_Joystick1Menu[] =
 
 static menuitem_t OP_Joystick2Menu[] =
 {
-	{IT_STRING | IT_CALL,  NULL, "Select Gamepad...", M_Setup2PJoystickMenu, 10},
-	{IT_STRING | IT_CVAR,  NULL, "Move \x17 Axis"    , &cv_moveaxis2        , 30},
-	{IT_STRING | IT_CVAR,  NULL, "Move \x18 Axis"    , &cv_sideaxis2        , 40},
-	{IT_STRING | IT_CVAR,  NULL, "Camera \x17 Axis"  , &cv_lookaxis2        , 50},
-	{IT_STRING | IT_CVAR,  NULL, "Camera \x18 Axis"  , &cv_turnaxis2        , 60},
-	{IT_STRING | IT_CVAR,  NULL, "Jump Axis"         , &cv_jumpaxis2        , 70},
-	{IT_STRING | IT_CVAR,  NULL, "Spin Axis"         , &cv_spinaxis2        , 80},
+	{IT_STRING | IT_CALL,  NULL, "Select Gamepad...", M_Setup2PJoystickMenu,  0},
+
+	{IT_STRING | IT_CVAR,  NULL, "Move \x17 Axis"    , &cv_moveaxis2        , 20},
+	{IT_STRING | IT_CVAR,  NULL, "Move \x18 Axis"    , &cv_sideaxis2        , 30},
+	{IT_STRING | IT_CVAR,  NULL, "Camera \x17 Axis"  , &cv_lookaxis2        , 40},
+	{IT_STRING | IT_CVAR,  NULL, "Camera \x18 Axis"  , &cv_turnaxis2        , 50},
+	{IT_STRING | IT_CVAR,  NULL, "Jump Axis"         , &cv_jumpaxis2        , 60},
+	{IT_STRING | IT_CVAR,  NULL, "Spin Axis"         , &cv_spinaxis2        , 70},
+	{IT_STRING | IT_CVAR,  NULL, "Shield Axis"       , &cv_shieldaxis2      , 80},
 	{IT_STRING | IT_CVAR,  NULL, "Fire Axis"         , &cv_fireaxis2        , 90},
 	{IT_STRING | IT_CVAR,  NULL, "Fire Normal Axis"  , &cv_firenaxis2       ,100},
 
@@ -1406,18 +1413,19 @@ static menuitem_t OP_OpenGLOptionsMenu[] =
 
 	{IT_HEADER, NULL, "General", NULL, 51},
 	{IT_STRING|IT_CVAR,         NULL, "Shaders",             &cv_glshaders,            63},
-	{IT_STRING|IT_CVAR,         NULL, "Lack of perspective", &cv_glshearing,           73},
-	{IT_STRING|IT_CVAR,         NULL, "Field of view",       &cv_fov,                  83},
+	{IT_STRING|IT_CVAR,         NULL, "Palette rendering",   &cv_glpaletterendering,   73},
+	{IT_STRING|IT_CVAR,         NULL, "Lack of perspective", &cv_glshearing,           83},
+	{IT_STRING|IT_CVAR,         NULL, "Field of view",       &cv_fov,                  93},
 
-	{IT_HEADER, NULL, "Miscellaneous", NULL, 102},
-	{IT_STRING|IT_CVAR,         NULL, "Bit depth",           &cv_scr_depth,           114},
-	{IT_STRING|IT_CVAR,         NULL, "Texture filter",      &cv_glfiltermode,        124},
-	{IT_STRING|IT_CVAR,         NULL, "Anisotropic",         &cv_glanisotropicmode,   134},
+	{IT_HEADER, NULL, "Miscellaneous", NULL, 112},
+	{IT_STRING|IT_CVAR,         NULL, "Bit depth",           &cv_scr_depth,           124},
+	{IT_STRING|IT_CVAR,         NULL, "Texture filter",      &cv_glfiltermode,        134},
+	{IT_STRING|IT_CVAR,         NULL, "Anisotropic",         &cv_glanisotropicmode,   144},
 #ifdef ALAM_LIGHTING
-	{IT_SUBMENU|IT_STRING,      NULL, "Lighting...",         &OP_OpenGLLightingDef,   144},
+	{IT_SUBMENU|IT_STRING,      NULL, "Lighting...",         &OP_OpenGLLightingDef,   154},
 #endif
 #if defined (_WINDOWS) && (!(defined (__unix__) || defined (UNIXCOMMON) || defined (HAVE_SDL)))
-	{IT_STRING|IT_CVAR,         NULL, "Fullscreen",          &cv_fullscreen,          154},
+	{IT_STRING|IT_CVAR,         NULL, "Fullscreen",          &cv_fullscreen,          164},
 #endif
 };
 
@@ -2691,7 +2699,7 @@ static boolean MIT_SetCurTitlePics(UINT32 menutype, INT32 level, INT32 *retval, 
 			curhidepics = menupres[menutype].hidetitlepics;
 			curttmode = menupres[menutype].ttmode;
 			curttscale = (menupres[menutype].ttscale != UINT8_MAX ? menupres[menutype].ttscale : ttscale);
-			strncpy(curttname, menupres[menutype].ttname, 9);
+			strncpy(curttname, menupres[menutype].ttname, sizeof(curttname)-1);
 			curttx = (menupres[menutype].ttx != INT16_MAX ? menupres[menutype].ttx : ttx);
 			curtty = (menupres[menutype].tty != INT16_MAX ? menupres[menutype].tty : tty);
 			curttloop = (menupres[menutype].ttloop != INT16_MAX ? menupres[menutype].ttloop : ttloop);
@@ -3425,7 +3433,7 @@ boolean M_Responder(event_t *ev)
 			// ignore ev_keydown events if the key maps to a character, since
 			// the ev_text event will follow immediately after in that case.
 			if (ev->type == ev_keydown && ch >= 32 && ch <= 127)
-				return false;
+				return true;
 
 			if (M_ChangeStringCvar(ch))
 				return true;
@@ -4098,53 +4106,6 @@ void M_DrawTextBox(INT32 x, INT32 y, INT32 width, INT32 boxlines)
 {
 	// Solid color textbox.
 	V_DrawFill(x+5, y+5, width*8+6, boxlines*8+6, 159);
-	//V_DrawFill(x+8, y+8, width*8, boxlines*8, 31);
-/*
-	patch_t *p;
-	INT32 cx, cy, n;
-	INT32 step, boff;
-
-	step = 8;
-	boff = 8;
-
-	// draw left side
-	cx = x;
-	cy = y;
-	V_DrawScaledPatch(cx, cy, 0, W_CachePatchNum(viewborderlump[BRDR_TL], PU_PATCH));
-	cy += boff;
-	p = W_CachePatchNum(viewborderlump[BRDR_L], PU_PATCH);
-	for (n = 0; n < boxlines; n++)
-	{
-		V_DrawScaledPatch(cx, cy, 0, p);
-		cy += step;
-	}
-	V_DrawScaledPatch(cx, cy, 0, W_CachePatchNum(viewborderlump[BRDR_BL], PU_PATCH));
-
-	// draw middle
-	V_DrawFlatFill(x + boff, y + boff, width*step, boxlines*step, st_borderpatchnum);
-
-	cx += boff;
-	cy = y;
-	while (width > 0)
-	{
-		V_DrawScaledPatch(cx, cy, 0, W_CachePatchNum(viewborderlump[BRDR_T], PU_PATCH));
-		V_DrawScaledPatch(cx, y + boff + boxlines*step, 0, W_CachePatchNum(viewborderlump[BRDR_B], PU_PATCH));
-		width--;
-		cx += step;
-	}
-
-	// draw right side
-	cy = y;
-	V_DrawScaledPatch(cx, cy, 0, W_CachePatchNum(viewborderlump[BRDR_TR], PU_PATCH));
-	cy += boff;
-	p = W_CachePatchNum(viewborderlump[BRDR_R], PU_PATCH);
-	for (n = 0; n < boxlines; n++)
-	{
-		V_DrawScaledPatch(cx, cy, 0, p);
-		cy += step;
-	}
-	V_DrawScaledPatch(cx, cy, 0, W_CachePatchNum(viewborderlump[BRDR_BR], PU_PATCH));
-*/
 }
 
 //
@@ -4996,22 +4957,6 @@ static void M_DrawCenteredMenu(void)
 			W_CachePatchName("M_CURSOR", PU_PATCH));
 		V_DrawCenteredString(x, cursory, V_YELLOWMAP, currentMenu->menuitems[itemOn].text);
 	}
-}
-
-//
-// M_StringHeight
-//
-// Find string height from hu_font chars
-//
-static inline size_t M_StringHeight(const char *string)
-{
-	size_t h = 8, i;
-
-	for (i = 0; i < strlen(string); i++)
-		if (string[i] == '\n')
-			h += 8;
-
-	return h;
 }
 
 // ==========================================================================
@@ -6131,56 +6076,16 @@ menu_t MessageDef =
 	NULL
 };
 
-
-void M_StartMessage(const char *string, void *routine,
-	menumessagetype_t itemtype)
+void M_StartMessage(const char *string, void *routine, menumessagetype_t itemtype)
 {
-	size_t max = 0, start = 0, i, strlines;
-	static char *message = NULL;
+	static char *message;
 	Z_Free(message);
-	message = Z_StrDup(string);
+	message = V_WordWrap(0,0,V_ALLOWLOWERCASE,string);
 	DEBFILE(message);
-
-	// Rudementary word wrapping.
-	// Simple and effective. Does not handle nonuniform letter sizes, colors, etc. but who cares.
-	strlines = 0;
-	for (i = 0; message[i]; i++)
-	{
-		if (message[i] == ' ')
-		{
-			start = i;
-			max += 4;
-		}
-		else if (message[i] == '\n')
-		{
-			strlines = i;
-			start = 0;
-			max = 0;
-			continue;
-		}
-		else
-			max += 8;
-
-		// Start trying to wrap if presumed length exceeds the screen width.
-		if (max >= BASEVIDWIDTH && start > 0)
-		{
-			message[start] = '\n';
-			max -= (start-strlines)*8;
-			strlines = start;
-			start = 0;
-		}
-	}
-
-	start = 0;
-	max = 0;
 
 	M_StartControlPanel(); // can't put menuactive to true
 
-	if (currentMenu == &MessageDef) // Prevent recursion
-		MessageDef.prevMenu = &MainDef;
-	else
-		MessageDef.prevMenu = currentMenu;
-
+	MessageDef.prevMenu = (currentMenu == &MessageDef) ? &MainDef : currentMenu; // Prevent recursion
 	MessageDef.menuitems[0].text     = message;
 	MessageDef.menuitems[0].alphaKey = (UINT8)itemtype;
 	if (!routine && itemtype != MM_NOTHING) itemtype = MM_NOTHING;
@@ -6199,50 +6104,16 @@ void M_StartMessage(const char *string, void *routine,
 			MessageDef.menuitems[0].itemaction = routine;
 			break;
 	}
-	//added : 06-02-98: now draw a textbox around the message
-	// compute lenght max and the numbers of lines
-	for (strlines = 0; *(message+start); strlines++)
-	{
-		for (i = 0;i < strlen(message+start);i++)
-		{
-			if (*(message+start+i) == '\n')
-			{
-				if (i > max)
-					max = i;
-				start += i;
-				i = (size_t)-1; //added : 07-02-98 : damned!
-				start++;
-				break;
-			}
-		}
+	MessageDef.x = (INT16)((BASEVIDWIDTH  - V_StringWidth(message, 0)-32)/2);
+	MessageDef.y = (INT16)((BASEVIDHEIGHT - V_StringHeight(message, V_RETURN8))/2);
 
-		if (i == strlen(message+start))
-			start += i;
-	}
-
-	MessageDef.x = (INT16)((BASEVIDWIDTH  - 8*max-16)/2);
-	MessageDef.y = (INT16)((BASEVIDHEIGHT - M_StringHeight(message))/2);
-
-	MessageDef.lastOn = (INT16)((strlines<<8)+max);
-
-	//M_SetupNextMenu();
 	currentMenu = &MessageDef;
 	itemOn = 0;
 }
 
-#define MAXMSGLINELEN 256
-
 static void M_DrawMessageMenu(void)
 {
-	INT32 y = currentMenu->y;
-	size_t i, start = 0;
-	INT16 max;
-	char string[MAXMSGLINELEN];
-	INT32 mlines;
 	const char *msg = currentMenu->menuitems[0].text;
-
-	mlines = currentMenu->lastOn>>8;
-	max = (INT16)((UINT8)(currentMenu->lastOn & 0xFF)*8);
 
 	// hack: draw RA background in RA menus
 	if (gamestate == GS_TIMEATTACK)
@@ -6267,51 +6138,8 @@ static void M_DrawMessageMenu(void)
 			V_DrawFadeScreen(0xFF00, curfadevalue);
 	}
 
-	M_DrawTextBox(currentMenu->x, y - 8, (max+7)>>3, mlines);
-
-	while (*(msg+start))
-	{
-		size_t len = strlen(msg+start);
-
-		for (i = 0; i < len; i++)
-		{
-			if (*(msg+start+i) == '\n')
-			{
-				memset(string, 0, MAXMSGLINELEN);
-				if (i >= MAXMSGLINELEN)
-				{
-					CONS_Printf("M_DrawMessageMenu: too long segment in %s\n", msg);
-					return;
-				}
-				else
-				{
-					strncpy(string,msg+start, i);
-					string[i] = '\0';
-					start += i;
-					i = (size_t)-1; //added : 07-02-98 : damned!
-					start++;
-				}
-				break;
-			}
-		}
-
-		if (i == strlen(msg+start))
-		{
-			if (i >= MAXMSGLINELEN)
-			{
-				CONS_Printf("M_DrawMessageMenu: too long segment in %s\n", msg);
-				return;
-			}
-			else
-			{
-				strcpy(string, msg + start);
-				start += i;
-			}
-		}
-
-		V_DrawString((BASEVIDWIDTH - V_StringWidth(string, 0))/2,y,V_ALLOWLOWERCASE,string);
-		y += 8; //hu_font[0]->height;
-	}
+	M_DrawTextBox(currentMenu->x, currentMenu->y - 8, 2+V_StringWidth(msg, 0)/8, V_StringHeight(msg, V_RETURN8)/8);
+	V_DrawCenteredString(BASEVIDWIDTH/2, currentMenu->y, V_ALLOWLOWERCASE|V_RETURN8, msg);
 }
 
 // default message handler
@@ -7998,7 +7826,7 @@ static void M_DrawSoundTest(void)
 				{
 					V_DrawFill(165+140-9, y-4, 8, 16, 150);
 					//V_DrawCharacter(165+140-8, y, '\x19' | V_YELLOWMAP, false);
-					V_DrawFixedPatch((165+140-9)<<FRACBITS, (y<<FRACBITS)-(bounce*4), FRACUNIT, 0, hu_font['\x19'-HU_FONTSTART], V_GetStringColormap(V_YELLOWMAP));
+					V_DrawFixedPatch((165+140-9)<<FRACBITS, (y<<FRACBITS)-(bounce*4), FRACUNIT, 0, hu_font.chars['\x19'-FONTSTART], V_GetStringColormap(V_YELLOWMAP));
 				}
 			}
 			t++;
@@ -11281,7 +11109,8 @@ static void M_DrawRoomMenu(void)
 			if (dot_frame < 0)
 				dot_frame = 0;
 
-			strncpy(&text[dot_frame], "...", min(dots, 3 - dot_frame));
+			if (dot_frame != 3)
+				strncpy(&text[dot_frame], "...", min(dots, 3 - dot_frame));
 		}
 
 		frame += renderdeltatics;
@@ -12097,9 +11926,22 @@ static void M_HandleConnectIP(INT32 choice)
 
 static fixed_t    multi_tics;
 static UINT8      multi_frame;
-static UINT8      multi_spr2;
+static UINT16     multi_spr2;
 static boolean    multi_paused;
 static boolean    multi_invcolor;
+static boolean    multi_override;
+
+static spritedef_t *multi_followitem_sprdef;
+static INT32        multi_followitem_skinnum;
+static UINT8        multi_followitem_numframes;
+static UINT8        multi_followitem_startframe;
+static UINT8        multi_followitem_frame;
+static fixed_t      multi_followitem_duration;
+static fixed_t      multi_followitem_tics;
+static fixed_t      multi_followitem_scale;
+static fixed_t      multi_followitem_yoffset;
+
+#define MULTI_DURATION (4*FRACUNIT)
 
 // this is set before entering the MultiPlayer setup menu,
 // for either player 1 or 2
@@ -12244,9 +12086,92 @@ static menucolor_t *M_GridIndexToMenuColor(UINT16 index)
 	}
 }
 
+static void M_SetPlayerSetupFollowItem(void)
+{
+	const mobjtype_t followitem = skins[setupm_fakeskin]->followitem;
+
+	switch (followitem)
+	{
+		case MT_TAILSOVERLAY:
+		{
+			const state_t *state = &states[S_TAILSOVERLAY_MINUS30DEGREES];
+			const UINT8 sprite2 = P_GetSkinSprite2(skins[setupm_fakeskin], state->frame & FF_FRAMEMASK, NULL);
+
+			if (state->sprite != SPR_PLAY)
+				break;
+
+			multi_followitem_sprdef = &skins[setupm_fakeskin]->sprites[sprite2];
+			multi_followitem_skinnum = setupm_fakeskin;
+			multi_followitem_numframes = multi_followitem_sprdef->numframes;
+			multi_followitem_startframe = 0;
+			multi_followitem_frame = multi_frame;
+			multi_followitem_duration = MULTI_DURATION;
+			multi_followitem_tics = multi_tics;
+			multi_followitem_scale = FRACUNIT;
+			multi_followitem_yoffset = 0;
+
+			if ((state->frame & FF_SPR2MIDSTART) && (multi_followitem_numframes > 0) && M_RandomChance(FRACUNIT / 2))
+			{
+				multi_followitem_frame += multi_followitem_numframes / 2;
+			}
+			break;
+		}
+		case MT_METALJETFUME:
+		{
+			const state_t *state = &states[S_JETFUME1];
+
+			if (!(state->frame & FF_ANIMATE))
+				break;
+
+			multi_followitem_sprdef = &sprites[state->sprite];
+			multi_followitem_skinnum = TC_DEFAULT;
+			multi_followitem_numframes = state->var1 + 1;
+			multi_followitem_startframe = state->frame & FF_FRAMEMASK;
+			multi_followitem_frame = multi_followitem_startframe;
+			multi_followitem_duration = state->var2 * FRACUNIT;
+			multi_followitem_tics = multi_tics % multi_followitem_duration;
+			multi_followitem_scale = 2 * FRACUNIT / 3;
+			multi_followitem_yoffset = (skins[setupm_fakeskin]->height - FixedMul(mobjinfo[followitem].height, multi_followitem_scale)) >> 1;
+			break;
+		}
+		default:
+			multi_followitem_sprdef = NULL;
+			break;
+	}
+}
+
+static void M_DrawPlayerSetupFollowItem(INT32 x, INT32 y, fixed_t scale, INT32 flags)
+{
+	spriteframe_t *sprframe;
+	patch_t *patch;
+	UINT8 *colormap;
+
+	if (multi_followitem_sprdef == NULL)
+		return;
+
+	if (multi_followitem_frame >= multi_followitem_startframe + multi_followitem_numframes)
+		multi_followitem_frame = multi_followitem_startframe;
+
+	colormap = R_GetTranslationColormap(multi_followitem_skinnum, setupm_fakecolor->color, GTC_CACHE);
+
+	sprframe = &multi_followitem_sprdef->spriteframes[multi_followitem_frame];
+	patch = W_CachePatchNum(sprframe->lumppat[0], PU_PATCH);
+	if (sprframe->flip & 1) // Only for first sprite
+		flags |= V_FLIP; // This sprite is left/right flipped!
+
+	x <<= FRACBITS;
+	y <<= FRACBITS;
+	y -= FixedMul(multi_followitem_yoffset, scale);
+
+	scale = FixedMul(scale, multi_followitem_scale);
+
+	V_DrawFixedPatch(x, y, scale, flags, patch, colormap);
+}
+
 static void M_DrawSetupMultiPlayerMenu(void)
 {
 	INT32 x, y, cursory = 0, flags = 0;
+	fixed_t scale;
 	spritedef_t *sprdef;
 	spriteframe_t *sprframe;
 	patch_t *patch;
@@ -12296,11 +12221,24 @@ static void M_DrawSetupMultiPlayerMenu(void)
 	y += 11;
 
 	// anim the player in the box
-	multi_tics -= renderdeltatics;
-	while (!multi_paused && multi_tics <= 0)
+	if (!multi_paused)
 	{
-		multi_frame++;
-		multi_tics += 4*FRACUNIT;
+		multi_tics -= renderdeltatics;
+		while (multi_tics <= 0)
+		{
+			multi_frame++;
+			multi_tics += MULTI_DURATION;
+		}
+
+		if (multi_followitem_sprdef != NULL)
+		{
+			multi_followitem_tics -= renderdeltatics;
+			while (multi_followitem_tics <= 0)
+			{
+				multi_followitem_frame++;
+				multi_followitem_tics += multi_followitem_duration;
+			}
+		}
 	}
 
 #define charw 74
@@ -12315,17 +12253,38 @@ static void M_DrawSetupMultiPlayerMenu(void)
 		goto faildraw;
 
 	// ok, draw player sprite for sure now
-	colormap = R_GetTranslationColormap(setupm_fakeskin, setupm_fakecolor->color, GTC_CACHE);
-
 	if (multi_frame >= sprdef->numframes)
 		multi_frame = 0;
+
+	scale = FixedDiv(skins[setupm_fakeskin]->highresscale, skins[setupm_fakeskin]->shieldscale);
+
+#define chary (y+64)
+
+	if (renderisnewtic)
+	{
+		LUA_HUD_ClearDrawList(luahuddrawlist_playersetup);
+		multi_override = LUA_HookCharacterHUD
+		(
+			HUD_HOOK(playersetup), luahuddrawlist_playersetup, setupm_player,
+			x << FRACBITS, chary << FRACBITS, scale,
+			setupm_fakeskin, multi_spr2, multi_frame, 1, setupm_fakecolor->color,
+			(multi_tics >> FRACBITS) + 1, multi_paused
+		);
+	}
+
+	LUA_HUD_DrawList(luahuddrawlist_playersetup);
+
+	if (multi_override == true)
+		goto colordraw;
+
+	colormap = R_GetTranslationColormap(setupm_fakeskin, setupm_fakecolor->color, GTC_CACHE);
 
 	sprframe = &sprdef->spriteframes[multi_frame];
 	patch = W_CachePatchNum(sprframe->lumppat[0], PU_PATCH);
 	if (sprframe->flip & 1) // Only for first sprite
 		flags |= V_FLIP; // This sprite is left/right flipped!
 
-#define chary (y+64)
+	M_DrawPlayerSetupFollowItem(x, chary, scale, flags & ~V_FLIP);
 
 	V_DrawFixedPatch(
 		x<<FRACBITS,
@@ -12518,6 +12477,20 @@ static void M_DrawColorRamp(INT32 x, INT32 y, INT32 w, INT32 h, skincolor_t colo
 		V_DrawFill(x, y+(i*h), w, h, color.ramp[i]);
 }
 
+static void M_InitPlayerSetupLua(void)
+{
+	// I'd really like to assume that the drawlist has been destroyed,
+	// but it appears M_ClearMenus has options not to call exit routines...
+	// so that doesn't seem safe to me??
+	if (!LUA_HUD_IsDrawListValid(luahuddrawlist_playersetup))
+	{
+		LUA_HUD_DestroyDrawList(luahuddrawlist_playersetup);
+		luahuddrawlist_playersetup = LUA_HUD_CreateDrawList();
+	}
+	LUA_HUD_ClearDrawList(luahuddrawlist_playersetup);
+	multi_override = false;
+}
+
 // Handle 1P/2P MP Setup
 static void M_HandleSetupMultiPlayer(INT32 choice)
 {
@@ -12563,6 +12536,7 @@ static void M_HandleSetupMultiPlayer(INT32 choice)
 				}
 				while ((prev_setupm_fakeskin != setupm_fakeskin) && !(R_SkinUsable(-1, setupm_fakeskin)));
 				multi_spr2 = P_GetSkinSprite2(skins[setupm_fakeskin], SPR2_WALK, NULL);
+				M_SetPlayerSetupFollowItem();
 			}
 			else if (itemOn == 2) // player color
 			{
@@ -12603,6 +12577,7 @@ static void M_HandleSetupMultiPlayer(INT32 choice)
 				}
 				while ((prev_setupm_fakeskin != setupm_fakeskin) && !(R_SkinUsable(-1, setupm_fakeskin)));
 				multi_spr2 = P_GetSkinSprite2(skins[setupm_fakeskin], SPR2_WALK, NULL);
+				M_SetPlayerSetupFollowItem();
 			}
 			else if (itemOn == 2) // player color
 			{
@@ -12723,7 +12698,7 @@ static void M_SetupMultiPlayer(INT32 choice)
 	(void)choice;
 
 	multi_frame = 0;
-	multi_tics = 4*FRACUNIT;
+	multi_tics = MULTI_DURATION;
 
 	strcpy(setupm_name, cv_playername.string);
 
@@ -12753,6 +12728,10 @@ static void M_SetupMultiPlayer(INT32 choice)
 	MP_PlayerSetupMenu[2].status = (IT_KEYHANDLER|IT_STRING);
 
 	multi_spr2 = P_GetSkinSprite2(skins[setupm_fakeskin], SPR2_WALK, NULL);
+	M_SetPlayerSetupFollowItem();
+
+	// allocate and/or clear Lua player setup draw list
+	M_InitPlayerSetupLua();
 
 	MP_PlayerSetupDef.prevMenu = currentMenu;
 	M_SetupNextMenu(&MP_PlayerSetupDef);
@@ -12764,7 +12743,7 @@ static void M_SetupMultiPlayer2(INT32 choice)
 	(void)choice;
 
 	multi_frame = 0;
-	multi_tics = 4*FRACUNIT;
+	multi_tics = MULTI_DURATION;
 
 	strcpy (setupm_name, cv_playername2.string);
 
@@ -12794,6 +12773,10 @@ static void M_SetupMultiPlayer2(INT32 choice)
 	MP_PlayerSetupMenu[2].status = (IT_KEYHANDLER|IT_STRING);
 
 	multi_spr2 = P_GetSkinSprite2(skins[setupm_fakeskin], SPR2_WALK, NULL);
+	M_SetPlayerSetupFollowItem();
+
+	// allocate and/or clear Lua player setup draw list
+	M_InitPlayerSetupLua();
 
 	MP_PlayerSetupDef.prevMenu = currentMenu;
 	M_SetupNextMenu(&MP_PlayerSetupDef);
@@ -12815,6 +12798,12 @@ static boolean M_QuitMultiPlayerMenu(void)
 	// send color if changed
 	if (setupm_fakecolor->color != setupm_cvcolor->value)
 		COM_BufAddText (va("%s %d\n",setupm_cvcolor->name,setupm_fakecolor->color));
+
+	// de-allocate Lua player setup drawlist
+	LUA_HUD_DestroyDrawList(luahuddrawlist_playersetup);
+	luahuddrawlist_playersetup = NULL;
+	multi_override = false;
+
 	return true;
 }
 
@@ -13672,23 +13661,14 @@ static void M_VideoModeMenu(INT32 choice)
 
 	memset(modedescs, 0, sizeof(modedescs));
 
-#if defined (__unix__) || defined (UNIXCOMMON) || defined (HAVE_SDL)
 	VID_PrepareModeList(); // FIXME: hack
-#endif
+
 	vidm_nummodes = 0;
 	vidm_selected = 0;
 	nummodes = VID_NumModes();
 
-#ifdef _WINDOWS
-	// clean that later: skip windowed mode 0, video modes menu only shows FULL SCREEN modes
-	if (nummodes <= NUMSPECIALMODES)
-		i = 0; // unless we have nothing
-	else
-		i = NUMSPECIALMODES;
-#else
-	// DOS does not skip mode 0, because mode 0 is ALWAYS present
 	i = 0;
-#endif
+
 	for (; i < nummodes && vidm_nummodes < MAXMODEDESCS; i++)
 	{
 		desc = VID_GetModeName(i);
