@@ -868,7 +868,7 @@ static void P_CreateSolidMidtextureSlope(line_t *line)
 	pslope_t *ref = P_GetReferenceSlopeForMidtexture(line);
 	if (ref)
 	{
-		line->midtexslope = Slope_Add(0);
+		line->midtexslope = Slope_Add(ref->flags & SL_NOPHYSICS);
 
 		P_UpdateSolidMidtextureSlope(line, ref);
 	}
