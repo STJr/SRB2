@@ -2256,9 +2256,9 @@ void S_ChangeMusicEx(const char *mmusic, UINT16 mflags, boolean looping, UINT32 
 		return;
 
 	strncpy(newmusic, mmusic, sizeof(newmusic)-1);
+	newmusic[6] = 0;
 	if (LUA_HookMusicChange(music_name, &hook_param))
 		return;
-	newmusic[6] = 0;
 
 	// No Music (empty string)
 	if (newmusic[0] == 0)
