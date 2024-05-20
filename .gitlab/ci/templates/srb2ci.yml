@@ -1,0 +1,145 @@
+.srb2ci:
+  image: git.do.srb2.org:5050/stjr/srb2ci/srb2ci:stable
+
+  cache:
+    - key: ccache-$CI_JOB_NAME_SLUG-$CI_COMMIT_REF_SLUG
+      fallback_keys:
+        - ccache-$CI_JOB_NAME_SLUG-$CI_DEFAULT_BRANCH
+        - ccache-$CI_JOB_NAME_SLUG-master
+      paths:
+        - build/ccache
+        - build/ccache_statslog
+
+    - key: apt-$CI_JOB_IMAGE
+      paths:
+        - build/apt-cache
+      unprotect: true
+
+  before_script:
+    - - |
+         # debconf
+         echo -e "\e[0Ksection_start:`date +%s`:debconf[collapsed=true]\r\e[0KSetup debconf's environment"
+      - export DEBIAN_FRONTEND="noninteractive"
+      - export DEBIAN_PRIORITY="low"
+      - export DEBCONF_NONINTERACTIVE_SEEN="true"
+      - |
+          # debconf
+          echo -e "\e[0Ksection_end:`date +%s`:debconf\r\e[0K"
+    - - |
+          # dpkg_aa
+          echo -e "\e[0Ksection_start:`date +%s`:dpkg_aa[collapsed=true]\r\e[0KAdding architectures to dpkg"
+      - dpkg --add-architecture i386
+      - dpkg --add-architecture amd64
+      - dpkg --add-architecture arm64
+      - |
+          # dpkg_aa
+          echo -e "\e[0Ksection_end:`date +%s`:dpkg_aa\r\e[0K"
+    - - |
+          # apt_conf
+          echo -e "\e[0Ksection_start:`date +%s`:apt_conf[collapsed=true]\r\e[0KSetting up APT conf"
+      - export APT_CACHE_DIR=$CI_PROJECT_DIR/build/apt-cache
+      - mkdir --parents --verbose $APT_CACHE_DIR/partial/
+      - touch /etc/apt/apt.conf.d/99build
+      - |
+          # apt.conf
+          echo Adding options to apt.conf':'
+      - |
+          # APT::Install-Recommends
+          echo APT::Install-Recommends "false"\;       | tee --append /etc/apt/apt.conf.d/99build
+      - |
+          # quit
+          echo quiet "1"\;                             | tee --append /etc/apt/apt.conf.d/99build
+      - |
+          # APT::Get::Assume-Yes
+          echo APT::Get::Assume-Yes "true"\;           | tee --append /etc/apt/apt.conf.d/99build
+      - |
+          # Dir::Cache::Archives
+          echo Dir::Cache::Archives "$APT_CACHE_DIR"\; | tee --append /etc/apt/apt.conf.d/99build
+      - |
+          # apt_conf
+          echo -e "\e[0Ksection_end:`date +%s`:apt_conf\r\e[0K"
+    - - |
+          # apt_update
+          echo -e "\e[0Ksection_start:`date +%s`:apt_update[collapsed=true]\r\e[0KUpdating APT listing"
+      - apt-get update
+      - |
+          # apt_update
+          echo -e "\e[0Ksection_end:`date +%s`:apt_update\r\e[0K"
+
+    - - |
+          # apt_pre
+          echo -e "\e[0Ksection_start:`date +%s`:apt_pre[collapsed=true]\r\e[0KInstalling pre packages"
+      - apt-get install apt-utils
+      - |
+          # apt_pre
+          echo -e "\e[0Ksection_end:`date +%s`:apt_pre\r\e[0K"
+
+    - - |
+          # apt_upgrade
+          echo -e "\e[0Ksection_start:`date +%s`:apt_upgrade[collapsed=true]\r\e[0KUpdating existing packages"
+      - apt-get upgrade
+      - |
+          # apt_update
+          echo -e "\e[0Ksection_end:`date +%s`:apt_upgrade\r\e[0K"
+
+    - - |
+          # apt_common
+          echo -e "\e[0Ksection_start:`date +%s`:apt_common[collapsed=true]\r\e[0KInstalling common packages"
+      - apt-get install make git ccache nasm cmake ca-certificates
+      - |
+          # apt_common
+          echo -e "\e[0Ksection_end:`date +%s`:apt_common\r\e[0K"
+
+    - - |
+          # ccache_config
+          echo -e "\e[0Ksection_start:`date +%s`:ccache_config[collapsed=true]\r\e[0KSetting up ccache config"
+      - mkdir --parents --verbose ~/.ccache/
+      - touch ~/.ccache/ccache.conf
+      - |
+          # cache.conf
+          echo Adding ccache configution option
+      - |
+          # base_dir
+          echo base_dir = $CI_PROJECT_DIR                        | tee --append ~/.ccache/ccache.conf
+      - |
+          # cache_dir
+          echo cache_dir = $CI_PROJECT_DIR/build/ccache          | tee --append ~/.ccache/ccache.conf
+      - |
+          # compiler_check
+          echo compiler_check = content                          | tee --append ~/.ccache/ccache.conf
+      - |
+          # stats_log
+          echo stats_log = $CI_PROJECT_DIR/build/ccache_statslog | tee --append ~/.ccache/ccache.conf
+      - |
+          # max_size
+          echo max_size = 300M                                   | tee --append ~/.ccache/ccache.conf
+      - |
+          # ccache_config
+          echo -e "\e[0Ksection_end:`date +%s`:ccache_config\r\e[0K"
+
+    - - |
+          # cache_reset
+          echo -e "\e[0Ksection_start:`date +%s`:ccache_reset[collapsed=true]\r\e[0KResetting ccache statistics"
+      - ccache --zero-stats
+      - ccache --show-stats
+      - |
+          # ccache_reset
+          echo -e "\e[0Ksection_end:`date +%s`:ccache_reset\r\e[0K"
+
+  after_script:
+    - - |
+           # apt_clean
+           echo -e "\e[0Ksection_start:`date +%s`:apt_clean[collapsed=true]\r\e[0KCleaning of unneeded APT packages"
+      - apt-get autoclean
+      - |
+          # apt_clean
+          echo -e "\e[0Ksection_end:`date +%s`:apt_clean\r\e[0K"
+
+    - - |
+          # ccache_stats
+          echo -e "\e[0Ksection_start:`date +%s`:ccache_stats[collapsed=true]\r\e[0Kccache statistics:"
+      - ccache --show-stats
+      - ccache --show-log-stats || true
+      - |
+          # ccahe_stats
+          echo -e "\e[0Ksection_end:`date +%s`:ccache_stats\r\e[0K"
