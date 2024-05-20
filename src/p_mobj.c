@@ -1672,7 +1672,6 @@ void P_XYMovement(mobj_t *mo)
 	fixed_t oldx, oldy; // reducing bobbing/momentum on ice when up against walls
 	boolean moved;
 	pslope_t *oldslope = NULL;
-	line_t *oldstandingline = NULL;
 	vector3_t slopemom = {0,0,0};
 	fixed_t predictedz = 0;
 
@@ -1705,10 +1704,7 @@ void P_XYMovement(mobj_t *mo)
 	oldy = mo->y;
 
 	if (mo->flags & MF_NOCLIPHEIGHT)
-	{
 		mo->standingslope = NULL;
-		mo->standingline = NULL;
-	}
 
 	// adjust various things based on slope
 	if (mo->standingslope && abs(mo->standingslope->zdelta) > FRACUNIT>>8) {
@@ -1720,7 +1716,7 @@ void P_XYMovement(mobj_t *mo)
 			slopemom.x = xmove;
 			slopemom.y = ymove;
 			slopemom.z = 0;
-			P_QuantizeObjectMomentumToSlope(mo, &slopemom);
+			P_QuantizeMomentumToSlope(&slopemom, mo->standingslope);
 
 			xmove = slopemom.x;
 			ymove = slopemom.y;
@@ -1728,7 +1724,6 @@ void P_XYMovement(mobj_t *mo)
 			predictedz = mo->z + slopemom.z; // We'll use this later...
 
 			oldslope = mo->standingslope;
-			oldstandingline = mo->standingline;
 		}
 	} else if (P_IsObjectOnGround(mo) && !mo->momz)
 		predictedz = mo->z;
@@ -1804,16 +1799,12 @@ void P_XYMovement(mobj_t *mo)
 		{ // try to slide along it
 			// Wall transfer part 1.
 			pslope_t *transferslope = NULL;
-			line_t *transferline = NULL;
 			fixed_t transfermomz = 0;
 			if (oldslope && (P_MobjFlip(mo)*(predictedz - mo->z) > 0)) // Only for moving up (relative to gravity), otherwise there's a failed launch when going down slopes and hitting walls
 			{
-				angle_t zangle;
 				transferslope = ((mo->standingslope) ? mo->standingslope : oldslope);
-				transferline = ((mo->standingline) ? mo->standingline : oldstandingline);
-				zangle = P_GetStandingSlopeZAngle(transferslope, transferline);
-				if (((zangle < ANGLE_180) ? zangle : InvAngle(zangle)) >= ANGLE_45) // Prevent some weird stuff going on on shallow slopes.
-					transfermomz = P_GetWallTransferMomZ(mo, transferslope, transferline);
+				if (((transferslope->zangle < ANGLE_180) ? transferslope->zangle : InvAngle(transferslope->zangle)) >= ANGLE_45) // Prevent some weird stuff going on on shallow slopes.
+					transfermomz = P_GetWallTransferMomZ(mo, transferslope);
 			}
 
 			P_SlideMove(mo);
@@ -1826,7 +1817,7 @@ void P_XYMovement(mobj_t *mo)
 			{
 				angle_t relation; // Scale transfer momentum based on how head-on it is to the slope.
 				if (mo->momx || mo->momy) // "Guess" the angle of the wall you hit using new momentum
-					relation = P_GetStandingSlopeDirection(transferslope, transferline) - R_PointToAngle2(0, 0, mo->momx, mo->momy);
+					relation = transferslope->xydirection - R_PointToAngle2(0, 0, mo->momx, mo->momy);
 				else // Give it for free, I guess.
 					relation = ANGLE_90;
 				transfermomz = FixedMul(transfermomz,
@@ -1835,7 +1826,6 @@ void P_XYMovement(mobj_t *mo)
 				{
 					mo->momz = transfermomz;
 					mo->standingslope = NULL;
-					mo->standingline = NULL;
 					if (player)
 					{
 						player->powers[pw_justlaunched] = 2;
@@ -1885,7 +1875,7 @@ void P_XYMovement(mobj_t *mo)
 			oldangle = FixedMul((signed)oldslope->zangle, FINECOSINE((moveangle - oldslope->xydirection) >> ANGLETOFINESHIFT));
 
 			if (mo->standingslope)
-				newangle = FixedMul((signed)P_GetObjectStandingSlopeZAngle(mo), FINECOSINE((moveangle - P_GetObjectStandingSlopeDirection(mo)) >> ANGLETOFINESHIFT));
+				newangle = FixedMul((signed)mo->standingslope->zangle, FINECOSINE((moveangle - mo->standingslope->xydirection) >> ANGLETOFINESHIFT));
 			else
 				newangle = 0;
 
@@ -1909,7 +1899,7 @@ void P_XYMovement(mobj_t *mo)
 		}
 	} else if (moved && mo->standingslope && predictedz) {
 		angle_t moveangle = R_PointToAngle2(0, 0, mo->momx, mo->momy);
-		angle_t newangle = FixedMul((signed)P_GetObjectStandingSlopeZAngle(mo), FINECOSINE((moveangle - P_GetObjectStandingSlopeDirection(mo)) >> ANGLETOFINESHIFT));
+		angle_t newangle = FixedMul((signed)mo->standingslope->zangle, FINECOSINE((moveangle - mo->standingslope->xydirection) >> ANGLETOFINESHIFT));
 
 			/*CONS_Printf("flat to angle %f - predicted z of %f\n",
 						FIXED_TO_FLOAT(AngleFixed(ANGLE_MAX-newangle)),
@@ -2442,9 +2432,8 @@ boolean P_ZMovement(mobj_t *mo)
 		if (((mo->eflags & MFE_VERTICALFLIP) ? tmceilingslope : tmfloorslope) && (mo->type != MT_STEAM))
 		{
 			mo->standingslope = (mo->eflags & MFE_VERTICALFLIP) ? tmceilingslope : tmfloorslope;
-			mo->standingline = (mo->eflags & MFE_VERTICALFLIP) ? tmceilingline : tmfloorline;
 			P_SetPitchRollFromSlope(mo, mo->standingslope);
-			P_ReverseQuantizeObjectMomentumToSlope(mo, &mom);
+			P_ReverseQuantizeMomentumToSlope(&mom, mo->standingslope);
 		}
 
 		// hit the floor
@@ -2590,7 +2579,7 @@ boolean P_ZMovement(mobj_t *mo)
 			mom.z = tmfloorthing->momz;
 
 		if (mo->standingslope) { // MT_STEAM will never have a standingslope, see above.
-			P_QuantizeObjectMomentumToSlope(mo, &mom);
+			P_QuantizeMomentumToSlope(&mom, mo->standingslope);
 		}
 
 		mo->momx = mom.x;
@@ -2836,9 +2825,7 @@ void P_PlayerZMovement(mobj_t *mo)
 
 		if (!mo->standingslope && (mo->eflags & MFE_VERTICALFLIP ? tmceilingslope : tmfloorslope)) {
 			// Handle landing on slope during Z movement
-			P_HandleSlopeLanding(mo,
-				(mo->eflags & MFE_VERTICALFLIP ? tmceilingslope : tmfloorslope),
-				(mo->eflags & MFE_VERTICALFLIP ? tmceilingline : tmfloorline));
+			P_HandleSlopeLanding(mo, (mo->eflags & MFE_VERTICALFLIP ? tmceilingslope : tmfloorslope));
 		}
 
 		if (P_MobjFlip(mo)*mo->momz < 0) // falling

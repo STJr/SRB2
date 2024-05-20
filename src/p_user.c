@@ -6257,15 +6257,15 @@ static void P_3dMovement(player_t *player)
 		&& player->mo->standingslope && (!(player->mo->standingslope->flags & SL_NOPHYSICS)) && abs(player->mo->standingslope->zdelta) > FRACUNIT/2) {
 		// Factor thrust to slope, but only for the part pushing up it!
 		// The rest is unaffected.
-		angle_t thrustangle = R_PointToAngle2(0, 0, totalthrust.x, totalthrust.y)-P_GetObjectStandingSlopeDirection(player->mo);
+		angle_t thrustangle = R_PointToAngle2(0, 0, totalthrust.x, totalthrust.y)-player->mo->standingslope->xydirection;
 
 		if (player->mo->standingslope->zdelta < 0) { // Direction goes down, so thrustangle needs to face toward
 			if (thrustangle < ANGLE_90 || thrustangle > ANGLE_270) {
-				P_QuantizeObjectMomentumToSlope(player->mo, &totalthrust);
+				P_QuantizeMomentumToSlope(&totalthrust, player->mo->standingslope);
 			}
 		} else { // Direction goes up, so thrustangle needs to face away
 			if (thrustangle > ANGLE_90 && thrustangle < ANGLE_270) {
-				P_QuantizeObjectMomentumToSlope(player->mo, &totalthrust);
+				P_QuantizeMomentumToSlope(&totalthrust, player->mo->standingslope);
 			}
 		}
 	}

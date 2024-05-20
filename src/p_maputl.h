@@ -57,7 +57,6 @@ boolean P_SceneryTryMove(mobj_t *thing, fixed_t x, fixed_t y);
 extern fixed_t opentop, openbottom, openrange, lowfloor, highceiling;
 extern pslope_t *opentopslope, *openbottomslope;
 extern ffloor_t *openfloorrover, *openceilingrover;
-extern line_t *opentopline, *openbottomline;
 
 void P_LineOpening(line_t *plinedef, mobj_t *mobj);
 
