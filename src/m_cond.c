@@ -108,7 +108,7 @@ void M_CopyGameData(gamedata_t *dest, gamedata_t *src)
 	}
 }
 
-void M_AddRawCondition(UINT8 set, UINT8 id, conditiontype_t c, INT32 r, INT16 x1, INT16 x2)
+void M_AddRawCondition(UINT16 set, UINT8 id, conditiontype_t c, INT32 r, INT16 x1, INT16 x2)
 {
 	condition_t *cond;
 	UINT32 num, wnum;

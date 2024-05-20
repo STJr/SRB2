@@ -137,7 +137,7 @@ typedef struct
 
 // If you have more secrets than these variables allow in your game,
 // you seriously need to get a life.
-#define MAXCONDITIONSETS 128
+#define MAXCONDITIONSETS 256
 #define MAXEMBLEMS       512
 #define MAXEXTRAEMBLEMS   48
 #define MAXUNLOCKABLES    80
@@ -233,7 +233,7 @@ gamedata_t *M_NewGameDataStruct(void);
 void M_CopyGameData(gamedata_t *dest, gamedata_t *src);
 
 // Condition set setup
-void M_AddRawCondition(UINT8 set, UINT8 id, conditiontype_t c, INT32 r, INT16 x1, INT16 x2);
+void M_AddRawCondition(UINT16 set, UINT8 id, conditiontype_t c, INT32 r, INT16 x1, INT16 x2);
 
 // Clearing secrets
 void M_ClearConditionSet(UINT8 set);
