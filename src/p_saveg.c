@@ -1990,7 +1990,7 @@ static void SaveMobjThinker(const thinker_t *th, const UINT8 type)
 		diff2 |= MD2_DONTDRAWFORVIEWMOBJ;
 	if (mobj->dispoffset != mobj->info->dispoffset)
 		diff2 |= MD2_DISPOFFSET;
-	if (mobj->alpha < FRACUNIT)
+	if (mobj->alpha != FRACUNIT)
 		diff2 |= MD2_ALPHA;
 
 	if (diff2 != 0)

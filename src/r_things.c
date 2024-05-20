@@ -992,12 +992,10 @@ UINT8 *R_GetTranslationForThing(mobj_t *mobj, skincolornum_t color, UINT16 trans
 	return NULL;
 }
 
-transnum_t R_GetTransmapFromAlpha(fixed_t alpha, transnum_t transmap)
+// Based off of R_GetLinedefTransTable
+transnum_t R_GetThingTransTable(fixed_t alpha, transnum_t transmap)
 {
-	INT32 value = 10 - transmap;
-	value = 10 - (FixedCeil(alpha * value)>>FRACBITS);
-	
-	return value;
+	return (20*(FRACUNIT - ((alpha * (10 - transmap))/10) - 1) + FRACUNIT) >> (FRACBITS+1);
 }
 
 //
@@ -1505,7 +1503,7 @@ static void R_ProjectDropShadow(mobj_t *thing, vissprite_t *vis, fixed_t scale, 
 	floordiff = abs((isflipped ? interp.height : 0) + interp.z - groundz);
 
 	trans = floordiff / (100*FRACUNIT) + 3;
-	trans = R_GetTransmapFromAlpha(thing->alpha, trans);
+	trans = R_GetThingTransTable(thing->alpha, trans);
 	if (trans >= 9) return;
 
 	scalemul = FixedMul(FRACUNIT - floordiff/640, scale);
@@ -2194,9 +2192,9 @@ static void R_ProjectSprite(mobj_t *thing)
 		trans = 0;
 	
 	if ((oldthing->flags2 & MF2_LINKDRAW) && oldthing->tracer)
-		trans = R_GetTransmapFromAlpha(oldthing->tracer->alpha, trans);
+		trans = R_GetThingTransTable(oldthing->tracer->alpha, trans);
 	else
-		trans = R_GetTransmapFromAlpha(oldthing->alpha, trans);
+		trans = R_GetThingTransTable(oldthing->alpha, trans);
 
 	// Check if this sprite needs to be rendered like a shadow
 	shadowdraw = (!!(thing->renderflags & RF_SHADOWDRAW) && !(papersprite || splat));
@@ -3658,8 +3656,7 @@ boolean R_ThingVisible (mobj_t *thing)
 		(thing->sprite == SPR_NULL) || // Don't draw null-sprites
 		(thing->flags2 & MF2_DONTDRAW) || // Don't draw MF2_LINKDRAW objects
 		(thing->drawonlyforplayer && thing->drawonlyforplayer != viewplayer) || // Don't draw other players' personal objects
-		((rendermode == render_soft && R_GetTransmapFromAlpha(thing->alpha, (thing->frame & FF_TRANSMASK)>>FF_TRANSSHIFT) >= 10) ||
-		(rendermode == render_opengl && thing->alpha == 0)) ||
+		(!R_BlendLevelVisible(thing->blendmode, R_GetThingTransTable(thing->alpha, 0))) ||
 		(!P_MobjWasRemoved(r_viewmobj) && (
 		  (r_viewmobj == thing) || // Don't draw first-person players or awayviewmobj objects
 		  (r_viewmobj->player && r_viewmobj->player->followmobj == thing) || // Don't draw first-person players' followmobj
