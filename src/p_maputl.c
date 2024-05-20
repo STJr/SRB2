@@ -541,16 +541,18 @@ void P_LineOpening(line_t *linedef, mobj_t *mobj)
 				if (delta1 > delta2) { // Below
 					if (opentop > texbottom) {
 						opentop = texbottom;
-						if ((linedef->flags & ML_MIDPEG) != 0) {
-							opentopslope = openbottomslope;
-						}
+						if (linedef->flags & ML_NOSKEW)
+							opentopslope = NULL;
+						else
+							opentopslope = linedef->midtexslope;
 					}
 				} else { // Above
 					if (openbottom < textop) {
 						openbottom = textop;
-						if ((linedef->flags & ML_MIDPEG) == 0) {
-							openbottomslope = opentopslope;
-						}
+						if (linedef->flags & ML_NOSKEW)
+							openbottomslope = NULL;
+						else
+							openbottomslope = linedef->midtexslope;
 					}
 				}
 			}
