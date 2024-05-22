@@ -1535,7 +1535,7 @@ void D_SRB2Main(void)
 			I_Error("Cannot find a map remotely named '%s'\n", word);
 		else
 		{
-			if (!M_CheckParm("-server"))
+			if (!(M_CheckParm("-server") || dedicated))
 				G_SetUsedCheats(true);
 			autostart = true;
 		}
