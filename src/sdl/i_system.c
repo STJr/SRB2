@@ -3275,4 +3275,18 @@ const char *I_GetSysName(void)
 	return SDL_GetPlatform();
 }
 
+
+void I_SetTextInputMode(boolean active)
+{
+	if (active)
+		SDL_StartTextInput();
+	else
+		SDL_StopTextInput();
+}
+
+boolean I_GetTextInputMode(void)
+{
+	return SDL_IsTextInputActive();
+}
+
 #endif
