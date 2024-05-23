@@ -279,13 +279,15 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 		back = backsector;
 
 	clipmidtex = (ldef->flags & ML_CLIPMIDTEX) || (sidedef->flags & SIDEFLAG_CLIP_MIDTEX);
-	texture_height = FixedDiv(textureheight[texnum], wall_scaley);
+	texture_height = textureheight[texnum];
 
 	if (sidedef->repeatcnt)
 		repeats = 1 + sidedef->repeatcnt;
 	else if (ldef->flags & ML_WRAPMIDTEX)
 	{
 		fixed_t high, low;
+
+		height = FixedDiv(texture_height, wall_scaley);
 
 		if (front->ceilingheight > back->ceilingheight)
 			high = back->ceilingheight;
@@ -297,8 +299,8 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 		else
 			low = back->floorheight;
 
-		repeats = (high - low)/texture_height;
-		if ((high-low)%texture_height)
+		repeats = (high - low)/height;
+		if ((high-low)%height)
 			repeats++; // tile an extra time to fill the gap -- Monster Iestyn
 	}
 	else
@@ -346,7 +348,7 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 			}
 		}
 
-		dc_texheight = textureheight[texnum]>>FRACBITS;
+		dc_texheight = texture_height>>FRACBITS;
 
 		// draw the columns
 		for (dc_x = x1; dc_x <= x2; dc_x++)
@@ -354,9 +356,9 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 			dc_texturemid = ds->maskedtextureheight[dc_x];
 
 			if (ldef->flags & ML_MIDPEG)
-				dc_texturemid += (textureheight[texnum])*times + textureheight[texnum];
+				dc_texturemid += texture_height*times + texture_height;
 			else
-				dc_texturemid -= (textureheight[texnum])*times;
+				dc_texturemid -= texture_height*times;
 
 			// Check for overflows first
 			overflow_test = (INT64)centeryfrac - (((INT64)dc_texturemid*spryscale)>>FRACBITS);
