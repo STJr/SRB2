@@ -500,8 +500,11 @@ void P_LineOpening(line_t *linedef, mobj_t *mobj)
 			INT32 texnum = R_GetTextureNum(side->midtexture); // make sure the texture is actually valid
 
 			if (texnum) {
+				fixed_t scaley = abs(side->scaley_mid);
+				fixed_t offsetvalue = FixedDiv(side->rowoffset + side->offsety_mid, scaley);
+
 				// Get the midtexture's height
-				texheight = FixedDiv(textureheight[texnum], abs(side->scaley_mid));
+				texheight = FixedDiv(textureheight[texnum], scaley);
 
 				// Set texbottom and textop to the Z coordinates of the texture's boundaries
 #if 0
@@ -509,26 +512,26 @@ void P_LineOpening(line_t *linedef, mobj_t *mobj)
 				// on non-solid polyobjects should NEVER happen in the future
 				if (linedef->polyobj && (linedef->polyobj->flags & POF_TESTHEIGHT)) {
 					if (linedef->flags & ML_WRAPMIDTEX && !side->repeatcnt) { // "infinite" repeat
-						texbottom = back->floorheight + side->rowoffset + side->offsety_mid;
-						textop = back->ceilingheight + side->rowoffset + side->offsety_mid;
+						texbottom = back->floorheight + offsetvalue;
+						textop = back->ceilingheight + offsetvalue;
 					} else if (linedef->flags & ML_MIDTEX) {
-						texbottom = back->floorheight + side->rowoffset + side->offsety_mid;
+						texbottom = back->floorheight + offsetvalue;
 						textop = texbottom + texheight*(side->repeatcnt+1);
 					} else {
-						textop = back->ceilingheight + side->rowoffset + side->offsety_mid;
+						textop = back->ceilingheight + offsetvalue;
 						texbottom = textop - texheight*(side->repeatcnt+1);
 					}
 				} else
 #endif
 				{
 					if (linedef->flags & ML_WRAPMIDTEX && !side->repeatcnt) { // "infinite" repeat
-						texbottom = openbottom + side->rowoffset + side->offsety_mid;
-						textop = opentop + side->rowoffset + side->offsety_mid;
+						texbottom = openbottom + offsetvalue;
+						textop = opentop + offsetvalue;
 					} else if (linedef->flags & ML_MIDPEG) {
-						texbottom = openbottom + side->rowoffset + side->offsety_mid;
+						texbottom = openbottom + offsetvalue;
 						textop = texbottom + texheight*(side->repeatcnt+1);
 					} else {
-						textop = opentop + side->rowoffset + side->offsety_mid;
+						textop = opentop + offsetvalue;
 						texbottom = textop - texheight*(side->repeatcnt+1);
 					}
 				}
