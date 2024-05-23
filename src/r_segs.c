@@ -129,7 +129,7 @@ INT32 R_GetOverlayTextureRepeats(unsigned which, side_t *side, INT32 texnum, sec
 		return repeats;
 
 	fixed_t high, low;
-	fixed_t texheight = textureheight[texnum];
+	fixed_t texheight = FixedDiv(textureheight[texnum], abs(side->overlays[which].scaley));
 
 	if (sec_back)
 	{
