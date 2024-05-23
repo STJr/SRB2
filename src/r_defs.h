@@ -649,6 +649,7 @@ typedef struct
 	INT32 texture;
 	fixed_t offsetx, offsety;
 	fixed_t scalex, scaley;
+	INT16 repeatcnt;
 	UINT8 blendmode;
 	fixed_t alpha;
 	UINT8 flags;

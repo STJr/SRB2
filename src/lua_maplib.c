@@ -1485,6 +1485,7 @@ enum sideoverlay_e {
 	sideoverlay_offsety,
 	sideoverlay_scalex,
 	sideoverlay_scaley,
+	sideoverlay_repeatcnt,
 	sideoverlay_alpha,
 	sideoverlay_blendmode,
 	sideoverlay_noskew,
@@ -1499,6 +1500,7 @@ static const char *const sideoverlay_opt[] = {
 	"offsety",
 	"scalex",
 	"scaley",
+	"repeatcnt",
 	"alpha",
 	"blendmode",
 	"noskew",
@@ -1541,6 +1543,9 @@ static int sideoverlay_get(lua_State *L)
 		return 1;
 	case sideoverlay_scaley:
 		lua_pushfixed(L, overlay->scaley);
+		return 1;
+	case sideoverlay_repeatcnt:
+		lua_pushinteger(L, overlay->repeatcnt);
 		return 1;
 	case sideoverlay_alpha:
 		lua_pushfixed(L, overlay->alpha);
@@ -1597,6 +1602,9 @@ static int sideoverlay_set(lua_State *L)
 		break;
 	case sideoverlay_scaley:
 		overlay->scaley = luaL_checkfixed(L, 3);
+		break;
+	case sideoverlay_repeatcnt:
+		overlay->repeatcnt = luaL_checkinteger(L, 3);
 		break;
 	case sideoverlay_alpha:
 		overlay->alpha = min(max(0, luaL_checkfixed(L, 3)), FRACUNIT);

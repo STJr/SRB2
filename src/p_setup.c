@@ -1335,6 +1335,7 @@ static void P_InitSideEdges(side_t *sd)
 		sd->overlays[j].texture = R_TextureNumForName("-");
 		sd->overlays[j].offsetx = sd->overlays[j].offsety = 0;
 		sd->overlays[j].scalex = sd->overlays[j].scaley = FRACUNIT;
+		sd->overlays[j].repeatcnt = 0;
 		sd->overlays[j].alpha = FRACUNIT;
 		sd->overlays[j].blendmode = AST_COPY;
 		sd->overlays[j].flags = 0;
@@ -1938,6 +1939,8 @@ static void ParseTextmapSidedefOverlay(unsigned which, UINT32 i, const char *par
 		overlay->scalex = FLOAT_TO_FIXED(atof(val));
 	else if (fastcmp(param, "scaley"))
 		overlay->scaley = FLOAT_TO_FIXED(atof(val));
+	else if (fastcmp(param, "repeatcnt"))
+		overlay->repeatcnt = atol(val);
 	else if (fastcmp(param, "alpha"))
 		overlay->alpha = FLOAT_TO_FIXED(atof(val));
 	else if (fastcmp(param, "renderstyle"))
@@ -2285,6 +2288,8 @@ static void WriteTextmapEdgeTexture(const char *prefix, unsigned i, side_t *side
 		fprintf(f, "%s""scalex = %f;\n", prefix, FIXED_TO_FLOAT(side->overlays[i].scalex));
 	if (side->overlays[i].scaley != FRACUNIT)
 		fprintf(f, "%s""scaley = %f;\n", prefix, FIXED_TO_FLOAT(side->overlays[i].scaley));
+	if (side->overlays[i].repeatcnt != 0)
+		fprintf(f, "%s""repeatcnt = %d;\n", prefix, side->overlays[i].repeatcnt);
 	if (side->overlays[i].alpha != FRACUNIT)
 		fprintf(f, "%s""alpha = %f;\n", prefix, FIXED_TO_FLOAT(side->overlays[i].alpha));
 	if (side->overlays[i].blendmode != AST_COPY)

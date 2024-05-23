@@ -123,10 +123,10 @@ transnum_t R_GetLinedefTransTable(fixed_t alpha)
 
 INT32 R_GetOverlayTextureRepeats(unsigned which, side_t *side, INT32 texnum, sector_t *sec_front, sector_t *sec_back, fixed_t v1x, fixed_t v1y, fixed_t v2x, fixed_t v2y)
 {
-	INT32 repeats = 1;
+	INT32 repeats = side->overlays[which].repeatcnt;
 
-	if (!(side->overlays[which].flags & SIDEOVERLAYFLAG_WRAP))
-		return repeats;
+	if (repeats > 0 || (side->overlays[which].flags & SIDEOVERLAYFLAG_WRAP) == 0)
+		return max(repeats, 1);
 
 	fixed_t high, low;
 	fixed_t texheight = FixedDiv(textureheight[texnum], abs(side->overlays[which].scaley));
