@@ -43,10 +43,9 @@ UINT16 P_GetStateSprite2(state_t *state)
 	else
 	{
 		// Transform the state frame into an animation ID
-		UINT32 stateframe = state->frame & FF_FRAMEMASK;
-		UINT16 spr2 = stateframe & ~FF_SPR2SUPER;
+		UINT16 spr2 = state->frame & FF_FRAMEMASK;
 
-		if (stateframe & FF_SPR2SUPER)
+		if (state->frame & SPR2F_SUPER)
 			spr2 |= SPR2F_SUPER;
 
 		return spr2;
@@ -70,7 +69,7 @@ boolean P_IsStateSprite2Super(state_t *state)
 		if (state->sprite2 & SPR2F_SUPER)
 			return true;
 	}
-	else if (state->frame & FF_SPR2SUPER)
+	else if (state->frame & SPR2F_SUPER)
 		return true;
 
 	return false;
