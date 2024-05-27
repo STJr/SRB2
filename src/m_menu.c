@@ -311,7 +311,7 @@ menu_t MP_MainDef;
 // Controls
 menu_t OP_ChangeControlsDef;
 menu_t OP_MPControlsDef, OP_MiscControlsDef;
-menu_t OP_P1ControlsDef, OP_P2ControlsDef, OP_MouseOptionsDef;
+menu_t OP_P1ControlsDef, OP_P2ControlsDef, BOT_Options, OP_MouseOptionsDef;
 menu_t OP_Mouse2OptionsDef, OP_Joystick1Def, OP_Joystick2Def;
 menu_t OP_CameraOptionsDef, OP_Camera2OptionsDef;
 menu_t OP_PlaystyleDef;
@@ -1052,6 +1052,8 @@ static menuitem_t OP_MainMenu[] =
 	{IT_CALL    | IT_STRING, NULL, "Server Options...",    M_ServerOptions,     80},
 
 	{IT_SUBMENU | IT_STRING, NULL, "Data Options...",      &OP_DataOptionsDef, 100},
+
+	{IT_SUBMENU | IT_STRING, NULL, "Bot options...",       &BOT_Options,   120},
 };
 
 static menuitem_t OP_P1ControlsMenu[] =
@@ -1076,6 +1078,17 @@ static menuitem_t OP_P2ControlsMenu[] =
 
 	{IT_STRING  | IT_CVAR, NULL, "Automatic braking", &cv_autobrake2,  70},
 	{IT_CALL    | IT_STRING, NULL, "Play Style...", M_Setup2PPlaystyleMenu, 80},
+};
+
+
+static menuitem_t BOT_OptionsMenu[] =
+{
+	{IT_CVAR    | IT_STRING, NULL, "Tails catch on air...", &cv_toggletails,   10},
+	{IT_CVAR    | IT_STRING, NULL, "Tails easy mode..", &cv_tailseasy,   20},
+	{IT_CVAR    | IT_STRING, NULL, "Tails velocity..", &cv_tailsvelocity,   30},
+	{IT_CVAR    | IT_STRING, NULL, "Tails gets tired..", &cv_tailstired,   40},
+
+	{IT_CVAR    | IT_STRING, NULL, "PLayer is saved..", &cv_botsaves,   60}
 };
 
 static menuitem_t OP_ChangeControlsMenu[] =
@@ -2062,6 +2075,15 @@ menu_t OP_P2ControlsDef = {
 	&OP_MainDef,
 	OP_P2ControlsMenu,
 	M_DrawControlsDefMenu,
+	50, 30, 0, NULL};
+
+menu_t BOT_Options = {
+	MTREE2(MN_OP_MAIN, MN_OP_BOTCONTROLS),
+	"M_CONTRO",
+	sizeof(BOT_OptionsMenu)/sizeof(menuitem_t),
+	&OP_MainDef,
+	BOT_OptionsMenu,
+	M_DrawGenericMenu,
 	50, 30, 0, NULL};
 
 menu_t OP_MouseOptionsDef = DEFAULTMENUSTYLE(

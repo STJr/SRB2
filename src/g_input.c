@@ -23,6 +23,11 @@
 
 static CV_PossibleValue_t mousesens_cons_t[] = {{1, "MIN"}, {MAXMOUSESENSITIVITY, "MAX"}, {0, NULL}};
 static CV_PossibleValue_t onecontrolperkey_cons_t[] = {{1, "One"}, {2, "Several"}, {0, NULL}};
+static CV_PossibleValue_t tails_toggle_cons_t[] = {{1, "on"}, {2, "off"}, {0, NULL}};
+static CV_PossibleValue_t tails_easy_cons_t[] = {{1, "on"}, {2, "off"}, {0, NULL}};
+static CV_PossibleValue_t tails_save_cons_t[] = {{1, "on"}, {2, "off"}, {0, NULL}};
+static CV_PossibleValue_t tails_velocity_cons_t[] = {{1, "1"}, {2, "2"}, {3, "3"}, {0, NULL}};
+static CV_PossibleValue_t tails_tired_cons_t[] = {{1, "on"}, {2, "off"}, {0, NULL}};
 
 // mouse values are used once
 consvar_t cv_mousesens = CVAR_INIT ("mousesens", "20", CV_SAVE, mousesens_cons_t, NULL);
@@ -30,6 +35,11 @@ consvar_t cv_mousesens2 = CVAR_INIT ("mousesens2", "20", CV_SAVE, mousesens_cons
 consvar_t cv_mouseysens = CVAR_INIT ("mouseysens", "20", CV_SAVE, mousesens_cons_t, NULL);
 consvar_t cv_mouseysens2 = CVAR_INIT ("mouseysens2", "20", CV_SAVE, mousesens_cons_t, NULL);
 consvar_t cv_controlperkey = CVAR_INIT ("controlperkey", "One", CV_SAVE, onecontrolperkey_cons_t, NULL);
+consvar_t cv_toggletails = CVAR_INIT ("toggletails", "2", CV_SAVE, tails_toggle_cons_t, NULL);
+consvar_t cv_tailseasy = CVAR_INIT ("easytails", "2", CV_SAVE, tails_easy_cons_t, NULL);
+consvar_t cv_botsaves = CVAR_INIT ("savebot", "2", CV_SAVE, tails_save_cons_t, NULL);
+consvar_t cv_tailsvelocity = CVAR_INIT ("tailsvelocity", "3", CV_SAVE, tails_velocity_cons_t, NULL);
+consvar_t cv_tailstired = CVAR_INIT ("tailstired", "2", CV_SAVE, tails_tired_cons_t, NULL);
 
 mouse_t mouse;
 mouse_t mouse2;

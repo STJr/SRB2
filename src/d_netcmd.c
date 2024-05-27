@@ -815,6 +815,11 @@ void D_RegisterClientCommands(void)
 	CV_RegisterVar(&cv_mouse2opt);
 #endif
 	CV_RegisterVar(&cv_controlperkey);
+	CV_RegisterVar(&cv_toggletails);
+	CV_RegisterVar(&cv_tailseasy);
+	CV_RegisterVar(&cv_botsaves);
+	CV_RegisterVar(&cv_tailsvelocity);
+	CV_RegisterVar(&cv_tailstired);
 
 	CV_RegisterVar(&cv_usemouse);
 	CV_RegisterVar(&cv_usemouse2);

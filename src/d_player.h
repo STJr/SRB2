@@ -160,6 +160,7 @@ typedef enum
 	PF_FINISHED    = 1<<30, // The player finished the level. NOT the same as exiting
 
 	// up to 1<<31 is free
+	PF_CATCHJUMP   = 1<<31
 } pflags_t;
 
 typedef enum

@@ -8518,7 +8518,7 @@ void P_MovePlayer(player_t *player)
 		// Fly counter for Tails.
 		if (player->powers[pw_tailsfly])
 		{
-			const fixed_t actionspd = player->actionspd/100;
+			const fixed_t actionspd = player->actionspd/100*cv_tailsvelocity.value;
 
 			if (player->charflags & SF_MULTIABILITY)
 			{
@@ -8561,7 +8561,7 @@ void P_MovePlayer(player_t *player)
 		else
 		{
 			// Tails-gets-tired Stuff
-			if (player->panim == PA_ABILITY && player->mo->state-states != S_PLAY_FLY_TIRED)
+			if (player->panim == PA_ABILITY && player->mo->state-states != S_PLAY_FLY_TIRED && cv_tailstired.value == 2)
 				P_SetPlayerMobjState(player->mo, S_PLAY_FLY_TIRED);
 
 			if (player->charability == CA_FLY && (leveltime % 10 == 0)
@@ -8786,6 +8786,9 @@ void P_MovePlayer(player_t *player)
 
 	if (P_IsObjectOnGround(player->mo))
 		player->mo->pmomz = 0;
+
+	if (cv_toggletails.value == 1 && !onground && !(player->mo->eflags & MFE_UNDERWATER) && (player->pflags & PF_JUMPED) && cmd->buttons & BT_SPIN)
+		player->pflags |= PF_CATCHJUMP;
 }
 
 static void P_DoZoomTube(player_t *player)
@@ -12215,7 +12218,7 @@ void P_PlayerThink(player_t *player)
 	if (player->powers[pw_flashing] && player->powers[pw_flashing] < UINT16_MAX && ((player->powers[pw_carry] == CR_NIGHTSMODE) || player->powers[pw_flashing] < flashingtics))
 		player->powers[pw_flashing]--;
 
-	if (player->powers[pw_tailsfly] && player->powers[pw_tailsfly] < UINT16_MAX && player->charability != CA_SWIM) // tails fly counter
+	if (player->powers[pw_tailsfly] && player->powers[pw_tailsfly] < UINT16_MAX && player->charability != CA_SWIM && cv_tailstired.value==2) // tails fly counter
 		player->powers[pw_tailsfly]--;
 
 	if (player->powers[pw_pushing] && player->powers[pw_pushing] < UINT16_MAX)

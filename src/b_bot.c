@@ -13,6 +13,7 @@
 #include "doomdef.h"
 #include "d_player.h"
 #include "g_game.h"
+#include "g_input.h"
 #include "r_main.h"
 #include "p_local.h"
 #include "b_bot.h"
@@ -162,6 +163,45 @@ static void B_BuildTailsTiccmd(mobj_t *sonic, mobj_t *tails, ticcmd_t *cmd)
 	{
 		cmd->angleturn = (ang) >> 16; // NOT FRACBITS DAMNIT
 	}
+
+	if (player->pflags & PF_CATCHJUMP)
+	{
+		if (P_IsObjectOnGround(sonic))
+		{
+			player->pflags &= ~PF_CATCHJUMP;
+		}
+		else if (dist >= touchdist && dist < followmin && abs(zdist) < 192*scale)
+		{
+			if (!_2d)
+				cmd->forwardmove = FixedHypot(pcmd->forwardmove, pcmd->sidemove) + 15;
+			else
+				cmd->sidemove = pcmd->sidemove + 15;
+		}
+		else if (dist >= followmin)
+		{
+			if (!_2d)
+				cmd->forwardmove = MAXPLMOVE;
+			else if (sonic->x > tails->x)
+				cmd->sidemove = MAXPLMOVE;
+			else
+				cmd->sidemove = -MAXPLMOVE;
+		}
+
+		if (cv_tailseasy.value == 1)
+		{
+			tails->x = sonic->x;
+			tails->y = sonic->y;
+			tails->z = sonic->z + scale*30;
+			tails->momx = sonic->momx;
+			tails->momy = sonic->momy;
+			P_SetObjectMomZ(tails, sonic->momz, false);
+		}
+
+        mem->thinkstate = AI_THINKFLY;
+        bot->pflags |= PF_CANCARRY;
+        P_SetMobjState(tails, S_PLAY_FLY);
+        player->pflags &= ~PF_CATCHJUMP;
+    }
 
 	// ********
 	// FLY MODE

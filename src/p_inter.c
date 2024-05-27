@@ -15,6 +15,7 @@
 #include "i_system.h"
 #include "am_map.h"
 #include "g_game.h"
+#include "g_input.h"
 #include "m_random.h"
 #include "p_local.h"
 #include "s_sound.h"
@@ -3836,6 +3837,12 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 
 	if (source && source->player && target)
 		G_GhostAddHit(target);
+
+	if (target->health <= 0 && target->type == MT_PLAYER && cv_botsaves.value == 1)
+	{
+		P_ResetPlayer(target->player);
+		return false;
+	}
 
 	if (target->health <= 0)
 	{

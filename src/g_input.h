@@ -116,6 +116,11 @@ typedef enum
 extern consvar_t cv_mousesens, cv_mouseysens;
 extern consvar_t cv_mousesens2, cv_mouseysens2;
 extern consvar_t cv_controlperkey;
+extern consvar_t cv_toggletails;
+extern consvar_t cv_tailseasy;
+extern consvar_t cv_botsaves;
+extern consvar_t cv_tailsvelocity;
+extern consvar_t cv_tailstired;
 
 typedef struct
 {
