@@ -140,6 +140,7 @@ static char *char_notes = NULL;
 
 boolean menuactive = false;
 boolean fromlevelselect = false;
+tic_t shieldbuttonprompt = 0; // Show a prompt about the new Shield button for old configs // TODO: 2.3: Remove
 
 typedef enum
 {
@@ -3161,6 +3162,7 @@ static void Command_Manual_f(void)
 	if (modeattacking)
 		return;
 	M_StartControlPanel();
+	if (shieldbuttonprompt) return; // TODO: 2.3: Delete this line
 	currentMenu = &MISC_HelpDef;
 	itemOn = 0;
 }
@@ -3340,6 +3342,7 @@ boolean M_Responder(event_t *ev)
 				if (modeattacking)
 					return true;
 				M_StartControlPanel();
+				if (shieldbuttonprompt) return true; // TODO: 2.3: Delete this line
 				M_Options(0);
 				// Uncomment the below if you want the menu to reset to the top each time like before. M_SetupNextMenu will fix it automatically.
 				//OP_SoundOptionsDef.lastOn = 0;
@@ -3350,6 +3353,7 @@ boolean M_Responder(event_t *ev)
 				if (modeattacking)
 					return true;
 				M_StartControlPanel();
+				if (shieldbuttonprompt) return true; // TODO: 2.3: Delete this line
 				M_Options(0);
 				M_VideoModeMenu(0);
 				return true;
@@ -3361,6 +3365,7 @@ boolean M_Responder(event_t *ev)
 				if (modeattacking)
 					return true;
 				M_StartControlPanel();
+				if (shieldbuttonprompt) return true; // TODO: 2.3: Delete this line
 				M_Options(0);
 				M_SetupNextMenu(&OP_MainDef);
 				return true;
@@ -3631,6 +3636,27 @@ void M_Drawer(void)
 	}
 }
 
+// Handle the "Do you want to assign Shield Ability now?" pop-up for old configs // TODO: 2.3: Remove
+static void M_ShieldButtonResponse(INT32 ch)
+{
+	if (I_GetTime() <= shieldbuttonprompt) // Don't mash past the pop-up by accident!
+	{
+		stopstopmessage = true;
+		return;
+	}
+
+	S_StartSound(NULL, sfx_menu1);
+	noFurtherInput = true;
+	shieldbuttonprompt = 0;
+
+	if (ch == 'y' || ch == KEY_ENTER)
+	{
+		stopstopmessage = true; // Stop MessageDef from calling M_SetupNextMenu automatically
+		OP_ChangeControlsDef.lastOn = 8; // Highlight Shield Ability in the controls menu
+		M_Setup1PControlsMenu(ch); // Set up P1's controls menu and call M_SetupNextMenu
+	}
+}
+
 //
 // M_StartControlPanel
 //
@@ -3662,6 +3688,17 @@ void M_StartControlPanel(void)
 		currentMenu = &MainDef;
 		itemOn = singleplr;
 		M_UpdateItemOn();
+
+		if (shieldbuttonprompt) // For old configs, show a pop-up about the new Shield button // TODO: 2.3: Remove
+		{
+			S_StartSound(NULL, sfx_menu1);
+			shieldbuttonprompt = I_GetTime() + TICRATE; // Don't mash past the pop-up by accident!
+
+			M_StartMessage(M_GetText("Welcome back! Since you last played,\nSpin has been split into separate\n\"Spin\" and \"Shield Ability\" controls."
+			"\n\nDo you want to \x82""assign Shield Ability now\x80""?"
+			"\n\n\nPress \x82""ENTER\x80"" or the \x83""A button\x80"" to accept\nPress \x82""ESC\x80"" or the \x85""B button\x80"" to skip\n"),
+				M_ShieldButtonResponse, MM_YESNO);
+		}
 	}
 	else if (modeattacking)
 	{
