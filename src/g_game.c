@@ -1386,6 +1386,13 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 	if (PLAYERINPUTDOWN(ssplayer, GC_SPIN) || (usejoystick && axis > 0))
 		cmd->buttons |= BT_SPIN;
 
+	if (gamestate != GS_LEVEL) // not in a level, don't build anything else
+	{
+		cmd->angleturn = ticcmd_oldangleturn[forplayer];
+		cmd->aiming = G_ClipAimingPitch(myaiming);
+		return;
+	}
+
 	// Centerview can be a toggle in simple mode!
 	{
 		static boolean last_centerviewdown[2], centerviewhold[2]; // detect taps for toggle behavior
@@ -1717,7 +1724,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 	// At this point, cmd doesn't contain the final angle yet,
 	// So we need to temporarily transform it so Lua scripters
 	// don't need to handle it differently than in other hooks.
-	if (addedtogame && gamestate == GS_LEVEL)
+	if (addedtogame)
 	{
 		INT16 extra = ticcmd_oldangleturn[forplayer] - player->oldrelangleturn;
 		INT16 origangle = cmd->angleturn;
