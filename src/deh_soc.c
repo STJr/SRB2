@@ -324,7 +324,7 @@ void readPlayer(MYFILE *f, INT32 num)
 			if (fastcmp(word, "PICNAME"))
 			{
 				SLOTFOUND
-				strncpy(description[num].picname, word2, 8);
+				strncpy(description[num].picname, word2, sizeof(description[num].picname)-1);
 			}
 			else if (fastcmp(word, "DISPLAYNAME"))
 			{
@@ -355,7 +355,7 @@ void readPlayer(MYFILE *f, INT32 num)
 			else if (fastcmp(word, "NAMETAG") || fastcmp(word, "TAGNAME"))
 			{
 				SLOTFOUND
-				strncpy(description[num].nametag, word2, 8);
+				strncpy(description[num].nametag, word2, sizeof(description[num].nametag)-1);
 			}
 			else if (fastcmp(word, "TAGTEXTCOLOR") || fastcmp(word, "TAGTEXTCOLOUR"))
 			{
@@ -405,7 +405,6 @@ void readfreeslots(MYFILE *f)
 {
 	char *s = Z_Malloc(MAXLINELEN, PU_STATIC, NULL);
 	char *word,*type;
-	char *tmp;
 	int i;
 
 	do
@@ -415,10 +414,13 @@ void readfreeslots(MYFILE *f)
 			if (s[0] == '\n')
 				break;
 
-			tmp = strchr(s, '#');
-			if (tmp)
-				*tmp = '\0';
-			if (s == tmp)
+			char *hashtag = strchr(s, '#');
+			char *space = strchr(s, ' ');
+			if (hashtag)
+				*hashtag = '\0';
+			if (space)
+				*space = '\0';
+			if (s == hashtag || s == space)
 				continue; // Skip comment lines, but don't break.
 
 			type = strtok(s, "_");
@@ -440,18 +442,16 @@ void readfreeslots(MYFILE *f)
 				S_AddSoundFx(word, false, 0, false);
 			else if (fastcmp(type, "SPR"))
 			{
+				if (strlen(word) > MAXSPRITENAME)
+					I_Error("Sprite name is longer than %d characters\n", MAXSPRITENAME);
+
 				for (i = SPR_FIRSTFREESLOT; i <= SPR_LASTFREESLOT; i++)
 				{
-					if (used_spr[(i-SPR_FIRSTFREESLOT)/8] & (1<<(i%8)))
-					{
-						if (!sprnames[i][4] && memcmp(sprnames[i],word,4)==0)
-							sprnames[i][4] = (char)f->wad;
+					if (in_bit_array(used_spr, i - SPR_FIRSTFREESLOT))
 						continue; // Already allocated, next.
-					}
 					// Found a free slot!
-					strncpy(sprnames[i],word,4);
-					//sprnames[i][4] = 0;
-					used_spr[(i-SPR_FIRSTFREESLOT)/8] |= 1<<(i%8); // Okay, this sprite slot has been named now.
+					strcpy(sprnames[i], word);
+					set_bit_array(used_spr, i - SPR_FIRSTFREESLOT); // Okay, this sprite slot has been named now.
 					// Lua needs to update the value in _G if it exists
 					LUA_UpdateSprName(word, i);
 					break;
@@ -1163,7 +1163,7 @@ void readgametype(MYFILE *f, char *gtname)
 	INT16 newgtrankingstype = -1;
 	int newgtinttype = 0;
 	char gtdescription[441];
-	char gtconst[MAXLINELEN];
+	char gtconst[MAXLINELEN+1];
 
 	// Empty strings.
 	gtdescription[0] = '\0';
@@ -1543,6 +1543,12 @@ void readlevelheader(MYFILE *f, INT32 num)
 				P_AddGradesForMare((INT16)(num-1), mare-1, word2);
 			}
 
+			// NiGHTS time limits (per mare)
+			else if (fastncmp(word, "NIGHTSTIME", 10))
+			{
+				P_AddNiGHTSTimes((INT16)(num-1), word2);
+			}
+
 			// Strings that can be truncated
 			else if (fastcmp(word, "SELECTHEADING"))
 			{
@@ -1677,7 +1683,7 @@ void readlevelheader(MYFILE *f, INT32 num)
 			else if (fastcmp(word, "SKYNUM"))
 				mapheaderinfo[num-1]->skynum = (INT16)i;
 			else if (fastcmp(word, "INTERSCREEN"))
-				strncpy(mapheaderinfo[num-1]->interscreen, word2, 8);
+				strncpy(mapheaderinfo[num-1]->interscreen, word2, sizeof(mapheaderinfo[num-1]->interscreen)-1);
 			else if (fastcmp(word, "PRECUTSCENENUM"))
 				mapheaderinfo[num-1]->precutscenenum = (UINT8)i;
 			else if (fastcmp(word, "CUTSCENENUM"))
@@ -2294,7 +2300,7 @@ static void readtextpromptpage(MYFILE *f, INT32 num, INT32 pagenum)
 					char name[34];
 					name[0] = '\x82'; // color yellow
 					name[1] = 0;
-					strncat(name, word2, 33);
+					strncat(name, word2, 32);
 					name[33] = 0;
 
 					// Replace _ with ' '
@@ -2304,7 +2310,7 @@ static void readtextpromptpage(MYFILE *f, INT32 num, INT32 pagenum)
 							name[j] = ' ';
 					}
 
-					strncpy(textprompts[num]->page[pagenum].name, name, 32);
+					strncpy(textprompts[num]->page[pagenum].name, name, sizeof(textprompts[num]->page[pagenum].name));
 				}
 				else
 					*textprompts[num]->page[pagenum].name = '\0';
@@ -3794,7 +3800,7 @@ void readmaincfg(MYFILE *f)
 			}
 			else if (fastcmp(word, "TITLEPICSNAME"))
 			{
-				strncpy(ttname, word2, 9);
+				strncpy(ttname, word2, sizeof(ttname)-1);
 				titlechanged = true;
 			}
 			else if (fastcmp(word, "TITLEPICSX"))
@@ -3878,8 +3884,12 @@ void readmaincfg(MYFILE *f)
 				savemoddata = true;
 
 				// Also save a time attack folder
-				filenamelen = strlen(gamedatafilename)-4;  // Strip off the extension
-				strncpy(timeattackfolder, gamedatafilename, min(filenamelen, sizeof (timeattackfolder)));
+				filenamelen = strlen(gamedatafilename);  // Strip off the extension
+				if (filenamelen >= 4)
+					filenamelen -= 4;
+				if (filenamelen >= sizeof(timeattackfolder))
+					filenamelen = sizeof(timeattackfolder)-1;
+				strncpy(timeattackfolder, gamedatafilename, filenamelen);
 				timeattackfolder[min(filenamelen, sizeof (timeattackfolder) - 1)] = '\0';
 
 				strcpy(savegamename, timeattackfolder);
@@ -4172,9 +4182,9 @@ spritenum_t get_sprite(const char *word)
 		return atoi(word);
 	if (fastncmp("SPR_",word,4))
 		word += 4; // take off the SPR_
-	for (i = 0; i < NUMSPRITES; i++)
-		if (!sprnames[i][4] && memcmp(word,sprnames[i],4)==0)
-			return i;
+	i = R_GetSpriteNumByName(word);
+	if (i != NUMSPRITES)
+		return i;
 	deh_warning("Couldn't find sprite named 'SPR_%s'",word);
 	return SPR_NULL;
 }

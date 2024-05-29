@@ -1185,7 +1185,7 @@ boolean preparefilemenu(boolean samedepth)
 					{
 						if (!filenamebuf[i][0])
 						{
-							strncpy(filenamebuf[i], wadfiles[i]->filename, MAX_WADPATH);
+							strncpy(filenamebuf[i], wadfiles[i]->filename, MAX_WADPATH-1);
 							filenamebuf[i][MAX_WADPATH - 1] = '\0';
 							nameonly(filenamebuf[i]);
 						}
