@@ -12144,7 +12144,7 @@ void P_PlayerThink(player_t *player)
 					}
 					/* FALLTHRU */
 				default:
-					if (player->powers[pw_carry] == CR_FAN && !(player->pflags & PF_DIRECTIONCHAR)) // Don't impact drawangle in any special way when on a fan
+					if (!(player->powers[pw_carry] == CR_FAN && (player->pflags & PF_DIRECTIONCHAR))) // Don't impact drawangle in any special way when on a fan
 						player->drawangle = player->mo->angle;
 					break;
 			}
