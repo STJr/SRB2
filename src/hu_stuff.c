@@ -999,6 +999,7 @@ static void HU_sendChatMessage(void)
 void HU_clearChatChars(void)
 {
 	memset(w_chat, '\0', sizeof(w_chat));
+	I_SetTextInputMode(false);
 	chat_on = false;
 	c_input = 0;
 
@@ -1048,6 +1049,7 @@ boolean HU_Responder(event_t *ev)
 		if ((ev->key == gamecontrol[GC_TALKKEY][0] || ev->key == gamecontrol[GC_TALKKEY][1])
 			&& netgame && !OLD_MUTE) // check for old chat mute, still let the players open the chat incase they want to scroll otherwise.
 		{
+			I_SetTextInputMode(true);
 			chat_on = true;
 			chat_on_first_event = false;
 			w_chat[0] = 0;
@@ -1059,6 +1061,7 @@ boolean HU_Responder(event_t *ev)
 		if ((ev->key == gamecontrol[GC_TEAMKEY][0] || ev->key == gamecontrol[GC_TEAMKEY][1])
 			&& netgame && !OLD_MUTE)
 		{
+			I_SetTextInputMode(true);
 			chat_on = true;
 			chat_on_first_event = false;
 			w_chat[0] = 0;
@@ -1133,6 +1136,7 @@ boolean HU_Responder(event_t *ev)
 			if (!CHAT_MUTE)
 				HU_sendChatMessage();
 
+			I_SetTextInputMode(false);
 			chat_on = false;
 			c_input = 0; // reset input cursor
 			chat_scrollmedown = true; // you hit enter, so you might wanna autoscroll to see what you just sent. :)
@@ -1143,6 +1147,7 @@ boolean HU_Responder(event_t *ev)
 			|| c == gamecontrol[GC_TEAMKEY][0] || c == gamecontrol[GC_TEAMKEY][1])
 			&& c >= KEY_MOUSE1)) // If it's not a keyboard key, then the chat button is used as a toggle.
 		{
+			I_SetTextInputMode(false);
 			chat_on = false;
 			c_input = 0; // reset input cursor
 			I_UpdateMouseGrab();
