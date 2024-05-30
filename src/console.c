@@ -70,13 +70,8 @@ static boolean consoleready;  // console prompt is ready
        INT32 con_destlines; // vid lines used by console at final position
 static INT32 con_curlines;  // vid lines currently used by console
 
-       INT32 con_clipviewtop; // (useless)
-
 static UINT8  con_hudlines;             // number of console heads up message lines
 static UINT32 con_hudtime[MAXHUDLINES]; // remaining time of display for hud msg lines
-
-       INT32 con_clearlines;      // top screen lines to refresh when view reduced
-       boolean con_hudupdate;   // when messages scroll, we need a backgrnd refresh
 
 // console text output
 static char *con_line;          // console text output current line
@@ -473,9 +468,6 @@ void CON_Init(void)
 
 	Lock_state();
 
-	//note: CON_Ticker should always execute at least once before D_Display()
-	con_clipviewtop = -1; // -1 does not clip
-
 	con_hudlines = atoi(cons_hudlines.defaultvalue);
 
 	Unlock_state();
@@ -751,7 +743,6 @@ void CON_ToggleOff(void)
 	con_curlines = 0;
 	CON_ClearHUD();
 	con_forcepic = 0;
-	con_clipviewtop = -1; // remove console clipping of view
 
 	I_UpdateMouseGrab();
 
@@ -798,18 +789,6 @@ void CON_Ticker(void)
 		}
 		else
 			CON_ChangeHeight();
-	}
-
-	// clip the view, so that the part under the console is not drawn
-	con_clipviewtop = -1;
-	if (cons_backpic.value) // clip only when using an opaque background
-	{
-		if (con_curlines > 0)
-			con_clipviewtop = con_curlines - viewwindowy - 1 - 10;
-		// NOTE: BIG HACK::SUBTRACT 10, SO THAT WATER DON'T COPY LINES OF THE CONSOLE
-		//       WINDOW!!! (draw some more lines behind the bottom of the console)
-		if (con_clipviewtop < 0)
-			con_clipviewtop = -1; // maybe not necessary, provided it's < 0
 	}
 
 	// check if console ready for prompt
@@ -882,12 +861,6 @@ static void CON_InputDelSelection(void)
 
 	Lock_state();
 
-	if (!input_cur)
-	{
-		Unlock_state();
-		return;
-	}
-
 	if (input_cur > input_sel)
 	{
 		start = input_sel;
@@ -949,8 +922,6 @@ static void CON_InputDelChar(void)
 //
 boolean CON_Responder(event_t *ev)
 {
-	static UINT8 consdown = false; // console is treated differently due to rare usage
-
 	// sequential completions a la 4dos
 	static char completioncmd[80 + sizeof("find ")] = "find ";
 	static char *completion = &completioncmd[sizeof("find ")-1];
@@ -970,32 +941,28 @@ boolean CON_Responder(event_t *ev)
 	// let go keyup events, don't eat them
 	if (ev->type != ev_keydown && ev->type != ev_text && ev->type != ev_console)
 	{
-		if (ev->key == gamecontrol[GC_CONSOLE][0] || ev->key == gamecontrol[GC_CONSOLE][1])
-			consdown = false;
 		return false;
 	}
 
 	key = ev->key;
 
 	// check for console toggle key
-	if (ev->type != ev_console)
+	if (ev->type == ev_keydown)
 	{
 		if (modeattacking || metalrecording || marathonmode)
 			return false;
 
-		if (ev->type == ev_keydown && ((key == gamecontrol[GC_CONSOLE][0] || key == gamecontrol[GC_CONSOLE][1]) && !shiftdown))
+		if ((key == gamecontrol[GC_CONSOLE][0] || key == gamecontrol[GC_CONSOLE][1]) && !shiftdown)
 		{
-			if (consdown) // ignore repeat
-				return true;
+			I_SetTextInputMode(con_destlines == 0); // inverse, since this is changed next tic.
 			consoletoggle = true;
-			consdown = true;
 			return true;
 		}
 
 		// check other keys only if console prompt is active
 		if (!consoleready && key < NUMINPUTS) // metzgermeister: boundary check!!
 		{
-			if (ev->type == ev_keydown && !menuactive && bindtable[key])
+			if (!menuactive && bindtable[key])
 			{
 				COM_BufAddText(bindtable[key]);
 				COM_BufAddText("\n");
@@ -1007,14 +974,14 @@ boolean CON_Responder(event_t *ev)
 		// escape key toggle off console
 		if (key == KEY_ESCAPE)
 		{
+			I_SetTextInputMode(false);
 			consoletoggle = true;
 			return true;
 		}
 	}
-
-	if (ev->type == ev_text)
+	else if (ev->type == ev_text)
 	{
-		if (!consoletoggle)
+		if (!consoletoggle && consoleready)
 			CON_InputAddChar(key);
 		return true;
 	}
@@ -1063,7 +1030,7 @@ boolean CON_Responder(event_t *ev)
 	}
 	else if (key == KEY_BACKSPACE)
 	{
-		if (ctrldown)
+		if (ctrldown && input_cur != 0)
 		{
 			input_sel = M_JumpWordReverse(inputlines[inputline], input_cur);
 			CON_InputDelSelection();
@@ -1121,7 +1088,9 @@ boolean CON_Responder(event_t *ev)
 
 		if (key == 'x' || key == 'X')
 		{
-			if (input_sel > input_cur)
+			if (input_sel == input_cur) // Don't replace the clipboard without a text selection
+				return true;
+			else if (input_sel > input_cur)
 				I_ClipboardCopy(&inputlines[inputline][input_cur], input_sel-input_cur);
 			else
 				I_ClipboardCopy(&inputlines[inputline][input_sel], input_cur-input_sel);
@@ -1131,7 +1100,9 @@ boolean CON_Responder(event_t *ev)
 		}
 		else if (key == 'c' || key == 'C')
 		{
-			if (input_sel > input_cur)
+			if (input_sel == input_cur) // Don't replace the clipboard without a text selection
+				return true;
+			else if (input_sel > input_cur)
 				I_ClipboardCopy(&inputlines[inputline][input_cur], input_sel-input_cur);
 			else
 				I_ClipboardCopy(&inputlines[inputline][input_sel], input_cur-input_sel);
@@ -1358,9 +1329,6 @@ static void CON_Linefeed(void)
 
 	con_line = &con_buffer[(con_cy%con_totallines)*con_width];
 	memset(con_line, ' ', con_width);
-
-	// make sure the view borders are refreshed if hud messages scroll
-	con_hudupdate = true; // see HU_Erase()
 }
 
 // Outputs text into the console text buffer
@@ -1737,11 +1705,11 @@ static void CON_DrawHudlines(void)
 			}
 			if (c >= con_width)
 				break;
-			if (*p < HU_FONTSTART)
+			if (*p < FONTSTART)
 				;//charwidth = 4 * con_scalefactor;
 			else
 			{
-				//charwidth = (hu_font['A'-HU_FONTSTART]->width) * con_scalefactor;
+				//charwidth = (hu_font.chars['A'-FONTSTART]->width) * con_scalefactor;
 				V_DrawCharacter(x, y, (INT32)(*p) | charflags | cv_constextsize.value | V_NOSCALESTART, true);
 			}
 		}
@@ -1749,9 +1717,6 @@ static void CON_DrawHudlines(void)
 		//V_DrawCharacter(x, y, (p[c]&0xff) | cv_constextsize.value | V_NOSCALESTART, true);
 		y += charheight;
 	}
-
-	// top screen lines that might need clearing when view is reduced
-	con_clearlines = y; // this is handled by HU_Erase();
 }
 
 // Lactozilla: Draws the console's background picture.
@@ -1816,10 +1781,6 @@ static void CON_DrawConsole(void)
 
 	if (con_curlines <= 0)
 		return;
-
-	//FIXME: refresh borders only when console bg is translucent
-	con_clearlines = con_curlines; // clear console draw from view borders
-	con_hudupdate = true; // always refresh while console is on
 
 	// draw console background
 	if (cons_backpic.value || con_forcepic)
