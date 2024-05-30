@@ -12143,6 +12143,7 @@ void P_PlayerThink(player_t *player)
 					}
 					/* FALLTHRU */
 				default:
+					player->drawangle = player->mo->angle;
 					break;
 			}
 		}
