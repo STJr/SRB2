@@ -983,7 +983,7 @@ void D_StartTitle(void)
 	emeralds = 0;
 	memset(&luabanks, 0, sizeof(luabanks));
 	lastmaploaded = 0;
-	pickedchar = R_SkinAvailable(cv_defaultskin.string);
+	pickedchar = R_SkinAvailable(cv_skin.string);
 
 	// In case someone exits out at the same time they start a time attack run,
 	// reset modeattacking
