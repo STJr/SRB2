@@ -7000,7 +7000,10 @@ static void M_LevelSelectWarp(INT32 choice)
 	if (currentMenu == &SP_LevelSelectDef || currentMenu == &SP_PauseLevelSelectDef)
 	{
 		if (cursaveslot > 0) // do we have a save slot to load?
+		{
+			CV_StealthSet(&cv_skin, DEFAULTSKIN); // already handled by loadgame so we don't want this
 			G_LoadGame((UINT32)cursaveslot, startmap); // reload from SP save data: this is needed to keep score/lives/continues from reverting to defaults
+		}
 		else // no save slot, start new game but keep the current skin
 		{
 			M_ClearMenus(true);
@@ -8649,9 +8652,14 @@ static void M_LoadSelect(INT32 choice)
 		M_NewGame();
 	}
 	else if (savegameinfo[saveSlotSelected-1].gamemap & 8192) // Completed
+	{
 		M_LoadGameLevelSelect(0);
+	}
 	else
+	{
+		CV_StealthSet(&cv_skin, DEFAULTSKIN); // already handled by loadgame so we don't want this
 		G_LoadGame((UINT32)saveSlotSelected, 0);
+	}
 
 	cursaveslot = saveSlotSelected;
 }
