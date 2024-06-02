@@ -574,13 +574,13 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 	curline = ds->curline;
 	backsector = pfloor->target;
 	frontsector = curline->frontsector == pfloor->target ? curline->backsector : curline->frontsector;
-	sidedef = R_GetFFloorSide(curline, pfloor);
+	sidedef = R_GetFFloorSide(curline->linedef, pfloor, pfloor->target);
 
 	colfunc = colfuncs[BASEDRAWFUNC];
 
 	if (pfloor->master->flags & ML_TFERLINE)
 	{
-		line_t *newline = R_GetFFloorLine(curline, pfloor);
+		line_t *newline = R_GetFFloorLine(curline->linedef, pfloor, pfloor->target);
 		do_texture_skew = newline->flags & ML_SKEWTD;
 		dont_peg_bottom = newline->flags & ML_DONTPEGBOTTOM;
 	}
