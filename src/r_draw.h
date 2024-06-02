@@ -154,9 +154,11 @@ void R_VideoErase(size_t ofs, INT32 count);
 
 void R_DrawColumn_8(void);
 void R_DrawColumnClamped_8(void);
+void R_Draw2sMultiPatchColumn_8(void);
 void R_DrawShadeColumn_8(void);
 void R_DrawTranslucentColumn_8(void);
 void R_DrawTranslucentColumnClamped_8(void);
+void R_Draw2sMultiPatchTranslucentColumn_8(void);
 void R_DrawDropShadowColumn_8(void);
 void R_DrawTranslatedColumn_8(void);
 void R_DrawTranslatedTranslucentColumn_8(void);

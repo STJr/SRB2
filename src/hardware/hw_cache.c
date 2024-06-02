@@ -756,7 +756,7 @@ static void GetMapTexture(INT32 tex, GLMapTexture_t *grtex, GLMipmap_t *mipmap)
 	Z_ChangeTag(mipmap->data, PU_HWRCACHE_UNLOCKED);
 }
 
-GLMapTexture_t *HWR_GetTexture(INT32 tex)
+GLMapTexture_t *HWR_GetTexture(INT32 tex, boolean chromakeyed)
 {
 	if (tex < 0 || tex >= (signed)gl_numtextures)
 	{
@@ -769,7 +769,43 @@ GLMapTexture_t *HWR_GetTexture(INT32 tex)
 
 	GLMapTexture_t *grtex = &gl_textures[tex];
 
-	GetMapTexture(tex, grtex, &grtex->mipmap);
+	GLMipmap_t *grMipmap = &grtex->mipmap;
+	GLMipmap_t *originalMipmap = grMipmap;
+
+	if (!originalMipmap->data && !originalMipmap->downloaded)
+		HWR_GenerateTexture(tex, grtex, originalMipmap);
+
+	// If chroma-keyed, create or use a different mipmap for the variant
+	if (chromakeyed && !textures[tex]->transparency && originalMipmap->data)
+	{
+		// Allocate it if it wasn't already
+		if (!originalMipmap->nextcolormap)
+		{
+			GLMipmap_t *newMipmap = calloc(1, sizeof (*grMipmap));
+			if (newMipmap == NULL)
+				I_Error("%s: Out of memory", "HWR_GetLevelFlat");
+
+			newMipmap->flags = TF_WRAPXY | TF_CHROMAKEYED;
+			newMipmap->width = (UINT16)textures[tex]->width;
+			newMipmap->height = (UINT16)textures[tex]->height;
+			newMipmap->format = textureformat;
+			originalMipmap->nextcolormap = newMipmap;
+		}
+
+		// Upload and bind the variant texture instead of the original one
+		grMipmap = originalMipmap->nextcolormap;
+
+		// Use the original texture's pixel data
+		// It can just be a pointer to it, since the r_opengl backend deals with the pixels
+		// that are supposed to be transparent.
+		grMipmap->data = originalMipmap->data;
+	}
+
+	if (!grMipmap->downloaded)
+		HWD.pfnSetTexture(grMipmap);
+	HWR_SetCurrentTexture(grMipmap);
+
+	Z_ChangeTag(grMipmap->data, PU_HWRCACHE_UNLOCKED);
 
 	return grtex;
 }

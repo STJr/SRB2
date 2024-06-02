@@ -951,7 +951,7 @@ static void HWR_RenderMidtexture(INT32 gl_midtexture, float cliplow, float cliph
 	else
 		repeats = 1;
 
-	GLMapTexture_t *grTex = HWR_GetTexture(gl_midtexture);
+	GLMapTexture_t *grTex = HWR_GetTexture(gl_midtexture, true);
 	float xscale = FixedToFloat(gl_sidedef->scalex_mid);
 	float yscale = FixedToFloat(gl_sidedef->scaley_mid);
 
@@ -1210,7 +1210,7 @@ static void HWR_ProcessSeg(void)
 		// check TOP TEXTURE
 		if ((worldhighslope < worldtopslope || worldhigh < worldtop) && gl_toptexture)
 		{
-			grTex = HWR_GetTexture(gl_toptexture);
+			grTex = HWR_GetTexture(gl_toptexture, false);
 			xscale = FixedToFloat(abs(gl_sidedef->scalex_top));
 			yscale = FixedToFloat(abs(gl_sidedef->scaley_top));
 
@@ -1300,7 +1300,7 @@ static void HWR_ProcessSeg(void)
 		// check BOTTOM TEXTURE
 		if ((worldlowslope > worldbottomslope || worldlow > worldbottom) && gl_bottomtexture)
 		{
-			grTex = HWR_GetTexture(gl_bottomtexture);
+			grTex = HWR_GetTexture(gl_bottomtexture, false);
 			xscale = FixedToFloat(abs(gl_sidedef->scalex_bottom));
 			yscale = FixedToFloat(abs(gl_sidedef->scaley_bottom));
 
@@ -1414,7 +1414,7 @@ static void HWR_ProcessSeg(void)
 		// Single sided line... Deal only with the middletexture (if one exists)
 		if (gl_midtexture && gl_linedef->special != SPECIAL_HORIZON_LINE) // (Ignore horizon line for OGL)
 		{
-			grTex = HWR_GetTexture(gl_midtexture);
+			grTex = HWR_GetTexture(gl_midtexture, false);
 			xscale = FixedToFloat(gl_sidedef->scalex_mid);
 			yscale = FixedToFloat(gl_sidedef->scaley_mid);
 
@@ -1588,7 +1588,7 @@ static void HWR_ProcessSeg(void)
 					// -- Monster Iestyn 26/06/18
 					fixed_t texturevpeg = side->rowoffset + side->offsety_mid;
 
-					grTex = HWR_GetTexture(texnum);
+					grTex = HWR_GetTexture(texnum, true);
 					xscale = FixedToFloat(side->scalex_mid);
 					yscale = FixedToFloat(side->scaley_mid);
 
@@ -1745,7 +1745,7 @@ static void HWR_ProcessSeg(void)
 					// -- Monster Iestyn 26/06/18
 					fixed_t texturevpeg = side->rowoffset + side->offsety_mid;
 
-					grTex = HWR_GetTexture(texnum);
+					grTex = HWR_GetTexture(texnum, true);
 					xscale = FixedToFloat(side->scalex_mid);
 					yscale = FixedToFloat(side->scaley_mid);
 
@@ -4086,7 +4086,7 @@ static void HWR_CreateDrawNodes(void)
 		else if (sortnode[sortindex[i]].wall)
 		{
 			if (!(sortnode[sortindex[i]].wall->blend & PF_NoTexture))
-				HWR_GetTexture(sortnode[sortindex[i]].wall->texnum);
+				HWR_GetTexture(sortnode[sortindex[i]].wall->texnum, true);
 			HWR_RenderWall(sortnode[sortindex[i]].wall->wallVerts, &sortnode[sortindex[i]].wall->Surf, sortnode[sortindex[i]].wall->blend, sortnode[sortindex[i]].wall->fogwall,
 				sortnode[sortindex[i]].wall->lightlevel, sortnode[sortindex[i]].wall->wallcolormap);
 		}
@@ -5066,6 +5066,8 @@ static void HWR_DrawSkyBackground(player_t *player)
 
 	HWD.pfnSetBlend(PF_Translucent|PF_NoDepthTest|PF_Modulated);
 
+	HWR_GetTexture(texturetranslation[skytexture], false);
+
 	if (cv_glskydome.value)
 	{
 		FTransform dometransform;
@@ -5080,8 +5082,6 @@ static void HWR_DrawSkyBackground(player_t *player)
 		//                     It should replace all other gl_viewxxx when finished
 		HWR_SetTransformAiming(&dometransform, player, false);
 		dometransform.angley = (float)((viewangle-ANGLE_270)>>ANGLETOFINESHIFT)*(360.0f/(float)FINEANGLES);
-
-		HWR_GetTexture(texturetranslation[skytexture]);
 
 		if (gl_sky.texture != texturetranslation[skytexture])
 		{
@@ -5102,7 +5102,6 @@ static void HWR_DrawSkyBackground(player_t *player)
 		float aspectratio;
 		float angleturn;
 
-		HWR_GetTexture(texturetranslation[skytexture]);
 		aspectratio = (float)vid.width/(float)vid.height;
 
 		//Hurdler: the sky is the only texture who need 4.0f instead of 1.0

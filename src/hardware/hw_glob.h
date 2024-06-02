@@ -120,7 +120,7 @@ void HWR_GetPatch(patch_t *patch);
 void HWR_GetMappedPatch(patch_t *patch, const UINT8 *colormap);
 void HWR_GetFadeMask(lumpnum_t fademasklumpnum);
 
-GLMapTexture_t *HWR_GetTexture(INT32 tex);
+GLMapTexture_t *HWR_GetTexture(INT32 tex, boolean chromakeyed);
 void HWR_GetLevelFlat(levelflat_t *levelflat, boolean chromakeyed);
 void HWR_GetRawFlat(lumpnum_t flatlumpnum);
 
