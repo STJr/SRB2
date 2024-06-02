@@ -355,8 +355,12 @@ static int mobj_get(lua_State *L)
 		lua_pushinteger(L, mo->blendmode);
 		break;
 	case mobj_bnext:
-		LUA_PushUserdata(L, mo->bnext, META_MOBJ);
-		break;
+		if (mo->blocknode && mo->blocknode->bnext) {
+			LUA_PushUserdata(L, mo->blocknode->bnext->mobj, META_MOBJ);
+			break;
+		}
+		else
+			return 0;
 	case mobj_bprev:
 		// bprev -- same deal as sprev above, but for the blockmap.
 		return UNIMPLEMENTED;
@@ -560,7 +564,7 @@ static int mobj_set(lua_State *L)
 		mo->frame = (UINT32)luaL_checkinteger(L, 3);
 		break;
 	case mobj_sprite2:
-		mo->sprite2 = P_GetSkinSprite2(((skin_t *)mo->skin), (UINT8)luaL_checkinteger(L, 3), mo->player);
+		mo->sprite2 = P_GetSkinSprite2(((skin_t *)mo->skin), (UINT16)luaL_checkinteger(L, 3), mo->player);
 		break;
 	case mobj_anim_duration:
 		mo->anim_duration = (UINT16)luaL_checkinteger(L, 3);
@@ -669,7 +673,6 @@ static int mobj_set(lua_State *L)
 				sector_list = NULL;
 			}
 			mo->snext = NULL, mo->sprev = NULL;
-			mo->bnext = NULL, mo->bprev = NULL;
 			P_SetThingPosition(mo);
 		}
 		else
@@ -759,7 +762,7 @@ static int mobj_set(lua_State *L)
 			return luaL_error(L, "mobj.type %d out of range (0 - %d).", newtype, NUMMOBJTYPES-1);
 		mo->type = newtype;
 		mo->info = &mobjinfo[newtype];
-		P_SetScale(mo, mo->scale);
+		P_SetScale(mo, mo->scale, false);
 		break;
 	}
 	case mobj_info:
@@ -833,9 +836,7 @@ static int mobj_set(lua_State *L)
 		fixed_t scale = luaL_checkfixed(L, 3);
 		if (scale < FRACUNIT/100)
 			scale = FRACUNIT/100;
-		mo->destscale = scale;
-		P_SetScale(mo, scale);
-		mo->old_scale = scale;
+		P_SetScale(mo, scale, true);
 		break;
 	}
 	case mobj_destscale:
@@ -1000,6 +1001,9 @@ static int mapthing_get(lua_State *L)
 		return 0;
 	}
 
+	if (field == (enum mapthing_e)-1)
+		return LUA_ErrInvalid(L, "fields");
+
 	switch (field)
 	{
 		case mapthing_valid:
@@ -1058,7 +1062,7 @@ static int mapthing_get(lua_State *L)
 			break;
 		default:
 			if (devparm)
-				return luaL_error(L, LUA_QL("mapthing_t") " has no field named " LUA_QS, field);
+				return luaL_error(L, "%s %s", LUA_QL("mapthing_t"), va("has no field named: %ui", field));
 			else
 				return 0;
 	}
@@ -1074,6 +1078,9 @@ static int mapthing_set(lua_State *L)
 
 	if (!mt)
 		return luaL_error(L, "accessed mapthing_t doesn't exist anymore.");
+
+	if (field == (enum mapthing_e)-1)
+		return LUA_ErrInvalid(L, "fields");
 
 	if (hud_running)
 		return luaL_error(L, "Do not alter mapthing_t in HUD rendering code!");
@@ -1132,7 +1139,7 @@ static int mapthing_set(lua_State *L)
 			mt->mobj = *((mobj_t **)luaL_checkudata(L, 3, META_MOBJ));
 			break;
 		default:
-			return luaL_error(L, LUA_QL("mapthing_t") " has no field named " LUA_QS, field);
+			return luaL_error(L, "%s %s", LUA_QL("mapthing_t"), va("has no field named: %ui", field));
 	}
 
 	return 0;

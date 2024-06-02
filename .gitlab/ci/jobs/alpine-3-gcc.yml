@@ -1,0 +1,135 @@
+Alpine 3 GCC:
+  stage: build
+
+  when: manual
+
+  image: alpine:3
+
+  allow_failure: true
+
+  cache:
+    - key: apk-$CI_JOB_IMAGE
+      paths:
+        - apk-cache
+      unprotect: true
+
+  artifacts:
+    paths:
+      - "bin/"
+      - "src/comptime.h"
+    expose_as: "Apline-3"
+    name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-Apline-3"
+
+  before_script:
+    - - |
+          # apk_cache
+          echo -e "\e[0Ksection_start:`date +%s`:apk_cache[collapsed=true]\r\e[0KUpdating APK listing"
+      - export APK_CACHE_DIR=`pwd`/apk-cache
+      - mkdir --parents --verbose $APK_CACHE_DIR/
+      - ln -sf /etc/apk/cache $APK_CACHE_DIR
+      - |
+          # apk_cache
+          echo -e "\e[0Ksection_end:`date +%s`:apk_cache\r\e[0K"
+
+    - - |
+          # apk_update
+          echo -e "\e[0Ksection_start:`date +%s`:apk_update[collapsed=true]\r\e[0KUpdating APK listing"
+      - apk update
+      - |
+          # apk_update
+          echo -e "\e[0Ksection_end:`date +%s`:apk_update\r\e[0K"
+
+    - - |
+          # apk_upgrade
+          echo -e "\e[0Ksection_start:`date +%s`:apk_upgrade[collapsed=true]\r\e[0KUpdating existing packages"
+      - apk upgrade
+      - |
+          # apk_update
+          echo -e "\e[0Ksection_end:`date +%s`:apk_upgrade\r\e[0K"
+
+    - - |
+          # apk_common
+          echo -e "\e[0Ksection_start:`date +%s`:apk_common[collapsed=true]\r\e[0KInstalling common packages"
+      - apk add make git ccache nasm
+      - |
+          # apk_common
+          echo -e "\e[0Ksection_end:`date +%s`:apk_common\r\e[0K"
+
+    - - |
+          # ccache_config
+          echo -e "\e[0Ksection_start:`date +%s`:ccache_config[collapsed=true]\r\e[0KSetting up ccache config"
+      - mkdir --parents --verbose ~/.ccache/
+      - touch ~/.ccache/ccache.conf
+      - |
+          # cache.conf
+          echo Adding ccache configution option
+      - |
+          # base_dir
+          echo base_dir = $PWD                  | tee -a ~/.ccache/ccache.conf
+      - |
+          # cache_dir
+          echo cache_dir = $PWD/ccache          | tee -a ~/.ccache/ccache.conf
+      - |
+          # compiler_check
+          echo compiler_check = content         | tee -a ~/.ccache/ccache.conf
+      - |
+          # stats_log
+          echo stats_log = $PWD/ccache_statslog | tee -a ~/.ccache/ccache.conf
+      - |
+          # max_size
+          echo max_size = 50M                   | tee -a ~/.ccache/ccache.conf
+      - |
+          # ccache_config
+          echo -e "\e[0Ksection_end:`date +%s`:ccache_config\r\e[0K"
+
+    - - |
+          # cache_reset
+          echo -e "\e[0Ksection_start:`date +%s`:ccache_reset[collapsed=true]\r\e[0KResetting ccache statistics"
+      - ccache --zero-stats
+      - ccache --show-stats
+      - |
+          # ccache_reset
+          echo -e "\e[0Ksection_end:`date +%s`:ccache_reset\r\e[0K"
+
+  script:
+    - - |
+          # apk_toolchain
+          echo -e "\e[0Ksection_start:`date +%s`:apk_toolchain[collapsed=true]\r\e[0KInstalling toolchain packages"
+      - apk add gcc
+      - |
+          # apk_toolchain
+          echo -e "\e[0Ksection_end:`date +%s`:apk_toolchain\r\e[0K"
+
+    - - |
+          # apk_development
+          echo -e "\e[0Ksection_start:`date +%s`:apk_development[collapsed=true]\r\e[0KInstalling development packages"
+      - apk add musl-dev sdl2_mixer-dev libpng-dev curl-dev libgme-dev libopenmpt-dev miniupnpc-dev
+      - |
+          # apk_development
+          echo -e "\e[0Ksection_end:`date +%s`:apk_development\r\e[0K"
+
+    - - |
+          # make
+          echo -e "\e[0Ksection_start:`date +%s`:make[collapsed=false]\r\e[0KCompiling SRB2"
+      - make --directory=src --keep-going CCACHE=1 ERRORMODE=1 NONX86=1 NOEXECINFO=1 || make --directory=src --keep-going CCACHE=1 ERRORMODE=1 NONX86=1 NOEXECINFO=1
+      - |
+          # make
+          echo -e "\e[0Ksection_end:`date +%s`:make\r\e[0K"
+
+  after_script:
+    - - |
+           # apk_clean
+           echo -e "\e[0Ksection_start:`date +%s`:apk_clean[collapsed=true]\r\e[0KCleaning of unneeded APK packages"
+      - apk cache clean
+      - |
+          # apk_clean
+          echo -e "\e[0Ksection_end:`date +%s`:apk_clean\r\e[0K"
+
+    - - |
+          # ccache_stats
+          echo -e "\e[0Ksection_start:`date +%s`:ccache_stats[collapsed=true]\r\e[0Kccache statistics:"
+      - ccache --show-stats --verbose
+      - ccache --show-log-stats --verbose
+      - |
+          # ccahe_stats
+          echo -e "\e[0Ksection_end:`date +%s`:ccache_stats\r\e[0K"

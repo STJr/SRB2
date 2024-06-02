@@ -138,7 +138,7 @@ INT32 *blockmaplump; // Big blockmap
 // origin of block map
 fixed_t bmaporgx, bmaporgy;
 // for thing chains
-mobj_t **blocklinks;
+blocknode_t **blocklinks;
 
 // REJECT
 // For fast sight rejection.
@@ -358,6 +358,8 @@ static void P_ClearSingleMapHeaderInfo(INT16 i)
 	mapheaderinfo[num]->marathonnext = 0;
 	mapheaderinfo[num]->startrings = 0;
 	mapheaderinfo[num]->sstimer = 90;
+	for (UINT8 n = 0; n < 8; n++)
+		mapheaderinfo[num]->nightstimer[n] = 0;
 	mapheaderinfo[num]->ssspheres = 1;
 	mapheaderinfo[num]->gravity = FRACUNIT/2;
 	mapheaderinfo[num]->keywords[0] = '\0';
@@ -525,6 +527,29 @@ UINT32 P_GetScoreForGradeOverall(INT16 map, UINT8 grade)
 	return score;
 }
 
+void P_AddNiGHTSTimes(INT16 i, char *gtext)
+{
+	char *spos = gtext;
+	
+	for (UINT8 n = 0; n < 8; n++)
+	{
+		if (spos != NULL)
+		{
+			mapheaderinfo[i]->nightstimer[n] = atoi(spos);
+			CONS_Debug(DBG_SETUP, "%u ", atoi(spos));
+			// Grab next comma
+			spos = strchr(spos, ',');
+			if (spos)
+				++spos;
+		}
+		else
+		{
+			mapheaderinfo[i]->nightstimer[n] = 0;
+		}
+	}
+
+}
+
 //
 // levelflats
 //
@@ -537,20 +562,14 @@ levelflat_t *foundflats;
 //SoM: Other files want this info.
 size_t P_PrecacheLevelFlats(void)
 {
-	lumpnum_t lump;
 	size_t i;
 
 	//SoM: 4/18/2000: New flat code to make use of levelflats.
 	flatmemory = 0;
 	for (i = 0; i < numlevelflats; i++)
 	{
-		if (levelflats[i].type == LEVELFLAT_FLAT)
-		{
-			lump = levelflats[i].u.flat.lumpnum;
-			if (devparm)
-				flatmemory += W_LumpLength(lump);
-			R_GetFlat(lump);
-		}
+		if (levelflats[i].type != LEVELFLAT_NONE)
+			R_GetFlat(&levelflats[i]);
 	}
 	return flatmemory;
 }
@@ -562,19 +581,8 @@ or NULL if we want to allocate it now.
 static INT32
 Ploadflat (levelflat_t *levelflat, const char *flatname, boolean resize)
 {
-#ifndef NO_PNG_LUMPS
-	UINT8         buffer[8];
-#endif
-
-	lumpnum_t    flatnum;
-	int       texturenum;
-	UINT8     *flatpatch;
-	size_t    lumplength;
-
-	size_t i;
-
 	// Scan through the already found flats, return if it matches.
-	for (i = 0; i < numlevelflats; i++)
+	for (size_t i = 0; i < numlevelflats; i++)
 	{
 		if (strnicmp(levelflat[i].name, flatname, 8) == 0)
 			return i;
@@ -598,64 +606,35 @@ Ploadflat (levelflat_t *levelflat, const char *flatname, boolean resize)
 	strlcpy(levelflat->name, flatname, sizeof (levelflat->name));
 	strupr(levelflat->name);
 
-	/* If we can't find a flat, try looking for a texture! */
-	if (( flatnum = R_GetFlatNumForName(levelflat->name) ) == LUMPERROR)
-	{
-		if (( texturenum = R_CheckTextureNumForName(levelflat->name) ) == -1)
-		{
-			// check for REDWALL
-			if (( texturenum = R_CheckTextureNumForName("REDWALL") ) != -1)
-				goto texturefound;
-			// check for REDFLR
-			else if (( flatnum = R_GetFlatNumForName("REDFLR") ) != LUMPERROR)
-				goto flatfound;
-			// nevermind
-			levelflat->type = LEVELFLAT_NONE;
-		}
-		else
-		{
-texturefound:
-			levelflat->type = LEVELFLAT_TEXTURE;
-			levelflat->u.texture.    num = texturenum;
-			levelflat->u.texture.lastnum = texturenum;
-			/* start out unanimated */
-			levelflat->u.texture.basenum = -1;
-		}
-	}
-	else
-	{
-flatfound:
-		/* This could be a flat, patch, or PNG. */
-		flatpatch = W_CacheLumpNum(flatnum, PU_CACHE);
-		lumplength = W_LumpLength(flatnum);
-		if (Picture_CheckIfDoomPatch((softwarepatch_t *)flatpatch, lumplength))
-			levelflat->type = LEVELFLAT_PATCH;
-		else
-		{
-#ifndef NO_PNG_LUMPS
-			/*
-			Only need eight bytes for PNG headers.
-			FIXME: Put this elsewhere.
-			*/
-			W_ReadLumpHeader(flatnum, buffer, 8, 0);
-			if (Picture_IsLumpPNG(buffer, lumplength))
-				levelflat->type = LEVELFLAT_PNG;
-			else
-#endif/*NO_PNG_LUMPS*/
-				levelflat->type = LEVELFLAT_FLAT;/* phew */
-		}
-		if (flatpatch)
-			Z_Free(flatpatch);
+	levelflat->type = LEVELFLAT_TEXTURE;
 
-		levelflat->u.flat.    lumpnum = flatnum;
-		levelflat->u.flat.baselumpnum = LUMPERROR;
+	// Look for a flat
+	int texturenum = R_CheckFlatNumForName(levelflat->name);
+	if (texturenum < 0)
+	{
+		// If we can't find a flat, try looking for a texture!
+		texturenum = R_CheckTextureNumForName(levelflat->name);
+		if (texturenum < 0)
+		{
+			// Use "not found" texture
+			texturenum = R_CheckTextureNumForName("REDWALL");
+
+			// Give up?
+			if (texturenum < 0)
+			{
+				levelflat->type = LEVELFLAT_NONE;
+				texturenum = -1;
+			}
+		}
 	}
+
+	levelflat->texture_id = texturenum;
 
 #ifndef ZDEBUG
 	CONS_Debug(DBG_SETUP, "flat #%03d: %s\n", atoi(sizeu1(numlevelflats)), levelflat->name);
 #endif
 
-	return ( numlevelflats++ );
+	return numlevelflats++;
 }
 
 // Auxiliary function. Find a flat in the active wad files,
@@ -923,13 +902,31 @@ static void P_SpawnMapThings(boolean spawnemblems)
 		P_SpawnEmeraldHunt();
 }
 
+static void P_WriteTextmap_Things(FILE *f, const mapthing_t *wmapthings); // proto
+
 // Experimental groovy write function!
-/*void P_WriteThings(void)
+void P_WriteThings(const char *filepath)
 {
 	size_t i, length;
 	mapthing_t *mt;
 	UINT8 *savebuffer, *savebuf_p;
 	INT16 temp;
+
+	if (udmf)
+	{
+		FILE *f = fopen(va("%s.txt", filepath), "w");
+		if (!f)
+		{
+			CONS_Alert(CONS_ERROR, M_GetText("Couldn't write to file %s\n"), filepath);
+			return;
+		}
+
+		P_WriteTextmap_Things(f, mapthings);
+		fclose(f);
+
+		CONS_Printf(M_GetText("%s.txt saved.\n"), filepath);
+		return;
+	}
 
 	savebuf_p = savebuffer = (UINT8 *)malloc(nummapthings * sizeof (mapthing_t));
 
@@ -954,12 +951,12 @@ static void P_SpawnMapThings(boolean spawnemblems)
 
 	length = savebuf_p - savebuffer;
 
-	FIL_WriteFile(va("newthings%d.lmp", gamemap), savebuffer, length);
+	FIL_WriteFile(va("%s.lmp", filepath), savebuffer, length);
 	free(savebuffer);
 	savebuf_p = NULL;
 
-	CONS_Printf(M_GetText("newthings%d.lmp saved.\n"), gamemap);
-}*/
+	CONS_Printf(M_GetText("%s.lmp saved.\n"), filepath);
+}
 
 //
 // MAP LOADING FUNCTIONS
@@ -1571,6 +1568,12 @@ static boolean TextmapCount(size_t size)
 	numvertexes = 0;
 	numsectors = 0;
 
+	if(!tkn)
+	{
+		CONS_Alert(CONS_ERROR, "No text in lump!\n");
+		return true;
+	}
+
 	// Look for namespace at the beginning.
 	if (!fastcmp(tkn, "namespace"))
 	{
@@ -1650,15 +1653,15 @@ textmap_colormap_t textmap_colormap = { false, 0, 25, 0, 25, 0, 31, 0 };
 
 typedef enum
 {
-    PD_A = 1,
-    PD_B = 1<<1,
-    PD_C = 1<<2,
-    PD_D = 1<<3,
+	PD_A = 1,
+	PD_B = 1<<1,
+	PD_C = 1<<2,
+	PD_D = 1<<3,
 } planedef_t;
 
 typedef struct textmap_plane_s {
-    UINT8 defined;
-    fixed_t a, b, c, d;
+	UINT8 defined;
+	double a, b, c, d;
 } textmap_plane_t;
 
 textmap_plane_t textmap_planefloor = {0, 0, 0, 0, 0};
@@ -1719,42 +1722,42 @@ static void ParseTextmapSectorParameter(UINT32 i, const char *param, const char 
 	else if (fastcmp(param, "floorplane_a"))
 	{
 		textmap_planefloor.defined |= PD_A;
-		textmap_planefloor.a = FLOAT_TO_FIXED(atof(val));
+		textmap_planefloor.a = atof(val);
 	}
 	else if (fastcmp(param, "floorplane_b"))
 	{
 		textmap_planefloor.defined |= PD_B;
-		textmap_planefloor.b = FLOAT_TO_FIXED(atof(val));
+		textmap_planefloor.b = atof(val);
 	}
 	else if (fastcmp(param, "floorplane_c"))
 	{
 		textmap_planefloor.defined |= PD_C;
-		textmap_planefloor.c = FLOAT_TO_FIXED(atof(val));
+		textmap_planefloor.c = atof(val);
 	}
 	else if (fastcmp(param, "floorplane_d"))
 	{
 		textmap_planefloor.defined |= PD_D;
-		textmap_planefloor.d = FLOAT_TO_FIXED(atof(val));
+		textmap_planefloor.d = atof(val);
 	}
 	else if (fastcmp(param, "ceilingplane_a"))
 	{
 		textmap_planeceiling.defined |= PD_A;
-		textmap_planeceiling.a = FLOAT_TO_FIXED(atof(val));
+		textmap_planeceiling.a = atof(val);
 	}
 	else if (fastcmp(param, "ceilingplane_b"))
 	{
 		textmap_planeceiling.defined |= PD_B;
-		textmap_planeceiling.b = FLOAT_TO_FIXED(atof(val));
+		textmap_planeceiling.b = atof(val);
 	}
 	else if (fastcmp(param, "ceilingplane_c"))
 	{
 		textmap_planeceiling.defined |= PD_C;
-		textmap_planeceiling.c = FLOAT_TO_FIXED(atof(val));
+		textmap_planeceiling.c = atof(val);
 	}
 	else if (fastcmp(param, "ceilingplane_d"))
 	{
 		textmap_planeceiling.defined |= PD_D;
-		textmap_planeceiling.d = FLOAT_TO_FIXED(atof(val));
+		textmap_planeceiling.d = atof(val);
 	}
 	else if (fastcmp(param, "lightcolor"))
 	{
@@ -1856,6 +1859,10 @@ static void ParseTextmapSectorParameter(UINT32 i, const char *param, const char 
 		sectors[i].specialflags |= SSF_JUMPFLIP;
 	else if (fastcmp(param, "gravityoverride") && fastcmp("true", val))
 		sectors[i].specialflags |= SSF_GRAVITYOVERRIDE;
+	else if (fastcmp(param, "nophysics_floor") && fastcmp("true", val))
+		sectors[i].specialflags |= SSF_NOPHYSICSFLOOR;
+	else if (fastcmp(param, "nophysics_ceiling") && fastcmp("true", val))
+		sectors[i].specialflags |= SSF_NOPHYSICSCEILING;
 	else if (fastcmp(param, "friction"))
 		sectors[i].friction = FLOAT_TO_FIXED(atof(val));
 	else if (fastcmp(param, "gravity"))
@@ -2190,6 +2197,60 @@ typedef struct
 	mapthing_t *angleanchor;
 } sectorspecialthings_t;
 
+static void P_WriteTextmap_Things(FILE *f, const mapthing_t *wmapthings)
+{
+	size_t i, j;
+	mtag_t firsttag;
+
+	// Actual writing
+	for (i = 0; i < nummapthings; i++)
+	{
+		fprintf(f, "thing // %s\n", sizeu1(i));
+		fprintf(f, "{\n");
+		firsttag = Tag_FGet(&wmapthings[i].tags);
+		if (firsttag != 0)
+			fprintf(f, "id = %d;\n", firsttag);
+		if (wmapthings[i].tags.count > 1)
+		{
+			fprintf(f, "moreids = \"");
+			for (j = 1; j < wmapthings[i].tags.count; j++)
+			{
+				if (j > 1)
+					fprintf(f, " ");
+				fprintf(f, "%d", wmapthings[i].tags.tags[j]);
+			}
+			fprintf(f, "\";\n");
+		}
+		fprintf(f, "x = %d;\n", wmapthings[i].x);
+		fprintf(f, "y = %d;\n", wmapthings[i].y);
+		if (wmapthings[i].z != 0)
+			fprintf(f, "height = %d;\n", wmapthings[i].z);
+		fprintf(f, "angle = %d;\n", wmapthings[i].angle);
+		if (wmapthings[i].pitch != 0)
+			fprintf(f, "pitch = %d;\n", wmapthings[i].pitch);
+		if (wmapthings[i].roll != 0)
+			fprintf(f, "roll = %d;\n", wmapthings[i].roll);
+		if (wmapthings[i].type != 0)
+			fprintf(f, "type = %d;\n", wmapthings[i].type);
+		if (wmapthings[i].spritexscale != FRACUNIT)
+			fprintf(f, "scalex = %f;\n", FIXED_TO_FLOAT(wmapthings[i].spritexscale));
+		if (wmapthings[i].spriteyscale != FRACUNIT)
+			fprintf(f, "scaley = %f;\n", FIXED_TO_FLOAT(wmapthings[i].spriteyscale));
+		if (wmapthings[i].scale != FRACUNIT)
+			fprintf(f, "mobjscale = %f;\n", FIXED_TO_FLOAT(wmapthings[i].scale));
+		if (wmapthings[i].options & MTF_OBJECTFLIP)
+			fprintf(f, "flip = true;\n");
+		for (j = 0; j < NUMMAPTHINGARGS; j++)
+			if (wmapthings[i].args[j] != 0)
+				fprintf(f, "arg%s = %d;\n", sizeu1(j), wmapthings[i].args[j]);
+		for (j = 0; j < NUMMAPTHINGSTRINGARGS; j++)
+			if (mapthings[i].stringargs[j])
+				fprintf(f, "stringarg%s = \"%s\";\n", sizeu1(j), mapthings[i].stringargs[j]);
+		fprintf(f, "}\n");
+		fprintf(f, "\n");
+	}
+}
+
 static void P_WriteTextmap(void)
 {
 	size_t i, j;
@@ -2457,52 +2518,7 @@ static void P_WriteTextmap(void)
 	}
 
 	fprintf(f, "namespace = \"srb2\";\n");
-	for (i = 0; i < nummapthings; i++)
-	{
-		fprintf(f, "thing // %s\n", sizeu1(i));
-		fprintf(f, "{\n");
-		firsttag = Tag_FGet(&wmapthings[i].tags);
-		if (firsttag != 0)
-			fprintf(f, "id = %d;\n", firsttag);
-		if (wmapthings[i].tags.count > 1)
-		{
-			fprintf(f, "moreids = \"");
-			for (j = 1; j < wmapthings[i].tags.count; j++)
-			{
-				if (j > 1)
-					fprintf(f, " ");
-				fprintf(f, "%d", wmapthings[i].tags.tags[j]);
-			}
-			fprintf(f, "\";\n");
-		}
-		fprintf(f, "x = %d;\n", wmapthings[i].x);
-		fprintf(f, "y = %d;\n", wmapthings[i].y);
-		if (wmapthings[i].z != 0)
-			fprintf(f, "height = %d;\n", wmapthings[i].z);
-		fprintf(f, "angle = %d;\n", wmapthings[i].angle);
-		if (wmapthings[i].pitch != 0)
-			fprintf(f, "pitch = %d;\n", wmapthings[i].pitch);
-		if (wmapthings[i].roll != 0)
-			fprintf(f, "roll = %d;\n", wmapthings[i].roll);
-		if (wmapthings[i].type != 0)
-			fprintf(f, "type = %d;\n", wmapthings[i].type);
-		if (wmapthings[i].spritexscale != FRACUNIT)
-			fprintf(f, "scalex = %f;\n", FIXED_TO_FLOAT(wmapthings[i].spritexscale));
-		if (wmapthings[i].spriteyscale != FRACUNIT)
-			fprintf(f, "scaley = %f;\n", FIXED_TO_FLOAT(wmapthings[i].spriteyscale));
-		if (wmapthings[i].scale != FRACUNIT)
-			fprintf(f, "mobjscale = %f;\n", FIXED_TO_FLOAT(wmapthings[i].scale));
-		if (wmapthings[i].options & MTF_OBJECTFLIP)
-			fprintf(f, "flip = true;\n");
-		for (j = 0; j < NUMMAPTHINGARGS; j++)
-			if (wmapthings[i].args[j] != 0)
-				fprintf(f, "arg%s = %d;\n", sizeu1(j), wmapthings[i].args[j]);
-		for (j = 0; j < NUMMAPTHINGSTRINGARGS; j++)
-			if (mapthings[i].stringargs[j])
-				fprintf(f, "stringarg%s = \"%s\";\n", sizeu1(j), mapthings[i].stringargs[j]);
-		fprintf(f, "}\n");
-		fprintf(f, "\n");
-	}
+	P_WriteTextmap_Things(f, wmapthings);
 
 	for (i = 0; i < numvertexes; i++)
 	{
@@ -2713,12 +2729,17 @@ static void P_WriteTextmap(void)
 			fprintf(f, "rotationfloor = %f;\n", FIXED_TO_FLOAT(AngleFixed(wsectors[i].floorangle)));
 		if (wsectors[i].ceilingangle != 0)
 			fprintf(f, "rotationceiling = %f;\n", FIXED_TO_FLOAT(AngleFixed(wsectors[i].ceilingangle)));
-        if (wsectors[i].extra_colormap)
+		if (wsectors[i].extra_colormap)
 		{
 			INT32 lightcolor = P_RGBAToColor(wsectors[i].extra_colormap->rgba);
 			UINT8 lightalpha = R_GetRgbaA(wsectors[i].extra_colormap->rgba);
 			INT32 fadecolor = P_RGBAToColor(wsectors[i].extra_colormap->fadergba);
 			UINT8 fadealpha = R_GetRgbaA(wsectors[i].extra_colormap->fadergba);
+
+			// For now, convert alpha from new (0-255) to old 'A-Z' (0-25) range
+			// TODO: remove this limitation in a backwards-compatible way (UDMF versioning?)
+			lightalpha /= 10;
+			fadealpha /= 10;
 
 			if (lightcolor != 0)
 				fprintf(f, "lightcolor = %d;\n", lightcolor);
@@ -2981,7 +3002,8 @@ static void P_LoadTextmap(void)
 		P_InitializeSector(sc);
 		if (textmap_colormap.used)
 		{
-			// Convert alpha values from old 0-25 (A-Z) range to 0-255 range
+			// Convert alpha values from old 'A-Z' (0-25) range to new UINT8 (0-255) range
+			// TODO: remove this limitation in a backwards-compatible way (UDMF versioning?)
 			UINT8 lightalpha = (textmap_colormap.lightalpha * 102) / 10;
 			UINT8 fadealpha = (textmap_colormap.fadealpha * 102) / 10;
 			
@@ -2992,15 +3014,19 @@ static void P_LoadTextmap(void)
 
 		if (textmap_planefloor.defined == (PD_A|PD_B|PD_C|PD_D))
 		{
-			sc->f_slope = MakeViaEquationConstants(textmap_planefloor.a, textmap_planefloor.b, textmap_planefloor.c, textmap_planefloor.d);
+			sc->f_slope = P_MakeSlopeViaEquationConstants(textmap_planefloor.a, textmap_planefloor.b, textmap_planefloor.c, textmap_planefloor.d);
 			sc->hasslope = true;
+			if (sc->specialflags & SSF_NOPHYSICSFLOOR)
+				sc->f_slope->flags |= SL_NOPHYSICS;
 		}
 
 		if (textmap_planeceiling.defined == (PD_A|PD_B|PD_C|PD_D))
 		{
-			sc->c_slope = MakeViaEquationConstants(textmap_planeceiling.a, textmap_planeceiling.b, textmap_planeceiling.c, textmap_planeceiling.d);
+			sc->c_slope = P_MakeSlopeViaEquationConstants(textmap_planeceiling.a, textmap_planeceiling.b, textmap_planeceiling.c, textmap_planeceiling.d);
 			sc->hasslope = true;
-		}
+			if (sc->specialflags & SSF_NOPHYSICSCEILING)
+				sc->c_slope->flags |= SL_NOPHYSICS;
+        }
 
 		TextmapFixFlatOffsets(sc);
 	}
@@ -3155,7 +3181,12 @@ static boolean P_LoadMapData(const virtres_t *virt)
 	if (udmf) // Count how many entries for each type we got in textmap.
 	{
 		virtlump_t *textmap = vres_Find(virt, "TEXTMAP");
-		M_TokenizerOpen((char *)textmap->data);
+		if (textmap->size == 0)
+		{
+			CONS_Alert(CONS_ERROR, "Emtpy TEXTMAP Lump!\n");
+			return false;
+		}
+		M_TokenizerOpen((char *)textmap->data, textmap->size);
 		if (!TextmapCount(textmap->size))
 		{
 			M_TokenizerClose();
@@ -3237,9 +3268,6 @@ static boolean P_LoadMapData(const virtres_t *virt)
 	// copy table for global usage
 	levelflats = M_Memcpy(Z_Calloc(numlevelflats * sizeof (*levelflats), PU_LEVEL, NULL), foundflats, numlevelflats * sizeof (levelflat_t));
 	free(foundflats);
-
-	// search for animated flats and set up
-	P_SetupLevelFlatAnims();
 
 	return true;
 }
@@ -3339,8 +3367,6 @@ static void P_InitializeSeg(seg_t *seg)
 	seg->lightmaps = NULL; // list of static lightmap for this seg
 #endif
 
-	seg->numlights = 0;
-	seg->rlights = NULL;
 	seg->polyseg = NULL;
 	seg->dontrenderme = false;
 }
@@ -7869,6 +7895,8 @@ boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate)
 		Z_Free(ss->attachedsolid);
 	}
 
+	P_ClearBlockNodes();
+
 	// Clear pointers that would be left dangling by the purge
 	R_FlushTranslationColormapCache();
 
@@ -7912,6 +7940,24 @@ boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate)
 
 	if (!P_LoadMapFromFile())
 		return false;
+
+	if (!demoplayback)
+	{
+		clientGamedata->mapvisited[gamemap-1] |= MV_VISITED;
+		serverGamedata->mapvisited[gamemap-1] |= MV_VISITED;
+
+		M_SilentUpdateUnlockablesAndEmblems(serverGamedata);
+
+		if (M_UpdateUnlockablesAndExtraEmblems(clientGamedata))
+		{
+			S_StartSound(NULL, sfx_s3k68);
+			G_SaveGameData(clientGamedata);
+		}
+		else if (!reloadinggamestate)
+		{
+			G_SaveGameData(clientGamedata);
+		}
+	}
 
 	// init anything that P_SpawnSlopes/P_LoadThings needs to know
 	P_InitSpecials();
@@ -7970,24 +8016,6 @@ boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate)
 
 	nextmapoverride = 0;
 	skipstats = 0;
-
-	if (!demoplayback)
-	{
-		clientGamedata->mapvisited[gamemap-1] |= MV_VISITED;
-		serverGamedata->mapvisited[gamemap-1] |= MV_VISITED;
-
-		M_SilentUpdateUnlockablesAndEmblems(serverGamedata);
-
-		if (M_UpdateUnlockablesAndExtraEmblems(clientGamedata))
-		{
-			S_StartSound(NULL, sfx_s3k68);
-			G_SaveGameData(clientGamedata);
-		}
-		else if (!reloadinggamestate)
-		{
-			G_SaveGameData(clientGamedata);
-		}
-	}
 
 	levelloading = false;
 

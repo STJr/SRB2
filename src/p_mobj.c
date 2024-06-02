@@ -85,9 +85,15 @@ void P_AddCachedAction(mobj_t *mobj, INT32 statenum)
 //
 static void P_SetupStateAnimation(mobj_t *mobj, state_t *st)
 {
-	INT32 animlength = (mobj->sprite == SPR_PLAY && mobj->skin)
-		? (INT32)(((skin_t *)mobj->skin)->sprites[mobj->sprite2].numframes) - 1
-		: st->var1;
+	INT32 animlength;
+
+	if (mobj->sprite == SPR_PLAY && mobj->skin)
+	{
+		spritedef_t *spritedef = P_GetSkinSpritedef(mobj->skin, mobj->sprite2);
+		animlength = (INT32)(spritedef->numframes);
+	}
+	else
+		animlength = st->var1;
 
 	if (!(st->frame & FF_ANIMATE))
 		return;
@@ -138,8 +144,13 @@ FUNCINLINE static ATTRINLINE void P_CycleStateAnimation(mobj_t *mobj)
 	}
 
 	// sprite2 version of above
-	if (mobj->skin && (((++mobj->frame) & FF_FRAMEMASK) >= (UINT32)(((skin_t *)mobj->skin)->sprites[mobj->sprite2].numframes)))
-		mobj->frame &= ~FF_FRAMEMASK;
+	if (mobj->skin)
+	{
+		spritedef_t *spritedef = P_GetSkinSpritedef(mobj->skin, mobj->sprite2);
+		UINT32 anim_length = (UINT32)(spritedef->numframes);
+		if (((++mobj->frame) & FF_FRAMEMASK) >= anim_length)
+			mobj->frame &= ~FF_FRAMEMASK;
+	}
 }
 
 //
@@ -395,31 +406,23 @@ static boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 		{
 			skin_t *skin = ((skin_t *)mobj->skin);
 			UINT16 frame = (mobj->frame & FF_FRAMEMASK)+1;
-			UINT8 numframes, spr2;
+			UINT8 numframes;
+			UINT16 spr2;
 
 			if (skin)
 			{
-				UINT16 stateframe = st->frame;
+				spr2 = P_GetStateSprite2(st);
 
-				// Add/Remove FF_SPR2SUPER based on certain conditions
-				if (player->charflags & SF_NOSUPERSPRITES)
-					stateframe = stateframe & ~FF_SPR2SUPER;
-				else if (player->powers[pw_super])
-					stateframe = stateframe | FF_SPR2SUPER;
+				// Add or remove SPR2F_SUPER based on certain conditions
+				spr2 = P_ApplySuperFlagToSprite2(spr2, mobj);
 
-				if (stateframe & FF_SPR2SUPER)
-				{
-					if (mobj->eflags & MFE_FORCENOSUPER)
-						stateframe = stateframe & ~FF_SPR2SUPER;
-				}
-				else if (mobj->eflags & MFE_FORCESUPER)
-					stateframe = stateframe | FF_SPR2SUPER;
+				// Get the needed sprite2 and frame number
+				spr2 = P_GetSkinSprite2(skin, spr2, mobj->player);
 
-				// Get the sprite2 and frame number
-				spr2 = P_GetSkinSprite2(skin, (stateframe & FF_FRAMEMASK), mobj->player);
-				numframes = skin->sprites[spr2].numframes;
+				spritedef_t *sprdef = P_GetSkinSpritedef(skin, spr2);
+				numframes = sprdef->numframes;
 
-				if (state == S_PLAY_STND && (spr2 & FF_SPR2SUPER) && skin->sprites[SPR2_WAIT|FF_SPR2SUPER].numframes == 0)
+				if (state == S_PLAY_STND && (spr2 & SPR2F_SUPER) && sprdef[SPR2_WAIT].numframes == 0)
 					mobj->tics = -1;	// If no super wait, don't wait at all
 			}
 			else
@@ -432,12 +435,19 @@ static boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 			if (mobj->sprite != SPR_PLAY)
 			{
 				mobj->sprite = SPR_PLAY;
-				frame = 0;
+				frame = P_GetSprite2StateFrame(st);
 			}
 			else if (mobj->sprite2 != spr2)
 			{
-				if ((st->frame & FF_SPR2MIDSTART) && numframes && P_RandomChance(FRACUNIT/2))
-					frame = numframes/2;
+				if (st->frame & FF_SPR2MIDSTART)
+				{
+					if (numframes && P_RandomChance(FRACUNIT/2))
+						frame = numframes/2;
+					else
+						frame = 0;
+				}
+				else if (numframes)
+					frame = P_GetSprite2StateFrame(st) % numframes;
 				else
 					frame = 0;
 			}
@@ -452,6 +462,7 @@ static boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 					{
 						if (mobj->frame & FF_FRAMEMASK)
 							mobj->frame--;
+
 						return P_SetPlayerMobjState(mobj, st->var1);
 					}
 				}
@@ -539,26 +550,23 @@ boolean P_SetMobjState(mobj_t *mobj, statenum_t state)
 		{
 			skin_t *skin = ((skin_t *)mobj->skin);
 			UINT16 frame = (mobj->frame & FF_FRAMEMASK)+1;
-			UINT8 numframes, spr2;
+			UINT8 numframes;
+			UINT16 spr2;
 
 			if (skin)
 			{
-				UINT16 stateframe = st->frame;
+				spr2 = P_GetStateSprite2(st);
 
-				// Add/Remove FF_SPR2SUPER based on certain conditions
-				if (stateframe & FF_SPR2SUPER)
-				{
-					if (mobj->eflags & MFE_FORCENOSUPER)
-						stateframe = stateframe & ~FF_SPR2SUPER;
-				}
-				else if (mobj->eflags & MFE_FORCESUPER)
-					stateframe = stateframe | FF_SPR2SUPER;
+				// Add or remove SPR2F_SUPER based on certain conditions
+				spr2 = P_ApplySuperFlagToSprite2(spr2, mobj);
 
-				// Get the sprite2 and frame number
-				spr2 = P_GetSkinSprite2(skin, (stateframe & FF_FRAMEMASK), NULL);
-				numframes = skin->sprites[spr2].numframes;
+				// Get the needed sprite2 and frame number
+				spr2 = P_GetSkinSprite2(skin, spr2, NULL);
 
-				if (state == S_PLAY_STND && (spr2 & FF_SPR2SUPER) && skin->sprites[SPR2_WAIT|FF_SPR2SUPER].numframes == 0)
+				spritedef_t *sprdef = P_GetSkinSpritedef(skin, spr2);
+				numframes = sprdef->numframes;
+
+				if (state == S_PLAY_STND && (spr2 & SPR2F_SUPER) && sprdef[SPR2_WAIT].numframes == 0)
 					mobj->tics = -1;	// If no super wait, don't wait at all
 			}
 			else
@@ -571,12 +579,19 @@ boolean P_SetMobjState(mobj_t *mobj, statenum_t state)
 			if (mobj->sprite != SPR_PLAY)
 			{
 				mobj->sprite = SPR_PLAY;
-				frame = 0;
+				frame = P_GetSprite2StateFrame(st);
 			}
 			else if (mobj->sprite2 != spr2)
 			{
-				if ((st->frame & FF_SPR2MIDSTART) && numframes && P_RandomChance(FRACUNIT/2))
-					frame = numframes/2;
+				if (st->frame & FF_SPR2MIDSTART)
+				{
+					if (numframes && P_RandomChance(FRACUNIT/2))
+						frame = numframes/2;
+					else
+						frame = 0;
+				}
+				else if (numframes)
+					frame = P_GetSprite2StateFrame(st) % numframes;
 				else
 					frame = 0;
 			}
@@ -591,6 +606,7 @@ boolean P_SetMobjState(mobj_t *mobj, statenum_t state)
 					{
 						if (mobj->frame & FF_FRAMEMASK)
 							mobj->frame--;
+
 						return P_SetMobjState(mobj, st->var1);
 					}
 				}
@@ -917,7 +933,7 @@ void P_ExplodeMissile(mobj_t *mo)
 		explodemo = P_SpawnMobj(mo->x, mo->y, mo->z, MT_EXPLODE);
 		if (!P_MobjWasRemoved(explodemo))
 		{
-			P_SetScale(explodemo, mo->scale);
+			P_SetScale(explodemo, mo->scale, true);
 			explodemo->destscale = mo->destscale;
 			explodemo->momx += (P_RandomByte() % 32) * FixedMul(FRACUNIT/8, explodemo->scale);
 			explodemo->momy += (P_RandomByte() % 32) * FixedMul(FRACUNIT/8, explodemo->scale);
@@ -926,7 +942,7 @@ void P_ExplodeMissile(mobj_t *mo)
 		explodemo = P_SpawnMobj(mo->x, mo->y, mo->z, MT_EXPLODE);
 		if (!P_MobjWasRemoved(explodemo))
 		{
-			P_SetScale(explodemo, mo->scale);
+			P_SetScale(explodemo, mo->scale, true);
 			explodemo->destscale = mo->destscale;
 			explodemo->momx += (P_RandomByte() % 64) * FixedMul(FRACUNIT/8, explodemo->scale);
 			explodemo->momy -= (P_RandomByte() % 64) * FixedMul(FRACUNIT/8, explodemo->scale);
@@ -935,7 +951,7 @@ void P_ExplodeMissile(mobj_t *mo)
 		explodemo = P_SpawnMobj(mo->x, mo->y, mo->z, MT_EXPLODE);
 		if (!P_MobjWasRemoved(explodemo))
 		{
-			P_SetScale(explodemo, mo->scale);
+			P_SetScale(explodemo, mo->scale, true);
 			explodemo->destscale = mo->destscale;
 			explodemo->momx -= (P_RandomByte() % 128) * FixedMul(FRACUNIT/8, explodemo->scale);
 			explodemo->momy += (P_RandomByte() % 128) * FixedMul(FRACUNIT/8, explodemo->scale);
@@ -944,7 +960,7 @@ void P_ExplodeMissile(mobj_t *mo)
 		explodemo = P_SpawnMobj(mo->x, mo->y, mo->z, MT_EXPLODE);
 		if (!P_MobjWasRemoved(explodemo))
 		{
-			P_SetScale(explodemo, mo->scale);
+			P_SetScale(explodemo, mo->scale, true);
 			explodemo->destscale = mo->destscale;
 			explodemo->momx -= (P_RandomByte() % 96) * FixedMul(FRACUNIT/8, explodemo->scale);
 			explodemo->momy -= (P_RandomByte() % 96) * FixedMul(FRACUNIT/8, explodemo->scale);
@@ -1092,9 +1108,8 @@ static fixed_t HighestOnLine(fixed_t radius, fixed_t x, fixed_t y, line_t *line,
 		);
 }
 
-fixed_t P_MobjFloorZ(mobj_t *mobj, sector_t *sector, sector_t *boundsec, fixed_t x, fixed_t y, line_t *line, boolean lowest, boolean perfect)
+fixed_t P_MobjFloorZ(sector_t *sector, sector_t *boundsec, fixed_t x, fixed_t y, fixed_t radius, line_t *line, boolean lowest, boolean perfect)
 {
-	I_Assert(mobj != NULL);
 	I_Assert(sector != NULL);
 
 	if (sector->f_slope) {
@@ -1103,14 +1118,14 @@ fixed_t P_MobjFloorZ(mobj_t *mobj, sector_t *sector, sector_t *boundsec, fixed_t
 
 		// Get the corner of the object that should be the highest on the slope
 		if (slope->d.x < 0)
-			testx = mobj->radius;
+			testx = radius;
 		else
-			testx = -mobj->radius;
+			testx = -radius;
 
 		if (slope->d.y < 0)
-			testy = mobj->radius;
+			testy = radius;
 		else
-			testy = -mobj->radius;
+			testy = -radius;
 
 		if ((slope->zdelta > 0) ^ !!(lowest)) {
 			testx = -testx;
@@ -1125,7 +1140,7 @@ fixed_t P_MobjFloorZ(mobj_t *mobj, sector_t *sector, sector_t *boundsec, fixed_t
 			return P_GetSlopeZAt(slope, testx, testy);
 
 		// If boundsec is set, we're looking for specials. In that case, iterate over every line in this sector to find the TRUE highest/lowest point
-		if (perfect) {
+		if (perfect && boundsec) {
 			size_t i;
 			line_t *ld;
 			fixed_t bbox[4];
@@ -1136,10 +1151,10 @@ fixed_t P_MobjFloorZ(mobj_t *mobj, sector_t *sector, sector_t *boundsec, fixed_t
 			else
 				finalheight = INT32_MIN;
 
-			bbox[BOXLEFT] = x-mobj->radius;
-			bbox[BOXRIGHT] = x+mobj->radius;
-			bbox[BOXTOP] = y+mobj->radius;
-			bbox[BOXBOTTOM] = y-mobj->radius;
+			bbox[BOXLEFT] = x-radius;
+			bbox[BOXRIGHT] = x+radius;
+			bbox[BOXTOP] = y+radius;
+			bbox[BOXBOTTOM] = y-radius;
 			for (i = 0; i < boundsec->linecount; i++) {
 				ld = boundsec->lines[i];
 
@@ -1151,9 +1166,9 @@ fixed_t P_MobjFloorZ(mobj_t *mobj, sector_t *sector, sector_t *boundsec, fixed_t
 					continue;
 
 				if (lowest)
-					finalheight = min(finalheight, HighestOnLine(mobj->radius, x, y, ld, slope, true));
+					finalheight = min(finalheight, HighestOnLine(radius, x, y, ld, slope, true));
 				else
-					finalheight = max(finalheight, HighestOnLine(mobj->radius, x, y, ld, slope, false));
+					finalheight = max(finalheight, HighestOnLine(radius, x, y, ld, slope, false));
 			}
 
 			return finalheight;
@@ -1164,14 +1179,13 @@ fixed_t P_MobjFloorZ(mobj_t *mobj, sector_t *sector, sector_t *boundsec, fixed_t
 		if (line == NULL)
 			return P_GetSlopeZAt(slope, x, y);
 
-		return HighestOnLine(mobj->radius, x, y, line, slope, lowest);
+		return HighestOnLine(radius, x, y, line, slope, lowest);
 	} else // Well, that makes it easy. Just get the floor height
 		return sector->floorheight;
 }
 
-fixed_t P_MobjCeilingZ(mobj_t *mobj, sector_t *sector, sector_t *boundsec, fixed_t x, fixed_t y, line_t *line, boolean lowest, boolean perfect)
+fixed_t P_MobjCeilingZ(sector_t *sector, sector_t *boundsec, fixed_t x, fixed_t y, fixed_t radius, line_t *line, boolean lowest, boolean perfect)
 {
-	I_Assert(mobj != NULL);
 	I_Assert(sector != NULL);
 
 	if (sector->c_slope) {
@@ -1180,14 +1194,14 @@ fixed_t P_MobjCeilingZ(mobj_t *mobj, sector_t *sector, sector_t *boundsec, fixed
 
 		// Get the corner of the object that should be the highest on the slope
 		if (slope->d.x < 0)
-			testx = mobj->radius;
+			testx = radius;
 		else
-			testx = -mobj->radius;
+			testx = -radius;
 
 		if (slope->d.y < 0)
-			testy = mobj->radius;
+			testy = radius;
 		else
-			testy = -mobj->radius;
+			testy = -radius;
 
 		if ((slope->zdelta > 0) ^ !!(lowest)) {
 			testx = -testx;
@@ -1202,7 +1216,7 @@ fixed_t P_MobjCeilingZ(mobj_t *mobj, sector_t *sector, sector_t *boundsec, fixed
 			return P_GetSlopeZAt(slope, testx, testy);
 
 		// If boundsec is set, we're looking for specials. In that case, iterate over every line in this sector to find the TRUE highest/lowest point
-		if (perfect) {
+		if (perfect && boundsec) {
 			size_t i;
 			line_t *ld;
 			fixed_t bbox[4];
@@ -1213,10 +1227,10 @@ fixed_t P_MobjCeilingZ(mobj_t *mobj, sector_t *sector, sector_t *boundsec, fixed
 			else
 				finalheight = INT32_MIN;
 
-			bbox[BOXLEFT] = x-mobj->radius;
-			bbox[BOXRIGHT] = x+mobj->radius;
-			bbox[BOXTOP] = y+mobj->radius;
-			bbox[BOXBOTTOM] = y-mobj->radius;
+			bbox[BOXLEFT] = x-radius;
+			bbox[BOXRIGHT] = x+radius;
+			bbox[BOXTOP] = y+radius;
+			bbox[BOXBOTTOM] = y-radius;
 			for (i = 0; i < boundsec->linecount; i++) {
 				ld = boundsec->lines[i];
 
@@ -1228,9 +1242,9 @@ fixed_t P_MobjCeilingZ(mobj_t *mobj, sector_t *sector, sector_t *boundsec, fixed
 					continue;
 
 				if (lowest)
-					finalheight = min(finalheight, HighestOnLine(mobj->radius, x, y, ld, slope, true));
+					finalheight = min(finalheight, HighestOnLine(radius, x, y, ld, slope, true));
 				else
-					finalheight = max(finalheight, HighestOnLine(mobj->radius, x, y, ld, slope, false));
+					finalheight = max(finalheight, HighestOnLine(radius, x, y, ld, slope, false));
 			}
 
 			return finalheight;
@@ -1241,165 +1255,11 @@ fixed_t P_MobjCeilingZ(mobj_t *mobj, sector_t *sector, sector_t *boundsec, fixed
 		if (line == NULL)
 			return P_GetSlopeZAt(slope, x, y);
 
-		return HighestOnLine(mobj->radius, x, y, line, slope, lowest);
+		return HighestOnLine(radius, x, y, line, slope, lowest);
 	} else // Well, that makes it easy. Just get the ceiling height
 		return sector->ceilingheight;
 }
 
-// Now do the same as all above, but for cameras because apparently cameras are special?
-fixed_t P_CameraFloorZ(camera_t *mobj, sector_t *sector, sector_t *boundsec, fixed_t x, fixed_t y, line_t *line, boolean lowest, boolean perfect)
-{
-	I_Assert(mobj != NULL);
-	I_Assert(sector != NULL);
-
-	if (sector->f_slope) {
-		fixed_t testx, testy;
-		pslope_t *slope = sector->f_slope;
-
-		// Get the corner of the object that should be the highest on the slope
-		if (slope->d.x < 0)
-			testx = mobj->radius;
-		else
-			testx = -mobj->radius;
-
-		if (slope->d.y < 0)
-			testy = mobj->radius;
-		else
-			testy = -mobj->radius;
-
-		if ((slope->zdelta > 0) ^ !!(lowest)) {
-			testx = -testx;
-			testy = -testy;
-		}
-
-		testx += x;
-		testy += y;
-
-		// If the highest point is in the sector, then we have it easy! Just get the Z at that point
-		if (R_IsPointInSector(boundsec ? boundsec : sector, testx, testy))
-			return P_GetSlopeZAt(slope, testx, testy);
-
-		// If boundsec is set, we're looking for specials. In that case, iterate over every line in this sector to find the TRUE highest/lowest point
-		if (perfect) {
-			size_t i;
-			line_t *ld;
-			fixed_t bbox[4];
-			fixed_t finalheight;
-
-			if (lowest)
-				finalheight = INT32_MAX;
-			else
-				finalheight = INT32_MIN;
-
-			bbox[BOXLEFT] = x-mobj->radius;
-			bbox[BOXRIGHT] = x+mobj->radius;
-			bbox[BOXTOP] = y+mobj->radius;
-			bbox[BOXBOTTOM] = y-mobj->radius;
-			for (i = 0; i < boundsec->linecount; i++) {
-				ld = boundsec->lines[i];
-
-				if (bbox[BOXRIGHT] <= ld->bbox[BOXLEFT] || bbox[BOXLEFT] >= ld->bbox[BOXRIGHT]
-				|| bbox[BOXTOP] <= ld->bbox[BOXBOTTOM] || bbox[BOXBOTTOM] >= ld->bbox[BOXTOP])
-					continue;
-
-				if (P_BoxOnLineSide(bbox, ld) != -1)
-					continue;
-
-				if (lowest)
-					finalheight = min(finalheight, HighestOnLine(mobj->radius, x, y, ld, slope, true));
-				else
-					finalheight = max(finalheight, HighestOnLine(mobj->radius, x, y, ld, slope, false));
-			}
-
-			return finalheight;
-		}
-
-		// If we're just testing for base sector location (no collision line), just go for the center's spot...
-		// It'll get fixed when we test for collision anyway, and the final result can't be lower than this
-		if (line == NULL)
-			return P_GetSlopeZAt(slope, x, y);
-
-		return HighestOnLine(mobj->radius, x, y, line, slope, lowest);
-	} else // Well, that makes it easy. Just get the floor height
-		return sector->floorheight;
-}
-
-fixed_t P_CameraCeilingZ(camera_t *mobj, sector_t *sector, sector_t *boundsec, fixed_t x, fixed_t y, line_t *line, boolean lowest, boolean perfect)
-{
-	I_Assert(mobj != NULL);
-	I_Assert(sector != NULL);
-
-	if (sector->c_slope) {
-		fixed_t testx, testy;
-		pslope_t *slope = sector->c_slope;
-
-		// Get the corner of the object that should be the highest on the slope
-		if (slope->d.x < 0)
-			testx = mobj->radius;
-		else
-			testx = -mobj->radius;
-
-		if (slope->d.y < 0)
-			testy = mobj->radius;
-		else
-			testy = -mobj->radius;
-
-		if ((slope->zdelta > 0) ^ !!(lowest)) {
-			testx = -testx;
-			testy = -testy;
-		}
-
-		testx += x;
-		testy += y;
-
-		// If the highest point is in the sector, then we have it easy! Just get the Z at that point
-		if (R_IsPointInSector(boundsec ? boundsec : sector, testx, testy))
-			return P_GetSlopeZAt(slope, testx, testy);
-
-		// If boundsec is set, we're looking for specials. In that case, iterate over every line in this sector to find the TRUE highest/lowest point
-		if (perfect) {
-			size_t i;
-			line_t *ld;
-			fixed_t bbox[4];
-			fixed_t finalheight;
-
-			if (lowest)
-				finalheight = INT32_MAX;
-			else
-				finalheight = INT32_MIN;
-
-			bbox[BOXLEFT] = x-mobj->radius;
-			bbox[BOXRIGHT] = x+mobj->radius;
-			bbox[BOXTOP] = y+mobj->radius;
-			bbox[BOXBOTTOM] = y-mobj->radius;
-			for (i = 0; i < boundsec->linecount; i++) {
-				ld = boundsec->lines[i];
-
-				if (bbox[BOXRIGHT] <= ld->bbox[BOXLEFT] || bbox[BOXLEFT] >= ld->bbox[BOXRIGHT]
-				|| bbox[BOXTOP] <= ld->bbox[BOXBOTTOM] || bbox[BOXBOTTOM] >= ld->bbox[BOXTOP])
-					continue;
-
-				if (P_BoxOnLineSide(bbox, ld) != -1)
-					continue;
-
-				if (lowest)
-					finalheight = min(finalheight, HighestOnLine(mobj->radius, x, y, ld, slope, true));
-				else
-					finalheight = max(finalheight, HighestOnLine(mobj->radius, x, y, ld, slope, false));
-			}
-
-			return finalheight;
-		}
-
-		// If we're just testing for base sector location (no collision line), just go for the center's spot...
-		// It'll get fixed when we test for collision anyway, and the final result can't be lower than this
-		if (line == NULL)
-			return P_GetSlopeZAt(slope, x, y);
-
-		return HighestOnLine(mobj->radius, x, y, line, slope, lowest);
-	} else // Well, that makes it easy. Just get the ceiling height
-		return sector->ceilingheight;
-}
 static void P_PlayerFlip(mobj_t *mo)
 {
 	if (!mo->player)
@@ -2118,7 +1978,7 @@ void P_RingXYMovement(mobj_t *mo)
 	I_Assert(mo != NULL);
 	I_Assert(!P_MobjWasRemoved(mo));
 
-	if (!P_SceneryTryMove(mo, mo->x + mo->momx, mo->y + mo->momy))
+	if (!P_SceneryTryMove(mo, mo->x + mo->momx, mo->y + mo->momy) && !P_MobjWasRemoved(mo))
 		P_SlideMove(mo);
 }
 
@@ -2132,8 +1992,10 @@ void P_SceneryXYMovement(mobj_t *mo)
 	oldx = mo->x;
 	oldy = mo->y;
 
-	if (!P_SceneryTryMove(mo, mo->x + mo->momx, mo->y + mo->momy))
+	if (!P_SceneryTryMove(mo, mo->x + mo->momx, mo->y + mo->momy) && !P_MobjWasRemoved(mo))
 		P_SlideMove(mo);
+	if (P_MobjWasRemoved(mo))
+		return;
 
 	if ((!(mo->eflags & MFE_VERTICALFLIP) && mo->z > mo->floorz) || (mo->eflags & MFE_VERTICALFLIP && mo->z+mo->height < mo->ceilingz))
 		return; // no friction when airborne
@@ -2329,12 +2191,15 @@ boolean P_CheckDeathPitCollide(mobj_t *mo)
 	if (mo->player && mo->player->pflags & PF_GODMODE)
 		return false;
 
-	if (((mo->z <= mo->subsector->sector->floorheight
+	fixed_t sectorFloor = P_GetSpecialBottomZ(mo, mo->subsector->sector, mo->subsector->sector);
+	fixed_t sectorCeiling = P_GetSpecialTopZ(mo, mo->subsector->sector, mo->subsector->sector);
+
+	if (((mo->z <= sectorFloor
 		&& ((mo->subsector->sector->flags & MSF_TRIGGERSPECIAL_HEADBUMP) || !(mo->eflags & MFE_VERTICALFLIP)) && (mo->subsector->sector->flags & MSF_FLIPSPECIAL_FLOOR))
-	|| (mo->z + mo->height >= mo->subsector->sector->ceilingheight
-		&& ((mo->subsector->sector->flags & MSF_TRIGGERSPECIAL_HEADBUMP) || (mo->eflags & MFE_VERTICALFLIP)) && (mo->subsector->sector->flags & MSF_FLIPSPECIAL_CEILING)))
-	&& (mo->subsector->sector->damagetype == SD_DEATHPITTILT
-	|| mo->subsector->sector->damagetype == SD_DEATHPITNOTILT))
+		|| (mo->z + mo->height >= sectorCeiling
+			&& ((mo->subsector->sector->flags & MSF_TRIGGERSPECIAL_HEADBUMP) || (mo->eflags & MFE_VERTICALFLIP)) && (mo->subsector->sector->flags & MSF_FLIPSPECIAL_CEILING)))
+		&& (mo->subsector->sector->damagetype == SD_DEATHPITTILT
+			|| mo->subsector->sector->damagetype == SD_DEATHPITNOTILT))
 		return true;
 
 	return false;
@@ -3108,8 +2973,7 @@ boolean P_SceneryZMovement(mobj_t *mo)
 						continue;
 					explodemo->momx += ((prandom & 0x0F) << (FRACBITS-2)) * (i & 2 ? -1 : 1);
 					explodemo->momy += ((prandom & 0xF0) << (FRACBITS-6)) * (i & 1 ? -1 : 1);
-					explodemo->destscale = mo->scale;
-					P_SetScale(explodemo, mo->scale);
+					P_SetScale(explodemo, mo->scale, true);
 				}
 
 				if (mo->threshold != 42) // Don't make pop sound if threshold is 42.
@@ -3135,7 +2999,7 @@ boolean P_SceneryZMovement(mobj_t *mo)
 				mobj_t *flower = P_SpawnMobjFromMobj(mo, 0, 0, 0, flowertype);
 				if (flower)
 				{
-					P_SetScale(flower, mo->scale/16);
+					P_SetScale(flower, mo->scale/16, true);
 					flower->destscale = mo->scale;
 					flower->scalespeed = mo->scale/8;
 				}
@@ -3375,10 +3239,7 @@ void P_MobjCheckWater(mobj_t *mobj)
 				else
 					splish = P_SpawnMobj(mobj->x, mobj->y, mobj->watertop, splishtype);
 				if (!P_MobjWasRemoved(splish))
-				{
-					splish->destscale = mobj->scale;
-					P_SetScale(splish, mobj->scale);
-				}
+					P_SetScale(splish, mobj->scale, true);
 			}
 
 			// skipping stone!
@@ -3417,10 +3278,7 @@ void P_MobjCheckWater(mobj_t *mobj)
 				else
 					splish = P_SpawnMobj(mobj->x, mobj->y, mobj->watertop, splishtype);
 				if (!P_MobjWasRemoved(splish))
-				{
-					splish->destscale = mobj->scale;
-					P_SetScale(splish, mobj->scale);
-				}
+					P_SetScale(splish, mobj->scale, true);
 			}
 		}
 
@@ -3471,8 +3329,7 @@ void P_MobjCheckWater(mobj_t *mobj)
 					else
 						bubble->momz = 0;
 
-					bubble->destscale = mobj->scale;
-					P_SetScale(bubble, mobj->scale);
+					P_SetScale(bubble, mobj->scale, true);
 				}
 			}
 		}
@@ -3914,6 +3771,8 @@ static void P_PlayerMobjThinker(mobj_t *mobj)
 	}
 	else
 		P_TryMove(mobj, mobj->x, mobj->y, true);
+	if (P_MobjWasRemoved(mobj))
+		return;
 
 	P_CheckCrumblingPlatforms(mobj);
 
@@ -4708,6 +4567,8 @@ static void P_Boss4PinchSpikeballs(mobj_t *mobj, angle_t angle, fixed_t dz)
 		{
 			seg->z = bz + (dz*(9-s));
 			P_TryMove(seg, workx + (dx*s), worky + (dy*s), true);
+			if (P_MobjWasRemoved(seg))
+				return;
 		}
 		angle += ANGLE_MAX/3;
 	}
@@ -4945,6 +4806,8 @@ static void P_Boss4Thinker(mobj_t *mobj)
 				(mobj->spawnpoint->x<<FRACBITS) - P_ReturnThrustX(mobj, mobj->angle, mobj->movefactor),
 				(mobj->spawnpoint->y<<FRACBITS) - P_ReturnThrustY(mobj, mobj->angle, mobj->movefactor),
 				true);
+		if (P_MobjWasRemoved(mobj))
+			return;
 
 		P_Boss4PinchSpikeballs(mobj, FixedAngle(mobj->movecount), mobj->z - mobj->watertop - mobjinfo[MT_EGGMOBILE4_MACE].height - mobj->height/2);
 
@@ -5136,8 +4999,7 @@ static void P_Boss7Thinker(mobj_t *mobj)
 		mobj_t *smoke = P_SpawnMobj(mobj->x, mobj->y, mobj->z + mobj->height, MT_SMOKE);
 		if (!P_MobjWasRemoved(smoke))
 		{
-			smoke->destscale = mobj->destscale;
-			P_SetScale(smoke, smoke->destscale);
+			P_SetScale(smoke, mobj->destscale, true);
 			smoke->momz = FixedMul(FRACUNIT, smoke->scale);
 		}
 	}
@@ -5514,6 +5376,8 @@ static void P_Boss9Thinker(mobj_t *mobj)
 	{
 		P_InstaThrust(mobj, mobj->angle, -4*FRACUNIT);
 		P_TryMove(mobj, mobj->x+mobj->momx, mobj->y+mobj->momy, true);
+		if (P_MobjWasRemoved(mobj))
+			return;
 		mobj->momz -= gravity;
 		if (mobj->z < mobj->watertop || mobj->z < (mobj->floorz + 16*FRACUNIT))
 		{
@@ -5586,7 +5450,7 @@ static void P_Boss9Thinker(mobj_t *mobj)
 				if (mobj->hprev)
 				{
 					mobj->hprev->destscale = FRACUNIT + (2*TICRATE - mobj->fuse)*(FRACUNIT/2)/TICRATE + FixedMul(FINECOSINE(angle>>ANGLETOFINESHIFT),FRACUNIT/2);
-					P_SetScale(mobj->hprev, mobj->hprev->destscale);
+					P_SetScale(mobj->hprev, mobj->hprev->destscale, false);
 
 					P_MoveOrigin(mobj->hprev, mobj->x, mobj->y, mobj->z + mobj->height/2 - mobj->hprev->height/2);
 					mobj->hprev->momx = mobj->momx;
@@ -5612,8 +5476,8 @@ static void P_Boss9Thinker(mobj_t *mobj)
 						{
 							S_StopSound(missile);
 							if (mobj->extravalue1 >= 2)
-								P_SetScale(missile, FRACUNIT>>1);
-							missile->destscale = missile->scale>>1;
+								P_SetScale(missile, FRACUNIT/2, true);
+							missile->destscale = missile->scale/2;
 							missile->fuse = TICRATE/2;
 							missile->scalespeed = abs(missile->destscale - missile->scale)/missile->fuse;
 							missile->z -= missile->height/2;
@@ -5636,7 +5500,7 @@ static void P_Boss9Thinker(mobj_t *mobj)
 									spread->angle = missile->angle+(ANGLE_11hh/2)*(i-2);
 									P_InstaThrust(spread,spread->angle,-spread->info->speed);
 									spread->momz = missile->momz;
-									P_SetScale(spread, missile->scale);
+									P_SetScale(spread, missile->scale, true);
 									spread->destscale = missile->destscale;
 									spread->scalespeed = missile->scalespeed;
 									spread->fuse = missile->fuse;
@@ -5660,7 +5524,7 @@ static void P_Boss9Thinker(mobj_t *mobj)
 										spread = P_SpawnMissile(mobj, mobj->target, missile->type);
 										if (P_MobjWasRemoved(spread))
 											continue;
-										P_SetScale(spread, missile->scale);
+										P_SetScale(spread, missile->scale, true);
 										spread->destscale = missile->destscale;
 										spread->fuse = missile->fuse;
 										spread->z -= spread->height/2;
@@ -5717,12 +5581,12 @@ static void P_Boss9Thinker(mobj_t *mobj)
 					{
 						if (mobj->health > mobj->info->damage)
 						{
-							P_SetScale(missile, FRACUNIT/3);
+							P_SetScale(missile, FRACUNIT/3, true);
 							missile->color = SKINCOLOR_MAGENTA; // sonic OVA/4 purple power
 						}
 						else
 						{
-							P_SetScale(missile, FRACUNIT/5);
+							P_SetScale(missile, FRACUNIT/5, true);
 							missile->color = SKINCOLOR_SUNSET; // sonic cd electric power
 						}
 						missile->destscale = missile->scale*2;
@@ -5785,10 +5649,7 @@ static void P_Boss9Thinker(mobj_t *mobj)
 					if (!P_MobjWasRemoved(missile))
 					{
 						if (mobj->extravalue1 >= 2)
-						{
-							missile->destscale = FRACUNIT>>1;
-							P_SetScale(missile, missile->destscale);
-						}
+							P_SetScale(missile, FRACUNIT/2, true);
 						missile->fuse = 3*TICRATE;
 						missile->z -= missile->height/2;
 
@@ -5807,8 +5668,7 @@ static void P_Boss9Thinker(mobj_t *mobj)
 								spread->angle = missile->angle+(ANGLE_11hh/2)*(i-2);
 								P_InstaThrust(spread,spread->angle,spread->info->speed);
 								spread->momz = missile->momz;
-								spread->destscale = FRACUNIT>>1;
-								P_SetScale(spread, spread->destscale);
+								P_SetScale(spread, FRACUNIT/2, true);
 								spread->fuse = missile->fuse;
 							}
 							P_InstaThrust(missile,missile->angle,missile->info->speed);
@@ -5825,8 +5685,7 @@ static void P_Boss9Thinker(mobj_t *mobj)
 									spread = P_SpawnMissile(mobj, mobj->target, missile->type);
 									if (!P_MobjWasRemoved(spread))
 									{
-										spread->destscale = FRACUNIT>>1;
-										P_SetScale(spread, spread->destscale);
+										P_SetScale(spread, FRACUNIT/2, true);
 										spread->fuse = missile->fuse;
 										spread->z -= spread->height/2;
 									}
@@ -5862,6 +5721,8 @@ static void P_Boss9Thinker(mobj_t *mobj)
 					P_InstaThrust(mobj, mobj->angle, 30*FRACUNIT);
 				if (!P_TryMove(mobj, mobj->x+mobj->momx, mobj->y+mobj->momy, true))
 				{ // Hit a wall? Find a direction to bounce
+					if (P_MobjWasRemoved(mobj))
+						return;
 					mobj->threshold--;
 					if (!mobj->threshold) { // failed bounce!
 						S_StartSound(mobj, sfx_mspogo);
@@ -5902,6 +5763,8 @@ static void P_Boss9Thinker(mobj_t *mobj)
 			P_InstaThrust(mobj, mobj->angle, -speed);
 			while (!P_TryMove(mobj, mobj->x+mobj->momx, mobj->y+mobj->momy, true) && tries++ < 16)
 			{
+				if (P_MobjWasRemoved(mobj))
+					return;
 				S_StartSound(mobj, sfx_mspogo);
 				P_BounceMove(mobj);
 				mobj->angle = R_PointToAngle2(mobj->momx, mobj->momy,0,0);
@@ -6086,8 +5949,12 @@ static void P_Boss9Thinker(mobj_t *mobj)
 					whoosh->flags |= MF_NOCLIPHEIGHT;
 #endif
 
-					P_SetMobjState(mobj->tracer, S_JETFUMEFLASH);
-					P_SetScale(mobj->tracer, mobj->scale << 1);
+					if (!P_MobjWasRemoved(mobj->tracer))
+					{
+						P_SetMobjState(mobj->tracer, S_JETFUMEFLASH);
+						P_SetScale(mobj->tracer, 2*mobj->scale, false);
+						mobj->tracer->old_scale = mobj->tracer->scale;
+					}
 				}
 				else
 				{
@@ -6422,28 +6289,24 @@ void P_SpawnParaloop(fixed_t x, fixed_t y, fixed_t z, fixed_t radius, INT32 numb
 //
 // Sets the sprite scaling
 //
-void P_SetScale(mobj_t *mobj, fixed_t newscale)
+void P_SetScale(mobj_t *mobj, fixed_t newscale, boolean instant)
 {
-	player_t *player;
-	fixed_t oldscale;
-
 	if (!mobj)
 		return;
 
-	oldscale = mobj->scale; //keep for adjusting stuff below
-
-	mobj->scale = newscale;
-
-	mobj->radius = FixedMul(FixedDiv(mobj->radius, oldscale), newscale);
-	mobj->height = FixedMul(FixedDiv(mobj->height, oldscale), newscale);
-
-	player = mobj->player;
-
-	if (player)
+	if (mobj->player)
 	{
 		G_GhostAddScale(newscale);
-		player->viewheight = FixedMul(FixedDiv(player->viewheight, oldscale), newscale); // Nonono don't calculate viewheight elsewhere, this is the best place for it!
+		// Nonono don't calculate viewheight elsewhere, this is the best place for it!
+		mobj->player->viewheight = FixedMul(FixedDiv(mobj->player->viewheight, mobj->scale), newscale);
 	}
+
+	mobj->radius = FixedMul(FixedDiv(mobj->radius, mobj->scale), newscale);
+	mobj->height = FixedMul(FixedDiv(mobj->height, mobj->scale), newscale);
+
+	mobj->scale = newscale;
+	if (instant)
+		mobj->destscale = mobj->old_scale = newscale;
 }
 
 void P_Attract(mobj_t *source, mobj_t *dest, boolean nightsgrab) // Home in on your target
@@ -6798,8 +6661,7 @@ static boolean P_ShieldLook(mobj_t *thing, shieldtype_t shield)
 	thing->flags |= MF_NOCLIPHEIGHT;
 	thing->eflags = (thing->eflags & ~MFE_VERTICALFLIP)|(thing->target->eflags & MFE_VERTICALFLIP);
 
-	P_SetScale(thing, FixedMul(thing->target->scale, thing->target->player->shieldscale));
-	thing->destscale = thing->scale;
+	P_SetScale(thing, FixedMul(thing->target->scale, thing->target->player->shieldscale), true);
 	thing->old_scale = FixedMul(thing->target->old_scale, thing->target->player->shieldscale);
 
 #define NewMH(mobj)   mobj->height // Ugly mobj-height and player-height defines, for the sake of prettier code
@@ -7147,11 +7009,11 @@ static void P_MobjScaleThink(mobj_t *mobj)
 		correctionType = 2; // Correct Z position by moving down
 
 	if (abs(mobj->scale - mobj->destscale) < mobj->scalespeed)
-		P_SetScale(mobj, mobj->destscale);
+		P_SetScale(mobj, mobj->destscale, false);
 	else if (mobj->scale < mobj->destscale)
-		P_SetScale(mobj, mobj->scale + mobj->scalespeed);
+		P_SetScale(mobj, mobj->scale + mobj->scalespeed, false);
 	else if (mobj->scale > mobj->destscale)
-		P_SetScale(mobj, mobj->scale - mobj->scalespeed);
+		P_SetScale(mobj, mobj->scale - mobj->scalespeed, false);
 
 	if (correctionType == 1)
 		mobj->z -= (mobj->height - oldheight)/2;
@@ -7244,8 +7106,9 @@ static boolean P_DrownNumbersSceneryThink(mobj_t *mobj)
 	mobj->x = mobj->target->x;
 	mobj->y = mobj->target->y;
 
+	P_SetScale(mobj, mobj->target->scale, false);
 	mobj->destscale = mobj->target->destscale;
-	P_SetScale(mobj, mobj->target->scale);
+	mobj->old_scale = mobj->target->old_scale;
 
 	if (mobj->target->eflags & MFE_VERTICALFLIP)
 	{
@@ -7406,10 +7269,10 @@ static boolean P_ParticleGenSceneryThink(mobj_t *mobj)
 				(mobjtype_t)mobj->threshold);
 			if (!P_MobjWasRemoved(spawn))
 			{
-				P_SetScale(spawn, mobj->scale);
-				spawn->momz = FixedMul(mobj->movefactor, spawn->scale);
+				P_SetScale(spawn, mobj->scale, true);
 				spawn->destscale = spawn->scale/100;
 				spawn->scalespeed = spawn->scale/mobj->health;
+				spawn->momz = FixedMul(mobj->movefactor, spawn->scale);
 				spawn->tics = (tic_t)mobj->health;
 				spawn->flags2 |= (mobj->flags2 & MF2_OBJECTFLIP);
 				spawn->angle += P_RandomKey(36)*ANG10; // irrelevant for default objects but might make sense for some custom ones
@@ -7501,6 +7364,8 @@ static void P_RosySceneryThink(mobj_t *mobj)
 			fixed_t x = mobj->x, y = mobj->y, z = mobj->z;
 			angle_t angletoplayer = R_PointToAngle2(x, y, mobj->target->x, mobj->target->y);
 			boolean allowed = P_TryMove(mobj, mobj->target->x, mobj->target->y, false);
+			if (P_MobjWasRemoved(mobj))
+				return;
 
 			P_UnsetThingPosition(mobj);
 			mobj->x = x;
@@ -7627,8 +7492,7 @@ static void P_RosySceneryThink(mobj_t *mobj)
 			mobj_t *cdlhrt = P_SpawnMobjFromMobj(mobj, 0, 0, mobj->height, MT_CDLHRT);
 			if (!P_MobjWasRemoved(cdlhrt))
 			{
-				cdlhrt->destscale = (5*mobj->scale) >> 4;
-				P_SetScale(cdlhrt, cdlhrt->destscale);
+				P_SetScale(cdlhrt, (5*mobj->scale) >> 4, true);
 				cdlhrt->fuse = (5*TICRATE) >> 1;
 				cdlhrt->momz = mobj->scale;
 				P_SetTarget(&cdlhrt->target, mobj);
@@ -7882,8 +7746,9 @@ static void P_MobjSceneryThink(mobj_t *mobj)
 
 		mobj->eflags |= (mobj->target->eflags & MFE_VERTICALFLIP);
 
+		P_SetScale(mobj, mobj->target->scale, false);
 		mobj->destscale = mobj->target->destscale;
-		P_SetScale(mobj, mobj->target->scale);
+		mobj->old_scale = mobj->target->old_scale;
 
 		if (!(mobj->eflags & MFE_VERTICALFLIP))
 			mobj->z = mobj->target->z + mobj->target->height + FixedMul((16 + abs((signed)(leveltime % TICRATE) - TICRATE/2))*FRACUNIT, mobj->target->scale);
@@ -8033,7 +7898,9 @@ static void P_MobjSceneryThink(mobj_t *mobj)
 		}
 		P_SetThingPosition(mobj);
 
-		P_SetScale(mobj, mobj->target->scale);
+		P_SetScale(mobj, mobj->target->scale, false);
+		mobj->destscale = mobj->target->destscale;
+		mobj->old_scale = mobj->target->old_scale;
 	}
 	break;
 	case MT_TUTORIALFLOWER:
@@ -8064,7 +7931,8 @@ static void P_MobjSceneryThink(mobj_t *mobj)
 		break;
 	}
 
-	P_SceneryThinker(mobj);
+	if (!P_MobjWasRemoved(mobj))
+		P_SceneryThinker(mobj);
 }
 
 static boolean P_MobjPushableThink(mobj_t *mobj)
@@ -8474,8 +8342,8 @@ static void P_ArrowThink(mobj_t *mobj)
 			if (!P_MobjWasRemoved(dust))
 			{
 				dust->tics = 18;
-				dust->scalespeed = 4096;
 				dust->destscale = FRACUNIT/32;
+				dust->scalespeed = FRACUNIT/16;
 			}
 		}
 	}
@@ -9455,7 +9323,7 @@ static inline boolean PIT_PushThing(mobj_t *thing)
 
 static void P_PointPushThink(mobj_t *mobj)
 {
-	INT32 xl, xh, yl, yh, bx, by;
+	INT32 xl, xh, yl, yh;
 	fixed_t radius;
 
 	if (!mobj->spawnpoint)
@@ -9470,9 +9338,8 @@ static void P_PointPushThink(mobj_t *mobj)
 	xh = (unsigned)(mobj->x + radius - bmaporgx + MAXRADIUS)>>MAPBLOCKSHIFT;
 	yl = (unsigned)(mobj->y - radius - bmaporgy - MAXRADIUS)>>MAPBLOCKSHIFT;
 	yh = (unsigned)(mobj->y + radius - bmaporgy + MAXRADIUS)>>MAPBLOCKSHIFT;
-	for (bx = xl; bx <= xh; bx++)
-		for (by = yl; by <= yh; by++)
-			P_BlockThingsIterator(bx, by, PIT_PushThing);
+
+	P_DoBlockThingsIterate(xl, yl, xh, yh, PIT_PushThing);
 }
 
 static boolean P_MobjRegularThink(mobj_t *mobj)
@@ -9887,9 +9754,9 @@ static boolean P_MobjRegularThink(mobj_t *mobj)
 			traindust->frame = P_RandomRange(0, 8)|FF_TRANS90;
 			traindust->angle = mobj->angle;
 			traindust->tics = TICRATE*4;
+			P_SetScale(traindust, FRACUNIT*6, true);
 			traindust->destscale = FRACUNIT*64;
 			traindust->scalespeed = FRACUNIT/24;
-			P_SetScale(traindust, FRACUNIT*6);
 		}
 		break;
 	case MT_TRAINSTEAMSPAWNER:
@@ -9900,9 +9767,9 @@ static boolean P_MobjRegularThink(mobj_t *mobj)
 			P_SetMobjState(steam, S_TRAINSTEAM);
 			steam->frame = P_RandomRange(0, 1)|FF_TRANS90;
 			steam->tics = TICRATE*8;
+			P_SetScale(steam, FRACUNIT*16, true);
 			steam->destscale = FRACUNIT*64;
 			steam->scalespeed = FRACUNIT/8;
-			P_SetScale(steam, FRACUNIT*16);
 			steam->momx = P_SignedRandom()*32;
 			steam->momy = -64*FRACUNIT;
 			steam->momz = 2*FRACUNIT;
@@ -10064,9 +9931,10 @@ static void P_MonitorFuseThink(mobj_t *mobj)
 {
 	mobj_t *newmobj;
 
-	// Special case for ALL monitors.
+	// Special case for ALL monitors outside of co-op.
 	// If a box's speed is nonzero, it's allowed to respawn as a WRM/SRM.
-	if (mobj->info->speed != 0 && (mobj->flags2 & (MF2_AMBUSH|MF2_STRONGBOX)))
+	if (!G_CoopGametype() && mobj->info->speed != 0
+		&& (mobj->flags2 & (MF2_AMBUSH|MF2_STRONGBOX)))
 	{
 		mobjtype_t spawnchance[64];
 		INT32 numchoices = 0, i = 0;
@@ -10294,6 +10162,8 @@ void P_MobjThinker(mobj_t *mobj)
 		P_SetTarget(&mobj->hnext, NULL);
 	if (mobj->hprev && P_MobjWasRemoved(mobj->hprev))
 		P_SetTarget(&mobj->hprev, NULL);
+	if (mobj->dontdrawforviewmobj && P_MobjWasRemoved(mobj->dontdrawforviewmobj))
+		P_SetTarget(&mobj->dontdrawforviewmobj, NULL);
 
 	mobj->eflags &= ~(MFE_PUSHED|MFE_SPRUNG);
 
@@ -10424,6 +10294,8 @@ void P_MobjThinker(mobj_t *mobj)
 		|| mobj->type == MT_CANNONBALLDECOR
 		|| mobj->type == MT_FALLINGROCK) {
 		P_TryMove(mobj, mobj->x, mobj->y, true); // Sets mo->standingslope correctly
+		if (P_MobjWasRemoved(mobj))
+			return;
 		//if (mobj->standingslope) CONS_Printf("slope physics on mobj\n");
 		P_ButteredSlope(mobj);
 	}
@@ -10525,6 +10397,8 @@ void P_PushableThinker(mobj_t *mobj)
 	// it has to be pushable RIGHT NOW for this part to happen
 	if (mobj->flags & MF_PUSHABLE && !(mobj->momx || mobj->momy))
 		P_TryMove(mobj, mobj->x, mobj->y, true);
+	if (P_MobjWasRemoved(mobj))
+		return;
 
 	if (mobj->type == MT_MINECART && mobj->health)
 	{
@@ -10856,18 +10730,28 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type, ...)
 
 	// Set shadowscale here, before spawn hook so that Lua can change it
 	mobj->shadowscale = P_DefaultMobjShadowScale(mobj);
-
-	if (!(mobj->flags & MF_NOTHINK))
-		P_AddThinker(THINK_MOBJ, &mobj->thinker);
-
+	
+	// A monitor can't respawn if we're not in multiplayer,
+	// or if we're in co-op and it's score or a 1up
+	if (mobj->flags & MF_MONITOR && (!(netgame || multiplayer)
+	|| (G_CoopGametype()
+		&& (mobj->type == MT_1UP_BOX
+		|| mobj->type == MT_SCORE1K_BOX
+		|| mobj->type == MT_SCORE10K_BOX)
+	)))
+		mobj->flags2 |= MF2_DONTRESPAWN;
 
 	if (type == MT_PLAYER)
 	{
 		// when spawning MT_PLAYER, set mobj->player before calling MobjSpawn hook to prevent P_RemoveMobj from succeeding on player mobj.
 		va_start(args, type);
 		mobj->player = va_arg(args, player_t *);
+		mobj->player->mo = mobj;
 		va_end(args);
 	}
+
+	if (!(mobj->flags & MF_NOTHINK) || (titlemapinaction && mobj->type == MT_ALTVIEWMAN))
+		P_AddThinker(THINK_MOBJ, &mobj->thinker);
 
 	// increment mobj reference, so we don't get a dangling reference in case MobjSpawn calls P_RemoveMobj
 	mobj->thinker.references++;
@@ -10891,7 +10775,7 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type, ...)
 			if (titlemapinaction) mobj->flags &= ~MF_NOTHINK;
 			break;
 		case MT_LOCKONINF:
-			P_SetScale(mobj, (mobj->destscale = 3*mobj->scale));
+			P_SetScale(mobj, 3*mobj->scale, true);
 			break;
 		case MT_CYBRAKDEMON_NAPALM_BOMB_LARGE:
 			mobj->fuse = mobj->info->painchance;
@@ -10902,8 +10786,7 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type, ...)
 				if (P_MobjWasRemoved(spawn))
 					break;
 
-				spawn->destscale = mobj->scale;
-				P_SetScale(spawn, mobj->scale);
+				P_SetScale(spawn, mobj->scale, true);
 				P_SetTarget(&spawn->target, mobj);
 			}
 			break;
@@ -10920,8 +10803,7 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type, ...)
 				if (P_MobjWasRemoved(spawn))
 					break;
 
-				spawn->destscale = mobj->scale;
-				P_SetScale(spawn, mobj->scale);
+				P_SetScale(spawn, mobj->scale, true);
 				P_SetTarget(&mobj->tracer, spawn);
 				P_SetTarget(&spawn->target, mobj);
 			}
@@ -10938,8 +10820,7 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type, ...)
 					if (P_MobjWasRemoved(ball))
 						continue;
 
-					ball->destscale = mobj->scale;
-					P_SetScale(ball, mobj->scale);
+					P_SetScale(ball, mobj->scale, true);
 					P_SetTarget(&ball->target, mobj);
 					ball->movedir = FixedAngle(FixedMul(FixedDiv(i<<FRACBITS, mobj->info->damage<<FRACBITS), 360<<FRACBITS));
 					ball->threshold = ball->radius + mobj->radius + FixedMul(ball->info->painchance, ball->scale);
@@ -10960,8 +10841,7 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type, ...)
 					if (P_MobjWasRemoved(ball))
 						continue;
 
-					ball->destscale = mobj->scale;
-					P_SetScale(ball, mobj->scale);
+					P_SetScale(ball, mobj->scale, true);
 					P_SetTarget(&lastball->tracer, ball);
 					P_SetTarget(&ball->target, mobj);
 					lastball = ball;
@@ -11173,7 +11053,7 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type, ...)
 
 	if (mobj->skin) // correct inadequecies above.
 	{
-		mobj->sprite2 = P_GetSkinSprite2(mobj->skin, (mobj->frame & FF_FRAMEMASK), NULL);
+		mobj->sprite2 = P_GetSkinSprite2(mobj->skin, P_GetStateSprite2(mobj->state), NULL);
 		mobj->frame &= ~FF_FRAMEMASK;
 	}
 
@@ -11784,7 +11664,6 @@ void P_SpawnPlayer(INT32 playernum)
     // MT_PLAYER cannot be removed, so this shouldn't be able to return NULL.
 	mobj = P_SpawnMobj(0, 0, 0, MT_PLAYER, p);
 	I_Assert(mobj != NULL);
-	p->mo = mobj;
 
 	mobj->angle = 0;
 
@@ -11821,7 +11700,7 @@ void P_SpawnPlayer(INT32 playernum)
 	p->awayviewtics = 0;
 
 	// set the scale to the mobj's destscale so settings get correctly set.  if we don't, they sometimes don't.
-	P_SetScale(mobj, mobj->destscale);
+	P_SetScale(mobj, mobj->destscale, true);
 	P_FlashPal(p, 0, 0); // Resets
 
 	// Set bounds accurately.
@@ -11890,7 +11769,7 @@ void P_AfterPlayerSpawn(INT32 playernum)
 	if (CheckForReverseGravity)
 		P_CheckGravity(mobj, false);
 
-	if (p->pflags & PF_FINISHED)
+	if (p->pflags & PF_FINISHED && !(p->exiting))
 		P_GiveFinishFlags(p);
 }
 
@@ -11995,7 +11874,7 @@ void P_MovePlayerToStarpost(INT32 playernum)
 
 	z = p->starpostz << FRACBITS;
 
-	P_SetScale(mobj, (mobj->destscale = abs(p->starpostscale)));
+	P_SetScale(mobj, abs(p->starpostscale), true);
 
 	if (p->starpostscale < 0)
 	{
@@ -13103,8 +12982,8 @@ static boolean P_SetupSpawnedMapThing(mapthing_t *mthing, mobj_t *mobj, boolean 
 			if (P_MobjWasRemoved(corona))
 				break;
 
-			P_SetScale(corona, (corona->destscale = mobj->scale*3));
 			P_SetTarget(&mobj->tracer, corona);
+			P_SetScale(corona, 3*mobj->scale, true);
 		}
 		break;
 	case MT_FLAMEHOLDER:
@@ -13122,8 +13001,8 @@ static boolean P_SetupSpawnedMapThing(mapthing_t *mthing, mobj_t *mobj, boolean 
 				if (P_MobjWasRemoved(corona))
 					break;
 
-				P_SetScale(corona, (corona->destscale = flame->scale*3));
 				P_SetTarget(&flame->tracer, corona);
+				P_SetScale(corona, 3*flame->scale, true);
 			}
 		}
 		break;
@@ -13211,10 +13090,8 @@ static boolean P_SetupSpawnedMapThing(mapthing_t *mthing, mobj_t *mobj, boolean 
 	case MT_DSZSTALAGMITE:
 	case MT_DSZ2STALAGMITE:
 	case MT_KELP:
-		if (mthing->args[0]) { // make mobj twice as big as normal
-			P_SetScale(mobj, 2*mobj->scale); // not 2*FRACUNIT in case of something like the old ERZ3 mode
-			mobj->destscale = mobj->scale;
-		}
+		if (mthing->args[0]) // make mobj twice as big as normal
+			P_SetScale(mobj, 2*mobj->scale, true); // not 2*FRACUNIT in case of something like the old ERZ3 mode
 		break;
 	case MT_THZTREE:
 	{ // Spawn the branches
@@ -13293,10 +13170,7 @@ static boolean P_SetupSpawnedMapThing(mapthing_t *mthing, mobj_t *mobj, boolean 
 	case MT_LAVAFALL:
 		mobj->fuse = 30 + mthing->args[0];
 		if (mthing->args[1])
-		{
-			P_SetScale(mobj, 2*mobj->scale);
-			mobj->destscale = mobj->scale;
-		}
+			P_SetScale(mobj, 2*mobj->scale, true);
 		break;
 	case MT_PYREFLY:
 		//start on fire if args[0], otherwise behave normally
@@ -13359,8 +13233,7 @@ static boolean P_SetupSpawnedMapThing(mapthing_t *mthing, mobj_t *mobj, boolean 
 				break;
 			P_SetTarget(&elecmobj->target, mobj);
 			elecmobj->angle = FixedAngle(mthing->angle << FRACBITS);
-			elecmobj->destscale = mobj->scale*2;
-			P_SetScale(elecmobj, elecmobj->destscale);
+			P_SetScale(elecmobj, 2*mobj->scale, true);
 		}
 		break;
 	case MT_STARPOST:
@@ -13418,8 +13291,8 @@ static boolean P_SetupSpawnedMapThing(mapthing_t *mthing, mobj_t *mobj, boolean 
 				return false;
 			}
 			base->angle = mobjangle + ANGLE_90;
+			P_SetScale(base, mobj->scale, true);
 			base->destscale = mobj->destscale;
-			P_SetScale(base, mobj->scale);
 			P_SetTarget(&base->target, mobj);
 			P_SetTarget(&mobj->tracer, base);
 		}
@@ -13596,8 +13469,9 @@ static mobj_t *P_SpawnMobjFromMapThing(mapthing_t *mthing, fixed_t x, fixed_t y,
 		return NULL;
 	mobj->spawnpoint = mthing;
 
-	P_SetScale(mobj, FixedMul(mobj->scale, mthing->scale));
+	P_SetScale(mobj, FixedMul(mobj->scale, mthing->scale), false);
 	mobj->destscale = FixedMul(mobj->destscale, mthing->scale);
+	mobj->old_scale = FixedMul(mobj->old_scale, mthing->scale);
 
 	mobj->spritexscale = mthing->spritexscale;
 	mobj->spriteyscale = mthing->spriteyscale;
@@ -14018,7 +13892,8 @@ boolean P_CheckMissileSpawn(mobj_t *th)
 
 	if (!P_TryMove(th, th->x, th->y, true))
 	{
-		P_ExplodeMissile(th);
+		if (!P_MobjWasRemoved(th))
+			P_ExplodeMissile(th);
 		return false;
 	}
 	return true;
@@ -14050,8 +13925,7 @@ mobj_t *P_SpawnXYZMissile(mobj_t *source, mobj_t *dest, mobjtype_t type,
 	if (source->eflags & MFE_VERTICALFLIP)
 		th->flags2 |= MF2_OBJECTFLIP;
 
-	th->destscale = source->scale;
-	P_SetScale(th, source->scale);
+	P_SetScale(th, source->scale, true);
 
 	speed = FixedMul(th->info->speed, th->scale);
 
@@ -14114,8 +13988,7 @@ mobj_t *P_SpawnAlteredDirectionMissile(mobj_t *source, mobjtype_t type, fixed_t 
 	if (source->eflags & MFE_VERTICALFLIP)
 		th->flags2 |= MF2_OBJECTFLIP;
 
-	th->destscale = source->scale;
-	P_SetScale(th, source->scale);
+	P_SetScale(th, source->scale, true);
 
 	speed = FixedMul(th->info->speed, th->scale);
 
@@ -14181,8 +14054,7 @@ mobj_t *P_SpawnPointMissile(mobj_t *source, fixed_t xa, fixed_t ya, fixed_t za, 
 	if (source->eflags & MFE_VERTICALFLIP)
 		th->flags2 |= MF2_OBJECTFLIP;
 
-	th->destscale = source->scale;
-	P_SetScale(th, source->scale);
+	P_SetScale(th, source->scale, true);
 
 	speed = FixedMul(th->info->speed, th->scale);
 
@@ -14253,8 +14125,7 @@ mobj_t *P_SpawnMissile(mobj_t *source, mobj_t *dest, mobjtype_t type)
 	if (source->eflags & MFE_VERTICALFLIP)
 		th->flags2 |= MF2_OBJECTFLIP;
 
-	th->destscale = source->scale;
-	P_SetScale(th, source->scale);
+	P_SetScale(th, source->scale, true);
 
 	if (source->type == MT_METALSONIC_BATTLE && source->health < 4)
 		speed = FixedMul(FixedMul(th->info->speed, 3*FRACUNIT/2), th->scale);
@@ -14356,8 +14227,7 @@ mobj_t *P_SPMAngle(mobj_t *source, mobjtype_t type, angle_t angle, UINT8 allowai
 	if (source->eflags & MFE_VERTICALFLIP)
 		th->flags2 |= MF2_OBJECTFLIP;
 
-	th->destscale = source->scale;
-	P_SetScale(th, source->scale);
+	P_SetScale(th, source->scale, true);
 
 	th->flags2 |= flags2;
 
@@ -14439,8 +14309,8 @@ mobj_t *P_SpawnMobjFromMobj(mobj_t *mobj, fixed_t xofs, fixed_t yofs, fixed_t zo
 		newmobj->old_z2 = mobj->old_z2 + zofs;
 	}
 
+	P_SetScale(newmobj, mobj->scale, false);
 	newmobj->destscale = mobj->destscale;
-	P_SetScale(newmobj, mobj->scale);
 
 	newmobj->old_x2 = mobj->old_x2 + xofs;
 	newmobj->old_y2 = mobj->old_y2 + yofs;
@@ -14469,9 +14339,13 @@ mobj_t *P_SpawnMobjFromMobj(mobj_t *mobj, fixed_t xofs, fixed_t yofs, fixed_t zo
 
 	newmobj->old_scale2 = mobj->old_scale2;
 	newmobj->old_scale = mobj->old_scale;
+	newmobj->old_spritexscale2 = mobj->old_spritexscale2;
 	newmobj->old_spritexscale = mobj->old_spritexscale;
+	newmobj->old_spriteyscale2 = mobj->old_spriteyscale2;
 	newmobj->old_spriteyscale = mobj->old_spriteyscale;
+	newmobj->old_spritexoffset2 = mobj->old_spritexoffset2;
 	newmobj->old_spritexoffset = mobj->old_spritexoffset;
+	newmobj->old_spriteyoffset2 = mobj->old_spriteyoffset2;
 	newmobj->old_spriteyoffset = mobj->old_spriteyoffset;
 
 	return newmobj;

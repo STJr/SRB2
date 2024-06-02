@@ -335,4 +335,16 @@ void I_GetCursorPosition(INT32 *x, INT32 *y);
 */
 void I_SetMouseGrab(boolean grab);
 
+/** \brief Returns the system name.
+*/
+const char *I_GetSysName(void);
+
+/** \brief Sets text input mode. When enabled, keyboard inputs will respect dead keys.
+ */
+void I_SetTextInputMode(boolean active);
+
+/** \brief Retrieves current text input mode.
+ */
+boolean I_GetTextInputMode(void);
+
 #endif

@@ -77,7 +77,7 @@ spriteinfo_t spriteinfo[NUMSPRITES];
 spritedef_t *sprites;
 size_t numsprites;
 
-static spriteframe_t sprtemp[64];
+static spriteframe_t sprtemp[MAXFRAMENUM];
 static size_t maxframe;
 static const char *spritename;
 
@@ -116,6 +116,14 @@ static INT32 drawsegs_xrange_count = 0;
 //
 // ==========================================================================
 
+spritenum_t R_GetSpriteNumByName(const char *name)
+{
+	for (spritenum_t i = 0; i < NUMSPRITES; i++)
+		if (!strcmp(name, sprnames[i]))
+			return i;
+	return NUMSPRITES;
+}
+
 //
 //
 //
@@ -128,10 +136,14 @@ static void R_InstallSpriteLump(UINT16 wad,            // graphics patch
 {
 	char cn = R_Frame2Char(frame), cr = R_Rotation2Char(rotation); // for debugging
 
+	char framedescription[256];
+	if (cn != '\xFF')
+		sprintf(framedescription, "%s frame %d (%c)", spritename, frame, cn);
+	else
+		sprintf(framedescription, "%s frame %d", spritename, frame);
+
 	INT32 r;
-	lumpnum_t lumppat = wad;
-	lumppat <<= 16;
-	lumppat += lump;
+	lumpnum_t lumppat = (wad << 16) + lump;
 
 	if (maxframe ==(size_t)-1 || frame > maxframe)
 		maxframe = frame;
@@ -147,9 +159,9 @@ static void R_InstallSpriteLump(UINT16 wad,            // graphics patch
 	{
 		// the lump should be used for all rotations
 		if (sprtemp[frame].rotate == SRF_SINGLE)
-			CONS_Debug(DBG_SETUP, "R_InitSprites: Sprite %s frame %c has multiple rot = 0 lump\n", spritename, cn);
+			CONS_Debug(DBG_SETUP, "R_InitSprites: Sprite %s has multiple rot = 0 lump\n", framedescription);
 		else if (sprtemp[frame].rotate != SRF_NONE) // Let's bundle 1-8/16 and L/R rotations into one debug message.
-			CONS_Debug(DBG_SETUP, "R_InitSprites: Sprite %s frame %c has rotations and a rot = 0 lump\n", spritename, cn);
+			CONS_Debug(DBG_SETUP, "R_InitSprites: Sprite %s has rotations and a rot = 0 lump\n", framedescription);
 
 		sprtemp[frame].rotate = SRF_SINGLE;
 		for (r = 0; r < 16; r++)
@@ -169,15 +181,15 @@ static void R_InstallSpriteLump(UINT16 wad,            // graphics patch
 		if (sprtemp[frame].rotate == SRF_NONE)
 			sprtemp[frame].rotate = SRF_SINGLE;
 		else if (sprtemp[frame].rotate == SRF_SINGLE)
-			CONS_Debug(DBG_SETUP, "R_InitSprites: Sprite %s frame %c has L/R rotations and a rot = 0 lump\n", spritename, cn);
+			CONS_Debug(DBG_SETUP, "R_InitSprites: Sprite %s has L/R rotations and a rot = 0 lump\n", framedescription);
 		else if (sprtemp[frame].rotate == SRF_3D)
-			CONS_Debug(DBG_SETUP, "R_InitSprites: Sprite %s frame %c has both L/R and 1-8 rotations\n", spritename, cn);
+			CONS_Debug(DBG_SETUP, "R_InitSprites: Sprite %s has both L/R and 1-8 rotations\n", framedescription);
 		else if (sprtemp[frame].rotate == SRF_3DGE)
-			CONS_Debug(DBG_SETUP, "R_InitSprites: Sprite %s frame %c has both L/R and 1-G rotations\n", spritename, cn);
+			CONS_Debug(DBG_SETUP, "R_InitSprites: Sprite %s has both L/R and 1-G rotations\n", framedescription);
 		else if ((sprtemp[frame].rotate & SRF_LEFT) && (rotation == ROT_L))
-			CONS_Debug(DBG_SETUP, "R_InitSprites: Sprite %s frame %c has multiple L rotations\n", spritename, cn);
+			CONS_Debug(DBG_SETUP, "R_InitSprites: Sprite %s has multiple L rotations\n", framedescription);
 		else if ((sprtemp[frame].rotate & SRF_RIGHT) && (rotation == ROT_R))
-			CONS_Debug(DBG_SETUP, "R_InitSprites: Sprite %s frame %c has multiple R rotations\n", spritename, cn);
+			CONS_Debug(DBG_SETUP, "R_InitSprites: Sprite %s has multiple R rotations\n", framedescription);
 
 		sprtemp[frame].rotate |= ((rotation == ROT_R) ? SRF_RIGHT : SRF_LEFT);
 		if ((sprtemp[frame].rotate & SRF_2D) == SRF_2D)
@@ -204,9 +216,9 @@ static void R_InstallSpriteLump(UINT16 wad,            // graphics patch
 	if (sprtemp[frame].rotate == SRF_NONE)
 		sprtemp[frame].rotate = SRF_SINGLE;
 	else if (sprtemp[frame].rotate == SRF_SINGLE)
-		CONS_Debug(DBG_SETUP, "R_InitSprites: Sprite %s frame %c has 1-8/G rotations and a rot = 0 lump\n", spritename, cn);
+		CONS_Debug(DBG_SETUP, "R_InitSprites: Sprite %s has 1-8/G rotations and a rot = 0 lump\n", framedescription);
 	else if (sprtemp[frame].rotate & SRF_2D)
-		CONS_Debug(DBG_SETUP, "R_InitSprites: Sprite %s frame %c has both L/R and 1-8/G rotations\n", spritename, cn);
+		CONS_Debug(DBG_SETUP, "R_InitSprites: Sprite %s has both L/R and 1-8/G rotations\n", framedescription);
 
 	// make 0 based
 	rotation--;
@@ -226,7 +238,12 @@ static void R_InstallSpriteLump(UINT16 wad,            // graphics patch
 	}
 
 	if (sprtemp[frame].lumppat[rotation] != LUMPERROR)
-		CONS_Debug(DBG_SETUP, "R_InitSprites: Sprite %s: %c%c has two lumps mapped to it\n", spritename, cn, cr);
+	{
+		if (cn != '\xFF')
+			CONS_Debug(DBG_SETUP, "R_InitSprites: Sprite %s: %d_%c (%c%c) has two lumps mapped to it\n", spritename, frame, cr, cn, cr);
+		else
+			CONS_Debug(DBG_SETUP, "R_InitSprites: Sprite %s: %d_%c has two lumps mapped to it\n", spritename, frame, cr);
+	}
 
 	// lumppat & lumpid are the same for original Doom, but different
 	// when using sprites in pwad : the lumppat points the new graphics
@@ -238,26 +255,202 @@ static void R_InstallSpriteLump(UINT16 wad,            // graphics patch
 		sprtemp[frame].flip &= ~(1<<rotation);
 }
 
+static boolean GetFramesAndRotationsFromShortLumpName(
+	const char *name,
+	INT32 *ret_frame,
+	UINT8 *ret_rotation,
+	INT32 *ret_frame2,
+	UINT8 *ret_rotation2
+)
+{
+	size_t namelen = strlen(name);
+
+	if (namelen != 6 && namelen != 8)
+		return false;
+
+	*ret_frame = R_Char2Frame(name[4]);
+	*ret_rotation = R_Char2Rotation(name[5]);
+	if (*ret_frame >= 64 || *ret_rotation == 255)
+		return false;
+
+	if (namelen == 8)
+	{
+		*ret_frame2 = R_Char2Frame(name[6]);
+		*ret_rotation2 = R_Char2Rotation(name[7]);
+		if (*ret_frame2 >= 64 || *ret_rotation2 == 255)
+			return false;
+	}
+	else
+	{
+		*ret_frame2 = -1;
+		*ret_rotation2 = 255;
+	}
+
+	return true;
+}
+
+static boolean GetSingleFrameAndRotation(
+	const char *name,
+	size_t len,
+	INT32 *ret_frame,
+	UINT8 *ret_rotation
+)
+{
+	const char *underscore = strchr(name, '_');
+
+	// Found but past the part of the name we are parsing
+	if ((size_t)(underscore - name) >= len)
+		underscore = NULL;
+
+	size_t framelen = underscore ? (size_t)(underscore - name) : len;
+	if (framelen < 1 || framelen > 4)
+		return false;
+
+	char framepart[4 + 1]; // Max 9999
+	strlcpy(framepart, name, framelen + 1);
+
+	for (size_t i = 0; i < framelen; i++)
+		if (!isdigit(framepart[i]))
+			return false;
+
+	*ret_frame = atoi(framepart);
+	*ret_rotation = underscore ? R_Char2Rotation(*(underscore + 1)) : 0;
+	if (*ret_frame >= MAXFRAMENUM || *ret_rotation == 255)
+		return false;
+
+	return true;
+}
+
+static boolean GetFramesAndRotationsFromLongLumpName(
+	const char *name,
+	INT32 *ret_frame,
+	UINT8 *ret_rotation,
+	INT32 *ret_frame2,
+	UINT8 *ret_rotation2
+)
+{
+	const char *plus = strchr(name, '+');
+
+	if (plus)
+	{
+		size_t len1 = plus - name;
+
+		if (!GetSingleFrameAndRotation(name, len1, ret_frame, ret_rotation))
+			return false;
+		if (!GetSingleFrameAndRotation(plus + 1, strlen(name) - len1 - 1, ret_frame2, ret_rotation2))
+			return false;
+	}
+	else
+	{
+		if (!GetSingleFrameAndRotation(name, strlen(name), ret_frame, ret_rotation))
+			return false;
+
+		*ret_frame2 = -1;
+		*ret_rotation2 = 255;
+	}
+
+	return true;
+}
+
+static UINT8 GetOppositeRotation(UINT8 rotation, UINT8 flags)
+{
+	if (flags & ~SRF_3DMASK)
+		I_Error("GetOppositeRotation: rotation type not supported");
+
+	UINT8 numrotations = (flags == SRF_3D) ? 8 : 16;
+	return (rotation == 1) ? 1 : numrotations + 2 - rotation;
+}
+
+static void MirrorMissingRotations(void)
+{
+	for (UINT32 framenum = 0; framenum < maxframe; framenum++)
+	{
+		spriteframe_t *frame = &sprtemp[framenum];
+
+		if (frame->rotate == SRF_NONE || !(frame->rotate & SRF_3DMASK))
+			continue;
+
+		UINT8 numrotations = frame->rotate == SRF_3D ? 8 : 16;
+
+		for (UINT8 rotation = 1; rotation <= numrotations; rotation++)
+		{
+			if (frame->lumppat[rotation - 1] != LUMPERROR)
+				continue;
+
+			UINT8 baserotation = GetOppositeRotation(rotation, frame->rotate);
+			UINT32 lumpnum = frame->lumppat[baserotation - 1];
+			R_InstallSpriteLump(WADFILENUM(lumpnum), LUMPNUM(lumpnum), frame->lumpid[baserotation], framenum, rotation, 1);
+		}
+	}
+}
+
+// Some checks to help development
+static void CheckFrame(const char *sprname)
+{
+	for (UINT32 frame = 0; frame < maxframe; frame++)
+	{
+		spriteframe_t *spriteframe = &sprtemp[frame];
+
+		char framedescription[256];
+		if (frame < 64)
+			sprintf(framedescription, "%s frame %d (%c)", sprname, frame, R_Frame2Char(frame));
+		else
+			sprintf(framedescription, "%s frame %d", sprname, frame);
+
+		switch (spriteframe->rotate)
+		{
+		case SRF_NONE:
+			// no rotations were found for that frame at all
+			I_Error("R_AddSingleSpriteDef: No patches found for %s", framedescription);
+			break;
+
+		case SRF_SINGLE:
+			// only the first rotation is needed
+			break;
+
+		case SRF_2D: // both Left and Right rotations
+			// we test to see whether the left and right slots are present
+			if ((spriteframe->lumppat[2] == LUMPERROR) || (spriteframe->lumppat[6] == LUMPERROR))
+				I_Error("R_AddSingleSpriteDef: Sprite %s is missing rotations (L-R mode)",
+				framedescription);
+			break;
+
+		default:
+			{
+				// must have all 8/16 frames
+				UINT8 rotation = ((spriteframe->rotate & SRF_3DGE) ? 16 : 8);
+				while (rotation--)
+				{
+					// we test the patch lump, or the id lump whatever
+					// if it was not loaded the two are LUMPERROR
+					if (spriteframe->lumppat[rotation] == LUMPERROR)
+						I_Error("R_AddSingleSpriteDef: Sprite %s is missing rotations (1-%c mode)",
+								framedescription, ((spriteframe->rotate & SRF_3DGE) ? 'G' : '8'));
+				}
+			}
+			break;
+		}
+	}
+}
+
 // Install a single sprite, given its identifying name (4 chars)
 //
 // (originally part of R_AddSpriteDefs)
 //
-// Pass: name of sprite : 4 chars
+// Pass: name of sprite
 //       spritedef_t
 //       wadnum         : wad number, indexes wadfiles[], where patches
 //                        for frames are found
 //       startlump      : first lump to search for sprite frames
 //       endlump        : AFTER the last lump to search
+//       longname       : whether to use long sprite names or 4-char names
 //
 // Returns true if the sprite was succesfully added
 //
-boolean R_AddSingleSpriteDef(const char *sprname, spritedef_t *spritedef, UINT16 wadnum, UINT16 startlump, UINT16 endlump)
+boolean R_AddSingleSpriteDef(const char *sprname, spritedef_t *spritedef, UINT16 wadnum, UINT16 startlump, UINT16 endlump, boolean longname)
 {
 	UINT16 l;
-	UINT8 frame;
-	UINT8 rotation;
 	lumpinfo_t *lumpinfo;
-	softwarepatch_t patch;
 	UINT16 numadded = 0;
 
 	memset(sprtemp,0xFF, sizeof (sprtemp));
@@ -283,18 +476,23 @@ boolean R_AddSingleSpriteDef(const char *sprname, spritedef_t *spritedef, UINT16
 
 	for (l = startlump; l < endlump; l++)
 	{
-		if (memcmp(lumpinfo[l].name,sprname,4)==0)
+		if (longname && W_IsLumpFolder(wadnum, l))
+			I_Error("R_AddSingleSpriteDef: all frame lumps for a sprite should be contained inside a single folder\n");
+
+		// For long sprites, the startlump-endlump range only includes
+		// relevant lumps, so no check needed in that case
+		if (longname || (strlen(sprname) == 4 && !memcmp(lumpinfo[l].name, sprname, 4)))
 		{
-			INT32 width, height;
+			INT16 width, height;
 			INT16 topoffset, leftoffset;
-#ifndef NO_PNG_LUMPS
-			boolean isPNG = false;
-#endif
+			INT32 frame, frame2;
+			UINT8 rotation, rotation2;
 
-			frame = R_Char2Frame(lumpinfo[l].name[4]);
-			rotation = R_Char2Rotation(lumpinfo[l].name[5]);
+			boolean good = longname ?
+				GetFramesAndRotationsFromLongLumpName(lumpinfo[l].longname, &frame, &rotation, &frame2, &rotation2) :
+				GetFramesAndRotationsFromShortLumpName(lumpinfo[l].name, &frame, &rotation, &frame2, &rotation2);
 
-			if (frame >= 64 || rotation == 255) // Give an actual NAME error -_-...
+			if (!good) // Give an actual NAME error -_-...
 			{
 				CONS_Alert(CONS_WARNING, M_GetText("Bad sprite name: %s\n"), W_CheckNameForNumPwad(wadnum,l));
 				continue;
@@ -304,33 +502,12 @@ boolean R_AddSingleSpriteDef(const char *sprname, spritedef_t *spritedef, UINT16
 			if (W_LumpLengthPwad(wadnum,l)<=8)
 				continue;
 
+			// Get the patch's dimensions only
+			if (!W_ReadPatchHeaderPwad(wadnum, l, &width, &height, &topoffset, &leftoffset))
+				continue;
+
 			// store sprite info in lookup tables
 			//FIXME : numspritelumps do not duplicate sprite replacements
-
-#ifndef NO_PNG_LUMPS
-			{
-				softwarepatch_t *png = W_CacheLumpNumPwad(wadnum, l, PU_STATIC);
-				size_t len = W_LumpLengthPwad(wadnum, l);
-
-				if (Picture_IsLumpPNG((UINT8 *)png, len))
-				{
-					Picture_PNGDimensions((UINT8 *)png, &width, &height, &topoffset, &leftoffset, len);
-					isPNG = true;
-				}
-
-				Z_Free(png);
-			}
-
-			if (!isPNG)
-#endif
-			{
-				W_ReadLumpHeaderPwad(wadnum, l, &patch, sizeof(INT16) * 4, 0);
-				width = (INT32)(SHORT(patch.width));
-				height = (INT32)(SHORT(patch.height));
-				topoffset = (INT16)(SHORT(patch.topoffset));
-				leftoffset = (INT16)(SHORT(patch.leftoffset));
-			}
-
 			spritecachedinfo[numspritelumps].width = width<<FRACBITS;
 			spritecachedinfo[numspritelumps].offset = leftoffset<<FRACBITS;
 			spritecachedinfo[numspritelumps].topoffset = topoffset<<FRACBITS;
@@ -347,19 +524,8 @@ boolean R_AddSingleSpriteDef(const char *sprname, spritedef_t *spritedef, UINT16
 			//----------------------------------------------------
 
 			R_InstallSpriteLump(wadnum, l, numspritelumps, frame, rotation, 0);
-
-			if (lumpinfo[l].name[6])
-			{
-				frame = R_Char2Frame(lumpinfo[l].name[6]);
-				rotation = R_Char2Rotation(lumpinfo[l].name[7]);
-
-				if (frame >= 64 || rotation == 255) // Give an actual NAME error -_-...
-				{
-					CONS_Alert(CONS_WARNING, M_GetText("Bad sprite name: %s\n"), W_CheckNameForNumPwad(wadnum,l));
-					continue;
-				}
-				R_InstallSpriteLump(wadnum, l, numspritelumps, frame, rotation, 1);
-			}
+			if (frame2 != -1)
+				R_InstallSpriteLump(wadnum, l, numspritelumps, frame2, rotation2, 1);
 
 			if (++numspritelumps >= max_spritelumps)
 			{
@@ -399,41 +565,10 @@ boolean R_AddSingleSpriteDef(const char *sprname, spritedef_t *spritedef, UINT16
 
 	maxframe++;
 
-	//
-	//  some checks to help development
-	//
-	for (frame = 0; frame < maxframe; frame++)
-	{
-		switch (sprtemp[frame].rotate)
-		{
-			case SRF_NONE:
-			// no rotations were found for that frame at all
-			I_Error("R_AddSingleSpriteDef: No patches found for %.4s frame %c", sprname, R_Frame2Char(frame));
-			break;
+	if (longname)
+		MirrorMissingRotations();
 
-			case SRF_SINGLE:
-			// only the first rotation is needed
-			break;
-
-			case SRF_2D: // both Left and Right rotations
-			// we test to see whether the left and right slots are present
-			if ((sprtemp[frame].lumppat[2] == LUMPERROR) || (sprtemp[frame].lumppat[6] == LUMPERROR))
-				I_Error("R_AddSingleSpriteDef: Sprite %.4s frame %c is missing rotations (L-R mode)",
-				sprname, R_Frame2Char(frame));
-			break;
-
-			default:
-			// must have all 8/16 frames
-				rotation = ((sprtemp[frame].rotate & SRF_3DGE) ? 16 : 8);
-				while (rotation--)
-				// we test the patch lump, or the id lump whatever
-				// if it was not loaded the two are LUMPERROR
-				if (sprtemp[frame].lumppat[rotation] == LUMPERROR)
-					I_Error("R_AddSingleSpriteDef: Sprite %.4s frame %c is missing rotations (1-%c mode)",
-					        sprname, R_Frame2Char(frame), ((sprtemp[frame].rotate & SRF_3DGE) ? 'G' : '8'));
-			break;
-		}
-	}
+	CheckFrame(sprname);
 
 	// allocate space for the frames present and copy sprtemp to it
 	if (spritedef->numframes &&             // has been allocated
@@ -454,14 +589,10 @@ boolean R_AddSingleSpriteDef(const char *sprname, spritedef_t *spritedef, UINT16
 	return true;
 }
 
-//
-// Search for sprites replacements in a wad whose names are in namelist
-//
-void R_AddSpriteDefs(UINT16 wadnum)
+static void AddShortSpriteDefs(UINT16 wadnum, size_t *ptr_spritesadded, size_t *ptr_framesadded)
 {
-	size_t i, addsprites = 0;
+	size_t i;
 	UINT16 start, end;
-	char wadname[MAX_WADPATH];
 
 	// Find the sprites section in this resource file.
 	switch (wadfiles[wadnum]->type)
@@ -499,27 +630,90 @@ void R_AddSpriteDefs(UINT16 wadnum)
 		return;
 	}
 
-
 	//
 	// scan through lumps, for each sprite, find all the sprite frames
 	//
 	for (i = 0; i < numsprites; i++)
 	{
-		if (sprnames[i][4] && wadnum >= (UINT16)sprnames[i][4])
-			continue;
-
-		if (R_AddSingleSpriteDef(sprnames[i], &sprites[i], wadnum, start, end))
+		if (R_AddSingleSpriteDef(sprnames[i], &sprites[i], wadnum, start, end, false))
 		{
 			// if a new sprite was added (not just replaced)
-			addsprites++;
+			(*ptr_spritesadded)++;
 #ifndef ZDEBUG
 			CONS_Debug(DBG_SETUP, "sprite %s set in pwad %d\n", sprnames[i], wadnum);
 #endif
 		}
 	}
 
-	nameonly(strcpy(wadname, wadfiles[wadnum]->filename));
-	CONS_Printf(M_GetText("%s added %d frames in %s sprites\n"), wadname, end-start, sizeu1(addsprites));
+	*ptr_framesadded += end - start;
+}
+
+static void AddLongSpriteDefs(UINT16 wadnum, size_t *ptr_spritesadded, size_t *ptr_framesadded)
+{
+	if (!W_FileHasFolders(wadfiles[wadnum]))
+		return;
+
+	UINT16 start = W_CheckNumForFolderStartPK3("LongSprites/", wadnum, 0);
+	UINT16 end = W_CheckNumForFolderEndPK3("LongSprites/", wadnum, start);
+
+	if (start == INT16_MAX || end == INT16_MAX || start >= end)
+		return;
+
+	size_t lumpnum = start;
+
+	while (lumpnum < end)
+	{
+		if (W_IsLumpFolder(wadnum, lumpnum))
+		{
+			lumpnum++;
+			continue;
+		}
+
+		UINT16 folderstart, folderend;
+		char *folderpath = W_GetLumpFolderPathPK3(wadnum, lumpnum);
+		folderstart = lumpnum;
+		folderend = W_CheckNumForFolderEndPK3(folderpath, wadnum, lumpnum);
+		Z_Free(folderpath);
+
+		spritenum_t sprnum;
+		char *sprname = W_GetLumpFolderNamePK3(wadnum, lumpnum);
+		strupr(sprname);
+		sprnum = R_GetSpriteNumByName(sprname);
+
+		if (sprnum != NUMSPRITES && R_AddSingleSpriteDef(sprname, &sprites[sprnum], wadnum, folderstart, folderend, true))
+		{
+			// A new sprite was added (not just replaced)
+			(*ptr_spritesadded)++;
+#ifndef ZDEBUG
+			CONS_Debug(DBG_SETUP, "long sprite %s set in pwad %d\n", sprname, wadnum);
+#endif
+		}
+
+		Z_Free(sprname);
+
+		lumpnum = folderend;
+	}
+
+	*ptr_framesadded += end - start;
+}
+
+//
+// Search for sprites replacements in a wad whose names are in namelist
+//
+void R_AddSpriteDefs(UINT16 wadnum)
+{
+	char wadname[MAX_WADPATH];
+	size_t spritesadded = 0;
+	size_t framesadded = 0;
+
+	AddShortSpriteDefs(wadnum, &spritesadded, &framesadded);
+	AddLongSpriteDefs(wadnum, &spritesadded, &framesadded);
+
+	if (spritesadded || framesadded)
+	{
+		nameonly(strcpy(wadname, wadfiles[wadnum]->filename));
+		CONS_Printf(M_GetText("%s added %s frames in %s sprites\n"), wadname, sizeu1(framesadded), sizeu2(spritesadded));
+	}
 }
 
 //
@@ -635,25 +829,18 @@ INT16 *mceilingclip;
 fixed_t spryscale = 0, sprtopscreen = 0, sprbotscreen = 0;
 fixed_t windowtop = 0, windowbottom = 0;
 
-void R_DrawMaskedColumn(column_t *column)
+void R_DrawMaskedColumn(column_t *column, unsigned lengthcol)
 {
-	INT32 topscreen;
-	INT32 bottomscreen;
-	fixed_t basetexturemid;
-	INT32 topdelta, prevdelta = 0;
+	fixed_t basetexturemid = dc_texturemid;
 
-	basetexturemid = dc_texturemid;
+	(void)lengthcol;
 
-	for (; column->topdelta != 0xff ;)
+	for (unsigned i = 0; i < column->num_posts; i++)
 	{
-		// calculate unclipped screen coordinates
-		// for post
-		topdelta = column->topdelta;
-		if (topdelta <= prevdelta)
-			topdelta += prevdelta;
-		prevdelta = topdelta;
-		topscreen = sprtopscreen + spryscale*topdelta;
-		bottomscreen = topscreen + spryscale*column->length;
+		post_t *post = &column->posts[i];
+
+		INT32 topscreen = sprtopscreen + spryscale*post->topdelta;
+		INT32 bottomscreen = topscreen + spryscale*post->length;
 
 		dc_yl = (topscreen+FRACUNIT-1)>>FRACBITS;
 		dc_yh = (bottomscreen-1)>>FRACBITS;
@@ -677,48 +864,55 @@ void R_DrawMaskedColumn(column_t *column)
 
 		if (dc_yl <= dc_yh && dc_yh > 0)
 		{
-			dc_source = (UINT8 *)column + 3;
-			dc_texturemid = basetexturemid - (topdelta<<FRACBITS);
+			dc_source = column->pixels + post->data_offset;
+			dc_texturemid = basetexturemid - (post->topdelta<<FRACBITS);
 
-			// Drawn by R_DrawColumn.
-			// This stuff is a likely cause of the splitscreen water crash bug.
-			// FIXTHIS: Figure out what "something more proper" is and do it.
-			// quick fix... something more proper should be done!!!
-			if (ylookup[dc_yl])
-				colfunc();
-#ifdef PARANOIA
-			else
-				I_Error("R_DrawMaskedColumn: Invalid ylookup for dc_yl %d", dc_yl);
-#endif
+			colfunc();
 		}
-		column = (column_t *)((UINT8 *)column + column->length + 4);
 	}
 
 	dc_texturemid = basetexturemid;
 }
 
-INT32 lengthcol; // column->length : for flipped column function pointers and multi-patch on 2sided wall = texture->height
+static UINT8 *flippedcol = NULL;
+static size_t flippedcolsize = 0;
 
-void R_DrawFlippedMaskedColumn(column_t *column)
+void R_DrawFlippedPost(UINT8 *source, unsigned length, void (*drawcolfunc)(void))
+{
+	if (!length)
+		return;
+
+	if (!flippedcolsize || length > flippedcolsize)
+	{
+		flippedcolsize = length;
+		flippedcol = Z_Realloc(flippedcol, length, PU_STATIC, NULL);
+	}
+
+	dc_source = flippedcol;
+
+	for (UINT8 *s = (UINT8 *)source, *d = flippedcol+length-1; d >= flippedcol; s++)
+		*d-- = *s;
+
+	drawcolfunc();
+}
+
+void R_DrawFlippedMaskedColumn(column_t *column, unsigned lengthcol)
 {
 	INT32 topscreen;
 	INT32 bottomscreen;
 	fixed_t basetexturemid = dc_texturemid;
-	INT32 topdelta, prevdelta = -1;
-	UINT8 *d,*s;
+	INT32 topdelta;
 
-	for (; column->topdelta != 0xff ;)
+	for (unsigned i = 0; i < column->num_posts; i++)
 	{
-		// calculate unclipped screen coordinates
-		// for post
-		topdelta = column->topdelta;
-		if (topdelta <= prevdelta)
-			topdelta += prevdelta;
-		prevdelta = topdelta;
-		topdelta = lengthcol-column->length-topdelta;
+		post_t *post = &column->posts[i];
+		if (!post->length)
+			continue;
+
+		topdelta = lengthcol-post->length-post->topdelta;
 		topscreen = sprtopscreen + spryscale*topdelta;
-		bottomscreen = sprbotscreen == INT32_MAX ? topscreen + spryscale*column->length
-		                                      : sprbotscreen + spryscale*column->length;
+		bottomscreen = sprbotscreen == INT32_MAX ? topscreen + spryscale*post->length
+		                                      : sprbotscreen + spryscale*post->length;
 
 		dc_yl = (topscreen+FRACUNIT-1)>>FRACBITS;
 		dc_yh = (bottomscreen-1)>>FRACBITS;
@@ -742,21 +936,10 @@ void R_DrawFlippedMaskedColumn(column_t *column)
 
 		if (dc_yl <= dc_yh && dc_yh > 0)
 		{
-			dc_source = ZZ_Alloc(column->length);
-			for (s = (UINT8 *)column+2+column->length, d = dc_source; d < dc_source+column->length; --s)
-				*d++ = *s;
 			dc_texturemid = basetexturemid - (topdelta<<FRACBITS);
 
-			// Still drawn by R_DrawColumn.
-			if (ylookup[dc_yl])
-				colfunc();
-#ifdef PARANOIA
-			else
-				I_Error("R_DrawMaskedColumn: Invalid ylookup for dc_yl %d", dc_yl);
-#endif
-			Z_Free(dc_source);
+			R_DrawFlippedPost(column->pixels + post->data_offset, post->length, colfunc);
 		}
-		column = (column_t *)((UINT8 *)column + column->length + 4);
 	}
 
 	dc_texturemid = basetexturemid;
@@ -769,6 +952,22 @@ UINT8 *R_GetTranslationForThing(mobj_t *mobj, skincolornum_t color, UINT16 trans
 	boolean is_player = mobj->skin && mobj->sprite == SPR_PLAY;
 	if (is_player) // This thing is a player!
 		skinnum = ((skin_t*)mobj->skin)->skinnum;
+
+	if (color != SKINCOLOR_NONE)
+	{
+		// New colormap stuff for skins Tails 06-07-2002
+		if (mobj->colorized)
+			skinnum = TC_RAINBOW;
+		else if (mobj->player && mobj->player->dashmode >= DASHMODE_THRESHOLD
+			&& (mobj->player->charflags & SF_DASHMODE)
+			&& ((leveltime/2) & 1))
+		{
+			if (mobj->player->charflags & SF_MACHINE)
+				skinnum = TC_DASHMODE;
+			else
+				skinnum = TC_RAINBOW;
+		}
+	}
 
 	if (R_ThingIsFlashing(mobj)) // Bosses "flash"
 	{
@@ -786,22 +985,7 @@ UINT8 *R_GetTranslationForThing(mobj_t *mobj, skincolornum_t color, UINT16 trans
 			return tr;
 	}
 	else if (color != SKINCOLOR_NONE)
-	{
-		// New colormap stuff for skins Tails 06-07-2002
-		if (mobj->colorized)
-			return R_GetTranslationColormap(TC_RAINBOW, color, GTC_CACHE);
-		else if (mobj->player && mobj->player->dashmode >= DASHMODE_THRESHOLD
-			&& (mobj->player->charflags & SF_DASHMODE)
-			&& ((leveltime/2) & 1))
-		{
-			if (mobj->player->charflags & SF_MACHINE)
-				return R_GetTranslationColormap(TC_DASHMODE, 0, GTC_CACHE);
-			else
-				return R_GetTranslationColormap(TC_RAINBOW, color, GTC_CACHE);
-		}
-		else
-			return R_GetTranslationColormap(skinnum, color, GTC_CACHE);
-	}
+		return R_GetTranslationColormap(skinnum, color, GTC_CACHE);
 	else if (mobj->sprite == SPR_PLAY) // Looks like a player, but doesn't have a color? Get rid of green sonic syndrome.
 		return R_GetTranslationColormap(TC_DEFAULT, SKINCOLOR_BLUE, GTC_CACHE);
 
@@ -815,14 +999,14 @@ UINT8 *R_GetTranslationForThing(mobj_t *mobj, skincolornum_t color, UINT16 trans
 static void R_DrawVisSprite(vissprite_t *vis)
 {
 	column_t *column;
-	void (*localcolfunc)(column_t *);
-	INT32 texturecolumn;
+	void (*localcolfunc)(column_t *, unsigned);
 	INT32 pwidth;
 	fixed_t frac;
 	patch_t *patch = vis->patch;
 	fixed_t this_scale = vis->thingscale;
 	INT32 x1, x2;
 	INT64 overflow_test;
+	unsigned lengthcol;
 
 	if (!patch)
 		return;
@@ -941,7 +1125,7 @@ static void R_DrawVisSprite(vissprite_t *vis)
 		for (dc_x = vis->x1; dc_x <= vis->x2; dc_x++, spryscale += scalestep)
 		{
 			angle_t angle = ((vis->centerangle + xtoviewangle[dc_x]) >> ANGLETOFINESHIFT) & 0xFFF;
-			texturecolumn = (vis->paperoffset - FixedMul(FINETANGENT(angle), vis->paperdistance)) / horzscale;
+			INT32 texturecolumn = (vis->paperoffset - FixedMul(FINETANGENT(angle), vis->paperdistance)) / horzscale;
 
 			if (texturecolumn < 0 || texturecolumn >= pwidth)
 				continue;
@@ -952,9 +1136,9 @@ static void R_DrawVisSprite(vissprite_t *vis)
 			sprtopscreen = (centeryfrac - FixedMul(dc_texturemid, spryscale));
 			dc_iscale = (0xffffffffu / (unsigned)spryscale);
 
-			column = (column_t *)((UINT8 *)patch->columns + (patch->columnofs[texturecolumn]));
+			column = &patch->columns[texturecolumn];
 
-			localcolfunc (column);
+			localcolfunc (column, lengthcol);
 		}
 	}
 	else if (vis->cut & SC_SHEAR)
@@ -966,17 +1150,9 @@ static void R_DrawVisSprite(vissprite_t *vis)
 		// Vertically sheared sprite
 		for (dc_x = vis->x1; dc_x <= vis->x2; dc_x++, frac += vis->xiscale, dc_texturemid -= vis->shear.tan)
 		{
-#ifdef RANGECHECK
-			texturecolumn = frac>>FRACBITS;
-			if (texturecolumn < 0 || texturecolumn >= pwidth)
-				I_Error("R_DrawSpriteRange: bad texturecolumn at %d from end", vis->x2 - dc_x);
-			column = (column_t *)((UINT8 *)patch->columns + (patch->columnofs[texturecolumn]));
-#else
-			column = (column_t *)((UINT8 *)patch->columns + (patch->columnofs[frac>>FRACBITS]));
-#endif
-
+			column = &patch->columns[frac>>FRACBITS];
 			sprtopscreen = (centeryfrac - FixedMul(dc_texturemid, spryscale));
-			localcolfunc (column);
+			localcolfunc (column, lengthcol);
 		}
 	}
 	else
@@ -988,20 +1164,12 @@ static void R_DrawVisSprite(vissprite_t *vis)
 		// Non-paper drawing loop
 		for (dc_x = vis->x1; dc_x <= vis->x2; dc_x++, frac += vis->xiscale, sprtopscreen += vis->shear.tan)
 		{
-#ifdef RANGECHECK
-			texturecolumn = frac>>FRACBITS;
-			if (texturecolumn < 0 || texturecolumn >= pwidth)
-				I_Error("R_DrawSpriteRange: bad texturecolumn at %d from end", vis->x2 - dc_x);
-			column = (column_t *)((UINT8 *)patch->columns + (patch->columnofs[texturecolumn]));
-#else
-			column = (column_t *)((UINT8 *)patch->columns + (patch->columnofs[frac>>FRACBITS]));
-#endif
-			localcolfunc (column);
+			column = &patch->columns[frac>>FRACBITS];
+			localcolfunc (column, lengthcol);
 		}
 	}
 
 	colfunc = colfuncs[BASEDRAWFUNC];
-	dc_hires = 0;
 
 	vis->x1 = x1;
 	vis->x2 = x2;
@@ -1010,21 +1178,12 @@ static void R_DrawVisSprite(vissprite_t *vis)
 // Special precipitation drawer Tails 08-18-2002
 static void R_DrawPrecipitationVisSprite(vissprite_t *vis)
 {
-	column_t *column;
-#ifdef RANGECHECK
-	INT32 texturecolumn;
-#endif
-	fixed_t frac;
-	patch_t *patch;
-	INT64 overflow_test;
-
-	//Fab : R_InitSprites now sets a wad lump number
-	patch = vis->patch;
+	patch_t *patch = vis->patch;
 	if (!patch)
 		return;
 
 	// Check for overflow
-	overflow_test = (INT64)centeryfrac - (((INT64)vis->texturemid*vis->scale)>>FRACBITS);
+	INT64 overflow_test = (INT64)centeryfrac - (((INT64)vis->texturemid*vis->scale)>>FRACBITS);
 	if (overflow_test < 0) overflow_test = -overflow_test;
 	if ((UINT64)overflow_test&0xFFFFFFFF80000000ULL) return; // fixed point mult would overflow
 
@@ -1040,31 +1199,19 @@ static void R_DrawPrecipitationVisSprite(vissprite_t *vis)
 	dc_texturemid = vis->texturemid;
 	dc_texheight = 0;
 
-	frac = vis->startfrac;
 	spryscale = vis->scale;
 	sprtopscreen = centeryfrac - FixedMul(dc_texturemid,spryscale);
 	windowtop = windowbottom = sprbotscreen = INT32_MAX;
 
 	if (vis->x1 < 0)
 		vis->x1 = 0;
-
 	if (vis->x2 >= vid.width)
 		vis->x2 = vid.width-1;
 
+	fixed_t frac = vis->startfrac;
+
 	for (dc_x = vis->x1; dc_x <= vis->x2; dc_x++, frac += vis->xiscale)
-	{
-#ifdef RANGECHECK
-		texturecolumn = frac>>FRACBITS;
-
-		if (texturecolumn < 0 || texturecolumn >= patch->width)
-			I_Error("R_DrawPrecipitationSpriteRange: bad texturecolumn");
-
-		column = (column_t *)((UINT8 *)patch->columns + (patch->columnofs[texturecolumn]));
-#else
-		column = (column_t *)((UINT8 *)patch->columns + (patch->columnofs[frac>>FRACBITS]));
-#endif
-		R_DrawMaskedColumn(column);
-	}
+		R_DrawMaskedColumn(&patch->columns[frac>>FRACBITS], patch->height);
 
 	colfunc = colfuncs[BASEDRAWFUNC];
 }
@@ -1609,6 +1756,9 @@ static void R_ProjectSprite(mobj_t *thing)
 	// uncapped/interpolation
 	interpmobjstate_t interp = {0};
 
+	if (!r_renderthings)
+		return;
+
 	// do interpolation
 	if (R_UsingFrameInterpolation() && !paused)
 	{
@@ -1648,20 +1798,22 @@ static void R_ProjectSprite(mobj_t *thing)
 	// decide which patch to use for sprite relative to player
 #ifdef RANGECHECK
 	if ((size_t)(thing->sprite) >= numsprites)
-		I_Error("R_ProjectSprite: invalid sprite number %d ", thing->sprite);
+		I_Error("R_ProjectSprite: invalid sprite number %d", thing->sprite);
 #endif
 
-	frame = thing->frame&FF_FRAMEMASK;
+	frame = thing->frame & FF_FRAMEMASK;
 
 	//Fab : 02-08-98: 'skin' override spritedef currently used for skin
 	if (thing->skin && thing->sprite == SPR_PLAY)
 	{
-		sprdef = &((skin_t *)thing->skin)->sprites[thing->sprite2];
+		sprdef = P_GetSkinSpritedef(thing->skin, thing->sprite2);
 #ifdef ROTSPRITE
-		sprinfo = &((skin_t *)thing->skin)->sprinfo[thing->sprite2];
+		sprinfo = P_GetSkinSpriteInfo(thing->skin, thing->sprite2);
 #endif
-		if (frame >= sprdef->numframes) {
-			CONS_Alert(CONS_ERROR, M_GetText("R_ProjectSprite: invalid skins[\"%s\"].sprites[%sSPR2_%s] frame %s\n"), ((skin_t *)thing->skin)->name, ((thing->sprite2 & FF_SPR2SUPER) ? "FF_SPR2SUPER|": ""), spr2names[(thing->sprite2 & ~FF_SPR2SUPER)], sizeu5(frame));
+
+		if (frame >= sprdef->numframes)
+		{
+			CONS_Alert(CONS_ERROR, M_GetText("R_ProjectSprite: invalid skins[\"%s\"].sprites[SPR2_%s] %sframe %s\n"), ((skin_t *)thing->skin)->name, spr2names[thing->sprite2 & SPR2F_MASK], (thing->sprite2 & SPR2F_SUPER) ? "super ": "", sizeu5(frame));
 			thing->sprite = states[S_UNKNOWN].sprite;
 			thing->frame = states[S_UNKNOWN].frame;
 			sprdef = &sprites[thing->sprite];
@@ -2763,7 +2915,7 @@ static void R_CreateDrawNodes(maskcount_t* mask, drawnode_t* head, boolean temps
 	// Add the 3D floors, thicksides, and masked textures...
 	for (ds = drawsegs + mask->drawsegs[1]; ds-- > drawsegs + mask->drawsegs[0];)
 	{
-		if (ds->numthicksides)
+		if (ds->numthicksides && r_renderwalls)
 		{
 			for (i = 0; i < ds->numthicksides; i++)
 			{
@@ -2782,17 +2934,19 @@ static void R_CreateDrawNodes(maskcount_t* mask, drawnode_t* head, boolean temps
 			else {
 				// Put it in!
 				entry = R_CreateDrawNode(head);
-				entry->plane = plane;
-				entry->seg = ds;
+				if (r_renderwalls)
+					entry->seg = ds;
+				if (r_renderfloors)
+					entry->plane = plane;
 			}
 			ds->curline->polyseg->visplane = NULL;
 		}
-		if (ds->maskedtexturecol)
+		if (ds->maskedtexturecol && r_renderwalls)
 		{
 			entry = R_CreateDrawNode(head);
 			entry->seg = ds;
 		}
-		if (ds->numffloorplanes)
+		if (ds->numffloorplanes && r_renderfloors)
 		{
 			for (i = 0; i < ds->numffloorplanes; i++)
 			{
@@ -3092,9 +3246,6 @@ void R_InitDrawNodes(void)
 //
 // R_DrawSprite
 //
-//Fab : 26-04-98:
-// NOTE : uses con_clipviewtop, so that when console is on,
-//        don't draw the part of sprites hidden under the console
 static void R_DrawSprite(vissprite_t *spr)
 {
 	mfloorclip = spr->clipbot;
@@ -3262,9 +3413,6 @@ static void R_ClipVisSprite(vissprite_t *spr, INT32 x1, INT32 x2, portal_t* port
 				(lowscale < spr->sortscale &&
 				 !R_PointOnSegSide (spr->gx, spr->gy, ds->curline)))
 			{
-				// masked mid texture?
-				/*if (ds->maskedtexturecol)
-					R_RenderMaskedSegRange (ds, r1, r2);*/
 				// seg is behind sprite
 				continue;
 			}

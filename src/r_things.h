@@ -27,7 +27,9 @@
 
 #define FEETADJUST (4<<FRACBITS) // R_AddSingleSpriteDef
 
-boolean R_AddSingleSpriteDef(const char *sprname, spritedef_t *spritedef, UINT16 wadnum, UINT16 startlump, UINT16 endlump);
+spritenum_t R_GetSpriteNumByName(const char *name);
+
+boolean R_AddSingleSpriteDef(const char *sprname, spritedef_t *spritedef, UINT16 wadnum, UINT16 startlump, UINT16 endlump, boolean longname);
 
 //faB: find sprites in wadfile, replace existing, add new ones
 //     (only sprites from namelist are added or replaced)
@@ -45,10 +47,10 @@ extern fixed_t sprtopscreen;
 extern fixed_t sprbotscreen;
 extern fixed_t windowtop;
 extern fixed_t windowbottom;
-extern INT32 lengthcol;
 
-void R_DrawMaskedColumn(column_t *column);
-void R_DrawFlippedMaskedColumn(column_t *column);
+void R_DrawMaskedColumn(column_t *column, unsigned lengthcol);
+void R_DrawFlippedMaskedColumn(column_t *column, unsigned lengthcol);
+void R_DrawFlippedPost(UINT8 *source, unsigned length, void (*drawcolfunc)(void));
 
 // ----------------
 // SPRITE RENDERING

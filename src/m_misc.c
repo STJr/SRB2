@@ -1254,7 +1254,7 @@ void M_SaveFrame(void)
 	// paranoia: should be unnecessary without singletics
 	static tic_t oldtic = 0;
 
-	if (oldtic == I_GetTime())
+	if (oldtic == I_GetTime() && !singletics)
 		return;
 	else
 		oldtic = I_GetTime();
@@ -1978,9 +1978,9 @@ void M_UnGetToken(void)
 
 static tokenizer_t *globalTokenizer = NULL;
 
-void M_TokenizerOpen(const char *inputString)
+void M_TokenizerOpen(const char *inputString, size_t len)
 {
-	globalTokenizer = Tokenizer_Open(inputString, 2);
+	globalTokenizer = Tokenizer_Open(inputString, len, 2);
 }
 
 void M_TokenizerClose(void)
@@ -2208,6 +2208,8 @@ int M_JumpWordReverse(const char *line, int offset)
 {
 	int (*is)(int);
 	int c;
+	if (offset == 0) // Don't let "--offset" later result in a negative value
+		return 0;
 	c = line[--offset];
 	if (isspace(c))
 		is = isspace;

@@ -273,6 +273,19 @@ typedef enum {
 	PCF_THUNK = 32,
 } precipflag_t;
 
+// [RH] Like msecnode_t, but for the blockmap
+typedef struct blocknode_s
+{
+	struct mobj_s *mobj;
+
+	int blockindex;     // index into blocklinks for the block this node is in
+
+	struct blocknode_s **mprev; // previous actor in this block
+	struct blocknode_s *mnext;  // next actor in this block
+	struct blocknode_s **bprev; // previous block this actor is in
+	struct blocknode_s *bnext;  // next block this actor is in
+} blocknode_t;
+
 // Map Object definition.
 typedef struct mobj_s
 {
@@ -295,15 +308,15 @@ typedef struct mobj_s
 	angle_t spriteroll, old_spriteroll, old_spriteroll2;
 	spritenum_t sprite; // used to find patch_t and flip value
 	UINT32 frame; // frame number, plus bits see p_pspr.h
-	UINT8 sprite2; // player sprites
+	UINT16 sprite2; // player sprites
 	UINT16 anim_duration; // for FF_ANIMATE states
 
 	UINT32 renderflags; // render flags
 	INT32 blendmode; // blend mode
 	fixed_t spritexscale, spriteyscale;
 	fixed_t spritexoffset, spriteyoffset;
-	fixed_t old_spritexscale, old_spriteyscale;
-	fixed_t old_spritexoffset, old_spriteyoffset;
+	fixed_t old_spritexscale, old_spriteyscale, old_spritexscale2, old_spriteyscale2;
+	fixed_t old_spritexoffset, old_spriteyoffset, old_spritexoffset2, old_spriteyoffset2;
 	struct pslope_s *floorspriteslope; // The slope that the floorsprite is rotated by
 
 	struct msecnode_s *touching_sectorlist; // a linked list of sectors where this object appears
@@ -344,8 +357,7 @@ typedef struct mobj_s
 
 	// Interaction info, by BLOCKMAP.
 	// Links in blocks (if needed).
-	struct mobj_s *bnext;
-	struct mobj_s **bprev; // killough 8/11/98: change to ptr-to-ptr
+	blocknode_t *blocknode;
 
 	// Additional pointers for NiGHTS hoops
 	struct mobj_s *hnext;
@@ -439,15 +451,15 @@ typedef struct precipmobj_s
 	angle_t spriteroll, old_spriteroll, old_spriteroll2;
 	spritenum_t sprite; // used to find patch_t and flip value
 	UINT32 frame; // frame number, plus bits see p_pspr.h
-	UINT8 sprite2; // player sprites
+	UINT16 sprite2; // player sprites
 	UINT16 anim_duration; // for FF_ANIMATE states
 
 	UINT32 renderflags; // render flags
 	INT32 blendmode; // blend mode
 	fixed_t spritexscale, spriteyscale;
 	fixed_t spritexoffset, spriteyoffset;
-	fixed_t old_spritexscale, old_spriteyscale;
-	fixed_t old_spritexoffset, old_spriteyoffset;
+	fixed_t old_spritexscale, old_spriteyscale, old_spritexscale2, old_spriteyscale2;
+	fixed_t old_spritexoffset, old_spriteyoffset, old_spritexoffset2, old_spriteyoffset2;
 	struct pslope_s *floorspriteslope; // The slope that the floorsprite is rotated by
 
 	struct mprecipsecnode_s *touching_sectorlist; // a linked list of sectors where this object appears
@@ -515,7 +527,7 @@ void P_SnowThinker(precipmobj_t *mobj);
 void P_RainThinker(precipmobj_t *mobj);
 void P_NullPrecipThinker(precipmobj_t *mobj);
 void P_RemovePrecipMobj(precipmobj_t *mobj);
-void P_SetScale(mobj_t *mobj, fixed_t newscale);
+void P_SetScale(mobj_t *mobj, fixed_t newscale, boolean instant);
 void P_XYMovement(mobj_t *mo);
 void P_RingXYMovement(mobj_t *mo);
 void P_SceneryXYMovement(mobj_t *mo);
