@@ -469,7 +469,7 @@ static void R_DrawRepeatMaskedColumn(column_t *col, unsigned lengthcol)
 
 		R_DrawMaskedColumn(col, lengthcol);
 
-		if ((INT64)topscreen + (INT64)texheight > (INT64)INT32_MAX) // prevent overflow
+		if ((INT64)sprtopscreen + (INT64)dc_texheight*spryscale > (INT64)INT32_MAX) // prevent overflow
 			break;
 
 		topscreen += texheight;
@@ -504,7 +504,7 @@ static void R_DrawRepeatFlippedMaskedColumn(column_t *col, unsigned lengthcol)
 
 		R_DrawFlippedMaskedColumn(col, lengthcol);
 
-		if ((INT64)topscreen + (INT64)texheight > (INT64)INT32_MAX) // prevent overflow
+		if ((INT64)sprtopscreen + (INT64)dc_texheight*spryscale > (INT64)INT32_MAX) // prevent overflow
 			break;
 
 		topscreen += texheight;
