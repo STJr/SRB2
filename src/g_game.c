@@ -1363,11 +1363,11 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 	axis = PlayerJoyAxis(ssplayer, JA_FIRENORMAL);
 	if (PLAYERINPUTDOWN(ssplayer, GC_FIRENORMAL) || (usejoystick && axis > 0))
 		cmd->buttons |= BT_FIRENORMAL;
-	
+
 	// Toss flag button
 	if (PLAYERINPUTDOWN(ssplayer, GC_TOSSFLAG))
 		cmd->buttons |= BT_TOSSFLAG;
-	
+
 	// Shield button
 	axis = PlayerJoyAxis(ssplayer, JA_SHIELD);
 	if (PLAYERINPUTDOWN(ssplayer, GC_SHIELD) || (usejoystick && axis > 0))
@@ -4018,7 +4018,7 @@ INT16 G_GetNextMap(boolean ignoretokens, boolean silent)
 	INT32 i;
 	INT16 newmapnum;
 	boolean spec = G_IsSpecialStage(gamemap);
-	
+
 	// go to next level
 	// newmapnum is 0-based, unlike gamemap
 	if (nextmapoverride != 0)
@@ -4122,7 +4122,7 @@ INT16 G_GetNextMap(boolean ignoretokens, boolean silent)
 
 	if (spec && (!gottoken || ignoretokens) && !nextmapoverride)
 		newmapnum = lastmap; // Exiting from a special stage? Go back to the game. Tails 08-11-2001
-	
+
 	if (!(gametyperules & GTR_CAMPAIGN))
 	{
 		if (cv_advancemap.value == 0) // Stay on same map.
@@ -4130,7 +4130,7 @@ INT16 G_GetNextMap(boolean ignoretokens, boolean silent)
 		else if (cv_advancemap.value == 2) // Go to random map.
 			newmapnum = RandMap(G_TOLFlag(gametype_to_use), prevmap);
 	}
-	
+
 	return newmapnum;
 }
 
@@ -4140,7 +4140,7 @@ INT16 G_GetNextMap(boolean ignoretokens, boolean silent)
 static void G_DoCompleted(void)
 {
 	INT32 i;
-	
+
 	tokenlist = 0; // Reset the list
 
 	if (modeattacking && pausedelay)
@@ -4168,7 +4168,7 @@ static void G_DoCompleted(void)
 	//Get and set prevmap/nextmap
 	prevmap = (INT16)(gamemap-1);
 	nextmap = G_GetNextMap(false, false);
-	
+
 	automapactive = false;
 
 	// We are committed to this map now.
