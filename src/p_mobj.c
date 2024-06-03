@@ -6662,8 +6662,21 @@ static boolean P_ShieldLook(mobj_t *thing, shieldtype_t shield)
 	thing->flags |= MF_NOCLIPHEIGHT;
 	thing->eflags = (thing->eflags & ~MFE_VERTICALFLIP)|(thing->target->eflags & MFE_VERTICALFLIP);
 
-	P_SetScale(thing, FixedMul(thing->target->scale, thing->target->player->shieldscale), true);
-	thing->old_scale = FixedMul(thing->target->old_scale, thing->target->player->shieldscale);
+	//Set the shield's scale based on shieldscale, hide it if we're too small!
+	fixed_t scale = FixedMul(thing->target->scale, thing->target->player->shieldscale);
+	if (scale < 1) {
+		P_SetScale(thing, thing->target->scale, true);
+		thing->old_scale = thing->target->old_scale;
+		
+		thing->flags2 |= (MF2_DONTDRAW|MF2_JUSTATTACKED); //Hide and indicate we're hidden
+	} else {
+		P_SetScale(thing, scale, true);
+		thing->old_scale = FixedMul(thing->target->old_scale, thing->target->player->shieldscale);
+		
+		//Only unhide if we were hidden by the above code
+		if (thing->flags2 & MF2_JUSTATTACKED)
+			thing->flags2 &= ~(MF2_DONTDRAW|MF2_JUSTATTACKED);
+	}
 
 #define NewMH(mobj)   mobj->height // Ugly mobj-height and player-height defines, for the sake of prettier code
 #define NewPH(player) P_GetPlayerHeight(player)
