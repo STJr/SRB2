@@ -502,6 +502,19 @@ void P_LineOpening(line_t *linedef, mobj_t *mobj)
 			if (texnum) {
 				fixed_t scaley = abs(side->scaley_mid);
 				fixed_t offsetvalue = FixedDiv(side->rowoffset + side->offsety_mid, scaley);
+				fixed_t midopentop, midopenbottom;
+
+				if (linedef->flags & ML_NOSKEW)
+				{
+					// Use the sector's actual heights if the midtexture is not skewed
+					midopentop = min(front->ceilingheight, back->ceilingheight);
+					midopenbottom = max(front->floorheight, back->floorheight);
+				}
+				else
+				{
+					midopentop = opentop;
+					midopenbottom = openbottom;
+				}
 
 				// Get the midtexture's height
 				texheight = FixedDiv(textureheight[texnum], scaley);
@@ -525,13 +538,13 @@ void P_LineOpening(line_t *linedef, mobj_t *mobj)
 #endif
 				{
 					if (linedef->flags & ML_WRAPMIDTEX && !side->repeatcnt) { // "infinite" repeat
-						texbottom = openbottom + offsetvalue;
-						textop = opentop + offsetvalue;
+						texbottom = midopenbottom + offsetvalue;
+						textop = midopentop + offsetvalue;
 					} else if (linedef->flags & ML_MIDPEG) {
-						texbottom = openbottom + offsetvalue;
+						texbottom = midopenbottom + offsetvalue;
 						textop = texbottom + texheight*(side->repeatcnt+1);
 					} else {
-						textop = opentop + offsetvalue;
+						textop = midopentop + offsetvalue;
 						texbottom = textop - texheight*(side->repeatcnt+1);
 					}
 				}
@@ -545,7 +558,7 @@ void P_LineOpening(line_t *linedef, mobj_t *mobj)
 					if (opentop > texbottom) {
 						opentop = texbottom;
 						if (linedef->flags & ML_NOSKEW)
-							opentopslope = NULL;
+							opentopslope = NULL; // Object is not actually on a slope
 						else
 							opentopslope = linedef->midtexslope;
 					}
@@ -553,7 +566,7 @@ void P_LineOpening(line_t *linedef, mobj_t *mobj)
 					if (openbottom < textop) {
 						openbottom = textop;
 						if (linedef->flags & ML_NOSKEW)
-							openbottomslope = NULL;
+							openbottomslope = NULL; // Object is not actually on a slope
 						else
 							openbottomslope = linedef->midtexslope;
 					}
