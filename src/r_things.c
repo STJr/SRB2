@@ -1774,6 +1774,10 @@ static void R_ProjectSprite(mobj_t *thing)
 	}
 
 	this_scale = interp.scale;
+
+	if (this_scale < 1)
+		return;
+
 	radius = interp.radius; // For drop shadows
 	height = interp.height; // Ditto
 
