@@ -1089,6 +1089,13 @@ void P_ResetPlayer(player_t *player)
 		if (player->mo->tracer && !P_MobjWasRemoved(player->mo->tracer))
 		{
 			player->mo->tracer->flags |= MF_PUSHABLE;
+
+			// goose the mom a little bit to trigger gravity to process for a tic
+			if (player->mo->tracer->eflags & MFE_VERTICALFLIP)
+				player->mo->tracer->momz -= 1;
+			else
+				player->mo->tracer->momz += 1;
+
 			P_SetTarget(&player->mo->tracer->tracer, NULL);
 		}
 		P_SetTarget(&player->mo->tracer, NULL);
@@ -4546,6 +4553,13 @@ void P_DoJump(player_t *player, boolean soundandstate, boolean allowflip)
 					player->mo->momz += player->mo->tracer->momz;
 				if (!P_IsObjectOnGround(player->mo->tracer))
 					P_SetObjectMomZ(player->mo->tracer, -9*FRACUNIT, true);
+
+				// goose the mom a little bit to trigger gravity to process for a tic
+				if (player->mo->tracer->eflags & MFE_VERTICALFLIP)
+					player->mo->tracer->momz -= 1;
+				else
+					player->mo->tracer->momz += 1;
+
 				player->mo->tracer->flags |= MF_PUSHABLE;
 				P_SetTarget(&player->mo->tracer->tracer, NULL);
 			}

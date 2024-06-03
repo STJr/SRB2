@@ -1027,7 +1027,6 @@ static unsigned PIT_DoCheckThing(mobj_t *thing)
 		if ((thing->flags & MF_PUSHABLE) // not carrying a player
 			&& (tmthing->player->powers[pw_carry] == CR_NONE) // player is not already riding something
 			&& !(tmthing->player->powers[pw_ignorelatch] & (1<<15))
-			&& ((tmthing->eflags & MFE_VERTICALFLIP) == (thing->eflags & MFE_VERTICALFLIP))
 			&& (P_MobjFlip(tmthing)*tmthing->momz <= 0)
 			&& ((!(tmthing->eflags & MFE_VERTICALFLIP) && abs(thing->z + thing->height - tmthing->z) < (thing->height>>2))
 				|| (tmthing->eflags & MFE_VERTICALFLIP && abs(tmthing->z + tmthing->height - thing->z) < (thing->height>>2))))
@@ -1041,6 +1040,7 @@ static unsigned PIT_DoCheckThing(mobj_t *thing)
 			P_SetTarget(&tmthing->tracer, thing);
 			if (!P_IsObjectOnGround(thing))
 				thing->momz += tmthing->momz;
+
 			return CHECKTHING_COLLIDE;
 		}
 	}
