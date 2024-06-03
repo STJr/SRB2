@@ -272,7 +272,7 @@ void HU_LoadFontCharacters(fontdef_t *font, const char *prefix)
 		for (i = 0; i < FONTSIZE; i++, j++)
 		{
 			sprintf(buffer, "%.5s%.3d", prefix, j);
-			if (W_CheckNumForName(buffer) == LUMPERROR)
+			if (W_CheckNumForPatchName(buffer) == LUMPERROR)
 				font->chars[i] = NULL;
 			else
 				font->chars[i] = (patch_t *)W_CachePatchName(buffer, PU_HUDGFX);
@@ -999,6 +999,7 @@ static void HU_sendChatMessage(void)
 void HU_clearChatChars(void)
 {
 	memset(w_chat, '\0', sizeof(w_chat));
+	I_SetTextInputMode(false);
 	chat_on = false;
 	c_input = 0;
 
@@ -1048,6 +1049,7 @@ boolean HU_Responder(event_t *ev)
 		if ((ev->key == gamecontrol[GC_TALKKEY][0] || ev->key == gamecontrol[GC_TALKKEY][1])
 			&& netgame && !OLD_MUTE) // check for old chat mute, still let the players open the chat incase they want to scroll otherwise.
 		{
+			I_SetTextInputMode(true);
 			chat_on = true;
 			chat_on_first_event = false;
 			w_chat[0] = 0;
@@ -1059,6 +1061,7 @@ boolean HU_Responder(event_t *ev)
 		if ((ev->key == gamecontrol[GC_TEAMKEY][0] || ev->key == gamecontrol[GC_TEAMKEY][1])
 			&& netgame && !OLD_MUTE)
 		{
+			I_SetTextInputMode(true);
 			chat_on = true;
 			chat_on_first_event = false;
 			w_chat[0] = 0;
@@ -1133,6 +1136,7 @@ boolean HU_Responder(event_t *ev)
 			if (!CHAT_MUTE)
 				HU_sendChatMessage();
 
+			I_SetTextInputMode(false);
 			chat_on = false;
 			c_input = 0; // reset input cursor
 			chat_scrollmedown = true; // you hit enter, so you might wanna autoscroll to see what you just sent. :)
@@ -1143,6 +1147,7 @@ boolean HU_Responder(event_t *ev)
 			|| c == gamecontrol[GC_TEAMKEY][0] || c == gamecontrol[GC_TEAMKEY][1])
 			&& c >= KEY_MOUSE1)) // If it's not a keyboard key, then the chat button is used as a toggle.
 		{
+			I_SetTextInputMode(false);
 			chat_on = false;
 			c_input = 0; // reset input cursor
 			I_UpdateMouseGrab();
@@ -2010,13 +2015,13 @@ static void HU_Draw32TeamTabRankings(playersort_t *tab, INT32 whiteplayer)
 		greycheck = greycheckdef;
 		supercheck = supercheckdef;
 
-		if (tab[i].color == skincolor_redteam) //red
+		if (players[tab[i].num].ctfteam == 1) //red
 		{
 			redplayers++;
 			x = 14 + (BASEVIDWIDTH/2);
 			y = (redplayers * 9) + 20;
 		}
-		else if (tab[i].color == skincolor_blueteam) //blue
+		else if (players[tab[i].num].ctfteam == 2) //blue
 		{
 			blueplayers++;
 			x = 14;
@@ -2098,7 +2103,7 @@ void HU_DrawTeamTabRankings(playersort_t *tab, INT32 whiteplayer)
 		if (players[tab[i].num].spectator)
 			continue; //ignore them.
 
-		if (tab[i].color == skincolor_redteam) //red
+		if (players[tab[i].num].ctfteam == 1) //red
 		{
 			if (redplayers++ > 8)
 			{
@@ -2106,7 +2111,7 @@ void HU_DrawTeamTabRankings(playersort_t *tab, INT32 whiteplayer)
 				break; // don't make more loops than we need to.
 			}
 		}
-		else if (tab[i].color == skincolor_blueteam) //blue
+		else if (players[tab[i].num].ctfteam == 2) //blue
 		{
 			if (blueplayers++ > 8)
 			{
@@ -2137,14 +2142,14 @@ void HU_DrawTeamTabRankings(playersort_t *tab, INT32 whiteplayer)
 		if (players[tab[i].num].spectator)
 			continue; //ignore them.
 
-		if (tab[i].color == skincolor_redteam) //red
+		if (players[tab[i].num].ctfteam == 1) //red
 		{
 			if (redplayers++ > 8)
 				continue;
 			x = 32 + (BASEVIDWIDTH/2);
 			y = (redplayers * 16) + 16;
 		}
-		else if (tab[i].color == skincolor_blueteam) //blue
+		else if (players[tab[i].num].ctfteam == 2) //blue
 		{
 			if (blueplayers++ > 8)
 				continue;

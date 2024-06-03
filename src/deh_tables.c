@@ -5804,6 +5804,10 @@ struct int_const_s const INT_CONST[] = {
 	{"MB_SCROLLUP",MB_SCROLLUP},
 	{"MB_SCROLLDOWN",MB_SCROLLDOWN},
 
+	// screen.h constants
+	{"BASEVIDWIDTH",BASEVIDWIDTH},
+	{"BASEVIDHEIGHT",BASEVIDHEIGHT},
+
 	{NULL,0}
 };
 

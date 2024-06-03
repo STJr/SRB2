@@ -1385,6 +1385,7 @@ fixed_t P_GetMobjGravity(mobj_t *mo)
 				case MT_WATERDROP:
 				case MT_CYBRAKDEMON:
 					gravityadd >>= 1;
+					break;
 				default:
 					break;
 			}

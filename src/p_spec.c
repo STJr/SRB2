@@ -3684,7 +3684,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 
 		case 466: // Set level failure state
 			{
-				if (line->args[1])
+				if (line->args[0])
 				{
 					stagefailed = false;
 					CONS_Debug(DBG_GAMELOGIC, "Stage can be completed successfully!\n");

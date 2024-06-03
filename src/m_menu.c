@@ -263,7 +263,7 @@ static void M_ConfirmTeamScramble(INT32 choice);
 static void M_ConfirmTeamChange(INT32 choice);
 static void M_SecretsMenu(INT32 choice);
 static void M_SetupChoosePlayer(INT32 choice);
-static UINT16 M_SetupChoosePlayerDirect(INT32 choice);
+static INT32 M_SetupChoosePlayerDirect(INT32 choice);
 static void M_QuitSRB2(INT32 choice);
 menu_t SP_MainDef, OP_MainDef;
 menu_t MISC_ScrambleTeamDef, MISC_ChangeTeamDef;
@@ -2102,6 +2102,12 @@ menu_t OP_PlaystyleDef = {
 	0, 0, 0, NULL
 };
 
+static void M_UpdateItemOn(void)
+{
+	I_SetTextInputMode((currentMenu->menuitems[itemOn].status & IT_CVARTYPE) == IT_CV_STRING ||
+		(currentMenu->menuitems[itemOn].status & IT_TYPE) == IT_KEYHANDLER);
+}
+
 static void M_VideoOptions(INT32 choice)
 {
 	(void)choice;
@@ -2329,6 +2335,7 @@ void Nextmap_OnChange(void)
 		{
 			currentMenu->lastOn = itemOn;
 			itemOn = nastart;
+			M_UpdateItemOn();
 		}
 	}
 	else if (currentMenu == &SP_TimeAttackDef)
@@ -2378,6 +2385,7 @@ void Nextmap_OnChange(void)
 		{
 			currentMenu->lastOn = itemOn;
 			itemOn = tastart;
+			M_UpdateItemOn();
 		}
 
 		if (mapheaderinfo[cv_nextmap.value-1] && mapheaderinfo[cv_nextmap.value-1]->forcecharacter[0] != '\0')
@@ -3128,6 +3136,7 @@ static void M_NextOpt(void)
 		else
 			itemOn++;
 	} while (oldItemOn != itemOn && ( (currentMenu->menuitems[itemOn].status & IT_TYPE) & IT_SPACE ));
+	M_UpdateItemOn();
 }
 
 static void M_PrevOpt(void)
@@ -3140,6 +3149,7 @@ static void M_PrevOpt(void)
 		else
 			itemOn--;
 	} while (oldItemOn != itemOn && ( (currentMenu->menuitems[itemOn].status & IT_TYPE) & IT_SPACE ));
+	M_UpdateItemOn();
 }
 
 // lock out further input in a tic when important buttons are pressed
@@ -3651,18 +3661,20 @@ void M_StartControlPanel(void)
 
 		currentMenu = &MainDef;
 		itemOn = singleplr;
+		M_UpdateItemOn();
 	}
 	else if (modeattacking)
 	{
 		currentMenu = &MAPauseDef;
 		MAPauseMenu[mapause_hints].status = (M_SecretUnlocked(SECRET_EMBLEMHINTS, clientGamedata)) ? (IT_STRING | IT_CALL) : (IT_DISABLED);
 		itemOn = mapause_continue;
+		M_UpdateItemOn();
 	}
 	else if (!(netgame || multiplayer)) // Single Player
 	{
 		// Devmode unlocks Pandora's Box in the pause menu
 		boolean pandora = ((M_SecretUnlocked(SECRET_PANDORA, serverGamedata) || cv_debug || devparm) && !marathonmode);
-		
+
 		if (gamestate != GS_LEVEL || ultimatemode) // intermission, so gray out stuff.
 		{
 			SPauseMenu[spause_pandora].status = (pandora) ? (IT_GRAYEDOUT) : (IT_DISABLED);
@@ -3703,6 +3715,7 @@ void M_StartControlPanel(void)
 
 		currentMenu = &SPauseDef;
 		itemOn = spause_continue;
+		M_UpdateItemOn();
 	}
 	else // multiplayer
 	{
@@ -3744,6 +3757,7 @@ void M_StartControlPanel(void)
 
 		currentMenu = &MPauseDef;
 		itemOn = mpause_continue;
+		M_UpdateItemOn();
 	}
 
 	CON_ToggleOff(); // move away console
@@ -3837,6 +3851,7 @@ void M_SetupNextMenu(menu_t *menudef)
 			}
 		}
 	}
+	M_UpdateItemOn();
 
 	hidetitlemap = false;
 }
@@ -4015,11 +4030,11 @@ static void M_DrawThermo(INT32 x, INT32 y, consvar_t *cv)
 	lumpnum_t leftlump, rightlump, centerlump[2], cursorlump;
 	patch_t *p;
 
-	leftlump = W_GetNumForName("M_THERML");
-	rightlump = W_GetNumForName("M_THERMR");
-	centerlump[0] = W_GetNumForName("M_THERMM");
-	centerlump[1] = W_GetNumForName("M_THERMM");
-	cursorlump = W_GetNumForName("M_THERMO");
+	leftlump = W_GetNumForPatchName("M_THERML");
+	rightlump = W_GetNumForPatchName("M_THERMR");
+	centerlump[0] = W_GetNumForPatchName("M_THERMM");
+	centerlump[1] = W_GetNumForPatchName("M_THERMM");
+	cursorlump = W_GetNumForPatchName("M_THERMO");
 
 	V_DrawScaledPatch(xx, y, 0, p = W_CachePatchNum(leftlump,PU_PATCH));
 	xx += p->width - p->leftoffset;
@@ -4141,7 +4156,7 @@ static void M_DrawStaticBox(fixed_t x, fixed_t y, INT32 flags, fixed_t w, fixed_
 			temp = (gametic % temp) * h*2*FRACUNIT; // Which frame to draw
 
 		V_DrawCroppedPatch(x*FRACUNIT, y*FRACUNIT, (w*FRACUNIT) / 160, (h*FRACUNIT) / 100, flags, patch, NULL, 0, temp, w*2*FRACUNIT, h*2*FRACUNIT);
-		
+
 		W_UnlockCachedPatch(patch);
 		return;
 	}
@@ -6109,6 +6124,7 @@ void M_StartMessage(const char *string, void *routine, menumessagetype_t itemtyp
 
 	currentMenu = &MessageDef;
 	itemOn = 0;
+	M_UpdateItemOn();
 }
 
 static void M_DrawMessageMenu(void)
@@ -6183,6 +6199,7 @@ static void M_HandleImageDef(INT32 choice)
 			if (itemOn >= (INT16)(currentMenu->numitems-1))
 				itemOn = 0;
             else itemOn++;
+			M_UpdateItemOn();
 			break;
 
 		case KEY_LEFTARROW:
@@ -6193,6 +6210,7 @@ static void M_HandleImageDef(INT32 choice)
 			if (!itemOn)
 				itemOn = currentMenu->numitems - 1;
 			else itemOn--;
+			M_UpdateItemOn();
 			break;
 
 		case KEY_ESCAPE:
@@ -6982,7 +7000,10 @@ static void M_LevelSelectWarp(INT32 choice)
 	if (currentMenu == &SP_LevelSelectDef || currentMenu == &SP_PauseLevelSelectDef)
 	{
 		if (cursaveslot > 0) // do we have a save slot to load?
+		{
+			CV_StealthSet(&cv_skin, DEFAULTSKIN); // already handled by loadgame so we don't want this
 			G_LoadGame((UINT32)cursaveslot, startmap); // reload from SP save data: this is needed to keep score/lives/continues from reverting to defaults
+		}
 		else // no save slot, start new game but keep the current skin
 		{
 			M_ClearMenus(true);
@@ -7389,6 +7410,7 @@ static void M_EmblemHints(INT32 choice)
 	SR_EmblemHintDef.prevMenu = currentMenu;
 	M_SetupNextMenu(&SR_EmblemHintDef);
 	itemOn = 2; // always start on back.
+	M_UpdateItemOn();
 }
 
 static void M_DrawEmblemHints(void)
@@ -8630,9 +8652,14 @@ static void M_LoadSelect(INT32 choice)
 		M_NewGame();
 	}
 	else if (savegameinfo[saveSlotSelected-1].gamemap & 8192) // Completed
+	{
 		M_LoadGameLevelSelect(0);
+	}
 	else
+	{
+		CV_StealthSet(&cv_skin, DEFAULTSKIN); // already handled by loadgame so we don't want this
 		G_LoadGame((UINT32)saveSlotSelected, 0);
+	}
 
 	cursaveslot = saveSlotSelected;
 }
@@ -9053,7 +9080,7 @@ static void M_CacheCharacterSelectEntry(INT32 i, INT32 skinnum)
 		description[i].namepic = W_CachePatchName(description[i].nametag, PU_PATCH);
 }
 
-static UINT16 M_SetupChoosePlayerDirect(INT32 choice)
+static INT32 M_SetupChoosePlayerDirect(INT32 choice)
 {
 	INT32 skinnum, botskinnum;
 	UINT16 i;
@@ -9142,7 +9169,7 @@ static UINT16 M_SetupChoosePlayerDirect(INT32 choice)
 
 static void M_SetupChoosePlayer(INT32 choice)
 {
-	UINT16 skinset = M_SetupChoosePlayerDirect(choice);
+	INT32 skinset = M_SetupChoosePlayerDirect(choice);
 	if (skinset != MAXCHARACTERSLOTS)
 	{
 		M_ChoosePlayer(skinset);
@@ -9490,6 +9517,8 @@ static void M_ChoosePlayer(INT32 choice)
 
 	//lastmapsaved = 0;
 	gamecomplete = 0;
+
+	CV_StealthSet(&cv_skin, skins[skinnum]->name);
 
 	G_DeferedInitNew(ultmode, G_BuildMapName(startmap), skinnum, false, fromlevelselect);
 	COM_BufAddText("dummyconsvar 1\n"); // G_DeferedInitNew doesn't do this
@@ -10050,6 +10079,7 @@ static void M_TimeAttack(INT32 choice)
 		Nextmap_OnChange();
 
 	itemOn = tastart; // "Start" is selected.
+	M_UpdateItemOn();
 }
 
 // Drawing function for Nights Attack
@@ -10166,7 +10196,7 @@ void M_DrawNightsAttackMenu(void)
 			skinnumber = 0; //Default to Sonic
 		else
 			skinnumber = (cv_chooseskin.value-1);
-			
+
 		spritedef_t *sprdef = &skins[skinnumber]->sprites[SPR2_NFLY]; //Make our patch the selected character's NFLY sprite
 		spritetimer = FixedInt(ntsatkdrawtimer/2) % skins[skinnumber]->sprites[SPR2_NFLY].numframes; //Make the sprite timer cycle though all the frames at 2 tics per frame
 		spriteframe_t *sprframe = &sprdef->spriteframes[spritetimer]; //Our animation frame is equal to the number on the timer
@@ -10179,11 +10209,11 @@ void M_DrawNightsAttackMenu(void)
 			color = skins[skinnumber]->supercolor+4;
 		else //If you don't go super in NiGHTS or at all, use prefcolor
 			color = skins[skinnumber]->prefcolor;
-				
+
 		angle_t fa = (FixedAngle(((FixedInt(ntsatkdrawtimer * 4)) % 360)<<FRACBITS)>>ANGLETOFINESHIFT) & FINEMASK;
 
 		V_DrawFixedPatch(270<<FRACBITS, (186<<FRACBITS) - 8*FINESINE(fa),
-						 FixedDiv(skins[skinnumber]->highresscale, skins[skinnumber]->shieldscale), 
+						 FixedDiv(skins[skinnumber]->highresscale, skins[skinnumber]->shieldscale),
 						 (sprframe->flip & 1<<6) ? V_FLIP : 0,
 						 natksprite,
 						 R_GetTranslationColormap(TC_BLINK, color, GTC_CACHE));
@@ -10288,6 +10318,7 @@ static void M_NightsAttack(INT32 choice)
 		Nextmap_OnChange();
 
 	itemOn = nastart; // "Start" is selected.
+	M_UpdateItemOn();
 }
 
 // Player has selected the "START" from the nights attack screen
@@ -10607,6 +10638,7 @@ static void M_ModeAttackEndGame(INT32 choice)
 		break;
 	}
 	itemOn = currentMenu->lastOn;
+	M_UpdateItemOn();
 	G_SetGamestate(GS_TIMEATTACK);
 	modeattacking = ATTACKING_NONE;
 	M_ChangeMenuMusic("_title", true);
@@ -10688,6 +10720,7 @@ static void M_Marathon(INT32 choice)
 	titlemapinaction = TITLEMAP_OFF; // Nope don't give us HOMs please
 	M_SetupNextMenu(&SP_MarathonDef);
 	itemOn = marathonstart; // "Start" is selected.
+	M_UpdateItemOn();
 	recatkdrawtimer = (50-8) * FRACUNIT;
 	char_scroll = 0;
 }
@@ -11401,6 +11434,7 @@ static void M_ConnectMenu(INT32 choice)
 	else
 		M_SetupNextMenu(&MP_ConnectDef);
 	itemOn = 0;
+	M_UpdateItemOn();
 	M_Refresh(0);
 }
 
@@ -11660,6 +11694,7 @@ static void M_StartServerMenu(INT32 choice)
 	Newgametype_OnChange();
 	M_SetupNextMenu(&MP_ServerDef);
 	itemOn = 1;
+	M_UpdateItemOn();
 }
 
 // ==============
@@ -11842,15 +11877,21 @@ static void M_HandleConnectIP(INT32 choice)
 					case KEY_INS:
 					case 'c':
 					case 'C': // ctrl+c, ctrl+insert, copying
-						I_ClipboardCopy(setupm_ip, l);
-						S_StartSound(NULL,sfx_menu1); // Tails
+						if (l != 0) // Don't replace the clipboard without any text
+						{
+							I_ClipboardCopy(setupm_ip, l);
+							S_StartSound(NULL,sfx_menu1); // Tails
+						}
 						break;
 
 					case 'x':
 					case 'X': // ctrl+x, cutting
-						I_ClipboardCopy(setupm_ip, l);
-						S_StartSound(NULL,sfx_menu1); // Tails
-						setupm_ip[0] = 0;
+						if (l != 0) // Don't replace the clipboard without any text
+						{
+							I_ClipboardCopy(setupm_ip, l);
+							S_StartSound(NULL,sfx_menu1); // Tails
+							setupm_ip[0] = 0;
+						}
 						break;
 
 					default: // otherwise do nothing
@@ -11874,9 +11915,12 @@ static void M_HandleConnectIP(INT32 choice)
 							break;
 						}
 					case KEY_DEL: // shift+delete, cutting
-						I_ClipboardCopy(setupm_ip, l);
-						S_StartSound(NULL,sfx_menu1); // Tails
-						setupm_ip[0] = 0;
+						if (l != 0) // Don't replace the clipboard without any text
+						{
+							I_ClipboardCopy(setupm_ip, l);
+							S_StartSound(NULL,sfx_menu1); // Tails
+							setupm_ip[0] = 0;
+						}
 						break;
 					default: // otherwise do nothing.
 						break;
@@ -13071,7 +13115,10 @@ static void M_SetupScreenshotMenu(void)
 	{
 		item->status = IT_GRAYEDOUT;
 		if ((currentMenu == &OP_ScreenshotOptionsDef) && (itemOn == op_screenshot_colorprofile)) // Can't select that
+		{
 			itemOn = op_screenshot_storagelocation;
+			M_UpdateItemOn();
+		}
 	}
 	else
 #endif
