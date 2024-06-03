@@ -1113,6 +1113,8 @@ static void P_InitializeLinedef(line_t *ld)
 	ld->callcount = 0;
 	ld->secportal = UINT32_MAX;
 
+	ld->midtexslope = NULL;
+
 	// cph 2006/09/30 - fix sidedef errors right away.
 	// cph 2002/07/20 - these errors are fatal if not fixed, so apply them
 	for (j = 0; j < 2; j++)
