@@ -12143,6 +12143,10 @@ void P_PlayerThink(player_t *player)
 				case CR_DUSTDEVIL:
 					player->drawangle += ANG20;
 					break;
+				case CR_FAN:
+					if (player->pflags & PF_ANALOGMODE) // Don't impact drawangle in any special way when on a fan
+						player->drawangle = player->mo->angle;
+					break;
 				/* -- in case we wanted to have the camera freely movable during zoom tubes
 				case CR_ZOOMTUBE:*/
 				case CR_ROPEHANG:
