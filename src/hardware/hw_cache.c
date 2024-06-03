@@ -450,15 +450,10 @@ static void HWR_GenerateTexture(INT32 texnum, GLMapTexture_t *grtex, GLMipmap_t 
 
 	texture = textures[texnum];
 
-	mipmap->flags = TF_WRAPXY;
-	mipmap->width = (UINT16)texture->width;
-	mipmap->height = (UINT16)texture->height;
-	mipmap->format = textureformat;
-
 	blockwidth = texture->width;
 	blockheight = texture->height;
-	blocksize = (blockwidth * blockheight);
-	block = MakeBlock(&grtex->mipmap);
+	blocksize = blockwidth * blockheight;
+	block = MakeBlock(mipmap);
 
 	// Composite the columns together.
 	for (i = 0, patch = texture->patches; i < texture->patchcount; i++, patch++)
@@ -488,7 +483,7 @@ static void HWR_GenerateTexture(INT32 texnum, GLMapTexture_t *grtex, GLMipmap_t 
 				realpatch = W_CachePatchNumPwad(wadnum, lumpnum, PU_PATCH);
 		}
 
-		HWR_DrawTexturePatchInCache(&grtex->mipmap, blockwidth, blockheight, texture, patch, realpatch);
+		HWR_DrawTexturePatchInCache(mipmap, blockwidth, blockheight, texture, patch, realpatch);
 
 		if (free_patch)
 			Patch_Free(realpatch);
@@ -741,21 +736,6 @@ void HWR_LoadMapTextures(size_t pnumtextures)
 // --------------------------------------------------------------------------
 // Make sure texture is downloaded and set it as the source
 // --------------------------------------------------------------------------
-static void GetMapTexture(INT32 tex, GLMapTexture_t *grtex, GLMipmap_t *mipmap)
-{
-	// Generate texture if missing from the cache
-	if (!mipmap->data && !mipmap->downloaded)
-		HWR_GenerateTexture(tex, grtex, mipmap);
-
-	// If hardware does not have the texture, then call pfnSetTexture to upload it
-	if (!mipmap->downloaded)
-		HWD.pfnSetTexture(mipmap);
-	HWR_SetCurrentTexture(mipmap);
-
-	// The system-memory data can be purged now.
-	Z_ChangeTag(mipmap->data, PU_HWRCACHE_UNLOCKED);
-}
-
 GLMapTexture_t *HWR_GetTexture(INT32 tex, boolean chromakeyed)
 {
 	if (tex < 0 || tex >= (signed)gl_numtextures)
@@ -772,34 +752,37 @@ GLMapTexture_t *HWR_GetTexture(INT32 tex, boolean chromakeyed)
 	GLMipmap_t *grMipmap = &grtex->mipmap;
 	GLMipmap_t *originalMipmap = grMipmap;
 
-	if (!originalMipmap->data && !originalMipmap->downloaded)
-		HWR_GenerateTexture(tex, grtex, originalMipmap);
+	if (!originalMipmap->downloaded)
+	{
+		originalMipmap->flags = TF_WRAPXY;
+		originalMipmap->width = (UINT16)textures[tex]->width;
+		originalMipmap->height = (UINT16)textures[tex]->height;
+		originalMipmap->format = textureformat;
+	}
 
 	// If chroma-keyed, create or use a different mipmap for the variant
-	if (chromakeyed && !textures[tex]->transparency && originalMipmap->data)
+	if (chromakeyed && !textures[tex]->transparency)
 	{
 		// Allocate it if it wasn't already
 		if (!originalMipmap->nextcolormap)
 		{
 			GLMipmap_t *newMipmap = calloc(1, sizeof (*grMipmap));
 			if (newMipmap == NULL)
-				I_Error("%s: Out of memory", "HWR_GetLevelFlat");
+				I_Error("%s: Out of memory", "HWR_GetTexture");
 
-			newMipmap->flags = TF_WRAPXY | TF_CHROMAKEYED;
-			newMipmap->width = (UINT16)textures[tex]->width;
-			newMipmap->height = (UINT16)textures[tex]->height;
-			newMipmap->format = textureformat;
+			newMipmap->flags = originalMipmap->flags | TF_CHROMAKEYED;
+			newMipmap->width = originalMipmap->width;
+			newMipmap->height = originalMipmap->height;
+			newMipmap->format = originalMipmap->format;
 			originalMipmap->nextcolormap = newMipmap;
 		}
 
 		// Upload and bind the variant texture instead of the original one
 		grMipmap = originalMipmap->nextcolormap;
-
-		// Use the original texture's pixel data
-		// It can just be a pointer to it, since the r_opengl backend deals with the pixels
-		// that are supposed to be transparent.
-		grMipmap->data = originalMipmap->data;
 	}
+
+	if (!grMipmap->data)
+		HWR_GenerateTexture(tex, grtex, grMipmap);
 
 	if (!grMipmap->downloaded)
 		HWD.pfnSetTexture(grMipmap);

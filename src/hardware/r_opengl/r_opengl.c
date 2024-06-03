@@ -1556,41 +1556,8 @@ EXPORT void HWRAPI(UpdateTexture) (GLMipmap_t *pTexInfo)
 	}
 	else if (pTexInfo->format == GL_TEXFMT_RGBA)
 	{
-		if (pTexInfo->flags & TF_CHROMAKEYED)
-		{
-			RGBA_t *color = (RGBA_t *)pTexInfo->data;
-
-			AllocTextureBuffer(pTexInfo);
-			ptex = tex = textureBuffer;
-
-			for (j = 0; j < h; j++)
-			{
-				for (i = 0; i < w; i++)
-				{
-					if (color->rgba == myPaletteData[HWR_PATCHES_CHROMAKEY_COLORINDEX].rgba)
-					{
-						tex[w*j+i].s.red   = 0;
-						tex[w*j+i].s.green = 0;
-						tex[w*j+i].s.blue  = 0;
-						tex[w*j+i].s.alpha = 0;
-						pTexInfo->flags |= TF_TRANSPARENT; // there is a hole in it
-					}
-					else
-					{
-						tex[w*j+i].s.red   = color->s.red;
-						tex[w*j+i].s.green = color->s.green;
-						tex[w*j+i].s.blue  = color->s.blue;
-						tex[w*j+i].s.alpha = color->s.alpha;
-					}
-					color++;
-				}
-			}
-		}
-		else
-		{
-			// Directly upload the texture data without any kind of conversion.
-			ptex = pImgData;
-		}
+		// Directly upload the texture data without any kind of conversion.
+		ptex = pImgData;
 	}
 	else if (pTexInfo->format == GL_TEXFMT_ALPHA_INTENSITY_88)
 	{
