@@ -377,6 +377,7 @@ static int lib_getSkinSpriteCompat(lua_State *L)
 	return 1;
 }
 
+// TODO: 2.3: Delete
 // #skin.sprites -> NUMPLAYERSPRITES*2
 static int lib_numSkinsSpritesCompat(lua_State *L)
 {
@@ -413,7 +414,7 @@ int LUA_SkinLib(lua_State *L)
 	LUA_RegisterUserdataMetatable(L, META_SOUNDSID, soundsid_get, NULL, soundsid_num);
 	LUA_RegisterUserdataMetatable(L, META_SKINSPRITES, lib_getSkinSprite, NULL, lib_numSkinsSprites);
 	LUA_RegisterUserdataMetatable(L, META_SKINSPRITESLIST, sprite_get, NULL, NULL);
-	LUA_RegisterUserdataMetatable(L, META_SKINSPRITESCOMPAT, lib_getSkinSpriteCompat, NULL, lib_numSkinsSpritesCompat);
+	LUA_RegisterUserdataMetatable(L, META_SKINSPRITESCOMPAT, lib_getSkinSpriteCompat, NULL, lib_numSkinsSpritesCompat); // TODO: 2.3: Delete
 
 	skin_fields_ref = Lua_CreateFieldTable(L, skin_opt);
 
