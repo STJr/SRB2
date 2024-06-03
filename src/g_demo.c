@@ -551,6 +551,9 @@ void G_ConsGhostTic(void)
 
 	testmo = players[0].mo;
 
+	if (P_MobjWasRemoved(testmo))
+		return; // No valid mobj exists, probably because of unexpected quit
+
 	// Grab ghost data.
 	ziptic = READUINT8(demo_p);
 	if (ziptic & GZT_XYZ)
