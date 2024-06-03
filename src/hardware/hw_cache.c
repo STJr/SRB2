@@ -675,25 +675,24 @@ void HWR_InitMapTextures(void)
 	gl_maptexturesloaded = false;
 }
 
-static void DeleteTextureMipmap(GLMipmap_t *grMipmap)
+static void DeleteTextureMipmap(GLMipmap_t *grMipmap, boolean delete_mipmap)
 {
 	HWD.pfnDeleteTexture(grMipmap);
 
-	// Chroma-keyed textures do not own their texture data, so do not free it
-	if (!(grMipmap->flags & TF_CHROMAKEYED))
+	if (delete_mipmap)
 		Z_Free(grMipmap->data);
 }
 
-static void FreeMapTexture(GLMapTexture_t *tex)
+static void FreeMapTexture(GLMapTexture_t *tex, boolean delete_chromakeys)
 {
 	if (tex->mipmap.nextcolormap)
 	{
-		DeleteTextureMipmap(tex->mipmap.nextcolormap);
+		DeleteTextureMipmap(tex->mipmap.nextcolormap, delete_chromakeys);
 		free(tex->mipmap.nextcolormap);
 		tex->mipmap.nextcolormap = NULL;
 	}
 
-	DeleteTextureMipmap(&tex->mipmap);
+	DeleteTextureMipmap(&tex->mipmap, true);
 }
 
 void HWR_FreeMapTextures(void)
@@ -702,8 +701,8 @@ void HWR_FreeMapTextures(void)
 
 	for (i = 0; i < gl_numtextures; i++)
 	{
-		FreeMapTexture(&gl_textures[i]);
-		FreeMapTexture(&gl_flats[i]);
+		FreeMapTexture(&gl_textures[i], true);
+		FreeMapTexture(&gl_flats[i], false);
 	}
 
 	// now the heap don't have any 'user' pointing to our
@@ -777,7 +776,7 @@ GLMapTexture_t *HWR_GetTexture(INT32 tex, boolean chromakeyed)
 			originalMipmap->nextcolormap = newMipmap;
 		}
 
-		// Upload and bind the variant texture instead of the original one
+		// Generate, upload and bind the variant texture instead of the original one
 		grMipmap = originalMipmap->nextcolormap;
 	}
 
