@@ -691,6 +691,7 @@ void D_RegisterClientCommands(void)
 	COM_AddCommand("timedemo", Command_Timedemo_f, 0);
 	COM_AddCommand("stopdemo", Command_Stopdemo_f, COM_LUA);
 	COM_AddCommand("playintro", Command_Playintro_f, COM_LUA);
+	CV_RegisterVar(&cv_resyncdemo);
 
 	COM_AddCommand("resetcamera", Command_ResetCamera_f, COM_LUA);
 

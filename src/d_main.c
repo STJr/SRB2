@@ -758,9 +758,9 @@ void D_SRB2Loop(void)
 	/* Smells like a hack... Don't fade Sonic's ass into the title screen. */
 	if (gamestate != GS_TITLESCREEN)
 	{
-		gstartuplumpnum = W_CheckNumForName("STARTUP");
+		gstartuplumpnum = W_CheckNumForPatchName("STARTUP");
 		if (gstartuplumpnum == LUMPERROR)
-			gstartuplumpnum = W_GetNumForName("MISSING");
+			gstartuplumpnum = W_GetNumForPatchName("MISSING");
 		V_DrawScaledPatch(0, 0, 0, W_CachePatchNum(gstartuplumpnum, PU_PATCH));
 	}
 
@@ -1842,17 +1842,21 @@ static boolean check_top_dir(const char **path, const char *top)
 	return true;
 }
 
-static int cmp_strlen_desc(const void *a, const void *b)
+static int cmp_strlen_desc(const void *A, const void *B)
 {
-	return ((int)strlen(*(const char*const*)b) - (int)strlen(*(const char*const*)a));
+	const char *pA = A;
+	const char *pB = B;
+	size_t As = strlen(pA);
+	size_t Bs = strlen(pB);
+	return ((int)Bs - (int)As);
 }
 
 boolean D_IsPathAllowed(const char *path)
 {
-	const char *paths[] = {
+	char *paths[] = {
 		srb2home,
 		srb2path,
-		cv_addons_folder.string
+		cv_addons_folder.zstring
 	};
 
 	const size_t n_paths = sizeof paths / sizeof *paths;

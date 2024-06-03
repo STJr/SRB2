@@ -1093,19 +1093,19 @@ static modelspr2frames_t *HWR_GetModelSprite2Frames(md2_t *md2, UINT16 spr2)
 			return &md2->model->superspr2frames[spr2];
 	}
 
-	if (md2->model->spr2frames)
+	if (md2->model->spr2frames[spr2].numframes)
 		return &md2->model->spr2frames[spr2];
 
 	return NULL;
 }
 
-static modelspr2frames_t *HWR_GetModelSprite2(md2_t *md2, skin_t *skin, UINT16 spr2, player_t *player)
+static UINT16 HWR_GetModelSprite2Num(md2_t *md2, skin_t *skin, UINT16 spr2, player_t *player)
 {
 	UINT16 super = 0;
 	UINT8 i = 0;
 
 	if (!md2 || !md2->model || !skin)
-		return HWR_GetModelSprite2Frames(md2, 0);
+		return 0;
 
 	while (!HWR_GetModelSprite2Frames(md2, spr2)
 		&& spr2 != SPR2_STND
@@ -1145,7 +1145,7 @@ static modelspr2frames_t *HWR_GetModelSprite2(md2_t *md2, skin_t *skin, UINT16 s
 	if (i >= 32) // probably an infinite loop...
 		spr2 = 0;
 
-	return HWR_GetModelSprite2Frames(md2, spr2);
+	return spr2;
 }
 
 // Adjust texture coords of model to fit into a patch's max_s and max_t
@@ -1269,6 +1269,7 @@ boolean HWR_DrawModel(gl_vissprite_t *spr)
 		const UINT8 flip = (UINT8)(!(spr->mobj->eflags & MFE_VERTICALFLIP) != !R_ThingVerticallyFlipped(spr->mobj));
 		const UINT8 hflip = (UINT8)(!(spr->mobj->mirrored) != !R_ThingHorizontallyFlipped(spr->mobj));
 		spritedef_t *sprdef;
+		UINT16 spr2 = 0;
 		spriteframe_t *sprframe;
 		INT32 mod;
 		interpmobjstate_t interp;
@@ -1438,13 +1439,17 @@ boolean HWR_DrawModel(gl_vissprite_t *spr)
 
 		frame = (spr->mobj->frame & FF_FRAMEMASK);
 		if (spr->mobj->skin && spr->mobj->sprite == SPR_PLAY)
-			spr2frames = HWR_GetModelSprite2(md2, spr->mobj->skin, spr->mobj->sprite2, spr->mobj->player);
+		{
+			spr2 = HWR_GetModelSprite2Num(md2, spr->mobj->skin, spr->mobj->sprite2, spr->mobj->player);
+			spr2frames = HWR_GetModelSprite2Frames(md2, spr2);
+		}
 		if (spr2frames)
 		{
+			spritedef_t *defaultdef = P_GetSkinSpritedef(spr->mobj->skin, spr2);
 			mod = spr2frames->numframes;
 #ifndef DONTHIDEDIFFANIMLENGTH // by default, different anim length is masked by the mod
-			if (mod > (INT32)sprdef->numframes)
-				mod = sprdef->numframes;
+			if (mod > (INT32)defaultdef->numframes)
+				mod = defaultdef->numframes;
 #endif
 			if (!mod)
 				mod = 1;

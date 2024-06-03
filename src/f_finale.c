@@ -2336,7 +2336,7 @@ void F_SkyScroll(const char *patchname)
 }
 
 #define LOADTTGFX(arr, name, maxf) \
-lumpnum = W_CheckNumForName(name); \
+lumpnum = W_CheckNumForPatchName(name); \
 if (lumpnum != LUMPERROR) \
 { \
 	arr[0] = W_CachePatchName(name, PU_PATCH_LOWPRIORITY); \
@@ -2350,7 +2350,7 @@ else if (strlen(name) <= 6) \
 	{ \
 		sprintf(&lumpname[cnt], "%.2hu", (UINT16)(i+1)); \
 		lumpname[8] = 0; \
-		lumpnum = W_CheckNumForName(lumpname); \
+		lumpnum = W_CheckNumForPatchName(lumpname); \
 		if (lumpnum != LUMPERROR) \
 			arr[i] = W_CachePatchName(lumpname, PU_PATCH_LOWPRIORITY); \
 		else \
@@ -4116,7 +4116,7 @@ static void F_GetPageTextGeometry(UINT8 *pagelines, boolean *rightside, INT32 *b
 	// reuse:
 	// cutnum -> promptnum
 	// scenenum -> pagenum
-	lumpnum_t iconlump = W_CheckNumForName(textprompts[cutnum]->page[scenenum].iconname);
+	lumpnum_t iconlump = W_CheckNumForPatchName(textprompts[cutnum]->page[scenenum].iconname);
 
 	*pagelines = textprompts[cutnum]->page[scenenum].lines ? textprompts[cutnum]->page[scenenum].lines : 4;
 	*rightside = (iconlump != LUMPERROR && textprompts[cutnum]->page[scenenum].rightside);
@@ -4508,7 +4508,7 @@ void F_TextPromptDrawer(void)
 	if (!promptactive)
 		return;
 
-	iconlump = W_CheckNumForName(textprompts[cutnum]->page[scenenum].iconname);
+	iconlump = W_CheckNumForPatchName(textprompts[cutnum]->page[scenenum].iconname);
 	F_GetPageTextGeometry(&pagelines, &rightside, &boxh, &texth, &texty, &namey, &chevrony, &textx, &textr);
 
 	// Draw gfx first

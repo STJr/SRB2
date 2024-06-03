@@ -442,26 +442,75 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 }
 
 // Loop through R_DrawMaskedColumn calls
+static fixed_t repeatscroll = 0;
+
 static void R_DrawRepeatMaskedColumn(column_t *col, unsigned lengthcol)
 {
-	while (sprtopscreen < sprbotscreen) {
-		R_DrawMaskedColumn(col, lengthcol);
-		if ((INT64)sprtopscreen + (INT64)dc_texheight*spryscale > (INT64)INT32_MAX) // prevent overflow
-			sprtopscreen = INT32_MAX;
-		else
-			sprtopscreen += dc_texheight*spryscale;
+	fixed_t topscreen = sprtopscreen;
+	fixed_t bottomscreen = sprbotscreen;
+
+	fixed_t texheight = dc_texheight*spryscale;
+
+	fixed_t scroll = -repeatscroll;
+	if (scroll < 0)
+	{
+		scroll = -FixedMul((abs(scroll) % (dc_texheight*FRACUNIT)), spryscale);
+		bottomscreen += texheight; // Draw an extra time
 	}
+	else if (scroll)
+	{
+		scroll = FixedMul(scroll % (dc_texheight*FRACUNIT), spryscale);
+		topscreen -= texheight; // Draw an extra time
+	}
+
+	while (topscreen < bottomscreen)
+	{
+		sprtopscreen = topscreen + scroll;
+
+		R_DrawMaskedColumn(col, lengthcol);
+
+		if ((INT64)sprtopscreen + (INT64)dc_texheight*spryscale > (INT64)INT32_MAX) // prevent overflow
+			break;
+
+		topscreen += texheight;
+	}
+
+	sprtopscreen = sprbotscreen;
 }
 
 static void R_DrawRepeatFlippedMaskedColumn(column_t *col, unsigned lengthcol)
 {
-	while (sprtopscreen < sprbotscreen) {
-		R_DrawFlippedMaskedColumn(col, lengthcol);
-		if ((INT64)sprtopscreen + (INT64)dc_texheight*spryscale > (INT64)INT32_MAX) // prevent overflow
-			sprtopscreen = INT32_MAX;
-		else
-			sprtopscreen += dc_texheight*spryscale;
+	fixed_t topscreen = sprtopscreen;
+	fixed_t bottomscreen = sprbotscreen;
+
+	fixed_t texheight = dc_texheight*spryscale;
+
+	fixed_t scroll = -repeatscroll;
+	if (scroll < 0)
+	{
+		scroll = -FixedMul((abs(scroll) % (dc_texheight*FRACUNIT)), spryscale);
+		bottomscreen += texheight; // Draw an extra time
 	}
+	else if (scroll)
+	{
+		scroll = FixedMul(scroll % (dc_texheight*FRACUNIT), spryscale);
+		topscreen -= texheight; // Draw an extra time
+	}
+
+	while (topscreen < bottomscreen)
+	{
+		sprtopscreen = topscreen + scroll;
+		sprbotscreen = bottomscreen + scroll;
+
+		R_DrawFlippedMaskedColumn(col, lengthcol);
+
+		if ((INT64)sprtopscreen + (INT64)dc_texheight*spryscale > (INT64)INT32_MAX) // prevent overflow
+			break;
+
+		topscreen += texheight;
+	}
+
+	sprtopscreen = sprbotscreen;
 }
 
 // Returns true if a fake floor is translucent.
@@ -497,7 +546,6 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 	sector_t        tempsec;
 	INT32             templight;
 	INT32             i, p;
-	fixed_t         offsetvalue;
 	lightlist_t     *light;
 	r_lightlist_t   *rlight;
 	INT32           range;
@@ -515,6 +563,8 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 	fixed_t wall_scalex, wall_scaley;
 	UINT8 vertflip;
 	unsigned lengthcol;
+	boolean fog = false;
+	boolean fuzzy = false;
 
 	void (*colfunc_2s) (column_t *, unsigned);
 
@@ -526,13 +576,11 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 	curline = ds->curline;
 	backsector = pfloor->target;
 	frontsector = curline->frontsector == pfloor->target ? curline->backsector : curline->frontsector;
-	sidedef = R_GetFFloorSide(curline, pfloor);
-
-	colfunc = colfuncs[BASEDRAWFUNC];
+	sidedef = R_GetFFloorSide(curline->linedef, pfloor, pfloor->target);
 
 	if (pfloor->master->flags & ML_TFERLINE)
 	{
-		line_t *newline = R_GetFFloorLine(curline, pfloor);
+		line_t *newline = R_GetFFloorLine(curline->linedef, pfloor, pfloor->target);
 		do_texture_skew = newline->flags & ML_SKEWTD;
 		dont_peg_bottom = newline->flags & ML_DONTPEGBOTTOM;
 	}
@@ -547,7 +595,7 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 
 	if (pfloor->fofflags & FOF_TRANSLUCENT)
 	{
-		boolean fuzzy = true;
+		fuzzy = true;
 
 		// Hacked up support for alpha value in software mode Tails 09-24-2002
 		// ...unhacked by toaster 04-01-2021, re-hacked a little by sphere 19-11-2021
@@ -560,17 +608,14 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 			else if (!(dc_transmap = R_GetTranslucencyTable(trans)) || trans == 0)
 				fuzzy = false; // Opaque
 		}
-
-		if (fuzzy)
-			colfunc = colfuncs[COLDRAWFUNC_FUZZY];
 	}
 	else if (pfloor->fofflags & FOF_FOG)
+	{
 		colfunc = colfuncs[COLDRAWFUNC_FOG];
+		fog = true;
+	}
 
 	range = max(ds->x2-ds->x1, 1);
-	//SoM: Moved these up here so they are available for my lightlist calculations
-	rw_scalestep = ds->scalestep;
-	spryscale = ds->scale1 + (x1 - ds->x1)*rw_scalestep;
 
 	dc_numlights = 0;
 	if (frontsector->numlights)
@@ -673,9 +718,9 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 		// Get correct light level!
 		if ((frontsector->extra_colormap && (frontsector->extra_colormap->flags & CMF_FOG)))
 			lightnum = (frontsector->lightlevel >> LIGHTSEGSHIFT);
-		else if (pfloor->fofflags & FOF_FOG)
+		else if (fog)
 			lightnum = (pfloor->master->frontsector->lightlevel >> LIGHTSEGSHIFT);
-		else if (colfunc == colfuncs[COLDRAWFUNC_FUZZY])
+		else if (fuzzy)
 			lightnum = LIGHTLEVELS-1;
 		else
 			lightnum = R_FakeFlat(frontsector, &tempsec, &templight, &templight, false)
@@ -702,6 +747,14 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 		wall_scaley = -wall_scaley;
 		vertflip = !vertflip;
 	}
+
+	//SoM: Moved these up here so they are available for my lightlist calculations
+	// Lactozilla: Moved them back down
+	// This uses floating point math now, because the fixed-point imprecisions
+	// become more severe the bigger the texture is scaled.
+	double dwall_scaley = FixedToDouble(wall_scaley);
+	double scalestep = FixedToDouble(ds->scalestep) / dwall_scaley;
+	double yscale = (FixedToDouble(ds->scale1) + (x1 - ds->x1)*scalestep) / dwall_scaley;
 
 	thicksidecol = ffloortexturecolumn;
 
@@ -734,7 +787,7 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 	else
 		dc_texturemid = FixedMul(*pfloor->topheight - viewz, wall_scaley);
 
-	offsetvalue = sidedef->rowoffset + sidedef->offsety_mid;
+	repeatscroll = sidedef->rowoffset + sidedef->offsety_mid;
 
 	if (dont_peg_bottom)
 	{
@@ -744,7 +797,7 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 			dc_texturemid = FixedMul(left_bottom, wall_scaley);
 		}
 		else
-			offsetvalue -= FixedMul(*pfloor->topheight - *pfloor->bottomheight, wall_scaley);
+			repeatscroll -= FixedMul(*pfloor->topheight - *pfloor->bottomheight, wall_scaley);
 	}
 
 	if (skewslope)
@@ -753,7 +806,7 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 		ffloortextureslide = FixedMul(R_GetSlopeTextureSlide(skewslope, lineangle), wall_scaley);
 	}
 
-	dc_texturemid += offsetvalue;
+	dc_texturemid += repeatscroll;
 
 	// Texture must be cached
 	R_CheckTextureCache(texnum);
@@ -824,14 +877,40 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 						rlight->botheight += rlight->botheightstep;
 				}
 			}
-			spryscale += rw_scalestep;
+			yscale += scalestep;
 			continue;
 		}
 
-		dc_iscale = FixedMul(0xffffffffu / (unsigned)spryscale, wall_scaley);
-
 		// Get data for the column
 		col = R_GetColumn(texnum, ((thicksidecol[dc_x] + wall_offsetx) >> FRACBITS));
+
+		spryscale = DoubleToFixed(yscale);
+
+		// Eh. I tried fixing the scaling artifacts but it still wasn't perfect.
+		// So this checks if the column has gaps in it or not, and if it does, uses a version of the column drawers
+		// that prevents the artifacts from being visible.
+		// Note that if rendering fog then none of this matters because there's no texture mapping to be done
+		if (!fog)
+		{
+			dc_iscale = 0xffffffffu / (unsigned)spryscale;
+
+			// Column has a single post and it matches the texture height, use regular column drawers
+			if (col->num_posts == 1 && col->posts[0].topdelta == 0 && col->posts[0].length == (unsigned)dc_texheight)
+			{
+				if (fuzzy)
+					colfunc = colfuncs[COLDRAWFUNC_FUZZY];
+				else
+					colfunc = colfuncs[BASEDRAWFUNC];
+			}
+			else
+			{
+				// Otherwise use column drawers with extra checks
+				if (fuzzy)
+					colfunc = R_DrawTranslucentColumnClamped_8;
+				else
+					colfunc = R_DrawColumnClamped_8;
+			}
+		}
 
 		// SoM: New code does not rely on R_DrawColumnShadowed_8 which
 		// will (hopefully) put less strain on the stack.
@@ -947,7 +1026,7 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 			if (windowtop < windowbottom)
 				colfunc_2s (col, lengthcol);
 
-			spryscale += rw_scalestep;
+			yscale += scalestep;
 			continue;
 		}
 
@@ -966,7 +1045,7 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 
 		// draw the texture
 		colfunc_2s (col, lengthcol);
-		spryscale += rw_scalestep;
+		yscale += scalestep;
 	}
 	colfunc = colfuncs[BASEDRAWFUNC];
 

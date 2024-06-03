@@ -390,22 +390,22 @@ fixed_t R_PointToDist(fixed_t x, fixed_t y)
 	return R_PointToDist2(viewx, viewy, x, y);
 }
 
-line_t *R_GetFFloorLine(const seg_t *seg, const ffloor_t *pfloor)
+line_t *R_GetFFloorLine(const line_t *line, const ffloor_t *pfloor, const sector_t *sector)
 {
 	if (pfloor->master->flags & ML_TFERLINE)
 	{
-		size_t linenum = seg->linedef - pfloor->target->lines[0];
+		size_t linenum = min((size_t)(line - sector->lines[0]), pfloor->master->frontsector->linecount);
 		return pfloor->master->frontsector->lines[0] + linenum;
 	}
 	else
 		return pfloor->master;
 }
 
-side_t *R_GetFFloorSide(const seg_t *seg, const ffloor_t *pfloor)
+side_t *R_GetFFloorSide(const line_t *line, const ffloor_t *pfloor, const sector_t *sector)
 {
 	if (pfloor->master->flags & ML_TFERLINE)
 	{
-		line_t *newline = R_GetFFloorLine(seg, pfloor);
+		line_t *newline = R_GetFFloorLine(line, pfloor, sector);
 		return &sides[newline->sidenum[0]];
 	}
 	else

@@ -126,7 +126,7 @@ Sonic Robo Blast 2 defines the following standardized fields:
       texturebottom = <string>; // Lower texture. Default = "-".
       texturemiddle = <string>; // Middle texture. Default = "-".
 
-      repeatcnt = <string>; // Number of middle texture repetitions. Default = 0
+      repeatcnt = <integer>; // Number of middle texture repetitions. Default = 0.
 
       sector = <integer>; // Sector index. No valid default.
 
