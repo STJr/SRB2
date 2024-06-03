@@ -1386,6 +1386,13 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 	if (PLAYERINPUTDOWN(ssplayer, GC_SPIN) || (usejoystick && axis > 0))
 		cmd->buttons |= BT_SPIN;
 
+	if (gamestate != GS_LEVEL) // not in a level, don't build anything else
+	{
+		cmd->angleturn = ticcmd_oldangleturn[forplayer];
+		cmd->aiming = G_ClipAimingPitch(myaiming);
+		return;
+	}
+
 	// Centerview can be a toggle in simple mode!
 	{
 		static boolean last_centerviewdown[2], centerviewhold[2]; // detect taps for toggle behavior
@@ -1420,7 +1427,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 
 		ticcmd_centerviewdown[forplayer] = true;
 	}
-	else if (ticcmd_centerviewdown[forplayer])
+	else if (ticcmd_centerviewdown[forplayer] || (leveltime < 5))
 	{
 		if (controlstyle == CS_SIMPLE)
 		{
@@ -1435,6 +1442,9 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 	{
 		if (
 			P_MobjWasRemoved(ticcmd_ztargetfocus[forplayer]) ||
+			(leveltime < 5) ||
+			(player->playerstate != PST_LIVE) ||
+			player->exiting ||
 			!ticcmd_ztargetfocus[forplayer]->health ||
 			(ticcmd_ztargetfocus[forplayer]->type == MT_EGGMOBILE3 && !ticcmd_ztargetfocus[forplayer]->movecount) // Sea Egg is moving around underground and shouldn't be tracked
 		)
@@ -1466,7 +1476,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 			P_SetTarget(&newtarget->target, ticcmd_ztargetfocus[forplayer]);
 			newtarget->drawonlyforplayer = player; // Hide it from the other player in splitscreen, and yourself when spectating
 
-			if (player->mo && P_AproxDistance(
+			if (player->mo && R_PointToDist2(0, 0,
 				player->mo->x - ticcmd_ztargetfocus[forplayer]->x,
 				player->mo->y - ticcmd_ztargetfocus[forplayer]->y
 			) > 50*player->mo->scale)
@@ -1714,7 +1724,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 	// At this point, cmd doesn't contain the final angle yet,
 	// So we need to temporarily transform it so Lua scripters
 	// don't need to handle it differently than in other hooks.
-	if (addedtogame && gamestate == GS_LEVEL)
+	if (addedtogame)
 	{
 		INT16 extra = ticcmd_oldangleturn[forplayer] - player->oldrelangleturn;
 		INT16 origangle = cmd->angleturn;
