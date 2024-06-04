@@ -691,6 +691,7 @@ void D_RegisterClientCommands(void)
 	COM_AddCommand("timedemo", Command_Timedemo_f, 0);
 	COM_AddCommand("stopdemo", Command_Stopdemo_f, COM_LUA);
 	COM_AddCommand("playintro", Command_Playintro_f, COM_LUA);
+	CV_RegisterVar(&cv_resyncdemo);
 
 	COM_AddCommand("resetcamera", Command_ResetCamera_f, COM_LUA);
 
@@ -1308,7 +1309,7 @@ static void SendNameAndColor(void)
 
 		SetColorLocal(consoleplayer, cv_playercolor.value);
 
-		if (splitscreen)
+		if (splitscreen || (!pickedchar && stricmp(cv_skin.string, skins[consoleplayer]->name) != 0))
 			SetSkinLocal(consoleplayer, R_SkinAvailable(cv_skin.string));
 		else
 			SetSkinLocal(consoleplayer, pickedchar);
@@ -4608,7 +4609,7 @@ static void Command_ExitLevel_f(void)
 			SendNetXCmd(XD_EXITLEVEL, NULL, 0);
 			return;
 		}
-		
+
 		// Allow exiting without cheating if at least one player beat the level
 		// Consistent with just setting playersforexit to one
 		if (splitscreen || multiplayer)
@@ -4622,7 +4623,7 @@ static void Command_ExitLevel_f(void)
 					continue;
 				if (players[i].lives <= 0)
 					continue;
-		
+
 				if ((players[i].pflags & PF_FINISHED) || players[i].exiting)
 				{
 					SendNetXCmd(XD_EXITLEVEL, NULL, 0);
@@ -4630,7 +4631,7 @@ static void Command_ExitLevel_f(void)
 				}
 			}
 		}
-		
+
 		// Only consider it a cheat if we're not allowed to go to the next map
 		if (M_CampaignWarpIsCheat(gametype, G_GetNextMap(true, true) + 1, serverGamedata))
 			CONS_Alert(CONS_NOTICE, M_GetText("Cheats must be enabled to force exit to a locked level!\n"));
@@ -4769,7 +4770,7 @@ static void Command_Cheats_f(void)
 			G_SetUsedCheats(false);
 		return;
 	}
-	
+
 	if (usedCheats)
 		CONS_Printf(M_GetText("Cheats are enabled, the game cannot be saved.\n"));
 	else
@@ -4941,6 +4942,8 @@ static boolean Skin2_CanChange(const char *valstr)
   */
 static void Skin_OnChange(void)
 {
+	pickedchar = R_SkinAvailable(cv_skin.string);
+
 	if (!Playing())
 		return;
 

@@ -86,8 +86,8 @@ subsector_t *R_PointInSubsectorOrNull(fixed_t x, fixed_t y);
 
 boolean R_DoCulling(line_t *cullheight, line_t *viewcullheight, fixed_t vz, fixed_t bottomh, fixed_t toph);
 
-line_t *R_GetFFloorLine(const seg_t *seg, const ffloor_t *pfloor);
-side_t *R_GetFFloorSide(const seg_t *seg, const ffloor_t *pfloor);
+line_t *R_GetFFloorLine(const line_t *line, const ffloor_t *pfloor, const sector_t *sector);
+side_t *R_GetFFloorSide(const line_t *line, const ffloor_t *pfloor, const sector_t *sector);
 
 // Render stats
 
