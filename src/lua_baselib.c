@@ -653,7 +653,7 @@ static int lib_pSpawnMobj(lua_State *L)
 	NOHUD
 	INLEVEL
 	NOSPAWNNULL
-	LUA_PushUserdata(L, P_SpawnMobj(x, y, z, type), META_MOBJ);
+	LUA_PushUserdata(L, P_SpawnMobj(x, y, z, type, NULL), META_MOBJ);
 	return 1;
 }
 

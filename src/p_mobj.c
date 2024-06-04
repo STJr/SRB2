@@ -10760,7 +10760,8 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type, ...)
 		// when spawning MT_PLAYER, set mobj->player before calling MobjSpawn hook to prevent P_RemoveMobj from succeeding on player mobj.
 		va_start(args, type);
 		mobj->player = va_arg(args, player_t *);
-		mobj->player->mo = mobj;
+		if (mobj->player)
+			mobj->player->mo = mobj;
 		va_end(args);
 	}
 
@@ -14302,7 +14303,8 @@ mobj_t *P_SpawnMobjFromMobj(mobj_t *mobj, fixed_t xofs, fixed_t yofs, fixed_t zo
 	yofs = FixedMul(yofs, mobj->scale);
 	zofs = FixedMul(zofs, mobj->scale);
 
-	newmobj = P_SpawnMobj(mobj->x + xofs, mobj->y + yofs, mobj->z + zofs, type);
+	newmobj = P_SpawnMobj(mobj->x + xofs, mobj->y + yofs, mobj->z + zofs, type, NULL);
+
 	if (!newmobj)
 		return NULL;
 
