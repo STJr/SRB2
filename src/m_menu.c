@@ -263,7 +263,7 @@ static void M_ConfirmTeamScramble(INT32 choice);
 static void M_ConfirmTeamChange(INT32 choice);
 static void M_SecretsMenu(INT32 choice);
 static void M_SetupChoosePlayer(INT32 choice);
-static UINT16 M_SetupChoosePlayerDirect(INT32 choice);
+static INT32 M_SetupChoosePlayerDirect(INT32 choice);
 static void M_QuitSRB2(INT32 choice);
 menu_t SP_MainDef, OP_MainDef;
 menu_t MISC_ScrambleTeamDef, MISC_ChangeTeamDef;
@@ -3674,7 +3674,7 @@ void M_StartControlPanel(void)
 	{
 		// Devmode unlocks Pandora's Box in the pause menu
 		boolean pandora = ((M_SecretUnlocked(SECRET_PANDORA, serverGamedata) || cv_debug || devparm) && !marathonmode);
-		
+
 		if (gamestate != GS_LEVEL || ultimatemode) // intermission, so gray out stuff.
 		{
 			SPauseMenu[spause_pandora].status = (pandora) ? (IT_GRAYEDOUT) : (IT_DISABLED);
@@ -4030,11 +4030,11 @@ static void M_DrawThermo(INT32 x, INT32 y, consvar_t *cv)
 	lumpnum_t leftlump, rightlump, centerlump[2], cursorlump;
 	patch_t *p;
 
-	leftlump = W_GetNumForName("M_THERML");
-	rightlump = W_GetNumForName("M_THERMR");
-	centerlump[0] = W_GetNumForName("M_THERMM");
-	centerlump[1] = W_GetNumForName("M_THERMM");
-	cursorlump = W_GetNumForName("M_THERMO");
+	leftlump = W_GetNumForPatchName("M_THERML");
+	rightlump = W_GetNumForPatchName("M_THERMR");
+	centerlump[0] = W_GetNumForPatchName("M_THERMM");
+	centerlump[1] = W_GetNumForPatchName("M_THERMM");
+	cursorlump = W_GetNumForPatchName("M_THERMO");
 
 	V_DrawScaledPatch(xx, y, 0, p = W_CachePatchNum(leftlump,PU_PATCH));
 	xx += p->width - p->leftoffset;
@@ -4156,7 +4156,7 @@ static void M_DrawStaticBox(fixed_t x, fixed_t y, INT32 flags, fixed_t w, fixed_
 			temp = (gametic % temp) * h*2*FRACUNIT; // Which frame to draw
 
 		V_DrawCroppedPatch(x*FRACUNIT, y*FRACUNIT, (w*FRACUNIT) / 160, (h*FRACUNIT) / 100, flags, patch, NULL, 0, temp, w*2*FRACUNIT, h*2*FRACUNIT);
-		
+
 		W_UnlockCachedPatch(patch);
 		return;
 	}
@@ -7000,7 +7000,10 @@ static void M_LevelSelectWarp(INT32 choice)
 	if (currentMenu == &SP_LevelSelectDef || currentMenu == &SP_PauseLevelSelectDef)
 	{
 		if (cursaveslot > 0) // do we have a save slot to load?
+		{
+			CV_StealthSet(&cv_skin, DEFAULTSKIN); // already handled by loadgame so we don't want this
 			G_LoadGame((UINT32)cursaveslot, startmap); // reload from SP save data: this is needed to keep score/lives/continues from reverting to defaults
+		}
 		else // no save slot, start new game but keep the current skin
 		{
 			M_ClearMenus(true);
@@ -8649,9 +8652,14 @@ static void M_LoadSelect(INT32 choice)
 		M_NewGame();
 	}
 	else if (savegameinfo[saveSlotSelected-1].gamemap & 8192) // Completed
+	{
 		M_LoadGameLevelSelect(0);
+	}
 	else
+	{
+		CV_StealthSet(&cv_skin, DEFAULTSKIN); // already handled by loadgame so we don't want this
 		G_LoadGame((UINT32)saveSlotSelected, 0);
+	}
 
 	cursaveslot = saveSlotSelected;
 }
@@ -9072,7 +9080,7 @@ static void M_CacheCharacterSelectEntry(INT32 i, INT32 skinnum)
 		description[i].namepic = W_CachePatchName(description[i].nametag, PU_PATCH);
 }
 
-static UINT16 M_SetupChoosePlayerDirect(INT32 choice)
+static INT32 M_SetupChoosePlayerDirect(INT32 choice)
 {
 	INT32 skinnum, botskinnum;
 	UINT16 i;
@@ -9161,7 +9169,7 @@ static UINT16 M_SetupChoosePlayerDirect(INT32 choice)
 
 static void M_SetupChoosePlayer(INT32 choice)
 {
-	UINT16 skinset = M_SetupChoosePlayerDirect(choice);
+	INT32 skinset = M_SetupChoosePlayerDirect(choice);
 	if (skinset != MAXCHARACTERSLOTS)
 	{
 		M_ChoosePlayer(skinset);
@@ -9509,6 +9517,8 @@ static void M_ChoosePlayer(INT32 choice)
 
 	//lastmapsaved = 0;
 	gamecomplete = 0;
+
+	CV_StealthSet(&cv_skin, skins[skinnum]->name);
 
 	G_DeferedInitNew(ultmode, G_BuildMapName(startmap), skinnum, false, fromlevelselect);
 	COM_BufAddText("dummyconsvar 1\n"); // G_DeferedInitNew doesn't do this
@@ -10186,7 +10196,7 @@ void M_DrawNightsAttackMenu(void)
 			skinnumber = 0; //Default to Sonic
 		else
 			skinnumber = (cv_chooseskin.value-1);
-			
+
 		spritedef_t *sprdef = &skins[skinnumber]->sprites[SPR2_NFLY]; //Make our patch the selected character's NFLY sprite
 		spritetimer = FixedInt(ntsatkdrawtimer/2) % skins[skinnumber]->sprites[SPR2_NFLY].numframes; //Make the sprite timer cycle though all the frames at 2 tics per frame
 		spriteframe_t *sprframe = &sprdef->spriteframes[spritetimer]; //Our animation frame is equal to the number on the timer
@@ -10199,11 +10209,14 @@ void M_DrawNightsAttackMenu(void)
 			color = skins[skinnumber]->supercolor+4;
 		else //If you don't go super in NiGHTS or at all, use prefcolor
 			color = skins[skinnumber]->prefcolor;
-				
+
 		angle_t fa = (FixedAngle(((FixedInt(ntsatkdrawtimer * 4)) % 360)<<FRACBITS)>>ANGLETOFINESHIFT) & FINEMASK;
+		fixed_t scale = skins[skinnumber]->highresscale;
+		if (skins[skinnumber]->shieldscale)
+			scale = FixedDiv(scale, skins[skinnumber]->shieldscale);
 
 		V_DrawFixedPatch(270<<FRACBITS, (186<<FRACBITS) - 8*FINESINE(fa),
-						 FixedDiv(skins[skinnumber]->highresscale, skins[skinnumber]->shieldscale), 
+						 scale,
 						 (sprframe->flip & 1<<6) ? V_FLIP : 0,
 						 natksprite,
 						 R_GetTranslationColormap(TC_BLINK, color, GTC_CACHE));
@@ -12290,7 +12303,9 @@ static void M_DrawSetupMultiPlayerMenu(void)
 	if (multi_frame >= sprdef->numframes)
 		multi_frame = 0;
 
-	scale = FixedDiv(skins[setupm_fakeskin]->highresscale, skins[setupm_fakeskin]->shieldscale);
+	scale = skins[setupm_fakeskin]->highresscale;
+	if (skins[setupm_fakeskin]->shieldscale)
+		scale = FixedDiv(scale, skins[setupm_fakeskin]->shieldscale);
 
 #define chary (y+64)
 
@@ -12323,7 +12338,7 @@ static void M_DrawSetupMultiPlayerMenu(void)
 	V_DrawFixedPatch(
 		x<<FRACBITS,
 		chary<<FRACBITS,
-		FixedDiv(skins[setupm_fakeskin]->highresscale, skins[setupm_fakeskin]->shieldscale),
+		scale,
 		flags, patch, colormap);
 
 	goto colordraw;

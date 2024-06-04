@@ -1728,12 +1728,12 @@ static void CON_DrawBackpic(void)
 
 	// Get the lumpnum for CONSBACK, STARTUP (Only during game startup) or fallback into MISSING.
 	if (con_startup)
-		piclump = W_CheckNumForName("STARTUP");
+		piclump = W_CheckNumForPatchName("STARTUP");
 	else
-		piclump = W_CheckNumForName("CONSBACK");
+		piclump = W_CheckNumForPatchName("CONSBACK");
 
 	if (piclump == LUMPERROR)
-		piclump = W_GetNumForName("MISSING");
+		piclump = W_GetNumForPatchName("MISSING");
 
 	// Cache the patch.
 	con_backpic = W_CachePatchNum(piclump, PU_PATCH);

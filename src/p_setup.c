@@ -831,13 +831,15 @@ void P_ScanThings(INT16 mapnum, INT16 wadnum, INT16 lumpnum)
 
 static void P_SpawnEmeraldHunt(void)
 {
-	INT32 emer[3], num[MAXHUNTEMERALDS], i, randomkey;
+	INT32 emer[3], num[MAXHUNTEMERALDS], i, amount, randomkey;
 	fixed_t x, y, z;
 
 	for (i = 0; i < numhuntemeralds; i++)
 		num[i] = i;
 
-	for (i = 0; i < 3; i++)
+	amount = min(numhuntemeralds, 3);
+
+	for (i = 0; i < amount; i++)
 	{
 		// generate random index, shuffle afterwards
 		randomkey = P_RandomKey(numhuntemeralds--);
@@ -1112,6 +1114,8 @@ static void P_InitializeLinedef(line_t *ld)
 
 	ld->callcount = 0;
 	ld->secportal = UINT32_MAX;
+
+	ld->midtexslope = NULL;
 
 	// cph 2006/09/30 - fix sidedef errors right away.
 	// cph 2002/07/20 - these errors are fatal if not fixed, so apply them

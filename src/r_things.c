@@ -839,8 +839,10 @@ void R_DrawMaskedColumn(column_t *column, unsigned lengthcol)
 	{
 		post_t *post = &column->posts[i];
 
+		dc_postlength = post->length;
+
 		INT32 topscreen = sprtopscreen + spryscale*post->topdelta;
-		INT32 bottomscreen = topscreen + spryscale*post->length;
+		INT32 bottomscreen = topscreen + spryscale*dc_postlength;
 
 		dc_yl = (topscreen+FRACUNIT-1)>>FRACBITS;
 		dc_yh = (bottomscreen-1)>>FRACBITS;
@@ -909,10 +911,12 @@ void R_DrawFlippedMaskedColumn(column_t *column, unsigned lengthcol)
 		if (!post->length)
 			continue;
 
-		topdelta = lengthcol-post->length-post->topdelta;
+		dc_postlength = post->length;
+
+		topdelta = lengthcol-dc_postlength-post->topdelta;
 		topscreen = sprtopscreen + spryscale*topdelta;
-		bottomscreen = sprbotscreen == INT32_MAX ? topscreen + spryscale*post->length
-		                                      : sprbotscreen + spryscale*post->length;
+		bottomscreen = sprbotscreen == INT32_MAX ? topscreen + spryscale*dc_postlength
+		                                      : sprbotscreen + spryscale*dc_postlength;
 
 		dc_yl = (topscreen+FRACUNIT-1)>>FRACBITS;
 		dc_yh = (bottomscreen-1)>>FRACBITS;
@@ -1770,6 +1774,10 @@ static void R_ProjectSprite(mobj_t *thing)
 	}
 
 	this_scale = interp.scale;
+
+	if (this_scale < 1)
+		return;
+
 	radius = interp.radius; // For drop shadows
 	height = interp.height; // Ditto
 

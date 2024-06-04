@@ -1533,14 +1533,14 @@ static void HWR_ProcessSeg(void)
 				if ((high1 < lowcut && highslope1 < lowcutslope) || (low1 > highcut && lowslope1 > highcutslope))
 					continue;
 
-				side_t *side = R_GetFFloorSide(gl_curline, rover);
+				side_t *side = R_GetFFloorSide(gl_curline->linedef, rover, gl_backsector);
 
 				boolean do_texture_skew;
 				boolean dont_peg_bottom;
 
 				if (rover->master->flags & ML_TFERLINE)
 				{
-					line_t *newline = R_GetFFloorLine(gl_curline, rover);
+					line_t *newline = R_GetFFloorLine(gl_curline->linedef, rover, gl_backsector);
 					do_texture_skew = newline->flags & ML_SKEWTD;
 					dont_peg_bottom = newline->flags & ML_DONTPEGBOTTOM;
 				}
@@ -1689,14 +1689,14 @@ static void HWR_ProcessSeg(void)
 				if ((high1 < lowcut && highslope1 < lowcutslope) || (low1 > highcut && lowslope1 > highcutslope))
 					continue;
 
-				side_t *side = R_GetFFloorSide(gl_curline, rover);
+				side_t *side = R_GetFFloorSide(gl_curline->linedef, rover, gl_backsector);
 
 				boolean do_texture_skew;
 				boolean dont_peg_bottom;
 
 				if (rover->master->flags & ML_TFERLINE)
 				{
-					line_t *newline = R_GetFFloorLine(gl_curline, rover);
+					line_t *newline = R_GetFFloorLine(gl_curline->linedef, rover, gl_backsector);
 					do_texture_skew = newline->flags & ML_SKEWTD;
 					dont_peg_bottom = newline->flags & ML_DONTPEGBOTTOM;
 				}
@@ -5221,7 +5221,9 @@ static void HWR_SetTransformAiming(FTransform *trans, player_t *player, boolean 
 	if (cv_glshearing.value == 1 || (cv_glshearing.value == 2 && R_IsViewpointThirdPerson(player, skybox)))
 	{
 		fixed_t fixedaiming = AIMINGTODY(aimingangle);
-		trans->viewaiming = FIXED_TO_FLOAT(fixedaiming);
+		trans->viewaiming = FIXED_TO_FLOAT(fixedaiming) * ((float)vid.width / vid.height) / ((float)BASEVIDWIDTH / BASEVIDHEIGHT);
+		if (splitscreen)
+			trans->viewaiming *= 2.125; // splitscreen adjusts fov with 0.8, so compensate (but only halfway, since splitscreen means only half the screen is used)
 		trans->shearing = true;
 		gl_aimingangle = 0;
 	}

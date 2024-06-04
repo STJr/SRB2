@@ -1269,19 +1269,19 @@ tic_t lt_exitticker = 0, lt_endtime = 0;
 //
 static void ST_cacheLevelTitle(void)
 {
-#define SETPATCH(default, warning, custom, idx) \
+#define SETPATCH(def, warning, custom, idx) \
 { \
 	lumpnum_t patlumpnum = LUMPERROR; \
 	if (mapheaderinfo[gamemap-1]->custom[0] != '\0') \
 	{ \
-		patlumpnum = W_CheckNumForName(mapheaderinfo[gamemap-1]->custom); \
+		patlumpnum = W_CheckNumForPatchName(mapheaderinfo[gamemap-1]->custom); \
 		if (patlumpnum != LUMPERROR) \
 			lt_patches[idx] = (patch_t *)W_CachePatchNum(patlumpnum, PU_HUDGFX); \
 	} \
 	if (patlumpnum == LUMPERROR) \
 	{ \
 		if (!(mapheaderinfo[gamemap-1]->levelflags & LF_WARNINGTITLE)) \
-			lt_patches[idx] = (patch_t *)W_CachePatchName(default, PU_HUDGFX); \
+			lt_patches[idx] = (patch_t *)W_CachePatchName(def, PU_HUDGFX); \
 		else \
 			lt_patches[idx] = (patch_t *)W_CachePatchName(warning, PU_HUDGFX); \
 	} \
