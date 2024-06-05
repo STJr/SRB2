@@ -33,8 +33,6 @@ target_compile_options(SRB2SDL2 PRIVATE
         -Wall
         -Wno-trigraphs
         -W # Was controlled by RELAXWARNINGS
-        -pedantic
-        -Wpedantic
         -Wfloat-equal
         -Wundef
         -Wpointer-arith
