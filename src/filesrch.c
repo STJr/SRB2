@@ -1191,7 +1191,7 @@ boolean preparefilemenu(boolean samedepth)
 					size_t i;
 
 					if (filenamebuf == NULL)
-						filenamebuf = calloc(sizeof(char) * MAX_WADPATH, numwadfiles);
+						filenamebuf = calloc(numwadfiles, sizeof(char) * MAX_WADPATH);
 
 					for (i = 0; i < numwadfiles; i++)
 					{

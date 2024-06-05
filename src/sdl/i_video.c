@@ -1706,7 +1706,7 @@ static void Impl_VideoSetupBuffer(void)
 	vid.direct = NULL;
 	if (vid.buffer)
 		free(vid.buffer);
-	vid.buffer = calloc(vid.rowbytes*vid.height, NUMSCREENS);
+	vid.buffer = calloc(NUMSCREENS, vid.rowbytes*vid.height);
 	if (!vid.buffer)
 	{
 		I_Error("%s", M_GetText("Not enough memory for video buffer\n"));
