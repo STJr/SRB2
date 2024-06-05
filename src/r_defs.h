@@ -626,6 +626,8 @@ typedef struct line_s
 	INT16 callcount; // no. of calls left before triggering, for the "X calls" linedef specials, defaults to 0
 
 	UINT32 secportal; // transferred sector portal
+
+	struct pslope_s *midtexslope;
 } line_t;
 
 // Don't make available to Lua or I will find where you live

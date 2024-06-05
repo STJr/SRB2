@@ -501,35 +501,51 @@ void P_LineOpening(line_t *linedef, mobj_t *mobj)
 			boolean wrapmidtex = linedef->flags & ML_WRAPMIDTEX || side->flags & SIDEFLAG_WRAP_MIDTEX;
 
 			if (texnum) {
+				fixed_t scaley = abs(side->scaley_mid);
+				fixed_t offsetvalue = FixedDiv(side->rowoffset + side->offsety_mid, scaley);
+				fixed_t midopentop, midopenbottom;
+
+				if (linedef->flags & ML_NOSKEW)
+				{
+					// Use the sector's actual heights if the midtexture is not skewed
+					midopentop = min(front->ceilingheight, back->ceilingheight);
+					midopenbottom = max(front->floorheight, back->floorheight);
+				}
+				else
+				{
+					midopentop = opentop;
+					midopenbottom = openbottom;
+				}
+
 				// Get the midtexture's height
-				texheight = textures[texnum]->height << FRACBITS;
+				texheight = FixedDiv(textureheight[texnum], scaley);
 
 				// Set texbottom and textop to the Z coordinates of the texture's boundaries
 #if 0
 				// don't remove this code unless solid midtextures
 				// on non-solid polyobjects should NEVER happen in the future
 				if (linedef->polyobj && (linedef->polyobj->flags & POF_TESTHEIGHT)) {
-					if (wrapmidtex && !side->repeatcnt) { // "infinite" repeat
-						texbottom = back->floorheight + side->rowoffset + side->offsety_mid;
-						textop = back->ceilingheight + side->rowoffset + side->offsety_mid;
+					if (linedef->flags & ML_WRAPMIDTEX && !side->repeatcnt) { // "infinite" repeat
+						texbottom = back->floorheight + offsetvalue;
+						textop = back->ceilingheight + offsetvalue;
 					} else if (linedef->flags & ML_MIDTEX) {
-						texbottom = back->floorheight + side->rowoffset + side->offsety_mid;
+						texbottom = back->floorheight + offsetvalue;
 						textop = texbottom + texheight*(side->repeatcnt+1);
 					} else {
-						textop = back->ceilingheight + side->rowoffset + side->offsety_mid;
+						textop = back->ceilingheight + offsetvalue;
 						texbottom = textop - texheight*(side->repeatcnt+1);
 					}
 				} else
 #endif
 				{
-					if (wrapmidtex && !side->repeatcnt) { // "infinite" repeat
-						texbottom = openbottom + side->rowoffset + side->offsety_mid;
-						textop = opentop + side->rowoffset + side->offsety_mid;
+					if (linedef->flags & ML_WRAPMIDTEX && !side->repeatcnt) { // "infinite" repeat
+						texbottom = midopenbottom + offsetvalue;
+						textop = midopentop + offsetvalue;
 					} else if (linedef->flags & ML_MIDPEG) {
-						texbottom = openbottom + side->rowoffset + side->offsety_mid;
+						texbottom = midopenbottom + offsetvalue;
 						textop = texbottom + texheight*(side->repeatcnt+1);
 					} else {
-						textop = opentop + side->rowoffset + side->offsety_mid;
+						textop = midopentop + offsetvalue;
 						texbottom = textop - texheight*(side->repeatcnt+1);
 					}
 				}
@@ -540,11 +556,21 @@ void P_LineOpening(line_t *linedef, mobj_t *mobj)
 				delta2 = abs(thingtop - texmid);
 
 				if (delta1 > delta2) { // Below
-					if (opentop > texbottom)
+					if (opentop > texbottom) {
 						opentop = texbottom;
+						if (linedef->flags & ML_NOSKEW)
+							opentopslope = NULL; // Object is not actually on a slope
+						else
+							opentopslope = linedef->midtexslope;
+					}
 				} else { // Above
-					if (openbottom < textop)
+					if (openbottom < textop) {
 						openbottom = textop;
+						if (linedef->flags & ML_NOSKEW)
+							openbottomslope = NULL; // Object is not actually on a slope
+						else
+							openbottomslope = linedef->midtexslope;
+					}
 				}
 			}
 		}

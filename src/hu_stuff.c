@@ -272,7 +272,7 @@ void HU_LoadFontCharacters(fontdef_t *font, const char *prefix)
 		for (i = 0; i < FONTSIZE; i++, j++)
 		{
 			sprintf(buffer, "%.5s%.3d", prefix, j);
-			if (W_CheckNumForName(buffer) == LUMPERROR)
+			if (W_CheckNumForPatchName(buffer) == LUMPERROR)
 				font->chars[i] = NULL;
 			else
 				font->chars[i] = (patch_t *)W_CachePatchName(buffer, PU_HUDGFX);
@@ -2015,13 +2015,13 @@ static void HU_Draw32TeamTabRankings(playersort_t *tab, INT32 whiteplayer)
 		greycheck = greycheckdef;
 		supercheck = supercheckdef;
 
-		if (tab[i].color == skincolor_redteam) //red
+		if (players[tab[i].num].ctfteam == 1) //red
 		{
 			redplayers++;
 			x = 14 + (BASEVIDWIDTH/2);
 			y = (redplayers * 9) + 20;
 		}
-		else if (tab[i].color == skincolor_blueteam) //blue
+		else if (players[tab[i].num].ctfteam == 2) //blue
 		{
 			blueplayers++;
 			x = 14;
@@ -2103,7 +2103,7 @@ void HU_DrawTeamTabRankings(playersort_t *tab, INT32 whiteplayer)
 		if (players[tab[i].num].spectator)
 			continue; //ignore them.
 
-		if (tab[i].color == skincolor_redteam) //red
+		if (players[tab[i].num].ctfteam == 1) //red
 		{
 			if (redplayers++ > 8)
 			{
@@ -2111,7 +2111,7 @@ void HU_DrawTeamTabRankings(playersort_t *tab, INT32 whiteplayer)
 				break; // don't make more loops than we need to.
 			}
 		}
-		else if (tab[i].color == skincolor_blueteam) //blue
+		else if (players[tab[i].num].ctfteam == 2) //blue
 		{
 			if (blueplayers++ > 8)
 			{
@@ -2142,14 +2142,14 @@ void HU_DrawTeamTabRankings(playersort_t *tab, INT32 whiteplayer)
 		if (players[tab[i].num].spectator)
 			continue; //ignore them.
 
-		if (tab[i].color == skincolor_redteam) //red
+		if (players[tab[i].num].ctfteam == 1) //red
 		{
 			if (redplayers++ > 8)
 				continue;
 			x = 32 + (BASEVIDWIDTH/2);
 			y = (redplayers * 16) + 16;
 		}
-		else if (tab[i].color == skincolor_blueteam) //blue
+		else if (players[tab[i].num].ctfteam == 2) //blue
 		{
 			if (blueplayers++ > 8)
 				continue;

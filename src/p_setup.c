@@ -831,13 +831,15 @@ void P_ScanThings(INT16 mapnum, INT16 wadnum, INT16 lumpnum)
 
 static void P_SpawnEmeraldHunt(void)
 {
-	INT32 emer[3], num[MAXHUNTEMERALDS], i, randomkey;
+	INT32 emer[3], num[MAXHUNTEMERALDS], i, amount, randomkey;
 	fixed_t x, y, z;
 
 	for (i = 0; i < numhuntemeralds; i++)
 		num[i] = i;
 
-	for (i = 0; i < 3; i++)
+	amount = min(numhuntemeralds, 3);
+
+	for (i = 0; i < amount; i++)
 	{
 		// generate random index, shuffle afterwards
 		randomkey = P_RandomKey(numhuntemeralds--);
@@ -1112,6 +1114,8 @@ static void P_InitializeLinedef(line_t *ld)
 
 	ld->callcount = 0;
 	ld->secportal = UINT32_MAX;
+
+	ld->midtexslope = NULL;
 
 	// cph 2006/09/30 - fix sidedef errors right away.
 	// cph 2002/07/20 - these errors are fatal if not fixed, so apply them
@@ -1569,11 +1573,41 @@ static void P_LoadThings(UINT8 *data)
 }
 
 // Stores positions for relevant map data spread through a TEXTMAP.
-UINT32 mapthingsPos[UINT16_MAX];
-UINT32 linesPos[UINT16_MAX];
-UINT32 sidesPos[UINT16_MAX];
-UINT32 vertexesPos[UINT16_MAX];
-UINT32 sectorsPos[UINT16_MAX];
+typedef struct textmap_block_s
+{
+	UINT32 *pos;
+	size_t capacity;
+} textmap_block_t;
+
+static textmap_block_t mapthingBlocks;
+static textmap_block_t linedefBlocks;
+static textmap_block_t sidedefBlocks;
+static textmap_block_t vertexBlocks;
+static textmap_block_t sectorBlocks;
+
+static void TextmapStorePos(textmap_block_t *blocks, size_t *count)
+{
+	size_t locCount = (*count) + 1;
+
+	if (blocks->pos == NULL)
+	{
+		// Initial capacity (half of the former one.)
+		blocks->capacity = UINT16_MAX / 2;
+
+		Z_Calloc(sizeof(blocks->pos) * blocks->capacity, PU_LEVEL, &blocks->pos);
+	}
+	else if (locCount >= blocks->capacity)
+	{
+		// If we hit the list's capacity, make space for 1024 more blocks
+		blocks->capacity += 1024;
+
+		Z_Realloc(blocks->pos, sizeof(blocks->pos) * blocks->capacity, PU_LEVEL, &blocks->pos);
+	}
+
+	blocks->pos[locCount - 1] = M_TokenizerGetEndPos();
+
+	(*count) = locCount;
+}
 
 // Determine total amount of map data in TEXTMAP.
 static boolean TextmapCount(size_t size)
@@ -1617,15 +1651,15 @@ static boolean TextmapCount(size_t size)
 			brackets++;
 		// Check for valid fields.
 		else if (fastcmp(tkn, "thing"))
-			mapthingsPos[nummapthings++] = M_TokenizerGetEndPos();
+			TextmapStorePos(&mapthingBlocks, &nummapthings);
 		else if (fastcmp(tkn, "linedef"))
-			linesPos[numlines++] = M_TokenizerGetEndPos();
+			TextmapStorePos(&linedefBlocks, &numlines);
 		else if (fastcmp(tkn, "sidedef"))
-			sidesPos[numsides++] = M_TokenizerGetEndPos();
+			TextmapStorePos(&sidedefBlocks, &numsides);
 		else if (fastcmp(tkn, "vertex"))
-			vertexesPos[numvertexes++] = M_TokenizerGetEndPos();
+			TextmapStorePos(&vertexBlocks, &numvertexes);
 		else if (fastcmp(tkn, "sector"))
-			sectorsPos[numsectors++] = M_TokenizerGetEndPos();
+			TextmapStorePos(&sectorBlocks, &numsectors);
 		else
 			CONS_Alert(CONS_NOTICE, "Unknown field '%s'.\n", tkn);
 	}
@@ -3076,7 +3110,7 @@ static void P_LoadTextmap(void)
 		vt->floorzset = vt->ceilingzset = false;
 		vt->floorz = vt->ceilingz = 0;
 
-		TextmapParse(vertexesPos[i], i, ParseTextmapVertexParameter);
+		TextmapParse(vertexBlocks.pos[i], i, ParseTextmapVertexParameter);
 
 		if (vt->x == INT32_MAX)
 			I_Error("P_LoadTextmap: vertex %s has no x value set!\n", sizeu1(i));
@@ -3133,7 +3167,7 @@ static void P_LoadTextmap(void)
 		textmap_planefloor.defined = 0;
 		textmap_planeceiling.defined = 0;
 
-		TextmapParse(sectorsPos[i], i, ParseTextmapSectorParameter);
+		TextmapParse(sectorBlocks.pos[i], i, ParseTextmapSectorParameter);
 
 		P_InitializeSector(sc);
 		if (textmap_colormap.used)
@@ -3182,7 +3216,7 @@ static void P_LoadTextmap(void)
 		ld->sidenum[0] = NO_SIDEDEF;
 		ld->sidenum[1] = NO_SIDEDEF;
 
-		TextmapParse(linesPos[i], i, ParseTextmapLinedefParameter);
+		TextmapParse(linedefBlocks.pos[i], i, ParseTextmapLinedefParameter);
 
 		if (!ld->v1)
 			I_Error("P_LoadTextmap: linedef %s has no v1 value set!\n", sizeu1(i));
@@ -3212,7 +3246,7 @@ static void P_LoadTextmap(void)
 
 		P_InitSideEdges(sd);
 
-		TextmapParse(sidesPos[i], i, ParseTextmapSidedefParameter);
+		TextmapParse(sidedefBlocks.pos[i], i, ParseTextmapSidedefParameter);
 
 		if (!sd->sector)
 			I_Error("P_LoadTextmap: sidedef %s has no sector value set!\n", sizeu1(i));
@@ -3236,7 +3270,7 @@ static void P_LoadTextmap(void)
 		memset(mt->stringargs, 0x00, NUMMAPTHINGSTRINGARGS*sizeof(*mt->stringargs));
 		mt->mobj = NULL;
 
-		TextmapParse(mapthingsPos[i], i, ParseTextmapThingParameter);
+		TextmapParse(mapthingBlocks.pos[i], i, ParseTextmapThingParameter);
 	}
 }
 
