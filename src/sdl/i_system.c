@@ -2987,7 +2987,7 @@ static void pathonly(char *s)
 */
 static const char *searchWad(const char *searchDir)
 {
-	static char tempsw[256] = "";
+	static char tempsw[MAX_WADPATH] = "";
 	filestatus_t fstemp;
 
 	strcpy(tempsw, WADKEYWORD1);
