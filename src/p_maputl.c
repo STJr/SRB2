@@ -498,7 +498,6 @@ void P_LineOpening(line_t *linedef, mobj_t *mobj)
 			fixed_t textop, texbottom, texheight;
 			fixed_t texmid, delta1, delta2;
 			INT32 texnum = R_GetTextureNum(side->midtexture); // make sure the texture is actually valid
-			boolean wrapmidtex = linedef->flags & ML_WRAPMIDTEX || side->flags & SIDEFLAG_WRAP_MIDTEX;
 
 			if (texnum) {
 				fixed_t scaley = abs(side->scaley_mid);

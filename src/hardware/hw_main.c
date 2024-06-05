@@ -1788,7 +1788,7 @@ static void HWR_RenderExtraTexture(unsigned which, side_t *side, sector_t *sec_f
 
 static void HWR_RenderFFloorExtraTextures(ffloor_t *pfloor, v2d_t vs, v2d_t ve, float xcliplow, float xcliphigh, boolean use_3dfloor_blend, FSurfaceInfo Surf, FBITFIELD blendmode)
 {
-	side_t *pside = R_GetFFloorSide(gl_curline, pfloor);
+	side_t *pside = R_GetFFloorSide(gl_curline->linedef, pfloor, pfloor->target);
 	sector_t *psector = pfloor->master->frontsector;
 
 	if (use_3dfloor_blend)

@@ -2948,7 +2948,7 @@ static fixed_t R_GetLowestSidedefTexture(side_t *side)
 
 static fixed_t R_GetFFloorTopZAt(const drawseg_t *ds, const ffloor_t *pfloor, fixed_t x, fixed_t y)
 {
-	side_t *side = R_GetFFloorSide(ds->curline, pfloor);
+	side_t *side = R_GetFFloorSide(ds->curline->linedef, pfloor, pfloor->target);
 	if (side->flags & SIDEFLAG_HASEDGETEXTURES)
 		return P_GetFFloorTopZAt(pfloor, x, y) + R_GetHighestSidedefTexture(side);
 
@@ -2957,7 +2957,7 @@ static fixed_t R_GetFFloorTopZAt(const drawseg_t *ds, const ffloor_t *pfloor, fi
 
 static fixed_t R_GetFFloorBottomZAt(const drawseg_t *ds, const ffloor_t *pfloor, fixed_t x, fixed_t y)
 {
-	side_t *side = R_GetFFloorSide(ds->curline, pfloor);
+	side_t *side = R_GetFFloorSide(ds->curline->linedef, pfloor, pfloor->target);
 	if (side->flags & SIDEFLAG_HASEDGETEXTURES)
 		return P_GetFFloorBottomZAt(pfloor, x, y) - R_GetLowestSidedefTexture(side);
 
