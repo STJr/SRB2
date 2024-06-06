@@ -7000,7 +7000,10 @@ static void M_LevelSelectWarp(INT32 choice)
 	if (currentMenu == &SP_LevelSelectDef || currentMenu == &SP_PauseLevelSelectDef)
 	{
 		if (cursaveslot > 0) // do we have a save slot to load?
+		{
+			CV_StealthSet(&cv_skin, DEFAULTSKIN); // already handled by loadgame so we don't want this
 			G_LoadGame((UINT32)cursaveslot, startmap); // reload from SP save data: this is needed to keep score/lives/continues from reverting to defaults
+		}
 		else // no save slot, start new game but keep the current skin
 		{
 			M_ClearMenus(true);
@@ -8649,9 +8652,14 @@ static void M_LoadSelect(INT32 choice)
 		M_NewGame();
 	}
 	else if (savegameinfo[saveSlotSelected-1].gamemap & 8192) // Completed
+	{
 		M_LoadGameLevelSelect(0);
+	}
 	else
+	{
+		CV_StealthSet(&cv_skin, DEFAULTSKIN); // already handled by loadgame so we don't want this
 		G_LoadGame((UINT32)saveSlotSelected, 0);
+	}
 
 	cursaveslot = saveSlotSelected;
 }
@@ -9510,6 +9518,8 @@ static void M_ChoosePlayer(INT32 choice)
 	//lastmapsaved = 0;
 	gamecomplete = 0;
 
+	CV_StealthSet(&cv_skin, skins[skinnum]->name);
+
 	G_DeferedInitNew(ultmode, G_BuildMapName(startmap), skinnum, false, fromlevelselect);
 	COM_BufAddText("dummyconsvar 1\n"); // G_DeferedInitNew doesn't do this
 
@@ -10201,9 +10211,12 @@ void M_DrawNightsAttackMenu(void)
 			color = skins[skinnumber]->prefcolor;
 
 		angle_t fa = (FixedAngle(((FixedInt(ntsatkdrawtimer * 4)) % 360)<<FRACBITS)>>ANGLETOFINESHIFT) & FINEMASK;
+		fixed_t scale = skins[skinnumber]->highresscale;
+		if (skins[skinnumber]->shieldscale)
+			scale = FixedDiv(scale, skins[skinnumber]->shieldscale);
 
 		V_DrawFixedPatch(270<<FRACBITS, (186<<FRACBITS) - 8*FINESINE(fa),
-						 FixedDiv(skins[skinnumber]->highresscale, skins[skinnumber]->shieldscale),
+						 scale,
 						 (sprframe->flip & 1<<6) ? V_FLIP : 0,
 						 natksprite,
 						 R_GetTranslationColormap(TC_BLINK, color, GTC_CACHE));
@@ -12290,7 +12303,9 @@ static void M_DrawSetupMultiPlayerMenu(void)
 	if (multi_frame >= sprdef->numframes)
 		multi_frame = 0;
 
-	scale = FixedDiv(skins[setupm_fakeskin]->highresscale, skins[setupm_fakeskin]->shieldscale);
+	scale = skins[setupm_fakeskin]->highresscale;
+	if (skins[setupm_fakeskin]->shieldscale)
+		scale = FixedDiv(scale, skins[setupm_fakeskin]->shieldscale);
 
 #define chary (y+64)
 
@@ -12323,7 +12338,7 @@ static void M_DrawSetupMultiPlayerMenu(void)
 	V_DrawFixedPatch(
 		x<<FRACBITS,
 		chary<<FRACBITS,
-		FixedDiv(skins[setupm_fakeskin]->highresscale, skins[setupm_fakeskin]->shieldscale),
+		scale,
 		flags, patch, colormap);
 
 	goto colordraw;

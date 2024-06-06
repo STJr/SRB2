@@ -1433,9 +1433,15 @@ static const char *locateWad(void)
 
 #ifndef NOHOME
 	// find in $HOME
-	I_OutputMsg(",HOME");
+	I_OutputMsg(",HOME/" DEFAULTDIR);
 	if ((envstr = I_GetEnv("HOME")) != NULL)
+	{
+		char *tmp = malloc(strlen(envstr) + sizeof(DEFAULTDIR));
+		strcpy(tmp, envstr);
+		strcat(tmp, DEFAULTDIR);
 		SEARCHWAD(envstr);
+		free(tmp);
+	}
 #endif
 
 	// search paths

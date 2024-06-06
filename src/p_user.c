@@ -915,7 +915,7 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 		player->textvar = NTV_BONUSTIMEEND; // Score and grades
 		player->finishedspheres = (INT16)(player->spheres);
 		player->finishedrings = (INT16)(player->rings);
-		
+
 		// Add score to temp leaderboards
 		player->lastmaretime = leveltime - player->marebegunat;
 		G_AddTempNightsRecords(player, player->marescore, player->lastmaretime, (UINT8)(oldmare + 1));
@@ -2379,7 +2379,7 @@ boolean P_PlayerHitFloor(player_t *player, boolean dorollstuff)
 		if (dorollstuff)
 		{
 			if ((player->charability2 == CA2_SPINDASH) && !((player->pflags & (PF_SPINNING|PF_THOKKED)) == PF_THOKKED) && !(player->charability == CA_THOK && player->secondjump)
-			&& (player->cmd.buttons & BT_SPIN) && (FixedHypot(player->mo->momx, player->mo->momy) > (5*player->mo->scale)))
+			&& (player->cmd.buttons & BT_SPIN) && (FixedHypot(player->mo->momx, player->mo->momy) >= (5*player->mo->scale)))
 				player->pflags = (player->pflags|PF_SPINNING) & ~PF_THOKKED;
 			else if (!(player->pflags & PF_STARTDASH))
 				player->pflags &= ~PF_SPINNING;
@@ -4735,7 +4735,7 @@ static void P_DoSpinAbility(player_t *player, ticcmd_t *cmd)
 				 // Revving
 				else if ((cmd->buttons & BT_SPIN) && (player->pflags & PF_STARTDASH))
 				{
-					if (player->speed > 5*player->mo->scale)
+					if (player->speed >= 5*player->mo->scale)
 					{
 						player->pflags &= ~PF_STARTDASH;
 						P_SetMobjState(player->mo, S_PLAY_ROLL);
@@ -4775,9 +4775,8 @@ static void P_DoSpinAbility(player_t *player, ticcmd_t *cmd)
 					if (!player->spectator)
 						S_StartSound(player->mo, sfx_spin);
 				}
-				else
 				// Catapult the player from a spindash rev!
-				if (onground && !(player->pflags & PF_SPINDOWN) && (player->pflags & PF_STARTDASH) && (player->pflags & PF_SPINNING))
+				else if (onground && !(player->pflags & PF_SPINDOWN) && (player->pflags & PF_STARTDASH) && (player->pflags & PF_SPINNING))
 				{
 					player->pflags &= ~PF_STARTDASH;
 					if (player->powers[pw_carry] == CR_BRAKGOOP)
@@ -8780,7 +8779,7 @@ void P_MovePlayer(player_t *player)
 	if (!(player->mo->momz || player->mo->momx || player->mo->momy) && !(player->mo->eflags & MFE_GOOWATER)
 	&& player->panim == PA_IDLE && !(player->powers[pw_carry]))
 		P_DoTeeter(player);
-	
+
 	// Toss a flag
 	if (G_GametypeHasTeams() && (cmd->buttons & BT_TOSSFLAG) && !(player->powers[pw_super]) && !(player->tossdelay))
 	{
