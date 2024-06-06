@@ -2463,53 +2463,20 @@ static inline void HU_DrawSpectatorTicker(void)
 {
 	int i;
 	int length = 0, height = 174;
-	int totallength = 0, templength = 0;
+	int totallength = 0;
 
 	for (i = 0; i < MAXPLAYERS; i++)
 		if (playeringame[i] && players[i].spectator)
 			totallength += (signed)strlen(player_names[i]) * 8 + 16;
 
-	length -= (leveltime % (totallength + BASEVIDWIDTH));
-	length += BASEVIDWIDTH;
+	length -= (leveltime % (totallength + (vid.width / vid.dup)));
+	length += (vid.width / vid.dup);
 
 	for (i = 0; i < MAXPLAYERS; i++)
 		if (playeringame[i] && players[i].spectator)
 		{
-			char *pos;
-			char initial[MAXPLAYERNAME+1];
-			char current[MAXPLAYERNAME+1];
-
-			strcpy(initial, player_names[i]);
-			pos = initial;
-
-			if (length >= -((signed)strlen(player_names[i]) * 8 + 16) && length <= BASEVIDWIDTH)
-			{
-				if (length < 0)
-				{
-					UINT8 eatenchars = (UINT8)(abs(length) / 8 + 1);
-
-					if (eatenchars <= strlen(initial))
-					{
-						// Eat one letter off the left side,
-						// then compensate the drawing position.
-						pos += eatenchars;
-						strcpy(current, pos);
-						templength = length % 8 + 8;
-					}
-					else
-					{
-						strcpy(current, " ");
-						templength = length;
-					}
-				}
-				else
-				{
-					strcpy(current, initial);
-					templength = length;
-				}
-
-				V_DrawString(templength, height + 8, V_TRANSLUCENT|V_ALLOWLOWERCASE, current);
-			}
+			if (length >= -((signed)strlen(player_names[i]) * 8 + 16) && length <= (vid.width / vid.dup))
+				V_DrawString(length, height + 8, V_TRANSLUCENT|V_ALLOWLOWERCASE|V_SNAPTOLEFT, player_names[i]);
 
 			length += (signed)strlen(player_names[i]) * 8 + 16;
 		}
