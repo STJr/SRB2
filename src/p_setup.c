@@ -3532,7 +3532,6 @@ static boolean P_LoadExtraVertices(UINT8 **data)
 	UINT32 xtrvrtx = READUINT32((*data));
 	line_t* ld = lines;
 	vertex_t *oldpos = vertexes;
-	ssize_t offset;
 	size_t i;
 
 	if (numvertexes != origvrtx) // If native vertex count doesn't match node original vertex count, bail out (broken data?).
@@ -3547,12 +3546,11 @@ static boolean P_LoadExtraVertices(UINT8 **data)
 	// If extra vertexes were generated, reallocate the vertex array and fix the pointers.
 	numvertexes += xtrvrtx;
 	vertexes = Z_Realloc(vertexes, numvertexes*sizeof(*vertexes), PU_LEVEL, NULL);
-	offset = (size_t)(vertexes - oldpos);
 
 	for (i = 0, ld = lines; i < numlines; i++, ld++)
 	{
-		ld->v1 += offset;
-		ld->v2 += offset;
+		ld->v1 = &vertexes[ld->v1 - oldpos];
+		ld->v2 = &vertexes[ld->v2 - oldpos];
 	}
 
 	// Read extra vertex data.
