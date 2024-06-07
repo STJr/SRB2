@@ -88,6 +88,9 @@ typedef struct
 		spritedef_t sprites[NUMPLAYERSPRITES];
 		spriteinfo_t sprinfo[NUMPLAYERSPRITES];
 	} super;
+
+	// TODO: 2.3: Delete
+	spritedef_t sprites_compat[NUMPLAYERSPRITES * 2];
 } skin_t;
 
 /// Externs
