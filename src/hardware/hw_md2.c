@@ -1154,6 +1154,9 @@ static void adjustTextureCoords(model_t *model, patch_t *patch)
 	int i;
 	GLPatch_t *gpatch = ((GLPatch_t *)patch->hardware);
 
+	if (!gpatch)
+		return;
+
 	for (i = 0; i < model->numMeshes; i++)
 	{
 		int j;
