@@ -2065,11 +2065,10 @@ static void CV_SetValueMaybeStealth(consvar_t *var, INT32 value, boolean stealth
 	if (var == &cv_forceskin) // Special handling.
 	{
 		const char *tmpskin = NULL;
-		if ((value < 0) || (value >= numskins))
-			;
-		else
+		if (value >= 0 && value < numskins)
 			tmpskin = skins[value]->name;
-		memcpy(val, tmpskin, SKINNAMESIZE);
+		if (tmpskin)
+			memcpy(val, tmpskin, SKINNAMESIZE);
 	}
 	else
 		sprintf(val, "%d", value);
