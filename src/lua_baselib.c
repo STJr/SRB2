@@ -3878,7 +3878,7 @@ static int lib_gAddPlayer(lua_State *L)
 	player_t *newplayer;
 	SINT8 skinnum = 0, bot;
 
-	for (i = 0; i < MAXPLAYERS; i++)
+	for (i = 1; i < MAXPLAYERS; i++)
 	{
 		if (!playeringame[i])
 			break;
