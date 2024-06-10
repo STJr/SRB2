@@ -1024,7 +1024,7 @@ void D_StartTitle(void)
 #define REALLOC_FILE_LIST \
 	if (list->files == NULL) \
 	{ \
-		list->files = calloc(sizeof(list->files), 2); \
+		list->files = calloc(2, sizeof(list->files)); \
 		list->numfiles = 1; \
 	} \
 	else \
