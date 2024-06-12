@@ -919,7 +919,11 @@ enum
 	LD_SDMIDLIGHT    = 1<<19,
 	LD_SDBOTLIGHT    = 1<<20,
 	LD_SDREPEATCNT   = 1<<21,
-	LD_SDFLAGS       = 1<<22
+	LD_SDFLAGS       = 1<<22,
+	LD_SDLIGHTABS    = 1<<23,
+	LD_SDTOPLIGHTABS = 1<<24,
+	LD_SDMIDLIGHTABS = 1<<25,
+	LD_SDBOTLIGHTABS = 1<<26
 };
 
 static boolean P_AreArgsEqual(const line_t *li, const line_t *spawnli)
@@ -1393,6 +1397,16 @@ static UINT32 GetSideDiff(const side_t *si, const side_t *spawnsi)
 		diff |= LD_SDBOTSCALEY;
 	if (si->repeatcnt != spawnsi->repeatcnt)
 		diff |= LD_SDREPEATCNT;
+	if (si->light != spawnsi->light)
+		diff |= LD_SDLIGHT;
+	if (si->light_top != spawnsi->light_top)
+		diff |= LD_SDTOPLIGHT;
+	if (si->light_mid != spawnsi->light_mid)
+		diff |= LD_SDMIDLIGHT;
+	if (si->light_bottom != spawnsi->light_bottom)
+		diff |= LD_SDBOTLIGHT;
+	if (si->lightabsolute != spawnsi->lightabsolute)
+		diff |= LD_SDLIGHTABS;
 	return diff;
 }
 
@@ -1436,6 +1450,10 @@ static void ArchiveSide(const side_t *si, UINT32 diff)
 		WRITEFIXED(save_p, si->scaley_bottom);
 	if (diff & LD_SDREPEATCNT)
 		WRITEINT16(save_p, si->repeatcnt);
+	if (diff & LD_SDLIGHT)
+		WRITEINT16(save_p, si->light);
+	if (diff & LD_SDLIGHTABS)
+		WRITEINT16(save_p, si->lightabsolute);
 }
 
 static void ArchiveLines(void)
@@ -1576,6 +1594,10 @@ static void UnArchiveSide(side_t *si)
 		si->scaley_bottom = READFIXED(save_p);
 	if (diff & LD_SDREPEATCNT)
 		si->repeatcnt = READINT16(save_p);
+	if (diff & LD_SDLIGHT)
+		si->light = READINT16(save_p);
+	if (diff & LD_SDLIGHTABS)
+		si->lightabsolute = READINT16(save_p);
 }
 
 static void UnArchiveLines(void)

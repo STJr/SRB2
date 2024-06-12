@@ -94,6 +94,30 @@ transnum_t R_GetLinedefTransTable(fixed_t alpha)
 	return (20*(FRACUNIT - alpha - 1) + FRACUNIT) >> (FRACBITS+1);
 }
 
+static INT16 R_SideLightLevel(side_t *side, UINT8 base_lightlevel)
+{
+	return side->light +
+		((side->lightabsolute) ? 0 : base_lightlevel);
+}
+
+static INT16 R_TopLightLevel(side_t *side, UINT8 base_lightlevel)
+{
+	return side->light_top +
+		((side->lightabsolute_top) ? 0 : R_SideLightLevel(side, base_lightlevel));
+}
+
+static INT16 R_MidLightLevel(side_t *side, UINT8 base_lightlevel)
+{
+	return side->light_mid +
+		((side->lightabsolute_mid) ? 0 : R_SideLightLevel(side, base_lightlevel));
+}
+
+static INT16 R_BottomLightLevel(side_t *side, UINT8 base_lightlevel)
+{
+	return side->light_bottom +
+		((side->lightabsolute_bottom) ? 0 : R_SideLightLevel(side, base_lightlevel));
+}
+
 void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 {
 	size_t pindex;
@@ -223,7 +247,7 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 			if ((colfunc != colfuncs[COLDRAWFUNC_FUZZY])
 				|| (rlight->flags & FOF_FOG)
 				|| (rlight->extra_colormap && (rlight->extra_colormap->flags & CMF_FOG)))
-				lightnum = (rlight->lightlevel >> LIGHTSEGSHIFT);
+				lightnum = R_SideLightLevel(curline->sidedef, rlight->lightlevel) >> LIGHTSEGSHIFT;
 			else
 				lightnum = LIGHTLEVELS - 1;
 
@@ -241,7 +265,7 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 	{
 		if ((colfunc != colfuncs[COLDRAWFUNC_FUZZY])
 			|| (frontsector->extra_colormap && (frontsector->extra_colormap->flags & CMF_FOG)))
-			lightnum = (frontsector->lightlevel >> LIGHTSEGSHIFT);
+			lightnum = R_SideLightLevel(curline->sidedef, frontsector->lightlevel) >> LIGHTSEGSHIFT;
 		else
 			lightnum = LIGHTLEVELS - 1;
 
@@ -697,9 +721,9 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 
 			// Check if the current light effects the colormap/lightlevel
 			if (pfloor->fofflags & FOF_FOG)
-				rlight->lightnum = (pfloor->master->frontsector->lightlevel >> LIGHTSEGSHIFT);
+				rlight->lightnum = R_SideLightLevel(curline->sidedef, pfloor->master->frontsector->lightlevel) >> LIGHTSEGSHIFT;
 			else
-				rlight->lightnum = (rlight->lightlevel >> LIGHTSEGSHIFT);
+				rlight->lightnum = R_SideLightLevel(curline->sidedef, rlight->lightlevel) >> LIGHTSEGSHIFT;
 
 			if (pfloor->fofflags & FOF_FOG || rlight->flags & FOF_FOG || (rlight->extra_colormap && (rlight->extra_colormap->flags & CMF_FOG)))
 				;
@@ -717,18 +741,17 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 	{
 		// Get correct light level!
 		if ((frontsector->extra_colormap && (frontsector->extra_colormap->flags & CMF_FOG)))
-			lightnum = (frontsector->lightlevel >> LIGHTSEGSHIFT);
+			lightnum = R_SideLightLevel(curline->sidedef, frontsector->lightlevel) >> LIGHTSEGSHIFT;
 		else if (fog)
-			lightnum = (pfloor->master->frontsector->lightlevel >> LIGHTSEGSHIFT);
+			lightnum = R_SideLightLevel(curline->sidedef, pfloor->master->frontsector->lightlevel) >> LIGHTSEGSHIFT;
 		else if (fuzzy)
 			lightnum = LIGHTLEVELS-1;
 		else
-			lightnum = R_FakeFlat(frontsector, &tempsec, &templight, &templight, false)
-				->lightlevel >> LIGHTSEGSHIFT;
+			lightnum = R_SideLightLevel(curline->sidedef, R_FakeFlat(frontsector, &tempsec, &templight, &templight, false)->lightlevel) >> LIGHTSEGSHIFT;
 
 		if (pfloor->fofflags & FOF_FOG || (frontsector->extra_colormap && (frontsector->extra_colormap->flags & CMF_FOG)));
 			else if (curline->v1->y == curline->v2->y)
-		lightnum--;
+			lightnum--;
 		else if (curline->v1->x == curline->v2->x)
 			lightnum++;
 
@@ -1353,7 +1376,7 @@ static void R_RenderSegLoop (void)
 			for (i = 0; i < dc_numlights; i++)
 			{
 				INT32 lightnum;
-				lightnum = (dc_lightlist[i].lightlevel >> LIGHTSEGSHIFT);
+				lightnum = R_SideLightLevel(curline->sidedef, dc_lightlist[i].lightlevel) >> LIGHTSEGSHIFT;
 
 				if (dc_lightlist[i].extra_colormap)
 					;
@@ -2540,7 +2563,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 		//  use different light tables
 		//  for horizontal / vertical / diagonal
 		// OPTIMIZE: get rid of LIGHTSEGSHIFT globally
-		lightnum = (frontsector->lightlevel >> LIGHTSEGSHIFT);
+		lightnum = R_SideLightLevel(curline->sidedef, frontsector->lightlevel) >> LIGHTSEGSHIFT;
 
 		if (curline->v1->y == curline->v2->y)
 			lightnum--;

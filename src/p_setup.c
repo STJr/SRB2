@@ -1367,6 +1367,9 @@ static void P_LoadSidedefs(UINT8 *data)
 		sd->scalex_top = sd->scalex_mid = sd->scalex_bottom = FRACUNIT;
 		sd->scaley_top = sd->scaley_mid = sd->scaley_bottom = FRACUNIT;
 
+		sd->light = sd->light_top = sd->light_mid = sd->light_bottom = 0;
+		sd->lightabsolute = sd->lightabsolute_top = sd->lightabsolute_mid = sd->lightabsolute_bottom = false;
+
 		P_SetSidedefSector(i, (UINT16)SHORT(msd->sector));
 
 		// Special info stored in texture fields!
@@ -1977,6 +1980,10 @@ static void ParseTextmapSidedefParameter(UINT32 i, const char *param, const char
 		P_SetSidedefSector(i, atol(val));
 	else if (fastcmp(param, "repeatcnt"))
 		sides[i].repeatcnt = atol(val);
+	else if (fastcmp(param, "light"))
+		sides[i].light = atol(val);
+	else if (fastcmp(param, "lightabsolute") && fastcmp("true", val))
+		sides[i].lightabsolute = true;
 }
 
 static void ParseTextmapLinedefParameter(UINT32 i, const char *param, const char *val)
@@ -2704,6 +2711,10 @@ static void P_WriteTextmap(void)
 			fprintf(f, "texturemiddle = \"%.*s\";\n", 8, textures[wsides[i].midtexture]->name);
 		if (wsides[i].repeatcnt != 0)
 			fprintf(f, "repeatcnt = %d;\n", wsides[i].repeatcnt);
+		if (wsides[i].light != 0)
+			fprintf(f, "light = %d;\n", wsides[i].light);
+		if (wsides[i].lightabsolute != 0)
+			fprintf(f, "lightabsolute = %d;\n", wsides[i].lightabsolute);
 		fprintf(f, "}\n");
 		fprintf(f, "\n");
 	}
@@ -3106,6 +3117,7 @@ static void P_LoadTextmap(void)
 		sd->bottomtexture = R_TextureNumForName("-");
 		sd->sector = NULL;
 		sd->repeatcnt = 0;
+		sd->light = sd->lightabsolute = 0;
 
 		TextmapParse(sidedefBlocks.pos[i], i, ParseTextmapSidedefParameter);
 
