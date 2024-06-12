@@ -1454,16 +1454,16 @@ static int side_set(lua_State *L)
 		side->repeatcnt = luaL_checkinteger(L, 3);
 		break;
 	case side_light:
-		side->repeatcnt = luaL_checkinteger(L, 3);
+		side->light = luaL_checkinteger(L, 3);
 		break;
 	case side_light_top:
-		side->repeatcnt = luaL_checkinteger(L, 3);
+		side->light_top = luaL_checkinteger(L, 3);
 		break;
 	case side_light_mid:
-		side->repeatcnt = luaL_checkinteger(L, 3);
+		side->light_mid = luaL_checkinteger(L, 3);
 		break;
 	case side_light_bottom:
-		side->repeatcnt = luaL_checkinteger(L, 3);
+		side->light_bottom = luaL_checkinteger(L, 3);
 		break;
 	case side_lightabsolute:
 		side->lightabsolute = luaL_checkboolean(L, 3);

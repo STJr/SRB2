@@ -100,6 +100,7 @@ static INT16 R_SideLightLevel(side_t *side, UINT8 base_lightlevel)
 		((side->lightabsolute) ? 0 : base_lightlevel);
 }
 
+/* TODO: implement per-texture lighting
 static INT16 R_TopLightLevel(side_t *side, UINT8 base_lightlevel)
 {
 	return side->light_top +
@@ -117,6 +118,7 @@ static INT16 R_BottomLightLevel(side_t *side, UINT8 base_lightlevel)
 	return side->light_bottom +
 		((side->lightabsolute_bottom) ? 0 : R_SideLightLevel(side, base_lightlevel));
 }
+*/
 
 void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 {

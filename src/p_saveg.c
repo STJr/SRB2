@@ -1407,6 +1407,12 @@ static UINT32 GetSideDiff(const side_t *si, const side_t *spawnsi)
 		diff |= LD_SDBOTLIGHT;
 	if (si->lightabsolute != spawnsi->lightabsolute)
 		diff |= LD_SDLIGHTABS;
+	if (si->lightabsolute_top != spawnsi->lightabsolute_top)
+		diff |= LD_SDTOPLIGHTABS;
+	if (si->lightabsolute_mid != spawnsi->lightabsolute_mid)
+		diff |= LD_SDMIDLIGHTABS;
+	if (si->lightabsolute_bottom != spawnsi->lightabsolute_bottom)
+		diff |= LD_SDBOTLIGHTABS;
 	return diff;
 }
 
@@ -1452,8 +1458,20 @@ static void ArchiveSide(const side_t *si, UINT32 diff)
 		WRITEINT16(save_p, si->repeatcnt);
 	if (diff & LD_SDLIGHT)
 		WRITEINT16(save_p, si->light);
+	if (diff & LD_SDTOPLIGHT)
+		WRITEINT16(save_p, si->light_top);
+	if (diff & LD_SDMIDLIGHT)
+		WRITEINT16(save_p, si->light_mid);
+	if (diff & LD_SDBOTLIGHT)
+		WRITEINT16(save_p, si->light_bottom);
 	if (diff & LD_SDLIGHTABS)
-		WRITEINT16(save_p, si->lightabsolute);
+		WRITEUINT8(save_p, si->lightabsolute);
+	if (diff & LD_SDTOPLIGHTABS)
+		WRITEUINT8(save_p, si->lightabsolute_top);
+	if (diff & LD_SDMIDLIGHTABS)
+		WRITEUINT8(save_p, si->lightabsolute_mid);
+	if (diff & LD_SDBOTLIGHTABS)
+		WRITEUINT8(save_p, si->lightabsolute_bottom);
 }
 
 static void ArchiveLines(void)
@@ -1596,8 +1614,20 @@ static void UnArchiveSide(side_t *si)
 		si->repeatcnt = READINT16(save_p);
 	if (diff & LD_SDLIGHT)
 		si->light = READINT16(save_p);
+	if (diff & LD_SDTOPLIGHT)
+		si->light_top = READINT16(save_p);
+	if (diff & LD_SDMIDLIGHT)
+		si->light_mid = READINT16(save_p);
+	if (diff & LD_SDBOTLIGHT)
+		si->light_bottom = READINT16(save_p);
 	if (diff & LD_SDLIGHTABS)
-		si->lightabsolute = READINT16(save_p);
+		si->lightabsolute = READUINT8(save_p);
+	if (diff & LD_SDTOPLIGHTABS)
+		si->lightabsolute_top = READUINT8(save_p);
+	if (diff & LD_SDMIDLIGHTABS)
+		si->lightabsolute_mid = READUINT8(save_p);
+	if (diff & LD_SDBOTLIGHTABS)
+		si->lightabsolute_bottom = READUINT8(save_p);
 }
 
 static void UnArchiveLines(void)

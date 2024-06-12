@@ -1982,8 +1982,20 @@ static void ParseTextmapSidedefParameter(UINT32 i, const char *param, const char
 		sides[i].repeatcnt = atol(val);
 	else if (fastcmp(param, "light"))
 		sides[i].light = atol(val);
+	else if (fastcmp(param, "light_top"))
+		sides[i].light_top = atol(val);
+	else if (fastcmp(param, "light_mid"))
+		sides[i].light_mid = atol(val);
+	else if (fastcmp(param, "light_bottom"))
+		sides[i].light_bottom = atol(val);
 	else if (fastcmp(param, "lightabsolute") && fastcmp("true", val))
 		sides[i].lightabsolute = true;
+	else if (fastcmp(param, "lightabsolute_top") && fastcmp("true", val))
+		sides[i].lightabsolute_top = true;
+	else if (fastcmp(param, "lightabsolute_mid") && fastcmp("true", val))
+		sides[i].lightabsolute_mid = true;
+	else if (fastcmp(param, "lightabsolute_bottom") && fastcmp("true", val))
+		sides[i].lightabsolute_bottom = true;
 }
 
 static void ParseTextmapLinedefParameter(UINT32 i, const char *param, const char *val)
@@ -2713,8 +2725,20 @@ static void P_WriteTextmap(void)
 			fprintf(f, "repeatcnt = %d;\n", wsides[i].repeatcnt);
 		if (wsides[i].light != 0)
 			fprintf(f, "light = %d;\n", wsides[i].light);
-		if (wsides[i].lightabsolute != 0)
-			fprintf(f, "lightabsolute = %d;\n", wsides[i].lightabsolute);
+		if (wsides[i].light_top != 0)
+			fprintf(f, "light_top = %d;\n", wsides[i].light_top);
+		if (wsides[i].light_mid != 0)
+			fprintf(f, "light_mid = %d;\n", wsides[i].light_mid);
+		if (wsides[i].light_bottom != 0)
+			fprintf(f, "light_bottom = %d;\n", wsides[i].light_bottom);
+		if (wsides[i].lightabsolute)
+			fprintf(f, "lightabsolute = true;\n");
+		if (wsides[i].lightabsolute_top)
+			fprintf(f, "lightabsolute_top = true;\n");
+		if (wsides[i].lightabsolute_mid)
+			fprintf(f, "lightabsolute_mid = true;\n");
+		if (wsides[i].lightabsolute_bottom)
+			fprintf(f, "lightabsolute_bottom = true;\n");
 		fprintf(f, "}\n");
 		fprintf(f, "\n");
 	}
@@ -3117,7 +3141,8 @@ static void P_LoadTextmap(void)
 		sd->bottomtexture = R_TextureNumForName("-");
 		sd->sector = NULL;
 		sd->repeatcnt = 0;
-		sd->light = sd->lightabsolute = 0;
+		sd->light = sd->light_top = sd->light_mid = sd->light_bottom = 0;
+		sd->lightabsolute = sd->lightabsolute_top = sd->lightabsolute_mid = sd->lightabsolute_bottom = false;
 
 		TextmapParse(sidedefBlocks.pos[i], i, ParseTextmapSidedefParameter);
 

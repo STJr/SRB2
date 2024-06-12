@@ -315,6 +315,7 @@ static FUINT HWR_SideLightLevel(side_t *side, UINT8 base_lightlevel)
 		((side->lightabsolute) ? 0 : base_lightlevel);
 }
 
+/* TODO: implement per-texture lighting
 static FUINT HWR_TopLightLevel(side_t *side, UINT8 base_lightlevel)
 {
 	return side->light_top +
@@ -332,6 +333,7 @@ static FUINT HWR_BottomLightLevel(side_t *side, UINT8 base_lightlevel)
 	return side->light_bottom +
 		((side->lightabsolute_bottom) ? 0 : HWR_SideLightLevel(side, base_lightlevel));
 }
+*/
 
 // ==========================================================================
 //                                   FLOOR/CEILING GENERATION FROM SUBSECTORS
