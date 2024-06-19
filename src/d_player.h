@@ -373,6 +373,16 @@ typedef enum
 	AI_SPINFOLLOW
 } aistatetype_t;
 
+// NiGHTS text
+typedef enum
+{
+	NTV_NONE = 0,
+	NTV_GETSPHERES,
+	NTV_GETMORESPHERES,
+	NTV_BONUSTIMESTART,
+	NTV_BONUSTIMEEND,
+} nightstextvar_t;
+
 
 // ========================================================================
 //                          PLAYER STRUCTURE
@@ -572,7 +582,8 @@ typedef struct player_s
 	// Statistical purposes.
 	tic_t marebegunat; // Leveltime when mare begun
 	tic_t startedtime; // Time which you started this mare with.
-	tic_t finishedtime; // Time it took you to finish the mare (used for display)
+	tic_t finishedtime; // The time it took to destroy the capsule on this mare (used for bonus time display)
+	tic_t lastmaretime; // The time it took to complete the last mare (used for rank display)
 	tic_t lapbegunat; // Leveltime when lap begun
 	tic_t lapstartedtime; // Time which you started this lap with.
 	INT16 finishedspheres; // The spheres you had left upon finishing the mare
@@ -587,7 +598,7 @@ typedef struct player_s
 	UINT8 totalmarebonuslap; // total mare bonus lap
 	INT32 maxlink; // maximum link obtained
 	UINT8 texttimer; // nights_texttime should not be local
-	UINT8 textvar; // which line of NiGHTS text to show -- let's not use cheap hacks
+	UINT8 textvar; // which line of NiGHTS text to show -- see nightstextvar_t
 
 	INT16 lastsidehit, lastlinehit;
 

@@ -378,7 +378,7 @@ typedef struct
 	char displayname[SKINNAMESIZE+1];
 	INT16 skinnum[2];
 	UINT16 oppositecolor;
-	char nametag[8];
+	char nametag[8+1];
 	patch_t *namepic;
 	UINT16 tagtextcolor;
 	UINT16 tagoutlinecolor;

@@ -23,13 +23,13 @@
 extern char *FREE_STATES[NUMSTATEFREESLOTS];
 extern char *FREE_MOBJS[NUMMOBJFREESLOTS];
 extern char *FREE_SKINCOLORS[NUMCOLORFREESLOTS];
-extern UINT8 used_spr[(NUMSPRITEFREESLOTS / 8) + 1]; // Bitwise flag for sprite freeslot in use! I would use ceil() here if I could, but it only saves 1 byte of memory anyway.
+extern bitarray_t used_spr[BIT_ARRAY_SIZE(NUMSPRITEFREESLOTS)]; // Sprite freeslots in use
 
 #define initfreeslots() {\
-	memset(FREE_STATES,0,sizeof(char *) * NUMSTATEFREESLOTS);\
-	memset(FREE_MOBJS,0,sizeof(char *) * NUMMOBJFREESLOTS);\
-	memset(FREE_SKINCOLORS,0,sizeof(char *) * NUMCOLORFREESLOTS);\
-	memset(used_spr,0,sizeof(UINT8) * ((NUMSPRITEFREESLOTS / 8) + 1));\
+	memset(FREE_STATES, 0, sizeof(FREE_STATES));\
+	memset(FREE_MOBJS, 0, sizeof(FREE_MOBJS));\
+	memset(FREE_SKINCOLORS, 0, sizeof(FREE_SKINCOLORS));\
+	memset(used_spr, 0, sizeof(used_spr));\
 	memset(actionsoverridden, LUA_REFNIL, sizeof(actionsoverridden));\
 }
 

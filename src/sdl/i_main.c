@@ -186,6 +186,9 @@ int main(int argc, char **argv)
 #endif
 #endif
 
+	// disable text input right off the bat, since we don't need it at the start.
+	I_SetTextInputMode(false);
+
 #ifdef LOGMESSAGES
 	if (!M_CheckParm("-nolog"))
 		InitLogging();

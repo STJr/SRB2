@@ -1909,7 +1909,7 @@ static void S_AddMusicStackEntry(const char *mname, UINT16 mflags, boolean loopi
 	if (!music_stacks)
 	{
 		music_stacks = Z_Calloc(sizeof (*mst), PU_MUSIC, NULL);
-		strlcpy(music_stacks->musname, (status == JT_MASTER ? mname : (S_CheckQueue() ? queue_name : mapmusname)), MAX_MUSIC_NAME+1);
+		strlcpy(music_stacks->musname, (status == JT_MASTER ? mname : (S_CheckQueue() ? queue_name : mapmusname)), sizeof(music_stacks->musname));
 		music_stacks->musflags = (status == JT_MASTER ? mflags : (S_CheckQueue() ? queue_flags : mapmusflags));
 		music_stacks->looping = (status == JT_MASTER ? looping : (S_CheckQueue() ? queue_looping : true));
 		music_stacks->position = (status == JT_MASTER ? position : (S_CheckQueue() ? queue_position : S_GetMusicPosition()));
@@ -1927,7 +1927,7 @@ static void S_AddMusicStackEntry(const char *mname, UINT16 mflags, boolean loopi
 
 	// create our new entry
 	new_mst = Z_Calloc(sizeof (*new_mst), PU_MUSIC, NULL);
-	strlcpy(new_mst->musname, mname, MAX_MUSIC_NAME+1);
+	strlcpy(new_mst->musname, mname, sizeof(new_mst->musname));
 	new_mst->musflags = mflags;
 	new_mst->looping = looping;
 	new_mst->position = position;
@@ -2031,7 +2031,7 @@ boolean S_RecallMusic(UINT16 status, boolean fromfirst)
 	if (result)
 	{
 		*entry = *result;
-		strlcpy(entry->musname, result->musname, MAX_MUSIC_NAME+1);
+		strlcpy(entry->musname, result->musname, sizeof(entry->musname));
 	}
 
 	// no result, just grab mapmusname
@@ -2251,7 +2251,7 @@ void S_ChangeMusicEx(const char *mmusic, UINT16 mflags, boolean looping, UINT32 
 	if (S_MusicDisabled())
 		return;
 
-	strlcpy(newmusic, mmusic, MAX_MUSIC_NAME+1);
+	strlcpy(newmusic, mmusic, sizeof(newmusic));
 	if (LUA_HookMusicChange(music_name, &hook_param))
 		return;
 
@@ -2487,7 +2487,7 @@ static void Command_Tunes_f(void)
 	if (argc > 2)
 		track = (UINT16)atoi(COM_Argv(2))-1;
 
-	strlcpy(mapmusname, tunearg, MAX_MUSIC_NAME+1);
+	strlcpy(mapmusname, tunearg, sizeof(mapmusname));
 
 	if (argc > 4)
 		position = (UINT32)atoi(COM_Argv(4));

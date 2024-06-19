@@ -1433,9 +1433,15 @@ static const char *locateWad(void)
 
 #ifndef NOHOME
 	// find in $HOME
-	I_OutputMsg(",HOME");
+	I_OutputMsg(",HOME/" DEFAULTDIR);
 	if ((envstr = I_GetEnv("HOME")) != NULL)
+	{
+		char *tmp = malloc(strlen(envstr) + sizeof(DEFAULTDIR));
+		strcpy(tmp, envstr);
+		strcat(tmp, DEFAULTDIR);
 		SEARCHWAD(envstr);
+		free(tmp);
+	}
 #endif
 
 	// search paths
@@ -1583,6 +1589,16 @@ void I_GetCursorPosition(INT32 *x, INT32 *y)
 {
 	(void)x;
 	(void)y;
+}
+
+void I_SetTextInputMode(boolean active)
+{
+	(void)active;
+}
+
+boolean I_GetTextInputMode(void)
+{
+	return false;
 }
 
 #include "../sdl/dosstr.c"

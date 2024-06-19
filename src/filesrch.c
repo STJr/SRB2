@@ -699,6 +699,15 @@ static void initdirpath(char *dirpath, size_t *dirpathindex, int depthleft)
 		dirpathindex[depthleft]--;
 }
 
+//sortdir by name? 
+static int lumpnamecompare(const void *A, const void *B)
+{
+	const lumpinfo_t *pA = A;
+	const lumpinfo_t *pB = B;
+	return strcmp((pA->fullname), (pB->fullname));
+
+}
+
 lumpinfo_t *getdirectoryfiles(const char *path, UINT16 *nlmp, UINT16 *nfolders)
 {
 	DIR **dirhandle;
@@ -899,6 +908,9 @@ lumpinfo_t *getdirectoryfiles(const char *path, UINT16 *nlmp, UINT16 *nfolders)
 
 	free(dirpathindex);
 	free(dirhandle);
+
+	//sort files and directories
+	qsort (lumpinfo, numlumps, sizeof(lumpinfo_t), lumpnamecompare);
 
 	(*nlmp) = numlumps;
 	return lumpinfo;
@@ -1190,13 +1202,13 @@ boolean preparefilemenu(boolean samedepth)
 					size_t i;
 
 					if (filenamebuf == NULL)
-						filenamebuf = calloc(sizeof(char) * MAX_WADPATH, numwadfiles);
+						filenamebuf = calloc(numwadfiles, sizeof(char) * MAX_WADPATH);
 
 					for (i = 0; i < numwadfiles; i++)
 					{
 						if (!filenamebuf[i][0])
 						{
-							strncpy(filenamebuf[i], wadfiles[i]->filename, MAX_WADPATH);
+							strncpy(filenamebuf[i], wadfiles[i]->filename, MAX_WADPATH-1);
 							filenamebuf[i][MAX_WADPATH - 1] = '\0';
 							nameonly(filenamebuf[i]);
 						}
