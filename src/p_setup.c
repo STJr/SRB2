@@ -8199,7 +8199,6 @@ void P_LoadMapsFromFile(UINT16 wadnum, boolean added_ingame)
 	lumpinfo_t *lumpinfo = NULL;
 	UINT16 numlumps = 0;
 
-	INT16 num;
 	const char *name;
 
 	if (W_FileHasFolders(wadfiles[wadnum]))
@@ -8245,19 +8244,17 @@ void P_LoadMapsFromFile(UINT16 wadnum, boolean added_ingame)
 		for (size_t i = 0; i < numlumps; i++, lumpinfo++)
 		{
 			name = lumpinfo->name;
-			if (name[0] == 'M' && name[1] == 'A' && name[2] == 'P')
+			if (name[0] == 'M' && name[1] == 'A' && name[2] == 'P' && name[5] == '\0')
 			{
-				if (name[5]!='\0')
-					continue;
-				num = (INT16)M_MapNumber(name[3], name[4]);
-
-				//If you replaced the map you're on, end the level when done.
-				if (gamestate == GS_LEVEL && num == gamemap)
-					replacedcurrentmap = true;
-
-				if (added_ingame)
-					CONS_Printf("%s\n", name);
-				mapsadded = true;
+				int status = P_AddMap(name, (wadnum << 16) + i);
+				if (status == 1)
+				{
+					if (added_ingame)
+						CONS_Printf("%s\n", name);
+					mapsadded = true;
+				}
+				else if (status < 0)
+					break;
 			}
 		}
 
