@@ -1045,8 +1045,6 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 
 	if (pfloor->fofflags & FOF_TRANSLUCENT)
 	{
-		fuzzy = true;
-
 		// Hacked up support for alpha value in software mode Tails 09-24-2002
 		// ...unhacked by toaster 04-01-2021, re-hacked a little by sphere 19-11-2021
 		blendlevel = (10*((256+12) - pfloor->alpha))/255;
@@ -1065,6 +1063,8 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 			else if (blendlevel > 0)
 				dc_transmap = R_GetTranslucencyTable(blendlevel);
 		}
+
+		fuzzy = dc_transmap != NULL;
 	}
 	else if (pfloor->fofflags & FOF_FOG)
 	{
