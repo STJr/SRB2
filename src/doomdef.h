@@ -82,6 +82,7 @@
 #include "version.h"
 #include "doomtype.h"
 
+#include <assert.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -648,6 +649,7 @@ UINT32 quickncasehash (const char *p, size_t n)
 #else
 #define I_Assert(e) ((void)0)
 #endif
+#define I_StaticAssert(e) static_assert(e, "Static assertion failed: " #e)
 
 // The character that separates pathnames. Forward slash on
 // most systems, but reverse solidus (\) on Windows.

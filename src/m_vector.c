@@ -21,6 +21,32 @@ void DVector3_Load(dvector3_t *vec, double x, double y, double z)
 	vec->z = z;
 }
 
+void DVector3_Copy(dvector3_t *a_o, const dvector3_t *a_i)
+{
+	memcpy(a_o, a_i, sizeof(dvector3_t));
+}
+
+void DVector3_Add(const dvector3_t *a_i, const dvector3_t *a_c, dvector3_t *a_o)
+{
+	a_o->x = a_i->x + a_c->x;
+	a_o->y = a_i->y + a_c->y;
+	a_o->z = a_i->z + a_c->z;
+}
+
+void DVector3_Subtract(const dvector3_t *a_i, const dvector3_t *a_c, dvector3_t *a_o)
+{
+	a_o->x = a_i->x - a_c->x;
+	a_o->y = a_i->y - a_c->y;
+	a_o->z = a_i->z - a_c->z;
+}
+
+void DVector3_Multiply(const dvector3_t *a_i, double a_c, dvector3_t *a_o)
+{
+	a_o->x = a_i->x * a_c;
+	a_o->y = a_i->y * a_c;
+	a_o->z = a_i->z * a_c;
+}
+
 double DVector3_Magnitude(const dvector3_t *a_normal)
 {
 	double xs = a_normal->x * a_normal->x;

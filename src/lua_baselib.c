@@ -44,6 +44,21 @@ return luaL_error(L, "HUD rendering code should not call this function!");\
 else if (hook_cmd_running)\
 return luaL_error(L, "CMD building code should not call this function!");
 
+#define NOSPAWNNULL if (type >= NUMMOBJTYPES)\
+return luaL_error(L, "mobj type %d out of range (0 - %d)", type, NUMMOBJTYPES-1);\
+else if (type == MT_NULL)\
+{\
+	if (!nospawnnull_seen) {\
+		nospawnnull_seen = true;\
+		CONS_Alert(CONS_WARNING,"Spawning an \"MT_NULL\" mobj is deprecated and will be removed.\nUse \"MT_RAY\" instead.\n");\
+	}\
+type = MT_RAY;\
+}
+static boolean nospawnnull_seen = false; // TODO: 2.3: Delete
+// TODO: 2.3: Use the below NOSPAWNNULL define instead. P_SpawnMobj used to say "if MT_NULL, use MT_RAY instead", so the above define maintains Lua script compatibility until v2.3
+/*#define NOSPAWNNULL if (type <= MT_NULL || type >= NUMMOBJTYPES)\
+return luaL_error(L, "mobj type %d out of range (1 - %d)", type, NUMMOBJTYPES-1);*/
+
 boolean luaL_checkboolean(lua_State *L, int narg) {
 	luaL_checktype(L, narg, LUA_TBOOLEAN);
 	return lua_toboolean(L, narg);
@@ -170,8 +185,10 @@ static const struct {
 	{META_SKIN,         "skin_t"},
 	{META_POWERS,       "player_t.powers"},
 	{META_SOUNDSID,     "skin_t.soundsid"},
-	{META_SKINSPRITES,  "skin_t.sprites"},
-	{META_SKINSPRITESLIST,  "skin_t.sprites[]"},
+
+	{META_SKINSPRITES,       "skin_t.skinsprites"},
+	{META_SKINSPRITESLIST,   "skin_t.skinsprites[]"},
+	{META_SKINSPRITESCOMPAT, "skin_t.sprites"}, // TODO: 2.3: Delete
 
 	{META_VERTEX,       "vertex_t"},
 	{META_LINE,         "line_t"},
@@ -328,6 +345,18 @@ static int lib_reserveLuabanks(lua_State *L)
 		return luaL_error(L, "luabanks[] has already been reserved! Only one savedata-enabled mod at a time may use this feature.");
 	reserved = true;
 	LUA_PushUserdata(L, &luabanks, META_LUABANKS);
+	return 1;
+}
+
+static int lib_tofixed(lua_State *L)
+{
+	const char *arg = luaL_checkstring(L, 1);
+	char *end;
+	float f = strtof(arg, &end);
+	if (*end != '\0')
+		lua_pushnil(L);
+	else
+		lua_pushnumber(L, FLOAT_TO_FIXED(f));
 	return 1;
 }
 
@@ -626,9 +655,8 @@ static int lib_pSpawnMobj(lua_State *L)
 	mobjtype_t type = luaL_checkinteger(L, 4);
 	NOHUD
 	INLEVEL
-	if (type >= NUMMOBJTYPES)
-		return luaL_error(L, "mobj type %d out of range (0 - %d)", type, NUMMOBJTYPES-1);
-	LUA_PushUserdata(L, P_SpawnMobj(x, y, z, type), META_MOBJ);
+	NOSPAWNNULL
+	LUA_PushUserdata(L, P_SpawnMobj(x, y, z, type, NULL), META_MOBJ);
 	return 1;
 }
 
@@ -641,10 +669,9 @@ static int lib_pSpawnMobjFromMobj(lua_State *L)
 	mobjtype_t type = luaL_checkinteger(L, 5);
 	NOHUD
 	INLEVEL
+	NOSPAWNNULL
 	if (!actor)
 		return LUA_ErrInvalid(L, "mobj_t");
-	if (type >= NUMMOBJTYPES)
-		return luaL_error(L, "mobj type %d out of range (0 - %d)", type, NUMMOBJTYPES-1);
 	LUA_PushUserdata(L, P_SpawnMobjFromMobj(actor, x, y, z, type), META_MOBJ);
 	return 1;
 }
@@ -662,17 +689,15 @@ static int lib_pRemoveMobj(lua_State *L)
 	return 0;
 }
 
-// P_IsValidSprite2 technically doesn't exist, and probably never should... but too much would need to be exposed to allow this to be checked by other methods.
-
 static int lib_pIsValidSprite2(lua_State *L)
 {
 	mobj_t *mobj = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
-	UINT8 spr2 = (UINT8)luaL_checkinteger(L, 2);
+	UINT16 spr2 = (UINT16)luaL_checkinteger(L, 2);
 	//HUDSAFE
 	INLEVEL
 	if (!mobj)
 		return LUA_ErrInvalid(L, "mobj_t");
-	lua_pushboolean(L, (mobj->skin && (((skin_t *)mobj->skin)->sprites[spr2].numframes)));
+	lua_pushboolean(L, mobj->skin && P_IsValidSprite2(mobj->skin, spr2));
 	return 1;
 }
 
@@ -709,10 +734,9 @@ static int lib_pSpawnMissile(lua_State *L)
 	mobjtype_t type = luaL_checkinteger(L, 3);
 	NOHUD
 	INLEVEL
+	NOSPAWNNULL
 	if (!source || !dest)
 		return LUA_ErrInvalid(L, "mobj_t");
-	if (type >= NUMMOBJTYPES)
-		return luaL_error(L, "mobj type %d out of range (0 - %d)", type, NUMMOBJTYPES-1);
 	LUA_PushUserdata(L, P_SpawnMissile(source, dest, type), META_MOBJ);
 	return 1;
 }
@@ -727,10 +751,9 @@ static int lib_pSpawnXYZMissile(lua_State *L)
 	fixed_t z = luaL_checkfixed(L, 6);
 	NOHUD
 	INLEVEL
+	NOSPAWNNULL
 	if (!source || !dest)
 		return LUA_ErrInvalid(L, "mobj_t");
-	if (type >= NUMMOBJTYPES)
-		return luaL_error(L, "mobj type %d out of range (0 - %d)", type, NUMMOBJTYPES-1);
 	LUA_PushUserdata(L, P_SpawnXYZMissile(source, dest, type, x, y, z), META_MOBJ);
 	return 1;
 }
@@ -747,10 +770,9 @@ static int lib_pSpawnPointMissile(lua_State *L)
 	fixed_t z = luaL_checkfixed(L, 8);
 	NOHUD
 	INLEVEL
+	NOSPAWNNULL
 	if (!source)
 		return LUA_ErrInvalid(L, "mobj_t");
-	if (type >= NUMMOBJTYPES)
-		return luaL_error(L, "mobj type %d out of range (0 - %d)", type, NUMMOBJTYPES-1);
 	LUA_PushUserdata(L, P_SpawnPointMissile(source, xa, ya, za, type, x, y, z), META_MOBJ);
 	return 1;
 }
@@ -765,10 +787,9 @@ static int lib_pSpawnAlteredDirectionMissile(lua_State *L)
 	INT32 shiftingAngle = (INT32)luaL_checkinteger(L, 5);
 	NOHUD
 	INLEVEL
+	NOSPAWNNULL
 	if (!source)
 		return LUA_ErrInvalid(L, "mobj_t");
-	if (type >= NUMMOBJTYPES)
-		return luaL_error(L, "mobj type %d out of range (0 - %d)", type, NUMMOBJTYPES-1);
 	LUA_PushUserdata(L, P_SpawnAlteredDirectionMissile(source, type, x, y, z, shiftingAngle), META_MOBJ);
 	return 1;
 }
@@ -796,10 +817,9 @@ static int lib_pSPMAngle(lua_State *L)
 	UINT32 flags2 = (UINT32)luaL_optinteger(L, 5, 0);
 	NOHUD
 	INLEVEL
+	NOSPAWNNULL
 	if (!source)
 		return LUA_ErrInvalid(L, "mobj_t");
-	if (type >= NUMMOBJTYPES)
-		return luaL_error(L, "mobj type %d out of range (0 - %d)", type, NUMMOBJTYPES-1);
 	LUA_PushUserdata(L, P_SPMAngle(source, type, angle, allowaim, flags2), META_MOBJ);
 	return 1;
 }
@@ -811,10 +831,9 @@ static int lib_pSpawnPlayerMissile(lua_State *L)
 	UINT32 flags2 = (UINT32)luaL_optinteger(L, 3, 0);
 	NOHUD
 	INLEVEL
+	NOSPAWNNULL
 	if (!source)
 		return LUA_ErrInvalid(L, "mobj_t");
-	if (type >= NUMMOBJTYPES)
-		return luaL_error(L, "mobj type %d out of range (0 - %d)", type, NUMMOBJTYPES-1);
 	LUA_PushUserdata(L, P_SpawnPlayerMissile(source, type, flags2), META_MOBJ);
 	return 1;
 }
@@ -845,8 +864,7 @@ static int lib_pWeaponOrPanel(lua_State *L)
 {
 	mobjtype_t type = luaL_checkinteger(L, 1);
 	//HUDSAFE
-	if (type >= NUMMOBJTYPES)
-		return luaL_error(L, "mobj type %d out of range (0 - %d)", type, NUMMOBJTYPES-1);
+	NOSPAWNNULL
 	lua_pushboolean(L, P_WeaponOrPanel(type));
 	return 1;
 }
@@ -889,8 +907,7 @@ static int lib_pSpawnParaloop(lua_State *L)
 	boolean spawncenter = lua_optboolean(L, 9);
 	NOHUD
 	INLEVEL
-	if (type >= NUMMOBJTYPES)
-		return luaL_error(L, "mobj type %d out of range (0 - %d)", type, NUMMOBJTYPES-1);
+	NOSPAWNNULL
 	if (nstate >= NUMSTATES)
 		return luaL_error(L, "state %d out of range (0 - %d)", nstate, NUMSTATES-1);
 	P_SpawnParaloop(x, y, z, radius, number, type, nstate, rotangle, spawncenter);
@@ -925,13 +942,14 @@ static int lib_pSetScale(lua_State *L)
 {
 	mobj_t *mobj = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
 	fixed_t newscale = luaL_checkfixed(L, 2);
+	boolean instant = lua_optboolean(L, 3);
 	NOHUD
 	INLEVEL
 	if (!mobj)
 		return LUA_ErrInvalid(L, "mobj_t");
 	if (newscale < FRACUNIT/100)
 		newscale = FRACUNIT/100;
-	P_SetScale(mobj, newscale);
+	P_SetScale(mobj, newscale, instant);
 	return 0;
 }
 
@@ -1763,10 +1781,9 @@ static int lib_pSpawnSpinMobj(lua_State *L)
 	mobjtype_t type = luaL_checkinteger(L, 2);
 	NOHUD
 	INLEVEL
+	NOSPAWNNULL
 	if (!player)
 		return LUA_ErrInvalid(L, "player_t");
-	if (type >= NUMMOBJTYPES)
-		return luaL_error(L, "mobj type %d out of range (0 - %d)", type, NUMMOBJTYPES-1);
 	P_SpawnSpinMobj(player, type);
 	return 0;
 }
@@ -2498,6 +2515,17 @@ static int lib_pDoSuperTransformation(lua_State *L)
 	return 0;
 }
 
+static int lib_pDoSuperDetransformation(lua_State *L)
+{
+	player_t *player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
+	NOHUD
+	INLEVEL
+	if (!player)
+		return LUA_ErrInvalid(L, "player_t");
+	P_DoSuperDetransformation(player);
+	return 0;
+}
+
 static int lib_pExplodeMissile(lua_State *L)
 {
 	mobj_t *mo = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
@@ -2712,12 +2740,11 @@ static int lib_pFadeLight(lua_State *L)
 
 static int lib_pIsFlagAtBase(lua_State *L)
 {
-	mobjtype_t flag = luaL_checkinteger(L, 1);
+	mobjtype_t type = luaL_checkinteger(L, 1);
 	//HUDSAFE
 	INLEVEL
-	if (flag >= NUMMOBJTYPES)
-		return luaL_error(L, "mobj type %d out of range (0 - %d)", flag, NUMMOBJTYPES-1);
-	lua_pushboolean(L, P_IsFlagAtBase(flag));
+	NOSPAWNNULL
+	lua_pushboolean(L, P_IsFlagAtBase(type));
 	return 1;
 }
 
@@ -3018,12 +3045,18 @@ static int lib_rFrame2Char(lua_State *L)
 	//HUDSAFE
 
 	c[0] = R_Frame2Char(ch);
+	if (c[0] == '\xFF')
+		return luaL_error(L, "frame %u cannot be represented by a character", ch);
+
 	c[1] = 0;
 
 	lua_pushstring(L, c);
 	lua_pushinteger(L, c[0]);
 	return 2;
 }
+
+// R_SKINS
+////////////
 
 // R_SetPlayerSkin technically doesn't exist either, although it's basically just SetPlayerSkin and SetPlayerSkinByNum handled in one place for convenience
 static int lib_rSetPlayerSkin(lua_State *L)
@@ -3084,6 +3117,47 @@ static int lib_rSkinUsable(lua_State *L)
 	}
 
 	lua_pushboolean(L, R_SkinUsable(j, i));
+	return 1;
+}
+
+static int lib_pGetStateSprite2(lua_State *L)
+{
+	int statenum = luaL_checkinteger(L, 1);
+	if (statenum < 0 || statenum >= NUMSTATES)
+		return luaL_error(L, "state %d out of range (0 - %d)", statenum, NUMSTATES-1);
+
+	lua_pushinteger(L, P_GetStateSprite2(&states[statenum]));
+	return 1;
+}
+
+static int lib_pGetSprite2StateFrame(lua_State *L)
+{
+	int statenum = luaL_checkinteger(L, 1);
+	if (statenum < 0 || statenum >= NUMSTATES)
+		return luaL_error(L, "state %d out of range (0 - %d)", statenum, NUMSTATES-1);
+
+	lua_pushinteger(L, P_GetSprite2StateFrame(&states[statenum]));
+	return 1;
+}
+
+static int lib_pIsStateSprite2Super(lua_State *L)
+{
+	int statenum = luaL_checkinteger(L, 1);
+	if (statenum < 0 || statenum >= NUMSTATES)
+		return luaL_error(L, "state %d out of range (0 - %d)", statenum, NUMSTATES-1);
+
+	lua_pushboolean(L, P_IsStateSprite2Super(&states[statenum]));
+	return 1;
+}
+
+// Not a real function. Who cares? I know I don't.
+static int lib_pGetSuperSprite2(lua_State *L)
+{
+	int animID = luaL_checkinteger(L, 1) & SPR2F_MASK;
+	if (animID < 0 || animID >= NUMPLAYERSPRITES)
+		return luaL_error(L, "sprite2 %d out of range (0 - %d)", animID, NUMPLAYERSPRITES-1);
+
+	lua_pushinteger(L, animID | SPR2F_SUPER);
 	return 1;
 }
 
@@ -4284,6 +4358,7 @@ static luaL_Reg lib[] = {
 	{"userdataMetatable", lib_userdataMetatable},
 	{"IsPlayerAdmin", lib_isPlayerAdmin},
 	{"reserveLuabanks", lib_reserveLuabanks},
+	{"tofixed", lib_tofixed},
 
 	// m_menu
 	{"M_MoveColorAfter",lib_pMoveColorAfter},
@@ -4461,6 +4536,7 @@ static luaL_Reg lib[] = {
 	{"P_VectorInstaThrust",lib_pVectorInstaThrust},
 	{"P_SetMobjStateNF",lib_pSetMobjStateNF},
 	{"P_DoSuperTransformation",lib_pDoSuperTransformation},
+	{"P_DoSuperDetransformation",lib_pDoSuperDetransformation},
 	{"P_ExplodeMissile",lib_pExplodeMissile},
 	{"P_MobjTouchingSectorSpecial",lib_pMobjTouchingSectorSpecial},
 	{"P_ThingOnSpecial3DFloor",lib_pThingOnSpecial3DFloor},
@@ -4501,7 +4577,13 @@ static luaL_Reg lib[] = {
 	{"R_Char2Frame",lib_rChar2Frame},
 	{"R_Frame2Char",lib_rFrame2Char},
 	{"R_SetPlayerSkin",lib_rSetPlayerSkin},
+
+	// r_skins
 	{"R_SkinUsable",lib_rSkinUsable},
+	{"P_GetStateSprite2",lib_pGetStateSprite2},
+	{"P_GetSprite2StateFrame",lib_pGetSprite2StateFrame},
+	{"P_IsStateSprite2Super",lib_pIsStateSprite2Super},
+	{"P_GetSuperSprite2",lib_pGetSuperSprite2},
 
 	// r_data
 	{"R_CheckTextureNumForName",lib_rCheckTextureNumForName},

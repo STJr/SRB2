@@ -134,7 +134,7 @@ void luaV_gettable (lua_State *L, TValue *t, TValue *key, StkId val) {
 void luaV_settable (lua_State *L, TValue *t, TValue *key, StkId val) {
   int loop;
   for (loop = 0; loop < MAXTAGLOOP; loop++) {
-    TValue *tm;
+    TValue *tm = NULL;
     if (ttistable(t)) {  /* `t' is a table? */
       Table *h = hvalue(t);
       TValue *oldval = luaH_set(L, h, key); /* do a primitive set */

@@ -115,12 +115,12 @@ static void SV_SendServerInfo(INT32 node, tic_t servertime)
 	netbuffer->u.serverinfo.refusereason = GetRefuseReason(node);
 
 	strncpy(netbuffer->u.serverinfo.gametypename, gametypes[gametype].name,
-			sizeof netbuffer->u.serverinfo.gametypename);
+			sizeof(netbuffer->u.serverinfo.gametypename)-1);
 	netbuffer->u.serverinfo.modifiedgame = (UINT8)modifiedgame;
 	netbuffer->u.serverinfo.cheatsenabled = CV_CheatsEnabled();
 	netbuffer->u.serverinfo.flags = (dedicated ? SV_DEDICATED : 0);
 	strncpy(netbuffer->u.serverinfo.servername, cv_servername.string,
-		MAXSERVERNAME);
+		sizeof(netbuffer->u.serverinfo.servername)-1);
 	strncpy(netbuffer->u.serverinfo.mapname, G_BuildMapName(gamemap), 7);
 
 	M_Memcpy(netbuffer->u.serverinfo.mapmd5, mapmd5, 16);
@@ -184,7 +184,9 @@ static void SV_SendPlayerInfo(INT32 node)
 		}
 
 		netbuffer->u.playerinfo[i].num = i;
-		strncpy(netbuffer->u.playerinfo[i].name, (const char *)&player_names[i], MAXPLAYERNAME+1);
+		memset(netbuffer->u.playerinfo[i].name, 0x00, sizeof(netbuffer->u.playerinfo[i].name));
+		memcpy(netbuffer->u.playerinfo[i].name, player_names[i], sizeof(player_names[i]));
+
 		netbuffer->u.playerinfo[i].name[MAXPLAYERNAME] = '\0';
 
 		//fetch IP address

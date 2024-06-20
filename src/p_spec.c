@@ -363,7 +363,7 @@ void P_ParseAnimationDefintion(SINT8 istexture)
 		// Increase the size to make room for the new animation definition
 		maxanims++;
 		animdefs = (animdef_t *)Z_Realloc(animdefs, sizeof(animdef_t)*(maxanims + 1), PU_STATIC, NULL);
-		strncpy(animdefs[i].startname, animdefsToken, 9);
+		strncpy(animdefs[i].startname, animdefsToken, sizeof(animdefs[i].startname)-1);
 	}
 
 	// animdefs[i].startname is now set to animdefsToken either way.
@@ -3684,7 +3684,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 
 		case 466: // Set level failure state
 			{
-				if (line->args[1])
+				if (line->args[0])
 				{
 					stagefailed = false;
 					CONS_Debug(DBG_GAMELOGIC, "Stage can be completed successfully!\n");
