@@ -1157,7 +1157,7 @@ void readgametype(MYFILE *f, INT32 num)
 	char gtconst[MAXLINELEN+1];
 	char gtdescription[441];
 
-	UINT8 newgtleftcolor, newgtrightcolor;
+	UINT8 newgtleftcolor = 0, newgtrightcolor = 0;
 	boolean has_desc_colors[2] = { false, false };
 
 	gtconst[0] = '\0';
