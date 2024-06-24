@@ -120,6 +120,98 @@ static INT16 R_BottomLightLevel(side_t *side, UINT8 base_lightlevel)
 }
 */
 
+// If we have a multi-patch texture on a 2sided wall (rare) then we draw
+//  it using R_DrawColumn, else we draw it using R_DrawMaskedColumn, this
+//  way we don't have to store extra post_t info with each column for
+//  multi-patch textures. They are not normally needed as multi-patch
+//  textures don't have holes in it. At least not for now.
+static void R_Render2sidedMultiPatchColumn(column_t *column, unsigned lengthcol)
+{
+	INT32 topscreen, bottomscreen;
+
+	post_t *post = &column->posts[0];
+	if (!post->length)
+		return;
+
+	topscreen = sprtopscreen;
+	bottomscreen = topscreen + spryscale * lengthcol;
+
+	dc_yl = (sprtopscreen+FRACUNIT-1)>>FRACBITS;
+	dc_yh = (bottomscreen-1)>>FRACBITS;
+
+	if (windowtop != INT32_MAX && windowbottom != INT32_MAX)
+	{
+		dc_yl = ((windowtop + FRACUNIT)>>FRACBITS);
+		dc_yh = (windowbottom - 1)>>FRACBITS;
+	}
+
+	if (dc_yh >= mfloorclip[dc_x])
+		dc_yh =  mfloorclip[dc_x] - 1;
+	if (dc_yl <= mceilingclip[dc_x])
+		dc_yl =  mceilingclip[dc_x] + 1;
+
+	if (dc_yl >= vid.height || dc_yh < 0)
+		return;
+
+	if (dc_yl <= dc_yh && dc_yh < vid.height && dc_yh > 0)
+	{
+		dc_source = column->pixels + post->data_offset;
+		dc_postlength = post->length;
+
+		if (colfunc == colfuncs[BASEDRAWFUNC])
+			(colfuncs[COLDRAWFUNC_TWOSMULTIPATCH])();
+		else if (colfunc == colfuncs[COLDRAWFUNC_FUZZY])
+			(colfuncs[COLDRAWFUNC_TWOSMULTIPATCHTRANS])();
+		else
+			colfunc();
+	}
+}
+
+static void R_RenderFlipped2sidedMultiPatchColumn(column_t *column, unsigned lengthcol)
+{
+	INT32 topscreen, bottomscreen;
+
+	void (*localcolfunc)(void);
+
+	post_t *post = &column->posts[0];
+	if (!post->length)
+		return;
+
+	topscreen = sprtopscreen;
+	bottomscreen = topscreen + spryscale * lengthcol;
+
+	dc_yl = (sprtopscreen+FRACUNIT-1)>>FRACBITS;
+	dc_yh = (bottomscreen-1)>>FRACBITS;
+
+	if (windowtop != INT32_MAX && windowbottom != INT32_MAX)
+	{
+		dc_yl = ((windowtop + FRACUNIT)>>FRACBITS);
+		dc_yh = (windowbottom - 1)>>FRACBITS;
+	}
+
+	if (dc_yh >= mfloorclip[dc_x])
+		dc_yh =  mfloorclip[dc_x] - 1;
+	if (dc_yl <= mceilingclip[dc_x])
+		dc_yl =  mceilingclip[dc_x] + 1;
+
+	if (dc_yl >= vid.height || dc_yh < 0)
+		return;
+
+	if (dc_yl <= dc_yh && dc_yh < vid.height && dc_yh > 0)
+	{
+		dc_postlength = post->length;
+
+		if (colfunc == colfuncs[BASEDRAWFUNC])
+			localcolfunc = colfuncs[COLDRAWFUNC_TWOSMULTIPATCH];
+		else if (colfunc == colfuncs[COLDRAWFUNC_FUZZY])
+			localcolfunc = colfuncs[COLDRAWFUNC_TWOSMULTIPATCHTRANS];
+		else
+			localcolfunc = colfunc;
+
+		R_DrawFlippedPost(column->pixels + post->data_offset, post->length, localcolfunc);
+	}
+}
+
 void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 {
 	size_t pindex;
@@ -207,7 +299,16 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 	// Texture must be cached
 	R_CheckTextureCache(texnum);
 
-	if (vertflip) // vertically flipped?
+	// handle case where multipatch texture is drawn on a 2sided wall, multi-patch textures
+	// are not stored per-column with post info in SRB2
+	if (!textures[texnum]->transparency)
+	{
+		if (vertflip) // vertically flipped?
+			colfunc_2s = R_RenderFlipped2sidedMultiPatchColumn;
+		else
+			colfunc_2s = R_Render2sidedMultiPatchColumn;
+	}
+	else if (vertflip) // vertically flipped?
 		colfunc_2s = R_DrawFlippedMaskedColumn;
 	else
 		colfunc_2s = R_DrawMaskedColumn; // render the usual 2sided single-patch packed texture
@@ -836,7 +937,16 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 	// Texture must be cached
 	R_CheckTextureCache(texnum);
 
-	if (vertflip) // vertically flipped?
+	// handle case where multipatch texture is drawn on a 2sided wall, multi-patch textures
+	// are not stored per-column with post info in SRB2
+	if (!textures[texnum]->transparency)
+	{
+		if (vertflip) // vertically flipped?
+			colfunc_2s = R_RenderFlipped2sidedMultiPatchColumn;
+		else
+			colfunc_2s = R_Render2sidedMultiPatchColumn;
+	}
+	else if (vertflip) // vertically flipped?
 		colfunc_2s = R_DrawRepeatFlippedMaskedColumn;
 	else
 		colfunc_2s = R_DrawRepeatMaskedColumn;
@@ -919,21 +1029,25 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 		{
 			dc_iscale = 0xffffffffu / (unsigned)spryscale;
 
-			// Column has a single post and it matches the texture height, use regular column drawers
-			if (col->num_posts == 1 && col->posts[0].topdelta == 0 && col->posts[0].length == (unsigned)dc_texheight)
+			// Skip if texture is multipatch
+			if (textures[texnum]->transparency)
 			{
-				if (fuzzy)
-					colfunc = colfuncs[COLDRAWFUNC_FUZZY];
+				// Column has a single post and it matches the texture height, use regular column drawers
+				if (col->num_posts == 1 && col->posts[0].topdelta == 0 && col->posts[0].length == (unsigned)dc_texheight)
+				{
+					if (fuzzy)
+						colfunc = colfuncs[COLDRAWFUNC_FUZZY];
+					else
+						colfunc = colfuncs[BASEDRAWFUNC];
+				}
 				else
-					colfunc = colfuncs[BASEDRAWFUNC];
-			}
-			else
-			{
-				// Otherwise use column drawers with extra checks
-				if (fuzzy)
-					colfunc = R_DrawTranslucentColumnClamped_8;
-				else
-					colfunc = R_DrawColumnClamped_8;
+				{
+					// Otherwise use column drawers with extra checks
+					if (fuzzy)
+						colfunc = colfuncs[COLDRAWFUNC_CLAMPEDTRANS];
+					else
+						colfunc = colfuncs[COLDRAWFUNC_CLAMPED];
+				}
 			}
 		}
 

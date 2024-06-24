@@ -115,6 +115,9 @@ typedef struct levelinterpolator_s {
 			vector3_t oldo, bako;
 			vector2_t oldd, bakd;
 			fixed_t oldzdelta, bakzdelta;
+			dvector3_t oldorigin, bakorigin;
+			dvector3_t oldnormdir, baknormdir;
+			double olddzdelta, bakdzdelta;
 		} dynslope;
 	};
 } levelinterpolator_t;
