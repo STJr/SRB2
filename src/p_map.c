@@ -1258,8 +1258,9 @@ static unsigned PIT_DoCheckThing(mobj_t *thing)
 
 		if (tmthing->type != MT_SHELL && tmthing->target && tmthing->target->type == thing->type)
 		{
-			// Don't hit same species as originator.
-			if (thing == tmthing->target)
+			// Don't hit yourself, and if a player, don't hit bots
+			if (thing == tmthing->target
+				|| (thing->player && tmthing->target->player && (thing->player->bot == BOT_2PAI || thing->player->bot == BOT_2PHUMAN)))
 				return CHECKTHING_IGNORE;
 
 			if (thing->type != MT_PLAYER)
