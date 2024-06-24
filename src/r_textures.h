@@ -54,6 +54,7 @@ typedef struct
 	char name[8];
 	UINT32 hash;
 	UINT8 type; // TEXTURETYPE_*
+	boolean transparency;
 	INT16 width, height;
 	UINT8 flip; // 1 = flipx, 2 = flipy, 3 = both
 	void *flat; // The texture, as a flat.
