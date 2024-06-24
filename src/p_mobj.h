@@ -313,6 +313,7 @@ typedef struct mobj_s
 
 	UINT32 renderflags; // render flags
 	INT32 blendmode; // blend mode
+	fixed_t alpha; // alpha
 	fixed_t spritexscale, spriteyscale;
 	fixed_t spritexoffset, spriteyoffset;
 	fixed_t old_spritexscale, old_spriteyscale, old_spritexscale2, old_spriteyscale2;
@@ -456,6 +457,7 @@ typedef struct precipmobj_s
 
 	UINT32 renderflags; // render flags
 	INT32 blendmode; // blend mode
+	fixed_t alpha; // alpha
 	fixed_t spritexscale, spriteyscale;
 	fixed_t spritexoffset, spriteyoffset;
 	fixed_t old_spritexscale, old_spriteyscale, old_spritexscale2, old_spriteyscale2;
