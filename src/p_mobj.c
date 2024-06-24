@@ -2246,7 +2246,7 @@ boolean P_ZMovement(mobj_t *mo)
 		else if (!onground)
 			P_SlopeLaunch(mo);
 	}
-	
+
 	if (!mo->player && P_CheckDeathPitCollide(mo) && mo->health
 	&& !(mo->flags & MF_NOCLIPHEIGHT) && !(mo->flags2 & MF2_BOSSDEAD))
 	{
@@ -2939,7 +2939,7 @@ boolean P_SceneryZMovement(mobj_t *mo)
 		mo->eflags &= ~MFE_APPLYPMOMZ;
 	}
 	mo->z += mo->momz;
-	
+
 	if (!mo->player && P_CheckDeathPitCollide(mo) && mo->health
 	&& !(mo->flags & MF_NOCLIPHEIGHT) && !(mo->flags2 & MF2_BOSSDEAD))
 	{
@@ -3782,7 +3782,7 @@ static void P_PlayerMobjThinker(mobj_t *mobj)
 
 	// always do the gravity bit now, that's simpler
 	// BUT CheckPosition only if wasn't done before.
-	if (!(mobj->eflags & MFE_ONGROUND) || mobj->momz
+	if (mobj->momz
 		|| ((mobj->eflags & MFE_VERTICALFLIP) && mobj->z + mobj->height != mobj->ceilingz)
 		|| (!(mobj->eflags & MFE_VERTICALFLIP) && mobj->z != mobj->floorz)
 		|| P_IsObjectInGoop(mobj))
@@ -3795,17 +3795,6 @@ static void P_PlayerMobjThinker(mobj_t *mobj)
 	}
 	else
 	{
-#if 0 // i don't know why this is here, it's causing a few undesired state glitches, and disabling it doesn't appear to negatively affect the game, but i don't want it gone permanently just in case some obscure bug crops up
-		if (!(mobj->player->powers[pw_carry] == CR_NIGHTSMODE)) // used for drilling
-			mobj->player->pflags &= ~PF_STARTJUMP;
-		mobj->player->pflags &= ~(PF_JUMPED|PF_NOJUMPDAMAGE);
-		if (mobj->player->secondjump || mobj->player->powers[pw_tailsfly])
-		{
-			mobj->player->secondjump = 0;
-			mobj->player->powers[pw_tailsfly] = 0;
-			P_SetMobjState(mobj, S_PLAY_WALK);
-		}
-#endif
 		mobj->eflags &= ~MFE_JUSTHITFLOOR;
 	}
 
@@ -10746,7 +10735,7 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type, ...)
 
 	// Set shadowscale here, before spawn hook so that Lua can change it
 	mobj->shadowscale = P_DefaultMobjShadowScale(mobj);
-	
+
 	// A monitor can't respawn if we're not in multiplayer,
 	// or if we're in co-op and it's score or a 1up
 	if (mobj->flags & MF_MONITOR && (!(netgame || multiplayer)
