@@ -27,7 +27,9 @@
 
 #define FEETADJUST (4<<FRACBITS) // R_AddSingleSpriteDef
 
-boolean R_AddSingleSpriteDef(const char *sprname, spritedef_t *spritedef, UINT16 wadnum, UINT16 startlump, UINT16 endlump);
+spritenum_t R_GetSpriteNumByName(const char *name);
+
+boolean R_AddSingleSpriteDef(const char *sprname, spritedef_t *spritedef, UINT16 wadnum, UINT16 startlump, UINT16 endlump, boolean longname);
 
 //faB: find sprites in wadfile, replace existing, add new ones
 //     (only sprites from namelist are added or replaced)
@@ -45,10 +47,10 @@ extern fixed_t sprtopscreen;
 extern fixed_t sprbotscreen;
 extern fixed_t windowtop;
 extern fixed_t windowbottom;
-extern INT32 lengthcol;
 
-void R_DrawMaskedColumn(column_t *column);
-void R_DrawFlippedMaskedColumn(column_t *column);
+void R_DrawMaskedColumn(column_t *column, unsigned lengthcol);
+void R_DrawFlippedMaskedColumn(column_t *column, unsigned lengthcol);
+void R_DrawFlippedPost(UINT8 *source, unsigned length, void (*drawcolfunc)(void));
 
 // ----------------
 // SPRITE RENDERING
@@ -87,6 +89,12 @@ boolean R_ThingIsFloorSprite (mobj_t *thing);
 boolean R_ThingIsFullBright (mobj_t *thing);
 boolean R_ThingIsSemiBright (mobj_t *thing);
 boolean R_ThingIsFullDark (mobj_t *thing);
+
+boolean R_ThingIsFlashing (mobj_t *thing);
+
+UINT8 *R_GetTranslationForThing(mobj_t *mobj, skincolornum_t color, UINT16 translation);
+
+void R_ThingOffsetOverlay (mobj_t *thing, fixed_t *outx, fixed_t *outy);
 
 // --------------
 // MASKED DRAWING
@@ -214,6 +222,7 @@ typedef struct vissprite_s
 	fixed_t shadowscale;
 
 	skincolornum_t color;
+	UINT16 translation;
 
 	INT16 clipbot[MAXVIDWIDTH], cliptop[MAXVIDWIDTH];
 
@@ -224,11 +233,7 @@ extern UINT32 visspritecount, numvisiblesprites;
 
 void R_ClipSprites(drawseg_t* dsstart, portal_t* portal);
 
-boolean R_SpriteIsFlashing(vissprite_t *vis);
-
 void R_DrawThingBoundingBox(vissprite_t *spr);
-
-UINT8 *R_GetSpriteTranslation(vissprite_t *vis);
 
 // ----------
 // DRAW NODES

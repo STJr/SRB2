@@ -13,6 +13,7 @@
 extern lua_State *gL;
 
 extern boolean mousegrabbedbylua;
+extern boolean ignoregameinputs;
 
 #define MUTABLE_TAGS
 
@@ -41,8 +42,9 @@ extern boolean mousegrabbedbylua;
 #define META_SKIN "SKIN_T*"
 #define META_POWERS "PLAYER_T*POWERS"
 #define META_SOUNDSID "SKIN_T*SOUNDSID"
-#define META_SKINSPRITES "SKIN_T*SPRITES"
-#define META_SKINSPRITESLIST "SKIN_T*SPRITES[]"
+#define META_SKINSPRITES "SKIN_T*SKINSPRITES"
+#define META_SKINSPRITESLIST "SKIN_T*SKINSPRITES[]"
+#define META_SKINSPRITESCOMPAT "SKIN_T*SPRITES" // TODO: 2.3: Delete
 
 #define META_VERTEX "VERTEX_T*"
 #define META_LINE "LINE_T*"
@@ -84,6 +86,7 @@ extern boolean mousegrabbedbylua;
 #define META_HUDINFO "HUDINFO_T*"
 #define META_PATCH "PATCH_T*"
 #define META_COLORMAP "COLORMAP"
+#define META_EXTRACOLORMAP "EXTRACOLORMAP_T*"
 #define META_CAMERA "CAMERA_T*"
 
 #define META_ACTION "ACTIONF_T*"
@@ -111,4 +114,5 @@ int LUA_TagLib(lua_State *L);
 int LUA_PolyObjLib(lua_State *L);
 int LUA_BlockmapLib(lua_State *L);
 int LUA_HudLib(lua_State *L);
+int LUA_ColorLib(lua_State *L);
 int LUA_InputLib(lua_State *L);

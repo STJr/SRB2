@@ -158,6 +158,10 @@ typedef enum
 	PF_FORCESTRAFE = 1<<28, // Turning inputs are translated into strafing inputs
 	PF_CANCARRY    = 1<<29, // Can carry another player?
 	PF_FINISHED    = 1<<30, // The player finished the level. NOT the same as exiting
+	
+	// True if shield button down last tic
+	// This may be the final flag, but 2.3 could free up the others
+	PF_SHIELDDOWN    = 1<<31,
 
 	// up to 1<<31 is free
 } pflags_t;
@@ -369,6 +373,16 @@ typedef enum
 	AI_SPINFOLLOW
 } aistatetype_t;
 
+// NiGHTS text
+typedef enum
+{
+	NTV_NONE = 0,
+	NTV_GETSPHERES,
+	NTV_GETMORESPHERES,
+	NTV_BONUSTIMESTART,
+	NTV_BONUSTIMEEND,
+} nightstextvar_t;
+
 
 // ========================================================================
 //                          PLAYER STRUCTURE
@@ -447,10 +461,10 @@ typedef struct player_s
 	UINT16 flashcount;
 	UINT16 flashpal;
 
-	// Player skin colorshift, 0-15 for which color to draw player.
+	// Player skin colorshift, which color to draw player.
 	UINT16 skincolor;
 
-	INT32 skin;
+	UINT8 skin;
 	UINT32 availabilities;
 
 	UINT32 score; // player score (total)
@@ -568,7 +582,8 @@ typedef struct player_s
 	// Statistical purposes.
 	tic_t marebegunat; // Leveltime when mare begun
 	tic_t startedtime; // Time which you started this mare with.
-	tic_t finishedtime; // Time it took you to finish the mare (used for display)
+	tic_t finishedtime; // The time it took to destroy the capsule on this mare (used for bonus time display)
+	tic_t lastmaretime; // The time it took to complete the last mare (used for rank display)
 	tic_t lapbegunat; // Leveltime when lap begun
 	tic_t lapstartedtime; // Time which you started this lap with.
 	INT16 finishedspheres; // The spheres you had left upon finishing the mare
@@ -583,7 +598,7 @@ typedef struct player_s
 	UINT8 totalmarebonuslap; // total mare bonus lap
 	INT32 maxlink; // maximum link obtained
 	UINT8 texttimer; // nights_texttime should not be local
-	UINT8 textvar; // which line of NiGHTS text to show -- let's not use cheap hacks
+	UINT8 textvar; // which line of NiGHTS text to show -- see nightstextvar_t
 
 	INT16 lastsidehit, lastlinehit;
 
@@ -599,6 +614,7 @@ typedef struct player_s
 	boolean spectator;
 	boolean outofcoop;
 	boolean removing;
+	boolean muted;
 	UINT8 bot;
 	struct player_s *botleader;
 	UINT16 lastbuttons;
@@ -607,9 +623,8 @@ typedef struct player_s
 
 	tic_t jointime; // Timer when player joins game to change skin/color
 	tic_t quittime; // Time elapsed since user disconnected, zero if connected
-#ifdef HWRENDER
+	tic_t lastinputtime; // the last tic the player has made any input
 	fixed_t fovadd; // adjust FOV for hw rendering
-#endif
 } player_t;
 
 // Values for dashmode

@@ -1,0 +1,19 @@
+include:
+  - '.gitlab/ci/templates/*.yml'
+  - '.gitlab/ci/jobs/*.yml'
+
+workflow:
+  auto_cancel:
+    on_new_commit: interruptible
+
+variables:
+  GIT_CLONE_PATH: $CI_BUILDS_DIR/$CI_CONCURRENT_ID/$CI_PROJECT_PATH
+  GIT_DEPTH: 20
+
+stages:
+  - build
+
+default:
+  interruptible: true
+  artifacts:
+    expire_in: 1 day

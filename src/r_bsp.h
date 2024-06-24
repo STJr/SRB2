@@ -25,13 +25,17 @@ extern sector_t *frontsector;
 extern sector_t *backsector;
 extern boolean portalline; // is curline a portal seg?
 
-// drawsegs are allocated on the fly... see r_segs.c
-
 extern INT32 checkcoord[12][4];
 
 extern drawseg_t *curdrawsegs;
 extern drawseg_t *drawsegs;
 extern drawseg_t *ds_p;
+
+extern boolean bothceilingssky;
+extern boolean bothfloorssky;
+
+extern boolean horizonline;
+
 extern INT32 doorclosed;
 
 // BSP?
@@ -39,6 +43,7 @@ void R_ClearClipSegs(void);
 void R_PortalClearClipSegs(INT32 start, INT32 end);
 void R_ClearDrawSegs(void);
 void R_RenderBSPNode(INT32 bspnum);
+void R_RenderPortalHorizonLine(sector_t *sector);
 
 void R_SortPolyObjects(subsector_t *sub);
 
@@ -52,4 +57,5 @@ boolean R_IsEmptyLine(seg_t *line, sector_t *front, sector_t *back);
 
 INT32 R_GetPlaneLight(sector_t *sector, fixed_t planeheight, boolean underside);
 void R_Prep3DFloors(sector_t *sector);
+void R_CheckSectorLightLists(sector_t *sector, sector_t *fakeflat, INT32 *floorlightlevel, INT32 *ceilinglightlevel, extracolormap_t **floorcolormap, extracolormap_t **ceilingcolormap);
 #endif

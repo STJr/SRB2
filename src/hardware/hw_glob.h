@@ -74,8 +74,6 @@ typedef struct gl_vissprite_s
 	float spritexscale, spriteyscale;
 	float spritexoffset, spriteyoffset;
 
-	skincolornum_t color;
-
 	UINT32 renderflags;
 	UINT8 rotateflags;
 
@@ -109,6 +107,8 @@ void HWR_FreeExtraSubsectors(void);
 // --------
 // hw_cache.c
 // --------
+RGBA_t *HWR_GetTexturePalette(void);
+
 void HWR_InitMapTextures(void);
 void HWR_LoadMapTextures(size_t pnumtextures);
 void HWR_FreeMapTextures(void);
@@ -119,10 +119,9 @@ patch_t *HWR_GetCachedGLPatch(lumpnum_t lumpnum);
 void HWR_GetPatch(patch_t *patch);
 void HWR_GetMappedPatch(patch_t *patch, const UINT8 *colormap);
 void HWR_GetFadeMask(lumpnum_t fademasklumpnum);
-patch_t *HWR_GetPic(lumpnum_t lumpnum);
 
-GLMapTexture_t *HWR_GetTexture(INT32 tex);
-void HWR_GetLevelFlat(levelflat_t *levelflat);
+GLMapTexture_t *HWR_GetTexture(INT32 tex, boolean chromakeyed);
+void HWR_GetLevelFlat(levelflat_t *levelflat, boolean chromakeyed);
 void HWR_GetRawFlat(lumpnum_t flatlumpnum);
 
 void HWR_FreeTexture(patch_t *patch);
@@ -133,6 +132,10 @@ void HWR_FreeColormapCache(void);
 void HWR_UnlockCachedPatch(GLPatch_t *gpatch);
 
 void HWR_SetPalette(RGBA_t *palette);
+void HWR_SetMapPalette(void);
+UINT32 HWR_CreateLightTable(UINT8 *lighttable);
+UINT32 HWR_GetLightTableID(extracolormap_t *colormap);
+void HWR_ClearLightTables(void);
 
 
 // --------
@@ -140,5 +143,19 @@ void HWR_SetPalette(RGBA_t *palette);
 // --------
 extern INT32 patchformat;
 extern INT32 textureformat;
+
+// --------
+// hw_shaders.c
+// --------
+boolean HWR_InitShaders(void);
+void HWR_CompileShaders(void);
+
+int HWR_GetShaderFromTarget(int shader_target);
+
+void HWR_LoadAllCustomShaders(void);
+void HWR_LoadCustomShadersFromFile(UINT16 wadnum, boolean PK3);
+const char *HWR_GetShaderName(INT32 shader);
+
+extern customshaderxlat_t shaderxlat[];
 
 #endif //_HW_GLOB_

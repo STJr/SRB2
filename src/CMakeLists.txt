@@ -6,10 +6,6 @@ add_executable(SRB2SDL2 MACOSX_BUNDLE WIN32
 	config.h.in
 	string.c
 	d_main.c
-	d_clisrv.c
-	d_net.c
-	d_netfil.c
-	d_netcmd.c
 	dehacked.c
 	deh_soc.c
 	deh_lua.c
@@ -39,7 +35,9 @@ add_executable(SRB2SDL2 MACOSX_BUNDLE WIN32
 	m_misc.c
 	m_perfstats.c
 	m_random.c
+	m_tokenizer.c
 	m_queue.c
+	m_vector.c
 	info.c
 	p_ceilng.c
 	p_enemy.c
@@ -72,6 +70,7 @@ add_executable(SRB2SDL2 MACOSX_BUNDLE WIN32
 	r_things.c
 	r_bbox.c
 	r_textures.c
+	r_translation.c
 	r_patch.c
 	r_patchrotation.c
 	r_picformats.c
@@ -83,12 +82,10 @@ add_executable(SRB2SDL2 MACOSX_BUNDLE WIN32
 	sounds.c
 	w_wad.c
 	filesrch.c
-	mserv.c
-	http-mserv.c
-	i_tcp.c
 	lzf.c
 	b_bot.c
 	u_list.c
+	snake.c
 	lua_script.c
 	lua_baselib.c
 	lua_mathlib.c
@@ -105,6 +102,7 @@ add_executable(SRB2SDL2 MACOSX_BUNDLE WIN32
 	lua_blockmaplib.c
 	lua_hudlib.c
 	lua_hudlib_drawlist.c
+	lua_colorlib.c
 	lua_inputlib.c
 )
 
@@ -136,9 +134,12 @@ add_dependencies(SRB2SDL2 _SRB2_reconf)
 
 if("${CMAKE_COMPILER_IS_GNUCC}" AND "${CMAKE_SYSTEM_NAME}" MATCHES "Windows")
 	target_link_options(SRB2SDL2 PRIVATE "-Wl,--disable-dynamicbase")
-	if(NOT "${SRB2_CONFIG_SYSTEM_LIBRARIES}" AND NOT "${SRB2_CONFIG_SHARED_INTERNAL_LIBRARIES}")
+	if("${SRB2_CONFIG_STATIC_STDLIB}")
 		# On MinGW with internal libraries, link the standard library statically
 		target_link_options(SRB2SDL2 PRIVATE "-static")
+	endif()
+	if(CMAKE_SIZEOF_VOID_P EQUAL 4)
+		target_link_options(SRB2SDL2 PRIVATE "-Wl,--large-address-aware")
 	endif()
 endif()
 
@@ -149,10 +150,15 @@ set(SRB2_CONFIG_DEV_BUILD OFF CACHE BOOL
 	"Compile a development build of SRB2.")
 
 add_subdirectory(blua)
+add_subdirectory(netcode)
 
 # OS macros
 if (UNIX)
 	target_compile_definitions(SRB2SDL2 PRIVATE -DUNIXCOMMON)
+endif()
+
+if (BSD MATCHES "FreeBSD")
+	target_compile_definitions(SRB2SDL2 PRIVATE -DFREEBSD)
 endif()
 
 if(CMAKE_COMPILER_IS_GNUCC)
@@ -170,19 +176,16 @@ if("${CMAKE_SYSTEM_NAME}" MATCHES "Darwin")
 	target_compile_definitions(SRB2SDL2 PRIVATE -DMACOSX)
 endif()
 
-target_link_libraries(SRB2SDL2 PRIVATE gme)
-target_compile_definitions(SRB2SDL2 PRIVATE -DHAVE_GME)
-if(NOT "${SRB2_CONFIG_SYSTEM_LIBRARIES}")
-	# this sucks but gme doesn't use modern cmake to delineate public headers
-	target_include_directories(SRB2SDL2 PRIVATE "${libgme_SOURCE_DIR}")
+if("${SRB2_CONFIG_USE_GME}")
+	target_link_libraries(SRB2SDL2 PRIVATE gme)
+	target_compile_definitions(SRB2SDL2 PRIVATE -DHAVE_GME)
+	if(NOT "${SRB2_CONFIG_SYSTEM_LIBRARIES}")
+		# this sucks but gme doesn't use modern cmake to delineate public headers
+		target_include_directories(SRB2SDL2 PRIVATE "${libgme_SOURCE_DIR}")
+	endif()
 endif()
 
-target_link_libraries(SRB2SDL2 PRIVATE openmpt)
-target_compile_definitions(SRB2SDL2 PRIVATE -DHAVE_OPENMPT)
-
-target_link_libraries(SRB2SDL2 PRIVATE ZLIB::ZLIB PNG::PNG CURL::libcurl)
-target_compile_definitions(SRB2SDL2 PRIVATE -DHAVE_ZLIB -DHAVE_PNG -DHAVE_CURL -D_LARGEFILE64_SOURCE)
-target_sources(SRB2SDL2 PRIVATE apng.c)
+target_compile_definitions(SRB2SDL2 PRIVATE -D_LARGEFILE64_SOURCE)
 
 set(SRB2_HAVE_THREADS ON)
 target_compile_definitions(SRB2SDL2 PRIVATE -DHAVE_THREADS)
@@ -240,6 +243,7 @@ target_compile_options(SRB2SDL2 PRIVATE
 	# This is a direct translation from versions.mk
 	$<$<AND:$<COMPILE_LANGUAGE:C>,$<C_COMPILER_ID:GNU>>:
 		-Wall
+		-Wextra
 		-Wno-trigraphs
 		-W # Was controlled by RELAXWARNINGS
 		-Wfloat-equal
@@ -258,6 +262,7 @@ target_compile_options(SRB2SDL2 PRIVATE
 		-Winline
 		-Wformat-y2k
 		-Wformat-security
+		-fwrapv
 
 		$<$<VERSION_LESS:$<C_COMPILER_VERSION>,2.9.5>:
 			-Wno-div-by-zero
@@ -281,7 +286,7 @@ target_compile_options(SRB2SDL2 PRIVATE
 
 		$<$<VERSION_GREATER_EQUAL:$<C_COMPILER_VERSION>,4.5.0>:
 			-Wlogical-op
-			-Wno-error=array-bounds
+			#-Wno-error=array-bounds
 		>
 
 		$<$<VERSION_GREATER_EQUAL:$<C_COMPILER_VERSION>,4.6.0>:
@@ -306,11 +311,7 @@ target_compile_options(SRB2SDL2 PRIVATE
 
 		$<$<VERSION_GREATER_EQUAL:$<C_COMPILER_VERSION>,8.1.0>:
 			-Wno-error=format-overflow
-			-Wno-error=stringop-truncation
-			-Wno-error=stringop-overflow
 			-Wno-format-overflow
-			-Wno-stringop-truncation
-			-Wno-stringop-overflow
 			-Wno-error=multistatement-macros
 		>
 
@@ -323,10 +324,13 @@ target_compile_options(SRB2SDL2 PRIVATE
 	$<$<AND:$<COMPILE_LANGUAGE:C>,$<OR:$<C_COMPILER_ID:AppleClang>,$<C_COMPILER_ID:Clang>>>:
 		-Wall
 		-Wno-absolute-value
+		-Wextra
 		-Wno-trigraphs
+		-Wconditional-uninitialized
 		-Wno-error=non-literal-null-conversion
 		-Wno-error=constant-conversion
 		-Wno-error=unused-but-set-variable
+		-fwrapv
 	>
 
 	# C, MSVC
@@ -339,6 +343,9 @@ target_compile_options(SRB2SDL2 PRIVATE
 	# C++, GNU, Clang and Apple Clang
 	$<$<AND:$<COMPILE_LANGUAGE:CXX>,$<OR:$<C_COMPILER_ID:GNU>,$<C_COMPILER_ID:AppleClang>,$<C_COMPILER_ID:Clang>>>:
 		-Wall
+		-Wextra
+		-Wno-trigraphs
+		-Wconditional-uninitialized
 	>
 
 	# C++, MSVC
@@ -380,6 +387,11 @@ endif()
 if(SRB2_CONFIG_PACKETDROP)
 	target_compile_definitions(SRB2SDL2 PRIVATE -DPACKETDROP)
 endif()
+if(SRB2_CONFIG_EXECINFO)
+else()
+	target_compile_definitions(SRB2SDL2 PRIVATE -DNOEXECINFO)
+	message(STATUS "You have disabled stack trace dump support")
+endif()
 if(SRB2_CONFIG_ZDEBUG)
 	target_compile_definitions(SRB2SDL2 PRIVATE -DZDEBUG)
 endif()
@@ -389,8 +401,66 @@ if(SRB2_CONFIG_PROFILEMODE AND "${CMAKE_C_COMPILER_ID}" STREQUAL "GNU")
 endif()
 
 add_subdirectory(sdl)
-if(SRB2_CONFIG_ENABLE_TESTS)
-	add_subdirectory(tests)
+
+if(TARGET ZLIB::ZLIB)
+	target_compile_definitions(SRB2SDL2 PRIVATE -DHAVE_ZLIB)
+	message(STATUS "Zlib Found")
+else()
+	message(STATUS "No Zlib Found")
+endif()
+
+if(TARGET PNG::PNG)
+	target_compile_definitions(SRB2SDL2 PRIVATE -DHAVE_PNG)
+	target_sources(SRB2SDL2 PRIVATE apng.c ${libapng_HEADER})
+	target_include_directories(SRB2SDL2 PRIVATE ${libapng_INCLUDE_DIRS} ${libpng_BINARY_DIR})
+	#message(STATUS "libpng inc DIRS at ${libapng_INCLUDE_DIRS}")
+	#message(STATUS "libpng bin DIRS at ${libpng_BINARY_DIR}")
+	#message(STATUS "png.h at ${libapng_HEADER}")
+	message(STATUS "libpng Found")
+else()
+	message(STATUS "No libpng Found")
+endif()
+
+if(TARGET PNG::PNG AND TARGET ZLIB::ZLIB)
+#libpng links zlib too?
+target_link_libraries(SRB2SDL2 PRIVATE PNG::PNG)
+endif()
+
+if(NOT TARGET PNG::PNG AND TARGET ZLIB::ZLIB)
+#got no libpng? we need zlib
+target_link_libraries(SRB2SDL2 PRIVATE ZLIB::ZLIB)
+endif()
+
+if(TARGET gme::gme)
+	target_compile_definitions(SRB2SDL2 PRIVATE -DHAVE_GME)
+	target_link_libraries(SRB2SDL2 PRIVATE gme::gme)
+	message(STATUS "libgme Found")
+else()
+	message(STATUS "No libgme Found")
+endif()
+
+if(TARGET libopenmpt::libopenmpt)
+	target_compile_definitions(SRB2SDL2 PRIVATE -DHAVE_OPENMPT)
+	target_link_libraries(SRB2SDL2 PRIVATE libopenmpt::libopenmpt)
+	message(STATUS "libopenmpt Found")
+else()
+	message(STATUS "No libopenmpt Found")
+endif()
+
+if(TARGET CURL::libcurl)
+	target_compile_definitions(SRB2SDL2 PRIVATE -DHAVE_CURL)
+	target_link_libraries(SRB2SDL2 PRIVATE CURL::libcurl)
+	message(STATUS "libcurl Found")
+else()
+	message(STATUS "No libcurl Found")
+endif()
+
+if(TARGET miniupnpc::miniupnpc)
+	target_compile_definitions(SRB2SDL2 PRIVATE -DHAVE_MINIUPNPC)
+	target_link_libraries(SRB2SDL2 PRIVATE miniupnpc::miniupnpc)
+	message(STATUS "miniupnpc Found")
+else()
+	message(STATUS "No miniupnpc Found")
 endif()
 
 # strip debug symbols into separate file when using gcc.

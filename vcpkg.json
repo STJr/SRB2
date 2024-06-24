@@ -1,0 +1,85 @@
+{
+  "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
+  "name": "srb2",
+  "version": "1.0.0",
+  "builtin-baseline": "c823fd3e57035b10d970a96da2796a2db55e5df5",
+  "dependencies": [
+    "curl",
+    {
+      "name": "libgme",
+      "platform": "!(windows & mingw) & !native"
+    },
+    {
+      "name": "libopenmpt",
+      "platform": "!(windows & mingw)"
+    },
+    "libpng",
+    "miniupnpc",
+    "sdl2",
+    {
+      "name": "sdl2-mixer-ext",
+      "features": [
+        {
+          "name": "cmd",
+          "platform": "linux"
+        },
+        {
+          "name": "libflac",
+          "platform": "!(windows & mingw & !static)"
+        },
+        {
+          "name": "libgme",
+          "platform": "!(windows & mingw) & !native"
+        },
+        {
+          "name": "libmodplug",
+          "platform": "!(windows & mingw)"
+        },
+        {
+          "name": "libopnmidi",
+          "platform": "!(windows & mingw)"
+        },
+        {
+          "name": "libvorbis",
+          "platform": "!(windows & mingw & !static)"
+        },
+        {
+          "name": "libxmp",
+          "platform": "!(windows & mingw)"
+        },
+        {
+          "name": "mpg123",
+          "platform": "!(windows & mingw)"
+        },
+        {
+          "name": "nativemidi",
+          "platform": "!(windows & mingw)"
+        },
+        {
+          "name": "opusfile",
+          "platform": "!(windows & mingw)"
+        },
+        {
+          "name": "pxtone",
+          "platform": "!(windows & mingw)"
+        },
+        {
+          "name": "timidity",
+          "platform": "!(windows & mingw)"
+        },
+        {
+          "name": "wavpack",
+          "platform": "!(windows & mingw)"
+        }
+      ]
+    },
+    "zlib"
+  ],
+  "overrides": [
+    {
+      "name": "sdl2",
+      "version": "2.28.5",
+      "port-version": 1
+    }
+  ]
+}

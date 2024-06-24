@@ -108,6 +108,7 @@ char *nongnu_strcasestr(const char *in, const char *what);
 
 int startswith (const char *base, const char *tag);
 int endswith (const char *base, const char *tag);
+char *xstrtok(char *line, const char *delims);
 
 #if defined (_WIN32) || defined (__HAIKU__)
 #define HAVE_DOSSTR_FUNCS

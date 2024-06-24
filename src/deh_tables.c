@@ -31,7 +31,7 @@
 char *FREE_STATES[NUMSTATEFREESLOTS];
 char *FREE_MOBJS[NUMMOBJFREESLOTS];
 char *FREE_SKINCOLORS[NUMCOLORFREESLOTS];
-UINT8 used_spr[(NUMSPRITEFREESLOTS / 8) + 1]; // Bitwise flag for sprite freeslot in use! I would use ceil() here if I could, but it only saves 1 byte of memory anyway.
+bitarray_t used_spr[BIT_ARRAY_SIZE(NUMSPRITEFREESLOTS)]; // Sprite freeslots in use
 
 const char NIGHTSGRADE_LIST[] = {
 	'F', // GRADE_F
@@ -219,6 +219,7 @@ actionpointer_t actionpointers[] =
 	{{A_ChangeColorRelative},    "A_CHANGECOLORRELATIVE"},
 	{{A_ChangeColorAbsolute},    "A_CHANGECOLORABSOLUTE"},
 	{{A_Dye},                    "A_DYE"},
+	{{A_SetTranslation},         "A_SETTRANSLATION"},
 	{{A_MoveRelative},           "A_MOVERELATIVE"},
 	{{A_MoveAbsolute},           "A_MOVEABSOLUTE"},
 	{{A_Thrust},                 "A_THRUST"},
@@ -1932,6 +1933,13 @@ const char *const STATE_LIST[] = { // array length left dynamic for sanity testi
 	"S_BIGMACE",
 	"S_SMALLGRABCHAIN",
 	"S_BIGGRABCHAIN",
+
+	// Blue spring on a ball
+	"S_BLUESPRINGBALL",
+	"S_BLUESPRINGBALL2",
+	"S_BLUESPRINGBALL3",
+	"S_BLUESPRINGBALL4",
+	"S_BLUESPRINGBALL5",
 
 	// Yellow spring on a ball
 	"S_YELLOWSPRINGBALL",
@@ -3891,6 +3899,7 @@ const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for sanity t
 	"MT_BIGMACE", // Big Mace
 	"MT_SMALLGRABCHAIN", // Small Grab Chain
 	"MT_BIGGRABCHAIN", // Big Grab Chain
+	"MT_BLUESPRINGBALL", // Blue spring on a ball
 	"MT_YELLOWSPRINGBALL", // Yellow spring on a ball
 	"MT_REDSPRINGBALL", // Red spring on a ball
 	"MT_SMALLFIREBAR", // Small Firebar
@@ -4283,7 +4292,7 @@ const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for sanity t
 	"MT_POLYANCHOR",
 	"MT_POLYSPAWN",
 
-	// Skybox objects
+	// Portal objects
 	"MT_SKYBOX",
 
 	// Debris
@@ -4825,6 +4834,7 @@ const char *const POWERS_LIST[] = {
 
 const char *const HUDITEMS_LIST[] = {
 	"LIVES",
+	"INPUT",
 
 	"RINGS",
 	"RINGSNUM",
@@ -4883,7 +4893,7 @@ const char *const MENUTYPES_LIST[] = {
 	"MP_SERVER",
 	"MP_CONNECT",
 	"MP_ROOM",
-	"MP_PLAYERSETUP", // MP_PlayerSetupDef shared with SPLITSCREEN if #defined NONET
+	"MP_PLAYERSETUP",
 	"MP_SERVER_OPTIONS",
 
 	// Options
@@ -5085,6 +5095,10 @@ struct int_const_s const INT_CONST[] = {
 	{"RF_SHADOWDRAW",RF_SHADOWDRAW},
 	{"RF_SHADOWEFFECTS",RF_SHADOWEFFECTS},
 	{"RF_DROPSHADOW",RF_DROPSHADOW},
+
+	// Animation flags
+	{"SPR2F_MASK",SPR2F_MASK},
+	{"SPR2F_SUPER",SPR2F_SUPER},
 
 	// Level flags
 	{"LF_SCRIPTISFILE",LF_SCRIPTISFILE},
@@ -5568,7 +5582,8 @@ struct int_const_s const INT_CONST[] = {
 	{"ROTAXIS_Z",ROTAXIS_Z},
 
 	// Buttons (ticcmd_t)
-	{"BT_WEAPONMASK",BT_WEAPONMASK}, //our first four bits.
+	{"BT_WEAPONMASK",BT_WEAPONMASK}, //our first three bits.
+	{"BT_SHIELD",BT_SHIELD},
 	{"BT_WEAPONNEXT",BT_WEAPONNEXT},
 	{"BT_WEAPONPREV",BT_WEAPONPREV},
 	{"BT_ATTACK",BT_ATTACK}, // shoot rings
@@ -5727,6 +5742,7 @@ struct int_const_s const INT_CONST[] = {
 	{"JA_DIGITAL",JA_DIGITAL},
 	{"JA_JUMP",JA_JUMP},
 	{"JA_SPIN",JA_SPIN},
+	{"JA_SHIELD",JA_SHIELD},
 	{"JA_FIRE",JA_FIRE},
 	{"JA_FIRENORMAL",JA_FIRENORMAL},
 	{"JOYAXISRANGE",JOYAXISRANGE},
@@ -5748,9 +5764,7 @@ struct int_const_s const INT_CONST[] = {
 	{"GC_WEPSLOT5",GC_WEPSLOT5},
 	{"GC_WEPSLOT6",GC_WEPSLOT6},
 	{"GC_WEPSLOT7",GC_WEPSLOT7},
-	{"GC_WEPSLOT8",GC_WEPSLOT8},
-	{"GC_WEPSLOT9",GC_WEPSLOT9},
-	{"GC_WEPSLOT10",GC_WEPSLOT10},
+	{"GC_SHIELD",GC_SHIELD},
 	{"GC_FIRE",GC_FIRE},
 	{"GC_FIRENORMAL",GC_FIRENORMAL},
 	{"GC_TOSSFLAG",GC_TOSSFLAG},
@@ -5789,6 +5803,10 @@ struct int_const_s const INT_CONST[] = {
 	{"MB_BUTTON8",MB_BUTTON8},
 	{"MB_SCROLLUP",MB_SCROLLUP},
 	{"MB_SCROLLDOWN",MB_SCROLLDOWN},
+
+	// screen.h constants
+	{"BASEVIDWIDTH",BASEVIDWIDTH},
+	{"BASEVIDHEIGHT",BASEVIDHEIGHT},
 
 	{NULL,0}
 };

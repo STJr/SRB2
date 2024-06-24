@@ -34,7 +34,7 @@
 #include "doomdef.h"
 #include "am_map.h"
 #include "console.h"
-#include "d_net.h"
+#include "netcode/d_net.h"
 #include "f_finale.h"
 #include "g_game.h"
 #include "hu_stuff.h"
@@ -50,17 +50,18 @@
 #include "p_saveg.h"
 #include "r_main.h"
 #include "r_local.h"
+#include "r_translation.h"
 #include "s_sound.h"
 #include "st_stuff.h"
 #include "v_video.h"
 #include "w_wad.h"
 #include "z_zone.h"
 #include "d_main.h"
-#include "d_netfil.h"
+#include "netcode/d_netfil.h"
 #include "m_cheat.h"
 #include "y_inter.h"
 #include "p_local.h" // chasecam
-#include "mserv.h" // ms_RoomId
+#include "netcode/mserv.h" // ms_RoomId
 #include "m_misc.h" // screenshot functionality
 #include "deh_tables.h" // Dehacked list test
 #include "m_cond.h" // condition initialization
@@ -192,19 +193,19 @@ void D_ProcessEvents(void)
 		ev = &events[eventtail];
 
 		// Set mouse buttons early in case event is eaten later
-		if (ev->type == ev_keydown || ev->type == ev_keyup)
+		if (ev->type == ev_keydown || ev->type == ev_keyup || ev->type == ev_text)
 		{
 			// Mouse buttons
 			if ((UINT32)(ev->key - KEY_MOUSE1) < MOUSEBUTTONS)
 			{
-				if (ev->type == ev_keydown)
+				if (ev->type == ev_keydown || ev->type == ev_text)
 					mouse.buttons |= 1 << (ev->key - KEY_MOUSE1);
 				else
 					mouse.buttons &= ~(1 << (ev->key - KEY_MOUSE1));
 			}
 			else if ((UINT32)(ev->key - KEY_2MOUSE1) < MOUSEBUTTONS)
 			{
-				if (ev->type == ev_keydown)
+				if (ev->type == ev_keydown || ev->type == ev_text)
 					mouse2.buttons |= 1 << (ev->key - KEY_2MOUSE1);
 				else
 					mouse2.buttons &= ~(1 << (ev->key - KEY_2MOUSE1));
@@ -407,13 +408,11 @@ static void D_Display(void)
 		case GS_LEVEL:
 			if (!gametic)
 				break;
-			HU_Erase();
 			AM_Drawer();
 			break;
 
 		case GS_INTERMISSION:
 			Y_IntermissionDrawer();
-			HU_Erase();
 			HU_Drawer();
 			break;
 
@@ -428,13 +427,11 @@ static void D_Display(void)
 
 		case GS_ENDING:
 			F_EndingDrawer();
-			HU_Erase();
 			HU_Drawer();
 			break;
 
 		case GS_CUTSCENE:
 			F_CutsceneDrawer();
-			HU_Erase();
 			HU_Drawer();
 			break;
 
@@ -444,7 +441,6 @@ static void D_Display(void)
 
 		case GS_EVALUATION:
 			F_GameEvaluationDrawer();
-			HU_Erase();
 			HU_Drawer();
 			break;
 
@@ -454,7 +450,6 @@ static void D_Display(void)
 
 		case GS_CREDITS:
 			F_CreditDrawer();
-			HU_Erase();
 			HU_Drawer();
 			break;
 
@@ -464,7 +459,6 @@ static void D_Display(void)
 			{
 				// I don't think HOM from nothing drawing is independent...
 				F_WaitingPlayersDrawer();
-				HU_Erase();
 				HU_Drawer();
 			}
 		case GS_DEDICATEDSERVER:
@@ -479,11 +473,21 @@ static void D_Display(void)
 	{
 		wipegamestate = gamestate;
 
-		// clean up border stuff
-		// see if the border needs to be initially drawn
 		if (gamestate == GS_LEVEL || (gamestate == GS_TITLESCREEN && titlemapinaction && curbghide && (!hidetitlemap)))
 		{
 			// draw the view directly
+			if (cv_debug)
+			{
+				r_renderwalls = cv_renderwalls.value;
+				r_renderfloors = cv_renderfloors.value;
+				r_renderthings = cv_renderthings.value;
+			}
+			else
+			{
+				r_renderwalls = true;
+				r_renderfloors = true;
+				r_renderthings = true;
+			}
 
 			if (!automapactive && !dedicated && cv_renderview.value)
 			{
@@ -505,23 +509,21 @@ static void D_Display(void)
 				// render the second screen
 				if (splitscreen && players[secondarydisplayplayer].mo)
 				{
-	#ifdef HWRENDER
-					if (rendermode != render_soft)
+					viewwindowy = vid.height / 2;
+
+#ifdef HWRENDER
+					if (rendermode == render_opengl)
 						HWR_RenderPlayerView(1, &players[secondarydisplayplayer]);
 					else
-	#endif
+#endif
 					if (rendermode != render_none)
 					{
-						viewwindowy = vid.height / 2;
-						M_Memcpy(ylookup, ylookup2, viewheight*sizeof (ylookup[0]));
-
 						topleft = screens[0] + viewwindowy*vid.width + viewwindowx;
 
 						R_RenderPlayerView(&players[secondarydisplayplayer]);
-
-						viewwindowy = 0;
-						M_Memcpy(ylookup, ylookup1, viewheight*sizeof (ylookup[0]));
 					}
+
+					viewwindowy = 0;
 				}
 
 				// Image postprocessing effect
@@ -756,9 +758,9 @@ void D_SRB2Loop(void)
 	/* Smells like a hack... Don't fade Sonic's ass into the title screen. */
 	if (gamestate != GS_TITLESCREEN)
 	{
-		gstartuplumpnum = W_CheckNumForName("STARTUP");
+		gstartuplumpnum = W_CheckNumForPatchName("STARTUP");
 		if (gstartuplumpnum == LUMPERROR)
-			gstartuplumpnum = W_GetNumForName("MISSING");
+			gstartuplumpnum = W_GetNumForPatchName("MISSING");
 		V_DrawScaledPatch(0, 0, 0, W_CachePatchNum(gstartuplumpnum, PU_PATCH));
 	}
 
@@ -981,6 +983,7 @@ void D_StartTitle(void)
 	emeralds = 0;
 	memset(&luabanks, 0, sizeof(luabanks));
 	lastmaploaded = 0;
+	pickedchar = R_SkinAvailable(cv_skin.string);
 
 	// In case someone exits out at the same time they start a time attack run,
 	// reset modeattacking
@@ -1021,7 +1024,7 @@ void D_StartTitle(void)
 #define REALLOC_FILE_LIST \
 	if (list->files == NULL) \
 	{ \
-		list->files = calloc(sizeof(list->files), 2); \
+		list->files = calloc(2, sizeof(list->files)); \
 		list->numfiles = 1; \
 	} \
 	else \
@@ -1293,7 +1296,7 @@ void D_SRB2Main(void)
 #endif
 
 	// for dedicated server
-#if !defined (_WINDOWS) //already check in win_main.c
+#if !defined (_WINDOWS) && !defined (DEDICATED) //already check in win_main.c
 	dedicated = M_CheckParm("-dedicated") != 0;
 #endif
 
@@ -1428,10 +1431,6 @@ void D_SRB2Main(void)
 	// Make backups of some SOCcable tables.
 	P_BackupTables();
 
-	// Setup character tables
-	// Have to be done here before files are loaded
-	M_InitCharacterTables();
-
 	mainwads = 3; // doesn't include music.dta
 #ifdef USE_PATCH_DTA
 	mainwads++;
@@ -1474,6 +1473,8 @@ void D_SRB2Main(void)
 	// setup loading screen
 	SCR_Startup();
 
+	PaletteRemap_Init();
+
 	HU_Init();
 
 	CON_Init();
@@ -1512,9 +1513,7 @@ void D_SRB2Main(void)
 	G_LoadGameData(clientGamedata);
 	M_CopyGameData(serverGamedata, clientGamedata);
 
-#if defined (__unix__) || defined (UNIXCOMMON) || defined (HAVE_SDL)
 	VID_PrepareModeList(); // Regenerate Modelist according to cv_fullscreen
-#endif
 
 	// set user default mode or mode set at cmdline
 	SCR_CheckDefaultMode();
@@ -1612,6 +1611,9 @@ void D_SRB2Main(void)
 	CONS_Printf("D_CheckNetGame(): Checking network game status.\n");
 	if (D_CheckNetGame())
 		autostart = true;
+
+	if (!dedicated)
+		pickedchar = R_SkinAvailable(cv_defaultskin.string);
 
 	// check for a driver that wants intermission stats
 	// start the apropriate game based on parms
@@ -1840,17 +1842,21 @@ static boolean check_top_dir(const char **path, const char *top)
 	return true;
 }
 
-static int cmp_strlen_desc(const void *a, const void *b)
+static int cmp_strlen_desc(const void *A, const void *B)
 {
-	return ((int)strlen(*(const char*const*)b) - (int)strlen(*(const char*const*)a));
+	const char *pA = A;
+	const char *pB = B;
+	size_t As = strlen(pA);
+	size_t Bs = strlen(pB);
+	return ((int)Bs - (int)As);
 }
 
 boolean D_IsPathAllowed(const char *path)
 {
-	const char *paths[] = {
+	char *paths[] = {
 		srb2home,
 		srb2path,
-		cv_addons_folder.string
+		cv_addons_folder.zstring
 	};
 
 	const size_t n_paths = sizeof paths / sizeof *paths;

@@ -140,15 +140,18 @@ static void Midiplayer_Onchange(void)
 			restart = true;
 	}
 
-	if (stricmp(Mix_GetSoundFonts(), cv_midisoundfontpath.string))
+	if (!Mix_GetSoundFonts() || stricmp(Mix_GetSoundFonts(), cv_midisoundfontpath.string))
 	{
 		if (!Mix_SetSoundFonts(cv_midisoundfontpath.string)) // == 0 means error
 			CONS_Alert(CONS_ERROR, "Sound font error: %s", Mix_GetError());
 		else
 			restart = true;
 	}
-
+#if SDL_MIXER_VERSION_ATLEAST(2,5,0)
+	Mix_SetTimidityCfg(cv_miditimiditypath.string);
+#else
 	Mix_Timidity_addToPathList(cv_miditimiditypath.string);
+#endif
 
 	if (restart)
 		S_StartEx(true);
@@ -159,7 +162,7 @@ static void MidiSoundfontPath_Onchange(void)
 	if (Mix_GetMidiPlayer() != MIDI_Fluidsynth || (I_SongType() != MU_NONE && I_SongType() != MU_MID_EX))
 		return;
 
-	if (stricmp(Mix_GetSoundFonts(), cv_midisoundfontpath.string))
+	if (!Mix_GetSoundFonts() || stricmp(Mix_GetSoundFonts(), cv_midisoundfontpath.string))
 	{
 		char *miditoken;
 		char *source = strdup(cv_midisoundfontpath.string);
@@ -286,7 +289,11 @@ void I_StartupSound(void)
 #ifdef HAVE_MIXERX
 	Mix_SetMidiPlayer(cv_midiplayer.value);
 	Mix_SetSoundFonts(cv_midisoundfontpath.string);
+#if SDL_MIXER_VERSION_ATLEAST(2,5,0)
+	Mix_SetTimidityCfg(cv_miditimiditypath.string);
+#else
 	Mix_Timidity_addToPathList(cv_miditimiditypath.string);
+#endif
 #endif
 #if SDL_MIXER_VERSION_ATLEAST(1,2,11)
 	Mix_Init(MIX_INIT_FLAC|MIX_INIT_MP3|MIX_INIT_OGG|MIX_INIT_MOD);
@@ -759,8 +766,8 @@ static void mix_gme(void *udata, Uint8 *stream, int len)
 		music_volume = 18;
 
 	// apply volume to stream
-	for (i = 0, p = (short *)stream; i < len/2; i++, p++)
-		*p = ((INT32)*p) * (music_volume*internal_volume/100)*2 / 40;
+	for (i = 0, p = (short *)stream; i < len / 2; i++, p++)
+		*p = ((INT32)*p) * music_volume * internal_volume / 100 / 20;
 }
 #endif
 
@@ -783,8 +790,8 @@ static void mix_openmpt(void *udata, Uint8 *stream, int len)
 		music_volume = 18;
 
 	// apply volume to stream
-	for (i = 0, p = (short *)stream; i < len/2; i++, p++)
-		*p = ((INT32)*p) * (music_volume*internal_volume/100)*2 / 40;
+	for (i = 0, p = (short *)stream; i < len / 2; i++, p++)
+		*p = ((INT32)*p) * music_volume * internal_volume / 100 / 20;
 }
 #endif
 
@@ -942,7 +949,12 @@ UINT32 I_GetSongLength(void)
 	else
 	{
 #ifdef HAVE_MIXERX
+#if SDL_MIXER_VERSION_ATLEAST(2,5,0)
+		double xlength = Mix_MusicDuration(music);
+#else
 		double xlength = Mix_GetMusicTotalTime(music);
+#endif
+
 		if (xlength >= 0)
 			return (UINT32)(xlength*1000);
 #endif
@@ -1198,9 +1210,13 @@ boolean I_LoadSong(char *data, size_t len)
 #ifdef HAVE_MIXERX
 	if (Mix_GetMidiPlayer() != cv_midiplayer.value)
 		Mix_SetMidiPlayer(cv_midiplayer.value);
-	if (stricmp(Mix_GetSoundFonts(), cv_midisoundfontpath.string))
+	if (!Mix_GetSoundFonts() || stricmp(Mix_GetSoundFonts(), cv_midisoundfontpath.string))
 		Mix_SetSoundFonts(cv_midisoundfontpath.string);
+#if SDL_MIXER_VERSION_ATLEAST(2,5,0)
+	Mix_SetTimidityCfg(cv_miditimiditypath.string);
+#else
 	Mix_Timidity_addToPathList(cv_miditimiditypath.string); // this overwrites previous custom path
+#endif
 #endif
 
 #ifdef HAVE_OPENMPT
@@ -1441,7 +1457,7 @@ void I_SetMusicVolume(UINT8 volume)
 	Mix_VolumeMusic(get_real_volume(music_volume));
 }
 
-boolean I_SetSongTrack(int track)
+boolean I_SetSongTrack(INT32 track)
 {
 #ifdef HAVE_GME
 	// If the specified track is within the number of tracks playing, then change it

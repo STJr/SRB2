@@ -11,6 +11,7 @@
 /// \brief Lua SOC library
 
 #include "deh_lua.h"
+#include "g_input.h"
 
 // freeslot takes a name (string only!)
 // and allocates it to the appropriate free slot.
@@ -58,24 +59,19 @@ static inline int lib_freeslot(lua_State *L)
 		}
 		else if (fastcmp(type, "SPR"))
 		{
-			char wad;
 			spritenum_t j;
-			lua_getfield(L, LUA_REGISTRYINDEX, "WAD");
-			wad = (char)lua_tointeger(L, -1);
-			lua_pop(L, 1);
+
+			if (strlen(word) > MAXSPRITENAME)
+				return luaL_error(L, "Sprite name is longer than %d characters\n", MAXSPRITENAME);
+
 			for (j = SPR_FIRSTFREESLOT; j <= SPR_LASTFREESLOT; j++)
 			{
-				if (used_spr[(j-SPR_FIRSTFREESLOT)/8] & (1<<(j%8)))
-				{
-					if (!sprnames[j][4] && memcmp(sprnames[j],word,4)==0)
-						sprnames[j][4] = wad;
+				if (in_bit_array(used_spr, j - SPR_FIRSTFREESLOT))
 					continue; // Already allocated, next.
-				}
 				// Found a free slot!
 				CONS_Printf("Sprite SPR_%s allocated.\n",word);
-				strncpy(sprnames[j],word,4);
-				//sprnames[j][4] = 0;
-				used_spr[(j-SPR_FIRSTFREESLOT)/8] |= 1<<(j%8); // Okay, this sprite slot has been named now.
+				strcpy(sprnames[j], word);
+				set_bit_array(used_spr, j - SPR_FIRSTFREESLOT); // Okay, this sprite slot has been named now.
 				// Lua needs to update the value in _G if it exists
 				LUA_UpdateSprName(word, j);
 				lua_pushinteger(L, j);
@@ -297,7 +293,8 @@ static int ScanConstants(lua_State *L, boolean mathlib, const char *word)
 			CacheAndPushConstant(L, word, (lua_Integer)PF_FULLSTASIS);
 			return 1;
 		}
-		else if (fastcmp(p, "USEDOWN")) // Remove case when 2.3 nears release...
+		// TODO: 2.3: Delete this alias
+		else if (fastcmp(p, "USEDOWN"))
 		{
 			CacheAndPushConstant(L, word, (lua_Integer)PF_SPINDOWN);
 			return 1;
@@ -453,17 +450,19 @@ static int ScanConstants(lua_State *L, boolean mathlib, const char *word)
 	}
 	else if (fastncmp("SPR_",word,4)) {
 		p = word+4;
-		for (i = 0; i < NUMSPRITES; i++)
-			if (!sprnames[i][4] && fastncmp(p,sprnames[i],4)) {
-				// updating overridden sprnames is not implemented for soc parser,
-				// so don't use cache
-				if (mathlib)
-					lua_pushinteger(L, i);
-				else
-					CacheAndPushConstant(L, word, i);
-				return 1;
-			}
-		if (mathlib) return luaL_error(L, "sprite '%s' could not be found.\n", word);
+		i = R_GetSpriteNumByName(p);
+		if (i != NUMSPRITES)
+		{
+			// updating overridden sprnames is not implemented for soc parser,
+			// so don't use cache
+			if (mathlib)
+				lua_pushinteger(L, i);
+			else
+				CacheAndPushConstant(L, word, i);
+			return 1;
+		}
+		else if (mathlib)
+			return luaL_error(L, "sprite '%s' could not be found.\n", word);
 		return 0;
 	}
 	else if (fastncmp("SPR2_",word,5)) {
@@ -572,7 +571,8 @@ static int ScanConstants(lua_State *L, boolean mathlib, const char *word)
 		if (mathlib) return luaL_error(L, "NiGHTS grade '%s' could not be found.\n", word);
 		return 0;
 	}
-	else if (fastncmp("MN_",word,3)) {
+	else if (fastncmp("MN_",word,3))
+	{
 		p = word+3;
 		for (i = 0; i < NUMMENUTYPES; i++)
 			if (fastcmp(p, MENUTYPES_LIST[i])) {
@@ -582,10 +582,30 @@ static int ScanConstants(lua_State *L, boolean mathlib, const char *word)
 		if (mathlib) return luaL_error(L, "menutype '%s' could not be found.\n", word);
 		return 0;
 	}
+	else if (mathlib && fastncmp("TRANSLATION_",word,12))
+	{
+		p = word+12;
+		int id = R_FindCustomTranslation_CaseInsensitive(p);
+		if (id != -1)
+		{
+			lua_pushinteger(L, id);
+			return 1;
+		}
+		return luaL_error(L, "translation '%s' could not be found.\n", word);
+	}
 
-	if (fastcmp(word, "BT_USE")) // Remove case when 2.3 nears release...
+	// TODO: 2.3: Delete these aliases
+	else if (fastcmp(word, "BT_USE"))
 	{
 		CacheAndPushConstant(L, word, (lua_Integer)BT_SPIN);
+		return 1;
+	}
+	else if (fastcmp(word, "GC_WEPSLOT8") || fastcmp(word, "GC_WEPSLOT9") || fastcmp(word, "GC_WEPSLOT10"))
+	{
+		// Using GC_WEPSLOT7 isn't accurate, but ensures that "if x >= GC_WEPSLOT1 and x <= GC_WEPSLOT10" keeps the intended effect
+		CacheAndPushConstant(L, word, (lua_Integer)GC_WEPSLOT7);
+		if (!mathlib)
+			LUA_Deprecated(L, "GC_WEPSLOT8\"-\"GC_WEPSLOT10", "GC_WEPSLOT1\"-\"GC_WEPSLOT7");
 		return 1;
 	}
 
@@ -598,14 +618,9 @@ static int ScanConstants(lua_State *L, boolean mathlib, const char *word)
 	return 0;
 }
 
-static inline int lib_getenum(lua_State *L)
+FUNCINLINE static ATTRINLINE int getEnum(lua_State *L, boolean mathlib, const char *word)
 {
-	const char *word;
 	fixed_t i;
-	boolean mathlib = lua_toboolean(L, lua_upvalueindex(1));
-	if (lua_type(L,2) != LUA_TSTRING)
-		return 0;
-	word = lua_tostring(L,2);
 
 	// check actions, super and globals first, as they don't have _G caching implemented
 	// so they benefit from being checked first
@@ -672,6 +687,46 @@ static inline int lib_getenum(lua_State *L)
 	else if ((!mathlib && LUA_PushGlobals(L, word)) || ScanConstants(L, mathlib, word))
 		return 1;
 
+	return -1;
+}
+
+static int constants_get(lua_State *L)
+{
+	const char *key;
+	int ret;
+
+	if (!lua_isstring(L, 2))
+		return 0;
+
+	key = luaL_checkstring(L, 2);
+
+	// In Lua, mathlib is never there
+	ret = getEnum(L, false, key);
+
+	if (ret != -1)
+		// Don't allow A_* or super.
+		// All userdata is meant to be considered global variables,
+		// so no need to get more specific than "is it userdata?"
+		if (!lua_isuserdata(L, -1) && !lua_isfunction(L, -1))
+			return ret;
+
+	return 0;
+}
+
+static inline int lib_getenum(lua_State *L)
+{
+	const char *word;
+	int ret;
+	boolean mathlib = lua_toboolean(L, lua_upvalueindex(1));
+	if (lua_type(L,2) != LUA_TSTRING)
+		return 0;
+	word = lua_tostring(L,2);
+
+	ret = getEnum(L, mathlib, word);
+
+	if (ret != -1)
+		return ret;
+
 	if (mathlib) return luaL_error(L, "constant '%s' could not be parsed.\n", word);
 
 	return 0;
@@ -680,18 +735,18 @@ static inline int lib_getenum(lua_State *L)
 // If a sprname has been "cached" to _G, update it to a new value.
 void LUA_UpdateSprName(const char *name, lua_Integer value)
 {
-	char fullname[9] = "SPR_XXXX";
+	char fullname[4 + MAXSPRITENAME + 1] = "SPR_";
 
 	if (!gL)
 		return;
 
-	strncpy(&fullname[4], name, 4);
+	strcpy(&fullname[4], name);
 	lua_pushstring(gL, fullname);
 	lua_rawget(gL, LUA_GLOBALSINDEX);
 
 	if (!lua_isnil(gL, -1))
 	{
-		lua_pushstring(gL, name);
+		lua_pushstring(gL, fullname);
 		lua_pushinteger(gL, value);
 		lua_rawset(gL, LUA_GLOBALSINDEX);
 	}
@@ -771,9 +826,17 @@ int LUA_SOCLib(lua_State *L)
 	lua_register(L,"getActionName",lib_getActionName);
 
 	luaL_newmetatable(L, META_ACTION);
-		lua_pushcfunction(L, action_call);
-		lua_setfield(L, -2, "__call");
+		LUA_SetCFunctionField(L, "__call", action_call);
 	lua_pop(L, 1);
+
+	// Allow access to constants without forcing the use of name comparison checks Lua-side
+	// This table will not access global variables, only constants
+	lua_newuserdata(L, 0);
+		lua_createtable(L, 0, 2);
+			lua_pushcfunction(L, constants_get);
+			lua_setfield(L, -2, "__index");
+		lua_setmetatable(L, -2);
+	lua_setglobal(L, "constants");
 
 	return 0;
 }

@@ -108,12 +108,16 @@ typedef struct levelinterpolator_s {
 			fixed_t *bakvertices;
 			size_t vertices_size;
 			fixed_t oldcx, oldcy, bakcx, bakcy;
+			angle_t oldangle, bakangle;
 		} polyobj;
 		struct {
 			pslope_t *slope;
 			vector3_t oldo, bako;
 			vector2_t oldd, bakd;
 			fixed_t oldzdelta, bakzdelta;
+			dvector3_t oldorigin, bakorigin;
+			dvector3_t oldnormdir, baknormdir;
+			double olddzdelta, bakdzdelta;
 		} dynslope;
 	};
 } levelinterpolator_t;
