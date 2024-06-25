@@ -298,8 +298,8 @@ void D_ProcessEvents(void)
 // added comment : there is a wipe eatch change of the gamestate
 gamestate_t wipegamestate = GS_LEVEL;
 // -1: Default; 0-n: Wipe index; INT16_MAX: do not wipe
-INT16 wipetypepre = INT16_MAX;
-INT16 wipetypepost = INT16_MAX;
+INT16 wipetypepre = -1;
+INT16 wipetypepost = -1;
 
 static void D_Display(void)
 {
@@ -749,8 +749,6 @@ void D_SRB2Loop(void)
 
 	// hack to start on a nice clear console screen.
 	COM_ImmedExecute("cls;version");
-	// hack to prevent white flash upon initial window resize
-	V_DrawFill(0,0,BASEVIDWIDTH,BASEVIDHEIGHT,31);
 
 	I_FinishUpdate(); // page flip or blit buffer
 	/*

@@ -313,7 +313,7 @@ const char *introtext[NUMINTROSCENES];
 
 static tic_t introscenetime[NUMINTROSCENES] =
 {
-	6*TICRATE,	// STJr Presents
+	5*TICRATE,	// STJr Presents
 	10*TICRATE + (TICRATE/2),	// Two months had passed since...
 	12*TICRATE + ((TICRATE/4) * 3),	// As it was about to drain the rings...
 	12*TICRATE + (TICRATE/4),					// What Sonic, Tails, and Knuckles...
@@ -623,15 +623,15 @@ void F_IntroDrawer(void)
 		{
 			V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
 
-			if (intro_curtime > TICRATE-17 && intro_curtime < 2*TICRATE-22) // Make the text shine!
+			if (intro_curtime < TICRATE-5) // Make the text shine!
 			{
-				sprintf(stjrintro, "STJRI%03u", intro_curtime-19);
+				sprintf(stjrintro, "STJRI%03u", intro_curtime-1);
 			}
-			else if (intro_curtime >= 2*TICRATE-23 && intro_curtime < 2*TICRATE-3) // Pause on black screen for just a second
+			else if (intro_curtime >= TICRATE-6 && intro_curtime < 2*TICRATE-20) // Pause on black screen for just a second
 			{
 				return;
 			}
-			else if (intro_curtime == 2*TICRATE-2)
+			else if (intro_curtime == 2*TICRATE-19)
 			{
 				// Fade in the text
 				// The text fade out is automatically handled when switching to a new intro scene
@@ -950,7 +950,7 @@ void F_IntroTicker(void)
 
 	if (rendermode != render_none)
 	{
-		if (intro_scenenum == 0 && intro_curtime == 2*TICRATE-2)
+		if (intro_scenenum == 0 && intro_curtime == 2*TICRATE-19)
 		{
 			S_ChangeMusicInternal("_stjr", false);
 
