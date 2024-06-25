@@ -403,27 +403,29 @@ consvar_t cv_cam_lockonboss[2] = {
 	CVAR_INIT ("cam2_lockaimassist", "Full", CV_SAVE|CV_ALLOWLUA, lockedassist_cons_t, NULL),
 };
 
-consvar_t cv_moveaxis = CVAR_INIT ("joyaxis_move", "Y-Axis", CV_SAVE, joyaxis_cons_t, NULL);
-consvar_t cv_sideaxis = CVAR_INIT ("joyaxis_side", "X-Axis", CV_SAVE, joyaxis_cons_t, NULL);
-consvar_t cv_lookaxis = CVAR_INIT ("joyaxis_look", "X-Rudder-", CV_SAVE, joyaxis_cons_t, NULL);
-consvar_t cv_turnaxis = CVAR_INIT ("joyaxis_turn", "Z-Axis", CV_SAVE, joyaxis_cons_t, NULL);
-consvar_t cv_jumpaxis = CVAR_INIT ("joyaxis_jump", "None", CV_SAVE, joyaxis_cons_t, NULL);
-consvar_t cv_spinaxis = CVAR_INIT ("joyaxis_spin", "None", CV_SAVE, joyaxis_cons_t, NULL);
-consvar_t cv_fireaxis = CVAR_INIT ("joyaxis_fire", "Z-Rudder", CV_SAVE, joyaxis_cons_t, NULL);
-consvar_t cv_firenaxis = CVAR_INIT ("joyaxis_firenormal", "Z-Axis", CV_SAVE, joyaxis_cons_t, NULL);
-consvar_t cv_deadzone = CVAR_INIT ("joy_deadzone", "0.125", CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL);
-consvar_t cv_digitaldeadzone = CVAR_INIT ("joy_digdeadzone", "0.25", CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL);
+consvar_t cv_moveaxis   = CVAR_INIT ("joyaxis_move",       "Y-Axis",    CV_SAVE, joyaxis_cons_t, NULL);
+consvar_t cv_sideaxis   = CVAR_INIT ("joyaxis_side",       "X-Axis",    CV_SAVE, joyaxis_cons_t, NULL);
+consvar_t cv_lookaxis   = CVAR_INIT ("joyaxis_look",       "X-Rudder-", CV_SAVE, joyaxis_cons_t, NULL);
+consvar_t cv_turnaxis   = CVAR_INIT ("joyaxis_turn",       "Z-Axis",    CV_SAVE, joyaxis_cons_t, NULL);
+consvar_t cv_jumpaxis   = CVAR_INIT ("joyaxis_jump",       "None",      CV_SAVE, joyaxis_cons_t, NULL);
+consvar_t cv_spinaxis   = CVAR_INIT ("joyaxis_spin",       "None",      CV_SAVE, joyaxis_cons_t, NULL);
+consvar_t cv_shieldaxis = CVAR_INIT ("joyaxis_shield",     "None",      CV_SAVE, joyaxis_cons_t, NULL);
+consvar_t cv_fireaxis   = CVAR_INIT ("joyaxis_fire",       "Z-Rudder",  CV_SAVE, joyaxis_cons_t, NULL);
+consvar_t cv_firenaxis  = CVAR_INIT ("joyaxis_firenormal", "Z-Axis",    CV_SAVE, joyaxis_cons_t, NULL);
+consvar_t cv_deadzone        = CVAR_INIT ("joy_deadzone",    "0.125", CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL);
+consvar_t cv_digitaldeadzone = CVAR_INIT ("joy_digdeadzone", "0.25",  CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL);
 
-consvar_t cv_moveaxis2 = CVAR_INIT ("joyaxis2_move", "Y-Axis", CV_SAVE, joyaxis_cons_t, NULL);
-consvar_t cv_sideaxis2 = CVAR_INIT ("joyaxis2_side", "X-Axis", CV_SAVE, joyaxis_cons_t, NULL);
-consvar_t cv_lookaxis2 = CVAR_INIT ("joyaxis2_look", "X-Rudder-", CV_SAVE, joyaxis_cons_t, NULL);
-consvar_t cv_turnaxis2 = CVAR_INIT ("joyaxis2_turn", "Z-Axis", CV_SAVE, joyaxis_cons_t, NULL);
-consvar_t cv_jumpaxis2 = CVAR_INIT ("joyaxis2_jump", "None", CV_SAVE, joyaxis_cons_t, NULL);
-consvar_t cv_spinaxis2 = CVAR_INIT ("joyaxis2_spin", "None", CV_SAVE, joyaxis_cons_t, NULL);
-consvar_t cv_fireaxis2 = CVAR_INIT ("joyaxis2_fire", "Z-Rudder", CV_SAVE, joyaxis_cons_t, NULL);
-consvar_t cv_firenaxis2 = CVAR_INIT ("joyaxis2_firenormal", "Z-Axis", CV_SAVE, joyaxis_cons_t, NULL);
-consvar_t cv_deadzone2 = CVAR_INIT ("joy_deadzone2", "0.125", CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL);
-consvar_t cv_digitaldeadzone2 = CVAR_INIT ("joy_digdeadzone2", "0.25", CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL);
+consvar_t cv_moveaxis2   = CVAR_INIT ("joyaxis2_move",       "Y-Axis",    CV_SAVE, joyaxis_cons_t, NULL);
+consvar_t cv_sideaxis2   = CVAR_INIT ("joyaxis2_side",       "X-Axis",    CV_SAVE, joyaxis_cons_t, NULL);
+consvar_t cv_lookaxis2   = CVAR_INIT ("joyaxis2_look",       "X-Rudder-", CV_SAVE, joyaxis_cons_t, NULL);
+consvar_t cv_turnaxis2   = CVAR_INIT ("joyaxis2_turn",       "Z-Axis",    CV_SAVE, joyaxis_cons_t, NULL);
+consvar_t cv_jumpaxis2   = CVAR_INIT ("joyaxis2_jump",       "None",      CV_SAVE, joyaxis_cons_t, NULL);
+consvar_t cv_spinaxis2   = CVAR_INIT ("joyaxis2_spin",       "None",      CV_SAVE, joyaxis_cons_t, NULL);
+consvar_t cv_shieldaxis2 = CVAR_INIT ("joyaxis2_shield",     "None",      CV_SAVE, joyaxis_cons_t, NULL);
+consvar_t cv_fireaxis2   = CVAR_INIT ("joyaxis2_fire",       "Z-Rudder",  CV_SAVE, joyaxis_cons_t, NULL);
+consvar_t cv_firenaxis2  = CVAR_INIT ("joyaxis2_firenormal", "Z-Axis",    CV_SAVE, joyaxis_cons_t, NULL);
+consvar_t cv_deadzone2        = CVAR_INIT ("joy_deadzone2",    "0.125", CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL);
+consvar_t cv_digitaldeadzone2 = CVAR_INIT ("joy_digdeadzone2", "0.25",  CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL);
 
 player_t *seenplayer; // player we're aiming at right now
 
@@ -894,6 +896,9 @@ INT32 JoyAxis(joyaxis_e axissel)
 		case JA_SPIN:
 			axisval = cv_spinaxis.value;
 			break;
+		case JA_SHIELD:
+			axisval = cv_shieldaxis.value;
+			break;
 		case JA_FIRE:
 			axisval = cv_fireaxis.value;
 			break;
@@ -966,6 +971,9 @@ INT32 Joy2Axis(joyaxis_e axissel)
 			break;
 		case JA_SPIN:
 			axisval = cv_spinaxis2.value;
+			break;
+		case JA_SHIELD:
+			axisval = cv_shieldaxis2.value;
 			break;
 		case JA_FIRE:
 			axisval = cv_fireaxis2.value;
@@ -1334,8 +1342,8 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 	if (PLAYERINPUTDOWN(ssplayer, GC_WEAPONPREV))
 		cmd->buttons |= BT_WEAPONPREV; // Previous Weapon
 
-#if NUM_WEAPONS > 10
-"Add extra inputs to g_input.h/gamecontrols_e"
+#if NUM_WEAPONS > 7
+"Add extra inputs to g_input.h/gamecontrols_e, and fix conflicts in d_ticcmd.h/ticcmd_t/buttons"
 #endif
 	//use the three avaliable bits to determine the weapon.
 	cmd->buttons &= ~BT_WEAPONMASK;
@@ -1355,13 +1363,14 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 	axis = PlayerJoyAxis(ssplayer, JA_FIRENORMAL);
 	if (PLAYERINPUTDOWN(ssplayer, GC_FIRENORMAL) || (usejoystick && axis > 0))
 		cmd->buttons |= BT_FIRENORMAL;
-	
+
 	// Toss flag button
 	if (PLAYERINPUTDOWN(ssplayer, GC_TOSSFLAG))
 		cmd->buttons |= BT_TOSSFLAG;
-	
+
 	// Shield button
-	if (PLAYERINPUTDOWN(ssplayer, GC_SHIELD))
+	axis = PlayerJoyAxis(ssplayer, JA_SHIELD);
+	if (PLAYERINPUTDOWN(ssplayer, GC_SHIELD) || (usejoystick && axis > 0))
 		cmd->buttons |= BT_SHIELD;
 
 	// Lua scriptable buttons
@@ -1376,6 +1385,13 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 	axis = PlayerJoyAxis(ssplayer, JA_SPIN);
 	if (PLAYERINPUTDOWN(ssplayer, GC_SPIN) || (usejoystick && axis > 0))
 		cmd->buttons |= BT_SPIN;
+
+	if (gamestate != GS_LEVEL) // not in a level, don't build anything else
+	{
+		cmd->angleturn = ticcmd_oldangleturn[forplayer];
+		cmd->aiming = G_ClipAimingPitch(myaiming);
+		return;
+	}
 
 	// Centerview can be a toggle in simple mode!
 	{
@@ -1411,7 +1427,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 
 		ticcmd_centerviewdown[forplayer] = true;
 	}
-	else if (ticcmd_centerviewdown[forplayer])
+	else if (ticcmd_centerviewdown[forplayer] || (leveltime < 5))
 	{
 		if (controlstyle == CS_SIMPLE)
 		{
@@ -1426,6 +1442,9 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 	{
 		if (
 			P_MobjWasRemoved(ticcmd_ztargetfocus[forplayer]) ||
+			(leveltime < 5) ||
+			(player->playerstate != PST_LIVE) ||
+			player->exiting ||
 			!ticcmd_ztargetfocus[forplayer]->health ||
 			(ticcmd_ztargetfocus[forplayer]->type == MT_EGGMOBILE3 && !ticcmd_ztargetfocus[forplayer]->movecount) // Sea Egg is moving around underground and shouldn't be tracked
 		)
@@ -1457,7 +1476,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 			P_SetTarget(&newtarget->target, ticcmd_ztargetfocus[forplayer]);
 			newtarget->drawonlyforplayer = player; // Hide it from the other player in splitscreen, and yourself when spectating
 
-			if (player->mo && P_AproxDistance(
+			if (player->mo && R_PointToDist2(0, 0,
 				player->mo->x - ticcmd_ztargetfocus[forplayer]->x,
 				player->mo->y - ticcmd_ztargetfocus[forplayer]->y
 			) > 50*player->mo->scale)
@@ -1705,7 +1724,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 	// At this point, cmd doesn't contain the final angle yet,
 	// So we need to temporarily transform it so Lua scripters
 	// don't need to handle it differently than in other hooks.
-	if (addedtogame && gamestate == GS_LEVEL)
+	if (addedtogame)
 	{
 		INT16 extra = ticcmd_oldangleturn[forplayer] - player->oldrelangleturn;
 		INT16 origangle = cmd->angleturn;
@@ -4004,7 +4023,7 @@ INT16 G_GetNextMap(boolean ignoretokens, boolean silent)
 	INT32 i;
 	INT16 newmapnum;
 	boolean spec = G_IsSpecialStage(gamemap);
-	
+
 	// go to next level
 	// newmapnum is 0-based, unlike gamemap
 	if (nextmapoverride != 0)
@@ -4108,7 +4127,7 @@ INT16 G_GetNextMap(boolean ignoretokens, boolean silent)
 
 	if (spec && (!gottoken || ignoretokens) && !nextmapoverride)
 		newmapnum = lastmap; // Exiting from a special stage? Go back to the game. Tails 08-11-2001
-	
+
 	if (!(gametyperules & GTR_CAMPAIGN))
 	{
 		if (cv_advancemap.value == 0) // Stay on same map.
@@ -4116,7 +4135,7 @@ INT16 G_GetNextMap(boolean ignoretokens, boolean silent)
 		else if (cv_advancemap.value == 2) // Go to random map.
 			newmapnum = RandMap(G_TOLFlag(gametype_to_use), prevmap);
 	}
-	
+
 	return newmapnum;
 }
 
@@ -4126,7 +4145,7 @@ INT16 G_GetNextMap(boolean ignoretokens, boolean silent)
 static void G_DoCompleted(void)
 {
 	INT32 i;
-	
+
 	tokenlist = 0; // Reset the list
 
 	if (modeattacking && pausedelay)
@@ -4154,7 +4173,7 @@ static void G_DoCompleted(void)
 	//Get and set prevmap/nextmap
 	prevmap = (INT16)(gamemap-1);
 	nextmap = G_GetNextMap(false, false);
-	
+
 	automapactive = false;
 
 	// We are committed to this map now.
@@ -5398,7 +5417,7 @@ void G_FreeMapSearch(mapsearchfreq_t *freq, INT32 freqc)
 INT32 G_FindMapByNameOrCode(const char *mapname, char **realmapnamep)
 {
 	boolean usemapcode = false;
-	INT32 newmapnum;
+	INT32 newmapnum = -1;
 	size_t mapnamelen = strlen(mapname);
 	char *p;
 

@@ -375,6 +375,17 @@ static boolean prepare_string_hook
 		return false;
 }
 
+static boolean prepare_hud_hook
+(
+		Hook_State * hook,
+		int default_status,
+		int hook_type
+){
+	return init_hook_type(hook, default_status,
+			hook_type, 0, NULL,
+			hudHookIds[hook_type].numHooks);
+}
+
 static void init_hook_call
 (
 		Hook_State * hook,
@@ -488,6 +499,21 @@ static int call_string_hooks(Hook_State *hook)
 static int call_mobj_type_hooks(Hook_State *hook, mobjtype_t mobj_type)
 {
 	return call_mapped(hook, &mobjHookIds[mobj_type][hook->hook_type]);
+}
+
+static void call_hud_hooks
+(
+		Hook_State * hook,
+		int        results,
+		Hook_Callback results_handler
+){
+	hud_running = true; // local hook
+	init_hook_call(hook, results, results_handler);
+	call_mapped(hook, &hudHookIds[hook->hook_type]);
+	hud_running = false;
+
+	lua_pushnil(gL);
+	lua_setfield(gL, LUA_REGISTRYINDEX, "HUD_DRAW_LIST");
 }
 
 static int call_hooks
@@ -648,23 +674,39 @@ int LUA_HookKey(event_t *event, int hook_type)
 
 void LUA_HookHUD(int hook_type, huddrawlist_h list)
 {
-	const hook_t * map = &hudHookIds[hook_type];
 	Hook_State hook;
-	if (map->numHooks > 0)
+	if (prepare_hud_hook(&hook, 0, hook_type))
 	{
-		start_hook_stack();
-		begin_hook_values(&hook);
-
 		LUA_SetHudHook(hook_type, list);
-
-		hud_running = true; // local hook
-		init_hook_call(&hook, 0, res_none);
-		call_mapped(&hook, map);
-		hud_running = false;
-
-		lua_pushnil(gL);
-		lua_setfield(gL, LUA_REGISTRYINDEX, "HUD_DRAW_LIST");
+		call_hud_hooks(&hook, 0, res_none);
 	}
+}
+
+int LUA_HookCharacterHUD
+(
+	int hook_type, huddrawlist_h list, player_t *player,
+	fixed_t x, fixed_t y, fixed_t scale,
+	INT32 skinIndex, UINT8 sprite2, UINT8 frame, UINT8 rotation, skincolornum_t color,
+	INT32 ticker, boolean mode
+){
+	Hook_State hook;
+	if (prepare_hud_hook(&hook, false, hook_type))
+	{
+		LUA_SetHudHook(hook_type, list);
+		LUA_PushUserdata(gL, player, META_PLAYER);
+		lua_pushfixed(gL, x);
+		lua_pushfixed(gL, y);
+		lua_pushfixed(gL, scale);
+		lua_pushstring(gL, skins[skinIndex]->name);
+		lua_pushinteger(gL, sprite2);
+		lua_pushinteger(gL, frame);
+		lua_pushinteger(gL, rotation);
+		lua_pushinteger(gL, color);
+		lua_pushinteger(gL, ticker);
+		lua_pushboolean(gL, mode);
+		call_hud_hooks(&hook, 1, res_true);
+	}
+	return hook.status;
 }
 
 /* =========================================================================

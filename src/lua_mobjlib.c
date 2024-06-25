@@ -69,6 +69,7 @@ enum mobj_e {
 	mobj_color,
 	mobj_translation,
 	mobj_blendmode,
+	mobj_alpha,
 	mobj_bnext,
 	mobj_bprev,
 	mobj_hnext,
@@ -150,6 +151,7 @@ static const char *const mobj_opt[] = {
 	"color",
 	"translation",
 	"blendmode",
+	"alpha",
 	"bnext",
 	"bprev",
 	"hnext",
@@ -353,6 +355,9 @@ static int mobj_get(lua_State *L)
 		break;
 	case mobj_blendmode:
 		lua_pushinteger(L, mo->blendmode);
+		break;
+	case mobj_alpha:
+		lua_pushfixed(L, mo->alpha);
 		break;
 	case mobj_bnext:
 		if (mo->blocknode && mo->blocknode->bnext) {
@@ -564,7 +569,7 @@ static int mobj_set(lua_State *L)
 		mo->frame = (UINT32)luaL_checkinteger(L, 3);
 		break;
 	case mobj_sprite2:
-		mo->sprite2 = P_GetSkinSprite2(((skin_t *)mo->skin), (UINT8)luaL_checkinteger(L, 3), mo->player);
+		mo->sprite2 = P_GetSkinSprite2(((skin_t *)mo->skin), (UINT16)luaL_checkinteger(L, 3), mo->player);
 		break;
 	case mobj_anim_duration:
 		mo->anim_duration = (UINT16)luaL_checkinteger(L, 3);
@@ -733,6 +738,16 @@ static int mobj_set(lua_State *L)
 		mo->blendmode = blendmode;
 		break;
 	}
+	case mobj_alpha:
+	{
+		fixed_t alpha = luaL_checkfixed(L, 3);
+		if (alpha < 0)
+			alpha = 0;
+		else if (alpha > FRACUNIT)
+			alpha = FRACUNIT;
+		mo->alpha = alpha;
+		break;
+	}
 	case mobj_bnext:
 		return NOSETPOS;
 	case mobj_bprev:
@@ -762,7 +777,7 @@ static int mobj_set(lua_State *L)
 			return luaL_error(L, "mobj.type %d out of range (0 - %d).", newtype, NUMMOBJTYPES-1);
 		mo->type = newtype;
 		mo->info = &mobjinfo[newtype];
-		P_SetScale(mo, mo->scale);
+		P_SetScale(mo, mo->scale, false);
 		break;
 	}
 	case mobj_info:
@@ -836,9 +851,7 @@ static int mobj_set(lua_State *L)
 		fixed_t scale = luaL_checkfixed(L, 3);
 		if (scale < FRACUNIT/100)
 			scale = FRACUNIT/100;
-		mo->destscale = scale;
-		P_SetScale(mo, scale);
-		mo->old_scale = scale;
+		P_SetScale(mo, scale, true);
 		break;
 	}
 	case mobj_destscale:

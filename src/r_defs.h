@@ -60,6 +60,8 @@ typedef UINT8 lighttable_t;
 #define CMF_FADEFULLBRIGHTSPRITES  1
 #define CMF_FOG 4
 
+#define TEXTURE_255_IS_TRANSPARENT
+
 // ExtraColormap type. Use for extra_colormaps from now on.
 typedef struct extracolormap_s
 {
@@ -358,7 +360,7 @@ typedef struct pslope_s
 
 	double dzdelta;
 
-	boolean moved : 1;
+	boolean moved;
 
 	UINT8 flags; // Slope options
 } pslope_t;
@@ -405,6 +407,8 @@ typedef enum
 	SSF_ROPEHANG = 1<<18,
 	SSF_JUMPFLIP = 1<<19,
 	SSF_GRAVITYOVERRIDE = 1<<20, // combine with MSF_GRAVITYFLIP
+	SSF_NOPHYSICSFLOOR = 1<<21,
+	SSF_NOPHYSICSCEILING = 1<<22,
 } sectorspecialflags_t;
 
 typedef enum
@@ -610,6 +614,8 @@ typedef struct line_s
 	INT16 callcount; // no. of calls left before triggering, for the "X calls" linedef specials, defaults to 0
 
 	UINT32 secportal; // transferred sector portal
+
+	struct pslope_s *midtexslope;
 } line_t;
 
 typedef struct
@@ -751,9 +757,6 @@ typedef struct seg_s
 	lightmap_t *lightmaps; // for static lightmap
 #endif
 
-	// Why slow things down by calculating lightlists for every thick side?
-	size_t numlights;
-	r_lightlist_t *rlights;
 	polyobj_t *polyseg;
 	boolean dontrenderme;
 	boolean glseg;
@@ -837,6 +840,7 @@ typedef struct drawseg_s
 	INT16 *sprtopclip;
 	INT16 *sprbottomclip;
 	fixed_t *maskedtexturecol;
+	fixed_t *maskedtextureheight; // For handling sloped midtextures
 	fixed_t *invscale;
 
 	struct visplane_s *ffloorplanes[MAXFFLOORS];
@@ -847,8 +851,6 @@ typedef struct drawseg_s
 	fixed_t frontscale[MAXVIDWIDTH];
 
 	UINT8 portalpass; // if > 0 and <= portalrender, do not affect sprite clipping
-
-	fixed_t maskedtextureheight[MAXVIDWIDTH]; // For handling sloped midtextures
 
 	vertex_t leftpos, rightpos; // Used for rendering FOF walls with slopes
 } drawseg_t;
@@ -977,6 +979,8 @@ typedef struct
 	rotsprite_t *rotated[16]; // Rotated patches
 #endif
 } spriteframe_t;
+
+#define MAXFRAMENUM 256
 
 //
 // A sprite definition:  a number of animation frames.

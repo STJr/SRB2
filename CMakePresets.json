@@ -2,26 +2,263 @@
 	"version": 3,
 	"configurePresets": [
 		{
-			"name": "default",
-			"description": "Build using default generator",
-			"binaryDir": "build",
+			"name": "__debug",
+			"hidden": true,
 			"cacheVariables": {
+				"SRB2_CONFIG_DEV_BUILD": "ON",
+				"CMAKE_BUILD_TYPE": "Debug"
+			}
+		},
+		{
+			"name": "__develop",
+			"hidden": true,
+			"cacheVariables": {
+				"CMAKE_C_FLAGS_RELWITHDEBINFO": "-DNDEBUG",
+				"CMAKE_CXX_FLAGS_RELWITHDEBINFO": "-DNDEBUG",
+				"SRB2_CONFIG_DEV_BUILD": "ON",
 				"CMAKE_BUILD_TYPE": "RelWithDebInfo"
 			}
 		},
 		{
-			"name": "debug",
-			"description": "Build for development (no optimizations)",
-			"inherits": "default",
+			"name": "__release",
+			"hidden": true,
 			"cacheVariables": {
-				"CMAKE_BUILD_TYPE": "Debug"
+				"CMAKE_C_FLAGS_RELWITHDEBINFO": "-DNDEBUG",
+				"CMAKE_CXX_FLAGS_RELWITHDEBINFO": "-DNDEBUG",
+				"SRB2_CONFIG_DEV_BUILD": "OFF",
+				"CMAKE_BUILD_TYPE": "RelWithDebInfo"
 			}
+		},
+		{
+			"name": "__testers",
+			"hidden": true,
+			"cacheVariables": {
+				"CMAKE_C_FLAGS_RELWITHDEBINFO": "-DNDEBUG",
+				"CMAKE_CXX_FLAGS_RELWITHDEBINFO": "-DNDEBUG",
+				"SRB2_CONFIG_DEV_BUILD": "ON",
+				"CMAKE_BUILD_TYPE": "RelWithDebInfo",
+				"SRB2_CONFIG_TESTERS": "ON"
+			}
+		},
+		{
+			"name": "__ninja",
+			"hidden": true,
+			"generator": "Ninja",
+			"cacheVariables": {
+				"CMAKE_COLOR_DIAGNOSTICS": "ON"
+			}
+		},
+		{
+			"name": "__vcpkg-toolchain",
+			"hidden": true,
+			"cacheVariables": {
+				"CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
+			}
+		},
+		{
+			"name": "__compiler-mingw-w64-i686",
+			"hidden": true,
+			"cacheVariables": {
+				"CMAKE_C_COMPILER": "i686-w64-mingw32-gcc",
+				"CMAKE_CXX_COMPILER": "i686-w64-mingw32-g++"
+			}
+		},
+		{
+			"name": "__mingw-dynamic",
+			"hidden": true,
+			"cacheVariables": {
+				"VCPKG_TARGET_TRIPLET": "x86-mingw-dynamic"
+			}
+		},
+		{
+			"name": "__mingw-static",
+			"hidden": true,
+			"cacheVariables": {
+				"VCPKG_HOST_TRIPLET": "x86-mingw-static",
+				"VCPKG_TARGET_TRIPLET": "x86-mingw-static"
+			}
+		},
+		{
+			"name": "__osx_x64",
+			"hidden": true,
+			"cacheVariables": {
+				"VCPKG_TARGET_TRIPLET": "x64-osx"
+			}
+		},
+		{
+			"name": "__osx_arm64",
+			"hidden": true,
+			"cacheVariables": {
+				"VCPKG_TARGET_TRIPLET": "arm64-osx"
+			}
+		},
+
+		{
+			"name": "ninja-debug",
+			"hidden": false,
+			"binaryDir": "build/${presetName}",
+			"inherits": ["__debug", "__ninja"]
+		},
+		{
+			"name": "ninja-develop",
+			"hidden": false,
+			"binaryDir": "build/${presetName}",
+			"inherits": ["__develop", "__ninja"]
+		},
+		{
+			"name": "ninja-release",
+			"hidden": false,
+			"binaryDir": "build/${presetName}",
+			"inherits": ["__release", "__ninja"]
+		},
+		{
+			"name": "ninja-testers",
+			"hidden": false,
+			"binaryDir": "build/${presetName}",
+			"inherits": ["__testers", "__ninja"]
+		},
+
+		{
+			"name": "ninja-vcpkg-debug",
+			"hidden": false,
+			"binaryDir": "build/${presetName}",
+			"inherits": ["__debug", "__ninja", "__vcpkg-toolchain"]
+		},
+		{
+			"name": "ninja-vcpkg-develop",
+			"hidden": false,
+			"binaryDir": "build/${presetName}",
+			"inherits": ["__develop", "__ninja", "__vcpkg-toolchain"]
+		},
+		{
+			"name": "ninja-vcpkg-release",
+			"hidden": false,
+			"binaryDir": "build/${presetName}",
+			"inherits": ["__release", "__ninja", "__vcpkg-toolchain"]
+		},
+		{
+			"name": "ninja-vcpkg-testers",
+			"hidden": false,
+			"binaryDir": "build/${presetName}",
+			"inherits": ["__testers", "__ninja", "__vcpkg-toolchain"]
+		},
+
+		{
+			"name": "ninja-x86_mingw_static_vcpkg-debug",
+			"hidden": false,
+			"binaryDir": "build/${presetName}",
+			"inherits": ["__debug", "__compiler-mingw-w64-i686", "__ninja", "__vcpkg-toolchain", "__mingw-static"]
+		},
+		{
+			"name": "ninja-x86_mingw_static_vcpkg-develop",
+			"hidden": false,
+			"binaryDir": "build/${presetName}",
+			"inherits": ["__develop", "__compiler-mingw-w64-i686", "__ninja", "__vcpkg-toolchain", "__mingw-static"]
+		},
+		{
+			"name": "ninja-x86_mingw_static_vcpkg-release",
+			"hidden": false,
+			"binaryDir": "build/${presetName}",
+			"inherits": ["__release", "__compiler-mingw-w64-i686", "__ninja", "__vcpkg-toolchain", "__mingw-static"]
+		},
+		{
+			"name": "ninja-x86_mingw_static_vcpkg-testers",
+			"hidden": false,
+			"binaryDir": "build/${presetName}",
+			"inherits": ["__testers", "__compiler-mingw-w64-i686", "__ninja", "__vcpkg-toolchain", "__mingw-static"]
+		},
+
+		{
+			"name": "ninja-x64_osx_vcpkg-debug",
+			"hidden": false,
+			"binaryDir": "build/${presetName}",
+			"inherits": ["__debug", "__ninja", "__vcpkg-toolchain", "__osx_x64"]
+		},
+		{
+			"name": "ninja-x64_osx_vcpkg-develop",
+			"hidden": false,
+			"binaryDir": "build/${presetName}",
+			"inherits": ["__develop", "__ninja", "__vcpkg-toolchain", "__osx_x64"]
+		},
+		{
+			"name": "ninja-x64_osx_vcpkg-release",
+			"hidden": false,
+			"binaryDir": "build/${presetName}",
+			"inherits": ["__release", "__ninja", "__vcpkg-toolchain", "__osx_x64"]
+		},
+
+		{
+			"name": "ninja-arm64_osx_vcpkg-debug",
+			"hidden": false,
+			"binaryDir": "build/${presetName}",
+			"inherits": ["__debug", "__ninja", "__vcpkg-toolchain", "__osx_arm64"]
+		},
+		{
+			"name": "ninja-arm64_osx_vcpkg-develop",
+			"hidden": false,
+			"binaryDir": "build/${presetName}",
+			"inherits": ["__develop", "__ninja", "__vcpkg-toolchain", "__osx_arm64"]
+		},
+		{
+			"name": "ninja-arm64_osx_vcpkg-release",
+			"hidden": false,
+			"binaryDir": "build/${presetName}",
+			"inherits": ["__release", "__ninja", "__vcpkg-toolchain", "__osx_arm64"]
 		}
 	],
+
 	"buildPresets": [
 		{
-			"name": "default",
-			"configurePreset": "default"
+			"name": "ninja-debug",
+			"configurePreset": "ninja-debug"
+		},
+		{
+			"name": "ninja-develop",
+			"configurePreset": "ninja-develop"
+		},
+		{
+			"name": "ninja-release",
+			"configurePreset": "ninja-release"
+		},
+		{
+			"name": "ninja-x86_mingw_static_vcpkg-debug",
+			"configurePreset": "ninja-x86_mingw_static_vcpkg-debug"
+		},
+		{
+			"name": "ninja-x86_mingw_static_vcpkg-develop",
+			"configurePreset": "ninja-x86_mingw_static_vcpkg-develop"
+		},
+		{
+			"name": "ninja-x86_mingw_static_vcpkg-release",
+			"configurePreset": "ninja-x86_mingw_static_vcpkg-release"
+		},
+		{
+			"name": "ninja-x86_mingw_static_vcpkg-testers",
+			"configurePreset": "ninja-x86_mingw_static_vcpkg-testers"
+		},
+		{
+			"name": "ninja-x64_osx_vcpkg-debug",
+			"configurePreset": "ninja-x64_osx_vcpkg-debug"
+		},
+		{
+			"name": "ninja-x64_osx_vcpkg-develop",
+			"configurePreset": "ninja-x64_osx_vcpkg-develop"
+		},
+		{
+			"name": "ninja-x64_osx_vcpkg-release",
+			"configurePreset": "ninja-x64_osx_vcpkg-release"
+		},
+		{
+			"name": "ninja-arm64_osx_vcpkg-debug",
+			"configurePreset": "ninja-arm64_osx_vcpkg-debug"
+		},
+		{
+			"name": "ninja-arm64_osx_vcpkg-develop",
+			"configurePreset": "ninja-arm64_osx_vcpkg-develop"
+		},
+		{
+			"name": "ninja-arm64_osx_vcpkg-release",
+			"configurePreset": "ninja-arm64_osx_vcpkg-release"
 		}
 	]
 }

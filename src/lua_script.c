@@ -622,9 +622,6 @@ static inline boolean LUA_LoadFile(MYFILE *f, char *name)
 	if (!gL) // Lua needs to be initialized
 		LUA_ClearState();
 
-	lua_pushinteger(gL, f->wad);
-	lua_setfield(gL, LUA_REGISTRYINDEX, "WAD");
-
 	lua_pushcfunction(gL, LUA_GetErrorMessage);
 	errorhandlerindex = lua_gettop(gL);
 

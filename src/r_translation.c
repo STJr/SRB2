@@ -556,7 +556,7 @@ static boolean ParseDecimal(tokenizer_t *sc, double *out)
 	return M_StringToDecimal(tkn, out);
 }
 
-static struct PaletteRemapParseResult *ThrowError(const char *format, ...)
+FUNCPRINTF static struct PaletteRemapParseResult *ThrowError(const char *format, ...)
 {
 	const size_t err_size = 512 * sizeof(char);
 
@@ -792,7 +792,7 @@ static struct PaletteRemapParseResult *PaletteRemap_ParseTranslation(const char 
 	return result;
 }
 
-static void PrintError(const char *name, const char *format, ...)
+FUNCDEBUG static void PrintError(const char *name, const char *format, ...)
 {
 	char error[256];
 

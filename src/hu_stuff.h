@@ -19,32 +19,33 @@
 #include "r_defs.h"
 
 //------------------------------------
-//           heads up font
+//           Fonts & stuff
 //------------------------------------
-#define HU_FONTSTART '\x16' // the first font character
-#define HU_FONTEND '~'
-
-#define HU_FONTSIZE (HU_FONTEND - HU_FONTSTART + 1)
-
-// Level title font
-#define LT_FONTSTART '!' // the first font characters
-#define LT_FONTEND 'z' // the last font characters
-#define LT_FONTSIZE (LT_FONTEND - LT_FONTSTART + 1)
-
-#define CRED_FONTSTART '!' // the first font character
-#define CRED_FONTEND 'Z' // the last font character
-#define CRED_FONTSIZE (CRED_FONTEND - CRED_FONTSTART + 1)
-
-// Name tag font
-// Used by base and outline font set
-#define NT_FONTSTART '!' // the first font character
-#define NT_FONTEND 'Z' // the last font character
-#define NT_FONTSIZE (NT_FONTEND - NT_FONTSTART + 1)
+#define FONTSTART '\x16' // the first font character
+#define FONTEND '~'
+#define FONTSIZE (FONTEND - FONTSTART + 1)
 
 #define HU_CROSSHAIRS 3 // maximum of 9 - see HU_Init();
 
 extern char *shiftxform; // english translation shift table
 extern char english_shiftxform[];
+
+typedef struct
+{
+	patch_t *chars[FONTSIZE];
+	INT32 kerning;
+	UINT32 spacewidth;
+	UINT32 charwidth;
+	UINT32 linespacing;
+} fontdef_t;
+
+extern fontdef_t hu_font, tny_font, cred_font, lt_font;
+extern fontdef_t ntb_font, nto_font;
+extern patch_t *tallnum[10];
+extern patch_t *nightsnum[10];
+extern patch_t *ttlnum[10];
+extern patch_t *tallminus;
+extern patch_t *tallinfin;
 
 //------------------------------------
 //        sorted player lines
@@ -69,8 +70,8 @@ typedef struct
 #else
 #define OLDCHAT (cv_consolechat.value == 1 || dedicated || vid.width < 640 || splitscreen)
 #endif
-#define CHAT_MUTE (cv_mute.value && !(server || IsPlayerAdmin(consoleplayer)))	// this still allows to open the chat but not to type. That's used for scrolling and whatnot.
-#define OLD_MUTE (OLDCHAT && cv_mute.value && !(server || IsPlayerAdmin(consoleplayer)))	// this is used to prevent oldchat from opening when muted.
+#define CHAT_MUTE ((cv_mute.value || players[consoleplayer].muted) && !(server || IsPlayerAdmin(consoleplayer)))	// this still allows to open the chat but not to type. That's used for scrolling and whatnot.
+#define OLD_MUTE (OLDCHAT && (cv_mute.value || players[consoleplayer].muted) && !(server || IsPlayerAdmin(consoleplayer)))	// this is used to prevent oldchat from opening when muted.
 
 // some functions
 void HU_AddChatText(const char *text, boolean playsound);
@@ -78,22 +79,12 @@ void HU_AddChatText(const char *text, boolean playsound);
 // set true when entering a chat message
 extern boolean chat_on;
 
-extern patch_t *hu_font[HU_FONTSIZE], *tny_font[HU_FONTSIZE];
-extern patch_t *tallnum[10];
-extern patch_t *nightsnum[10];
-extern patch_t *lt_font[LT_FONTSIZE];
-extern patch_t *cred_font[CRED_FONTSIZE];
-extern patch_t *ntb_font[NT_FONTSIZE];
-extern patch_t *nto_font[NT_FONTSIZE];
-extern patch_t *ttlnum[10];
 extern patch_t *emeraldpics[3][8];
 extern patch_t *rflagico;
 extern patch_t *bflagico;
 extern patch_t *rmatcico;
 extern patch_t *bmatcico;
 extern patch_t *tagico;
-extern patch_t *tallminus;
-extern patch_t *tallinfin;
 extern patch_t *tokenicon;
 
 // set true whenever the tab rankings are being shown for any reason
@@ -103,6 +94,8 @@ extern boolean hu_showscores;
 void HU_Init(void);
 
 void HU_LoadGraphics(void);
+void HU_LoadFontCharacters(fontdef_t *font, const char *prefix);
+void HU_SetFontProperties(fontdef_t *font, INT32 kerning, UINT32 spacewidth, UINT32 charwidth, UINT32 linespacing);
 
 // reset heads up when consoleplayer respawns.
 void HU_Start(void);

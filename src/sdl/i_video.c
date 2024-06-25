@@ -382,6 +382,8 @@ static INT32 Impl_SDL_Scancode_To_Keycode(SDL_Scancode code)
 
 static boolean ShouldIgnoreMouse(void)
 {
+	if (cv_alwaysgrabmouse.value)
+		return false;
 	if (menuactive)
 		return !M_MouseNeeded();
 	if (paused || con_destlines || chat_on)
@@ -1704,7 +1706,7 @@ static void Impl_VideoSetupBuffer(void)
 	vid.direct = NULL;
 	if (vid.buffer)
 		free(vid.buffer);
-	vid.buffer = calloc(vid.rowbytes*vid.height, NUMSCREENS);
+	vid.buffer = calloc(NUMSCREENS, vid.rowbytes*vid.height);
 	if (!vid.buffer)
 	{
 		I_Error("%s", M_GetText("Not enough memory for video buffer\n"));

@@ -564,6 +564,12 @@ void P_DoTeamscrambling(void)
 		CV_SetValue(&cv_teamscramble, 0);
 }
 
+
+//
+// P_DoSpecialStageStuff()
+//
+// For old-style (non-NiGHTS) special stages
+//
 static inline void P_DoSpecialStageStuff(void)
 {
 	boolean stillalive = false;
@@ -601,7 +607,15 @@ static inline void P_DoSpecialStageStuff(void)
 				if (--players[i].nightstime > 6)
 				{
 					if (P_IsLocalPlayer(&players[i]) && oldnightstime > 10*TICRATE && players[i].nightstime <= 10*TICRATE)
-						S_ChangeMusicInternal("_drown", false);
+					{
+						if (mapheaderinfo[gamemap-1]->levelflags & LF_MIXNIGHTSCOUNTDOWN)
+						{
+							S_FadeMusic(0, 10*MUSICRATE);
+							S_StartSound(NULL, sfx_timeup); // that creepy "out of time" music from NiGHTS.
+						}
+						else
+							S_ChangeMusicInternal("_drown", false);
+					}
 					stillalive = true;
 				}
 				else if (!players[i].exiting)

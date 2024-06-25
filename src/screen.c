@@ -44,6 +44,8 @@
 // SRB2Kart
 #include "r_fps.h" // R_GetFramerateCap
 
+#include "lua_hud.h" // LUA_HudEnabled
+
 // --------------------------------------------
 // assembly or c drawer routines for 8bpp/16bpp
 // --------------------------------------------
@@ -69,11 +71,6 @@ consvar_t cv_scr_height = CVAR_INIT ("scr_height", "800", CV_SAVE, CV_Unsigned, 
 consvar_t cv_scr_width_w = CVAR_INIT ("scr_width_w", "640", CV_SAVE, CV_Unsigned, NULL);
 consvar_t cv_scr_height_w = CVAR_INIT ("scr_height_w", "400", CV_SAVE, CV_Unsigned, NULL);
 consvar_t cv_scr_depth = CVAR_INIT ("scr_depth", "16 bits", CV_SAVE, scr_depth_cons_t, NULL);
-
-consvar_t cv_renderview = CVAR_INIT ("renderview", "On", 0, CV_OnOff, NULL);
-consvar_t cv_renderwalls = CVAR_INIT ("renderwalls", "On", CV_NOTINNET|CV_CHEAT, CV_OnOff, NULL);
-consvar_t cv_renderfloors = CVAR_INIT ("renderfloors", "On", CV_NOTINNET|CV_CHEAT, CV_OnOff, NULL);
-consvar_t cv_renderthings = CVAR_INIT ("renderthings", "On", CV_NOTINNET|CV_CHEAT, CV_OnOff, NULL);
 
 CV_PossibleValue_t cv_renderer_t[] = {
 	{1, "Software"},
@@ -115,6 +112,10 @@ void SCR_SetDrawFuncs(void)
 		colfuncs[COLDRAWFUNC_SHADE] = R_DrawShadeColumn_8;
 		colfuncs[COLDRAWFUNC_SHADOWED] = R_DrawColumnShadowed_8;
 		colfuncs[COLDRAWFUNC_TRANSTRANS] = R_DrawTranslatedTranslucentColumn_8;
+		colfuncs[COLDRAWFUNC_CLAMPED] = R_DrawColumnClamped_8;
+		colfuncs[COLDRAWFUNC_CLAMPEDTRANS] = R_DrawTranslucentColumnClamped_8;
+		colfuncs[COLDRAWFUNC_TWOSMULTIPATCH] = R_Draw2sMultiPatchColumn_8;
+		colfuncs[COLDRAWFUNC_TWOSMULTIPATCHTRANS] = R_Draw2sMultiPatchTranslucentColumn_8;
 		colfuncs[COLDRAWFUNC_FOG] = R_DrawFogColumn_8;
 
 		spanfuncs[SPANDRAWFUNC_TRANS] = R_DrawTranslucentSpan_8;
@@ -494,6 +495,7 @@ void SCR_ClosedCaptions(void)
 			basey -= 8;
 		else if ((modeattacking == ATTACKING_NIGHTS)
 		|| (!(maptol & TOL_NIGHTS)
+		&& LUA_HudEnabled(hud_powerups)
 		&& ((cv_powerupdisplay.value == 2) // "Always"
 		 || (cv_powerupdisplay.value == 1 && !camera.chase)))) // "First-person only"
 			basey -= 16;
