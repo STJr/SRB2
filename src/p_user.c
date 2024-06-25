@@ -976,6 +976,9 @@ pflags_t P_GetJumpFlags(player_t *player)
 //
 boolean P_PlayerInPain(player_t *player)
 {
+	if (P_MobjWasRemoved(player->mo))
+		return false;
+		
 	// no silly, sliding isn't pain
 	if (!(player->pflags & PF_SLIDING) && player->mo->state == &states[player->mo->info->painstate] && player->powers[pw_flashing])
 		return true;
@@ -2078,6 +2081,7 @@ mobj_t *P_SpawnGhostMobj(mobj_t *mobj)
 
 	ghost->renderflags = mobj->renderflags;
 	ghost->blendmode = mobj->blendmode;
+	ghost->alpha = mobj->alpha;
 
 	ghost->spritexscale = mobj->spritexscale;
 	ghost->spriteyscale = mobj->spriteyscale;

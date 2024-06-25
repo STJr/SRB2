@@ -1258,8 +1258,9 @@ static unsigned PIT_DoCheckThing(mobj_t *thing)
 
 		if (tmthing->type != MT_SHELL && tmthing->target && tmthing->target->type == thing->type)
 		{
-			// Don't hit same species as originator.
-			if (thing == tmthing->target)
+			// Don't hit yourself, and if a player, don't hit bots
+			if (thing == tmthing->target
+				|| (thing->player && tmthing->target->player && (thing->player->bot == BOT_2PAI || thing->player->bot == BOT_2PHUMAN)))
 				return CHECKTHING_IGNORE;
 
 			if (thing->type != MT_PLAYER)
@@ -3960,23 +3961,25 @@ papercollision:
 		mo->momy = tmymove;
 	}
 
+	const fixed_t tmradius = mo->radius > 8 ? mo->radius : 8;
+
 	do {
-		if (tmxmove > mo->radius) {
-			newx = mo->x + mo->radius;
-			tmxmove -= mo->radius;
-		} else if (tmxmove < -mo->radius) {
-			newx = mo->x - mo->radius;
-			tmxmove += mo->radius;
+		if (tmxmove > tmradius) {
+			newx = mo->x + tmradius;
+			tmxmove -= tmradius;
+		} else if (tmxmove < -tmradius) {
+			newx = mo->x - tmradius;
+			tmxmove += tmradius;
 		} else {
 			newx = mo->x + tmxmove;
 			tmxmove = 0;
 		}
-		if (tmymove > mo->radius) {
-			newy = mo->y + mo->radius;
-			tmymove -= mo->radius;
-		} else if (tmymove < -mo->radius) {
-			newy = mo->y - mo->radius;
-			tmymove += mo->radius;
+		if (tmymove > tmradius) {
+			newy = mo->y + tmradius;
+			tmymove -= tmradius;
+		} else if (tmymove < -tmradius) {
+			newy = mo->y - tmradius;
+			tmymove += tmradius;
 		} else {
 			newy = mo->y + tmymove;
 			tmymove = 0;

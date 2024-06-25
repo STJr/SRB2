@@ -1004,25 +1004,21 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 		{
 			dc_iscale = 0xffffffffu / (unsigned)spryscale;
 
-			// Skip if texture is multipatch
-			if (textures[texnum]->transparency)
+			// Column has a single post and it matches the texture height, use regular column drawers
+			if (col->num_posts == 1 && col->posts[0].topdelta == 0 && col->posts[0].length == (unsigned)dc_texheight)
 			{
-				// Column has a single post and it matches the texture height, use regular column drawers
-				if (col->num_posts == 1 && col->posts[0].topdelta == 0 && col->posts[0].length == (unsigned)dc_texheight)
-				{
-					if (fuzzy)
-						colfunc = colfuncs[COLDRAWFUNC_FUZZY];
-					else
-						colfunc = colfuncs[BASEDRAWFUNC];
-				}
+				if (fuzzy)
+					colfunc = colfuncs[COLDRAWFUNC_FUZZY];
 				else
-				{
-					// Otherwise use column drawers with extra checks
-					if (fuzzy)
-						colfunc = colfuncs[COLDRAWFUNC_CLAMPEDTRANS];
-					else
-						colfunc = colfuncs[COLDRAWFUNC_CLAMPED];
-				}
+					colfunc = colfuncs[BASEDRAWFUNC];
+			}
+			else
+			{
+				// Otherwise use column drawers with extra checks
+				if (fuzzy)
+					colfunc = colfuncs[COLDRAWFUNC_CLAMPEDTRANS];
+				else
+					colfunc = colfuncs[COLDRAWFUNC_CLAMPED];
 			}
 		}
 
