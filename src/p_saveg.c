@@ -3297,6 +3297,8 @@ static thinker_t* LoadMobjThinker(actionf_p1 thinker)
 		mobj->translation = READUINT16(save_p);
 	if (diff2 & MD2_ALPHA)
 		mobj->alpha = READFIXED(save_p);
+	else
+		mobj->alpha = FRACUNIT;
 
 	if (diff & MD_REDFLAG)
 	{
