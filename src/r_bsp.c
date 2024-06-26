@@ -230,13 +230,13 @@ static INT32 R_DoorClosed(void)
 	&& (backsector->floorheight <= frontsector->floorheight || curline->sidedef->bottomtexture);
 }
 
-static UINT8 R_FloorLightLevel(sector_t *sector, INT16 base_lightlevel)
+static UINT8 R_FloorLightLevel(sector_t *sector, UINT8 base_lightlevel)
 {
 	return max(0, min(255, sector->floorlightlevel +
 		((sector->floorlightabsolute) ? 0 : base_lightlevel)));
 }
 
-static UINT8 R_CeilingLightLevel(sector_t *sector, INT16 base_lightlevel)
+static UINT8 R_CeilingLightLevel(sector_t *sector, UINT8 base_lightlevel)
 {
 	return max(0, min(255, sector->ceilinglightlevel +
 		((sector->ceilinglightabsolute) ? 0 : base_lightlevel)));
