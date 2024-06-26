@@ -919,7 +919,11 @@ enum
 	LD_SDMIDLIGHT    = 1<<19,
 	LD_SDBOTLIGHT    = 1<<20,
 	LD_SDREPEATCNT   = 1<<21,
-	LD_SDFLAGS       = 1<<22
+	LD_SDFLAGS       = 1<<22,
+	LD_SDLIGHTABS    = 1<<23,
+	LD_SDTOPLIGHTABS = 1<<24,
+	LD_SDMIDLIGHTABS = 1<<25,
+	LD_SDBOTLIGHTABS = 1<<26
 };
 
 static boolean P_AreArgsEqual(const line_t *li, const line_t *spawnli)
@@ -1393,6 +1397,22 @@ static UINT32 GetSideDiff(const side_t *si, const side_t *spawnsi)
 		diff |= LD_SDBOTSCALEY;
 	if (si->repeatcnt != spawnsi->repeatcnt)
 		diff |= LD_SDREPEATCNT;
+	if (si->light != spawnsi->light)
+		diff |= LD_SDLIGHT;
+	if (si->light_top != spawnsi->light_top)
+		diff |= LD_SDTOPLIGHT;
+	if (si->light_mid != spawnsi->light_mid)
+		diff |= LD_SDMIDLIGHT;
+	if (si->light_bottom != spawnsi->light_bottom)
+		diff |= LD_SDBOTLIGHT;
+	if (si->lightabsolute != spawnsi->lightabsolute)
+		diff |= LD_SDLIGHTABS;
+	if (si->lightabsolute_top != spawnsi->lightabsolute_top)
+		diff |= LD_SDTOPLIGHTABS;
+	if (si->lightabsolute_mid != spawnsi->lightabsolute_mid)
+		diff |= LD_SDMIDLIGHTABS;
+	if (si->lightabsolute_bottom != spawnsi->lightabsolute_bottom)
+		diff |= LD_SDBOTLIGHTABS;
 	return diff;
 }
 
@@ -1436,6 +1456,22 @@ static void ArchiveSide(const side_t *si, UINT32 diff)
 		WRITEFIXED(save_p, si->scaley_bottom);
 	if (diff & LD_SDREPEATCNT)
 		WRITEINT16(save_p, si->repeatcnt);
+	if (diff & LD_SDLIGHT)
+		WRITEINT16(save_p, si->light);
+	if (diff & LD_SDTOPLIGHT)
+		WRITEINT16(save_p, si->light_top);
+	if (diff & LD_SDMIDLIGHT)
+		WRITEINT16(save_p, si->light_mid);
+	if (diff & LD_SDBOTLIGHT)
+		WRITEINT16(save_p, si->light_bottom);
+	if (diff & LD_SDLIGHTABS)
+		WRITEUINT8(save_p, si->lightabsolute);
+	if (diff & LD_SDTOPLIGHTABS)
+		WRITEUINT8(save_p, si->lightabsolute_top);
+	if (diff & LD_SDMIDLIGHTABS)
+		WRITEUINT8(save_p, si->lightabsolute_mid);
+	if (diff & LD_SDBOTLIGHTABS)
+		WRITEUINT8(save_p, si->lightabsolute_bottom);
 }
 
 static void ArchiveLines(void)
@@ -1576,6 +1612,22 @@ static void UnArchiveSide(side_t *si)
 		si->scaley_bottom = READFIXED(save_p);
 	if (diff & LD_SDREPEATCNT)
 		si->repeatcnt = READINT16(save_p);
+	if (diff & LD_SDLIGHT)
+		si->light = READINT16(save_p);
+	if (diff & LD_SDTOPLIGHT)
+		si->light_top = READINT16(save_p);
+	if (diff & LD_SDMIDLIGHT)
+		si->light_mid = READINT16(save_p);
+	if (diff & LD_SDBOTLIGHT)
+		si->light_bottom = READINT16(save_p);
+	if (diff & LD_SDLIGHTABS)
+		si->lightabsolute = READUINT8(save_p);
+	if (diff & LD_SDTOPLIGHTABS)
+		si->lightabsolute_top = READUINT8(save_p);
+	if (diff & LD_SDMIDLIGHTABS)
+		si->lightabsolute_mid = READUINT8(save_p);
+	if (diff & LD_SDBOTLIGHTABS)
+		si->lightabsolute_bottom = READUINT8(save_p);
 }
 
 static void UnArchiveLines(void)
@@ -3245,6 +3297,8 @@ static thinker_t* LoadMobjThinker(actionf_p1 thinker)
 		mobj->translation = READUINT16(save_p);
 	if (diff2 & MD2_ALPHA)
 		mobj->alpha = READFIXED(save_p);
+	else
+		mobj->alpha = FRACUNIT;
 
 	if (diff & MD_REDFLAG)
 	{

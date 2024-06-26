@@ -309,6 +309,43 @@ static FUINT HWR_CalcSlopeLight(FUINT lightnum, angle_t dir, fixed_t delta)
 	return (FUINT)finallight;
 }
 
+static FUINT HWR_SideLightLevel(side_t *side, UINT8 base_lightlevel)
+{
+	return side->light +
+		((side->lightabsolute) ? 0 : base_lightlevel);
+}
+
+/* TODO: implement per-texture lighting
+static FUINT HWR_TopLightLevel(side_t *side, UINT8 base_lightlevel)
+{
+	return side->light_top +
+		((side->lightabsolute_top) ? 0 : HWR_SideLightLevel(side, base_lightlevel));
+}
+
+static FUINT HWR_MidLightLevel(side_t *side, UINT8 base_lightlevel)
+{
+	return side->light_mid +
+		((side->lightabsolute_mid) ? 0 : HWR_SideLightLevel(side, base_lightlevel));
+}
+
+static FUINT HWR_BottomLightLevel(side_t *side, UINT8 base_lightlevel)
+{
+	return side->light_bottom +
+		((side->lightabsolute_bottom) ? 0 : HWR_SideLightLevel(side, base_lightlevel));
+}
+*/
+
+static UINT8 HWR_FloorLightLevel(sector_t *sector, UINT8 base_lightlevel)
+{
+	return max(0, min(255, sector->floorlightlevel +
+		((sector->floorlightabsolute) ? 0 : base_lightlevel)));
+}
+
+static UINT8 HWR_CeilingLightLevel(sector_t *sector, UINT8 base_lightlevel)
+{
+	return max(0, min(255, sector->ceilinglightlevel +
+		((sector->ceilinglightabsolute) ? 0 : base_lightlevel)));
+}
 // ==========================================================================
 //                                   FLOOR/CEILING GENERATION FROM SUBSECTORS
 // ==========================================================================
@@ -705,8 +742,9 @@ static void HWR_SplitWall(sector_t *sector, FOutVector *wallVerts, INT32 texnum,
 	fixed_t v2x = FloatToFixed(wallVerts[1].x);
 	fixed_t v2y = FloatToFixed(wallVerts[1].z);
 
+	FUINT lightnum = HWR_SideLightLevel(gl_sidedef, sector->lightlevel);
 	const UINT8 alpha = Surf->PolyColor.s.alpha;
-	FUINT lightnum = HWR_CalcWallLight(sector->lightlevel, v1x, v1y, v2x, v2y);
+	lightnum = HWR_CalcWallLight(lightnum, v1x, v1y, v2x, v2y);
 	extracolormap_t *colormap = NULL;
 
 	if (!r_renderwalls)
@@ -750,13 +788,13 @@ static void HWR_SplitWall(sector_t *sector, FOutVector *wallVerts, INT32 texnum,
 		{
 			if (pfloor && (pfloor->fofflags & FOF_FOG))
 			{
-				lightnum = pfloor->master->frontsector->lightlevel;
+				lightnum = HWR_SideLightLevel(gl_sidedef, pfloor->master->frontsector->lightlevel);
 				colormap = pfloor->master->frontsector->extra_colormap;
 				lightnum = colormap ? lightnum : HWR_CalcWallLight(lightnum, v1x, v1y, v2x, v2y);
 			}
 			else
 			{
-				lightnum = *list[i].lightlevel;
+				lightnum = HWR_SideLightLevel(gl_sidedef, *list[i].lightlevel);
 				colormap = *list[i].extra_colormap;
 				lightnum = colormap ? lightnum : HWR_CalcWallLight(lightnum, v1x, v1y, v2x, v2y);
 			}
@@ -1167,7 +1205,7 @@ static void HWR_ProcessSeg(void)
 	float cliplow = (float)gl_curline->offset;
 	float cliphigh = cliplow + (gl_curline->flength * FRACUNIT);
 
-	FUINT lightnum = gl_frontsector->lightlevel;
+	FUINT lightnum = HWR_SideLightLevel(gl_sidedef, gl_frontsector->lightlevel);
 	extracolormap_t *colormap = gl_frontsector->extra_colormap;
 	lightnum = colormap ? lightnum : HWR_CalcWallLight(lightnum, vs.x, vs.y, ve.x, ve.y);
 
@@ -1628,11 +1666,11 @@ static void HWR_ProcessSeg(void)
 				{
 					blendmode = PF_Fog|PF_NoTexture;
 
-					lightnum = rover->master->frontsector->lightlevel;
+					lightnum = HWR_SideLightLevel(gl_sidedef, rover->master->frontsector->lightlevel);
 					colormap = rover->master->frontsector->extra_colormap;
 					lightnum = colormap ? lightnum : HWR_CalcWallLight(lightnum, vs.x, vs.y, ve.x, ve.y);
 
-					Surf.PolyColor.s.alpha = HWR_FogBlockAlpha(rover->master->frontsector->lightlevel, rover->master->frontsector->extra_colormap);
+					Surf.PolyColor.s.alpha = HWR_FogBlockAlpha(HWR_SideLightLevel(gl_sidedef, rover->master->frontsector->lightlevel), rover->master->frontsector->extra_colormap);
 
 					if (gl_frontsector->numlights)
 						HWR_SplitWall(gl_frontsector, wallVerts, 0, &Surf, rover->fofflags, rover, blendmode);
@@ -1785,7 +1823,7 @@ static void HWR_ProcessSeg(void)
 				{
 					blendmode = PF_Fog|PF_NoTexture;
 
-					lightnum = rover->master->frontsector->lightlevel;
+					lightnum = HWR_SideLightLevel(gl_sidedef, rover->master->frontsector->lightlevel);
 					colormap = rover->master->frontsector->extra_colormap;
 					lightnum = colormap ? lightnum : HWR_CalcWallLight(lightnum, vs.x, vs.y, ve.x, ve.y);
 
@@ -2442,7 +2480,7 @@ static void HWR_Subsector(size_t num)
 			rover; rover = rover->next)
 		{
 			fixed_t bottomCullHeight, topCullHeight, centerHeight;
-
+			
 			if (!(rover->fofflags & FOF_EXISTS) || !(rover->fofflags & FOF_RENDERPLANES))
 				continue;
 			if (sub->validcount == validcount)
@@ -2471,13 +2509,13 @@ static void HWR_Subsector(size_t num)
 					UINT8 alpha;
 
 					light = R_GetPlaneLight(gl_frontsector, centerHeight, viewz < bottomCullHeight ? true : false);
-					alpha = HWR_FogBlockAlpha(*gl_frontsector->lightlist[light].lightlevel, rover->master->frontsector->extra_colormap);
+					alpha = HWR_FogBlockAlpha(HWR_FloorLightLevel(rover->master->frontsector, *gl_frontsector->lightlist[light].lightlevel), rover->master->frontsector->extra_colormap);
 
 					HWR_AddTransparentFloor(0,
 					                       &extrasubsectors[num],
 										   false,
 					                       *rover->bottomheight,
-					                       *gl_frontsector->lightlist[light].lightlevel,
+					                       HWR_FloorLightLevel(rover->master->frontsector, *gl_frontsector->lightlist[light].lightlevel),
 					                       alpha, rover->master->frontsector, PF_Fog|PF_NoTexture,
 										   true, false, rover->master->frontsector->extra_colormap);
 				}
@@ -2489,7 +2527,7 @@ static void HWR_Subsector(size_t num)
 					                       &extrasubsectors[num],
 										   false,
 					                       *rover->bottomheight,
-					                       *gl_frontsector->lightlist[light].lightlevel,
+					                       HWR_FloorLightLevel(rover->master->frontsector, *gl_frontsector->lightlist[light].lightlevel),
 					                       max(0, min(rover->alpha, 255)), rover->master->frontsector,
 					                       HWR_RippleBlend(gl_frontsector, rover, false) | (rover->blend ? HWR_GetBlendModeFlag(rover->blend) : PF_Translucent),
 					                       false, rover->fofflags & FOF_SPLAT, *gl_frontsector->lightlist[light].extra_colormap);
@@ -2498,8 +2536,9 @@ static void HWR_Subsector(size_t num)
 				{
 					HWR_GetLevelFlat(&levelflats[*rover->bottompic], rover->fofflags & FOF_SPLAT);
 					light = R_GetPlaneLight(gl_frontsector, centerHeight, viewz < bottomCullHeight ? true : false);
-					HWR_RenderPlane(sub, &extrasubsectors[num], false, *rover->bottomheight, HWR_RippleBlend(gl_frontsector, rover, false)|PF_Occlude, *gl_frontsector->lightlist[light].lightlevel, &levelflats[*rover->bottompic],
-					                rover->master->frontsector, 255, *gl_frontsector->lightlist[light].extra_colormap);
+					HWR_RenderPlane(sub, &extrasubsectors[num], false, *rover->bottomheight, HWR_RippleBlend(gl_frontsector, rover, false)|PF_Occlude,
+					                HWR_FloorLightLevel(rover->master->frontsector, *gl_frontsector->lightlist[light].lightlevel),
+					                &levelflats[*rover->bottompic], rover->master->frontsector, 255, *gl_frontsector->lightlist[light].extra_colormap);
 				}
 			}
 
@@ -2516,13 +2555,13 @@ static void HWR_Subsector(size_t num)
 					UINT8 alpha;
 
 					light = R_GetPlaneLight(gl_frontsector, centerHeight, viewz < topCullHeight ? true : false);
-					alpha = HWR_FogBlockAlpha(*gl_frontsector->lightlist[light].lightlevel, rover->master->frontsector->extra_colormap);
+					alpha = HWR_FogBlockAlpha(HWR_CeilingLightLevel(rover->master->frontsector, *gl_frontsector->lightlist[light].lightlevel), rover->master->frontsector->extra_colormap);
 
 					HWR_AddTransparentFloor(0,
 					                       &extrasubsectors[num],
 										   true,
 					                       *rover->topheight,
-					                       *gl_frontsector->lightlist[light].lightlevel,
+					                       HWR_CeilingLightLevel(rover->master->frontsector, *gl_frontsector->lightlist[light].lightlevel),
 					                       alpha, rover->master->frontsector, PF_Fog|PF_NoTexture,
 										   true, false, rover->master->frontsector->extra_colormap);
 				}
@@ -2534,7 +2573,7 @@ static void HWR_Subsector(size_t num)
 					                        &extrasubsectors[num],
 											true,
 					                        *rover->topheight,
-					                        *gl_frontsector->lightlist[light].lightlevel,
+					                        HWR_CeilingLightLevel(rover->master->frontsector, *gl_frontsector->lightlist[light].lightlevel),
 					                        max(0, min(rover->alpha, 255)), rover->master->frontsector,
 					                        HWR_RippleBlend(gl_frontsector, rover, false) | (rover->blend ? HWR_GetBlendModeFlag(rover->blend) : PF_Translucent),
 					                        false, rover->fofflags & FOF_SPLAT, *gl_frontsector->lightlist[light].extra_colormap);
@@ -2543,8 +2582,9 @@ static void HWR_Subsector(size_t num)
 				{
 					HWR_GetLevelFlat(&levelflats[*rover->toppic], rover->fofflags & FOF_SPLAT);
 					light = R_GetPlaneLight(gl_frontsector, centerHeight, viewz < topCullHeight ? true : false);
-					HWR_RenderPlane(sub, &extrasubsectors[num], true, *rover->topheight, HWR_RippleBlend(gl_frontsector, rover, false)|PF_Occlude, *gl_frontsector->lightlist[light].lightlevel, &levelflats[*rover->toppic],
-					                  rover->master->frontsector, 255, *gl_frontsector->lightlist[light].extra_colormap);
+					HWR_RenderPlane(sub, &extrasubsectors[num], true, *rover->topheight, HWR_RippleBlend(gl_frontsector, rover, false)|PF_Occlude,
+					                  HWR_CeilingLightLevel(rover->master->frontsector, *gl_frontsector->lightlist[light].lightlevel),
+					                  &levelflats[*rover->toppic], rover->master->frontsector, 255, *gl_frontsector->lightlist[light].extra_colormap);
 				}
 			}
 		}
@@ -3906,7 +3946,7 @@ void HWR_AddTransparentFloor(levelflat_t *levelflat, extrasubsector_t *xsub, boo
 
 	planeinfo[numplanes].isceiling = isceiling;
 	planeinfo[numplanes].fixedheight = fixedheight;
-	planeinfo[numplanes].lightlevel = (planecolormap && (planecolormap->flags & CMF_FOG)) ? 255 : lightlevel;
+	planeinfo[numplanes].lightlevel = (planecolormap && (planecolormap->flags & CMF_FOG)) ? lightlevel : 255; // TODO: 2.3: Make transparent FOF planes always use light level
 	planeinfo[numplanes].levelflat = levelflat;
 	planeinfo[numplanes].xsub = xsub;
 	planeinfo[numplanes].alpha = alpha;
@@ -3938,7 +3978,7 @@ void HWR_AddTransparentPolyobjectFloor(levelflat_t *levelflat, polyobj_t *polyse
 
 	polyplaneinfo[numpolyplanes].isceiling = isceiling;
 	polyplaneinfo[numpolyplanes].fixedheight = fixedheight;
-	polyplaneinfo[numpolyplanes].lightlevel = (planecolormap && (planecolormap->flags & CMF_FOG)) ? 255 : lightlevel;
+	polyplaneinfo[numpolyplanes].lightlevel = (planecolormap && (planecolormap->flags & CMF_FOG)) ? lightlevel : 255;  // TODO: 2.3: Make transparent polyobject planes always use light level
 	polyplaneinfo[numpolyplanes].levelflat = levelflat;
 	polyplaneinfo[numpolyplanes].polysector = polysector;
 	polyplaneinfo[numpolyplanes].alpha = alpha;

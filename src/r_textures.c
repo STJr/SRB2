@@ -1179,7 +1179,7 @@ static lumpnum_t W_GetTexPatchLumpNum(const char *name)
 	if (lump == LUMPERROR)
 	{
 		// Use whatever else you can find.
-		return W_GetNumForName(name);
+		return W_CheckNumForPatchName(name);
 	}
 
 	return lump;

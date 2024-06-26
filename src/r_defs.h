@@ -633,6 +633,11 @@ typedef struct
 	fixed_t scalex_top, scalex_mid, scalex_bottom;
 	fixed_t scaley_top, scaley_mid, scaley_bottom;
 
+	// per-wall lighting for UDMF
+	// TODO: implement per-texture lighting
+	INT16 light, light_top, light_mid, light_bottom;
+	boolean lightabsolute, lightabsolute_top, lightabsolute_mid, lightabsolute_bottom;
+
 	// Texture indices.
 	// We do not maintain names here.
 	INT32 toptexture, bottomtexture, midtexture;
