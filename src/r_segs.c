@@ -94,29 +94,29 @@ transnum_t R_GetLinedefTransTable(fixed_t alpha)
 	return (20*(FRACUNIT - alpha - 1) + FRACUNIT) >> (FRACBITS+1);
 }
 
-static INT16 R_SideLightLevel(side_t *side, UINT8 base_lightlevel)
+static UINT8 R_SideLightLevel(side_t *side, INT16 base_lightlevel)
 {
-	return side->light +
-		((side->lightabsolute) ? 0 : base_lightlevel);
+	return max(0, min(255, side->light +
+		((side->lightabsolute) ? 0 : base_lightlevel)));
 }
 
 /* TODO: implement per-texture lighting
-static INT16 R_TopLightLevel(side_t *side, UINT8 base_lightlevel)
+static UINT8 R_TopLightLevel(side_t *side, INT16 base_lightlevel)
 {
-	return side->light_top +
-		((side->lightabsolute_top) ? 0 : R_SideLightLevel(side, base_lightlevel));
+	return max(0, min(255, side->light_top +
+		((side->lightabsolute_top) ? 0 : R_SideLightLevel(side, base_lightlevel))));
 }
 
-static INT16 R_MidLightLevel(side_t *side, UINT8 base_lightlevel)
+static UINT8 R_MidLightLevel(side_t *side, INT16 base_lightlevel)
 {
-	return side->light_mid +
-		((side->lightabsolute_mid) ? 0 : R_SideLightLevel(side, base_lightlevel));
+	return max(0, min(255, side->light_mid +
+		((side->lightabsolute_mid) ? 0 : R_SideLightLevel(side, base_lightlevel))));
 }
 
-static INT16 R_BottomLightLevel(side_t *side, UINT8 base_lightlevel)
+static UINT8 R_BottomLightLevel(side_t *side, INT16 base_lightlevel)
 {
-	return side->light_bottom +
-		((side->lightabsolute_bottom) ? 0 : R_SideLightLevel(side, base_lightlevel));
+	return max(0, min(255, side->light_bottom +
+		((side->lightabsolute_bottom) ? 0 : R_SideLightLevel(side, base_lightlevel))));
 }
 */
 
