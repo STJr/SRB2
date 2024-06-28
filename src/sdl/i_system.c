@@ -3003,8 +3003,8 @@ static const char *searchWad(const char *searchDir)
 
 #define CHECKWADPATH(ret) \
 do { \
-	I_OutputMsg(",%s", returnWadPath); \
-	if (isWadPathOk(returnWadPath)) \
+	I_OutputMsg(",%s", ret); \
+	if (isWadPathOk(ret)) \
 		return ret; \
 } while (0)
 
@@ -3033,7 +3033,9 @@ static const char *locateWad(void)
 #ifndef NOCWD
 	// examine current dir
 	strcpy(returnWadPath, ".");
-	CHECKWADPATH(NULL);
+	I_OutputMsg(",%s", returnWadPath);
+	if (isWadPathOk(returnWadPath))
+		return NULL;
 #endif
 
 #ifdef __APPLE__
@@ -3053,10 +3055,11 @@ static const char *locateWad(void)
 	I_OutputMsg(",HOME/" DEFAULTDIR);
 	if ((envstr = I_GetEnv("HOME")) != NULL)
 	{
-		char *tmp = malloc(strlen(envstr) + sizeof(DEFAULTDIR));
+		char *tmp = malloc(strlen(envstr) + 1 + sizeof(DEFAULTDIR));
 		strcpy(tmp, envstr);
+		strcat(tmp, "/");
 		strcat(tmp, DEFAULTDIR);
-		SEARCHWAD(envstr);
+		CHECKWADPATH(tmp);
 		free(tmp);
 	}
 #endif
