@@ -421,6 +421,7 @@ typedef struct
 {
 	char levelname[32];
 	UINT8 skinnum;
+	char skinname [SKINNAMESIZE+1];
 	UINT8 botskin;
 	UINT8 numemeralds;
 	UINT8 numgameovers;

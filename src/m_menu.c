@@ -8432,7 +8432,17 @@ static void M_DrawLoadGameData(void)
 			if (savegameinfo[savetodraw].lives == -42)
 				V_DrawRightAlignedThinString(x + 79, y, V_GRAYMAP, "NEW GAME");
 			else if (savegameinfo[savetodraw].lives == -666)
-				V_DrawRightAlignedThinString(x + 79, y, V_REDMAP, "CAN'T LOAD!");
+			{
+				if (savegameinfo[savetodraw].continuescore == -62)
+				{
+					V_DrawRightAlignedThinString(x + 79, y, V_REDMAP, "ADDON NOT LOADED");
+					V_DrawRightAlignedThinString(x + 79, y-10, V_REDMAP, savegameinfo[savetodraw].skinname);
+				}
+				else
+				{
+					V_DrawRightAlignedThinString(x + 79, y, V_REDMAP, "CAN'T LOAD!");
+				}
+			}
 			else if (savegameinfo[savetodraw].gamemap & 8192)
 				V_DrawRightAlignedThinString(x + 79, y, V_GREENMAP, "CLEAR!");
 			else
@@ -8665,6 +8675,7 @@ static void M_LoadSelect(INT32 choice)
 }
 
 #define VERSIONSIZE 16
+#define MISSING { savegameinfo[slot].continuescore = -62; savegameinfo[slot].lives = -666; Z_Free(savebuffer); return; }
 #define BADSAVE { savegameinfo[slot].lives = -666; Z_Free(savebuffer); return; }
 #define CHECKPOS if (sav_p >= end_p) BADSAVE
 // Reads the save file to list lives, level, player, etc.
@@ -8761,10 +8772,11 @@ static void M_ReadSavegameInfo(UINT32 slot)
 		CHECKPOS
 		READSTRINGN(sav_p, ourSkinName, SKINNAMESIZE);
 		savegameinfo[slot].skinnum = R_SkinAvailable(ourSkinName);
+		STRBUFCPY(savegameinfo[slot].skinname, ourSkinName);
 
 		if (savegameinfo[slot].skinnum >= numskins
 		|| !R_SkinUsable(-1, savegameinfo[slot].skinnum))
-			BADSAVE
+			MISSING
 
 		CHECKPOS
 		READSTRINGN(sav_p, botSkinName, SKINNAMESIZE);
@@ -8772,7 +8784,7 @@ static void M_ReadSavegameInfo(UINT32 slot)
 
 		if (savegameinfo[slot].botskin-1 >= numskins
 		|| !R_SkinUsable(-1, savegameinfo[slot].botskin-1))
-			BADSAVE
+			MISSING
 	}
 
 	CHECKPOS
@@ -8817,6 +8829,7 @@ static void M_ReadSavegameInfo(UINT32 slot)
 }
 #undef CHECKPOS
 #undef BADSAVE
+#undef MISSING
 
 //
 // M_ReadSaveStrings
