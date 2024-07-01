@@ -3352,7 +3352,7 @@ void G_AddPlayer(INT32 playernum)
 
 	p->playerstate = PST_REBORN;
 
-	p->height = mobjinfo[MT_PLAYER].height;
+	p->height = skins[p->skin]->height;
 
 	if (G_GametypeUsesLives() || ((netgame || multiplayer) && (gametyperules & GTR_FRIENDLY)))
 		p->lives = cv_startinglives.value;
