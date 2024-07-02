@@ -30,10 +30,6 @@
 #define NUMSCREENS 5
 #endif
 
-// Size of statusbar.
-#define ST_HEIGHT 32
-#define ST_WIDTH 320
-
 // used now as a maximum video mode size for extra vesa modes.
 
 // we try to re-allocate a minimum of buffers for stability of the memory,
