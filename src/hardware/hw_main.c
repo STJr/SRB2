@@ -309,39 +309,39 @@ static FUINT HWR_CalcSlopeLight(FUINT lightnum, angle_t dir, fixed_t delta)
 	return (FUINT)finallight;
 }
 
-static FUINT HWR_SideLightLevel(side_t *side, UINT8 base_lightlevel)
+static UINT8 HWR_SideLightLevel(side_t *side, INT16 base_lightlevel)
 {
-	return side->light +
-		((side->lightabsolute) ? 0 : base_lightlevel);
+	return max(0, min(255, side->light +
+		((side->lightabsolute) ? 0 : base_lightlevel)));
 }
 
 /* TODO: implement per-texture lighting
-static FUINT HWR_TopLightLevel(side_t *side, UINT8 base_lightlevel)
+static UINT8 HWR_TopLightLevel(side_t *side, INT16 base_lightlevel)
 {
-	return side->light_top +
-		((side->lightabsolute_top) ? 0 : HWR_SideLightLevel(side, base_lightlevel));
+	return max(0, min(255, side->light_top +
+		((side->lightabsolute_top) ? 0 : HWR_SideLightLevel(side, base_lightlevel))));
 }
 
-static FUINT HWR_MidLightLevel(side_t *side, UINT8 base_lightlevel)
+static UINT8 HWR_MidLightLevel(side_t *side, INT16 base_lightlevel)
 {
-	return side->light_mid +
-		((side->lightabsolute_mid) ? 0 : HWR_SideLightLevel(side, base_lightlevel));
+	return max(0, min(255, side->light_mid +
+		((side->lightabsolute_mid) ? 0 : HWR_SideLightLevel(side, base_lightlevel))));
 }
 
-static FUINT HWR_BottomLightLevel(side_t *side, UINT8 base_lightlevel)
+static UINT8 HWR_BottomLightLevel(side_t *side, INT16 base_lightlevel)
 {
-	return side->light_bottom +
-		((side->lightabsolute_bottom) ? 0 : HWR_SideLightLevel(side, base_lightlevel));
+	return max(0, min(255, side->light_bottom +
+		((side->lightabsolute_bottom) ? 0 : HWR_SideLightLevel(side, base_lightlevel))));
 }
 */
 
-static UINT8 HWR_FloorLightLevel(sector_t *sector, UINT8 base_lightlevel)
+static UINT8 HWR_FloorLightLevel(sector_t *sector, INT16 base_lightlevel)
 {
 	return max(0, min(255, sector->floorlightlevel +
 		((sector->floorlightabsolute) ? 0 : base_lightlevel)));
 }
 
-static UINT8 HWR_CeilingLightLevel(sector_t *sector, UINT8 base_lightlevel)
+static UINT8 HWR_CeilingLightLevel(sector_t *sector, INT16 base_lightlevel)
 {
 	return max(0, min(255, sector->ceilinglightlevel +
 		((sector->ceilinglightabsolute) ? 0 : base_lightlevel)));
