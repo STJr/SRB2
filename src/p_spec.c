@@ -2405,18 +2405,15 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 					y = line->args[3] << FRACBITS;
 					z = line->args[4] << FRACBITS;
 
-					P_UnsetThingPosition(mo);
-					mo->x += x;
-					mo->y += y;
-					mo->z += z;
-					P_SetThingPosition(mo);
-
+					P_SetOrigin(mo, mo->x + x, mo->y + y, mo->z + z);
+					
 					if (mo->player)
 					{
 						if (bot) // This might put poor Tails in a wall if he's too far behind! D: But okay, whatever! >:3
 							P_SetOrigin(bot, bot->x + x, bot->y + y, bot->z + z);
 						if (splitscreen && mo->player == &players[secondarydisplayplayer] && camera2.chase)
 						{
+							camera2.reset = true;
 							camera2.x += x;
 							camera2.y += y;
 							camera2.z += z;
@@ -2424,6 +2421,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 						}
 						else if (camera.chase && mo->player == &players[displayplayer])
 						{
+							camera.reset = true;
 							camera.x += x;
 							camera.y += y;
 							camera.z += z;
