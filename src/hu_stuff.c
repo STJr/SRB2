@@ -204,7 +204,7 @@ void HU_LoadGraphics(void)
 	HU_SetFontProperties(&hu_font,   0,  4,  8, 12);
 	HU_SetFontProperties(&tny_font,  0,  2,  4, 12);
 	HU_SetFontProperties(&cred_font, 0, 16, 16, 16);
-	HU_SetFontProperties(&lt_font,   0, 16, 20, 20);
+	HU_SetFontProperties(&lt_font,   0, 16, 20, 16);
 	HU_SetFontProperties(&ntb_font,  2,  4, 20, 21);
 	HU_SetFontProperties(&nto_font,  0,  4, 20, 21);
 
