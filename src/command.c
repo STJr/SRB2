@@ -1992,7 +1992,7 @@ static void CV_SetCVar(consvar_t *var, const char *value, boolean stealth)
 	if (var->flags & CV_NETVAR)
 	{
 		// send the value of the variable
-		UINT8 buf[128];
+		UINT8 buf[512];
 		UINT8 *p = buf;
 
 		// Loading from a config in a netgame? Set revert value.
@@ -2065,11 +2065,10 @@ static void CV_SetValueMaybeStealth(consvar_t *var, INT32 value, boolean stealth
 	if (var == &cv_forceskin) // Special handling.
 	{
 		const char *tmpskin = NULL;
-		if ((value < 0) || (value >= numskins))
-			;
-		else
+		if (value >= 0 && value < numskins)
 			tmpskin = skins[value]->name;
-		memcpy(val, tmpskin, SKINNAMESIZE);
+		if (tmpskin)
+			memcpy(val, tmpskin, SKINNAMESIZE);
 	}
 	else
 		sprintf(val, "%d", value);

@@ -94,6 +94,124 @@ transnum_t R_GetLinedefTransTable(fixed_t alpha)
 	return (20*(FRACUNIT - alpha - 1) + FRACUNIT) >> (FRACBITS+1);
 }
 
+static UINT8 R_SideLightLevel(side_t *side, INT16 base_lightlevel)
+{
+	return max(0, min(255, side->light +
+		((side->lightabsolute) ? 0 : base_lightlevel)));
+}
+
+/* TODO: implement per-texture lighting
+static UINT8 R_TopLightLevel(side_t *side, INT16 base_lightlevel)
+{
+	return max(0, min(255, side->light_top +
+		((side->lightabsolute_top) ? 0 : R_SideLightLevel(side, base_lightlevel))));
+}
+
+static UINT8 R_MidLightLevel(side_t *side, INT16 base_lightlevel)
+{
+	return max(0, min(255, side->light_mid +
+		((side->lightabsolute_mid) ? 0 : R_SideLightLevel(side, base_lightlevel))));
+}
+
+static UINT8 R_BottomLightLevel(side_t *side, INT16 base_lightlevel)
+{
+	return max(0, min(255, side->light_bottom +
+		((side->lightabsolute_bottom) ? 0 : R_SideLightLevel(side, base_lightlevel))));
+}
+*/
+
+// If we have a multi-patch texture on a 2sided wall (rare) then we draw
+//  it using R_DrawColumn, else we draw it using R_DrawMaskedColumn, this
+//  way we don't have to store extra post_t info with each column for
+//  multi-patch textures. They are not normally needed as multi-patch
+//  textures don't have holes in it. At least not for now.
+static void R_Render2sidedMultiPatchColumn(column_t *column, unsigned lengthcol)
+{
+	INT32 topscreen, bottomscreen;
+
+	post_t *post = &column->posts[0];
+	if (!post->length)
+		return;
+
+	topscreen = sprtopscreen;
+	bottomscreen = topscreen + spryscale * lengthcol;
+
+	dc_yl = (sprtopscreen+FRACUNIT-1)>>FRACBITS;
+	dc_yh = (bottomscreen-1)>>FRACBITS;
+
+	if (windowtop != INT32_MAX && windowbottom != INT32_MAX)
+	{
+		dc_yl = ((windowtop + FRACUNIT)>>FRACBITS);
+		dc_yh = (windowbottom - 1)>>FRACBITS;
+	}
+
+	if (dc_yh >= mfloorclip[dc_x])
+		dc_yh =  mfloorclip[dc_x] - 1;
+	if (dc_yl <= mceilingclip[dc_x])
+		dc_yl =  mceilingclip[dc_x] + 1;
+
+	if (dc_yl >= vid.height || dc_yh < 0)
+		return;
+
+	if (dc_yl <= dc_yh && dc_yh < vid.height && dc_yh > 0)
+	{
+		dc_source = column->pixels + post->data_offset;
+		dc_postlength = post->length;
+
+		if (colfunc == colfuncs[BASEDRAWFUNC])
+			(colfuncs[COLDRAWFUNC_TWOSMULTIPATCH])();
+		else if (colfunc == colfuncs[COLDRAWFUNC_FUZZY])
+			(colfuncs[COLDRAWFUNC_TWOSMULTIPATCHTRANS])();
+		else
+			colfunc();
+	}
+}
+
+static void R_RenderFlipped2sidedMultiPatchColumn(column_t *column, unsigned lengthcol)
+{
+	INT32 topscreen, bottomscreen;
+
+	void (*localcolfunc)(void);
+
+	post_t *post = &column->posts[0];
+	if (!post->length)
+		return;
+
+	topscreen = sprtopscreen;
+	bottomscreen = topscreen + spryscale * lengthcol;
+
+	dc_yl = (sprtopscreen+FRACUNIT-1)>>FRACBITS;
+	dc_yh = (bottomscreen-1)>>FRACBITS;
+
+	if (windowtop != INT32_MAX && windowbottom != INT32_MAX)
+	{
+		dc_yl = ((windowtop + FRACUNIT)>>FRACBITS);
+		dc_yh = (windowbottom - 1)>>FRACBITS;
+	}
+
+	if (dc_yh >= mfloorclip[dc_x])
+		dc_yh =  mfloorclip[dc_x] - 1;
+	if (dc_yl <= mceilingclip[dc_x])
+		dc_yl =  mceilingclip[dc_x] + 1;
+
+	if (dc_yl >= vid.height || dc_yh < 0)
+		return;
+
+	if (dc_yl <= dc_yh && dc_yh < vid.height && dc_yh > 0)
+	{
+		dc_postlength = post->length;
+
+		if (colfunc == colfuncs[BASEDRAWFUNC])
+			localcolfunc = colfuncs[COLDRAWFUNC_TWOSMULTIPATCH];
+		else if (colfunc == colfuncs[COLDRAWFUNC_FUZZY])
+			localcolfunc = colfuncs[COLDRAWFUNC_TWOSMULTIPATCHTRANS];
+		else
+			localcolfunc = colfunc;
+
+		R_DrawFlippedPost(column->pixels + post->data_offset, post->length, localcolfunc);
+	}
+}
+
 void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 {
 	size_t pindex;
@@ -181,7 +299,16 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 	// Texture must be cached
 	R_CheckTextureCache(texnum);
 
-	if (vertflip) // vertically flipped?
+	// handle case where multipatch texture is drawn on a 2sided wall, multi-patch textures
+	// are not stored per-column with post info in SRB2
+	if (!textures[texnum]->transparency)
+	{
+		if (vertflip) // vertically flipped?
+			colfunc_2s = R_RenderFlipped2sidedMultiPatchColumn;
+		else
+			colfunc_2s = R_Render2sidedMultiPatchColumn;
+	}
+	else if (vertflip) // vertically flipped?
 		colfunc_2s = R_DrawFlippedMaskedColumn;
 	else
 		colfunc_2s = R_DrawMaskedColumn; // render the usual 2sided single-patch packed texture
@@ -223,7 +350,7 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 			if ((colfunc != colfuncs[COLDRAWFUNC_FUZZY])
 				|| (rlight->flags & FOF_FOG)
 				|| (rlight->extra_colormap && (rlight->extra_colormap->flags & CMF_FOG)))
-				lightnum = (rlight->lightlevel >> LIGHTSEGSHIFT);
+				lightnum = R_SideLightLevel(curline->sidedef, rlight->lightlevel) >> LIGHTSEGSHIFT;
 			else
 				lightnum = LIGHTLEVELS - 1;
 
@@ -241,7 +368,7 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 	{
 		if ((colfunc != colfuncs[COLDRAWFUNC_FUZZY])
 			|| (frontsector->extra_colormap && (frontsector->extra_colormap->flags & CMF_FOG)))
-			lightnum = (frontsector->lightlevel >> LIGHTSEGSHIFT);
+			lightnum = R_SideLightLevel(curline->sidedef, frontsector->lightlevel) >> LIGHTSEGSHIFT;
 		else
 			lightnum = LIGHTLEVELS - 1;
 
@@ -697,9 +824,9 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 
 			// Check if the current light effects the colormap/lightlevel
 			if (pfloor->fofflags & FOF_FOG)
-				rlight->lightnum = (pfloor->master->frontsector->lightlevel >> LIGHTSEGSHIFT);
+				rlight->lightnum = R_SideLightLevel(curline->sidedef, pfloor->master->frontsector->lightlevel) >> LIGHTSEGSHIFT;
 			else
-				rlight->lightnum = (rlight->lightlevel >> LIGHTSEGSHIFT);
+				rlight->lightnum = R_SideLightLevel(curline->sidedef, rlight->lightlevel) >> LIGHTSEGSHIFT;
 
 			if (pfloor->fofflags & FOF_FOG || rlight->flags & FOF_FOG || (rlight->extra_colormap && (rlight->extra_colormap->flags & CMF_FOG)))
 				;
@@ -717,18 +844,17 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 	{
 		// Get correct light level!
 		if ((frontsector->extra_colormap && (frontsector->extra_colormap->flags & CMF_FOG)))
-			lightnum = (frontsector->lightlevel >> LIGHTSEGSHIFT);
+			lightnum = R_SideLightLevel(curline->sidedef, frontsector->lightlevel) >> LIGHTSEGSHIFT;
 		else if (fog)
-			lightnum = (pfloor->master->frontsector->lightlevel >> LIGHTSEGSHIFT);
+			lightnum = R_SideLightLevel(curline->sidedef, pfloor->master->frontsector->lightlevel) >> LIGHTSEGSHIFT;
 		else if (fuzzy)
 			lightnum = LIGHTLEVELS-1;
 		else
-			lightnum = R_FakeFlat(frontsector, &tempsec, &templight, &templight, false)
-				->lightlevel >> LIGHTSEGSHIFT;
+			lightnum = R_SideLightLevel(curline->sidedef, R_FakeFlat(frontsector, &tempsec, &templight, &templight, false)->lightlevel) >> LIGHTSEGSHIFT;
 
 		if (pfloor->fofflags & FOF_FOG || (frontsector->extra_colormap && (frontsector->extra_colormap->flags & CMF_FOG)));
 			else if (curline->v1->y == curline->v2->y)
-		lightnum--;
+			lightnum--;
 		else if (curline->v1->x == curline->v2->x)
 			lightnum++;
 
@@ -811,7 +937,16 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 	// Texture must be cached
 	R_CheckTextureCache(texnum);
 
-	if (vertflip) // vertically flipped?
+	// handle case where multipatch texture is drawn on a 2sided wall, multi-patch textures
+	// are not stored per-column with post info in SRB2
+	if (!textures[texnum]->transparency)
+	{
+		if (vertflip) // vertically flipped?
+			colfunc_2s = R_RenderFlipped2sidedMultiPatchColumn;
+		else
+			colfunc_2s = R_Render2sidedMultiPatchColumn;
+	}
+	else if (vertflip) // vertically flipped?
 		colfunc_2s = R_DrawRepeatFlippedMaskedColumn;
 	else
 		colfunc_2s = R_DrawRepeatMaskedColumn;
@@ -906,9 +1041,9 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 			{
 				// Otherwise use column drawers with extra checks
 				if (fuzzy)
-					colfunc = R_DrawTranslucentColumnClamped_8;
+					colfunc = colfuncs[COLDRAWFUNC_CLAMPEDTRANS];
 				else
-					colfunc = R_DrawColumnClamped_8;
+					colfunc = colfuncs[COLDRAWFUNC_CLAMPED];
 			}
 		}
 
@@ -1353,7 +1488,7 @@ static void R_RenderSegLoop (void)
 			for (i = 0; i < dc_numlights; i++)
 			{
 				INT32 lightnum;
-				lightnum = (dc_lightlist[i].lightlevel >> LIGHTSEGSHIFT);
+				lightnum = R_SideLightLevel(curline->sidedef, dc_lightlist[i].lightlevel) >> LIGHTSEGSHIFT;
 
 				if (dc_lightlist[i].extra_colormap)
 					;
@@ -2540,7 +2675,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 		//  use different light tables
 		//  for horizontal / vertical / diagonal
 		// OPTIMIZE: get rid of LIGHTSEGSHIFT globally
-		lightnum = (frontsector->lightlevel >> LIGHTSEGSHIFT);
+		lightnum = R_SideLightLevel(curline->sidedef, frontsector->lightlevel) >> LIGHTSEGSHIFT;
 
 		if (curline->v1->y == curline->v2->y)
 			lightnum--;

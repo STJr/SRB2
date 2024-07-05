@@ -2791,7 +2791,7 @@ void readframe(MYFILE *f, INT32 num)
 				size_t z;
 				boolean found = false;
 				size_t actionlen = strlen(word2) + 1;
-				char *actiontocompare = calloc(actionlen, 1);
+				char *actiontocompare = calloc(1, actionlen);
 
 				strcpy(actiontocompare, word2);
 				strupr(actiontocompare);
