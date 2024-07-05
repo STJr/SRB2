@@ -3786,6 +3786,8 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 
 		if (player->powers[pw_carry] == CR_NIGHTSMODE) // NiGHTS damage handling
 		{
+			if (player->powers[pw_flashing])
+				return false;
 			if (!force)
 			{
 				if (source == target)
@@ -3803,6 +3805,10 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 
 		if (G_IsSpecialStage(gamemap) && !(damagetype & DMG_DEATHMASK))
 		{
+			if (player->powers[pw_flashing])
+				return false;
+			if (LUA_HookMobjDamage(target, inflictor, source, damage, damagetype))
+				return true;
 			P_SpecialStageDamage(player, inflictor, source);
 			return true;
 		}

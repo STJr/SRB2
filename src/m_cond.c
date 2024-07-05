@@ -494,6 +494,12 @@ UINT8 M_MapLocked(INT32 mapnum, gamedata_t *data)
 
 UINT8 M_CampaignWarpIsCheat(INT32 gt, INT32 mapnum, gamedata_t *data)
 {
+	if (dedicated)
+	{
+		// See M_MapLocked; don't make dedicated servers annoying.
+		return false;
+	}
+
 	if (M_MapLocked(mapnum, data) == true)
 	{
 		// Warping to locked maps is definitely always a cheat

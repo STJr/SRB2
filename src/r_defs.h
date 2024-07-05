@@ -60,6 +60,8 @@ typedef UINT8 lighttable_t;
 #define CMF_FADEFULLBRIGHTSPRITES  1
 #define CMF_FOG 4
 
+#define TEXTURE_255_IS_TRANSPARENT
+
 // ExtraColormap type. Use for extra_colormaps from now on.
 typedef struct extracolormap_s
 {
@@ -358,7 +360,7 @@ typedef struct pslope_s
 
 	double dzdelta;
 
-	boolean moved : 1;
+	boolean moved;
 
 	UINT8 flags; // Slope options
 } pslope_t;
@@ -630,6 +632,11 @@ typedef struct
 
 	fixed_t scalex_top, scalex_mid, scalex_bottom;
 	fixed_t scaley_top, scaley_mid, scaley_bottom;
+
+	// per-wall lighting for UDMF
+	// TODO: implement per-texture lighting
+	INT16 light, light_top, light_mid, light_bottom;
+	boolean lightabsolute, lightabsolute_top, lightabsolute_mid, lightabsolute_bottom;
 
 	// Texture indices.
 	// We do not maintain names here.

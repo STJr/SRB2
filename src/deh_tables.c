@@ -4483,6 +4483,8 @@ const char *const PLAYERFLAG_LIST[] = {
 	"CANCARRY", // Can carry?
 	"FINISHED",
 
+	"SHIELDDOWN", // Shield has been pressed.
+
 	NULL // stop loop here.
 };
 
