@@ -79,6 +79,7 @@ boolean PaletteRemap_Equal(remaptable_t *a, remaptable_t *b);
 void PaletteRemap_SetIdentity(remaptable_t *tr);
 boolean PaletteRemap_IsIdentity(remaptable_t *tr);
 unsigned PaletteRemap_Add(remaptable_t *tr);
+void PaletteRemap_DeleteAll(void);
 
 int R_FindCustomTranslation(const char *name);
 int R_FindCustomTranslation_CaseInsensitive(const char *name);
@@ -89,6 +90,7 @@ remaptable_t *R_GetTranslationByID(int id);
 UINT8 *R_GetTranslationRemap(int id, skincolornum_t skincolor, INT32 skinnum);
 void R_UpdateTranslationRemaps(skincolornum_t skincolor, INT32 skinnum);
 boolean R_TranslationIsValid(int id);
+void R_DeleteCustomTranslations(void);
 
 void R_ParseTrnslate(INT32 wadNum, UINT16 lumpnum);
 void R_LoadParsedTranslations(void);

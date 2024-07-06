@@ -1800,6 +1800,9 @@ void D_ReloadFiles(void)
 	Patch_FreeTag(PU_PATCH_ROTATED);
 	Patch_FreeTag(PU_SPRITE);
 
+	// Reinit the palette remaps
+	PaletteRemap_Init();
+
 	// Load SOC and Lua.
 	for (INT32 i = 0; i < numwadfiles; i++)
 	{

@@ -27,6 +27,7 @@
 #include "p_local.h"
 #include "r_draw.h"
 #include "r_main.h"
+#include "r_translation.h"
 #include "s_sound.h"
 #include "g_game.h"
 #include "g_demo.h"
@@ -4391,6 +4392,10 @@ void G_InitialState(void)
 {
 	// Delete all skins.
 	R_DelSkins();
+
+	// Delete all translations
+	R_DeleteCustomTranslations();
+	PaletteRemap_DeleteAll();
 
 	// Clear all added sound effects.
 	for (INT32 i = sfx_freeslot0; i <= sfx_lastskinsoundslot; i++)

@@ -139,6 +139,48 @@ unsigned PaletteRemap_Add(remaptable_t *tr)
 	return numpaletteremaps - 1;
 }
 
+static void DeleteSkincolorRemaps(colorcache_t **remaps)
+{
+	for (unsigned i = 0; i < MAXSKINCOLORS - 1; i++)
+	{
+		if (remaps[i])
+			Z_Free(remaps[i]);
+	}
+}
+
+static void PaletteRemap_Delete(remaptable_t *tr)
+{
+	if (tr->skincolor_remaps)
+	{
+		for (unsigned i = 0; i < TT_CACHE_SIZE; i++)
+		{
+			colorcache_t **remaps = tr->skincolor_remaps[i];
+			if (remaps)
+			{
+				DeleteSkincolorRemaps(remaps);
+				Z_Free(remaps);
+			}
+		}
+
+		Z_Free(tr->skincolor_remaps);
+	}
+
+	Z_Free(tr->sources);
+
+	Z_Free(tr);
+}
+
+void PaletteRemap_DeleteAll(void)
+{
+	for (unsigned i = 0; i < numpaletteremaps; i++)
+		PaletteRemap_Delete(paletteremaps[i]);
+
+	Z_Free(paletteremaps);
+
+	paletteremaps = NULL;
+	numpaletteremaps = 0;
+}
+
 static void MakeGrayscaleRemap(void)
 {
 	remaptable_t *grayscale = PaletteRemap_New();
@@ -1129,7 +1171,7 @@ UINT8 *R_GetTranslationRemap(int id, skincolornum_t skincolor, INT32 skinnum)
 	INT32 index = R_SkinTranslationToCacheIndex(skinnum);
 
 	if (!tr->skincolor_remaps[index])
-		tr->skincolor_remaps[index] = Z_Calloc(NUM_PALETTE_ENTRIES * (MAXSKINCOLORS - 1), PU_LEVEL, NULL);
+		tr->skincolor_remaps[index] = Z_Calloc(sizeof(colorcache_t *) * (MAXSKINCOLORS - 1), PU_LEVEL, NULL);
 
 	colorcache_t *cache = tr->skincolor_remaps[index][skincolor - 1];
 	if (!cache)
@@ -1178,4 +1220,16 @@ remaptable_t *R_GetBuiltInTranslation(SINT8 tc)
 		return R_GetTranslationByID(dashModeRemap);
 	}
 	return NULL;
+}
+
+void R_DeleteCustomTranslations(void)
+{
+	for (unsigned i = 0; i < numcustomtranslations; i++)
+	{
+		Z_Free(customtranslations[i].name);
+	}
+
+	Z_Free(customtranslations);
+	customtranslations = NULL;
+	numcustomtranslations = 0;
 }
