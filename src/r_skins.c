@@ -1086,15 +1086,13 @@ void R_DelSkins(void)
 	for (int i = 0; i < numskins; i++)
 	{
 		ST_UnLoadFaceGraphics(i);
-
 		Z_Free(skins[i]);
-
-		skins[i] = NULL;
 	}
 
-	numskins = 0;
-
 	Z_Free(skins);
+
+	skins = NULL;
+	numskins = 0;
 
 	M_InitCharacterTables(0);
 }
