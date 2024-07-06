@@ -4227,6 +4227,7 @@ void M_InitCharacterTables(INT32 num)
 	if (!num)
 	{
 		Z_Free(description);
+		description = NULL;
 		numdescriptions = 0;
 		return;
 	}
