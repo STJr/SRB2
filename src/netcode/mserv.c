@@ -50,6 +50,8 @@ static void Command_Listserv_f(void);
 
 #endif/*MASTERSERVER*/
 
+static boolean ServerName_CanChange (const char*);
+
 static void Update_parameters (void);
 
 static void MasterServer_OnChange(void);
@@ -61,7 +63,7 @@ static CV_PossibleValue_t masterserver_update_rate_cons_t[] = {
 };
 
 consvar_t cv_masterserver = CVAR_INIT ("masterserver", "https://ds.ms.srb2.org/MS/0", CV_SAVE|CV_CALL, NULL, MasterServer_OnChange);
-consvar_t cv_servername = CVAR_INIT ("servername", "SRB2 server", CV_SAVE|CV_NETVAR|CV_CALL|CV_NOINIT|CV_ALLOWLUA, NULL, Update_parameters);
+consvar_t cv_servername = CVAR_INIT_WITH_CALLBACKS ("servername", "SRB2 server", CV_SAVE|CV_NETVAR|CV_CALL|CV_NOINIT|CV_ALLOWLUA, NULL, Update_parameters, ServerName_CanChange);
 
 consvar_t cv_masterserver_update_rate = CVAR_INIT ("masterserver_update_rate", "15", CV_SAVE|CV_CALL|CV_NOINIT, masterserver_update_rate_cons_t, Update_parameters);
 
@@ -496,6 +498,15 @@ Set_api (const char *api)
 }
 
 #endif/*MASTERSERVER*/
+
+static boolean ServerName_CanChange(const char* newvalue)
+{
+	if (strlen(newvalue) < MAXSERVERNAME)
+		return true;
+
+	CONS_Alert(CONS_NOTICE, "The server name must be shorter than %d characters\n", MAXSERVERNAME);
+	return false;
+}
 
 static void
 Update_parameters (void)

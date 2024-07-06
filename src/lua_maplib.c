@@ -213,6 +213,14 @@ enum side_e {
 	side_sector,
 	side_special,
 	side_repeatcnt,
+	side_light,
+	side_light_top,
+	side_light_mid,
+	side_light_bottom,
+	side_lightabsolute,
+	side_lightabsolute_top,
+	side_lightabsolute_mid,
+	side_lightabsolute_bottom,
 	side_text
 };
 
@@ -241,6 +249,14 @@ static const char *const side_opt[] = {
 	"sector",
 	"special",
 	"repeatcnt",
+	"light",
+	"light_top",
+	"light_mid",
+	"light_bottom",
+	"lightabsolute",
+	"lightabsolute_top",
+	"lightabsolute_mid",
+	"lightabsolute_bottom",
 	"text",
 	NULL};
 
@@ -486,6 +502,8 @@ static int lib_iterateSectorThinglist(lua_State *L)
 	if (!lua_isnil(L, 1))
 	{
 		thing = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
+		if (P_MobjWasRemoved(thing))
+			return luaL_error(L, "current entry in thinglist was removed; avoid calling P_RemoveMobj on entries!");
 		thing = thing->snext;
 	}
 	else
@@ -1309,6 +1327,30 @@ static int side_get(lua_State *L)
 	case side_repeatcnt:
 		lua_pushinteger(L, side->repeatcnt);
 		return 1;
+	case side_light:
+		lua_pushinteger(L, side->light);
+		return 1;
+	case side_light_top:
+		lua_pushinteger(L, side->light_top);
+		return 1;
+	case side_light_mid:
+		lua_pushinteger(L, side->light_mid);
+		return 1;
+	case side_light_bottom:
+		lua_pushinteger(L, side->light_bottom);
+		return 1;
+	case side_lightabsolute:
+		lua_pushboolean(L, side->lightabsolute);
+		return 1;
+	case side_lightabsolute_top:
+		lua_pushboolean(L, side->lightabsolute_top);
+		return 1;
+	case side_lightabsolute_mid:
+		lua_pushboolean(L, side->lightabsolute_mid);
+		return 1;
+	case side_lightabsolute_bottom:
+		lua_pushboolean(L, side->lightabsolute_bottom);
+		return 1;
 	// TODO: 2.3: Delete
 	case side_text:
 		{
@@ -1410,6 +1452,30 @@ static int side_set(lua_State *L)
 		break;
 	case side_repeatcnt:
 		side->repeatcnt = luaL_checkinteger(L, 3);
+		break;
+	case side_light:
+		side->light = luaL_checkinteger(L, 3);
+		break;
+	case side_light_top:
+		side->light_top = luaL_checkinteger(L, 3);
+		break;
+	case side_light_mid:
+		side->light_mid = luaL_checkinteger(L, 3);
+		break;
+	case side_light_bottom:
+		side->light_bottom = luaL_checkinteger(L, 3);
+		break;
+	case side_lightabsolute:
+		side->lightabsolute = luaL_checkboolean(L, 3);
+		break;
+	case side_lightabsolute_top:
+		side->lightabsolute_top = luaL_checkboolean(L, 3);
+		break;
+	case side_lightabsolute_mid:
+		side->lightabsolute_mid = luaL_checkboolean(L, 3);
+		break;
+	case side_lightabsolute_bottom:
+		side->lightabsolute_bottom = luaL_checkboolean(L, 3);
 		break;
 	}
 	return 0;
@@ -2609,12 +2675,18 @@ static int slope_set(lua_State *L)
 			slope->o.z = luaL_checkfixed(L, -1);
 		else
 			slope->o.z = 0;
+		DVector3_Load(&slope->dorigin,
+			FixedToDouble(slope->o.x),
+			FixedToDouble(slope->o.y),
+			FixedToDouble(slope->o.z)
+		);
 		lua_pop(L, 1);
 		break;
 	}
-	case slope_zdelta: { // zdelta, this is temp until i figure out wtf to do
+	case slope_zdelta: { // zdelta
 		slope->zdelta = luaL_checkfixed(L, 3);
 		slope->zangle = R_PointToAngle2(0, 0, FRACUNIT, -slope->zdelta);
+		slope->dzdelta = FixedToDouble(slope->zdelta);
 		P_CalculateSlopeNormal(slope);
 		break;
 	}
@@ -2624,6 +2696,7 @@ static int slope_set(lua_State *L)
 			return luaL_error(L, "invalid zangle for slope!");
 		slope->zangle = zangle;
 		slope->zdelta = -FINETANGENT(((slope->zangle+ANGLE_90)>>ANGLETOFINESHIFT) & 4095);
+		slope->dzdelta = FixedToDouble(slope->zdelta);
 		P_CalculateSlopeNormal(slope);
 		break;
 	}
@@ -2631,6 +2704,8 @@ static int slope_set(lua_State *L)
 		slope->xydirection = luaL_checkangle(L, 3);
 		slope->d.x = -FINECOSINE((slope->xydirection>>ANGLETOFINESHIFT) & FINEMASK);
 		slope->d.y = -FINESINE((slope->xydirection>>ANGLETOFINESHIFT) & FINEMASK);
+		slope->dnormdir.x = FixedToDouble(slope->d.x);
+		slope->dnormdir.y = FixedToDouble(slope->d.y);
 		P_CalculateSlopeNormal(slope);
 		break;
 	}

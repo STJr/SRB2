@@ -33,6 +33,9 @@ extern fixed_t fovtan;
 // WARNING: a should be unsigned but to add with 2048, it isn't!
 #define AIMINGTODY(a) FixedDiv((FINETANGENT((2048+(((INT32)a)>>ANGLETOFINESHIFT)) & FINEMASK)*160), fovtan)
 
+#define MINFOV 60
+#define MAXFOV 179
+
 extern size_t validcount, linecount, loopcount, framecount;
 
 // The fraction of a tic being drawn (for interpolation between two tics)
@@ -74,16 +77,17 @@ INT32 R_PointOnSegSide(fixed_t x, fixed_t y, seg_t *line);
 angle_t R_PointToAngle(fixed_t x, fixed_t y);
 angle_t R_PointToAngle64(INT64 x, INT64 y);
 angle_t R_PointToAngle2(fixed_t px2, fixed_t py2, fixed_t px1, fixed_t py1);
-angle_t R_PointToAngleEx(INT32 x2, INT32 y2, INT32 x1, INT32 y1);
 fixed_t R_PointToDist(fixed_t x, fixed_t y);
 fixed_t R_PointToDist2(fixed_t px2, fixed_t py2, fixed_t px1, fixed_t py1);
 
-fixed_t R_ScaleFromGlobalAngle(angle_t visangle);
 boolean R_IsPointInSector(sector_t *sector, fixed_t x, fixed_t y);
 subsector_t *R_PointInSubsector(fixed_t x, fixed_t y);
 subsector_t *R_PointInSubsectorOrNull(fixed_t x, fixed_t y);
 
 boolean R_DoCulling(line_t *cullheight, line_t *viewcullheight, fixed_t vz, fixed_t bottomh, fixed_t toph);
+
+line_t *R_GetFFloorLine(const line_t *line, const ffloor_t *pfloor, const sector_t *sector);
+side_t *R_GetFFloorSide(const line_t *line, const ffloor_t *pfloor, const sector_t *sector);
 
 // Render stats
 
@@ -115,12 +119,18 @@ extern consvar_t cv_chasecam, cv_chasecam2;
 extern consvar_t cv_flipcam, cv_flipcam2;
 
 extern consvar_t cv_shadow;
-extern consvar_t cv_ffloorclip, cv_spriteclip;
 extern consvar_t cv_translucency;
 extern consvar_t cv_drawdist, cv_drawdist_nights, cv_drawdist_precip;
-extern consvar_t cv_fov;
+extern consvar_t cv_fov, cv_fovchange;
 extern consvar_t cv_skybox;
-extern consvar_t cv_tailspickup;
+extern consvar_t cv_renderview;
+extern consvar_t cv_renderhitbox, cv_renderhitboxinterpolation, cv_renderhitboxgldepth;
+extern consvar_t cv_renderwalls, cv_renderfloors, cv_renderthings;
+extern consvar_t cv_ffloorclip, cv_spriteclip;
+
+extern boolean r_renderwalls;
+extern boolean r_renderfloors;
+extern boolean r_renderthings;
 
 // Called by startup code.
 void R_Init(void);
@@ -134,6 +144,8 @@ void R_SetViewSize(void);
 
 // do it (sometimes explicitly called)
 void R_ExecuteSetViewSize(void);
+
+fixed_t R_GetPlayerFov(player_t *player);
 
 void R_SetupFrame(player_t *player);
 void R_SkyboxFrame(player_t *player);

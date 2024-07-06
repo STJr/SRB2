@@ -29,7 +29,9 @@ m_menu.c
 m_misc.c
 m_perfstats.c
 m_random.c
+m_tokenizer.c
 m_queue.c
+m_vector.c
 info.c
 p_ceilng.c
 p_enemy.c
@@ -62,6 +64,7 @@ r_splats.c
 r_things.c
 r_bbox.c
 r_textures.c
+r_translation.c
 r_patch.c
 r_patchrotation.c
 r_picformats.c

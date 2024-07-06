@@ -41,6 +41,8 @@ typedef struct banreason_s
 static banreason_t *reasontail = NULL; //last entry, use prev
 static banreason_t *reasonhead = NULL; //1st entry, use next
 
+static boolean bans_loaded = false;
+
 void Ban_Add(const char *reason)
 {
 	banreason_t *reasonlist = malloc(sizeof(*reasonlist));
@@ -85,6 +87,8 @@ void Ban_Load_File(boolean warning)
 	if (!I_ClearBans)
 		return;
 
+	bans_loaded = true;
+
 	f = fopen(va("%s"PATHSEP"%s", srb2home, "ban.txt"), "r");
 
 	if (!f)
@@ -123,6 +127,12 @@ void D_SaveBan(void)
 	banreason_t *reasonlist = reasonhead;
 	const char *address, *mask;
 	const char *path = va("%s"PATHSEP"%s", srb2home, "ban.txt");
+
+	if (!bans_loaded)
+	{
+		// don't save bans if they were never loaded.
+		return;
+	}
 
 	if (!reasonhead)
 	{
@@ -274,7 +284,9 @@ void Command_BanIP(void)
 
 	if (server) // Only the server can use this, otherwise does nothing.
 	{
+		char *addrbuf = NULL;
 		const char *address = (COM_Argv(1));
+		const char *mask = strchr(address, '/');
 		const char *reason;
 
 		if (COM_Argc() == 2)
@@ -282,8 +294,16 @@ void Command_BanIP(void)
 		else
 			reason = COM_Argv(2);
 
+		if (mask != NULL)
+		{
+			addrbuf = Z_Malloc(mask - address + 1, PU_STATIC, NULL);
+			memcpy(addrbuf, address, mask - address);
+			addrbuf[mask - address] = '\0';
+			address = addrbuf;
+			mask++;
+		}
 
-		if (I_SetBanAddress && I_SetBanAddress(address, NULL))
+		if (I_SetBanAddress && I_SetBanAddress(address, mask))
 		{
 			if (reason)
 				CONS_Printf("Banned IP address %s for: %s\n", address, reason);
@@ -295,8 +315,9 @@ void Command_BanIP(void)
 		}
 		else
 		{
-			return;
+			CONS_Printf("Unable to apply ban: address in malformed or invalid, or too many bans are applied\n");
 		}
+		Z_Free(addrbuf);
 	}
 }
 

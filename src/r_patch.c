@@ -21,44 +21,101 @@
 
 //
 // Creates a patch.
-// Assumes a PU_PATCH zone memory tag and no user, but can always be set later
 //
 
-patch_t *Patch_Create(softwarepatch_t *source, size_t srcsize, void *dest)
+patch_t *Patch_Create(INT16 width, INT16 height)
 {
-	patch_t *patch = (dest == NULL) ? Z_Calloc(sizeof(patch_t), PU_PATCH, NULL) : (patch_t *)(dest);
+	patch_t *patch = Z_Calloc(sizeof(patch_t), PU_PATCH, NULL);
+	patch->width = width;
+	patch->height = height;
+	return patch;
+}
 
-	if (source)
-	{
-		INT32 col, colsize;
-		size_t size = sizeof(INT32) * SHORT(source->width);
-		size_t offs = (sizeof(INT16) * 4) + size;
+patch_t *Patch_CreateFromDoomPatch(softwarepatch_t *source)
+{
+	patch_t *patch = Patch_Create(0, 0);
+	if (!source)
+		return patch;
 
-		patch->width      = SHORT(source->width);
-		patch->height     = SHORT(source->height);
-		patch->leftoffset = SHORT(source->leftoffset);
-		patch->topoffset  = SHORT(source->topoffset);
-		patch->columnofs  = Z_Calloc(size, PU_PATCH_DATA, NULL);
+	patch->width      = SHORT(source->width);
+	patch->height     = SHORT(source->height);
+	patch->leftoffset = SHORT(source->leftoffset);
+	patch->topoffset  = SHORT(source->topoffset);
 
-		for (col = 0; col < source->width; col++)
-		{
-			// This makes the column offsets relative to the column data itself,
-			// instead of the entire patch data
-			patch->columnofs[col] = LONG(source->columnofs[col]) - offs;
-		}
+	size_t total_pixels = 0;
+	size_t total_posts = 0;
 
-		if (!srcsize)
-			I_Error("Patch_Create: no source size!");
+	Patch_CalcDataSizes(source, &total_pixels, &total_posts);
 
-		colsize = (INT32)(srcsize) - (INT32)offs;
-		if (colsize <= 0)
-			I_Error("Patch_Create: no column data!");
+	patch->columns = Z_Calloc(sizeof(column_t) * patch->width, PU_PATCH_DATA, NULL);
+	patch->posts = Z_Calloc(sizeof(post_t) * total_posts, PU_PATCH_DATA, NULL);
+	patch->pixels = Z_Calloc(sizeof(UINT8) * total_pixels, PU_PATCH_DATA, NULL);
 
-		patch->columns = Z_Calloc(colsize, PU_PATCH_DATA, NULL);
-		M_Memcpy(patch->columns, ((UINT8 *)source + LONG(source->columnofs[0])), colsize);
-	}
+	Patch_MakeColumns(source, patch->width, patch->width, patch->pixels, patch->columns, patch->posts, false);
 
 	return patch;
+}
+
+void Patch_CalcDataSizes(softwarepatch_t *source, size_t *total_pixels, size_t *total_posts)
+{
+	for (INT32 i = 0; i < source->width; i++)
+	{
+		doompost_t *src_posts = (doompost_t*)((UINT8 *)source + LONG(source->columnofs[i]));
+		for (doompost_t *post = src_posts; post->topdelta != 0xff ;)
+		{
+			(*total_posts)++;
+			(*total_pixels) += post->length;
+			post = (doompost_t *)((UINT8 *)post + post->length + 4);
+		}
+	}
+}
+
+void Patch_MakeColumns(softwarepatch_t *source, size_t num_columns, INT16 width, UINT8 *pixels, column_t *columns, post_t *posts, boolean flip)
+{
+	column_t *column = flip ? columns + (num_columns - 1) : columns;
+
+	for (size_t i = 0; i < num_columns; i++)
+	{
+		size_t prevdelta = 0;
+		size_t data_offset = 0;
+
+		column->pixels = pixels;
+		column->posts = posts;
+		column->num_posts = 0;
+
+		if (i >= (unsigned)width)
+			continue;
+
+		doompost_t *src_posts = (doompost_t*)((UINT8 *)source + LONG(source->columnofs[i]));
+
+		for (doompost_t *post = src_posts; post->topdelta != 0xff ;)
+		{
+			size_t topdelta = post->topdelta;
+			if (topdelta <= prevdelta)
+				topdelta += prevdelta;
+			prevdelta = topdelta;
+
+			posts->topdelta = topdelta;
+			posts->length = (size_t)post->length;
+			posts->data_offset = data_offset;
+
+			memcpy(pixels, (UINT8 *)post + 3, post->length);
+
+			data_offset += posts->length;
+			pixels += posts->length;
+
+			column->num_posts++;
+
+			posts++;
+
+			post = (doompost_t *)((UINT8 *)post + post->length + 4);
+		}
+
+		if (flip)
+			column--;
+		else
+			column++;
+	}
 }
 
 //
@@ -96,10 +153,12 @@ static void Patch_FreeData(patch_t *patch)
 	}
 #endif
 
-	if (patch->columnofs)
-		Z_Free(patch->columnofs);
+	if (patch->pixels)
+		Z_Free(patch->pixels);
 	if (patch->columns)
 		Z_Free(patch->columns);
+	if (patch->posts)
+		Z_Free(patch->posts);
 }
 
 void Patch_Free(patch_t *patch)

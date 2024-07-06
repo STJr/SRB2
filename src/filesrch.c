@@ -444,12 +444,11 @@ filestatus_t filesearch(char *filename, const char *startpath, const UINT8 *want
 		strcpy(&searchpath[searchpathindex[depthleft]],dent->d_name);
 
 #if defined(__linux__) || defined(__FreeBSD__)
-		if (dent->d_type == DT_UNKNOWN)
-			if (lstat(searchpath,&fsstat) == 0 && S_ISDIR(fsstat.st_mode))
+		if (dent->d_type == DT_UNKNOWN || dent->d_type == DT_LNK)
+			if (stat(searchpath,&fsstat) == 0 && S_ISDIR(fsstat.st_mode))
 				dent->d_type = DT_DIR;
 
 		// Linux and FreeBSD has a special field for file type on dirent, so use that to speed up lookups.
-		// FIXME: should we also follow symlinks?
 		if (dent->d_type == DT_DIR && depthleft)
 #else
 		if (stat(searchpath,&fsstat) < 0) // do we want to follow symlinks? if not: change it to lstat
@@ -617,7 +616,8 @@ INT32 samepaths(const char *path1, const char *path2)
 	if (stat1.st_dev == stat2.st_dev)
 	{
 #if !defined(_WIN32)
-		return (stat1.st_ino == stat2.st_ino);
+		if (stat1.st_ino == stat2.st_ino)
+			return 1;
 #else
 		// The above doesn't work on NTFS or FAT.
 		HANDLE file1 = CreateFileA(path1, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
@@ -645,6 +645,8 @@ INT32 samepaths(const char *path1, const char *path2)
 		// I'll just use EIO...
 		if (!GetFileInformationByHandle(file1, &file1info))
 		{
+			CloseHandle(file1);
+			CloseHandle(file2);
 #ifndef AVOID_ERRNO
 			direrror = EIO;
 #endif
@@ -660,16 +662,19 @@ INT32 samepaths(const char *path1, const char *path2)
 			return -2;
 		}
 
+		int status = 0;
+
 		if (file1info.dwVolumeSerialNumber == file2info.dwVolumeSerialNumber
 		&& file1info.nFileIndexLow == file2info.nFileIndexLow
 		&& file1info.nFileIndexHigh == file2info.nFileIndexHigh)
 		{
-			CloseHandle(file1);
-			CloseHandle(file2);
-			return 1;
+			status = 1;
 		}
 
-		return 0;
+		CloseHandle(file1);
+		CloseHandle(file2);
+
+		return status;
 #endif
 	}
 
@@ -691,6 +696,15 @@ static void initdirpath(char *dirpath, size_t *dirpathindex, int depthleft)
 	}
 	else
 		dirpathindex[depthleft]--;
+}
+
+//sortdir by name? 
+static int lumpnamecompare(const void *A, const void *B)
+{
+	const lumpinfo_t *pA = A;
+	const lumpinfo_t *pB = B;
+	return strcmp((pA->fullname), (pB->fullname));
+
 }
 
 lumpinfo_t *getdirectoryfiles(const char *path, UINT16 *nlmp, UINT16 *nfolders)
@@ -836,6 +850,7 @@ lumpinfo_t *getdirectoryfiles(const char *path, UINT16 *nlmp, UINT16 *nfolders)
 
 		lump_p->diskpath = Z_StrDup(dirpath); // Path in the filesystem to the file
 		lump_p->compression = CM_NOCOMPRESSION; // Lump is uncompressed
+		lump_p->size = lump_p->disksize = fsstat.st_size;
 
 		// Remove the directory's path.
 		fullname = lump_p->diskpath;
@@ -881,6 +896,9 @@ lumpinfo_t *getdirectoryfiles(const char *path, UINT16 *nlmp, UINT16 *nfolders)
 
 	free(dirpathindex);
 	free(dirhandle);
+
+	//sort files and directories
+	qsort (lumpinfo, numlumps, sizeof(lumpinfo_t), lumpnamecompare);
 
 	(*nlmp) = numlumps;
 	return lumpinfo;
@@ -1172,7 +1190,7 @@ boolean preparefilemenu(boolean samedepth)
 					size_t i;
 
 					if (filenamebuf == NULL)
-						filenamebuf = calloc(sizeof(char) * MAX_WADPATH, numwadfiles);
+						filenamebuf = calloc(numwadfiles, sizeof(char) * MAX_WADPATH);
 
 					for (i = 0; i < numwadfiles; i++)
 					{
@@ -1181,7 +1199,7 @@ boolean preparefilemenu(boolean samedepth)
 
 						if (!filenamebuf[i][0])
 						{
-							strncpy(filenamebuf[i], wadfiles[i]->filename, MAX_WADPATH);
+							strncpy(filenamebuf[i], wadfiles[i]->filename, MAX_WADPATH-1);
 							filenamebuf[i][MAX_WADPATH - 1] = '\0';
 							nameonly(filenamebuf[i]);
 						}

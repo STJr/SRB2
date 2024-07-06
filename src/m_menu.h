@@ -176,6 +176,7 @@ typedef struct
 extern menupres_t menupres[NUMMENUTYPES];
 extern UINT32 prevMenuId;
 extern UINT32 activeMenuId;
+extern tic_t shieldprompt_timer; // Show a prompt about the new Shield button for old configs // TODO: 2.3: Remove
 
 void M_InitMenuPresTables(void);
 UINT8 M_GetYoungestChildMenu(void);
@@ -382,7 +383,7 @@ typedef struct
 	char displayname[SKINNAMESIZE+1];
 	INT16 skinnum[2];
 	UINT16 oppositecolor;
-	char nametag[8];
+	char nametag[8+1];
 	patch_t *namepic;
 	UINT16 tagtextcolor;
 	UINT16 tagoutlinecolor;
@@ -425,6 +426,7 @@ typedef struct
 {
 	char levelname[32];
 	UINT8 skinnum;
+	char skinname [SKINNAMESIZE+1];
 	UINT8 botskin;
 	UINT8 numemeralds;
 	UINT8 numgameovers;

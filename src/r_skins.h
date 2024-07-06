@@ -80,9 +80,17 @@ typedef struct
 	// specific sounds per skin
 	sfxenum_t soundsid[NUMSKINSOUNDS]; // sound # in S_sfx table
 
+	spritedef_t sprites[NUMPLAYERSPRITES];
+	spriteinfo_t sprinfo[NUMPLAYERSPRITES];
+
 	// contains super versions too
-	spritedef_t sprites[NUMPLAYERSPRITES*2];
-	spriteinfo_t sprinfo[NUMPLAYERSPRITES*2];
+	struct {
+		spritedef_t sprites[NUMPLAYERSPRITES];
+		spriteinfo_t sprinfo[NUMPLAYERSPRITES];
+	} super;
+
+	// TODO: 2.3: Delete
+	spritedef_t sprites_compat[NUMPLAYERSPRITES * 2];
 } skin_t;
 
 /// Externs
@@ -103,7 +111,14 @@ void R_AddSkins(UINT16 wadnum, boolean mainfile);
 void R_PatchSkins(UINT16 wadnum, boolean mainfile);
 void R_DelSkins(void);
 
-UINT8 P_GetSkinSprite2(skin_t *skin, UINT8 spr2, player_t *player);
+UINT16 P_GetStateSprite2(state_t *state);
+UINT16 P_GetSprite2StateFrame(state_t *state);
+UINT16 P_GetSkinSprite2(skin_t *skin, UINT16 spr2, player_t *player);
+UINT16 P_ApplySuperFlagToSprite2(UINT16 spr2, mobj_t *mobj);
+spritedef_t *P_GetSkinSpritedef(skin_t *skin, UINT16 spr2);
+spriteinfo_t *P_GetSkinSpriteInfo(skin_t *skin, UINT16 spr2);
+boolean P_IsValidSprite2(skin_t *skin, UINT16 spr2);
+boolean P_IsStateSprite2Super(state_t *state);
 
 void R_RefreshSprite2(void);
 

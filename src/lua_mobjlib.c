@@ -14,6 +14,7 @@
 #include "fastcmp.h"
 #include "r_data.h"
 #include "r_skins.h"
+#include "r_translation.h"
 #include "p_local.h"
 #include "g_game.h"
 #include "p_setup.h"
@@ -66,7 +67,9 @@ enum mobj_e {
 	mobj_renderflags,
 	mobj_skin,
 	mobj_color,
+	mobj_translation,
 	mobj_blendmode,
+	mobj_alpha,
 	mobj_bnext,
 	mobj_bprev,
 	mobj_hnext,
@@ -146,7 +149,9 @@ static const char *const mobj_opt[] = {
 	"renderflags",
 	"skin",
 	"color",
+	"translation",
 	"blendmode",
+	"alpha",
 	"bnext",
 	"bprev",
 	"hnext",
@@ -338,12 +343,29 @@ static int mobj_get(lua_State *L)
 	case mobj_color:
 		lua_pushinteger(L, mo->color);
 		break;
+	case mobj_translation:
+		if (mo->translation)
+		{
+			const char *name = R_GetCustomTranslationName(mo->translation);
+			if (name)
+				lua_pushstring(L, name);
+			break;
+		}
+		lua_pushnil(L);
+		break;
 	case mobj_blendmode:
 		lua_pushinteger(L, mo->blendmode);
 		break;
-	case mobj_bnext:
-		LUA_PushUserdata(L, mo->bnext, META_MOBJ);
+	case mobj_alpha:
+		lua_pushfixed(L, mo->alpha);
 		break;
+	case mobj_bnext:
+		if (mo->blocknode && mo->blocknode->bnext) {
+			LUA_PushUserdata(L, mo->blocknode->bnext->mobj, META_MOBJ);
+			break;
+		}
+		else
+			return 0;
 	case mobj_bprev:
 		// bprev -- same deal as sprev above, but for the blockmap.
 		return UNIMPLEMENTED;
@@ -547,7 +569,7 @@ static int mobj_set(lua_State *L)
 		mo->frame = (UINT32)luaL_checkinteger(L, 3);
 		break;
 	case mobj_sprite2:
-		mo->sprite2 = P_GetSkinSprite2(((skin_t *)mo->skin), (UINT8)luaL_checkinteger(L, 3), mo->player);
+		mo->sprite2 = P_GetSkinSprite2(((skin_t *)mo->skin), (UINT16)luaL_checkinteger(L, 3), mo->player);
 		break;
 	case mobj_anim_duration:
 		mo->anim_duration = (UINT16)luaL_checkinteger(L, 3);
@@ -656,7 +678,6 @@ static int mobj_set(lua_State *L)
 				sector_list = NULL;
 			}
 			mo->snext = NULL, mo->sprev = NULL;
-			mo->bnext = NULL, mo->bprev = NULL;
 			P_SetThingPosition(mo);
 		}
 		else
@@ -689,10 +710,24 @@ static int mobj_set(lua_State *L)
 	}
 	case mobj_color:
 	{
-		UINT16 newcolor = (UINT16)luaL_checkinteger(L,3);
+		UINT16 newcolor = (UINT16)luaL_checkinteger(L, 3);
 		if (newcolor >= numskincolors)
 			return luaL_error(L, "mobj.color %d out of range (0 - %d).", newcolor, numskincolors-1);
 		mo->color = newcolor;
+		break;
+	}
+	case mobj_translation:
+	{
+		if (!lua_isnil(L, 3)) {
+			const char *tr = luaL_checkstring(L, 3);
+			int id = R_FindCustomTranslation(tr);
+			if (id != -1)
+				mo->translation = id;
+			else
+				return luaL_error(L, "invalid translation '%s'.", tr);
+		}
+		else
+			mo->translation = 0;
 		break;
 	}
 	case mobj_blendmode:
@@ -701,6 +736,16 @@ static int mobj_set(lua_State *L)
 		if (blendmode < 0 || blendmode > AST_OVERLAY)
 			return luaL_error(L, "mobj.blendmode %d out of range (0 - %d).", blendmode, AST_OVERLAY);
 		mo->blendmode = blendmode;
+		break;
+	}
+	case mobj_alpha:
+	{
+		fixed_t alpha = luaL_checkfixed(L, 3);
+		if (alpha < 0)
+			alpha = 0;
+		else if (alpha > FRACUNIT)
+			alpha = FRACUNIT;
+		mo->alpha = alpha;
 		break;
 	}
 	case mobj_bnext:
@@ -732,7 +777,7 @@ static int mobj_set(lua_State *L)
 			return luaL_error(L, "mobj.type %d out of range (0 - %d).", newtype, NUMMOBJTYPES-1);
 		mo->type = newtype;
 		mo->info = &mobjinfo[newtype];
-		P_SetScale(mo, mo->scale);
+		P_SetScale(mo, mo->scale, false);
 		break;
 	}
 	case mobj_info:
@@ -806,9 +851,7 @@ static int mobj_set(lua_State *L)
 		fixed_t scale = luaL_checkfixed(L, 3);
 		if (scale < FRACUNIT/100)
 			scale = FRACUNIT/100;
-		mo->destscale = scale;
-		P_SetScale(mo, scale);
-		mo->old_scale = scale;
+		P_SetScale(mo, scale, true);
 		break;
 	}
 	case mobj_destscale:
@@ -973,6 +1016,9 @@ static int mapthing_get(lua_State *L)
 		return 0;
 	}
 
+	if (field == (enum mapthing_e)-1)
+		return LUA_ErrInvalid(L, "fields");
+
 	switch (field)
 	{
 		case mapthing_valid:
@@ -1031,7 +1077,7 @@ static int mapthing_get(lua_State *L)
 			break;
 		default:
 			if (devparm)
-				return luaL_error(L, LUA_QL("mapthing_t") " has no field named " LUA_QS, field);
+				return luaL_error(L, "%s %s", LUA_QL("mapthing_t"), va("has no field named: %ui", field));
 			else
 				return 0;
 	}
@@ -1047,6 +1093,9 @@ static int mapthing_set(lua_State *L)
 
 	if (!mt)
 		return luaL_error(L, "accessed mapthing_t doesn't exist anymore.");
+
+	if (field == (enum mapthing_e)-1)
+		return LUA_ErrInvalid(L, "fields");
 
 	if (hud_running)
 		return luaL_error(L, "Do not alter mapthing_t in HUD rendering code!");
@@ -1105,7 +1154,7 @@ static int mapthing_set(lua_State *L)
 			mt->mobj = *((mobj_t **)luaL_checkudata(L, 3, META_MOBJ));
 			break;
 		default:
-			return luaL_error(L, LUA_QL("mapthing_t") " has no field named " LUA_QS, field);
+			return luaL_error(L, "%s %s", LUA_QL("mapthing_t"), va("has no field named: %ui", field));
 	}
 
 	return 0;

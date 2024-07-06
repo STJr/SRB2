@@ -190,6 +190,7 @@ enum player_e
 	player_marelap,
 	player_marebonuslap,
 	player_marebegunat,
+	player_lastmaretime,
 	player_startedtime,
 	player_finishedtime,
 	player_lapbegunat,
@@ -225,9 +226,7 @@ enum player_e
 	player_quittime,
 	player_lastinputtime,
 	player_ping,
-#ifdef HWRENDER
-	player_fovadd,
-#endif
+	player_fovadd
 };
 
 static const char *const player_opt[] = {
@@ -339,6 +338,7 @@ static const char *const player_opt[] = {
 	"marelap",
 	"marebonuslap",
 	"marebegunat",
+	"lastmaretime",
 	"startedtime",
 	"finishedtime",
 	"lapbegunat",
@@ -374,9 +374,7 @@ static const char *const player_opt[] = {
 	"quittime",
 	"lastinputtime",
 	"ping",
-#ifdef HWRENDER
 	"fovadd",
-#endif
 	NULL,
 };
 
@@ -729,6 +727,9 @@ static int player_get(lua_State *L)
 	case player_marebegunat:
 		lua_pushinteger(L, plr->marebegunat);
 		break;
+	case player_lastmaretime:
+		lua_pushinteger(L, plr->lastmaretime);
+		break;
 	case player_startedtime:
 		lua_pushinteger(L, plr->startedtime);
 		break;
@@ -834,11 +835,9 @@ static int player_get(lua_State *L)
 	case player_ping:
 		lua_pushinteger(L, playerpingtable[plr - players]);
 		break;
-#ifdef HWRENDER
 	case player_fovadd:
 		lua_pushfixed(L, plr->fovadd);
 		break;
-#endif
 	default:
 		lua_getfield(L, LUA_REGISTRYINDEX, LREG_EXTVARS);
 		I_Assert(lua_istable(L, -1));
@@ -1225,6 +1224,9 @@ static int player_set(lua_State *L)
 	case player_marebegunat:
 		plr->marebegunat = (tic_t)luaL_checkinteger(L, 3);
 		break;
+	case player_lastmaretime:
+		plr->lastmaretime = (tic_t)luaL_checkinteger(L, 3);
+		break;
 	case player_startedtime:
 		plr->startedtime = (tic_t)luaL_checkinteger(L, 3);
 		break;
@@ -1357,11 +1359,9 @@ static int player_set(lua_State *L)
 	case player_lastinputtime:
 		plr->lastinputtime = (tic_t)luaL_checkinteger(L, 3);
 		break;
-#ifdef HWRENDER
 	case player_fovadd:
 		plr->fovadd = luaL_checkfixed(L, 3);
 		break;
-#endif
 	default:
 		lua_getfield(L, LUA_REGISTRYINDEX, LREG_EXTVARS);
 		I_Assert(lua_istable(L, -1));
@@ -1431,8 +1431,8 @@ static int power_len(lua_State *L)
 	return 1;
 }
 
-#define NOFIELD luaL_error(L, LUA_QL("ticcmd_t") " has no field named " LUA_QS, field)
-#define NOSET luaL_error(L, LUA_QL("ticcmd_t") " field " LUA_QS " should not be set directly.", ticcmd_opt[field])
+#define NOFIELD luaL_error(L, "%s %s", LUA_QL("ticcmd_t"), va("has no field named %ui", field))
+#define NOSET luaL_error(L, LUA_QL("ticcmd_t") " field %s should not be set directly.", ticcmd_opt[field])
 
 enum ticcmd_e
 {
@@ -1462,6 +1462,9 @@ static int ticcmd_get(lua_State *L)
 	enum ticcmd_e field = Lua_optoption(L, 2, -1, ticcmd_fields_ref);
 	if (!cmd)
 		return LUA_ErrInvalid(L, "player_t");
+
+	if (field == (enum ticcmd_e)-1)
+		return LUA_ErrInvalid(L, "fields");
 
 	switch (field)
 	{
@@ -1496,6 +1499,9 @@ static int ticcmd_set(lua_State *L)
 	enum ticcmd_e field = Lua_optoption(L, 2, -1, ticcmd_fields_ref);
 	if (!cmd)
 		return LUA_ErrInvalid(L, "ticcmd_t");
+
+	if (field == (enum ticcmd_e)-1)
+		return LUA_ErrInvalid(L, "fields");
 
 	if (hud_running)
 		return luaL_error(L, "Do not alter player_t in HUD rendering code!");

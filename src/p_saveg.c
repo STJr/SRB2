@@ -170,6 +170,7 @@ static void P_NetArchivePlayers(void)
 		WRITEUINT8(save_p, players[i].panim);
 		WRITEUINT8(save_p, players[i].stronganim);
 		WRITEUINT8(save_p, players[i].spectator);
+		WRITEUINT8(save_p, players[i].muted);
 
 		WRITEUINT16(save_p, players[i].flashpal);
 		WRITEUINT16(save_p, players[i].flashcount);
@@ -260,6 +261,7 @@ static void P_NetArchivePlayers(void)
 		WRITEUINT8(save_p, players[i].marelap);
 		WRITEUINT8(save_p, players[i].marebonuslap);
 		WRITEUINT32(save_p, players[i].marebegunat);
+		WRITEUINT32(save_p, players[i].lastmaretime);
 		WRITEUINT32(save_p, players[i].startedtime);
 		WRITEUINT32(save_p, players[i].finishedtime);
 		WRITEUINT32(save_p, players[i].lapbegunat);
@@ -399,6 +401,7 @@ static void P_NetUnArchivePlayers(void)
 		players[i].panim = READUINT8(save_p);
 		players[i].stronganim = READUINT8(save_p);
 		players[i].spectator = READUINT8(save_p);
+		players[i].muted = READUINT8(save_p);
 
 		players[i].flashpal = READUINT16(save_p);
 		players[i].flashcount = READUINT16(save_p);
@@ -490,6 +493,7 @@ static void P_NetUnArchivePlayers(void)
 		players[i].marelap = READUINT8(save_p);
 		players[i].marebonuslap = READUINT8(save_p);
 		players[i].marebegunat = READUINT32(save_p);
+		players[i].lastmaretime = READUINT32(save_p);
 		players[i].startedtime = READUINT32(save_p);
 		players[i].finishedtime = READUINT32(save_p);
 		players[i].lapbegunat = READUINT32(save_p);
@@ -915,7 +919,11 @@ enum
 	LD_SDMIDLIGHT    = 1<<19,
 	LD_SDBOTLIGHT    = 1<<20,
 	LD_SDREPEATCNT   = 1<<21,
-	LD_SDFLAGS       = 1<<22
+	LD_SDFLAGS       = 1<<22,
+	LD_SDLIGHTABS    = 1<<23,
+	LD_SDTOPLIGHTABS = 1<<24,
+	LD_SDMIDLIGHTABS = 1<<25,
+	LD_SDBOTLIGHTABS = 1<<26
 };
 
 static boolean P_AreArgsEqual(const line_t *li, const line_t *spawnli)
@@ -1389,6 +1397,22 @@ static UINT32 GetSideDiff(const side_t *si, const side_t *spawnsi)
 		diff |= LD_SDBOTSCALEY;
 	if (si->repeatcnt != spawnsi->repeatcnt)
 		diff |= LD_SDREPEATCNT;
+	if (si->light != spawnsi->light)
+		diff |= LD_SDLIGHT;
+	if (si->light_top != spawnsi->light_top)
+		diff |= LD_SDTOPLIGHT;
+	if (si->light_mid != spawnsi->light_mid)
+		diff |= LD_SDMIDLIGHT;
+	if (si->light_bottom != spawnsi->light_bottom)
+		diff |= LD_SDBOTLIGHT;
+	if (si->lightabsolute != spawnsi->lightabsolute)
+		diff |= LD_SDLIGHTABS;
+	if (si->lightabsolute_top != spawnsi->lightabsolute_top)
+		diff |= LD_SDTOPLIGHTABS;
+	if (si->lightabsolute_mid != spawnsi->lightabsolute_mid)
+		diff |= LD_SDMIDLIGHTABS;
+	if (si->lightabsolute_bottom != spawnsi->lightabsolute_bottom)
+		diff |= LD_SDBOTLIGHTABS;
 	return diff;
 }
 
@@ -1432,6 +1456,22 @@ static void ArchiveSide(const side_t *si, UINT32 diff)
 		WRITEFIXED(save_p, si->scaley_bottom);
 	if (diff & LD_SDREPEATCNT)
 		WRITEINT16(save_p, si->repeatcnt);
+	if (diff & LD_SDLIGHT)
+		WRITEINT16(save_p, si->light);
+	if (diff & LD_SDTOPLIGHT)
+		WRITEINT16(save_p, si->light_top);
+	if (diff & LD_SDMIDLIGHT)
+		WRITEINT16(save_p, si->light_mid);
+	if (diff & LD_SDBOTLIGHT)
+		WRITEINT16(save_p, si->light_bottom);
+	if (diff & LD_SDLIGHTABS)
+		WRITEUINT8(save_p, si->lightabsolute);
+	if (diff & LD_SDTOPLIGHTABS)
+		WRITEUINT8(save_p, si->lightabsolute_top);
+	if (diff & LD_SDMIDLIGHTABS)
+		WRITEUINT8(save_p, si->lightabsolute_mid);
+	if (diff & LD_SDBOTLIGHTABS)
+		WRITEUINT8(save_p, si->lightabsolute_bottom);
 }
 
 static void ArchiveLines(void)
@@ -1572,6 +1612,22 @@ static void UnArchiveSide(side_t *si)
 		si->scaley_bottom = READFIXED(save_p);
 	if (diff & LD_SDREPEATCNT)
 		si->repeatcnt = READINT16(save_p);
+	if (diff & LD_SDLIGHT)
+		si->light = READINT16(save_p);
+	if (diff & LD_SDTOPLIGHT)
+		si->light_top = READINT16(save_p);
+	if (diff & LD_SDMIDLIGHT)
+		si->light_mid = READINT16(save_p);
+	if (diff & LD_SDBOTLIGHT)
+		si->light_bottom = READINT16(save_p);
+	if (diff & LD_SDLIGHTABS)
+		si->lightabsolute = READUINT8(save_p);
+	if (diff & LD_SDTOPLIGHTABS)
+		si->lightabsolute_top = READUINT8(save_p);
+	if (diff & LD_SDMIDLIGHTABS)
+		si->lightabsolute_mid = READUINT8(save_p);
+	if (diff & LD_SDBOTLIGHTABS)
+		si->lightabsolute_bottom = READUINT8(save_p);
 }
 
 static void UnArchiveLines(void)
@@ -1741,7 +1797,9 @@ typedef enum
 	MD2_FLOORSPRITESLOPE    = 1<<22,
 	MD2_DISPOFFSET          = 1<<23,
 	MD2_DRAWONLYFORPLAYER   = 1<<24,
-	MD2_DONTDRAWFORVIEWMOBJ = 1<<25
+	MD2_DONTDRAWFORVIEWMOBJ = 1<<25,
+	MD2_TRANSLATION         = 1<<26,
+	MD2_ALPHA               = 1<<27
 } mobj_diff2_t;
 
 typedef enum
@@ -1879,7 +1937,7 @@ static void SaveMobjThinker(const thinker_t *th, const UINT8 type)
 		diff |= MD_TICS;
 	if (mobj->sprite != mobj->state->sprite)
 		diff |= MD_SPRITE;
-	if (mobj->sprite == SPR_PLAY && mobj->sprite2 != (mobj->state->frame&FF_FRAMEMASK))
+	if (mobj->sprite == SPR_PLAY && mobj->sprite2 != P_GetStateSprite2(mobj->state))
 		diff |= MD_SPRITE;
 	if (mobj->frame != mobj->state->frame)
 		diff |= MD_FRAME;
@@ -1930,6 +1988,8 @@ static void SaveMobjThinker(const thinker_t *th, const UINT8 type)
 		diff2 |= MD2_CVMEM;
 	if (mobj->color)
 		diff2 |= MD2_COLOR;
+	if (mobj->translation)
+		diff2 |= MD2_TRANSLATION;
 	if (mobj->skin)
 		diff2 |= MD2_SKIN;
 	if (mobj->extravalue1)
@@ -1982,6 +2042,8 @@ static void SaveMobjThinker(const thinker_t *th, const UINT8 type)
 		diff2 |= MD2_DONTDRAWFORVIEWMOBJ;
 	if (mobj->dispoffset != mobj->info->dispoffset)
 		diff2 |= MD2_DISPOFFSET;
+	if (mobj->alpha != FRACUNIT)
+		diff2 |= MD2_ALPHA;
 
 	if (diff2 != 0)
 		diff |= MD_MORE;
@@ -2061,7 +2123,7 @@ static void SaveMobjThinker(const thinker_t *th, const UINT8 type)
 	if (diff & MD_SPRITE) {
 		WRITEUINT16(save_p, mobj->sprite);
 		if (mobj->sprite == SPR_PLAY)
-			WRITEUINT8(save_p, mobj->sprite2);
+			WRITEUINT16(save_p, mobj->sprite2);
 	}
 	if (diff & MD_FRAME)
 	{
@@ -2163,6 +2225,10 @@ static void SaveMobjThinker(const thinker_t *th, const UINT8 type)
 		WRITEUINT32(save_p, mobj->dontdrawforviewmobj->mobjnum);
 	if (diff2 & MD2_DISPOFFSET)
 		WRITEINT32(save_p, mobj->dispoffset);
+	if (diff2 & MD2_TRANSLATION)
+		WRITEUINT16(save_p, mobj->translation);
+	if (diff2 & MD2_ALPHA)
+		WRITEFIXED(save_p, mobj->alpha);
 
 	WRITEUINT32(save_p, mobj->mobjnum);
 }
@@ -3089,12 +3155,12 @@ static thinker_t* LoadMobjThinker(actionf_p1 thinker)
 	if (diff & MD_SPRITE) {
 		mobj->sprite = READUINT16(save_p);
 		if (mobj->sprite == SPR_PLAY)
-			mobj->sprite2 = READUINT8(save_p);
+			mobj->sprite2 = READUINT16(save_p);
 	}
 	else {
 		mobj->sprite = mobj->state->sprite;
 		if (mobj->sprite == SPR_PLAY)
-			mobj->sprite2 = mobj->state->frame&FF_FRAMEMASK;
+			mobj->sprite2 = P_GetStateSprite2(mobj->state);
 	}
 	if (diff & MD_FRAME)
 	{
@@ -3216,6 +3282,8 @@ static thinker_t* LoadMobjThinker(actionf_p1 thinker)
 		slope->normal.x = READFIXED(save_p);
 		slope->normal.y = READFIXED(save_p);
 		slope->normal.z = READFIXED(save_p);
+
+		slope->moved = true;
 	}
 	if (diff2 & MD2_DRAWONLYFORPLAYER)
 		mobj->drawonlyforplayer = &players[READUINT8(save_p)];
@@ -3225,6 +3293,12 @@ static thinker_t* LoadMobjThinker(actionf_p1 thinker)
 		mobj->dispoffset = READINT32(save_p);
 	else
 		mobj->dispoffset = mobj->info->dispoffset;
+	if (diff2 & MD2_TRANSLATION)
+		mobj->translation = READUINT16(save_p);
+	if (diff2 & MD2_ALPHA)
+		mobj->alpha = READFIXED(save_p);
+	else
+		mobj->alpha = FRACUNIT;
 
 	if (diff & MD_REDFLAG)
 	{

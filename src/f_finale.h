@@ -98,7 +98,7 @@ typedef enum
 extern ttmode_enum ttmode;
 extern UINT8 ttscale;
 // ttmode user vars
-extern char ttname[9];
+extern char ttname[8+1];
 extern INT16 ttx;
 extern INT16 tty;
 extern INT16 ttloop;

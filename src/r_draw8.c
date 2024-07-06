@@ -40,18 +40,13 @@ void R_DrawColumn_8(void)
 #endif
 
 	// Framebuffer destination address.
-	// Use ylookup LUT to avoid multiply with ScreenWidth.
-	// Use columnofs LUT for subwindows?
-
-	//dest = ylookup[dc_yl] + columnofs[dc_x];
 	dest = &topleft[dc_yl*vid.width + dc_x];
 
 	count++;
 
 	// Determine scaling, which is the only mapping to be done.
 	fracstep = dc_iscale;
-	//frac = dc_texturemid + (dc_yl - centery)*fracstep;
-	frac = (dc_texturemid + FixedMul((dc_yl << FRACBITS) - centeryfrac, fracstep))*(!dc_hires);
+	frac = dc_texturemid + FixedMul((dc_yl << FRACBITS) - centeryfrac, fracstep);
 
 	// Inner loop that does the actual texture mapping, e.g. a DDA-like scaling.
 	// This is as fast as it gets.
@@ -105,6 +100,98 @@ void R_DrawColumn_8(void)
 	}
 }
 
+/**	\brief The R_DrawColumnClamped_8 function
+	Same as R_DrawColumn_8, but prevents artifacts from showing up (caused by fixed-point imprecisions)
+*/
+void R_DrawColumnClamped_8(void)
+{
+	INT32 count;
+	UINT8 *dest;
+	fixed_t frac;
+	fixed_t fracstep;
+
+	count = dc_yh - dc_yl;
+
+	if (count < 0) // Zero length, column does not exceed a pixel.
+		return;
+
+#ifdef RANGECHECK
+	if ((unsigned)dc_x >= (unsigned)vid.width || dc_yl < 0 || dc_yh >= vid.height)
+		return;
+#endif
+
+	// Framebuffer destination address.
+	dest = &topleft[dc_yl*vid.width + dc_x];
+
+	count++;
+
+	// Determine scaling, which is the only mapping to be done.
+	fracstep = dc_iscale;
+	frac = dc_texturemid + FixedMul((dc_yl << FRACBITS) - centeryfrac, fracstep);
+
+	// Inner loop that does the actual texture mapping, e.g. a DDA-like scaling.
+	// This is as fast as it gets.
+	{
+		const UINT8 *source = dc_source;
+		const lighttable_t *colormap = dc_colormap;
+		INT32 heightmask = dc_texheight-1;
+		INT32 idx;
+		if (dc_texheight & heightmask)   // not a power of 2 -- killough
+		{
+			heightmask++;
+			heightmask <<= FRACBITS;
+
+			if (frac < 0)
+				while ((frac += heightmask) <  0);
+			else
+				while (frac >= heightmask)
+					frac -= heightmask;
+
+			do
+			{
+				// Re-map color indices from wall texture column
+				//  using a lighting/special effects LUT.
+				// heightmask is the Tutti-Frutti fix
+				idx = frac>>FRACBITS;
+				if (idx >= 0 && idx < dc_postlength)
+					*dest = colormap[source[idx]];
+				dest += vid.width;
+
+				// Avoid overflow.
+				if (fracstep > 0x7FFFFFFF - frac)
+					frac += fracstep - heightmask;
+				else
+					frac += fracstep;
+
+				while (frac >= heightmask)
+					frac -= heightmask;
+			} while (--count);
+		}
+		else
+		{
+			while ((count -= 2) >= 0) // texture height is a power of 2
+			{
+				idx = (frac>>FRACBITS) & heightmask;
+				if (idx >= 0 && idx < dc_postlength)
+					*dest = colormap[source[idx]];
+				dest += vid.width;
+				frac += fracstep;
+				idx = (frac>>FRACBITS) & heightmask;
+				if (idx >= 0 && idx < dc_postlength)
+					*dest = colormap[source[idx]];
+				dest += vid.width;
+				frac += fracstep;
+			}
+			if (count & 1)
+			{
+				idx = (frac>>FRACBITS) & heightmask;
+				if (idx >= 0 && idx < dc_postlength)
+					*dest = colormap[source[idx]];
+			}
+		}
+	}
+}
+
 void R_Draw2sMultiPatchColumn_8(void)
 {
 	INT32 count;
@@ -123,18 +210,13 @@ void R_Draw2sMultiPatchColumn_8(void)
 #endif
 
 	// Framebuffer destination address.
-	// Use ylookup LUT to avoid multiply with ScreenWidth.
-	// Use columnofs LUT for subwindows?
-
-	//dest = ylookup[dc_yl] + columnofs[dc_x];
 	dest = &topleft[dc_yl*vid.width + dc_x];
 
 	count++;
 
 	// Determine scaling, which is the only mapping to be done.
 	fracstep = dc_iscale;
-	//frac = dc_texturemid + (dc_yl - centery)*fracstep;
-	frac = (dc_texturemid + FixedMul((dc_yl << FRACBITS) - centeryfrac, fracstep))*(!dc_hires);
+	frac = dc_texturemid + FixedMul((dc_yl << FRACBITS) - centeryfrac, fracstep);
 
 	// Inner loop that does the actual texture mapping, e.g. a DDA-like scaling.
 	// This is as fast as it gets.
@@ -219,18 +301,13 @@ void R_Draw2sMultiPatchTranslucentColumn_8(void)
 #endif
 
 	// Framebuffer destination address.
-	// Use ylookup LUT to avoid multiply with ScreenWidth.
-	// Use columnofs LUT for subwindows?
-
-	//dest = ylookup[dc_yl] + columnofs[dc_x];
 	dest = &topleft[dc_yl*vid.width + dc_x];
 
 	count++;
 
 	// Determine scaling, which is the only mapping to be done.
 	fracstep = dc_iscale;
-	//frac = dc_texturemid + (dc_yl - centery)*fracstep;
-	frac = (dc_texturemid + FixedMul((dc_yl << FRACBITS) - centeryfrac, fracstep))*(!dc_hires);
+	frac = dc_texturemid + FixedMul((dc_yl << FRACBITS) - centeryfrac, fracstep);
 
 	// Inner loop that does the actual texture mapping, e.g. a DDA-like scaling.
 	// This is as fast as it gets.
@@ -320,14 +397,11 @@ void R_DrawShadeColumn_8(void)
 		I_Error("R_DrawShadeColumn_8: %d to %d at %d", dc_yl, dc_yh, dc_x);
 #endif
 
-	// FIXME. As above.
-	//dest = ylookup[dc_yl] + columnofs[dc_x];
 	dest = &topleft[dc_yl*vid.width + dc_x];
 
 	// Looks familiar.
 	fracstep = dc_iscale;
-	//frac = dc_texturemid + (dc_yl - centery)*fracstep;
-	frac = (dc_texturemid + FixedMul((dc_yl << FRACBITS) - centeryfrac, fracstep))*(!dc_hires);
+	frac = dc_texturemid + FixedMul((dc_yl << FRACBITS) - centeryfrac, fracstep);
 
 	// Here we do an additional index re-mapping.
 	do
@@ -359,14 +433,11 @@ void R_DrawTranslucentColumn_8(void)
 		I_Error("R_DrawTranslucentColumn_8: %d to %d at %d", dc_yl, dc_yh, dc_x);
 #endif
 
-	// FIXME. As above.
-	//dest = ylookup[dc_yl] + columnofs[dc_x];
 	dest = &topleft[dc_yl*vid.width + dc_x];
 
 	// Looks familiar.
 	fracstep = dc_iscale;
-	//frac = dc_texturemid + (dc_yl - centery)*fracstep;
-	frac = (dc_texturemid + FixedMul((dc_yl << FRACBITS) - centeryfrac, fracstep))*(!dc_hires);
+	frac = dc_texturemid + FixedMul((dc_yl << FRACBITS) - centeryfrac, fracstep);
 
 	// Inner loop that does the actual texture mapping, e.g. a DDA-like scaling.
 	// This is as fast as it gets.
@@ -412,6 +483,90 @@ void R_DrawTranslucentColumn_8(void)
 			}
 			if (count & 1)
 				*dest = *(transmap + (colormap[source[(frac>>FRACBITS)&heightmask]]<<8) + (*dest));
+		}
+	}
+}
+
+/**	\brief The R_DrawTranslucentColumnClamped_8 function
+	Same as R_DrawTranslucentColumn_8, but prevents artifacts from showing up (caused by fixed-point imprecisions)
+*/
+void R_DrawTranslucentColumnClamped_8(void)
+{
+	INT32 count;
+	UINT8 *dest;
+	fixed_t frac, fracstep;
+
+	count = dc_yh - dc_yl + 1;
+
+	if (count <= 0) // Zero length, column does not exceed a pixel.
+		return;
+
+#ifdef RANGECHECK
+	if ((unsigned)dc_x >= (unsigned)vid.width || dc_yl < 0 || dc_yh >= vid.height)
+		I_Error("R_DrawTranslucentColumnClamped_8: %d to %d at %d", dc_yl, dc_yh, dc_x);
+#endif
+
+	dest = &topleft[dc_yl*vid.width + dc_x];
+
+	// Looks familiar.
+	fracstep = dc_iscale;
+	frac = dc_texturemid + FixedMul((dc_yl << FRACBITS) - centeryfrac, fracstep);
+
+	// Inner loop that does the actual texture mapping, e.g. a DDA-like scaling.
+	// This is as fast as it gets.
+	{
+		const UINT8 *source = dc_source;
+		const UINT8 *transmap = dc_transmap;
+		const lighttable_t *colormap = dc_colormap;
+		INT32 heightmask = dc_texheight - 1;
+		INT32 idx;
+		if (dc_texheight & heightmask)
+		{
+			heightmask++;
+			heightmask <<= FRACBITS;
+
+			if (frac < 0)
+				while ((frac += heightmask) < 0)
+					;
+			else
+				while (frac >= heightmask)
+					frac -= heightmask;
+
+			do
+			{
+				// Re-map color indices from wall texture column
+				// using a lighting/special effects LUT.
+				// heightmask is the Tutti-Frutti fix
+				idx = frac>>FRACBITS;
+				if (idx >= 0 && idx < dc_postlength)
+					*dest = *(transmap + (colormap[source[idx]]<<8) + (*dest));
+				dest += vid.width;
+				if ((frac += fracstep) >= heightmask)
+					frac -= heightmask;
+			}
+			while (--count);
+		}
+		else
+		{
+			while ((count -= 2) >= 0) // texture height is a power of 2
+			{
+				idx = (frac>>FRACBITS)&heightmask;
+				if (idx >= 0 && idx < dc_postlength)
+					*dest = *(transmap + (colormap[source[idx]]<<8) + (*dest));
+				dest += vid.width;
+				frac += fracstep;
+				idx = (frac>>FRACBITS)&heightmask;
+				if (idx >= 0 && idx < dc_postlength)
+					*dest = *(transmap + (colormap[source[idx]]<<8) + (*dest));
+				dest += vid.width;
+				frac += fracstep;
+			}
+			if (count & 1)
+			{
+				idx = (frac>>FRACBITS)&heightmask;
+				if (idx >= 0 && idx < dc_postlength)
+					*dest = *(transmap + (colormap[source[idx]]<<8) + (*dest));
+			}
 		}
 	}
 }
@@ -464,14 +619,11 @@ void R_DrawTranslatedTranslucentColumn_8(void)
 	if (count <= 0) // Zero length, column does not exceed a pixel.
 		return;
 
-	// FIXME. As above.
-	//dest = ylookup[dc_yl] + columnofs[dc_x];
 	dest = &topleft[dc_yl*vid.width + dc_x];
 
 	// Looks familiar.
 	fracstep = dc_iscale;
-	//frac = dc_texturemid + (dc_yl - centery)*fracstep;
-	frac = (dc_texturemid + FixedMul((dc_yl << FRACBITS) - centeryfrac, fracstep))*(!dc_hires);
+	frac = dc_texturemid + FixedMul((dc_yl << FRACBITS) - centeryfrac, fracstep);
 
 	// Inner loop that does the actual texture mapping, e.g. a DDA-like scaling.
 	// This is as fast as it gets.
@@ -540,14 +692,11 @@ void R_DrawTranslatedColumn_8(void)
 		I_Error("R_DrawTranslatedColumn_8: %d to %d at %d", dc_yl, dc_yh, dc_x);
 #endif
 
-	// FIXME. As above.
-	//dest = ylookup[dc_yl] + columnofs[dc_x];
 	dest = &topleft[dc_yl*vid.width + dc_x];
 
 	// Looks familiar.
 	fracstep = dc_iscale;
-	//frac = dc_texturemid + (dc_yl-centery)*fracstep;
-	frac = (dc_texturemid + FixedMul((dc_yl << FRACBITS) - centeryfrac, fracstep))*(!dc_hires);
+	frac = dc_texturemid + FixedMul((dc_yl << FRACBITS) - centeryfrac, fracstep);
 
 	// Here we do an additional index re-mapping.
 	do
@@ -603,7 +752,7 @@ void R_DrawSpan_8 (void)
 
 	source = ds_source;
 	colormap = ds_colormap;
-	dest = ylookup[ds_y] + columnofs[ds_x1];
+	dest = &topleft[ds_y*vid.width + ds_x1];
 
 	if (dest+8 > deststop)
 		return;
@@ -682,7 +831,7 @@ void R_DrawTiltedSpan_8(void)
 
 	R_CalcSlopeLight();
 
-	dest = ylookup[ds_y] + columnofs[ds_x1];
+	dest = &topleft[ds_y*vid.width + ds_x1];
 	source = ds_source;
 	//colormap = ds_colormap;
 
@@ -804,7 +953,7 @@ void R_DrawTiltedTranslucentSpan_8(void)
 
 	R_CalcSlopeLight();
 
-	dest = ylookup[ds_y] + columnofs[ds_x1];
+	dest = &topleft[ds_y*vid.width + ds_x1];
 	source = ds_source;
 	//colormap = ds_colormap;
 
@@ -926,7 +1075,7 @@ void R_DrawTiltedWaterSpan_8(void)
 
 	R_CalcSlopeLight();
 
-	dest = ylookup[ds_y] + columnofs[ds_x1];
+	dest = &topleft[ds_y*vid.width + ds_x1];
 	dsrc = screens[1] + (ds_y+ds_bgofs)*vid.width + ds_x1;
 	source = ds_source;
 	//colormap = ds_colormap;
@@ -1047,7 +1196,7 @@ void R_DrawTiltedSplat_8(void)
 
 	R_CalcSlopeLight();
 
-	dest = ylookup[ds_y] + columnofs[ds_x1];
+	dest = &topleft[ds_y*vid.width + ds_x1];
 	source = ds_source;
 	//colormap = ds_colormap;
 
@@ -1184,7 +1333,7 @@ void R_DrawSplat_8 (void)
 
 	source = ds_source;
 	colormap = ds_colormap;
-	dest = ylookup[ds_y] + columnofs[ds_x1];
+	dest = &topleft[ds_y*vid.width + ds_x1];
 
 	while (count >= 8)
 	{
@@ -1304,7 +1453,7 @@ void R_DrawTranslucentSplat_8 (void)
 
 	source = ds_source;
 	colormap = ds_colormap;
-	dest = ylookup[ds_y] + columnofs[ds_x1];
+	dest = &topleft[ds_y*vid.width + ds_x1];
 
 	while (count >= 8)
 	{
@@ -1407,7 +1556,7 @@ void R_DrawFloorSprite_8 (void)
 	source = (UINT16 *)ds_source;
 	colormap = ds_colormap;
 	translation = ds_translation;
-	dest = ylookup[ds_y] + columnofs[ds_x1];
+	dest = &topleft[ds_y*vid.width + ds_x1];
 
 	while (count >= 8)
 	{
@@ -1518,7 +1667,7 @@ void R_DrawTranslucentFloorSprite_8 (void)
 	source = (UINT16 *)ds_source;
 	colormap = ds_colormap;
 	translation = ds_translation;
-	dest = ylookup[ds_y] + columnofs[ds_x1];
+	dest = &topleft[ds_y*vid.width + ds_x1];
 
 	while (count >= 8)
 	{
@@ -1613,7 +1762,7 @@ void R_DrawTiltedFloorSprite_8(void)
 	uz = ds_su.z + ds_su.y*(centery-ds_y) + ds_su.x*(ds_x1-centerx);
 	vz = ds_sv.z + ds_sv.y*(centery-ds_y) + ds_sv.x*(ds_x1-centerx);
 
-	dest = ylookup[ds_y] + columnofs[ds_x1];
+	dest = &topleft[ds_y*vid.width + ds_x1];
 	source = (UINT16 *)ds_source;
 	colormap = ds_colormap;
 	translation = ds_translation;
@@ -1722,7 +1871,7 @@ void R_DrawTiltedTranslucentFloorSprite_8(void)
 	uz = ds_su.z + ds_su.y*(centery-ds_y) + ds_su.x*(ds_x1-centerx);
 	vz = ds_sv.z + ds_sv.y*(centery-ds_y) + ds_sv.x*(ds_x1-centerx);
 
-	dest = ylookup[ds_y] + columnofs[ds_x1];
+	dest = &topleft[ds_y*vid.width + ds_x1];
 	source = (UINT16 *)ds_source;
 	colormap = ds_colormap;
 	translation = ds_translation;
@@ -1837,7 +1986,7 @@ void R_DrawTranslucentSpan_8 (void)
 
 	source = ds_source;
 	colormap = ds_colormap;
-	dest = ylookup[ds_y] + columnofs[ds_x1];
+	dest = &topleft[ds_y*vid.width + ds_x1];
 
 	while (count >= 8)
 	{
@@ -1914,7 +2063,7 @@ void R_DrawWaterSpan_8(void)
 
 	source = ds_source;
 	colormap = ds_colormap;
-	dest = ylookup[ds_y] + columnofs[ds_x1];
+	dest = &topleft[ds_y*vid.width + ds_x1];
 	dsrc = screens[1] + (ds_y+ds_bgofs)*vid.width + ds_x1;
 	count = ds_x2 - ds_x1 + 1;
 
@@ -1977,7 +2126,6 @@ void R_DrawFogSpan_8(void)
 	size_t count;
 
 	colormap = ds_colormap;
-	//dest = ylookup[ds_y] + columnofs[ds_x1];
 	dest = &topleft[ds_y *vid.width + ds_x1];
 
 	count = ds_x2 - ds_x1 + 1;
@@ -2007,7 +2155,7 @@ void R_DrawTiltedFogSpan_8(void)
 {
 	int width = ds_x2 - ds_x1;
 
-	UINT8 *dest = ylookup[ds_y] + columnofs[ds_x1];
+	UINT8 *dest = &topleft[ds_y*vid.width + ds_x1];
 
 	R_CalcSlopeLight();
 
@@ -2027,7 +2175,7 @@ void R_DrawSolidColorSpan_8(void)
 	size_t count = (ds_x2 - ds_x1 + 1);
 
 	UINT8 source = ds_colormap[ds_source[0]];
-	UINT8 *dest = ylookup[ds_y] + columnofs[ds_x1];
+	UINT8 *dest = &topleft[ds_y*vid.width + ds_x1];
 
 	memset(dest, source, count);
 }
@@ -2040,7 +2188,7 @@ void R_DrawTransSolidColorSpan_8(void)
 	size_t count = (ds_x2 - ds_x1 + 1);
 
 	UINT8 source = ds_colormap[ds_source[0]];
-	UINT8 *dest = ylookup[ds_y] + columnofs[ds_x1];
+	UINT8 *dest = &topleft[ds_y*vid.width + ds_x1];
 
 	const UINT8 *deststop = screens[0] + vid.rowbytes * vid.height;
 
@@ -2059,7 +2207,7 @@ void R_DrawTiltedSolidColorSpan_8(void)
 	int width = ds_x2 - ds_x1;
 
 	UINT8 source = ds_source[0];
-	UINT8 *dest = ylookup[ds_y] + columnofs[ds_x1];
+	UINT8 *dest = &topleft[ds_y*vid.width + ds_x1];
 
 	R_CalcSlopeLight();
 
@@ -2078,7 +2226,7 @@ void R_DrawTiltedTransSolidColorSpan_8(void)
 	int width = ds_x2 - ds_x1;
 
 	UINT8 source = ds_source[0];
-	UINT8 *dest = ylookup[ds_y] + columnofs[ds_x1];
+	UINT8 *dest = &topleft[ds_y*vid.width + ds_x1];
 
 	R_CalcSlopeLight();
 
@@ -2097,7 +2245,7 @@ void R_DrawWaterSolidColorSpan_8(void)
 {
 	UINT8 source = ds_source[0];
 	UINT8 *colormap = ds_colormap;
-	UINT8 *dest = ylookup[ds_y] + columnofs[ds_x1];
+	UINT8 *dest = &topleft[ds_y*vid.width + ds_x1];
 	UINT8 *dsrc = screens[1] + (ds_y+ds_bgofs)*vid.width + ds_x1;
 
 	size_t count = (ds_x2 - ds_x1 + 1);
@@ -2118,7 +2266,7 @@ void R_DrawTiltedWaterSolidColorSpan_8(void)
 	int width = ds_x2 - ds_x1;
 
 	UINT8 source = ds_source[0];
-	UINT8 *dest = ylookup[ds_y] + columnofs[ds_x1];
+	UINT8 *dest = &topleft[ds_y*vid.width + ds_x1];
 	UINT8 *dsrc = screens[1] + (ds_y+ds_bgofs)*vid.width + ds_x1;
 
 	R_CalcSlopeLight();
@@ -2150,9 +2298,6 @@ void R_DrawFogColumn_8(void)
 #endif
 
 	// Framebuffer destination address.
-	// Use ylookup LUT to avoid multiply with ScreenWidth.
-	// Use columnofs LUT for subwindows?
-	//dest = ylookup[dc_yl] + columnofs[dc_x];
 	dest = &topleft[dc_yl*vid.width + dc_x];
 
 	// Determine scaling, which is the only mapping to be done.

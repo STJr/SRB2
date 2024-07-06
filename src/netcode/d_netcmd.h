@@ -94,7 +94,10 @@ extern consvar_t cv_inttime, cv_coopstarposts, cv_cooplives, cv_advancemap, cv_p
 extern consvar_t cv_overtime;
 extern consvar_t cv_startinglives;
 
-// for F_finale.c
+extern consvar_t cv_gravity, cv_movebob;
+extern consvar_t cv_tailspickup;
+
+// for f_finale.c
 extern consvar_t cv_rollingdemos;
 
 extern consvar_t cv_ringslinger, cv_soundtest;
@@ -104,7 +107,6 @@ extern consvar_t cv_specialrings, cv_powerstones, cv_matchboxes, cv_competitionb
 extern consvar_t cv_maxping;
 extern consvar_t cv_pingtimeout;
 extern consvar_t cv_showping;
-
 
 extern consvar_t cv_skipmapcheck;
 
@@ -141,14 +143,15 @@ typedef enum
 	XD_RUNSOC,      // 16
 	XD_REQADDFILE,  // 17
 	XD_REQADDFOLDER,// 18
-	XD_DELFILE,     // 19
-	XD_UNLOADADDONS,// 20
-	XD_SETMOTD,     // 21
-	XD_SUICIDE,     // 22
-	XD_DEMOTED,     // 23
-	XD_LUACMD,      // 24
-	XD_LUAVAR,      // 25
-	XD_LUAFILE,     // 26
+	XD_SETMOTD,     // 19
+	XD_SUICIDE,     // 20
+	XD_DEMOTED,     // 21
+	XD_LUACMD,      // 22
+	XD_LUAVAR,      // 23
+	XD_LUAFILE,     // 24
+	XD_MUTEPLAYER,  // 25
+	XD_DELFILE,     // 26
+	XD_UNLOADADDONS,// 27
 	MAXNETXCMD
 } netxcmd_t;
 

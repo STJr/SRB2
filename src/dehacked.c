@@ -643,9 +643,5 @@ void DEH_Init(void)
 {
 	deh_loaded = false;
 
-	memset(FREE_STATES,0,sizeof(char *) * NUMSTATEFREESLOTS);
-	memset(FREE_MOBJS,0,sizeof(char *) * NUMMOBJFREESLOTS);
-	memset(FREE_SKINCOLORS,0,sizeof(char *) * NUMCOLORFREESLOTS);
-	memset(used_spr,0,sizeof(UINT8) * ((NUMSPRITEFREESLOTS / 8) + 1));
-	memset(actionsoverridden, LUA_REFNIL, sizeof(actionsoverridden));
+	initfreeslots();
 }

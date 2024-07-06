@@ -25,6 +25,7 @@
 // demoplaying back and demo recording
 extern boolean demoplayback, titledemo, demorecording, timingdemo;
 extern tic_t demostarttime;
+extern UINT16 demoversion;
 
 typedef enum
 {
@@ -34,6 +35,7 @@ typedef enum
 } demo_file_override_e;
 
 extern demo_file_override_e demofileoverride;
+extern consvar_t cv_resyncdemo;
 
 // Quit after playing a demo from cmdline.
 extern boolean singledemo;

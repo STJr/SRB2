@@ -134,7 +134,7 @@ HMS_on_read (char *s, size_t _1, size_t n, void *userdata)
 	return n;
 }
 
-static struct HMS_buffer *
+FUNCDEBUG static struct HMS_buffer *
 HMS_connect (int proto, const char *format, ...)
 {
 	va_list ap;
@@ -486,19 +486,23 @@ int
 HMS_unlist (void)
 {
 	struct HMS_buffer *hms;
-	int ok;
+	int ok = 0;
 
-	hms = HMS_connect(PROTO_V4, "servers/%s/unlist", hms_server_token);
+	if (hms_server_token)
+	{
+		hms = HMS_connect(PROTO_V4, "servers/%s/unlist", hms_server_token);
 
-	if (! hms)
-		return 0;
+		if (! hms)
+			return 0;
 
-	curl_easy_setopt(hms->curl, CURLOPT_CUSTOMREQUEST, "POST");
+		curl_easy_setopt(hms->curl, CURLOPT_POST, 1);
+		curl_easy_setopt(hms->curl, CURLOPT_POSTFIELDSIZE, 0);
 
-	ok = HMS_do(hms);
-	HMS_end(hms);
+		ok = HMS_do(hms);
+		HMS_end(hms);
 
-	free(hms_server_token);
+		free(hms_server_token);
+	}
 
 #ifndef NO_IPV6
 	if (hms_server_token_ipv6 && hms_allow_ipv6)
@@ -508,7 +512,8 @@ HMS_unlist (void)
 		if (! hms)
 			return 0;
 
-		curl_easy_setopt(hms->curl, CURLOPT_CUSTOMREQUEST, "POST");
+		curl_easy_setopt(hms->curl, CURLOPT_POST, 1);
+		curl_easy_setopt(hms->curl, CURLOPT_POSTFIELDSIZE, 0);
 
 		ok = HMS_do(hms);
 		HMS_end(hms);
@@ -524,18 +529,13 @@ int
 HMS_update (void)
 {
 	struct HMS_buffer *hms;
-	int ok;
+	int ok = 0;
 
 	char post[256];
 
 	char *title;
 
-	hms = HMS_connect(PROTO_V4, "servers/%s/update", hms_server_token);
-
-	if (! hms)
-		return 0;
-
-	title = curl_easy_escape(hms->curl, cv_servername.string, 0);
+	title = curl_easy_escape(NULL, cv_servername.string, 0);
 
 	snprintf(post, sizeof post,
 			"title=%s",
@@ -544,10 +544,18 @@ HMS_update (void)
 
 	curl_free(title);
 
-	curl_easy_setopt(hms->curl, CURLOPT_POSTFIELDS, post);
+	if (hms_server_token)
+	{
+		hms = HMS_connect(PROTO_V4, "servers/%s/update", hms_server_token);
 
-	ok = HMS_do(hms);
-	HMS_end(hms);
+		if (! hms)
+			return 0;
+
+		curl_easy_setopt(hms->curl, CURLOPT_POSTFIELDS, post);
+
+		ok = HMS_do(hms);
+		HMS_end(hms);
+	}
 
 #ifndef NO_IPV6
 	if (hms_server_token_ipv6 && hms_allow_ipv6)
