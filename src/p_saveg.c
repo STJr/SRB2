@@ -790,10 +790,10 @@ static void P_NetUnArchivePlayers(save_t *save_p)
 		players[i].charability = P_ReadUINT8(save_p);
 		players[i].charability2 = P_ReadUINT8(save_p);
 		players[i].charflags = P_ReadUINT32(save_p);
-		players[i].thokitem = (mobjtype_t)P_ReadUINT32(save_p);
-		players[i].spinitem = (mobjtype_t)P_ReadUINT32(save_p);
-		players[i].revitem = (mobjtype_t)P_ReadUINT32(save_p);
-		players[i].followitem = (mobjtype_t)P_ReadUINT32(save_p);
+		players[i].thokitem = P_ReadUINT32(save_p);
+		players[i].spinitem = P_ReadUINT32(save_p);
+		players[i].revitem = P_ReadUINT32(save_p);
+		players[i].followitem = P_ReadUINT32(save_p);
 		players[i].actionspd = P_ReadFixed(save_p);
 		players[i].mindash = P_ReadFixed(save_p);
 		players[i].maxdash = P_ReadFixed(save_p);
