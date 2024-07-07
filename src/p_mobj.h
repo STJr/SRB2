@@ -539,6 +539,8 @@ boolean P_SceneryZMovement(mobj_t *mo);
 void P_PlayerZMovement(mobj_t *mo);
 void P_EmeraldManager(void);
 
+mobj_t *P_FindNewPosition(UINT32 oldposition);
+
 extern INT32 modulothing;
 
 #define MAXHUNTEMERALDS 64
