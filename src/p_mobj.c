@@ -96,11 +96,15 @@ static void P_SetupStateAnimation(mobj_t *mobj, state_t *st)
 		animlength = st->var1;
 
 	if (!(st->frame & FF_ANIMATE))
+	{
+		mobj->anim_duration = 0;
 		return;
+	}
 
 	if (animlength <= 0 || st->var2 == 0)
 	{
 		mobj->frame &= ~FF_ANIMATE;
+		mobj->anim_duration = 0;
 		return; // Crash/stupidity prevention
 	}
 
