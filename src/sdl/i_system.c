@@ -271,75 +271,86 @@ SDL_bool framebuffer = SDL_FALSE;
 UINT8 keyboard_started = false;
 
 #ifdef UNIXBACKTRACE
-#define STDERR_WRITE(string) if (fd != -1) I_OutputMsg("%s", string)
-#define CRASHLOG_WRITE(string) if (fd != -1) junk = write(fd, string, strlen(string))
-#define CRASHLOG_STDERR_WRITE(string) \
-	if (fd != -1)\
-		junk = write(fd, string, strlen(string));\
-	I_OutputMsg("%s", string)
+
+static void bt_write_file(int fd, const char *string) {
+	ssize_t written = 0;
+	ssize_t sourcelen = strlen(string);
+
+	while (fd != -1 && (written != -1 && errno != EINTR) && written < sourcelen)
+		written = write(fd, string, sourcelen);
+}
+
+static void bt_write_stderr(const char *string) {
+	bt_write_file(STDERR_FILENO, string);
+}
+
+static void bt_write_all(int fd, const char *string) {
+	bt_write_file(fd, string);
+	bt_write_file(STDERR_FILENO, string);
+}
 
 static void write_backtrace(INT32 signal)
 {
 	int fd = -1;
-#ifndef NOEXECINFO
-	size_t size;
-#endif
 	time_t rawtime;
 	struct tm timeinfo;
-	ssize_t junk;
 
 	enum { BT_SIZE = 1024, STR_SIZE = 32 };
 #ifndef NOEXECINFO
-	void *array[BT_SIZE];
+	void *funcptrs[BT_SIZE];
+	size_t bt_size;
 #endif
 	char timestr[STR_SIZE];
 
-	const char *error = "An error occurred within SRB2! Send this stack trace to someone who can help!\n";
-	const char *error2 = "(Or find crash-log.txt in your SRB2 directory.)\n"; // Shown only to stderr.
+	const char *filename = va("%s" PATHSEP "%s", srb2home, "crash-log.txt");
 
-	fd = open(va("%s" PATHSEP "%s", srb2home, "crash-log.txt"), O_CREAT|O_APPEND|O_RDWR, S_IRUSR|S_IWUSR);
+	fd = open(filename, O_CREAT|O_APPEND|O_RDWR, S_IRUSR|S_IWUSR);
 
-	if (fd == -1)
-		I_OutputMsg("\nWARNING: Couldn't open crash log for writing! Make sure your permissions are correct. Please save the below report!\n");
+	if (fd == -1) // File handle error
+		bt_write_stderr("\nWARNING: Couldn't open crash log for writing! Make sure your permissions are correct. Please save the below report!\n");
 
 	// Get the current time as a string.
 	time(&rawtime);
 	localtime_r(&rawtime, &timeinfo);
 	strftime(timestr, STR_SIZE, "%a, %d %b %Y %T %z", &timeinfo);
 
-	CRASHLOG_WRITE("------------------------\n"); // Nice looking seperator
+	bt_write_file(fd, "------------------------\n"); // Nice looking seperator
 
-	CRASHLOG_STDERR_WRITE("\n"); // Newline to look nice for both outputs.
-	CRASHLOG_STDERR_WRITE(error); // "Oops, SRB2 crashed" message
-	STDERR_WRITE(error2); // Tell the user where the crash log is.
+	bt_write_all(fd, "\n"); // Newline to look nice for both outputs.
+	bt_write_all(fd, "An error occurred within SRB2! Send this stack trace to someone who can help!\n");
+
+	if (fd != -1) // If the crash log exists,
+		bt_write_stderr("(Or find crash-log.txt in your SRB2 directory.)\n"); // tell the user where the crash log is.
 
 	// Tell the log when we crashed.
-	CRASHLOG_WRITE("Time of crash: ");
-	CRASHLOG_WRITE(timestr);
-	CRASHLOG_WRITE("\n");
+	bt_write_file(fd, "Time of crash: ");
+	bt_write_file(fd, timestr);
+	bt_write_file(fd, "\n");
 
 	// Give the crash log the cause and a nice 'Backtrace:' thing
 	// The signal is given to the user when the parent process sees we crashed.
-	CRASHLOG_WRITE("Cause: ");
-	CRASHLOG_WRITE(strsignal(signal));
-	CRASHLOG_WRITE("\n"); // Newline for the signal name
+	bt_write_file(fd, "Cause: ");
+	bt_write_file(fd, strsignal(signal));
+	bt_write_file(fd, "\n"); // Newline for the signal name
 
-#ifndef NOEXECINFO
-	CRASHLOG_STDERR_WRITE("\nBacktrace:\n");
+#ifdef NOEXECINFO
+	bt_write_all(fd, "\nNo Backtrace support\n");
+#else
+	bt_write_all(fd, "\nBacktrace:\n");
 
 	// Flood the output and log with the backtrace
-	size = backtrace(array, BT_SIZE);
-	backtrace_symbols_fd(array, size, fd);
-	backtrace_symbols_fd(array, size, STDERR_FILENO);
+	bt_size = backtrace(funcptrs, BT_SIZE);
+	backtrace_symbols_fd(funcptrs, bt_size, fd);
+	backtrace_symbols_fd(funcptrs, bt_size, STDERR_FILENO);
 #endif
 
-	CRASHLOG_WRITE("\n"); // Write another newline to the log so it looks nice :)
-	(void)junk;
-	close(fd);
+	bt_write_file(fd, "\n"); // Write another newline to the log so it looks nice :)
+	if (fd != -1) {
+		fsync(fd); // reaaaaally make sure we got that data written.
+		close(fd);
+	}
 }
-#undef STDERR_WRITE
-#undef CRASHLOG_WRITE
-#undef CRASHLOG_STDERR_WRITE
+
 #endif // UNIXBACKTRACE
 
 static void I_ReportSignal(int num, int coredumped)
@@ -2976,7 +2987,7 @@ static void pathonly(char *s)
 */
 static const char *searchWad(const char *searchDir)
 {
-	static char tempsw[256] = "";
+	static char tempsw[MAX_WADPATH] = "";
 	filestatus_t fstemp;
 
 	strcpy(tempsw, WADKEYWORD1);
@@ -2992,8 +3003,8 @@ static const char *searchWad(const char *searchDir)
 
 #define CHECKWADPATH(ret) \
 do { \
-	I_OutputMsg(",%s", returnWadPath); \
-	if (isWadPathOk(returnWadPath)) \
+	I_OutputMsg(",%s", ret); \
+	if (isWadPathOk(ret)) \
 		return ret; \
 } while (0)
 
@@ -3022,7 +3033,9 @@ static const char *locateWad(void)
 #ifndef NOCWD
 	// examine current dir
 	strcpy(returnWadPath, ".");
-	CHECKWADPATH(NULL);
+	I_OutputMsg(",%s", returnWadPath);
+	if (isWadPathOk(returnWadPath))
+		return NULL;
 #endif
 
 #ifdef __APPLE__
@@ -3039,9 +3052,16 @@ static const char *locateWad(void)
 
 #ifndef NOHOME
 	// find in $HOME
-	I_OutputMsg(",HOME");
+	I_OutputMsg(",HOME/" DEFAULTDIR);
 	if ((envstr = I_GetEnv("HOME")) != NULL)
-		SEARCHWAD(envstr);
+	{
+		char *tmp = malloc(strlen(envstr) + 1 + sizeof(DEFAULTDIR));
+		strcpy(tmp, envstr);
+		strcat(tmp, "/");
+		strcat(tmp, DEFAULTDIR);
+		CHECKWADPATH(tmp);
+		free(tmp);
+	}
 #endif
 
 	// search paths
@@ -3273,6 +3293,20 @@ void I_RegisterSysCommands(void) {}
 const char *I_GetSysName(void)
 {
 	return SDL_GetPlatform();
+}
+
+
+void I_SetTextInputMode(boolean active)
+{
+	if (active)
+		SDL_StartTextInput();
+	else
+		SDL_StopTextInput();
+}
+
+boolean I_GetTextInputMode(void)
+{
+	return SDL_IsTextInputActive();
 }
 
 #endif

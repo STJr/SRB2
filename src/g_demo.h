@@ -35,6 +35,7 @@ typedef enum
 } demo_file_override_e;
 
 extern demo_file_override_e demofileoverride;
+extern consvar_t cv_resyncdemo;
 
 // Quit after playing a demo from cmdline.
 extern boolean singledemo;

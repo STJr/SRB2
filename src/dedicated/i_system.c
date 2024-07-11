@@ -1390,8 +1390,8 @@ static const char *searchWad(const char *searchDir)
 
 #define CHECKWADPATH(ret) \
 do { \
-	I_OutputMsg(",%s", returnWadPath); \
-	if (isWadPathOk(returnWadPath)) \
+	I_OutputMsg(",%s", ret); \
+	if (isWadPathOk(ret)) \
 		return ret; \
 } while (0)
 
@@ -1416,7 +1416,9 @@ static const char *locateWad(void)
 #ifndef NOCWD
 	// examine current dir
 	strcpy(returnWadPath, ".");
-	CHECKWADPATH(NULL);
+	I_OutputMsg(",%s", returnWadPath);
+	if (isWadPathOk(returnWadPath))
+		return NULL;
 #endif
 
 #ifdef __APPLE__
@@ -1433,9 +1435,15 @@ static const char *locateWad(void)
 
 #ifndef NOHOME
 	// find in $HOME
-	I_OutputMsg(",HOME");
 	if ((envstr = I_GetEnv("HOME")) != NULL)
-		SEARCHWAD(envstr);
+	{
+		char *tmp = malloc(strlen(envstr) + 1 + sizeof(DEFAULTDIR));
+		strcpy(tmp, envstr);
+		strcat(tmp, "/");
+		strcat(tmp, DEFAULTDIR);
+		CHECKWADPATH(tmp);
+		free(tmp);
+	}
 #endif
 
 	// search paths
@@ -1583,6 +1591,16 @@ void I_GetCursorPosition(INT32 *x, INT32 *y)
 {
 	(void)x;
 	(void)y;
+}
+
+void I_SetTextInputMode(boolean active)
+{
+	(void)active;
+}
+
+boolean I_GetTextInputMode(void)
+{
+	return false;
 }
 
 #include "../sdl/dosstr.c"

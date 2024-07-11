@@ -67,6 +67,8 @@ static UINT8 *metalbuffer = NULL;
 static UINT8 *metal_p;
 static UINT16 metalversion;
 
+consvar_t cv_resyncdemo = CVAR_INIT("resyncdemo", "On", 0, CV_OnOff, NULL);
+
 // extra data stuff (events registered this frame while recording)
 static struct {
 	UINT8 flags; // EZT flags
@@ -549,6 +551,9 @@ void G_ConsGhostTic(void)
 
 	testmo = players[0].mo;
 
+	if (P_MobjWasRemoved(testmo))
+		return; // No valid mobj exists, probably because of unexpected quit
+
 	// Grab ghost data.
 	ziptic = READUINT8(demo_p);
 	if (ziptic & GZT_XYZ)
@@ -664,11 +669,14 @@ void G_ConsGhostTic(void)
 			CONS_Alert(CONS_WARNING, M_GetText("Demo playback has desynced!\n"));
 		demosynced = false;
 
-		P_UnsetThingPosition(testmo);
-		testmo->x = oldghost.x;
-		testmo->y = oldghost.y;
-		P_SetThingPosition(testmo);
-		testmo->z = oldghost.z;
+		if (cv_resyncdemo.value)
+		{
+			P_UnsetThingPosition(testmo);
+			testmo->x = oldghost.x;
+			testmo->y = oldghost.y;
+			P_SetThingPosition(testmo);
+			testmo->z = oldghost.z;
+		}
 	}
 
 	if (*demo_p == DEMOMARKER)

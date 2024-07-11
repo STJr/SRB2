@@ -839,8 +839,10 @@ void R_DrawMaskedColumn(column_t *column, unsigned lengthcol)
 	{
 		post_t *post = &column->posts[i];
 
+		dc_postlength = post->length;
+
 		INT32 topscreen = sprtopscreen + spryscale*post->topdelta;
-		INT32 bottomscreen = topscreen + spryscale*post->length;
+		INT32 bottomscreen = topscreen + spryscale*dc_postlength;
 
 		dc_yl = (topscreen+FRACUNIT-1)>>FRACBITS;
 		dc_yh = (bottomscreen-1)>>FRACBITS;
@@ -909,10 +911,12 @@ void R_DrawFlippedMaskedColumn(column_t *column, unsigned lengthcol)
 		if (!post->length)
 			continue;
 
-		topdelta = lengthcol-post->length-post->topdelta;
+		dc_postlength = post->length;
+
+		topdelta = lengthcol-dc_postlength-post->topdelta;
 		topscreen = sprtopscreen + spryscale*topdelta;
-		bottomscreen = sprbotscreen == INT32_MAX ? topscreen + spryscale*post->length
-		                                      : sprbotscreen + spryscale*post->length;
+		bottomscreen = sprbotscreen == INT32_MAX ? topscreen + spryscale*dc_postlength
+		                                      : sprbotscreen + spryscale*dc_postlength;
 
 		dc_yl = (topscreen+FRACUNIT-1)>>FRACBITS;
 		dc_yh = (bottomscreen-1)>>FRACBITS;
@@ -990,6 +994,12 @@ UINT8 *R_GetTranslationForThing(mobj_t *mobj, skincolornum_t color, UINT16 trans
 		return R_GetTranslationColormap(TC_DEFAULT, SKINCOLOR_BLUE, GTC_CACHE);
 
 	return NULL;
+}
+
+// Based off of R_GetLinedefTransTable
+transnum_t R_GetThingTransTable(fixed_t alpha, transnum_t transmap)
+{
+	return (20*(FRACUNIT - ((alpha * (10 - transmap))/10) - 1) + FRACUNIT) >> (FRACBITS+1);
 }
 
 //
@@ -1497,6 +1507,7 @@ static void R_ProjectDropShadow(mobj_t *thing, vissprite_t *vis, fixed_t scale, 
 	floordiff = abs((isflipped ? interp.height : 0) + interp.z - groundz);
 
 	trans = floordiff / (100*FRACUNIT) + 3;
+	trans = R_GetThingTransTable(thing->alpha, trans);
 	if (trans >= 9) return;
 
 	scalemul = FixedMul(FRACUNIT - floordiff/640, scale);
@@ -1770,6 +1781,10 @@ static void R_ProjectSprite(mobj_t *thing)
 	}
 
 	this_scale = interp.scale;
+
+	if (this_scale < 1)
+		return;
+
 	radius = interp.radius; // For drop shadows
 	height = interp.height; // Ditto
 
@@ -2183,6 +2198,11 @@ static void R_ProjectSprite(mobj_t *thing)
 	}
 	else
 		trans = 0;
+	
+	if ((oldthing->flags2 & MF2_LINKDRAW) && oldthing->tracer)
+		trans = R_GetThingTransTable(oldthing->tracer->alpha, trans);
+	else
+		trans = R_GetThingTransTable(oldthing->alpha, trans);
 
 	// Check if this sprite needs to be rendered like a shadow
 	shadowdraw = (!!(thing->renderflags & RF_SHADOWDRAW) && !(papersprite || splat));
@@ -3644,6 +3664,7 @@ boolean R_ThingVisible (mobj_t *thing)
 		(thing->sprite == SPR_NULL) || // Don't draw null-sprites
 		(thing->flags2 & MF2_DONTDRAW) || // Don't draw MF2_LINKDRAW objects
 		(thing->drawonlyforplayer && thing->drawonlyforplayer != viewplayer) || // Don't draw other players' personal objects
+		(!R_BlendLevelVisible(thing->blendmode, R_GetThingTransTable(thing->alpha, 0))) ||
 		(!P_MobjWasRemoved(r_viewmobj) && (
 		  (r_viewmobj == thing) || // Don't draw first-person players or awayviewmobj objects
 		  (r_viewmobj->player && r_viewmobj->player->followmobj == thing) || // Don't draw first-person players' followmobj

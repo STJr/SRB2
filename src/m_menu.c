@@ -140,6 +140,7 @@ static char *char_notes = NULL;
 
 boolean menuactive = false;
 boolean fromlevelselect = false;
+tic_t shieldprompt_timer = 0; // Show a prompt about the new Shield button for old configs // TODO: 2.3: Remove
 
 typedef enum
 {
@@ -263,7 +264,7 @@ static void M_ConfirmTeamScramble(INT32 choice);
 static void M_ConfirmTeamChange(INT32 choice);
 static void M_SecretsMenu(INT32 choice);
 static void M_SetupChoosePlayer(INT32 choice);
-static UINT16 M_SetupChoosePlayerDirect(INT32 choice);
+static INT32 M_SetupChoosePlayerDirect(INT32 choice);
 static void M_QuitSRB2(INT32 choice);
 menu_t SP_MainDef, OP_MainDef;
 menu_t MISC_ScrambleTeamDef, MISC_ChangeTeamDef;
@@ -2102,6 +2103,12 @@ menu_t OP_PlaystyleDef = {
 	0, 0, 0, NULL
 };
 
+static void M_UpdateItemOn(void)
+{
+	I_SetTextInputMode((currentMenu->menuitems[itemOn].status & IT_CVARTYPE) == IT_CV_STRING ||
+		(currentMenu->menuitems[itemOn].status & IT_TYPE) == IT_KEYHANDLER);
+}
+
 static void M_VideoOptions(INT32 choice)
 {
 	(void)choice;
@@ -2329,6 +2336,7 @@ void Nextmap_OnChange(void)
 		{
 			currentMenu->lastOn = itemOn;
 			itemOn = nastart;
+			M_UpdateItemOn();
 		}
 	}
 	else if (currentMenu == &SP_TimeAttackDef)
@@ -2378,6 +2386,7 @@ void Nextmap_OnChange(void)
 		{
 			currentMenu->lastOn = itemOn;
 			itemOn = tastart;
+			M_UpdateItemOn();
 		}
 
 		if (mapheaderinfo[cv_nextmap.value-1] && mapheaderinfo[cv_nextmap.value-1]->forcecharacter[0] != '\0')
@@ -3128,6 +3137,7 @@ static void M_NextOpt(void)
 		else
 			itemOn++;
 	} while (oldItemOn != itemOn && ( (currentMenu->menuitems[itemOn].status & IT_TYPE) & IT_SPACE ));
+	M_UpdateItemOn();
 }
 
 static void M_PrevOpt(void)
@@ -3140,6 +3150,7 @@ static void M_PrevOpt(void)
 		else
 			itemOn--;
 	} while (oldItemOn != itemOn && ( (currentMenu->menuitems[itemOn].status & IT_TYPE) & IT_SPACE ));
+	M_UpdateItemOn();
 }
 
 // lock out further input in a tic when important buttons are pressed
@@ -3151,6 +3162,7 @@ static void Command_Manual_f(void)
 	if (modeattacking)
 		return;
 	M_StartControlPanel();
+	if (shieldprompt_timer) return; // TODO: 2.3: Delete this line
 	currentMenu = &MISC_HelpDef;
 	itemOn = 0;
 }
@@ -3330,6 +3342,7 @@ boolean M_Responder(event_t *ev)
 				if (modeattacking)
 					return true;
 				M_StartControlPanel();
+				if (shieldprompt_timer) return true; // TODO: 2.3: Delete this line
 				M_Options(0);
 				// Uncomment the below if you want the menu to reset to the top each time like before. M_SetupNextMenu will fix it automatically.
 				//OP_SoundOptionsDef.lastOn = 0;
@@ -3340,6 +3353,7 @@ boolean M_Responder(event_t *ev)
 				if (modeattacking)
 					return true;
 				M_StartControlPanel();
+				if (shieldprompt_timer) return true; // TODO: 2.3: Delete this line
 				M_Options(0);
 				M_VideoModeMenu(0);
 				return true;
@@ -3351,6 +3365,7 @@ boolean M_Responder(event_t *ev)
 				if (modeattacking)
 					return true;
 				M_StartControlPanel();
+				if (shieldprompt_timer) return true; // TODO: 2.3: Delete this line
 				M_Options(0);
 				M_SetupNextMenu(&OP_MainDef);
 				return true;
@@ -3621,6 +3636,230 @@ void M_Drawer(void)
 	}
 }
 
+// Handle the "Do you want to assign Shield Ability now?" pop-up for old configs // TODO: 2.3: Remove this line...
+static UINT8 shieldprompt_currentchoice = 0; // ...and this line...
+
+static void M_ShieldPromptUseDefaults(void) // ...and this function
+{
+	// With a default config from v2.2.10 to v2.2.13, the B button will be set to Custom 1,
+	// and Controls per Key defaults to "One", so it will override the default Shield button.
+	// A default config from v2.2.0 to v2.2.9 has Next Weapon on B, so it suffers from this too.
+
+	// So for "Use default Shield Ability buttons", we should update old configs to mitigate gamepad conflicts
+	// (even with "Several" Controls per Key!), and show a message with the default bindings
+
+	for (setupcontrols = gamecontrol; true; setupcontrols = gamecontrolbis) // Do stuff for both P1 and P2
+	{
+		INT32 JOY1 = (setupcontrols == gamecontrol) ? KEY_JOY1 : KEY_2JOY1; // Is this for P1 or for P2?
+
+		if ((setupcontrols[GC_CUSTOM1][0] == JOY1+1 || setupcontrols[GC_CUSTOM1][1] == JOY1+1)
+		&&  (setupcontrols[GC_CUSTOM2][0] == JOY1+3 || setupcontrols[GC_CUSTOM2][1] == JOY1+3)
+		&&  (setupcontrols[GC_CUSTOM3][0] == JOY1+8 || setupcontrols[GC_CUSTOM3][1] == JOY1+8))
+		{
+			// If the player has v2.2.13's default gamepad Custom 1/2/3 buttons,
+			// shuffle Custom 1/2/3 around to make room for Shield Ability on B
+			UINT8 shield_slot  = (setupcontrols[GC_SHIELD ][0] == KEY_NULL  ) ? 0 : 1;
+			UINT8 custom1_slot = (setupcontrols[GC_CUSTOM1][0] == JOY1+1) ? 0 : 1;
+			UINT8 custom2_slot = (setupcontrols[GC_CUSTOM2][0] == JOY1+3) ? 0 : 1;
+			UINT8 custom3_slot = (setupcontrols[GC_CUSTOM3][0] == JOY1+8) ? 0 : 1;
+
+			setupcontrols[GC_SHIELD ][shield_slot ] = JOY1+1; // Assign Shield Ability to B
+			setupcontrols[GC_CUSTOM1][custom1_slot] = JOY1+3; // Move Custom 1 from B to Y
+			setupcontrols[GC_CUSTOM2][custom2_slot] = JOY1+8; // Move Custom 2 from Y to LS
+			setupcontrols[GC_CUSTOM3][custom3_slot] = KEY_NULL; // Unassign Custom 3 from LS...
+			// (The alternative would be to check and update the ENTIRE gamepad layout.
+			// That'd be nice, but it would mess with people that are used to the old defaults.)
+		}
+		else if ((setupcontrols[GC_WEAPONNEXT][0] == JOY1+1 || setupcontrols[GC_WEAPONNEXT][1] == JOY1+1)
+		&&       (setupcontrols[GC_WEAPONPREV][0] == JOY1+2 || setupcontrols[GC_WEAPONPREV][1] == JOY1+2))
+		{
+			// Or if the user has a default config from v2.2.0 to v2.2.9,
+			// the B button will be Next Weapon, and X will be Previous Weapon.
+			// It's "safe" to discard one of them, you just have to press X multiple times to select in the other direction
+			UINT8 shield_slot  = (setupcontrols[GC_SHIELD    ][0] == KEY_NULL  ) ? 0 : 1;
+			UINT8 nweapon_slot = (setupcontrols[GC_WEAPONNEXT][0] == JOY1+1) ? 0 : 1;
+			UINT8 pweapon_slot = (setupcontrols[GC_WEAPONPREV][0] == JOY1+2) ? 0 : 1;
+
+			setupcontrols[GC_SHIELD    ][shield_slot ] = JOY1+1; // Assign Shield Ability to B
+			setupcontrols[GC_WEAPONNEXT][nweapon_slot] = JOY1+3; // Move Next Weapon from B to X
+			setupcontrols[GC_WEAPONPREV][pweapon_slot] = KEY_NULL; // Unassign Previous Weapon from X
+		}
+
+		if (setupcontrols == gamecontrolbis) // If we've already updated both players, break out
+			break;
+	}
+
+
+	// Now, show a message about the default Shield Ability bindings
+	if ((gamecontrol[GC_SHIELD][0] == KEY_LALT && gamecontrol[GC_SHIELD][1] == KEY_JOY1+1)
+	||  (gamecontrol[GC_SHIELD][0] == KEY_JOY1+1 && gamecontrol[GC_SHIELD][1] == KEY_LALT))
+	{
+		// Left Alt and the B button are both assigned
+		M_StartMessage(M_GetText("Shield Ability defaults to\nthe \x82""Left Alt\x80"" key on keyboard,\nand the \x85""B button\x80"" on gamepads."
+		"\n\nYou can always reassign it\nin the Options menu later."
+		"\n\n\nPress 'Enter' to continue\n"),
+			NULL, MM_NOTHING);
+		MessageDef.x = 43; // Change the pop-up message's background position/width
+		MessageDef.lastOn = (MessageDef.lastOn & ~0xFF) | 27;
+	}
+	else if (gamecontrol[GC_SHIELD][0] == KEY_LALT || gamecontrol[GC_SHIELD][1] == KEY_LALT)
+	{
+		// Left Alt is assigned, but the B button isn't.
+		M_StartMessage(M_GetText("Shield Ability defaults to\nthe \x82""Left Alt\x80"" key on keyboard.\nThe \x85""B button\x80"" on gamepads was taken."
+		"\n\nYou can always reassign it\nin the Options menu later."
+		"\n\n\nPress 'Enter' to continue\n"),
+			NULL, MM_NOTHING);
+		MessageDef.x = 24; // Change the pop-up message's background position/width
+		MessageDef.lastOn = (MessageDef.lastOn & ~0xFF) | 32;
+	}
+	else if (gamecontrol[GC_SHIELD][0] == KEY_JOY1+1 || gamecontrol[GC_SHIELD][1] == KEY_JOY1+1)
+	{
+		// The B button is assigned, but Left Alt isn't
+		M_StartMessage(M_GetText("Shield Ability defaults to\nthe \x85""B button\x80"" on gamepads.\nThe \x82""Left Alt\x80"" key on keyboard was taken."
+		"\n\nYou can always reassign it\nin the Options menu later."
+		"\n\n\nPress 'Enter' to continue\n"),
+			NULL, MM_NOTHING);
+		MessageDef.x = 8; // Change the pop-up message's background position/width
+		MessageDef.lastOn = (MessageDef.lastOn & ~0xFF) | 36;
+	}
+	else if (gamecontrol[GC_SHIELD][0] == KEY_NULL && gamecontrol[GC_SHIELD][1] == KEY_NULL)
+	{
+		// Neither Left Alt nor the B button are assigned
+		M_StartMessage(M_GetText("Shield Ability is unassigned!\nThe \x82""Left Alt\x80"" key on keyboard and\nthe \x85""B button\x80"" on gamepads were taken."
+		"\n\nYou should assign Shield Ability\nin the Options menu later."
+		"\n\n\nPress 'Enter' to continue\n"),
+			NULL, MM_NOTHING);
+		MessageDef.x = 19; // Change the pop-up message's background position/width
+		MessageDef.lastOn = (MessageDef.lastOn & ~0xFF) | 33;
+	}
+	else
+	{
+		// Neither Left Alt nor the B button are assigned... but something else is???
+		// (This can technically happen if you edit your config or use setcontrol in the console before opening the menu)
+		char keystr[16+16+2+7+1]; // Two 16-char keys + two colour codes + "' and '" + null
+
+		if (gamecontrol[GC_SHIELD][0] != KEY_NULL && gamecontrol[GC_SHIELD][1] != KEY_NULL)
+			STRBUFCPY(keystr, va("%s\x80""' and '\x82""%s",
+				G_KeyNumToName(gamecontrol[GC_SHIELD][0]),
+				G_KeyNumToName(gamecontrol[GC_SHIELD][1])));
+		else if (gamecontrol[GC_SHIELD][0] != KEY_NULL)
+			STRBUFCPY(keystr, G_KeyNumToName(gamecontrol[GC_SHIELD][0]));
+		else //if (gamecontrol[GC_SHIELD][1] != KEY_NULL)
+			STRBUFCPY(keystr, G_KeyNumToName(gamecontrol[GC_SHIELD][1]));
+
+		M_StartMessage(va("Shield Ability is assigned to\n'\x82""%s\x80""'."
+		"\n\nYou can always reassign it\nin the Options menu later."
+		"\n\n\nPress 'Enter' to continue\n",
+			keystr), NULL, MM_NOTHING);
+		MessageDef.x = 23; // Change the pop-up message's background position/width
+		MessageDef.lastOn = (MessageDef.lastOn & ~0xFF) | 32;
+	}
+}
+
+static void M_HandleShieldPromptMenu(INT32 choice) // TODO: 2.3: Remove
+{
+	switch (choice)
+	{
+		case KEY_ESCAPE:
+			if (I_GetTime() <= shieldprompt_timer) // Don't mash past the pop-up by accident!
+				break;
+
+			S_StartSound(NULL, sfx_menu1);
+			noFurtherInput = true;
+			shieldprompt_timer = 0;
+			M_ShieldPromptUseDefaults();
+			break;
+
+		case KEY_ENTER:
+			if (I_GetTime() <= shieldprompt_timer) // Don't mash past the pop-up by accident!
+				break;
+
+			S_StartSound(NULL, sfx_menu1);
+			noFurtherInput = true;
+			shieldprompt_timer = 0;
+
+			if (shieldprompt_currentchoice == 0)
+			{
+				OP_ChangeControlsDef.lastOn = 8; // Highlight Shield Ability in the controls menu
+				M_Setup1PControlsMenu(0); // Set up P1's controls menu and call M_SetupNextMenu
+			}
+			else if (shieldprompt_currentchoice == 1) // Copy the Spin buttons to the Shield buttons
+			{
+				CV_SetValue(&cv_controlperkey, 2); // Make sure that Controls per Key is "Several"
+
+				gamecontrol   [GC_SHIELD][0] = gamecontrol   [GC_SPIN][0];
+				gamecontrol   [GC_SHIELD][1] = gamecontrol   [GC_SPIN][1];
+				gamecontrolbis[GC_SHIELD][0] = gamecontrolbis[GC_SPIN][0];
+				gamecontrolbis[GC_SHIELD][1] = gamecontrolbis[GC_SPIN][1];
+				CV_SetValue(&cv_shieldaxis,  cv_spinaxis.value);
+				CV_SetValue(&cv_shieldaxis2, cv_spinaxis2.value);
+
+				M_StartMessage(M_GetText("Spin and Shield Ability are now\nthe same button."
+				"\n\nYou can always reassign them\nin the Options menu later."
+				"\n\n\nPress 'Enter' to continue\n"),
+					NULL, MM_NOTHING);
+				MessageDef.x = 36; // Change the pop-up message's background position/width
+				MessageDef.lastOn = (MessageDef.lastOn & ~0xFF) | 29;
+			}
+			else
+				M_ShieldPromptUseDefaults();
+			break;
+
+		case KEY_UPARROW:
+			S_StartSound(NULL, sfx_menu1);
+			shieldprompt_currentchoice = (shieldprompt_currentchoice+2)%3;
+			break;
+
+		case KEY_DOWNARROW:
+			S_StartSound(NULL, sfx_menu1);
+			shieldprompt_currentchoice = (shieldprompt_currentchoice+1)%3;
+			break;
+	}
+
+	MessageDef.prevMenu = &MainDef;
+}
+
+static void M_DrawShieldPromptMenu(void) // TODO: 2.3: Remove
+{
+	INT16 cursorx = (BASEVIDWIDTH/2) - 24;
+
+	V_DrawFill(10-3, 68-3, 300+6, 40+6, 159);
+	// V_DrawCenteredString doesn't centre newlines, so we have to draw each line separately
+	V_DrawCenteredString(BASEVIDWIDTH/2, 68, V_ALLOWLOWERCASE, "Welcome back! Since you last played,");
+	V_DrawCenteredString(BASEVIDWIDTH/2, 76, V_ALLOWLOWERCASE, "Spin has been split into separate");
+	V_DrawCenteredString(BASEVIDWIDTH/2, 84, V_ALLOWLOWERCASE, "\"Spin\" and \"Shield Ability\" controls.");
+
+	V_DrawCenteredString(BASEVIDWIDTH/2, 98, V_ALLOWLOWERCASE, "Do you want to assign Shield Ability now?");
+
+
+	V_DrawCenteredString(BASEVIDWIDTH/2, 164,
+		(shieldprompt_currentchoice == 0) ? V_YELLOWMAP : 0, "Open Control Setup");
+	V_DrawCenteredString(BASEVIDWIDTH/2, 172,
+		(shieldprompt_currentchoice == 1) ? V_YELLOWMAP : 0, "Keep the old behaviour");
+	V_DrawCenteredString(BASEVIDWIDTH/2, 180,
+		(shieldprompt_currentchoice == 2) ? V_YELLOWMAP : 0, "Use default Shield Ability buttons");
+
+	switch (shieldprompt_currentchoice)
+	{
+		case 0:  cursorx -= V_StringWidth("Open Control Setup",                 0)/2; break;
+		case 1:  cursorx -= V_StringWidth("Keep the old behaviour",             0)/2; break;
+		default: cursorx -= V_StringWidth("Use default Shield Ability buttons", 0)/2; break;
+	}
+	V_DrawScaledPatch(cursorx, 164 + (shieldprompt_currentchoice*8), 0, W_CachePatchName("M_CURSOR", PU_PATCH));
+}
+
+static menuitem_t OP_ShieldPromptMenu[] = {{IT_KEYHANDLER | IT_NOTHING, NULL, "", M_HandleShieldPromptMenu, 0}}; // TODO: 2.3: Remove
+
+menu_t OP_ShieldPromptDef = { // TODO: 2.3: Remove
+	MN_SPECIAL,
+	NULL,
+	1,
+	&MainDef,
+	OP_ShieldPromptMenu,
+	M_DrawShieldPromptMenu,
+	0, 0, 0, NULL
+};
+
 //
 // M_StartControlPanel
 //
@@ -3651,18 +3890,29 @@ void M_StartControlPanel(void)
 
 		currentMenu = &MainDef;
 		itemOn = singleplr;
+		M_UpdateItemOn();
+
+		if (shieldprompt_timer) // For old configs, show a pop-up about the new Shield button // TODO: 2.3: Remove
+		{
+			S_StartSound(NULL, sfx_strpst);
+			noFurtherInput = true;
+			shieldprompt_timer = I_GetTime() + TICRATE; // Don't mash past the pop-up by accident!
+
+			M_SetupNextMenu(&OP_ShieldPromptDef);
+		}
 	}
 	else if (modeattacking)
 	{
 		currentMenu = &MAPauseDef;
 		MAPauseMenu[mapause_hints].status = (M_SecretUnlocked(SECRET_EMBLEMHINTS, clientGamedata)) ? (IT_STRING | IT_CALL) : (IT_DISABLED);
 		itemOn = mapause_continue;
+		M_UpdateItemOn();
 	}
 	else if (!(netgame || multiplayer)) // Single Player
 	{
 		// Devmode unlocks Pandora's Box in the pause menu
 		boolean pandora = ((M_SecretUnlocked(SECRET_PANDORA, serverGamedata) || cv_debug || devparm) && !marathonmode);
-		
+
 		if (gamestate != GS_LEVEL || ultimatemode) // intermission, so gray out stuff.
 		{
 			SPauseMenu[spause_pandora].status = (pandora) ? (IT_GRAYEDOUT) : (IT_DISABLED);
@@ -3703,6 +3953,7 @@ void M_StartControlPanel(void)
 
 		currentMenu = &SPauseDef;
 		itemOn = spause_continue;
+		M_UpdateItemOn();
 	}
 	else // multiplayer
 	{
@@ -3744,6 +3995,7 @@ void M_StartControlPanel(void)
 
 		currentMenu = &MPauseDef;
 		itemOn = mpause_continue;
+		M_UpdateItemOn();
 	}
 
 	CON_ToggleOff(); // move away console
@@ -3837,6 +4089,7 @@ void M_SetupNextMenu(menu_t *menudef)
 			}
 		}
 	}
+	M_UpdateItemOn();
 
 	hidetitlemap = false;
 }
@@ -4015,11 +4268,11 @@ static void M_DrawThermo(INT32 x, INT32 y, consvar_t *cv)
 	lumpnum_t leftlump, rightlump, centerlump[2], cursorlump;
 	patch_t *p;
 
-	leftlump = W_GetNumForName("M_THERML");
-	rightlump = W_GetNumForName("M_THERMR");
-	centerlump[0] = W_GetNumForName("M_THERMM");
-	centerlump[1] = W_GetNumForName("M_THERMM");
-	cursorlump = W_GetNumForName("M_THERMO");
+	leftlump = W_GetNumForPatchName("M_THERML");
+	rightlump = W_GetNumForPatchName("M_THERMR");
+	centerlump[0] = W_GetNumForPatchName("M_THERMM");
+	centerlump[1] = W_GetNumForPatchName("M_THERMM");
+	cursorlump = W_GetNumForPatchName("M_THERMO");
 
 	V_DrawScaledPatch(xx, y, 0, p = W_CachePatchNum(leftlump,PU_PATCH));
 	xx += p->width - p->leftoffset;
@@ -4141,7 +4394,7 @@ static void M_DrawStaticBox(fixed_t x, fixed_t y, INT32 flags, fixed_t w, fixed_
 			temp = (gametic % temp) * h*2*FRACUNIT; // Which frame to draw
 
 		V_DrawCroppedPatch(x*FRACUNIT, y*FRACUNIT, (w*FRACUNIT) / 160, (h*FRACUNIT) / 100, flags, patch, NULL, 0, temp, w*2*FRACUNIT, h*2*FRACUNIT);
-		
+
 		W_UnlockCachedPatch(patch);
 		return;
 	}
@@ -6109,6 +6362,7 @@ void M_StartMessage(const char *string, void *routine, menumessagetype_t itemtyp
 
 	currentMenu = &MessageDef;
 	itemOn = 0;
+	M_UpdateItemOn();
 }
 
 static void M_DrawMessageMenu(void)
@@ -6183,6 +6437,7 @@ static void M_HandleImageDef(INT32 choice)
 			if (itemOn >= (INT16)(currentMenu->numitems-1))
 				itemOn = 0;
             else itemOn++;
+			M_UpdateItemOn();
 			break;
 
 		case KEY_LEFTARROW:
@@ -6193,6 +6448,7 @@ static void M_HandleImageDef(INT32 choice)
 			if (!itemOn)
 				itemOn = currentMenu->numitems - 1;
 			else itemOn--;
+			M_UpdateItemOn();
 			break;
 
 		case KEY_ESCAPE:
@@ -6982,7 +7238,10 @@ static void M_LevelSelectWarp(INT32 choice)
 	if (currentMenu == &SP_LevelSelectDef || currentMenu == &SP_PauseLevelSelectDef)
 	{
 		if (cursaveslot > 0) // do we have a save slot to load?
+		{
+			CV_StealthSet(&cv_skin, DEFAULTSKIN); // already handled by loadgame so we don't want this
 			G_LoadGame((UINT32)cursaveslot, startmap); // reload from SP save data: this is needed to keep score/lives/continues from reverting to defaults
+		}
 		else // no save slot, start new game but keep the current skin
 		{
 			M_ClearMenus(true);
@@ -7389,6 +7648,7 @@ static void M_EmblemHints(INT32 choice)
 	SR_EmblemHintDef.prevMenu = currentMenu;
 	M_SetupNextMenu(&SR_EmblemHintDef);
 	itemOn = 2; // always start on back.
+	M_UpdateItemOn();
 }
 
 static void M_DrawEmblemHints(void)
@@ -8350,7 +8610,7 @@ static void M_DrawLoadGameData(void)
 				if (savegameinfo[savetodraw].lives == -42)
 					col = 26;
 				else if (savegameinfo[savetodraw].botskin == 3) // & knuckles
-					col = 105;
+					col = 106;
 				else if (savegameinfo[savetodraw].botskin) // tailsbot or custom
 					col = 134;
 				else
@@ -8410,7 +8670,17 @@ static void M_DrawLoadGameData(void)
 			if (savegameinfo[savetodraw].lives == -42)
 				V_DrawRightAlignedThinString(x + 79, y, V_GRAYMAP, "NEW GAME");
 			else if (savegameinfo[savetodraw].lives == -666)
-				V_DrawRightAlignedThinString(x + 79, y, V_REDMAP, "CAN'T LOAD!");
+			{
+				if (savegameinfo[savetodraw].continuescore == -62)
+				{
+					V_DrawRightAlignedThinString(x + 79, y, V_REDMAP, "ADDON NOT LOADED");
+					V_DrawRightAlignedThinString(x + 79, y-10, V_REDMAP, savegameinfo[savetodraw].skinname);
+				}
+				else
+				{
+					V_DrawRightAlignedThinString(x + 79, y, V_REDMAP, "CAN'T LOAD!");
+				}
+			}
 			else if (savegameinfo[savetodraw].gamemap & 8192)
 				V_DrawRightAlignedThinString(x + 79, y, V_GREENMAP, "CLEAR!");
 			else
@@ -8630,14 +8900,20 @@ static void M_LoadSelect(INT32 choice)
 		M_NewGame();
 	}
 	else if (savegameinfo[saveSlotSelected-1].gamemap & 8192) // Completed
+	{
 		M_LoadGameLevelSelect(0);
+	}
 	else
+	{
+		CV_StealthSet(&cv_skin, DEFAULTSKIN); // already handled by loadgame so we don't want this
 		G_LoadGame((UINT32)saveSlotSelected, 0);
+	}
 
 	cursaveslot = saveSlotSelected;
 }
 
 #define VERSIONSIZE 16
+#define MISSING { savegameinfo[slot].continuescore = -62; savegameinfo[slot].lives = -666; Z_Free(savebuffer); return; }
 #define BADSAVE { savegameinfo[slot].lives = -666; Z_Free(savebuffer); return; }
 #define CHECKPOS if (sav_p >= end_p) BADSAVE
 // Reads the save file to list lives, level, player, etc.
@@ -8734,10 +9010,11 @@ static void M_ReadSavegameInfo(UINT32 slot)
 		CHECKPOS
 		READSTRINGN(sav_p, ourSkinName, SKINNAMESIZE);
 		savegameinfo[slot].skinnum = R_SkinAvailable(ourSkinName);
+		STRBUFCPY(savegameinfo[slot].skinname, ourSkinName);
 
 		if (savegameinfo[slot].skinnum >= numskins
 		|| !R_SkinUsable(-1, savegameinfo[slot].skinnum))
-			BADSAVE
+			MISSING
 
 		CHECKPOS
 		READSTRINGN(sav_p, botSkinName, SKINNAMESIZE);
@@ -8745,7 +9022,7 @@ static void M_ReadSavegameInfo(UINT32 slot)
 
 		if (savegameinfo[slot].botskin-1 >= numskins
 		|| !R_SkinUsable(-1, savegameinfo[slot].botskin-1))
-			BADSAVE
+			MISSING
 	}
 
 	CHECKPOS
@@ -8790,6 +9067,7 @@ static void M_ReadSavegameInfo(UINT32 slot)
 }
 #undef CHECKPOS
 #undef BADSAVE
+#undef MISSING
 
 //
 // M_ReadSaveStrings
@@ -9053,7 +9331,7 @@ static void M_CacheCharacterSelectEntry(INT32 i, INT32 skinnum)
 		description[i].namepic = W_CachePatchName(description[i].nametag, PU_PATCH);
 }
 
-static UINT16 M_SetupChoosePlayerDirect(INT32 choice)
+static INT32 M_SetupChoosePlayerDirect(INT32 choice)
 {
 	INT32 skinnum, botskinnum;
 	UINT16 i;
@@ -9142,7 +9420,7 @@ static UINT16 M_SetupChoosePlayerDirect(INT32 choice)
 
 static void M_SetupChoosePlayer(INT32 choice)
 {
-	UINT16 skinset = M_SetupChoosePlayerDirect(choice);
+	INT32 skinset = M_SetupChoosePlayerDirect(choice);
 	if (skinset != MAXCHARACTERSLOTS)
 	{
 		M_ChoosePlayer(skinset);
@@ -9490,6 +9768,8 @@ static void M_ChoosePlayer(INT32 choice)
 
 	//lastmapsaved = 0;
 	gamecomplete = 0;
+
+	CV_StealthSet(&cv_skin, skins[skinnum]->name);
 
 	G_DeferedInitNew(ultmode, G_BuildMapName(startmap), skinnum, false, fromlevelselect);
 	COM_BufAddText("dummyconsvar 1\n"); // G_DeferedInitNew doesn't do this
@@ -10050,6 +10330,7 @@ static void M_TimeAttack(INT32 choice)
 		Nextmap_OnChange();
 
 	itemOn = tastart; // "Start" is selected.
+	M_UpdateItemOn();
 }
 
 // Drawing function for Nights Attack
@@ -10166,7 +10447,7 @@ void M_DrawNightsAttackMenu(void)
 			skinnumber = 0; //Default to Sonic
 		else
 			skinnumber = (cv_chooseskin.value-1);
-			
+
 		spritedef_t *sprdef = &skins[skinnumber]->sprites[SPR2_NFLY]; //Make our patch the selected character's NFLY sprite
 		spritetimer = FixedInt(ntsatkdrawtimer/2) % skins[skinnumber]->sprites[SPR2_NFLY].numframes; //Make the sprite timer cycle though all the frames at 2 tics per frame
 		spriteframe_t *sprframe = &sprdef->spriteframes[spritetimer]; //Our animation frame is equal to the number on the timer
@@ -10179,11 +10460,14 @@ void M_DrawNightsAttackMenu(void)
 			color = skins[skinnumber]->supercolor+4;
 		else //If you don't go super in NiGHTS or at all, use prefcolor
 			color = skins[skinnumber]->prefcolor;
-				
+
 		angle_t fa = (FixedAngle(((FixedInt(ntsatkdrawtimer * 4)) % 360)<<FRACBITS)>>ANGLETOFINESHIFT) & FINEMASK;
+		fixed_t scale = skins[skinnumber]->highresscale;
+		if (skins[skinnumber]->shieldscale)
+			scale = FixedDiv(scale, skins[skinnumber]->shieldscale);
 
 		V_DrawFixedPatch(270<<FRACBITS, (186<<FRACBITS) - 8*FINESINE(fa),
-						 FixedDiv(skins[skinnumber]->highresscale, skins[skinnumber]->shieldscale), 
+						 scale,
 						 (sprframe->flip & 1<<6) ? V_FLIP : 0,
 						 natksprite,
 						 R_GetTranslationColormap(TC_BLINK, color, GTC_CACHE));
@@ -10288,6 +10572,7 @@ static void M_NightsAttack(INT32 choice)
 		Nextmap_OnChange();
 
 	itemOn = nastart; // "Start" is selected.
+	M_UpdateItemOn();
 }
 
 // Player has selected the "START" from the nights attack screen
@@ -10607,6 +10892,7 @@ static void M_ModeAttackEndGame(INT32 choice)
 		break;
 	}
 	itemOn = currentMenu->lastOn;
+	M_UpdateItemOn();
 	G_SetGamestate(GS_TIMEATTACK);
 	modeattacking = ATTACKING_NONE;
 	M_ChangeMenuMusic("_title", true);
@@ -10688,6 +10974,7 @@ static void M_Marathon(INT32 choice)
 	titlemapinaction = TITLEMAP_OFF; // Nope don't give us HOMs please
 	M_SetupNextMenu(&SP_MarathonDef);
 	itemOn = marathonstart; // "Start" is selected.
+	M_UpdateItemOn();
 	recatkdrawtimer = (50-8) * FRACUNIT;
 	char_scroll = 0;
 }
@@ -11401,6 +11688,7 @@ static void M_ConnectMenu(INT32 choice)
 	else
 		M_SetupNextMenu(&MP_ConnectDef);
 	itemOn = 0;
+	M_UpdateItemOn();
 	M_Refresh(0);
 }
 
@@ -11660,6 +11948,7 @@ static void M_StartServerMenu(INT32 choice)
 	Newgametype_OnChange();
 	M_SetupNextMenu(&MP_ServerDef);
 	itemOn = 1;
+	M_UpdateItemOn();
 }
 
 // ==============
@@ -11842,15 +12131,21 @@ static void M_HandleConnectIP(INT32 choice)
 					case KEY_INS:
 					case 'c':
 					case 'C': // ctrl+c, ctrl+insert, copying
-						I_ClipboardCopy(setupm_ip, l);
-						S_StartSound(NULL,sfx_menu1); // Tails
+						if (l != 0) // Don't replace the clipboard without any text
+						{
+							I_ClipboardCopy(setupm_ip, l);
+							S_StartSound(NULL,sfx_menu1); // Tails
+						}
 						break;
 
 					case 'x':
 					case 'X': // ctrl+x, cutting
-						I_ClipboardCopy(setupm_ip, l);
-						S_StartSound(NULL,sfx_menu1); // Tails
-						setupm_ip[0] = 0;
+						if (l != 0) // Don't replace the clipboard without any text
+						{
+							I_ClipboardCopy(setupm_ip, l);
+							S_StartSound(NULL,sfx_menu1); // Tails
+							setupm_ip[0] = 0;
+						}
 						break;
 
 					default: // otherwise do nothing
@@ -11874,9 +12169,12 @@ static void M_HandleConnectIP(INT32 choice)
 							break;
 						}
 					case KEY_DEL: // shift+delete, cutting
-						I_ClipboardCopy(setupm_ip, l);
-						S_StartSound(NULL,sfx_menu1); // Tails
-						setupm_ip[0] = 0;
+						if (l != 0) // Don't replace the clipboard without any text
+						{
+							I_ClipboardCopy(setupm_ip, l);
+							S_StartSound(NULL,sfx_menu1); // Tails
+							setupm_ip[0] = 0;
+						}
 						break;
 					default: // otherwise do nothing.
 						break;
@@ -12256,7 +12554,9 @@ static void M_DrawSetupMultiPlayerMenu(void)
 	if (multi_frame >= sprdef->numframes)
 		multi_frame = 0;
 
-	scale = FixedDiv(skins[setupm_fakeskin]->highresscale, skins[setupm_fakeskin]->shieldscale);
+	scale = skins[setupm_fakeskin]->highresscale;
+	if (skins[setupm_fakeskin]->shieldscale)
+		scale = FixedDiv(scale, skins[setupm_fakeskin]->shieldscale);
 
 #define chary (y+64)
 
@@ -12289,7 +12589,7 @@ static void M_DrawSetupMultiPlayerMenu(void)
 	V_DrawFixedPatch(
 		x<<FRACBITS,
 		chary<<FRACBITS,
-		FixedDiv(skins[setupm_fakeskin]->highresscale, skins[setupm_fakeskin]->shieldscale),
+		scale,
 		flags, patch, colormap);
 
 	goto colordraw;
@@ -13071,7 +13371,10 @@ static void M_SetupScreenshotMenu(void)
 	{
 		item->status = IT_GRAYEDOUT;
 		if ((currentMenu == &OP_ScreenshotOptionsDef) && (itemOn == op_screenshot_colorprofile)) // Can't select that
+		{
 			itemOn = op_screenshot_storagelocation;
+			M_UpdateItemOn();
+		}
 	}
 	else
 #endif

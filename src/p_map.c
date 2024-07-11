@@ -389,7 +389,6 @@ boolean P_DoSpring(mobj_t *spring, mobj_t *object)
 	{
 		INT32 pflags;
 		UINT8 secondjump;
-		boolean washoming;
 
 		if (spring->flags & MF_ENEMY) // Spring shells
 			P_SetTarget(&spring->target, object);
@@ -421,7 +420,7 @@ boolean P_DoSpring(mobj_t *spring, mobj_t *object)
 		{
 			boolean wasSpindashing = object->player->dashspeed > 0 && (object->player->charability2 == CA2_SPINDASH);
 
-			pflags = object->player->pflags & (PF_STARTJUMP | PF_JUMPED | PF_NOJUMPDAMAGE | PF_SPINNING | PF_THOKKED | PF_BOUNCING); // I still need these.
+			pflags = object->player->pflags & (PF_STARTJUMP | PF_JUMPED | PF_NOJUMPDAMAGE | PF_SPINNING | PF_BOUNCING); // I still need these.
 
 			if (wasSpindashing) // Ensure we're in the rolling state, and not spindash.
 				P_SetMobjState(object, S_PLAY_ROLL);
@@ -433,7 +432,6 @@ boolean P_DoSpring(mobj_t *spring, mobj_t *object)
 			}
 		}
 		secondjump = object->player->secondjump;
-		washoming = object->player->homing;
 		P_ResetPlayer(object->player);
 
 		if (spring->info->painchance == 1) // For all those ancient, SOC'd abilities.
@@ -445,8 +443,6 @@ boolean P_DoSpring(mobj_t *spring, mobj_t *object)
 		{
 			object->player->pflags |= (pflags &~ PF_STARTJUMP);
 			object->player->secondjump = secondjump;
-			if (washoming)
-				object->player->pflags &= ~PF_THOKKED;
 		}
 		else if (!vertispeed)
 		{
@@ -1027,7 +1023,6 @@ static unsigned PIT_DoCheckThing(mobj_t *thing)
 		if ((thing->flags & MF_PUSHABLE) // not carrying a player
 			&& (tmthing->player->powers[pw_carry] == CR_NONE) // player is not already riding something
 			&& !(tmthing->player->powers[pw_ignorelatch] & (1<<15))
-			&& ((tmthing->eflags & MFE_VERTICALFLIP) == (thing->eflags & MFE_VERTICALFLIP))
 			&& (P_MobjFlip(tmthing)*tmthing->momz <= 0)
 			&& ((!(tmthing->eflags & MFE_VERTICALFLIP) && abs(thing->z + thing->height - tmthing->z) < (thing->height>>2))
 				|| (tmthing->eflags & MFE_VERTICALFLIP && abs(tmthing->z + tmthing->height - thing->z) < (thing->height>>2))))
@@ -1041,6 +1036,7 @@ static unsigned PIT_DoCheckThing(mobj_t *thing)
 			P_SetTarget(&tmthing->tracer, thing);
 			if (!P_IsObjectOnGround(thing))
 				thing->momz += tmthing->momz;
+
 			return CHECKTHING_COLLIDE;
 		}
 	}
@@ -1262,8 +1258,9 @@ static unsigned PIT_DoCheckThing(mobj_t *thing)
 
 		if (tmthing->type != MT_SHELL && tmthing->target && tmthing->target->type == thing->type)
 		{
-			// Don't hit same species as originator.
-			if (thing == tmthing->target)
+			// Don't hit yourself, and if a player, don't hit bots
+			if (thing == tmthing->target
+				|| (thing->player && tmthing->target->player && (thing->player->bot == BOT_2PAI || thing->player->bot == BOT_2PHUMAN)))
 				return CHECKTHING_IGNORE;
 
 			if (thing->type != MT_PLAYER)
@@ -2504,6 +2501,9 @@ boolean P_TryCameraMove(fixed_t x, fixed_t y, camera_t *thiscam)
 	boolean itsatwodlevel = false;
 
 	floatok = false;
+
+	if (dedicated) // this crashes so don't even try it
+		return false;
 
 	if (twodlevel
 		|| (thiscam == &camera && players[displayplayer].mo && (players[displayplayer].mo->flags2 & MF2_TWOD))
@@ -3964,23 +3964,25 @@ papercollision:
 		mo->momy = tmymove;
 	}
 
+	const fixed_t tmradius = mo->radius > 8 ? mo->radius : 8;
+
 	do {
-		if (tmxmove > mo->radius) {
-			newx = mo->x + mo->radius;
-			tmxmove -= mo->radius;
-		} else if (tmxmove < -mo->radius) {
-			newx = mo->x - mo->radius;
-			tmxmove += mo->radius;
+		if (tmxmove > tmradius) {
+			newx = mo->x + tmradius;
+			tmxmove -= tmradius;
+		} else if (tmxmove < -tmradius) {
+			newx = mo->x - tmradius;
+			tmxmove += tmradius;
 		} else {
 			newx = mo->x + tmxmove;
 			tmxmove = 0;
 		}
-		if (tmymove > mo->radius) {
-			newy = mo->y + mo->radius;
-			tmymove -= mo->radius;
-		} else if (tmymove < -mo->radius) {
-			newy = mo->y - mo->radius;
-			tmymove += mo->radius;
+		if (tmymove > tmradius) {
+			newy = mo->y + tmradius;
+			tmymove -= tmradius;
+		} else if (tmymove < -tmradius) {
+			newy = mo->y - tmradius;
+			tmymove += tmradius;
 		} else {
 			newy = mo->y + tmymove;
 			tmymove = 0;
