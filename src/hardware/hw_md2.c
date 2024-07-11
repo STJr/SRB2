@@ -1201,7 +1201,7 @@ static INT32 GetAnimDuration(mobj_t *mobj) //part of p_mobj's setplayermobjstate
 	if (!(mobj->frame & FF_ANIMATE) && mobj->anim_duration) //set manually by something through lua
 		return mobj->anim_duration;
 
-	if (!player && mobj->type == MT_TAILSOVERLAY) //so tails overlays interpolate properly
+	if (!player && mobj->type == MT_TAILSOVERLAY && mobj->tracer) //so tails overlays interpolate properly
 		player = mobj->tracer->player;
 	if (player)
 	{
@@ -1691,7 +1691,6 @@ boolean HWR_DrawModel(gl_vissprite_t *spr)
 			HWD.pfnDrawModel(md2->model, frame, durs, tics, nextFrame, &p, md2->scale * xs, md2->scale * ys, flip, hflip, &Surf);
 		}
 	}
-
 	return true;
 }
 
