@@ -23,6 +23,7 @@
 #include "z_zone.h"
 #include "console.h" // con_startup_loadprogress
 #include "m_perfstats.h" // ps_metric_t
+#include "p_local.h"
 #ifdef HWRENDER
 #include "hardware/hw_main.h" // for cv_glshearing
 #endif
@@ -303,6 +304,7 @@ void R_InterpolateMobjState(mobj_t *mobj, fixed_t frac, interpmobjstate_t *out)
 		out->spriteyscale = mobj->spriteyscale;
 		out->spritexoffset = mobj->spritexoffset;
 		out->spriteyoffset = mobj->spriteyoffset;
+		out->flipped = P_MobjFlip(mobj) == -1;
 		return;
 	}
 
@@ -344,6 +346,7 @@ void R_InterpolateMobjState(mobj_t *mobj, fixed_t frac, interpmobjstate_t *out)
 	out->pitch = mobj->resetinterp ? mobj->pitch : R_LerpAngle(mobj->old_pitch, mobj->pitch, frac);
 	out->roll = mobj->resetinterp ? mobj->roll : R_LerpAngle(mobj->old_roll, mobj->roll, frac);
 	out->spriteroll = mobj->resetinterp ? mobj->spriteroll : R_LerpAngle(mobj->old_spriteroll, mobj->spriteroll, frac);
+	out->flipped = P_MobjFlip(mobj) == -1;
 }
 
 void R_InterpolatePrecipMobjState(precipmobj_t *mobj, fixed_t frac, interpmobjstate_t *out)

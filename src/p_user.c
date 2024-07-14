@@ -45,6 +45,7 @@
 #include "m_cheat.h"
 // Thok camera snap (ctrl-f "chalupa")
 #include "g_input.h"
+#include "m_easing.h"
 
 #ifdef HW3SOUND
 #include "hardware/hw3sound.h"
@@ -9724,6 +9725,7 @@ consvar_t cv_cam_rotspeed = CVAR_INIT ("cam_rotspeed", "10", CV_SAVE|CV_ALLOWLUA
 consvar_t cv_cam_turnmultiplier = CVAR_INIT ("cam_turnmultiplier", "0.75", CV_FLOAT|CV_SAVE|CV_ALLOWLUA, multiplier_cons_t, NULL);
 consvar_t cv_cam_orbit = CVAR_INIT ("cam_orbit", "Off", CV_SAVE|CV_ALLOWLUA, CV_OnOff, NULL);
 consvar_t cv_cam_adjust = CVAR_INIT ("cam_adjust", "On", CV_SAVE|CV_ALLOWLUA, CV_OnOff, NULL);
+consvar_t cv_cam_tilting = CVAR_INIT ("cam_tilting", "On", CV_SAVE, CV_OnOff, NULL);
 consvar_t cv_cam2_dist = CVAR_INIT ("cam2_curdist", "160", CV_FLOAT|CV_ALLOWLUA, NULL, NULL);
 consvar_t cv_cam2_height = CVAR_INIT ("cam2_curheight", "25", CV_FLOAT|CV_ALLOWLUA, NULL, NULL);
 consvar_t cv_cam2_still = CVAR_INIT ("cam2_still", "Off", CV_ALLOWLUA, CV_OnOff, NULL);
@@ -11394,6 +11396,11 @@ static void P_DoTailsOverlay(player_t *player, mobj_t *tails)
 		tails->flags2 |= MF2_SHADOW;
 	else
 		tails->flags2 &= ~MF2_SHADOW;
+	
+	// this is SIGMA
+	tails->pitch = player->mo->pitch;
+	tails->roll = player->mo->roll;
+
 }
 
 // Metal Sonic's jet fume
@@ -12161,7 +12168,7 @@ void P_PlayerThink(player_t *player)
 	P_CheckUnderwaterAndSpaceTimer(player); // Display the countdown drown numbers!
 	P_CheckInvincibilityTimer(player); // Spawn Invincibility Sparkles
 
-#if 1
+#if 0
 	// "Blur" a bit when you have speed shoes and are going fast enough
 	if ((player->powers[pw_super] || player->powers[pw_sneakers]) && (player->speed + abs(player->mo->momz)) > FixedMul(20*FRACUNIT,player->mo->scale))
 	{
@@ -12413,6 +12420,12 @@ void P_PlayerThink(player_t *player)
 		dashmode = 0;
 	}
 #undef dashmode
+
+	// Reset view roll if not on a slope
+	if (!P_IsObjectOnGround(player->mo))
+	{
+		player->viewrollangle = Easing_OutExpo(FRACUNIT/60,player->viewrollangle,0);
+	}
 
 	LUA_HookPlayer(player, HOOK(PlayerThink));
 

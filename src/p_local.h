@@ -119,6 +119,8 @@ extern consvar_t cv_cam_speed, cv_cam_rotate, cv_cam_rotspeed, cv_cam_turnmultip
 extern consvar_t cv_cam2_dist, cv_cam2_still, cv_cam2_height;
 extern consvar_t cv_cam2_speed, cv_cam2_rotate, cv_cam2_rotspeed, cv_cam2_turnmultiplier, cv_cam2_orbit, cv_cam2_adjust;
 
+extern consvar_t cv_cam_tilting;
+
 extern consvar_t cv_cam_savedist[2][2], cv_cam_saveheight[2][2];
 void CV_UpdateCamDist(void);
 void CV_UpdateCam2Dist(void);
@@ -181,6 +183,10 @@ void P_TwinSpinRejuvenate(player_t *player, mobjtype_t type);
 void P_BlackOw(player_t *player);
 void P_ElementalFire(player_t *player, boolean cropcircle);
 void P_SpawnSkidDust(player_t *player, fixed_t radius, boolean sound);
+
+void P_HaltPlayerOrbit(player_t *player);
+void P_ExitPlayerOrbit(player_t *player);
+boolean P_PlayerOrbit(player_t *player);
 
 void P_MovePlayer(player_t *player);
 void P_DoPityCheck(player_t *player);
@@ -538,5 +544,6 @@ void P_DoSuperTransformation(player_t *player, boolean giverings);
 void P_ExplodeMissile(mobj_t *mo);
 void P_CheckGravity(mobj_t *mo, boolean affect);
 void P_SetPitchRollFromSlope(mobj_t *mo, pslope_t *slope);
-
+void P_SetPitchRoll(mobj_t *mo, angle_t pitch, angle_t yaw);
+void P_ResetPitchRoll(mobj_t *mo);
 #endif // __P_LOCAL__

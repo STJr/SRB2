@@ -1593,6 +1593,7 @@ void R_RegisterEngineStuff(void)
 	CV_RegisterVar(&cv_cam_turnmultiplier);
 	CV_RegisterVar(&cv_cam_orbit);
 	CV_RegisterVar(&cv_cam_adjust);
+	CV_RegisterVar(&cv_cam_tilting);
 
 	CV_RegisterVar(&cv_cam2_dist);
 	CV_RegisterVar(&cv_cam2_still);

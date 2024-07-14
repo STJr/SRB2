@@ -519,6 +519,7 @@ void P_RingZMovement(mobj_t *mo);
 boolean P_SceneryZMovement(mobj_t *mo);
 void P_PlayerZMovement(mobj_t *mo);
 void P_EmeraldManager(void);
+angle_t P_GetMobjSlopeRotation(mobj_t *mo);
 
 extern INT32 modulothing;
 

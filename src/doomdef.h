@@ -669,7 +669,7 @@ extern int
 // Compile them at your own risk!
 
 ///	Allows the use of devmode in multiplayer. AKA "fishcake"
-//#define NETGAME_DEVMODE
+// #define NETGAME_DEVMODE
 
 ///	Allows gravity changes in netgames, no questions asked.
 //#define NETGAME_GRAVITY

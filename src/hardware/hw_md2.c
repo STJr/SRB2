@@ -1630,7 +1630,7 @@ boolean HWR_DrawModel(gl_vissprite_t *spr)
 			}
 		}
 
-#if 0
+#if 1
 		p.anglez = FIXED_TO_FLOAT(AngleFixed(interp.pitch));
 		p.anglex = FIXED_TO_FLOAT(AngleFixed(interp.roll));
 #else

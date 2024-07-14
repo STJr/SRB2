@@ -36,6 +36,7 @@
 #include "p_slopes.h"
 #include "f_finale.h"
 #include "m_cond.h"
+#include "m_easing.h"	//lmaoololooo easing for slope tilt
 
 static CV_PossibleValue_t CV_BobSpeed[] = {{0, "MIN"}, {4*FRACUNIT, "MAX"}, {0, NULL}};
 consvar_t cv_movebob = CVAR_INIT ("movebob", "1.0", CV_FLOAT|CV_SAVE, CV_BobSpeed, NULL);
@@ -1551,29 +1552,76 @@ void P_CheckGravity(mobj_t *mo, boolean affect)
 	}
 }
 
+angle_t P_GetMobjSlopeRotation(mobj_t *mo)
+{
+	angle_t lookAngle = R_PointToAngle(mo->x, mo->y);
+
+	if (!R_PointToDist(mo->x, mo->y))
+	{
+		lookAngle = mo->angle;
+	}
+
+	angle_t zangle = mo->standingslope->zangle;
+	angle_t xydirection = mo->standingslope->xydirection;
+
+	return FixedMul(zangle, FINESINE((lookAngle - xydirection) >> ANGLETOFINESHIFT));
+}
+
 //
 // P_SetPitchRollFromSlope
 //
 void P_SetPitchRollFromSlope(mobj_t *mo, pslope_t *slope)
 {
-#if 0
 	if (slope)
 	{
 		fixed_t tempz = slope->normal.z;
 		fixed_t tempy = slope->normal.y;
 		fixed_t tempx = slope->normal.x;
+		angle_t destpitch = R_PointToAngle2(0, 0, FixedSqrt(FixedMul(tempy, tempy) + FixedMul(tempz, tempz)), tempx);
+		angle_t destroll = R_PointToAngle2(0, 0, tempz, tempy);
 
-		mo->pitch = R_PointToAngle2(0, 0, FixedSqrt(FixedMul(tempy, tempy) + FixedMul(tempz, tempz)), tempx);
-		mo->roll = R_PointToAngle2(0, 0, tempz, tempy);
+		mo->pitch = Easing_InExpo(FRACUNIT*9/10,mo->pitch,destpitch);
+		mo->roll = Easing_InExpo(FRACUNIT*9/10,mo->roll,destroll);
+#if 1
+		// lmao do some view rolling
+		if (mo->player)
+		{
+			angle_t destvroll = -P_GetMobjSlopeRotation(mo);
+			if (!cv_cam_tilting.value) { destvroll = 0; }
+			mo->player->viewrollangle = Easing_OutExpo(FRACUNIT/90,mo->player->viewrollangle,destvroll);
+		}
+#endif
+
 	}
 	else
 	{
-		mo->pitch = mo->roll = 0;
+		mo->pitch = Easing_InExpo(FRACUNIT*9/10,mo->pitch,0);
+		mo->roll = Easing_InExpo(FRACUNIT*9/10,mo->roll,0);
+		if (mo->player)
+		{
+			mo->player->viewrollangle = Easing_OutExpo(FRACUNIT/90,mo->player->viewrollangle,0);
+		}
 	}
-#else
-	(void)mo;
-	(void)slope;
-#endif
+}
+
+//
+// P_SetPitchRoll
+//
+void P_SetPitchRoll(mobj_t *mo, angle_t pitch, angle_t yaw)
+{
+	pitch = InvAngle(pitch);
+	yaw >>= ANGLETOFINESHIFT;
+	mo->roll  = FixedMul(pitch, FINESINE   (yaw));
+	mo->pitch = FixedMul(pitch, FINECOSINE (yaw));
+}
+
+//
+// P_ResetPitchRoll
+//
+void P_ResetPitchRoll(mobj_t *mo)
+{
+	mo->pitch = 0;
+	mo->roll = 0;
 }
 
 #define STOPSPEED (FRACUNIT)
@@ -6773,6 +6821,8 @@ static boolean P_ShieldLook(mobj_t *thing, shieldtype_t shield)
 		thing->z = thing->target->z - (FixedDiv(P_GetPlayerHeight(thing->target->player) - thing->target->height, 3*FRACUNIT)) + FixedMul(2*FRACUNIT, thing->target->scale);
 	P_SetThingPosition(thing);
 	P_CheckPosition(thing, thing->x, thing->y);
+	thing->pitch = thing->target->pitch;
+	thing->roll = thing->target->roll;
 
 	if (P_MobjWasRemoved(thing))
 		return false;

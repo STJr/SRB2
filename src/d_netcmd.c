@@ -202,11 +202,12 @@ static CV_PossibleValue_t matchboxes_cons_t[] = {{0, "Normal"}, {1, "Mystery"}, 
 
 static CV_PossibleValue_t chances_cons_t[] = {{0, "MIN"}, {9, "MAX"}, {0, NULL}};
 static CV_PossibleValue_t pause_cons_t[] = {{0, "Server"}, {1, "All"}, {0, NULL}};
+static CV_PossibleValue_t devmode_cons_t[] = {{0, "MIN"}, {16383, "MAX"}};
 
 consvar_t cv_showinputjoy = CVAR_INIT ("showinputjoy", "Off", CV_ALLOWLUA, CV_OnOff, NULL);
 
 #ifdef NETGAME_DEVMODE
-static consvar_t cv_fishcake = CVAR_INIT ("fishcake", "Off", CV_CALL|CV_NOSHOWHELP|CV_RESTRICT, CV_OnOff, Fishcake_OnChange);
+static consvar_t cv_fishcake = CVAR_INIT ("fishcake", "0", CV_CALL|CV_NOSHOWHELP|CV_RESTRICT, devmode_cons_t, Fishcake_OnChange);
 #endif
 static consvar_t cv_dummyconsvar = CVAR_INIT ("dummyconsvar", "Off", CV_CALL|CV_NOSHOWHELP, CV_OnOff, DummyConsvar_OnChange);
 
@@ -4868,7 +4869,7 @@ static void Skin_OnChange(void)
 		return;
 	}
 
-	if (CanChangeSkin(consoleplayer) && !P_PlayerMoving(consoleplayer))
+	if (CanChangeSkin(consoleplayer)) // && !P_PlayerMoving(consoleplayer))
 		SendNameAndColor();
 	else
 	{

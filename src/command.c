@@ -775,6 +775,7 @@ static void COM_CEcho_f(void)
 	cechotext[sizeof(cechotext) - 1] = '\0';
 
 	HU_DoCEcho(cechotext);
+	CONS_Printf(M_GetText("CECHO: %s \n"), cechotext);
 }
 
 /** Sets drawing flags for the CECHO command.

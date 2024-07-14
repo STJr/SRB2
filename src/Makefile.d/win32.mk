@@ -3,7 +3,7 @@
 #
 
 ifndef MINGW64
-EXENAME?=srb2win.exe
+EXENAME?=srb2src.exe
 else
 EXENAME?=srb2win64.exe
 endif

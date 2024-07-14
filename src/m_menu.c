@@ -1209,15 +1209,16 @@ static menuitem_t OP_CameraOptionsMenu[] =
 	{IT_STRING  | IT_CVAR, NULL, "Flip Camera with Gravity"  , &cv_flipcam , 11},
 	{IT_STRING  | IT_CVAR, NULL, "Orbital Looking"  , &cv_cam_orbit , 16},
 	{IT_STRING  | IT_CVAR, NULL, "Downhill Slope Adjustment", &cv_cam_adjust, 21},
+	{IT_STRING  | IT_CVAR, NULL, "Slope View Tilting", &cv_cam_tilting, 26},
 
-	{IT_HEADER,                                NULL, "Camera Positioning", NULL, 30},
-	{IT_STRING  | IT_CVAR | IT_CV_INTEGERSTEP, NULL, "Camera Distance", &cv_cam_savedist[0][0], 36},
-	{IT_STRING  | IT_CVAR | IT_CV_INTEGERSTEP, NULL, "Camera Height", &cv_cam_saveheight[0][0], 41},
-	{IT_STRING  | IT_CVAR | IT_CV_FLOATSLIDER, NULL, "Camera Spacial Speed", &cv_cam_speed, 46},
-	{IT_STRING  | IT_CVAR | IT_CV_FLOATSLIDER, NULL, "Rotation Speed", &cv_cam_turnmultiplier, 51},
+	{IT_HEADER,                                NULL, "Camera Positioning", NULL, 35},
+	{IT_STRING  | IT_CVAR | IT_CV_INTEGERSTEP, NULL, "Camera Distance", &cv_cam_savedist[0][0], 41},
+	{IT_STRING  | IT_CVAR | IT_CV_INTEGERSTEP, NULL, "Camera Height", &cv_cam_saveheight[0][0], 46},
+	{IT_STRING  | IT_CVAR | IT_CV_FLOATSLIDER, NULL, "Camera Spacial Speed", &cv_cam_speed, 51},
+	{IT_STRING  | IT_CVAR | IT_CV_FLOATSLIDER, NULL, "Rotation Speed", &cv_cam_turnmultiplier, 56},
 
-	{IT_HEADER,            NULL, "Display Options", NULL, 60},
-	{IT_STRING  | IT_CVAR, NULL, "Crosshair", &cv_crosshair, 66},
+	{IT_HEADER,            NULL, "Display Options", NULL, 61},
+	{IT_STRING  | IT_CVAR, NULL, "Crosshair", &cv_crosshair, 67},
 };
 
 static menuitem_t OP_Camera2OptionsMenu[] =

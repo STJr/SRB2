@@ -14,6 +14,7 @@
 #include "z_zone.h"
 #include "w_wad.h"
 #include "r_main.h" // R_PointToAngle
+#include "p_mobj.h"
 
 #ifdef ROTSPRITE
 fixed_t rollcosang[ROTANGLES];
@@ -26,13 +27,18 @@ angle_t R_ModelRotationAngle(interpmobjstate_t *interp)
 
 angle_t R_SpriteRotationAngle(interpmobjstate_t *interp)
 {
-#if 0
+#if 1
 	angle_t viewingAngle = R_PointToAngle(interp->x, interp->y);
 
 	fixed_t pitchMul = -FINESINE(viewingAngle >> ANGLETOFINESHIFT);
 	fixed_t rollMul = FINECOSINE(viewingAngle >> ANGLETOFINESHIFT);
 
 	angle_t rollOrPitch = FixedMul(interp->pitch, pitchMul) + FixedMul(interp->roll, rollMul);
+
+	if (interp->flipped)
+	{
+		rollOrPitch *= -1;
+	}
 
 	return (rollOrPitch + R_ModelRotationAngle(interp));
 #else
