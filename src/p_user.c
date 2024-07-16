@@ -13040,6 +13040,8 @@ void P_PlayerAfterThink(player_t *player)
 					default:
 						var1 = 1;
 						var2 = 0;
+						player->followmobj->pitch = player->mo->pitch;
+						player->followmobj->roll = player->mo->roll;
 						A_CapeChase(player->followmobj);
 						break;
 				}
