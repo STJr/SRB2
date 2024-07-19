@@ -610,6 +610,12 @@ typedef struct player_s
 #ifdef HWRENDER
 	fixed_t fovadd; // adjust FOV for hw rendering
 #endif
+
+/*
+#ifdef WEIRDSHIT
+	UINT8 stairjank;
+#endif
+*/
 } player_t;
 
 // Values for dashmode

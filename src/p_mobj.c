@@ -2002,6 +2002,10 @@ void P_XYMovement(mobj_t *mo)
 				{
 					mo->momz = transfermomz;
 					mo->standingslope = NULL;
+
+					mo->pitch = FixedAngle(FixedMul(-90*FRACUNIT,FINECOSINE(mo->angle >> ANGLETOFINESHIFT)));
+					mo->roll = FixedAngle(FixedMul(-90*FRACUNIT,FINESINE(mo->angle >> ANGLETOFINESHIFT)));
+					
 					if (player)
 					{
 						player->powers[pw_justlaunched] = 2;

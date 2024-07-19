@@ -6254,6 +6254,39 @@ static void P_3dMovement(player_t *player)
 			player->mo->momy = tempmomy + player->cmomy;
 		}
 	}
+
+#ifdef WEIRDSHIT
+	if (player->mo->eflags & (MFE_UNDERWATER|MFE_GOOWATER))
+	{
+		fixed_t sidemove = cmd->sidemove*55*FRACUNIT;
+		fixed_t movespeed = min(FixedDiv(FixedHypot(player->mo->momx,player->mo->momy),22*FRACUNIT),FRACUNIT);
+		fixed_t rolladd = FixedMul(sidemove,movespeed);
+		
+		rolladd = max(-ANG30,min(ANG30,rolladd));
+
+		player->mo->spriteroll = rolladd;
+	}
+
+	/*
+	if (player->mo->eflags & MFE_JUSTSTEPPEDDOWN && P_IsObjectOnGround(player->mo))
+	{
+		S_StartSound(player->mo,sfx_s23b);
+		player->stairjank = 17;
+	}
+
+	if (player->stairjank > 0)
+	{
+		angle_t ang = (ANGLE_11hh / 2 /
+			(17 / player->stairjank));
+		angle_t jankang = ((leveltime % 4) < 2 ? ang : -ang);
+		player->mo->spriteroll += jankang;
+		
+		player->stairjank -= 1;
+	}
+	*/
+	
+#endif
+
 }
 
 //
@@ -12712,6 +12745,8 @@ void P_PlayerAfterThink(player_t *player)
 					player->mo->momx = tails->momx;
 					player->mo->momy = tails->momy;
 					player->mo->momz = tails->momz;
+					player->mo->pitch = tails->pitch;
+					player->mo->roll = tails->roll;
 				}
 
 				if (G_CoopGametype() && tails->player && tails->player->bot != BOT_2PAI)
