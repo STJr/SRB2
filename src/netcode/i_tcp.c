@@ -37,6 +37,7 @@
 #endif
 
 #include "../doomdef.h"
+#include "../z_zone.h"
 
 #ifdef USE_WINSOCK1
 	#include <winsock.h>
@@ -120,8 +121,6 @@ typedef union
 	static boolean UPNP_support = true;
 	#endif // HAVE_MINIUPNC
 
-#define MAXBANS 100
-
 #include "../i_system.h"
 #include "i_net.h"
 #include "d_net.h"
@@ -169,8 +168,8 @@ static mysockaddr_t clientaddress[MAXNETNODES+1];
 static mysockaddr_t broadcastaddress[MAXNETNODES+1];
 static size_t broadcastaddresses = 0;
 static boolean nodeconnected[MAXNETNODES+1];
-static mysockaddr_t banned[MAXBANS];
-static UINT8 bannedmask[MAXBANS];
+static mysockaddr_t *banned;
+static UINT8 *bannedmask;
 
 static size_t numbans = 0;
 static boolean SOCK_bannednode[MAXNETNODES+1]; /// \note do we really need the +1?
@@ -1253,9 +1252,9 @@ static boolean SOCK_Ban(INT32 node)
 {
 	if (node > MAXNETNODES)
 		return false;
-	if (numbans == MAXBANS)
-		return false;
 
+	banned = Z_Realloc(banned, sizeof(*banned) * (numbans+1), PU_STATIC, NULL);
+	bannedmask = Z_Realloc(bannedmask, sizeof(*bannedmask) * (numbans+1), PU_STATIC, NULL);
 	M_Memcpy(&banned[numbans], &clientaddress[node], sizeof (mysockaddr_t));
 	if (banned[numbans].any.sa_family == AF_INET)
 	{
@@ -1278,7 +1277,7 @@ static boolean SOCK_SetBanAddress(const char *address, const char *mask)
 	struct my_addrinfo *ai, *runp, hints;
 	int gaie;
 
-	if (numbans == MAXBANS || !address)
+	if (!address)
 		return false;
 
 	memset(&hints, 0x00, sizeof(hints));
@@ -1293,8 +1292,10 @@ static boolean SOCK_SetBanAddress(const char *address, const char *mask)
 
 	runp = ai;
 
-	while(runp != NULL && numbans != MAXBANS)
+	while(runp != NULL)
 	{
+		banned = Z_Realloc(banned, sizeof(*banned) * (numbans+1), PU_STATIC, NULL);
+		bannedmask = Z_Realloc(bannedmask, sizeof(*bannedmask) * (numbans+1), PU_STATIC, NULL);
 		memcpy(&banned[numbans], runp->ai_addr, runp->ai_addrlen);
 
 		if (mask)
@@ -1324,6 +1325,10 @@ static boolean SOCK_SetBanAddress(const char *address, const char *mask)
 static void SOCK_ClearBans(void)
 {
 	numbans = 0;
+	Z_Free(banned);
+	banned = NULL;
+	Z_Free(bannedmask);
+	bannedmask = NULL;
 }
 
 boolean I_InitTcpNetwork(void)
