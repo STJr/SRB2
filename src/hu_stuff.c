@@ -547,6 +547,11 @@ static void DoSayCommand(SINT8 target, size_t usedargs, UINT8 flags)
 		strlcpy(msg, newmsg, HU_MAXMSGLEN + 1);
 	}
 
+	if (flags & HU_CSAY)
+	{
+		CONS_Printf(M_GetText("CSAY: %s \n"), msg);
+	}
+
 	SendNetXCmd(XD_SAY, buf, strlen(msg) + 1 + msg-buf);
 }
 

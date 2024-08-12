@@ -6256,6 +6256,7 @@ static void P_3dMovement(player_t *player)
 	}
 
 #ifdef WEIRDSHIT
+	/*
 	if (player->mo->eflags & (MFE_UNDERWATER|MFE_GOOWATER))
 	{
 		fixed_t sidemove = cmd->sidemove*55*FRACUNIT;
@@ -6267,7 +6268,6 @@ static void P_3dMovement(player_t *player)
 		player->mo->spriteroll = rolladd;
 	}
 
-	/*
 	if (player->mo->eflags & MFE_JUSTSTEPPEDDOWN && P_IsObjectOnGround(player->mo))
 	{
 		S_StartSound(player->mo,sfx_s23b);
@@ -6284,7 +6284,7 @@ static void P_3dMovement(player_t *player)
 		player->stairjank -= 1;
 	}
 	*/
-	
+
 #endif
 
 }
@@ -9758,7 +9758,6 @@ consvar_t cv_cam_rotspeed = CVAR_INIT ("cam_rotspeed", "10", CV_SAVE|CV_ALLOWLUA
 consvar_t cv_cam_turnmultiplier = CVAR_INIT ("cam_turnmultiplier", "0.75", CV_FLOAT|CV_SAVE|CV_ALLOWLUA, multiplier_cons_t, NULL);
 consvar_t cv_cam_orbit = CVAR_INIT ("cam_orbit", "Off", CV_SAVE|CV_ALLOWLUA, CV_OnOff, NULL);
 consvar_t cv_cam_adjust = CVAR_INIT ("cam_adjust", "On", CV_SAVE|CV_ALLOWLUA, CV_OnOff, NULL);
-consvar_t cv_cam_tilting = CVAR_INIT ("cam_tilting", "On", CV_SAVE, CV_OnOff, NULL);
 consvar_t cv_cam2_dist = CVAR_INIT ("cam2_curdist", "160", CV_FLOAT|CV_ALLOWLUA, NULL, NULL);
 consvar_t cv_cam2_height = CVAR_INIT ("cam2_curheight", "25", CV_FLOAT|CV_ALLOWLUA, NULL, NULL);
 consvar_t cv_cam2_still = CVAR_INIT ("cam2_still", "Off", CV_ALLOWLUA, CV_OnOff, NULL);
@@ -9811,6 +9810,8 @@ fixed_t t_cam_rotate = -42;
 fixed_t t_cam2_dist = -42;
 fixed_t t_cam2_height = -42;
 fixed_t t_cam2_rotate = -42;
+
+consvar_t cv_cam_tilting = CVAR_INIT ("cam_tilting", "On", CV_SAVE, CV_OnOff, NULL);
 
 #define MAXCAMERADIST 140*FRACUNIT // Max distance the camera can be in front of the player (2D mode)
 
@@ -13075,8 +13076,8 @@ void P_PlayerAfterThink(player_t *player)
 					default:
 						var1 = 1;
 						var2 = 0;
-						player->followmobj->pitch = player->mo->pitch;
-						player->followmobj->roll = player->mo->roll;
+						// player->followmobj->pitch = player->mo->pitch;
+						// player->followmobj->roll = player->mo->roll;
 						A_CapeChase(player->followmobj);
 						break;
 				}

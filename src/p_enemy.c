@@ -5374,6 +5374,8 @@ void A_OverlayThink(mobj_t *actor)
 		actor->z = actor->target->z + ((var2>>16) ? -1 : 1)*(var2&0xFFFF)*FRACUNIT;
 	actor->angle = (actor->target->player ? actor->target->player->drawangle : actor->target->angle) + actor->movedir;
 	actor->eflags = actor->target->eflags;
+	actor->pitch = actor->target->pitch;
+	actor->roll = actor->target->roll;
 
 	actor->momx = actor->target->momx;
 	actor->momy = actor->target->momy;
@@ -6118,6 +6120,8 @@ void A_CapeChase(mobj_t *actor)
 		actor->z = chaser->z + FixedMul((locvar1 >> 16)*FRACUNIT, actor->scale);
 	}
 	actor->angle = angle;
+	actor->pitch = chaser->pitch;
+	actor->roll = chaser->roll;
 	P_SetThingPosition(actor);
 }
 

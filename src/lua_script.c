@@ -38,6 +38,8 @@
 #include "doomstat.h"
 #include "g_state.h"
 
+#include "doomdef.h"
+
 lua_State *gL = NULL;
 
 // List of internal libraries to load from SRB2
@@ -1056,6 +1058,10 @@ static UINT8 ArchiveValue(int TABLESINDEX, int myindex)
 	case LUA_TLIGHTUSERDATA:
 	case LUA_TTHREAD:
 	case LUA_TFUNCTION:
+		CONS_Alert(CONS_ERROR,
+			M_GetText("Archived a null value %d! (light userdata = 2, thread = 8, function = 6)\n"),
+			lua_type(gL, myindex)
+		);
 		WRITEUINT8(save_p, ARCH_NULL);
 		return 2;
 	case LUA_TBOOLEAN:
