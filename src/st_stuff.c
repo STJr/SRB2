@@ -2849,7 +2849,7 @@ void ST_Drawer(void)
 				break;
 		}
 
-		V_DrawCenteredString(BASEVIDWIDTH/2, BASEVIDHEIGHT/2 + 15, V_HUDTRANSHALF|c, player_names[seenplayer-players]);
+		V_DrawCenteredThinString(BASEVIDWIDTH/2, BASEVIDHEIGHT/2 + 15, V_HUDTRANSHALF|V_ALLOWLOWERCASE|c, player_names[seenplayer-players]);
 	}
 
 	// Doom's status bar only updated if necessary.
