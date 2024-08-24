@@ -1,3 +1,12 @@
+# Major edits
+- Mobj pitch/roll functional (3d rotation for models on slopes, like DRRR)
+- CEchos/CSays print message into console
+- Skin change at any time
+- renderhitbox in multiplayer
+- Minor net edits ("Archived a null value")
+-Joining netgame shows progress bar on "checking files"
+
+
 # Sonic Robo Blast 2
 [![latest release](https://badgen.net/github/release/STJr/SRB2/stable)](https://github.com/STJr/SRB2/releases/latest)
 
