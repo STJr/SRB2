@@ -2624,6 +2624,7 @@ void G_PlayerReborn(INT32 player, boolean betweenmaps)
 	boolean spectator;
 	boolean outofcoop;
 	boolean removing;
+	boolean muted;
 	INT16 bot;
 	SINT8 pity;
 	INT16 rings;
@@ -2641,6 +2642,7 @@ void G_PlayerReborn(INT32 player, boolean betweenmaps)
 	spectator = players[player].spectator;
 	outofcoop = players[player].outofcoop;
 	removing = players[player].removing;
+	muted = players[player].muted;
 	pflags = (players[player].pflags & (PF_FLIPCAM|PF_ANALOGMODE|PF_DIRECTIONCHAR|PF_AUTOBRAKE|PF_TAGIT|PF_GAMETYPEOVER));
 	playerangleturn = players[player].angleturn;
 	oldrelangleturn = players[player].oldrelangleturn;
@@ -2718,6 +2720,7 @@ void G_PlayerReborn(INT32 player, boolean betweenmaps)
 	p->spectator = spectator;
 	p->outofcoop = outofcoop;
 	p->removing = removing;
+	p->muted = muted;
 	p->angleturn = playerangleturn;
 	p->oldrelangleturn = oldrelangleturn;
 
