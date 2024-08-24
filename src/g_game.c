@@ -1936,6 +1936,8 @@ void G_DoLoadLevel(boolean resetplayer)
 //
 void G_StartTitleCard(void)
 {
+	ST_stopTitleCard();
+
 	// The title card has been disabled for this map.
 	// Oh well.
 	if (!G_IsTitleCardAvailable())
