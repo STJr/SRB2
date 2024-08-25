@@ -5356,9 +5356,7 @@ void P_SaveNetGame(save_t *save_p, boolean resending)
 	mobj_t *mobj;
 	INT32 i = 1; // don't start from 0, it'd be confused with a blank pointer otherwise
 
-	UINT8 *p = &save_p->buf[save_p->pos];
-	CV_SaveNetVars(&p);
-	save_p->pos = p - save_p->buf;
+	CV_SaveNetVars(save_p);
 	P_NetArchiveMisc(save_p, resending);
 	P_NetArchiveEmblems(save_p);
 
@@ -5411,9 +5409,7 @@ boolean P_LoadGame(save_t *save_p, INT16 mapoverride)
 
 boolean P_LoadNetGame(save_t *save_p, boolean reloading)
 {
-	UINT8 *p = &save_p->buf[save_p->pos];
-	CV_LoadNetVars(&p);
-	save_p->pos = p - save_p->buf;
+	CV_LoadNetVars(save_p);
 	if (!P_NetUnArchiveMisc(save_p, reloading))
 		return false;
 	P_NetUnArchiveEmblems(save_p);

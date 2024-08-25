@@ -80,6 +80,7 @@ void SV_SendSaveGame(INT32 node, boolean resending)
 	if (!compressedsave)
 	{
 		CONS_Alert(CONS_ERROR, M_GetText("No more free memory for savegame\n"));
+		free(savebuffer.buf);
 		return;
 	}
 
