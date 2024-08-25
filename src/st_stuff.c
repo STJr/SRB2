@@ -1042,6 +1042,9 @@ static void ST_drawInput(void)
 
 	INT32 x = hudinfo[HUD_INPUT].x, y = hudinfo[HUD_INPUT].y;
 
+	if (hu_showscores)
+		return;
+
 	if (stplyr->powers[pw_carry] == CR_NIGHTSMODE)
 		y += 8;
 	else if (modeattacking || !LUA_HudEnabled(hud_lives))

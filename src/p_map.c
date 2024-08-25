@@ -1465,13 +1465,13 @@ static unsigned PIT_DoCheckThing(mobj_t *thing)
 	}
 
 	// check for special pickup
-	if (thing->flags & MF_SPECIAL)
+	if (thing->flags & MF_SPECIAL && (tmthing->player || (tmthing->flags & MF_PUSHABLE))) // MF_PUSHABLE added for steam jets
 	{
 		P_TouchSpecialThing(thing, tmthing, true); // can remove thing
 		return CHECKTHING_COLLIDE;
 	}
 	// check again for special pickup
-	if (tmthing->flags & MF_SPECIAL)
+	if (tmthing->flags & MF_SPECIAL && (thing->player || (thing->flags & MF_PUSHABLE))) // MF_PUSHABLE added for steam jets
 	{
 		P_TouchSpecialThing(tmthing, thing, true); // can remove thing
 		return CHECKTHING_COLLIDE;
