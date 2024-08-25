@@ -8796,7 +8796,7 @@ void P_MovePlayer(player_t *player)
 		if ((cmd->buttons & BT_SHIELD) && !(player->pflags & PF_SHIELDDOWN) && !spinshieldhack)
 		{
 			// Transform into super if we can!
-			if (P_SuperReady(player, true))
+			if (P_SuperReady(player))
 				P_DoSuperTransformation(player, false);
 		}
 	}
