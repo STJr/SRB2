@@ -1501,8 +1501,8 @@ void NetUpdate(void)
 			INT32 i;
 
 			boolean empty = true;
-			for (i = 1; i < MAXNETNODES; i++)
-				if (netnodes[i].ingame)
+			for (i = 0; i < MAXPLAYERS; i++)
+				if (playeringame[i])
 				{
 					empty = false;
 					break;
@@ -1542,7 +1542,7 @@ void NetUpdate(void)
 			{
 				if (dedicatedidle >= dedicatedidletime)
 				{
-					CONS_Printf("DEDICATED: Awakening from idle (Node detected...)\n");
+					CONS_Printf("DEDICATED: Awakening from idle (Player detected...)\n");
 					dedicatedidle = 0;
 				}
 			}
