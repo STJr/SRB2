@@ -1543,8 +1543,8 @@ void NetUpdate(void)
 				if (dedicatedidle >= dedicatedidletime)
 				{
 					CONS_Printf("DEDICATED: Awakening from idle (Player detected...)\n");
-					dedicatedidle = 0;
 				}
+				dedicatedidle = 0;
 			}
 		}
 		else
