@@ -1462,9 +1462,9 @@ static void DedicatedIdleUpdate(INT32 *realtics)
 				{
 					const char *idlereason = "at round start";
 					if (leveltime > 3)
-						idlereason = va("for %d seconds", dedicatedidle/TICRATE);
+						idlereason = va("for %d seconds", dedicatedidle / TICRATE);
 
-					CONS_Printf("DEDICATED: No nodes %s, idling...\n", idlereason);
+					CONS_Printf("DEDICATED: No players %s, idling...\n", idlereason);
 					(*realtics) = 0;
 					dedicatedidle = dedicatedidletime;
 				}
