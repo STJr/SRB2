@@ -1500,18 +1500,15 @@ void NetUpdate(void)
 		{
 			INT32 i;
 
-			for (i = 1; i < MAXNETNODES; ++i)
+			boolean empty = true;
+			for (i = 1; i < MAXNETNODES; i++)
 				if (netnodes[i].ingame)
 				{
-					if (dedicatedidle >= dedicatedidletime)
-					{
-						CONS_Printf("DEDICATED: Awakening from idle (Node %d detected...)\n", i);
-						dedicatedidle = 0;
-					}
+					empty = false;
 					break;
 				}
 
-			if (i == MAXNETNODES)
+			if (empty)
 			{
 				if (leveltime == 2)
 				{
@@ -1539,6 +1536,14 @@ void NetUpdate(void)
 					CONS_Printf("DEDICATED: No nodes %s, idling...\n", idlereason);
 					realtics = 0;
 					dedicatedidle = dedicatedidletime;
+				}
+			}
+			else
+			{
+				if (dedicatedidle >= dedicatedidletime)
+				{
+					CONS_Printf("DEDICATED: Awakening from idle (Node detected...)\n");
+					dedicatedidle = 0;
 				}
 			}
 		}
