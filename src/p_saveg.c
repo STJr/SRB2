@@ -35,6 +35,7 @@
 #include "p_polyobj.h"
 #include "lua_script.h"
 #include "p_slopes.h"
+#include "hu_stuff.h"
 
 savedata_t savedata;
 
@@ -4854,6 +4855,12 @@ static void P_NetArchiveMisc(save_t *save_p, boolean resending)
 		P_WriteUINT8(save_p, 0x2f);
 	else
 		P_WriteUINT8(save_p, 0x2e);
+
+	for (i = 0; i < MAXPLAYERS; i++)
+	{
+		P_WriteUINT8(save_p, spam_tokens[i]);
+		P_WriteUINT32(save_p, spam_tics[i]);
+	}
 }
 
 static inline boolean P_NetUnArchiveMisc(save_t *save_p, boolean reloading)
@@ -4950,6 +4957,12 @@ static inline boolean P_NetUnArchiveMisc(save_t *save_p, boolean reloading)
 	// Is it paused?
 	if (P_ReadUINT8(save_p) == 0x2f)
 		paused = true;
+
+	for (i = 0; i < MAXPLAYERS; i++)
+	{
+		spam_tokens[i] = P_ReadUINT8(save_p);
+		spam_tics[i] = P_ReadUINT32(save_p);
+	}
 
 	return true;
 }

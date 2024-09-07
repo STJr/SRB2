@@ -1033,7 +1033,6 @@ void FileSendTicker(void)
 
 	netbuffer->packettype = PT_FILEFRAGMENT;
 
-	// (((sendbytes-nowsentbyte)*TICRATE)/(I_GetTime()-starttime)<(UINT32)net_bandwidth)
 	while (packetsent-- && filestosend != 0)
 	{
 		for (i = currentnode, j = 0; j < MAXNETNODES;
