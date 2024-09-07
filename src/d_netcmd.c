@@ -50,6 +50,7 @@
 #include "md5.h"
 #include "m_perfstats.h"
 #include "u_list.h"
+#include "deh_tables.h"
 
 #ifdef NETGAME_DEVMODE
 #define CV_RESTRICT CV_NETVAR
@@ -158,6 +159,7 @@ static void Got_MotD_f(UINT8 **cp, INT32 playernum);
 
 static void Command_ShowScores_f(void);
 static void Command_ShowTime_f(void);
+static void Command_Freeslots_f(void);
 
 static void Command_Isgamemodified_f(void);
 static void Command_Cheats_f(void);
@@ -516,6 +518,7 @@ void D_RegisterServerCommands(void)
 #endif
 
 	COM_AddCommand("downloads", Command_Downloads_f, COM_LUA);
+	COM_AddCommand("freeslots", Command_Freeslots_f, COM_LUA);
 
 	// for master server connection
 	AddMServCommands();
@@ -3490,6 +3493,7 @@ static void Command_Addfile(void)
 			else // file not found
 				continue;
 
+			/*
 			for (i = 0; i < numwadfiles; i++)
 			{
 				if (wadfiles[i]->type == RET_FOLDER)
@@ -3501,6 +3505,7 @@ static void Command_Addfile(void)
 					continue;
 				}
 			}
+			*/
 #endif
 			WRITEMEM(buf_p, md5sum, 16);
 		}
@@ -3615,6 +3620,7 @@ static void Command_Addfolder(void)
 		}
 
 		// Check if the folder is already added.
+		/*
 		for (i = 0; i < numwadfiles; i++)
 		{
 			if (wadfiles[i]->type != RET_FOLDER)
@@ -3626,7 +3632,8 @@ static void Command_Addfolder(void)
 				continue;
 			}
 		}
-
+		*/
+		
 		Z_Free(fullpath);
 
 		AddedFilesAdd(&addedfolders, fn);
@@ -5038,4 +5045,62 @@ static void BaseNumLaps_OnChange(void)
 		else
 			CONS_Printf(M_GetText("Number of laps will be changed to %d next round.\n"), cv_basenumlaps.value);
 	}
+}
+
+static void Command_Freeslots_f(void)
+{
+	CONS_Printf("Current empty number of freeslots are:\n");
+
+	// Freeslots taken up
+	INT32 ammount = 0;
+	INT32 i;
+
+	for (i = SPR_FIRSTFREESLOT; i <= SPR_LASTFREESLOT; i++)
+	{
+		char *tempname = sprnames[i];
+		if (tempname[0] == 'F' &&
+			tempname[1] == (char)('0' + (char)((i-SPR_FIRSTFREESLOT+1)/100)) &&
+			tempname[2] == (char)('0' + (char)(((i-SPR_FIRSTFREESLOT+1)/10)%10)) &&
+			tempname[3] == (char)('0' + (char)((i-SPR_FIRSTFREESLOT+1)%10)) &&
+			tempname[4] == '\0'
+		) {
+			ammount++;
+		}
+	}
+	CONS_Printf(M_GetText("Sprites:		%d free out of %d\n"),		ammount,	NUMSPRITEFREESLOTS);
+	
+	CONS_Printf(M_GetText("Sprite2s:		%d free out of %d\n"),		ammount,	127);
+	CONS_Printf(M_GetText("States:		%d free out of %d\n"),		ammount,	NUMSTATEFREESLOTS);
+
+	ammount = 0;
+	for (i = 0; i < NUMMOBJFREESLOTS; i++) {
+		if (!FREE_MOBJS[i])
+			ammount++;
+	}
+	CONS_Printf(M_GetText("Mobj types:	%d free out of %d\n"),	ammount,	NUMMOBJFREESLOTS);
+	
+	/*
+	ammount = 0;
+	for (i = sfx_freeslot0; i <= NUMSFX; i++)
+	{
+		if (
+			true
+		) {
+			ammount++;
+		}
+	}
+	CONS_Printf(M_GetText("Sounds:		%d free out of %d\n"),	ammount,	NUMSFXFREESLOTS + NUMSKINSFXSLOTS);
+	*/
+	
+	ammount = 0;
+	for (i = SKINCOLOR_FIRSTFREESLOT; i <= SKINCOLOR_LASTFREESLOT; i++)
+	{
+		if (skincolors[i].accessible == false &&
+			skincolors[i].name[0] == '\0'
+		) {
+			ammount++;
+		}
+	}
+	CONS_Printf(M_GetText("Skincolors:	%d free out of %d\n"),	ammount,	NUMCOLORFREESLOTS);
+
 }

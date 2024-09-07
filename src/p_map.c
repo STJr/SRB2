@@ -377,7 +377,11 @@ boolean P_DoSpring(mobj_t *spring, mobj_t *object)
 	}
 
 	if (vertispeed)
+	{
 		object->momz = FixedMul(vertispeed,FixedSqrt(FixedMul(object->scale, spring->scale)));
+		object->pitch = spring->pitch;
+		object->roll = spring->roll;
+	}
 
 	if (horizspeed)
 		P_InstaThrustEvenIn2D(object, spring->angle, FixedMul(horizspeed,FixedSqrt(FixedMul(object->scale, spring->scale))));

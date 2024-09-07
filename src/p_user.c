@@ -1974,6 +1974,7 @@ mobj_t *P_SpawnGhostMobj(mobj_t *mobj)
 
 	P_SetScale(ghost, mobj->scale);
 	ghost->destscale = mobj->scale;
+	ghost->old_scale = mobj->scale;
 
 	if (mobj->eflags & MFE_VERTICALFLIP)
 	{
