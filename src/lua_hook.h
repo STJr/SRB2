@@ -74,6 +74,7 @@ automatically.
 	X (PlayerCanEnterSpinGaps),\
 	X (KeyDown),\
 	X (KeyUp),\
+	X (TextInput),\
 
 #define STRING_HOOK_LIST(X) \
 	X (BotAI),/* B_BuildTailsTiccmd by skin name */\

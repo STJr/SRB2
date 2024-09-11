@@ -129,6 +129,18 @@ static int lib_getCursorPosition(lua_State *L)
 	return 2;
 }
 
+static int lib_setTextInputMode(lua_State *L)
+{
+	I_SetTextInputMode(luaL_checkboolean(L, 1));
+	return 0;
+}
+
+static int lib_getTextInputMode(lua_State *L)
+{
+	lua_pushinteger(L, I_GetTextInputMode());
+	return 1;
+}
+
 static luaL_Reg lib[] = {
 	{"gameControlDown", lib_gameControlDown},
 	{"gameControl2Down", lib_gameControl2Down},
@@ -143,6 +155,8 @@ static luaL_Reg lib[] = {
 	{"getMouseGrab", lib_getMouseGrab},
 	{"setMouseGrab", lib_setMouseGrab},
 	{"getCursorPosition", lib_getCursorPosition},
+	{"setTextInputMode", lib_setTextInputMode},
+	{"getTextInputMode", lib_getTextInputMode},
 	{NULL, NULL}
 };
 
