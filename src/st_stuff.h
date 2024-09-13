@@ -49,9 +49,9 @@ void ST_doPaletteStuff(void);
 
 // title card
 void ST_startTitleCard(void);
+void ST_stopTitleCard(void);
 void ST_runTitleCard(void);
 void ST_drawTitleCard(void);
-void ST_preDrawTitleCard(void);
 void ST_preLevelTitleCardDrawer(void);
 void ST_drawWipeTitleCard(void);
 

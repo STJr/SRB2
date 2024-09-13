@@ -4799,12 +4799,11 @@ static void Command_Togglemodified_f(void)
 	modifiedgame = !modifiedgame;
 }
 
-extern UINT8 *save_p;
 static void Command_Archivetest_f(void)
 {
-	UINT8 *buf;
 	UINT32 i, wrote;
 	thinker_t *th;
+	save_t savebuffer;
 	if (gamestate != GS_LEVEL)
 	{
 		CONS_Printf("This command only works in-game, you dummy.\n");
@@ -4818,28 +4817,29 @@ static void Command_Archivetest_f(void)
 			((mobj_t *)th)->mobjnum = i++;
 
 	// allocate buffer
-	buf = save_p = ZZ_Alloc(1024);
+	savebuffer.size = 1024;
+	savebuffer.buf = malloc(savebuffer.size);
+	savebuffer.pos = 0;
 
 	// test archive
 	CONS_Printf("LUA_Archive...\n");
-	LUA_Archive();
-	WRITEUINT8(save_p, 0x7F);
-	wrote = (UINT32)(save_p-buf);
+	LUA_Archive(&savebuffer);
+	P_WriteUINT8(&savebuffer, 0x7F);
+	wrote = savebuffer.pos;
 
 	// clear Lua state, so we can really see what happens!
 	CONS_Printf("Clearing state!\n");
 	LUA_ClearExtVars();
 
 	// test unarchive
-	save_p = buf;
 	CONS_Printf("LUA_UnArchive...\n");
-	LUA_UnArchive();
-	i = READUINT8(save_p);
-	if (i != 0x7F || wrote != (UINT32)(save_p-buf))
-		CONS_Printf("Savegame corrupted. (write %u, read %u)\n", wrote, (UINT32)(save_p-buf));
+	LUA_UnArchive(&savebuffer);
+	i = P_ReadUINT8(&savebuffer);
+	if (i != 0x7F || wrote != (UINT32)(savebuffer.pos))
+		CONS_Printf("Savegame corrupted. (write %u, read %u)\n", wrote, (UINT32)(savebuffer.pos));
 
 	// free buffer
-	Z_Free(buf);
+	free(savebuffer.buf);
 	CONS_Printf("Done. No crash.\n");
 }
 #endif

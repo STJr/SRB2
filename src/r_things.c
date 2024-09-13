@@ -379,7 +379,7 @@ static void MirrorMissingRotations(void)
 
 			UINT8 baserotation = GetOppositeRotation(rotation, frame->rotate);
 			UINT32 lumpnum = frame->lumppat[baserotation - 1];
-			R_InstallSpriteLump(WADFILENUM(lumpnum), LUMPNUM(lumpnum), frame->lumpid[baserotation], framenum, rotation, 1);
+			R_InstallSpriteLump(WADFILENUM(lumpnum), LUMPNUM(lumpnum), frame->lumpid[baserotation - 1], framenum, rotation, 1);
 		}
 	}
 }

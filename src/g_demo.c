@@ -1454,6 +1454,7 @@ void G_BeginRecording(void)
 	char *filename;
 	UINT16 totalfiles;
 	UINT8 *m;
+	save_t savebuffer;
 
 	if (demo_p)
 		return;
@@ -1603,7 +1604,11 @@ void G_BeginRecording(void)
 	}
 
 	// Save netvar data
-	CV_SaveDemoVars(&demo_p);
+	savebuffer.buf = demo_p;
+	savebuffer.size = demoend - demo_p;
+	savebuffer.pos = 0;
+	CV_SaveDemoVars(&savebuffer);
+	demo_p = &savebuffer.buf[savebuffer.pos];
 
 	memset(&oldcmd,0,sizeof(oldcmd));
 	memset(&oldghost,0,sizeof(oldghost));
@@ -2236,10 +2241,24 @@ void G_DoPlayDemo(char *defdemoname)
 	// net var data
 #ifdef OLD22DEMOCOMPAT
 	if (demoversion < 0x000d)
-		CV_LoadOldDemoVars(&demo_p);
+	{
+		save_t savebuffer;
+		savebuffer.buf = demo_p;
+		savebuffer.size = demoend - demo_p;
+		savebuffer.pos = 0;
+		CV_LoadOldDemoVars(&savebuffer);
+		demo_p = &savebuffer.buf[savebuffer.pos];
+	}
 	else
 #endif
-		CV_LoadDemoVars(&demo_p);
+	{
+		save_t savebuffer;
+		savebuffer.buf = demo_p;
+		savebuffer.size = demoend - demo_p;
+		savebuffer.pos = 0;
+		CV_LoadDemoVars(&savebuffer);
+		demo_p = &savebuffer.buf[savebuffer.pos];
+	}
 
 	// Sigh ... it's an empty demo.
 	if (*demo_p == DEMOMARKER)
