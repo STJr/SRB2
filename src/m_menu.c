@@ -28,6 +28,8 @@
 #include "g_game.h"
 #include "g_input.h"
 #include "m_argv.h"
+#include "m_anigif.h"
+
 
 // Data.
 #include "sounds.h"
@@ -14111,8 +14113,14 @@ void M_QuitResponse(INT32 ch)
 			I_FinishUpdate(); // Update the screen with the image Tails 06-19-2001
 			I_Sleep(cv_sleep.value);
 			I_UpdateTime(cv_timescale.value);
+			if (moviemode)
+				M_SaveFrame();
+			if (takescreenshot)
+				M_DoScreenShot();
 		}
 	}
+	if (moviemode)
+		M_StopMovie();
 	I_Quit();
 }
 

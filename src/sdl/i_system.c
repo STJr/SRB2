@@ -194,6 +194,7 @@ static char returnWadPath[256];
 #include "../filesrch.h"
 #include "endtxt.h"
 #include "sdlmain.h"
+#include "../m_anigif.h"
 
 #include "../i_joy.h"
 
@@ -2406,7 +2407,9 @@ void I_Quit(void)
 		G_CheckDemoStatus();
 	if (metalrecording)
 		G_StopMetalRecording(false);
-
+	if (moviemode)
+		M_StopMovie();
+		
 	D_QuitNetGame();
 	CL_AbortDownloadResume();
 	M_FreePlayerSetupColors();
@@ -2522,6 +2525,8 @@ void I_Error(const char *error, ...)
 		G_CheckDemoStatus();
 	if (metalrecording)
 		G_StopMetalRecording(false);
+	if (moviemode)
+		M_StopMovie();
 
 	D_QuitNetGame();
 	CL_AbortDownloadResume();
