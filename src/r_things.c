@@ -367,7 +367,7 @@ static void MirrorMissingRotations(void)
 	{
 		spriteframe_t *frame = &sprtemp[framenum];
 
-		if (frame->rotate == SRF_NONE || !(frame->rotate & SRF_3DMASK))
+		if (frame->rotate == SRF_NONE || !(frame->rotate & (SRF_3DMASK | SRF_2D)))
 			continue;
 
 		UINT8 numrotations = frame->rotate == SRF_3D ? 8 : 16;
@@ -2198,7 +2198,7 @@ static void R_ProjectSprite(mobj_t *thing)
 	}
 	else
 		trans = 0;
-	
+
 	if ((oldthing->flags2 & MF2_LINKDRAW) && oldthing->tracer)
 		trans = R_GetThingTransTable(oldthing->tracer->alpha, trans);
 	else
