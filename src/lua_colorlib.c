@@ -1,6 +1,6 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
-// Copyright (C) 2021-2024 by "Lactozilla".
+// Copyright (C) 2021-2024 by Lactozilla.
 // Copyright (C) 2014-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
