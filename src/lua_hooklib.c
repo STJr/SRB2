@@ -498,7 +498,9 @@ static int call_string_hooks(Hook_State *hook)
 
 static int call_mobj_type_hooks(Hook_State *hook, mobjtype_t mobj_type)
 {
-	if (mobj_type == MT_NULL && (
+	int numCalls = call_mapped(hook, &mobjHookIds[mobj_type][hook->hook_type]);
+
+	if (numCalls > 0 && mobj_type == MT_NULL && (
 		   hook->hook_type == MOBJ_HOOK(MobjThinker    )
 		|| hook->hook_type == MOBJ_HOOK(MobjCollide    )
 		|| hook->hook_type == MOBJ_HOOK(MobjLineCollide)
@@ -514,7 +516,7 @@ static int call_mobj_type_hooks(Hook_State *hook, mobjtype_t mobj_type)
 			mobjHookNames[hook->hook_type])
 		);
 
-	return call_mapped(hook, &mobjHookIds[mobj_type][hook->hook_type]);
+	return numCalls;
 }
 
 static void call_hud_hooks
