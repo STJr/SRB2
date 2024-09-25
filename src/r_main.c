@@ -1153,7 +1153,7 @@ void R_SetupFrame(player_t *player)
 		if (quake.epicenter) {
 			// Calculate 3D distance from epicenter, using the camera.
 			fixed_t xydist, dist;
-			if (r_viewmobj == NULL) {
+			if (P_MobjWasRemoved(r_viewmobj)) {
 				xydist = R_PointToDist2(thiscam->x, thiscam->y, quake.epicenter->x, quake.epicenter->y);
 				dist = R_PointToDist2(0, thiscam->z, xydist, quake.epicenter->z);
 			} else {
