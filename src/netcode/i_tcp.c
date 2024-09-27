@@ -143,7 +143,6 @@ typedef union
 #endif
 
 #include "i_addrinfo.h"
-#define SELECTTEST
 #define DEFAULTPORT "5029"
 
 #ifdef USE_WINSOCK
@@ -631,56 +630,6 @@ static boolean SOCK_Get(void)
 	return false;
 }
 
-// check if we can send (do not go over the buffer)
-
-static fd_set masterset;
-
-#ifdef SELECTTEST
-static boolean FD_CPY(fd_set *src, fd_set *dst, SOCKET_TYPE *fd, size_t len)
-{
-	boolean testset = false;
-	FD_ZERO(dst);
-	for (size_t i = 0; i < len;i++)
-	{
-		if(fd[i] != (SOCKET_TYPE)ERRSOCKET &&
-		   FD_ISSET(fd[i], src) && !FD_ISSET(fd[i], dst)) // no checking for dups
-		{
-			FD_SET(fd[i], dst);
-			testset = true;
-		}
-	}
-	return testset;
-}
-
-static boolean SOCK_CanSend(void)
-{
-	struct timeval timeval_for_select = {0, 0};
-	fd_set tset;
-	int wselect;
-
-	if(!FD_CPY(&masterset, &tset, mysockets, mysocketses))
-		return false;
-	wselect = select(255, NULL, &tset, NULL, &timeval_for_select);
-	if (wselect >= 1)
-		return true;
-	return false;
-}
-
-static boolean SOCK_CanGet(void)
-{
-	struct timeval timeval_for_select = {0, 0};
-	fd_set tset;
-	int rselect;
-
-	if(!FD_CPY(&masterset, &tset, mysockets, mysocketses))
-		return false;
-	rselect = select(255, &tset, NULL, NULL, &timeval_for_select);
-	if (rselect >= 1)
-		return true;
-	return false;
-}
-#endif
-
 static inline ssize_t SOCK_SendToAddr(SOCKET_TYPE socket, mysockaddr_t *sockaddr)
 {
 	socklen_t d4 = (socklen_t)sizeof(struct sockaddr_in);
@@ -922,7 +871,6 @@ static boolean UDP_Socket(void)
 		mysockets[s] = ERRSOCKET;
 	for (s = 0; s < MAXNETNODES+1; s++)
 		nodesocket[s] = ERRSOCKET;
-	FD_ZERO(&masterset);
 	s = 0;
 
 	memset(&hints, 0x00, sizeof (hints));
@@ -949,7 +897,6 @@ static boolean UDP_Socket(void)
 					mysockets[s] = UDP_Bind(runp->ai_family, runp->ai_addr, (socklen_t)runp->ai_addrlen);
 					if (mysockets[s] != (SOCKET_TYPE)ERRSOCKET)
 					{
-						FD_SET(mysockets[s], &masterset);
 						myfamily[s] = hints.ai_family;
 						s++;
 					}
@@ -970,7 +917,6 @@ static boolean UDP_Socket(void)
 				mysockets[s] = UDP_Bind(runp->ai_family, runp->ai_addr, (socklen_t)runp->ai_addrlen);
 				if (mysockets[s] != (SOCKET_TYPE)ERRSOCKET)
 				{
-					FD_SET(mysockets[s], &masterset);
 					myfamily[s] = hints.ai_family;
 					s++;
 #ifdef HAVE_MINIUPNPC
@@ -1003,7 +949,6 @@ static boolean UDP_Socket(void)
 						mysockets[s] = UDP_Bind(runp->ai_family, runp->ai_addr, (socklen_t)runp->ai_addrlen);
 						if (mysockets[s] != (SOCKET_TYPE)ERRSOCKET)
 						{
-							FD_SET(mysockets[s], &masterset);
 							myfamily[s] = hints.ai_family;
 							s++;
 						}
@@ -1024,7 +969,6 @@ static boolean UDP_Socket(void)
 					mysockets[s] = UDP_Bind(runp->ai_family, runp->ai_addr, (socklen_t)runp->ai_addrlen);
 					if (mysockets[s] != (SOCKET_TYPE)ERRSOCKET)
 					{
-						FD_SET(mysockets[s], &masterset);
 						myfamily[s] = hints.ai_family;
 						s++;
 					}
@@ -1150,16 +1094,13 @@ boolean I_InitTcpDriver(void)
 
 static void SOCK_CloseSocket(void)
 {
-	for (size_t i=0; i < MAXNETNODES+1; i++)
+	for (size_t i=0; i < mysocketses; i++)
 	{
-		if (mysockets[i] != (SOCKET_TYPE)ERRSOCKET
-		 && FD_ISSET(mysockets[i], &masterset))
-		{
-			FD_CLR(mysockets[i], &masterset);
+		if (mysockets[i] != (SOCKET_TYPE)ERRSOCKET)
 			close(mysockets[i]);
-		}
 		mysockets[i] = ERRSOCKET;
 	}
+	mysocketses = 0;
 }
 
 void I_ShutdownTcpDriver(void)
@@ -1244,12 +1185,6 @@ static boolean SOCK_OpenSocket(void)
 	I_NetCloseSocket = SOCK_CloseSocket;
 	I_NetFreeNodenum = SOCK_FreeNodenum;
 	I_NetMakeNodewPort = SOCK_NetMakeNodewPort;
-
-#ifdef SELECTTEST
-	// seem like not work with libsocket : (
-	I_NetCanSend = SOCK_CanSend;
-	I_NetCanGet = SOCK_CanGet;
-#endif
 
 	// build the socket but close it first
 	SOCK_CloseSocket();
