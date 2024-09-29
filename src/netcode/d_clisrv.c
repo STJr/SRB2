@@ -1414,6 +1414,83 @@ static void IdleUpdate(void)
 	}
 }
 
+static void DedicatedIdleUpdate(INT32 *realtics)
+{
+	const tic_t dedicatedidletime = cv_dedicatedidletime.value * TICRATE;
+	static tic_t dedicatedidletimeprev = 0;
+	static tic_t dedicatedidle = 0;
+
+	if (!server || !dedicated || gamestate != GS_LEVEL)
+		return;
+
+	if (dedicatedidletime > 0)
+	{
+		INT32 i;
+
+		boolean empty = true;
+		for (i = 0; i < MAXPLAYERS; i++)
+			if (playeringame[i])
+			{
+				empty = false;
+				break;
+			}
+
+		if (empty)
+		{
+			if (leveltime == 2)
+			{
+				// On next tick...
+				dedicatedidle = dedicatedidletime - 1;
+			}
+			else if (dedicatedidle >= dedicatedidletime)
+			{
+				if (D_GetExistingTextcmd(gametic, 0) || D_GetExistingTextcmd(gametic + 1, 0))
+				{
+					CONS_Printf("DEDICATED: Awakening from idle (Netxcmd detected...)\n");
+					dedicatedidle = 0;
+				}
+				else
+				{
+					(*realtics) = 0;
+				}
+			}
+			else
+			{
+				dedicatedidle += (*realtics);
+
+				if (dedicatedidle >= dedicatedidletime)
+				{
+					const char *idlereason = "at round start";
+					if (leveltime > 3)
+						idlereason = va("for %d seconds", dedicatedidle / TICRATE);
+
+					CONS_Printf("DEDICATED: No players %s, idling...\n", idlereason);
+					(*realtics) = 0;
+					dedicatedidle = dedicatedidletime;
+				}
+			}
+		}
+		else
+		{
+			if (dedicatedidle >= dedicatedidletime)
+			{
+				CONS_Printf("DEDICATED: Awakening from idle (Player detected...)\n");
+			}
+			dedicatedidle = 0;
+		}
+	}
+	else
+	{
+		if (dedicatedidletimeprev > 0 && dedicatedidle >= dedicatedidletimeprev)
+		{
+			CONS_Printf("DEDICATED: Awakening from idle (Idle disabled...)\n");
+		}
+		dedicatedidle = 0;
+	}
+
+	dedicatedidletimeprev = dedicatedidletime;
+}
+
 // Handle timeouts to prevent definitive freezes from happenning
 static void HandleNodeTimeouts(void)
 {
@@ -1490,69 +1567,7 @@ void NetUpdate(void)
 			realtics = 5;
 	}
 
-	if (server && dedicated && gamestate == GS_LEVEL)
- 	{
-		const tic_t dedicatedidletime = cv_dedicatedidletime.value * TICRATE;
-		static tic_t dedicatedidletimeprev = 0;
-		static tic_t dedicatedidle = 0;
-
-		if (dedicatedidletime > 0)
-		{
-			INT32 i;
-
-			for (i = 1; i < MAXNETNODES; ++i)
-				if (netnodes[i].ingame)
-				{
-					if (dedicatedidle >= dedicatedidletime)
-					{
-						CONS_Printf("DEDICATED: Awakening from idle (Node %d detected...)\n", i);
-						dedicatedidle = 0;
-					}
-					break;
-				}
-
-			if (i == MAXNETNODES)
-			{
-				if (leveltime == 2)
-				{
-					// On next tick...
-					dedicatedidle = dedicatedidletime-1;
-				}
-				else if (dedicatedidle >= dedicatedidletime)
-				{
-					if (D_GetExistingTextcmd(gametic, 0) || D_GetExistingTextcmd(gametic+1, 0))
-					{
-						CONS_Printf("DEDICATED: Awakening from idle (Netxcmd detected...)\n");
-						dedicatedidle = 0;
-					}
-					else
-					{
-						realtics = 0;
-					}
-				}
-				else if ((dedicatedidle += realtics) >= dedicatedidletime)
-				{
-					const char *idlereason = "at round start";
-					if (leveltime > 3)
-						idlereason = va("for %d seconds", dedicatedidle/TICRATE);
-
-					CONS_Printf("DEDICATED: No nodes %s, idling...\n", idlereason);
-					realtics = 0;
-					dedicatedidle = dedicatedidletime;
-				}
-			}
-		}
-		else
-		{
-			if (dedicatedidletimeprev > 0 && dedicatedidle >= dedicatedidletimeprev)
-			{
-				CONS_Printf("DEDICATED: Awakening from idle (Idle disabled...)\n");
-			}
-			dedicatedidle = 0;
-		}
-
-		dedicatedidletimeprev = dedicatedidletime;
- 	}
+	DedicatedIdleUpdate(&realtics);
 
 	gametime = nowtime;
 

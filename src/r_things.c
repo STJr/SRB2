@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -367,7 +367,7 @@ static void MirrorMissingRotations(void)
 	{
 		spriteframe_t *frame = &sprtemp[framenum];
 
-		if (frame->rotate == SRF_NONE || !(frame->rotate & SRF_3DMASK))
+		if (frame->rotate == SRF_NONE || !(frame->rotate & (SRF_3DMASK | SRF_2D)))
 			continue;
 
 		UINT8 numrotations = frame->rotate == SRF_3D ? 8 : 16;
@@ -379,7 +379,7 @@ static void MirrorMissingRotations(void)
 
 			UINT8 baserotation = GetOppositeRotation(rotation, frame->rotate);
 			UINT32 lumpnum = frame->lumppat[baserotation - 1];
-			R_InstallSpriteLump(WADFILENUM(lumpnum), LUMPNUM(lumpnum), frame->lumpid[baserotation], framenum, rotation, 1);
+			R_InstallSpriteLump(WADFILENUM(lumpnum), LUMPNUM(lumpnum), frame->lumpid[baserotation - 1], framenum, rotation, 1);
 		}
 	}
 }
@@ -2198,7 +2198,7 @@ static void R_ProjectSprite(mobj_t *thing)
 	}
 	else
 		trans = 0;
-	
+
 	if ((oldthing->flags2 & MF2_LINKDRAW) && oldthing->tracer)
 		trans = R_GetThingTransTable(oldthing->tracer->alpha, trans);
 	else

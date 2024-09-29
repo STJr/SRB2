@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -180,6 +180,7 @@ UINT16 W_CheckNumForMarkerStartPwad(const char *name, UINT16 wad, UINT16 startlu
 UINT16 W_CheckNumForFullNamePK3(const char *name, UINT16 wad, UINT16 startlump);
 UINT16 W_CheckNumForFolderStartPK3(const char *name, UINT16 wad, UINT16 startlump);
 UINT16 W_CheckNumForFolderEndPK3(const char *name, UINT16 wad, UINT16 startlump);
+INT32 W_IsFolderEmpty(const char *name, UINT16 wad);
 char *W_GetLumpFolderPathPK3(UINT16 wad, UINT16 lump);
 char *W_GetLumpFolderNamePK3(UINT16 wad, UINT16 lump);
 

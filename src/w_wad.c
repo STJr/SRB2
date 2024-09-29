@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -1329,10 +1329,10 @@ UINT16 W_CheckNumForFolderStartPK3(const char *name, UINT16 wad, UINT16 startlum
 			/* SLADE is special and puts a single directory entry. Skip that. */
 			if (strlen(lump_p->fullname) == name_length)
 				i++;
-			break;
+			return i;
 		}
 	}
-	return i;
+	return INT16_MAX;
 }
 
 // In a PK3 type of resource file, it looks for the next lumpinfo entry that doesn't share the specified pathfile.
@@ -1348,6 +1348,17 @@ UINT16 W_CheckNumForFolderEndPK3(const char *name, UINT16 wad, UINT16 startlump)
 			break;
 	}
 	return i;
+}
+
+// Returns 0 if the folder is not empty, 1 if it is empty, -1 if it doesn't exist
+INT32 W_IsFolderEmpty(const char *name, UINT16 wad)
+{
+	UINT16 start = W_CheckNumForFolderStartPK3(name, wad, 0);
+	if (start == INT16_MAX)
+		return -1;
+
+	// Unlike W_CheckNumForFolderStartPK3, W_CheckNumForFolderEndPK3 doesn't return INT16_MAX.
+	return W_CheckNumForFolderEndPK3(name, wad, start) <= start;
 }
 
 char *W_GetLumpFolderPathPK3(UINT16 wad, UINT16 lump)
@@ -1692,7 +1703,7 @@ lumpnum_t W_GetNumForLongName(const char *name)
 //
 static UINT16 W_CheckNumForPatchNamePwad(const char *name, UINT16 wad, boolean longname)
 {
-	UINT16 i, start, end;
+	UINT16 i, start = INT16_MAX, end = INT16_MAX;
 	static char uname[8 + 1] = { 0 };
 	UINT32 hash = 0;
 	lumpinfo_t *lump_p;
@@ -1714,8 +1725,11 @@ static UINT16 W_CheckNumForPatchNamePwad(const char *name, UINT16 wad, boolean l
 	// TODO: cache namespace lump IDs
 	if (W_FileHasFolders(wadfiles[wad]))
 	{
-		start = W_CheckNumForFolderStartPK3("Flats/", wad, 0);
-		end = W_CheckNumForFolderEndPK3("Flats/", wad, start);
+		if (!W_IsFolderEmpty("Flats/", wad))
+		{
+			start = W_CheckNumForFolderStartPK3("Flats/", wad, 0);
+			end = W_CheckNumForFolderEndPK3("Flats/", wad, start);
+		}
 	}
 	else
 	{

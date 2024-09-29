@@ -3,7 +3,7 @@
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Portions Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 2014-2023 by Sonic Team Junior.
+// Copyright (C) 2014-2024 by Sonic Team Junior.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -999,20 +999,8 @@ static void I_GetConsoleEvents(void)
 static void I_StartupConsole(void)
 {
 	HANDLE ci, co;
-	const INT32 ded = M_CheckParm("-dedicated");
-	BOOL gotConsole = FALSE;
-	if (M_CheckParm("-console") || ded)
-		gotConsole = AllocConsole();
-#ifdef _DEBUG
-	else if (M_CheckParm("-noconsole") && !ded)
-#else
-	else if (!M_CheckParm("-console") && !ded)
-#endif
-	{
-		FreeConsole();
-		gotConsole = FALSE;
-	}
-
+	BOOL gotConsole = AllocConsole();
+	consolevent = !M_CheckParm("-noconsole");
 	if (gotConsole)
 	{
 		SetConsoleTitleA("SRB2 Console");
@@ -1040,12 +1028,7 @@ static inline void I_ShutdownConsole(void){}
 static void I_GetConsoleEvents(void){}
 static inline void I_StartupConsole(void)
 {
-#ifdef _DEBUG
 	consolevent = !M_CheckParm("-noconsole");
-#else
-	consolevent = M_CheckParm("-console");
-#endif
-
 	framebuffer = M_CheckParm("-framebuffer");
 
 	if (framebuffer)

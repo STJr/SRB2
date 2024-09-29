@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -1465,13 +1465,13 @@ static unsigned PIT_DoCheckThing(mobj_t *thing)
 	}
 
 	// check for special pickup
-	if (thing->flags & MF_SPECIAL)
+	if (thing->flags & MF_SPECIAL && (tmthing->player || (tmthing->flags & MF_PUSHABLE))) // MF_PUSHABLE added for steam jets
 	{
 		P_TouchSpecialThing(thing, tmthing, true); // can remove thing
 		return CHECKTHING_COLLIDE;
 	}
 	// check again for special pickup
-	if (tmthing->flags & MF_SPECIAL)
+	if (tmthing->flags & MF_SPECIAL && (thing->player || (thing->flags & MF_PUSHABLE))) // MF_PUSHABLE added for steam jets
 	{
 		P_TouchSpecialThing(tmthing, thing, true); // can remove thing
 		return CHECKTHING_COLLIDE;
