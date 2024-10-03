@@ -1152,8 +1152,14 @@ void R_SetupFrame(player_t *player)
 
 		if (quake.epicenter) {
 			// Calculate 3D distance from epicenter, using the camera.
-			fixed_t xydist = R_PointToDist2(thiscam->x, thiscam->y, quake.epicenter->x, quake.epicenter->y);
-			fixed_t dist = R_PointToDist2(0, thiscam->z, xydist, quake.epicenter->z);
+			fixed_t xydist, dist;
+			if (P_MobjWasRemoved(r_viewmobj)) {
+				xydist = R_PointToDist2(thiscam->x, thiscam->y, quake.epicenter->x, quake.epicenter->y);
+				dist = R_PointToDist2(0, thiscam->z, xydist, quake.epicenter->z);
+			} else {
+				xydist = R_PointToDist2(r_viewmobj->x, r_viewmobj->y, quake.epicenter->x, quake.epicenter->y);
+				dist = R_PointToDist2(0, r_viewmobj->z, xydist, quake.epicenter->z);
+			}
 
 			// More effect closer to epicenter, outside of radius = no effect
 			if (!quake.radius || dist > quake.radius)
