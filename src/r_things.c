@@ -279,6 +279,14 @@ static boolean GetFramesAndRotationsFromShortLumpName(
 		*ret_rotation2 = R_Char2Rotation(name[7]);
 		if (*ret_frame2 >= 64 || *ret_rotation2 == 255)
 			return false;
+
+		// TRNSLATE is a valid but extremely unlikely sprite name:
+		// * The sprite name is "TRNS"
+		// * The frame is L, rotation A; mirrored to frame T, rotation E
+		// In the very unfortunate event that TRNSLATE is found between sprite lumps,
+		// this name check prevents it from being added as a sprite, when it actually isn't.
+		if (memcmp(name, "TRNSLATE", 8) == 0)
+			return false;
 	}
 	else
 	{
