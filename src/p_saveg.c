@@ -1501,13 +1501,13 @@ static void UnArchiveSectors(save_t *save_p)
 			sectors[i].ceilingheight = P_ReadFixed(save_p);
 		if (diff & SD_FLOORPIC)
 		{
-			sectors[i].floorpic = P_AddLevelFlatRuntime((char *)save_p);
-			save_p += 8;
+			sectors[i].floorpic = P_AddLevelFlatRuntime((char *)&save_p->buf[save_p->pos]);
+			save_p->pos += 8;
 		}
 		if (diff & SD_CEILPIC)
 		{
-			sectors[i].ceilingpic = P_AddLevelFlatRuntime((char *)save_p);
-			save_p += 8;
+			sectors[i].ceilingpic = P_AddLevelFlatRuntime((char *)&save_p->buf[save_p->pos]);
+			save_p->pos += 8;
 		}
 		if (diff & SD_LIGHT)
 			sectors[i].lightlevel = P_ReadINT16(save_p);
