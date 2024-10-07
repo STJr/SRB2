@@ -840,9 +840,16 @@ static void I_RegisterChildSignals(void)
 void I_OutputMsg(const char *fmt, ...)
 {
 	size_t len;
-	char txt[8192];
+	char *txt;
 	va_list  argptr;
 
+	va_start(argptr,fmt);
+	len = vsnprintf(NULL, 0, fmt, argptr);
+	va_end(argptr);
+	if (len == 0)
+		return;
+
+	txt = malloc(len+1);
 	va_start(argptr,fmt);
 	vsprintf(txt, fmt, argptr);
 	va_end(argptr);
@@ -876,7 +883,10 @@ void I_OutputMsg(const char *fmt, ...)
 		DWORD bytesWritten;
 
 		if (co == INVALID_HANDLE_VALUE)
+		{
+			free(txt);
 			return;
+		}
 
 		if (GetFileType(co) == FILE_TYPE_CHAR && GetConsoleMode(co, &bytesWritten))
 		{
@@ -892,11 +902,16 @@ void I_OutputMsg(const char *fmt, ...)
 			if (oldLength > 0)
 			{
 				LPVOID blank = malloc(oldLength);
-				if (!blank) return;
+				if (!blank)
+				{
+					free(txt);
+					return;
+				}
 				memset(blank, ' ', oldLength); // Blank out.
 				oldLines = malloc(oldLength*sizeof(TCHAR));
 				if (!oldLines)
 				{
+					free(txt);
 					free(blank);
 					return;
 				}
@@ -941,7 +956,7 @@ void I_OutputMsg(const char *fmt, ...)
 	if (!framebuffer)
 		fprintf(stderr, "%s", txt);
 #ifdef HAVE_TERMIOS
-	if (consolevent && txt[strlen(txt)-1] == '\n')
+	if (consolevent && txt[len-1] == '\n')
 	{
 		write(STDOUT_FILENO, tty_con.buffer, tty_con.cursor);
 		ttycon_ateol = true;
@@ -953,6 +968,7 @@ void I_OutputMsg(const char *fmt, ...)
 		fflush(stderr);
 
 #endif
+	free(txt);
 }
 
 //

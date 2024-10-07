@@ -1035,6 +1035,9 @@ void I_OutputMsg(const char *fmt, ...)
 	va_start(argptr,fmt);
 	len = vsnprintf(NULL, 0, fmt, argptr);
 	va_end(argptr);
+	if (len == 0)
+		return;
+
 	txt = malloc(len+1);
 	va_start(argptr,fmt);
 	vsprintf(txt, fmt, argptr);
@@ -1134,7 +1137,7 @@ void I_OutputMsg(const char *fmt, ...)
 	if (!framebuffer)
 		fprintf(stderr, "%s", txt);
 #ifdef HAVE_TERMIOS
-	if (consolevent && txt[strlen(txt)-1] == '\n')
+	if (consolevent && txt[len-1] == '\n')
 	{
 		write(STDOUT_FILENO, tty_con.buffer, tty_con.cursor);
 		ttycon_ateol = true;
