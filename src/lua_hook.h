@@ -135,6 +135,7 @@ void LUA_HookBool(boolean value, int hook);
 int  LUA_HookPlayer(player_t *, int hook);
 int  LUA_HookTiccmd(player_t *, ticcmd_t *, int hook);
 int  LUA_HookKey(event_t *event, int hook); // Hooks for key events
+int  LUA_HookText(event_t *event, int hook); // Hooks for text events
 
 void LUA_HookPreThinkFrame(void);
 void LUA_HookThinkFrame(void);

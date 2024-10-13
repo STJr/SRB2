@@ -2286,7 +2286,7 @@ boolean G_LuaResponder(event_t *ev)
 	}
 	else if (ev->type == ev_text)
 	{
-		cancelled = LUA_HookKey(ev, HOOK(TextInput));
+		cancelled = LUA_HookText(ev, HOOK(TextInput));
 		LUA_InvalidateUserdata(ev);
 	}
 
