@@ -196,6 +196,7 @@ static void DEH_LoadDehackedFile(MYFILE *f, boolean mainfile)
 
 	deh_num_warning = 0;
 
+	bootmap = 0;
 	gamedataadded = titlechanged = introchanged = false;
 
 	// it doesn't test the version of SRB2 and version of dehacked file
