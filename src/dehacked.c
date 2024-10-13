@@ -587,7 +587,12 @@ static void DEH_LoadDehackedFile(MYFILE *f, boolean mainfile)
 
 	if (gamestate == GS_TITLESCREEN)
 	{
-		if (introchanged)
+		if (bootmap)
+		{
+			menuactive = false;
+			D_MapChange(bootmap, gametype, ultimatemode, true, 0, false, false);
+		}
+		else if (introchanged)
 		{
 			menuactive = false;
 			I_UpdateMouseGrab();

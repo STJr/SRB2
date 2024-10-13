@@ -3549,6 +3549,8 @@ void readmaincfg(MYFILE *f)
 	char *tmp;
 	INT32 value;
 
+	bootmap = 0; // reset bootmap so we don't warp to the wrong map if another maincfg had set this before
+
 	do
 	{
 		if (myfgets(s, MAXLINELEN, f))
