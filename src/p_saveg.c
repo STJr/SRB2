@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -1501,13 +1501,13 @@ static void UnArchiveSectors(save_t *save_p)
 			sectors[i].ceilingheight = P_ReadFixed(save_p);
 		if (diff & SD_FLOORPIC)
 		{
-			sectors[i].floorpic = P_AddLevelFlatRuntime((char *)save_p);
-			save_p += 8;
+			sectors[i].floorpic = P_AddLevelFlatRuntime((char *)&save_p->buf[save_p->pos]);
+			save_p->pos += 8;
 		}
 		if (diff & SD_CEILPIC)
 		{
-			sectors[i].ceilingpic = P_AddLevelFlatRuntime((char *)save_p);
-			save_p += 8;
+			sectors[i].ceilingpic = P_AddLevelFlatRuntime((char *)&save_p->buf[save_p->pos]);
+			save_p->pos += 8;
 		}
 		if (diff & SD_LIGHT)
 			sectors[i].lightlevel = P_ReadINT16(save_p);
