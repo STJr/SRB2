@@ -227,6 +227,9 @@ void D_ProcessEvents(void)
 			}
 		}
 
+		if (CON_PreResponder(ev))
+			continue;
+
 		// Screenshots over everything so that they can be taken anywhere.
 		if (M_ScreenshotResponder(ev))
 			continue; // ate the event
