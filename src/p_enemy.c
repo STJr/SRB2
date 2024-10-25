@@ -14034,6 +14034,12 @@ static void P_SnapperLegPlace(mobj_t *mo)
 	seg = seg->tracer;
 	do
 	{
+		if (P_MobjWasRemoved(seg))
+		{
+			seg = NULL;
+			break;
+		}
+
 		o1 = seg->extravalue1;
 		o2 = seg->extravalue2;
 		alt = seg->cusval;
