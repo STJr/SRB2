@@ -11,11 +11,16 @@
 /// \brief a data structure for managing cached drawlists for the Lua hud lib
 
 #include "lua_hudlib_drawlist.h"
+#include "lua_hud.h"
+#include "blua/lstate.h" // shhhhhh
+#include "lua_libs.h"
 
 #include <string.h>
 
 #include "v_video.h"
 #include "z_zone.h"
+#include "r_main.h"
+#include "r_fps.h"
 
 enum drawitem_e {
 	DI_Draw = 0,
@@ -35,6 +40,7 @@ enum drawitem_e {
 
 // A single draw item with all possible arguments needed for a draw call.
 typedef struct drawitem_s {
+	UINT64 id;
 	enum drawitem_e type;
 	fixed_t x;
 	fixed_t y;
@@ -45,6 +51,7 @@ typedef struct drawitem_s {
 	fixed_t hscale;
 	fixed_t vscale;
 	patch_t *patch;
+	const char *stroffset;
 	INT32 flags;
 	UINT16 basecolor;
 	UINT16 outlinecolor;
@@ -66,6 +73,8 @@ struct huddrawlist_s {
 	drawitem_t *items;
 	size_t items_capacity;
 	size_t items_len;
+	drawitem_t *olditems;
+	size_t olditems_len;
 	char *strbuf;
 	size_t strbuf_capacity;
 	size_t strbuf_len;
@@ -107,6 +116,8 @@ huddrawlist_h LUA_HUD_CreateDrawList(void)
 	drawlist->items = NULL;
 	drawlist->items_capacity = 0;
 	drawlist->items_len = 0;
+	drawlist->olditems = NULL;
+	drawlist->olditems_len = 0;
 	drawlist->strbuf = NULL;
 	drawlist->strbuf_capacity = 0;
 	drawlist->strbuf_len = 0;
@@ -116,8 +127,14 @@ huddrawlist_h LUA_HUD_CreateDrawList(void)
 
 void LUA_HUD_ClearDrawList(huddrawlist_h list)
 {
+	// swap the old and new lists
+	void *tmp = list->olditems;
+	list->olditems = list->items;
+	list->items = tmp;
+
 	// rather than deallocate, we'll just save the existing allocation and empty
 	// it out for reuse
+	list->olditems_len = list->items_len;
 
 	// this memset probably isn't necessary
 	if (list->items)
@@ -142,6 +159,10 @@ void LUA_HUD_DestroyDrawList(huddrawlist_h list)
 	{
 		Z_Free(list->items);
 	}
+	if (list->olditems)
+	{
+		Z_Free(list->olditems);
+	}
 	Z_Free(list);
 }
 
@@ -161,6 +182,7 @@ static size_t AllocateDrawItem(huddrawlist_h list)
 		if (list->items_capacity == 0) list->items_capacity = 128;
 		else list->items_capacity *= 2;
 		list->items = (drawitem_t *) Z_Realloc(list->items, sizeof(struct drawitem_s) * list->items_capacity, PU_STATIC, NULL);
+		list->olditems = (drawitem_t *) Z_Realloc(list->olditems, sizeof(struct drawitem_s) * list->items_capacity, PU_STATIC, NULL);
 	}
 
 	return list->items_len++;
@@ -196,6 +218,31 @@ static const char *CopyString(huddrawlist_h list, const char* str)
 	return result;
 }
 
+#define INTERP_LATCH 1
+#define INTERP_STRING 2
+#define INTERP_FLAGMASK 0x3
+
+static UINT64 GetItemId(void)
+{
+	if (!hud_interpolate)
+	{
+		return 0;
+	}
+
+	// leave bits 0 and 1 free for the string mode
+	UINT64 id = ((UINT64)(uintptr_t)gL->savedpc << 32) | (hud_interpcounter << 10) | (hud_interptag << 2);
+
+	if (hud_interplatch)
+	{
+		id |= INTERP_LATCH;
+		hud_interplatch = false;
+	}
+	if (hud_interpstring)
+		id |= INTERP_STRING;
+
+	return id;
+}
+
 void LUA_HUD_AddDraw(
 	huddrawlist_h list,
 	INT32 x,
@@ -207,6 +254,7 @@ void LUA_HUD_AddDraw(
 {
 	size_t i = AllocateDrawItem(list);
 	drawitem_t *item = &list->items[i];
+	item->id = GetItemId();
 	item->type = DI_Draw;
 	item->x = x;
 	item->y = y;
@@ -227,6 +275,7 @@ void LUA_HUD_AddDrawScaled(
 {
 	size_t i = AllocateDrawItem(list);
 	drawitem_t *item = &list->items[i];
+	item->id = GetItemId();
 	item->type = DI_DrawScaled;
 	item->x = x;
 	item->y = y;
@@ -249,6 +298,7 @@ void LUA_HUD_AddDrawStretched(
 {
 	size_t i = AllocateDrawItem(list);
 	drawitem_t *item = &list->items[i];
+	item->id = GetItemId();
 	item->type = DI_DrawStretched;
 	item->x = x;
 	item->y = y;
@@ -276,6 +326,7 @@ void LUA_HUD_AddDrawCropped(
 {
 	size_t i = AllocateDrawItem(list);
 	drawitem_t *item = &list->items[i];
+	item->id = GetItemId();
 	item->type = DI_DrawCropped;
 	item->x = x;
 	item->y = y;
@@ -300,6 +351,7 @@ void LUA_HUD_AddDrawNum(
 {
 	size_t i = AllocateDrawItem(list);
 	drawitem_t *item = &list->items[i];
+	item->id = GetItemId();
 	item->type = DI_DrawNum;
 	item->x = x;
 	item->y = y;
@@ -318,6 +370,7 @@ void LUA_HUD_AddDrawPaddedNum(
 {
 	size_t i = AllocateDrawItem(list);
 	drawitem_t *item = &list->items[i];
+	item->id = GetItemId();
 	item->type = DI_DrawPaddedNum;
 	item->x = x;
 	item->y = y;
@@ -337,6 +390,7 @@ void LUA_HUD_AddDrawFill(
 {
 	size_t i = AllocateDrawItem(list);
 	drawitem_t *item = &list->items[i];
+	item->id = GetItemId();
 	item->type = DI_DrawFill;
 	item->x = x;
 	item->y = y;
@@ -356,9 +410,11 @@ void LUA_HUD_AddDrawString(
 {
 	size_t i = AllocateDrawItem(list);
 	drawitem_t *item = &list->items[i];
+	item->id = GetItemId();
 	item->type = DI_DrawString;
 	item->x = x;
 	item->y = y;
+	item->stroffset = CopyString(list, str);
 	item->str = CopyString(list, str);
 	item->flags = flags;
 	item->align = align;
@@ -378,9 +434,11 @@ void LUA_HUD_AddDrawNameTag(
 {
 	size_t i = AllocateDrawItem(list);
 	drawitem_t *item = &list->items[i];
+	item->id = GetItemId();
 	item->type = DI_DrawNameTag;
 	item->x = x;
 	item->y = y;
+	item->stroffset = CopyString(list, str);
 	item->str = CopyString(list, str);
 	item->flags = flags;
 	item->basecolor = basecolor;
@@ -404,9 +462,11 @@ void LUA_HUD_AddDrawScaledNameTag(
 {
 	size_t i = AllocateDrawItem(list);
 	drawitem_t *item = &list->items[i];
+	item->id = GetItemId();
 	item->type = DI_DrawScaledNameTag;
 	item->x = x;
 	item->y = y;
+	item->stroffset = CopyString(list, str);
 	item->str = CopyString(list, str);
 	item->flags = flags;
 	item->scale = scale;
@@ -426,9 +486,11 @@ void LUA_HUD_AddDrawLevelTitle(
 {
 	size_t i = AllocateDrawItem(list);
 	drawitem_t *item = &list->items[i];
+	item->id = GetItemId();
 	item->type = DI_DrawLevelTitle;
 	item->x = x;
 	item->y = y;
+	item->stroffset = CopyString(list, str);
 	item->str = CopyString(list, str);
 	item->flags = flags;
 }
@@ -441,6 +503,7 @@ void LUA_HUD_AddFadeScreen(
 {
 	size_t i = AllocateDrawItem(list);
 	drawitem_t *item = &list->items[i];
+	item->id = 0;
 	item->type = DI_FadeScreen;
 	item->color = color;
 	item->strength = strength;
@@ -449,7 +512,12 @@ void LUA_HUD_AddFadeScreen(
 void LUA_HUD_DrawList(huddrawlist_h list)
 {
 	size_t i;
-
+	size_t j = 0;
+	fixed_t frac = R_UsingFrameInterpolation() ? rendertimefrac : FRACUNIT;
+	fixed_t lerpx = 0, lerpy = 0;
+	drawitem_t *latchitem = NULL;
+	drawitem_t *oldlatchitem = NULL;
+	
 	if (!list) I_Error("HUD drawlist invalid");
 	if (list->items_len <= 0) return;
 	if (!list->items) I_Error("HUD drawlist->items invalid");
@@ -457,118 +525,168 @@ void LUA_HUD_DrawList(huddrawlist_h list)
 	for (i = 0; i < list->items_len; i++)
 	{
 		drawitem_t *item = &list->items[i];
+		drawitem_t *olditem = NULL;
+		//const char *itemstr = &list->strbuf[item->stroffset];
 
+		if (item->id)
+		{
+			// find the old one too
+			// this is kinda cursed... we need to check every item
+			// but stop when the first-checked item is reached again
+			size_t stop = j;
+			do
+			{
+				if (j == list->olditems_len)
+				{
+					j = 0;
+					continue;
+				}
+				drawitem_t *old = &list->olditems[j++];
+				if ((old->id & ~INTERP_FLAGMASK) == (item->id & ~INTERP_FLAGMASK))
+				{
+					// gotcha!
+					olditem = old;
+					if (item->id & INTERP_LATCH)
+					{
+						lerpx = FixedMul(frac, item->x - olditem->x);
+						lerpy = FixedMul(frac, item->y - olditem->y);
+						latchitem = item;
+						oldlatchitem = olditem;
+					}
+					else if (!(item->id & INTERP_STRING))
+					{
+						lerpx = FixedMul(frac, item->x - olditem->x);
+						lerpy = FixedMul(frac, item->y - olditem->y);
+						latchitem = NULL;
+					}
+					break;
+				}
+			}
+			while (j != stop);
+		}
+		else
+		{
+			lerpx = lerpy = 0;
+			latchitem = NULL;
+		}
+
+		#define LERP(it) (olditem ? olditem->it + FixedMul(frac, item->it - olditem->it) : item->it)
+
+		// half of this could be done when the coordinates are latched... zzzzzz
+		#define LERPS(it) (latchitem ? ((latchitem->it + (item->it - latchitem->it)) - (latchitem->it - oldlatchitem->it)) + lerp##it : (olditem ? olditem->it + FixedMul(frac, item->it - olditem->it) : item->it))
+		//define LERPS(it) (olditem ? (latchitem ? (latchitem->it + (item->it - latchitem->it)) - (latchitem->it - oldlatchitem->it) : olditem->it) + lerp##it : item->it)
+		
 		switch (item->type)
 		{
 			case DI_Draw:
-				V_DrawFixedPatch(item->x<<FRACBITS, item->y<<FRACBITS, FRACUNIT, item->flags, item->patch, item->colormap);
+				V_DrawFixedPatch(LERPS(x<<FRACBITS), LERPS(y<<FRACBITS), FRACUNIT, item->flags, item->patch, item->colormap);
 				break;
 			case DI_DrawScaled:
-				V_DrawFixedPatch(item->x, item->y, item->scale, item->flags, item->patch, item->colormap);
+				V_DrawFixedPatch(LERPS(x), LERPS(y), LERP(scale), item->flags, item->patch, item->colormap);
 				break;
 			case DI_DrawStretched:
-				V_DrawStretchyFixedPatch(item->x, item->y, item->hscale, item->vscale, item->flags, item->patch, item->colormap);
+				V_DrawStretchyFixedPatch(LERPS(x), LERPS(y), LERP(hscale), LERP(vscale), item->flags, item->patch, item->colormap);
 				break;
 			case DI_DrawCropped:
-				V_DrawCroppedPatch(item->x, item->y, item->hscale, item->vscale, item->flags, item->patch, item->colormap, item->sx, item->sy, item->w, item->h);
+				V_DrawCroppedPatch(LERPS(x), LERPS(y), LERP(hscale), LERP(vscale), item->flags, item->patch, item->colormap, item->sx, item->sy, LERP(w), LERP(h));
 				break;
 			case DI_DrawNum:
-				V_DrawTallNum(item->x, item->y, item->flags, item->num);
+				V_DrawTallNum(LERPS(x), LERPS(y), item->flags, item->num);
 				break;
 			case DI_DrawPaddedNum:
-				V_DrawPaddedTallNum(item->x, item->y, item->flags, item->num, item->digits);
+				V_DrawPaddedTallNum(LERPS(x), LERPS(y), item->flags, item->num, item->digits);
 				break;
 			case DI_DrawFill:
-				V_DrawFill(item->x, item->y, item->w, item->h, item->c);
+				V_DrawFill(LERPS(x), LERPS(y), LERP(w), LERP(h), item->c);
 				break;
 			case DI_DrawString:
 				switch(item->align)
 				{
 				// hu_font
 				case align_left:
-					V_DrawString(item->x, item->y, item->flags, item->str);
+					V_DrawString(LERPS(x), LERPS(y), item->flags, item->str);
 					break;
 				case align_center:
-					V_DrawCenteredString(item->x, item->y, item->flags, item->str);
+					V_DrawCenteredString(LERPS(x), LERPS(y), item->flags, item->str);
 					break;
 				case align_right:
-					V_DrawRightAlignedString(item->x, item->y, item->flags, item->str);
+					V_DrawRightAlignedString(LERPS(x), LERPS(y), item->flags, item->str);
 					break;
 				case align_fixed:
-					V_DrawStringAtFixed(item->x, item->y, item->flags, item->str);
+					V_DrawStringAtFixed(LERPS(x), LERPS(y), item->flags, item->str);
 					break;
 				case align_fixedcenter:
-					V_DrawCenteredStringAtFixed(item->x, item->y, item->flags, item->str);
+					V_DrawCenteredStringAtFixed(LERPS(x), LERPS(y), item->flags, item->str);
 					break;
 				case align_fixedright:
-					V_DrawRightAlignedStringAtFixed(item->x, item->y, item->flags, item->str);
+					V_DrawRightAlignedStringAtFixed(LERPS(x), LERPS(y), item->flags, item->str);
 					break;
 				// hu_font, 0.5x scale
 				case align_small:
-					V_DrawSmallString(item->x, item->y, item->flags, item->str);
+					V_DrawSmallString(LERPS(x), LERPS(y), item->flags, item->str);
 					break;
 				case align_smallfixed:
-					V_DrawSmallStringAtFixed(item->x, item->y, item->flags, item->str);
+					V_DrawSmallStringAtFixed(LERPS(x), LERPS(y), item->flags, item->str);
 					break;
 				case align_smallfixedcenter:
-					V_DrawCenteredSmallStringAtFixed(item->x, item->y, item->flags, item->str);
+					V_DrawCenteredSmallStringAtFixed(LERPS(x), LERPS(y), item->flags, item->str);
 					break;
 				case align_smallfixedright:
-					V_DrawRightAlignedSmallStringAtFixed(item->x, item->y, item->flags, item->str);
+					V_DrawRightAlignedSmallStringAtFixed(LERPS(x), LERPS(y), item->flags, item->str);
 					break;
 				case align_smallcenter:
-					V_DrawCenteredSmallString(item->x, item->y, item->flags, item->str);
+					V_DrawCenteredSmallString(LERPS(x), LERPS(y), item->flags, item->str);
 					break;
 				case align_smallright:
-					V_DrawRightAlignedSmallString(item->x, item->y, item->flags, item->str);
+					V_DrawRightAlignedSmallString(LERPS(x), LERPS(y), item->flags, item->str);
 					break;
 				case align_smallthin:
-					V_DrawSmallThinString(item->x, item->y, item->flags, item->str);
+					V_DrawSmallThinString(LERPS(x), LERPS(y), item->flags, item->str);
 					break;
 				case align_smallthincenter:
-					V_DrawCenteredSmallThinString(item->x, item->y, item->flags, item->str);
+					V_DrawCenteredSmallThinString(LERPS(x), LERPS(y), item->flags, item->str);
 					break;
 				case align_smallthinright:
-					V_DrawRightAlignedSmallThinString(item->x, item->y, item->flags, item->str);
+					V_DrawRightAlignedSmallThinString(LERPS(x), LERPS(y), item->flags, item->str);
 					break;
 				case align_smallthinfixed:
-					V_DrawSmallThinStringAtFixed(item->x, item->y, item->flags, item->str);
+					V_DrawSmallThinStringAtFixed(LERPS(x), LERPS(y), item->flags, item->str);
 					break;
 				case align_smallthinfixedcenter:
-					V_DrawCenteredSmallThinStringAtFixed(item->x, item->y, item->flags, item->str);
+					V_DrawCenteredSmallThinStringAtFixed(LERPS(x), LERPS(y), item->flags, item->str);
 					break;
 				case align_smallthinfixedright:
-					V_DrawRightAlignedSmallThinStringAtFixed(item->x, item->y, item->flags, item->str);
+					V_DrawRightAlignedSmallThinStringAtFixed(LERPS(x), LERPS(y), item->flags, item->str);
 					break;
 				// tny_font
 				case align_thin:
-					V_DrawThinString(item->x, item->y, item->flags, item->str);
+					V_DrawThinString(LERPS(x), LERPS(y), item->flags, item->str);
 					break;
 				case align_thincenter:
-					V_DrawCenteredThinString(item->x, item->y, item->flags, item->str);
+					V_DrawCenteredThinString(LERPS(x), LERPS(y), item->flags, item->str);
 					break;
 				case align_thinright:
-					V_DrawRightAlignedThinString(item->x, item->y, item->flags, item->str);
+					V_DrawRightAlignedThinString(LERPS(x), LERPS(y), item->flags, item->str);
 					break;
 				case align_thinfixed:
-					V_DrawThinStringAtFixed(item->x, item->y, item->flags, item->str);
+					V_DrawThinStringAtFixed(LERPS(x), LERPS(y), item->flags, item->str);
 					break;
 				case align_thinfixedcenter:
-					V_DrawCenteredThinStringAtFixed(item->x, item->y, item->flags, item->str);
+					V_DrawCenteredThinStringAtFixed(LERPS(x), LERPS(y), item->flags, item->str);
 					break;
 				case align_thinfixedright:
-					V_DrawRightAlignedThinStringAtFixed(item->x, item->y, item->flags, item->str);
+					V_DrawRightAlignedThinStringAtFixed(LERPS(x), LERPS(y), item->flags, item->str);
 					break;
 				}
 				break;
 			case DI_DrawNameTag:
-				V_DrawNameTag(item->x, item->y, item->flags, FRACUNIT, item->basecolormap, item->outlinecolormap, item->str);
+				V_DrawNameTag(LERPS(x), LERPS(y), item->flags, FRACUNIT, item->basecolormap, item->outlinecolormap, item->str);
 				break;
 			case DI_DrawScaledNameTag:
-				V_DrawNameTag(FixedInt(item->x), FixedInt(item->y), item->flags, item->scale, item->basecolormap, item->outlinecolormap, item->str);
+				V_DrawNameTag(FixedInt(LERPS(x)), FixedInt(LERPS(y)), item->flags, LERP(scale), item->basecolormap, item->outlinecolormap, item->str);
 				break;
 			case DI_DrawLevelTitle:
-				V_DrawLevelTitle(item->x, item->y, item->flags, item->str);
+				V_DrawLevelTitle(LERPS(x), LERPS(y), item->flags, item->str);
 				break;
 			case DI_FadeScreen:
 				V_DrawFadeScreen(item->color, item->strength);
