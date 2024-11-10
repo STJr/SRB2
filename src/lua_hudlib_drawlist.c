@@ -588,7 +588,7 @@ void LUA_HUD_DrawList(huddrawlist_h list)
 				V_DrawStretchyFixedPatch(LERPS(x), LERPS(y), LERP(hscale), LERP(vscale), item->flags, item->patch, item->colormap);
 				break;
 			case DI_DrawCropped:
-				V_DrawCroppedPatch(LERPS(x), LERPS(y), LERP(hscale), LERP(vscale), item->flags, item->patch, item->colormap, item->sx, item->sy, LERP(w), LERP(h));
+				V_DrawCroppedPatch(LERPS(x), LERPS(y), LERP(hscale), LERP(vscale), item->flags, item->patch, item->colormap, LERP(sx), LERP(sy), LERP(w), LERP(h));
 				break;
 			case DI_DrawNum:
 				V_DrawTallNum(LERPS(x), LERPS(y), item->flags, item->num);
