@@ -1208,7 +1208,7 @@ static boolean SOCK_Ban(INT32 node)
 	else if (banned[numbans].any.sa_family == AF_INET6)
 	{
 		banned[numbans].ip6.sin6_port = 0;
-		bannedmask[numbans] = 128;
+		bannedmask[numbans] = 64;
 	}
 #endif
 	numbans++;
@@ -1245,7 +1245,7 @@ static boolean SOCK_SetBanAddress(const char *address, const char *mask)
 			bannedmask[numbans] = (UINT8)atoi(mask);
 #ifdef HAVE_IPV6
 		else if (runp->ai_family == AF_INET6)
-			bannedmask[numbans] = 128;
+			bannedmask[numbans] = 64;
 #endif
 		else
 			bannedmask[numbans] = 32;
@@ -1254,7 +1254,7 @@ static boolean SOCK_SetBanAddress(const char *address, const char *mask)
 			bannedmask[numbans] = 32;
 #ifdef HAVE_IPV6
 		else if (bannedmask[numbans] > 128 && runp->ai_family == AF_INET6)
-			bannedmask[numbans] = 128;
+			bannedmask[numbans] = 64;
 #endif
 		numbans++;
 		runp = runp->ai_next;
