@@ -67,17 +67,9 @@ extern doomcom_t *doomcom;
 */
 extern boolean (*I_NetGet)(void);
 
-/**	\brief ask to driver if there is data waiting
-*/
-extern boolean (*I_NetCanGet)(void);
-
 /**	\brief send packet within doomcom struct
 */
 extern void (*I_NetSend)(void);
-
-/**	\brief ask to driver if all is ok to send data now
-*/
-extern boolean (*I_NetCanSend)(void);
 
 /**	\brief	close a connection
 
