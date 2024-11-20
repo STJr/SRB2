@@ -3064,6 +3064,7 @@ void HU_DoCEcho(const char *msg)
 {
 	I_OutputMsg("%s\n", msg); // print to log
 
+	CONS_Printf(M_GetText("CSAY: %s \n"), msg);
 	strncpy(cechotext, msg, sizeof(cechotext));
 	strncat(cechotext, "\\", sizeof(cechotext) - strlen(cechotext) - 1);
 	cechotext[sizeof(cechotext) - 1] = '\0';

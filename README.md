@@ -4,6 +4,7 @@
 - Skin change at any time
 - renderhitbox in multiplayer
 - Minor net edits ("Archived a null value")
+- Hud interpolation from SRB2K Saturn (v.interpolate(bool/int) in lua)
 -Joining netgame shows progress bar on "checking files"
 
 
