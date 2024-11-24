@@ -1152,11 +1152,7 @@ static SINT8 SOCK_NetMakeNodewPort(const char *address, const char *port)
 		// test ip address of server
 		for (i = 0; i < mysocketses; ++i)
 		{
-			/* sendto tests that there is a network to this
-				address */
-			if (runp->ai_addr->sa_family == myfamily[i] &&
-					sendto(mysockets[i], NULL, 0, 0,
-						runp->ai_addr, runp->ai_addrlen) == 0)
+			if (runp->ai_addr->sa_family == myfamily[i])
 			{
 				memcpy(&clientaddress[newnode], runp->ai_addr, runp->ai_addrlen);
 				break;
