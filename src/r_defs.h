@@ -242,9 +242,8 @@ typedef struct sectorportal_s
 		struct sector_s *sector;
 		struct mobj_s *mobj;
 	};
-	struct {
-		fixed_t x, y;
-	} origin;
+	struct sector_s *target;
+	boolean ceiling;
 } sectorportal_t;
 
 typedef struct ffloor_s

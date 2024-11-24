@@ -142,11 +142,9 @@ void Portal_Remove (portal_t* portal)
 	Z_Free(portal);
 }
 
-static void Portal_GetViewpointForLine(portal_t *portal, line_t *start, line_t *dest)
+static void Portal_GetViewpointForLine(portal_t *portal, line_t *start, line_t *dest, angle_t dangle)
 {
 	// Offset the portal view by the linedef centers
-	angle_t dangle = R_PointToAngle2(0,0,dest->dx,dest->dy) - R_PointToAngle2(start->dx,start->dy,0,0);
-
 	fixed_t disttopoint;
 	angle_t angtopoint;
 
@@ -168,7 +166,6 @@ static void Portal_GetViewpointForLine(portal_t *portal, line_t *start, line_t *
 
 	portal->viewx = dest_c.x + FixedMul(FINECOSINE(angtopoint>>ANGLETOFINESHIFT), disttopoint);
 	portal->viewy = dest_c.y + FixedMul(FINESINE(angtopoint>>ANGLETOFINESHIFT), disttopoint);
-	portal->viewz = viewz + dest->frontsector->floorheight - start->frontsector->floorheight;
 	portal->viewangle = viewangle + dangle;
 }
 
@@ -189,7 +186,11 @@ void Portal_Add2Lines (const INT32 line1, const INT32 line2, const INT32 x1, con
 	line_t* start	= &lines[line1];
 	line_t* dest	= &lines[line2];
 
-	Portal_GetViewpointForLine(portal, start, dest);
+	angle_t dangle = R_PointToAngle2(0,0,dest->dx,dest->dy) - R_PointToAngle2(start->dx,start->dy,0,0);
+
+	Portal_GetViewpointForLine(portal, start, dest, dangle);
+
+	portal->viewz = viewz + dest->frontsector->floorheight - start->frontsector->floorheight;
 
 	portal->clipline = line2;
 	portal->is_skybox = false;
@@ -332,10 +333,23 @@ static void Portal_GetViewpointForSecPortal(portal_t *portal, sectorportal_t *se
 	fixed_t x, y, z;
 	angle_t angle;
 
+	sector_t *target = secportal->target;
+
+	fixed_t target_x = target->soundorg.x;
+	fixed_t target_y = target->soundorg.y;
+	fixed_t target_z;
+
+	if (secportal->ceiling)
+		target_z = P_GetSectorCeilingZAt(target, target_x, target_y);
+	else
+		target_z = P_GetSectorFloorZAt(target, target_x, target_y);
+
 	switch (secportal->type)
 	{
 	case SECPORTAL_LINE:
-		Portal_GetViewpointForLine(portal, secportal->line.start, secportal->line.dest);
+		angle = secportal->line.dest->angle - secportal->line.start->angle;
+		Portal_GetViewpointForLine(portal, secportal->line.start, secportal->line.dest, angle);
+		portal->viewz = viewz; // Apparently it just works like that. Not going to question it.
 		return;
 	case SECPORTAL_OBJECT:
 		if (!secportal->mobj || P_MobjWasRemoved(secportal->mobj))
@@ -373,8 +387,9 @@ static void Portal_GetViewpointForSecPortal(portal_t *portal, sectorportal_t *se
 		return;
 	}
 
-	fixed_t refx = secportal->origin.x - viewx;
-	fixed_t refy = secportal->origin.y - viewy;
+	fixed_t refx = target_x - viewx;
+	fixed_t refy = target_y - viewy;
+	fixed_t refz = target_z - viewz;
 
 	// Rotate the X/Y to match the target angle
 	if (angle != 0)
@@ -387,7 +402,7 @@ static void Portal_GetViewpointForSecPortal(portal_t *portal, sectorportal_t *se
 
 	portal->viewx = x - refx;
 	portal->viewy = y - refy;
-	portal->viewz = z + viewz;
+	portal->viewz = z - refz;
 	portal->viewangle = angle + viewangle;
 }
 
@@ -425,7 +440,7 @@ static boolean Portal_AddSectorPortal (const visplane_t* plane)
 
 /** Creates a transferred sector portal.
  */
-void Portal_AddTransferred (UINT32 secportalnum, const INT32 x1, const INT32 x2)
+void Portal_AddTransferred (const UINT32 secportalnum, const INT32 x1, const INT32 x2)
 {
 	if (secportalnum >= secportalcount)
 		return;
