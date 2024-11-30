@@ -4913,12 +4913,12 @@ static boolean Skin_CanChange(const char *valstr)
 	if (!Playing())
 		return true; // do whatever you want
 
-	if (!(multiplayer || netgame)) // In single player.
-		return true;
-
 	// You already are that skin.
 	if (stricmp(skins[players[consoleplayer].skin]->name, valstr) == 0)
 		return false;
+
+	if (!(multiplayer || netgame)) // In single player.
+		return true;
 
 	if (CanChangeSkin(consoleplayer) && !P_PlayerMoving(consoleplayer))
 		return true;
