@@ -101,7 +101,7 @@ void Portal_ClipApply (const portal_t* portal)
 
 static portal_t* Portal_Add (const INT16 x1, const INT16 x2)
 {
-	portal_t *portal		= Z_Malloc(sizeof(portal_t), PU_LEVEL, NULL);
+	portal_t *portal		= Z_Calloc(sizeof(portal_t), PU_LEVEL, NULL);
 	INT16 *ceilingclipsave	= Z_Malloc(sizeof(INT16)*(x2-x1 + 1), PU_LEVEL, NULL);
 	INT16 *floorclipsave	= Z_Malloc(sizeof(INT16)*(x2-x1 + 1), PU_LEVEL, NULL);
 	fixed_t *frontscalesave	= Z_Malloc(sizeof(fixed_t)*(x2-x1 + 1), PU_LEVEL, NULL);
@@ -117,7 +117,7 @@ static portal_t* Portal_Add (const INT16 x1, const INT16 x2)
 		portal_cap->next = portal;
 		portal_cap = portal;
 	}
-	portal->next = NULL;
+	portal->clipline = -1;
 
 	// Store clipping values so they can be restored once the portal is rendered.
 	portal->ceilingclip	= ceilingclipsave;
@@ -193,9 +193,6 @@ void Portal_Add2Lines (const INT32 line1, const INT32 line2, const INT32 x1, con
 	portal->viewz = viewz + dest->frontsector->floorheight - start->frontsector->floorheight;
 
 	portal->clipline = line2;
-	portal->is_skybox = false;
-	portal->is_horizon = false;
-	portal->horizon_sector = NULL;
 
 	Portal_ClipRange(portal);
 
@@ -318,10 +315,7 @@ static boolean Portal_AddSkybox (const visplane_t* plane)
 
 	Portal_ClipVisplane(plane, portal);
 
-	portal->clipline = -1;
 	portal->is_skybox = true;
-	portal->is_horizon = false;
-	portal->horizon_sector = NULL;
 
 	Portal_GetViewpointForSkybox(portal);
 
@@ -352,8 +346,9 @@ static void Portal_GetViewpointForSecPortal(portal_t *portal, sectorportal_t *se
 		portal->viewz = viewz; // Apparently it just works like that. Not going to question it.
 		return;
 	case SECPORTAL_OBJECT:
-		if (!secportal->mobj || P_MobjWasRemoved(secportal->mobj))
+		if (P_MobjWasRemoved(secportal->mobj))
 			return;
+		portal->viewmobj = secportal->mobj;
 		x = secportal->mobj->x;
 		y = secportal->mobj->y;
 		z = secportal->mobj->z;
@@ -428,11 +423,6 @@ static boolean Portal_AddSectorPortal (const visplane_t* plane)
 
 	Portal_ClipVisplane(plane, portal);
 
-	portal->clipline = -1;
-	portal->is_horizon = false;
-	portal->is_skybox = false;
-	portal->horizon_sector = NULL;
-
 	Portal_GetViewpointForSecPortal(portal, secportal);
 
 	return true;
@@ -450,9 +440,6 @@ void Portal_AddTransferred (const UINT32 secportalnum, const INT32 x1, const INT
 		return;
 
 	portal_t* portal = Portal_Add(x1, x2);
-	portal->is_skybox = false;
-	portal->is_horizon = false;
-	portal->horizon_sector = NULL;
 
 	if (secportal->type == SECPORTAL_SKYBOX)
 		Portal_GetViewpointForSkybox(portal);

@@ -36,6 +36,8 @@ typedef struct portal_s
 
 	boolean is_skybox;
 
+	mobj_t *viewmobj;
+
 	UINT8 pass;			/**< Keeps track of the portal's recursion depth. */
 	INT32 clipline;		/**< Optional clipline for line-based portals. */
 
