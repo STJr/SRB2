@@ -1143,7 +1143,7 @@ static void Internal_FreeNodenum(INT32 nodenum)
 
 char *I_NetSplitAddress(char *host, char **port)
 {
-	boolean v4 = (strchr(host, '.') != NULL);
+	boolean v4 = (host[0] != '[');
 
 	host = strtok(host, v4 ? ":" : "[]");
 
