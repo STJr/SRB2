@@ -65,6 +65,7 @@
 #include "i_video.h" // rendermode
 #include "md5.h"
 #include "lua_script.h"
+#include "lua_hook.h"
 #ifdef SCANTHINGS
 #include "p_setup.h" // P_ScanThings
 #endif
@@ -1009,6 +1010,10 @@ UINT16 W_InitFile(const char *filename, boolean mainfile, boolean startup)
 		break;
 	}
 
+	lua_lumploading++;
+	LUA_HookVoid(HOOK(AddonLoaded));
+	lua_lumploading--;
+
 	W_InvalidateLumpnumCache();
 	return wadfile->numlumps;
 }
@@ -1169,6 +1174,11 @@ UINT16 W_InitFolder(const char *path, boolean mainfile, boolean startup)
 	W_ReadFileShaders(wadfile);
 	W_LoadTrnslateLumps(numwadfiles - 1);
 	W_LoadDehackedLumpsPK3(numwadfiles - 1, mainfile);
+
+	lua_lumploading++;
+	LUA_HookVoid(HOOK(AddonLoaded));
+	lua_lumploading--;
+
 	W_InvalidateLumpnumCache();
 
 	return wadfile->numlumps;
