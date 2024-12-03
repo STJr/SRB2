@@ -3401,7 +3401,7 @@ boolean M_Responder(event_t *ev)
 	{
 		// ignore ev_keydown events if the key maps to a character, since
 		// the ev_text event will follow immediately after in that case.
-		if (ev->type == ev_keydown && ch >= 32 && ch <= 127)
+		if (ev->type == ev_keydown && ((ch >= 32 && ch <= 127) || (ch >= KEY_KEYPAD7 && ch <= KEY_KPADDEL)))
 			return true;
 
 		routine(ch);
@@ -12195,15 +12195,6 @@ static void M_HandleConnectIP(INT32 choice)
 				setupm_ip[l] = (char)choice;
 				setupm_ip[l+1] = 0;
 			}
-			else if (choice >= 199 && choice <= 211 && choice != 202 && choice != 206) //numpad too!
-			{
-				char keypad_translation[] = {'7','8','9','-','4','5','6','+','1','2','3','0','.'};
-				choice = keypad_translation[choice - 199];
-				S_StartSound(NULL,sfx_menu1); // Tails
-				setupm_ip[l] = (char)choice;
-				setupm_ip[l+1] = 0;
-			}
-
 			break;
 	}
 
