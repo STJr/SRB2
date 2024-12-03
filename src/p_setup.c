@@ -8464,6 +8464,8 @@ static boolean P_LoadAddon(UINT16 numlumps)
 			SendNetXCmd(XD_EXITLEVEL, NULL, 0);
 	}
 
+	LUA_HookVoid(HOOK(AddonLoaded));
+
 	return true;
 }
 
