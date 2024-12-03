@@ -1988,7 +1988,7 @@ static void CV_SetCVar(consvar_t *var, const char *value, boolean stealth)
 	if (!var->string)
 		I_Error("CV_Set: %s no string set!\n", var->name);
 #endif
-	if (!var || !var->string || !value || !stricmp(var->string, value))
+	if (!var || !var->string || !value || (var->can_change == NULL && !stricmp(var->string, value)))
 		return; // no changes
 
 	if (var->flags & CV_NETVAR)
