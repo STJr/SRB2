@@ -112,6 +112,7 @@ void *hwSym(const char *funcName,void *handle)
 
 	GETFUNC(SetPaletteLookup);
 	GETFUNC(CreateLightTable);
+	GETFUNC(UpdateLightTable);
 	GETFUNC(ClearLightTables);
 	GETFUNC(SetScreenPalette);
 
