@@ -23,7 +23,7 @@
 #define SPEED 5
 
 #define NUM_BLOCKS_X 20
-#define NUM_BLOCKS_Y 10
+#define NUM_BLOCKS_Y 8
 #define BLOCK_SIZE 12
 #define BORDER_SIZE 12
 
@@ -32,7 +32,7 @@
 
 #define LEFT_X ((BASEVIDWIDTH - MAP_WIDTH) / 2 - BORDER_SIZE)
 #define RIGHT_X (LEFT_X + MAP_WIDTH + BORDER_SIZE * 2 - 1)
-#define BOTTOM_Y (BASEVIDHEIGHT - 48)
+#define BOTTOM_Y (BASEVIDHEIGHT - 76)
 #define TOP_Y (BOTTOM_Y - MAP_HEIGHT - BORDER_SIZE * 2 + 1)
 
 enum bonustype_s {
