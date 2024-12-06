@@ -5255,8 +5255,8 @@ static void P_NetArchiveSectorPortals(save_t *save_p)
 			P_WriteUINT32(save_p, SaveSector(secportals[i].sector));
 			break;
 		case SECPORTAL_OBJECT:
-			if (secportals[i].mobj && !P_MobjWasRemoved(secportals[i].mobj))
-				SaveMobjnum(secportals[i].mobj);
+			if (!P_MobjWasRemoved(secportals[i].mobj))
+				P_WriteUINT32(save_p, SaveMobjnum(secportals[i].mobj));
 			else
 				P_WriteUINT32(save_p, 0);
 			break;
