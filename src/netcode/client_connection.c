@@ -299,7 +299,7 @@ static void CL_DrawConnectionStatus(void)
 			}
 			DrawFileProgress(file, BASEVIDHEIGHT-46);
 
-			V_DrawCenteredString(BASEVIDWIDTH/2, BASEVIDHEIGHT-16-16, V_ALLOWLOWERCASE|V_YELLOWMAP, "Overall Download Progress");
+			V_DrawCenteredString(BASEVIDWIDTH/2, BASEVIDHEIGHT-16-14, V_ALLOWLOWERCASE|V_YELLOWMAP, "Total Progress");
 			DrawOverallProgress(BASEVIDHEIGHT-16);
 		}
 		else
