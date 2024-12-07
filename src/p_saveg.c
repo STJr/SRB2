@@ -5239,8 +5239,8 @@ static void P_NetArchiveSectorPortals(save_t *save_p)
 		UINT8 type = secportals[i].type;
 
 		P_WriteUINT8(save_p, type);
-		P_WriteFixed(save_p, secportals[i].origin.x);
-		P_WriteFixed(save_p, secportals[i].origin.y);
+		P_WriteUINT8(save_p, secportals[i].ceiling ? 1 : 0);
+		P_WriteUINT32(save_p, SaveSector(secportals[i].target));
 
 		switch (type)
 		{
@@ -5255,8 +5255,8 @@ static void P_NetArchiveSectorPortals(save_t *save_p)
 			P_WriteUINT32(save_p, SaveSector(secportals[i].sector));
 			break;
 		case SECPORTAL_OBJECT:
-			if (secportals[i].mobj && !P_MobjWasRemoved(secportals[i].mobj))
-				SaveMobjnum(secportals[i].mobj);
+			if (!P_MobjWasRemoved(secportals[i].mobj))
+				P_WriteUINT32(save_p, SaveMobjnum(secportals[i].mobj));
 			else
 				P_WriteUINT32(save_p, 0);
 			break;
@@ -5283,8 +5283,8 @@ static void P_NetUnArchiveSectorPortals(save_t *save_p)
 		sectorportal_t *secportal = &secportals[id];
 
 		secportal->type = P_ReadUINT8(save_p);
-		secportal->origin.x = P_ReadFixed(save_p);
-		secportal->origin.y = P_ReadFixed(save_p);
+		secportal->ceiling = (P_ReadUINT8(save_p) != 0) ? true : false;
+		secportal->target = LoadSector(P_ReadUINT32(save_p));
 
 		switch (secportal->type)
 		{
