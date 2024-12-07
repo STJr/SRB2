@@ -8002,6 +8002,9 @@ boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate)
 	// Free GPU textures before freeing patches.
 	if (rendermode == render_opengl && (vid.glstate == VID_GL_LIBRARY_LOADED))
 		HWR_ClearAllTextures();
+
+	// Delete light table textures
+	HWR_ClearLightTables();
 #endif
 
 	Patch_FreeTag(PU_PATCH_LOWPRIORITY);
