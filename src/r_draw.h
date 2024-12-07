@@ -173,6 +173,7 @@ void R_DrawTiltedTranslucentSpan_8(void);
 void R_DrawSplat_8(void);
 void R_DrawTranslucentSplat_8(void);
 void R_DrawTiltedSplat_8(void);
+void R_DrawTiltedTranslucentSplat_8(void);
 
 void R_DrawFloorSprite_8(void);
 void R_DrawTranslucentFloorSprite_8(void);
@@ -194,6 +195,7 @@ void R_DrawTiltedTranslucentSpan_NPO2_8(void);
 void R_DrawSplat_NPO2_8(void);
 void R_DrawTranslucentSplat_NPO2_8(void);
 void R_DrawTiltedSplat_NPO2_8(void);
+void R_DrawTiltedTranslucentSplat_NPO2_8(void);
 
 void R_DrawFloorSprite_NPO2_8(void);
 void R_DrawTranslucentFloorSprite_NPO2_8(void);

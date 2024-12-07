@@ -1434,6 +1434,9 @@ static void R_PortalFrame(portal_t *portal)
 	viewsin = FINESINE(viewangle>>ANGLETOFINESHIFT);
 	viewcos = FINECOSINE(viewangle>>ANGLETOFINESHIFT);
 
+	if (!P_MobjWasRemoved(portal->viewmobj))
+		r_viewmobj = portal->viewmobj;
+
 	portalclipstart = portal->start;
 	portalclipend = portal->end;
 

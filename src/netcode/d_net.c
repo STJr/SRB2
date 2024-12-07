@@ -67,8 +67,6 @@ INT16 hardware_MAXPACKETLENGTH;
 
 boolean (*I_NetGet)(void) = NULL;
 void (*I_NetSend)(void) = NULL;
-boolean (*I_NetCanSend)(void) = NULL;
-boolean (*I_NetCanGet)(void) = NULL;
 void (*I_NetCloseSocket)(void) = NULL;
 void (*I_NetFreeNodenum)(INT32 nodenum) = NULL;
 SINT8 (*I_NetMakeNodewPort)(const char *address, const char* port) = NULL;
@@ -993,15 +991,7 @@ boolean HSendPacket(INT32 node, boolean reliable, UINT8 acknum, size_t packetlen
 		netbuffer->ackreturn = 0;
 	if (reliable)
 	{
-		if (I_NetCanSend && !I_NetCanSend())
-		{
-			if (netbuffer->packettype < PT_CANFAIL)
-				GetFreeAcknum(&netbuffer->ack, true);
-
-			DEBFILE("HSendPacket: Out of bandwidth\n");
-			return false;
-		}
-		else if (!GetFreeAcknum(&netbuffer->ack, false))
+		if (!GetFreeAcknum(&netbuffer->ack, false))
 			return false;
 	}
 	else
@@ -1153,7 +1143,7 @@ static void Internal_FreeNodenum(INT32 nodenum)
 
 char *I_NetSplitAddress(char *host, char **port)
 {
-	boolean v4 = (strchr(host, '.') != NULL);
+	boolean v4 = (host[0] != '[');
 
 	host = strtok(host, v4 ? ":" : "[]");
 
@@ -1205,7 +1195,6 @@ boolean D_CheckNetGame(void)
 
 	I_NetGet = Internal_Get;
 	I_NetSend = Internal_Send;
-	I_NetCanSend = NULL;
 	I_NetCloseSocket = NULL;
 	I_NetFreeNodenum = Internal_FreeNodenum;
 	I_NetMakeNodewPort = NULL;
@@ -1375,7 +1364,6 @@ void D_CloseConnection(void)
 
 		I_NetGet = Internal_Get;
 		I_NetSend = Internal_Send;
-		I_NetCanSend = NULL;
 		I_NetCloseSocket = NULL;
 		I_NetFreeNodenum = Internal_FreeNodenum;
 		I_NetMakeNodewPort = NULL;
