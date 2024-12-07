@@ -7645,20 +7645,20 @@ static void P_InitCamera(void)
 			CV_SetValue(&cv_analog[1], 0);
 
 		displayplayer = consoleplayer; // Start with your OWN view, please!
-	}
 
-	if (twodlevel)
-	{
-		CV_SetValue(&cv_analog[0], false);
-		CV_SetValue(&cv_analog[1], false);
-	}
-	else
-	{
-		if (cv_useranalog[0].value)
-			CV_SetValue(&cv_analog[0], true);
+		if (twodlevel)
+		{
+			CV_SetValue(&cv_analog[0], false);
+			CV_SetValue(&cv_analog[1], false);
+		}
+		else
+		{
+			if (cv_useranalog[0].value)
+				CV_SetValue(&cv_analog[0], true);
 
-		if ((splitscreen && cv_useranalog[1].value) || botingame)
-			CV_SetValue(&cv_analog[1], true);
+			if ((splitscreen && cv_useranalog[1].value) || botingame)
+				CV_SetValue(&cv_analog[1], true);
+		}
 	}
 }
 
