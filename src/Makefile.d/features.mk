@@ -3,7 +3,7 @@
 #
 
 passthru_opts+=\
-	NO_IPV6 NOHW NOMD5 NOPOSTPROCESSING\
+	NO_IPV6 NOHW NOPOSTPROCESSING\
 	MOBJCONSISTANCY PACKETDROP ZDEBUG\
 	NOUPNP NOEXECINFO\
 
@@ -16,10 +16,6 @@ endif
 ifndef NOHW
 opts+=-DHWRENDER
 sources+=$(call List,hardware/Sourcefile)
-endif
-
-ifndef NOMD5
-sources+=md5.c
 endif
 
 ifdef PNG_PKGCONFIG

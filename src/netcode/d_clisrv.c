@@ -45,6 +45,7 @@
 #include "../lua_hook.h"
 #include "../lua_libs.h"
 #include "../md5.h"
+#include "../lonesha256.h"
 #include "../m_perfstats.h"
 #include "server_connection.h"
 #include "client_connection.h"
@@ -93,7 +94,7 @@ boolean hu_stopped = false;
 char *reqpass;
 char **adminpass;
 UINT32 adminpasscount = 0;
-char adminsalt[MAXPLAYERS][9];
+static char adminsalt[MAXNETNODES][9];
 I_StaticAssert(sizeof(netbuffer->u.salt) == sizeof(adminsalt[0]));
 
 tic_t neededtic;
@@ -873,21 +874,21 @@ static void PT_Login(SINT8 node)
 	if (client)
 		return;
 
-#ifndef NOMD5
+	I_Assert((UINT8)node < sizeof(adminsalt) / sizeof(adminsalt[0]));
+
 	// I_GetRandomBytes should get it's data from a CSPRNG, so it's safe to use it here.
 	I_GetRandomBytes(adminsalt[node], sizeof(adminsalt[node]));
 	adminsalt[node][8] = '\0'; // convenience
 	netbuffer->packettype = PT_LOGINCHALLENGE;
 	memcpy(netbuffer->u.salt, adminsalt[node], sizeof(adminsalt[node]));
 	HSendPacket(node, true, 0, sizeof(adminsalt[node]));
-#else
-	(void)node;
-#endif
 }
 
 static void PT_LoginChallenge(SINT8 node)
 {
-#ifndef NOMD5
+	char salt[9];
+	I_StaticAssert(sizeof(salt) == sizeof(netbuffer->u.salt));
+
 	if (node != servernode)
 		return;
 
@@ -897,26 +898,23 @@ static void PT_LoginChallenge(SINT8 node)
 	if (reqpass == NULL)
 		return; // got PT_LOGINCHALLENGE but we didn't request a login
 
-	D_MD5PasswordPass((const UINT8 *)reqpass, strlen(reqpass), netbuffer->u.salt, &netbuffer->u.md5sum);
+	memcpy(salt, netbuffer->u.salt, sizeof(netbuffer->u.salt));
+	D_SHA256PasswordPass((const UINT8 *)reqpass, strlen(reqpass), salt, netbuffer->u.sha256sum);
 	Z_Free(reqpass);
 	reqpass = NULL;
 
 	netbuffer->packettype = PT_LOGINAUTH;
-	HSendPacket(servernode, true, 0, 16);
-#else
-	(void)node;
-#endif
+	HSendPacket(servernode, true, 0, sizeof(netbuffer->u.sha256sum));
 }
 
 static void PT_LoginAuth(SINT8 node, INT32 netconsole)
 {
-#ifndef NOMD5
-	UINT8 finalmd5[16];/* Well, it's the cool thing to do? */
+	UINT8 finalsha256[32];/* Well, it's the cool thing to do? */
 	UINT32 i;
 	if (client)
 		return;
 
-	if (doomcom->datalength < 16)/* ignore partial sends */
+	if (doomcom->datalength < sizeof(netbuffer->u.sha256sum))/* ignore partial sends */
 		return;
 
 	if (adminsalt[node][0] == 0)
@@ -934,9 +932,9 @@ static void PT_LoginAuth(SINT8 node, INT32 netconsole)
 	for (i = 0; i < adminpasscount; i++)
 	{
 		// Do the final pass to compare with the sent md5
-		D_MD5PasswordPass((const UINT8 *)adminpass[i], strlen(adminpass[i]), adminsalt[node], finalmd5);
+		D_SHA256PasswordPass((const UINT8 *)adminpass[i], strlen(adminpass[i]), adminsalt[node], finalsha256);
 
-		if (!memcmp(netbuffer->u.md5sum, finalmd5, 16))
+		if (!memcmp(netbuffer->u.sha256sum, finalsha256, 32))
 		{
 			adminsalt[node][0] = 0;
 			CONS_Printf(M_GetText("%s passed authentication.\n"), player_names[netconsole]);
@@ -947,10 +945,6 @@ static void PT_LoginAuth(SINT8 node, INT32 netconsole)
 
 	adminsalt[node][0] = 0;
 	CONS_Printf(M_GetText("Password from %s failed.\n"), player_names[netconsole]);
-#else
-	(void)node;
-	(void)netconsole;
-#endif
 }
 
 /** Add a login for HTTP downloads. If the
@@ -1944,29 +1938,18 @@ tic_t GetLag(INT32 node)
 	return gametic - netnodes[node].tic;
 }
 
-void D_MD5PasswordPass(const UINT8 *buffer, size_t len, const char *salt, void *dest)
+void D_SHA256PasswordPass(const UINT8 *buffer, size_t len, const char *salt, UINT8 dest[static 32])
 {
-	// FIXME: replace with SHA-256, since MD5 is busted.
-#ifdef NOMD5
-	(void)buffer;
-	(void)len;
-	(void)salt;
-	memset(dest, 0, 16);
-#else
-	char tmpbuf[256];
+	UINT8 *tmpbuf;
 	const size_t sl = strlen(salt);
 
 	if (len > 256-sl)
 		len = 256-sl;
 
+	tmpbuf = Z_Malloc(sizeof(char) * (sl + len), PU_STATIC, NULL);
 	memcpy(tmpbuf, buffer, len);
 	memmove(&tmpbuf[len], salt, sl);
-	//strcpy(&tmpbuf[len], salt);
-	len += strlen(salt);
-	if (len < 256)
-		memset(&tmpbuf[len],0,256-len);
 
-	// Yes, we intentionally md5 the ENTIRE buffer regardless of size...
-	md5_buffer(tmpbuf, 256, dest);
-#endif
+	lonesha256(dest, tmpbuf, len+sl);
+	Z_Free(tmpbuf);
 }

@@ -106,8 +106,6 @@
 
 FILE *fopenfile(const char*, const char*);
 
-//#define NOMD5
-
 // If you don't disable ALL debug first, you get ALL debug enabled
 #if !defined (NDEBUG)
 #ifndef PACKETDROP

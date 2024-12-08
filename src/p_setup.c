@@ -7195,19 +7195,12 @@ static void P_ConvertBinaryMap(void)
   */
 static INT32 P_MakeBufferMD5(const char *buffer, size_t len, void *resblock)
 {
-#ifdef NOMD5
-	(void)buffer;
-	(void)len;
-	memset(resblock, 0x00, 16);
-	return 1;
-#else
 	tic_t t = I_GetTime();
 	CONS_Debug(DBG_SETUP, "Making MD5\n");
 	if (md5_buffer(buffer, len, resblock) == NULL)
 		return 1;
 	CONS_Debug(DBG_SETUP, "MD5 calc took %f seconds\n", (float)(I_GetTime() - t)/NEWTICRATE);
 	return 0;
-#endif
 }
 
 static void P_MakeMapMD5(virtres_t *virt, void *dest)

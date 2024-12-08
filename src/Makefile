@@ -60,7 +60,6 @@
 #
 # Netplay incompatible
 # --------------------
-# NOMD5=1 - Disable MD5 checksum (validation tool).
 # NOPOSTPROCESSING=1 - ?
 # MOBJCONSISTANCY=1 - ??
 # PACKETDROP=1 - ??

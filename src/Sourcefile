@@ -99,3 +99,5 @@ lua_hudlib_drawlist.c
 lua_inputlib.c
 lua_colorlib.c
 lua_interceptlib.c
+md5.c
+lonesha256.c

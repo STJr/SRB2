@@ -311,7 +311,6 @@ static void W_LoadDehackedLumps(UINT16 wadnum, boolean mainfile)
   * \return 0 if MD5 checksum was made, and is at resblock, 1 if error was found
   */
 
-#ifndef NOMD5
 static INT32 W_MakeFileMD5(const char *filename, void *resblock)
 {
 	FILE *fhandle;
@@ -332,7 +331,6 @@ static INT32 W_MakeFileMD5(const char *filename, void *resblock)
 	}
 	return 1;
 }
-#endif
 
 // Invalidates the cache of lump numbers. Call this whenever a wad is added.
 static void W_InvalidateLumpnumCache(void)
@@ -857,9 +855,7 @@ UINT16 W_InitFile(const char *filename, boolean mainfile, boolean startup)
 	wadfile_t *wadfile;
 	restype_t type;
 	UINT16 numlumps = 0;
-#ifndef NOMD5
 	size_t i;
-#endif
 	UINT8 md5sum[16];
 	int important;
 
@@ -900,7 +896,6 @@ UINT16 W_InitFile(const char *filename, boolean mainfile, boolean startup)
 
 	important = !important;
 
-#ifndef NOMD5
 	//
 	// w-waiiiit!
 	// Let's not add a wad file if the MD5 matches
@@ -921,7 +916,6 @@ UINT16 W_InitFile(const char *filename, boolean mainfile, boolean startup)
 			return W_InitFileError(filename, false);
 		}
 	}
-#endif
 
 	switch(type = ResourceFileDetect(filename))
 	{
@@ -2576,7 +2570,6 @@ void *W_CachePatchLongName(const char *name, INT32 tag)
 		return W_CachePatchNum(W_GetNumForLongPatchName("MISSING"), tag);
 	return W_CachePatchNum(num, tag);
 }
-#ifndef NOMD5
 #define MD5_LEN 16
 
 /**
@@ -2596,7 +2589,6 @@ static void PrintMD5String(const UINT8 *md5, char *buf)
 		md5[8], md5[9], md5[10], md5[11],
 		md5[12], md5[13], md5[14], md5[15]);
 }
-#endif
 /** Verifies a file's MD5 is as it should be.
   * For releases, used as cheat prevention -- if the MD5 doesn't match, a
   * fatal error is thrown. In debug mode, an MD5 mismatch only triggers a
@@ -2609,10 +2601,6 @@ static void PrintMD5String(const UINT8 *md5, char *buf)
   */
 void W_VerifyFileMD5(UINT16 wadfilenum, const char *matchmd5)
 {
-#ifdef NOMD5
-	(void)wadfilenum;
-	(void)matchmd5;
-#else
 	UINT8 realmd5[MD5_LEN];
 	INT32 ix;
 
@@ -2646,7 +2634,6 @@ void W_VerifyFileMD5(UINT16 wadfilenum, const char *matchmd5)
 #endif
 			(M_GetText("File is old, is corrupt or has been modified:\n%s\nFound MD5: %s\nWanted MD5: %s\n"), wadfiles[wadfilenum]->filename, actualmd5text, matchmd5);
 	}
-#endif
 }
 
 // Verify versions for different archive

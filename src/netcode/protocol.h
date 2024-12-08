@@ -310,6 +310,7 @@ typedef struct
 		clientconfig_pak clientcfg;
 		char salt[9];
 		UINT8 md5sum[16];
+		UINT8 sha256sum[32];
 		serverinfo_pak serverinfo;
 		serverrefuse_pak serverrefuse;
 		askinfo_pak askinfo;

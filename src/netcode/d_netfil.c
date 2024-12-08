@@ -1915,10 +1915,6 @@ size_t nameonlylength(const char *s)
 
 filestatus_t checkfilemd5(char *filename, const UINT8 *wantedmd5sum)
 {
-#if defined (NOMD5)
-	(void)wantedmd5sum;
-	(void)filename;
-#else
 	FILE *fhandle;
 	UINT8 md5sum[16];
 
@@ -1936,7 +1932,6 @@ filestatus_t checkfilemd5(char *filename, const UINT8 *wantedmd5sum)
 	}
 
 	I_Error("Couldn't open %s for md5 check", filename);
-#endif
 	return FS_FOUND; // will never happen, but makes the compiler shut up
 }
 

@@ -2976,10 +2976,6 @@ void D_ClearPassword(void)
 // Remote Administration
 static void Command_Changepassword_f(void)
 {
-#ifdef NOMD5
-	// If we have no MD5 support then completely disable XD_LOGIN responses for security.
-	CONS_Alert(CONS_NOTICE, "Remote administration commands are not supported in this build.\n");
-#else
 	if (client) // cannot change remotely
 	{
 		CONS_Printf(M_GetText("Only the server can use this.\n"));
@@ -2994,16 +2990,11 @@ static void Command_Changepassword_f(void)
 
 	D_SetPassword(COM_Argv(1));
 	CONS_Printf(M_GetText("Password added.\n"));
-#endif
 }
 
 // Remote Administration
 static void Command_Clearpassword_f(void)
 {
-#ifdef NOMD5
-	// If we have no MD5 support then completely disable XD_LOGIN responses for security.
-	CONS_Alert(CONS_NOTICE, "Remote administration commands are not supported in this build.\n");
-#else
 	if (client) // cannot change remotely
 	{
 		CONS_Printf(M_GetText("Only the server can use this.\n"));
@@ -3012,15 +3003,10 @@ static void Command_Clearpassword_f(void)
 
 	D_ClearPassword();
 	CONS_Printf(M_GetText("Passwords cleared.\n"));
-#endif
 }
 
 static void Command_Login_f(void)
 {
-#ifdef NOMD5
-	// If we have no MD5 support then completely disable XD_LOGIN responses for security.
-	CONS_Alert(CONS_NOTICE, "Remote administration commands are not supported in this build.\n");
-#else
 	const char *pw;
 
 	if (!netgame)
@@ -3047,7 +3033,6 @@ static void Command_Login_f(void)
 
 	netbuffer->packettype = PT_LOGIN;
 	HSendPacket(servernode, true, 0, 0);
-#endif
 }
 
 boolean IsPlayerAdmin(INT32 playernum)
@@ -3509,9 +3494,6 @@ static void Command_Addfile(void)
 		// calculate and check md5
 		{
 			UINT8 md5sum[16];
-#ifdef NOMD5
-			memset(md5sum,0,16);
-#else
 			FILE *fhandle;
 
 			if ((fhandle = W_OpenWadFile(&fn, true)) != NULL)
@@ -3536,7 +3518,6 @@ static void Command_Addfile(void)
 					continue;
 				}
 			}
-#endif
 			WRITEMEM(buf_p, md5sum, 16);
 		}
 

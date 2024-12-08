@@ -127,7 +127,7 @@ INT32 D_NumBots(void);
 
 tic_t GetLag(INT32 node);
 
-void D_MD5PasswordPass(const UINT8 *buffer, size_t len, const char *salt, void *dest);
+void D_SHA256PasswordPass(const UINT8 *buffer, size_t len, const char *salt, UINT8 dest[static 32]);
 
 extern char *reqpass;
 extern char **adminpass;
