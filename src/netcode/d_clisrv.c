@@ -914,7 +914,7 @@ static void PT_LoginAuth(SINT8 node, INT32 netconsole)
 	if (client)
 		return;
 
-	if (doomcom->datalength < sizeof(netbuffer->u.sha256sum))/* ignore partial sends */
+	if ((size_t)doomcom->datalength < sizeof(netbuffer->u.sha256sum))/* ignore partial sends */
 		return;
 
 	if (adminsalt[node][0] == 0)
