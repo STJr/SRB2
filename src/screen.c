@@ -124,6 +124,7 @@ void SCR_SetDrawFuncs(void)
 		spanfuncs[SPANDRAWFUNC_SPLAT] = R_DrawSplat_8;
 		spanfuncs[SPANDRAWFUNC_TRANSSPLAT] = R_DrawTranslucentSplat_8;
 		spanfuncs[SPANDRAWFUNC_TILTEDSPLAT] = R_DrawTiltedSplat_8;
+		spanfuncs[SPANDRAWFUNC_TILTEDTRANSSPLAT] = R_DrawTiltedTranslucentSplat_8;
 		spanfuncs[SPANDRAWFUNC_SPRITE] = R_DrawFloorSprite_8;
 		spanfuncs[SPANDRAWFUNC_TRANSSPRITE] = R_DrawTranslucentFloorSprite_8;
 		spanfuncs[SPANDRAWFUNC_TILTEDSPRITE] = R_DrawTiltedFloorSprite_8;
@@ -146,6 +147,7 @@ void SCR_SetDrawFuncs(void)
 		spanfuncs_npo2[SPANDRAWFUNC_SPLAT] = R_DrawSplat_NPO2_8;
 		spanfuncs_npo2[SPANDRAWFUNC_TRANSSPLAT] = R_DrawTranslucentSplat_NPO2_8;
 		spanfuncs_npo2[SPANDRAWFUNC_TILTEDSPLAT] = R_DrawTiltedSplat_NPO2_8;
+		spanfuncs_npo2[SPANDRAWFUNC_TILTEDTRANSSPLAT] = R_DrawTiltedTranslucentSplat_NPO2_8;
 		spanfuncs_npo2[SPANDRAWFUNC_SPRITE] = R_DrawFloorSprite_NPO2_8;
 		spanfuncs_npo2[SPANDRAWFUNC_TRANSSPRITE] = R_DrawTranslucentFloorSprite_NPO2_8;
 		spanfuncs_npo2[SPANDRAWFUNC_TILTEDSPRITE] = R_DrawTiltedFloorSprite_NPO2_8;

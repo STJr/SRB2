@@ -426,9 +426,6 @@ void R_ClearColormaps(void)
 {
 	// Purged by PU_LEVEL, just overwrite the pointer
 	extra_colormaps = R_CreateDefaultColormap(true);
-#ifdef HWRENDER
-	HWR_ClearLightTables();
-#endif
 }
 
 //
@@ -847,6 +844,15 @@ void R_GenerateLightTable(extracolormap_t *extra_colormap, boolean uselookup)
 			}
 		}
 	}
+}
+
+void R_UpdateLightTable(extracolormap_t *extra_colormap, boolean uselookup)
+{
+	R_GenerateLightTable(extra_colormap, uselookup);
+
+#ifdef HWRENDER
+	extra_colormap->gl_lighttable.needs_update = true;
+#endif
 }
 
 extracolormap_t *R_CreateColormapFromLinedef(char *p1, char *p2, char *p3)

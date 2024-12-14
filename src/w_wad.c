@@ -65,6 +65,7 @@
 #include "i_video.h" // rendermode
 #include "md5.h"
 #include "lua_script.h"
+#include "lua_hook.h"
 #ifdef SCANTHINGS
 #include "p_setup.h" // P_ScanThings
 #endif
@@ -307,12 +308,10 @@ static void W_LoadDehackedLumps(UINT16 wadnum, boolean mainfile)
   * \param resblock resulting MD5 checksum
   * \return 0 if MD5 checksum was made, and is at resblock, 1 if error was found
   */
+
+#ifndef NOMD5
 static INT32 W_MakeFileMD5(const char *filename, void *resblock)
 {
-#ifdef NOMD5
-	(void)filename;
-	memset(resblock, 0x00, 16);
-#else
 	FILE *fhandle;
 
 	if ((fhandle = fopen(filename, "rb")) != NULL)
@@ -329,9 +328,9 @@ static INT32 W_MakeFileMD5(const char *filename, void *resblock)
 		fclose(fhandle);
 		return 0;
 	}
-#endif
 	return 1;
 }
+#endif
 
 // Invalidates the cache of lump numbers. Call this whenever a wad is added.
 static void W_InvalidateLumpnumCache(void)
@@ -1011,6 +1010,10 @@ UINT16 W_InitFile(const char *filename, boolean mainfile, boolean startup)
 		break;
 	}
 
+	lua_lumploading++;
+	LUA_HookVoid(HOOK(AddonLoaded));
+	lua_lumploading--;
+
 	W_InvalidateLumpnumCache();
 	return wadfile->numlumps;
 }
@@ -1171,6 +1174,11 @@ UINT16 W_InitFolder(const char *path, boolean mainfile, boolean startup)
 	W_ReadFileShaders(wadfile);
 	W_LoadTrnslateLumps(numwadfiles - 1);
 	W_LoadDehackedLumpsPK3(numwadfiles - 1, mainfile);
+
+	lua_lumploading++;
+	LUA_HookVoid(HOOK(AddonLoaded));
+	lua_lumploading--;
+
 	W_InvalidateLumpnumCache();
 
 	return wadfile->numlumps;
@@ -1348,17 +1356,6 @@ UINT16 W_CheckNumForFolderEndPK3(const char *name, UINT16 wad, UINT16 startlump)
 			break;
 	}
 	return i;
-}
-
-// Returns 0 if the folder is not empty, 1 if it is empty, -1 if it doesn't exist
-INT32 W_IsFolderEmpty(const char *name, UINT16 wad)
-{
-	UINT16 start = W_CheckNumForFolderStartPK3(name, wad, 0);
-	if (start == INT16_MAX)
-		return -1;
-
-	// Unlike W_CheckNumForFolderStartPK3, W_CheckNumForFolderEndPK3 doesn't return INT16_MAX.
-	return W_CheckNumForFolderEndPK3(name, wad, start) <= start;
 }
 
 char *W_GetLumpFolderPathPK3(UINT16 wad, UINT16 lump)
@@ -1725,10 +1722,14 @@ static UINT16 W_CheckNumForPatchNamePwad(const char *name, UINT16 wad, boolean l
 	// TODO: cache namespace lump IDs
 	if (W_FileHasFolders(wadfiles[wad]))
 	{
-		if (!W_IsFolderEmpty("Flats/", wad))
+		start = W_CheckNumForFolderStartPK3("Flats/", wad, 0);
+		end = W_CheckNumForFolderEndPK3("Flats/", wad, start);
+
+		// if the start and end is the same, the folder is empty
+		if (end <= start)
 		{
-			start = W_CheckNumForFolderStartPK3("Flats/", wad, 0);
-			end = W_CheckNumForFolderEndPK3("Flats/", wad, start);
+			start = INT16_MAX;
+			end = INT16_MAX;
 		}
 	}
 	else

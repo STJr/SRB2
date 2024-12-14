@@ -192,7 +192,10 @@ static void DEH_LoadDehackedFile(MYFILE *f, boolean mainfile)
 	INT32 i;
 
 	if (!deh_loaded)
+	{
 		initfreeslots();
+		deh_loaded = true;
+	}
 
 	deh_num_warning = 0;
 
@@ -605,14 +608,10 @@ static void DEH_LoadDehackedFile(MYFILE *f, boolean mainfile)
 	if (deh_num_warning)
 	{
 		CONS_Printf(M_GetText("%d warning%s in the SOC lump\n"), deh_num_warning, deh_num_warning == 1 ? "" : "s");
-		if (devparm) {
+		if (devparm)
 			I_Error("%s%s",va(M_GetText("%d warning%s in the SOC lump\n"), deh_num_warning, deh_num_warning == 1 ? "" : "s"), M_GetText("See log.txt for details.\n"));
-			//while (!I_GetKey())
-				//I_OsPolling();
-		}
 	}
 
-	deh_loaded = true;
 	Z_Free(s);
 }
 

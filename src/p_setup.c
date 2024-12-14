@@ -530,7 +530,7 @@ UINT32 P_GetScoreForGradeOverall(INT16 map, UINT8 grade)
 void P_AddNiGHTSTimes(INT16 i, char *gtext)
 {
 	char *spos = gtext;
-	
+
 	for (UINT8 n = 0; n < 8; n++)
 	{
 		if (spos != NULL)
@@ -2995,7 +2995,7 @@ static void P_LoadTextmap(void)
 	side_t     *sd;
 	mapthing_t *mt;
 
-	CONS_Alert(CONS_NOTICE, "UDMF support is still a work-in-progress; its specs and features are prone to change until it is fully implemented.\n");
+	//CONS_Alert(CONS_NOTICE, "UDMF support is still a work-in-progress; its specs and features are prone to change until it is fully implemented.\n");
 
 	/// Given the UDMF specs, some fields are given a default value.
 	/// If an element's field has a default value set, it is omitted
@@ -3075,7 +3075,7 @@ static void P_LoadTextmap(void)
 			// TODO: remove this limitation in a backwards-compatible way (UDMF versioning?)
 			UINT8 lightalpha = (textmap_colormap.lightalpha * 102) / 10;
 			UINT8 fadealpha = (textmap_colormap.fadealpha * 102) / 10;
-			
+
 			INT32 rgba = P_ColorToRGBA(textmap_colormap.lightcolor, lightalpha);
 			INT32 fadergba = P_ColorToRGBA(textmap_colormap.fadecolor, fadealpha);
 			sc->extra_colormap = sc->spawn_extra_colormap = R_CreateColormap(rgba, fadergba, textmap_colormap.fadestart, textmap_colormap.fadeend, textmap_colormap.flags);
@@ -7645,20 +7645,20 @@ static void P_InitCamera(void)
 			CV_SetValue(&cv_analog[1], 0);
 
 		displayplayer = consoleplayer; // Start with your OWN view, please!
-	}
 
-	if (twodlevel)
-	{
-		CV_SetValue(&cv_analog[0], false);
-		CV_SetValue(&cv_analog[1], false);
-	}
-	else
-	{
-		if (cv_useranalog[0].value)
-			CV_SetValue(&cv_analog[0], true);
+		if (twodlevel)
+		{
+			CV_SetValue(&cv_analog[0], false);
+			CV_SetValue(&cv_analog[1], false);
+		}
+		else
+		{
+			if (cv_useranalog[0].value)
+				CV_SetValue(&cv_analog[0], true);
 
-		if ((splitscreen && cv_useranalog[1].value) || botingame)
-			CV_SetValue(&cv_analog[1], true);
+			if ((splitscreen && cv_useranalog[1].value) || botingame)
+				CV_SetValue(&cv_analog[1], true);
+		}
 	}
 }
 
@@ -8002,6 +8002,9 @@ boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate)
 	// Free GPU textures before freeing patches.
 	if (rendermode == render_opengl && (vid.glstate == VID_GL_LIBRARY_LOADED))
 		HWR_ClearAllTextures();
+
+	// Delete light table textures
+	HWR_ClearLightTables();
 #endif
 
 	Patch_FreeTag(PU_PATCH_LOWPRIORITY);
