@@ -3257,6 +3257,24 @@ EXPORT UINT32 HWRAPI(CreateLightTable)(RGBA_t *hw_lighttable)
 	return item->id;
 }
 
+EXPORT void HWRAPI(UpdateLightTable)(UINT32 id, RGBA_t *hw_lighttable)
+{
+	LTListItem *item = LightTablesHead;
+	while (item && item->id != id)
+		item = item->next;
+
+	if (item)
+	{
+		pglBindTexture(GL_TEXTURE_2D, item->id);
+
+		// Just update it
+		pglTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 256, 32, GL_RGBA, GL_UNSIGNED_BYTE, hw_lighttable);
+
+		// restore previously bound texture
+		pglBindTexture(GL_TEXTURE_2D, tex_downloaded);
+	}
+}
+
 // Delete light table textures, ids given before become invalid and must not be used.
 EXPORT void HWRAPI(ClearLightTables)(void)
 {

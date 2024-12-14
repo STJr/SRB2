@@ -1301,6 +1301,136 @@ void R_DrawTiltedSplat_8(void)
 #endif
 }
 
+void R_DrawTiltedTranslucentSplat_8(void)
+{
+	// x1, x2 = ds_x1, ds_x2
+	int width = ds_x2 - ds_x1;
+	double iz, uz, vz;
+	UINT32 u, v;
+	int i;
+
+	UINT8 *source;
+	UINT8 *colormap;
+	UINT8 *dest;
+
+	UINT8 val;
+
+	double startz, startu, startv;
+	double izstep, uzstep, vzstep;
+	double endz, endu, endv;
+	UINT32 stepu, stepv;
+
+	iz = ds_sz.z + ds_sz.y*(centery-ds_y) + ds_sz.x*(ds_x1-centerx);
+	uz = ds_su.z + ds_su.y*(centery-ds_y) + ds_su.x*(ds_x1-centerx);
+	vz = ds_sv.z + ds_sv.y*(centery-ds_y) + ds_sv.x*(ds_x1-centerx);
+
+	R_CalcSlopeLight();
+
+	dest = &topleft[ds_y*vid.width + ds_x1];
+	source = ds_source;
+	//colormap = ds_colormap;
+
+#if 0	// The "perfect" reference version of this routine. Pretty slow.
+		// Use it only to see how things are supposed to look.
+	i = 0;
+	do
+	{
+		double z = 1.f/iz;
+		u = (INT64)(uz*z);
+		v = (INT64)(vz*z);
+
+		colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
+
+		val = source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)];
+		if (val != TRANSPARENTPIXEL)
+			*dest = *(ds_transmap + (colormap[val] << 8) + *dest);
+
+		dest++;
+		iz += ds_sz.x;
+		uz += ds_su.x;
+		vz += ds_sv.x;
+	} while (--width >= 0);
+#else
+	startz = 1.f/iz;
+	startu = uz*startz;
+	startv = vz*startz;
+
+	izstep = ds_sz.x * SPANSIZE;
+	uzstep = ds_su.x * SPANSIZE;
+	vzstep = ds_sv.x * SPANSIZE;
+	//x1 = 0;
+	width++;
+
+	while (width >= SPANSIZE)
+	{
+		iz += izstep;
+		uz += uzstep;
+		vz += vzstep;
+
+		endz = 1.f/iz;
+		endu = uz*endz;
+		endv = vz*endz;
+		stepu = (INT64)((endu - startu) * INVSPAN);
+		stepv = (INT64)((endv - startv) * INVSPAN);
+		u = (INT64)(startu);
+		v = (INT64)(startv);
+
+		for (i = SPANSIZE-1; i >= 0; i--)
+		{
+			colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
+			val = source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)];
+			if (val != TRANSPARENTPIXEL)
+				*dest = *(ds_transmap + (colormap[val] << 8) + *dest);
+			dest++;
+			u += stepu;
+			v += stepv;
+		}
+		startu = endu;
+		startv = endv;
+		width -= SPANSIZE;
+	}
+	if (width > 0)
+	{
+		if (width == 1)
+		{
+			u = (INT64)(startu);
+			v = (INT64)(startv);
+			colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
+			val = source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)];
+			if (val != TRANSPARENTPIXEL)
+				*dest = *(ds_transmap + (colormap[val] << 8) + *dest);
+		}
+		else
+		{
+			double left = width;
+			iz += ds_sz.x * left;
+			uz += ds_su.x * left;
+			vz += ds_sv.x * left;
+
+			endz = 1.f/iz;
+			endu = uz*endz;
+			endv = vz*endz;
+			left = 1.f/left;
+			stepu = (INT64)((endu - startu) * left);
+			stepv = (INT64)((endv - startv) * left);
+			u = (INT64)(startu);
+			v = (INT64)(startv);
+
+			for (; width != 0; width--)
+			{
+				colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
+				val = source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)];
+				if (val != TRANSPARENTPIXEL)
+					*dest = *(ds_transmap + (colormap[val] << 8) + *dest);
+				dest++;
+				u += stepu;
+				v += stepv;
+			}
+		}
+	}
+#endif
+}
+
 /**	\brief The R_DrawSplat_8 function
 	Just like R_DrawSpan_8, but skips transparent pixels.
 */
