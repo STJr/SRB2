@@ -35,6 +35,10 @@ endif
 else ifdef FREEBSD
 UNIX=1
 platform=freebsd
+else ifdef HAIKU
+# Give Haiku its own configuration, since it
+# isn't actually UNIX.
+include Makefile.d/haiku.mk
 else ifdef SOLARIS # FIXME: UNTESTED
 UNIX=1
 platform=solaris
