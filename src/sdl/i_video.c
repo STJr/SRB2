@@ -101,6 +101,8 @@ rendermode_t rendermode = render_soft;
 rendermode_t chosenrendermode = render_none; // set by command line arguments
 
 boolean highcolor = false;
+//Awesome!
+INT32 gifrecordcount = 0;
 
 static void VidWaitChanged(void);
 
@@ -1240,6 +1242,21 @@ void I_FinishUpdate(void)
 
 	if (marathonmode)
 		SCR_DisplayMarathonInfo();
+
+	//sure, why not
+	if (moviemode)
+	{
+		INT32 cmap = (((2*leveltime)/TICRATE) & 1) ? V_REDMAP : 0;
+		INT32 mheight = BASEVIDHEIGHT - 8;
+		V_DrawThinString(0, mheight,
+			cmap|V_USERHUDTRANSHALF|V_SNAPTOLEFT|V_SNAPTOBOTTOM, "REC"
+		);
+		gifrecordcount += 1;
+	}
+	else
+	{
+		gifrecordcount = 0;
+	}
 
 	// draw captions if enabled
 	if (cv_closedcaptioning.value)

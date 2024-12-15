@@ -340,6 +340,10 @@ static void I_ReportSignal(int num, int coredumped)
 	char sigttl[512] = "Process killed by signal: ";
 	const char *reportmsg = "\n\nTo help us figure out the cause, you can visit our official Discord server\nwhere you will find more instructions on how to submit a crash report.\n\nSorry for the inconvenience!";
 
+	// will this work??? is this safe?? Who knows
+	if (moviemode)
+		M_StopMovie();
+	
 	switch (num)
 	{
 //	case SIGINT:

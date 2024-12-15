@@ -14119,8 +14119,6 @@ void M_QuitResponse(INT32 ch)
 				M_DoScreenShot();
 		}
 	}
-	if (moviemode)
-		M_StopMovie();
 	I_Quit();
 }
 
