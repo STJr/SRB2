@@ -7156,6 +7156,9 @@ static void P_NiGHTSMovement(player_t *player)
 
 	firstdrill = false;
 
+	//Awersome.
+	player->mo->roll = player->mo->pitch = 0;
+
 	if (player->drillmeter > 96*20)
 		player->drillmeter = 96*20;
 

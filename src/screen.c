@@ -571,9 +571,9 @@ void SCR_ClosedCaptions(void)
 		else if (splitscreen)
 			basey -= 8;
 		else if ((modeattacking == ATTACKING_NIGHTS)
-		|| (!(maptol & TOL_NIGHTS)
-		&& ((cv_powerupdisplay.value == 2) // "Always"
-		 || (cv_powerupdisplay.value == 1 && !camera.chase)))) // "First-person only"
+		//remove the nights tol check because of the "new" nights icons
+		|| ((cv_powerupdisplay.value == 2) // "Always"
+		|| (cv_powerupdisplay.value == 1 && !camera.chase))) // "First-person only"
 			basey -= 16;
 	}
 
@@ -592,7 +592,7 @@ void SCR_ClosedCaptions(void)
 			continue;
 
 		flags = V_SNAPTORIGHT|V_SNAPTOBOTTOM|V_ALLOWLOWERCASE;
-		y = basey-((i + 2)*10);
+		y = basey-((i + 2)*8);
 
 		if (closedcaptions[i].b)
 		{
@@ -613,7 +613,7 @@ void SCR_ClosedCaptions(void)
 		else
 			dot = ' ';
 
-		V_DrawRightAlignedString(BASEVIDWIDTH - 20, y, flags,
+		V_DrawRightAlignedThinString(BASEVIDWIDTH - 20, y, flags,
 			va("%c [%s]", dot, (closedcaptions[i].s->caption[0] ? closedcaptions[i].s->caption : closedcaptions[i].s->name)));
 	}
 }
