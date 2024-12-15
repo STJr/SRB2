@@ -1249,7 +1249,7 @@ void I_FinishUpdate(void)
 		INT32 cmap = (((2*leveltime)/TICRATE) & 1) ? V_REDMAP : 0;
 		INT32 mheight = BASEVIDHEIGHT - 8;
 		V_DrawThinString(0, mheight,
-			cmap|V_USERHUDTRANSHALF|V_SNAPTOLEFT|V_SNAPTOBOTTOM, "REC"
+			cmap|V_USERHUDTRANS|V_SNAPTOLEFT|V_SNAPTOBOTTOM, "REC"
 		);
 		gifrecordcount += 1;
 	}
