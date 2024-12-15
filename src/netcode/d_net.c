@@ -48,6 +48,10 @@
 #define FORCECLOSE 0x8000
 tic_t connectiontimeout = (10*TICRATE);
 
+INT16 numnetnodes;
+INT16 numslots;
+INT16 extratics;
+
 /// \brief network packet
 doomcom_t *doomcom = NULL;
 /// \brief network packet data, points inside doomcom
@@ -1176,8 +1180,8 @@ void D_SetDoomcom(void)
 {
 	if (doomcom) return;
 	doomcom = Z_Calloc(sizeof (doomcom_t), PU_STATIC, NULL);
-	doomcom->numslots = doomcom->numnodes = 1;
-	doomcom->extratics = 0;
+	numslots = numnetnodes = 1;
+	extratics = 0;
 }
 
 //
@@ -1223,10 +1227,10 @@ boolean D_CheckNetGame(void)
 	if (M_CheckParm("-extratic"))
 	{
 		if (M_IsNextParm())
-			doomcom->extratics = (INT16)atoi(M_GetNextParm());
+			extratics = (INT16)atoi(M_GetNextParm());
 		else
-			doomcom->extratics = 1;
-		CONS_Printf(M_GetText("Set extratics to %d\n"), doomcom->extratics);
+			extratics = 1;
+		CONS_Printf(M_GetText("Set extratics to %d\n"), extratics);
 	}
 
 	software_MAXPACKETLENGTH = hardware_MAXPACKETLENGTH;
@@ -1248,8 +1252,8 @@ boolean D_CheckNetGame(void)
 	if (netgame)
 		multiplayer = true;
 
-	if (doomcom->numnodes > MAXNETNODES)
-		I_Error("Too many nodes (%d), max:%d", doomcom->numnodes, MAXNETNODES);
+	if (numnetnodes > MAXNETNODES)
+		I_Error("Too many nodes (%d), max:%d", numnetnodes, MAXNETNODES);
 
 	netbuffer = (doomdata_t *)(void *)&doomcom->data;
 
