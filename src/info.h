@@ -1037,6 +1037,7 @@ typedef enum sprite
 	SPR_SBFL,
 	SPR_SBSK,
 	SPR_HBAT,
+	SPR_OLDK,
 
 	// Debris
 	SPR_SPRK, // Sparkle
@@ -4308,6 +4309,11 @@ typedef enum state
 	S_HANGSTER_RETURN2,
 	S_HANGSTER_RETURN3,
 
+	S_OLDK_STND,
+	S_OLDK_DIE0,
+	S_OLDK_DIE1,
+	S_OLDK_DIE2,
+
 	S_CRUMBLE1,
 	S_CRUMBLE2,
 
@@ -5115,6 +5121,8 @@ typedef enum mobj_type
 	MT_SPINBOBERT_FIRE1,
 	MT_SPINBOBERT_FIRE2,
 	MT_HANGSTER,
+
+	MT_OLDK,
 
 	// Utility Objects
 	MT_TELEPORTMAN,

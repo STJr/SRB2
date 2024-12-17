@@ -575,6 +575,7 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[BLUEBALL_L],  // SPR_SBFL,
 	&lspr[BLUEBALL_L],  // SPR_SBSK,
 	&lspr[NOLIGHT],     // SPR_BATT,
+	&lspr[NOLIGHT],		// SPR_OLDK,
 
 	// Debris
 	&lspr[RINGSPARK_L],  // SPR_SPRK

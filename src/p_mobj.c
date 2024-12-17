@@ -9529,6 +9529,10 @@ static boolean P_MobjRegularThink(mobj_t *mobj)
 		if (!P_HangsterThink(mobj))
 			return false;
 		break;
+	case MT_OLDK:
+		if (mobj->health <= 0)
+			mobj->momz -= ((2*FRACUNIT)/3);
+		break;
 	case MT_LHRT:
 		mobj->momx = FixedMul(mobj->momx, mobj->extravalue2);
 		mobj->momy = FixedMul(mobj->momy, mobj->extravalue2);
