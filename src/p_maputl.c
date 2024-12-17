@@ -1069,7 +1069,7 @@ boolean P_BlockThingsIterator(INT32 x, INT32 y, boolean (*func)(mobj_t *), mobj_
 		if (!func(block->mobj))
 			return false;
 
-		if (checkthing && P_MobjWasRemoved(tmthing)) // func just popped our tmthing, cannot continue.
+		if (checkthing && P_MobjWasRemoved(thing)) // func just popped our tmthing, cannot continue.
 			return true;
 	}
 
