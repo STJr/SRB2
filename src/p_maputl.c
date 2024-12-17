@@ -1058,9 +1058,9 @@ boolean P_BlockThingsIterator(INT32 x, INT32 y, boolean (*func)(mobj_t *))
 		return true;
 
 	// Check interaction with the objects in the blockmap.
-	for (block = blocklinks[y*bmapwidth + x]; block; block = next)
+	for (block = blocklinks[y*bmapwidth + x]; block != NULL; block = next)
 	{
-		next = block->mnext; // We want to note our reference to mnext here in case the object gets removed!
+		next = block->mnext; // We want to note our reference to mnext here!
 
 		if (!func(block->mobj))
 			return false;
