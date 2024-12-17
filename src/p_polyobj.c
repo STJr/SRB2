@@ -878,15 +878,15 @@ static void Polyobj_carryThings(polyobj_t *po, fixed_t dx, fixed_t dy)
 		{
 			mobj_t *mo;
 			blocknode_t *block;
+			blocknode_t *next = NULL;
 
 			if (x < 0 || y < 0 || x >= bmapwidth || y >= bmapheight)
 				continue;
 
-			block = blocklinks[y * bmapwidth + x];
-
-			for (; block; block = block->mnext)
+			for (block = blocklinks[y * bmapwidth + x]; block != NULL; block = next)
 			{
 				mo = block->mobj;
+				next = block->mnext;
 
 				if (mo->lastlook == pomovecount)
 					continue;
@@ -942,9 +942,11 @@ static INT32 Polyobj_clipThings(polyobj_t *po, line_t *line)
 			{
 				mobj_t *mo = NULL;
 				blocknode_t *block = blocklinks[y * bmapwidth + x];
+				blocknode_t *next = NULL;
 
-				for (; block; block = block->mnext)
+				for (; block != NULL; block = next)
 				{
+					next = block->mnext;
 					mo = block->mobj;
 
 					// Don't scroll objects that aren't affected by gravity
@@ -1115,15 +1117,15 @@ static void Polyobj_rotateThings(polyobj_t *po, vector2_t origin, angle_t delta,
 		{
 			mobj_t *mo;
 			blocknode_t *block;
+			blocknode_t *next = NULL;
 
 			if (x < 0 || y < 0 || x >= bmapwidth || y >= bmapheight)
 				continue;
 
-			block = blocklinks[y * bmapwidth + x];
-
-			for (; block; block = block->mnext)
+			for (block = blocklinks[y * bmapwidth + x]; block != NULL; block = next)
 			{
 				mo = block->mobj;
+				next = block->mnext;
 
 				if (mo->lastlook == pomovecount)
 					continue;

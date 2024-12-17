@@ -4385,15 +4385,15 @@ static boolean P_CheckSectorPolyObjects(sector_t *sector, boolean realcrush, boo
 			{
 				mobj_t *mo;
 				blocknode_t *block;
+				blocknode_t *next = NULL;
 
 				if (x < 0 || y < 0 || x >= bmapwidth || y >= bmapheight)
 					continue;
 
-				block = blocklinks[y * bmapwidth + x];
-
-				for (; block; block = block->mnext)
+				for (block = blocklinks[y * bmapwidth + x]; block != NULL; block = next)
 				{
 					mo = block->mobj;
+					next = block->mnext;
 
 					// Monster Iestyn: do we need to check if a mobj has already been checked? ...probably not I suspect
 					if (!P_MobjInsidePolyobj(po, mo))
