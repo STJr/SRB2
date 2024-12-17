@@ -69,6 +69,7 @@ typedef LPVOID (WINAPI *p_MapViewOfFile) (HANDLE, DWORD, DWORD, DWORD, SIZE_T);
 #if defined (__linux__) || defined (__HAIKU__)
 #include <sys/statvfs.h>
 #else
+#include <sys/statvfs.h>
 #include <sys/param.h>
 #include <sys/mount.h>
 /*For meminfo*/
