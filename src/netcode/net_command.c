@@ -64,6 +64,12 @@ void SendNetXCmd(netxcmd_t id, const void *param, size_t nparam)
 	{
 		textcmdbuf_t *buf = textcmdbuf;
 
+		if (2+nparam > MAXTEXTCMD)
+		{
+			CONS_Alert(CONS_ERROR, M_GetText("packet too large to fit NetXCmd, cannot add netcmd %d! (size: %s, max: %d)\n"), id, sizeu1(2+nparam), MAXTEXTCMD);
+			return;
+		}
+
 		// for future reference: if (cv_debug) != debug disabled.
 		CONS_Alert(CONS_NOTICE, M_GetText("NetXCmd buffer full, delaying netcmd %d... (size: %d, needed: %s)\n"), id, localtextcmd[0], sizeu1(nparam));
 		if (buf == NULL)
@@ -80,14 +86,14 @@ void SendNetXCmd(netxcmd_t id, const void *param, size_t nparam)
 
 		if (buf->cmd[0]+2+nparam > MAXTEXTCMD)
 		{
-			WriteNetXCmd(buf->cmd, id, param, nparam);
-		}
-		else
-		{
 			buf->next = Z_Malloc(sizeof(textcmdbuf_t), PU_STATIC, NULL);
 			buf->next->cmd[0] = 0;
 			buf->next->next = NULL;
 			WriteNetXCmd(buf->next->cmd, id, param, nparam);
+		}
+		else
+		{
+			WriteNetXCmd(buf->cmd, id, param, nparam);
 		}
 		return;
 	}
@@ -100,6 +106,12 @@ void SendNetXCmd2(netxcmd_t id, const void *param, size_t nparam)
 	if (localtextcmd2[0]+2+nparam > MAXTEXTCMD)
 	{
 		textcmdbuf_t *buf = textcmdbuf2;
+
+		if (2+nparam > MAXTEXTCMD)
+		{
+			CONS_Alert(CONS_ERROR, M_GetText("packet too large to fit NetXCmd, cannot add netcmd %d! (size: %s, max: %d)\n"), id, sizeu1(2+nparam), MAXTEXTCMD);
+			return;
+		}
 
 		// for future reference: if (cv_debug) != debug disabled.
 		CONS_Alert(CONS_NOTICE, M_GetText("NetXCmd buffer full, delaying netcmd %d... (size: %d, needed: %s)\n"), id, localtextcmd2[0], sizeu1(nparam));
@@ -117,14 +129,14 @@ void SendNetXCmd2(netxcmd_t id, const void *param, size_t nparam)
 
 		if (buf->cmd[0]+2+nparam > MAXTEXTCMD)
 		{
-			WriteNetXCmd(buf->cmd, id, param, nparam);
-		}
-		else
-		{
 			buf->next = Z_Malloc(sizeof(textcmdbuf_t), PU_STATIC, NULL);
 			buf->next->cmd[0] = 0;
 			buf->next->next = NULL;
 			WriteNetXCmd(buf->next->cmd, id, param, nparam);
+		}
+		else
+		{
+			WriteNetXCmd(buf->cmd, id, param, nparam);
 		}
 		return;
 	}
