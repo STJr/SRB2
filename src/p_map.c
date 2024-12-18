@@ -36,6 +36,9 @@
 
 #include "m_perfstats.h" // ps_checkposition_calls
 
+// Formerly called MAXRADIUS
+#define MAXTRYMOVE (32*FRACUNIT)
+
 fixed_t tmbbox[4];
 mobj_t *tmthing;
 static INT32 tmflags;
@@ -2165,15 +2168,10 @@ boolean P_CheckPosition(mobj_t *thing, fixed_t x, fixed_t y)
 		}
 	}
 
-	// The bounding box is extended by MAXRADIUS
-	// because mobj_ts are grouped into mapblocks
-	// based on their origin point, and can overlap
-	// into adjacent blocks by up to MAXRADIUS units.
-
-	xl = (unsigned)(tmbbox[BOXLEFT] - bmaporgx - MAXRADIUS)>>MAPBLOCKSHIFT;
-	xh = (unsigned)(tmbbox[BOXRIGHT] - bmaporgx + MAXRADIUS)>>MAPBLOCKSHIFT;
-	yl = (unsigned)(tmbbox[BOXBOTTOM] - bmaporgy - MAXRADIUS)>>MAPBLOCKSHIFT;
-	yh = (unsigned)(tmbbox[BOXTOP] - bmaporgy + MAXRADIUS)>>MAPBLOCKSHIFT;
+	xl = (unsigned)(tmbbox[BOXLEFT] - bmaporgx)>>MAPBLOCKSHIFT;
+	xh = (unsigned)(tmbbox[BOXRIGHT] - bmaporgx)>>MAPBLOCKSHIFT;
+	yl = (unsigned)(tmbbox[BOXBOTTOM] - bmaporgy)>>MAPBLOCKSHIFT;
+	yh = (unsigned)(tmbbox[BOXTOP] - bmaporgy)>>MAPBLOCKSHIFT;
 
 	BMBOUNDFIX(xl, xh, yl, yh);
 
@@ -2393,11 +2391,6 @@ boolean P_CheckCameraPosition(fixed_t x, fixed_t y, camera_t *thiscam)
 		}
 	}
 
-	// The bounding box is extended by MAXRADIUS
-	// because mobj_ts are grouped into mapblocks
-	// based on their origin point, and can overlap
-	// into adjacent blocks by up to MAXRADIUS units.
-
 	xl = (unsigned)(tmbbox[BOXLEFT] - bmaporgx)>>MAPBLOCKSHIFT;
 	xh = (unsigned)(tmbbox[BOXRIGHT] - bmaporgx)>>MAPBLOCKSHIFT;
 	yl = (unsigned)(tmbbox[BOXBOTTOM] - bmaporgy)>>MAPBLOCKSHIFT;
@@ -2528,16 +2521,16 @@ boolean P_TryCameraMove(fixed_t x, fixed_t y, camera_t *thiscam)
 		}
 
 		do {
-			if (x-tryx > MAXRADIUS)
-				tryx += MAXRADIUS;
-			else if (x-tryx < -MAXRADIUS)
-				tryx -= MAXRADIUS;
+			if (x-tryx > MAXTRYMOVE)
+				tryx += MAXTRYMOVE;
+			else if (x-tryx < -MAXTRYMOVE)
+				tryx -= MAXTRYMOVE;
 			else
 				tryx = x;
-			if (y-tryy > MAXRADIUS)
-				tryy += MAXRADIUS;
-			else if (y-tryy < -MAXRADIUS)
-				tryy -= MAXRADIUS;
+			if (y-tryy > MAXTRYMOVE)
+				tryy += MAXTRYMOVE;
+			else if (y-tryy < -MAXTRYMOVE)
+				tryy -= MAXTRYMOVE;
 			else
 				tryy = y;
 
@@ -2683,7 +2676,7 @@ increment_move
 	floatok = false;
 
 	// This makes sure that there are no freezes from computing extremely small movements.
-	// Originally was MAXRADIUS/2, but that can cause some bad inconsistencies for small players.
+	// Originally was MAXTRYMOVE/2, but that can cause some bad inconsistencies for small players.
 	radius = max(radius, thing->scale);
 
 	// And we also have to prevent Big Large (tm) movements, as those can skip too far
@@ -2872,10 +2865,10 @@ boolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, boolean allowdropoff)
 	{
 		INT32 xl, xh, yl, yh;
 
-		yh = (unsigned)(thing->y + MAXRADIUS - bmaporgy)>>MAPBLOCKSHIFT;
-		yl = (unsigned)(thing->y - MAXRADIUS - bmaporgy)>>MAPBLOCKSHIFT;
-		xh = (unsigned)(thing->x + MAXRADIUS - bmaporgx)>>MAPBLOCKSHIFT;
-		xl = (unsigned)(thing->x - MAXRADIUS - bmaporgx)>>MAPBLOCKSHIFT;
+		yh = (unsigned)(thing->y + thing->radius - bmaporgy)>>MAPBLOCKSHIFT;
+		yl = (unsigned)(thing->y - thing->radius - bmaporgy)>>MAPBLOCKSHIFT;
+		xh = (unsigned)(thing->x + thing->radius - bmaporgx)>>MAPBLOCKSHIFT;
+		xl = (unsigned)(thing->x - thing->radius - bmaporgx)>>MAPBLOCKSHIFT;
 
 		BMBOUNDFIX(xl, xh, yl, yh);
 
@@ -2947,16 +2940,16 @@ boolean P_SceneryTryMove(mobj_t *thing, fixed_t x, fixed_t y)
 	tryx = thing->x;
 	tryy = thing->y;
 	do {
-		if (x-tryx > MAXRADIUS)
-			tryx += MAXRADIUS;
-		else if (x-tryx < -MAXRADIUS)
-			tryx -= MAXRADIUS;
+		if (x-tryx > MAXTRYMOVE)
+			tryx += MAXTRYMOVE;
+		else if (x-tryx < -MAXTRYMOVE)
+			tryx -= MAXTRYMOVE;
 		else
 			tryx = x;
-		if (y-tryy > MAXRADIUS)
-			tryy += MAXRADIUS;
-		else if (y-tryy < -MAXRADIUS)
-			tryy -= MAXRADIUS;
+		if (y-tryy > MAXTRYMOVE)
+			tryy += MAXTRYMOVE;
+		else if (y-tryy < -MAXTRYMOVE)
+			tryy -= MAXTRYMOVE;
 		else
 			tryy = y;
 
@@ -4215,7 +4208,8 @@ void P_RadiusAttack(mobj_t *spot, mobj_t *source, fixed_t damagedist, UINT8 dama
 	INT32 xl, xh, yl, yh;
 	fixed_t dist;
 
-	dist = FixedMul(damagedist, spot->scale) + MAXRADIUS;
+	dist = FixedMul(damagedist, spot->scale);
+
 	yh = (unsigned)(spot->y + dist - bmaporgy)>>MAPBLOCKSHIFT;
 	yl = (unsigned)(spot->y - dist - bmaporgy)>>MAPBLOCKSHIFT;
 	xh = (unsigned)(spot->x + dist - bmaporgx)>>MAPBLOCKSHIFT;
@@ -4385,15 +4379,15 @@ static boolean P_CheckSectorPolyObjects(sector_t *sector, boolean realcrush, boo
 			{
 				mobj_t *mo;
 				blocknode_t *block;
+				blocknode_t *next = NULL;
 
 				if (x < 0 || y < 0 || x >= bmapwidth || y >= bmapheight)
 					continue;
 
-				block = blocklinks[y * bmapwidth + x];
-
-				for (; block; block = block->mnext)
+				for (block = blocklinks[y * bmapwidth + x]; block != NULL; block = next)
 				{
 					mo = block->mobj;
+					next = block->mnext;
 
 					// Monster Iestyn: do we need to check if a mobj has already been checked? ...probably not I suspect
 					if (!P_MobjInsidePolyobj(po, mo))

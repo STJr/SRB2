@@ -435,7 +435,7 @@ UINT8 P_FindLowestMare(void)
 	// to find the egg capsule with the lowest mare
 	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 	{
-		if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+		if (th->removing)
 			continue;
 
 		mo2 = (mobj_t *)th;
@@ -488,7 +488,7 @@ boolean P_TransferToNextMare(player_t *player)
 	// to find the closest axis point
 	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 	{
-		if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+		if (th->removing)
 			continue;
 
 		mo2 = (mobj_t *)th;
@@ -539,7 +539,7 @@ static mobj_t *P_FindAxis(INT32 mare, INT32 axisnum)
 	// to find the closest axis point
 	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 	{
-		if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+		if (th->removing)
 			continue;
 
 		mo2 = (mobj_t *)th;
@@ -574,7 +574,7 @@ static mobj_t *P_FindAxisTransfer(INT32 mare, INT32 axisnum, mobjtype_t type)
 	// to find the closest axis point
 	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 	{
-		if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+		if (th->removing)
 			continue;
 
 		mo2 = (mobj_t *)th;
@@ -615,7 +615,7 @@ void P_TransferToAxis(player_t *player, INT32 axisnum)
 	// to find the closest axis point
 	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 	{
-		if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+		if (th->removing)
 			continue;
 
 		mo2 = (mobj_t *)th;
@@ -716,7 +716,7 @@ static void P_DeNightserizePlayer(player_t *player)
 	// Check to see if the player should be killed.
 	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 	{
-		if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+		if (th->removing)
 			continue;
 
 		mo2 = (mobj_t *)th;
@@ -1899,7 +1899,7 @@ void P_SpawnShieldOrb(player_t *player)
 	// blaze through the thinkers to see if an orb already exists!
 	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 	{
-		if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+		if (th->removing)
 			continue;
 
 		shieldobj = (mobj_t *)th;
@@ -5106,7 +5106,7 @@ void P_Telekinesis(player_t *player, fixed_t thrust, fixed_t range)
 
 	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 	{
-		if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+		if (th->removing)
 			continue;
 
 		mo2 = (mobj_t *)th;
@@ -6472,7 +6472,7 @@ static void P_NightsTransferPoints(player_t *player, fixed_t xspeed, fixed_t rad
 		// Find next waypoint
 		for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 		{
-			if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+			if (th->removing)
 				continue;
 
 			mo2 = (mobj_t *)th;
@@ -6508,7 +6508,7 @@ static void P_NightsTransferPoints(player_t *player, fixed_t xspeed, fixed_t rad
 		{
 			for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 			{
-				if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+				if (th->removing)
 					continue;
 
 				mo2 = (mobj_t *)th;
@@ -6537,7 +6537,7 @@ static void P_NightsTransferPoints(player_t *player, fixed_t xspeed, fixed_t rad
 		{
 			for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 			{
-				if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+				if (th->removing)
 					continue;
 
 				mo2 = (mobj_t *)th;
@@ -7269,7 +7269,7 @@ static void P_NiGHTSMovement(player_t *player)
 		// to find the closest axis point
 		for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 		{
-			if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+			if (th->removing)
 				continue;
 
 			mo2 = (mobj_t *)th;
@@ -8169,7 +8169,7 @@ void P_MovePlayer(player_t *player)
 
 			for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 			{
-				if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+				if (th->removing)
 					continue;
 
 				mo2 = (mobj_t *)th;
@@ -9150,7 +9150,7 @@ void P_NukeEnemies(mobj_t *inflictor, mobj_t *source, fixed_t radius)
 
 	for (think = thlist[THINK_MOBJ].next; think != &thlist[THINK_MOBJ]; think = think->next)
 	{
-		if (think->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+		if (think->removing)
 			continue;
 
 		mo = (mobj_t *)think;
@@ -9248,7 +9248,7 @@ mobj_t *P_LookForFocusTarget(player_t *player, mobj_t *exclude, SINT8 direction,
 
 	for (think = thlist[THINK_MOBJ].next; think != &thlist[THINK_MOBJ]; think = think->next)
 	{
-		if (think->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+		if (think->removing)
 			continue;
 
 		mo = (mobj_t *)think;
@@ -9367,7 +9367,7 @@ mobj_t *P_LookForEnemies(player_t *player, boolean nonenemies, boolean bullet)
 
 	for (think = thlist[THINK_MOBJ].next; think != &thlist[THINK_MOBJ]; think = think->next)
 	{
-		if (think->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+		if (think->removing)
 			continue;
 
 		mo = (mobj_t *)think;
@@ -9513,7 +9513,7 @@ void P_FindEmerald(void)
 	// to find all emeralds
 	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 	{
-		if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+		if (th->removing)
 			continue;
 
 		mo2 = (mobj_t *)th;
@@ -10914,7 +10914,7 @@ static mobj_t *P_GetAxis(INT32 num)
 
 	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 	{
-		if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+		if (th->removing)
 			continue;
 
 		mobj = (mobj_t *)th;
@@ -11996,7 +11996,7 @@ void P_PlayerThink(player_t *player)
 
 		for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 		{
-			if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+			if (th->removing)
 				continue;
 
 			mo2 = (mobj_t *)th;

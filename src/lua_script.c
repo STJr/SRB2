@@ -1779,7 +1779,7 @@ void LUA_Archive(save_t *save_p)
 
 	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 	{
-		if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+		if (th->removing)
 			continue;
 
 		// archive function will determine when to skip mobjs,
@@ -1817,7 +1817,7 @@ void LUA_UnArchive(save_t *save_p)
 		mobjnum = P_ReadUINT32(save_p); // read a mobjnum
 		for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 		{
-			if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+			if (th->removing)
 				continue;
 			if (((mobj_t *)th)->mobjnum != mobjnum) // find matching mobj
 				continue;
