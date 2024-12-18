@@ -1136,6 +1136,7 @@ static const char *credits[] = {
 	"Victor \"VAdaPEGA\" Ara\x1Fjo", // Araújo
 	"Malcolm \"RedXVI\" Brown",
 	"Dave \"DemonTomatoDave\" Bulmer",
+	"Dan Cidoni", // aka Krabs
 	"Paul \"Boinciel\" Clempson",
 	"\"Cyan Helkaraxe\"",
 	"Claire \"clairebun\" Ellis",
@@ -1154,18 +1155,19 @@ static const char *credits[] = {
 	"Colette \"fickleheart\" Bordelon",
 	"Hank \"FuriousFox\" Brannock",
 	"Matthew \"Fawfulfan\" Chapman",
+	"Dan Cidoni", // aka Krabs
 	"Paul \"Boinciel\" Clempson",
 	"Sally \"TehRealSalt\" Cochenour",
 	"Desmond \"Blade\" DesJardins",
 	"Sherman \"CoatRack\" DesJardins",
 	"Ben \"Mystic\" Geyer",
 	"Nathan \"Jazz\" Giroux",
+	"\"GomaTheMascar\"",
 	"Vivian \"toaster\" Grannell",
 	"James \"SeventhSentinel\" Hall",
 	"Kepa \"Nev3r\" Iceta",
 	"Thomas \"Shadow Hog\" Igoe",
 	"Mujamel \"MK\" Khan",
-	"\"Krabs\"",
 	"\"Kaito Sinclaire\"",
 	"Alexander \"DrTapeworm\" Moench-Ford",
 	"\"Radicalicious\"",
