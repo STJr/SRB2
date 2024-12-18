@@ -8061,6 +8061,10 @@ static boolean P_MobjBossThink(mobj_t *mobj)
 		case MT_METALSONIC_BATTLE:
 			P_Boss9Thinker(mobj);
 			break;
+		case MT_OLDK:
+			if (mobj->health <= 0)
+				mobj->momz -= (2*FRACUNIT)/3;
+			break;
 		default: // Generic SOC-made boss
 			if (mobj->flags2 & MF2_SKULLFLY)
 				P_SpawnGhostMobj(mobj);
@@ -9528,10 +9532,6 @@ static boolean P_MobjRegularThink(mobj_t *mobj)
 	case MT_HANGSTER:
 		if (!P_HangsterThink(mobj))
 			return false;
-		break;
-	case MT_OLDK:
-		if (mobj->health <= 0)
-			mobj->momz -= ((2*FRACUNIT)/3);
 		break;
 	case MT_LHRT:
 		mobj->momx = FixedMul(mobj->momx, mobj->extravalue2);

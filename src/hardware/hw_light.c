@@ -575,7 +575,6 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[BLUEBALL_L],  // SPR_SBFL,
 	&lspr[BLUEBALL_L],  // SPR_SBSK,
 	&lspr[NOLIGHT],     // SPR_BATT,
-	&lspr[NOLIGHT],		// SPR_OLDK,
 
 	// Debris
 	&lspr[RINGSPARK_L],  // SPR_SPRK
@@ -614,6 +613,9 @@ light_t *t_lspr[NUMSPRITES] =
 	// Gravity Well Objects
 	&lspr[NOLIGHT],     // SPR_GWLG
 	&lspr[NOLIGHT],     // SPR_GWLR
+
+	// LJ Knuckles
+	&lspr[NOLIGHT],		// SPR_OLDK,
 
 	// Free slots
 	&lspr[NOLIGHT],

@@ -486,7 +486,6 @@ char sprnames[NUMSPRITES + 1][MAXSPRITENAME + 1] =
 	"SBFL",
 	"SBSK",
 	"HBAT",
-	"OLDK",
 
 	// Debris
 	"SPRK", // Sparkle
@@ -525,6 +524,9 @@ char sprnames[NUMSPRITES + 1][MAXSPRITENAME + 1] =
 	// Gravity Well Objects
 	"GWLG",
 	"GWLR",
+
+	// LJ Knuckles
+	"OLDK",
 };
 
 char spr2names[NUMPLAYERSPRITES][MAXSPRITENAME + 1] =
@@ -3937,11 +3939,6 @@ state_t states[NUMSTATES] =
 	{SPR_HBAT, 3,  1, {NULL}, 0, 0, S_HANGSTER_RETURN1, 0}, // S_HANGSTER_RETURN2
 	{SPR_HBAT, 0, 15, {NULL}, 0, 0, S_HANGSTER_LOOK, 0}, // S_HANGSTER_RETURN3
 
-	{SPR_OLDK, FF_ANIMATE, -1, {NULL}, 1, 16, S_NULL, 0}, // S_OLDK_STND
-	{SPR_OLDK, 2, 0, {A_ForceWin}, 0, 0, S_OLDK_DIE1, 0}, // S_OLDK_DIE0
-	{SPR_OLDK, 2, 0, {A_Scream}, 0, 0, S_OLDK_DIE2, 0}, // S_OLDK_DIE1
-	{SPR_OLDK, 2, -1, {A_ZThrust}, 14, 1|(1<<16), S_NULL, 0}, // S_OLDK_DIE2
-
 	{SPR_NULL, 0,  35, {NULL}, 0, 0, S_CRUMBLE2, 0}, // S_CRUMBLE1
 	{SPR_NULL, 0, 105, {A_Scream}, 0, 0, S_NULL, 0}, // S_CRUMBLE2
 
@@ -4001,6 +3998,11 @@ state_t states[NUMSTATES] =
 	{SPR_BRIY, FF_ANIMATE|FF_RANDOMANIM, -1, {NULL}, 31, 1, S_NULL, 0}, // S_YELLOWBRICKDEBRIS
 
 	{SPR_NULL, 0, 1, {NULL}, 0, 0, S_NULL, 0}, // S_NAMECHECK
+
+	{SPR_OLDK, FF_ANIMATE, -1, {NULL}, 1, 16, S_NULL, 0}, // S_OLDK_STND
+	{SPR_OLDK, 2, 0, {A_ForceWin}, 0, 0, S_OLDK_DIE1, 0}, // S_OLDK_DIE0
+	{SPR_OLDK, 2, 0, {A_Scream}, 0, 0, S_OLDK_DIE2, 0}, // S_OLDK_DIE1
+	{SPR_OLDK, 2, -1, {A_ZThrust}, 14, 1|(1<<16), S_NULL, 0}, // S_OLDK_DIE2
 };
 
 mobjinfo_t mobjinfo[NUMMOBJTYPES] =
@@ -20502,34 +20504,6 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL          // raisestate
 	},
 
-				// MT_OLDK
-	{
-		666,            // doomednum
-		S_OLDK_STND,	// spawnstate
-		2,              // spawnhealth
-		S_NULL, 		// seestate
-		sfx_None,		// seesound
-		32,             // reactiontime
-		sfx_None,       // attacksound
-		S_OLDK_DIE0,    // painstate
-		128,            // painchance
-		sfx_s3k35,      // painsound
-		S_NULL,         // meleestate
-		S_NULL,         // missilestate
-		S_OLDK_DIE0,	// deathstate
-		S_NULL,         // xdeathstate
-		sfx_s3k35,      // deathsound
-		2*FRACUNIT,		// speed
-		32*FRACUNIT,    // radius
-		64*FRACUNIT,    // height
-		0,              // display offset
-		1000,           // mass
-		0,              // damage
-		sfx_None,       // activesound
-		MF_SPECIAL|MF_SHOOTABLE|MF_NOGRAVITY|MF_BOSS, // flags
-		S_NULL          // raisestate
-	},
-
 	{           // MT_TELEPORTMAN
 		751,            // doomednum
 		S_INVISIBLE,    // spawnstate
@@ -21636,6 +21610,33 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		0,              // damage
 		sfx_None,       // activesound
 		MF_NOBLOCKMAP|MF_NOSECTOR|MF_NOCLIP|MF_NOCLIPHEIGHT|MF_NOGRAVITY|MF_SCENERY, // flags
+		S_NULL          // raisestate
+	},
+
+	{			// MT_OLDK
+		666,            // doomednum
+		S_OLDK_STND,	// spawnstate
+		1,              // spawnhealth
+		S_NULL, 		// seestate
+		sfx_None,		// seesound
+		32,             // reactiontime
+		sfx_None,       // attacksound
+		S_OLDK_DIE0,    // painstate
+		128,            // painchance
+		sfx_s3k35,      // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_OLDK_DIE0,	// deathstate
+		S_NULL,         // xdeathstate
+		sfx_s3k35,      // deathsound
+		2*FRACUNIT,		// speed
+		32*FRACUNIT,    // radius
+		64*FRACUNIT,    // height
+		0,              // display offset
+		1000,           // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_SPECIAL|MF_SHOOTABLE|MF_NOGRAVITY|MF_BOSS, // flags
 		S_NULL          // raisestate
 	},
 };
