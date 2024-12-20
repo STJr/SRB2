@@ -7837,13 +7837,14 @@ void A_BuzzFly(mobj_t *actor)
 
 // Function: A_GuardChase
 //
-// Description: Modified A_Chase for Egg Guard
+// Description: Modified A_Chase for Egg Guard and Koopa Troopas
 //
-// var1 = unused
+// var1 = shield (0) or no shield (1)
 // var2 = unused
 //
 void A_GuardChase(mobj_t *actor)
 {
+	INT32 locvar1 = var1;
 	INT32 delta;
 
 	if (LUA_CallAction(A_GUARDCHASE, actor))
@@ -7852,11 +7853,11 @@ void A_GuardChase(mobj_t *actor)
 	if (actor->reactiontime)
 		actor->reactiontime--;
 
-	if (actor->threshold != 42) // In formation...
+	if (actor->threshold != 42 || locvar1 == 1) // In formation...
 	{
 		fixed_t speed;
 
-		if (!actor->tracer || !actor->tracer->health)
+		if ((!actor->tracer || !actor->tracer->health) && locvar1 == 0)
 		{
 			P_SetTarget(&actor->tracer, NULL);
 			actor->threshold = 42;
@@ -7945,7 +7946,7 @@ void A_GuardChase(mobj_t *actor)
 	// Now that we've moved, its time for our shield to move!
 	// Otherwise it'll never act as a proper overlay.
 	if (actor->tracer && actor->tracer->state
-	&& actor->tracer->state->action.acp1)
+	&& actor->tracer->state->action.acp1 && locvar1 == 0)
 	{
 		var1 = actor->tracer->state->var1, var2 = actor->tracer->state->var2;
 		actor->tracer->state->action.acp1(actor->tracer);
