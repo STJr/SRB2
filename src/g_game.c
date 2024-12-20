@@ -1722,7 +1722,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 	// At this point, cmd doesn't contain the final angle yet,
 	// So we need to temporarily transform it so Lua scripters
 	// don't need to handle it differently than in other hooks.
-	if (addedtogame)
+	if (addedtogame && gamestate == GS_LEVEL)
 	{
 		INT16 extra = ticcmd_oldangleturn[forplayer] - player->oldrelangleturn;
 		INT16 origangle = cmd->angleturn;
