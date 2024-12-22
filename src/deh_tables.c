@@ -2245,6 +2245,10 @@ const char *const STATE_LIST[] = { // array length left dynamic for sanity testi
 	"S_LAMPPOST2",  // with snow
 	"S_HANGSTAR",
 	"S_MISTLETOE",
+	"S_SSZTREE",
+	"S_SSZTREE_BRANCH",
+	"S_SSZTREE2",
+	"S_SSZTREE2_BRANCH",
 	// Xmas GFZ bushes
 	"S_XMASBLUEBERRYBUSH",
 	"S_XMASBERRYBUSH",
@@ -4114,6 +4118,10 @@ const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for sanity t
 	"MT_LAMPPOST2",  // with snow
 	"MT_HANGSTAR",
 	"MT_MISTLETOE",
+	"MT_SSZTREE",
+	"MT_SSZTREE_BRANCH",
+	"MT_SSZTREE2",
+	"MT_SSZTREE2_BRANCH",
 	// Xmas GFZ bushes
 	"MT_XMASBLUEBERRYBUSH",
 	"MT_XMASBERRYBUSH",

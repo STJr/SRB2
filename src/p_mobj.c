@@ -13153,6 +13153,34 @@ static boolean P_SetupSpawnedMapThing(mapthing_t *mthing, mobj_t *mobj, boolean 
 			banner->angle = mobjangle + ANGLE_90;
 	}
 	break;
+	case MT_SSZTREE:
+	{ // Spawn the branches
+		angle_t mobjangle = FixedAngle((mthing->angle % 113) << FRACBITS);
+		mobj_t *branch = P_SpawnMobjFromMobj(mobj, FRACUNIT, 0, 0, MT_SSZTREE_BRANCH);
+		if (!P_MobjWasRemoved(branch))
+			branch->angle = mobjangle + ANGLE_22h;
+		branch = P_SpawnMobjFromMobj(mobj, 0, FRACUNIT, 0, MT_SSZTREE_BRANCH);
+		if (!P_MobjWasRemoved(branch))
+			branch->angle = mobjangle + ANGLE_157h;
+		branch = P_SpawnMobjFromMobj(mobj, -FRACUNIT, 0, 0, MT_SSZTREE_BRANCH);
+		if (!P_MobjWasRemoved(branch))
+			branch->angle = mobjangle + ANGLE_270;
+	}
+	break;
+	case MT_SSZTREE2:
+	{ // Spawn the branches
+		angle_t mobjangle = FixedAngle((mthing->angle % 113) << FRACBITS);
+		mobj_t *branch = P_SpawnMobjFromMobj(mobj, FRACUNIT, 0, 0, MT_SSZTREE2_BRANCH);
+		if (!P_MobjWasRemoved(branch))
+			branch->angle = mobjangle + ANGLE_22h;
+		branch = P_SpawnMobjFromMobj(mobj, 0, FRACUNIT, 0, MT_SSZTREE2_BRANCH);
+		if (!P_MobjWasRemoved(branch))
+			branch->angle = mobjangle + ANGLE_157h;
+		branch = P_SpawnMobjFromMobj(mobj, -FRACUNIT, 0, 0, MT_SSZTREE2_BRANCH);
+		if (!P_MobjWasRemoved(branch))
+			branch->angle = mobjangle + ANGLE_270;
+	}
+	break;
 	case MT_HHZTREE_TOP:
 	{ // Spawn the branches
 		angle_t mobjangle = FixedAngle(mthing->angle << FRACBITS) & (ANGLE_90 - 1);

@@ -306,6 +306,8 @@ char sprnames[NUMSPRITES + 1][MAXSPRITENAME + 1] =
 	"XMS4", // Lamppost
 	"XMS5", // Hanging Star
 	"XMS6", // Mistletoe
+	"SNTT", // Silver Shiver tree
+	"SSTT", // Silver Shiver tree with snow
 	"FHZI", // FHZ ice
 	"ROSY",
 
@@ -2658,6 +2660,10 @@ state_t states[NUMSTATES] =
 	{SPR_XMS4, 1, -1, {NULL}, 0, 0, S_NULL, 0}, // S_LAMPPOST2
 	{SPR_XMS5, 0, -1, {NULL}, 0, 0, S_NULL, 0}, // S_HANGSTAR
 	{SPR_XMS6, 0, -1, {NULL}, 0, 0, S_NULL, 0}, // S_MISTLETOE
+	{SPR_SNTT, 0, -1, {NULL}, 0, 0, S_NULL, 0}, 				// S_SSZTREE
+	{SPR_SNTT, 1|FF_PAPERSPRITE, -1, {NULL}, 0, 0, S_NULL, 0}, 	// S_SSZTREE_BRANCH
+	{SPR_SSTT, 0, -1, {NULL}, 0, 0, S_NULL, 0}, 				// S_SSZTREE2
+	{SPR_SSTT, 1|FF_PAPERSPRITE, -1, {NULL}, 0, 0, S_NULL, 0}, 	// S_SSZTREE2_BRANCH
 	// Xmas GFZ bushes
 	{SPR_BUS3, 1, -1, {NULL}, 0, 0, S_NULL, 0}, // S_XMASBLUEBERRYBUSH
 	{SPR_BUS1, 1, -1, {NULL}, 0, 0, S_NULL, 0}, // S_XMASBERRYBUSH
@@ -14882,6 +14888,114 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		1,              // damage
 		sfx_None,       // activesound
 		MF_NOBLOCKMAP|MF_NOCLIP|MF_SPAWNCEILING|MF_NOGRAVITY|MF_SCENERY, // flags
+		S_NULL          // raisestate
+	},
+
+	{           // MT_SSZTREE
+		1860,           // doomednum
+		S_SSZTREE,    	// spawnstate
+		1000,           // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		8,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		0,              // speed
+		20*FRACUNIT,    // radius
+		256*FRACUNIT,   // height
+		0,              // display offset
+		100,            // mass
+		1,              // damage
+		sfx_None,       // activesound
+		MF_SOLID|MF_SCENERY, // flags
+		S_NULL          // raisestate
+	},
+
+	{           // MT_SSZTREE_BRANCH
+		-1,		        // doomednum
+		S_SSZTREE_BRANCH,    // spawnstate
+		1000,           // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		8,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		0,              // speed
+		20*FRACUNIT,    // radius
+		256*FRACUNIT,   // height
+		0,              // display offset
+		100,            // mass
+		1,              // damage
+		sfx_None,       // activesound
+		MF_NOBLOCKMAP|MF_NOCLIP|MF_SCENERY, // flags
+		S_NULL          // raisestate
+	},
+
+	{           // MT_SSZTREE2
+		1861,           // doomednum
+		S_SSZTREE2,    	// spawnstate
+		1000,           // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		8,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		0,              // speed
+		20*FRACUNIT,    // radius
+		256*FRACUNIT,   // height
+		0,              // display offset
+		100,            // mass
+		1,              // damage
+		sfx_None,       // activesound
+		MF_SOLID|MF_SCENERY, // flags
+		S_NULL          // raisestate
+	},
+
+	{           // MT_SSZTREE2_BRANCH
+		-1,		        // doomednum
+		S_SSZTREE2_BRANCH,    // spawnstate
+		1000,           // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		8,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		0,              // speed
+		20*FRACUNIT,    // radius
+		256*FRACUNIT,   // height
+		0,              // display offset
+		100,            // mass
+		1,              // damage
+		sfx_None,       // activesound
+		MF_NOBLOCKMAP|MF_NOCLIP|MF_SCENERY, // flags
 		S_NULL          // raisestate
 	},
 

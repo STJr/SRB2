@@ -857,6 +857,8 @@ typedef enum sprite
 	SPR_XMS4, // Lamppost
 	SPR_XMS5, // Hanging Star
 	SPR_XMS6, // Mistletoe
+	SPR_SNTT, // Silver Shiver tree
+	SPR_SSTT, // Silver Shiver tree with snow
 	SPR_FHZI, // FHZ Ice
 	SPR_ROSY,
 
@@ -3089,6 +3091,10 @@ typedef enum state
 	S_LAMPPOST2,  // with snow
 	S_HANGSTAR,
 	S_MISTLETOE,
+	S_SSZTREE,
+	S_SSZTREE_BRANCH,
+	S_SSZTREE2,
+	S_SSZTREE2_BRANCH,
 	// Xmas GFZ bushes
 	S_XMASBLUEBERRYBUSH,
 	S_XMASBERRYBUSH,
@@ -4985,6 +4991,10 @@ typedef enum mobj_type
 	MT_LAMPPOST2,  // with snow
 	MT_HANGSTAR,
 	MT_MISTLETOE,
+	MT_SSZTREE,
+	MT_SSZTREE_BRANCH,
+	MT_SSZTREE2,
+	MT_SSZTREE2_BRANCH,
 	// Xmas GFZ bushes
 	MT_XMASBLUEBERRYBUSH,
 	MT_XMASBERRYBUSH,

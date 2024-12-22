@@ -395,6 +395,8 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[NOLIGHT],     // SPR_XMS4
 	&lspr[NOLIGHT],     // SPR_XMS5
 	&lspr[NOLIGHT],     // SPR_XMS6
+	&lspr[NOLIGHT],     // SPR_SNTT
+	&lspr[NOLIGHT],     // SPR_SSTT
 	&lspr[NOLIGHT],     // SPR_FHZI
 	&lspr[NOLIGHT],     // SPR_ROSY
 
