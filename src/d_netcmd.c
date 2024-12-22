@@ -768,7 +768,10 @@ void D_RegisterClientCommands(void)
 	CV_RegisterVar(&cv_chattime);
 	CV_RegisterVar(&cv_chatspamprotection);
 	CV_RegisterVar(&cv_chatbacktint);
-	CV_RegisterVar(&cv_consolechat);
+	CV_RegisterVar(&cv_chatx);
+	CV_RegisterVar(&cv_chaty);
+	CV_RegisterVar(&cv_chats1);
+	CV_RegisterVar(&cv_chats2);
 	CV_RegisterVar(&cv_chatnotifications);
 	CV_RegisterVar(&cv_crosshair);
 	CV_RegisterVar(&cv_crosshair2);
