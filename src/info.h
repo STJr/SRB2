@@ -892,6 +892,8 @@ typedef enum sprite
 	// Misc Scenery
 	SPR_STLG, // Stalagmites
 	SPR_DBAL, // Disco
+	SPR_GINE, // Crystalline Heights tree
+	SPR_PPAL, // Pristine Shores palm trees
 
 	// Powerup Indicators
 	SPR_ARMA, // Armageddon Shield Orb
@@ -3227,6 +3229,9 @@ typedef enum state
 	S_DBALL5,
 	S_DBALL6,
 	S_EGGSTATUE2,
+	S_GINE,
+	S_PPAL,
+	S_PPEL,
 
 	// Shield Orb
 	S_ARMA1,
@@ -5133,6 +5138,9 @@ typedef enum mobj_type
 	// Misc scenery
 	MT_DBALL,
 	MT_EGGSTATUE2,
+	MT_GINE,
+	MT_PPAL,
+	MT_PPEL,
 
 	// Powerup Indicators
 	MT_ELEMENTAL_ORB, // Elemental shield mobj

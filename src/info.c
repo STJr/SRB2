@@ -341,6 +341,8 @@ char sprnames[NUMSPRITES + 1][MAXSPRITENAME + 1] =
 	// Misc Scenery
 	"STLG", // Stalagmites
 	"DBAL", // Disco
+	"GINE", // Crystalline Heights tree
+	"PPAL", // Pristine Shores palm trees
 
 	// Powerup Indicators
 	"ARMA", // Armageddon Shield Orb
@@ -2798,6 +2800,10 @@ state_t states[NUMSTATES] =
 	{SPR_DBAL, FF_FULLBRIGHT|5, 5, {NULL}, 0, 0, S_DBALL1, 0}, // S_DBALL6
 
 	{SPR_ESTA, 1, -1, {NULL}, 0, 0, S_NULL, 0}, // S_EGGSTATUE2
+
+	{SPR_GINE, 0, -1, {NULL}, 0, 0, S_NULL, 0}, // S_GINE
+	{SPR_PPAL, 0, -1, {NULL}, 0, 0, S_NULL, 0}, // S_PPAL
+	{SPR_PPAL, 1, -1, {NULL}, 0, 0, S_NULL, 0}, // S_PPEL
 
 	// Shield Orb
 	{SPR_ARMA, FF_TRANS40   , 2, {NULL}, 0, 0, S_ARMA2 , 0}, // S_ARMA1
@@ -16895,6 +16901,87 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		1,              // damage
 		sfx_None,       // activesound
 		MF_SOLID|MF_PUSHABLE|MF_SCENERY, // flags
+		S_NULL          // raisestate
+	},
+
+	{           // MT_GINE
+		3048,           // doomednum
+		S_GINE,         // spawnstate
+		1000,           // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		8,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		0,              // speed
+		32*FRACUNIT,    // radius
+		628*FRACUNIT,   // height
+		0,              // display offset
+		100,            // mass
+		1,              // damage
+		sfx_None,       // activesound
+		MF_SOLID|MF_SCENERY, // flags
+		S_NULL          // raisestate
+	},
+
+	{           // MT_PPAL
+		3050,           // doomednum
+		S_PPAL,         // spawnstate
+		1000,           // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		8,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		0,              // speed
+		16*FRACUNIT,    // radius
+		626*FRACUNIT,   // height
+		0,              // display offset
+		100,            // mass
+		1,              // damage
+		sfx_None,       // activesound
+		MF_SOLID|MF_SCENERY, // flags
+		S_NULL          // raisestate
+	},
+
+	{           // MT_PPEL
+		3051,           // doomednum
+		S_PPEL,         // spawnstate
+		1000,           // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		8,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		0,              // speed
+		16*FRACUNIT,    // radius
+		517*FRACUNIT,   // height
+		0,              // display offset
+		100,            // mass
+		1,              // damage
+		sfx_None,       // activesound
+		MF_SOLID|MF_SCENERY, // flags
 		S_NULL          // raisestate
 	},
 

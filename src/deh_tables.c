@@ -2369,6 +2369,9 @@ const char *const STATE_LIST[] = { // array length left dynamic for sanity testi
 	"S_DBALL5",
 	"S_DBALL6",
 	"S_EGGSTATUE2",
+	"S_GINE",
+	"S_PPAL",
+	"S_PPEL",
 
 	// Shield Orb
 	"S_ARMA1",
@@ -4248,6 +4251,9 @@ const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for sanity t
 	// Misc scenery
 	"MT_DBALL",
 	"MT_EGGSTATUE2",
+	"MT_GINE",
+	"MT_PPAL",
+	"MT_PPEL",
 
 	// Powerup Indicators
 	"MT_ELEMENTAL_ORB", // Elemental shield mobj
