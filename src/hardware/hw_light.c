@@ -481,6 +481,15 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[NOLIGHT],     // SPR_SSWY
 	&lspr[NOLIGHT],     // SPR_SSWR
 	&lspr[NOLIGHT],     // SPR_SSWB
+	&lspr[NOLIGHT],     // SPR_MPRY
+	&lspr[NOLIGHT],     // SPR_MPRR
+	&lspr[NOLIGHT],     // SPR_MPRB
+	&lspr[NOLIGHT],     // SPR_MSWY
+	&lspr[NOLIGHT],     // SPR_MSWR
+	&lspr[NOLIGHT],     // SPR_MSWB
+	&lspr[NOLIGHT],     // SPR_MDIY
+	&lspr[NOLIGHT],     // SPR_MDIR
+	&lspr[NOLIGHT],     // SPR_MDIB
 	&lspr[NOLIGHT],     // SPR_BSTY
 	&lspr[NOLIGHT],     // SPR_BSTR
 
