@@ -66,6 +66,9 @@ void COM_ImmedExecute(const char *ptext);
 // Execute commands in buffer, flush them
 void COM_BufExecute(void);
 
+// Executes a script from a file
+boolean COM_ExecFile(const char *scriptname, com_flags_t flags, boolean silent);
+
 // As above; and progress the wait timer.
 void COM_BufTicker(void);
 

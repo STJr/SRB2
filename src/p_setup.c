@@ -7373,11 +7373,11 @@ static void P_RunLevelScript(const char *scriptname)
 			return;
 		}
 
-		COM_BufInsertText(W_CacheLumpNum(lumpnum, PU_CACHE));
+		COM_BufInsertTextEx(W_CacheLumpNum(lumpnum, PU_CACHE), COM_LUA);
 	}
 	else
 	{
-		COM_BufAddText(va("exec %s\n", scriptname));
+		COM_ExecFile(scriptname, COM_LUA, false);
 	}
 	COM_BufExecute(); // Run it!
 }

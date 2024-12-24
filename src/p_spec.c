@@ -2546,7 +2546,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 					char *text = Z_Malloc(len + 1, PU_CACHE, NULL);
 					memcpy(text, lump, len);
 					text[len] = '\0';
-					COM_BufInsertText(text);
+					COM_BufInsertTextEx(text, COM_LUA);
 					Z_Free(text);
 				}
 			}
