@@ -1310,7 +1310,7 @@ static INT32 HU_GetChatSnapping(void)
 
 static void HU_drawMiniChat(void)
 {
-	INT32 x = cv_chatx.value+2;
+	INT32 x = cv_chatx.value - 1;
 	INT32 charwidth = 4, charheight = 6;
 	INT32 boxw = cv_chatwidth.value;
 	INT32 dx = 0, dy = 0;
@@ -1458,7 +1458,7 @@ static void HU_drawChatLog(INT32 offset)
 {
 	INT32 charwidth = 4, charheight = 6;
 	INT32 boxw = cv_chatwidth.value, boxh = cv_chatheight.value;
-	INT32 x = cv_chatx.value+2, y, dx = 0, dy = 0;
+	INT32 x = cv_chatx.value, y, dx = 0, dy = 0;
 	UINT32 i = 0;
 	INT32 chat_topy, chat_bottomy;
 	boolean atbottom = false;
