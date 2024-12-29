@@ -7853,6 +7853,10 @@ boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate)
 	maptol = mapheaderinfo[gamemap-1]->typeoflevel;
 	gametyperules = gametypedefaultrules[gametype];
 
+	// clear the target on map change, since the object will be invalidated
+	P_SetTarget(&ticcmd_ztargetfocus[0], NULL);
+	P_SetTarget(&ticcmd_ztargetfocus[1], NULL);
+
 	CON_Drawer(); // let the user know what we are going to do
 	I_FinishUpdate(); // page flip or blit buffer
 

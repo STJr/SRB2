@@ -1867,10 +1867,6 @@ void G_DoLoadLevel(boolean resetplayer)
 	if (gamestate == GS_INTERMISSION)
 		Y_EndIntermission();
 
-	// clear the target on map change, since the object will be invalidated
-	P_SetTarget(&ticcmd_ztargetfocus[0], NULL);
-	P_SetTarget(&ticcmd_ztargetfocus[1], NULL);
-
 	// cleanup
 	if (titlemapinaction == TITLEMAP_LOADING)
 	{
