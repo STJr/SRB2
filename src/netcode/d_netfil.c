@@ -606,7 +606,7 @@ void AddLuaFileTransfer(const char *filename, const char *mode)
 		prevnext = &((*prevnext)->next);
 
 	// Allocate file transfer information and append it to the transfer list
-	filetransfer = malloc(sizeof(luafiletransfer_t));
+	filetransfer = calloc(1, sizeof(luafiletransfer_t));
 	if (!filetransfer)
 		I_Error("AddLuaFileTransfer: Out of memory\n");
 	*prevnext = filetransfer;
