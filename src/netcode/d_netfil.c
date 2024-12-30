@@ -95,6 +95,7 @@ static filetran_t transfer[MAXNETNODES];
 INT32 fileneedednum; // Number of files needed to join the server
 fileneeded_t *fileneeded; // List of needed files
 static tic_t lasttimeackpacketsent = 0;
+static I_mutex downloadmutex;
 char downloaddir[512] = "DOWNLOAD";
 
 // For resuming failed downloads
@@ -1687,10 +1688,15 @@ boolean CURLPrepareFile(const char* url, int dfilenum)
 void CURLAbortFile(void)
 {
 	filedownload.http_running = false;
+
+	// lock and unlock to wait for the download thread to exit
+	I_lock_mutex(&downloadmutex);
+	I_unlock_mutex(downloadmutex);
 }
 
 void CURLGetFile(void)
 {
+	I_lock_mutex(&downloadmutex);
 	CURLMcode mc; /* return code used by curl_multi_wait() */
 	CURLcode easyres; /* Return from easy interface */
 	CURLMsg *m; /* for picking up messages with the transfer status */
@@ -1791,6 +1797,7 @@ void CURLGetFile(void)
 		multi_handle = NULL;
 	}
 	filedownload.http_running = false;
+	I_unlock_mutex(downloadmutex);
 }
 
 HTTP_login *
