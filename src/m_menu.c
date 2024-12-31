@@ -8511,6 +8511,7 @@ static void M_StartTutorial(INT32 choice)
 	gamecomplete = 0;
 	cursaveslot = 0;
 	maplistoption = 0;
+	CV_StealthSet(&cv_skin, DEFAULTSKIN); // tutorial accounts for sonic only
 	G_DeferedInitNew(false, G_BuildMapName(tutorialmap), 0, false, false);
 }
 
