@@ -12,4 +12,4 @@
 #define MODVERSION 55
 
 // Define this as a prerelease version suffix (pre#, RC#)
-#define BETAVERSION "pre3"
+#define BETAVERSION "pre4"
