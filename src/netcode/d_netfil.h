@@ -140,6 +140,7 @@ boolean CL_SendFileRequest(void);
 void PT_RequestFile(SINT8 node);
 
 boolean CURLPrepareFile(const char* url, int dfilenum);
+void CURLAbortFile(void);
 void CURLGetFile(void);
 HTTP_login * CURLGetLogin (const char *url, HTTP_login ***return_prev_next);
 
