@@ -6656,12 +6656,12 @@ static boolean P_ShieldLook(mobj_t *thing, shieldtype_t shield)
 	if (scale < 1) {
 		P_SetScale(thing, thing->target->scale, true);
 		thing->old_scale = thing->target->old_scale;
-		
+
 		thing->flags2 |= (MF2_DONTDRAW|MF2_JUSTATTACKED); //Hide and indicate we're hidden
 	} else {
 		P_SetScale(thing, scale, true);
 		thing->old_scale = FixedMul(thing->target->old_scale, thing->target->player->shieldscale);
-		
+
 		//Only unhide if we were hidden by the above code
 		if (thing->flags2 & MF2_JUSTATTACKED)
 			thing->flags2 &= ~(MF2_DONTDRAW|MF2_JUSTATTACKED);
@@ -6789,6 +6789,12 @@ void P_RunOverlays(void)
 		// then you're on your own.
 		else
 			zoffs = 0;
+
+		// hide the overlay as well if we're part of a hidden shield
+		if ((mo->target->flags2 & (MF2_JUSTATTACKED|MF2_DONTDRAW)) == (MF2_JUSTATTACKED|MF2_DONTDRAW))
+			mo->flags2 |= (MF2_DONTDRAW|MF2_JUSTATTACKED);
+		else if (mo->flags2 & MF2_JUSTATTACKED)
+			mo->flags2 &= ~(MF2_DONTDRAW|MF2_JUSTATTACKED);
 
 		P_UnsetThingPosition(mo);
 		mo->x = mo->target->x;
