@@ -2310,9 +2310,10 @@ void I_SleepDuration(precise_t duration)
 #if defined(__linux__) || defined(__FreeBSD__) || defined(__HAIKU__)
 	UINT64 precision = I_GetPrecisePrecision();
 	precise_t dest = I_GetPreciseTime() + duration;
-	if (duration * 100000 / precision > 1)
+	precise_t slack = (precision / 10000); // 0.1 ms slack
+	if (duration > slack)
 	{
-		duration -= (precision / 10000); // 0.1 ms slack
+		duration -= slack;
 		struct timespec ts = {
 			.tv_sec = duration / precision,
 			.tv_nsec = duration * 1000000000 / precision % 1000000000,
