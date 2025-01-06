@@ -2669,7 +2669,7 @@ static void HWR_Subsector(size_t num)
 // BP: big hack for a test in lighning ref : 1249753487AB
 fixed_t *hwbbox;
 
-void HWR_RenderBSPNode(INT32 bspnum)
+static void HWR_RenderBSPNode(INT32 bspnum)
 {
 	node_t *bsp;
 	INT32 side;
