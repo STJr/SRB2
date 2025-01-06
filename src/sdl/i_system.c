@@ -2310,7 +2310,7 @@ void I_SleepDuration(precise_t duration)
 #if defined(__linux__) || defined(__FreeBSD__) || defined(__HAIKU__)
 	UINT64 precision = I_GetPrecisePrecision();
 	precise_t dest = I_GetPreciseTime() + duration;
-	precise_t slack = (precision / 10000); // 0.1 ms slack
+	precise_t slack = (precision / 5000); // 0.2 ms slack
 	if (duration > slack)
 	{
 		duration -= slack;
