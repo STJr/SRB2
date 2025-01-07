@@ -119,8 +119,6 @@ extern consvar_t cv_cam_speed, cv_cam_rotate, cv_cam_rotspeed, cv_cam_turnmultip
 extern consvar_t cv_cam2_dist, cv_cam2_still, cv_cam2_height;
 extern consvar_t cv_cam2_speed, cv_cam2_rotate, cv_cam2_rotspeed, cv_cam2_turnmultiplier, cv_cam2_orbit, cv_cam2_adjust;
 
-extern consvar_t cv_cam_tilting;
-
 extern consvar_t cv_cam_savedist[2][2], cv_cam_saveheight[2][2];
 void CV_UpdateCamDist(void);
 void CV_UpdateCam2Dist(void);

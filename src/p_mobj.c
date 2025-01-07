@@ -1580,29 +1580,13 @@ void P_SetPitchRollFromSlope(mobj_t *mo, pslope_t *slope)
 		angle_t destpitch = R_PointToAngle2(0, 0, FixedSqrt(FixedMul(tempy, tempy) + FixedMul(tempz, tempz)), tempx);
 		angle_t destroll = R_PointToAngle2(0, 0, tempz, tempy);
 
-		mo->pitch = destpitch; //Easing_InExpo(FRACUNIT*9/10,mo->pitch,destpitch);
-		mo->roll = destroll; //Easing_InExpo(FRACUNIT*9/10,mo->roll,destroll);
-#if 0
-		// lmao do some view rolling
-		if (mo->player)
-		{
-			angle_t destvroll = -P_GetMobjSlopeRotation(mo);
-			if (!cv_cam_tilting.value) { destvroll = 0; }
-			mo->player->viewrollangle = Easing_OutExpo(FRACUNIT/90,mo->player->viewrollangle,destvroll);
-		}
-#endif
-
+		mo->pitch = destpitch;
+		mo->roll = destroll;
 	}
 	else
 	{
-		mo->pitch = 0; //Easing_InExpo(FRACUNIT*9/10,mo->pitch,0);
-		mo->roll = 0; //Easing_InExpo(FRACUNIT*9/10,mo->roll,0);
-#if 0
-		if (mo->player)
-		{
-			mo->player->viewrollangle = Easing_OutExpo(FRACUNIT/90,mo->player->viewrollangle,0);
-		}
-#endif
+		mo->pitch = 0;
+		mo->roll = 0;
 	}
 }
 

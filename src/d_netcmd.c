@@ -768,10 +768,6 @@ void D_RegisterClientCommands(void)
 	CV_RegisterVar(&cv_chattime);
 	CV_RegisterVar(&cv_chatspamprotection);
 	CV_RegisterVar(&cv_chatbacktint);
-	CV_RegisterVar(&cv_chatx);
-	CV_RegisterVar(&cv_chaty);
-	CV_RegisterVar(&cv_chats1);
-	CV_RegisterVar(&cv_chats2);
 	CV_RegisterVar(&cv_chatnotifications);
 	CV_RegisterVar(&cv_crosshair);
 	CV_RegisterVar(&cv_crosshair2);
@@ -939,6 +935,12 @@ void D_RegisterClientCommands(void)
 #ifdef LUA_ALLOW_BYTECODE
 	COM_AddCommand("dumplua", Command_Dumplua_f, COM_LUA);
 #endif
+
+	//le
+	CV_RegisterVar(&cv_chatx);
+	CV_RegisterVar(&cv_chaty);
+	CV_RegisterVar(&cv_chats1);
+	CV_RegisterVar(&cv_chats2);
 }
 
 /** Checks if a name (as received from another player) is okay.

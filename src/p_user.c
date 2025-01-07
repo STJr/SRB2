@@ -9815,8 +9815,6 @@ fixed_t t_cam2_dist = -42;
 fixed_t t_cam2_height = -42;
 fixed_t t_cam2_rotate = -42;
 
-consvar_t cv_cam_tilting = CVAR_INIT ("cam_tilting", "On", CV_SAVE, CV_OnOff, NULL);
-
 #define MAXCAMERADIST 140*FRACUNIT // Max distance the camera can be in front of the player (2D mode)
 
 void P_ResetCamera(player_t *player, camera_t *thiscam)
