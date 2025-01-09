@@ -102,7 +102,7 @@ rendermode_t chosenrendermode = render_none; // set by command line arguments
 
 boolean highcolor = false;
 //Awesome!
-INT32 gifrecordcount = 0;
+tic_t gif_startrecording = -1;
 
 static void VidWaitChanged(void);
 
@@ -1246,16 +1246,24 @@ void I_FinishUpdate(void)
 	//sure, why not
 	if (moviemode)
 	{
-		INT32 cmap = (((2*leveltime)/TICRATE) & 1) ? V_REDMAP : 0;
+		if (gif_startrecording == -1)
+			gif_startrecording = leveltime;
+		tic_t gif_recordtime = leveltime - gif_startrecording;
+
+		INT32 cmap = (((2*gif_recordtime)/TICRATE) & 1) ? V_REDMAP : 0;
 		INT32 mheight = BASEVIDHEIGHT - 8;
 		V_DrawThinString(0, mheight,
 			cmap|V_USERHUDTRANS|V_SNAPTOLEFT|V_SNAPTOBOTTOM, "REC"
 		);
-		gifrecordcount += 1;
+	
+		V_DrawThinString(17, mheight,
+			V_GRAYMAP|V_ALLOWLOWERCASE|V_USERHUDTRANS|V_SNAPTOLEFT|V_SNAPTOBOTTOM,
+			va("(%d.%02ds)",G_TicsToSeconds(gif_recordtime),G_TicsToCentiseconds(gif_recordtime))
+		);
 	}
 	else
 	{
-		gifrecordcount = 0;
+		gif_startrecording = -1;
 	}
 
 	// draw captions if enabled
