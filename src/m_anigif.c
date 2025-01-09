@@ -765,6 +765,12 @@ INT32 GIF_close(void)
 
 	// final terminator.
 	fwrite(";", 1, 1, gif_out);
+	
+	//returns bytes
+	long int gif_size = ftell(gif_out);
+	gif_size /= (1024);
+	gif_size = FixedDiv(gif_size<<FRACBITS, 1024<<FRACBITS); //gives us a close-enough calc
+
 	fclose(gif_out);
 	gif_out = NULL;
 
@@ -780,7 +786,17 @@ INT32 GIF_close(void)
 		Z_Free(giflzw_hashTable);
 	giflzw_hashTable = NULL;
 
-	CONS_Printf(M_GetText("Animated gif closed; wrote %d frames\n"), gif_frames);
+	CONS_Printf(M_GetText("Animated gif closed; wrote %d frames (%0.2f MB)\n"), gif_frames, FIXED_TO_FLOAT(gif_size));
 	return 1;
 }
+
+INT32 GIF_ReturnFramesBecauseImGoodAtC(void)
+{
+	return (moviemode == MM_GIF) ? gif_frames : 0;
+}
+long int GIF_ReturnSizeBecauseImTooGoodAtC(void)
+{
+	return (moviemode == MM_GIF) ? ftell(gif_out) : 0;
+}
+
 #endif //ifdef HAVE_ANIGIF

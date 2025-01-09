@@ -31,6 +31,9 @@
 #include "m_misc.h" // moviemode
 #include "m_anigif.h" // cv_gif_downscale
 #include "p_setup.h" // NiGHTS grading
+#ifdef HAVE_ANIGIF
+	#include "m_anigif.h"
+#endif
 
 //random index
 #include "m_random.h"
@@ -2900,4 +2903,28 @@ void ST_Drawer(void)
 		}
 	}
 
+}
+
+void ST_ReallyCoolAndUsefulGIFDrawer(void)
+{
+	if (!moviemode)
+		return;
+
+	//the number of frames we wrote should be equivilant to the number of tics
+	//we recorded
+	INT32 gif_frames = GIF_ReturnFramesBecauseImGoodAtC();
+	long int gif_size = GIF_ReturnSizeBecauseImTooGoodAtC();
+	gif_size /= (1024);
+	gif_size = FixedDiv(gif_size<<FRACBITS, 1024<<FRACBITS); //gives us a close-enough calc
+
+	INT32 cmap = (((2*gif_frames)/TICRATE) & 1) ? V_REDMAP : 0;
+	INT32 mheight = BASEVIDHEIGHT - 8;
+	V_DrawThinString(0, mheight,
+		cmap|V_USERHUDTRANS|V_SNAPTOLEFT|V_SNAPTOBOTTOM, "REC"
+	);
+
+	V_DrawThinString(17, mheight,
+		V_GRAYMAP|V_ALLOWLOWERCASE|V_USERHUDTRANS|V_SNAPTOLEFT|V_SNAPTOBOTTOM,
+		va("(%d.%02ds, %.2f mb)",G_TicsToSeconds(gif_frames),G_TicsToCentiseconds(gif_frames), FIXED_TO_FLOAT(gif_size))
+	);
 }

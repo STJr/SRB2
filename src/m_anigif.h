@@ -25,6 +25,8 @@
 INT32 GIF_open(const char *filename);
 void GIF_frame(void);
 INT32 GIF_close(void);
+INT32 GIF_ReturnFramesBecauseImGoodAtC(void);
+long int GIF_ReturnSizeBecauseImTooGoodAtC(void);
 #endif
 
 extern consvar_t cv_gif_optimize, cv_gif_downscale, cv_gif_dynamicdelay, cv_gif_localcolortable;
