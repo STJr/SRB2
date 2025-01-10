@@ -66,6 +66,7 @@ typedef struct
 
 extern consvar_t cv_masterserver, cv_servername;
 extern consvar_t cv_masterserver_update_rate;
+extern consvar_t cv_masterserver_room_id;
 extern consvar_t cv_masterserver_timeout;
 extern consvar_t cv_masterserver_debug;
 extern consvar_t cv_masterserver_token;

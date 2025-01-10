@@ -3318,7 +3318,7 @@ boolean M_Responder(event_t *ev)
 
 	if (ch == -1)
 		return false;
-	else if (ch == gamecontrol[GC_SYSTEMMENU][0] || ch == gamecontrol[GC_SYSTEMMENU][1]) // allow remappable ESC key
+	else if (ev->type != ev_text && (ch == gamecontrol[GC_SYSTEMMENU][0] || ch == gamecontrol[GC_SYSTEMMENU][1])) // allow remappable ESC key
 		ch = KEY_ESCAPE;
 
 	// F-Keys
@@ -3399,6 +3399,13 @@ boolean M_Responder(event_t *ev)
 	// Handle menuitems which need a specific key handling
 	if (routine && (currentMenu->menuitems[itemOn].status & IT_TYPE) == IT_KEYHANDLER)
 	{
+		// block text input if ctrl is held, to allow using ctrl+c ctrl+v and ctrl+x
+		if (ctrldown)
+		{
+			routine(ch);
+			return true;
+		}
+
 		// ignore ev_keydown events if the key maps to a character, since
 		// the ev_text event will follow immediately after in that case.
 		if (ev->type == ev_keydown && ((ch >= 32 && ch <= 127) || (ch >= KEY_KEYPAD7 && ch <= KEY_KPADDEL)))
@@ -3429,7 +3436,7 @@ boolean M_Responder(event_t *ev)
 		{
 			// dirty hack: for customising controls, I want only buttons/keys, not moves
 			if (ev->type == ev_mouse || ev->type == ev_mouse2 || ev->type == ev_joystick
-				|| ev->type == ev_joystick2)
+				|| ev->type == ev_joystick2 || ev->type == ev_text)
 				return true;
 			if (routine)
 			{
@@ -11776,10 +11783,10 @@ static void M_ChooseRoom(INT32 choice)
 #endif
 
 	if (choice == 0)
-		ms_RoomId = -1;
+		CV_SetValue(&cv_masterserver_room_id, 0);
 	else
 	{
-		ms_RoomId = roomIds[choice-1];
+		CV_SetValue(&cv_masterserver_room_id, roomIds[choice-1]);
 		menuRoomIndex = choice - 1;
 	}
 
@@ -12116,8 +12123,7 @@ static void M_HandleConnectIP(INT32 choice)
 
 			if ( ctrldown ) {
 				switch (choice) {
-					case 'v':
-					case 'V': // ctrl+v, pasting
+					case 'v': // ctrl+v, pasting
 					{
 						const char *paste = I_ClipboardPaste();
 
@@ -12130,8 +12136,7 @@ static void M_HandleConnectIP(INT32 choice)
 						break;
 					}
 					case KEY_INS:
-					case 'c':
-					case 'C': // ctrl+c, ctrl+insert, copying
+					case 'c': // ctrl+c, ctrl+insert, copying
 						if (l != 0) // Don't replace the clipboard without any text
 						{
 							I_ClipboardCopy(setupm_ip, l);
@@ -12139,8 +12144,7 @@ static void M_HandleConnectIP(INT32 choice)
 						}
 						break;
 
-					case 'x':
-					case 'X': // ctrl+x, cutting
+					case 'x': // ctrl+x, cutting
 						if (l != 0) // Don't replace the clipboard without any text
 						{
 							I_ClipboardCopy(setupm_ip, l);
