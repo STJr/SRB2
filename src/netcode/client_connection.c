@@ -593,6 +593,7 @@ static void AbortConnection(void)
 {
 	Snake_Free(&snake);
 
+	CURLAbortFile();
 	D_QuitNetGame();
 	CL_Reset();
 	D_StartTitle();
@@ -1108,10 +1109,6 @@ static boolean CL_ServerConnectionTicker(const char *tmpsave, tic_t *oldtic, tic
 					break;
 				}
 			}
-
-			// Rusty TODO: multithread
-			if (filedownload.http_running)
-				CURLGetFile();
 
 			if (waitmore)
 				break; // exit the case

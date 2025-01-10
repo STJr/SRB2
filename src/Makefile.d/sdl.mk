@@ -33,11 +33,13 @@ else
 opts+=-DHAVE_MIXER
 sources+=sdl/mixer_sound.c
 
-  ifdef HAVE_MIXERX
-  opts+=-DHAVE_MIXERX
-  libs+=-lSDL2_mixer_ext
-  else
-  libs+=-lSDL2_mixer
+  ifndef HAIKU # Haiku has a special import path
+    ifdef HAVE_MIXERX
+    opts+=-DHAVE_MIXERX
+    libs+=-lSDL2_mixer_ext
+    else
+    libs+=-lSDL2_mixer
+    endif
   endif
 endif
 
