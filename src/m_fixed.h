@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -46,6 +46,20 @@ FUNCMATH FUNCINLINE static ATTRINLINE float FixedToFloat(fixed_t x)
 }
 
 FUNCMATH FUNCINLINE static ATTRINLINE fixed_t FloatToFixed(float f)
+{
+	return (fixed_t)(f * FRACUNIT);
+}
+
+/*!
+  \brief convert fixed_t into double-precision floating number
+*/
+
+FUNCMATH FUNCINLINE static ATTRINLINE double FixedToDouble(fixed_t x)
+{
+	return x / (double)FRACUNIT;
+}
+
+FUNCMATH FUNCINLINE static ATTRINLINE fixed_t DoubleToFixed(double f)
 {
 	return (fixed_t)(f * FRACUNIT);
 }

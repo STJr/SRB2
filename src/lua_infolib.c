@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2012-2016 by John "JTE" Muniz.
-// Copyright (C) 2012-2023 by Sonic Team Junior.
+// Copyright (C) 2012-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -88,12 +88,12 @@ static int lib_getSprname(lua_State *L)
 	else if (lua_isstring(L, 1))
 	{
 		const char *name = lua_tostring(L, 1);
-		for (i = 0; i < NUMSPRITES; i++)
-			if (fastcmp(name, sprnames[i]))
-			{
-				lua_pushinteger(L, i);
-				return 1;
-			}
+		i = R_GetSpriteNumByName(name);
+		if (i != NUMSPRITES)
+		{
+			lua_pushinteger(L, i);
+			return 1;
+		}
 	}
 	return 0;
 }
@@ -165,7 +165,7 @@ static int lib_getSpr2default(lua_State *L)
 static int lib_setSpr2default(lua_State *L)
 {
 	playersprite_t i;
-	UINT8 j = 0;
+	UINT16 j = 0;
 
 	if (hud_running)
 		return luaL_error(L, "Do not alter spr2defaults[] in HUD rendering code!");
@@ -242,25 +242,13 @@ static int lib_getSpriteInfo(lua_State *L)
 	UINT32 i = NUMSPRITES;
 	lua_remove(L, 1);
 
-	if (lua_isstring(L, 1))
+	if (lua_type(L, 1) == LUA_TSTRING)
 	{
 		const char *name = lua_tostring(L, 1);
-		INT32 spr;
-		for (spr = 0; spr < NUMSPRITES; spr++)
-		{
-			if (fastcmp(name, sprnames[spr]))
-			{
-				i = spr;
-				break;
-			}
-		}
-		if (i == NUMSPRITES)
-		{
-			char *check;
-			i = strtol(name, &check, 10);
-			if (check == name || *check != '\0')
-				return luaL_error(L, "unknown sprite name %s", name);
-		}
+		INT32 spr = R_GetSpriteNumByName(name);
+		if (spr == NUMSPRITES)
+			return luaL_error(L, "unknown sprite name %s", name);
+		i = spr;
 	}
 	else
 		i = luaL_checkinteger(L, 1);
@@ -359,8 +347,8 @@ static int PopPivotTable(spriteinfo_t *info, lua_State *L, int stk)
 			default:
 				TYPEERROR("pivot frame", LUA_TNUMBER, lua_type(L, stk+1));
 		}
-		if ((idx < 0) || (idx >= 64))
-			return luaL_error(L, "pivot frame %d out of range (0 - %d)", idx, 63);
+		if ((idx < 0) || (idx >= MAXFRAMENUM))
+			return luaL_error(L, "pivot frame %d out of range (0 - %d)", idx, MAXFRAMENUM - 1);
 		// the values in pivot[] are also tables
 		if (PopPivotSubTable(info->pivot, L, stk+2, idx))
 			info->available = true;
@@ -483,7 +471,7 @@ static int spriteinfo_set(lua_State *L)
 		}
 	}
 	else
-		return luaL_error(L, va("Field %s does not exist in spriteinfo_t", field));
+		return luaL_error(L, "Field %s does not exist in spriteinfo_t", field);
 
 	return 0;
 }
@@ -555,7 +543,7 @@ static int pivotlist_set(lua_State *L)
 
 static int pivotlist_num(lua_State *L)
 {
-	lua_pushinteger(L, 64);
+	lua_pushinteger(L, MAXFRAMENUM);
 	return 1;
 }
 
@@ -577,7 +565,7 @@ static int framepivot_get(lua_State *L)
 		lua_pushinteger(L, 0);
 	}
 	else
-		return luaL_error(L, va("Field %s does not exist in spriteframepivot_t", field));
+		return luaL_error(L, "Field %s does not exist in spriteframepivot_t", field);
 
 	return 1;
 }
@@ -604,7 +592,7 @@ static int framepivot_set(lua_State *L)
 	else if (fastcmp("rotaxis", field))
 		LUA_UsageWarning(L, "\"rotaxis\" is deprecated and will be removed.")
 	else
-		return luaL_error(L, va("Field %s does not exist in spriteframepivot_t", field));
+		return luaL_error(L, "Field %s does not exist in spriteframepivot_t", field);
 
 	return 0;
 }
@@ -1663,7 +1651,7 @@ static void setRamp(lua_State *L, skincolor_t* c) {
 	lua_pushnil(L);
 	for (i=0; i<COLORRAMPSIZE; i++) {
 		if (lua_objlen(L,-2)!=COLORRAMPSIZE) {
-			luaL_error(L, LUA_QL("skincolor_t") " field 'ramp' must be %d entries long; got %d.", COLORRAMPSIZE, lua_objlen(L,-2));
+			luaL_error(L, LUA_QL("skincolor_t") " field 'ramp' must be %d entries long; got %d.", COLORRAMPSIZE, luaL_getn(L,-2));
 			break;
 		}
 		if (lua_next(L, -2) != 0) {
@@ -1747,7 +1735,7 @@ static int lib_setSkinColor(lua_State *L)
 		else if (i == 6 || (str && fastcmp(str,"accessible"))) {
 			boolean v = lua_toboolean(L, 3);
 			if (cnum < FIRSTSUPERCOLOR && v != skincolors[cnum].accessible)
-				CONS_Alert(CONS_WARNING, "skincolors[] index %d is a standard color; accessibility changes are prohibited.", cnum);
+				CONS_Alert(CONS_WARNING, "skincolors[] index %d is a standard color; accessibility changes are prohibited.\n", cnum);
 			else
 				info->accessible = v;
 		}
@@ -1842,7 +1830,7 @@ static int skincolor_set(lua_State *L)
 	else if (fastcmp(field,"accessible")) {
 		boolean v = lua_toboolean(L, 3);
 		if (cnum < FIRSTSUPERCOLOR && v != skincolors[cnum].accessible)
-			CONS_Alert(CONS_WARNING, "skincolors[] index %d is a standard color; accessibility changes are prohibited.", cnum);
+			CONS_Alert(CONS_WARNING, "skincolors[] index %d is a standard color; accessibility changes are prohibited.\n", cnum);
 		else
 			info->accessible = v;
 	} else

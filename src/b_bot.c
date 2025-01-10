@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2007-2016 by John "JTE" Muniz.
-// Copyright (C) 2011-2023 by Sonic Team Junior.
+// Copyright (C) 2011-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -387,7 +387,8 @@ void B_BuildTiccmd(player_t *player, ticcmd_t *cmd)
 	}
 
 	// Bot AI isn't programmed in analog.
-	CV_SetValue(&cv_analog[1], false);
+	if (!dedicated)
+		CV_SetValue(&cv_analog[1], false);
 
 	// Let Lua scripts build ticcmds
 	if (LUA_HookTiccmd(player, cmd, HOOK(BotTiccmd)))
@@ -589,8 +590,9 @@ void B_RespawnBot(INT32 playernum)
 	}
 	else
 		P_SetMobjState(tails, S_PLAY_FALL);
-	P_SetScale(tails, sonic->scale);
+	P_SetScale(tails, sonic->scale, false);
 	tails->destscale = sonic->destscale;
+	tails->old_scale = sonic->old_scale;
 }
 
 void B_HandleFlightIndicator(player_t *player)

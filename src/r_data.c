@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -31,6 +31,10 @@
 #include "byteptr.h"
 #include "dehacked.h"
 
+#ifdef HWRENDER
+#include "hardware/hw_glob.h" // HWR_ClearLightTables
+#endif
+
 //
 // Graphics.
 // SRB2 graphics for walls and sprites
@@ -49,10 +53,6 @@ lighttable_t *fadecolormap;
 
 // for debugging/info purposes
 size_t flatmemory, spritememory, texturememory;
-
-// highcolor stuff
-INT16 color8to16[256]; // remap color index to highcolor rgb value
-INT16 *hicolormaps; // test a 32k colormap remaps high -> high
 
 // Blends two pixels together, using the equation
 // that matches the specified alpha style.
@@ -846,6 +846,15 @@ void R_GenerateLightTable(extracolormap_t *extra_colormap, boolean uselookup)
 	}
 }
 
+void R_UpdateLightTable(extracolormap_t *extra_colormap, boolean uselookup)
+{
+	R_GenerateLightTable(extra_colormap, uselookup);
+
+#ifdef HWRENDER
+	extra_colormap->gl_lighttable.needs_update = true;
+#endif
+}
+
 extracolormap_t *R_CreateColormapFromLinedef(char *p1, char *p2, char *p3)
 {
 	// default values
@@ -1171,40 +1180,6 @@ const char *R_NameForColormap(extracolormap_t *extra_colormap)
 #endif
 
 //
-// build a table for quick conversion from 8bpp to 15bpp
-//
-
-//
-// added "static inline" keywords, linking with the debug version
-// of allegro, it have a makecol15 function of it's own, now
-// with "static inline" keywords,it sloves this problem ;)
-//
-FUNCMATH static inline int makecol15(int r, int g, int b)
-{
-	return (((r >> 3) << 10) | ((g >> 3) << 5) | ((b >> 3)));
-}
-
-static void R_Init8to16(void)
-{
-	UINT8 *palette;
-	int i;
-
-	palette = W_CacheLumpName("PLAYPAL",PU_CACHE);
-
-	for (i = 0; i < 256; i++)
-	{
-		// PLAYPAL uses 8 bit values
-		color8to16[i] = (INT16)makecol15(palette[0], palette[1], palette[2]);
-		palette += 3;
-	}
-
-	// test a big colormap
-	hicolormaps = Z_Malloc(16384*sizeof(*hicolormaps), PU_STATIC, NULL);
-	for (i = 0; i < 16384; i++)
-		hicolormaps[i] = (INT16)(i<<1);
-}
-
-//
 // R_InitData
 //
 // Locates all the lumps that will be used by all views
@@ -1212,12 +1187,6 @@ static void R_Init8to16(void)
 //
 void R_InitData(void)
 {
-	if (highcolor)
-	{
-		CONS_Printf("InitHighColor...\n");
-		R_Init8to16();
-	}
-
 	CONS_Printf("R_LoadParsedTranslations()...\n");
 	R_LoadParsedTranslations();
 

@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2006      by Graue.
-// Copyright (C) 2006-2023 by Sonic Team Junior.
+// Copyright (C) 2006-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -68,3 +68,27 @@ int endswith(const char *base, const char *tag)
 
 	return !memcmp(&base[base_length - tag_length], tag, tag_length);
 }
+
+// strtok version that only skips over one delimiter at a time
+char *xstrtok(char *line, const char *delims)
+{
+	static char *saveline = NULL;
+	char *p;
+
+	if(line != NULL)
+		saveline = line;
+
+	// see if we have reached the end of the line
+	if(saveline == NULL || *saveline == '\0')
+		return NULL;
+
+	p = saveline; // save start of this token
+	
+	saveline += strcspn(saveline, delims); // get the number of non-delims characters, go past delimiter
+
+	if(*saveline != '\0') // trash the delim if necessary
+		*saveline++ = '\0';
+
+	return p;
+}
+

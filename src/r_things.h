@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -27,7 +27,9 @@
 
 #define FEETADJUST (4<<FRACBITS) // R_AddSingleSpriteDef
 
-boolean R_AddSingleSpriteDef(const char *sprname, spritedef_t *spritedef, UINT16 wadnum, UINT16 startlump, UINT16 endlump);
+spritenum_t R_GetSpriteNumByName(const char *name);
+
+boolean R_AddSingleSpriteDef(const char *sprname, spritedef_t *spritedef, UINT16 wadnum, UINT16 startlump, UINT16 endlump, boolean longname);
 
 //faB: find sprites in wadfile, replace existing, add new ones
 //     (only sprites from namelist are added or replaced)
@@ -45,10 +47,10 @@ extern fixed_t sprtopscreen;
 extern fixed_t sprbotscreen;
 extern fixed_t windowtop;
 extern fixed_t windowbottom;
-extern INT32 lengthcol;
 
-void R_DrawMaskedColumn(column_t *column);
-void R_DrawFlippedMaskedColumn(column_t *column);
+void R_DrawMaskedColumn(column_t *column, unsigned lengthcol);
+void R_DrawFlippedMaskedColumn(column_t *column, unsigned lengthcol);
+void R_DrawFlippedPost(UINT8 *source, unsigned length, void (*drawcolfunc)(void));
 
 // ----------------
 // SPRITE RENDERING
@@ -91,6 +93,7 @@ boolean R_ThingIsFullDark (mobj_t *thing);
 boolean R_ThingIsFlashing (mobj_t *thing);
 
 UINT8 *R_GetTranslationForThing(mobj_t *mobj, skincolornum_t color, UINT16 translation);
+transnum_t R_GetThingTransTable(fixed_t alpha, transnum_t transmap);
 
 void R_ThingOffsetOverlay (mobj_t *thing, fixed_t *outx, fixed_t *outy);
 

@@ -453,7 +453,7 @@ static int PS_DrawPerfRows(int x, int y, int color, perfstatrow_t *rows)
 	return draw_y;
 }
 
-static void PS_UpdateMetricHistory(ps_metric_t *metric, boolean time_metric, boolean frame_metric, boolean set_user)
+static void PS_UpdateMetricHistory(ps_metric_t *metric, boolean time_metric, boolean frame_metric)
 {
 	int index = frame_metric ? ps_frame_index : ps_tick_index;
 
@@ -461,7 +461,7 @@ static void PS_UpdateMetricHistory(ps_metric_t *metric, boolean time_metric, boo
 	{
 		// allocate history table
 		int value_size = time_metric ? sizeof(precise_t) : sizeof(INT32);
-		void** memory_user = set_user ? &metric->history : NULL;
+		void** memory_user = &metric->history;
 
 		metric->history = Z_Calloc(value_size * cv_ps_samplesize.value, PU_PERFSTATS,
 				memory_user);
@@ -491,7 +491,7 @@ static void PS_UpdateRowHistories(perfstatrow_t *rows, boolean frame_metric)
 	for (row = rows; row->lores_label; row++)
 	{
 		if (PS_IsRowValid(row))
-			PS_UpdateMetricHistory(row->metric, !!(row->flags & PS_TIME), frame_metric, true);
+			PS_UpdateMetricHistory(row->metric, !!(row->flags & PS_TIME), frame_metric);
 	}
 }
 
@@ -584,7 +584,7 @@ static void PS_CountThinkers(void)
 		for (thinker = thlist[i].next; thinker != &thlist[i]; thinker = thinker->next)
 		{
 			ps_thinkercount.value.i++;
-			if (thinker->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+			if (thinker->removing)
 				ps_removecount.value.i++;
 			else if (i == THINK_POLYOBJ)
 				ps_polythcount.value.i++;
@@ -649,17 +649,17 @@ void PS_UpdateTickStats(void)
 			if (cv_perfstats.value == 3)
 			{
 				for (i = 0; i < thinkframe_hooks_length; i++)
-					PS_UpdateMetricHistory(&thinkframe_hooks[i].time_taken, true, false, false);
+					PS_UpdateMetricHistory(&thinkframe_hooks[i].time_taken, true, false);
 			}
 			else if (cv_perfstats.value == 4)
 			{
 				for (i = 0; i < prethinkframe_hooks_length; i++)
-					PS_UpdateMetricHistory(&prethinkframe_hooks[i].time_taken, true, false, false);
+					PS_UpdateMetricHistory(&prethinkframe_hooks[i].time_taken, true, false);
 			}
 			else if (cv_perfstats.value == 5)
 			{
 				for (i = 0; i < postthinkframe_hooks_length; i++)
-					PS_UpdateMetricHistory(&postthinkframe_hooks[i].time_taken, true, false, false);
+					PS_UpdateMetricHistory(&postthinkframe_hooks[i].time_taken, true, false);
 			}
 		}
 		if (cv_perfstats.value)

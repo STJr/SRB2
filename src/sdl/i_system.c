@@ -41,12 +41,6 @@ typedef LPVOID (WINAPI *p_MapViewOfFile) (HANDLE, DWORD, DWORD, DWORD, SIZE_T);
 #include <ntsecapi.h>
 #undef SystemFunction036
 
-// A little more than the minimum sleep duration on Windows.
-// May be incorrect for other platforms, but we don't currently have a way to
-// query the scheduler granularity. SDL will do what's needed to make this as
-// low as possible though.
-#define MIN_SLEEP_DURATION_MS 2.1
-
 #endif
 #include <stdio.h>
 #include <stdlib.h>
@@ -106,6 +100,10 @@ typedef LPVOID (WINAPI *p_MapViewOfFile) (HANDLE, DWORD, DWORD, DWORD, SIZE_T);
 #include <sys/ioctl.h> // ioctl
 #define HAVE_TERMIOS
 #endif
+#endif
+
+#if defined(UNIXCOMMON)
+#include <poll.h>
 #endif
 
 #if defined (__unix__) || (defined (UNIXCOMMON) && !defined (__APPLE__))
@@ -221,6 +219,12 @@ static char returnWadPath[256];
 #include "../byteptr.h"
 #endif
 
+// A little more than the minimum sleep duration on Windows.
+// May be incorrect for other platforms, but we don't currently have a way to
+// query the scheduler granularity. SDL will do what's needed to make this as
+// low as possible though.
+#define MIN_SLEEP_DURATION_MS 2.1
+
 /**	\brief	The JoyReset function
 
 	\param	JoySet	Joystick info to reset
@@ -267,75 +271,86 @@ SDL_bool framebuffer = SDL_FALSE;
 UINT8 keyboard_started = false;
 
 #ifdef UNIXBACKTRACE
-#define STDERR_WRITE(string) if (fd != -1) I_OutputMsg("%s", string)
-#define CRASHLOG_WRITE(string) if (fd != -1) junk = write(fd, string, strlen(string))
-#define CRASHLOG_STDERR_WRITE(string) \
-	if (fd != -1)\
-		junk = write(fd, string, strlen(string));\
-	I_OutputMsg("%s", string)
+
+static void bt_write_file(int fd, const char *string) {
+	ssize_t written = 0;
+	ssize_t sourcelen = strlen(string);
+
+	while (fd != -1 && (written != -1 && errno != EINTR) && written < sourcelen)
+		written = write(fd, string, sourcelen);
+}
+
+static void bt_write_stderr(const char *string) {
+	bt_write_file(STDERR_FILENO, string);
+}
+
+static void bt_write_all(int fd, const char *string) {
+	bt_write_file(fd, string);
+	bt_write_file(STDERR_FILENO, string);
+}
 
 static void write_backtrace(INT32 signal)
 {
 	int fd = -1;
-#ifndef NOEXECINFO
-	size_t size;
-#endif
 	time_t rawtime;
 	struct tm timeinfo;
-	ssize_t junk;
 
 	enum { BT_SIZE = 1024, STR_SIZE = 32 };
 #ifndef NOEXECINFO
-	void *array[BT_SIZE];
+	void *funcptrs[BT_SIZE];
+	size_t bt_size;
 #endif
 	char timestr[STR_SIZE];
 
-	const char *error = "An error occurred within SRB2! Send this stack trace to someone who can help!\n";
-	const char *error2 = "(Or find crash-log.txt in your SRB2 directory.)\n"; // Shown only to stderr.
+	const char *filename = va("%s" PATHSEP "%s", srb2home, "crash-log.txt");
 
-	fd = open(va("%s" PATHSEP "%s", srb2home, "crash-log.txt"), O_CREAT|O_APPEND|O_RDWR, S_IRUSR|S_IWUSR);
+	fd = open(filename, O_CREAT|O_APPEND|O_RDWR, S_IRUSR|S_IWUSR);
 
-	if (fd == -1)
-		I_OutputMsg("\nWARNING: Couldn't open crash log for writing! Make sure your permissions are correct. Please save the below report!\n");
+	if (fd == -1) // File handle error
+		bt_write_stderr("\nWARNING: Couldn't open crash log for writing! Make sure your permissions are correct. Please save the below report!\n");
 
 	// Get the current time as a string.
 	time(&rawtime);
 	localtime_r(&rawtime, &timeinfo);
 	strftime(timestr, STR_SIZE, "%a, %d %b %Y %T %z", &timeinfo);
 
-	CRASHLOG_WRITE("------------------------\n"); // Nice looking seperator
+	bt_write_file(fd, "------------------------\n"); // Nice looking seperator
 
-	CRASHLOG_STDERR_WRITE("\n"); // Newline to look nice for both outputs.
-	CRASHLOG_STDERR_WRITE(error); // "Oops, SRB2 crashed" message
-	STDERR_WRITE(error2); // Tell the user where the crash log is.
+	bt_write_all(fd, "\n"); // Newline to look nice for both outputs.
+	bt_write_all(fd, "An error occurred within SRB2! Send this stack trace to someone who can help!\n");
+
+	if (fd != -1) // If the crash log exists,
+		bt_write_stderr("(Or find crash-log.txt in your SRB2 directory.)\n"); // tell the user where the crash log is.
 
 	// Tell the log when we crashed.
-	CRASHLOG_WRITE("Time of crash: ");
-	CRASHLOG_WRITE(timestr);
-	CRASHLOG_WRITE("\n");
+	bt_write_file(fd, "Time of crash: ");
+	bt_write_file(fd, timestr);
+	bt_write_file(fd, "\n");
 
 	// Give the crash log the cause and a nice 'Backtrace:' thing
 	// The signal is given to the user when the parent process sees we crashed.
-	CRASHLOG_WRITE("Cause: ");
-	CRASHLOG_WRITE(strsignal(signal));
-	CRASHLOG_WRITE("\n"); // Newline for the signal name
+	bt_write_file(fd, "Cause: ");
+	bt_write_file(fd, strsignal(signal));
+	bt_write_file(fd, "\n"); // Newline for the signal name
 
-#ifndef NOEXECINFO
-	CRASHLOG_STDERR_WRITE("\nBacktrace:\n");
+#ifdef NOEXECINFO
+	bt_write_all(fd, "\nNo Backtrace support\n");
+#else
+	bt_write_all(fd, "\nBacktrace:\n");
 
 	// Flood the output and log with the backtrace
-	size = backtrace(array, BT_SIZE);
-	backtrace_symbols_fd(array, size, fd);
-	backtrace_symbols_fd(array, size, STDERR_FILENO);
+	bt_size = backtrace(funcptrs, BT_SIZE);
+	backtrace_symbols_fd(funcptrs, bt_size, fd);
+	backtrace_symbols_fd(funcptrs, bt_size, STDERR_FILENO);
 #endif
 
-	CRASHLOG_WRITE("\n"); // Write another newline to the log so it looks nice :)
-	(void)junk;
-	close(fd);
+	bt_write_file(fd, "\n"); // Write another newline to the log so it looks nice :)
+	if (fd != -1) {
+		fsync(fd); // reaaaaally make sure we got that data written.
+		close(fd);
+	}
 }
-#undef STDERR_WRITE
-#undef CRASHLOG_WRITE
-#undef CRASHLOG_STDERR_WRITE
+
 #endif // UNIXBACKTRACE
 
 static void I_ReportSignal(int num, int coredumped)
@@ -616,51 +631,60 @@ void I_GetConsoleEvents(void)
 	// we use this when sending back commands
 	event_t ev = {0};
 	char key = 0;
-	ssize_t d;
+	struct pollfd pfd =
+	{
+		.fd = STDIN_FILENO,
+		.events = POLLIN,
+		.revents = 0,
+	};
 
 	if (!consolevent)
 		return;
 
-	ev.type = ev_console;
-	ev.key = 0;
-	if (read(STDIN_FILENO, &key, 1) == -1 || !key)
-		return;
+	for (;;)
+	{
+		if (poll(&pfd, 1, 0) < 1 || !(pfd.revents & POLLIN))
+			return;
 
-	// we have something
-	// backspace?
-	// NOTE TTimo testing a lot of values .. seems it's the only way to get it to work everywhere
-	if ((key == tty_erase) || (key == 127) || (key == 8))
-	{
-		if (tty_con.cursor > 0)
+		ev.type = ev_console;
+		ev.key = 0;
+		if (read(STDIN_FILENO, &key, 1) == -1 || !key)
+			return;
+
+		// we have something
+		// backspace?
+		// NOTE TTimo testing a lot of values .. seems it's the only way to get it to work everywhere
+		if ((key == tty_erase) || (key == 127) || (key == 8))
 		{
-			tty_con.cursor--;
-			tty_con.buffer[tty_con.cursor] = '\0';
-			tty_Back();
+			if (tty_con.cursor > 0)
+			{
+				tty_con.cursor--;
+				tty_con.buffer[tty_con.cursor] = '\0';
+				tty_Back();
+			}
+			ev.key = KEY_BACKSPACE;
 		}
-		ev.key = KEY_BACKSPACE;
-	}
-	else if (key < ' ') // check if this is a control char
-	{
-		if (key == '\n')
+		else if (key < ' ') // check if this is a control char
 		{
-			tty_Clear();
-			tty_con.cursor = 0;
-			ev.key = KEY_ENTER;
+			if (key == '\n')
+			{
+				tty_Clear();
+				tty_con.cursor = 0;
+				ev.key = KEY_ENTER;
+			}
+			else continue;
 		}
-		else return;
+		else if (tty_con.cursor < sizeof (tty_con.buffer))
+		{
+			// push regular character
+			ev.key = tty_con.buffer[tty_con.cursor] = key;
+			tty_con.cursor++;
+			// print the current line (this is differential)
+			write(STDOUT_FILENO, &key, 1);
+		}
+		if (ev.key) D_PostEvent(&ev);
+		//tty_FlushIn();
 	}
-	else if (tty_con.cursor < sizeof (tty_con.buffer))
-	{
-		// push regular character
-		ev.type = ev_text;
-		ev.key = tty_con.buffer[tty_con.cursor] = key;
-		tty_con.cursor++;
-		// print the current line (this is differential)
-		d = write(STDOUT_FILENO, &key, 1);
-	}
-	if (ev.key) D_PostEvent(&ev);
-	//tty_FlushIn();
-	(void)d;
 }
 
 #elif defined (_WIN32)
@@ -1701,7 +1725,7 @@ const char *I_GetJoyName(INT32 joyindex)
 	{
 		tempname = SDL_JoystickNameForIndex(joyindex);
 		if (tempname)
-			strncpy(joyname, tempname, 255);
+			strncpy(joyname, tempname, sizeof(joyname)-1);
 	}
 	return joyname;
 }
@@ -2283,7 +2307,7 @@ void I_Sleep(UINT32 ms)
 
 void I_SleepDuration(precise_t duration)
 {
-#if defined(__linux__) || defined(__FreeBSD__)
+#if defined(__linux__) || defined(__FreeBSD__) || defined(__HAIKU__)
 	UINT64 precision = I_GetPrecisePrecision();
 	struct timespec ts = {
 		.tv_sec = duration / precision,
@@ -2292,7 +2316,7 @@ void I_SleepDuration(precise_t duration)
 	int status;
 	do status = clock_nanosleep(CLOCK_MONOTONIC, 0, &ts, &ts);
 	while (status == EINTR);
-#else
+#elif defined (MIN_SLEEP_DURATION_MS)
 	UINT64 precision = I_GetPrecisePrecision();
 	INT32 sleepvalue = cv_sleep.value;
 	UINT64 delaygranularity;
@@ -2844,7 +2868,7 @@ size_t I_GetRandomBytes(char *destination, size_t count)
 {
 #if defined (__unix__) || defined (UNIXCOMMON) || defined(__APPLE__)
 	FILE *rndsource;
-	size_t actual_bytes;
+	size_t actual_bytes = 0;
 
 	if (!(rndsource = fopen("/dev/urandom", "r")))
 		if (!(rndsource = fopen("/dev/random", "r")))
@@ -2963,7 +2987,7 @@ static void pathonly(char *s)
 */
 static const char *searchWad(const char *searchDir)
 {
-	static char tempsw[256] = "";
+	static char tempsw[MAX_WADPATH] = "";
 	filestatus_t fstemp;
 
 	strcpy(tempsw, WADKEYWORD1);
@@ -2979,8 +3003,8 @@ static const char *searchWad(const char *searchDir)
 
 #define CHECKWADPATH(ret) \
 do { \
-	I_OutputMsg(",%s", returnWadPath); \
-	if (isWadPathOk(returnWadPath)) \
+	I_OutputMsg(",%s", ret); \
+	if (isWadPathOk(ret)) \
 		return ret; \
 } while (0)
 
@@ -3009,7 +3033,9 @@ static const char *locateWad(void)
 #ifndef NOCWD
 	// examine current dir
 	strcpy(returnWadPath, ".");
-	CHECKWADPATH(NULL);
+	I_OutputMsg(",%s", returnWadPath);
+	if (isWadPathOk(returnWadPath))
+		return NULL;
 #endif
 
 #ifdef __APPLE__
@@ -3026,9 +3052,16 @@ static const char *locateWad(void)
 
 #ifndef NOHOME
 	// find in $HOME
-	I_OutputMsg(",HOME");
+	I_OutputMsg(",HOME/" DEFAULTDIR);
 	if ((envstr = I_GetEnv("HOME")) != NULL)
-		SEARCHWAD(envstr);
+	{
+		char *tmp = malloc(strlen(envstr) + 1 + sizeof(DEFAULTDIR));
+		strcpy(tmp, envstr);
+		strcat(tmp, "/");
+		strcat(tmp, DEFAULTDIR);
+		CHECKWADPATH(tmp);
+		free(tmp);
+	}
 #endif
 
 	// search paths
@@ -3054,8 +3087,10 @@ const char *I_LocateWad(void)
 	{
 		// change to the directory where we found srb2.pk3
 #if defined (_WIN32)
+		waddir = _fullpath(NULL, waddir, MAX_PATH);
 		SetCurrentDirectoryA(waddir);
 #else
+		waddir = realpath(waddir, NULL);
 		if (chdir(waddir) == -1)
 			I_OutputMsg("Couldn't change working directory\n");
 #endif
@@ -3256,4 +3291,24 @@ const CPUInfoFlags *I_CPUInfo(void)
 
 // note CPUAFFINITY code used to reside here
 void I_RegisterSysCommands(void) {}
+
+const char *I_GetSysName(void)
+{
+	return SDL_GetPlatform();
+}
+
+
+void I_SetTextInputMode(boolean active)
+{
+	if (active)
+		SDL_StartTextInput();
+	else
+		SDL_StopTextInput();
+}
+
+boolean I_GetTextInputMode(void)
+{
+	return SDL_IsTextInputActive();
+}
+
 #endif

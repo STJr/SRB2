@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2012-2016 by John "JTE" Muniz.
-// Copyright (C) 2012-2023 by Sonic Team Junior.
+// Copyright (C) 2012-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -72,6 +72,7 @@ automatically.
 	X (MusicChange),\
 	X (PlayerHeight),/* override player height */\
 	X (PlayerCanEnterSpinGaps),\
+	X (AddonLoaded),\
 	X (KeyDown),\
 	X (KeyUp),\
 
@@ -86,6 +87,8 @@ automatically.
 	X (title),/* titlescreen */\
 	X (titlecard),\
 	X (intermission),\
+	X (continue),\
+	X (playersetup),\
 
 /*
 I chose to access the hook enums through a macro as well. This could provide
@@ -117,6 +120,13 @@ extern boolean hook_cmd_running;
 
 void LUA_HookVoid(int hook);
 void LUA_HookHUD(int hook, huddrawlist_h drawlist);
+int LUA_HookCharacterHUD
+(
+	int hook, huddrawlist_h drawlist, player_t *player,
+	fixed_t x, fixed_t y, fixed_t scale,
+	INT32 skinIndex, UINT8 sprite2, UINT8 frame, UINT8 rotation, skincolornum_t color,
+	INT32 ticker, boolean mode
+);
 
 int  LUA_HookMobj(mobj_t *, int hook);
 int  LUA_Hook2Mobj(mobj_t *, mobj_t *, int hook);

@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -27,13 +27,31 @@ typedef enum
 
 typedef enum
 {
+	DLSTATUS_OK,
+	DLSTATUS_TOOLARGE,
+	DLSTATUS_WONTSEND,
+	DLSTATUS_NODOWNLOAD,
+	DLSTATUS_FOLDER
+} dlstatus_t;
+
+typedef enum
+{
+	FDOWNLOAD_FAIL_NONE,
+	FDOWNLOAD_FAIL_NOTFOUND,
+	FDOWNLOAD_FAIL_MD5SUMBAD,
+	FDOWNLOAD_FAIL_OTHER
+} filedownloadfail_t;
+
+typedef enum
+{
 	FS_NOTCHECKED,
 	FS_NOTFOUND,
 	FS_FOUND,
 	FS_REQUESTED,
 	FS_DOWNLOADING,
 	FS_OPEN, // Is opened and used in w_wad
-	FS_MD5SUMBAD
+	FS_MD5SUMBAD,
+	FS_FALLBACK
 } filestatus_t;
 
 typedef enum
@@ -51,6 +69,7 @@ typedef struct
 	UINT8 willsend; // Is the server willing to send it?
 	UINT8 folder; // File is a folder
 	fileneededtype_t type;
+	filedownloadfail_t failed;
 	boolean justdownloaded; // To prevent late fragments from causing an I_Error
 
 	// Used only for download
@@ -70,11 +89,30 @@ extern INT32 fileneedednum;
 extern fileneeded_t *fileneeded;
 extern char downloaddir[512];
 
-extern INT32 lastfilenum;
-extern INT32 downloadcompletednum;
-extern UINT32 downloadcompletedsize;
-extern INT32 totalfilesrequestednum;
-extern UINT32 totalfilesrequestedsize;
+typedef struct
+{
+	INT32 current;
+	INT32 remaining;
+	INT32 completednum;
+	UINT32 completedsize;
+
+	boolean http_failed;
+	boolean http_running;
+
+	char http_source[MAX_MIRROR_LENGTH];
+} file_download_t;
+
+extern file_download_t filedownload;
+
+typedef struct HTTP_login HTTP_login;
+
+extern struct HTTP_login
+{
+	char       * url;
+	char       * auth;
+	HTTP_login * next;
+}
+*curl_logins;
 
 extern consvar_t cv_maxsend, cv_noticedownload, cv_downloadspeed;
 
@@ -97,9 +135,14 @@ boolean SendingFile(INT32 node);
 void FileReceiveTicker(void);
 void PT_FileFragment(SINT8 node, INT32 netconsole);
 
-boolean CL_CheckDownloadable(void);
+UINT8 CL_CheckDownloadable(boolean direct);
 boolean CL_SendFileRequest(void);
 void PT_RequestFile(SINT8 node);
+
+boolean CURLPrepareFile(const char* url, int dfilenum);
+void CURLAbortFile(void);
+void CURLGetFile(void);
+HTTP_login * CURLGetLogin (const char *url, HTTP_login ***return_prev_next);
 
 typedef enum
 {

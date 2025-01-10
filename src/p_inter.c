@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -101,7 +101,7 @@ void P_ClearStarPost(INT32 postnum)
 	// scan the thinkers
 	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 	{
-		if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+		if (th->removing)
 			continue;
 
 		mo2 = (mobj_t *)th;
@@ -130,7 +130,7 @@ void P_ResetStarposts(void)
 
 	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 	{
-		if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+		if (th->removing)
 			continue;
 
 		post = (mobj_t *)th;
@@ -392,17 +392,50 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 		}
 	}
 
-	player = toucher->player;
-	I_Assert(player != NULL); // Only players can touch stuff!
-
-	if (player->spectator)
-		return;
-
 	// Ignore multihits in "ouchie" mode
-	if (special->flags & (MF_ENEMY|MF_BOSS) && special->flags2 & MF2_FRET)
+	if (special->flags & (MF_ENEMY | MF_BOSS) && special->flags2 & MF2_FRET)
 		return;
 
-	if (LUA_HookTouchSpecial(special, toucher) || P_MobjWasRemoved(special))
+	player = toucher->player;
+
+	if (player)
+	{
+		if (player->spectator)
+			return;
+
+		// Some hooks may assume that the toucher is a player, so we keep it in here.
+		if (LUA_HookTouchSpecial(special, toucher) || P_MobjWasRemoved(special))
+			return;
+	}
+
+	if (player || (toucher->flags & MF_PUSHABLE)) // Special area for objects that are interactable by both player AND MF_PUSHABLE.
+	{
+		if (special->type == MT_STEAM)
+		{
+			if (player && player->mo->state == &states[player->mo->info->painstate]) // can't use gas jets when player is in pain!
+				return;
+
+			fixed_t speed = special->info->mass; // gas jets use this for the vertical thrust
+			SINT8 flipval = P_MobjFlip(special); // virtually everything here centers around the thruster's gravity, not the object's!
+
+			if (special->state != &states[S_STEAM1]) // Only when it bursts
+				return;
+
+			toucher->eflags |= MFE_SPRUNG;
+			toucher->momz = flipval * FixedMul(speed, FixedSqrt(FixedMul(special->scale, toucher->scale))); // scale the speed with both objects' scales, just like with springs!
+
+			if (player)
+			{
+				P_ResetPlayer(player);
+				if (player->panim != PA_FALL)
+					P_SetMobjState(toucher, S_PLAY_FALL);
+			}
+
+			return; // Don't collect it!
+		}
+	}
+
+	if (!player) // Only players can touch stuff!
 		return;
 
 	// 0 = none, 1 = elemental pierce, 2 = bubble bounce
@@ -803,7 +836,8 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				{
 					clientGamedata->collected[special->health-1] = true;
 					M_UpdateUnlockablesAndExtraEmblems(clientGamedata);
-					G_SaveGameData(clientGamedata);
+					if (!prevCollected) // don't thrash the disk and wreak performance.
+						G_SaveGameData(clientGamedata);
 				}
 
 				if (netgame)
@@ -969,7 +1003,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 						// scan the thinkers to find the corresponding anchorpoint
 						for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 						{
-							if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+							if (th->removing)
 								continue;
 
 							mo2 = (mobj_t *)th;
@@ -1063,7 +1097,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				// scan the remaining thinkers
 				for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 				{
-					if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+					if (th->removing)
 						continue;
 
 					mo2 = (mobj_t *)th;
@@ -1113,7 +1147,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				// in from the paraloop. Isn't this just so efficient?
 				for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 				{
-					if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+					if (th->removing)
 						continue;
 
 					mo2 = (mobj_t *)th;
@@ -1332,7 +1366,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			}
 			break;
 		case MT_NIGHTSEXTRATIME:
-			if ((player->bot && player->bot != BOT_MPAI) || !(player->powers[pw_carry] == CR_NIGHTSMODE))
+			if ((player->bot && player->bot != BOT_MPAI) || !(player->powers[pw_carry] == CR_NIGHTSMODE || (G_IsSpecialStage(gamemap) && !(maptol & TOL_NIGHTS))))
 				return;
 			if (!G_IsSpecialStage(gamemap))
 			{
@@ -1344,7 +1378,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			else
 			{
 				for (i = 0; i < MAXPLAYERS; i++)
-					if (playeringame[i] && players[i].powers[pw_carry] == CR_NIGHTSMODE)
+					if (playeringame[i] && (player->powers[pw_carry] == CR_NIGHTSMODE || (G_IsSpecialStage(gamemap) && !(maptol & TOL_NIGHTS))))
 					{
 						players[i].nightstime += special->info->speed;
 						players[i].startedtime += special->info->speed;
@@ -1397,11 +1431,14 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			i = 0;
 			for (; special->type == MT_HOOP; special = special->hnext)
 			{
-				special->fuse = 11;
-				special->movedir = i;
-				special->extravalue1 = special->target->extravalue1;
-				special->extravalue2 = special->target->extravalue2;
-				special->target->threshold = 4242;
+				if (!P_MobjWasRemoved(special->target))
+				{
+					special->fuse = 11;
+					special->movedir = i;
+					special->extravalue1 = special->target->extravalue1;
+					special->extravalue2 = special->target->extravalue2;
+					special->target->threshold = 4242;
+				}
 				i++;
 			}
 			// Make the collision detectors disappear.
@@ -1485,7 +1522,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				// scan the remaining thinkers to find koopa
 				for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 				{
-					if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+					if (th->removing)
 						continue;
 
 					mo2 = (mobj_t *)th;
@@ -1878,6 +1915,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				toucher->tracer->flags2 = (toucher->tracer->flags2 & ~MF2_AMBUSH) | destambush;
 			}
 			return;
+
 		default: // SOC or script pickup
 			if (player->bot && player->bot != BOT_MPAI)
 				return;
@@ -1982,7 +2020,7 @@ void P_TouchStarPost(mobj_t *post, player_t *player, boolean snaptopost)
 
 		for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 		{
-			if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+			if (th->removing)
 				continue;
 
 			mo2 = (mobj_t *)th;
@@ -2530,8 +2568,14 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 		{
 			P_SetTarget(&target->target, source);
 			source->player->numboxes++;
-			if (cv_itemrespawn.value && gametype != GT_COOP && (modifiedgame || netgame || multiplayer))
-				target->fuse = cv_itemrespawntime.value*TICRATE + 2; // Random box generation
+			// Set respawn
+			if (!(target->flags2 & MF2_DONTRESPAWN))
+			{
+				if (!(netgame || multiplayer))
+					target->fuse = atoi(cv_itemrespawntime.defaultvalue)*TICRATE + 2; 
+				else if (cv_itemrespawn.value)
+					target->fuse = cv_itemrespawntime.value*TICRATE + 2;
+			}
 		}
 
 		// Award Score Tails
@@ -2765,8 +2809,7 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 				mo = P_SpawnMobj(target->x, target->y, target->z, MT_EXTRALARGEBUBBLE);
 			if (P_MobjWasRemoved(mo))
 				break;
-			mo->destscale = target->scale;
-			P_SetScale(mo, mo->destscale);
+			P_SetScale(mo, target->scale, true);
 			P_SetMobjState(mo, mo->info->raisestate);
 			break;
 
@@ -2827,7 +2870,7 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 				// scan the thinkers to make sure all the old pinch dummies are gone on death
 				for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 				{
-					if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+					if (th->removing)
 						continue;
 
 					mo = (mobj_t *)th;
@@ -3598,7 +3641,7 @@ void P_SpecialStageDamage(player_t *player, mobj_t *inflictor, mobj_t *source)
 		if (player->nightstime > 5*TICRATE)
 			player->nightstime -= 5*TICRATE;
 		else
-			player->nightstime = 0;
+			player->nightstime = 1;
 	}
 
 	P_DoPlayerPain(player, inflictor, source);
@@ -3744,6 +3787,8 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 
 		if (player->powers[pw_carry] == CR_NIGHTSMODE) // NiGHTS damage handling
 		{
+			if (player->powers[pw_flashing])
+				return false;
 			if (!force)
 			{
 				if (source == target)
@@ -3761,6 +3806,10 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 
 		if (G_IsSpecialStage(gamemap) && !(damagetype & DMG_DEATHMASK))
 		{
+			if (player->powers[pw_flashing])
+				return false;
+			if (LUA_HookMobjDamage(target, inflictor, source, damage, damagetype))
+				return true;
 			P_SpecialStageDamage(player, inflictor, source);
 			return true;
 		}
@@ -3957,8 +4006,7 @@ void P_PlayerRingBurst(player_t *player, INT32 num_rings)
 		mo->fuse = 8*TICRATE;
 		P_SetTarget(&mo->target, player->mo);
 
-		mo->destscale = player->mo->scale;
-		P_SetScale(mo, player->mo->scale);
+		P_SetScale(mo, player->mo->scale, true);
 
 		// Angle offset by player angle, then slightly offset by amount of rings
 		fa = ((i*FINEANGLES/16) + va - ((num_rings-1)*FINEANGLES/32)) & FINEMASK;
@@ -4094,8 +4142,7 @@ void P_PlayerWeaponPanelBurst(player_t *player)
 		mo->flags &= ~(MF_NOGRAVITY|MF_NOCLIPHEIGHT);
 		P_SetTarget(&mo->target, player->mo);
 		mo->fuse = 12*TICRATE;
-		mo->destscale = player->mo->scale;
-		P_SetScale(mo, player->mo->scale);
+		P_SetScale(mo, player->mo->scale, true);
 
 		// Angle offset by player angle
 		fa = ((i*FINEANGLES/16) + (player->mo->angle>>ANGLETOFINESHIFT)) & FINEMASK;
@@ -4183,8 +4230,7 @@ void P_PlayerWeaponAmmoBurst(player_t *player)
 		player->powers[power] = 0;
 		mo->fuse = 12*TICRATE;
 
-		mo->destscale = player->mo->scale;
-		P_SetScale(mo, player->mo->scale);
+		P_SetScale(mo, player->mo->scale, true);
 
 		// Angle offset by player angle
 		fa = ((i*FINEANGLES/16) + (player->mo->angle>>ANGLETOFINESHIFT)) & FINEMASK;
@@ -4231,8 +4277,7 @@ void P_PlayerWeaponPanelOrAmmoBurst(player_t *player)
 			mo->flags &= ~(MF_NOGRAVITY|MF_NOCLIPHEIGHT); \
 			P_SetTarget(&mo->target, player->mo); \
 			mo->fuse = 12*TICRATE; \
-			mo->destscale = player->mo->scale; \
-			P_SetScale(mo, player->mo->scale); \
+			P_SetScale(mo, player->mo->scale, true); \
 			mo->momx = FixedMul(FINECOSINE(fa),ns); \
 			if (!(twodlevel || (player->mo->flags2 & MF2_TWOD))) \
 				mo->momy = FixedMul(FINESINE(fa),ns); \
@@ -4254,8 +4299,7 @@ void P_PlayerWeaponPanelOrAmmoBurst(player_t *player)
 			mo->flags &= ~(MF_NOGRAVITY|MF_NOCLIPHEIGHT); \
 			P_SetTarget(&mo->target, player->mo); \
 			mo->fuse = 12*TICRATE; \
-			mo->destscale = player->mo->scale; \
-			P_SetScale(mo, player->mo->scale); \
+			P_SetScale(mo, player->mo->scale, true); \
 			mo->momx = FixedMul(FINECOSINE(fa),ns); \
 			if (!(twodlevel || (player->mo->flags2 & MF2_TWOD))) \
 				mo->momy = FixedMul(FINESINE(fa),ns); \

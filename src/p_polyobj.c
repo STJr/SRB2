@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2006      by James Haley
-// Copyright (C) 2006-2023 by Sonic Team Junior.
+// Copyright (C) 2006-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -877,14 +877,17 @@ static void Polyobj_carryThings(polyobj_t *po, fixed_t dx, fixed_t dy)
 		for (x = po->blockbox[BOXLEFT]; x <= po->blockbox[BOXRIGHT]; ++x)
 		{
 			mobj_t *mo;
+			blocknode_t *block;
+			blocknode_t *next = NULL;
 
 			if (x < 0 || y < 0 || x >= bmapwidth || y >= bmapheight)
 				continue;
 
-			mo = blocklinks[y * bmapwidth + x];
-
-			for (; mo; mo = mo->bnext)
+			for (block = blocklinks[y * bmapwidth + x]; block != NULL; block = next)
 			{
+				mo = block->mobj;
+				next = block->mnext;
+
 				if (mo->lastlook == pomovecount)
 					continue;
 
@@ -924,11 +927,11 @@ static INT32 Polyobj_clipThings(polyobj_t *po, line_t *line)
 	if (!(po->flags & POF_SOLID))
 		return hitflags;
 
-	// adjust linedef bounding box to blockmap, extend by MAXRADIUS
-	linebox[BOXLEFT]   = (unsigned)(line->bbox[BOXLEFT]   - bmaporgx - MAXRADIUS) >> MAPBLOCKSHIFT;
-	linebox[BOXRIGHT]  = (unsigned)(line->bbox[BOXRIGHT]  - bmaporgx + MAXRADIUS) >> MAPBLOCKSHIFT;
-	linebox[BOXBOTTOM] = (unsigned)(line->bbox[BOXBOTTOM] - bmaporgy - MAXRADIUS) >> MAPBLOCKSHIFT;
-	linebox[BOXTOP]    = (unsigned)(line->bbox[BOXTOP]    - bmaporgy + MAXRADIUS) >> MAPBLOCKSHIFT;
+	// adjust linedef bounding box to blockmap
+	linebox[BOXLEFT]   = (unsigned)(line->bbox[BOXLEFT]   - bmaporgx) >> MAPBLOCKSHIFT;
+	linebox[BOXRIGHT]  = (unsigned)(line->bbox[BOXRIGHT]  - bmaporgx) >> MAPBLOCKSHIFT;
+	linebox[BOXBOTTOM] = (unsigned)(line->bbox[BOXBOTTOM] - bmaporgy) >> MAPBLOCKSHIFT;
+	linebox[BOXTOP]    = (unsigned)(line->bbox[BOXTOP]    - bmaporgy) >> MAPBLOCKSHIFT;
 
 	// check all mobj blockmap cells the line contacts
 	for (y = linebox[BOXBOTTOM]; y <= linebox[BOXTOP]; ++y)
@@ -937,10 +940,14 @@ static INT32 Polyobj_clipThings(polyobj_t *po, line_t *line)
 		{
 			if (!(x < 0 || y < 0 || x >= bmapwidth || y >= bmapheight))
 			{
-				mobj_t *mo = blocklinks[y * bmapwidth + x];
+				mobj_t *mo = NULL;
+				blocknode_t *block = blocklinks[y * bmapwidth + x];
+				blocknode_t *next = NULL;
 
-				for (; mo; mo = mo->bnext)
+				for (; block != NULL; block = next)
 				{
+					next = block->mnext;
+					mo = block->mobj;
 
 					// Don't scroll objects that aren't affected by gravity
 					if (mo->flags & MF_NOGRAVITY)
@@ -1109,14 +1116,17 @@ static void Polyobj_rotateThings(polyobj_t *po, vector2_t origin, angle_t delta,
 		for (x = po->blockbox[BOXLEFT]; x <= po->blockbox[BOXRIGHT]; ++x)
 		{
 			mobj_t *mo;
+			blocknode_t *block;
+			blocknode_t *next = NULL;
 
 			if (x < 0 || y < 0 || x >= bmapwidth || y >= bmapheight)
 				continue;
 
-			mo = blocklinks[y * bmapwidth + x];
-
-			for (; mo; mo = mo->bnext)
+			for (block = blocklinks[y * bmapwidth + x]; block != NULL; block = next)
 			{
+				mo = block->mobj;
+				next = block->mnext;
+
 				if (mo->lastlook == pomovecount)
 					continue;
 
@@ -1308,7 +1318,7 @@ void Polyobj_InitLevel(void)
 	// the mobj_t pointers on a queue for use below.
 	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 	{
-		if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+		if (th->removing)
 			continue;
 
 		mo = (mobj_t *)th;

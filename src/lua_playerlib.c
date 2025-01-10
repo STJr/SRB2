@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2012-2016 by John "JTE" Muniz.
-// Copyright (C) 2012-2023 by Sonic Team Junior.
+// Copyright (C) 2012-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -190,6 +190,7 @@ enum player_e
 	player_marelap,
 	player_marebonuslap,
 	player_marebegunat,
+	player_lastmaretime,
 	player_startedtime,
 	player_finishedtime,
 	player_lapbegunat,
@@ -337,6 +338,7 @@ static const char *const player_opt[] = {
 	"marelap",
 	"marebonuslap",
 	"marebegunat",
+	"lastmaretime",
 	"startedtime",
 	"finishedtime",
 	"lapbegunat",
@@ -724,6 +726,9 @@ static int player_get(lua_State *L)
 		break;
 	case player_marebegunat:
 		lua_pushinteger(L, plr->marebegunat);
+		break;
+	case player_lastmaretime:
+		lua_pushinteger(L, plr->lastmaretime);
 		break;
 	case player_startedtime:
 		lua_pushinteger(L, plr->startedtime);
@@ -1219,6 +1224,9 @@ static int player_set(lua_State *L)
 	case player_marebegunat:
 		plr->marebegunat = (tic_t)luaL_checkinteger(L, 3);
 		break;
+	case player_lastmaretime:
+		plr->lastmaretime = (tic_t)luaL_checkinteger(L, 3);
+		break;
 	case player_startedtime:
 		plr->startedtime = (tic_t)luaL_checkinteger(L, 3);
 		break;
@@ -1423,8 +1431,8 @@ static int power_len(lua_State *L)
 	return 1;
 }
 
-#define NOFIELD luaL_error(L, LUA_QL("ticcmd_t") " has no field named " LUA_QS, field)
-#define NOSET luaL_error(L, LUA_QL("ticcmd_t") " field " LUA_QS " should not be set directly.", ticcmd_opt[field])
+#define NOFIELD luaL_error(L, "%s %s", LUA_QL("ticcmd_t"), va("has no field named %ui", field))
+#define NOSET luaL_error(L, LUA_QL("ticcmd_t") " field %s should not be set directly.", ticcmd_opt[field])
 
 enum ticcmd_e
 {
@@ -1454,6 +1462,9 @@ static int ticcmd_get(lua_State *L)
 	enum ticcmd_e field = Lua_optoption(L, 2, -1, ticcmd_fields_ref);
 	if (!cmd)
 		return LUA_ErrInvalid(L, "player_t");
+
+	if (field == (enum ticcmd_e)-1)
+		return LUA_ErrInvalid(L, "fields");
 
 	switch (field)
 	{
@@ -1488,6 +1499,9 @@ static int ticcmd_set(lua_State *L)
 	enum ticcmd_e field = Lua_optoption(L, 2, -1, ticcmd_fields_ref);
 	if (!cmd)
 		return LUA_ErrInvalid(L, "ticcmd_t");
+
+	if (field == (enum ticcmd_e)-1)
+		return LUA_ErrInvalid(L, "fields");
 
 	if (hud_running)
 		return luaL_error(L, "Do not alter player_t in HUD rendering code!");

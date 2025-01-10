@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -180,12 +180,25 @@ UINT16 W_CheckNumForMarkerStartPwad(const char *name, UINT16 wad, UINT16 startlu
 UINT16 W_CheckNumForFullNamePK3(const char *name, UINT16 wad, UINT16 startlump);
 UINT16 W_CheckNumForFolderStartPK3(const char *name, UINT16 wad, UINT16 startlump);
 UINT16 W_CheckNumForFolderEndPK3(const char *name, UINT16 wad, UINT16 startlump);
+char *W_GetLumpFolderPathPK3(UINT16 wad, UINT16 lump);
+char *W_GetLumpFolderNamePK3(UINT16 wad, UINT16 lump);
+
+void W_GetFolderLumpsPwad(const char *name, UINT16 wad, UINT32 **list, UINT16 *list_capacity, UINT16 *numlumps);
+void W_GetFolderLumps(const char *name, UINT32 **list, UINT16 *list_capacity, UINT16 *numlumps);
+UINT32 W_CountFolderLumpsPwad(const char *name, UINT16 wad);
+UINT32 W_CountFolderLumps(const char *name);
 
 lumpnum_t W_CheckNumForMap(const char *name);
 lumpnum_t W_CheckNumForName(const char *name);
 lumpnum_t W_CheckNumForLongName(const char *name);
 lumpnum_t W_GetNumForName(const char *name); // like W_CheckNumForName but I_Error on LUMPERROR
 lumpnum_t W_GetNumForLongName(const char *name);
+
+lumpnum_t W_CheckNumForPatchName(const char *name);
+lumpnum_t W_CheckNumForLongPatchName(const char *name);
+lumpnum_t W_GetNumForPatchName(const char *name); // like W_CheckNumForPatchName but I_Error on LUMPERROR
+lumpnum_t W_GetNumForLongPatchName(const char *name);
+
 lumpnum_t W_CheckNumForNameInBlock(const char *name, const char *blockstart, const char *blockend);
 UINT8 W_LumpExists(const char *name); // Lua uses this.
 
@@ -210,20 +223,18 @@ void *W_CacheLumpNumForce(lumpnum_t lumpnum, INT32 tag);
 
 boolean W_IsLumpCached(lumpnum_t lump, void *ptr);
 boolean W_IsPatchCached(lumpnum_t lump, void *ptr);
+boolean W_IsPatchCachedPwad(UINT16 wad, UINT16 lump, void *ptr);
 
 void *W_CacheLumpName(const char *name, INT32 tag);
 void *W_CachePatchName(const char *name, INT32 tag);
 void *W_CachePatchLongName(const char *name, INT32 tag);
 
-// Returns either a Software patch, or an OpenGL patch.
-// Performs any necessary conversions from PNG images.
 void *W_CachePatchNumPwad(UINT16 wad, UINT16 lump, INT32 tag);
 void *W_CachePatchNum(lumpnum_t lumpnum, INT32 tag);
+void *W_GetCachedPatchNumPwad(UINT16 wad, UINT16 lump);
 
-// Returns a Software patch.
-// Performs any necessary conversions from PNG images.
-void *W_CacheSoftwarePatchNumPwad(UINT16 wad, UINT16 lump, INT32 tag);
-void *W_CacheSoftwarePatchNum(lumpnum_t lumpnum, INT32 tag);
+boolean W_ReadPatchHeaderPwad(UINT16 wadnum, UINT16 lumpnum, INT16 *width, INT16 *height, INT16 *topoffset, INT16 *leftoffset);
+boolean W_ReadPatchHeader(lumpnum_t lumpnum, INT16 *width, INT16 *height, INT16 *topoffset, INT16 *leftoffset);
 
 void W_UnlockCachedPatch(void *patch);
 
