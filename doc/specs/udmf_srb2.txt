@@ -1,5 +1,5 @@
 ===============================================================================
-Universal Doom Map Format Sonic Robo Blast 2 extensions v1.0 19.02.2024
+Universal Doom Map Format Sonic Robo Blast 2 extensions v1.0 19.06.2024
 
     Copyright (c) 2024 Sonic Team Junior
        uses Universal Doom Map Format Specification v1.1 as a template,
@@ -142,6 +142,9 @@ Sonic Robo Blast 2 defines the following standardized fields:
       offsety_mid = <float>;           // Y offset for mid texture. Default = 0.0.
       offsetx_bottom = <float>;        // X offset for lower texture. Default = 0.0.
       offsety_bottom = <float>;        // Y offset for lower texture. Default = 0.0.
+
+      light = <integer>;               // Light level, relative to 'sector' light level. Default = 0.
+      lightabsolute = <bool>;          // true = 'light' is an absolute value, ignoring 'sector' light level.
 
       comment = <string>; // A comment. Implementors should attach no special
                           // semantic meaning to this field.

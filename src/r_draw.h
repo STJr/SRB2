@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -154,9 +154,11 @@ void R_VideoErase(size_t ofs, INT32 count);
 
 void R_DrawColumn_8(void);
 void R_DrawColumnClamped_8(void);
+void R_Draw2sMultiPatchColumn_8(void);
 void R_DrawShadeColumn_8(void);
 void R_DrawTranslucentColumn_8(void);
 void R_DrawTranslucentColumnClamped_8(void);
+void R_Draw2sMultiPatchTranslucentColumn_8(void);
 void R_DrawDropShadowColumn_8(void);
 void R_DrawTranslatedColumn_8(void);
 void R_DrawTranslatedTranslucentColumn_8(void);
@@ -171,6 +173,7 @@ void R_DrawTiltedTranslucentSpan_8(void);
 void R_DrawSplat_8(void);
 void R_DrawTranslucentSplat_8(void);
 void R_DrawTiltedSplat_8(void);
+void R_DrawTiltedTranslucentSplat_8(void);
 
 void R_DrawFloorSprite_8(void);
 void R_DrawTranslucentFloorSprite_8(void);
@@ -192,6 +195,7 @@ void R_DrawTiltedTranslucentSpan_NPO2_8(void);
 void R_DrawSplat_NPO2_8(void);
 void R_DrawTranslucentSplat_NPO2_8(void);
 void R_DrawTiltedSplat_NPO2_8(void);
+void R_DrawTiltedTranslucentSplat_NPO2_8(void);
 
 void R_DrawFloorSprite_NPO2_8(void);
 void R_DrawTranslucentFloorSprite_NPO2_8(void);

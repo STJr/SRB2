@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -93,6 +93,7 @@ boolean R_ThingIsFullDark (mobj_t *thing);
 boolean R_ThingIsFlashing (mobj_t *thing);
 
 UINT8 *R_GetTranslationForThing(mobj_t *mobj, skincolornum_t color, UINT16 translation);
+transnum_t R_GetThingTransTable(fixed_t alpha, transnum_t transmap);
 
 void R_ThingOffsetOverlay (mobj_t *thing, fixed_t *outx, fixed_t *outy);
 

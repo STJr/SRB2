@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2012-2016 by John "JTE" Muniz.
-// Copyright (C) 2012-2023 by Sonic Team Junior.
+// Copyright (C) 2012-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -69,6 +69,7 @@ enum mobj_e {
 	mobj_color,
 	mobj_translation,
 	mobj_blendmode,
+	mobj_alpha,
 	mobj_bnext,
 	mobj_bprev,
 	mobj_hnext,
@@ -150,6 +151,7 @@ static const char *const mobj_opt[] = {
 	"color",
 	"translation",
 	"blendmode",
+	"alpha",
 	"bnext",
 	"bprev",
 	"hnext",
@@ -196,12 +198,12 @@ static int mobj_get(lua_State *L)
 	enum mobj_e field = Lua_optoption(L, 2, -1, mobj_fields_ref);
 	lua_settop(L, 2);
 
-	if (!mo || !ISINLEVEL) {
+	if (P_MobjWasRemoved(mo) || !ISINLEVEL) {
 		if (field == mobj_valid) {
 			lua_pushboolean(L, 0);
 			return 1;
 		}
-		if (!mo) {
+		if (P_MobjWasRemoved(mo)) {
 			return LUA_ErrInvalid(L, "mobj_t");
 		} else
 			return luaL_error(L, "Do not access an mobj_t field outside a level!");
@@ -353,6 +355,9 @@ static int mobj_get(lua_State *L)
 		break;
 	case mobj_blendmode:
 		lua_pushinteger(L, mo->blendmode);
+		break;
+	case mobj_alpha:
+		lua_pushfixed(L, mo->alpha);
 		break;
 	case mobj_bnext:
 		if (mo->blocknode && mo->blocknode->bnext) {
@@ -731,6 +736,16 @@ static int mobj_set(lua_State *L)
 		if (blendmode < 0 || blendmode > AST_OVERLAY)
 			return luaL_error(L, "mobj.blendmode %d out of range (0 - %d).", blendmode, AST_OVERLAY);
 		mo->blendmode = blendmode;
+		break;
+	}
+	case mobj_alpha:
+	{
+		fixed_t alpha = luaL_checkfixed(L, 3);
+		if (alpha < 0)
+			alpha = 0;
+		else if (alpha > FRACUNIT)
+			alpha = FRACUNIT;
+		mo->alpha = alpha;
 		break;
 	}
 	case mobj_bnext:

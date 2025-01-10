@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -38,11 +38,6 @@
 
 // Convenience macro to fix issue with collision along bottom/left edges of blockmap -Red
 #define BMBOUNDFIX(xl, xh, yl, yh) {if (xl > xh) xl = 0; if (yl > yh) yl = 0;}
-
-// MAXRADIUS is for precalculated sector block boxes
-// the spider demon is larger,
-// but we do not have any moving sectors nearby
-#define MAXRADIUS (32*FRACUNIT)
 
 // max Z move up or down without jumping
 // above this, a height difference is considered as a 'dropoff'

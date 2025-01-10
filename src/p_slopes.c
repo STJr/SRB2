@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2009      by Stephen McGranahan.
-// Copyright (C) 2015-2023 by Sonic Team Junior.
+// Copyright (C) 2015-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -181,8 +181,8 @@ void T_DynamicSlopeLine (dynlineplanethink_t* th)
 {
 	pslope_t* slope = th->slope;
 	line_t* srcline = th->sourceline;
-
-	fixed_t zdelta;
+	
+	fixed_t zdelta, oldoz = slope->o.z;
 
 	switch(th->type) {
 	case DP_FRONTFLOOR:
@@ -209,7 +209,7 @@ void T_DynamicSlopeLine (dynlineplanethink_t* th)
 		return;
 	}
 
-	if (slope->zdelta != FixedDiv(zdelta, th->extent)) {
+	if (slope->zdelta != FixedDiv(zdelta, th->extent) || oldoz != slope->o.z) {
 		slope->zdelta = FixedDiv(zdelta, th->extent);
 		slope->zangle = R_PointToAngle2(0, 0, th->extent, -zdelta);
 		slope->moved = true;
