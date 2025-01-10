@@ -114,7 +114,7 @@ void HWR_ProcessPolygon(FSurfaceInfo *pSurf, FOutVector *pOutVerts, FUINT iNumPt
 		polygonArray[polygonArraySize].numVerts = iNumPts;
 		polygonArray[polygonArraySize].polyFlags = PolyFlags;
 		polygonArray[polygonArraySize].texture = current_texture;
-		polygonArray[polygonArraySize].shader = (shader_target != -1) ? HWR_GetShaderFromTarget(shader_target) : shader_target;
+		polygonArray[polygonArraySize].shader = (shader_target != SHADER_NONE) ? HWR_GetShaderFromTarget(shader_target) : shader_target;
 		polygonArray[polygonArraySize].horizonSpecial = horizonSpecial;
 		// default to polygonArraySize so we don't lose order on horizon lines
 		// (yes, it's supposed to be negative, since we're sorting in that direction)
@@ -311,7 +311,6 @@ void HWR_RenderBatches(void)
 			int nextIndex = polygonIndexArray[polygonReadPos];
 			if (polygonArray[index].hash != polygonArray[nextIndex].hash)
 			{
-				changeState = true;
 				nextShader = polygonArray[nextIndex].shader;
 				nextTexture = polygonArray[nextIndex].texture;
 				nextPolyFlags = polygonArray[nextIndex].polyFlags;
@@ -320,14 +319,17 @@ void HWR_RenderBatches(void)
 					nextTexture = 0;
 				if (currentShader != nextShader && cv_glshaders.value && gl_shadersavailable)
 				{
+					changeState = true;
 					changeShader = true;
 				}
 				if (currentTexture != nextTexture)
 				{
+					changeState = true;
 					changeTexture = true;
 				}
 				if (currentPolyFlags != nextPolyFlags)
 				{
+					changeState = true;
 					changePolyFlags = true;
 				}
 				if (cv_glshaders.value && gl_shadersavailable)
@@ -339,6 +341,7 @@ void HWR_RenderBatches(void)
 						currentSurfaceInfo.LightInfo.fade_start != nextSurfaceInfo.LightInfo.fade_start ||
 						currentSurfaceInfo.LightInfo.fade_end != nextSurfaceInfo.LightInfo.fade_end)
 					{
+						changeState = true;
 						changeSurfaceInfo = true;
 					}
 				}
@@ -346,6 +349,7 @@ void HWR_RenderBatches(void)
 				{
 					if (currentSurfaceInfo.PolyColor.rgba != nextSurfaceInfo.PolyColor.rgba)
 					{
+						changeState = true;
 						changeSurfaceInfo = true;
 					}
 				}

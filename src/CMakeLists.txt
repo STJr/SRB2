@@ -172,6 +172,11 @@ if("${CMAKE_SYSTEM_NAME}" MATCHES "Linux")
 	endif()
 endif()
 
+if("${CMAKE_SYSTEM_NAME}" MATCHES "Haiku")
+	target_compile_definitions(SRB2SDL2 PRIVATE -DNOEXECINFO)
+	target_link_libraries(SRB2SDL2 PRIVATE network)
+endif()
+
 if("${CMAKE_SYSTEM_NAME}" MATCHES "Darwin")
 	target_compile_definitions(SRB2SDL2 PRIVATE -DMACOSX)
 endif()
