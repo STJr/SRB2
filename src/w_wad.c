@@ -1358,17 +1358,6 @@ UINT16 W_CheckNumForFolderEndPK3(const char *name, UINT16 wad, UINT16 startlump)
 	return i;
 }
 
-// Returns 0 if the folder is not empty, 1 if it is empty, -1 if it doesn't exist
-INT32 W_IsFolderEmpty(const char *name, UINT16 wad)
-{
-	UINT16 start = W_CheckNumForFolderStartPK3(name, wad, 0);
-	if (start == INT16_MAX)
-		return -1;
-
-	// Unlike W_CheckNumForFolderStartPK3, W_CheckNumForFolderEndPK3 doesn't return INT16_MAX.
-	return W_CheckNumForFolderEndPK3(name, wad, start) <= start;
-}
-
 char *W_GetLumpFolderPathPK3(UINT16 wad, UINT16 lump)
 {
 	const char *fullname = wadfiles[wad]->lumpinfo[lump].fullname;
@@ -1733,10 +1722,14 @@ static UINT16 W_CheckNumForPatchNamePwad(const char *name, UINT16 wad, boolean l
 	// TODO: cache namespace lump IDs
 	if (W_FileHasFolders(wadfiles[wad]))
 	{
-		if (!W_IsFolderEmpty("Flats/", wad))
+		start = W_CheckNumForFolderStartPK3("Flats/", wad, 0);
+		end = W_CheckNumForFolderEndPK3("Flats/", wad, start);
+
+		// if the start and end is the same, the folder is empty
+		if (end <= start)
 		{
-			start = W_CheckNumForFolderStartPK3("Flats/", wad, 0);
-			end = W_CheckNumForFolderEndPK3("Flats/", wad, start);
+			start = INT16_MAX;
+			end = INT16_MAX;
 		}
 	}
 	else

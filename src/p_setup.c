@@ -692,7 +692,7 @@ void P_ReloadRings(void)
 	// scan the thinkers to find rings/spheres/hoops to unset
 	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 	{
-		if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+		if (th->removing)
 			continue;
 
 		mo = (mobj_t *)th;
@@ -750,7 +750,7 @@ void P_SwitchSpheresBonusMode(boolean bonustime)
 	// scan the thinkers to find spheres to switch
 	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 	{
-		if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+		if (th->removing)
 			continue;
 
 		mo = (mobj_t *)th;
@@ -7333,7 +7333,7 @@ void P_RespawnThings(void)
 
 	for (think = thlist[THINK_MOBJ].next; think != &thlist[THINK_MOBJ]; think = think->next)
 	{
-		if (think->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+		if (think->removing)
 			continue;
 		P_RemoveMobj((mobj_t *)think);
 	}
@@ -7645,20 +7645,20 @@ static void P_InitCamera(void)
 			CV_SetValue(&cv_analog[1], 0);
 
 		displayplayer = consoleplayer; // Start with your OWN view, please!
-	}
 
-	if (twodlevel)
-	{
-		CV_SetValue(&cv_analog[0], false);
-		CV_SetValue(&cv_analog[1], false);
-	}
-	else
-	{
-		if (cv_useranalog[0].value)
-			CV_SetValue(&cv_analog[0], true);
+		if (twodlevel)
+		{
+			CV_SetValue(&cv_analog[0], false);
+			CV_SetValue(&cv_analog[1], false);
+		}
+		else
+		{
+			if (cv_useranalog[0].value)
+				CV_SetValue(&cv_analog[0], true);
 
-		if ((splitscreen && cv_useranalog[1].value) || botingame)
-			CV_SetValue(&cv_analog[1], true);
+			if ((splitscreen && cv_useranalog[1].value) || botingame)
+				CV_SetValue(&cv_analog[1], true);
+		}
 	}
 }
 
@@ -7853,6 +7853,10 @@ boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate)
 	maptol = mapheaderinfo[gamemap-1]->typeoflevel;
 	gametyperules = gametypedefaultrules[gametype];
 
+	// clear the target on map change, since the object will be invalidated
+	P_SetTarget(&ticcmd_ztargetfocus[0], NULL);
+	P_SetTarget(&ticcmd_ztargetfocus[1], NULL);
+
 	CON_Drawer(); // let the user know what we are going to do
 	I_FinishUpdate(); // page flip or blit buffer
 
@@ -8002,6 +8006,9 @@ boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate)
 	// Free GPU textures before freeing patches.
 	if (rendermode == render_opengl && (vid.glstate == VID_GL_LIBRARY_LOADED))
 		HWR_ClearAllTextures();
+
+	// Delete light table textures
+	HWR_ClearLightTables();
 #endif
 
 	Patch_FreeTag(PU_PATCH_LOWPRIORITY);
