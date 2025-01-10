@@ -61,7 +61,7 @@
     - - |
           # apt_update
           echo -e "\e[0Ksection_start:`date +%s`:apt_update[collapsed=true]\r\e[0KUpdating APT listing"
-      - apt-get update
+      - timeout 2m apt-get update || timeout 2m apt-get update
       - |
           # apt_update
           echo -e "\e[0Ksection_end:`date +%s`:apt_update\r\e[0K"

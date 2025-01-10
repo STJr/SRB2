@@ -3,7 +3,7 @@
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
 // Copyright (C) 2011-2016 by Matthew "Kaito Sinclaire" Walsh.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -3318,7 +3318,7 @@ boolean M_Responder(event_t *ev)
 
 	if (ch == -1)
 		return false;
-	else if (ch == gamecontrol[GC_SYSTEMMENU][0] || ch == gamecontrol[GC_SYSTEMMENU][1]) // allow remappable ESC key
+	else if (ev->type != ev_text && (ch == gamecontrol[GC_SYSTEMMENU][0] || ch == gamecontrol[GC_SYSTEMMENU][1])) // allow remappable ESC key
 		ch = KEY_ESCAPE;
 
 	// F-Keys
@@ -3399,9 +3399,16 @@ boolean M_Responder(event_t *ev)
 	// Handle menuitems which need a specific key handling
 	if (routine && (currentMenu->menuitems[itemOn].status & IT_TYPE) == IT_KEYHANDLER)
 	{
+		// block text input if ctrl is held, to allow using ctrl+c ctrl+v and ctrl+x
+		if (ctrldown)
+		{
+			routine(ch);
+			return true;
+		}
+
 		// ignore ev_keydown events if the key maps to a character, since
 		// the ev_text event will follow immediately after in that case.
-		if (ev->type == ev_keydown && ch >= 32 && ch <= 127)
+		if (ev->type == ev_keydown && ((ch >= 32 && ch <= 127) || (ch >= KEY_KEYPAD7 && ch <= KEY_KPADDEL)))
 			return true;
 
 		routine(ch);
@@ -3429,7 +3436,7 @@ boolean M_Responder(event_t *ev)
 		{
 			// dirty hack: for customising controls, I want only buttons/keys, not moves
 			if (ev->type == ev_mouse || ev->type == ev_mouse2 || ev->type == ev_joystick
-				|| ev->type == ev_joystick2)
+				|| ev->type == ev_joystick2 || ev->type == ev_text)
 				return true;
 			if (routine)
 			{
@@ -8511,6 +8518,7 @@ static void M_StartTutorial(INT32 choice)
 	gamecomplete = 0;
 	cursaveslot = 0;
 	maplistoption = 0;
+	CV_StealthSet(&cv_skin, DEFAULTSKIN); // tutorial accounts for sonic only
 	G_DeferedInitNew(false, G_BuildMapName(tutorialmap), 0, false, false);
 }
 
@@ -12115,8 +12123,7 @@ static void M_HandleConnectIP(INT32 choice)
 
 			if ( ctrldown ) {
 				switch (choice) {
-					case 'v':
-					case 'V': // ctrl+v, pasting
+					case 'v': // ctrl+v, pasting
 					{
 						const char *paste = I_ClipboardPaste();
 
@@ -12129,8 +12136,7 @@ static void M_HandleConnectIP(INT32 choice)
 						break;
 					}
 					case KEY_INS:
-					case 'c':
-					case 'C': // ctrl+c, ctrl+insert, copying
+					case 'c': // ctrl+c, ctrl+insert, copying
 						if (l != 0) // Don't replace the clipboard without any text
 						{
 							I_ClipboardCopy(setupm_ip, l);
@@ -12138,8 +12144,7 @@ static void M_HandleConnectIP(INT32 choice)
 						}
 						break;
 
-					case 'x':
-					case 'X': // ctrl+x, cutting
+					case 'x': // ctrl+x, cutting
 						if (l != 0) // Don't replace the clipboard without any text
 						{
 							I_ClipboardCopy(setupm_ip, l);
@@ -12195,15 +12200,6 @@ static void M_HandleConnectIP(INT32 choice)
 				setupm_ip[l] = (char)choice;
 				setupm_ip[l+1] = 0;
 			}
-			else if (choice >= 199 && choice <= 211 && choice != 202 && choice != 206) //numpad too!
-			{
-				char keypad_translation[] = {'7','8','9','-','4','5','6','+','1','2','3','0','.'};
-				choice = keypad_translation[choice - 199];
-				S_StartSound(NULL,sfx_menu1); // Tails
-				setupm_ip[l] = (char)choice;
-				setupm_ip[l+1] = 0;
-			}
-
 			break;
 	}
 

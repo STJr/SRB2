@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -49,9 +49,9 @@ void ST_doPaletteStuff(void);
 
 // title card
 void ST_startTitleCard(void);
+void ST_stopTitleCard(void);
 void ST_runTitleCard(void);
 void ST_drawTitleCard(void);
-void ST_preDrawTitleCard(void);
 void ST_preLevelTitleCardDrawer(void);
 void ST_drawWipeTitleCard(void);
 

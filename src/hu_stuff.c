@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -587,8 +587,8 @@ static void Command_CSay_f(void)
 	DoSayCommand(0, 1, HU_CSAY);
 }
 
-static tic_t spam_tokens[MAXPLAYERS] = { 1 }; // fill the buffer with 1 so the motd can be sent.
-static tic_t spam_tics[MAXPLAYERS];
+UINT8 spam_tokens[MAXPLAYERS] = { 1 }; // fill the buffer with 1 so the motd can be sent.
+tic_t spam_tics[MAXPLAYERS];
 
 /** Receives a message, processing an ::XD_SAY command.
   * \sa DoSayCommand
@@ -649,13 +649,11 @@ static void Got_Saycmd(UINT8 **p, INT32 playernum)
 	else
 		spam_tokens[playernum] -= 1;
 
-	// run the lua hook even if we were supposed to eat the msg, netgame consistency goes first.
+	if (spam_eatmsg)
+		return; // don't proceed if we were supposed to eat the message.
 
 	if (LUA_HookPlayerMsg(playernum, target, flags, msg))
 		return;
-
-	if (spam_eatmsg)
-		return; // don't proceed if we were supposed to eat the message.
 
 	// If it's a CSAY, just CECHO and be done with it.
 	if (flags & HU_CSAY)
