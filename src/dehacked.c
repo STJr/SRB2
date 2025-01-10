@@ -20,6 +20,7 @@ boolean deh_loaded = false;
 boolean gamedataadded = false;
 boolean titlechanged = false;
 boolean introchanged = false;
+boolean bootmapchanged = false;
 
 static int dbg_line;
 static INT32 deh_num_warning = 0;
@@ -199,7 +200,7 @@ static void DEH_LoadDehackedFile(MYFILE *f, boolean mainfile)
 
 	deh_num_warning = 0;
 
-	gamedataadded = titlechanged = introchanged = false;
+	gamedataadded = titlechanged = introchanged = bootmapchanged = false;
 
 	// it doesn't test the version of SRB2 and version of dehacked file
 	dbg_line = -1; // start at -1 so the first line is 0.
@@ -590,7 +591,12 @@ static void DEH_LoadDehackedFile(MYFILE *f, boolean mainfile)
 
 	if (gamestate == GS_TITLESCREEN)
 	{
-		if (introchanged)
+		if (bootmapchanged && bootmap)
+		{
+			menuactive = false;
+			D_MapChange(bootmap, gametype, ultimatemode, true, 0, false, false);
+		}
+		else if (introchanged)
 		{
 			menuactive = false;
 			I_UpdateMouseGrab();

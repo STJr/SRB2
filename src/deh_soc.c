@@ -3925,6 +3925,7 @@ void readmaincfg(MYFILE *f)
 					value = get_number(word2);
 
 				bootmap = (INT16)value;
+				bootmapchanged = true;
 				//titlechanged = true;
 			}
 			else if (fastcmp(word, "STARTCHAR"))
