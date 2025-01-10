@@ -3,7 +3,7 @@
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
 // Copyright (C) 1999-2000 by Jess Haas, Nicolas Kalkhof, Colin Phipps, Florian Schulze, Andrey Budko (prboom)
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -117,6 +117,19 @@ static vector3_t *R_LerpVector3(const vector3_t *from, const vector3_t *to, fixe
 	FV3_SubEx(to, from, out);
 	FV3_MulEx(out, frac, out);
 	FV3_AddEx(from, out, out);
+	return out;
+}
+
+static double R_LerpDouble(double from, double to, double frac)
+{
+	return from + (frac * (to - from));
+}
+
+static dvector3_t *R_LerpDVector3(const dvector3_t *from, const dvector3_t *to, double frac, dvector3_t *out)
+{
+	DVector3_Subtract(to, from, out);
+	DVector3_Multiply(out, frac, out);
+	DVector3_Add(from, out, out);
 	return out;
 }
 
@@ -497,6 +510,14 @@ void R_CreateInterpolator_DynSlope(thinker_t *thinker, pslope_t *slope)
 	FV2_Copy(&interp->dynslope.bakd, &slope->d);
 
 	interp->dynslope.oldzdelta = interp->dynslope.bakzdelta = slope->zdelta;
+
+	DVector3_Copy(&interp->dynslope.oldorigin, &slope->dorigin);
+	DVector3_Copy(&interp->dynslope.bakorigin, &slope->dorigin);
+
+	DVector3_Copy(&interp->dynslope.oldnormdir, &slope->dnormdir);
+	DVector3_Copy(&interp->dynslope.baknormdir, &slope->dnormdir);
+
+	interp->dynslope.olddzdelta = interp->dynslope.bakdzdelta = slope->dzdelta;
 }
 
 void R_InitializeLevelInterpolators(void)
@@ -561,6 +582,21 @@ static void UpdateLevelInterpolatorState(levelinterpolator_t *interp)
 		FV3_Copy(&interp->dynslope.bako, &interp->dynslope.slope->o);
 		FV2_Copy(&interp->dynslope.bakd, &interp->dynslope.slope->d);
 		interp->dynslope.bakzdelta = interp->dynslope.slope->zdelta;
+
+		DVector3_Copy(&interp->dynslope.oldorigin, &interp->dynslope.bakorigin);
+		DVector3_Copy(&interp->dynslope.oldnormdir, &interp->dynslope.baknormdir);
+		interp->dynslope.olddzdelta = interp->dynslope.bakdzdelta;
+
+		if (interp->dynslope.slope->moved)
+		{
+			P_CalculateSlopeVectors(interp->dynslope.slope);
+
+			interp->dynslope.slope->moved = false;
+		}
+
+		DVector3_Copy(&interp->dynslope.bakorigin, &interp->dynslope.slope->dorigin);
+		DVector3_Copy(&interp->dynslope.baknormdir, &interp->dynslope.slope->dnormdir);
+		interp->dynslope.bakdzdelta = interp->dynslope.slope->dzdelta;
 		break;
 	}
 }
@@ -646,7 +682,13 @@ void R_ApplyLevelInterpolators(fixed_t frac)
 			R_LerpVector3(&interp->dynslope.oldo, &interp->dynslope.bako, frac, &interp->dynslope.slope->o);
 			R_LerpVector2(&interp->dynslope.oldd, &interp->dynslope.bakd, frac, &interp->dynslope.slope->d);
 			interp->dynslope.slope->zdelta = R_LerpFixed(interp->dynslope.oldzdelta, interp->dynslope.bakzdelta, frac);
-			interp->dynslope.slope->moved = true;
+			if (rendermode == render_soft)
+			{
+				double dfrac = FixedToDouble(frac);
+				R_LerpDVector3(&interp->dynslope.oldorigin, &interp->dynslope.bakorigin, dfrac, &interp->dynslope.slope->dorigin);
+				R_LerpDVector3(&interp->dynslope.oldnormdir, &interp->dynslope.baknormdir, dfrac, &interp->dynslope.slope->dnormdir);
+				interp->dynslope.slope->dzdelta = R_LerpDouble(interp->dynslope.olddzdelta, interp->dynslope.bakdzdelta, dfrac);
+			}
 			break;
 		}
 	}
@@ -704,6 +746,10 @@ void R_RestoreLevelInterpolators(void)
 			FV3_Copy(&interp->dynslope.slope->o, &interp->dynslope.bako);
 			FV2_Copy(&interp->dynslope.slope->d, &interp->dynslope.bakd);
 			interp->dynslope.slope->zdelta = interp->dynslope.bakzdelta;
+
+			DVector3_Copy(&interp->dynslope.slope->dorigin, &interp->dynslope.bakorigin);
+			DVector3_Copy(&interp->dynslope.slope->dnormdir, &interp->dynslope.baknormdir);
+			interp->dynslope.slope->dzdelta = interp->dynslope.bakdzdelta;
 			break;
 		}
 	}

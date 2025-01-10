@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -4483,6 +4483,8 @@ const char *const PLAYERFLAG_LIST[] = {
 	"CANCARRY", // Can carry?
 	"FINISHED",
 
+	"SHIELDDOWN", // Shield has been pressed.
+
 	NULL // stop loop here.
 };
 
@@ -5803,6 +5805,10 @@ struct int_const_s const INT_CONST[] = {
 	{"MB_BUTTON8",MB_BUTTON8},
 	{"MB_SCROLLUP",MB_SCROLLUP},
 	{"MB_SCROLLDOWN",MB_SCROLLDOWN},
+
+	// screen.h constants
+	{"BASEVIDWIDTH",BASEVIDWIDTH},
+	{"BASEVIDHEIGHT",BASEVIDHEIGHT},
 
 	{NULL,0}
 };

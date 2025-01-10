@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -90,7 +90,7 @@ static void P_SetupStateAnimation(mobj_t *mobj, state_t *st)
 	if (mobj->sprite == SPR_PLAY && mobj->skin)
 	{
 		spritedef_t *spritedef = P_GetSkinSpritedef(mobj->skin, mobj->sprite2);
-		animlength = (INT32)(spritedef->numframes);
+		animlength = (INT32)(spritedef->numframes) - 1;
 	}
 	else
 		animlength = st->var1;
@@ -765,7 +765,7 @@ void P_EmeraldManager(void)
 
 	for (think = thlist[THINK_MOBJ].next; think != &thlist[THINK_MOBJ]; think = think->next)
 	{
-		if (think->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+		if (think->removing)
 			continue;
 
 		mo = (mobj_t *)think;
@@ -1385,6 +1385,7 @@ fixed_t P_GetMobjGravity(mobj_t *mo)
 				case MT_WATERDROP:
 				case MT_CYBRAKDEMON:
 					gravityadd >>= 1;
+					break;
 				default:
 					break;
 			}
@@ -2245,7 +2246,7 @@ boolean P_ZMovement(mobj_t *mo)
 		else if (!onground)
 			P_SlopeLaunch(mo);
 	}
-	
+
 	if (!mo->player && P_CheckDeathPitCollide(mo) && mo->health
 	&& !(mo->flags & MF_NOCLIPHEIGHT) && !(mo->flags2 & MF2_BOSSDEAD))
 	{
@@ -2938,7 +2939,7 @@ boolean P_SceneryZMovement(mobj_t *mo)
 		mo->eflags &= ~MFE_APPLYPMOMZ;
 	}
 	mo->z += mo->momz;
-	
+
 	if (!mo->player && P_CheckDeathPitCollide(mo) && mo->health
 	&& !(mo->flags & MF_NOCLIPHEIGHT) && !(mo->flags2 & MF2_BOSSDEAD))
 	{
@@ -3454,7 +3455,7 @@ void P_DestroyRobots(void)
 
 	for (think = thlist[THINK_MOBJ].next; think != &thlist[THINK_MOBJ]; think = think->next)
 	{
-		if (think->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+		if (think->removing)
 			continue;
 
 		mo = (mobj_t *)think;
@@ -3781,7 +3782,7 @@ static void P_PlayerMobjThinker(mobj_t *mobj)
 
 	// always do the gravity bit now, that's simpler
 	// BUT CheckPosition only if wasn't done before.
-	if (!(mobj->eflags & MFE_ONGROUND) || mobj->momz
+	if (mobj->momz
 		|| ((mobj->eflags & MFE_VERTICALFLIP) && mobj->z + mobj->height != mobj->ceilingz)
 		|| (!(mobj->eflags & MFE_VERTICALFLIP) && mobj->z != mobj->floorz)
 		|| P_IsObjectInGoop(mobj))
@@ -3794,17 +3795,6 @@ static void P_PlayerMobjThinker(mobj_t *mobj)
 	}
 	else
 	{
-#if 0 // i don't know why this is here, it's causing a few undesired state glitches, and disabling it doesn't appear to negatively affect the game, but i don't want it gone permanently just in case some obscure bug crops up
-		if (!(mobj->player->powers[pw_carry] == CR_NIGHTSMODE)) // used for drilling
-			mobj->player->pflags &= ~PF_STARTJUMP;
-		mobj->player->pflags &= ~(PF_JUMPED|PF_NOJUMPDAMAGE);
-		if (mobj->player->secondjump || mobj->player->powers[pw_tailsfly])
-		{
-			mobj->player->secondjump = 0;
-			mobj->player->powers[pw_tailsfly] = 0;
-			P_SetMobjState(mobj, S_PLAY_WALK);
-		}
-#endif
 		mobj->eflags &= ~MFE_JUSTHITFLOOR;
 	}
 
@@ -4264,7 +4254,7 @@ static void P_Boss3Thinker(mobj_t *mobj)
 			// this can happen if the boss was hurt earlier than expected
 			for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 			{
-				if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+				if (th->removing)
 					continue;
 
 				mo2 = (mobj_t *)th;
@@ -5353,7 +5343,7 @@ static void P_Boss9Thinker(mobj_t *mobj)
 		// Build a hoop linked list of 'em!
 		for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 		{
-			if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+			if (th->removing)
 				continue;
 
 			mo2 = (mobj_t *)th;
@@ -6055,7 +6045,7 @@ mobj_t *P_GetClosestAxis(mobj_t *source)
 	// scan the thinkers to find the closest axis point
 	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 	{
-		if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+		if (th->removing)
 			continue;
 
 		mo2 = (mobj_t *)th;
@@ -6661,8 +6651,21 @@ static boolean P_ShieldLook(mobj_t *thing, shieldtype_t shield)
 	thing->flags |= MF_NOCLIPHEIGHT;
 	thing->eflags = (thing->eflags & ~MFE_VERTICALFLIP)|(thing->target->eflags & MFE_VERTICALFLIP);
 
-	P_SetScale(thing, FixedMul(thing->target->scale, thing->target->player->shieldscale), true);
-	thing->old_scale = FixedMul(thing->target->old_scale, thing->target->player->shieldscale);
+	//Set the shield's scale based on shieldscale, hide it if we're too small!
+	fixed_t scale = FixedMul(thing->target->scale, thing->target->player->shieldscale);
+	if (scale < 1) {
+		P_SetScale(thing, thing->target->scale, true);
+		thing->old_scale = thing->target->old_scale;
+		
+		thing->flags2 |= (MF2_DONTDRAW|MF2_JUSTATTACKED); //Hide and indicate we're hidden
+	} else {
+		P_SetScale(thing, scale, true);
+		thing->old_scale = FixedMul(thing->target->old_scale, thing->target->player->shieldscale);
+		
+		//Only unhide if we were hidden by the above code
+		if (thing->flags2 & MF2_JUSTATTACKED)
+			thing->flags2 &= ~(MF2_DONTDRAW|MF2_JUSTATTACKED);
+	}
 
 #define NewMH(mobj)   mobj->height // Ugly mobj-height and player-height defines, for the sake of prettier code
 #define NewPH(player) P_GetPlayerHeight(player)
@@ -9334,10 +9337,10 @@ static void P_PointPushThink(mobj_t *mobj)
 	radius = mobj->spawnpoint->args[0] << FRACBITS;
 
 	pushmobj = mobj;
-	xl = (unsigned)(mobj->x - radius - bmaporgx - MAXRADIUS)>>MAPBLOCKSHIFT;
-	xh = (unsigned)(mobj->x + radius - bmaporgx + MAXRADIUS)>>MAPBLOCKSHIFT;
-	yl = (unsigned)(mobj->y - radius - bmaporgy - MAXRADIUS)>>MAPBLOCKSHIFT;
-	yh = (unsigned)(mobj->y + radius - bmaporgy + MAXRADIUS)>>MAPBLOCKSHIFT;
+	xl = (unsigned)(mobj->x - radius - bmaporgx)>>MAPBLOCKSHIFT;
+	xh = (unsigned)(mobj->x + radius - bmaporgx)>>MAPBLOCKSHIFT;
+	yl = (unsigned)(mobj->y - radius - bmaporgy)>>MAPBLOCKSHIFT;
+	yh = (unsigned)(mobj->y + radius - bmaporgy)>>MAPBLOCKSHIFT;
 
 	P_DoBlockThingsIterate(xl, yl, xh, yh, PIT_PushThing);
 }
@@ -10341,6 +10344,7 @@ void P_MobjThinker(mobj_t *mobj)
 		case MT_GRENADEPICKUP:
 			if (mobj->health == 0) // Fading tile
 			{
+				// TODO: Maybe use mobj->alpha instead of messing with frame flags
 				INT32 value = mobj->info->damage/10;
 				value = mobj->fuse/value;
 				value = 10-value;
@@ -10686,6 +10690,7 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type, ...)
 
 	// Sprite rendering
 	mobj->blendmode = AST_TRANSLUCENT;
+	mobj->alpha = FRACUNIT;
 	mobj->spritexscale = mobj->spriteyscale = mobj->scale;
 	mobj->spritexoffset = mobj->spriteyoffset = 0;
 	mobj->floorspriteslope = NULL;
@@ -10730,7 +10735,7 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type, ...)
 
 	// Set shadowscale here, before spawn hook so that Lua can change it
 	mobj->shadowscale = P_DefaultMobjShadowScale(mobj);
-	
+
 	// A monitor can't respawn if we're not in multiplayer,
 	// or if we're in co-op and it's score or a 1up
 	if (mobj->flags & MF_MONITOR && (!(netgame || multiplayer)
@@ -10746,7 +10751,8 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type, ...)
 		// when spawning MT_PLAYER, set mobj->player before calling MobjSpawn hook to prevent P_RemoveMobj from succeeding on player mobj.
 		va_start(args, type);
 		mobj->player = va_arg(args, player_t *);
-		mobj->player->mo = mobj;
+		if (mobj->player)
+			mobj->player->mo = mobj;
 		va_end(args);
 	}
 
@@ -11177,17 +11183,16 @@ tic_t itemrespawntime[ITEMQUESIZE];
 size_t iquehead, iquetail;
 
 #ifdef PARANOIA
-#define SCRAMBLE_REMOVED // Force debug build to crash when Removed mobj is accessed
+#define SCRAMBLE_REMOVED // Force debug build to crash when a removed mobj is accessed
 #endif
 void P_RemoveMobj(mobj_t *mobj)
 {
 	I_Assert(mobj != NULL);
-	if (P_MobjWasRemoved(mobj))
-		return; // something already removing this mobj.
+	if (P_MobjWasRemoved(mobj) || mobj->thinker.removing)
+		return; // Something already removed or is removing this mobj.
 
-	mobj->thinker.function.acp1 = (actionf_p1)P_RemoveThinkerDelayed; // shh. no recursing.
+	mobj->thinker.removing = true; // Set earlier to avoid recursion.
 	LUA_HookMobj(mobj, MOBJ_HOOK(MobjRemoved));
-	mobj->thinker.function.acp1 = (actionf_p1)P_MobjThinker; // needed for P_UnsetThingPosition, etc. to work.
 
 	// Rings only, please!
 	if (mobj->spawnpoint &&
@@ -12857,7 +12862,7 @@ static boolean P_MapAlreadyHasStarPost(mobj_t *mobj)
 
 	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 	{
-		if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+		if (th->removing)
 			continue;
 
 		mo2 = (mobj_t *)th;
@@ -14288,7 +14293,8 @@ mobj_t *P_SpawnMobjFromMobj(mobj_t *mobj, fixed_t xofs, fixed_t yofs, fixed_t zo
 	yofs = FixedMul(yofs, mobj->scale);
 	zofs = FixedMul(zofs, mobj->scale);
 
-	newmobj = P_SpawnMobj(mobj->x + xofs, mobj->y + yofs, mobj->z + zofs, type);
+	newmobj = P_SpawnMobj(mobj->x + xofs, mobj->y + yofs, mobj->z + zofs, type, NULL);
+
 	if (!newmobj)
 		return NULL;
 

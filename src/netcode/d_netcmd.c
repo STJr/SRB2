@@ -391,7 +391,7 @@ static CV_PossibleValue_t perfstats_cons_t[] = {
 consvar_t cv_perfstats = CVAR_INIT ("perfstats", "Off", CV_CALL, perfstats_cons_t, PS_PerfStats_OnChange);
 static CV_PossibleValue_t ps_samplesize_cons_t[] = {
 	{1, "MIN"}, {1000, "MAX"}, {0, NULL}};
-consvar_t cv_ps_samplesize = CVAR_INIT ("ps_samplesize", "1", CV_CALL, ps_samplesize_cons_t, PS_SampleSize_OnChange);
+consvar_t cv_ps_samplesize = CVAR_INIT ("ps_samplesize", "175", CV_CALL, ps_samplesize_cons_t, PS_SampleSize_OnChange);
 static CV_PossibleValue_t ps_descriptor_cons_t[] = {
 	{1, "Average"}, {2, "SD"}, {3, "Minimum"}, {4, "Maximum"}, {0, NULL}};
 consvar_t cv_ps_descriptor = CVAR_INIT ("ps_descriptor", "Average", 0, ps_descriptor_cons_t, NULL);
@@ -620,6 +620,7 @@ void D_RegisterServerCommands(void)
 	CV_RegisterVar(&cv_blamecfail);
 	CV_RegisterVar(&cv_dedicatedidletime);
 	CV_RegisterVar(&cv_idletime);
+	CV_RegisterVar(&cv_idlespectate);
 	CV_RegisterVar(&cv_httpsource);
 
 	COM_AddCommand("ping", Command_Ping_f, COM_LUA);
@@ -691,6 +692,7 @@ void D_RegisterClientCommands(void)
 	COM_AddCommand("timedemo", Command_Timedemo_f, 0);
 	COM_AddCommand("stopdemo", Command_Stopdemo_f, COM_LUA);
 	COM_AddCommand("playintro", Command_Playintro_f, COM_LUA);
+	CV_RegisterVar(&cv_resyncdemo);
 
 	COM_AddCommand("resetcamera", Command_ResetCamera_f, COM_LUA);
 
@@ -1308,7 +1310,7 @@ static void SendNameAndColor(void)
 
 		SetColorLocal(consoleplayer, cv_playercolor.value);
 
-		if (splitscreen)
+		if (splitscreen || (!pickedchar && stricmp(cv_skin.string, skins[consoleplayer]->name) != 0))
 			SetSkinLocal(consoleplayer, R_SkinAvailable(cv_skin.string));
 		else
 			SetSkinLocal(consoleplayer, pickedchar);
@@ -2509,11 +2511,11 @@ static void MutePlayer(boolean mute)
 
 	if (COM_Argc() < 2)
 	{
-		CONS_Printf(M_GetText("muteplayer <playernum>: mute a player\n"));
+		CONS_Printf(M_GetText("muteplayer <playername/playernum>: mute a player\n"));
 		return;
 	}
 
-	data[0] = atoi(COM_Argv(1));
+	data[0] = nametonum(COM_Argv(1));
 	if (data[0] >= MAXPLAYERS || !playeringame[data[0]])
 	{
 		CONS_Alert(CONS_NOTICE, M_GetText("There is no player %u!\n"), (unsigned int)data[0]);
@@ -2602,11 +2604,11 @@ static void Command_ServerTeamChange_f(void)
 	if (COM_Argc() < 3)
 	{
 		if (G_TagGametype())
-			CONS_Printf(M_GetText("serverchangeteam <playernum> <team>: switch player to a new team (%s)\n"), "it, notit, playing, or spectator");
+			CONS_Printf(M_GetText("serverchangeteam <playername/playernum> <team>: switch player to a new team (%s)\n"), "it, notit, playing, or spectator");
 		else if (G_GametypeHasTeams())
-			CONS_Printf(M_GetText("serverchangeteam <playernum> <team>: switch player to a new team (%s)\n"), "red, blue or spectator");
+			CONS_Printf(M_GetText("serverchangeteam <playername/playernum> <team>: switch player to a new team (%s)\n"), "red, blue or spectator");
 		else if (G_GametypeHasSpectators())
-			CONS_Printf(M_GetText("serverchangeteam <playernum> <team>: switch player to a new team (%s)\n"), "spectator or playing");
+			CONS_Printf(M_GetText("serverchangeteam <playername/playernum> <team>: switch player to a new team (%s)\n"), "spectator or playing");
 		else
 			CONS_Alert(CONS_NOTICE, M_GetText("This command cannot be used in this gametype.\n"));
 		return;
@@ -2654,19 +2656,19 @@ static void Command_ServerTeamChange_f(void)
 	if (error)
 	{
 		if (G_TagGametype())
-			CONS_Printf(M_GetText("serverchangeteam <playernum> <team>: switch player to a new team (%s)\n"), "it, notit, playing, or spectator");
+			CONS_Printf(M_GetText("serverchangeteam <playername/playernum> <team>: switch player to a new team (%s)\n"), "it, notit, playing, or spectator");
 		else if (G_GametypeHasTeams())
-			CONS_Printf(M_GetText("serverchangeteam <playernum> <team>: switch player to a new team (%s)\n"), "red, blue or spectator");
+			CONS_Printf(M_GetText("serverchangeteam <playername/playernum> <team>: switch player to a new team (%s)\n"), "red, blue or spectator");
 		else if (G_GametypeHasSpectators())
-			CONS_Printf(M_GetText("serverchangeteam <playernum> <team>: switch player to a new team (%s)\n"), "spectator or playing");
+			CONS_Printf(M_GetText("serverchangeteam <playername/playernum> <team>: switch player to a new team (%s)\n"), "spectator or playing");
 		return;
 	}
 
-	NetPacket.packet.playernum = atoi(COM_Argv(1));
+	NetPacket.packet.playernum = nametonum(COM_Argv(1));
 
-	if (!playeringame[NetPacket.packet.playernum])
+	if (NetPacket.packet.playernum == -1 || !playeringame[NetPacket.packet.playernum])
 	{
-		CONS_Alert(CONS_NOTICE, M_GetText("There is no player %d!\n"), NetPacket.packet.playernum);
+		CONS_Alert(CONS_NOTICE, M_GetText("There is no player %s!\n"), COM_Argv(1));
 		return;
 	}
 
@@ -3105,13 +3107,16 @@ static void Command_Verify_f(void)
 
 	if (COM_Argc() != 2)
 	{
-		CONS_Printf(M_GetText("promote <playernum>: give admin privileges to a player\n"));
+		CONS_Printf(M_GetText("promote <playername/playernum>: give admin privileges to a player\n"));
 		return;
 	}
 
-	strlcpy(buf, COM_Argv(1), sizeof (buf));
-
-	playernum = atoi(buf);
+	playernum = nametonum(COM_Argv(1));
+	if (playernum == -1)
+	{
+		CONS_Alert(CONS_NOTICE, M_GetText("There is no player %s!\n"), COM_Argv(1));
+		return;
+	}
 
 	temp = buf;
 
@@ -3155,13 +3160,16 @@ static void Command_RemoveAdmin_f(void)
 
 	if (COM_Argc() != 2)
 	{
-		CONS_Printf(M_GetText("demote <playernum>: remove admin privileges from a player\n"));
+		CONS_Printf(M_GetText("demote <playername/playernum>: remove admin privileges from a player\n"));
 		return;
 	}
 
-	strlcpy(buf, COM_Argv(1), sizeof(buf));
-
-	playernum = atoi(buf);
+	playernum = nametonum(COM_Argv(1));
+	if (playernum == -1)
+	{
+		CONS_Alert(CONS_NOTICE, M_GetText("There is no player %s!\n"), COM_Argv(1));
+		return;
+	}
 
 	temp = buf;
 
@@ -4608,7 +4616,7 @@ static void Command_ExitLevel_f(void)
 			SendNetXCmd(XD_EXITLEVEL, NULL, 0);
 			return;
 		}
-		
+
 		// Allow exiting without cheating if at least one player beat the level
 		// Consistent with just setting playersforexit to one
 		if (splitscreen || multiplayer)
@@ -4622,7 +4630,7 @@ static void Command_ExitLevel_f(void)
 					continue;
 				if (players[i].lives <= 0)
 					continue;
-		
+
 				if ((players[i].pflags & PF_FINISHED) || players[i].exiting)
 				{
 					SendNetXCmd(XD_EXITLEVEL, NULL, 0);
@@ -4630,7 +4638,7 @@ static void Command_ExitLevel_f(void)
 				}
 			}
 		}
-		
+
 		// Only consider it a cheat if we're not allowed to go to the next map
 		if (M_CampaignWarpIsCheat(gametype, G_GetNextMap(true, true) + 1, serverGamedata))
 			CONS_Alert(CONS_NOTICE, M_GetText("Cheats must be enabled to force exit to a locked level!\n"));
@@ -4769,7 +4777,7 @@ static void Command_Cheats_f(void)
 			G_SetUsedCheats(false);
 		return;
 	}
-	
+
 	if (usedCheats)
 		CONS_Printf(M_GetText("Cheats are enabled, the game cannot be saved.\n"));
 	else
@@ -4791,12 +4799,11 @@ static void Command_Togglemodified_f(void)
 	modifiedgame = !modifiedgame;
 }
 
-extern UINT8 *save_p;
 static void Command_Archivetest_f(void)
 {
-	UINT8 *buf;
 	UINT32 i, wrote;
 	thinker_t *th;
+	save_t savebuffer;
 	if (gamestate != GS_LEVEL)
 	{
 		CONS_Printf("This command only works in-game, you dummy.\n");
@@ -4810,28 +4817,29 @@ static void Command_Archivetest_f(void)
 			((mobj_t *)th)->mobjnum = i++;
 
 	// allocate buffer
-	buf = save_p = ZZ_Alloc(1024);
+	savebuffer.size = 1024;
+	savebuffer.buf = malloc(savebuffer.size);
+	savebuffer.pos = 0;
 
 	// test archive
 	CONS_Printf("LUA_Archive...\n");
-	LUA_Archive();
-	WRITEUINT8(save_p, 0x7F);
-	wrote = (UINT32)(save_p-buf);
+	LUA_Archive(&savebuffer);
+	P_WriteUINT8(&savebuffer, 0x7F);
+	wrote = savebuffer.pos;
 
 	// clear Lua state, so we can really see what happens!
 	CONS_Printf("Clearing state!\n");
 	LUA_ClearExtVars();
 
 	// test unarchive
-	save_p = buf;
 	CONS_Printf("LUA_UnArchive...\n");
-	LUA_UnArchive();
-	i = READUINT8(save_p);
-	if (i != 0x7F || wrote != (UINT32)(save_p-buf))
-		CONS_Printf("Savegame corrupted. (write %u, read %u)\n", wrote, (UINT32)(save_p-buf));
+	LUA_UnArchive(&savebuffer);
+	i = P_ReadUINT8(&savebuffer);
+	if (i != 0x7F || wrote != (UINT32)(savebuffer.pos))
+		CONS_Printf("Savegame corrupted. (write %u, read %u)\n", wrote, (UINT32)(savebuffer.pos));
 
 	// free buffer
-	Z_Free(buf);
+	free(savebuffer.buf);
 	CONS_Printf("Done. No crash.\n");
 }
 #endif
@@ -4902,10 +4910,12 @@ static void Name2_OnChange(void)
 
 static boolean Skin_CanChange(const char *valstr)
 {
-	(void)valstr;
-
 	if (!Playing())
 		return true; // do whatever you want
+
+	// You already are that skin.
+	if (stricmp(skins[players[consoleplayer].skin]->name, valstr) == 0)
+		return false;
 
 	if (!(multiplayer || netgame)) // In single player.
 		return true;
@@ -4921,10 +4931,12 @@ static boolean Skin_CanChange(const char *valstr)
 
 static boolean Skin2_CanChange(const char *valstr)
 {
-	(void)valstr;
-
 	if (!Playing() || !splitscreen)
 		return true; // do whatever you want
+
+	// You already are that skin.
+	if (stricmp(skins[players[secondarydisplayplayer].skin]->name, valstr) == 0)
+		return false;
 
 	if (CanChangeSkin(secondarydisplayplayer) && !P_PlayerMoving(secondarydisplayplayer))
 		return true;
@@ -4941,6 +4953,8 @@ static boolean Skin2_CanChange(const char *valstr)
   */
 static void Skin_OnChange(void)
 {
+	pickedchar = R_SkinAvailable(cv_skin.string);
+
 	if (!Playing())
 		return;
 

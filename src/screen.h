@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -29,10 +29,6 @@
 #else
 #define NUMSCREENS 5
 #endif
-
-// Size of statusbar.
-#define ST_HEIGHT 32
-#define ST_WIDTH 320
 
 // used now as a maximum video mode size for extra vesa modes.
 
@@ -97,6 +93,10 @@ enum
 	COLDRAWFUNC_SHADE,
 	COLDRAWFUNC_SHADOWED,
 	COLDRAWFUNC_TRANSTRANS,
+	COLDRAWFUNC_CLAMPED,
+	COLDRAWFUNC_CLAMPEDTRANS,
+	COLDRAWFUNC_TWOSMULTIPATCH,
+	COLDRAWFUNC_TWOSMULTIPATCHTRANS,
 	COLDRAWFUNC_FOG,
 
 	COLDRAWFUNC_MAX
@@ -115,6 +115,7 @@ enum
 	SPANDRAWFUNC_SPLAT,
 	SPANDRAWFUNC_TRANSSPLAT,
 	SPANDRAWFUNC_TILTEDSPLAT,
+	SPANDRAWFUNC_TILTEDTRANSSPLAT,
 
 	SPANDRAWFUNC_SPRITE,
 	SPANDRAWFUNC_TRANSSPRITE,

@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -338,5 +338,13 @@ void I_SetMouseGrab(boolean grab);
 /** \brief Returns the system name.
 */
 const char *I_GetSysName(void);
+
+/** \brief Sets text input mode. When enabled, keyboard inputs will respect dead keys.
+ */
+void I_SetTextInputMode(boolean active);
+
+/** \brief Retrieves current text input mode.
+ */
+boolean I_GetTextInputMode(void);
 
 #endif

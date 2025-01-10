@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -1042,6 +1042,9 @@ static void ST_drawInput(void)
 
 	INT32 x = hudinfo[HUD_INPUT].x, y = hudinfo[HUD_INPUT].y;
 
+	if (hu_showscores)
+		return;
+
 	if (stplyr->powers[pw_carry] == CR_NIGHTSMODE)
 		y += 8;
 	else if (modeattacking || !LUA_HudEnabled(hud_lives))
@@ -1255,6 +1258,8 @@ static void ST_drawInput(void)
 		V_DrawThinString(x, y, hudinfo[HUD_INPUT].f|((leveltime & 4) ? V_YELLOWMAP : V_REDMAP), "BAD DEMO!!");
 }
 
+static boolean lt_active = false;
+
 static patch_t *lt_patches[3];
 static INT32 lt_scroll = 0;
 static INT32 lt_mom = 0;
@@ -1269,19 +1274,19 @@ tic_t lt_exitticker = 0, lt_endtime = 0;
 //
 static void ST_cacheLevelTitle(void)
 {
-#define SETPATCH(default, warning, custom, idx) \
+#define SETPATCH(def, warning, custom, idx) \
 { \
 	lumpnum_t patlumpnum = LUMPERROR; \
 	if (mapheaderinfo[gamemap-1]->custom[0] != '\0') \
 	{ \
-		patlumpnum = W_CheckNumForName(mapheaderinfo[gamemap-1]->custom); \
+		patlumpnum = W_CheckNumForPatchName(mapheaderinfo[gamemap-1]->custom); \
 		if (patlumpnum != LUMPERROR) \
 			lt_patches[idx] = (patch_t *)W_CachePatchNum(patlumpnum, PU_HUDGFX); \
 	} \
 	if (patlumpnum == LUMPERROR) \
 	{ \
 		if (!(mapheaderinfo[gamemap-1]->levelflags & LF_WARNINGTITLE)) \
-			lt_patches[idx] = (patch_t *)W_CachePatchName(default, PU_HUDGFX); \
+			lt_patches[idx] = (patch_t *)W_CachePatchName(def, PU_HUDGFX); \
 		else \
 			lt_patches[idx] = (patch_t *)W_CachePatchName(warning, PU_HUDGFX); \
 	} \
@@ -1303,6 +1308,7 @@ void ST_startTitleCard(void)
 	ST_cacheLevelTitle();
 
 	// initialize HUD variables
+	lt_active = true;
 	lt_ticker = lt_exitticker = lt_lasttic = 0;
 	lt_endtime = 2*TICRATE + (10*NEWTICRATERATIO);
 	lt_scroll = BASEVIDWIDTH * FRACUNIT;
@@ -1311,21 +1317,11 @@ void ST_startTitleCard(void)
 }
 
 //
-// What happens before drawing the title card.
-// Which is just setting the HUD translucency.
+// Stops the title card.
 //
-void ST_preDrawTitleCard(void)
+void ST_stopTitleCard(void)
 {
-	if (!G_IsTitleCardAvailable())
-		return;
-
-	if (lt_ticker >= (lt_endtime + TICRATE))
-		return;
-
-	if (!lt_exitticker)
-		st_translucency = 0;
-	else
-		st_translucency = max(0, min((INT32)lt_exitticker-4, cv_translucenthud.value));
+	lt_active = false;
 }
 
 //
@@ -1334,47 +1330,43 @@ void ST_preDrawTitleCard(void)
 //
 void ST_runTitleCard(void)
 {
-	boolean run = !(paused || P_AutoPause());
-
-	if (!G_IsTitleCardAvailable())
+	if (!lt_active || ((paused || P_AutoPause()) && lt_ticker >= PRELEVELTIME))
 		return;
 
-	if (lt_ticker >= (lt_endtime + TICRATE))
-		return;
-
-	if (run || (lt_ticker < PRELEVELTIME))
+	if (!lt_exitticker)
 	{
-		// tick
-		lt_ticker++;
-		if (lt_ticker >= lt_endtime)
-			lt_exitticker++;
-
-		// scroll to screen (level title)
-		if (!lt_exitticker)
-		{
-			if (abs(lt_scroll) > FRACUNIT)
-				lt_scroll -= (lt_scroll>>2);
-			else
-				lt_scroll = 0;
-		}
-		// scroll away from screen (level title)
+		if (abs(lt_scroll) > FRACUNIT)
+			lt_scroll -= (lt_scroll>>2);
 		else
+			lt_scroll = 0;
+
+		if (abs(lt_zigzag) > FRACUNIT)
+			lt_zigzag -= (lt_zigzag>>2);
+		else
+			lt_zigzag = 0;
+	}
+	else
+	{
+		lt_mom -= FRACUNIT*6;
+
+		if (lt_scroll > -BASEVIDWIDTH * FRACUNIT * 2)
 		{
-			lt_mom -= FRACUNIT*6;
 			lt_scroll += lt_mom;
 		}
 
-		// scroll to screen (zigzag)
-		if (!lt_exitticker)
+		if (lt_zigzag > -(lt_patches[1]->width)*FRACUNIT)
 		{
-			if (abs(lt_zigzag) > FRACUNIT)
-				lt_zigzag -= (lt_zigzag>>2);
-			else
-				lt_zigzag = 0;
-		}
-		// scroll away from screen (zigzag)
-		else
 			lt_zigzag += lt_mom;
+		}
+	}
+
+	lt_ticker++;
+	lt_exitticker = max((signed)lt_ticker - (signed)lt_endtime, 0);
+
+	if (lt_ticker >= (lt_endtime + TICRATE))
+	{
+		lt_active = false;
+		return;
 	}
 }
 
@@ -1400,9 +1392,6 @@ void ST_drawTitleCard(void)
 		colornum = cv_playercolor.value;
 
 	colormap = R_GetTranslationColormap(TC_DEFAULT, colornum, GTC_CACHE);
-
-	if (!G_IsTitleCardAvailable())
-		return;
 
 	if (!LUA_HudEnabled(hud_stagetitle))
 		goto luahook;
@@ -1484,13 +1473,14 @@ void ST_preLevelTitleCardDrawer(void)
 //
 void ST_drawWipeTitleCard(void)
 {
+	if (!lt_active)
+		return;
+
 	stplyr = &players[consoleplayer];
-	ST_preDrawTitleCard();
 	ST_drawTitleCard();
 	if (splitscreen)
 	{
 		stplyr = &players[secondarydisplayplayer];
-		ST_preDrawTitleCard();
 		ST_drawTitleCard();
 	}
 }
@@ -2665,7 +2655,7 @@ static boolean ST_doItemFinderIconsAndSound(void)
 	// Scan thinkers to find emblem mobj with these ids
 	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 	{
-		if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+		if (th->removing)
 			continue;
 
 		mo2 = (mobj_t *)th;
@@ -2701,24 +2691,14 @@ static boolean ST_doItemFinderIconsAndSound(void)
 	return true;
 }
 
+static boolean drawstagetitle = false;
+
 //
 // Draw the status bar overlay, customisable: the user chooses which
 // kind of information to overlay
 //
 static void ST_overlayDrawer(void)
 {
-	// Decide whether to draw the stage title or not
-	boolean stagetitle = false;
-
-	// Check for a valid level title
-	// If the HUD is enabled
-	// And, if Lua is running, if the HUD library has the stage title enabled
-	if (G_IsTitleCardAvailable() && *mapheaderinfo[gamemap-1]->lvlttl != '\0' && !(hu_showscores && (netgame || multiplayer)))
-	{
-		stagetitle = true;
-		ST_preDrawTitleCard();
-	}
-
 	// hu_showscores = auto hide score/time/rings when tab rankings are shown
 	if (!(hu_showscores && (netgame || multiplayer)))
 	{
@@ -2858,7 +2838,7 @@ static void ST_overlayDrawer(void)
 	}
 
 	// draw level title Tails
-	if (stagetitle && (!WipeInAction) && (!WipeStageTitle))
+	if (drawstagetitle && !WipeInAction && !WipeStageTitle)
 		ST_drawTitleCard();
 
 	if (!hu_showscores && (netgame || multiplayer) && LUA_HudEnabled(hud_textspectator))
@@ -2929,7 +2909,22 @@ void ST_Drawer(void)
 		}
 	}
 
-	st_translucency = cv_translucenthud.value;
+	// Decide whether to draw the stage title or not
+	if (lt_active)
+	{
+		drawstagetitle = !(hu_showscores && (netgame || multiplayer));
+
+		if (!lt_exitticker)
+			st_translucency = 0;
+		else
+			st_translucency = max(0, min((INT32)lt_exitticker-4, cv_translucenthud.value));
+	}
+	else
+	{
+		st_translucency = cv_translucenthud.value;
+
+		drawstagetitle = false;
+	}
 
 	if (st_overlay)
 	{

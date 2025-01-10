@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -96,6 +96,281 @@ void R_DrawColumn_8(void)
 			}
 			if (count & 1)
 				*dest = colormap[source[(frac>>FRACBITS) & heightmask]];
+		}
+	}
+}
+
+/**	\brief The R_DrawColumnClamped_8 function
+	Same as R_DrawColumn_8, but prevents artifacts from showing up (caused by fixed-point imprecisions)
+*/
+void R_DrawColumnClamped_8(void)
+{
+	INT32 count;
+	UINT8 *dest;
+	fixed_t frac;
+	fixed_t fracstep;
+
+	count = dc_yh - dc_yl;
+
+	if (count < 0) // Zero length, column does not exceed a pixel.
+		return;
+
+#ifdef RANGECHECK
+	if ((unsigned)dc_x >= (unsigned)vid.width || dc_yl < 0 || dc_yh >= vid.height)
+		return;
+#endif
+
+	// Framebuffer destination address.
+	dest = &topleft[dc_yl*vid.width + dc_x];
+
+	count++;
+
+	// Determine scaling, which is the only mapping to be done.
+	fracstep = dc_iscale;
+	frac = dc_texturemid + FixedMul((dc_yl << FRACBITS) - centeryfrac, fracstep);
+
+	// Inner loop that does the actual texture mapping, e.g. a DDA-like scaling.
+	// This is as fast as it gets.
+	{
+		const UINT8 *source = dc_source;
+		const lighttable_t *colormap = dc_colormap;
+		INT32 heightmask = dc_texheight-1;
+		INT32 idx;
+		if (dc_texheight & heightmask)   // not a power of 2 -- killough
+		{
+			heightmask++;
+			heightmask <<= FRACBITS;
+
+			if (frac < 0)
+				while ((frac += heightmask) <  0);
+			else
+				while (frac >= heightmask)
+					frac -= heightmask;
+
+			do
+			{
+				// Re-map color indices from wall texture column
+				//  using a lighting/special effects LUT.
+				// heightmask is the Tutti-Frutti fix
+				idx = frac>>FRACBITS;
+				if (idx >= 0 && idx < dc_postlength)
+					*dest = colormap[source[idx]];
+				dest += vid.width;
+
+				// Avoid overflow.
+				if (fracstep > 0x7FFFFFFF - frac)
+					frac += fracstep - heightmask;
+				else
+					frac += fracstep;
+
+				while (frac >= heightmask)
+					frac -= heightmask;
+			} while (--count);
+		}
+		else
+		{
+			while ((count -= 2) >= 0) // texture height is a power of 2
+			{
+				idx = (frac>>FRACBITS) & heightmask;
+				if (idx >= 0 && idx < dc_postlength)
+					*dest = colormap[source[idx]];
+				dest += vid.width;
+				frac += fracstep;
+				idx = (frac>>FRACBITS) & heightmask;
+				if (idx >= 0 && idx < dc_postlength)
+					*dest = colormap[source[idx]];
+				dest += vid.width;
+				frac += fracstep;
+			}
+			if (count & 1)
+			{
+				idx = (frac>>FRACBITS) & heightmask;
+				if (idx >= 0 && idx < dc_postlength)
+					*dest = colormap[source[idx]];
+			}
+		}
+	}
+}
+
+void R_Draw2sMultiPatchColumn_8(void)
+{
+	INT32 count;
+	register UINT8 *dest;
+	register fixed_t frac;
+	fixed_t fracstep;
+
+	count = dc_yh - dc_yl;
+
+	if (count < 0) // Zero length, column does not exceed a pixel.
+		return;
+
+#ifdef RANGECHECK
+	if ((unsigned)dc_x >= (unsigned)vid.width || dc_yl < 0 || dc_yh >= vid.height)
+		return;
+#endif
+
+	// Framebuffer destination address.
+	dest = &topleft[dc_yl*vid.width + dc_x];
+
+	count++;
+
+	// Determine scaling, which is the only mapping to be done.
+	fracstep = dc_iscale;
+	frac = dc_texturemid + FixedMul((dc_yl << FRACBITS) - centeryfrac, fracstep);
+
+	// Inner loop that does the actual texture mapping, e.g. a DDA-like scaling.
+	// This is as fast as it gets.
+	{
+		register const UINT8 *source = dc_source;
+		register const lighttable_t *colormap = dc_colormap;
+		register INT32 heightmask = dc_texheight-1;
+		register UINT8 val;
+		if (dc_texheight & heightmask)   // not a power of 2 -- killough
+		{
+			heightmask++;
+			heightmask <<= FRACBITS;
+
+			if (frac < 0)
+				while ((frac += heightmask) <  0);
+			else
+				while (frac >= heightmask)
+					frac -= heightmask;
+
+			do
+			{
+				// Re-map color indices from wall texture column
+				//  using a lighting/special effects LUT.
+				// heightmask is the Tutti-Frutti fix
+				val = source[frac>>FRACBITS];
+
+				if (val != TRANSPARENTPIXEL)
+					*dest = colormap[val];
+
+				dest += vid.width;
+
+				// Avoid overflow.
+				if (fracstep > 0x7FFFFFFF - frac)
+					frac += fracstep - heightmask;
+				else
+					frac += fracstep;
+
+				while (frac >= heightmask)
+					frac -= heightmask;
+			} while (--count);
+		}
+		else
+		{
+			while ((count -= 2) >= 0) // texture height is a power of 2
+			{
+				val = source[(frac>>FRACBITS) & heightmask];
+				if (val != TRANSPARENTPIXEL)
+					*dest = colormap[val];
+				dest += vid.width;
+				frac += fracstep;
+				val = source[(frac>>FRACBITS) & heightmask];
+				if (val != TRANSPARENTPIXEL)
+					*dest = colormap[val];
+				dest += vid.width;
+				frac += fracstep;
+			}
+			if (count & 1)
+			{
+				val = source[(frac>>FRACBITS) & heightmask];
+				if (val != TRANSPARENTPIXEL)
+					*dest = colormap[val];
+			}
+		}
+	}
+}
+
+void R_Draw2sMultiPatchTranslucentColumn_8(void)
+{
+	INT32 count;
+	register UINT8 *dest;
+	register fixed_t frac;
+	fixed_t fracstep;
+
+	count = dc_yh - dc_yl;
+
+	if (count < 0) // Zero length, column does not exceed a pixel.
+		return;
+
+#ifdef RANGECHECK
+	if ((unsigned)dc_x >= (unsigned)vid.width || dc_yl < 0 || dc_yh >= vid.height)
+		return;
+#endif
+
+	// Framebuffer destination address.
+	dest = &topleft[dc_yl*vid.width + dc_x];
+
+	count++;
+
+	// Determine scaling, which is the only mapping to be done.
+	fracstep = dc_iscale;
+	frac = dc_texturemid + FixedMul((dc_yl << FRACBITS) - centeryfrac, fracstep);
+
+	// Inner loop that does the actual texture mapping, e.g. a DDA-like scaling.
+	// This is as fast as it gets.
+	{
+		register const UINT8 *source = dc_source;
+		register const UINT8 *transmap = dc_transmap;
+		register const lighttable_t *colormap = dc_colormap;
+		register INT32 heightmask = dc_texheight-1;
+		register UINT8 val;
+		if (dc_texheight & heightmask)   // not a power of 2 -- killough
+		{
+			heightmask++;
+			heightmask <<= FRACBITS;
+
+			if (frac < 0)
+				while ((frac += heightmask) <  0);
+			else
+				while (frac >= heightmask)
+					frac -= heightmask;
+
+			do
+			{
+				// Re-map color indices from wall texture column
+				//  using a lighting/special effects LUT.
+				// heightmask is the Tutti-Frutti fix
+				val = source[frac>>FRACBITS];
+
+				if (val != TRANSPARENTPIXEL)
+					*dest = *(transmap + (colormap[val]<<8) + (*dest));
+
+				dest += vid.width;
+
+				// Avoid overflow.
+				if (fracstep > 0x7FFFFFFF - frac)
+					frac += fracstep - heightmask;
+				else
+					frac += fracstep;
+
+				while (frac >= heightmask)
+					frac -= heightmask;
+			} while (--count);
+		}
+		else
+		{
+			while ((count -= 2) >= 0) // texture height is a power of 2
+			{
+				val = source[(frac>>FRACBITS) & heightmask];
+				if (val != TRANSPARENTPIXEL)
+					*dest = *(transmap + (colormap[val]<<8) + (*dest));
+				dest += vid.width;
+				frac += fracstep;
+				val = source[(frac>>FRACBITS) & heightmask];
+				if (val != TRANSPARENTPIXEL)
+					*dest = *(transmap + (colormap[val]<<8) + (*dest));
+				dest += vid.width;
+				frac += fracstep;
+			}
+			if (count & 1)
+			{
+				val = source[(frac>>FRACBITS) & heightmask];
+				if (val != TRANSPARENTPIXEL)
+					*dest = *(transmap + (colormap[val]<<8) + (*dest));
+			}
 		}
 	}
 }
@@ -208,6 +483,90 @@ void R_DrawTranslucentColumn_8(void)
 			}
 			if (count & 1)
 				*dest = *(transmap + (colormap[source[(frac>>FRACBITS)&heightmask]]<<8) + (*dest));
+		}
+	}
+}
+
+/**	\brief The R_DrawTranslucentColumnClamped_8 function
+	Same as R_DrawTranslucentColumn_8, but prevents artifacts from showing up (caused by fixed-point imprecisions)
+*/
+void R_DrawTranslucentColumnClamped_8(void)
+{
+	INT32 count;
+	UINT8 *dest;
+	fixed_t frac, fracstep;
+
+	count = dc_yh - dc_yl + 1;
+
+	if (count <= 0) // Zero length, column does not exceed a pixel.
+		return;
+
+#ifdef RANGECHECK
+	if ((unsigned)dc_x >= (unsigned)vid.width || dc_yl < 0 || dc_yh >= vid.height)
+		I_Error("R_DrawTranslucentColumnClamped_8: %d to %d at %d", dc_yl, dc_yh, dc_x);
+#endif
+
+	dest = &topleft[dc_yl*vid.width + dc_x];
+
+	// Looks familiar.
+	fracstep = dc_iscale;
+	frac = dc_texturemid + FixedMul((dc_yl << FRACBITS) - centeryfrac, fracstep);
+
+	// Inner loop that does the actual texture mapping, e.g. a DDA-like scaling.
+	// This is as fast as it gets.
+	{
+		const UINT8 *source = dc_source;
+		const UINT8 *transmap = dc_transmap;
+		const lighttable_t *colormap = dc_colormap;
+		INT32 heightmask = dc_texheight - 1;
+		INT32 idx;
+		if (dc_texheight & heightmask)
+		{
+			heightmask++;
+			heightmask <<= FRACBITS;
+
+			if (frac < 0)
+				while ((frac += heightmask) < 0)
+					;
+			else
+				while (frac >= heightmask)
+					frac -= heightmask;
+
+			do
+			{
+				// Re-map color indices from wall texture column
+				// using a lighting/special effects LUT.
+				// heightmask is the Tutti-Frutti fix
+				idx = frac>>FRACBITS;
+				if (idx >= 0 && idx < dc_postlength)
+					*dest = *(transmap + (colormap[source[idx]]<<8) + (*dest));
+				dest += vid.width;
+				if ((frac += fracstep) >= heightmask)
+					frac -= heightmask;
+			}
+			while (--count);
+		}
+		else
+		{
+			while ((count -= 2) >= 0) // texture height is a power of 2
+			{
+				idx = (frac>>FRACBITS)&heightmask;
+				if (idx >= 0 && idx < dc_postlength)
+					*dest = *(transmap + (colormap[source[idx]]<<8) + (*dest));
+				dest += vid.width;
+				frac += fracstep;
+				idx = (frac>>FRACBITS)&heightmask;
+				if (idx >= 0 && idx < dc_postlength)
+					*dest = *(transmap + (colormap[source[idx]]<<8) + (*dest));
+				dest += vid.width;
+				frac += fracstep;
+			}
+			if (count & 1)
+			{
+				idx = (frac>>FRACBITS)&heightmask;
+				if (idx >= 0 && idx < dc_postlength)
+					*dest = *(transmap + (colormap[source[idx]]<<8) + (*dest));
+			}
 		}
 	}
 }
@@ -933,6 +1292,136 @@ void R_DrawTiltedSplat_8(void)
 				val = source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)];
 				if (val != TRANSPARENTPIXEL)
 					*dest = colormap[val];
+				dest++;
+				u += stepu;
+				v += stepv;
+			}
+		}
+	}
+#endif
+}
+
+void R_DrawTiltedTranslucentSplat_8(void)
+{
+	// x1, x2 = ds_x1, ds_x2
+	int width = ds_x2 - ds_x1;
+	double iz, uz, vz;
+	UINT32 u, v;
+	int i;
+
+	UINT8 *source;
+	UINT8 *colormap;
+	UINT8 *dest;
+
+	UINT8 val;
+
+	double startz, startu, startv;
+	double izstep, uzstep, vzstep;
+	double endz, endu, endv;
+	UINT32 stepu, stepv;
+
+	iz = ds_sz.z + ds_sz.y*(centery-ds_y) + ds_sz.x*(ds_x1-centerx);
+	uz = ds_su.z + ds_su.y*(centery-ds_y) + ds_su.x*(ds_x1-centerx);
+	vz = ds_sv.z + ds_sv.y*(centery-ds_y) + ds_sv.x*(ds_x1-centerx);
+
+	R_CalcSlopeLight();
+
+	dest = &topleft[ds_y*vid.width + ds_x1];
+	source = ds_source;
+	//colormap = ds_colormap;
+
+#if 0	// The "perfect" reference version of this routine. Pretty slow.
+		// Use it only to see how things are supposed to look.
+	i = 0;
+	do
+	{
+		double z = 1.f/iz;
+		u = (INT64)(uz*z);
+		v = (INT64)(vz*z);
+
+		colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
+
+		val = source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)];
+		if (val != TRANSPARENTPIXEL)
+			*dest = *(ds_transmap + (colormap[val] << 8) + *dest);
+
+		dest++;
+		iz += ds_sz.x;
+		uz += ds_su.x;
+		vz += ds_sv.x;
+	} while (--width >= 0);
+#else
+	startz = 1.f/iz;
+	startu = uz*startz;
+	startv = vz*startz;
+
+	izstep = ds_sz.x * SPANSIZE;
+	uzstep = ds_su.x * SPANSIZE;
+	vzstep = ds_sv.x * SPANSIZE;
+	//x1 = 0;
+	width++;
+
+	while (width >= SPANSIZE)
+	{
+		iz += izstep;
+		uz += uzstep;
+		vz += vzstep;
+
+		endz = 1.f/iz;
+		endu = uz*endz;
+		endv = vz*endz;
+		stepu = (INT64)((endu - startu) * INVSPAN);
+		stepv = (INT64)((endv - startv) * INVSPAN);
+		u = (INT64)(startu);
+		v = (INT64)(startv);
+
+		for (i = SPANSIZE-1; i >= 0; i--)
+		{
+			colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
+			val = source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)];
+			if (val != TRANSPARENTPIXEL)
+				*dest = *(ds_transmap + (colormap[val] << 8) + *dest);
+			dest++;
+			u += stepu;
+			v += stepv;
+		}
+		startu = endu;
+		startv = endv;
+		width -= SPANSIZE;
+	}
+	if (width > 0)
+	{
+		if (width == 1)
+		{
+			u = (INT64)(startu);
+			v = (INT64)(startv);
+			colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
+			val = source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)];
+			if (val != TRANSPARENTPIXEL)
+				*dest = *(ds_transmap + (colormap[val] << 8) + *dest);
+		}
+		else
+		{
+			double left = width;
+			iz += ds_sz.x * left;
+			uz += ds_su.x * left;
+			vz += ds_sv.x * left;
+
+			endz = 1.f/iz;
+			endu = uz*endz;
+			endv = vz*endz;
+			left = 1.f/left;
+			stepu = (INT64)((endu - startu) * left);
+			stepv = (INT64)((endv - startv) * left);
+			u = (INT64)(startu);
+			v = (INT64)(startv);
+
+			for (; width != 0; width--)
+			{
+				colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
+				val = source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)];
+				if (val != TRANSPARENTPIXEL)
+					*dest = *(ds_transmap + (colormap[val] << 8) + *dest);
 				dest++;
 				u += stepu;
 				v += stepv;

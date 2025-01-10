@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2012-2016 by John "JTE" Muniz.
-// Copyright (C) 2012-2023 by Sonic Team Junior.
+// Copyright (C) 2012-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -42,8 +42,9 @@ extern boolean ignoregameinputs;
 #define META_SKIN "SKIN_T*"
 #define META_POWERS "PLAYER_T*POWERS"
 #define META_SOUNDSID "SKIN_T*SOUNDSID"
-#define META_SKINSPRITES "SKIN_T*SPRITES"
-#define META_SKINSPRITESLIST "SKIN_T*SPRITES[]"
+#define META_SKINSPRITES "SKIN_T*SKINSPRITES"
+#define META_SKINSPRITESLIST "SKIN_T*SKINSPRITES[]"
+#define META_SKINSPRITESCOMPAT "SKIN_T*SPRITES" // TODO: 2.3: Delete
 
 #define META_VERTEX "VERTEX_T*"
 #define META_LINE "LINE_T*"

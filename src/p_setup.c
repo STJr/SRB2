@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -530,7 +530,7 @@ UINT32 P_GetScoreForGradeOverall(INT16 map, UINT8 grade)
 void P_AddNiGHTSTimes(INT16 i, char *gtext)
 {
 	char *spos = gtext;
-	
+
 	for (UINT8 n = 0; n < 8; n++)
 	{
 		if (spos != NULL)
@@ -692,7 +692,7 @@ void P_ReloadRings(void)
 	// scan the thinkers to find rings/spheres/hoops to unset
 	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 	{
-		if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+		if (th->removing)
 			continue;
 
 		mo = (mobj_t *)th;
@@ -750,7 +750,7 @@ void P_SwitchSpheresBonusMode(boolean bonustime)
 	// scan the thinkers to find spheres to switch
 	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 	{
-		if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+		if (th->removing)
 			continue;
 
 		mo = (mobj_t *)th;
@@ -831,13 +831,15 @@ void P_ScanThings(INT16 mapnum, INT16 wadnum, INT16 lumpnum)
 
 static void P_SpawnEmeraldHunt(void)
 {
-	INT32 emer[3], num[MAXHUNTEMERALDS], i, randomkey;
+	INT32 emer[3], num[MAXHUNTEMERALDS], i, amount, randomkey;
 	fixed_t x, y, z;
 
 	for (i = 0; i < numhuntemeralds; i++)
 		num[i] = i;
 
-	for (i = 0; i < 3; i++)
+	amount = min(numhuntemeralds, 3);
+
+	for (i = 0; i < amount; i++)
 	{
 		// generate random index, shuffle afterwards
 		randomkey = P_RandomKey(numhuntemeralds--);
@@ -1113,6 +1115,8 @@ static void P_InitializeLinedef(line_t *ld)
 	ld->callcount = 0;
 	ld->secportal = UINT32_MAX;
 
+	ld->midtexslope = NULL;
+
 	// cph 2006/09/30 - fix sidedef errors right away.
 	// cph 2002/07/20 - these errors are fatal if not fixed, so apply them
 	for (j = 0; j < 2; j++)
@@ -1363,6 +1367,9 @@ static void P_LoadSidedefs(UINT8 *data)
 		sd->scalex_top = sd->scalex_mid = sd->scalex_bottom = FRACUNIT;
 		sd->scaley_top = sd->scaley_mid = sd->scaley_bottom = FRACUNIT;
 
+		sd->light = sd->light_top = sd->light_mid = sd->light_bottom = 0;
+		sd->lightabsolute = sd->lightabsolute_top = sd->lightabsolute_mid = sd->lightabsolute_bottom = false;
+
 		P_SetSidedefSector(i, (UINT16)SHORT(msd->sector));
 
 		// Special info stored in texture fields!
@@ -1550,11 +1557,41 @@ static void P_LoadThings(UINT8 *data)
 }
 
 // Stores positions for relevant map data spread through a TEXTMAP.
-UINT32 mapthingsPos[UINT16_MAX];
-UINT32 linesPos[UINT16_MAX];
-UINT32 sidesPos[UINT16_MAX];
-UINT32 vertexesPos[UINT16_MAX];
-UINT32 sectorsPos[UINT16_MAX];
+typedef struct textmap_block_s
+{
+	UINT32 *pos;
+	size_t capacity;
+} textmap_block_t;
+
+static textmap_block_t mapthingBlocks;
+static textmap_block_t linedefBlocks;
+static textmap_block_t sidedefBlocks;
+static textmap_block_t vertexBlocks;
+static textmap_block_t sectorBlocks;
+
+static void TextmapStorePos(textmap_block_t *blocks, size_t *count)
+{
+	size_t locCount = (*count) + 1;
+
+	if (blocks->pos == NULL)
+	{
+		// Initial capacity (half of the former one.)
+		blocks->capacity = UINT16_MAX / 2;
+
+		Z_Calloc(sizeof(blocks->pos) * blocks->capacity, PU_LEVEL, &blocks->pos);
+	}
+	else if (locCount >= blocks->capacity)
+	{
+		// If we hit the list's capacity, make space for 1024 more blocks
+		blocks->capacity += 1024;
+
+		Z_Realloc(blocks->pos, sizeof(blocks->pos) * blocks->capacity, PU_LEVEL, &blocks->pos);
+	}
+
+	blocks->pos[locCount - 1] = M_TokenizerGetEndPos();
+
+	(*count) = locCount;
+}
 
 // Determine total amount of map data in TEXTMAP.
 static boolean TextmapCount(size_t size)
@@ -1598,15 +1635,15 @@ static boolean TextmapCount(size_t size)
 			brackets++;
 		// Check for valid fields.
 		else if (fastcmp(tkn, "thing"))
-			mapthingsPos[nummapthings++] = M_TokenizerGetEndPos();
+			TextmapStorePos(&mapthingBlocks, &nummapthings);
 		else if (fastcmp(tkn, "linedef"))
-			linesPos[numlines++] = M_TokenizerGetEndPos();
+			TextmapStorePos(&linedefBlocks, &numlines);
 		else if (fastcmp(tkn, "sidedef"))
-			sidesPos[numsides++] = M_TokenizerGetEndPos();
+			TextmapStorePos(&sidedefBlocks, &numsides);
 		else if (fastcmp(tkn, "vertex"))
-			vertexesPos[numvertexes++] = M_TokenizerGetEndPos();
+			TextmapStorePos(&vertexBlocks, &numvertexes);
 		else if (fastcmp(tkn, "sector"))
-			sectorsPos[numsectors++] = M_TokenizerGetEndPos();
+			TextmapStorePos(&sectorBlocks, &numsectors);
 		else
 			CONS_Alert(CONS_NOTICE, "Unknown field '%s'.\n", tkn);
 	}
@@ -1943,6 +1980,22 @@ static void ParseTextmapSidedefParameter(UINT32 i, const char *param, const char
 		P_SetSidedefSector(i, atol(val));
 	else if (fastcmp(param, "repeatcnt"))
 		sides[i].repeatcnt = atol(val);
+	else if (fastcmp(param, "light"))
+		sides[i].light = atol(val);
+	else if (fastcmp(param, "light_top"))
+		sides[i].light_top = atol(val);
+	else if (fastcmp(param, "light_mid"))
+		sides[i].light_mid = atol(val);
+	else if (fastcmp(param, "light_bottom"))
+		sides[i].light_bottom = atol(val);
+	else if (fastcmp(param, "lightabsolute") && fastcmp("true", val))
+		sides[i].lightabsolute = true;
+	else if (fastcmp(param, "lightabsolute_top") && fastcmp("true", val))
+		sides[i].lightabsolute_top = true;
+	else if (fastcmp(param, "lightabsolute_mid") && fastcmp("true", val))
+		sides[i].lightabsolute_mid = true;
+	else if (fastcmp(param, "lightabsolute_bottom") && fastcmp("true", val))
+		sides[i].lightabsolute_bottom = true;
 }
 
 static void ParseTextmapLinedefParameter(UINT32 i, const char *param, const char *val)
@@ -2670,6 +2723,22 @@ static void P_WriteTextmap(void)
 			fprintf(f, "texturemiddle = \"%.*s\";\n", 8, textures[wsides[i].midtexture]->name);
 		if (wsides[i].repeatcnt != 0)
 			fprintf(f, "repeatcnt = %d;\n", wsides[i].repeatcnt);
+		if (wsides[i].light != 0)
+			fprintf(f, "light = %d;\n", wsides[i].light);
+		if (wsides[i].light_top != 0)
+			fprintf(f, "light_top = %d;\n", wsides[i].light_top);
+		if (wsides[i].light_mid != 0)
+			fprintf(f, "light_mid = %d;\n", wsides[i].light_mid);
+		if (wsides[i].light_bottom != 0)
+			fprintf(f, "light_bottom = %d;\n", wsides[i].light_bottom);
+		if (wsides[i].lightabsolute)
+			fprintf(f, "lightabsolute = true;\n");
+		if (wsides[i].lightabsolute_top)
+			fprintf(f, "lightabsolute_top = true;\n");
+		if (wsides[i].lightabsolute_mid)
+			fprintf(f, "lightabsolute_mid = true;\n");
+		if (wsides[i].lightabsolute_bottom)
+			fprintf(f, "lightabsolute_bottom = true;\n");
 		fprintf(f, "}\n");
 		fprintf(f, "\n");
 	}
@@ -2926,7 +2995,7 @@ static void P_LoadTextmap(void)
 	side_t     *sd;
 	mapthing_t *mt;
 
-	CONS_Alert(CONS_NOTICE, "UDMF support is still a work-in-progress; its specs and features are prone to change until it is fully implemented.\n");
+	//CONS_Alert(CONS_NOTICE, "UDMF support is still a work-in-progress; its specs and features are prone to change until it is fully implemented.\n");
 
 	/// Given the UDMF specs, some fields are given a default value.
 	/// If an element's field has a default value set, it is omitted
@@ -2940,7 +3009,7 @@ static void P_LoadTextmap(void)
 		vt->floorzset = vt->ceilingzset = false;
 		vt->floorz = vt->ceilingz = 0;
 
-		TextmapParse(vertexesPos[i], i, ParseTextmapVertexParameter);
+		TextmapParse(vertexBlocks.pos[i], i, ParseTextmapVertexParameter);
 
 		if (vt->x == INT32_MAX)
 			I_Error("P_LoadTextmap: vertex %s has no x value set!\n", sizeu1(i));
@@ -2997,7 +3066,7 @@ static void P_LoadTextmap(void)
 		textmap_planefloor.defined = 0;
 		textmap_planeceiling.defined = 0;
 
-		TextmapParse(sectorsPos[i], i, ParseTextmapSectorParameter);
+		TextmapParse(sectorBlocks.pos[i], i, ParseTextmapSectorParameter);
 
 		P_InitializeSector(sc);
 		if (textmap_colormap.used)
@@ -3006,7 +3075,7 @@ static void P_LoadTextmap(void)
 			// TODO: remove this limitation in a backwards-compatible way (UDMF versioning?)
 			UINT8 lightalpha = (textmap_colormap.lightalpha * 102) / 10;
 			UINT8 fadealpha = (textmap_colormap.fadealpha * 102) / 10;
-			
+
 			INT32 rgba = P_ColorToRGBA(textmap_colormap.lightcolor, lightalpha);
 			INT32 fadergba = P_ColorToRGBA(textmap_colormap.fadecolor, fadealpha);
 			sc->extra_colormap = sc->spawn_extra_colormap = R_CreateColormap(rgba, fadergba, textmap_colormap.fadestart, textmap_colormap.fadeend, textmap_colormap.flags);
@@ -3046,7 +3115,7 @@ static void P_LoadTextmap(void)
 		ld->sidenum[0] = NO_SIDEDEF;
 		ld->sidenum[1] = NO_SIDEDEF;
 
-		TextmapParse(linesPos[i], i, ParseTextmapLinedefParameter);
+		TextmapParse(linedefBlocks.pos[i], i, ParseTextmapLinedefParameter);
 
 		if (!ld->v1)
 			I_Error("P_LoadTextmap: linedef %s has no v1 value set!\n", sizeu1(i));
@@ -3072,8 +3141,10 @@ static void P_LoadTextmap(void)
 		sd->bottomtexture = R_TextureNumForName("-");
 		sd->sector = NULL;
 		sd->repeatcnt = 0;
+		sd->light = sd->light_top = sd->light_mid = sd->light_bottom = 0;
+		sd->lightabsolute = sd->lightabsolute_top = sd->lightabsolute_mid = sd->lightabsolute_bottom = false;
 
-		TextmapParse(sidesPos[i], i, ParseTextmapSidedefParameter);
+		TextmapParse(sidedefBlocks.pos[i], i, ParseTextmapSidedefParameter);
 
 		if (!sd->sector)
 			I_Error("P_LoadTextmap: sidedef %s has no sector value set!\n", sizeu1(i));
@@ -3097,7 +3168,7 @@ static void P_LoadTextmap(void)
 		memset(mt->stringargs, 0x00, NUMMAPTHINGSTRINGARGS*sizeof(*mt->stringargs));
 		mt->mobj = NULL;
 
-		TextmapParse(mapthingsPos[i], i, ParseTextmapThingParameter);
+		TextmapParse(mapthingBlocks.pos[i], i, ParseTextmapThingParameter);
 	}
 }
 
@@ -3415,13 +3486,13 @@ typedef enum {
 } nodetype_t;
 
 // Find out the BSP format.
-static nodetype_t P_GetNodetype(const virtres_t *virt, UINT8 **nodedata)
+static nodetype_t P_GetNodetype(const virtres_t *virt, UINT8 **nodedata, char signature[4 + 1])
 {
 	boolean supported[NUMNODETYPES] = {0};
 	nodetype_t nodetype = NT_UNSUPPORTED;
-	char signature[4 + 1];
 
 	*nodedata = NULL;
+	signature[0] = signature[4] = '\0';
 
 	if (udmf)
 	{
@@ -3430,7 +3501,7 @@ static nodetype_t P_GetNodetype(const virtres_t *virt, UINT8 **nodedata)
 		if (virtznodes && virtznodes->size)
 		{
 			*nodedata = virtznodes->data;
-			supported[NT_XGLN] = supported[NT_XGL3] = true;
+			supported[NT_XGLN] = supported[NT_XGL2] = supported[NT_XGL3] = true;
 		}
 	}
 	else
@@ -3452,9 +3523,9 @@ static nodetype_t P_GetNodetype(const virtres_t *virt, UINT8 **nodedata)
 			virtssectors = vres_Find(virt, "SSECTORS");
 
 			if (virtssectors && virtssectors->size)
-			{ // Possibly GL nodes: NODES ignored, SSECTORS takes precedence as nodes lump, (It is confusing yeah) and has a signature.
+			{ // Possibly GL nodes: NODES ignored, SSECTORS takes precedence as nodes lump (it is confusing, yeah), and has a signature.
 				*nodedata = virtssectors->data;
-				supported[NT_XGLN] = supported[NT_ZGLN] = supported[NT_XGL3] = true;
+				supported[NT_XGLN] = supported[NT_ZGLN] = supported[NT_XGL2] = supported[NT_XGL3] = true;
 			}
 			else
 			{ // Possibly ZDoom extended nodes: SSECTORS is empty, NODES has a signature.
@@ -3474,19 +3545,42 @@ static nodetype_t P_GetNodetype(const virtres_t *virt, UINT8 **nodedata)
 	}
 
 	M_Memcpy(signature, *nodedata, 4);
-	signature[4] = '\0';
 	(*nodedata) += 4;
 
-	if (!strcmp(signature, "XNOD"))
-		nodetype = NT_XNOD;
-	else if (!strcmp(signature, "ZNOD"))
-		nodetype = NT_ZNOD;
-	else if (!strcmp(signature, "XGLN"))
-		nodetype = NT_XGLN;
-	else if (!strcmp(signature, "ZGLN"))
-		nodetype = NT_ZGLN;
-	else if (!strcmp(signature, "XGL3"))
-		nodetype = NT_XGL3;
+	// Identify node format from its starting signature.
+	if (memcmp(&signature[1], "NOD", 3) == 0) // ZDoom extended nodes
+	{
+		if (signature[0] == 'X')
+		{
+			nodetype = NT_XNOD; // Uncompressed
+		}
+		else if (signature[0] == 'Z')
+		{
+			nodetype = NT_ZNOD; // Compressed
+		}
+	}
+	else if (memcmp(&signature[1], "GL", 2) == 0) // GL nodes
+	{
+		switch (signature[0])
+		{
+		case 'X': // Uncompressed
+			switch (signature[3])
+			{
+			case 'N': nodetype = NT_XGLN; break; // GL nodes
+			case '2': nodetype = NT_XGL2; break; // Version 2 GL nodes
+			case '3': nodetype = NT_XGL3; break; // Version 3 GL nodes
+			}
+			break;
+		case 'Z': // Compressed
+			switch (signature[3])
+			{
+			case 'N': nodetype = NT_ZGLN; break; // GL nodes (compressed)
+			case '2': nodetype = NT_ZGL2; break; // Version 2 GL nodes (compressed)
+			case '3': nodetype = NT_ZGL3; break; // Version 3 GL nodes (compressed)
+			}
+			break;
+		}
+	}
 
 	return supported[nodetype] ? nodetype : NT_UNSUPPORTED;
 }
@@ -3498,7 +3592,6 @@ static boolean P_LoadExtraVertices(UINT8 **data)
 	UINT32 xtrvrtx = READUINT32((*data));
 	line_t* ld = lines;
 	vertex_t *oldpos = vertexes;
-	ssize_t offset;
 	size_t i;
 
 	if (numvertexes != origvrtx) // If native vertex count doesn't match node original vertex count, bail out (broken data?).
@@ -3513,12 +3606,11 @@ static boolean P_LoadExtraVertices(UINT8 **data)
 	// If extra vertexes were generated, reallocate the vertex array and fix the pointers.
 	numvertexes += xtrvrtx;
 	vertexes = Z_Realloc(vertexes, numvertexes*sizeof(*vertexes), PU_LEVEL, NULL);
-	offset = (size_t)(vertexes - oldpos);
 
 	for (i = 0, ld = lines; i < numlines; i++, ld++)
 	{
-		ld->v1 += offset;
-		ld->v2 += offset;
+		ld->v1 = &vertexes[ld->v1 - oldpos];
+		ld->v2 = &vertexes[ld->v2 - oldpos];
 	}
 
 	// Read extra vertex data.
@@ -3556,6 +3648,7 @@ static boolean P_LoadExtendedSubsectorsAndSegs(UINT8 **data, nodetype_t nodetype
 		switch (nodetype)
 		{
 		case NT_XGLN:
+		case NT_XGL2:
 		case NT_XGL3:
 			for (m = 0; m < (size_t)subsectors[i].numlines; m++, k++)
 			{
@@ -3567,7 +3660,7 @@ static boolean P_LoadExtendedSubsectorsAndSegs(UINT8 **data, nodetype_t nodetype
 
 				READUINT32((*data)); // partner, can be ignored by software renderer
 
-				if (nodetype == NT_XGL3)
+				if (nodetype != NT_XGLN)
 				{
 					UINT32 linenum = READUINT32((*data));
 					if (linenum != 0xFFFFFFFF && linenum >= numlines)
@@ -3678,8 +3771,9 @@ static void P_LoadExtendedNodes(UINT8 **data, nodetype_t nodetype)
 
 static void P_LoadMapBSP(const virtres_t *virt)
 {
+	char signature[4 + 1];
 	UINT8 *nodedata = NULL;
-	nodetype_t nodetype = P_GetNodetype(virt, &nodedata);
+	nodetype_t nodetype = P_GetNodetype(virt, &nodedata, signature);
 
 	switch (nodetype)
 	{
@@ -3711,6 +3805,7 @@ static void P_LoadMapBSP(const virtres_t *virt)
 	}
 	case NT_XNOD:
 	case NT_XGLN:
+	case NT_XGL2:
 	case NT_XGL3:
 		if (!P_LoadExtraVertices(&nodedata))
 			return;
@@ -3719,10 +3814,13 @@ static void P_LoadMapBSP(const virtres_t *virt)
 		P_LoadExtendedNodes(&nodedata, nodetype);
 		break;
 	default:
-		CONS_Alert(CONS_WARNING, "Unsupported BSP format detected.\n");
-		return;
+		if (isprint(signature[0]) && isprint(signature[1]) && isprint(signature[2]) && isprint(signature[3]))
+		{
+			I_Error("Unsupported BSP format '%s' detected!\n", signature);
+			return;
+		}
+		I_Error("Unknown BSP format detected!\n");
 	}
-	return;
 }
 
 // Split from P_LoadBlockMap for convenience
@@ -7235,7 +7333,7 @@ void P_RespawnThings(void)
 
 	for (think = thlist[THINK_MOBJ].next; think != &thlist[THINK_MOBJ]; think = think->next)
 	{
-		if (think->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+		if (think->removing)
 			continue;
 		P_RemoveMobj((mobj_t *)think);
 	}
@@ -7547,20 +7645,20 @@ static void P_InitCamera(void)
 			CV_SetValue(&cv_analog[1], 0);
 
 		displayplayer = consoleplayer; // Start with your OWN view, please!
-	}
 
-	if (twodlevel)
-	{
-		CV_SetValue(&cv_analog[0], false);
-		CV_SetValue(&cv_analog[1], false);
-	}
-	else
-	{
-		if (cv_useranalog[0].value)
-			CV_SetValue(&cv_analog[0], true);
+		if (twodlevel)
+		{
+			CV_SetValue(&cv_analog[0], false);
+			CV_SetValue(&cv_analog[1], false);
+		}
+		else
+		{
+			if (cv_useranalog[0].value)
+				CV_SetValue(&cv_analog[0], true);
 
-		if ((splitscreen && cv_useranalog[1].value) || botingame)
-			CV_SetValue(&cv_analog[1], true);
+			if ((splitscreen && cv_useranalog[1].value) || botingame)
+				CV_SetValue(&cv_analog[1], true);
+		}
 	}
 }
 
@@ -7755,6 +7853,10 @@ boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate)
 	maptol = mapheaderinfo[gamemap-1]->typeoflevel;
 	gametyperules = gametypedefaultrules[gametype];
 
+	// clear the target on map change, since the object will be invalidated
+	P_SetTarget(&ticcmd_ztargetfocus[0], NULL);
+	P_SetTarget(&ticcmd_ztargetfocus[1], NULL);
+
 	CON_Drawer(); // let the user know what we are going to do
 	I_FinishUpdate(); // page flip or blit buffer
 
@@ -7904,6 +8006,9 @@ boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate)
 	// Free GPU textures before freeing patches.
 	if (rendermode == render_opengl && (vid.glstate == VID_GL_LIBRARY_LOADED))
 		HWR_ClearAllTextures();
+
+	// Delete light table textures
+	HWR_ClearLightTables();
 #endif
 
 	Patch_FreeTag(PU_PATCH_LOWPRIORITY);

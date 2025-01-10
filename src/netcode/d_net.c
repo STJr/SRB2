@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -62,16 +62,11 @@ static doomdata_t reboundstore[MAXREBOUND];
 static INT16 reboundsize[MAXREBOUND];
 static INT32 rebound_head, rebound_tail;
 
-/// \brief bandwith of netgame
-INT32 net_bandwidth;
-
 /// \brief max length per packet
 INT16 hardware_MAXPACKETLENGTH;
 
 boolean (*I_NetGet)(void) = NULL;
 void (*I_NetSend)(void) = NULL;
-boolean (*I_NetCanSend)(void) = NULL;
-boolean (*I_NetCanGet)(void) = NULL;
 void (*I_NetCloseSocket)(void) = NULL;
 void (*I_NetFreeNodenum)(INT32 nodenum) = NULL;
 SINT8 (*I_NetMakeNodewPort)(const char *address, const char* port) = NULL;
@@ -996,15 +991,7 @@ boolean HSendPacket(INT32 node, boolean reliable, UINT8 acknum, size_t packetlen
 		netbuffer->ackreturn = 0;
 	if (reliable)
 	{
-		if (I_NetCanSend && !I_NetCanSend())
-		{
-			if (netbuffer->packettype < PT_CANFAIL)
-				GetFreeAcknum(&netbuffer->ack, true);
-
-			DEBFILE("HSendPacket: Out of bandwidth\n");
-			return false;
-		}
-		else if (!GetFreeAcknum(&netbuffer->ack, false))
+		if (!GetFreeAcknum(&netbuffer->ack, false))
 			return false;
 	}
 	else
@@ -1156,7 +1143,7 @@ static void Internal_FreeNodenum(INT32 nodenum)
 
 char *I_NetSplitAddress(char *host, char **port)
 {
-	boolean v4 = (strchr(host, '.') != NULL);
+	boolean v4 = (host[0] != '[');
 
 	host = strtok(host, v4 ? ":" : "[]");
 
@@ -1189,10 +1176,7 @@ void D_SetDoomcom(void)
 {
 	if (doomcom) return;
 	doomcom = Z_Calloc(sizeof (doomcom_t), PU_STATIC, NULL);
-	doomcom->id = DOOMCOM_ID;
 	doomcom->numslots = doomcom->numnodes = 1;
-	doomcom->gametype = 0;
-	doomcom->consoleplayer = 0;
 	doomcom->extratics = 0;
 }
 
@@ -1211,13 +1195,11 @@ boolean D_CheckNetGame(void)
 
 	I_NetGet = Internal_Get;
 	I_NetSend = Internal_Send;
-	I_NetCanSend = NULL;
 	I_NetCloseSocket = NULL;
 	I_NetFreeNodenum = Internal_FreeNodenum;
 	I_NetMakeNodewPort = NULL;
 
 	hardware_MAXPACKETLENGTH = MAXPACKETLENGTH;
-	net_bandwidth = 30000;
 	// I_InitNetwork sets doomcom and netgame
 	// check and initialize the network driver
 	multiplayer = false;
@@ -1237,7 +1219,6 @@ boolean D_CheckNetGame(void)
 	server = true; // WTF? server always true???
 		// no! The deault mode is server. Client is set elsewhere
 		// when the client executes connect command.
-	doomcom->ticdup = 1;
 
 	if (M_CheckParm("-extratic"))
 	{
@@ -1246,21 +1227,6 @@ boolean D_CheckNetGame(void)
 		else
 			doomcom->extratics = 1;
 		CONS_Printf(M_GetText("Set extratics to %d\n"), doomcom->extratics);
-	}
-
-	if (M_CheckParm("-bandwidth"))
-	{
-		if (M_IsNextParm())
-		{
-			net_bandwidth = atoi(M_GetNextParm());
-			if (net_bandwidth < 1000)
-				net_bandwidth = 1000;
-			if (net_bandwidth > 100000)
-				hardware_MAXPACKETLENGTH = MAXPACKETLENGTH;
-			CONS_Printf(M_GetText("Network bandwidth set to %d\n"), net_bandwidth);
-		}
-		else
-			I_Error("usage: -bandwidth <byte_per_sec>");
 	}
 
 	software_MAXPACKETLENGTH = hardware_MAXPACKETLENGTH;
@@ -1282,8 +1248,6 @@ boolean D_CheckNetGame(void)
 	if (netgame)
 		multiplayer = true;
 
-	if (doomcom->id != DOOMCOM_ID)
-		I_Error("Doomcom buffer invalid!");
 	if (doomcom->numnodes > MAXNETNODES)
 		I_Error("Too many nodes (%d), max:%d", doomcom->numnodes, MAXNETNODES);
 
@@ -1293,7 +1257,7 @@ boolean D_CheckNetGame(void)
 	if (M_CheckParm("-debugfile"))
 	{
 		char filename[21];
-		INT32 k = doomcom->consoleplayer - 1;
+		INT32 k = consoleplayer - 1;
 		if (M_IsNextParm())
 			k = atoi(M_GetNextParm()) - 1;
 		while (!debugfile && k < MAXPLAYERS)
@@ -1400,7 +1364,6 @@ void D_CloseConnection(void)
 
 		I_NetGet = Internal_Get;
 		I_NetSend = Internal_Send;
-		I_NetCanSend = NULL;
 		I_NetCloseSocket = NULL;
 		I_NetFreeNodenum = Internal_FreeNodenum;
 		I_NetMakeNodewPort = NULL;

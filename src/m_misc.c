@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -559,6 +559,11 @@ void M_FirstLoadConfig(void)
 	// load config, make sure those commands doesnt require the screen...
 	COM_BufInsertText(va("exec \"%s\"\n", configfile));
 	// no COM_BufExecute() needed; that does it right away
+
+	// For configs loaded at startup only, check for pre-Shield-button configs // TODO: 2.3: Remove
+	if (GETMAJOREXECVERSION(cv_execversion.value) < 55 // Pre-v2.2.14 configs
+	&& cv_execversion.value != 25) // Make sure that the config exists, too
+		shieldprompt_timer = 1;
 
 	// don't filter anymore vars and don't let this convsvar be changed
 	COM_BufInsertText(va("%s \"%d\"\n", cv_execversion.name, EXECVERSION));
@@ -2208,6 +2213,8 @@ int M_JumpWordReverse(const char *line, int offset)
 {
 	int (*is)(int);
 	int c;
+	if (offset == 0) // Don't let "--offset" later result in a negative value
+		return 0;
 	c = line[--offset];
 	if (isspace(c))
 		is = isspace;

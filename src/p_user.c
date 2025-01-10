@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -435,7 +435,7 @@ UINT8 P_FindLowestMare(void)
 	// to find the egg capsule with the lowest mare
 	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 	{
-		if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+		if (th->removing)
 			continue;
 
 		mo2 = (mobj_t *)th;
@@ -488,7 +488,7 @@ boolean P_TransferToNextMare(player_t *player)
 	// to find the closest axis point
 	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 	{
-		if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+		if (th->removing)
 			continue;
 
 		mo2 = (mobj_t *)th;
@@ -539,7 +539,7 @@ static mobj_t *P_FindAxis(INT32 mare, INT32 axisnum)
 	// to find the closest axis point
 	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 	{
-		if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+		if (th->removing)
 			continue;
 
 		mo2 = (mobj_t *)th;
@@ -574,7 +574,7 @@ static mobj_t *P_FindAxisTransfer(INT32 mare, INT32 axisnum, mobjtype_t type)
 	// to find the closest axis point
 	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 	{
-		if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+		if (th->removing)
 			continue;
 
 		mo2 = (mobj_t *)th;
@@ -615,7 +615,7 @@ void P_TransferToAxis(player_t *player, INT32 axisnum)
 	// to find the closest axis point
 	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 	{
-		if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+		if (th->removing)
 			continue;
 
 		mo2 = (mobj_t *)th;
@@ -716,7 +716,7 @@ static void P_DeNightserizePlayer(player_t *player)
 	// Check to see if the player should be killed.
 	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 	{
-		if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+		if (th->removing)
 			continue;
 
 		mo2 = (mobj_t *)th;
@@ -915,7 +915,7 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 		player->textvar = NTV_BONUSTIMEEND; // Score and grades
 		player->finishedspheres = (INT16)(player->spheres);
 		player->finishedrings = (INT16)(player->rings);
-		
+
 		// Add score to temp leaderboards
 		player->lastmaretime = leveltime - player->marebegunat;
 		G_AddTempNightsRecords(player, player->marescore, player->lastmaretime, (UINT8)(oldmare + 1));
@@ -976,6 +976,9 @@ pflags_t P_GetJumpFlags(player_t *player)
 //
 boolean P_PlayerInPain(player_t *player)
 {
+	if (P_MobjWasRemoved(player->mo))
+		return false;
+		
 	// no silly, sliding isn't pain
 	if (!(player->pflags & PF_SLIDING) && player->mo->state == &states[player->mo->info->painstate] && player->powers[pw_flashing])
 		return true;
@@ -1089,6 +1092,13 @@ void P_ResetPlayer(player_t *player)
 		if (player->mo->tracer && !P_MobjWasRemoved(player->mo->tracer))
 		{
 			player->mo->tracer->flags |= MF_PUSHABLE;
+
+			// goose the mom a little bit to trigger gravity to process for a tic
+			if (player->mo->tracer->eflags & MFE_VERTICALFLIP)
+				player->mo->tracer->momz -= 1;
+			else
+				player->mo->tracer->momz += 1;
+
 			P_SetTarget(&player->mo->tracer->tracer, NULL);
 		}
 		P_SetTarget(&player->mo->tracer, NULL);
@@ -1889,7 +1899,7 @@ void P_SpawnShieldOrb(player_t *player)
 	// blaze through the thinkers to see if an orb already exists!
 	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 	{
-		if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+		if (th->removing)
 			continue;
 
 		shieldobj = (mobj_t *)th;
@@ -2071,6 +2081,7 @@ mobj_t *P_SpawnGhostMobj(mobj_t *mobj)
 
 	ghost->renderflags = mobj->renderflags;
 	ghost->blendmode = mobj->blendmode;
+	ghost->alpha = mobj->alpha;
 
 	ghost->spritexscale = mobj->spritexscale;
 	ghost->spriteyscale = mobj->spriteyscale;
@@ -2372,7 +2383,7 @@ boolean P_PlayerHitFloor(player_t *player, boolean dorollstuff)
 		if (dorollstuff)
 		{
 			if ((player->charability2 == CA2_SPINDASH) && !((player->pflags & (PF_SPINNING|PF_THOKKED)) == PF_THOKKED) && !(player->charability == CA_THOK && player->secondjump)
-			&& (player->cmd.buttons & BT_SPIN) && (FixedHypot(player->mo->momx, player->mo->momy) > (5*player->mo->scale)))
+			&& (player->cmd.buttons & BT_SPIN) && (FixedHypot(player->mo->momx, player->mo->momy) >= (5*player->mo->scale)))
 				player->pflags = (player->pflags|PF_SPINNING) & ~PF_THOKKED;
 			else if (!(player->pflags & PF_STARTDASH))
 				player->pflags &= ~PF_SPINNING;
@@ -4546,6 +4557,13 @@ void P_DoJump(player_t *player, boolean soundandstate, boolean allowflip)
 					player->mo->momz += player->mo->tracer->momz;
 				if (!P_IsObjectOnGround(player->mo->tracer))
 					P_SetObjectMomZ(player->mo->tracer, -9*FRACUNIT, true);
+
+				// goose the mom a little bit to trigger gravity to process for a tic
+				if (player->mo->tracer->eflags & MFE_VERTICALFLIP)
+					player->mo->tracer->momz -= 1;
+				else
+					player->mo->tracer->momz += 1;
+
 				player->mo->tracer->flags |= MF_PUSHABLE;
 				P_SetTarget(&player->mo->tracer->tracer, NULL);
 			}
@@ -4721,7 +4739,7 @@ static void P_DoSpinAbility(player_t *player, ticcmd_t *cmd)
 				 // Revving
 				else if ((cmd->buttons & BT_SPIN) && (player->pflags & PF_STARTDASH))
 				{
-					if (player->speed > 5*player->mo->scale)
+					if (player->speed >= 5*player->mo->scale)
 					{
 						player->pflags &= ~PF_STARTDASH;
 						P_SetMobjState(player->mo, S_PLAY_ROLL);
@@ -4761,9 +4779,8 @@ static void P_DoSpinAbility(player_t *player, ticcmd_t *cmd)
 					if (!player->spectator)
 						S_StartSound(player->mo, sfx_spin);
 				}
-				else
 				// Catapult the player from a spindash rev!
-				if (onground && !(player->pflags & PF_SPINDOWN) && (player->pflags & PF_STARTDASH) && (player->pflags & PF_SPINNING))
+				else if (onground && !(player->pflags & PF_SPINDOWN) && (player->pflags & PF_STARTDASH) && (player->pflags & PF_SPINNING))
 				{
 					player->pflags &= ~PF_STARTDASH;
 					if (player->powers[pw_carry] == CR_BRAKGOOP)
@@ -5095,7 +5112,7 @@ void P_Telekinesis(player_t *player, fixed_t thrust, fixed_t range)
 
 	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 	{
-		if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+		if (th->removing)
 			continue;
 
 		mo2 = (mobj_t *)th;
@@ -6462,7 +6479,7 @@ static void P_NightsTransferPoints(player_t *player, fixed_t xspeed, fixed_t rad
 		// Find next waypoint
 		for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 		{
-			if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+			if (th->removing)
 				continue;
 
 			mo2 = (mobj_t *)th;
@@ -6498,7 +6515,7 @@ static void P_NightsTransferPoints(player_t *player, fixed_t xspeed, fixed_t rad
 		{
 			for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 			{
-				if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+				if (th->removing)
 					continue;
 
 				mo2 = (mobj_t *)th;
@@ -6527,7 +6544,7 @@ static void P_NightsTransferPoints(player_t *player, fixed_t xspeed, fixed_t rad
 		{
 			for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 			{
-				if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+				if (th->removing)
 					continue;
 
 				mo2 = (mobj_t *)th;
@@ -7259,7 +7276,7 @@ static void P_NiGHTSMovement(player_t *player)
 		// to find the closest axis point
 		for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 		{
-			if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+			if (th->removing)
 				continue;
 
 			mo2 = (mobj_t *)th;
@@ -8159,7 +8176,7 @@ void P_MovePlayer(player_t *player)
 
 			for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 			{
-				if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+				if (th->removing)
 					continue;
 
 				mo2 = (mobj_t *)th;
@@ -8766,7 +8783,7 @@ void P_MovePlayer(player_t *player)
 	if (!(player->mo->momz || player->mo->momx || player->mo->momy) && !(player->mo->eflags & MFE_GOOWATER)
 	&& player->panim == PA_IDLE && !(player->powers[pw_carry]))
 		P_DoTeeter(player);
-	
+
 	// Toss a flag
 	if (G_GametypeHasTeams() && (cmd->buttons & BT_TOSSFLAG) && !(player->powers[pw_super]) && !(player->tossdelay))
 	{
@@ -8812,6 +8829,8 @@ void P_MovePlayer(player_t *player)
 			player->mo->height = P_GetPlayerSpinHeight(player);
 			atspinheight = true;
 		}
+		else if (player->powers[pw_carry] == CR_PLAYER || player->powers[pw_carry] == CR_PTERABYTE) // You're slightly shorter while being carried
+			player->mo->height = FixedDiv(P_GetPlayerHeight(player), FixedDiv(14*FRACUNIT,10*FRACUNIT));
 		else
 			player->mo->height = P_GetPlayerHeight(player);
 
@@ -9142,7 +9161,7 @@ void P_NukeEnemies(mobj_t *inflictor, mobj_t *source, fixed_t radius)
 
 	for (think = thlist[THINK_MOBJ].next; think != &thlist[THINK_MOBJ]; think = think->next)
 	{
-		if (think->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+		if (think->removing)
 			continue;
 
 		mo = (mobj_t *)think;
@@ -9240,7 +9259,7 @@ mobj_t *P_LookForFocusTarget(player_t *player, mobj_t *exclude, SINT8 direction,
 
 	for (think = thlist[THINK_MOBJ].next; think != &thlist[THINK_MOBJ]; think = think->next)
 	{
-		if (think->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+		if (think->removing)
 			continue;
 
 		mo = (mobj_t *)think;
@@ -9359,7 +9378,7 @@ mobj_t *P_LookForEnemies(player_t *player, boolean nonenemies, boolean bullet)
 
 	for (think = thlist[THINK_MOBJ].next; think != &thlist[THINK_MOBJ]; think = think->next)
 	{
-		if (think->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+		if (think->removing)
 			continue;
 
 		mo = (mobj_t *)think;
@@ -9505,7 +9524,7 @@ void P_FindEmerald(void)
 	// to find all emeralds
 	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 	{
-		if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+		if (th->removing)
 			continue;
 
 		mo2 = (mobj_t *)th;
@@ -10906,7 +10925,7 @@ static mobj_t *P_GetAxis(INT32 num)
 
 	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 	{
-		if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+		if (th->removing)
 			continue;
 
 		mobj = (mobj_t *)th;
@@ -11988,7 +12007,7 @@ void P_PlayerThink(player_t *player)
 
 		for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 		{
-			if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+			if (th->removing)
 				continue;
 
 			mo2 = (mobj_t *)th;
@@ -12128,6 +12147,10 @@ void P_PlayerThink(player_t *player)
 					break;
 				case CR_DUSTDEVIL:
 					player->drawangle += ANG20;
+					break;
+				case CR_FAN:
+					if (player->pflags & PF_ANALOGMODE) // Don't impact drawangle in any special way when on a fan
+						player->drawangle = player->mo->angle;
 					break;
 				/* -- in case we wanted to have the camera freely movable during zoom tubes
 				case CR_ZOOMTUBE:*/
@@ -12829,9 +12852,9 @@ void P_PlayerAfterThink(player_t *player)
 				else
 				{
 					if (tails->player)
-						P_TryMove(player->mo, tails->x + P_ReturnThrustX(tails, tails->player->drawangle, 4*FRACUNIT), tails->y + P_ReturnThrustY(tails, tails->player->drawangle, 4*FRACUNIT), true);
+						P_TryMove(player->mo, tails->x + P_ReturnThrustX(tails, tails->player->drawangle, 4*tails->scale), tails->y + P_ReturnThrustY(tails, tails->player->drawangle, 4*tails->scale), true);
 					else
-						P_TryMove(player->mo, tails->x + P_ReturnThrustX(tails, tails->angle, 4*FRACUNIT), tails->y + P_ReturnThrustY(tails, tails->angle, 4*FRACUNIT), true);
+						P_TryMove(player->mo, tails->x + P_ReturnThrustX(tails, tails->angle, 4*tails->scale), tails->y + P_ReturnThrustY(tails, tails->angle, 4*tails->scale), true);
 					player->mo->momx = tails->momx;
 					player->mo->momy = tails->momy;
 					player->mo->momz = tails->momz;
@@ -12845,7 +12868,7 @@ void P_PlayerAfterThink(player_t *player)
 						P_SetPlayerAngle(player, player->mo->angle);
 				}
 
-				if (P_AproxDistance(player->mo->x - tails->x, player->mo->y - tails->y) > player->mo->radius)
+				if (P_AproxDistance(player->mo->x - tails->x, player->mo->y - tails->y) > tails->radius)
 					player->powers[pw_carry] = CR_NONE;
 
 				if (player->powers[pw_carry] == CR_PLAYER)
@@ -13066,7 +13089,7 @@ void P_PlayerAfterThink(player_t *player)
 				player->mo->momy = ptera->momy;
 				player->mo->momz = ptera->momz;
 
-				if (P_AproxDistance(player->mo->x - ptera->x - ptera->watertop, player->mo->y - ptera->y - ptera->waterbottom) > player->mo->radius)
+				if (P_AproxDistance(player->mo->x - ptera->x - ptera->watertop, player->mo->y - ptera->y - ptera->waterbottom) > ptera->radius)
 					goto dropoff;
 
 				ptera->watertop >>= 1;

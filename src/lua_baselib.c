@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2012-2016 by John "JTE" Muniz.
-// Copyright (C) 2012-2023 by Sonic Team Junior.
+// Copyright (C) 2012-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -184,8 +184,10 @@ static const struct {
 	{META_SKIN,         "skin_t"},
 	{META_POWERS,       "player_t.powers"},
 	{META_SOUNDSID,     "skin_t.soundsid"},
-	{META_SKINSPRITES,  "skin_t.sprites"},
-	{META_SKINSPRITESLIST,  "skin_t.sprites[]"},
+
+	{META_SKINSPRITES,       "skin_t.skinsprites"},
+	{META_SKINSPRITESLIST,   "skin_t.skinsprites[]"},
+	{META_SKINSPRITESCOMPAT, "skin_t.sprites"}, // TODO: 2.3: Delete
 
 	{META_VERTEX,       "vertex_t"},
 	{META_LINE,         "line_t"},
@@ -342,6 +344,18 @@ static int lib_reserveLuabanks(lua_State *L)
 		return luaL_error(L, "luabanks[] has already been reserved! Only one savedata-enabled mod at a time may use this feature.");
 	reserved = true;
 	LUA_PushUserdata(L, &luabanks, META_LUABANKS);
+	return 1;
+}
+
+static int lib_tofixed(lua_State *L)
+{
+	const char *arg = luaL_checkstring(L, 1);
+	char *end;
+	float f = strtof(arg, &end);
+	if (*end != '\0')
+		lua_pushnil(L);
+	else
+		lua_pushnumber(L, FLOAT_TO_FIXED(f));
 	return 1;
 }
 
@@ -641,7 +655,7 @@ static int lib_pSpawnMobj(lua_State *L)
 	NOHUD
 	INLEVEL
 	NOSPAWNNULL
-	LUA_PushUserdata(L, P_SpawnMobj(x, y, z, type), META_MOBJ);
+	LUA_PushUserdata(L, P_SpawnMobj(x, y, z, type, NULL), META_MOBJ);
 	return 1;
 }
 
@@ -3167,17 +3181,25 @@ static int lib_rTextureNumForName(lua_State *L)
 
 static int lib_rCheckTextureNameForNum(lua_State *L)
 {
+	char s[9];
 	INT32 num = (INT32)luaL_checkinteger(L, 1);
 	//HUDSAFE
-	lua_pushstring(L, R_CheckTextureNameForNum(num));
+
+	M_Memcpy(s, R_CheckTextureNameForNum(num), 8);
+	s[8] = '\0';
+	lua_pushstring(L, s);
 	return 1;
 }
 
 static int lib_rTextureNameForNum(lua_State *L)
 {
+	char s[9];
 	INT32 num = (INT32)luaL_checkinteger(L, 1);
 	//HUDSAFE
-	lua_pushstring(L, R_TextureNameForNum(num));
+
+	M_Memcpy(s, R_TextureNameForNum(num), 8);
+	s[8] = '\0';
+	lua_pushstring(L, s);
 	return 1;
 }
 
@@ -3864,7 +3886,7 @@ static int lib_gAddPlayer(lua_State *L)
 	player_t *newplayer;
 	SINT8 skinnum = 0, bot;
 
-	for (i = 0; i < MAXPLAYERS; i++)
+	for (i = 1; i < MAXPLAYERS; i++)
 	{
 		if (!playeringame[i])
 			break;
@@ -4333,6 +4355,7 @@ static luaL_Reg lib[] = {
 	{"userdataMetatable", lib_userdataMetatable},
 	{"IsPlayerAdmin", lib_isPlayerAdmin},
 	{"reserveLuabanks", lib_reserveLuabanks},
+	{"tofixed", lib_tofixed},
 
 	// m_menu
 	{"M_MoveColorAfter",lib_pMoveColorAfter},
