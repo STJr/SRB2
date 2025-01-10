@@ -477,10 +477,9 @@ typedef struct
 
 feild_t tty_con;
 
-// when printing general stuff to stdout stderr (Sys_Printf)
-//   we need to disable the tty console stuff
-// this increments so we can recursively disable
-static INT32 ttycon_hide = 0;
+// lock to prevent clearing partial lines, since not everything
+// printed ends on a newline.
+static boolean ttycon_ateol = true;
 // some key codes that the terminal may be using
 // TTimo NOTE: I'm not sure how relevant this is
 static INT32 tty_erase;
@@ -508,63 +507,31 @@ static inline void tty_FlushIn(void)
 // TTimo NOTE: it seems on some terminals just sending '\b' is not enough
 //   so for now, in any case we send "\b \b" .. yeah well ..
 //   (there may be a way to find out if '\b' alone would work though)
+// Hanicef NOTE: using \b this way is unreliable because of terminal state,
+//   it's better to use \r to reset the cursor to the beginning of the
+//   line and clear from there.
 static void tty_Back(void)
 {
-	char key;
-	ssize_t d;
-	key = '\b';
-	d = write(STDOUT_FILENO, &key, 1);
-	key = ' ';
-	d = write(STDOUT_FILENO, &key, 1);
-	key = '\b';
-	d = write(STDOUT_FILENO, &key, 1);
-	(void)d;
+	write(STDOUT_FILENO, "\r", 1);
+	if (tty_con.cursor>0)
+	{
+		write(STDOUT_FILENO, tty_con.buffer, tty_con.cursor);
+	}
+	write(STDOUT_FILENO, " \b", 2);
 }
 
 static void tty_Clear(void)
 {
 	size_t i;
+	write(STDOUT_FILENO, "\r", 1);
 	if (tty_con.cursor>0)
 	{
 		for (i=0; i<tty_con.cursor; i++)
 		{
-			tty_Back();
+			write(STDOUT_FILENO, " ", 1);
 		}
+		write(STDOUT_FILENO, "\r", 1);
 	}
-
-}
-
-// clear the display of the line currently edited
-// bring cursor back to beginning of line
-static inline void tty_Hide(void)
-{
-	//I_Assert(consolevent);
-	if (ttycon_hide)
-	{
-		ttycon_hide++;
-		return;
-	}
-	tty_Clear();
-	ttycon_hide++;
-}
-
-// show the current line
-// FIXME TTimo need to position the cursor if needed??
-static inline void tty_Show(void)
-{
-	size_t i;
-	ssize_t d;
-	//I_Assert(consolevent);
-	I_Assert(ttycon_hide>0);
-	ttycon_hide--;
-	if (ttycon_hide == 0 && tty_con.cursor)
-	{
-		for (i=0; i<tty_con.cursor; i++)
-		{
-			d = write(STDOUT_FILENO, tty_con.buffer+i, 1);
-		}
-	}
-	(void)d;
 }
 
 // never exit without calling this, or your terminal will be left in a pretty bad state
@@ -671,6 +638,11 @@ void I_GetConsoleEvents(void)
 				tty_Clear();
 				tty_con.cursor = 0;
 				ev.key = KEY_ENTER;
+			}
+			else if (key == 0x4) // ^D, aka EOF
+			{
+				// shut down, most unix programs behave this way
+				I_Quit();
 			}
 			else continue;
 		}
@@ -879,9 +851,16 @@ static void I_RegisterChildSignals(void)
 void I_OutputMsg(const char *fmt, ...)
 {
 	size_t len;
-	char txt[8192];
+	char *txt;
 	va_list  argptr;
 
+	va_start(argptr,fmt);
+	len = vsnprintf(NULL, 0, fmt, argptr);
+	va_end(argptr);
+	if (len == 0)
+		return;
+
+	txt = malloc(len+1);
 	va_start(argptr,fmt);
 	vsprintf(txt, fmt, argptr);
 	va_end(argptr);
@@ -915,7 +894,10 @@ void I_OutputMsg(const char *fmt, ...)
 		DWORD bytesWritten;
 
 		if (co == INVALID_HANDLE_VALUE)
+		{
+			free(txt);
 			return;
+		}
 
 		if (GetFileType(co) == FILE_TYPE_CHAR && GetConsoleMode(co, &bytesWritten))
 		{
@@ -931,11 +913,16 @@ void I_OutputMsg(const char *fmt, ...)
 			if (oldLength > 0)
 			{
 				LPVOID blank = malloc(oldLength);
-				if (!blank) return;
+				if (!blank)
+				{
+					free(txt);
+					return;
+				}
 				memset(blank, ' ', oldLength); // Blank out.
 				oldLines = malloc(oldLength*sizeof(TCHAR));
 				if (!oldLines)
 				{
+					free(txt);
 					free(blank);
 					return;
 				}
@@ -970,18 +957,20 @@ void I_OutputMsg(const char *fmt, ...)
 	}
 #else
 #ifdef HAVE_TERMIOS
-	if (consolevent)
+	if (consolevent && ttycon_ateol)
 	{
-		tty_Hide();
+		tty_Clear();
+		ttycon_ateol = false;
 	}
 #endif
 
 	if (!framebuffer)
 		fprintf(stderr, "%s", txt);
 #ifdef HAVE_TERMIOS
-	if (consolevent)
+	if (consolevent && txt[len-1] == '\n')
 	{
-		tty_Show();
+		write(STDOUT_FILENO, tty_con.buffer, tty_con.cursor);
+		ttycon_ateol = true;
 	}
 #endif
 
@@ -990,6 +979,7 @@ void I_OutputMsg(const char *fmt, ...)
 		fflush(stderr);
 
 #endif
+	free(txt);
 }
 
 //
