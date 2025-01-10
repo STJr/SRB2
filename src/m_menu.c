@@ -11783,10 +11783,10 @@ static void M_ChooseRoom(INT32 choice)
 #endif
 
 	if (choice == 0)
-		ms_RoomId = -1;
+		CV_SetValue(&cv_masterserver_room_id, 0);
 	else
 	{
-		ms_RoomId = roomIds[choice-1];
+		CV_SetValue(&cv_masterserver_room_id, roomIds[choice-1]);
 		menuRoomIndex = choice - 1;
 	}
 
