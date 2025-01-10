@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -37,6 +37,7 @@
 #endif
 
 #include "../doomdef.h"
+#include "../z_zone.h"
 
 #ifdef USE_WINSOCK1
 	#include <winsock.h>
@@ -87,6 +88,10 @@
 	#undef EHOSTUNREACH
 	#endif
 	#define EHOSTUNREACH WSAEHOSTUNREACH
+	#ifdef ENETUNREACH
+	#undef ENETUNREACH
+	#endif
+	#define ENETUNREACH WSAENETUNREACH
 	#ifndef IOC_VENDOR
 	#define IOC_VENDOR 0x18000000
 	#endif
@@ -120,8 +125,6 @@ typedef union
 	static boolean UPNP_support = true;
 	#endif // HAVE_MINIUPNC
 
-#define MAXBANS 100
-
 #include "../i_system.h"
 #include "i_net.h"
 #include "d_net.h"
@@ -140,7 +143,6 @@ typedef union
 #endif
 
 #include "i_addrinfo.h"
-#define SELECTTEST
 #define DEFAULTPORT "5029"
 
 #ifdef USE_WINSOCK
@@ -169,8 +171,8 @@ static mysockaddr_t clientaddress[MAXNETNODES+1];
 static mysockaddr_t broadcastaddress[MAXNETNODES+1];
 static size_t broadcastaddresses = 0;
 static boolean nodeconnected[MAXNETNODES+1];
-static mysockaddr_t banned[MAXBANS];
-static UINT8 bannedmask[MAXBANS];
+static mysockaddr_t *banned;
+static UINT8 *bannedmask;
 
 static size_t numbans = 0;
 static boolean SOCK_bannednode[MAXNETNODES+1]; /// \note do we really need the +1?
@@ -317,7 +319,11 @@ init_upnpc_once(struct upnpdata *upnpuserdata)
 		I_OutputMsg(M_GetText("Found UPnP device:\n desc: %s\n st: %s\n"),
 		           dev->descURL, dev->st);
 
+#if (MINIUPNPC_API_VERSION >= 18)
+		UPNP_GetValidIGD(devlist, &urls, &data, lanaddr, sizeof(lanaddr), NULL, 0);
+#else
 		UPNP_GetValidIGD(devlist, &urls, &data, lanaddr, sizeof(lanaddr));
+#endif
 		I_OutputMsg(M_GetText("Local LAN IP address: %s\n"), lanaddr);
 		descXML = miniwget(dev->descURL, &descXMLsize, scope_id, &status_code);
 		if (descXML)
@@ -624,56 +630,6 @@ static boolean SOCK_Get(void)
 	return false;
 }
 
-// check if we can send (do not go over the buffer)
-
-static fd_set masterset;
-
-#ifdef SELECTTEST
-static boolean FD_CPY(fd_set *src, fd_set *dst, SOCKET_TYPE *fd, size_t len)
-{
-	boolean testset = false;
-	FD_ZERO(dst);
-	for (size_t i = 0; i < len;i++)
-	{
-		if(fd[i] != (SOCKET_TYPE)ERRSOCKET &&
-		   FD_ISSET(fd[i], src) && !FD_ISSET(fd[i], dst)) // no checking for dups
-		{
-			FD_SET(fd[i], dst);
-			testset = true;
-		}
-	}
-	return testset;
-}
-
-static boolean SOCK_CanSend(void)
-{
-	struct timeval timeval_for_select = {0, 0};
-	fd_set tset;
-	int wselect;
-
-	if(!FD_CPY(&masterset, &tset, mysockets, mysocketses))
-		return false;
-	wselect = select(255, NULL, &tset, NULL, &timeval_for_select);
-	if (wselect >= 1)
-		return true;
-	return false;
-}
-
-static boolean SOCK_CanGet(void)
-{
-	struct timeval timeval_for_select = {0, 0};
-	fd_set tset;
-	int rselect;
-
-	if(!FD_CPY(&masterset, &tset, mysockets, mysocketses))
-		return false;
-	rselect = select(255, &tset, NULL, NULL, &timeval_for_select);
-	if (rselect >= 1)
-		return true;
-	return false;
-}
-#endif
-
 static inline ssize_t SOCK_SendToAddr(SOCKET_TYPE socket, mysockaddr_t *sockaddr)
 {
 	socklen_t d4 = (socklen_t)sizeof(struct sockaddr_in);
@@ -681,7 +637,6 @@ static inline ssize_t SOCK_SendToAddr(SOCKET_TYPE socket, mysockaddr_t *sockaddr
 	socklen_t d6 = (socklen_t)sizeof(struct sockaddr_in6);
 #endif
 	socklen_t d, da = (socklen_t)sizeof(mysockaddr_t);
-	ssize_t status;
 
 	switch (sockaddr->any.sa_family)
 	{
@@ -692,13 +647,10 @@ static inline ssize_t SOCK_SendToAddr(SOCKET_TYPE socket, mysockaddr_t *sockaddr
 		default:       d = da; break;
 	}
 
-	status = sendto(socket, (char *)&doomcom->data, doomcom->datalength, 0, &sockaddr->any, d);
-	if (status == -1)
-	{
-		CONS_Alert(CONS_WARNING, "Unable to send packet to %s: %s\n", SOCK_AddrToStr(sockaddr), strerror(errno));
-	}
-	return status;
+	return sendto(socket, (char *)&doomcom->data, doomcom->datalength, 0, &sockaddr->any, d);
 }
+
+#define ALLOWEDERROR(x) ((x) == ECONNREFUSED || (x) == EWOULDBLOCK || (x) == EHOSTUNREACH || (x) == ENETUNREACH)
 
 static void SOCK_Send(void)
 {
@@ -714,19 +666,25 @@ static void SOCK_Send(void)
 			for (size_t j = 0; j < broadcastaddresses; j++)
 			{
 				if (myfamily[i] == broadcastaddress[j].any.sa_family)
-					SOCK_SendToAddr(mysockets[i], &broadcastaddress[j]);
+				{
+					c = SOCK_SendToAddr(mysockets[i], &broadcastaddress[j]);
+					if (c == ERRSOCKET && !ALLOWEDERROR(errno))
+						break;
+				}
 			}
 		}
-		return;
 	}
 	else if (nodesocket[doomcom->remotenode] == (SOCKET_TYPE)ERRSOCKET)
 	{
 		for (size_t i = 0; i < mysocketses; i++)
 		{
 			if (myfamily[i] == clientaddress[doomcom->remotenode].any.sa_family)
-				SOCK_SendToAddr(mysockets[i], &clientaddress[doomcom->remotenode]);
+			{
+				c = SOCK_SendToAddr(mysockets[i], &clientaddress[doomcom->remotenode]);
+				if (c == ERRSOCKET && !ALLOWEDERROR(errno))
+					break;
+			}
 		}
-		return;
 	}
 	else
 	{
@@ -736,11 +694,13 @@ static void SOCK_Send(void)
 	if (c == ERRSOCKET)
 	{
 		int e = errno; // save error code so it can't be modified later
-		if (e != ECONNREFUSED && e != EWOULDBLOCK && e != EHOSTUNREACH)
+		if (!ALLOWEDERROR(e))
 			I_Error("SOCK_Send, error sending to node %d (%s) #%u: %s", doomcom->remotenode,
 				SOCK_GetNodeAddress(doomcom->remotenode), e, strerror(e));
 	}
 }
+
+#undef ALLOWEDERROR
 
 static void SOCK_FreeNodenum(INT32 numnode)
 {
@@ -911,7 +871,6 @@ static boolean UDP_Socket(void)
 		mysockets[s] = ERRSOCKET;
 	for (s = 0; s < MAXNETNODES+1; s++)
 		nodesocket[s] = ERRSOCKET;
-	FD_ZERO(&masterset);
 	s = 0;
 
 	memset(&hints, 0x00, sizeof (hints));
@@ -938,7 +897,6 @@ static boolean UDP_Socket(void)
 					mysockets[s] = UDP_Bind(runp->ai_family, runp->ai_addr, (socklen_t)runp->ai_addrlen);
 					if (mysockets[s] != (SOCKET_TYPE)ERRSOCKET)
 					{
-						FD_SET(mysockets[s], &masterset);
 						myfamily[s] = hints.ai_family;
 						s++;
 					}
@@ -959,7 +917,6 @@ static boolean UDP_Socket(void)
 				mysockets[s] = UDP_Bind(runp->ai_family, runp->ai_addr, (socklen_t)runp->ai_addrlen);
 				if (mysockets[s] != (SOCKET_TYPE)ERRSOCKET)
 				{
-					FD_SET(mysockets[s], &masterset);
 					myfamily[s] = hints.ai_family;
 					s++;
 #ifdef HAVE_MINIUPNPC
@@ -992,7 +949,6 @@ static boolean UDP_Socket(void)
 						mysockets[s] = UDP_Bind(runp->ai_family, runp->ai_addr, (socklen_t)runp->ai_addrlen);
 						if (mysockets[s] != (SOCKET_TYPE)ERRSOCKET)
 						{
-							FD_SET(mysockets[s], &masterset);
 							myfamily[s] = hints.ai_family;
 							s++;
 						}
@@ -1013,7 +969,6 @@ static boolean UDP_Socket(void)
 					mysockets[s] = UDP_Bind(runp->ai_family, runp->ai_addr, (socklen_t)runp->ai_addrlen);
 					if (mysockets[s] != (SOCKET_TYPE)ERRSOCKET)
 					{
-						FD_SET(mysockets[s], &masterset);
 						myfamily[s] = hints.ai_family;
 						s++;
 					}
@@ -1139,16 +1094,13 @@ boolean I_InitTcpDriver(void)
 
 static void SOCK_CloseSocket(void)
 {
-	for (size_t i=0; i < MAXNETNODES+1; i++)
+	for (size_t i=0; i < mysocketses; i++)
 	{
-		if (mysockets[i] != (SOCKET_TYPE)ERRSOCKET
-		 && FD_ISSET(mysockets[i], &masterset))
-		{
-			FD_CLR(mysockets[i], &masterset);
+		if (mysockets[i] != (SOCKET_TYPE)ERRSOCKET)
 			close(mysockets[i]);
-		}
 		mysockets[i] = ERRSOCKET;
 	}
+	mysocketses = 0;
 }
 
 void I_ShutdownTcpDriver(void)
@@ -1200,11 +1152,7 @@ static SINT8 SOCK_NetMakeNodewPort(const char *address, const char *port)
 		// test ip address of server
 		for (i = 0; i < mysocketses; ++i)
 		{
-			/* sendto tests that there is a network to this
-				address */
-			if (runp->ai_addr->sa_family == myfamily[i] &&
-					sendto(mysockets[i], NULL, 0, 0,
-						runp->ai_addr, runp->ai_addrlen) == 0)
+			if (runp->ai_addr->sa_family == myfamily[i])
 			{
 				memcpy(&clientaddress[newnode], runp->ai_addr, runp->ai_addrlen);
 				break;
@@ -1234,12 +1182,6 @@ static boolean SOCK_OpenSocket(void)
 	I_NetFreeNodenum = SOCK_FreeNodenum;
 	I_NetMakeNodewPort = SOCK_NetMakeNodewPort;
 
-#ifdef SELECTTEST
-	// seem like not work with libsocket : (
-	I_NetCanSend = SOCK_CanSend;
-	I_NetCanGet = SOCK_CanGet;
-#endif
-
 	// build the socket but close it first
 	SOCK_CloseSocket();
 	return UDP_Socket();
@@ -1249,9 +1191,9 @@ static boolean SOCK_Ban(INT32 node)
 {
 	if (node > MAXNETNODES)
 		return false;
-	if (numbans == MAXBANS)
-		return false;
 
+	banned = Z_Realloc(banned, sizeof(*banned) * (numbans+1), PU_STATIC, NULL);
+	bannedmask = Z_Realloc(bannedmask, sizeof(*bannedmask) * (numbans+1), PU_STATIC, NULL);
 	M_Memcpy(&banned[numbans], &clientaddress[node], sizeof (mysockaddr_t));
 	if (banned[numbans].any.sa_family == AF_INET)
 	{
@@ -1262,7 +1204,7 @@ static boolean SOCK_Ban(INT32 node)
 	else if (banned[numbans].any.sa_family == AF_INET6)
 	{
 		banned[numbans].ip6.sin6_port = 0;
-		bannedmask[numbans] = 128;
+		bannedmask[numbans] = 64;
 	}
 #endif
 	numbans++;
@@ -1274,7 +1216,7 @@ static boolean SOCK_SetBanAddress(const char *address, const char *mask)
 	struct my_addrinfo *ai, *runp, hints;
 	int gaie;
 
-	if (numbans == MAXBANS || !address)
+	if (!address)
 		return false;
 
 	memset(&hints, 0x00, sizeof(hints));
@@ -1289,15 +1231,17 @@ static boolean SOCK_SetBanAddress(const char *address, const char *mask)
 
 	runp = ai;
 
-	while(runp != NULL && numbans != MAXBANS)
+	while(runp != NULL)
 	{
+		banned = Z_Realloc(banned, sizeof(*banned) * (numbans+1), PU_STATIC, NULL);
+		bannedmask = Z_Realloc(bannedmask, sizeof(*bannedmask) * (numbans+1), PU_STATIC, NULL);
 		memcpy(&banned[numbans], runp->ai_addr, runp->ai_addrlen);
 
 		if (mask)
 			bannedmask[numbans] = (UINT8)atoi(mask);
 #ifdef HAVE_IPV6
 		else if (runp->ai_family == AF_INET6)
-			bannedmask[numbans] = 128;
+			bannedmask[numbans] = 64;
 #endif
 		else
 			bannedmask[numbans] = 32;
@@ -1306,7 +1250,7 @@ static boolean SOCK_SetBanAddress(const char *address, const char *mask)
 			bannedmask[numbans] = 32;
 #ifdef HAVE_IPV6
 		else if (bannedmask[numbans] > 128 && runp->ai_family == AF_INET6)
-			bannedmask[numbans] = 128;
+			bannedmask[numbans] = 64;
 #endif
 		numbans++;
 		runp = runp->ai_next;
@@ -1320,6 +1264,10 @@ static boolean SOCK_SetBanAddress(const char *address, const char *mask)
 static void SOCK_ClearBans(void)
 {
 	numbans = 0;
+	Z_Free(banned);
+	banned = NULL;
+	Z_Free(bannedmask);
+	bannedmask = NULL;
 }
 
 boolean I_InitTcpNetwork(void)
@@ -1374,7 +1322,6 @@ boolean I_InitTcpNetwork(void)
 		// FIXME:
 		// ??? and now ?
 		// server on a big modem ??? 4*isdn
-		net_bandwidth = 16000;
 		hardware_MAXPACKETLENGTH = INETPACKETLENGTH;
 
 		ret = true;
@@ -1403,7 +1350,6 @@ boolean I_InitTcpNetwork(void)
 			// so we're on a LAN
 			COM_BufAddText("connect any\n");
 
-			net_bandwidth = 800000;
 			hardware_MAXPACKETLENGTH = MAXPACKETLENGTH;
 		}
 	}

@@ -444,12 +444,11 @@ filestatus_t filesearch(char *filename, const char *startpath, const UINT8 *want
 		strcpy(&searchpath[searchpathindex[depthleft]],dent->d_name);
 
 #if defined(__linux__) || defined(__FreeBSD__)
-		if (dent->d_type == DT_UNKNOWN)
-			if (lstat(searchpath,&fsstat) == 0 && S_ISDIR(fsstat.st_mode))
+		if (dent->d_type == DT_UNKNOWN || dent->d_type == DT_LNK)
+			if (stat(searchpath,&fsstat) == 0 && S_ISDIR(fsstat.st_mode))
 				dent->d_type = DT_DIR;
 
 		// Linux and FreeBSD has a special field for file type on dirent, so use that to speed up lookups.
-		// FIXME: should we also follow symlinks?
 		if (dent->d_type == DT_DIR && depthleft)
 #else
 		if (stat(searchpath,&fsstat) < 0) // do we want to follow symlinks? if not: change it to lstat

@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -54,6 +54,7 @@ typedef struct
 	char name[8];
 	UINT32 hash;
 	UINT8 type; // TEXTURETYPE_*
+	boolean transparency;
 	INT16 width, height;
 	UINT8 flip; // 1 = flipx, 2 = flipy, 3 = both
 	void *flat; // The texture, as a flat.

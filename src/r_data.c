@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -426,9 +426,6 @@ void R_ClearColormaps(void)
 {
 	// Purged by PU_LEVEL, just overwrite the pointer
 	extra_colormaps = R_CreateDefaultColormap(true);
-#ifdef HWRENDER
-	HWR_ClearLightTables();
-#endif
 }
 
 //
@@ -847,6 +844,15 @@ void R_GenerateLightTable(extracolormap_t *extra_colormap, boolean uselookup)
 			}
 		}
 	}
+}
+
+void R_UpdateLightTable(extracolormap_t *extra_colormap, boolean uselookup)
+{
+	R_GenerateLightTable(extra_colormap, uselookup);
+
+#ifdef HWRENDER
+	extra_colormap->gl_lighttable.needs_update = true;
+#endif
 }
 
 extracolormap_t *R_CreateColormapFromLinedef(char *p1, char *p2, char *p3)
