@@ -2302,13 +2302,22 @@ void I_SleepDuration(precise_t duration)
 {
 #if defined(__linux__) || defined(__FreeBSD__) || defined(__HAIKU__)
 	UINT64 precision = I_GetPrecisePrecision();
-	struct timespec ts = {
-		.tv_sec = duration / precision,
-		.tv_nsec = duration * 1000000000 / precision % 1000000000,
-	};
-	int status;
-	do status = clock_nanosleep(CLOCK_MONOTONIC, 0, &ts, &ts);
-	while (status == EINTR);
+	precise_t dest = I_GetPreciseTime() + duration;
+	precise_t slack = (precision / 5000); // 0.2 ms slack
+	if (duration > slack)
+	{
+		duration -= slack;
+		struct timespec ts = {
+			.tv_sec = duration / precision,
+			.tv_nsec = duration * 1000000000 / precision % 1000000000,
+		};
+		int status;
+		do status = clock_nanosleep(CLOCK_MONOTONIC, 0, &ts, &ts);
+		while (status == EINTR);
+	}
+
+	// busy-wait the rest
+	while (((INT64)dest - (INT64)I_GetPreciseTime()) > 0);
 #elif defined (MIN_SLEEP_DURATION_MS)
 	UINT64 precision = I_GetPrecisePrecision();
 	INT32 sleepvalue = cv_sleep.value;
