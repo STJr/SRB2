@@ -1600,7 +1600,7 @@ void D_SRB2Main(void)
 	{
 		if (!M_IsNextParm())
 			I_Error("usage: -room <room_id>\nCheck the Master Server's webpage for room ID numbers.\n");
-		ms_RoomId = atoi(M_GetNextParm());
+		CV_SetValue(&cv_masterserver_room_id, atoi(M_GetNextParm()));
 
 #ifdef UPDATE_ALERT
 		GetMODVersion_Console();

@@ -3180,17 +3180,25 @@ static int lib_rTextureNumForName(lua_State *L)
 
 static int lib_rCheckTextureNameForNum(lua_State *L)
 {
+	char s[9];
 	INT32 num = (INT32)luaL_checkinteger(L, 1);
 	//HUDSAFE
-	lua_pushstring(L, R_CheckTextureNameForNum(num));
+
+	M_Memcpy(s, R_CheckTextureNameForNum(num), 8);
+	s[8] = '\0';
+	lua_pushstring(L, s);
 	return 1;
 }
 
 static int lib_rTextureNameForNum(lua_State *L)
 {
+	char s[9];
 	INT32 num = (INT32)luaL_checkinteger(L, 1);
 	//HUDSAFE
-	lua_pushstring(L, R_TextureNameForNum(num));
+
+	M_Memcpy(s, R_TextureNameForNum(num), 8);
+	s[8] = '\0';
+	lua_pushstring(L, s);
 	return 1;
 }
 
