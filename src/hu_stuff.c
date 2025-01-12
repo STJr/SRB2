@@ -590,7 +590,7 @@ static void Command_CSay_f(void)
 UINT8 spam_tokens[MAXPLAYERS] = { 1 }; // fill the buffer with 1 so the motd can be sent.
 tic_t spam_tics[MAXPLAYERS];
 
-static char *GetChatColorFromSkinColor(INT32 skincolor)
+static const char *GetChatColorFromSkinColor(INT32 skincolor)
 {
 	const char *textcolor = NULL;
 	UINT16 chatcolor = skincolors[skincolor].chatcolor;
