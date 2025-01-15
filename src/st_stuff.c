@@ -2931,7 +2931,7 @@ void ST_ReallyCoolAndUsefulGIFDrawer(void)
 		V_ALLOWLOWERCASE|V_USERHUDTRANS|V_SNAPTOLEFT|V_SNAPTOBOTTOM,
 		va(
 			//shitty ik lol
-			(withincap ? "(\x86%d.%02ds,\x82 %.2f mb\x86)" : "(\x86%d.%02ds, %.2f mb)"),
+			(withincap ? "\x86(%d.%02ds,\x82 %.2f mb\x86)" : "\x86(%d.%02ds, %.2f mb)"),
 			
 			G_TicsToSeconds(gif_frames),
 			G_TicsToCentiseconds(gif_frames),
