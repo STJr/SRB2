@@ -266,9 +266,9 @@ static void RemoveAck(INT32 i)
 }
 
 // We have got a packet, proceed the ack request and ack return
-static int Processackpak(void)
+static boolean Processackpak(void)
 {
-	int goodpacket = 0;
+	boolean goodpacket = true;
 	node_t *node = &nodes[doomcom->remotenode];
 
 	// Received an ack return, so remove the ack in the list
@@ -291,17 +291,9 @@ static int Processackpak(void)
 		getackpacket++;
 		if (cmpack(ack, node->firstacktosend) <= 0)
 		{
-			UINT8 newhead = (UINT8)((node->acktosend_head+1) % MAXACKTOSEND);
 			DEBFILE(va("Discard(1) ack %d (duplicated)\n", ack));
-			if (newhead != node->acktosend_tail)
-			{
-				// push the ack back onto the acktosend list to make sure it's responded to
-				node->acktosend[node->acktosend_head] = ack;
-				node->acktosend_head = newhead;
-			}
-
 			duppacket++;
-			goodpacket = 1; // Discard packet (duplicate)
+			goodpacket = false; // Discard packet (duplicate)
 		}
 		else
 		{
@@ -311,10 +303,10 @@ static int Processackpak(void)
 				{
 					DEBFILE(va("Discard(2) ack %d (duplicated)\n", ack));
 					duppacket++;
-					goodpacket = 1; // Discard packet (duplicate)
+					goodpacket = false; // Discard packet (duplicate)
 					break;
 				}
-			if (goodpacket == 0)
+			if (goodpacket)
 			{
 				// Is a good packet so increment the acknowledge number,
 				// Then search for a "hole" in the queue
@@ -375,13 +367,12 @@ static int Processackpak(void)
 					else // Buffer full discard packet, sender will resend it
 					{ // We can admit the packet but we will not detect the duplication after :(
 						DEBFILE("no more freeackret\n");
-						goodpacket = 2;
+						goodpacket = false;
 					}
 				}
 			}
 		}
 	}
-	// return values: 0 = ok, 1 = duplicate, 2 = out of order
 	return goodpacket;
 }
 
@@ -559,6 +550,7 @@ void Net_WaitAllAckReceived(UINT32 timeout)
 static void InitNode(node_t *node)
 {
 	node->acktosend_head = node->acktosend_tail = 0;
+	memset(node->acktosend, 0, sizeof(node->acktosend));
 	node->firstacktosend = 0;
 	node->nextacknum = 1;
 	node->remotefirstack = 0;
@@ -1023,7 +1015,6 @@ boolean HGetPacket(void)
 	while(true)
 	{
 		//nodejustjoined = I_NetGet();
-		int goodpacket;
 		I_NetGet();
 
 		if (doomcom->remotenode == -1) // No packet received
@@ -1069,15 +1060,8 @@ boolean HGetPacket(void)
 		}*/
 
 		// Proceed the ack and ackreturn field
-		goodpacket = Processackpak();
-		if (goodpacket != 0)
-		{
-			// resend the ACK in case the previous ACK didn't reach the client.
-			// prevents the client's netbuffer from locking up.
-			if (goodpacket == 1)
-				Net_SendAcks(doomcom->remotenode);
+		if (!Processackpak())
 			continue; // discarded (duplicated)
-		}
 
 		// A packet with just ackreturn
 		if (netbuffer->packettype == PT_NOTHING)
