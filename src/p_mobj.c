@@ -13159,30 +13159,28 @@ static boolean P_SetupSpawnedMapThing(mapthing_t *mthing, mobj_t *mobj, boolean 
 	break;
 	case MT_SSZTREE:
 	{ // Spawn the branches
-		angle_t mobjangle = FixedAngle((mthing->angle % 113) << FRACBITS);
-		mobj_t *branch = P_SpawnMobjFromMobj(mobj, FRACUNIT, 0, 0, MT_SSZTREE_BRANCH);
-		if (!P_MobjWasRemoved(branch))
-			branch->angle = mobjangle + ANGLE_22h;
-		branch = P_SpawnMobjFromMobj(mobj, 0, FRACUNIT, 0, MT_SSZTREE_BRANCH);
-		if (!P_MobjWasRemoved(branch))
-			branch->angle = mobjangle + ANGLE_157h;
-		branch = P_SpawnMobjFromMobj(mobj, -FRACUNIT, 0, 0, MT_SSZTREE_BRANCH);
-		if (!P_MobjWasRemoved(branch))
-			branch->angle = mobjangle + ANGLE_270;
+		INT32 i;
+		mobj_t *branch;
+		for (i = 0; i < 5; i++)
+		{
+			branch = P_SpawnMobjFromMobj(mobj, 0, 0, 0, MT_SSZTREE_BRANCH);
+			if (P_MobjWasRemoved(branch))
+				continue;
+			branch->angle = mobj->angle + FixedAngle(i*72*FRACUNIT);
+		}
 	}
 	break;
 	case MT_SSZTREE2:
 	{ // Spawn the branches
-		angle_t mobjangle = FixedAngle((mthing->angle % 113) << FRACBITS);
-		mobj_t *branch = P_SpawnMobjFromMobj(mobj, FRACUNIT, 0, 0, MT_SSZTREE2_BRANCH);
-		if (!P_MobjWasRemoved(branch))
-			branch->angle = mobjangle + ANGLE_22h;
-		branch = P_SpawnMobjFromMobj(mobj, 0, FRACUNIT, 0, MT_SSZTREE2_BRANCH);
-		if (!P_MobjWasRemoved(branch))
-			branch->angle = mobjangle + ANGLE_157h;
-		branch = P_SpawnMobjFromMobj(mobj, -FRACUNIT, 0, 0, MT_SSZTREE2_BRANCH);
-		if (!P_MobjWasRemoved(branch))
-			branch->angle = mobjangle + ANGLE_270;
+		INT32 i;
+		mobj_t *branch;
+		for (i = 0; i < 5; i++)
+		{
+			branch = P_SpawnMobjFromMobj(mobj, 0, 0, 0, MT_SSZTREE2_BRANCH);
+			if (P_MobjWasRemoved(branch))
+				continue;
+			branch->angle = mobj->angle + FixedAngle(i*72*FRACUNIT);
+		}
 	}
 	break;
 	case MT_HHZTREE_TOP:
