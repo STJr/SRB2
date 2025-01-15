@@ -204,11 +204,11 @@ static CV_PossibleValue_t matchboxes_cons_t[] = {{0, "Normal"}, {1, "Mystery"}, 
 
 static CV_PossibleValue_t chances_cons_t[] = {{0, "MIN"}, {9, "MAX"}, {0, NULL}};
 static CV_PossibleValue_t pause_cons_t[] = {{0, "Server"}, {1, "All"}, {0, NULL}};
-static CV_PossibleValue_t devmode_cons_t[] = {{0, "MIN"}, {16383, "MAX"}};
 
 consvar_t cv_showinputjoy = CVAR_INIT ("showinputjoy", "Off", CV_ALLOWLUA, CV_OnOff, NULL);
 
 #ifdef NETGAME_DEVMODE
+static CV_PossibleValue_t devmode_cons_t[] = {{0, "MIN"}, {16383, "MAX"}};
 static consvar_t cv_fishcake = CVAR_INIT ("fishcake", "0", CV_CALL|CV_NOSHOWHELP|CV_RESTRICT, devmode_cons_t, Fishcake_OnChange);
 #endif
 static consvar_t cv_dummyconsvar = CVAR_INIT ("dummyconsvar", "Off", CV_CALL|CV_NOSHOWHELP, CV_OnOff, DummyConsvar_OnChange);
@@ -697,6 +697,7 @@ void D_RegisterClientCommands(void)
 	CV_RegisterVar(&cv_gif_downscale);
 	CV_RegisterVar(&cv_gif_dynamicdelay);
 	CV_RegisterVar(&cv_gif_localcolortable);
+	CV_RegisterVar(&cv_gif_maxsize);
 
 	// register these so it is saved to config
 	CV_RegisterVar(&cv_playername);

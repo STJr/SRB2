@@ -29,6 +29,7 @@ INT32 GIF_ReturnFramesBecauseImGoodAtC(void);
 long int GIF_ReturnSizeBecauseImTooGoodAtC(void);
 #endif
 
-extern consvar_t cv_gif_optimize, cv_gif_downscale, cv_gif_dynamicdelay, cv_gif_localcolortable;
+extern consvar_t cv_gif_optimize, cv_gif_downscale, cv_gif_dynamicdelay, cv_gif_localcolortable, cv_gif_maxsize;
+extern CV_PossibleValue_t gif_maxsize_cons_t[];
 
 #endif

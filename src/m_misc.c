@@ -1264,7 +1264,22 @@ void M_SaveFrame(void)
 			takescreenshot = true;
 			return;
 		case MM_GIF:
+
+			long int old_size = GIF_ReturnSizeBecauseImTooGoodAtC();
 			GIF_frame();
+
+			if (cv_gif_maxsize.value != 0)
+			{
+				long int cur_size = GIF_ReturnSizeBecauseImTooGoodAtC();
+				long int diff = (cur_size - old_size)*8;
+
+				if (cur_size >= (cv_gif_maxsize.value*1028*1028) - diff)
+				{
+					CONS_Alert(CONS_NOTICE, M_GetText("Max movie size reached\n"));
+					M_StopMovie();
+				}
+			}
+
 			return;
 		case MM_APNG:
 #ifdef USE_APNG

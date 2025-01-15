@@ -2913,7 +2913,9 @@ void ST_ReallyCoolAndUsefulGIFDrawer(void)
 	//the number of frames we wrote should be equivilant to the number of tics
 	//we recorded
 	INT32 gif_frames = GIF_ReturnFramesBecauseImGoodAtC();
-	long int gif_size = GIF_ReturnSizeBecauseImTooGoodAtC();
+
+	long int orig_gif_size = GIF_ReturnSizeBecauseImTooGoodAtC();
+	long int gif_size = orig_gif_size;
 	gif_size /= (1024);
 	gif_size = FixedDiv(gif_size<<FRACBITS, 1024<<FRACBITS); //gives us a close-enough calc
 
@@ -2923,8 +2925,17 @@ void ST_ReallyCoolAndUsefulGIFDrawer(void)
 		cmap|V_USERHUDTRANS|V_SNAPTOLEFT|V_SNAPTOBOTTOM, "REC"
 	);
 
+	boolean withincap = (cv_gif_maxsize.value != 0 ? (orig_gif_size >= (max(cv_gif_maxsize.value - 2, 0)*1028*1028)) : false);
+
 	V_DrawThinString(17, mheight,
-		V_GRAYMAP|V_ALLOWLOWERCASE|V_USERHUDTRANS|V_SNAPTOLEFT|V_SNAPTOBOTTOM,
-		va("(%d.%02ds, %.2f mb)",G_TicsToSeconds(gif_frames),G_TicsToCentiseconds(gif_frames), FIXED_TO_FLOAT(gif_size))
+		V_ALLOWLOWERCASE|V_USERHUDTRANS|V_SNAPTOLEFT|V_SNAPTOBOTTOM,
+		va(
+			//shitty ik lol
+			(withincap ? "(\x86%d.%02ds,\x82 %.2f mb\x86)" : "(\x86%d.%02ds, %.2f mb)"),
+			
+			G_TicsToSeconds(gif_frames),
+			G_TicsToCentiseconds(gif_frames),
+			FIXED_TO_FLOAT(gif_size)
+		)
 	);
 }

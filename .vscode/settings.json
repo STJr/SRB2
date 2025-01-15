@@ -3,6 +3,8 @@
         "am_map.h": "c",
         "v_video.h": "c",
         "lua_hud.h": "c",
-        "lua_hudlib_drawlist.h": "c"
+        "lua_hudlib_drawlist.h": "c",
+        "hw_main.h": "c",
+        "byteptr.h": "c"
     }
 }
