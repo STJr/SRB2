@@ -338,7 +338,7 @@ static void I_ReportSignal(int num, int coredumped)
 	const char *sigmsg, *signame;
 	char ttl[128];
 	char sigttl[512] = "Process killed by signal: ";
-	const char *reportmsg = "\n\nTo help us figure out the cause, you can visit our official Discord server\nwhere you will find more instructions on how to submit a crash report.\n\nSorry for the inconvenience!";
+	const char *reportmsg = "\n\nTo help us figure out the cause, you can visit the Takis Central Discord server\nwhere you will find more instructions on how to submit a crash report.\n\nSorry for the inconvenience!";
 
 	// will this work??? is this safe?? Who knows
 	if (moviemode)
@@ -421,7 +421,7 @@ static void I_ReportSignal(int num, int coredumped)
 
 #if SDL_VERSION_ATLEAST(2,0,14)
 	if (buttonid == 1)
-		SDL_OpenURL("https://www.srb2.org/discord");
+		SDL_OpenURL("https://discord.gg/aaY8p8nrBk");
 #endif
 }
 
