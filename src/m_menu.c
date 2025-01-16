@@ -1539,6 +1539,7 @@ static menuitem_t OP_ScreenshotOptionsMenu[] =
 	{IT_STRING|IT_CVAR, NULL, "Region Optimizing", &cv_gif_optimize,              100},
 	{IT_STRING|IT_CVAR, NULL, "Local Color Table", &cv_gif_localcolortable,       105},
 	{IT_STRING|IT_CVAR|IT_CV_SLIDER, NULL, "Max GIF Size (MB)",      &cv_gif_maxsize,  110},
+	{IT_STRING|IT_CVAR, NULL, "Keep recording when capped",      &cv_gif_rolling_buffer,  	  115},
 
 	{IT_STRING|IT_CVAR, NULL, "Downscaling",       &cv_apng_downscale,             95},
 	{IT_STRING|IT_CVAR, NULL, "Memory Level",      &cv_zlib_memorya,              100},
@@ -1555,9 +1556,9 @@ enum
 	op_movie_folder = 11,
 	op_screenshot_capture = 12,
 	op_screenshot_gif_start = 13,
-	op_screenshot_gif_end = 16,
-	op_screenshot_apng_start = 17,
-	op_screenshot_apng_end = 21,
+	op_screenshot_gif_end = 17,
+	op_screenshot_apng_start = 18,
+	op_screenshot_apng_end = 22,
 };
 
 static menuitem_t OP_EraseDataMenu[] =
