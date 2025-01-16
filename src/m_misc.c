@@ -1268,6 +1268,7 @@ void M_SaveFrame(void)
 			long int old_size = GIF_ReturnSizeBecauseImTooGoodAtC();
 			GIF_frame();
 
+			//GIF size cap
 			if (cv_gif_maxsize.value != 0)
 			{
 				long int cur_size = GIF_ReturnSizeBecauseImTooGoodAtC();
@@ -1275,8 +1276,16 @@ void M_SaveFrame(void)
 
 				if (cur_size >= (cv_gif_maxsize.value*1028*1028) - diff)
 				{
-					CONS_Alert(CONS_NOTICE, M_GetText("Max movie size reached\n"));
 					M_StopMovie();
+
+					//Keep rolling
+					if (cv_gif_rolling_buffer.value)
+					{
+						M_StartMovie();
+						return;
+					}
+
+					CONS_Alert(CONS_NOTICE, M_GetText("Max movie size reached\n"));
 				}
 			}
 
