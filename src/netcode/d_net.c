@@ -485,6 +485,13 @@ void Net_CloseConnection(INT32 node)
 
 	nodes[node].flags |= NF_CLOSE;
 
+	if (server)
+	{
+		// send a PT_NOTHING back to acknowledge the packet
+		netbuffer->packettype = PT_NOTHING;
+		HSendPacket(node, false, 0, 0);
+	}
+
 	// check if we are waiting for an ack from this node
 	for (INT32 i = 0; i < MAXACKPACKETS; i++)
 		if (ackpak[i].acknum && ackpak[i].destinationnode == node)
