@@ -109,6 +109,7 @@ typedef union
 		UINT16 *color[MAXPLAYERS]; // Winner's color #
 		boolean spectator[MAXPLAYERS]; // Spectator list
 		UINT8 *character[MAXPLAYERS]; // Winner's character #
+		INT32 ctfteam[MAXPLAYERS]; // Winner's ctfteam #
 		INT32 num[MAXPLAYERS]; // Winner's player #
 		char *name[MAXPLAYERS]; // Winner's name
 		patch_t *result; // RESULT
@@ -849,7 +850,7 @@ void Y_IntermissionDrawer(void)
 			{
 				UINT8 *colormap = R_GetTranslationColormap(*data.match.character[i], *data.match.color[i], GTC_CACHE);
 
-				if (*data.match.color[i] == SKINCOLOR_RED) //red
+				if (data.match.ctfteam[i] == 1) //red
 				{
 					if (redplayers++ > 9)
 						continue;
@@ -857,7 +858,7 @@ void Y_IntermissionDrawer(void)
 					y = (redplayers * 16) + 32;
 					V_DrawCenteredString(x+6, y, 0, va("%d", redplayers));
 				}
-				else if (*data.match.color[i] == SKINCOLOR_BLUE) //blue
+				else if (data.match.ctfteam[i] == 2) //blue
 				{
 					if (blueplayers++ > 9)
 						continue;
@@ -1687,6 +1688,7 @@ static void Y_CalculateTimeRaceWinners(void)
 
 			if (players[i].realtime <= data.match.scores[data.match.numplayers] && completed[i] == false)
 			{
+				data.match.ctfteam[data.match.numplayers] = players[i].ctfteam;
 				data.match.scores[data.match.numplayers] = players[i].realtime;
 				data.match.color[data.match.numplayers] = &players[i].skincolor;
 				data.match.character[data.match.numplayers] = &players[i].skin;
