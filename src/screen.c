@@ -495,11 +495,9 @@ void SCR_ClosedCaptions(void)
 			basey -= 42;
 		else if (splitscreen)
 			basey -= 8;
-		else if ((modeattacking == ATTACKING_NIGHTS)
-		|| (!(maptol & TOL_NIGHTS)
-		&& LUA_HudEnabled(hud_powerups)
+		else if (LUA_HudEnabled(hud_powerups)
 		&& ((cv_powerupdisplay.value == 2) // "Always"
-		 || (cv_powerupdisplay.value == 1 && !camera.chase)))) // "First-person only"
+		 || (cv_powerupdisplay.value == 1 && !camera.chase))) // "First-person only"
 			basey -= 16;
 	}
 

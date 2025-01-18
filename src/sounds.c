@@ -284,6 +284,8 @@ sfxinfo_t S_sfx[NUMSFX] =
   {"mario8", false,  48, SF_X4AWAYSOUND,     -1, NULL, 0, -1, -1, LUMPERROR, "Hurt"},
   {"mario9",  true, 120, 0,                  -1, NULL, 0, -1, -1, LUMPERROR, "Emerging power-up"},
   {"marioa",  true, 192, 0,                  -1, NULL, 0, -1, -1, LUMPERROR, "One-up"},
+  {"mariob",  true, 127, 0,                  -1, NULL, 0, -1, -1, LUMPERROR, "Spring"},
+  {"marioc",  true, 127, 0,                  -1, NULL, 0, -1, -1, LUMPERROR, "Crumbling"},
   {"thwomp",  true, 127, SF_X4AWAYSOUND,     -1, NULL, 0, -1, -1, LUMPERROR, "Thwomp"},
 
   // Black Eggman
