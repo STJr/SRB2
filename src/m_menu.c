@@ -14418,6 +14418,7 @@ static INT32 quitsounds[] =
 };
 
 const char *QuitScreenMessages[3] = {
+	(
 	"Design and content in\n"
 	"SRB2 is copyright\n"
 	"1998-2025 by STJr. All\n"
@@ -14430,13 +14431,17 @@ const char *QuitScreenMessages[3] = {
 	"make no profit\n"
 	"whatsoever (in\n"
 	"fact, we lose\n"
-	"money).\n"
-	,
+	"money)."
+	),
 
-	"THIS GAME SHOULD NOT BE SOLD!",
+	(
+	"THIS GAME SHOULD NOT BE SOLD!"
+	),
 
+	(
 	"STJr is in no way affiliated\n"
-	"with SEGA or Sonic Team.\n"
+	"with SEGA or Sonic Team."
+	)
 };
 
 void M_QuitResponse(INT32 ch)
