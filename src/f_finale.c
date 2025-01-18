@@ -1105,6 +1105,7 @@ static const char *credits[] = {
 	"Paul \"Boinciel\" Clempson",
 	"Sally \"TehRealSalt\" Cochenour",
 	"\"DaJumpJump\"", // New Ringslinger graphics (2.2.14)
+	"\"DeltaSanic\"",
 	"Desmond \"Blade\" DesJardins",
 	"Sherman \"CoatRack\" DesJardins",
 	"\"DirkTheHusky\"",
