@@ -8095,7 +8095,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		0,    			// mass
 		36*FRACUNIT,    // damage
 		sfx_None,       // activesound
-		MF_SOLID|MF_SPRING, // flags
+		MF_SOLID|MF_SPRING|MF_NOGRAVITY, // flags
 		S_HORIZYELLOWTRAMPOLINE2 // raisestate
 	},
 
@@ -8122,7 +8122,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		0,			    // mass
 		72*FRACUNIT,    // damage
 		sfx_None,       // activesound
-		MF_SOLID|MF_SPRING, // flags
+		MF_SOLID|MF_SPRING|MF_NOGRAVITY, // flags
 		S_HORIZREDTRAMPOLINE2 // raisestate
 	},
 
@@ -8149,7 +8149,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		0,   			// mass
 		18*FRACUNIT,    // damage
 		sfx_None,       // activesound
-		MF_SOLID|MF_SPRING, // flags
+		MF_SOLID|MF_SPRING|MF_NOGRAVITY, // flags
 		S_HORIZBLUETRAMPOLINE2 // raisestate
 	},
 
