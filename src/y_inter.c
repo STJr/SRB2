@@ -1623,6 +1623,7 @@ static void Y_CalculateMatchWinners(void)
 	boolean completed[MAXPLAYERS];
 
 	// Initialize variables
+	memset(data.match.ctfteam, 0, sizeof (data.match.ctfteam));
 	memset(data.match.scores, 0, sizeof (data.match.scores));
 	memset(data.match.color, 0, sizeof (data.match.color));
 	memset(data.match.character, 0, sizeof (data.match.character));
@@ -1643,8 +1644,15 @@ static void Y_CalculateMatchWinners(void)
 
 			if (players[i].score >= data.match.scores[data.match.numplayers] && completed[i] == false)
 			{
+				data.match.ctfteam[data.match.numplayers] = players[i].ctfteam;
 				data.match.scores[data.match.numplayers] = players[i].score;
 				data.match.color[data.match.numplayers] = &players[i].skincolor;
+				if (data.match.ctfteam[data.match.numplayers] == 1) // red team
+					data.match.color[data.match.numplayers] = &skincolor_redteam; 
+
+				if (data.match.ctfteam[data.match.numplayers] == 2) // blue team
+					data.match.color[data.match.numplayers] = &skincolor_blueteam;
+
 				data.match.character[data.match.numplayers] = &players[i].skin;
 				data.match.name[data.match.numplayers] = player_names[i];
 				data.match.spectator[data.match.numplayers] = players[i].spectator;
@@ -1688,7 +1696,6 @@ static void Y_CalculateTimeRaceWinners(void)
 
 			if (players[i].realtime <= data.match.scores[data.match.numplayers] && completed[i] == false)
 			{
-				data.match.ctfteam[data.match.numplayers] = players[i].ctfteam;
 				data.match.scores[data.match.numplayers] = players[i].realtime;
 				data.match.color[data.match.numplayers] = &players[i].skincolor;
 				data.match.character[data.match.numplayers] = &players[i].skin;
