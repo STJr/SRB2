@@ -527,7 +527,8 @@ void SCR_ClosedCaptions(void)
 			if (closedcaptions[i].b) // If the caption hasn't reached its final destination...
 			{
 				y -= closedcaptions[i].b * 4 * FRACUNIT; // ...move it per tic...
-				y += (rendertimefrac % FRACUNIT) * 4; // ...and interpolate it per frame
+				if (cv_consoleinterp.value)
+					y += (rendertimefrac % FRACUNIT) * 4; // ...and interpolate it per frame
 				// We have to modulo it by FRACUNIT, so that it won't be a tic ahead with interpolation disabled
 				// Unlike everything else, captions are (intentionally) interpolated from T to T+1 instead of T-1 to T
 			}

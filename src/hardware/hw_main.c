@@ -3082,7 +3082,6 @@ static void HWR_SplitSprite(gl_vissprite_t *spr)
 	// Let dispoffset work first since this adjust each vertex
 	HWR_RotateSpritePolyToAim(spr, baseWallVerts, false);
 
-
 	// push it toward the camera to mitigate floor-clipping sprites
 	{
 		float sprdist = sqrtf((spr->x1 - gl_viewx)*(spr->x1 - gl_viewx) + (spr->z1 - gl_viewy)*(spr->z1 - gl_viewy) + (spr->gzt - gl_viewz)*(spr->gzt - gl_viewz));

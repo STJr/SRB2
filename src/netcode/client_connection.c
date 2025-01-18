@@ -58,7 +58,7 @@ static void DrawConnectionStatusBox(void)
 	if (cl_mode == CL_CONFIRMCONNECT || IsDownloadingFile())
 		return;
 
-	V_DrawCenteredString(BASEVIDWIDTH/2, BASEVIDHEIGHT-16-16, V_YELLOWMAP, "Press ESC to abort");
+	V_DrawCenteredString(BASEVIDWIDTH/2, BASEVIDHEIGHT-16-16, V_YELLOWMAP|V_ALLOWLOWERCASE, "Press ESC to abort");
 }
 
 static void DrawFileProgress(fileneeded_t *file, int y)
@@ -132,7 +132,7 @@ static void CL_DrawConnectionStatus(void)
 				break;
 			case CL_ASKFULLFILELIST:
 			case CL_CHECKFILES:
-				cltext = M_GetText("Checking server addon list...");
+				cltext = M_GetText("!?!? Checking server addon list...");
 				break;
 			case CL_CONFIRMCONNECT:
 				cltext = "";
@@ -151,7 +151,7 @@ static void CL_DrawConnectionStatus(void)
 				cltext = M_GetText("Connecting to server...");
 				break;
 		}
-		V_DrawCenteredString(BASEVIDWIDTH/2, BASEVIDHEIGHT-16-24, V_YELLOWMAP, cltext);
+		V_DrawCenteredString(BASEVIDWIDTH/2, BASEVIDHEIGHT-16-24, V_YELLOWMAP|V_ALLOWLOWERCASE, cltext);
 	}
 	else
 	{
@@ -160,7 +160,7 @@ static void CL_DrawConnectionStatus(void)
 			INT32 totalfileslength;
 			INT32 loadcompletednum = 0;
 
-			V_DrawCenteredString(BASEVIDWIDTH/2, BASEVIDHEIGHT-16-16, V_YELLOWMAP, "Press ESC to abort");
+			V_DrawCenteredString(BASEVIDWIDTH/2, BASEVIDHEIGHT-16-16, V_YELLOWMAP|V_ALLOWLOWERCASE, "Press ESC to abort");
 
 			// ima just count files here
 			if (fileneeded)
@@ -178,6 +178,28 @@ static void CL_DrawConnectionStatus(void)
 			V_DrawFill(BASEVIDWIDTH/2-128, BASEVIDHEIGHT-16, totalfileslength, 8, 96);
 			V_DrawCenteredString(BASEVIDWIDTH/2, BASEVIDHEIGHT-16, V_20TRANS|V_MONOSPACE,
 				va(" %2u/%2u files",loadcompletednum,fileneedednum));
+		}
+		else if ((cl_mode == CL_CHECKFILES) || (cl_mode == CL_ASKFULLFILELIST))
+		{
+			INT32 totalfileslength;
+			INT32 checkcompletednum = 0;
+			INT32 i;
+			V_DrawCenteredString(BASEVIDWIDTH/2, BASEVIDHEIGHT-16-16, V_YELLOWMAP|V_ALLOWLOWERCASE, "Press ESC to abort");
+			//ima just count files here
+			if (fileneeded)
+			{
+				for (i = 0; i < fileneedednum; i++)
+					if (fileneeded[i].status != FS_NOTCHECKED)
+						checkcompletednum++;
+			}
+			// Check progress
+			V_DrawCenteredString(BASEVIDWIDTH/2, BASEVIDHEIGHT-16-24, V_YELLOWMAP|V_ALLOWLOWERCASE, "!!!! Checking server addon list...");
+			totalfileslength = (INT32)((checkcompletednum/(double)(fileneedednum)) * 256);
+			M_DrawTextBox(BASEVIDWIDTH/2-128-8, BASEVIDHEIGHT-16-8, 32, 1);
+			V_DrawFill(BASEVIDWIDTH/2-128, BASEVIDHEIGHT-16, 256, 8, 111);
+			V_DrawFill(BASEVIDWIDTH/2-128, BASEVIDHEIGHT-16, totalfileslength, 8, 96);
+			V_DrawCenteredString(BASEVIDWIDTH/2, BASEVIDHEIGHT-16, V_20TRANS|V_MONOSPACE|V_ALLOWLOWERCASE,
+				va(" %2u/%2u files",checkcompletednum,fileneedednum));
 		}
 		else if (filedownload.current != -1)
 		{

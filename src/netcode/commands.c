@@ -453,6 +453,9 @@ void Command_connect(void)
 			CONS_Alert(CONS_ERROR, M_GetText("There is no network driver\n"));
 	}
 
+	//get rid of the titlescreen menus when doing this
+	menuactive = false;
+
 	splitscreen = false;
 	SplitScreen_OnChange();
 	botingame = false;

@@ -11476,6 +11476,8 @@ void P_DoTailsOverlay(player_t *player, mobj_t *tails)
 	tails->old_scale = player->mo->old_scale;
 	tails->radius = player->mo->radius;
 	tails->height = player->mo->height;
+	tails->pitch = player->mo->pitch;
+	tails->roll = player->mo->roll;
 	zoffs = FixedMul(zoffs, tails->scale);
 
 	if (player->mo->eflags & MFE_VERTICALFLIP)

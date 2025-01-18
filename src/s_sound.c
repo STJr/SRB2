@@ -86,6 +86,7 @@ static void Captioning_OnChange(void)
 }
 
 consvar_t cv_closedcaptioning = CVAR_INIT ("closedcaptioning", "Off", CV_SAVE|CV_CALL, CV_OnOff, Captioning_OnChange);
+consvar_t cv_consoleinterp = CVAR_INIT ("mischudinterpolation", "Off", CV_SAVE, CV_OnOff, NULL);
 
 // number of channels available
 consvar_t cv_numChannels = CVAR_INIT ("snd_channels", "32", CV_SAVE|CV_CALL, CV_Unsigned, SetChannelsNum);
