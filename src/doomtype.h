@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -108,6 +108,7 @@ char *nongnu_strcasestr(const char *in, const char *what);
 
 int startswith (const char *base, const char *tag);
 int endswith (const char *base, const char *tag);
+char *xstrtok(char *line, const char *delims);
 
 #if defined (_WIN32) || defined (__HAIKU__)
 #define HAVE_DOSSTR_FUNCS

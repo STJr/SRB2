@@ -39,6 +39,7 @@ extern boolean deh_loaded;
 extern boolean gamedataadded;
 extern boolean titlechanged;
 extern boolean introchanged;
+extern boolean bootmapchanged;
 
 #define MAX_ACTION_RECURSION 30
 extern const char *luaactions[MAX_ACTION_RECURSION];
@@ -61,4 +62,5 @@ typedef struct
 #define myfeof(a) (a->data + a->size <= a->curpos)
 char *myfgets(char *buf, size_t bufsize, MYFILE *f);
 char *myhashfgets(char *buf, size_t bufsize, MYFILE *f);
+void ignorelinesuntilhash(MYFILE *f);
 #endif

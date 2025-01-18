@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -238,7 +238,7 @@ UINT32 S_GetMusicPosition(void);
 
 typedef struct musicstack_s
 {
-	char musname[7];
+	char musname[7+1];
 	UINT16 musflags;
 	boolean looping;
 	UINT32 position;

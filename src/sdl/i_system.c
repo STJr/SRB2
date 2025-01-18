@@ -5,7 +5,7 @@
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Portions Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 2014-2023 by Sonic Team Junior.
+// Copyright (C) 2014-2025 by Sonic Team Junior.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -78,10 +78,11 @@ typedef LPVOID (WINAPI *p_MapViewOfFile) (HANDLE, DWORD, DWORD, DWORD, SIZE_T);
 #include "SDL_cpuinfo.h"
 #define HAVE_SDLCPUINFO
 
-#if defined (__unix__) || defined(__APPLE__) || (defined (UNIXCOMMON) && !defined (__HAIKU__))
-#if defined (__linux__)
-#include <sys/vfs.h>
+#if defined (__unix__) || defined(__APPLE__) || defined (UNIXCOMMON)
+#if defined (__linux__) || defined (__HAIKU__)
+#include <sys/statvfs.h>
 #else
+#include <sys/statvfs.h>
 #include <sys/param.h>
 #include <sys/mount.h>
 /*For meminfo*/
@@ -94,7 +95,7 @@ typedef LPVOID (WINAPI *p_MapViewOfFile) (HANDLE, DWORD, DWORD, DWORD, SIZE_T);
 #endif
 #endif
 
-#if defined (__linux__) || (defined (UNIXCOMMON) && !defined (__HAIKU__))
+#if defined (__linux__) || defined (UNIXCOMMON)
 #ifndef NOTERMIOS
 #include <termios.h>
 #include <sys/ioctl.h> // ioctl
@@ -102,10 +103,16 @@ typedef LPVOID (WINAPI *p_MapViewOfFile) (HANDLE, DWORD, DWORD, DWORD, SIZE_T);
 #endif
 #endif
 
+#if defined(UNIXCOMMON)
+#include <poll.h>
+#endif
+
 #if defined (__unix__) || (defined (UNIXCOMMON) && !defined (__APPLE__))
 #include <errno.h>
 #include <sys/wait.h>
-//#define NEWSIGNALHANDLER
+#ifndef __HAIKU__ // haiku's crash dialog is just objectively better
+#define NEWSIGNALHANDLER
+#endif
 #endif
 
 #ifndef NOMUMBLE
@@ -189,12 +196,12 @@ static char returnWadPath[256];
 #include "../i_system.h"
 #include "../i_threads.h"
 #include "../screen.h" //vid.WndParent
-#include "../d_net.h"
+#include "../netcode/d_net.h"
+#include "../netcode/commands.h"
 #include "../g_game.h"
 #include "../filesrch.h"
 #include "endtxt.h"
 #include "sdlmain.h"
-#include "../m_anigif.h"
 
 #include "../i_joy.h"
 
@@ -211,9 +218,15 @@ static char returnWadPath[256];
 
 #if !defined(NOMUMBLE) && defined(HAVE_MUMBLE)
 // Mumble context string
-#include "../d_clisrv.h"
+#include "../netcode/d_clisrv.h"
 #include "../byteptr.h"
 #endif
+
+// A little more than the minimum sleep duration on Windows.
+// May be incorrect for other platforms, but we don't currently have a way to
+// query the scheduler granularity. SDL will do what's needed to make this as
+// low as possible though.
+#define MIN_SLEEP_DURATION_MS 2.1
 
 /**	\brief	The JoyReset function
 
@@ -261,75 +274,86 @@ SDL_bool framebuffer = SDL_FALSE;
 UINT8 keyboard_started = false;
 
 #ifdef UNIXBACKTRACE
-#define STDERR_WRITE(string) if (fd != -1) I_OutputMsg("%s", string)
-#define CRASHLOG_WRITE(string) if (fd != -1) junk = write(fd, string, strlen(string))
-#define CRASHLOG_STDERR_WRITE(string) \
-	if (fd != -1)\
-		junk = write(fd, string, strlen(string));\
-	I_OutputMsg("%s", string)
+
+static void bt_write_file(int fd, const char *string) {
+	ssize_t written = 0;
+	ssize_t sourcelen = strlen(string);
+
+	while (fd != -1 && (written != -1 && errno != EINTR) && written < sourcelen)
+		written = write(fd, string, sourcelen);
+}
+
+static void bt_write_stderr(const char *string) {
+	bt_write_file(STDERR_FILENO, string);
+}
+
+static void bt_write_all(int fd, const char *string) {
+	bt_write_file(fd, string);
+	bt_write_file(STDERR_FILENO, string);
+}
 
 static void write_backtrace(INT32 signal)
 {
 	int fd = -1;
-#ifndef NOEXECINFO
-	size_t size;
-#endif
 	time_t rawtime;
 	struct tm timeinfo;
-	ssize_t junk;
 
 	enum { BT_SIZE = 1024, STR_SIZE = 32 };
 #ifndef NOEXECINFO
-	void *array[BT_SIZE];
+	void *funcptrs[BT_SIZE];
+	size_t bt_size;
 #endif
 	char timestr[STR_SIZE];
 
-	const char *error = "An error occurred within SRB2! Send this stack trace to someone who can help!\n";
-	const char *error2 = "(Or find crash-log.txt in your SRB2 directory.)\n"; // Shown only to stderr.
+	const char *filename = va("%s" PATHSEP "%s", srb2home, "crash-log.txt");
 
-	fd = open(va("%s" PATHSEP "%s", srb2home, "crash-log.txt"), O_CREAT|O_APPEND|O_RDWR, S_IRUSR|S_IWUSR);
+	fd = open(filename, O_CREAT|O_APPEND|O_RDWR, S_IRUSR|S_IWUSR);
 
-	if (fd == -1)
-		I_OutputMsg("\nWARNING: Couldn't open crash log for writing! Make sure your permissions are correct. Please save the below report!\n");
+	if (fd == -1) // File handle error
+		bt_write_stderr("\nWARNING: Couldn't open crash log for writing! Make sure your permissions are correct. Please save the below report!\n");
 
 	// Get the current time as a string.
 	time(&rawtime);
 	localtime_r(&rawtime, &timeinfo);
 	strftime(timestr, STR_SIZE, "%a, %d %b %Y %T %z", &timeinfo);
 
-	CRASHLOG_WRITE("------------------------\n"); // Nice looking seperator
+	bt_write_file(fd, "------------------------\n"); // Nice looking seperator
 
-	CRASHLOG_STDERR_WRITE("\n"); // Newline to look nice for both outputs.
-	CRASHLOG_STDERR_WRITE(error); // "Oops, SRB2 crashed" message
-	STDERR_WRITE(error2); // Tell the user where the crash log is.
+	bt_write_all(fd, "\n"); // Newline to look nice for both outputs.
+	bt_write_all(fd, "An error occurred within SRB2! Send this stack trace to someone who can help!\n");
+
+	if (fd != -1) // If the crash log exists,
+		bt_write_stderr("(Or find crash-log.txt in your SRB2 directory.)\n"); // tell the user where the crash log is.
 
 	// Tell the log when we crashed.
-	CRASHLOG_WRITE("Time of crash: ");
-	CRASHLOG_WRITE(timestr);
-	CRASHLOG_WRITE("\n");
+	bt_write_file(fd, "Time of crash: ");
+	bt_write_file(fd, timestr);
+	bt_write_file(fd, "\n");
 
 	// Give the crash log the cause and a nice 'Backtrace:' thing
 	// The signal is given to the user when the parent process sees we crashed.
-	CRASHLOG_WRITE("Cause: ");
-	CRASHLOG_WRITE(strsignal(signal));
-	CRASHLOG_WRITE("\n"); // Newline for the signal name
+	bt_write_file(fd, "Cause: ");
+	bt_write_file(fd, strsignal(signal));
+	bt_write_file(fd, "\n"); // Newline for the signal name
 
-#ifndef NOEXECINFO
-	CRASHLOG_STDERR_WRITE("\nBacktrace:\n");
+#ifdef NOEXECINFO
+	bt_write_all(fd, "\nNo Backtrace support\n");
+#else
+	bt_write_all(fd, "\nBacktrace:\n");
 
 	// Flood the output and log with the backtrace
-	size = backtrace(array, BT_SIZE);
-	backtrace_symbols_fd(array, size, fd);
-	backtrace_symbols_fd(array, size, STDERR_FILENO);
+	bt_size = backtrace(funcptrs, BT_SIZE);
+	backtrace_symbols_fd(funcptrs, bt_size, fd);
+	backtrace_symbols_fd(funcptrs, bt_size, STDERR_FILENO);
 #endif
 
-	CRASHLOG_WRITE("\n"); // Write another newline to the log so it looks nice :)
-	(void)junk;
-	close(fd);
+	bt_write_file(fd, "\n"); // Write another newline to the log so it looks nice :)
+	if (fd != -1) {
+		fsync(fd); // reaaaaally make sure we got that data written.
+		close(fd);
+	}
 }
-#undef STDERR_WRITE
-#undef CRASHLOG_WRITE
-#undef CRASHLOG_STDERR_WRITE
+
 #endif // UNIXBACKTRACE
 
 static void I_ReportSignal(int num, int coredumped)
@@ -338,12 +362,8 @@ static void I_ReportSignal(int num, int coredumped)
 	const char *sigmsg, *signame;
 	char ttl[128];
 	char sigttl[512] = "Process killed by signal: ";
-	const char *reportmsg = "\n\nTo help us figure out the cause, you can visit the Takis Central Discord server\nwhere you will find more instructions on how to submit a crash report.\n\nSorry for the inconvenience!";
+	const char *reportmsg = "\n\nTo help us figure out the cause, you can visit our official Discord server\nwhere you will find more instructions on how to submit a crash report.\n\nSorry for the inconvenience!";
 
-	// will this work??? is this safe?? Who knows
-	if (moviemode)
-		M_StopMovie();
-	
 	switch (num)
 	{
 //	case SIGINT:
@@ -421,7 +441,7 @@ static void I_ReportSignal(int num, int coredumped)
 
 #if SDL_VERSION_ATLEAST(2,0,14)
 	if (buttonid == 1)
-		SDL_OpenURL("https://discord.gg/aaY8p8nrBk");
+		SDL_OpenURL("https://www.srb2.org/discord");
 #endif
 }
 
@@ -460,10 +480,9 @@ typedef struct
 
 feild_t tty_con;
 
-// when printing general stuff to stdout stderr (Sys_Printf)
-//   we need to disable the tty console stuff
-// this increments so we can recursively disable
-static INT32 ttycon_hide = 0;
+// lock to prevent clearing partial lines, since not everything
+// printed ends on a newline.
+static boolean ttycon_ateol = true;
 // some key codes that the terminal may be using
 // TTimo NOTE: I'm not sure how relevant this is
 static INT32 tty_erase;
@@ -491,63 +510,31 @@ static inline void tty_FlushIn(void)
 // TTimo NOTE: it seems on some terminals just sending '\b' is not enough
 //   so for now, in any case we send "\b \b" .. yeah well ..
 //   (there may be a way to find out if '\b' alone would work though)
+// Hanicef NOTE: using \b this way is unreliable because of terminal state,
+//   it's better to use \r to reset the cursor to the beginning of the
+//   line and clear from there.
 static void tty_Back(void)
 {
-	char key;
-	ssize_t d;
-	key = '\b';
-	d = write(STDOUT_FILENO, &key, 1);
-	key = ' ';
-	d = write(STDOUT_FILENO, &key, 1);
-	key = '\b';
-	d = write(STDOUT_FILENO, &key, 1);
-	(void)d;
+	write(STDOUT_FILENO, "\r", 1);
+	if (tty_con.cursor>0)
+	{
+		write(STDOUT_FILENO, tty_con.buffer, tty_con.cursor);
+	}
+	write(STDOUT_FILENO, " \b", 2);
 }
 
 static void tty_Clear(void)
 {
 	size_t i;
+	write(STDOUT_FILENO, "\r", 1);
 	if (tty_con.cursor>0)
 	{
 		for (i=0; i<tty_con.cursor; i++)
 		{
-			tty_Back();
+			write(STDOUT_FILENO, " ", 1);
 		}
+		write(STDOUT_FILENO, "\r", 1);
 	}
-
-}
-
-// clear the display of the line currently edited
-// bring cursor back to beginning of line
-static inline void tty_Hide(void)
-{
-	//I_Assert(consolevent);
-	if (ttycon_hide)
-	{
-		ttycon_hide++;
-		return;
-	}
-	tty_Clear();
-	ttycon_hide++;
-}
-
-// show the current line
-// FIXME TTimo need to position the cursor if needed??
-static inline void tty_Show(void)
-{
-	size_t i;
-	ssize_t d;
-	//I_Assert(consolevent);
-	I_Assert(ttycon_hide>0);
-	ttycon_hide--;
-	if (ttycon_hide == 0 && tty_con.cursor)
-	{
-		for (i=0; i<tty_con.cursor; i++)
-		{
-			d = write(STDOUT_FILENO, tty_con.buffer+i, 1);
-		}
-	}
-	(void)d;
 }
 
 // never exit without calling this, or your terminal will be left in a pretty bad state
@@ -614,49 +601,65 @@ void I_GetConsoleEvents(void)
 	// we use this when sending back commands
 	event_t ev = {0};
 	char key = 0;
-	ssize_t d;
+	struct pollfd pfd =
+	{
+		.fd = STDIN_FILENO,
+		.events = POLLIN,
+		.revents = 0,
+	};
 
 	if (!consolevent)
 		return;
 
-	ev.type = ev_console;
-	if (read(STDIN_FILENO, &key, 1) == -1 || !key)
-		return;
+	for (;;)
+	{
+		if (poll(&pfd, 1, 0) < 1 || !(pfd.revents & POLLIN))
+			return;
 
-	// we have something
-	// backspace?
-	// NOTE TTimo testing a lot of values .. seems it's the only way to get it to work everywhere
-	if ((key == tty_erase) || (key == 127) || (key == 8))
-	{
-		if (tty_con.cursor > 0)
+		ev.type = ev_console;
+		ev.key = 0;
+		if (read(STDIN_FILENO, &key, 1) == -1 || !key)
+			return;
+
+		// we have something
+		// backspace?
+		// NOTE TTimo testing a lot of values .. seems it's the only way to get it to work everywhere
+		if ((key == tty_erase) || (key == 127) || (key == 8))
 		{
-			tty_con.cursor--;
-			tty_con.buffer[tty_con.cursor] = '\0';
-			tty_Back();
+			if (tty_con.cursor > 0)
+			{
+				tty_con.cursor--;
+				tty_con.buffer[tty_con.cursor] = '\0';
+				tty_Back();
+			}
+			ev.key = KEY_BACKSPACE;
 		}
-		ev.key = KEY_BACKSPACE;
-	}
-	else if (key < ' ') // check if this is a control char
-	{
-		if (key == '\n')
+		else if (key < ' ') // check if this is a control char
 		{
-			tty_Clear();
-			tty_con.cursor = 0;
-			ev.key = KEY_ENTER;
+			if (key == '\n')
+			{
+				tty_Clear();
+				tty_con.cursor = 0;
+				ev.key = KEY_ENTER;
+			}
+			else if (key == 0x4) // ^D, aka EOF
+			{
+				// shut down, most unix programs behave this way
+				I_Quit();
+			}
+			else continue;
 		}
-		else return;
+		else if (tty_con.cursor < sizeof (tty_con.buffer))
+		{
+			// push regular character
+			ev.key = tty_con.buffer[tty_con.cursor] = key;
+			tty_con.cursor++;
+			// print the current line (this is differential)
+			write(STDOUT_FILENO, &key, 1);
+		}
+		if (ev.key) D_PostEvent(&ev);
+		//tty_FlushIn();
 	}
-	else
-	{
-		// push regular character
-		ev.key = tty_con.buffer[tty_con.cursor] = key;
-		tty_con.cursor++;
-		// print the current line (this is differential)
-		d = write(STDOUT_FILENO, &key, 1);
-	}
-	if (ev.key) D_PostEvent(&ev);
-	//tty_FlushIn();
-	(void)d;
 }
 
 #elif defined (_WIN32)
@@ -851,9 +854,16 @@ static void I_RegisterChildSignals(void)
 void I_OutputMsg(const char *fmt, ...)
 {
 	size_t len;
-	char txt[8192];
+	char *txt;
 	va_list  argptr;
 
+	va_start(argptr,fmt);
+	len = vsnprintf(NULL, 0, fmt, argptr);
+	va_end(argptr);
+	if (len == 0)
+		return;
+
+	txt = malloc(len+1);
 	va_start(argptr,fmt);
 	vsprintf(txt, fmt, argptr);
 	va_end(argptr);
@@ -887,7 +897,10 @@ void I_OutputMsg(const char *fmt, ...)
 		DWORD bytesWritten;
 
 		if (co == INVALID_HANDLE_VALUE)
+		{
+			free(txt);
 			return;
+		}
 
 		if (GetFileType(co) == FILE_TYPE_CHAR && GetConsoleMode(co, &bytesWritten))
 		{
@@ -903,11 +916,16 @@ void I_OutputMsg(const char *fmt, ...)
 			if (oldLength > 0)
 			{
 				LPVOID blank = malloc(oldLength);
-				if (!blank) return;
+				if (!blank)
+				{
+					free(txt);
+					return;
+				}
 				memset(blank, ' ', oldLength); // Blank out.
 				oldLines = malloc(oldLength*sizeof(TCHAR));
 				if (!oldLines)
 				{
+					free(txt);
 					free(blank);
 					return;
 				}
@@ -942,18 +960,20 @@ void I_OutputMsg(const char *fmt, ...)
 	}
 #else
 #ifdef HAVE_TERMIOS
-	if (consolevent)
+	if (consolevent && ttycon_ateol)
 	{
-		tty_Hide();
+		tty_Clear();
+		ttycon_ateol = false;
 	}
 #endif
 
 	if (!framebuffer)
 		fprintf(stderr, "%s", txt);
 #ifdef HAVE_TERMIOS
-	if (consolevent)
+	if (consolevent && txt[len-1] == '\n')
 	{
-		tty_Show();
+		write(STDOUT_FILENO, tty_con.buffer, tty_con.cursor);
+		ttycon_ateol = true;
 	}
 #endif
 
@@ -962,6 +982,7 @@ void I_OutputMsg(const char *fmt, ...)
 		fflush(stderr);
 
 #endif
+	free(txt);
 }
 
 //
@@ -1697,7 +1718,7 @@ const char *I_GetJoyName(INT32 joyindex)
 	{
 		tempname = SDL_JoystickNameForIndex(joyindex);
 		if (tempname)
-			strncpy(joyname, tempname, 255);
+			strncpy(joyname, tempname, sizeof(joyname)-1);
 	}
 	return joyname;
 }
@@ -2277,6 +2298,61 @@ void I_Sleep(UINT32 ms)
 	SDL_Delay(ms);
 }
 
+void I_SleepDuration(precise_t duration)
+{
+#if defined(__linux__) || defined(__FreeBSD__) || defined(__HAIKU__)
+	UINT64 precision = I_GetPrecisePrecision();
+	precise_t dest = I_GetPreciseTime() + duration;
+	precise_t slack = (precision / 5000); // 0.2 ms slack
+	if (duration > slack)
+	{
+		duration -= slack;
+		struct timespec ts = {
+			.tv_sec = duration / precision,
+			.tv_nsec = duration * 1000000000 / precision % 1000000000,
+		};
+		int status;
+		do status = clock_nanosleep(CLOCK_MONOTONIC, 0, &ts, &ts);
+		while (status == EINTR);
+	}
+
+	// busy-wait the rest
+	while (((INT64)dest - (INT64)I_GetPreciseTime()) > 0);
+#elif defined (MIN_SLEEP_DURATION_MS)
+	UINT64 precision = I_GetPrecisePrecision();
+	INT32 sleepvalue = cv_sleep.value;
+	UINT64 delaygranularity;
+	precise_t cur;
+	precise_t dest;
+
+	{
+		double gran = round(((double)(precision / 1000) * sleepvalue * MIN_SLEEP_DURATION_MS));
+		delaygranularity = (UINT64)gran;
+	}
+
+	cur = I_GetPreciseTime();
+	dest = cur + duration;
+
+	// the reason this is not dest > cur is because the precise counter may wrap
+	// two's complement arithmetic is our friend here, though!
+	// e.g. cur 0xFFFFFFFFFFFFFFFE = -2, dest 0x0000000000000001 = 1
+	// 0x0000000000000001 - 0xFFFFFFFFFFFFFFFE = 3
+	while ((INT64)(dest - cur) > 0)
+	{
+		// If our cv_sleep value exceeds the remaining sleep duration, use the
+		// hard sleep function.
+		if (sleepvalue > 0 && (dest - cur) > delaygranularity)
+		{
+			I_Sleep(sleepvalue);
+		}
+
+		// Otherwise, this is a spinloop.
+
+		cur = I_GetPreciseTime();
+	}
+#endif
+}
+
 #ifdef NEWSIGNALHANDLER
 ATTRNORETURN static FUNCNORETURN void newsignalhandler_Warn(const char *pr)
 {
@@ -2400,9 +2476,7 @@ void I_Quit(void)
 	SDLforceUngrabMouse();
 	quiting = SDL_FALSE;
 	M_SaveConfig(NULL); //save game config, cvars..
-#ifndef NONET
 	D_SaveBan(); // save the ban list
-#endif
 	G_SaveGameData(clientGamedata); // Tails 12-08-2002
 	//added:16-02-98: when recording a demo, should exit using 'q' key,
 	//        but sometimes we forget and use 'F10'.. so save here too.
@@ -2411,9 +2485,7 @@ void I_Quit(void)
 		G_CheckDemoStatus();
 	if (metalrecording)
 		G_StopMetalRecording(false);
-	if (moviemode)
-		M_StopMovie();
-		
+
 	D_QuitNetGame();
 	CL_AbortDownloadResume();
 	M_FreePlayerSetupColors();
@@ -2519,9 +2591,7 @@ void I_Error(const char *error, ...)
 	// ---
 
 	M_SaveConfig(NULL); // save game config, cvars..
-#ifndef NONET
 	D_SaveBan(); // save the ban list
-#endif
 	G_SaveGameData(clientGamedata); // Tails 12-08-2002
 
 	// Shutdown. Here might be other errors.
@@ -2529,8 +2599,6 @@ void I_Error(const char *error, ...)
 		G_CheckDemoStatus();
 	if (metalrecording)
 		G_StopMetalRecording(false);
-	if (moviemode)
-		M_StopMovie();
 
 	D_QuitNetGame();
 	CL_AbortDownloadResume();
@@ -2688,18 +2756,13 @@ void I_ShutdownSystem(void)
 void I_GetDiskFreeSpace(INT64 *freespace)
 {
 #if defined (__unix__) || defined(__APPLE__) || defined (UNIXCOMMON)
-#if defined (SOLARIS) || defined (__HAIKU__)
-	*freespace = INT32_MAX;
-	return;
-#else // Both Linux and BSD have this, apparently.
-	struct statfs stfs;
-	if (statfs(srb2home, &stfs) == -1)
+	struct statvfs stfs;
+	if (statvfs(srb2home, &stfs) == -1)
 	{
 		*freespace = INT32_MAX;
 		return;
 	}
 	*freespace = stfs.f_bavail * stfs.f_bsize;
-#endif
 #elif defined (_WIN32)
 	static p_GetDiskFreeSpaceExA pfnGetDiskFreeSpaceEx = NULL;
 	static boolean testwin95 = false;
@@ -2802,7 +2865,7 @@ size_t I_GetRandomBytes(char *destination, size_t count)
 {
 #if defined (__unix__) || defined (UNIXCOMMON) || defined(__APPLE__)
 	FILE *rndsource;
-	size_t actual_bytes;
+	size_t actual_bytes = 0;
 
 	if (!(rndsource = fopen("/dev/urandom", "r")))
 		if (!(rndsource = fopen("/dev/random", "r")))
@@ -2921,7 +2984,7 @@ static void pathonly(char *s)
 */
 static const char *searchWad(const char *searchDir)
 {
-	static char tempsw[256] = "";
+	static char tempsw[MAX_WADPATH] = "";
 	filestatus_t fstemp;
 
 	strcpy(tempsw, WADKEYWORD1);
@@ -2937,8 +3000,8 @@ static const char *searchWad(const char *searchDir)
 
 #define CHECKWADPATH(ret) \
 do { \
-	I_OutputMsg(",%s", returnWadPath); \
-	if (isWadPathOk(returnWadPath)) \
+	I_OutputMsg(",%s", ret); \
+	if (isWadPathOk(ret)) \
 		return ret; \
 } while (0)
 
@@ -2967,7 +3030,9 @@ static const char *locateWad(void)
 #ifndef NOCWD
 	// examine current dir
 	strcpy(returnWadPath, ".");
-	CHECKWADPATH(NULL);
+	I_OutputMsg(",%s", returnWadPath);
+	if (isWadPathOk(returnWadPath))
+		return NULL;
 #endif
 
 #ifdef __APPLE__
@@ -2984,9 +3049,16 @@ static const char *locateWad(void)
 
 #ifndef NOHOME
 	// find in $HOME
-	I_OutputMsg(",HOME");
+	I_OutputMsg(",HOME/" DEFAULTDIR);
 	if ((envstr = I_GetEnv("HOME")) != NULL)
-		SEARCHWAD(envstr);
+	{
+		char *tmp = malloc(strlen(envstr) + 1 + sizeof(DEFAULTDIR));
+		strcpy(tmp, envstr);
+		strcat(tmp, "/");
+		strcat(tmp, DEFAULTDIR);
+		CHECKWADPATH(tmp);
+		free(tmp);
+	}
 #endif
 
 	// search paths
@@ -3012,8 +3084,10 @@ const char *I_LocateWad(void)
 	{
 		// change to the directory where we found srb2.pk3
 #if defined (_WIN32)
+		waddir = _fullpath(NULL, waddir, MAX_PATH);
 		SetCurrentDirectoryA(waddir);
 #else
+		waddir = realpath(waddir, NULL);
 		if (chdir(waddir) == -1)
 			I_OutputMsg("Couldn't change working directory\n");
 #endif
@@ -3214,4 +3288,24 @@ const CPUInfoFlags *I_CPUInfo(void)
 
 // note CPUAFFINITY code used to reside here
 void I_RegisterSysCommands(void) {}
+
+const char *I_GetSysName(void)
+{
+	return SDL_GetPlatform();
+}
+
+
+void I_SetTextInputMode(boolean active)
+{
+	if (active)
+		SDL_StartTextInput();
+	else
+		SDL_StopTextInput();
+}
+
+boolean I_GetTextInputMode(void)
+{
+	return SDL_IsTextInputActive();
+}
+
 #endif

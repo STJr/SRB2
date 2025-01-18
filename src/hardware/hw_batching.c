@@ -1,6 +1,6 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
-// Copyright (C) 2020-2023 by Sonic Team Junior.
+// Copyright (C) 2020-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -76,7 +76,7 @@ void HWR_SetCurrentTexture(GLMipmap_t *texture)
 // If batching is enabled, this function collects the polygon data and the chosen texture
 // for later use in HWR_RenderBatches. Otherwise the rendering backend is used to
 // render the polygon immediately.
-void HWR_ProcessPolygon(FSurfaceInfo *pSurf, FOutVector *pOutVerts, FUINT iNumPts, FBITFIELD PolyFlags, int shader, boolean horizonSpecial)
+void HWR_ProcessPolygon(FSurfaceInfo *pSurf, FOutVector *pOutVerts, FUINT iNumPts, FBITFIELD PolyFlags, int shader_target, boolean horizonSpecial)
 {
     if (currently_batching)
 	{
@@ -114,19 +114,46 @@ void HWR_ProcessPolygon(FSurfaceInfo *pSurf, FOutVector *pOutVerts, FUINT iNumPt
 		polygonArray[polygonArraySize].numVerts = iNumPts;
 		polygonArray[polygonArraySize].polyFlags = PolyFlags;
 		polygonArray[polygonArraySize].texture = current_texture;
-		polygonArray[polygonArraySize].shader = shader;
+		polygonArray[polygonArraySize].shader = (shader_target != SHADER_NONE) ? HWR_GetShaderFromTarget(shader_target) : shader_target;
 		polygonArray[polygonArraySize].horizonSpecial = horizonSpecial;
+		// default to polygonArraySize so we don't lose order on horizon lines
+		// (yes, it's supposed to be negative, since we're sorting in that direction)
+		polygonArray[polygonArraySize].hash = -polygonArraySize;
 		polygonArraySize++;
+
+		if (!(PolyFlags & PF_NoTexture) && !horizonSpecial)
+		{
+			// use FNV-1a to hash polygons for later sorting.
+			INT32 hash = 0x811c9dc5;
+#define DIGEST(h, x) h ^= (x); h *= 0x01000193
+			if (current_texture)
+			{
+				DIGEST(hash, current_texture->downloaded);
+			}
+			DIGEST(hash, PolyFlags);
+			DIGEST(hash, pSurf->PolyColor.rgba);
+			if (cv_glshaders.value && gl_shadersavailable)
+			{
+				DIGEST(hash, shader_target);
+				DIGEST(hash, pSurf->TintColor.rgba);
+				DIGEST(hash, pSurf->FadeColor.rgba);
+				DIGEST(hash, pSurf->LightInfo.light_level);
+				DIGEST(hash, pSurf->LightInfo.fade_start);
+				DIGEST(hash, pSurf->LightInfo.fade_end);
+			}
+#undef DIGEST
+			// remove the sign bit to ensure that skybox and horizon line comes first.
+			polygonArray[polygonArraySize-1].hash = (hash & INT32_MAX);
+		}
 
 		memcpy(&unsortedVertexArray[unsortedVertexArraySize], pOutVerts, iNumPts * sizeof(FOutVector));
 		unsortedVertexArraySize += iNumPts;
 	}
 	else
 	{
-        if (shader)
-            HWD.pfnSetShader(shader);
-        HWD.pfnDrawPolygon(pSurf, pOutVerts, iNumPts, PolyFlags);
-    }
+		HWD.pfnSetShader((shader_target != SHADER_NONE) ? HWR_GetShaderFromTarget(shader_target) : shader_target);
+		HWD.pfnDrawPolygon(pSurf, pOutVerts, iNumPts, PolyFlags);
+	}
 }
 
 static int comparePolygons(const void *p1, const void *p2)
@@ -135,84 +162,7 @@ static int comparePolygons(const void *p1, const void *p2)
 	unsigned int index2 = *(const unsigned int*)p2;
 	PolygonArrayEntry* poly1 = &polygonArray[index1];
 	PolygonArrayEntry* poly2 = &polygonArray[index2];
-	int diff;
-	INT64 diff64;
-	UINT32 downloaded1 = 0;
-	UINT32 downloaded2 = 0;
-
-	int shader1 = poly1->shader;
-	int shader2 = poly2->shader;
-	// make skywalls and horizon lines first in order
-	if (poly1->polyFlags & PF_NoTexture || poly1->horizonSpecial)
-		shader1 = -1;
-	if (poly2->polyFlags & PF_NoTexture || poly2->horizonSpecial)
-		shader2 = -1;
-	diff = shader1 - shader2;
-	if (diff != 0) return diff;
-
-	// skywalls and horizon lines must retain their order for horizon lines to work
-	if (shader1 == -1 && shader2 == -1)
-		return index1 - index2;
-
-	if (poly1->texture)
-		downloaded1 = poly1->texture->downloaded; // there should be a opengl texture name here, usable for comparisons
-	if (poly2->texture)
-		downloaded2 = poly2->texture->downloaded;
-	diff64 = downloaded1 - downloaded2;
-	if (diff64 != 0) return diff64;
-
-	diff = poly1->polyFlags - poly2->polyFlags;
-	if (diff != 0) return diff;
-
-	diff64 = poly1->surf.PolyColor.rgba - poly2->surf.PolyColor.rgba;
-	if (diff64 < 0) return -1; else if (diff64 > 0) return 1;
-	diff64 = poly1->surf.TintColor.rgba - poly2->surf.TintColor.rgba;
-	if (diff64 < 0) return -1; else if (diff64 > 0) return 1;
-	diff64 = poly1->surf.FadeColor.rgba - poly2->surf.FadeColor.rgba;
-	if (diff64 < 0) return -1; else if (diff64 > 0) return 1;
-
-	diff = poly1->surf.LightInfo.light_level - poly2->surf.LightInfo.light_level;
-	if (diff != 0) return diff;
-	diff = poly1->surf.LightInfo.fade_start - poly2->surf.LightInfo.fade_start;
-	if (diff != 0) return diff;
-	diff = poly1->surf.LightInfo.fade_end - poly2->surf.LightInfo.fade_end;
-	return diff;
-}
-
-static int comparePolygonsNoShaders(const void *p1, const void *p2)
-{
-	unsigned int index1 = *(const unsigned int*)p1;
-	unsigned int index2 = *(const unsigned int*)p2;
-	PolygonArrayEntry* poly1 = &polygonArray[index1];
-	PolygonArrayEntry* poly2 = &polygonArray[index2];
-	int diff;
-	INT64 diff64;
-
-	GLMipmap_t *texture1 = poly1->texture;
-	GLMipmap_t *texture2 = poly2->texture;
-	UINT32 downloaded1 = 0;
-	UINT32 downloaded2 = 0;
-	if (poly1->polyFlags & PF_NoTexture || poly1->horizonSpecial)
-		texture1 = NULL;
-	if (poly2->polyFlags & PF_NoTexture || poly2->horizonSpecial)
-		texture2 = NULL;
-	if (texture1)
-		downloaded1 = texture1->downloaded; // there should be a opengl texture name here, usable for comparisons
-	if (texture2)
-		downloaded2 = texture2->downloaded;
-	// skywalls and horizon lines must retain their order for horizon lines to work
-	if (!texture1 && !texture2)
-		return index1 - index2;
-	diff64 = downloaded1 - downloaded2;
-	if (diff64 != 0) return diff64;
-
-	diff = poly1->polyFlags - poly2->polyFlags;
-	if (diff != 0) return diff;
-
-	diff64 = poly1->surf.PolyColor.rgba - poly2->surf.PolyColor.rgba;
-	if (diff64 < 0) return -1; else if (diff64 > 0) return 1;
-
-	return 0;
+	return poly1->hash - poly2->hash;
 }
 
 // This function organizes the geometry collected by HWR_ProcessPolygon calls into batches and uses
@@ -263,10 +213,7 @@ void HWR_RenderBatches(void)
 
 	// sort polygons
 	PS_START_TIMING(ps_hw_batchsorttime);
-	if (cv_glshaders.value && gl_shadersavailable)
-		qsort(polygonIndexArray, polygonArraySize, sizeof(unsigned int), comparePolygons);
-	else
-		qsort(polygonIndexArray, polygonArraySize, sizeof(unsigned int), comparePolygonsNoShaders);
+	qsort(polygonIndexArray, polygonArraySize, sizeof(unsigned int), comparePolygons);
 	PS_STOP_TIMING(ps_hw_batchsorttime);
 	// sort order
 	// 1. shader
@@ -362,46 +309,49 @@ void HWR_RenderBatches(void)
 		{
 			// check if a state change is required, set the change bools and next vars
 			int nextIndex = polygonIndexArray[polygonReadPos];
-			nextShader = polygonArray[nextIndex].shader;
-			nextTexture = polygonArray[nextIndex].texture;
-			nextPolyFlags = polygonArray[nextIndex].polyFlags;
-			nextSurfaceInfo = polygonArray[nextIndex].surf;
-			if (nextPolyFlags & PF_NoTexture)
-				nextTexture = 0;
-			if (currentShader != nextShader && cv_glshaders.value && gl_shadersavailable)
+			if (polygonArray[index].hash != polygonArray[nextIndex].hash)
 			{
-				changeState = true;
-				changeShader = true;
-			}
-			if (currentTexture != nextTexture)
-			{
-				changeState = true;
-				changeTexture = true;
-			}
-			if (currentPolyFlags != nextPolyFlags)
-			{
-				changeState = true;
-				changePolyFlags = true;
-			}
-			if (cv_glshaders.value && gl_shadersavailable)
-			{
-				if (currentSurfaceInfo.PolyColor.rgba != nextSurfaceInfo.PolyColor.rgba ||
-					currentSurfaceInfo.TintColor.rgba != nextSurfaceInfo.TintColor.rgba ||
-					currentSurfaceInfo.FadeColor.rgba != nextSurfaceInfo.FadeColor.rgba ||
-					currentSurfaceInfo.LightInfo.light_level != nextSurfaceInfo.LightInfo.light_level ||
-					currentSurfaceInfo.LightInfo.fade_start != nextSurfaceInfo.LightInfo.fade_start ||
-					currentSurfaceInfo.LightInfo.fade_end != nextSurfaceInfo.LightInfo.fade_end)
+				nextShader = polygonArray[nextIndex].shader;
+				nextTexture = polygonArray[nextIndex].texture;
+				nextPolyFlags = polygonArray[nextIndex].polyFlags;
+				nextSurfaceInfo = polygonArray[nextIndex].surf;
+				if (nextPolyFlags & PF_NoTexture)
+					nextTexture = 0;
+				if (currentShader != nextShader && cv_glshaders.value && gl_shadersavailable)
 				{
 					changeState = true;
-					changeSurfaceInfo = true;
+					changeShader = true;
 				}
-			}
-			else
-			{
-				if (currentSurfaceInfo.PolyColor.rgba != nextSurfaceInfo.PolyColor.rgba)
+				if (currentTexture != nextTexture)
 				{
 					changeState = true;
-					changeSurfaceInfo = true;
+					changeTexture = true;
+				}
+				if (currentPolyFlags != nextPolyFlags)
+				{
+					changeState = true;
+					changePolyFlags = true;
+				}
+				if (cv_glshaders.value && gl_shadersavailable)
+				{
+					if (currentSurfaceInfo.PolyColor.rgba != nextSurfaceInfo.PolyColor.rgba ||
+						currentSurfaceInfo.TintColor.rgba != nextSurfaceInfo.TintColor.rgba ||
+						currentSurfaceInfo.FadeColor.rgba != nextSurfaceInfo.FadeColor.rgba ||
+						currentSurfaceInfo.LightInfo.light_level != nextSurfaceInfo.LightInfo.light_level ||
+						currentSurfaceInfo.LightInfo.fade_start != nextSurfaceInfo.LightInfo.fade_start ||
+						currentSurfaceInfo.LightInfo.fade_end != nextSurfaceInfo.LightInfo.fade_end)
+					{
+						changeState = true;
+						changeSurfaceInfo = true;
+					}
+				}
+				else
+				{
+					if (currentSurfaceInfo.PolyColor.rgba != nextSurfaceInfo.PolyColor.rgba)
+					{
+						changeState = true;
+						changeSurfaceInfo = true;
+					}
 				}
 			}
 		}
@@ -423,36 +373,39 @@ void HWR_RenderBatches(void)
 		if (stopFlag) break;
 
 		// change state according to change bools and next vars, update current vars and reset bools
-		if (changeShader)
+		if (changeState)
 		{
-			HWD.pfnSetShader(nextShader);
-			currentShader = nextShader;
-			changeShader = false;
+			if (changeShader)
+			{
+				HWD.pfnSetShader(nextShader);
+				currentShader = nextShader;
+				changeShader = false;
 
-			ps_hw_numshaders.value.i++;
-		}
-		if (changeTexture)
-		{
-			// texture should be already ready for use from calls to SetTexture during batch collection
-		    HWD.pfnSetTexture(nextTexture);
-			currentTexture = nextTexture;
-			changeTexture = false;
+				ps_hw_numshaders.value.i++;
+			}
+			if (changeTexture)
+			{
+				// texture should be already ready for use from calls to SetTexture during batch collection
+			    HWD.pfnSetTexture(nextTexture);
+				currentTexture = nextTexture;
+				changeTexture = false;
 
-			ps_hw_numtextures.value.i++;
-		}
-		if (changePolyFlags)
-		{
-			currentPolyFlags = nextPolyFlags;
-			changePolyFlags = false;
+				ps_hw_numtextures.value.i++;
+			}
+			if (changePolyFlags)
+			{
+				currentPolyFlags = nextPolyFlags;
+				changePolyFlags = false;
 
-			ps_hw_numpolyflags.value.i++;
-		}
-		if (changeSurfaceInfo)
-		{
-			currentSurfaceInfo = nextSurfaceInfo;
-			changeSurfaceInfo = false;
+				ps_hw_numpolyflags.value.i++;
+			}
+			if (changeSurfaceInfo)
+			{
+				currentSurfaceInfo = nextSurfaceInfo;
+				changeSurfaceInfo = false;
 
-			ps_hw_numcolors.value.i++;
+				ps_hw_numcolors.value.i++;
+			}
 		}
 		// and that should be it?
 	}

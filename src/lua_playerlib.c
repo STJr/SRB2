@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2012-2016 by John "JTE" Muniz.
-// Copyright (C) 2012-2023 by Sonic Team Junior.
+// Copyright (C) 2012-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -190,6 +190,7 @@ enum player_e
 	player_marelap,
 	player_marebonuslap,
 	player_marebegunat,
+	player_lastmaretime,
 	player_startedtime,
 	player_finishedtime,
 	player_lapbegunat,
@@ -223,10 +224,9 @@ enum player_e
 	player_blocked,
 	player_jointime,
 	player_quittime,
+	player_lastinputtime,
 	player_ping,
-#ifdef HWRENDER
-	player_fovadd,
-#endif
+	player_fovadd
 };
 
 static const char *const player_opt[] = {
@@ -338,6 +338,7 @@ static const char *const player_opt[] = {
 	"marelap",
 	"marebonuslap",
 	"marebegunat",
+	"lastmaretime",
 	"startedtime",
 	"finishedtime",
 	"lapbegunat",
@@ -371,10 +372,9 @@ static const char *const player_opt[] = {
 	"blocked",
 	"jointime",
 	"quittime",
+	"lastinputtime",
 	"ping",
-#ifdef HWRENDER
 	"fovadd",
-#endif
 	NULL,
 };
 
@@ -407,7 +407,7 @@ static int player_get(lua_State *L)
 	case player_realmo:
 		LUA_PushUserdata(L, plr->mo, META_MOBJ);
 		break;
-	// Kept for backward-compatibility
+	// TODO: 2.3: Kept for backward-compatibility
 	// Should be fixed to work like "realmo" later
 	case player_mo:
 		if (plr->spectator)
@@ -727,6 +727,9 @@ static int player_get(lua_State *L)
 	case player_marebegunat:
 		lua_pushinteger(L, plr->marebegunat);
 		break;
+	case player_lastmaretime:
+		lua_pushinteger(L, plr->lastmaretime);
+		break;
 	case player_startedtime:
 		lua_pushinteger(L, plr->startedtime);
 		break;
@@ -826,14 +829,15 @@ static int player_get(lua_State *L)
 	case player_quittime:
 		lua_pushinteger(L, plr->quittime);
 		break;
+	case player_lastinputtime:
+		lua_pushinteger(L, plr->lastinputtime);
+		break;
 	case player_ping:
 		lua_pushinteger(L, playerpingtable[plr - players]);
 		break;
-#ifdef HWRENDER
 	case player_fovadd:
 		lua_pushfixed(L, plr->fovadd);
 		break;
-#endif
 	default:
 		lua_getfield(L, LUA_REGISTRYINDEX, LREG_EXTVARS);
 		I_Assert(lua_istable(L, -1));
@@ -1220,6 +1224,9 @@ static int player_set(lua_State *L)
 	case player_marebegunat:
 		plr->marebegunat = (tic_t)luaL_checkinteger(L, 3);
 		break;
+	case player_lastmaretime:
+		plr->lastmaretime = (tic_t)luaL_checkinteger(L, 3);
+		break;
 	case player_startedtime:
 		plr->startedtime = (tic_t)luaL_checkinteger(L, 3);
 		break;
@@ -1349,11 +1356,12 @@ static int player_set(lua_State *L)
 	case player_quittime:
 		plr->quittime = (tic_t)luaL_checkinteger(L, 3);
 		break;
-#ifdef HWRENDER
+	case player_lastinputtime:
+		plr->lastinputtime = (tic_t)luaL_checkinteger(L, 3);
+		break;
 	case player_fovadd:
 		plr->fovadd = luaL_checkfixed(L, 3);
 		break;
-#endif
 	default:
 		lua_getfield(L, LUA_REGISTRYINDEX, LREG_EXTVARS);
 		I_Assert(lua_istable(L, -1));
@@ -1423,8 +1431,8 @@ static int power_len(lua_State *L)
 	return 1;
 }
 
-#define NOFIELD luaL_error(L, LUA_QL("ticcmd_t") " has no field named " LUA_QS, field)
-#define NOSET luaL_error(L, LUA_QL("ticcmd_t") " field " LUA_QS " should not be set directly.", ticcmd_opt[field])
+#define NOFIELD luaL_error(L, "%s %s", LUA_QL("ticcmd_t"), va("has no field named %ui", field))
+#define NOSET luaL_error(L, LUA_QL("ticcmd_t") " field %s should not be set directly.", ticcmd_opt[field])
 
 enum ticcmd_e
 {
@@ -1454,6 +1462,9 @@ static int ticcmd_get(lua_State *L)
 	enum ticcmd_e field = Lua_optoption(L, 2, -1, ticcmd_fields_ref);
 	if (!cmd)
 		return LUA_ErrInvalid(L, "player_t");
+
+	if (field == (enum ticcmd_e)-1)
+		return LUA_ErrInvalid(L, "fields");
 
 	switch (field)
 	{
@@ -1489,6 +1500,9 @@ static int ticcmd_set(lua_State *L)
 	if (!cmd)
 		return LUA_ErrInvalid(L, "ticcmd_t");
 
+	if (field == (enum ticcmd_e)-1)
+		return LUA_ErrInvalid(L, "fields");
+
 	if (hud_running)
 		return luaL_error(L, "Do not alter player_t in HUD rendering code!");
 
@@ -1523,48 +1537,13 @@ static int ticcmd_set(lua_State *L)
 
 int LUA_PlayerLib(lua_State *L)
 {
-	luaL_newmetatable(L, META_PLAYER);
-		lua_pushcfunction(L, player_get);
-		lua_setfield(L, -2, "__index");
-
-		lua_pushcfunction(L, player_set);
-		lua_setfield(L, -2, "__newindex");
-
-		lua_pushcfunction(L, player_num);
-		lua_setfield(L, -2, "__len");
-	lua_pop(L,1);
+	LUA_RegisterUserdataMetatable(L, META_PLAYER, player_get, player_set, player_num);
+	LUA_RegisterUserdataMetatable(L, META_POWERS, power_get, power_set, power_len);
+	LUA_RegisterUserdataMetatable(L, META_TICCMD, ticcmd_get, ticcmd_set, NULL);
 
 	player_fields_ref = Lua_CreateFieldTable(L, player_opt);
-
-	luaL_newmetatable(L, META_POWERS);
-		lua_pushcfunction(L, power_get);
-		lua_setfield(L, -2, "__index");
-
-		lua_pushcfunction(L, power_set);
-		lua_setfield(L, -2, "__newindex");
-
-		lua_pushcfunction(L, power_len);
-		lua_setfield(L, -2, "__len");
-	lua_pop(L,1);
-
-	luaL_newmetatable(L, META_TICCMD);
-		lua_pushcfunction(L, ticcmd_get);
-		lua_setfield(L, -2, "__index");
-
-		lua_pushcfunction(L, ticcmd_set);
-		lua_setfield(L, -2, "__newindex");
-	lua_pop(L,1);
-
 	ticcmd_fields_ref = Lua_CreateFieldTable(L, ticcmd_opt);
 
-	lua_newuserdata(L, 0);
-		lua_createtable(L, 0, 2);
-			lua_pushcfunction(L, lib_getPlayer);
-			lua_setfield(L, -2, "__index");
-
-			lua_pushcfunction(L, lib_lenPlayer);
-			lua_setfield(L, -2, "__len");
-		lua_setmetatable(L, -2);
-	lua_setglobal(L, "players");
+	LUA_RegisterGlobalUserdata(L, "players", lib_getPlayer, NULL, lib_lenPlayer);
 	return 0;
 }

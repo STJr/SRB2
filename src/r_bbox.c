@@ -267,6 +267,7 @@ static boolean is_tangible (mobj_t *thing)
 boolean R_ThingBoundingBoxVisible(mobj_t *thing)
 {
 	INT32 cvmode = cv_renderhitbox.value;
+	boolean ring = false;
 
 	// lets do ALL the cheating :iwantsummadat:
 	/*
@@ -274,14 +275,12 @@ boolean R_ThingBoundingBoxVisible(mobj_t *thing)
 		return false;
 	*/
 
-	// Do not render bbox for these
 	switch (thing->type)
 	{
 		default:
-			// First person / awayviewmobj -- rendering
-			// a bbox too close to the viewpoint causes
-			// anomalies and these are exactly on the
-			// viewpoint!
+			// First person / awayviewmobj -- rendering a bbox 
+			// too close to the viewpoint causes anomalies
+			// and these are exactly on the viewpoint!
 			if (thing != r_viewmobj)
 			{
 				break;
@@ -293,6 +292,17 @@ boolean R_ThingBoundingBoxVisible(mobj_t *thing)
 			// are rendered using portals in Software,
 			// r_viewmobj does not point here.
 			return false;
+
+		case MT_RING:
+		case MT_BLUESPHERE:
+		case MT_NIGHTSSTAR:
+		case MT_NIGHTSCHIP:
+		case MT_COIN:
+			// Rings and similar objects are often placed
+			// in large amounts, so they are handled
+			// separately from other tangible objects.
+			ring = true;
+			break;
 	}
 
 	switch (cvmode)
@@ -307,16 +317,10 @@ boolean R_ThingBoundingBoxVisible(mobj_t *thing)
 			return !is_tangible(thing);
 
 		case RENDERHITBOX_TANGIBLE:
-			// Exclude rings from here, lots of them!
-			if (thing->type == MT_RING)
-			{
-				return false;
-			}
-
-			return is_tangible(thing);
+			return !ring && is_tangible(thing);
 
 		case RENDERHITBOX_RINGS:
-			return (thing->type == MT_RING || thing->type == MT_BLUESPHERE);
+			return ring;
 
 		default:
 			return false;

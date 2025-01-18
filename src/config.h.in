@@ -40,10 +40,11 @@
  * Last updated 2023 / 05 / 02 - v2.2.11 - patch.pk3 & zones.pk3
  * Last updated 2023 / 09 / 06 - v2.2.12 - patch.pk3
  * Last updated 2023 / 09 / 09 - v2.2.13 - none
+ * Last updated 2025 / 01 / 16 - v2.2.14 - main assets
  */
-#define ASSET_HASH_SRB2_PK3   "ad911f29a28a18968ee5b2d11c2acb39"
-#define ASSET_HASH_ZONES_PK3  "1c8adf8d079ecb87d00081f158acf3c7"
-#define ASSET_HASH_PLAYER_DTA "2e7aaae8a6b1b77d90ffe7606ceadb6c"
+#define ASSET_HASH_SRB2_PK3   "c1d9a4b3452b350d4662f41eb301dc6c"
+#define ASSET_HASH_ZONES_PK3  "2ab758817fff96bc60ee9dec85e0b534"
+#define ASSET_HASH_CHARACTERS_PK3 "97ce7008d16152731fe037141309aa24"
 #ifdef USE_PATCH_DTA
 #define ASSET_HASH_PATCH_PK3  "3c7b73f34af7e9a7bceb2d5260f76172"
 #endif

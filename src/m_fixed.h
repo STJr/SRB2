@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -34,6 +34,7 @@
 */
 
 typedef INT32 fixed_t;
+typedef UINT32 ufixed_t;
 
 /*!
   \brief convert fixed_t into floating number
@@ -45,6 +46,20 @@ FUNCMATH FUNCINLINE static ATTRINLINE float FixedToFloat(fixed_t x)
 }
 
 FUNCMATH FUNCINLINE static ATTRINLINE fixed_t FloatToFixed(float f)
+{
+	return (fixed_t)(f * FRACUNIT);
+}
+
+/*!
+  \brief convert fixed_t into double-precision floating number
+*/
+
+FUNCMATH FUNCINLINE static ATTRINLINE double FixedToDouble(fixed_t x)
+{
+	return x / (double)FRACUNIT;
+}
+
+FUNCMATH FUNCINLINE static ATTRINLINE fixed_t DoubleToFixed(double f)
 {
 	return (fixed_t)(f * FRACUNIT);
 }
@@ -106,7 +121,7 @@ FUNCMATH FUNCINLINE static ATTRINLINE fixed_t FixedInt(fixed_t a)
 */
 FUNCMATH FUNCINLINE static ATTRINLINE fixed_t FixedDiv(fixed_t a, fixed_t b)
 {
-	if ((abs(a) >> (FRACBITS-2)) >= abs(b))
+	if (((ufixed_t)abs(a) >> (FRACBITS-2)) >= (ufixed_t)abs(b))
 		return (a^b) < 0 ? INT32_MIN : INT32_MAX;
 
 	return FixedDiv2(a, b);

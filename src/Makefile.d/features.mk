@@ -3,7 +3,7 @@
 #
 
 passthru_opts+=\
-	NONET NO_IPV6 NOHW NOMD5 NOPOSTPROCESSING\
+	NO_IPV6 NOHW NOMD5 NOPOSTPROCESSING\
 	MOBJCONSISTANCY PACKETDROP ZDEBUG\
 	NOUPNP NOEXECINFO\
 
@@ -18,16 +18,10 @@ opts+=-DHWRENDER
 sources+=$(call List,hardware/Sourcefile)
 endif
 
-ifdef NONET
-NOCURL=1
-endif
-
 ifndef NOMD5
 sources+=md5.c
 endif
 
-ifndef NOZLIB
-ifndef NOPNG
 ifdef PNG_PKGCONFIG
 $(eval $(call Use_pkg_config,PNG_PKGCONFIG))
 else
@@ -40,10 +34,7 @@ opts+=-D_LARGEFILE64_SOURCE
 endif
 opts+=-DHAVE_PNG
 sources+=apng.c
-endif
-endif
 
-ifndef NONET
 ifndef NOCURL
 CURLCONFIG?=curl-config
 $(eval $(call Configure,CURL,$(CURLCONFIG)))
@@ -55,7 +46,6 @@ MINIUPNPC_PKGCONFIG?=miniupnpc
 $(eval $(call Use_pkg_config,MINIUPNPC))
 HAVE_MINIUPNPC=1
 opts+=-DHAVE_MINIUPNPC
-endif
 endif
 
 # (Valgrind is a memory debugger.)

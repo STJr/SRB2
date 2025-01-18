@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -28,11 +28,12 @@
 #include "byteptr.h"
 #include "p_saveg.h"
 #include "g_game.h" // for player_names
-#include "d_netcmd.h"
+#include "netcode/d_netcmd.h"
+#include "netcode/net_command.h"
 #include "hu_stuff.h"
 #include "p_setup.h"
 #include "lua_script.h"
-#include "d_netfil.h" // findfile
+#include "netcode/d_netfil.h" // findfile
 #include "r_data.h" // Color_cons_t
 #include "d_main.h" // D_IsPathAllowed
 
@@ -50,8 +51,10 @@ static void COM_CEchoDuration_f(void);
 static void COM_Exec_f(void);
 static void COM_Wait_f(void);
 static void COM_Help_f(void);
+static void COM_Find_f(void);
 static void COM_Toggle_f(void);
 static void COM_Add_f(void);
+
 
 static void CV_EnforceExecVersion(void);
 static boolean CV_FilterVarByVersion(consvar_t *v, const char *valstr);
@@ -343,6 +346,7 @@ void COM_Init(void)
 	COM_AddCommand("exec", COM_Exec_f, 0);
 	COM_AddCommand("wait", COM_Wait_f, 0);
 	COM_AddCommand("help", COM_Help_f, COM_LUA);
+	COM_AddCommand("find", COM_Find_f, COM_LUA);
 	COM_AddCommand("toggle", COM_Toggle_f, COM_LUA);
 	COM_AddCommand("add", COM_Add_f, COM_LUA);
 	RegisterNetXCmd(XD_NETVAR, Got_NetVar);
@@ -644,7 +648,7 @@ static void COM_ExecuteString(char *ptext)
 		{
 			if ((com_flags & COM_LUA) && !(cmd->flags & COM_LUA))
 			{
-				CONS_Alert(CONS_WARNING, "Command '%s' cannot be run from Lua.\n", cmd->name);
+				CONS_Alert(CONS_WARNING, "Command '%s' cannot be run from a script.\n", cmd->name);
 				return;
 			}
 
@@ -806,10 +810,46 @@ static void COM_CEchoDuration_f(void)
 
 /** Executes a script file.
   */
-static void COM_Exec_f(void)
+boolean COM_ExecFile(const char *scriptname, com_flags_t flags, boolean silent)
 {
 	UINT8 *buf = NULL;
 	char filename[256];
+
+	if (!D_CheckPathAllowed(scriptname, "tried to exec"))
+		return false;
+
+	// load file
+	// Try with Argv passed verbatim first, for back compat
+	FIL_ReadFile(scriptname, &buf);
+
+	if (!buf)
+	{
+		// Now try by searching the file path
+		// filename is modified with the full found path
+		strlcpy(filename, scriptname, sizeof(filename));
+		if (findfile(filename, NULL, true) != FS_NOTFOUND)
+			FIL_ReadFile(filename, &buf);
+
+		if (!buf)
+			return false;
+	}
+
+	if (!silent)
+		CONS_Printf(M_GetText("Executing %s\n"), scriptname);
+
+	// insert text file into the command buffer
+	COM_BufAddTextEx((char *)buf, flags);
+	COM_BufAddTextEx("\n", flags);
+
+	// free buffer
+	Z_Free(buf);
+
+	return true;
+}
+
+static void COM_Exec_f(void)
+{
+	boolean silent;
 
 	if (COM_Argc() < 2 || COM_Argc() > 3)
 	{
@@ -817,38 +857,13 @@ static void COM_Exec_f(void)
 		return;
 	}
 
-	if (!D_CheckPathAllowed(COM_Argv(1), "tried to exec"))
+	silent = COM_CheckParm("-silent");
+
+	if (COM_ExecFile(COM_Argv(1), com_flags, silent))
 		return;
 
-	// load file
-	// Try with Argv passed verbatim first, for back compat
-	FIL_ReadFile(COM_Argv(1), &buf);
-
-	if (!buf)
-	{
-		// Now try by searching the file path
-		// filename is modified with the full found path
-		strcpy(filename, COM_Argv(1));
-		if (findfile(filename, NULL, true) != FS_NOTFOUND)
-			FIL_ReadFile(filename, &buf);
-
-		if (!buf)
-		{
-			if (!COM_CheckParm("-noerror"))
-				CONS_Printf(M_GetText("couldn't execute file %s\n"), COM_Argv(1));
-			return;
-		}
-	}
-
-	if (!COM_CheckParm("-silent"))
-		CONS_Printf(M_GetText("executing %s\n"), COM_Argv(1));
-
-	// insert text file into the command buffer
-	COM_BufAddTextEx((char *)buf, com_flags);
-	COM_BufAddTextEx("\n", com_flags);
-
-	// free buffer
-	Z_Free(buf);
+	if (!COM_CheckParm("-noerror"))
+		CONS_Printf(M_GetText("Couldn't execute file %s\n"), COM_Argv(1));
 }
 
 /** Delays execution of the rest of the commands until the next frame.
@@ -879,7 +894,7 @@ static void COM_Help_f(void)
 			boolean floatmode = false;
 			const char *cvalue = NULL;
 			CONS_Printf("\x82""Variable %s:\n", cvar->name);
-			CONS_Printf(M_GetText("  flags :"));
+			CONS_Printf(M_GetText("  flags: "));
 			if (cvar->flags & CV_SAVE)
 				CONS_Printf("AUTOSAVE ");
 			if (cvar->flags & CV_FLOAT)
@@ -976,31 +991,8 @@ static void COM_Help_f(void)
 				return;
 			}
 
-			CONS_Printf("No exact match, searching...\n");
-
-			// variables
-			CONS_Printf("\x82""Variables:\n");
-			for (cvar = consvar_vars; cvar; cvar = cvar->next)
-			{
-				if ((cvar->flags & CV_NOSHOWHELP) || (!strstr(cvar->name, help)))
-					continue;
-				CONS_Printf("%s ", cvar->name);
-				i++;
-			}
-
-			// commands
-			CONS_Printf("\x82""\nCommands:\n");
-			for (cmd = com_commands; cmd; cmd = cmd->next)
-			{
-				if (!strstr(cmd->name, help))
-					continue;
-				CONS_Printf("%s ",cmd->name);
-				i++;
-			}
-
-			CONS_Printf("\x82""\nCheck wiki.srb2.org for more or type help <command or variable>\n");
-
-			CONS_Debug(DBG_GAMELOGIC, "\x87Total : %d\n", i);
+			CONS_Printf("No variable or command named %s", help);
+			CONS_Printf("\x82""\nCheck wiki.srb2.org for more or try typing help without arguments\n");
 		}
 		return;
 	}
@@ -1028,6 +1020,76 @@ static void COM_Help_f(void)
 
 		CONS_Debug(DBG_GAMELOGIC, "\x82Total : %d\n", i);
 	}
+}
+
+static void COM_Find_f(void)
+{
+	static char prefix[80];
+	xcommand_t *cmd;
+	consvar_t *cvar;
+	cmdalias_t *alias;
+	const char *match;
+	const char *help;
+	size_t helplen;
+	boolean matchesany;
+
+	if (COM_Argc() != 2)
+	{
+		CONS_Printf(M_GetText("find <text>: Search for variables, commands and aliases containing <text>\n"));
+		return;
+	}
+
+	help = COM_Argv(1);
+	helplen = strlen(help);
+	CONS_Printf("\x82""Variables:\n");
+	matchesany = false;
+	for (cvar = consvar_vars; cvar; cvar = cvar->next)
+	{
+		if (cvar->flags & CV_NOSHOWHELP)
+			continue;
+		match = strstr(cvar->name, help);
+		if (match != NULL)
+		{
+			memcpy(prefix, cvar->name, match - cvar->name);
+			prefix[match - cvar->name] = '\0';
+			CONS_Printf("  %s\x83%s\x80%s\n", prefix, help, &match[helplen]);
+			matchesany = true;
+		}
+	}
+	if (!matchesany)
+		CONS_Printf("  (none)\n");
+
+	CONS_Printf("\x82""Commands:\n");
+	matchesany = false;
+	for (cmd = com_commands; cmd; cmd = cmd->next)
+	{
+		match = strstr(cmd->name, help);
+		if (match != NULL)
+		{
+			memcpy(prefix, cmd->name, match - cmd->name);
+			prefix[match - cmd->name] = '\0';
+			CONS_Printf("  %s\x83%s\x80%s\n", prefix, help, &match[helplen]);
+			matchesany = true;
+		}
+	}
+	if (!matchesany)
+		CONS_Printf("  (none)\n");
+
+	CONS_Printf("\x82""Aliases:\n");
+	matchesany = false;
+	for (alias = com_alias; alias; alias = alias->next)
+	{
+		match = strstr(alias->name, help);
+		if (match != NULL)
+		{
+			memcpy(prefix, alias->name, match - alias->name);
+			prefix[match - alias->name] = '\0';
+			CONS_Printf("  %s\x83%s\x80%s\n", prefix, help, &match[helplen]);
+			matchesany = true;
+		}
+	}
+	if (!matchesany)
+		CONS_Printf("  (none)\n");
 }
 
 /** Toggles a console variable. Useful for on/off values.
@@ -1379,8 +1441,8 @@ void CV_RegisterVar(consvar_t *variable)
 #ifdef PARANOIA
 	if ((variable->flags & CV_NOINIT) && !(variable->flags & CV_CALL))
 		I_Error("variable %s has CV_NOINIT without CV_CALL\n", variable->name);
-	if ((variable->flags & CV_CALL) && !variable->func)
-		I_Error("variable %s has CV_CALL without a function\n", variable->name);
+	if ((variable->flags & CV_CALL) && !(variable->func || variable->can_change))
+		I_Error("variable %s has CV_CALL without any callbacks\n", variable->name);
 #endif
 
 	if (variable->flags & CV_NOINIT)
@@ -1446,12 +1508,35 @@ static void Setvalue(consvar_t *var, const char *valstr, boolean stealth)
 	boolean override = false;
 	INT32 overrideval = 0;
 
-	// If we want messages informing us if cheats have been enabled or disabled,
-	// we need to rework the consvars a little bit.  This call crashes the game
-	// on load because not all variables will be registered at that time.
-/*	boolean prevcheats = false;
-	if (var->flags & CV_CHEAT)
-		prevcheats = CV_CheatsEnabled(); */
+	// raise 'can change' code
+	LUA_CVarChanged(var); // let consolelib know what cvar this is.
+	if (var->flags & CV_CALL && var->can_change && !stealth)
+	{
+		if (!var->can_change(valstr))
+		{
+			// The callback refused the default value on register. How naughty...
+			// So we just use some fallback value.
+			if (var->string == NULL)
+			{
+				if (var->PossibleValue)
+				{
+					// Use PossibleValue
+					valstr = var->PossibleValue[0].strvalue;
+				}
+				else
+				{
+					// Else, use an empty string
+					valstr = "";
+				}
+			}
+			else
+			{
+				// Callback returned false, and the game is not registering this variable,
+				// so we can return safely.
+				return;
+			}
+		}
+	}
 
 	if (var->PossibleValue)
 	{
@@ -1613,16 +1698,6 @@ found:
 	}
 
 finish:
-	// See the note above.
-/* 	if (var->flags & CV_CHEAT)
-	{
-		boolean newcheats = CV_CheatsEnabled();
-
-		if (!prevcheats && newcheats)
-			CONS_Printf(M_GetText("Cheats have been enabled.\n"));
-		else if (prevcheats && !newcheats)
-			CONS_Printf(M_GetText("Cheats have been disabled.\n"));
-	} */
 
 	if (var->flags & CV_SHOWMODIFONETIME || var->flags & CV_SHOWMODIF)
 	{
@@ -1635,8 +1710,7 @@ finish:
 	}
 	var->flags |= CV_MODIFIED;
 	// raise 'on change' code
-	LUA_CVarChanged(var); // let consolelib know what cvar this is.
-	if (var->flags & CV_CALL && !stealth)
+	if (var->flags & CV_CALL && var->func && !stealth)
 		var->func();
 
 	return;
@@ -1660,8 +1734,7 @@ badinput:
 
 static boolean serverloading = false;
 
-static consvar_t *
-ReadNetVar (UINT8 **p, char **return_value, boolean *return_stealth)
+static consvar_t *ReadNetVar(save_t *p, char **return_value, boolean *return_stealth)
 {
 	UINT16  netid;
 	char   *val;
@@ -1669,10 +1742,10 @@ ReadNetVar (UINT8 **p, char **return_value, boolean *return_stealth)
 
 	consvar_t *cvar;
 
-	netid   = READUINT16 (*p);
-	val     = (char *)*p;
-	SKIPSTRING (*p);
-	stealth = READUINT8  (*p);
+	netid   = P_ReadUINT16(p);
+	val     = (char *)&p->buf[p->pos];
+	P_SkipString(p);
+	stealth = P_ReadUINT8(p);
 
 	cvar = CV_FindNetVar(netid);
 
@@ -1690,8 +1763,7 @@ ReadNetVar (UINT8 **p, char **return_value, boolean *return_stealth)
 }
 
 #ifdef OLD22DEMOCOMPAT
-static consvar_t *
-ReadOldDemoVar (UINT8 **p, char **return_value, boolean *return_stealth)
+static consvar_t *ReadOldDemoVar(save_t *p, char **return_value, boolean *return_stealth)
 {
 	UINT16  id;
 	char   *val;
@@ -1699,10 +1771,10 @@ ReadOldDemoVar (UINT8 **p, char **return_value, boolean *return_stealth)
 
 	old_demo_var_t *demovar;
 
-	id      = READUINT16 (*p);
-	val     = (char *)*p;
-	SKIPSTRING (*p);
-	stealth = READUINT8  (*p);
+	id      = P_ReadUINT16(p);
+	val     = (char *)&p->buf[p->pos];
+	P_SkipString(p);
+	stealth = P_ReadUINT8(p);
 
 	demovar = CV_FindOldDemoVar(id);
 
@@ -1721,8 +1793,7 @@ ReadOldDemoVar (UINT8 **p, char **return_value, boolean *return_stealth)
 }
 #endif/*OLD22DEMOCOMPAT*/
 
-static consvar_t *
-ReadDemoVar (UINT8 **p, char **return_value, boolean *return_stealth)
+static consvar_t *ReadDemoVar(save_t *p, char **return_value, boolean *return_stealth)
 {
 	char   *name;
 	char   *val;
@@ -1730,11 +1801,11 @@ ReadDemoVar (UINT8 **p, char **return_value, boolean *return_stealth)
 
 	consvar_t *cvar;
 
-	name    = (char *)*p;
-	SKIPSTRING (*p);
-	val     = (char *)*p;
-	SKIPSTRING (*p);
-	stealth = READUINT8  (*p);
+	name    = (char *)&p->buf[p->pos];
+	P_SkipString(p);
+	val     = (char *)&p->buf[p->pos];
+	P_SkipString(p);
+	stealth = P_ReadUINT8(p);
 
 	cvar = CV_FindVar(name);
 
@@ -1764,41 +1835,46 @@ static void Got_NetVar(UINT8 **p, INT32 playernum)
 		return;
 	}
 
-	cvar = ReadNetVar(p, &svalue, &stealth);
+	save_t save_p;
+	save_p.buf = *p;
+	save_p.size = MAXTEXTCMD;
+	save_p.pos = 0;
+	cvar = ReadNetVar(&save_p, &svalue, &stealth);
+	*p = &save_p.buf[save_p.pos];
 
 	if (cvar)
 		Setvalue(cvar, svalue, stealth);
 }
 
-void CV_SaveVars(UINT8 **p, boolean in_demo)
+void CV_SaveVars(save_t *p, boolean in_demo)
 {
 	consvar_t *cvar;
-	UINT8 *count_p = *p;
+	UINT8 *count_p = &p->buf[p->pos];
 	UINT16 count = 0;
 
 	// send only changed cvars ...
 	// the client will reset all netvars to default before loading
-	WRITEUINT16(*p, 0x0000);
+	P_WriteUINT16(p, 0x0000);
 	for (cvar = consvar_vars; cvar; cvar = cvar->next)
 		if ((cvar->flags & CV_NETVAR) && !CV_IsSetToDefault(cvar))
 		{
 			if (in_demo)
 			{
-				WRITESTRING(*p, cvar->name);
+				P_WriteString(p, cvar->name);
 			}
 			else
 			{
-				WRITEUINT16(*p, cvar->netid);
+				P_WriteUINT16(p, cvar->netid);
 			}
-			WRITESTRING(*p, cvar->string);
-			WRITEUINT8(*p, false);
+			P_WriteString(p, cvar->string);
+			P_WriteUINT8(p, false);
 			++count;
 		}
 	WRITEUINT16(count_p, count);
 }
 
-static void CV_LoadVars(UINT8 **p,
-		consvar_t *(*got)(UINT8 **p, char **ret_value, boolean *ret_stealth))
+static void CV_LoadVars(save_t *p,
+		consvar_t *(*got)(save_t *p, char **ret_value, boolean *ret_stealth))
 {
 	const boolean store = (client || demoplayback);
 
@@ -1826,7 +1902,7 @@ static void CV_LoadVars(UINT8 **p,
 		}
 	}
 
-	count = READUINT16(*p);
+	count = P_ReadUINT16(p);
 	while (count--)
 	{
 		cvar = (*got)(p, &val, &stealth);
@@ -1859,19 +1935,19 @@ void CV_RevertNetVars(void)
 	}
 }
 
-void CV_LoadNetVars(UINT8 **p)
+void CV_LoadNetVars(save_t *p)
 {
 	CV_LoadVars(p, ReadNetVar);
 }
 
 #ifdef OLD22DEMOCOMPAT
-void CV_LoadOldDemoVars(UINT8 **p)
+void CV_LoadOldDemoVars(save_t *p)
 {
 	CV_LoadVars(p, ReadOldDemoVar);
 }
 #endif
 
-void CV_LoadDemoVars(UINT8 **p)
+void CV_LoadDemoVars(save_t *p)
 {
 	CV_LoadVars(p, ReadDemoVar);
 }
@@ -1924,13 +2000,13 @@ static void CV_SetCVar(consvar_t *var, const char *value, boolean stealth)
 	if (!var->string)
 		I_Error("CV_Set: %s no string set!\n", var->name);
 #endif
-	if (!var || !var->string || !value || !stricmp(var->string, value))
+	if (!var || !var->string || !value || (var->can_change == NULL && !stricmp(var->string, value)))
 		return; // no changes
 
 	if (var->flags & CV_NETVAR)
 	{
 		// send the value of the variable
-		UINT8 buf[128];
+		UINT8 buf[512];
 		UINT8 *p = buf;
 
 		// Loading from a config in a netgame? Set revert value.
@@ -1998,16 +2074,15 @@ void CV_StealthSet(consvar_t *var, const char *value)
   */
 static void CV_SetValueMaybeStealth(consvar_t *var, INT32 value, boolean stealth)
 {
-	char val[SKINNAMESIZE+1];
+	char val[SKINNAMESIZE+1] = "None";
 
 	if (var == &cv_forceskin) // Special handling.
 	{
 		const char *tmpskin = NULL;
-		if ((value < 0) || (value >= numskins))
-			tmpskin = "None";
-		else
-			tmpskin = skins[value].name;
-		strncpy(val, tmpskin, SKINNAMESIZE);
+		if (value >= 0 && value < numskins)
+			tmpskin = skins[value]->name;
+		if (tmpskin)
+			memcpy(val, tmpskin, SKINNAMESIZE);
 	}
 	else
 		sprintf(val, "%d", value);
@@ -2430,7 +2505,7 @@ static boolean CV_Command(void)
 
 	if (CV_Immutable(v))
 	{
-		CONS_Alert(CONS_WARNING, "Variable '%s' cannot be changed from Lua.\n", v->name);
+		CONS_Alert(CONS_WARNING, "Variable '%s' cannot be changed from a script.\n", v->name);
 		return true;
 	}
 

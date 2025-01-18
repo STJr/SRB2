@@ -3,7 +3,7 @@
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
 // Copyright (C) 1999-2000 by Jess Haas, Nicolas Kalkhof, Colin Phipps, Florian Schulze, Andrey Budko (prboom)
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -19,9 +19,9 @@
 #include "i_video.h"
 #include "r_plane.h"
 #include "p_spec.h"
+#include "p_slopes.h"
 #include "r_state.h"
 #include "z_zone.h"
-#include "console.h" // con_startup_loadprogress
 #include "m_perfstats.h" // ps_metric_t
 #include "p_local.h"
 #ifdef HWRENDER
@@ -118,6 +118,19 @@ static vector3_t *R_LerpVector3(const vector3_t *from, const vector3_t *to, fixe
 	FV3_SubEx(to, from, out);
 	FV3_MulEx(out, frac, out);
 	FV3_AddEx(from, out, out);
+	return out;
+}
+
+static double R_LerpDouble(double from, double to, double frac)
+{
+	return from + (frac * (to - from));
+}
+
+static dvector3_t *R_LerpDVector3(const dvector3_t *from, const dvector3_t *to, double frac, dvector3_t *out)
+{
+	DVector3_Subtract(to, from, out);
+	DVector3_Multiply(out, frac, out);
+	DVector3_Add(from, out, out);
 	return out;
 }
 
@@ -485,6 +498,7 @@ void R_CreateInterpolator_Polyobj(thinker_t *thinker, polyobj_t *polyobj)
 
 	interp->polyobj.oldcx = interp->polyobj.bakcx = polyobj->centerPt.x;
 	interp->polyobj.oldcy = interp->polyobj.bakcy = polyobj->centerPt.y;
+	interp->polyobj.oldangle = interp->polyobj.bakangle = polyobj->angle;
 }
 
 void R_CreateInterpolator_DynSlope(thinker_t *thinker, pslope_t *slope)
@@ -499,6 +513,14 @@ void R_CreateInterpolator_DynSlope(thinker_t *thinker, pslope_t *slope)
 	FV2_Copy(&interp->dynslope.bakd, &slope->d);
 
 	interp->dynslope.oldzdelta = interp->dynslope.bakzdelta = slope->zdelta;
+
+	DVector3_Copy(&interp->dynslope.oldorigin, &slope->dorigin);
+	DVector3_Copy(&interp->dynslope.bakorigin, &slope->dorigin);
+
+	DVector3_Copy(&interp->dynslope.oldnormdir, &slope->dnormdir);
+	DVector3_Copy(&interp->dynslope.baknormdir, &slope->dnormdir);
+
+	interp->dynslope.olddzdelta = interp->dynslope.bakdzdelta = slope->dzdelta;
 }
 
 void R_InitializeLevelInterpolators(void)
@@ -506,6 +528,15 @@ void R_InitializeLevelInterpolators(void)
 	levelinterpolators_len = 0;
 	levelinterpolators_size = 0;
 	levelinterpolators = NULL;
+}
+
+static void RecalculatePolyobjectSegAngles(polyobj_t *polyobj)
+{
+	for (size_t i = 0; i < polyobj->segCount; i++)
+	{
+		seg_t *seg = polyobj->segs[i];
+		seg->angle = R_PointToAngle2(seg->v1->x, seg->v1->y, seg->v2->x, seg->v2->y);
+	}
 }
 
 static void UpdateLevelInterpolatorState(levelinterpolator_t *interp)
@@ -538,10 +569,13 @@ static void UpdateLevelInterpolatorState(levelinterpolator_t *interp)
 			interp->polyobj.bakvertices[i * 2    ] = interp->polyobj.polyobj->vertices[i]->x;
 			interp->polyobj.bakvertices[i * 2 + 1] = interp->polyobj.polyobj->vertices[i]->y;
 		}
+		RecalculatePolyobjectSegAngles(interp->polyobj.polyobj);
 		interp->polyobj.oldcx = interp->polyobj.bakcx;
 		interp->polyobj.oldcy = interp->polyobj.bakcy;
+		interp->polyobj.oldangle = interp->polyobj.bakangle;
 		interp->polyobj.bakcx = interp->polyobj.polyobj->centerPt.x;
 		interp->polyobj.bakcy = interp->polyobj.polyobj->centerPt.y;
+		interp->polyobj.bakangle = interp->polyobj.polyobj->angle;
 		break;
 	case LVLINTERP_DynSlope:
 		FV3_Copy(&interp->dynslope.oldo, &interp->dynslope.bako);
@@ -551,6 +585,21 @@ static void UpdateLevelInterpolatorState(levelinterpolator_t *interp)
 		FV3_Copy(&interp->dynslope.bako, &interp->dynslope.slope->o);
 		FV2_Copy(&interp->dynslope.bakd, &interp->dynslope.slope->d);
 		interp->dynslope.bakzdelta = interp->dynslope.slope->zdelta;
+
+		DVector3_Copy(&interp->dynslope.oldorigin, &interp->dynslope.bakorigin);
+		DVector3_Copy(&interp->dynslope.oldnormdir, &interp->dynslope.baknormdir);
+		interp->dynslope.olddzdelta = interp->dynslope.bakdzdelta;
+
+		if (interp->dynslope.slope->moved)
+		{
+			P_CalculateSlopeVectors(interp->dynslope.slope);
+
+			interp->dynslope.slope->moved = false;
+		}
+
+		DVector3_Copy(&interp->dynslope.bakorigin, &interp->dynslope.slope->dorigin);
+		DVector3_Copy(&interp->dynslope.baknormdir, &interp->dynslope.slope->dnormdir);
+		interp->dynslope.bakdzdelta = interp->dynslope.slope->dzdelta;
 		break;
 	}
 }
@@ -627,13 +676,22 @@ void R_ApplyLevelInterpolators(fixed_t frac)
 				interp->polyobj.polyobj->vertices[ii]->x = R_LerpFixed(interp->polyobj.oldvertices[ii * 2    ], interp->polyobj.bakvertices[ii * 2    ], frac);
 				interp->polyobj.polyobj->vertices[ii]->y = R_LerpFixed(interp->polyobj.oldvertices[ii * 2 + 1], interp->polyobj.bakvertices[ii * 2 + 1], frac);
 			}
+			RecalculatePolyobjectSegAngles(interp->polyobj.polyobj);
 			interp->polyobj.polyobj->centerPt.x = R_LerpFixed(interp->polyobj.oldcx, interp->polyobj.bakcx, frac);
 			interp->polyobj.polyobj->centerPt.y = R_LerpFixed(interp->polyobj.oldcy, interp->polyobj.bakcy, frac);
+			interp->polyobj.polyobj->angle = R_LerpAngle(interp->polyobj.oldangle, interp->polyobj.bakangle, frac);
 			break;
 		case LVLINTERP_DynSlope:
 			R_LerpVector3(&interp->dynslope.oldo, &interp->dynslope.bako, frac, &interp->dynslope.slope->o);
 			R_LerpVector2(&interp->dynslope.oldd, &interp->dynslope.bakd, frac, &interp->dynslope.slope->d);
 			interp->dynslope.slope->zdelta = R_LerpFixed(interp->dynslope.oldzdelta, interp->dynslope.bakzdelta, frac);
+			if (rendermode == render_soft)
+			{
+				double dfrac = FixedToDouble(frac);
+				R_LerpDVector3(&interp->dynslope.oldorigin, &interp->dynslope.bakorigin, dfrac, &interp->dynslope.slope->dorigin);
+				R_LerpDVector3(&interp->dynslope.oldnormdir, &interp->dynslope.baknormdir, dfrac, &interp->dynslope.slope->dnormdir);
+				interp->dynslope.slope->dzdelta = R_LerpDouble(interp->dynslope.olddzdelta, interp->dynslope.bakdzdelta, dfrac);
+			}
 			break;
 		}
 	}
@@ -682,13 +740,19 @@ void R_RestoreLevelInterpolators(void)
 				interp->polyobj.polyobj->vertices[ii]->x = interp->polyobj.bakvertices[ii * 2    ];
 				interp->polyobj.polyobj->vertices[ii]->y = interp->polyobj.bakvertices[ii * 2 + 1];
 			}
+			RecalculatePolyobjectSegAngles(interp->polyobj.polyobj);
 			interp->polyobj.polyobj->centerPt.x = interp->polyobj.bakcx;
 			interp->polyobj.polyobj->centerPt.y = interp->polyobj.bakcy;
+			interp->polyobj.polyobj->angle = interp->polyobj.bakangle;
 			break;
 		case LVLINTERP_DynSlope:
 			FV3_Copy(&interp->dynslope.slope->o, &interp->dynslope.bako);
 			FV2_Copy(&interp->dynslope.slope->d, &interp->dynslope.bakd);
 			interp->dynslope.slope->zdelta = interp->dynslope.bakzdelta;
+
+			DVector3_Copy(&interp->dynslope.slope->dorigin, &interp->dynslope.bakorigin);
+			DVector3_Copy(&interp->dynslope.slope->dnormdir, &interp->dynslope.baknormdir);
+			interp->dynslope.slope->dzdelta = interp->dynslope.bakdzdelta;
 			break;
 		}
 	}
@@ -802,6 +866,10 @@ void R_ResetMobjInterpolationState(mobj_t *mobj)
 	mobj->old_roll2 = mobj->old_roll;
 	mobj->old_spriteroll2 = mobj->old_spriteroll;
 	mobj->old_scale2 = mobj->old_scale;
+	mobj->old_spritexscale2 = mobj->old_spritexscale;
+	mobj->old_spriteyscale2 = mobj->old_spriteyscale;
+	mobj->old_spritexoffset2 = mobj->old_spritexoffset;
+	mobj->old_spriteyoffset2 = mobj->old_spriteyoffset;
 	mobj->old_x = mobj->x;
 	mobj->old_y = mobj->y;
 	mobj->old_z = mobj->z;
@@ -838,6 +906,10 @@ void R_ResetPrecipitationMobjInterpolationState(precipmobj_t *mobj)
 	mobj->old_pitch2 = mobj->old_pitch;
 	mobj->old_roll2 = mobj->old_roll;
 	mobj->old_spriteroll2 = mobj->old_spriteroll;
+	mobj->old_spritexscale2 = mobj->old_spritexscale;
+	mobj->old_spriteyscale2 = mobj->old_spriteyscale;
+	mobj->old_spritexoffset2 = mobj->old_spritexoffset;
+	mobj->old_spriteyoffset2 = mobj->old_spriteyoffset;
 	mobj->old_x = mobj->x;
 	mobj->old_y = mobj->y;
 	mobj->old_z = mobj->z;

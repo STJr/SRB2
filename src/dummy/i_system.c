@@ -1,6 +1,7 @@
 #include "../doomdef.h"
 #include "../doomtype.h"
 #include "../i_system.h"
+#include "../i_time.h"
 
 FILE *logstream = NULL;
 
@@ -17,6 +18,11 @@ size_t I_GetFreeMem(size_t *total)
 void I_Sleep(UINT32 ms)
 {
 	(void)ms;
+}
+
+void I_SleepDuration(precise_t duration)
+{
+	(void)duration;
 }
 
 precise_t I_GetPreciseTime(void)
@@ -198,6 +204,21 @@ void I_GetCursorPosition(INT32 *x, INT32 *y)
 {
 	(void)x;
 	(void)y;
+}
+
+const char *I_GetSysName(void)
+{
+	return NULL;
+}
+
+void I_SetTextInputMode(boolean active)
+{
+	(void)active;
+}
+
+boolean I_GetTextInputMode(void)
+{
+	return false;
 }
 
 #include "../sdl/dosstr.c"

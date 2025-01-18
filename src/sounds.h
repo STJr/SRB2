@@ -43,7 +43,7 @@ typedef enum
 
 // free sfx for S_AddSoundFx()
 #define NUMSFXFREESLOTS 1600 // Matches SOC Editor.
-#define NUMSKINSFXSLOTS (MAXSKINS*NUMSKINSOUNDS)
+#define NUMSKINSFXSLOTS (128*NUMSKINSOUNDS)
 
 //
 // SoundFX struct.
@@ -332,6 +332,8 @@ typedef enum
 	sfx_mario8,
 	sfx_mario9,
 	sfx_marioa,
+	sfx_mariob,
+	sfx_marioc,
 	sfx_thwomp,
 
 	// Black Eggman
@@ -874,7 +876,7 @@ typedef enum
 	// free slots for S_AddSoundFx() at run-time --------------------
 	sfx_freeslot0,
 	//
-	// ... 60 free sounds here ...
+	// ... 1600 free sounds here ...
 	//
 	sfx_lastfreeslot = sfx_freeslot0 + NUMSFXFREESLOTS-1,
 	// end of freeslots ---------------------------------------------

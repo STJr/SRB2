@@ -1,6 +1,6 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
-// Copyright (C) 2020-2023 by Jaime "Lactozilla" Passos.
+// Copyright (C) 2020-2024 by Lactozilla.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -18,7 +18,10 @@
 #include "doomdef.h"
 
 // Patch functions
-patch_t *Patch_Create(softwarepatch_t *source, size_t srcsize, void *dest);
+patch_t *Patch_Create(INT16 width, INT16 height);
+patch_t *Patch_CreateFromDoomPatch(softwarepatch_t *source);
+void Patch_CalcDataSizes(softwarepatch_t *source, size_t *total_pixels, size_t *total_posts);
+void Patch_MakeColumns(softwarepatch_t *source, size_t num_columns, INT16 width, UINT8 *pixels, column_t *columns, post_t *posts, boolean flip);
 void Patch_Free(patch_t *patch);
 
 #define Patch_FreeTag(tagnum) Patch_FreeTags(tagnum, tagnum)
@@ -37,7 +40,7 @@ patch_t *Patch_GetRotated(patch_t *patch, INT32 angle, boolean flip);
 patch_t *Patch_GetRotatedSprite(
 	spriteframe_t *sprite,
 	size_t frame, size_t spriteangle,
-	boolean flip, boolean adjustfeet,
+	boolean flip,
 	void *info, INT32 rotationangle);
 angle_t R_ModelRotationAngle(interpmobjstate_t *interp);
 angle_t R_SpriteRotationAngle(interpmobjstate_t *interp);

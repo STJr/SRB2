@@ -1,6 +1,6 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
-// Copyright (C) 2004-2023 by Sonic Team Junior.
+// Copyright (C) 2004-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -15,7 +15,7 @@
 #include "f_finale.h"
 #include "g_game.h"
 #include "hu_stuff.h"
-#include "i_net.h"
+#include "netcode/i_net.h"
 #include "i_video.h"
 #include "p_tick.h"
 #include "r_defs.h"
@@ -97,7 +97,7 @@ typedef union
 		// Continues
 		UINT8 continues;
 		patch_t *pcontinues;
-		INT32 *playerchar; // Continue HUD
+		UINT8 *playerchar; // Continue HUD
 		UINT16 *playercolor;
 
 		UINT8 gotlife; // Number of extra lives obtained
@@ -108,7 +108,8 @@ typedef union
 		UINT32 scores[MAXPLAYERS]; // Winner's score
 		UINT16 *color[MAXPLAYERS]; // Winner's color #
 		boolean spectator[MAXPLAYERS]; // Spectator list
-		INT32 *character[MAXPLAYERS]; // Winner's character #
+		UINT8 *character[MAXPLAYERS]; // Winner's character #
+		INT32 ctfteam[MAXPLAYERS]; // Winner's ctfteam #
 		INT32 num[MAXPLAYERS]; // Winner's player #
 		char *name[MAXPLAYERS]; // Winner's name
 		patch_t *result; // RESULT
@@ -121,7 +122,7 @@ typedef union
 	struct
 	{
 		UINT16 *color[MAXPLAYERS]; // Winner's color #
-		INT32 *character[MAXPLAYERS]; // Winner's character #
+		UINT8 *character[MAXPLAYERS]; // Winner's character #
 		INT32 num[MAXPLAYERS]; // Winner's player #
 		char name[MAXPLAYERS][9]; // Winner's name
 		UINT32 times[MAXPLAYERS];
@@ -536,7 +537,7 @@ void Y_IntermissionDrawer(void)
 
 		if (animatetic && (tic_t)intertic >= animatetic)
 		{
-			const INT32 scradjust = (vid.width/vid.dupx)>>3; // 40 for BASEVIDWIDTH
+			const INT32 scradjust = (vid.width/vid.dup)>>3; // 40 for BASEVIDWIDTH
 			INT32 animatetimer = (intertic - animatetic);
 			if (animatetimer <= 16)
 			{
@@ -580,7 +581,7 @@ void Y_IntermissionDrawer(void)
 			if (LUA_HudEnabled(hud_intermissiontitletext))
 			{
 				const char *ringtext = "\x82" "50 rings, no shield";
-				const char *tut1text = "\x82" "press " "\x80" "spin";
+				const char *tut1text = "\x82" "press " "\x80" "shield";
 				const char *tut2text = "\x82" "mid-" "\x80" "jump";
 				ttheight = 8;
 				V_DrawLevelTitle(data.spec.passedx1 + xoffset1, ttheight, 0, data.spec.passed1);
@@ -687,7 +688,7 @@ void Y_IntermissionDrawer(void)
 
 				if (intertic > 1)
 				{
-					if (stagefailed && data.spec.emeraldy < (vid.height/vid.dupy)+16)
+					if (stagefailed && data.spec.emeraldy < (vid.height/vid.dup)+16)
 					{
 						emeraldx += intertic - 6;
 					}
@@ -849,7 +850,7 @@ void Y_IntermissionDrawer(void)
 			{
 				UINT8 *colormap = R_GetTranslationColormap(*data.match.character[i], *data.match.color[i], GTC_CACHE);
 
-				if (*data.match.color[i] == SKINCOLOR_RED) //red
+				if (data.match.ctfteam[i] == 1) //red
 				{
 					if (redplayers++ > 9)
 						continue;
@@ -857,7 +858,7 @@ void Y_IntermissionDrawer(void)
 					y = (redplayers * 16) + 32;
 					V_DrawCenteredString(x+6, y, 0, va("%d", redplayers));
 				}
-				else if (*data.match.color[i] == SKINCOLOR_BLUE) //blue
+				else if (data.match.ctfteam[i] == 2) //blue
 				{
 					if (blueplayers++ > 9)
 						continue;
@@ -1129,7 +1130,7 @@ void Y_Ticker(void)
 			else if (mapheaderinfo[gamemap-1]->musintername[0] && S_MusicExists(mapheaderinfo[gamemap-1]->musintername, !midi_disabled, !digital_disabled))
 				S_ChangeMusicInternal(mapheaderinfo[gamemap-1]->musintername, false); // don't loop it
 			else
-				S_ChangeMusicInternal("_clear", false); // don't loop it
+				S_ChangeMusicInternal(stagefailed ? "CHFAIL" : "CHPASS", false); // don't loop it
 			tallydonetic = -1;
 		}
 
@@ -1163,7 +1164,7 @@ void Y_Ticker(void)
 			}
 			else
 			{
-				if (data.spec.emeraldy < (vid.height/vid.dupy)+16)
+				if (data.spec.emeraldy < (vid.height/vid.dup)+16)
 				{
 					data.spec.emeraldy += (++data.spec.emeraldmomy);
 				}
@@ -1382,22 +1383,22 @@ void Y_StartIntermission(void)
 			else
 			{
 				// too long so just show "YOU GOT THROUGH THE ACT"
-				if (strlen(skins[players[consoleplayer].skin].realname) > 13)
+				if (strlen(skins[players[consoleplayer].skin]->realname) > 13)
 				{
 					strcpy(data.coop.passed1, "you got");
 					strcpy(data.coop.passed2, (mapheaderinfo[gamemap-1]->actnum) ? "through act" : "through the act");
 				}
 				// long enough that "X GOT" won't fit so use "X PASSED THE ACT"
-				else if (strlen(skins[players[consoleplayer].skin].realname) > 8)
+				else if (strlen(skins[players[consoleplayer].skin]->realname) > 8)
 				{
-					strcpy(data.coop.passed1, skins[players[consoleplayer].skin].realname);
+					strcpy(data.coop.passed1, skins[players[consoleplayer].skin]->realname);
 					strcpy(data.coop.passed2, (mapheaderinfo[gamemap-1]->actnum) ? "passed act" : "passed the act");
 				}
 				// length is okay for normal use
 				else
 				{
 					snprintf(data.coop.passed1, sizeof data.coop.passed1, "%s got",
-						skins[players[consoleplayer].skin].realname);
+						skins[players[consoleplayer].skin]->realname);
 					strcpy(data.coop.passed2, (mapheaderinfo[gamemap-1]->actnum) ? "through act" : "through the act");
 				}
 			}
@@ -1469,26 +1470,26 @@ void Y_StartIntermission(void)
 			{
 				snprintf(data.spec.passed1,
 					sizeof data.spec.passed1, "%s",
-					skins[players[consoleplayer].skin].realname);
+					skins[players[consoleplayer].skin]->realname);
 				data.spec.passed1[sizeof data.spec.passed1 - 1] = '\0';
 				strcpy(data.spec.passed2, "got them all!");
 
 				if (players[consoleplayer].charflags & SF_SUPER)
 				{
 					strcpy(data.spec.passed3, "can now become");
-					if (strlen(skins[players[consoleplayer].skin].supername) > 20) //too long, use generic
+					if (strlen(skins[players[consoleplayer].skin]->supername) > 20) //too long, use generic
 						strcpy(data.spec.passed4, "their super form");
 					else
-						strcpy(data.spec.passed4, skins[players[consoleplayer].skin].supername);
+						strcpy(data.spec.passed4, skins[players[consoleplayer].skin]->supername);
 				}
 			}
 			else
 			{
-				if (strlen(skins[players[consoleplayer].skin].realname) <= SKINNAMESIZE-5)
+				if (strlen(skins[players[consoleplayer].skin]->realname) <= SKINNAMESIZE-5)
 				{
 					snprintf(data.spec.passed1,
 						sizeof data.spec.passed1, "%s got",
-						skins[players[consoleplayer].skin].realname);
+						skins[players[consoleplayer].skin]->realname);
 					data.spec.passed1[sizeof data.spec.passed1 - 1] = '\0';
 				}
 				else
@@ -1687,6 +1688,7 @@ static void Y_CalculateTimeRaceWinners(void)
 
 			if (players[i].realtime <= data.match.scores[data.match.numplayers] && completed[i] == false)
 			{
+				data.match.ctfteam[data.match.numplayers] = players[i].ctfteam;
 				data.match.scores[data.match.numplayers] = players[i].realtime;
 				data.match.color[data.match.numplayers] = &players[i].skincolor;
 				data.match.character[data.match.numplayers] = &players[i].skin;
@@ -2043,7 +2045,7 @@ static void Y_AwardCoopBonuses(void)
 	y_bonus_t localbonuses[4];
 
 	// set score/total first
-	data.coop.total = players[consoleplayer].recordscore;
+	data.coop.total = (players[consoleplayer].pflags & PF_FINISHED) ? players[consoleplayer].recordscore : 0;
 	data.coop.score = players[consoleplayer].score;
 	data.coop.gotperfbonus = -1;
 	memset(data.coop.bonuses, 0, sizeof(data.coop.bonuses));
@@ -2060,7 +2062,12 @@ static void Y_AwardCoopBonuses(void)
 
 		for (j = 0; j < 4; ++j) // Set bonuses
 		{
-			(bonuses_list[bonusnum][j])(&players[i], &localbonuses[j]);
+			//Set the bonus, but only if we actually finished
+			if (players[i].pflags & PF_FINISHED)
+				(bonuses_list[bonusnum][j])(&players[i], &localbonuses[j]);
+			else
+				Y_SetNullBonus(&players[i], &localbonuses[j]);
+			
 			players[i].score += localbonuses[j].points;
 			if (players[i].score > MAXSCORE)
 				players[i].score = MAXSCORE;

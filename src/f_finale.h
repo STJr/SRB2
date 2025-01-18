@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -96,7 +96,7 @@ typedef enum
 extern ttmode_enum ttmode;
 extern UINT8 ttscale;
 // ttmode user vars
-extern char ttname[9];
+extern char ttname[8+1];
 extern INT16 ttx;
 extern INT16 tty;
 extern INT16 ttloop;

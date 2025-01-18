@@ -52,6 +52,9 @@ typedef struct thinker_s
 	// this one using pointers. Used for garbage collection.
 	INT32 references;
 
+	boolean removing;
+	boolean cachable;
+
 #ifdef PARANOIA
 	INT32 debug_mobjtype;
 	tic_t debug_time;

@@ -1,6 +1,6 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
-// Copyright (C) 2020-2023 by Jaime "Lactozilla" Passos.
+// Copyright (C) 2020-2023 by Lactozilla.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -10,7 +10,7 @@
 /// \brief Patch rotation.
 
 #include "r_patchrotation.h"
-#include "r_things.h" // FEETADJUST
+#include "r_things.h" // FEETADJUST (todo: is this needed anymore? -- Monster Iestyn 21 Sep 2023 )
 #include "z_zone.h"
 #include "w_wad.h"
 #include "r_main.h" // R_PointToAngle
@@ -72,23 +72,20 @@ patch_t *Patch_GetRotated(patch_t *patch, INT32 angle, boolean flip)
 patch_t *Patch_GetRotatedSprite(
 	spriteframe_t *sprite,
 	size_t frame, size_t spriteangle,
-	boolean flip, boolean adjustfeet,
+	boolean flip,
 	void *info, INT32 rotationangle)
 {
-	rotsprite_t *rotsprite;
+	rotsprite_t *rotsprite = sprite->rotated[spriteangle];
 	spriteinfo_t *sprinfo = (spriteinfo_t *)info;
 	INT32 idx = rotationangle;
-	UINT8 type = (adjustfeet ? 1 : 0);
 
 	if (rotationangle < 1 || rotationangle >= ROTANGLES)
 		return NULL;
 
-	rotsprite = sprite->rotated[type][spriteangle];
-
 	if (rotsprite == NULL)
 	{
 		rotsprite = RotatedPatch_Create(ROTANGLES);
-		sprite->rotated[type][spriteangle] = rotsprite;
+		sprite->rotated[spriteangle] = rotsprite;
 	}
 
 	if (flip)
@@ -117,10 +114,6 @@ patch_t *Patch_GetRotatedSprite(
 		}
 
 		RotatedPatch_DoRotation(rotsprite, patch, rotationangle, xpivot, ypivot, flip);
-
-		//BP: we cannot use special tric in hardware mode because feet in ground caused by z-buffer
-		if (adjustfeet)
-			((patch_t *)rotsprite->patches[idx])->topoffset += FEETADJUST>>FRACBITS;
 	}
 
 	return rotsprite->patches[idx];

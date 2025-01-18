@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2012-2016 by John "JTE" Muniz.
-// Copyright (C) 2012-2023 by Sonic Team Junior.
+// Copyright (C) 2012-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -24,7 +24,7 @@
 #include "lua_hud.h" // hud_running errors
 
 #include "m_perfstats.h"
-#include "d_netcmd.h" // for cv_perfstats
+#include "netcode/d_netcmd.h" // for cv_perfstats
 #include "i_system.h" // I_GetPreciseTime
 
 /* =========================================================================
@@ -76,12 +76,12 @@ static boolean mobj_hook_available(int hook_type, mobjtype_t mobj_type)
 		);
 }
 
-static int hook_in_list
+static unsigned hook_in_list
 (
 		const char * const         name,
 		const char * const * const list
 ){
-	int type;
+	unsigned type;
 
 	for (type = 0; list[type] != NULL; ++type)
 	{
@@ -200,7 +200,7 @@ static void add_hook_ref(lua_State *L, int idx)
 static int lib_addHook(lua_State *L)
 {
 	const char * name;
-	int type;
+	unsigned type;
 
 	if (!lua_lumploading)
 		return luaL_error(L, "This function cannot be called from within a hook or coroutine!");
@@ -375,6 +375,17 @@ static boolean prepare_string_hook
 		return false;
 }
 
+static boolean prepare_hud_hook
+(
+		Hook_State * hook,
+		int default_status,
+		int hook_type
+){
+	return init_hook_type(hook, default_status,
+			hook_type, 0, NULL,
+			hudHookIds[hook_type].numHooks);
+}
+
 static void init_hook_call
 (
 		Hook_State * hook,
@@ -487,7 +498,40 @@ static int call_string_hooks(Hook_State *hook)
 
 static int call_mobj_type_hooks(Hook_State *hook, mobjtype_t mobj_type)
 {
-	return call_mapped(hook, &mobjHookIds[mobj_type][hook->hook_type]);
+	int numCalls = call_mapped(hook, &mobjHookIds[mobj_type][hook->hook_type]);
+
+	if (numCalls > 0 && mobj_type == MT_NULL && (
+		   hook->hook_type == MOBJ_HOOK(MobjThinker    )
+		|| hook->hook_type == MOBJ_HOOK(MobjCollide    )
+		|| hook->hook_type == MOBJ_HOOK(MobjLineCollide)
+		|| hook->hook_type == MOBJ_HOOK(MobjMoveCollide)
+		|| hook->hook_type == MOBJ_HOOK(MobjFuse       )
+		|| hook->hook_type == MOBJ_HOOK(MobjThinker    )
+		|| hook->hook_type == MOBJ_HOOK(BossThinker    )
+		|| hook->hook_type == MOBJ_HOOK(MobjMoveBlocked)
+		|| hook->hook_type == MOBJ_HOOK(FollowMobj     )
+	))
+		LUA_UsageWarning(L, va(
+			"%s hooks not attached to a specific mobj type are deprecated and will be removed.",
+			mobjHookNames[hook->hook_type])
+		);
+
+	return numCalls;
+}
+
+static void call_hud_hooks
+(
+		Hook_State * hook,
+		int        results,
+		Hook_Callback results_handler
+){
+	hud_running = true; // local hook
+	init_hook_call(hook, results, results_handler);
+	call_mapped(hook, &hudHookIds[hook->hook_type]);
+	hud_running = false;
+
+	lua_pushnil(gL);
+	lua_setfield(gL, LUA_REGISTRYINDEX, "HUD_DRAW_LIST");
 }
 
 static int call_hooks
@@ -648,33 +692,47 @@ int LUA_HookKey(event_t *event, int hook_type)
 
 void LUA_HookHUD(int hook_type, huddrawlist_h list)
 {
-	const hook_t * map = &hudHookIds[hook_type];
 	Hook_State hook;
-	if (map->numHooks > 0)
+	if (prepare_hud_hook(&hook, 0, hook_type))
 	{
-		start_hook_stack();
-		begin_hook_values(&hook);
-
 		LUA_SetHudHook(hook_type, list);
-
-		hud_running = true; // local hook
-		init_hook_call(&hook, 0, res_none);
-		call_mapped(&hook, map);
-		hud_running = false;
-
-		lua_pushnil(gL);
-		lua_setfield(gL, LUA_REGISTRYINDEX, "HUD_DRAW_LIST");
+		call_hud_hooks(&hook, 0, res_none);
 	}
+}
+
+int LUA_HookCharacterHUD
+(
+	int hook_type, huddrawlist_h list, player_t *player,
+	fixed_t x, fixed_t y, fixed_t scale,
+	INT32 skinIndex, UINT8 sprite2, UINT8 frame, UINT8 rotation, skincolornum_t color,
+	INT32 ticker, boolean mode
+){
+	Hook_State hook;
+	if (prepare_hud_hook(&hook, false, hook_type))
+	{
+		LUA_SetHudHook(hook_type, list);
+		LUA_PushUserdata(gL, player, META_PLAYER);
+		lua_pushfixed(gL, x);
+		lua_pushfixed(gL, y);
+		lua_pushfixed(gL, scale);
+		lua_pushstring(gL, skins[skinIndex]->name);
+		lua_pushinteger(gL, sprite2);
+		lua_pushinteger(gL, frame);
+		lua_pushinteger(gL, rotation);
+		lua_pushinteger(gL, color);
+		lua_pushinteger(gL, ticker);
+		lua_pushboolean(gL, mode);
+		call_hud_hooks(&hook, 1, res_true);
+	}
+	return hook.status;
 }
 
 /* =========================================================================
                                SPECIALIZED HOOKS
    ========================================================================= */
 
-void LUA_HookThinkFrame(void)
+static void hook_think_frame(int type)
 {
-	const int type = HOOK(ThinkFrame);
-
 	// variables used by perf stats
 	int hook_index = 0;
 	precise_t time_taken = 0;
@@ -692,7 +750,7 @@ void LUA_HookThinkFrame(void)
 		{
 			get_hook(&hook, map->ids, k);
 
-			if (cv_perfstats.value == 3)
+			if (cv_perfstats.value >= 3)
 			{
 				lua_pushvalue(gL, -1);/* need the function again */
 				time_taken = I_GetPreciseTime();
@@ -700,18 +758,39 @@ void LUA_HookThinkFrame(void)
 
 			call_single_hook(&hook);
 
-			if (cv_perfstats.value == 3)
+			if (cv_perfstats.value >= 3)
 			{
 				lua_Debug ar;
 				time_taken = I_GetPreciseTime() - time_taken;
 				lua_getinfo(gL, ">S", &ar);
-				PS_SetThinkFrameHookInfo(hook_index, time_taken, ar.short_src);
+				if (type == 4) // sorry for magic numbers
+					PS_SetPreThinkFrameHookInfo(hook_index, time_taken, ar.short_src);
+				else if (type == 5)
+					PS_SetThinkFrameHookInfo(hook_index, time_taken, ar.short_src);
+				else if (type == 6)
+					PS_SetPostThinkFrameHookInfo(hook_index, time_taken, ar.short_src);
+
 				hook_index++;
 			}
 		}
 
 		lua_settop(gL, 0);
 	}
+}
+
+void LUA_HookPreThinkFrame(void)
+{
+	hook_think_frame(HOOK(PreThinkFrame));
+}
+
+void LUA_HookThinkFrame(void)
+{
+	hook_think_frame(HOOK(ThinkFrame));
+}
+
+void LUA_HookPostThinkFrame(void)
+{
+	hook_think_frame(HOOK(PostThinkFrame));
 }
 
 int LUA_HookMobjLineCollide(mobj_t *mobj, line_t *line)
