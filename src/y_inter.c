@@ -1647,8 +1647,11 @@ static void Y_CalculateMatchWinners(void)
 				data.match.ctfteam[data.match.numplayers] = players[i].ctfteam;
 				data.match.scores[data.match.numplayers] = players[i].score;
 				data.match.color[data.match.numplayers] = &players[i].skincolor;
-				if (data.match.ctfteam[data.match.numplayers] == 1) { data.match.color[data.match.numplayers] = &skincolor_redteam; } // red team
-				else if (data.match.ctfteam[data.match.numplayers] == 2) { data.match.color[data.match.numplayers] = &skincolor_blueteam; } // blue team
+				if (data.match.ctfteam[data.match.numplayers] == 1) // red team
+					data.match.color[data.match.numplayers] = &skincolor_redteam; 
+
+				if (data.match.ctfteam[data.match.numplayers] == 2) // blue team
+					data.match.color[data.match.numplayers] = &skincolor_blueteam;
 
 				data.match.character[data.match.numplayers] = &players[i].skin;
 				data.match.name[data.match.numplayers] = player_names[i];
