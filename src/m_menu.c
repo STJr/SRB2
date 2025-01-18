@@ -14433,7 +14433,8 @@ const char *QuitScreenMessages[3] = {
 	"money).\n"
 	,
 
-	"THIS GAME SHOULD NOT BE SOLD!",
+	"THIS GAME SHOULD NOT BE SOLD!"
+	,
 
 	"STJr is in no way affiliated\n"
 	"with SEGA or Sonic Team.\n"
