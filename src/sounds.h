@@ -332,8 +332,6 @@ typedef enum
 	sfx_mario8,
 	sfx_mario9,
 	sfx_marioa,
-	sfx_mariob,
-	sfx_marioc,
 	sfx_thwomp,
 
 	// Black Eggman
