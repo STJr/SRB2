@@ -5866,6 +5866,10 @@ static void P_ConvertBinaryLinedefTypes(void)
 			lines[i].args[0] = tag;
 			lines[i].args[1] = !!(lines[i].flags & ML_NOCLIMB);
 			break;
+		case 465: // Bounce Player (purely for backwards compatibility with new Pipe Towers)
+			lines[i].args[0] = (FixedHypot(lines[i].dx, lines[i].dy) / 8) >> FRACBITS;
+			lines[i].special = 430;
+			break;
 		case 466: //Set level failure state
 			lines[i].args[0] = !!(lines[i].flags & ML_NOCLIMB);
 			break;
@@ -7369,11 +7373,11 @@ static void P_RunLevelScript(const char *scriptname)
 			return;
 		}
 
-		COM_BufInsertText(W_CacheLumpNum(lumpnum, PU_CACHE));
+		COM_BufInsertTextEx(W_CacheLumpNum(lumpnum, PU_CACHE), COM_LUA);
 	}
 	else
 	{
-		COM_BufAddText(va("exec %s\n", scriptname));
+		COM_ExecFile(scriptname, COM_LUA, false);
 	}
 	COM_BufExecute(); // Run it!
 }

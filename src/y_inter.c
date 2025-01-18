@@ -109,6 +109,7 @@ typedef union
 		UINT16 *color[MAXPLAYERS]; // Winner's color #
 		boolean spectator[MAXPLAYERS]; // Spectator list
 		UINT8 *character[MAXPLAYERS]; // Winner's character #
+		INT32 ctfteam[MAXPLAYERS]; // Winner's ctfteam #
 		INT32 num[MAXPLAYERS]; // Winner's player #
 		char *name[MAXPLAYERS]; // Winner's name
 		patch_t *result; // RESULT
@@ -579,9 +580,9 @@ void Y_IntermissionDrawer(void)
 		{
 			if (LUA_HudEnabled(hud_intermissiontitletext))
 			{
-				const char *ringtext = "\x82" "get 50 rings, then";
+				const char *ringtext = "\x82" "50 rings, no shield";
 				const char *tut1text = "\x82" "press " "\x80" "shield";
-				const char *tut2text = "\x82" "to transform";
+				const char *tut2text = "\x82" "mid-" "\x80" "jump";
 				ttheight = 8;
 				V_DrawLevelTitle(data.spec.passedx1 + xoffset1, ttheight, 0, data.spec.passed1);
 				ttheight += V_LevelNameHeight(data.spec.passed3) + 2;
@@ -849,7 +850,7 @@ void Y_IntermissionDrawer(void)
 			{
 				UINT8 *colormap = R_GetTranslationColormap(*data.match.character[i], *data.match.color[i], GTC_CACHE);
 
-				if (*data.match.color[i] == SKINCOLOR_RED) //red
+				if (data.match.ctfteam[i] == 1) //red
 				{
 					if (redplayers++ > 9)
 						continue;
@@ -857,7 +858,7 @@ void Y_IntermissionDrawer(void)
 					y = (redplayers * 16) + 32;
 					V_DrawCenteredString(x+6, y, 0, va("%d", redplayers));
 				}
-				else if (*data.match.color[i] == SKINCOLOR_BLUE) //blue
+				else if (data.match.ctfteam[i] == 2) //blue
 				{
 					if (blueplayers++ > 9)
 						continue;
@@ -1129,7 +1130,7 @@ void Y_Ticker(void)
 			else if (mapheaderinfo[gamemap-1]->musintername[0] && S_MusicExists(mapheaderinfo[gamemap-1]->musintername, !midi_disabled, !digital_disabled))
 				S_ChangeMusicInternal(mapheaderinfo[gamemap-1]->musintername, false); // don't loop it
 			else
-				S_ChangeMusicInternal("_clear", false); // don't loop it
+				S_ChangeMusicInternal(stagefailed ? "CHFAIL" : "CHPASS", false); // don't loop it
 			tallydonetic = -1;
 		}
 
@@ -1687,6 +1688,7 @@ static void Y_CalculateTimeRaceWinners(void)
 
 			if (players[i].realtime <= data.match.scores[data.match.numplayers] && completed[i] == false)
 			{
+				data.match.ctfteam[data.match.numplayers] = players[i].ctfteam;
 				data.match.scores[data.match.numplayers] = players[i].realtime;
 				data.match.color[data.match.numplayers] = &players[i].skincolor;
 				data.match.character[data.match.numplayers] = &players[i].skin;

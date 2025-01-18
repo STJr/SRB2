@@ -3,7 +3,7 @@
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
 // Copyright (C) 2011-2016 by Matthew "Kaito Sinclaire" Walsh.
-// Copyright (C) 1999-2024 by Sonic Team Junior.
+// Copyright (C) 1999-2025 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -14417,6 +14417,33 @@ static INT32 quitsounds[] =
 	sfx_chchng // Tails 11-09-99
 };
 
+const char *QuitScreenMessages[3] = {
+	(
+	"Design and content in\n"
+	"SRB2 is copyright\n"
+	"1998-2025 by STJr. All\n"
+	"original material in\n"
+	"this game is copyrighted\n"
+	"by their respective\n"
+	"owners, and no copyright\n"
+	"infringement is\n"
+	"intended. STJr's staff\n"
+	"make no profit\n"
+	"whatsoever (in\n"
+	"fact, we lose\n"
+	"money)."
+	),
+
+	(
+	"THIS GAME SHOULD NOT BE SOLD!"
+	),
+
+	(
+	"STJr is in no way affiliated\n"
+	"with SEGA or Sonic Team."
+	)
+};
+
 void M_QuitResponse(INT32 ch)
 {
 	tic_t ptime;
@@ -14438,6 +14465,9 @@ void M_QuitResponse(INT32 ch)
 		while (ptime > I_GetTime())
 		{
 			V_DrawScaledPatch(0, 0, 0, W_CachePatchName("GAMEQUIT", PU_PATCH)); // Demo 3 Quit Screen Tails 06-16-2001
+			V_DrawCenteredString(2+(V_StringWidth(QuitScreenMessages[0], V_ALLOWLOWERCASE)/2), 4, V_ALLOWLOWERCASE, QuitScreenMessages[0]);
+			V_DrawCenteredString(160, 166, V_ALLOWLOWERCASE|V_REDMAP, QuitScreenMessages[1]);
+			V_DrawCenteredString(160, 176, V_ALLOWLOWERCASE, QuitScreenMessages[2]);
 			I_FinishUpdate(); // Update the screen with the image Tails 06-19-2001
 			I_Sleep(cv_sleep.value);
 			I_UpdateTime(cv_timescale.value);

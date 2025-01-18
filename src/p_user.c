@@ -4438,27 +4438,21 @@ static void P_DoSuperStuff(player_t *player)
 //
 // Returns true if player is ready to transform or detransform
 //
-boolean P_SuperReady(player_t *player, boolean transform)
+boolean P_SuperReady(player_t *player)
 {
-	if (!transform &&
-	(player->powers[pw_super] < TICRATE*3/2
-	|| !G_CoopGametype())) // No turning back in competitive!
-		return false;
-	else if (transform
-	&& (player->powers[pw_super]
-	|| !ALL7EMERALDS(emeralds)
-	|| !(player->rings >= 50)))
-		return false;
-
 	if (player->mo
+	&& (player->rings >= 50)
+	&& ALL7EMERALDS(emeralds)
+	&& (player->charflags & SF_SUPER)
+	&& (player->pflags & PF_JUMPED)
+	&& !player->powers[pw_super]
+	&& !player->powers[pw_invulnerability]
+	&& !(player->powers[pw_shield] & SH_NOSTACK)
 	&& !player->powers[pw_tailsfly]
 	&& !player->powers[pw_carry]
-	&& (player->charflags & SF_SUPER)
 	&& !P_PlayerInPain(player)
 	&& !player->climbing
 	&& !(player->pflags & (PF_JUMPSTASIS|PF_THOKKED|PF_STARTDASH|PF_GLIDING|PF_SLIDING|PF_SHIELDABILITY))
-	&& ((player->pflags & PF_JUMPED) || (P_IsObjectOnGround(player->mo) && (player->panim == PA_IDLE || player->panim == PA_EDGE
-	|| player->panim == PA_WALK || player->panim == PA_RUN || (player->charflags & SF_DASHMODE && player->panim == PA_DASH))))
 	&& !(maptol & TOL_NIGHTS))
 		return true;
 
@@ -5318,8 +5312,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd, boolean spinshieldhac
 			;
 		else if (cmd->buttons & BT_SPIN)
 		{
-			if (spinshieldhack && !(player->pflags & PF_SPINDOWN) && P_SuperReady(player, true)
-			&& !player->powers[pw_invulnerability] && !(player->powers[pw_shield] & SH_NOSTACK)) // These two checks are no longer in P_SuperReady
+			if (spinshieldhack && !(player->pflags & PF_SPINDOWN) && P_SuperReady(player))
 			{
 				// If you're using two-button play, can turn Super and aren't already,
 				// and you don't have a shield, then turn Super!
@@ -8803,12 +8796,8 @@ void P_MovePlayer(player_t *player)
 		if ((cmd->buttons & BT_SHIELD) && !(player->pflags & PF_SHIELDDOWN) && !spinshieldhack)
 		{
 			// Transform into super if we can!
-			if (P_SuperReady(player, true))
+			if (P_SuperReady(player))
 				P_DoSuperTransformation(player, false);
-
-			// Detransform from super if we can!
-			else if (P_SuperReady(player, false))
-				P_DoSuperDetransformation(player);
 		}
 	}
 
