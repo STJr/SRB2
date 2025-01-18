@@ -1163,6 +1163,7 @@ static const char *credits[] = {
 	"Sally \"TehRealSalt\" Cochenour",
 	"Desmond \"Blade\" DesJardins",
 	"Sherman \"CoatRack\" DesJardins",
+	"\"Evertone\"", // summit showdown hehehehe
 	"Ben \"Mystic\" Geyer",
 	"Nathan \"Jazz\" Giroux",
 	"\"GomaTheMascar\"",
@@ -1173,7 +1174,6 @@ static const char *credits[] = {
 	"Mujamel \"MK\" Khan",
 	"\"Kaito Sinclaire\"",
 	"Alexander \"DrTapeworm\" Moench-Ford",
-	"\"orbitalviolet\"", // summit showdown hehehehe (aka Evertone)
 	"\"Radicalicious\"",
 	"\"Revan\"",
 	"Anna \"QueenDelta\" Sandlin",
