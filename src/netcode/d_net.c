@@ -485,7 +485,7 @@ void Net_CloseConnection(INT32 node)
 
 	nodes[node].flags |= NF_CLOSE;
 
-	if (server)
+	if (nodes[node].firstacktosend)
 	{
 		// send a PT_NOTHING back to acknowledge the packet
 		netbuffer->packettype = PT_NOTHING;
