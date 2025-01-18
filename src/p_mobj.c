@@ -1434,7 +1434,7 @@ void P_CheckGravity(mobj_t *mo, boolean affect)
 //
 void P_SetPitchRollFromSlope(mobj_t *mo, pslope_t *slope)
 {
-#if 0
+#if 1
 	if (slope)
 	{
 		fixed_t tempz = slope->normal.z;

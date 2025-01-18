@@ -479,7 +479,7 @@ void SCR_DisplayLocalPing(void)
 	}
 }
 
-
+// TODO: interp toggle (same for console)
 void SCR_ClosedCaptions(void)
 {
 	UINT8 i;
@@ -543,7 +543,7 @@ void SCR_ClosedCaptions(void)
 		else
 			dot = ' ';
 
-		V_DrawRightAlignedStringAtFixed((BASEVIDWIDTH-20) * FRACUNIT, y, flags,
+		V_DrawRightAlignedThinStringAtFixed((BASEVIDWIDTH-20) * FRACUNIT, y, flags,
 			va("%c [%s]", dot, (closedcaptions[i].s->caption[0] ? closedcaptions[i].s->caption : closedcaptions[i].s->name)));
 	}
 }
