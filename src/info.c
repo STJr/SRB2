@@ -689,11 +689,6 @@ playersprite_t spr2defaults[NUMPLAYERSPRITES] = {
 	SPR2_TAL0, // SPR2_TALB,
 	SPR2_TAL6, // SPR2_TALC,
 
-	SPR2_WAIT, // SPR2_CNT1,
-	SPR2_FALL, // SPR2_CNT2,
-	SPR2_SPNG, // SPR2_CNT3,
-	SPR2_CNT1, // SPR2_CNT4,
-
 	0, // SPR2_MSC0,
 	0, // SPR2_MSC1,
 	0, // SPR2_MSC2,
@@ -704,6 +699,11 @@ playersprite_t spr2defaults[NUMPLAYERSPRITES] = {
 	0, // SPR2_MSC7,
 	0, // SPR2_MSC8,
 	0, // SPR2_MSC9,
+
+	SPR2_WAIT, // SPR2_CNT1,
+	SPR2_FALL, // SPR2_CNT2,
+	SPR2_SPNG, // SPR2_CNT3,
+	SPR2_CNT1, // SPR2_CNT4,
 
 	0, // SPR2_SIGN,
 	0, // SPR2_LIFE,

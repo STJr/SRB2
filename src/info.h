@@ -1156,7 +1156,7 @@ typedef enum playersprite
 	SPR2_TALB,
 	SPR2_TALC,
 
-	//Misc slots
+	// Misc slots
 	SPR2_MSC0,
 	SPR2_MSC1,
 	SPR2_MSC2,
