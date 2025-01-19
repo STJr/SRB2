@@ -4927,7 +4927,7 @@ static boolean Skin_CanChange(const char *valstr)
 	if (!(multiplayer || netgame)) // In single player.
 		return true;
 
-	if (CanChangeSkin(consoleplayer) && !P_PlayerMoving(consoleplayer))
+	if (CanChangeSkin(consoleplayer))
 		return true;
 	else
 	{
@@ -4945,7 +4945,7 @@ static boolean Skin2_CanChange(const char *valstr)
 	if (stricmp(skins[players[secondarydisplayplayer].skin]->name, valstr) == 0)
 		return false;
 
-	if (CanChangeSkin(secondarydisplayplayer) && !P_PlayerMoving(secondarydisplayplayer))
+	if (CanChangeSkin(secondarydisplayplayer))
 		return true;
 	else
 	{

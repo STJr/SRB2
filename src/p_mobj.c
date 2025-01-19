@@ -1968,6 +1968,7 @@ void P_XYMovement(mobj_t *mo)
 			mo->y = mo->target->y + FixedMul(FINESINE(fa),mo->target->radius);
 		}
 
+		mo->pitch = mo->roll = 0;
 		mo->momx = mo->momy = 0;
 		P_SetThingPosition(mo);
 	}
