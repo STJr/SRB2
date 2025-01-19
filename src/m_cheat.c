@@ -1112,7 +1112,7 @@ static mapthing_t *OP_CreateNewMapThing(player_t *player, UINT16 type, boolean c
 	// Ignore offsets
 	if (mt->type == mobjinfo[MT_EMBLEM].doomednum)
 		mt->args[1] = 1;
-	else
+	else if (!(mt->type == mobjinfo[MT_METALSONIC_RACE].doomednum || mt->type == mobjinfo[MT_ROSY].doomednum))
 		mt->args[0] = 1;
 
 	return mt;
