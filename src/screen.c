@@ -446,8 +446,14 @@ void SCR_DisplayTicRate(void)
 
 	if (cv_ticrate.value == 2) // compact counter
 	{
-		V_DrawRightAlignedString(vid.width, h,
-			ticcntcolor|V_NOSCALESTART|V_USERHUDTRANS, va("%04.2f", averageFPS)); // use averageFPS directly
+		const char *fpsstr = va("%04.2f", averageFPS);
+		//this FUCKING sucks
+		V_DrawThinString(
+			BASEVIDWIDTH - (V_ThinStringWidth(fpsstr,0)),
+			BASEVIDHEIGHT - 8,
+			ticcntcolor|V_USERHUDTRANS|V_SNAPTORIGHT|V_SNAPTOBOTTOM,
+			fpsstr // use averageFPS directly
+		);
 	}
 	else if (cv_ticrate.value == 1) // full counter
 	{

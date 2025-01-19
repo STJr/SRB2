@@ -5,6 +5,7 @@
         "lua_hud.h": "c",
         "lua_hudlib_drawlist.h": "c",
         "hw_main.h": "c",
-        "byteptr.h": "c"
+        "byteptr.h": "c",
+        "sdlmain.h": "c"
     }
 }

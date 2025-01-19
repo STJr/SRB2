@@ -3082,7 +3082,9 @@ static void HWR_SplitSprite(gl_vissprite_t *spr)
 	// Let dispoffset work first since this adjust each vertex
 	HWR_RotateSpritePolyToAim(spr, baseWallVerts, false);
 
+	//TODO: splat issues (https://git.do.srb2.org/STJr/SRB2/-/issues/1374)
 	// push it toward the camera to mitigate floor-clipping sprites
+	if (! (spr->renderflags & (RF_SPLATMASK|RF_PAPERSPRITE|RF_FLOORSPRITE)))
 	{
 		float sprdist = sqrtf((spr->x1 - gl_viewx)*(spr->x1 - gl_viewx) + (spr->z1 - gl_viewy)*(spr->z1 - gl_viewy) + (spr->gzt - gl_viewz)*(spr->gzt - gl_viewz));
 		float distfact = ((2.0f*spr->dispoffset) + 20.0f) / sprdist;
@@ -3091,6 +3093,18 @@ static void HWR_SplitSprite(gl_vissprite_t *spr)
 			baseWallVerts[i].x += (gl_viewx - baseWallVerts[i].x)*distfact;
 			baseWallVerts[i].z += (gl_viewy - baseWallVerts[i].z)*distfact;
 			baseWallVerts[i].y += (gl_viewz - baseWallVerts[i].y)*distfact;
+		}
+	}
+	else
+	{
+		// if it has a dispoffset, push it a little towards the camera
+		if (spr->dispoffset) {
+			float co = -gl_viewcos*(0.05f*spr->dispoffset);
+			float si = -gl_viewsin*(0.05f*spr->dispoffset);
+			baseWallVerts[0].z = baseWallVerts[3].z = baseWallVerts[0].z+si;
+			baseWallVerts[1].z = baseWallVerts[2].z = baseWallVerts[1].z+si;
+			baseWallVerts[0].x = baseWallVerts[3].x = baseWallVerts[0].x+co;
+			baseWallVerts[1].x = baseWallVerts[2].x = baseWallVerts[1].x+co;
 		}
 	}
 	

@@ -30,7 +30,6 @@
 #include "m_argv.h"
 #include "m_anigif.h"
 
-
 // Data.
 #include "sounds.h"
 #include "s_sound.h"

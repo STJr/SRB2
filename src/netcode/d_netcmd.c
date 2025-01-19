@@ -726,6 +726,8 @@ void D_RegisterClientCommands(void)
 	CV_RegisterVar(&cv_gif_downscale);
 	CV_RegisterVar(&cv_gif_dynamicdelay);
 	CV_RegisterVar(&cv_gif_localcolortable);
+	CV_RegisterVar(&cv_gif_maxsize);
+	CV_RegisterVar(&cv_gif_rolling_buffer);
 
 	// register these so it is saved to config
 	CV_RegisterVar(&cv_playername);
@@ -798,6 +800,10 @@ void D_RegisterClientCommands(void)
 	CV_RegisterVar(&cv_chattime);
 	CV_RegisterVar(&cv_chatbacktint);
 	CV_RegisterVar(&cv_consolechat);
+	CV_RegisterVar(&cv_chatx);
+	CV_RegisterVar(&cv_chaty);
+	CV_RegisterVar(&cv_chats1);
+	CV_RegisterVar(&cv_chats2);
 	CV_RegisterVar(&cv_chatnotifications);
 	CV_RegisterVar(&cv_crosshair);
 	CV_RegisterVar(&cv_crosshair2);

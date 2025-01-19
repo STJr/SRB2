@@ -202,6 +202,7 @@ static char returnWadPath[256];
 #include "../filesrch.h"
 #include "endtxt.h"
 #include "sdlmain.h"
+#include "../m_anigif.h"
 
 #include "../i_joy.h"
 
@@ -364,6 +365,10 @@ static void I_ReportSignal(int num, int coredumped)
 	char sigttl[512] = "Process killed by signal: ";
 	const char *reportmsg = "\n\nTo help us figure out the cause, you can visit our official Discord server\nwhere you will find more instructions on how to submit a crash report.\n\nSorry for the inconvenience!";
 
+	// will this work??? is this safe?? Who knows
+	if (moviemode)
+		M_StopMovie();
+	
 	switch (num)
 	{
 //	case SIGINT:
@@ -441,7 +446,7 @@ static void I_ReportSignal(int num, int coredumped)
 
 #if SDL_VERSION_ATLEAST(2,0,14)
 	if (buttonid == 1)
-		SDL_OpenURL("https://www.srb2.org/discord");
+		SDL_OpenURL("https://discord.gg/aaY8p8nrBk");
 #endif
 }
 
@@ -2486,6 +2491,9 @@ void I_Quit(void)
 	if (metalrecording)
 		G_StopMetalRecording(false);
 
+	if (moviemode)
+		M_StopMovie();
+	
 	D_QuitNetGame();
 	CL_AbortDownloadResume();
 	M_FreePlayerSetupColors();
@@ -2599,7 +2607,9 @@ void I_Error(const char *error, ...)
 		G_CheckDemoStatus();
 	if (metalrecording)
 		G_StopMetalRecording(false);
-
+	if (moviemode)
+		M_StopMovie();
+	
 	D_QuitNetGame();
 	CL_AbortDownloadResume();
 	M_FreePlayerSetupColors();
