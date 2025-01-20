@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -1152,8 +1152,14 @@ void R_SetupFrame(player_t *player)
 
 		if (quake.epicenter) {
 			// Calculate 3D distance from epicenter, using the camera.
-			fixed_t xydist = R_PointToDist2(thiscam->x, thiscam->y, quake.epicenter->x, quake.epicenter->y);
-			fixed_t dist = R_PointToDist2(0, thiscam->z, xydist, quake.epicenter->z);
+			fixed_t xydist, dist;
+			if (P_MobjWasRemoved(r_viewmobj)) {
+				xydist = R_PointToDist2(thiscam->x, thiscam->y, quake.epicenter->x, quake.epicenter->y);
+				dist = R_PointToDist2(0, thiscam->z, xydist, quake.epicenter->z);
+			} else {
+				xydist = R_PointToDist2(r_viewmobj->x, r_viewmobj->y, quake.epicenter->x, quake.epicenter->y);
+				dist = R_PointToDist2(0, r_viewmobj->z, xydist, quake.epicenter->z);
+			}
 
 			// More effect closer to epicenter, outside of radius = no effect
 			if (!quake.radius || dist > quake.radius)
@@ -1427,6 +1433,9 @@ static void R_PortalFrame(portal_t *portal)
 	viewangle = portal->viewangle;
 	viewsin = FINESINE(viewangle>>ANGLETOFINESHIFT);
 	viewcos = FINECOSINE(viewangle>>ANGLETOFINESHIFT);
+
+	if (!P_MobjWasRemoved(portal->viewmobj))
+		r_viewmobj = portal->viewmobj;
 
 	portalclipstart = portal->start;
 	portalclipend = portal->end;

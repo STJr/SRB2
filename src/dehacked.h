@@ -39,6 +39,7 @@ extern boolean deh_loaded;
 extern boolean gamedataadded;
 extern boolean titlechanged;
 extern boolean introchanged;
+extern boolean bootmapchanged;
 
 #define MAX_ACTION_RECURSION 30
 extern const char *luaactions[MAX_ACTION_RECURSION];

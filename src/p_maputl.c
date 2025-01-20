@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -1052,7 +1052,6 @@ boolean P_BlockLinesIterator(INT32 x, INT32 y, boolean (*func)(line_t *))
 //
 boolean P_BlockThingsIterator(INT32 x, INT32 y, boolean (*func)(mobj_t *), mobj_t *thing)
 {
-	mobj_t *bnext = NULL;
 	blocknode_t *block, *next = NULL;
 	
 	boolean checkthing = false;
@@ -1063,27 +1062,16 @@ boolean P_BlockThingsIterator(INT32 x, INT32 y, boolean (*func)(mobj_t *), mobj_
 		return true;
 
 	// Check interaction with the objects in the blockmap.
-	for (block = blocklinks[y*bmapwidth + x]; block; block = next)
+	for (block = blocklinks[y*bmapwidth + x]; block != NULL; block = next)
 	{
-		next = block->mnext;
-		if (next)
-			P_SetTarget(&bnext, next->mobj); // We want to note our reference to bnext here in case it is MF_NOTHINK and gets removed!
+		next = block->mnext; // We want to note our reference to mnext here!
 
 		if (!func(block->mobj))
-		{
-			P_SetTarget(&bnext, NULL);
 			return false;
-		}
 
-		if ((checkthing && P_MobjWasRemoved(thing)) // func just popped our tmthing, cannot continue.
-		|| (bnext && P_MobjWasRemoved(bnext))) // func just broke blockmap chain, cannot continue.
-		{
-			P_SetTarget(&bnext, NULL);
+		if (checkthing && P_MobjWasRemoved(thing)) // func just popped our tmthing, cannot continue.
 			return true;
-		}
 	}
-
-	P_SetTarget(&bnext, NULL);
 
 	return true;
 }
