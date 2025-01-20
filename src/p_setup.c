@@ -5866,6 +5866,10 @@ static void P_ConvertBinaryLinedefTypes(void)
 			lines[i].args[0] = tag;
 			lines[i].args[1] = !!(lines[i].flags & ML_NOCLIMB);
 			break;
+		case 465: // Bounce Player (purely for backwards compatibility with new Pipe Towers)
+			lines[i].args[0] = (FixedHypot(lines[i].dx, lines[i].dy) / 8) >> FRACBITS;
+			lines[i].special = 430;
+			break;
 		case 466: //Set level failure state
 			lines[i].args[0] = !!(lines[i].flags & ML_NOCLIMB);
 			break;
@@ -7369,11 +7373,11 @@ static void P_RunLevelScript(const char *scriptname)
 			return;
 		}
 
-		COM_BufInsertText(W_CacheLumpNum(lumpnum, PU_CACHE));
+		COM_BufInsertTextEx(W_CacheLumpNum(lumpnum, PU_CACHE), COM_LUA);
 	}
 	else
 	{
-		COM_BufAddText(va("exec %s\n", scriptname));
+		COM_ExecFile(scriptname, COM_LUA, false);
 	}
 	COM_BufExecute(); // Run it!
 }
@@ -7852,6 +7856,10 @@ boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate)
 	// This is needed. Don't touch.
 	maptol = mapheaderinfo[gamemap-1]->typeoflevel;
 	gametyperules = gametypedefaultrules[gametype];
+
+	// clear the target on map change, since the object will be invalidated
+	P_SetTarget(&ticcmd_ztargetfocus[0], NULL);
+	P_SetTarget(&ticcmd_ztargetfocus[1], NULL);
 
 	CON_Drawer(); // let the user know what we are going to do
 	I_FinishUpdate(); // page flip or blit buffer

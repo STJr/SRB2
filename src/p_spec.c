@@ -2546,7 +2546,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 					char *text = Z_Malloc(len + 1, PU_CACHE, NULL);
 					memcpy(text, lump, len);
 					text[len] = '\0';
-					COM_BufInsertText(text);
+					COM_BufInsertTextEx(text, COM_LUA);
 					Z_Free(text);
 				}
 			}
@@ -2702,6 +2702,18 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 				EV_DoCrush(line->args[0], line, crushBothOnce);
 			break;
 
+		case 430: // Bounce Player
+			if (mo && mo->player)
+			{
+				P_SetObjectMomZ(mo, line->args[0]*FRACUNIT, false);
+				S_StartSound(NULL, sfx_s3k8a);
+				mo->player->pflags |= PF_JUMPED;
+				if (skins[mo->player->skin]->flags & SF_NOJUMPSPIN)
+					P_SetMobjState(mo, S_PLAY_SPRING);
+				else
+					P_SetMobjState(mo, S_PLAY_JUMP);
+			}
+			break;
 		case 432: // Enable/Disable 2D Mode
 			if (mo && mo->player)
 			{

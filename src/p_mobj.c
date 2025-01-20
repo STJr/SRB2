@@ -96,11 +96,15 @@ static void P_SetupStateAnimation(mobj_t *mobj, state_t *st)
 		animlength = st->var1;
 
 	if (!(st->frame & FF_ANIMATE))
+	{
+		mobj->anim_duration = 0;
 		return;
+	}
 
 	if (animlength <= 0 || st->var2 == 0)
 	{
 		mobj->frame &= ~FF_ANIMATE;
+		mobj->anim_duration = 0;
 		return; // Crash/stupidity prevention
 	}
 
@@ -157,27 +161,6 @@ FUNCINLINE static ATTRINLINE void P_CycleStateAnimation(mobj_t *mobj)
 // P_CycleMobjState
 //
 static void P_CycleMobjState(mobj_t *mobj)
-{
-	// state animations
-	P_CycleStateAnimation(mobj);
-
-	// cycle through states,
-	// calling action functions at transitions
-	if (mobj->tics != -1)
-	{
-		mobj->tics--;
-
-		// you can cycle through multiple states in a tic
-		if (!mobj->tics && mobj->state)
-			if (!P_SetMobjState(mobj, mobj->state->nextstate))
-				return; // freed itself
-	}
-}
-
-//
-// P_CycleMobjState for players.
-//
-static void P_CyclePlayerMobjState(mobj_t *mobj)
 {
 	// state animations
 	P_CycleStateAnimation(mobj);
@@ -3799,7 +3782,7 @@ static void P_PlayerMobjThinker(mobj_t *mobj)
 	}
 
 animonly:
-	P_CyclePlayerMobjState(mobj);
+	P_CycleMobjState(mobj);
 }
 
 static void CalculatePrecipFloor(precipmobj_t *mobj)
@@ -8061,6 +8044,10 @@ static boolean P_MobjBossThink(mobj_t *mobj)
 		case MT_METALSONIC_BATTLE:
 			P_Boss9Thinker(mobj);
 			break;
+		case MT_OLDK:
+			if (mobj->health <= 0)
+				mobj->momz -= (2*FRACUNIT)/3;
+			break;
 		default: // Generic SOC-made boss
 			if (mobj->flags2 & MF2_SKULLFLY)
 				P_SpawnGhostMobj(mobj);
@@ -10326,10 +10313,7 @@ void P_MobjThinker(mobj_t *mobj)
 	}
 
 	// Can end up here if a player dies.
-	if (mobj->player)
-		P_CyclePlayerMobjState(mobj);
-	else
-		P_CycleMobjState(mobj);
+	P_CycleMobjState(mobj);
 
 	if (P_MobjWasRemoved(mobj))
 		return;
@@ -13147,6 +13131,32 @@ static boolean P_SetupSpawnedMapThing(mapthing_t *mthing, mobj_t *mobj, boolean 
 			0, ((mobj->type == MT_CEZPOLE1) ? MT_CEZBANNER1 : MT_CEZBANNER2));
 		if (!P_MobjWasRemoved(banner))
 			banner->angle = mobjangle + ANGLE_90;
+	}
+	break;
+	case MT_SSZTREE:
+	{ // Spawn the branches
+		INT32 i;
+		mobj_t *branch;
+		for (i = 0; i < 5; i++)
+		{
+			branch = P_SpawnMobjFromMobj(mobj, 0, 0, 0, MT_SSZTREE_BRANCH);
+			if (P_MobjWasRemoved(branch))
+				continue;
+			branch->angle = mobj->angle + FixedAngle(i*72*FRACUNIT);
+		}
+	}
+	break;
+	case MT_SSZTREE2:
+	{ // Spawn the branches
+		INT32 i;
+		mobj_t *branch;
+		for (i = 0; i < 5; i++)
+		{
+			branch = P_SpawnMobjFromMobj(mobj, 0, 0, 0, MT_SSZTREE2_BRANCH);
+			if (P_MobjWasRemoved(branch))
+				continue;
+			branch->angle = mobj->angle + FixedAngle(i*72*FRACUNIT);
+		}
 	}
 	break;
 	case MT_HHZTREE_TOP:

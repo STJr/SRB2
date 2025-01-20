@@ -395,6 +395,8 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[NOLIGHT],     // SPR_XMS4
 	&lspr[NOLIGHT],     // SPR_XMS5
 	&lspr[NOLIGHT],     // SPR_XMS6
+	&lspr[NOLIGHT],     // SPR_SNTT
+	&lspr[NOLIGHT],     // SPR_SSTT
 	&lspr[NOLIGHT],     // SPR_FHZI
 	&lspr[NOLIGHT],     // SPR_ROSY
 
@@ -428,6 +430,8 @@ light_t *t_lspr[NUMSPRITES] =
 	// Misc Scenery
 	&lspr[NOLIGHT],     // SPR_STLG
 	&lspr[NOLIGHT],     // SPR_DBAL
+	&lspr[NOLIGHT],     // SPR_GINE
+	&lspr[NOLIGHT],     // SPR_PPAL
 
 	// Powerup Indicators
 	&lspr[NOLIGHT],     // SPR_ARMA
@@ -481,6 +485,15 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[NOLIGHT],     // SPR_SSWY
 	&lspr[NOLIGHT],     // SPR_SSWR
 	&lspr[NOLIGHT],     // SPR_SSWB
+	&lspr[NOLIGHT],     // SPR_MPRY
+	&lspr[NOLIGHT],     // SPR_MPRR
+	&lspr[NOLIGHT],     // SPR_MPRB
+	&lspr[NOLIGHT],     // SPR_MSWY
+	&lspr[NOLIGHT],     // SPR_MSWR
+	&lspr[NOLIGHT],     // SPR_MSWB
+	&lspr[NOLIGHT],     // SPR_MDIY
+	&lspr[NOLIGHT],     // SPR_MDIR
+	&lspr[NOLIGHT],     // SPR_MDIB
 	&lspr[NOLIGHT],     // SPR_BSTY
 	&lspr[NOLIGHT],     // SPR_BSTR
 
@@ -539,6 +552,7 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[NOLIGHT],     // SPR_BGOM
 	&lspr[REDBALL_L],     // SPR_FFWR
 	&lspr[SMALLREDBALL_L], // SPR_FBLL
+	&lspr[NOLIGHT],		// SPR_MKOP
 	&lspr[NOLIGHT],     // SPR_SHLL
 	&lspr[REDBALL_L],   // SPR_PUMA
 	&lspr[NOLIGHT],     // SPR_HAMM
@@ -609,10 +623,29 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[NOLIGHT], // SPR_BRIR
 	&lspr[NOLIGHT], // SPR_BRIB
 	&lspr[NOLIGHT], // SPR_BRIY
+	&lspr[NOLIGHT], // SPR_MBRI
+	&lspr[NOLIGHT], // SPR_MBRS
+	&lspr[NOLIGHT], // SPR_MBRB
+	&lspr[NOLIGHT], // SPR_MBRC
+	&lspr[NOLIGHT], // SPR_MTRI
+	&lspr[NOLIGHT], // SPR_MARS
+	&lspr[NOLIGHT], // SPR_MRFL
+	&lspr[NOLIGHT], // SPR_MAUH
+	&lspr[NOLIGHT], // SPR_MBSA
+	&lspr[NOLIGHT], // SPR_MBSB
+	&lspr[NOLIGHT], // SPR_MBSC
+	&lspr[NOLIGHT], // SPR_MFRE
+	&lspr[NOLIGHT], // SPR_MFYE
+	&lspr[NOLIGHT], // SPR_MFBE
+	&lspr[NOLIGHT], // SPR_MFWD
+	&lspr[NOLIGHT], // SPR_MUS3
 
 	// Gravity Well Objects
 	&lspr[NOLIGHT],     // SPR_GWLG
 	&lspr[NOLIGHT],     // SPR_GWLR
+
+	// LJ Knuckles
+	&lspr[NOLIGHT],		// SPR_OLDK,
 
 	// Free slots
 	&lspr[NOLIGHT],
