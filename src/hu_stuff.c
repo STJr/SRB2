@@ -590,6 +590,45 @@ static void Command_CSay_f(void)
 UINT8 spam_tokens[MAXPLAYERS] = { 1 }; // fill the buffer with 1 so the motd can be sent.
 tic_t spam_tics[MAXPLAYERS];
 
+static const char *GetChatColorFromSkinColor(INT32 skincolor)
+{
+	const char *textcolor = NULL;
+	UINT16 chatcolor = skincolors[skincolor].chatcolor;
+	if (!chatcolor || chatcolor%0x1000 || chatcolor>V_INVERTMAP)
+		textcolor = "\x80";
+	else if (chatcolor == V_MAGENTAMAP)
+		textcolor = "\x81";
+	else if (chatcolor == V_YELLOWMAP)
+		textcolor = "\x82";
+	else if (chatcolor == V_GREENMAP)
+		textcolor = "\x83";
+	else if (chatcolor == V_BLUEMAP)
+		textcolor = "\x84";
+	else if (chatcolor == V_REDMAP)
+		textcolor = "\x85";
+	else if (chatcolor == V_GRAYMAP)
+		textcolor = "\x86";
+	else if (chatcolor == V_ORANGEMAP)
+		textcolor = "\x87";
+	else if (chatcolor == V_SKYMAP)
+		textcolor = "\x88";
+	else if (chatcolor == V_PURPLEMAP)
+		textcolor = "\x89";
+	else if (chatcolor == V_AQUAMAP)
+		textcolor = "\x8a";
+	else if (chatcolor == V_PERIDOTMAP)
+		textcolor = "\x8b";
+	else if (chatcolor == V_AZUREMAP)
+		textcolor = "\x8c";
+	else if (chatcolor == V_BROWNMAP)
+		textcolor = "\x8d";
+	else if (chatcolor == V_ROSYMAP)
+		textcolor = "\x8e";
+	else if (chatcolor == V_INVERTMAP)
+		textcolor = "\x8f";
+	return textcolor;
+}
+
 /** Receives a message, processing an ::XD_SAY command.
   * \sa DoSayCommand
   * \author Graue <graue@oceanbase.org>
@@ -710,51 +749,27 @@ static void Got_Saycmd(UINT8 **p, INT32 playernum)
 		{
 			if (players[playernum].ctfteam == 1) // red
 			{
-				cstart = "\x85";
-				textcolor = "\x85";
+				cstart = textcolor = GetChatColorFromSkinColor(skincolor_redteam);
 			}
 			else // blue
 			{
-				cstart = "\x84";
-				textcolor = "\x84";
+				cstart = textcolor = GetChatColorFromSkinColor(skincolor_blueteam);
 			}
 		}
 		else
         {
-			UINT16 chatcolor = skincolors[players[playernum].skincolor].chatcolor;
-
-			if (!chatcolor || chatcolor%0x1000 || chatcolor>V_INVERTMAP)
-				cstart = "\x80";
-			else if (chatcolor == V_MAGENTAMAP)
-				cstart = "\x81";
-			else if (chatcolor == V_YELLOWMAP)
-				cstart = "\x82";
-			else if (chatcolor == V_GREENMAP)
-				cstart = "\x83";
-			else if (chatcolor == V_BLUEMAP)
-				cstart = "\x84";
-			else if (chatcolor == V_REDMAP)
-				cstart = "\x85";
-			else if (chatcolor == V_GRAYMAP)
-				cstart = "\x86";
-			else if (chatcolor == V_ORANGEMAP)
-				cstart = "\x87";
-			else if (chatcolor == V_SKYMAP)
-				cstart = "\x88";
-			else if (chatcolor == V_PURPLEMAP)
-				cstart = "\x89";
-			else if (chatcolor == V_AQUAMAP)
-				cstart = "\x8a";
-			else if (chatcolor == V_PERIDOTMAP)
-				cstart = "\x8b";
-			else if (chatcolor == V_AZUREMAP)
-				cstart = "\x8c";
-			else if (chatcolor == V_BROWNMAP)
-				cstart = "\x8d";
-			else if (chatcolor == V_ROSYMAP)
-				cstart = "\x8e";
-			else if (chatcolor == V_INVERTMAP)
-				cstart = "\x8f";
+			cstart = GetChatColorFromSkinColor(players[playernum].skincolor);
+			if (G_GametypeHasTeams())
+			{
+				if (players[playernum].ctfteam == 1) // red
+				{
+					cstart = GetChatColorFromSkinColor(skincolor_redteam);
+				}
+				else // blue
+				{
+					cstart = GetChatColorFromSkinColor(skincolor_blueteam);
+				}
+			}
         }
 		prefix = cstart;
 
