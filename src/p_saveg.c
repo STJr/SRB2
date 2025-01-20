@@ -302,6 +302,18 @@ typedef enum
 	DRONE      = 0x80,
 } player_saveflags;
 
+static inline UINT32 SavePlayer(const player_t *player)
+{
+	if (player) return (UINT32)(player - players);
+	return 0xFFFFFFFF;
+}
+
+static inline player_t *LoadPlayer(UINT32 player)
+{
+	if (player >= MAXPLAYERS) return NULL;
+	return &players[player];
+}
+
 static inline void P_ArchivePlayer(save_t *save_p)
 {
 	const player_t *player = &players[consoleplayer];
@@ -441,6 +453,8 @@ static void P_NetArchivePlayers(save_t *save_p)
 		// Bots //
 		//////////
 		P_WriteUINT8(save_p, players[i].bot);
+		if (players[i].bot)
+			P_WriteUINT32(save_p, SavePlayer(players[i].botleader));
 		P_WriteUINT8(save_p, players[i].botmem.lastForward);
 		P_WriteUINT8(save_p, players[i].botmem.lastBlocked);
 		P_WriteUINT8(save_p, players[i].botmem.catchup_tics);
@@ -672,6 +686,8 @@ static void P_NetUnArchivePlayers(save_t *save_p)
 		// Bots //
 		//////////
 		players[i].bot = P_ReadUINT8(save_p);
+		if (players[i].bot)
+			players[i].botleader = LoadPlayer(P_ReadUINT32(save_p));
 
 		players[i].botmem.lastForward = P_ReadUINT8(save_p);
 		players[i].botmem.lastBlocked = P_ReadUINT8(save_p);
@@ -2106,12 +2122,6 @@ static UINT32 SaveLine(const line_t *line)
 	return 0xFFFFFFFF;
 }
 
-static inline UINT32 SavePlayer(const player_t *player)
-{
-	if (player) return (UINT32)(player - players);
-	return 0xFFFFFFFF;
-}
-
 static UINT32 SaveSlope(const pslope_t *slope)
 {
 	if (slope) return (UINT32)(slope->id);
@@ -3235,12 +3245,6 @@ static line_t *LoadLine(UINT32 line)
 {
 	if (line >= numlines) return NULL;
 	return &lines[line];
-}
-
-static inline player_t *LoadPlayer(UINT32 player)
-{
-	if (player >= MAXPLAYERS) return NULL;
-	return &players[player];
 }
 
 static inline pslope_t *LoadSlope(UINT32 slopeid)
