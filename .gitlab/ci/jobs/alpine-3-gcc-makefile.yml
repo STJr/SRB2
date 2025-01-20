@@ -1,4 +1,4 @@
-Alpine 3 GCC:
+Alpine 3 GCC Makefile:
   stage: build
 
   when: manual
@@ -8,17 +8,17 @@ Alpine 3 GCC:
   allow_failure: true
 
   cache:
-    - key: apk-$CI_JOB_IMAGE
+    - key: apk-$CI_JOB_IMAGE-makefile
       paths:
         - apk-cache
       unprotect: true
 
   artifacts:
     paths:
-      - "build.alpine3/bin/"
-      - "build.alpine3/src/config.h"
-    expose_as: "Apline-3"
-    name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-Apline-3"
+      - "bin/"
+      - "src/comptime.h"
+    expose_as: "Apline-3-makefile"
+    name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-Apline-3-makefile"
 
   before_script:
     - - |
@@ -50,7 +50,7 @@ Alpine 3 GCC:
     - - |
           # apk_common
           echo -e "\e[0Ksection_start:`date +%s`:apk_common[collapsed=true]\r\e[0KInstalling common packages"
-      - apk add cmake make git ccache nasm
+      - apk add make git ccache nasm
       - |
           # apk_common
           echo -e "\e[0Ksection_end:`date +%s`:apk_common\r\e[0K"
@@ -109,17 +109,9 @@ Alpine 3 GCC:
           echo -e "\e[0Ksection_end:`date +%s`:apk_development\r\e[0K"
 
     - - |
-          # cmake
-          echo -e "\e[0Ksection_start:`date +%s`:cmake[collapsed=false]\r\e[0KBuilding Makefiles"
-      - cmake -B build.alpine3 -DSRB2_USE_CCACHE=YES -DSRB2_CONFIG_ERRORMODE=ON -DSRB2_CONFIG_EXECINFO=NO -G "Unix Makefiles"
-      - |
-          # cmake
-          echo -e "\e[0Ksection_end:`date +%s`:cmake\r\e[0K"
-
-    - - |
           # make
           echo -e "\e[0Ksection_start:`date +%s`:make[collapsed=false]\r\e[0KCompiling SRB2"
-      - make --directory=build.alpine3 --keep-going || make --directory=build.alpine3 --keep-going
+      - make --directory=src --keep-going CCACHE=1 ERRORMODE=1 NONX86=1 NOEXECINFO=1 || make --directory=src --keep-going CCACHE=1 ERRORMODE=1 NONX86=1 NOEXECINFO=1
       - |
           # make
           echo -e "\e[0Ksection_end:`date +%s`:make\r\e[0K"

@@ -1,12 +1,12 @@
-Alpine 3 GCC Dedicated:
-  extends: Alpine 3 GCC
+Alpine 3 GCC Dedicated Makefile:
+  extends: Alpine 3 GCC Makefile
 
   artifacts:
     paths:
       - "bin/"
       - "src/comptime.h"
-    expose_as: "Apline-3-Dedicated"
-    name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-Apline-3-Dedicated"
+    expose_as: "Apline-3-Dedicated-makefile"
+    name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-Apline-3-Dedicated-makefile"
 
   script:
     - - |
