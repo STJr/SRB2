@@ -453,8 +453,7 @@ static void P_NetArchivePlayers(save_t *save_p)
 		// Bots //
 		//////////
 		P_WriteUINT8(save_p, players[i].bot);
-		if (players[i].bot)
-			P_WriteUINT32(save_p, SavePlayer(players[i].botleader));
+		P_WriteUINT32(save_p, SavePlayer(players[i].botleader));
 		P_WriteUINT8(save_p, players[i].botmem.lastForward);
 		P_WriteUINT8(save_p, players[i].botmem.lastBlocked);
 		P_WriteUINT8(save_p, players[i].botmem.catchup_tics);
@@ -686,8 +685,7 @@ static void P_NetUnArchivePlayers(save_t *save_p)
 		// Bots //
 		//////////
 		players[i].bot = P_ReadUINT8(save_p);
-		if (players[i].bot)
-			players[i].botleader = LoadPlayer(P_ReadUINT32(save_p));
+		players[i].botleader = LoadPlayer(P_ReadUINT32(save_p));
 
 		players[i].botmem.lastForward = P_ReadUINT8(save_p);
 		players[i].botmem.lastBlocked = P_ReadUINT8(save_p);
