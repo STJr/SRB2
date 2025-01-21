@@ -50,6 +50,9 @@ jobs:
             - /home/circleci/.cache/apt
       - checkout
       - run:
+         name: Create deps folder as needed
+         command: mkdir -p make/linux/64/SDL/deps/
+      - run:
           name: make master depend file
           command: find make/linux/64/SDL/deps/ -type f -print0 | sort -z | xargs -r0 cat > make/linux/64/SDL.deps
       - restore_cache:
