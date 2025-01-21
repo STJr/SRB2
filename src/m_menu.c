@@ -3917,12 +3917,16 @@ void M_StartControlPanel(void)
 	}
 	else if (!(netgame || multiplayer)) // Single Player
 	{
-		// Devmode unlocks Pandora's Box in the pause menu
-		boolean pandora = ((M_SecretUnlocked(SECRET_PANDORA, serverGamedata) || cv_debug || devparm) && !marathonmode);
+		// Devmode unlocks Pandora's Box and Level Select in the pause menu
+		boolean isforbidden = (marathonmode || ultimatemode);
+		boolean isdebug = ((cv_debug || devparm) && !isforbidden);
+		boolean pandora = ((M_SecretUnlocked(SECRET_PANDORA, serverGamedata) && !isforbidden) || isdebug);
+		boolean lselect = ((M_SecretUnlocked(SECRET_LEVELSELECT, serverGamedata) && !isforbidden) || isdebug);
 
-		if (gamestate != GS_LEVEL || ultimatemode) // intermission, so gray out stuff.
+		if (gamestate != GS_LEVEL) // intermission, so gray out stuff.
 		{
 			SPauseMenu[spause_pandora].status = (pandora) ? (IT_GRAYEDOUT) : (IT_DISABLED);
+			SPauseMenu[spause_levelselect].status = (lselect) ? (IT_STRING | IT_CALL) : (IT_DISABLED);
 			SPauseMenu[spause_retry].status = IT_GRAYEDOUT;
 		}
 		else
@@ -3932,6 +3936,11 @@ void M_StartControlPanel(void)
 				++numlives;
 
 			SPauseMenu[spause_pandora].status = (pandora) ? (IT_STRING | IT_CALL) : (IT_DISABLED);
+			SPauseMenu[spause_levelselect].status = (lselect) ? (IT_STRING | IT_CALL) : (IT_DISABLED);
+			if (ultimatemode)
+			{
+				SPauseMenu[spause_retry].status = IT_GRAYEDOUT;
+			}
 
 			// The list of things that can disable retrying is (was?) a little too complex
 			// for me to want to use the short if statement syntax
@@ -3940,13 +3949,6 @@ void M_StartControlPanel(void)
 			else
 				SPauseMenu[spause_retry].status = (IT_STRING | IT_CALL);
 		}
-
-		// We can always use level select though. :33
-		// Guarantee it if we have either it unlocked or devmode is enabled
-		if ((maplistoption != 0 || M_SecretUnlocked(SECRET_LEVELSELECT, serverGamedata) || cv_debug || devparm) && !marathonmode)
-			SPauseMenu[spause_levelselect].status = (IT_STRING | IT_CALL);
-		else
-			SPauseMenu[spause_levelselect].status = (IT_DISABLED);
 
 		// And emblem hints.
 		SPauseMenu[spause_hints].status = (M_SecretUnlocked(SECRET_EMBLEMHINTS, clientGamedata) && !marathonmode) ? (IT_STRING | IT_CALL) : (IT_DISABLED);
@@ -7792,7 +7794,7 @@ static void M_PauseLevelSelect(INT32 choice)
 	// and we have the level select unlocked so that it
 	// transfers the level select list from the menu
 	// used to enter the game to the pause menu.
-	if (maplistoption == 0 && M_SecretUnlocked(SECRET_LEVELSELECT, serverGamedata))
+	if (maplistoption == 0)
 		maplistoption = 1;
 
 	if (!M_PrepareLevelPlatter(-1, true))
