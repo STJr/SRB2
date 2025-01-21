@@ -3921,7 +3921,7 @@ void M_StartControlPanel(void)
 		boolean isforbidden = (marathonmode || ultimatemode);
 		boolean isdebug = ((cv_debug || devparm) && !isforbidden);
 		boolean pandora = ((M_SecretUnlocked(SECRET_PANDORA, serverGamedata) && !isforbidden) || isdebug);
-		boolean lselect = ((M_SecretUnlocked(SECRET_LEVELSELECT, serverGamedata) && !isforbidden) || isdebug);
+		boolean lselect = ((maplistoption != 0 && !isforbidden) || isdebug);
 
 		if (gamestate != GS_LEVEL) // intermission, so gray out stuff.
 		{
@@ -7790,13 +7790,9 @@ static void M_PauseLevelSelect(INT32 choice)
 	SP_PauseLevelSelectDef.prevMenu = currentMenu;
 	levellistmode = LLM_LEVELSELECT;
 
-	// maplistoption is only specified if not set already
-	// and we have the level select unlocked so that it
+	// maplistoption is NOT specified, so that this
 	// transfers the level select list from the menu
 	// used to enter the game to the pause menu.
-	if (maplistoption == 0)
-		maplistoption = 1;
-
 	if (!M_PrepareLevelPlatter(-1, true))
 	{
 		M_StartMessage(M_GetText("No selectable levels found.\n"),NULL,MM_NOTHING);
