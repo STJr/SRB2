@@ -426,7 +426,7 @@ HMS_register (void)
 
 	char *title;
 
-	hms = HMS_connect(PROTO_V4, "rooms/%d/register", ms_RoomId);
+	hms = HMS_connect(PROTO_V4, "rooms/%d/register", cv_masterserver_room_id.value);
 
 	if (! hms)
 		return 0;
@@ -462,7 +462,7 @@ HMS_register (void)
 	if (!hms_allow_ipv6)
 		return ok;
 
-	hms = HMS_connect(PROTO_V6, "rooms/%d/register", ms_RoomId);
+	hms = HMS_connect(PROTO_V6, "rooms/%d/register", cv_masterserver_room_id.value);
 
 	if (! hms)
 		return 0;
