@@ -15,9 +15,10 @@ target_sources(SRB2SDL2 PRIVATE
 # Compatibility flag with later versions of GCC
 # We should really fix our code to not need this
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
-    target_compile_options(SRB2SDL2 PRIVATE -mno-ms-bitfields)
+    if (CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|x64|amd64|AMD64|em64t|EM64T)")
+        target_compile_options(SRB2SDL2 PRIVATE -mno-ms-bitfields)
+    endif()
 endif()
-
 # Yes we know we use insecure CRT functions...
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
     target_compile_definitions(SRB2SDL2 PRIVATE -D_CRT_SECURE_NO_WARNINGS)
