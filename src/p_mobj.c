@@ -6639,12 +6639,12 @@ static boolean P_ShieldLook(mobj_t *thing, shieldtype_t shield)
 	if (scale < 1) {
 		P_SetScale(thing, thing->target->scale, true);
 		thing->old_scale = thing->target->old_scale;
-		
+
 		thing->flags2 |= (MF2_DONTDRAW|MF2_JUSTATTACKED); //Hide and indicate we're hidden
 	} else {
 		P_SetScale(thing, scale, true);
 		thing->old_scale = FixedMul(thing->target->old_scale, thing->target->player->shieldscale);
-		
+
 		//Only unhide if we were hidden by the above code
 		if (thing->flags2 & MF2_JUSTATTACKED)
 			thing->flags2 &= ~(MF2_DONTDRAW|MF2_JUSTATTACKED);
@@ -6772,6 +6772,12 @@ void P_RunOverlays(void)
 		// then you're on your own.
 		else
 			zoffs = 0;
+
+		// hide the overlay as well if we're part of a hidden shield
+		if ((mo->target->flags2 & (MF2_JUSTATTACKED|MF2_DONTDRAW)) == (MF2_JUSTATTACKED|MF2_DONTDRAW))
+			mo->flags2 |= (MF2_DONTDRAW|MF2_JUSTATTACKED);
+		else if (mo->flags2 & MF2_JUSTATTACKED)
+			mo->flags2 &= ~(MF2_DONTDRAW|MF2_JUSTATTACKED);
 
 		P_UnsetThingPosition(mo);
 		mo->x = mo->target->x;
@@ -10996,13 +11002,6 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type, ...)
 				mcsolid->angle = mobj->angle + ANGLE_90;
 			}
 			break;
-		case MT_TORCHFLOWER:
-			{
-				mobj_t *fire = P_SpawnMobjFromMobj(mobj, 0, 0, 46*FRACUNIT, MT_FLAME);
-				if (!P_MobjWasRemoved(fire))
-					P_SetTarget(&mobj->target, fire);
-				break;
-			}
 		case MT_PYREFLY:
 			mobj->extravalue1 = (FixedHypot(mobj->x, mobj->y)/FRACUNIT) % 360;
 			mobj->extravalue2 = 0;
@@ -12995,6 +12994,13 @@ static boolean P_SetupSpawnedMapThing(mapthing_t *mthing, mobj_t *mobj, boolean 
 			}
 		}
 		break;
+	case MT_TORCHFLOWER:
+		{
+			mobj_t *fire = P_SpawnMobjFromMobj(mobj, 0, 0, 46*FRACUNIT, MT_FLAME);
+			if (!P_MobjWasRemoved(fire))
+				P_SetTarget(&mobj->target, fire);
+			break;
+		}
 	case MT_CANDLE:
 	case MT_CANDLEPRICKET:
 		if (mthing->args[0])
