@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2021 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -56,7 +56,6 @@
 #endif
 
 #ifdef _WINDOWS
-#define NONET
 #if !defined (HWRENDER) && !defined (NOHW)
 #define HWRENDER
 #endif
@@ -83,6 +82,7 @@
 #include "version.h"
 #include "doomtype.h"
 
+#include <assert.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -100,11 +100,29 @@
 #include <sys/stat.h>
 #include <ctype.h>
 
-#if defined (_WIN32) || defined (__DJGPP__)
+#ifdef _WIN32
 #include <io.h>
 #endif
 
+FILE *fopenfile(const char*, const char*);
+
 //#define NOMD5
+
+// If you don't disable ALL debug first, you get ALL debug enabled
+#if !defined (NDEBUG)
+#ifndef PACKETDROP
+#define PACKETDROP
+#endif
+#ifndef PARANOIA
+#define PARANOIA
+#endif
+#ifndef RANGECHECK
+#define RANGECHECK
+#endif
+#ifndef ZDEBUG
+#define ZDEBUG
+#endif
+#endif
 
 // Uncheck this to compile debugging code
 //#define RANGECHECK
@@ -112,7 +130,7 @@
 //#define PARANOIA // do some tests that never fail but maybe
 // turn this on by make etc.. DEBUGMODE = 1 or use the Debug profile in the VC++ projects
 //#endif
-#if defined (_WIN32) || (defined (__unix__) && !defined (MSDOS)) || defined(__APPLE__) || defined (UNIXCOMMON) || defined (macintosh)
+#if defined (_WIN32) || defined (__unix__) || defined(__APPLE__) || defined (UNIXCOMMON) || defined (macintosh)
 #define LOGMESSAGES // write message in log.txt
 #endif
 
@@ -127,6 +145,7 @@ extern char logfilename[1024];
 //#define DEVELOP // Disable this for release builds to remove excessive cheat commands and enable MD5 checking and stuff, all in one go. :3
 #ifdef DEVELOP
 #define VERSIONSTRING "Development EXE"
+#define VERSIONSTRING_RC "Development EXE" "\0"
 // most interface strings are ignored in development mode.
 // we use comprevision and compbranch instead.
 // VERSIONSTRING_RC is for the resource-definition script used by windows builds
@@ -149,7 +168,10 @@ extern char logfilename[1024];
 
 // Does this version require an added patch file?
 // Comment or uncomment this as necessary.
-#define USE_PATCH_DTA
+//#define USE_PATCH_DTA
+
+// Enforce a limit of loaded WAD files.
+//#define ENFORCE_WAD_LIMIT
 
 // Use .kart extension addons
 //#define USE_KART
@@ -220,9 +242,16 @@ extern char logfilename[1024];
 // NOTE: it needs more than this to increase the number of players...
 
 #define MAXPLAYERS 32
-#define MAXSKINS 32
-#define PLAYERSMASK (MAXPLAYERS-1)
 #define MAXPLAYERNAME 21
+#define PLAYERSMASK (MAXPLAYERS-1)
+
+// Don't make MAXSKINS higher than 255, since skin numbers are used with an UINT8 in
+// various parts of the codebase, and one number is reserved. If you do anyway,
+// the data type of those variables will have to be changed into at least an UINT16.
+// This change must affect code such as demo recording and playback,
+// and the structure of some networking packets and commands.
+#define MAXSKINS 255
+#define MAXCHARACTERSLOTS (MAXSKINS * 3) // Should be higher than MAXSKINS.
 
 #define COLORRAMPSIZE 16
 #define MAXCOLORNAME 32
@@ -255,66 +284,111 @@ typedef enum
 	// Desaturated
 	SKINCOLOR_AETHER,
 	SKINCOLOR_SLATE,
+	SKINCOLOR_MOONSTONE,
 	SKINCOLOR_BLUEBELL,
 	SKINCOLOR_PINK,
+	SKINCOLOR_ROSEWOOD,
 	SKINCOLOR_YOGURT,
+	SKINCOLOR_LATTE,
 	SKINCOLOR_BROWN,
+	SKINCOLOR_BOULDER,
 	SKINCOLOR_BRONZE,
+	SKINCOLOR_SEPIA,
+	SKINCOLOR_ECRU,
 	SKINCOLOR_TAN,
 	SKINCOLOR_BEIGE,
+	SKINCOLOR_ROSEBUSH,
 	SKINCOLOR_MOSS,
 	SKINCOLOR_AZURE,
+	SKINCOLOR_EGGPLANT,
 	SKINCOLOR_LAVENDER,
 
 	// Viv's vivid colours (toast 21/07/17)
+	// Tweaks & additions (Lach, sphere, Alice, MotorRoach 26/10/22)
 	SKINCOLOR_RUBY,
+	SKINCOLOR_CHERRY,
 	SKINCOLOR_SALMON,
+	SKINCOLOR_PEPPER,
 	SKINCOLOR_RED,
 	SKINCOLOR_CRIMSON,
 	SKINCOLOR_FLAME,
+	SKINCOLOR_GARNET,
 	SKINCOLOR_KETCHUP,
 	SKINCOLOR_PEACHY,
 	SKINCOLOR_QUAIL,
+	SKINCOLOR_FOUNDATION,
 	SKINCOLOR_SUNSET,
 	SKINCOLOR_COPPER,
 	SKINCOLOR_APRICOT,
 	SKINCOLOR_ORANGE,
 	SKINCOLOR_RUST,
+	SKINCOLOR_TANGERINE,
+	SKINCOLOR_TOPAZ,
 	SKINCOLOR_GOLD,
 	SKINCOLOR_SANDY,
+	SKINCOLOR_GOLDENROD,
 	SKINCOLOR_YELLOW,
 	SKINCOLOR_OLIVE,
+	SKINCOLOR_PEAR,
+	SKINCOLOR_LEMON,
 	SKINCOLOR_LIME,
 	SKINCOLOR_PERIDOT,
 	SKINCOLOR_APPLE,
+	SKINCOLOR_HEADLIGHT,
+	SKINCOLOR_CHARTREUSE,
 	SKINCOLOR_GREEN,
 	SKINCOLOR_FOREST,
-	SKINCOLOR_EMERALD,
+	SKINCOLOR_SHAMROCK,
+	SKINCOLOR_JADE,
 	SKINCOLOR_MINT,
+	SKINCOLOR_MASTER,
+	SKINCOLOR_EMERALD,
 	SKINCOLOR_SEAFOAM,
+	SKINCOLOR_ISLAND,
+	SKINCOLOR_BOTTLE,
 	SKINCOLOR_AQUA,
 	SKINCOLOR_TEAL,
+	SKINCOLOR_OCEAN,
 	SKINCOLOR_WAVE,
 	SKINCOLOR_CYAN,
+	SKINCOLOR_TURQUOISE,
+	SKINCOLOR_AQUAMARINE,
 	SKINCOLOR_SKY,
+	SKINCOLOR_MARINE,
 	SKINCOLOR_CERULEAN,
+	SKINCOLOR_DREAM,
 	SKINCOLOR_ICY,
+	SKINCOLOR_DAYBREAK,
 	SKINCOLOR_SAPPHIRE, // sweet mother, i cannot weave – slender aphrodite has overcome me with longing for a girl
+	SKINCOLOR_ARCTIC,
 	SKINCOLOR_CORNFLOWER,
 	SKINCOLOR_BLUE,
 	SKINCOLOR_COBALT,
+	SKINCOLOR_MIDNIGHT,
+	SKINCOLOR_GALAXY,
 	SKINCOLOR_VAPOR,
 	SKINCOLOR_DUSK,
+	SKINCOLOR_MAJESTY,
 	SKINCOLOR_PASTEL,
 	SKINCOLOR_PURPLE,
+	SKINCOLOR_NOBLE,
+	SKINCOLOR_FUCHSIA,
 	SKINCOLOR_BUBBLEGUM,
+	SKINCOLOR_SIBERITE,
 	SKINCOLOR_MAGENTA,
 	SKINCOLOR_NEON,
 	SKINCOLOR_VIOLET,
+	SKINCOLOR_ROYAL,
 	SKINCOLOR_LILAC,
+	SKINCOLOR_MAUVE,
+	SKINCOLOR_EVENTIDE,
 	SKINCOLOR_PLUM,
 	SKINCOLOR_RASPBERRY,
+	SKINCOLOR_TAFFY,
 	SKINCOLOR_ROSY,
+	SKINCOLOR_FANCY,
+	SKINCOLOR_SANGRIA,
+	SKINCOLOR_VOLCANIC,
 
 	FIRSTSUPERCOLOR,
 
@@ -397,7 +471,7 @@ extern skincolor_t skincolors[MAXSKINCOLORS];
 
 #define PUSHACCEL (2*FRACUNIT) // Acceleration for MF2_SLIDEPUSH items.
 
-// Special linedef executor tag numbers!
+// Special linedef executor tag numbers! Binary map format only (UDMF has other ways of doing these things).
 enum {
 	LE_PINCHPHASE      =    -2, // A boss entered pinch phase (and, in most cases, is preparing their pinch phase attack!)
 	LE_ALLBOSSESDEAD   =    -3, // All bosses in the map are dead (Egg capsule raise)
@@ -415,7 +489,7 @@ enum {
 };
 
 // Name of local directory for config files and savegames
-#if (((defined (__unix__) && !defined (MSDOS)) || defined (UNIXCOMMON)) && !defined (__CYGWIN__)) && !defined (__APPLE__)
+#if (defined (__unix__) || defined (UNIXCOMMON)) && !defined (__CYGWIN__) && !defined (__APPLE__)
 #define DEFAULTDIR ".srb2"
 #else
 #define DEFAULTDIR "srb2"
@@ -475,12 +549,16 @@ extern char liveeventbackup[256];
 #define M_GetText(x) (x)
 #endif
 void M_StartupLocale(void);
-extern void *(*M_Memcpy)(void* dest, const void* src, size_t n) FUNCNONNULL;
+void *M_Memcpy(void* dest, const void* src, size_t n);
 char *va(const char *format, ...) FUNCPRINTF;
 char *M_GetToken(const char *inputString);
 void M_UnGetToken(void);
-UINT32 M_GetTokenPos(void);
-void M_SetTokenPos(UINT32 newPos);
+void M_TokenizerOpen(const char *inputString, size_t len);
+void M_TokenizerClose(void);
+const char *M_TokenizerRead(UINT32 i);
+const char *M_TokenizerReadZDoom(UINT32 i);
+UINT32 M_TokenizerGetEndPos(void);
+void M_TokenizerSetEndPos(UINT32 newPos);
 char *sizeu1(size_t num);
 char *sizeu2(size_t num);
 char *sizeu3(size_t num);
@@ -526,6 +604,22 @@ extern boolean capslock;
 // i_system.c, replace getchar() once the keyboard has been appropriated
 INT32 I_GetKey(void);
 
+/* http://www.cse.yorku.ca/~oz/hash.html */
+static inline
+UINT32 quickncasehash (const char *p, size_t n)
+{
+	size_t i = 0;
+	UINT32 x = 5381;
+
+	while (i < n && p[i])
+	{
+		x = (x * 33) ^ tolower(p[i]);
+		i++;
+	}
+
+	return x;
+}
+
 #ifndef min // Double-Check with WATTCP-32's cdefs.h
 #define min(x, y) (((x) < (y)) ? (x) : (y))
 #endif
@@ -555,6 +649,7 @@ INT32 I_GetKey(void);
 #else
 #define I_Assert(e) ((void)0)
 #endif
+#define I_StaticAssert(e) static_assert(e, "Static assertion failed: " #e)
 
 // The character that separates pathnames. Forward slash on
 // most systems, but reverse solidus (\) on Windows.
@@ -567,7 +662,16 @@ INT32 I_GetKey(void);
 #define PUNCTUATION "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~"
 
 // Compile date and time and revision.
-extern const char *compdate, *comptime, *comprevision, *compbranch;
+extern const char
+	*compdate,
+	*comptime,
+	*comprevision,
+	*compbranch,
+	*compnote,
+	*comptype;
+extern int
+	compuncommitted,
+	compoptimized;
 
 // Disabled code and code under testing
 // None of these that are disabled in the normal build are guaranteed to work perfectly
@@ -604,19 +708,8 @@ extern const char *compdate, *comptime, *comprevision, *compbranch;
 /// Experimental tweaks to analog mode. (Needs a lot of work before it's ready for primetime.)
 //#define REDSANALOG
 
-/// Backwards compatibility with musicslots.
-/// \note	You should leave this enabled unless you're working with a future SRB2 version.
-#define MUSICSLOT_COMPATIBILITY
-
 /// Experimental attempts at preventing MF_PAPERCOLLISION objects from getting stuck in walls.
 //#define PAPER_COLLISIONCORRECTION
-
-/// FINALLY some real clipping that doesn't make walls dissappear AND speeds the game up
-/// (that was the original comment from SRB2CB, sadly it is a lie and actually slows game down)
-/// on the bright side it fixes some weird issues with translucent walls
-/// \note	SRB2CB port.
-///      	SRB2CB itself ported this from PrBoom+
-#define NEWCLIP
 
 /// OpenGL shaders
 #define GL_SHADERS
@@ -635,13 +728,10 @@ extern const char *compdate, *comptime, *comprevision, *compbranch;
 #define NO_PNG_LUMPS
 #endif
 
-/// Render flats on walls
-#define WALLFLATS
-
 /// Maintain compatibility with older 2.2 demos
 #define OLD22DEMOCOMPAT
 
-#if defined (HAVE_CURL) && ! defined (NONET)
+#ifdef HAVE_CURL
 #define MASTERSERVER
 #else
 #undef UPDATE_ALERT

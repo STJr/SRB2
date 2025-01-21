@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2021 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -15,8 +15,9 @@
 #include "console.h"
 #include "d_main.h"
 #include "d_player.h"
-#include "d_clisrv.h"
+#include "netcode/d_clisrv.h"
 #include "p_setup.h"
+#include "i_time.h"
 #include "i_system.h"
 #include "m_random.h"
 #include "p_local.h"
@@ -38,6 +39,7 @@
 #include "v_video.h"
 #include "lua_hook.h"
 #include "md5.h" // demo checksums
+#include "netcode/d_netfil.h" // G_CheckDemoExtraFiles
 
 boolean timingdemo; // if true, exit with report on completion
 boolean nodrawers; // for comparative timing purposes
@@ -48,13 +50,15 @@ static char demoname[64];
 boolean demorecording;
 boolean demoplayback;
 boolean titledemo; // Title Screen demo can be cancelled by any key
+demo_file_override_e demofileoverride;
 static UINT8 *demobuffer = NULL;
 static UINT8 *demo_p, *demotime_p;
 static UINT8 *demoend;
 static UINT8 demoflags;
-static UINT16 demoversion;
+UINT16 demoversion;
 boolean singledemo; // quit after playing a demo from cmdline
 boolean demo_start; // don't start playing demo right away
+boolean demo_forwardmove_rng; // old demo backwards compatibility
 boolean demosynced = true; // console warning message
 
 boolean metalrecording; // recording as metal sonic
@@ -62,6 +66,8 @@ mobj_t *metalplayback;
 static UINT8 *metalbuffer = NULL;
 static UINT8 *metal_p;
 static UINT16 metalversion;
+
+consvar_t cv_resyncdemo = CVAR_INIT("resyncdemo", "On", 0, CV_OnOff, NULL);
 
 // extra data stuff (events registered this frame while recording)
 static struct {
@@ -94,7 +100,7 @@ demoghost *ghosts = NULL;
 // DEMO RECORDING
 //
 
-#define DEMOVERSION 0x000e
+#define DEMOVERSION 0x0012
 #define DEMOHEADER  "\xF0" "SRB2Replay" "\x0F"
 
 #define DF_GHOST        0x01 // This demo contains ghost data too!
@@ -109,6 +115,7 @@ demoghost *ghosts = NULL;
 #define ZT_ANGLE   0x04
 #define ZT_BUTTONS 0x08
 #define ZT_AIMING  0x10
+#define ZT_LATENCY 0x20
 #define DEMOMARKER 0x80 // demoend
 #define METALDEATH 0x44
 #define METALSNICE 0x69
@@ -178,9 +185,15 @@ void G_ReadDemoTiccmd(ticcmd_t *cmd, INT32 playernum)
 	if (ziptic & ZT_ANGLE)
 		oldcmd.angleturn = READINT16(demo_p);
 	if (ziptic & ZT_BUTTONS)
+	{
 		oldcmd.buttons = (oldcmd.buttons & (BT_CAMLEFT|BT_CAMRIGHT)) | (READUINT16(demo_p) & ~(BT_CAMLEFT|BT_CAMRIGHT));
+		if (demoversion < 0x0012 && oldcmd.buttons & BT_SPIN)
+			oldcmd.buttons |= BT_SHIELD; // Copy BT_SPIN to BT_SHIELD for pre-Shield-button demos
+	}
 	if (ziptic & ZT_AIMING)
 		oldcmd.aiming = READINT16(demo_p);
+	if (ziptic & ZT_LATENCY)
+		oldcmd.latency = READUINT8(demo_p);
 
 	G_CopyTiccmd(cmd, &oldcmd, 1);
 	players[playernum].angleturn = cmd->angleturn;
@@ -236,6 +249,13 @@ void G_WriteDemoTiccmd(ticcmd_t *cmd, INT32 playernum)
 		WRITEINT16(demo_p,cmd->aiming);
 		oldcmd.aiming = cmd->aiming;
 		ziptic |= ZT_AIMING;
+	}
+
+	if (cmd->latency != oldcmd.latency)
+	{
+		WRITEUINT8(demo_p,cmd->latency);
+		oldcmd.latency = cmd->latency;
+		ziptic |= ZT_LATENCY;
 	}
 
 	*ziptic_p = ziptic;
@@ -395,7 +415,7 @@ void G_WriteGhostTic(mobj_t *ghost)
 	{
 		oldghost.sprite2 = ghost->sprite2;
 		ziptic |= GZT_SPR2;
-		WRITEUINT8(demo_p,oldghost.sprite2);
+		WRITEUINT16(demo_p,oldghost.sprite2);
 	}
 
 	// Check for sprite set changes
@@ -478,7 +498,7 @@ void G_WriteGhostTic(mobj_t *ghost)
 			if (ghost->player->followmobj->colorized)
 				followtic |= FZT_COLORIZED;
 			if (followtic & FZT_SKIN)
-				WRITEUINT8(demo_p,(UINT8)(((skin_t *)(ghost->player->followmobj->skin))-skins));
+				WRITEUINT8(demo_p,(UINT8)(((skin_t *)ghost->player->followmobj->skin)->skinnum));
 			oldghost.flags2 |= MF2_AMBUSH;
 		}
 
@@ -495,7 +515,7 @@ void G_WriteGhostTic(mobj_t *ghost)
 		temp = ghost->player->followmobj->z-ghost->z;
 		WRITEFIXED(demo_p,temp);
 		if (followtic & FZT_SKIN)
-			WRITEUINT8(demo_p,ghost->player->followmobj->sprite2);
+			WRITEUINT16(demo_p,ghost->player->followmobj->sprite2);
 		WRITEUINT16(demo_p,ghost->player->followmobj->sprite);
 		WRITEUINT8(demo_p,(ghost->player->followmobj->frame & FF_FRAMEMASK));
 		WRITEUINT16(demo_p,ghost->player->followmobj->color);
@@ -531,6 +551,9 @@ void G_ConsGhostTic(void)
 
 	testmo = players[0].mo;
 
+	if (P_MobjWasRemoved(testmo))
+		return; // No valid mobj exists, probably because of unexpected quit
+
 	// Grab ghost data.
 	ziptic = READUINT8(demo_p);
 	if (ziptic & GZT_XYZ)
@@ -557,7 +580,7 @@ void G_ConsGhostTic(void)
 	if (ziptic & GZT_FRAME)
 		demo_p++;
 	if (ziptic & GZT_SPR2)
-		demo_p++;
+		demo_p += (demoversion < 0x0011) ? sizeof(UINT8) : sizeof(UINT16);
 
 	if (ziptic & GZT_EXTRA)
 	{ // But wait, there's more!
@@ -591,7 +614,7 @@ void G_ConsGhostTic(void)
 				mobj = NULL;
 				for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 				{
-					if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+					if (th->removing)
 						continue;
 					mobj = (mobj_t *)th;
 					if (mobj->type == (mobjtype_t)type && mobj->x == x && mobj->y == y && mobj->z == z)
@@ -626,7 +649,7 @@ void G_ConsGhostTic(void)
 		// momx, momy and momz
 		demo_p += (demoversion < 0x000e) ? sizeof(INT16) * 3 : sizeof(fixed_t) * 3;
 		if (followtic & FZT_SKIN)
-			demo_p++;
+			demo_p += (demoversion < 0x0011) ? sizeof(UINT8) : sizeof(UINT16);
 		demo_p += sizeof(UINT16);
 		demo_p++;
 		demo_p += (demoversion==0x000c) ? 1 : sizeof(UINT16);
@@ -646,11 +669,14 @@ void G_ConsGhostTic(void)
 			CONS_Alert(CONS_WARNING, M_GetText("Demo playback has desynced!\n"));
 		demosynced = false;
 
-		P_UnsetThingPosition(testmo);
-		testmo->x = oldghost.x;
-		testmo->y = oldghost.y;
-		P_SetThingPosition(testmo);
-		testmo->z = oldghost.z;
+		if (cv_resyncdemo.value)
+		{
+			P_UnsetThingPosition(testmo);
+			testmo->x = oldghost.x;
+			testmo->y = oldghost.y;
+			P_SetThingPosition(testmo);
+			testmo->z = oldghost.z;
+		}
 	}
 
 	if (*demo_p == DEMOMARKER)
@@ -679,6 +705,8 @@ void G_GhostTicker(void)
 			g->p += 2;
 		if (ziptic & ZT_AIMING)
 			g->p += 2;
+		if (ziptic & ZT_LATENCY)
+			g->p++;
 
 		// Grab ghost data.
 		ziptic = READUINT8(g->p);
@@ -706,7 +734,7 @@ void G_GhostTicker(void)
 		if (ziptic & GZT_FRAME)
 			g->oldmo.frame = READUINT8(g->p);
 		if (ziptic & GZT_SPR2)
-			g->oldmo.sprite2 = READUINT8(g->p);
+			g->oldmo.sprite2 = (g->version < 0x0011) ? READUINT8(g->p) : READUINT16(g->p);
 
 		// Update ghost
 		P_UnsetThingPosition(g->mo);
@@ -745,7 +773,7 @@ void G_GhostTicker(void)
 					g->mo->color = SKINCOLOR_WHITE;
 					break;
 				case GHC_NIGHTSSKIN: // not actually a colour
-					g->mo->skin = &skins[DEFAULTNIGHTSSKIN];
+					g->mo->skin = skins[DEFAULTNIGHTSSKIN];
 					break;
 				}
 			}
@@ -755,7 +783,7 @@ void G_GhostTicker(void)
 			{
 				g->mo->destscale = READFIXED(g->p);
 				if (g->mo->destscale != g->mo->scale)
-					P_SetScale(g->mo, g->mo->destscale);
+					P_SetScale(g->mo, g->mo->destscale, false);
 			}
 			if (xziptic & EZT_THOKMASK)
 			{ // Let's only spawn ONE of these per frame, thanks.
@@ -782,32 +810,40 @@ void G_GhostTicker(void)
 					if (type == MT_GHOST)
 					{
 						mobj = P_SpawnGhostMobj(g->mo); // does a large portion of the work for us
-						mobj->frame = (mobj->frame & ~FF_FRAMEMASK)|tr_trans60<<FF_TRANSSHIFT; // P_SpawnGhostMobj sets trans50, we want trans60
+						if (!P_MobjWasRemoved(mobj))
+							mobj->frame = (mobj->frame & ~FF_FRAMEMASK)|tr_trans60<<FF_TRANSSHIFT; // P_SpawnGhostMobj sets trans50, we want trans60
 					}
 					else
 					{
 						mobj = P_SpawnMobjFromMobj(g->mo, 0, 0, -FixedDiv(FixedMul(g->mo->info->height, g->mo->scale) - g->mo->height,3*FRACUNIT), MT_THOK);
-						mobj->sprite = states[mobjinfo[type].spawnstate].sprite;
-						mobj->frame = (states[mobjinfo[type].spawnstate].frame & FF_FRAMEMASK) | tr_trans60<<FF_TRANSSHIFT;
-						mobj->color = g->mo->color;
-						mobj->skin = g->mo->skin;
-						P_SetScale(mobj, (mobj->destscale = g->mo->scale));
-
-						if (type == MT_THOK) // spintrail-specific modification for MT_THOK
+						if (!P_MobjWasRemoved(mobj))
 						{
-							mobj->frame = FF_TRANS80;
-							mobj->fuse = mobj->tics;
+							mobj->sprite = states[mobjinfo[type].spawnstate].sprite;
+							mobj->frame = (states[mobjinfo[type].spawnstate].frame & FF_FRAMEMASK) | tr_trans60<<FF_TRANSSHIFT;
+							mobj->color = g->mo->color;
+							mobj->skin = g->mo->skin;
+							P_SetScale(mobj, g->mo->scale, true);
+
+							if (type == MT_THOK) // spintrail-specific modification for MT_THOK
+							{
+								mobj->frame = FF_TRANS80;
+								mobj->fuse = mobj->tics;
+							}
+							mobj->tics = -1; // nope.
 						}
-						mobj->tics = -1; // nope.
 					}
-					mobj->floorz = mobj->z;
-					mobj->ceilingz = mobj->z+mobj->height;
-					P_UnsetThingPosition(mobj);
-					mobj->flags = MF_NOBLOCKMAP|MF_NOCLIP|MF_NOCLIPHEIGHT|MF_NOGRAVITY; // make an ATTEMPT to curb crazy SOCs fucking stuff up...
-					P_SetThingPosition(mobj);
-					if (!mobj->fuse)
-						mobj->fuse = 8;
-					P_SetTarget(&mobj->target, g->mo);
+
+					if (!P_MobjWasRemoved(mobj))
+					{
+						mobj->floorz = mobj->z;
+						mobj->ceilingz = mobj->z+mobj->height;
+						P_UnsetThingPosition(mobj);
+						mobj->flags = MF_NOBLOCKMAP|MF_NOCLIP|MF_NOCLIPHEIGHT|MF_NOGRAVITY; // make an ATTEMPT to curb crazy SOCs fucking stuff up...
+						P_SetThingPosition(mobj);
+						if (!mobj->fuse)
+							mobj->fuse = 8;
+						P_SetTarget(&mobj->target, g->mo);
+					}
 				}
 			}
 			if (xziptic & EZT_HIT)
@@ -831,6 +867,8 @@ void G_GhostTicker(void)
 					|| health != 0 || i >= 4) // only spawn for the first 4 hits per frame, to prevent ghosts from splode-spamming too bad.
 						continue;
 					poof = P_SpawnMobj(x, y, z, MT_GHOST);
+					if (P_MobjWasRemoved(poof))
+						continue;
 					poof->angle = angle;
 					poof->flags = MF_NOBLOCKMAP|MF_NOCLIP|MF_NOCLIPHEIGHT|MF_NOGRAVITY; // make an ATTEMPT to curb crazy SOCs fucking stuff up...
 					poof->health = 0;
@@ -876,19 +914,22 @@ void G_GhostTicker(void)
 				if (follow)
 					P_RemoveMobj(follow);
 				P_SetTarget(&follow, P_SpawnMobjFromMobj(g->mo, 0, 0, 0, MT_GHOST));
-				P_SetTarget(&follow->tracer, g->mo);
-				follow->tics = -1;
-				temp = READINT16(g->p)<<FRACBITS;
-				follow->height = FixedMul(follow->scale, temp);
+				if (!P_MobjWasRemoved(follow))
+				{
+					P_SetTarget(&follow->tracer, g->mo);
+					follow->tics = -1;
+					temp = READINT16(g->p)<<FRACBITS;
+					follow->height = FixedMul(follow->scale, temp);
 
-				if (followtic & FZT_LINKDRAW)
-					follow->flags2 |= MF2_LINKDRAW;
+					if (followtic & FZT_LINKDRAW)
+						follow->flags2 |= MF2_LINKDRAW;
 
-				if (followtic & FZT_COLORIZED)
-					follow->colorized = true;
+					if (followtic & FZT_COLORIZED)
+						follow->colorized = true;
 
-				if (followtic & FZT_SKIN)
-					follow->skin = &skins[READUINT8(g->p)];
+					if (followtic & FZT_SKIN)
+						follow->skin = skins[READUINT8(g->p)];
+				}
 			}
 			if (follow)
 			{
@@ -897,7 +938,7 @@ void G_GhostTicker(void)
 				else
 					follow->destscale = g->mo->destscale;
 				if (follow->destscale != follow->scale)
-					P_SetScale(follow, follow->destscale);
+					P_SetScale(follow, follow->destscale, false);
 
 				P_UnsetThingPosition(follow);
 				temp = (g->version < 0x000e) ? READINT16(g->p)<<8 : READFIXED(g->p);
@@ -908,7 +949,7 @@ void G_GhostTicker(void)
 				follow->z = g->mo->z + temp;
 				P_SetThingPosition(follow);
 				if (followtic & FZT_SKIN)
-					follow->sprite2 = READUINT8(g->p);
+					follow->sprite2 = (g->version < 0x0011) ? READUINT8(g->p) : READUINT16(g->p);
 				else
 					follow->sprite2 = 0;
 				follow->sprite = READUINT16(g->p);
@@ -996,7 +1037,7 @@ void G_ReadMetalTic(mobj_t *metal)
 		oldmetal.x = READFIXED(metal_p);
 		oldmetal.y = READFIXED(metal_p);
 		oldmetal.z = READFIXED(metal_p);
-		P_TeleportMove(metal, oldmetal.x, oldmetal.y, oldmetal.z);
+		P_MoveOrigin(metal, oldmetal.x, oldmetal.y, oldmetal.z);
 		oldmetal.x = metal->x;
 		oldmetal.y = metal->y;
 		oldmetal.z = metal->z;
@@ -1017,9 +1058,13 @@ void G_ReadMetalTic(mobj_t *metal)
 	if (ziptic & GZT_ANGLE)
 		metal->angle = READUINT8(metal_p)<<24;
 	if (ziptic & GZT_FRAME)
+	{
 		oldmetal.frame = READUINT32(metal_p);
+		if (metalversion < 0x000f)
+			oldmetal.frame = G_ConvertOldFrameFlags(oldmetal.frame);
+	}
 	if (ziptic & GZT_SPR2)
-		oldmetal.sprite2 = READUINT8(metal_p);
+		oldmetal.sprite2 = (metalversion < 0x0011) ? READUINT8(metal_p) : READUINT16(metal_p);
 
 	// Set movement, position, and angle
 	// oldmetal contains where you're supposed to be.
@@ -1046,7 +1091,7 @@ void G_ReadMetalTic(mobj_t *metal)
 		{
 			metal->destscale = READFIXED(metal_p);
 			if (metal->destscale != metal->scale)
-				P_SetScale(metal, metal->destscale);
+				P_SetScale(metal, metal->destscale, false);
 		}
 		if (xziptic & EZT_THOKMASK)
 		{ // Let's only spawn ONE of these per frame, thanks.
@@ -1077,28 +1122,35 @@ void G_ReadMetalTic(mobj_t *metal)
 				else
 				{
 					mobj = P_SpawnMobjFromMobj(metal, 0, 0, -FixedDiv(FixedMul(metal->info->height, metal->scale) - metal->height,3*FRACUNIT), MT_THOK);
-					mobj->sprite = states[mobjinfo[type].spawnstate].sprite;
-					mobj->frame = states[mobjinfo[type].spawnstate].frame;
-					mobj->angle = metal->angle;
-					mobj->color = metal->color;
-					mobj->skin = metal->skin;
-					P_SetScale(mobj, (mobj->destscale = metal->scale));
-
-					if (type == MT_THOK) // spintrail-specific modification for MT_THOK
+					if (!P_MobjWasRemoved(mobj))
 					{
-						mobj->frame = FF_TRANS70;
-						mobj->fuse = mobj->tics;
+						mobj->sprite = states[mobjinfo[type].spawnstate].sprite;
+						mobj->frame = states[mobjinfo[type].spawnstate].frame;
+						mobj->angle = metal->angle;
+						mobj->color = metal->color;
+						mobj->skin = metal->skin;
+						P_SetScale(mobj, metal->scale, true);
+
+						if (type == MT_THOK) // spintrail-specific modification for MT_THOK
+						{
+							mobj->frame = FF_TRANS70;
+							mobj->fuse = mobj->tics;
+						}
+						mobj->tics = -1; // nope.
 					}
-					mobj->tics = -1; // nope.
 				}
-				mobj->floorz = mobj->z;
-				mobj->ceilingz = mobj->z+mobj->height;
-				P_UnsetThingPosition(mobj);
-				mobj->flags = MF_NOBLOCKMAP|MF_NOCLIP|MF_NOCLIPHEIGHT|MF_NOGRAVITY; // make an ATTEMPT to curb crazy SOCs fucking stuff up...
-				P_SetThingPosition(mobj);
-				if (!mobj->fuse)
-					mobj->fuse = 8;
-				P_SetTarget(&mobj->target, metal);
+
+				if (!P_MobjWasRemoved(mobj))
+				{
+					mobj->floorz = mobj->z;
+					mobj->ceilingz = mobj->z+mobj->height;
+					P_UnsetThingPosition(mobj);
+					mobj->flags = MF_NOBLOCKMAP|MF_NOCLIP|MF_NOCLIPHEIGHT|MF_NOGRAVITY; // make an ATTEMPT to curb crazy SOCs fucking stuff up...
+					P_SetThingPosition(mobj);
+					if (!mobj->fuse)
+						mobj->fuse = 8;
+					P_SetTarget(&mobj->target, metal);
+				}
 			}
 		}
 		if (xziptic & EZT_SPRITE)
@@ -1120,19 +1172,22 @@ void G_ReadMetalTic(mobj_t *metal)
 				if (follow)
 					P_RemoveMobj(follow);
 				P_SetTarget(&follow, P_SpawnMobjFromMobj(metal, 0, 0, 0, MT_GHOST));
-				P_SetTarget(&follow->tracer, metal);
-				follow->tics = -1;
-				temp = READINT16(metal_p)<<FRACBITS;
-				follow->height = FixedMul(follow->scale, temp);
+				if (!P_MobjWasRemoved(follow))
+				{
+					P_SetTarget(&follow->tracer, metal);
+					follow->tics = -1;
+					temp = READINT16(metal_p)<<FRACBITS;
+					follow->height = FixedMul(follow->scale, temp);
 
-				if (followtic & FZT_LINKDRAW)
-					follow->flags2 |= MF2_LINKDRAW;
+					if (followtic & FZT_LINKDRAW)
+						follow->flags2 |= MF2_LINKDRAW;
 
-				if (followtic & FZT_COLORIZED)
-					follow->colorized = true;
+					if (followtic & FZT_COLORIZED)
+						follow->colorized = true;
 
-				if (followtic & FZT_SKIN)
-					follow->skin = &skins[READUINT8(metal_p)];
+					if (followtic & FZT_SKIN)
+						follow->skin = skins[READUINT8(metal_p)];
+				}
 			}
 			if (follow)
 			{
@@ -1141,7 +1196,7 @@ void G_ReadMetalTic(mobj_t *metal)
 				else
 					follow->destscale = metal->destscale;
 				if (follow->destscale != follow->scale)
-					P_SetScale(follow, follow->destscale);
+					P_SetScale(follow, follow->destscale, false);
 
 				P_UnsetThingPosition(follow);
 				temp = (metalversion < 0x000e) ? READINT16(metal_p)<<8 : READFIXED(metal_p);
@@ -1152,13 +1207,15 @@ void G_ReadMetalTic(mobj_t *metal)
 				follow->z = metal->z + temp;
 				P_SetThingPosition(follow);
 				if (followtic & FZT_SKIN)
-					follow->sprite2 = READUINT8(metal_p);
+					follow->sprite2 = (metalversion < 0x0011) ? READUINT8(metal_p) : READUINT16(metal_p);
 				else
 					follow->sprite2 = 0;
 				follow->sprite = READUINT16(metal_p);
 				follow->frame = READUINT32(metal_p); // NOT & FF_FRAMEMASK here, so 32 bits
+				if (metalversion < 0x000f)
+					follow->frame = G_ConvertOldFrameFlags(follow->frame);
 				follow->angle = metal->angle;
-				follow->color = (metalversion==0x000c) ? READUINT8(metal_p) : READUINT16(metal_p);
+				follow->color = (metalversion == 0x000c) ? READUINT8(metal_p) : READUINT16(metal_p);
 
 				if (!(followtic & FZT_SPAWNED))
 				{
@@ -1259,7 +1316,7 @@ void G_WriteMetalTic(mobj_t *metal)
 	{
 		oldmetal.sprite2 = metal->sprite2;
 		ziptic |= GZT_SPR2;
-		WRITEUINT8(demo_p,oldmetal.sprite2);
+		WRITEUINT16(demo_p,oldmetal.sprite2);
 	}
 
 	// Check for sprite set changes
@@ -1317,7 +1374,7 @@ void G_WriteMetalTic(mobj_t *metal)
 			if (metal->player->followmobj->colorized)
 				followtic |= FZT_COLORIZED;
 			if (followtic & FZT_SKIN)
-				WRITEUINT8(demo_p,(UINT8)(((skin_t *)(metal->player->followmobj->skin))-skins));
+				WRITEUINT8(demo_p,(UINT8)(((skin_t *)metal->player->followmobj->skin)->skinnum));
 			oldmetal.flags2 |= MF2_AMBUSH;
 		}
 
@@ -1334,7 +1391,7 @@ void G_WriteMetalTic(mobj_t *metal)
 		temp = metal->player->followmobj->z-metal->z;
 		WRITEFIXED(demo_p,temp);
 		if (followtic & FZT_SKIN)
-			WRITEUINT8(demo_p,metal->player->followmobj->sprite2);
+			WRITEUINT16(demo_p,metal->player->followmobj->sprite2);
 		WRITEUINT16(demo_p,metal->player->followmobj->sprite);
 		WRITEUINT32(demo_p,metal->player->followmobj->frame); // NOT & FF_FRAMEMASK here, so 32 bits
 		WRITEUINT16(demo_p,metal->player->followmobj->color);
@@ -1394,6 +1451,11 @@ void G_BeginRecording(void)
 	char name[MAXCOLORNAME+1];
 	player_t *player = &players[consoleplayer];
 
+	char *filename;
+	UINT16 totalfiles;
+	UINT8 *m;
+	save_t savebuffer;
+
 	if (demo_p)
 		return;
 	memset(name,0,sizeof(name));
@@ -1416,23 +1478,43 @@ void G_BeginRecording(void)
 	M_Memcpy(demo_p, mapmd5, 16); demo_p += 16;
 
 	WRITEUINT8(demo_p,demoflags);
+
+	// file list
+	m = demo_p;/* file count */
+	demo_p += 2;
+
+	totalfiles = 0;
+	for (i = mainwads; ++i < numwadfiles; )
+	{
+		if (wadfiles[i]->important)
+		{
+			nameonly(( filename = va("%s", wadfiles[i]->filename) ));
+			WRITESTRINGL(demo_p, filename, MAX_WADPATH);
+			WRITEMEM(demo_p, wadfiles[i]->md5sum, 16);
+
+			totalfiles++;
+		}
+	}
+
+	WRITEUINT16(m, totalfiles);
+
 	switch ((demoflags & DF_ATTACKMASK)>>DF_ATTACKSHIFT)
 	{
-	case ATTACKING_NONE: // 0
-		break;
-	case ATTACKING_RECORD: // 1
-		demotime_p = demo_p;
-		WRITEUINT32(demo_p,UINT32_MAX); // time
-		WRITEUINT32(demo_p,0); // score
-		WRITEUINT16(demo_p,0); // rings
-		break;
-	case ATTACKING_NIGHTS: // 2
-		demotime_p = demo_p;
-		WRITEUINT32(demo_p,UINT32_MAX); // time
-		WRITEUINT32(demo_p,0); // score
-		break;
-	default: // 3
-		break;
+		case ATTACKING_NONE: // 0
+			break;
+		case ATTACKING_RECORD: // 1
+			demotime_p = demo_p;
+			WRITEUINT32(demo_p,UINT32_MAX); // time
+			WRITEUINT32(demo_p,0); // score
+			WRITEUINT16(demo_p,0); // rings
+			break;
+		case ATTACKING_NIGHTS: // 2
+			demotime_p = demo_p;
+			WRITEUINT32(demo_p,UINT32_MAX); // time
+			WRITEUINT32(demo_p,0); // score
+			break;
+		default: // 3
+			break;
 	}
 
 	WRITEUINT32(demo_p,P_GetInitSeed());
@@ -1446,16 +1528,21 @@ void G_BeginRecording(void)
 	demo_p += 16;
 
 	// Skin
-	for (i = 0; i < 16 && cv_skin.string[i]; i++)
-		name[i] = cv_skin.string[i];
+	const char *skinname = skins[players[0].skin]->name;
+	for (i = 0; i < 16 && skinname[i]; i++)
+		name[i] = skinname[i];
 	for (; i < 16; i++)
 		name[i] = '\0';
 	M_Memcpy(demo_p,name,16);
 	demo_p += 16;
 
 	// Color
-	for (i = 0; i < MAXCOLORNAME && cv_playercolor.string[i]; i++)
-		name[i] = cv_playercolor.string[i];
+	UINT16 skincolor = players[0].skincolor;
+	if (skincolor >= numskincolors)
+		skincolor = SKINCOLOR_NONE;
+	const char *skincolor_name = skincolors[skincolor].name;
+	for (i = 0; i < MAXCOLORNAME && skincolor_name[i]; i++)
+		name[i] = skincolor_name[i];
 	for (; i < MAXCOLORNAME; i++)
 		name[i] = '\0';
 	M_Memcpy(demo_p,name,MAXCOLORNAME);
@@ -1464,18 +1551,18 @@ void G_BeginRecording(void)
 	// Stats
 	WRITEUINT8(demo_p,player->charability);
 	WRITEUINT8(demo_p,player->charability2);
-	WRITEUINT8(demo_p,player->actionspd>>FRACBITS);
-	WRITEUINT8(demo_p,player->mindash>>FRACBITS);
-	WRITEUINT8(demo_p,player->maxdash>>FRACBITS);
-	WRITEUINT8(demo_p,player->normalspeed>>FRACBITS);
-	WRITEUINT8(demo_p,player->runspeed>>FRACBITS);
+	WRITEFIXED(demo_p,player->actionspd);
+	WRITEFIXED(demo_p,player->mindash);
+	WRITEFIXED(demo_p,player->maxdash);
+	WRITEFIXED(demo_p,player->normalspeed);
+	WRITEFIXED(demo_p,player->runspeed);
 	WRITEUINT8(demo_p,player->thrustfactor);
 	WRITEUINT8(demo_p,player->accelstart);
 	WRITEUINT8(demo_p,player->acceleration);
 	WRITEFIXED(demo_p,player->height);
 	WRITEFIXED(demo_p,player->spinheight);
-	WRITEUINT8(demo_p,player->camerascale>>FRACBITS);
-	WRITEUINT8(demo_p,player->shieldscale>>FRACBITS);
+	WRITEFIXED(demo_p,player->camerascale);
+	WRITEFIXED(demo_p,player->shieldscale);
 
 	// Trying to convert it back to % causes demo desync due to precision loss.
 	// Don't do it.
@@ -1517,7 +1604,11 @@ void G_BeginRecording(void)
 	}
 
 	// Save netvar data
-	CV_SaveDemoVars(&demo_p);
+	savebuffer.buf = demo_p;
+	savebuffer.size = demoend - demo_p;
+	savebuffer.pos = 0;
+	CV_SaveDemoVars(&savebuffer);
+	demo_p = &savebuffer.buf[savebuffer.pos];
 
 	memset(&oldcmd,0,sizeof(oldcmd));
 	memset(&oldghost,0,sizeof(oldghost));
@@ -1571,6 +1662,183 @@ void G_BeginMetal(void)
 	oldmetal.angle = mo->angle>>24;
 }
 
+static void G_LoadDemoExtraFiles(UINT8 **pp, UINT16 this_demo_version)
+{
+	UINT16 totalfiles;
+	char filename[MAX_WADPATH];
+	UINT8 md5sum[16];
+	filestatus_t ncs = FS_NOTFOUND;
+	boolean toomany = false;
+	boolean alreadyloaded;
+	UINT16 i, j;
+
+	if (this_demo_version < 0x0010)
+	{
+		// demo has no file list
+		return;
+	}
+
+	totalfiles = READUINT16((*pp));
+	for (i = 0; i < totalfiles; ++i)
+	{
+		if (toomany)
+			SKIPSTRING((*pp));
+		else
+		{
+			strlcpy(filename, (char *)(*pp), sizeof filename);
+			SKIPSTRING((*pp));
+		}
+		READMEM((*pp), md5sum, 16);
+
+		if (!toomany)
+		{
+			alreadyloaded = false;
+
+			for (j = 0; j < numwadfiles; ++j)
+			{
+				if (memcmp(md5sum, wadfiles[j]->md5sum, 16) == 0)
+				{
+					alreadyloaded = true;
+					break;
+				}
+			}
+
+			if (alreadyloaded)
+				continue;
+
+			if (numwadfiles >= MAX_WADFILES)
+				toomany = true;
+			else
+				ncs = findfile(filename, md5sum, false);
+
+			if (toomany)
+			{
+				CONS_Alert(CONS_WARNING, M_GetText("Too many files loaded to add anymore for demo playback\n"));
+				if (!CON_Ready())
+					M_StartMessage(M_GetText("There are too many files loaded to add this demo's addons.\n\nDemo playback may desync.\n\nPress ESC\n"), NULL, MM_NOTHING);
+			}
+			else if (ncs != FS_FOUND)
+			{
+				if (ncs == FS_NOTFOUND)
+					CONS_Alert(CONS_NOTICE, M_GetText("You do not have a copy of %s\n"), filename);
+				else if (ncs == FS_MD5SUMBAD)
+					CONS_Alert(CONS_NOTICE, M_GetText("Checksum mismatch on %s\n"), filename);
+				else
+					CONS_Alert(CONS_NOTICE, M_GetText("Unknown error finding file %s\n"), filename);
+
+				if (!CON_Ready())
+					M_StartMessage(M_GetText("There were errors trying to add this demo's addons. Check the console for more information.\n\nDemo playback may desync.\n\nPress ESC\n"), NULL, MM_NOTHING);
+			}
+			else
+			{
+				P_AddWadFile(filename);
+			}
+		}
+	}
+}
+
+static void G_SkipDemoExtraFiles(UINT8 **pp, UINT16 this_demo_version)
+{
+	UINT16 totalfiles;
+	UINT16 i;
+
+	if (this_demo_version < 0x0010)
+	{
+		// demo has no file list
+		return;
+	}
+
+	totalfiles = READUINT16((*pp));
+	for (i = 0; i < totalfiles; ++i)
+	{
+		SKIPSTRING((*pp));// file name
+		(*pp) += 16;// md5
+	}
+}
+
+// G_CheckDemoExtraFiles: checks if our loaded WAD list matches the demo's.
+// Enabling quick prevents filesystem checks to see if needed files are available to load.
+static UINT8 G_CheckDemoExtraFiles(UINT8 **pp, boolean quick, UINT16 this_demo_version)
+{
+	UINT16 totalfiles, filesloaded, nmusfilecount;
+	char filename[MAX_WADPATH];
+	UINT8 md5sum[16];
+	boolean toomany = false;
+	boolean alreadyloaded;
+	UINT16 i, j;
+	UINT8 error = DFILE_ERROR_NONE;
+
+	if (this_demo_version < 0x0010)
+	{
+		// demo has no file list
+		return DFILE_ERROR_NONE;
+	}
+
+	totalfiles = READUINT16((*pp));
+	filesloaded = 0;
+	for (i = 0; i < totalfiles; ++i)
+	{
+		if (toomany)
+			SKIPSTRING((*pp));
+		else
+		{
+			strlcpy(filename, (char *)(*pp), sizeof filename);
+			SKIPSTRING((*pp));
+		}
+		READMEM((*pp), md5sum, 16);
+
+		if (!toomany)
+		{
+			alreadyloaded = false;
+			nmusfilecount = 0;
+
+			for (j = 0; j < numwadfiles; ++j)
+			{
+				if (wadfiles[j]->important && j > mainwads)
+					nmusfilecount++;
+				else
+					continue;
+
+				if (memcmp(md5sum, wadfiles[j]->md5sum, 16) == 0)
+				{
+					alreadyloaded = true;
+
+					if (i != nmusfilecount-1 && error < DFILE_ERROR_OUTOFORDER)
+						error |= DFILE_ERROR_OUTOFORDER;
+
+					break;
+				}
+			}
+
+			if (alreadyloaded)
+			{
+				filesloaded++;
+				continue;
+			}
+
+			if (numwadfiles >= MAX_WADFILES)
+				error = DFILE_ERROR_CANNOTLOAD;
+			else if (!quick && findfile(filename, md5sum, false) != FS_FOUND)
+				error = DFILE_ERROR_CANNOTLOAD;
+			else if (error < DFILE_ERROR_INCOMPLETEOUTOFORDER)
+				error |= DFILE_ERROR_NOTLOADED;
+		} else
+			error = DFILE_ERROR_CANNOTLOAD;
+	}
+
+	// Get final file count
+	nmusfilecount = 0;
+
+	for (j = 0; j < numwadfiles; ++j)
+		if (wadfiles[j]->important && j > mainwads)
+			nmusfilecount++;
+
+	if (!error && filesloaded < nmusfilecount)
+		error = DFILE_ERROR_EXTRAFILES;
+
+	return error;
+}
+
 void G_SetDemoTime(UINT32 ptime, UINT32 pscore, UINT16 prings)
 {
 	if (!demorecording || !demotime_p)
@@ -1599,10 +1867,9 @@ UINT8 G_CmpDemoTime(char *oldname, char *newname)
 	UINT8 *buffer,*p;
 	UINT8 flags;
 	UINT32 oldtime, newtime, oldscore, newscore;
-	UINT16 oldrings, newrings, oldversion;
+	UINT16 oldrings, newrings, oldversion, newversion;
 	size_t bufsize ATTRUNUSED;
 	UINT8 c;
-	UINT16 s ATTRUNUSED;
 	UINT8 aflags = 0;
 
 	// load the new file
@@ -1618,15 +1885,15 @@ UINT8 G_CmpDemoTime(char *oldname, char *newname)
 	I_Assert(c == VERSION);
 	c = READUINT8(p); // SUBVERSION
 	I_Assert(c == SUBVERSION);
-	s = READUINT16(p);
-	I_Assert(s >= 0x000c);
+	newversion = READUINT16(p);
+	I_Assert(newversion == DEMOVERSION);
 	p += 16; // demo checksum
 	I_Assert(!memcmp(p, "PLAY", 4));
 	p += 4; // PLAY
 	p += 2; // gamemap
 	p += 16; // map md5
 	flags = READUINT8(p); // demoflags
-
+	G_SkipDemoExtraFiles(&p, newversion);
 	aflags = flags & (DF_RECORDATTACK|DF_NIGHTSATTACK);
 	I_Assert(aflags);
 	if (flags & DF_RECORDATTACK)
@@ -1665,13 +1932,9 @@ UINT8 G_CmpDemoTime(char *oldname, char *newname)
 	p++; // VERSION
 	p++; // SUBVERSION
 	oldversion = READUINT16(p);
-	switch(oldversion) // demoversion
+	if (oldversion < 0x000c || oldversion > DEMOVERSION)
 	{
-	case DEMOVERSION: // latest always supported
-	case 0x000c: // all that changed between then and now was longer color name
-		break;
-	// too old, cannot support.
-	default:
+		// too old (or new), cannot support
 		CONS_Alert(CONS_NOTICE, M_GetText("File '%s' invalid format. It will be overwritten.\n"), oldname);
 		Z_Free(buffer);
 		return UINT8_MAX;
@@ -1689,6 +1952,7 @@ UINT8 G_CmpDemoTime(char *oldname, char *newname)
 		p += 2; // gamemap
 	p += 16; // mapmd5
 	flags = READUINT8(p);
+	G_SkipDemoExtraFiles(&p, oldversion);
 	if (!(flags & aflags))
 	{
 		CONS_Alert(CONS_NOTICE, M_GetText("File '%s' not from same game mode. It will be overwritten.\n"), oldname);
@@ -1743,14 +2007,11 @@ void G_DoPlayDemo(char *defdemoname)
 	UINT8 i;
 	lumpnum_t l;
 	char skin[17],color[MAXCOLORNAME+1],*n,*pdemoname;
-	UINT8 version,subversion,charability,charability2,thrustfactor,accelstart,acceleration,cnamelen;
+	UINT8 version,subversion,charability,charability2,thrustfactor,accelstart,acceleration;
 	pflags_t pflags;
 	UINT32 randseed, followitem;
 	fixed_t camerascale,shieldscale,actionspd,mindash,maxdash,normalspeed,runspeed,jumpfactor,height,spinheight;
 	char msg[1024];
-#ifdef OLD22DEMOCOMPAT
-	boolean use_old_demo_vars = false;
-#endif
 
 	skin[16] = '\0';
 	color[MAXCOLORNAME] = '\0';
@@ -1808,21 +2069,14 @@ void G_DoPlayDemo(char *defdemoname)
 	version = READUINT8(demo_p);
 	subversion = READUINT8(demo_p);
 	demoversion = READUINT16(demo_p);
-	switch(demoversion)
-	{
-	case 0x000d:
-	case DEMOVERSION: // latest always supported
-		cnamelen = MAXCOLORNAME;
-		break;
+	demo_forwardmove_rng = (demoversion < 0x0010);
 #ifdef OLD22DEMOCOMPAT
-	// all that changed between then and now was longer color name
-	case 0x000c:
-		cnamelen = 16;
-		use_old_demo_vars = true;
-		break;
+	if (demoversion < 0x000c || demoversion > DEMOVERSION)
+#else
+	if (demoversion < 0x000d || demoversion > DEMOVERSION)
 #endif
-	// too old, cannot support.
-	default:
+	{
+		// too old (or new), cannot support
 		snprintf(msg, 1024, M_GetText("%s is an incompatible replay format and cannot be played.\n"), pdemoname);
 		CONS_Alert(CONS_ERROR, "%s", msg);
 		M_StartMessage(msg, NULL, MM_NOTHING);
@@ -1849,6 +2103,69 @@ void G_DoPlayDemo(char *defdemoname)
 	demo_p += 16; // mapmd5
 
 	demoflags = READUINT8(demo_p);
+
+	if (titledemo)
+	{
+		// Titledemos should always play and ought to always be compatible with whatever wadlist is running.
+		G_SkipDemoExtraFiles(&demo_p, demoversion);
+	}
+	else if (demofileoverride == DFILE_OVERRIDE_LOAD)
+	{
+		G_LoadDemoExtraFiles(&demo_p, demoversion);
+	}
+	else if (demofileoverride == DFILE_OVERRIDE_SKIP)
+	{
+		G_SkipDemoExtraFiles(&demo_p, demoversion);
+	}
+	else
+	{
+		UINT8 error = G_CheckDemoExtraFiles(&demo_p, false, demoversion);
+
+		if (error)
+		{
+			switch (error)
+			{
+				case DFILE_ERROR_NOTLOADED:
+					snprintf(msg, 1024,
+						M_GetText("Required files for this demo are not loaded.\n\nUse\n\"playdemo %s -addfiles\"\nto load them and play the demo.\n"),
+					pdemoname);
+					break;
+
+				case DFILE_ERROR_OUTOFORDER:
+					snprintf(msg, 1024,
+						M_GetText("Required files for this demo are loaded out of order.\n\nUse\n\"playdemo %s -force\"\nto play the demo anyway.\n"),
+					pdemoname);
+					break;
+
+				case DFILE_ERROR_INCOMPLETEOUTOFORDER:
+					snprintf(msg, 1024,
+						M_GetText("Required files for this demo are not loaded, and some are out of order.\n\nUse\n\"playdemo %s -addfiles\"\nto load needed files and play the demo.\n"),
+					pdemoname);
+					break;
+
+				case DFILE_ERROR_CANNOTLOAD:
+					snprintf(msg, 1024,
+						M_GetText("Required files for this demo cannot be loaded.\n\nUse\n\"playdemo %s -force\"\nto play the demo anyway.\n"),
+					pdemoname);
+					break;
+
+				case DFILE_ERROR_EXTRAFILES:
+					snprintf(msg, 1024,
+						M_GetText("You have additional files loaded beyond the demo's file list.\n\nUse\n\"playdemo %s -force\"\nto play the demo anyway.\n"),
+					pdemoname);
+					break;
+			}
+
+			CONS_Alert(CONS_ERROR, "%s", msg);
+			M_StartMessage(msg, NULL, MM_NOTHING);
+			Z_Free(pdemoname);
+			Z_Free(demobuffer);
+			demoplayback = false;
+			titledemo = false;
+			return;
+		}
+	}
+
 	modeattacking = (demoflags & DF_ATTACKMASK)>>DF_ATTACKSHIFT;
 	CON_ToggleOff();
 
@@ -1886,23 +2203,23 @@ void G_DoPlayDemo(char *defdemoname)
 	demo_p += 16;
 
 	// Color
-	M_Memcpy(color,demo_p,cnamelen);
-	demo_p += cnamelen;
+	M_Memcpy(color, demo_p, (demoversion < 0x000d) ? 16 : MAXCOLORNAME);
+	demo_p += (demoversion < 0x000d) ? 16 : MAXCOLORNAME;
 
 	charability = READUINT8(demo_p);
 	charability2 = READUINT8(demo_p);
-	actionspd = (fixed_t)READUINT8(demo_p)<<FRACBITS;
-	mindash = (fixed_t)READUINT8(demo_p)<<FRACBITS;
-	maxdash = (fixed_t)READUINT8(demo_p)<<FRACBITS;
-	normalspeed = (fixed_t)READUINT8(demo_p)<<FRACBITS;
-	runspeed = (fixed_t)READUINT8(demo_p)<<FRACBITS;
+	actionspd = (demoversion < 0x0010) ? (fixed_t)READUINT8(demo_p)<<FRACBITS : READFIXED(demo_p);
+	mindash = (demoversion < 0x0010) ? (fixed_t)READUINT8(demo_p)<<FRACBITS : READFIXED(demo_p);
+	maxdash = (demoversion < 0x0010) ? (fixed_t)READUINT8(demo_p)<<FRACBITS : READFIXED(demo_p);
+	normalspeed = (demoversion < 0x0010) ? (fixed_t)READUINT8(demo_p)<<FRACBITS : READFIXED(demo_p);
+	runspeed = (demoversion < 0x0010) ? (fixed_t)READUINT8(demo_p)<<FRACBITS : READFIXED(demo_p);
 	thrustfactor = READUINT8(demo_p);
 	accelstart = READUINT8(demo_p);
 	acceleration = READUINT8(demo_p);
 	height = (demoversion < 0x000e) ? (fixed_t)READUINT8(demo_p)<<FRACBITS : READFIXED(demo_p);
 	spinheight = (demoversion < 0x000e) ? (fixed_t)READUINT8(demo_p)<<FRACBITS : READFIXED(demo_p);
-	camerascale = (fixed_t)READUINT8(demo_p)<<FRACBITS;
-	shieldscale = (fixed_t)READUINT8(demo_p)<<FRACBITS;
+	camerascale = (demoversion < 0x0010) ? (fixed_t)READUINT8(demo_p)<<FRACBITS : READFIXED(demo_p);
+	shieldscale = (demoversion < 0x0010) ? (fixed_t)READUINT8(demo_p)<<FRACBITS : READFIXED(demo_p);
 	jumpfactor = READFIXED(demo_p);
 	followitem = READUINT32(demo_p);
 
@@ -1923,11 +2240,25 @@ void G_DoPlayDemo(char *defdemoname)
 
 	// net var data
 #ifdef OLD22DEMOCOMPAT
-	if (use_old_demo_vars)
-		CV_LoadOldDemoVars(&demo_p);
+	if (demoversion < 0x000d)
+	{
+		save_t savebuffer;
+		savebuffer.buf = demo_p;
+		savebuffer.size = demoend - demo_p;
+		savebuffer.pos = 0;
+		CV_LoadOldDemoVars(&savebuffer);
+		demo_p = &savebuffer.buf[savebuffer.pos];
+	}
 	else
 #endif
-		CV_LoadDemoVars(&demo_p);
+	{
+		save_t savebuffer;
+		savebuffer.buf = demo_p;
+		savebuffer.size = demoend - demo_p;
+		savebuffer.pos = 0;
+		CV_LoadDemoVars(&savebuffer);
+		demo_p = &savebuffer.buf[savebuffer.pos];
+	}
 
 	// Sigh ... it's an empty demo.
 	if (*demo_p == DEMOMARKER)
@@ -1956,7 +2287,7 @@ void G_DoPlayDemo(char *defdemoname)
 	// Set skin
 	SetPlayerSkin(0, skin);
 
-	LUAh_MapChange(gamemap);
+	LUA_HookInt(gamemap, HOOK(MapChange));
 	displayplayer = consoleplayer = 0;
 	memset(playeringame,0,sizeof(playeringame));
 	playeringame[0] = true;
@@ -1964,14 +2295,13 @@ void G_DoPlayDemo(char *defdemoname)
 	G_InitNew(false, G_BuildMapName(gamemap), true, true, false);
 
 	// Set color
-	players[0].skincolor = skins[players[0].skin].prefcolor;
+	players[0].skincolor = skins[players[0].skin]->prefcolor;
 	for (i = 0; i < numskincolors; i++)
 		if (!stricmp(skincolors[i].name,color))
 		{
 			players[0].skincolor = i;
 			break;
 		}
-	CV_StealthSetValue(&cv_playercolor, players[0].skincolor);
 	if (players[0].mo)
 	{
 		players[0].mo->color = players[0].skincolor;
@@ -2004,14 +2334,89 @@ void G_DoPlayDemo(char *defdemoname)
 	demo_start = true;
 }
 
+//
+// Check if a replay can be loaded from the menu
+//
+UINT8 G_CheckDemoForError(char *defdemoname)
+{
+	lumpnum_t l;
+	char *n,*pdemoname;
+	UINT16 our_demo_version;
+
+	if (titledemo)
+	{
+		// Don't do anything with files for these.
+		return DFILE_ERROR_NONE;
+	}
+
+	n = defdemoname+strlen(defdemoname);
+	while (*n != '/' && *n != '\\' && n != defdemoname)
+		n--;
+	if (n != defdemoname)
+		n++;
+	pdemoname = ZZ_Alloc(strlen(n)+1);
+	strcpy(pdemoname,n);
+
+	// Internal if no extension, external if one exists
+	if (FIL_CheckExtension(defdemoname))
+	{
+		//FIL_DefaultExtension(defdemoname, ".lmp");
+		if (!FIL_ReadFile(defdemoname, &demobuffer))
+		{
+			return DFILE_ERROR_NOTDEMO;
+		}
+		demo_p = demobuffer;
+	}
+	// load demo resource from WAD
+	else if ((l = W_CheckNumForName(defdemoname)) == LUMPERROR)
+	{
+		return DFILE_ERROR_NOTDEMO;
+	}
+	else // it's an internal demo
+	{
+		demobuffer = demo_p = W_CacheLumpNum(l, PU_STATIC);
+	}
+
+	// read demo header
+	if (memcmp(demo_p, DEMOHEADER, 12))
+	{
+		return DFILE_ERROR_NOTDEMO;
+	}
+	demo_p += 12; // DEMOHEADER
+
+	demo_p++; // version
+	demo_p++; // subversion
+	our_demo_version = READUINT16(demo_p);
+#ifdef OLD22DEMOCOMPAT
+	if (our_demo_version < 0x000c || our_demo_version > DEMOVERSION)
+#else
+	if (our_demo_version < 0x000d || our_demo_version > DEMOVERSION)
+#endif
+	{
+		// too old (or new), cannot support
+		return DFILE_ERROR_NOTDEMO;
+	}
+	demo_p += 16; // demo checksum
+	if (memcmp(demo_p, "PLAY", 4))
+	{
+		return DFILE_ERROR_NOTDEMO;
+	}
+	demo_p += 4; // "PLAY"
+	demo_p += 2; // gamemap
+	demo_p += 16; // mapmd5
+
+	demo_p++; // demoflags
+
+	return G_CheckDemoExtraFiles(&demo_p, true, our_demo_version);
+}
+
 void G_AddGhost(char *defdemoname)
 {
 	INT32 i;
 	lumpnum_t l;
 	char name[17],skin[17],color[MAXCOLORNAME+1],*n,*pdemoname,md5[16];
-	UINT8 cnamelen;
 	demoghost *gh;
-	UINT8 flags;
+	UINT8 flags, subversion;
 	UINT8 *buffer,*p;
 	mapthing_t *mthing;
 	UINT16 count, ghostversion;
@@ -2059,20 +2464,11 @@ void G_AddGhost(char *defdemoname)
 		return;
 	} p += 12; // DEMOHEADER
 	p++; // VERSION
-	p++; // SUBVERSION
+	subversion = READUINT8(p); // SUBVERSION
 	ghostversion = READUINT16(p);
-	switch(ghostversion)
+	if (ghostversion < 0x000c || ghostversion > DEMOVERSION)
 	{
-	case 0x000d:
-	case DEMOVERSION: // latest always supported
-		cnamelen = MAXCOLORNAME;
-		break;
-	// all that changed between then and now was longer color name
-	case 0x000c:
-		cnamelen = 16;
-		break;
-	// too old, cannot support.
-	default:
+		// too old (or new), cannot support
 		CONS_Alert(CONS_NOTICE, M_GetText("Ghost %s: Demo version incompatible.\n"), pdemoname);
 		Z_Free(pdemoname);
 		Z_Free(buffer);
@@ -2107,6 +2503,9 @@ void G_AddGhost(char *defdemoname)
 		Z_Free(buffer);
 		return;
 	}
+
+	G_SkipDemoExtraFiles(&p, ghostversion); // Don't wanna modify the file list for ghosts.
+
 	switch ((flags & DF_ATTACKMASK)>>DF_ATTACKSHIFT)
 	{
 	case ATTACKING_NONE: // 0
@@ -2132,23 +2531,18 @@ void G_AddGhost(char *defdemoname)
 	p += 16;
 
 	// Color
-	M_Memcpy(color, p,cnamelen);
-	p += cnamelen;
+	M_Memcpy(color, p, (ghostversion < 0x000d) ? 16 : MAXCOLORNAME);
+	p += (ghostversion < 0x000d) ? 16 : MAXCOLORNAME;
 
 	// Ghosts do not have a player structure to put this in.
 	p++; // charability
 	p++; // charability2
-	p++; // actionspd
-	p++; // mindash
-	p++; // maxdash
-	p++; // normalspeed
-	p++; // runspeed
+	p += (ghostversion < 0x0010) ? 5 : 5 * sizeof(fixed_t); // actionspd, mindash, maxdash, normalspeed, and runspeed
 	p++; // thrustfactor
 	p++; // accelstart
 	p++; // acceleration
 	p += (ghostversion < 0x000e) ? 2 : 2 * sizeof(fixed_t); // height and spinheight
-	p++; // camerascale
-	p++; // shieldscale
+	p += (ghostversion < 0x0010) ? 2 : 2 * sizeof(fixed_t); // camerascale and shieldscale
 	p += 4; // jumpfactor
 	p += 4; // followitem
 
@@ -2158,9 +2552,19 @@ void G_AddGhost(char *defdemoname)
 	count = READUINT16(p);
 	while (count--)
 	{
-		SKIPSTRING(p);
-		SKIPSTRING(p);
-		p++;
+		// In 2.2.7 netvar saving was updated
+		if (subversion < 7)
+		{
+			p += 2;
+			SKIPSTRING(p);
+			p++;
+		}
+		else
+		{
+			SKIPSTRING(p);
+			SKIPSTRING(p);
+			p++;
+		}
 	}
 
 	if (*p == DEMOMARKER)
@@ -2185,11 +2589,13 @@ void G_AddGhost(char *defdemoname)
 	{ // A bit more complex than P_SpawnPlayer because ghosts aren't solid and won't just push themselves out of the ceiling.
 		fixed_t z,f,c;
 		fixed_t offset = mthing->z << FRACBITS;
-		gh->mo = P_SpawnMobj(mthing->x << FRACBITS, mthing->y << FRACBITS, 0, MT_GHOST);
+		P_SetTarget(&gh->mo, P_SpawnMobj(mthing->x << FRACBITS, mthing->y << FRACBITS, 0, MT_GHOST));
+		if (P_MobjWasRemoved(gh->mo))
+			return;
 		gh->mo->angle = FixedAngle(mthing->angle << FRACBITS);
 		f = gh->mo->floorz;
 		c = gh->mo->ceilingz - mobjinfo[MT_PLAYER].height;
-		if (!!(mthing->options & MTF_AMBUSH) ^ !!(mthing->options & MTF_OBJECTFLIP))
+		if (!!(mthing->args[0]) ^ !!(mthing->options & MTF_OBJECTFLIP))
 		{
 			z = c - offset;
 			if (z < f)
@@ -2209,11 +2615,11 @@ void G_AddGhost(char *defdemoname)
 	gh->oldmo.z = gh->mo->z;
 
 	// Set skin
-	gh->mo->skin = &skins[0];
+	gh->mo->skin = skins[0];
 	for (i = 0; i < numskins; i++)
-		if (!stricmp(skins[i].name,skin))
+		if (!stricmp(skins[i]->name,skin))
 		{
-			gh->mo->skin = &skins[i];
+			gh->mo->skin = skins[i];
 			break;
 		}
 	gh->oldmo.skin = gh->mo->skin;
@@ -2228,10 +2634,10 @@ void G_AddGhost(char *defdemoname)
 		}
 	gh->oldmo.color = gh->mo->color;
 
-	gh->mo->state = states+S_PLAY_STND;
+	gh->mo->state = &states[S_PLAY_STND];
 	gh->mo->sprite = gh->mo->state->sprite;
-	gh->mo->sprite2 = (gh->mo->state->frame & FF_FRAMEMASK);
-	//gh->mo->frame = tr_trans30<<FF_TRANSSHIFT;
+	gh->mo->sprite2 = P_GetStateSprite2(gh->mo->state);
+	gh->mo->frame = (gh->mo->state->frame & ~FF_FRAMEMASK) | P_GetSprite2StateFrame(gh->mo->state);
 	gh->mo->flags2 |= MF2_DONTDRAW;
 	gh->fadein = (9-3)*6; // fade from invisible to trans30 over as close to 35 tics as possible
 	gh->mo->tics = -1;
@@ -2290,7 +2696,7 @@ void G_DoPlayMetal(void)
 	// find metal sonic
 	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 	{
-		if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+		if (th->removing)
 			continue;
 
 		mo = (mobj_t *)th;
@@ -2311,14 +2717,9 @@ void G_DoPlayMetal(void)
 	metal_p++; // VERSION
 	metal_p++; // SUBVERSION
 	metalversion = READUINT16(metal_p);
-	switch(metalversion)
+	if (metalversion < 0x000c || metalversion > DEMOVERSION)
 	{
-	case DEMOVERSION: // latest always supported
-	case 0x000d: // There are checks wheter the momentum is from older demo versions or not
-	case 0x000c: // all that changed between then and now was longer color name
-		break;
-	// too old, cannot support.
-	default:
+		// too old (or new), cannot support
 		CONS_Alert(CONS_WARNING, M_GetText("Failed to load bot recording for this map, format version incompatible.\n"));
 		Z_Free(metalbuffer);
 		return;
@@ -2410,12 +2811,13 @@ ATTRNORETURN void FUNCNORETURN G_StopMetalRecording(boolean kill)
 	{
 		WRITEUINT8(demo_p, (kill) ? METALDEATH : DEMOMARKER); // add the demo end (or metal death) marker
 		WriteDemoChecksum();
-		saved = FIL_WriteFile(va("%sMS.LMP", G_BuildMapName(gamemap)), demobuffer, demo_p - demobuffer); // finally output the file.
+		sprintf(demoname, "%sMS.LMP", G_BuildMapName(gamemap));
+		saved = FIL_WriteFile(va(pandf, srb2home, demoname), demobuffer, demo_p - demobuffer); // finally output the file.
 	}
 	free(demobuffer);
 	metalrecording = false;
 	if (saved)
-		I_Error("Saved to %sMS.LMP", G_BuildMapName(gamemap));
+		I_Error("Saved to %s", demoname);
 	I_Error("Failed to save demo!");
 }
 
@@ -2529,4 +2931,46 @@ boolean G_CheckDemoStatus(void)
 	}
 
 	return false;
+}
+
+// 2.2.10 shifted some frame flags around, this function converts frame flags from older versions to their 2.2.10 equivalents.
+INT32 G_ConvertOldFrameFlags(INT32 frame)
+{
+	if (frame & 0x01000000) // was FF_ANIMATE, is now FF_VERTICALFLIP
+	{
+		frame &= ~0x01000000;
+		frame |= FF_ANIMATE;
+	}
+
+	if (frame & 0x02000000) // was FF_RANDOMANIM, is now FF_HORIZONTALFLIP
+	{
+		frame &= ~0x02000000;
+		frame |= FF_RANDOMANIM;
+	}
+
+	if (frame & 0x04000000) // was FF_GLOBALANIM, is now empty
+	{
+		frame &= ~0x04000000;
+		frame |= FF_GLOBALANIM;
+	}
+
+	if (frame & 0x00200000) // was FF_VERTICALFLIP, is now FF_FULLDARK
+	{
+		frame &= ~0x00200000;
+		frame |= FF_VERTICALFLIP;
+	}
+
+	if (frame & 0x00400000) // was FF_HORIZONTALFLIP, is now FF_PAPERSPRITE
+	{
+		frame &= ~0x00400000;
+		frame |= FF_HORIZONTALFLIP;
+	}
+
+	if (frame & 0x00800000) // was FF_PAPERSPRITE, is now FF_FLOORSPRITE
+	{
+		frame &= ~0x00800000;
+		frame |= FF_PAPERSPRITE;
+	}
+
+	return frame;
 }

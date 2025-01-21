@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2021 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -30,17 +30,11 @@ typedef struct
 	size_t numlumps;
 } lumplist_t;
 
-// Possible alpha types for a patch.
-enum patchalphastyle {AST_COPY, AST_TRANSLUCENT, AST_ADD, AST_SUBTRACT, AST_REVERSESUBTRACT, AST_MODULATE, AST_OVERLAY};
-
 UINT32 ASTBlendPixel(RGBA_t background, RGBA_t foreground, int style, UINT8 alpha);
 UINT32 ASTBlendTexturePixel(RGBA_t background, RGBA_t foreground, int style, UINT8 alpha);
 UINT8 ASTBlendPaletteIndexes(UINT8 background, UINT8 foreground, int style, UINT8 alpha);
 
 extern INT32 ASTTextureBlendingThreshold[2];
-
-extern INT16 color8to16[256]; // remap color index to highcolor
-extern INT16 *hicolormaps; // remap high colors to high colors..
 
 extern CV_PossibleValue_t Color_cons_t[];
 
@@ -95,6 +89,8 @@ typedef enum
 	TMCF_OVERRIDE     = 1<<13,
 } textmapcolormapflags_t;
 
+void R_GenerateLightTable(extracolormap_t *extra_colormap, boolean uselookup);
+void R_UpdateLightTable(extracolormap_t *extra_colormap, boolean uselookup);
 lighttable_t *R_CreateLightTable(extracolormap_t *extra_colormap);
 extracolormap_t * R_CreateColormapFromLinedef(char *p1, char *p2, char *p3);
 extracolormap_t* R_CreateColormap(INT32 rgba, INT32 fadergba, UINT8 fadestart, UINT8 fadeend, UINT8 flags);

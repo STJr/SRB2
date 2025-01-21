@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 2013-2016 by Matthew "Kaito Sinclaire" Walsh.
 // Copyright (C) 2013      by "Ninji".
-// Copyright (C) 2013-2021 by Sonic Team Junior.
+// Copyright (C) 2013-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -21,6 +21,7 @@
 #include "i_system.h" // I_GetPreciseTime
 #include "m_misc.h"
 #include "st_stuff.h" // st_palette
+#include "doomstat.h" // singletics
 
 #ifdef HWRENDER
 #include "hardware/hw_main.h"
@@ -462,7 +463,7 @@ static void GIF_headwrite(void)
 	// Image width/height
 	if (gif_downscale)
 	{
-		scrbuf_downscaleamt = vid.dupx;
+		scrbuf_downscaleamt = vid.dup;
 		rwidth = (vid.width / scrbuf_downscaleamt);
 		rheight = (vid.height / scrbuf_downscaleamt);
 	}
@@ -604,11 +605,11 @@ static void GIF_framewrite(void)
 		UINT16 delay = 0;
 		INT32 startline;
 
-		if (gif_dynamicdelay ==(UINT8) 2)
+		if (gif_dynamicdelay ==(UINT8) 2 && !singletics)
 		{
 			// golden's attempt at creating a "dynamic delay"
 			UINT16 mingifdelay = 10; // minimum gif delay in milliseconds (keep at 10 because gifs can't get more precise).
-			gif_delayus += I_PreciseToMicros(I_GetPreciseTime() - gif_prevframetime); // increase delay by how much time was spent between last measurement
+			gif_delayus += (I_GetPreciseTime() - gif_prevframetime) / (I_GetPrecisePrecision() / 1000000); // increase delay by how much time was spent between last measurement
 
 			if (gif_delayus/1000 >= mingifdelay) // delay is big enough to be able to effect gif frame delay?
 			{
@@ -617,11 +618,11 @@ static void GIF_framewrite(void)
 				gif_delayus -= frames*(mingifdelay*1000); // remove frames by the amount of milliseconds they take. don't reset to 0, the microseconds help consistency.
 			}
 		}
-		else if (gif_dynamicdelay ==(UINT8) 1)
+		else if (gif_dynamicdelay ==(UINT8) 1 && !singletics)
 		{
 			float delayf = ceil(100.0f/NEWTICRATE);
 
-			delay = (UINT16)I_PreciseToMicros((I_GetPreciseTime() - gif_prevframetime))/10/1000;
+			delay = (UINT16)((I_GetPreciseTime() - gif_prevframetime)) / (I_GetPrecisePrecision() / 1000000) /10/1000;
 
 			if (delay < (UINT16)(delayf))
 				delay = (UINT16)(delayf);

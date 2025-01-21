@@ -41,7 +41,7 @@
 #endif
 
 #if defined (_WIN32) && !defined (main)
-//#define SDLMAIN
+#define SDLMAIN
 #endif
 
 #ifdef SDLMAIN
@@ -68,39 +68,6 @@ char logfilename[1024];
 #if defined (_WIN32)
 #include "../win32/win_dbg.h"
 typedef BOOL (WINAPI *p_IsDebuggerPresent)(VOID);
-#endif
-
-#if defined (_WIN32)
-static inline VOID MakeCodeWritable(VOID)
-{
-#ifdef USEASM // Disable write-protection of code segment
-	DWORD OldRights;
-	const DWORD NewRights = PAGE_EXECUTE_READWRITE;
-	PBYTE pBaseOfImage = (PBYTE)GetModuleHandle(NULL);
-	PIMAGE_DOS_HEADER dosH =(PIMAGE_DOS_HEADER)pBaseOfImage;
-	PIMAGE_NT_HEADERS ntH = (PIMAGE_NT_HEADERS)(pBaseOfImage + dosH->e_lfanew);
-	PIMAGE_OPTIONAL_HEADER oH = (PIMAGE_OPTIONAL_HEADER)
-		((PBYTE)ntH + sizeof (IMAGE_NT_SIGNATURE) + sizeof (IMAGE_FILE_HEADER));
-	LPVOID pA = pBaseOfImage+oH->BaseOfCode;
-	SIZE_T pS = oH->SizeOfCode;
-#if 1 // try to find the text section
-	PIMAGE_SECTION_HEADER ntS = IMAGE_FIRST_SECTION (ntH);
-	WORD s;
-	for (s = 0; s < ntH->FileHeader.NumberOfSections; s++)
-	{
-		if (memcmp (ntS[s].Name, ".text\0\0", 8) == 0)
-		{
-			pA = pBaseOfImage+ntS[s].VirtualAddress;
-			pS = ntS[s].Misc.VirtualSize;
-			break;
-		}
-	}
-#endif
-
-	if (!VirtualProtect(pA,pS,NewRights,&OldRights))
-		I_Error("Could not make code writable\n");
-#endif
-}
 #endif
 
 #ifdef LOGMESSAGES
@@ -219,6 +186,9 @@ int main(int argc, char **argv)
 #endif
 #endif
 
+	// disable text input right off the bat, since we don't need it at the start.
+	I_SetTextInputMode(false);
+
 #ifdef LOGMESSAGES
 	if (!M_CheckParm("-nolog"))
 		InitLogging();
@@ -243,7 +213,6 @@ int main(int argc, char **argv)
 #ifndef __MINGW32__
 	prevExceptionFilter = SetUnhandledExceptionFilter(RecordExceptionInfo);
 #endif
-	MakeCodeWritable();
 #endif
 
 	// startup SRB2

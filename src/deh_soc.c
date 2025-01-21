@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2021 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -34,7 +34,7 @@
 #include "r_sky.h"
 #include "fastcmp.h"
 #include "lua_script.h" // Reluctantly included for LUA_EvalMath
-#include "d_clisrv.h"
+#include "netcode/d_clisrv.h"
 
 #ifdef HWRENDER
 #include "hardware/hw_light.h"
@@ -45,6 +45,7 @@
 #include "dehacked.h"
 #include "deh_soc.h"
 #include "deh_lua.h" // included due to some LUA_SetLuaAction hack smh
+// also used for LUA_UpdateSprName
 #include "deh_tables.h"
 
 // Loops through every constant and operation in word and performs its calculations, returning the final value.
@@ -127,6 +128,33 @@ static float searchfvalue(const char *s)
 #endif
 
 // These are for clearing all of various things
+void clear_emblems(void)
+{
+	INT32 i;
+
+	for (i = 0; i < MAXEMBLEMS; ++i)
+	{
+		Z_Free(emblemlocations[i].stringVar);
+		emblemlocations[i].stringVar = NULL;
+	}
+
+	memset(&emblemlocations, 0, sizeof(emblemlocations));
+	numemblems = 0;
+}
+
+void clear_unlockables(void)
+{
+	INT32 i;
+
+	for (i = 0; i < MAXUNLOCKABLES; ++i)
+	{
+		Z_Free(unlockables[i].stringVar);
+		unlockables[i].stringVar = NULL;
+	}
+
+	memset(&unlockables, 0, sizeof(unlockables));
+}
+
 void clear_conditionsets(void)
 {
 	UINT8 i;
@@ -160,25 +188,22 @@ void clear_levels(void)
 	P_AllocMapHeader(gamemap-1);
 }
 
-static boolean findFreeSlot(INT32 *num)
+static boolean findCharacterSlot(INT32 *num)
 {
-	// Send the character select entry to a free slot.
-	while (*num < MAXSKINS && (description[*num].used))
-		*num = *num+1;
+	if (description)
+	{
+		// Send the character select entry to a free slot.
+		while (*num < numdescriptions && (description[*num].used))
+			(*num)++;
+	}
 
-	// No more free slots. :(
-	if (*num >= MAXSKINS)
+	// No more free slots.
+	if (*num >= MAXCHARACTERSLOTS)
 		return false;
+	else if (*num >= numdescriptions)
+		M_InitCharacterTables((*num) + 1);
 
-	// Redesign your logo. (See M_DrawSetupChoosePlayerMenu in m_menu.c...)
-	description[*num].picname[0] = '\0';
-	description[*num].nametag[0] = '\0';
-	description[*num].displayname[0] = '\0';
-	description[*num].oppositecolor = SKINCOLOR_NONE;
-	description[*num].tagtextcolor = SKINCOLOR_NONE;
-	description[*num].tagoutlinecolor = SKINCOLOR_NONE;
-
-	// Found one! ^_^
+	// Found one!
 	return (description[*num].used = true);
 }
 
@@ -189,30 +214,43 @@ void readPlayer(MYFILE *f, INT32 num)
 	char *s = Z_Malloc(MAXLINELEN, PU_STATIC, NULL);
 	char *word;
 	char *word2;
-	char *displayname = ZZ_Alloc(MAXLINELEN+1);
-	INT32 i;
 	boolean slotfound = false;
+	boolean failure = false;
+	INT32 i;
+
+	if (num < 0 || num >= MAXCHARACTERSLOTS)
+	{
+		deh_warning("Character %d out of range (0 - %d)", num, MAXCHARACTERSLOTS-1);
+		failure = true;
+	}
+
+	#define FINDSLOT \
+		if (!failure && !slotfound && (slotfound = findCharacterSlot(&num)) == false) { \
+			failure = true; \
+			deh_warning("Too many characters, ignoring"); \
+		}
 
 	#define SLOTFOUND \
-		if (!slotfound && (slotfound = findFreeSlot(&num)) == false) \
-			goto done;
-
-	displayname[MAXLINELEN] = '\0';
+		FINDSLOT \
+		if (failure) \
+			continue;
 
 	do
 	{
 		if (myfgets(s, MAXLINELEN, f))
 		{
+			char stringvalue[MAXLINELEN];
+
 			if (s[0] == '\n')
 				break;
 
-			for (i = 0; i < MAXLINELEN-3; i++)
+			stringvalue[0] = '\0';
+
+			for (i = 0; i < MAXLINELEN-3 && !failure; i++)
 			{
-				char *tmp;
 				if (s[i] == '=')
 				{
-					tmp = &s[i+2];
-					strncpy(displayname, tmp, SKINNAMESIZE);
+					strlcpy(stringvalue, &s[i+2], sizeof stringvalue);
 					break;
 				}
 			}
@@ -227,9 +265,18 @@ void readPlayer(MYFILE *f, INT32 num)
 			{
 				char *playertext = NULL;
 
-				SLOTFOUND
+				FINDSLOT
 
-				for (i = 0; i < MAXLINELEN-3; i++)
+				if (failure)
+				{
+					ignorelinesuntilhash(f);
+					continue;
+				}
+
+				// A friendly neighborhood alias for brevity's sake
+#define NOTE_SIZE sizeof(description[num].notes)
+
+				for (i = 0; i < (INT32)(MAXLINELEN-NOTE_SIZE-3); i++)
 				{
 					if (s[i] == '=')
 					{
@@ -239,17 +286,18 @@ void readPlayer(MYFILE *f, INT32 num)
 				}
 				if (playertext)
 				{
-					strcpy(description[num].notes, playertext);
-					strcat(description[num].notes, myhashfgets(playertext, sizeof (description[num].notes), f));
+					strlcpy(description[num].notes, playertext, NOTE_SIZE);
+					strlcat(description[num].notes,
+						myhashfgets(playertext, NOTE_SIZE, f), NOTE_SIZE);
 				}
 				else
-					strcpy(description[num].notes, "");
+					description[num].notes[0] = '\0';
 
 				// For some reason, cutting the string did not work above. Most likely due to strcpy or strcat...
 				// It works down here, though.
 				{
 					INT32 numline = 0;
-					for (i = 0; (size_t)i < sizeof(description[num].notes)-1; i++)
+					for (i = 0; (size_t)i < NOTE_SIZE-1; i++)
 					{
 						if (numline < 20 && description[num].notes[i] == '\n')
 							numline++;
@@ -260,6 +308,7 @@ void readPlayer(MYFILE *f, INT32 num)
 				}
 				description[num].notes[strlen(description[num].notes)-1] = '\0';
 				description[num].notes[i] = '\0';
+#undef NOTE_SIZE
 				continue;
 			}
 
@@ -271,37 +320,32 @@ void readPlayer(MYFILE *f, INT32 num)
 
 			if (word2[strlen(word2)-1] == '\n')
 				word2[strlen(word2)-1] = '\0';
-			i = atoi(word2);
 
 			if (fastcmp(word, "PICNAME"))
 			{
 				SLOTFOUND
-				strncpy(description[num].picname, word2, 8);
+				strncpy(description[num].picname, word2, sizeof(description[num].picname)-1);
 			}
-			// new character select
 			else if (fastcmp(word, "DISPLAYNAME"))
 			{
+				char *cur = NULL;
+
 				SLOTFOUND
-				// replace '#' with line breaks
-				// (also remove any '\n')
+
+				// Remove any line breaks
+				cur = strchr(stringvalue, '\n');
+				if (cur)
+					*cur = '\0';
+
+				// Turn '#' into line breaks
+				cur = strchr(stringvalue, '#');
+				while (cur)
 				{
-					char *cur = NULL;
-
-					// remove '\n'
-					cur = strchr(displayname, '\n');
-					if (cur)
-						*cur = '\0';
-
-					// turn '#' into '\n'
-					cur = strchr(displayname, '#');
-					while (cur)
-					{
-						*cur = '\n';
-						cur = strchr(cur, '#');
-					}
+					*cur = '\n';
+					cur = strchr(cur, '#');
 				}
-				// copy final string
-				strncpy(description[num].displayname, displayname, SKINNAMESIZE);
+
+				strlcpy(description[num].displayname, stringvalue, sizeof description[num].displayname);
 			}
 			else if (fastcmp(word, "OPPOSITECOLOR") || fastcmp(word, "OPPOSITECOLOUR"))
 			{
@@ -311,7 +355,7 @@ void readPlayer(MYFILE *f, INT32 num)
 			else if (fastcmp(word, "NAMETAG") || fastcmp(word, "TAGNAME"))
 			{
 				SLOTFOUND
-				strncpy(description[num].nametag, word2, 8);
+				strncpy(description[num].nametag, word2, sizeof(description[num].nametag)-1);
 			}
 			else if (fastcmp(word, "TAGTEXTCOLOR") || fastcmp(word, "TAGTEXTCOLOUR"))
 			{
@@ -332,10 +376,12 @@ void readPlayer(MYFILE *f, INT32 num)
 					Because of this, you are allowed to edit any previous entries you like, but only if you
 					signal that you are purposely doing so by disabling and then reenabling the slot.
 				*/
-				if (i && !slotfound && (slotfound = findFreeSlot(&num)) == false)
-					goto done;
+				i = atoi(word2);
+				if (i && !slotfound && (slotfound = findCharacterSlot(&num)) == false)
+					failure = true;
 
-				description[num].used = (!!i);
+				if (!failure)
+					description[num].used = (!!i);
 			}
 			else if (fastcmp(word, "SKINNAME"))
 			{
@@ -344,13 +390,12 @@ void readPlayer(MYFILE *f, INT32 num)
 				strlcpy(description[num].skinname, word2, sizeof description[num].skinname);
 				strlwr(description[num].skinname);
 			}
-			else
+			else if (!failure)
 				deh_warning("readPlayer %d: unknown word '%s'", num, word);
 		}
 	} while (!myfeof(f)); // finish when the line is empty
+	#undef FINDSLOT
 	#undef SLOTFOUND
-done:
-	Z_Free(displayname);
 	Z_Free(s);
 }
 
@@ -360,7 +405,6 @@ void readfreeslots(MYFILE *f)
 {
 	char *s = Z_Malloc(MAXLINELEN, PU_STATIC, NULL);
 	char *word,*type;
-	char *tmp;
 	int i;
 
 	do
@@ -370,10 +414,13 @@ void readfreeslots(MYFILE *f)
 			if (s[0] == '\n')
 				break;
 
-			tmp = strchr(s, '#');
-			if (tmp)
-				*tmp = '\0';
-			if (s == tmp)
+			char *hashtag = strchr(s, '#');
+			char *space = strchr(s, ' ');
+			if (hashtag)
+				*hashtag = '\0';
+			if (space)
+				*space = '\0';
+			if (s == hashtag || s == space)
 				continue; // Skip comment lines, but don't break.
 
 			type = strtok(s, "_");
@@ -395,18 +442,18 @@ void readfreeslots(MYFILE *f)
 				S_AddSoundFx(word, false, 0, false);
 			else if (fastcmp(type, "SPR"))
 			{
+				if (strlen(word) > MAXSPRITENAME)
+					I_Error("Sprite name is longer than %d characters\n", MAXSPRITENAME);
+
 				for (i = SPR_FIRSTFREESLOT; i <= SPR_LASTFREESLOT; i++)
 				{
-					if (used_spr[(i-SPR_FIRSTFREESLOT)/8] & (1<<(i%8)))
-					{
-						if (!sprnames[i][4] && memcmp(sprnames[i],word,4)==0)
-							sprnames[i][4] = (char)f->wad;
+					if (in_bit_array(used_spr, i - SPR_FIRSTFREESLOT))
 						continue; // Already allocated, next.
-					}
 					// Found a free slot!
-					strncpy(sprnames[i],word,4);
-					//sprnames[i][4] = 0;
-					used_spr[(i-SPR_FIRSTFREESLOT)/8] |= 1<<(i%8); // Okay, this sprite slot has been named now.
+					strcpy(sprnames[i], word);
+					set_bit_array(used_spr, i - SPR_FIRSTFREESLOT); // Okay, this sprite slot has been named now.
+					// Lua needs to update the value in _G if it exists
+					LUA_UpdateSprName(word, i);
 					break;
 				}
 			}
@@ -481,6 +528,8 @@ void readfreeslots(MYFILE *f)
 	} while (!myfeof(f)); // finish when the line is empty
 
 	Z_Free(s);
+
+	R_RefreshSprite2();
 }
 
 void readthing(MYFILE *f, INT32 num)
@@ -661,7 +710,8 @@ void readskincolor(MYFILE *f, INT32 num)
 			if (fastcmp(word, "NAME"))
 			{
 				size_t namesize = sizeof(skincolors[num].name);
-				char truncword[namesize];
+				char *truncword = malloc(namesize); // Follow C standard - SSNTails
+
 				UINT16 dupecheck;
 
 				deh_strlcpy(truncword, word2, namesize, va("Skincolor %d: name", num)); // truncate here to check for dupes
@@ -669,7 +719,7 @@ void readskincolor(MYFILE *f, INT32 num)
 				if (truncword[0] != '\0' && (!stricmp(truncword, skincolors[SKINCOLOR_NONE].name) || (dupecheck && dupecheck != num)))
 				{
 					size_t lastchar = strlen(truncword);
-					char oldword[lastchar+1];
+					char *oldword = malloc(lastchar + 1); // Follow C standard - SSNTails
 					char dupenum = '1';
 
 					strlcpy(oldword, truncword, lastchar+1);
@@ -694,9 +744,12 @@ void readskincolor(MYFILE *f, INT32 num)
 					}
 
 					deh_warning("Skincolor %d: name %s is a duplicate of another skincolor's name - renamed to %s", num, oldword, truncword);
+					free(oldword);
 				}
 
 				strlcpy(skincolors[num].name, truncword, namesize); // already truncated
+
+				free(truncword);
 			}
 			else if (fastcmp(word, "RAMP"))
 			{
@@ -870,8 +923,9 @@ static void readspriteframe(MYFILE *f, spriteinfo_t *sprinfo, UINT8 frame)
 				sprinfo->pivot[frame].x = value;
 			else if (fastcmp(word, "YPIVOT"))
 				sprinfo->pivot[frame].y = value;
+			// TODO: 2.3: Delete
 			else if (fastcmp(word, "ROTAXIS"))
-				sprinfo->pivot[frame].rotaxis = value;
+				deh_warning("SpriteInfo: ROTAXIS is deprecated and will be removed.");
 			else
 			{
 				f->curpos = lastline;
@@ -891,7 +945,7 @@ void readspriteinfo(MYFILE *f, INT32 num, boolean sprite2)
 	INT32 value;
 #endif
 	char *lastline;
-	INT32 skinnumbers[MAXSKINS];
+	UINT8 *skinnumbers = NULL;
 	INT32 foundskins = 0;
 
 	// allocate a spriteinfo
@@ -980,7 +1034,9 @@ void readspriteinfo(MYFILE *f, INT32 num, boolean sprite2)
 					break;
 				}
 
-				skinnumbers[foundskins] = skinnum;
+				if (skinnumbers == NULL)
+					skinnumbers = Z_Malloc(sizeof(UINT8) * numskins, PU_STATIC, NULL);
+				skinnumbers[foundskins] = (UINT8)skinnum;
 				foundskins++;
 			}
 			else if (fastcmp(word, "DEFAULT"))
@@ -1023,8 +1079,7 @@ void readspriteinfo(MYFILE *f, INT32 num, boolean sprite2)
 					}
 					for (i = 0; i < foundskins; i++)
 					{
-						size_t skinnum = skinnumbers[i];
-						skin_t *skin = &skins[skinnum];
+						skin_t *skin = skins[skinnumbers[i]];
 						spriteinfo_t *sprinfo = skin->sprinfo;
 						M_Memcpy(&sprinfo[num], info, sizeof(spriteinfo_t));
 					}
@@ -1043,6 +1098,8 @@ void readspriteinfo(MYFILE *f, INT32 num, boolean sprite2)
 
 	Z_Free(s);
 	Z_Free(info);
+	if (skinnumbers)
+		Z_Free(skinnumbers);
 }
 
 void readsprite2(MYFILE *f, INT32 num)
@@ -1088,7 +1145,6 @@ void readsprite2(MYFILE *f, INT32 num)
 	Z_Free(s);
 }
 
-// copypasted from readPlayer :]
 void readgametype(MYFILE *f, char *gtname)
 {
 	char *s = Z_Malloc(MAXLINELEN, PU_STATIC, NULL);
@@ -1107,7 +1163,7 @@ void readgametype(MYFILE *f, char *gtname)
 	INT16 newgtrankingstype = -1;
 	int newgtinttype = 0;
 	char gtdescription[441];
-	char gtconst[MAXLINELEN];
+	char gtconst[MAXLINELEN+1];
 
 	// Empty strings.
 	gtdescription[0] = '\0';
@@ -1140,8 +1196,10 @@ void readgametype(MYFILE *f, char *gtname)
 				}
 				if (descr)
 				{
-					strcpy(gtdescription, descr);
-					strcat(gtdescription, myhashfgets(descr, sizeof (gtdescription), f));
+					strlcpy(gtdescription, descr, sizeof (gtdescription));
+					strlcat(gtdescription,
+						myhashfgets(descr, sizeof (gtdescription), f),
+						sizeof (gtdescription));
 				}
 				else
 					strcpy(gtdescription, "");
@@ -1485,6 +1543,12 @@ void readlevelheader(MYFILE *f, INT32 num)
 				P_AddGradesForMare((INT16)(num-1), mare-1, word2);
 			}
 
+			// NiGHTS time limits (per mare)
+			else if (fastncmp(word, "NIGHTSTIME", 10))
+			{
+				P_AddNiGHTSTimes((INT16)(num-1), word2);
+			}
+
 			// Strings that can be truncated
 			else if (fastcmp(word, "SELECTHEADING"))
 			{
@@ -1574,19 +1638,9 @@ void readlevelheader(MYFILE *f, INT32 num)
 						sizeof(mapheaderinfo[num-1]->musname), va("Level header %d: music", num));
 				}
 			}
-#ifdef MUSICSLOT_COMPATIBILITY
+			// TODO: 2.3: Delete
 			else if (fastcmp(word, "MUSICSLOT"))
-			{
-				i = get_mus(word2, true);
-				if (i && i <= 1035)
-					snprintf(mapheaderinfo[num-1]->musname, 7, "%sM", G_BuildMapName(i));
-				else if (i && i <= 1050)
-					strncpy(mapheaderinfo[num-1]->musname, compat_special_music_slots[i - 1036], 7);
-				else
-					mapheaderinfo[num-1]->musname[0] = 0; // becomes empty string
-				mapheaderinfo[num-1]->musname[6] = 0;
-			}
-#endif
+				deh_warning("Level header %d: MusicSlot parameter is deprecated and will be removed.\nUse \"Music\" instead.", num);
 			else if (fastcmp(word, "MUSICTRACK"))
 				mapheaderinfo[num-1]->mustrack = ((UINT16)i - 1);
 			else if (fastcmp(word, "MUSICPOS"))
@@ -1629,7 +1683,7 @@ void readlevelheader(MYFILE *f, INT32 num)
 			else if (fastcmp(word, "SKYNUM"))
 				mapheaderinfo[num-1]->skynum = (INT16)i;
 			else if (fastcmp(word, "INTERSCREEN"))
-				strncpy(mapheaderinfo[num-1]->interscreen, word2, 8);
+				strncpy(mapheaderinfo[num-1]->interscreen, word2, sizeof(mapheaderinfo[num-1]->interscreen)-1);
 			else if (fastcmp(word, "PRECUTSCENENUM"))
 				mapheaderinfo[num-1]->precutscenenum = (UINT8)i;
 			else if (fastcmp(word, "CUTSCENENUM"))
@@ -1964,19 +2018,6 @@ static void readcutscenescene(MYFILE *f, INT32 num, INT32 scenenum)
 				strncpy(cutscenes[num]->scene[scenenum].musswitch, word2, 7);
 				cutscenes[num]->scene[scenenum].musswitch[6] = 0;
 			}
-#ifdef MUSICSLOT_COMPATIBILITY
-			else if (fastcmp(word, "MUSICSLOT"))
-			{
-				i = get_mus(word2, true);
-				if (i && i <= 1035)
-					snprintf(cutscenes[num]->scene[scenenum].musswitch, 7, "%sM", G_BuildMapName(i));
-				else if (i && i <= 1050)
-					strncpy(cutscenes[num]->scene[scenenum].musswitch, compat_special_music_slots[i - 1036], 7);
-				else
-					cutscenes[num]->scene[scenenum].musswitch[0] = 0; // becomes empty string
-				cutscenes[num]->scene[scenenum].musswitch[6] = 0;
-			}
-#endif
 			else if (fastcmp(word, "MUSICTRACK"))
 			{
 				cutscenes[num]->scene[scenenum].musswitchflags = ((UINT16)i) & MUSIC_TRACKMASK;
@@ -2239,19 +2280,6 @@ static void readtextpromptpage(MYFILE *f, INT32 num, INT32 pagenum)
 				strncpy(textprompts[num]->page[pagenum].musswitch, word2, 7);
 				textprompts[num]->page[pagenum].musswitch[6] = 0;
 			}
-#ifdef MUSICSLOT_COMPATIBILITY
-			else if (fastcmp(word, "MUSICSLOT"))
-			{
-				i = get_mus(word2, true);
-				if (i && i <= 1035)
-					snprintf(textprompts[num]->page[pagenum].musswitch, 7, "%sM", G_BuildMapName(i));
-				else if (i && i <= 1050)
-					strncpy(textprompts[num]->page[pagenum].musswitch, compat_special_music_slots[i - 1036], 7);
-				else
-					textprompts[num]->page[pagenum].musswitch[0] = 0; // becomes empty string
-				textprompts[num]->page[pagenum].musswitch[6] = 0;
-			}
-#endif
 			else if (fastcmp(word, "MUSICTRACK"))
 			{
 				textprompts[num]->page[pagenum].musswitchflags = ((UINT16)i) & MUSIC_TRACKMASK;
@@ -2272,7 +2300,7 @@ static void readtextpromptpage(MYFILE *f, INT32 num, INT32 pagenum)
 					char name[34];
 					name[0] = '\x82'; // color yellow
 					name[1] = 0;
-					strncat(name, word2, 33);
+					strncat(name, word2, 32);
 					name[33] = 0;
 
 					// Replace _ with ' '
@@ -2282,7 +2310,7 @@ static void readtextpromptpage(MYFILE *f, INT32 num, INT32 pagenum)
 							name[j] = ' ';
 					}
 
-					strncpy(textprompts[num]->page[pagenum].name, name, 32);
+					strncpy(textprompts[num]->page[pagenum].name, name, sizeof(textprompts[num]->page[pagenum].name));
 				}
 				else
 					*textprompts[num]->page[pagenum].name = '\0';
@@ -2577,20 +2605,6 @@ void readmenu(MYFILE *f, INT32 num)
 				menupres[num].musname[6] = 0;
 				titlechanged = true;
 			}
-#ifdef MUSICSLOT_COMPATIBILITY
-			else if (fastcmp(word, "MUSICSLOT"))
-			{
-				value = get_mus(word2, true);
-				if (value && value <= 1035)
-					snprintf(menupres[num].musname, 7, "%sM", G_BuildMapName(value));
-				else if (value && value <= 1050)
-					strncpy(menupres[num].musname, compat_special_music_slots[value - 1036], 7);
-				else
-					menupres[num].musname[0] = 0; // becomes empty string
-				menupres[num].musname[6] = 0;
-				titlechanged = true;
-			}
-#endif
 			else if (fastcmp(word, "MUSICTRACK"))
 			{
 				menupres[num].mustrack = ((UINT16)value - 1);
@@ -2704,10 +2718,10 @@ void readhuditem(MYFILE *f, INT32 num)
 			}
 			else if (fastcmp(word, "F"))
 			{
-				hudinfo[num].f = i;
+				hudinfo[num].f = get_number(word2);
 			}
 			else
-				deh_warning("Level header %d: unknown word '%s'", num, word);
+				deh_warning("HUD item %d: unknown word '%s'", num, word);
 		}
 	} while (!myfeof(f)); // finish when the line is empty
 
@@ -2776,13 +2790,13 @@ void readframe(MYFILE *f, INT32 num)
 			{
 				size_t z;
 				boolean found = false;
-				char actiontocompare[32];
+				size_t actionlen = strlen(word2) + 1;
+				char *actiontocompare = calloc(1, actionlen);
 
-				memset(actiontocompare, 0x00, sizeof(actiontocompare));
-				strlcpy(actiontocompare, word2, sizeof (actiontocompare));
+				strcpy(actiontocompare, word2);
 				strupr(actiontocompare);
 
-				for (z = 0; z < 32; z++)
+				for (z = 0; z < actionlen; z++)
 				{
 					if (actiontocompare[z] == '\n' || actiontocompare[z] == '\r')
 					{
@@ -2815,6 +2829,8 @@ void readframe(MYFILE *f, INT32 num)
 
 				if (!found)
 					deh_warning("Unknown action %s", actiontocompare);
+
+				free(actiontocompare);
 			}
 			else
 				deh_warning("Frame %d: unknown word '%s'", num, word1);
@@ -2839,26 +2855,31 @@ void readsound(MYFILE *f, INT32 num)
 			if (s[0] == '\n')
 				break;
 
+			// First remove trailing newline, if there is one
+			tmp = strchr(s, '\n');
+			if (tmp)
+				*tmp = '\0';
+
 			tmp = strchr(s, '#');
 			if (tmp)
 				*tmp = '\0';
 			if (s == tmp)
 				continue; // Skip comment lines, but don't break.
 
-			word = strtok(s, " ");
-			if (word)
-				strupr(word);
+			// Set / reset word
+			word = s;
+
+			// Get the part before the " = "
+			tmp = strchr(s, '=');
+			if (tmp)
+				*(tmp-1) = '\0';
 			else
 				break;
+			strupr(word);
 
-			word2 = strtok(NULL, " ");
-			if (word2)
-				value = atoi(word2);
-			else
-			{
-				deh_warning("No value for token %s", word);
-				continue;
-			}
+			// Now get the part after
+			word2 = tmp += 2;
+			value = atoi(word2); // used for numerical settings
 
 			if (fastcmp(word, "SINGULAR"))
 			{
@@ -2913,7 +2934,9 @@ static boolean GoodDataFileName(const char *s)
 	p = s + strlen(s) - strlen(tail);
 	if (p <= s) return false; // too short
 	if (!fasticmp(p, tail)) return false; // doesn't end in .dat
-	if (fasticmp(s, "gamedata.dat")) return false;
+
+	if (fasticmp(s, "gamedata.dat")) return false; // Don't overwrite default gamedata
+	if (fasticmp(s, "main.dat")) return false; // Don't overwrite default time attack replays
 
 	return true;
 }
@@ -3017,7 +3040,12 @@ void reademblemdata(MYFILE *f, INT32 num)
 			else if (fastcmp(word, "COLOR"))
 				emblemlocations[num-1].color = get_number(word2);
 			else if (fastcmp(word, "VAR"))
+			{
+				Z_Free(emblemlocations[num-1].stringVar);
+				emblemlocations[num-1].stringVar = Z_StrDup(word2);
+
 				emblemlocations[num-1].var = get_number(word2);
+			}
 			else
 				deh_warning("Emblem %d: unknown word '%s'", num, word);
 		}
@@ -3219,11 +3247,16 @@ void readunlockable(MYFILE *f, INT32 num)
 						unlockables[num].type = SECRET_WARP;
 					else if (fastcmp(word2, "SOUNDTEST"))
 						unlockables[num].type = SECRET_SOUNDTEST;
+					else if (fastcmp(word2, "SKIN"))
+						unlockables[num].type = SECRET_SKIN;
 					else
 						unlockables[num].type = (INT16)i;
 				}
 				else if (fastcmp(word, "VAR"))
 				{
+					Z_Free(unlockables[num].stringVar);
+					unlockables[num].stringVar = Z_StrDup(word2);
+
 					// Support using the actual map name,
 					// i.e., Level AB, Level FZ, etc.
 
@@ -3309,7 +3342,7 @@ static void readcondition(UINT8 set, UINT32 id, char *word2)
 		else
 			re = atoi(params[1]);
 
-		if (re < 0 || re >= NUMMAPS)
+		if (re <= 0 || re > NUMMAPS)
 		{
 			deh_warning("Level number %d out of range (1 - %d)", re, NUMMAPS);
 			return;
@@ -3329,7 +3362,7 @@ static void readcondition(UINT8 set, UINT32 id, char *word2)
 		else
 			x1 = (INT16)atoi(params[1]);
 
-		if (x1 < 0 || x1 >= NUMMAPS)
+		if (x1 <= 0 || x1 > NUMMAPS)
 		{
 			deh_warning("Level number %d out of range (1 - %d)", re, NUMMAPS);
 			return;
@@ -3364,7 +3397,7 @@ static void readcondition(UINT8 set, UINT32 id, char *word2)
 		else
 			x1 = (INT16)atoi(params[1]);
 
-		if (x1 < 0 || x1 >= NUMMAPS)
+		if (x1 <= 0 || x1 > NUMMAPS)
 		{
 			deh_warning("Level number %d out of range (1 - %d)", re, NUMMAPS);
 			return;
@@ -3551,7 +3584,7 @@ void readmaincfg(MYFILE *f)
 			if (fastcmp(word, "EXECCFG"))
 			{
 				if (strchr(word2, '.'))
-					COM_BufAddText(va("exec %s\n", word2));
+					COM_ExecFile(word2, COM_LUA, false);
 				else
 				{
 					lumpnum_t lumpnum;
@@ -3566,7 +3599,7 @@ void readmaincfg(MYFILE *f)
 					if (lumpnum == LUMPERROR || W_LumpLength(lumpnum) == 0)
 						CONS_Debug(DBG_SETUP, "SOC Error: script lump %s not found/not valid.\n", newname);
 					else
-						COM_BufInsertText(W_CacheLumpNum(lumpnum, PU_CACHE));
+						COM_BufInsertTextEx(W_CacheLumpNum(lumpnum, PU_CACHE), COM_LUA);
 				}
 			}
 
@@ -3767,7 +3800,7 @@ void readmaincfg(MYFILE *f)
 			}
 			else if (fastcmp(word, "TITLEPICSNAME"))
 			{
-				strncpy(ttname, word2, 9);
+				strncpy(ttname, word2, sizeof(ttname)-1);
 				titlechanged = true;
 			}
 			else if (fastcmp(word, "TITLEPICSX"))
@@ -3831,6 +3864,10 @@ void readmaincfg(MYFILE *f)
 			{
 				useContinues = (UINT8)(value || word2[0] == 'T' || word2[0] == 'Y');
 			}
+			else if (fastcmp(word, "SHAREEMBLEMS"))
+			{
+				shareEmblems = (UINT8)(value || word2[0] == 'T' || word2[0] == 'Y');
+			}
 
 			else if (fastcmp(word, "GAMEDATA"))
 			{
@@ -3841,14 +3878,18 @@ void readmaincfg(MYFILE *f)
 				if (!GoodDataFileName(word2))
 					I_Error("Maincfg: bad data file name '%s'\n", word2);
 
-				G_SaveGameData();
+				G_SaveGameData(clientGamedata);
 				strlcpy(gamedatafilename, word2, sizeof (gamedatafilename));
 				strlwr(gamedatafilename);
 				savemoddata = true;
 
 				// Also save a time attack folder
-				filenamelen = strlen(gamedatafilename)-4;  // Strip off the extension
-				strncpy(timeattackfolder, gamedatafilename, min(filenamelen, sizeof (timeattackfolder)));
+				filenamelen = strlen(gamedatafilename);  // Strip off the extension
+				if (filenamelen >= 4)
+					filenamelen -= 4;
+				if (filenamelen >= sizeof(timeattackfolder))
+					filenamelen = sizeof(timeattackfolder)-1;
+				strncpy(timeattackfolder, gamedatafilename, filenamelen);
 				timeattackfolder[min(filenamelen, sizeof (timeattackfolder) - 1)] = '\0';
 
 				strcpy(savegamename, timeattackfolder);
@@ -3884,6 +3925,7 @@ void readmaincfg(MYFILE *f)
 					value = get_number(word2);
 
 				bootmap = (INT16)value;
+				bootmapchanged = true;
 				//titlechanged = true;
 			}
 			else if (fastcmp(word, "STARTCHAR"))
@@ -4141,9 +4183,9 @@ spritenum_t get_sprite(const char *word)
 		return atoi(word);
 	if (fastncmp("SPR_",word,4))
 		word += 4; // take off the SPR_
-	for (i = 0; i < NUMSPRITES; i++)
-		if (!sprnames[i][4] && memcmp(word,sprnames[i],4)==0)
-			return i;
+	i = R_GetSpriteNumByName(word);
+	if (i != NUMSPRITES)
+		return i;
 	deh_warning("Couldn't find sprite named 'SPR_%s'",word);
 	return SPR_NULL;
 }
@@ -4177,46 +4219,6 @@ sfxenum_t get_sfx(const char *word)
 	deh_warning("Couldn't find sfx named 'SFX_%s'",word);
 	return sfx_None;
 }
-
-#ifdef MUSICSLOT_COMPATIBILITY
-UINT16 get_mus(const char *word, UINT8 dehacked_mode)
-{ // Returns the value of MUS_ enumerations
-	UINT16 i;
-	char lumptmp[4];
-
-	if (*word >= '0' && *word <= '9')
-		return atoi(word);
-	if (!word[2] && toupper(word[0]) >= 'A' && toupper(word[0]) <= 'Z')
-		return (UINT16)M_MapNumber(word[0], word[1]);
-
-	if (fastncmp("MUS_",word,4))
-		word += 4; // take off the MUS_
-	else if (fastncmp("O_",word,2) || fastncmp("D_",word,2))
-		word += 2; // take off the O_ or D_
-
-	strncpy(lumptmp, word, 4);
-	lumptmp[3] = 0;
-	if (fasticmp("MAP",lumptmp))
-	{
-		word += 3;
-		if (toupper(word[0]) >= 'A' && toupper(word[0]) <= 'Z')
-			return (UINT16)M_MapNumber(word[0], word[1]);
-		else if ((i = atoi(word)))
-			return i;
-
-		word -= 3;
-		if (dehacked_mode)
-			deh_warning("Couldn't find music named 'MUS_%s'",word);
-		return 0;
-	}
-	for (i = 0; compat_special_music_slots[i][0]; ++i)
-		if (fasticmp(word, compat_special_music_slots[i]))
-			return i + 1036;
-	if (dehacked_mode)
-		deh_warning("Couldn't find music named 'MUS_%s'",word);
-	return 0;
-}
-#endif
 
 hudnum_t get_huditem(const char *word)
 { // Returns the value of HUD_ enumerations
@@ -4448,13 +4450,6 @@ static fixed_t find_const(const char **rword)
 		free(word);
 		return r;
 	}
-#ifdef MUSICSLOT_COMPATIBILITY
-	else if (fastncmp("MUS_",word,4) || fastncmp("O_",word,2)) {
-		r = get_mus(word, true);
-		free(word);
-		return r;
-	}
-#endif
 	else if (fastncmp("PW_",word,3)) {
 		r = get_power(word);
 		free(word);

@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2006      by James Haley
-// Copyright (C) 2006-2021 by Sonic Team Junior.
+// Copyright (C) 2006-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -24,6 +24,7 @@
 #include "p_tick.h"
 #include "p_local.h"
 #include "p_polyobj.h"
+#include "r_fps.h"
 #include "r_main.h"
 #include "r_state.h"
 #include "r_defs.h"
@@ -785,7 +786,7 @@ static void Polyobj_pushThing(polyobj_t *po, line_t *line, mobj_t *mo)
 	vertex_t closest;
 
 	// calculate angle of line and subtract 90 degrees to get normal
-	lineangle = R_PointToAngle2(0, 0, line->dx, line->dy) - ANGLE_90;
+	lineangle = line->angle - ANGLE_90;
 	lineangle >>= ANGLETOFINESHIFT;
 	momx = FixedMul(po->thrust, FINECOSINE(lineangle));
 	momy = FixedMul(po->thrust, FINESINE(lineangle));
@@ -876,14 +877,17 @@ static void Polyobj_carryThings(polyobj_t *po, fixed_t dx, fixed_t dy)
 		for (x = po->blockbox[BOXLEFT]; x <= po->blockbox[BOXRIGHT]; ++x)
 		{
 			mobj_t *mo;
+			blocknode_t *block;
+			blocknode_t *next = NULL;
 
 			if (x < 0 || y < 0 || x >= bmapwidth || y >= bmapheight)
 				continue;
 
-			mo = blocklinks[y * bmapwidth + x];
-
-			for (; mo; mo = mo->bnext)
+			for (block = blocklinks[y * bmapwidth + x]; block != NULL; block = next)
 			{
+				mo = block->mobj;
+				next = block->mnext;
+
 				if (mo->lastlook == pomovecount)
 					continue;
 
@@ -923,11 +927,11 @@ static INT32 Polyobj_clipThings(polyobj_t *po, line_t *line)
 	if (!(po->flags & POF_SOLID))
 		return hitflags;
 
-	// adjust linedef bounding box to blockmap, extend by MAXRADIUS
-	linebox[BOXLEFT]   = (unsigned)(line->bbox[BOXLEFT]   - bmaporgx - MAXRADIUS) >> MAPBLOCKSHIFT;
-	linebox[BOXRIGHT]  = (unsigned)(line->bbox[BOXRIGHT]  - bmaporgx + MAXRADIUS) >> MAPBLOCKSHIFT;
-	linebox[BOXBOTTOM] = (unsigned)(line->bbox[BOXBOTTOM] - bmaporgy - MAXRADIUS) >> MAPBLOCKSHIFT;
-	linebox[BOXTOP]    = (unsigned)(line->bbox[BOXTOP]    - bmaporgy + MAXRADIUS) >> MAPBLOCKSHIFT;
+	// adjust linedef bounding box to blockmap
+	linebox[BOXLEFT]   = (unsigned)(line->bbox[BOXLEFT]   - bmaporgx) >> MAPBLOCKSHIFT;
+	linebox[BOXRIGHT]  = (unsigned)(line->bbox[BOXRIGHT]  - bmaporgx) >> MAPBLOCKSHIFT;
+	linebox[BOXBOTTOM] = (unsigned)(line->bbox[BOXBOTTOM] - bmaporgy) >> MAPBLOCKSHIFT;
+	linebox[BOXTOP]    = (unsigned)(line->bbox[BOXTOP]    - bmaporgy) >> MAPBLOCKSHIFT;
 
 	// check all mobj blockmap cells the line contacts
 	for (y = linebox[BOXBOTTOM]; y <= linebox[BOXTOP]; ++y)
@@ -936,10 +940,14 @@ static INT32 Polyobj_clipThings(polyobj_t *po, line_t *line)
 		{
 			if (!(x < 0 || y < 0 || x >= bmapwidth || y >= bmapheight))
 			{
-				mobj_t *mo = blocklinks[y * bmapwidth + x];
+				mobj_t *mo = NULL;
+				blocknode_t *block = blocklinks[y * bmapwidth + x];
+				blocknode_t *next = NULL;
 
-				for (; mo; mo = mo->bnext)
+				for (; block != NULL; block = next)
 				{
+					next = block->mnext;
+					mo = block->mobj;
 
 					// Don't scroll objects that aren't affected by gravity
 					if (mo->flags & MF_NOGRAVITY)
@@ -963,7 +971,7 @@ static INT32 Polyobj_clipThings(polyobj_t *po, line_t *line)
 					else
 						Polyobj_pushThing(po, line, mo);
 
-					if (mo->player && (po->lines[0]->backsector->flags & SF_TRIGGERSPECIAL_TOUCH) && !(po->flags & POF_NOSPECIALS))
+					if (mo->player && (po->lines[0]->backsector->flags & MSF_TRIGGERSPECIAL_TOUCH) && !(po->flags & POF_NOSPECIALS))
 						P_ProcessSpecialSector(mo->player, mo->subsector->sector, po->lines[0]->backsector);
 
 					hitflags |= 1;
@@ -1060,6 +1068,8 @@ static void Polyobj_rotateLine(line_t *ld)
 	ld->dx = v2->x - v1->x;
 	ld->dy = v2->y - v1->y;
 
+	ld->angle = R_PointToAngle2(0, 0, ld->dx, ld->dy);
+
 	// determine slopetype
 	ld->slopetype = !ld->dx ? ST_VERTICAL : !ld->dy ? ST_HORIZONTAL :
 			((ld->dy > 0) == (ld->dx > 0)) ? ST_POSITIVE : ST_NEGATIVE;
@@ -1089,7 +1099,7 @@ static void Polyobj_rotateLine(line_t *ld)
 }
 
 // Causes objects resting on top of the rotating polyobject to 'ride' with its movement.
-static void Polyobj_rotateThings(polyobj_t *po, vector2_t origin, angle_t delta, UINT8 turnthings)
+static void Polyobj_rotateThings(polyobj_t *po, vector2_t origin, angle_t delta, boolean turnplayers, boolean turnothers)
 {
 	static INT32 pomovecount = 10000;
 	INT32 x, y;
@@ -1106,14 +1116,17 @@ static void Polyobj_rotateThings(polyobj_t *po, vector2_t origin, angle_t delta,
 		for (x = po->blockbox[BOXLEFT]; x <= po->blockbox[BOXRIGHT]; ++x)
 		{
 			mobj_t *mo;
+			blocknode_t *block;
+			blocknode_t *next = NULL;
 
 			if (x < 0 || y < 0 || x >= bmapwidth || y >= bmapheight)
 				continue;
 
-			mo = blocklinks[y * bmapwidth + x];
-
-			for (; mo; mo = mo->bnext)
+			for (block = blocklinks[y * bmapwidth + x]; block != NULL; block = next)
 			{
+				mo = block->mobj;
+				next = block->mnext;
+
 				if (mo->lastlook == pomovecount)
 					continue;
 
@@ -1151,7 +1164,7 @@ static void Polyobj_rotateThings(polyobj_t *po, vector2_t origin, angle_t delta,
 
 					Polyobj_slideThing(mo, newxoff, newyoff);
 
-					if (turnthings == 2 || (turnthings == 1 && !mo->player)) {
+					if ((turnplayers && mo->player) || (turnothers && !mo->player)) {
 						mo->angle += delta;
 						if (mo->player)
 							P_SetPlayerAngle(mo->player, (angle_t)(mo->player->angleturn << 16) + delta);
@@ -1163,7 +1176,7 @@ static void Polyobj_rotateThings(polyobj_t *po, vector2_t origin, angle_t delta,
 }
 
 // Rotates a polyobject around its start point.
-boolean Polyobj_rotate(polyobj_t *po, angle_t delta, UINT8 turnthings, boolean checkmobjs)
+boolean Polyobj_rotate(polyobj_t *po, angle_t delta, boolean turnplayers, boolean turnothers, boolean checkmobjs)
 {
 	size_t i;
 	angle_t angle;
@@ -1201,7 +1214,7 @@ boolean Polyobj_rotate(polyobj_t *po, angle_t delta, UINT8 turnthings, boolean c
 		for (i = 0; i < po->numLines; ++i)
 			hitflags |= Polyobj_clipThings(po, po->lines[i]);
 
-		Polyobj_rotateThings(po, origin, delta, turnthings);
+		Polyobj_rotateThings(po, origin, delta, turnplayers, turnothers);
 	}
 
 	if (hitflags & 2)
@@ -1240,6 +1253,8 @@ boolean Polyobj_rotate(polyobj_t *po, angle_t delta, UINT8 turnthings, boolean c
 // Returns NULL if no such polyobject exists.
 polyobj_t *Polyobj_GetForNum(INT32 id)
 {
+	if (numPolyObjects == 0)
+		return NULL;
 	INT32 curidx  = PolyObjects[id % numPolyObjects].first;
 
 	while (curidx != numPolyObjects && PolyObjects[curidx].id != id)
@@ -1303,7 +1318,7 @@ void Polyobj_InitLevel(void)
 	// the mobj_t pointers on a queue for use below.
 	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 	{
-		if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+		if (th->removing)
 			continue;
 
 		mo = (mobj_t *)th;
@@ -1409,7 +1424,7 @@ void Polyobj_MoveOnLoad(polyobj_t *po, angle_t angle, fixed_t x, fixed_t y)
 	fixed_t dx, dy;
 
 	// first, rotate to the saved angle
-	Polyobj_rotate(po, angle, false, false);
+	Polyobj_rotate(po, angle, false, false, false);
 
 	// determine component distances to translate
 	dx = x - po->spawnSpot.x;
@@ -1452,7 +1467,7 @@ void T_PolyObjRotate(polyrotate_t *th)
 
 	// rotate by 'speed' angle per frame
 	// if distance == -1, this polyobject rotates perpetually
-	if (Polyobj_rotate(po, th->speed, th->turnobjs, true) && th->distance != -1)
+	if (Polyobj_rotate(po, th->speed, th->turnobjs & PTF_PLAYERS, th->turnobjs & PTF_OTHERS, true) && th->distance != -1)
 	{
 		INT32 avel = abs(th->speed);
 
@@ -1854,7 +1869,7 @@ void T_PolyDoorSwing(polyswingdoor_t *th)
 
 	// rotate by 'speed' angle per frame
 	// if distance == -1, this polyobject rotates perpetually
-	if (Polyobj_rotate(po, th->speed, false, true) && th->distance != -1)
+	if (Polyobj_rotate(po, th->speed, false, false, true) && th->distance != -1)
 	{
 		INT32 avel = abs(th->speed);
 
@@ -1985,7 +2000,7 @@ void T_PolyObjRotDisplace(polyrotdisplace_t *th)
 
 	rotangle = FixedMul(th->rotscale, delta);
 
-	if (Polyobj_rotate(po, FixedAngle(rotangle), th->turnobjs, true))
+	if (Polyobj_rotate(po, FixedAngle(rotangle), th->turnobjs & PTF_PLAYERS, th->turnobjs & PTF_OTHERS, true))
 		th->oldHeights = newheights;
 }
 
@@ -2014,7 +2029,7 @@ boolean EV_DoPolyObjRotate(polyrotdata_t *prdata)
 		return false;
 
 	// check for override if this polyobj already has a thinker
-	if (po->thinker && !prdata->overRide)
+	if (po->thinker && !(prdata->flags & TMPR_OVERRIDE))
 		return false;
 
 	// create a new thinker
@@ -2029,10 +2044,10 @@ boolean EV_DoPolyObjRotate(polyrotdata_t *prdata)
 	// use Hexen-style byte angles for speed and distance
 	th->speed = Polyobj_AngSpeed(prdata->speed * prdata->direction);
 
-	if (prdata->distance == 360)    // 360 means perpetual
+	if (prdata->flags & TMPR_CONTINUOUS)
 		th->distance = -1;
-	else if (prdata->distance == 0) // 0 means 360 degrees
-		th->distance = 0xffffffff - 1;
+	else if (prdata->distance == 360)
+		th->distance = ANGLE_MAX - 1;
 	else
 		th->distance = FixedAngle(prdata->distance*FRACUNIT);
 
@@ -2047,7 +2062,14 @@ boolean EV_DoPolyObjRotate(polyrotdata_t *prdata)
 
 	oldpo = po;
 
-	th->turnobjs = prdata->turnobjs;
+	// interpolation
+	R_CreateInterpolator_Polyobj(&th->thinker, po);
+
+	th->turnobjs = 0;
+	if (!(prdata->flags & TMPR_DONTROTATEOTHERS))
+		th->turnobjs |= PTF_OTHERS;
+	if (prdata->flags & TMPR_ROTATEPLAYERS)
+		th->turnobjs |= PTF_PLAYERS;
 
 	// apply action to mirroring polyobjects as well
 	start = 0;
@@ -2108,6 +2130,9 @@ boolean EV_DoPolyObjMove(polymovedata_t *pmdata)
 
 	oldpo = po;
 
+	// interpolation
+	R_CreateInterpolator_Polyobj(&th->thinker, po);
+
 	// apply action to mirroring polyobjects as well
 	start = 0;
 	while ((po = Polyobj_GetChild(oldpo, &start)))
@@ -2123,8 +2148,10 @@ boolean EV_DoPolyObjMove(polymovedata_t *pmdata)
 boolean EV_DoPolyObjWaypoint(polywaypointdata_t *pwdata)
 {
 	polyobj_t *po;
+	polyobj_t *oldpo;
 	polywaypoint_t *th;
 	mobj_t *first = NULL;
+	INT32 start;
 
 	if (!(po = Polyobj_GetForNum(pwdata->polyObjNum)))
 	{
@@ -2175,6 +2202,26 @@ boolean EV_DoPolyObjWaypoint(polywaypointdata_t *pwdata)
 		th->continuous = false;
 	}
 
+	// interpolation
+	R_CreateInterpolator_Polyobj(&th->thinker, po);
+	// T_PolyObjWaypoint is the only polyobject movement
+	// that can adjust z, so we add these ones too.
+	R_CreateInterpolator_SectorPlane(&th->thinker, po->lines[0]->backsector, false);
+	R_CreateInterpolator_SectorPlane(&th->thinker, po->lines[0]->backsector, true);
+
+	// Most other polyobject functions handle children by recursively
+	// giving each child another thinker. T_PolyObjWaypoint handles
+	// it manually though, which means we need to manually give them
+	// interpolation here instead.
+	start = 0;
+	oldpo = po;
+	while ((po = Polyobj_GetChild(oldpo, &start)))
+	{
+		R_CreateInterpolator_Polyobj(&th->thinker, po);
+		R_CreateInterpolator_SectorPlane(&th->thinker, po->lines[0]->backsector, false);
+		R_CreateInterpolator_SectorPlane(&th->thinker, po->lines[0]->backsector, true);
+	}
+
 	th->pointnum = first->health;
 
 	return true;
@@ -2223,6 +2270,9 @@ static void Polyobj_doSlideDoor(polyobj_t *po, polydoordata_t *doordata)
 
 	oldpo = po;
 
+	// interpolation
+	R_CreateInterpolator_Polyobj(&th->thinker, po);
+
 	// start action on mirroring polyobjects as well
 	start = 0;
 	while ((po = Polyobj_GetChild(oldpo, &start)))
@@ -2262,6 +2312,9 @@ static void Polyobj_doSwingDoor(polyobj_t *po, polydoordata_t *doordata)
 	// TODO: sound sequence start event
 
 	oldpo = po;
+
+	// interpolation
+	R_CreateInterpolator_Polyobj(&th->thinker, po);
 
 	// start action on mirroring polyobjects as well
 	start = 0;
@@ -2334,6 +2387,9 @@ boolean EV_DoPolyObjDisplace(polydisplacedata_t *prdata)
 
 	oldpo = po;
 
+	// interpolation
+	R_CreateInterpolator_Polyobj(&th->thinker, po);
+
 	// apply action to mirroring polyobjects as well
 	start = 0;
 	while ((po = Polyobj_GetChild(oldpo, &start)))
@@ -2379,6 +2435,9 @@ boolean EV_DoPolyObjRotDisplace(polyrotdisplacedata_t *prdata)
 	th->turnobjs = prdata->turnobjs;
 
 	oldpo = po;
+
+	// interpolation
+	R_CreateInterpolator_Polyobj(&th->thinker, po);
 
 	// apply action to mirroring polyobjects as well
 	start = 0;
@@ -2483,6 +2542,9 @@ boolean EV_DoPolyObjFlag(polyflagdata_t *pfdata)
 		po->tmpVerts[i] = *(po->vertices[i]);
 
 	oldpo = po;
+
+	// interpolation
+	R_CreateInterpolator_Polyobj(&th->thinker, po);
 
 	// apply action to mirroring polyobjects as well
 	start = 0;

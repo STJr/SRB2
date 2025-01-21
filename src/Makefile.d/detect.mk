@@ -4,7 +4,6 @@
 
 # Previously featured:\
 	PANDORA\
-	HAIKU\
 	DUMMY\
 	DJGPPDOS\
 	SOLARIS\
@@ -17,7 +16,7 @@ all_systems:=\
 	UNIX\
 	LINUX\
 	FREEBSD\
-	SDL\
+	HAIKU\
 
 # check for user specified system
 ifeq (,$(filter $(all_systems),$(.VARIABLES)))
@@ -36,6 +35,8 @@ system:=$(shell uname -s)
 
 ifeq ($(system),Linux)
 new_system:=LINUX
+else ifeq ($(system),Haiku)
+new_system:=HAIKU
 else
 
 $(error \
@@ -57,27 +58,39 @@ endif
 
 # This must have high to low order.
 gcc_versions:=\
-	102 101\
-	93 92 91\
-	84 83 82 81\
-	75 74 73 72 71\
-	64 63 62 61\
-	55 54 53 52 51\
+	132 131 130\
+	123 122 121 120\
+	114 113 112 111 110\
+	105 104 103 102 101 100\
+	95 94 93 92 91 90\
+	85 84 83 82 81 80\
+	75 74 73 72 71 70\
+	64 63 62 61 60\
+	55 54 53 52 51 50\
 	49 48 47 46 45 44 43 42 41 40
 
-latest_gcc_version:=10.2
+latest_gcc_version:=13.2
 
 # Automatically set version flag, but not if one was
 # manually set. And don't bother if this is a clean only
 # run.
 ifeq (,$(call Wildvar,GCC% destructive))
-version:=$(shell $(CC) --version)
+
+# can't use $(CC) --version here since that uses argv[0] to display the name
+# also gcc outputs the information to stderr, so I had to do 2>&1
+# this program really doesn't like identifying itself
+shellversion:=$(shell $(CC) -v 2>&1)
+# Try to remove "-win32"
+version:=$(subst -win32,.0,$(shellversion))
 
 # check if this is in fact GCC
-ifneq (,$(or $(findstring gcc,$(version)),\
-	$(findstring GCC,$(version))))
+ifneq (,$(findstring gcc version,$(version)))
 
-version:=$(shell $(CC) -dumpversion)
+# in stark contrast to the name, gcc will give me a nicely formatted version number for free
+shellversion:=$(shell $(CC) -dumpfullversion)
+
+# Try to remove "-win32"
+version:=$(subst -win32,.0,$(shellversion))
 
 # Turn version into words of major, minor
 v:=$(subst ., ,$(version))

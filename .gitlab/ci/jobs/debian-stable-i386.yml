@@ -1,0 +1,53 @@
+Debian stable:i386:
+  extends: .srb2ci
+
+  stage: build
+
+  when: manual
+
+  artifacts:
+    paths:
+      - "build.cmake/bin/"
+      - "build.cmake/src/config.h"
+    expose_as: "Debian i386"
+    name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-i686"
+
+  variables:
+    CC: i686-linux-gnu-gcc
+    OBJCOPY: i686-linux-gnu-objcopy
+    OBJDUMP: i686-linux-gnu-objdump
+    LD: i686-linux-gnu-ld
+    PKG_CONFIG_PATH: /usr/lib/i386-linux-gnu/pkgconfig
+
+  script:
+    - - |
+          # apt_toolchain
+          echo -e "\e[0Ksection_start:`date +%s`:apt_toolchain[collapsed=true]\r\e[0KInstalling toolchain packages"
+      - apt-get install gcc-i686-linux-gnu || apt-get install gcc
+      - |
+          # apt_toolchain
+          echo -e "\e[0Ksection_end:`date +%s`:apt_toolchain\r\e[0K"
+
+    - - |
+          # apt_development
+          echo -e "\e[0Ksection_start:`date +%s`:apt_development[collapsed=true]\r\e[0KInstalling development packages"
+      - apt-get install libsdl2-mixer-dev:i386 libpng-dev:i386 libcurl4-openssl-dev:i386 libgme-dev:i386 libopenmpt-dev:i386 libminiupnpc-dev:i386
+      - |
+          # apt_development
+          echo -e "\e[0Ksection_end:`date +%s`:apt_development\r\e[0K"
+
+    - - |
+          # cmake
+          echo -e "\e[0Ksection_start:`date +%s`:cmake[collapsed=false]\r\e[0KBuilding Makefiles"
+      - cmake -B build.cmake -DSRB2_USE_CCACHE=YES -DSRB2_CONFIG_ERRORMODE=ON -G "Unix Makefiles"
+      - |
+          # cmake
+          echo -e "\e[0Ksection_end:`date +%s`:cmake\r\e[0K"
+
+    - - |
+          # make
+          echo -e "\e[0Ksection_start:`date +%s`:make[collapsed=false]\r\e[0KCompiling SRB2"
+      - make --directory=build.cmake --keep-going || make --directory=build.cmake --keep-going
+      - |
+          # make
+          echo -e "\e[0Ksection_end:`date +%s`:make\r\e[0K"

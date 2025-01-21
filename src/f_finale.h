@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2021 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -40,7 +40,7 @@ void F_TextPromptTicker(void);
 void F_GameEndDrawer(void);
 void F_IntroDrawer(void);
 void F_TitleScreenDrawer(void);
-void F_SkyScroll(INT32 scrollxspeed, INT32 scrollyspeed, const char *patchname);
+void F_SkyScroll(const char *patchname);
 
 void F_GameEvaluationDrawer(void);
 void F_StartGameEvaluation(void);
@@ -52,7 +52,7 @@ void F_EndingDrawer(void);
 void F_CreditTicker(void);
 void F_CreditDrawer(void);
 
-void F_StartCustomCutscene(INT32 cutscenenum, boolean precutscene, boolean resetplayer);
+void F_StartCustomCutscene(INT32 cutscenenum, boolean precutscene, boolean resetplayer, boolean FLS);
 void F_CutsceneDrawer(void);
 void F_EndCutScene(void);
 
@@ -74,6 +74,10 @@ void F_StartContinue(void);
 void F_ContinueTicker(void);
 void F_ContinueDrawer(void);
 
+void F_StartWaitingPlayers(void);
+void F_WaitingPlayersTicker(void);
+void F_WaitingPlayersDrawer(void);
+
 extern INT32 finalecount;
 extern INT32 titlescrollxspeed;
 extern INT32 titlescrollyspeed;
@@ -92,7 +96,7 @@ typedef enum
 extern ttmode_enum ttmode;
 extern UINT8 ttscale;
 // ttmode user vars
-extern char ttname[9];
+extern char ttname[8+1];
 extern INT16 ttx;
 extern INT16 tty;
 extern INT16 ttloop;
@@ -131,7 +135,7 @@ extern UINT16 curtttics;
 #define TITLEBACKGROUNDACTIVE (curfadevalue >= 0 || curbgname[0])
 
 void F_InitMenuPresValues(void);
-void F_MenuPresTicker(boolean run);
+void F_MenuPresTicker(void);
 
 //
 // WIPE

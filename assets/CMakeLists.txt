@@ -1,72 +1,51 @@
 ## Assets Target Configuration ##
 
-# For prepending the current source path, later
-FUNCTION(PREPEND var prefix)
-   SET(listVar "")
-   FOREACH(f ${ARGN})
-      LIST(APPEND listVar "${prefix}/${f}")
-   ENDFOREACH(f)
-   SET(${var} "${listVar}" PARENT_SCOPE)
-ENDFUNCTION(PREPEND)
+if(${CMAKE_SYSTEM} MATCHES Linux)
+	# Asset installation isn't part of the Linux target
+	return()
+endif()
 
-set(SRB2_ASSET_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/installer"
-	CACHE STRING "Path to directory that contains all asset files for the installer.")
+if("${SRB2_CONFIG_ASSET_DIRECTORY}" STREQUAL "")
+	message(WARNING "SRB2_CONFIG_ASSET_DIRECTORY is not set, so installation will not contain data files.")
+	return()
+endif()
 
-set(SRB2_ASSET_INSTALL ON
-	CACHE BOOL "Insert asset files into the install directory or package.")
+get_filename_component(SRB2_ASSET_DIRECTORY_ABSOLUTE "${SRB2_CONFIG_ASSET_DIRECTORY}" ABSOLUTE)
+
+set(SRB2_ASSETS_DOCS
+	"README.txt"
+	"README-SDL.txt"
+	"LICENSE.txt"
+	"LICENSE-3RD-PARTY.txt"
+)
+list(TRANSFORM SRB2_ASSETS_DOCS PREPEND "/")
+list(TRANSFORM SRB2_ASSETS_DOCS PREPEND "${SRB2_ASSET_DIRECTORY_ABSOLUTE}")
 
 ####################
 # POST-V2.2 NOTE: Do not forget to add patch.pk3 to the end of this list!
 ####################
 
-set(SRB2_ASSET_HASHED
-"srb2.pk3;\
-player.dta;\
-zones.pk3;\
-patch.pk3"
-	CACHE STRING "Asset filenames to apply MD5 checks. No spaces between entries!"
+set(SRB2_ASSETS_GAME
+	"srb2.pk3"
+	"characters.pk3"
+	"zones.pk3"
+	"patch.pk3"
+	"music.pk3"
+	"models.dat"
 )
+list(TRANSFORM SRB2_ASSETS_GAME PREPEND "/")
+list(TRANSFORM SRB2_ASSETS_GAME PREPEND "${SRB2_ASSET_DIRECTORY_ABSOLUTE}")
 
-set(SRB2_ASSET_DOCS
-"README.txt;\
-LICENSE.txt;\
-LICENSE-3RD-PARTY.txt;\
-README-SDL.txt"
-	CACHE STRING "Documentation filenames. In OS X, these are packaged separately from other assets. No spaces between entries!"
-)
-
-PREPEND(SRB2_ASSET_DOCS ${SRB2_ASSET_DIRECTORY} ${SRB2_ASSET_DOCS})
-
-foreach(SRB2_ASSET ${SRB2_ASSET_HASHED})
-	file(MD5 ${SRB2_ASSET_DIRECTORY}/${SRB2_ASSET} "SRB2_ASSET_${SRB2_ASSET}_HASH")
-	set(SRB2_ASSET_${SRB2_ASSET}_HASH ${SRB2_ASSET_${SRB2_ASSET}_HASH} PARENT_SCOPE)
-endforeach()
+set(SRB2_ASSETS ${SRB2_ASSET_DOCS} ${SRB2_ASSETS_GAME})
 
 # Installation
 
 if(${CMAKE_SYSTEM} MATCHES Darwin)
 	get_target_property(outname SRB2SDL2 OUTPUT_NAME)
-	if(${SRB2_ASSET_INSTALL})
-		install(DIRECTORY "${SRB2_ASSET_DIRECTORY}/"
-			DESTINATION "${outname}.app/Contents/Resources"
-		)
-	endif()
-	# Always install the doc files, even in non-asset packages.
-	install(FILES ${SRB2_ASSET_DOCS}
-		DESTINATION .
-		OPTIONAL
-	)
+	install(FILES ${SRB2_ASSETS} DESTINATION "${outname}.app/Contents/Resources")
+	install(DIRECTORY "${SRB2_ASSET_DIRECTORY_ABSOLUTE}/models" DESTINATION "${outname}.app/Contents/Resources")
+	install(FILES ${SRB2_ASSETS_DOCS} DESTINATION .)
 else()
-	if(${SRB2_ASSET_INSTALL})
-		install(DIRECTORY "${SRB2_ASSET_DIRECTORY}/"
-			DESTINATION .
-		)
-		# Docs are assumed to be located in SRB2_ASSET_DIRECTORY, so don't install them in their own call.
-	else()
-		# Always install the doc files, even in non-asset packages.
-		install(FILES ${SRB2_ASSET_DOCS}
-			DESTINATION .
-			OPTIONAL
-		)
-	endif()
+	install(FILES ${SRB2_ASSETS} DESTINATION .)
+	install(DIRECTORY "${SRB2_ASSET_DIRECTORY_ABSOLUTE}/models" DESTINATION .)
 endif()

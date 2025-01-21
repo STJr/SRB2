@@ -135,6 +135,15 @@
     <ClInclude Include="..\dehacked.h">
       <Filter>D_Doom</Filter>
     </ClInclude>
+    <ClInclude Include="..\deh_lua.h">
+      <Filter>D_Doom</Filter>
+    </ClInclude>
+    <ClInclude Include="..\deh_soc.h">
+      <Filter>D_Doom</Filter>
+    </ClInclude>
+    <ClInclude Include="..\deh_tables.h">
+      <Filter>D_Doom</Filter>
+    </ClInclude>
     <ClInclude Include="..\doomdata.h">
       <Filter>D_Doom</Filter>
     </ClInclude>
@@ -147,22 +156,10 @@
     <ClInclude Include="..\doomtype.h">
       <Filter>D_Doom</Filter>
     </ClInclude>
-    <ClInclude Include="..\d_clisrv.h">
-      <Filter>D_Doom</Filter>
-    </ClInclude>
     <ClInclude Include="..\d_event.h">
       <Filter>D_Doom</Filter>
     </ClInclude>
     <ClInclude Include="..\d_main.h">
-      <Filter>D_Doom</Filter>
-    </ClInclude>
-    <ClInclude Include="..\d_net.h">
-      <Filter>D_Doom</Filter>
-    </ClInclude>
-    <ClInclude Include="..\d_netcmd.h">
-      <Filter>D_Doom</Filter>
-    </ClInclude>
-    <ClInclude Include="..\d_netfil.h">
       <Filter>D_Doom</Filter>
     </ClInclude>
     <ClInclude Include="..\d_player.h">
@@ -258,9 +255,6 @@
     <ClInclude Include="..\hardware\hw_model.h">
       <Filter>Hw_Hardware</Filter>
     </ClInclude>
-    <ClInclude Include="..\hardware\u_list.h">
-      <Filter>Hw_Hardware</Filter>
-    </ClInclude>
     <ClInclude Include="..\byteptr.h">
       <Filter>I_Interface</Filter>
     </ClInclude>
@@ -268,9 +262,6 @@
       <Filter>I_Interface</Filter>
     </ClInclude>
     <ClInclude Include="..\filesrch.h">
-      <Filter>I_Interface</Filter>
-    </ClInclude>
-    <ClInclude Include="..\i_addrinfo.h">
       <Filter>I_Interface</Filter>
     </ClInclude>
     <ClInclude Include="..\i_joy.h">
@@ -288,16 +279,13 @@
     <ClInclude Include="..\i_tcp.h">
       <Filter>I_Interface</Filter>
     </ClInclude>
+    <ClInclude Include="..\i_threads.h">
+      <Filter>I_Interface</Filter>
+    </ClInclude>
     <ClInclude Include="..\i_video.h">
       <Filter>I_Interface</Filter>
     </ClInclude>
     <ClInclude Include="..\keys.h">
-      <Filter>I_Interface</Filter>
-    </ClInclude>
-    <ClInclude Include="..\mserv.h">
-      <Filter>I_Interface</Filter>
-    </ClInclude>
-    <ClInclude Include="..\http-mserv.h">
       <Filter>I_Interface</Filter>
     </ClInclude>
     <ClInclude Include="..\lua_hook.h">
@@ -348,10 +336,16 @@
     <ClInclude Include="..\m_misc.h">
       <Filter>M_Misc</Filter>
     </ClInclude>
+    <ClInclude Include="..\m_tokenizer.h">
+      <Filter>M_Misc</Filter>
+    </ClInclude>
     <ClInclude Include="..\m_perfstats.h">
       <Filter>M_Misc</Filter>
     </ClInclude>
     <ClInclude Include="..\m_queue.h">
+      <Filter>M_Misc</Filter>
+    </ClInclude>
+    <ClInclude Include="..\m_vector.h">
       <Filter>M_Misc</Filter>
     </ClInclude>
     <ClInclude Include="..\m_random.h">
@@ -359,6 +353,51 @@
     </ClInclude>
     <ClInclude Include="..\m_swap.h">
       <Filter>M_Misc</Filter>
+    </ClInclude>
+    <ClInclude Include="..\netcode\client_connection.h">
+      <Filter>D_Doom</Filter>
+    </ClInclude>
+    <ClInclude Include="..\netcode\commands.h">
+      <Filter>D_Doom</Filter>
+    </ClInclude>
+    <ClInclude Include="..\netcode\d_clisrv.h">
+      <Filter>D_Doom</Filter>
+    </ClInclude>
+    <ClInclude Include="..\netcode\d_net.h">
+      <Filter>D_Doom</Filter>
+    </ClInclude>
+    <ClInclude Include="..\netcode\d_netcmd.h">
+      <Filter>D_Doom</Filter>
+    </ClInclude>
+    <ClInclude Include="..\netcode\d_netfil.h">
+      <Filter>D_Doom</Filter>
+    </ClInclude>
+    <ClInclude Include="..\netcode\gamestate.h">
+      <Filter>D_Doom</Filter>
+    </ClInclude>
+    <ClInclude Include="..\netcode\i_addrinfo.h">
+      <Filter>I_Interface</Filter>
+    </ClInclude>
+    <ClInclude Include="..\netcode\i_net.h">
+      <Filter>I_Interface</Filter>
+    </ClInclude>
+    <ClInclude Include="..\netcode\i_tcp.h">
+      <Filter>I_Interface</Filter>
+    </ClInclude>
+    <ClInclude Include="..\netcode\mserv.h">
+      <Filter>I_Interface</Filter>
+    </ClInclude>
+    <ClInclude Include="..\netcode\net_command.h">
+      <Filter>D_Doom</Filter>
+    </ClInclude>
+    <ClInclude Include="..\netcode\protocol.h">
+      <Filter>D_Doom</Filter>
+    </ClInclude>
+    <ClInclude Include="..\netcode\server_connection.h">
+      <Filter>D_Doom</Filter>
+    </ClInclude>
+    <ClInclude Include="..\netcode\tic_command.h">
+      <Filter>D_Doom</Filter>
     </ClInclude>
     <ClInclude Include="..\comptime.h">
       <Filter>O_Other</Filter>
@@ -401,6 +440,12 @@
     </ClInclude>
     <ClInclude Include="..\tables.h">
       <Filter>P_Play</Filter>
+    </ClInclude>
+    <ClInclude Include="..\taglist.h">
+      <Filter>P_Play</Filter>
+    </ClInclude>
+    <ClInclude Include="..\libdivide.h">
+      <Filter>R_Rend</Filter>
     </ClInclude>
     <ClInclude Include="..\r_bsp.h">
       <Filter>R_Rend</Filter>
@@ -447,6 +492,9 @@
     <ClInclude Include="..\v_video.h">
       <Filter>R_Rend</Filter>
     </ClInclude>
+    <ClInclude Include="..\snake.h">
+      <Filter>M_Misc</Filter>
+    </ClInclude>
     <ClInclude Include="..\sounds.h">
       <Filter>S_Sounds</Filter>
     </ClInclude>
@@ -489,9 +537,31 @@
     <ClInclude Include="..\r_textures.h">
       <Filter>R_Rend</Filter>
     </ClInclude>
+    <ClInclude Include="..\r_translation.h">
+      <Filter>R_Rend</Filter>
+    </ClInclude>
     <ClInclude Include="..\r_portal.h">
       <Filter>R_Rend</Filter>
     </ClInclude>
+    <ClInclude Include="..\lua_hudlib_drawlist.h">
+      <Filter>LUA</Filter>
+    </ClInclude>
+    <ClInclude Include="..\i_time.h">
+      <Filter>I_Interface</Filter>
+    </ClInclude>
+    <ClInclude Include="..\r_fps.h">
+      <Filter>R_Rend</Filter>
+    </ClInclude>
+    <ClInclude Include="..\m_easing.h">
+      <Filter>M_Misc</Filter>
+    </ClInclude>
+    <ClInclude Include="..\d_clisrv.h" />
+    <ClInclude Include="..\d_net.h" />
+    <ClInclude Include="..\d_netcmd.h" />
+    <ClInclude Include="..\d_netfil.h" />
+    <ClInclude Include="..\u_list.h" />
+    <ClInclude Include="..\mserv.h" />
+    <ClInclude Include="..\http-mserv.h" />
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="..\tmap.nas">
@@ -597,19 +667,16 @@
     <ClCompile Include="..\dehacked.c">
       <Filter>D_Doom</Filter>
     </ClCompile>
-    <ClCompile Include="..\d_clisrv.c">
+    <ClCompile Include="..\deh_lua.c">
+      <Filter>D_Doom</Filter>
+    </ClCompile>
+    <ClCompile Include="..\deh_soc.c">
+      <Filter>D_Doom</Filter>
+    </ClCompile>
+    <ClCompile Include="..\deh_tables.c">
       <Filter>D_Doom</Filter>
     </ClCompile>
     <ClCompile Include="..\d_main.c">
-      <Filter>D_Doom</Filter>
-    </ClCompile>
-    <ClCompile Include="..\d_net.c">
-      <Filter>D_Doom</Filter>
-    </ClCompile>
-    <ClCompile Include="..\d_netcmd.c">
-      <Filter>D_Doom</Filter>
-    </ClCompile>
-    <ClCompile Include="..\d_netfil.c">
       <Filter>D_Doom</Filter>
     </ClCompile>
     <ClCompile Include="..\z_zone.c">
@@ -684,22 +751,13 @@
     <ClCompile Include="..\hardware\hw_model.c">
       <Filter>Hw_Hardware</Filter>
     </ClCompile>
+    <ClCompile Include="..\hardware\hw_shaders.c">
+      <Filter>Hw_Hardware</Filter>
+    </ClCompile>
     <ClCompile Include="..\hardware\u_list.c">
       <Filter>Hw_Hardware</Filter>
     </ClCompile>
     <ClCompile Include="..\filesrch.c">
-      <Filter>I_Interface</Filter>
-    </ClCompile>
-    <ClCompile Include="..\i_addrinfo.c">
-      <Filter>I_Interface</Filter>
-    </ClCompile>
-    <ClCompile Include="..\i_tcp.c">
-      <Filter>I_Interface</Filter>
-    </ClCompile>
-    <ClCompile Include="..\mserv.c">
-      <Filter>I_Interface</Filter>
-    </ClCompile>
-    <ClCompile Include="..\http-mserv.c">
       <Filter>I_Interface</Filter>
     </ClCompile>
     <ClCompile Include="..\lua_baselib.c">
@@ -718,6 +776,9 @@
       <Filter>LUA</Filter>
     </ClCompile>
     <ClCompile Include="..\lua_infolib.c">
+      <Filter>LUA</Filter>
+    </ClCompile>
+    <ClCompile Include="..\lua_inputlib.c">
       <Filter>LUA</Filter>
     </ClCompile>
     <ClCompile Include="..\lua_maplib.c">
@@ -739,6 +800,9 @@
       <Filter>LUA</Filter>
     </ClCompile>
     <ClCompile Include="..\lua_skinlib.c">
+      <Filter>LUA</Filter>
+    </ClCompile>
+    <ClCompile Include="..\lua_taglib.c">
       <Filter>LUA</Filter>
     </ClCompile>
     <ClCompile Include="..\lua_thinkerlib.c">
@@ -774,14 +838,62 @@
     <ClCompile Include="..\m_misc.c">
       <Filter>M_Misc</Filter>
     </ClCompile>
+    <ClCompile Include="..\m_tokenizer.c">
+      <Filter>M_Misc</Filter>
+    </ClCompile>
     <ClCompile Include="..\m_perfstats.c">
       <Filter>M_Misc</Filter>
     </ClCompile>
     <ClCompile Include="..\m_queue.c">
       <Filter>M_Misc</Filter>
     </ClCompile>
+    <ClCompile Include="..\m_vector.c">
+      <Filter>M_Misc</Filter>
+    </ClCompile>
     <ClCompile Include="..\m_random.c">
       <Filter>M_Misc</Filter>
+    </ClCompile>
+    <ClCompile Include="..\netcode\client_connection.c">
+      <Filter>D_Doom</Filter>
+    </ClCompile>
+    <ClCompile Include="..\netcode\commands.c">
+      <Filter>D_Doom</Filter>
+    </ClCompile>
+    <ClCompile Include="..\netcode\d_clisrv.c">
+      <Filter>D_Doom</Filter>
+    </ClCompile>
+    <ClCompile Include="..\netcode\d_net.c">
+      <Filter>D_Doom</Filter>
+    </ClCompile>
+    <ClCompile Include="..\netcode\d_netcmd.c">
+      <Filter>D_Doom</Filter>
+    </ClCompile>
+    <ClCompile Include="..\netcode\d_netfil.c">
+      <Filter>D_Doom</Filter>
+    </ClCompile>
+    <ClCompile Include="..\netcode\gamestate.c">
+      <Filter>D_Doom</Filter>
+    </ClCompile>
+    <ClCompile Include="..\netcode\http-mserv.c">
+      <Filter>I_Interface</Filter>
+    </ClCompile>
+    <ClCompile Include="..\netcode\i_addrinfo.c">
+      <Filter>I_Interface</Filter>
+    </ClCompile>
+    <ClCompile Include="..\netcode\i_tcp.c">
+      <Filter>I_Interface</Filter>
+    </ClCompile>
+    <ClCompile Include="..\netcode\mserv.c">
+      <Filter>I_Interface</Filter>
+    </ClCompile>
+    <ClCompile Include="..\netcode\net_command.c">
+      <Filter>D_Doom</Filter>
+    </ClCompile>
+    <ClCompile Include="..\netcode\server_connection.c">
+      <Filter>D_Doom</Filter>
+    </ClCompile>
+    <ClCompile Include="..\netcode\tic_command.c">
+      <Filter>D_Doom</Filter>
     </ClCompile>
     <ClCompile Include="..\string.c">
       <Filter>M_Misc</Filter>
@@ -846,6 +958,9 @@
     <ClCompile Include="..\tables.c">
       <Filter>P_Play</Filter>
     </ClCompile>
+    <ClCompile Include="..\taglist.c">
+      <Filter>P_Play</Filter>
+    </ClCompile>
     <ClCompile Include="..\t_facon.c">
       <Filter>P_Play</Filter>
     </ClCompile>
@@ -865,9 +980,6 @@
       <Filter>R_Rend</Filter>
     </ClCompile>
     <ClCompile Include="..\r_draw.c">
-      <Filter>R_Rend</Filter>
-    </ClCompile>
-    <ClCompile Include="..\r_draw16.c">
       <Filter>R_Rend</Filter>
     </ClCompile>
     <ClCompile Include="..\r_draw8.c">
@@ -903,6 +1015,9 @@
     <ClCompile Include="..\v_video.c">
       <Filter>R_Rend</Filter>
     </ClCompile>
+    <ClCompile Include="..\snake.c">
+      <Filter>M_Misc</Filter>
+    </ClCompile>
     <ClCompile Include="..\sounds.c">
       <Filter>S_Sounds</Filter>
     </ClCompile>
@@ -922,9 +1037,6 @@
       <Filter>SDLApp</Filter>
     </ClCompile>
     <ClCompile Include="hwsym_sdl.c">
-      <Filter>SDLApp</Filter>
-    </ClCompile>
-    <ClCompile Include="i_cdmus.c">
       <Filter>SDLApp</Filter>
     </ClCompile>
     <ClCompile Include="i_main.c">
@@ -979,7 +1091,32 @@
     <ClCompile Include="..\r_textures.c">
       <Filter>R_Rend</Filter>
     </ClCompile>
+    <ClCompile Include="..\r_translation.c">
+      <Filter>R_Rend</Filter>
+    </ClCompile>
     <ClCompile Include="..\r_portal.c">
+      <Filter>R_Rend</Filter>
+    </ClCompile>
+    <ClCompile Include="..\lua_hudlib_drawlist.c">
+      <Filter>LUA</Filter>
+    </ClCompile>
+    <ClCompile Include="..\i_time.c">
+      <Filter>I_Interface</Filter>
+    </ClCompile>
+    <ClCompile Include="..\r_fps.c">
+      <Filter>R_Rend</Filter>
+    </ClCompile>
+    <ClCompile Include="..\m_easing.c">
+      <Filter>M_Misc</Filter>
+    </ClCompile>
+    <ClCompile Include="..\u_list.c" />
+    <ClCompile Include="..\blua\loslib.c">
+      <Filter>BLUA</Filter>
+    </ClCompile>
+    <ClCompile Include="..\lua_colorlib.c">
+      <Filter>LUA</Filter>
+    </ClCompile>
+    <ClCompile Include="..\r_bbox.c">
       <Filter>R_Rend</Filter>
     </ClCompile>
   </ItemGroup>

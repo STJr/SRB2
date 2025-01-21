@@ -33,11 +33,13 @@ else
 opts+=-DHAVE_MIXER
 sources+=sdl/mixer_sound.c
 
-  ifdef HAVE_MIXERX
-  opts+=-DHAVE_MIXERX
-  libs+=-lSDL2_mixer_ext
-  else
-  libs+=-lSDL2_mixer
+  ifndef HAIKU # Haiku has a special import path
+    ifdef HAVE_MIXERX
+    opts+=-DHAVE_MIXERX
+    libs+=-lSDL2_mixer_ext
+    else
+    libs+=-lSDL2_mixer
+    endif
   endif
 endif
 
@@ -54,13 +56,6 @@ SDL_CFLAGS?=$(shell $(SDL_CONFIG) --cflags)
 SDL_LDFLAGS?=$(shell $(SDL_CONFIG) \
 		$(if $(STATIC),--static-libs,--libs))
 $(eval $(call Propogate_flags,SDL))
-endif
-
-# use the x86 asm code
-ifndef CYGWIN32
-ifndef NOASM
-USEASM=1
-endif
 endif
 
 ifdef MINGW

@@ -3,12 +3,12 @@ ifdef ComSpec
 COMSPEC=$(ComSpec)
 endif
 ifdef COMSPEC
-OBJCOPY=objcopy.exe
-OBJDUMP=objdump.exe
+OBJCOPY?=objcopy.exe
+OBJDUMP?=objdump.exe
 GZIP?=gzip.exe
 else
-OBJCOPY=objcopy
-OBJDUMP=objdump
+OBJCOPY?=objcopy
+OBJDUMP?=objdump
 GZIP?=gzip
 endif
 DBGNAME=$(BIN).debug

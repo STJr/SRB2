@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2021 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -42,16 +42,16 @@ void ST_UnloadGraphics(void);
 void ST_LoadGraphics(void);
 
 // face load graphics, called when skin changes
-void ST_LoadFaceGraphics(INT32 playernum);
+void ST_LoadFaceGraphics(INT32 skinnum);
 void ST_ReloadSkinFaceGraphics(void);
 
 void ST_doPaletteStuff(void);
 
 // title card
 void ST_startTitleCard(void);
+void ST_stopTitleCard(void);
 void ST_runTitleCard(void);
 void ST_drawTitleCard(void);
-void ST_preDrawTitleCard(void);
 void ST_preLevelTitleCardDrawer(void);
 void ST_drawWipeTitleCard(void);
 
@@ -76,8 +76,8 @@ extern patch_t *sboscore;
 extern patch_t *sbotime;
 extern patch_t *sbocolon;
 extern patch_t *sboperiod;
-extern patch_t *faceprefix[MAXSKINS]; // face status patches
-extern patch_t *superprefix[MAXSKINS]; // super face status patches
+extern patch_t **faceprefix; // face status patches
+extern patch_t **superprefix; // super face status patches
 extern patch_t *livesback;
 extern patch_t *stlivex;
 extern patch_t *ngradeletters[7];
@@ -92,6 +92,7 @@ typedef struct
 typedef enum
 {
 	HUD_LIVES,
+	HUD_INPUT,
 
 	HUD_RINGS,
 	HUD_RINGSNUM,
@@ -123,5 +124,8 @@ typedef enum
 extern hudinfo_t hudinfo[NUMHUDITEMS];
 
 extern UINT16 objectsdrawn;
+
+#define NUMLINKCOLORS 12
+extern skincolornum_t linkColor[3][NUMLINKCOLORS];
 
 #endif

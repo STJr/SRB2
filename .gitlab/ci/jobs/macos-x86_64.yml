@@ -1,0 +1,115 @@
+osxcross x86_64:
+  extends: .srb2ci
+
+  stage: build
+
+  cache:
+    - key: ccache-$CI_JOB_NAME_SLUG-$CI_COMMIT_REF_SLUG
+      fallback_keys:
+        - ccache-$CI_JOB_NAME_SLUG-$CI_DEFAULT_BRANCH
+        - ccache-$CI_JOB_NAME_SLUG-master
+      paths:
+        - build/ccache
+        - build/ccache_statslog
+
+    - key: apt-$CI_JOB_IMAGE
+      paths:
+        - build/apt-cache
+      unprotect: true
+
+    - key: vcpkg-root
+      paths:
+        - build/vcpkg-root
+      unprotect: true
+
+    - key: vcpkg-binary-cache-x64-osx
+      paths:
+        - build/vcpkg-binary-cache
+      unprotect: true
+
+  artifacts:
+    paths:
+      - "build.osxcross/bin/"
+      - "build.osxcross/src/config.h"
+    expose_as: "Mac x86_64"
+    name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-clang"
+
+  variables:
+    OSXCROSS_HOST: x86_64-apple-darwin21.4
+    LD: x86_64-apple-darwin21.4-ld
+
+  script:
+    - |
+        # vcpkg
+        echo -e "\e[0Ksection_start:`date +%s`:vcpkg-root[collapsed=true]\r\e[0KUpdating vcpkg"
+
+        if [ -d "build/vcpkg-root" ]; then
+          pushd build/vcpkg-root
+          git fetch https://github.com/Microsoft/vcpkg master
+          git reset --hard FETCH_HEAD
+          popd
+        else
+          mkdir -p build
+          git clone https://github.com/Microsoft/vcpkg build/vcpkg-root
+        fi
+
+        export VCPKG_ROOT=$(pwd)/build/vcpkg-root
+        export VCPKG_BINARY_SOURCES="clear;files,$(pwd)/build/vcpkg-binary-cache,readwrite"
+
+        mkdir -p "build/vcpkg-binary-cache"
+
+        echo -e "\e[0Ksection_end:`date +%s`:vcpkg-root\r\e[0K"
+
+    - - |
+          # apt_development
+          echo -e "\e[0Ksection_start:`date +%s`:macports_development[collapsed=true]\r\e[0KInstalling development packages"
+      - osxcross-macports install curl libopenmpt libsdl2_mixer
+      - |
+          # apt_development
+          echo -e "\e[0Ksection_end:`date +%s`:macports_development\r\e[0K"
+
+    - - |
+          # cmake
+          echo -e "\e[0Ksection_start:`date +%s`:cmake[collapsed=false]\r\e[0KBuilding Makefiles"
+      - cmake -B build.osxcross --toolchain /osxcross/toolchain.cmake -DCPM_USE_LOCAL_PACKAGES:BOOL=ON -DOPENMPT_INCLUDE_DIR:PATH="/osxcross/macports/pkgs/opt/local/include" -DSDL2_INCLUDE_DIR:PATH="/osxcross/macports/pkgs/opt/local/lib" -DSRB2_CONFIG_ENABLE_TESTS:BOOL=OFF -DSRB2_CONFIG_SYSTEM_LIBRARIES:BOOL=ON -DSRB2_CONFIG_USE_GME:BOOL=OFF -G "Unix Makefiles"
+      - |
+          # make
+          echo -e "\e[0Ksection_end:`date +%s`:make\r\e[0K"
+
+    - - |
+          # make
+          echo -e "\e[0Ksection_start:`date +%s`:make[collapsed=false]\r\e[0KCompiling SRB2"
+      - make --directory=build.osxcross --keep-going || make --directory=build.osxcross --keep-going
+      - |
+          # make
+          echo -e "\e[0Ksection_end:`date +%s`:make\r\e[0K"
+
+  after_script:
+    - - |
+           # apt_clean
+           echo -e "\e[0Ksection_start:`date +%s`:apt_clean[collapsed=true]\r\e[0KCleaning of unneeded APT packages"
+      - apt-get autoclean
+      - |
+          # apt_clean
+          echo -e "\e[0Ksection_end:`date +%s`:apt_clean\r\e[0K"
+
+    - - |
+          # vcpkg_clean
+          echo -e "\e[0Ksection_start:`date +%s`:vcpkg_clean[collapsed=true]\r\e[0KCleaning vcpkg-root"
+
+          if [ -d "build/vcpkg-root" ]; then
+            pushd "build/vcpkg-root"
+            git clean
+            popd
+          fi
+
+          echo -e "\e[0Ksection_end:`date +%s`:vcpkg_clean\r\e[0K"
+
+    - - |
+          # ccache_stats
+          echo -e "\e[0Ksection_start:`date +%s`:ccache_stats[collapsed=true]\r\e[0Kccache statistics:"
+      - ccache --show-stats
+      - ccache --show-log-stats || true
+      - |
+          # ccahe_stats
+          echo -e "\e[0Ksection_end:`date +%s`:ccache_stats\r\e[0K"

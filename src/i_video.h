@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2021 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -39,10 +39,6 @@ extern rendermode_t rendermode;
 /**	\brief render mode set by command line arguments
 */
 extern rendermode_t chosenrendermode;
-
-/**	\brief use highcolor modes if true
-*/
-extern boolean highcolor;
 
 /**	\brief setup video mode
 */
@@ -108,8 +104,8 @@ void VID_CheckGLLoaded(rendermode_t oldrender);
 	\return	name of video mode
 */
 const char *VID_GetModeName(INT32 modenum);
-void VID_PrepareModeList(void); /// note hack for SDL
 
+void VID_PrepareModeList(void);
 
 /**	\brief can video system do fullscreen
 */
@@ -150,5 +146,7 @@ void I_BeginRead(void);
 /**	\brief Stop disk icon
 */
 void I_EndRead(void);
+
+UINT32 I_GetRefreshRate(void);
 
 #endif

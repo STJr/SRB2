@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2021 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -75,6 +75,7 @@ extern SINT8 startinglivesbalance[maxgameovers+1];
 extern boolean modifiedgame;
 extern UINT16 mainwads;
 extern boolean savemoddata; // This mod saves time/emblem data.
+extern boolean usedCheats;
 extern boolean disableSpeedAdjust; // Don't alter the duration of player states if true
 extern boolean imcontinuing; // Temporary flag while continuing
 extern boolean metalrecording;
@@ -131,8 +132,6 @@ extern INT32 postimgparam2;
 extern INT32 viewwindowx, viewwindowy;
 extern INT32 viewwidth, scaledviewwidth;
 
-extern boolean gamedataloaded;
-
 // Player taking events, and displaying.
 extern INT32 consoleplayer;
 extern INT32 displayplayer;
@@ -166,7 +165,7 @@ extern boolean exitfadestarted;
 typedef struct
 {
 	UINT8 numpics;
-	char picname[8][8];
+	char picname[8][8+1];
 	UINT8 pichires[8];
 	char *text;
 	UINT16 xcoord[8];
@@ -250,6 +249,7 @@ extern textprompt_t *textprompts[MAX_PROMPTS];
 // For the Custom Exit linedef.
 extern INT16 nextmapoverride;
 extern UINT8 skipstats;
+extern INT16 nextgametype;
 
 extern UINT32 ssspheres; //  Total # of spheres in a level
 
@@ -296,69 +296,70 @@ typedef struct
 typedef struct
 {
 	// The original eight, plus one.
-	char lvlttl[22];       ///< Level name without "Zone". (21 character limit instead of 32, 21 characters can display on screen max anyway)
-	char subttl[33];       ///< Subtitle for level
-	UINT8 actnum;          ///< Act number or 0 for none.
-	UINT32 typeoflevel;    ///< Combination of typeoflevel flags.
-	INT16 nextlevel;       ///< Map number of next level, or 1100-1102 to end.
-	INT16 marathonnext;    ///< See nextlevel, but for Marathon mode. Necessary to support hub worlds ala SUGOI.
-	char keywords[33];     ///< Keywords separated by space to search for. 32 characters.
-	char musname[7];       ///< Music track to play. "" for no music.
-	UINT16 mustrack;       ///< Subsong to play. Only really relevant for music modules and specific formats supported by GME. 0 to ignore.
-	UINT32 muspos;    ///< Music position to jump to.
-	char forcecharacter[17];  ///< (SKINNAMESIZE+1) Skin to switch to or "" to disable.
-	UINT8 weather;         ///< 0 = sunny day, 1 = storm, 2 = snow, 3 = rain, 4 = blank, 5 = thunder w/o rain, 6 = rain w/o lightning, 7 = heat wave.
-	INT16 skynum;          ///< Sky number to use.
-	INT16 skybox_scalex;   ///< Skybox X axis scale. (0 = no movement, 1 = 1:1 movement, 16 = 16:1 slow movement, -4 = 1:4 fast movement, etc.)
-	INT16 skybox_scaley;   ///< Skybox Y axis scale.
-	INT16 skybox_scalez;   ///< Skybox Z axis scale.
+	char lvlttl[21+1];          ///< Level name without "Zone". (21 character limit instead of 32, 21 characters can display on screen max anyway)
+	char subttl[32+1];          ///< Subtitle for level
+	UINT8 actnum;               ///< Act number or 0 for none.
+	UINT32 typeoflevel;         ///< Combination of typeoflevel flags.
+	INT16 nextlevel;            ///< Map number of next level, or 1100-1102 to end.
+	INT16 marathonnext;         ///< See nextlevel, but for Marathon mode. Necessary to support hub worlds ala SUGOI.
+	char keywords[32+1];        ///< Keywords separated by space to search for. 32 characters.
+	char musname[7];            ///< Music track to play. "" for no music.
+	UINT16 mustrack;            ///< Subsong to play. Only really relevant for music modules and specific formats supported by GME. 0 to ignore.
+	UINT32 muspos;              ///< Music position to jump to.
+	char forcecharacter[16+1];  ///< (SKINNAMESIZE+1) Skin to switch to or "" to disable.
+	UINT8 weather;              ///< 0 = sunny day, 1 = storm, 2 = snow, 3 = rain, 4 = blank, 5 = thunder w/o rain, 6 = rain w/o lightning, 7 = heat wave.
+	INT16 skynum;               ///< Sky number to use.
+	INT16 skybox_scalex;        ///< Skybox X axis scale. (0 = no movement, 1 = 1:1 movement, 16 = 16:1 slow movement, -4 = 1:4 fast movement, etc.)
+	INT16 skybox_scaley;        ///< Skybox Y axis scale.
+	INT16 skybox_scalez;        ///< Skybox Z axis scale.
 
 	// Extra information.
-	char interscreen[8];  ///< 320x200 patch to display at intermission.
-	char runsoc[33];      ///< SOC to execute at start of level (32 character limit instead of 63)
-	char scriptname[33];  ///< Script to use when the map is switched to. (32 character limit instead of 191)
-	UINT8 precutscenenum; ///< Cutscene number to play BEFORE a level starts.
-	UINT8 cutscenenum;    ///< Cutscene number to use, 0 for none.
-	INT16 countdown;      ///< Countdown until level end?
-	UINT16 palette;       ///< PAL lump to use on this map
-	UINT8 numlaps;        ///< Number of laps in circuit mode, unless overridden.
-	SINT8 unlockrequired; ///< Is an unlockable required to play this level? -1 if no.
-	UINT8 levelselect;    ///< Is this map available in the level select? If so, which map list is it available in?
-	SINT8 bonustype;      ///< What type of bonus does this level have? (-1 for null.)
-	SINT8 maxbonuslives;  ///< How many bonus lives to award at Intermission? (-1 for unlimited.)
+	char interscreen[8+1];      ///< 320x200 patch to display at intermission.
+	char runsoc[32+1];          ///< SOC to execute at start of level (32 character limit instead of 63)
+	char scriptname[32+1];      ///< Script to use when the map is switched to. (32 character limit instead of 191)
+	UINT8 precutscenenum;       ///< Cutscene number to play BEFORE a level starts.
+	UINT8 cutscenenum;          ///< Cutscene number to use, 0 for none.
+	INT16 countdown;            ///< Countdown until level end?
+	UINT16 palette;             ///< PAL lump to use on this map
+	UINT8 numlaps;              ///< Number of laps in circuit mode, unless overridden.
+	SINT8 unlockrequired;       ///< Is an unlockable required to play this level? -1 if no.
+	UINT8 levelselect;          ///< Is this map available in the level select? If so, which map list is it available in?
+	SINT8 bonustype;            ///< What type of bonus does this level have? (-1 for null.)
+	SINT8 maxbonuslives;        ///< How many bonus lives to award at Intermission? (-1 for unlimited.)
 
-	UINT16 levelflags;     ///< LF_flags:  merged booleans into one UINT16 for space, see below
-	UINT8 menuflags;      ///< LF2_flags: options that affect record attack / nights mode menus
+	UINT16 levelflags;          ///< LF_flags:  merged booleans into one UINT16 for space, see below
+	UINT8 menuflags;            ///< LF2_flags: options that affect record attack / nights mode menus
 
-	char selectheading[22]; ///< Level select heading. Allows for controllable grouping.
-	UINT16 startrings;      ///< Number of rings players start with.
-	INT32 sstimer;          ///< Timer for special stages.
-	UINT32 ssspheres;       ///< Sphere requirement in special stages.
-	fixed_t gravity;        ///< Map-wide gravity.
+	char selectheading[22];     ///< Level select heading. Allows for controllable grouping.
+	UINT16 startrings;          ///< Number of rings players start with.
+	INT32 sstimer;              ///< Timer for special stages.
+	UINT32 ssspheres;           ///< Sphere requirement in special stages.
+	fixed_t gravity;            ///< Map-wide gravity.
+	UINT16 nightstimer[8];      ///< Per-mare time limits for NiGHTS stages.
 
 	// Title card.
-	char ltzzpatch[8];      ///< Zig zag patch.
-	char ltzztext[8];       ///< Zig zag text.
-	char ltactdiamond[8];   ///< Act diamond.
+	char ltzzpatch[8+1];        ///< Zig zag patch.
+	char ltzztext[8+1];         ///< Zig zag text.
+	char ltactdiamond[8+1];     ///< Act diamond.
 
 	// Freed animals stuff.
-	UINT8 numFlickies;     ///< Internal. For freed flicky support.
-	mobjtype_t *flickies;  ///< List of freeable flickies in this level. Allocated dynamically for space reasons. Be careful.
+	UINT8 numFlickies;          ///< Internal. For freed flicky support.
+	mobjtype_t *flickies;       ///< List of freeable flickies in this level. Allocated dynamically for space reasons. Be careful.
 
 	// NiGHTS stuff.
-	UINT8 numGradedMares;   ///< Internal. For grade support.
-	nightsgrades_t *grades; ///< NiGHTS grades. Allocated dynamically for space reasons. Be careful.
+	UINT8 numGradedMares;       ///< Internal. For grade support.
+	nightsgrades_t *grades;     ///< NiGHTS grades. Allocated dynamically for space reasons. Be careful.
 
 	// Music stuff.
-	UINT32 musinterfadeout;  ///< Fade out level music on intermission screen in milliseconds
-	char musintername[7];    ///< Intermission screen music.
+	UINT32 musinterfadeout;     ///< Fade out level music on intermission screen in milliseconds
+	char musintername[7];       ///< Intermission screen music.
 
 	char muspostbossname[7];    ///< Post-bossdeath music.
 	UINT16 muspostbosstrack;    ///< Post-bossdeath track.
 	UINT32 muspostbosspos;      ///< Post-bossdeath position
 	UINT32 muspostbossfadein;   ///< Post-bossdeath fade-in milliseconds.
 
-	SINT8 musforcereset; ///< Force resetmusic (-1 for default; 0 for force off; 1 for force on)
+	SINT8 musforcereset;        ///< Force resetmusic (-1 for default; 0 for force off; 1 for force on)
 
 	// Lua stuff.
 	// (This is not ifdeffed so the map header structure can stay identical, just in case.)
@@ -494,9 +495,7 @@ typedef struct
 extern tolinfo_t TYPEOFLEVEL[NUMTOLNAMES];
 extern UINT32 lastcustomtol;
 
-extern tic_t totalplaytime;
-
-extern UINT8 stagefailed;
+extern boolean stagefailed;
 
 // Emeralds stored as bits to throw savegame hackers off.
 extern UINT16 emeralds;
@@ -513,52 +512,6 @@ extern UINT16 emeralds;
 extern INT32 luabanks[NUM_LUABANKS];
 
 extern INT32 nummaprings; //keep track of spawned rings/coins
-
-/** Time attack information, currently a very small structure.
-  */
-typedef struct
-{
-	tic_t time;   ///< Time in which the level was finished.
-	UINT32 score; ///< Score when the level was finished.
-	UINT16 rings; ///< Rings when the level was finished.
-} recorddata_t;
-
-/** Setup for one NiGHTS map.
-  * These are dynamically allocated because I am insane
-  */
-#define GRADE_F 0
-#define GRADE_E 1
-#define GRADE_D 2
-#define GRADE_C 3
-#define GRADE_B 4
-#define GRADE_A 5
-#define GRADE_S 6
-
-typedef struct
-{
-	// 8 mares, 1 overall (0)
-	UINT8	nummares;
-	UINT32	score[9];
-	UINT8	grade[9];
-	tic_t	time[9];
-} nightsdata_t;
-
-extern nightsdata_t *nightsrecords[NUMMAPS];
-extern recorddata_t *mainrecords[NUMMAPS];
-
-// mapvisited is now a set of flags that says what we've done in the map.
-#define MV_VISITED      1
-#define MV_BEATEN       2
-#define MV_ALLEMERALDS  4
-#define MV_ULTIMATE     8
-#define MV_PERFECT     16
-#define MV_PERFECTRA   32
-#define MV_MAX         63 // used in gamedata check, update whenever MV's are added
-#define MV_MP         128
-extern UINT8 mapvisited[NUMMAPS];
-
-// Temporary holding place for nights data for the current map
-extern nightsdata_t ntemprecords;
 
 extern UINT32 token; ///< Number of tokens collected in a level
 extern UINT32 tokenlist; ///< List of tokens collected
@@ -592,8 +545,11 @@ extern UINT8 useBlackRock;
 
 extern UINT8 use1upSound;
 extern UINT8 maxXtraLife; // Max extra lives from rings
+
 extern UINT8 useContinues;
 #define continuesInSession (!multiplayer && (ultimatemode || (useContinues && !marathonmode) || (!modeattacking && !(cursaveslot > 0))))
+
+extern UINT8 shareEmblems;
 
 extern mobj_t *hunt1, *hunt2, *hunt3; // Emerald hunt locations
 
@@ -614,10 +570,6 @@ extern INT16 scramblecount; //for CTF team scramble
 extern INT32 cheats;
 
 extern tic_t hidetime;
-
-extern UINT32 timesBeaten; // # of times the game has been beaten.
-extern UINT32 timesBeatenWithEmeralds;
-extern UINT32 timesBeatenUltimate;
 
 // ===========================
 // Internal parameters, fixed.
@@ -683,10 +635,11 @@ extern boolean singletics;
 // Netgame stuff
 // =============
 
-#include "d_clisrv.h"
+#include "netcode/d_clisrv.h"
 
 extern consvar_t cv_timetic; // display high resolution timer
 extern consvar_t cv_powerupdisplay; // display powerups
+extern consvar_t cv_showinput; // display input viewer outside of time attack
 extern consvar_t cv_showinputjoy; // display joystick in time attack
 extern consvar_t cv_forceskin; // force clients to use the server's skin
 extern consvar_t cv_downloading; // allow clients to downloading WADs.

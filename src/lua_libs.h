@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2012-2016 by John "JTE" Muniz.
-// Copyright (C) 2012-2021 by Sonic Team Junior.
+// Copyright (C) 2012-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -11,6 +11,9 @@
 /// \brief libraries for Lua scripting
 
 extern lua_State *gL;
+
+extern boolean mousegrabbedbylua;
+extern boolean ignoregameinputs;
 
 #define MUTABLE_TAGS
 
@@ -39,8 +42,9 @@ extern lua_State *gL;
 #define META_SKIN "SKIN_T*"
 #define META_POWERS "PLAYER_T*POWERS"
 #define META_SOUNDSID "SKIN_T*SOUNDSID"
-#define META_SKINSPRITES "SKIN_T*SPRITES"
-#define META_SKINSPRITESLIST "SKIN_T*SPRITES[]"
+#define META_SKINSPRITES "SKIN_T*SKINSPRITES"
+#define META_SKINSPRITESLIST "SKIN_T*SKINSPRITES[]"
+#define META_SKINSPRITESCOMPAT "SKIN_T*SPRITES" // TODO: 2.3: Delete
 
 #define META_VERTEX "VERTEX_T*"
 #define META_LINE "LINE_T*"
@@ -82,11 +86,15 @@ extern lua_State *gL;
 #define META_HUDINFO "HUDINFO_T*"
 #define META_PATCH "PATCH_T*"
 #define META_COLORMAP "COLORMAP"
+#define META_EXTRACOLORMAP "EXTRACOLORMAP_T*"
 #define META_CAMERA "CAMERA_T*"
 
 #define META_ACTION "ACTIONF_T*"
 
 #define META_LUABANKS "LUABANKS[]*"
+
+#define META_KEYEVENT "KEYEVENT_T*"
+#define META_MOUSE "MOUSE_T*"
 
 boolean luaL_checkboolean(lua_State *L, int narg);
 
@@ -106,3 +114,5 @@ int LUA_TagLib(lua_State *L);
 int LUA_PolyObjLib(lua_State *L);
 int LUA_BlockmapLib(lua_State *L);
 int LUA_HudLib(lua_State *L);
+int LUA_ColorLib(lua_State *L);
+int LUA_InputLib(lua_State *L);

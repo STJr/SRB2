@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2021 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -19,6 +19,7 @@
 #include "d_event.h"
 #include "g_demo.h"
 #include "m_cheat.h" // objectplacing
+#include "m_cond.h"
 
 extern char gamedatafilename[64];
 extern char timeattackfolder[64];
@@ -48,9 +49,11 @@ extern boolean promptactive;
 
 extern consvar_t cv_pauseifunfocused;
 
+extern consvar_t cv_instantretry;
+
 // used in game menu
 extern consvar_t cv_tutorialprompt;
-extern consvar_t cv_chatwidth, cv_chatnotifications, cv_chatheight, cv_chattime, cv_consolechat, cv_chatbacktint, cv_chatspamprotection, cv_compactscoreboard;
+extern consvar_t cv_chatwidth, cv_chatnotifications, cv_chatheight, cv_chattime, cv_consolechat, cv_chatbacktint, cv_chatspamprotection, cv_chatspamspeed, cv_chatspamburst, cv_compactscoreboard;
 extern consvar_t cv_crosshair, cv_crosshair2;
 extern consvar_t cv_invertmouse, cv_alwaysfreelook, cv_chasefreelook, cv_mousemove;
 extern consvar_t cv_invertmouse2, cv_alwaysfreelook2, cv_chasefreelook2, cv_mousemove2;
@@ -68,8 +71,8 @@ typedef enum {
 #define P_ControlStyle(player) ((((player)->pflags & PF_ANALOGMODE) ? CS_LMAOGALOG : 0) | (((player)->pflags & PF_DIRECTIONCHAR) ? CS_STANDARD : 0))
 
 extern consvar_t cv_autobrake, cv_autobrake2;
-extern consvar_t cv_sideaxis,cv_turnaxis,cv_moveaxis,cv_lookaxis,cv_jumpaxis,cv_spinaxis,cv_fireaxis,cv_firenaxis,cv_deadzone,cv_digitaldeadzone;
-extern consvar_t cv_sideaxis2,cv_turnaxis2,cv_moveaxis2,cv_lookaxis2,cv_jumpaxis2,cv_spinaxis2,cv_fireaxis2,cv_firenaxis2,cv_deadzone2,cv_digitaldeadzone2;
+extern consvar_t cv_sideaxis, cv_turnaxis, cv_moveaxis, cv_lookaxis, cv_jumpaxis, cv_spinaxis, cv_shieldaxis, cv_fireaxis, cv_firenaxis, cv_deadzone, cv_digitaldeadzone;
+extern consvar_t cv_sideaxis2,cv_turnaxis2,cv_moveaxis2,cv_lookaxis2,cv_jumpaxis2,cv_spinaxis2,cv_shieldaxis2,cv_fireaxis2,cv_firenaxis2,cv_deadzone2,cv_digitaldeadzone2;
 extern consvar_t cv_ghost_bestscore, cv_ghost_besttime, cv_ghost_bestrings, cv_ghost_last, cv_ghost_guest;
 
 // hi here's some new controls
@@ -84,6 +87,26 @@ typedef enum
 	LOCK_INTERESTS = 1<<2,
 } lockassist_e;
 
+
+typedef enum
+{
+	JA_NONE = 0,
+	JA_TURN,
+	JA_MOVE,
+	JA_LOOK,
+	JA_STRAFE,
+
+	JA_DIGITAL, // axes henceforth use digital deadzone
+
+	JA_JUMP = JA_DIGITAL,
+	JA_SPIN,
+	JA_SHIELD,
+	JA_FIRE,
+	JA_FIRENORMAL,
+} joyaxis_e;
+
+INT32 JoyAxis(joyaxis_e axissel);
+INT32 Joy2Axis(joyaxis_e axissel);
 
 // mouseaiming (looking up/down with the mouse or keyboard)
 #define KB_LOOKSPEED (1<<25)
@@ -154,8 +177,7 @@ void G_SpawnPlayer(INT32 playernum);
 
 // Can be called by the startup code or M_Responder.
 // A normal game starts at map 1, but a warp test can start elsewhere
-void G_DeferedInitNew(boolean pultmode, const char *mapname, INT32 pickedchar,
-	boolean SSSG, boolean FLS);
+void G_DeferedInitNew(boolean pultmode, const char *mapname, INT32 character, boolean SSSG, boolean FLS);
 void G_DoLoadLevel(boolean resetplayer);
 void G_StartTitleCard(void);
 void G_PreLevelTitleCard(void);
@@ -164,7 +186,7 @@ boolean G_IsTitleCardAvailable(void);
 // Can be called by the startup code or M_Responder, calls P_SetupLevel.
 void G_LoadGame(UINT32 slot, INT16 mapoverride);
 
-void G_SaveGameData(void);
+void G_SaveGameData(gamedata_t *data);
 
 void G_SaveGame(UINT32 slot, INT16 mapnum);
 
@@ -195,6 +217,7 @@ boolean G_CoopGametype(void);
 boolean G_TagGametype(void);
 boolean G_CompetitionGametype(void);
 boolean G_EnoughPlayersFinished(void);
+INT16 G_GetNextMap(boolean ignoretokens, boolean silent);
 void G_ExitLevel(void);
 void G_NextLevel(void);
 void G_Continue(void);
@@ -204,6 +227,7 @@ void G_EndGame(void); // moved from y_inter.c/h and renamed
 
 void G_Ticker(boolean run);
 boolean G_Responder(event_t *ev);
+boolean G_LuaResponder(event_t *ev);
 
 void G_AddPlayer(INT32 playernum);
 
@@ -219,27 +243,27 @@ void G_SetModeAttackRetryFlag(void);
 void G_ClearModeAttackRetryFlag(void);
 boolean G_GetModeAttackRetryFlag(void);
 
-void G_LoadGameData(void);
+void G_LoadGameData(gamedata_t *data);
 void G_LoadGameSettings(void);
 
 void G_SetGameModified(boolean silent);
+void G_SetUsedCheats(boolean silent);
 
 void G_SetGamestate(gamestate_t newstate);
 
 // Gamedata record shit
-void G_AllocMainRecordData(INT16 i);
-void G_AllocNightsRecordData(INT16 i);
-void G_ClearRecords(void);
+void G_AllocMainRecordData(INT16 i, gamedata_t *data);
+void G_AllocNightsRecordData(INT16 i, gamedata_t *data);
+void G_ClearRecords(gamedata_t *data);
 
-UINT32 G_GetBestScore(INT16 map);
-tic_t G_GetBestTime(INT16 map);
-UINT16 G_GetBestRings(INT16 map);
-UINT32 G_GetBestNightsScore(INT16 map, UINT8 mare);
-tic_t G_GetBestNightsTime(INT16 map, UINT8 mare);
-UINT8 G_GetBestNightsGrade(INT16 map, UINT8 mare);
+UINT32 G_GetBestScore(INT16 map, gamedata_t *data);
+tic_t G_GetBestTime(INT16 map, gamedata_t *data);
+UINT16 G_GetBestRings(INT16 map, gamedata_t *data);
+UINT32 G_GetBestNightsScore(INT16 map, UINT8 mare, gamedata_t *data);
+tic_t G_GetBestNightsTime(INT16 map, UINT8 mare, gamedata_t *data);
+UINT8 G_GetBestNightsGrade(INT16 map, UINT8 mare, gamedata_t *data);
 
-void G_AddTempNightsRecords(UINT32 pscore, tic_t ptime, UINT8 mare);
-void G_SetNightsRecords(void);
+void G_AddTempNightsRecords(player_t *player, UINT32 pscore, tic_t ptime, UINT8 mare);
 
 FUNCMATH INT32 G_TicsToHours(tic_t tics);
 FUNCMATH INT32 G_TicsToMinutes(tic_t tics, boolean full);

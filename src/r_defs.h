@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2021 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -16,6 +16,7 @@
 
 // Some more or less basic data types we depend on.
 #include "m_fixed.h"
+#include "m_vector.h"
 
 // We rely on the thinker data struct to handle sound origins in sectors.
 #include "d_think.h"
@@ -53,8 +54,13 @@ typedef struct
 // Could even use more than 32 levels.
 typedef UINT8 lighttable_t;
 
+#define NUM_PALETTE_ENTRIES 256
+#define DEFAULT_STARTTRANSCOLOR 96
+
 #define CMF_FADEFULLBRIGHTSPRITES  1
 #define CMF_FOG 4
+
+#define TEXTURE_255_IS_TRANSPARENT
 
 // ExtraColormap type. Use for extra_colormaps from now on.
 typedef struct extracolormap_s
@@ -68,6 +74,14 @@ typedef struct extracolormap_s
 	INT32 fadergba; // The colour the colourmaps fade to
 
 	lighttable_t *colormap;
+
+#ifdef HWRENDER
+	struct {
+		UINT32 id; // The id of the hardware lighttable. Zero means it does not exist yet.
+		RGBA_t *data; // The texture data of the hardware lighttable.
+		boolean needs_update; // If the colormap changed recently or not.
+	} gl_lighttable;
+#endif
 
 #ifdef EXTRACOLORMAPLUMPS
 	lumpnum_t lump; // for colormap lump matching, init to LUMPERROR
@@ -115,44 +129,125 @@ typedef struct
   */
 typedef enum
 {
-	FF_EXISTS            = 0x1,        ///< Always set, to check for validity.
-	FF_BLOCKPLAYER       = 0x2,        ///< Solid to player, but nothing else
-	FF_BLOCKOTHERS       = 0x4,        ///< Solid to everything but player
-	FF_SOLID             = 0x6,        ///< Clips things.
-	FF_RENDERSIDES       = 0x8,        ///< Renders the sides.
-	FF_RENDERPLANES      = 0x10,       ///< Renders the floor/ceiling.
-	FF_RENDERALL         = 0x18,       ///< Renders everything.
-	FF_SWIMMABLE         = 0x20,       ///< Is a water block.
-	FF_NOSHADE           = 0x40,       ///< Messes with the lighting?
-	FF_CUTSOLIDS         = 0x80,       ///< Cuts out hidden solid pixels.
-	FF_CUTEXTRA          = 0x100,      ///< Cuts out hidden translucent pixels.
-	FF_CUTLEVEL          = 0x180,      ///< Cuts out all hidden pixels.
-	FF_CUTSPRITES        = 0x200,      ///< Final step in making 3D water.
-	FF_BOTHPLANES        = 0x400,      ///< Render inside and outside planes.
-	FF_EXTRA             = 0x800,      ///< Gets cut by ::FF_CUTEXTRA.
-	FF_TRANSLUCENT       = 0x1000,     ///< See through!
-	FF_FOG               = 0x2000,     ///< Fog "brush."
-	FF_INVERTPLANES      = 0x4000,     ///< Only render inside planes.
-	FF_ALLSIDES          = 0x8000,     ///< Render inside and outside sides.
-	FF_INVERTSIDES       = 0x10000,    ///< Only render inside sides.
-	FF_DOUBLESHADOW      = 0x20000,    ///< Make two lightlist entries to reset light?
-	FF_FLOATBOB          = 0x40000,    ///< Floats on water and bobs if you step on it.
-	FF_NORETURN          = 0x80000,    ///< Used with ::FF_CRUMBLE. Will not return to its original position after falling.
-	FF_CRUMBLE           = 0x100000,   ///< Falls 2 seconds after being stepped on, and randomly brings all touching crumbling 3dfloors down with it, providing their master sectors share the same tag (allows crumble platforms above or below, to also exist).
-	FF_SHATTERBOTTOM     = 0x200000,   ///< Used with ::FF_BUSTUP. Like FF_SHATTER, but only breaks from the bottom. Good for springing up through rubble.
-	FF_MARIO             = 0x400000,   ///< Acts like a question block when hit from underneath. Goodie spawned at top is determined by master sector.
-	FF_BUSTUP            = 0x800000,   ///< You can spin through/punch this block and it will crumble!
-	FF_QUICKSAND         = 0x1000000,  ///< Quicksand!
-	FF_PLATFORM          = 0x2000000,  ///< You can jump up through this to the top.
-	FF_REVERSEPLATFORM   = 0x4000000,  ///< A fall-through floor in normal gravity, a platform in reverse gravity.
-	FF_INTANGIBLEFLATS   = 0x6000000,  ///< Both flats are intangible, but the sides are still solid.
-	FF_SHATTER           = 0x8000000,  ///< Used with ::FF_BUSTUP. Bustable on mere touch.
-	FF_SPINBUST          = 0x10000000, ///< Used with ::FF_BUSTUP. Also bustable if you're in your spinning frames.
-	FF_STRONGBUST        = 0x20000000, ///< Used with ::FF_BUSTUP. Only bustable by "strong" characters (Knuckles) and abilities (bouncing, twinspin, melee).
-	FF_RIPPLE            = 0x40000000, ///< Ripple the flats
-	FF_COLORMAPONLY      = 0x80000000, ///< Only copy the colormap, not the lightlevel
-	FF_GOOWATER          = FF_SHATTERBOTTOM, ///< Used with ::FF_SWIMMABLE. Makes thick bouncey goop.
+	FOF_EXISTS            = 0x1,        ///< Always set, to check for validity.
+	FOF_BLOCKPLAYER       = 0x2,        ///< Solid to player, but nothing else
+	FOF_BLOCKOTHERS       = 0x4,        ///< Solid to everything but player
+	FOF_SOLID             = 0x6,        ///< Clips things.
+	FOF_RENDERSIDES       = 0x8,        ///< Renders the sides.
+	FOF_RENDERPLANES      = 0x10,       ///< Renders the floor/ceiling.
+	FOF_RENDERALL         = 0x18,       ///< Renders everything.
+	FOF_SWIMMABLE         = 0x20,       ///< Is a water block.
+	FOF_NOSHADE           = 0x40,       ///< Messes with the lighting?
+	FOF_CUTSOLIDS         = 0x80,       ///< Cuts out hidden solid pixels.
+	FOF_CUTEXTRA          = 0x100,      ///< Cuts out hidden translucent pixels.
+	FOF_CUTLEVEL          = 0x180,      ///< Cuts out all hidden pixels.
+	FOF_CUTSPRITES        = 0x200,      ///< Final step in making 3D water.
+	FOF_BOTHPLANES        = 0x400,      ///< Render inside and outside planes.
+	FOF_EXTRA             = 0x800,      ///< Gets cut by ::FOF_CUTEXTRA.
+	FOF_TRANSLUCENT       = 0x1000,     ///< See through!
+	FOF_FOG               = 0x2000,     ///< Fog "brush."
+	FOF_INVERTPLANES      = 0x4000,     ///< Only render inside planes.
+	FOF_ALLSIDES          = 0x8000,     ///< Render inside and outside sides.
+	FOF_INVERTSIDES       = 0x10000,    ///< Only render inside sides.
+	FOF_DOUBLESHADOW      = 0x20000,    ///< Make two lightlist entries to reset light?
+	FOF_FLOATBOB          = 0x40000,    ///< Floats on water and bobs if you step on it.
+	FOF_NORETURN          = 0x80000,    ///< Used with ::FOF_CRUMBLE. Will not return to its original position after falling.
+	FOF_CRUMBLE           = 0x100000,   ///< Falls 2 seconds after being stepped on, and randomly brings all touching crumbling 3dfloors down with it, providing their master sectors share the same tag (allows crumble platforms above or below, to also exist).
+	FOF_GOOWATER          = 0x200000,   ///< Used with ::FOF_SWIMMABLE. Makes thick bouncey goop.
+	FOF_MARIO             = 0x400000,   ///< Acts like a question block when hit from underneath. Goodie spawned at top is determined by master sector.
+	FOF_BUSTUP            = 0x800000,   ///< You can spin through/punch this block and it will crumble!
+	FOF_QUICKSAND         = 0x1000000,  ///< Quicksand!
+	FOF_PLATFORM          = 0x2000000,  ///< You can jump up through this to the top.
+	FOF_REVERSEPLATFORM   = 0x4000000,  ///< A fall-through floor in normal gravity, a platform in reverse gravity.
+	FOF_INTANGIBLEFLATS   = 0x6000000,  ///< Both flats are intangible, but the sides are still solid.
+	FOF_RIPPLE            = 0x8000000,  ///< Ripple the flats
+	FOF_COLORMAPONLY      = 0x10000000, ///< Only copy the colormap, not the lightlevel
+	FOF_BOUNCY            = 0x20000000, ///< Bounces players
+	FOF_SPLAT             = 0x40000000, ///< Use splat flat renderer (treat cyan pixels as invisible)
 } ffloortype_e;
+
+typedef enum
+{
+	FF_OLD_EXISTS            = 0x1,
+	FF_OLD_BLOCKPLAYER       = 0x2,
+	FF_OLD_BLOCKOTHERS       = 0x4,
+	FF_OLD_SOLID             = 0x6,
+	FF_OLD_RENDERSIDES       = 0x8,
+	FF_OLD_RENDERPLANES      = 0x10,
+	FF_OLD_RENDERALL         = 0x18,
+	FF_OLD_SWIMMABLE         = 0x20,
+	FF_OLD_NOSHADE           = 0x40,
+	FF_OLD_CUTSOLIDS         = 0x80,
+	FF_OLD_CUTEXTRA          = 0x100,
+	FF_OLD_CUTLEVEL          = 0x180,
+	FF_OLD_CUTSPRITES        = 0x200,
+	FF_OLD_BOTHPLANES        = 0x400,
+	FF_OLD_EXTRA             = 0x800,
+	FF_OLD_TRANSLUCENT       = 0x1000,
+	FF_OLD_FOG               = 0x2000,
+	FF_OLD_INVERTPLANES      = 0x4000,
+	FF_OLD_ALLSIDES          = 0x8000,
+	FF_OLD_INVERTSIDES       = 0x10000,
+	FF_OLD_DOUBLESHADOW      = 0x20000,
+	FF_OLD_FLOATBOB          = 0x40000,
+	FF_OLD_NORETURN          = 0x80000,
+	FF_OLD_CRUMBLE           = 0x100000,
+	FF_OLD_SHATTERBOTTOM     = 0x200000,
+	FF_OLD_GOOWATER          = 0x200000,
+	FF_OLD_MARIO             = 0x400000,
+	FF_OLD_BUSTUP            = 0x800000,
+	FF_OLD_QUICKSAND         = 0x1000000,
+	FF_OLD_PLATFORM          = 0x2000000,
+	FF_OLD_REVERSEPLATFORM   = 0x4000000,
+	FF_OLD_INTANGIBLEFLATS   = 0x6000000,
+	FF_OLD_SHATTER           = 0x8000000,
+	FF_OLD_SPINBUST          = 0x10000000,
+	FF_OLD_STRONGBUST        = 0x20000000,
+	FF_OLD_RIPPLE            = 0x40000000,
+	FF_OLD_COLORMAPONLY      = 0x80000000,
+} oldffloortype_e;
+
+typedef enum
+{
+	FB_PUSHABLES   = 0x1, // Bustable by pushables
+	FB_EXECUTOR    = 0x2, // Trigger linedef executor
+	FB_ONLYBOTTOM  = 0x4, // Only bustable from below
+} ffloorbustflags_e;
+
+typedef enum
+{
+	BT_TOUCH,
+	BT_SPINBUST,
+	BT_REGULAR,
+	BT_STRONG,
+} busttype_e;
+
+typedef enum
+{
+	SECPORTAL_LINE,    // Works similar to a line portal
+	SECPORTAL_SKYBOX,  // Uses the skybox object as the reference view
+	SECPORTAL_PLANE,   // Eternity Engine's plane portal type
+	SECPORTAL_HORIZON, // Eternity Engine's horizon portal type
+	SECPORTAL_OBJECT,  // Uses an object as the reference view
+	SECPORTAL_FLOOR,   // Uses a sector as the reference view; the view height is aligned with the sector's floor
+	SECPORTAL_CEILING, // Uses a sector as the reference view; the view height is aligned with the sector's ceiling
+	SECPORTAL_NONE = 0xFF
+} secportaltype_e;
+
+typedef struct sectorportal_s
+{
+	secportaltype_e type;
+	union {
+		struct {
+			struct line_s *start;
+			struct line_s *dest;
+		} line;
+		struct sector_s *sector;
+		struct mobj_s *mobj;
+	};
+	struct sector_s *target;
+	boolean ceiling;
+} sectorportal_t;
 
 typedef struct ffloor_s
 {
@@ -161,12 +256,16 @@ typedef struct ffloor_s
 	INT16 *toplightlevel;
 	fixed_t *topxoffs;
 	fixed_t *topyoffs;
+	fixed_t *topxscale;
+	fixed_t *topyscale;
 	angle_t *topangle;
 
 	fixed_t *bottomheight;
 	INT32 *bottompic;
 	fixed_t *bottomxoffs;
 	fixed_t *bottomyoffs;
+	fixed_t *bottomxscale;
+	fixed_t *bottomyscale;
 	angle_t *bottomangle;
 
 	// Pointers to pointers. Yup.
@@ -174,7 +273,7 @@ typedef struct ffloor_s
 	struct pslope_s **b_slope;
 
 	size_t secnum;
-	ffloortype_e flags;
+	ffloortype_e fofflags;
 	struct line_s *master;
 
 	struct sector_s *target;
@@ -184,7 +283,20 @@ typedef struct ffloor_s
 
 	INT32 lastlight;
 	INT32 alpha;
+	UINT8 blend; // blendmode
 	tic_t norender; // for culling
+
+	// Only relevant for FOF_BUSTUP
+	ffloorbustflags_e bustflags;
+	UINT8 busttype;
+	INT16 busttag;
+
+	// Only relevant for FOF_QUICKSAND
+	fixed_t sinkspeed;
+	fixed_t friction;
+
+	// Only relevant for FOF_BOUNCY
+	fixed_t bouncestrength;
 
 	// these are saved for netgames, so do not let Lua touch these!
 	ffloortype_e spawnflags; // flags the 3D floor spawned with
@@ -204,7 +316,7 @@ typedef struct lightlist_s
 	extracolormap_t **extra_colormap; // pointer-to-a-pointer, so we can react to colormap changes
 	INT32 flags;
 	ffloor_t *caster;
-	struct pslope_s *slope; // FF_DOUBLESHADOW makes me have to store this pointer here. Bluh bluh.
+	struct pslope_s *slope; // FOF_DOUBLESHADOW makes me have to store this pointer here. Bluh bluh.
 } lightlist_t;
 
 
@@ -245,22 +357,85 @@ typedef struct pslope_s
 	angle_t zangle;		/// Precomputed angle of the plane going up from the ground (not measured in degrees).
 	angle_t xydirection;/// Precomputed angle of the normal's projection on the XY plane.
 
+	dvector3_t dorigin;
+	dvector3_t dnormdir;
+
+	double dzdelta;
+
+	boolean moved;
+
 	UINT8 flags; // Slope options
 } pslope_t;
 
 typedef enum
 {
 	// flipspecial - planes with effect
-	SF_FLIPSPECIAL_FLOOR       =  1,
-	SF_FLIPSPECIAL_CEILING     =  1<<1,
-	SF_FLIPSPECIAL_BOTH        =  (SF_FLIPSPECIAL_FLOOR|SF_FLIPSPECIAL_CEILING),
+	MSF_FLIPSPECIAL_FLOOR       =  1,
+	MSF_FLIPSPECIAL_CEILING     =  1<<1,
+	MSF_FLIPSPECIAL_BOTH        =  (MSF_FLIPSPECIAL_FLOOR|MSF_FLIPSPECIAL_CEILING),
 	// triggerspecial - conditions under which plane touch causes effect
-	SF_TRIGGERSPECIAL_TOUCH    =  1<<2,
-	SF_TRIGGERSPECIAL_HEADBUMP =  1<<3,
+	MSF_TRIGGERSPECIAL_TOUCH    =  1<<2,
+	MSF_TRIGGERSPECIAL_HEADBUMP =  1<<3,
+	// triggerline - conditions for linedef executor triggering
+	MSF_TRIGGERLINE_PLANE       =  1<<4, // require plane touch
+	MSF_TRIGGERLINE_MOBJ        =  1<<5, // allow non-pushable mobjs to trigger
 	// invertprecip - inverts presence of precipitation
-	SF_INVERTPRECIP            =  1<<4,
+	MSF_INVERTPRECIP            =  1<<6,
+	MSF_GRAVITYFLIP             =  1<<7,
+	MSF_HEATWAVE                =  1<<8,
+	MSF_NOCLIPCAMERA            =  1<<9,
 } sectorflags_t;
 
+typedef enum
+{
+	SSF_OUTERSPACE = 1,
+	SSF_DOUBLESTEPUP = 1<<1,
+	SSF_NOSTEPDOWN = 1<<2,
+	SSF_WINDCURRENT = 1<<3,
+	SSF_CONVEYOR = 1<<4,
+	SSF_SPEEDPAD = 1<<5,
+	SSF_STARPOSTACTIVATOR = 1<<6,
+	SSF_EXIT = 1<<7,
+	SSF_SPECIALSTAGEPIT = 1<<8,
+	SSF_RETURNFLAG = 1<<9,
+	SSF_REDTEAMBASE = 1<<10,
+	SSF_BLUETEAMBASE = 1<<11,
+	SSF_FAN = 1<<12,
+	SSF_SUPERTRANSFORM = 1<<13,
+	SSF_FORCESPIN = 1<<14,
+	SSF_ZOOMTUBESTART = 1<<15,
+	SSF_ZOOMTUBEEND = 1<<16,
+	SSF_FINISHLINE = 1<<17,
+	SSF_ROPEHANG = 1<<18,
+	SSF_JUMPFLIP = 1<<19,
+	SSF_GRAVITYOVERRIDE = 1<<20, // combine with MSF_GRAVITYFLIP
+	SSF_NOPHYSICSFLOOR = 1<<21,
+	SSF_NOPHYSICSCEILING = 1<<22,
+} sectorspecialflags_t;
+
+typedef enum
+{
+	SD_NONE = 0,
+	SD_GENERIC = 1,
+	SD_WATER = 2,
+	SD_FIRE = 3,
+	SD_LAVA = 4,
+	SD_ELECTRIC = 5,
+	SD_SPIKE = 6,
+	SD_DEATHPITTILT = 7,
+	SD_DEATHPITNOTILT = 8,
+	SD_INSTAKILL = 9,
+	SD_SPECIALSTAGE = 10,
+} sectordamage_t;
+
+typedef enum
+{
+	TO_PLAYER = 0,
+	TO_ALLPLAYERS = 1,
+	TO_MOBJ = 2,
+	TO_PLAYEREMERALDS = 3, // only for binary backwards compatibility: check player emeralds
+	TO_PLAYERNIGHTS = 4, // only for binary backwards compatibility: check NiGHTS mare
+} triggerobject_t;
 
 typedef enum
 {
@@ -302,17 +477,25 @@ typedef struct sector_s
 	void *fadecolormapdata; // fade colormap thinker
 
 	// floor and ceiling texture offsets
-	fixed_t floor_xoffs, floor_yoffs;
-	fixed_t ceiling_xoffs, ceiling_yoffs;
+	fixed_t floorxoffset, flooryoffset;
+	fixed_t ceilingxoffset, ceilingyoffset;
+
+	// floor and ceiling texture scale
+	fixed_t floorxscale, flooryscale;
+	fixed_t ceilingxscale, ceilingyscale;
 
 	// flat angle
-	angle_t floorpic_angle;
-	angle_t ceilingpic_angle;
+	angle_t floorangle;
+	angle_t ceilingangle;
 
 	INT32 heightsec; // other sector, or -1 if no other sector
 	INT32 camsec; // used for camera clipping
 
-	INT32 floorlightsec, ceilinglightsec;
+	// floor and ceiling lighting
+	INT16 floorlightlevel, ceilinglightlevel;
+	boolean floorlightabsolute, ceilinglightabsolute; // absolute or relative to sector's light level?
+	INT32 floorlightsec, ceilinglightsec; // take floor/ceiling light level from another sector
+
 	INT32 crumblestate; // used for crumbling and bobbing
 
 	// list of mobjs that are at least partially in the sector
@@ -336,10 +519,18 @@ typedef struct sector_s
 	extracolormap_t *extra_colormap;
 	boolean colormap_protected;
 
-	// This points to the master's floorheight, so it can be changed in realtime!
-	fixed_t *gravity; // per-sector gravity
-	boolean verticalflip; // If gravity < 0, then allow flipped physics
+	fixed_t gravity; // per-sector gravity factor
+	fixed_t *gravityptr; // For binary format: Read gravity from floor height of master sector
+
 	sectorflags_t flags;
+	sectorspecialflags_t specialflags;
+	UINT8 damagetype;
+
+	// Linedef executor triggering
+	mtag_t triggertag; // tag to call upon triggering
+	UINT8 triggerer; // who can trigger?
+
+	fixed_t friction;
 
 	// Sprite culling feature
 	struct line_s *cullheight;
@@ -361,6 +552,10 @@ typedef struct sector_s
 
 	// colormap structure
 	extracolormap_t *spawn_extra_colormap;
+
+	// portals
+	UINT32 portal_floor;
+	UINT32 portal_ceiling;
 } sector_t;
 
 //
@@ -374,10 +569,14 @@ typedef enum
 	ST_NEGATIVE
 } slopetype_t;
 
-#define HORIZONSPECIAL 41
+#define SPECIAL_HORIZON_LINE 41
 
-#define NUMLINEARGS 6
+#define SPECIAL_SECTOR_SETPORTAL 6
+
+#define NUMLINEARGS 10
 #define NUMLINESTRINGARGS 2
+
+#define NO_SIDEDEF 0xFFFFFFFF
 
 typedef struct line_s
 {
@@ -386,6 +585,7 @@ typedef struct line_s
 	vertex_t *v2;
 
 	fixed_t dx, dy; // Precalculated v2 - v1 for side checking.
+	angle_t angle; // Precalculated angle between dx and dy
 
 	// Animation related.
 	INT16 flags;
@@ -395,8 +595,9 @@ typedef struct line_s
 	char *stringargs[NUMLINESTRINGARGS];
 
 	// Visual appearance: sidedefs.
-	UINT16 sidenum[2]; // sidenum[1] will be 0xffff if one-sided
+	UINT32 sidenum[2]; // sidenum[1] will be NO_SIDEDEF if one-sided
 	fixed_t alpha; // translucency
+	UINT8 blendmode; // blendmode
 	INT32 executordelay;
 
 	fixed_t bbox[4]; // bounding box for the extent of the linedef
@@ -412,8 +613,11 @@ typedef struct line_s
 	size_t validcount; // if == validcount, already checked
 	polyobj_t *polyobj; // Belongs to a polyobject?
 
-	char *text; // a concatenation of all front and back texture names, for linedef specials that require a string.
 	INT16 callcount; // no. of calls left before triggering, for the "X calls" linedef specials, defaults to 0
+
+	UINT32 secportal; // transferred sector portal
+
+	struct pslope_s *midtexslope;
 } line_t;
 
 typedef struct
@@ -423,6 +627,18 @@ typedef struct
 
 	// add this to the calculated texture top
 	fixed_t rowoffset;
+
+	// per-texture offsets for UDMF
+	fixed_t offsetx_top, offsetx_mid, offsetx_bottom;
+	fixed_t offsety_top, offsety_mid, offsety_bottom;
+
+	fixed_t scalex_top, scalex_mid, scalex_bottom;
+	fixed_t scaley_top, scaley_mid, scaley_bottom;
+
+	// per-wall lighting for UDMF
+	// TODO: implement per-texture lighting
+	INT16 light, light_top, light_mid, light_bottom;
+	boolean lightabsolute, lightabsolute_top, lightabsolute_mid, lightabsolute_bottom;
 
 	// Texture indices.
 	// We do not maintain names here.
@@ -437,8 +653,6 @@ typedef struct
 	INT16 special; // the special of the linedef this side belongs to
 	INT16 repeatcnt; // # of times to repeat midtexture
 
-	char *text; // a concatenation of all top, bottom, and mid texture names, for linedef specials that require a string.
-
 	extracolormap_t *colormap_data; // storage for colormaps; not applied to sectors.
 } side_t;
 
@@ -452,7 +666,7 @@ typedef struct subsector_s
 {
 	sector_t *sector;
 	INT16 numlines;
-	UINT16 firstline;
+	UINT32 firstline;
 	struct polyobj_s *polyList; // haleyjd 02/19/06: list of polyobjects
 	size_t validcount;
 } subsector_t;
@@ -550,9 +764,6 @@ typedef struct seg_s
 	lightmap_t *lightmaps; // for static lightmap
 #endif
 
-	// Why slow things down by calculating lightlists for every thick side?
-	size_t numlights;
-	r_lightlist_t *rlights;
 	polyobj_t *polyseg;
 	boolean dontrenderme;
 	boolean glseg;
@@ -583,14 +794,26 @@ typedef struct
 {
 	UINT8 topdelta; // -1 is the last post in a column
 	UINT8 length;   // length data bytes follows
-} ATTRPACK post_t;
+} ATTRPACK doompost_t;
 
 #if defined(_MSC_VER)
 #pragma pack()
 #endif
 
-// column_t is a list of 0 or more post_t, (UINT8)-1 terminated
-typedef post_t column_t;
+typedef struct
+{
+	unsigned topdelta;
+	unsigned length;
+	size_t data_offset;
+} post_t;
+
+// column_t is a list of 0 or more post_t
+typedef struct
+{
+	unsigned num_posts;
+	post_t *posts;
+	UINT8 *pixels;
+} column_t;
 
 //
 // OTHER TYPES
@@ -618,33 +841,26 @@ typedef struct drawseg_s
 	fixed_t bsilheight; // do not clip sprites above this
 	fixed_t tsilheight; // do not clip sprites below this
 
+	fixed_t offsetx;
+
 	// Pointers to lists for sprite clipping, all three adjusted so [x1] is first value.
 	INT16 *sprtopclip;
 	INT16 *sprbottomclip;
-	INT16 *maskedtexturecol;
+	fixed_t *maskedtexturecol;
+	fixed_t *maskedtextureheight; // For handling sloped midtextures
+	fixed_t *invscale;
 
 	struct visplane_s *ffloorplanes[MAXFFLOORS];
 	INT32 numffloorplanes;
 	struct ffloor_s *thicksides[MAXFFLOORS];
-	INT16 *thicksidecol;
+	fixed_t *thicksidecol;
 	INT32 numthicksides;
 	fixed_t frontscale[MAXVIDWIDTH];
 
 	UINT8 portalpass; // if > 0 and <= portalrender, do not affect sprite clipping
 
-	fixed_t maskedtextureheight[MAXVIDWIDTH]; // For handling sloped midtextures
-
 	vertex_t leftpos, rightpos; // Used for rendering FOF walls with slopes
 } drawseg_t;
-
-typedef enum
-{
-	PALETTE         = 0,  // 1 byte is the index in the doom palette (as usual)
-	INTENSITY       = 1,  // 1 byte intensity
-	INTENSITY_ALPHA = 2,  // 2 byte: alpha then intensity
-	RGB24           = 3,  // 24 bit rgb
-	RGBA32          = 4,  // 32 bit rgba
-} pic_mode_t;
 
 #ifdef ROTSPRITE
 typedef struct
@@ -664,8 +880,9 @@ typedef struct
 	INT16 width, height;
 	INT16 leftoffset, topoffset;
 
-	INT32 *columnofs; // Column offsets. This is relative to patch->columns
-	UINT8 *columns; // Software column data
+	UINT8 *pixels;
+	column_t *columns;
+	post_t *posts;
 
 	void *hardware; // OpenGL patch, allocated whenever necessary
 	void *flats[4]; // The patch as flats
@@ -689,29 +906,12 @@ typedef struct
 	// the [0] is &columnofs[width]
 } ATTRPACK softwarepatch_t;
 
-#ifdef _MSC_VER
-#pragma warning(disable :  4200)
-#endif
-
-// a pic is an unmasked block of pixels, stored in horizontal way
-typedef struct
-{
-	INT16 width;
-	UINT8 zero;       // set to 0 allow autodetection of pic_t
-	                 // mode instead of patch or raw
-	UINT8 mode;       // see pic_mode_t above
-	INT16 height;
-	INT16 reserved1; // set to 0
-	UINT8 data[0];
-} ATTRPACK pic_t;
-
-#ifdef _MSC_VER
-#pragma warning(default : 4200)
-#endif
-
 #if defined(_MSC_VER)
 #pragma pack()
 #endif
+
+// Possible alpha types for a patch.
+enum patchalphastyle {AST_COPY, AST_TRANSLUCENT, AST_ADD, AST_SUBTRACT, AST_REVERSESUBTRACT, AST_MODULATE, AST_OVERLAY, AST_FOG};
 
 typedef enum
 {
@@ -726,17 +926,19 @@ typedef enum
 	RF_NOSPLATBILLBOARD = 0x0040,   // Don't billboard floor sprites (faces forward from the view angle)
 	RF_NOSPLATROLLANGLE = 0x0080,   // Don't rotate floor sprites by the object's rollangle (uses rotated patches instead)
 
-	RF_BLENDMASK        = 0x0F00,   // --Blending modes
-	RF_FULLBRIGHT       = 0x0100,   // Sprite is drawn at full brightness
-	RF_FULLDARK         = 0x0200,   // Sprite is drawn completely dark
-	RF_NOCOLORMAPS      = 0x0400,   // Sprite is not drawn with colormaps
+	RF_BRIGHTMASK       = 0x00000300,   // --Bright modes
+	RF_FULLBRIGHT       = 0x00000100,   // Sprite is drawn at full brightness
+	RF_FULLDARK         = 0x00000200,   // Sprite is drawn completely dark
+	RF_SEMIBRIGHT       = (RF_FULLBRIGHT | RF_FULLDARK), // between sector bright and full bright
 
-	RF_SPRITETYPEMASK   = 0x7000,   // ---Different sprite types
-	RF_PAPERSPRITE      = 0x1000,   // Paper sprite
-	RF_FLOORSPRITE      = 0x2000,   // Floor sprite
+	RF_NOCOLORMAPS      = 0x00000400,   // Sprite is not drawn with colormaps
 
-	RF_SHADOWDRAW       = 0x10000,  // Stretches and skews the sprite like a shadow.
-	RF_SHADOWEFFECTS    = 0x20000,  // Scales and becomes transparent like a shadow.
+	RF_SPRITETYPEMASK   = 0x00003000,   // --Different sprite types
+	RF_PAPERSPRITE      = 0x00001000,   // Paper sprite
+	RF_FLOORSPRITE      = 0x00002000,   // Floor sprite
+
+	RF_SHADOWDRAW       = 0x00004000,  // Stretches and skews the sprite like a shadow.
+	RF_SHADOWEFFECTS    = 0x00008000,  // Scales and becomes transparent like a shadow.
 	RF_DROPSHADOW       = (RF_SHADOWDRAW | RF_SHADOWEFFECTS | RF_FULLDARK),
 } renderflags_t;
 
@@ -781,9 +983,11 @@ typedef struct
 	UINT16 flip;
 
 #ifdef ROTSPRITE
-	rotsprite_t *rotated[2][16]; // Rotated patches
+	rotsprite_t *rotated[16]; // Rotated patches
 #endif
 } spriteframe_t;
+
+#define MAXFRAMENUM 256
 
 //
 // A sprite definition:  a number of animation frames.

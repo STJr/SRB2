@@ -11,19 +11,20 @@
 
 #ifdef CMAKECONFIG
 
-#define ASSET_HASH_SRB2_PK3   "${SRB2_ASSET_srb2.pk3_HASH}"
-#define ASSET_HASH_PLAYER_DTA "${SRB2_ASSET_player.dta_HASH}"
-#define ASSET_HASH_ZONES_PK3  "${SRB2_ASSET_zones.pk3_HASH}"
-#ifdef USE_PATCH_DTA
-#define ASSET_HASH_PATCH_PK3  "${SRB2_ASSET_patch.pk3_HASH}"
+#define SRB2_COMP_REVISION       "${SRB2_COMP_REVISION}"
+#define SRB2_COMP_BRANCH         "${SRB2_COMP_BRANCH}"
+#define SRB2_COMP_NOTE           "${SRB2_COMP_NOTE}"
+// This is done with configure_file instead of defines in order to avoid
+// recompiling the whole target whenever the working directory state changes
+#cmakedefine SRB2_COMP_UNCOMMITTED
+#ifdef SRB2_COMP_UNCOMMITTED
+#define COMPVERSION_UNCOMMITTED
 #endif
 
-#define SRB2_COMP_REVISION    "${SRB2_COMP_REVISION}"
-#define SRB2_COMP_BRANCH      "${SRB2_COMP_BRANCH}"
+#define CMAKE_BUILD_TYPE         "${CMAKE_BUILD_TYPE}"
+#cmakedefine01 SRB2_COMP_OPTIMIZED
 
-#define CMAKE_ASSETS_DIR      "${CMAKE_SOURCE_DIR}/assets"
-
-#else
+#endif
 
 /* Manually defined asset hashes for non-CMake builds
  * Last updated 2020 / 02 / 15 - v2.2.1 - main assets
@@ -35,13 +36,17 @@
  * Last updated 2020 / 09 / 27 - v2.2.7 - patch.pk3
  * Last updated 2020 / 10 / 02 - v2.2.8 - patch.pk3
  * Last updated 2021 / 05 / 06 - v2.2.9 - patch.pk3 & zones.pk3
+ * Last updated 2022 / 03 / 06 - v2.2.10 - main assets
+ * Last updated 2023 / 05 / 02 - v2.2.11 - patch.pk3 & zones.pk3
+ * Last updated 2023 / 09 / 06 - v2.2.12 - patch.pk3
+ * Last updated 2023 / 09 / 09 - v2.2.13 - none
+ * Last updated 2025 / 01 / 16 - v2.2.14 - main assets
  */
-#define ASSET_HASH_SRB2_PK3   "0277c9416756627004e83cbb5b2e3e28"
-#define ASSET_HASH_ZONES_PK3  "f8f3e2b5deacf40f14e36686a07d44bb"
-#define ASSET_HASH_PLAYER_DTA "49dad7b24634c89728cc3e0b689e12bb"
+#define ASSET_HASH_SRB2_PK3   "c1d9a4b3452b350d4662f41eb301dc6c"
+#define ASSET_HASH_ZONES_PK3  "2ab758817fff96bc60ee9dec85e0b534"
+#define ASSET_HASH_CHARACTERS_PK3 "97ce7008d16152731fe037141309aa24"
 #ifdef USE_PATCH_DTA
-#define ASSET_HASH_PATCH_PK3  "7d467a883f7887b3c311798ee2f56b6a"
+#define ASSET_HASH_PATCH_PK3  "3c7b73f34af7e9a7bceb2d5260f76172"
 #endif
 
-#endif
 #endif

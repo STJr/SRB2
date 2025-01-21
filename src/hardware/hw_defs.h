@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2021 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -17,6 +17,12 @@
 
 #define ZCLIP_PLANE 4.0f // Used for the actual game drawing
 #define NZCLIP_PLANE 0.9f // Seems to be only used for the HUD and screen textures
+
+// The width/height/depth of the palette lookup table used by palette rendering.
+// Changing this also requires changing the shader code!
+// Also assumed to be a power of two in some parts of the code.
+// 64 seems to work perfectly for the vanilla palette.
+#define HWR_PALETTE_LUT_SIZE 64
 
 // ==========================================================================
 //                                                               SIMPLE TYPES
@@ -93,33 +99,22 @@ typedef struct FVector
 //Hurdler: Transform (coords + angles)
 //BP: transform order : scale(rotation_x(rotation_y(translation(v))))
 
-// Kart features
-//#define USE_FTRANSFORM_ANGLEZ
-//#define USE_FTRANSFORM_MIRROR
-
 // Vanilla features
 #define USE_MODEL_NEXTFRAME
 
 typedef struct
 {
 	FLOAT       x,y,z;           // position
-#ifdef USE_FTRANSFORM_ANGLEZ
 	FLOAT       anglex,angley,anglez;   // aimingangle / viewangle
-#else
-	FLOAT       anglex,angley;   // aimingangle / viewangle
-#endif
 	FLOAT       scalex,scaley,scalez;
 	FLOAT       fovxangle, fovyangle;
 	UINT8       splitscreen;
 	boolean     flip;            // screenflip
 	boolean     roll;
-	SINT8       rollflip;
 	FLOAT       rollangle; // done to not override USE_FTRANSFORM_ANGLEZ
-	UINT8       rotaxis;
 	FLOAT       centerx, centery;
-#ifdef USE_FTRANSFORM_MIRROR
+	FLOAT       rollx, rollz;
 	boolean     mirror;          // SRB2Kart: Encore Mode
-#endif
 	boolean     shearing;        // 14042019
 	float       viewaiming;      // 17052019
 } FTransform;
@@ -133,32 +128,31 @@ typedef struct
 } FOutVector;
 
 #ifdef GL_SHADERS
-// Predefined shader types
+
+// Shader targets used to render specific types of geometry.
+// A shader target is resolved to an actual shader with HWR_GetShaderFromTarget.
+// The shader returned may be a base shader or a custom shader.
 enum
 {
-	SHADER_DEFAULT = 0,
+	SHADER_NONE = -1,
 
-	SHADER_FLOOR,
+	SHADER_FLOOR = 0,
 	SHADER_WALL,
 	SHADER_SPRITE,
-	SHADER_MODEL, SHADER_MODEL_LIGHTING,
+	SHADER_MODEL,
 	SHADER_WATER,
 	SHADER_FOG,
 	SHADER_SKY,
+	SHADER_PALETTE_POSTPROCESS,
+	SHADER_UI_COLORMAP_FADE,
+	SHADER_UI_TINTED_WIPE,
 
-	NUMBASESHADERS,
+	NUMSHADERTARGETS
 };
 
 // Maximum amount of shader programs
-// Must be higher than NUMBASESHADERS
-#define HWR_MAXSHADERS 16
-
-// Shader sources (vertex and fragment)
-typedef struct
-{
-	char *vertex;
-	char *fragment;
-} shadersource_t;
+// Must be at least NUMSHADERTARGETS*2 to fit base and custom shaders for each shader target.
+#define HWR_MAXSHADERS NUMSHADERTARGETS*2
 
 // Custom shader reference table
 typedef struct
@@ -237,7 +231,8 @@ enum EPolyFlags
 	PF_RemoveYWrap      = 0x00010000,   // Forces clamp texture on Y
 	PF_ForceWrapX       = 0x00020000,   // Forces repeat texture on X
 	PF_ForceWrapY       = 0x00040000,   // Forces repeat texture on Y
-	PF_Ripple           = 0x00100000    // Water ripple effect. The current backend doesn't use it for anything.
+	PF_Ripple           = 0x00100000,   // Water ripple effect. The current backend doesn't use it for anything.
+	PF_WireFrame        = 0x00200000,   // Draws vertices as lines instead of triangles
 };
 
 
@@ -251,7 +246,7 @@ enum ETextureFlags
 	TF_WRAPX       = 0x00000001,        // wrap around X
 	TF_WRAPY       = 0x00000002,        // wrap around Y
 	TF_WRAPXY      = TF_WRAPY|TF_WRAPX, // very common so use alias is more easy
-	TF_CHROMAKEYED = 0x00000010,
+	TF_CHROMAKEYED = 0x00000010,        // Used only for flats with pixels that have palette index 255
 	TF_TRANSPARENT = 0x00000040,        // texture with some alpha == 0
 };
 
@@ -281,6 +276,7 @@ struct FSurfaceInfo
 	RGBA_t			PolyColor;
 	RGBA_t			TintColor;
 	RGBA_t			FadeColor;
+	UINT32			LightTableId;
 	FLightInfo		LightInfo;
 };
 typedef struct FSurfaceInfo FSurfaceInfo;
@@ -288,27 +284,26 @@ typedef struct FSurfaceInfo FSurfaceInfo;
 #define GL_DEFAULTMIX 0x00000000
 #define GL_DEFAULTFOG 0xFF000000
 
-//Hurdler: added for backward compatibility
+// Various settings and states for the rendering backend.
 enum hwdsetspecialstate
 {
 	HWD_SET_MODEL_LIGHTING = 1,
 	HWD_SET_SHADERS,
 	HWD_SET_TEXTUREFILTERMODE,
 	HWD_SET_TEXTUREANISOTROPICMODE,
+	HWD_SET_WIREFRAME,
 	HWD_NUMSTATE
 };
 
 typedef enum hwdsetspecialstate hwdspecialstate_t;
 
-// Lactozilla: Shader options
-enum hwdshaderoption
+enum hwdshaderstage
 {
-	HWD_SHADEROPTION_OFF,
-	HWD_SHADEROPTION_ON,
-	HWD_SHADEROPTION_NOCUSTOM,
+	HWD_SHADERSTAGE_VERTEX,
+	HWD_SHADERSTAGE_FRAGMENT,
 };
 
-typedef enum hwdshaderoption hwdshaderoption_t;
+typedef enum hwdshaderstage hwdshaderstage_t;
 
 // Lactozilla: Shader info
 // Generally set at the start of the frame.
@@ -328,6 +323,19 @@ enum hwdfiltermode
 	HWD_SET_TEXTUREFILTER_MIXED2,
 	HWD_SET_TEXTUREFILTER_MIXED3,
 };
+
+// Screen texture slots
+enum hwdscreentexture
+{
+	HWD_SCREENTEXTURE_WIPE_START, // source image for the wipe/fade effect
+	HWD_SCREENTEXTURE_WIPE_END,   // destination image for the wipe/fade effect
+	HWD_SCREENTEXTURE_GENERIC1,   // underwater/heat effect, intermission background
+	HWD_SCREENTEXTURE_GENERIC2,   // palette-based colormap fade, screen before palette rendering's postprocessing
+	HWD_SCREENTEXTURE_GENERIC3,   // screen after palette rendering's postprocessing
+	NUMSCREENTEXTURES,            // (generic3 is unused if palette rendering is disabled)
+};
+
+typedef enum hwdscreentexture hwdscreentexture_t;
 
 
 #endif //_HWR_DEFS_

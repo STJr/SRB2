@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2012-2016 by John "JTE" Muniz.
-// Copyright (C) 2012-2021 by Sonic Team Junior.
+// Copyright (C) 2012-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -127,8 +127,7 @@ static int lib_startIterate(lua_State *L)
 int LUA_ThinkerLib(lua_State *L)
 {
 	luaL_newmetatable(L, META_ITERATIONSTATE);
-	lua_pushcfunction(L, iterationState_gc);
-	lua_setfield(L, -2, "__gc");
+	LUA_SetCFunctionField(L, "__gc", iterationState_gc);
 	lua_pop(L, 1);
 
 	lua_createtable(L, 0, 1);

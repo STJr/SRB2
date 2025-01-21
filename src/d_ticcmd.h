@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2021 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -21,23 +21,28 @@
 #pragma interface
 #endif
 
+#define MAXPREDICTTICS 12
+
 // Button/action code definitions.
 typedef enum
 {
-	// First 4 bits are weapon change info, DO NOT USE!
-	BT_WEAPONMASK = 0x0F, //our first four bits.
+	// First 3 bits are weapon change info, DO NOT USE!
+	BT_WEAPONMASK = 0x07,  //our first three bits.
+	
+	BT_SHIELD     = 1<<3,  // shield or super action
 
-	BT_WEAPONNEXT = 1<<4,
-	BT_WEAPONPREV = 1<<5,
+	BT_WEAPONNEXT = 1<<4,  // select next weapon
+	BT_WEAPONPREV = 1<<5,  // select previous weapon
 
-	BT_ATTACK     = 1<<6, // shoot rings
-	BT_SPIN       = 1<<7,
-	BT_CAMLEFT    = 1<<8, // turn camera left
-	BT_CAMRIGHT   = 1<<9, // turn camera right
-	BT_TOSSFLAG   = 1<<10,
-	BT_JUMP       = 1<<11,
-	BT_FIRENORMAL = 1<<12, // Fire a normal ring no matter what
-
+	BT_ATTACK     = 1<<6,  // shoot rings
+	BT_SPIN       = 1<<7,  // spin action
+	BT_CAMLEFT    = 1<<8,  // turn camera left
+	BT_CAMRIGHT   = 1<<9,  // turn camera right
+	BT_TOSSFLAG   = 1<<10, // toss flag or emeralds
+	BT_JUMP       = 1<<11, // jump action
+	BT_FIRENORMAL = 1<<12, // fire a normal ring no matter what
+	
+	// custom lua buttons
 	BT_CUSTOM1    = 1<<13,
 	BT_CUSTOM2    = 1<<14,
 	BT_CUSTOM3    = 1<<15,
@@ -63,6 +68,7 @@ typedef struct
 	INT16 angleturn; // <<16 for angle delta - saved as 1 byte into demos
 	INT16 aiming; // vertical aiming, see G_BuildTicCmd
 	UINT16 buttons;
+	UINT8 latency; // Netgames: how many tics ago was this ticcmd generated from this player's end?
 } ATTRPACK ticcmd_t;
 
 #if defined(_MSC_VER)

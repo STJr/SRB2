@@ -1,1 +1,28 @@
-target_sourcefile(c)
+target_sources(SRB2SDL2 PRIVATE
+	lapi.c
+	lbaselib.c
+	ldo.c
+	lfunc.c
+	linit.c
+	liolib.c
+	llex.c
+	lmem.c
+	lobject.c
+	lstate.c
+	lstrlib.c
+	ltablib.c
+	lundump.c
+	lzio.c
+	lauxlib.c
+	lcode.c
+	ldebug.c
+	ldump.c
+	lgc.c
+	lopcodes.c
+	lparser.c
+	lstring.c
+	ltable.c
+	ltm.c
+	lvm.c
+	loslib.c
+)

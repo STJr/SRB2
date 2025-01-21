@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2021 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -81,7 +81,7 @@ extern angle_t tantoangle[SLOPERANGE+1];
 
 // Utility function, called by R_PointToAngle.
 FUNCMATH unsigned SlopeDiv(unsigned num, unsigned den);
-// Only called by R_PointToAngleEx
+// Only called by R_PointToAngle64
 UINT64 SlopeDivEx(unsigned int num, unsigned int den);
 
 // 360 - angle_t(ANGLE_45) = ANGLE_315
@@ -107,7 +107,10 @@ boolean FV3_InsidePolygon(const vector3_t *vIntersection, const vector3_t *Poly,
 boolean FV3_IntersectedPolygon(const vector3_t *vPoly, const vector3_t *vLine, const INT32 vertexCount, vector3_t *collisionPoint);
 void FV3_Rotate(vector3_t *rotVec, const vector3_t *axisVec, const angle_t angle);
 /// Fixed Point Matrix functions
-void FM_Rotate(matrix_t *dest, angle_t angle, fixed_t x, fixed_t y, fixed_t z);
+matrix_t *FM_Rotate(matrix_t *dest, angle_t angle, fixed_t x, fixed_t y, fixed_t z);
+matrix_t *FM_RotateX(matrix_t *dest, angle_t rad);
+matrix_t *FM_RotateY(matrix_t *dest, angle_t rad);
+matrix_t *FM_RotateZ(matrix_t *dest, angle_t rad);
 
 // The table values in tables.c are calculated with this many fractional bits.
 #define FINE_FRACBITS 16

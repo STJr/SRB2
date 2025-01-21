@@ -1,0 +1,54 @@
+Debian stable:arm64:
+  extends: .srb2ci
+
+  stage: build
+
+  when: manual
+
+  artifacts:
+    paths:
+      - "build.cmake/bin/"
+      - "build.cmake/src/config.h"
+    expose_as: "Debian arm64"
+    name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-aarch64"
+
+  variables:
+    CC: aarch64-linux-gnu-gcc
+    LDFLAGS: -Wl,-fuse-ld=gold
+    OBJCOPY: aarch64-linux-gnu-objcopy
+    OBJDUMP: aarch64-linux-gnu-objdump
+    LD: aarch64-linux-gnu-ld
+    PKG_CONFIG_PATH: /usr/lib/aarch64-linux-gnu/pkgconfig
+
+  script:
+    - - |
+          # apt_toolchain
+          echo -e "\e[0Ksection_start:`date +%s`:apt_toolchain[collapsed=true]\r\e[0KInstalling toolchain packages"
+      - apt-get install gcc-aarch64-linux-gnu || apt-get install gcc
+      - |
+          # apt_toolchain
+          echo -e "\e[0Ksection_end:`date +%s`:apt_toolchain\r\e[0K"
+
+    - - |
+          # apt_development
+          echo -e "\e[0Ksection_start:`date +%s`:apt_development[collapsed=true]\r\e[0KInstalling development packages"
+      - apt-get install libsdl2-mixer-dev:arm64 libpng-dev:arm64 libcurl4-openssl-dev:arm64 libgme-dev:arm64 libopenmpt-dev:arm64 libminiupnpc-dev:arm64
+      - |
+          # apt_development
+          echo -e "\e[0Ksection_end:`date +%s`:apt_development\r\e[0K"
+
+    - - |
+          # cmake
+          echo -e "\e[0Ksection_start:`date +%s`:cmake[collapsed=false]\r\e[0KBuilding Makefiles"
+      - cmake -B build.cmake -DSRB2_USE_CCACHE=YES -DSRB2_CONFIG_ERRORMODE=ON -DSRB2_CONFIG_FORCE_NO_MS_BITFIELDS=ON -G "Unix Makefiles"
+      - |
+          # cmake
+          echo -e "\e[0Ksection_end:`date +%s`:cmake\r\e[0K"
+
+    - - |
+          # make
+          echo -e "\e[0Ksection_start:`date +%s`:make[collapsed=false]\r\e[0KCompiling SRB2"
+      - make --directory=build.cmake --keep-going || make --directory=build.cmake --keep-going
+      - |
+          # make
+          echo -e "\e[0Ksection_end:`date +%s`:make\r\e[0K"
