@@ -1,5 +1,5 @@
-Debian oldstable:amd64:
-  extends: Debian stable:amd64
+Debian oldstable:amd64 Makefile:
+  extends: Debian stable:amd64 Makefile
 
   when: manual
 
@@ -9,10 +9,10 @@ Debian oldstable:amd64:
 
   artifacts:
     paths:
-      - "build.cmake/bin/"
-      - "build.cmake/src/config.h"
-    expose_as: "Debian old amd64"
-    name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-old-x86-64"
+      - "bin/"
+      - "src/comptime.h"
+    expose_as: "Debian old amd64 makefile"
+    name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-old-x86-64-makefile"
 
   script:
     - - |
@@ -32,17 +32,9 @@ Debian oldstable:amd64:
           echo -e "\e[0Ksection_end:`date +%s`:apt_development\r\e[0K"
 
     - - |
-          # cmake
-          echo -e "\e[0Ksection_start:`date +%s`:cmake[collapsed=false]\r\e[0KBuilding Makefiles"
-      - cmake -B build.cmake -DSRB2_USE_CCACHE=YES -DSRB2_CONFIG_ERRORMODE=ON -DSRB2_CONFIG_USE_GME=OFF -G "Unix Makefiles"
-      - |
-          # cmake
-          echo -e "\e[0Ksection_end:`date +%s`:cmake\r\e[0K"
-
-    - - |
           # make
           echo -e "\e[0Ksection_start:`date +%s`:make[collapsed=false]\r\e[0KCompiling SRB2"
-      - make --directory=build.cmake --keep-going || make --directory=build.cmake --keep-going
+      - make --directory=src --keep-going CCACHE=1 ERRORMODE=1 LINUX64=1 NOGME=1 || make --directory=src --keep-going CCACHE=1 ERRORMODE=1 LINUX64=1 NOGME=1
       - |
           # make
           echo -e "\e[0Ksection_end:`date +%s`:make\r\e[0K"
