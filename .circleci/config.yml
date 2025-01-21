@@ -7,6 +7,7 @@ jobs:
         environment:
           CC: ccache gcc
           CCACHE_COMPRESS: true
+          WFLAGS: -Wno-error=unused-result
       #- image: ubuntu:trusty
       #  environment:
       #    CC: ccache gcc -m32
