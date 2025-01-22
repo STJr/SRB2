@@ -1395,7 +1395,7 @@ void P_DoSuperTransformation(player_t *player, boolean giverings)
 // P_DoSuperDetransformation
 //
 // Detransform into regular Sonic!
-void P_DoSuperDetransformation(player_t *player)
+static void P_DoSuperDetransformation(player_t *player)
 {
 	player->powers[pw_emeralds] = 0; // lost the power stones
 	P_SpawnGhostMobj(player->mo);
@@ -4199,6 +4199,16 @@ static void P_DoFiring(player_t *player, ticcmd_t *cmd)
 
 	I_Assert(player != NULL);
 	I_Assert(!P_MobjWasRemoved(player->mo));
+	
+	// Toss a flag
+	if (cmd->buttons & BT_TOSSFLAG && G_GametypeHasTeams()
+		&& !(player->powers[pw_super]) && !(player->tossdelay))
+	{
+		if (!(player->gotflag & (GF_REDFLAG|GF_BLUEFLAG)))
+			P_PlayerEmeraldBurst(player, true); // Toss emeralds
+		else
+			P_PlayerFlagBurst(player, true);
+	}
 
 	if (!(cmd->buttons & (BT_ATTACK|BT_FIRENORMAL)))
 	{
@@ -4208,7 +4218,7 @@ static void P_DoFiring(player_t *player, ticcmd_t *cmd)
 		return;
 	}
 
-	if (player->pflags & PF_ATTACKDOWN || player->climbing || (G_TagGametype() && !(player->pflags & PF_TAGIT)))
+	if (player->pflags & PF_ATTACKDOWN || player->climbing)
 		return;
 
 	// Fire a fireball if we have the Fire Flower powerup!
@@ -4224,7 +4234,7 @@ static void P_DoFiring(player_t *player, ticcmd_t *cmd)
 	}
 
 	// No ringslinging outside of ringslinger!
-	if (!G_RingSlingerGametype() || player->weapondelay)
+	if (!G_RingSlingerGametype() || player->weapondelay || (G_TagGametype() && !(player->pflags & PF_TAGIT)))
 		return;
 
 	player->pflags |= PF_ATTACKDOWN;
@@ -5277,7 +5287,7 @@ static boolean P_PlayerShieldThink(player_t *player, ticcmd_t *cmd, mobj_t *lock
 //
 // Handles player jumping
 //
-static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd, boolean spinshieldhack)
+static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 {
 	mobj_t *lockonthok = NULL, *visual = NULL;
 
@@ -5310,52 +5320,45 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd, boolean spinshieldhac
 			;
 		else if (P_PlayerShieldThink(player, cmd, lockonthok, visual))
 			;
-		else if (cmd->buttons & BT_SPIN)
+		else if ((cmd->buttons & BT_SPIN) && !LUA_HookPlayer(player, HOOK(JumpSpinSpecial)))
 		{
 			if (spinshieldhack && !(player->pflags & PF_SPINDOWN) && P_SuperReady(player))
 			{
-				// If you're using two-button play, can turn Super and aren't already,
-				// and you don't have a shield, then turn Super!
-				P_DoSuperTransformation(player, false);
-			}
-			else if (!LUA_HookPlayer(player, HOOK(JumpSpinSpecial)))
-				switch (player->charability)
-				{
-					case CA_THOK:
-						if (player->powers[pw_super]) // Super Sonic float
+				case CA_THOK:
+					if (player->powers[pw_super]) // Super Sonic float
+					{
+						if ((player->speed > 5*player->mo->scale) // FixedMul(5<<FRACBITS, player->mo->scale), but scale is FRACUNIT-based
+						&& (P_MobjFlip(player->mo)*player->mo->momz <= 0))
 						{
-							if ((player->speed > 5*player->mo->scale) // FixedMul(5<<FRACBITS, player->mo->scale), but scale is FRACUNIT-based
-							&& (P_MobjFlip(player->mo)*player->mo->momz <= 0))
+							if (player->panim != PA_RUN && player->panim != PA_WALK)
 							{
-								if (player->panim != PA_RUN && player->panim != PA_WALK)
-								{
-									if (player->speed >= FixedMul(player->runspeed, player->mo->scale))
-										P_SetMobjState(player->mo, S_PLAY_FLOAT_RUN);
-									else
-										P_SetMobjState(player->mo, S_PLAY_FLOAT);
-								}
-
-								player->mo->momz = 0;
-								player->pflags &= ~(PF_STARTJUMP|PF_SPINNING);
-								player->secondjump = 1;
+								if (player->speed >= FixedMul(player->runspeed, player->mo->scale))
+									P_SetMobjState(player->mo, S_PLAY_FLOAT_RUN);
+								else
+									P_SetMobjState(player->mo, S_PLAY_FLOAT);
 							}
+
+							player->mo->momz = 0;
+							player->pflags &= ~(PF_STARTJUMP|PF_SPINNING);
+							player->secondjump = 1;
 						}
-						break;
-					case CA_TELEKINESIS:
-						if (!(player->pflags & (PF_THOKKED|PF_SPINDOWN)) || (player->charflags & SF_MULTIABILITY))
-						{
-							P_Telekinesis(player,
-								-FixedMul(player->actionspd, player->mo->scale), // -ve thrust (pulling towards player)
-								FixedMul(384*FRACUNIT, player->mo->scale));
-						}
-						break;
-					case CA_TWINSPIN:
-						if ((player->charability2 == CA2_MELEE) && (!(player->pflags & (PF_THOKKED|PF_SPINDOWN)) || player->charflags & SF_MULTIABILITY))
-							P_DoTwinSpin(player);
-						break;
-					default:
-						break;
-				}
+					}
+					break;
+				case CA_TELEKINESIS:
+					if (!(player->pflags & (PF_THOKKED|PF_SPINDOWN)) || (player->charflags & SF_MULTIABILITY))
+					{
+						P_Telekinesis(player,
+							-FixedMul(player->actionspd, player->mo->scale), // -ve thrust (pulling towards player)
+							FixedMul(384*FRACUNIT, player->mo->scale));
+					}
+					break;
+				case CA_TWINSPIN:
+					if ((player->charability2 == CA2_MELEE) && (!(player->pflags & (PF_THOKKED|PF_SPINDOWN)) || player->charflags & SF_MULTIABILITY))
+						P_DoTwinSpin(player);
+					break;
+				default:
+					break;
+			}
 		}
 	}
 
@@ -8070,7 +8073,6 @@ void P_MovePlayer(player_t *player)
 {
 	ticcmd_t *cmd;
 	INT32 i;
-	boolean spinshieldhack = false; // Hack: Is Spin and Shield bound to the same button (pressed on the same tic)?
 
 	fixed_t runspd;
 
@@ -8692,13 +8694,10 @@ void P_MovePlayer(player_t *player)
 	&& !(player->mo->eflags & (MFE_UNDERWATER|MFE_TOUCHWATER)))
 		P_ElementalFire(player, false);
 
-	if ((cmd->buttons & (BT_SPIN|BT_SHIELD)) == (BT_SPIN|BT_SHIELD) && !(player->pflags & (PF_SPINDOWN|PF_SHIELDDOWN)))
-		spinshieldhack = true; // Spin and Shield is bound to the same button (pressed on the same tic), so enable two-button play (Jump and Spin+Shield)
-
 	P_DoSpinAbility(player, cmd);
 
 	// jumping
-	P_DoJumpStuff(player, cmd, spinshieldhack);
+	P_DoJumpStuff(player, cmd);
 
 	// If you're not spinning, you'd better not be spindashing!
 	if (!(player->pflags & PF_SPINNING) && player->powers[pw_carry] != CR_NIGHTSMODE)
@@ -8787,13 +8786,18 @@ void P_MovePlayer(player_t *player)
 	}
 
 	// Check for fire and shield buttons
-	if (!player->exiting)
+	if (!player->exiting && !(player->pflags & PF_STASIS))
 	{
+		// Check for fire buttons
 		P_DoFiring(player, cmd);
-
+		
+		// Release the shield button
+		if (!(cmd->buttons & BT_SHIELD))
+			player->pflags &= ~PF_SHIELDDOWN;
+		
 		// Shield button behavior
 		// Check P_PlayerShieldThink for actual shields!
-		if ((cmd->buttons & BT_SHIELD) && !(player->pflags & PF_SHIELDDOWN) && !spinshieldhack)
+		else if (!(player->pflags & PF_SHIELDDOWN))
 		{
 			// Transform into super if we can!
 			if (P_SuperReady(player))
@@ -12059,7 +12063,7 @@ void P_PlayerThink(player_t *player)
 				ticmiss++;
 
 			P_DoRopeHang(player);
-			P_DoJumpStuff(player, &player->cmd, false); // P_DoRopeHang would set PF_SPINDOWN, so no spinshieldhack here
+			P_DoJumpStuff(player, &player->cmd);
 		}
 		else //if (player->powers[pw_carry] == CR_ZOOMTUBE)
 		{
@@ -12332,12 +12336,6 @@ void P_PlayerThink(player_t *player)
 		else
 			player->pflags &= ~PF_SPINDOWN;
 	}
-
-	// Check for Shield button
-	if (cmd->buttons & BT_SHIELD)
-		player->pflags |= PF_SHIELDDOWN;
-	else
-		player->pflags &= ~PF_SHIELDDOWN;
 
 	// IF PLAYER NOT HERE THEN FLASH END IF
 	if (player->quittime && player->powers[pw_flashing] < flashingtics - 1
