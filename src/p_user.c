@@ -12299,7 +12299,7 @@ void P_PlayerThink(player_t *player)
 	P_CheckUnderwaterAndSpaceTimer(player); // Display the countdown drown numbers!
 	P_CheckInvincibilityTimer(player); // Spawn Invincibility Sparkles
 
-#if 1
+#if 0
 	// "Blur" a bit when you have speed shoes and are going fast enough
 	if ((player->powers[pw_super] || player->powers[pw_sneakers]) && (player->speed + abs(player->mo->momz)) > FixedMul(20*FRACUNIT,player->mo->scale))
 	{
