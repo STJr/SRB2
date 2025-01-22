@@ -3371,7 +3371,7 @@ const char *const STATE_LIST[] = { // array length left dynamic for sanity testi
 
 	"S_SPEEDWINGS",
 	"S_SPEEDWINGSD",
-	
+
 	"S_PARTICLEPICKUP1",
 	"S_PARTICLEPICKUP2",
 	"S_1000SCOREAWARD",

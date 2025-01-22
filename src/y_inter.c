@@ -2074,7 +2074,7 @@ static void Y_AwardCoopBonuses(void)
 				(bonuses_list[bonusnum][j])(&players[i], &localbonuses[j]);
 			else
 				Y_SetNullBonus(&players[i], &localbonuses[j]);
-			
+
 			players[i].score += localbonuses[j].points;
 			if (players[i].score > MAXSCORE)
 				players[i].score = MAXSCORE;

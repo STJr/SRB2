@@ -28,7 +28,7 @@ typedef enum
 {
 	// First 3 bits are weapon change info, DO NOT USE!
 	BT_WEAPONMASK = 0x07,  //our first three bits.
-	
+
 	BT_SHIELD     = 1<<3,  // shield or super action
 
 	BT_WEAPONNEXT = 1<<4,  // select next weapon
@@ -41,7 +41,7 @@ typedef enum
 	BT_TOSSFLAG   = 1<<10, // toss flag or emeralds
 	BT_JUMP       = 1<<11, // jump action
 	BT_FIRENORMAL = 1<<12, // fire a normal ring no matter what
-	
+
 	// custom lua buttons
 	BT_CUSTOM1    = 1<<13,
 	BT_CUSTOM2    = 1<<14,
