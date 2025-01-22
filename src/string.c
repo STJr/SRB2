@@ -83,7 +83,7 @@ char *xstrtok(char *line, const char *delims)
 		return NULL;
 
 	p = saveline; // save start of this token
-	
+
 	saveline += strcspn(saveline, delims); // get the number of non-delims characters, go past delimiter
 
 	if(*saveline != '\0') // trash the delim if necessary
@@ -91,4 +91,3 @@ char *xstrtok(char *line, const char *delims)
 
 	return p;
 }
-

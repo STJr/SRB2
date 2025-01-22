@@ -158,7 +158,7 @@ typedef enum
 	PF_FORCESTRAFE = 1<<28, // Turning inputs are translated into strafing inputs
 	PF_CANCARRY    = 1<<29, // Can carry another player?
 	PF_FINISHED    = 1<<30, // The player finished the level. NOT the same as exiting
-	
+
 	// True if shield button down last tic
 	// This may be the final flag, but 2.3 could free up the others
 	PF_SHIELDDOWN    = 1<<31,

@@ -1289,7 +1289,7 @@ static void HU_drawMiniChat(void)
 
 				V_DrawChatCharacter(x + dx + 2, y+dy, msg[j] |V_SNAPTOBOTTOM|V_SNAPTOLEFT|V_MONOSPACE|transflag, true, colormap);
 				dx += charwidth;
-				
+
 				if (dx >= boxw-charwidth-2)
 				{
 					dx = 0;
@@ -1540,9 +1540,9 @@ static void HU_DrawChat(void)
 				else if ((n == 1) && !(w_chat[3] == '0') && (!((i == 1) || ((i >= 10) && (i <= 19)))))
 					continue;
 				else if ((n == 2) && !(w_chat[3] == '0') && (!((i == 2) || ((i >= 20) && (i <= 29)))))
-					continue; 
+					continue;
 				else if ((n == 3) && !(w_chat[3] == '0') && (!((i == 3) || ((i >= 30) && (i <= 31)))))
-					continue; 
+					continue;
 				else	// general case.
 					if (i != n) continue;
 			}
