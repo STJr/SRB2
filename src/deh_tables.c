@@ -3255,6 +3255,7 @@ const char *const STATE_LIST[] = { // array length left dynamic for sanity testi
 	"S_MARIOBUSH2",
 	"S_TOAD",
 
+
 	// Nights-specific stuff
 	"S_NIGHTSDRONE_MAN1",
 	"S_NIGHTSDRONE_MAN2",

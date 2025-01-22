@@ -2406,7 +2406,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 					z = line->args[4] << FRACBITS;
 
 					P_SetOrigin(mo, mo->x + x, mo->y + y, mo->z + z);
-					
+
 					if (mo->player)
 					{
 						if (bot) // This might put poor Tails in a wall if he's too far behind! D: But okay, whatever! >:3

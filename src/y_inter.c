@@ -1648,7 +1648,7 @@ static void Y_CalculateMatchWinners(void)
 				data.match.scores[data.match.numplayers] = players[i].score;
 				data.match.color[data.match.numplayers] = &players[i].skincolor;
 				if (data.match.ctfteam[data.match.numplayers] == 1) // red team
-					data.match.color[data.match.numplayers] = &skincolor_redteam; 
+					data.match.color[data.match.numplayers] = &skincolor_redteam;
 
 				if (data.match.ctfteam[data.match.numplayers] == 2) // blue team
 					data.match.color[data.match.numplayers] = &skincolor_blueteam;
@@ -2074,7 +2074,7 @@ static void Y_AwardCoopBonuses(void)
 				(bonuses_list[bonusnum][j])(&players[i], &localbonuses[j]);
 			else
 				Y_SetNullBonus(&players[i], &localbonuses[j]);
-			
+
 			players[i].score += localbonuses[j].points;
 			if (players[i].score > MAXSCORE)
 				players[i].score = MAXSCORE;
