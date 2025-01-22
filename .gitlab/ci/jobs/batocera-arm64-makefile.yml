@@ -1,18 +1,16 @@
-Debian oldstable:arm64:
-  extends: Debian stable:arm64
+batocera:arm64 Makefile:
+  extends: Debian stable:arm64 Makefile
 
   when: manual
-
-  image: git.do.srb2.org:5050/stjr/srb2ci/srb2ci:oldstable
 
   allow_failure: true
 
   artifacts:
     paths:
-      - "build.cmake/bin/"
-      - "build.cmake/src/config.h"
-    expose_as: "Debian old arm64"
-    name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-old-aarch64"
+      - "bin/"
+      - "src/comptime.h"
+    expose_as: "Debian old arm64 makefile"
+    name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-batocera-aarch64-makefile"
 
   script:
     - - |
@@ -32,17 +30,9 @@ Debian oldstable:arm64:
           echo -e "\e[0Ksection_end:`date +%s`:apt_development\r\e[0K"
 
     - - |
-          # cmake
-          echo -e "\e[0Ksection_start:`date +%s`:cmake[collapsed=false]\r\e[0KBuilding Makefiles"
-      - cmake -B build.cmake -DSRB2_USE_CCACHE=YES -DSRB2_CONFIG_ERRORMODE=ON -DSRB2_CONFIG_FORCE_NO_MS_BITFIELDS=ON -DSRB2_CONFIG_USE_GME=OFF -G "Unix Makefiles"
-      - |
-          # cmake
-          echo -e "\e[0Ksection_end:`date +%s`:cmake\r\e[0K"
-
-    - - |
           # make
           echo -e "\e[0Ksection_start:`date +%s`:make[collapsed=false]\r\e[0KCompiling SRB2"
-      - make --directory=build.cmake --keep-going || make --directory=build.cmake --keep-going
+      - make --directory=src --keep-going CCACHE=1 ERRORMODE=1 LINUX64=1 ERRORMODE=1 NONX86=1 ARM64=1 NOGME=1 || make --directory=src --keep-going CCACHE=1 ERRORMODE=1 LINUX64=1 NONX86=1 ARM64=1 NOGME=1
       - |
           # make
           echo -e "\e[0Ksection_end:`date +%s`:make\r\e[0K"
