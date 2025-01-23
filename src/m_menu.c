@@ -1073,7 +1073,6 @@ static menuitem_t OP_ChangeControlsMenu[] =
 	{IT_CALL | IT_STRING2, NULL, "Move Right",       M_ChangeControl, GC_STRAFERIGHT },
 	{IT_CALL | IT_STRING2, NULL, "Jump",             M_ChangeControl, GC_JUMP      },
 	{IT_CALL | IT_STRING2, NULL, "Spin",             M_ChangeControl, GC_SPIN     },
-	{IT_CALL | IT_STRING2, NULL, "Shield",           M_ChangeControl, GC_SHIELD    },
 	{IT_HEADER, NULL, "Camera", NULL, 0},
 	{IT_SPACE, NULL, NULL, NULL, 0}, // padding
 	{IT_CALL | IT_STRING2, NULL, "Look Up",        M_ChangeControl, GC_LOOKUP      },
@@ -13324,23 +13323,23 @@ static void M_Setup1PControlsMenu(INT32 choice)
 	currentMenu->lastOn = itemOn;
 
 	// Unhide the nine non-P2 controls and their headers
-	//OP_ChangeControlsMenu[19+0].status = IT_HEADER;
-	//OP_ChangeControlsMenu[19+1].status = IT_SPACE;
+	//OP_ChangeControlsMenu[18+0].status = IT_HEADER;
+	//OP_ChangeControlsMenu[18+1].status = IT_SPACE;
 	// ...
-	OP_ChangeControlsMenu[19+2].status = IT_CALL|IT_STRING2;
-	OP_ChangeControlsMenu[19+3].status = IT_CALL|IT_STRING2;
-	OP_ChangeControlsMenu[19+4].status = IT_CALL|IT_STRING2;
-	OP_ChangeControlsMenu[19+5].status = IT_CALL|IT_STRING2;
-	OP_ChangeControlsMenu[19+6].status = IT_CALL|IT_STRING2;
-	//OP_ChangeControlsMenu[19+7].status = IT_CALL|IT_STRING2;
-	//OP_ChangeControlsMenu[19+8].status = IT_CALL|IT_STRING2;
-	OP_ChangeControlsMenu[19+9].status = IT_CALL|IT_STRING2;
+	OP_ChangeControlsMenu[18+2].status = IT_CALL|IT_STRING2;
+	OP_ChangeControlsMenu[18+3].status = IT_CALL|IT_STRING2;
+	OP_ChangeControlsMenu[18+4].status = IT_CALL|IT_STRING2;
+	OP_ChangeControlsMenu[18+5].status = IT_CALL|IT_STRING2;
+	OP_ChangeControlsMenu[18+6].status = IT_CALL|IT_STRING2;
+	//OP_ChangeControlsMenu[18+7].status = IT_CALL|IT_STRING2;
+	//OP_ChangeControlsMenu[18+8].status = IT_CALL|IT_STRING2;
+	OP_ChangeControlsMenu[18+9].status = IT_CALL|IT_STRING2;
 	// ...
-	OP_ChangeControlsMenu[29+0].status = IT_HEADER;
-	OP_ChangeControlsMenu[29+1].status = IT_SPACE;
+	OP_ChangeControlsMenu[28+0].status = IT_HEADER;
+	OP_ChangeControlsMenu[28+1].status = IT_SPACE;
 	// ...
-	OP_ChangeControlsMenu[29+2].status = IT_CALL|IT_STRING2;
-	OP_ChangeControlsMenu[29+3].status = IT_CALL|IT_STRING2;
+	OP_ChangeControlsMenu[28+2].status = IT_CALL|IT_STRING2;
+	OP_ChangeControlsMenu[28+3].status = IT_CALL|IT_STRING2;
 
 	OP_ChangeControlsDef.prevMenu = &OP_P1ControlsDef;
 	OP_ChangeControlsDef.menuid &= ~(((1 << MENUBITS) - 1) << MENUBITS); // remove second level
@@ -13356,23 +13355,23 @@ static void M_Setup2PControlsMenu(INT32 choice)
 	currentMenu->lastOn = itemOn;
 
 	// Hide the nine non-P2 controls and their headers
-	//OP_ChangeControlsMenu[19+0].status = IT_GRAYEDOUT2;
-	//OP_ChangeControlsMenu[19+1].status = IT_GRAYEDOUT2;
+	//OP_ChangeControlsMenu[18+0].status = IT_GRAYEDOUT2;
+	//OP_ChangeControlsMenu[18+1].status = IT_GRAYEDOUT2;
 	// ...
-	OP_ChangeControlsMenu[19+2].status = IT_GRAYEDOUT2;
-	OP_ChangeControlsMenu[19+3].status = IT_GRAYEDOUT2;
-	OP_ChangeControlsMenu[19+4].status = IT_GRAYEDOUT2;
-	OP_ChangeControlsMenu[19+5].status = IT_GRAYEDOUT2;
-	OP_ChangeControlsMenu[19+6].status = IT_GRAYEDOUT2;
-	//OP_ChangeControlsMenu[19+7].status = IT_GRAYEDOUT2;
-	//OP_ChangeControlsMenu[19+8].status = IT_GRAYEDOUT2;
-	OP_ChangeControlsMenu[19+9].status = IT_GRAYEDOUT2;
+	OP_ChangeControlsMenu[18+2].status = IT_GRAYEDOUT2;
+	OP_ChangeControlsMenu[18+3].status = IT_GRAYEDOUT2;
+	OP_ChangeControlsMenu[18+4].status = IT_GRAYEDOUT2;
+	OP_ChangeControlsMenu[18+5].status = IT_GRAYEDOUT2;
+	OP_ChangeControlsMenu[18+6].status = IT_GRAYEDOUT2;
+	//OP_ChangeControlsMenu[18+7].status = IT_GRAYEDOUT2;
+	//OP_ChangeControlsMenu[18+8].status = IT_GRAYEDOUT2;
+	OP_ChangeControlsMenu[18+9].status = IT_GRAYEDOUT2;
 	// ...
-	OP_ChangeControlsMenu[29+0].status = IT_GRAYEDOUT2;
-	OP_ChangeControlsMenu[29+1].status = IT_GRAYEDOUT2;
+	OP_ChangeControlsMenu[28+0].status = IT_GRAYEDOUT2;
+	OP_ChangeControlsMenu[28+1].status = IT_GRAYEDOUT2;
 	// ...
-	OP_ChangeControlsMenu[29+2].status = IT_GRAYEDOUT2;
-	OP_ChangeControlsMenu[29+3].status = IT_GRAYEDOUT2;
+	OP_ChangeControlsMenu[28+2].status = IT_GRAYEDOUT2;
+	OP_ChangeControlsMenu[28+3].status = IT_GRAYEDOUT2;
 
 	OP_ChangeControlsDef.prevMenu = &OP_P2ControlsDef;
 	OP_ChangeControlsDef.menuid &= ~(((1 << MENUBITS) - 1) << MENUBITS); // remove second level

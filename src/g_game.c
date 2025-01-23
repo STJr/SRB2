@@ -1335,7 +1335,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 #if NUM_WEAPONS > 10
 "Add extra inputs to g_input.h/gamecontrols_e"
 #endif
-	//use the three avaliable bits to determine the weapon.
+	//use the four avaliable bits to determine the weapon.
 	cmd->buttons &= ~BT_WEAPONMASK;
 	for (i = 0; i < NUM_WEAPONS; ++i)
 		if (PLAYERINPUTDOWN(ssplayer, GC_WEPSLOT1 + i))
@@ -1354,13 +1354,8 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 	if (PLAYERINPUTDOWN(ssplayer, GC_FIRENORMAL) || (usejoystick && axis > 0))
 		cmd->buttons |= BT_FIRENORMAL;
 
-	// Toss flag button
 	if (PLAYERINPUTDOWN(ssplayer, GC_TOSSFLAG))
 		cmd->buttons |= BT_TOSSFLAG;
-
-	// Shield button
-	if (PLAYERINPUTDOWN(ssplayer, GC_SHIELD))
-		cmd->buttons |= BT_SHIELD;
 
 	// Lua scriptable buttons
 	if (PLAYERINPUTDOWN(ssplayer, GC_CUSTOM1))
@@ -2768,7 +2763,6 @@ void G_PlayerReborn(INT32 player, boolean betweenmaps)
 	p->pflags |= PF_SPINDOWN;
 	p->pflags |= PF_ATTACKDOWN;
 	p->pflags |= PF_JUMPDOWN;
-	p->pflags |= PF_SHIELDDOWN;
 
 	p->playerstate = PST_LIVE;
 	p->panim = PA_IDLE; // standing animation
