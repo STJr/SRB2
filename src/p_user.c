@@ -4350,7 +4350,7 @@ static void P_DoSuperStuff(player_t *player)
 		if (!(ALL7EMERALDS(emeralds) && player->charflags & SF_SUPER))
 		{
 			player->powers[pw_super] = 0;
-			P_SetPlayerMobjState(player->mo, S_PLAY_STND);
+			P_SetMobjState(player->mo, S_PLAY_STND);
 			if (P_IsLocalPlayer(player))
 			{
 				music_stack_noposition = true; // HACK: Do not reposition next music
@@ -4425,7 +4425,7 @@ static void P_DoSuperStuff(player_t *player)
 				player->powers[pw_flashing] = flashingtics-1;
 
 			if (player->mo->sprite2 & FF_SPR2SUPER)
-				P_SetPlayerMobjState(player->mo, player->mo->state-states);
+				P_SetMobjState(player->mo, player->mo->state-states);
 
 			// Inform the netgame that the champion has fallen in the heat of battle.
 			if (!G_CoopGametype())
@@ -5342,9 +5342,9 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 								if (player->panim != PA_RUN && player->panim != PA_WALK)
 								{
 									if (player->speed >= FixedMul(player->runspeed, player->mo->scale))
-										P_SetPlayerMobjState(player->mo, S_PLAY_FLOAT_RUN);
+										P_SetMobjState(player->mo, S_PLAY_FLOAT_RUN);
 									else
-										P_SetPlayerMobjState(player->mo, S_PLAY_FLOAT);
+										P_SetMobjState(player->mo, S_PLAY_FLOAT);
 								}
 
 								player->mo->momz = 0;
