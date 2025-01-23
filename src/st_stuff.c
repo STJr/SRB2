@@ -2822,7 +2822,7 @@ static void ST_overlayDrawer(void)
 		}
 		else if (cv_powerupdisplay.value == 2 && LUA_HudEnabled(hud_powerups))
 			ST_drawPowerupHUD();  // same as it ever was...
-		
+
 	}
 	else if (!(netgame || multiplayer) && cv_powerupdisplay.value == 2 && LUA_HudEnabled(hud_powerups))
 		ST_drawPowerupHUD(); // same as it ever was...

@@ -3917,12 +3917,16 @@ void M_StartControlPanel(void)
 	}
 	else if (!(netgame || multiplayer)) // Single Player
 	{
-		// Devmode unlocks Pandora's Box in the pause menu
-		boolean pandora = ((M_SecretUnlocked(SECRET_PANDORA, serverGamedata) || cv_debug || devparm) && !marathonmode);
+		// Devmode unlocks Pandora's Box and Level Select in the pause menu
+		boolean isforbidden = (marathonmode || ultimatemode);
+		boolean isdebug = ((cv_debug || devparm) && !isforbidden);
+		boolean pandora = ((M_SecretUnlocked(SECRET_PANDORA, serverGamedata) && !isforbidden) || isdebug);
+		boolean lselect = ((maplistoption != 0 && !isforbidden) || isdebug);
 
-		if (gamestate != GS_LEVEL || ultimatemode) // intermission, so gray out stuff.
+		if (gamestate != GS_LEVEL) // intermission, so gray out stuff.
 		{
 			SPauseMenu[spause_pandora].status = (pandora) ? (IT_GRAYEDOUT) : (IT_DISABLED);
+			SPauseMenu[spause_levelselect].status = (lselect) ? (IT_STRING | IT_CALL) : (IT_DISABLED);
 			SPauseMenu[spause_retry].status = IT_GRAYEDOUT;
 		}
 		else
@@ -3932,6 +3936,11 @@ void M_StartControlPanel(void)
 				++numlives;
 
 			SPauseMenu[spause_pandora].status = (pandora) ? (IT_STRING | IT_CALL) : (IT_DISABLED);
+			SPauseMenu[spause_levelselect].status = (lselect) ? (IT_STRING | IT_CALL) : (IT_DISABLED);
+			if (ultimatemode)
+			{
+				SPauseMenu[spause_retry].status = IT_GRAYEDOUT;
+			}
 
 			// The list of things that can disable retrying is (was?) a little too complex
 			// for me to want to use the short if statement syntax
@@ -3940,13 +3949,6 @@ void M_StartControlPanel(void)
 			else
 				SPauseMenu[spause_retry].status = (IT_STRING | IT_CALL);
 		}
-
-		// We can always use level select though. :33
-		// Guarantee it if we have either it unlocked or devmode is enabled
-		if ((maplistoption != 0 || M_SecretUnlocked(SECRET_LEVELSELECT, serverGamedata) || cv_debug || devparm) && !marathonmode)
-			SPauseMenu[spause_levelselect].status = (IT_STRING | IT_CALL);
-		else
-			SPauseMenu[spause_levelselect].status = (IT_DISABLED);
 
 		// And emblem hints.
 		SPauseMenu[spause_hints].status = (M_SecretUnlocked(SECRET_EMBLEMHINTS, clientGamedata) && !marathonmode) ? (IT_STRING | IT_CALL) : (IT_DISABLED);
@@ -7788,13 +7790,9 @@ static void M_PauseLevelSelect(INT32 choice)
 	SP_PauseLevelSelectDef.prevMenu = currentMenu;
 	levellistmode = LLM_LEVELSELECT;
 
-	// maplistoption is only specified if not set already
-	// and we have the level select unlocked so that it
+	// maplistoption is NOT specified, so that this
 	// transfers the level select list from the menu
 	// used to enter the game to the pause menu.
-	if (maplistoption == 0 && M_SecretUnlocked(SECRET_LEVELSELECT, serverGamedata))
-		maplistoption = 1;
-
 	if (!M_PrepareLevelPlatter(-1, true))
 	{
 		M_StartMessage(M_GetText("No selectable levels found.\n"),NULL,MM_NOTHING);
@@ -11373,7 +11371,7 @@ static void M_Refresh(INT32 choice)
 
 	// note: this is the one case where 0 is a valid room number
 	// because it corresponds to "All"
-	CL_UpdateServerList(!(ms_RoomId < 0), ms_RoomId);
+	CL_UpdateServerList(cv_masterserver_room_id.value >= 0, cv_masterserver_room_id.value);
 
 	// first page of servers
 	serverlistpage = 0;
@@ -11459,7 +11457,7 @@ static void M_DrawConnectMenu(void)
 		numPages = 1;
 
 	// Room name
-	if (ms_RoomId < 0)
+	if (cv_masterserver_room_id.value < 0)
 		V_DrawRightAlignedString(BASEVIDWIDTH - currentMenu->x, currentMenu->y + MP_ConnectMenu[mp_connect_room].alphaKey,
 		                         V_YELLOWMAP, (itemOn == mp_connect_room) ? "<Select to change>" : "<Unlisted Mode>");
 	else
@@ -11687,7 +11685,7 @@ static void M_ConnectMenu(INT32 choice)
 
 	// first page of servers
 	serverlistpage = 0;
-	if (ms_RoomId < 0)
+	if (cv_masterserver_room_id.value < 0)
 	{
 		M_RoomMenu(0); // Select a room instead of staring at an empty list
 		// This prevents us from returning to the modified game alert.
@@ -11783,7 +11781,7 @@ static void M_ChooseRoom(INT32 choice)
 #endif
 
 	if (choice == 0)
-		CV_SetValue(&cv_masterserver_room_id, 0);
+		CV_SetValue(&cv_masterserver_room_id, -1);
 	else
 	{
 		CV_SetValue(&cv_masterserver_room_id, roomIds[choice-1]);
@@ -11855,7 +11853,7 @@ static void M_DrawServerMenu(void)
 	if (currentMenu == &MP_ServerDef)
 	{
 		M_DrawLevelPlatterHeader(currentMenu->y - lsheadingheight/2, "Server settings", true, false);
-		if (ms_RoomId < 0)
+		if (cv_masterserver_room_id.value < 0)
 			V_DrawRightAlignedString(BASEVIDWIDTH - currentMenu->x, currentMenu->y + MP_ServerMenu[mp_server_room].alphaKey,
 			                         V_YELLOWMAP, (itemOn == mp_server_room) ? "<Select to change>" : "<Unlisted Mode>");
 		else
@@ -11951,7 +11949,7 @@ static void M_ServerOptions(INT32 choice)
 static void M_StartServerMenu(INT32 choice)
 {
 	(void)choice;
-	ms_RoomId = -1;
+	CV_SetValue(&cv_masterserver_room_id, -1);
 	levellistmode = LLM_CREATESERVER;
 	Newgametype_OnChange();
 	M_SetupNextMenu(&MP_ServerDef);
