@@ -3,7 +3,7 @@
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
 // Copyright (C) 2011-2016 by Matthew "Kaito Sinclaire" Walsh.
-// Copyright (C) 1999-2024 by Sonic Team Junior.
+// Copyright (C) 1999-2025 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -143,7 +143,7 @@ typedef enum
 
 typedef struct
 {
-	char bgname[8]; // name for background gfx lump; lays over titlemap if this is set
+	char bgname[9]; // name for background gfx lump; lays over titlemap if this is set
 	SINT8 fadestrength;  // darken background when displaying this menu, strength 0-31 or -1 for undefined
 	INT32 bgcolor; // fill color, overrides bg name. -1 means follow bg name rules.
 	INT32 titlescrollxspeed; // background gfx scroll per menu; inherits global setting
@@ -371,7 +371,7 @@ typedef struct
 {
 	boolean used;
 	char notes[441];
-	char picname[8];
+	char picname[9];
 	char skinname[SKINNAMESIZE*2+2]; // skin&skin\0
 	patch_t *charpic;
 	UINT8 prev;
@@ -379,7 +379,7 @@ typedef struct
 	char displayname[SKINNAMESIZE+1];
 	INT16 skinnum[2];
 	UINT16 oppositecolor;
-	char nametag[8+1];
+	char nametag[9];
 	patch_t *namepic;
 	UINT16 tagtextcolor;
 	UINT16 tagoutlinecolor;

@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2024 by Sonic Team Junior.
+// Copyright (C) 1999-2025 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -209,7 +209,7 @@ typedef struct
 	UINT8 picmode; // sequence mode after displaying last pic, 0 = persist, 1 = loop, 2 = destroy
 	UINT8 pictoloop; // if picmode == loop, which pic to loop to?
 	UINT8 pictostart; // initial pic number to show
-	char picname[MAX_PROMPT_PICS][8];
+	char picname[MAX_PROMPT_PICS][9];
 	UINT8 pichires[MAX_PROMPT_PICS];
 	UINT16 xcoord[MAX_PROMPT_PICS]; // gfx
 	UINT16 ycoord[MAX_PROMPT_PICS]; // gfx
@@ -221,7 +221,7 @@ typedef struct
 
 	char tag[33]; // page tag
 	char name[34]; // narrator name, extra char for color
-	char iconname[8]; // narrator icon lump
+	char iconname[9]; // narrator icon lump
 	boolean rightside; // narrator side, false = left, true = right
 	boolean iconflip; // narrator flip icon horizontally
 	UINT8 hidehud; // hide hud, 0 = show all, 1 = hide depending on prompt position (top/bottom), 2 = hide all
