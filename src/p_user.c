@@ -1390,6 +1390,56 @@ void P_DoSuperTransformation(player_t *player, boolean giverings)
 	P_PlayerFlagBurst(player, false);
 }
 
+//
+// P_DoSuperDetransformation
+//
+// Detransform into regular Sonic!
+void P_DoSuperDetransformation(player_t *player)
+{
+	player->powers[pw_emeralds] = 0; // lost the power stones
+	P_SpawnGhostMobj(player->mo);
+
+	player->powers[pw_super] = 0;
+
+	// Restore color
+	if ((player->powers[pw_shield] & SH_STACK) == SH_FIREFLOWER)
+	{
+		player->mo->color = SKINCOLOR_WHITE;
+		G_GhostAddColor(GHC_FIREFLOWER);
+	}
+	else
+	{
+		player->mo->color = P_GetPlayerColor(player);
+		G_GhostAddColor(GHC_NORMAL);
+	}
+
+	if (!G_CoopGametype())
+		player->powers[pw_flashing] = flashingtics-1;
+
+	if (player->mo->sprite2 & FF_SPR2SUPER)
+		P_SetMobjState(player->mo, player->mo->state-states);
+
+	// Inform the netgame that the champion has fallen in the heat of battle.
+	if (!G_CoopGametype())
+	{
+		S_StartSound(NULL, sfx_s3k66); //let all players hear it.
+		HU_SetCEchoFlags(0);
+		HU_SetCEchoDuration(5);
+		HU_DoCEcho(va("%s\\is no longer super.\\\\\\\\", player_names[player-players]));
+	}
+
+	// Resume normal music if you're the console player
+	if (P_IsLocalPlayer(player))
+	{
+		music_stack_noposition = true; // HACK: Do not reposition next music
+		music_stack_fadeout = MUSICRATE/2; // HACK: Fade out current music
+	}
+	P_RestoreMusic(player);
+
+	// If you had a shield, restore its visual significance.
+	P_SpawnShieldOrb(player);
+}
+
 // Adds to the player's score
 void P_AddPlayerScore(player_t *player, UINT32 amount)
 {
@@ -4404,48 +4454,7 @@ static void P_DoSuperStuff(player_t *player)
 		// Ran out of rings while super!
 		if (player->rings <= 0 || player->exiting)
 		{
-			player->powers[pw_emeralds] = 0; // lost the power stones
-			P_SpawnGhostMobj(player->mo);
-
-			player->powers[pw_super] = 0;
-
-			// Restore color
-			if ((player->powers[pw_shield] & SH_STACK) == SH_FIREFLOWER)
-			{
-				player->mo->color = SKINCOLOR_WHITE;
-				G_GhostAddColor(GHC_FIREFLOWER);
-			}
-			else
-			{
-				player->mo->color = P_GetPlayerColor(player);
-				G_GhostAddColor(GHC_NORMAL);
-			}
-
-			if (!G_CoopGametype())
-				player->powers[pw_flashing] = flashingtics-1;
-
-			if (player->mo->sprite2 & FF_SPR2SUPER)
-				P_SetMobjState(player->mo, player->mo->state-states);
-
-			// Inform the netgame that the champion has fallen in the heat of battle.
-			if (!G_CoopGametype())
-			{
-				S_StartSound(NULL, sfx_s3k66); //let all players hear it.
-				HU_SetCEchoFlags(0);
-				HU_SetCEchoDuration(5);
-				HU_DoCEcho(va("%s\\is no longer super.\\\\\\\\", player_names[player-players]));
-			}
-
-			// Resume normal music if you're the console player
-			if (P_IsLocalPlayer(player))
-			{
-				music_stack_noposition = true; // HACK: Do not reposition next music
-				music_stack_fadeout = MUSICRATE/2; // HACK: Fade out current music
-			}
-			P_RestoreMusic(player);
-
-			// If you had a shield, restore its visual significance.
-			P_SpawnShieldOrb(player);
+			P_DoSuperDetransformation(player);
 		}
 	}
 }
