@@ -475,7 +475,7 @@ UINT8 M_MapLocked(INT32 mapnum, gamedata_t *data)
 		// that's better than making dedicated server's lives hell.
 		return false;
 	}
-	
+
 	if (cv_debug || devparm)
 		return false; // Unlock every level when in devmode.
 
