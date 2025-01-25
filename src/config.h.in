@@ -41,13 +41,13 @@
  * Last updated 2023 / 09 / 06 - v2.2.12 - patch.pk3
  * Last updated 2023 / 09 / 09 - v2.2.13 - none
  * Last updated 2025 / 01 / 16 - v2.2.14 - main assets
- * Last updated 2025 / 01 / 21 - v2.2.15 - main assets
+ * Last updated 2025 / 01 / 24 - v2.2.15 - main assets
  */
-#define ASSET_HASH_SRB2_PK3   "b3e3431983a9b16817fd11dbbaec65e4"
-#define ASSET_HASH_ZONES_PK3  "5ba928b05eda4a13154edd6699118414"
-#define ASSET_HASH_CHARACTERS_PK3 "5f184b8ba0560b32ae342c231e9c6f9a"
+#define ASSET_HASH_SRB2_PK3       "3182ce524acc2072ddaa81acf4b6a9aa"
+#define ASSET_HASH_ZONES_PK3      "88ff4c300851ccdb0406698eadd89907"
+#define ASSET_HASH_CHARACTERS_PK3 "5c5936b8a690e007c0939bd0785a41fb"
 #ifdef USE_PATCH_DTA
-#define ASSET_HASH_PATCH_PK3  "00000000000000000000000000000000"
+#define ASSET_HASH_PATCH_PK3      "00000000000000000000000000000000"
 #endif
 
 #endif
