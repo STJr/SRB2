@@ -1129,7 +1129,7 @@ static SINT8 SOCK_NetMakeNodewPort(const char *address, const char *port)
 	DEBFILE(va("Creating new node: %s@%s\n", address, port));
 
 	memset (&hints, 0x00, sizeof (hints));
-	hints.ai_flags = 0;
+	hints.ai_flags = AI_ADDRCONFIG;
 	hints.ai_family = AF_UNSPEC;
 	hints.ai_socktype = SOCK_DGRAM;
 	hints.ai_protocol = IPPROTO_UDP;
@@ -1159,7 +1159,7 @@ static SINT8 SOCK_NetMakeNodewPort(const char *address, const char *port)
 			}
 		}
 
-		if (i < mysocketses)
+		if (i >= mysocketses)
 			runp = runp->ai_next;
 		else
 			break;
