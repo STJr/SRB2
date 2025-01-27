@@ -3,7 +3,7 @@
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Portions Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 2014-2024 by Sonic Team Junior.
+// Copyright (C) 2014-2025 by Sonic Team Junior.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -65,10 +65,11 @@ typedef LPVOID (WINAPI *p_MapViewOfFile) (HANDLE, DWORD, DWORD, DWORD, SIZE_T);
 #pragma warning(default : 4214 4244)
 #endif
 
-#if defined (__unix__) || defined(__APPLE__) || (defined (UNIXCOMMON) && !defined (__HAIKU__))
-#if defined (__linux__)
-#include <sys/vfs.h>
+#if defined (__unix__) || defined(__APPLE__) || defined (UNIXCOMMON)
+#if defined (__linux__) || defined (__HAIKU__)
+#include <sys/statvfs.h>
 #else
+#include <sys/statvfs.h>
 #include <sys/param.h>
 #include <sys/mount.h>
 /*For meminfo*/
@@ -81,7 +82,7 @@ typedef LPVOID (WINAPI *p_MapViewOfFile) (HANDLE, DWORD, DWORD, DWORD, SIZE_T);
 #endif
 #endif
 
-#if defined (__linux__) || (defined (UNIXCOMMON) && !defined (__HAIKU__))
+#if defined (__linux__) || defined (UNIXCOMMON)
 #ifndef NOTERMIOS
 #include <termios.h>
 #include <sys/ioctl.h> // ioctl
@@ -96,7 +97,9 @@ typedef LPVOID (WINAPI *p_MapViewOfFile) (HANDLE, DWORD, DWORD, DWORD, SIZE_T);
 #if defined (__unix__) || (defined (UNIXCOMMON) && !defined (__APPLE__))
 #include <errno.h>
 #include <sys/wait.h>
+#ifndef __HAIKU__ // haiku's crash dialog is just objectively better
 #define NEWSIGNALHANDLER
+#endif
 #endif
 
 #ifndef NOMUMBLE
@@ -374,15 +377,24 @@ void I_Sleep(UINT32 ms)
 
 void I_SleepDuration(precise_t duration)
 {
-#if defined(__linux__) || defined(__FreeBSD__)
+#if defined(__linux__) || defined(__FreeBSD__) || defined(__HAIKU__)
 	UINT64 precision = I_GetPrecisePrecision();
-	struct timespec ts = {
-		.tv_sec = duration / precision,
-		.tv_nsec = duration * 1000000000 / precision % 1000000000,
-	};
-	int status;
-	do status = clock_nanosleep(CLOCK_MONOTONIC, 0, &ts, &ts);
-	while (status == EINTR);
+	precise_t dest = I_GetPreciseTime() + duration;
+	precise_t slack = (precision / 5000); // 0.2 ms slack
+	if (duration > slack)
+	{
+		duration -= slack;
+		struct timespec ts = {
+			.tv_sec = duration / precision,
+			.tv_nsec = duration * 1000000000 / precision % 1000000000,
+		};
+		int status;
+		do status = clock_nanosleep(CLOCK_MONOTONIC, 0, &ts, &ts);
+		while (status == EINTR);
+	}
+
+	// busy-wait the rest
+	while (((INT64)dest - (INT64)I_GetPreciseTime()) > 0);
 #else
 	UINT64 precision = I_GetPrecisePrecision();
 	INT32 sleepvalue = cv_sleep.value;
@@ -705,10 +717,9 @@ typedef struct
 
 static feild_t tty_con;
 
-// when printing general stuff to stdout stderr (Sys_Printf)
-//   we need to disable the tty console stuff
-// this increments so we can recursively disable
-static INT32 ttycon_hide = 0;
+// lock to prevent clearing partial lines, since not everything
+// printed ends on a newline.
+static boolean ttycon_ateol = true;
 // some key codes that the terminal may be using
 // TTimo NOTE: I'm not sure how relevant this is
 static INT32 tty_erase;
@@ -736,63 +747,31 @@ static inline void tty_FlushIn(void)
 // TTimo NOTE: it seems on some terminals just sending '\b' is not enough
 //   so for now, in any case we send "\b \b" .. yeah well ..
 //   (there may be a way to find out if '\b' alone would work though)
+// Hanicef NOTE: using \b this way is unreliable because of terminal state,
+//   it's better to use \r to reset the cursor to the beginning of the
+//   line and clear from there.
 static void tty_Back(void)
 {
-	char key;
-	ssize_t d;
-	key = '\b';
-	d = write(STDOUT_FILENO, &key, 1);
-	key = ' ';
-	d = write(STDOUT_FILENO, &key, 1);
-	key = '\b';
-	d = write(STDOUT_FILENO, &key, 1);
-	(void)d;
+	write(STDOUT_FILENO, "\r", 1);
+	if (tty_con.cursor>0)
+	{
+		write(STDOUT_FILENO, tty_con.buffer, tty_con.cursor);
+	}
+	write(STDOUT_FILENO, " \b", 2);
 }
 
 static void tty_Clear(void)
 {
 	size_t i;
+	write(STDOUT_FILENO, "\r", 1);
 	if (tty_con.cursor>0)
 	{
 		for (i=0; i<tty_con.cursor; i++)
 		{
-			tty_Back();
+			write(STDOUT_FILENO, " ", 1);
 		}
+		write(STDOUT_FILENO, "\r", 1);
 	}
-
-}
-
-// clear the display of the line currently edited
-// bring cursor back to beginning of line
-static inline void tty_Hide(void)
-{
-	//I_Assert(consolevent);
-	if (ttycon_hide)
-	{
-		ttycon_hide++;
-		return;
-	}
-	tty_Clear();
-	ttycon_hide++;
-}
-
-// show the current line
-// FIXME TTimo need to position the cursor if needed??
-static inline void tty_Show(void)
-{
-	size_t i;
-	ssize_t d;
-	//I_Assert(consolevent);
-	I_Assert(ttycon_hide>0);
-	ttycon_hide--;
-	if (ttycon_hide == 0 && tty_con.cursor)
-	{
-		for (i=0; i<tty_con.cursor; i++)
-		{
-			d = write(STDOUT_FILENO, tty_con.buffer+i, 1);
-		}
-	}
-	(void)d;
 }
 
 // never exit without calling this, or your terminal will be left in a pretty bad state
@@ -899,6 +878,11 @@ static void I_GetConsoleEvents(void)
 				tty_Clear();
 				tty_con.cursor = 0;
 				ev.key = KEY_ENTER;
+			}
+			else if (key == 0x4) // ^D, aka EOF
+			{
+				// shut down, most unix programs behave this way
+				I_Quit();
 			}
 			else continue;
 		}
@@ -1046,6 +1030,9 @@ void I_OutputMsg(const char *fmt, ...)
 	va_start(argptr,fmt);
 	len = vsnprintf(NULL, 0, fmt, argptr);
 	va_end(argptr);
+	if (len == 0)
+		return;
+
 	txt = malloc(len+1);
 	va_start(argptr,fmt);
 	vsprintf(txt, fmt, argptr);
@@ -1135,18 +1122,20 @@ void I_OutputMsg(const char *fmt, ...)
 	}
 #else
 #ifdef HAVE_TERMIOS
-	if (consolevent)
+	if (consolevent && ttycon_ateol)
 	{
-		tty_Hide();
+		tty_Clear();
+		ttycon_ateol = false;
 	}
 #endif
 
 	if (!framebuffer)
 		fprintf(stderr, "%s", txt);
 #ifdef HAVE_TERMIOS
-	if (consolevent)
+	if (consolevent && txt[len-1] == '\n')
 	{
-		tty_Show();
+		write(STDOUT_FILENO, tty_con.buffer, tty_con.cursor);
+		ttycon_ateol = true;
 	}
 #endif
 
@@ -1226,18 +1215,13 @@ void I_ShutdownSystem(void)
 void I_GetDiskFreeSpace(INT64* freespace)
 {
 #if defined (__unix__) || defined(__APPLE__) || defined (UNIXCOMMON)
-#if defined (SOLARIS) || defined (__HAIKU__)
-	*freespace = INT32_MAX;
-	return;
-#else // Both Linux and BSD have this, apparently.
-	struct statfs stfs;
-	if (statfs(srb2home, &stfs) == -1)
+	struct statvfs stfs;
+	if (statvfs(srb2home, &stfs) == -1)
 	{
 		*freespace = INT32_MAX;
 		return;
 	}
 	*freespace = stfs.f_bavail * stfs.f_bsize;
-#endif
 #elif defined (_WIN32)
 	static p_GetDiskFreeSpaceExA pfnGetDiskFreeSpaceEx = NULL;
 	static boolean testwin95 = false;
@@ -1453,8 +1437,10 @@ const char *I_LocateWad(void)
 	{
 		// change to the directory where we found srb2.pk3
 #if defined (_WIN32)
+		waddir = _fullpath(NULL, waddir, MAX_PATH);
 		SetCurrentDirectoryA(waddir);
 #else
+		waddir = realpath(waddir, NULL);
 		if (chdir(waddir) == -1)
 			I_OutputMsg("Couldn't change working directory\n");
 #endif
@@ -1587,4 +1573,3 @@ boolean I_GetTextInputMode(void)
 }
 
 #include "../sdl/dosstr.c"
-

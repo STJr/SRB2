@@ -613,6 +613,10 @@ static int libd_getSprite2Patch(lua_State *L)
 	if (super)
 		j |= SPR2F_SUPER;
 
+	// If there is no "super" variation of this sprite, try with the normal one.
+	if (!P_IsValidSprite2(skins[i], j))
+		j &= ~SPR2F_SUPER;
+
 	sprdef = P_GetSkinSpritedef(skins[i], j);
 
 	// set frame number

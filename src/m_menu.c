@@ -3,7 +3,7 @@
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
 // Copyright (C) 2011-2016 by Matthew "Kaito Sinclaire" Walsh.
-// Copyright (C) 1999-2024 by Sonic Team Junior.
+// Copyright (C) 1999-2025 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -140,7 +140,6 @@ static char *char_notes = NULL;
 
 boolean menuactive = false;
 boolean fromlevelselect = false;
-tic_t shieldprompt_timer = 0; // Show a prompt about the new Shield button for old configs // TODO: 2.3: Remove
 
 typedef enum
 {
@@ -1072,9 +1071,8 @@ static menuitem_t OP_ChangeControlsMenu[] =
 	{IT_CALL | IT_STRING2, NULL, "Move Backward",    M_ChangeControl, GC_BACKWARD    },
 	{IT_CALL | IT_STRING2, NULL, "Move Left",        M_ChangeControl, GC_STRAFELEFT  },
 	{IT_CALL | IT_STRING2, NULL, "Move Right",       M_ChangeControl, GC_STRAFERIGHT },
-	{IT_CALL | IT_STRING2, NULL, "Jump",             M_ChangeControl, GC_JUMP        },
-	{IT_CALL | IT_STRING2, NULL, "Spin",             M_ChangeControl, GC_SPIN        },
-	{IT_CALL | IT_STRING2, NULL, "Shield Ability",   M_ChangeControl, GC_SHIELD      },
+	{IT_CALL | IT_STRING2, NULL, "Jump",             M_ChangeControl, GC_JUMP      },
+	{IT_CALL | IT_STRING2, NULL, "Spin",             M_ChangeControl, GC_SPIN     },
 	{IT_HEADER, NULL, "Camera", NULL, 0},
 	{IT_SPACE, NULL, NULL, NULL, 0}, // padding
 	{IT_CALL | IT_STRING2, NULL, "Look Up",        M_ChangeControl, GC_LOOKUP      },
@@ -1123,15 +1121,13 @@ static menuitem_t OP_ChangeControlsMenu[] =
 
 static menuitem_t OP_Joystick1Menu[] =
 {
-	{IT_STRING | IT_CALL,  NULL, "Select Gamepad...", M_Setup1PJoystickMenu,  0},
-
-	{IT_STRING | IT_CVAR,  NULL, "Move \x17 Axis"    , &cv_moveaxis         , 20},
-	{IT_STRING | IT_CVAR,  NULL, "Move \x18 Axis"    , &cv_sideaxis         , 30},
-	{IT_STRING | IT_CVAR,  NULL, "Camera \x17 Axis"  , &cv_lookaxis         , 40},
-	{IT_STRING | IT_CVAR,  NULL, "Camera \x18 Axis"  , &cv_turnaxis         , 50},
-	{IT_STRING | IT_CVAR,  NULL, "Jump Axis"         , &cv_jumpaxis         , 60},
-	{IT_STRING | IT_CVAR,  NULL, "Spin Axis"         , &cv_spinaxis         , 70},
-	{IT_STRING | IT_CVAR,  NULL, "Shield Axis"       , &cv_shieldaxis       , 80},
+	{IT_STRING | IT_CALL,  NULL, "Select Gamepad...", M_Setup1PJoystickMenu, 10},
+	{IT_STRING | IT_CVAR,  NULL, "Move \x17 Axis"    , &cv_moveaxis         , 30},
+	{IT_STRING | IT_CVAR,  NULL, "Move \x18 Axis"    , &cv_sideaxis         , 40},
+	{IT_STRING | IT_CVAR,  NULL, "Camera \x17 Axis"  , &cv_lookaxis         , 50},
+	{IT_STRING | IT_CVAR,  NULL, "Camera \x18 Axis"  , &cv_turnaxis         , 60},
+	{IT_STRING | IT_CVAR,  NULL, "Jump Axis"         , &cv_jumpaxis         , 70},
+	{IT_STRING | IT_CVAR,  NULL, "Spin Axis"         , &cv_spinaxis         , 80},
 	{IT_STRING | IT_CVAR,  NULL, "Fire Axis"         , &cv_fireaxis         , 90},
 	{IT_STRING | IT_CVAR,  NULL, "Fire Normal Axis"  , &cv_firenaxis        ,100},
 
@@ -1143,15 +1139,13 @@ static menuitem_t OP_Joystick1Menu[] =
 
 static menuitem_t OP_Joystick2Menu[] =
 {
-	{IT_STRING | IT_CALL,  NULL, "Select Gamepad...", M_Setup2PJoystickMenu,  0},
-
-	{IT_STRING | IT_CVAR,  NULL, "Move \x17 Axis"    , &cv_moveaxis2        , 20},
-	{IT_STRING | IT_CVAR,  NULL, "Move \x18 Axis"    , &cv_sideaxis2        , 30},
-	{IT_STRING | IT_CVAR,  NULL, "Camera \x17 Axis"  , &cv_lookaxis2        , 40},
-	{IT_STRING | IT_CVAR,  NULL, "Camera \x18 Axis"  , &cv_turnaxis2        , 50},
-	{IT_STRING | IT_CVAR,  NULL, "Jump Axis"         , &cv_jumpaxis2        , 60},
-	{IT_STRING | IT_CVAR,  NULL, "Spin Axis"         , &cv_spinaxis2        , 70},
-	{IT_STRING | IT_CVAR,  NULL, "Shield Axis"       , &cv_shieldaxis2      , 80},
+	{IT_STRING | IT_CALL,  NULL, "Select Gamepad...", M_Setup2PJoystickMenu, 10},
+	{IT_STRING | IT_CVAR,  NULL, "Move \x17 Axis"    , &cv_moveaxis2        , 30},
+	{IT_STRING | IT_CVAR,  NULL, "Move \x18 Axis"    , &cv_sideaxis2        , 40},
+	{IT_STRING | IT_CVAR,  NULL, "Camera \x17 Axis"  , &cv_lookaxis2        , 50},
+	{IT_STRING | IT_CVAR,  NULL, "Camera \x18 Axis"  , &cv_turnaxis2        , 60},
+	{IT_STRING | IT_CVAR,  NULL, "Jump Axis"         , &cv_jumpaxis2        , 70},
+	{IT_STRING | IT_CVAR,  NULL, "Spin Axis"         , &cv_spinaxis2        , 80},
 	{IT_STRING | IT_CVAR,  NULL, "Fire Axis"         , &cv_fireaxis2        , 90},
 	{IT_STRING | IT_CVAR,  NULL, "Fire Normal Axis"  , &cv_firenaxis2       ,100},
 
@@ -3162,7 +3156,6 @@ static void Command_Manual_f(void)
 	if (modeattacking)
 		return;
 	M_StartControlPanel();
-	if (shieldprompt_timer) return; // TODO: 2.3: Delete this line
 	currentMenu = &MISC_HelpDef;
 	itemOn = 0;
 }
@@ -3318,7 +3311,7 @@ boolean M_Responder(event_t *ev)
 
 	if (ch == -1)
 		return false;
-	else if (ch == gamecontrol[GC_SYSTEMMENU][0] || ch == gamecontrol[GC_SYSTEMMENU][1]) // allow remappable ESC key
+	else if (ev->type != ev_text && (ch == gamecontrol[GC_SYSTEMMENU][0] || ch == gamecontrol[GC_SYSTEMMENU][1])) // allow remappable ESC key
 		ch = KEY_ESCAPE;
 
 	// F-Keys
@@ -3342,7 +3335,6 @@ boolean M_Responder(event_t *ev)
 				if (modeattacking)
 					return true;
 				M_StartControlPanel();
-				if (shieldprompt_timer) return true; // TODO: 2.3: Delete this line
 				M_Options(0);
 				// Uncomment the below if you want the menu to reset to the top each time like before. M_SetupNextMenu will fix it automatically.
 				//OP_SoundOptionsDef.lastOn = 0;
@@ -3353,7 +3345,6 @@ boolean M_Responder(event_t *ev)
 				if (modeattacking)
 					return true;
 				M_StartControlPanel();
-				if (shieldprompt_timer) return true; // TODO: 2.3: Delete this line
 				M_Options(0);
 				M_VideoModeMenu(0);
 				return true;
@@ -3365,7 +3356,6 @@ boolean M_Responder(event_t *ev)
 				if (modeattacking)
 					return true;
 				M_StartControlPanel();
-				if (shieldprompt_timer) return true; // TODO: 2.3: Delete this line
 				M_Options(0);
 				M_SetupNextMenu(&OP_MainDef);
 				return true;
@@ -3399,6 +3389,13 @@ boolean M_Responder(event_t *ev)
 	// Handle menuitems which need a specific key handling
 	if (routine && (currentMenu->menuitems[itemOn].status & IT_TYPE) == IT_KEYHANDLER)
 	{
+		// block text input if ctrl is held, to allow using ctrl+c ctrl+v and ctrl+x
+		if (ctrldown)
+		{
+			routine(ch);
+			return true;
+		}
+
 		// ignore ev_keydown events if the key maps to a character, since
 		// the ev_text event will follow immediately after in that case.
 		if (ev->type == ev_keydown && ((ch >= 32 && ch <= 127) || (ch >= KEY_KEYPAD7 && ch <= KEY_KPADDEL)))
@@ -3429,7 +3426,7 @@ boolean M_Responder(event_t *ev)
 		{
 			// dirty hack: for customising controls, I want only buttons/keys, not moves
 			if (ev->type == ev_mouse || ev->type == ev_mouse2 || ev->type == ev_joystick
-				|| ev->type == ev_joystick2)
+				|| ev->type == ev_joystick2 || ev->type == ev_text)
 				return true;
 			if (routine)
 			{
@@ -3636,230 +3633,6 @@ void M_Drawer(void)
 	}
 }
 
-// Handle the "Do you want to assign Shield Ability now?" pop-up for old configs // TODO: 2.3: Remove this line...
-static UINT8 shieldprompt_currentchoice = 0; // ...and this line...
-
-static void M_ShieldPromptUseDefaults(void) // ...and this function
-{
-	// With a default config from v2.2.10 to v2.2.13, the B button will be set to Custom 1,
-	// and Controls per Key defaults to "One", so it will override the default Shield button.
-	// A default config from v2.2.0 to v2.2.9 has Next Weapon on B, so it suffers from this too.
-
-	// So for "Use default Shield Ability buttons", we should update old configs to mitigate gamepad conflicts
-	// (even with "Several" Controls per Key!), and show a message with the default bindings
-
-	for (setupcontrols = gamecontrol; true; setupcontrols = gamecontrolbis) // Do stuff for both P1 and P2
-	{
-		INT32 JOY1 = (setupcontrols == gamecontrol) ? KEY_JOY1 : KEY_2JOY1; // Is this for P1 or for P2?
-
-		if ((setupcontrols[GC_CUSTOM1][0] == JOY1+1 || setupcontrols[GC_CUSTOM1][1] == JOY1+1)
-		&&  (setupcontrols[GC_CUSTOM2][0] == JOY1+3 || setupcontrols[GC_CUSTOM2][1] == JOY1+3)
-		&&  (setupcontrols[GC_CUSTOM3][0] == JOY1+8 || setupcontrols[GC_CUSTOM3][1] == JOY1+8))
-		{
-			// If the player has v2.2.13's default gamepad Custom 1/2/3 buttons,
-			// shuffle Custom 1/2/3 around to make room for Shield Ability on B
-			UINT8 shield_slot  = (setupcontrols[GC_SHIELD ][0] == KEY_NULL  ) ? 0 : 1;
-			UINT8 custom1_slot = (setupcontrols[GC_CUSTOM1][0] == JOY1+1) ? 0 : 1;
-			UINT8 custom2_slot = (setupcontrols[GC_CUSTOM2][0] == JOY1+3) ? 0 : 1;
-			UINT8 custom3_slot = (setupcontrols[GC_CUSTOM3][0] == JOY1+8) ? 0 : 1;
-
-			setupcontrols[GC_SHIELD ][shield_slot ] = JOY1+1; // Assign Shield Ability to B
-			setupcontrols[GC_CUSTOM1][custom1_slot] = JOY1+3; // Move Custom 1 from B to Y
-			setupcontrols[GC_CUSTOM2][custom2_slot] = JOY1+8; // Move Custom 2 from Y to LS
-			setupcontrols[GC_CUSTOM3][custom3_slot] = KEY_NULL; // Unassign Custom 3 from LS...
-			// (The alternative would be to check and update the ENTIRE gamepad layout.
-			// That'd be nice, but it would mess with people that are used to the old defaults.)
-		}
-		else if ((setupcontrols[GC_WEAPONNEXT][0] == JOY1+1 || setupcontrols[GC_WEAPONNEXT][1] == JOY1+1)
-		&&       (setupcontrols[GC_WEAPONPREV][0] == JOY1+2 || setupcontrols[GC_WEAPONPREV][1] == JOY1+2))
-		{
-			// Or if the user has a default config from v2.2.0 to v2.2.9,
-			// the B button will be Next Weapon, and X will be Previous Weapon.
-			// It's "safe" to discard one of them, you just have to press X multiple times to select in the other direction
-			UINT8 shield_slot  = (setupcontrols[GC_SHIELD    ][0] == KEY_NULL  ) ? 0 : 1;
-			UINT8 nweapon_slot = (setupcontrols[GC_WEAPONNEXT][0] == JOY1+1) ? 0 : 1;
-			UINT8 pweapon_slot = (setupcontrols[GC_WEAPONPREV][0] == JOY1+2) ? 0 : 1;
-
-			setupcontrols[GC_SHIELD    ][shield_slot ] = JOY1+1; // Assign Shield Ability to B
-			setupcontrols[GC_WEAPONNEXT][nweapon_slot] = JOY1+3; // Move Next Weapon from B to X
-			setupcontrols[GC_WEAPONPREV][pweapon_slot] = KEY_NULL; // Unassign Previous Weapon from X
-		}
-
-		if (setupcontrols == gamecontrolbis) // If we've already updated both players, break out
-			break;
-	}
-
-
-	// Now, show a message about the default Shield Ability bindings
-	if ((gamecontrol[GC_SHIELD][0] == KEY_LALT && gamecontrol[GC_SHIELD][1] == KEY_JOY1+1)
-	||  (gamecontrol[GC_SHIELD][0] == KEY_JOY1+1 && gamecontrol[GC_SHIELD][1] == KEY_LALT))
-	{
-		// Left Alt and the B button are both assigned
-		M_StartMessage(M_GetText("Shield Ability defaults to\nthe \x82""Left Alt\x80"" key on keyboard,\nand the \x85""B button\x80"" on gamepads."
-		"\n\nYou can always reassign it\nin the Options menu later."
-		"\n\n\nPress 'Enter' to continue\n"),
-			NULL, MM_NOTHING);
-		MessageDef.x = 43; // Change the pop-up message's background position/width
-		MessageDef.lastOn = (MessageDef.lastOn & ~0xFF) | 27;
-	}
-	else if (gamecontrol[GC_SHIELD][0] == KEY_LALT || gamecontrol[GC_SHIELD][1] == KEY_LALT)
-	{
-		// Left Alt is assigned, but the B button isn't.
-		M_StartMessage(M_GetText("Shield Ability defaults to\nthe \x82""Left Alt\x80"" key on keyboard.\nThe \x85""B button\x80"" on gamepads was taken."
-		"\n\nYou can always reassign it\nin the Options menu later."
-		"\n\n\nPress 'Enter' to continue\n"),
-			NULL, MM_NOTHING);
-		MessageDef.x = 24; // Change the pop-up message's background position/width
-		MessageDef.lastOn = (MessageDef.lastOn & ~0xFF) | 32;
-	}
-	else if (gamecontrol[GC_SHIELD][0] == KEY_JOY1+1 || gamecontrol[GC_SHIELD][1] == KEY_JOY1+1)
-	{
-		// The B button is assigned, but Left Alt isn't
-		M_StartMessage(M_GetText("Shield Ability defaults to\nthe \x85""B button\x80"" on gamepads.\nThe \x82""Left Alt\x80"" key on keyboard was taken."
-		"\n\nYou can always reassign it\nin the Options menu later."
-		"\n\n\nPress 'Enter' to continue\n"),
-			NULL, MM_NOTHING);
-		MessageDef.x = 8; // Change the pop-up message's background position/width
-		MessageDef.lastOn = (MessageDef.lastOn & ~0xFF) | 36;
-	}
-	else if (gamecontrol[GC_SHIELD][0] == KEY_NULL && gamecontrol[GC_SHIELD][1] == KEY_NULL)
-	{
-		// Neither Left Alt nor the B button are assigned
-		M_StartMessage(M_GetText("Shield Ability is unassigned!\nThe \x82""Left Alt\x80"" key on keyboard and\nthe \x85""B button\x80"" on gamepads were taken."
-		"\n\nYou should assign Shield Ability\nin the Options menu later."
-		"\n\n\nPress 'Enter' to continue\n"),
-			NULL, MM_NOTHING);
-		MessageDef.x = 19; // Change the pop-up message's background position/width
-		MessageDef.lastOn = (MessageDef.lastOn & ~0xFF) | 33;
-	}
-	else
-	{
-		// Neither Left Alt nor the B button are assigned... but something else is???
-		// (This can technically happen if you edit your config or use setcontrol in the console before opening the menu)
-		char keystr[16+16+2+7+1]; // Two 16-char keys + two colour codes + "' and '" + null
-
-		if (gamecontrol[GC_SHIELD][0] != KEY_NULL && gamecontrol[GC_SHIELD][1] != KEY_NULL)
-			STRBUFCPY(keystr, va("%s\x80""' and '\x82""%s",
-				G_KeyNumToName(gamecontrol[GC_SHIELD][0]),
-				G_KeyNumToName(gamecontrol[GC_SHIELD][1])));
-		else if (gamecontrol[GC_SHIELD][0] != KEY_NULL)
-			STRBUFCPY(keystr, G_KeyNumToName(gamecontrol[GC_SHIELD][0]));
-		else //if (gamecontrol[GC_SHIELD][1] != KEY_NULL)
-			STRBUFCPY(keystr, G_KeyNumToName(gamecontrol[GC_SHIELD][1]));
-
-		M_StartMessage(va("Shield Ability is assigned to\n'\x82""%s\x80""'."
-		"\n\nYou can always reassign it\nin the Options menu later."
-		"\n\n\nPress 'Enter' to continue\n",
-			keystr), NULL, MM_NOTHING);
-		MessageDef.x = 23; // Change the pop-up message's background position/width
-		MessageDef.lastOn = (MessageDef.lastOn & ~0xFF) | 32;
-	}
-}
-
-static void M_HandleShieldPromptMenu(INT32 choice) // TODO: 2.3: Remove
-{
-	switch (choice)
-	{
-		case KEY_ESCAPE:
-			if (I_GetTime() <= shieldprompt_timer) // Don't mash past the pop-up by accident!
-				break;
-
-			S_StartSound(NULL, sfx_menu1);
-			noFurtherInput = true;
-			shieldprompt_timer = 0;
-			M_ShieldPromptUseDefaults();
-			break;
-
-		case KEY_ENTER:
-			if (I_GetTime() <= shieldprompt_timer) // Don't mash past the pop-up by accident!
-				break;
-
-			S_StartSound(NULL, sfx_menu1);
-			noFurtherInput = true;
-			shieldprompt_timer = 0;
-
-			if (shieldprompt_currentchoice == 0)
-			{
-				OP_ChangeControlsDef.lastOn = 8; // Highlight Shield Ability in the controls menu
-				M_Setup1PControlsMenu(0); // Set up P1's controls menu and call M_SetupNextMenu
-			}
-			else if (shieldprompt_currentchoice == 1) // Copy the Spin buttons to the Shield buttons
-			{
-				CV_SetValue(&cv_controlperkey, 2); // Make sure that Controls per Key is "Several"
-
-				gamecontrol   [GC_SHIELD][0] = gamecontrol   [GC_SPIN][0];
-				gamecontrol   [GC_SHIELD][1] = gamecontrol   [GC_SPIN][1];
-				gamecontrolbis[GC_SHIELD][0] = gamecontrolbis[GC_SPIN][0];
-				gamecontrolbis[GC_SHIELD][1] = gamecontrolbis[GC_SPIN][1];
-				CV_SetValue(&cv_shieldaxis,  cv_spinaxis.value);
-				CV_SetValue(&cv_shieldaxis2, cv_spinaxis2.value);
-
-				M_StartMessage(M_GetText("Spin and Shield Ability are now\nthe same button."
-				"\n\nYou can always reassign them\nin the Options menu later."
-				"\n\n\nPress 'Enter' to continue\n"),
-					NULL, MM_NOTHING);
-				MessageDef.x = 36; // Change the pop-up message's background position/width
-				MessageDef.lastOn = (MessageDef.lastOn & ~0xFF) | 29;
-			}
-			else
-				M_ShieldPromptUseDefaults();
-			break;
-
-		case KEY_UPARROW:
-			S_StartSound(NULL, sfx_menu1);
-			shieldprompt_currentchoice = (shieldprompt_currentchoice+2)%3;
-			break;
-
-		case KEY_DOWNARROW:
-			S_StartSound(NULL, sfx_menu1);
-			shieldprompt_currentchoice = (shieldprompt_currentchoice+1)%3;
-			break;
-	}
-
-	MessageDef.prevMenu = &MainDef;
-}
-
-static void M_DrawShieldPromptMenu(void) // TODO: 2.3: Remove
-{
-	INT16 cursorx = (BASEVIDWIDTH/2) - 24;
-
-	V_DrawFill(10-3, 68-3, 300+6, 40+6, 159);
-	// V_DrawCenteredString doesn't centre newlines, so we have to draw each line separately
-	V_DrawCenteredString(BASEVIDWIDTH/2, 68, V_ALLOWLOWERCASE, "Welcome back! Since you last played,");
-	V_DrawCenteredString(BASEVIDWIDTH/2, 76, V_ALLOWLOWERCASE, "Spin has been split into separate");
-	V_DrawCenteredString(BASEVIDWIDTH/2, 84, V_ALLOWLOWERCASE, "\"Spin\" and \"Shield Ability\" controls.");
-
-	V_DrawCenteredString(BASEVIDWIDTH/2, 98, V_ALLOWLOWERCASE, "Do you want to assign Shield Ability now?");
-
-
-	V_DrawCenteredString(BASEVIDWIDTH/2, 164,
-		(shieldprompt_currentchoice == 0) ? V_YELLOWMAP : 0, "Open Control Setup");
-	V_DrawCenteredString(BASEVIDWIDTH/2, 172,
-		(shieldprompt_currentchoice == 1) ? V_YELLOWMAP : 0, "Keep the old behaviour");
-	V_DrawCenteredString(BASEVIDWIDTH/2, 180,
-		(shieldprompt_currentchoice == 2) ? V_YELLOWMAP : 0, "Use default Shield Ability buttons");
-
-	switch (shieldprompt_currentchoice)
-	{
-		case 0:  cursorx -= V_StringWidth("Open Control Setup",                 0)/2; break;
-		case 1:  cursorx -= V_StringWidth("Keep the old behaviour",             0)/2; break;
-		default: cursorx -= V_StringWidth("Use default Shield Ability buttons", 0)/2; break;
-	}
-	V_DrawScaledPatch(cursorx, 164 + (shieldprompt_currentchoice*8), 0, W_CachePatchName("M_CURSOR", PU_PATCH));
-}
-
-static menuitem_t OP_ShieldPromptMenu[] = {{IT_KEYHANDLER | IT_NOTHING, NULL, "", M_HandleShieldPromptMenu, 0}}; // TODO: 2.3: Remove
-
-menu_t OP_ShieldPromptDef = { // TODO: 2.3: Remove
-	MN_SPECIAL,
-	NULL,
-	1,
-	&MainDef,
-	OP_ShieldPromptMenu,
-	M_DrawShieldPromptMenu,
-	0, 0, 0, NULL
-};
-
 //
 // M_StartControlPanel
 //
@@ -3891,15 +3664,6 @@ void M_StartControlPanel(void)
 		currentMenu = &MainDef;
 		itemOn = singleplr;
 		M_UpdateItemOn();
-
-		if (shieldprompt_timer) // For old configs, show a pop-up about the new Shield button // TODO: 2.3: Remove
-		{
-			S_StartSound(NULL, sfx_strpst);
-			noFurtherInput = true;
-			shieldprompt_timer = I_GetTime() + TICRATE; // Don't mash past the pop-up by accident!
-
-			M_SetupNextMenu(&OP_ShieldPromptDef);
-		}
 	}
 	else if (modeattacking)
 	{
@@ -3910,12 +3674,16 @@ void M_StartControlPanel(void)
 	}
 	else if (!(netgame || multiplayer)) // Single Player
 	{
-		// Devmode unlocks Pandora's Box in the pause menu
-		boolean pandora = ((M_SecretUnlocked(SECRET_PANDORA, serverGamedata) || cv_debug || devparm) && !marathonmode);
+		// Devmode unlocks Pandora's Box and Level Select in the pause menu
+		boolean isforbidden = (marathonmode || ultimatemode);
+		boolean isdebug = ((cv_debug || devparm) && !isforbidden);
+		boolean pandora = ((M_SecretUnlocked(SECRET_PANDORA, serverGamedata) && !isforbidden) || isdebug);
+		boolean lselect = ((maplistoption != 0 && !isforbidden) || isdebug);
 
-		if (gamestate != GS_LEVEL || ultimatemode) // intermission, so gray out stuff.
+		if (gamestate != GS_LEVEL) // intermission, so gray out stuff.
 		{
 			SPauseMenu[spause_pandora].status = (pandora) ? (IT_GRAYEDOUT) : (IT_DISABLED);
+			SPauseMenu[spause_levelselect].status = (lselect) ? (IT_STRING | IT_CALL) : (IT_DISABLED);
 			SPauseMenu[spause_retry].status = IT_GRAYEDOUT;
 		}
 		else
@@ -3925,6 +3693,11 @@ void M_StartControlPanel(void)
 				++numlives;
 
 			SPauseMenu[spause_pandora].status = (pandora) ? (IT_STRING | IT_CALL) : (IT_DISABLED);
+			SPauseMenu[spause_levelselect].status = (lselect) ? (IT_STRING | IT_CALL) : (IT_DISABLED);
+			if (ultimatemode)
+			{
+				SPauseMenu[spause_retry].status = IT_GRAYEDOUT;
+			}
 
 			// The list of things that can disable retrying is (was?) a little too complex
 			// for me to want to use the short if statement syntax
@@ -3933,13 +3706,6 @@ void M_StartControlPanel(void)
 			else
 				SPauseMenu[spause_retry].status = (IT_STRING | IT_CALL);
 		}
-
-		// We can always use level select though. :33
-		// Guarantee it if we have either it unlocked or devmode is enabled
-		if ((maplistoption != 0 || M_SecretUnlocked(SECRET_LEVELSELECT, serverGamedata) || cv_debug || devparm) && !marathonmode)
-			SPauseMenu[spause_levelselect].status = (IT_STRING | IT_CALL);
-		else
-			SPauseMenu[spause_levelselect].status = (IT_DISABLED);
 
 		// And emblem hints.
 		SPauseMenu[spause_hints].status = (M_SecretUnlocked(SECRET_EMBLEMHINTS, clientGamedata) && !marathonmode) ? (IT_STRING | IT_CALL) : (IT_DISABLED);
@@ -7781,13 +7547,9 @@ static void M_PauseLevelSelect(INT32 choice)
 	SP_PauseLevelSelectDef.prevMenu = currentMenu;
 	levellistmode = LLM_LEVELSELECT;
 
-	// maplistoption is only specified if not set already
-	// and we have the level select unlocked so that it
+	// maplistoption is NOT specified, so that this
 	// transfers the level select list from the menu
 	// used to enter the game to the pause menu.
-	if (maplistoption == 0 && M_SecretUnlocked(SECRET_LEVELSELECT, serverGamedata))
-		maplistoption = 1;
-
 	if (!M_PrepareLevelPlatter(-1, true))
 	{
 		M_StartMessage(M_GetText("No selectable levels found.\n"),NULL,MM_NOTHING);
@@ -8511,6 +8273,7 @@ static void M_StartTutorial(INT32 choice)
 	gamecomplete = 0;
 	cursaveslot = 0;
 	maplistoption = 0;
+	CV_StealthSet(&cv_skin, DEFAULTSKIN); // tutorial accounts for sonic only
 	G_DeferedInitNew(false, G_BuildMapName(tutorialmap), 0, false, false);
 }
 
@@ -11365,7 +11128,7 @@ static void M_Refresh(INT32 choice)
 
 	// note: this is the one case where 0 is a valid room number
 	// because it corresponds to "All"
-	CL_UpdateServerList(!(ms_RoomId < 0), ms_RoomId);
+	CL_UpdateServerList(cv_masterserver_room_id.value >= 0, cv_masterserver_room_id.value);
 
 	// first page of servers
 	serverlistpage = 0;
@@ -11451,7 +11214,7 @@ static void M_DrawConnectMenu(void)
 		numPages = 1;
 
 	// Room name
-	if (ms_RoomId < 0)
+	if (cv_masterserver_room_id.value < 0)
 		V_DrawRightAlignedString(BASEVIDWIDTH - currentMenu->x, currentMenu->y + MP_ConnectMenu[mp_connect_room].alphaKey,
 		                         V_YELLOWMAP, (itemOn == mp_connect_room) ? "<Select to change>" : "<Unlisted Mode>");
 	else
@@ -11679,7 +11442,7 @@ static void M_ConnectMenu(INT32 choice)
 
 	// first page of servers
 	serverlistpage = 0;
-	if (ms_RoomId < 0)
+	if (cv_masterserver_room_id.value < 0)
 	{
 		M_RoomMenu(0); // Select a room instead of staring at an empty list
 		// This prevents us from returning to the modified game alert.
@@ -11775,10 +11538,10 @@ static void M_ChooseRoom(INT32 choice)
 #endif
 
 	if (choice == 0)
-		ms_RoomId = -1;
+		CV_SetValue(&cv_masterserver_room_id, -1);
 	else
 	{
-		ms_RoomId = roomIds[choice-1];
+		CV_SetValue(&cv_masterserver_room_id, roomIds[choice-1]);
 		menuRoomIndex = choice - 1;
 	}
 
@@ -11847,7 +11610,7 @@ static void M_DrawServerMenu(void)
 	if (currentMenu == &MP_ServerDef)
 	{
 		M_DrawLevelPlatterHeader(currentMenu->y - lsheadingheight/2, "Server settings", true, false);
-		if (ms_RoomId < 0)
+		if (cv_masterserver_room_id.value < 0)
 			V_DrawRightAlignedString(BASEVIDWIDTH - currentMenu->x, currentMenu->y + MP_ServerMenu[mp_server_room].alphaKey,
 			                         V_YELLOWMAP, (itemOn == mp_server_room) ? "<Select to change>" : "<Unlisted Mode>");
 		else
@@ -11943,7 +11706,7 @@ static void M_ServerOptions(INT32 choice)
 static void M_StartServerMenu(INT32 choice)
 {
 	(void)choice;
-	ms_RoomId = -1;
+	CV_SetValue(&cv_masterserver_room_id, -1);
 	levellistmode = LLM_CREATESERVER;
 	Newgametype_OnChange();
 	M_SetupNextMenu(&MP_ServerDef);
@@ -12115,8 +11878,7 @@ static void M_HandleConnectIP(INT32 choice)
 
 			if ( ctrldown ) {
 				switch (choice) {
-					case 'v':
-					case 'V': // ctrl+v, pasting
+					case 'v': // ctrl+v, pasting
 					{
 						const char *paste = I_ClipboardPaste();
 
@@ -12129,8 +11891,7 @@ static void M_HandleConnectIP(INT32 choice)
 						break;
 					}
 					case KEY_INS:
-					case 'c':
-					case 'C': // ctrl+c, ctrl+insert, copying
+					case 'c': // ctrl+c, ctrl+insert, copying
 						if (l != 0) // Don't replace the clipboard without any text
 						{
 							I_ClipboardCopy(setupm_ip, l);
@@ -12138,8 +11899,7 @@ static void M_HandleConnectIP(INT32 choice)
 						}
 						break;
 
-					case 'x':
-					case 'X': // ctrl+x, cutting
+					case 'x': // ctrl+x, cutting
 						if (l != 0) // Don't replace the clipboard without any text
 						{
 							I_ClipboardCopy(setupm_ip, l);
@@ -13563,23 +13323,23 @@ static void M_Setup1PControlsMenu(INT32 choice)
 	currentMenu->lastOn = itemOn;
 
 	// Unhide the nine non-P2 controls and their headers
-	//OP_ChangeControlsMenu[19+0].status = IT_HEADER;
-	//OP_ChangeControlsMenu[19+1].status = IT_SPACE;
+	//OP_ChangeControlsMenu[18+0].status = IT_HEADER;
+	//OP_ChangeControlsMenu[18+1].status = IT_SPACE;
 	// ...
-	OP_ChangeControlsMenu[19+2].status = IT_CALL|IT_STRING2;
-	OP_ChangeControlsMenu[19+3].status = IT_CALL|IT_STRING2;
-	OP_ChangeControlsMenu[19+4].status = IT_CALL|IT_STRING2;
-	OP_ChangeControlsMenu[19+5].status = IT_CALL|IT_STRING2;
-	OP_ChangeControlsMenu[19+6].status = IT_CALL|IT_STRING2;
-	//OP_ChangeControlsMenu[19+7].status = IT_CALL|IT_STRING2;
-	//OP_ChangeControlsMenu[19+8].status = IT_CALL|IT_STRING2;
-	OP_ChangeControlsMenu[19+9].status = IT_CALL|IT_STRING2;
+	OP_ChangeControlsMenu[18+2].status = IT_CALL|IT_STRING2;
+	OP_ChangeControlsMenu[18+3].status = IT_CALL|IT_STRING2;
+	OP_ChangeControlsMenu[18+4].status = IT_CALL|IT_STRING2;
+	OP_ChangeControlsMenu[18+5].status = IT_CALL|IT_STRING2;
+	OP_ChangeControlsMenu[18+6].status = IT_CALL|IT_STRING2;
+	//OP_ChangeControlsMenu[18+7].status = IT_CALL|IT_STRING2;
+	//OP_ChangeControlsMenu[18+8].status = IT_CALL|IT_STRING2;
+	OP_ChangeControlsMenu[18+9].status = IT_CALL|IT_STRING2;
 	// ...
-	OP_ChangeControlsMenu[29+0].status = IT_HEADER;
-	OP_ChangeControlsMenu[29+1].status = IT_SPACE;
+	OP_ChangeControlsMenu[28+0].status = IT_HEADER;
+	OP_ChangeControlsMenu[28+1].status = IT_SPACE;
 	// ...
-	OP_ChangeControlsMenu[29+2].status = IT_CALL|IT_STRING2;
-	OP_ChangeControlsMenu[29+3].status = IT_CALL|IT_STRING2;
+	OP_ChangeControlsMenu[28+2].status = IT_CALL|IT_STRING2;
+	OP_ChangeControlsMenu[28+3].status = IT_CALL|IT_STRING2;
 
 	OP_ChangeControlsDef.prevMenu = &OP_P1ControlsDef;
 	OP_ChangeControlsDef.menuid &= ~(((1 << MENUBITS) - 1) << MENUBITS); // remove second level
@@ -13595,23 +13355,23 @@ static void M_Setup2PControlsMenu(INT32 choice)
 	currentMenu->lastOn = itemOn;
 
 	// Hide the nine non-P2 controls and their headers
-	//OP_ChangeControlsMenu[19+0].status = IT_GRAYEDOUT2;
-	//OP_ChangeControlsMenu[19+1].status = IT_GRAYEDOUT2;
+	//OP_ChangeControlsMenu[18+0].status = IT_GRAYEDOUT2;
+	//OP_ChangeControlsMenu[18+1].status = IT_GRAYEDOUT2;
 	// ...
-	OP_ChangeControlsMenu[19+2].status = IT_GRAYEDOUT2;
-	OP_ChangeControlsMenu[19+3].status = IT_GRAYEDOUT2;
-	OP_ChangeControlsMenu[19+4].status = IT_GRAYEDOUT2;
-	OP_ChangeControlsMenu[19+5].status = IT_GRAYEDOUT2;
-	OP_ChangeControlsMenu[19+6].status = IT_GRAYEDOUT2;
-	//OP_ChangeControlsMenu[19+7].status = IT_GRAYEDOUT2;
-	//OP_ChangeControlsMenu[19+8].status = IT_GRAYEDOUT2;
-	OP_ChangeControlsMenu[19+9].status = IT_GRAYEDOUT2;
+	OP_ChangeControlsMenu[18+2].status = IT_GRAYEDOUT2;
+	OP_ChangeControlsMenu[18+3].status = IT_GRAYEDOUT2;
+	OP_ChangeControlsMenu[18+4].status = IT_GRAYEDOUT2;
+	OP_ChangeControlsMenu[18+5].status = IT_GRAYEDOUT2;
+	OP_ChangeControlsMenu[18+6].status = IT_GRAYEDOUT2;
+	//OP_ChangeControlsMenu[18+7].status = IT_GRAYEDOUT2;
+	//OP_ChangeControlsMenu[18+8].status = IT_GRAYEDOUT2;
+	OP_ChangeControlsMenu[18+9].status = IT_GRAYEDOUT2;
 	// ...
-	OP_ChangeControlsMenu[29+0].status = IT_GRAYEDOUT2;
-	OP_ChangeControlsMenu[29+1].status = IT_GRAYEDOUT2;
+	OP_ChangeControlsMenu[28+0].status = IT_GRAYEDOUT2;
+	OP_ChangeControlsMenu[28+1].status = IT_GRAYEDOUT2;
 	// ...
-	OP_ChangeControlsMenu[29+2].status = IT_GRAYEDOUT2;
-	OP_ChangeControlsMenu[29+3].status = IT_GRAYEDOUT2;
+	OP_ChangeControlsMenu[28+2].status = IT_GRAYEDOUT2;
+	OP_ChangeControlsMenu[28+3].status = IT_GRAYEDOUT2;
 
 	OP_ChangeControlsDef.prevMenu = &OP_P2ControlsDef;
 	OP_ChangeControlsDef.menuid &= ~(((1 << MENUBITS) - 1) << MENUBITS); // remove second level
@@ -14412,6 +14172,33 @@ static INT32 quitsounds[] =
 	sfx_chchng // Tails 11-09-99
 };
 
+const char *QuitScreenMessages[3] = {
+	(
+	"Design and content in\n"
+	"SRB2 is copyright\n"
+	"1998-2025 by STJr. All\n"
+	"original material in\n"
+	"this game is copyrighted\n"
+	"by their respective\n"
+	"owners, and no copyright\n"
+	"infringement is\n"
+	"intended. STJr's staff\n"
+	"make no profit\n"
+	"whatsoever (in\n"
+	"fact, we lose\n"
+	"money)."
+	),
+
+	(
+	"THIS GAME SHOULD NOT BE SOLD!"
+	),
+
+	(
+	"STJr is in no way affiliated\n"
+	"with SEGA or Sonic Team."
+	)
+};
+
 void M_QuitResponse(INT32 ch)
 {
 	tic_t ptime;
@@ -14433,6 +14220,9 @@ void M_QuitResponse(INT32 ch)
 		while (ptime > I_GetTime())
 		{
 			V_DrawScaledPatch(0, 0, 0, W_CachePatchName("GAMEQUIT", PU_PATCH)); // Demo 3 Quit Screen Tails 06-16-2001
+			V_DrawCenteredString(2+(V_StringWidth(QuitScreenMessages[0], V_ALLOWLOWERCASE)/2), 4, V_ALLOWLOWERCASE, QuitScreenMessages[0]);
+			V_DrawCenteredString(160, 166, V_ALLOWLOWERCASE|V_REDMAP, QuitScreenMessages[1]);
+			V_DrawCenteredString(160, 176, V_ALLOWLOWERCASE, QuitScreenMessages[2]);
 			I_FinishUpdate(); // Update the screen with the image Tails 06-19-2001
 			I_Sleep(cv_sleep.value);
 			I_UpdateTime(cv_timescale.value);

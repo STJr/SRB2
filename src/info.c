@@ -306,6 +306,8 @@ char sprnames[NUMSPRITES + 1][MAXSPRITENAME + 1] =
 	"XMS4", // Lamppost
 	"XMS5", // Hanging Star
 	"XMS6", // Mistletoe
+	"SNTT", // Silver Shiver tree
+	"SSTT", // Silver Shiver tree with snow
 	"FHZI", // FHZ ice
 	"ROSY",
 
@@ -339,6 +341,8 @@ char sprnames[NUMSPRITES + 1][MAXSPRITENAME + 1] =
 	// Misc Scenery
 	"STLG", // Stalagmites
 	"DBAL", // Disco
+	"GINE", // Crystalline Heights tree
+	"PPAL", // Pristine Shores palm trees
 
 	// Powerup Indicators
 	"ARMA", // Armageddon Shield Orb
@@ -524,6 +528,9 @@ char sprnames[NUMSPRITES + 1][MAXSPRITENAME + 1] =
 	// Gravity Well Objects
 	"GWLG",
 	"GWLR",
+
+	// LJ Knuckles
+	"OLDK",
 };
 
 char spr2names[NUMPLAYERSPRITES][MAXSPRITENAME + 1] =
@@ -592,6 +599,17 @@ char spr2names[NUMPLAYERSPRITES][MAXSPRITENAME + 1] =
 	"TALA",
 	"TALB",
 	"TALC",
+
+	"MSC0",
+	"MSC1",
+	"MSC2",
+	"MSC3",
+	"MSC4",
+	"MSC5",
+	"MSC6",
+	"MSC7",
+	"MSC8",
+	"MSC9",
 
 	"CNT1",
 	"CNT2",
@@ -671,6 +689,17 @@ playersprite_t spr2defaults[NUMPLAYERSPRITES] = {
 	SPR2_TAL0, // SPR2_TALB,
 	SPR2_TAL6, // SPR2_TALC,
 
+	0, // SPR2_MSC0,
+	0, // SPR2_MSC1,
+	0, // SPR2_MSC2,
+	0, // SPR2_MSC3,
+	0, // SPR2_MSC4,
+	0, // SPR2_MSC5,
+	0, // SPR2_MSC6,
+	0, // SPR2_MSC7,
+	0, // SPR2_MSC8,
+	0, // SPR2_MSC9,
+
 	SPR2_WAIT, // SPR2_CNT1,
 	SPR2_FALL, // SPR2_CNT2,
 	SPR2_SPNG, // SPR2_CNT3,
@@ -709,7 +738,7 @@ state_t states[NUMSTATES] =
 
 	// Player
 	{SPR_PLAY, SPR2_STND|FF_ANIMATE,    105, {NULL}, 0,  7, S_PLAY_WAIT, 0}, // S_PLAY_STND
-	{SPR_PLAY, SPR2_WAIT|FF_ANIMATE,     -1, {NULL}, 0, 16, S_NULL, 0},      // S_PLAY_WAIT
+	{SPR_PLAY, SPR2_WAIT,                16, {NULL}, 0,  0, S_PLAY_WAIT, 0}, // S_PLAY_WAIT
 	{SPR_PLAY, SPR2_WALK,                 4, {NULL}, 0,  0, S_PLAY_WALK, 0}, // S_PLAY_WALK
 	{SPR_PLAY, SPR2_SKID,                 1, {NULL}, 0,  0, S_PLAY_WALK, 0}, // S_PLAY_SKID
 	{SPR_PLAY, SPR2_RUN ,                 2, {NULL}, 0,  0, S_PLAY_RUN, 0},  // S_PLAY_RUN
@@ -1368,116 +1397,117 @@ state_t states[NUMSTATES] =
 	// Boss 5
 	{SPR_NULL, 0, 2, {A_CheckFlags2}, MF2_AMBUSH, S_FANG_IDLE0, S_FANG_INTRO0, 0}, // S_FANG_SETUP
 
-	{SPR_NULL, 0, 2, {NULL}, 0, 0, S_FANG_INTRO1, 0}, // S_FANG_INTRO0
-	{SPR_NULL, 0, 2, {A_Boss5MakeJunk}, -S_FANG_CLONE1, 0, S_FANG_INTRO2, 0}, // S_FANG_INTRO1
-	{SPR_NULL, 0, 0, {A_Repeat}, 25, S_FANG_INTRO1, S_FANG_INTRO3, 0}, // S_FANG_INTRO2
-	{SPR_NULL, 0, 0, {A_Boss5MakeJunk}, 0, 1, S_FANG_INTRO4, 0}, // S_FANG_INTRO3
-	{SPR_FANG, 30, 1, {A_ZThrust}, 9, (1<<16)|1, S_FANG_INTRO5, 0}, // S_FANG_INTRO4
-	{SPR_FANG, 27, 1, {A_Boss5CheckOnGround}, S_FANG_INTRO9, 0, S_FANG_INTRO6, 0}, // S_FANG_INTRO5
-	{SPR_FANG, 28, 1, {A_Boss5CheckOnGround}, S_FANG_INTRO9, 0, S_FANG_INTRO7, 0}, // S_FANG_INTRO6
-	{SPR_FANG, 29, 1, {A_Boss5CheckOnGround}, S_FANG_INTRO9, 0, S_FANG_INTRO8, 0}, // S_FANG_INTRO7
-	{SPR_FANG, 30, 1, {A_Boss5CheckOnGround}, S_FANG_INTRO9, 0, S_FANG_INTRO5, 0}, // S_FANG_INTRO8
-	{SPR_FANG, 23|FF_ANIMATE, 50, {NULL}, 1, 4, S_FANG_INTRO10, 0}, // S_FANG_INTRO9
-	{SPR_FANG, 25, 5, {NULL}, 0, 0, S_FANG_INTRO11, 0}, // S_FANG_INTRO10
-	{SPR_FANG, 26, 2, {A_Boss5MakeJunk}, S_BROKENROBOTD, 2, S_FANG_INTRO12, 0}, // S_FANG_INTRO11
-	{SPR_FANG, 31|FF_ANIMATE, 50, {NULL}, 3, 4, S_FANG_IDLE1, 0}, // S_FANG_INTRO12
+	{SPR_NULL,         0, 2, {NULL}, 0, 0, S_FANG_INTRO1, 0}, // S_FANG_INTRO0
+	{SPR_NULL,         0, 2, {A_Boss5MakeJunk}, -S_FANG_CLONE1, 0, S_FANG_INTRO2, 0}, // S_FANG_INTRO1
+	{SPR_NULL,         0, 0, {A_Repeat}, 25, S_FANG_INTRO1, S_FANG_INTRO3, 0}, // S_FANG_INTRO2
+	{SPR_NULL,         0, 0, {A_Boss5MakeJunk}, 0, 1, S_FANG_INTRO4, 0}, // S_FANG_INTRO3
+	{SPR_PLAY, SPR2_ROLL, 1, {A_ZThrust}, 9, (1<<16)|1, S_FANG_INTRO5, 0}, // S_FANG_INTRO4
+	{SPR_PLAY, SPR2_ROLL, 1, {A_Boss5CheckOnGround}, S_FANG_INTRO9, 0, S_FANG_INTRO6, 0}, // S_FANG_INTRO5
+	{SPR_PLAY, SPR2_ROLL, 1, {A_Boss5CheckOnGround}, S_FANG_INTRO9, 0, S_FANG_INTRO7, 0}, // S_FANG_INTRO6
+	{SPR_PLAY, SPR2_ROLL, 1, {A_Boss5CheckOnGround}, S_FANG_INTRO9, 0, S_FANG_INTRO8, 0}, // S_FANG_INTRO7
+	{SPR_PLAY, SPR2_ROLL, 1, {A_Boss5CheckOnGround}, S_FANG_INTRO9, 0, S_FANG_INTRO5, 0}, // S_FANG_INTRO8
+	{SPR_PLAY, SPR2_MSC0|FF_ANIMATE, 50, {NULL}, 0, 4, S_FANG_INTRO10, 0}, // S_FANG_INTRO9
+	{SPR_PLAY, SPR2_MSC1, 5, {NULL}, 0, 0, S_FANG_INTRO11, 0}, // S_FANG_INTRO10
+	{SPR_PLAY, SPR2_MSC2, 2, {A_Boss5MakeJunk}, S_BROKENROBOTD, 2, S_FANG_INTRO12, 0}, // S_FANG_INTRO11
+	{SPR_PLAY, SPR2_CNT1|FF_ANIMATE, 50, {NULL}, 0, 4, S_FANG_IDLE1, 0}, // S_FANG_INTRO12
 
-	{SPR_FANG, 11, 2, {A_Boss5MakeJunk}, 0, -1, S_FANG_CLONE2, 0}, // S_FANG_CLONE1
-	{SPR_FANG, 11, 0, {A_Repeat}, 49, S_FANG_CLONE1, S_FANG_CLONE3, 0}, // S_FANG_INTRO2
-	{SPR_FANG, 12, 0, {A_SetObjectFlags}, MF_NOGRAVITY, 1, S_FANG_CLONE4, 0}, // S_FANG_CLONE3
-	{SPR_FANG, 12, 1, {A_Boss5CheckOnGround}, S_FANG_IDLE0, 0, S_FANG_CLONE4, 0}, // S_FANG_CLONE4
+	{SPR_PLAY, SPR2_SPNG, 2, {A_Boss5MakeJunk}, 0, -1, S_FANG_CLONE2, 0}, // S_FANG_CLONE1
+	{SPR_PLAY, SPR2_SPNG, 0, {A_Repeat}, 49, S_FANG_CLONE1, S_FANG_CLONE3, 0}, // S_FANG_CLONE2
+	{SPR_PLAY, SPR2_FALL, 0, {A_SetObjectFlags}, MF_NOGRAVITY, 1, S_FANG_CLONE4, 0}, // S_FANG_CLONE3
+	{SPR_PLAY, SPR2_FALL, 1, {A_Boss5CheckOnGround}, S_FANG_IDLE0, 0, S_FANG_CLONE4, 0}, // S_FANG_CLONE4
 
-	{SPR_FANG, 0,  0, {A_SetObjectFlags}, MF_NOCLIPTHING, 1, S_FANG_IDLE1, 0}, // S_FANG_IDLE0
-	{SPR_FANG, 2, 16, {A_Look}, 1, 0, S_FANG_IDLE2, 0}, // S_FANG_IDLE1
-	{SPR_FANG, 3, 16, {A_Look}, 1, 0, S_FANG_IDLE3, 0}, // S_FANG_IDLE2
-	{SPR_FANG, 3, 16, {A_Look}, 1, 0, S_FANG_IDLE4, 0}, // S_FANG_IDLE3
-	{SPR_FANG, 3, 16, {A_Look}, 1, 0, S_FANG_IDLE5, 0}, // S_FANG_IDLE4
-	{SPR_FANG, 2, 16, {A_Look}, 1, 0, S_FANG_IDLE6, 0}, // S_FANG_IDLE5
-	{SPR_FANG, 1, 16, {A_Look}, 1, 0, S_FANG_IDLE7, 0}, // S_FANG_IDLE6
-	{SPR_FANG, 1, 16, {A_Look}, 1, 0, S_FANG_IDLE8, 0}, // S_FANG_IDLE7
-	{SPR_FANG, 1, 16, {A_Look}, 1, 0, S_FANG_IDLE1, 0}, // S_FANG_IDLE8
+	{SPR_PLAY,         0,  0, {A_SetObjectFlags}, MF_NOCLIPTHING, 1, S_FANG_IDLE1, 0}, // S_FANG_IDLE0
+	{SPR_PLAY, SPR2_WAIT, 16, {A_Look}, 1, 0, S_FANG_IDLE2, 0}, // S_FANG_IDLE1
+	{SPR_PLAY, SPR2_WAIT, 16, {A_Look}, 1, 0, S_FANG_IDLE3, 0}, // S_FANG_IDLE2
+	{SPR_PLAY, SPR2_WAIT, 16, {A_Look}, 1, 0, S_FANG_IDLE4, 0}, // S_FANG_IDLE3
+	{SPR_PLAY, SPR2_WAIT, 16, {A_Look}, 1, 0, S_FANG_IDLE5, 0}, // S_FANG_IDLE4
+	{SPR_PLAY, SPR2_WAIT, 16, {A_Look}, 1, 0, S_FANG_IDLE6, 0}, // S_FANG_IDLE5
+	{SPR_PLAY, SPR2_WAIT, 16, {A_Look}, 1, 0, S_FANG_IDLE7, 0}, // S_FANG_IDLE6
+	{SPR_PLAY, SPR2_WAIT, 16, {A_Look}, 1, 0, S_FANG_IDLE8, 0}, // S_FANG_IDLE7
+	{SPR_PLAY, SPR2_WAIT, 16, {A_Look}, 1, 0, S_FANG_IDLE1, 0}, // S_FANG_IDLE8
 
-	{SPR_FANG, 14, 0, {A_DoNPCPain}, FRACUNIT, 0, S_FANG_PAIN2, 0}, // S_FANG_PAIN1
-	{SPR_FANG, 14, 1, {A_Boss5CheckOnGround}, S_FANG_PATHINGSTART1, S_FANG_PINCHPATHINGSTART1, S_FANG_PAIN2, 0}, // S_FANG_PAIN2
+	{SPR_PLAY,         0, 0, {A_DoNPCPain}, FRACUNIT, 0, S_FANG_PAIN2, 0}, // S_FANG_PAIN1
+	{SPR_PLAY, SPR2_PAIN, 1, {A_Boss5CheckOnGround}, S_FANG_PATHINGSTART1, S_FANG_PINCHPATHINGSTART1, S_FANG_PAIN2, 0}, // S_FANG_PAIN2
 
-	{SPR_FANG,  8, 0, {A_Boss5ExtraRepeat}, 5, 4, S_FANG_PATHINGSTART2, 0}, // S_FANG_PATHINGSTART1
-	{SPR_FANG,  8, 0, {A_PlayActiveSound}, 0, 0, S_FANG_PATHING, 0}, // S_FANG_PATHINGSTART2
-	{SPR_FANG,  8, 0, {A_Boss5FindWaypoint}, 0, 0, S_FANG_BOUNCE1, 0}, // S_FANG_PATHING
+	{SPR_PLAY,         0, 0, {A_Boss5ExtraRepeat}, 5, 4, S_FANG_PATHINGSTART2, 0}, // S_FANG_PATHINGSTART1
+	{SPR_PLAY,         0, 0, {A_PlayActiveSound}, 0, 0, S_FANG_PATHING, 0}, // S_FANG_PATHINGSTART2
+	{SPR_PLAY,         0, 0, {A_Boss5FindWaypoint}, 0, 0, S_FANG_BOUNCE1, 0}, // S_FANG_PATHING
 
-	{SPR_FANG,  8, 2, {A_Thrust}, 0, 1, S_FANG_BOUNCE2, 0}, // S_FANG_BOUNCE1
-	{SPR_FANG,  9, 2, {NULL}, 0, 0, S_FANG_BOUNCE3, 0}, // S_FANG_BOUNCE2
-	{SPR_FANG, 10, 1, {A_Boss5Jump}, 0, 0, S_FANG_BOUNCE4, 0}, // S_FANG_BOUNCE3
-	{SPR_FANG, 10, 1, {A_Boss5CheckFalling}, S_FANG_CHECKPATH1, S_FANG_FALL1, S_FANG_BOUNCE4, 0}, // S_FANG_BOUNCE4
+	{SPR_PLAY, SPR2_LAND, 2, {A_Thrust}, 0, 1, S_FANG_BOUNCE2, 0}, // S_FANG_BOUNCE1
+	{SPR_PLAY, SPR2_LAND, 2, {NULL}, 0, 0, S_FANG_BOUNCE3, 0}, // S_FANG_BOUNCE2
+	{SPR_PLAY, SPR2_LAND, 1, {A_Boss5Jump}, 0, 0, S_FANG_BOUNCE4, 0}, // S_FANG_BOUNCE3
+	{SPR_PLAY, SPR2_BNCE, 1, {A_Boss5CheckFalling}, S_FANG_CHECKPATH1, S_FANG_FALL1, S_FANG_BOUNCE4, 0}, // S_FANG_BOUNCE4
 
-	{SPR_FANG, 12, 1, {A_Boss5CheckOnGround}, S_FANG_CHECKPATH1, 0, S_FANG_FALL2, 0}, // S_FANG_FALL1
-	{SPR_FANG, 13, 1, {A_Boss5CheckOnGround}, S_FANG_CHECKPATH1, 0, S_FANG_FALL1, 0}, // S_FANG_FALL2
+	{SPR_PLAY, SPR2_FALL, 1, {A_Boss5CheckOnGround}, S_FANG_CHECKPATH1, 0, S_FANG_FALL2, 0}, // S_FANG_FALL1
+	{SPR_PLAY, SPR2_FALL, 1, {A_Boss5CheckOnGround}, S_FANG_CHECKPATH1, 0, S_FANG_FALL1, 0}, // S_FANG_FALL2
 
-	{SPR_FANG,  8, 0, {A_Boss5Calm}, 0, 0, S_FANG_CHECKPATH2, 0}, // S_FANG_CHECKPATH1
-	{SPR_FANG,  8, 0, {A_Repeat}, 0, S_FANG_PATHINGCONT1, S_FANG_SKID1, 0}, // S_FANG_CHECKPATH2
+	{SPR_PLAY,         0, 0, {A_Boss5Calm}, 0, 0, S_FANG_CHECKPATH2, 0}, // S_FANG_CHECKPATH1
+	{SPR_PLAY,         0, 0, {A_Repeat}, 0, S_FANG_PATHINGCONT1, S_FANG_SKID1, 0}, // S_FANG_CHECKPATH2
 
-	{SPR_FANG,  9, 0, {A_Boss5PinchShot}, MT_FBOMB, -16, S_FANG_PATHINGCONT2, 0}, // S_FANG_PATHINGCONT1
-	{SPR_FANG,  9, 0, {A_PlayActiveSound}, 0, 0, S_FANG_PATHINGCONT3, 0}, // S_FANG_PATHINGCONT2
-	{SPR_FANG,  9, 2, {A_Thrust}, 0, 1, S_FANG_PATHING, 0}, // S_FANG_PATHINGCONT3
+	{SPR_PLAY,         0, 0, {A_Boss5PinchShot}, MT_FBOMB, -16, S_FANG_PATHINGCONT2, 0}, // S_FANG_PATHINGCONT1
+	{SPR_PLAY,         0, 0, {A_PlayActiveSound}, 0, 0, S_FANG_PATHINGCONT3, 0}, // S_FANG_PATHINGCONT2
+	{SPR_PLAY, SPR2_LAND, 2, {A_Thrust}, 0, 1, S_FANG_PATHING, 0}, // S_FANG_PATHINGCONT3
 
-	{SPR_FANG,  4,  0, {A_PlayAttackSound}, 0, 0, S_FANG_SKID2, 0}, // S_FANG_SKID1
-	{SPR_FANG,  4,  1, {A_DoNPCSkid}, S_FANG_SKID3, 0, S_FANG_SKID2, 0}, // S_FANG_SKID2
-	{SPR_FANG,  4, 10, {NULL}, 0, 0, S_FANG_CHOOSEATTACK, 0}, // S_FANG_SKID3
+	{SPR_PLAY,         0,  0, {A_PlayAttackSound}, 0, 0, S_FANG_SKID2, 0}, // S_FANG_SKID1
+	{SPR_PLAY, SPR2_SKID,  1, {A_DoNPCSkid}, S_FANG_SKID3, 0, S_FANG_SKID2, 0}, // S_FANG_SKID2
+	{SPR_PLAY, SPR2_SKID, 10, {NULL}, 0, 0, S_FANG_CHOOSEATTACK, 0}, // S_FANG_SKID3
 
-	{SPR_FANG,  0, 0, {A_RandomState}, S_FANG_LOBSHOT0, S_FANG_FIRESTART1, S_NULL, 0}, // S_FANG_CHOOSEATTACK
+	{SPR_PLAY,         0, 0, {A_RandomState}, S_FANG_LOBSHOT0, S_FANG_FIRESTART1, S_NULL, 0}, // S_FANG_CHOOSEATTACK
 
-	{SPR_FANG,  5,  0, {A_PrepareRepeat}, 3, 0, S_FANG_FIRESTART2, 0}, // S_FANG_FIRESTART1 // Reset loop
-	{SPR_FANG,  5, 18, {A_LookForBetter}, 1, 0, S_FANG_FIRE1, 0}, // S_FANG_FIRESTART2
-	{SPR_FANG,  5,  5, {A_FireShot}, MT_CORK, -16, S_FANG_FIRE2, 0}, // S_FANG_FIRE1 // Start of loop
-	{SPR_FANG,  6,  5, {NULL}, 0, 0, S_FANG_FIRE3, 0}, // S_FANG_FIRE2
-	{SPR_FANG,  7,  5, {NULL}, 0, 0, S_FANG_FIRE4, 0}, // S_FANG_FIRE3
-	{SPR_FANG,  5,  5, {NULL}, 2, 0, S_FANG_FIREREPEAT, 0}, // S_FANG_FIRE4
-	{SPR_FANG,  5,  0, {A_Repeat}, 3, S_FANG_FIRE1, S_FANG_WAIT1, 0}, // S_FANG_FIREREPEAT // End of loop
+	{SPR_PLAY,         0,  0, {A_PrepareRepeat}, 3, 0, S_FANG_FIRESTART2, 0}, // S_FANG_FIRESTART1 // Reset loop
+	{SPR_PLAY, SPR2_FIRE, 18, {A_LookForBetter}, 1, 0, S_FANG_FIRE1, 0}, // S_FANG_FIRESTART2
+	{SPR_PLAY, SPR2_FIRE,  2, {A_FireShot}, MT_CORK, -16, S_FANG_FIRE2, 0}, // S_FANG_FIRE1 // Start of loop
+	{SPR_PLAY, SPR2_FIRE,  2, {NULL}, 0, 0, S_FANG_FIRE3, 0}, // S_FANG_FIRE2
+	{SPR_PLAY, SPR2_FIRE, 16, {NULL}, 0, 0, S_FANG_FIREREPEAT, 0}, // S_FANG_FIRE3
+	{SPR_PLAY,         0,  0, {A_Repeat}, 3, S_FANG_FIRE1, S_FANG_WAIT1, 0}, // S_FANG_FIREREPEAT // End of loop
 
-	{SPR_FANG, 18, 16, {A_LookForBetter}, 1, 0, S_FANG_LOBSHOT1, 0}, // S_FANG_LOBSHOT0
-	{SPR_FANG, 19,  2, {A_LookForBetter}, 1, 0, S_FANG_LOBSHOT2, 0}, // S_FANG_LOBSHOT1
-	{SPR_FANG, 20, 18, {A_BrakLobShot}, MT_FBOMB, 32+(1<<16), S_FANG_WAIT1, 0}, // S_FANG_LOBSHOT2
+	{SPR_PLAY, SPR2_MSC3, 14, {A_LookForBetter}, 1, 0, S_FANG_LOBSHOT1, 0}, // S_FANG_LOBSHOT0
+	{SPR_PLAY, SPR2_MSC3,  2, {A_LookForBetter}, 1, 0, S_FANG_LOBSHOT2, 0}, // S_FANG_LOBSHOT1
+	{SPR_PLAY, SPR2_MSC3,  2, {A_LookForBetter}, 1, 0, S_FANG_LOBSHOT3, 0}, // S_FANG_LOBSHOT2
+	{SPR_PLAY, SPR2_MSC3, 18, {A_BrakLobShot}, MT_FBOMB, 32+(1<<16), S_FANG_WAIT1, 0}, // S_FANG_LOBSHOT3
 
-	{SPR_FANG, FF_ANIMATE|15, 70, {NULL}, 1, 5, S_FANG_WAIT2, 0}, // S_FANG_WAIT1
-	{SPR_FANG,             0, 35, {A_Look}, 1, 0, S_FANG_IDLE1, 0}, // S_FANG_WAIT2
+	{SPR_PLAY, SPR2_MLEL|FF_ANIMATE, 70, {NULL}, 0, 5, S_FANG_WAIT2, 0}, // S_FANG_WAIT1
+	{SPR_PLAY,            SPR2_STND, 35, {A_Look}, 1, 0, S_FANG_IDLE1, 0}, // S_FANG_WAIT2
 
-	{SPR_FANG, 12, 1, {A_Boss5CheckOnGround}, S_FANG_PATHINGSTART2, S_FANG_PINCHPATHINGSTART1, S_FANG_WALLHIT, 0}, // S_FANG_WALLHIT
+	{SPR_PLAY, SPR2_FALL, 1, {A_Boss5CheckOnGround}, S_FANG_PATHINGSTART2, S_FANG_PINCHPATHINGSTART1, S_FANG_WALLHIT, 0}, // S_FANG_WALLHIT
 
-	{SPR_FANG,  8,  0, {A_PrepareRepeat}, 1, 0, S_FANG_PINCHPATHINGSTART2, 0}, // S_FANG_PINCHPATHINGSTART1
-	{SPR_FANG,  8,  0, {A_PlayActiveSound}, 0, 0, S_FANG_PINCHPATHING, 0}, // S_FANG_PINCHPATHINGSTART2
-	{SPR_FANG,  8,  0, {A_Boss5FindWaypoint}, 1, 0, S_FANG_PINCHBOUNCE0, 0}, // S_FANG_PINCHPATHING
-	{SPR_FANG,  8,  0, {A_SetObjectFlags}, MF_NOCLIP|MF_NOCLIPHEIGHT, 2, S_FANG_PINCHBOUNCE1, 0}, // S_FANG_PINCHBOUNCE0
-	{SPR_FANG,  8,  2, {A_Thrust}, 0, 1, S_FANG_PINCHBOUNCE2, 0}, // S_FANG_PINCHBOUNCE1
-	{SPR_FANG,  9,  2, {NULL}, 0, 0, S_FANG_PINCHBOUNCE3, 0}, // S_FANG_PINCHBOUNCE2
-	{SPR_FANG, 10,  2, {A_Boss5Jump}, 0, 0, S_FANG_PINCHBOUNCE4, 0}, // S_FANG_PINCHBOUNCE3
-	{SPR_FANG, 10,  1, {A_Boss5CheckFalling}, S_FANG_PINCHSKID1, S_FANG_PINCHFALL0, S_FANG_PINCHBOUNCE4, 0}, // S_FANG_PINCHBOUNCE4
-	{SPR_FANG, 12,  0, {A_SetObjectFlags}, MF_NOCLIP|MF_NOCLIPHEIGHT, 1, S_FANG_PINCHFALL1, 0}, // S_FANG_PINCHFALL0
-	{SPR_FANG, 12,  1, {A_Boss5CheckOnGround}, S_FANG_PINCHSKID1, 0, S_FANG_PINCHFALL2, 0}, // S_FANG_PINCHFALL1
-	{SPR_FANG, 13,  1, {A_Boss5CheckOnGround}, S_FANG_PINCHSKID1, 0, S_FANG_PINCHFALL1, 0}, // S_FANG_PINCHFALL2
-	{SPR_FANG,  4,  0, {A_PlayAttackSound}, 0, 0, S_FANG_PINCHSKID2, 0}, // S_FANG_PINCHSKID1
-	{SPR_FANG,  4,  1, {A_DoNPCSkid}, S_FANG_PINCHLOBSHOT0, 0, S_FANG_PINCHSKID2, 0}, // S_FANG_PINCHSKID2
-	{SPR_FANG, 18, 16, {A_FaceTarget}, 3, 0, S_FANG_PINCHLOBSHOT1, 0}, // S_FANG_PINCHLOBSHOT0
-	{SPR_FANG, 19,  2, {A_FaceTarget}, 3, 0, S_FANG_PINCHLOBSHOT2, 0}, // S_FANG_PINCHLOBSHOT1
-	{SPR_FANG, 20, 30, {A_Boss5MakeItRain}, MT_FBOMB, -16, S_FANG_PINCHLOBSHOT3, 0}, // S_FANG_PINCHLOBSHOT2
-	{SPR_FANG, 20, 18, {A_LinedefExecuteFromArg}, 4, 0, S_FANG_PINCHLOBSHOT4, 0}, // S_FANG_PINCHLOBSHOT3
-	{SPR_FANG,  0,  0, {A_Boss5Calm}, 0, 0, S_FANG_PATHINGSTART1, 0}, // S_FANG_PINCHLOBSHOT4
+	{SPR_PLAY,         0,  0, {A_PrepareRepeat}, 1, 0, S_FANG_PINCHPATHINGSTART2, 0}, // S_FANG_PINCHPATHINGSTART1
+	{SPR_PLAY,         0,  0, {A_PlayActiveSound}, 0, 0, S_FANG_PINCHPATHING, 0}, // S_FANG_PINCHPATHINGSTART2
+	{SPR_PLAY,         0,  0, {A_Boss5FindWaypoint}, 1, 0, S_FANG_PINCHBOUNCE0, 0}, // S_FANG_PINCHPATHING
+	{SPR_PLAY,         0,  0, {A_SetObjectFlags}, MF_NOCLIP|MF_NOCLIPHEIGHT, 2, S_FANG_PINCHBOUNCE1, 0}, // S_FANG_PINCHBOUNCE0
+	{SPR_PLAY, SPR2_LAND,  2, {A_Thrust}, 0, 1, S_FANG_PINCHBOUNCE2, 0}, // S_FANG_PINCHBOUNCE1
+	{SPR_PLAY, SPR2_LAND,  2, {NULL}, 0, 0, S_FANG_PINCHBOUNCE3, 0}, // S_FANG_PINCHBOUNCE2
+	{SPR_PLAY, SPR2_LAND,  2, {A_Boss5Jump}, 0, 0, S_FANG_PINCHBOUNCE4, 0}, // S_FANG_PINCHBOUNCE3
+	{SPR_PLAY, SPR2_BNCE,  1, {A_Boss5CheckFalling}, S_FANG_PINCHSKID1, S_FANG_PINCHFALL0, S_FANG_PINCHBOUNCE4, 0}, // S_FANG_PINCHBOUNCE4
+	{SPR_PLAY,         0,  0, {A_SetObjectFlags}, MF_NOCLIP|MF_NOCLIPHEIGHT, 1, S_FANG_PINCHFALL1, 0}, // S_FANG_PINCHFALL0
+	{SPR_PLAY, SPR2_FALL,  1, {A_Boss5CheckOnGround}, S_FANG_PINCHSKID1, 0, S_FANG_PINCHFALL2, 0}, // S_FANG_PINCHFALL1
+	{SPR_PLAY, SPR2_FALL,  1, {A_Boss5CheckOnGround}, S_FANG_PINCHSKID1, 0, S_FANG_PINCHFALL1, 0}, // S_FANG_PINCHFALL2
+	{SPR_PLAY,         0,  0, {A_PlayAttackSound}, 0, 0, S_FANG_PINCHSKID2, 0}, // S_FANG_PINCHSKID1
+	{SPR_PLAY, SPR2_SKID,  1, {A_DoNPCSkid}, S_FANG_PINCHLOBSHOT0, 0, S_FANG_PINCHSKID2, 0}, // S_FANG_PINCHSKID2
+	{SPR_PLAY, SPR2_MSC3, 16, {A_FaceTarget}, 1, 5, S_FANG_PINCHLOBSHOT1, 0}, // S_FANG_PINCHLOBSHOT0
+	{SPR_PLAY, SPR2_MSC3,  2, {A_FaceTarget}, 3, 0, S_FANG_PINCHLOBSHOT2, 0}, // S_FANG_PINCHLOBSHOT1
+	{SPR_PLAY, SPR2_MSC3,  2, {A_FaceTarget}, 3, 0, S_FANG_PINCHLOBSHOT3, 0}, // S_FANG_PINCHLOBSHOT2
+	{SPR_PLAY, SPR2_MSC3, 30, {A_Boss5MakeItRain}, MT_FBOMB, -16, S_FANG_PINCHLOBSHOT4, 0}, // S_FANG_PINCHLOBSHOT3
+	{SPR_PLAY, SPR2_STND, 18, {A_LinedefExecuteFromArg}, 4, 0, S_FANG_PINCHLOBSHOT5, 0}, // S_FANG_PINCHLOBSHOT4
+	{SPR_PLAY,         0,  0, {A_Boss5Calm}, 0, 0, S_FANG_PATHINGSTART1, 0}, // S_FANG_PINCHLOBSHOT5
 
-	{SPR_FANG, 21, 0, {A_DoNPCPain},                    0, 0, S_FANG_DIE2, 0}, // S_FANG_DIE1
-	{SPR_FANG, 21, 1, {A_Boss5CheckOnGround}, S_FANG_DIE3, 0, S_FANG_DIE2, 0}, // S_FANG_DIE2
+	{SPR_PLAY,         0, 0, {A_DoNPCPain},                    0, 0, S_FANG_DIE2, 0}, // S_FANG_DIE1
+	{SPR_PLAY, SPR2_MSC4, 1, {A_Boss5CheckOnGround}, S_FANG_DIE3, 0, S_FANG_DIE2, 0}, // S_FANG_DIE2
 
-	{SPR_FANG, 22,  0, {A_Scream}, 0, 0, S_FANG_DIE4, 0}, // S_FANG_DIE3
-	{SPR_FANG, 22, -1, {A_SetFuse}, 70, 0, S_FANG_DIE5, 0}, // S_FANG_DIE4
+	{SPR_PLAY,         0,  0, {A_Scream}, 0, 0, S_FANG_DIE4, 0}, // S_FANG_DIE3
+	{SPR_PLAY, SPR2_MSC5, -1, {A_SetFuse}, 70, 0, S_FANG_DIE5, 0}, // S_FANG_DIE4
 
-	{SPR_FANG, 11, 0, {A_PlaySound}, sfx_jump, 0, S_FANG_DIE6, 0}, // S_FANG_DIE5
-	{SPR_FANG, 11, 1, {A_ZThrust}, 6, (1<<16)|1, S_FANG_DIE7, 0}, // S_FANG_DIE6
-	{SPR_FANG, 11, 1, {A_Boss5CheckFalling}, S_FANG_FLEEPATHING1, S_FANG_DIE8, S_FANG_DIE7, 0}, // S_FANG_DIE7
-	{SPR_FANG, 12, 1, {A_Boss5CheckOnGround}, S_FANG_FLEEPATHING1, 0, S_FANG_DIE8, 0}, // S_FANG_DIE8
+	{SPR_PLAY,         0, 0, {A_PlaySound}, sfx_jump, 0, S_FANG_DIE6, 0}, // S_FANG_DIE5
+	{SPR_PLAY, SPR2_JUMP, 1, {A_ZThrust}, 6, (1<<16)|1, S_FANG_DIE7, 0}, // S_FANG_DIE6
+	{SPR_PLAY, SPR2_JUMP, 1, {A_Boss5CheckFalling}, S_FANG_FLEEPATHING1, S_FANG_DIE8, S_FANG_DIE7, 0}, // S_FANG_DIE7
+	{SPR_PLAY, SPR2_FALL, 1, {A_Boss5CheckOnGround}, S_FANG_FLEEPATHING1, 0, S_FANG_DIE8, 0}, // S_FANG_DIE8
 
-	{SPR_FANG,  9,  0, {A_PlayActiveSound}, 0, 0, S_FANG_FLEEPATHING2, 0}, // S_FANG_FLEEPATHING1
-	{SPR_FANG,  8,  2, {A_Boss5FindWaypoint}, 2, 0, S_FANG_FLEEBOUNCE1, 0}, // S_FANG_FLEEPATHING2
-	{SPR_FANG,  9,  2, {NULL}, 0, 0, S_FANG_FLEEBOUNCE2, 0}, // S_FANG_FLEEBOUNCE1
-	{SPR_FANG, 10, -1, {A_BossDeath}, 0, 0, S_NULL, 0}, // S_FANG_FLEEBOUNCE2
+	{SPR_PLAY,         0,  0, {A_PlayActiveSound}, 0, 0, S_FANG_FLEEPATHING2, 0}, // S_FANG_FLEEPATHING1
+	{SPR_PLAY, SPR2_LAND,  2, {A_Boss5FindWaypoint}, 2, 0, S_FANG_FLEEBOUNCE1, 0}, // S_FANG_FLEEPATHING2
+	{SPR_PLAY, SPR2_LAND,  2, {NULL}, 0, 0, S_FANG_FLEEBOUNCE2, 0}, // S_FANG_FLEEBOUNCE1
+	{SPR_PLAY, SPR2_LAND, -1, {A_BossDeath}, 0, 0, S_NULL, 0}, // S_FANG_FLEEBOUNCE2
 
-	{SPR_FANG, 17, 7*TICRATE, {NULL}, 0, 0, S_NULL, 0}, // S_FANG_KO
+	{SPR_PLAY, SPR2_DEAD, 7*TICRATE, {NULL}, 0, 0, S_NULL, 0}, // S_FANG_KO
 
 	{SPR_NULL, 0, -1, {A_RandomStateRange}, S_BROKENROBOTA, S_BROKENROBOTF, S_NULL, 0}, // S_BROKENROBOTRANDOM
 	{SPR_BRKN,    FF_ANIMATE|FF_RANDOMANIM, -1, {NULL}, 3, 4, S_NULL, 0}, // S_BROKENROBOTA
@@ -1760,22 +1790,22 @@ state_t states[NUMSTATES] =
 	// Metal Sonic
 	{SPR_PLAY, SPR2_STND, -1, {NULL}, 0, 0, S_METALSONIC_RACE, 0}, // S_METALSONIC_RACE
 
-	{SPR_METL,  4, -1, {NULL},         0, 0, S_METALSONIC_FLOAT, 0},             // S_METALSONIC_FLOAT
-	{SPR_METL, 16|FF_FULLBRIGHT, -1, {NULL}, 0, 0, S_METALSONIC_STUN, 0}, // S_METALSONIC_VECTOR
-	{SPR_METL, 15, -1, {NULL},         0, 0, S_METALSONIC_FLOAT, 0}, // S_METALSONIC_STUN
-	{SPR_METL, 17, 20, {NULL},         0, 0, S_METALSONIC_GATHER, 0},// S_METALSONIC_RAISE
-	{SPR_METL, 18, -1, {NULL},         0, 0, S_METALSONIC_FLOAT, 0},             // S_METALSONIC_GATHER
-	{SPR_METL,  6|FF_FULLBRIGHT|FF_ANIMATE|FF_GLOBALANIM, -1, {NULL}, 1, 2, S_METALSONIC_BOUNCE, 0},// S_METALSONIC_DASH
-	{SPR_METL, 18|FF_FULLBRIGHT|FF_ANIMATE|FF_GLOBALANIM, -1, {NULL}, 1, 2, S_METALSONIC_FLOAT, 0},             // S_METALSONIC_BOUNCE
-	{SPR_METL, 14, -1, {NULL},         0, 0, S_METALSONIC_FLOAT, 0},             // S_METALSONIC_BADBOUNCE
-	{SPR_METL, 17, -1, {NULL},         0, 0, S_METALSONIC_GATHER, 0},// S_METALSONIC_SHOOT
-	{SPR_METL, 15, 40, {A_Pain},       0, 0, S_METALSONIC_FLOAT, 0}, // S_METALSONIC_PAIN
-	{SPR_METL, 17,  2, {A_Fall},       0, 0, S_METALSONIC_DEATH2, 0},// S_METALSONIC_DEATH1
-	{SPR_METL, 17,  4, {A_BossScream}, 0, 0, S_METALSONIC_DEATH3, 0},// S_METALSONIC_DEATH2
-	{SPR_METL, 17,  0, {A_Repeat}, 17, S_METALSONIC_DEATH2, S_METALSONIC_DEATH4, 0}, // S_METALSONIC_DEATH3
-	{SPR_METL, 17, -1, {A_BossDeath},  0, 0, S_NULL, 0},             // S_METALSONIC_DEATH4
-	{SPR_METL, 15,  1, {A_BossScream},         0, 0, S_METALSONIC_FLEE2, 0}, // S_METALSONIC_FLEE1
-	{SPR_METL, 15,  7, {NULL},                 0, 0, S_METALSONIC_FLEE1, 0}, // S_METALSONIC_FLEE2
+	{SPR_PLAY,               SPR2_WALK, -1, {NULL},         0, 0, S_METALSONIC_FLOAT, 0}, // S_METALSONIC_FLOAT
+	{SPR_PLAY, SPR2_MSC1|FF_FULLBRIGHT, -1, {NULL}, 0, 0, S_METALSONIC_STUN, 0}, // S_METALSONIC_VECTOR
+	{SPR_PLAY,               SPR2_MSC0, -1, {NULL},         0, 0, S_METALSONIC_FLOAT, 0},// S_METALSONIC_STUN
+	{SPR_PLAY, SPR2_SPNG, 20, {NULL},         0, 0, S_METALSONIC_GATHER, 0}, // S_METALSONIC_RAISE
+	{SPR_PLAY, SPR2_MSC2, -1, {NULL},         0, 0, S_METALSONIC_FLOAT, 0}, // S_METALSONIC_GATHER
+	{SPR_PLAY, SPR2_DASH|FF_FULLBRIGHT, -1, {NULL}, 1, 2, S_METALSONIC_BOUNCE, 0}, // S_METALSONIC_DASH
+	{SPR_PLAY, SPR2_MSC2|FF_FULLBRIGHT, -1, {NULL}, 1, 2, S_METALSONIC_FLOAT, 0}, // S_METALSONIC_BOUNCE
+	{SPR_PLAY, SPR2_PAIN, -1, {NULL},         0, 0, S_METALSONIC_FLOAT, 0}, // S_METALSONIC_BADBOUNCE
+	{SPR_PLAY, SPR2_SPNG, -1, {NULL},         0, 0, S_METALSONIC_GATHER, 0}, // S_METALSONIC_SHOOT
+	{SPR_PLAY, SPR2_FLT, 40, {A_Pain},       0, 0, S_METALSONIC_FLOAT, 0}, // S_METALSONIC_PAIN
+	{SPR_PLAY, SPR2_SPNG,  2, {A_Fall},       0, 0, S_METALSONIC_DEATH2, 0}, // S_METALSONIC_DEATH1
+	{SPR_PLAY, SPR2_SPNG,  4, {A_BossScream}, 0, 0, S_METALSONIC_DEATH3, 0}, // S_METALSONIC_DEATH2
+	{SPR_PLAY, SPR2_SPNG,  0, {A_Repeat}, 17, S_METALSONIC_DEATH2, S_METALSONIC_DEATH4, 0}, // S_METALSONIC_DEATH3
+	{SPR_PLAY, SPR2_SPNG, -1, {A_BossDeath},  0, 0, S_NULL, 0}, // S_METALSONIC_DEATH4
+	{SPR_PLAY, SPR2_FLT,  1, {A_BossScream},         0, 0, S_METALSONIC_FLEE2, 0}, // S_METALSONIC_FLEE1
+	{SPR_PLAY, SPR2_FLT,  7, {NULL},                 0, 0, S_METALSONIC_FLEE1, 0}, // S_METALSONIC_FLEE2
 
 	{SPR_MSCF, FF_FULLBRIGHT|FF_TRANS30|FF_ANIMATE, -1, {NULL}, 11, 1, S_NULL, 0},  // S_MSSHIELD_F1
 	{SPR_MSCF, FF_FULLBRIGHT|FF_ANIMATE|12, -1, {NULL}, 8, 2, S_NULL, 0},  // S_MSSHIELD_F2
@@ -2629,6 +2659,10 @@ state_t states[NUMSTATES] =
 	{SPR_XMS4, 1, -1, {NULL}, 0, 0, S_NULL, 0}, // S_LAMPPOST2
 	{SPR_XMS5, 0, -1, {NULL}, 0, 0, S_NULL, 0}, // S_HANGSTAR
 	{SPR_XMS6, 0, -1, {NULL}, 0, 0, S_NULL, 0}, // S_MISTLETOE
+	{SPR_SNTT, 0, -1, {NULL}, 0, 0, S_NULL, 0}, 				// S_SSZTREE
+	{SPR_SNTT, 1|FF_PAPERSPRITE, -1, {NULL}, 0, 0, S_NULL, 0}, 	// S_SSZTREE_BRANCH
+	{SPR_SSTT, 0, -1, {NULL}, 0, 0, S_NULL, 0}, 				// S_SSZTREE2
+	{SPR_SSTT, 1|FF_PAPERSPRITE, -1, {NULL}, 0, 0, S_NULL, 0}, 	// S_SSZTREE2_BRANCH
 	// Xmas GFZ bushes
 	{SPR_BUS3, 1, -1, {NULL}, 0, 0, S_NULL, 0}, // S_XMASBLUEBERRYBUSH
 	{SPR_BUS1, 1, -1, {NULL}, 0, 0, S_NULL, 0}, // S_XMASBERRYBUSH
@@ -2636,16 +2670,15 @@ state_t states[NUMSTATES] =
 	// FHZ
 	{SPR_FHZI, 0, -1, {NULL}, 0, 0, S_NULL, 0}, // S_FHZICE1
 	{SPR_FHZI, 1, -1, {NULL}, 0, 0, S_NULL, 0}, // S_FHZICE2
-	{SPR_ROSY, 16, 8, {NULL}, 0, 0, S_ROSY_IDLE2, 0}, // S_ROSY_IDLE1
-	{SPR_ROSY, 17, 4, {NULL}, 0, 0, S_ROSY_IDLE3, 0}, // S_ROSY_IDLE2
-	{SPR_ROSY, 18, 8, {NULL}, 0, 0, S_ROSY_IDLE4, 0}, // S_ROSY_IDLE3
-	{SPR_ROSY, 17, 4, {NULL}, 0, 0, S_ROSY_IDLE1, 0}, // S_ROSY_IDLE4
-	{SPR_ROSY, 14, -1, {NULL}, 1, 0, S_NULL, 0}, // S_ROSY_JUMP
-	{SPR_ROSY,  5, -1, {NULL}, 7, 0, S_NULL, 0}, // S_ROSY_WALK
-	{SPR_ROSY, 19, -1, {NULL}, 0, 0, S_NULL, 0}, // S_ROSY_HUG
-	{SPR_ROSY, 13, -1, {NULL}, 0, 0, S_NULL, 0}, // S_ROSY_PAIN
-	{SPR_ROSY,  1|FF_ANIMATE, -1, {NULL}, 3, 16, S_NULL, 0}, // S_ROSY_STND
-	{SPR_ROSY, 20|FF_ANIMATE, TICRATE, {NULL}, 3, 4, S_ROSY_WALK, 0}, // S_ROSY_UNHAPPY
+	// Amy FHZ cameo
+	{SPR_PLAY, SPR2_CNT1|FF_ANIMATE,      -1, {NULL}, 0, 0, S_NULL, 0}, // S_ROSY_IDLE
+	{SPR_PLAY,            SPR2_MSC0,      -1, {NULL}, 0, 0, S_NULL, 0}, // S_ROSY_JUMP
+	{SPR_PLAY,            SPR2_MSC1,      -1, {NULL}, 0, 0, S_NULL, 0}, // S_ROSY_FALL
+	{SPR_PLAY,            SPR2_WALK,      -1, {NULL}, 7, 0, S_NULL, 0}, // S_ROSY_WALK
+	{SPR_PLAY,            SPR2_MSC2,      -1, {NULL}, 0, 0, S_NULL, 0}, // S_ROSY_HUG
+	{SPR_PLAY,            SPR2_PAIN,      -1, {NULL}, 0, 0, S_NULL, 0}, // S_ROSY_PAIN
+	{SPR_PLAY, SPR2_WAIT|FF_ANIMATE,      -1, {NULL}, 0, 5, S_NULL, 0}, // S_ROSY_STND
+	{SPR_PLAY, SPR2_MSC3|FF_ANIMATE, TICRATE, {NULL}, 0, 4, S_ROSY_WALK, 0}, // S_ROSY_UNHAPPY
 
 	// Halloween Scenery
 	// Pumpkins
@@ -2751,6 +2784,10 @@ state_t states[NUMSTATES] =
 	{SPR_DBAL, FF_FULLBRIGHT|5, 5, {NULL}, 0, 0, S_DBALL1, 0}, // S_DBALL6
 
 	{SPR_ESTA, 1, -1, {NULL}, 0, 0, S_NULL, 0}, // S_EGGSTATUE2
+
+	{SPR_GINE, 0, -1, {NULL}, 0, 0, S_NULL, 0}, // S_GINE
+	{SPR_PPAL, 0, -1, {NULL}, 0, 0, S_NULL, 0}, // S_PPAL
+	{SPR_PPAL, 1, -1, {NULL}, 0, 0, S_NULL, 0}, // S_PPEL
 
 	// Shield Orb
 	{SPR_ARMA, FF_TRANS40   , 2, {NULL}, 0, 0, S_ARMA2 , 0}, // S_ARMA1
@@ -3995,6 +4032,11 @@ state_t states[NUMSTATES] =
 	{SPR_BRIY, FF_ANIMATE|FF_RANDOMANIM, -1, {NULL}, 31, 1, S_NULL, 0}, // S_YELLOWBRICKDEBRIS
 
 	{SPR_NULL, 0, 1, {NULL}, 0, 0, S_NULL, 0}, // S_NAMECHECK
+
+	{SPR_OLDK, FF_ANIMATE, -1, {NULL}, 1, 16, S_NULL, 0}, // S_OLDK_STND
+	{SPR_OLDK, 2, 0, {A_ForceWin}, 0, 0, S_OLDK_DIE1, 0}, // S_OLDK_DIE0
+	{SPR_OLDK, 2, 0, {A_Scream}, 0, 0, S_OLDK_DIE2, 0}, // S_OLDK_DIE1
+	{SPR_OLDK, 2, -1, {A_ZThrust}, 14, 1|(1<<16), S_NULL, 0}, // S_OLDK_DIE2
 };
 
 mobjinfo_t mobjinfo[NUMMOBJTYPES] =
@@ -14523,6 +14565,114 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL          // raisestate
 	},
 
+	{           // MT_SSZTREE
+		1860,           // doomednum
+		S_SSZTREE,    	// spawnstate
+		1000,           // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		8,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		0,              // speed
+		20*FRACUNIT,    // radius
+		256*FRACUNIT,   // height
+		0,              // display offset
+		100,            // mass
+		1,              // damage
+		sfx_None,       // activesound
+		MF_SOLID|MF_SCENERY, // flags
+		S_NULL          // raisestate
+	},
+
+	{           // MT_SSZTREE_BRANCH
+		-1,		        // doomednum
+		S_SSZTREE_BRANCH,    // spawnstate
+		1000,           // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		8,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		0,              // speed
+		20*FRACUNIT,    // radius
+		256*FRACUNIT,   // height
+		0,              // display offset
+		100,            // mass
+		1,              // damage
+		sfx_None,       // activesound
+		MF_NOBLOCKMAP|MF_NOCLIP|MF_SCENERY, // flags
+		S_NULL          // raisestate
+	},
+
+	{           // MT_SSZTREE2
+		1861,           // doomednum
+		S_SSZTREE2,    	// spawnstate
+		1000,           // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		8,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		0,              // speed
+		20*FRACUNIT,    // radius
+		256*FRACUNIT,   // height
+		0,              // display offset
+		100,            // mass
+		1,              // damage
+		sfx_None,       // activesound
+		MF_SOLID|MF_SCENERY, // flags
+		S_NULL          // raisestate
+	},
+
+	{           // MT_SSZTREE2_BRANCH
+		-1,		        // doomednum
+		S_SSZTREE2_BRANCH,    // spawnstate
+		1000,           // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		8,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		0,              // speed
+		20*FRACUNIT,    // radius
+		256*FRACUNIT,   // height
+		0,              // display offset
+		100,            // mass
+		1,              // damage
+		sfx_None,       // activesound
+		MF_NOBLOCKMAP|MF_NOCLIP|MF_SCENERY, // flags
+		S_NULL          // raisestate
+	},
+
 	{           // MT_XMASBLUEBERRYBUSH
 		1859,           // doomednum
 		S_XMASBLUEBERRYBUSH, // spawnstate
@@ -14660,7 +14810,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 
 	{           // MT_ROSY
 		2104,           // doomednum
-		S_ROSY_IDLE1,   // spawnstate
+		S_ROSY_IDLE,    // spawnstate
 		1000,           // spawnhealth
 		S_NULL,         // seestate
 		sfx_None,       // seesound
@@ -16359,6 +16509,87 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		1,              // damage
 		sfx_None,       // activesound
 		MF_SOLID|MF_PUSHABLE|MF_SCENERY, // flags
+		S_NULL          // raisestate
+	},
+
+	{           // MT_GINE
+		3048,           // doomednum
+		S_GINE,         // spawnstate
+		1000,           // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		8,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		0,              // speed
+		32*FRACUNIT,    // radius
+		628*FRACUNIT,   // height
+		0,              // display offset
+		100,            // mass
+		1,              // damage
+		sfx_None,       // activesound
+		MF_SOLID|MF_SCENERY, // flags
+		S_NULL          // raisestate
+	},
+
+	{           // MT_PPAL
+		3050,           // doomednum
+		S_PPAL,         // spawnstate
+		1000,           // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		8,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		0,              // speed
+		16*FRACUNIT,    // radius
+		626*FRACUNIT,   // height
+		0,              // display offset
+		100,            // mass
+		1,              // damage
+		sfx_None,       // activesound
+		MF_SOLID|MF_SCENERY, // flags
+		S_NULL          // raisestate
+	},
+
+	{           // MT_PPEL
+		3051,           // doomednum
+		S_PPEL,         // spawnstate
+		1000,           // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		8,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		0,              // speed
+		16*FRACUNIT,    // radius
+		517*FRACUNIT,   // height
+		0,              // display offset
+		100,            // mass
+		1,              // damage
+		sfx_None,       // activesound
+		MF_SOLID|MF_SCENERY, // flags
 		S_NULL          // raisestate
 	},
 
@@ -21604,6 +21835,33 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		MF_NOBLOCKMAP|MF_NOSECTOR|MF_NOCLIP|MF_NOCLIPHEIGHT|MF_NOGRAVITY|MF_SCENERY, // flags
 		S_NULL          // raisestate
 	},
+
+	{			// MT_OLDK
+		666,            // doomednum
+		S_OLDK_STND,	// spawnstate
+		1,              // spawnhealth
+		S_NULL, 		// seestate
+		sfx_None,		// seesound
+		32,             // reactiontime
+		sfx_None,       // attacksound
+		S_OLDK_DIE0,    // painstate
+		128,            // painchance
+		sfx_s3k35,      // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_OLDK_DIE0,	// deathstate
+		S_NULL,         // xdeathstate
+		sfx_s3k35,      // deathsound
+		2*FRACUNIT,		// speed
+		32*FRACUNIT,    // radius
+		64*FRACUNIT,    // height
+		0,              // display offset
+		1000,           // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_SPECIAL|MF_SHOOTABLE|MF_NOGRAVITY|MF_BOSS, // flags
+		S_NULL          // raisestate
+	},
 };
 
 skincolor_t skincolors[MAXSKINCOLORS] = {
@@ -21639,15 +21897,15 @@ skincolor_t skincolors[MAXSKINCOLORS] = {
 	{"Moss",      {0x58, 0x58, 0x59, 0x59, 0x5a, 0x5a, 0x5b, 0x5b, 0x5b, 0x5c, 0x5d, 0x5d, 0x5e, 0x5e, 0x5f, 0x5f}, SKINCOLOR_BEIGE,     13, V_GREENMAP,  true}, // SKINCOLOR_MOSS
 	{"Azure",     {0x90, 0x90, 0x91, 0x91, 0xaa, 0xaa, 0xab, 0xab, 0xab, 0xac, 0xad, 0xad, 0xae, 0xae, 0xaf, 0xaf}, SKINCOLOR_PINK,      5,  V_AZUREMAP,  true}, // SKINCOLOR_AZURE
 	{"Eggplant",  {   4,   8,    11,   11,   16,  195,  195,  195,  196,  186,  187,  187,  254,  254,   30,   31}, SKINCOLOR_ROSEBUSH,  5,  V_PURPLEMAP, true}, // SKINCOLOR_EGGPLANT
-	{"Lavender",  {0xc0, 0xc0, 0xc1, 0xc1, 0xc2, 0xc2, 0xc3, 0xc3, 0xc3, 0xc4, 0xc5, 0xc5, 0xc6, 0xc6, 0xc7, 0xc7}, SKINCOLOR_GOLD,      4,  V_PURPLEMAP, true}, // SKINCOLOR_LAVENDER
+	{"Lavender",  {0xc0, 0xc0, 0xc1, 0xc1, 0xc2, 0xc2, 0xc3, 0xc3, 0xc3, 0xc4, 0xc5, 0xc5, 0xc6, 0xc6, 0xc7, 0xc7}, SKINCOLOR_HEADLIGHT, 8,  V_PURPLEMAP, true}, // SKINCOLOR_LAVENDER
 
 	// Viv's vivid colours (toast 21/07/17)
 	// Tweaks & additions (Lach, Chrispy, sphere, Alice, MotorRoach & Saneko 26/10/22)
 	{"Ruby",       {0xb0, 0xb0, 0xc9, 0xca, 0xcc, 0x26, 0x27, 0x28, 0x29, 0x2a, 0xb9, 0xb9, 0xba, 0xba, 0xbb, 0xfd}, SKINCOLOR_EMERALD,    10, V_REDMAP,     true}, // SKINCOLOR_RUBY
 	{"Cherry",     { 202,  203,  204,  205,  206,   40,   41,   42,   43,   44,  186,  187,   28,   29,   30,   31}, SKINCOLOR_MIDNIGHT,   10, V_REDMAP,     true}, // SKINCOLOR_CHERRY
 	{"Salmon",     {0xd0, 0xd0, 0xd1, 0xd2, 0x20, 0x21, 0x24, 0x25, 0x26, 0x28, 0x29, 0x2a, 0x2b, 0x2c, 0x2d, 0x2e}, SKINCOLOR_FOREST,     6,  V_REDMAP,     true}, // SKINCOLOR_SALMON
-	{"Pepper",     { 210,   32,   33,   34,   35,   35,   36,   37,   38,   39,   41,   43,   45,   45,   46,   47}, SKINCOLOR_MASTER,     8,  V_REDMAP,     true}, // SKINCOLOR_PEPPER
-	{"Red",        {0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x27, 0x28, 0x29, 0x2a, 0x2b, 0x2c, 0x2d, 0x47, 0x2e, 0x2f}, SKINCOLOR_GREEN,      10, V_REDMAP,     true}, // SKINCOLOR_RED
+	{"Pepper",     { 210,   32,   33,   34,   35,   35,   36,   37,   38,   39,   41,   43,   45,   45,   46,   47}, SKINCOLOR_GREEN,      10, V_REDMAP,     true}, // SKINCOLOR_PEPPER
+	{"Red",        {0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x27, 0x28, 0x29, 0x2a, 0x2b, 0x2c, 0x2d, 0x47, 0x2e, 0x2f}, SKINCOLOR_MASTER,     8,  V_REDMAP,     true}, // SKINCOLOR_RED
 	{"Crimson",    {0x27, 0x27, 0x28, 0x28, 0x29, 0x2a, 0x2b, 0x2b, 0x2c, 0x2d, 0x2e, 0x2e, 0x2e, 0x2f, 0x2f, 0x1f}, SKINCOLOR_ICY,        10, V_REDMAP,     true}, // SKINCOLOR_CRIMSON
 	{"Flame",      {0x31, 0x32, 0x33, 0x36, 0x22, 0x22, 0x25, 0x25, 0x25, 0xcd, 0xcf, 0xcf, 0xc5, 0xc5, 0xc7, 0xc7}, SKINCOLOR_PURPLE,     8,  V_REDMAP,     true}, // SKINCOLOR_FLAME
 	{"Garnet",     {   0,   83,   50,   53,   34,   35,   37,   38,   39,   40,   42,   44,   45,   46,   47,   47}, SKINCOLOR_AQUAMARINE, 6,  V_REDMAP,     true}, // SKINCOLOR_GARNET
@@ -21662,7 +21920,7 @@ skincolor_t skincolors[MAXSKINCOLORS] = {
 	{"Rust",       {0x38, 0x39, 0x3a, 0x3b, 0x3c, 0x3c, 0x3d, 0x3d, 0x3d, 0x3f, 0x2c, 0x2d, 0x47, 0x2e, 0x2f, 0x2f}, SKINCOLOR_YOGURT,     8,  V_ORANGEMAP,  true}, // SKINCOLOR_RUST
 	{"Tangerine",  {  81,   83,   64,   64,   51,   52,   53,   54,   56,   58,   60,   61,   63,   45,   46,   47}, SKINCOLOR_OCEAN,      12, V_ORANGEMAP,  true}, // SKINCOLOR_TANGERINE
 	{"Topaz",      {   0,   81,   83,   73,   74,   74,   65,   52,   53,   54,   56,   58,   60,   42,   43,   45}, SKINCOLOR_MOONSTONE,  10, V_YELLOWMAP,  true}, // SKINCOLOR_TOPAZ
-	{"Gold",       {0x51, 0x51, 0x54, 0x54, 0x41, 0x42, 0x43, 0x43, 0x44, 0x45, 0x46, 0x3f, 0x2d, 0x2e, 0x2f, 0x2f}, SKINCOLOR_LAVENDER,   10, V_YELLOWMAP,  true}, // SKINCOLOR_GOLD
+	{"Gold",       {0x51, 0x51, 0x54, 0x54, 0x41, 0x42, 0x43, 0x43, 0x44, 0x45, 0x46, 0x3f, 0x2d, 0x2e, 0x2f, 0x2f}, SKINCOLOR_MAUVE,      8,  V_YELLOWMAP,  true}, // SKINCOLOR_GOLD
 	{"Sandy",      {0x53, 0x40, 0x41, 0x42, 0x43, 0xe6, 0xe9, 0xe9, 0xea, 0xec, 0xec, 0xc6, 0xc6, 0xc7, 0xc7, 0xfe}, SKINCOLOR_SKY,        8,  V_YELLOWMAP,  true}, // SKINCOLOR_SANDY
 	{"Goldenrod",  {   0,   80,   81,   81,   83,   73,   73,   64,   65,   66,   67,   68,   69,   62,   44,   45}, SKINCOLOR_MAJESTY,    8,  V_YELLOWMAP,  true}, // SKINCOLOR_GOLDENROD
 	{"Yellow",     {0x52, 0x53, 0x49, 0x49, 0x4a, 0x4a, 0x4b, 0x4b, 0x4b, 0x4c, 0x4d, 0x4d, 0x4e, 0x4e, 0x4f, 0xed}, SKINCOLOR_CORNFLOWER, 8,  V_YELLOWMAP,  true}, // SKINCOLOR_YELLOW
@@ -21672,19 +21930,19 @@ skincolor_t skincolors[MAXSKINCOLORS] = {
 	{"Lime",       {0x50, 0x51, 0x52, 0x53, 0x48, 0xbc, 0xbd, 0xbe, 0xbe, 0xbf, 0x6a, 0x6b, 0x6c, 0x6d, 0x6e, 0x6f}, SKINCOLOR_MAGENTA,    9,  V_PERIDOTMAP, true}, // SKINCOLOR_LIME
 	{"Peridot",    {0x58, 0x58, 0xbc, 0xbc, 0xbd, 0xbd, 0xbe, 0xbe, 0xbe, 0xbf, 0x5e, 0x5e, 0x5f, 0x5f, 0x77, 0x77}, SKINCOLOR_COBALT,     2,  V_PERIDOTMAP, true}, // SKINCOLOR_PERIDOT
 	{"Apple",      {0x49, 0x49, 0xbc, 0xbd, 0xbe, 0xbe, 0xbe, 0x67, 0x69, 0x6a, 0x6b, 0x6b, 0x6c, 0x6d, 0x6d, 0x6d}, SKINCOLOR_RASPBERRY,  13, V_PERIDOTMAP, true}, // SKINCOLOR_APPLE
-	{"Headlight",  {   0,   80,   81,   82,   73,   84,   64,   65,   91,   91,  124,  125,  126,  137,  138,  139}, SKINCOLOR_MAUVE,      8,  V_YELLOWMAP,  true}, // SKINCOLOR_HEADLIGHT
+	{"Headlight",  {   0,   80,   81,   82,   73,   84,   64,   65,   91,   91,  124,  125,  126,  137,  138,  139}, SKINCOLOR_LAVENDER,   10, V_YELLOWMAP,  true}, // SKINCOLOR_HEADLIGHT
 	{"Chartreuse", {  80,   82,   72,   73,  188,  188,  113,  114,  114,  125,  126,  137,  138,  139,  253,  254}, SKINCOLOR_NOBLE,      9,  V_PERIDOTMAP, true}, // SKINCOLOR_CHARTREUSE
-	{"Green",      {0x60, 0x61, 0x62, 0x63, 0x64, 0x65, 0x66, 0x67, 0x68, 0x69, 0x6a, 0x6b, 0x6c, 0x6d, 0x6e, 0x6f}, SKINCOLOR_RED,        6,  V_GREENMAP,   true}, // SKINCOLOR_GREEN
+	{"Green",      {0x60, 0x61, 0x62, 0x63, 0x64, 0x65, 0x66, 0x67, 0x68, 0x69, 0x6a, 0x6b, 0x6c, 0x6d, 0x6e, 0x6f}, SKINCOLOR_PEPPER,     8,  V_GREENMAP,   true}, // SKINCOLOR_GREEN
 	{"Forest",     {0x65, 0x66, 0x67, 0x68, 0x69, 0x69, 0x6a, 0x6b, 0x6b, 0x6c, 0x6d, 0x6d, 0x6e, 0x6e, 0x6e, 0x6f}, SKINCOLOR_SALMON,     9,  V_GREENMAP,   true}, // SKINCOLOR_FOREST
 	{"Shamrock",   {0x70, 0x70, 0x71, 0x71, 0x72, 0x72, 0x73, 0x73, 0x73, 0x74, 0x75, 0x75, 0x76, 0x76, 0x77, 0x77}, SKINCOLOR_SIBERITE,   10, V_GREENMAP,   true}, // SKINCOLOR_SHAMROCK
-	{"Jade",       { 128,  120,  121,  122,  122,  113,  114,  114,  115,  116,  117,  118,  119,  110,  111,   30}, SKINCOLOR_TAFFY,      10, V_GREENMAP,   true}, // SKINCOLOR_JADE
+	{"Jade",       { 128,  120,  121,  122,  122,  113,  114,  114,  115,  116,  117,  118,  119,  110,  111,   30}, SKINCOLOR_ROSY,       7,  V_GREENMAP,   true}, // SKINCOLOR_JADE
 	{"Mint",       {0x00, 0x00, 0x58, 0x58, 0x59, 0x62, 0x62, 0x62, 0x64, 0x67, 0x7e, 0x7e, 0x8f, 0x8f, 0x8a, 0x8a}, SKINCOLOR_VIOLET,     5,  V_GREENMAP,   true}, // SKINCOLOR_MINT
-	{"Master",     {   0,   80,   88,   96,  112,  113,   99,  100,  124,  125,  126,  117,  107,  118,  119,  111}, SKINCOLOR_PEPPER,     8,  V_GREENMAP,   true}, // SKINCOLOR_MASTER
+	{"Master",     {   0,   80,   88,   96,  112,  113,   99,  100,  124,  125,  126,  117,  107,  118,  119,  111}, SKINCOLOR_RED,        6,  V_GREENMAP,   true}, // SKINCOLOR_MASTER
 	{"Emerald",    {  80,   96,  112,  113,  114,  114,  125,  125,  126,  126,  137,  137,  138,  138,  139,  139}, SKINCOLOR_RUBY,       9,  V_GREENMAP,   true}, // SKINCOLOR_EMERALD
 	{"Seafoam",    {0x01, 0x58, 0x59, 0x5a, 0x7c, 0x7d, 0x7d, 0x7e, 0x7e, 0x8f, 0x8f, 0x8a, 0x8a, 0x8b, 0xfd, 0xfd}, SKINCOLOR_PLUM,       6,  V_AQUAMAP,    true}, // SKINCOLOR_SEAFOAM
 	{"Island",     {  96,   97,  113,  113,  114,  124,  142,  136,  136,  150,  151,  153,  168,  168,  169,  169}, SKINCOLOR_GALAXY,     7,  V_AQUAMAP,    true}, // SKINCOLOR_ISLAND
 	{"Bottle",     {   0,    1,    3,    4,    5,  140,  141,  141,  124,  125,  126,  127,  118,  119,  111,  111}, SKINCOLOR_LATTE,      14, V_AQUAMAP,    true}, // SKINCOLOR_BOTTLE
-	{"Aqua",       {0x78, 0x79, 0x7a, 0x7a, 0x7b, 0x7b, 0x7c, 0x7c, 0x7c, 0x7d, 0x7e, 0x7e, 0x7f, 0x7f, 0x76, 0x77}, SKINCOLOR_ROSY,       7,  V_AQUAMAP,    true}, // SKINCOLOR_AQUA
+	{"Aqua",       {0x78, 0x79, 0x7a, 0x7a, 0x7b, 0x7b, 0x7c, 0x7c, 0x7c, 0x7d, 0x7e, 0x7e, 0x7f, 0x7f, 0x76, 0x77}, SKINCOLOR_TAFFY,      10, V_AQUAMAP,    true}, // SKINCOLOR_AQUA
 	{"Teal",       {0x78, 0x78, 0x8c, 0x8c, 0x8d, 0x8d, 0x8d, 0x8e, 0x8e, 0x8f, 0x8f, 0x8f, 0x8a, 0x8a, 0x8a, 0x8a}, SKINCOLOR_PEACHY,     7,  V_SKYMAP,     true}, // SKINCOLOR_TEAL
 	{"Ocean",      { 120,  121,  122,  122,  123,  141,  142,  142,  136,  137,  138,  138,  139,  139,  253,  253}, SKINCOLOR_TANGERINE,  4,  V_AQUAMAP,    true}, // SKINCOLOR_OCEAN
 	{"Wave",       {0x00, 0x78, 0x78, 0x79, 0x8d, 0x87, 0x88, 0x89, 0x89, 0xae, 0xa8, 0xa8, 0xa9, 0xa9, 0xfd, 0xfd}, SKINCOLOR_QUAIL,      5,  V_SKYMAP,     true}, // SKINCOLOR_WAVE
@@ -21718,12 +21976,12 @@ skincolor_t skincolors[MAXSKINCOLORS] = {
 	{"Violet",     {0xd0, 0xd1, 0xd2, 0xca, 0xcc, 0xb8, 0xb9, 0xb9, 0xba, 0xa8, 0xa8, 0xa9, 0xa9, 0xfd, 0xfe, 0xfe}, SKINCOLOR_MINT,       6,  V_MAGENTAMAP, true}, // SKINCOLOR_VIOLET
 	{"Royal",      { 208,  209,  192,  192,  192,  193,  193,  194,  194,  172,  173,  174,  175,  175,  139,  139}, SKINCOLOR_FANCY,      9,  V_PURPLEMAP,  true}, // SKINCOLOR_ROYAL
 	{"Lilac",      {0x00, 0xd0, 0xd1, 0xd2, 0xd3, 0xc1, 0xc1, 0xc2, 0xc3, 0xc4, 0xc5, 0xc5, 0xc6, 0xc6, 0xfe, 0x1f}, SKINCOLOR_VAPOR,      4,  V_ROSYMAP,    true}, // SKINCOLOR_LILAC
-	{"Mauve",      { 176,  177,  178,  192,  193,  194,  195,  195,  196,  185,  185,  186,  186,  187,  187,  253}, SKINCOLOR_HEADLIGHT,  8,  V_PURPLEMAP,  true}, // SKINCOLOR_MAUVE
+	{"Mauve",      { 176,  177,  178,  192,  193,  194,  195,  195,  196,  185,  185,  186,  186,  187,  187,  253}, SKINCOLOR_GOLD,       4,  V_PURPLEMAP,  true}, // SKINCOLOR_MAUVE
 	{"Eventide",   {  51,   52,   53,   33,   34,  204,  183,  183,  184,  184,  166,  167,  168,  169,  253,  254}, SKINCOLOR_DAYBREAK,   13, V_MAGENTAMAP, true}, // SKINCOLOR_EVENTIDE
 	{"Plum",       {0xc8, 0xd3, 0xd5, 0xd6, 0xd7, 0xce, 0xcf, 0xb9, 0xb9, 0xba, 0xba, 0xa9, 0xa9, 0xa9, 0xfd, 0xfe}, SKINCOLOR_MINT,       7,  V_ROSYMAP,    true}, // SKINCOLOR_PLUM
 	{"Raspberry",  {0xc8, 0xc9, 0xca, 0xcb, 0xcb, 0xcc, 0xcd, 0xcd, 0xce, 0xb9, 0xb9, 0xba, 0xba, 0xbb, 0xfe, 0xfe}, SKINCOLOR_APPLE,      13, V_ROSYMAP,    true}, // SKINCOLOR_RASPBERRY
-	{"Taffy",      {   1,  176,  176,  177,  178,  179,  202,  203,  204,  204,  205,  206,  207,   44,   45,   46}, SKINCOLOR_JADE,       8,  V_ROSYMAP,    true}, // SKINCOLOR_TAFFY
-	{"Rosy",       {0xfc, 0xc8, 0xc8, 0xc9, 0xc9, 0xca, 0xca, 0xcb, 0xcb, 0xcc, 0xcc, 0xcd, 0xcd, 0xce, 0xce, 0xcf}, SKINCOLOR_AQUA,       1,  V_ROSYMAP,    true}, // SKINCOLOR_ROSY
+	{"Taffy",      {   1,  176,  176,  177,  178,  179,  202,  203,  204,  204,  205,  206,  207,   44,   45,   46}, SKINCOLOR_AQUA,       1,  V_ROSYMAP,    true}, // SKINCOLOR_TAFFY
+	{"Rosy",       {0xfc, 0xc8, 0xc8, 0xc9, 0xc9, 0xca, 0xca, 0xcb, 0xcb, 0xcc, 0xcc, 0xcd, 0xcd, 0xce, 0xce, 0xcf}, SKINCOLOR_JADE,       8,  V_ROSYMAP,    true}, // SKINCOLOR_ROSY
 	{"Fancy",      {   0,  208,   49,  210,  210,  202,  202,  203,  204,  204,  205,  206,  207,  207,  186,  186}, SKINCOLOR_ROYAL,      9,  V_ROSYMAP,    true}, // SKINCOLOR_FANCY
 	{"Sangria",    { 210,   32,   33,   34,   34,  215,  215,  207,  207,  185,  186,  186,  186,  169,  169,  253}, SKINCOLOR_TURQUOISE,  12, V_ROSYMAP,    true}, // SKINCOLOR_SANGRIA
 	{"Volcanic",   {  54,   36,   42,   44,   45,   46,   46,   47,   28,  253,  253,  254,  254,   30,   31,   31}, SKINCOLOR_BRONZE,     9,  V_REDMAP,     true}, // SKINCOLOR_VOLCANIC

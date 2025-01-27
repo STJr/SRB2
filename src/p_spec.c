@@ -2406,7 +2406,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 					z = line->args[4] << FRACBITS;
 
 					P_SetOrigin(mo, mo->x + x, mo->y + y, mo->z + z);
-					
+
 					if (mo->player)
 					{
 						if (bot) // This might put poor Tails in a wall if he's too far behind! D: But okay, whatever! >:3
@@ -2546,7 +2546,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 					char *text = Z_Malloc(len + 1, PU_CACHE, NULL);
 					memcpy(text, lump, len);
 					text[len] = '\0';
-					COM_BufInsertText(text);
+					COM_BufInsertTextEx(text, COM_LUA);
 					Z_Free(text);
 				}
 			}
@@ -3642,7 +3642,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 					if (mo2->type != MT_EGGTRAP)
 						continue;
 
-					if (mo2->thinker.function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+					if (mo2->thinker.removing)
 						continue;
 
 					P_KillMobj(mo2, NULL, mo, 0);
@@ -3854,7 +3854,7 @@ void P_SetupSignExit(player_t *player)
 	// spin all signposts in the level then.
 	for (think = thlist[THINK_MOBJ].next; think != &thlist[THINK_MOBJ]; think = think->next)
 	{
-		if (think->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+		if (think->removing)
 			continue;
 
 		thing = (mobj_t *)think;
@@ -3892,7 +3892,7 @@ boolean P_IsFlagAtBase(mobjtype_t flag)
 
 	for (think = thlist[THINK_MOBJ].next; think != &thlist[THINK_MOBJ]; think = think->next)
 	{
-		if (think->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+		if (think->removing)
 			continue;
 
 		mo = (mobj_t *)think;
@@ -4395,7 +4395,7 @@ static void P_ProcessEggCapsule(player_t *player, sector_t *sector)
 	// The chimps are my friends.. heeheeheheehehee..... - LouisJM
 	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 	{
-		if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+		if (th->removing)
 			continue;
 		mo2 = (mobj_t *)th;
 		if (mo2->type != MT_EGGTRAP)
