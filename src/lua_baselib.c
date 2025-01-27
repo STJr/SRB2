@@ -1989,7 +1989,7 @@ static int lib_pLineIsBlocking(lua_State *L)
 		return LUA_ErrInvalid(L, "mobj_t");
 	if (!line)
 		return LUA_ErrInvalid(L, "line_t");
-	
+
 	// P_LineOpening in P_LineIsBlocking sets these variables.
 	// We want to keep their old values after so that whatever
 	// map collision code uses them doesn't get messed up.
@@ -2002,9 +2002,9 @@ static int lib_pLineIsBlocking(lua_State *L)
 	pslope_t *oldopenbottomslope = openbottomslope;
 	ffloor_t *oldopenfloorrover = openfloorrover;
 	ffloor_t *oldopenceilingrover = openceilingrover;
-	
+
 	lua_pushboolean(L, P_LineIsBlocking(mo, line));
-	
+
 	opentop = oldopentop;
 	openbottom = oldopenbottom;
 	openrange = oldopenrange;
@@ -2014,7 +2014,7 @@ static int lib_pLineIsBlocking(lua_State *L)
 	openbottomslope = oldopenbottomslope;
 	openfloorrover = oldopenfloorrover;
 	openceilingrover = oldopenceilingrover;
-	
+
 	return 1;
 }
 

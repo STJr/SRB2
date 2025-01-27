@@ -1110,7 +1110,7 @@ static lumpnum_t W_GetTexPatchLumpNum(const char *name)
 
 	lumpnum_t lump = LUMPERROR;
 	INT32 lump_type_it;
-	
+
 
 	for (lump_type_it = 0; lump_type_it < USE__MAX; lump_type_it++)
 	{
@@ -1716,7 +1716,7 @@ const char *R_CheckTextureNameForNum(INT32 num)
 {
 	if (num > 0 && num < numtextures)
 		return textures[num]->name;
-	
+
 	return "-";
 }
 

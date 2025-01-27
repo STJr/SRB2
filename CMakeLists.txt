@@ -8,6 +8,7 @@ endif()
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
 
 include(CMakeDependentOption)
+include(CheckCXXCompilerFlag)
 
 file(STRINGS src/version.h SRB2_VERSION)
 string(REGEX MATCH "[0-9]+\\.[0-9.]+" SRB2_VERSION ${SRB2_VERSION})
@@ -72,6 +73,7 @@ option(SRB2_CONFIG_MOBJCONSISTANCY "Compile with MOBJCONSISTANCY defined." OFF)
 option(SRB2_CONFIG_PACKETDROP "Compile with PACKETDROP defined." OFF)
 option(SRB2_CONFIG_EXECINFO "Enable stack trace dump support." ON)
 option(SRB2_CONFIG_ZDEBUG "Compile with ZDEBUG defined." OFF)
+option(SRB2_CONFIG_FORCE_NO_MS_BITFIELDS "Compile without -mno-ms-bitfields compiler flag" OFF)
 # SRB2_CONFIG_PROFILEMODE is probably superceded by some CMake setting.
 option(SRB2_CONFIG_PROFILEMODE "Compile for profiling (GCC only)." OFF)
 set(SRB2_CONFIG_ASSET_DIRECTORY "" CACHE PATH "Path to directory that contains all asset files for the installer. If set, assets will be part of installation and cpack.")

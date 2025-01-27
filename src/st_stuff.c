@@ -1176,10 +1176,8 @@ static void ST_drawInput(void)
 	V_DrawFill(x+16+(xoffs), y+(yoffs)-offs, 10, 10, col);\
 	V_DrawCharacter(x+16+1+(xoffs), y+1+(yoffs)-offs, hudinfo[HUD_INPUT].f|symb, false)
 
-	drawbutt( 4,-3, BT_JUMP,   'J' );
-	drawbutt(15,-3, BT_SPIN,   'S' );
-	drawbutt(26,-3, BT_SHIELD, '\0'); // Instead of a wide 'J' or 'S', we'll draw a thin "SH" for Shield
-	V_DrawThinString(x+16+26, y+2+(-3)-offs, hudinfo[HUD_LIVES].f, "SH");
+	drawbutt( 4,-3, BT_JUMP, 'J');
+	drawbutt(15,-3, BT_SPIN, 'S');
 
 	V_DrawFill(x+16+4, y+8, 21, 10, hudinfo[HUD_INPUT].f|20); // sundial backing
 	if (stplyr->mo)
@@ -2822,7 +2820,7 @@ static void ST_overlayDrawer(void)
 		}
 		else if (cv_powerupdisplay.value == 2 && LUA_HudEnabled(hud_powerups))
 			ST_drawPowerupHUD();  // same as it ever was...
-		
+
 	}
 	else if (!(netgame || multiplayer) && cv_powerupdisplay.value == 2 && LUA_HudEnabled(hud_powerups))
 		ST_drawPowerupHUD(); // same as it ever was...

@@ -1,0 +1,35 @@
+Windows x86 Makefile:
+  extends: .srb2ci
+
+  stage: build
+
+  when: on_success
+
+  artifacts:
+    paths:
+      - "bin/"
+      - "src/comptime.h"
+    expose_as: "Win32-makefile"
+    name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-Win32-makefile"
+
+  variables:
+    PREFIX: i686-w64-mingw32
+    CC: /usr/bin/i686-w64-mingw32-gcc-posix
+    CXX: /usr/bin/i686-w64-mingw32-g++-posix
+
+  script:
+    - - |
+          # apt_toolchain
+          echo -e "\e[0Ksection_start:`date +%s`:apt_toolchain[collapsed=true]\r\e[0KInstalling toolchain packages"
+      - apt-get install gcc-mingw-w64-i686-win32
+      - |
+          # apt_toolchain
+          echo -e "\e[0Ksection_end:`date +%s`:apt_toolchain\r\e[0K"
+
+    - - |
+          # make
+          echo -e "\e[0Ksection_start:`date +%s`:make[collapsed=false]\r\e[0KCompiling SRB2"
+      - make --directory=src --keep-going CCACHE=1 ERRORMODE=1 MINGW=1 SDL=1 || make --directory=src --keep-going CCACHE=1 ERRORMODE=1 MINGW=1 SDL=1
+      - |
+          # make
+          echo -e "\e[0Ksection_end:`date +%s`:make\r\e[0K"
