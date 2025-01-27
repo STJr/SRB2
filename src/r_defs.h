@@ -76,8 +76,11 @@ typedef struct extracolormap_s
 	lighttable_t *colormap;
 
 #ifdef HWRENDER
-	// The id of the hardware lighttable. Zero means it does not exist yet.
-	UINT32 gl_lighttable_id;
+	struct {
+		UINT32 id; // The id of the hardware lighttable. Zero means it does not exist yet.
+		RGBA_t *data; // The texture data of the hardware lighttable.
+		boolean needs_update; // If the colormap changed recently or not.
+	} gl_lighttable;
 #endif
 
 #ifdef EXTRACOLORMAPLUMPS
@@ -242,9 +245,8 @@ typedef struct sectorportal_s
 		struct sector_s *sector;
 		struct mobj_s *mobj;
 	};
-	struct {
-		fixed_t x, y;
-	} origin;
+	struct sector_s *target;
+	boolean ceiling;
 } sectorportal_t;
 
 typedef struct ffloor_s

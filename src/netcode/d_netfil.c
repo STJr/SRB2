@@ -95,6 +95,7 @@ static filetran_t transfer[MAXNETNODES];
 INT32 fileneedednum; // Number of files needed to join the server
 fileneeded_t *fileneeded; // List of needed files
 static tic_t lasttimeackpacketsent = 0;
+static I_mutex downloadmutex;
 char downloaddir[512] = "DOWNLOAD";
 
 // For resuming failed downloads
@@ -606,7 +607,7 @@ void AddLuaFileTransfer(const char *filename, const char *mode)
 		prevnext = &((*prevnext)->next);
 
 	// Allocate file transfer information and append it to the transfer list
-	filetransfer = malloc(sizeof(luafiletransfer_t));
+	filetransfer = calloc(1, sizeof(luafiletransfer_t));
 	if (!filetransfer)
 		I_Error("AddLuaFileTransfer: Out of memory\n");
 	*prevnext = filetransfer;
@@ -1344,9 +1345,9 @@ void PT_FileFragment(SINT8 node, INT32 netconsole)
 
 	if (!(strcmp(filename, "srb2.pk3")
 		&& strcmp(filename, "zones.pk3")
-		&& strcmp(filename, "player.dta")
+		&& strcmp(filename, "characters.pk3")
 		&& strcmp(filename, "patch.pk3")
-		&& strcmp(filename, "music.dta")
+		&& strcmp(filename, "music.pk3")
 		))
 		I_Error("Tried to download \"%s\"", filename);
 
@@ -1609,11 +1610,13 @@ boolean CURLPrepareFile(const char* url, int dfilenum)
 		I_Error("Attempted to download files in -nodownload mode");
 #endif
 
-	curl_global_init(CURL_GLOBAL_ALL);
+	if (!multi_handle)
+	{
+		curl_global_init(CURL_GLOBAL_ALL);
+		multi_handle = curl_multi_init();
+	}
 
 	http_handle = curl_easy_init();
-	multi_handle = curl_multi_init();
-
 	if (http_handle && multi_handle)
 	{
 		I_mkdir(downloaddir, 0755);
@@ -1672,6 +1675,8 @@ boolean CURLPrepareFile(const char* url, int dfilenum)
 		filedownload.current = dfilenum;
 		filedownload.http_running = true;
 
+		I_spawn_thread("http-download", (I_thread_fn)CURLGetFile, NULL);
+
 		return true;
 	}
 
@@ -1680,103 +1685,119 @@ boolean CURLPrepareFile(const char* url, int dfilenum)
 	return false;
 }
 
+void CURLAbortFile(void)
+{
+	filedownload.http_running = false;
+
+	// lock and unlock to wait for the download thread to exit
+	I_lock_mutex(&downloadmutex);
+	I_unlock_mutex(downloadmutex);
+}
+
 void CURLGetFile(void)
 {
+	I_lock_mutex(&downloadmutex);
 	CURLMcode mc; /* return code used by curl_multi_wait() */
 	CURLcode easyres; /* Return from easy interface */
-	int numfds;
 	CURLMsg *m; /* for picking up messages with the transfer status */
 	CURL *e;
 	int msgs_left; /* how many messages are left */
 	const char *easy_handle_error;
+	boolean running = true;
 
-	if (curl_runninghandles)
+	while (running && filedownload.http_running)
 	{
-		curl_multi_perform(multi_handle, &curl_runninghandles);
-
-		/* wait for activity, timeout or "nothing" */
-		mc = curl_multi_wait(multi_handle, NULL, 0, 1000, &numfds);
-
-		if (mc != CURLM_OK)
+		if (curl_runninghandles)
 		{
-			CONS_Alert(CONS_WARNING, "curl_multi_wait() failed, code %d.\n", mc);
-			return;
-		}
-		curl_curfile->currentsize = curl_dlnow;
-		curl_curfile->totalsize = curl_dltotal;
-	}
+			curl_multi_perform(multi_handle, &curl_runninghandles);
 
-	/* See how the transfers went */
-	while ((m = curl_multi_info_read(multi_handle, &msgs_left)))
-	{
-		if (m && (m->msg == CURLMSG_DONE))
-		{
-			e = m->easy_handle;
-			easyres = m->data.result;
+			/* wait for activity, timeout or "nothing" */
+			mc = curl_multi_wait(multi_handle, NULL, 0, 1000, NULL);
 
-			char *filename = Z_StrDup(curl_realname);
-			nameonly(filename);
-
-			if (easyres != CURLE_OK)
+			if (mc != CURLM_OK)
 			{
-				long response_code = 0;
-
-				if (easyres == CURLE_HTTP_RETURNED_ERROR)
-					curl_easy_getinfo(e, CURLINFO_RESPONSE_CODE, &response_code);
-
-				if (response_code == 404)
-					curl_curfile->failed = FDOWNLOAD_FAIL_NOTFOUND;
-				else
-					curl_curfile->failed = FDOWNLOAD_FAIL_OTHER;
-
-				easy_handle_error = (response_code) ? va("HTTP response code %ld", response_code) : curl_easy_strerror(easyres);
-				curl_curfile->status = FS_FALLBACK;
-				curl_curfile->currentsize = curl_origfilesize;
-				curl_curfile->totalsize = curl_origtotalfilesize;
-				filedownload.http_failed = true;
-				fclose(curl_curfile->file);
-				remove(curl_curfile->filename);
-				CONS_Alert(CONS_ERROR, M_GetText("Failed to download addon \"%s\" (%s)\n"), filename, easy_handle_error);
+				CONS_Alert(CONS_WARNING, "curl_multi_wait() failed, code %d.\n", mc);
+				continue;
 			}
-			else
+			curl_curfile->currentsize = curl_dlnow;
+			curl_curfile->totalsize = curl_dltotal;
+		}
+
+		/* See how the transfers went */
+		while ((m = curl_multi_info_read(multi_handle, &msgs_left)))
+		{
+			if (m && (m->msg == CURLMSG_DONE))
 			{
-				fclose(curl_curfile->file);
+				running = false;
+				e = m->easy_handle;
+				easyres = m->data.result;
 
-				CONS_Printf(M_GetText("Finished download of \"%s\"\n"), filename);
+				char *filename = Z_StrDup(curl_realname);
+				nameonly(filename);
 
-				if (checkfilemd5(curl_curfile->filename, curl_curfile->md5sum) == FS_MD5SUMBAD)
+				if (easyres != CURLE_OK)
 				{
-					CONS_Alert(CONS_WARNING, M_GetText("File \"%s\" does not match the version used by the server\n"), filename);
+					long response_code = 0;
+
+					if (easyres == CURLE_HTTP_RETURNED_ERROR)
+						curl_easy_getinfo(e, CURLINFO_RESPONSE_CODE, &response_code);
+
+					if (response_code == 404)
+						curl_curfile->failed = FDOWNLOAD_FAIL_NOTFOUND;
+					else
+						curl_curfile->failed = FDOWNLOAD_FAIL_OTHER;
+
+					easy_handle_error = (response_code) ? va("HTTP response code %ld", response_code) : curl_easy_strerror(easyres);
 					curl_curfile->status = FS_FALLBACK;
-					curl_curfile->failed = FDOWNLOAD_FAIL_MD5SUMBAD;
+					curl_curfile->currentsize = curl_origfilesize;
+					curl_curfile->totalsize = curl_origtotalfilesize;
 					filedownload.http_failed = true;
+					fclose(curl_curfile->file);
+					remove(curl_curfile->filename);
+					CONS_Alert(CONS_ERROR, M_GetText("Failed to download addon \"%s\" (%s)\n"), filename, easy_handle_error);
 				}
 				else
 				{
-					filedownload.completednum++;
-					filedownload.completedsize += curl_curfile->totalsize;
-					curl_curfile->status = FS_FOUND;
+					fclose(curl_curfile->file);
+
+					CONS_Printf(M_GetText("Finished download of \"%s\"\n"), filename);
+
+					if (checkfilemd5(curl_curfile->filename, curl_curfile->md5sum) == FS_MD5SUMBAD)
+					{
+						CONS_Alert(CONS_WARNING, M_GetText("File \"%s\" does not match the version used by the server\n"), filename);
+						curl_curfile->status = FS_FALLBACK;
+						curl_curfile->failed = FDOWNLOAD_FAIL_MD5SUMBAD;
+						filedownload.http_failed = true;
+					}
+					else
+					{
+						filedownload.completednum++;
+						filedownload.completedsize += curl_curfile->totalsize;
+						curl_curfile->status = FS_FOUND;
+					}
 				}
+
+				Z_Free(filename);
+
+				curl_curfile->file = NULL;
+				filedownload.remaining--;
+				curl_multi_remove_handle(multi_handle, e);
+				curl_easy_cleanup(e);
+
+				if (!filedownload.remaining)
+					break;
 			}
-
-			Z_Free(filename);
-
-			curl_curfile->file = NULL;
-			filedownload.http_running = false;
-			filedownload.remaining--;
-			curl_multi_remove_handle(multi_handle, e);
-			curl_easy_cleanup(e);
-
-			if (!filedownload.remaining)
-				break;
 		}
 	}
 
-	if (!filedownload.remaining)
+	if (!filedownload.remaining || !filedownload.http_running)
 	{
 		curl_multi_cleanup(multi_handle);
 		curl_global_cleanup();
+		multi_handle = NULL;
 	}
+	filedownload.http_running = false;
+	I_unlock_mutex(downloadmutex);
 }
 
 HTTP_login *

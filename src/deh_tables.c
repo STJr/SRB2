@@ -1081,11 +1081,11 @@ const char *const STATE_LIST[] = { // array length left dynamic for sanity testi
 	"S_FANG_FIRE1",
 	"S_FANG_FIRE2",
 	"S_FANG_FIRE3",
-	"S_FANG_FIRE4",
 	"S_FANG_FIREREPEAT",
 	"S_FANG_LOBSHOT0",
 	"S_FANG_LOBSHOT1",
 	"S_FANG_LOBSHOT2",
+	"S_FANG_LOBSHOT3",
 	"S_FANG_WAIT1",
 	"S_FANG_WAIT2",
 	"S_FANG_WALLHIT",
@@ -1107,6 +1107,7 @@ const char *const STATE_LIST[] = { // array length left dynamic for sanity testi
 	"S_FANG_PINCHLOBSHOT2",
 	"S_FANG_PINCHLOBSHOT3",
 	"S_FANG_PINCHLOBSHOT4",
+	"S_FANG_PINCHLOBSHOT5",
 	"S_FANG_DIE1",
 	"S_FANG_DIE2",
 	"S_FANG_DIE3",
@@ -2245,6 +2246,10 @@ const char *const STATE_LIST[] = { // array length left dynamic for sanity testi
 	"S_LAMPPOST2",  // with snow
 	"S_HANGSTAR",
 	"S_MISTLETOE",
+	"S_SSZTREE",
+	"S_SSZTREE_BRANCH",
+	"S_SSZTREE2",
+	"S_SSZTREE2_BRANCH",
 	// Xmas GFZ bushes
 	"S_XMASBLUEBERRYBUSH",
 	"S_XMASBERRYBUSH",
@@ -2252,11 +2257,9 @@ const char *const STATE_LIST[] = { // array length left dynamic for sanity testi
 	// FHZ
 	"S_FHZICE1",
 	"S_FHZICE2",
-	"S_ROSY_IDLE1",
-	"S_ROSY_IDLE2",
-	"S_ROSY_IDLE3",
-	"S_ROSY_IDLE4",
+	"S_ROSY_IDLE",
 	"S_ROSY_JUMP",
+	"S_ROSY_FALL",
 	"S_ROSY_WALK",
 	"S_ROSY_HUG",
 	"S_ROSY_PAIN",
@@ -2365,6 +2368,9 @@ const char *const STATE_LIST[] = { // array length left dynamic for sanity testi
 	"S_DBALL5",
 	"S_DBALL6",
 	"S_EGGSTATUE2",
+	"S_GINE",
+	"S_PPAL",
+	"S_PPEL",
 
 	// Shield Orb
 	"S_ARMA1",
@@ -3249,6 +3255,7 @@ const char *const STATE_LIST[] = { // array length left dynamic for sanity testi
 	"S_MARIOBUSH2",
 	"S_TOAD",
 
+
 	// Nights-specific stuff
 	"S_NIGHTSDRONE_MAN1",
 	"S_NIGHTSDRONE_MAN2",
@@ -3552,6 +3559,12 @@ const char *const STATE_LIST[] = { // array length left dynamic for sanity testi
 	"S_YELLOWBRICKDEBRIS",
 
 	"S_NAMECHECK",
+
+	// LJ Knuckles
+	"S_OLDK_STND",
+	"S_OLDK_DIE0",
+	"S_OLDK_DIE1",
+	"S_OLDK_DIE2",
 };
 
 // RegEx to generate this from info.h: ^\tMT_([^,]+), --> \t"MT_\1",
@@ -4023,6 +4036,10 @@ const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for sanity t
 	"MT_LAMPPOST2",  // with snow
 	"MT_HANGSTAR",
 	"MT_MISTLETOE",
+	"MT_SSZTREE",
+	"MT_SSZTREE_BRANCH",
+	"MT_SSZTREE2",
+	"MT_SSZTREE2_BRANCH",
 	// Xmas GFZ bushes
 	"MT_XMASBLUEBERRYBUSH",
 	"MT_XMASBERRYBUSH",
@@ -4102,6 +4119,9 @@ const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for sanity t
 	// Misc scenery
 	"MT_DBALL",
 	"MT_EGGSTATUE2",
+	"MT_GINE",
+	"MT_PPAL",
+	"MT_PPEL",
 
 	// Powerup Indicators
 	"MT_ELEMENTAL_ORB", // Elemental shield mobj
@@ -4329,6 +4349,8 @@ const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for sanity t
 
 	"MT_NAMECHECK",
 	"MT_RAY",
+
+	"MT_OLDK",
 };
 
 const char *const MOBJFLAG_LIST[] = {
@@ -5236,6 +5258,7 @@ struct int_const_s const INT_CONST[] = {
 	{"SF_MARIODAMAGE",SF_MARIODAMAGE},
 	{"SF_MACHINE",SF_MACHINE},
 	{"SF_DASHMODE",SF_DASHMODE},
+	{"SF_FASTWAIT",SF_FASTWAIT},
 	{"SF_FASTEDGE",SF_FASTEDGE},
 	{"SF_MULTIABILITY",SF_MULTIABILITY},
 	{"SF_NONIGHTSROTATION",SF_NONIGHTSROTATION},
@@ -5584,8 +5607,7 @@ struct int_const_s const INT_CONST[] = {
 	{"ROTAXIS_Z",ROTAXIS_Z},
 
 	// Buttons (ticcmd_t)
-	{"BT_WEAPONMASK",BT_WEAPONMASK}, //our first three bits.
-	{"BT_SHIELD",BT_SHIELD},
+	{"BT_WEAPONMASK",BT_WEAPONMASK}, //our first four bits.
 	{"BT_WEAPONNEXT",BT_WEAPONNEXT},
 	{"BT_WEAPONPREV",BT_WEAPONPREV},
 	{"BT_ATTACK",BT_ATTACK}, // shoot rings
@@ -5744,7 +5766,6 @@ struct int_const_s const INT_CONST[] = {
 	{"JA_DIGITAL",JA_DIGITAL},
 	{"JA_JUMP",JA_JUMP},
 	{"JA_SPIN",JA_SPIN},
-	{"JA_SHIELD",JA_SHIELD},
 	{"JA_FIRE",JA_FIRE},
 	{"JA_FIRENORMAL",JA_FIRENORMAL},
 	{"JOYAXISRANGE",JOYAXISRANGE},
@@ -5766,7 +5787,9 @@ struct int_const_s const INT_CONST[] = {
 	{"GC_WEPSLOT5",GC_WEPSLOT5},
 	{"GC_WEPSLOT6",GC_WEPSLOT6},
 	{"GC_WEPSLOT7",GC_WEPSLOT7},
-	{"GC_SHIELD",GC_SHIELD},
+	{"GC_WEPSLOT8",GC_WEPSLOT8},
+	{"GC_WEPSLOT9",GC_WEPSLOT9},
+	{"GC_WEPSLOT10",GC_WEPSLOT10},
 	{"GC_FIRE",GC_FIRE},
 	{"GC_FIRENORMAL",GC_FIRENORMAL},
 	{"GC_TOSSFLAG",GC_TOSSFLAG},

@@ -72,6 +72,7 @@ automatically.
 	X (MusicChange),\
 	X (PlayerHeight),/* override player height */\
 	X (PlayerCanEnterSpinGaps),\
+	X (AddonLoaded),\
 	X (KeyDown),\
 	X (KeyUp),\
 	X (TextInput),\

@@ -1095,7 +1095,7 @@ void R_SetupFrame(player_t *player)
 	camera_t *thiscam;
 	boolean chasecam = R_ViewpointHasChasecam(player);
 	boolean ispaused = paused || P_AutoPause();
-	
+
 	if (splitscreen && player == &players[secondarydisplayplayer] && player != &players[consoleplayer])
 		thiscam = &camera2;
 	else
@@ -1375,7 +1375,7 @@ boolean R_ViewpointHasChasecam(player_t *player)
 		chasecam = true; // force chasecam on
 	else if (player->spectator) // no spectator chasecam
 		chasecam = false; // force chasecam off
-		
+
 	if (chasecam && !thiscam->chase)
 	{
 		P_ResetCamera(player, thiscam);
@@ -1386,7 +1386,7 @@ boolean R_ViewpointHasChasecam(player_t *player)
 		P_ResetCamera(player, thiscam);
 		thiscam->chase = false;
 	}
-	
+
 	if (isplayer2)
 	{
 		R_SetViewContext(VIEWCONTEXT_PLAYER2);
@@ -1433,6 +1433,9 @@ static void R_PortalFrame(portal_t *portal)
 	viewangle = portal->viewangle;
 	viewsin = FINESINE(viewangle>>ANGLETOFINESHIFT);
 	viewcos = FINECOSINE(viewangle>>ANGLETOFINESHIFT);
+
+	if (!P_MobjWasRemoved(portal->viewmobj))
+		r_viewmobj = portal->viewmobj;
 
 	portalclipstart = portal->start;
 	portalclipend = portal->end;
