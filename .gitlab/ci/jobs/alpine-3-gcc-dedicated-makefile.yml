@@ -1,18 +1,18 @@
-Alpine 3 GCC Dedicated:
-  extends: Alpine 3 GCC
+Alpine 3 GCC Dedicated Makefile:
+  extends: Alpine 3 GCC Makefile
 
   artifacts:
     paths:
       - "bin/"
       - "src/comptime.h"
-    expose_as: "Apline-3-Dedicated"
-    name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-Apline-3-Dedicated"
+    expose_as: "Apline-3-Dedicated-makefile"
+    name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-Apline-3-Dedicated-makefile"
 
   script:
     - - |
           # apk_toolchain
           echo -e "\e[0Ksection_start:`date +%s`:apk_toolchain[collapsed=true]\r\e[0KInstalling toolchain packages"
-      - apk add gcc
+      - apk add gcc g++
       - |
           # apk_toolchain
           echo -e "\e[0Ksection_end:`date +%s`:apk_toolchain\r\e[0K"

@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2012-2016 by Matthew "Kaito Sinclaire" Walsh.
-// Copyright (C) 2012-2023 by Sonic Team Junior.
+// Copyright (C) 2012-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -475,7 +475,7 @@ UINT8 M_MapLocked(INT32 mapnum, gamedata_t *data)
 		// that's better than making dedicated server's lives hell.
 		return false;
 	}
-	
+
 	if (cv_debug || devparm)
 		return false; // Unlock every level when in devmode.
 
@@ -494,6 +494,12 @@ UINT8 M_MapLocked(INT32 mapnum, gamedata_t *data)
 
 UINT8 M_CampaignWarpIsCheat(INT32 gt, INT32 mapnum, gamedata_t *data)
 {
+	if (dedicated)
+	{
+		// See M_MapLocked; don't make dedicated servers annoying.
+		return false;
+	}
+
 	if (M_MapLocked(mapnum, data) == true)
 	{
 		// Warping to locked maps is definitely always a cheat

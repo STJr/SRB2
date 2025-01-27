@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -147,9 +147,9 @@ static void R_DrawFlippedColumnInCache(column_t *column, UINT8 *cache, texpatch_
 
 		if (count > 0)
 		{
-			for (; dest < cache + position + count; --source, is_opaque++)
+			for (; dest < cache + position + count; --source, dest++, is_opaque++)
 			{
-				*dest++ = *source;
+				*dest = *source;
 				*is_opaque = true;
 			}
 		}
@@ -295,7 +295,6 @@ UINT8 *R_GenerateTexture(size_t texnum)
 		UINT16 lumpnum = patch->lump;
 		UINT8 *pdata;
 		softwarepatch_t *realpatch;
-		boolean holey = false;
 
 #ifndef NO_PNG_LUMPS
 		UINT8 header[PNG_HEADER_SIZE];
@@ -310,9 +309,11 @@ UINT8 *R_GenerateTexture(size_t texnum)
 		pdata = W_CacheLumpNumPwad(wadnum, lumpnum, PU_CACHE);
 		realpatch = (softwarepatch_t *)pdata;
 
+		texture->transparency = false;
+
 		// Check the patch for holes.
 		if (texture->width > SHORT(realpatch->width) || texture->height > SHORT(realpatch->height))
-			holey = true;
+			texture->transparency = true;
 		else
 		{
 			UINT8 *colofs = (UINT8 *)realpatch->columnofs;
@@ -332,12 +333,12 @@ UINT8 *R_GenerateTexture(size_t texnum)
 					col = (doompost_t *)((UINT8 *)col + col->length + 4);
 				}
 				if (y < texture->height)
-					holey = true; // this texture is HOLEy! D:
+					texture->transparency = true; // this texture is HOLEy! D:
 			}
 		}
 
 		// If the patch uses transparency, we have to save it this way.
-		if (holey)
+		if (texture->transparency)
 		{
 			texture->flip = patch->flip;
 
@@ -377,6 +378,15 @@ UINT8 *R_GenerateTexture(size_t texnum)
 	opaque_pixels = Z_Calloc(total_pixels * sizeof(UINT8), PU_STATIC, NULL);
 	temp_columns = Z_Calloc(sizeof(column_t) * texture->width, PU_STATIC, NULL);
 	temp_block = Z_Calloc(total_pixels, PU_STATIC, NULL);
+
+#ifdef TEXTURE_255_IS_TRANSPARENT
+	texture->transparency = false;
+
+	// Transparency hack
+	memset(temp_block, TRANSPARENTPIXEL, total_pixels);
+#else
+	texture->transparency = true;
+#endif
 
 	for (x = 0; x < texture->width; x++)
 	{
@@ -474,12 +484,26 @@ UINT8 *R_GenerateTexture(size_t texnum)
 	// Now write the columns
 	column_posts = Z_Calloc(sizeof(unsigned) * texture->width, PU_STATIC, NULL);
 
+#ifdef TEXTURE_255_IS_TRANSPARENT
+	total_posts = texture->width;
+	temp_posts = Z_Realloc(temp_posts, sizeof(post_t) * total_posts, PU_CACHE, NULL);
+#endif
+
 	for (x = 0; x < texture->width; x++)
 	{
 		post_t *post = NULL;
-		boolean was_opaque = false;
 
 		column_t *column = &temp_columns[x];
+
+#ifdef TEXTURE_255_IS_TRANSPARENT
+		post = &temp_posts[x];
+		post->topdelta = 0;
+		post->length = texture->height;
+		post->data_offset = 0;
+		column_posts[x] = x;
+		column->num_posts = 1;
+#else
+		boolean was_opaque = false;
 
 		column_posts[x] = (unsigned)-1;
 
@@ -510,6 +534,7 @@ UINT8 *R_GenerateTexture(size_t texnum)
 
 			post->length++;
 		}
+#endif
 	}
 
 	blocksize = (sizeof(column_t) * texture->width) + (sizeof(post_t) * total_posts) + (sizeof(UINT8) * total_pixels);
@@ -1085,7 +1110,7 @@ static lumpnum_t W_GetTexPatchLumpNum(const char *name)
 
 	lumpnum_t lump = LUMPERROR;
 	INT32 lump_type_it;
-	
+
 
 	for (lump_type_it = 0; lump_type_it < USE__MAX; lump_type_it++)
 	{
@@ -1154,7 +1179,7 @@ static lumpnum_t W_GetTexPatchLumpNum(const char *name)
 	if (lump == LUMPERROR)
 	{
 		// Use whatever else you can find.
-		return W_GetNumForName(name);
+		return W_CheckNumForPatchName(name);
 	}
 
 	return lump;
@@ -1691,7 +1716,7 @@ const char *R_CheckTextureNameForNum(INT32 num)
 {
 	if (num > 0 && num < numtextures)
 		return textures[num]->name;
-	
+
 	return "-";
 }
 

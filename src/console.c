@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -1728,12 +1728,12 @@ static void CON_DrawBackpic(void)
 
 	// Get the lumpnum for CONSBACK, STARTUP (Only during game startup) or fallback into MISSING.
 	if (con_startup)
-		piclump = W_CheckNumForName("STARTUP");
+		piclump = W_CheckNumForPatchName("STARTUP");
 	else
-		piclump = W_CheckNumForName("CONSBACK");
+		piclump = W_CheckNumForPatchName("CONSBACK");
 
 	if (piclump == LUMPERROR)
-		piclump = W_GetNumForName("MISSING");
+		piclump = W_GetNumForPatchName("MISSING");
 
 	// Cache the patch.
 	con_backpic = W_CachePatchNum(piclump, PU_PATCH);

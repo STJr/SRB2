@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2012-2016 by John "JTE" Muniz.
-// Copyright (C) 2012-2023 by Sonic Team Junior.
+// Copyright (C) 2012-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -214,6 +214,14 @@ enum side_e {
 	side_special,
 	side_repeatcnt,
 	side_clipmidtex,
+	side_light,
+	side_light_top,
+	side_light_mid,
+	side_light_bottom,
+	side_lightabsolute,
+	side_lightabsolute_top,
+	side_lightabsolute_mid,
+	side_lightabsolute_bottom,
 	side_text
 };
 
@@ -243,6 +251,14 @@ static const char *const side_opt[] = {
 	"special",
 	"repeatcnt",
 	"clipmidtex",
+	"light",
+	"light_top",
+	"light_mid",
+	"light_bottom",
+	"lightabsolute",
+	"lightabsolute_top",
+	"lightabsolute_mid",
+	"lightabsolute_bottom",
 	"text",
 	NULL};
 
@@ -1316,6 +1332,30 @@ static int side_get(lua_State *L)
 	case side_clipmidtex:
 		lua_pushinteger(L, side->flags & SIDEFLAG_CLIP_MIDTEX);
 		return 1;
+	case side_light:
+		lua_pushinteger(L, side->light);
+		return 1;
+	case side_light_top:
+		lua_pushinteger(L, side->light_top);
+		return 1;
+	case side_light_mid:
+		lua_pushinteger(L, side->light_mid);
+		return 1;
+	case side_light_bottom:
+		lua_pushinteger(L, side->light_bottom);
+		return 1;
+	case side_lightabsolute:
+		lua_pushboolean(L, side->lightabsolute);
+		return 1;
+	case side_lightabsolute_top:
+		lua_pushboolean(L, side->lightabsolute_top);
+		return 1;
+	case side_lightabsolute_mid:
+		lua_pushboolean(L, side->lightabsolute_mid);
+		return 1;
+	case side_lightabsolute_bottom:
+		lua_pushboolean(L, side->lightabsolute_bottom);
+		return 1;
 	// TODO: 2.3: Delete
 	case side_text:
 		{
@@ -1423,6 +1463,30 @@ static int side_set(lua_State *L)
 			side->flags |= SIDEFLAG_CLIP_MIDTEX;
 		else
 			side->flags &= ~SIDEFLAG_CLIP_MIDTEX;
+		break;
+	case side_light:
+		side->light = luaL_checkinteger(L, 3);
+		break;
+	case side_light_top:
+		side->light_top = luaL_checkinteger(L, 3);
+		break;
+	case side_light_mid:
+		side->light_mid = luaL_checkinteger(L, 3);
+		break;
+	case side_light_bottom:
+		side->light_bottom = luaL_checkinteger(L, 3);
+		break;
+	case side_lightabsolute:
+		side->lightabsolute = luaL_checkboolean(L, 3);
+		break;
+	case side_lightabsolute_top:
+		side->lightabsolute_top = luaL_checkboolean(L, 3);
+		break;
+	case side_lightabsolute_mid:
+		side->lightabsolute_mid = luaL_checkboolean(L, 3);
+		break;
+	case side_lightabsolute_bottom:
+		side->lightabsolute_bottom = luaL_checkboolean(L, 3);
 		break;
 	}
 	return 0;

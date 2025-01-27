@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -90,17 +90,21 @@ static void P_SetupStateAnimation(mobj_t *mobj, state_t *st)
 	if (mobj->sprite == SPR_PLAY && mobj->skin)
 	{
 		spritedef_t *spritedef = P_GetSkinSpritedef(mobj->skin, mobj->sprite2);
-		animlength = (INT32)(spritedef->numframes);
+		animlength = (INT32)(spritedef->numframes) - 1;
 	}
 	else
 		animlength = st->var1;
 
 	if (!(st->frame & FF_ANIMATE))
+	{
+		mobj->anim_duration = 0;
 		return;
+	}
 
 	if (animlength <= 0 || st->var2 == 0)
 	{
 		mobj->frame &= ~FF_ANIMATE;
+		mobj->anim_duration = 0;
 		return; // Crash/stupidity prevention
 	}
 
@@ -157,27 +161,6 @@ FUNCINLINE static ATTRINLINE void P_CycleStateAnimation(mobj_t *mobj)
 // P_CycleMobjState
 //
 static void P_CycleMobjState(mobj_t *mobj)
-{
-	// state animations
-	P_CycleStateAnimation(mobj);
-
-	// cycle through states,
-	// calling action functions at transitions
-	if (mobj->tics != -1)
-	{
-		mobj->tics--;
-
-		// you can cycle through multiple states in a tic
-		if (!mobj->tics && mobj->state)
-			if (!P_SetMobjState(mobj, mobj->state->nextstate))
-				return; // freed itself
-	}
-}
-
-//
-// P_CycleMobjState for players.
-//
-static void P_CyclePlayerMobjState(mobj_t *mobj)
 {
 	// state animations
 	P_CycleStateAnimation(mobj);
@@ -340,8 +323,10 @@ static boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 		mobj->state = st;
 		mobj->tics = st->tics;
 
-		// Adjust the player's animation speed to match their velocity.
-		if (player->panim == PA_EDGE && (player->charflags & SF_FASTEDGE))
+		// Adjust the player's animation speed
+		if (mobj->state-states == S_PLAY_WAIT && (player->charflags & SF_FASTWAIT))
+			mobj->tics = 5;
+		else if (player->panim == PA_EDGE && (player->charflags & SF_FASTEDGE))
 			mobj->tics = 2;
 		else if (!(disableSpeedAdjust || player->charflags & SF_NOSPEEDADJUST))
 		{
@@ -765,7 +750,7 @@ void P_EmeraldManager(void)
 
 	for (think = thlist[THINK_MOBJ].next; think != &thlist[THINK_MOBJ]; think = think->next)
 	{
-		if (think->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+		if (think->removing)
 			continue;
 
 		mo = (mobj_t *)think;
@@ -1385,6 +1370,7 @@ fixed_t P_GetMobjGravity(mobj_t *mo)
 				case MT_WATERDROP:
 				case MT_CYBRAKDEMON:
 					gravityadd >>= 1;
+					break;
 				default:
 					break;
 			}
@@ -2245,7 +2231,7 @@ boolean P_ZMovement(mobj_t *mo)
 		else if (!onground)
 			P_SlopeLaunch(mo);
 	}
-	
+
 	if (!mo->player && P_CheckDeathPitCollide(mo) && mo->health
 	&& !(mo->flags & MF_NOCLIPHEIGHT) && !(mo->flags2 & MF2_BOSSDEAD))
 	{
@@ -2938,7 +2924,7 @@ boolean P_SceneryZMovement(mobj_t *mo)
 		mo->eflags &= ~MFE_APPLYPMOMZ;
 	}
 	mo->z += mo->momz;
-	
+
 	if (!mo->player && P_CheckDeathPitCollide(mo) && mo->health
 	&& !(mo->flags & MF_NOCLIPHEIGHT) && !(mo->flags2 & MF2_BOSSDEAD))
 	{
@@ -3454,7 +3440,7 @@ void P_DestroyRobots(void)
 
 	for (think = thlist[THINK_MOBJ].next; think != &thlist[THINK_MOBJ]; think = think->next)
 	{
-		if (think->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+		if (think->removing)
 			continue;
 
 		mo = (mobj_t *)think;
@@ -3781,7 +3767,7 @@ static void P_PlayerMobjThinker(mobj_t *mobj)
 
 	// always do the gravity bit now, that's simpler
 	// BUT CheckPosition only if wasn't done before.
-	if (!(mobj->eflags & MFE_ONGROUND) || mobj->momz
+	if (mobj->momz
 		|| ((mobj->eflags & MFE_VERTICALFLIP) && mobj->z + mobj->height != mobj->ceilingz)
 		|| (!(mobj->eflags & MFE_VERTICALFLIP) && mobj->z != mobj->floorz)
 		|| P_IsObjectInGoop(mobj))
@@ -3794,22 +3780,11 @@ static void P_PlayerMobjThinker(mobj_t *mobj)
 	}
 	else
 	{
-#if 0 // i don't know why this is here, it's causing a few undesired state glitches, and disabling it doesn't appear to negatively affect the game, but i don't want it gone permanently just in case some obscure bug crops up
-		if (!(mobj->player->powers[pw_carry] == CR_NIGHTSMODE)) // used for drilling
-			mobj->player->pflags &= ~PF_STARTJUMP;
-		mobj->player->pflags &= ~(PF_JUMPED|PF_NOJUMPDAMAGE);
-		if (mobj->player->secondjump || mobj->player->powers[pw_tailsfly])
-		{
-			mobj->player->secondjump = 0;
-			mobj->player->powers[pw_tailsfly] = 0;
-			P_SetMobjState(mobj, S_PLAY_WALK);
-		}
-#endif
 		mobj->eflags &= ~MFE_JUSTHITFLOOR;
 	}
 
 animonly:
-	P_CyclePlayerMobjState(mobj);
+	P_CycleMobjState(mobj);
 }
 
 static void CalculatePrecipFloor(precipmobj_t *mobj)
@@ -4264,7 +4239,7 @@ static void P_Boss3Thinker(mobj_t *mobj)
 			// this can happen if the boss was hurt earlier than expected
 			for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 			{
-				if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+				if (th->removing)
 					continue;
 
 				mo2 = (mobj_t *)th;
@@ -5353,7 +5328,7 @@ static void P_Boss9Thinker(mobj_t *mobj)
 		// Build a hoop linked list of 'em!
 		for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 		{
-			if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+			if (th->removing)
 				continue;
 
 			mo2 = (mobj_t *)th;
@@ -6055,7 +6030,7 @@ mobj_t *P_GetClosestAxis(mobj_t *source)
 	// scan the thinkers to find the closest axis point
 	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 	{
-		if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+		if (th->removing)
 			continue;
 
 		mo2 = (mobj_t *)th;
@@ -6661,8 +6636,21 @@ static boolean P_ShieldLook(mobj_t *thing, shieldtype_t shield)
 	thing->flags |= MF_NOCLIPHEIGHT;
 	thing->eflags = (thing->eflags & ~MFE_VERTICALFLIP)|(thing->target->eflags & MFE_VERTICALFLIP);
 
-	P_SetScale(thing, FixedMul(thing->target->scale, thing->target->player->shieldscale), true);
-	thing->old_scale = FixedMul(thing->target->old_scale, thing->target->player->shieldscale);
+	//Set the shield's scale based on shieldscale, hide it if we're too small!
+	fixed_t scale = FixedMul(thing->target->scale, thing->target->player->shieldscale);
+	if (scale < 1) {
+		P_SetScale(thing, thing->target->scale, true);
+		thing->old_scale = thing->target->old_scale;
+
+		thing->flags2 |= (MF2_DONTDRAW|MF2_JUSTATTACKED); //Hide and indicate we're hidden
+	} else {
+		P_SetScale(thing, scale, true);
+		thing->old_scale = FixedMul(thing->target->old_scale, thing->target->player->shieldscale);
+
+		//Only unhide if we were hidden by the above code
+		if (thing->flags2 & MF2_JUSTATTACKED)
+			thing->flags2 &= ~(MF2_DONTDRAW|MF2_JUSTATTACKED);
+	}
 
 #define NewMH(mobj)   mobj->height // Ugly mobj-height and player-height defines, for the sake of prettier code
 #define NewPH(player) P_GetPlayerHeight(player)
@@ -6786,6 +6774,12 @@ void P_RunOverlays(void)
 		// then you're on your own.
 		else
 			zoffs = 0;
+
+		// hide the overlay as well if we're part of a hidden shield
+		if ((mo->target->flags2 & (MF2_JUSTATTACKED|MF2_DONTDRAW)) == (MF2_JUSTATTACKED|MF2_DONTDRAW))
+			mo->flags2 |= (MF2_DONTDRAW|MF2_JUSTATTACKED);
+		else if (mo->flags2 & MF2_JUSTATTACKED)
+			mo->flags2 &= ~(MF2_DONTDRAW|MF2_JUSTATTACKED);
 
 		P_UnsetThingPosition(mo);
 		mo->x = mo->target->x;
@@ -7315,7 +7309,7 @@ static void P_RosySceneryThink(mobj_t *mobj)
 		player = &players[i];
 	}
 
-	if (stat == S_ROSY_JUMP || stat == S_ROSY_PAIN)
+	if (stat == S_ROSY_JUMP || stat == S_ROSY_FALL || stat == S_ROSY_PAIN)
 	{
 		if (P_IsObjectOnGround(mobj))
 		{
@@ -7326,16 +7320,16 @@ static void P_RosySceneryThink(mobj_t *mobj)
 				stat = S_ROSY_WALK;
 			P_SetMobjState(mobj, stat);
 		}
-		else if (P_MobjFlip(mobj)*mobj->momz < 0)
-			mobj->frame = mobj->state->frame + mobj->state->var1;
+		else if (P_MobjFlip(mobj)*mobj->momz < 0 && stat == S_ROSY_JUMP)
+			P_SetMobjState(mobj, S_ROSY_FALL);
 	}
 
 	if (!player)
 	{
-		if ((stat < S_ROSY_IDLE1 || stat > S_ROSY_IDLE4) && stat != S_ROSY_JUMP)
+		if (stat != S_ROSY_IDLE && stat != S_ROSY_JUMP && stat != S_ROSY_FALL)
 		{
 			mobj->momx = mobj->momy = 0;
-			P_SetMobjState(mobj, S_ROSY_IDLE1);
+			P_SetMobjState(mobj, S_ROSY_IDLE);
 		}
 	}
 	else
@@ -7349,13 +7343,11 @@ static void P_RosySceneryThink(mobj_t *mobj)
 
 		switch (stat)
 		{
-		case S_ROSY_IDLE1:
-		case S_ROSY_IDLE2:
-		case S_ROSY_IDLE3:
-		case S_ROSY_IDLE4:
+		case S_ROSY_IDLE:
 			dojump = true;
 			break;
 		case S_ROSY_JUMP:
+		case S_ROSY_FALL:
 		case S_ROSY_PAIN:
 			// handled above
 			break;
@@ -7381,8 +7373,7 @@ static void P_RosySceneryThink(mobj_t *mobj)
 				max = pdist;
 				if ((--mobj->extravalue1) <= 0)
 				{
-					if (++mobj->frame > mobj->state->frame + mobj->state->var1)
-						mobj->frame = mobj->state->frame;
+					P_SetMobjState(mobj, S_ROSY_WALK);
 					if (mom > 12*mobj->scale)
 						mobj->extravalue1 = 2;
 					else if (mom > 6*mobj->scale)
@@ -8057,6 +8048,10 @@ static boolean P_MobjBossThink(mobj_t *mobj)
 			break;
 		case MT_METALSONIC_BATTLE:
 			P_Boss9Thinker(mobj);
+			break;
+		case MT_OLDK:
+			if (mobj->health <= 0)
+				mobj->momz -= (2*FRACUNIT)/3;
 			break;
 		default: // Generic SOC-made boss
 			if (mobj->flags2 & MF2_SKULLFLY)
@@ -9334,10 +9329,10 @@ static void P_PointPushThink(mobj_t *mobj)
 	radius = mobj->spawnpoint->args[0] << FRACBITS;
 
 	pushmobj = mobj;
-	xl = (unsigned)(mobj->x - radius - bmaporgx - MAXRADIUS)>>MAPBLOCKSHIFT;
-	xh = (unsigned)(mobj->x + radius - bmaporgx + MAXRADIUS)>>MAPBLOCKSHIFT;
-	yl = (unsigned)(mobj->y - radius - bmaporgy - MAXRADIUS)>>MAPBLOCKSHIFT;
-	yh = (unsigned)(mobj->y + radius - bmaporgy + MAXRADIUS)>>MAPBLOCKSHIFT;
+	xl = (unsigned)(mobj->x - radius - bmaporgx)>>MAPBLOCKSHIFT;
+	xh = (unsigned)(mobj->x + radius - bmaporgx)>>MAPBLOCKSHIFT;
+	yl = (unsigned)(mobj->y - radius - bmaporgy)>>MAPBLOCKSHIFT;
+	yh = (unsigned)(mobj->y + radius - bmaporgy)>>MAPBLOCKSHIFT;
 
 	P_DoBlockThingsIterate(xl, yl, xh, yh, PIT_PushThing);
 }
@@ -10323,10 +10318,7 @@ void P_MobjThinker(mobj_t *mobj)
 	}
 
 	// Can end up here if a player dies.
-	if (mobj->player)
-		P_CyclePlayerMobjState(mobj);
-	else
-		P_CycleMobjState(mobj);
+	P_CycleMobjState(mobj);
 
 	if (P_MobjWasRemoved(mobj))
 		return;
@@ -10341,6 +10333,7 @@ void P_MobjThinker(mobj_t *mobj)
 		case MT_GRENADEPICKUP:
 			if (mobj->health == 0) // Fading tile
 			{
+				// TODO: Maybe use mobj->alpha instead of messing with frame flags
 				INT32 value = mobj->info->damage/10;
 				value = mobj->fuse/value;
 				value = 10-value;
@@ -10615,6 +10608,19 @@ static fixed_t P_DefaultMobjShadowScale (mobj_t *thing)
 	}
 }
 
+static INT32 P_SetupNPC(mobj_t *mobj, const char *name)
+{
+	INT32 skinnum = R_SkinAvailable(name);
+
+	if (skinnum != -1)
+	{
+		mobj->skin = skins[skinnum];
+		mobj->color = skins[skinnum]->prefcolor;
+	}
+
+	return skinnum;
+}
+
 //
 // P_SpawnMobj
 //
@@ -10686,6 +10692,7 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type, ...)
 
 	// Sprite rendering
 	mobj->blendmode = AST_TRANSLUCENT;
+	mobj->alpha = FRACUNIT;
 	mobj->spritexscale = mobj->spriteyscale = mobj->scale;
 	mobj->spritexoffset = mobj->spriteyoffset = 0;
 	mobj->floorspriteslope = NULL;
@@ -10730,7 +10737,7 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type, ...)
 
 	// Set shadowscale here, before spawn hook so that Lua can change it
 	mobj->shadowscale = P_DefaultMobjShadowScale(mobj);
-	
+
 	// A monitor can't respawn if we're not in multiplayer,
 	// or if we're in co-op and it's score or a 1up
 	if (mobj->flags & MF_MONITOR && (!(netgame || multiplayer)
@@ -10746,7 +10753,8 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type, ...)
 		// when spawning MT_PLAYER, set mobj->player before calling MobjSpawn hook to prevent P_RemoveMobj from succeeding on player mobj.
 		va_start(args, type);
 		mobj->player = va_arg(args, player_t *);
-		mobj->player->mo = mobj;
+		if (mobj->player)
+			mobj->player->mo = mobj;
 		va_end(args);
 	}
 
@@ -10966,17 +10974,14 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type, ...)
 				nummaprings++;
 			break;
 		case MT_METALSONIC_RACE:
-			mobj->skin = skins[5];
-			/* FALLTHRU */
 		case MT_METALSONIC_BATTLE:
-			mobj->color = skins[5]->prefcolor;
-			sc = 5;
+			sc = P_SetupNPC(mobj, "metalsonic");
 			break;
 		case MT_FANG:
-			sc = 4;
+			sc = P_SetupNPC(mobj, "fang");
 			break;
 		case MT_ROSY:
-			sc = 3;
+			sc = P_SetupNPC(mobj, "amy");
 			break;
 		case MT_CORK:
 			mobj->flags2 |= MF2_SUPERFIRE;
@@ -11006,13 +11011,6 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type, ...)
 				mcsolid->angle = mobj->angle + ANGLE_90;
 			}
 			break;
-		case MT_TORCHFLOWER:
-			{
-				mobj_t *fire = P_SpawnMobjFromMobj(mobj, 0, 0, 46*FRACUNIT, MT_FLAME);
-				if (!P_MobjWasRemoved(fire))
-					P_SetTarget(&mobj->target, fire);
-				break;
-			}
 		case MT_PYREFLY:
 			mobj->extravalue1 = (FixedHypot(mobj->x, mobj->y)/FRACUNIT) % 360;
 			mobj->extravalue2 = 0;
@@ -11177,17 +11175,16 @@ tic_t itemrespawntime[ITEMQUESIZE];
 size_t iquehead, iquetail;
 
 #ifdef PARANOIA
-#define SCRAMBLE_REMOVED // Force debug build to crash when Removed mobj is accessed
+#define SCRAMBLE_REMOVED // Force debug build to crash when a removed mobj is accessed
 #endif
 void P_RemoveMobj(mobj_t *mobj)
 {
 	I_Assert(mobj != NULL);
-	if (P_MobjWasRemoved(mobj))
-		return; // something already removing this mobj.
+	if (P_MobjWasRemoved(mobj) || mobj->thinker.removing)
+		return; // Something already removed or is removing this mobj.
 
-	mobj->thinker.function.acp1 = (actionf_p1)P_RemoveThinkerDelayed; // shh. no recursing.
+	mobj->thinker.removing = true; // Set earlier to avoid recursion.
 	LUA_HookMobj(mobj, MOBJ_HOOK(MobjRemoved));
-	mobj->thinker.function.acp1 = (actionf_p1)P_MobjThinker; // needed for P_UnsetThingPosition, etc. to work.
 
 	// Rings only, please!
 	if (mobj->spawnpoint &&
@@ -11283,15 +11280,6 @@ void P_RemoveMobj(mobj_t *mobj)
 	// Invalidate mobj_t data to cause crashes if accessed!
 	memset((UINT8 *)mobj + sizeof(thinker_t), 0xff, sizeof(mobj_t) - sizeof(thinker_t));
 #endif
-}
-
-// This does not need to be added to Lua.
-// To test it in Lua, check mobj.valid
-boolean P_MobjWasRemoved(mobj_t *mobj)
-{
-	if (mobj && mobj->thinker.function.acp1 == (actionf_p1)P_MobjThinker)
-		return false;
-	return true;
 }
 
 void P_RemovePrecipMobj(precipmobj_t *mobj)
@@ -12857,7 +12845,7 @@ static boolean P_MapAlreadyHasStarPost(mobj_t *mobj)
 
 	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 	{
-		if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+		if (th->removing)
 			continue;
 
 		mo2 = (mobj_t *)th;
@@ -13006,6 +12994,13 @@ static boolean P_SetupSpawnedMapThing(mapthing_t *mthing, mobj_t *mobj, boolean 
 			}
 		}
 		break;
+	case MT_TORCHFLOWER:
+		{
+			mobj_t *fire = P_SpawnMobjFromMobj(mobj, 0, 0, 46*FRACUNIT, MT_FLAME);
+			if (!P_MobjWasRemoved(fire))
+				P_SetTarget(&mobj->target, fire);
+			break;
+		}
 	case MT_CANDLE:
 	case MT_CANDLEPRICKET:
 		if (mthing->args[0])
@@ -13142,6 +13137,32 @@ static boolean P_SetupSpawnedMapThing(mapthing_t *mthing, mobj_t *mobj, boolean 
 			0, ((mobj->type == MT_CEZPOLE1) ? MT_CEZBANNER1 : MT_CEZBANNER2));
 		if (!P_MobjWasRemoved(banner))
 			banner->angle = mobjangle + ANGLE_90;
+	}
+	break;
+	case MT_SSZTREE:
+	{ // Spawn the branches
+		INT32 i;
+		mobj_t *branch;
+		for (i = 0; i < 5; i++)
+		{
+			branch = P_SpawnMobjFromMobj(mobj, 0, 0, 0, MT_SSZTREE_BRANCH);
+			if (P_MobjWasRemoved(branch))
+				continue;
+			branch->angle = mobj->angle + FixedAngle(i*72*FRACUNIT);
+		}
+	}
+	break;
+	case MT_SSZTREE2:
+	{ // Spawn the branches
+		INT32 i;
+		mobj_t *branch;
+		for (i = 0; i < 5; i++)
+		{
+			branch = P_SpawnMobjFromMobj(mobj, 0, 0, 0, MT_SSZTREE2_BRANCH);
+			if (P_MobjWasRemoved(branch))
+				continue;
+			branch->angle = mobj->angle + FixedAngle(i*72*FRACUNIT);
+		}
 	}
 	break;
 	case MT_HHZTREE_TOP:
@@ -14288,7 +14309,8 @@ mobj_t *P_SpawnMobjFromMobj(mobj_t *mobj, fixed_t xofs, fixed_t yofs, fixed_t zo
 	yofs = FixedMul(yofs, mobj->scale);
 	zofs = FixedMul(zofs, mobj->scale);
 
-	newmobj = P_SpawnMobj(mobj->x + xofs, mobj->y + yofs, mobj->z + zofs, type);
+	newmobj = P_SpawnMobj(mobj->x + xofs, mobj->y + yofs, mobj->z + zofs, type, NULL);
+
 	if (!newmobj)
 		return NULL;
 

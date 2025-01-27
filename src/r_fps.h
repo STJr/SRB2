@@ -3,7 +3,7 @@
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
 // Copyright (C) 1999-2000 by Jess Haas, Nicolas Kalkhof, Colin Phipps, Florian Schulze, Andrey Budko (prboom)
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -115,6 +115,9 @@ typedef struct levelinterpolator_s {
 			vector3_t oldo, bako;
 			vector2_t oldd, bakd;
 			fixed_t oldzdelta, bakzdelta;
+			dvector3_t oldorigin, bakorigin;
+			dvector3_t oldnormdir, baknormdir;
+			double olddzdelta, bakdzdelta;
 		} dynslope;
 	};
 } levelinterpolator_t;

@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -45,14 +45,15 @@ typedef enum
 	SF_MARIODAMAGE      = SF_NOJUMPDAMAGE|SF_STOMPDAMAGE, // The Mario method of being able to damage enemies, etc.
 	SF_MACHINE          = 1<<10, // Beep boop. Are you a robot?
 	SF_DASHMODE         = 1<<11, // Sonic Advance 2 style top speed increase?
-	SF_FASTEDGE         = 1<<12, // Faster edge teeter?
-	SF_MULTIABILITY     = 1<<13, // Revenge of Final Demo.
-	SF_NONIGHTSROTATION = 1<<14, // Disable sprite rotation for NiGHTS
-	SF_NONIGHTSSUPER    = 1<<15, // Disable super colors for NiGHTS (if you have SF_SUPER)
-	SF_NOSUPERSPRITES   = 1<<16, // Don't use super sprites while super
-	SF_NOSUPERJUMPBOOST = 1<<17, // Disable the jump boost given while super (i.e. Knuckles)
-	SF_CANBUSTWALLS     = 1<<18, // Can naturally bust walls on contact? (i.e. Knuckles)
-	SF_NOSHIELDABILITY  = 1<<19, // Disable shield abilities
+	SF_FASTWAIT         = 1<<12, // Faster wait animation?
+	SF_FASTEDGE         = 1<<13, // Faster edge teeter?
+	SF_MULTIABILITY     = 1<<14, // Revenge of Final Demo.
+	SF_NONIGHTSROTATION = 1<<15, // Disable sprite rotation for NiGHTS
+	SF_NONIGHTSSUPER    = 1<<16, // Disable super colors for NiGHTS (if you have SF_SUPER)
+	SF_NOSUPERSPRITES   = 1<<17, // Don't use super sprites while super
+	SF_NOSUPERJUMPBOOST = 1<<18, // Disable the jump boost given while super (i.e. Knuckles)
+	SF_CANBUSTWALLS     = 1<<19, // Can naturally bust walls on contact? (i.e. Knuckles)
+	SF_NOSHIELDABILITY  = 1<<20, // Disable shield abilities
 
 	// free up to and including 1<<31
 } skinflags_t;
@@ -158,10 +159,6 @@ typedef enum
 	PF_FORCESTRAFE = 1<<28, // Turning inputs are translated into strafing inputs
 	PF_CANCARRY    = 1<<29, // Can carry another player?
 	PF_FINISHED    = 1<<30, // The player finished the level. NOT the same as exiting
-	
-	// True if shield button down last tic
-	// This may be the final flag, but 2.3 could free up the others
-	PF_SHIELDDOWN    = 1<<31,
 
 	// up to 1<<31 is free
 } pflags_t;

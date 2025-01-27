@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -636,6 +636,14 @@ static void R_LoadSkinSprites(UINT16 wadnum, UINT16 *lump, UINT16 *lastlump, ski
 
 	if (skin->sprites[0].numframes == 0)
 		CONS_Alert(CONS_ERROR, M_GetText("No frames found for sprite SPR2_%s\n"), spr2names[0]);
+
+	// TODO: 2.3: Delete
+	memcpy(&skin->sprites_compat[start_spr2],
+		&skin->sprites[start_spr2],
+		sizeof(spritedef_t) * (free_spr2 - start_spr2));
+	memcpy(&skin->sprites_compat[start_spr2 + NUMPLAYERSPRITES],
+		&skin->super.sprites[start_spr2],
+		sizeof(spritedef_t) * (free_spr2 - start_spr2));
 }
 
 // returns whether found appropriate property

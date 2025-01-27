@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2025 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -209,19 +209,19 @@ typedef struct
 	UINT8 picmode; // sequence mode after displaying last pic, 0 = persist, 1 = loop, 2 = destroy
 	UINT8 pictoloop; // if picmode == loop, which pic to loop to?
 	UINT8 pictostart; // initial pic number to show
-	char picname[MAX_PROMPT_PICS][8];
+	char picname[MAX_PROMPT_PICS][8+1];
 	UINT8 pichires[MAX_PROMPT_PICS];
 	UINT16 xcoord[MAX_PROMPT_PICS]; // gfx
 	UINT16 ycoord[MAX_PROMPT_PICS]; // gfx
 	UINT16 picduration[MAX_PROMPT_PICS];
 
-	char   musswitch[7];
+	char   musswitch[6+1];
 	UINT16 musswitchflags;
 	UINT8 musicloop;
 
-	char tag[33]; // page tag
-	char name[34]; // narrator name, extra char for color
-	char iconname[8]; // narrator icon lump
+	char tag[32+1]; // page tag
+	char name[32+2]; // narrator name, extra char for color
+	char iconname[8+1]; // narrator icon lump
 	boolean rightside; // narrator side, false = left, true = right
 	boolean iconflip; // narrator flip icon horizontally
 	UINT8 hidehud; // hide hud, 0 = show all, 1 = hide depending on prompt position (top/bottom), 2 = hide all
@@ -233,7 +233,7 @@ typedef struct
 	sfxenum_t textsfx; // sfx_ id for printing text
 	UINT8 nextprompt; // next prompt to jump to, one-based. 0 = current prompt
 	UINT8 nextpage; // next page to jump to, one-based. 0 = next page within prompt->numpages
-	char nexttag[33]; // next tag to jump to. If set, this overrides nextprompt and nextpage.
+	char nexttag[32+1]; // next tag to jump to. If set, this overrides nextprompt and nextpage.
 	INT32 timetonext; // time in tics to jump to next page automatically. 0 = don't jump automatically
 	char *text;
 } textpage_t;
@@ -287,8 +287,8 @@ typedef struct
 // (This is not ifdeffed so the map header structure can stay identical, just in case.)
 typedef struct
 {
-	char option[32]; // 31 usable characters
-	char value[256]; // 255 usable characters. If this seriously isn't enough then wtf.
+	char option[31+1]; // 31 usable characters
+	char value[255+1]; // 255 usable characters. If this seriously isn't enough then wtf.
 } customoption_t;
 
 /** Map header information.
@@ -303,7 +303,7 @@ typedef struct
 	INT16 nextlevel;            ///< Map number of next level, or 1100-1102 to end.
 	INT16 marathonnext;         ///< See nextlevel, but for Marathon mode. Necessary to support hub worlds ala SUGOI.
 	char keywords[32+1];        ///< Keywords separated by space to search for. 32 characters.
-	char musname[7];            ///< Music track to play. "" for no music.
+	char musname[6+1];          ///< Music track to play. "" for no music.
 	UINT16 mustrack;            ///< Subsong to play. Only really relevant for music modules and specific formats supported by GME. 0 to ignore.
 	UINT32 muspos;              ///< Music position to jump to.
 	char forcecharacter[16+1];  ///< (SKINNAMESIZE+1) Skin to switch to or "" to disable.
@@ -330,7 +330,7 @@ typedef struct
 	UINT16 levelflags;          ///< LF_flags:  merged booleans into one UINT16 for space, see below
 	UINT8 menuflags;            ///< LF2_flags: options that affect record attack / nights mode menus
 
-	char selectheading[22];     ///< Level select heading. Allows for controllable grouping.
+	char selectheading[21+1];   ///< Level select heading. Allows for controllable grouping.
 	UINT16 startrings;          ///< Number of rings players start with.
 	INT32 sstimer;              ///< Timer for special stages.
 	UINT32 ssspheres;           ///< Sphere requirement in special stages.
@@ -352,9 +352,9 @@ typedef struct
 
 	// Music stuff.
 	UINT32 musinterfadeout;     ///< Fade out level music on intermission screen in milliseconds
-	char musintername[7];       ///< Intermission screen music.
+	char musintername[6+1];     ///< Intermission screen music.
 
-	char muspostbossname[7];    ///< Post-bossdeath music.
+	char muspostbossname[6+1];  ///< Post-bossdeath music.
 	UINT16 muspostbosstrack;    ///< Post-bossdeath track.
 	UINT32 muspostbosspos;      ///< Post-bossdeath position
 	UINT32 muspostbossfadein;   ///< Post-bossdeath fade-in milliseconds.

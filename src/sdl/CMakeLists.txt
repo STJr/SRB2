@@ -14,8 +14,13 @@ target_sources(SRB2SDL2 PRIVATE
 
 # Compatibility flag with later versions of GCC
 # We should really fix our code to not need this
-if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
-    target_compile_options(SRB2SDL2 PRIVATE -mno-ms-bitfields)
+if (NOT SRB2_CONFIG_FORCE_NO_MS_BITFIELDS)
+	if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+		check_cxx_compiler_flag("-mno-ms-bitfields" HAS_NO_MS_BITFIELDS)
+		if(HAS_NO_MS_BITFIELDS)
+			target_compile_options(SRB2SDL2 PRIVATE -mno-ms-bitfields)
+		endif()
+	endif()
 endif()
 
 # Yes we know we use insecure CRT functions...
@@ -33,8 +38,6 @@ target_compile_options(SRB2SDL2 PRIVATE
         -Wall
         -Wno-trigraphs
         -W # Was controlled by RELAXWARNINGS
-        -pedantic
-        -Wpedantic
         -Wfloat-equal
         -Wundef
         -Wpointer-arith

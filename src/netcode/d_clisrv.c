@@ -113,8 +113,11 @@ consvar_t cv_blamecfail = CVAR_INIT ("blamecfail", "Off", CV_SAVE|CV_NETVAR, CV_
 static CV_PossibleValue_t playbackspeed_cons_t[] = {{1, "MIN"}, {10, "MAX"}, {0, NULL}};
 consvar_t cv_playbackspeed = CVAR_INIT ("playbackspeed", "1", 0, playbackspeed_cons_t, NULL);
 
-consvar_t cv_idletime = CVAR_INIT ("idletime", "0", CV_SAVE, CV_Unsigned, NULL);
-consvar_t cv_dedicatedidletime = CVAR_INIT ("dedicatedidletime", "10", CV_SAVE, CV_Unsigned, NULL);
+consvar_t cv_dedicatedidletime = CVAR_INIT ("dedicatedidletime", "10", CV_SAVE|CV_NETVAR, CV_Unsigned, NULL);
+
+static CV_PossibleValue_t idleaction_cons_t[] = {{1, "Kick"}, {2, "Spectate"}, {0, NULL}};
+consvar_t cv_idleaction = CVAR_INIT ("idleaction", "Spectate", CV_SAVE|CV_NETVAR, idleaction_cons_t, NULL);
+consvar_t cv_idletime = CVAR_INIT ("idletime", "3", CV_SAVE|CV_NETVAR, CV_Unsigned, NULL);
 
 consvar_t cv_httpsource = CVAR_INIT ("http_source", "", CV_SAVE, NULL, NULL);
 
@@ -660,7 +663,7 @@ void D_QuitNetGame(void)
 			if (netnodes[i].ingame)
 				HSendPacket(i, true, 0, 0);
 #ifdef MASTERSERVER
-		if (serverrunning && ms_RoomId > 0)
+		if (serverrunning && cv_masterserver_room_id.value > 0)
 			UnregisterServer();
 #endif
 	}
@@ -794,7 +797,7 @@ void SV_SpawnServer(void)
 		{
 			I_NetOpenSocket();
 #ifdef MASTERSERVER
-			if (ms_RoomId > 0)
+			if (cv_masterserver_room_id.value > 0)
 				RegisterServer();
 #endif
 		}
@@ -1360,19 +1363,33 @@ static void IdleUpdate(void)
 	if (!server || !netgame)
 		return;
 
-	for (i = 1; i < MAXPLAYERS; i++)
+	for (i = 0; i < MAXPLAYERS; i++)
 	{
-		if (cv_idletime.value && playeringame[i] && playernode[i] != UINT8_MAX && !players[i].quittime && !players[i].spectator && !players[i].bot && !IsPlayerAdmin(i) && i != serverplayer && gamestate == GS_LEVEL)
+		if (playeringame[i] && playernode[i] != UINT8_MAX && !players[i].quittime && !players[i].spectator && !players[i].bot && gamestate == GS_LEVEL)
 		{
 			if (players[i].cmd.forwardmove || players[i].cmd.sidemove || players[i].cmd.buttons)
 				players[i].lastinputtime = 0;
 			else
 				players[i].lastinputtime++;
 
-			if (players[i].lastinputtime > (tic_t)cv_idletime.value * TICRATE * 60)
+			if (cv_idletime.value && !IsPlayerAdmin(i) && i != serverplayer && !(players[i].pflags & PF_FINISHED) && players[i].lastinputtime > (tic_t)cv_idletime.value * TICRATE * 60)
 			{
 				players[i].lastinputtime = 0;
-				SendKick(i, KICK_MSG_IDLE | KICK_MSG_KEEP_BODY);
+				if (cv_idleaction.value == 2 && G_GametypeHasSpectators())
+				{
+					changeteam_union NetPacket;
+					UINT16 usvalue;
+					NetPacket.value.l = NetPacket.value.b = 0;
+					NetPacket.packet.newteam = 0;
+					NetPacket.packet.playernum = i;
+					NetPacket.packet.verification = true; // This signals that it's a server change
+					usvalue = SHORT(NetPacket.value.l|NetPacket.value.b);
+					SendNetXCmd(XD_TEAMCHANGE, &usvalue, sizeof(usvalue));
+				}
+				else if (cv_idleaction.value == 1)
+				{
+					SendKick(i, KICK_MSG_IDLE | KICK_MSG_KEEP_BODY);
+				}
 			}
 		}
 		else
@@ -1397,6 +1414,83 @@ static void IdleUpdate(void)
 			}
 		}
 	}
+}
+
+static void DedicatedIdleUpdate(INT32 *realtics)
+{
+	const tic_t dedicatedidletime = cv_dedicatedidletime.value * TICRATE;
+	static tic_t dedicatedidletimeprev = 0;
+	static tic_t dedicatedidle = 0;
+
+	if (!server || !dedicated || gamestate != GS_LEVEL)
+		return;
+
+	if (dedicatedidletime > 0)
+	{
+		INT32 i;
+
+		boolean empty = true;
+		for (i = 0; i < MAXPLAYERS; i++)
+			if (playeringame[i])
+			{
+				empty = false;
+				break;
+			}
+
+		if (empty)
+		{
+			if (leveltime == 2)
+			{
+				// On next tick...
+				dedicatedidle = dedicatedidletime - 1;
+			}
+			else if (dedicatedidle >= dedicatedidletime)
+			{
+				if (D_GetExistingTextcmd(gametic, 0) || D_GetExistingTextcmd(gametic + 1, 0))
+				{
+					CONS_Printf("DEDICATED: Awakening from idle (Netxcmd detected...)\n");
+					dedicatedidle = 0;
+				}
+				else
+				{
+					(*realtics) = 0;
+				}
+			}
+			else
+			{
+				dedicatedidle += (*realtics);
+
+				if (dedicatedidle >= dedicatedidletime)
+				{
+					const char *idlereason = "at round start";
+					if (leveltime > 3)
+						idlereason = va("for %d seconds", dedicatedidle / TICRATE);
+
+					CONS_Printf("DEDICATED: No players %s, idling...\n", idlereason);
+					(*realtics) = 0;
+					dedicatedidle = dedicatedidletime;
+				}
+			}
+		}
+		else
+		{
+			if (dedicatedidle >= dedicatedidletime)
+			{
+				CONS_Printf("DEDICATED: Awakening from idle (Player detected...)\n");
+			}
+			dedicatedidle = 0;
+		}
+	}
+	else
+	{
+		if (dedicatedidletimeprev > 0 && dedicatedidle >= dedicatedidletimeprev)
+		{
+			CONS_Printf("DEDICATED: Awakening from idle (Idle disabled...)\n");
+		}
+		dedicatedidle = 0;
+	}
+
+	dedicatedidletimeprev = dedicatedidletime;
 }
 
 // Handle timeouts to prevent definitive freezes from happenning
@@ -1475,69 +1569,7 @@ void NetUpdate(void)
 			realtics = 5;
 	}
 
-	if (server && dedicated && gamestate == GS_LEVEL)
- 	{
-		const tic_t dedicatedidletime = cv_dedicatedidletime.value * TICRATE;
-		static tic_t dedicatedidletimeprev = 0;
-		static tic_t dedicatedidle = 0;
-
-		if (dedicatedidletime > 0)
-		{
-			INT32 i;
-
-			for (i = 1; i < MAXNETNODES; ++i)
-				if (netnodes[i].ingame)
-				{
-					if (dedicatedidle >= dedicatedidletime)
-					{
-						CONS_Printf("DEDICATED: Awakening from idle (Node %d detected...)\n", i);
-						dedicatedidle = 0;
-					}
-					break;
-				}
-
-			if (i == MAXNETNODES)
-			{
-				if (leveltime == 2)
-				{
-					// On next tick...
-					dedicatedidle = dedicatedidletime-1;
-				}
-				else if (dedicatedidle >= dedicatedidletime)
-				{
-					if (D_GetExistingTextcmd(gametic, 0) || D_GetExistingTextcmd(gametic+1, 0))
-					{
-						CONS_Printf("DEDICATED: Awakening from idle (Netxcmd detected...)\n");
-						dedicatedidle = 0;
-					}
-					else
-					{
-						realtics = 0;
-					}
-				}
-				else if ((dedicatedidle += realtics) >= dedicatedidletime)
-				{
-					const char *idlereason = "at round start";
-					if (leveltime > 3)
-						idlereason = va("for %d seconds", dedicatedidle/TICRATE);
-
-					CONS_Printf("DEDICATED: No nodes %s, idling...\n", idlereason);
-					realtics = 0;
-					dedicatedidle = dedicatedidletime;
-				}
-			}
-		}
-		else
-		{
-			if (dedicatedidletimeprev > 0 && dedicatedidle >= dedicatedidletimeprev)
-			{
-				CONS_Printf("DEDICATED: Awakening from idle (Idle disabled...)\n");
-			}
-			dedicatedidle = 0;
-		}
-
-		dedicatedidletimeprev = dedicatedidletime;
- 	}
+	DedicatedIdleUpdate(&realtics);
 
 	gametime = nowtime;
 
@@ -1784,7 +1816,7 @@ INT16 Consistancy(void)
 	{
 		for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 		{
-			if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+			if (th->removing)
 				continue;
 
 			mo = (mobj_t *)th;

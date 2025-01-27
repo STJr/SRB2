@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -230,6 +230,18 @@ static INT32 R_DoorClosed(void)
 	&& (backsector->floorheight <= frontsector->floorheight || curline->sidedef->bottomtexture);
 }
 
+static UINT8 R_FloorLightLevel(sector_t *sector, INT16 base_lightlevel)
+{
+	return max(0, min(255, sector->floorlightlevel +
+		((sector->floorlightabsolute) ? 0 : base_lightlevel)));
+}
+
+static UINT8 R_CeilingLightLevel(sector_t *sector, INT16 base_lightlevel)
+{
+	return max(0, min(255, sector->ceilinglightlevel +
+		((sector->ceilinglightabsolute) ? 0 : base_lightlevel)));
+}
+
 //
 // If player's view height is underneath fake floor, lower the
 // drawn ceiling to be just under the floor height, and replace
@@ -312,11 +324,11 @@ sector_t *R_FakeFlat(sector_t *sec, sector_t *tempsec, INT32 *floorlightlevel,
 			tempsec->lightlevel = s->lightlevel;
 
 			if (floorlightlevel)
-				*floorlightlevel = s->floorlightsec == -1 ? (s->floorlightabsolute ? s->floorlightlevel : max(0, min(255, s->lightlevel + s->floorlightlevel)))
+			*floorlightlevel = s->floorlightsec == -1 ? (s->floorlightabsolute ? s->floorlightlevel : max(0, min(255, s->lightlevel + s->floorlightlevel)))
 					: sectors[s->floorlightsec].lightlevel;
 
 			if (ceilinglightlevel)
-				*ceilinglightlevel = s->ceilinglightsec == -1 ? (s->ceilinglightabsolute ? s->ceilinglightlevel : max(0, min(255, s->lightlevel + s->ceilinglightlevel)))
+			*ceilinglightlevel = s->ceilinglightsec == -1 ? (s->ceilinglightabsolute ? s->ceilinglightlevel : max(0, min(255, s->lightlevel + s->ceilinglightlevel)))
 					: sectors[s->ceilinglightsec].lightlevel;
 		}
 		else if (heightsec != -1 && viewz >= sectors[heightsec].ceilingheight
@@ -356,11 +368,11 @@ sector_t *R_FakeFlat(sector_t *sec, sector_t *tempsec, INT32 *floorlightlevel,
 			tempsec->lightlevel = s->lightlevel;
 
 			if (floorlightlevel)
-				*floorlightlevel = s->floorlightsec == -1 ? (s->floorlightabsolute ? s->floorlightlevel : max(0, min(255, s->lightlevel + s->floorlightlevel)))
+			*floorlightlevel = s->floorlightsec == -1 ? (s->floorlightabsolute ? s->floorlightlevel : max(0, min(255, s->lightlevel + s->floorlightlevel)))
 					: sectors[s->floorlightsec].lightlevel;
 
 			if (ceilinglightlevel)
-				*ceilinglightlevel = s->ceilinglightsec == -1 ? (s->ceilinglightabsolute ? s->ceilinglightlevel : max(0, min(255, s->lightlevel + s->ceilinglightlevel)))
+			*ceilinglightlevel = s->ceilinglightsec == -1 ? (s->ceilinglightabsolute ? s->ceilinglightlevel : max(0, min(255, s->lightlevel + s->ceilinglightlevel)))
 					: sectors[s->ceilinglightsec].lightlevel;
 		}
 		sec = tempsec;
@@ -968,11 +980,10 @@ static void R_Subsector(size_t num)
 				&& ((viewz < heightcheck && (rover->fofflags & FOF_BOTHPLANES || !(rover->fofflags & FOF_INVERTPLANES)))
 				|| (viewz > heightcheck && (rover->fofflags & FOF_BOTHPLANES || rover->fofflags & FOF_INVERTPLANES))))
 			{
-				light = R_GetPlaneLight(frontsector, planecenterz,
-					viewz < heightcheck);
+				light = R_GetPlaneLight(frontsector, planecenterz, viewz < heightcheck);
 
 				ffloor[numffloors].plane = R_FindPlane(rover->master->frontsector, *rover->bottomheight, *rover->bottompic,
-					*frontsector->lightlist[light].lightlevel, *rover->bottomxoffs, *rover->bottomyoffs,
+					R_FloorLightLevel(rover->master->frontsector, *frontsector->lightlist[light].lightlevel), *rover->bottomxoffs, *rover->bottomyoffs,
 					*rover->bottomxscale, *rover->bottomyscale, *rover->bottomangle,
 					*frontsector->lightlist[light].extra_colormap, rover, NULL, *rover->b_slope, NULL);
 
@@ -1002,7 +1013,7 @@ static void R_Subsector(size_t num)
 				light = R_GetPlaneLight(frontsector, planecenterz, viewz < heightcheck);
 
 				ffloor[numffloors].plane = R_FindPlane(rover->master->frontsector, *rover->topheight, *rover->toppic,
-					*frontsector->lightlist[light].lightlevel, *rover->topxoffs, *rover->topyoffs,
+					R_CeilingLightLevel(rover->master->frontsector, *frontsector->lightlist[light].lightlevel), *rover->topxoffs, *rover->topyoffs,
 					*rover->topxscale, *rover->topyscale, *rover->topangle,
 					*frontsector->lightlist[light].extra_colormap, rover, NULL, *rover->t_slope, NULL);
 

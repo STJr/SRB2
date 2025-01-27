@@ -444,12 +444,11 @@ filestatus_t filesearch(char *filename, const char *startpath, const UINT8 *want
 		strcpy(&searchpath[searchpathindex[depthleft]],dent->d_name);
 
 #if defined(__linux__) || defined(__FreeBSD__)
-		if (dent->d_type == DT_UNKNOWN)
-			if (lstat(searchpath,&fsstat) == 0 && S_ISDIR(fsstat.st_mode))
+		if (dent->d_type == DT_UNKNOWN || dent->d_type == DT_LNK)
+			if (stat(searchpath,&fsstat) == 0 && S_ISDIR(fsstat.st_mode))
 				dent->d_type = DT_DIR;
 
 		// Linux and FreeBSD has a special field for file type on dirent, so use that to speed up lookups.
-		// FIXME: should we also follow symlinks?
 		if (dent->d_type == DT_DIR && depthleft)
 #else
 		if (stat(searchpath,&fsstat) < 0) // do we want to follow symlinks? if not: change it to lstat
@@ -699,6 +698,15 @@ static void initdirpath(char *dirpath, size_t *dirpathindex, int depthleft)
 		dirpathindex[depthleft]--;
 }
 
+//sortdir by name?
+static int lumpnamecompare(const void *A, const void *B)
+{
+	const lumpinfo_t *pA = A;
+	const lumpinfo_t *pB = B;
+	return strcmp((pA->fullname), (pB->fullname));
+
+}
+
 lumpinfo_t *getdirectoryfiles(const char *path, UINT16 *nlmp, UINT16 *nfolders)
 {
 	DIR **dirhandle;
@@ -888,6 +896,9 @@ lumpinfo_t *getdirectoryfiles(const char *path, UINT16 *nlmp, UINT16 *nfolders)
 
 	free(dirpathindex);
 	free(dirhandle);
+
+	//sort files and directories
+	qsort (lumpinfo, numlumps, sizeof(lumpinfo_t), lumpnamecompare);
 
 	(*nlmp) = numlumps;
 	return lumpinfo;
@@ -1179,7 +1190,7 @@ boolean preparefilemenu(boolean samedepth)
 					size_t i;
 
 					if (filenamebuf == NULL)
-						filenamebuf = calloc(sizeof(char) * MAX_WADPATH, numwadfiles);
+						filenamebuf = calloc(numwadfiles, sizeof(char) * MAX_WADPATH);
 
 					for (i = 0; i < numwadfiles; i++)
 					{

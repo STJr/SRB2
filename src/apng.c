@@ -71,7 +71,7 @@ apng_create_info_struct (png_structp pngp)
 {
 	apng_infop ainfop;
 	(void)pngp;
-	if (( ainfop = calloc(sizeof (apng_info),1) ))
+	if (( ainfop = calloc(1,sizeof (apng_info)) ))
 	{
 		apng_set_write_fn(pngp, ainfop, 0, 0, 0, 0, 0);
 		apng_set_set_acTL_fn(pngp, ainfop, 0);

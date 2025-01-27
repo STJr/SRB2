@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2014-2016 by John "JTE" Muniz.
-// Copyright (C) 2014-2023 by Sonic Team Junior.
+// Copyright (C) 2014-2025 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -54,7 +54,8 @@ enum skin {
 	skin_contspeed,
 	skin_contangle,
 	skin_soundsid,
-	skin_sprites,
+	skin_sprites, // TODO: 2.3: Delete
+	skin_skinsprites,
 	skin_supersprites,
 	skin_natkcolor
 };
@@ -95,7 +96,8 @@ static const char *const skin_opt[] = {
 	"contspeed",
 	"contangle",
 	"soundsid",
-	"sprites",
+	"sprites", // TODO: 2.3: Delete
+	"skinsprites",
 	"supersprites",
 	"natkcolor",
 	NULL};
@@ -219,7 +221,10 @@ static int skin_get(lua_State *L)
 	case skin_soundsid:
 		LUA_PushUserdata(L, skin->soundsid, META_SOUNDSID);
 		break;
-	case skin_sprites:
+	case skin_sprites: // TODO: 2.3: Delete
+		LUA_PushUserdata(L, skin->sprites_compat, META_SKINSPRITESCOMPAT);
+		break;
+	case skin_skinsprites:
 		LUA_PushUserdata(L, skin->sprites, META_SKINSPRITES);
 		break;
 	case skin_supersprites:
@@ -338,15 +343,7 @@ static int soundsid_num(lua_State *L)
 	return 1;
 }
 
-enum spritesopt {
-	numframes = 0
-};
-
-static const char *const sprites_opt[] = {
-	"numframes",
-	NULL};
-
-// skin.sprites[i] -> sprites[i]
+// skin.skinsprites[i] -> sprites[i]
 static int lib_getSkinSprite(lua_State *L)
 {
 	spritedef_t *sksprites = *(spritedef_t **)luaL_checkudata(L, 1, META_SKINSPRITES);
@@ -359,12 +356,45 @@ static int lib_getSkinSprite(lua_State *L)
 	return 1;
 }
 
-// #skin.sprites -> NUMPLAYERSPRITES
+// #skin.skinsprites -> NUMPLAYERSPRITES
 static int lib_numSkinsSprites(lua_State *L)
 {
 	lua_pushinteger(L, NUMPLAYERSPRITES);
 	return 1;
 }
+
+// TODO: 2.3: Delete
+// skin.sprites[i] -> sprites[i]
+static int lib_getSkinSpriteCompat(lua_State *L)
+{
+	spritedef_t *sksprites = *(spritedef_t **)luaL_checkudata(L, 1, META_SKINSPRITESCOMPAT);
+	INT32 i = luaL_checkinteger(L, 2) & (SPR2F_MASK | SPR2F_SUPER);
+
+	if (i & SPR2F_SUPER)
+		i = (i & ~SPR2F_SUPER) + NUMPLAYERSPRITES;
+
+	if (i < 0 || i >= NUMPLAYERSPRITES*2)
+		return luaL_error(L, "skin sprites index %d out of range (0 - %d)", i, (NUMPLAYERSPRITES*2)-1);
+
+	LUA_PushUserdata(L, &sksprites[i], META_SKINSPRITESLIST);
+	return 1;
+}
+
+// TODO: 2.3: Delete
+// #skin.sprites -> NUMPLAYERSPRITES*2
+static int lib_numSkinsSpritesCompat(lua_State *L)
+{
+	lua_pushinteger(L, NUMPLAYERSPRITES*2);
+	return 1;
+}
+
+enum spritesopt {
+	numframes = 0
+};
+
+static const char *const sprites_opt[] = {
+	"numframes",
+	NULL};
 
 static int sprite_get(lua_State *L)
 {
@@ -387,6 +417,7 @@ int LUA_SkinLib(lua_State *L)
 	LUA_RegisterUserdataMetatable(L, META_SOUNDSID, soundsid_get, NULL, soundsid_num);
 	LUA_RegisterUserdataMetatable(L, META_SKINSPRITES, lib_getSkinSprite, NULL, lib_numSkinsSprites);
 	LUA_RegisterUserdataMetatable(L, META_SKINSPRITESLIST, sprite_get, NULL, NULL);
+	LUA_RegisterUserdataMetatable(L, META_SKINSPRITESCOMPAT, lib_getSkinSpriteCompat, NULL, lib_numSkinsSpritesCompat); // TODO: 2.3: Delete
 
 	skin_fields_ref = Lua_CreateFieldTable(L, skin_opt);
 
