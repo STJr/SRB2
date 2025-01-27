@@ -181,7 +181,7 @@ void T_DynamicSlopeLine (dynlineplanethink_t* th)
 {
 	pslope_t* slope = th->slope;
 	line_t* srcline = th->sourceline;
-	
+
 	fixed_t zdelta, oldoz = slope->o.z;
 
 	switch(th->type) {

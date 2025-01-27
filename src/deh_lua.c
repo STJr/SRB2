@@ -11,7 +11,6 @@
 /// \brief Lua SOC library
 
 #include "deh_lua.h"
-#include "g_input.h"
 
 // freeslot takes a name (string only!)
 // and allocates it to the appropriate free slot.
@@ -600,18 +599,10 @@ static int ScanConstants(lua_State *L, boolean mathlib, const char *word)
 		return luaL_error(L, "translation '%s' could not be found.\n", word);
 	}
 
-	// TODO: 2.3: Delete these aliases
-	else if (fastcmp(word, "BT_USE"))
+	// TODO: 2.3: Delete this alias
+	if (fastcmp(word, "BT_USE"))
 	{
 		CacheAndPushConstant(L, word, (lua_Integer)BT_SPIN);
-		return 1;
-	}
-	else if (fastcmp(word, "GC_WEPSLOT8") || fastcmp(word, "GC_WEPSLOT9") || fastcmp(word, "GC_WEPSLOT10"))
-	{
-		// Using GC_WEPSLOT7 isn't accurate, but ensures that "if x >= GC_WEPSLOT1 and x <= GC_WEPSLOT10" keeps the intended effect
-		CacheAndPushConstant(L, word, (lua_Integer)GC_WEPSLOT7);
-		if (!mathlib)
-			LUA_Deprecated(L, "GC_WEPSLOT8\"-\"GC_WEPSLOT10", "GC_WEPSLOT1\"-\"GC_WEPSLOT7");
 		return 1;
 	}
 

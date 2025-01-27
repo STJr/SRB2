@@ -67,9 +67,10 @@ consvar_t cv_masterserver = CVAR_INIT ("masterserver", "https://ds.ms.srb2.org/M
 consvar_t cv_servername = CVAR_INIT_WITH_CALLBACKS ("servername", "SRB2 server", CV_SAVE|CV_NETVAR|CV_CALL|CV_NOINIT|CV_ALLOWLUA, NULL, Update_parameters, ServerName_CanChange);
 
 consvar_t cv_masterserver_update_rate = CVAR_INIT ("masterserver_update_rate", "15", CV_SAVE|CV_CALL|CV_NOINIT, masterserver_update_rate_cons_t, Update_parameters);
-consvar_t cv_masterserver_room_id = CVAR_INIT ("masterserver_room_id", "0", CV_CALL, CV_Unsigned, RoomId_OnChange);
+CV_PossibleValue_t cv_masterserver_room_values[] = {{-1, "MIN"}, {999999999, "MAX"}, {0, NULL}};
+consvar_t cv_masterserver_room_id = CVAR_INIT ("masterserver_room_id", "-1", CV_CALL, cv_masterserver_room_values, RoomId_OnChange);
 
-INT16 ms_RoomId = 0;
+static INT16 ms_RoomId = -1;
 
 #if defined (MASTERSERVER) && defined (HAVE_THREADS)
 int           ms_QueryId;
@@ -449,7 +450,7 @@ void UnregisterServer(void)
 static boolean
 Online (void)
 {
-	return ( serverrunning && ms_RoomId > 0 );
+	return ( serverrunning && cv_masterserver_room_id.value > 0 );
 }
 
 static inline void SendPingToMasterServer(void)
