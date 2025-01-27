@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -101,7 +101,7 @@ void P_ClearStarPost(INT32 postnum)
 	// scan the thinkers
 	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 	{
-		if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+		if (th->removing)
 			continue;
 
 		mo2 = (mobj_t *)th;
@@ -130,7 +130,7 @@ void P_ResetStarposts(void)
 
 	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 	{
-		if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+		if (th->removing)
 			continue;
 
 		post = (mobj_t *)th;
@@ -538,14 +538,14 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			if ((P_MobjFlip(toucher)*toucher->momz < 0) && (elementalpierce != 1) && (!(player->powers[pw_strong] & STR_HEAVY)))
 			{
 				fixed_t setmomz = -toucher->momz; // Store this, momz get changed by P_DoJump within P_DoBubbleBounce
-				
+
 				if (elementalpierce == 2) // Reset bubblewrap, part 1
 					P_DoBubbleBounce(player);
 				toucher->momz = setmomz;
 				if (elementalpierce == 2) // Reset bubblewrap, part 2
 				{
 					boolean underwater = toucher->eflags & MFE_UNDERWATER;
-							
+
 					if (underwater)
 						toucher->momz /= 2;
 					toucher->momz -= (toucher->momz/(underwater ? 8 : 4)); // Cap the height!
@@ -836,7 +836,8 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				{
 					clientGamedata->collected[special->health-1] = true;
 					M_UpdateUnlockablesAndExtraEmblems(clientGamedata);
-					G_SaveGameData(clientGamedata);
+					if (!prevCollected) // don't thrash the disk and wreak performance.
+						G_SaveGameData(clientGamedata);
 				}
 
 				if (netgame)
@@ -1002,7 +1003,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 						// scan the thinkers to find the corresponding anchorpoint
 						for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 						{
-							if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+							if (th->removing)
 								continue;
 
 							mo2 = (mobj_t *)th;
@@ -1096,7 +1097,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				// scan the remaining thinkers
 				for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 				{
-					if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+					if (th->removing)
 						continue;
 
 					mo2 = (mobj_t *)th;
@@ -1146,7 +1147,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				// in from the paraloop. Isn't this just so efficient?
 				for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 				{
-					if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+					if (th->removing)
 						continue;
 
 					mo2 = (mobj_t *)th;
@@ -1521,7 +1522,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				// scan the remaining thinkers to find koopa
 				for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 				{
-					if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+					if (th->removing)
 						continue;
 
 					mo2 = (mobj_t *)th;
@@ -2019,7 +2020,7 @@ void P_TouchStarPost(mobj_t *post, player_t *player, boolean snaptopost)
 
 		for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 		{
-			if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+			if (th->removing)
 				continue;
 
 			mo2 = (mobj_t *)th;
@@ -2571,7 +2572,7 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 			if (!(target->flags2 & MF2_DONTRESPAWN))
 			{
 				if (!(netgame || multiplayer))
-					target->fuse = atoi(cv_itemrespawntime.defaultvalue)*TICRATE + 2; 
+					target->fuse = atoi(cv_itemrespawntime.defaultvalue)*TICRATE + 2;
 				else if (cv_itemrespawn.value)
 					target->fuse = cv_itemrespawntime.value*TICRATE + 2;
 			}
@@ -2869,7 +2870,7 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 				// scan the thinkers to make sure all the old pinch dummies are gone on death
 				for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 				{
-					if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+					if (th->removing)
 						continue;
 
 					mo = (mobj_t *)th;
@@ -3786,6 +3787,8 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 
 		if (player->powers[pw_carry] == CR_NIGHTSMODE) // NiGHTS damage handling
 		{
+			if (player->powers[pw_flashing])
+				return false;
 			if (!force)
 			{
 				if (source == target)
@@ -3803,6 +3806,10 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 
 		if (G_IsSpecialStage(gamemap) && !(damagetype & DMG_DEATHMASK))
 		{
+			if (player->powers[pw_flashing])
+				return false;
+			if (LUA_HookMobjDamage(target, inflictor, source, damage, damagetype))
+				return true;
 			P_SpecialStageDamage(player, inflictor, source);
 			return true;
 		}

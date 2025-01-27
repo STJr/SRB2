@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -29,7 +29,7 @@
 #include "i_video.h"
 #include "i_system.h"
 
-#include "st_stuff.h" // ST_HEIGHT
+#include "st_stuff.h"
 #include "r_local.h"
 
 #include "keys.h"
@@ -204,7 +204,7 @@ void HU_LoadGraphics(void)
 	HU_SetFontProperties(&hu_font,   0,  4,  8, 12);
 	HU_SetFontProperties(&tny_font,  0,  2,  4, 12);
 	HU_SetFontProperties(&cred_font, 0, 16, 16, 16);
-	HU_SetFontProperties(&lt_font,   0, 16, 20, 20);
+	HU_SetFontProperties(&lt_font,   0, 16, 20, 16);
 	HU_SetFontProperties(&ntb_font,  2,  4, 20, 21);
 	HU_SetFontProperties(&nto_font,  0,  4, 20, 21);
 
@@ -587,8 +587,47 @@ static void Command_CSay_f(void)
 	DoSayCommand(0, 1, HU_CSAY);
 }
 
-static tic_t spam_tokens[MAXPLAYERS] = { 1 }; // fill the buffer with 1 so the motd can be sent.
-static tic_t spam_tics[MAXPLAYERS];
+UINT8 spam_tokens[MAXPLAYERS] = { 1 }; // fill the buffer with 1 so the motd can be sent.
+tic_t spam_tics[MAXPLAYERS];
+
+static const char *GetChatColorFromSkinColor(INT32 skincolor)
+{
+	const char *textcolor = NULL;
+	UINT16 chatcolor = skincolors[skincolor].chatcolor;
+	if (!chatcolor || chatcolor%0x1000 || chatcolor>V_INVERTMAP)
+		textcolor = "\x80";
+	else if (chatcolor == V_MAGENTAMAP)
+		textcolor = "\x81";
+	else if (chatcolor == V_YELLOWMAP)
+		textcolor = "\x82";
+	else if (chatcolor == V_GREENMAP)
+		textcolor = "\x83";
+	else if (chatcolor == V_BLUEMAP)
+		textcolor = "\x84";
+	else if (chatcolor == V_REDMAP)
+		textcolor = "\x85";
+	else if (chatcolor == V_GRAYMAP)
+		textcolor = "\x86";
+	else if (chatcolor == V_ORANGEMAP)
+		textcolor = "\x87";
+	else if (chatcolor == V_SKYMAP)
+		textcolor = "\x88";
+	else if (chatcolor == V_PURPLEMAP)
+		textcolor = "\x89";
+	else if (chatcolor == V_AQUAMAP)
+		textcolor = "\x8a";
+	else if (chatcolor == V_PERIDOTMAP)
+		textcolor = "\x8b";
+	else if (chatcolor == V_AZUREMAP)
+		textcolor = "\x8c";
+	else if (chatcolor == V_BROWNMAP)
+		textcolor = "\x8d";
+	else if (chatcolor == V_ROSYMAP)
+		textcolor = "\x8e";
+	else if (chatcolor == V_INVERTMAP)
+		textcolor = "\x8f";
+	return textcolor;
+}
 
 /** Receives a message, processing an ::XD_SAY command.
   * \sa DoSayCommand
@@ -599,6 +638,7 @@ static void Got_Saycmd(UINT8 **p, INT32 playernum)
 	SINT8 target;
 	UINT8 flags;
 	const char *dispname;
+	char buf[HU_MAXMSGLEN + 1];
 	char *msg;
 	boolean action = false;
 	char *ptr;
@@ -608,8 +648,8 @@ static void Got_Saycmd(UINT8 **p, INT32 playernum)
 
 	target = READSINT8(*p);
 	flags = READUINT8(*p);
-	msg = (char *)*p;
-	SKIPSTRINGL(*p, HU_MAXMSGLEN + 1);
+	msg = buf;
+	READSTRINGL(*p, msg, HU_MAXMSGLEN + 1);
 
 	if ((cv_mute.value || players[playernum].muted || flags & (HU_CSAY|HU_SERVER_SAY)) && playernum != serverplayer && !(IsPlayerAdmin(playernum)))
 	{
@@ -649,13 +689,11 @@ static void Got_Saycmd(UINT8 **p, INT32 playernum)
 	else
 		spam_tokens[playernum] -= 1;
 
-	// run the lua hook even if we were supposed to eat the msg, netgame consistency goes first.
+	if (spam_eatmsg)
+		return; // don't proceed if we were supposed to eat the message.
 
 	if (LUA_HookPlayerMsg(playernum, target, flags, msg))
 		return;
-
-	if (spam_eatmsg)
-		return; // don't proceed if we were supposed to eat the message.
 
 	// If it's a CSAY, just CECHO and be done with it.
 	if (flags & HU_CSAY)
@@ -711,51 +749,27 @@ static void Got_Saycmd(UINT8 **p, INT32 playernum)
 		{
 			if (players[playernum].ctfteam == 1) // red
 			{
-				cstart = "\x85";
-				textcolor = "\x85";
+				cstart = textcolor = GetChatColorFromSkinColor(skincolor_redteam);
 			}
 			else // blue
 			{
-				cstart = "\x84";
-				textcolor = "\x84";
+				cstart = textcolor = GetChatColorFromSkinColor(skincolor_blueteam);
 			}
 		}
 		else
         {
-			UINT16 chatcolor = skincolors[players[playernum].skincolor].chatcolor;
-
-			if (!chatcolor || chatcolor%0x1000 || chatcolor>V_INVERTMAP)
-				cstart = "\x80";
-			else if (chatcolor == V_MAGENTAMAP)
-				cstart = "\x81";
-			else if (chatcolor == V_YELLOWMAP)
-				cstart = "\x82";
-			else if (chatcolor == V_GREENMAP)
-				cstart = "\x83";
-			else if (chatcolor == V_BLUEMAP)
-				cstart = "\x84";
-			else if (chatcolor == V_REDMAP)
-				cstart = "\x85";
-			else if (chatcolor == V_GRAYMAP)
-				cstart = "\x86";
-			else if (chatcolor == V_ORANGEMAP)
-				cstart = "\x87";
-			else if (chatcolor == V_SKYMAP)
-				cstart = "\x88";
-			else if (chatcolor == V_PURPLEMAP)
-				cstart = "\x89";
-			else if (chatcolor == V_AQUAMAP)
-				cstart = "\x8a";
-			else if (chatcolor == V_PERIDOTMAP)
-				cstart = "\x8b";
-			else if (chatcolor == V_AZUREMAP)
-				cstart = "\x8c";
-			else if (chatcolor == V_BROWNMAP)
-				cstart = "\x8d";
-			else if (chatcolor == V_ROSYMAP)
-				cstart = "\x8e";
-			else if (chatcolor == V_INVERTMAP)
-				cstart = "\x8f";
+			cstart = GetChatColorFromSkinColor(players[playernum].skincolor);
+			if (G_GametypeHasTeams())
+			{
+				if (players[playernum].ctfteam == 1) // red
+				{
+					cstart = GetChatColorFromSkinColor(skincolor_redteam);
+				}
+				else // blue
+				{
+					cstart = GetChatColorFromSkinColor(skincolor_blueteam);
+				}
+			}
         }
 		prefix = cstart;
 
@@ -1218,27 +1232,36 @@ static void HU_drawMiniChat(void)
 	INT32 charwidth = 4, charheight = 6;
 	INT32 boxw = cv_chatwidth.value;
 	INT32 dx = 0, dy = 0;
+	boolean prev_linereturn = false;
 
 	if (!chat_nummsg_min)
 		return; // needless to say it's useless to do anything if we don't have anything to draw.
 
 	for (size_t i = chat_nummsg_min; i > 0; i--)
 	{
-		char *msg = V_ChatWordWrap(chatx, boxw-charwidth, V_SNAPTOBOTTOM|V_SNAPTOLEFT|V_ALLOWLOWERCASE, chat_mini[i-1]);
+		char *msg = V_ChatWordWrap(0, boxw-charwidth-2, V_SNAPTOBOTTOM|V_SNAPTOLEFT|V_ALLOWLOWERCASE|V_MONOSPACE, chat_mini[i-1]);
 		for(size_t j = 0; msg[j]; j++) // iterate through msg
 		{
 			if (msg[j] == '\n') // get back down.
 			{
-				chatheight += charheight;
-				dx = 0;
+				if (!prev_linereturn)
+				{
+					chatheight += charheight;
+					dx = 0;
+				}
+				prev_linereturn = true;
 			}
 			else if (msg[j] >= FONTSTART)
 			{
+				prev_linereturn = false;
+
 				dx += charwidth;
-				if (dx >= boxw)
+
+				if (dx >= boxw-charwidth-2)
 				{
 					dx = 0;
 					chatheight += charheight;
+					prev_linereturn = true;
 				}
 			}
 		}
@@ -1250,35 +1273,43 @@ static void HU_drawMiniChat(void)
 	}
 
 	y = chaty - (chatheight + charheight);
+	prev_linereturn = false;
 
 	for (size_t i = 0; i < chat_nummsg_min; i++) // iterate through our hot messages
 	{
 		INT32 timer = ((cv_chattime.value*TICRATE)-chat_timers[i]) - cv_chattime.value*TICRATE+9; // see below...
 		INT32 transflag = (timer >= 0 && timer <= 9) ? (timer*V_10TRANS) : 0; // you can make bad jokes out of this one.
-		char *msg = V_ChatWordWrap(chatx, boxw-charwidth, V_SNAPTOBOTTOM|V_SNAPTOLEFT|V_ALLOWLOWERCASE, chat_mini[i]); // get the current message, and word wrap it.
+		char *msg = V_ChatWordWrap(0, boxw-charwidth-2, V_SNAPTOBOTTOM|V_SNAPTOLEFT|V_ALLOWLOWERCASE|V_MONOSPACE, chat_mini[i]); // get the current message, and word wrap it.
 		UINT8 *colormap = NULL;
 
 		for(size_t j = 0; msg[j]; j++) // iterate through msg
 		{
 			if (msg[j] == '\n') // get back down.
 			{
-				dy += charheight;
-				dx = 0;
+				if (!prev_linereturn)
+				{
+					dy += charheight;
+					dx = 0;
+				}
+				prev_linereturn = true;
 			}
 			else if (msg[j] & 0x80) // get colormap
 				colormap = V_GetStringColormap(((msg[j] & 0x7f) << V_CHARCOLORSHIFT) & V_CHARCOLORMASK);
 			else if (msg[j] >= FONTSTART)
 			{
+				prev_linereturn = false;
+
 				if (cv_chatbacktint.value) // on request of wolfy
 					V_DrawFillConsoleMap(x + dx + 2, y+dy, charwidth, charheight, 239|V_SNAPTOBOTTOM|V_SNAPTOLEFT);
 
-				V_DrawChatCharacter(x + dx + 2, y+dy, msg[j] |V_SNAPTOBOTTOM|V_SNAPTOLEFT|transflag, true, colormap);
-
+				V_DrawChatCharacter(x + dx + 2, y+dy, msg[j] |V_SNAPTOBOTTOM|V_SNAPTOLEFT|V_MONOSPACE|transflag, true, colormap);
 				dx += charwidth;
-				if (dx >= boxw)
+
+				if (dx >= boxw-charwidth-2)
 				{
 					dx = 0;
 					dy += charheight;
+					prev_linereturn = true;
 				}
 			}
 		}
@@ -1303,6 +1334,7 @@ static void HU_drawChatLog(INT32 offset)
 	UINT32 i = 0;
 	INT32 chat_topy, chat_bottomy;
 	boolean atbottom = false;
+	boolean prev_linereturn = false;
 
 	// make sure that our scroll position isn't "illegal";
 	if (chat_scroll > chat_maxscroll)
@@ -1335,27 +1367,38 @@ static void HU_drawChatLog(INT32 offset)
 
 	for (i=0; i<chat_nummsg_log; i++) // iterate through our chatlog
 	{
-		char *msg = V_ChatWordWrap(chatx, boxw-charwidth, V_SNAPTOBOTTOM|V_SNAPTOLEFT|V_ALLOWLOWERCASE, chat_log[i]); // get the current message, and word wrap it.
+		char *msg = V_ChatWordWrap(0, boxw-charwidth-2, V_SNAPTOBOTTOM|V_SNAPTOLEFT|V_ALLOWLOWERCASE|V_MONOSPACE, chat_log[i]); // get the current message, and word wrap it.
 		UINT8 *colormap = NULL;
 		for(size_t j = 0; msg[j]; j++) // iterate through msg
 		{
 			if (msg[j] == '\n') // get back down.
 			{
-				dy += charheight;
-				dx = 0;
+				if (!prev_linereturn)
+				{
+					dy += charheight;
+					dx = 0;
+				}
+				prev_linereturn = true;
 			}
 			else if (msg[j] & 0x80) // get colormap
 				colormap = V_GetStringColormap(((msg[j] & 0x7f) << V_CHARCOLORSHIFT) & V_CHARCOLORMASK);
-			else if (msg[j] >= FONTSTART)
+			else
 			{
-				if ((y+dy+2 >= chat_topy) && (y+dy < (chat_bottomy)))
-					V_DrawChatCharacter(x + dx + 2, y+dy+2, msg[j] |V_SNAPTOBOTTOM|V_SNAPTOLEFT, true, colormap);
+				prev_linereturn = false;
 
-				dx += charwidth;
-				if (dx >= boxw-charwidth-2 && i<chat_nummsg_log) // end of message shouldn't count, nor should invisible characters!!!!
+				if (msg[j] >= FONTSTART)
+				{
+					if ((y+dy+2 >= chat_topy) && (y+dy < (chat_bottomy)))
+						V_DrawChatCharacter(x + dx + 2, y+dy+2, msg[j] |V_SNAPTOBOTTOM|V_SNAPTOLEFT|V_MONOSPACE, true, colormap);
+
+					dx += charwidth;
+				}
+
+				if (dx >= boxw-charwidth-2 && i < chat_nummsg_log) // end of message shouldn't count, nor should invisible characters!!!!
 				{
 					dx = 0;
 					dy += charheight;
+					prev_linereturn = true;
 				}
 			}
 		}
@@ -1512,9 +1555,9 @@ static void HU_DrawChat(void)
 				else if ((n == 1) && !(w_chat[3] == '0') && (!((i == 1) || ((i >= 10) && (i <= 19)))))
 					continue;
 				else if ((n == 2) && !(w_chat[3] == '0') && (!((i == 2) || ((i >= 20) && (i <= 29)))))
-					continue; 
+					continue;
 				else if ((n == 3) && !(w_chat[3] == '0') && (!((i == 3) || ((i >= 30) && (i <= 31)))))
-					continue; 
+					continue;
 				else	// general case.
 					if (i != n) continue;
 			}

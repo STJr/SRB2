@@ -172,6 +172,11 @@ if("${CMAKE_SYSTEM_NAME}" MATCHES "Linux")
 	endif()
 endif()
 
+if("${CMAKE_SYSTEM_NAME}" MATCHES "Haiku")
+	target_compile_definitions(SRB2SDL2 PRIVATE -DNOEXECINFO)
+	target_link_libraries(SRB2SDL2 PRIVATE network)
+endif()
+
 if("${CMAKE_SYSTEM_NAME}" MATCHES "Darwin")
 	target_compile_definitions(SRB2SDL2 PRIVATE -DMACOSX)
 endif()
@@ -229,9 +234,12 @@ endif()
 
 # Compatibility flag with later versions of GCC
 # We should really fix our code to not need this
-if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
-	if (CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|x64|amd64|AMD64|em64t|EM64T)")
-		target_compile_options(SRB2SDL2 PRIVATE -mno-ms-bitfields)
+if (NOT SRB2_CONFIG_FORCE_NO_MS_BITFIELDS)
+	if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+		check_cxx_compiler_flag("-mno-ms-bitfields" HAS_NO_MS_BITFIELDS)
+		if(HAS_NO_MS_BITFIELDS)
+			target_compile_options(SRB2SDL2 PRIVATE -mno-ms-bitfields)
+		endif()
 	endif()
 endif()
 

@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -100,7 +100,7 @@ demoghost *ghosts = NULL;
 // DEMO RECORDING
 //
 
-#define DEMOVERSION 0x0012
+#define DEMOVERSION 0x0011
 #define DEMOHEADER  "\xF0" "SRB2Replay" "\x0F"
 
 #define DF_GHOST        0x01 // This demo contains ghost data too!
@@ -185,11 +185,7 @@ void G_ReadDemoTiccmd(ticcmd_t *cmd, INT32 playernum)
 	if (ziptic & ZT_ANGLE)
 		oldcmd.angleturn = READINT16(demo_p);
 	if (ziptic & ZT_BUTTONS)
-	{
 		oldcmd.buttons = (oldcmd.buttons & (BT_CAMLEFT|BT_CAMRIGHT)) | (READUINT16(demo_p) & ~(BT_CAMLEFT|BT_CAMRIGHT));
-		if (demoversion < 0x0012 && oldcmd.buttons & BT_SPIN)
-			oldcmd.buttons |= BT_SHIELD; // Copy BT_SPIN to BT_SHIELD for pre-Shield-button demos
-	}
 	if (ziptic & ZT_AIMING)
 		oldcmd.aiming = READINT16(demo_p);
 	if (ziptic & ZT_LATENCY)
@@ -614,7 +610,7 @@ void G_ConsGhostTic(void)
 				mobj = NULL;
 				for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 				{
-					if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+					if (th->removing)
 						continue;
 					mobj = (mobj_t *)th;
 					if (mobj->type == (mobjtype_t)type && mobj->x == x && mobj->y == y && mobj->z == z)
@@ -1453,6 +1449,7 @@ void G_BeginRecording(void)
 	char *filename;
 	UINT16 totalfiles;
 	UINT8 *m;
+	save_t savebuffer;
 
 	if (demo_p)
 		return;
@@ -1602,7 +1599,11 @@ void G_BeginRecording(void)
 	}
 
 	// Save netvar data
-	CV_SaveDemoVars(&demo_p);
+	savebuffer.buf = demo_p;
+	savebuffer.size = demoend - demo_p;
+	savebuffer.pos = 0;
+	CV_SaveDemoVars(&savebuffer);
+	demo_p = &savebuffer.buf[savebuffer.pos];
 
 	memset(&oldcmd,0,sizeof(oldcmd));
 	memset(&oldghost,0,sizeof(oldghost));
@@ -2235,10 +2236,24 @@ void G_DoPlayDemo(char *defdemoname)
 	// net var data
 #ifdef OLD22DEMOCOMPAT
 	if (demoversion < 0x000d)
-		CV_LoadOldDemoVars(&demo_p);
+	{
+		save_t savebuffer;
+		savebuffer.buf = demo_p;
+		savebuffer.size = demoend - demo_p;
+		savebuffer.pos = 0;
+		CV_LoadOldDemoVars(&savebuffer);
+		demo_p = &savebuffer.buf[savebuffer.pos];
+	}
 	else
 #endif
-		CV_LoadDemoVars(&demo_p);
+	{
+		save_t savebuffer;
+		savebuffer.buf = demo_p;
+		savebuffer.size = demoend - demo_p;
+		savebuffer.pos = 0;
+		CV_LoadDemoVars(&savebuffer);
+		demo_p = &savebuffer.buf[savebuffer.pos];
+	}
 
 	// Sigh ... it's an empty demo.
 	if (*demo_p == DEMOMARKER)
@@ -2676,7 +2691,7 @@ void G_DoPlayMetal(void)
 	// find metal sonic
 	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 	{
-		if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+		if (th->removing)
 			continue;
 
 		mo = (mobj_t *)th;

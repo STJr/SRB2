@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -168,7 +168,7 @@ extern char logfilename[1024];
 
 // Does this version require an added patch file?
 // Comment or uncomment this as necessary.
-#define USE_PATCH_DTA
+//#define USE_PATCH_DTA
 
 // Enforce a limit of loaded WAD files.
 //#define ENFORCE_WAD_LIMIT

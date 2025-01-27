@@ -3,7 +3,7 @@
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
 // Copyright (C) 2011-2016 by Matthew "Kaito Sinclaire" Walsh.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2025 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -1071,9 +1071,8 @@ static menuitem_t OP_ChangeControlsMenu[] =
 	{IT_CALL | IT_STRING2, NULL, "Move Backward",    M_ChangeControl, GC_BACKWARD    },
 	{IT_CALL | IT_STRING2, NULL, "Move Left",        M_ChangeControl, GC_STRAFELEFT  },
 	{IT_CALL | IT_STRING2, NULL, "Move Right",       M_ChangeControl, GC_STRAFERIGHT },
-	{IT_CALL | IT_STRING2, NULL, "Jump",             M_ChangeControl, GC_JUMP        },
-	{IT_CALL | IT_STRING2, NULL, "Spin",             M_ChangeControl, GC_SPIN        },
-	{IT_CALL | IT_STRING2, NULL, "Shield Ability",   M_ChangeControl, GC_SHIELD      },
+	{IT_CALL | IT_STRING2, NULL, "Jump",             M_ChangeControl, GC_JUMP      },
+	{IT_CALL | IT_STRING2, NULL, "Spin",             M_ChangeControl, GC_SPIN     },
 	{IT_HEADER, NULL, "Camera", NULL, 0},
 	{IT_SPACE, NULL, NULL, NULL, 0}, // padding
 	{IT_CALL | IT_STRING2, NULL, "Look Up",        M_ChangeControl, GC_LOOKUP      },
@@ -1122,15 +1121,13 @@ static menuitem_t OP_ChangeControlsMenu[] =
 
 static menuitem_t OP_Joystick1Menu[] =
 {
-	{IT_STRING | IT_CALL,  NULL, "Select Gamepad...", M_Setup1PJoystickMenu,  0},
-
-	{IT_STRING | IT_CVAR,  NULL, "Move \x17 Axis"    , &cv_moveaxis         , 20},
-	{IT_STRING | IT_CVAR,  NULL, "Move \x18 Axis"    , &cv_sideaxis         , 30},
-	{IT_STRING | IT_CVAR,  NULL, "Camera \x17 Axis"  , &cv_lookaxis         , 40},
-	{IT_STRING | IT_CVAR,  NULL, "Camera \x18 Axis"  , &cv_turnaxis         , 50},
-	{IT_STRING | IT_CVAR,  NULL, "Jump Axis"         , &cv_jumpaxis         , 60},
-	{IT_STRING | IT_CVAR,  NULL, "Spin Axis"         , &cv_spinaxis         , 70},
-	{IT_STRING | IT_CVAR,  NULL, "Shield Axis"       , &cv_shieldaxis       , 80},
+	{IT_STRING | IT_CALL,  NULL, "Select Gamepad...", M_Setup1PJoystickMenu, 10},
+	{IT_STRING | IT_CVAR,  NULL, "Move \x17 Axis"    , &cv_moveaxis         , 30},
+	{IT_STRING | IT_CVAR,  NULL, "Move \x18 Axis"    , &cv_sideaxis         , 40},
+	{IT_STRING | IT_CVAR,  NULL, "Camera \x17 Axis"  , &cv_lookaxis         , 50},
+	{IT_STRING | IT_CVAR,  NULL, "Camera \x18 Axis"  , &cv_turnaxis         , 60},
+	{IT_STRING | IT_CVAR,  NULL, "Jump Axis"         , &cv_jumpaxis         , 70},
+	{IT_STRING | IT_CVAR,  NULL, "Spin Axis"         , &cv_spinaxis         , 80},
 	{IT_STRING | IT_CVAR,  NULL, "Fire Axis"         , &cv_fireaxis         , 90},
 	{IT_STRING | IT_CVAR,  NULL, "Fire Normal Axis"  , &cv_firenaxis        ,100},
 
@@ -1142,15 +1139,13 @@ static menuitem_t OP_Joystick1Menu[] =
 
 static menuitem_t OP_Joystick2Menu[] =
 {
-	{IT_STRING | IT_CALL,  NULL, "Select Gamepad...", M_Setup2PJoystickMenu,  0},
-
-	{IT_STRING | IT_CVAR,  NULL, "Move \x17 Axis"    , &cv_moveaxis2        , 20},
-	{IT_STRING | IT_CVAR,  NULL, "Move \x18 Axis"    , &cv_sideaxis2        , 30},
-	{IT_STRING | IT_CVAR,  NULL, "Camera \x17 Axis"  , &cv_lookaxis2        , 40},
-	{IT_STRING | IT_CVAR,  NULL, "Camera \x18 Axis"  , &cv_turnaxis2        , 50},
-	{IT_STRING | IT_CVAR,  NULL, "Jump Axis"         , &cv_jumpaxis2        , 60},
-	{IT_STRING | IT_CVAR,  NULL, "Spin Axis"         , &cv_spinaxis2        , 70},
-	{IT_STRING | IT_CVAR,  NULL, "Shield Axis"       , &cv_shieldaxis2      , 80},
+	{IT_STRING | IT_CALL,  NULL, "Select Gamepad...", M_Setup2PJoystickMenu, 10},
+	{IT_STRING | IT_CVAR,  NULL, "Move \x17 Axis"    , &cv_moveaxis2        , 30},
+	{IT_STRING | IT_CVAR,  NULL, "Move \x18 Axis"    , &cv_sideaxis2        , 40},
+	{IT_STRING | IT_CVAR,  NULL, "Camera \x17 Axis"  , &cv_lookaxis2        , 50},
+	{IT_STRING | IT_CVAR,  NULL, "Camera \x18 Axis"  , &cv_turnaxis2        , 60},
+	{IT_STRING | IT_CVAR,  NULL, "Jump Axis"         , &cv_jumpaxis2        , 70},
+	{IT_STRING | IT_CVAR,  NULL, "Spin Axis"         , &cv_spinaxis2        , 80},
 	{IT_STRING | IT_CVAR,  NULL, "Fire Axis"         , &cv_fireaxis2        , 90},
 	{IT_STRING | IT_CVAR,  NULL, "Fire Normal Axis"  , &cv_firenaxis2       ,100},
 
@@ -3315,7 +3310,7 @@ boolean M_Responder(event_t *ev)
 
 	if (ch == -1)
 		return false;
-	else if (ch == gamecontrol[GC_SYSTEMMENU][0] || ch == gamecontrol[GC_SYSTEMMENU][1]) // allow remappable ESC key
+	else if (ev->type != ev_text && (ch == gamecontrol[GC_SYSTEMMENU][0] || ch == gamecontrol[GC_SYSTEMMENU][1])) // allow remappable ESC key
 		ch = KEY_ESCAPE;
 
 	// F-Keys
@@ -3393,9 +3388,16 @@ boolean M_Responder(event_t *ev)
 	// Handle menuitems which need a specific key handling
 	if (routine && (currentMenu->menuitems[itemOn].status & IT_TYPE) == IT_KEYHANDLER)
 	{
+		// block text input if ctrl is held, to allow using ctrl+c ctrl+v and ctrl+x
+		if (ctrldown)
+		{
+			routine(ch);
+			return true;
+		}
+
 		// ignore ev_keydown events if the key maps to a character, since
 		// the ev_text event will follow immediately after in that case.
-		if (ev->type == ev_keydown && ch >= 32 && ch <= 127)
+		if (ev->type == ev_keydown && ((ch >= 32 && ch <= 127) || (ch >= KEY_KEYPAD7 && ch <= KEY_KPADDEL)))
 			return true;
 
 		routine(ch);
@@ -3423,7 +3425,7 @@ boolean M_Responder(event_t *ev)
 		{
 			// dirty hack: for customising controls, I want only buttons/keys, not moves
 			if (ev->type == ev_mouse || ev->type == ev_mouse2 || ev->type == ev_joystick
-				|| ev->type == ev_joystick2)
+				|| ev->type == ev_joystick2 || ev->type == ev_text)
 				return true;
 			if (routine)
 			{
@@ -3671,12 +3673,16 @@ void M_StartControlPanel(void)
 	}
 	else if (!(netgame || multiplayer)) // Single Player
 	{
-		// Devmode unlocks Pandora's Box in the pause menu
-		boolean pandora = ((M_SecretUnlocked(SECRET_PANDORA, serverGamedata) || cv_debug || devparm) && !marathonmode);
+		// Devmode unlocks Pandora's Box and Level Select in the pause menu
+		boolean isforbidden = (marathonmode || ultimatemode);
+		boolean isdebug = ((cv_debug || devparm) && !isforbidden);
+		boolean pandora = ((M_SecretUnlocked(SECRET_PANDORA, serverGamedata) && !isforbidden) || isdebug);
+		boolean lselect = ((maplistoption != 0 && !isforbidden) || isdebug);
 
-		if (gamestate != GS_LEVEL || ultimatemode) // intermission, so gray out stuff.
+		if (gamestate != GS_LEVEL) // intermission, so gray out stuff.
 		{
 			SPauseMenu[spause_pandora].status = (pandora) ? (IT_GRAYEDOUT) : (IT_DISABLED);
+			SPauseMenu[spause_levelselect].status = (lselect) ? (IT_STRING | IT_CALL) : (IT_DISABLED);
 			SPauseMenu[spause_retry].status = IT_GRAYEDOUT;
 		}
 		else
@@ -3686,6 +3692,11 @@ void M_StartControlPanel(void)
 				++numlives;
 
 			SPauseMenu[spause_pandora].status = (pandora) ? (IT_STRING | IT_CALL) : (IT_DISABLED);
+			SPauseMenu[spause_levelselect].status = (lselect) ? (IT_STRING | IT_CALL) : (IT_DISABLED);
+			if (ultimatemode)
+			{
+				SPauseMenu[spause_retry].status = IT_GRAYEDOUT;
+			}
 
 			// The list of things that can disable retrying is (was?) a little too complex
 			// for me to want to use the short if statement syntax
@@ -3694,13 +3705,6 @@ void M_StartControlPanel(void)
 			else
 				SPauseMenu[spause_retry].status = (IT_STRING | IT_CALL);
 		}
-
-		// We can always use level select though. :33
-		// Guarantee it if we have either it unlocked or devmode is enabled
-		if ((maplistoption != 0 || M_SecretUnlocked(SECRET_LEVELSELECT, serverGamedata) || cv_debug || devparm) && !marathonmode)
-			SPauseMenu[spause_levelselect].status = (IT_STRING | IT_CALL);
-		else
-			SPauseMenu[spause_levelselect].status = (IT_DISABLED);
 
 		// And emblem hints.
 		SPauseMenu[spause_hints].status = (M_SecretUnlocked(SECRET_EMBLEMHINTS, clientGamedata) && !marathonmode) ? (IT_STRING | IT_CALL) : (IT_DISABLED);
@@ -7543,13 +7547,9 @@ static void M_PauseLevelSelect(INT32 choice)
 	SP_PauseLevelSelectDef.prevMenu = currentMenu;
 	levellistmode = LLM_LEVELSELECT;
 
-	// maplistoption is only specified if not set already
-	// and we have the level select unlocked so that it
+	// maplistoption is NOT specified, so that this
 	// transfers the level select list from the menu
 	// used to enter the game to the pause menu.
-	if (maplistoption == 0 && M_SecretUnlocked(SECRET_LEVELSELECT, serverGamedata))
-		maplistoption = 1;
-
 	if (!M_PrepareLevelPlatter(-1, true))
 	{
 		M_StartMessage(M_GetText("No selectable levels found.\n"),NULL,MM_NOTHING);
@@ -8273,6 +8273,7 @@ static void M_StartTutorial(INT32 choice)
 	gamecomplete = 0;
 	cursaveslot = 0;
 	maplistoption = 0;
+	CV_StealthSet(&cv_skin, DEFAULTSKIN); // tutorial accounts for sonic only
 	G_DeferedInitNew(false, G_BuildMapName(tutorialmap), 0, false, false);
 }
 
@@ -8372,7 +8373,7 @@ static void M_DrawLoadGameData(void)
 				if (savegameinfo[savetodraw].lives == -42)
 					col = 26;
 				else if (savegameinfo[savetodraw].botskin == 3) // & knuckles
-					col = 105;
+					col = 106;
 				else if (savegameinfo[savetodraw].botskin) // tailsbot or custom
 					col = 134;
 				else
@@ -8432,7 +8433,17 @@ static void M_DrawLoadGameData(void)
 			if (savegameinfo[savetodraw].lives == -42)
 				V_DrawRightAlignedThinString(x + 79, y, V_GRAYMAP, "NEW GAME");
 			else if (savegameinfo[savetodraw].lives == -666)
-				V_DrawRightAlignedThinString(x + 79, y, V_REDMAP, "CAN'T LOAD!");
+			{
+				if (savegameinfo[savetodraw].continuescore == -62)
+				{
+					V_DrawRightAlignedThinString(x + 79, y, V_REDMAP, "ADDON NOT LOADED");
+					V_DrawRightAlignedThinString(x + 79, y-10, V_REDMAP, savegameinfo[savetodraw].skinname);
+				}
+				else
+				{
+					V_DrawRightAlignedThinString(x + 79, y, V_REDMAP, "CAN'T LOAD!");
+				}
+			}
 			else if (savegameinfo[savetodraw].flags & SAVE_GAME_COMPLETE_BIT)
 				V_DrawRightAlignedThinString(x + 79, y, V_GREENMAP, "CLEAR!");
 			else
@@ -8665,6 +8676,7 @@ static void M_LoadSelect(INT32 choice)
 }
 
 #define VERSIONSIZE 16
+#define MISSING { savegameinfo[slot].continuescore = -62; savegameinfo[slot].lives = -666; Z_Free(savebuffer); return; }
 #define BADSAVE { savegameinfo[slot].lives = -666; Z_Free(savebuffer); return; }
 #define CHECKPOS if (sav_p >= end_p) BADSAVE
 // Reads the save file to list lives, level, player, etc.
@@ -8787,10 +8799,11 @@ static void M_ReadSavegameInfo(UINT32 slot)
 		CHECKPOS
 		READSTRINGN(sav_p, ourSkinName, SKINNAMESIZE);
 		savegameinfo[slot].skinnum = R_SkinAvailable(ourSkinName);
+		STRBUFCPY(savegameinfo[slot].skinname, ourSkinName);
 
 		if (savegameinfo[slot].skinnum >= numskins
 		|| !R_SkinUsable(-1, savegameinfo[slot].skinnum))
-			BADSAVE
+			MISSING
 
 		CHECKPOS
 		READSTRINGN(sav_p, botSkinName, SKINNAMESIZE);
@@ -8798,7 +8811,7 @@ static void M_ReadSavegameInfo(UINT32 slot)
 
 		if (savegameinfo[slot].botskin-1 >= numskins
 		|| !R_SkinUsable(-1, savegameinfo[slot].botskin-1))
-			BADSAVE
+			MISSING
 	}
 
 	CHECKPOS
@@ -8843,6 +8856,7 @@ static void M_ReadSavegameInfo(UINT32 slot)
 }
 #undef CHECKPOS
 #undef BADSAVE
+#undef MISSING
 
 //
 // M_ReadSaveStrings
@@ -11151,7 +11165,7 @@ static void M_Refresh(INT32 choice)
 
 	// note: this is the one case where 0 is a valid room number
 	// because it corresponds to "All"
-	CL_UpdateServerList(!(ms_RoomId < 0), ms_RoomId);
+	CL_UpdateServerList(cv_masterserver_room_id.value >= 0, cv_masterserver_room_id.value);
 
 	// first page of servers
 	serverlistpage = 0;
@@ -11237,7 +11251,7 @@ static void M_DrawConnectMenu(void)
 		numPages = 1;
 
 	// Room name
-	if (ms_RoomId < 0)
+	if (cv_masterserver_room_id.value < 0)
 		V_DrawRightAlignedString(BASEVIDWIDTH - currentMenu->x, currentMenu->y + MP_ConnectMenu[mp_connect_room].alphaKey,
 		                         V_YELLOWMAP, (itemOn == mp_connect_room) ? "<Select to change>" : "<Unlisted Mode>");
 	else
@@ -11465,7 +11479,7 @@ static void M_ConnectMenu(INT32 choice)
 
 	// first page of servers
 	serverlistpage = 0;
-	if (ms_RoomId < 0)
+	if (cv_masterserver_room_id.value < 0)
 	{
 		M_RoomMenu(0); // Select a room instead of staring at an empty list
 		// This prevents us from returning to the modified game alert.
@@ -11561,10 +11575,10 @@ static void M_ChooseRoom(INT32 choice)
 #endif
 
 	if (choice == 0)
-		ms_RoomId = -1;
+		CV_SetValue(&cv_masterserver_room_id, -1);
 	else
 	{
-		ms_RoomId = roomIds[choice-1];
+		CV_SetValue(&cv_masterserver_room_id, roomIds[choice-1]);
 		menuRoomIndex = choice - 1;
 	}
 
@@ -11633,7 +11647,7 @@ static void M_DrawServerMenu(void)
 	if (currentMenu == &MP_ServerDef)
 	{
 		M_DrawLevelPlatterHeader(currentMenu->y - lsheadingheight/2, "Server settings", true, false);
-		if (ms_RoomId < 0)
+		if (cv_masterserver_room_id.value < 0)
 			V_DrawRightAlignedString(BASEVIDWIDTH - currentMenu->x, currentMenu->y + MP_ServerMenu[mp_server_room].alphaKey,
 			                         V_YELLOWMAP, (itemOn == mp_server_room) ? "<Select to change>" : "<Unlisted Mode>");
 		else
@@ -11729,7 +11743,7 @@ static void M_ServerOptions(INT32 choice)
 static void M_StartServerMenu(INT32 choice)
 {
 	(void)choice;
-	ms_RoomId = -1;
+	CV_SetValue(&cv_masterserver_room_id, -1);
 	levellistmode = LLM_CREATESERVER;
 	Newgametype_OnChange();
 	M_SetupNextMenu(&MP_ServerDef);
@@ -11901,8 +11915,7 @@ static void M_HandleConnectIP(INT32 choice)
 
 			if ( ctrldown ) {
 				switch (choice) {
-					case 'v':
-					case 'V': // ctrl+v, pasting
+					case 'v': // ctrl+v, pasting
 					{
 						const char *paste = I_ClipboardPaste();
 
@@ -11915,8 +11928,7 @@ static void M_HandleConnectIP(INT32 choice)
 						break;
 					}
 					case KEY_INS:
-					case 'c':
-					case 'C': // ctrl+c, ctrl+insert, copying
+					case 'c': // ctrl+c, ctrl+insert, copying
 						if (l != 0) // Don't replace the clipboard without any text
 						{
 							I_ClipboardCopy(setupm_ip, l);
@@ -11924,8 +11936,7 @@ static void M_HandleConnectIP(INT32 choice)
 						}
 						break;
 
-					case 'x':
-					case 'X': // ctrl+x, cutting
+					case 'x': // ctrl+x, cutting
 						if (l != 0) // Don't replace the clipboard without any text
 						{
 							I_ClipboardCopy(setupm_ip, l);
@@ -11981,15 +11992,6 @@ static void M_HandleConnectIP(INT32 choice)
 				setupm_ip[l] = (char)choice;
 				setupm_ip[l+1] = 0;
 			}
-			else if (choice >= 199 && choice <= 211 && choice != 202 && choice != 206) //numpad too!
-			{
-				char keypad_translation[] = {'7','8','9','-','4','5','6','+','1','2','3','0','.'};
-				choice = keypad_translation[choice - 199];
-				S_StartSound(NULL,sfx_menu1); // Tails
-				setupm_ip[l] = (char)choice;
-				setupm_ip[l+1] = 0;
-			}
-
 			break;
 	}
 
@@ -13358,23 +13360,23 @@ static void M_Setup1PControlsMenu(INT32 choice)
 	currentMenu->lastOn = itemOn;
 
 	// Unhide the nine non-P2 controls and their headers
-	//OP_ChangeControlsMenu[19+0].status = IT_HEADER;
-	//OP_ChangeControlsMenu[19+1].status = IT_SPACE;
+	//OP_ChangeControlsMenu[18+0].status = IT_HEADER;
+	//OP_ChangeControlsMenu[18+1].status = IT_SPACE;
 	// ...
-	OP_ChangeControlsMenu[19+2].status = IT_CALL|IT_STRING2;
-	OP_ChangeControlsMenu[19+3].status = IT_CALL|IT_STRING2;
-	OP_ChangeControlsMenu[19+4].status = IT_CALL|IT_STRING2;
-	OP_ChangeControlsMenu[19+5].status = IT_CALL|IT_STRING2;
-	OP_ChangeControlsMenu[19+6].status = IT_CALL|IT_STRING2;
-	//OP_ChangeControlsMenu[19+7].status = IT_CALL|IT_STRING2;
-	//OP_ChangeControlsMenu[19+8].status = IT_CALL|IT_STRING2;
-	OP_ChangeControlsMenu[19+9].status = IT_CALL|IT_STRING2;
+	OP_ChangeControlsMenu[18+2].status = IT_CALL|IT_STRING2;
+	OP_ChangeControlsMenu[18+3].status = IT_CALL|IT_STRING2;
+	OP_ChangeControlsMenu[18+4].status = IT_CALL|IT_STRING2;
+	OP_ChangeControlsMenu[18+5].status = IT_CALL|IT_STRING2;
+	OP_ChangeControlsMenu[18+6].status = IT_CALL|IT_STRING2;
+	//OP_ChangeControlsMenu[18+7].status = IT_CALL|IT_STRING2;
+	//OP_ChangeControlsMenu[18+8].status = IT_CALL|IT_STRING2;
+	OP_ChangeControlsMenu[18+9].status = IT_CALL|IT_STRING2;
 	// ...
-	OP_ChangeControlsMenu[29+0].status = IT_HEADER;
-	OP_ChangeControlsMenu[29+1].status = IT_SPACE;
+	OP_ChangeControlsMenu[28+0].status = IT_HEADER;
+	OP_ChangeControlsMenu[28+1].status = IT_SPACE;
 	// ...
-	OP_ChangeControlsMenu[29+2].status = IT_CALL|IT_STRING2;
-	OP_ChangeControlsMenu[29+3].status = IT_CALL|IT_STRING2;
+	OP_ChangeControlsMenu[28+2].status = IT_CALL|IT_STRING2;
+	OP_ChangeControlsMenu[28+3].status = IT_CALL|IT_STRING2;
 
 	OP_ChangeControlsDef.prevMenu = &OP_P1ControlsDef;
 	OP_ChangeControlsDef.menuid &= ~(((1 << MENUBITS) - 1) << MENUBITS); // remove second level
@@ -13390,23 +13392,23 @@ static void M_Setup2PControlsMenu(INT32 choice)
 	currentMenu->lastOn = itemOn;
 
 	// Hide the nine non-P2 controls and their headers
-	//OP_ChangeControlsMenu[19+0].status = IT_GRAYEDOUT2;
-	//OP_ChangeControlsMenu[19+1].status = IT_GRAYEDOUT2;
+	//OP_ChangeControlsMenu[18+0].status = IT_GRAYEDOUT2;
+	//OP_ChangeControlsMenu[18+1].status = IT_GRAYEDOUT2;
 	// ...
-	OP_ChangeControlsMenu[19+2].status = IT_GRAYEDOUT2;
-	OP_ChangeControlsMenu[19+3].status = IT_GRAYEDOUT2;
-	OP_ChangeControlsMenu[19+4].status = IT_GRAYEDOUT2;
-	OP_ChangeControlsMenu[19+5].status = IT_GRAYEDOUT2;
-	OP_ChangeControlsMenu[19+6].status = IT_GRAYEDOUT2;
-	//OP_ChangeControlsMenu[19+7].status = IT_GRAYEDOUT2;
-	//OP_ChangeControlsMenu[19+8].status = IT_GRAYEDOUT2;
-	OP_ChangeControlsMenu[19+9].status = IT_GRAYEDOUT2;
+	OP_ChangeControlsMenu[18+2].status = IT_GRAYEDOUT2;
+	OP_ChangeControlsMenu[18+3].status = IT_GRAYEDOUT2;
+	OP_ChangeControlsMenu[18+4].status = IT_GRAYEDOUT2;
+	OP_ChangeControlsMenu[18+5].status = IT_GRAYEDOUT2;
+	OP_ChangeControlsMenu[18+6].status = IT_GRAYEDOUT2;
+	//OP_ChangeControlsMenu[18+7].status = IT_GRAYEDOUT2;
+	//OP_ChangeControlsMenu[18+8].status = IT_GRAYEDOUT2;
+	OP_ChangeControlsMenu[18+9].status = IT_GRAYEDOUT2;
 	// ...
-	OP_ChangeControlsMenu[29+0].status = IT_GRAYEDOUT2;
-	OP_ChangeControlsMenu[29+1].status = IT_GRAYEDOUT2;
+	OP_ChangeControlsMenu[28+0].status = IT_GRAYEDOUT2;
+	OP_ChangeControlsMenu[28+1].status = IT_GRAYEDOUT2;
 	// ...
-	OP_ChangeControlsMenu[29+2].status = IT_GRAYEDOUT2;
-	OP_ChangeControlsMenu[29+3].status = IT_GRAYEDOUT2;
+	OP_ChangeControlsMenu[28+2].status = IT_GRAYEDOUT2;
+	OP_ChangeControlsMenu[28+3].status = IT_GRAYEDOUT2;
 
 	OP_ChangeControlsDef.prevMenu = &OP_P2ControlsDef;
 	OP_ChangeControlsDef.menuid &= ~(((1 << MENUBITS) - 1) << MENUBITS); // remove second level
@@ -14207,6 +14209,33 @@ static INT32 quitsounds[] =
 	sfx_chchng // Tails 11-09-99
 };
 
+const char *QuitScreenMessages[3] = {
+	(
+	"Design and content in\n"
+	"SRB2 is copyright\n"
+	"1998-2025 by STJr. All\n"
+	"original material in\n"
+	"this game is copyrighted\n"
+	"by their respective\n"
+	"owners, and no copyright\n"
+	"infringement is\n"
+	"intended. STJr's staff\n"
+	"make no profit\n"
+	"whatsoever (in\n"
+	"fact, we lose\n"
+	"money)."
+	),
+
+	(
+	"THIS GAME SHOULD NOT BE SOLD!"
+	),
+
+	(
+	"STJr is in no way affiliated\n"
+	"with SEGA or Sonic Team."
+	)
+};
+
 void M_QuitResponse(INT32 ch)
 {
 	tic_t ptime;
@@ -14228,6 +14257,9 @@ void M_QuitResponse(INT32 ch)
 		while (ptime > I_GetTime())
 		{
 			V_DrawScaledPatch(0, 0, 0, W_CachePatchName("GAMEQUIT", PU_PATCH)); // Demo 3 Quit Screen Tails 06-16-2001
+			V_DrawCenteredString(2+(V_StringWidth(QuitScreenMessages[0], V_ALLOWLOWERCASE)/2), 4, V_ALLOWLOWERCASE, QuitScreenMessages[0]);
+			V_DrawCenteredString(160, 166, V_ALLOWLOWERCASE|V_REDMAP, QuitScreenMessages[1]);
+			V_DrawCenteredString(160, 176, V_ALLOWLOWERCASE, QuitScreenMessages[2]);
 			I_FinishUpdate(); // Update the screen with the image Tails 06-19-2001
 			I_Sleep(cv_sleep.value);
 			I_UpdateTime(cv_timescale.value);

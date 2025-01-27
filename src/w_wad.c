@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -65,6 +65,10 @@
 #include "i_video.h" // rendermode
 #include "md5.h"
 #include "lua_script.h"
+#include "lua_hook.h"
+#ifdef SCANTHINGS
+#include "p_setup.h" // P_ScanThings
+#endif
 #include "m_misc.h" // M_MapNumber
 #include "g_game.h" // G_SetGameModified
 
@@ -288,12 +292,10 @@ static void W_LoadDehackedLumps(UINT16 wadnum, boolean mainfile)
   * \param resblock resulting MD5 checksum
   * \return 0 if MD5 checksum was made, and is at resblock, 1 if error was found
   */
+
+#ifndef NOMD5
 static INT32 W_MakeFileMD5(const char *filename, void *resblock)
 {
-#ifdef NOMD5
-	(void)filename;
-	memset(resblock, 0x00, 16);
-#else
 	FILE *fhandle;
 
 	if ((fhandle = fopen(filename, "rb")) != NULL)
@@ -310,9 +312,9 @@ static INT32 W_MakeFileMD5(const char *filename, void *resblock)
 		fclose(fhandle);
 		return 0;
 	}
-#endif
 	return 1;
 }
+#endif
 
 // Invalidates the cache of lump numbers. Call this whenever a wad is added.
 static void W_InvalidateLumpnumCache(void)
@@ -1015,6 +1017,10 @@ UINT16 W_InitFile(const char *filename, boolean mainfile, boolean startup)
 		break;
 	}
 
+	lua_lumploading++;
+	LUA_HookVoid(HOOK(AddonLoaded));
+	lua_lumploading--;
+
 	W_InvalidateLumpnumCache();
 	return wadfile->numlumps;
 }
@@ -1176,6 +1182,11 @@ UINT16 W_InitFolder(const char *path, boolean mainfile, boolean startup)
 	P_LoadMapsFromFile(numwadfiles - 1, !startup);
 	W_LoadTrnslateLumps(numwadfiles - 1);
 	W_LoadDehackedLumpsPK3(numwadfiles - 1, mainfile);
+
+	lua_lumploading++;
+	LUA_HookVoid(HOOK(AddonLoaded));
+	lua_lumploading--;
+
 	W_InvalidateLumpnumCache();
 
 	return wadfile->numlumps;
@@ -1339,10 +1350,10 @@ UINT16 W_CheckNumForFolderStartPK3(const char *name, UINT16 wad, UINT16 startlum
 			/* SLADE is special and puts a single directory entry. Skip that. */
 			if (strlen(lump_p->fullname) == name_length)
 				i++;
-			break;
+			return i;
 		}
 	}
-	return i;
+	return INT16_MAX;
 }
 
 // In a PK3 type of resource file, it looks for the next lumpinfo entry that doesn't share the specified pathfile.
@@ -1667,7 +1678,7 @@ lumpnum_t W_GetNumForLongName(const char *name)
 //
 static UINT16 W_CheckNumForPatchNamePwad(const char *name, UINT16 wad, boolean longname)
 {
-	UINT16 i, start, end;
+	UINT16 i, start = INT16_MAX, end = INT16_MAX;
 	static char uname[8 + 1] = { 0 };
 	UINT32 hash = 0;
 	lumpinfo_t *lump_p;
@@ -1693,6 +1704,13 @@ static UINT16 W_CheckNumForPatchNamePwad(const char *name, UINT16 wad, boolean l
 	{
 		start = W_CheckNumForFolderStartPK3("Flats/", wad, 0);
 		end = W_CheckNumForFolderEndPK3("Flats/", wad, start);
+
+		// if the start and end is the same, the folder is empty
+		if (end <= start)
+		{
+			start = INT16_MAX;
+			end = INT16_MAX;
+		}
 	}
 	else
 	{
@@ -2642,7 +2660,8 @@ static lumpchecklist_t folderblacklist[] =
 {
 	{"Lua/", 4},
 	{"SOC/", 4},
-	{"Sprites/",  8},
+	{"Sprites/", 8},
+	{"LongSprites/", 12},
 	{"Textures/", 9},
 	{"Patches/", 8},
 	{"Flats/", 6},

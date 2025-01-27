@@ -31,10 +31,26 @@ return luaL_error(L, "HUD rendering code should not call this function!");
 
 static consvar_t *this_cvar;
 
+static void clear_lua_stack(void)
+{
+	if (gL) // check if Lua is actually turned on first, you dummmy -- Monster Iestyn 04/07/18
+		lua_settop(gL, 0); // clear stack
+}
+
 void Got_Luacmd(UINT8 **cp, INT32 playernum)
 {
 	UINT8 i, argc, flags;
+	const char *argv[256];
 	char buf[256];
+
+	argc = READUINT8(*cp);
+	argv[0] = (const char*)*cp;
+	SKIPSTRINGN(*cp, 255);
+	for (i = 1; i < argc; i++)
+	{
+		argv[i] = (const char*)*cp;
+		SKIPSTRINGN(*cp, 255);
+	}
 
 	// don't use I_Assert here, goto the deny code below
 	// to clean up and kick people who try nefarious exploits
@@ -48,8 +64,7 @@ void Got_Luacmd(UINT8 **cp, INT32 playernum)
 	lua_getfield(gL, LUA_REGISTRYINDEX, "COM_Command"); // push COM_Command
 	if (!lua_istable(gL, -1)) goto deny;
 
-	argc = READUINT8(*cp);
-	READSTRINGN(*cp, buf, 255);
+	strlcpy(buf, argv[0], 255);
 	strlwr(buf); // must lowercase buffer
 	lua_getfield(gL, -1, buf); // push command info table
 	if (!lua_istable(gL, -1)) goto deny;
@@ -75,10 +90,17 @@ void Got_Luacmd(UINT8 **cp, INT32 playernum)
 
 	lua_remove(gL, -2); // pop command info table
 
+	if (!lua_checkstack(gL, argc)) // player + command arguments
+	{
+		clear_lua_stack();
+		CONS_Alert(CONS_WARNING, "lua command stack overflow from %s (%d, need %d more)\n", player_names[playernum], lua_gettop(gL), argc);
+		return;
+	}
+
 	LUA_PushUserdata(gL, &players[playernum], META_PLAYER);
 	for (i = 1; i < argc; i++)
 	{
-		READSTRINGN(*cp, buf, 255);
+		strlcpy(buf, argv[i], 255);
 		lua_pushstring(gL, buf);
 	}
 	LUA_Call(gL, (int)argc, 0, 1); // argc is 1-based, so this will cover the player we passed too.
@@ -86,8 +108,7 @@ void Got_Luacmd(UINT8 **cp, INT32 playernum)
 
 deny:
 	//must be hacked/buggy client
-	if (gL) // check if Lua is actually turned on first, you dummmy -- Monster Iestyn 04/07/18
-		lua_settop(gL, 0); // clear stack
+	clear_lua_stack();
 
 	CONS_Alert(CONS_WARNING, M_GetText("Illegal lua command received from %s\n"), player_names[playernum]);
 	if (server)
@@ -173,6 +194,11 @@ void COM_Lua_f(void)
 	I_Assert(lua_isfunction(gL, -1));
 	lua_remove(gL, -2); // pop command info table
 
+	if (!lua_checkstack(gL, COM_Argc() + 1))
+	{
+		CONS_Alert(CONS_WARNING, "lua command stack overflow (%d, need %s more)\n", lua_gettop(gL), sizeu1(COM_Argc() + 1));
+		return;
+	}
 	LUA_PushUserdata(gL, &players[playernum], META_PLAYER);
 	for (i = 1; i < COM_Argc(); i++)
 		lua_pushstring(gL, COM_Argv(i));

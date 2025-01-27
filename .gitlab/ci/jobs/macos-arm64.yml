@@ -30,7 +30,7 @@ osxcross arm64:
     - - |
           # cmake
           echo -e "\e[0Ksection_start:`date +%s`:cmake[collapsed=false]\r\e[0KBuilding Makefiles"
-      - cmake -B build.osxcross --toolchain /osxcross/toolchain.cmake -DCPM_USE_LOCAL_PACKAGES:BOOL=ON -DOPENMPT_INCLUDE_DIR:PATH="/osxcross/macports/pkgs/opt/local/include" -DSDL2_INCLUDE_DIR:PATH="/osxcross/macports/pkgs/opt/local/lib" -DSRB2_CONFIG_ENABLE_TESTS:BOOL=OFF -DSRB2_CONFIG_SYSTEM_LIBRARIES:BOOL=ON -DSRB2_CONFIG_USE_GME:BOOL=OFF -G "Unix Makefiles"
+      - cmake -B build.osxcross --toolchain /osxcross/toolchain.cmake -DCPM_USE_LOCAL_PACKAGES:BOOL=ON -DOPENMPT_INCLUDE_DIR:PATH="/osxcross/macports/pkgs/opt/local/include" -DSDL2_INCLUDE_DIR:PATH="/osxcross/macports/pkgs/opt/local/lib" -DSRB2_CONFIG_ENABLE_TESTS:BOOL=OFF -DSRB2_CONFIG_SYSTEM_LIBRARIES:BOOL=ON -DSRB2_CONFIG_FORCE_NO_MS_BITFIELDS:BOOL=ON -DSRB2_CONFIG_USE_GME:BOOL=OFF -G "Unix Makefiles"
       - |
           # make
           echo -e "\e[0Ksection_end:`date +%s`:make\r\e[0K"
