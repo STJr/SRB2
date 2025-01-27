@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2012-2016 by John "JTE" Muniz.
-// Copyright (C) 2012-2024 by Sonic Team Junior.
+// Copyright (C) 2012-2025 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -1730,12 +1730,11 @@ static int lib_pResetCamera(lua_State *L)
 static int lib_pSuperReady(lua_State *L)
 {
 	player_t *player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
-	boolean transform = (boolean)lua_opttrueboolean(L, 2);
 	//HUDSAFE
 	INLEVEL
 	if (!player)
 		return LUA_ErrInvalid(L, "player_t");
-	lua_pushboolean(L, P_SuperReady(player, transform));
+	lua_pushboolean(L, P_SuperReady(player));
 	return 1;
 }
 
@@ -1988,7 +1987,7 @@ static int lib_pLineIsBlocking(lua_State *L)
 		return LUA_ErrInvalid(L, "mobj_t");
 	if (!line)
 		return LUA_ErrInvalid(L, "line_t");
-	
+
 	// P_LineOpening in P_LineIsBlocking sets these variables.
 	// We want to keep their old values after so that whatever
 	// map collision code uses them doesn't get messed up.
@@ -2001,9 +2000,9 @@ static int lib_pLineIsBlocking(lua_State *L)
 	pslope_t *oldopenbottomslope = openbottomslope;
 	ffloor_t *oldopenfloorrover = openfloorrover;
 	ffloor_t *oldopenceilingrover = openceilingrover;
-	
+
 	lua_pushboolean(L, P_LineIsBlocking(mo, line));
-	
+
 	opentop = oldopentop;
 	openbottom = oldopenbottom;
 	openrange = oldopenrange;
@@ -2013,7 +2012,7 @@ static int lib_pLineIsBlocking(lua_State *L)
 	openbottomslope = oldopenbottomslope;
 	openfloorrover = oldopenfloorrover;
 	openceilingrover = oldopenceilingrover;
-	
+
 	return 1;
 }
 
@@ -3181,17 +3180,25 @@ static int lib_rTextureNumForName(lua_State *L)
 
 static int lib_rCheckTextureNameForNum(lua_State *L)
 {
+	char s[9];
 	INT32 num = (INT32)luaL_checkinteger(L, 1);
 	//HUDSAFE
-	lua_pushstring(L, R_CheckTextureNameForNum(num));
+
+	M_Memcpy(s, R_CheckTextureNameForNum(num), 8);
+	s[8] = '\0';
+	lua_pushstring(L, s);
 	return 1;
 }
 
 static int lib_rTextureNameForNum(lua_State *L)
 {
+	char s[9];
 	INT32 num = (INT32)luaL_checkinteger(L, 1);
 	//HUDSAFE
-	lua_pushstring(L, R_TextureNameForNum(num));
+
+	M_Memcpy(s, R_TextureNameForNum(num), 8);
+	s[8] = '\0';
+	lua_pushstring(L, s);
 	return 1;
 }
 

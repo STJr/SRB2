@@ -620,7 +620,7 @@ void D_RegisterServerCommands(void)
 	CV_RegisterVar(&cv_blamecfail);
 	CV_RegisterVar(&cv_dedicatedidletime);
 	CV_RegisterVar(&cv_idletime);
-	CV_RegisterVar(&cv_idlespectate);
+	CV_RegisterVar(&cv_idleaction);
 	CV_RegisterVar(&cv_httpsource);
 
 	COM_AddCommand("ping", Command_Ping_f, COM_LUA);
@@ -824,8 +824,6 @@ void D_RegisterClientCommands(void)
 	CV_RegisterVar(&cv_jumpaxis2);
 	CV_RegisterVar(&cv_spinaxis);
 	CV_RegisterVar(&cv_spinaxis2);
-	CV_RegisterVar(&cv_shieldaxis);
-	CV_RegisterVar(&cv_shieldaxis2);
 	CV_RegisterVar(&cv_fireaxis);
 	CV_RegisterVar(&cv_fireaxis2);
 	CV_RegisterVar(&cv_firenaxis);

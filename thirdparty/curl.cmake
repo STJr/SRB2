@@ -55,4 +55,3 @@ else()
 endif()
 
 FetchContent_MakeAvailable(curl)
-

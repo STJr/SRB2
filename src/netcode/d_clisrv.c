@@ -113,9 +113,11 @@ consvar_t cv_blamecfail = CVAR_INIT ("blamecfail", "Off", CV_SAVE|CV_NETVAR, CV_
 static CV_PossibleValue_t playbackspeed_cons_t[] = {{1, "MIN"}, {10, "MAX"}, {0, NULL}};
 consvar_t cv_playbackspeed = CVAR_INIT ("playbackspeed", "1", 0, playbackspeed_cons_t, NULL);
 
-consvar_t cv_idletime = CVAR_INIT ("idletime", "0", CV_SAVE, CV_Unsigned, NULL);
-consvar_t cv_idlespectate = CVAR_INIT ("idlespectate", "On", CV_SAVE, CV_OnOff, NULL);
-consvar_t cv_dedicatedidletime = CVAR_INIT ("dedicatedidletime", "10", CV_SAVE, CV_Unsigned, NULL);
+consvar_t cv_dedicatedidletime = CVAR_INIT ("dedicatedidletime", "10", CV_SAVE|CV_NETVAR, CV_Unsigned, NULL);
+
+static CV_PossibleValue_t idleaction_cons_t[] = {{1, "Kick"}, {2, "Spectate"}, {0, NULL}};
+consvar_t cv_idleaction = CVAR_INIT ("idleaction", "Spectate", CV_SAVE|CV_NETVAR, idleaction_cons_t, NULL);
+consvar_t cv_idletime = CVAR_INIT ("idletime", "3", CV_SAVE|CV_NETVAR, CV_Unsigned, NULL);
 
 consvar_t cv_httpsource = CVAR_INIT ("http_source", "", CV_SAVE, NULL, NULL);
 
@@ -661,7 +663,7 @@ void D_QuitNetGame(void)
 			if (netnodes[i].ingame)
 				HSendPacket(i, true, 0, 0);
 #ifdef MASTERSERVER
-		if (serverrunning && ms_RoomId > 0)
+		if (serverrunning && cv_masterserver_room_id.value > 0)
 			UnregisterServer();
 #endif
 	}
@@ -795,7 +797,7 @@ void SV_SpawnServer(void)
 		{
 			I_NetOpenSocket();
 #ifdef MASTERSERVER
-			if (ms_RoomId > 0)
+			if (cv_masterserver_room_id.value > 0)
 				RegisterServer();
 #endif
 		}
@@ -1373,7 +1375,7 @@ static void IdleUpdate(void)
 			if (cv_idletime.value && !IsPlayerAdmin(i) && i != serverplayer && !(players[i].pflags & PF_FINISHED) && players[i].lastinputtime > (tic_t)cv_idletime.value * TICRATE * 60)
 			{
 				players[i].lastinputtime = 0;
-				if (cv_idlespectate.value && G_GametypeHasSpectators())
+				if (cv_idleaction.value == 2 && G_GametypeHasSpectators())
 				{
 					changeteam_union NetPacket;
 					UINT16 usvalue;
@@ -1384,7 +1386,7 @@ static void IdleUpdate(void)
 					usvalue = SHORT(NetPacket.value.l|NetPacket.value.b);
 					SendNetXCmd(XD_TEAMCHANGE, &usvalue, sizeof(usvalue));
 				}
-				else
+				else if (cv_idleaction.value == 1)
 				{
 					SendKick(i, KICK_MSG_IDLE | KICK_MSG_KEEP_BODY);
 				}

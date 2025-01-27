@@ -1176,10 +1176,8 @@ static void ST_drawInput(void)
 	V_DrawFill(x+16+(xoffs), y+(yoffs)-offs, 10, 10, col);\
 	V_DrawCharacter(x+16+1+(xoffs), y+1+(yoffs)-offs, hudinfo[HUD_INPUT].f|symb, false)
 
-	drawbutt( 4,-3, BT_JUMP,   'J' );
-	drawbutt(15,-3, BT_SPIN,   'S' );
-	drawbutt(26,-3, BT_SHIELD, '\0'); // Instead of a wide 'J' or 'S', we'll draw a thin "SH" for Shield
-	V_DrawThinString(x+16+26, y+2+(-3)-offs, hudinfo[HUD_LIVES].f, "SH");
+	drawbutt( 4,-3, BT_JUMP, 'J');
+	drawbutt(15,-3, BT_SPIN, 'S');
 
 	V_DrawFill(x+16+4, y+8, 21, 10, hudinfo[HUD_INPUT].f|20); // sundial backing
 	if (stplyr->mo)
@@ -2068,24 +2066,25 @@ static void ST_drawNiGHTSHUD(void)
 	if (!stplyr->exiting && !oldspecialstage && LUA_HudEnabled(hud_nightsscore))
 		ST_DrawNightsOverlayNum(304<<FRACBITS, 14<<FRACBITS, FRACUNIT, V_PERPLAYER|V_SNAPTOTOP|V_SNAPTORIGHT, stplyr->marescore, nightsnum, SKINCOLOR_AZURE);
 
-	// TODO give this its own section for Lua
+	// TODO: give this its own section for Lua
+	// TODO: on multi-mare maps, show time & grade for each completed mare
 	if (!stplyr->exiting && LUA_HudEnabled(hud_nightsscore))
 	{
 		if (modeattacking == ATTACKING_NIGHTS)
 		{
 			INT32 maretime = max(stplyr->realtime - stplyr->marebegunat, 0);
 
-#define VFLAGS V_SNAPTOBOTTOM|V_SNAPTORIGHT|V_PERPLAYER|V_HUDTRANS
-			V_DrawScaledPatch(BASEVIDWIDTH-22, BASEVIDHEIGHT-20, VFLAGS, W_CachePatchName("NGRTIMER", PU_HUDGFX));
-			V_DrawPaddedTallNum(BASEVIDWIDTH-22, BASEVIDHEIGHT-20, VFLAGS, G_TicsToCentiseconds(maretime), 2);
-			V_DrawScaledPatch(BASEVIDWIDTH-46, BASEVIDHEIGHT-20, VFLAGS, sboperiod);
+#define VFLAGS V_SNAPTOTOP|V_SNAPTORIGHT|V_PERPLAYER|V_HUDTRANS
+			V_DrawScaledPatch(BASEVIDWIDTH-16, 40, VFLAGS, W_CachePatchName("NGRTIMER", PU_HUDGFX));
+			V_DrawPaddedTallNum(BASEVIDWIDTH-16, 40, VFLAGS, G_TicsToCentiseconds(maretime), 2);
+			V_DrawScaledPatch(BASEVIDWIDTH-40, 40, VFLAGS, sboperiod);
 			if (maretime < 60*TICRATE)
-				V_DrawTallNum(BASEVIDWIDTH-46, BASEVIDHEIGHT-20, VFLAGS, G_TicsToSeconds(maretime));
+				V_DrawTallNum(BASEVIDWIDTH-40, 40, VFLAGS, G_TicsToSeconds(maretime));
 			else
 			{
-				V_DrawPaddedTallNum(BASEVIDWIDTH-46, BASEVIDHEIGHT-20, VFLAGS, G_TicsToSeconds(maretime), 2);
-				V_DrawScaledPatch(BASEVIDWIDTH-70, BASEVIDHEIGHT-20, VFLAGS, sbocolon);
-				V_DrawTallNum(BASEVIDWIDTH-70, BASEVIDHEIGHT-20, VFLAGS, G_TicsToMinutes(maretime, true));
+				V_DrawPaddedTallNum(BASEVIDWIDTH-40, 40, VFLAGS, G_TicsToSeconds(maretime), 2);
+				V_DrawScaledPatch(BASEVIDWIDTH-64, 40, VFLAGS, sbocolon);
+				V_DrawTallNum(BASEVIDWIDTH-64, 40, VFLAGS, G_TicsToMinutes(maretime, true));
 			}
 #undef VFLAGS
 		}
@@ -2821,7 +2820,7 @@ static void ST_overlayDrawer(void)
 		}
 		else if (cv_powerupdisplay.value == 2 && LUA_HudEnabled(hud_powerups))
 			ST_drawPowerupHUD();  // same as it ever was...
-		
+
 	}
 	else if (!(netgame || multiplayer) && cv_powerupdisplay.value == 2 && LUA_HudEnabled(hud_powerups))
 		ST_drawPowerupHUD(); // same as it ever was...
