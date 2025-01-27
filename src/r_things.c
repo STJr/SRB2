@@ -968,7 +968,9 @@ UINT8 *R_GetTranslationForThing(mobj_t *mobj, skincolornum_t color, UINT16 trans
 	if (color != SKINCOLOR_NONE)
 	{
 		// New colormap stuff for skins Tails 06-07-2002
-		if (mobj->colorized)
+		if ((mobj->state-states == S_METALSONIC_DASH || mobj->state-states == S_METALSONIC_BOUNCE) && (((leveltime/2) & 1))) // Metal boss doing attack
+			skinnum = TC_DASHMODE;
+		else if (mobj->colorized)
 			skinnum = TC_RAINBOW;
 		else if (mobj->player && mobj->player->dashmode >= DASHMODE_THRESHOLD
 			&& (mobj->player->charflags & SF_DASHMODE)

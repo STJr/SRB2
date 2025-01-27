@@ -1373,7 +1373,7 @@ boolean HWR_DrawModel(gl_vissprite_t *spr)
 		// Apparently people don't like jump frames like that, so back it goes
 		if (tics > durs)
 			durs = tics;
-		
+
 		// Make linkdraw objects use their tracer's alpha value
 		fixed_t newalpha = spr->mobj->alpha;
 		if ((spr->mobj->flags2 & MF2_LINKDRAW) && spr->mobj->tracer)
@@ -1392,7 +1392,7 @@ boolean HWR_DrawModel(gl_vissprite_t *spr)
 			Surf.PolyColor.s.alpha = (spr->mobj->flags2 & MF2_SHADOW) ? 0x40 : 0xff;
 			Surf.PolyFlags = HWR_GetBlendModeFlag(blendmode);
 		}
-		
+
 		Surf.PolyColor.s.alpha = FixedMul(newalpha, Surf.PolyColor.s.alpha);
 
 		// don't forget to enable the depth test because we can't do this

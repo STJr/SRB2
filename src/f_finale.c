@@ -1105,6 +1105,7 @@ static const char *credits[] = {
 	"Paul \"Boinciel\" Clempson",
 	"Sally \"TehRealSalt\" Cochenour",
 	"\"DaJumpJump\"", // New Ringslinger graphics (2.2.14)
+	"\"DeltaSanic\"",
 	"Desmond \"Blade\" DesJardins",
 	"Sherman \"CoatRack\" DesJardins",
 	"\"DirkTheHusky\"",
@@ -1120,11 +1121,11 @@ static const char *credits[] = {
 	"Alice \"Alacroix\" de Lemos",
 	"Logan \"Hyperchaotix\" McCloud",
 	"Alexander \"DrTapeworm\" Moench-Ford",
+    "\"orbitalviolet\"", // summit showdown hehehehe (aka Evertone)
 	"Andrew \"Senku Niola\" Moran",
 	"\"MotorRoach\"",
 	"Phillip \"TelosTurntable\" Robinson",
 	"\"Scizor300\"",
-	"\"Skydusk\"",
 	"Wessel \"sphere\" Smit",
 	"David \"Instant Sonic\" Spencer Jr.",
 	"\"SSNTails\"",
@@ -1172,11 +1173,9 @@ static const char *credits[] = {
 	"Mujamel \"MK\" Khan",
 	"\"Kaito Sinclaire\"",
 	"Alexander \"DrTapeworm\" Moench-Ford",
-	"\"orbitalviolet\"", // summit showdown hehehehe (aka Evertone)
 	"\"Radicalicious\"",
 	"\"Revan\"",
 	"Anna \"QueenDelta\" Sandlin",
-	"\"Skydusk\"",
 	"Wessel \"sphere\" Smit",
 	"\"SSNTails\"",
 	"Aaron \"Othius\" Stojkov",
@@ -3657,7 +3656,7 @@ static void F_DrawContinueCharacter(INT32 dx, INT32 dy, UINT8 n)
 		(
 			HUD_HOOK(continue), luahuddrawlist_continue[n], contPlayers[n],
 			dx, dy, contskins[n]->highresscale,
-			(INT32)(&contskins[n] - skins), cont_spr2[n][0], cont_spr2[n][1], cont_spr2[n][2] + 1, contColors[n], // add 1 to rotation to convert internal angle numbers (0-7) to WAD editor angle numbers (1-8)
+			(INT32)(contskins[n]->skinnum), cont_spr2[n][0], cont_spr2[n][1], cont_spr2[n][2] + 1, contColors[n], // add 1 to rotation to convert internal angle numbers (0-7) to WAD editor angle numbers (1-8)
 			imcontinuing ? continuetime : timetonext, imcontinuing
 		);
 	}
@@ -3723,7 +3722,7 @@ void F_ContinueDrawer(void)
 	else if (ncontinues > 10)
 	{
 		if (!(continuetime & 1) || continuetime > 17)
-			V_DrawContinueIcon(x, 68, 0, (INT32)(&contskins[0] - skins), contColors[0]);
+			V_DrawContinueIcon(x, 68, 0, contskins[0]->skinnum, contColors[0]);
 		V_DrawScaledPatch(x+12, 66, 0, stlivex);
 		V_DrawRightAlignedString(x+38, 64, 0,
 			va("%d",(imcontinuing ? ncontinues-1 : ncontinues)));
@@ -3737,7 +3736,7 @@ void F_ContinueDrawer(void)
 		{
 			if (i == (ncontinues/2) && ((continuetime & 1) || continuetime > 17))
 				continue;
-			V_DrawContinueIcon(x - (i*30), 68, 0, (INT32)(&contskins[0] - skins), contColors[0]);
+			V_DrawContinueIcon(x - (i*30), 68, 0, contskins[0]->skinnum, contColors[0]);
 		}
 		x = BASEVIDWIDTH>>1;
 	}

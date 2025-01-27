@@ -705,7 +705,7 @@ static void add_alias(char *newname, char *newcmd)
 	{
 		if (!stricmp(newname, a->name))
 		{
-			Z_Free(a->value); // Free old cmd 
+			Z_Free(a->value); // Free old cmd
 			a->value = newcmd;
 			return;
 		}
