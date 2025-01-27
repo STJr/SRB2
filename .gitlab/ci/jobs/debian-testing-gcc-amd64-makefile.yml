@@ -18,13 +18,14 @@ Debian testing GCC Makefile:
 
   variables:
     CC: gcc
+    CXX: g++
     LDFLAGS: -Wl,-fuse-ld=gold
 
   script:
     - - |
           # apt_toolchain
           echo -e "\e[0Ksection_start:`date +%s`:apt_toolchain[collapsed=true]\r\e[0KInstalling toolchain packages"
-      - apt-get install gcc
+      - apt-get install gcc g++
       - |
           # apt_toolchain
           echo -e "\e[0Ksection_end:`date +%s`:apt_toolchain\r\e[0K"

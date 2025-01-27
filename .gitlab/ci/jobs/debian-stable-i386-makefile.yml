@@ -14,6 +14,7 @@ Debian stable:i386 Makefile:
 
   variables:
     CC: i686-linux-gnu-gcc
+    CXX: i686-linux-gnu-g++
     OBJCOPY: i686-linux-gnu-objcopy
     OBJDUMP: i686-linux-gnu-objdump
     LD: i686-linux-gnu-ld
@@ -23,7 +24,7 @@ Debian stable:i386 Makefile:
     - - |
           # apt_toolchain
           echo -e "\e[0Ksection_start:`date +%s`:apt_toolchain[collapsed=true]\r\e[0KInstalling toolchain packages"
-      - apt-get install gcc-i686-linux-gnu || apt-get install gcc
+      - apt-get install gcc-i686-linux-gnu g++-i686-linux-gnu || apt-get install gcc g++
       - |
           # apt_toolchain
           echo -e "\e[0Ksection_end:`date +%s`:apt_toolchain\r\e[0K"
