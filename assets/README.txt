@@ -33,9 +33,6 @@ https://discord.gg/b3BGb8A
 Twitter:
 https://twitter.com/SonicTeamJr
 
-Facebook:
-https://facebook.com/SonicRoboBlast2
-
 
 COPYRIGHT AND DISCLAIMER
 

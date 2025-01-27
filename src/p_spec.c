@@ -2406,7 +2406,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 					z = line->args[4] << FRACBITS;
 
 					P_SetOrigin(mo, mo->x + x, mo->y + y, mo->z + z);
-					
+
 					if (mo->player)
 					{
 						if (bot) // This might put poor Tails in a wall if he's too far behind! D: But okay, whatever! >:3
@@ -2702,18 +2702,6 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 				EV_DoCrush(line->args[0], line, crushBothOnce);
 			break;
 
-		case 430: // Bounce Player
-			if (mo && mo->player)
-			{
-				P_SetObjectMomZ(mo, line->args[0]*FRACUNIT, false);
-				S_StartSound(NULL, sfx_s3k8a);
-				mo->player->pflags |= PF_JUMPED;
-				if (skins[mo->player->skin]->flags & SF_NOJUMPSPIN)
-					P_SetMobjState(mo, S_PLAY_SPRING);
-				else
-					P_SetMobjState(mo, S_PLAY_JUMP);
-			}
-			break;
 		case 432: // Enable/Disable 2D Mode
 			if (mo && mo->player)
 			{

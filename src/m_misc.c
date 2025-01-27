@@ -560,11 +560,6 @@ void M_FirstLoadConfig(void)
 	COM_BufInsertText(va("exec \"%s\"\n", configfile));
 	// no COM_BufExecute() needed; that does it right away
 
-	// For configs loaded at startup only, check for pre-Shield-button configs // TODO: 2.3: Remove
-	if (GETMAJOREXECVERSION(cv_execversion.value) < 55 // Pre-v2.2.14 configs
-	&& cv_execversion.value != 25) // Make sure that the config exists, too
-		shieldprompt_timer = 1;
-
 	// don't filter anymore vars and don't let this convsvar be changed
 	COM_BufInsertText(va("%s \"%d\"\n", cv_execversion.name, EXECVERSION));
 	CV_ToggleExecVersion(false);

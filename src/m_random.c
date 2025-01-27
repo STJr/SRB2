@@ -193,9 +193,9 @@ INT32 M_RandomKey(INT32 a)
   */
 INT32 M_RandomRange(INT32 a, INT32 b)
 {
-  	if (b < a)
+	if (b < a)
 	{
-    	INT32 temp;
+		INT32 temp;
 
 		temp = a;
 		a = b;
