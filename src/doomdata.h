@@ -103,53 +103,50 @@ typedef struct
 // LineDef attributes.
 //
 
-enum
-{
-	// Solid, is an obstacle.
-	ML_IMPASSIBLE    = 1<<0,
+// Solid, is an obstacle.
+#define ML_IMPASSIBLE      1<<0
 
-	// Blocks monsters only.
-	ML_BLOCKMONSTERS = 1<<1,
+// Blocks monsters only.
+#define ML_BLOCKMONSTERS   1<<1
 
-	// Backside will not be present at all if not two sided.
-	ML_TWOSIDED      = 1<<2,
+// Backside will not be present at all if not two sided.
+#define ML_TWOSIDED        1<<2
 
-	// If a texture is pegged, the texture will have
-	// the end exposed to air held constant at the
-	// top or bottom of the texture (stairs or pulled
-	// down things) and will move with a height change
-	// of one of the neighbor sectors.
-	// Unpegged textures allways have the first row of
-	// the texture at the top pixel of the line for both
-	// top and bottom textures (use next to windows).
+// If a texture is pegged, the texture will have
+// the end exposed to air held constant at the
+// top or bottom of the texture (stairs or pulled
+// down things) and will move with a height change
+// of one of the neighbor sectors.
+// Unpegged textures allways have the first row of
+// the texture at the top pixel of the line for both
+// top and bottom textures (use next to windows).
 
-	// upper texture unpegged
-	ML_DONTPEGTOP    = 1<<3,
+// upper texture unpegged
+#define ML_DONTPEGTOP      1<<3
 
-	// lower texture unpegged
-	ML_DONTPEGBOTTOM = 1<<4,
+// lower texture unpegged
+#define ML_DONTPEGBOTTOM   1<<4
 
-	ML_SKEWTD        = 1<<5,
+#define ML_SKEWTD          1<<5
 
-	// Don't let Knuckles climb on this line
-	ML_NOCLIMB       = 1<<6,
+// Don't let Knuckles climb on this line
+#define ML_NOCLIMB         1<<6
 
-	ML_NOSKEW        = 1<<7,
-	ML_MIDPEG        = 1<<8,
-	ML_MIDSOLID      = 1<<9,
-	ML_WRAPMIDTEX    = 1<<10,
+#define ML_NOSKEW          1<<7
+#define ML_MIDPEG          1<<8
+#define ML_MIDSOLID        1<<9
+#define ML_WRAPMIDTEX      1<<10
 
-	ML_NETONLY       = 1<<11, // Apply effect only in netgames
-	ML_NONET         = 1<<12, // Apply effect only in single player games
-	ML_EFFECT6       = 1<<13,
+#define ML_NETONLY         1<<11 // Apply effect only in netgames
+#define ML_NONET           1<<12 // Apply effect only in single player games
+#define ML_EFFECT6         1<<13
 
-	// Bounce off walls!
-	ML_BOUNCY        = 1<<14,
+// Bounce off walls!
+#define ML_BOUNCY          1<<14
 
-	ML_TFERLINE      = 1<<15,
+#define ML_TFERLINE        1<<15
 
-	ML_CLIPMIDTEX    = 1<<16
-};
+#define ML_CLIPMIDTEX      1<<16
 
 // Sector definition, from editing.
 typedef struct
