@@ -2383,8 +2383,11 @@ static void *W_GetPatchPwad(UINT16 wad, UINT16 lump, INT32 tag)
 #endif
 		}
 
-		dest = Patch_CreateFromDoomPatch(ptr);
+		dest = Patch_CreateFromDoomPatch(ptr, len);
 		Z_Free(ptr);
+
+		if (dest == NULL)
+			return NULL;
 
 		Z_ChangeTag(dest, tag);
 		Z_SetUser(dest, &lumpcache[lump]);
@@ -2403,7 +2406,7 @@ void *W_CachePatchNumPwad(UINT16 wad, UINT16 lump, INT32 tag)
 	patch_t *patch = W_GetPatchPwad(wad, lump, tag);
 
 #ifdef HWRENDER
-	if (rendermode == render_opengl)
+	if (patch != NULL && rendermode == render_opengl)
 		Patch_CreateGL(patch);
 #endif
 

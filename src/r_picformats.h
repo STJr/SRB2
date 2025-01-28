@@ -62,8 +62,8 @@ void *Picture_Convert(
 	pictureflags_t flags);
 
 void *Picture_PatchConvert(
-	pictureformat_t informat, void *picture, pictureformat_t outformat,
-	size_t *outsize,
+	pictureformat_t informat, size_t insize, void *picture,
+	pictureformat_t outformat, size_t *outsize,
 	INT32 inwidth, INT32 inheight, INT32 inleftoffset, INT32 intopoffset,
 	pictureflags_t flags);
 void *Picture_FlatConvert(
