@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2014-2016 by John "JTE" Muniz.
-// Copyright (C) 2014-2024 by Sonic Team Junior.
+// Copyright (C) 2014-2025 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -368,7 +368,10 @@ static int lib_numSkinsSprites(lua_State *L)
 static int lib_getSkinSpriteCompat(lua_State *L)
 {
 	spritedef_t *sksprites = *(spritedef_t **)luaL_checkudata(L, 1, META_SKINSPRITESCOMPAT);
-	playersprite_t i = luaL_checkinteger(L, 2);
+	INT32 i = luaL_checkinteger(L, 2) & (SPR2F_MASK | SPR2F_SUPER);
+
+	if (i & SPR2F_SUPER)
+		i = (i & ~SPR2F_SUPER) + NUMPLAYERSPRITES;
 
 	if (i < 0 || i >= NUMPLAYERSPRITES*2)
 		return luaL_error(L, "skin sprites index %d out of range (0 - %d)", i, (NUMPLAYERSPRITES*2)-1);
