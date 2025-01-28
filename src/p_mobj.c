@@ -323,8 +323,10 @@ static boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 		mobj->state = st;
 		mobj->tics = st->tics;
 
-		// Adjust the player's animation speed to match their velocity.
-		if (player->panim == PA_EDGE && (player->charflags & SF_FASTEDGE))
+		// Adjust the player's animation speed
+		if (mobj->state-states == S_PLAY_WAIT && (player->charflags & SF_FASTWAIT))
+			mobj->tics = 5;
+		else if (player->panim == PA_EDGE && (player->charflags & SF_FASTEDGE))
 			mobj->tics = 2;
 		else if (!(disableSpeedAdjust || player->charflags & SF_NOSPEEDADJUST))
 		{
@@ -7307,7 +7309,7 @@ static void P_RosySceneryThink(mobj_t *mobj)
 		player = &players[i];
 	}
 
-	if (stat == S_ROSY_JUMP || stat == S_ROSY_PAIN)
+	if (stat == S_ROSY_JUMP || stat == S_ROSY_FALL || stat == S_ROSY_PAIN)
 	{
 		if (P_IsObjectOnGround(mobj))
 		{
@@ -7318,16 +7320,16 @@ static void P_RosySceneryThink(mobj_t *mobj)
 				stat = S_ROSY_WALK;
 			P_SetMobjState(mobj, stat);
 		}
-		else if (P_MobjFlip(mobj)*mobj->momz < 0)
-			mobj->frame = mobj->state->frame + mobj->state->var1;
+		else if (P_MobjFlip(mobj)*mobj->momz < 0 && stat == S_ROSY_JUMP)
+			P_SetMobjState(mobj, S_ROSY_FALL);
 	}
 
 	if (!player)
 	{
-		if ((stat < S_ROSY_IDLE1 || stat > S_ROSY_IDLE4) && stat != S_ROSY_JUMP)
+		if (stat != S_ROSY_IDLE && stat != S_ROSY_JUMP && stat != S_ROSY_FALL)
 		{
 			mobj->momx = mobj->momy = 0;
-			P_SetMobjState(mobj, S_ROSY_IDLE1);
+			P_SetMobjState(mobj, S_ROSY_IDLE);
 		}
 	}
 	else
@@ -7341,13 +7343,11 @@ static void P_RosySceneryThink(mobj_t *mobj)
 
 		switch (stat)
 		{
-		case S_ROSY_IDLE1:
-		case S_ROSY_IDLE2:
-		case S_ROSY_IDLE3:
-		case S_ROSY_IDLE4:
+		case S_ROSY_IDLE:
 			dojump = true;
 			break;
 		case S_ROSY_JUMP:
+		case S_ROSY_FALL:
 		case S_ROSY_PAIN:
 			// handled above
 			break;
@@ -7373,8 +7373,7 @@ static void P_RosySceneryThink(mobj_t *mobj)
 				max = pdist;
 				if ((--mobj->extravalue1) <= 0)
 				{
-					if (++mobj->frame > mobj->state->frame + mobj->state->var1)
-						mobj->frame = mobj->state->frame;
+					P_SetMobjState(mobj, S_ROSY_WALK);
 					if (mom > 12*mobj->scale)
 						mobj->extravalue1 = 2;
 					else if (mom > 6*mobj->scale)
@@ -10609,6 +10608,19 @@ static fixed_t P_DefaultMobjShadowScale (mobj_t *thing)
 	}
 }
 
+static INT32 P_SetupNPC(mobj_t *mobj, const char *name)
+{
+	INT32 skinnum = R_SkinAvailable(name);
+
+	if (skinnum != -1)
+	{
+		mobj->skin = skins[skinnum];
+		mobj->color = skins[skinnum]->prefcolor;
+	}
+
+	return skinnum;
+}
+
 //
 // P_SpawnMobj
 //
@@ -10962,17 +10974,14 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type, ...)
 				nummaprings++;
 			break;
 		case MT_METALSONIC_RACE:
-			mobj->skin = skins[5];
-			/* FALLTHRU */
 		case MT_METALSONIC_BATTLE:
-			mobj->color = skins[5]->prefcolor;
-			sc = 5;
+			sc = P_SetupNPC(mobj, "metalsonic");
 			break;
 		case MT_FANG:
-			sc = 4;
+			sc = P_SetupNPC(mobj, "fang");
 			break;
 		case MT_ROSY:
-			sc = 3;
+			sc = P_SetupNPC(mobj, "amy");
 			break;
 		case MT_CORK:
 			mobj->flags2 |= MF2_SUPERFIRE;
@@ -11271,15 +11280,6 @@ void P_RemoveMobj(mobj_t *mobj)
 	// Invalidate mobj_t data to cause crashes if accessed!
 	memset((UINT8 *)mobj + sizeof(thinker_t), 0xff, sizeof(mobj_t) - sizeof(thinker_t));
 #endif
-}
-
-// This does not need to be added to Lua.
-// To test it in Lua, check mobj.valid
-boolean P_MobjWasRemoved(mobj_t *mobj)
-{
-	if (mobj && mobj->thinker.function.acp1 == (actionf_p1)P_MobjThinker)
-		return false;
-	return true;
 }
 
 void P_RemovePrecipMobj(precipmobj_t *mobj)

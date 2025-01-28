@@ -100,7 +100,7 @@ demoghost *ghosts = NULL;
 // DEMO RECORDING
 //
 
-#define DEMOVERSION 0x0012
+#define DEMOVERSION 0x0011
 #define DEMOHEADER  "\xF0" "SRB2Replay" "\x0F"
 
 #define DF_GHOST        0x01 // This demo contains ghost data too!
@@ -185,11 +185,7 @@ void G_ReadDemoTiccmd(ticcmd_t *cmd, INT32 playernum)
 	if (ziptic & ZT_ANGLE)
 		oldcmd.angleturn = READINT16(demo_p);
 	if (ziptic & ZT_BUTTONS)
-	{
 		oldcmd.buttons = (oldcmd.buttons & (BT_CAMLEFT|BT_CAMRIGHT)) | (READUINT16(demo_p) & ~(BT_CAMLEFT|BT_CAMRIGHT));
-		if (demoversion < 0x0012 && oldcmd.buttons & BT_SPIN)
-			oldcmd.buttons |= BT_SHIELD; // Copy BT_SPIN to BT_SHIELD for pre-Shield-button demos
-	}
 	if (ziptic & ZT_AIMING)
 		oldcmd.aiming = READINT16(demo_p);
 	if (ziptic & ZT_LATENCY)
