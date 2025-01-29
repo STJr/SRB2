@@ -56,7 +56,8 @@ enum
 };
 
 // Minimum length of a valid Doom patch
-#define PATCH_MIN_SIZE 13
+// This is the size of a 1x1 patch.
+#define PATCH_MIN_SIZE ((sizeof(INT16) * 4) + (sizeof(INT32)) + 1)
 
 // Minimum size of a PNG file.
 // See: https://web.archive.org/web/20230524232139/http://garethrees.org/2007/11/14/pngcrush/

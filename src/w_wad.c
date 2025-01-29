@@ -1700,7 +1700,7 @@ lumpnum_t W_GetNumForLongName(const char *name)
 // in its entirety.
 static boolean W_IsProbablyValidPatch(UINT16 wadnum, UINT16 lumpnum)
 {
-	UINT8 header[sizeof(INT16) * 4];
+	UINT8 header[PATCH_MIN_SIZE];
 
 	I_StaticAssert(sizeof(header) >= PNG_HEADER_SIZE);
 
@@ -1708,7 +1708,7 @@ static boolean W_IsProbablyValidPatch(UINT16 wadnum, UINT16 lumpnum)
 	size_t lumplen = W_LumpLengthPwad(wadnum, lumpnum);
 
 	// Cannot be a valid Doom patch
-	if (lumplen < PATCH_MIN_SIZE)
+	if (lumplen < sizeof(header))
 		return false;
 
 	// Check if it's probably a valid PNG
@@ -1726,11 +1726,14 @@ static boolean W_IsProbablyValidPatch(UINT16 wadnum, UINT16 lumpnum)
 		// Otherwise, we read it as a patch
 	}
 
-	// Read the first 8 bytes
+	// Read the first 12 bytes, plus one
 	W_ReadLumpHeaderPwad(wadnum, lumpnum, header, sizeof(header), 0);
 
-	INT16 width = ((UINT16 *)header)[0];
-	INT16 height = ((UINT16 *)header)[1];
+	softwarepatch_t patch;
+	memcpy(&patch, header, sizeof(header));
+
+	INT16 width = SHORT(patch.width);
+	INT16 height = SHORT(patch.height);
 
 	// Lump size makes no sense given the width
 	if (!VALID_PATCH_LUMP_SIZE(lumplen, width))
@@ -1739,7 +1742,15 @@ static boolean W_IsProbablyValidPatch(UINT16 wadnum, UINT16 lumpnum)
 	// Check the dimensions.
 	if (width > 0 && height > 0 && width <= MAX_PATCH_DIMENSIONS && height <= MAX_PATCH_DIMENSIONS)
 	{
-		// Dimensions seem to make sense. Patch might be valid
+		// Dimensions seem to make sense... But check at least the first column.
+		UINT32 ofs = LONG(patch.columnofs[0]);
+
+		// Need one byte for an empty column (but there's patches that don't know that!)
+		if (ofs < ((sizeof(INT16) * 4) + (width * sizeof(INT32))) || ofs >= (UINT32)lumplen)
+		{
+			return false;
+		}
+
 		return true;
 	}
 
