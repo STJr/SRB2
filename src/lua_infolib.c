@@ -238,8 +238,35 @@ static int lib_spr2namelen(lua_State *L)
 
 struct PivotFrame {
 	spriteinfo_t *sprinfo;
-	UINT8 frame;
+	UINT16 frame;
 };
+
+static UINT16 GetSpriteInfoFrame(lua_State *L, int idx)
+{
+	if (lua_type(L, idx) == LUA_TSTRING)
+	{
+		const char *field = luaL_checkstring(L, idx);
+
+		if (fastcmp("default", field))
+		{
+			return SPRINFO_DEFAULT_FRAME;
+		}
+		else
+		{
+			UINT8 frame = R_Char2Frame(field[0]);
+			if (frame == 255)
+				return luaL_error(L, "invalid frame %s", field);
+			return (UINT16)frame;
+		}
+	}
+	else
+	{
+		int frameID = luaL_checknumber(L, idx);
+		if (frameID < 0 || frameID >= MAXFRAMENUM)
+			return luaL_error(L, "frame %d out of range (0 - %d)", frameID, MAXFRAMENUM - 1);
+		return (UINT16)frameID;
+	}
+}
 
 // spriteinfo[]
 static int lib_getSpriteInfo(lua_State *L)
@@ -339,21 +366,15 @@ static int PopPivotTable(spriteinfo_t *info, lua_State *L, int stk)
 	while (lua_next(L, stk))
 	{
 		int idx = 0;
-		const char *framestr = NULL;
 		switch (lua_type(L, stk+1))
 		{
 			case LUA_TSTRING:
-				framestr = lua_tostring(L, stk+1);
-				idx = R_Char2Frame(framestr[0]);
-				break;
 			case LUA_TNUMBER:
-				idx = lua_tonumber(L, stk+1);
+				idx = GetSpriteInfoFrame(L, stk+1);
 				break;
 			default:
 				TYPEERROR("pivot frame", LUA_TNUMBER, lua_type(L, stk+1));
 		}
-		if ((idx < 0) || (idx >= MAXFRAMENUM))
-			return luaL_error(L, "pivot frame %d out of range (0 - %d)", idx, MAXFRAMENUM - 1);
 		// the values in pivot[] are also tables
 		if (PopPivotSubTable(info, L, stk+2, idx))
 			set_bit_array(info->available, idx);
@@ -496,12 +517,7 @@ static int pivotlist_get(lua_State *L)
 {
 	struct PivotFrame *container;
 	spriteinfo_t *sprinfo = *((spriteinfo_t **)luaL_checkudata(L, 1, META_PIVOTLIST));
-	const char *field = luaL_checkstring(L, 2);
-	UINT8 frame;
-
-	frame = R_Char2Frame(field[0]);
-	if (frame == 255)
-		luaL_error(L, "invalid frame %s", field);
+	UINT16 frame = GetSpriteInfoFrame(L, 2);
 
 	// bypass LUA_PushUserdata
 	container = lua_newuserdata(L, sizeof *container);
@@ -517,8 +533,7 @@ static int pivotlist_get(lua_State *L)
 static int pivotlist_set(lua_State *L)
 {
 	spriteinfo_t *sprinfo = *((spriteinfo_t **)luaL_checkudata(L, 1, META_PIVOTLIST));
-	const char *field = luaL_checkstring(L, 2);
-	UINT8 frame;
+	UINT16 frame;
 	int okcool = 0;
 
 	if (!lua_lumploading)
@@ -528,9 +543,7 @@ static int pivotlist_set(lua_State *L)
 	if (hook_cmd_running)
 		return luaL_error(L, "Do not alter spriteframepivot_t in CMD building code!");
 
-	frame = R_Char2Frame(field[0]);
-	if (frame == 255)
-		luaL_error(L, "invalid frame %s", field);
+	frame = GetSpriteInfoFrame(L, 2);
 
 	// pivot[] is a table
 	if (lua_istable(L, 3))
