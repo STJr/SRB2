@@ -1551,11 +1551,39 @@ static void copy_to_skin (struct ParseSpriteInfoState *parser, INT32 skinnum)
 	}
 }
 
+struct ParsedSpriteInfoFrame {
+	INT32 pivotX;
+	INT32 pivotY;
+};
+
+static boolean define_spriteinfo_frame(struct ParsedSpriteInfoFrame *frame, spriteinfo_t *dest, UINT16 index)
+{
+	boolean defined = false;
+
+	if (frame->pivotX != INT32_MAX)
+	{
+		dest->pivot[index].x = frame->pivotX;
+		defined = true;
+	}
+	if (frame->pivotY != INT32_MAX)
+	{
+		dest->pivot[index].y = frame->pivotY;
+		defined = true;
+	}
+
+	return defined;
+}
+
 static void R_ParseSpriteInfoFrame(struct ParseSpriteInfoState *parser, boolean all)
 {
 	char *sprinfoToken;
-	size_t sprinfoTokenLength;
 	UINT16 frameID = 0;
+	UINT16 frameEndID = UINT16_MAX;
+
+	struct ParsedSpriteInfoFrame frame = {
+		.pivotX = INT32_MAX,
+		.pivotY = INT32_MAX
+	};
 
 	if (all)
 	{
@@ -1564,18 +1592,65 @@ static void R_ParseSpriteInfoFrame(struct ParseSpriteInfoState *parser, boolean 
 	else
 	{
 		// Sprite identifier
+		char *frameToken = NULL;
+		char *startRange = NULL;
+		char *endRange = NULL;
 		sprinfoToken = M_GetToken(NULL);
 		if (sprinfoToken == NULL)
 		{
 			I_Error("Error parsing SPRTINFO lump: Unexpected end of file where sprite frame should be");
 		}
-		sprinfoTokenLength = strlen(sprinfoToken);
-		if (sprinfoTokenLength != 1)
+
+		// Parse range
+		frameToken = Z_StrDup(sprinfoToken);
+		startRange = frameToken;
+		endRange = strstr(frameToken, "..");
+		if (endRange != NULL)
 		{
-			I_Error("Error parsing SPRTINFO lump: Invalid frame \"%s\"",sprinfoToken);
+			*endRange = '\0';
+			endRange += 2;
+			if (strstr(endRange, "."))
+				I_Error("Error parsing SPRTINFO lump: Invalid range \"%s\"",sprinfoToken);
 		}
 
-		frameID = R_Char2Frame(sprinfoToken[0]);
+		int parseStartFrameID = -1;
+		if (!M_StringToNumber(startRange, &parseStartFrameID))
+		{
+			if (strlen(startRange) != 1)
+				I_Error("Error parsing SPRTINFO lump: Invalid frame \"%s\"",startRange);
+			parseStartFrameID = R_Char2Frame(startRange[0]);
+			if (parseStartFrameID == 255)
+				I_Error("Error parsing SPRTINFO lump: Invalid frame \"%s\"",startRange);
+		}
+		if (parseStartFrameID < 0 || parseStartFrameID >= MAXFRAMENUM)
+			I_Error("Error parsing SPRTINFO lump: Invalid frame \"%s\"",startRange);
+		frameID = (UINT16)parseStartFrameID;
+
+		// Parse range ID
+		if (endRange != NULL)
+		{
+			int parseEndFrameID = -1;
+			if (!M_StringToNumber(endRange, &parseEndFrameID))
+			{
+				if (strlen(endRange) != 1)
+					I_Error("Error parsing SPRTINFO lump: Invalid frame \"%s\"",endRange);
+				parseEndFrameID = R_Char2Frame(endRange[0]);
+				if (parseEndFrameID == 255)
+					I_Error("Error parsing SPRTINFO lump: Invalid frame \"%s\"",endRange);
+			}
+			if (parseEndFrameID < 0 || parseEndFrameID >= MAXFRAMENUM)
+				I_Error("Error parsing SPRTINFO lump: Invalid frame \"%s\"",endRange);
+			frameEndID = (UINT16)parseEndFrameID;
+		}
+
+		Z_Free(frameToken);
+
+		// Validate the range
+		if (frameEndID != UINT16_MAX && frameID >= frameEndID)
+		{
+			I_Error("Error parsing SPRTINFO lump: Invalid range \"%s\"",sprinfoToken);
+		}
+
 		Z_Free(sprinfoToken);
 	}
 
@@ -1599,13 +1674,13 @@ static void R_ParseSpriteInfoFrame(struct ParseSpriteInfoState *parser, boolean 
 				{
 					Z_Free(sprinfoToken);
 					sprinfoToken = M_GetToken(NULL);
-					parser->info->pivot[frameID].x = atoi(sprinfoToken);
+					frame.pivotX = atoi(sprinfoToken);
 				}
 				else if (stricmp(sprinfoToken, "YPIVOT")==0)
 				{
 					Z_Free(sprinfoToken);
 					sprinfoToken = M_GetToken(NULL);
-					parser->info->pivot[frameID].y = atoi(sprinfoToken);
+					frame.pivotY = atoi(sprinfoToken);
 				}
 				else if (stricmp(sprinfoToken, "ROTAXIS")==0)
 				{
@@ -1624,7 +1699,24 @@ static void R_ParseSpriteInfoFrame(struct ParseSpriteInfoState *parser, boolean 
 		Z_Free(sprinfoToken);
 	}
 
-	set_bit_array(parser->info->available, frameID);
+	// Apply to the specified range of frames
+	if (frameEndID != UINT16_MAX)
+	{
+		for (UINT16 frameIter = frameID; frameIter <= frameEndID; frameIter++)
+		{
+			if (define_spriteinfo_frame(&frame, parser->info, frameIter))
+			{
+				set_bit_array(parser->info->available, frameIter);
+			}
+		}
+	}
+	else
+	{
+		if (define_spriteinfo_frame(&frame, parser->info, frameID))
+		{
+			set_bit_array(parser->info->available, frameID);
+		}
+	}
 
 	if (parser->spr2)
 	{

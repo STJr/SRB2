@@ -268,7 +268,7 @@ static int lib_getSpriteInfo(lua_State *L)
 #define FIELDERROR(f, e) luaL_error(L, "bad value for " LUA_QL(f) " in table passed to spriteinfo[] (%s)", e);
 #define TYPEERROR(f, t1, t2) FIELDERROR(f, va("%s expected, got %s", lua_typename(L, t1), lua_typename(L, t2)))
 
-static int PopPivotSubTable(spriteframepivot_t *pivot, lua_State *L, int stk, int idx)
+static int PopPivotSubTable(spriteinfo_t *info, lua_State *L, int stk, int idx)
 {
 	int okcool = 0;
 	switch (lua_type(L, stk))
@@ -306,9 +306,9 @@ static int PopPivotSubTable(spriteframepivot_t *pivot, lua_State *L, int stk, in
 				}
 				// Set it
 				if (ikey == 1 || (key && fastcmp(key, "x")))
-					pivot[idx].x = (INT32)value;
+					info->pivot[idx].x = (INT32)value;
 				else if (ikey == 2 || (key && fastcmp(key, "y")))
-					pivot[idx].y = (INT32)value;
+					info->pivot[idx].y = (INT32)value;
 				// TODO: 2.3: Delete
 				else if (ikey == 3 || (key && fastcmp(key, "rotaxis")))
 					LUA_UsageWarning(L, "\"rotaxis\" is deprecated and will be removed.")
@@ -355,7 +355,7 @@ static int PopPivotTable(spriteinfo_t *info, lua_State *L, int stk)
 		if ((idx < 0) || (idx >= MAXFRAMENUM))
 			return luaL_error(L, "pivot frame %d out of range (0 - %d)", idx, MAXFRAMENUM - 1);
 		// the values in pivot[] are also tables
-		if (PopPivotSubTable(info->pivot, L, stk+2, idx))
+		if (PopPivotSubTable(info, L, stk+2, idx))
 			set_bit_array(info->available, idx);
 		lua_pop(L, 1);
 	}
@@ -534,12 +534,14 @@ static int pivotlist_set(lua_State *L)
 
 	// pivot[] is a table
 	if (lua_istable(L, 3))
-		okcool = PopPivotSubTable(sprinfo->pivot, L, 3, frame);
+		okcool = PopPivotSubTable(sprinfo, L, 3, frame);
 	// pivot[] is userdata
 	else if (lua_isuserdata(L, 3))
 	{
 		struct PivotFrame *container = luaL_checkudata(L, 3, META_FRAMEPIVOT);
-		memcpy(&sprinfo->pivot[frame], &container->sprinfo->pivot[container->frame], sizeof(spriteframepivot_t));
+		memcpy(&sprinfo->pivot[frame],
+			&container->sprinfo->pivot[container->frame],
+			sizeof(spriteframepivot_t));
 		okcool = 1;
 	}
 
