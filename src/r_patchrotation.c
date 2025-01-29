@@ -101,6 +101,11 @@ patch_t *Patch_GetRotatedSprite(
 			xpivot = sprinfo->pivot[frame].x;
 			ypivot = sprinfo->pivot[frame].y;
 		}
+		else if (R_IsSpriteInfoAvailable(sprinfo, SPRINFO_DEFAULT_FRAME))
+		{
+			xpivot = sprinfo->pivot[SPRINFO_DEFAULT_FRAME].x;
+			ypivot = sprinfo->pivot[SPRINFO_DEFAULT_FRAME].y;
+		}
 		else
 		{
 			xpivot = patch->leftoffset;

@@ -98,10 +98,12 @@ typedef struct
 	INT32 x, y;
 } spriteframepivot_t;
 
+#define SPRINFO_DEFAULT_FRAME (MAXFRAMENUM)
+
 typedef struct
 {
-	UINT8 available[BIT_ARRAY_SIZE(MAXFRAMENUM)];
-	spriteframepivot_t pivot[MAXFRAMENUM];
+	UINT8 available[BIT_ARRAY_SIZE(MAXFRAMENUM + 1)]; // 1 extra for default_frame
+	spriteframepivot_t pivot[MAXFRAMENUM + 1];
 } spriteinfo_t;
 
 // PNG support
@@ -126,6 +128,6 @@ extern spriteinfo_t spriteinfo[NUMSPRITES];
 void R_LoadSpriteInfoLumps(UINT16 wadnum, UINT16 numlumps);
 void R_ParseSPRTINFOLump(UINT16 wadNum, UINT16 lumpNum);
 
-boolean R_IsSpriteInfoAvailable(spriteinfo_t *info, UINT8 frame);
+boolean R_IsSpriteInfoAvailable(spriteinfo_t *info, UINT16 frame);
 
 #endif // __R_PICFORMATS__
