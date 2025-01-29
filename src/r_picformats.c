@@ -1597,6 +1597,8 @@ static void R_ParseSpriteInfoFrame(struct ParseSpriteInfoState *parser)
 		Z_Free(sprinfoToken);
 	}
 
+	set_bit_array(parser->info->available, frameID);
+
 	if (parser->spr2)
 	{
 		INT32 i;
@@ -1672,7 +1674,6 @@ static void R_ParseSpriteInfo(boolean spr2)
 
 	// allocate a spriteinfo
 	parser.info = Z_Calloc(sizeof(spriteinfo_t), PU_STATIC, NULL);
-	parser.info->available = true;
 
 	// Left Curly Brace
 	sprinfoToken = M_GetToken(NULL);
@@ -1787,4 +1788,9 @@ void R_LoadSpriteInfoLumps(UINT16 wadnum, UINT16 numlumps)
 		if (!memcmp(name, "SPRTINFO", 8) || !memcmp(name, "SPR_", 4))
 			R_ParseSPRTINFOLump(wadnum, i);
 	}
+}
+
+boolean R_IsSpriteInfoAvailable(spriteinfo_t *info, UINT8 frame)
+{
+	return info && in_bit_array(info->available, frame);
 }

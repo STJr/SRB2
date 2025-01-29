@@ -96,7 +96,7 @@ patch_t *Patch_GetRotatedSprite(
 
 		patch = W_CachePatchNum(lump, PU_SPRITE);
 
-		if (sprinfo->available)
+		if (R_IsSpriteInfoAvailable(sprinfo, frame))
 		{
 			xpivot = sprinfo->pivot[frame].x;
 			ypivot = sprinfo->pivot[frame].y;

@@ -955,7 +955,6 @@ void readspriteinfo(MYFILE *f, INT32 num, boolean sprite2)
 
 	// allocate a spriteinfo
 	spriteinfo_t *info = Z_Calloc(sizeof(spriteinfo_t), PU_STATIC, NULL);
-	info->available = true;
 
 	do
 	{
@@ -1074,6 +1073,7 @@ void readspriteinfo(MYFILE *f, INT32 num, boolean sprite2)
 
 				// read sprite frame and store it in the spriteinfo_t struct
 				readspriteframe(f, info, frame);
+				set_bit_array(info->available, frame);
 				if (sprite2)
 				{
 					INT32 i;
