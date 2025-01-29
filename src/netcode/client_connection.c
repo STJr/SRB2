@@ -51,11 +51,6 @@ static boolean IsDownloadingFile(void)
 	return false;
 }
 
-static boolean IsRequestedFile(fileneeded_t *file)
-{
-	return file->status == FS_REQUESTED || file->status == FS_DOWNLOADING || file->justdownloaded;
-}
-
 static void DrawConnectionStatusBox(void)
 {
 	M_DrawTextBox(BASEVIDWIDTH/2-128-8, BASEVIDHEIGHT-16-8, 32, 1);
@@ -93,19 +88,9 @@ static void DrawFileProgress(fileneeded_t *file, int y)
 
 static void DrawOverallProgress(int y)
 {
-	UINT32 totalsize = 0;
-	INT32 downloadedfiles = 0;
-	INT32 totalfiles = 0;
-	for (int i = 0; i < fileneedednum; i++) {
-		if (IsRequestedFile(&fileneeded[i])) {
-			totalsize += fileneeded[i].totalsize;
-			totalfiles++;
-		}
-
-		if (fileneeded[i].justdownloaded)
-			downloadedfiles++;
-	}
-
+	UINT32 totalsize = filedownload.totalsize;
+	INT32 downloadedfiles = filedownload.completednum;
+	INT32 totalfiles = filedownload.remaining + filedownload.completednum;
 	INT32 downloaded = filedownload.completedsize;
 	if (fileneeded[filedownload.current].currentsize != fileneeded[filedownload.current].totalsize)
 		downloaded = filedownload.completedsize + fileneeded[filedownload.current].currentsize;
@@ -125,7 +110,6 @@ static void DrawOverallProgress(int y)
 		progress_str = va(" %.2fKiB/%.2fKiB", (double)downloaded / 1024, (double)totalsize / 1024);
 
 	V_DrawString(BASEVIDWIDTH/2-128, y, V_20TRANS|V_ALLOWLOWERCASE, progress_str);
-
 	V_DrawRightAlignedString(BASEVIDWIDTH/2+128, y, V_20TRANS|V_ALLOWLOWERCASE, va("%2u/%2u Files ", downloadedfiles+1, totalfiles));
 }
 
@@ -704,6 +688,7 @@ static void ShowDownloadConsentMessage(void)
 		if (IsFileDownloadable(&fileneeded[i]))
 			totalsize += fileneeded[i].totalsize;
 	}
+	filedownload.totalsize = totalsize;
 
 	const char *downloadsize = GetPrintableFileSize(totalsize);
 
