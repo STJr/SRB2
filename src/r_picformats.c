@@ -811,13 +811,19 @@ boolean Picture_IsFlatFormat(pictureformat_t format)
   */
 boolean Picture_CheckIfDoomPatch(softwarepatch_t *patch, size_t size)
 {
-	// Minimum length of a valid Doom patch
-	if (size < 13)
+	// Does not meet minimum size requirements
+	if (size < PATCH_MIN_SIZE)
 		return false;
 
 	INT16 width = SHORT(patch->width);
 	INT16 height = SHORT(patch->height);
-	if (width <= 0 || height <= 0)
+
+	// Quickly check for the dimensions first.
+	if (width <= 0 || height <= 0 || width > MAX_PATCH_DIMENSIONS || height > MAX_PATCH_DIMENSIONS)
+		return false;
+
+	// Lump size makes no sense given the width
+	if (!VALID_PATCH_LUMP_SIZE(size, width))
 		return false;
 
 	// The dimensions seem like they might be valid for a patch, so
@@ -829,7 +835,7 @@ boolean Picture_CheckIfDoomPatch(softwarepatch_t *patch, size_t size)
 		UINT32 ofs = LONG(patch->columnofs[x]);
 
 		// Need one byte for an empty column (but there's patches that don't know that!)
-		if (ofs < (UINT32)width * 4 + 8 || ofs >= (UINT32)size)
+		if (ofs < ((sizeof(INT16) * 4) + (width * sizeof(INT32))) || ofs >= (UINT32)size)
 		{
 			return false;
 		}
@@ -897,8 +903,9 @@ void *Picture_TextureToFlat(size_t texnum)
   */
 boolean Picture_IsLumpPNG(const UINT8 *d, size_t s)
 {
-	if (s < 67) // https://web.archive.org/web/20230524232139/http://garethrees.org/2007/11/14/pngcrush/
+	if (s < PNG_MIN_SIZE)
 		return false;
+
 	// Check for PNG file signature using memcmp
 	// As it may be faster on CPUs with slow unaligned memory access
 	// Ref: http://www.libpng.org/pub/png/spec/1.2/PNG-Rationale.html#R.PNG-file-signature

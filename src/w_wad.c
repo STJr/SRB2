@@ -1695,12 +1695,64 @@ lumpnum_t W_GetNumForLongName(const char *name)
 	return i;
 }
 
+// Checks if a given lump might be a valid patch.
+// This will need to read a bit of the file, but it attempts to not load it
+// in its entirety.
+static boolean W_IsProbablyValidPatch(UINT16 wadnum, UINT16 lumpnum)
+{
+	UINT8 header[sizeof(INT16) * 4];
+
+	I_StaticAssert(sizeof(header) >= PNG_HEADER_SIZE);
+
+	// Check the file's size first
+	size_t lumplen = W_LumpLengthPwad(wadnum, lumpnum);
+
+	// Cannot be a valid Doom patch
+	if (lumplen < PATCH_MIN_SIZE)
+		return false;
+
+	// Check if it's probably a valid PNG
+	if (lumplen >= PNG_MIN_SIZE)
+	{
+		// Read the PNG's header
+		W_ReadLumpHeaderPwad(wadnum, lumpnum, header, PNG_HEADER_SIZE, 0);
+
+		if (Picture_IsLumpPNG(header, lumplen))
+		{
+			// Assume it is if the signature matches.
+			return true;
+		}
+
+		// Otherwise, we read it as a patch
+	}
+
+	// Read the first 8 bytes
+	W_ReadLumpHeaderPwad(wadnum, lumpnum, header, sizeof(header), 0);
+
+	INT16 width = ((UINT16 *)header)[0];
+	INT16 height = ((UINT16 *)header)[1];
+
+	// Lump size makes no sense given the width
+	if (!VALID_PATCH_LUMP_SIZE(lumplen, width))
+		return false;
+
+	// Check the dimensions.
+	if (width > 0 && height > 0 && width <= MAX_PATCH_DIMENSIONS && height <= MAX_PATCH_DIMENSIONS)
+	{
+		// Dimensions seem to make sense. Patch might be valid
+		return true;
+	}
+
+	// Not valid if this point was reached
+	return false;
+}
+
 //
 // Same as W_CheckNumForNamePwad, but handles namespaces.
 //
 static UINT16 W_CheckNumForPatchNamePwad(const char *name, UINT16 wad, boolean longname)
 {
-	UINT16 i, start = INT16_MAX, end = INT16_MAX;
+	UINT16 i;
 	static char uname[8 + 1] = { 0 };
 	UINT32 hash = 0;
 	lumpinfo_t *lump_p;
@@ -1715,51 +1767,15 @@ static UINT16 W_CheckNumForPatchNamePwad(const char *name, UINT16 wad, boolean l
 		hash = quickncasehash(uname, 8);
 	}
 
-	// SRB2 doesn't have a specific namespace for graphics, which means someone can do weird things
-	// like placing graphics inside a namespace it doesn't make sense for them to be in, like Sounds/ or SOC/
-	// So for now, this checks for lumps OUTSIDE of the flats namespace.
-	// When this situation changes, change the loops below to check for lumps INSIDE the namespaces to look in.
-	// TODO: cache namespace lump IDs
-	if (W_FileHasFolders(wadfiles[wad]))
-	{
-		start = W_CheckNumForFolderStartPK3("Flats/", wad, 0);
-		end = W_CheckNumForFolderEndPK3("Flats/", wad, start);
-
-		// if the start and end is the same, the folder is empty
-		if (end <= start)
-		{
-			start = INT16_MAX;
-			end = INT16_MAX;
-		}
-	}
-	else
-	{
-		start = W_CheckNumForMarkerStartPwad("F_START", wad, 0);
-		end = W_CheckNumForNamePwad("F_END", wad, start);
-		if (end != INT16_MAX)
-			end++;
-	}
-
 	lump_p = wadfiles[wad]->lumpinfo;
 
-	if (start == INT16_MAX)
-		start = wadfiles[wad]->numlumps;
-
-	for (i = 0; i < start; i++, lump_p++)
+	for (i = 0; i < wadfiles[wad]->numlumps; i++, lump_p++)
 	{
 		if ((!longname && lump_p->hash == hash && !strncmp(lump_p->name, uname, sizeof(uname) - 1))
 		|| (longname && stricmp(lump_p->longname, name) == 0))
-			return i;
-	}
-
-	if (end != INT16_MAX && start < end)
-	{
-		lump_p = wadfiles[wad]->lumpinfo + end;
-
-		for (i = end; i < wadfiles[wad]->numlumps; i++, lump_p++)
 		{
-			if ((!longname && lump_p->hash == hash && !strncmp(lump_p->name, uname, sizeof(uname) - 1))
-			|| (longname && stricmp(lump_p->longname, name) == 0))
+			// Found the patch by name, but needs to check if it is valid.
+			if (W_IsProbablyValidPatch(wad, i))
 				return i;
 		}
 	}

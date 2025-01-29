@@ -55,6 +55,16 @@ enum
 	PICDEPTH_32BPP = 32
 };
 
+// Minimum length of a valid Doom patch
+#define PATCH_MIN_SIZE 13
+
+// Minimum size of a PNG file.
+// See: https://web.archive.org/web/20230524232139/http://garethrees.org/2007/11/14/pngcrush/
+#define PNG_MIN_SIZE 67
+
+// Size of a PNG header
+#define PNG_HEADER_SIZE 8
+
 void *Picture_Convert(
 	pictureformat_t informat, void *picture, pictureformat_t outformat,
 	size_t insize, size_t *outsize,
@@ -103,9 +113,6 @@ typedef struct
 	spriteframepivot_t pivot[MAXFRAMENUM];
 	boolean available;
 } spriteinfo_t;
-
-// PNG support
-#define PNG_HEADER_SIZE 8
 
 boolean Picture_IsLumpPNG(const UINT8 *d, size_t s);
 
