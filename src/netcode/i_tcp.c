@@ -456,6 +456,8 @@ static boolean SOCK_cmpipv6(mysockaddr_t *a, mysockaddr_t *b, UINT8 mask)
 {
 	UINT8 bitmask;
 	I_Assert(mask <= 128);
+	if (mask == 0)
+		mask = 128;
 	if (memcmp(&a->ip6.sin6_addr.s6_addr, &b->ip6.sin6_addr.s6_addr, mask / 8) != 0)
 		return false;
 	if (mask % 8 == 0)
