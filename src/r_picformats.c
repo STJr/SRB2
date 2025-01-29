@@ -812,7 +812,7 @@ boolean Picture_IsFlatFormat(pictureformat_t format)
 boolean Picture_CheckIfDoomPatch(softwarepatch_t *patch, size_t size)
 {
 	// Does not meet minimum size requirements
-	if (size < PATCH_MIN_SIZE)
+	if (size < MIN_PATCH_LUMP_SIZE)
 		return false;
 
 	INT16 width = SHORT(patch->width);
@@ -835,7 +835,7 @@ boolean Picture_CheckIfDoomPatch(softwarepatch_t *patch, size_t size)
 		UINT32 ofs = LONG(patch->columnofs[x]);
 
 		// Need one byte for an empty column (but there's patches that don't know that!)
-		if (ofs < ((sizeof(INT16) * 4) + (width * sizeof(INT32))) || ofs >= (UINT32)size)
+		if (ofs < FIRST_PATCH_LUMP_COLUMN(width) || (size_t)ofs >= size)
 		{
 			return false;
 		}

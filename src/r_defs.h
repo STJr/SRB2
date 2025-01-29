@@ -910,10 +910,6 @@ typedef struct
 #pragma pack()
 #endif
 
-#define MAX_PATCH_DIMENSIONS 8192
-
-#define VALID_PATCH_LUMP_SIZE(lumplen, width) ((lumplen) >= (sizeof(INT16) * 4) + ((width) * sizeof(INT32)))
-
 // Possible alpha types for a patch.
 enum patchalphastyle {AST_COPY, AST_TRANSLUCENT, AST_ADD, AST_SUBTRACT, AST_REVERSESUBTRACT, AST_MODULATE, AST_OVERLAY, AST_FOG};
 

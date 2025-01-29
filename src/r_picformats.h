@@ -55,9 +55,21 @@ enum
 	PICDEPTH_32BPP = 32
 };
 
-// Minimum length of a valid Doom patch
+// Maximum allowed dimensions for a patch
+#define MAX_PATCH_DIMENSIONS 8192
+
+// Minimum amount of bytes required for a valid patch lump header
+#define MIN_PATCH_LUMP_HEADER_SIZE ((sizeof(INT16) * 4) + sizeof(INT32))
+
+// Minimum length of a valid Doom patch lump
 // This is the size of a 1x1 patch.
-#define PATCH_MIN_SIZE ((sizeof(INT16) * 4) + (sizeof(INT32)) + 1)
+#define MIN_PATCH_LUMP_SIZE (MIN_PATCH_LUMP_HEADER_SIZE + 1)
+
+// Gets the offset to the very first column in a patch lump
+#define FIRST_PATCH_LUMP_COLUMN(width) ((sizeof(INT16) * 4) + ((width) * sizeof(INT32)))
+
+// Checks if the size of a lump is valid for a patch, given a certain width
+#define VALID_PATCH_LUMP_SIZE(lumplen, width) ((lumplen) >= FIRST_PATCH_LUMP_COLUMN(width))
 
 // Minimum size of a PNG file.
 // See: https://web.archive.org/web/20230524232139/http://garethrees.org/2007/11/14/pngcrush/

@@ -1700,7 +1700,7 @@ lumpnum_t W_GetNumForLongName(const char *name)
 // in its entirety.
 static boolean W_IsProbablyValidPatch(UINT16 wadnum, UINT16 lumpnum)
 {
-	UINT8 header[PATCH_MIN_SIZE];
+	UINT8 header[MIN_PATCH_LUMP_HEADER_SIZE];
 
 	I_StaticAssert(sizeof(header) >= PNG_HEADER_SIZE);
 
@@ -1708,7 +1708,7 @@ static boolean W_IsProbablyValidPatch(UINT16 wadnum, UINT16 lumpnum)
 	size_t lumplen = W_LumpLengthPwad(wadnum, lumpnum);
 
 	// Cannot be a valid Doom patch
-	if (lumplen < sizeof(header))
+	if (lumplen < MIN_PATCH_LUMP_SIZE)
 		return false;
 
 	// Check if it's probably a valid PNG
@@ -1726,7 +1726,7 @@ static boolean W_IsProbablyValidPatch(UINT16 wadnum, UINT16 lumpnum)
 		// Otherwise, we read it as a patch
 	}
 
-	// Read the first 12 bytes, plus one
+	// Read the first 12 bytes
 	W_ReadLumpHeaderPwad(wadnum, lumpnum, header, sizeof(header), 0);
 
 	softwarepatch_t patch;
@@ -1746,7 +1746,7 @@ static boolean W_IsProbablyValidPatch(UINT16 wadnum, UINT16 lumpnum)
 		UINT32 ofs = LONG(patch.columnofs[0]);
 
 		// Need one byte for an empty column (but there's patches that don't know that!)
-		if (ofs < ((sizeof(INT16) * 4) + (width * sizeof(INT32))) || ofs >= (UINT32)lumplen)
+		if (ofs < FIRST_PATCH_LUMP_COLUMN(width) || (size_t)ofs >= lumplen)
 		{
 			return false;
 		}
