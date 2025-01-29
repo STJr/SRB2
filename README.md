@@ -5,9 +5,13 @@
 - renderhitbox in multiplayer
 - Minor net edits ("Archived a null value")
 - Hud interpolation from SRB2K Saturn (v.interpolate(bool/int) in lua)
--Joining netgame shows progress bar on "checking files"
-
-
+- Joining netgame shows progress bar on "checking files"
+- Adjustable gif size cap
+- Draw gif information to hud
+- Crosshairs can invert pixels behind, to improve their visibility (must add tinyfontfix locally to work)
+- Addfilelocal
+- Thin captions and thin FPS! (tinyfontfix.pk3 needed for captions)
+  
 # Sonic Robo Blast 2
 [![latest release](https://badgen.net/github/release/STJr/SRB2/stable)](https://github.com/STJr/SRB2/releases/latest)
 
