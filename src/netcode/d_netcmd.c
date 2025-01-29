@@ -124,6 +124,7 @@ static void Command_StopMovie_f(void);
 static void Command_Map_f(void);
 static void Command_ResetCamera_f(void);
 
+static void Command_Addfilelocal(void);
 static void Command_Addfile(void);
 static void Command_Addfolder(void);
 static void Command_ListWADS_f(void);
@@ -508,6 +509,7 @@ void D_RegisterServerCommands(void)
 
 	COM_AddCommand("addfolder", Command_Addfolder, COM_LUA);
 	COM_AddCommand("addfile", Command_Addfile, COM_LUA);
+	COM_AddCommand("addfilelocal", Command_Addfilelocal, COM_LUA);
 	COM_AddCommand("listwad", Command_ListWADS_f, COM_LUA);
 
 	COM_AddCommand("runsoc", Command_RunSOC, COM_LUA);
@@ -807,6 +809,8 @@ void D_RegisterClientCommands(void)
 	CV_RegisterVar(&cv_chatnotifications);
 	CV_RegisterVar(&cv_crosshair);
 	CV_RegisterVar(&cv_crosshair2);
+	CV_RegisterVar(&cv_crosshair_invert);
+	CV_RegisterVar(&cv_crosshair2_invert);
 	CV_RegisterVar(&cv_alwaysfreelook);
 	CV_RegisterVar(&cv_alwaysfreelook2);
 	CV_RegisterVar(&cv_chasefreelook);
@@ -3548,6 +3552,30 @@ static void Command_Addfile(void)
 	}
 
 	AddedFilesClearList(&addedfiles);
+}
+
+static void Command_Addfilelocal(void)
+{
+	const char *fn;
+	INT32 i;
+
+	if (COM_Argc() != 2)
+	{
+		CONS_Printf(M_GetText("addfilelocal <wadfile.wad>: load wad file\n"));
+		return;
+	}
+	else
+		fn = COM_Argv(1);
+
+	// Disallow non-printing characters and semicolons.
+	for (i = 0; fn[i] != '\0'; i++)
+		if (!isprint(fn[i]) || fn[i] == ';')
+			return;
+
+	// Add any wad file, ignoring checks for if it contains complex things like
+	// lua. Great for complex but client-side customizations, like different
+	// level cards or anything like that.
+	P_AddWadFileLocal(fn);
 }
 
 static void Command_Addfolder(void)

@@ -335,6 +335,8 @@ consvar_t cv_instantretry = CVAR_INIT ("instantretry", "No", CV_SAVE, CV_YesNo, 
 
 consvar_t cv_crosshair = CVAR_INIT ("crosshair", "Cross", CV_SAVE, crosshair_cons_t, NULL);
 consvar_t cv_crosshair2 = CVAR_INIT ("crosshair2", "Cross", CV_SAVE, crosshair_cons_t, NULL);
+consvar_t cv_crosshair_invert = CVAR_INIT ("crosshair_invert", "No", CV_SAVE, CV_YesNo, NULL);
+consvar_t cv_crosshair2_invert = CVAR_INIT ("crosshair2_invert", "No", CV_SAVE, CV_YesNo, NULL);
 consvar_t cv_invertmouse = CVAR_INIT ("invertmouse", "Off", CV_SAVE, CV_OnOff, NULL);
 consvar_t cv_alwaysfreelook = CVAR_INIT ("alwaysmlook", "On", CV_SAVE, CV_OnOff, NULL);
 consvar_t cv_invertmouse2 = CVAR_INIT ("invertmouse2", "Off", CV_SAVE, CV_OnOff, NULL);

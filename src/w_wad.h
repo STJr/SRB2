@@ -156,7 +156,7 @@ void W_Shutdown(void);
 // Opens a WAD file. Returns the FILE * handle for the file, or NULL if not found or could not be opened
 FILE *W_OpenWadFile(const char **filename, boolean useerrors);
 // Load and add a wadfile to the active wad files, returns numbers of lumps, INT16_MAX on error
-UINT16 W_InitFile(const char *filename, boolean mainfile, boolean startup);
+UINT16 W_InitFile(const char *filename, boolean mainfile, boolean startup, boolean local);
 // Adds a folder as a file
 UINT16 W_InitFolder(const char *path, boolean mainfile, boolean startup);
 

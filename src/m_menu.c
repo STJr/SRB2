@@ -1204,6 +1204,7 @@ static menuitem_t OP_CameraOptionsMenu[] =
 
 	{IT_HEADER,            NULL, "Display Options", NULL, 60},
 	{IT_STRING  | IT_CVAR, NULL, "Crosshair", &cv_crosshair, 66},
+	{IT_STRING  | IT_CVAR, NULL, "Inverted Crosshair", &cv_crosshair_invert, 66},
 };
 
 static menuitem_t OP_Camera2OptionsMenu[] =
