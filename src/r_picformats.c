@@ -1583,6 +1583,8 @@ static void R_ParseSpriteInfoFrame(struct ParseSpriteInfoState *parser, boolean 
 	UINT16 frameID = 0;
 	UINT16 frameEndID = UINT16_MAX;
 
+	boolean usingDeprecatedPivot = false;
+
 	struct ParsedSpriteInfoFrame frame = {
 		.pivotX = INT32_MAX,
 		.pivotY = INT32_MAX
@@ -1673,17 +1675,33 @@ static void R_ParseSpriteInfoFrame(struct ParseSpriteInfoState *parser, boolean 
 			}
 			while (strcmp(sprinfoToken,"}")!=0)
 			{
-				if (stricmp(sprinfoToken, "XPIVOT")==0)
+				if (stricmp(sprinfoToken, "ROTATIONXPIVOT")==0)
 				{
 					Z_Free(sprinfoToken);
 					sprinfoToken = M_GetToken(NULL);
 					frame.pivotX = atoi(sprinfoToken);
 				}
+				else if (stricmp(sprinfoToken, "ROTATIONYPIVOT")==0)
+				{
+					Z_Free(sprinfoToken);
+					sprinfoToken = M_GetToken(NULL);
+					frame.pivotY = atoi(sprinfoToken);
+				}
+				// TODO: 2.3: Delete
+				else if (stricmp(sprinfoToken, "XPIVOT")==0)
+				{
+					Z_Free(sprinfoToken);
+					sprinfoToken = M_GetToken(NULL);
+					frame.pivotX = atoi(sprinfoToken);
+					usingDeprecatedPivot = true;
+				}
+				// TODO: 2.3: Delete
 				else if (stricmp(sprinfoToken, "YPIVOT")==0)
 				{
 					Z_Free(sprinfoToken);
 					sprinfoToken = M_GetToken(NULL);
 					frame.pivotY = atoi(sprinfoToken);
+					usingDeprecatedPivot = true;
 				}
 				// TODO: 2.3: Delete
 				else if (stricmp(sprinfoToken, "ROTAXIS")==0)
@@ -1720,6 +1738,13 @@ static void R_ParseSpriteInfoFrame(struct ParseSpriteInfoState *parser, boolean 
 		{
 			set_bit_array(parser->info->available, frameID);
 		}
+	}
+
+	// TODO: 2.3: Delete
+	if (usingDeprecatedPivot)
+	{
+		parser->info->frames[SPRINFO_DEFAULT_FRAME].pivot.available = true;
+		set_bit_array(parser->info->available, SPRINFO_DEFAULT_FRAME);
 	}
 
 	if (parser->spr2)
