@@ -98,13 +98,13 @@ patch_t *Patch_GetRotatedSprite(
 
 		if (R_IsSpriteInfoAvailable(sprinfo, frame))
 		{
-			xpivot = sprinfo->pivot[frame].x;
-			ypivot = sprinfo->pivot[frame].y;
+			xpivot = sprinfo->frames[frame].pivot.x;
+			ypivot = sprinfo->frames[frame].pivot.y;
 		}
 		else if (R_IsSpriteInfoAvailable(sprinfo, SPRINFO_DEFAULT_FRAME))
 		{
-			xpivot = sprinfo->pivot[SPRINFO_DEFAULT_FRAME].x;
-			ypivot = sprinfo->pivot[SPRINFO_DEFAULT_FRAME].y;
+			xpivot = sprinfo->frames[SPRINFO_DEFAULT_FRAME].pivot.x;
+			ypivot = sprinfo->frames[SPRINFO_DEFAULT_FRAME].pivot.y;
 		}
 		else
 		{

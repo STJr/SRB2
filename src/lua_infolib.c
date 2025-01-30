@@ -333,9 +333,9 @@ static int PopPivotSubTable(spriteinfo_t *info, lua_State *L, int stk, int idx)
 				}
 				// Set it
 				if (ikey == 1 || (key && fastcmp(key, "x")))
-					info->pivot[idx].x = (INT32)value;
+					info->frames[idx].pivot.x = (INT32)value;
 				else if (ikey == 2 || (key && fastcmp(key, "y")))
-					info->pivot[idx].y = (INT32)value;
+					info->frames[idx].pivot.y = (INT32)value;
 				// TODO: 2.3: Delete
 				else if (ikey == 3 || (key && fastcmp(key, "rotaxis")))
 					LUA_UsageWarning(L, "\"rotaxis\" is deprecated and will be removed.")
@@ -552,8 +552,8 @@ static int pivotlist_set(lua_State *L)
 	else if (lua_isuserdata(L, 3))
 	{
 		struct PivotFrame *container = luaL_checkudata(L, 3, META_FRAMEPIVOT);
-		memcpy(&sprinfo->pivot[frame],
-			&container->sprinfo->pivot[container->frame],
+		memcpy(&sprinfo->frames[frame].pivot,
+			&container->sprinfo->frames[container->frame].pivot,
 			sizeof(spriteframepivot_t));
 		okcool = 1;
 	}
@@ -573,7 +573,7 @@ static int pivotlist_num(lua_State *L)
 static int framepivot_get(lua_State *L)
 {
 	struct PivotFrame *container = luaL_checkudata(L, 1, META_FRAMEPIVOT);
-	spriteframepivot_t *framepivot = &container->sprinfo->pivot[container->frame];
+	spriteframepivot_t *framepivot = &container->sprinfo->frames[container->frame].pivot;
 	const char *field = luaL_checkstring(L, 2);
 
 	I_Assert(framepivot != NULL);
@@ -597,7 +597,7 @@ static int framepivot_get(lua_State *L)
 static int framepivot_set(lua_State *L)
 {
 	struct PivotFrame *container = luaL_checkudata(L, 1, META_FRAMEPIVOT);
-	spriteframepivot_t *framepivot = &container->sprinfo->pivot[container->frame];
+	spriteframepivot_t *framepivot = &container->sprinfo->frames[container->frame].pivot;
 	UINT8 *available = container->sprinfo->available;
 	const char *field = luaL_checkstring(L, 2);
 

@@ -98,12 +98,17 @@ typedef struct
 	INT32 x, y;
 } spriteframepivot_t;
 
+typedef struct
+{
+	spriteframepivot_t pivot;
+} spriteinfoframe_t;
+
 #define SPRINFO_DEFAULT_FRAME (MAXFRAMENUM)
 
 typedef struct
 {
 	UINT8 available[BIT_ARRAY_SIZE(MAXFRAMENUM + 1)]; // 1 extra for default_frame
-	spriteframepivot_t pivot[MAXFRAMENUM + 1];
+	spriteinfoframe_t frames[MAXFRAMENUM + 1];
 } spriteinfo_t;
 
 // PNG support

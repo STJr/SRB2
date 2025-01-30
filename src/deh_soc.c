@@ -925,9 +925,9 @@ static void readspriteframe(MYFILE *f, spriteinfo_t *sprinfo, UINT8 frame)
 			value = atoi(word2); // used for numerical settings
 
 			if (fastcmp(word, "XPIVOT"))
-				sprinfo->pivot[frame].x = value;
+				sprinfo->frames[frame].pivot.x = value;
 			else if (fastcmp(word, "YPIVOT"))
-				sprinfo->pivot[frame].y = value;
+				sprinfo->frames[frame].pivot.y = value;
 			// TODO: 2.3: Delete
 			else if (fastcmp(word, "ROTAXIS"))
 				deh_warning("SpriteInfo: ROTAXIS is deprecated and will be removed.");

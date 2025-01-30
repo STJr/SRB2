@@ -1556,18 +1556,18 @@ struct ParsedSpriteInfoFrame {
 	INT32 pivotY;
 };
 
-static boolean define_spriteinfo_frame(struct ParsedSpriteInfoFrame *frame, spriteinfo_t *dest, UINT16 index)
+static boolean define_spriteinfo_frame(struct ParsedSpriteInfoFrame *frame, spriteinfoframe_t *dest)
 {
 	boolean defined = false;
 
 	if (frame->pivotX != INT32_MAX)
 	{
-		dest->pivot[index].x = frame->pivotX;
+		dest->pivot.x = frame->pivotX;
 		defined = true;
 	}
 	if (frame->pivotY != INT32_MAX)
 	{
-		dest->pivot[index].y = frame->pivotY;
+		dest->pivot.y = frame->pivotY;
 		defined = true;
 	}
 
@@ -1704,7 +1704,7 @@ static void R_ParseSpriteInfoFrame(struct ParseSpriteInfoState *parser, boolean 
 	{
 		for (UINT16 frameIter = frameID; frameIter <= frameEndID; frameIter++)
 		{
-			if (define_spriteinfo_frame(&frame, parser->info, frameIter))
+			if (define_spriteinfo_frame(&frame, &parser->info->frames[frameIter]))
 			{
 				set_bit_array(parser->info->available, frameIter);
 			}
@@ -1712,7 +1712,7 @@ static void R_ParseSpriteInfoFrame(struct ParseSpriteInfoState *parser, boolean 
 	}
 	else
 	{
-		if (define_spriteinfo_frame(&frame, parser->info, frameID))
+		if (define_spriteinfo_frame(&frame, &parser->info->frames[frameID]))
 		{
 			set_bit_array(parser->info->available, frameID);
 		}
