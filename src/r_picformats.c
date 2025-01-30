@@ -1563,11 +1563,13 @@ static boolean define_spriteinfo_frame(struct ParsedSpriteInfoFrame *frame, spri
 	if (frame->pivotX != INT32_MAX)
 	{
 		dest->pivot.x = frame->pivotX;
+		dest->pivot.available = true;
 		defined = true;
 	}
 	if (frame->pivotY != INT32_MAX)
 	{
 		dest->pivot.y = frame->pivotY;
+		dest->pivot.available = true;
 		defined = true;
 	}
 
@@ -1682,6 +1684,7 @@ static void R_ParseSpriteInfoFrame(struct ParseSpriteInfoState *parser, boolean 
 					sprinfoToken = M_GetToken(NULL);
 					frame.pivotY = atoi(sprinfoToken);
 				}
+				// TODO: 2.3: Delete
 				else if (stricmp(sprinfoToken, "ROTAXIS")==0)
 				{
 					Z_Free(sprinfoToken);

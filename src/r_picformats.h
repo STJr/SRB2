@@ -96,6 +96,7 @@ typedef enum
 typedef struct
 {
 	INT32 x, y;
+	boolean available;
 } spriteframepivot_t;
 
 typedef struct
