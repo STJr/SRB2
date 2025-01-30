@@ -682,10 +682,7 @@ static int framelist_num(lua_State *L)
 static int sprinfoframe_get(lua_State *L)
 {
 	struct SpriteInfoFrame *container = luaL_checkudata(L, 1, META_SPRITEINFOFRAME);
-	spriteinfoframe_t *frame = &container->sprinfo->frames[container->frame];
 	const char *field = luaL_checkstring(L, 2);
-
-	I_Assert(frame != NULL);
 
 	if (fastcmp("pivot", field))
 	{
