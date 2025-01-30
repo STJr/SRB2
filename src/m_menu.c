@@ -1204,7 +1204,7 @@ static menuitem_t OP_CameraOptionsMenu[] =
 
 	{IT_HEADER,            NULL, "Display Options", NULL, 60},
 	{IT_STRING  | IT_CVAR, NULL, "Crosshair", &cv_crosshair, 66},
-	{IT_STRING  | IT_CVAR, NULL, "Inverted Crosshair", &cv_crosshair_invert, 66},
+	{IT_STRING  | IT_CVAR, NULL, "Inverted Crosshair", &cv_crosshair_invert, 71},
 };
 
 static menuitem_t OP_Camera2OptionsMenu[] =
@@ -1223,6 +1223,7 @@ static menuitem_t OP_Camera2OptionsMenu[] =
 
 	{IT_HEADER,            NULL, "Display Options", NULL, 60},
 	{IT_STRING  | IT_CVAR, NULL, "Crosshair", &cv_crosshair2, 66},
+	{IT_STRING  | IT_CVAR, NULL, "Inverted Crosshair", &cv_crosshair2_invert, 71},
 };
 
 static menuitem_t OP_CameraExtendedOptionsMenu[] =
@@ -1341,16 +1342,17 @@ static menuitem_t OP_VideoOptionsMenu[] =
 	{IT_STRING | IT_CVAR, NULL, "Draw Distance",             &cv_drawdist,        166},
 	{IT_STRING | IT_CVAR, NULL, "Weather Draw Dist.",        &cv_drawdist_precip, 171},
 	{IT_STRING | IT_CVAR, NULL, "NiGHTS Hoop Draw Dist.",    &cv_drawdist_nights, 176},
+	{IT_STRING | IT_CVAR, NULL, "Pitch/Roll Rotation",    	 &cv_pitchroll_rotation, 181},
 
-	{IT_HEADER, NULL, "Diagnostic", NULL, 184},
-	{IT_STRING | IT_CVAR, NULL, "Show FPS",                  &cv_ticrate,         190},
-	{IT_STRING | IT_CVAR, NULL, "Clear Before Redraw",       &cv_homremoval,      195},
-	{IT_STRING | IT_CVAR, NULL, "Show \"FOCUS LOST\"",       &cv_showfocuslost,   200},
+	{IT_HEADER, NULL, "Diagnostic", NULL, 190},
+	{IT_STRING | IT_CVAR, NULL, "Show FPS",                  &cv_ticrate,         196},
+	{IT_STRING | IT_CVAR, NULL, "Clear Before Redraw",       &cv_homremoval,      201},
+	{IT_STRING | IT_CVAR, NULL, "Show \"FOCUS LOST\"",       &cv_showfocuslost,   206},
 
 #ifdef HWRENDER
-	{IT_HEADER, NULL, "Renderer", NULL, 208},
-	{IT_CALL | IT_STRING, NULL, "OpenGL Options...",         M_OpenGLOptionsMenu, 214},
-	{IT_STRING | IT_CVAR, NULL, "FPS Cap",                   &cv_fpscap,          219},
+	{IT_HEADER, NULL, "Renderer", NULL, 215},
+	{IT_CALL | IT_STRING, NULL, "OpenGL Options...",         M_OpenGLOptionsMenu, 221},
+	{IT_STRING | IT_CVAR, NULL, "FPS Cap",                   &cv_fpscap,          226},
 #endif
 };
 
