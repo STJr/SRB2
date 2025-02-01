@@ -39,11 +39,6 @@
 // Convenience macro to fix issue with collision along bottom/left edges of blockmap -Red
 #define BMBOUNDFIX(xl, xh, yl, yh) {if (xl > xh) xl = 0; if (yl > yh) yl = 0;}
 
-// MAXRADIUS is for precalculated sector block boxes
-// the spider demon is larger,
-// but we do not have any moving sectors nearby
-#define MAXRADIUS (32*FRACUNIT)
-
 // max Z move up or down without jumping
 // above this, a height difference is considered as a 'dropoff'
 #define MAXSTEPMOVE (24*FRACUNIT)
