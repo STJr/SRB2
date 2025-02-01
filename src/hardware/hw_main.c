@@ -881,6 +881,7 @@ static boolean HWR_BlendMidtextureSurface(FSurfaceInfo *pSurf)
 
 static void HWR_RenderMidtexture(INT32 gl_midtexture, float cliplow, float cliphigh, fixed_t worldtop, fixed_t worldbottom, fixed_t worldhigh, fixed_t worldlow, fixed_t worldtopslope, fixed_t worldbottomslope, fixed_t worldhighslope, fixed_t worldlowslope, UINT32 lightnum, FOutVector *inWallVerts)
 {
+	sector_t *front, *back;
 	FOutVector wallVerts[4];
 
 	FSurfaceInfo Surf;
@@ -889,6 +890,16 @@ static void HWR_RenderMidtexture(INT32 gl_midtexture, float cliplow, float cliph
 	// Determine if it's visible
 	if (!HWR_BlendMidtextureSurface(&Surf))
 		return;
+
+	if (gl_linedef->frontsector->heightsec != -1)
+		front = &sectors[gl_linedef->frontsector->heightsec];
+	else
+		front = gl_linedef->frontsector;
+
+	if (gl_linedef->backsector->heightsec != -1)
+		back = &sectors[gl_linedef->backsector->heightsec];
+	else
+		back = gl_linedef->backsector;
 
 	fixed_t texheight = FixedDiv(textureheight[gl_midtexture], abs(gl_sidedef->scaley_mid));
 	INT32 repeats;
@@ -899,15 +910,15 @@ static void HWR_RenderMidtexture(INT32 gl_midtexture, float cliplow, float cliph
 	{
 		fixed_t high, low;
 
-		if (gl_frontsector->ceilingheight > gl_backsector->ceilingheight)
-			high = gl_backsector->ceilingheight;
+		if (front->ceilingheight > back->ceilingheight)
+			high = back->ceilingheight;
 		else
-			high = gl_frontsector->ceilingheight;
+			high = front->ceilingheight;
 
-		if (gl_frontsector->floorheight > gl_backsector->floorheight)
-			low = gl_frontsector->floorheight;
+		if (front->floorheight > back->floorheight)
+			low = front->floorheight;
 		else
-			low = gl_backsector->floorheight;
+			low = back->floorheight;
 
 		repeats = (high - low) / texheight;
 		if ((high - low) % texheight)
@@ -934,8 +945,8 @@ static void HWR_RenderMidtexture(INT32 gl_midtexture, float cliplow, float cliph
 	if (gl_curline->polyseg)
 	{
 		// Change this when polyobjects support slopes
-		popentop = popentopslope = gl_curline->backsector->ceilingheight;
-		popenbottom = popenbottomslope = gl_curline->backsector->floorheight;
+		popentop = popentopslope = back->ceilingheight;
+		popenbottom = popenbottomslope = back->floorheight;
 	}
 	else
 	{
@@ -1608,7 +1619,7 @@ static void HWR_ProcessSeg(void)
 				{
 					blendmode = PF_Masked;
 
-					if ((rover->fofflags & FOF_TRANSLUCENT && !(rover->fofflags & FOF_SPLAT)) || rover->blend)
+					if ((rover->fofflags & FOF_TRANSLUCENT && !((rover->fofflags & FOF_SPLAT) && rover->alpha >= 255)) || rover->blend)
 					{
 						blendmode = rover->blend ? HWR_GetBlendModeFlag(rover->blend) : PF_Translucent;
 						Surf.PolyColor.s.alpha = max(0, min(rover->alpha, 255));
@@ -1765,7 +1776,7 @@ static void HWR_ProcessSeg(void)
 				{
 					blendmode = PF_Masked;
 
-					if ((rover->fofflags & FOF_TRANSLUCENT && !(rover->fofflags & FOF_SPLAT)) || rover->blend)
+					if ((rover->fofflags & FOF_TRANSLUCENT && !((rover->fofflags & FOF_SPLAT) && rover->alpha >= 255)) || rover->blend)
 					{
 						blendmode = rover->blend ? HWR_GetBlendModeFlag(rover->blend) : PF_Translucent;
 						Surf.PolyColor.s.alpha = max(0, min(rover->alpha, 255));
@@ -2419,7 +2430,7 @@ static void HWR_Subsector(size_t num)
 			
 			if (gl_frontsector->cullheight)
 			{
-				if (HWR_DoCulling(gl_frontsector->cullheight, viewsector->cullheight, gl_viewz, FIXED_TO_FLOAT(bottomCullHeight), FIXED_TO_FLOAT(topCullHeight)))
+				if (HWR_DoCulling(gl_frontsector->cullheight, viewsector->cullheight, gl_viewz, FIXED_TO_FLOAT(*rover->bottomheight), FIXED_TO_FLOAT(*rover->topheight)))
 					continue;
 			}
 
@@ -2446,7 +2457,7 @@ static void HWR_Subsector(size_t num)
 					                       alpha, rover->master->frontsector, PF_Fog|PF_NoTexture,
 										   true, false, rover->master->frontsector->extra_colormap);
 				}
-				else if ((rover->fofflags & FOF_TRANSLUCENT && !(rover->fofflags & FOF_SPLAT)) || rover->blend) // SoM: Flags are more efficient
+				else if ((rover->fofflags & FOF_TRANSLUCENT && !((rover->fofflags & FOF_SPLAT) && rover->alpha >= 255)) || rover->blend) // SoM: Flags are more efficient
 				{
 					light = R_GetPlaneLight(gl_frontsector, centerHeight, viewz < bottomCullHeight ? true : false);
 
@@ -2492,7 +2503,7 @@ static void HWR_Subsector(size_t num)
 					                       alpha, rover->master->frontsector, PF_Fog|PF_NoTexture,
 										   true, false, rover->master->frontsector->extra_colormap);
 				}
-				else if ((rover->fofflags & FOF_TRANSLUCENT && !(rover->fofflags & FOF_SPLAT)) || rover->blend)
+				else if ((rover->fofflags & FOF_TRANSLUCENT && !((rover->fofflags & FOF_SPLAT) && rover->alpha >= 255)) || rover->blend)
 				{
 					light = R_GetPlaneLight(gl_frontsector, centerHeight, viewz < topCullHeight ? true : false);
 

@@ -28,6 +28,12 @@ static inline int lib_freeslot(lua_State *L)
 	if (!lua_lumploading)
 		return luaL_error(L, "This function cannot be called from within a hook or coroutine!");
 
+	if (!deh_loaded)
+	{
+		initfreeslots();
+		deh_loaded = true;
+	}
+
 	while (n-- > 0)
 	{
 		s = Z_StrDup(luaL_checkstring(L,1));

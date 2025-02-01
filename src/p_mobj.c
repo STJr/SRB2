@@ -90,7 +90,7 @@ static void P_SetupStateAnimation(mobj_t *mobj, state_t *st)
 	if (mobj->sprite == SPR_PLAY && mobj->skin)
 	{
 		spritedef_t *spritedef = P_GetSkinSpritedef(mobj->skin, mobj->sprite2);
-		animlength = (INT32)(spritedef->numframes);
+		animlength = (INT32)(spritedef->numframes) - 1;
 	}
 	else
 		animlength = st->var1;

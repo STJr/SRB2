@@ -14395,7 +14395,7 @@ void A_LavafallLava(mobj_t *actor)
 	if (LUA_CallAction(A_LAVAFALLLAVA, actor))
 		return;
 
-	if ((40 - actor->fuse) % (2*(actor->scale >> FRACBITS)))
+	if ((40 - actor->fuse) % max(2*(actor->scale >> FRACBITS), 1)) // avoid crashes if actor->scale < FRACUNIT
 		return;
 
 	// Don't spawn lava unless a player is nearby.
