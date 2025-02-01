@@ -36,4 +36,3 @@ FetchContent_Declare(
 )
 
 FetchContent_MakeAvailable(SDL2_mixer_ext)
-

@@ -1573,4 +1573,3 @@ boolean I_GetTextInputMode(void)
 }
 
 #include "../sdl/dosstr.c"
-

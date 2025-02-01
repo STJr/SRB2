@@ -3255,6 +3255,7 @@ const char *const STATE_LIST[] = { // array length left dynamic for sanity testi
 	"S_MARIOBUSH2",
 	"S_TOAD",
 
+
 	// Nights-specific stuff
 	"S_NIGHTSDRONE_MAN1",
 	"S_NIGHTSDRONE_MAN2",
@@ -5606,8 +5607,7 @@ struct int_const_s const INT_CONST[] = {
 	{"ROTAXIS_Z",ROTAXIS_Z},
 
 	// Buttons (ticcmd_t)
-	{"BT_WEAPONMASK",BT_WEAPONMASK}, //our first three bits.
-	{"BT_SHIELD",BT_SHIELD},
+	{"BT_WEAPONMASK",BT_WEAPONMASK}, //our first four bits.
 	{"BT_WEAPONNEXT",BT_WEAPONNEXT},
 	{"BT_WEAPONPREV",BT_WEAPONPREV},
 	{"BT_ATTACK",BT_ATTACK}, // shoot rings
@@ -5766,7 +5766,6 @@ struct int_const_s const INT_CONST[] = {
 	{"JA_DIGITAL",JA_DIGITAL},
 	{"JA_JUMP",JA_JUMP},
 	{"JA_SPIN",JA_SPIN},
-	{"JA_SHIELD",JA_SHIELD},
 	{"JA_FIRE",JA_FIRE},
 	{"JA_FIRENORMAL",JA_FIRENORMAL},
 	{"JOYAXISRANGE",JOYAXISRANGE},
@@ -5788,7 +5787,9 @@ struct int_const_s const INT_CONST[] = {
 	{"GC_WEPSLOT5",GC_WEPSLOT5},
 	{"GC_WEPSLOT6",GC_WEPSLOT6},
 	{"GC_WEPSLOT7",GC_WEPSLOT7},
-	{"GC_SHIELD",GC_SHIELD},
+	{"GC_WEPSLOT8",GC_WEPSLOT8},
+	{"GC_WEPSLOT9",GC_WEPSLOT9},
+	{"GC_WEPSLOT10",GC_WEPSLOT10},
 	{"GC_FIRE",GC_FIRE},
 	{"GC_FIRENORMAL",GC_FIRENORMAL},
 	{"GC_TOSSFLAG",GC_TOSSFLAG},

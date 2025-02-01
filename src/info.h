@@ -4089,6 +4089,7 @@ typedef enum state
 	S_MARIOBUSH2,
 	S_TOAD,
 
+
 	// Nights-specific stuff
 	S_NIGHTSDRONE_MAN1,
 	S_NIGHTSDRONE_MAN2,
