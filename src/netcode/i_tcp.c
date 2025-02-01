@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2024 by Sonic Team Junior.
+// Copyright (C) 1999-2025 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -695,7 +695,7 @@ static void SOCK_Send(void)
 	{
 		int e = errno; // save error code so it can't be modified later
 		if (!ALLOWEDERROR(e))
-			I_Error("SOCK_Send, error sending to node %d (%s) #%u: %s", doomcom->remotenode,
+			I_Error("SOCK_Send, error sending to node %d (%s) #%u, %s", doomcom->remotenode,
 				SOCK_GetNodeAddress(doomcom->remotenode), e, strerror(e));
 	}
 }
@@ -726,6 +726,8 @@ static SOCKET_TYPE UDP_Bind(int family, struct sockaddr *addr, socklen_t addrlen
 {
 	SOCKET_TYPE s = socket(family, SOCK_DGRAM, IPPROTO_UDP);
 	int opt;
+	int rc;
+	int e = 0; // save error code so it can't be modified later code
 	socklen_t opts;
 #ifdef FIONBIO
 	unsigned long trueval = true;
@@ -740,12 +742,17 @@ static SOCKET_TYPE UDP_Bind(int family, struct sockaddr *addr, socklen_t addrlen
 #ifdef USE_WINSOCK2
 		DWORD dwBytesReturned = 0;
 		BOOL bfalse = FALSE;
-		WSAIoctl(s, SIO_UDP_CONNRESET, &bfalse, sizeof(bfalse),
+		rc = WSAIoctl(s, SIO_UDP_CONNRESET, &bfalse, sizeof(bfalse),
 		         NULL, 0, &dwBytesReturned, NULL, NULL);
 #else
 		unsigned long falseval = false;
-		ioctl(s, SIO_UDP_CONNRESET, &falseval);
+		rc = ioctl(s, SIO_UDP_CONNRESET, &falseval);
 #endif
+		if (rc == -1)
+		{
+			e = errno;
+			I_OutputMsg("SIO_UDP_CONNRESET failed: #%u, %s\n", e, strerror(e));
+		}
 	}
 #endif
 
@@ -758,14 +765,22 @@ static SOCKET_TYPE UDP_Bind(int family, struct sockaddr *addr, socklen_t addrlen
 		{
 			opt = true;
 			opts = (socklen_t)sizeof(opt);
-			setsockopt(s, SOL_SOCKET, SO_REUSEADDR, (char *)&opt, opts);
+			rc = setsockopt(s, SOL_SOCKET, SO_REUSEADDR, (char *)&opt, opts);
+			if (rc <= -1)
+			{
+				e = errno;
+				I_OutputMsg("setting SO_REUSEADDR failed: #%u, %s\n", e, strerror(e));
+			}
 		}
 		// make it broadcastable
 		opt = true;
 		opts = (socklen_t)sizeof(opt);
-		if (setsockopt(s, SOL_SOCKET, SO_BROADCAST, (char *)&opt, opts))
+		rc = setsockopt(s, SOL_SOCKET, SO_BROADCAST, (char *)&opt, opts);
+		if (rc <= -1)
 		{
+			e = errno;
 			CONS_Alert(CONS_WARNING, M_GetText("Could not get broadcast rights\n")); // I do not care anymore
+			I_OutputMsg("setting SO_BROADCAST failed: #%u, %s\n", e, strerror(e));
 		}
 	}
 #ifdef HAVE_IPV6
@@ -775,24 +790,34 @@ static SOCKET_TYPE UDP_Bind(int family, struct sockaddr *addr, socklen_t addrlen
 		{
 			opt = true;
 			opts = (socklen_t)sizeof(opt);
-			setsockopt(s, SOL_SOCKET, SO_REUSEADDR, (char *)&opt, opts);
+			rc = setsockopt(s, SOL_SOCKET, SO_REUSEADDR, (char *)&opt, opts);
+			if (rc <= -1)
+			{
+				e = errno;
+				I_OutputMsg("setting SO_REUSEADDR failed: #%u, %s\n", e, strerror(e));
+			}
 		}
 #ifdef IPV6_V6ONLY
 		// make it IPv6 ony
 		opt = true;
 		opts = (socklen_t)sizeof(opt);
-		if (setsockopt(s, IPPROTO_IPV6, IPV6_V6ONLY, (char *)&opt, opts))
+		rc = setsockopt(s, IPPROTO_IPV6, IPV6_V6ONLY, (char *)&opt, opts);
+		if (rc <= -1)
 		{
+			e = errno;
 			CONS_Alert(CONS_WARNING, M_GetText("Could not limit IPv6 bind\n")); // I do not care anymore
+			I_OutputMsg("setting IPV6_V6ONLY failed: #%u, %s\n", e, strerror(e));
 		}
 #endif
 	}
 #endif
 
-	if (bind(s, addr, addrlen) == ERRSOCKET)
+	rc = bind(s, addr, addrlen);
+	if (rc == ERRSOCKET)
 	{
+		e = errno;
 		close(s);
-		I_OutputMsg("Binding failed\n");
+		I_OutputMsg("Binding failed: #%u, %s\n", e, strerror(e));
 		return (SOCKET_TYPE)ERRSOCKET;
 	}
 
@@ -806,9 +831,12 @@ static SOCKET_TYPE UDP_Bind(int family, struct sockaddr *addr, socklen_t addrlen
 
 			inet_pton(AF_INET6, IPV6_MULTICAST_ADDRESS, &maddr.ipv6mr_multiaddr);
 			maddr.ipv6mr_interface = 0;
-			if (setsockopt(s, IPPROTO_IPV6, IPV6_JOIN_GROUP, (const char *)&maddr, sizeof(maddr)) != 0)
+			rc = setsockopt(s, IPPROTO_IPV6, IPV6_JOIN_GROUP, (const char *)&maddr, sizeof(maddr));
+			if (rc <= -1)
 			{
+				e = errno;
 				CONS_Alert(CONS_WARNING, M_GetText("Could not register multicast address\n"));
+				I_OutputMsg("setting IPV6_JOIN_GROUP failed: #%u, %s \n", e, strerror(e));
 			}
 		}
 	}
@@ -816,33 +844,56 @@ static SOCKET_TYPE UDP_Bind(int family, struct sockaddr *addr, socklen_t addrlen
 
 #ifdef FIONBIO
 	// make it non blocking
-	opt = true;
-	if (ioctl(s, FIONBIO, &trueval) != 0)
+	rc = ioctl(s, FIONBIO, &trueval);
+	if (rc == -1)
 	{
+		e = errno;
 		close(s);
-		I_OutputMsg("Seting FIOBIO on failed\n");
+		I_OutputMsg("FIOBIO failed: #%u, %s\n", e, strerror(e));
 		return (SOCKET_TYPE)ERRSOCKET;
 	}
 #endif
 
+	opt = 0;
 	opts = (socklen_t)sizeof(opt);
-	getsockopt(s, SOL_SOCKET, SO_RCVBUF, (char *)&opt, &opts);
+	rc = getsockopt(s, SOL_SOCKET, SO_RCVBUF, (char *)&opt, &opts);
+	if (rc <= -1)
+	{
+		e = errno;
+		I_OutputMsg("getting SO_RCVBUF failed: #%u, %s\n", e, strerror(e));
+	}
 	CONS_Printf(M_GetText("Network system buffer: %dKb\n"), opt>>10);
 
 	if (opt < 64<<10) // 64k
 	{
 		opt = 64<<10;
 		opts = (socklen_t)sizeof(opt);
-		setsockopt(s, SOL_SOCKET, SO_RCVBUF, (char *)&opt, opts);
-		getsockopt(s, SOL_SOCKET, SO_RCVBUF, (char *)&opt, &opts);
-		if (opt < 64<<10)
+		rc = setsockopt(s, SOL_SOCKET, SO_RCVBUF, (char *)&opt, opts);
+		if (rc <= -1)
+		{
+			e = errno;
+			I_OutputMsg("setting SO_RCVBUF failed: #%u, %s\n", e, strerror(e));
+		}
+		opt = 0;
+		rc = getsockopt(s, SOL_SOCKET, SO_RCVBUF, (char *)&opt, &opts);
+		if (rc <= -1)
+		{
+			e = errno;
+			I_OutputMsg("getting SO_RCVBUF failed: #%u, %s\n", e, strerror(e));
+		}
+		if (opt <= 64<<10)
 			CONS_Alert(CONS_WARNING, M_GetText("Can't set buffer length to 64k, file transfer will be bad\n"));
 		else
 			CONS_Printf(M_GetText("Network system buffer set to: %dKb\n"), opt>>10);
 	}
 
-	if (getsockname(s, &straddr.any, &len) == -1)
+	rc = getsockname(s, &straddr.any, &len);
+	if (rc != 0)
+	{
+		e = errno;
 		CONS_Alert(CONS_WARNING, M_GetText("Failed to get port number\n"));
+		I_OutputMsg("getsockname failed: #%u, %s\n", e, strerror(e));
+	}
 	else
 	{
 		if (family == AF_INET)
