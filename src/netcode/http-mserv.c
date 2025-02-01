@@ -556,7 +556,6 @@ HMS_update (void)
 	char *title;
 
 	HMS_check_args_once();
-
 	title = curl_easy_escape(NULL, cv_servername.string, 0);
 
 	snprintf(post, sizeof post,
