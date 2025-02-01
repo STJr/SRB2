@@ -836,6 +836,12 @@ static SOCKET_TYPE UDP_Bind(int family, struct sockaddr *addr, socklen_t addrlen
 			{
 				e = errno;
 				CONS_Alert(CONS_WARNING, M_GetText("Could not register multicast address\n"));
+				if (e == ENODEV)
+				{
+					close(s);
+					I_OutputMsg("Binding failed: no IPv6 device\n");
+					return (SOCKET_TYPE)ERRSOCKET;
+				}
 				I_OutputMsg("setting IPV6_JOIN_GROUP failed: #%u, %s \n", e, strerror(e));
 			}
 		}
