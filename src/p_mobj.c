@@ -85,9 +85,15 @@ void P_AddCachedAction(mobj_t *mobj, INT32 statenum)
 //
 static void P_SetupStateAnimation(mobj_t *mobj, state_t *st)
 {
-	INT32 animlength = (mobj->sprite == SPR_PLAY && mobj->skin)
-		? (INT32)(((skin_t *)mobj->skin)->sprites[mobj->sprite2].numframes) - 1
-		: st->var1;
+	INT32 animlength;
+
+	if (mobj->sprite == SPR_PLAY && mobj->skin)
+	{
+		spritedef_t *spritedef = P_GetSkinSpritedef(mobj->skin, mobj->sprite2);
+		animlength = (INT32)(spritedef->numframes);
+	}
+	else
+		animlength = st->var1;
 
 	if (!(st->frame & FF_ANIMATE))
 		return;
@@ -138,8 +144,13 @@ FUNCINLINE static ATTRINLINE void P_CycleStateAnimation(mobj_t *mobj)
 	}
 
 	// sprite2 version of above
-	if (mobj->skin && (((++mobj->frame) & FF_FRAMEMASK) >= (UINT32)(((skin_t *)mobj->skin)->sprites[mobj->sprite2].numframes)))
-		mobj->frame &= ~FF_FRAMEMASK;
+	if (mobj->skin)
+	{
+		spritedef_t *spritedef = P_GetSkinSpritedef(mobj->skin, mobj->sprite2);
+		UINT32 anim_length = (UINT32)(spritedef->numframes);
+		if (((++mobj->frame) & FF_FRAMEMASK) >= anim_length)
+			mobj->frame &= ~FF_FRAMEMASK;
+	}
 }
 
 //
@@ -395,31 +406,23 @@ static boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 		{
 			skin_t *skin = ((skin_t *)mobj->skin);
 			UINT16 frame = (mobj->frame & FF_FRAMEMASK)+1;
-			UINT8 numframes, spr2;
+			UINT8 numframes;
+			UINT16 spr2;
 
 			if (skin)
 			{
-				UINT16 stateframe = st->frame;
+				spr2 = P_GetStateSprite2(st);
 
-				// Add/Remove FF_SPR2SUPER based on certain conditions
-				if (player->charflags & SF_NOSUPERSPRITES || (player->powers[pw_carry] == CR_NIGHTSMODE && (player->charflags & SF_NONIGHTSSUPER)))
-					stateframe = stateframe & ~FF_SPR2SUPER;
-				else if (player->powers[pw_super] || (player->powers[pw_carry] == CR_NIGHTSMODE && (player->charflags & SF_SUPER)))
-					stateframe = stateframe | FF_SPR2SUPER;
+				// Add or remove SPR2F_SUPER based on certain conditions
+				spr2 = P_ApplySuperFlagToSprite2(spr2, mobj);
 
-				if (stateframe & FF_SPR2SUPER)
-				{
-					if (mobj->eflags & MFE_FORCENOSUPER)
-						stateframe = stateframe & ~FF_SPR2SUPER;
-				}
-				else if (mobj->eflags & MFE_FORCESUPER)
-					stateframe = stateframe | FF_SPR2SUPER;
+				// Get the needed sprite2 and frame number
+				spr2 = P_GetSkinSprite2(skin, spr2, mobj->player);
 
-				// Get the sprite2 and frame number
-				spr2 = P_GetSkinSprite2(skin, (stateframe & FF_FRAMEMASK), mobj->player);
-				numframes = skin->sprites[spr2].numframes;
+				spritedef_t *sprdef = P_GetSkinSpritedef(skin, spr2);
+				numframes = sprdef->numframes;
 
-				if (state == S_PLAY_STND && (spr2 & FF_SPR2SUPER) && skin->sprites[SPR2_WAIT|FF_SPR2SUPER].numframes == 0)
+				if (state == S_PLAY_STND && (spr2 & SPR2F_SUPER) && sprdef[SPR2_WAIT].numframes == 0)
 					mobj->tics = -1;	// If no super wait, don't wait at all
 			}
 			else
@@ -432,12 +435,19 @@ static boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 			if (mobj->sprite != SPR_PLAY)
 			{
 				mobj->sprite = SPR_PLAY;
-				frame = 0;
+				frame = P_GetSprite2StateFrame(st);
 			}
 			else if (mobj->sprite2 != spr2)
 			{
-				if ((st->frame & FF_SPR2MIDSTART) && numframes && P_RandomChance(FRACUNIT/2))
-					frame = numframes/2;
+				if (st->frame & FF_SPR2MIDSTART)
+				{
+					if (numframes && P_RandomChance(FRACUNIT/2))
+						frame = numframes/2;
+					else
+						frame = 0;
+				}
+				else if (numframes)
+					frame = P_GetSprite2StateFrame(st) % numframes;
 				else
 					frame = 0;
 			}
@@ -452,6 +462,7 @@ static boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 					{
 						if (mobj->frame & FF_FRAMEMASK)
 							mobj->frame--;
+
 						return P_SetPlayerMobjState(mobj, st->var1);
 					}
 				}
@@ -539,26 +550,23 @@ boolean P_SetMobjState(mobj_t *mobj, statenum_t state)
 		{
 			skin_t *skin = ((skin_t *)mobj->skin);
 			UINT16 frame = (mobj->frame & FF_FRAMEMASK)+1;
-			UINT8 numframes, spr2;
+			UINT8 numframes;
+			UINT16 spr2;
 
 			if (skin)
 			{
-				UINT16 stateframe = st->frame;
+				spr2 = P_GetStateSprite2(st);
 
-				// Add/Remove FF_SPR2SUPER based on certain conditions
-				if (stateframe & FF_SPR2SUPER)
-				{
-					if (mobj->eflags & MFE_FORCENOSUPER)
-						stateframe = stateframe & ~FF_SPR2SUPER;
-				}
-				else if (mobj->eflags & MFE_FORCESUPER)
-					stateframe = stateframe | FF_SPR2SUPER;
+				// Add or remove SPR2F_SUPER based on certain conditions
+				spr2 = P_ApplySuperFlagToSprite2(spr2, mobj);
 
-				// Get the sprite2 and frame number
-				spr2 = P_GetSkinSprite2(skin, (stateframe & FF_FRAMEMASK), NULL);
-				numframes = skin->sprites[spr2].numframes;
+				// Get the needed sprite2 and frame number
+				spr2 = P_GetSkinSprite2(skin, spr2, NULL);
 
-				if (state == S_PLAY_STND && (spr2 & FF_SPR2SUPER) && skin->sprites[SPR2_WAIT|FF_SPR2SUPER].numframes == 0)
+				spritedef_t *sprdef = P_GetSkinSpritedef(skin, spr2);
+				numframes = sprdef->numframes;
+
+				if (state == S_PLAY_STND && (spr2 & SPR2F_SUPER) && sprdef[SPR2_WAIT].numframes == 0)
 					mobj->tics = -1;	// If no super wait, don't wait at all
 			}
 			else
@@ -571,12 +579,19 @@ boolean P_SetMobjState(mobj_t *mobj, statenum_t state)
 			if (mobj->sprite != SPR_PLAY)
 			{
 				mobj->sprite = SPR_PLAY;
-				frame = 0;
+				frame = P_GetSprite2StateFrame(st);
 			}
 			else if (mobj->sprite2 != spr2)
 			{
-				if ((st->frame & FF_SPR2MIDSTART) && numframes && P_RandomChance(FRACUNIT/2))
-					frame = numframes/2;
+				if (st->frame & FF_SPR2MIDSTART)
+				{
+					if (numframes && P_RandomChance(FRACUNIT/2))
+						frame = numframes/2;
+					else
+						frame = 0;
+				}
+				else if (numframes)
+					frame = P_GetSprite2StateFrame(st) % numframes;
 				else
 					frame = 0;
 			}
@@ -591,6 +606,7 @@ boolean P_SetMobjState(mobj_t *mobj, statenum_t state)
 					{
 						if (mobj->frame & FF_FRAMEMASK)
 							mobj->frame--;
+
 						return P_SetMobjState(mobj, st->var1);
 					}
 				}
@@ -1092,9 +1108,8 @@ static fixed_t HighestOnLine(fixed_t radius, fixed_t x, fixed_t y, line_t *line,
 		);
 }
 
-fixed_t P_MobjFloorZ(mobj_t *mobj, sector_t *sector, sector_t *boundsec, fixed_t x, fixed_t y, line_t *line, boolean lowest, boolean perfect)
+fixed_t P_MobjFloorZ(sector_t *sector, sector_t *boundsec, fixed_t x, fixed_t y, fixed_t radius, line_t *line, boolean lowest, boolean perfect)
 {
-	I_Assert(mobj != NULL);
 	I_Assert(sector != NULL);
 
 	if (sector->f_slope) {
@@ -1103,14 +1118,14 @@ fixed_t P_MobjFloorZ(mobj_t *mobj, sector_t *sector, sector_t *boundsec, fixed_t
 
 		// Get the corner of the object that should be the highest on the slope
 		if (slope->d.x < 0)
-			testx = mobj->radius;
+			testx = radius;
 		else
-			testx = -mobj->radius;
+			testx = -radius;
 
 		if (slope->d.y < 0)
-			testy = mobj->radius;
+			testy = radius;
 		else
-			testy = -mobj->radius;
+			testy = -radius;
 
 		if ((slope->zdelta > 0) ^ !!(lowest)) {
 			testx = -testx;
@@ -1125,7 +1140,7 @@ fixed_t P_MobjFloorZ(mobj_t *mobj, sector_t *sector, sector_t *boundsec, fixed_t
 			return P_GetSlopeZAt(slope, testx, testy);
 
 		// If boundsec is set, we're looking for specials. In that case, iterate over every line in this sector to find the TRUE highest/lowest point
-		if (perfect) {
+		if (perfect && boundsec) {
 			size_t i;
 			line_t *ld;
 			fixed_t bbox[4];
@@ -1136,10 +1151,10 @@ fixed_t P_MobjFloorZ(mobj_t *mobj, sector_t *sector, sector_t *boundsec, fixed_t
 			else
 				finalheight = INT32_MIN;
 
-			bbox[BOXLEFT] = x-mobj->radius;
-			bbox[BOXRIGHT] = x+mobj->radius;
-			bbox[BOXTOP] = y+mobj->radius;
-			bbox[BOXBOTTOM] = y-mobj->radius;
+			bbox[BOXLEFT] = x-radius;
+			bbox[BOXRIGHT] = x+radius;
+			bbox[BOXTOP] = y+radius;
+			bbox[BOXBOTTOM] = y-radius;
 			for (i = 0; i < boundsec->linecount; i++) {
 				ld = boundsec->lines[i];
 
@@ -1151,9 +1166,9 @@ fixed_t P_MobjFloorZ(mobj_t *mobj, sector_t *sector, sector_t *boundsec, fixed_t
 					continue;
 
 				if (lowest)
-					finalheight = min(finalheight, HighestOnLine(mobj->radius, x, y, ld, slope, true));
+					finalheight = min(finalheight, HighestOnLine(radius, x, y, ld, slope, true));
 				else
-					finalheight = max(finalheight, HighestOnLine(mobj->radius, x, y, ld, slope, false));
+					finalheight = max(finalheight, HighestOnLine(radius, x, y, ld, slope, false));
 			}
 
 			return finalheight;
@@ -1164,14 +1179,13 @@ fixed_t P_MobjFloorZ(mobj_t *mobj, sector_t *sector, sector_t *boundsec, fixed_t
 		if (line == NULL)
 			return P_GetSlopeZAt(slope, x, y);
 
-		return HighestOnLine(mobj->radius, x, y, line, slope, lowest);
+		return HighestOnLine(radius, x, y, line, slope, lowest);
 	} else // Well, that makes it easy. Just get the floor height
 		return sector->floorheight;
 }
 
-fixed_t P_MobjCeilingZ(mobj_t *mobj, sector_t *sector, sector_t *boundsec, fixed_t x, fixed_t y, line_t *line, boolean lowest, boolean perfect)
+fixed_t P_MobjCeilingZ(sector_t *sector, sector_t *boundsec, fixed_t x, fixed_t y, fixed_t radius, line_t *line, boolean lowest, boolean perfect)
 {
-	I_Assert(mobj != NULL);
 	I_Assert(sector != NULL);
 
 	if (sector->c_slope) {
@@ -1180,14 +1194,14 @@ fixed_t P_MobjCeilingZ(mobj_t *mobj, sector_t *sector, sector_t *boundsec, fixed
 
 		// Get the corner of the object that should be the highest on the slope
 		if (slope->d.x < 0)
-			testx = mobj->radius;
+			testx = radius;
 		else
-			testx = -mobj->radius;
+			testx = -radius;
 
 		if (slope->d.y < 0)
-			testy = mobj->radius;
+			testy = radius;
 		else
-			testy = -mobj->radius;
+			testy = -radius;
 
 		if ((slope->zdelta > 0) ^ !!(lowest)) {
 			testx = -testx;
@@ -1202,7 +1216,7 @@ fixed_t P_MobjCeilingZ(mobj_t *mobj, sector_t *sector, sector_t *boundsec, fixed
 			return P_GetSlopeZAt(slope, testx, testy);
 
 		// If boundsec is set, we're looking for specials. In that case, iterate over every line in this sector to find the TRUE highest/lowest point
-		if (perfect) {
+		if (perfect && boundsec) {
 			size_t i;
 			line_t *ld;
 			fixed_t bbox[4];
@@ -1213,10 +1227,10 @@ fixed_t P_MobjCeilingZ(mobj_t *mobj, sector_t *sector, sector_t *boundsec, fixed
 			else
 				finalheight = INT32_MIN;
 
-			bbox[BOXLEFT] = x-mobj->radius;
-			bbox[BOXRIGHT] = x+mobj->radius;
-			bbox[BOXTOP] = y+mobj->radius;
-			bbox[BOXBOTTOM] = y-mobj->radius;
+			bbox[BOXLEFT] = x-radius;
+			bbox[BOXRIGHT] = x+radius;
+			bbox[BOXTOP] = y+radius;
+			bbox[BOXBOTTOM] = y-radius;
 			for (i = 0; i < boundsec->linecount; i++) {
 				ld = boundsec->lines[i];
 
@@ -1228,9 +1242,9 @@ fixed_t P_MobjCeilingZ(mobj_t *mobj, sector_t *sector, sector_t *boundsec, fixed
 					continue;
 
 				if (lowest)
-					finalheight = min(finalheight, HighestOnLine(mobj->radius, x, y, ld, slope, true));
+					finalheight = min(finalheight, HighestOnLine(radius, x, y, ld, slope, true));
 				else
-					finalheight = max(finalheight, HighestOnLine(mobj->radius, x, y, ld, slope, false));
+					finalheight = max(finalheight, HighestOnLine(radius, x, y, ld, slope, false));
 			}
 
 			return finalheight;
@@ -1241,165 +1255,11 @@ fixed_t P_MobjCeilingZ(mobj_t *mobj, sector_t *sector, sector_t *boundsec, fixed
 		if (line == NULL)
 			return P_GetSlopeZAt(slope, x, y);
 
-		return HighestOnLine(mobj->radius, x, y, line, slope, lowest);
+		return HighestOnLine(radius, x, y, line, slope, lowest);
 	} else // Well, that makes it easy. Just get the ceiling height
 		return sector->ceilingheight;
 }
 
-// Now do the same as all above, but for cameras because apparently cameras are special?
-fixed_t P_CameraFloorZ(camera_t *mobj, sector_t *sector, sector_t *boundsec, fixed_t x, fixed_t y, line_t *line, boolean lowest, boolean perfect)
-{
-	I_Assert(mobj != NULL);
-	I_Assert(sector != NULL);
-
-	if (sector->f_slope) {
-		fixed_t testx, testy;
-		pslope_t *slope = sector->f_slope;
-
-		// Get the corner of the object that should be the highest on the slope
-		if (slope->d.x < 0)
-			testx = mobj->radius;
-		else
-			testx = -mobj->radius;
-
-		if (slope->d.y < 0)
-			testy = mobj->radius;
-		else
-			testy = -mobj->radius;
-
-		if ((slope->zdelta > 0) ^ !!(lowest)) {
-			testx = -testx;
-			testy = -testy;
-		}
-
-		testx += x;
-		testy += y;
-
-		// If the highest point is in the sector, then we have it easy! Just get the Z at that point
-		if (R_IsPointInSector(boundsec ? boundsec : sector, testx, testy))
-			return P_GetSlopeZAt(slope, testx, testy);
-
-		// If boundsec is set, we're looking for specials. In that case, iterate over every line in this sector to find the TRUE highest/lowest point
-		if (perfect) {
-			size_t i;
-			line_t *ld;
-			fixed_t bbox[4];
-			fixed_t finalheight;
-
-			if (lowest)
-				finalheight = INT32_MAX;
-			else
-				finalheight = INT32_MIN;
-
-			bbox[BOXLEFT] = x-mobj->radius;
-			bbox[BOXRIGHT] = x+mobj->radius;
-			bbox[BOXTOP] = y+mobj->radius;
-			bbox[BOXBOTTOM] = y-mobj->radius;
-			for (i = 0; i < boundsec->linecount; i++) {
-				ld = boundsec->lines[i];
-
-				if (bbox[BOXRIGHT] <= ld->bbox[BOXLEFT] || bbox[BOXLEFT] >= ld->bbox[BOXRIGHT]
-				|| bbox[BOXTOP] <= ld->bbox[BOXBOTTOM] || bbox[BOXBOTTOM] >= ld->bbox[BOXTOP])
-					continue;
-
-				if (P_BoxOnLineSide(bbox, ld) != -1)
-					continue;
-
-				if (lowest)
-					finalheight = min(finalheight, HighestOnLine(mobj->radius, x, y, ld, slope, true));
-				else
-					finalheight = max(finalheight, HighestOnLine(mobj->radius, x, y, ld, slope, false));
-			}
-
-			return finalheight;
-		}
-
-		// If we're just testing for base sector location (no collision line), just go for the center's spot...
-		// It'll get fixed when we test for collision anyway, and the final result can't be lower than this
-		if (line == NULL)
-			return P_GetSlopeZAt(slope, x, y);
-
-		return HighestOnLine(mobj->radius, x, y, line, slope, lowest);
-	} else // Well, that makes it easy. Just get the floor height
-		return sector->floorheight;
-}
-
-fixed_t P_CameraCeilingZ(camera_t *mobj, sector_t *sector, sector_t *boundsec, fixed_t x, fixed_t y, line_t *line, boolean lowest, boolean perfect)
-{
-	I_Assert(mobj != NULL);
-	I_Assert(sector != NULL);
-
-	if (sector->c_slope) {
-		fixed_t testx, testy;
-		pslope_t *slope = sector->c_slope;
-
-		// Get the corner of the object that should be the highest on the slope
-		if (slope->d.x < 0)
-			testx = mobj->radius;
-		else
-			testx = -mobj->radius;
-
-		if (slope->d.y < 0)
-			testy = mobj->radius;
-		else
-			testy = -mobj->radius;
-
-		if ((slope->zdelta > 0) ^ !!(lowest)) {
-			testx = -testx;
-			testy = -testy;
-		}
-
-		testx += x;
-		testy += y;
-
-		// If the highest point is in the sector, then we have it easy! Just get the Z at that point
-		if (R_IsPointInSector(boundsec ? boundsec : sector, testx, testy))
-			return P_GetSlopeZAt(slope, testx, testy);
-
-		// If boundsec is set, we're looking for specials. In that case, iterate over every line in this sector to find the TRUE highest/lowest point
-		if (perfect) {
-			size_t i;
-			line_t *ld;
-			fixed_t bbox[4];
-			fixed_t finalheight;
-
-			if (lowest)
-				finalheight = INT32_MAX;
-			else
-				finalheight = INT32_MIN;
-
-			bbox[BOXLEFT] = x-mobj->radius;
-			bbox[BOXRIGHT] = x+mobj->radius;
-			bbox[BOXTOP] = y+mobj->radius;
-			bbox[BOXBOTTOM] = y-mobj->radius;
-			for (i = 0; i < boundsec->linecount; i++) {
-				ld = boundsec->lines[i];
-
-				if (bbox[BOXRIGHT] <= ld->bbox[BOXLEFT] || bbox[BOXLEFT] >= ld->bbox[BOXRIGHT]
-				|| bbox[BOXTOP] <= ld->bbox[BOXBOTTOM] || bbox[BOXBOTTOM] >= ld->bbox[BOXTOP])
-					continue;
-
-				if (P_BoxOnLineSide(bbox, ld) != -1)
-					continue;
-
-				if (lowest)
-					finalheight = min(finalheight, HighestOnLine(mobj->radius, x, y, ld, slope, true));
-				else
-					finalheight = max(finalheight, HighestOnLine(mobj->radius, x, y, ld, slope, false));
-			}
-
-			return finalheight;
-		}
-
-		// If we're just testing for base sector location (no collision line), just go for the center's spot...
-		// It'll get fixed when we test for collision anyway, and the final result can't be lower than this
-		if (line == NULL)
-			return P_GetSlopeZAt(slope, x, y);
-
-		return HighestOnLine(mobj->radius, x, y, line, slope, lowest);
-	} else // Well, that makes it easy. Just get the ceiling height
-		return sector->ceilingheight;
-}
 static void P_PlayerFlip(mobj_t *mo)
 {
 	if (!mo->player)
@@ -1525,6 +1385,7 @@ fixed_t P_GetMobjGravity(mobj_t *mo)
 				case MT_WATERDROP:
 				case MT_CYBRAKDEMON:
 					gravityadd >>= 1;
+					break;
 				default:
 					break;
 			}
@@ -2331,8 +2192,8 @@ boolean P_CheckDeathPitCollide(mobj_t *mo)
 	if (mo->player && mo->player->pflags & PF_GODMODE)
 		return false;
 
-	fixed_t sectorFloor = P_GetSectorFloorZAt(mo->subsector->sector, mo->x, mo->y);
-	fixed_t sectorCeiling = P_GetSectorCeilingZAt(mo->subsector->sector, mo->x, mo->y);
+	fixed_t sectorFloor = P_GetSpecialBottomZ(mo, mo->subsector->sector, mo->subsector->sector);
+	fixed_t sectorCeiling = P_GetSpecialTopZ(mo, mo->subsector->sector, mo->subsector->sector);
 
 	if (((mo->z <= sectorFloor
 		&& ((mo->subsector->sector->flags & MSF_TRIGGERSPECIAL_HEADBUMP) || !(mo->eflags & MFE_VERTICALFLIP)) && (mo->subsector->sector->flags & MSF_FLIPSPECIAL_FLOOR))
@@ -11193,7 +11054,7 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type, ...)
 
 	if (mobj->skin) // correct inadequecies above.
 	{
-		mobj->sprite2 = P_GetSkinSprite2(mobj->skin, (mobj->frame & FF_FRAMEMASK), NULL);
+		mobj->sprite2 = P_GetSkinSprite2(mobj->skin, P_GetStateSprite2(mobj->state), NULL);
 		mobj->frame &= ~FF_FRAMEMASK;
 	}
 

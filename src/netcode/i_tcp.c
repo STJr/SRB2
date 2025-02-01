@@ -114,16 +114,10 @@ typedef union
 } mysockaddr_t;
 
 	#ifdef HAVE_MINIUPNPC
-	#ifdef MINIUPNP_STATICLIB
-		#include "miniwget.h"
-		#include "miniupnpc.h"
-		#include "upnpcommands.h"
-	#else
-		#include "miniupnpc/miniwget.h"
-		#include "miniupnpc/miniupnpc.h"
-		#include "miniupnpc/upnpcommands.h"
-	#endif
-		static boolean UPNP_support = true;
+	#include "miniupnpc/miniwget.h"
+	#include "miniupnpc/miniupnpc.h"
+	#include "miniupnpc/upnpcommands.h"
+	static boolean UPNP_support = true;
 	#endif // HAVE_MINIUPNC
 
 #define MAXBANS 100

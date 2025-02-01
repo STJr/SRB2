@@ -2256,9 +2256,9 @@ void S_ChangeMusicEx(const char *mmusic, UINT16 mflags, boolean looping, UINT32 
 		return;
 
 	strncpy(newmusic, mmusic, sizeof(newmusic)-1);
+	newmusic[6] = 0;
 	if (LUA_HookMusicChange(music_name, &hook_param))
 		return;
-	newmusic[6] = 0;
 
 	// No Music (empty string)
 	if (newmusic[0] == 0)
@@ -2494,11 +2494,11 @@ static void Command_Tunes_f(void)
 		track = (UINT16)atoi(COM_Argv(2))-1;
 
 	strncpy(mapmusname, tunearg, 7);
+	mapmusname[6] = 0;
 
 	if (argc > 4)
 		position = (UINT32)atoi(COM_Argv(4));
 
-	mapmusname[6] = 0;
 	mapmusflags = (track & MUSIC_TRACKMASK);
 	mapmusposition = position;
 

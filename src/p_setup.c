@@ -358,6 +358,8 @@ static void P_ClearSingleMapHeaderInfo(INT16 i)
 	mapheaderinfo[num]->marathonnext = 0;
 	mapheaderinfo[num]->startrings = 0;
 	mapheaderinfo[num]->sstimer = 90;
+	for (UINT8 n = 0; n < 8; n++)
+		mapheaderinfo[num]->nightstimer[n] = 0;
 	mapheaderinfo[num]->ssspheres = 1;
 	mapheaderinfo[num]->gravity = FRACUNIT/2;
 	mapheaderinfo[num]->keywords[0] = '\0';
@@ -523,6 +525,29 @@ UINT32 P_GetScoreForGradeOverall(INT16 map, UINT8 grade)
 	for (i = 0; i < mares; ++i)
 			score += P_GetScoreForGrade(map, i, grade);
 	return score;
+}
+
+void P_AddNiGHTSTimes(INT16 i, char *gtext)
+{
+	char *spos = gtext;
+	
+	for (UINT8 n = 0; n < 8; n++)
+	{
+		if (spos != NULL)
+		{
+			mapheaderinfo[i]->nightstimer[n] = atoi(spos);
+			CONS_Debug(DBG_SETUP, "%u ", atoi(spos));
+			// Grab next comma
+			spos = strchr(spos, ',');
+			if (spos)
+				++spos;
+		}
+		else
+		{
+			mapheaderinfo[i]->nightstimer[n] = 0;
+		}
+	}
+
 }
 
 //
@@ -806,13 +831,15 @@ void P_ScanThings(INT16 mapnum, INT16 wadnum, INT16 lumpnum)
 
 static void P_SpawnEmeraldHunt(void)
 {
-	INT32 emer[3], num[MAXHUNTEMERALDS], i, randomkey;
+	INT32 emer[3], num[MAXHUNTEMERALDS], i, amount, randomkey;
 	fixed_t x, y, z;
 
 	for (i = 0; i < numhuntemeralds; i++)
 		num[i] = i;
 
-	for (i = 0; i < 3; i++)
+	amount = min(numhuntemeralds, 3);
+
+	for (i = 0; i < amount; i++)
 	{
 		// generate random index, shuffle afterwards
 		randomkey = P_RandomKey(numhuntemeralds--);
@@ -1087,6 +1114,8 @@ static void P_InitializeLinedef(line_t *ld)
 
 	ld->callcount = 0;
 	ld->secportal = UINT32_MAX;
+
+	ld->midtexslope = NULL;
 
 	// cph 2006/09/30 - fix sidedef errors right away.
 	// cph 2002/07/20 - these errors are fatal if not fixed, so apply them
@@ -1834,6 +1863,10 @@ static void ParseTextmapSectorParameter(UINT32 i, const char *param, const char 
 		sectors[i].specialflags |= SSF_JUMPFLIP;
 	else if (fastcmp(param, "gravityoverride") && fastcmp("true", val))
 		sectors[i].specialflags |= SSF_GRAVITYOVERRIDE;
+	else if (fastcmp(param, "nophysics_floor") && fastcmp("true", val))
+		sectors[i].specialflags |= SSF_NOPHYSICSFLOOR;
+	else if (fastcmp(param, "nophysics_ceiling") && fastcmp("true", val))
+		sectors[i].specialflags |= SSF_NOPHYSICSCEILING;
 	else if (fastcmp(param, "friction"))
 		sectors[i].friction = FLOAT_TO_FIXED(atof(val));
 	else if (fastcmp(param, "gravity"))
@@ -2700,12 +2733,17 @@ static void P_WriteTextmap(void)
 			fprintf(f, "rotationfloor = %f;\n", FIXED_TO_FLOAT(AngleFixed(wsectors[i].floorangle)));
 		if (wsectors[i].ceilingangle != 0)
 			fprintf(f, "rotationceiling = %f;\n", FIXED_TO_FLOAT(AngleFixed(wsectors[i].ceilingangle)));
-        if (wsectors[i].extra_colormap)
+		if (wsectors[i].extra_colormap)
 		{
 			INT32 lightcolor = P_RGBAToColor(wsectors[i].extra_colormap->rgba);
 			UINT8 lightalpha = R_GetRgbaA(wsectors[i].extra_colormap->rgba);
 			INT32 fadecolor = P_RGBAToColor(wsectors[i].extra_colormap->fadergba);
 			UINT8 fadealpha = R_GetRgbaA(wsectors[i].extra_colormap->fadergba);
+
+			// For now, convert alpha from new (0-255) to old 'A-Z' (0-25) range
+			// TODO: remove this limitation in a backwards-compatible way (UDMF versioning?)
+			lightalpha /= 10;
+			fadealpha /= 10;
 
 			if (lightcolor != 0)
 				fprintf(f, "lightcolor = %d;\n", lightcolor);
@@ -2968,7 +3006,8 @@ static void P_LoadTextmap(void)
 		P_InitializeSector(sc);
 		if (textmap_colormap.used)
 		{
-			// Convert alpha values from old 0-25 (A-Z) range to 0-255 range
+			// Convert alpha values from old 'A-Z' (0-25) range to new UINT8 (0-255) range
+			// TODO: remove this limitation in a backwards-compatible way (UDMF versioning?)
 			UINT8 lightalpha = (textmap_colormap.lightalpha * 102) / 10;
 			UINT8 fadealpha = (textmap_colormap.fadealpha * 102) / 10;
 			
@@ -2981,13 +3020,17 @@ static void P_LoadTextmap(void)
 		{
 			sc->f_slope = P_MakeSlopeViaEquationConstants(textmap_planefloor.a, textmap_planefloor.b, textmap_planefloor.c, textmap_planefloor.d);
 			sc->hasslope = true;
+			if (sc->specialflags & SSF_NOPHYSICSFLOOR)
+				sc->f_slope->flags |= SL_NOPHYSICS;
 		}
 
 		if (textmap_planeceiling.defined == (PD_A|PD_B|PD_C|PD_D))
 		{
 			sc->c_slope = P_MakeSlopeViaEquationConstants(textmap_planeceiling.a, textmap_planeceiling.b, textmap_planeceiling.c, textmap_planeceiling.d);
 			sc->hasslope = true;
-		}
+			if (sc->specialflags & SSF_NOPHYSICSCEILING)
+				sc->c_slope->flags |= SL_NOPHYSICS;
+        }
 
 		TextmapFixFlatOffsets(sc);
 	}

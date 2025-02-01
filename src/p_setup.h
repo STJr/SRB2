@@ -87,5 +87,6 @@ UINT8 P_GetGrade(UINT32 pscore, INT16 map, UINT8 mare);
 UINT8 P_HasGrades(INT16 map, UINT8 mare);
 UINT32 P_GetScoreForGrade(INT16 map, UINT8 mare, UINT8 grade);
 UINT32 P_GetScoreForGradeOverall(INT16 map, UINT8 grade);
+void P_AddNiGHTSTimes(INT16 i, char *gtext);
 
 #endif

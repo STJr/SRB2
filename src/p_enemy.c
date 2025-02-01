@@ -4189,8 +4189,10 @@ static void P_DoBoss5Death(mobj_t *mo)
 			if (!P_MobjWasRemoved(pole))
 			{
 				P_SetScale(pole, 2*FRACUNIT, true);
+				pole->angle = mo->tracer->angle;
 				pole->momx = P_ReturnThrustX(pole, pole->angle, speed);
 				pole->momy = P_ReturnThrustY(pole, pole->angle, speed);
+				
 				P_SetTarget(&pole->tracer, P_SpawnMobj(
 					pole->x, pole->y,
 					pole->z - 256*FRACUNIT,
@@ -4199,7 +4201,7 @@ static void P_DoBoss5Death(mobj_t *mo)
 				{
 					pole->tracer->flags |= MF_NOCLIPTHING;
 					P_SetScale(pole->tracer, 2*FRACUNIT, true);
-					pole->angle = pole->tracer->angle = mo->tracer->angle;
+					pole->tracer->angle = mo->tracer->angle;
 					pole->tracer->momx = pole->momx;
 					pole->tracer->momy = pole->momy;
 
@@ -4863,7 +4865,7 @@ void A_AttractChase(mobj_t *actor)
 	else
 		actor->flags2 &= ~MF2_DONTDRAW;
 
-	// Turn flingrings back into regular rings if attracted.
+	// Turn rings into flingrings if shield is lost or out of range
 	if (actor->tracer && actor->tracer->player
 		&& !(actor->tracer->player->powers[pw_shield] & SH_PROTECTELECTRIC) && actor->info->reactiontime && actor->type != (mobjtype_t)actor->info->reactiontime)
 	{
@@ -4895,8 +4897,9 @@ void A_AttractChase(mobj_t *actor)
 	// If a FlingRing gets attracted by a shield, change it into a normal ring.
 	if (actor->type == (mobjtype_t)actor->info->reactiontime)
 	{
-		P_SpawnMobj(actor->x, actor->y, actor->z, actor->info->painchance);
-		P_RemoveMobj(actor);
+		actor->type = mobjinfo[actor->type].painchance; // Become the regular version of the fling object.
+		actor->flags = mobjinfo[actor->type].flags;		// Reset actor flags.
+		P_SetMobjState(actor, actor->info->spawnstate); // Go to regular object's spawn state.
 		return;
 	}
 
@@ -5192,7 +5195,7 @@ void A_SetSolidSteam(mobj_t *actor)
 		return;
 
 	actor->flags &= ~MF_NOCLIP;
-	actor->flags |= MF_SOLID;
+	actor->flags |= MF_SPECIAL;
 	if (!(actor->flags2 & MF2_AMBUSH))
 	{
 		if (P_RandomChance(FRACUNIT/8))
@@ -5222,7 +5225,7 @@ void A_UnsetSolidSteam(mobj_t *actor)
 	if (LUA_CallAction(A_UNSETSOLIDSTEAM, actor))
 		return;
 
-	actor->flags &= ~MF_SOLID;
+	actor->flags &= ~MF_SPECIAL;
 	actor->flags |= MF_NOCLIP;
 }
 
@@ -14855,11 +14858,17 @@ void A_RolloutRock(mobj_t *actor)
 
 	if (!actor->tracer || P_MobjWasRemoved(actor->tracer) || !actor->tracer->health)
 		actor->flags |= MF_PUSHABLE;
+	else if (actor->tracer->eflags & MFE_VERTICALFLIP)
+	{
+		actor->flags2 |= MF2_OBJECTFLIP;
+		actor->eflags |= MFE_VERTICALFLIP;
+	}
 	else
 	{
-		actor->flags2 = (actor->flags2 & ~MF2_OBJECTFLIP) | (actor->tracer->flags2 & MF2_OBJECTFLIP);
-		actor->eflags = (actor->eflags & ~MFE_VERTICALFLIP) | (actor->tracer->eflags & MFE_VERTICALFLIP);
+		actor->flags2 &= ~MF2_OBJECTFLIP;
+		actor->eflags &= ~MFE_VERTICALFLIP;
 	}
+
 
 	actor->friction = FRACUNIT; // turns out riding on solids sucks, so let's just make it easier on ourselves
 

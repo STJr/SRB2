@@ -392,17 +392,50 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 		}
 	}
 
-	player = toucher->player;
-	I_Assert(player != NULL); // Only players can touch stuff!
-
-	if (player->spectator)
-		return;
-
 	// Ignore multihits in "ouchie" mode
-	if (special->flags & (MF_ENEMY|MF_BOSS) && special->flags2 & MF2_FRET)
+	if (special->flags & (MF_ENEMY | MF_BOSS) && special->flags2 & MF2_FRET)
 		return;
 
-	if (LUA_HookTouchSpecial(special, toucher) || P_MobjWasRemoved(special))
+	player = toucher->player;
+
+	if (player)
+	{
+		if (player->spectator)
+			return;
+
+		// Some hooks may assume that the toucher is a player, so we keep it in here.
+		if (LUA_HookTouchSpecial(special, toucher) || P_MobjWasRemoved(special))
+			return;
+	}
+
+	if (player || (toucher->flags & MF_PUSHABLE)) // Special area for objects that are interactable by both player AND MF_PUSHABLE.
+	{
+		if (special->type == MT_STEAM)
+		{
+			if (player && player->mo->state == &states[player->mo->info->painstate]) // can't use gas jets when player is in pain!
+				return;
+
+			fixed_t speed = special->info->mass; // gas jets use this for the vertical thrust
+			SINT8 flipval = P_MobjFlip(special); // virtually everything here centers around the thruster's gravity, not the object's!
+
+			if (special->state != &states[S_STEAM1]) // Only when it bursts
+				return;
+
+			toucher->eflags |= MFE_SPRUNG;
+			toucher->momz = flipval * FixedMul(speed, FixedSqrt(FixedMul(special->scale, toucher->scale))); // scale the speed with both objects' scales, just like with springs!
+
+			if (player)
+			{
+				P_ResetPlayer(player);
+				if (player->panim != PA_FALL)
+					P_SetMobjState(toucher, S_PLAY_FALL);
+			}
+
+			return; // Don't collect it!
+		}
+	}
+
+	if (!player) // Only players can touch stuff!
 		return;
 
 	// 0 = none, 1 = elemental pierce, 2 = bubble bounce
@@ -1332,7 +1365,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			}
 			break;
 		case MT_NIGHTSEXTRATIME:
-			if ((player->bot && player->bot != BOT_MPAI) || !(player->powers[pw_carry] == CR_NIGHTSMODE))
+			if ((player->bot && player->bot != BOT_MPAI) || !(player->powers[pw_carry] == CR_NIGHTSMODE || (G_IsSpecialStage(gamemap) && !(maptol & TOL_NIGHTS))))
 				return;
 			if (!G_IsSpecialStage(gamemap))
 			{
@@ -1344,7 +1377,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			else
 			{
 				for (i = 0; i < MAXPLAYERS; i++)
-					if (playeringame[i] && players[i].powers[pw_carry] == CR_NIGHTSMODE)
+					if (playeringame[i] && (player->powers[pw_carry] == CR_NIGHTSMODE || (G_IsSpecialStage(gamemap) && !(maptol & TOL_NIGHTS))))
 					{
 						players[i].nightstime += special->info->speed;
 						players[i].startedtime += special->info->speed;
@@ -1881,6 +1914,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				toucher->tracer->flags2 = (toucher->tracer->flags2 & ~MF2_AMBUSH) | destambush;
 			}
 			return;
+
 		default: // SOC or script pickup
 			if (player->bot && player->bot != BOT_MPAI)
 				return;
@@ -3606,7 +3640,7 @@ void P_SpecialStageDamage(player_t *player, mobj_t *inflictor, mobj_t *source)
 		if (player->nightstime > 5*TICRATE)
 			player->nightstime -= 5*TICRATE;
 		else
-			player->nightstime = 0;
+			player->nightstime = 1;
 	}
 
 	P_DoPlayerPain(player, inflictor, source);

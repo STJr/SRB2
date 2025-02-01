@@ -31,7 +31,7 @@
 char *FREE_STATES[NUMSTATEFREESLOTS];
 char *FREE_MOBJS[NUMMOBJFREESLOTS];
 char *FREE_SKINCOLORS[NUMCOLORFREESLOTS];
-UINT8 used_spr[(NUMSPRITEFREESLOTS / 8) + 1]; // Bitwise flag for sprite freeslot in use! I would use ceil() here if I could, but it only saves 1 byte of memory anyway.
+bitarray_t used_spr[BIT_ARRAY_SIZE(NUMSPRITEFREESLOTS)]; // Sprite freeslots in use
 
 const char NIGHTSGRADE_LIST[] = {
 	'F', // GRADE_F
@@ -5096,6 +5096,10 @@ struct int_const_s const INT_CONST[] = {
 	{"RF_SHADOWEFFECTS",RF_SHADOWEFFECTS},
 	{"RF_DROPSHADOW",RF_DROPSHADOW},
 
+	// Animation flags
+	{"SPR2F_MASK",SPR2F_MASK},
+	{"SPR2F_SUPER",SPR2F_SUPER},
+
 	// Level flags
 	{"LF_SCRIPTISFILE",LF_SCRIPTISFILE},
 	{"LF_SPEEDMUSIC",LF_SPEEDMUSIC},
@@ -5799,6 +5803,10 @@ struct int_const_s const INT_CONST[] = {
 	{"MB_BUTTON8",MB_BUTTON8},
 	{"MB_SCROLLUP",MB_SCROLLUP},
 	{"MB_SCROLLDOWN",MB_SCROLLDOWN},
+
+	// screen.h constants
+	{"BASEVIDWIDTH",BASEVIDWIDTH},
+	{"BASEVIDHEIGHT",BASEVIDHEIGHT},
 
 	{NULL,0}
 };

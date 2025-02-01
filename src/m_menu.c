@@ -184,6 +184,9 @@ static fixed_t char_scroll = 0;
 
 static tic_t keydown = 0;
 
+// Lua
+static huddrawlist_h luahuddrawlist_playersetup;
+
 //
 // PROTOTYPES
 //
@@ -260,7 +263,7 @@ static void M_ConfirmTeamScramble(INT32 choice);
 static void M_ConfirmTeamChange(INT32 choice);
 static void M_SecretsMenu(INT32 choice);
 static void M_SetupChoosePlayer(INT32 choice);
-static UINT16 M_SetupChoosePlayerDirect(INT32 choice);
+static INT32 M_SetupChoosePlayerDirect(INT32 choice);
 static void M_QuitSRB2(INT32 choice);
 menu_t SP_MainDef, OP_MainDef;
 menu_t MISC_ScrambleTeamDef, MISC_ChangeTeamDef;
@@ -2099,6 +2102,12 @@ menu_t OP_PlaystyleDef = {
 	0, 0, 0, NULL
 };
 
+static void M_UpdateItemOn(void)
+{
+	I_SetTextInputMode((currentMenu->menuitems[itemOn].status & IT_CVARTYPE) == IT_CV_STRING ||
+		(currentMenu->menuitems[itemOn].status & IT_TYPE) == IT_KEYHANDLER);
+}
+
 static void M_VideoOptions(INT32 choice)
 {
 	(void)choice;
@@ -2326,6 +2335,7 @@ void Nextmap_OnChange(void)
 		{
 			currentMenu->lastOn = itemOn;
 			itemOn = nastart;
+			M_UpdateItemOn();
 		}
 	}
 	else if (currentMenu == &SP_TimeAttackDef)
@@ -2375,6 +2385,7 @@ void Nextmap_OnChange(void)
 		{
 			currentMenu->lastOn = itemOn;
 			itemOn = tastart;
+			M_UpdateItemOn();
 		}
 
 		if (mapheaderinfo[cv_nextmap.value-1] && mapheaderinfo[cv_nextmap.value-1]->forcecharacter[0] != '\0')
@@ -3125,6 +3136,7 @@ static void M_NextOpt(void)
 		else
 			itemOn++;
 	} while (oldItemOn != itemOn && ( (currentMenu->menuitems[itemOn].status & IT_TYPE) & IT_SPACE ));
+	M_UpdateItemOn();
 }
 
 static void M_PrevOpt(void)
@@ -3137,6 +3149,7 @@ static void M_PrevOpt(void)
 		else
 			itemOn--;
 	} while (oldItemOn != itemOn && ( (currentMenu->menuitems[itemOn].status & IT_TYPE) & IT_SPACE ));
+	M_UpdateItemOn();
 }
 
 // lock out further input in a tic when important buttons are pressed
@@ -3648,18 +3661,20 @@ void M_StartControlPanel(void)
 
 		currentMenu = &MainDef;
 		itemOn = singleplr;
+		M_UpdateItemOn();
 	}
 	else if (modeattacking)
 	{
 		currentMenu = &MAPauseDef;
 		MAPauseMenu[mapause_hints].status = (M_SecretUnlocked(SECRET_EMBLEMHINTS, clientGamedata)) ? (IT_STRING | IT_CALL) : (IT_DISABLED);
 		itemOn = mapause_continue;
+		M_UpdateItemOn();
 	}
 	else if (!(netgame || multiplayer)) // Single Player
 	{
 		// Devmode unlocks Pandora's Box in the pause menu
 		boolean pandora = ((M_SecretUnlocked(SECRET_PANDORA, serverGamedata) || cv_debug || devparm) && !marathonmode);
-		
+
 		if (gamestate != GS_LEVEL || ultimatemode) // intermission, so gray out stuff.
 		{
 			SPauseMenu[spause_pandora].status = (pandora) ? (IT_GRAYEDOUT) : (IT_DISABLED);
@@ -3700,6 +3715,7 @@ void M_StartControlPanel(void)
 
 		currentMenu = &SPauseDef;
 		itemOn = spause_continue;
+		M_UpdateItemOn();
 	}
 	else // multiplayer
 	{
@@ -3741,6 +3757,7 @@ void M_StartControlPanel(void)
 
 		currentMenu = &MPauseDef;
 		itemOn = mpause_continue;
+		M_UpdateItemOn();
 	}
 
 	CON_ToggleOff(); // move away console
@@ -3834,6 +3851,7 @@ void M_SetupNextMenu(menu_t *menudef)
 			}
 		}
 	}
+	M_UpdateItemOn();
 
 	hidetitlemap = false;
 }
@@ -4012,11 +4030,11 @@ static void M_DrawThermo(INT32 x, INT32 y, consvar_t *cv)
 	lumpnum_t leftlump, rightlump, centerlump[2], cursorlump;
 	patch_t *p;
 
-	leftlump = W_GetNumForName("M_THERML");
-	rightlump = W_GetNumForName("M_THERMR");
-	centerlump[0] = W_GetNumForName("M_THERMM");
-	centerlump[1] = W_GetNumForName("M_THERMM");
-	cursorlump = W_GetNumForName("M_THERMO");
+	leftlump = W_GetNumForPatchName("M_THERML");
+	rightlump = W_GetNumForPatchName("M_THERMR");
+	centerlump[0] = W_GetNumForPatchName("M_THERMM");
+	centerlump[1] = W_GetNumForPatchName("M_THERMM");
+	cursorlump = W_GetNumForPatchName("M_THERMO");
 
 	V_DrawScaledPatch(xx, y, 0, p = W_CachePatchNum(leftlump,PU_PATCH));
 	xx += p->width - p->leftoffset;
@@ -4138,7 +4156,7 @@ static void M_DrawStaticBox(fixed_t x, fixed_t y, INT32 flags, fixed_t w, fixed_
 			temp = (gametic % temp) * h*2*FRACUNIT; // Which frame to draw
 
 		V_DrawCroppedPatch(x*FRACUNIT, y*FRACUNIT, (w*FRACUNIT) / 160, (h*FRACUNIT) / 100, flags, patch, NULL, 0, temp, w*2*FRACUNIT, h*2*FRACUNIT);
-		
+
 		W_UnlockCachedPatch(patch);
 		return;
 	}
@@ -4954,22 +4972,6 @@ static void M_DrawCenteredMenu(void)
 			W_CachePatchName("M_CURSOR", PU_PATCH));
 		V_DrawCenteredString(x, cursory, V_YELLOWMAP, currentMenu->menuitems[itemOn].text);
 	}
-}
-
-//
-// M_StringHeight
-//
-// Find string height from hu_font chars
-//
-static inline size_t M_StringHeight(const char *string)
-{
-	size_t h = 8, i;
-
-	for (i = 0; i < strlen(string); i++)
-		if (string[i] == '\n')
-			h += 8;
-
-	return h;
 }
 
 // ==========================================================================
@@ -6089,56 +6091,16 @@ menu_t MessageDef =
 	NULL
 };
 
-
-void M_StartMessage(const char *string, void *routine,
-	menumessagetype_t itemtype)
+void M_StartMessage(const char *string, void *routine, menumessagetype_t itemtype)
 {
-	size_t max = 0, start = 0, i, strlines;
-	static char *message = NULL;
+	static char *message;
 	Z_Free(message);
-	message = Z_StrDup(string);
+	message = V_WordWrap(0,0,V_ALLOWLOWERCASE,string);
 	DEBFILE(message);
-
-	// Rudementary word wrapping.
-	// Simple and effective. Does not handle nonuniform letter sizes, colors, etc. but who cares.
-	strlines = 0;
-	for (i = 0; message[i]; i++)
-	{
-		if (message[i] == ' ')
-		{
-			start = i;
-			max += 4;
-		}
-		else if (message[i] == '\n')
-		{
-			strlines = i;
-			start = 0;
-			max = 0;
-			continue;
-		}
-		else
-			max += 8;
-
-		// Start trying to wrap if presumed length exceeds the screen width.
-		if (max >= BASEVIDWIDTH && start > 0)
-		{
-			message[start] = '\n';
-			max -= (start-strlines)*8;
-			strlines = start;
-			start = 0;
-		}
-	}
-
-	start = 0;
-	max = 0;
 
 	M_StartControlPanel(); // can't put menuactive to true
 
-	if (currentMenu == &MessageDef) // Prevent recursion
-		MessageDef.prevMenu = &MainDef;
-	else
-		MessageDef.prevMenu = currentMenu;
-
+	MessageDef.prevMenu = (currentMenu == &MessageDef) ? &MainDef : currentMenu; // Prevent recursion
 	MessageDef.menuitems[0].text     = message;
 	MessageDef.menuitems[0].alphaKey = (UINT8)itemtype;
 	if (!routine && itemtype != MM_NOTHING) itemtype = MM_NOTHING;
@@ -6157,50 +6119,17 @@ void M_StartMessage(const char *string, void *routine,
 			MessageDef.menuitems[0].itemaction = routine;
 			break;
 	}
-	//added : 06-02-98: now draw a textbox around the message
-	// compute lenght max and the numbers of lines
-	for (strlines = 0; *(message+start); strlines++)
-	{
-		for (i = 0;i < strlen(message+start);i++)
-		{
-			if (*(message+start+i) == '\n')
-			{
-				if (i > max)
-					max = i;
-				start += i;
-				i = (size_t)-1; //added : 07-02-98 : damned!
-				start++;
-				break;
-			}
-		}
+	MessageDef.x = (INT16)((BASEVIDWIDTH  - V_StringWidth(message, 0)-32)/2);
+	MessageDef.y = (INT16)((BASEVIDHEIGHT - V_StringHeight(message, V_RETURN8))/2);
 
-		if (i == strlen(message+start))
-			start += i;
-	}
-
-	MessageDef.x = (INT16)((BASEVIDWIDTH  - 8*max-16)/2);
-	MessageDef.y = (INT16)((BASEVIDHEIGHT - M_StringHeight(message))/2);
-
-	MessageDef.lastOn = (INT16)((strlines<<8)+max);
-
-	//M_SetupNextMenu();
 	currentMenu = &MessageDef;
 	itemOn = 0;
+	M_UpdateItemOn();
 }
-
-#define MAXMSGLINELEN 256
 
 static void M_DrawMessageMenu(void)
 {
-	INT32 y = currentMenu->y;
-	size_t i, start = 0;
-	INT16 max;
-	char string[MAXMSGLINELEN];
-	INT32 mlines;
 	const char *msg = currentMenu->menuitems[0].text;
-
-	mlines = currentMenu->lastOn>>8;
-	max = (INT16)((UINT8)(currentMenu->lastOn & 0xFF)*8);
 
 	// hack: draw RA background in RA menus
 	if (gamestate == GS_TIMEATTACK)
@@ -6225,51 +6154,8 @@ static void M_DrawMessageMenu(void)
 			V_DrawFadeScreen(0xFF00, curfadevalue);
 	}
 
-	M_DrawTextBox(currentMenu->x, y - 8, (max+7)>>3, mlines);
-
-	while (*(msg+start))
-	{
-		size_t len = strlen(msg+start);
-
-		for (i = 0; i < len; i++)
-		{
-			if (*(msg+start+i) == '\n')
-			{
-				memset(string, 0, MAXMSGLINELEN);
-				if (i >= MAXMSGLINELEN)
-				{
-					CONS_Printf("M_DrawMessageMenu: too long segment in %s\n", msg);
-					return;
-				}
-				else
-				{
-					strncpy(string,msg+start, i);
-					string[i] = '\0';
-					start += i;
-					i = (size_t)-1; //added : 07-02-98 : damned!
-					start++;
-				}
-				break;
-			}
-		}
-
-		if (i == strlen(msg+start))
-		{
-			if (i >= MAXMSGLINELEN)
-			{
-				CONS_Printf("M_DrawMessageMenu: too long segment in %s\n", msg);
-				return;
-			}
-			else
-			{
-				strcpy(string, msg + start);
-				start += i;
-			}
-		}
-
-		V_DrawString((BASEVIDWIDTH - V_StringWidth(string, 0))/2,y,V_ALLOWLOWERCASE,string);
-		y += 8; //hu_font[0]->height;
-	}
+	M_DrawTextBox(currentMenu->x, currentMenu->y - 8, 2+V_StringWidth(msg, 0)/8, V_StringHeight(msg, V_RETURN8)/8);
+	V_DrawCenteredString(BASEVIDWIDTH/2, currentMenu->y, V_ALLOWLOWERCASE|V_RETURN8, msg);
 }
 
 // default message handler
@@ -6313,6 +6199,7 @@ static void M_HandleImageDef(INT32 choice)
 			if (itemOn >= (INT16)(currentMenu->numitems-1))
 				itemOn = 0;
             else itemOn++;
+			M_UpdateItemOn();
 			break;
 
 		case KEY_LEFTARROW:
@@ -6323,6 +6210,7 @@ static void M_HandleImageDef(INT32 choice)
 			if (!itemOn)
 				itemOn = currentMenu->numitems - 1;
 			else itemOn--;
+			M_UpdateItemOn();
 			break;
 
 		case KEY_ESCAPE:
@@ -7112,7 +7000,10 @@ static void M_LevelSelectWarp(INT32 choice)
 	if (currentMenu == &SP_LevelSelectDef || currentMenu == &SP_PauseLevelSelectDef)
 	{
 		if (cursaveslot > 0) // do we have a save slot to load?
+		{
+			CV_StealthSet(&cv_skin, DEFAULTSKIN); // already handled by loadgame so we don't want this
 			G_LoadGame((UINT32)cursaveslot, startmap); // reload from SP save data: this is needed to keep score/lives/continues from reverting to defaults
+		}
 		else // no save slot, start new game but keep the current skin
 		{
 			M_ClearMenus(true);
@@ -7519,6 +7410,7 @@ static void M_EmblemHints(INT32 choice)
 	SR_EmblemHintDef.prevMenu = currentMenu;
 	M_SetupNextMenu(&SR_EmblemHintDef);
 	itemOn = 2; // always start on back.
+	M_UpdateItemOn();
 }
 
 static void M_DrawEmblemHints(void)
@@ -7956,7 +7848,7 @@ static void M_DrawSoundTest(void)
 				{
 					V_DrawFill(165+140-9, y-4, 8, 16, 150);
 					//V_DrawCharacter(165+140-8, y, '\x19' | V_YELLOWMAP, false);
-					V_DrawFixedPatch((165+140-9)<<FRACBITS, (y<<FRACBITS)-(bounce*4), FRACUNIT, 0, hu_font['\x19'-HU_FONTSTART], V_GetStringColormap(V_YELLOWMAP));
+					V_DrawFixedPatch((165+140-9)<<FRACBITS, (y<<FRACBITS)-(bounce*4), FRACUNIT, 0, hu_font.chars['\x19'-FONTSTART], V_GetStringColormap(V_YELLOWMAP));
 				}
 			}
 			t++;
@@ -8760,9 +8652,14 @@ static void M_LoadSelect(INT32 choice)
 		M_NewGame();
 	}
 	else if (savegameinfo[saveSlotSelected-1].gamemap & 8192) // Completed
+	{
 		M_LoadGameLevelSelect(0);
+	}
 	else
+	{
+		CV_StealthSet(&cv_skin, DEFAULTSKIN); // already handled by loadgame so we don't want this
 		G_LoadGame((UINT32)saveSlotSelected, 0);
+	}
 
 	cursaveslot = saveSlotSelected;
 }
@@ -9183,7 +9080,7 @@ static void M_CacheCharacterSelectEntry(INT32 i, INT32 skinnum)
 		description[i].namepic = W_CachePatchName(description[i].nametag, PU_PATCH);
 }
 
-static UINT16 M_SetupChoosePlayerDirect(INT32 choice)
+static INT32 M_SetupChoosePlayerDirect(INT32 choice)
 {
 	INT32 skinnum, botskinnum;
 	UINT16 i;
@@ -9272,7 +9169,7 @@ static UINT16 M_SetupChoosePlayerDirect(INT32 choice)
 
 static void M_SetupChoosePlayer(INT32 choice)
 {
-	UINT16 skinset = M_SetupChoosePlayerDirect(choice);
+	INT32 skinset = M_SetupChoosePlayerDirect(choice);
 	if (skinset != MAXCHARACTERSLOTS)
 	{
 		M_ChoosePlayer(skinset);
@@ -9620,6 +9517,8 @@ static void M_ChoosePlayer(INT32 choice)
 
 	//lastmapsaved = 0;
 	gamecomplete = 0;
+
+	CV_StealthSet(&cv_skin, skins[skinnum]->name);
 
 	G_DeferedInitNew(ultmode, G_BuildMapName(startmap), skinnum, false, fromlevelselect);
 	COM_BufAddText("dummyconsvar 1\n"); // G_DeferedInitNew doesn't do this
@@ -10180,6 +10079,7 @@ static void M_TimeAttack(INT32 choice)
 		Nextmap_OnChange();
 
 	itemOn = tastart; // "Start" is selected.
+	M_UpdateItemOn();
 }
 
 // Drawing function for Nights Attack
@@ -10296,7 +10196,7 @@ void M_DrawNightsAttackMenu(void)
 			skinnumber = 0; //Default to Sonic
 		else
 			skinnumber = (cv_chooseskin.value-1);
-			
+
 		spritedef_t *sprdef = &skins[skinnumber]->sprites[SPR2_NFLY]; //Make our patch the selected character's NFLY sprite
 		spritetimer = FixedInt(ntsatkdrawtimer/2) % skins[skinnumber]->sprites[SPR2_NFLY].numframes; //Make the sprite timer cycle though all the frames at 2 tics per frame
 		spriteframe_t *sprframe = &sprdef->spriteframes[spritetimer]; //Our animation frame is equal to the number on the timer
@@ -10309,11 +10209,11 @@ void M_DrawNightsAttackMenu(void)
 			color = skins[skinnumber]->supercolor+4;
 		else //If you don't go super in NiGHTS or at all, use prefcolor
 			color = skins[skinnumber]->prefcolor;
-				
+
 		angle_t fa = (FixedAngle(((FixedInt(ntsatkdrawtimer * 4)) % 360)<<FRACBITS)>>ANGLETOFINESHIFT) & FINEMASK;
 
 		V_DrawFixedPatch(270<<FRACBITS, (186<<FRACBITS) - 8*FINESINE(fa),
-						 FixedDiv(skins[skinnumber]->highresscale, skins[skinnumber]->shieldscale), 
+						 FixedDiv(skins[skinnumber]->highresscale, skins[skinnumber]->shieldscale),
 						 (sprframe->flip & 1<<6) ? V_FLIP : 0,
 						 natksprite,
 						 R_GetTranslationColormap(TC_BLINK, color, GTC_CACHE));
@@ -10418,6 +10318,7 @@ static void M_NightsAttack(INT32 choice)
 		Nextmap_OnChange();
 
 	itemOn = nastart; // "Start" is selected.
+	M_UpdateItemOn();
 }
 
 // Player has selected the "START" from the nights attack screen
@@ -10737,6 +10638,7 @@ static void M_ModeAttackEndGame(INT32 choice)
 		break;
 	}
 	itemOn = currentMenu->lastOn;
+	M_UpdateItemOn();
 	G_SetGamestate(GS_TIMEATTACK);
 	modeattacking = ATTACKING_NONE;
 	M_ChangeMenuMusic("_title", true);
@@ -10818,6 +10720,7 @@ static void M_Marathon(INT32 choice)
 	titlemapinaction = TITLEMAP_OFF; // Nope don't give us HOMs please
 	M_SetupNextMenu(&SP_MarathonDef);
 	itemOn = marathonstart; // "Start" is selected.
+	M_UpdateItemOn();
 	recatkdrawtimer = (50-8) * FRACUNIT;
 	char_scroll = 0;
 }
@@ -11531,6 +11434,7 @@ static void M_ConnectMenu(INT32 choice)
 	else
 		M_SetupNextMenu(&MP_ConnectDef);
 	itemOn = 0;
+	M_UpdateItemOn();
 	M_Refresh(0);
 }
 
@@ -11790,6 +11694,7 @@ static void M_StartServerMenu(INT32 choice)
 	Newgametype_OnChange();
 	M_SetupNextMenu(&MP_ServerDef);
 	itemOn = 1;
+	M_UpdateItemOn();
 }
 
 // ==============
@@ -11972,15 +11877,21 @@ static void M_HandleConnectIP(INT32 choice)
 					case KEY_INS:
 					case 'c':
 					case 'C': // ctrl+c, ctrl+insert, copying
-						I_ClipboardCopy(setupm_ip, l);
-						S_StartSound(NULL,sfx_menu1); // Tails
+						if (l != 0) // Don't replace the clipboard without any text
+						{
+							I_ClipboardCopy(setupm_ip, l);
+							S_StartSound(NULL,sfx_menu1); // Tails
+						}
 						break;
 
 					case 'x':
 					case 'X': // ctrl+x, cutting
-						I_ClipboardCopy(setupm_ip, l);
-						S_StartSound(NULL,sfx_menu1); // Tails
-						setupm_ip[0] = 0;
+						if (l != 0) // Don't replace the clipboard without any text
+						{
+							I_ClipboardCopy(setupm_ip, l);
+							S_StartSound(NULL,sfx_menu1); // Tails
+							setupm_ip[0] = 0;
+						}
 						break;
 
 					default: // otherwise do nothing
@@ -12004,9 +11915,12 @@ static void M_HandleConnectIP(INT32 choice)
 							break;
 						}
 					case KEY_DEL: // shift+delete, cutting
-						I_ClipboardCopy(setupm_ip, l);
-						S_StartSound(NULL,sfx_menu1); // Tails
-						setupm_ip[0] = 0;
+						if (l != 0) // Don't replace the clipboard without any text
+						{
+							I_ClipboardCopy(setupm_ip, l);
+							S_StartSound(NULL,sfx_menu1); // Tails
+							setupm_ip[0] = 0;
+						}
 						break;
 					default: // otherwise do nothing.
 						break;
@@ -12056,9 +11970,22 @@ static void M_HandleConnectIP(INT32 choice)
 
 static fixed_t    multi_tics;
 static UINT8      multi_frame;
-static UINT8      multi_spr2;
+static UINT16     multi_spr2;
 static boolean    multi_paused;
 static boolean    multi_invcolor;
+static boolean    multi_override;
+
+static spritedef_t *multi_followitem_sprdef;
+static INT32        multi_followitem_skinnum;
+static UINT8        multi_followitem_numframes;
+static UINT8        multi_followitem_startframe;
+static UINT8        multi_followitem_frame;
+static fixed_t      multi_followitem_duration;
+static fixed_t      multi_followitem_tics;
+static fixed_t      multi_followitem_scale;
+static fixed_t      multi_followitem_yoffset;
+
+#define MULTI_DURATION (4*FRACUNIT)
 
 // this is set before entering the MultiPlayer setup menu,
 // for either player 1 or 2
@@ -12203,9 +12130,92 @@ static menucolor_t *M_GridIndexToMenuColor(UINT16 index)
 	}
 }
 
+static void M_SetPlayerSetupFollowItem(void)
+{
+	const mobjtype_t followitem = skins[setupm_fakeskin]->followitem;
+
+	switch (followitem)
+	{
+		case MT_TAILSOVERLAY:
+		{
+			const state_t *state = &states[S_TAILSOVERLAY_MINUS30DEGREES];
+			const UINT8 sprite2 = P_GetSkinSprite2(skins[setupm_fakeskin], state->frame & FF_FRAMEMASK, NULL);
+
+			if (state->sprite != SPR_PLAY)
+				break;
+
+			multi_followitem_sprdef = &skins[setupm_fakeskin]->sprites[sprite2];
+			multi_followitem_skinnum = setupm_fakeskin;
+			multi_followitem_numframes = multi_followitem_sprdef->numframes;
+			multi_followitem_startframe = 0;
+			multi_followitem_frame = multi_frame;
+			multi_followitem_duration = MULTI_DURATION;
+			multi_followitem_tics = multi_tics;
+			multi_followitem_scale = FRACUNIT;
+			multi_followitem_yoffset = 0;
+
+			if ((state->frame & FF_SPR2MIDSTART) && (multi_followitem_numframes > 0) && M_RandomChance(FRACUNIT / 2))
+			{
+				multi_followitem_frame += multi_followitem_numframes / 2;
+			}
+			break;
+		}
+		case MT_METALJETFUME:
+		{
+			const state_t *state = &states[S_JETFUME1];
+
+			if (!(state->frame & FF_ANIMATE))
+				break;
+
+			multi_followitem_sprdef = &sprites[state->sprite];
+			multi_followitem_skinnum = TC_DEFAULT;
+			multi_followitem_numframes = state->var1 + 1;
+			multi_followitem_startframe = state->frame & FF_FRAMEMASK;
+			multi_followitem_frame = multi_followitem_startframe;
+			multi_followitem_duration = state->var2 * FRACUNIT;
+			multi_followitem_tics = multi_tics % multi_followitem_duration;
+			multi_followitem_scale = 2 * FRACUNIT / 3;
+			multi_followitem_yoffset = (skins[setupm_fakeskin]->height - FixedMul(mobjinfo[followitem].height, multi_followitem_scale)) >> 1;
+			break;
+		}
+		default:
+			multi_followitem_sprdef = NULL;
+			break;
+	}
+}
+
+static void M_DrawPlayerSetupFollowItem(INT32 x, INT32 y, fixed_t scale, INT32 flags)
+{
+	spriteframe_t *sprframe;
+	patch_t *patch;
+	UINT8 *colormap;
+
+	if (multi_followitem_sprdef == NULL)
+		return;
+
+	if (multi_followitem_frame >= multi_followitem_startframe + multi_followitem_numframes)
+		multi_followitem_frame = multi_followitem_startframe;
+
+	colormap = R_GetTranslationColormap(multi_followitem_skinnum, setupm_fakecolor->color, GTC_CACHE);
+
+	sprframe = &multi_followitem_sprdef->spriteframes[multi_followitem_frame];
+	patch = W_CachePatchNum(sprframe->lumppat[0], PU_PATCH);
+	if (sprframe->flip & 1) // Only for first sprite
+		flags |= V_FLIP; // This sprite is left/right flipped!
+
+	x <<= FRACBITS;
+	y <<= FRACBITS;
+	y -= FixedMul(multi_followitem_yoffset, scale);
+
+	scale = FixedMul(scale, multi_followitem_scale);
+
+	V_DrawFixedPatch(x, y, scale, flags, patch, colormap);
+}
+
 static void M_DrawSetupMultiPlayerMenu(void)
 {
 	INT32 x, y, cursory = 0, flags = 0;
+	fixed_t scale;
 	spritedef_t *sprdef;
 	spriteframe_t *sprframe;
 	patch_t *patch;
@@ -12255,11 +12265,24 @@ static void M_DrawSetupMultiPlayerMenu(void)
 	y += 11;
 
 	// anim the player in the box
-	multi_tics -= renderdeltatics;
-	while (!multi_paused && multi_tics <= 0)
+	if (!multi_paused)
 	{
-		multi_frame++;
-		multi_tics += 4*FRACUNIT;
+		multi_tics -= renderdeltatics;
+		while (multi_tics <= 0)
+		{
+			multi_frame++;
+			multi_tics += MULTI_DURATION;
+		}
+
+		if (multi_followitem_sprdef != NULL)
+		{
+			multi_followitem_tics -= renderdeltatics;
+			while (multi_followitem_tics <= 0)
+			{
+				multi_followitem_frame++;
+				multi_followitem_tics += multi_followitem_duration;
+			}
+		}
 	}
 
 #define charw 74
@@ -12274,17 +12297,38 @@ static void M_DrawSetupMultiPlayerMenu(void)
 		goto faildraw;
 
 	// ok, draw player sprite for sure now
-	colormap = R_GetTranslationColormap(setupm_fakeskin, setupm_fakecolor->color, GTC_CACHE);
-
 	if (multi_frame >= sprdef->numframes)
 		multi_frame = 0;
+
+	scale = FixedDiv(skins[setupm_fakeskin]->highresscale, skins[setupm_fakeskin]->shieldscale);
+
+#define chary (y+64)
+
+	if (renderisnewtic)
+	{
+		LUA_HUD_ClearDrawList(luahuddrawlist_playersetup);
+		multi_override = LUA_HookCharacterHUD
+		(
+			HUD_HOOK(playersetup), luahuddrawlist_playersetup, setupm_player,
+			x << FRACBITS, chary << FRACBITS, scale,
+			setupm_fakeskin, multi_spr2, multi_frame, 1, setupm_fakecolor->color,
+			(multi_tics >> FRACBITS) + 1, multi_paused
+		);
+	}
+
+	LUA_HUD_DrawList(luahuddrawlist_playersetup);
+
+	if (multi_override == true)
+		goto colordraw;
+
+	colormap = R_GetTranslationColormap(setupm_fakeskin, setupm_fakecolor->color, GTC_CACHE);
 
 	sprframe = &sprdef->spriteframes[multi_frame];
 	patch = W_CachePatchNum(sprframe->lumppat[0], PU_PATCH);
 	if (sprframe->flip & 1) // Only for first sprite
 		flags |= V_FLIP; // This sprite is left/right flipped!
 
-#define chary (y+64)
+	M_DrawPlayerSetupFollowItem(x, chary, scale, flags & ~V_FLIP);
 
 	V_DrawFixedPatch(
 		x<<FRACBITS,
@@ -12477,6 +12521,20 @@ static void M_DrawColorRamp(INT32 x, INT32 y, INT32 w, INT32 h, skincolor_t colo
 		V_DrawFill(x, y+(i*h), w, h, color.ramp[i]);
 }
 
+static void M_InitPlayerSetupLua(void)
+{
+	// I'd really like to assume that the drawlist has been destroyed,
+	// but it appears M_ClearMenus has options not to call exit routines...
+	// so that doesn't seem safe to me??
+	if (!LUA_HUD_IsDrawListValid(luahuddrawlist_playersetup))
+	{
+		LUA_HUD_DestroyDrawList(luahuddrawlist_playersetup);
+		luahuddrawlist_playersetup = LUA_HUD_CreateDrawList();
+	}
+	LUA_HUD_ClearDrawList(luahuddrawlist_playersetup);
+	multi_override = false;
+}
+
 // Handle 1P/2P MP Setup
 static void M_HandleSetupMultiPlayer(INT32 choice)
 {
@@ -12522,6 +12580,7 @@ static void M_HandleSetupMultiPlayer(INT32 choice)
 				}
 				while ((prev_setupm_fakeskin != setupm_fakeskin) && !(R_SkinUsable(-1, setupm_fakeskin)));
 				multi_spr2 = P_GetSkinSprite2(skins[setupm_fakeskin], SPR2_WALK, NULL);
+				M_SetPlayerSetupFollowItem();
 			}
 			else if (itemOn == 2) // player color
 			{
@@ -12562,6 +12621,7 @@ static void M_HandleSetupMultiPlayer(INT32 choice)
 				}
 				while ((prev_setupm_fakeskin != setupm_fakeskin) && !(R_SkinUsable(-1, setupm_fakeskin)));
 				multi_spr2 = P_GetSkinSprite2(skins[setupm_fakeskin], SPR2_WALK, NULL);
+				M_SetPlayerSetupFollowItem();
 			}
 			else if (itemOn == 2) // player color
 			{
@@ -12682,7 +12742,7 @@ static void M_SetupMultiPlayer(INT32 choice)
 	(void)choice;
 
 	multi_frame = 0;
-	multi_tics = 4*FRACUNIT;
+	multi_tics = MULTI_DURATION;
 
 	strcpy(setupm_name, cv_playername.string);
 
@@ -12712,6 +12772,10 @@ static void M_SetupMultiPlayer(INT32 choice)
 	MP_PlayerSetupMenu[2].status = (IT_KEYHANDLER|IT_STRING);
 
 	multi_spr2 = P_GetSkinSprite2(skins[setupm_fakeskin], SPR2_WALK, NULL);
+	M_SetPlayerSetupFollowItem();
+
+	// allocate and/or clear Lua player setup draw list
+	M_InitPlayerSetupLua();
 
 	MP_PlayerSetupDef.prevMenu = currentMenu;
 	M_SetupNextMenu(&MP_PlayerSetupDef);
@@ -12723,7 +12787,7 @@ static void M_SetupMultiPlayer2(INT32 choice)
 	(void)choice;
 
 	multi_frame = 0;
-	multi_tics = 4*FRACUNIT;
+	multi_tics = MULTI_DURATION;
 
 	strcpy (setupm_name, cv_playername2.string);
 
@@ -12753,6 +12817,10 @@ static void M_SetupMultiPlayer2(INT32 choice)
 	MP_PlayerSetupMenu[2].status = (IT_KEYHANDLER|IT_STRING);
 
 	multi_spr2 = P_GetSkinSprite2(skins[setupm_fakeskin], SPR2_WALK, NULL);
+	M_SetPlayerSetupFollowItem();
+
+	// allocate and/or clear Lua player setup draw list
+	M_InitPlayerSetupLua();
 
 	MP_PlayerSetupDef.prevMenu = currentMenu;
 	M_SetupNextMenu(&MP_PlayerSetupDef);
@@ -12774,6 +12842,12 @@ static boolean M_QuitMultiPlayerMenu(void)
 	// send color if changed
 	if (setupm_fakecolor->color != setupm_cvcolor->value)
 		COM_BufAddText (va("%s %d\n",setupm_cvcolor->name,setupm_fakecolor->color));
+
+	// de-allocate Lua player setup drawlist
+	LUA_HUD_DestroyDrawList(luahuddrawlist_playersetup);
+	luahuddrawlist_playersetup = NULL;
+	multi_override = false;
+
 	return true;
 }
 
@@ -13041,7 +13115,10 @@ static void M_SetupScreenshotMenu(void)
 	{
 		item->status = IT_GRAYEDOUT;
 		if ((currentMenu == &OP_ScreenshotOptionsDef) && (itemOn == op_screenshot_colorprofile)) // Can't select that
+		{
 			itemOn = op_screenshot_storagelocation;
+			M_UpdateItemOn();
+		}
 	}
 	else
 #endif

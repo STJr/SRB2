@@ -1,13 +1,33 @@
-CPMAddPackage(
-	NAME openmpt
-	VERSION 0.4.30
-	URL "https://github.com/OpenMPT/openmpt/archive/refs/tags/libopenmpt-0.4.30.zip"
-	DOWNLOAD_ONLY ON
-)
+if(TARGET libopenmpt)
+    #return()
+endif()
 
-if(openmpt_ADDED)
+message(STATUS "Third-party: creating target 'libopenmpt'")
+
+
+include(FetchContent)
+
+if (libopenmpt_USE_THIRDPARTY)
+	FetchContent_Declare(
+		libopenmpt-local
+		GITHUB_REPOSITORY openmpt
+		GIT_TAG libopenmpt-0.4.38
+		version 0.4.38
+		EXCLUDE_FROM_ALL ON
+	)
+else()
+	FetchContent_Declare(
+		libopenmpt-local
+		SOURCE_DIR "${CMAKE_SOURCE_DIR}/thirdparty/libopenmpt/"
+		EXCLUDE_FROM_ALL ON
+	)
+endif()
+
+FetchContent_MakeAvailable(libopenmpt)
+
+if(aaaa-libopenmpt-local_ADDED)
 	set(
-		openmpt_SOURCES
+		libopenmpt-local_SOURCES
 
 		# minimp3
 		# -DMPT_WITH_MINIMP3
@@ -264,26 +284,26 @@ if(openmpt_ADDED)
 		libopenmpt/libopenmpt_impl.cpp
 		libopenmpt/libopenmpt_ext_impl.cpp
 	)
-	list(TRANSFORM openmpt_SOURCES PREPEND "${openmpt_SOURCE_DIR}/")
+	list(TRANSFORM libopenmpt-local_SOURCES PREPEND "${libopenmpt-local_SOURCE_DIR}/")
 
 	# -DLIBOPENMPT_BUILD
 	configure_file("openmpt_svn_version.h" "svn_version.h")
-	add_library(openmpt "${SRB2_INTERNAL_LIBRARY_TYPE}" ${openmpt_SOURCES} ${CMAKE_CURRENT_BINARY_DIR}/svn_version.h)
+	add_library(libopenmpt STATIC ${libopenmpt-local_SOURCES} ${CMAKE_CURRENT_BINARY_DIR}/svn_version.h)
 	if("${CMAKE_C_COMPILER_ID}" STREQUAL GNU OR "${CMAKE_C_COMPILER_ID}" STREQUAL Clang OR "${CMAKE_C_COMPILER_ID}" STREQUAL AppleClang)
-		target_compile_options(openmpt PRIVATE "-g0")
+		target_compile_options(libopenmpt PRIVATE "-g0")
 	endif()
 	if("${CMAKE_SYSTEM_NAME}" STREQUAL Windows AND "${CMAKE_C_COMPILER_ID}" STREQUAL MSVC)
-		target_link_libraries(openmpt PRIVATE Rpcrt4)
+		target_link_libraries(libopenmpt PRIVATE Rpcrt4)
 	endif()
-	target_compile_features(openmpt PRIVATE cxx_std_11)
-	target_compile_definitions(openmpt PRIVATE -DLIBOPENMPT_BUILD)
+	target_compile_features(libopenmpt PRIVATE cxx_std_11)
+	target_compile_definitions(libopenmpt PRIVATE -DLIBOPENMPT_BUILD)
 
-	target_include_directories(openmpt PRIVATE "${openmpt_SOURCE_DIR}/common")
-	target_include_directories(openmpt PRIVATE "${openmpt_SOURCE_DIR}/src")
-	target_include_directories(openmpt PRIVATE "${openmpt_SOURCE_DIR}/include")
-	target_include_directories(openmpt PRIVATE "${openmpt_SOURCE_DIR}")
-	target_include_directories(openmpt PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")
+	target_include_directories(libopenmpt PRIVATE "${libopenmpt-local_SOURCE_DIR}/common")
+	target_include_directories(libopenmpt PRIVATE "${libopenmpt-local_SOURCE_DIR}/src")
+	target_include_directories(libopenmpt PRIVATE "${libopenmpt-local_SOURCE_DIR}/include")
+	target_include_directories(libopenmpt PRIVATE "${libopenmpt-local_SOURCE_DIR}")
+	target_include_directories(libopenmpt PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")
 
 	# I wish this wasn't necessary, but it is
-	target_include_directories(openmpt PUBLIC "${openmpt_SOURCE_DIR}")
+	target_include_directories(libopenmpt PUBLIC "${libopenmpt-local_SOURCE_DIR}")
 endif()

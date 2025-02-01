@@ -1570,7 +1570,7 @@ static void R_ParseSpriteInfo(boolean spr2)
 	spriteinfo_t *info;
 	char *sprinfoToken;
 	size_t sprinfoTokenLength;
-	char newSpriteName[5]; // no longer dynamically allocated
+	char newSpriteName[MAXSPRITENAME + 1]; // no longer dynamically allocated
 	spritenum_t sprnum = NUMSPRITES;
 	playersprite_t spr2num = NUMPLAYERSPRITES;
 	INT32 i;
@@ -1584,31 +1584,17 @@ static void R_ParseSpriteInfo(boolean spr2)
 		I_Error("Error parsing SPRTINFO lump: Unexpected end of file where sprite name should be");
 	}
 	sprinfoTokenLength = strlen(sprinfoToken);
-	if (sprinfoTokenLength != 4)
-	{
-		I_Error("Error parsing SPRTINFO lump: Sprite name \"%s\" isn't 4 characters long",sprinfoToken);
-	}
-	else
-	{
-		memset(&newSpriteName, 0, 5);
-		M_Memcpy(newSpriteName, sprinfoToken, sprinfoTokenLength);
-		// ^^ we've confirmed that the token is == 4 characters so it will never overflow a 5 byte char buffer
-		strupr(newSpriteName); // Just do this now so we don't have to worry about it
-	}
+	if (sprinfoTokenLength > MAXSPRITENAME)
+		I_Error("Error parsing SPRTINFO lump: Sprite name \"%s\" is longer than %d characters", sprinfoToken, MAXSPRITENAME);
+	strcpy(newSpriteName, sprinfoToken);
+	strupr(newSpriteName); // Just do this now so we don't have to worry about it
 	Z_Free(sprinfoToken);
 
 	if (!spr2)
 	{
-		for (i = 0; i <= NUMSPRITES; i++)
-		{
-			if (i == NUMSPRITES)
-				I_Error("Error parsing SPRTINFO lump: Unknown sprite name \"%s\"", newSpriteName);
-			if (!memcmp(newSpriteName,sprnames[i],4))
-			{
-				sprnum = i;
-				break;
-			}
-		}
+		sprnum = R_GetSpriteNumByName(newSpriteName);
+		if (sprnum == NUMSPRITES)
+			I_Error("Error parsing SPRTINFO lump: Unknown sprite name \"%s\"", newSpriteName);
 	}
 	else
 	{

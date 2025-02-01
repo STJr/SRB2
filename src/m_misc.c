@@ -2208,6 +2208,8 @@ int M_JumpWordReverse(const char *line, int offset)
 {
 	int (*is)(int);
 	int c;
+	if (offset == 0) // Don't let "--offset" later result in a negative value
+		return 0;
 	c = line[--offset];
 	if (isspace(c))
 		is = isspace;

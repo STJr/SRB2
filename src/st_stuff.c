@@ -371,9 +371,11 @@ void ST_LoadFaceGraphics(INT32 skinnum)
 		spritedef_t *sprdef = &skins[skinnum]->sprites[SPR2_XTRA];
 		spriteframe_t *sprframe = &sprdef->spriteframes[XTRA_LIFEPIC];
 		faceprefix[skinnum] = W_CachePatchNum(sprframe->lumppat[0], PU_HUDGFX);
-		if (skins[skinnum]->sprites[(SPR2_XTRA|FF_SPR2SUPER)].numframes > XTRA_LIFEPIC)
+
+		spritedef_t *super_sprdef = P_GetSkinSpritedef(skins[skinnum], SPR2_XTRA|SPR2F_SUPER);
+		if (super_sprdef->numframes > XTRA_LIFEPIC)
 		{
-			sprdef = &skins[skinnum]->sprites[SPR2_XTRA|FF_SPR2SUPER];
+			sprdef = super_sprdef;
 			sprframe = &sprdef->spriteframes[0];
 			superprefix[skinnum] = W_CachePatchNum(sprframe->lumppat[0], PU_HUDGFX);
 		}
@@ -507,7 +509,7 @@ static void ST_DrawNightsOverlayNum(fixed_t x /* right border */, fixed_t y, fix
 static void ST_drawDebugInfo(void)
 {
 	INT32 height = 0, h = 8, w = 18, lowh;
-	void (*textfunc)(INT32, INT32, INT32, const char *);
+	fixed_t textscale = FRACUNIT/2;
 
 	if (!(stplyr->mo && cv_debug))
 		return;
@@ -516,12 +518,12 @@ static void ST_drawDebugInfo(void)
 
 	if ((moviemode == MM_GIF && cv_gif_downscale.value) || vid.dup == 1)
 	{
-		textfunc = V_DrawRightAlignedString;
+		textscale = FRACUNIT;
 		lowh = ((vid.height/vid.dup) - 16);
 	}
 	else
 	{
-		textfunc = V_DrawRightAlignedSmallString;
+		textscale = FRACUNIT/2;
 		h /= 2;
 		w /= 2;
 		lowh = 0;
@@ -532,10 +534,10 @@ static void ST_drawDebugInfo(void)
 								V_DrawRightAlignedThinString(320,  8+lowh, VFLAGS|V_REDMAP, "SOME INFO NOT VISIBLE");\
 								return;\
 							}\
-							textfunc(320, height, VFLAGS, str);\
+							V_DrawAlignedFontString(320, height, VFLAGS, textscale, textscale, str, hu_font, alignright);\
 							height += h;
 
-#define V_DrawDebugFlag(f, str) textfunc(width, height, VFLAGS|f, str);\
+#define V_DrawDebugFlag(f, str) V_DrawAlignedFontString(width, height, VFLAGS|f, textscale, textscale, str, hu_font, alignright);\
 								width -= w
 
 	if (cv_debug & DBG_MEMORY)
@@ -1267,19 +1269,19 @@ tic_t lt_exitticker = 0, lt_endtime = 0;
 //
 static void ST_cacheLevelTitle(void)
 {
-#define SETPATCH(default, warning, custom, idx) \
+#define SETPATCH(def, warning, custom, idx) \
 { \
 	lumpnum_t patlumpnum = LUMPERROR; \
 	if (mapheaderinfo[gamemap-1]->custom[0] != '\0') \
 	{ \
-		patlumpnum = W_CheckNumForName(mapheaderinfo[gamemap-1]->custom); \
+		patlumpnum = W_CheckNumForPatchName(mapheaderinfo[gamemap-1]->custom); \
 		if (patlumpnum != LUMPERROR) \
 			lt_patches[idx] = (patch_t *)W_CachePatchNum(patlumpnum, PU_HUDGFX); \
 	} \
 	if (patlumpnum == LUMPERROR) \
 	{ \
 		if (!(mapheaderinfo[gamemap-1]->levelflags & LF_WARNINGTITLE)) \
-			lt_patches[idx] = (patch_t *)W_CachePatchName(default, PU_HUDGFX); \
+			lt_patches[idx] = (patch_t *)W_CachePatchName(def, PU_HUDGFX); \
 		else \
 			lt_patches[idx] = (patch_t *)W_CachePatchName(warning, PU_HUDGFX); \
 	} \
@@ -1551,13 +1553,16 @@ static void ST_drawPowerupHUD(void)
 	{
 		shieldoffs[q] = ICONSEP;
 
-		if ((stplyr->powers[pw_shield] & SH_NOSTACK & ~SH_FORCEHP) == SH_FORCE)
+		if ((stplyr->powers[pw_shield] & SH_NOSTACK & ~SH_FORCEHP) == SH_FORCE
+		&& (stplyr->powers[pw_shield] & SH_FORCEHP) > 0) // Special handling for >1HP Force Shields
 		{
-			UINT8 i, max = (stplyr->powers[pw_shield] & SH_FORCEHP);
-			for (i = 0; i <= max; i++)
-			{
-				V_DrawSmallScaledPatch(offs-(i<<1), hudinfo[HUD_POWERUPS].y-(i<<1), (V_PERPLAYER|hudinfo[HUD_POWERUPS].f)|((i == max) ? V_HUDTRANS : V_HUDTRANSHALF), forceshield);
-			}
+			UINT8 max = (stplyr->powers[pw_shield] & SH_FORCEHP);
+
+			V_DrawSmallScaledPatch(offs,   hudinfo[HUD_POWERUPS].y,   V_PERPLAYER|hudinfo[HUD_POWERUPS].f|V_HUDTRANSHALF, forceshield);
+			V_DrawSmallScaledPatch(offs-2, hudinfo[HUD_POWERUPS].y-2, V_PERPLAYER|hudinfo[HUD_POWERUPS].f|V_HUDTRANS,     forceshield);
+
+			if (max > 1) // if the shield has more than 2 hits, show the extra n hits as "+n"
+				V_DrawRightAlignedThinString(offs+16, hudinfo[HUD_POWERUPS].y, V_PERPLAYER|hudinfo[HUD_POWERUPS].f|V_HUDTRANS, va("+%d", max - 1));
 		}
 		else
 		{
@@ -1567,6 +1572,7 @@ static void ST_drawPowerupHUD(void)
 				case SH_ELEMENTAL:   p = watershield;   break;
 				case SH_ARMAGEDDON:  p = bombshield;    break;
 				case SH_ATTRACT:     p = ringshield;    break;
+				case SH_FORCE:       p = forceshield;   break;
 				case SH_PITY:        p = pityshield;    break;
 				case SH_PINK:        p = pinkshield;    break;
 				case SH_FLAMEAURA:   p = flameshield;   break;
@@ -1749,22 +1755,23 @@ static void ST_drawNightsRecords(void)
 
 	switch (stplyr->textvar)
 	{
-		case 1: // A "Bonus Time Start" by any other name...
+		case NTV_BONUSTIMESTART: // A "Bonus Time Start" by any other name...
 		{
 			V_DrawCenteredString(BASEVIDWIDTH/2, 52, V_GREENMAP|aflag, M_GetText("GET TO THE GOAL!"));
 			V_DrawCenteredString(BASEVIDWIDTH/2, 60,            aflag, M_GetText("SCORE MULTIPLIER START!"));
 
 			if (stplyr->finishedtime)
 			{
-				V_DrawString(BASEVIDWIDTH/2 - 48, 140, aflag, "TIME:");
-				V_DrawString(BASEVIDWIDTH/2 - 48, 148, aflag, "BONUS:");
-				V_DrawRightAlignedString(BASEVIDWIDTH/2 + 48, 140, V_ORANGEMAP|aflag, va("%d", (stplyr->startedtime - stplyr->finishedtime)/TICRATE));
-				V_DrawRightAlignedString(BASEVIDWIDTH/2 + 48, 148, V_ORANGEMAP|aflag, va("%d", (stplyr->finishedtime/TICRATE) * 100));
+				tic_t maretime = stplyr->startedtime - stplyr->finishedtime;
+				V_DrawString(BASEVIDWIDTH/2 - 48, 140, V_YELLOWMAP|aflag, "TIME:");
+				V_DrawString(BASEVIDWIDTH/2 - 48, 148, V_YELLOWMAP|aflag, "BONUS:");
+				V_DrawRightAlignedString(BASEVIDWIDTH/2 + 48, 140, aflag, va("%i:%02i.%02i", G_TicsToMinutes(maretime,true), G_TicsToSeconds(maretime), G_TicsToCentiseconds(maretime)));
+				V_DrawRightAlignedString(BASEVIDWIDTH/2 + 48, 148, aflag, va("%d", (stplyr->finishedtime/TICRATE) * 100));
 			}
 			break;
 		}
-		case 2: // Get n Spheres
-		case 3: // Get n more Spheres
+		case NTV_GETSPHERES: // Get n Spheres
+		case NTV_GETMORESPHERES: // Get n more Spheres
 		{
 			if (!stplyr->capsule)
 				return;
@@ -1772,31 +1779,37 @@ static void ST_drawNightsRecords(void)
 			// Yes, this string is an abomination.
 			V_DrawCenteredString(BASEVIDWIDTH/2, 60, aflag,
 								 va(M_GetText("\x80GET\x82 %d\x80 %s%s%s!"), stplyr->capsule->health,
-									(stplyr->textvar == 3) ? M_GetText("MORE ") : "",
+									(stplyr->textvar == NTV_GETMORESPHERES) ? M_GetText("MORE ") : "",
 									(G_IsSpecialStage(gamemap)) ? "SPHERE" : "CHIP",
 									(stplyr->capsule->health > 1) ? "S" : ""));
 			break;
 		}
-		case 4: // End Bonus
+		case NTV_BONUSTIMEEND: // End Bonus
 		{
-			V_DrawString(BASEVIDWIDTH/2 - 56, 140, aflag, (G_IsSpecialStage(gamemap)) ? "SPHERES:" : "CHIPS:");
-			V_DrawString(BASEVIDWIDTH/2 - 56, 148, aflag, "BONUS:");
-			V_DrawRightAlignedString(BASEVIDWIDTH/2 + 56, 140, V_ORANGEMAP|aflag, va("%d", stplyr->finishedspheres));
-			V_DrawRightAlignedString(BASEVIDWIDTH/2 + 56, 148, V_ORANGEMAP|aflag, va("%d", stplyr->finishedspheres * 50));
-			ST_DrawNightsOverlayNum((BASEVIDWIDTH/2 + 56)<<FRACBITS, 160<<FRACBITS, FRACUNIT, aflag, stplyr->lastmarescore, nightsnum, SKINCOLOR_AZURE);
+			V_DrawString(BASEVIDWIDTH/2 - 48, 132, V_YELLOWMAP|aflag, "TIME:");
+			V_DrawString(BASEVIDWIDTH/2 - 48, 140, V_YELLOWMAP|aflag, (G_IsSpecialStage(gamemap)) ? "SPHERES:" : "CHIPS:");
+			V_DrawString(BASEVIDWIDTH/2 - 48, 148, V_YELLOWMAP|aflag, "BONUS:");
+			V_DrawRightAlignedString(BASEVIDWIDTH/2 + 48, 132, aflag, va("%i:%02i.%02i", G_TicsToMinutes(stplyr->lastmaretime,true), G_TicsToSeconds(stplyr->lastmaretime), G_TicsToCentiseconds(stplyr->lastmaretime)));
+			V_DrawRightAlignedString(BASEVIDWIDTH/2 + 48, 140, aflag, va("%d", stplyr->finishedspheres));
+			V_DrawRightAlignedString(BASEVIDWIDTH/2 + 48, 148, aflag, va("%d", stplyr->finishedspheres * 50));
+			ST_DrawNightsOverlayNum((BASEVIDWIDTH/2 + 48)<<FRACBITS, 160<<FRACBITS, FRACUNIT, aflag, stplyr->lastmarescore, nightsnum, SKINCOLOR_AZURE);
+
+			// If this is a multi-mare map, display the mare number.
+			if (stplyr->lastmare || P_FindLowestMare() < UINT8_MAX)
+				V_DrawLevelActNum(BASEVIDWIDTH/2 - 80, 128 + 3, aflag, stplyr->lastmare + 1);
 
 			// If new record, say so!
 			if (!(netgame || multiplayer) && G_GetBestNightsScore(gamemap, stplyr->lastmare + 1, clientGamedata) <= stplyr->lastmarescore)
 			{
 				if (stplyr->texttimer & 16)
-					V_DrawCenteredString(BASEVIDWIDTH/2, 184, V_YELLOWMAP|aflag, "* NEW RECORD *");
+					V_DrawCenteredString(BASEVIDWIDTH/2, 184, aflag, "\x85* \x82NEW RECORD \x85*\x80");
 			}
 
 			if (P_HasGrades(gamemap, stplyr->lastmare + 1))
 			{
 				UINT8 grade = P_GetGrade(stplyr->lastmarescore, gamemap, stplyr->lastmare);
-				if (modeattacking || grade >= GRADE_A)
-					V_DrawTranslucentPatch(BASEVIDWIDTH/2 + 60, 160, aflag, ngradeletters[grade]);
+				if (modeattacking || !G_IsSpecialStage(gamemap) || grade >= GRADE_A)
+					V_DrawTranslucentPatch(BASEVIDWIDTH/2 + 60, 128, aflag, ngradeletters[grade]);
 			}
 			break;
 		}
@@ -1906,7 +1919,7 @@ static void ST_drawNiGHTSHUD(void)
 	// Link drawing
 	if (!oldspecialstage
 	// Don't display when the score is showing (it popping up for a split second when exiting a map is intentional)
-	&& !(stplyr->texttimer && stplyr->textvar == 4)
+	&& !(stplyr->texttimer && stplyr->textvar == NTV_BONUSTIMEEND)
 	&& LUA_HudEnabled(hud_nightslink)
 	&& ((cv_debug & DBG_NIGHTSBASIC) || stplyr->linkcount > 1)) // When debugging, show "0 Link".
 	{
@@ -1953,7 +1966,7 @@ static void ST_drawNiGHTSHUD(void)
 		INT32 amount;
 		const INT32 length = 88;
 
-		origamount = stplyr->capsule->spawnpoint->angle;
+		origamount = stplyr->capsule->spawnpoint->args[1];
 		I_Assert(origamount > 0); // should not happen now
 
 		ST_DrawTopLeftOverlayPatch(72, 8, nbracket);

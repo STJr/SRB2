@@ -67,6 +67,8 @@ static UINT8 *metalbuffer = NULL;
 static UINT8 *metal_p;
 static UINT16 metalversion;
 
+consvar_t cv_resyncdemo = CVAR_INIT("resyncdemo", "On", 0, CV_OnOff, NULL);
+
 // extra data stuff (events registered this frame while recording)
 static struct {
 	UINT8 flags; // EZT flags
@@ -413,7 +415,7 @@ void G_WriteGhostTic(mobj_t *ghost)
 	{
 		oldghost.sprite2 = ghost->sprite2;
 		ziptic |= GZT_SPR2;
-		WRITEUINT8(demo_p,oldghost.sprite2);
+		WRITEUINT16(demo_p,oldghost.sprite2);
 	}
 
 	// Check for sprite set changes
@@ -513,7 +515,7 @@ void G_WriteGhostTic(mobj_t *ghost)
 		temp = ghost->player->followmobj->z-ghost->z;
 		WRITEFIXED(demo_p,temp);
 		if (followtic & FZT_SKIN)
-			WRITEUINT8(demo_p,ghost->player->followmobj->sprite2);
+			WRITEUINT16(demo_p,ghost->player->followmobj->sprite2);
 		WRITEUINT16(demo_p,ghost->player->followmobj->sprite);
 		WRITEUINT8(demo_p,(ghost->player->followmobj->frame & FF_FRAMEMASK));
 		WRITEUINT16(demo_p,ghost->player->followmobj->color);
@@ -549,6 +551,9 @@ void G_ConsGhostTic(void)
 
 	testmo = players[0].mo;
 
+	if (P_MobjWasRemoved(testmo))
+		return; // No valid mobj exists, probably because of unexpected quit
+
 	// Grab ghost data.
 	ziptic = READUINT8(demo_p);
 	if (ziptic & GZT_XYZ)
@@ -575,7 +580,7 @@ void G_ConsGhostTic(void)
 	if (ziptic & GZT_FRAME)
 		demo_p++;
 	if (ziptic & GZT_SPR2)
-		demo_p++;
+		demo_p += (demoversion < 0x0011) ? sizeof(UINT8) : sizeof(UINT16);
 
 	if (ziptic & GZT_EXTRA)
 	{ // But wait, there's more!
@@ -644,7 +649,7 @@ void G_ConsGhostTic(void)
 		// momx, momy and momz
 		demo_p += (demoversion < 0x000e) ? sizeof(INT16) * 3 : sizeof(fixed_t) * 3;
 		if (followtic & FZT_SKIN)
-			demo_p++;
+			demo_p += (demoversion < 0x0011) ? sizeof(UINT8) : sizeof(UINT16);
 		demo_p += sizeof(UINT16);
 		demo_p++;
 		demo_p += (demoversion==0x000c) ? 1 : sizeof(UINT16);
@@ -664,11 +669,14 @@ void G_ConsGhostTic(void)
 			CONS_Alert(CONS_WARNING, M_GetText("Demo playback has desynced!\n"));
 		demosynced = false;
 
-		P_UnsetThingPosition(testmo);
-		testmo->x = oldghost.x;
-		testmo->y = oldghost.y;
-		P_SetThingPosition(testmo);
-		testmo->z = oldghost.z;
+		if (cv_resyncdemo.value)
+		{
+			P_UnsetThingPosition(testmo);
+			testmo->x = oldghost.x;
+			testmo->y = oldghost.y;
+			P_SetThingPosition(testmo);
+			testmo->z = oldghost.z;
+		}
 	}
 
 	if (*demo_p == DEMOMARKER)
@@ -726,7 +734,7 @@ void G_GhostTicker(void)
 		if (ziptic & GZT_FRAME)
 			g->oldmo.frame = READUINT8(g->p);
 		if (ziptic & GZT_SPR2)
-			g->oldmo.sprite2 = READUINT8(g->p);
+			g->oldmo.sprite2 = (g->version < 0x0011) ? READUINT8(g->p) : READUINT16(g->p);
 
 		// Update ghost
 		P_UnsetThingPosition(g->mo);
@@ -941,7 +949,7 @@ void G_GhostTicker(void)
 				follow->z = g->mo->z + temp;
 				P_SetThingPosition(follow);
 				if (followtic & FZT_SKIN)
-					follow->sprite2 = READUINT8(g->p);
+					follow->sprite2 = (g->version < 0x0011) ? READUINT8(g->p) : READUINT16(g->p);
 				else
 					follow->sprite2 = 0;
 				follow->sprite = READUINT16(g->p);
@@ -1056,7 +1064,7 @@ void G_ReadMetalTic(mobj_t *metal)
 			oldmetal.frame = G_ConvertOldFrameFlags(oldmetal.frame);
 	}
 	if (ziptic & GZT_SPR2)
-		oldmetal.sprite2 = READUINT8(metal_p);
+		oldmetal.sprite2 = (metalversion < 0x0011) ? READUINT8(metal_p) : READUINT16(metal_p);
 
 	// Set movement, position, and angle
 	// oldmetal contains where you're supposed to be.
@@ -1199,7 +1207,7 @@ void G_ReadMetalTic(mobj_t *metal)
 				follow->z = metal->z + temp;
 				P_SetThingPosition(follow);
 				if (followtic & FZT_SKIN)
-					follow->sprite2 = READUINT8(metal_p);
+					follow->sprite2 = (metalversion < 0x0011) ? READUINT8(metal_p) : READUINT16(metal_p);
 				else
 					follow->sprite2 = 0;
 				follow->sprite = READUINT16(metal_p);
@@ -1207,7 +1215,7 @@ void G_ReadMetalTic(mobj_t *metal)
 				if (metalversion < 0x000f)
 					follow->frame = G_ConvertOldFrameFlags(follow->frame);
 				follow->angle = metal->angle;
-				follow->color = (metalversion==0x000c) ? READUINT8(metal_p) : READUINT16(metal_p);
+				follow->color = (metalversion == 0x000c) ? READUINT8(metal_p) : READUINT16(metal_p);
 
 				if (!(followtic & FZT_SPAWNED))
 				{
@@ -1308,7 +1316,7 @@ void G_WriteMetalTic(mobj_t *metal)
 	{
 		oldmetal.sprite2 = metal->sprite2;
 		ziptic |= GZT_SPR2;
-		WRITEUINT8(demo_p,oldmetal.sprite2);
+		WRITEUINT16(demo_p,oldmetal.sprite2);
 	}
 
 	// Check for sprite set changes
@@ -1383,7 +1391,7 @@ void G_WriteMetalTic(mobj_t *metal)
 		temp = metal->player->followmobj->z-metal->z;
 		WRITEFIXED(demo_p,temp);
 		if (followtic & FZT_SKIN)
-			WRITEUINT8(demo_p,metal->player->followmobj->sprite2);
+			WRITEUINT16(demo_p,metal->player->followmobj->sprite2);
 		WRITEUINT16(demo_p,metal->player->followmobj->sprite);
 		WRITEUINT32(demo_p,metal->player->followmobj->frame); // NOT & FF_FRAMEMASK here, so 32 bits
 		WRITEUINT16(demo_p,metal->player->followmobj->color);
@@ -2607,10 +2615,10 @@ void G_AddGhost(char *defdemoname)
 		}
 	gh->oldmo.color = gh->mo->color;
 
-	gh->mo->state = states+S_PLAY_STND;
+	gh->mo->state = &states[S_PLAY_STND];
 	gh->mo->sprite = gh->mo->state->sprite;
-	gh->mo->sprite2 = (gh->mo->state->frame & FF_FRAMEMASK);
-	//gh->mo->frame = tr_trans30<<FF_TRANSSHIFT;
+	gh->mo->sprite2 = P_GetStateSprite2(gh->mo->state);
+	gh->mo->frame = (gh->mo->state->frame & ~FF_FRAMEMASK) | P_GetSprite2StateFrame(gh->mo->state);
 	gh->mo->flags2 |= MF2_DONTDRAW;
 	gh->fadein = (9-3)*6; // fade from invisible to trans30 over as close to 35 tics as possible
 	gh->mo->tics = -1;

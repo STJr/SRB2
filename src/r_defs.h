@@ -405,6 +405,8 @@ typedef enum
 	SSF_ROPEHANG = 1<<18,
 	SSF_JUMPFLIP = 1<<19,
 	SSF_GRAVITYOVERRIDE = 1<<20, // combine with MSF_GRAVITYFLIP
+	SSF_NOPHYSICSFLOOR = 1<<21,
+	SSF_NOPHYSICSCEILING = 1<<22,
 } sectorspecialflags_t;
 
 typedef enum
@@ -610,6 +612,8 @@ typedef struct line_s
 	INT16 callcount; // no. of calls left before triggering, for the "X calls" linedef specials, defaults to 0
 
 	UINT32 secportal; // transferred sector portal
+
+	struct pslope_s *midtexslope;
 } line_t;
 
 typedef struct
@@ -973,6 +977,8 @@ typedef struct
 	rotsprite_t *rotated[16]; // Rotated patches
 #endif
 } spriteframe_t;
+
+#define MAXFRAMENUM 256
 
 //
 // A sprite definition:  a number of animation frames.
