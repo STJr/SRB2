@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -679,13 +679,13 @@ static void D_Display(void)
 			s[sizeof s - 1] = '\0';
 
 			snprintf(s, sizeof s - 1, "get %d b/s", getbps);
-			V_DrawRightAlignedString(BASEVIDWIDTH, BASEVIDHEIGHT-ST_HEIGHT-40, V_YELLOWMAP, s);
+			V_DrawRightAlignedString(BASEVIDWIDTH, BASEVIDHEIGHT-40, V_YELLOWMAP, s);
 			snprintf(s, sizeof s - 1, "send %d b/s", sendbps);
-			V_DrawRightAlignedString(BASEVIDWIDTH, BASEVIDHEIGHT-ST_HEIGHT-30, V_YELLOWMAP, s);
+			V_DrawRightAlignedString(BASEVIDWIDTH, BASEVIDHEIGHT-30, V_YELLOWMAP, s);
 			snprintf(s, sizeof s - 1, "GameMiss %.2f%%", gamelostpercent);
-			V_DrawRightAlignedString(BASEVIDWIDTH, BASEVIDHEIGHT-ST_HEIGHT-20, V_YELLOWMAP, s);
+			V_DrawRightAlignedString(BASEVIDWIDTH, BASEVIDHEIGHT-20, V_YELLOWMAP, s);
 			snprintf(s, sizeof s - 1, "SysMiss %.2f%%", lostpercent);
-			V_DrawRightAlignedString(BASEVIDWIDTH, BASEVIDHEIGHT-ST_HEIGHT-10, V_YELLOWMAP, s);
+			V_DrawRightAlignedString(BASEVIDWIDTH, BASEVIDHEIGHT-10, V_YELLOWMAP, s);
 		}
 
 		if (cv_perfstats.value)
@@ -1024,7 +1024,7 @@ void D_StartTitle(void)
 #define REALLOC_FILE_LIST \
 	if (list->files == NULL) \
 	{ \
-		list->files = calloc(sizeof(list->files), 2); \
+		list->files = calloc(2, sizeof(list->files)); \
 		list->numfiles = 1; \
 	} \
 	else \
@@ -1250,7 +1250,7 @@ void D_SRB2Main(void)
 	// Print GPL notice for our console users (Linux)
 	CONS_Printf(
 	"\n\nSonic Robo Blast 2\n"
-	"Copyright (C) 1998-2023 by Sonic Team Junior\n\n"
+	"Copyright (C) 1998-2024 by Sonic Team Junior\n\n"
 	"This program comes with ABSOLUTELY NO WARRANTY.\n\n"
 	"This is free software, and you are welcome to redistribute it\n"
 	"and/or modify it under the terms of the GNU General Public License\n"
@@ -1535,7 +1535,7 @@ void D_SRB2Main(void)
 			I_Error("Cannot find a map remotely named '%s'\n", word);
 		else
 		{
-			if (!M_CheckParm("-server"))
+			if (!(M_CheckParm("-server") || dedicated))
 				G_SetUsedCheats(true);
 			autostart = true;
 		}

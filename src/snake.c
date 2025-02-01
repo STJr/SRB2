@@ -582,7 +582,7 @@ boolean Snake_JoyGrabber(void *opaque, event_t *ev)
 {
 	snake_t *snake = opaque;
 
-	if (ev->type == ev_joystick  && ev->key == 0)
+	if (snake != NULL && ev->type == ev_joystick  && ev->key == 0)
 	{
 		snake->joyevents[snake->joyeventcount] = ev;
 		snake->joyeventcount++;

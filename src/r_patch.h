@@ -1,6 +1,6 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
-// Copyright (C) 2020-2023 by Jaime "Lactozilla" Passos.
+// Copyright (C) 2020-2024 by Lactozilla.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.

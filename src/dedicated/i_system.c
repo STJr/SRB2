@@ -3,7 +3,7 @@
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Portions Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 2014-2023 by Sonic Team Junior.
+// Copyright (C) 2014-2024 by Sonic Team Junior.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -999,20 +999,8 @@ static void I_GetConsoleEvents(void)
 static void I_StartupConsole(void)
 {
 	HANDLE ci, co;
-	const INT32 ded = M_CheckParm("-dedicated");
-	BOOL gotConsole = FALSE;
-	if (M_CheckParm("-console") || ded)
-		gotConsole = AllocConsole();
-#ifdef _DEBUG
-	else if (M_CheckParm("-noconsole") && !ded)
-#else
-	else if (!M_CheckParm("-console") && !ded)
-#endif
-	{
-		FreeConsole();
-		gotConsole = FALSE;
-	}
-
+	BOOL gotConsole = AllocConsole();
+	consolevent = !M_CheckParm("-noconsole");
 	if (gotConsole)
 	{
 		SetConsoleTitleA("SRB2 Console");
@@ -1040,12 +1028,7 @@ static inline void I_ShutdownConsole(void){}
 static void I_GetConsoleEvents(void){}
 static inline void I_StartupConsole(void)
 {
-#ifdef _DEBUG
 	consolevent = !M_CheckParm("-noconsole");
-#else
-	consolevent = M_CheckParm("-console");
-#endif
-
 	framebuffer = M_CheckParm("-framebuffer");
 
 	if (framebuffer)
@@ -1390,8 +1373,8 @@ static const char *searchWad(const char *searchDir)
 
 #define CHECKWADPATH(ret) \
 do { \
-	I_OutputMsg(",%s", returnWadPath); \
-	if (isWadPathOk(returnWadPath)) \
+	I_OutputMsg(",%s", ret); \
+	if (isWadPathOk(ret)) \
 		return ret; \
 } while (0)
 
@@ -1416,7 +1399,9 @@ static const char *locateWad(void)
 #ifndef NOCWD
 	// examine current dir
 	strcpy(returnWadPath, ".");
-	CHECKWADPATH(NULL);
+	I_OutputMsg(",%s", returnWadPath);
+	if (isWadPathOk(returnWadPath))
+		return NULL;
 #endif
 
 #ifdef __APPLE__
@@ -1433,9 +1418,15 @@ static const char *locateWad(void)
 
 #ifndef NOHOME
 	// find in $HOME
-	I_OutputMsg(",HOME");
 	if ((envstr = I_GetEnv("HOME")) != NULL)
-		SEARCHWAD(envstr);
+	{
+		char *tmp = malloc(strlen(envstr) + 1 + sizeof(DEFAULTDIR));
+		strcpy(tmp, envstr);
+		strcat(tmp, "/");
+		strcat(tmp, DEFAULTDIR);
+		CHECKWADPATH(tmp);
+		free(tmp);
+	}
 #endif
 
 	// search paths

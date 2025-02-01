@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2012-2016 by John "JTE" Muniz.
-// Copyright (C) 2012-2023 by Sonic Team Junior.
+// Copyright (C) 2012-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -184,8 +184,10 @@ static const struct {
 	{META_SKIN,         "skin_t"},
 	{META_POWERS,       "player_t.powers"},
 	{META_SOUNDSID,     "skin_t.soundsid"},
-	{META_SKINSPRITES,  "skin_t.sprites"},
-	{META_SKINSPRITESLIST,  "skin_t.sprites[]"},
+
+	{META_SKINSPRITES,       "skin_t.skinsprites"},
+	{META_SKINSPRITESLIST,   "skin_t.skinsprites[]"},
+	{META_SKINSPRITESCOMPAT, "skin_t.sprites"}, // TODO: 2.3: Delete
 
 	{META_VERTEX,       "vertex_t"},
 	{META_LINE,         "line_t"},
@@ -653,7 +655,7 @@ static int lib_pSpawnMobj(lua_State *L)
 	NOHUD
 	INLEVEL
 	NOSPAWNNULL
-	LUA_PushUserdata(L, P_SpawnMobj(x, y, z, type), META_MOBJ);
+	LUA_PushUserdata(L, P_SpawnMobj(x, y, z, type, NULL), META_MOBJ);
 	return 1;
 }
 
@@ -1728,12 +1730,11 @@ static int lib_pResetCamera(lua_State *L)
 static int lib_pSuperReady(lua_State *L)
 {
 	player_t *player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
-	boolean transform = (boolean)lua_opttrueboolean(L, 2);
 	//HUDSAFE
 	INLEVEL
 	if (!player)
 		return LUA_ErrInvalid(L, "player_t");
-	lua_pushboolean(L, P_SuperReady(player, transform));
+	lua_pushboolean(L, P_SuperReady(player));
 	return 1;
 }
 
@@ -3876,7 +3877,7 @@ static int lib_gAddPlayer(lua_State *L)
 	player_t *newplayer;
 	SINT8 skinnum = 0, bot;
 
-	for (i = 0; i < MAXPLAYERS; i++)
+	for (i = 1; i < MAXPLAYERS; i++)
 	{
 		if (!playeringame[i])
 			break;

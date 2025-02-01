@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -1258,8 +1258,9 @@ static unsigned PIT_DoCheckThing(mobj_t *thing)
 
 		if (tmthing->type != MT_SHELL && tmthing->target && tmthing->target->type == thing->type)
 		{
-			// Don't hit same species as originator.
-			if (thing == tmthing->target)
+			// Don't hit yourself, and if a player, don't hit bots
+			if (thing == tmthing->target
+				|| (thing->player && tmthing->target->player && (thing->player->bot == BOT_2PAI || thing->player->bot == BOT_2PHUMAN)))
 				return CHECKTHING_IGNORE;
 
 			if (thing->type != MT_PLAYER)
@@ -1464,13 +1465,13 @@ static unsigned PIT_DoCheckThing(mobj_t *thing)
 	}
 
 	// check for special pickup
-	if (thing->flags & MF_SPECIAL)
+	if (thing->flags & MF_SPECIAL && (tmthing->player || (tmthing->flags & MF_PUSHABLE))) // MF_PUSHABLE added for steam jets
 	{
 		P_TouchSpecialThing(thing, tmthing, true); // can remove thing
 		return CHECKTHING_COLLIDE;
 	}
 	// check again for special pickup
-	if (tmthing->flags & MF_SPECIAL)
+	if (tmthing->flags & MF_SPECIAL && (thing->player || (thing->flags & MF_PUSHABLE))) // MF_PUSHABLE added for steam jets
 	{
 		P_TouchSpecialThing(tmthing, thing, true); // can remove thing
 		return CHECKTHING_COLLIDE;
@@ -2500,6 +2501,9 @@ boolean P_TryCameraMove(fixed_t x, fixed_t y, camera_t *thiscam)
 	boolean itsatwodlevel = false;
 
 	floatok = false;
+
+	if (dedicated) // this crashes so don't even try it
+		return false;
 
 	if (twodlevel
 		|| (thiscam == &camera && players[displayplayer].mo && (players[displayplayer].mo->flags2 & MF2_TWOD))
@@ -3960,23 +3964,25 @@ papercollision:
 		mo->momy = tmymove;
 	}
 
+	const fixed_t tmradius = mo->radius > 8 ? mo->radius : 8;
+
 	do {
-		if (tmxmove > mo->radius) {
-			newx = mo->x + mo->radius;
-			tmxmove -= mo->radius;
-		} else if (tmxmove < -mo->radius) {
-			newx = mo->x - mo->radius;
-			tmxmove += mo->radius;
+		if (tmxmove > tmradius) {
+			newx = mo->x + tmradius;
+			tmxmove -= tmradius;
+		} else if (tmxmove < -tmradius) {
+			newx = mo->x - tmradius;
+			tmxmove += tmradius;
 		} else {
 			newx = mo->x + tmxmove;
 			tmxmove = 0;
 		}
-		if (tmymove > mo->radius) {
-			newy = mo->y + mo->radius;
-			tmymove -= mo->radius;
-		} else if (tmymove < -mo->radius) {
-			newy = mo->y - mo->radius;
-			tmymove += mo->radius;
+		if (tmymove > tmradius) {
+			newy = mo->y + tmradius;
+			tmymove -= tmradius;
+		} else if (tmymove < -tmradius) {
+			newy = mo->y - tmradius;
+			tmymove += tmradius;
 		} else {
 			newy = mo->y + tmymove;
 			tmymove = 0;

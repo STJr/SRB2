@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -3786,6 +3786,8 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 
 		if (player->powers[pw_carry] == CR_NIGHTSMODE) // NiGHTS damage handling
 		{
+			if (player->powers[pw_flashing])
+				return false;
 			if (!force)
 			{
 				if (source == target)
@@ -3803,6 +3805,10 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 
 		if (G_IsSpecialStage(gamemap) && !(damagetype & DMG_DEATHMASK))
 		{
+			if (player->powers[pw_flashing])
+				return false;
+			if (LUA_HookMobjDamage(target, inflictor, source, damage, damagetype))
+				return true;
 			P_SpecialStageDamage(player, inflictor, source);
 			return true;
 		}

@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -32,7 +32,6 @@
 #define INETPACKETLENGTH 1024
 
 extern INT16 hardware_MAXPACKETLENGTH;
-extern INT32 net_bandwidth; // in byte/s
 
 #if defined(_MSC_VER)
 #pragma pack(1)
@@ -40,36 +39,17 @@ extern INT32 net_bandwidth; // in byte/s
 
 typedef struct
 {
-	/// Supposed to be DOOMCOM_ID
-	INT32 id;
-
-	/// SRB2 executes an INT32 to execute commands.
-	INT16 intnum;
-	/// Communication between SRB2 and the driver.
-	/// Is CMD_SEND or CMD_GET.
-	INT16 command;
 	/// Is dest for send, set by get (-1 = no packet).
 	INT16 remotenode;
-
 	/// Number of bytes in doomdata to be sent
 	INT16 datalength;
 
 	/// Info common to all nodes.
 	/// Console is always node 0.
 	INT16 numnodes;
-	/// Flag: 1 = no duplication, 2-5 = dup for slow nets.
-	INT16 ticdup;
 	/// Flag: 1 = send a backup tic in every packet.
 	INT16 extratics;
-	/// kind of game
-	INT16 gametype;
-	/// Flag: -1 = new game, 0-5 = load savegame
-	INT16 savegame;
-	/// currect map
-	INT16 map;
 
-	/// Info specific to this node.
-	INT16 consoleplayer;
 	/// Number of "slots": the highest player number in use plus one.
 	INT16 numslots;
 

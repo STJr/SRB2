@@ -1,6 +1,6 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
-// Copyright (C) 2004-2023 by Sonic Team Junior.
+// Copyright (C) 2004-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -579,9 +579,9 @@ void Y_IntermissionDrawer(void)
 		{
 			if (LUA_HudEnabled(hud_intermissiontitletext))
 			{
-				const char *ringtext = "\x82" "get 50 rings, then";
+				const char *ringtext = "\x82" "50 rings, no shield";
 				const char *tut1text = "\x82" "press " "\x80" "shield";
-				const char *tut2text = "\x82" "to transform";
+				const char *tut2text = "\x82" "mid-" "\x80" "jump";
 				ttheight = 8;
 				V_DrawLevelTitle(data.spec.passedx1 + xoffset1, ttheight, 0, data.spec.passed1);
 				ttheight += V_LevelNameHeight(data.spec.passed3) + 2;

@@ -3,7 +3,7 @@
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
 // Copyright (C) 2011-2016 by Matthew "Kaito Sinclaire" Walsh.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -176,6 +176,7 @@ typedef struct
 extern menupres_t menupres[NUMMENUTYPES];
 extern UINT32 prevMenuId;
 extern UINT32 activeMenuId;
+extern tic_t shieldprompt_timer; // Show a prompt about the new Shield button for old configs // TODO: 2.3: Remove
 
 void M_InitMenuPresTables(void);
 UINT8 M_GetYoungestChildMenu(void);
@@ -421,6 +422,7 @@ typedef struct
 {
 	char levelname[32];
 	UINT8 skinnum;
+	char skinname [SKINNAMESIZE+1];
 	UINT8 botskin;
 	UINT8 numemeralds;
 	UINT8 numgameovers;

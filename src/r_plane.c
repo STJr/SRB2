@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -910,7 +910,7 @@ void R_DrawSinglePlane(visplane_t *pl)
 
 		if (pl->polyobj->translucency == 0 || (pl->extra_colormap && (pl->extra_colormap->flags & CMF_FOG)))
 			light = (pl->lightlevel >> LIGHTSEGSHIFT);
-		else
+		else // TODO: 2.3: Make transparent polyobject planes always use light level
 			light = LIGHTLEVELS-1;
 	}
 	else
@@ -952,7 +952,7 @@ void R_DrawSinglePlane(visplane_t *pl)
 
 				if ((spanfunctype == SPANDRAWFUNC_SPLAT) || (pl->extra_colormap && (pl->extra_colormap->flags & CMF_FOG)))
 					light = (pl->lightlevel >> LIGHTSEGSHIFT);
-				else
+				else // TODO: 2.3: Make transparent FOF planes use light level instead of always being fullbright
 					light = LIGHTLEVELS-1;
 			}
 			else if (pl->ffloor->fofflags & FOF_FOG)

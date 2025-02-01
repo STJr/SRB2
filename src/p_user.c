@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -976,6 +976,9 @@ pflags_t P_GetJumpFlags(player_t *player)
 //
 boolean P_PlayerInPain(player_t *player)
 {
+	if (P_MobjWasRemoved(player->mo))
+		return false;
+		
 	// no silly, sliding isn't pain
 	if (!(player->pflags & PF_SLIDING) && player->mo->state == &states[player->mo->info->painstate] && player->powers[pw_flashing])
 		return true;
@@ -2078,6 +2081,7 @@ mobj_t *P_SpawnGhostMobj(mobj_t *mobj)
 
 	ghost->renderflags = mobj->renderflags;
 	ghost->blendmode = mobj->blendmode;
+	ghost->alpha = mobj->alpha;
 
 	ghost->spritexscale = mobj->spritexscale;
 	ghost->spriteyscale = mobj->spriteyscale;
@@ -4434,27 +4438,21 @@ static void P_DoSuperStuff(player_t *player)
 //
 // Returns true if player is ready to transform or detransform
 //
-boolean P_SuperReady(player_t *player, boolean transform)
+boolean P_SuperReady(player_t *player)
 {
-	if (!transform &&
-	(player->powers[pw_super] < TICRATE*3/2
-	|| !G_CoopGametype())) // No turning back in competitive!
-		return false;
-	else if (transform
-	&& (player->powers[pw_super]
-	|| !ALL7EMERALDS(emeralds)
-	|| !(player->rings >= 50)))
-		return false;
-
 	if (player->mo
+	&& (player->rings >= 50)
+	&& ALL7EMERALDS(emeralds)
+	&& (player->charflags & SF_SUPER)
+	&& (player->pflags & PF_JUMPED)
+	&& !player->powers[pw_super]
+	&& !player->powers[pw_invulnerability]
+	&& !(player->powers[pw_shield] & SH_NOSTACK)
 	&& !player->powers[pw_tailsfly]
 	&& !player->powers[pw_carry]
-	&& (player->charflags & SF_SUPER)
 	&& !P_PlayerInPain(player)
 	&& !player->climbing
 	&& !(player->pflags & (PF_JUMPSTASIS|PF_THOKKED|PF_STARTDASH|PF_GLIDING|PF_SLIDING|PF_SHIELDABILITY))
-	&& ((player->pflags & PF_JUMPED) || (P_IsObjectOnGround(player->mo) && (player->panim == PA_IDLE || player->panim == PA_EDGE
-	|| player->panim == PA_WALK || player->panim == PA_RUN || (player->charflags & SF_DASHMODE && player->panim == PA_DASH))))
 	&& !(maptol & TOL_NIGHTS))
 		return true;
 
@@ -5314,8 +5312,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd, boolean spinshieldhac
 			;
 		else if (cmd->buttons & BT_SPIN)
 		{
-			if (spinshieldhack && !(player->pflags & PF_SPINDOWN) && P_SuperReady(player, true)
-			&& !player->powers[pw_invulnerability] && !(player->powers[pw_shield] & SH_NOSTACK)) // These two checks are no longer in P_SuperReady
+			if (spinshieldhack && !(player->pflags & PF_SPINDOWN) && P_SuperReady(player))
 			{
 				// If you're using two-button play, can turn Super and aren't already,
 				// and you don't have a shield, then turn Super!
@@ -8799,12 +8796,8 @@ void P_MovePlayer(player_t *player)
 		if ((cmd->buttons & BT_SHIELD) && !(player->pflags & PF_SHIELDDOWN) && !spinshieldhack)
 		{
 			// Transform into super if we can!
-			if (P_SuperReady(player, true))
+			if (P_SuperReady(player))
 				P_DoSuperTransformation(player, false);
-
-			// Detransform from super if we can!
-			else if (P_SuperReady(player, false))
-				P_DoSuperDetransformation(player);
 		}
 	}
 
@@ -8825,6 +8818,8 @@ void P_MovePlayer(player_t *player)
 			player->mo->height = P_GetPlayerSpinHeight(player);
 			atspinheight = true;
 		}
+		else if (player->powers[pw_carry] == CR_PLAYER || player->powers[pw_carry] == CR_PTERABYTE) // You're slightly shorter while being carried
+			player->mo->height = FixedDiv(P_GetPlayerHeight(player), FixedDiv(14*FRACUNIT,10*FRACUNIT));
 		else
 			player->mo->height = P_GetPlayerHeight(player);
 
@@ -12846,9 +12841,9 @@ void P_PlayerAfterThink(player_t *player)
 				else
 				{
 					if (tails->player)
-						P_TryMove(player->mo, tails->x + P_ReturnThrustX(tails, tails->player->drawangle, 4*FRACUNIT), tails->y + P_ReturnThrustY(tails, tails->player->drawangle, 4*FRACUNIT), true);
+						P_TryMove(player->mo, tails->x + P_ReturnThrustX(tails, tails->player->drawangle, 4*tails->scale), tails->y + P_ReturnThrustY(tails, tails->player->drawangle, 4*tails->scale), true);
 					else
-						P_TryMove(player->mo, tails->x + P_ReturnThrustX(tails, tails->angle, 4*FRACUNIT), tails->y + P_ReturnThrustY(tails, tails->angle, 4*FRACUNIT), true);
+						P_TryMove(player->mo, tails->x + P_ReturnThrustX(tails, tails->angle, 4*tails->scale), tails->y + P_ReturnThrustY(tails, tails->angle, 4*tails->scale), true);
 					player->mo->momx = tails->momx;
 					player->mo->momy = tails->momy;
 					player->mo->momz = tails->momz;
@@ -12862,7 +12857,7 @@ void P_PlayerAfterThink(player_t *player)
 						P_SetPlayerAngle(player, player->mo->angle);
 				}
 
-				if (P_AproxDistance(player->mo->x - tails->x, player->mo->y - tails->y) > player->mo->radius)
+				if (P_AproxDistance(player->mo->x - tails->x, player->mo->y - tails->y) > tails->radius)
 					player->powers[pw_carry] = CR_NONE;
 
 				if (player->powers[pw_carry] == CR_PLAYER)
@@ -13083,7 +13078,7 @@ void P_PlayerAfterThink(player_t *player)
 				player->mo->momy = ptera->momy;
 				player->mo->momz = ptera->momz;
 
-				if (P_AproxDistance(player->mo->x - ptera->x - ptera->watertop, player->mo->y - ptera->y - ptera->waterbottom) > player->mo->radius)
+				if (P_AproxDistance(player->mo->x - ptera->x - ptera->watertop, player->mo->y - ptera->y - ptera->waterbottom) > ptera->radius)
 					goto dropoff;
 
 				ptera->watertop >>= 1;
