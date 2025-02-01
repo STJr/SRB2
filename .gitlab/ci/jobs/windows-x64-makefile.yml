@@ -21,7 +21,7 @@ Windows x64 Makefile:
     - - |
           # apt_toolchain
           echo -e "\e[0Ksection_start:`date +%s`:apt_toolchain[collapsed=true]\r\e[0KInstalling toolchain packages"
-      - apt-get install gcc-mingw-w64-x86-64-win32 g++-mingw-w64-x86-64-win32
+      - apt-get install g++-mingw-w64-x86-64-win32
       - |
           # apt_toolchain
           echo -e "\e[0Ksection_end:`date +%s`:apt_toolchain\r\e[0K"

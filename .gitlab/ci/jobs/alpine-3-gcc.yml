@@ -95,7 +95,7 @@ Alpine 3 GCC:
     - - |
           # apk_toolchain
           echo -e "\e[0Ksection_start:`date +%s`:apk_toolchain[collapsed=true]\r\e[0KInstalling toolchain packages"
-      - apk add gcc g++
+      - apk add g++
       - |
           # apk_toolchain
           echo -e "\e[0Ksection_end:`date +%s`:apk_toolchain\r\e[0K"
