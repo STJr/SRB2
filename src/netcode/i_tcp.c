@@ -936,6 +936,13 @@ static boolean UDP_Socket(void)
 	hints.ai_socktype = SOCK_DGRAM;
 	hints.ai_protocol = IPPROTO_UDP;
 
+#ifdef HAVE_IPV6
+	if (!b_ipv6)
+		I_OutputMsg("Disabling IPv6 support at runtime\n");
+#else
+	I_OutputMsg("Compiled without IPv6 support\n");
+#endif
+
 	if (serverrunning)
 		serv = serverport_name;
 	else
