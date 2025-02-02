@@ -3471,8 +3471,8 @@ static void HWR_DrawSprite(gl_vissprite_t *spr)
 		// Translate
 		for (i = 0; i < 4; i++)
 		{
-			wallVerts[i].x = rotated[i].x + FIXED_TO_FLOAT(spr->mobj->x);
-			wallVerts[i].z = rotated[i].y + FIXED_TO_FLOAT(spr->mobj->y);
+			wallVerts[i].x = rotated[i].x + spr->x1;
+			wallVerts[i].z = rotated[i].y + spr->z1;
 		}
 
 		if (renderflags & (RF_SLOPESPLAT | RF_OBJECTSLOPESPLAT))
