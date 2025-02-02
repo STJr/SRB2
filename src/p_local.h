@@ -139,6 +139,7 @@ void P_SetPlayerAngle(player_t *player, angle_t angle);
 angle_t P_GetLocalAngle(player_t *player);
 void P_SetLocalAngle(player_t *player, angle_t angle);
 void P_ForceLocalAngle(player_t *player, angle_t angle);
+angle_t P_GetLocalAiming(player_t *player);
 boolean P_PlayerFullbright(player_t *player);
 boolean P_PlayerCanEnterSpinGaps(player_t *player);
 boolean P_PlayerShouldUseSpinHeight(player_t *player);

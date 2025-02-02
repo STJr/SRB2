@@ -345,7 +345,7 @@ static int camera_get(lua_State *L)
 		lua_pushboolean(L, cam->chase);
 		break;
 	case camera_aiming:
-		lua_pushinteger(L, cam->aiming);
+		lua_pushinteger(L, cam->chase ? cam->aiming : P_GetLocalAiming(&players[displayplayer])); // Swap angle vars depending on chasecam.
 		break;
 	case camera_x:
 		lua_pushinteger(L, cam->x);
@@ -360,7 +360,7 @@ static int camera_get(lua_State *L)
 		lua_pushboolean(L, cam->reset);
 		break;
 	case camera_angle:
-		lua_pushinteger(L, cam->angle);
+		lua_pushinteger(L, cam->chase ? cam->angle : P_GetLocalAngle(&players[displayplayer]));
 		break;
 	case camera_subsector:
 		LUA_PushUserdata(L, cam->subsector, META_SUBSECTOR);

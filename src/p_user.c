@@ -13222,6 +13222,17 @@ void P_ForceLocalAngle(player_t *player, angle_t angle)
 		localangle2 = angle;
 }
 
+// USED BY LUA ONLY!!
+angle_t P_GetLocalAiming(player_t *player)
+{
+	if (player == &players[consoleplayer])
+		return localaiming;
+	else if (player == &players[secondarydisplayplayer])
+		return localaiming2;
+	else
+		return 0;
+}
+
 boolean P_PlayerFullbright(player_t *player)
 {
 	return (player->powers[pw_super]
