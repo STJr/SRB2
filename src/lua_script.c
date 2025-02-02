@@ -34,6 +34,7 @@
 #include "lua_script.h"
 #include "lua_libs.h"
 #include "lua_hook.h"
+#include "lua_custombuild.h"
 
 #include "doomstat.h"
 #include "g_state.h"
@@ -438,6 +439,10 @@ int LUA_PushGlobals(lua_State *L, const char *word)
 		lua_pushboolean(L, chat_on);
 		return 1;
 	}
+
+	if (Takis_PushGlobals(L, word))
+		return 1;
+	
 	return 0;
 }
 

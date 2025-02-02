@@ -7,6 +7,11 @@
         "hw_main.h": "c",
         "byteptr.h": "c",
         "sdlmain.h": "c",
-        "r_skins.h": "c"
+        "r_skins.h": "c",
+        "p_local.h": "c",
+        "doomdef.h": "c",
+        "p_setup.h": "c",
+        "lua_libs.h": "c",
+        "lua_script.h": "c"
     }
 }
