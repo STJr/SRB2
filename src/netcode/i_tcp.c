@@ -655,6 +655,7 @@ static inline ssize_t SOCK_SendToAddr(SOCKET_TYPE socket, mysockaddr_t *sockaddr
 static void SOCK_Send(void)
 {
 	ssize_t c = ERRSOCKET;
+	int e = -1; // save error code so it can't be modified later code and avoid calling WSAGetLastError() more then once
 
 	if (!nodeconnected[doomcom->remotenode])
 		return;
@@ -668,8 +669,12 @@ static void SOCK_Send(void)
 				if (myfamily[i] == broadcastaddress[j].any.sa_family)
 				{
 					c = SOCK_SendToAddr(mysockets[i], &broadcastaddress[j]);
-					if (c == ERRSOCKET && !ALLOWEDERROR(errno))
-						break;
+					if (c == ERRSOCKET)
+					{
+						e = errno;
+						if (!ALLOWEDERROR(e))
+							break;
+					}
 				}
 			}
 		}
@@ -681,19 +686,26 @@ static void SOCK_Send(void)
 			if (myfamily[i] == clientaddress[doomcom->remotenode].any.sa_family)
 			{
 				c = SOCK_SendToAddr(mysockets[i], &clientaddress[doomcom->remotenode]);
-				if (c == ERRSOCKET && !ALLOWEDERROR(errno))
-					break;
+				if (c == ERRSOCKET)
+				{
+					e = errno;
+					if (!ALLOWEDERROR(e))
+						break;
+				}
 			}
 		}
 	}
 	else
 	{
 		c = SOCK_SendToAddr(nodesocket[doomcom->remotenode], &clientaddress[doomcom->remotenode]);
+		if (c == ERRSOCKET)
+		{
+			e = errno;
+		}
 	}
 
-	if (c == ERRSOCKET)
+	if (c == ERRSOCKET && e != -1) // -1 means no socket for the address family was found
 	{
-		int e = errno; // save error code so it can't be modified later
 		if (!ALLOWEDERROR(e))
 			I_Error("SOCK_Send, error sending to node %d (%s) #%u: %s", doomcom->remotenode,
 				SOCK_GetNodeAddress(doomcom->remotenode), e, strerror(e));
