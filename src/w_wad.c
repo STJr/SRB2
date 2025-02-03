@@ -897,6 +897,8 @@ UINT16 W_InitFile(const char *filename, boolean mainfile, boolean startup, boole
 	}
 
 	important = !important;
+	if (local)
+		important = 0;
 
 #ifndef NOMD5
 	//
