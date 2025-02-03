@@ -240,20 +240,27 @@ HMS_connect (int proto, const char *format, ...)
 		curl_easy_setopt(curl, CURLOPT_STDERR, logstream);
 	}
 
-	if (M_CheckParm("-bindaddr") && M_IsNextParm())
-	{
-		curl_easy_setopt(curl, CURLOPT_INTERFACE, M_GetNextParm());
-	}
-
 	curl_easy_setopt(curl, CURLOPT_URL, url);
 	curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
 
 #ifndef NO_IPV6
 	if (proto == PROTO_V6 || (proto == PROTO_ANY && !hms_allow_ipv4))
+	{
 		curl_easy_setopt(curl, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V6);
+		if (M_CheckParm("-bindaddr6") && M_IsNextParm())
+		{
+			curl_easy_setopt(curl, CURLOPT_INTERFACE, M_GetNextParm());
+		}
+	}
 	if (proto == PROTO_V4 || (proto == PROTO_ANY && !hms_allow_ipv6))
 #endif
+	{
 		curl_easy_setopt(curl, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
+		if (M_CheckParm("-bindaddr") && M_IsNextParm())
+		{
+			curl_easy_setopt(curl, CURLOPT_INTERFACE, M_GetNextParm());
+		}
+	}
 
 	curl_easy_setopt(curl, CURLOPT_TIMEOUT, cv_masterserver_timeout.value);
 	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, HMS_on_read);
