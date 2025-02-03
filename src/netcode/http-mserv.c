@@ -64,7 +64,9 @@ consvar_t cv_masterserver_token = CVAR_INIT
 static int hms_started;
 
 static boolean hms_args_checked;
+#ifndef NO_IPV6
 static boolean hms_allow_ipv6;
+#endif
 static boolean hms_allow_ipv4;
 
 static char *hms_api;
@@ -141,7 +143,9 @@ static void HMS_check_args_once(void)
 	if (hms_args_checked)
 		return;
 
+#ifndef NO_IPV6
 	hms_allow_ipv6 = !M_CheckParm("-noipv6");
+#endif
 	hms_allow_ipv4 = !M_CheckParm("-noipv4");
 	hms_args_checked = true;
 }
