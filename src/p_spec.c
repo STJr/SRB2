@@ -4573,6 +4573,10 @@ static void P_ProcessExitSector(player_t *player, mtag_t sectag)
 
 	if (lines[lineindex].args[1] & TMEF_SKIPTALLY)
 		skipstats = 1;
+
+	//skip stats actually skips post-level cutscenes.
+	if (lines[lineindex].args[1] & TMEF_KEEPCUTSCENE)
+		keepcutscene = true;
 }
 
 static void P_ProcessTeamBase(player_t *player, boolean redteam)

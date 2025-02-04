@@ -4181,29 +4181,19 @@ static int lib_gSetCustomExitVars(lua_State *L)
 	nextmapoverride = 0;
 	skipstats = 0;
 	nextgametype = -1;
-	luakeepcutscenes = 0;
+	keepcutscene = false;
 
 	if (n >= 1)
 	{
 		nextmapoverride = (INT16)luaL_optinteger(L, 1, 0);
 		skipstats = (INT16)luaL_optinteger(L, 2, 0);
 		nextgametype = (INT16)luaL_optinteger(L, 3, -1);
-		luakeepcutscenes = (INT16)luaL_optinteger(L, 4, 0);
+		
+		if (!lua_isnil(L, 4))
+			keepcutscene = luaL_checkboolean(L, 4);
 	}
 
 	return 0;
-}
-
-// Another Lua function that doesn't actually exist, but since lib_gSetCustomExitVars exists...
-// The get counterpart would have been useful as well.
-// Gets nextmapoverride, skipstats and nextgametype for any other use
-static int lib_gGetCustomExitVars(lua_State* L)
-{
-	lua_pushinteger(L, nextmapoverride);
-	lua_pushinteger(L, skipstats);
-	lua_pushinteger(L, nextgametype);
-	lua_pushinteger(L, luakeepcutscenes);
-	return 4;
 }
 
 static int lib_gEnoughPlayersFinished(lua_State *L)
@@ -4647,7 +4637,6 @@ static luaL_Reg lib[] = {
 	{"G_FindMapByNameOrCode",lib_gFindMapByNameOrCode},
 	{"G_DoReborn",lib_gDoReborn},
 	{"G_SetCustomExitVars",lib_gSetCustomExitVars},
-	{"G_GetCustomExitVars", lib_gGetCustomExitVars},
 	{"G_EnoughPlayersFinished",lib_gEnoughPlayersFinished},
 	{"G_ExitLevel",lib_gExitLevel},
 	{"G_IsSpecialStage",lib_gIsSpecialStage},

@@ -160,8 +160,9 @@ textprompt_t *textprompts[MAX_PROMPTS];
 
 INT16 nextmapoverride;
 UINT8 skipstats;
-UINT8 luakeepcutscenes;
 INT16 nextgametype = -1;
+
+boolean keepcutscene;
 
 // Pointers to each CTF flag
 mobj_t *redflag;
@@ -3160,7 +3161,7 @@ void G_DoReborn(INT32 playernum)
 					nextmapoverride = gamemap;
 					countdown2 = TICRATE;
 					skipstats = 2;
-					luakeepcutscenes = 0;
+					forcekeepcutscenes = 0;
 
 					for (i = 0; i < MAXPLAYERS; i++)
 					{
@@ -4211,7 +4212,7 @@ void G_AfterIntermission(void)
 
 	if ((gametyperules & GTR_CUTSCENES) && mapheaderinfo[gamemap-1]->cutscenenum
 		&& !modeattacking
-		&& (skipstats <= 1 || luakeepcutscenes > 0)
+		&& (skipstats <= 1 || keepcutscene == true)
 		&& (gamecomplete || !(marathonmode & MA_NOCUTSCENES))
 		&& stagefailed == false)
 	{
