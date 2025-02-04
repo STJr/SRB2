@@ -3161,7 +3161,7 @@ void G_DoReborn(INT32 playernum)
 					nextmapoverride = gamemap;
 					countdown2 = TICRATE;
 					skipstats = 2;
-					forcekeepcutscenes = 0;
+					keepcutscene = 0;
 
 					for (i = 0; i < MAXPLAYERS; i++)
 					{
