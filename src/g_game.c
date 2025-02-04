@@ -160,6 +160,7 @@ textprompt_t *textprompts[MAX_PROMPTS];
 
 INT16 nextmapoverride;
 UINT8 skipstats;
+UINT8 luakeepcutscenes;
 INT16 nextgametype = -1;
 
 // Pointers to each CTF flag
