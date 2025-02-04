@@ -3159,6 +3159,7 @@ void G_DoReborn(INT32 playernum)
 					nextmapoverride = gamemap;
 					countdown2 = TICRATE;
 					skipstats = 2;
+					luakeepcutscenes = 0;
 
 					for (i = 0; i < MAXPLAYERS; i++)
 					{
@@ -4209,7 +4210,7 @@ void G_AfterIntermission(void)
 
 	if ((gametyperules & GTR_CUTSCENES) && mapheaderinfo[gamemap-1]->cutscenenum
 		&& !modeattacking
-		&& skipstats <= 1
+		&& (skipstats <= 1 || luakeepcutscenes > 0)
 		&& (gamecomplete || !(marathonmode & MA_NOCUTSCENES))
 		&& stagefailed == false)
 	{
