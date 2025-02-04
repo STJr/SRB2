@@ -4199,9 +4199,6 @@ static int lib_gSetCustomExitVars(lua_State *L)
 // Gets nextmapoverride, skipstats and nextgametype for any other use
 static int lib_gGetCustomExitVars(lua_State* L)
 {
-	NOHUD
-	INLEVEL
-
 	lua_pushinteger(L, nextmapoverride);
 	lua_pushinteger(L, skipstats);
 	lua_pushinteger(L, nextgametype);
