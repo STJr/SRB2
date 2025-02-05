@@ -1444,14 +1444,18 @@ static luaL_Reg lib_hud[] = {
 	{"height", libd_height},
 	{"scale", libd_dup},
 	{"renderer", libd_renderer},
-	{"RandomFixed",libd_RandomFixed},
-	{"RandomByte",libd_RandomByte},
-	{"RandomKey",libd_RandomKey},
-	{"RandomRange",libd_RandomRange},
-	{"SignedRandom",libd_SignedRandom}, // MACRO
-	{"RandomChance",libd_RandomChance}, // MACRO
-	{"localTransFlag", libd_getlocaltransflag},
-	{"userTransFlag", libd_getusertransflag},
+	{NULL, NULL}
+};
+
+// globalized client_side random functions.
+static luaL_Reg lib_randomclient[] = {
+	// m_random
+	{"localfixed",libd_RandomFixed},
+	{"localbyte",libd_RandomByte},
+	{"localkey",libd_RandomKey},
+	{"localrange",libd_RandomRange},
+	{"localsignedrandom",libd_SignedRandom}, // MACRO
+	{"localchance",libd_RandomChance}, // MACRO
 	{NULL, NULL}
 };
 
@@ -1478,6 +1482,7 @@ int LUA_HudLib(lua_State *L)
 	LUA_RegisterGlobalUserdata(L, "hudinfo", lib_getHudInfo, NULL, lib_hudinfolen);
 
 	luaL_register(L, "hud", lib_hud);
+	luaL_register(L, "random", lib_randomclient);
 	return 0;
 }
 
