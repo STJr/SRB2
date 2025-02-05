@@ -40,8 +40,8 @@ Windows x86:
 
   variables:
     PREFIX: i686-w64-mingw32
-    CC: /usr/bin/i686-w64-mingw32-gcc-posix
-    CXX: /usr/bin/i686-w64-mingw32-g++-posix
+    CC: /usr/lib/ccache/i686-w64-mingw32-gcc
+    CXX: /usr/lib/ccache/i686-w64-mingw32-g++
 
   script:
     - |
@@ -84,9 +84,7 @@ Windows x86:
     - - |
           # cmake
           echo -e "\e[0Ksection_start:`date +%s`:cmake[collapsed=false]\r\e[0KBuilding Makefiles"
-          # cmake
-          echo -e "\e[0Ksection_start:`date +%s`:cmake[collapsed=false]\r\e[0KBuilding Makefiles"
-      - cmake --preset ninja-x86_mingw_static_vcpkg-debug -G "Unix Makefiles" -DSRB2_USE_CCACHE=YES -DSRB2_CONFIG_ERRORMODE=ON -DCMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake
+      - cmake -B build.cmake --preset ninja-x86_mingw_static_vcpkg-debug -DSRB2_USE_CCACHE=NO -DSRB2_CONFIG_ERRORMODE=ON
       - |
           # cmake
           echo -e "\e[0Ksection_end:`date +%s`:cmake\r\e[0K"
@@ -94,7 +92,7 @@ Windows x86:
     - - |
           # make
           echo -e "\e[0Ksection_start:`date +%s`:make[collapsed=false]\r\e[0KCompiling SRB2"
-      - cmake --build --preset ninja-x86_mingw_static_vcpkg-debug --parallel 1 -- --keep-going || cmake --build --preset ninja-x86_mingw_static_vcpkg-debug --parallel 1 -- --keep-going
+      - cmake -build build.cmake --parallel 1 --verbose --preset ninja-x86_mingw_static_vcpkg-debug
       - |
           # make
           echo -e "\e[0Ksection_end:`date +%s`:make\r\e[0K"
