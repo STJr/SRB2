@@ -3,10 +3,6 @@ osxcross arm64:
 
   stage: build
 
-  when: manual
-
-  allow_failure: true
-
   artifacts:
     paths:
       - "build.cmake/bin/"
