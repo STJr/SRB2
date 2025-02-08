@@ -15,8 +15,8 @@ Alpine 3 GCC:
 
   artifacts:
     paths:
-      - "build.alpine3/bin/"
-      - "build.alpine3/src/config.h"
+      - "build.cmake/bin/"
+      - "build.cmake/src/config.h"
     expose_as: "Apline-3"
     name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-Apline-3"
 
@@ -111,7 +111,7 @@ Alpine 3 GCC:
     - - |
           # cmake
           echo -e "\e[0Ksection_start:`date +%s`:cmake[collapsed=false]\r\e[0KBuilding Makefiles"
-      - cmake -B build.alpine3 -DSRB2_USE_CCACHE=YES -DSRB2_CONFIG_ERRORMODE=ON -DSRB2_CONFIG_EXECINFO=NO -G "Unix Makefiles"
+      - cmake -B build.cmake -DSRB2_USE_CCACHE=YES -DSRB2_CONFIG_ERRORMODE=ON -DSRB2_CONFIG_EXECINFO=NO -DSRB2_CONFIG_USE_GME:BOOL=ON
       - |
           # cmake
           echo -e "\e[0Ksection_end:`date +%s`:cmake\r\e[0K"
@@ -119,7 +119,7 @@ Alpine 3 GCC:
     - - |
           # make
           echo -e "\e[0Ksection_start:`date +%s`:make[collapsed=false]\r\e[0KCompiling SRB2"
-      - make --directory=build.alpine3 --keep-going || make --directory=build.alpine3 --keep-going
+      - cmake --build build.cmake --parallel 1 --verbose
       - |
           # make
           echo -e "\e[0Ksection_end:`date +%s`:make\r\e[0K"
