@@ -10,6 +10,7 @@
 - Crosshairs can invert pixels behind, to improve their visibility (must add tinyfontfix locally to work)
 - Addfilelocal!
 - Thin captions and thin FPS! (tinyfontfix.pk3 needed for captions)
+- Ring-Racers-styled screen quakes! ("rr_quakes" in console)
   
 # Sonic Robo Blast 2
 [![latest release](https://badgen.net/github/release/STJr/SRB2/stable)](https://github.com/STJr/SRB2/releases/latest)
