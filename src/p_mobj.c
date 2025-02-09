@@ -39,7 +39,7 @@
 #include "netcode/net_command.h"
 
 static CV_PossibleValue_t CV_BobSpeed[] = {{0, "MIN"}, {4*FRACUNIT, "MAX"}, {0, NULL}};
-consvar_t cv_movebob = CVAR_INIT ("movebob", "1.0", CV_FLOAT|CV_SAVE, CV_BobSpeed, NULL);
+consvar_t cv_movebob = CVAR_INIT ("movebob", "0.25", CV_FLOAT|CV_SAVE, CV_BobSpeed, NULL);
 
 actioncache_t actioncachehead;
 
