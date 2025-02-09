@@ -11520,8 +11520,9 @@ void P_DoTailsOverlay(player_t *player, mobj_t *tails)
 // When the player is on a moving animation, the follow object goes to its see state.
 // When dash mode is entered, the follow object switches to its melee state.
 //
-// If MF2_FRET is set, the jet fume flashes during dash mode.
+// If MF2_FRET is set, the jet fume will flash during dash mode.
 // MF2_AMBUSH can be used to enable Metal Sonic's skidding animation.
+// MF2_JUSTATTACKED will enable the color cycling.
 // If the follow item is MT_METALJETFUME, the above two effects are automatically applied.
 //
 // MF2_STRONGBOX is internally used to track if the jet fume is in its deactivated state or not.
@@ -11656,7 +11657,10 @@ void P_DoMetalJetFume(player_t *player, mobj_t *fume)
 
 		fume->flags2 = (fume->flags2 & ~MF2_DONTDRAW) | (mo->flags2 & MF2_DONTDRAW);
 		fume->destscale = (mo->scale + FixedDiv(player->speed, player->normalspeed)) / (underwater ? 6 : 3);
-		fume->color = FUME_SKINCOLORS[(dashmode * sizeof(FUME_SKINCOLORS)) / (DASHMODE_MAX + 1)];
+
+		// Do color cycling if follow item is MT_METALJETFUME, or if MF2_JUSTATTACKED is set
+		if (ismetaljetfume || (fume->flags2 & MF2_JUSTATTACKED))
+			fume->color = FUME_SKINCOLORS[(dashmode * sizeof(FUME_SKINCOLORS)) / (DASHMODE_MAX + 1)];
 
 		if (underwater)
 		{
