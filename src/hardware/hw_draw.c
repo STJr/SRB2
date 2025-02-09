@@ -256,8 +256,8 @@ void HWR_DrawStretchyFixedPatch(patch_t *gpatch, fixed_t x, fixed_t y, fixed_t p
 	}
 
 	// positions of the cx, cy, are between 0 and vid.width/vid.height now, we need them to be between -1 and 1
-	cx = -1 + (cx / (vid.width/2));
-	cy = 1 - (cy / (vid.height/2));
+	cx = -1.0f + (cx / (vid.width / 2.0f));
+	cy = 1.0f - (cy / (vid.height / 2.0f));
 
 	// fwidth and fheight are similar
 	fwidth /= vid.width / 2;
