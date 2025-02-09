@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2024 by Sonic Team Junior.
+// Copyright (C) 1999-2025 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -730,6 +730,8 @@ static boolean R_ProcessPatchableFields(skin_t *skin, char *stoken, char *value)
 	GETFLAG(MACHINE)
 	GETFLAG(DASHMODE)
 	GETFLAG(FASTEDGE)
+	GETFLAG(FASTWAIT)
+	GETFLAG(JETFUME)
 	GETFLAG(MULTIABILITY)
 	GETFLAG(NONIGHTSROTATION)
 	GETFLAG(NONIGHTSSUPER)
