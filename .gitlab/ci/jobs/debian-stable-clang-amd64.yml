@@ -9,8 +9,8 @@ Debian stable Clang:
 
   artifacts:
     paths:
-      - "build.clang/bin/"
-      - "build.clang/src/config.h"
+      - "build.cmake/bin/"
+      - "build.cmake/src/config.h"
     expose_as: "clang"
     name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-clang"
 
@@ -41,7 +41,7 @@ Debian stable Clang:
     - - |
           # cmake
           echo -e "\e[0Ksection_start:`date +%s`:cmake[collapsed=false]\r\e[0KBuilding Makefiles"
-      - cmake -B build.clang -DCPM_USE_LOCAL_PACKAGES:BOOL=ON -DSRB2_CONFIG_ENABLE_TESTS:BOOL=OFF -DSRB2_CONFIG_SYSTEM_LIBRARIES:BOOL=ON -DSRB2_USE_LIBGME:BOOL=OFF -G "Unix Makefiles"
+      - cmake -B build.cmake -DCPM_USE_LOCAL_PACKAGES:BOOL=ON -DSRB2_CONFIG_ENABLE_TESTS:BOOL=OFF -DSRB2_CONFIG_SYSTEM_LIBRARIES:BOOL=ON -DSRB2_USE_LIBGME:BOOL=OFF -DSRB2_CONFIG_USE_GME:BOOL=ON
       - |
           # cmake
           echo -e "\e[0Ksection_end:`date +%s`:cmake\r\e[0K"
@@ -49,7 +49,7 @@ Debian stable Clang:
     - - |
           # make
           echo -e "\e[0Ksection_start:`date +%s`:make[collapsed=false]\r\e[0KCompiling SRB2"
-      - make --directory=build.clang --keep-going || make --directory=build.clang --keep-going
+      - cmake  --build build.cmake --parallel 1 --verbose
       - |
           # make
           echo -e "\e[0Ksection_end:`date +%s`:make\r\e[0K"
