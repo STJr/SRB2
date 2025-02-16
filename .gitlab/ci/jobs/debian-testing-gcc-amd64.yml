@@ -19,7 +19,6 @@ Debian testing GCC:
   variables:
     CC: gcc
     CXX: g++
-    LDFLAGS: -Wl,-fuse-ld=gold
 
   script:
     - - |
