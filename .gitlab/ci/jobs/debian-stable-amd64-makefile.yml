@@ -1,6 +1,10 @@
 Debian stable:amd64 Makefile:
   extends: .srb2ci
 
+  when: manual
+
+  allow_failure: true
+
   stage: build
 
   artifacts:

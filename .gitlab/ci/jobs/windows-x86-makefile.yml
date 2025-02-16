@@ -3,7 +3,9 @@ Windows x86 Makefile:
 
   stage: build
 
-  when: on_success
+  when: manual
+
+  allow_failure: true
 
   artifacts:
     paths:

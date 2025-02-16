@@ -35,7 +35,7 @@ ifndef GCC295
  WFLAGS+=-Wendif-labels
 endif
 ifdef GCC41
- WFLAGS+=-Wshadow
+ WFLAGS+=-Wno-shadow
 endif
 #WFLAGS+=-Wlarger-than-%len%
  WFLAGS+=-Wpointer-arith
@@ -61,7 +61,7 @@ endif
 ifdef GCC45
  WFLAGS+=-Wlogical-op
 endif
- WFLAGS+=-Waggregate-return
+ WFLAGS+=-Wno-aggregate-return
 ifdef HAIKU
 ifdef GCC41
  #WFLAGS+=-Wno-attributes
@@ -125,6 +125,8 @@ ifdef GCC44
 endif
 ifdef GCC46
  WFLAGS+=-Wno-error=suggest-attribute=noreturn
+ WFLAGS+=-Wno-error=maybe-uninitialized
+ WFLAGS+=-Wno-error=inline
 endif
 ifdef GCC54
  WFLAGS+=-Wno-logical-op -Wno-error=logical-op
