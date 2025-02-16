@@ -471,13 +471,13 @@ void Environment::printKill(ACSVM::Thread *thread, ACSVM::Word type, ACSVM::Word
 	}
 	else if (killType == ACSVM::KillType::OutOfBounds)
 	{
-		CONS_Alert(CONS_ERROR, "ACSVM ERROR: Jumped to out of bounds location %lu in script %s\n",
-			(thread->codePtr - thread->module->codeV.data() - 1), scriptName.c_str());
+		CONS_Alert(CONS_ERROR, "ACSVM ERROR: Jumped to out of bounds location %s in script %s\n",
+			sizeu1((thread->codePtr - thread->module->codeV.data() - 1)), scriptName.c_str());
 	}
 	else
 	{
-		CONS_Alert(CONS_ERROR, "ACSVM ERROR: Kill %u:%d at %lu in script %s\n",
-			type, data, (thread->codePtr - thread->module->codeV.data() - 1), scriptName.c_str());
+		CONS_Alert(CONS_ERROR, "ACSVM ERROR: Kill %u:%d at %s in script %s\n",
+			type, data, sizeu1((thread->codePtr - thread->module->codeV.data() - 1)), scriptName.c_str());
 	}
 
 	CONS_Printf("Script terminated.\n");

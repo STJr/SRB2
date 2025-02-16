@@ -626,7 +626,7 @@ bool CallFunc_Random(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::Word
 		no tid means search thru all thinkers.
 --------------------------------------------------*/
 static mobjtype_t filter_for_mobjtype = MT_NULL; // annoying but I don't wanna mess with other code
-bool ACS_ThingTypeFilter(mobj_t *mo)
+static bool ACS_ThingTypeFilter(mobj_t *mo)
 {
 	return (ACS_CountThing(mo, filter_for_mobjtype));
 }
@@ -1590,7 +1590,7 @@ bool CallFunc_strcasecmp(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM::
 
 		Returns the number of enemies in the tagged sectors.
 --------------------------------------------------*/
-bool ACS_EnemyFilter(mobj_t *mo)
+static bool ACS_EnemyFilter(mobj_t *mo)
 {
 	return ((mo->flags & (MF_ENEMY|MF_BOSS)) && mo->health > 0);
 }
@@ -1618,7 +1618,7 @@ bool CallFunc_CountEnemies(ACSVM::Thread *thread, const ACSVM::Word *argV, ACSVM
 
 		Returns the number of pushables in the tagged sectors.
 --------------------------------------------------*/
-bool ACS_PushableFilter(mobj_t *mo)
+static bool ACS_PushableFilter(mobj_t *mo)
 {
 	return ((mo->flags & MF_PUSHABLE)
 		|| ((mo->info->flags & MF_PUSHABLE) && mo->fuse));
