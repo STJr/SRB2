@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2024 by Sonic Team Junior.
+// Copyright (C) 1999-2025 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -22,6 +22,10 @@
 #include "p_tick.h"
 #include "r_defs.h"
 #include "p_maputl.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #define FLOATSPEED (FRACUNIT*4)
 
@@ -69,6 +73,7 @@ extern thinker_t thlist[];
 extern mobj_t *mobjcache;
 
 void P_InitThinkers(void);
+void P_InvalidateThinkersWithoutInit(void);
 void P_AddThinker(const thinklistnum_t n, thinker_t *thinker);
 void P_RemoveThinker(thinker_t *thinker);
 
@@ -147,6 +152,7 @@ UINT16 P_GetPlayerColor(player_t *player);
 boolean P_IsObjectInGoop(mobj_t *mo);
 boolean P_IsObjectOnGround(mobj_t *mo);
 boolean P_InSpaceSector(mobj_t *mo);
+#define P_IsObjectFlipped(o) (((o)->eflags & MFE_VERTICALFLIP) == MFE_VERTICALFLIP)
 boolean P_InQuicksand(mobj_t *mo);
 boolean P_InJumpFlipSector(mobj_t *mo);
 boolean P_PlayerHitFloor(player_t *player, boolean dorollstuff);
@@ -204,6 +210,8 @@ void P_DoSpinDashDust(player_t *player);
 #define P_AnalogMove(player) (P_ControlStyle(player) == CS_LMAOGALOG)
 boolean P_TransferToNextMare(player_t *player);
 UINT8 P_FindLowestMare(void);
+UINT8 P_FindLowestLap(void);
+UINT8 P_FindHighestLap(void);
 void P_FindEmerald(void);
 void P_TransferToAxis(player_t *player, INT32 axisnum);
 boolean P_PlayerMoving(INT32 pnum);
@@ -316,6 +324,8 @@ fixed_t P_MobjCeilingZ(sector_t *sector, sector_t *boundsec, fixed_t x, fixed_t 
 #define P_GetSpecialBottomZ(mobj, src, bound) P_MobjFloorZ(src, bound, mobj->x, mobj->y, mobj->radius, NULL, src != bound, true)
 #define P_GetSpecialTopZ(mobj, src, bound) P_MobjCeilingZ(src, bound, mobj->x, mobj->y, mobj->radius, NULL, src == bound, true)
 
+INT32 P_FloorPicAtPos(fixed_t x, fixed_t y, fixed_t z, fixed_t height);
+
 #define P_CameraGetFloorZ(mobj, sector, x, y, line) P_MobjFloorZ(sector, NULL, x, y, mobj->radius, line, false, false)
 #define P_CameraGetCeilingZ(mobj, sector, x, y, line) P_MobjCeilingZ(sector, NULL, x, y, mobj->radius, line, true, false)
 #define P_CameraGetFOFTopZ(mobj, sector, fof, x, y, line) P_MobjCeilingZ(sectors + fof->secnum, sector, x, y, mobj->radius, line, false, false)
@@ -333,6 +343,7 @@ mobj_t *P_SpawnXYZMissile(mobj_t *source, mobj_t *dest, mobjtype_t type, fixed_t
 mobj_t *P_SpawnPointMissile(mobj_t *source, fixed_t xa, fixed_t ya, fixed_t za, mobjtype_t type, fixed_t x, fixed_t y, fixed_t z);
 mobj_t *P_SpawnAlteredDirectionMissile(mobj_t *source, mobjtype_t type, fixed_t x, fixed_t y, fixed_t z, INT32 shiftingAngle);
 mobj_t *P_SPMAngle(mobj_t *source, mobjtype_t type, angle_t angle, UINT8 aimtype, UINT32 flags2);
+mobj_t *P_SpawnMissileAtSpeeds(mobj_t *source, mobjtype_t type, angle_t angle, fixed_t hspeed, fixed_t vspeed, boolean useGravity);
 #define P_SpawnPlayerMissile(s,t,f) P_SPMAngle(s,t,s->angle,true,f)
 #define P_SpawnNameFinder(s,t) P_SPMAngle(s,t,s->angle,true,0)
 void P_ColorTeamMissile(mobj_t *missile, player_t *source);
@@ -553,5 +564,18 @@ void P_DoSuperDetransformation(player_t *player);
 void P_ExplodeMissile(mobj_t *mo);
 void P_CheckGravity(mobj_t *mo, boolean affect);
 void P_SetPitchRollFromSlope(mobj_t *mo, pslope_t *slope);
+fixed_t P_GetMobjHead(mobj_t *mo);
+fixed_t P_GetMobjFeet(mobj_t *mo);
+
+void P_InitTIDHash(void);
+void P_SetThingTID(mobj_t *mo, mtag_t tid);
+void P_RemoveThingTID(mobj_t *mo);
+mobj_t *P_FindMobjFromTID(mtag_t tid, mobj_t *i, mobj_t *activator);
+
+void P_DeleteMobjStringArgs(mobj_t *mobj);
+
+#ifdef __cplusplus
+} // extern "C"
+#endif
 
 #endif // __P_LOCAL__

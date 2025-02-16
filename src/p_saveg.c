@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2024 by Sonic Team Junior.
+// Copyright (C) 1999-2025 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -5560,32 +5560,15 @@ static inline boolean P_UnArchiveLuabanksAndConsistency(save_t *save_p)
 	return true;
 }
 
-static void DoACSArchive(void)
+static void DoACSArchive(save_t *save_p)
 {
-	savebuffer_t save;
-	save.buffer = save_start;
-	save.end = save_end;
-	save.p = save_p;
-	save.size = save_length;
-
-	ACS_Archive(&save);
-
-	save_p = save.p;
+	ACS_Archive(save_p);
 }
 
-static void DoACSUnArchive(void)
+static void DoACSUnArchive(save_t *save_p)
 {
-	savebuffer_t save;
-	save.buffer = save_start;
-	save.end = save_end;
-	save.p = save_p;
-	save.size = save_length;
-
-	ACS_UnArchive(&save);
-
-	save_p = save.p;
+	ACS_UnArchive(save_p);
 }
-
 
 void P_SaveGame(save_t *save_p, INT16 mapnum)
 {
@@ -5628,7 +5611,7 @@ void P_SaveNetGame(save_t *save_p, boolean resending)
 		P_NetArchiveSectorPortals(save_p);
 	}
 
-	DoACSArchive();
+	DoACSArchive(save_p);
 	LUA_Archive(save_p);
 
 	P_ArchiveLuabanksAndConsistency(save_p);
@@ -5673,7 +5656,7 @@ boolean P_LoadNetGame(save_t *save_p, boolean reloading)
 		P_FinishMobjs();
 	}
 
-	DoACSUnArchive();
+	DoACSUnArchive(save_p);
 	LUA_UnArchive(save_p);
 
 	// This is stupid and hacky, but maybe it'll work!

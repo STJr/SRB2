@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2024 by Russell's Smart Interfaces
-// Copyright (C) 2024 by Sonic Team Junior.
+// Copyright (C) 2025 by Sonic Team Junior.
 // Copyright (C) 2016 by James Haley, David Hill, et al. (Team Eternity)
 // Copyright (C) 2024 by Sally "TehRealSalt" Cochenour
 // Copyright (C) 2024 by Kart Krew
@@ -31,33 +31,31 @@
 
 using namespace srb2::acs;
 
-SaveBuffer::SaveBuffer(savebuffer_t *save_) :
+SaveBuffer::SaveBuffer(save_t *save_) :
 	save{save_}
 {
 }
 
 SaveBuffer::int_type SaveBuffer::overflow(SaveBuffer::int_type ch)
 {
-	if (save->p == save->end)
+	if (save->pos == save->size)
 	{
 		return traits_type::eof();
 	}
 
-	*save->p = static_cast<UINT8>(ch);
-	save->p++;
+	P_WriteUINT8(save, static_cast<UINT8>(ch));
 
 	return ch;
 }
 
 SaveBuffer::int_type SaveBuffer::underflow()
 {
-	if (save->p == save->end)
+	if (save->pos == save->size)
 	{
 		return traits_type::eof();
 	}
 
-	UINT8 ret = *save->p;
-	save->p++;
+	UINT8 ret = P_ReadUINT8(save);
 
 	// Allow the streambuf internal funcs to work
 	buf[0] = ret;

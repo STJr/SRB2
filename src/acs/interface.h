@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2024 by Russell's Smart Interfaces
-// Copyright (C) 2024 by Sonic Team Junior.
+// Copyright (C) 2025 by Sonic Team Junior.
 // Copyright (C) 2016 by James Haley, David Hill, et al. (Team Eternity)
 // Copyright (C) 2024 by Sally "TehRealSalt" Cochenour
 // Copyright (C) 2024 by Kart Krew
@@ -286,7 +286,7 @@ boolean ACS_Terminate(const char *name);
 
 
 /*--------------------------------------------------
-	void ACS_Archive(savebuffer_t *save);
+	void ACS_Archive(save_t *save);
 
 		Saves the ACS VM state into a save buffer.
 
@@ -297,11 +297,11 @@ boolean ACS_Terminate(const char *name);
 		None
 --------------------------------------------------*/
 
-void ACS_Archive(savebuffer_t *save);
+void ACS_Archive(save_t *save);
 
 
 /*--------------------------------------------------
-	void ACS_UnArchive(savebuffer_t *save);
+	void ACS_UnArchive(save_t *save);
 
 		Loads the ACS VM state from a save buffer.
 
@@ -312,7 +312,7 @@ void ACS_Archive(savebuffer_t *save);
 		None
 --------------------------------------------------*/
 
-void ACS_UnArchive(savebuffer_t *save);
+void ACS_UnArchive(save_t *save);
 
 #ifdef __cplusplus
 }

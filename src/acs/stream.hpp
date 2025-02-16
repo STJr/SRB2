@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2024 by Russell's Smart Interfaces
-// Copyright (C) 2024 by Sonic Team Junior.
+// Copyright (C) 2025 by Sonic Team Junior.
 // Copyright (C) 2016 by James Haley, David Hill, et al. (Team Eternity)
 // Copyright (C) 2024 by Sally "TehRealSalt" Cochenour
 // Copyright (C) 2024 by Kart Krew
@@ -35,10 +35,10 @@ namespace srb2::acs {
 class SaveBuffer : public std::streambuf
 {
 public:
-	savebuffer_t *save;
+	save_t *save;
 	UINT8 buf[1];
 
-	explicit SaveBuffer(savebuffer_t *save_);
+	explicit SaveBuffer(save_t *save_);
 
 private:
 	virtual int_type overflow(int_type ch);

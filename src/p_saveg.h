@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2024 by Sonic Team Junior.
+// Copyright (C) 1999-2025 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -39,14 +39,6 @@ boolean P_LoadNetGame(save_t *save_p, boolean reloading);
 
 typedef struct
 {
-	UINT8 *buffer;
-	UINT8 *p;
-	UINT8 *end;
-	size_t size;
-} savebuffer_t;
-
-typedef struct
-{
 	UINT8 skin;
 	UINT8 botskin;
 	INT32 score;
@@ -57,10 +49,6 @@ typedef struct
 } savedata_t;
 
 extern savedata_t savedata;
-
-#ifdef __cplusplus
-} // extern "C"
-#endif
 
 void P_WriteUINT8(save_t *p, UINT8 v);
 void P_WriteSINT8(save_t *p, SINT8 v);
@@ -93,5 +81,9 @@ void P_ReadStringN(save_t *p, char *s, size_t n);
 void P_ReadStringL(save_t *p, char *s, size_t n);
 void P_ReadString(save_t *p, char *s);
 void P_ReadMem(save_t *p, void *s, size_t n);
+
+#ifdef __cplusplus
+} // extern "C"
+#endif
 
 #endif

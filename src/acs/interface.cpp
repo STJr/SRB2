@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2024 by Russell's Smart Interfaces
-// Copyright (C) 2024 by Sonic Team Junior.
+// Copyright (C) 2025 by Sonic Team Junior.
 // Copyright (C) 2016 by James Haley, David Hill, et al. (Team Eternity)
 // Copyright (C) 2024 by Sally "TehRealSalt" Cochenour
 // Copyright (C) 2024 by Kart Krew
@@ -453,11 +453,11 @@ boolean ACS_Terminate(const char *name)
 }
 
 /*--------------------------------------------------
-	void ACS_Archive(savebuffer_t *save)
+	void ACS_Archive(save_t *save)
 
 		See header file for description.
 --------------------------------------------------*/
-void ACS_Archive(savebuffer_t *save)
+void ACS_Archive(save_t *save)
 {
 	Environment *env = &ACSEnv;
 
@@ -481,11 +481,11 @@ void ACS_Archive(savebuffer_t *save)
 }
 
 /*--------------------------------------------------
-	void ACS_UnArchive(savebuffer_t *save)
+	void ACS_UnArchive(save_t *save)
 
 		See header file for description.
 --------------------------------------------------*/
-void ACS_UnArchive(savebuffer_t *save)
+void ACS_UnArchive(save_t *save)
 {
 	Environment *env = &ACSEnv;
 
