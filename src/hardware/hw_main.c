@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -309,6 +309,43 @@ static FUINT HWR_CalcSlopeLight(FUINT lightnum, angle_t dir, fixed_t delta)
 	return (FUINT)finallight;
 }
 
+static UINT8 HWR_SideLightLevel(side_t *side, INT16 base_lightlevel)
+{
+	return max(0, min(255, side->light +
+		((side->lightabsolute) ? 0 : base_lightlevel)));
+}
+
+/* TODO: implement per-texture lighting
+static UINT8 HWR_TopLightLevel(side_t *side, INT16 base_lightlevel)
+{
+	return max(0, min(255, side->light_top +
+		((side->lightabsolute_top) ? 0 : HWR_SideLightLevel(side, base_lightlevel))));
+}
+
+static UINT8 HWR_MidLightLevel(side_t *side, INT16 base_lightlevel)
+{
+	return max(0, min(255, side->light_mid +
+		((side->lightabsolute_mid) ? 0 : HWR_SideLightLevel(side, base_lightlevel))));
+}
+
+static UINT8 HWR_BottomLightLevel(side_t *side, INT16 base_lightlevel)
+{
+	return max(0, min(255, side->light_bottom +
+		((side->lightabsolute_bottom) ? 0 : HWR_SideLightLevel(side, base_lightlevel))));
+}
+*/
+
+static UINT8 HWR_FloorLightLevel(sector_t *sector, INT16 base_lightlevel)
+{
+	return max(0, min(255, sector->floorlightlevel +
+		((sector->floorlightabsolute) ? 0 : base_lightlevel)));
+}
+
+static UINT8 HWR_CeilingLightLevel(sector_t *sector, INT16 base_lightlevel)
+{
+	return max(0, min(255, sector->ceilinglightlevel +
+		((sector->ceilinglightabsolute) ? 0 : base_lightlevel)));
+}
 // ==========================================================================
 //                                   FLOOR/CEILING GENERATION FROM SUBSECTORS
 // ==========================================================================
@@ -705,8 +742,9 @@ static void HWR_SplitWall(sector_t *sector, FOutVector *wallVerts, INT32 texnum,
 	fixed_t v2x = FloatToFixed(wallVerts[1].x);
 	fixed_t v2y = FloatToFixed(wallVerts[1].z);
 
+	FUINT lightnum = HWR_SideLightLevel(gl_sidedef, sector->lightlevel);
 	const UINT8 alpha = Surf->PolyColor.s.alpha;
-	FUINT lightnum = HWR_CalcWallLight(sector->lightlevel, v1x, v1y, v2x, v2y);
+	lightnum = HWR_CalcWallLight(lightnum, v1x, v1y, v2x, v2y);
 	extracolormap_t *colormap = NULL;
 
 	if (!r_renderwalls)
@@ -750,13 +788,13 @@ static void HWR_SplitWall(sector_t *sector, FOutVector *wallVerts, INT32 texnum,
 		{
 			if (pfloor && (pfloor->fofflags & FOF_FOG))
 			{
-				lightnum = pfloor->master->frontsector->lightlevel;
+				lightnum = HWR_SideLightLevel(gl_sidedef, pfloor->master->frontsector->lightlevel);
 				colormap = pfloor->master->frontsector->extra_colormap;
 				lightnum = colormap ? lightnum : HWR_CalcWallLight(lightnum, v1x, v1y, v2x, v2y);
 			}
 			else
 			{
-				lightnum = *list[i].lightlevel;
+				lightnum = HWR_SideLightLevel(gl_sidedef, *list[i].lightlevel);
 				colormap = *list[i].extra_colormap;
 				lightnum = colormap ? lightnum : HWR_CalcWallLight(lightnum, v1x, v1y, v2x, v2y);
 			}
@@ -916,6 +954,7 @@ static boolean HWR_BlendMidtextureSurface(FSurfaceInfo *pSurf)
 
 static void HWR_RenderMidtexture(INT32 gl_midtexture, float cliplow, float cliphigh, fixed_t worldtop, fixed_t worldbottom, fixed_t worldhigh, fixed_t worldlow, fixed_t worldtopslope, fixed_t worldbottomslope, fixed_t worldhighslope, fixed_t worldlowslope, UINT32 lightnum, FOutVector *inWallVerts)
 {
+	sector_t *front, *back;
 	FOutVector wallVerts[4];
 
 	FSurfaceInfo Surf;
@@ -924,6 +963,16 @@ static void HWR_RenderMidtexture(INT32 gl_midtexture, float cliplow, float cliph
 	// Determine if it's visible
 	if (!HWR_BlendMidtextureSurface(&Surf))
 		return;
+
+	if (gl_linedef->frontsector->heightsec != -1)
+		front = &sectors[gl_linedef->frontsector->heightsec];
+	else
+		front = gl_linedef->frontsector;
+
+	if (gl_linedef->backsector->heightsec != -1)
+		back = &sectors[gl_linedef->backsector->heightsec];
+	else
+		back = gl_linedef->backsector;
 
 	fixed_t texheight = FixedDiv(textureheight[gl_midtexture], abs(gl_sidedef->scaley_mid));
 	INT32 repeats;
@@ -934,15 +983,15 @@ static void HWR_RenderMidtexture(INT32 gl_midtexture, float cliplow, float cliph
 	{
 		fixed_t high, low;
 
-		if (gl_frontsector->ceilingheight > gl_backsector->ceilingheight)
-			high = gl_backsector->ceilingheight;
+		if (front->ceilingheight > back->ceilingheight)
+			high = back->ceilingheight;
 		else
-			high = gl_frontsector->ceilingheight;
+			high = front->ceilingheight;
 
-		if (gl_frontsector->floorheight > gl_backsector->floorheight)
-			low = gl_frontsector->floorheight;
+		if (front->floorheight > back->floorheight)
+			low = front->floorheight;
 		else
-			low = gl_backsector->floorheight;
+			low = back->floorheight;
 
 		repeats = (high - low) / texheight;
 		if ((high - low) % texheight)
@@ -951,7 +1000,7 @@ static void HWR_RenderMidtexture(INT32 gl_midtexture, float cliplow, float cliph
 	else
 		repeats = 1;
 
-	GLMapTexture_t *grTex = HWR_GetTexture(gl_midtexture);
+	GLMapTexture_t *grTex = HWR_GetTexture(gl_midtexture, true);
 	float xscale = FixedToFloat(gl_sidedef->scalex_mid);
 	float yscale = FixedToFloat(gl_sidedef->scaley_mid);
 
@@ -969,8 +1018,8 @@ static void HWR_RenderMidtexture(INT32 gl_midtexture, float cliplow, float cliph
 	if (gl_curline->polyseg)
 	{
 		// Change this when polyobjects support slopes
-		popentop = popentopslope = gl_curline->backsector->ceilingheight;
-		popenbottom = popenbottomslope = gl_curline->backsector->floorheight;
+		popentop = popentopslope = back->ceilingheight;
+		popenbottom = popenbottomslope = back->floorheight;
 	}
 	else
 	{
@@ -1167,7 +1216,7 @@ static void HWR_ProcessSeg(void)
 	float cliplow = (float)gl_curline->offset;
 	float cliphigh = cliplow + (gl_curline->flength * FRACUNIT);
 
-	FUINT lightnum = gl_frontsector->lightlevel;
+	FUINT lightnum = HWR_SideLightLevel(gl_sidedef, gl_frontsector->lightlevel);
 	extracolormap_t *colormap = gl_frontsector->extra_colormap;
 	lightnum = colormap ? lightnum : HWR_CalcWallLight(lightnum, vs.x, vs.y, ve.x, ve.y);
 
@@ -1210,7 +1259,7 @@ static void HWR_ProcessSeg(void)
 		// check TOP TEXTURE
 		if ((worldhighslope < worldtopslope || worldhigh < worldtop) && gl_toptexture)
 		{
-			grTex = HWR_GetTexture(gl_toptexture);
+			grTex = HWR_GetTexture(gl_toptexture, false);
 			xscale = FixedToFloat(abs(gl_sidedef->scalex_top));
 			yscale = FixedToFloat(abs(gl_sidedef->scaley_top));
 
@@ -1300,7 +1349,7 @@ static void HWR_ProcessSeg(void)
 		// check BOTTOM TEXTURE
 		if ((worldlowslope > worldbottomslope || worldlow > worldbottom) && gl_bottomtexture)
 		{
-			grTex = HWR_GetTexture(gl_bottomtexture);
+			grTex = HWR_GetTexture(gl_bottomtexture, false);
 			xscale = FixedToFloat(abs(gl_sidedef->scalex_bottom));
 			yscale = FixedToFloat(abs(gl_sidedef->scaley_bottom));
 
@@ -1414,7 +1463,7 @@ static void HWR_ProcessSeg(void)
 		// Single sided line... Deal only with the middletexture (if one exists)
 		if (gl_midtexture && gl_linedef->special != SPECIAL_HORIZON_LINE) // (Ignore horizon line for OGL)
 		{
-			grTex = HWR_GetTexture(gl_midtexture);
+			grTex = HWR_GetTexture(gl_midtexture, false);
 			xscale = FixedToFloat(gl_sidedef->scalex_mid);
 			yscale = FixedToFloat(gl_sidedef->scaley_mid);
 
@@ -1533,14 +1582,14 @@ static void HWR_ProcessSeg(void)
 				if ((high1 < lowcut && highslope1 < lowcutslope) || (low1 > highcut && lowslope1 > highcutslope))
 					continue;
 
-				side_t *side = R_GetFFloorSide(gl_curline, rover);
+				side_t *side = R_GetFFloorSide(gl_curline->linedef, rover, gl_backsector);
 
 				boolean do_texture_skew;
 				boolean dont_peg_bottom;
 
 				if (rover->master->flags & ML_TFERLINE)
 				{
-					line_t *newline = R_GetFFloorLine(gl_curline, rover);
+					line_t *newline = R_GetFFloorLine(gl_curline->linedef, rover, gl_backsector);
 					do_texture_skew = newline->flags & ML_SKEWTD;
 					dont_peg_bottom = newline->flags & ML_DONTPEGBOTTOM;
 				}
@@ -1588,7 +1637,7 @@ static void HWR_ProcessSeg(void)
 					// -- Monster Iestyn 26/06/18
 					fixed_t texturevpeg = side->rowoffset + side->offsety_mid;
 
-					grTex = HWR_GetTexture(texnum);
+					grTex = HWR_GetTexture(texnum, true);
 					xscale = FixedToFloat(side->scalex_mid);
 					yscale = FixedToFloat(side->scaley_mid);
 
@@ -1628,11 +1677,11 @@ static void HWR_ProcessSeg(void)
 				{
 					blendmode = PF_Fog|PF_NoTexture;
 
-					lightnum = rover->master->frontsector->lightlevel;
+					lightnum = HWR_SideLightLevel(gl_sidedef, rover->master->frontsector->lightlevel);
 					colormap = rover->master->frontsector->extra_colormap;
 					lightnum = colormap ? lightnum : HWR_CalcWallLight(lightnum, vs.x, vs.y, ve.x, ve.y);
 
-					Surf.PolyColor.s.alpha = HWR_FogBlockAlpha(rover->master->frontsector->lightlevel, rover->master->frontsector->extra_colormap);
+					Surf.PolyColor.s.alpha = HWR_FogBlockAlpha(HWR_SideLightLevel(gl_sidedef, rover->master->frontsector->lightlevel), rover->master->frontsector->extra_colormap);
 
 					if (gl_frontsector->numlights)
 						HWR_SplitWall(gl_frontsector, wallVerts, 0, &Surf, rover->fofflags, rover, blendmode);
@@ -1643,7 +1692,7 @@ static void HWR_ProcessSeg(void)
 				{
 					blendmode = PF_Masked;
 
-					if ((rover->fofflags & FOF_TRANSLUCENT && !(rover->fofflags & FOF_SPLAT)) || rover->blend)
+					if ((rover->fofflags & FOF_TRANSLUCENT && !((rover->fofflags & FOF_SPLAT) && rover->alpha >= 255)) || rover->blend)
 					{
 						blendmode = rover->blend ? HWR_GetBlendModeFlag(rover->blend) : PF_Translucent;
 						Surf.PolyColor.s.alpha = max(0, min(rover->alpha, 255));
@@ -1689,14 +1738,14 @@ static void HWR_ProcessSeg(void)
 				if ((high1 < lowcut && highslope1 < lowcutslope) || (low1 > highcut && lowslope1 > highcutslope))
 					continue;
 
-				side_t *side = R_GetFFloorSide(gl_curline, rover);
+				side_t *side = R_GetFFloorSide(gl_curline->linedef, rover, gl_backsector);
 
 				boolean do_texture_skew;
 				boolean dont_peg_bottom;
 
 				if (rover->master->flags & ML_TFERLINE)
 				{
-					line_t *newline = R_GetFFloorLine(gl_curline, rover);
+					line_t *newline = R_GetFFloorLine(gl_curline->linedef, rover, gl_backsector);
 					do_texture_skew = newline->flags & ML_SKEWTD;
 					dont_peg_bottom = newline->flags & ML_DONTPEGBOTTOM;
 				}
@@ -1745,7 +1794,7 @@ static void HWR_ProcessSeg(void)
 					// -- Monster Iestyn 26/06/18
 					fixed_t texturevpeg = side->rowoffset + side->offsety_mid;
 
-					grTex = HWR_GetTexture(texnum);
+					grTex = HWR_GetTexture(texnum, true);
 					xscale = FixedToFloat(side->scalex_mid);
 					yscale = FixedToFloat(side->scaley_mid);
 
@@ -1785,7 +1834,7 @@ static void HWR_ProcessSeg(void)
 				{
 					blendmode = PF_Fog|PF_NoTexture;
 
-					lightnum = rover->master->frontsector->lightlevel;
+					lightnum = HWR_SideLightLevel(gl_sidedef, rover->master->frontsector->lightlevel);
 					colormap = rover->master->frontsector->extra_colormap;
 					lightnum = colormap ? lightnum : HWR_CalcWallLight(lightnum, vs.x, vs.y, ve.x, ve.y);
 
@@ -1800,7 +1849,7 @@ static void HWR_ProcessSeg(void)
 				{
 					blendmode = PF_Masked;
 
-					if ((rover->fofflags & FOF_TRANSLUCENT && !(rover->fofflags & FOF_SPLAT)) || rover->blend)
+					if ((rover->fofflags & FOF_TRANSLUCENT && !((rover->fofflags & FOF_SPLAT) && rover->alpha >= 255)) || rover->blend)
 					{
 						blendmode = rover->blend ? HWR_GetBlendModeFlag(rover->blend) : PF_Translucent;
 						Surf.PolyColor.s.alpha = max(0, min(rover->alpha, 255));
@@ -2447,14 +2496,14 @@ static void HWR_Subsector(size_t num)
 				continue;
 			if (sub->validcount == validcount)
 				continue;
-			
+
 			// rendering heights for bottom and top planes
 			bottomCullHeight = P_GetFFloorBottomZAt(rover, viewx, viewy);
 			topCullHeight = P_GetFFloorTopZAt(rover, viewx, viewy);
-			
+
 			if (gl_frontsector->cullheight)
 			{
-				if (HWR_DoCulling(gl_frontsector->cullheight, viewsector->cullheight, gl_viewz, FIXED_TO_FLOAT(bottomCullHeight), FIXED_TO_FLOAT(topCullHeight)))
+				if (HWR_DoCulling(gl_frontsector->cullheight, viewsector->cullheight, gl_viewz, FIXED_TO_FLOAT(*rover->bottomheight), FIXED_TO_FLOAT(*rover->topheight)))
 					continue;
 			}
 
@@ -2471,17 +2520,17 @@ static void HWR_Subsector(size_t num)
 					UINT8 alpha;
 
 					light = R_GetPlaneLight(gl_frontsector, centerHeight, viewz < bottomCullHeight ? true : false);
-					alpha = HWR_FogBlockAlpha(*gl_frontsector->lightlist[light].lightlevel, rover->master->frontsector->extra_colormap);
+					alpha = HWR_FogBlockAlpha(HWR_FloorLightLevel(rover->master->frontsector, *gl_frontsector->lightlist[light].lightlevel), rover->master->frontsector->extra_colormap);
 
 					HWR_AddTransparentFloor(0,
 					                       &extrasubsectors[num],
 										   false,
 					                       *rover->bottomheight,
-					                       *gl_frontsector->lightlist[light].lightlevel,
+					                       HWR_FloorLightLevel(rover->master->frontsector, *gl_frontsector->lightlist[light].lightlevel),
 					                       alpha, rover->master->frontsector, PF_Fog|PF_NoTexture,
 										   true, false, rover->master->frontsector->extra_colormap);
 				}
-				else if ((rover->fofflags & FOF_TRANSLUCENT && !(rover->fofflags & FOF_SPLAT)) || rover->blend) // SoM: Flags are more efficient
+				else if ((rover->fofflags & FOF_TRANSLUCENT && !((rover->fofflags & FOF_SPLAT) && rover->alpha >= 255)) || rover->blend) // SoM: Flags are more efficient
 				{
 					light = R_GetPlaneLight(gl_frontsector, centerHeight, viewz < bottomCullHeight ? true : false);
 
@@ -2489,7 +2538,7 @@ static void HWR_Subsector(size_t num)
 					                       &extrasubsectors[num],
 										   false,
 					                       *rover->bottomheight,
-					                       *gl_frontsector->lightlist[light].lightlevel,
+					                       HWR_FloorLightLevel(rover->master->frontsector, *gl_frontsector->lightlist[light].lightlevel),
 					                       max(0, min(rover->alpha, 255)), rover->master->frontsector,
 					                       HWR_RippleBlend(gl_frontsector, rover, false) | (rover->blend ? HWR_GetBlendModeFlag(rover->blend) : PF_Translucent),
 					                       false, rover->fofflags & FOF_SPLAT, *gl_frontsector->lightlist[light].extra_colormap);
@@ -2498,8 +2547,9 @@ static void HWR_Subsector(size_t num)
 				{
 					HWR_GetLevelFlat(&levelflats[*rover->bottompic], rover->fofflags & FOF_SPLAT);
 					light = R_GetPlaneLight(gl_frontsector, centerHeight, viewz < bottomCullHeight ? true : false);
-					HWR_RenderPlane(sub, &extrasubsectors[num], false, *rover->bottomheight, HWR_RippleBlend(gl_frontsector, rover, false)|PF_Occlude, *gl_frontsector->lightlist[light].lightlevel, &levelflats[*rover->bottompic],
-					                rover->master->frontsector, 255, *gl_frontsector->lightlist[light].extra_colormap);
+					HWR_RenderPlane(sub, &extrasubsectors[num], false, *rover->bottomheight, HWR_RippleBlend(gl_frontsector, rover, false)|PF_Occlude,
+					                HWR_FloorLightLevel(rover->master->frontsector, *gl_frontsector->lightlist[light].lightlevel),
+					                &levelflats[*rover->bottompic], rover->master->frontsector, 255, *gl_frontsector->lightlist[light].extra_colormap);
 				}
 			}
 
@@ -2516,17 +2566,17 @@ static void HWR_Subsector(size_t num)
 					UINT8 alpha;
 
 					light = R_GetPlaneLight(gl_frontsector, centerHeight, viewz < topCullHeight ? true : false);
-					alpha = HWR_FogBlockAlpha(*gl_frontsector->lightlist[light].lightlevel, rover->master->frontsector->extra_colormap);
+					alpha = HWR_FogBlockAlpha(HWR_CeilingLightLevel(rover->master->frontsector, *gl_frontsector->lightlist[light].lightlevel), rover->master->frontsector->extra_colormap);
 
 					HWR_AddTransparentFloor(0,
 					                       &extrasubsectors[num],
 										   true,
 					                       *rover->topheight,
-					                       *gl_frontsector->lightlist[light].lightlevel,
+					                       HWR_CeilingLightLevel(rover->master->frontsector, *gl_frontsector->lightlist[light].lightlevel),
 					                       alpha, rover->master->frontsector, PF_Fog|PF_NoTexture,
 										   true, false, rover->master->frontsector->extra_colormap);
 				}
-				else if ((rover->fofflags & FOF_TRANSLUCENT && !(rover->fofflags & FOF_SPLAT)) || rover->blend)
+				else if ((rover->fofflags & FOF_TRANSLUCENT && !((rover->fofflags & FOF_SPLAT) && rover->alpha >= 255)) || rover->blend)
 				{
 					light = R_GetPlaneLight(gl_frontsector, centerHeight, viewz < topCullHeight ? true : false);
 
@@ -2534,7 +2584,7 @@ static void HWR_Subsector(size_t num)
 					                        &extrasubsectors[num],
 											true,
 					                        *rover->topheight,
-					                        *gl_frontsector->lightlist[light].lightlevel,
+					                        HWR_CeilingLightLevel(rover->master->frontsector, *gl_frontsector->lightlist[light].lightlevel),
 					                        max(0, min(rover->alpha, 255)), rover->master->frontsector,
 					                        HWR_RippleBlend(gl_frontsector, rover, false) | (rover->blend ? HWR_GetBlendModeFlag(rover->blend) : PF_Translucent),
 					                        false, rover->fofflags & FOF_SPLAT, *gl_frontsector->lightlist[light].extra_colormap);
@@ -2543,8 +2593,9 @@ static void HWR_Subsector(size_t num)
 				{
 					HWR_GetLevelFlat(&levelflats[*rover->toppic], rover->fofflags & FOF_SPLAT);
 					light = R_GetPlaneLight(gl_frontsector, centerHeight, viewz < topCullHeight ? true : false);
-					HWR_RenderPlane(sub, &extrasubsectors[num], true, *rover->topheight, HWR_RippleBlend(gl_frontsector, rover, false)|PF_Occlude, *gl_frontsector->lightlist[light].lightlevel, &levelflats[*rover->toppic],
-					                  rover->master->frontsector, 255, *gl_frontsector->lightlist[light].extra_colormap);
+					HWR_RenderPlane(sub, &extrasubsectors[num], true, *rover->topheight, HWR_RippleBlend(gl_frontsector, rover, false)|PF_Occlude,
+					                  HWR_CeilingLightLevel(rover->master->frontsector, *gl_frontsector->lightlist[light].lightlevel),
+					                  &levelflats[*rover->toppic], rover->master->frontsector, 255, *gl_frontsector->lightlist[light].extra_colormap);
 				}
 			}
 		}
@@ -2880,7 +2931,7 @@ static void HWR_DrawDropShadow(mobj_t *thing, fixed_t scale)
 	}
 
 	HWR_Lighting(&sSurf, 0, colormap);
-	sSurf.PolyColor.s.alpha = alpha;
+	sSurf.PolyColor.s.alpha = FixedMul(thing->alpha, alpha);
 
 	if (HWR_UseShader())
 	{
@@ -3055,10 +3106,15 @@ static void HWR_SplitSprite(gl_vissprite_t *spr)
 	// co-ordinates
 	memcpy(wallVerts, baseWallVerts, sizeof(baseWallVerts));
 
+	fixed_t newalpha = spr->mobj->alpha;
+
 	// if sprite has linkdraw, then dont write to z-buffer (by not using PF_Occlude)
 	// this will result in sprites drawn afterwards to be drawn on top like intended when using linkdraw.
 	if ((spr->mobj->flags2 & MF2_LINKDRAW) && spr->mobj->tracer)
+	{
+		newalpha = spr->mobj->tracer->alpha;
 		occlusion = 0;
+	}
 	else
 		occlusion = PF_Occlude;
 
@@ -3094,6 +3150,8 @@ static void HWR_SplitSprite(gl_vissprite_t *spr)
 		blend = HWR_GetBlendModeFlag(blendmode)|occlusion;
 		if (!occlusion) use_linkdraw_hack = true;
 	}
+
+	Surf.PolyColor.s.alpha = FixedMul(newalpha, Surf.PolyColor.s.alpha);
 
 	if (HWR_UseShader())
 	{
@@ -3291,7 +3349,7 @@ static void HWR_DrawBoundingBox(gl_vissprite_t *vis)
 		v[15].y = v[16].y = v[17].y = v[21].y = v[22].y = v[23].y = vis->gzt; // top
 
 	Surf.PolyColor = V_GetColor(R_GetBoundingBoxColor(vis->mobj));
-	
+
 	HWR_ProcessPolygon(&Surf, v, 24, (cv_renderhitboxgldepth.value ? 0 : PF_NoDepthTest)|PF_Modulated|PF_NoTexture|PF_WireFrame, SHADER_NONE, false);
 }
 
@@ -3543,11 +3601,15 @@ static void HWR_DrawSprite(gl_vissprite_t *spr)
 		FBITFIELD blend = 0;
 		FBITFIELD occlusion;
 		boolean use_linkdraw_hack = false;
+		fixed_t newalpha = spr->mobj->alpha;
 
 		// if sprite has linkdraw, then dont write to z-buffer (by not using PF_Occlude)
 		// this will result in sprites drawn afterwards to be drawn on top like intended when using linkdraw.
 		if ((spr->mobj->flags2 & MF2_LINKDRAW) && spr->mobj->tracer)
+		{
 			occlusion = 0;
+			newalpha = spr->mobj->tracer->alpha;
+		}
 		else
 			occlusion = PF_Occlude;
 
@@ -3583,6 +3645,8 @@ static void HWR_DrawSprite(gl_vissprite_t *spr)
 			blend = HWR_GetBlendModeFlag(blendmode)|occlusion;
 			if (!occlusion) use_linkdraw_hack = true;
 		}
+
+		Surf.PolyColor.s.alpha = FixedMul(newalpha, Surf.PolyColor.s.alpha);
 
 		if (spr->renderflags & RF_SHADOWEFFECTS)
 		{
@@ -3893,7 +3957,7 @@ void HWR_AddTransparentFloor(levelflat_t *levelflat, extrasubsector_t *xsub, boo
 
 	planeinfo[numplanes].isceiling = isceiling;
 	planeinfo[numplanes].fixedheight = fixedheight;
-	planeinfo[numplanes].lightlevel = (planecolormap && (planecolormap->flags & CMF_FOG)) ? 255 : lightlevel;
+	planeinfo[numplanes].lightlevel = (planecolormap && (planecolormap->flags & CMF_FOG)) ? lightlevel : 255; // TODO: 2.3: Make transparent FOF planes always use light level
 	planeinfo[numplanes].levelflat = levelflat;
 	planeinfo[numplanes].xsub = xsub;
 	planeinfo[numplanes].alpha = alpha;
@@ -3925,7 +3989,7 @@ void HWR_AddTransparentPolyobjectFloor(levelflat_t *levelflat, polyobj_t *polyse
 
 	polyplaneinfo[numpolyplanes].isceiling = isceiling;
 	polyplaneinfo[numpolyplanes].fixedheight = fixedheight;
-	polyplaneinfo[numpolyplanes].lightlevel = (planecolormap && (planecolormap->flags & CMF_FOG)) ? 255 : lightlevel;
+	polyplaneinfo[numpolyplanes].lightlevel = (planecolormap && (planecolormap->flags & CMF_FOG)) ? lightlevel : 255;  // TODO: 2.3: Make transparent polyobject planes always use light level
 	polyplaneinfo[numpolyplanes].levelflat = levelflat;
 	polyplaneinfo[numpolyplanes].polysector = polysector;
 	polyplaneinfo[numpolyplanes].alpha = alpha;
@@ -4086,7 +4150,7 @@ static void HWR_CreateDrawNodes(void)
 		else if (sortnode[sortindex[i]].wall)
 		{
 			if (!(sortnode[sortindex[i]].wall->blend & PF_NoTexture))
-				HWR_GetTexture(sortnode[sortindex[i]].wall->texnum);
+				HWR_GetTexture(sortnode[sortindex[i]].wall->texnum, true);
 			HWR_RenderWall(sortnode[sortindex[i]].wall->wallVerts, &sortnode[sortindex[i]].wall->Surf, sortnode[sortindex[i]].wall->blend, sortnode[sortindex[i]].wall->fogwall,
 				sortnode[sortindex[i]].wall->lightlevel, sortnode[sortindex[i]].wall->wallcolormap);
 		}
@@ -5066,6 +5130,8 @@ static void HWR_DrawSkyBackground(player_t *player)
 
 	HWD.pfnSetBlend(PF_Translucent|PF_NoDepthTest|PF_Modulated);
 
+	HWR_GetTexture(texturetranslation[skytexture], false);
+
 	if (cv_glskydome.value)
 	{
 		FTransform dometransform;
@@ -5080,8 +5146,6 @@ static void HWR_DrawSkyBackground(player_t *player)
 		//                     It should replace all other gl_viewxxx when finished
 		HWR_SetTransformAiming(&dometransform, player, false);
 		dometransform.angley = (float)((viewangle-ANGLE_270)>>ANGLETOFINESHIFT)*(360.0f/(float)FINEANGLES);
-
-		HWR_GetTexture(texturetranslation[skytexture]);
 
 		if (gl_sky.texture != texturetranslation[skytexture])
 		{
@@ -5102,7 +5166,6 @@ static void HWR_DrawSkyBackground(player_t *player)
 		float aspectratio;
 		float angleturn;
 
-		HWR_GetTexture(texturetranslation[skytexture]);
 		aspectratio = (float)vid.width/(float)vid.height;
 
 		//Hurdler: the sky is the only texture who need 4.0f instead of 1.0
@@ -5221,7 +5284,9 @@ static void HWR_SetTransformAiming(FTransform *trans, player_t *player, boolean 
 	if (cv_glshearing.value == 1 || (cv_glshearing.value == 2 && R_IsViewpointThirdPerson(player, skybox)))
 	{
 		fixed_t fixedaiming = AIMINGTODY(aimingangle);
-		trans->viewaiming = FIXED_TO_FLOAT(fixedaiming);
+		trans->viewaiming = FIXED_TO_FLOAT(fixedaiming) * ((float)vid.width / vid.height) / ((float)BASEVIDWIDTH / BASEVIDHEIGHT);
+		if (splitscreen)
+			trans->viewaiming *= 2.125; // splitscreen adjusts fov with 0.8, so compensate (but only halfway, since splitscreen means only half the screen is used)
 		trans->shearing = true;
 		gl_aimingangle = 0;
 	}
@@ -5540,7 +5605,7 @@ void HWR_RenderPlayerView(INT32 viewnumber, player_t *player)
 // Can't have palette rendering if shaders are disabled.
 boolean HWR_ShouldUsePaletteRendering(void)
 {
-	return (cv_glpaletterendering.value && HWR_UseShader());
+	return (pMasterPalette != NULL && cv_glpaletterendering.value && HWR_UseShader());
 }
 
 // enable or disable palette rendering state depending on settings and availability
@@ -5657,7 +5722,7 @@ consvar_t cv_glbatching = CVAR_INIT ("gr_batching", "On", 0, CV_OnOff, NULL);
 
 static CV_PossibleValue_t glpalettedepth_cons_t[] = {{16, "16 bits"}, {24, "24 bits"}, {0, NULL}};
 
-consvar_t cv_glpaletterendering = CVAR_INIT ("gr_paletterendering", "Off", CV_SAVE|CV_CALL, CV_OnOff, CV_glpaletterendering_OnChange);
+consvar_t cv_glpaletterendering = CVAR_INIT ("gr_paletterendering", "On", CV_SAVE|CV_CALL, CV_OnOff, CV_glpaletterendering_OnChange);
 consvar_t cv_glpalettedepth = CVAR_INIT ("gr_palettedepth", "16 bits", CV_SAVE|CV_CALL, glpalettedepth_cons_t, CV_glpalettedepth_OnChange);
 
 #define ONLY_IF_GL_LOADED if (vid.glstate != VID_GL_LIBRARY_LOADED) return;
@@ -5729,6 +5794,7 @@ void HWR_AddCommands(void)
 	CV_RegisterVar(&cv_glskydome);
 	CV_RegisterVar(&cv_glspritebillboarding);
 	CV_RegisterVar(&cv_glfakecontrast);
+	CV_RegisterVar(&cv_glslopecontrast);
 	CV_RegisterVar(&cv_glshearing);
 	CV_RegisterVar(&cv_glshaders);
 

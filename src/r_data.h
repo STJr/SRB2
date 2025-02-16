@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -90,6 +90,7 @@ typedef enum
 } textmapcolormapflags_t;
 
 void R_GenerateLightTable(extracolormap_t *extra_colormap, boolean uselookup);
+void R_UpdateLightTable(extracolormap_t *extra_colormap, boolean uselookup);
 lighttable_t *R_CreateLightTable(extracolormap_t *extra_colormap);
 extracolormap_t * R_CreateColormapFromLinedef(char *p1, char *p2, char *p3);
 extracolormap_t* R_CreateColormap(INT32 rgba, INT32 fadergba, UINT8 fadestart, UINT8 fadeend, UINT8 flags);

@@ -165,7 +165,7 @@ void Command_CountMobjs_f(void)
 
 			for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 			{
-				if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+				if (th->removing)
 					continue;
 
 				if (((mobj_t *)th)->type == i)
@@ -185,7 +185,7 @@ void Command_CountMobjs_f(void)
 
 		for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 		{
-			if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+			if (th->removing)
 				continue;
 
 			if (((mobj_t *)th)->type == i)
@@ -363,6 +363,7 @@ void P_RemoveThinkerDelayed(thinker_t *thinker)
 void P_RemoveThinker(thinker_t *thinker)
 {
 	LUA_InvalidateUserdata(thinker);
+	thinker->removing = true;
 	thinker->function.acp1 = (actionf_p1)P_RemoveThinkerDelayed;
 }
 

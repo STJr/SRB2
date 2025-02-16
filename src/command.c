@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -648,7 +648,7 @@ static void COM_ExecuteString(char *ptext)
 		{
 			if ((com_flags & COM_LUA) && !(cmd->flags & COM_LUA))
 			{
-				CONS_Alert(CONS_WARNING, "Command '%s' cannot be run from Lua.\n", cmd->name);
+				CONS_Alert(CONS_WARNING, "Command '%s' cannot be run from a script.\n", cmd->name);
 				return;
 			}
 
@@ -705,7 +705,7 @@ static void add_alias(char *newname, char *newcmd)
 	{
 		if (!stricmp(newname, a->name))
 		{
-			Z_Free(a->value); // Free old cmd 
+			Z_Free(a->value); // Free old cmd
 			a->value = newcmd;
 			return;
 		}
@@ -809,10 +809,46 @@ static void COM_CEchoDuration_f(void)
 
 /** Executes a script file.
   */
-static void COM_Exec_f(void)
+boolean COM_ExecFile(const char *scriptname, com_flags_t flags, boolean silent)
 {
 	UINT8 *buf = NULL;
 	char filename[256];
+
+	if (!D_CheckPathAllowed(scriptname, "tried to exec"))
+		return false;
+
+	// load file
+	// Try with Argv passed verbatim first, for back compat
+	FIL_ReadFile(scriptname, &buf);
+
+	if (!buf)
+	{
+		// Now try by searching the file path
+		// filename is modified with the full found path
+		strlcpy(filename, scriptname, sizeof(filename));
+		if (findfile(filename, NULL, true) != FS_NOTFOUND)
+			FIL_ReadFile(filename, &buf);
+
+		if (!buf)
+			return false;
+	}
+
+	if (!silent)
+		CONS_Printf(M_GetText("Executing %s\n"), scriptname);
+
+	// insert text file into the command buffer
+	COM_BufAddTextEx((char *)buf, flags);
+	COM_BufAddTextEx("\n", flags);
+
+	// free buffer
+	Z_Free(buf);
+
+	return true;
+}
+
+static void COM_Exec_f(void)
+{
+	boolean silent;
 
 	if (COM_Argc() < 2 || COM_Argc() > 3)
 	{
@@ -820,38 +856,13 @@ static void COM_Exec_f(void)
 		return;
 	}
 
-	if (!D_CheckPathAllowed(COM_Argv(1), "tried to exec"))
+	silent = COM_CheckParm("-silent");
+
+	if (COM_ExecFile(COM_Argv(1), com_flags, silent))
 		return;
 
-	// load file
-	// Try with Argv passed verbatim first, for back compat
-	FIL_ReadFile(COM_Argv(1), &buf);
-
-	if (!buf)
-	{
-		// Now try by searching the file path
-		// filename is modified with the full found path
-		strcpy(filename, COM_Argv(1));
-		if (findfile(filename, NULL, true) != FS_NOTFOUND)
-			FIL_ReadFile(filename, &buf);
-
-		if (!buf)
-		{
-			if (!COM_CheckParm("-noerror"))
-				CONS_Printf(M_GetText("couldn't execute file %s\n"), COM_Argv(1));
-			return;
-		}
-	}
-
-	if (!COM_CheckParm("-silent"))
-		CONS_Printf(M_GetText("executing %s\n"), COM_Argv(1));
-
-	// insert text file into the command buffer
-	COM_BufAddTextEx((char *)buf, com_flags);
-	COM_BufAddTextEx("\n", com_flags);
-
-	// free buffer
-	Z_Free(buf);
+	if (!COM_CheckParm("-noerror"))
+		CONS_Printf(M_GetText("Couldn't execute file %s\n"), COM_Argv(1));
 }
 
 /** Delays execution of the rest of the commands until the next frame.
@@ -1722,8 +1733,7 @@ badinput:
 
 static boolean serverloading = false;
 
-static consvar_t *
-ReadNetVar (UINT8 **p, char **return_value, boolean *return_stealth)
+static consvar_t *ReadNetVar(save_t *p, char **return_value, boolean *return_stealth)
 {
 	UINT16  netid;
 	char   *val;
@@ -1731,10 +1741,10 @@ ReadNetVar (UINT8 **p, char **return_value, boolean *return_stealth)
 
 	consvar_t *cvar;
 
-	netid   = READUINT16 (*p);
-	val     = (char *)*p;
-	SKIPSTRING (*p);
-	stealth = READUINT8  (*p);
+	netid   = P_ReadUINT16(p);
+	val     = (char *)&p->buf[p->pos];
+	P_SkipString(p);
+	stealth = P_ReadUINT8(p);
 
 	cvar = CV_FindNetVar(netid);
 
@@ -1752,8 +1762,7 @@ ReadNetVar (UINT8 **p, char **return_value, boolean *return_stealth)
 }
 
 #ifdef OLD22DEMOCOMPAT
-static consvar_t *
-ReadOldDemoVar (UINT8 **p, char **return_value, boolean *return_stealth)
+static consvar_t *ReadOldDemoVar(save_t *p, char **return_value, boolean *return_stealth)
 {
 	UINT16  id;
 	char   *val;
@@ -1761,10 +1770,10 @@ ReadOldDemoVar (UINT8 **p, char **return_value, boolean *return_stealth)
 
 	old_demo_var_t *demovar;
 
-	id      = READUINT16 (*p);
-	val     = (char *)*p;
-	SKIPSTRING (*p);
-	stealth = READUINT8  (*p);
+	id      = P_ReadUINT16(p);
+	val     = (char *)&p->buf[p->pos];
+	P_SkipString(p);
+	stealth = P_ReadUINT8(p);
 
 	demovar = CV_FindOldDemoVar(id);
 
@@ -1783,8 +1792,7 @@ ReadOldDemoVar (UINT8 **p, char **return_value, boolean *return_stealth)
 }
 #endif/*OLD22DEMOCOMPAT*/
 
-static consvar_t *
-ReadDemoVar (UINT8 **p, char **return_value, boolean *return_stealth)
+static consvar_t *ReadDemoVar(save_t *p, char **return_value, boolean *return_stealth)
 {
 	char   *name;
 	char   *val;
@@ -1792,11 +1800,11 @@ ReadDemoVar (UINT8 **p, char **return_value, boolean *return_stealth)
 
 	consvar_t *cvar;
 
-	name    = (char *)*p;
-	SKIPSTRING (*p);
-	val     = (char *)*p;
-	SKIPSTRING (*p);
-	stealth = READUINT8  (*p);
+	name    = (char *)&p->buf[p->pos];
+	P_SkipString(p);
+	val     = (char *)&p->buf[p->pos];
+	P_SkipString(p);
+	stealth = P_ReadUINT8(p);
 
 	cvar = CV_FindVar(name);
 
@@ -1826,41 +1834,46 @@ static void Got_NetVar(UINT8 **p, INT32 playernum)
 		return;
 	}
 
-	cvar = ReadNetVar(p, &svalue, &stealth);
+	save_t save_p;
+	save_p.buf = *p;
+	save_p.size = MAXTEXTCMD;
+	save_p.pos = 0;
+	cvar = ReadNetVar(&save_p, &svalue, &stealth);
+	*p = &save_p.buf[save_p.pos];
 
 	if (cvar)
 		Setvalue(cvar, svalue, stealth);
 }
 
-void CV_SaveVars(UINT8 **p, boolean in_demo)
+void CV_SaveVars(save_t *p, boolean in_demo)
 {
 	consvar_t *cvar;
-	UINT8 *count_p = *p;
+	UINT8 *count_p = &p->buf[p->pos];
 	UINT16 count = 0;
 
 	// send only changed cvars ...
 	// the client will reset all netvars to default before loading
-	WRITEUINT16(*p, 0x0000);
+	P_WriteUINT16(p, 0x0000);
 	for (cvar = consvar_vars; cvar; cvar = cvar->next)
 		if ((cvar->flags & CV_NETVAR) && !CV_IsSetToDefault(cvar))
 		{
 			if (in_demo)
 			{
-				WRITESTRING(*p, cvar->name);
+				P_WriteString(p, cvar->name);
 			}
 			else
 			{
-				WRITEUINT16(*p, cvar->netid);
+				P_WriteUINT16(p, cvar->netid);
 			}
-			WRITESTRING(*p, cvar->string);
-			WRITEUINT8(*p, false);
+			P_WriteString(p, cvar->string);
+			P_WriteUINT8(p, false);
 			++count;
 		}
 	WRITEUINT16(count_p, count);
 }
 
-static void CV_LoadVars(UINT8 **p,
-		consvar_t *(*got)(UINT8 **p, char **ret_value, boolean *ret_stealth))
+static void CV_LoadVars(save_t *p,
+		consvar_t *(*got)(save_t *p, char **ret_value, boolean *ret_stealth))
 {
 	const boolean store = (client || demoplayback);
 
@@ -1888,7 +1901,7 @@ static void CV_LoadVars(UINT8 **p,
 		}
 	}
 
-	count = READUINT16(*p);
+	count = P_ReadUINT16(p);
 	while (count--)
 	{
 		cvar = (*got)(p, &val, &stealth);
@@ -1921,19 +1934,19 @@ void CV_RevertNetVars(void)
 	}
 }
 
-void CV_LoadNetVars(UINT8 **p)
+void CV_LoadNetVars(save_t *p)
 {
 	CV_LoadVars(p, ReadNetVar);
 }
 
 #ifdef OLD22DEMOCOMPAT
-void CV_LoadOldDemoVars(UINT8 **p)
+void CV_LoadOldDemoVars(save_t *p)
 {
 	CV_LoadVars(p, ReadOldDemoVar);
 }
 #endif
 
-void CV_LoadDemoVars(UINT8 **p)
+void CV_LoadDemoVars(save_t *p)
 {
 	CV_LoadVars(p, ReadDemoVar);
 }
@@ -1986,13 +1999,13 @@ static void CV_SetCVar(consvar_t *var, const char *value, boolean stealth)
 	if (!var->string)
 		I_Error("CV_Set: %s no string set!\n", var->name);
 #endif
-	if (!var || !var->string || !value || !stricmp(var->string, value))
+	if (!var || !var->string || !value || (var->can_change == NULL && !stricmp(var->string, value)))
 		return; // no changes
 
 	if (var->flags & CV_NETVAR)
 	{
 		// send the value of the variable
-		UINT8 buf[128];
+		UINT8 buf[512];
 		UINT8 *p = buf;
 
 		// Loading from a config in a netgame? Set revert value.
@@ -2065,11 +2078,10 @@ static void CV_SetValueMaybeStealth(consvar_t *var, INT32 value, boolean stealth
 	if (var == &cv_forceskin) // Special handling.
 	{
 		const char *tmpskin = NULL;
-		if ((value < 0) || (value >= numskins))
-			;
-		else
+		if (value >= 0 && value < numskins)
 			tmpskin = skins[value]->name;
-		memcpy(val, tmpskin, SKINNAMESIZE);
+		if (tmpskin)
+			memcpy(val, tmpskin, SKINNAMESIZE);
 	}
 	else
 		sprintf(val, "%d", value);
@@ -2492,7 +2504,7 @@ static boolean CV_Command(void)
 
 	if (CV_Immutable(v))
 	{
-		CONS_Alert(CONS_WARNING, "Variable '%s' cannot be changed from Lua.\n", v->name);
+		CONS_Alert(CONS_WARNING, "Variable '%s' cannot be changed from a script.\n", v->name);
 		return true;
 	}
 

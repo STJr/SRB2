@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -2256,9 +2256,9 @@ void S_ChangeMusicEx(const char *mmusic, UINT16 mflags, boolean looping, UINT32 
 		return;
 
 	strncpy(newmusic, mmusic, sizeof(newmusic)-1);
+	newmusic[6] = 0;
 	if (LUA_HookMusicChange(music_name, &hook_param))
 		return;
-	newmusic[6] = 0;
 
 	// No Music (empty string)
 	if (newmusic[0] == 0)

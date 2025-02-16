@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -147,9 +147,9 @@ static void R_DrawFlippedColumnInCache(column_t *column, UINT8 *cache, texpatch_
 
 		if (count > 0)
 		{
-			for (; dest < cache + position + count; --source, is_opaque++)
+			for (; dest < cache + position + count; --source, dest++, is_opaque++)
 			{
-				*dest++ = *source;
+				*dest = *source;
 				*is_opaque = true;
 			}
 		}
@@ -295,7 +295,6 @@ UINT8 *R_GenerateTexture(size_t texnum)
 		UINT16 lumpnum = patch->lump;
 		UINT8 *pdata;
 		softwarepatch_t *realpatch;
-		boolean holey = false;
 
 #ifndef NO_PNG_LUMPS
 		UINT8 header[PNG_HEADER_SIZE];
@@ -310,9 +309,11 @@ UINT8 *R_GenerateTexture(size_t texnum)
 		pdata = W_CacheLumpNumPwad(wadnum, lumpnum, PU_CACHE);
 		realpatch = (softwarepatch_t *)pdata;
 
+		texture->transparency = false;
+
 		// Check the patch for holes.
 		if (texture->width > SHORT(realpatch->width) || texture->height > SHORT(realpatch->height))
-			holey = true;
+			texture->transparency = true;
 		else
 		{
 			UINT8 *colofs = (UINT8 *)realpatch->columnofs;
@@ -332,12 +333,12 @@ UINT8 *R_GenerateTexture(size_t texnum)
 					col = (doompost_t *)((UINT8 *)col + col->length + 4);
 				}
 				if (y < texture->height)
-					holey = true; // this texture is HOLEy! D:
+					texture->transparency = true; // this texture is HOLEy! D:
 			}
 		}
 
 		// If the patch uses transparency, we have to save it this way.
-		if (holey)
+		if (texture->transparency)
 		{
 			texture->flip = patch->flip;
 
@@ -377,6 +378,15 @@ UINT8 *R_GenerateTexture(size_t texnum)
 	opaque_pixels = Z_Calloc(total_pixels * sizeof(UINT8), PU_STATIC, NULL);
 	temp_columns = Z_Calloc(sizeof(column_t) * texture->width, PU_STATIC, NULL);
 	temp_block = Z_Calloc(total_pixels, PU_STATIC, NULL);
+
+#ifdef TEXTURE_255_IS_TRANSPARENT
+	texture->transparency = false;
+
+	// Transparency hack
+	memset(temp_block, TRANSPARENTPIXEL, total_pixels);
+#else
+	texture->transparency = true;
+#endif
 
 	for (x = 0; x < texture->width; x++)
 	{
@@ -474,12 +484,26 @@ UINT8 *R_GenerateTexture(size_t texnum)
 	// Now write the columns
 	column_posts = Z_Calloc(sizeof(unsigned) * texture->width, PU_STATIC, NULL);
 
+#ifdef TEXTURE_255_IS_TRANSPARENT
+	total_posts = texture->width;
+	temp_posts = Z_Realloc(temp_posts, sizeof(post_t) * total_posts, PU_CACHE, NULL);
+#endif
+
 	for (x = 0; x < texture->width; x++)
 	{
 		post_t *post = NULL;
-		boolean was_opaque = false;
 
 		column_t *column = &temp_columns[x];
+
+#ifdef TEXTURE_255_IS_TRANSPARENT
+		post = &temp_posts[x];
+		post->topdelta = 0;
+		post->length = texture->height;
+		post->data_offset = 0;
+		column_posts[x] = x;
+		column->num_posts = 1;
+#else
+		boolean was_opaque = false;
 
 		column_posts[x] = (unsigned)-1;
 
@@ -510,6 +534,7 @@ UINT8 *R_GenerateTexture(size_t texnum)
 
 			post->length++;
 		}
+#endif
 	}
 
 	blocksize = (sizeof(column_t) * texture->width) + (sizeof(post_t) * total_posts) + (sizeof(UINT8) * total_pixels);
@@ -821,8 +846,8 @@ Rloadflats (INT32 i, INT32 w)
 			UINT8 *flatlump = W_CacheLumpNumPwad(wadnum, lumpnum, PU_CACHE);
 			if (Picture_PNGDimensions((UINT8 *)flatlump, &texw, &texh, NULL, NULL, lumplength))
 			{
-				width = (INT16)width;
-				height = (INT16)height;
+				width = (INT16)texw;
+				height = (INT16)texh;
 			}
 			else
 			{
@@ -1068,6 +1093,98 @@ void R_LoadTexturesPwad(UINT16 wadnum)
 	R_FinishLoadingTextures(newtextures);
 }
 
+static lumpnum_t W_GetTexPatchLumpNum(const char *name)
+{
+	// Flats as a texture patch crashes horribly, and flats
+	// can share the same name as textures.
+
+	// But even if they worked, we want to prioritize:
+	// Patches -> Textures -> anything else
+
+	enum
+	{
+		USE_PATCHES,
+		USE_TEXTURES,
+		USE__MAX,
+	};
+
+	lumpnum_t lump = LUMPERROR;
+	INT32 lump_type_it;
+
+
+	for (lump_type_it = 0; lump_type_it < USE__MAX; lump_type_it++)
+	{
+		INT32 i;
+
+		for (i = numwadfiles - 1; i >= 0; i--) // Scan wad files backwards so patched lumps take precedent
+		{
+			lumpnum_t start = LUMPERROR;
+			lumpnum_t end = LUMPERROR;
+
+			switch (wadfiles[i]->type)
+			{
+				case RET_WAD:
+					if (lump_type_it == USE_PATCHES)
+					{
+						if ((start = W_CheckNumForMarkerStartPwad("P_START", (UINT16)i, 0)) == INT16_MAX)
+							continue;
+						else if ((end = W_CheckNumForNamePwad("P_END", (UINT16)i, start)) == INT16_MAX)
+							continue;
+					}
+					else if (lump_type_it == USE_TEXTURES)
+					{
+						if ((start = W_CheckNumForMarkerStartPwad("TX_START", (UINT16)i, 0)) == INT16_MAX)
+							continue;
+						else if ((end = W_CheckNumForNamePwad("TX_END", (UINT16)i, start)) == INT16_MAX)
+							continue;
+					}
+					break;
+				case RET_PK3:
+				case RET_FOLDER:
+					if (lump_type_it == USE_PATCHES)
+					{
+						if ((start = W_CheckNumForFolderStartPK3("Patches/", i, 0)) == INT16_MAX)
+							continue;
+						if ((end = W_CheckNumForFolderEndPK3("Patches/", i, start)) == INT16_MAX)
+							continue;
+					}
+					else if (lump_type_it == USE_TEXTURES)
+					{
+						if ((start = W_CheckNumForFolderStartPK3("Textures/", i, 0)) == INT16_MAX)
+							continue;
+						if ((end = W_CheckNumForFolderEndPK3("Textures/", i, start)) == INT16_MAX)
+							continue;
+					}
+					break;
+				default:
+					continue;
+			}
+
+			// Now find lump with specified name in that range.
+			lump = W_CheckNumForNamePwad(name, (UINT16)i, start);
+			if (lump < end)
+			{
+				lump += (i<<16); // found it, in our constraints
+				break;
+			}
+			lump = LUMPERROR;
+		}
+
+		if (lump != LUMPERROR)
+		{
+			break;
+		}
+	}
+
+	if (lump == LUMPERROR)
+	{
+		// Use whatever else you can find.
+		return W_CheckNumForPatchName(name);
+	}
+
+	return lump;
+}
+
 static texpatch_t *R_ParsePatch(boolean actuallyLoadPatch)
 {
 	char *texturesToken;
@@ -1240,13 +1357,13 @@ static texpatch_t *R_ParsePatch(boolean actuallyLoadPatch)
 	if (actuallyLoadPatch == true)
 	{
 		// Check lump exists
-		patchLumpNum = W_GetNumForName(patchName);
+		patchLumpNum = W_GetTexPatchLumpNum(patchName);
 		// If so, allocate memory for texpatch_t and fill 'er up
 		resultPatch = (texpatch_t *)Z_Malloc(sizeof(texpatch_t),PU_STATIC,NULL);
 		resultPatch->originx = patchXPos;
 		resultPatch->originy = patchYPos;
-		resultPatch->lump = patchLumpNum & 65535;
-		resultPatch->wad = patchLumpNum>>16;
+		resultPatch->lump = LUMPNUM(patchLumpNum);
+		resultPatch->wad = WADFILENUM(patchLumpNum);
 		resultPatch->flip = flip;
 		resultPatch->alpha = alpha;
 		resultPatch->style = style;
@@ -1599,7 +1716,7 @@ const char *R_CheckTextureNameForNum(INT32 num)
 {
 	if (num > 0 && num < numtextures)
 		return textures[num]->name;
-	
+
 	return "-";
 }
 

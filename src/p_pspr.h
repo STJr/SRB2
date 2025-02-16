@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -39,7 +39,7 @@
 #define FF_FRAMEMASK 0xff
 
 /// \brief Frame flags - SPR2: Super sprite2
-#define FF_SPR2SUPER 0x80
+#define FF_SPR2SUPER SPR2F_SUPER //TODO: 2.3: remove this backwards compat hack
 /// \brief Frame flags - SPR2: A change of state at the end of Sprite2 animation
 #define FF_SPR2ENDSTATE 0x100
 /// \brief Frame flags - SPR2: 50% of starting in middle of Sprite2 animation

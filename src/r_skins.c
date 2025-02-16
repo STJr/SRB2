@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -43,10 +43,9 @@ UINT16 P_GetStateSprite2(state_t *state)
 	else
 	{
 		// Transform the state frame into an animation ID
-		UINT32 stateframe = state->frame & FF_FRAMEMASK;
-		UINT16 spr2 = stateframe & ~FF_SPR2SUPER;
+		UINT16 spr2 = state->frame & FF_FRAMEMASK;
 
-		if (stateframe & FF_SPR2SUPER)
+		if (state->frame & SPR2F_SUPER)
 			spr2 |= SPR2F_SUPER;
 
 		return spr2;
@@ -70,7 +69,7 @@ boolean P_IsStateSprite2Super(state_t *state)
 		if (state->sprite2 & SPR2F_SUPER)
 			return true;
 	}
-	else if (state->frame & FF_SPR2SUPER)
+	else if (state->frame & SPR2F_SUPER)
 		return true;
 
 	return false;
@@ -637,6 +636,14 @@ static void R_LoadSkinSprites(UINT16 wadnum, UINT16 *lump, UINT16 *lastlump, ski
 
 	if (skin->sprites[0].numframes == 0)
 		CONS_Alert(CONS_ERROR, M_GetText("No frames found for sprite SPR2_%s\n"), spr2names[0]);
+
+	// TODO: 2.3: Delete
+	memcpy(&skin->sprites_compat[start_spr2],
+		&skin->sprites[start_spr2],
+		sizeof(spritedef_t) * (free_spr2 - start_spr2));
+	memcpy(&skin->sprites_compat[start_spr2 + NUMPLAYERSPRITES],
+		&skin->super.sprites[start_spr2],
+		sizeof(spritedef_t) * (free_spr2 - start_spr2));
 }
 
 // returns whether found appropriate property

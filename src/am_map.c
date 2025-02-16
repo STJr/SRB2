@@ -1076,6 +1076,9 @@ static inline void AM_drawPlayers(void)
 		if (!playeringame[i] || players[i].spectator)
 			continue;
 
+		if (!players[i].mo)
+			continue;
+
 		p = &players[i];
 		if (p->skincolor > 0)
 			color = R_GetTranslationColormap(TC_DEFAULT, p->skincolor, GTC_CACHE)[GREENS + 8];

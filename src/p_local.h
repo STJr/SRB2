@@ -23,10 +23,6 @@
 #include "r_defs.h"
 #include "p_maputl.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #define FLOATSPEED (FRACUNIT*4)
 
 // Maximum player score.
@@ -42,11 +38,6 @@ extern "C" {
 
 // Convenience macro to fix issue with collision along bottom/left edges of blockmap -Red
 #define BMBOUNDFIX(xl, xh, yl, yh) {if (xl > xh) xl = 0; if (yl > yh) yl = 0;}
-
-// MAXRADIUS is for precalculated sector block boxes
-// the spider demon is larger,
-// but we do not have any moving sectors nearby
-#define MAXRADIUS (32*FRACUNIT)
 
 // max Z move up or down without jumping
 // above this, a height difference is considered as a 'dropoff'
@@ -78,7 +69,6 @@ extern thinker_t thlist[];
 extern mobj_t *mobjcache;
 
 void P_InitThinkers(void);
-void P_InvalidateThinkersWithoutInit(void);
 void P_AddThinker(const thinklistnum_t n, thinker_t *thinker);
 void P_RemoveThinker(thinker_t *thinker);
 
@@ -157,7 +147,6 @@ UINT16 P_GetPlayerColor(player_t *player);
 boolean P_IsObjectInGoop(mobj_t *mo);
 boolean P_IsObjectOnGround(mobj_t *mo);
 boolean P_InSpaceSector(mobj_t *mo);
-#define P_IsObjectFlipped(o) (((o)->eflags & MFE_VERTICALFLIP) == MFE_VERTICALFLIP)
 boolean P_InQuicksand(mobj_t *mo);
 boolean P_InJumpFlipSector(mobj_t *mo);
 boolean P_PlayerHitFloor(player_t *player, boolean dorollstuff);
@@ -209,14 +198,12 @@ mobj_t *P_LookForEnemies(player_t *player, boolean nonenemies, boolean bullet);
 void P_NukeEnemies(mobj_t *inflictor, mobj_t *source, fixed_t radius);
 void P_Earthquake(mobj_t *inflictor, mobj_t *source, fixed_t radius);
 boolean P_HomingAttack(mobj_t *source, mobj_t *enemy); /// \todo doesn't belong in p_user
-boolean P_SuperReady(player_t *player, boolean transform);
+boolean P_SuperReady(player_t *player);
 void P_DoJump(player_t *player, boolean soundandstate, boolean allowflip);
 void P_DoSpinDashDust(player_t *player);
 #define P_AnalogMove(player) (P_ControlStyle(player) == CS_LMAOGALOG)
 boolean P_TransferToNextMare(player_t *player);
 UINT8 P_FindLowestMare(void);
-UINT8 P_FindLowestLap(void);
-UINT8 P_FindHighestLap(void);
 void P_FindEmerald(void);
 void P_TransferToAxis(player_t *player, INT32 axisnum);
 boolean P_PlayerMoving(INT32 pnum);
@@ -302,7 +289,6 @@ void P_RecalcPrecipInSector(sector_t *sector);
 void P_PrecipitationEffects(void);
 
 void P_RemoveMobj(mobj_t *th);
-boolean P_MobjWasRemoved(mobj_t *th);
 void P_RemoveSavegameMobj(mobj_t *th);
 boolean P_SetMobjState(mobj_t *mobj, statenum_t state);
 void P_RunShields(void);
@@ -314,6 +300,13 @@ boolean P_CheckSkyHit(mobj_t *mo, line_t *line);
 void P_PushableThinker(mobj_t *mobj);
 void P_SceneryThinker(mobj_t *mobj);
 
+// This does not need to be added to Lua.
+// To test it in Lua, check mobj.valid
+FUNCINLINE static ATTRINLINE boolean P_MobjWasRemoved(mobj_t *mobj)
+{
+	return mobj == NULL || mobj->thinker.function.acp1 != (actionf_p1)P_MobjThinker;
+}
+
 fixed_t P_MobjFloorZ(sector_t *sector, sector_t *boundsec, fixed_t x, fixed_t y, fixed_t radius, line_t *line, boolean lowest, boolean perfect);
 fixed_t P_MobjCeilingZ(sector_t *sector, sector_t *boundsec, fixed_t x, fixed_t y, fixed_t radius, line_t *line, boolean lowest, boolean perfect);
 #define P_GetFloorZ(mobj, sector, x, y, line) P_MobjFloorZ(sector, NULL, x, y, mobj->radius, line, false, false)
@@ -322,8 +315,6 @@ fixed_t P_MobjCeilingZ(sector_t *sector, sector_t *boundsec, fixed_t x, fixed_t 
 #define P_GetFOFBottomZ(mobj, sector, fof, x, y, line) P_MobjFloorZ(sectors + fof->secnum, sector, x, y, mobj->radius, line, true, false)
 #define P_GetSpecialBottomZ(mobj, src, bound) P_MobjFloorZ(src, bound, mobj->x, mobj->y, mobj->radius, NULL, src != bound, true)
 #define P_GetSpecialTopZ(mobj, src, bound) P_MobjCeilingZ(src, bound, mobj->x, mobj->y, mobj->radius, NULL, src == bound, true)
-
-INT32 P_FloorPicAtPos(fixed_t x, fixed_t y, fixed_t z, fixed_t height);
 
 #define P_CameraGetFloorZ(mobj, sector, x, y, line) P_MobjFloorZ(sector, NULL, x, y, mobj->radius, line, false, false)
 #define P_CameraGetCeilingZ(mobj, sector, x, y, line) P_MobjCeilingZ(sector, NULL, x, y, mobj->radius, line, true, false)
@@ -342,7 +333,6 @@ mobj_t *P_SpawnXYZMissile(mobj_t *source, mobj_t *dest, mobjtype_t type, fixed_t
 mobj_t *P_SpawnPointMissile(mobj_t *source, fixed_t xa, fixed_t ya, fixed_t za, mobjtype_t type, fixed_t x, fixed_t y, fixed_t z);
 mobj_t *P_SpawnAlteredDirectionMissile(mobj_t *source, mobjtype_t type, fixed_t x, fixed_t y, fixed_t z, INT32 shiftingAngle);
 mobj_t *P_SPMAngle(mobj_t *source, mobjtype_t type, angle_t angle, UINT8 aimtype, UINT32 flags2);
-mobj_t *P_SpawnMissileAtSpeeds(mobj_t *source, mobjtype_t type, angle_t angle, fixed_t hspeed, fixed_t vspeed, boolean useGravity);
 #define P_SpawnPlayerMissile(s,t,f) P_SPMAngle(s,t,s->angle,true,f)
 #define P_SpawnNameFinder(s,t) P_SPMAngle(s,t,s->angle,true,0)
 void P_ColorTeamMissile(mobj_t *missile, player_t *source);
@@ -563,18 +553,5 @@ void P_DoSuperDetransformation(player_t *player);
 void P_ExplodeMissile(mobj_t *mo);
 void P_CheckGravity(mobj_t *mo, boolean affect);
 void P_SetPitchRollFromSlope(mobj_t *mo, pslope_t *slope);
-fixed_t P_GetMobjHead(mobj_t *mo);
-fixed_t P_GetMobjFeet(mobj_t *mo);
-
-void P_InitTIDHash(void);
-void P_SetThingTID(mobj_t *mo, mtag_t tid);
-void P_RemoveThingTID(mobj_t *mo);
-mobj_t *P_FindMobjFromTID(mtag_t tid, mobj_t *i, mobj_t *activator);
-
-void P_DeleteMobjStringArgs(mobj_t *mobj);
-
-#ifdef __cplusplus
-} // extern "C"
-#endif
 
 #endif // __P_LOCAL__

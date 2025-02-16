@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -390,22 +390,22 @@ fixed_t R_PointToDist(fixed_t x, fixed_t y)
 	return R_PointToDist2(viewx, viewy, x, y);
 }
 
-line_t *R_GetFFloorLine(const seg_t *seg, const ffloor_t *pfloor)
+line_t *R_GetFFloorLine(const line_t *line, const ffloor_t *pfloor, const sector_t *sector)
 {
 	if (pfloor->master->flags & ML_TFERLINE)
 	{
-		size_t linenum = seg->linedef - pfloor->target->lines[0];
+		size_t linenum = min((size_t)(line - sector->lines[0]), pfloor->master->frontsector->linecount);
 		return pfloor->master->frontsector->lines[0] + linenum;
 	}
 	else
 		return pfloor->master;
 }
 
-side_t *R_GetFFloorSide(const seg_t *seg, const ffloor_t *pfloor)
+side_t *R_GetFFloorSide(const line_t *line, const ffloor_t *pfloor, const sector_t *sector)
 {
 	if (pfloor->master->flags & ML_TFERLINE)
 	{
-		line_t *newline = R_GetFFloorLine(seg, pfloor);
+		line_t *newline = R_GetFFloorLine(line, pfloor, sector);
 		return &sides[newline->sidenum[0]];
 	}
 	else
@@ -1095,7 +1095,7 @@ void R_SetupFrame(player_t *player)
 	camera_t *thiscam;
 	boolean chasecam = R_ViewpointHasChasecam(player);
 	boolean ispaused = paused || P_AutoPause();
-	
+
 	if (splitscreen && player == &players[secondarydisplayplayer] && player != &players[consoleplayer])
 		thiscam = &camera2;
 	else
@@ -1152,8 +1152,14 @@ void R_SetupFrame(player_t *player)
 
 		if (quake.epicenter) {
 			// Calculate 3D distance from epicenter, using the camera.
-			fixed_t xydist = R_PointToDist2(thiscam->x, thiscam->y, quake.epicenter->x, quake.epicenter->y);
-			fixed_t dist = R_PointToDist2(0, thiscam->z, xydist, quake.epicenter->z);
+			fixed_t xydist, dist;
+			if (P_MobjWasRemoved(r_viewmobj)) {
+				xydist = R_PointToDist2(thiscam->x, thiscam->y, quake.epicenter->x, quake.epicenter->y);
+				dist = R_PointToDist2(0, thiscam->z, xydist, quake.epicenter->z);
+			} else {
+				xydist = R_PointToDist2(r_viewmobj->x, r_viewmobj->y, quake.epicenter->x, quake.epicenter->y);
+				dist = R_PointToDist2(0, r_viewmobj->z, xydist, quake.epicenter->z);
+			}
 
 			// More effect closer to epicenter, outside of radius = no effect
 			if (!quake.radius || dist > quake.radius)
@@ -1369,7 +1375,7 @@ boolean R_ViewpointHasChasecam(player_t *player)
 		chasecam = true; // force chasecam on
 	else if (player->spectator) // no spectator chasecam
 		chasecam = false; // force chasecam off
-		
+
 	if (chasecam && !thiscam->chase)
 	{
 		P_ResetCamera(player, thiscam);
@@ -1380,7 +1386,7 @@ boolean R_ViewpointHasChasecam(player_t *player)
 		P_ResetCamera(player, thiscam);
 		thiscam->chase = false;
 	}
-	
+
 	if (isplayer2)
 	{
 		R_SetViewContext(VIEWCONTEXT_PLAYER2);
@@ -1427,6 +1433,9 @@ static void R_PortalFrame(portal_t *portal)
 	viewangle = portal->viewangle;
 	viewsin = FINESINE(viewangle>>ANGLETOFINESHIFT);
 	viewcos = FINECOSINE(viewangle>>ANGLETOFINESHIFT);
+
+	if (!P_MobjWasRemoved(portal->viewmobj))
+		r_viewmobj = portal->viewmobj;
 
 	portalclipstart = portal->start;
 	portalclipend = portal->end;

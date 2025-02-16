@@ -254,11 +254,10 @@ static int lib_searchBlockmap(lua_State *L)
 	}
 	else // mobj and function only - search around mobj's radius by default
 	{
-		fixed_t radius = mobj->radius + MAXRADIUS;
-		x1 = mobj->x - radius;
-		x2 = mobj->x + radius;
-		y1 = mobj->y - radius;
-		y2 = mobj->y + radius;
+		x1 = mobj->x - mobj->radius;
+		x2 = mobj->x + mobj->radius;
+		y1 = mobj->y - mobj->radius;
+		y2 = mobj->y + mobj->radius;
 	}
 	lua_settop(L, 2); // pop everything except function, mobj
 

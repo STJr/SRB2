@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -303,6 +303,8 @@ enum actionnum
 	A_CHANGEHEIGHT,
 	NUMACTIONS
 };
+
+struct mobj_s;
 
 // IMPORTANT NOTE: If you add/remove from this list of action
 // functions, don't forget to update them in deh_tables.c!
@@ -861,6 +863,8 @@ typedef enum sprite
 	SPR_XMS4, // Lamppost
 	SPR_XMS5, // Hanging Star
 	SPR_XMS6, // Mistletoe
+	SPR_SNTT, // Silver Shiver tree
+	SPR_SSTT, // Silver Shiver tree with snow
 	SPR_FHZI, // FHZ Ice
 	SPR_ROSY,
 
@@ -894,6 +898,8 @@ typedef enum sprite
 	// Misc Scenery
 	SPR_STLG, // Stalagmites
 	SPR_DBAL, // Disco
+	SPR_GINE, // Crystalline Heights tree
+	SPR_PPAL, // Pristine Shores palm trees
 
 	// Powerup Indicators
 	SPR_ARMA, // Armageddon Shield Orb
@@ -1080,6 +1086,9 @@ typedef enum sprite
 	SPR_GWLG,
 	SPR_GWLR,
 
+	// LJ Knuckles
+	SPR_OLDK,
+
 	SPR_FIRSTFREESLOT,
 	SPR_LASTFREESLOT = SPR_FIRSTFREESLOT + NUMSPRITEFREESLOTS - 1,
 	NUMSPRITES
@@ -1152,6 +1161,18 @@ typedef enum playersprite
 	SPR2_TALA,
 	SPR2_TALB,
 	SPR2_TALC,
+
+	// Misc slots
+	SPR2_MSC0,
+	SPR2_MSC1,
+	SPR2_MSC2,
+	SPR2_MSC3,
+	SPR2_MSC4,
+	SPR2_MSC5,
+	SPR2_MSC6,
+	SPR2_MSC7,
+	SPR2_MSC8,
+	SPR2_MSC9,
 
 	SPR2_CNT1, // continue disappointment
 	SPR2_CNT2, // continue lift
@@ -1900,11 +1921,11 @@ typedef enum state
 	S_FANG_FIRE1,
 	S_FANG_FIRE2,
 	S_FANG_FIRE3,
-	S_FANG_FIRE4,
 	S_FANG_FIREREPEAT,
 	S_FANG_LOBSHOT0,
 	S_FANG_LOBSHOT1,
 	S_FANG_LOBSHOT2,
+	S_FANG_LOBSHOT3,
 	S_FANG_WAIT1,
 	S_FANG_WAIT2,
 	S_FANG_WALLHIT,
@@ -1926,6 +1947,7 @@ typedef enum state
 	S_FANG_PINCHLOBSHOT2,
 	S_FANG_PINCHLOBSHOT3,
 	S_FANG_PINCHLOBSHOT4,
+	S_FANG_PINCHLOBSHOT5,
 	S_FANG_DIE1,
 	S_FANG_DIE2,
 	S_FANG_DIE3,
@@ -3064,6 +3086,10 @@ typedef enum state
 	S_LAMPPOST2,  // with snow
 	S_HANGSTAR,
 	S_MISTLETOE,
+	S_SSZTREE,
+	S_SSZTREE_BRANCH,
+	S_SSZTREE2,
+	S_SSZTREE2_BRANCH,
 	// Xmas GFZ bushes
 	S_XMASBLUEBERRYBUSH,
 	S_XMASBERRYBUSH,
@@ -3071,11 +3097,9 @@ typedef enum state
 	// FHZ
 	S_FHZICE1,
 	S_FHZICE2,
-	S_ROSY_IDLE1,
-	S_ROSY_IDLE2,
-	S_ROSY_IDLE3,
-	S_ROSY_IDLE4,
+	S_ROSY_IDLE,
 	S_ROSY_JUMP,
+	S_ROSY_FALL,
 	S_ROSY_WALK,
 	S_ROSY_HUG,
 	S_ROSY_PAIN,
@@ -3184,6 +3208,9 @@ typedef enum state
 	S_DBALL5,
 	S_DBALL6,
 	S_EGGSTATUE2,
+	S_GINE,
+	S_PPAL,
+	S_PPEL,
 
 	// Shield Orb
 	S_ARMA1,
@@ -4068,6 +4095,7 @@ typedef enum state
 	S_MARIOBUSH2,
 	S_TOAD,
 
+
 	// Nights-specific stuff
 	S_NIGHTSDRONE_MAN1,
 	S_NIGHTSDRONE_MAN2,
@@ -4371,6 +4399,12 @@ typedef enum state
 	S_YELLOWBRICKDEBRIS, // for CEZ3
 
 	S_NAMECHECK,
+
+	// LJ Knuckles
+	S_OLDK_STND,
+	S_OLDK_DIE0,
+	S_OLDK_DIE1,
+	S_OLDK_DIE2,
 
 	S_FIRSTFREESLOT,
 	S_LASTFREESLOT = S_FIRSTFREESLOT + NUMSTATEFREESLOTS - 1,
@@ -4863,6 +4897,10 @@ typedef enum mobj_type
 	MT_LAMPPOST2,  // with snow
 	MT_HANGSTAR,
 	MT_MISTLETOE,
+	MT_SSZTREE,
+	MT_SSZTREE_BRANCH,
+	MT_SSZTREE2,
+	MT_SSZTREE2_BRANCH,
 	// Xmas GFZ bushes
 	MT_XMASBLUEBERRYBUSH,
 	MT_XMASBERRYBUSH,
@@ -4942,6 +4980,9 @@ typedef enum mobj_type
 	// Misc scenery
 	MT_DBALL,
 	MT_EGGSTATUE2,
+	MT_GINE,
+	MT_PPAL,
+	MT_PPEL,
 
 	// Powerup Indicators
 	MT_ELEMENTAL_ORB, // Elemental shield mobj
@@ -5169,6 +5210,8 @@ typedef enum mobj_type
 
 	MT_NAMECHECK,
 	MT_RAY, // General purpose mobj
+
+	MT_OLDK,
 
 	MT_FIRSTFREESLOT,
 	MT_LASTFREESLOT = MT_FIRSTFREESLOT + NUMMOBJFREESLOTS - 1,
