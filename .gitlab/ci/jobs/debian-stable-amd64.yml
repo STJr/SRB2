@@ -13,7 +13,6 @@ Debian stable:amd64:
   variables:
     CC: x86_64-linux-gnu-gcc
     CXX: x86_64-linux-gnu-g++
-    LDFLAGS: -Wl,-fuse-ld=gold
     OBJCOPY: x86_64-linux-gnu-objcopy
     OBJDUMP: x86_64-linux-gnu-objdump
     PKG_CONFIG_PATH: /usr/lib/x86_64-linux-gnu/pkgconfig

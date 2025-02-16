@@ -15,7 +15,6 @@ Debian stable:arm64 Makefile:
   variables:
     CC: aarch64-linux-gnu-gcc
     CXX: aarch64-linux-gnu-g++
-    LDFLAGS: -Wl,-fuse-ld=gold
     OBJCOPY: aarch64-linux-gnu-objcopy
     OBJDUMP: aarch64-linux-gnu-objdump
     LD: aarch64-linux-gnu-ld
