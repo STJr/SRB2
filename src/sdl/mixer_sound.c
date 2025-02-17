@@ -199,7 +199,18 @@ static void MidiSoundfontPath_Onchange(void)
 
 // make sure that s_sound.c does not already verify these
 // which happens when: defined(HAVE_MIXERX) && !defined(HAVE_MIXER)
-static CV_PossibleValue_t midiplayer_cons_t[] = {{MIDI_OPNMIDI, "OPNMIDI"}, {MIDI_Fluidsynth, "Fluidsynth"}, {MIDI_Timidity, "Timidity"}, {MIDI_Native, "Native"}, {0, NULL}};
+static CV_PossibleValue_t midiplayer_cons_t[] = {
+	{MIDI_ADLMIDI,    "ADLMIDI"},
+	{MIDI_OPNMIDI,    "OPNMIDI"},
+	{MIDI_Timidity,   "Timidity"},
+	{MIDI_Fluidsynth, "Fluidsynth"},
+#if SDL_MIXER_VERSION_ATLEAST(2,6,0)
+	{MIDI_EDMIDI,     "EDMIDI"},
+#endif
+	{MIDI_Native,     "Native"},
+	{MIDI_ANY,        "Any"},
+	{0,               NULL}
+};
 consvar_t cv_midiplayer = CVAR_INIT ("midiplayer", "OPNMIDI" /*MIDI_OPNMIDI*/, CV_CALL|CV_NOINIT|CV_SAVE, midiplayer_cons_t, Midiplayer_Onchange);
 consvar_t cv_midisoundfontpath = CVAR_INIT ("midisoundfont", "sf2/8bitsf.SF2", CV_CALL|CV_NOINIT|CV_SAVE, NULL, MidiSoundfontPath_Onchange);
 consvar_t cv_miditimiditypath = CVAR_INIT ("midisoundbank", "./timidity", CV_SAVE, NULL, NULL);
