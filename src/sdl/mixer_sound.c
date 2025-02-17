@@ -135,7 +135,7 @@ static void Midiplayer_Onchange(void)
 	if (Mix_GetMidiPlayer() != cv_midiplayer.value)
 	{
 		if (Mix_SetMidiPlayer(cv_midiplayer.value)) // <> 0 means error
-			CONS_Alert(CONS_ERROR, "Midi player error: %s", Mix_GetError());
+			CONS_Alert(CONS_ERROR, "Midi player error: %s\n", Mix_GetError());
 		else
 			restart = true;
 	}
@@ -143,7 +143,7 @@ static void Midiplayer_Onchange(void)
 	if (!Mix_GetSoundFonts() || stricmp(Mix_GetSoundFonts(), cv_midisoundfontpath.string))
 	{
 		if (!Mix_SetSoundFonts(cv_midisoundfontpath.string)) // == 0 means error
-			CONS_Alert(CONS_ERROR, "Sound font error: %s", Mix_GetError());
+			CONS_Alert(CONS_ERROR, "Sound font error: %s\n", Mix_GetError());
 		else
 			restart = true;
 	}
@@ -190,7 +190,7 @@ static void MidiSoundfontPath_Onchange(void)
 		if (proceed)
 		{
 			if (!Mix_SetSoundFonts(cv_midisoundfontpath.string))
-				CONS_Alert(CONS_ERROR, "Sound font error: %s", Mix_GetError());
+				CONS_Alert(CONS_ERROR, "Sound font error: %s\n", Mix_GetError());
 			else
 				S_StartEx(true);
 		}
