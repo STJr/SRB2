@@ -132,11 +132,15 @@ add_custom_target(_SRB2_reconf ALL
 )
 add_dependencies(SRB2SDL2 _SRB2_reconf)
 
-if("${CMAKE_COMPILER_IS_GNUCC}" AND "${CMAKE_SYSTEM_NAME}" MATCHES "Windows")
+if("${CMAKE_C_COMPILER_ID}" MATCHES "GNU" AND "${CMAKE_SYSTEM_NAME}" MATCHES "Windows")
 	target_link_options(SRB2SDL2 PRIVATE "-Wl,--disable-dynamicbase")
 	if("${SRB2_CONFIG_STATIC_STDLIB}")
 		# On MinGW with internal libraries, link the standard library statically
+		MESSAGE(STATUS "Forcing static libstdc++ on MinGW?")
 		target_link_options(SRB2SDL2 PRIVATE "-static")
+		set(THREADS_PREFER_PTHREAD_FLAG TRUE)
+		find_package(Threads REQUIRED)
+		target_link_libraries(SRB2SDL2 PRIVATE Threads::Threads) 
 	endif()
 	if(CMAKE_SIZEOF_VOID_P EQUAL 4)
 		target_link_options(SRB2SDL2 PRIVATE "-Wl,--large-address-aware")
@@ -492,7 +496,7 @@ if((CMAKE_COMPILER_IS_GNUCC) AND NOT ("${CMAKE_SYSTEM_NAME}" MATCHES Darwin))
 endif()
 
 # copy DLLs to bin/ directory if building internal shared on windows
-if("${CMAKE_SYSTEM_NAME}" STREQUAL Windows AND NOT "${SRB2_CONFIG_INTERNAL_LIBRARIES}" AND "${SRB2_CONFIG_SHARED_INTERNAL_LIBRARIES}")
+if("${CMAKE_SYSTEM_NAME}" STREQUAL Windows AND NOT "${SRB2_CONFIG_INTERNAL_LIBRARIES}")
 	set(ADDITIONAL_DLLS "")
 	if("${CMAKE_C_COMPILER_ID}" STREQUAL GNU)
 		# also copy implicitly linked system libraries
