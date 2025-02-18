@@ -2492,7 +2492,8 @@ static boolean CV_FilterVarByVersion(consvar_t *v, const char *valstr)
 			(!stricmp(v->name, "cam_speed") && !stricmp(valstr, "0.3")) ||
 			(!stricmp(v->name, "cam2_speed") && !stricmp(valstr, "0.3")) ||
 			(!stricmp(v->name, "timerres") && atoi(valstr) == 0) || // 0 = classic
-			(!stricmp(v->name, "gr_modelinterpolation") && atoi(valstr) == 1) // 1 = sometimes
+			(!stricmp(v->name, "gr_modelinterpolation") && atoi(valstr) == 1) || // 1 = sometimes
+			(!stricmp(v->name, "fov") && atoi(valstr) == 90)
 		)
 			return false;
 	}
