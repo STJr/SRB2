@@ -9334,7 +9334,7 @@ static void P_PointPushThink(mobj_t *mobj)
 	yl = (unsigned)(mobj->y - radius - bmaporgy)>>MAPBLOCKSHIFT;
 	yh = (unsigned)(mobj->y + radius - bmaporgy)>>MAPBLOCKSHIFT;
 
-	P_DoBlockThingsIterate(xl, yl, xh, yh, PIT_PushThing);
+	P_DoBlockThingsIterate(xl, yl, xh, yh, PIT_PushThing, pushmobj);
 }
 
 static boolean P_MobjRegularThink(mobj_t *mobj)
