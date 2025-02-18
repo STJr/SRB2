@@ -136,8 +136,7 @@ if("${CMAKE_C_COMPILER_ID}" MATCHES "GNU" AND "${CMAKE_SYSTEM_NAME}" MATCHES "Wi
 	target_link_options(SRB2SDL2 PRIVATE "-Wl,--disable-dynamicbase")
 	if("${SRB2_CONFIG_STATIC_STDLIB}")
 		# On MinGW with internal libraries, link the standard library statically
-		MESSAGE(STATUS "Forcing static libstdc++ on MinGW?")
-		target_link_options(SRB2SDL2 PRIVATE "-static")
+		target_link_options(SRB2SDL2 PRIVATE -Wl,--add-stdcall-alias -static-libgcc -static-libstdc++ -static -lpthread)
 		set(THREADS_PREFER_PTHREAD_FLAG TRUE)
 		find_package(Threads REQUIRED)
 		target_link_libraries(SRB2SDL2 PRIVATE Threads::Threads) 
@@ -501,16 +500,157 @@ endif()
 
 # copy DLLs to bin/ directory if building internal shared on windows
 if("${CMAKE_SYSTEM_NAME}" STREQUAL Windows AND NOT "${SRB2_CONFIG_INTERNAL_LIBRARIES}")
+	# also copy implicitly linked system libraries
 	set(ADDITIONAL_DLLS "")
-	if("${CMAKE_C_COMPILER_ID}" STREQUAL GNU AND "${VCPKG_HOST_TRIPLET}" MATCHES "-mingw-static$")
-		# also copy implicitly linked system libraries
-		get_filename_component(MINGW_BIN_PATH ${CMAKE_CXX_COMPILER} PATH)
-		list(APPEND ADDITIONAL_DLLS
-			"libgcc_s_dw2-1.dll"
-			"libstdc++-6.dll"
-			"libwinpthread-1.dll"
+	if("${CMAKE_CXX_COMPILER_ID}" STREQUAL GNU)
+		string(CONCAT gcc_search_dirs_path "${CMAKE_BINARY_DIR}" /gcc_search_dirs.txt)
+		#message(STATUS gcc_search_dirs_path=${gcc_search_dirs_path})
+		execute_process(
+			COMMAND ${CMAKE_CXX_COMPILER} -print-search-dirs
+			OUTPUT_FILE "${gcc_search_dirs_path}"
+			#OUTPUT_VARIABLE gcc_search_dirs
 		)
-		list(TRANSFORM ADDITIONAL_DLLS PREPEND "${MINGW_BIN_PATH}/")
+
+		file(READ "${gcc_search_dirs_path}" gcc_search_dirs)
+		#message(STATUS gcc_search_dirs=${gcc_search_dirs})
+
+		#set(gcc_install_dir "${gcc_search_dirs}")
+		#string(REGEX MATCH "install: =[ \t]*([^\r\n]*)" gcc_install_dir "${gcc_install_dir}" )
+		#set(gcc_install_dir "${CMAKE_MATCH_1}")
+		#message(STATUS gcc_install_dir="${gcc_install_dir}")
+
+
+		string(CONCAT gcc_search_dirs_install_path_1 "${CMAKE_BINARY_DIR}" /gcc_search_dirs_install_1.txt)
+		#message(STATUS gcc_search_dirs_install_path_1=${gcc_search_dirs_install_path_1})
+		execute_process(
+			COMMAND grep "^install:"
+			INPUT_FILE "${gcc_search_dirs_path}"
+			OUTPUT_FILE "${gcc_search_dirs_install_path_1}"
+		)
+
+		string(CONCAT gcc_search_dirs_install_path_2 "${CMAKE_BINARY_DIR}" /gcc_search_dirs_install_2.txt)
+		#message(STATUS gcc_search_dirs_install_path_2=${gcc_search_dirs_install_path_2})
+		execute_process(
+			COMMAND sed -e "s/^install: //" -e "s,=/,/,g"
+			INPUT_FILE "${gcc_search_dirs_install_path_1}"
+			OUTPUT_FILE "${gcc_search_dirs_install_path_2}"
+		)
+
+		if(NOT ("${CMAKE_HOST_SYSTEM_NAME}" STREQUAL "Windows"))
+			string(REPLACE ":" ";" gcc_install_dir "${gcc_install_dir}")
+		endif()
+
+		file(READ ${gcc_search_dirs_install_path_2} gcc_install_dir)
+
+		#set(gcc_programs_dir "${gcc_search_dirs}")
+		#string(REGEX MATCH "programs: =[ \t]*([^\r\n]*)" gcc_programs_dir "${gcc_programs_dir}" )
+		#set(gcc_programs_dir "${CMAKE_MATCH_1}")
+		#message(STATUS gcc_programs_dir="${gcc_programs_dir}")
+
+		string(CONCAT gcc_search_dirs_programs_path_1 "${CMAKE_BINARY_DIR}" /gcc_search_dirs_programs_1.txt)
+		#message(STATUS gcc_search_dirs_programs_path_1=${gcc_search_dirs_programs_path_1})
+		execute_process(
+			COMMAND grep "^programs:"
+			INPUT_FILE "${gcc_search_dirs_path}"
+			OUTPUT_FILE "${gcc_search_dirs_programs_path_1}"
+		)
+
+		string(CONCAT gcc_search_dirs_programs_path_2 "${CMAKE_BINARY_DIR}" /gcc_search_dirs_programs_2.txt)
+		#message(STATUS gcc_search_dirs_programs_path_2=${gcc_search_dirs_programs_path_2})
+		execute_process(
+			COMMAND sed -e "s/^programs: =//" -e "s,=/,/,g"
+			INPUT_FILE "${gcc_search_dirs_programs_path_1}"
+			OUTPUT_FILE "${gcc_search_dirs_programs_path_2}"
+		)
+
+		file(READ ${gcc_search_dirs_programs_path_2} gcc_programs_dir)
+
+		if(NOT ("${CMAKE_HOST_SYSTEM_NAME}" STREQUAL "Windows"))
+			string(REPLACE ":" ";" gcc_programs_dir "${gcc_programs_dir}")
+		endif()
+
+		#set(gcc_libraries_dir "${gcc_search_dirs}")
+		#string(REGEX MATCH "libraries: =[ \t]*([^\r\n]*)" gcc_libraries_dir "${gcc_libraries_dir}" )
+		#set(gcc_libraries_dir "${CMAKE_MATCH_1}")
+		#message(STATUS gcc_libraries_dir="${gcc_libraries_dir}")
+
+		string(CONCAT gcc_search_dirs_libraries_path_1 "${CMAKE_BINARY_DIR}" /gcc_search_dirs_libraries_1.txt)
+		#message(STATUS gcc_search_dirs_libraries_path_1=${gcc_search_dirs_libraries_path_1})
+		execute_process(
+			COMMAND grep "^libraries:"
+			INPUT_FILE "${gcc_search_dirs_path}"
+			OUTPUT_FILE "${gcc_search_dirs_libraries_path_1}"
+		)
+
+		string(CONCAT gcc_search_dirs_libraries_path_2 "${CMAKE_BINARY_DIR}" /gcc_search_dirs_libraries_2.txt)
+		#message(STATUS gcc_search_dirs_libraries_path_2=${gcc_search_dirs_libraries_path_2})
+		execute_process(
+			COMMAND sed -e "s/^libraries: =//" -e "s,=/,/,g"
+			INPUT_FILE "${gcc_search_dirs_libraries_path_1}"
+			OUTPUT_FILE "${gcc_search_dirs_libraries_path_2}"
+		)
+
+		file(READ ${gcc_search_dirs_libraries_path_2} gcc_libraries_dir)
+
+		if(NOT ("${CMAKE_HOST_SYSTEM_NAME}" STREQUAL "Windows"))
+			string(REPLACE ":" ";" gcc_libraries_dir "${gcc_libraries_dir}")
+		endif()
+
+		#list(LENGTH gcc_install_dir gcc_install_dir_len)
+		#list(LENGTH gcc_programs_dir gcc_programs_dir_len)
+		#list(LENGTH gcc_libraries_dir gcc_libraries_dir_len)
+		#message(STATUS gcc_install_dir_len="${gcc_install_dir_len}")
+		#message(STATUS gcc_install_dir="${gcc_install_dir}")
+		#message(STATUS gcc_programs_dir_len="${gcc_programs_dir_len}")
+		#message(STATUS gcc_programs_dir="${gcc_programs_dir}")
+		#message(STATUS gcc_libraries_dir_len="${gcc_libraries_dir_len}")
+		#message(STATUS gcc_libraries_dir="${gcc_libraries_dir}")
+
+		get_filename_component(CMAKE_CXX_COMPILER_DIR ${CMAKE_CXX_COMPILER} DIRECTORY)
+		#message(STATUS CMAKE_CXX_COMPILER_DIR="${CMAKE_CXX_COMPILER_DIR}")
+
+		set(OLD_CMAKE_FIND_LIBRARY_SUFFIXES  ${CMAKE_FIND_LIBRARY_SUFFIXES})
+		set(CMAKE_FIND_LIBRARY_SUFFIXES "" ${CMAKE_FIND_LIBRARY_SUFFIXES})
+		set(OLD_CMAKE_FIND_LIBRARY_PREFIXES  ${CMAKE_FIND_LIBRARY_PREFIXES})
+		set(CMAKE_FIND_LIBRARY_PREFIXES "" ${CMAKE_FIND_LIBRARY_PREFIXES})
+
+		find_library(LIBGCC
+			NAMES "libgcc_s_dw2-1.dll" "libgcc_s_sjlj-1.dll" "libgcc_s_seh-1.dll"
+			PATHS ${gcc_programs_dir} ${CMAKE_CXX_COMPILER_DIR}
+		)
+		if (LIBGCC)
+			#message(STATUS LIBGCC="${LIBGCC}")
+			list(APPEND ADDITIONAL_DLLS ${LIBGCC})
+		endif()
+		unset(LIBGCC)
+		find_library(LIBSTDCPP
+			NAMES "libstdc++-6.dll"
+			PATHS ${gcc_programs_dir} ${CMAKE_CXX_COMPILER_DIR}
+		)
+		if (LIBSTDCPP)
+			#message(STATUS LIBSTDCPP="${LIBSTDCPP}")
+			list(APPEND ADDITIONAL_DLLS ${LIBSTDCPP})
+		endif()
+		unset(LIBSTDCPP)
+		find_library(LIBPTHREAD
+			NAMES "winpthread-1.dll" "libwinpthread-1.dll" "pthreadGC2.dll"
+			PATHS ${gcc_libraries_dir} ${CMAKE_CXX_COMPILER_DIR}
+		)
+		if(LIBPTHREAD)
+			#message(STATUS LIBPTHREAD="${LIBPTHREAD}")
+			list(APPEND ADDITIONAL_DLLS ${LIBPTHREAD})
+		endif()
+
+		set(CMAKE_FIND_LIBRARY_SUFFIXES ${OLD_CMAKE_FIND_LIBRARY_SUFFIXES})
+		set(CMAKE_FIND_LIBRARY_PREFIXES ${OLD_CMAKE_FIND_LIBRARY_PREFIXES})
+		unset(LIBPTHREAD)
+		unset(gcc_install_dir)
+		unset(gcc_programs_dir)
+		unset(gcc_libraries_dir)
+		unset(OLD_CMAKE_FIND_LIBRARY_SUFFIXES)
+		unset(OLD_CMAKE_FIND_LIBRARY_PREFIXES)
+
+		#message(STATUS ADDITIONAL_DLLS="${ADDITIONAL_DLLS}")
 	endif()
 	add_custom_command(TARGET SRB2SDL2 POST_BUILD
 		COMMAND ${CMAKE_COMMAND} -E copy_if_different
