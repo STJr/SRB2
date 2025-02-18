@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2024 by Sonic Team Junior.
+// Copyright (C) 1999-2025 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -11515,6 +11515,18 @@ void P_DoTailsOverlay(player_t *player, mobj_t *tails)
 }
 
 // Metal Sonic's jet fume
+//
+// The follow object's state is set to its spawn state when deactivated.
+// When the player is on a moving animation, the follow object goes to its see state.
+// When dash mode is entered, the follow object switches to its melee state.
+//
+// If MF2_FRET is set, the jet fume will flash during dash mode.
+// MF2_AMBUSH can be used to enable Metal Sonic's skidding animation.
+// MF2_JUSTATTACKED will enable the color cycling.
+// If the follow item is MT_METALJETFUME, the above two effects are automatically applied.
+//
+// MF2_STRONGBOX is internally used to track if the jet fume is in its deactivated state or not.
+// MF2_BOSSNOTRAP is internally used to instantly reset the jet fume's scale to its intended scale.
 void P_DoMetalJetFume(player_t *player, mobj_t *fume)
 {
 	static const UINT8 FUME_SKINCOLORS[] =
@@ -11541,19 +11553,29 @@ void P_DoMetalJetFume(player_t *player, mobj_t *fume)
 	fixed_t heightoffset = ((mo->eflags & MFE_VERTICALFLIP) ? mo->height - (P_GetPlayerHeight(player) >> 1) : (P_GetPlayerHeight(player) >> 1));
 	panim_t panim = player->panim;
 	tic_t dashmode = min(player->dashmode, DASHMODE_MAX);
+	boolean ismetaljetfume = fume->type == MT_METALJETFUME;
+	boolean notmoving = panim != PA_WALK && panim != PA_RUN && panim != PA_DASH;
 	boolean underwater = mo->eflags & MFE_UNDERWATER;
 	statenum_t stat = fume->state-states;
 	boolean resetinterp = false;
 
-	if (panim != PA_WALK && panim != PA_RUN && panim != PA_DASH) // turn invisible when not in a coherent movement state
+	if (notmoving) // deactivate when not in a coherent movement state
 	{
-		if (stat != fume->info->spawnstate)
+		if ((fume->flags2 & MF2_STRONGBOX) == 0)
+		{
 			P_SetMobjState(fume, fume->info->spawnstate);
-		return;
+			fume->flags2 |= MF2_STRONGBOX;
+		}
+		if (P_MobjWasRemoved(fume) || ismetaljetfume)
+			return;
 	}
 
-	if (player->skidtime) // Rotate during metal sonic's new skid animation
-		angle += ANGLE_90;
+	// Rotate on skid animation if follow item is MT_METALJETFUME, or if MF2_AMBUSH is set
+	if (player->mo->sprite2 == SPR2_SKID)
+	{
+		if ((ismetaljetfume && (player->charflags & SF_JETFUME)) || (fume->flags2 & MF2_AMBUSH))
+			angle += ANGLE_90;
+	}
 
 	if (underwater) // No fume underwater; spawn bubbles instead!
 	{
@@ -11590,54 +11612,82 @@ void P_DoMetalJetFume(player_t *player, mobj_t *fume)
 
 		if (panim == PA_WALK)
 		{
-			if (stat != fume->info->spawnstate)
+			if ((fume->flags2 & MF2_STRONGBOX) == 0)
 			{
-				fume->threshold = 0;
 				P_SetMobjState(fume, fume->info->spawnstate);
+				fume->threshold = 0;
+				fume->flags2 &= ~MF2_STRONGBOX;
 			}
-			return;
+			if (P_MobjWasRemoved(fume) || ismetaljetfume)
+				return;
 		}
 	}
 
-	if (stat == fume->info->spawnstate) // If currently inivisble, activate!
+	// If currently deactivated, activate!
+	if (!notmoving && !underwater && (fume->flags2 & MF2_STRONGBOX))
 	{
 		P_SetMobjState(fume, (stat = fume->info->seestate));
+		if (P_MobjWasRemoved(fume))
+			return;
 		P_SetScale(fume, mo->scale, false);
+		fume->flags2 &= ~MF2_STRONGBOX;
 		resetinterp = true;
 	}
 
-	if (dashmode > DASHMODE_THRESHOLD && stat != fume->info->seestate) // If in dashmode, grow really big and flash
+	// If in dash mode, grow really big
+	if (dashmode > DASHMODE_THRESHOLD && stat != fume->info->meleestate)
 	{
 		fume->destscale = mo->scale;
-		fume->flags2 ^= MF2_DONTDRAW;
 		fume->flags2 |= mo->flags2 & MF2_DONTDRAW;
+
+		// Flash if follow item is MT_METALJETFUME, or if MF2_FRET is set
+		if (ismetaljetfume || (fume->flags2 & MF2_FRET))
+			fume->flags2 ^= MF2_DONTDRAW;
 	}
 	else // Otherwise, pick a size and color depending on speed and proximity to dashmode
 	{
-		if (dashmode == DASHMODE_THRESHOLD && dashmode > (tic_t)fume->movecount) // If just about to enter dashmode, play the startup animation again
+		// If just about to enter dash mode, play the startup animation again
+		if (dashmode == DASHMODE_THRESHOLD && dashmode > (tic_t)fume->movecount)
 		{
-			P_SetMobjState(fume, (stat = fume->info->seestate));
+			P_SetMobjState(fume, fume->info->meleestate);
+			if (P_MobjWasRemoved(fume))
+				return;
 			P_SetScale(fume, 2*mo->scale, true);
 		}
+
 		fume->flags2 = (fume->flags2 & ~MF2_DONTDRAW) | (mo->flags2 & MF2_DONTDRAW);
 		fume->destscale = (mo->scale + FixedDiv(player->speed, player->normalspeed)) / (underwater ? 6 : 3);
-		fume->color = FUME_SKINCOLORS[(dashmode * sizeof(FUME_SKINCOLORS)) / (DASHMODE_MAX + 1)];
+
+		// Do color cycling if follow item is MT_METALJETFUME, or if MF2_JUSTATTACKED is set
+		if (ismetaljetfume || (fume->flags2 & MF2_JUSTATTACKED))
+			fume->color = FUME_SKINCOLORS[(dashmode * sizeof(FUME_SKINCOLORS)) / (DASHMODE_MAX + 1)];
 
 		if (underwater)
 		{
-			fume->frame = (fume->frame & FF_FRAMEMASK) | FF_ANIMATE | (P_RandomRange(0, 9) * FF_TRANS10);
+			fume->frame = (fume->frame & ~FF_TRANSMASK) | (P_RandomRange(0, 9) << FF_TRANSSHIFT);
 			fume->threshold = 1;
 		}
 		else if (fume->threshold)
 		{
-			fume->frame = (fume->frame & FF_FRAMEMASK) | fume->state->frame;
+			fume->frame = (fume->frame & FF_FRAMEMASK) | (fume->state->frame & ~FF_FRAMEMASK);
 			fume->threshold = 0;
 		}
 	}
 
-	fume->movecount = dashmode; // keeps track of previous dashmode value so we know whether Metal is entering or leaving it
-	fume->flags2 = (fume->flags2 & ~MF2_OBJECTFLIP) | (mo->flags2 & MF2_OBJECTFLIP); // Make sure to flip in reverse gravity!
-	fume->eflags = (fume->eflags & ~MFE_VERTICALFLIP) | (mo->eflags & MFE_VERTICALFLIP); // Make sure to flip in reverse gravity!
+	// keeps track of previous dash mode value so we know whether Metal is entering or leaving it
+	fume->movecount = dashmode;
+
+	// Make sure to flip in reverse gravity!
+	fume->flags2 = (fume->flags2 & ~MF2_OBJECTFLIP) | (mo->flags2 & MF2_OBJECTFLIP);
+	fume->eflags = (fume->eflags & ~MFE_VERTICALFLIP) | (mo->eflags & MFE_VERTICALFLIP);
+
+	// Set the appropriate scale at spawn
+	// This is... strange, but I had to choose a flag that a follow object would not ordinarily use.
+	if ((fume->flags2 & MF2_BOSSNOTRAP) == 0)
+	{
+		P_SetScale(fume, fume->destscale, true);
+		fume->flags2 |= MF2_BOSSNOTRAP;
+	}
 
 	// Finally, set its position
 	dist = -mo->radius - FixedMul(fume->info->radius, fume->destscale - mo->scale/3);
@@ -11647,9 +11697,10 @@ void P_DoMetalJetFume(player_t *player, mobj_t *fume)
 	fume->y = mo->y + P_ReturnThrustY(fume, angle, dist);
 	fume->z = mo->z + heightoffset - (fume->height >> 1);
 	P_SetThingPosition(fume);
-	if (resetinterp) R_ResetMobjInterpolationState(fume);
+	if (resetinterp)
+		R_ResetMobjInterpolationState(fume);
 
-	// If dashmode is high enough, spawn a trail
+	// If dash mode is high enough, spawn a trail
 	if (player->normalspeed >= skins[player->skin]->normalspeed*2)
 	{
 		mobj_t *ghost = P_SpawnGhostMobj(fume);
@@ -11663,6 +11714,8 @@ void P_DoFollowMobj(player_t *player, mobj_t *followmobj)
 {
 	if (LUA_HookFollowMobj(player, followmobj) || P_MobjWasRemoved(followmobj))
 		{;}
+	else if (player->charflags & SF_JETFUME)
+		P_DoMetalJetFume(player, followmobj);
 	else
 	{
 		switch (followmobj->type)
@@ -13164,7 +13217,8 @@ void P_PlayerAfterThink(player_t *player)
 						player->followmobj->colorized = true;
 						break;
 					default:
-						player->followmobj->flags2 |= MF2_LINKDRAW;
+						if ((player->charflags & SF_JETFUME) == 0)
+							player->followmobj->flags2 |= MF2_LINKDRAW;
 						break;
 				}
 			}
