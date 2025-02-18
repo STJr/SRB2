@@ -22,8 +22,6 @@ Debian stable:amd64 Makefile:
     OBJDUMP: x86_64-linux-gnu-objdump
     PKG_CONFIG_PATH: /usr/lib/x86_64-linux-gnu/pkgconfig
 
-  when: on_success
-
   script:
     - - |
           # apt_toolchain
