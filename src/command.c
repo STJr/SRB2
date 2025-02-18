@@ -2482,6 +2482,21 @@ static boolean CV_FilterVarByVersion(consvar_t *v, const char *valstr)
 		if (!CV_FilterJoyAxisVars(v, valstr))
 			return false;
 	}
+
+	if (GETMAJOREXECVERSION(cv_execversion.value) < 57) // 57 = 2.2.16
+	{
+		if (
+			(!stricmp(v->name, "movebob") && atoi(valstr) == FRACUNIT) ||
+			(!stricmp(v->name, "playersforexit") && atoi(valstr) == 4) || // 4 = all
+			(!stricmp(v->name, "advancemap") && atoi(valstr) == 1) || // 1 = next
+			(!stricmp(v->name, "cam_speed") && !stricmp(valstr, "0.3")) ||
+			(!stricmp(v->name, "cam2_speed") && !stricmp(valstr, "0.3")) ||
+			(!stricmp(v->name, "timerres") && atoi(valstr) == 0) || // 0 = classic
+			(!stricmp(v->name, "gr_modelinterpolation") && atoi(valstr) == 1) // 1 = sometimes
+		)
+			return false;
+	}
+
 	return true;
 }
 
