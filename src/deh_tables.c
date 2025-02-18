@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2024 by Sonic Team Junior.
+// Copyright (C) 1999-2025 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -5260,6 +5260,7 @@ struct int_const_s const INT_CONST[] = {
 	{"SF_DASHMODE",SF_DASHMODE},
 	{"SF_FASTWAIT",SF_FASTWAIT},
 	{"SF_FASTEDGE",SF_FASTEDGE},
+	{"SF_JETFUME",SF_JETFUME},
 	{"SF_MULTIABILITY",SF_MULTIABILITY},
 	{"SF_NONIGHTSROTATION",SF_NONIGHTSROTATION},
 	{"SF_NONIGHTSSUPER",SF_NONIGHTSSUPER},
