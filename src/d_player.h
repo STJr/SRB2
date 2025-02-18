@@ -50,7 +50,7 @@ typedef enum
 	SF_JETFUME          = 1<<14, // Follow item uses Metal Sonic's jet fume behavior
 	SF_MULTIABILITY     = 1<<15, // Revenge of Final Demo.
 	SF_NONIGHTSROTATION = 1<<16, // Disable sprite rotation for NiGHTS
-	SF_NONIGHTSSUPER    = 1<<17, // Disable super colors for NiGHTS (if you have SF_SUPER)
+	SF_NONIGHTSSUPER    = 1<<17, // Disable super sprites and colors for NiGHTS
 	SF_NOSUPERSPRITES   = 1<<18, // Don't use super sprites while super
 	SF_NOSUPERJUMPBOOST = 1<<19, // Disable the jump boost given while super (i.e. Knuckles)
 	SF_CANBUSTWALLS     = 1<<20, // Can naturally bust walls on contact? (i.e. Knuckles)
