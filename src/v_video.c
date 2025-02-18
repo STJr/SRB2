@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -1137,7 +1137,7 @@ void V_DrawFill(INT32 x, INT32 y, INT32 w, INT32 h, INT32 c)
 	}
 #endif
 
-	
+
 
 	if (splitscreen && (c & V_PERPLAYER))
 	{
@@ -1953,7 +1953,7 @@ char *V_FontWordWrap(INT32 x, INT32 w, INT32 option, fixed_t scale, const char *
 	INT32 spacewidth = font.spacewidth, charwidth = 0;
 
 	slen = strlen(string);
-	
+
 	if (w == 0)
 		w = BASEVIDWIDTH;
 	w -= x;
@@ -2131,7 +2131,7 @@ void V_DrawAlignedFontStringAtFixed(fixed_t x, fixed_t y, INT32 option, fixed_t 
 				lx = x - (V_FontStringWidth(line, option, font)*pscale);
 				break;
 		}
-		
+
 		V_DrawFontStringAtFixed(lx, ly, option, pscale, vscale, line, font);
 
 		ly += FixedMul(((option & V_RETURN8) ? 8 : font.linespacing)<<FRACBITS, vscale);
@@ -2422,7 +2422,7 @@ INT32 V_FontStringWidth(const char *string, INT32 option, fontdef_t font)
 			if (wline < w) wline = w;
 			w = 0;
 			continue;
-		}	
+		}
 		if (string[i] & 0x80)
 			continue;
 
@@ -2455,7 +2455,7 @@ INT32 V_FontStringHeight(const char *string, INT32 option, fontdef_t font)
 			{
 				result += (option & V_RETURN8) ? 8 : font.linespacing;
 				h = 0;
-			}	
+			}
 			continue;
 		}
 

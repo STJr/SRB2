@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -135,22 +135,24 @@ void P_ParseAnimationDefintion(SINT8 istexture);
 
 static boolean P_FindTextureForAnimation(anim_t *anim, animdef_t *animdef)
 {
-	if (R_CheckTextureNumForName(animdef->startname) == -1)
+	INT32 start = R_CheckTextureNumForName(animdef->startname, TEXTURETYPE_TEXTURE);
+	if (start == -1)
 		return false;
 
-	anim->picnum = R_TextureNumForName(animdef->endname);
-	anim->basepic = R_TextureNumForName(animdef->startname);
+	anim->basepic = start;
+	anim->picnum = R_CheckTextureNumForName(animdef->endname, TEXTURETYPE_TEXTURE);
 
 	return true;
 }
 
 static boolean P_FindFlatForAnimation(anim_t *anim, animdef_t *animdef)
 {
-	if (R_CheckFlatNumForName(animdef->startname) == -1)
+	INT32 start = R_CheckTextureNumForName(animdef->startname, TEXTURETYPE_FLAT);
+	if (start == -1)
 		return false;
 
-	anim->picnum = R_CheckFlatNumForName(animdef->endname);
-	anim->basepic = R_CheckFlatNumForName(animdef->startname);
+	anim->basepic = start;
+	anim->picnum = R_CheckTextureNumForName(animdef->endname, TEXTURETYPE_FLAT);
 
 	return true;
 }
@@ -2406,7 +2408,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 					z = line->args[4] << FRACBITS;
 
 					P_SetOrigin(mo, mo->x + x, mo->y + y, mo->z + z);
-					
+
 					if (mo->player)
 					{
 						if (bot) // This might put poor Tails in a wall if he's too far behind! D: But okay, whatever! >:3
@@ -2546,7 +2548,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 					char *text = Z_Malloc(len + 1, PU_CACHE, NULL);
 					memcpy(text, lump, len);
 					text[len] = '\0';
-					COM_BufInsertText(text);
+					COM_BufInsertTextEx(text, COM_LUA);
 					Z_Free(text);
 				}
 			}
@@ -3642,7 +3644,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 					if (mo2->type != MT_EGGTRAP)
 						continue;
 
-					if (mo2->thinker.function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+					if (mo2->thinker.removing)
 						continue;
 
 					P_KillMobj(mo2, NULL, mo, 0);
@@ -3854,7 +3856,7 @@ void P_SetupSignExit(player_t *player)
 	// spin all signposts in the level then.
 	for (think = thlist[THINK_MOBJ].next; think != &thlist[THINK_MOBJ]; think = think->next)
 	{
-		if (think->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+		if (think->removing)
 			continue;
 
 		thing = (mobj_t *)think;
@@ -3892,7 +3894,7 @@ boolean P_IsFlagAtBase(mobjtype_t flag)
 
 	for (think = thlist[THINK_MOBJ].next; think != &thlist[THINK_MOBJ]; think = think->next)
 	{
-		if (think->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+		if (think->removing)
 			continue;
 
 		mo = (mobj_t *)think;
@@ -4395,7 +4397,7 @@ static void P_ProcessEggCapsule(player_t *player, sector_t *sector)
 	// The chimps are my friends.. heeheeheheehehee..... - LouisJM
 	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 	{
-		if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+		if (th->removing)
 			continue;
 		mo2 = (mobj_t *)th;
 		if (mo2->type != MT_EGGTRAP)
@@ -6236,7 +6238,7 @@ static void P_DoPortalCopyFromLine(sector_t *dest_sector, int plane_type, int ta
 	}
 }
 
-static sectorportal_t *P_SectorGetPortalOrCreate(sector_t *sector, UINT32 *num, UINT32 *result)
+static sectorportal_t *P_SectorGetPortalOrCreate(sector_t *sector, UINT32 *num, UINT32 *result, boolean ceiling)
 {
 	sectorportal_t *secportal = NULL;
 
@@ -6244,8 +6246,8 @@ static sectorportal_t *P_SectorGetPortalOrCreate(sector_t *sector, UINT32 *num, 
 	{
 		*num = P_NewSectorPortal();
 		secportal = &secportals[*num];
-		secportal->origin.x = sector->soundorg.x;
-		secportal->origin.y = sector->soundorg.y;
+		secportal->target = sector;
+		secportal->ceiling = ceiling;
 		*result = *num;
 	}
 	else
@@ -6259,12 +6261,12 @@ static sectorportal_t *P_SectorGetPortalOrCreate(sector_t *sector, UINT32 *num, 
 
 static sectorportal_t *P_SectorGetFloorPortalOrCreate(sector_t *sector, UINT32 *result)
 {
-	return P_SectorGetPortalOrCreate(sector, &sector->portal_floor, result);
+	return P_SectorGetPortalOrCreate(sector, &sector->portal_floor, result, false);
 }
 
 static sectorportal_t *P_SectorGetCeilingPortalOrCreate(sector_t *sector, UINT32 *result)
 {
-	return P_SectorGetPortalOrCreate(sector, &sector->portal_ceiling, result);
+	return P_SectorGetPortalOrCreate(sector, &sector->portal_ceiling, result, true);
 }
 
 static void P_CopySectorPortalToLines(UINT32 portal_num, int sector_tag)

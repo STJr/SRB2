@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2014-2016 by John "JTE" Muniz.
-// Copyright (C) 2014-2023 by Sonic Team Junior.
+// Copyright (C) 2014-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -612,6 +612,10 @@ static int libd_getSprite2Patch(lua_State *L)
 
 	if (super)
 		j |= SPR2F_SUPER;
+
+	// If there is no "super" variation of this sprite, try with the normal one.
+	if (!P_IsValidSprite2(skins[i], j))
+		j &= ~SPR2F_SUPER;
 
 	sprdef = P_GetSkinSpritedef(skins[i], j);
 

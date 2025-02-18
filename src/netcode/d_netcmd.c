@@ -391,7 +391,7 @@ static CV_PossibleValue_t perfstats_cons_t[] = {
 consvar_t cv_perfstats = CVAR_INIT ("perfstats", "Off", CV_CALL, perfstats_cons_t, PS_PerfStats_OnChange);
 static CV_PossibleValue_t ps_samplesize_cons_t[] = {
 	{1, "MIN"}, {1000, "MAX"}, {0, NULL}};
-consvar_t cv_ps_samplesize = CVAR_INIT ("ps_samplesize", "1", CV_CALL, ps_samplesize_cons_t, PS_SampleSize_OnChange);
+consvar_t cv_ps_samplesize = CVAR_INIT ("ps_samplesize", "175", CV_CALL, ps_samplesize_cons_t, PS_SampleSize_OnChange);
 static CV_PossibleValue_t ps_descriptor_cons_t[] = {
 	{1, "Average"}, {2, "SD"}, {3, "Minimum"}, {4, "Maximum"}, {0, NULL}};
 consvar_t cv_ps_descriptor = CVAR_INIT ("ps_descriptor", "Average", 0, ps_descriptor_cons_t, NULL);
@@ -620,7 +620,7 @@ void D_RegisterServerCommands(void)
 	CV_RegisterVar(&cv_blamecfail);
 	CV_RegisterVar(&cv_dedicatedidletime);
 	CV_RegisterVar(&cv_idletime);
-	CV_RegisterVar(&cv_idlespectate);
+	CV_RegisterVar(&cv_idleaction);
 	CV_RegisterVar(&cv_httpsource);
 
 	COM_AddCommand("ping", Command_Ping_f, COM_LUA);
@@ -824,8 +824,6 @@ void D_RegisterClientCommands(void)
 	CV_RegisterVar(&cv_jumpaxis2);
 	CV_RegisterVar(&cv_spinaxis);
 	CV_RegisterVar(&cv_spinaxis2);
-	CV_RegisterVar(&cv_shieldaxis);
-	CV_RegisterVar(&cv_shieldaxis2);
 	CV_RegisterVar(&cv_fireaxis);
 	CV_RegisterVar(&cv_fireaxis2);
 	CV_RegisterVar(&cv_firenaxis);
@@ -4799,12 +4797,11 @@ static void Command_Togglemodified_f(void)
 	modifiedgame = !modifiedgame;
 }
 
-extern UINT8 *save_p;
 static void Command_Archivetest_f(void)
 {
-	UINT8 *buf;
 	UINT32 i, wrote;
 	thinker_t *th;
+	save_t savebuffer;
 	if (gamestate != GS_LEVEL)
 	{
 		CONS_Printf("This command only works in-game, you dummy.\n");
@@ -4818,28 +4815,29 @@ static void Command_Archivetest_f(void)
 			((mobj_t *)th)->mobjnum = i++;
 
 	// allocate buffer
-	buf = save_p = ZZ_Alloc(1024);
+	savebuffer.size = 1024;
+	savebuffer.buf = malloc(savebuffer.size);
+	savebuffer.pos = 0;
 
 	// test archive
 	CONS_Printf("LUA_Archive...\n");
-	LUA_Archive();
-	WRITEUINT8(save_p, 0x7F);
-	wrote = (UINT32)(save_p-buf);
+	LUA_Archive(&savebuffer);
+	P_WriteUINT8(&savebuffer, 0x7F);
+	wrote = savebuffer.pos;
 
 	// clear Lua state, so we can really see what happens!
 	CONS_Printf("Clearing state!\n");
 	LUA_ClearExtVars();
 
 	// test unarchive
-	save_p = buf;
 	CONS_Printf("LUA_UnArchive...\n");
-	LUA_UnArchive();
-	i = READUINT8(save_p);
-	if (i != 0x7F || wrote != (UINT32)(save_p-buf))
-		CONS_Printf("Savegame corrupted. (write %u, read %u)\n", wrote, (UINT32)(save_p-buf));
+	LUA_UnArchive(&savebuffer);
+	i = P_ReadUINT8(&savebuffer);
+	if (i != 0x7F || wrote != (UINT32)(savebuffer.pos))
+		CONS_Printf("Savegame corrupted. (write %u, read %u)\n", wrote, (UINT32)(savebuffer.pos));
 
 	// free buffer
-	Z_Free(buf);
+	free(savebuffer.buf);
 	CONS_Printf("Done. No crash.\n");
 }
 #endif
@@ -4910,10 +4908,12 @@ static void Name2_OnChange(void)
 
 static boolean Skin_CanChange(const char *valstr)
 {
-	(void)valstr;
-
 	if (!Playing())
 		return true; // do whatever you want
+
+	// You already are that skin.
+	if (stricmp(skins[players[consoleplayer].skin]->name, valstr) == 0)
+		return false;
 
 	if (!(multiplayer || netgame)) // In single player.
 		return true;
@@ -4929,10 +4929,12 @@ static boolean Skin_CanChange(const char *valstr)
 
 static boolean Skin2_CanChange(const char *valstr)
 {
-	(void)valstr;
-
 	if (!Playing() || !splitscreen)
 		return true; // do whatever you want
+
+	// You already are that skin.
+	if (stricmp(skins[players[secondarydisplayplayer].skin]->name, valstr) == 0)
+		return false;
 
 	if (CanChangeSkin(secondarydisplayplayer) && !P_PlayerMoving(secondarydisplayplayer))
 		return true;

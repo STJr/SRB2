@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -954,6 +954,7 @@ static boolean HWR_BlendMidtextureSurface(FSurfaceInfo *pSurf)
 
 static void HWR_RenderMidtexture(INT32 gl_midtexture, float cliplow, float cliphigh, fixed_t worldtop, fixed_t worldbottom, fixed_t worldhigh, fixed_t worldlow, fixed_t worldtopslope, fixed_t worldbottomslope, fixed_t worldhighslope, fixed_t worldlowslope, UINT32 lightnum, FOutVector *inWallVerts)
 {
+	sector_t *front, *back;
 	FOutVector wallVerts[4];
 
 	FSurfaceInfo Surf;
@@ -962,6 +963,16 @@ static void HWR_RenderMidtexture(INT32 gl_midtexture, float cliplow, float cliph
 	// Determine if it's visible
 	if (!HWR_BlendMidtextureSurface(&Surf))
 		return;
+
+	if (gl_linedef->frontsector->heightsec != -1)
+		front = &sectors[gl_linedef->frontsector->heightsec];
+	else
+		front = gl_linedef->frontsector;
+
+	if (gl_linedef->backsector->heightsec != -1)
+		back = &sectors[gl_linedef->backsector->heightsec];
+	else
+		back = gl_linedef->backsector;
 
 	fixed_t texheight = FixedDiv(textureheight[gl_midtexture], abs(gl_sidedef->scaley_mid));
 	INT32 repeats;
@@ -972,15 +983,15 @@ static void HWR_RenderMidtexture(INT32 gl_midtexture, float cliplow, float cliph
 	{
 		fixed_t high, low;
 
-		if (gl_frontsector->ceilingheight > gl_backsector->ceilingheight)
-			high = gl_backsector->ceilingheight;
+		if (front->ceilingheight > back->ceilingheight)
+			high = back->ceilingheight;
 		else
-			high = gl_frontsector->ceilingheight;
+			high = front->ceilingheight;
 
-		if (gl_frontsector->floorheight > gl_backsector->floorheight)
-			low = gl_frontsector->floorheight;
+		if (front->floorheight > back->floorheight)
+			low = front->floorheight;
 		else
-			low = gl_backsector->floorheight;
+			low = back->floorheight;
 
 		repeats = (high - low) / texheight;
 		if ((high - low) % texheight)
@@ -1007,8 +1018,8 @@ static void HWR_RenderMidtexture(INT32 gl_midtexture, float cliplow, float cliph
 	if (gl_curline->polyseg)
 	{
 		// Change this when polyobjects support slopes
-		popentop = popentopslope = gl_curline->backsector->ceilingheight;
-		popenbottom = popenbottomslope = gl_curline->backsector->floorheight;
+		popentop = popentopslope = back->ceilingheight;
+		popenbottom = popenbottomslope = back->floorheight;
 	}
 	else
 	{
@@ -1681,7 +1692,7 @@ static void HWR_ProcessSeg(void)
 				{
 					blendmode = PF_Masked;
 
-					if ((rover->fofflags & FOF_TRANSLUCENT && !(rover->fofflags & FOF_SPLAT)) || rover->blend)
+					if ((rover->fofflags & FOF_TRANSLUCENT && !((rover->fofflags & FOF_SPLAT) && rover->alpha >= 255)) || rover->blend)
 					{
 						blendmode = rover->blend ? HWR_GetBlendModeFlag(rover->blend) : PF_Translucent;
 						Surf.PolyColor.s.alpha = max(0, min(rover->alpha, 255));
@@ -1838,7 +1849,7 @@ static void HWR_ProcessSeg(void)
 				{
 					blendmode = PF_Masked;
 
-					if ((rover->fofflags & FOF_TRANSLUCENT && !(rover->fofflags & FOF_SPLAT)) || rover->blend)
+					if ((rover->fofflags & FOF_TRANSLUCENT && !((rover->fofflags & FOF_SPLAT) && rover->alpha >= 255)) || rover->blend)
 					{
 						blendmode = rover->blend ? HWR_GetBlendModeFlag(rover->blend) : PF_Translucent;
 						Surf.PolyColor.s.alpha = max(0, min(rover->alpha, 255));
@@ -2480,19 +2491,19 @@ static void HWR_Subsector(size_t num)
 			rover; rover = rover->next)
 		{
 			fixed_t bottomCullHeight, topCullHeight, centerHeight;
-			
+
 			if (!(rover->fofflags & FOF_EXISTS) || !(rover->fofflags & FOF_RENDERPLANES))
 				continue;
 			if (sub->validcount == validcount)
 				continue;
-			
+
 			// rendering heights for bottom and top planes
 			bottomCullHeight = P_GetFFloorBottomZAt(rover, viewx, viewy);
 			topCullHeight = P_GetFFloorTopZAt(rover, viewx, viewy);
-			
+
 			if (gl_frontsector->cullheight)
 			{
-				if (HWR_DoCulling(gl_frontsector->cullheight, viewsector->cullheight, gl_viewz, FIXED_TO_FLOAT(bottomCullHeight), FIXED_TO_FLOAT(topCullHeight)))
+				if (HWR_DoCulling(gl_frontsector->cullheight, viewsector->cullheight, gl_viewz, FIXED_TO_FLOAT(*rover->bottomheight), FIXED_TO_FLOAT(*rover->topheight)))
 					continue;
 			}
 
@@ -2519,7 +2530,7 @@ static void HWR_Subsector(size_t num)
 					                       alpha, rover->master->frontsector, PF_Fog|PF_NoTexture,
 										   true, false, rover->master->frontsector->extra_colormap);
 				}
-				else if ((rover->fofflags & FOF_TRANSLUCENT && !(rover->fofflags & FOF_SPLAT)) || rover->blend) // SoM: Flags are more efficient
+				else if ((rover->fofflags & FOF_TRANSLUCENT && !((rover->fofflags & FOF_SPLAT) && rover->alpha >= 255)) || rover->blend) // SoM: Flags are more efficient
 				{
 					light = R_GetPlaneLight(gl_frontsector, centerHeight, viewz < bottomCullHeight ? true : false);
 
@@ -2565,7 +2576,7 @@ static void HWR_Subsector(size_t num)
 					                       alpha, rover->master->frontsector, PF_Fog|PF_NoTexture,
 										   true, false, rover->master->frontsector->extra_colormap);
 				}
-				else if ((rover->fofflags & FOF_TRANSLUCENT && !(rover->fofflags & FOF_SPLAT)) || rover->blend)
+				else if ((rover->fofflags & FOF_TRANSLUCENT && !((rover->fofflags & FOF_SPLAT) && rover->alpha >= 255)) || rover->blend)
 				{
 					light = R_GetPlaneLight(gl_frontsector, centerHeight, viewz < topCullHeight ? true : false);
 
@@ -3094,7 +3105,7 @@ static void HWR_SplitSprite(gl_vissprite_t *spr)
 	// baseWallVerts is used to know the final shape to easily get the vertex
 	// co-ordinates
 	memcpy(wallVerts, baseWallVerts, sizeof(baseWallVerts));
-	
+
 	fixed_t newalpha = spr->mobj->alpha;
 
 	// if sprite has linkdraw, then dont write to z-buffer (by not using PF_Occlude)
@@ -3139,7 +3150,7 @@ static void HWR_SplitSprite(gl_vissprite_t *spr)
 		blend = HWR_GetBlendModeFlag(blendmode)|occlusion;
 		if (!occlusion) use_linkdraw_hack = true;
 	}
-	
+
 	Surf.PolyColor.s.alpha = FixedMul(newalpha, Surf.PolyColor.s.alpha);
 
 	if (HWR_UseShader())
@@ -3338,7 +3349,7 @@ static void HWR_DrawBoundingBox(gl_vissprite_t *vis)
 		v[15].y = v[16].y = v[17].y = v[21].y = v[22].y = v[23].y = vis->gzt; // top
 
 	Surf.PolyColor = V_GetColor(R_GetBoundingBoxColor(vis->mobj));
-	
+
 	HWR_ProcessPolygon(&Surf, v, 24, (cv_renderhitboxgldepth.value ? 0 : PF_NoDepthTest)|PF_Modulated|PF_NoTexture|PF_WireFrame, SHADER_NONE, false);
 }
 
@@ -3634,7 +3645,7 @@ static void HWR_DrawSprite(gl_vissprite_t *spr)
 			blend = HWR_GetBlendModeFlag(blendmode)|occlusion;
 			if (!occlusion) use_linkdraw_hack = true;
 		}
-		
+
 		Surf.PolyColor.s.alpha = FixedMul(newalpha, Surf.PolyColor.s.alpha);
 
 		if (spr->renderflags & RF_SHADOWEFFECTS)
@@ -5594,7 +5605,7 @@ void HWR_RenderPlayerView(INT32 viewnumber, player_t *player)
 // Can't have palette rendering if shaders are disabled.
 boolean HWR_ShouldUsePaletteRendering(void)
 {
-	return (cv_glpaletterendering.value && HWR_UseShader());
+	return (pMasterPalette != NULL && cv_glpaletterendering.value && HWR_UseShader());
 }
 
 // enable or disable palette rendering state depending on settings and availability
@@ -5711,7 +5722,7 @@ consvar_t cv_glbatching = CVAR_INIT ("gr_batching", "On", 0, CV_OnOff, NULL);
 
 static CV_PossibleValue_t glpalettedepth_cons_t[] = {{16, "16 bits"}, {24, "24 bits"}, {0, NULL}};
 
-consvar_t cv_glpaletterendering = CVAR_INIT ("gr_paletterendering", "Off", CV_SAVE|CV_CALL, CV_OnOff, CV_glpaletterendering_OnChange);
+consvar_t cv_glpaletterendering = CVAR_INIT ("gr_paletterendering", "On", CV_SAVE|CV_CALL, CV_OnOff, CV_glpaletterendering_OnChange);
 consvar_t cv_glpalettedepth = CVAR_INIT ("gr_palettedepth", "16 bits", CV_SAVE|CV_CALL, glpalettedepth_cons_t, CV_glpalettedepth_OnChange);
 
 #define ONLY_IF_GL_LOADED if (vid.glstate != VID_GL_LIBRARY_LOADED) return;
@@ -5783,6 +5794,7 @@ void HWR_AddCommands(void)
 	CV_RegisterVar(&cv_glskydome);
 	CV_RegisterVar(&cv_glspritebillboarding);
 	CV_RegisterVar(&cv_glfakecontrast);
+	CV_RegisterVar(&cv_glslopecontrast);
 	CV_RegisterVar(&cv_glshearing);
 	CV_RegisterVar(&cv_glshaders);
 

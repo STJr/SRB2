@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -562,7 +562,7 @@ void Command_Teleport_f(void)
 
 			for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 			{
-				if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+				if (th->removing)
 					continue;
 
 				mo2 = (mobj_t *)th;
@@ -1072,7 +1072,7 @@ static mapthing_t *OP_CreateNewMapThing(player_t *player, UINT16 type, boolean c
 
 		for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 		{
-			if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+			if (th->removing)
 				continue;
 
 			mo = (mobj_t *)th;
@@ -1110,9 +1110,9 @@ static mapthing_t *OP_CreateNewMapThing(player_t *player, UINT16 type, boolean c
 	mt->pitch = mt->roll = 0;
 
 	// Ignore offsets
-	if (mt->type == MT_EMBLEM)
+	if (mt->type == mobjinfo[MT_EMBLEM].doomednum)
 		mt->args[1] = 1;
-	else
+	else if (!(mt->type == mobjinfo[MT_METALSONIC_RACE].doomednum || mt->type == mobjinfo[MT_ROSY].doomednum))
 		mt->args[0] = 1;
 
 	return mt;

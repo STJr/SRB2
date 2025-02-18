@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -162,7 +162,7 @@ void Command_CountMobjs_f(void)
 
 			for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 			{
-				if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+				if (th->removing)
 					continue;
 
 				if (((mobj_t *)th)->type == i)
@@ -182,7 +182,7 @@ void Command_CountMobjs_f(void)
 
 		for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 		{
-			if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+			if (th->removing)
 				continue;
 
 			if (((mobj_t *)th)->type == i)
@@ -348,6 +348,7 @@ void P_RemoveThinkerDelayed(thinker_t *thinker)
 void P_RemoveThinker(thinker_t *thinker)
 {
 	LUA_InvalidateUserdata(thinker);
+	thinker->removing = true;
 	thinker->function.acp1 = (actionf_p1)P_RemoveThinkerDelayed;
 }
 
