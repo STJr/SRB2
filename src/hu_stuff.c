@@ -109,7 +109,6 @@ static patch_t *nopingicon;
 
 // crosshair 0 = off, 1 = cross, 2 = angle, 3 = point, see m_menu.c
 static patch_t *crosshair[HU_CROSSHAIRS]; // 3 precached crosshair graphics
-static patch_t *crosshair_inverted[HU_CROSSHAIRS]; // 3 precached crosshair graphics for subtractive blending
 
 // -------
 // protos.
@@ -230,9 +229,6 @@ void HU_LoadGraphics(void)
 	{
 		sprintf(buffer, "CROSHAI%c", '1'+i);
 		crosshair[i] = (patch_t *)W_CachePatchName(buffer, PU_HUDGFX);
-
-		sprintf(buffer, "CRSHAII%c", '1'+i);
-		crosshair_inverted[i] = (patch_t *)W_CachePatchName(buffer, PU_HUDGFX);
 	}
 
 	emblemicon = W_CachePatchName("EMBLICON", PU_HUDGFX);
@@ -1651,13 +1647,14 @@ static inline void HU_DrawCrosshairs(void)
 	if (automapactive || demoplayback)
 		return;
 
+	//we get the TC_ALLWHITE colormap for these so we dont have to have extra all-white graphics
 	stplyr = ((stplyr == &players[displayplayer]) ? &players[secondarydisplayplayer] : &players[displayplayer]);
 	if (!players[displayplayer].spectator && (!camera.chase || ticcmd_ztargetfocus[0]) && cross1)
-		V_DrawStretchyFixedPatch((BASEVIDWIDTH/2)<<FRACBITS, (BASEVIDHEIGHT/2)<<FRACBITS, FRACUNIT, splitscreen ? 2*FRACUNIT : FRACUNIT, V_TRANSLUCENT|V_PERPLAYER|(cv_crosshair_invert.value ? V_SUBTRACT : 0), (cv_crosshair_invert.value ? crosshair_inverted : crosshair)[cross1 - 1], NULL);
+		V_DrawStretchyFixedPatch((BASEVIDWIDTH/2)<<FRACBITS, (BASEVIDHEIGHT/2)<<FRACBITS, FRACUNIT, splitscreen ? 2*FRACUNIT : FRACUNIT, V_TRANSLUCENT|V_PERPLAYER|(cv_crosshair_invert.value ? V_SUBTRACT : 0), crosshair[cross1 - 1], cv_crosshair_invert.value ? R_GetTranslationColormap(TC_ALLWHITE, SKINCOLOR_WHITE, GTC_CACHE) : NULL);
 
 	stplyr = ((stplyr == &players[displayplayer]) ? &players[secondarydisplayplayer] : &players[displayplayer]);
 	if (!players[secondarydisplayplayer].spectator && (!camera2.chase || ticcmd_ztargetfocus[1]) && cross2 && splitscreen)
-		V_DrawStretchyFixedPatch((BASEVIDWIDTH/2)<<FRACBITS, (BASEVIDHEIGHT/2)<<FRACBITS, FRACUNIT, 2*FRACUNIT, V_TRANSLUCENT|V_PERPLAYER|(cv_crosshair2_invert.value ? V_SUBTRACT : 0), (cv_crosshair2_invert.value ? crosshair_inverted : crosshair)[cross2 - 1], NULL);
+		V_DrawStretchyFixedPatch((BASEVIDWIDTH/2)<<FRACBITS, (BASEVIDHEIGHT/2)<<FRACBITS, FRACUNIT, 2*FRACUNIT, V_TRANSLUCENT|V_PERPLAYER|(cv_crosshair2_invert.value ? V_SUBTRACT : 0), crosshair[cross2 - 1], cv_crosshair_invert.value ? R_GetTranslationColormap(TC_ALLWHITE, SKINCOLOR_WHITE, GTC_CACHE) : NULL);
 }
 
 static void HU_DrawCEcho(void)
