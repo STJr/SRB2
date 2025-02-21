@@ -585,8 +585,8 @@ static int lib_cvRegisterVar(lua_State *L)
 	{
 		if (!category)
 		{
-			char* temp = strdup(wadfiles[numwadfiles - 1]->filename);
-			nameonly(temp);
+			char* temp = wadfiles[numwadfiles - 1]->filename;
+			temp += strlen(temp) - nameonlylength(temp);
 
 			category = temp;
 		}
