@@ -135,22 +135,24 @@ void P_ParseAnimationDefintion(SINT8 istexture);
 
 static boolean P_FindTextureForAnimation(anim_t *anim, animdef_t *animdef)
 {
-	if (R_CheckTextureNumForName(animdef->startname) == -1)
+	INT32 start = R_CheckTextureNumForName(animdef->startname, TEXTURETYPE_TEXTURE);
+	if (start == -1)
 		return false;
 
-	anim->picnum = R_TextureNumForName(animdef->endname);
-	anim->basepic = R_TextureNumForName(animdef->startname);
+	anim->basepic = start;
+	anim->picnum = R_CheckTextureNumForName(animdef->endname, TEXTURETYPE_TEXTURE);
 
 	return true;
 }
 
 static boolean P_FindFlatForAnimation(anim_t *anim, animdef_t *animdef)
 {
-	if (R_CheckFlatNumForName(animdef->startname) == -1)
+	INT32 start = R_CheckTextureNumForName(animdef->startname, TEXTURETYPE_FLAT);
+	if (start == -1)
 		return false;
 
-	anim->picnum = R_CheckFlatNumForName(animdef->endname);
-	anim->basepic = R_CheckFlatNumForName(animdef->startname);
+	anim->basepic = start;
+	anim->picnum = R_CheckTextureNumForName(animdef->endname, TEXTURETYPE_FLAT);
 
 	return true;
 }
@@ -2406,7 +2408,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 					z = line->args[4] << FRACBITS;
 
 					P_SetOrigin(mo, mo->x + x, mo->y + y, mo->z + z);
-					
+
 					if (mo->player)
 					{
 						if (bot) // This might put poor Tails in a wall if he's too far behind! D: But okay, whatever! >:3
@@ -2702,18 +2704,6 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 				EV_DoCrush(line->args[0], line, crushBothOnce);
 			break;
 
-		case 430: // Bounce Player
-			if (mo && mo->player)
-			{
-				P_SetObjectMomZ(mo, line->args[0]*FRACUNIT, false);
-				S_StartSound(NULL, sfx_s3k8a);
-				mo->player->pflags |= PF_JUMPED;
-				if (skins[mo->player->skin]->flags & SF_NOJUMPSPIN)
-					P_SetMobjState(mo, S_PLAY_SPRING);
-				else
-					P_SetMobjState(mo, S_PLAY_JUMP);
-			}
-			break;
 		case 432: // Enable/Disable 2D Mode
 			if (mo && mo->player)
 			{

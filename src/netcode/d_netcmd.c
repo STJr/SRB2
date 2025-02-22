@@ -320,7 +320,7 @@ consvar_t cv_overtime = CVAR_INIT ("overtime", "Yes", CV_SAVE|CV_NETVAR|CV_ALLOW
 consvar_t cv_rollingdemos = CVAR_INIT ("rollingdemos", "On", CV_SAVE, CV_OnOff, NULL);
 
 static CV_PossibleValue_t timetic_cons_t[] = {{0, "Classic"}, {1, "Centiseconds"}, {2, "Mania"}, {3, "Tics"}, {0, NULL}};
-consvar_t cv_timetic = CVAR_INIT ("timerres", "Classic", CV_SAVE, timetic_cons_t, NULL);
+consvar_t cv_timetic = CVAR_INIT ("timerres", "Mania", CV_SAVE, timetic_cons_t, NULL);
 
 static CV_PossibleValue_t powerupdisplay_cons_t[] = {{0, "Never"}, {1, "First-person only"}, {2, "Always"}, {0, NULL}};
 consvar_t cv_powerupdisplay = CVAR_INIT ("powerupdisplay", "First-person only", CV_SAVE, powerupdisplay_cons_t, NULL);
@@ -372,10 +372,10 @@ static CV_PossibleValue_t cooplives_cons_t[] = {{0, "Infinite"}, {1, "Per-player
 consvar_t cv_cooplives = CVAR_INIT ("cooplives", "Avoid Game Over", CV_SAVE|CV_NETVAR|CV_CALL|CV_CHEAT|CV_ALLOWLUA, cooplives_cons_t, CoopLives_OnChange);
 
 static CV_PossibleValue_t advancemap_cons_t[] = {{0, "Off"}, {1, "Next"}, {2, "Random"}, {0, NULL}};
-consvar_t cv_advancemap = CVAR_INIT ("advancemap", "Next", CV_SAVE|CV_NETVAR|CV_ALLOWLUA, advancemap_cons_t, NULL);
+consvar_t cv_advancemap = CVAR_INIT ("advancemap", "Random", CV_SAVE|CV_NETVAR|CV_ALLOWLUA, advancemap_cons_t, NULL);
 
 static CV_PossibleValue_t playersforexit_cons_t[] = {{0, "One"}, {1, "1/4"}, {2, "Half"}, {3, "3/4"}, {4, "All"}, {0, NULL}};
-consvar_t cv_playersforexit = CVAR_INIT ("playersforexit", "All", CV_SAVE|CV_NETVAR|CV_ALLOWLUA, playersforexit_cons_t, NULL);
+consvar_t cv_playersforexit = CVAR_INIT ("playersforexit", "3/4", CV_SAVE|CV_NETVAR|CV_ALLOWLUA, playersforexit_cons_t, NULL);
 
 consvar_t cv_exitmove = CVAR_INIT ("exitmove", "On", CV_SAVE|CV_NETVAR|CV_CALL|CV_ALLOWLUA, CV_OnOff, ExitMove_OnChange);
 
@@ -824,8 +824,6 @@ void D_RegisterClientCommands(void)
 	CV_RegisterVar(&cv_jumpaxis2);
 	CV_RegisterVar(&cv_spinaxis);
 	CV_RegisterVar(&cv_spinaxis2);
-	CV_RegisterVar(&cv_shieldaxis);
-	CV_RegisterVar(&cv_shieldaxis2);
 	CV_RegisterVar(&cv_fireaxis);
 	CV_RegisterVar(&cv_fireaxis2);
 	CV_RegisterVar(&cv_firenaxis);
@@ -4255,9 +4253,9 @@ void D_GameTypeChanged(INT32 lastgametype)
 			case GT_TEAMMATCH:
 				if (!cv_timelimit.changed && !cv_pointlimit.changed) // user hasn't changed limits
 				{
-					// default settings for match: timelimit 10 mins, no pointlimit
+					// default settings for match: timelimit 7 mins, no pointlimit
 					CV_SetValue(&cv_pointlimit, 0);
-					CV_SetValue(&cv_timelimit, 10);
+					CV_SetValue(&cv_timelimit, 7);
 				}
 				if (!cv_itemrespawntime.changed)
 					CV_Set(&cv_itemrespawntime, cv_itemrespawntime.defaultvalue); // respawn normally
@@ -4266,9 +4264,9 @@ void D_GameTypeChanged(INT32 lastgametype)
 			case GT_HIDEANDSEEK:
 				if (!cv_timelimit.changed && !cv_pointlimit.changed) // user hasn't changed limits
 				{
-					// default settings for tag: 5 mins, no pointlimit
+					// default settings for tag: 7 mins, no pointlimit
 					// Note that tag mode also uses an alternate timing mechanism in tandem with timelimit.
-					CV_SetValue(&cv_timelimit, 5);
+					CV_SetValue(&cv_timelimit, 7);
 					CV_SetValue(&cv_pointlimit, 0);
 				}
 				if (!cv_itemrespawntime.changed)
@@ -4277,8 +4275,8 @@ void D_GameTypeChanged(INT32 lastgametype)
 			case GT_CTF:
 				if (!cv_timelimit.changed && !cv_pointlimit.changed) // user hasn't changed limits
 				{
-					// default settings for CTF: no timelimit, pointlimit 5
-					CV_SetValue(&cv_timelimit, 0);
+					// default settings for CTF: 15 mins, pointlimit 5
+					CV_SetValue(&cv_timelimit, 15);
 					CV_SetValue(&cv_pointlimit, 5);
 				}
 				if (!cv_itemrespawntime.changed)

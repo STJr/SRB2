@@ -3,7 +3,7 @@
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
 // Copyright (C) 2011-2016 by Matthew "Kaito Sinclaire" Walsh.
-// Copyright (C) 1999-2024 by Sonic Team Junior.
+// Copyright (C) 1999-2025 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -143,7 +143,7 @@ typedef enum
 
 typedef struct
 {
-	char bgname[8]; // name for background gfx lump; lays over titlemap if this is set
+	char bgname[8+1]; // name for background gfx lump; lays over titlemap if this is set
 	SINT8 fadestrength;  // darken background when displaying this menu, strength 0-31 or -1 for undefined
 	INT32 bgcolor; // fill color, overrides bg name. -1 means follow bg name rules.
 	INT32 titlescrollxspeed; // background gfx scroll per menu; inherits global setting
@@ -153,13 +153,13 @@ typedef struct
 	SINT8 hidetitlepics; // hide title gfx per menu; -1 means undefined, inherits global setting
 	ttmode_enum ttmode; // title wing animation mode; default TTMODE_OLD
 	UINT8 ttscale; // scale of title wing gfx (FRACUNIT / ttscale); -1 means undefined, inherits global setting
-	char ttname[9]; // lump name of title wing gfx. If name length is <= 6, engine will attempt to load numbered frames (TTNAMExx)
+	char ttname[8+1]; // lump name of title wing gfx. If name length is <= 6, engine will attempt to load numbered frames (TTNAMExx)
 	INT16 ttx; // X position of title wing
 	INT16 tty; // Y position of title wing
 	INT16 ttloop; // # frame to loop; -1 means dont loop
 	UINT16 tttics; // # of tics per frame
 
-	char musname[7]; ///< Music track to play. "" for no music.
+	char musname[6+1]; ///< Music track to play. "" for no music.
 	UINT16 mustrack; ///< Subsong to play. Only really relevant for music modules and specific formats supported by GME. 0 to ignore.
 	boolean muslooping; ///< Loop the music
 	boolean musstop; ///< Don't play any music
@@ -176,7 +176,6 @@ typedef struct
 extern menupres_t menupres[NUMMENUTYPES];
 extern UINT32 prevMenuId;
 extern UINT32 activeMenuId;
-extern tic_t shieldprompt_timer; // Show a prompt about the new Shield button for old configs // TODO: 2.3: Remove
 
 void M_InitMenuPresTables(void);
 UINT8 M_GetYoungestChildMenu(void);
@@ -370,8 +369,8 @@ extern menu_t OP_JoystickSetDef;
 typedef struct
 {
 	boolean used;
-	char notes[441];
-	char picname[8];
+	char notes[440+1];
+	char picname[8+1];
 	char skinname[SKINNAMESIZE*2+2]; // skin&skin\0
 	patch_t *charpic;
 	UINT8 prev;

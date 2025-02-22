@@ -2491,16 +2491,16 @@ static void HWR_Subsector(size_t num)
 			rover; rover = rover->next)
 		{
 			fixed_t bottomCullHeight, topCullHeight, centerHeight;
-			
+
 			if (!(rover->fofflags & FOF_EXISTS) || !(rover->fofflags & FOF_RENDERPLANES))
 				continue;
 			if (sub->validcount == validcount)
 				continue;
-			
+
 			// rendering heights for bottom and top planes
 			bottomCullHeight = P_GetFFloorBottomZAt(rover, viewx, viewy);
 			topCullHeight = P_GetFFloorTopZAt(rover, viewx, viewy);
-			
+
 			if (gl_frontsector->cullheight)
 			{
 				if (HWR_DoCulling(gl_frontsector->cullheight, viewsector->cullheight, gl_viewz, FIXED_TO_FLOAT(*rover->bottomheight), FIXED_TO_FLOAT(*rover->topheight)))
@@ -2671,45 +2671,31 @@ fixed_t *hwbbox;
 
 static void HWR_RenderBSPNode(INT32 bspnum)
 {
-	node_t *bsp = &nodes[bspnum];
-
-	// Decide which side the view point is on
+	node_t *bsp;
 	INT32 side;
 
 	ps_numbspcalls.value.i++;
 
-	// Found a subsector?
-	if (bspnum & NF_SUBSECTOR)
+	while (!(bspnum & NF_SUBSECTOR))  // Found a subsector?
 	{
-		if (bspnum == -1)
-		{
-			//*(gl_drawsubsector_p++) = 0;
-			HWR_Subsector(0);
-		}
-		else
-		{
-			//*(gl_drawsubsector_p++) = bspnum&(~NF_SUBSECTOR);
-			HWR_Subsector(bspnum&(~NF_SUBSECTOR));
-		}
-		return;
-	}
+		bsp = &nodes[bspnum];
 
-	// Decide which side the view point is on.
-	side = R_PointOnSide(viewx, viewy, bsp);
-
-	// BP: big hack for a test in lighning ref : 1249753487AB
-	hwbbox = bsp->bbox[side];
-
-	// Recursively divide front space.
-	HWR_RenderBSPNode(bsp->children[side]);
-
-	// Possibly divide back space.
-	if (HWR_CheckBBox(bsp->bbox[side^1]))
-	{
+		// Decide which side the view point is on.
+		side = R_PointOnSide(viewx, viewy, bsp);
 		// BP: big hack for a test in lighning ref : 1249753487AB
-		hwbbox = bsp->bbox[side^1];
-		HWR_RenderBSPNode(bsp->children[side^1]);
+		hwbbox = bsp->bbox[side];
+		// Recursively divide front space.
+		HWR_RenderBSPNode(bsp->children[side]);
+
+		// Possibly divide back space.
+
+		if (!HWR_CheckBBox(bsp->bbox[side^1]))
+			return;
+
+		bspnum = bsp->children[side^1];
 	}
+
+	HWR_Subsector(bspnum == -1 ? 0 : bspnum & ~NF_SUBSECTOR);
 }
 
 // ==========================================================================
@@ -3105,7 +3091,7 @@ static void HWR_SplitSprite(gl_vissprite_t *spr)
 	// baseWallVerts is used to know the final shape to easily get the vertex
 	// co-ordinates
 	memcpy(wallVerts, baseWallVerts, sizeof(baseWallVerts));
-	
+
 	fixed_t newalpha = spr->mobj->alpha;
 
 	// if sprite has linkdraw, then dont write to z-buffer (by not using PF_Occlude)
@@ -3150,7 +3136,7 @@ static void HWR_SplitSprite(gl_vissprite_t *spr)
 		blend = HWR_GetBlendModeFlag(blendmode)|occlusion;
 		if (!occlusion) use_linkdraw_hack = true;
 	}
-	
+
 	Surf.PolyColor.s.alpha = FixedMul(newalpha, Surf.PolyColor.s.alpha);
 
 	if (HWR_UseShader())
@@ -3349,7 +3335,7 @@ static void HWR_DrawBoundingBox(gl_vissprite_t *vis)
 		v[15].y = v[16].y = v[17].y = v[21].y = v[22].y = v[23].y = vis->gzt; // top
 
 	Surf.PolyColor = V_GetColor(R_GetBoundingBoxColor(vis->mobj));
-	
+
 	HWR_ProcessPolygon(&Surf, v, 24, (cv_renderhitboxgldepth.value ? 0 : PF_NoDepthTest)|PF_Modulated|PF_NoTexture|PF_WireFrame, SHADER_NONE, false);
 }
 
@@ -3645,7 +3631,7 @@ static void HWR_DrawSprite(gl_vissprite_t *spr)
 			blend = HWR_GetBlendModeFlag(blendmode)|occlusion;
 			if (!occlusion) use_linkdraw_hack = true;
 		}
-		
+
 		Surf.PolyColor.s.alpha = FixedMul(newalpha, Surf.PolyColor.s.alpha);
 
 		if (spr->renderflags & RF_SHADOWEFFECTS)
@@ -5675,7 +5661,6 @@ void HWR_LoadLevel(void)
 // ==========================================================================
 
 static CV_PossibleValue_t glshaders_cons_t[] = {{0, "Off"}, {1, "On"}, {2, "Ignore custom shaders"}, {0, NULL}};
-static CV_PossibleValue_t glmodelinterpolation_cons_t[] = {{0, "Off"}, {1, "Sometimes"}, {2, "Always"}, {0, NULL}};
 static CV_PossibleValue_t glfakecontrast_cons_t[] = {{0, "Off"}, {1, "On"}, {2, "Smooth"}, {0, NULL}};
 static CV_PossibleValue_t glshearing_cons_t[] = {{0, "Off"}, {1, "On"}, {2, "Third-person"}, {0, NULL}};
 
@@ -5704,7 +5689,7 @@ consvar_t cv_glcoronasize = CVAR_INIT ("gr_coronasize", "1", CV_SAVE|CV_FLOAT, 0
 #endif
 
 consvar_t cv_glmodels = CVAR_INIT ("gr_models", "Off", CV_SAVE, CV_OnOff, NULL);
-consvar_t cv_glmodelinterpolation = CVAR_INIT ("gr_modelinterpolation", "Sometimes", CV_SAVE, glmodelinterpolation_cons_t, NULL);
+consvar_t cv_glmodelinterpolation = CVAR_INIT ("gr_modelinterpolation", "On", CV_SAVE, CV_OnOff, NULL);
 consvar_t cv_glmodellighting = CVAR_INIT ("gr_modellighting", "Off", CV_SAVE|CV_CALL, CV_OnOff, CV_glmodellighting_OnChange);
 
 consvar_t cv_glshearing = CVAR_INIT ("gr_shearing", "Off", CV_SAVE, glshearing_cons_t, NULL);

@@ -1179,7 +1179,7 @@ static void IdentifyVersion(void)
 	// Add the maps
 	D_AddFile(&startupwadfiles, va(pandf,srb2waddir, "zones.pk3"));
 
-	// Add the players
+	// Add the characters
 	D_AddFile(&startupwadfiles, va(pandf,srb2waddir, "characters.pk3"));
 
 #ifdef USE_PATCH_DTA

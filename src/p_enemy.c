@@ -3922,7 +3922,7 @@ static void P_DoBoss5Death(mobj_t *mo)
 				pole->angle = mo->tracer->angle;
 				pole->momx = P_ReturnThrustX(pole, pole->angle, speed);
 				pole->momy = P_ReturnThrustY(pole, pole->angle, speed);
-				
+
 				P_SetTarget(&pole->tracer, P_SpawnMobj(
 					pole->x, pole->y,
 					pole->z - 256*FRACUNIT,
@@ -5582,7 +5582,7 @@ void A_MinusDigging(mobj_t *actor)
 
 		minus = actor;
 
-		P_DoBlockThingsIterate(xl, yl, xh, yh, PIT_MinusCarry);
+		P_DoBlockThingsIterate(xl, yl, xh, yh, PIT_MinusCarry, minus);
 	}
 	else
 	{
@@ -7837,14 +7837,13 @@ void A_BuzzFly(mobj_t *actor)
 
 // Function: A_GuardChase
 //
-// Description: Modified A_Chase for Egg Guard and Koopa Troopas
+// Description: Modified A_Chase for Egg Guard
 //
-// var1 = shield (0) or no shield (1)
+// var1 = unused
 // var2 = unused
 //
 void A_GuardChase(mobj_t *actor)
 {
-	INT32 locvar1 = var1;
 	INT32 delta;
 
 	if (LUA_CallAction(A_GUARDCHASE, actor))
@@ -7853,11 +7852,11 @@ void A_GuardChase(mobj_t *actor)
 	if (actor->reactiontime)
 		actor->reactiontime--;
 
-	if (actor->threshold != 42 || locvar1 == 1) // In formation...
+	if (actor->threshold != 42) // In formation...
 	{
 		fixed_t speed;
 
-		if ((!actor->tracer || !actor->tracer->health) && locvar1 == 0)
+		if (!actor->tracer || !actor->tracer->health)
 		{
 			P_SetTarget(&actor->tracer, NULL);
 			actor->threshold = 42;
@@ -7946,7 +7945,7 @@ void A_GuardChase(mobj_t *actor)
 	// Now that we've moved, its time for our shield to move!
 	// Otherwise it'll never act as a proper overlay.
 	if (actor->tracer && actor->tracer->state
-	&& actor->tracer->state->action.acp1 && locvar1 == 0)
+	&& actor->tracer->state->action.acp1)
 	{
 		var1 = actor->tracer->state->var1, var2 = actor->tracer->state->var2;
 		actor->tracer->state->action.acp1(actor->tracer);
@@ -8333,7 +8332,7 @@ void A_Shockwave(mobj_t *actor)
 		ang += interval;
 		sprev = shock;
 	}
-	
+
 	S_StartSound(actor, shock->info->seesound);
 }
 
@@ -13727,7 +13726,7 @@ void A_DustDevilThink(mobj_t *actor)
 
 	dustdevil = actor;
 
-	P_DoBlockThingsIterate(xl, yl, xh, yh, PIT_DustDevilLaunch);
+	P_DoBlockThingsIterate(xl, yl, xh, yh, PIT_DustDevilLaunch, dustdevil);
 
 	//Whirlwind sound effect.
 	if (leveltime % 70 == 0)
@@ -13843,7 +13842,7 @@ void A_TNTExplode(mobj_t *actor)
 
 	barrel = actor;
 
-	P_DoBlockThingsIterate(xl, yl, xh, yh, PIT_TNTExplode);
+	P_DoBlockThingsIterate(xl, yl, xh, yh, PIT_TNTExplode, barrel);
 
 	// cause a quake -- P_StartQuake does not exist yet
 	epicenter.x = actor->x;

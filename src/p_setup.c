@@ -609,15 +609,15 @@ Ploadflat (levelflat_t *levelflat, const char *flatname, boolean resize)
 	levelflat->type = LEVELFLAT_TEXTURE;
 
 	// Look for a flat
-	int texturenum = R_CheckFlatNumForName(levelflat->name);
+	int texturenum = R_CheckTextureNumForName(levelflat->name, TEXTURETYPE_FLAT);
 	if (texturenum < 0)
 	{
 		// If we can't find a flat, try looking for a texture!
-		texturenum = R_CheckTextureNumForName(levelflat->name);
+		texturenum = R_CheckTextureNumForName(levelflat->name, TEXTURETYPE_TEXTURE);
 		if (texturenum < 0)
 		{
 			// Use "not found" texture
-			texturenum = R_CheckTextureNumForName("REDWALL");
+			texturenum = R_CheckTextureNumForName("REDWALL", TEXTURETYPE_TEXTURE);
 
 			// Give up?
 			if (texturenum < 0)
@@ -5865,10 +5865,6 @@ static void P_ConvertBinaryLinedefTypes(void)
 		case 464: //Trigger egg capsule
 			lines[i].args[0] = tag;
 			lines[i].args[1] = !!(lines[i].flags & ML_NOCLIMB);
-			break;
-		case 465: // Bounce Player (purely for backwards compatibility with new Pipe Towers)
-			lines[i].args[0] = (FixedHypot(lines[i].dx, lines[i].dy) / 8) >> FRACBITS;
-			lines[i].special = 430;
 			break;
 		case 466: //Set level failure state
 			lines[i].args[0] = !!(lines[i].flags & ML_NOCLIMB);

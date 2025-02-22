@@ -538,14 +538,14 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			if ((P_MobjFlip(toucher)*toucher->momz < 0) && (elementalpierce != 1) && (!(player->powers[pw_strong] & STR_HEAVY)))
 			{
 				fixed_t setmomz = -toucher->momz; // Store this, momz get changed by P_DoJump within P_DoBubbleBounce
-				
+
 				if (elementalpierce == 2) // Reset bubblewrap, part 1
 					P_DoBubbleBounce(player);
 				toucher->momz = setmomz;
 				if (elementalpierce == 2) // Reset bubblewrap, part 2
 				{
 					boolean underwater = toucher->eflags & MFE_UNDERWATER;
-							
+
 					if (underwater)
 						toucher->momz /= 2;
 					toucher->momz -= (toucher->momz/(underwater ? 8 : 4)); // Cap the height!
@@ -2572,7 +2572,7 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 			if (!(target->flags2 & MF2_DONTRESPAWN))
 			{
 				if (!(netgame || multiplayer))
-					target->fuse = atoi(cv_itemrespawntime.defaultvalue)*TICRATE + 2; 
+					target->fuse = atoi(cv_itemrespawntime.defaultvalue)*TICRATE + 2;
 				else if (cv_itemrespawn.value)
 					target->fuse = cv_itemrespawntime.value*TICRATE + 2;
 			}

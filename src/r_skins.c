@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2024 by Sonic Team Junior.
+// Copyright (C) 1999-2025 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -80,10 +80,19 @@ UINT16 P_ApplySuperFlagToSprite2(UINT16 spr2, mobj_t *mobj)
 {
 	if (mobj->player)
 	{
-		if (mobj->player->charflags & SF_NOSUPERSPRITES || (mobj->player->powers[pw_carry] == CR_NIGHTSMODE && (mobj->player->charflags & SF_NONIGHTSSUPER)))
+		boolean is_nights = mobj->player->powers[pw_carry] == CR_NIGHTSMODE;
+
+		if (mobj->player->charflags & SF_NOSUPERSPRITES || (is_nights && (mobj->player->charflags & SF_NONIGHTSSUPER)))
 			spr2 &= ~SPR2F_SUPER;
-		else if (mobj->player->powers[pw_super] || (mobj->player->powers[pw_carry] == CR_NIGHTSMODE && (mobj->player->charflags & SF_SUPER)))
+		else if (mobj->player->powers[pw_super] || (is_nights && (mobj->player->charflags & SF_SUPER)))
 			spr2 |= SPR2F_SUPER;
+
+		// Special case for transforming when you are NiGHTS.
+		// Do NOT apply the super sprites in this situation, even if they exist.
+		if (is_nights && mobj->state >= &states[S_PLAY_NIGHTS_TRANS1] && mobj->state <= &states[S_PLAY_NIGHTS_TRANS6])
+		{
+			spr2 &= ~SPR2F_SUPER;
+		}
 	}
 
 	if (spr2 & SPR2F_SUPER)
@@ -730,6 +739,8 @@ static boolean R_ProcessPatchableFields(skin_t *skin, char *stoken, char *value)
 	GETFLAG(MACHINE)
 	GETFLAG(DASHMODE)
 	GETFLAG(FASTEDGE)
+	GETFLAG(FASTWAIT)
+	GETFLAG(JETFUME)
 	GETFLAG(MULTIABILITY)
 	GETFLAG(NONIGHTSROTATION)
 	GETFLAG(NONIGHTSSUPER)
