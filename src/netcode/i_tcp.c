@@ -655,6 +655,7 @@ static inline ssize_t SOCK_SendToAddr(SOCKET_TYPE socket, mysockaddr_t *sockaddr
 static void SOCK_Send(void)
 {
 	ssize_t c = ERRSOCKET;
+	int e = -1; // save error code so it can't be modified later code and avoid calling WSAGetLastError() more then once
 
 	if (!nodeconnected[doomcom->remotenode])
 		return;
@@ -668,8 +669,12 @@ static void SOCK_Send(void)
 				if (myfamily[i] == broadcastaddress[j].any.sa_family)
 				{
 					c = SOCK_SendToAddr(mysockets[i], &broadcastaddress[j]);
-					if (c == ERRSOCKET && !ALLOWEDERROR(errno))
-						break;
+					if (c == ERRSOCKET)
+					{
+						e = errno;
+						if (!ALLOWEDERROR(e))
+							break;
+					}
 				}
 			}
 		}
@@ -681,19 +686,26 @@ static void SOCK_Send(void)
 			if (myfamily[i] == clientaddress[doomcom->remotenode].any.sa_family)
 			{
 				c = SOCK_SendToAddr(mysockets[i], &clientaddress[doomcom->remotenode]);
-				if (c == ERRSOCKET && !ALLOWEDERROR(errno))
-					break;
+				if (c == ERRSOCKET)
+				{
+					e = errno;
+					if (!ALLOWEDERROR(e))
+						break;
+				}
 			}
 		}
 	}
 	else
 	{
 		c = SOCK_SendToAddr(nodesocket[doomcom->remotenode], &clientaddress[doomcom->remotenode]);
+		if (c == ERRSOCKET)
+		{
+			e = errno;
+		}
 	}
 
-	if (c == ERRSOCKET)
+	if (c == ERRSOCKET && e != -1) // -1 means no socket for the address family was found
 	{
-		int e = errno; // save error code so it can't be modified later
 		if (!ALLOWEDERROR(e))
 			I_Error("SOCK_Send, error sending to node %d (%s) #%u: %s", doomcom->remotenode,
 				SOCK_GetNodeAddress(doomcom->remotenode), e, strerror(e));
@@ -864,6 +876,7 @@ static boolean UDP_Socket(void)
 #ifdef HAVE_IPV6
 	const INT32 b_ipv6 = !M_CheckParm("-noipv6");
 #endif
+	const INT32 b_ipv4 = !M_CheckParm("-noipv4");
 	const char *serv;
 
 
@@ -884,11 +897,33 @@ static boolean UDP_Socket(void)
 	else
 		serv = clientport_name;
 
-	if (M_CheckParm("-bindaddr"))
+	if (b_ipv4)
 	{
-		while (M_IsNextParm())
+		if (M_CheckParm("-bindaddr"))
 		{
-			gaie = I_getaddrinfo(M_GetNextParm(), serv, &hints, &ai);
+			while (M_IsNextParm())
+			{
+				gaie = I_getaddrinfo(M_GetNextParm(), serv, &hints, &ai);
+				if (gaie == 0)
+				{
+					runp = ai;
+					while (runp != NULL && s < MAXNETNODES+1)
+					{
+						mysockets[s] = UDP_Bind(runp->ai_family, runp->ai_addr, (socklen_t)runp->ai_addrlen);
+						if (mysockets[s] != (SOCKET_TYPE)ERRSOCKET)
+						{
+							myfamily[s] = hints.ai_family;
+							s++;
+						}
+						runp = runp->ai_next;
+					}
+					I_freeaddrinfo(ai);
+				}
+			}
+		}
+		else
+		{
+			gaie = I_getaddrinfo("0.0.0.0", serv, &hints, &ai);
 			if (gaie == 0)
 			{
 				runp = ai;
@@ -899,37 +934,18 @@ static boolean UDP_Socket(void)
 					{
 						myfamily[s] = hints.ai_family;
 						s++;
+#ifdef HAVE_MINIUPNPC
+						if (UPNP_support)
+						{
+							I_UPnP_rem(serverport_name, "UDP");
+							I_UPnP_add(NULL, serverport_name, "UDP");
+						}
+#endif
 					}
 					runp = runp->ai_next;
 				}
 				I_freeaddrinfo(ai);
 			}
-		}
-	}
-	else
-	{
-		gaie = I_getaddrinfo("0.0.0.0", serv, &hints, &ai);
-		if (gaie == 0)
-		{
-			runp = ai;
-			while (runp != NULL && s < MAXNETNODES+1)
-			{
-				mysockets[s] = UDP_Bind(runp->ai_family, runp->ai_addr, (socklen_t)runp->ai_addrlen);
-				if (mysockets[s] != (SOCKET_TYPE)ERRSOCKET)
-				{
-					myfamily[s] = hints.ai_family;
-					s++;
-#ifdef HAVE_MINIUPNPC
-					if (UPNP_support)
-					{
-						I_UPnP_rem(serverport_name, "UDP");
-						I_UPnP_add(NULL, serverport_name, "UDP");
-					}
-#endif
-				}
-				runp = runp->ai_next;
-			}
-			I_freeaddrinfo(ai);
 		}
 	}
 #ifdef HAVE_IPV6
@@ -996,11 +1012,14 @@ static boolean UDP_Socket(void)
 
 	s = 0;
 
-	// setup broadcast adress to BROADCASTADDR entry
-	broadcastaddress[s].any.sa_family = AF_INET;
-	broadcastaddress[s].ip4.sin_port = htons(atoi(DEFAULTPORT));
-	broadcastaddress[s].ip4.sin_addr.s_addr = htonl(INADDR_BROADCAST);
-	s++;
+	if (b_ipv4)
+	{
+		// setup broadcast adress to BROADCASTADDR entry
+		broadcastaddress[s].any.sa_family = AF_INET;
+		broadcastaddress[s].ip4.sin_port = htons(atoi(DEFAULTPORT));
+		broadcastaddress[s].ip4.sin_addr.s_addr = htonl(INADDR_BROADCAST);
+		s++;
+	}
 
 #ifdef HAVE_IPV6
 	if (b_ipv6)
