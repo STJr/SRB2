@@ -208,8 +208,8 @@ UINT8 *PutFileNeeded(UINT16 firstfile)
 				filestatus += (WILLSEND_NO << 4); // Won't send
 			else if (wadfiles[i]->filesize <= (UINT32)cv_maxsend.value * 1024)
 				filestatus += (WILLSEND_YES << 4); // Will send if requested
-			// else
-				// filestatus += (0 << 4); -- Won't send, too big
+			else
+				filestatus += (WILLSEND_TOOLARGE << 4); // Won't send, too big
 		}
 
 		WRITEUINT8(p, filestatus);

@@ -14,6 +14,7 @@ Debian stable:i386:
 
   variables:
     CC: i686-linux-gnu-gcc
+    CXX: i686-linux-gnu-g++
     OBJCOPY: i686-linux-gnu-objcopy
     OBJDUMP: i686-linux-gnu-objdump
     LD: i686-linux-gnu-ld
@@ -23,7 +24,7 @@ Debian stable:i386:
     - - |
           # apt_toolchain
           echo -e "\e[0Ksection_start:`date +%s`:apt_toolchain[collapsed=true]\r\e[0KInstalling toolchain packages"
-      - apt-get install gcc-i686-linux-gnu || apt-get install gcc
+      - apt-get install g++-i686-linux-gnu || apt-get install g++
       - |
           # apt_toolchain
           echo -e "\e[0Ksection_end:`date +%s`:apt_toolchain\r\e[0K"
@@ -39,7 +40,7 @@ Debian stable:i386:
     - - |
           # cmake
           echo -e "\e[0Ksection_start:`date +%s`:cmake[collapsed=false]\r\e[0KBuilding Makefiles"
-      - cmake -B build.cmake -DSRB2_USE_CCACHE=YES -DSRB2_CONFIG_ERRORMODE=ON -G "Unix Makefiles"
+      - cmake -B build.cmake -DSRB2_USE_CCACHE=YES -DSRB2_CONFIG_ERRORMODE=ON -DSRB2_CONFIG_USE_GME:BOOL=ON
       - |
           # cmake
           echo -e "\e[0Ksection_end:`date +%s`:cmake\r\e[0K"
@@ -47,7 +48,7 @@ Debian stable:i386:
     - - |
           # make
           echo -e "\e[0Ksection_start:`date +%s`:make[collapsed=false]\r\e[0KCompiling SRB2"
-      - make --directory=build.cmake --keep-going || make --directory=build.cmake --keep-going
+      - cmake --build build.cmake --parallel 1 --verbose
       - |
           # make
           echo -e "\e[0Ksection_end:`date +%s`:make\r\e[0K"

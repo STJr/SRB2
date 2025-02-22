@@ -3,16 +3,13 @@ osxcross arm64:
 
   stage: build
 
-  when: manual
-
-  allow_failure: true
-
   artifacts:
     paths:
-      - "build.osxcross/bin/"
-      - "build.osxcross/src/config.h"
+      - "build.arm64/bin/"
+      - "build.arm64/dist/arm64.h"
+      - "build.arm64/src/config.h"
     expose_as: "Mac arm64"
-    name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-clang"
+    name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-arm64-apple-darwin21.4"
 
   variables:
     OSXCROSS_HOST: arm64-apple-darwin21.4
@@ -22,7 +19,8 @@ osxcross arm64:
     - - |
           # apt_development
           echo -e "\e[0Ksection_start:`date +%s`:macports_development[collapsed=true]\r\e[0KInstalling development packages"
-      - osxcross-macports install --arm64 curl libopenmpt libsdl2_mixer
+      - osxcross-macports install --arm64 libxmp wavpack libopenmpt opusfile || osxcross-macports install --arm64 libxmp wavpack libopenmpt opusfile
+      - osxcross-macports install --static --arm64 curl libsdl2_mixer libpng || osxcross-macports install --static --arm64 curl libsdl2_mixer libpng
       - |
           # apt_development
           echo -e "\e[0Ksection_end:`date +%s`:macports_development\r\e[0K"
@@ -30,7 +28,7 @@ osxcross arm64:
     - - |
           # cmake
           echo -e "\e[0Ksection_start:`date +%s`:cmake[collapsed=false]\r\e[0KBuilding Makefiles"
-      - cmake -B build.osxcross --toolchain /osxcross/toolchain.cmake -DCPM_USE_LOCAL_PACKAGES:BOOL=ON -DOPENMPT_INCLUDE_DIR:PATH="/osxcross/macports/pkgs/opt/local/include" -DSDL2_INCLUDE_DIR:PATH="/osxcross/macports/pkgs/opt/local/lib" -DSRB2_CONFIG_ENABLE_TESTS:BOOL=OFF -DSRB2_CONFIG_SYSTEM_LIBRARIES:BOOL=ON -DSRB2_CONFIG_FORCE_NO_MS_BITFIELDS:BOOL=ON -DSRB2_CONFIG_USE_GME:BOOL=OFF -G "Unix Makefiles"
+      - cmake -B build.arm64 --toolchain /osxcross/toolchain.cmake -DCPM_USE_LOCAL_PACKAGES:BOOL=ON -DOPENMPT_INCLUDE_DIR:PATH="/osxcross/macports/pkgs/opt/local/include" -DSDL2_INCLUDE_DIR:PATH="/osxcross/macports/pkgs/opt/local/lib" -DSRB2_CONFIG_ENABLE_TESTS:BOOL=OFF -DSRB2_CONFIG_SYSTEM_LIBRARIES:BOOL=ON -DSRB2_CONFIG_FORCE_NO_MS_BITFIELDS:BOOL=ON -DSRB2_CONFIG_USE_GME:BOOL=OFF -DSRB2_SDL2_EXE_NAME=srb2_$CI_PIPELINE_ID
       - |
           # make
           echo -e "\e[0Ksection_end:`date +%s`:make\r\e[0K"
@@ -38,7 +36,16 @@ osxcross arm64:
     - - |
           # make
           echo -e "\e[0Ksection_start:`date +%s`:make[collapsed=false]\r\e[0KCompiling SRB2"
-      - make --directory=build.osxcross --keep-going || make --directory=build.osxcross --keep-going
+      - cmake --build build.arm64 --parallel 1 --verbose
       - |
           # make
           echo -e "\e[0Ksection_end:`date +%s`:make\r\e[0K"
+
+    - - |
+          # copy config.h
+          echo -e "\e[0Ksection_start:`date +%s`:copy[collapsed=false]\r\e[0KCopying config.h"
+      - mkdir --parents --verbose build.arm64/dist
+      - cp --reflink=auto --sparse=always --verbose build.arm64/src/config.h build.arm64/dist/arm64.h
+      - |
+          # make
+          echo -e "\e[0Ksection_end:`date +%s`:copy\r\e[0K"

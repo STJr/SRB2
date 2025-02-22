@@ -1,6 +1,7 @@
 lapi.c
 lbaselib.c
 ldo.c
+ldblib.c
 lfunc.c
 linit.c
 liolib.c

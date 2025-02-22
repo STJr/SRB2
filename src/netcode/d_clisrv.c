@@ -673,6 +673,7 @@ void D_QuitNetGame(void)
 		HSendPacket(servernode, true, 0, 0);
 	}
 
+	seenplayer = NULL;
 	D_CloseConnection();
 	ClearAdminPlayers();
 
