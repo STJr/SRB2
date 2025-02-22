@@ -135,22 +135,24 @@ void P_ParseAnimationDefintion(SINT8 istexture);
 
 static boolean P_FindTextureForAnimation(anim_t *anim, animdef_t *animdef)
 {
-	if (R_CheckTextureNumForName(animdef->startname) == -1)
+	INT32 start = R_CheckTextureNumForName(animdef->startname, TEXTURETYPE_TEXTURE);
+	if (start == -1)
 		return false;
 
-	anim->picnum = R_TextureNumForName(animdef->endname);
-	anim->basepic = R_TextureNumForName(animdef->startname);
+	anim->basepic = start;
+	anim->picnum = R_CheckTextureNumForName(animdef->endname, TEXTURETYPE_TEXTURE);
 
 	return true;
 }
 
 static boolean P_FindFlatForAnimation(anim_t *anim, animdef_t *animdef)
 {
-	if (R_CheckFlatNumForName(animdef->startname) == -1)
+	INT32 start = R_CheckTextureNumForName(animdef->startname, TEXTURETYPE_FLAT);
+	if (start == -1)
 		return false;
 
-	anim->picnum = R_CheckFlatNumForName(animdef->endname);
-	anim->basepic = R_CheckFlatNumForName(animdef->startname);
+	anim->basepic = start;
+	anim->picnum = R_CheckTextureNumForName(animdef->endname, TEXTURETYPE_FLAT);
 
 	return true;
 }

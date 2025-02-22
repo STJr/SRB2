@@ -1062,15 +1062,11 @@ static boolean HWR_AllowModel(mobj_t *mobj)
 
 static boolean HWR_CanInterpolateModel(mobj_t *mobj, model_t *model)
 {
-	if (cv_glmodelinterpolation.value == 2) // Always interpolate
-		return true;
 	return model->interpolate[(mobj->frame & FF_FRAMEMASK)];
 }
 
 static boolean HWR_CanInterpolateSprite2(modelspr2frames_t *spr2frame)
 {
-	if (cv_glmodelinterpolation.value == 2) // Always interpolate
-		return true;
 	return spr2frame->interpolate;
 }
 

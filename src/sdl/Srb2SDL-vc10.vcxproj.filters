@@ -604,6 +604,9 @@
     <ClCompile Include="..\blua\ldebug.c">
       <Filter>BLUA</Filter>
     </ClCompile>
+    <ClCompile Include="..\blua\ldblib.c">
+      <Filter>BLUA</Filter>
+    </ClCompile>
     <ClCompile Include="..\blua\ldo.c">
       <Filter>BLUA</Filter>
     </ClCompile>

@@ -1566,12 +1566,11 @@ boolean P_PathTraverse(fixed_t px1, fixed_t py1, fixed_t px2, fixed_t py2,
 		if (flags & PT_ADDTHINGS)
 			if (!P_BlockThingsIterator(mapx, mapy, PIT_AddThingIntercepts, NULL))
 				return false; // early out
-		
+
 		// both coordinates reached the end, so end the traversing.
 		if ((mapxstep | mapystep) == 0)
 			break;
-		
-		
+
 		// [RH] Handle corner cases properly instead of pretending they don't exist.
 		switch ((((yintercept >> FRACBITS) == mapy) << 1) | ((xintercept >> FRACBITS) == mapx))
 		{

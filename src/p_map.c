@@ -2876,7 +2876,7 @@ boolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, boolean allowdropoff)
 		standx = x;
 		standy = y;
 
-		P_DoBlockThingsIterate(xl, yl, xh, yh, PIT_PushableMoved, thing);
+		P_DoBlockThingsIterate(xl, yl, xh, yh, PIT_PushableMoved, stand);
 	}
 
 	// Link the thing into its new position

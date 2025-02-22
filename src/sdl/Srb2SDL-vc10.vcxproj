@@ -447,6 +447,7 @@
     <ClCompile Include="..\blua\lauxlib.c" />
     <ClCompile Include="..\blua\lbaselib.c" />
     <ClCompile Include="..\blua\lcode.c" />
+    <ClCompile Include="..\blua\ldblib.c" />
     <ClCompile Include="..\blua\ldebug.c" />
     <ClCompile Include="..\blua\ldo.c" />
     <ClCompile Include="..\blua\ldump.c" />
