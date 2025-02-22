@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2024 by Sonic Team Junior.
+// Copyright (C) 1999-2025 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -182,8 +182,8 @@ static void R_MapPlane(INT32 y, INT32 x1, INT32 x2)
 
 		R_CalculatePlaneRipple(currentplane->viewangle + currentplane->plangle);
 
-		ds_xfrac += planeripple.xfrac;
-		ds_yfrac += planeripple.yfrac;
+		ds_xfrac += FixedMul(planeripple.xfrac, currentplane->xscale);
+		ds_yfrac += FixedMul(planeripple.yfrac, currentplane->yscale);
 		ds_bgofs >>= FRACBITS;
 
 		if ((y + ds_bgofs) >= viewheight)

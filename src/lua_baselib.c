@@ -3166,7 +3166,10 @@ static int lib_rCheckTextureNumForName(lua_State *L)
 {
 	const char *name = luaL_checkstring(L, 1);
 	//HUDSAFE
-	lua_pushinteger(L, R_CheckTextureNumForName(name));
+	INT32 num = R_CheckTextureNumForName(name, TEXTURETYPE_TEXTURE);
+	if (num == -1)
+		num = R_CheckTextureNumForName(name, TEXTURETYPE_FLAT);
+	lua_pushinteger(L, num);
 	return 1;
 }
 

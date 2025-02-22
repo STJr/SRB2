@@ -39,7 +39,7 @@
 #include "netcode/net_command.h"
 
 static CV_PossibleValue_t CV_BobSpeed[] = {{0, "MIN"}, {4*FRACUNIT, "MAX"}, {0, NULL}};
-consvar_t cv_movebob = CVAR_INIT ("movebob", "1.0", CV_FLOAT|CV_SAVE, CV_BobSpeed, NULL);
+consvar_t cv_movebob = CVAR_INIT ("movebob", "0.25", CV_FLOAT|CV_SAVE, CV_BobSpeed, NULL);
 
 actioncache_t actioncachehead;
 
@@ -324,7 +324,7 @@ static boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 		mobj->tics = st->tics;
 
 		// Adjust the player's animation speed
-		if (mobj->state-states == S_PLAY_WAIT && (player->charflags & SF_FASTWAIT))
+		if (state == S_PLAY_WAIT && (player->charflags & SF_FASTWAIT))
 			mobj->tics = 5;
 		else if (player->panim == PA_EDGE && (player->charflags & SF_FASTEDGE))
 			mobj->tics = 2;
@@ -9334,7 +9334,7 @@ static void P_PointPushThink(mobj_t *mobj)
 	yl = (unsigned)(mobj->y - radius - bmaporgy)>>MAPBLOCKSHIFT;
 	yh = (unsigned)(mobj->y + radius - bmaporgy)>>MAPBLOCKSHIFT;
 
-	P_DoBlockThingsIterate(xl, yl, xh, yh, PIT_PushThing);
+	P_DoBlockThingsIterate(xl, yl, xh, yh, PIT_PushThing, pushmobj);
 }
 
 static boolean P_MobjRegularThink(mobj_t *mobj)
