@@ -722,6 +722,12 @@ static int lib_pSpawnLockOn(lua_State *L)
 		visual->flags2 |= MF2_DONTDRAW;
 		visual->drawonlyforplayer = player; // Hide it from the other player in splitscreen, and yourself when spectating
 		P_SetMobjStateNF(visual, state);
+
+		// This is also handled in P_SceneryThinker, but we want to set it here
+		// so we dont get any weird interp. lag as it properly scales -luigi budd
+		P_SetScale(visual, lockon->scale, false);
+		visual->destscale = lockon->destscale;
+		visual->old_scale = lockon->old_scale;
 	}
 	return 0;
 }
