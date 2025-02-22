@@ -3,10 +3,6 @@ Windows x86:
 
   stage: build
 
-  when: manual
-
-  allow_failure: true
-
   cache:
     - key: ccache-$CI_JOB_NAME_SLUG-$CI_COMMIT_REF_SLUG
       fallback_keys:
@@ -33,15 +29,15 @@ Windows x86:
 
   artifacts:
     paths:
-      - "build/ninja-x86_mingw_static_vcpkg-debug/bin/"
-      - "build/ninja-x86_mingw_static_vcpkg-debug/src/config.h"
+      - "build.cmake/bin/"
+      - "build.cmake/src/config.h"
     expose_as: "Win32"
     name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-Win32"
 
   variables:
     PREFIX: i686-w64-mingw32
-    CC: /usr/bin/i686-w64-mingw32-gcc-posix
-    CXX: /usr/bin/i686-w64-mingw32-g++-posix
+    CC: /usr/lib/ccache/i686-w64-mingw32-gcc
+    CXX: /usr/lib/ccache/i686-w64-mingw32-g++
 
   script:
     - |
@@ -59,7 +55,7 @@ Windows x86:
         fi
 
         export VCPKG_ROOT=$(pwd)/build/vcpkg-root
-        export VCPKG_BINARY_SOURCES="clear;files,$(pwd)/build/vcpkg-binary-cache,readwrite"
+        export VCPKG_BINARY_SOURCES="clear;files,/opt/vcpkg.bsources,read;files,$(pwd)/build/vcpkg-binary-cache,readwrite"
 
         mkdir -p "build/vcpkg-binary-cache"
 
@@ -84,9 +80,7 @@ Windows x86:
     - - |
           # cmake
           echo -e "\e[0Ksection_start:`date +%s`:cmake[collapsed=false]\r\e[0KBuilding Makefiles"
-          # cmake
-          echo -e "\e[0Ksection_start:`date +%s`:cmake[collapsed=false]\r\e[0KBuilding Makefiles"
-      - cmake --preset ninja-x86_mingw_static_vcpkg-debug -G "Unix Makefiles" -DSRB2_USE_CCACHE=YES -DSRB2_CONFIG_ERRORMODE=ON -DCMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake
+      - cmake -B build.cmake -DSRB2_USE_CCACHE=NO -DSRB2_CONFIG_ERRORMODE=ON -DCMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake -DVCPKG_TARGET_TRIPLET=x86-mingw-static -DVCPKG_CHAINLOAD_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/toolchains/mingw.cmake -G "Unix Makefiles"
       - |
           # cmake
           echo -e "\e[0Ksection_end:`date +%s`:cmake\r\e[0K"
@@ -94,7 +88,7 @@ Windows x86:
     - - |
           # make
           echo -e "\e[0Ksection_start:`date +%s`:make[collapsed=false]\r\e[0KCompiling SRB2"
-      - cmake --build --preset ninja-x86_mingw_static_vcpkg-debug --parallel 1 -- --keep-going || cmake --build --preset ninja-x86_mingw_static_vcpkg-debug --parallel 1 -- --keep-going
+      - cmake --build build.cmake --parallel 1 --verbose
       - |
           # make
           echo -e "\e[0Ksection_end:`date +%s`:make\r\e[0K"

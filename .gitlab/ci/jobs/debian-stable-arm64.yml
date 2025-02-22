@@ -15,7 +15,6 @@ Debian stable:arm64:
   variables:
     CC: aarch64-linux-gnu-gcc
     CXX: aarch64-linux-gnu-g++
-    LDFLAGS: -Wl,-fuse-ld=gold
     OBJCOPY: aarch64-linux-gnu-objcopy
     OBJDUMP: aarch64-linux-gnu-objdump
     LD: aarch64-linux-gnu-ld
@@ -41,7 +40,7 @@ Debian stable:arm64:
     - - |
           # cmake
           echo -e "\e[0Ksection_start:`date +%s`:cmake[collapsed=false]\r\e[0KBuilding Makefiles"
-      - cmake -B build.cmake -DSRB2_USE_CCACHE=YES -DSRB2_CONFIG_ERRORMODE=ON -DSRB2_CONFIG_FORCE_NO_MS_BITFIELDS=ON -G "Unix Makefiles"
+      - cmake -B build.cmake -DSRB2_USE_CCACHE=YES -DSRB2_CONFIG_ERRORMODE=ON -DSRB2_CONFIG_FORCE_NO_MS_BITFIELDS=ON -DSRB2_CONFIG_USE_GME:BOOL=ON
       - |
           # cmake
           echo -e "\e[0Ksection_end:`date +%s`:cmake\r\e[0K"
@@ -49,7 +48,7 @@ Debian stable:arm64:
     - - |
           # make
           echo -e "\e[0Ksection_start:`date +%s`:make[collapsed=false]\r\e[0KCompiling SRB2"
-      - make --directory=build.cmake --keep-going || make --directory=build.cmake --keep-going
+      - cmake --build build.cmake --parallel 1 --verbose
       - |
           # make
           echo -e "\e[0Ksection_end:`date +%s`:make\r\e[0K"

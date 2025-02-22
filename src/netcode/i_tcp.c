@@ -702,9 +702,13 @@ static void SOCK_Send(void)
 	else
 	{
 		c = SOCK_SendToAddr(nodesocket[doomcom->remotenode], &clientaddress[doomcom->remotenode]);
+		if (c == ERRSOCKET)
+		{
+			e = errno;
+		}
 	}
 
-	if (c == ERRSOCKET)
+	if (c == ERRSOCKET && e != -1) // -1 means no socket for the address family was found
 	{
 		if (!ALLOWEDERROR(e))
 			I_Error("SOCK_Send, error sending to node %d (%s) #%u, %s", doomcom->remotenode,
@@ -933,6 +937,7 @@ static boolean UDP_Socket(void)
 #ifdef HAVE_IPV6
 	const INT32 b_ipv6 = !M_CheckParm("-noipv6");
 #endif
+	const INT32 b_ipv4 = !M_CheckParm("-noipv4");
 	const char *serv;
 
 
@@ -960,11 +965,33 @@ static boolean UDP_Socket(void)
 	else
 		serv = clientport_name;
 
-	if (M_CheckParm("-bindaddr"))
+	if (b_ipv4)
 	{
-		while (M_IsNextParm())
+		if (M_CheckParm("-bindaddr"))
 		{
-			gaie = I_getaddrinfo(M_GetNextParm(), serv, &hints, &ai);
+			while (M_IsNextParm())
+			{
+				gaie = I_getaddrinfo(M_GetNextParm(), serv, &hints, &ai);
+				if (gaie == 0)
+				{
+					runp = ai;
+					while (runp != NULL && s < MAXNETNODES+1)
+					{
+						mysockets[s] = UDP_Bind(runp->ai_family, runp->ai_addr, (socklen_t)runp->ai_addrlen);
+						if (mysockets[s] != (SOCKET_TYPE)ERRSOCKET)
+						{
+							myfamily[s] = hints.ai_family;
+							s++;
+						}
+						runp = runp->ai_next;
+					}
+					I_freeaddrinfo(ai);
+				}
+			}
+		}
+		else
+		{
+			gaie = I_getaddrinfo("0.0.0.0", serv, &hints, &ai);
 			if (gaie == 0)
 			{
 				runp = ai;
@@ -975,37 +1002,18 @@ static boolean UDP_Socket(void)
 					{
 						myfamily[s] = hints.ai_family;
 						s++;
+#ifdef HAVE_MINIUPNPC
+						if (UPNP_support)
+						{
+							I_UPnP_rem(serverport_name, "UDP");
+							I_UPnP_add(NULL, serverport_name, "UDP");
+						}
+#endif
 					}
 					runp = runp->ai_next;
 				}
 				I_freeaddrinfo(ai);
 			}
-		}
-	}
-	else
-	{
-		gaie = I_getaddrinfo("0.0.0.0", serv, &hints, &ai);
-		if (gaie == 0)
-		{
-			runp = ai;
-			while (runp != NULL && s < MAXNETNODES+1)
-			{
-				mysockets[s] = UDP_Bind(runp->ai_family, runp->ai_addr, (socklen_t)runp->ai_addrlen);
-				if (mysockets[s] != (SOCKET_TYPE)ERRSOCKET)
-				{
-					myfamily[s] = hints.ai_family;
-					s++;
-#ifdef HAVE_MINIUPNPC
-					if (UPNP_support)
-					{
-						I_UPnP_rem(serverport_name, "UDP");
-						I_UPnP_add(NULL, serverport_name, "UDP");
-					}
-#endif
-				}
-				runp = runp->ai_next;
-			}
-			I_freeaddrinfo(ai);
 		}
 	}
 #ifdef HAVE_IPV6
@@ -1072,11 +1080,14 @@ static boolean UDP_Socket(void)
 
 	s = 0;
 
-	// setup broadcast adress to BROADCASTADDR entry
-	broadcastaddress[s].any.sa_family = AF_INET;
-	broadcastaddress[s].ip4.sin_port = htons(atoi(DEFAULTPORT));
-	broadcastaddress[s].ip4.sin_addr.s_addr = htonl(INADDR_BROADCAST);
-	s++;
+	if (b_ipv4)
+	{
+		// setup broadcast adress to BROADCASTADDR entry
+		broadcastaddress[s].any.sa_family = AF_INET;
+		broadcastaddress[s].ip4.sin_port = htons(atoi(DEFAULTPORT));
+		broadcastaddress[s].ip4.sin_addr.s_addr = htonl(INADDR_BROADCAST);
+		s++;
+	}
 
 #ifdef HAVE_IPV6
 	if (b_ipv6)
@@ -1205,7 +1216,7 @@ static SINT8 SOCK_NetMakeNodewPort(const char *address, const char *port)
 	DEBFILE(va("Creating new node: %s@%s\n", address, port));
 
 	memset (&hints, 0x00, sizeof (hints));
-	hints.ai_flags = 0;
+	hints.ai_flags = AI_ADDRCONFIG;
 	hints.ai_family = AF_UNSPEC;
 	hints.ai_socktype = SOCK_DGRAM;
 	hints.ai_protocol = IPPROTO_UDP;
@@ -1235,7 +1246,7 @@ static SINT8 SOCK_NetMakeNodewPort(const char *address, const char *port)
 			}
 		}
 
-		if (i < mysocketses)
+		if (i >= mysocketses)
 			runp = runp->ai_next;
 		else
 			break;
