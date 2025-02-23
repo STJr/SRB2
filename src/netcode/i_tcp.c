@@ -656,7 +656,7 @@ static inline ssize_t SOCK_SendToAddr(SOCKET_TYPE socket, mysockaddr_t *sockaddr
 	return sendto(socket, (char *)&doomcom->data, doomcom->datalength, 0, &sockaddr->any, d);
 }
 
-#define ALLOWEDERROR(x) ((x) == ECONNREFUSED || (x) == EWOULDBLOCK || (x) == EHOSTUNREACH || (x) == ENETUNREACH)
+#define ALLOWEDERROR(x) ((x) == ECONNREFUSED || (x) == EWOULDBLOCK || (x) == EHOSTUNREACH || (x) == ENETUNREACH || (x) == EADDRNOTAVAIL)
 
 static void SOCK_Send(void)
 {
@@ -710,7 +710,7 @@ static void SOCK_Send(void)
 		}
 	}
 
-	if (c == ERRSOCKET && e != -1) // -1 means no socket for the address family was found
+	if (c == ERRSOCKET && e != 0) // 0 means no socket for the address family was found
 	{
 		if (!ALLOWEDERROR(e))
 			I_Error("SOCK_Send, error sending to node %d (%s) #%u, %s", doomcom->remotenode,
