@@ -1695,7 +1695,8 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			if (P_IsLocalPlayer(player))
 			{
 				quake.intensity = 9*FRACUNIT;
-				quake.time = TICRATE/2;
+				quake.time = quake.starttime = TICRATE/2;
+				quake.minus = quake.intensity / quake.starttime;
 				quake.epicenter = NULL;
 			}
 

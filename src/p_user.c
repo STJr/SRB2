@@ -9234,8 +9234,9 @@ void P_Earthquake(mobj_t *inflictor, mobj_t *source, fixed_t radius)
 	{
 		quake.epicenter = NULL;
 		quake.intensity = 8*inflictor->scale;
-		quake.time = 8;
+		quake.time = quake.starttime = 8;
 		quake.radius = scaledradius;
+		quake.minus = quake.intensity / quake.starttime;
 	}
 
 	P_RadiusAttack(inflictor, source, radius, 0, false);

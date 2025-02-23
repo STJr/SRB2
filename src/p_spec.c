@@ -2950,7 +2950,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 		{
 			quake.intensity = line->args[1] << FRACBITS;
 			quake.radius = line->args[2] << FRACBITS;
-			quake.time = line->args[0];
+			quake.time = quake.starttime = line->args[0];
 
 			quake.epicenter = NULL; /// \todo
 
@@ -2959,6 +2959,8 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 				quake.intensity = 8<<FRACBITS;
 			if (!quake.radius)
 				quake.radius = 512<<FRACBITS;
+			
+			quake.minus = quake.intensity / quake.starttime;
 			break;
 		}
 

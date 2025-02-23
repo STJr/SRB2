@@ -2876,6 +2876,8 @@ static int lib_pStartQuake(lua_State *L)
 	// These things are actually used in 2.1.
 	quake.intensity = q_intensity;
 	quake.time = q_time;
+	quake.starttime = q_time;
+	quake.minus = quake.intensity / q_time;
 	return 0;
 }
 

@@ -12559,7 +12559,8 @@ void A_MineExplode(mobj_t *actor)
 	quake.epicenter = NULL;
 	quake.radius = 512*FRACUNIT;
 	quake.intensity = 8*FRACUNIT;
-	quake.time = TICRATE/3;
+	quake.time = quake.starttime = TICRATE/3;
+	quake.minus = quake.intensity / quake.starttime;
 
 	P_RadiusAttack(actor, actor->tracer, 192*FRACUNIT, DMG_CANHURTSELF, true);
 	P_MobjCheckWater(actor);
@@ -13570,13 +13571,14 @@ void A_Boss5BombExplode(mobj_t *actor)
 	//P_StartQuake(9*actor->scale, TICRATE/6, {actor->x, actor->y, actor->z}, 20*actor->radius);
 	// the above does not exist, so we set the quake values directly instead
 	quake.intensity = 9*actor->scale;
-	quake.time = TICRATE/6;
+	quake.time = quake.starttime = TICRATE/6;
 	// the following quake values have no effect atm? ah well, may as well set them anyway
 	{
 		mappoint_t q_epicenter = {actor->x, actor->y, actor->z};
 		quake.epicenter = &q_epicenter;
 	}
 	quake.radius = 20*actor->radius;
+	quake.minus = quake.intensity / quake.starttime;
 }
 
 static mobj_t *dustdevil;
@@ -13853,9 +13855,10 @@ void A_TNTExplode(mobj_t *actor)
 	epicenter.y = actor->y;
 	epicenter.z = actor->z;
 	quake.intensity = 9*FRACUNIT;
-	quake.time = TICRATE/6;
+	quake.time = quake.starttime = TICRATE/6;
 	quake.epicenter = &epicenter;
 	quake.radius = 512*FRACUNIT;
+	quake.minus = quake.intensity / quake.starttime;
 
 	if (locvar1)
 	{

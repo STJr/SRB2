@@ -271,6 +271,9 @@ extern struct quake
 	// camera offsets and duration
 	fixed_t x,y,z;
 	UINT16 time;
+	// for easing
+	UINT16 starttime;
+	fixed_t minus;
 
 	// location, radius, and intensity...
 	mappoint_t *epicenter;
