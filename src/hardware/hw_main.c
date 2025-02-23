@@ -130,7 +130,7 @@ boolean HWR_UseShader(void)
 
 static boolean HWR_IsWireframeMode(void)
 {
-	return (cv_glwireframe.value && cv_debug);
+	return (cv_glwireframe.value);
 }
 
 void HWR_Lighting(FSurfaceInfo *Surface, INT32 light_level, extracolormap_t *colormap)
