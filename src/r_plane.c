@@ -920,7 +920,7 @@ void R_DrawSinglePlane(visplane_t *pl)
 			spanfunctype = SPANDRAWFUNC_SPLAT;
 
 		if (pl->polyobj->translucency == 0 || (pl->extra_colormap && (pl->extra_colormap->flags & CMF_FOG)))
-			light = (pl->lightlevel >> LIGHTSEGSHIFT);
+			light = (cv_fullbrite_hack.value ? 255 : pl->lightlevel >> LIGHTSEGSHIFT);
 		else // TODO: 2.3: Make transparent polyobject planes always use light level
 			light = LIGHTLEVELS-1;
 	}
@@ -962,7 +962,7 @@ void R_DrawSinglePlane(visplane_t *pl)
 				}
 
 				if ((spanfunctype == SPANDRAWFUNC_SPLAT) || (pl->extra_colormap && (pl->extra_colormap->flags & CMF_FOG)))
-					light = (pl->lightlevel >> LIGHTSEGSHIFT);
+					light = (cv_fullbrite_hack.value ? 255 : pl->lightlevel >> LIGHTSEGSHIFT);
 				else // TODO: 2.3: Make transparent FOF planes use light level instead of always being fullbright
 					light = LIGHTLEVELS-1;
 			}
@@ -972,7 +972,7 @@ void R_DrawSinglePlane(visplane_t *pl)
 				spanfunctype = SPANDRAWFUNC_FOG;
 				light = (pl->lightlevel >> LIGHTSEGSHIFT);
 			}
-			else light = (pl->lightlevel >> LIGHTSEGSHIFT);
+			else light = (cv_fullbrite_hack.value ? 255 : pl->lightlevel >> LIGHTSEGSHIFT);
 
 			if (pl->ffloor->fofflags & FOF_RIPPLE && !ds_fog)
 			{
@@ -999,7 +999,7 @@ void R_DrawSinglePlane(visplane_t *pl)
 			}
 		}
 		else
-			light = (pl->lightlevel >> LIGHTSEGSHIFT);
+			light = (cv_fullbrite_hack.value ? 255 : pl->lightlevel >> LIGHTSEGSHIFT);
 	}
 
 	if (ds_fog)

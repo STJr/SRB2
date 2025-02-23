@@ -175,6 +175,7 @@ consvar_t cv_ffloorclip = CVAR_INIT ("r_ffloorclip", "On", 0, CV_OnOff, NULL);
 consvar_t cv_spriteclip = CVAR_INIT ("r_spriteclip", "On", 0, CV_OnOff, NULL);
 
 consvar_t cv_homremoval = CVAR_INIT ("homremoval", "No", CV_SAVE, homremoval_cons_t, NULL);
+consvar_t cv_fullbrite_hack = CVAR_INIT ("fullbrite", "No", CV_NOINIT, CV_OnOff, NULL);
 
 consvar_t cv_renderstats = CVAR_INIT ("renderstats", "Off", 0, CV_OnOff, NULL);
 
@@ -1651,6 +1652,7 @@ void R_RegisterEngineStuff(void)
 		return;
 
 	CV_RegisterVar(&cv_homremoval);
+	CV_RegisterVar(&cv_fullbrite_hack);
 	CV_RegisterVar(&cv_translucency);
 	CV_RegisterVar(&cv_drawdist);
 	CV_RegisterVar(&cv_drawdist_nights);
