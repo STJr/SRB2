@@ -96,7 +96,7 @@ transnum_t R_GetLinedefTransTable(fixed_t alpha)
 
 static UINT8 R_SideLightLevel(side_t *side, INT16 base_lightlevel)
 {
-	return max(0, min(255, side->light +
+	return cv_fullbrite_hack.value ? 255 : max(0, min(255, side->light +
 		((side->lightabsolute) ? 0 : base_lightlevel)));
 }
 
