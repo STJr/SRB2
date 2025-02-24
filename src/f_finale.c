@@ -815,7 +815,7 @@ void F_IntroDrawer(void)
 			if (worktics >= 5)
 				trans = (worktics-5)>>1;
 			if (trans < 10)
-				V_DrawFixedPatch(x, y, scale, trans<<V_ALPHASHIFT, glow, NULL);
+				V_DrawFixedPatch(x, y, scale, trans<<V_ALPHASHIFT|V_ADD, glow, NULL);
 
 			trans = (15-worktics);
 			if (trans < 0)
@@ -1535,7 +1535,7 @@ void F_GameEvaluationDrawer(void)
 		if (finalecount >= 5)
 			trans = (finalecount-5)>>1;
 		if (trans < 10)
-			V_DrawFixedPatch(x, y, scale, trans<<V_ALPHASHIFT, glow, NULL);
+			V_DrawFixedPatch(x, y, scale, trans<<V_ALPHASHIFT|V_ADD, glow, NULL);
 
 		trans = (15-finalecount);
 		if (trans < 0)
@@ -1993,7 +1993,7 @@ void F_EndingDrawer(void)
 				trans = (-parallaxticker/4) + 5;
 				if (trans < 0)
 					trans = 0;
-				V_DrawFixedPatch(x, y, scale, trans<<V_ALPHASHIFT, endglow[(finalecount & 1) ? 0 : 1], NULL);
+				V_DrawFixedPatch(x, y, scale, trans<<V_ALPHASHIFT|V_ADD, endglow[(finalecount & 1) ? 0 : 1], NULL);
 			}
 
 			if (goodending && finalecount > INFLECTIONPOINT)
