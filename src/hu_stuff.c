@@ -395,8 +395,11 @@ void HU_AddChatText(const char *text, boolean playsound)
 
 	if (OLDCHAT) // if we're using oldchat, print directly in console
 		CONS_Printf("%s\n", text);
-	else			// if we aren't, still save the message to log.txt
-		CON_LogMessage(va("%s\n", text));
+	else			// if we aren't, still save the message to log.txt	
+	{
+		CON_LogMessage(text);
+		CON_LogMessage("\n"); // Add newline. Don't use va for that, since `text` might be refering to va's buffer itself
+	}
 }
 
 /** Runs a say command, sending an ::XD_SAY message.
