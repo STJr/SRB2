@@ -19,7 +19,6 @@ Debian stable Clang:
     CXX: clang
     WFLAGS: -Wno-cast-align -Wno-implicit-const-int-float-conversion -Werror
     CFLAGS: -Wno-cast-align -Wno-implicit-const-int-float-conversion -Werror
-    LDFLAGS: -Wl,-fuse-ld=gold
 
   script:
     - - |
