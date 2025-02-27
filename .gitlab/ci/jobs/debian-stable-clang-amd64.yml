@@ -16,7 +16,7 @@ Debian stable Clang:
 
   variables:
     CC: clang
-    CXX: clang
+    CXX: clang++
     WFLAGS: -Wno-cast-align -Wno-implicit-const-int-float-conversion -Werror
     CFLAGS: -Wno-cast-align -Wno-implicit-const-int-float-conversion -Werror
 
