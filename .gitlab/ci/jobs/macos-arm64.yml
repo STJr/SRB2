@@ -8,11 +8,11 @@ osxcross arm64:
       - "build.arm64/bin/"
       - "build.arm64/dist/arm64.h"
       - "build.arm64/src/config.h"
-    name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-arm64-apple-darwin21.4"
+    name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-arm64-apple-darwin"
 
   variables:
-    OSXCROSS_HOST: arm64-apple-darwin21.4
-    LD: arm64-apple-darwin21.4-ld
+    OSXCROSS_HOST: oa64
+    LD: /opt/osxcross.arm64/ld
 
   script:
     - - |

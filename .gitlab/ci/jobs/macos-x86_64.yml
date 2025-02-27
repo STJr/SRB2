@@ -8,18 +8,18 @@ osxcross x86_64:
       - "build.x86_64/bin/"
       - "build.x86_64/dist/x86_64.h"
       - "build.x86_64/src/config.h"
-    name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-x86_64-apple-darwin21.4"
+    name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-x86_64-apple-darwin"
 
   variables:
-    OSXCROSS_HOST: x86_64-apple-darwin21.4
-    LD: x86_64-apple-darwin21.4-ld
+    OSXCROSS_HOST: o64
+    LD: /opt/osxcross.x86_64/ld
 
   script:
     - - |
           # apt_development
           echo -e "\e[0Ksection_start:`date +%s`:macports_development[collapsed=true]\r\e[0KInstalling development packages"
-      - osxcross-macports install libxmp wavpack libopenmpt opusfile || osxcross-macports install libxmp wavpack libopenmpt opusfile
-      - osxcross-macports install --static curl libsdl2_mixer libpng || osxcross-macports install --static curl libsdl2_mixer libpng
+      - osxcross-macports install         libxmp wavpack libopenmpt opusfile || osxcross-macports install         libxmp wavpack libopenmpt opusfile
+      - osxcross-macports install --static         curl libsdl2_mixer libpng || osxcross-macports install --static         curl libsdl2_mixer libpng
       - |
           # apt_development
           echo -e "\e[0Ksection_end:`date +%s`:macports_development\r\e[0K"

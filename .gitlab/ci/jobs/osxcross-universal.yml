@@ -15,7 +15,7 @@ osxcross universal:
       - "dist/bin"
       - "dist/src"
     expose_as: "Mac Universal"
-    name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-lipo-apple-darwin21.4"
+    name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-lipo-apple-darwin"
 
   script:
     - - |
