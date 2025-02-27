@@ -21,11 +21,6 @@ Windows x64:
         - build/apt-cache
       unprotect: true
 
-    - key: vcpkg-root
-      paths:
-        - build/vcpkg-root
-      unprotect: true
-
     - key: vcpkg-binary-cache-x64-mingw-static
       paths:
         - build/vcpkg-binary-cache
@@ -46,20 +41,9 @@ Windows x64:
   script:
     - |
         # vcpkg
-        echo -e "\e[0Ksection_start:`date +%s`:vcpkg-root[collapsed=true]\r\e[0KUpdating vcpkg"
+        echo -e "\e[0Ksection_start:`date +%s`:vcpkg-root[collapsed=true]\r\e[0KSetting vcpkg cache"
 
-        if [ -d "build/vcpkg-root" ]; then
-          pushd build/vcpkg-root
-          git fetch https://github.com/Microsoft/vcpkg master
-          git reset --hard FETCH_HEAD
-          popd
-        else
-          mkdir -p build
-          git clone https://github.com/Microsoft/vcpkg build/vcpkg-root
-        fi
-
-        export VCPKG_ROOT=$(pwd)/build/vcpkg-root
-        export VCPKG_BINARY_SOURCES="clear;files,/opt/vcpkg.bsources,read;files,$(pwd)/build/vcpkg-binary-cache,readwrite"
+        export VCPKG_DEFAULT_BINARY_CACHE="$(pwd)/build/vcpkg-binary-cache"
 
         mkdir -p "build/vcpkg-binary-cache"
 
@@ -105,18 +89,6 @@ Windows x64:
       - |
           # apt_clean
           echo -e "\e[0Ksection_end:`date +%s`:apt_clean\r\e[0K"
-
-    - - |
-          # vcpkg_clean
-          echo -e "\e[0Ksection_start:`date +%s`:vcpkg_clean[collapsed=true]\r\e[0KCleaning vcpkg-root"
-
-          if [ -d "build/vcpkg-root" ]; then
-            pushd "build/vcpkg-root"
-            git clean -f
-            popd
-          fi
-
-          echo -e "\e[0Ksection_end:`date +%s`:vcpkg_clean\r\e[0K"
 
     - - |
           # ccache_stats
