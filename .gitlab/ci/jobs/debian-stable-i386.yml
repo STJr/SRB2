@@ -1,7 +1,7 @@
 Debian stable:i386:
   extends: .srb2ci
 
-  stage: build
+  stage: stable
 
   when: manual
 

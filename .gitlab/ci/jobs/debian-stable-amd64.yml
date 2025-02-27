@@ -1,7 +1,7 @@
 Debian stable:amd64:
   extends: .srb2ci
 
-  stage: build
+  stage: stable
 
   artifacts:
     paths:

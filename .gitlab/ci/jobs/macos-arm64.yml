@@ -1,14 +1,13 @@
 osxcross arm64:
   extends: .srb2ci
 
-  stage: build
+  stage: osxcross
 
   artifacts:
     paths:
       - "build.arm64/bin/"
       - "build.arm64/dist/arm64.h"
       - "build.arm64/src/config.h"
-    expose_as: "Mac arm64"
     name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-arm64-apple-darwin21.4"
 
   variables:

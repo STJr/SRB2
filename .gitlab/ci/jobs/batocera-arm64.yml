@@ -1,6 +1,8 @@
 batocera:arm64:
   extends: Debian stable:arm64
 
+  stage: batocera
+
   when: manual
 
   allow_failure: true

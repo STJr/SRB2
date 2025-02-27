@@ -11,7 +11,13 @@ variables:
   GIT_DEPTH: 20
 
 stages:
-  - build
+  - clang
+  - alpine
+  - oldstable
+  - stable
+  - batocera
+  - testing
+  - win32
   - osxcross
 
 default:

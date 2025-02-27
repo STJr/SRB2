@@ -1,6 +1,8 @@
 Debian oldstable:arm64 Makefile:
   extends: Debian stable:arm64 Makefile
 
+  stage: oldstable
+
   when: manual
 
   image: git.do.srb2.org:5050/stjr/srb2ci/srb2ci:oldstable

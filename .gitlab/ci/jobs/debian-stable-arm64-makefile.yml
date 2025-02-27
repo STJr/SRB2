@@ -1,7 +1,7 @@
 Debian stable:arm64 Makefile:
   extends: .srb2ci
 
-  stage: build
+  stage: stable
 
   when: manual
 

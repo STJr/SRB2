@@ -1,7 +1,7 @@
 Windows x86 Makefile:
   extends: .srb2ci
 
-  stage: build
+  stage: win32
 
   when: on_success
 

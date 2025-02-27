@@ -1,5 +1,5 @@
 Alpine 3 GCC:
-  stage: build
+  stage: alpine
 
   when: manual
 

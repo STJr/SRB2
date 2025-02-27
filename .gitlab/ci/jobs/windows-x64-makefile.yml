@@ -1,7 +1,7 @@
 Windows x64 Makefile:
   extends: .srb2ci
 
-  stage: build
+  stage: win32
 
   when: manual
 

@@ -1,7 +1,7 @@
 Debian testing GCC:
   extends: .srb2ci
 
-  stage: build
+  stage: testing
 
   when: manual
 
