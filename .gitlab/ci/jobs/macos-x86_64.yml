@@ -18,8 +18,8 @@ osxcross x86_64:
     - - |
           # apt_development
           echo -e "\e[0Ksection_start:`date +%s`:macports_development[collapsed=true]\r\e[0KInstalling development packages"
-      - osxcross-macports install         libxmp wavpack libopenmpt opusfile || osxcross-macports install         libxmp wavpack libopenmpt opusfile
-      - osxcross-macports install --static         curl libsdl2_mixer libpng || osxcross-macports install --static         curl libsdl2_mixer libpng
+      - osxcross-macports install         libopenmpt libxmp wavpack opusfile || osxcross-macports install         libopenmpt libxmp wavpack opusfile
+      - osxcross-macports install --static         miniupnpc curl libsdl2_mixer libpng || osxcross-macports install --static         miniupnpc curl libsdl2_mixer libpng
       - |
           # apt_development
           echo -e "\e[0Ksection_end:`date +%s`:macports_development\r\e[0K"
