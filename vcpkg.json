@@ -1,80 +1,51 @@
 {
-	"$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
-	"name": "srb2",
-	"version": "1.0.0",
-	"dependencies": [
-		{
-			"name": "zlib"
-		},
-		{
-			"name": "libpng"
-		},
-		{
-			"name": "curl",
-			"platform": "!(osx & !native)"
-		},
-		{
-			"name": "libopenmpt"
-		},
-		{
-			"name": "libgme"
-		},
-		{
-			"name": "miniupnpc"
-		},
-		{
-			"name": "sdl2",
-			"default-features": false,
-			"features": [
-				{
-					"name": "wayland",
-					"platform": "linux"
-				},
-				{
-					"name": "x11",
-					"platform": "!windows"
-				}
-			]
-		},
-		{
-			"name": "sdl2-mixer-ext",
-			"default-features": true,
-			"features": [
-				{
-					"name": "ffmpeg"
-				},
-				{
-					"name": "fluidsynth",
-					"platform": "!(osx & !native)"
-				},
-				{
-					"name": "libflac"
-				},
-				{
-					"name": "libgme"
-				},
-				{
-					"name": "libmodplug"
-				},
-				{
-					"name": "libvorbis"
-				},
-				{
-					"name": "libxmp"
-				},
-				{
-					"name": "mpg123"
-				},
-				{
-					"name": "opusfile"
-				},
-				{
-					"name": "pxtone"
-				},
-				{
-					"name": "timidity"
-				}
-			]
-		}
-	]
+  "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
+  "name": "srb2",
+  "version": "1.0.0",
+  "builtin-baseline": "d5ec528843d29e3a52d745a64b469f810b2cedbf",
+  "dependencies": [
+    {
+      "name": "curl",
+      "platform": "!(osx & !native)"
+    },
+    "libgme",
+    "libopenmpt",
+    "libpng",
+    "miniupnpc",
+    {
+      "name": "sdl2",
+      "default-features": false,
+      "features": [
+        {
+          "name": "wayland",
+          "platform": "linux"
+        },
+        {
+          "name": "x11",
+          "platform": "!windows"
+        }
+      ],
+      "platform": "!(osx & !native)",
+      "version>=": "2.30.7"
+    },
+    {
+      "name": "sdl2-mixer-ext",
+      "features": [
+        "ffmpeg",
+        "fluidsynth",
+        "libflac",
+        "libgme",
+        "libmodplug",
+        "libvorbis",
+        "libxmp",
+        "mpg123",
+        "opusfile",
+        "pxtone",
+        "timidity"
+      ],
+      "platform": "!(osx & !native)",
+      "version>=": "2.6.0"
+    },
+    "zlib"
+  ]
 }
