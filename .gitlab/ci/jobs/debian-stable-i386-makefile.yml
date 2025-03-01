@@ -1,7 +1,7 @@
 Debian stable:i386 Makefile:
   extends: .srb2ci
 
-  stage: stable
+  stage: build
 
   when: manual
 

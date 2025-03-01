@@ -1,7 +1,7 @@
 Debian stable Clang:
   extends: .srb2ci
 
-  stage: clang
+  stage: build
 
   when: on_success
 

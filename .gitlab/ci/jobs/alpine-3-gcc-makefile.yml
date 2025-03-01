@@ -1,5 +1,5 @@
 Alpine 3 GCC Makefile:
-  stage: alpine
+  stage: build
 
   when: manual
 

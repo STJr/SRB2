@@ -1,7 +1,7 @@
 Debian oldstable:amd64 Makefile:
   extends: Debian stable:amd64 Makefile
 
-  stage: oldstable
+  stage: build
 
   when: manual
 

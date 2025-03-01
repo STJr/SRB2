@@ -1,7 +1,7 @@
 Windows x64:
   extends: .srb2ci
 
-  stage: win32
+  stage: build
 
   when: manual
 

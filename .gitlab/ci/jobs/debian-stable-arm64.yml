@@ -1,7 +1,7 @@
 Debian stable:arm64:
   extends: .srb2ci
 
-  stage: stable
+  stage: build
 
   when: manual
 

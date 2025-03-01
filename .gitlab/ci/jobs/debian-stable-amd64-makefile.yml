@@ -1,7 +1,7 @@
 Debian stable:amd64 Makefile:
   extends: .srb2ci
 
-  stage: stable
+  stage: build
 
   artifacts:
     paths:

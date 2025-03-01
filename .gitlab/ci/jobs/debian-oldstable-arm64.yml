@@ -1,7 +1,7 @@
 Debian oldstable:arm64:
   extends: Debian stable:arm64
 
-  stage: oldstable
+  stage: build
 
   when: manual
 

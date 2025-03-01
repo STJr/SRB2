@@ -1,7 +1,7 @@
 Debian oldstable:arm64 Makefile:
   extends: Debian stable:arm64 Makefile
 
-  stage: oldstable
+  stage: build
 
   when: manual
 

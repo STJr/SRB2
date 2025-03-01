@@ -1,7 +1,7 @@
 batocera:arm64:
   extends: Debian stable:arm64
 
-  stage: batocera
+  stage: build
 
   when: manual
 

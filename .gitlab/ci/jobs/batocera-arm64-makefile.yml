@@ -1,7 +1,7 @@
 batocera:arm64 Makefile:
   extends: Debian stable:arm64 Makefile
 
-  stage: batocera
+  stage: build
 
   when: manual
 

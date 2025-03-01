@@ -1,7 +1,7 @@
 osxcross x86_64:
   extends: .srb2ci
 
-  stage: osxcross
+  stage: build
 
   artifacts:
     paths:
