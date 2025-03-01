@@ -739,7 +739,7 @@ void LUA_DumpFile(const char *filename)
 	char filenamebuf[MAX_WADPATH];
 
 	if (!gL) // Lua needs to be initialized
-		LUA_ClearState(false);
+		LUA_ClearState();
 
 	// find the file the SRB2 way
 	strncpy(filenamebuf, filename, MAX_WADPATH);

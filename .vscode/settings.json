@@ -12,6 +12,8 @@
         "doomdef.h": "c",
         "p_setup.h": "c",
         "lua_libs.h": "c",
-        "lua_script.h": "c"
+        "lua_script.h": "c",
+        "p_polyobj.h": "c",
+        "p_slopes.h": "c"
     }
 }

@@ -26,6 +26,7 @@
 #include "m_perfstats.h"
 #include "netcode/d_netcmd.h" // for cv_perfstats
 #include "i_system.h" // I_GetPreciseTime
+#include "lua_custombuild.h" // takis_complexlocaladdons
 
 /* =========================================================================
                                   ABSTRACTION
@@ -208,14 +209,12 @@ static int lib_addHook(lua_State *L)
 	name = luaL_checkstring(L, 1);
 	luaL_checktype(L, 2, LUA_TFUNCTION);
 
-    /*
-    anti-aimbot
-    if (strcmp(name, "PlayerCmd") == 0)
+    // anti-aimbot
+    if (strcmp(name, "PlayerCmd") == 0 && takis_complexlocaladdons)
     {
         return luaL_error(L, "PlayerCmd hooks cannot be added in local addons.");
     }
-    */
-
+    
 	/* this is a very special case */
 	if (( type = hook_in_list(name, stringHookNames) ) < STRING_HOOK(MAX))
 	{
