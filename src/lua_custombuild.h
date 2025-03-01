@@ -14,7 +14,9 @@
 
 #include "lua_script.h"
 
-extern boolean takis_custombuild; 
+extern boolean takis_custombuild;
+extern boolean takis_complexlocaladdons;
+
 INT32 Takis_PushGlobals(lua_State *L, const char *word);
 
 #endif // __TAKIS_LUA__

@@ -19,6 +19,8 @@
 #include "lua_custombuild.h"
 
 boolean takis_custombuild = true;
+// if TRUE, the user loaded a local addon that has more than just music lumps
+boolean takis_complexlocaladdons = false;
 
 //this build isnt officially called anything, so i'll just use "takis" for now
 INT32 Takis_PushGlobals(lua_State *L, const char *word)
@@ -26,6 +28,9 @@ INT32 Takis_PushGlobals(lua_State *L, const char *word)
     if (fastcmp(word,"takis_custombuild")) {
 		lua_pushboolean(L, takis_custombuild);
 		return 1;
-    }
+    } else if (fastcmp(word, "takis_complexlocaladdons")) {
+		lua_pushboolean(L, takis_complexlocaladdons);
+		return 1;
+	}
     return 0;
 }

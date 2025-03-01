@@ -185,6 +185,10 @@ static fixed_t char_scroll = 0;
 
 static tic_t keydown = 0;
 
+// now THIS is cool!
+static tic_t gc_spin_down = 0;
+static boolean addons_forcelocal = false; 
+
 // Lua
 static huddrawlist_h luahuddrawlist_playersetup;
 
@@ -348,6 +352,7 @@ static void M_ScreenshotOptions(INT32 choice);
 static void M_SetupScreenshotMenu(void);
 static void M_EraseData(INT32 choice);
 
+static void M_LocalAddons(INT32 choice);
 static void M_Addons(INT32 choice);
 static void M_AddonsOptions(INT32 choice);
 static patch_t *addonsp[NUM_EXT+5];
@@ -549,6 +554,7 @@ typedef enum
 static menuitem_t MPauseMenu[] =
 {
 	{IT_STRING | IT_CALL,    NULL, "Add-ons...",                M_Addons,               8},
+	{IT_STRING | IT_CALL,    NULL, "Local Add-ons...",          M_LocalAddons,          8},
 	{IT_STRING | IT_SUBMENU, NULL, "Scramble Teams...",         &MISC_ScrambleTeamDef, 16},
 	{IT_STRING | IT_CALL,    NULL, "Emblem Hints...",           M_EmblemHints,         24},
 	{IT_STRING | IT_CALL,    NULL, "Switch Gametype/Level...",  M_MapChange,           32},
@@ -572,6 +578,7 @@ static menuitem_t MPauseMenu[] =
 typedef enum
 {
 	mpause_addons = 0,
+    mpause_localaddons,
 	mpause_scramble,
 	mpause_hints,
 	mpause_switchmap,
@@ -3208,6 +3215,15 @@ boolean M_Responder(event_t *ev)
 				// added 5-2-98 remap virtual keys (mouse & joystick buttons)
 				switch (ch)
 				{
+                    case KEY_LSHIFT:
+                        if (keydown == 1)
+                        {
+                            if (gc_spin_down == 0)
+                                gc_spin_down = 2;
+                            else
+                                gc_spin_down = 0;
+                        }
+                        break;
 					case KEY_MOUSE1:
 					case KEY_JOY1:
 						ch = KEY_ENTER;
@@ -3731,6 +3747,7 @@ void M_StartControlPanel(void)
 	else // multiplayer
 	{
 		MPauseMenu[mpause_switchmap].status = IT_DISABLED;
+		MPauseMenu[mpause_localaddons].status = IT_STRING | IT_CALL;
 		MPauseMenu[mpause_addons].status = IT_DISABLED;
 		MPauseMenu[mpause_scramble].status = IT_DISABLED;
 		MPauseMenu[mpause_psetupsplit].status = IT_DISABLED;
@@ -3744,6 +3761,7 @@ void M_StartControlPanel(void)
 		{
 			MPauseMenu[mpause_switchmap].status = IT_STRING | IT_CALL;
 			MPauseMenu[mpause_addons].status = IT_STRING | IT_CALL;
+			MPauseMenu[mpause_localaddons].status = IT_DISABLED;
 			if (G_GametypeHasTeams())
 				MPauseMenu[mpause_scramble].status = IT_STRING | IT_SUBMENU;
 		}
@@ -6316,6 +6334,12 @@ static void M_Addons(INT32 choice)
 	M_SetupNextMenu(&MISC_AddonsDef);
 }
 
+static void M_LocalAddons(INT32 choice)
+{
+    addons_forcelocal = true;
+    M_Addons(choice);
+}
+
 #ifdef ENFORCE_WAD_LIMIT
 #define width 4
 #define vpadding 27
@@ -6444,6 +6468,7 @@ static void M_DrawAddons(void)
 	size_t t, b; // top and bottom item #s to draw in directory
 	const UINT8 *flashcol = NULL;
 	UINT8 hilicol;
+    boolean locally = (gc_spin_down > 0 || addons_forcelocal);
 
 	// hack - need to refresh at end of frame to handle addfile...
 	if (refreshdirmenu & M_AddonsRefresh())
@@ -6452,12 +6477,20 @@ static void M_DrawAddons(void)
 		return;
 	}
 
-	if (Playing())
-		V_DrawCenteredString(BASEVIDWIDTH/2, 5, warningflags, "Adding files mid-game may cause problems.");
-	else
-		V_DrawCenteredString(BASEVIDWIDTH/2, 5, 0, LOCATIONSTRING1);
-			// (recommendedflags == V_SKYMAP ? LOCATIONSTRING2 : LOCATIONSTRING1)
-
+    if (!locally)
+    {
+        if (Playing())
+            V_DrawCenteredString(BASEVIDWIDTH/2, 5, warningflags, "Adding files mid-game may cause problems.");
+        else
+            V_DrawCenteredString(BASEVIDWIDTH/2, 5, 0, LOCATIONSTRING1);
+                // (recommendedflags == V_SKYMAP ? LOCATIONSTRING2 : LOCATIONSTRING1)
+    }
+    else
+    {
+        V_DrawCenteredString(BASEVIDWIDTH/2, 5, V_ALLOWLOWERCASE,
+            va("Loading locally. %s", addons_forcelocal ? "" : "(L-SHIFT)")
+        );
+    }
 #ifdef ENFORCE_WAD_LIMIT
 	if (numwadfiles <= mainwads+1)
 		y = 0;
@@ -6481,14 +6514,21 @@ static void M_DrawAddons(void)
 
 #define boxwidth (MAXSTRINGLENGTH*8+6)
 
+	m = (BASEVIDHEIGHT - currentMenu->y + 2) - (y - 1);
+
+    // draw the local-addon-loading border first (duh)
+    if (locally)
+    {
+        V_DrawFill(x-22, y - 2, boxwidth + 2, m + 2, 159);
+    }
+
 	// draw the file path and the top white + black lines of the box
 	V_DrawString(x-21, (y - 16) + (lsheadingheight - 12), highlightflags|V_ALLOWLOWERCASE, M_AddonsHeaderPath());
 	V_DrawFill(x-21, (y - 16) + (lsheadingheight - 3), boxwidth, 1, hilicol);
 	V_DrawFill(x-21, (y - 16) + (lsheadingheight - 2), boxwidth, 1, 30);
 
-	m = (BASEVIDHEIGHT - currentMenu->y + 2) - (y - 1);
 	// addons menu back color
-	V_DrawFill(x-21, y - 1, boxwidth, m, 159);
+	V_DrawFill(x-21, y - 1, boxwidth, m, locally ? 157 : 159);
 
 	// The directory is too small for a scrollbar, so just draw a tall white line
 	if (sizedirmenu <= addonmenusize)
@@ -6577,7 +6617,17 @@ static void M_DrawAddons(void)
 	// draw search box
 	y = BASEVIDHEIGHT - currentMenu->y + 1;
 
-	M_DrawTextBox(x - (21 + 5), y, MAXSTRINGLENGTH, 1);
+    if (locally)
+    {
+        // V_DrawFill(x+5, y+5, width*8+6, boxlines*8+6, 159);
+        V_DrawFill(x - 22,  y + 4, (MAXSTRINGLENGTH)*8 + 8, 16, 159);   // outline
+        V_DrawFill(x - 21,  y + 5, (MAXSTRINGLENGTH)*8 + 6, 14, 157);
+    }
+    else
+    {
+        M_DrawTextBox(x - (21 + 5), y, MAXSTRINGLENGTH, 1);
+    }
+    
 	if (menusearch[0])
 		V_DrawString(x - 18, y + 8, V_ALLOWLOWERCASE, menusearch+1);
 	else
@@ -6665,6 +6715,8 @@ static void M_HandleAddons(INT32 choice)
 #endif
 	}
 
+    boolean locally = (gc_spin_down > 0 || addons_forcelocal);
+    
 	switch (choice)
 	{
 		case KEY_DOWNARROW:
@@ -6699,7 +6751,7 @@ static void M_HandleAddons(INT32 choice)
 			break;
 		case KEY_ENTER:
 			{
-				boolean refresh = true;
+                boolean refresh = true;
 				if (!dirmenu[dir_on[menudepthleft]])
 					S_StartSound(NULL, sfx_lose);
 				else
@@ -6761,7 +6813,7 @@ static void M_HandleAddons(INT32 choice)
 						case EXT_KART:
 #endif
 						case EXT_PK3:
-							COM_BufAddText(va("addfile \"%s%s\"", menupath, dirmenu[dir_on[menudepthleft]]+DIR_STRING));
+							COM_BufAddText(va("%s \"%s%s\"", locally ? "addfilelocal" : "addfile", menupath, dirmenu[dir_on[menudepthleft]]+DIR_STRING));
 							break;
 						default:
 							S_StartSound(NULL, sfx_lose);
@@ -6781,6 +6833,8 @@ static void M_HandleAddons(INT32 choice)
 	}
 	if (exitmenu)
 	{
+        addons_forcelocal = false;
+        gc_spin_down = 0;
 		closefilemenu(true);
 
 		// secrets disabled by addfile...
