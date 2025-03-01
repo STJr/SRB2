@@ -35,8 +35,6 @@ Windows x64:
 
   variables:
     PREFIX: x86_64-w64-mingw32
-    CC: /usr/lib/ccache/x86_64-w64-mingw32-gcc
-    CXX: /usr/lib/ccache/x86_64-w64-mingw32-g++
 
   script:
     - |
