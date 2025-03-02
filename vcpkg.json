@@ -6,10 +6,13 @@
   "dependencies": [
     {
       "name": "curl",
-      "platform": "!(osx & !native)"
+      "platform": "!wasm32"
     },
     "libgme",
-    "libopenmpt",
+    {
+      "name":"libopenmpt",
+      "platform": "!wasm32"
+    },
     "libpng",
     "miniupnpc",
     {
@@ -25,26 +28,41 @@
           "platform": "!windows"
         }
       ],
-      "platform": "!(osx & !native)",
-      "version>=": "2.30.7"
+      "platform": "!wasm32",
+      "version>=": "2.30.6#2"
     },
     {
       "name": "sdl2-mixer-ext",
       "features": [
         "ffmpeg",
-        "fluidsynth",
-        "libflac",
+        {
+          "name":"fluidsynth",
+          "platform": "!wasm32"
+        },
+        {
+          "name":"libflac",
+          "platform": "!wasm32"
+        },
         "libgme",
         "libmodplug",
-        "libvorbis",
+        {
+          "name":"libvorbis",
+          "platform": "!wasm32"
+        },
         "libxmp",
-        "mpg123",
-        "opusfile",
+        {
+          "name":"mpg123",
+          "platform": "!wasm32"
+        },
+        {
+          "name":"opusfile",
+          "platform": "!wasm32"
+        },
         "pxtone",
         "timidity"
       ],
-      "platform": "!(osx & !native)",
-      "version>=": "2.6.0"
+      "platform": "!wasm32",
+      "version>=": "2.6.0#0"
     },
     "zlib"
   ]
