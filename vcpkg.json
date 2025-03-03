@@ -37,7 +37,7 @@
         "ffmpeg",
         {
           "name":"fluidsynth",
-          "platform": "!(mingw & !native) & !wasm32"
+          "platform": "!static"
         },
         {
           "name":"libflac",
