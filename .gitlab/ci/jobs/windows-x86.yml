@@ -31,7 +31,7 @@ Windows x86:
 
   variables:
     PREFIX: i686-w64-mingw32
-    VCPKG_DEFAULT_TRIPLET=x86-mingw-static
+    VCPKG_DEFAULT_TRIPLET: x86-mingw-static
 
   script:
     - |
