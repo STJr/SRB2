@@ -11,6 +11,8 @@ osxcross arm64:
     name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-arm64-apple-darwin"
 
   variables:
+    OSXCROSS_HOST: oa64
+    CMAKE_TOOLCHAIN_FILE: /osxcross/toolchain.cmake
     LD: /opt/osxcross.arm64/ld
 
   script:
@@ -26,7 +28,7 @@ osxcross arm64:
     - - |
           # cmake
           echo -e "\e[0Ksection_start:`date +%s`:cmake[collapsed=false]\r\e[0KBuilding Makefiles"
-      - oa64-cmake -B build.arm64 -DCPM_USE_LOCAL_PACKAGES:BOOL=ON -DOPENMPT_INCLUDE_DIR:PATH="/osxcross/macports/pkgs/opt/local/include" -DSDL2_INCLUDE_DIR:PATH="/osxcross/macports/pkgs/opt/local/lib" -DSRB2_CONFIG_ENABLE_TESTS:BOOL=OFF -DSRB2_CONFIG_SYSTEM_LIBRARIES:BOOL=ON -DSRB2_CONFIG_USE_GME:BOOL=OFF -DSRB2_SDL2_EXE_NAME=srb2_$CI_PIPELINE_ID -DSRB2_CONFIG_FORCE_NO_MS_BITFIELDS:BOOL=ON -G "Unix Makefiles"
+      - cmake -B build.arm64 -DCPM_USE_LOCAL_PACKAGES:BOOL=ON -DOPENMPT_INCLUDE_DIR:PATH="/osxcross/macports/pkgs/opt/local/include" -DSDL2_INCLUDE_DIR:PATH="/osxcross/macports/pkgs/opt/local/lib" -DSRB2_CONFIG_ENABLE_TESTS:BOOL=OFF -DSRB2_CONFIG_SYSTEM_LIBRARIES:BOOL=ON -DSRB2_CONFIG_USE_GME:BOOL=OFF -DSRB2_SDL2_EXE_NAME=srb2_$CI_PIPELINE_ID -DSRB2_CONFIG_FORCE_NO_MS_BITFIELDS:BOOL=ON -G "Unix Makefiles"
       - |
           # make
           echo -e "\e[0Ksection_end:`date +%s`:make\r\e[0K"
@@ -34,7 +36,7 @@ osxcross arm64:
     - - |
           # make
           echo -e "\e[0Ksection_start:`date +%s`:make[collapsed=false]\r\e[0KCompiling SRB2"
-      - oa64-cmake --build build.arm64 --parallel 1 --verbose -- --keep-going
+      - cmake --build build.arm64 --parallel 1 --verbose -- --keep-going
       - |
           # make
           echo -e "\e[0Ksection_end:`date +%s`:make\r\e[0K"

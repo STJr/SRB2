@@ -36,6 +36,7 @@ Windows x64:
   variables:
     PREFIX: x86_64-w64-mingw32
     VCPKG_DEFAULT_TRIPLET: x64-mingw-static
+    LD: /usr/bin/x86_64-w64-mingw32-ld
 
   script:
     - |
