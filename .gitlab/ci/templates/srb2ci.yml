@@ -107,7 +107,7 @@
           ccache --set-config compiler_check=content
       - |
           # stats_log
-          ccache --set-config stats_log=$CI_PROJECT_DIR/build/ccache_statslog
+          ccache --set-config stats_log=$CI_PROJECT_DIR/build/ccache_statslog || true
       - |
           # max_size
           ccache --set-config max_size=300M
