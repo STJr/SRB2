@@ -39,7 +39,7 @@ Debian stable:amd64:
     - - |
           # cmake
           echo -e "\e[0Ksection_start:`date +%s`:cmake[collapsed=false]\r\e[0KBuilding Makefiles"
-      - cmake -B build.cmake -DSRB2_CONFIG_ERRORMODE=ON -DSRB2_CONFIG_USE_GME:BOOL=ON -G "Unix Makefiles"
+      - cmake -B build.cmake -DSRB2_CONFIG_ENABLE_WEBM_MOVIES=OFF -DSRB2_CONFIG_ERRORMODE=ON -DSRB2_CONFIG_USE_GME:BOOL=ON -G "Unix Makefiles"
       - |
           # cmake
           echo -e "\e[0Ksection_end:`date +%s`:cmake\r\e[0K"
