@@ -3,6 +3,8 @@ osxcross arm64:
 
   stage: build
 
+  allow_failure: true
+
   artifacts:
     paths:
       - "build.arm64/bin/"

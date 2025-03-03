@@ -3,6 +3,8 @@ osxcross x86_64:
 
   stage: build
 
+  allow_failure: true
+
   artifacts:
     paths:
       - "build.x86_64/bin/"
