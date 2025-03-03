@@ -36,7 +36,7 @@ Debian oldstable:arm64:
     - - |
           # cmake
           echo -e "\e[0Ksection_start:`date +%s`:cmake[collapsed=false]\r\e[0KBuilding Makefiles"
-      - cmake -B build.cmake -DSRB2_USE_CCACHE=YES -DSRB2_CONFIG_ERRORMODE=ON -DSRB2_CONFIG_FORCE_NO_MS_BITFIELDS=ON -DSRB2_CONFIG_USE_GME:BOOL=ON
+      - cmake -B build.cmake -DSRB2_CONFIG_ERRORMODE=ON -DSRB2_CONFIG_FORCE_NO_MS_BITFIELDS=ON -DSRB2_CONFIG_USE_GME:BOOL=ON -G "Unix Makefiles"
       - |
           # cmake
           echo -e "\e[0Ksection_end:`date +%s`:cmake\r\e[0K"
@@ -44,7 +44,7 @@ Debian oldstable:arm64:
     - - |
           # make
           echo -e "\e[0Ksection_start:`date +%s`:make[collapsed=false]\r\e[0KCompiling SRB2"
-      - cmake --build build.cmake --parallel 1 --verbose
+      - cmake --build build.cmake --parallel 1 --verbose -- --keep-going
       - |
           # make
           echo -e "\e[0Ksection_end:`date +%s`:make\r\e[0K"
