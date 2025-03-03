@@ -34,9 +34,10 @@ Windows x64:
     name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-Win64"
 
   variables:
-    PREFIX: x86_64-w64-mingw32
     VCPKG_TARGET_TRIPLET: x64-mingw-static
-    LD: /usr/bin/x86_64-w64-mingw32-ld
+    CC: x86_64-w64-mingw32-gcc
+    CXX: x86_64-w64-mingw32-g++
+    LD: x86_64-w64-mingw32-ld
 
   script:
     - |
@@ -68,7 +69,7 @@ Windows x64:
     - - |
           # cmake
           echo -e "\e[0Ksection_start:`date +%s`:cmake[collapsed=false]\r\e[0KBuilding Makefiles"
-      - cmake -B build.cmake -DSRB2_CONFIG_ERRORMODE=ON  --toolchain $VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake -DVCPKG_CHAINLOAD_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/toolchains/mingw.cmake -G "Unix Makefiles"
+      - cmake -B build.cmake -DSRB2_CONFIG_ERRORMODE=ON -DCMAKE_TOOLCHAIN_FILE=${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake -DVCPKG_TARGET_TRIPLET=${VCPKG_TARGET_TRIPLET} -DVCPKG_CHAINLOAD_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/toolchains/mingw.cmake -G "Unix Makefiles"
       - |
           # cmake
           echo -e "\e[0Ksection_end:`date +%s`:cmake\r\e[0K"
@@ -80,21 +81,3 @@ Windows x64:
       - |
           # make
           echo -e "\e[0Ksection_end:`date +%s`:make\r\e[0K"
-
-  after_script:
-    - - |
-           # apt_clean
-           echo -e "\e[0Ksection_start:`date +%s`:apt_clean[collapsed=true]\r\e[0KCleaning of unneeded APT packages"
-      - apt-get autoclean
-      - |
-          # apt_clean
-          echo -e "\e[0Ksection_end:`date +%s`:apt_clean\r\e[0K"
-
-    - - |
-          # ccache_stats
-          echo -e "\e[0Ksection_start:`date +%s`:ccache_stats[collapsed=true]\r\e[0Kccache statistics:"
-      - ccache --show-stats
-      - ccache --show-log-stats || true
-      - |
-          # ccahe_stats
-          echo -e "\e[0Ksection_end:`date +%s`:ccache_stats\r\e[0K"
