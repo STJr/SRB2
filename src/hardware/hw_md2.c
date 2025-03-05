@@ -1388,8 +1388,13 @@ boolean HWR_DrawModel(gl_vissprite_t *spr)
 			Surf.PolyColor.s.alpha = (spr->mobj->flags2 & MF2_SHADOW) ? 0x40 : 0xff;
 			Surf.PolyFlags = HWR_GetBlendModeFlag(blendmode);
 		}
-
-		Surf.PolyColor.s.alpha = FixedMul(newalpha, Surf.PolyColor.s.alpha);
+		
+		if (newalpha < FRACUNIT)
+		{
+			// TODO: The ternary operator is a hack to make alpha values roughly match what their FF_TRANSMASK equivalent would be
+			// See if there's a better way of doing this
+			Surf.PolyColor.s.alpha = min(FixedMul(newalpha, Surf.PolyColor.s.alpha == 0xFF ? 256 : Surf.PolyColor.s.alpha), 0xFF);
+		}
 
 		// don't forget to enable the depth test because we can't do this
 		// like before: model polygons are not sorted

@@ -3137,7 +3137,13 @@ static void HWR_SplitSprite(gl_vissprite_t *spr)
 		if (!occlusion) use_linkdraw_hack = true;
 	}
 
-	Surf.PolyColor.s.alpha = FixedMul(newalpha, Surf.PolyColor.s.alpha);
+	if (cv_translucency.value && newalpha < FRACUNIT)
+	{
+		// TODO: The ternary operator is a hack to make alpha values roughly match what their FF_TRANSMASK equivalent would be
+		// See if there's a better way of doing this
+		Surf.PolyColor.s.alpha = min(FixedMul(newalpha, Surf.PolyColor.s.alpha == 0xFF ? 256 : Surf.PolyColor.s.alpha), 0xFF);
+		blend = HWR_GetBlendModeFlag(blendmode);
+	}
 
 	if (HWR_UseShader())
 	{
@@ -3632,7 +3638,13 @@ static void HWR_DrawSprite(gl_vissprite_t *spr)
 			if (!occlusion) use_linkdraw_hack = true;
 		}
 
-		Surf.PolyColor.s.alpha = FixedMul(newalpha, Surf.PolyColor.s.alpha);
+		if (cv_translucency.value && newalpha < FRACUNIT)
+		{
+			// TODO: The ternary operator is a hack to make alpha values roughly match what their FF_TRANSMASK equivalent would be
+			// See if there's a better way of doing this
+			Surf.PolyColor.s.alpha = min(FixedMul(newalpha, Surf.PolyColor.s.alpha == 0xFF ? 256 : Surf.PolyColor.s.alpha), 0xFF);
+			blend = HWR_GetBlendModeFlag(blendmode);
+		}
 
 		if (spr->renderflags & RF_SHADOWEFFECTS)
 		{
