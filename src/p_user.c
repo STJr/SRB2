@@ -10087,7 +10087,7 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 		camheight += thiscam->height;
 
 	if (twodlevel || (mo->flags2 & MF2_TWOD))
-		angle = ANGLE_90;
+		angle = ANGLE_90 - ANG10;
 	else if (camstill || resetcalled || player->playerstate == PST_DEAD)
 		angle = thiscam->angle;
 	else if (player->powers[pw_carry] == CR_NIGHTSMODE) // NiGHTS Level
