@@ -1,6 +1,8 @@
 Debian oldstable:amd64 Makefile:
   extends: Debian stable:amd64 Makefile
 
+  stage: build
+
   when: manual
 
   image: git.do.srb2.org:5050/stjr/srb2ci/srb2ci:oldstable
