@@ -612,6 +612,7 @@ void LUA_ClearExtVars(void)
 // if they were not called on lump load
 // (i.e. they were called in hooks or coroutines etc)
 INT32 lua_lumploading = 0;
+INT32 lua_locallyloading = 0;
 
 // Load a script from a MYFILE
 static inline boolean LUA_LoadFile(MYFILE *f, char *name)

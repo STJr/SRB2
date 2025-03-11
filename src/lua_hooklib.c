@@ -210,11 +210,11 @@ static int lib_addHook(lua_State *L)
 	luaL_checktype(L, 2, LUA_TFUNCTION);
 
     // anti-aimbot
-    if (strcmp(name, "PlayerCmd") == 0 && takis_complexlocaladdons)
+    if (strcmp(name, "PlayerCmd") == 0 && takis_complexlocaladdons && lua_locallyloading)
     {
         return luaL_error(L, "PlayerCmd hooks cannot be added in local addons.");
     }
-    
+
 	/* this is a very special case */
 	if (( type = hook_in_list(name, stringHookNames) ) < STRING_HOOK(MAX))
 	{
