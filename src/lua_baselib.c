@@ -1878,6 +1878,26 @@ static int lib_pPlayerShouldUseSpinHeight(lua_State *L)
 	return 1;
 }
 
+static int lib_pGetLocalAiming(lua_State *L)
+{
+	player_t *player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
+	INLEVEL
+	if (!player)
+		return LUA_ErrInvalid(L, "player_t");
+	lua_pushinteger(L, P_GetLocalAiming(player));
+	return 1;
+}
+
+static int lib_pGetLocalAngle(lua_State *L)
+{
+	player_t *player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
+	INLEVEL
+	if (!player)
+		return LUA_ErrInvalid(L, "player_t");
+	lua_pushinteger(L, P_GetLocalAngle(player));
+	return 1;
+}
+
 // P_MAP
 ///////////
 
@@ -4492,6 +4512,8 @@ static luaL_Reg lib[] = {
 	{"P_DoFollowMobj",lib_pDoFollowMobj},
 	{"P_PlayerCanEnterSpinGaps",lib_pPlayerCanEnterSpinGaps},
 	{"P_PlayerShouldUseSpinHeight",lib_pPlayerShouldUseSpinHeight},
+    {"P_GetLocalAiming",lib_pGetLocalAiming},
+    {"P_GetLocalAngle",lib_pGetLocalAngle},
 
 	// p_map
 	{"P_CheckPosition",lib_pCheckPosition},
