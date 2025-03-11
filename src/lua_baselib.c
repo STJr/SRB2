@@ -1884,7 +1884,7 @@ static int lib_pGetLocalAiming(lua_State *L)
 	INLEVEL
 	if (!player)
 		return LUA_ErrInvalid(L, "player_t");
-	lua_pushinteger(L, P_GetLocalAiming(player));
+	lua_pushangle(L, P_GetLocalAiming(player));
 	return 1;
 }
 
@@ -1894,7 +1894,7 @@ static int lib_pGetLocalAngle(lua_State *L)
 	INLEVEL
 	if (!player)
 		return LUA_ErrInvalid(L, "player_t");
-	lua_pushinteger(L, P_GetLocalAngle(player));
+	lua_pushangle(L, P_GetLocalAngle(player));
 	return 1;
 }
 
