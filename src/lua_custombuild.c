@@ -31,6 +31,12 @@ INT32 Takis_PushGlobals(lua_State *L, const char *word)
     } else if (fastcmp(word, "takis_complexlocaladdons")) {
 		lua_pushboolean(L, takis_complexlocaladdons);
 		return 1;
+	} else if (fastcmp(word, "takis_locallyloading")) {
+        if (lua_locallyloading)
+		    lua_pushboolean(L, true);
+        else
+            lua_pushboolean(L, false);
+		return 1;
 	}
     return 0;
 }
