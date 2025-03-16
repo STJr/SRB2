@@ -14,6 +14,7 @@
         "lua_libs.h": "c",
         "lua_script.h": "c",
         "p_polyobj.h": "c",
-        "p_slopes.h": "c"
+        "p_slopes.h": "c",
+        "xutility": "c"
     }
 }

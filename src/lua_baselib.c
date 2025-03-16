@@ -2897,8 +2897,11 @@ static int lib_pStartQuake(lua_State *L)
 	quake.intensity = q_intensity;
 	quake.time = q_time;
 	quake.starttime = q_time;
-	quake.minus = quake.intensity / q_time;
-	return 0;
+    if (quake.time != 1)
+	    quake.minus = quake.intensity / q_time;
+	else
+        quake.minus = 0;
+    return 0;
 }
 
 static int lib_evCrumbleChain(lua_State *L)

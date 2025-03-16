@@ -2960,8 +2960,11 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			if (!quake.radius)
 				quake.radius = 512<<FRACBITS;
 			
-			quake.minus = quake.intensity / quake.starttime;
-			break;
+			if (quake.time != 0)
+                quake.minus = quake.intensity / quake.starttime;
+			else
+                quake.minus = 0;
+            break;
 		}
 
 		case 445: // Force block disappear remotely (reappear if args[2] is set)
