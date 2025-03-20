@@ -21,11 +21,12 @@ osxcross x86_64:
     - - |
           # apt_development
           echo -e "\e[0Ksection_start:`date +%s`:macports_development[collapsed=true]\r\e[0KInstalling development packages"
-      - osxcross-macports install         libopenmpt || osxcross-macports install --verbose         libopenmpt || true
-      - osxcross-macports install         wavpack || osxcross-macports install --verbose         wavpack || true
+      - osxcross-macports install         libopenmpt      || osxcross-macports install --verbose         libopenmpt || true
+      - osxcross-macports install         wavpack         || osxcross-macports install --verbose         wavpack    || true
       - osxcross-macports install         libxmp opusfile || osxcross-macports install --verbose         libxmp opusfile
       - osxcross-macports install --static         libsdl2_mixer || osxcross-macports install --verbose --static         libsdl2_mixer || true
-      - osxcross-macports install --static         miniupnpc curl libpng || osxcross-macports install --verbose --static         miniupnpc curl libpng
+      - osxcross-macports install --static         curl          || osxcross-macports install --verbose --static         curl          || true
+      - osxcross-macports install --static         miniupnpc libpng || osxcross-macports install --verbose --static         miniupnpc libpng
       - |
           # apt_development
           echo -e "\e[0Ksection_end:`date +%s`:macports_development\r\e[0K"
@@ -33,7 +34,19 @@ osxcross x86_64:
     - - |
           # cmake
           echo -e "\e[0Ksection_start:`date +%s`:cmake[collapsed=false]\r\e[0KBuilding Makefiles"
-      - cmake -B build.x86_64 -DSRB2_CONFIG_ENABLE_WEBM_MOVIES=OFF -DCPM_USE_LOCAL_PACKAGES:BOOL=ON -DOPENMPT_INCLUDE_DIR:PATH="/osxcross/macports/pkgs/opt/local/include" -DSDL2_INCLUDE_DIR:PATH="/osxcross/macports/pkgs/opt/local/lib" -DSRB2_CONFIG_ENABLE_TESTS:BOOL=OFF -DSRB2_CONFIG_SYSTEM_LIBRARIES:BOOL=ON -DSRB2_CONFIG_USE_GME:BOOL=OFF -DSRB2_SDL2_EXE_NAME=srb2_$CI_PIPELINE_ID -G "Unix Makefiles"
+      - |
+          cmake \
+            -B build.x86_64 \
+            -G "Unix Makefiles" \
+            -DCMAKE_COLOR_DIAGNOSTICS=OFF \
+            -DSRB2_CONFIG_ENABLE_WEBM_MOVIES=OFF \
+            -DCPM_USE_LOCAL_PACKAGES:BOOL=ON \
+            -DOPENMPT_INCLUDE_DIR:PATH="/osxcross/macports/pkgs/opt/local/include" \
+            -DSDL2_INCLUDE_DIR:PATH="/osxcross/macports/pkgs/opt/local/lib" \
+            -DSRB2_CONFIG_ENABLE_TESTS:BOOL=OFF \
+            -DSRB2_CONFIG_SYSTEM_LIBRARIES:BOOL=ON \
+            -DSRB2_CONFIG_USE_GME:BOOL=OFF \
+            -DSRB2_SDL2_EXE_NAME=srb2_$CI_PIPELINE_ID
       - |
           # make
           echo -e "\e[0Ksection_end:`date +%s`:make\r\e[0K"
@@ -41,7 +54,7 @@ osxcross x86_64:
     - - |
           # make
           echo -e "\e[0Ksection_start:`date +%s`:make[collapsed=false]\r\e[0KCompiling SRB2"
-      - cmake --build build.x86_64 --parallel 1 --verbose -- --keep-going
+      - cmake --build build.x86_64 --parallel 1 -- --keep-going
       - |
           # make
           echo -e "\e[0Ksection_end:`date +%s`:make\r\e[0K"
