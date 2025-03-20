@@ -8,11 +8,16 @@
       "name": "curl",
       "platform": "!wasm32"
     },
-    "libgme",
     {
-      "name":"libopenmpt",
-      "platform": "!wasm32"
+      "name": "curl",
+      "default-features": false,
+      "platform": "wasm32",
+      "features": [
+        "mbedtls"
+      ]
     },
+    "libgme",
+    "libopenmpt",
     "libpng",
     "miniupnpc",
     {
@@ -28,7 +33,6 @@
           "platform": "!windows"
         }
       ],
-      "platform": "!wasm32",
       "version>=": "2.30.6#2"
     },
     {
@@ -38,29 +42,16 @@
           "name":"fluidsynth",
           "platform": "!static"
         },
-        {
-          "name":"libflac",
-          "platform": "!wasm32"
-        },
+        "libflac",
         "libgme",
         "libmodplug",
-        {
-          "name":"libvorbis",
-          "platform": "!wasm32"
-        },
+        "libvorbis",
         "libxmp",
-        {
-          "name":"mpg123",
-          "platform": "!wasm32"
-        },
-        {
-          "name":"opusfile",
-          "platform": "!wasm32"
-        },
+        "mpg123",
+        "opusfile",
         "pxtone",
         "timidity"
       ],
-      "platform": "!wasm32",
       "version>=": "2.6.0#0"
     },
     "zlib"
