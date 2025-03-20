@@ -79,7 +79,7 @@ typedef LPVOID (WINAPI *p_MapViewOfFile) (HANDLE, DWORD, DWORD, DWORD, SIZE_T);
 #define HAVE_SDLCPUINFO
 
 #if defined (__unix__) || defined(__APPLE__) || defined (UNIXCOMMON)
-#if defined (__linux__) || defined (__HAIKU__)
+#if defined (__linux__) || defined (__HAIKU__) || defined (__EMSCRIPTEN__)
 #include <sys/statvfs.h>
 #else
 #include <sys/statvfs.h>
@@ -111,7 +111,9 @@ typedef LPVOID (WINAPI *p_MapViewOfFile) (HANDLE, DWORD, DWORD, DWORD, SIZE_T);
 #include <errno.h>
 #include <sys/wait.h>
 #ifndef __HAIKU__ // haiku's crash dialog is just objectively better
+#ifndef __EMSCRIPTEN__ // WASM does not have a rell fork()
 #define NEWSIGNALHANDLER
+#endif
 #endif
 #endif
 
@@ -145,11 +147,13 @@ typedef LPVOID (WINAPI *p_MapViewOfFile) (HANDLE, DWORD, DWORD, DWORD, SIZE_T);
 #endif
 
 #if defined (__unix__) || defined(__APPLE__) || defined (UNIXCOMMON)
+#if !defined (__EMSCRIPTEN__)
 #ifndef NOEXECINFO
 #include <execinfo.h>
 #endif
 #include <time.h>
 #define UNIXBACKTRACE
+#endif
 #endif
 
 // Locations to directly check for srb2.pk3 in
