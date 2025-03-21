@@ -256,6 +256,10 @@ boolean cht_Responder(event_t *ev)
 #define REQUIRE_NOULTIMATE if (ultimatemode)\
 { CONS_Printf(M_GetText("You're too good to be cheating!\n")); return; }
 
+// TODO: check if other clients have this build too
+#define REQUIRE_TAKISBUILDONLY if (!addedtogame || consoleplayer < 0 || !playeringame[consoleplayer] || serverplayer != consoleplayer)\
+{ CONS_Printf(M_GetText("Only the server can use this on this modified build.\n")); return; }
+
 // command that can be typed at the console!
 void Command_CheatNoClip_f(void)
 {
@@ -966,6 +970,11 @@ consvar_t cv_speed = CVAR_INIT ("op_speed", "16", CV_NOTINNET, op_speed_t, NULL)
 consvar_t cv_opflags = CVAR_INIT ("op_flags", "0", CV_NOTINNET, op_flags_t, NULL);
 consvar_t cv_ophoopflags = CVAR_INIT ("op_hoopflags", "4", CV_NOTINNET, op_hoopflags_t, NULL);
 
+boolean freezelevelthinkers = false;
+// if TRUE, tick the thinkframes
+// start off as true
+boolean freezelevelthinkers_thinkframers = true;
+
 boolean objectplacing = false;
 mobjtype_t op_currentthing = 0; // For the object placement mode
 UINT16 op_currentdoomednum = 0; // For display, etc
@@ -1449,6 +1458,43 @@ void Command_Writethings_f(void)
 	}
 }
 
+void Command_FreezeLevel_f(void)
+{
+	size_t thinkframes;
+
+	REQUIRE_INLEVEL;
+	REQUIRE_TAKISBUILDONLY;
+
+	G_SetUsedCheats(false);
+    thinkframes = COM_CheckPartialParm("-t");
+	
+    // Start freezing thinkers
+	if (!freezelevelthinkers || thinkframes)
+	{
+        if (!freezelevelthinkers)
+        {
+            freezelevelthinkers = true;
+            CONS_Printf("Level thinkers frozen. Not responsible for desynchs, use for debugging only!\n");
+        }
+
+ 		if (thinkframes)
+		{
+            freezelevelthinkers_thinkframers = !freezelevelthinkers_thinkframers;
+            CONS_Printf(M_GetText("Lua Pre/Post/ThinkFrames have been %s.\n"),
+                (freezelevelthinkers_thinkframers ? "thawed" : "frozen")
+            );
+		}
+       
+    }
+	// Enanble/thaw level
+	else
+	{
+		freezelevelthinkers = false;
+        freezelevelthinkers_thinkframers = true;
+        CONS_Printf("Level thinkers thawed. Client desynchs may occur!\n");
+	}
+}
+
 void Command_ObjectPlace_f(void)
 {
 	size_t thingarg;
@@ -1460,7 +1506,7 @@ void Command_ObjectPlace_f(void)
 
 	G_SetUsedCheats(false);
 
-	silent = COM_CheckParm("-silent");
+	silent = COM_CheckPartialParm("-s");
 
 	thingarg = 2 - ( silent != 1 );
 

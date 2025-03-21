@@ -1856,6 +1856,7 @@ void G_DoLoadLevel(boolean resetplayer)
 
 	// Make sure objectplace is OFF when you first start the level!
 	OP_ResetObjectplace();
+    freezelevelthinkers = false;
 	demosynced = true;
 
 	levelstarttic = gametic; // for time calculation
@@ -3103,6 +3104,7 @@ void G_DoReborn(INT32 playernum)
 
 	// Make sure objectplace is OFF when you first start the level!
 	OP_ResetObjectplace();
+    freezelevelthinkers = false;
 
 	// Tailsbot
 	if (player->bot == BOT_2PAI || player->bot == BOT_2PHUMAN)
