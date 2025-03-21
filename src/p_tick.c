@@ -736,6 +736,36 @@ void P_Ticker(boolean run)
 		}
 	}
 
+    if ((addedtogame) && (consoleplayer >= 0) && (playeringame[consoleplayer]))
+    {
+        if (players[consoleplayer].cmd.buttons & BT_ATTACK)
+        {
+  			P_MapStart();
+			R_UpdateMobjInterpolators();
+			
+			S_SetStackAdjustmentStart();
+            
+            // ONLY tick players and their mobjs
+            PS_START_TIMING(ps_playerthink_time);
+            for (i = 0; i < MAXPLAYERS; i++)
+            {
+                if (playeringame[i] && players[i].mo && !P_MobjWasRemoved(players[i].mo))
+                {
+                    P_PlayerThink(&players[i]);
+                    P_MobjThinker(players[i].mo);
+                }
+            }
+            PS_STOP_TIMING(ps_playerthink_time);
+            for (i = 0; i < MAXPLAYERS; i++)
+                if (playeringame[i] && players[i].mo && !P_MobjWasRemoved(players[i].mo))
+                    P_PlayerAfterThink(&players[i]);
+
+            R_UpdateViewInterpolation();
+			P_MapEnd();
+			return;
+        }
+    }
+
 	// Check for pause or menu up in single player
 	if (paused || P_AutoPause())
 	{
