@@ -11,10 +11,11 @@
     {
       "name": "curl",
       "default-features": false,
-      "platform": "wasm32",
       "features": [
         "mbedtls"
-      ]
+      ],
+      "platform": "wasm32",
+      "version>=": "7.74.0#5"
     },
     "libgme",
     "libopenmpt",
@@ -22,17 +23,16 @@
     "miniupnpc",
     {
       "name": "sdl2",
+      "platform": "!linux"
+    },
+    {
+      "name": "sdl2",
       "default-features": false,
       "features": [
-        {
-          "name": "wayland",
-          "platform": "linux"
-        },
-        {
-          "name": "x11",
-          "platform": "!windows"
-        }
+        "wayland",
+        "x11"
       ],
+      "platform": "linux",
       "version>=": "2.30.6#2"
     },
     {
