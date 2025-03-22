@@ -736,12 +736,58 @@ void P_Ticker(boolean run)
 		}
 	}
 
-	// Check for pause or menu up in single player
+ 	// Check for pause or menu up in single player
 	if (paused || P_AutoPause())
 	{
 		S_SetStackAdjustmentStart();
 		return;
 	}
+
+    if (freezelevelthinkers)
+    {
+        P_MapStart();
+        R_UpdateMobjInterpolators();
+        
+        S_SetStackAdjustmentStart();
+        
+        // tick prethink too cause takis uses it for controls (only if toggled)
+        if (freezelevelthinkers_thinkframers)
+        {
+            PS_START_TIMING(ps_lua_prethinkframe_time);
+            LUA_HookPreThinkFrame();
+            PS_STOP_TIMING(ps_lua_prethinkframe_time);
+        }
+
+        // ONLY tick players and their mobjs
+        PS_START_TIMING(ps_playerthink_time);
+        for (i = 0; i < MAXPLAYERS; i++)
+        {
+            if (playeringame[i] && players[i].mo && !P_MobjWasRemoved(players[i].mo))
+            {
+                P_PlayerThink(&players[i]);
+                P_MobjThinker(players[i].mo);
+            }
+        }
+        PS_STOP_TIMING(ps_playerthink_time);
+        for (i = 0; i < MAXPLAYERS; i++)
+            if (playeringame[i] && players[i].mo && !P_MobjWasRemoved(players[i].mo))
+                P_PlayerAfterThink(&players[i]);
+
+        if (freezelevelthinkers_thinkframers)
+        {
+            PS_START_TIMING(ps_lua_thinkframe_time);
+            LUA_HookThinkFrame();
+            PS_STOP_TIMING(ps_lua_thinkframe_time);
+
+            PS_START_TIMING(ps_lua_postthinkframe_time);
+            LUA_HookPostThinkFrame();
+            PS_STOP_TIMING(ps_lua_postthinkframe_time);
+       }
+
+        R_UpdateViewInterpolation();
+        P_MapEnd();
+        return;
+    }
 
 	if (!S_MusicPaused())
 		S_AdjustMusicStackTics();

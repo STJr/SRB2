@@ -22,6 +22,8 @@
 boolean cht_Responder(event_t *ev);
 void cht_Init(void);
 
+void Command_FreezeLevel_f(void);
+
 //
 // ObjectPlace
 //
@@ -30,6 +32,9 @@ void Command_Writethings_f(void);
 
 extern consvar_t cv_opflags, cv_ophoopflags, cv_mapthingnum, cv_speed;
 //extern consvar_t cv_snapto, cv_grid;
+
+extern boolean freezelevelthinkers;
+extern boolean freezelevelthinkers_thinkframers;
 
 extern boolean objectplacing;
 extern mobjtype_t op_currentthing;

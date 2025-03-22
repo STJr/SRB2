@@ -933,6 +933,8 @@ void D_RegisterClientCommands(void)
 	CV_RegisterVar(&cv_ps_samplesize);
 	CV_RegisterVar(&cv_ps_descriptor);
 
+	COM_AddCommand("freezelevel", Command_FreezeLevel_f, COM_LUA);
+
 	// ingame object placing
 	COM_AddCommand("objectplace", Command_ObjectPlace_f, COM_LUA);
 	COM_AddCommand("writethings", Command_Writethings_f, COM_LUA);
