@@ -40,7 +40,14 @@ Debian stable:i386:
     - - |
           # cmake
           echo -e "\e[0Ksection_start:`date +%s`:cmake[collapsed=false]\r\e[0KBuilding Makefiles"
-      - cmake -B build.cmake -DSRB2_CONFIG_ENABLE_WEBM_MOVIES=OFF -DSRB2_CONFIG_ERRORMODE=ON -DSRB2_CONFIG_USE_GME:BOOL=ON -G "Unix Makefiles"
+      - |
+          cmake \
+            -B build.cmake \
+            -G "Unix Makefiles" \
+            -DCMAKE_COLOR_DIAGNOSTICS=OFF \
+            -DSRB2_CONFIG_ENABLE_WEBM_MOVIES=OFF \
+            -DSRB2_CONFIG_ERRORMODE=ON \
+            -DSRB2_CONFIG_USE_GME:BOOL=ON
       - |
           # cmake
           echo -e "\e[0Ksection_end:`date +%s`:cmake\r\e[0K"
@@ -48,7 +55,7 @@ Debian stable:i386:
     - - |
           # make
           echo -e "\e[0Ksection_start:`date +%s`:make[collapsed=false]\r\e[0KCompiling SRB2"
-      - cmake --build build.cmake --parallel 1 --verbose -- --keep-going
+      - cmake --build build.cmake --parallel 1 -- --keep-going
       - |
           # make
           echo -e "\e[0Ksection_end:`date +%s`:make\r\e[0K"

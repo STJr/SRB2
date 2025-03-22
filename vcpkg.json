@@ -34,7 +34,6 @@
     {
       "name": "sdl2-mixer-ext",
       "features": [
-        "ffmpeg",
         {
           "name":"fluidsynth",
           "platform": "!static"
