@@ -736,6 +736,13 @@ void P_Ticker(boolean run)
 		}
 	}
 
+ 	// Check for pause or menu up in single player
+	if (paused || P_AutoPause())
+	{
+		S_SetStackAdjustmentStart();
+		return;
+	}
+
     if (freezelevelthinkers)
     {
         P_MapStart();
@@ -781,13 +788,6 @@ void P_Ticker(boolean run)
         P_MapEnd();
         return;
     }
-
-	// Check for pause or menu up in single player
-	if (paused || P_AutoPause())
-	{
-		S_SetStackAdjustmentStart();
-		return;
-	}
 
 	if (!S_MusicPaused())
 		S_AdjustMusicStackTics();
