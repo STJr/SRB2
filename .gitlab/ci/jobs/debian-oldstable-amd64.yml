@@ -1,8 +1,6 @@
 Debian oldstable:amd64:
   extends: Debian stable:amd64
 
-  stage: build
-
   when: manual
 
   image: git.do.srb2.org:5050/stjr/srb2ci/srb2ci:oldstable
@@ -20,7 +18,7 @@ Debian oldstable:amd64:
     - - |
           # apt_toolchain
           echo -e "\e[0Ksection_start:`date +%s`:apt_toolchain[collapsed=true]\r\e[0KInstalling toolchain packages"
-      - apt-get install g++-x86-64-linux-gnu || apt-get install g++
+      - apt-get install gcc-x86-64-linux-gnu || apt-get install gcc
       - |
           # apt_toolchain
           echo -e "\e[0Ksection_end:`date +%s`:apt_toolchain\r\e[0K"
@@ -36,14 +34,7 @@ Debian oldstable:amd64:
     - - |
           # cmake
           echo -e "\e[0Ksection_start:`date +%s`:cmake[collapsed=false]\r\e[0KBuilding Makefiles"
-      - |
-          cmake \
-            -B build.cmake \
-            -G "Unix Makefiles" \
-            -DCMAKE_COLOR_DIAGNOSTICS=OFF \
-            -DSRB2_CONFIG_ENABLE_WEBM_MOVIES=OFF \
-            -DSRB2_CONFIG_ERRORMODE=ON \
-            -DSRB2_CONFIG_USE_GME:BOOL=ON
+      - cmake -B build.cmake -DSRB2_USE_CCACHE=YES -DSRB2_CONFIG_ERRORMODE=ON -DSRB2_CONFIG_USE_GME=OFF -G "Unix Makefiles"
       - |
           # cmake
           echo -e "\e[0Ksection_end:`date +%s`:cmake\r\e[0K"
@@ -51,7 +42,7 @@ Debian oldstable:amd64:
     - - |
           # make
           echo -e "\e[0Ksection_start:`date +%s`:make[collapsed=false]\r\e[0KCompiling SRB2"
-      - cmake --build build.cmake --parallel 1 -- --keep-going
+      - make --directory=build.cmake --keep-going || make --directory=build.cmake --keep-going
       - |
           # make
           echo -e "\e[0Ksection_end:`date +%s`:make\r\e[0K"

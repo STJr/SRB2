@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2025 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -386,7 +386,6 @@ static const char *SOCK_AddrToStr(mysockaddr_t *sk)
 	int v6 = 0;
 #endif
 	void *addr;
-	int e = 0; // save error code so it can't be modified later code and avoid calling WSAGetLastError() more then once
 
 	if(sk->any.sa_family == AF_INET)
 		addr = &sk->ip4.sin_addr;
@@ -400,10 +399,7 @@ static const char *SOCK_AddrToStr(mysockaddr_t *sk)
 	if(addr == NULL)
 		sprintf(s, "No address");
 	else if(inet_ntop(sk->any.sa_family, addr, &s[v6], sizeof (s) - v6) == NULL)
-	{
-		e = errno;
-		sprintf(s, "Unknown family type, error #%u: %s", e, strerror(e));
-	}
+		sprintf(s, "Unknown family type, error #%u", errno);
 #ifdef HAVE_IPV6
 	else if(sk->any.sa_family == AF_INET6)
 	{
@@ -460,8 +456,6 @@ static boolean SOCK_cmpipv6(mysockaddr_t *a, mysockaddr_t *b, UINT8 mask)
 {
 	UINT8 bitmask;
 	I_Assert(mask <= 128);
-	if (mask == 0)
-		mask = 128;
 	if (memcmp(&a->ip6.sin6_addr.s6_addr, &b->ip6.sin6_addr.s6_addr, mask / 8) != 0)
 		return false;
 	if (mask % 8 == 0)
@@ -656,12 +650,11 @@ static inline ssize_t SOCK_SendToAddr(SOCKET_TYPE socket, mysockaddr_t *sockaddr
 	return sendto(socket, (char *)&doomcom->data, doomcom->datalength, 0, &sockaddr->any, d);
 }
 
-#define ALLOWEDERROR(x) ((x) == ECONNREFUSED || (x) == EWOULDBLOCK || (x) == EHOSTUNREACH || (x) == ENETUNREACH || (x) == EADDRNOTAVAIL)
+#define ALLOWEDERROR(x) ((x) == ECONNREFUSED || (x) == EWOULDBLOCK || (x) == EHOSTUNREACH || (x) == ENETUNREACH)
 
 static void SOCK_Send(void)
 {
 	ssize_t c = ERRSOCKET;
-	int e = 0; // save error code so it can't be modified later code and avoid calling WSAGetLastError() more then once
 
 	if (!nodeconnected[doomcom->remotenode])
 		return;
@@ -675,12 +668,8 @@ static void SOCK_Send(void)
 				if (myfamily[i] == broadcastaddress[j].any.sa_family)
 				{
 					c = SOCK_SendToAddr(mysockets[i], &broadcastaddress[j]);
-					if (c == ERRSOCKET)
-					{
-						e = errno;
-						if (!ALLOWEDERROR(e))
-							break;
-					}
+					if (c == ERRSOCKET && !ALLOWEDERROR(errno))
+						break;
 				}
 			}
 		}
@@ -692,28 +681,21 @@ static void SOCK_Send(void)
 			if (myfamily[i] == clientaddress[doomcom->remotenode].any.sa_family)
 			{
 				c = SOCK_SendToAddr(mysockets[i], &clientaddress[doomcom->remotenode]);
-				if (c == ERRSOCKET)
-				{
-					e = errno;
-					if (!ALLOWEDERROR(e))
-						break;
-				}
+				if (c == ERRSOCKET && !ALLOWEDERROR(errno))
+					break;
 			}
 		}
 	}
 	else
 	{
 		c = SOCK_SendToAddr(nodesocket[doomcom->remotenode], &clientaddress[doomcom->remotenode]);
-		if (c == ERRSOCKET)
-		{
-			e = errno;
-		}
 	}
 
-	if (c == ERRSOCKET && e != 0) // 0 means no socket for the address family was found
+	if (c == ERRSOCKET)
 	{
+		int e = errno; // save error code so it can't be modified later
 		if (!ALLOWEDERROR(e))
-			I_Error("SOCK_Send, error sending to node %d (%s) #%u, %s", doomcom->remotenode,
+			I_Error("SOCK_Send, error sending to node %d (%s) #%u: %s", doomcom->remotenode,
 				SOCK_GetNodeAddress(doomcom->remotenode), e, strerror(e));
 	}
 }
@@ -744,8 +726,6 @@ static SOCKET_TYPE UDP_Bind(int family, struct sockaddr *addr, socklen_t addrlen
 {
 	SOCKET_TYPE s = socket(family, SOCK_DGRAM, IPPROTO_UDP);
 	int opt;
-	int rc;
-	int e = 0; // save error code so it can't be modified later code and avoid calling WSAGetLastError() more then once
 	socklen_t opts;
 #ifdef FIONBIO
 	unsigned long trueval = true;
@@ -760,17 +740,12 @@ static SOCKET_TYPE UDP_Bind(int family, struct sockaddr *addr, socklen_t addrlen
 #ifdef USE_WINSOCK2
 		DWORD dwBytesReturned = 0;
 		BOOL bfalse = FALSE;
-		rc = WSAIoctl(s, SIO_UDP_CONNRESET, &bfalse, sizeof(bfalse),
+		WSAIoctl(s, SIO_UDP_CONNRESET, &bfalse, sizeof(bfalse),
 		         NULL, 0, &dwBytesReturned, NULL, NULL);
 #else
 		unsigned long falseval = false;
-		rc = ioctl(s, SIO_UDP_CONNRESET, &falseval);
+		ioctl(s, SIO_UDP_CONNRESET, &falseval);
 #endif
-		if (rc == -1)
-		{
-			e = errno;
-			I_OutputMsg("SIO_UDP_CONNRESET failed: #%u, %s\n", e, strerror(e));
-		}
 	}
 #endif
 
@@ -783,22 +758,14 @@ static SOCKET_TYPE UDP_Bind(int family, struct sockaddr *addr, socklen_t addrlen
 		{
 			opt = true;
 			opts = (socklen_t)sizeof(opt);
-			rc = setsockopt(s, SOL_SOCKET, SO_REUSEADDR, (char *)&opt, opts);
-			if (rc <= -1)
-			{
-				e = errno;
-				I_OutputMsg("setting SO_REUSEADDR failed: #%u, %s\n", e, strerror(e));
-			}
+			setsockopt(s, SOL_SOCKET, SO_REUSEADDR, (char *)&opt, opts);
 		}
 		// make it broadcastable
 		opt = true;
 		opts = (socklen_t)sizeof(opt);
-		rc = setsockopt(s, SOL_SOCKET, SO_BROADCAST, (char *)&opt, opts);
-		if (rc <= -1)
+		if (setsockopt(s, SOL_SOCKET, SO_BROADCAST, (char *)&opt, opts))
 		{
-			e = errno;
 			CONS_Alert(CONS_WARNING, M_GetText("Could not get broadcast rights\n")); // I do not care anymore
-			I_OutputMsg("setting SO_BROADCAST failed: #%u, %s\n", e, strerror(e));
 		}
 	}
 #ifdef HAVE_IPV6
@@ -808,34 +775,24 @@ static SOCKET_TYPE UDP_Bind(int family, struct sockaddr *addr, socklen_t addrlen
 		{
 			opt = true;
 			opts = (socklen_t)sizeof(opt);
-			rc = setsockopt(s, SOL_SOCKET, SO_REUSEADDR, (char *)&opt, opts);
-			if (rc <= -1)
-			{
-				e = errno;
-				I_OutputMsg("setting SO_REUSEADDR failed: #%u, %s\n", e, strerror(e));
-			}
+			setsockopt(s, SOL_SOCKET, SO_REUSEADDR, (char *)&opt, opts);
 		}
 #ifdef IPV6_V6ONLY
 		// make it IPv6 ony
 		opt = true;
 		opts = (socklen_t)sizeof(opt);
-		rc = setsockopt(s, IPPROTO_IPV6, IPV6_V6ONLY, (char *)&opt, opts);
-		if (rc <= -1)
+		if (setsockopt(s, IPPROTO_IPV6, IPV6_V6ONLY, (char *)&opt, opts))
 		{
-			e = errno;
 			CONS_Alert(CONS_WARNING, M_GetText("Could not limit IPv6 bind\n")); // I do not care anymore
-			I_OutputMsg("setting IPV6_V6ONLY failed: #%u, %s\n", e, strerror(e));
 		}
 #endif
 	}
 #endif
 
-	rc = bind(s, addr, addrlen);
-	if (rc == ERRSOCKET)
+	if (bind(s, addr, addrlen) == ERRSOCKET)
 	{
-		e = errno;
 		close(s);
-		I_OutputMsg("Binding failed: #%u, %s\n", e, strerror(e));
+		I_OutputMsg("Binding failed\n");
 		return (SOCKET_TYPE)ERRSOCKET;
 	}
 
@@ -849,18 +806,9 @@ static SOCKET_TYPE UDP_Bind(int family, struct sockaddr *addr, socklen_t addrlen
 
 			inet_pton(AF_INET6, IPV6_MULTICAST_ADDRESS, &maddr.ipv6mr_multiaddr);
 			maddr.ipv6mr_interface = 0;
-			rc = setsockopt(s, IPPROTO_IPV6, IPV6_JOIN_GROUP, (const char *)&maddr, sizeof(maddr));
-			if (rc <= -1)
+			if (setsockopt(s, IPPROTO_IPV6, IPV6_JOIN_GROUP, (const char *)&maddr, sizeof(maddr)) != 0)
 			{
-				e = errno;
 				CONS_Alert(CONS_WARNING, M_GetText("Could not register multicast address\n"));
-				if (e == ENODEV)
-				{
-					close(s);
-					I_OutputMsg("Binding failed: no IPv6 device\n");
-					return (SOCKET_TYPE)ERRSOCKET;
-				}
-				I_OutputMsg("setting IPV6_JOIN_GROUP failed: #%u, %s \n", e, strerror(e));
 			}
 		}
 	}
@@ -868,56 +816,33 @@ static SOCKET_TYPE UDP_Bind(int family, struct sockaddr *addr, socklen_t addrlen
 
 #ifdef FIONBIO
 	// make it non blocking
-	rc = ioctl(s, FIONBIO, &trueval);
-	if (rc == -1)
+	opt = true;
+	if (ioctl(s, FIONBIO, &trueval) != 0)
 	{
-		e = errno;
 		close(s);
-		I_OutputMsg("FIOBIO failed: #%u, %s\n", e, strerror(e));
+		I_OutputMsg("Seting FIOBIO on failed\n");
 		return (SOCKET_TYPE)ERRSOCKET;
 	}
 #endif
 
-	opt = 0;
 	opts = (socklen_t)sizeof(opt);
-	rc = getsockopt(s, SOL_SOCKET, SO_RCVBUF, (char *)&opt, &opts);
-	if (rc <= -1)
-	{
-		e = errno;
-		I_OutputMsg("getting SO_RCVBUF failed: #%u, %s\n", e, strerror(e));
-	}
+	getsockopt(s, SOL_SOCKET, SO_RCVBUF, (char *)&opt, &opts);
 	CONS_Printf(M_GetText("Network system buffer: %dKb\n"), opt>>10);
 
 	if (opt < 64<<10) // 64k
 	{
 		opt = 64<<10;
 		opts = (socklen_t)sizeof(opt);
-		rc = setsockopt(s, SOL_SOCKET, SO_RCVBUF, (char *)&opt, opts);
-		if (rc <= -1)
-		{
-			e = errno;
-			I_OutputMsg("setting SO_RCVBUF failed: #%u, %s\n", e, strerror(e));
-		}
-		opt = 0;
-		rc = getsockopt(s, SOL_SOCKET, SO_RCVBUF, (char *)&opt, &opts);
-		if (rc <= -1)
-		{
-			e = errno;
-			I_OutputMsg("getting SO_RCVBUF failed: #%u, %s\n", e, strerror(e));
-		}
-		if (opt <= 64<<10)
+		setsockopt(s, SOL_SOCKET, SO_RCVBUF, (char *)&opt, opts);
+		getsockopt(s, SOL_SOCKET, SO_RCVBUF, (char *)&opt, &opts);
+		if (opt < 64<<10)
 			CONS_Alert(CONS_WARNING, M_GetText("Can't set buffer length to 64k, file transfer will be bad\n"));
 		else
 			CONS_Printf(M_GetText("Network system buffer set to: %dKb\n"), opt>>10);
 	}
 
-	rc = getsockname(s, &straddr.any, &len);
-	if (rc != 0)
-	{
-		e = errno;
+	if (getsockname(s, &straddr.any, &len) == -1)
 		CONS_Alert(CONS_WARNING, M_GetText("Failed to get port number\n"));
-		I_OutputMsg("getsockname failed: #%u, %s\n", e, strerror(e));
-	}
 	else
 	{
 		if (family == AF_INET)
@@ -939,7 +864,6 @@ static boolean UDP_Socket(void)
 #ifdef HAVE_IPV6
 	const INT32 b_ipv6 = !M_CheckParm("-noipv6");
 #endif
-	const INT32 b_ipv4 = !M_CheckParm("-noipv4");
 	const char *serv;
 
 
@@ -955,45 +879,16 @@ static boolean UDP_Socket(void)
 	hints.ai_socktype = SOCK_DGRAM;
 	hints.ai_protocol = IPPROTO_UDP;
 
-#ifdef HAVE_IPV6
-	if (!b_ipv6)
-		I_OutputMsg("Disabling IPv6 support at runtime\n");
-#else
-	I_OutputMsg("Compiled without IPv6 support\n");
-#endif
-
 	if (serverrunning)
 		serv = serverport_name;
 	else
 		serv = clientport_name;
 
-	if (b_ipv4)
+	if (M_CheckParm("-bindaddr"))
 	{
-		if (M_CheckParm("-bindaddr"))
+		while (M_IsNextParm())
 		{
-			while (M_IsNextParm())
-			{
-				gaie = I_getaddrinfo(M_GetNextParm(), serv, &hints, &ai);
-				if (gaie == 0)
-				{
-					runp = ai;
-					while (runp != NULL && s < MAXNETNODES+1)
-					{
-						mysockets[s] = UDP_Bind(runp->ai_family, runp->ai_addr, (socklen_t)runp->ai_addrlen);
-						if (mysockets[s] != (SOCKET_TYPE)ERRSOCKET)
-						{
-							myfamily[s] = hints.ai_family;
-							s++;
-						}
-						runp = runp->ai_next;
-					}
-					I_freeaddrinfo(ai);
-				}
-			}
-		}
-		else
-		{
-			gaie = I_getaddrinfo("0.0.0.0", serv, &hints, &ai);
+			gaie = I_getaddrinfo(M_GetNextParm(), serv, &hints, &ai);
 			if (gaie == 0)
 			{
 				runp = ai;
@@ -1004,18 +899,37 @@ static boolean UDP_Socket(void)
 					{
 						myfamily[s] = hints.ai_family;
 						s++;
-#ifdef HAVE_MINIUPNPC
-						if (UPNP_support)
-						{
-							I_UPnP_rem(serverport_name, "UDP");
-							I_UPnP_add(NULL, serverport_name, "UDP");
-						}
-#endif
 					}
 					runp = runp->ai_next;
 				}
 				I_freeaddrinfo(ai);
 			}
+		}
+	}
+	else
+	{
+		gaie = I_getaddrinfo("0.0.0.0", serv, &hints, &ai);
+		if (gaie == 0)
+		{
+			runp = ai;
+			while (runp != NULL && s < MAXNETNODES+1)
+			{
+				mysockets[s] = UDP_Bind(runp->ai_family, runp->ai_addr, (socklen_t)runp->ai_addrlen);
+				if (mysockets[s] != (SOCKET_TYPE)ERRSOCKET)
+				{
+					myfamily[s] = hints.ai_family;
+					s++;
+#ifdef HAVE_MINIUPNPC
+					if (UPNP_support)
+					{
+						I_UPnP_rem(serverport_name, "UDP");
+						I_UPnP_add(NULL, serverport_name, "UDP");
+					}
+#endif
+				}
+				runp = runp->ai_next;
+			}
+			I_freeaddrinfo(ai);
 		}
 	}
 #ifdef HAVE_IPV6
@@ -1082,14 +996,11 @@ static boolean UDP_Socket(void)
 
 	s = 0;
 
-	if (b_ipv4)
-	{
-		// setup broadcast adress to BROADCASTADDR entry
-		broadcastaddress[s].any.sa_family = AF_INET;
-		broadcastaddress[s].ip4.sin_port = htons(atoi(DEFAULTPORT));
-		broadcastaddress[s].ip4.sin_addr.s_addr = htonl(INADDR_BROADCAST);
-		s++;
-	}
+	// setup broadcast adress to BROADCASTADDR entry
+	broadcastaddress[s].any.sa_family = AF_INET;
+	broadcastaddress[s].ip4.sin_port = htons(atoi(DEFAULTPORT));
+	broadcastaddress[s].ip4.sin_addr.s_addr = htonl(INADDR_BROADCAST);
+	s++;
 
 #ifdef HAVE_IPV6
 	if (b_ipv6)
@@ -1218,7 +1129,7 @@ static SINT8 SOCK_NetMakeNodewPort(const char *address, const char *port)
 	DEBFILE(va("Creating new node: %s@%s\n", address, port));
 
 	memset (&hints, 0x00, sizeof (hints));
-	hints.ai_flags = AI_ADDRCONFIG;
+	hints.ai_flags = 0;
 	hints.ai_family = AF_UNSPEC;
 	hints.ai_socktype = SOCK_DGRAM;
 	hints.ai_protocol = IPPROTO_UDP;
@@ -1248,7 +1159,7 @@ static SINT8 SOCK_NetMakeNodewPort(const char *address, const char *port)
 			}
 		}
 
-		if (i >= mysocketses)
+		if (i < mysocketses)
 			runp = runp->ai_next;
 		else
 			break;

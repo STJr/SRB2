@@ -14,7 +14,7 @@ Debian stable:arm64 Makefile:
 
   variables:
     CC: aarch64-linux-gnu-gcc
-    CXX: aarch64-linux-gnu-g++
+    LDFLAGS: -Wl,-fuse-ld=gold
     OBJCOPY: aarch64-linux-gnu-objcopy
     OBJDUMP: aarch64-linux-gnu-objdump
     LD: aarch64-linux-gnu-ld
@@ -24,7 +24,7 @@ Debian stable:arm64 Makefile:
     - - |
           # apt_toolchain
           echo -e "\e[0Ksection_start:`date +%s`:apt_toolchain[collapsed=true]\r\e[0KInstalling toolchain packages"
-      - apt-get install gg++-aarch64-linux-gnu || apt-get install g++
+      - apt-get install gcc-aarch64-linux-gnu || apt-get install gcc
       - |
           # apt_toolchain
           echo -e "\e[0Ksection_end:`date +%s`:apt_toolchain\r\e[0K"

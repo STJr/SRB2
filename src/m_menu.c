@@ -3917,9 +3917,6 @@ void M_Ticker(void)
 		M_SetupScreenshotMenu();
 
 #if defined (MASTERSERVER) && defined (HAVE_THREADS)
-	if (!netgame)
-		return;
-
 	I_lock_mutex(&ms_ServerList_mutex);
 	{
 		if (ms_ServerList)

@@ -2,67 +2,84 @@
   "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
   "name": "srb2",
   "version": "1.0.0",
-  "builtin-baseline": "d5ec528843d29e3a52d745a64b469f810b2cedbf",
+  "builtin-baseline": "c823fd3e57035b10d970a96da2796a2db55e5df5",
   "dependencies": [
+    "curl",
     {
-      "name": "curl",
-      "platform": "!wasm32"
+      "name": "libgme",
+      "platform": "!(windows & mingw) & !native"
     },
-    "libgme",
     {
-      "name":"libopenmpt",
-      "platform": "!wasm32"
+      "name": "libopenmpt",
+      "platform": "!(windows & mingw)"
     },
     "libpng",
     "miniupnpc",
-    {
-      "name": "sdl2",
-      "default-features": false,
-      "features": [
-        {
-          "name": "wayland",
-          "platform": "linux"
-        },
-        {
-          "name": "x11",
-          "platform": "!windows"
-        }
-      ],
-      "platform": "!wasm32",
-      "version>=": "2.30.6#2"
-    },
+    "sdl2",
     {
       "name": "sdl2-mixer-ext",
       "features": [
         {
-          "name":"fluidsynth",
-          "platform": "!static"
+          "name": "cmd",
+          "platform": "linux"
         },
         {
-          "name":"libflac",
-          "platform": "!wasm32"
-        },
-        "libgme",
-        "libmodplug",
-        {
-          "name":"libvorbis",
-          "platform": "!wasm32"
-        },
-        "libxmp",
-        {
-          "name":"mpg123",
-          "platform": "!wasm32"
+          "name": "libflac",
+          "platform": "!(windows & mingw & !static)"
         },
         {
-          "name":"opusfile",
-          "platform": "!wasm32"
+          "name": "libgme",
+          "platform": "!(windows & mingw) & !native"
         },
-        "pxtone",
-        "timidity"
-      ],
-      "platform": "!wasm32",
-      "version>=": "2.6.0#0"
+        {
+          "name": "libmodplug",
+          "platform": "!(windows & mingw)"
+        },
+        {
+          "name": "libopnmidi",
+          "platform": "!(windows & mingw)"
+        },
+        {
+          "name": "libvorbis",
+          "platform": "!(windows & mingw & !static)"
+        },
+        {
+          "name": "libxmp",
+          "platform": "!(windows & mingw)"
+        },
+        {
+          "name": "mpg123",
+          "platform": "!(windows & mingw)"
+        },
+        {
+          "name": "nativemidi",
+          "platform": "!(windows & mingw)"
+        },
+        {
+          "name": "opusfile",
+          "platform": "!(windows & mingw)"
+        },
+        {
+          "name": "pxtone",
+          "platform": "!(windows & mingw)"
+        },
+        {
+          "name": "timidity",
+          "platform": "!(windows & mingw)"
+        },
+        {
+          "name": "wavpack",
+          "platform": "!(windows & mingw)"
+        }
+      ]
     },
     "zlib"
+  ],
+  "overrides": [
+    {
+      "name": "sdl2",
+      "version": "2.28.5",
+      "port-version": 1
+    }
   ]
 }
