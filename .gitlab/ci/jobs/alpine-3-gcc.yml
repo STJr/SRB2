@@ -15,8 +15,8 @@ Alpine 3 GCC:
 
   artifacts:
     paths:
-      - "build.alpine3/bin/"
-      - "build.alpine3/src/config.h"
+      - "build.cmake/bin/"
+      - "build.cmake/src/config.h"
     expose_as: "Apline-3"
     name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-Apline-3"
 
@@ -58,26 +58,24 @@ Alpine 3 GCC:
     - - |
           # ccache_config
           echo -e "\e[0Ksection_start:`date +%s`:ccache_config[collapsed=true]\r\e[0KSetting up ccache config"
-      - mkdir --parents --verbose ~/.ccache/
-      - touch ~/.ccache/ccache.conf
       - |
           # cache.conf
           echo Adding ccache configution option
       - |
           # base_dir
-          echo base_dir = $PWD                  | tee -a ~/.ccache/ccache.conf
+          ccache --set-config base_dir=$CI_PROJECT_DIR
       - |
           # cache_dir
-          echo cache_dir = $PWD/ccache          | tee -a ~/.ccache/ccache.conf
+          ccache --set-config cache_dir=$CI_PROJECT_DIR/build/ccache
       - |
           # compiler_check
-          echo compiler_check = content         | tee -a ~/.ccache/ccache.conf
+          ccache --set-config compiler_check=content
       - |
           # stats_log
-          echo stats_log = $PWD/ccache_statslog | tee -a ~/.ccache/ccache.conf
+          ccache --set-config stats_log=$CI_PROJECT_DIR/build/ccache_statslog
       - |
           # max_size
-          echo max_size = 50M                   | tee -a ~/.ccache/ccache.conf
+          ccache --set-config max_size=300M
       - |
           # ccache_config
           echo -e "\e[0Ksection_end:`date +%s`:ccache_config\r\e[0K"
@@ -95,7 +93,7 @@ Alpine 3 GCC:
     - - |
           # apk_toolchain
           echo -e "\e[0Ksection_start:`date +%s`:apk_toolchain[collapsed=true]\r\e[0KInstalling toolchain packages"
-      - apk add gcc g++
+      - apk add g++
       - |
           # apk_toolchain
           echo -e "\e[0Ksection_end:`date +%s`:apk_toolchain\r\e[0K"
@@ -111,7 +109,15 @@ Alpine 3 GCC:
     - - |
           # cmake
           echo -e "\e[0Ksection_start:`date +%s`:cmake[collapsed=false]\r\e[0KBuilding Makefiles"
-      - cmake -B build.alpine3 -DSRB2_USE_CCACHE=YES -DSRB2_CONFIG_ERRORMODE=ON -DSRB2_CONFIG_EXECINFO=NO -G "Unix Makefiles"
+      - |
+          cmake \
+            -B build.cmake \
+            -G "Unix Makefiles" \
+            -DCMAKE_COLOR_DIAGNOSTICS=OFF \
+            -DSRB2_CONFIG_ENABLE_WEBM_MOVIES=OFF \
+            -DSRB2_CONFIG_ERRORMODE=ON \
+            -DSRB2_CONFIG_EXECINFO=NO \
+            -DSRB2_CONFIG_USE_GME:BOOL=ON
       - |
           # cmake
           echo -e "\e[0Ksection_end:`date +%s`:cmake\r\e[0K"
@@ -119,7 +125,7 @@ Alpine 3 GCC:
     - - |
           # make
           echo -e "\e[0Ksection_start:`date +%s`:make[collapsed=false]\r\e[0KCompiling SRB2"
-      - make --directory=build.alpine3 --keep-going || make --directory=build.alpine3 --keep-going
+      - cmake --build build.cmake --parallel 1 -- --keep-going
       - |
           # make
           echo -e "\e[0Ksection_end:`date +%s`:make\r\e[0K"
