@@ -39,10 +39,13 @@
       "name": "sdl2-mixer-ext",
       "features": [
         {
-          "name":"fluidsynth",
+          "name": "fluidsynth",
           "platform": "!static"
         },
-        "libflac",
+        {
+          "name": "libflac",
+          "platform": "!emscripten"
+        },
         "libgme",
         "libmodplug",
         "libvorbis",
