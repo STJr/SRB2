@@ -95,7 +95,8 @@ typedef struct
 	INT32 remaining;
 	INT32 completednum;
 	UINT32 completedsize;
-
+    UINT64 totalsize;
+    
 	boolean http_failed;
 	boolean http_running;
 
