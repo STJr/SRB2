@@ -325,6 +325,7 @@ static void CL_DrawConnectionStatus(void)
 
 static boolean CL_AskFileList(INT32 firstfile)
 {
+	doomdata_t *netbuffer = DOOMCOM_DATA(doomcom);
 	netbuffer->packettype = PT_TELLFILESNEEDED;
 	netbuffer->u.filesneedednum = firstfile;
 
@@ -340,6 +341,7 @@ boolean CL_SendJoin(void)
 {
 	UINT8 localplayers = 1;
 	char const *player2name;
+	doomdata_t *netbuffer = DOOMCOM_DATA(doomcom);
 	if (netgame)
 		CONS_Printf(M_GetText("Sending join request...\n"));
 	netbuffer->packettype = PT_CLIENTJOIN;
@@ -372,6 +374,7 @@ boolean CL_SendJoin(void)
 static void SendAskInfo(INT32 node)
 {
 	const tic_t asktime = I_GetTime();
+	doomdata_t *netbuffer = DOOMCOM_DATA(doomcom);
 	netbuffer->packettype = PT_ASKINFO;
 	netbuffer->u.askinfo.version = VERSION;
 	netbuffer->u.askinfo.time = (tic_t)LONG(asktime);
@@ -1357,6 +1360,7 @@ void CL_ConnectToServer(void)
 void PT_ServerInfo(SINT8 node)
 {
 	// compute ping in ms
+	doomdata_t *netbuffer = DOOMCOM_DATA(doomcom);
 	const tic_t ticnow = I_GetTime();
 	const tic_t ticthen = (tic_t)LONG(netbuffer->u.serverinfo.time);
 	const tic_t ticdiff = (ticnow - ticthen)*1000/NEWTICRATE;
@@ -1383,6 +1387,7 @@ static boolean ServerOnly(SINT8 node)
 
 void PT_MoreFilesNeeded(SINT8 node)
 {
+	doomdata_t *netbuffer = DOOMCOM_DATA(doomcom);
 	if (server && serverrunning)
 	{ // But wait I thought I'm the server?
 		Net_CloseConnection(node);
@@ -1401,6 +1406,7 @@ void PT_MoreFilesNeeded(SINT8 node)
 // Negative response of client join request
 void PT_ServerRefuse(SINT8 node)
 {
+	doomdata_t *netbuffer = DOOMCOM_DATA(doomcom);
 	if (server && serverrunning)
 	{ // But wait I thought I'm the server?
 		Net_CloseConnection(node);
@@ -1438,6 +1444,7 @@ void PT_ServerRefuse(SINT8 node)
 // Positive response of client join request
 void PT_ServerCFG(SINT8 node)
 {
+	doomdata_t *netbuffer = DOOMCOM_DATA(doomcom);
 	if (server && serverrunning && node != servernode)
 	{ // but wait I thought I'm the server?
 		Net_CloseConnection(node);

@@ -34,9 +34,6 @@ void Command_Numnodes(void);
 
 extern INT32 mapchangepending;
 
-// Points inside doomcom
-extern doomdata_t *netbuffer;
-
 #define BASEPACKETSIZE      offsetof(doomdata_t, u)
 #define BASESERVERTICSSIZE  offsetof(doomdata_t, u.serverpak.cmds[0])
 

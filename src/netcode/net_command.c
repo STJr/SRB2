@@ -232,6 +232,7 @@ size_t TotalTextCmdPerTic(tic_t tic)
 
 void PT_TextCmd(SINT8 node, INT32 netconsole)
 {
+	doomdata_t *netbuffer = DOOMCOM_DATA(doomcom);
 	if (client)
 		return;
 
@@ -338,6 +339,7 @@ void CL_CopyNetCommandsFromServerPacket(tic_t tic, UINT8 **buf)
 
 void CL_SendNetCommands(void)
 {
+	doomdata_t *netbuffer = DOOMCOM_DATA(doomcom);
 	// Send extra data if needed
 	if (localtextcmd[0])
 	{

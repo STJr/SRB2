@@ -95,6 +95,7 @@ GetRefuseReason (INT32 node)
 
 static void SV_SendServerInfo(INT32 node, tic_t servertime)
 {
+	doomdata_t *netbuffer = DOOMCOM_DATA(doomcom);
 	UINT8 *p;
 
 	netbuffer->packettype = PT_SERVERINFO;
@@ -173,6 +174,7 @@ static void SV_SendServerInfo(INT32 node, tic_t servertime)
 
 static void SV_SendPlayerInfo(INT32 node)
 {
+	doomdata_t *netbuffer = DOOMCOM_DATA(doomcom);
 	netbuffer->packettype = PT_PLAYERINFO;
 
 	for (UINT8 i = 0; i < MAXPLAYERS; i++)
@@ -240,6 +242,7 @@ static void SV_SendPlayerInfo(INT32 node)
   */
 static boolean SV_SendServerConfig(INT32 node)
 {
+	doomdata_t *netbuffer = DOOMCOM_DATA(doomcom);
 	boolean waspacketsent;
 
 	netbuffer->packettype = PT_SERVERCFG;
@@ -349,6 +352,7 @@ static void SV_AddPlayer(SINT8 node, const char *name)
 
 static void SV_SendRefuse(INT32 node, const char *reason)
 {
+	doomdata_t *netbuffer = DOOMCOM_DATA(doomcom);
 	strcpy(netbuffer->u.serverrefuse.reason, reason);
 
 	netbuffer->packettype = PT_SERVERREFUSE;
@@ -359,6 +363,7 @@ static void SV_SendRefuse(INT32 node, const char *reason)
 static const char *
 GetRefuseMessage (SINT8 node, INT32 rejoinernum)
 {
+	doomdata_t *netbuffer = DOOMCOM_DATA(doomcom);
 	clientconfig_pak *cc = &netbuffer->u.clientcfg;
 
 	boolean rejoining = (rejoinernum != -1);
@@ -435,6 +440,7 @@ GetRefuseMessage (SINT8 node, INT32 rejoinernum)
   */
 void PT_ClientJoin(SINT8 node)
 {
+	doomdata_t *netbuffer = DOOMCOM_DATA(doomcom);
 	char names[MAXSPLITSCREENPLAYERS][MAXPLAYERNAME + 1];
 	INT32 numplayers = netbuffer->u.clientcfg.localplayers;
 	INT32 rejoinernum;
@@ -494,6 +500,7 @@ void PT_AskInfoViaMS(SINT8 node)
 
 void PT_TellFilesNeeded(SINT8 node)
 {
+	doomdata_t *netbuffer = DOOMCOM_DATA(doomcom);
 	if (server && serverrunning)
 	{
 		UINT8 *p;
@@ -513,6 +520,7 @@ void PT_TellFilesNeeded(SINT8 node)
 
 void PT_AskInfo(SINT8 node)
 {
+	doomdata_t *netbuffer = DOOMCOM_DATA(doomcom);
 	if (server && serverrunning)
 	{
 		SV_SendServerInfo(node, (tic_t)LONG(netbuffer->u.askinfo.time));

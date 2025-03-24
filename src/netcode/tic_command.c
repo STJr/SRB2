@@ -115,6 +115,7 @@ static void CheckTiccmdHacks(INT32 playernum, tic_t tic)
 static void CheckConsistancy(SINT8 nodenum, tic_t tic)
 {
 	netnode_t *node = &netnodes[nodenum];
+	doomdata_t *netbuffer = DOOMCOM_DATA(doomcom);
 	INT16 neededconsistancy = consistancy[tic%BACKUPTICS];
 	INT16 clientconsistancy = SHORT(netbuffer->u.clientpak.consistancy);
 
@@ -151,6 +152,7 @@ static void CheckConsistancy(SINT8 nodenum, tic_t tic)
 void PT_ClientCmd(SINT8 nodenum, INT32 netconsole)
 {
 	netnode_t *node = &netnodes[nodenum];
+	doomdata_t *netbuffer = DOOMCOM_DATA(doomcom);
 	tic_t realend, realstart;
 
 	if (client)
@@ -213,6 +215,7 @@ void PT_ClientCmd(SINT8 nodenum, INT32 netconsole)
 void PT_ServerTics(SINT8 node, INT32 netconsole)
 {
 	tic_t realend, realstart;
+	doomdata_t *netbuffer = DOOMCOM_DATA(doomcom);
 	servertics_pak *packet = &netbuffer->u.serverpak;
 
 	if (!netnodes[node].ingame)
@@ -271,6 +274,7 @@ void CL_SendClientCmd(void)
 {
 	size_t packetsize = 0;
 	boolean mis = false;
+	doomdata_t *netbuffer = DOOMCOM_DATA(doomcom);
 
 	netbuffer->packettype = PT_CLIENTCMD;
 
@@ -355,6 +359,7 @@ static tic_t SV_CalculateNumTicsForPacket(SINT8 nodenum, tic_t firsttic, tic_t l
 // Sends tic/net commands from firstticstosend to maketic-1
 void SV_SendTics(void)
 {
+	doomdata_t *netbuffer = DOOMCOM_DATA(doomcom);
 	tic_t realfirsttic, lasttictosend;
 
 	// Send to all clients except yourself

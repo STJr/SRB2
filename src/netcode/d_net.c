@@ -54,8 +54,6 @@ INT16 extratics;
 
 /// \brief network packet
 doomcom_t *doomcom = NULL;
-/// \brief network packet data, points inside doomcom
-doomdata_t *netbuffer = NULL;
 
 #ifdef DEBUGFILE
 FILE *debugfile = NULL; // put some net info in a file during the game
@@ -198,6 +196,7 @@ FUNCMATH static inline INT32 cmpack(UINT8 a, UINT8 b)
   */
 static boolean GetFreeAcknum(UINT8 *freeack)
 {
+	doomdata_t *netbuffer = DOOMCOM_DATA(doomcom);
 	node_t *node = &nodes[doomcom->remotenode];
 	INT32 numfreeslot = 0;
 	INT32 i;
@@ -265,6 +264,7 @@ static void RemoveAck(node_t *node, INT32 i)
 // We have got a packet, proceed the ack request and ack return
 static boolean Processackpak(void)
 {
+	doomdata_t *netbuffer = DOOMCOM_DATA(doomcom);
 	boolean goodpacket = true;
 	node_t *node = &nodes[doomcom->remotenode];
 
@@ -340,6 +340,7 @@ void Net_ConnectionTimeout(INT32 node)
 // Resend the data if needed
 void Net_AckTicker(void)
 {
+	doomdata_t *netbuffer = DOOMCOM_DATA(doomcom);
 	for (INT32 nodei = 0; nodei < numnetnodes; nodei++)
 	{
 		for (INT32 i = 0; i < MAXACKPACKETS; i++)
@@ -460,6 +461,7 @@ static void InitAck(void)
 // remove a node, clear all ack from this node and reset askret
 void Net_CloseConnection(INT32 node)
 {
+	doomdata_t *netbuffer = DOOMCOM_DATA(doomcom);
 	boolean forceclose = (node & FORCECLOSE) != 0;
 
 	if (node == -1)
@@ -516,6 +518,7 @@ void Net_CloseConnection(INT32 node)
 //
 static UINT32 NetbufferChecksum(void)
 {
+	doomdata_t *netbuffer = DOOMCOM_DATA(doomcom);
 	UINT32 c = 0x1234567;
 	const INT32 l = doomcom->datalength - 4;
 	const UINT8 *buf = (UINT8 *)netbuffer + 4;
@@ -609,6 +612,7 @@ static const char *packettypename[NUMPACKETTYPE] =
 
 static void DebugPrintpacket(const char *header)
 {
+	doomdata_t *netbuffer = DOOMCOM_DATA(doomcom);
 	fprintf(debugfile, "%-12s (node %d,ack %d,ackret %d,size %d) type(%d) : %s\n",
 		header, doomcom->remotenode, netbuffer->ack, netbuffer->ackreturn, doomcom->datalength,
 		netbuffer->packettype, packettypename[netbuffer->packettype]);
@@ -770,6 +774,7 @@ void Command_Droprate(void)
 
 static boolean ShouldDropPacket(void)
 {
+	doomdata_t *netbuffer = DOOMCOM_DATA(doomcom);
 	return (packetdropquantity[netbuffer->packettype])
 		|| (packetdroprate != 0 && rand() < (((double)RAND_MAX) * (packetdroprate / 100.f))) || packetdroprate == 100;
 }
@@ -780,6 +785,7 @@ static boolean ShouldDropPacket(void)
 //
 boolean HSendPacket(INT32 node, boolean reliable, UINT8 acknum, size_t packetlength)
 {
+	doomdata_t *netbuffer = DOOMCOM_DATA(doomcom);
 	doomcom->datalength = (INT16)(packetlength + BASEPACKETSIZE);
 	if (node == 0) // Packet is to go back to us
 	{
@@ -870,6 +876,7 @@ boolean HSendPacket(INT32 node, boolean reliable, UINT8 acknum, size_t packetlen
 //
 boolean HGetPacket(void)
 {
+	doomdata_t *netbuffer = DOOMCOM_DATA(doomcom);
 	//boolean nodejustjoined;
 
 	// Get a packet from self
@@ -1075,8 +1082,6 @@ boolean D_CheckNetGame(void)
 
 	if (numnetnodes > MAXNETNODES)
 		I_Error("Too many nodes (%d), max:%d", numnetnodes, MAXNETNODES);
-
-	netbuffer = (doomdata_t *)(void *)&doomcom->data;
 
 #ifdef DEBUGFILE
 	if (M_CheckParm("-debugfile"))

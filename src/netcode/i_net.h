@@ -48,6 +48,8 @@ typedef struct
 	char data[MAXPACKETLENGTH];
 } ATTRPACK doomcom_t;
 
+#define DOOMCOM_DATA(d) (doomdata_t *)&(d)->data
+
 #if defined(_MSC_VER)
 #pragma pack()
 #endif
