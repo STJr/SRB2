@@ -474,6 +474,49 @@ static int lib_pRandomChance(lua_State *L)
 	return 1;
 }
 
+static int lib_mRandomFixed(lua_State *L)
+{
+	lua_pushfixed(L, M_RandomFixed());
+	return 1;
+}
+
+static int lib_mRandomByte(lua_State *L)
+{
+	lua_pushinteger(L, M_RandomByte());
+	return 1;
+}
+
+static int lib_mRandomKey(lua_State *L)
+{
+	INT32 a = (INT32)luaL_checkinteger(L, 1);
+
+	lua_pushinteger(L, M_RandomKey(a));
+	return 1;
+}
+
+static int lib_mRandomRange(lua_State *L)
+{
+	INT32 a = (INT32)luaL_checkinteger(L, 1);
+	INT32 b = (INT32)luaL_checkinteger(L, 2);
+
+	lua_pushinteger(L, M_RandomRange(a, b));
+	return 1;
+}
+
+// Macros.
+static int lib_mSignedRandom(lua_State *L)
+{
+	lua_pushinteger(L, M_SignedRandom());
+	return 1;
+}
+
+static int lib_mRandomChance(lua_State *L)
+{
+	fixed_t p = luaL_checkfixed(L, 1);
+	lua_pushboolean(L, M_RandomChance(p));
+	return 1;
+}
+
 // P_MAPUTIL
 ///////////////
 
@@ -2897,7 +2940,7 @@ static int lib_pStartQuake(lua_State *L)
 	quake.intensity = q_intensity;
 	quake.time = q_time;
 	quake.starttime = q_time;
-    if (quake.time != 1)
+    if (quake.time > 1)
 	    quake.minus = quake.intensity / q_time;
 	else
         quake.minus = 0;
@@ -4402,6 +4445,13 @@ static luaL_Reg lib[] = {
 	{"P_RandomRange",lib_pRandomRange},
 	{"P_SignedRandom",lib_pSignedRandom}, // MACRO
 	{"P_RandomChance",lib_pRandomChance}, // MACRO
+	
+	{"M_RandomFixed",lib_mRandomFixed},
+	{"M_RandomByte",lib_mRandomByte},
+	{"M_RandomKey",lib_mRandomKey},
+	{"M_RandomRange",lib_mRandomRange},
+	{"M_SignedRandom",lib_mSignedRandom}, // MACRO
+	{"M_RandomChance",lib_mRandomChance}, // MACRO
 
 	// p_maputil
 	{"P_AproxDistance",lib_pAproxDistance},
