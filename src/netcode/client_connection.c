@@ -388,8 +388,6 @@ static void SendAskInfo(INT32 node)
 serverelem_t serverlist[MAXSERVERLIST];
 UINT32 serverlistcount = 0;
 
-#define FORCECLOSE 0x8000
-
 static void SL_ClearServerList(INT32 connectedserver)
 {
 	for (UINT32 i = 0; i < serverlistcount; i++)

@@ -28,6 +28,8 @@
 #define MAXSPLITSCREENPLAYERS 2 // Max number of players on a single computer
 //#define NETSPLITSCREEN // Kart's splitscreen netgame feature
 
+#define FORCECLOSE 0x8000
+
 #define STATLENGTH (TICRATE*2)
 
 // stat of net

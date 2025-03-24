@@ -45,7 +45,6 @@
 //   firstticstosend is used to optimize a condition
 // Normally maketic >= gametic > 0
 
-#define FORCECLOSE 0x8000
 tic_t connectiontimeout = (10*TICRATE);
 
 INT16 numnetnodes;
@@ -335,27 +334,32 @@ void Net_ConnectionTimeout(INT32 node)
 	// Do not redo it quickly (if we do not close connection it is
 	// for a good reason!)
 	nodes[node].lasttimepacketreceived = I_GetTime();
+	for (INT32 i = 0; i < MAXACKPACKETS; i++)
+	{
+		// reset resentnum so we don't drop the connection immediately
+		nodes[node].ackpak[i].resentnum = 0;
+	}
 }
 
 // Resend the data if needed
 void Net_AckTicker(void)
 {
 	doomdata_t *netbuffer = DOOMCOM_DATA(doomcom);
-	for (INT32 nodei = 0; nodei < numnetnodes; nodei++)
+	for (INT32 nodei = 0; nodei < MAXNETNODES; nodei++)
 	{
+		node_t *node = &nodes[nodei];
 		for (INT32 i = 0; i < MAXACKPACKETS; i++)
 		{
-			node_t *node = &nodes[nodei];
-			if (node->ackpak[i].acknum && node->ackpak[i].senttime + NODETIMEOUT < I_GetTime())
+			if (node->ackpak[i].acknum)
 			{
-				if (node->ackpak[i].resentnum > 20 && (node->flags & NF_CLOSE))
+				if (node->ackpak[i].resentnum > 70 && (node->flags & NF_CLOSE))
 				{
-					DEBFILE(va("ack %d sent 20 times so connection is supposed lost: node %d\n",
+					DEBFILE(va("ack %d sent 70 times so connection is supposed lost: node %d\n",
 						i, nodei));
 					Net_CloseConnection(nodei | FORCECLOSE);
 
 					node->ackpak[i].acknum = 0;
-					continue;
+					break;
 				}
 				DEBFILE(va("Resend ack %d, %u<%d at %u\n", node->ackpak[i].acknum, node->ackpak[i].senttime,
 					NODETIMEOUT, I_GetTime()));
