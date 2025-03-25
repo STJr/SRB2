@@ -2444,10 +2444,8 @@ INT32 I_StartupSystem(void)
 	SDL_version SDLlinked;
 	SDL_VERSION(&SDLcompiled)
 	SDL_GetVersion(&SDLlinked);
-#ifdef HAVE_THREADS
 	I_start_threads();
 	I_AddExitFunc(I_stop_threads);
-#endif
 	I_StartupConsole();
 #ifdef NEWSIGNALHANDLER
 	// This is useful when debugging. It lets GDB attach to

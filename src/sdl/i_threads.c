@@ -185,7 +185,10 @@ I_spawn_thread (
 			);
 
 			if (! th->thread)
+			{
+				I_OutputMsg("I_spawn_thread failed to make thread %s: %s\n", name, SDL_GetError());
 				abort();
+			}
 		}
 	}
 	I_unlock_mutex(i_thread_pool_mutex);
