@@ -23,6 +23,10 @@
 /// \file
 /// \brief SRB2 system stuff for SDL
 
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#endif
+
 #include <signal.h>
 
 #ifdef _WIN32
@@ -2310,7 +2314,11 @@ void I_StartupTimer(void)
 
 void I_Sleep(UINT32 ms)
 {
+#if defined (__EMSCRIPTEN__) && 0
+	emscripten_sleep(ms);
+#else
 	SDL_Delay(ms);
+#endif
 }
 
 void I_SleepDuration(precise_t duration)
@@ -2519,7 +2527,12 @@ void I_Quit(void)
 		free(myargv); // Deallocate allocated memory
 death:
 	W_Shutdown();
+#ifdef __EMSCRIPTEN__
+    emscripten_cancel_main_loop();
+    emscripten_force_exit(0);
+#else
 	exit(0);
+#endif
 }
 
 void I_WaitVBL(INT32 count)
