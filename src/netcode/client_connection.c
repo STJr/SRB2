@@ -392,7 +392,7 @@ static void SL_InsertServer(serverinfo_pak* info, SINT8 node)
 	M_SortServerList();
 }
 
-#if defined (MASTERSERVER) && defined (HAVE_THREADS)
+#if defined (MASTERSERVER)
 struct Fetch_servers_ctx
 {
 	int room;
@@ -437,7 +437,7 @@ Fetch_servers_thread (struct Fetch_servers_ctx *ctx)
 
 	free(ctx);
 }
-#endif // defined (MASTERSERVER) && defined (HAVE_THREADS)
+#endif // defined (MASTERSERVER)
 
 void CL_QueryServerList (msg_server_t *server_list)
 {
@@ -493,34 +493,38 @@ void CL_UpdateServerList(boolean internetsearch, INT32 room)
 #ifdef MASTERSERVER
 	if (internetsearch)
 	{
-#ifdef HAVE_THREADS
-		struct Fetch_servers_ctx *ctx;
-
-		ctx = malloc(sizeof *ctx);
-
-		// This called from M_Refresh so I don't use a mutex
-		m_waiting_mode = M_WAITING_SERVERS;
-
-		I_lock_mutex(&ms_QueryId_mutex);
+		if (I_can_thread())
 		{
-			ctx->id = ms_QueryId;
+			struct Fetch_servers_ctx *ctx;
+
+			ctx = malloc(sizeof *ctx);
+
+			// This called from M_Refresh so I don't use a mutex
+			m_waiting_mode = M_WAITING_SERVERS;
+
+			I_lock_mutex(&ms_QueryId_mutex);
+			{
+				ctx->id = ms_QueryId;
+			}
+			I_unlock_mutex(ms_QueryId_mutex);
+
+			ctx->room = room;
+
+			(void)I_spawn_thread("fetch-servers", (I_thread_fn)Fetch_servers_thread, ctx);
 		}
-		I_unlock_mutex(ms_QueryId_mutex);
-
-		ctx->room = room;
-
-		I_spawn_thread("fetch-servers", (I_thread_fn)Fetch_servers_thread, ctx);
-#else
-		msg_server_t *server_list;
-
-		server_list = GetShortServersList(room, 0);
-
-		if (server_list)
+		else
 		{
-			CL_QueryServerList(server_list);
-			free(server_list);
+			msg_server_t *server_list;
+
+			server_list = GetShortServersList(room, 0);
+
+			if (server_list)
+			{
+				CL_QueryServerList(server_list);
+				free(server_list);
+			}
 		}
-#endif
+
 	}
 #endif // MASTERSERVER
 }
@@ -1187,13 +1191,9 @@ static boolean CL_ServerConnectionTicker(const char *tmpsave, tic_t *oldtic, tic
 				F_TitleScreenDrawer();
 			}
 			CL_DrawConnectionStatus();
-#ifdef HAVE_THREADS
 			I_lock_mutex(&m_menu_mutex);
-#endif
 			M_Drawer(); //Needed for drawing messageboxes on the connection screen
-#ifdef HAVE_THREADS
 			I_unlock_mutex(m_menu_mutex);
-#endif
 			I_UpdateNoVsync(); // page flip or blit buffer
 			if (moviemode)
 				M_SaveFrame();

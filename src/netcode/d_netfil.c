@@ -1605,6 +1605,9 @@ boolean CURLPrepareFile(const char* url, int dfilenum)
 {
 	HTTP_login *login;
 
+	if (!I_can_thread())
+		return false;
+
 #ifdef PARANOIA
 	if (M_CheckParm("-nodownload"))
 		I_Error("Attempted to download files in -nodownload mode");
@@ -1675,7 +1678,7 @@ boolean CURLPrepareFile(const char* url, int dfilenum)
 		filedownload.current = dfilenum;
 		filedownload.http_running = true;
 
-		I_spawn_thread("http-download", (I_thread_fn)CURLGetFile, NULL);
+		(void)I_spawn_thread("http-download", (I_thread_fn)CURLGetFile, NULL);
 
 		return true;
 	}

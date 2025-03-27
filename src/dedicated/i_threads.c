@@ -42,10 +42,11 @@ static void *HandleThread(void *data)
 	return NULL;
 }
 
-void I_spawn_thread(const char *name, I_thread_fn entry, void *userdata)
+int I_spawn_thread(const char *name, I_thread_fn entry, void *userdata)
 {
 	thread_t *thread;
 	(void)name;
+
 	pthread_mutex_lock(&thread_lock);
 	thread = thread_list;
 	while (thread != NULL)
@@ -69,6 +70,13 @@ void I_spawn_thread(const char *name, I_thread_fn entry, void *userdata)
 	thread->userdata = userdata;
 	pthread_create(&thread->thread, NULL, HandleThread, thread);
 	pthread_mutex_unlock(&thread_lock);
+
+	return true;
+}
+
+int I_can_thread(void)
+{
+	return true;
 }
 
 int I_thread_is_stopped(void)

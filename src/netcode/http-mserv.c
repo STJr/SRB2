@@ -70,9 +70,7 @@ static boolean hms_allow_ipv6;
 static boolean hms_allow_ipv4;
 
 static char *hms_api;
-#ifdef HAVE_THREADS
 static I_mutex hms_api_mutex;
-#endif
 
 static char *hms_server_token;
 #ifndef NO_IPV6
@@ -201,9 +199,7 @@ HMS_connect (int proto, const char *format, ...)
 		token_length = 0;
 	}
 
-#ifdef HAVE_THREADS
 	I_lock_mutex(&hms_api_mutex);
-#endif
 
 	init_user_agent_once();
 
@@ -215,9 +211,7 @@ HMS_connect (int proto, const char *format, ...)
 
 	sprintf(url, "%s/", hms_api);
 
-#ifdef HAVE_THREADS
 	I_unlock_mutex(hms_api_mutex);
-#endif
 
 	va_start (ap, format);
 	seek += vsprintf(&url[seek], format, ap);
@@ -379,7 +373,6 @@ HMS_fetch_rooms (int joining, int query_id)
 				*/
 				if (joining || id_no != 0)
 				{
-#ifdef HAVE_THREADS
 					I_lock_mutex(&ms_QueryId_mutex);
 					{
 						if (query_id != ms_QueryId)
@@ -389,7 +382,6 @@ HMS_fetch_rooms (int joining, int query_id)
 
 					if (! doing_shit)
 						break;
-#endif
 
 					room_list[i].header.buffer[0] = 1;
 
@@ -413,9 +405,7 @@ HMS_fetch_rooms (int joining, int query_id)
 
 		if (doing_shit)
 		{
-#ifdef HAVE_THREADS
 			I_lock_mutex(&m_menu_mutex);
-#endif
 			{
 				for (i = 0; room_list[i].header.buffer[0]; i++)
 				{
@@ -427,9 +417,7 @@ HMS_fetch_rooms (int joining, int query_id)
 					}
 				}
 			}
-#ifdef HAVE_THREADS
 			I_unlock_mutex(m_menu_mutex);
-#endif
 		}
 	}
 	else
@@ -710,7 +698,6 @@ HMS_fetch_servers (msg_server_t *list, int room_number, int query_id)
 
 				if (address && port && title && version)
 				{
-#ifdef HAVE_THREADS
 					I_lock_mutex(&ms_QueryId_mutex);
 					{
 						if (query_id != ms_QueryId)
@@ -720,7 +707,6 @@ HMS_fetch_servers (msg_server_t *list, int room_number, int query_id)
 
 					if (! doing_shit)
 						break;
-#endif
 
 					if (strcmp(version, local_version) == 0)
 					{
@@ -809,16 +795,12 @@ HMS_compare_mod_version (char *buffer, size_t buffer_size)
 void
 HMS_set_api (char *api)
 {
-#ifdef HAVE_THREADS
 	I_lock_mutex(&hms_api_mutex);
-#endif
 	{
 		free(hms_api);
 		hms_api = api;
 	}
-#ifdef HAVE_THREADS
 	I_unlock_mutex(hms_api_mutex);
-#endif
 }
 
 #endif/*MASTERSERVER*/

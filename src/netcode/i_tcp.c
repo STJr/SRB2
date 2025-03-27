@@ -274,9 +274,14 @@ static void init_upnpc_once(struct upnpdata *upnpdata);
 
 static void I_InitUPnP(void)
 {
+	if (!I_can_thread())
+	{
+		UPNP_support = false;
+		return;
+	}
 	upnpuser = malloc(sizeof *upnpuser);
 	upnpuser->upnpc_started = 0;
-	I_spawn_thread("init_upnpc_once", (I_thread_fn)init_upnpc_once, upnpuser);
+	(void)I_spawn_thread("init_upnpc_once", (I_thread_fn)init_upnpc_once, upnpuser);
 }
 
 static void

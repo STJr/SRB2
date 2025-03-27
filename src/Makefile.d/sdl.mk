@@ -43,10 +43,7 @@ sources+=sdl/mixer_sound.c
   endif
 endif
 
-ifndef NOTHREADS
-opts+=-DHAVE_THREADS
 sources+=sdl/i_threads.c
-endif
 
 ifdef SDL_PKGCONFIG
 $(eval $(call Use_pkg_config,SDL))
