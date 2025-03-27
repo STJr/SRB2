@@ -103,6 +103,10 @@ typedef LPVOID (WINAPI *p_MapViewOfFile) (HANDLE, DWORD, DWORD, DWORD, SIZE_T);
 #endif
 #endif
 
+#ifdef __EMSCRIPTEN__
+#undef HAVE_TERMIOS // do not read on /dev/tty, JavaScript alert() are blocking
+#endif
+
 #if defined(UNIXCOMMON)
 #include <poll.h>
 #endif
@@ -799,6 +803,11 @@ static inline void I_StartupConsole(void)
 
 	framebuffer = M_CheckParm("-framebuffer");
 
+#ifdef __EMSCRIPTEN__
+	framebuffer = SDL_FALSE;
+	consolevent = SDL_TRUE;
+#endif
+
 	if (framebuffer)
 		consolevent = SDL_FALSE;
 }
@@ -972,7 +981,9 @@ void I_OutputMsg(const char *fmt, ...)
 #endif
 
 	if (!framebuffer)
+	{
 		fprintf(stderr, "%s", txt);
+	}
 #ifdef HAVE_TERMIOS
 	if (consolevent && txt[len-1] == '\n')
 	{
