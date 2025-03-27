@@ -15,6 +15,10 @@
 ///        plus functions to parse command line parameters, configure game
 ///        parameters, and call the startup functions.
 
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#endif
+
 #if defined (__unix__) || defined (__APPLE__) || defined (UNIXCOMMON)
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -693,16 +697,11 @@ static void D_Display(void)
 
 tic_t rendergametic;
 
+static void D_RunFrame(void);
+static tic_t oldentertics = 0;
+
 void D_SRB2Loop(void)
 {
-	tic_t entertic = 0, oldentertics = 0, realtics = 0, rendertimeout = INFTICS;
-	double deltatics = 0.0;
-	double deltasecs = 0.0;
-	static lumpnum_t gstartuplumpnum;
-
-	boolean interp = false;
-	boolean doDisplay = false;
-
 	if (dedicated)
 		server = true;
 
@@ -746,13 +745,55 @@ void D_SRB2Loop(void)
 	/* Smells like a hack... Don't fade Sonic's ass into the title screen. */
 	if (gamestate != GS_TITLESCREEN)
 	{
-		gstartuplumpnum = W_CheckNumForPatchName("STARTUP");
+		lumpnum_t gstartuplumpnum = W_CheckNumForPatchName("STARTUP");
 		if (gstartuplumpnum == LUMPERROR)
 			gstartuplumpnum = W_GetNumForPatchName("MISSING");
 		V_DrawScaledPatch(0, 0, 0, W_CachePatchNum(gstartuplumpnum, PU_PATCH));
 	}
-
+#ifdef __EMSCRIPTEN__
+	emscripten_set_main_loop(D_RunFrame, 0, 1);
+#else
 	for (;;)
+	{
+		D_RunFrame();
+	}
+#endif
+}
+
+static boolean D_LockFrame = false;
+
+#ifdef __EMSCRIPTEN__
+
+void change_resolution(int x, int y)
+{
+	setmodeneeded = VID_GetModeForSize(x, y) + 1;
+}
+
+void pause_loop(void)
+{
+	D_LockFrame = true;
+	//emscripten_sleep(1000);
+	emscripten_pause_main_loop();
+}
+
+void resume_loop(void)
+{
+	D_LockFrame = false;
+	//emscripten_sleep(1000);
+	emscripten_resume_main_loop();
+}
+#endif
+
+static void D_RunFrame(void)
+{
+	static tic_t entertic = 0, realtics = 0, rendertimeout = INFTICS;
+	static double deltatics = 0.0;
+	static double deltasecs = 0.0;
+
+	static boolean interp = false;
+	static boolean doDisplay = false;
+
+	if (!D_LockFrame)
 	{
 		// capbudget is the minimum precise_t duration of a single loop iteration
 		precise_t capbudget;
@@ -908,6 +949,7 @@ void D_SRB2Loop(void)
 		deltasecs = (double)((INT64)(finishprecise - enterprecise)) / I_GetPrecisePrecision();
 		deltatics = deltasecs * NEWTICRATE;
 	}
+	return;
 }
 
 //
