@@ -20,6 +20,10 @@
 /// \file
 /// \brief SRB2 graphics stuff for SDL
 
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#endif
+
 #include <stdlib.h>
 
 #include <signal.h>
@@ -1973,3 +1977,53 @@ UINT32 I_GetRefreshRate(void)
 	// trouble querying mode over and over again.
 	return refresh_rate;
 }
+
+#ifdef __EMSCRIPTEN__
+int change_resolution(int x, int y)
+{
+	vid.width = x;
+	vid.height = y;
+	return VID_CheckRenderer();
+}
+
+void inject_text(const char *text)
+{
+	event_t event;
+	size_t len = 0;
+	event.type = ev_text;
+	{
+		event.key = text[len];
+		D_PostEvent(&event);
+		len++;
+	} while (text[len] != 0x00);
+}
+
+void inject_keycode(int key, int type)
+{
+	event_t event;
+	if (type == true)
+	{
+		event.type = ev_keyup;
+	}
+	else if (type == false)
+	{
+		event.type = ev_keydown;
+	}
+	else
+	{
+		return;
+	}
+	event.key = key;
+	if (event.key) D_PostEvent(&event);
+}
+
+void unlock_mouse(void)
+{
+	SDLforceUngrabMouse();
+}
+
+void lock_mouse(void)
+{
+	SDLdoGrabMouse();
+}
+#endif

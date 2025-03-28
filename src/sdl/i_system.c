@@ -2527,12 +2527,7 @@ void I_Quit(void)
 		free(myargv); // Deallocate allocated memory
 death:
 	W_Shutdown();
-#ifdef __EMSCRIPTEN__
-    emscripten_cancel_main_loop();
-    emscripten_force_exit(0);
-#else
 	exit(0);
-#endif
 }
 
 void I_WaitVBL(INT32 count)

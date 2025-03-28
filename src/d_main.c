@@ -737,12 +737,23 @@ void D_SRB2Loop(void)
 	// hack to start on a nice clear console screen.
 	COM_ImmedExecute("cls;version");
 
+#ifdef __EMSCRIPTEN__
+	EM_ASM(
+		try {
+			StartedMainLoopCallback();
+		} catch (err) {
+			console.log('Faild to find StartedMainLoopCallback()');
+		}
+	);
+#endif
+
 	I_FinishUpdate(); // page flip or blit buffer
 	/*
 	LMFAO this was showing garbage under OpenGL
 	because I_FinishUpdate was called afterward
 	*/
 	/* Smells like a hack... Don't fade Sonic's ass into the title screen. */
+
 	if (gamestate != GS_TITLESCREEN)
 	{
 		lumpnum_t gstartuplumpnum = W_CheckNumForPatchName("STARTUP");
@@ -763,24 +774,20 @@ void D_SRB2Loop(void)
 static boolean D_LockFrame = false;
 
 #ifdef __EMSCRIPTEN__
-
-void change_resolution(int x, int y)
-{
-	setmodeneeded = VID_GetModeForSize(x, y) + 1;
-}
-
-void pause_loop(void)
+int pause_loop(void)
 {
 	D_LockFrame = true;
 	//emscripten_sleep(1000);
 	emscripten_pause_main_loop();
+	return 0;
 }
 
-void resume_loop(void)
+int resume_loop(void)
 {
 	D_LockFrame = false;
 	//emscripten_sleep(1000);
 	emscripten_resume_main_loop();
+	return 0;
 }
 #endif
 
