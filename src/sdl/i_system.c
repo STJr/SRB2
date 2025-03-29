@@ -3239,7 +3239,13 @@ size_t I_GetFreeMem(size_t *total)
 #else
 	// Guess 48 MB.
 	if (total)
+	{
+#if SDL_VERSION_ATLEAST(2,0,1)
+		*total = SDL_GetSystemRAM();
+#else
 		*total = 48<<20;
+#endif
+	}
 	return 48<<20;
 #endif
 }
