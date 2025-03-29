@@ -2312,11 +2312,13 @@ void I_StartupTimer(void)
 
 void I_Sleep(UINT32 ms)
 {
-#if defined (__EMSCRIPTEN__) && 0
-	emscripten_sleep(ms);
-#else
-	SDL_Delay(ms);
+#if defined (__EMSCRIPTEN__)
+	if (emscripten_has_asyncify())
+	{
+		return emscripten_sleep(ms);
+	}
 #endif
+	SDL_Delay(ms);
 }
 
 void I_SleepDuration(precise_t duration)
