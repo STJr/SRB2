@@ -807,11 +807,6 @@ static inline void I_StartupConsole(void)
 
 	framebuffer = M_CheckParm("-framebuffer");
 
-#ifdef __EMSCRIPTEN__
-	framebuffer = SDL_FALSE;
-	consolevent = SDL_TRUE;
-#endif
-
 	if (framebuffer)
 		consolevent = SDL_FALSE;
 }
@@ -984,10 +979,13 @@ void I_OutputMsg(const char *fmt, ...)
 	}
 #endif
 
+#ifdef __EMSCRIPTEN__
+	fprintf(stdout, "%s", txt);
+#else
 	if (!framebuffer)
-	{
 		fprintf(stderr, "%s", txt);
-	}
+#endif
+
 #ifdef HAVE_TERMIOS
 	if (consolevent && txt[len-1] == '\n')
 	{
