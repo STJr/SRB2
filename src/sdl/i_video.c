@@ -479,6 +479,35 @@ static void SurfaceInfo(const SDL_Surface *infoSurface, const char *SurfaceText)
 		CONS_Printf("%s", M_GetText(" Colorkey RLE acceleration blit\n"));
 }
 
+static void TimingInfo(void)
+{
+#ifdef __EMSCRIPTEN__
+	int mode = -1, value = -1;
+	emscripten_get_main_loop_timing(&mode, &value);
+	CONS_Printf("\x82" "Currect Timing Mode\n");
+	if (mode == -1)
+	{
+		CONS_Printf(" Unknown\n");
+	}
+	else if (mode == EM_TIMING_SETTIMEOUT)
+	{
+		CONS_Printf(" everty %d ms\n", value);
+	}
+	else if (mode == EM_TIMING_RAF)
+	{
+		CONS_Printf(" every %d vsync\n", value);
+	}
+	else if (mode == EM_TIMING_SETIMMEDIATE)
+	{
+		CONS_Printf(" Unknown value %d\n", value);
+	}
+	else
+	{
+		CONS_Printf(" Unknown mode %d\n", mode);
+	}
+#endif
+}
+
 static void VID_Command_Info_f (void)
 {
 #if 0
@@ -526,6 +555,7 @@ static void VID_Command_Info_f (void)
 	SurfaceInfo(bufSurface, M_GetText("Current Engine Mode"));
 	SurfaceInfo(vidSurface, M_GetText("Current Video Mode"));
 #endif
+	TimingInfo();
 }
 
 static void VID_Command_ModeList_f(void)
@@ -1836,7 +1866,11 @@ void I_StartupGraphics(void)
 	I_ShutdownTTF();
 #endif
 
+#ifdef __EMSCRIPTEN__
+	VID_SetMode(VID_GetModeForSize(BASEVIDWIDTH*2, BASEVIDHEIGHT*2));
+#else
 	VID_SetMode(VID_GetModeForSize(BASEVIDWIDTH, BASEVIDHEIGHT));
+#endif
 
 	if (M_CheckParm("-nomousegrab"))
 		mousegrabok = SDL_FALSE;
