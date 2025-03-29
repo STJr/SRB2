@@ -774,18 +774,16 @@ void D_SRB2Loop(void)
 static boolean D_LockFrame = false;
 
 #ifdef __EMSCRIPTEN__
-int pause_loop(void)
+int EMSCRIPTEN_KEEPALIVE pause_loop(void)
 {
 	D_LockFrame = true;
-	//emscripten_sleep(1000);
 	emscripten_pause_main_loop();
 	return 0;
 }
 
-int resume_loop(void)
+int EMSCRIPTEN_KEEPALIVE resume_loop(void)
 {
 	D_LockFrame = false;
-	//emscripten_sleep(1000);
 	emscripten_resume_main_loop();
 	return 0;
 }
