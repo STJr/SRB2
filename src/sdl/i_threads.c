@@ -210,7 +210,11 @@ I_spawn_thread (
 int
 I_can_thread (void)
 {
+#ifdef __EMSCRIPTEN_PTHREADS__
+	return true;
+#else
 	return SDL_ThreadID() != 0;
+#endif
 }
 
 int
