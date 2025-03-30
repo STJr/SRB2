@@ -1759,14 +1759,15 @@ void CURLGetFile(void)
 	{
 		if (curl_runninghandles)
 		{
-			curl_multi_perform(multi_handle, &curl_runninghandles);
+			mc = curl_multi_perform(multi_handle, &curl_runninghandles);
+			if (mc != CURLM_OK) I_OutputMsg("libcurl: %s\n", curl_multi_strerror(mc));
 
 			/* wait for activity, timeout or "nothing" */
 			mc = curl_multi_wait(multi_handle, NULL, 0, 1000, NULL);
 
 			if (mc != CURLM_OK)
 			{
-				CONS_Alert(CONS_WARNING, "curl_multi_wait() failed, code %d.\n", mc);
+				CONS_Alert(CONS_WARNING, "curl_multi_wait() failed: %s.\n", curl_multi_strerror(mc));
 				continue;
 			}
 			curl_curfile->currentsize = curl_dlnow;
@@ -1834,7 +1835,8 @@ void CURLGetFile(void)
 
 				curl_curfile->file = NULL;
 				filedownload.remaining--;
-				curl_multi_remove_handle(multi_handle, e);
+				mc = curl_multi_remove_handle(multi_handle, e);
+				if (mc != CURLM_OK) I_OutputMsg("libcurl: %s\n", curl_multi_strerror(mc));
 				curl_easy_cleanup(e);
 
 				if (!filedownload.remaining)
@@ -1845,7 +1847,8 @@ void CURLGetFile(void)
 
 	if (!filedownload.remaining || !filedownload.http_running)
 	{
-		curl_multi_cleanup(multi_handle);
+		mc = curl_multi_cleanup(multi_handle);
+		if (mc != CURLM_OK) I_OutputMsg("libcurl: %s\n", curl_multi_strerror(mc));
 		curl_global_cleanup();
 		multi_handle = NULL;
 	}
