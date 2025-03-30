@@ -1604,6 +1604,7 @@ static int curlprogress_callback(void *clientp, curl_off_t dltotal, curl_off_t d
 boolean CURLPrepareFile(const char* url, int dfilenum)
 {
 	HTTP_login *login;
+	CURLcode cc;
 
 	if (!I_can_thread())
 		return false;
@@ -1615,13 +1616,28 @@ boolean CURLPrepareFile(const char* url, int dfilenum)
 
 	if (!multi_handle)
 	{
-		curl_global_init(CURL_GLOBAL_ALL);
-		multi_handle = curl_multi_init();
+		cc = curl_global_init(CURL_GLOBAL_ALL);
+		if (cc < 0)
+		{
+			I_OutputMsg("libcurl: curl_global_init() returned %d\n", cc);
+		}
+		else
+		{
+			multi_handle = curl_multi_init();
+		}
+		if (!multi_handle)
+		{
+			I_OutputMsg("libcurl: curl_multi_init() failed\n");
+			curl_global_cleanup();
+			return false;
+		}
 	}
 
 	http_handle = curl_easy_init();
-	if (http_handle && multi_handle)
+	if (http_handle)
 	{
+		CURLMcode mc;
+
 		I_mkdir(downloaddir, 0755);
 
 		curl_curfile = &fileneeded[dfilenum];
@@ -1678,7 +1694,15 @@ boolean CURLPrepareFile(const char* url, int dfilenum)
 		filedownload.current = dfilenum;
 		filedownload.http_running = true;
 
-		(void)I_spawn_thread("http-download", (I_thread_fn)CURLGetFile, NULL);
+		if (!I_spawn_thread("http-download", (I_thread_fn)CURLGetFile, NULL))
+		{
+			mc = curl_multi_cleanup(multi_handle);
+			if (mc != CURLM_OK) I_OutputMsg("libcurl: %s\n",  curl_multi_strerror(mc));
+			curl_global_cleanup();
+			multi_handle = NULL;
+			filedownload.http_running = false;
+			return false;
+		}
 
 		return true;
 	}

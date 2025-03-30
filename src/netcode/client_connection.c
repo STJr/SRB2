@@ -510,7 +510,10 @@ void CL_UpdateServerList(boolean internetsearch, INT32 room)
 
 			ctx->room = room;
 
-			(void)I_spawn_thread("fetch-servers", (I_thread_fn)Fetch_servers_thread, ctx);
+			if (!I_spawn_thread("fetch-servers", (I_thread_fn)Fetch_servers_thread, ctx))
+			{
+				free(ctx);
+			}
 		}
 		else
 		{

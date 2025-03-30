@@ -392,11 +392,15 @@ void RegisterServer(void)
 #ifdef MASTERSERVER
 	if (I_can_thread())
 	{
-		(void)I_spawn_thread(
+		void *nsid = New_server_id();
+		if (!I_spawn_thread(
 				"register-server",
 				(I_thread_fn)Register_server_thread,
-				New_server_id()
-		);
+				nsid
+		))
+		{
+			free(nsid);
+		}
 	}
 	else
 	{
@@ -409,11 +413,15 @@ static void UpdateServer(void)
 {
 	if (I_can_thread())
 	{
-		(void)I_spawn_thread(
+		void *sid = Server_id();
+		if (!I_spawn_thread(
 				"update-server",
 				(I_thread_fn)Update_server_thread,
-				Server_id()
-		);
+				sid
+		))
+		{
+			free(sid);
+		}
 	}
 	else
 	{
@@ -426,11 +434,14 @@ void UnregisterServer(void)
 #ifdef MASTERSERVER
 	if (I_can_thread())
 	{
-		(void)I_spawn_thread(
+		if (!I_spawn_thread(
 				"unlist-server",
 				(I_thread_fn)Unlist_server_thread,
 				Server_id()
-		);
+		))
+		{
+			;
+		}
 	}
 	else
 	{
@@ -482,17 +493,21 @@ void MasterClient_Ticker(void)
 static void
 Set_api (const char *api)
 {
+	char *dapi = strdup(api);
 	if (I_can_thread())
 	{
-		(void)I_spawn_thread(
+		if (!I_spawn_thread(
 				"change-masterserver",
 				(I_thread_fn)Change_masterserver_thread,
-				strdup(api)
-		);
+				dapi
+		))
+		{
+			free(dapi);
+		}
 	}
 	else
 	{
-		HMS_set_api(strdup(api));
+		HMS_set_api(dapi);
 	}
 }
 

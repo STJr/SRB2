@@ -11519,8 +11519,11 @@ static void M_RoomMenu(INT32 choice)
 		}
 		I_unlock_mutex(ms_QueryId_mutex);
 
-		(void)I_spawn_thread("check-new-version",
-				(I_thread_fn)Check_new_version_thread, id);
+		if(!I_spawn_thread("check-new-version",
+				(I_thread_fn)Check_new_version_thread, id))
+		{
+			free(id);
+		}
 	}
 	else
 	{
