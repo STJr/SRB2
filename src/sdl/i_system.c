@@ -2528,10 +2528,10 @@ void I_Quit(void)
 death:
 	W_Shutdown();
 #ifdef __EMSCRIPTEN__
+	emscripten_cancel_main_loop();
 	emscripten_force_exit(0);
-#else
-	exit(0);
 #endif
+	exit(0);
 }
 
 void I_WaitVBL(INT32 count)
