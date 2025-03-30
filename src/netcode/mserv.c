@@ -389,7 +389,6 @@ Change_masterserver_thread (char *api)
 
 void RegisterServer(void)
 {
-#ifdef MASTERSERVER
 	if (I_can_thread())
 	{
 		void *nsid = New_server_id();
@@ -406,7 +405,6 @@ void RegisterServer(void)
 	{
 		Finish_registration();
 	}
-#endif/*MASTERSERVER*/
 }
 
 static void UpdateServer(void)
@@ -431,7 +429,6 @@ static void UpdateServer(void)
 
 void UnregisterServer(void)
 {
-#ifdef MASTERSERVER
 	if (I_can_thread())
 	{
 		if (!I_spawn_thread(
@@ -447,11 +444,9 @@ void UnregisterServer(void)
 	{
 		Finish_unlist();
 	}
-#endif/*MASTERSERVER*/
 }
 
-static boolean
-Online (void)
+static boolean Online(void)
 {
 	return ( serverrunning && cv_masterserver_room_id.value > 0 );
 }
@@ -485,9 +480,7 @@ static inline void SendPingToMasterServer(void)
 
 void MasterClient_Ticker(void)
 {
-#ifdef MASTERSERVER
 	SendPingToMasterServer();
-#endif
 }
 
 static void
@@ -510,8 +503,12 @@ Set_api (const char *api)
 		HMS_set_api(dapi);
 	}
 }
+#else /*MASTERSERVER*/
 
-#endif/*MASTERSERVER*/
+void RegisterServer(void) {}
+void UnregisterServer(void) {}
+
+#endif
 
 static boolean ServerName_CanChange(const char* newvalue)
 {
@@ -554,7 +551,9 @@ static void RoomId_OnChange(void)
 	{
 		UnregisterServer();
 		ms_RoomId = cv_masterserver_room_id.value;
+#ifdef MASTERSERVER
 		if (Online())
+#endif
 			RegisterServer();
 	}
 }

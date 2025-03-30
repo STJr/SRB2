@@ -733,7 +733,7 @@ extern int
 /// Maintain compatibility with older 2.2 demos
 #define OLD22DEMOCOMPAT
 
-#ifdef HAVE_CURL
+#if defined (HAVE_CURL) && !(defined(__EMSCRIPTEN__) && !defined(__EMSCRIPTEN_PTHREADS__))
 #define MASTERSERVER
 #else
 #undef UPDATE_ALERT
