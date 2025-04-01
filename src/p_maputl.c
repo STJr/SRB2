@@ -1053,7 +1053,7 @@ boolean P_BlockLinesIterator(INT32 x, INT32 y, boolean (*func)(line_t *))
 boolean P_BlockThingsIterator(INT32 x, INT32 y, boolean (*func)(mobj_t *), mobj_t *thing)
 {
 	blocknode_t *block, *next = NULL;
-	
+
 	boolean checkthing = false;
 	if (thing)
 			checkthing = true;
@@ -1473,12 +1473,12 @@ boolean P_PathTraverse(fixed_t px1, fixed_t py1, fixed_t px2, fixed_t py2,
 	trace.y = py1;
 	trace.dx = px2 - px1;
 	trace.dy = py2 - py1;
-	
+
 	xt1 = px1>>MAPBLOCKSHIFT;
 	yt1 = py2>>MAPBLOCKSHIFT;
 	px1 = (unsigned)(px1 - bmaporgx);
 	py1 = (unsigned)(py1 - bmaporgy);
-	
+
 	xt2 = px2>>MAPBLOCKSHIFT;
 	yt2 = py2>>MAPBLOCKSHIFT;
 	px2 = (unsigned)(px2 - bmaporgx);
@@ -1524,11 +1524,11 @@ boolean P_PathTraverse(fixed_t px1, fixed_t py1, fixed_t px2, fixed_t py2,
 		xstep = 256*FRACUNIT;
 	}
 	xintercept = ((unsigned)px1>>MAPBTOFRAC) + FixedMul(partialy, xstep);
-	
+
 	// [RH] Fix for traces that pass only through blockmap corners. In that case,
 	// xintercept and yintercept can both be set ahead of mapx and mapy, so the
 	// for loop would never advance anywhere.
-	
+
 	if (abs(xstep) == 1 && abs(ystep) == 1)
 	{
 		if (ystep < 0)
@@ -1545,7 +1545,7 @@ boolean P_PathTraverse(fixed_t px1, fixed_t py1, fixed_t px2, fixed_t py2,
 			yintercept = yt1;
 		}
 	}
-	
+
 	xt1 = (unsigned)px1>>MAPBLOCKSHIFT;
 	yt1 = (unsigned)py1>>MAPBLOCKSHIFT;
 	xt2 = (unsigned)px2>>MAPBLOCKSHIFT;
@@ -1577,21 +1577,21 @@ boolean P_PathTraverse(fixed_t px1, fixed_t py1, fixed_t px2, fixed_t py2,
 			case 0: // neither xintercept nor yintercept match!
 				count = 64; // Stop traversing, because somebody screwed up.
 				break;
-			
+
 			case 1: // xintercept matches
 				xintercept += xstep;
 				mapy += mapystep;
 				if (mapy == yt2)
 					mapystep = 0;
 				break;
-			
+
 			case 2: // yintercept matches
 				yintercept += ystep;
 				mapx += mapxstep;
 				if (mapx == xt2)
 					mapxstep = 0;
 				break;
-			
+
 			case 3: // xintercept and yintercept both match
 				// The trace is exiting a block through its corner. Not only does the block
 				// being entered need to be checked (which will happen when this loop
@@ -1604,7 +1604,7 @@ boolean P_PathTraverse(fixed_t px1, fixed_t py1, fixed_t px2, fixed_t py2,
 					if (!P_BlockLinesIterator(mapx, mapy + mapystep, PIT_AddLineIntercepts))
 						return false; // early out
 				}
-				
+
 				if (flags & PT_ADDTHINGS)
 				{
 					if (!P_BlockThingsIterator(mapx + mapxstep, mapy, PIT_AddThingIntercepts, NULL))
@@ -1612,7 +1612,7 @@ boolean P_PathTraverse(fixed_t px1, fixed_t py1, fixed_t px2, fixed_t py2,
 					if (!P_BlockThingsIterator(mapx, mapy + mapystep, PIT_AddThingIntercepts, NULL))
 						return false; // early out
 				}
-				
+
 				xintercept += xstep;
 				yintercept += ystep;
 				mapx += mapxstep;
