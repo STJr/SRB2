@@ -19,7 +19,6 @@ Debian testing GCC:
   variables:
     CC: gcc
     CXX: g++
-    LDFLAGS: -Wl,-fuse-ld=gold
 
   script:
     - - |
@@ -41,7 +40,14 @@ Debian testing GCC:
     - - |
           # cmake
           echo -e "\e[0Ksection_start:`date +%s`:cmake[collapsed=false]\r\e[0KBuilding Makefiles"
-      - cmake -B build.cmake -DSRB2_USE_CCACHE=YES -DSRB2_CONFIG_ERRORMODE=ON -DSRB2_CONFIG_USE_GME:BOOL=ON
+      - |
+          cmake \
+            -B build.cmake \
+            -G "Unix Makefiles" \
+            -DCMAKE_COLOR_DIAGNOSTICS=OFF \
+            -DSRB2_CONFIG_ENABLE_WEBM_MOVIES=OFF \
+            -DSRB2_CONFIG_ERRORMODE=ON \
+            -DSRB2_CONFIG_USE_GME:BOOL=ON
       - |
           # cmake
           echo -e "\e[0Ksection_end:`date +%s`:cmake\r\e[0K"
@@ -49,7 +55,7 @@ Debian testing GCC:
     - - |
           # make
           echo -e "\e[0Ksection_start:`date +%s`:make[collapsed=false]\r\e[0KCompiling SRB2"
-      - cmake --build build.cmake --parallel 1 --verbose
+      - cmake --build build.cmake --parallel 1 -- --keep-going
       - |
           # make
           echo -e "\e[0Ksection_end:`date +%s`:make\r\e[0K"

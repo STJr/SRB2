@@ -53,7 +53,7 @@ static void rasterize_segment_tex(INT32 x1, INT32 y1, INT32 x2, INT32 y2, INT32 
 
 			if (dir == 0)
 			{
-				for (;;)
+				for (; count > 0; count--)
 				{
 					rastertab[y1].maxx = xs;
 					rastertab[y1].tx2 = xe;
@@ -62,13 +62,11 @@ static void rasterize_segment_tex(INT32 x1, INT32 y1, INT32 x2, INT32 y2, INT32 
 					xs += dx0;
 					xe += dx1;
 					y1++;
-
-					if (count-- < 1) break;
 				}
 			}
 			else
 			{
-				for (;;)
+				for (; count > 0; count--)
 				{
 					rastertab[y1].maxx = xs;
 					rastertab[y1].tx2 = tc;
@@ -77,8 +75,6 @@ static void rasterize_segment_tex(INT32 x1, INT32 y1, INT32 x2, INT32 y2, INT32 
 					xs += dx0;
 					xe += dx1;
 					y1++;
-
-					if (count-- < 1) break;
 				}
 			}
 		}
@@ -95,7 +91,7 @@ static void rasterize_segment_tex(INT32 x1, INT32 y1, INT32 x2, INT32 y2, INT32 
 
 			if (dir == 0)
 			{
-				for (;;)
+				for (; count > 0; count--)
 				{
 					rastertab[y2].minx = xs;
 					rastertab[y2].tx1 = xe;
@@ -104,13 +100,11 @@ static void rasterize_segment_tex(INT32 x1, INT32 y1, INT32 x2, INT32 y2, INT32 
 					xs += dx0;
 					xe += dx1;
 					y2++;
-
-					if (count-- < 1) break;
 				}
 			}
 			else
 			{
-				for (;;)
+				for (; count > 0; count--)
 				{
 					rastertab[y2].minx = xs;
 					rastertab[y2].tx1 = tc;
@@ -119,8 +113,6 @@ static void rasterize_segment_tex(INT32 x1, INT32 y1, INT32 x2, INT32 y2, INT32 
 					xs += dx0;
 					xe += dx1;
 					y2++;
-
-					if (count-- < 1) break;
 				}
 			}
 		}
