@@ -15,7 +15,6 @@
 
 #include "../i_threads.h"
 #include "../doomdef.h"
-#include "../doomtype.h"
 
 typedef struct thread_s thread_t;
 

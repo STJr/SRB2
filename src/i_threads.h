@@ -12,6 +12,8 @@
 #ifndef I_THREADS_H
 #define I_THREADS_H
 
+#include "doomtype.h"
+
 typedef void (*I_thread_fn)(void *userdata);
 
 typedef void * I_mutex;
