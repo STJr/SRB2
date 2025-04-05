@@ -1126,6 +1126,7 @@ static int libd_levelTitleHeight(lua_State *L)
 
 static int libd_getColormap(lua_State *L)
 {
+	HUDONLY
 	INT32 skinnum = TC_DEFAULT;
 	skincolornum_t color = luaL_optinteger(L, 2, 0);
 	UINT8* colormap = NULL;
@@ -1170,6 +1171,7 @@ static int libd_getColormap(lua_State *L)
 
 static int libd_getStringColormap(lua_State *L)
 {
+	HUDONLY
 	INT32 flags = luaL_checkinteger(L, 1);
 	UINT8* colormap = NULL;
 
@@ -1183,6 +1185,7 @@ static int libd_getStringColormap(lua_State *L)
 
 static int libd_getSectorColormap(lua_State *L)
 {
+	HUDONLY
 	boolean has_sector = false;
 	sector_t *sector = NULL;
 	if (!lua_isnoneornil(L, 1))
@@ -1438,8 +1441,6 @@ static luaL_Reg lib_hud[] = {
 	{"cachePatch", libd_cachePatch},
 	{"getSpritePatch", libd_getSpritePatch},
 	{"getSprite2Patch", libd_getSprite2Patch},
-	{"getColormap", libd_getColormap},
-	{"getStringColormap", libd_getStringColormap},
 	{"width", libd_width},
 	{"height", libd_height},
 	{"scale", libd_dup},
