@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2024 by Sonic Team Junior.
+// Copyright (C) 1999-2025 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -47,13 +47,14 @@ typedef enum
 	SF_DASHMODE         = 1<<11, // Sonic Advance 2 style top speed increase?
 	SF_FASTWAIT         = 1<<12, // Faster wait animation?
 	SF_FASTEDGE         = 1<<13, // Faster edge teeter?
-	SF_MULTIABILITY     = 1<<14, // Revenge of Final Demo.
-	SF_NONIGHTSROTATION = 1<<15, // Disable sprite rotation for NiGHTS
-	SF_NONIGHTSSUPER    = 1<<16, // Disable super colors for NiGHTS (if you have SF_SUPER)
-	SF_NOSUPERSPRITES   = 1<<17, // Don't use super sprites while super
-	SF_NOSUPERJUMPBOOST = 1<<18, // Disable the jump boost given while super (i.e. Knuckles)
-	SF_CANBUSTWALLS     = 1<<19, // Can naturally bust walls on contact? (i.e. Knuckles)
-	SF_NOSHIELDABILITY  = 1<<20, // Disable shield abilities
+	SF_JETFUME          = 1<<14, // Follow item uses Metal Sonic's jet fume behavior
+	SF_MULTIABILITY     = 1<<15, // Revenge of Final Demo.
+	SF_NONIGHTSROTATION = 1<<16, // Disable sprite rotation for NiGHTS
+	SF_NONIGHTSSUPER    = 1<<17, // Disable super sprites and colors for NiGHTS
+	SF_NOSUPERSPRITES   = 1<<18, // Don't use super sprites while super
+	SF_NOSUPERJUMPBOOST = 1<<19, // Disable the jump boost given while super (i.e. Knuckles)
+	SF_CANBUSTWALLS     = 1<<20, // Can naturally bust walls on contact? (i.e. Knuckles)
+	SF_NOSHIELDABILITY  = 1<<21, // Disable shield abilities
 
 	// free up to and including 1<<31
 } skinflags_t;
