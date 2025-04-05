@@ -34,6 +34,7 @@
 #ifdef HAVE_ANIGIF
 	#include "m_anigif.h"
 #endif
+#include "r_main.h" // cv_moviemodeinfo
 
 //random index
 #include "m_random.h"
@@ -2947,6 +2948,12 @@ void ST_ReallyCoolAndUsefulGIFDrawer(void)
 {
 	if (!moviemode)
 		return;
+    
+    if (moviemode != MM_GIF)
+        return;
+    
+    if (!cv_moviemodeinfo.value)
+        return;
 
 	//the number of frames we wrote should be equivilant to the number of tics
 	//we recorded

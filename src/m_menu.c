@@ -1356,11 +1356,12 @@ static menuitem_t OP_VideoOptionsMenu[] =
 	{IT_STRING | IT_CVAR, NULL, "Show FPS",                  &cv_ticrate,         201},
 	{IT_STRING | IT_CVAR, NULL, "Clear Before Redraw",       &cv_homremoval,      206},
 	{IT_STRING | IT_CVAR, NULL, "Show \"FOCUS LOST\"",       &cv_showfocuslost,   211},
+	{IT_STRING | IT_CVAR, NULL, "Show GIF Info",             &cv_moviemodeinfo,   216},
 
 #ifdef HWRENDER
-	{IT_HEADER, NULL, "Renderer", NULL, 220},
-	{IT_CALL | IT_STRING, NULL, "OpenGL Options...",         M_OpenGLOptionsMenu, 226},
-	{IT_STRING | IT_CVAR, NULL, "FPS Cap",                   &cv_fpscap,          231},
+	{IT_HEADER, NULL, "Renderer", NULL, 225},
+	{IT_CALL | IT_STRING, NULL, "OpenGL Options...",         M_OpenGLOptionsMenu, 231},
+	{IT_STRING | IT_CVAR, NULL, "FPS Cap",                   &cv_fpscap,          236},
 #endif
 };
 
