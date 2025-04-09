@@ -3,7 +3,6 @@
 target_sources(SRB2SDL2 PRIVATE
 	ogl_sdl.c
 	i_threads.c
-	i_net.c
 	i_system.c
 	i_main.c
 	i_video.c

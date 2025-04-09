@@ -1039,14 +1039,8 @@ boolean D_CheckNetGame(void)
 	// I_InitNetwork sets doomcom and netgame
 	// check and initialize the network driver
 	multiplayer = false;
-
-	// only dos version with external driver will return true
-	netgame = I_InitNetwork();
-	if (!netgame && !I_NetOpenSocket)
-	{
-		D_SetDoomcom();
-		netgame = I_InitTcpNetwork();
-	}
+	D_SetDoomcom();
+	netgame = I_InitTcpNetwork();
 
 	if (netgame)
 		ret = true;
