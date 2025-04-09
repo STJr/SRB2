@@ -101,9 +101,6 @@ int SUBVERSION;
 // platform independant focus loss
 UINT8 window_notinfocus = false;
 
-static addfilelist_t startupwadfiles;
-static addfilelist_t startuppwads;
-
 boolean devparm = false; // started game with -devparm
 
 boolean singletics = false; // timedemo
@@ -1126,7 +1123,7 @@ static void ChangeDirForUrlHandler(void)
 // Identify the SRB2 version, and IWAD file to use.
 // ==========================================================================
 
-static void IdentifyVersion(void)
+static void IdentifyVersion(addfilelist_t *startupwadfiles)
 {
 	char *srb2wad;
 	const char *srb2waddir = NULL;
@@ -1169,7 +1166,7 @@ static void IdentifyVersion(void)
 
 	// Load the IWAD
 	if (srb2wad != NULL && FIL_ReadFileOK(srb2wad))
-		D_AddFile(&startupwadfiles, srb2wad);
+		D_AddFile(startupwadfiles, srb2wad);
 	else
 		I_Error("srb2.pk3 not found! Expected in %s, ss file: %s\n", srb2waddir, srb2wad);
 
@@ -1180,14 +1177,14 @@ static void IdentifyVersion(void)
 	// checking in D_SRB2Main
 
 	// Add the maps
-	D_AddFile(&startupwadfiles, va(pandf,srb2waddir, "zones.pk3"));
+	D_AddFile(startupwadfiles, va(pandf,srb2waddir, "zones.pk3"));
 
 	// Add the characters
-	D_AddFile(&startupwadfiles, va(pandf,srb2waddir, "characters.pk3"));
+	D_AddFile(startupwadfiles, va(pandf,srb2waddir, "characters.pk3"));
 
 #ifdef USE_PATCH_DTA
 	// Add our crappy patches to fix our bugs
-	D_AddFile(&startupwadfiles, va(pandf,srb2waddir, "patch.pk3"));
+	D_AddFile(startupwadfiles, va(pandf,srb2waddir, "patch.pk3"));
 #endif
 
 #if !defined (HAVE_SDL) || defined (HAVE_MIXER)
@@ -1197,7 +1194,7 @@ static void IdentifyVersion(void)
 			const char *musicpath = va(pandf,srb2waddir,str);\
 			int ms = W_VerifyNMUSlumps(musicpath, false); \
 			if (ms == 1) \
-				D_AddFile(&startupwadfiles, musicpath); \
+				D_AddFile(startupwadfiles, musicpath); \
 			else if (ms == 0) \
 				I_Error("File "str" has been modified with non-music/sound lumps"); \
 		}
@@ -1241,6 +1238,14 @@ void D_SRB2Main(void)
 
 	INT32 pstartmap = 1;
 	boolean autostart = false;
+
+	addfilelist_t startupwads;
+	addfilelist_t startupwadfiles;
+
+	startupwads.files = NULL;
+	startupwads.numfiles = 0;
+	startupwadfiles.files = NULL;
+	startupwadfiles.numfiles = 0;
 
 	/* break the version string into version numbers, for netplay */
 	D_ConvertVersionNumbers();
@@ -1286,7 +1291,7 @@ void D_SRB2Main(void)
 	ChangeDirForUrlHandler();
 
 	// identify the main IWAD file to use
-	IdentifyVersion();
+	IdentifyVersion(&startupwadfiles);
 
 #if !defined(NOTERMIOS)
 	setbuf(stdout, NULL); // non-buffered output
@@ -1404,9 +1409,9 @@ void D_SRB2Main(void)
 			else if (myargv[i][0] == '-' || myargv[i][0] == '+')
 				addontype = 0;
 			else if (addontype == 1)
-				D_AddFile(&startuppwads, myargv[i]);
+				D_AddFile(&startupwads, myargv[i]);
 			else if (addontype == 2)
-				D_AddFolder(&startuppwads, myargv[i]);
+				D_AddFolder(&startupwads, myargv[i]);
 		}
 	}
 
@@ -1491,11 +1496,11 @@ void D_SRB2Main(void)
 
 	CON_StopRefresh(); // Temporarily stop refreshing the screen for wad loading
 
-	if (startuppwads.numfiles)
+	if (startupwads.numfiles)
 	{
 		CONS_Printf("W_InitMultipleFiles(): Adding extra PWADs.\n");
-		W_InitMultipleFiles(&startuppwads);
-		D_CleanFile(&startuppwads);
+		W_InitMultipleFiles(&startupwads);
+		D_CleanFile(&startupwads);
 	}
 
 	CON_StartRefresh(); // Restart the refresh!
