@@ -125,7 +125,7 @@ static void CL_DrawConnectionStatus(void)
 	// Draw background fade
 	V_DrawFadeScreen(0xFF00, 16); // force default
 
-	if (cl_mode != CL_DOWNLOADFILES && cl_mode != CL_DOWNLOADHTTPFILES && cl_mode != CL_LOADFILES && cl_mode != CL_CHECKFILES && cl_mode != CL_ASKFULLFILELIST)
+	if (cl_mode != CL_DOWNLOADFILES && cl_mode != CL_DOWNLOADHTTPFILES && cl_mode != CL_LOADFILES && cl_mode != CL_CHECKFILES && cl_mode != CL_ASKFULLFILELIST && cl_mode != CL_VIEWSERVER)
 	{
 		INT32 animtime = ((ccstime / 4) & 15) + 16;
 		UINT8 palstart;
@@ -232,6 +232,78 @@ static void CL_DrawConnectionStatus(void)
 			V_DrawFill(BASEVIDWIDTH/2-128, BASEVIDHEIGHT-16, totalfileslength, 8, 96);
 			V_DrawCenteredString(BASEVIDWIDTH/2, BASEVIDHEIGHT-16, V_20TRANS|V_MONOSPACE,
 				va(" %2u/%2u Files",checkcompletednum,fileneedednum));
+		}
+		else if (cl_mode == CL_VIEWSERVER)
+		{
+			V_DrawFill(8, 16, BASEVIDWIDTH - 16, 54, 159);
+
+			V_DrawThinString(12 + 80, 18, V_ALLOWLOWERCASE, va("%s", serverlist[joinnode].info.servername));
+
+			const char *map = va("%sP", serverlist[joinnode].info.mapname);
+			patch_t *current_map = W_LumpExists(map) ? W_CachePatchName(map, PU_CACHE) : W_CachePatchName("BLANKLVL", PU_CACHE);
+			V_DrawSmallScaledPatch(10, 18, 0, current_map);
+
+			V_DrawThinString(12 + 80, 38, V_ALLOWLOWERCASE, va("%s", serverlist[joinnode].info.maptitle));
+			V_DrawThinString(12 + 80, 48, V_ALLOWLOWERCASE, va("%s", serverlist[joinnode].info.gametypename));
+
+			if (fileneedednum > 0)
+			{
+				V_DrawThinString(12 + 80, 58, V_ALLOWLOWERCASE|V_ORANGEMAP, va("%i Addons", fileneedednum));
+			}
+			else
+			{
+				V_DrawThinString(12 + 80, 58, V_ALLOWLOWERCASE|V_YELLOWMAP, "Vanilla");
+			}
+
+			if (serverlist[joinnode].info.cheatsenabled)
+			{
+				V_DrawRightAlignedThinString(BASEVIDWIDTH - 12, 58, V_ALLOWLOWERCASE|V_GREENMAP, "Cheats");
+			}
+
+			V_DrawFill(8, 72, BASEVIDWIDTH - 16, 112, 159);
+
+			V_DrawString(12, 74, V_ALLOWLOWERCASE|V_YELLOWMAP, "Players");
+			V_DrawRightAlignedString(BASEVIDWIDTH - 12, 74, V_ALLOWLOWERCASE|V_YELLOWMAP, va("%i / %i", serverlist[joinnode].info.numberofplayer, serverlist[joinnode].info.maxplayer));
+
+			INT32 i;
+			INT32 count = 0;
+			INT32 x = 14;
+			INT32 y = 84;
+			INT32 statuscolor = 1;
+			char player_name[MAXPLAYERNAME+1];
+			if (serverlist[joinnode].info.numberofplayer > 0)
+			{
+				for (i = 0; i < MAXPLAYERS; i++)
+				{
+					if (playerinfo[i].num < 255)
+					{
+						strncpy(player_name, playerinfo[i].name, MAXPLAYERNAME);
+						V_DrawThinString(x + 10, y, V_ALLOWLOWERCASE|V_6WIDTHSPACE, player_name);
+
+						if (playerinfo[i].team == 0) { statuscolor = 112; } // playing
+						if (playerinfo[i].data & 0x20) { statuscolor = 54; } // tag IT
+						if (playerinfo[i].team == 1) { statuscolor = 35; } // ctf red team
+						if (playerinfo[i].team == 2) { statuscolor = 152; } // ctf blue team
+						if (playerinfo[i].team == 255) { statuscolor = 16; } // spectator or non-team
+
+						V_DrawFill(x, y, 7, 7, 31);
+						V_DrawFill(x, y, 6, 6, statuscolor);
+
+						y += 9;
+						count++;
+						if ((count == 11) || (count == 22))
+						{
+							x += 104;
+							y = 84;
+						}
+					}
+				}
+			}
+
+			// Buttons
+			V_DrawFill(8, BASEVIDHEIGHT - 14, BASEVIDWIDTH - 16, 12, 159);
+			V_DrawThinString(16, BASEVIDHEIGHT - 12, V_ALLOWLOWERCASE, va("[%sESC%s] = Abort", "\x82", "\x80"));
+			V_DrawRightAlignedThinString(BASEVIDWIDTH - 12, BASEVIDHEIGHT - 12, V_ALLOWLOWERCASE, va("[%sENTER%s] = Join", "\x82", "\x80"));
 		}
 		else if (filedownload.current != -1)
 		{
@@ -980,6 +1052,7 @@ static boolean CL_ServerConnectionSearchTicker(tic_t *asksent)
 			if (i < 0)
 				return true;
 		}
+		joinnode = i;
 
 		if (client)
 		{
@@ -1017,7 +1090,7 @@ static boolean CL_ServerConnectionSearchTicker(tic_t *asksent)
 				return true;
 			}
 
-			cl_mode = CL_CHECKFILES;
+			cl_mode = CL_VIEWSERVER;
 		}
 		else
 		{
@@ -1097,7 +1170,7 @@ static boolean CL_ServerConnectionTicker(const char *tmpsave, tic_t *oldtic, tic
 
 		case CL_ASKFULLFILELIST:
 			if (cl_lastcheckedfilecount == UINT16_MAX) // All files retrieved
-				cl_mode = CL_CHECKFILES;
+				cl_mode = CL_VIEWSERVER;
 			else if (fileneedednum != cl_lastcheckedfilecount || I_GetTime() >= *asksent)
 			{
 				if (CL_AskFileList(fileneedednum))
@@ -1223,6 +1296,14 @@ static boolean CL_ServerConnectionTicker(const char *tmpsave, tic_t *oldtic, tic
 				if (!Snake_JoyGrabber(snake, &events[eventtail]))
 					G_MapEventsToControls(&events[eventtail]);
 			}
+		}
+
+		if (cl_mode == CL_VIEWSERVER)
+		{
+			if (gamekeydown[KEY_ENTER])
+				cl_mode = CL_CHECKFILES;
+			else if (gamekeydown[KEY_ESCAPE])
+				cl_mode = CL_ABORTED;
 		}
 
 		if (gamekeydown[KEY_ESCAPE] || gamekeydown[KEY_JOY1+1] || cl_mode == CL_ABORTED)
@@ -1370,6 +1451,16 @@ void PT_ServerInfo(SINT8 node)
 		[sizeof netbuffer->u.serverinfo.gametypename - 1] = '\0';
 
 	SL_InsertServer(&netbuffer->u.serverinfo, node);
+}
+
+void PT_PlayerInfo(SINT8 node)
+{
+	doomdata_t *netbuffer = DOOMCOM_DATA(doomcom);
+	(void)node;
+
+	INT32 i;
+	for (i = 0; i < MAXPLAYERS; i++)
+		playerinfo[i] = netbuffer->u.playerinfo[i];
 }
 
 // Helper function for packets that should only be sent by the server

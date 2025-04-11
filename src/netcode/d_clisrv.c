@@ -73,6 +73,8 @@ boolean serverrunning = false;
 INT32 serverplayer = 0;
 char motd[254], server_context[8]; // Message of the Day, Unique Context (even without Mumble support)
 
+plrinfo_pak playerinfo[MAXPLAYERS];
+
 netnode_t netnodes[MAXNETNODES];
 
 // Server specific vars
@@ -98,6 +100,7 @@ static char adminsalt[MAXNETNODES][9];
 
 tic_t neededtic;
 SINT8 servernode = 0; // the number of the server node
+SINT8 joinnode = 0; // used for CL_VIEWSERVER
 
 boolean acceptnewnode = true;
 
@@ -151,6 +154,7 @@ void CL_Reset(void)
 	D_CloseConnection(); // netgame = false
 	multiplayer = false;
 	servernode = 0;
+	joinnode = 0;
 	server = true;
 	numnetnodes = 1;
 	numslots = 1;
@@ -1214,7 +1218,7 @@ static void HandlePacketFromAwayNode(SINT8 node)
 		case PT_CLIENTJOIN     : PT_ClientJoin     (node    ); break;
 		case PT_SERVERSHUTDOWN : PT_ServerShutdown (node    ); break;
 		case PT_CLIENTCMD      :                               break; // This is not an "unknown packet"
-		case PT_PLAYERINFO     :                               break; // This is not an "unknown packet"
+		case PT_PLAYERINFO     : PT_PlayerInfo     (node    ); break;
 
 		default:
 			DEBFILE(va("unknown packet received (%d) from unknown host\n",netbuffer->packettype));

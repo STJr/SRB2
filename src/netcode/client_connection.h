@@ -37,7 +37,8 @@ typedef enum
 	CL_ABORTED,
 	CL_ASKFULLFILELIST,
 	CL_CONFIRMCONNECT,
-	CL_DOWNLOADHTTPFILES
+	CL_DOWNLOADHTTPFILES,
+	CL_VIEWSERVER
 } cl_mode_t;
 
 extern serverelem_t serverlist[MAXSERVERLIST];
@@ -55,6 +56,7 @@ void CL_ConnectToServer(void);
 boolean CL_SendJoin(void);
 
 void PT_ServerInfo(SINT8 node);
+void PT_PlayerInfo(SINT8 node);
 void PT_MoreFilesNeeded(SINT8 node);
 void PT_ServerRefuse(SINT8 node);
 void PT_ServerCFG(SINT8 node);

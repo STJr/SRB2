@@ -118,6 +118,9 @@ SINT8 nametonum(const char *name);
 extern char motd[254], server_context[8];
 extern UINT8 playernode[MAXPLAYERS];
 
+extern plrinfo_pak playerinfo[MAXPLAYERS];
+extern SINT8 joinnode;
+
 INT32 D_NumPlayers(void);
 INT32 D_NumNodes(boolean skiphost);
 INT32 D_NumBots(void);
