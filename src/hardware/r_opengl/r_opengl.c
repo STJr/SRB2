@@ -227,7 +227,6 @@ FUNCPRINTF static void GL_MSG_Error(const char *format, ...)
 /* 1.0 functions */
 /* Miscellaneous */
 #define pglClearColor glClearColor
-//glClear
 #define pglColorMask glColorMask
 #define pglAlphaFunc glAlphaFunc
 #define pglBlendFunc glBlendFunc
@@ -237,9 +236,7 @@ FUNCPRINTF static void GL_MSG_Error(const char *format, ...)
 #define pglEnable glEnable
 #define pglDisable glDisable
 #define pglGetFloatv glGetFloatv
-//glGetIntegerv
-//glGetString
-#define pglHint glHint
+#define pglPolygonMode glPolygonMode
 
 /* Depth Buffer */
 #define pglClearDepth glClearDepth
@@ -283,6 +280,7 @@ FUNCPRINTF static void GL_MSG_Error(const char *format, ...)
 /* Texture mapping */
 #define pglTexEnvi glTexEnvi
 #define pglTexParameteri glTexParameteri
+#define pglTexImage1D glTexImage1D
 #define pglTexImage2D glTexImage2D
 #define pglTexSubImage2D glTexSubImage2D
 
@@ -668,6 +666,7 @@ void SetupGLFunc4(void)
 {
 	/* 1.2 funcs */
 	pglTexImage3D = GetGLFunc("glTexImage3D");
+
 	/* 1.3 funcs */
 	pglActiveTexture = GetGLFunc("glActiveTexture");
 	pglMultiTexCoord2f = GetGLFunc("glMultiTexCoord2f");

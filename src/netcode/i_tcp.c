@@ -274,9 +274,18 @@ static void init_upnpc_once(struct upnpdata *upnpdata);
 
 static void I_InitUPnP(void)
 {
+	if (!I_can_thread())
+	{
+		UPNP_support = false;
+		return;
+	}
 	upnpuser = malloc(sizeof *upnpuser);
 	upnpuser->upnpc_started = 0;
-	I_spawn_thread("init_upnpc_once", (I_thread_fn)init_upnpc_once, upnpuser);
+	if (!I_spawn_thread("init_upnpc_once", (I_thread_fn)init_upnpc_once, upnpuser))
+	{
+		UPNP_support = false;
+		free(upnpuser);
+	}
 }
 
 static void
@@ -1113,6 +1122,12 @@ static boolean UDP_Socket(void)
 boolean I_InitTcpDriver(void)
 {
 	boolean tcp_was_up = init_tcp_driver;
+
+#ifdef __EMSCRIPTEN__
+	I_OutputMsg("Compiled without networking support\n");
+	return false;
+#endif
+
 	if (!init_tcp_driver)
 	{
 #ifdef USE_WINSOCK

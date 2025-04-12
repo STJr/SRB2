@@ -703,7 +703,9 @@ extern int
 ///	    	This stops the game from storing backups of the states, sprites, and mobjinfo tables.
 ///	    	Though this info is compressed under normal circumstances, it's still a lot of extra
 ///	    	memory that never gets touched.
+#if !(defined (__EMSCRIPTEN__) && (__SIZEOF_SIZE_T__ == 4))
 #define ALLOW_RESETDATA
+#endif
 
 /// Experimental tweaks to analog mode. (Needs a lot of work before it's ready for primetime.)
 //#define REDSANALOG
@@ -731,7 +733,7 @@ extern int
 /// Maintain compatibility with older 2.2 demos
 #define OLD22DEMOCOMPAT
 
-#ifdef HAVE_CURL
+#if defined (HAVE_CURL) && !(defined(__EMSCRIPTEN__) && !defined(__EMSCRIPTEN_PTHREADS__))
 #define MASTERSERVER
 #else
 #undef UPDATE_ALERT
