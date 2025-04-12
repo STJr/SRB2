@@ -277,6 +277,9 @@ HMS_connect (int proto, const char *format, ...)
 	cc = curl_easy_setopt(curl, CURLOPT_TIMEOUT, cv_masterserver_timeout.value);
 	if (cc != CURLE_OK) I_OutputMsg("libcurl: %s\n", buffer->errbuf);
 
+	cc = curl_easy_setopt(curl, CURLOPT_MAXREDIRS, 30L);
+	if (cc != CURLE_OK) I_OutputMsg("libcurl: %s\n", buffer->errbuf);
+
 	cc = curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, HMS_on_read);
 	if (cc != CURLE_OK) I_OutputMsg("libcurl: %s\n", buffer->errbuf);
 
