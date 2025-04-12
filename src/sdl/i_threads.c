@@ -155,7 +155,7 @@ Worker (
 	return 0;
 }
 
-void
+int
 I_spawn_thread (
 		const char  * name,
 		I_thread_fn   entry,
@@ -164,10 +164,16 @@ I_spawn_thread (
 	Link   link;
 	Thread th;
 
+	if (! I_can_thread())
+		return false;
+
 	th = malloc(sizeof *th);
 
 	if (! th)
-		abort();/* this is pretty GNU of me */
+	{
+		I_OutputMsg("Failed to make memory for Thread: %s", name);
+		return false;
+	}
 
 	th->entry    = entry;
 	th->userdata = userdata;
@@ -185,10 +191,30 @@ I_spawn_thread (
 			);
 
 			if (! th->thread)
-				abort();
+			{
+				I_OutputMsg("I_spawn_thread failed to make thread %s: %s\n", name, SDL_GetError());
+			}
 		}
 	}
 	I_unlock_mutex(i_thread_pool_mutex);
+
+	if (! th->thread)
+	{
+		free(th);
+		return false;
+	}
+
+	return true;
+}
+
+int
+I_can_thread (void)
+{
+#ifdef __EMSCRIPTEN_PTHREADS__
+	return true;
+#else
+	return SDL_ThreadID() != 0;
+#endif
 }
 
 int
@@ -203,6 +229,9 @@ I_start_threads (void)
 	i_thread_pool_mutex = SDL_CreateMutex();
 	i_mutex_pool_mutex  = SDL_CreateMutex();
 	i_cond_pool_mutex   = SDL_CreateMutex();
+
+	if (! I_can_thread())
+		return;
 
 	if (!(
 				i_thread_pool_mutex &&
@@ -284,6 +313,9 @@ I_lock_mutex (
 ){
 	SDL_mutex * mutex;
 
+	if (! I_can_thread())
+		return;
+
 	mutex = Identity(
 			&i_mutex_pool,
 			i_mutex_pool_mutex,
@@ -299,6 +331,9 @@ void
 I_unlock_mutex (
 		I_mutex id
 ){
+	if (! I_can_thread())
+		return;
+
 	if (SDL_UnlockMutex(id) == -1)
 		abort();
 }
@@ -327,6 +362,9 @@ I_wake_one_cond (
 ){
 	SDL_cond * cond;
 
+	if (! I_can_thread())
+		return;
+
 	cond = Identity(
 			&i_cond_pool,
 			i_cond_pool_mutex,
@@ -343,6 +381,9 @@ I_wake_all_cond (
 		I_cond * anchor
 ){
 	SDL_cond * cond;
+
+	if (! I_can_thread())
+		return;
 
 	cond = Identity(
 			&i_cond_pool,

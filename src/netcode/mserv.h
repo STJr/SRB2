@@ -71,13 +71,11 @@ extern consvar_t cv_masterserver_timeout;
 extern consvar_t cv_masterserver_debug;
 extern consvar_t cv_masterserver_token;
 
-#ifdef HAVE_THREADS
 extern int           ms_QueryId;
 extern I_mutex       ms_QueryId_mutex;
 
 extern msg_server_t *ms_ServerList;
 extern I_mutex       ms_ServerList_mutex;
-#endif
 
 void RegisterServer(void);
 void UnregisterServer(void);
