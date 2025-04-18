@@ -2285,8 +2285,9 @@ void G_DoPlayDemo(char *defdemoname)
 
 	LUA_HookInt(gamemap, HOOK(MapChange));
 	displayplayer = consoleplayer = 0;
-	memset(playeringame,0,sizeof(playeringame));
-	playeringame[0] = true;
+	for (i = 0; i < MAXPLAYERS; i++)
+		players[i].ingame = false;
+	players[0].ingame = true;
 	P_SetRandSeed(randseed);
 	G_InitNew(false, G_BuildMapName(gamemap), true, true, false);
 

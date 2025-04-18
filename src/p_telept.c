@@ -143,7 +143,7 @@ boolean P_Teleport(mobj_t *thing, fixed_t x, fixed_t y, fixed_t z, angle_t angle
 			INT32 p;
 			// Search for any players you might be carrying, so you can get them off before they end up being taken with you!
 			for (p = 0; p < MAXPLAYERS; p++)
-				if (playeringame[p] && players[p].mo && players[p].powers[pw_carry] == CR_PLAYER && players[p].mo->tracer == thing)
+				if (players[p].ingame && players[p].mo && players[p].powers[pw_carry] == CR_PLAYER && players[p].mo->tracer == thing)
 				{
 					players[p].powers[pw_carry] = CR_NONE;
 					P_SetTarget(&players[p].mo->tracer, NULL);

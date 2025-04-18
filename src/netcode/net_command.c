@@ -174,7 +174,7 @@ UINT8* D_GetTextcmd(tic_t tic, INT32 playernum)
 void ExtraDataTicker(void)
 {
 	for (INT32 i = 0; i < MAXPLAYERS; i++)
-		if (playeringame[i] || i == 0)
+		if (players[i].ingame || i == 0)
 		{
 			UINT8 *bufferstart = D_GetExistingTextcmd(gametic, i);
 
@@ -223,7 +223,7 @@ size_t TotalTextCmdPerTic(tic_t tic)
 	for (INT32 i = 0; i < MAXPLAYERS; i++)
 	{
 		UINT8 *textcmd = D_GetExistingTextcmd(tic, i);
-		if ((!i || playeringame[i]) && textcmd)
+		if ((!i || players[i].ingame) && textcmd)
 			total += 2 + textcmd[0]; // "+2" for size and playernum
 	}
 
@@ -312,7 +312,7 @@ void SV_WriteNetCommandsForTic(tic_t tic, UINT8 **buf)
 		UINT8 *cmd = D_GetExistingTextcmd(tic, i);
 		INT32 size = cmd ? cmd[0] : 0;
 
-		if ((!i || playeringame[i]) && size)
+		if ((!i || players[i].ingame) && size)
 		{
 			(*numcmds)++;
 			WRITEUINT8(*buf, i);
@@ -379,6 +379,6 @@ void SendKicksForNode(SINT8 node, UINT8 msg)
 		return;
 
 	for (INT32 playernum = netnodes[node].player; playernum != -1; playernum = netnodes[node].player2)
-		if (playernum != -1 && playeringame[playernum])
+		if (playernum != -1 && players[playernum].ingame)
 			SendKick(playernum, msg);
 }

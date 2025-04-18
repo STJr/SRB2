@@ -70,7 +70,7 @@ static INT32 FindRejoinerNum(SINT8 node)
 	// Check if any player matches the stripped address
 	for (INT32 i = 0; i < MAXPLAYERS; i++)
 	{
-		if (playeringame[i] && playeraddress[i][0] && playernode[i] == UINT8_MAX
+		if (players[i].ingame && playeraddress[i][0] && playernode[i] == UINT8_MAX
 		&& !strcmp(playeraddress[i], strippednodeaddress))
 			return i;
 	}
@@ -311,10 +311,10 @@ static void SV_AddPlayer(SINT8 node, const char *name)
 	if (newplayernum == -1)
 	{
 		// search for a free playernum
-		// we can't use playeringame since it is not updated here
+		// we can't use players since it is not updated here
 		for (newplayernum = dedicated ? 1 : 0; newplayernum < MAXPLAYERS; newplayernum++)
 		{
-			if (playeringame[newplayernum])
+			if (players[newplayernum].ingame)
 				continue;
 			for (n = 0; n < MAXNETNODES; n++)
 				if (netnodes[n].player == newplayernum || netnodes[n].player2 == newplayernum)

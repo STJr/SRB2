@@ -625,7 +625,7 @@ static void P_DoTailsCarry(player_t *sonic, player_t *tails)
 
 	// Search in case another player is already being carried by this fox.
 	for (p = 0; p < MAXPLAYERS; p++)
-		if (playeringame[p] && players[p].mo
+		if (players[p].ingame && players[p].mo
 		&& players[p].powers[pw_carry] == CR_PLAYER && players[p].mo->tracer == tails->mo)
 			return;
 
@@ -2293,7 +2293,7 @@ void P_CheckHoopPosition(mobj_t *hoopthing, fixed_t x, fixed_t y, fixed_t z, fix
 	(void)radius; //unused
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
-		if (!playeringame[i] || !players[i].mo || players[i].spectator)
+		if (!players[i].ingame || !players[i].mo || players[i].spectator)
 			continue;
 
 		if (abs(players[i].mo->x - x) >= hoopblockdist ||

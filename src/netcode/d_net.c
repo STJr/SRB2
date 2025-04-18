@@ -1137,7 +1137,7 @@ void Command_Ping_f(void)
 
 	pingc = 0;
 	for (INT32 i = 1; i < MAXPLAYERS; ++i)
-		if (playeringame[i])
+		if (players[i].ingame)
 	{
 		int n;
 
@@ -1168,7 +1168,7 @@ void Command_Ping_f(void)
 				ms_width,   pingv[i].ms);
 	}
 
-	if (!server && playeringame[consoleplayer])
+	if (!server && players[consoleplayer].ingame)
 	{
 		CONS_Printf("\nYour ping is %d ms\n", playerpingtable[consoleplayer]);
 	}

@@ -495,7 +495,7 @@ static void DoSayCommand(SINT8 target, size_t usedargs, UINT8 flags)
 		//CONS_Printf("%d\n", target);
 
 		// check for target player, if it doesn't exist then we can't send the message!
-		if (target < MAXPLAYERS && playeringame[target]) // player exists
+		if (target < MAXPLAYERS && players[target].ingame) // player exists
 			target++; // even though playernums are from 0 to 31, target is 1 to 32, so up that by 1 to have it work!
 		else
 		{
@@ -994,7 +994,7 @@ static void HU_sendChatMessage(void)
 		target = atoi(playernum); // turn that into a number
 
 		// check for target player, if it doesn't exist then we can't send the message!
-		if (target < MAXPLAYERS && playeringame[target]) // player exists
+		if (target < MAXPLAYERS && players[target].ingame) // player exists
 			target++; // even though playernums are from 0 to 31, target is 1 to 32, so up that by 1 to have it work!
 		else
 		{
@@ -1566,7 +1566,7 @@ static void HU_DrawChat(void)
 					if (i != n) continue;
 			}
 
-			if (playeringame[i])
+			if (players[i].ingame)
 			{
 				char name[MAXPLAYERNAME+1];
 				strlcpy(name, player_names[i], 7); // shorten name to 7 characters.
@@ -2517,14 +2517,14 @@ static inline void HU_DrawSpectatorTicker(void)
 	int totallength = 0;
 
 	for (i = 0; i < MAXPLAYERS; i++)
-		if (playeringame[i] && players[i].spectator)
+		if (players[i].ingame && players[i].spectator)
 			totallength += (signed)strlen(player_names[i]) * 8 + 16;
 
 	length -= (leveltime % (totallength + (vid.width / vid.dup)));
 	length += (vid.width / vid.dup);
 
 	for (i = 0; i < MAXPLAYERS; i++)
-		if (playeringame[i] && players[i].spectator)
+		if (players[i].ingame && players[i].spectator)
 		{
 			if (length >= -((signed)strlen(player_names[i]) * 8 + 16) && length <= (vid.width / vid.dup))
 				V_DrawString(length, height + 8, V_TRANSLUCENT|V_ALLOWLOWERCASE|V_SNAPTOLEFT, player_names[i]);
@@ -2589,7 +2589,7 @@ static void HU_DrawRankings(void)
 
 	for (j = 0; j < MAXPLAYERS; j++)
 	{
-		if (!playeringame[j])
+		if (!players[j].ingame)
 			continue;
 
 		if (!G_PlatformGametype() && players[j].spectator)
@@ -2597,7 +2597,7 @@ static void HU_DrawRankings(void)
 
 		for (i = 0; i < MAXPLAYERS; i++)
 		{
-			if (!playeringame[i])
+			if (!players[i].ingame)
 				continue;
 
 			if (!G_PlatformGametype() && players[i].spectator)

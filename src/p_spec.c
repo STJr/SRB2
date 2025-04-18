@@ -1366,7 +1366,7 @@ static boolean P_CheckNightsTriggerLine(line_t *triggerline, mobj_t *actor)
 		for (i = 0; i < MAXPLAYERS; i++)
 		{
 			UINT8 lap;
-			if (!playeringame[i] || players[i].spectator)
+			if (!players[i].ingame || players[i].spectator)
 				continue;
 
 			// denightserize: run only if all players are not nights
@@ -1490,7 +1490,7 @@ static boolean P_CheckPlayerRings(line_t *triggerline, mobj_t *actor)
 	{
 		for (i = 0; i < MAXPLAYERS; i++)
 		{
-			if (!playeringame[i] || players[i].spectator)
+			if (!players[i].ingame || players[i].spectator)
 				continue;
 
 			if (!players[i].mo || ((maptol & TOL_NIGHTS) ? players[i].spheres : players[i].rings) <= 0)
@@ -3603,7 +3603,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 					UINT8 i;
 					for (i = 0; i < MAXPLAYERS; i++)
 					{
-						if (!playeringame[i])
+						if (!players[i].ingame)
 							continue;
 						P_DoPlayerExit(&players[i], true);
 					}
@@ -3657,7 +3657,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 					// Mark all players with the time to exit thingy!
 					for (i = 0; i < MAXPLAYERS; i++)
 					{
-						if (!playeringame[i])
+						if (!players[i].ingame)
 							continue;
 						P_DoPlayerExit(&players[i], true);
 					}
@@ -4345,7 +4345,7 @@ sector_t *P_FindPlayerTrigger(player_t *player, line_t *sourceline)
 
 boolean P_IsPlayerValid(size_t playernum)
 {
-	if (!playeringame[playernum])
+	if (!players[playernum].ingame)
 		return false;
 
 	if (!players[playernum].mo)
@@ -4419,7 +4419,7 @@ static void P_ProcessEggCapsule(player_t *player, sector_t *sector)
 	// Mark all players with the time to exit thingy!
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
-		if (!playeringame[i])
+		if (!players[i].ingame)
 			continue;
 		P_DoPlayerExit(&players[i], true);
 	}

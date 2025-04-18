@@ -37,7 +37,7 @@ static int lib_iteratePlayers(lua_State *L)
 		i = (INT32)(*((player_t **)luaL_checkudata(L, 1, META_PLAYER)) - players);
 	for (i++; i < MAXPLAYERS; i++)
 	{
-		if (!playeringame[i])
+		if (!players[i].ingame)
 			continue;
 		if (!players[i].mo)
 			continue;
@@ -56,7 +56,7 @@ static int lib_getPlayer(lua_State *L)
 		lua_Integer i = luaL_checkinteger(L, 2);
 		if (i < 0 || i >= MAXPLAYERS)
 			return luaL_error(L, "players[] index %d out of range (0 - %d)", i, MAXPLAYERS-1);
-		if (!playeringame[i])
+		if (!players[i].ingame)
 			return 0;
 		if (!players[i].mo)
 			return 0;

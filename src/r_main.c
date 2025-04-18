@@ -206,7 +206,7 @@ void SplitScreen_OnChange(void)
 		INT32 i;
 		secondarydisplayplayer = consoleplayer;
 		for (i = 0; i < MAXPLAYERS; i++)
-			if (playeringame[i] && i != consoleplayer)
+			if (players[i].ingame && i != consoleplayer)
 			{
 				secondarydisplayplayer = i;
 				break;

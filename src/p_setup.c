@@ -7343,7 +7343,7 @@ static void P_InitLevelSettings(void)
 		countdowntimer = mapheaderinfo[gamemap-1]->countdown * TICRATE;
 		for (i = 0; i < MAXPLAYERS; i++)
 		{
-			if (!playeringame[i])
+			if (!players[i].ingame)
 				continue;
 			if (players[i].starposttime > maxtime)
 				maxtime = players[i].starposttime;
@@ -7377,7 +7377,7 @@ static void P_InitLevelSettings(void)
 	{
 		for (i = 0; i < MAXPLAYERS; i++)
 		{
-			if (playeringame[i] && players[i].lives > 0)
+			if (players[i].ingame && players[i].lives > 0)
 			{
 				canresetlives = false;
 				break;
@@ -7391,7 +7391,7 @@ static void P_InitLevelSettings(void)
 	{
 		G_PlayerReborn(i, true);
 
-		if (canresetlives && (netgame || multiplayer) && playeringame[i] && (G_CompetitionGametype() || players[i].lives <= 0))
+		if (canresetlives && (netgame || multiplayer) && players[i].ingame && (G_CompetitionGametype() || players[i].lives <= 0))
 		{
 			// In Co-Op, replenish a user's lives if they are depleted.
 			players[i].lives = cv_startinglives.value;
@@ -7484,7 +7484,7 @@ static void P_ForceCharacter(const char *forcecharskin)
 
 	for (unsigned i = 0; i < MAXPLAYERS; i++)
 	{
-		if (!playeringame[i])
+		if (!players[i].ingame)
 			continue;
 
 		INT32 skinnum = R_SkinAvailable(forcecharskin);
@@ -7659,7 +7659,7 @@ static void P_InitTagGametype(void)
 	//Also, you'd never have to loop through all 32 players slots to find anything ever again.
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
-		if (playeringame[i] && !(players[i].spectator || players[i].quittime))
+		if (players[i].ingame && !(players[i].spectator || players[i].quittime))
 		{
 			playersactive[realnumplayers] = i; //stores the player's node in the array.
 			realnumplayers++;
@@ -7836,7 +7836,7 @@ static void P_InitPlayers(void)
 
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
-		if (!playeringame[i])
+		if (!players[i].ingame)
 			continue;
 
 		// Start players with pity shields if possible
@@ -7911,7 +7911,7 @@ static void P_InitGametype(void)
 		tic_t maxstarposttime = 0;
 		for (i = 0; i < MAXPLAYERS; i++)
 		{
-			if (playeringame[i] && players[i].starposttime > maxstarposttime)
+			if (players[i].ingame && players[i].starposttime > maxstarposttime)
 				maxstarposttime = players[i].starposttime;
 		}
 		leveltime = maxstarposttime;
@@ -8248,7 +8248,7 @@ boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate)
 		INT32 buf = gametic % BACKUPTICS;
 		for (i = 0; i < MAXPLAYERS; i++)
 		{
-			if (playeringame[i])
+			if (players[i].ingame)
 				G_CopyTiccmd(&players[i].cmd, &netcmds[buf][i], 1);
 		}
 		P_PreTicker(2);

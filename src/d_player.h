@@ -609,6 +609,7 @@ typedef struct player_s
 	INT32 awayviewtics;
 	angle_t awayviewaiming; // Used for cut-away view
 
+	boolean ingame;
 	boolean spectator;
 	boolean outofcoop;
 	boolean removing;

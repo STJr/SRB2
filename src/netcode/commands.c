@@ -463,7 +463,7 @@ void Command_connect(void)
 void Command_GetPlayerNum(void)
 {
 	for (INT32 i = 0; i < MAXPLAYERS; i++)
-		if (playeringame[i])
+		if (players[i].ingame)
 		{
 			if (serverplayer == i)
 				CONS_Printf(M_GetText("num:%2d  node:%2d  %s\n"), i, playernode[i], player_names[i]);
@@ -484,13 +484,13 @@ void Command_Nodes(void)
 	for (INT32 i = 0; i < MAXPLAYERS; i++)
 	{
 		const size_t plen = strlen(player_names[i]);
-		if (playeringame[i] && plen > maxlen)
+		if (players[i].ingame && plen > maxlen)
 			maxlen = plen;
 	}
 
 	for (INT32 i = 0; i < MAXPLAYERS; i++)
 	{
-		if (playeringame[i])
+		if (players[i].ingame)
 		{
 			CONS_Printf("%.2u: %*s", i, (int)maxlen, player_names[i]);
 

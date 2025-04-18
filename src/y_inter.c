@@ -743,7 +743,7 @@ void Y_IntermissionDrawer(void)
 			V_DrawCenteredString(x+6, y, 0, va("%d", j+1));
 			j++; //We skip spectators, but not their number.
 
-			if (playeringame[data.match.num[i]])
+			if (players[data.match.num[i]].ingame)
 			{
 				// Draw the back sprite, it looks ugly if we don't
 				V_DrawSmallScaledPatch(x+16, y-4, 0, livesback);
@@ -846,7 +846,7 @@ void Y_IntermissionDrawer(void)
 
 		for (i = 0; i < data.match.numplayers; i++)
 		{
-			if (playeringame[data.match.num[i]] && !(data.match.spectator[i]))
+			if (players[data.match.num[i]].ingame && !(data.match.spectator[i]))
 			{
 				UINT8 *colormap = R_GetTranslationColormap(*data.match.character[i], *data.match.color[i], GTC_CACHE);
 
@@ -926,7 +926,7 @@ void Y_IntermissionDrawer(void)
 
 			V_DrawCenteredString(x+6, y, 0, va("%d", i+1));
 
-			if (playeringame[data.competition.num[i]])
+			if (players[data.competition.num[i]].ingame)
 			{
 				// Draw the back sprite, it looks ugly if we don't
 				V_DrawSmallScaledPatch(x+16, y-4, 0, livesback);
@@ -1061,7 +1061,7 @@ void Y_Ticker(void)
 			return;
 
 		for (i = 0; i < MAXPLAYERS; i++)
-			if (playeringame[i] && (players[i].cmd.buttons & BT_SPIN))
+			if (players[i].ingame && (players[i].cmd.buttons & BT_SPIN))
 				skip = true;
 
 		// bonuses count down by 222 each tic
@@ -1182,7 +1182,7 @@ void Y_Ticker(void)
 			return;
 
 		for (i = 0; i < MAXPLAYERS; i++)
-			if (playeringame[i])
+			if (players[i].ingame)
 			{
 				if (players[i].cmd.buttons & BT_SPIN)
 					skip = true;
@@ -1634,12 +1634,12 @@ static void Y_CalculateMatchWinners(void)
 
 	for (j = 0; j < MAXPLAYERS; j++)
 	{
-		if (!playeringame[j])
+		if (!players[j].ingame)
 			continue;
 
 		for (i = 0; i < MAXPLAYERS; i++)
 		{
-			if (!playeringame[i])
+			if (!players[i].ingame)
 				continue;
 
 			if (players[i].score >= data.match.scores[data.match.numplayers] && completed[i] == false)
@@ -1686,12 +1686,12 @@ static void Y_CalculateTimeRaceWinners(void)
 
 	for (j = 0; j < MAXPLAYERS; j++)
 	{
-		if (!playeringame[j])
+		if (!players[j].ingame)
 			continue;
 
 		for (i = 0; i < MAXPLAYERS; i++)
 		{
-			if (!playeringame[i])
+			if (!players[i].ingame)
 				continue;
 
 			if (players[i].realtime <= data.match.scores[data.match.numplayers] && completed[i] == false)
@@ -1733,7 +1733,7 @@ static void Y_CalculateCompetitionWinners(void)
 	// Award points.
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
-		if (!playeringame[i])
+		if (!players[i].ingame)
 			continue;
 
 		for (j = 0; j < 5; j++)
@@ -1750,7 +1750,7 @@ static void Y_CalculateCompetitionWinners(void)
 
 		for (j = 0; j < MAXPLAYERS; j++)
 		{
-			if (!playeringame[j] || j == i)
+			if (!players[j].ingame || j == i)
 				continue;
 
 			if (players[i].realtime <= players[j].realtime)
@@ -1796,14 +1796,14 @@ static void Y_CalculateCompetitionWinners(void)
 	data.competition.numplayers = 0;
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
-		if (!playeringame[i])
+		if (!players[i].ingame)
 			continue;
 
 		winner = 0;
 
 		for (j = 0; j < MAXPLAYERS; j++)
 		{
-			if (!playeringame[j])
+			if (!players[j].ingame)
 				continue;
 
 			if (points[j] >= data.competition.points[data.competition.numplayers] && completed[j] == false)
@@ -1965,7 +1965,7 @@ static void Y_SetPerfectBonus(player_t *player, y_bonus_t *bstruct)
 		INT32 sharedringtotal = 0;
 		for (i = 0; i < MAXPLAYERS; i++)
 		{
-			if (!playeringame[i]) continue;
+			if (!players[i].ingame) continue;
 			sharedringtotal += players[i].rings;
 		}
 		if (!sharedringtotal || nummaprings == -1 || sharedringtotal < nummaprings)
@@ -1992,7 +1992,7 @@ static void Y_SetSpecialRingBonus(player_t *player, y_bonus_t *bstruct)
 
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
-		if (!playeringame[i]) continue;
+		if (!players[i].ingame) continue;
 		sharedringtotal += players[i].rings;
 	}
 	bstruct->points = max(0, (sharedringtotal) * 100);
@@ -2060,7 +2060,7 @@ static void Y_AwardCoopBonuses(void)
 
 	for (i = 0; i < MAXPLAYERS; ++i)
 	{
-		if (!playeringame[i] || players[i].lives < 1 || players[i].bot == BOT_2PAI || players[i].bot == BOT_2PHUMAN) // not active, game over or tails bot
+		if (!players[i].ingame || players[i].lives < 1 || players[i].bot == BOT_2PAI || players[i].bot == BOT_2PHUMAN) // not active, game over or tails bot
 			bonusnum = 0; // all null
 		else
 			bonusnum = mapheaderinfo[prevmap]->bonustype + 1; // -1 is none
@@ -2118,7 +2118,7 @@ static void Y_AwardSpecialStageBonus(void)
 	{
 		oldscore = players[i].score;
 
-		if (!playeringame[i] || players[i].lives < 1 || players[i].bot == BOT_2PAI || players[i].bot == BOT_2PHUMAN) // not active, game over or tails bot
+		if (!players[i].ingame || players[i].lives < 1 || players[i].bot == BOT_2PAI || players[i].bot == BOT_2PHUMAN) // not active, game over or tails bot
 		{
 			Y_SetNullBonus(&players[i], &localbonuses[0]);
 			Y_SetNullBonus(&players[i], &localbonuses[1]);

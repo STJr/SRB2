@@ -31,7 +31,6 @@ extern char  player_names[MAXPLAYERS][MAXPLAYERNAME+1];
 extern INT32 player_name_changes[MAXPLAYERS];
 
 extern player_t players[MAXPLAYERS];
-extern boolean playeringame[MAXPLAYERS];
 
 // gametic at level start
 extern tic_t levelstarttic;

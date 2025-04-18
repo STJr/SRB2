@@ -1001,7 +1001,7 @@ boolean EnsurePlayerNameIsGood(char *name, INT32 playernum)
 	// Check if a player is currently using the name, case-insensitively.
 	for (ix = 0; ix < MAXPLAYERS; ix++)
 	{
-		if (ix != playernum && playeringame[ix]
+		if (ix != playernum && players[ix].ingame
 			&& strcasecmp(name, player_names[ix]) == 0)
 		{
 			// We shouldn't kick people out just because
@@ -1119,7 +1119,7 @@ void CleanupPlayerName(INT32 playernum, const char *newname)
 		// no stealing another player's name
 		for (i = 0; i < MAXPLAYERS; i++)
 		{
-			if (i != playernum && playeringame[i]
+			if (i != playernum && players[i].ingame
 				&& strcasecmp(tmpname, player_names[i]) == 0)
 			{
 				break;
@@ -1242,7 +1242,7 @@ static void ForceAllSkins(INT32 forcedskin)
 {
 	for (INT32 i = 0; i < MAXPLAYERS; ++i)
 	{
-		if (playeringame[i])
+		if (players[i].ingame)
 			SetPlayerSkinByNum(i, forcedskin);
 	}
 }
@@ -1726,7 +1726,7 @@ void D_MapChange(INT32 mapnum, INT32 newgametype, boolean pultmode, boolean rese
 				{
 					//CL_RemoveSplitscreenPlayer();
 					botingame = false;
-					playeringame[1] = false;
+					players[1].ingame = false;
 				}
 			}
 			else if (!botingame)
@@ -1734,7 +1734,7 @@ void D_MapChange(INT32 mapnum, INT32 newgametype, boolean pultmode, boolean rese
 				//CL_AddSplitscreenPlayer();
 				botingame = true;
 				secondarydisplayplayer = 1;
-				playeringame[1] = true;
+				players[1].ingame = true;
 				players[1].bot = 1;
 				SendNameAndColor2();
 			}
@@ -2522,7 +2522,7 @@ static void MutePlayer(boolean mute)
 	}
 
 	data[0] = nametonum(COM_Argv(1));
-	if (data[0] >= MAXPLAYERS || !playeringame[data[0]])
+	if (data[0] >= MAXPLAYERS || !players[data[0]].ingame)
 	{
 		CONS_Alert(CONS_NOTICE, M_GetText("There is no player %u!\n"), (unsigned int)data[0]);
 		return;
@@ -2565,7 +2565,7 @@ static void Got_MutePlayer(UINT8 **cp, INT32 playernum)
 		return;
 	}
 
-	if (player >= MAXPLAYERS || !playeringame[player])
+	if (player >= MAXPLAYERS || !players[player].ingame)
 	{
 		CONS_Alert(CONS_WARNING, M_GetText("Illegal mute received from player %s\n"), player_names[playernum]);
 		if (server)
@@ -2672,7 +2672,7 @@ static void Command_ServerTeamChange_f(void)
 
 	NetPacket.packet.playernum = nametonum(COM_Argv(1));
 
-	if (NetPacket.packet.playernum == -1 || !playeringame[NetPacket.packet.playernum])
+	if (NetPacket.packet.playernum == -1 || !players[NetPacket.packet.playernum].ingame)
 	{
 		CONS_Alert(CONS_NOTICE, M_GetText("There is no player %s!\n"), COM_Argv(1));
 		return;
@@ -3115,7 +3115,7 @@ static void Command_Verify_f(void)
 
 	WRITEUINT8(temp, playernum);
 
-	if (playeringame[playernum])
+	if (players[playernum].ingame)
 		SendNetXCmd(XD_VERIFIED, buf, 1);
 }
 
@@ -3168,7 +3168,7 @@ static void Command_RemoveAdmin_f(void)
 
 	WRITEUINT8(temp, playernum);
 
-	if (playeringame[playernum])
+	if (players[playernum].ingame)
 		SendNetXCmd(XD_DEMOTED, buf, 1);
 }
 
@@ -4072,7 +4072,7 @@ static void CoopStarposts_OnChange(void)
 
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
-		if (!playeringame[i])
+		if (!players[i].ingame)
 			continue;
 
 		if (!players[i].spectator)
@@ -4089,7 +4089,7 @@ static void CoopStarposts_OnChange(void)
 
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
-		if (!playeringame[i])
+		if (!players[i].ingame)
 			continue;
 
 		if (!players[i].spectator)
@@ -4130,7 +4130,7 @@ static void CoopLives_OnChange(void)
 
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
-		if (!playeringame[i])
+		if (!players[i].ingame)
 			continue;
 
 		if (!players[i].spectator)
@@ -4153,7 +4153,7 @@ static void ExitMove_OnChange(void)
 	if (cv_exitmove.value)
 	{
 		for (i = 0; i < MAXPLAYERS; ++i)
-			if (playeringame[i] && players[i].mo)
+			if (players[i].ingame && players[i].mo)
 			{
 				if (players[i].mo->target && players[i].mo->target->type == MT_SIGN)
 					P_SetTarget(&players[i].mo->target, NULL);
@@ -4315,7 +4315,7 @@ void D_GameTypeChanged(INT32 lastgametype)
 	{
 		INT32 i;
 		for (i = 0; i < MAXPLAYERS; i++)
-			if (playeringame[i])
+			if (players[i].ingame)
 			{
 				players[i].ctfteam = 0;
 				players[i].spectator = (gametyperules & GTR_NOSPECTATORSPAWN) ? false : true;
@@ -4328,7 +4328,7 @@ void D_GameTypeChanged(INT32 lastgametype)
 	{
 		INT32 i;
 		for (i = 0; i < MAXPLAYERS; i++)
-			if (playeringame[i])
+			if (players[i].ingame)
 				players[i].ctfteam = 0;
 
 		if (server || (IsPlayerAdmin(consoleplayer)))
@@ -4438,7 +4438,7 @@ retryscramble:
 	// Put each player's node in the array.
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
-		if (playeringame[i] && !players[i].spectator)
+		if (players[i].ingame && !players[i].spectator)
 		{
 			scrambleplayers[playercount] = i;
 			playercount++;
@@ -4613,7 +4613,7 @@ static void Command_ExitLevel_f(void)
 			INT32 i;
 			for (i = 0; i < MAXPLAYERS; i++)
 			{
-				if (!playeringame[i] || players[i].spectator || players[i].bot)
+				if (!players[i].ingame || players[i].spectator || players[i].bot)
 					continue;
 				if (players[i].quittime > 30 * TICRATE)
 					continue;
@@ -5093,7 +5093,7 @@ static void Command_ShowScores_f(void)
 
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
-		if (playeringame[i])
+		if (players[i].ingame)
 			// FIXME: %lu? what's wrong with %u? ~Callum (produces warnings...)
 			CONS_Printf(M_GetText("%s's score is %u\n"), player_names[i], players[i].score);
 	}

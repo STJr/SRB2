@@ -444,7 +444,7 @@ void SV_Maketic(void)
 {
 	for (INT32 i = 0; i < MAXPLAYERS; i++)
 	{
-		if (!playeringame[i])
+		if (!players[i].ingame)
 			continue;
 
 		// We didn't receive this tic

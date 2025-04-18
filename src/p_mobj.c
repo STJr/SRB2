@@ -776,7 +776,7 @@ void P_EmeraldManager(void)
 	// But wait! We need to check all the players too, to see if anyone has some of the emeralds.
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
-		if (!playeringame[i] || players[i].spectator)
+		if (!players[i].ingame || players[i].spectator)
 			continue;
 
 		if (!players[i].mo)
@@ -3984,7 +3984,7 @@ boolean P_BossTargetPlayer(mobj_t *actor, boolean closest)
 		else if (actor->lastlook == stop)
 			return (closest && lastdist > 0);
 
-		if (!playeringame[actor->lastlook])
+		if (!players[actor->lastlook].ingame)
 			continue;
 
 		if (!closest && c++ == 2)
@@ -4028,7 +4028,7 @@ boolean P_SupermanLook4Players(mobj_t *actor)
 
 	for (c = 0; c < MAXPLAYERS; c++)
 	{
-		if (playeringame[c] && !players[c].spectator)
+		if (players[c].ingame && !players[c].spectator)
 		{
 			if (players[c].pflags & PF_INVIS)
 				continue; // ignore notarget
@@ -5007,7 +5007,7 @@ static void P_Boss7Thinker(mobj_t *mobj)
 			// It was a team effort
 			for (i = 0; i < MAXPLAYERS; i++)
 			{
-				if (!playeringame[i])
+				if (!players[i].ingame)
 					continue;
 
 				P_AddPlayerScore(&players[i], 1000);
@@ -5038,7 +5038,7 @@ static void P_Boss7Thinker(mobj_t *mobj)
 
 		for (i = 0; i < MAXPLAYERS; i++)
 		{
-			if (!playeringame[i] || players[i].spectator)
+			if (!players[i].ingame || players[i].spectator)
 				continue;
 
 			if (!players[i].mo)
@@ -5120,7 +5120,7 @@ static void P_Boss7Thinker(mobj_t *mobj)
 		// Looks for players in goop. If you find one, try to jump on him.
 		for (i = 0; i < MAXPLAYERS; i++)
 		{
-			if (!playeringame[i] || players[i].spectator)
+			if (!players[i].ingame || players[i].spectator)
 				continue;
 
 			if (!players[i].mo)
@@ -5260,7 +5260,7 @@ static void P_Boss7Thinker(mobj_t *mobj)
 		// Hurt player??
 		for (i = 0; i < MAXPLAYERS; i++)
 		{
-			if (!playeringame[i] || players[i].spectator)
+			if (!players[i].ingame || players[i].spectator)
 				continue;
 
 			if (!players[i].mo)
@@ -7027,7 +7027,7 @@ static void P_MaceSceneryThink(mobj_t *mobj)
 		// Quick! Look through players! Don't move unless a player is relatively close by.
 		// The below is selected based on CEZ2's first room. I promise you it is a coincidence that it looks like the weed number.
 		for (i = 0; i < MAXPLAYERS; ++i)
-			if (playeringame[i] && players[i].mo
+			if (players[i].ingame && players[i].mo
 				&& P_AproxDistance(P_AproxDistance(mobj->x - players[i].mo->x, mobj->y - players[i].mo->y), mobj->z - players[i].mo->z) < (4200 << FRACBITS))
 				break; // Stop looking.
 		if (i == MAXPLAYERS)
@@ -7279,7 +7279,7 @@ static void P_RosySceneryThink(mobj_t *mobj)
 	statenum_t stat = (mobj->state - states);
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
-		if (!playeringame[i])
+		if (!players[i].ingame)
 			continue;
 		if (!players[i].mo)
 			continue;
@@ -8580,7 +8580,7 @@ static boolean P_EggRobo1Think(mobj_t *mobj)
 				for (i = 0; i < MAXPLAYERS; i++)
 				{
 					fixed_t compdist;
-					if (!playeringame[i])
+					if (!players[i].ingame)
 						continue;
 					if (players[i].spectator)
 						continue;
@@ -8796,7 +8796,7 @@ static void P_NiGHTSDroneThink(mobj_t *mobj)
 		boolean bonustime = false;
 
 		for (i = 0; i < MAXPLAYERS; i++)
-			if (playeringame[i] && players[i].bonustime && players[i].powers[pw_carry] == CR_NIGHTSMODE)
+			if (players[i].ingame && players[i].bonustime && players[i].powers[pw_carry] == CR_NIGHTSMODE)
 			{
 				bonustime = true;
 				break;
@@ -8850,7 +8850,7 @@ static void P_NiGHTSDroneThink(mobj_t *mobj)
 
 		// state switching logic
 		for (i = 0; i < MAXPLAYERS; i++)
-			if (playeringame[i] && players[i].bonustime && players[i].powers[pw_carry] == CR_NIGHTSMODE)
+			if (players[i].ingame && players[i].bonustime && players[i].powers[pw_carry] == CR_NIGHTSMODE)
 			{
 				bonustime = true;
 				break;
@@ -8869,7 +8869,7 @@ static void P_NiGHTSDroneThink(mobj_t *mobj)
 		else if (!G_IsSpecialStage(gamemap))
 		{
 			for (i = 0; i < MAXPLAYERS; i++)
-				if (playeringame[i] && players[i].powers[pw_carry] != CR_NIGHTSMODE)
+				if (players[i].ingame && players[i].powers[pw_carry] != CR_NIGHTSMODE)
 				{
 					bonustime = true; // variable reuse
 					break;
@@ -9525,7 +9525,7 @@ static boolean P_MobjRegularThink(mobj_t *mobj)
 			INT32 i;
 			P_SetTarget(&mobj->target, NULL);
 			for (i = 0; i < MAXPLAYERS; i++)
-				if (playeringame[i] && players[i].mo
+				if (players[i].ingame && players[i].mo
 					&& players[i].mare == mobj->threshold && players[i].spheres > 0)
 				{
 					fixed_t dist = P_AproxDistance(players[i].mo->x - mobj->x, players[i].mo->y - mobj->y);
@@ -11027,7 +11027,7 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type, ...)
 		UINT8 i;
 		for (i = 0; i < MAXPLAYERS; i++)
 		{
-			if (!playeringame[i] || players[i].spectator)
+			if (!players[i].ingame || players[i].spectator)
 				continue;
 
 			if (players[i].skin == sc)
@@ -11461,7 +11461,7 @@ void P_PrecipitationEffects(void)
 
 	// Local effects from here on out!
 	// If we're not in game fully yet, we don't worry about them.
-	if (!playeringame[displayplayer] || !players[displayplayer].mo)
+	if (!players[displayplayer].ingame || !players[displayplayer].mo)
 		return;
 
 	if (sound_disabled)

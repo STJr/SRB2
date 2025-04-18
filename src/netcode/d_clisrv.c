@@ -212,7 +212,7 @@ static void Got_AddPlayer(UINT8 **p, INT32 playernum)
 	splitscreenplayer = newplayernum & 0x80;
 	newplayernum &= ~0x80;
 
-	rejoined = playeringame[newplayernum];
+	rejoined = players[newplayernum].ingame;
 
 	if (!rejoined)
 	{
@@ -220,7 +220,7 @@ static void Got_AddPlayer(UINT8 **p, INT32 playernum)
 		// HACK: don't do this for splitscreen, it relies on preset values
 		if (!splitscreen && !botingame)
 			CL_ClearPlayer(newplayernum);
-		playeringame[newplayernum] = true;
+		players[newplayernum].ingame = true;
 		G_AddPlayer(newplayernum);
 		if (newplayernum+1 > numslots)
 			numslots = (INT16)(newplayernum+1);
@@ -345,7 +345,7 @@ static void PT_ClientQuit(SINT8 node, INT32 netconsole)
 	if (client)
 		return;
 
-	if (netnodes[node].ingame && netconsole != -1 && playeringame[netconsole])
+	if (netnodes[node].ingame && netconsole != -1 && players[netconsole].ingame)
 		SendKicksForNode(node, KICK_MSG_PLAYER_QUIT | KICK_MSG_KEEP_BODY);
 
 	Net_CloseConnection(node);
@@ -451,7 +451,7 @@ static void Got_KickCmd(UINT8 **p, INT32 playernum)
 
 				for (INT32 i = 0; i < MAXPLAYERS; i++)
 				{
-					if (!playeringame[i])
+					if (!players[i].ingame)
 						continue;
 					CONS_Printf("-------------------------------------\n");
 					CONS_Printf("Player %d: %s\n", i, player_names[i]);
@@ -569,7 +569,7 @@ static void RedistributeSpecialStageSpheres(INT32 playernum)
 		INT32 n;
 		for (INT32 i = 0; i < MAXPLAYERS; i++)
 		{
-			if (!playeringame[i] || i == playernum)
+			if (!players[i].ingame || i == playernum)
 				continue;
 
 			n = min(spheres, sincrement);
@@ -592,7 +592,7 @@ void CL_RemovePlayer(INT32 playernum, kickreason_t reason)
 {
 	// Sanity check: exceptional cases (i.e. c-fails) can cause multiple
 	// kick commands to be issued for the same player.
-	if (!playeringame[playernum])
+	if (!players[playernum].ingame)
 		return;
 
 	if (server)
@@ -618,8 +618,8 @@ void CL_RemovePlayer(INT32 playernum, kickreason_t reason)
 	CL_ClearPlayer(playernum);
 
 	// remove avatar of player
-	playeringame[playernum] = false;
-	while (!playeringame[numslots-1] && numslots > 1)
+	players[playernum].ingame = false;
+	while (!players[numslots-1].ingame && numslots > 1)
 		numslots--;
 
 	// Reset the name
@@ -739,7 +739,7 @@ void SV_ResetServer(void)
 	for (INT32 i = 0; i < MAXPLAYERS; i++)
 	{
 		LUA_InvalidatePlayer(&players[i]);
-		playeringame[i] = false;
+		players[i].ingame = false;
 		playernode[i] = UINT8_MAX;
 		memset(playeraddress[i], 0, sizeof(*playeraddress));
 		sprintf(player_names[i], "Player %d", i + 1);
@@ -1062,7 +1062,7 @@ static inline void PingUpdate(void)
 	{
 		for (INT32 i = 1; i < MAXPLAYERS; i++)
 		{
-			if (playeringame[i] && !players[i].quittime
+			if (players[i].ingame && !players[i].quittime
 			&& (realpingtable[i] / pingmeasurecount > (unsigned)cv_maxping.value))
 			{
 				if (players[i].jointime > 30 * TICRATE)
@@ -1079,7 +1079,7 @@ static inline void PingUpdate(void)
 		{
 			for (INT32 i = 1; i < MAXPLAYERS; i++)
 			{
-				if (playeringame[i] && laggers[i])
+				if (players[i].ingame && laggers[i])
 				{
 					pingtimeout[i]++;
 					// ok your net has been bad for too long, you deserve to die.
@@ -1138,7 +1138,7 @@ static void PT_Ping(SINT8 node, INT32 netconsole)
 	if (client)
 	{
 		for (INT32 i = 0; i < MAXPLAYERS; i++)
-			if (playeringame[i])
+			if (players[i].ingame)
 				playerpingtable[i] = (tic_t)netbuffer->u.pingtable[i];
 
 		servermaxping = (tic_t)netbuffer->u.pingtable[MAXPLAYERS];
@@ -1412,7 +1412,7 @@ static void UpdatePingTable(void)
 			PingUpdate();
 		// update node latency values so we can take an average later.
 		for (INT32 i = 0; i < MAXPLAYERS; i++)
-			if (playeringame[i] && playernode[i] != UINT8_MAX)
+			if (players[i].ingame && playernode[i] != UINT8_MAX)
 				realpingtable[i] += G_TicsToMilliseconds(GetLag(playernode[i]));
 		pingmeasurecount++;
 	}
@@ -1427,7 +1427,7 @@ static void IdleUpdate(void)
 
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
-		if (playeringame[i] && playernode[i] != UINT8_MAX && !players[i].quittime && !players[i].spectator && !players[i].bot && gamestate == GS_LEVEL)
+		if (players[i].ingame && playernode[i] != UINT8_MAX && !players[i].quittime && !players[i].spectator && !players[i].bot && gamestate == GS_LEVEL)
 		{
 			if (players[i].cmd.forwardmove || players[i].cmd.sidemove || players[i].cmd.buttons)
 				players[i].lastinputtime = 0;
@@ -1458,7 +1458,7 @@ static void IdleUpdate(void)
 		{
 			players[i].lastinputtime = 0;
 
-			if (players[i].quittime && playeringame[i])
+			if (players[i].quittime && players[i].ingame)
 			{
 				players[i].quittime++;
 
@@ -1493,7 +1493,7 @@ static void DedicatedIdleUpdate(INT32 *realtics)
 
 		boolean empty = true;
 		for (i = 0; i < MAXPLAYERS; i++)
-			if (playeringame[i])
+			if (players[i].ingame)
 			{
 				empty = false;
 				break;
@@ -1773,14 +1773,14 @@ SINT8 nametonum(const char *name)
 
 	if (playernum)
 	{
-		if (playeringame[playernum])
+		if (players[playernum].ingame)
 			return (SINT8)playernum;
 		else
 			return -1;
 	}
 
 	for (INT32 i = 0; i < MAXPLAYERS; i++)
-		if (playeringame[i] && !stricmp(player_names[i], name))
+		if (players[i].ingame && !stricmp(player_names[i], name))
 			return (SINT8)i;
 
 	CONS_Printf(M_GetText("There is no player named \"%s\"\n"), name);
@@ -1803,7 +1803,7 @@ INT32 D_NumPlayers(void)
 {
 	INT32 num = 0;
 	for (INT32 ix = 0; ix < MAXPLAYERS; ix++)
-		if (playeringame[ix])
+		if (players[ix].ingame)
 			num++;
 	return num;
 }
@@ -1830,7 +1830,7 @@ INT32 D_NumBots(void)
 {
 	INT32 num = 0, ix;
 	for (ix = 0; ix < MAXPLAYERS; ix++)
-		if (playeringame[ix] && players[ix].bot)
+		if (players[ix].ingame && players[ix].bot)
 			num++;
 	return num;
 }
@@ -1853,7 +1853,7 @@ INT16 Consistancy(void)
 
 	for (INT32 i = 0; i < MAXPLAYERS; i++)
 	{
-		if (!playeringame[i])
+		if (!players[i].ingame)
 			ret ^= 0xCCCC;
 		else if (!players[i].mo);
 		else

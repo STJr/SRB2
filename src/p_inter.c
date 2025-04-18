@@ -242,7 +242,7 @@ void P_DoNightsScore(player_t *player)
 	{
 		INT32 i;
 		for (i = 0; i < MAXPLAYERS; i++)
-			if (playeringame[i])
+			if (players[i].ingame)
 			{
 				if (++players[i].linkcount > players[i].maxlink)
 					players[i].maxlink = players[i].linkcount;
@@ -319,7 +319,7 @@ void P_DoMatchSuper(player_t *player)
 	// Check everyone else on your team for emeralds, and turn those helpful assisting players invincible too.
 	if (doteams)
 		for (i = 0; i < MAXPLAYERS; i++)
-			if (playeringame[i] && players[i].ctfteam == player->ctfteam
+			if (players[i].ingame && players[i].ctfteam == player->ctfteam
 			&& players[i].powers[pw_emeralds] != 0)
 			{
 				players[i].powers[pw_emeralds] = 0;
@@ -750,7 +750,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			{
 				for (i = 0; i < MAXPLAYERS; i++)
 				{
-					if (!playeringame[i] || players[i].spectator)
+					if (!players[i].ingame || players[i].spectator)
 						continue;
 					P_DoPlayerExit(&players[i], true);
 				}
@@ -964,7 +964,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 						else // Make sure that SOMEONE has the emerald, at least!
 						{
 							for (i = 0; i < MAXPLAYERS; i++)
-								if (playeringame[i] && players[i].playerstate == PST_LIVE
+								if (players[i].ingame && players[i].playerstate == PST_LIVE
 								&& players[i].mo->tracer
 								&& players[i].mo->tracer->type == MT_GOTEMERALD)
 									return;
@@ -1214,7 +1214,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			if (G_IsSpecialStage(gamemap) && !player->exiting)
 			{ // In special stages, share spheres. Everyone gives up theirs to the player who touched the capsule
 				for (i = 0; i < MAXPLAYERS; i++)
-					if (playeringame[i] && (&players[i] != player) && players[i].spheres > 0)
+					if (players[i].ingame && (&players[i] != player) && players[i].spheres > 0)
 					{
 						player->spheres += players[i].spheres;
 						players[i].spheres = 0;
@@ -1294,7 +1294,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			else
 			{
 				for (i = 0; i < MAXPLAYERS; i++)
-					if (playeringame[i] && players[i].powers[pw_carry] == CR_NIGHTSMODE)
+					if (players[i].ingame && players[i].powers[pw_carry] == CR_NIGHTSMODE)
 						players[i].powers[pw_nights_superloop] = (UINT16)special->info->speed;
 				if (special->info->deathsound != sfx_None)
 					S_StartSoundFromEverywhere(special->info->deathsound);
@@ -1316,7 +1316,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			else
 			{
 				for (i = 0; i < MAXPLAYERS; i++)
-					if (playeringame[i] && players[i].powers[pw_carry] == CR_NIGHTSMODE)
+					if (players[i].ingame && players[i].powers[pw_carry] == CR_NIGHTSMODE)
 						players[i].drillmeter = special->info->speed;
 				if (special->info->deathsound != sfx_None)
 					S_StartSoundFromEverywhere(special->info->deathsound);
@@ -1346,7 +1346,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			{
 				mobj_t *flickyobj;
 				for (i = 0; i < MAXPLAYERS; i++)
-					if (playeringame[i] && players[i].mo && players[i].powers[pw_carry] == CR_NIGHTSMODE) {
+					if (players[i].ingame && players[i].mo && players[i].powers[pw_carry] == CR_NIGHTSMODE) {
 						players[i].powers[pw_nights_helper] = (UINT16)special->info->speed;
 						flickyobj = P_SpawnMobj(players[i].mo->x, players[i].mo->y, players[i].mo->z + players[i].mo->info->height, MT_NIGHTOPIANHELPER);
 						if (!P_MobjWasRemoved(flickyobj))
@@ -1377,7 +1377,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			else
 			{
 				for (i = 0; i < MAXPLAYERS; i++)
-					if (playeringame[i] && (player->powers[pw_carry] == CR_NIGHTSMODE || (G_IsSpecialStage(gamemap) && !(maptol & TOL_NIGHTS))))
+					if (players[i].ingame && (player->powers[pw_carry] == CR_NIGHTSMODE || (G_IsSpecialStage(gamemap) && !(maptol & TOL_NIGHTS))))
 					{
 						players[i].nightstime += special->info->speed;
 						players[i].startedtime += special->info->speed;
@@ -1407,7 +1407,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			else
 			{
 				for (i = 0; i < MAXPLAYERS; i++)
-					if (playeringame[i] && players[i].powers[pw_carry] == CR_NIGHTSMODE)
+					if (players[i].ingame && players[i].powers[pw_carry] == CR_NIGHTSMODE)
 					{
 						players[i].powers[pw_nights_linkfreeze] += (UINT16)special->info->speed;
 						players[i].linktimer = nightslinktics;
@@ -1457,7 +1457,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			if (G_IsSpecialStage(gamemap))
 			{
 				for (i = 0; i < MAXPLAYERS; i++)
-					if (playeringame[i] && players[i].powers[pw_carry] == CR_NIGHTSMODE)
+					if (players[i].ingame && players[i].powers[pw_carry] == CR_NIGHTSMODE)
 						players[i].drillmeter += TICRATE/2;
 			}
 			else if (player->bot && player->bot != BOT_MPAI)
@@ -1967,7 +1967,7 @@ void P_TouchStarPost(mobj_t *post, player_t *player, boolean snaptopost)
 	{
 		for (i = 0; i < MAXPLAYERS; i++)
 		{
-			if (playeringame[i])
+			if (players[i].ingame)
 			{
 				if (players[i].bot) // ignore dumb, stupid tails
 					continue;
@@ -2271,7 +2271,7 @@ void P_CheckTimeLimit(void)
 		{
 			for (i = 0; i < MAXPLAYERS; i++)
 			{
-				if (!playeringame[i] || players[i].spectator
+				if (!players[i].ingame || players[i].spectator
 				 || (players[i].pflags & PF_GAMETYPEOVER) || (players[i].pflags & PF_TAGIT))
 					continue;
 
@@ -2295,7 +2295,7 @@ void P_CheckTimeLimit(void)
 		//Figure out if we have enough participating players to care.
 		for (i = 0; i < MAXPLAYERS; i++)
 		{
-			if (playeringame[i] && players[i].spectator)
+			if (players[i].ingame && players[i].spectator)
 				spectators++;
 		}
 
@@ -2311,7 +2311,7 @@ void P_CheckTimeLimit(void)
 				//Store the nodes of participating players in an array.
 				for (i = 0; i < MAXPLAYERS; i++)
 				{
-					if (playeringame[i] && !players[i].spectator)
+					if (players[i].ingame && !players[i].spectator)
 					{
 						playerarray[playercount] = i;
 						playercount++;
@@ -2384,7 +2384,7 @@ void P_CheckPointLimit(void)
 	{
 		for (i = 0; i < MAXPLAYERS; i++)
 		{
-			if (!playeringame[i] || players[i].spectator)
+			if (!players[i].ingame || players[i].spectator)
 				continue;
 
 			if ((UINT32)cv_pointlimit.value <= players[i].score)
@@ -2413,7 +2413,7 @@ void P_CheckSurvivors(void)
 
 	for (i=0; i < MAXPLAYERS; i++) //figure out counts of taggers, survivors and spectators.
 	{
-		if (playeringame[i])
+		if (players[i].ingame)
 		{
 			if (players[i].spectator)
 				spectators++;
@@ -2490,7 +2490,7 @@ boolean P_CheckRacers(void)
 	// Check if all the players in the race have finished. If so, end the level.
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
-		if (playeringame[i] && !players[i].exiting && players[i].lives > 0)
+		if (players[i].ingame && !players[i].exiting && players[i].lives > 0)
 			break;
 	}
 
@@ -2703,7 +2703,7 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 					INT32 i;
 					for (i = 0; i < MAXPLAYERS; i++)
 					{
-						if (!playeringame[i])
+						if (!players[i].ingame)
 							continue;
 
 						if (players[i].lives > 0)
