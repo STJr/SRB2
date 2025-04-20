@@ -294,7 +294,7 @@ static void Got_AddPlayer(UINT8 **p, INT32 playernum)
 		}
 
 		// rewind neededtic to re-process packets, so we can sync up to the server
-		gametic = neededtic = maketic;
+		gametic = neededtic = maketic+1;
 	}
 
 	if (netgame)
