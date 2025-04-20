@@ -137,23 +137,6 @@ typedef struct
 
 typedef struct
 {
-	// Server launch stuffs
-	UINT8 serverplayer;
-	UINT8 totalslotnum; // "Slots": highest player number in use plus one.
-
-	tic_t gametic;
-	UINT8 clientnode;
-	UINT8 gamestate;
-
-	UINT8 gametype;
-	UINT8 modifiedgame;
-	UINT8 usedCheats;
-
-	char server_context[8]; // Unique context id, generated at server startup.
-} ATTRPACK serverconfig_pak;
-
-typedef struct
-{
 	UINT8 fileid;
 	UINT32 filesize;
 	UINT8 iteration;
@@ -302,7 +285,6 @@ typedef struct
 		clientcmd_pak clientpak;
 		client2cmd_pak client2pak;
 		servertics_pak serverpak;
-		serverconfig_pak servercfg;
 		UINT8 textcmd[MAXTEXTCMD+1];
 		filetx_pak filetxpak;
 		fileack_pak fileack;

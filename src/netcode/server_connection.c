@@ -242,24 +242,24 @@ static void SV_SendPlayerInfo(INT32 node)
   */
 static boolean SV_SendServerConfig(INT32 node)
 {
-	doomdata_t *netbuffer = DOOMCOM_DATA(doomcom);
+	char *data = doomcom->data;
 	boolean waspacketsent;
 
-	netbuffer->packettype = PT_SERVERCFG;
+	DOOMCOM_SETTYPE(data, PT_SERVERCFG);
+	data += 8;
 
-	netbuffer->u.servercfg.serverplayer = (UINT8)serverplayer;
-	netbuffer->u.servercfg.totalslotnum = (UINT8)numslots;
-	netbuffer->u.servercfg.gametic = (tic_t)LONG(gametic);
-	netbuffer->u.servercfg.clientnode = (UINT8)node;
-	netbuffer->u.servercfg.gamestate = (UINT8)gamestate;
-	netbuffer->u.servercfg.gametype = (UINT8)gametype;
-	netbuffer->u.servercfg.modifiedgame = (UINT8)modifiedgame;
-	netbuffer->u.servercfg.usedCheats = (UINT8)usedCheats;
-
-	memcpy(netbuffer->u.servercfg.server_context, server_context, 8);
+	WRITEUINT8(data, serverplayer);
+	WRITEUINT8(data, numslots);
+	WRITEUINT32(data, gametic);
+	WRITEUINT8(data, node);
+	WRITEUINT8(data, gamestate);
+	WRITEUINT8(data, gametype);
+	WRITEUINT8(data, modifiedgame);
+	WRITEUINT8(data, usedCheats);
+	WRITEMEM(data, server_context, 8);
 
 	{
-		const size_t len = sizeof (serverconfig_pak);
+		const size_t len = data - doomcom->data - 8;
 
 #ifdef DEBUGFILE
 		if (debugfile)

@@ -617,6 +617,7 @@ static const char *packettypename[NUMPACKETTYPE] =
 static void DebugPrintpacket(const char *header)
 {
 	doomdata_t *netbuffer = DOOMCOM_DATA(doomcom);
+	save_t data = DOOMCOM_DATABUF(doomcom);
 	fprintf(debugfile, "%-12s (node %d,ack %d,ackret %d,size %d) type(%d) : %s\n",
 		header, doomcom->remotenode, netbuffer->ack, netbuffer->ackreturn, doomcom->datalength,
 		netbuffer->packettype, packettypename[netbuffer->packettype]);
@@ -670,13 +671,22 @@ static void DebugPrintpacket(const char *header)
 			fprintfstringnewline((char *)netbuffer->u.textcmd + 2, netbuffer->u.textcmd[0] - 1);
 			break;
 		case PT_SERVERCFG:
+		{
+			UINT8 dbg_serverplayer = P_ReadUINT8(&data);
+			UINT8 dbg_numslots = P_ReadUINT8(&data);
+			UINT32 dbg_gametic = P_ReadUINT32(&data);
+			UINT8 dbg_node = P_ReadUINT8(&data);
+			UINT8 dbg_gamestate = P_ReadUINT8(&data);
+			UINT8 dbg_gametype = P_ReadUINT8(&data);
+			UINT8 dbg_modifiedgame = P_ReadUINT8(&data);
 			fprintf(debugfile, "    playerslots %d clientnode %d serverplayer %d "
 				"gametic %u gamestate %d gametype %d modifiedgame %d\n",
-				netbuffer->u.servercfg.totalslotnum, netbuffer->u.servercfg.clientnode,
-				netbuffer->u.servercfg.serverplayer, (UINT32)LONG(netbuffer->u.servercfg.gametic),
-				netbuffer->u.servercfg.gamestate, netbuffer->u.servercfg.gametype,
-				netbuffer->u.servercfg.modifiedgame);
+				dbg_numslots, dbg_node,
+				dbg_serverplayer, (UINT32)dbg_gametic,
+				dbg_gamestate, dbg_gametype,
+				dbg_modifiedgame);
 			break;
+		}
 		case PT_SERVERINFO:
 			fprintf(debugfile, "    '%s' player %d/%d, map %s, filenum %d, time %u \n",
 				netbuffer->u.serverinfo.servername, netbuffer->u.serverinfo.numberofplayer,

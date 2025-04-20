@@ -49,7 +49,8 @@ typedef struct
 } ATTRPACK doomcom_t;
 
 #define DOOMCOM_DATA(d) (doomdata_t *)&(d)->data
-
+#define DOOMCOM_SETTYPE(d, t) ((d)[6] = (t))
+#define DOOMCOM_DATABUF(d) { .buf = (unsigned char *)(d)->data+8, .size = (d)->datalength, .pos = 0 }
 #if defined(_MSC_VER)
 #pragma pack()
 #endif

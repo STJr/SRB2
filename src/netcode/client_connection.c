@@ -1533,7 +1533,8 @@ void PT_ServerRefuse(SINT8 node)
 // Positive response of client join request
 void PT_ServerCFG(SINT8 node)
 {
-	doomdata_t *netbuffer = DOOMCOM_DATA(doomcom);
+	save_t data = DOOMCOM_DATABUF(doomcom);
+	UINT8 gs;
 	if (server && serverrunning && node != servernode)
 	{ // but wait I thought I'm the server?
 		Net_CloseConnection(node);
@@ -1545,22 +1546,28 @@ void PT_ServerCFG(SINT8 node)
 	if (cl_mode != CL_WAITJOINRESPONSE)
 		return;
 
+	serverplayer = P_ReadUINT8(&data);
+	if (serverplayer >= 0)
+		playernode[(UINT8)serverplayer] = servernode;
+
+	numslots = P_ReadUINT8(&data);
+	if (client)
+		maketic = gametic = neededtic = P_ReadUINT32(&data);
+	else
+		P_ReadUINT32(&data);
+
+	mynode = P_ReadUINT8(&data);
+	gs = P_ReadUINT8(&data);
 	if (client)
 	{
-		maketic = gametic = neededtic = (tic_t)LONG(netbuffer->u.servercfg.gametic);
-		G_SetGametype(netbuffer->u.servercfg.gametype);
-		modifiedgame = netbuffer->u.servercfg.modifiedgame;
-		if (netbuffer->u.servercfg.usedCheats)
+		G_SetGametype(P_ReadUINT8(&data));
+		modifiedgame = P_ReadUINT8(&data);
+		if (P_ReadUINT8(&data))
 			G_SetUsedCheats(true);
-		memcpy(server_context, netbuffer->u.servercfg.server_context, 8);
+		P_ReadMem(&data, server_context, 8);
 	}
 
 	netnodes[(UINT8)servernode].ingame = true;
-	serverplayer = netbuffer->u.servercfg.serverplayer;
-	numslots = SHORT(netbuffer->u.servercfg.totalslotnum);
-	mynode = netbuffer->u.servercfg.clientnode;
-	if (serverplayer >= 0)
-		playernode[(UINT8)serverplayer] = servernode;
 
 	if (netgame)
 		CONS_Printf(M_GetText("Join accepted, waiting for complete game state...\n"));
@@ -1569,8 +1576,7 @@ void PT_ServerCFG(SINT8 node)
 	/// \note Wait. What if a Lua script uses some global custom variables synched with the NetVars hook?
 	///       Shouldn't they be downloaded even at intermission time?
 	///       Also, according to PT_ClientJoin, the server will send the savegame even during intermission...
-	if (netbuffer->u.servercfg.gamestate == GS_LEVEL/* ||
-		netbuffer->u.servercfg.gamestate == GS_INTERMISSION*/)
+	if (gs == GS_LEVEL/* || gs == GS_INTERMISSION*/)
 		cl_mode = CL_DOWNLOADSAVEGAME;
 	else
 		cl_mode = CL_CONNECTED;

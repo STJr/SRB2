@@ -292,6 +292,9 @@ static void Got_AddPlayer(UINT8 **p, INT32 playernum)
 			if (camera2.chase && splitscreenplayer)
 				P_ResetCamera(newplayer, &camera2);
 		}
+
+		// rewind neededtic to re-process packets, so we can sync up to the server
+		gametic = neededtic = maketic;
 	}
 
 	if (netgame)
@@ -1637,7 +1640,7 @@ void NetUpdate(void)
 
 	UpdatePingTable();
 
-	if (client)
+	if (client && players[consoleplayer].ingame) // wait with updating maketic until we're in-game
 		maketic = neededtic;
 
 	Local_Maketic(realtics);
