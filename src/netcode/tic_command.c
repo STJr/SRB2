@@ -30,6 +30,7 @@ ticcmd_t localcmds;
 ticcmd_t localcmds2;
 boolean cl_packetmissed;
 ticcmd_t netcmds[BACKUPTICS][MAXPLAYERS];
+static ticcmd_t playercmds[MAXPLAYERS];
 
 static inline void *G_DcpyTiccmd(void* dest, const ticcmd_t* src, const size_t n)
 {
@@ -193,22 +194,16 @@ void PT_ClientCmd(SINT8 nodenum, INT32 netconsole)
 		|| netbuffer->packettype == PT_NODEKEEPALIVEMIS)
 		return;
 
-	// If we've alredy received a ticcmd for this tic, just submit it for the next one.
-	tic_t faketic = maketic;
-	if ((!!(netcmds[maketic % BACKUPTICS][netconsole].angleturn & TICCMD_RECEIVED))
-		&& (maketic - firstticstosend < BACKUPTICS - 1))
-		faketic++;
-
 	// Copy ticcmd
-	G_MoveTiccmd(&netcmds[faketic%BACKUPTICS][netconsole], &netbuffer->u.clientpak.cmd, 1);
+	// store it in an internal buffer so the last packet takes precedence, which minimizes input lag
+	G_MoveTiccmd(&playercmds[netconsole], &netbuffer->u.clientpak.cmd, 1);
 
 	// Splitscreen cmd
 	if ((netbuffer->packettype == PT_CLIENT2CMD || netbuffer->packettype == PT_CLIENT2MIS)
 		&& node->player2 >= 0)
-		G_MoveTiccmd(&netcmds[faketic%BACKUPTICS][(UINT8)node->player2],
-			&netbuffer->u.client2pak.cmd2, 1);
+		G_MoveTiccmd(&playercmds[(UINT8)node->player2], &netbuffer->u.client2pak.cmd2, 1);
 
-	CheckTiccmdHacks(netconsole, faketic);
+	CheckTiccmdHacks(netconsole, maketic);
 	CheckConsistancy(nodenum, realstart);
 }
 
@@ -442,35 +437,6 @@ void Local_Maketic(INT32 realtics)
 // create missed tic
 void SV_Maketic(void)
 {
-	for (INT32 i = 0; i < MAXPLAYERS; i++)
-	{
-		if (!players[i].ingame)
-			continue;
-
-		// We didn't receive this tic
-		if ((netcmds[maketic % BACKUPTICS][i].angleturn & TICCMD_RECEIVED) == 0)
-		{
-			ticcmd_t *    ticcmd = &netcmds[(maketic    ) % BACKUPTICS][i];
-			ticcmd_t *prevticcmd = &netcmds[(maketic - 1) % BACKUPTICS][i];
-
-			if (players[i].quittime)
-			{
-				// Copy the angle/aiming from the previous tic
-				// and empty the other inputs
-				memset(ticcmd, 0, sizeof(netcmds[0][0]));
-				ticcmd->angleturn = prevticcmd->angleturn | TICCMD_RECEIVED;
-				ticcmd->aiming = prevticcmd->aiming;
-			}
-			else
-			{
-				DEBFILE(va("MISS tic%4d for player %d\n", maketic, i));
-				// Copy the input from the previous tic
-				*ticcmd = *prevticcmd;
-				ticcmd->angleturn &= ~TICCMD_RECEIVED;
-			}
-		}
-	}
-
-	// All tics have been processed, make the next
+	G_MoveTiccmd(netcmds[maketic % BACKUPTICS], playercmds, MAXPLAYERS);
 	maketic++;
 }
