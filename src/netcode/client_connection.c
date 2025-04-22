@@ -668,7 +668,7 @@ static boolean IsFileDownloadable(fileneeded_t *file)
 
 static boolean UseDirectDownloader(void)
 {
-	return filedownload.http_source[0] == '\0' || filedownload.http_failed;
+	return !cv_http_enable.value || filedownload.http_source[0] == '\0' || filedownload.http_failed;
 }
 
 static void DoLoadFiles(void)
