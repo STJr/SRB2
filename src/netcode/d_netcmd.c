@@ -934,6 +934,8 @@ void D_RegisterClientCommands(void)
 
 	CV_RegisterVar(&cv_freedemocamera);
 
+	CV_RegisterVar(&cv_http_enable);
+
 	// add cheat commands
 	COM_AddCommand("noclip", Command_CheatNoClip_f, COM_LUA);
 	COM_AddCommand("god", Command_CheatGod_f, COM_LUA);
