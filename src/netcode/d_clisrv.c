@@ -1640,7 +1640,7 @@ void NetUpdate(void)
 
 	UpdatePingTable();
 
-	if (client && players[consoleplayer].ingame) // wait with updating maketic until we're in-game
+	if (client) // wait with updating maketic until we're in-game
 		maketic = neededtic;
 
 	Local_Maketic(realtics);

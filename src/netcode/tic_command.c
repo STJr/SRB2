@@ -236,7 +236,6 @@ void PT_ServerTics(SINT8 node, INT32 netconsole)
 	realstart = packet->starttic;
 	realend = realstart + packet->numtics;
 
-	realend = min(realend, gametic + CLIENTBACKUPTICS);
 	cl_packetmissed = realstart > neededtic;
 
 	if (realstart <= neededtic && realend > neededtic)
@@ -369,23 +368,6 @@ void SV_SendTics(void)
 			realfirsttic = node->supposedtic;
 			lasttictosend = min(maketic, node->tic + CLIENTBACKUPTICS);
 
-			if (realfirsttic >= lasttictosend)
-			{
-				// Well, we have sent all the tics, so we will use extra bandwidth
-				// to resend packets that are supposed lost.
-				// This is necessary since lost packet detection
-				// works when we receive a packet with firsttic > neededtic (PT_SERVERTICS)
-				DEBFILE(va("Nothing to send node %u mak=%u sup=%u net=%u \n",
-					n, maketic, node->supposedtic, node->tic));
-
-				realfirsttic = node->tic;
-
-				if (realfirsttic >= lasttictosend || (I_GetTime() + n)&3)
-					// All tics are Ok
-					continue;
-
-				DEBFILE(va("Sent %d anyway\n", realfirsttic));
-			}
 			realfirsttic = max(realfirsttic, firstticstosend);
 
 			lasttictosend = realfirsttic + SV_CalculateNumTicsForPacket(n, realfirsttic, lasttictosend);
