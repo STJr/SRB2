@@ -503,12 +503,12 @@ void PT_TellFilesNeeded(doomcom_t *doomcom)
 	UINT8 node = doomcom->remotenode;
 	if (server && serverrunning)
 	{
-		doomcom = D_NewPacket(PT_MOREFILESNEEDED, node, 0);
 		doomdata_t *netbuffer = DOOMCOM_DATA(doomcom);
 		UINT8 *p;
 		INT32 firstfile = netbuffer->u.filesneedednum;
+		doomcom = D_NewPacket(PT_MOREFILESNEEDED, node, 0);
+		netbuffer = DOOMCOM_DATA(doomcom);
 
-		netbuffer->packettype = PT_MOREFILESNEEDED;
 		netbuffer->u.filesneededcfg.first = firstfile;
 		netbuffer->u.filesneededcfg.more = 0;
 
