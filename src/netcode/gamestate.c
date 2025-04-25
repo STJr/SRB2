@@ -155,7 +155,7 @@ void SV_SavedGame(void)
 
 void CL_LoadReceivedSavegame(boolean reloading)
 {
-	doomdata_t *netbuffer = DOOMCOM_DATA(doomcom);
+	doomcom_t *doomcom = D_NewPacket(PT_RECEIVEDGAMESTATE, servernode, 0);
 	save_t savebuffer;
 	size_t decompressedlen;
 	char tmpsave[256];
@@ -217,8 +217,7 @@ void CL_LoadReceivedSavegame(boolean reloading)
 
 	// Tell the server we have received and reloaded the gamestate
 	// so they know they can resume the game
-	netbuffer->packettype = PT_RECEIVEDGAMESTATE;
-	HSendPacket(servernode, true, 0, 0);
+	HSendPacket(doomcom, true, 0);
 }
 
 void CL_ReloadReceivedSavegame(void)
@@ -252,7 +251,6 @@ void CL_ReloadReceivedSavegame(void)
 
 void Command_ResendGamestate(void)
 {
-	doomdata_t *netbuffer = DOOMCOM_DATA(doomcom);
 	SINT8 playernum;
 
 	if (COM_Argc() == 1)
@@ -270,17 +268,18 @@ void Command_ResendGamestate(void)
 	if (playernum == -1 || playernum == 0)
 		return;
 
+	doomcom_t *doomcom = D_NewPacket(PT_WILLRESENDGAMESTATE, playernode[playernum], 0);
 	// Send a PT_WILLRESENDGAMESTATE packet to the client so they know what's going on
-	netbuffer->packettype = PT_WILLRESENDGAMESTATE;
-	if (!HSendPacket(playernode[playernum], true, 0, 0))
+	if (!HSendPacket(doomcom, true, 0))
 	{
 		CONS_Alert(CONS_ERROR, M_GetText("A problem occurred, please try again.\n"));
 		return;
 	}
 }
 
-void PT_CanReceiveGamestate(SINT8 node)
+void PT_CanReceiveGamestate(doomcom_t *doomcom)
 {
+	UINT8 node = doomcom->remotenode;
 	if (client || netnodes[node].sendingsavegame)
 		return;
 
@@ -290,17 +289,17 @@ void PT_CanReceiveGamestate(SINT8 node)
 	netnodes[node].resendingsavegame = true;
 }
 
-void PT_ReceivedGamestate(SINT8 node)
+void PT_ReceivedGamestate(doomcom_t *doomcom)
 {
+	UINT8 node = doomcom->remotenode;
 	netnodes[node].sendingsavegame = false;
 	netnodes[node].resendingsavegame = false;
 	netnodes[node].savegameresendcooldown = I_GetTime() + 5 * TICRATE;
 }
 
-void PT_WillResendGamestate(SINT8 node)
+void PT_WillResendGamestate(doomcom_t *doomcom)
 {
-	doomdata_t *netbuffer = DOOMCOM_DATA(doomcom);
-	(void)node;
+	doomcom = D_NewPacket(PT_CANRECEIVEGAMESTATE, servernode, 0);
 
 	char tmpsave[256];
 
@@ -309,8 +308,7 @@ void PT_WillResendGamestate(SINT8 node)
 
 	// Send back a PT_CANRECEIVEGAMESTATE packet to the server
 	// so they know they can start sending the game state
-	netbuffer->packettype = PT_CANRECEIVEGAMESTATE;
-	if (!HSendPacket(servernode, true, 0, 0))
+	if (!HSendPacket(doomcom, true, 0))
 		return;
 
 	CONS_Printf(M_GetText("Reloading game state...\n"));

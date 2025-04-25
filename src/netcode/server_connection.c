@@ -95,10 +95,10 @@ GetRefuseReason (INT32 node)
 
 static void SV_SendServerInfo(INT32 node, tic_t servertime)
 {
+	doomcom_t *doomcom = D_NewPacket(PT_SERVERINFO, node, 0);
 	doomdata_t *netbuffer = DOOMCOM_DATA(doomcom);
 	UINT8 *p;
 
-	netbuffer->packettype = PT_SERVERINFO;
 	netbuffer->u.serverinfo._255 = 255;
 	netbuffer->u.serverinfo.packetversion = PACKETVERSION;
 	netbuffer->u.serverinfo.version = VERSION;
@@ -167,15 +167,16 @@ static void SV_SendServerInfo(INT32 node, tic_t servertime)
 
 	netbuffer->u.serverinfo.httpsource[MAX_MIRROR_LENGTH-1] = '\0';
 
-	p = PutFileNeeded(0);
+	p = PutFileNeeded(netbuffer, 0);
 
-	HSendPacket(node, false, 0, p - ((UINT8 *)&netbuffer->u));
+	doomcom->datalength = p - ((UINT8 *)&netbuffer->u);
+	HSendPacket(doomcom, false, 0);
 }
 
 static void SV_SendPlayerInfo(INT32 node)
 {
+	doomcom_t *doomcom = D_NewPacket(PT_PLAYERINFO, node, sizeof(plrinfo_pak) * MAXPLAYERS);
 	doomdata_t *netbuffer = DOOMCOM_DATA(doomcom);
-	netbuffer->packettype = PT_PLAYERINFO;
 
 	for (UINT8 i = 0; i < MAXPLAYERS; i++)
 	{
@@ -231,7 +232,7 @@ static void SV_SendPlayerInfo(INT32 node)
 			netbuffer->u.playerinfo[i].data |= 0x80;
 	}
 
-	HSendPacket(node, false, 0, sizeof(plrinfo_pak) * MAXPLAYERS);
+	HSendPacket(doomcom, false, 0);
 }
 
 /** Sends a PT_SERVERCFG packet
@@ -242,11 +243,9 @@ static void SV_SendPlayerInfo(INT32 node)
   */
 static boolean SV_SendServerConfig(INT32 node)
 {
-	char *data = doomcom->data;
+	doomcom_t *doomcom = D_NewPacket(PT_SERVERCFG, node, 0);
+	char *data = doomcom->data + 8;
 	boolean waspacketsent;
-
-	DOOMCOM_SETTYPE(data, PT_SERVERCFG);
-	data += 8;
 
 	WRITEUINT8(data, serverplayer);
 	WRITEUINT8(data, numslots);
@@ -259,17 +258,17 @@ static boolean SV_SendServerConfig(INT32 node)
 	WRITEMEM(data, server_context, 8);
 
 	{
-		const size_t len = data - doomcom->data - 8;
+		doomcom->datalength = data - doomcom->data - 8;
 
 #ifdef DEBUGFILE
 		if (debugfile)
 		{
 			fprintf(debugfile, "ServerConfig Packet about to be sent, size of packet:%s to node:%d\n",
-				sizeu1(len), node);
+				sizeu1(doomcom->datalength), node);
 		}
 #endif
 
-		waspacketsent = HSendPacket(node, true, 0, len);
+		waspacketsent = HSendPacket(doomcom, true, 0);
 	}
 
 #ifdef DEBUGFILE
@@ -352,17 +351,17 @@ static void SV_AddPlayer(SINT8 node, const char *name)
 
 static void SV_SendRefuse(INT32 node, const char *reason)
 {
-	doomdata_t *netbuffer = DOOMCOM_DATA(doomcom);
-	strcpy(netbuffer->u.serverrefuse.reason, reason);
+	doomcom_t *doomcom = D_NewPacket(PT_SERVERREFUSE, node, strlen(reason)+1);
+	strcpy(doomcom->data+8, reason);
 
-	netbuffer->packettype = PT_SERVERREFUSE;
-	HSendPacket(node, true, 0, strlen(netbuffer->u.serverrefuse.reason) + 1);
+	HSendPacket(doomcom, true, 0);
 	Net_CloseConnection(node);
 }
 
 static const char *
-GetRefuseMessage (SINT8 node, INT32 rejoinernum)
+GetRefuseMessage (doomcom_t *doomcom, INT32 rejoinernum)
 {
+	UINT8 node = doomcom->remotenode;
 	doomdata_t *netbuffer = DOOMCOM_DATA(doomcom);
 	clientconfig_pak *cc = &netbuffer->u.clientcfg;
 
@@ -438,8 +437,9 @@ GetRefuseMessage (SINT8 node, INT32 rejoinernum)
   * \param node The packet sender
   *
   */
-void PT_ClientJoin(SINT8 node)
+void PT_ClientJoin(doomcom_t *doomcom)
 {
+	UINT8 node = doomcom->remotenode;
 	doomdata_t *netbuffer = DOOMCOM_DATA(doomcom);
 	char names[MAXSPLITSCREENPLAYERS][MAXPLAYERNAME + 1];
 	INT32 numplayers = netbuffer->u.clientcfg.localplayers;
@@ -451,7 +451,7 @@ void PT_ClientJoin(SINT8 node)
 
 	rejoinernum = FindRejoinerNum(node);
 
-	const char *refuse = GetRefuseMessage(node, rejoinernum);
+	const char *refuse = GetRefuseMessage(doomcom, rejoinernum);
 	if (refuse)
 	{
 		SV_SendRefuse(node, refuse);
@@ -493,16 +493,18 @@ void PT_ClientJoin(SINT8 node)
 	joindelay += cv_joindelay.value * TICRATE;
 }
 
-void PT_AskInfoViaMS(SINT8 node)
+void PT_AskInfoViaMS(doomcom_t *doomcom)
 {
-	Net_CloseConnection(node);
+	Net_CloseConnection(doomcom->remotenode);
 }
 
-void PT_TellFilesNeeded(SINT8 node)
+void PT_TellFilesNeeded(doomcom_t *doomcom)
 {
-	doomdata_t *netbuffer = DOOMCOM_DATA(doomcom);
+	UINT8 node = doomcom->remotenode;
 	if (server && serverrunning)
 	{
+		doomcom = D_NewPacket(PT_MOREFILESNEEDED, node, 0);
+		doomdata_t *netbuffer = DOOMCOM_DATA(doomcom);
 		UINT8 *p;
 		INT32 firstfile = netbuffer->u.filesneedednum;
 
@@ -510,16 +512,18 @@ void PT_TellFilesNeeded(SINT8 node)
 		netbuffer->u.filesneededcfg.first = firstfile;
 		netbuffer->u.filesneededcfg.more = 0;
 
-		p = PutFileNeeded(firstfile);
+		p = PutFileNeeded(netbuffer, firstfile);
 
-		HSendPacket(node, false, 0, p - ((UINT8 *)&netbuffer->u));
+		doomcom->datalength = p - (UINT8 *)&netbuffer->u;
+		HSendPacket(doomcom, false, 0);
 	}
 	else // Shouldn't get this if you aren't the server...?
 		Net_CloseConnection(node);
 }
 
-void PT_AskInfo(SINT8 node)
+void PT_AskInfo(doomcom_t *doomcom)
 {
+	UINT8 node = doomcom->remotenode;
 	doomdata_t *netbuffer = DOOMCOM_DATA(doomcom);
 	if (server && serverrunning)
 	{

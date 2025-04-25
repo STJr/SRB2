@@ -166,9 +166,8 @@ enum
   * Used to have size limiting built in - now handled via W_InitFile in w_wad.c
   *
   */
-UINT8 *PutFileNeeded(UINT16 firstfile)
+UINT8 *PutFileNeeded(doomdata_t *netbuffer, UINT16 firstfile)
 {
-	doomdata_t *netbuffer = DOOMCOM_DATA(doomcom);
 	UINT8 count = 0;
 	UINT8 *p_start = netbuffer->packettype == PT_MOREFILESNEEDED ? netbuffer->u.filesneededcfg.files : netbuffer->u.serverinfo.fileneeded;
 	UINT8 *p = p_start;
@@ -364,6 +363,7 @@ void CL_AbortDownloadResume(void)
   */
 boolean CL_SendFileRequest(void)
 {
+	doomcom_t *doomcom = D_NewPacket(PT_REQUESTFILE, servernode, 0);
 	doomdata_t *netbuffer = DOOMCOM_DATA(doomcom);
 	char *p;
 	INT64 totalfreespaceneeded = 0, availablefreespace;
@@ -401,7 +401,6 @@ boolean CL_SendFileRequest(void)
 		return false;
 	}
 
-	netbuffer->packettype = PT_REQUESTFILE;
 	p = (char *)netbuffer->u.textcmd;
 	for (INT32 i = 0; i < fileneedednum; i++)
 		if (fileneeded[i].status == FS_NOTFOUND || fileneeded[i].status == FS_MD5SUMBAD)
@@ -417,7 +416,8 @@ boolean CL_SendFileRequest(void)
 
 	WRITEUINT8(p, 0xFF);
 
-	if (!HSendPacket(servernode, true, 0, p - (char *)netbuffer->u.textcmd))
+	doomcom->datalength = p - (char *)netbuffer->u.textcmd;
+	if (!HSendPacket(doomcom, true, 0))
 	{
 		CONS_Printf("Could not send download request packet to server\n");
 		return false;
@@ -430,9 +430,10 @@ boolean CL_SendFileRequest(void)
 }
 
 // get request filepak and put it on the send queue
-void PT_RequestFile(SINT8 node)
+void PT_RequestFile(doomcom_t *doomcom)
 {
 	doomdata_t *netbuffer = DOOMCOM_DATA(doomcom);
+	UINT8 node = doomcom->remotenode;
 	UINT8 *p = netbuffer->u.textcmd;
 
 	if (client || !cv_downloading.value)
@@ -654,7 +655,6 @@ void AddLuaFileTransfer(const char *filename, const char *mode)
 
 static void SV_PrepareSendLuaFileToNextNode(void)
 {
-	doomdata_t *netbuffer = DOOMCOM_DATA(doomcom);
 	UINT8 success = 1;
 
     // Find a client to send the file to
@@ -662,8 +662,8 @@ static void SV_PrepareSendLuaFileToNextNode(void)
 		if (luafiletransfers->nodestatus[i] == LFTNS_WAITING) // Node waiting
 		{
 			// Tell the client we're about to send them the file
-			netbuffer->packettype = PT_SENDINGLUAFILE;
-			if (!HSendPacket(i, true, 0, 0))
+			doomcom_t *doomcom = D_NewPacket(PT_SENDINGLUAFILE, i, 0);
+			if (!HSendPacket(doomcom, true, 0))
 				I_Error("Failed to send a PT_SENDINGLUAFILE packet\n"); // !!! Todo: Handle failure a bit better lol
 
 			luafiletransfers->nodestatus[i] = LFTNS_ASKED;
@@ -759,7 +759,7 @@ void SV_AbortLuaFileTransfer(INT32 node)
 
 void CL_PrepareDownloadLuaFile(void)
 {
-	doomdata_t *netbuffer = DOOMCOM_DATA(doomcom);
+	doomcom_t *doomcom = D_NewPacket(PT_ASKLUAFILE, servernode, 0);
 	// If there is no transfer in the list, this normally means the server
 	// called io.open before us, so we have to wait until we call it too
 	if (!luafiletransfers)
@@ -775,8 +775,7 @@ void CL_PrepareDownloadLuaFile(void)
 	}
 
 	// Tell the server we are ready to receive the file
-	netbuffer->packettype = PT_ASKLUAFILE;
-	HSendPacket(servernode, true, 0, 0);
+	HSendPacket(doomcom, true, 0);
 
 	FreeFileNeeded();
 	AllocFileNeeded(1);
@@ -1011,7 +1010,6 @@ static void SV_EndFileSend(INT32 node)
   */
 void FileSendTicker(void)
 {
-	doomdata_t *netbuffer = DOOMCOM_DATA(doomcom);
 	static INT32 currentnode = 0;
 	filetx_pak *p;
 	size_t fragmentsize;
@@ -1038,8 +1036,6 @@ void FileSendTicker(void)
 		return;
 
 	packetsent = cv_downloadspeed.value;
-
-	netbuffer->packettype = PT_FILEFRAGMENT;
 
 	while (packetsent-- && filestosend != 0)
 	{
@@ -1120,10 +1116,13 @@ void FileSendTicker(void)
 		}
 
 		// Build a packet containing a file fragment
-		p = &netbuffer->u.filetxpak;
 		fragmentsize = FILEFRAGMENTSIZE;
 		if (f->size-transfer[i].position < fragmentsize)
 			fragmentsize = f->size-transfer[i].position;
+
+		doomcom_t *doomcom = D_NewPacket(PT_FILEFRAGMENT, i, FILETXHEADER + fragmentsize);
+		doomdata_t *netbuffer = DOOMCOM_DATA(doomcom);
+		p = &netbuffer->u.filetxpak;
 		if (ram)
 			M_Memcpy(p->data, &f->id.ram[transfer[i].position], fragmentsize);
 		else
@@ -1140,7 +1139,7 @@ void FileSendTicker(void)
 		p->size = SHORT((UINT16)FILEFRAGMENTSIZE);
 
 		// Send the packet
-		if (HSendPacket(i, false, 0, FILETXHEADER + fragmentsize)) // Don't use the default acknowledgement system
+		if (HSendPacket(doomcom, false, 0)) // Don't use the default acknowledgement system
 		{ // Success
 			transfer[i].position = (UINT32)(transfer[i].position + fragmentsize);
 			if (transfer[i].position >= f->size)
@@ -1160,8 +1159,9 @@ void FileSendTicker(void)
 	}
 }
 
-void PT_FileAck(SINT8 node)
+void PT_FileAck(doomcom_t *doomcom)
 {
+	UINT8 node = doomcom->remotenode;
 	doomdata_t *netbuffer = DOOMCOM_DATA(doomcom);
 	fileack_pak *packet = &netbuffer->u.fileack;
 	filetran_t *trans = &transfer[node];
@@ -1215,8 +1215,9 @@ void PT_FileAck(SINT8 node)
 	}
 }
 
-void PT_FileReceived(SINT8 node)
+void PT_FileReceived(doomcom_t *doomcom)
 {
+	UINT8 node = doomcom->remotenode;
 	doomdata_t *netbuffer = DOOMCOM_DATA(doomcom);
 	filetx_t *trans = transfer[node].txlist;
 
@@ -1226,10 +1227,9 @@ void PT_FileReceived(SINT8 node)
 
 static void SendAckPacket(fileack_pak *packet, UINT8 fileid)
 {
+	size_t packetsize = sizeof(*packet) + packet->numsegments * sizeof(*packet->segments);
+	doomcom_t *doomcom = D_NewPacket(PT_FILEACK, servernode, packetsize);
 	doomdata_t *netbuffer = DOOMCOM_DATA(doomcom);
-	size_t packetsize;
-
-	packetsize = sizeof(*packet) + packet->numsegments * sizeof(*packet->segments);
 
 	// Finalise the packet
 	packet->fileid = fileid;
@@ -1240,9 +1240,8 @@ static void SendAckPacket(fileack_pak *packet, UINT8 fileid)
 	}
 
 	// Send the packet
-	netbuffer->packettype = PT_FILEACK;
 	M_Memcpy(&netbuffer->u.fileack, packet, packetsize);
-	HSendPacket(servernode, false, 0, packetsize);
+	HSendPacket(doomcom, false, 0);
 
 	// Clear the packet
 	memset(packet, 0, sizeof(*packet) + 512);
@@ -1304,9 +1303,8 @@ void FileReceiveTicker(void)
 	}
 }
 
-static void OpenNewFileForDownload(fileneeded_t *file, const char *filename)
+static void OpenNewFileForDownload(doomdata_t *netbuffer, fileneeded_t *file, const char *filename)
 {
-	doomdata_t *netbuffer = DOOMCOM_DATA(doomcom);
 	file->file = fopen(filename, "wb");
 	if (!file->file)
 		I_Error("Can't create file %s: %s", filename, strerror(errno));
@@ -1320,8 +1318,9 @@ static void OpenNewFileForDownload(fileneeded_t *file, const char *filename)
 		I_Error("FileSendTicker: No more memory\n");
 }
 
-void PT_FileFragment(SINT8 node, INT32 netconsole)
+void PT_FileFragment(doomcom_t *doomcom, INT32 netconsole)
 {
+	UINT8 node = doomcom->remotenode;
 	doomdata_t *netbuffer = DOOMCOM_DATA(doomcom);
 	if (netnodes[node].ingame)
 	{
@@ -1394,7 +1393,7 @@ void PT_FileFragment(SINT8 node, INT32 netconsole)
 
 				CONS_Printf("Restarting download of addon \"%s\"...\n", filename);
 
-				OpenNewFileForDownload(file, file->filename);
+				OpenNewFileForDownload(netbuffer, file, file->filename);
 			}
 			else
 			{
@@ -1410,7 +1409,7 @@ void PT_FileFragment(SINT8 node, INT32 netconsole)
 		else
 		{
 			CL_AbortDownloadResume();
-			OpenNewFileForDownload(file, file->filename);
+			OpenNewFileForDownload(netbuffer, file, file->filename);
 			CONS_Printf("Downloading addon \"%s\" from the server...\n", filename);
 		}
 
@@ -1447,15 +1446,16 @@ void PT_FileFragment(SINT8 node, INT32 netconsole)
 				file->justdownloaded = true;
 
 				// Tell the server we have received the file
-				netbuffer->packettype = PT_FILERECEIVED;
+				doomcom = D_NewPacket(PT_FILERECEIVED, servernode, 1);
+				netbuffer = DOOMCOM_DATA(doomcom);
 				netbuffer->u.filereceived = filenum;
-				HSendPacket(servernode, true, 0, 1);
+				HSendPacket(doomcom, true, 0);
 
 				if (luafiletransfers)
 				{
 					// Tell the server we have received the file
-					netbuffer->packettype = PT_HASLUAFILE;
-					HSendPacket(servernode, true, 0, 0);
+					doomcom = D_NewPacket(PT_HASLUAFILE, servernode, 0);
+					HSendPacket(doomcom, true, 0);
 					FreeFileNeeded();
 				}
 				else

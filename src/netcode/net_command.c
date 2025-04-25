@@ -279,8 +279,9 @@ size_t TotalTextCmdPerTic(tic_t tic)
 	return total;
 }
 
-void PT_TextCmd(SINT8 node, INT32 netconsole)
+void PT_TextCmd(doomcom_t *doomcom, INT32 netconsole)
 {
+	UINT8 node = doomcom->remotenode;
 	doomdata_t *netbuffer = DOOMCOM_DATA(doomcom);
 	if (client)
 		return;
@@ -388,14 +389,14 @@ void CL_CopyNetCommandsFromServerPacket(tic_t tic, UINT8 **buf)
 
 void CL_SendNetCommands(void)
 {
-	doomdata_t *netbuffer = DOOMCOM_DATA(doomcom);
 	// Send extra data if needed
 	if (localtextcmd[0])
 	{
-		netbuffer->packettype = PT_TEXTCMD;
+		doomcom_t *doomcom = D_NewPacket(PT_TEXTCMD, servernode, localtextcmd[0]+1);
+		doomdata_t *netbuffer = DOOMCOM_DATA(doomcom);
 		M_Memcpy(netbuffer->u.textcmd,localtextcmd, localtextcmd[0]+1);
 		// All extra data have been sent
-		if (HSendPacket(servernode, true, 0, localtextcmd[0]+1)) // Send can fail...
+		if (HSendPacket(doomcom, true, 0)) // Send can fail...
 		{
 			localtextcmd[0] = 0;
 			if (textcmdbuf != NULL)
@@ -411,10 +412,11 @@ void CL_SendNetCommands(void)
 	// Send extra data if needed for player 2 (splitscreen)
 	if (localtextcmd2[0])
 	{
-		netbuffer->packettype = PT_TEXTCMD2;
+		doomcom_t *doomcom = D_NewPacket(PT_TEXTCMD2, servernode, localtextcmd2[0]+1);
+		doomdata_t *netbuffer = DOOMCOM_DATA(doomcom);
 		M_Memcpy(netbuffer->u.textcmd, localtextcmd2, localtextcmd2[0]+1);
 		// All extra data have been sent
-		if (HSendPacket(servernode, true, 0, localtextcmd2[0]+1)) // Send can fail...
+		if (HSendPacket(doomcom, true, 0)) // Send can fail...
 		{
 			localtextcmd2[0] = 0;
 			if (textcmdbuf2 != NULL)

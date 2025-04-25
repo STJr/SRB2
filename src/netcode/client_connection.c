@@ -397,11 +397,11 @@ static void CL_DrawConnectionStatus(void)
 
 static boolean CL_AskFileList(INT32 firstfile)
 {
+	doomcom_t *doomcom = D_NewPacket(PT_TELLFILESNEEDED, servernode, sizeof(INT32));
 	doomdata_t *netbuffer = DOOMCOM_DATA(doomcom);
-	netbuffer->packettype = PT_TELLFILESNEEDED;
 	netbuffer->u.filesneedednum = firstfile;
 
-	return HSendPacket(servernode, false, 0, sizeof (INT32));
+	return HSendPacket(doomcom, false, 0);
 }
 
 /** Sends a PT_CLIENTJOIN packet to the server
@@ -413,10 +413,10 @@ boolean CL_SendJoin(void)
 {
 	UINT8 localplayers = 1;
 	char const *player2name;
+	doomcom_t *doomcom = D_NewPacket(PT_CLIENTJOIN, servernode, sizeof(clientconfig_pak));
 	doomdata_t *netbuffer = DOOMCOM_DATA(doomcom);
 	if (netgame)
 		CONS_Printf(M_GetText("Sending join request...\n"));
-	netbuffer->packettype = PT_CLIENTJOIN;
 
 	netbuffer->u.clientcfg.modversion = MODVERSION;
 	strncpy(netbuffer->u.clientcfg.application,
@@ -440,21 +440,21 @@ boolean CL_SendJoin(void)
 	strncpy(netbuffer->u.clientcfg.names[0], cv_playername.zstring, sizeof(netbuffer->u.clientcfg.names[0])-1);
 	strncpy(netbuffer->u.clientcfg.names[1], player2name, MAXPLAYERNAME);
 
-	return HSendPacket(servernode, true, 0, sizeof (clientconfig_pak));
+	return HSendPacket(doomcom, true, 0);
 }
 
 static void SendAskInfo(INT32 node)
 {
 	const tic_t asktime = I_GetTime();
+	doomcom_t *doomcom = D_NewPacket(PT_ASKINFO, node, sizeof(askinfo_pak));
 	doomdata_t *netbuffer = DOOMCOM_DATA(doomcom);
-	netbuffer->packettype = PT_ASKINFO;
 	netbuffer->u.askinfo.version = VERSION;
 	netbuffer->u.askinfo.time = (tic_t)LONG(asktime);
 
 	// Even if this never arrives due to the host being firewalled, we've
 	// now allowed traffic from the host to us in, so once the MS relays
 	// our address to the host, it'll be able to speak to us.
-	HSendPacket(node, false, 0, sizeof (askinfo_pak));
+	HSendPacket(doomcom, false, 0);
 }
 
 serverelem_t serverlist[MAXSERVERLIST];
@@ -1436,8 +1436,9 @@ void CL_ConnectToServer(void)
   * \note What happens if the packet comes from a client or something like that?
   *
   */
-void PT_ServerInfo(SINT8 node)
+void PT_ServerInfo(doomcom_t *doomcom)
 {
+	UINT8 node = doomcom->remotenode;
 	// compute ping in ms
 	doomdata_t *netbuffer = DOOMCOM_DATA(doomcom);
 	const tic_t ticnow = I_GetTime();
@@ -1453,8 +1454,9 @@ void PT_ServerInfo(SINT8 node)
 	SL_InsertServer(&netbuffer->u.serverinfo, node);
 }
 
-void PT_PlayerInfo(SINT8 node)
+void PT_PlayerInfo(doomcom_t *doomcom)
 {
+	UINT8 node = doomcom->remotenode;
 	doomdata_t *netbuffer = DOOMCOM_DATA(doomcom);
 	(void)node;
 
@@ -1474,8 +1476,9 @@ static boolean ServerOnly(SINT8 node)
 	return true;
 }
 
-void PT_MoreFilesNeeded(SINT8 node)
+void PT_MoreFilesNeeded(doomcom_t *doomcom)
 {
+	UINT8 node = doomcom->remotenode;
 	doomdata_t *netbuffer = DOOMCOM_DATA(doomcom);
 	if (server && serverrunning)
 	{ // But wait I thought I'm the server?
@@ -1493,8 +1496,9 @@ void PT_MoreFilesNeeded(SINT8 node)
 }
 
 // Negative response of client join request
-void PT_ServerRefuse(SINT8 node)
+void PT_ServerRefuse(doomcom_t *doomcom)
 {
+	UINT8 node = doomcom->remotenode;
 	doomdata_t *netbuffer = DOOMCOM_DATA(doomcom);
 	if (server && serverrunning)
 	{ // But wait I thought I'm the server?
@@ -1531,8 +1535,9 @@ void PT_ServerRefuse(SINT8 node)
 }
 
 // Positive response of client join request
-void PT_ServerCFG(SINT8 node)
+void PT_ServerCFG(doomcom_t *doomcom)
 {
+	UINT8 node = doomcom->remotenode;
 	save_t data = DOOMCOM_DATABUF(doomcom);
 	UINT8 gs;
 	if (server && serverrunning && node != servernode)

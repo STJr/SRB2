@@ -343,8 +343,9 @@ static void UnlinkPlayerFromNode(INT32 playernum)
 	}
 }
 
-static void PT_ClientQuit(SINT8 node, INT32 netconsole)
+static void PT_ClientQuit(doomcom_t *doomcom, INT32 netconsole)
 {
+	UINT8 node = doomcom->remotenode;
 	if (client)
 		return;
 
@@ -650,12 +651,11 @@ void CL_RemovePlayer(INT32 playernum, kickreason_t reason)
 //
 void D_QuitNetGame(void)
 {
-	doomdata_t *netbuffer = DOOMCOM_DATA(doomcom);
 	mousegrabbedbylua = true;
 	textinputmodeenabledbylua = false;
 	I_UpdateMouseGrab();
 
-	if (!netgame || !netbuffer)
+	if (!netgame)
 		return;
 
 	DEBFILE("===========================================================================\n"
@@ -670,10 +670,9 @@ void D_QuitNetGame(void)
 
 	if (server)
 	{
-		netbuffer->packettype = PT_SERVERSHUTDOWN;
 		for (INT32 i = 0; i < MAXNETNODES; i++)
 			if (netnodes[i].ingame)
-				HSendPacket(i, true, 0, 0);
+				HSendPacket(D_NewPacket(PT_SERVERSHUTDOWN, i, 0), true, 0);
 #ifdef MASTERSERVER
 		if (serverrunning && cv_masterserver_room_id.value > 0)
 			UnregisterServer();
@@ -681,8 +680,7 @@ void D_QuitNetGame(void)
 	}
 	else if (servernode > 0 && servernode < MAXNETNODES && netnodes[(UINT8)servernode].ingame)
 	{
-		netbuffer->packettype = PT_CLIENTQUIT;
-		HSendPacket(servernode, true, 0, 0);
+		HSendPacket(D_NewPacket(PT_CLIENTQUIT, servernode, 0), true, 0);
 	}
 
 	seenplayer = NULL;
@@ -863,12 +861,11 @@ void SV_StopServer(void)
   * \param node The packet sender (should be the server)
   *
   */
-static void PT_ServerShutdown(SINT8 node)
+static void PT_ServerShutdown(doomcom_t *doomcom)
 {
-	if (node != servernode || server || cl_mode == CL_SEARCHING)
+	if (doomcom->remotenode != servernode || server || cl_mode == CL_SEARCHING)
 		return;
 
-	(void)node;
 	LUA_HookBool(false, HOOK(GameQuit));
 	D_QuitNetGame();
 	CL_Reset();
@@ -876,28 +873,27 @@ static void PT_ServerShutdown(SINT8 node)
 	M_StartMessage(M_GetText("Server has shutdown\n\nPress Esc\n"), NULL, MM_NOTHING);
 }
 
-static void PT_Login(SINT8 node)
+static void PT_Login(doomcom_t *doomcom)
 {
-	doomdata_t *netbuffer = DOOMCOM_DATA(doomcom);
 	if (client)
 		return;
 
+	UINT8 node = doomcom->remotenode;
 	I_Assert((UINT8)node < sizeof(adminsalt) / sizeof(adminsalt[0]));
 
 	// I_GetRandomBytes should get it's data from a CSPRNG, so it's safe to use it here.
 	I_GetRandomBytes(adminsalt[node], sizeof(adminsalt[node]));
 	adminsalt[node][8] = '\0'; // convenience
-	netbuffer->packettype = PT_LOGINCHALLENGE;
+	doomcom = D_NewPacket(PT_LOGINCHALLENGE, node, sizeof(adminsalt[node]));
+	doomdata_t *netbuffer = DOOMCOM_DATA(doomcom);
 	memcpy(netbuffer->u.salt, adminsalt[node], sizeof(adminsalt[node]));
-	HSendPacket(node, true, 0, sizeof(adminsalt[node]));
+	HSendPacket(doomcom, true, 0);
 }
 
-static void PT_LoginChallenge(SINT8 node)
+static void PT_LoginChallenge(doomcom_t *doomcom)
 {
 	doomdata_t *netbuffer = DOOMCOM_DATA(doomcom);
-	char salt[9];
-	I_StaticAssert(sizeof(salt) == sizeof(netbuffer->u.salt));
-
+	UINT8 node = doomcom->remotenode;
 	if (node != servernode)
 		return;
 
@@ -907,17 +903,18 @@ static void PT_LoginChallenge(SINT8 node)
 	if (reqpass == NULL)
 		return; // got PT_LOGINCHALLENGE but we didn't request a login
 
-	memcpy(salt, netbuffer->u.salt, sizeof(netbuffer->u.salt));
-	D_SHA256PasswordPass((const UINT8 *)reqpass, strlen(reqpass), salt, netbuffer->u.sha256sum);
+	doomcom_t *respcom = D_NewPacket(PT_LOGINAUTH, servernode, sizeof(netbuffer->u.sha256sum));
+	doomdata_t *respbuffer = DOOMCOM_DATA(respcom);
+	D_SHA256PasswordPass((const UINT8 *)reqpass, strlen(reqpass), netbuffer->u.salt, respbuffer->u.sha256sum);
 	Z_Free(reqpass);
 	reqpass = NULL;
 
-	netbuffer->packettype = PT_LOGINAUTH;
-	HSendPacket(servernode, true, 0, sizeof(netbuffer->u.sha256sum));
+	HSendPacket(respcom, true, 0);
 }
 
-static void PT_LoginAuth(SINT8 node, INT32 netconsole)
+static void PT_LoginAuth(doomcom_t *doomcom, INT32 netconsole)
 {
+	UINT8 node = doomcom->remotenode;
 	doomdata_t *netbuffer = DOOMCOM_DATA(doomcom);
 	UINT8 finalsha256[32];/* Well, it's the cool thing to do? */
 	UINT32 i;
@@ -1025,22 +1022,23 @@ static void Command_list_http_logins (void)
 	}
 }
 
-static void PT_AskLuaFile(SINT8 node)
+static void PT_AskLuaFile(doomcom_t *doomcom)
 {
+	UINT8 node = doomcom->remotenode;
 	if (server && luafiletransfers && luafiletransfers->nodestatus[node] == LFTNS_ASKED)
 		AddLuaFileToSendQueue(node, luafiletransfers->realfilename);
 }
 
-static void PT_HasLuaFile(SINT8 node)
+static void PT_HasLuaFile(doomcom_t *doomcom)
 {
+	UINT8 node = doomcom->remotenode;
 	if (server && luafiletransfers && luafiletransfers->nodestatus[node] == LFTNS_SENDING)
 		SV_HandleLuaFileSent(node);
 }
 
-static void PT_SendingLuaFile(SINT8 node)
+static void PT_SendingLuaFile(doomcom_t *doomcom)
 {
-	(void)node;
-
+	(void)doomcom;
 	if (client)
 		CL_PrepareDownloadLuaFile();
 }
@@ -1053,12 +1051,9 @@ If they're not lagging, decrement the timer by 1. Of course, reset all of this i
 
 static inline void PingUpdate(void)
 {
-	doomdata_t *netbuffer = DOOMCOM_DATA(doomcom);
 	boolean laggers[MAXPLAYERS];
 	UINT8 numlaggers = 0;
 	memset(laggers, 0, sizeof(boolean) * MAXPLAYERS);
-
-	netbuffer->packettype = PT_PING;
 
 	//check for ping limit breakage.
 	if (cv_maxping.value)
@@ -1107,31 +1102,35 @@ static inline void PingUpdate(void)
 	//make the ping packet and clear server data for next one
 	for (INT32 i = 0; i < MAXPLAYERS; i++)
 	{
-		netbuffer->u.pingtable[i] = realpingtable[i] / pingmeasurecount;
 		//server takes a snapshot of the real ping for display.
 		//otherwise, pings fluctuate a lot and would be odd to look at.
 		playerpingtable[i] = realpingtable[i] / pingmeasurecount;
 		realpingtable[i] = 0; //Reset each as we go.
 	}
 
-	// send the server's maxping as last element of our ping table. This is useful to let us know when we're about to get kicked.
-	netbuffer->u.pingtable[MAXPLAYERS] = cv_maxping.value;
-
 	//send out our ping packets
 	for (INT32 i = 0; i < MAXNETNODES; i++)
 		if (netnodes[i].ingame)
-			HSendPacket(i, true, 0, sizeof(INT32) * (MAXPLAYERS+1));
+		{
+			doomcom_t *doomcom = D_NewPacket(PT_PING, i, sizeof(INT32) * (MAXPLAYERS+1));
+			doomdata_t *netbuffer = DOOMCOM_DATA(doomcom);
+			memcpy(netbuffer->u.pingtable, playerpingtable, sizeof(INT32) * MAXPLAYERS);
+
+			// send the server's maxping as last element of our ping table. This is useful to let us know when we're about to get kicked.
+			netbuffer->u.pingtable[MAXPLAYERS] = cv_maxping.value;
+			HSendPacket(doomcom, true, 0);
+		}
 
 	pingmeasurecount = 1; //Reset count
 }
 
-static void PT_Ping(SINT8 node, INT32 netconsole)
+static void PT_Ping(doomcom_t *doomcom, INT32 netconsole)
 {
 	doomdata_t *netbuffer = DOOMCOM_DATA(doomcom);
 	// Only accept PT_PING from the server.
-	if (node != servernode)
+	if (doomcom->remotenode != servernode)
 	{
-		CONS_Alert(CONS_WARNING, M_GetText("%s received from non-host %d\n"), "PT_PING", node);
+		CONS_Alert(CONS_WARNING, M_GetText("%s received from non-host %d\n"), "PT_PING", doomcom->remotenode);
 		if (server)
 			SendKick(netconsole, KICK_MSG_CON_FAIL | KICK_MSG_KEEP_BODY);
 		return;
@@ -1148,7 +1147,7 @@ static void PT_Ping(SINT8 node, INT32 netconsole)
 	}
 }
 
-static void PT_BasicKeepAlive(SINT8 node, INT32 netconsole)
+static void PT_BasicKeepAlive(doomcom_t *doomcom, INT32 netconsole)
 {
 	if (client)
 		return;
@@ -1158,11 +1157,11 @@ static void PT_BasicKeepAlive(SINT8 node, INT32 netconsole)
 		return;
 
 	// If a client sends this it should mean they are done receiving the savegame
-	netnodes[node].sendingsavegame = false;
+	netnodes[doomcom->remotenode].sendingsavegame = false;
 
 	// As long as clients send keep alives, the server can keep running, so reset the timeout
 	/// \todo Use a separate cvar for that kind of timeout?
-	netnodes[node].freezetimeout = I_GetTime() + connectiontimeout;
+	netnodes[doomcom->remotenode].freezetimeout = I_GetTime() + connectiontimeout;
 	return;
 }
 
@@ -1170,21 +1169,16 @@ static void PT_BasicKeepAlive(SINT8 node, INT32 netconsole)
 // Used during wipes to tell the server that a node is still connected
 static void CL_SendClientKeepAlive(void)
 {
-	doomdata_t *netbuffer = DOOMCOM_DATA(doomcom);
-	netbuffer->packettype = PT_BASICKEEPALIVE;
-
-	HSendPacket(servernode, false, 0, 0);
+	HSendPacket(D_NewPacket(PT_BASICKEEPALIVE, servernode, 0), false, 0);
 }
 
 static void SV_SendServerKeepAlive(void)
 {
-	doomdata_t *netbuffer = DOOMCOM_DATA(doomcom);
 	for (INT32 n = 1; n < MAXNETNODES; n++)
 	{
 		if (netnodes[n].ingame)
 		{
-			netbuffer->packettype = PT_BASICKEEPALIVE;
-			HSendPacket(n, false, 0, 0);
+			HSendPacket(D_NewPacket(PT_BASICKEEPALIVE, n, 0), false, 0);
 		}
 	}
 }
@@ -1197,31 +1191,32 @@ static void SV_SendServerKeepAlive(void)
   * \sa GetPackets
   *
   */
-static void HandlePacketFromAwayNode(SINT8 node)
+static void HandlePacketFromAwayNode(doomcom_t *doomcom)
 {
 	doomdata_t *netbuffer = DOOMCOM_DATA(doomcom);
+	UINT8 node = doomcom->remotenode;
 	if (node != servernode)
 		DEBFILE(va("Received packet from unknown host %d\n", node));
 
 	switch (netbuffer->packettype)
 	{
-		case PT_ASKINFOVIAMS   : PT_AskInfoViaMS   (node    ); break;
-		case PT_SERVERINFO     : PT_ServerInfo     (node    ); break;
-		case PT_TELLFILESNEEDED: PT_TellFilesNeeded(node    ); break;
-		case PT_MOREFILESNEEDED: PT_MoreFilesNeeded(node    ); break;
-		case PT_ASKINFO        : PT_AskInfo        (node    ); break;
-		case PT_SERVERREFUSE   : PT_ServerRefuse   (node    ); break;
-		case PT_SERVERCFG      : PT_ServerCFG      (node    ); break;
-		case PT_FILEFRAGMENT   : PT_FileFragment   (node, -1); break;
-		case PT_FILEACK        : PT_FileAck        (node    ); break;
-		case PT_FILERECEIVED   : PT_FileReceived   (node    ); break;
-		case PT_REQUESTFILE    : PT_RequestFile    (node    ); break;
-		case PT_CLIENTQUIT     : PT_ClientQuit     (node, -1); break;
-		case PT_SERVERTICS     : PT_ServerTics     (node, -1); break;
-		case PT_CLIENTJOIN     : PT_ClientJoin     (node    ); break;
-		case PT_SERVERSHUTDOWN : PT_ServerShutdown (node    ); break;
-		case PT_CLIENTCMD      :                               break; // This is not an "unknown packet"
-		case PT_PLAYERINFO     : PT_PlayerInfo     (node    ); break;
+		case PT_ASKINFOVIAMS   : PT_AskInfoViaMS   (doomcom    ); break;
+		case PT_SERVERINFO     : PT_ServerInfo     (doomcom    ); break;
+		case PT_TELLFILESNEEDED: PT_TellFilesNeeded(doomcom    ); break;
+		case PT_MOREFILESNEEDED: PT_MoreFilesNeeded(doomcom    ); break;
+		case PT_ASKINFO        : PT_AskInfo        (doomcom    ); break;
+		case PT_SERVERREFUSE   : PT_ServerRefuse   (doomcom    ); break;
+		case PT_SERVERCFG      : PT_ServerCFG      (doomcom    ); break;
+		case PT_FILEFRAGMENT   : PT_FileFragment   (doomcom, -1); break;
+		case PT_FILEACK        : PT_FileAck        (doomcom    ); break;
+		case PT_FILERECEIVED   : PT_FileReceived   (doomcom    ); break;
+		case PT_REQUESTFILE    : PT_RequestFile    (doomcom    ); break;
+		case PT_CLIENTQUIT     : PT_ClientQuit     (doomcom, -1); break;
+		case PT_SERVERTICS     : PT_ServerTics     (doomcom, -1); break;
+		case PT_CLIENTJOIN     : PT_ClientJoin     (doomcom    ); break;
+		case PT_SERVERSHUTDOWN : PT_ServerShutdown (doomcom    ); break;
+		case PT_CLIENTCMD      :                                        break; // This is not an "unknown packet"
+		case PT_PLAYERINFO     : PT_PlayerInfo     (doomcom    ); break;
 
 		default:
 			DEBFILE(va("unknown packet received (%d) from unknown host\n",netbuffer->packettype));
@@ -1237,10 +1232,11 @@ static void HandlePacketFromAwayNode(SINT8 node)
   * \sa GetPackets
   *
   */
-static void HandlePacketFromPlayer(SINT8 node)
+static void HandlePacketFromPlayer(doomcom_t *doomcom)
 {
 	doomdata_t *netbuffer = DOOMCOM_DATA(doomcom);
 	INT32 netconsole;
+	UINT8 node = doomcom->remotenode;
 
 	if (dedicated && node == 0)
 		netconsole = 0;
@@ -1261,32 +1257,32 @@ static void HandlePacketFromPlayer(SINT8 node)
 		case PT_CLIENT2MIS:
 		case PT_NODEKEEPALIVE:
 		case PT_NODEKEEPALIVEMIS:
-			PT_ClientCmd(node, netconsole);
+			PT_ClientCmd(doomcom, netconsole);
 			break;
-		case PT_BASICKEEPALIVE     : PT_BasicKeepAlive     (node, netconsole); break;
-		case PT_TEXTCMD            : PT_TextCmd            (node, netconsole); break;
-		case PT_TEXTCMD2           : PT_TextCmd            (node, netconsole); break;
-		case PT_LOGIN              : PT_Login              (node            ); break;
-		case PT_LOGINAUTH          : PT_LoginAuth          (node, netconsole); break;
-		case PT_CLIENTQUIT         : PT_ClientQuit         (node, netconsole); break;
-		case PT_CANRECEIVEGAMESTATE: PT_CanReceiveGamestate(node            ); break;
-		case PT_ASKLUAFILE         : PT_AskLuaFile         (node            ); break;
-		case PT_HASLUAFILE         : PT_HasLuaFile         (node            ); break;
-		case PT_RECEIVEDGAMESTATE  : PT_ReceivedGamestate  (node            ); break;
-		case PT_SERVERINFO         : PT_ServerInfo         (node            ); break;
+		case PT_BASICKEEPALIVE     : PT_BasicKeepAlive     (doomcom, netconsole); break;
+		case PT_TEXTCMD            : PT_TextCmd            (doomcom, netconsole); break;
+		case PT_TEXTCMD2           : PT_TextCmd            (doomcom, netconsole); break;
+		case PT_LOGIN              : PT_Login              (doomcom            ); break;
+		case PT_LOGINAUTH          : PT_LoginAuth          (doomcom, netconsole); break;
+		case PT_CLIENTQUIT         : PT_ClientQuit         (doomcom, netconsole); break;
+		case PT_CANRECEIVEGAMESTATE: PT_CanReceiveGamestate(doomcom            ); break;
+		case PT_ASKLUAFILE         : PT_AskLuaFile         (doomcom            ); break;
+		case PT_HASLUAFILE         : PT_HasLuaFile         (doomcom            ); break;
+		case PT_RECEIVEDGAMESTATE  : PT_ReceivedGamestate  (doomcom            ); break;
+		case PT_SERVERINFO         : PT_ServerInfo         (doomcom            ); break;
 
 		// CLIENT RECEIVE
-		case PT_SERVERTICS         : PT_ServerTics         (node, netconsole); break;
-		case PT_PING               : PT_Ping               (node, netconsole); break;
-		case PT_FILEFRAGMENT       : PT_FileFragment       (node, netconsole); break;
-		case PT_FILEACK            : PT_FileAck            (node            ); break;
-		case PT_FILERECEIVED       : PT_FileReceived       (node            ); break;
-		case PT_LOGINCHALLENGE     : PT_LoginChallenge     (node            ); break;
-		case PT_WILLRESENDGAMESTATE: PT_WillResendGamestate(node            ); break;
-		case PT_SENDINGLUAFILE     : PT_SendingLuaFile     (node            ); break;
-		case PT_SERVERSHUTDOWN     : PT_ServerShutdown     (node            ); break;
-		case PT_SERVERCFG          :                                           break;
-		case PT_CLIENTJOIN         :                                           break;
+		case PT_SERVERTICS         : PT_ServerTics         (doomcom, netconsole); break;
+		case PT_PING               : PT_Ping               (doomcom, netconsole); break;
+		case PT_FILEFRAGMENT       : PT_FileFragment       (doomcom, netconsole); break;
+		case PT_FILEACK            : PT_FileAck            (doomcom            ); break;
+		case PT_FILERECEIVED       : PT_FileReceived       (doomcom            ); break;
+		case PT_LOGINCHALLENGE     : PT_LoginChallenge     (doomcom            ); break;
+		case PT_WILLRESENDGAMESTATE: PT_WillResendGamestate(doomcom            ); break;
+		case PT_SENDINGLUAFILE     : PT_SendingLuaFile     (doomcom            ); break;
+		case PT_SERVERSHUTDOWN     : PT_ServerShutdown     (doomcom            ); break;
+		case PT_SERVERCFG          :                                              break;
+		case PT_CLIENTJOIN         :                                              break;
 
 		default:
 			DEBFILE(va("UNKNOWN PACKET TYPE RECEIVED %d from host %d\n",
@@ -1294,24 +1290,17 @@ static void HandlePacketFromPlayer(SINT8 node)
 	}
 }
 
-/**	Handles all received packets, if any
-  *
-  * \todo Add details to this description (lol)
-  *
-  */
+static void GetPacket(doomcom_t *doomcom)
+{
+	if (netnodes[doomcom->remotenode].ingame)
+		HandlePacketFromPlayer(doomcom);
+	else
+		HandlePacketFromAwayNode(doomcom);
+}
+
 void GetPackets(void)
 {
-	while (HGetPacket())
-	{
-		SINT8 node = doomcom->remotenode;
-
-		// Packet received from someone already playing
-		if (netnodes[node].ingame)
-			HandlePacketFromPlayer(node);
-		// Packet received from someone not playing
-		else
-			HandlePacketFromAwayNode(node);
-	}
+	HGetPacket(GetPacket);
 }
 
 boolean TryRunTics(tic_t realtics)
@@ -1737,10 +1726,6 @@ void D_ClientServerInit(void)
 	COM_AddCommand("set_http_login", Command_set_http_login, 0);
 	COM_AddCommand("list_http_logins", Command_list_http_logins, 0);
 	COM_AddCommand("resendgamestate", Command_ResendGamestate, COM_LUA);
-#ifdef PACKETDROP
-	COM_AddCommand("drop", Command_Drop, COM_LUA);
-	COM_AddCommand("droprate", Command_Droprate, COM_LUA);
-#endif
 #ifdef _DEBUG
 	COM_AddCommand("numnodes", Command_Numnodes, COM_LUA);
 #endif

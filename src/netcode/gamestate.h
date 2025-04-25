@@ -24,8 +24,8 @@ void SV_SavedGame(void);
 void CL_LoadReceivedSavegame(boolean reloading);
 void CL_ReloadReceivedSavegame(void);
 void Command_ResendGamestate(void);
-void PT_CanReceiveGamestate(SINT8 node);
-void PT_ReceivedGamestate(SINT8 node);
-void PT_WillResendGamestate(SINT8 node);
+void PT_CanReceiveGamestate(doomcom_t *doomcom);
+void PT_ReceivedGamestate(doomcom_t *doomcom);
+void PT_WillResendGamestate(doomcom_t *doomcom);
 
 #endif

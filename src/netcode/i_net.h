@@ -67,15 +67,13 @@ extern INT16 numslots;
 */
 extern INT16 extratics;
 
-extern doomcom_t *doomcom;
-
 /**	\brief return packet in doomcom struct
 */
-extern boolean (*I_NetGet)(void);
+extern boolean (*I_NetGet)(doomcom_t *doomcom);
 
 /**	\brief send packet within doomcom struct
 */
-extern void (*I_NetSend)(void);
+extern void (*I_NetSend)(doomcom_t *doomcom);
 
 /**	\brief	close a connection
 

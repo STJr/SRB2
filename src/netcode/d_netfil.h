@@ -119,7 +119,7 @@ extern consvar_t cv_maxsend, cv_noticedownload, cv_downloadspeed;
 
 void AllocFileNeeded(INT32 size);
 void FreeFileNeeded(void);
-UINT8 *PutFileNeeded(UINT16 firstfile);
+UINT8 *PutFileNeeded(doomdata_t *netbuffer, UINT16 firstfile);
 void D_ParseFileneeded(INT32 fileneedednum_parm, UINT8 *fileneededstr, UINT16 firstfile);
 void CL_PrepareDownloadSaveGame(const char *tmpsave);
 
@@ -129,16 +129,16 @@ void AddRamToSendQueue(INT32 node, void *data, size_t size, freemethod_t freemet
 	UINT8 fileid);
 
 void FileSendTicker(void);
-void PT_FileAck(SINT8 node);
-void PT_FileReceived(SINT8 node);
+void PT_FileAck(doomcom_t *doomcom);
+void PT_FileReceived(doomcom_t *doomcom);
 boolean SendingFile(INT32 node);
 
 void FileReceiveTicker(void);
-void PT_FileFragment(SINT8 node, INT32 netconsole);
+void PT_FileFragment(doomcom_t *doomcom, INT32 netconsole);
 
 UINT8 CL_CheckDownloadable(boolean direct);
 boolean CL_SendFileRequest(void);
-void PT_RequestFile(SINT8 node);
+void PT_RequestFile(doomcom_t *doomcom);
 
 boolean CURLPrepareFile(const char* url, int dfilenum);
 void CURLAbortFile(void);

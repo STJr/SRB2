@@ -113,10 +113,9 @@ static void CheckTiccmdHacks(INT32 playernum, tic_t tic)
 }
 
 // Check player consistancy during the level
-static void CheckConsistancy(SINT8 nodenum, tic_t tic)
+static void CheckConsistancy(doomdata_t *netbuffer, SINT8 nodenum, tic_t tic)
 {
 	netnode_t *node = &netnodes[nodenum];
-	doomdata_t *netbuffer = DOOMCOM_DATA(doomcom);
 	INT16 neededconsistancy = consistancy[tic%BACKUPTICS];
 	INT16 clientconsistancy = SHORT(netbuffer->u.clientpak.consistancy);
 
@@ -128,8 +127,8 @@ static void CheckConsistancy(SINT8 nodenum, tic_t tic)
 	if (cv_resynchattempts.value)
 	{
 		// Tell the client we are about to resend them the gamestate
-		netbuffer->packettype = PT_WILLRESENDGAMESTATE;
-		HSendPacket(nodenum, true, 0, 0);
+		doomcom_t *doomcom = D_NewPacket(PT_WILLRESENDGAMESTATE, nodenum, 0);
+		HSendPacket(doomcom, true, 0);
 
 		node->resendingsavegame = true;
 
@@ -150,8 +149,9 @@ static void CheckConsistancy(SINT8 nodenum, tic_t tic)
 	}
 }
 
-void PT_ClientCmd(SINT8 nodenum, INT32 netconsole)
+void PT_ClientCmd(doomcom_t *doomcom, INT32 netconsole)
 {
+	UINT8 nodenum = doomcom->remotenode;
 	netnode_t *node = &netnodes[nodenum];
 	doomdata_t *netbuffer = DOOMCOM_DATA(doomcom);
 	tic_t realend, realstart;
@@ -204,11 +204,12 @@ void PT_ClientCmd(SINT8 nodenum, INT32 netconsole)
 		G_MoveTiccmd(&playercmds[(UINT8)node->player2], &netbuffer->u.client2pak.cmd2, 1);
 
 	CheckTiccmdHacks(netconsole, maketic);
-	CheckConsistancy(nodenum, realstart);
+	CheckConsistancy(netbuffer, nodenum, realstart);
 }
 
-void PT_ServerTics(SINT8 node, INT32 netconsole)
+void PT_ServerTics(doomcom_t *doomcom, INT32 netconsole)
 {
+	UINT8 node = doomcom->remotenode;
 	tic_t realend, realstart;
 	doomdata_t *netbuffer = DOOMCOM_DATA(doomcom);
 	servertics_pak *packet = &netbuffer->u.serverpak;
@@ -266,8 +267,8 @@ void PT_ServerTics(SINT8 node, INT32 netconsole)
 // send the client packet to the server
 void CL_SendClientCmd(void)
 {
-	size_t packetsize = 0;
 	boolean mis = false;
+	doomcom_t *doomcom = D_NewPacket(0, servernode, 0);
 	doomdata_t *netbuffer = DOOMCOM_DATA(doomcom);
 
 	netbuffer->packettype = PT_CLIENTCMD;
@@ -285,12 +286,12 @@ void CL_SendClientCmd(void)
 	{
 		// Send PT_NODEKEEPALIVE packet
 		netbuffer->packettype = (mis ? PT_NODEKEEPALIVEMIS : PT_NODEKEEPALIVE);
-		packetsize = sizeof (clientcmd_pak) - sizeof (ticcmd_t) - sizeof (INT16);
-		HSendPacket(servernode, false, 0, packetsize);
+		doomcom->datalength = sizeof (clientcmd_pak) - sizeof (ticcmd_t) - sizeof (INT16);
+		HSendPacket(doomcom, false, 0);
 	}
 	else if (gamestate != GS_NULL && (addedtogame || dedicated))
 	{
-		packetsize = sizeof (clientcmd_pak);
+		doomcom->datalength = sizeof (clientcmd_pak);
 		G_MoveTiccmd(&netbuffer->u.clientpak.cmd, &localcmds, 1);
 		netbuffer->u.clientpak.consistancy = SHORT(consistancy[gametic%BACKUPTICS]);
 
@@ -298,11 +299,11 @@ void CL_SendClientCmd(void)
 		if (splitscreen || botingame)
 		{
 			netbuffer->packettype = (mis ? PT_CLIENT2MIS : PT_CLIENT2CMD);
-			packetsize = sizeof (client2cmd_pak);
+			doomcom->datalength = sizeof (client2cmd_pak);
 			G_MoveTiccmd(&netbuffer->u.client2pak.cmd2, &localcmds2, 1);
 		}
 
-		HSendPacket(servernode, false, 0, packetsize);
+		HSendPacket(doomcom, false, 0);
 	}
 
 	if (cl_mode == CL_CONNECTED || dedicated)
@@ -353,7 +354,6 @@ static tic_t SV_CalculateNumTicsForPacket(SINT8 nodenum, tic_t firsttic, tic_t l
 // Sends tic/net commands from firstticstosend to maketic-1
 void SV_SendTics(void)
 {
-	doomdata_t *netbuffer = DOOMCOM_DATA(doomcom);
 	tic_t realfirsttic, lasttictosend;
 
 	// Send to all clients except yourself
@@ -362,6 +362,8 @@ void SV_SendTics(void)
 	for (INT32 n = 1; n < MAXNETNODES; n++)
 		if (netnodes[n].ingame)
 		{
+			doomcom_t *doomcom = D_NewPacket(PT_SERVERTICS, n, 0);
+			doomdata_t *netbuffer = DOOMCOM_DATA(doomcom);
 			netnode_t *node = &netnodes[n];
 
 			// assert node->supposedtic>=node->tic
@@ -384,8 +386,8 @@ void SV_SendTics(void)
 				bufpos = G_DcpyTiccmd(bufpos, netcmds[i%BACKUPTICS], numslots * sizeof (ticcmd_t));
 			for (tic_t i = realfirsttic; i < lasttictosend; i++)
 				SV_WriteNetCommandsForTic(i, &bufpos);
-			size_t packsize = bufpos - (UINT8 *)&(netbuffer->u);
-			HSendPacket(n, false, 0, packsize);
+			doomcom->datalength = bufpos - (UINT8 *)&(netbuffer->u);
+			HSendPacket(doomcom, false, 0);
 
 			// When tics are too large, only one tic is sent so don't go backwards!
 			if (lasttictosend-extratics > realfirsttic)

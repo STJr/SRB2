@@ -49,7 +49,7 @@ void ExtraDataTicker(void);
 // used at txtcmds received to check packetsize bound
 size_t TotalTextCmdPerTic(tic_t tic);
 
-void PT_TextCmd(SINT8 node, INT32 netconsole);
+void PT_TextCmd(doomcom_t *doomcom, INT32 netconsole);
 void SV_WriteNetCommandsForTic(tic_t tic, UINT8 **buf);
 void CL_CopyNetCommandsFromServerPacket(tic_t tic, UINT8 **buf);
 void CL_SendNetCommands(void);

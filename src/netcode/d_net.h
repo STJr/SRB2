@@ -18,6 +18,7 @@
 #ifndef __D_NET__
 #define __D_NET__
 
+#include "i_net.h"
 #include "../doomtype.h"
 
 // Max computers in a game
@@ -65,10 +66,9 @@ extern boolean serverrunning;
 void Net_AckTicker(void);
 
 // If reliable return true if packet sent, 0 else
-boolean HSendPacket(INT32 node, boolean reliable, UINT8 acknum,
-	size_t packetlength);
-boolean HGetPacket(void);
-void D_SetDoomcom(void);
+boolean HSendPacket(doomcom_t *doomcom, boolean reliable, UINT8 acknum);
+void HGetPacket(void (*handler)(doomcom_t *doomcom));
+doomcom_t *D_NewPacket(UINT8 type, INT16 node, INT16 length);
 boolean D_CheckNetGame(void);
 void D_CloseConnection(void);
 boolean Net_IsNodeIPv6(INT32 node);

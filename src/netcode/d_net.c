@@ -51,9 +51,6 @@ INT16 numnetnodes;
 INT16 numslots;
 INT16 extratics;
 
-/// \brief network packet
-doomcom_t *doomcom = NULL;
-
 #ifdef DEBUGFILE
 FILE *debugfile = NULL; // put some net info in a file during the game
 #endif
@@ -66,8 +63,8 @@ static INT32 rebound_head, rebound_tail;
 /// \brief max length per packet
 INT16 hardware_MAXPACKETLENGTH;
 
-boolean (*I_NetGet)(void) = NULL;
-void (*I_NetSend)(void) = NULL;
+boolean (*I_NetGet)(doomcom_t *doomcom) = NULL;
+void (*I_NetSend)(doomcom_t *doomcom) = NULL;
 void (*I_NetCloseSocket)(void) = NULL;
 void (*I_NetFreeNodenum)(INT32 nodenum) = NULL;
 SINT8 (*I_NetMakeNodewPort)(const char *address, const char* port) = NULL;
@@ -143,10 +140,7 @@ typedef struct
 	tic_t senttime; // The time when the ack was sent
 	UINT16 length; // The packet size
 	UINT16 resentnum; // The number of times the ack has been resent
-	union {
-		SINT8 raw[MAXPACKETLENGTH];
-		doomdata_t data;
-	} pak;
+	doomcom_t *doomcom;
 } ackpak_t;
 
 typedef enum
@@ -193,7 +187,7 @@ FUNCMATH static inline INT32 cmpack(UINT8 a, UINT8 b)
   * \param freeack  The address to store the free acknum at
   * \return True if a free acknum was found
   */
-static boolean GetFreeAcknum(UINT8 *freeack)
+static boolean GetFreeAcknum(doomcom_t *doomcom, UINT8 *freeack)
 {
 	doomdata_t *netbuffer = DOOMCOM_DATA(doomcom);
 	node_t *node = &nodes[doomcom->remotenode];
@@ -207,7 +201,7 @@ static boolean GetFreeAcknum(UINT8 *freeack)
 	}
 
 	for (i = 0; i < MAXACKPACKETS; i++)
-		if (!node->ackpak[i].acknum)
+		if (node->ackpak[i].doomcom == NULL)
 		{
 			// For low priority packets, make sure to let freeslots so urgent packets can be sent
 			if (netbuffer->packettype >= PT_CANFAIL)
@@ -225,12 +219,10 @@ static boolean GetFreeAcknum(UINT8 *freeack)
 			node->ackpak[i].length = doomcom->datalength;
 			node->ackpak[i].senttime = I_GetTime();
 			node->ackpak[i].resentnum = 0;
-			M_Memcpy(node->ackpak[i].pak.raw, netbuffer, node->ackpak[i].length);
+			node->ackpak[i].doomcom = doomcom;
 
 			*freeack = node->ackpak[i].acknum;
-
 			sendackpacket++; // For stat
-
 			return true;
 		}
 
@@ -255,13 +247,15 @@ static UINT8 GetAcktosend(INT32 node)
 static void RemoveAck(node_t *node, INT32 i)
 {
 	DEBFILE(va("Remove ack %d\n",node->ackpak[i].acknum));
+	Z_Free(node->ackpak[i].doomcom);
+	node->ackpak[i].doomcom = NULL;
 	node->ackpak[i].acknum = 0;
 	if (node->flags & NF_CLOSE)
 		Net_CloseConnection(node-nodes);
 }
 
 // We have got a packet, proceed the ack request and ack return
-static boolean Processackpak(void)
+static boolean Processackpak(doomcom_t *doomcom)
 {
 	doomdata_t *netbuffer = DOOMCOM_DATA(doomcom);
 	boolean goodpacket = true;
@@ -304,14 +298,28 @@ static boolean Processackpak(void)
 			}
 			else // Out of order packet
 			{
-				// Don't increment firsacktosend, put it in asktosend queue
-				// Will be incremented when the nextfirstack comes (code above)
 				DEBFILE(va("out of order packet (%d expected)\n", nextfirstack));
 				goodpacket = false;
 			}
 		}
 	}
 	return goodpacket;
+}
+
+//
+// Checksum
+//
+static UINT32 NetbufferChecksum(doomcom_t *doomcom)
+{
+	doomdata_t *netbuffer = DOOMCOM_DATA(doomcom);
+	UINT32 c = 0x1234567;
+	const INT32 l = doomcom->datalength - 4;
+	const UINT8 *buf = (UINT8 *)netbuffer + 4;
+
+	for (INT32 i = 0; i < l; i++, buf++)
+		c += (*buf) * (i+1);
+
+	return LONG(c);
 }
 
 void Net_ConnectionTimeout(INT32 node)
@@ -344,7 +352,6 @@ void Net_ConnectionTimeout(INT32 node)
 // Resend the data if needed
 void Net_AckTicker(void)
 {
-	doomdata_t *netbuffer = DOOMCOM_DATA(doomcom);
 	for (INT32 nodei = 0; nodei < MAXNETNODES; nodei++)
 	{
 		node_t *node = &nodes[nodei];
@@ -358,18 +365,24 @@ void Net_AckTicker(void)
 						i, nodei));
 					Net_CloseConnection(nodei | FORCECLOSE);
 
+					Z_Free(node->ackpak[i].doomcom);
+					node->ackpak[i].doomcom = NULL;
 					node->ackpak[i].acknum = 0;
 					break;
 				}
 				DEBFILE(va("Resend ack %d, %u<%d at %u\n", node->ackpak[i].acknum, node->ackpak[i].senttime,
 					NODETIMEOUT, I_GetTime()));
-				M_Memcpy(netbuffer, node->ackpak[i].pak.raw, node->ackpak[i].length);
 				node->ackpak[i].senttime = I_GetTime();
 				node->ackpak[i].resentnum++;
 				node->ackpak[i].nextacknum = node->nextacknum;
 				retransmit++; // For stat
-				HSendPacket((INT32)(node - nodes), false, node->ackpak[i].acknum,
-					(size_t)(node->ackpak[i].length - BASEPACKETSIZE));
+				sendbytes += packetheaderlength + node->ackpak[i].doomcom->datalength; // For stat
+
+				doomdata_t *netbuffer = DOOMCOM_DATA(node->ackpak[i].doomcom);
+				netbuffer->ackreturn = GetAcktosend(nodei);
+				netbuffer->ack = node->ackpak[i].acknum;
+				netbuffer->checksum = NetbufferChecksum(node->ackpak[i].doomcom);
+				I_NetSend(node->ackpak[i].doomcom);
 			}
 		}
 	}
@@ -427,7 +440,7 @@ void Net_WaitAllAckReceived(UINT32 timeout)
 	tic_t tictac = I_GetTime();
 	timeout = tictac + timeout*NEWTICRATE;
 
-	HGetPacket();
+	HGetPacket(NULL);
 	while (timeout > I_GetTime() && !Net_AllAcksReceived())
 	{
 		while (tictac == I_GetTime())
@@ -436,7 +449,7 @@ void Net_WaitAllAckReceived(UINT32 timeout)
 			I_UpdateTime(cv_timescale.value);
 		}
 		tictac = I_GetTime();
-		HGetPacket();
+		HGetPacket(NULL);
 		Net_AckTicker();
 	}
 }
@@ -465,7 +478,6 @@ static void InitAck(void)
 // remove a node, clear all ack from this node and reset askret
 void Net_CloseConnection(INT32 node)
 {
-	doomdata_t *netbuffer = DOOMCOM_DATA(doomcom);
 	boolean forceclose = (node & FORCECLOSE) != 0;
 
 	if (node == -1)
@@ -490,8 +502,7 @@ void Net_CloseConnection(INT32 node)
 	if (nodes[node].firstacktosend)
 	{
 		// send a PT_NOTHING back to acknowledge the packet
-		netbuffer->packettype = PT_NOTHING;
-		HSendPacket(node, false, 0, 0);
+		HSendPacket(D_NewPacket(PT_NOTHING, node, 0), false, 0);
 	}
 	else
 	{
@@ -515,22 +526,6 @@ void Net_CloseConnection(INT32 node)
 	if (server)
 		SV_AbortLuaFileTransfer(node);
 	I_NetFreeNodenum(node);
-}
-
-//
-// Checksum
-//
-static UINT32 NetbufferChecksum(void)
-{
-	doomdata_t *netbuffer = DOOMCOM_DATA(doomcom);
-	UINT32 c = 0x1234567;
-	const INT32 l = doomcom->datalength - 4;
-	const UINT8 *buf = (UINT8 *)netbuffer + 4;
-
-	for (INT32 i = 0; i < l; i++, buf++)
-		c += (*buf) * (i+1);
-
-	return LONG(c);
 }
 
 #ifdef DEBUGFILE
@@ -614,7 +609,7 @@ static const char *packettypename[NUMPACKETTYPE] =
 	"PING"
 };
 
-static void DebugPrintpacket(const char *header)
+static void DebugPrintpacket(doomcom_t *doomcom, const char *header)
 {
 	doomdata_t *netbuffer = DOOMCOM_DATA(doomcom);
 	save_t data = DOOMCOM_DATABUF(doomcom);
@@ -714,93 +709,14 @@ static void DebugPrintpacket(const char *header)
 }
 #endif
 
-#ifdef PACKETDROP
-static INT32 packetdropquantity[NUMPACKETTYPE] = {0};
-static INT32 packetdroprate = 0;
-
-void Command_Drop(void)
-{
-	INT32 packetquantity;
-	const char *packetname;
-
-	if (COM_Argc() < 2)
-	{
-		CONS_Printf("drop <packettype> [quantity]: drop packets\n"
-					"drop reset: cancel all packet drops\n");
-		return;
-	}
-
-	if (!(stricmp(COM_Argv(1), "reset") && stricmp(COM_Argv(1), "cancel") && stricmp(COM_Argv(1), "stop")))
-	{
-		memset(packetdropquantity, 0, sizeof(packetdropquantity));
-		return;
-	}
-
-	if (COM_Argc() >= 3)
-	{
-		packetquantity = atoi(COM_Argv(2));
-		if (packetquantity <= 0 && COM_Argv(2)[0] != '0')
-		{
-			CONS_Printf("Invalid quantity\n");
-			return;
-		}
-	}
-	else
-		packetquantity = -1;
-
-	packetname = COM_Argv(1);
-
-	if (!(stricmp(packetname, "all") && stricmp(packetname, "any")))
-		for (size_t i = 0; i < NUMPACKETTYPE; i++)
-			packetdropquantity[i] = packetquantity;
-	else
-	{
-		for (size_t i = 0; i < NUMPACKETTYPE; i++)
-			if (!stricmp(packetname, packettypename[i]))
-			{
-				packetdropquantity[i] = packetquantity;
-				return;
-			}
-
-		CONS_Printf("Unknown packet name\n");
-	}
-}
-
-void Command_Droprate(void)
-{
-	INT32 droprate;
-
-	if (COM_Argc() < 2)
-	{
-		CONS_Printf("Packet drop rate: %d%%\n", packetdroprate);
-		return;
-	}
-
-	droprate = atoi(COM_Argv(1));
-	if ((droprate <= 0 && COM_Argv(1)[0] != '0') || droprate > 100)
-	{
-		CONS_Printf("Packet drop rate must be between 0 and 100!\n");
-		return;
-	}
-
-	packetdroprate = droprate;
-}
-
-static boolean ShouldDropPacket(void)
-{
-	doomdata_t *netbuffer = DOOMCOM_DATA(doomcom);
-	return (packetdropquantity[netbuffer->packettype])
-		|| (packetdroprate != 0 && rand() < (((double)RAND_MAX) * (packetdroprate / 100.f))) || packetdroprate == 100;
-}
-#endif
-
 //
 // HSendPacket
 //
-boolean HSendPacket(INT32 node, boolean reliable, UINT8 acknum, size_t packetlength)
+boolean HSendPacket(doomcom_t *doomcom, boolean reliable, UINT8 acknum)
 {
+	UINT8 node = doomcom->remotenode;
 	doomdata_t *netbuffer = DOOMCOM_DATA(doomcom);
-	doomcom->datalength = (INT16)(packetlength + BASEPACKETSIZE);
+	doomcom->datalength += BASEPACKETSIZE;
 	if (node == 0) // Packet is to go back to us
 	{
 		if ((rebound_head+1) % MAXREBOUND == rebound_tail)
@@ -808,6 +724,7 @@ boolean HSendPacket(INT32 node, boolean reliable, UINT8 acknum, size_t packetlen
 #ifdef PARANOIA
 			CONS_Debug(DBG_NETPLAY, "No more rebound buf\n");
 #endif
+			Z_Free(doomcom);
 			return false;
 		}
 		netbuffer->ack = netbuffer->ackreturn = 0; // don't hold over values from last packet sent/received
@@ -819,9 +736,10 @@ boolean HSendPacket(INT32 node, boolean reliable, UINT8 acknum, size_t packetlen
 		if (debugfile)
 		{
 			doomcom->remotenode = (INT16)node;
-			DebugPrintpacket("SENDLOCAL");
+			DebugPrintpacket(doomcom, "SENDLOCAL");
 		}
 #endif
+		Z_Free(doomcom);
 		return true;
 	}
 
@@ -836,8 +754,9 @@ boolean HSendPacket(INT32 node, boolean reliable, UINT8 acknum, size_t packetlen
 		DEBFILE("HSendPacket: nothing to send\n");
 #ifdef DEBUGFILE
 		if (debugfile)
-			DebugPrintpacket("TRISEND");
+			DebugPrintpacket(doomcom, "TRISEND");
 #endif
+		Z_Free(doomcom);
 		return false;
 	}
 
@@ -847,39 +766,26 @@ boolean HSendPacket(INT32 node, boolean reliable, UINT8 acknum, size_t packetlen
 		netbuffer->ackreturn = 0;
 	if (reliable)
 	{
-		if (!GetFreeAcknum(&netbuffer->ack))
+		if (!GetFreeAcknum(doomcom, &netbuffer->ack))
+		{
+			Z_Free(doomcom);
 			return false;
+		}
 	}
 	else
 		netbuffer->ack = acknum;
 
-	netbuffer->checksum = NetbufferChecksum();
+	netbuffer->checksum = NetbufferChecksum(doomcom);
 	sendbytes += packetheaderlength + doomcom->datalength; // For stat
 
-#ifdef PACKETDROP
-	// Simulate internet :)
-	//if (rand() >= (INT32)(RAND_MAX * (PACKETLOSSRATE / 100.f)))
-	if (!ShouldDropPacket())
-	{
-#endif
 #ifdef DEBUGFILE
-		if (debugfile)
-			DebugPrintpacket("SENT");
+	if (debugfile)
+		DebugPrintpacket(doomcom, "SENT");
 #endif
-		I_NetSend();
-#ifdef PACKETDROP
-	}
-	else
-	{
-		if (packetdropquantity[netbuffer->packettype] > 0)
-			packetdropquantity[netbuffer->packettype]--;
-#ifdef DEBUGFILE
-		if (debugfile)
-			DebugPrintpacket("NOT SENT");
-#endif
-	}
-#endif
+	I_NetSend(doomcom);
 
+	if (!reliable) // if it's reliable, wait with deallocating until we've ensured the packet has been received
+		Z_Free(doomcom);
 	return true;
 }
 
@@ -888,13 +794,14 @@ boolean HSendPacket(INT32 node, boolean reliable, UINT8 acknum, size_t packetlen
 // Returns false if no packet is waiting
 // Check Datalength and checksum
 //
-boolean HGetPacket(void)
+void HGetPacket(void (*handler)(doomcom_t *doomcom))
 {
+	doomcom_t *doomcom = D_NewPacket(0, 0, 0);
 	doomdata_t *netbuffer = DOOMCOM_DATA(doomcom);
 	//boolean nodejustjoined;
 
 	// Get a packet from self
-	if (rebound_tail != rebound_head)
+	while (rebound_tail != rebound_head)
 	{
 		M_Memcpy(netbuffer, &reboundstore[rebound_tail], reboundsize[rebound_tail]);
 		doomcom->datalength = reboundsize[rebound_tail];
@@ -903,21 +810,22 @@ boolean HGetPacket(void)
 		rebound_tail = (rebound_tail+1) % MAXREBOUND;
 #ifdef DEBUGFILE
 		if (debugfile)
-			DebugPrintpacket("GETLOCAL");
+			DebugPrintpacket(doomcom, "GETLOCAL");
 #endif
-		return true;
+		handler(doomcom);
 	}
 
 	if (!netgame)
-		return false;
+	{
+		Z_Free(doomcom);
+		return;
+	}
 
 	while(true)
 	{
 		//nodejustjoined = I_NetGet();
-		I_NetGet();
-
-		if (doomcom->remotenode == -1) // No packet received
-			return false;
+		if (!I_NetGet(doomcom)) // No packets received
+			break;
 
 		getbytes += packetheaderlength + doomcom->datalength; // For stat
 
@@ -929,7 +837,7 @@ boolean HGetPacket(void)
 
 		nodes[doomcom->remotenode].lasttimepacketreceived = I_GetTime();
 
-		if (netbuffer->checksum != NetbufferChecksum())
+		if (netbuffer->checksum != NetbufferChecksum(doomcom))
 		{
 			DEBFILE("Bad packet checksum\n");
 			// Do not disconnect or anything, just ignore the packet.
@@ -940,7 +848,7 @@ boolean HGetPacket(void)
 
 #ifdef DEBUGFILE
 		if (debugfile)
-			DebugPrintpacket("GET");
+			DebugPrintpacket(doomcom, "GET");
 #endif
 
 		/*// If a new node sends an unexpected packet, just ignore it
@@ -959,26 +867,29 @@ boolean HGetPacket(void)
 		}*/
 
 		// Proceed the ack and ackreturn field
-		if (!Processackpak())
+		if (!Processackpak(doomcom))
 			continue; // discarded (duplicated)
 
 		// A packet with just ackreturn
 		if (netbuffer->packettype == PT_NOTHING)
 			continue;
-		break;
+		if (handler != NULL)
+			handler(doomcom);
 	}
 
-	return true;
+	Z_Free(doomcom);
+	return;
 }
 
-static boolean Internal_Get(void)
+static boolean Internal_Get(doomcom_t *doomcom)
 {
 	doomcom->remotenode = -1;
 	return false;
 }
 
-FUNCNORETURN static ATTRNORETURN void Internal_Send(void)
+FUNCNORETURN static ATTRNORETURN void Internal_Send(doomcom_t *doomcom)
 {
+	(void)doomcom;
 	I_Error("Send without netgame\n");
 }
 
@@ -1018,12 +929,13 @@ SINT8 I_NetMakeNode(const char *hostname)
 	return newnode;
 }
 
-void D_SetDoomcom(void)
+doomcom_t *D_NewPacket(UINT8 type, INT16 node, INT16 length)
 {
-	if (doomcom) return;
-	doomcom = Z_Calloc(sizeof (doomcom_t), PU_STATIC, NULL);
-	numslots = numnetnodes = 1;
-	extratics = 0;
+	doomcom_t *doomcom = Z_Calloc(sizeof(doomcom_t), PU_STATIC, NULL);
+	doomcom->data[6] = type;
+	doomcom->remotenode = node;
+	doomcom->datalength = length;
+	return doomcom;
 }
 
 //
@@ -1046,10 +958,7 @@ boolean D_CheckNetGame(void)
 	I_NetMakeNodewPort = NULL;
 
 	hardware_MAXPACKETLENGTH = MAXPACKETLENGTH;
-	// I_InitNetwork sets doomcom and netgame
-	// check and initialize the network driver
 	multiplayer = false;
-	D_SetDoomcom();
 	netgame = I_InitTcpNetwork();
 
 	if (netgame)

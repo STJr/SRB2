@@ -3013,7 +3013,7 @@ static void Command_Clearpassword_f(void)
 static void Command_Login_f(void)
 {
 	const char *pw;
-	doomdata_t *netbuffer = DOOMCOM_DATA(doomcom);
+	doomcom_t *doomcom = D_NewPacket(PT_LOGIN, servernode, 16);
 
 	if (!netgame)
 	{
@@ -3037,8 +3037,7 @@ static void Command_Login_f(void)
 
 	CONS_Printf(M_GetText("Sending login... (Notice only given if password is correct.)\n"));
 
-	netbuffer->packettype = PT_LOGIN;
-	HSendPacket(servernode, true, 0, 0);
+	HSendPacket(doomcom, true, 0);
 }
 
 boolean IsPlayerAdmin(INT32 playernum)

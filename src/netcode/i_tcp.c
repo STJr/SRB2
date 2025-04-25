@@ -560,7 +560,7 @@ void Command_Numnodes(void)
 #endif
 
 // Returns true if a packet was received from a new node, false in all other cases
-static boolean SOCK_Get(void)
+static boolean SOCK_Get(doomcom_t *doomcom)
 {
 	size_t i;
 	int j;
@@ -583,7 +583,7 @@ static boolean SOCK_Get(void)
 					doomcom->remotenode = (INT16)j; // good packet from a game player
 					doomcom->datalength = (INT16)c;
 					nodesocket[j] = mysockets[n];
-					return false;
+					return true;
 				}
 			}
 			// not found
@@ -622,7 +622,7 @@ static boolean SOCK_Get(void)
 	return false;
 }
 
-static inline ssize_t SOCK_SendToAddr(SOCKET_TYPE socket, mysockaddr_t *sockaddr)
+static inline ssize_t SOCK_SendToAddr(SOCKET_TYPE socket, doomcom_t *doomcom, mysockaddr_t *sockaddr)
 {
 	socklen_t d4 = (socklen_t)sizeof(struct sockaddr_in);
 #ifdef HAVE_IPV6
@@ -644,7 +644,7 @@ static inline ssize_t SOCK_SendToAddr(SOCKET_TYPE socket, mysockaddr_t *sockaddr
 
 #define ALLOWEDERROR(x) ((x) == ECONNREFUSED || (x) == EWOULDBLOCK || (x) == EHOSTUNREACH || (x) == ENETUNREACH || (x) == EADDRNOTAVAIL)
 
-static void SOCK_Send(void)
+static void SOCK_Send(doomcom_t *doomcom)
 {
 	ssize_t c = ERRSOCKET;
 	int e = 0; // save error code so it can't be modified later code and avoid calling WSAGetLastError() more then once
@@ -660,7 +660,7 @@ static void SOCK_Send(void)
 			{
 				if (myfamily[i] == broadcastaddress[j].any.sa_family)
 				{
-					c = SOCK_SendToAddr(mysockets[i], &broadcastaddress[j]);
+					c = SOCK_SendToAddr(mysockets[i], doomcom, &broadcastaddress[j]);
 					if (c == ERRSOCKET)
 					{
 						e = errno;
@@ -677,7 +677,7 @@ static void SOCK_Send(void)
 		{
 			if (myfamily[i] == clientaddress[doomcom->remotenode].any.sa_family)
 			{
-				c = SOCK_SendToAddr(mysockets[i], &clientaddress[doomcom->remotenode]);
+				c = SOCK_SendToAddr(mysockets[i], doomcom, &clientaddress[doomcom->remotenode]);
 				if (c == ERRSOCKET)
 				{
 					e = errno;
@@ -689,7 +689,7 @@ static void SOCK_Send(void)
 	}
 	else
 	{
-		c = SOCK_SendToAddr(nodesocket[doomcom->remotenode], &clientaddress[doomcom->remotenode]);
+		c = SOCK_SendToAddr(nodesocket[doomcom->remotenode], doomcom, &clientaddress[doomcom->remotenode]);
 		if (c == ERRSOCKET)
 		{
 			e = errno;
