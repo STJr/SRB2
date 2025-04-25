@@ -380,6 +380,11 @@ void CL_CopyNetCommandsFromServerPacket(tic_t tic, UINT8 **buf)
 	{
 		INT32 playernum = *(*buf)++; // playernum
 		size_t size = (*buf)[0]+1;
+		if (playernum < 0 || playernum >= MAXPLAYERS)
+		{
+			CONS_Alert(CONS_WARNING, "Got bogus NetXCmd packet targetting player %d\n", playernum);
+			return;
+		}
 
 		if (tic >= gametic) // Don't copy old net commands
 			M_Memcpy(D_GetTextcmd(tic, playernum), *buf, size);
