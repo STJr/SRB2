@@ -242,7 +242,7 @@ void PT_ServerTics(doomcom_t *doomcom, INT32 netconsole)
 	if (realstart <= neededtic && realend > neededtic)
 	{
 		UINT8 *pak = (UINT8 *)&packet->cmds;
-		UINT8 *txtpak = (UINT8 *)&packet->cmds[numslots * packet->numtics];
+		UINT8 *txtpak = (UINT8 *)&packet->cmds[packet->numslots * packet->numtics];
 
 		for (tic_t i = realstart; i < realend; i++)
 		{
@@ -251,7 +251,7 @@ void PT_ServerTics(doomcom_t *doomcom, INT32 netconsole)
 
 			// copy the tics
 			pak = G_ScpyTiccmd(netcmds[i%BACKUPTICS], pak,
-				numslots*sizeof (ticcmd_t));
+				packet->numslots*sizeof (ticcmd_t));
 
 			CL_CopyNetCommandsFromServerPacket(i, &txtpak);
 		}

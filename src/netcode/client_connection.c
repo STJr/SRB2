@@ -1555,6 +1555,7 @@ void PT_ServerCFG(doomcom_t *doomcom)
 	if (serverplayer >= 0)
 		playernode[(UINT8)serverplayer] = servernode;
 
+	// NOTE: no longer used, we now rely on number of slots via servertics
 	numslots = P_ReadUINT8(&data);
 	if (client)
 		maketic = gametic = neededtic = P_ReadUINT32(&data);
