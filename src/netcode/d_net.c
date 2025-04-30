@@ -812,7 +812,8 @@ void HGetPacket(void (*handler)(doomcom_t *doomcom))
 		if (debugfile)
 			DebugPrintpacket(doomcom, "GETLOCAL");
 #endif
-		handler(doomcom);
+		if (handler != NULL)
+			handler(doomcom);
 	}
 
 	if (!netgame)
