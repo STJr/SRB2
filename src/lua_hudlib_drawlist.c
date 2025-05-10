@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2014-2016 by John "JTE" Muniz.
-// Copyright (C) 2014-2023 by Sonic Team Junior.
+// Copyright (C) 2014-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -180,7 +180,8 @@ static const char *CopyString(huddrawlist_h list, const char* str)
 		const char *old_offset = list->strbuf;
 		size_t i;
 		if (list->strbuf_capacity == 0) list->strbuf_capacity = 256;
-		else list->strbuf_capacity *= 2;
+		while (list->strbuf_capacity <= list->strbuf_len + lenstr + 1)
+			list->strbuf_capacity *= 2;
 		list->strbuf = (char*) Z_Realloc(list->strbuf, sizeof(char) * list->strbuf_capacity, PU_STATIC, NULL);
 
 		// align the string pointers to make sure old pointers don't point towards invalid addresses

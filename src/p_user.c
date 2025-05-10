@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2025 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -435,7 +435,7 @@ UINT8 P_FindLowestMare(void)
 	// to find the egg capsule with the lowest mare
 	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 	{
-		if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+		if (th->removing)
 			continue;
 
 		mo2 = (mobj_t *)th;
@@ -488,7 +488,7 @@ boolean P_TransferToNextMare(player_t *player)
 	// to find the closest axis point
 	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 	{
-		if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+		if (th->removing)
 			continue;
 
 		mo2 = (mobj_t *)th;
@@ -539,7 +539,7 @@ static mobj_t *P_FindAxis(INT32 mare, INT32 axisnum)
 	// to find the closest axis point
 	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 	{
-		if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+		if (th->removing)
 			continue;
 
 		mo2 = (mobj_t *)th;
@@ -574,7 +574,7 @@ static mobj_t *P_FindAxisTransfer(INT32 mare, INT32 axisnum, mobjtype_t type)
 	// to find the closest axis point
 	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 	{
-		if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+		if (th->removing)
 			continue;
 
 		mo2 = (mobj_t *)th;
@@ -615,7 +615,7 @@ void P_TransferToAxis(player_t *player, INT32 axisnum)
 	// to find the closest axis point
 	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 	{
-		if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+		if (th->removing)
 			continue;
 
 		mo2 = (mobj_t *)th;
@@ -669,7 +669,7 @@ static void P_DeNightserizePlayer(player_t *player)
 	player->powers[pw_carry] = CR_NIGHTSFALL;
 
 	player->powers[pw_underwater] = 0;
-	player->pflags &= ~(PF_SPINDOWN|PF_JUMPDOWN|PF_ATTACKDOWN|PF_SHIELDDOWN|PF_STARTDASH|PF_GLIDING|PF_STARTJUMP|PF_JUMPED|PF_NOJUMPDAMAGE|PF_THOKKED|PF_SPINNING|PF_DRILLING|PF_TRANSFERTOCLOSEST);
+	player->pflags &= ~(PF_SPINDOWN|PF_JUMPDOWN|PF_ATTACKDOWN|PF_STARTDASH|PF_GLIDING|PF_STARTJUMP|PF_JUMPED|PF_NOJUMPDAMAGE|PF_THOKKED|PF_SPINNING|PF_DRILLING|PF_TRANSFERTOCLOSEST);
 	player->secondjump = 0;
 	player->homing = 0;
 	player->climbing = 0;
@@ -716,7 +716,7 @@ static void P_DeNightserizePlayer(player_t *player)
 	// Check to see if the player should be killed.
 	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 	{
-		if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+		if (th->removing)
 			continue;
 
 		mo2 = (mobj_t *)th;
@@ -802,7 +802,7 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 	if (mapheaderinfo[gamemap-1]->nightstimer[newmare] > 0)
 		nighttime = mapheaderinfo[gamemap-1]->nightstimer[newmare];
 
-	player->pflags &= ~(PF_SPINDOWN|PF_JUMPDOWN|PF_ATTACKDOWN|PF_SHIELDDOWN|PF_STARTDASH|PF_GLIDING|PF_JUMPED|PF_NOJUMPDAMAGE|PF_THOKKED|PF_SHIELDABILITY|PF_SPINNING|PF_DRILLING);
+	player->pflags &= ~(PF_SPINDOWN|PF_JUMPDOWN|PF_ATTACKDOWN|PF_STARTDASH|PF_GLIDING|PF_JUMPED|PF_NOJUMPDAMAGE|PF_THOKKED|PF_SHIELDABILITY|PF_SPINNING|PF_DRILLING);
 	player->homing = 0;
 	player->mo->fuse = 0;
 	player->speed = 0;
@@ -976,6 +976,9 @@ pflags_t P_GetJumpFlags(player_t *player)
 //
 boolean P_PlayerInPain(player_t *player)
 {
+	if (P_MobjWasRemoved(player->mo))
+		return false;
+
 	// no silly, sliding isn't pain
 	if (!(player->pflags & PF_SLIDING) && player->mo->state == &states[player->mo->info->painstate] && player->powers[pw_flashing])
 		return true;
@@ -1089,6 +1092,13 @@ void P_ResetPlayer(player_t *player)
 		if (player->mo->tracer && !P_MobjWasRemoved(player->mo->tracer))
 		{
 			player->mo->tracer->flags |= MF_PUSHABLE;
+
+			// goose the mom a little bit to trigger gravity to process for a tic
+			if (player->mo->tracer->eflags & MFE_VERTICALFLIP)
+				player->mo->tracer->momz -= 1;
+			else
+				player->mo->tracer->momz += 1;
+
 			P_SetTarget(&player->mo->tracer->tracer, NULL);
 		}
 		P_SetTarget(&player->mo->tracer, NULL);
@@ -1352,6 +1362,8 @@ void P_DoSuperTransformation(player_t *player, boolean giverings)
 	if (!(mapheaderinfo[gamemap-1]->levelflags & LF_NOSSMUSIC) && P_IsLocalPlayer(player))
 		P_PlayJingle(player, JT_SUPER);
 
+	S_StartSound(NULL, sfx_supert); //let all players hear it -mattw_cfi
+
 	player->mo->momx = player->mo->momy = player->mo->momz = player->cmomx = player->cmomy = player->rmomx = player->rmomy = 0;
 
 	// Transformation animation
@@ -1368,11 +1380,8 @@ void P_DoSuperTransformation(player_t *player, boolean giverings)
 		player->powers[pw_sneakers] = 0;
 	}
 
-	if (G_CoopGametype())
-		S_StartSound(player->mo, sfx_supert); //only hear it near yourself in co-op
-	else
+	if (!G_CoopGametype())
 	{
-		S_StartSound(NULL, sfx_supert); //let all players hear it -mattw_cfi
 		HU_SetCEchoFlags(0);
 		HU_SetCEchoDuration(5);
 		HU_DoCEcho(va("%s\\is now super.\\\\\\\\", player_names[player-players]));
@@ -1407,7 +1416,7 @@ void P_DoSuperDetransformation(player_t *player)
 	if (!G_CoopGametype())
 		player->powers[pw_flashing] = flashingtics-1;
 
-	if (player->mo->sprite2 & SPR2F_SUPER)
+	if (player->mo->sprite2 & FF_SPR2SUPER)
 		P_SetMobjState(player->mo, player->mo->state-states);
 
 	// Inform the netgame that the champion has fallen in the heat of battle.
@@ -1889,7 +1898,7 @@ void P_SpawnShieldOrb(player_t *player)
 	// blaze through the thinkers to see if an orb already exists!
 	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 	{
-		if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+		if (th->removing)
 			continue;
 
 		shieldobj = (mobj_t *)th;
@@ -2071,6 +2080,7 @@ mobj_t *P_SpawnGhostMobj(mobj_t *mobj)
 
 	ghost->renderflags = mobj->renderflags;
 	ghost->blendmode = mobj->blendmode;
+	ghost->alpha = mobj->alpha;
 
 	ghost->spritexscale = mobj->spritexscale;
 	ghost->spriteyscale = mobj->spriteyscale;
@@ -2372,7 +2382,7 @@ boolean P_PlayerHitFloor(player_t *player, boolean dorollstuff)
 		if (dorollstuff)
 		{
 			if ((player->charability2 == CA2_SPINDASH) && !((player->pflags & (PF_SPINNING|PF_THOKKED)) == PF_THOKKED) && !(player->charability == CA_THOK && player->secondjump)
-			&& (player->cmd.buttons & BT_SPIN) && (FixedHypot(player->mo->momx, player->mo->momy) > (5*player->mo->scale)))
+			&& (player->cmd.buttons & BT_SPIN) && (FixedHypot(player->mo->momx, player->mo->momy) >= (5*player->mo->scale)))
 				player->pflags = (player->pflags|PF_SPINNING) & ~PF_THOKKED;
 			else if (!(player->pflags & PF_STARTDASH))
 				player->pflags &= ~PF_SPINNING;
@@ -3300,6 +3310,7 @@ static void P_DoPlayerHeadSigns(player_t *player)
 					sign->frame = 2|FF_FULLBRIGHT;
 			}
 		}
+	}
 
 	if (!P_MobjWasRemoved(sign) && splitscreen) // Hide the sign from yourself in splitscreen - In single-screen, it wouldn't get spawned if it shouldn't be visible
 	{
@@ -3336,7 +3347,6 @@ static void P_DoPlayerHeadSigns(player_t *player)
 			}
 		}
 #endif
-	}
 	}
 }
 
@@ -4115,7 +4125,7 @@ static void P_DoTeeter(player_t *player)
 			teeteryl = teeteryh = player->mo->y;
 			couldteeter = false;
 			solidteeter = teeter;
-			if (!P_DoBlockThingsIterate(xl, yl, xh, yh, PIT_CheckSolidsTeeter))
+			if (!P_DoBlockThingsIterate(xl, yl, xh, yh, PIT_CheckSolidsTeeter, tmthing))
 				goto teeterdone; // we've found something that stops us teetering at all
 teeterdone:
 			teeter = solidteeter;
@@ -4200,7 +4210,6 @@ static void P_DoFiring(player_t *player, ticcmd_t *cmd)
 	if (player->pflags & PF_ATTACKDOWN || player->climbing || (G_TagGametype() && !(player->pflags & PF_TAGIT)))
 		return;
 
-	// Fire a fireball if we have the Fire Flower powerup!
 	if (((player->powers[pw_shield] & SH_STACK) == SH_FIREFLOWER) && !(player->weapondelay))
 	{
 		player->pflags |= PF_ATTACKDOWN;
@@ -4212,7 +4221,6 @@ static void P_DoFiring(player_t *player, ticcmd_t *cmd)
 		return;
 	}
 
-	// No ringslinging outside of ringslinger!
 	if (!G_RingSlingerGametype() || player->weapondelay)
 		return;
 
@@ -4391,7 +4399,34 @@ static void P_DoSuperStuff(player_t *player)
 		// If you're super and not Sonic, de-superize!
 		if (!(ALL7EMERALDS(emeralds) && player->charflags & SF_SUPER))
 		{
-			P_DoSuperDetransformation(player);
+			player->powers[pw_super] = 0;
+			P_SetMobjState(player->mo, S_PLAY_STND);
+			if (P_IsLocalPlayer(player))
+			{
+				music_stack_noposition = true; // HACK: Do not reposition next music
+				music_stack_fadeout = MUSICRATE/2; // HACK: Fade out current music
+			}
+			P_RestoreMusic(player);
+			P_SpawnShieldOrb(player);
+
+			// Restore color
+			if ((player->powers[pw_shield] & SH_STACK) == SH_FIREFLOWER)
+			{
+				player->mo->color = SKINCOLOR_WHITE;
+				G_GhostAddColor(GHC_FIREFLOWER);
+			}
+			else
+			{
+				player->mo->color = P_GetPlayerColor(player);
+				G_GhostAddColor(GHC_NORMAL);
+			}
+
+			if (!G_CoopGametype())
+			{
+				HU_SetCEchoFlags(0);
+				HU_SetCEchoDuration(5);
+				HU_DoCEcho(va("%s\\is no longer super.\\\\\\\\", player_names[player-players]));
+			}
 			return;
 		}
 
@@ -4418,37 +4453,28 @@ static void P_DoSuperStuff(player_t *player)
 
 		// Ran out of rings while super!
 		if (player->rings <= 0 || player->exiting)
+		{
 			P_DoSuperDetransformation(player);
+		}
 	}
 }
 
 //
 // P_SuperReady
 //
-// Returns true if player is ready to transform or detransform
+// Returns true if player is ready to turn super, duh
 //
-boolean P_SuperReady(player_t *player, boolean transform)
+boolean P_SuperReady(player_t *player)
 {
-	if (!transform &&
-	(player->powers[pw_super] < TICRATE*3/2
-	|| !G_CoopGametype())) // No turning back in competitive!
-		return false;
-	else if (transform
-	&& (player->powers[pw_super]
-	|| !ALL7EMERALDS(emeralds)
-	|| !(player->rings >= 50)))
-		return false;
-
-	if (player->mo
+	if (!player->powers[pw_super]
+	&& !player->powers[pw_invulnerability]
 	&& !player->powers[pw_tailsfly]
-	&& !player->powers[pw_carry]
 	&& (player->charflags & SF_SUPER)
-	&& !P_PlayerInPain(player)
-	&& !player->climbing
-	&& !(player->pflags & (PF_JUMPSTASIS|PF_THOKKED|PF_STARTDASH|PF_GLIDING|PF_SLIDING|PF_SHIELDABILITY))
-	&& ((player->pflags & PF_JUMPED) || (P_IsObjectOnGround(player->mo) && (player->panim == PA_IDLE || player->panim == PA_EDGE
-	|| player->panim == PA_WALK || player->panim == PA_RUN || (player->charflags & SF_DASHMODE && player->panim == PA_DASH))))
-	&& !(maptol & TOL_NIGHTS))
+	&& (player->pflags & PF_JUMPED)
+	&& !(player->powers[pw_shield] & SH_NOSTACK)
+	&& !(maptol & TOL_NIGHTS)
+	&& ALL7EMERALDS(emeralds)
+	&& (player->rings >= 50))
 		return true;
 
 	return false;
@@ -4546,6 +4572,13 @@ void P_DoJump(player_t *player, boolean soundandstate, boolean allowflip)
 					player->mo->momz += player->mo->tracer->momz;
 				if (!P_IsObjectOnGround(player->mo->tracer))
 					P_SetObjectMomZ(player->mo->tracer, -9*FRACUNIT, true);
+
+				// goose the mom a little bit to trigger gravity to process for a tic
+				if (player->mo->tracer->eflags & MFE_VERTICALFLIP)
+					player->mo->tracer->momz -= 1;
+				else
+					player->mo->tracer->momz += 1;
+
 				player->mo->tracer->flags |= MF_PUSHABLE;
 				P_SetTarget(&player->mo->tracer->tracer, NULL);
 			}
@@ -4721,7 +4754,7 @@ static void P_DoSpinAbility(player_t *player, ticcmd_t *cmd)
 				 // Revving
 				else if ((cmd->buttons & BT_SPIN) && (player->pflags & PF_STARTDASH))
 				{
-					if (player->speed > 5*player->mo->scale)
+					if (player->speed >= 5*player->mo->scale)
 					{
 						player->pflags &= ~PF_STARTDASH;
 						P_SetMobjState(player->mo, S_PLAY_ROLL);
@@ -4761,9 +4794,8 @@ static void P_DoSpinAbility(player_t *player, ticcmd_t *cmd)
 					if (!player->spectator)
 						S_StartSound(player->mo, sfx_spin);
 				}
-				else
 				// Catapult the player from a spindash rev!
-				if (onground && !(player->pflags & PF_SPINDOWN) && (player->pflags & PF_STARTDASH) && (player->pflags & PF_SPINNING))
+				else if (onground && !(player->pflags & PF_SPINDOWN) && (player->pflags & PF_STARTDASH) && (player->pflags & PF_SPINNING))
 				{
 					player->pflags &= ~PF_STARTDASH;
 					if (player->powers[pw_carry] == CR_BRAKGOOP)
@@ -5095,7 +5127,7 @@ void P_Telekinesis(player_t *player, fixed_t thrust, fixed_t range)
 
 	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 	{
-		if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+		if (th->removing)
 			continue;
 
 		mo2 = (mobj_t *)th;
@@ -5147,7 +5179,7 @@ static boolean P_PlayerShieldThink(player_t *player, ticcmd_t *cmd, mobj_t *lock
 {
 	mobj_t *lockonshield = NULL;
 
-	if ((player->powers[pw_shield] & SH_NOSTACK) && !player->powers[pw_super] && !(player->pflags & PF_SHIELDDOWN)
+	if ((player->powers[pw_shield] & SH_NOSTACK) && !player->powers[pw_super] && !(player->pflags & PF_SPINDOWN)
 		&& ((!(player->pflags & PF_THOKKED) || (((player->powers[pw_shield] & SH_NOSTACK) == SH_BUBBLEWRAP || (player->powers[pw_shield] & SH_NOSTACK) == SH_ATTRACT) && player->secondjump == UINT8_MAX) ))) // thokked is optional if you're bubblewrapped / 3dblasted
 	{
 		if ((player->powers[pw_shield] & SH_NOSTACK) == SH_ATTRACT && !(player->charflags & SF_NOSHIELDABILITY))
@@ -5177,7 +5209,7 @@ static boolean P_PlayerShieldThink(player_t *player, ticcmd_t *cmd, mobj_t *lock
 				}
 			}
 		}
-		if ((!(player->charflags & SF_NOSHIELDABILITY)) && (cmd->buttons & BT_SHIELD && !LUA_HookPlayer(player, HOOK(ShieldSpecial)))) // Shield button effects
+		if ((!(player->charflags & SF_NOSHIELDABILITY)) && (cmd->buttons & BT_SPIN && !LUA_HookPlayer(player, HOOK(ShieldSpecial)))) // Spin button effects
 		{
 			// Force stop
 			if ((player->powers[pw_shield] & ~(SH_FORCEHP|SH_STACK)) == SH_FORCE)
@@ -5266,7 +5298,7 @@ static boolean P_PlayerShieldThink(player_t *player, ticcmd_t *cmd, mobj_t *lock
 //
 // Handles player jumping
 //
-static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd, boolean spinshieldhack)
+static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 {
 	mobj_t *lockonthok = NULL, *visual = NULL;
 
@@ -5299,13 +5331,12 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd, boolean spinshieldhac
 			;
 		else if (P_PlayerShieldThink(player, cmd, lockonthok, visual))
 			;
-		else if (cmd->buttons & BT_SPIN)
+		else if ((cmd->buttons & BT_SPIN))
 		{
-			if (spinshieldhack && !(player->pflags & PF_SPINDOWN) && P_SuperReady(player, true)
-			&& !player->powers[pw_invulnerability] && !(player->powers[pw_shield] & SH_NOSTACK)) // These two checks are no longer in P_SuperReady
+			if (!(player->pflags & PF_SPINDOWN) && P_SuperReady(player))
 			{
-				// If you're using two-button play, can turn Super and aren't already,
-				// and you don't have a shield, then turn Super!
+				// If you can turn super and aren't already,
+				// and you don't have a shield, do it!
 				P_DoSuperTransformation(player, false);
 			}
 			else if (!LUA_HookPlayer(player, HOOK(JumpSpinSpecial)))
@@ -5408,6 +5439,12 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd, boolean spinshieldhac
 		}
 		else if (player->pflags & PF_SLIDING || ((gametyperules & GTR_TEAMFLAGS) && player->gotflag) || player->pflags & PF_SHIELDABILITY)
 			;
+		/*else if (P_SuperReady(player))
+		{
+			// If you can turn super and aren't already,
+			// and you don't have a shield, do it!
+			P_DoSuperTransformation(player, false);
+		}*/
 		else if (player->pflags & PF_JUMPED)
 		{
 			if (!LUA_HookPlayer(player, HOOK(AbilitySpecial)))
@@ -6462,7 +6499,7 @@ static void P_NightsTransferPoints(player_t *player, fixed_t xspeed, fixed_t rad
 		// Find next waypoint
 		for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 		{
-			if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+			if (th->removing)
 				continue;
 
 			mo2 = (mobj_t *)th;
@@ -6498,7 +6535,7 @@ static void P_NightsTransferPoints(player_t *player, fixed_t xspeed, fixed_t rad
 		{
 			for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 			{
-				if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+				if (th->removing)
 					continue;
 
 				mo2 = (mobj_t *)th;
@@ -6527,7 +6564,7 @@ static void P_NightsTransferPoints(player_t *player, fixed_t xspeed, fixed_t rad
 		{
 			for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 			{
-				if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+				if (th->removing)
 					continue;
 
 				mo2 = (mobj_t *)th;
@@ -7259,7 +7296,7 @@ static void P_NiGHTSMovement(player_t *player)
 		// to find the closest axis point
 		for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 		{
-			if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+			if (th->removing)
 				continue;
 
 			mo2 = (mobj_t *)th;
@@ -8060,7 +8097,6 @@ void P_MovePlayer(player_t *player)
 {
 	ticcmd_t *cmd;
 	INT32 i;
-	boolean spinshieldhack = false; // Hack: Is Spin and Shield bound to the same button (pressed on the same tic)?
 
 	fixed_t runspd;
 
@@ -8159,7 +8195,7 @@ void P_MovePlayer(player_t *player)
 
 			for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 			{
-				if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+				if (th->removing)
 					continue;
 
 				mo2 = (mobj_t *)th;
@@ -8682,13 +8718,10 @@ void P_MovePlayer(player_t *player)
 	&& !(player->mo->eflags & (MFE_UNDERWATER|MFE_TOUCHWATER)))
 		P_ElementalFire(player, false);
 
-	if ((cmd->buttons & (BT_SPIN|BT_SHIELD)) == (BT_SPIN|BT_SHIELD) && !(player->pflags & (PF_SPINDOWN|PF_SHIELDDOWN)))
-		spinshieldhack = true; // Spin and Shield is bound to the same button (pressed on the same tic), so enable two-button play (Jump and Spin+Shield)
-
 	P_DoSpinAbility(player, cmd);
 
 	// jumping
-	P_DoJumpStuff(player, cmd, spinshieldhack);
+	P_DoJumpStuff(player, cmd);
 
 	// If you're not spinning, you'd better not be spindashing!
 	if (!(player->pflags & PF_SPINNING) && player->powers[pw_carry] != CR_NIGHTSMODE)
@@ -8776,24 +8809,9 @@ void P_MovePlayer(player_t *player)
 			P_PlayerFlagBurst(player, true);
 	}
 
-	// Check for fire and shield buttons
+	// check for fire
 	if (!player->exiting)
-	{
 		P_DoFiring(player, cmd);
-
-		// Shield button behavior
-		// Check P_PlayerShieldThink for actual shields!
-		if ((cmd->buttons & BT_SHIELD) && !(player->pflags & PF_SHIELDDOWN) && !spinshieldhack)
-		{
-			// Transform into super if we can!
-			if (P_SuperReady(player, true))
-				P_DoSuperTransformation(player, false);
-
-			// Detransform from super if we can!
-			else if (P_SuperReady(player, false))
-				P_DoSuperDetransformation(player);
-		}
-	}
 
 	{
 		boolean atspinheight = false;
@@ -8812,6 +8830,8 @@ void P_MovePlayer(player_t *player)
 			player->mo->height = P_GetPlayerSpinHeight(player);
 			atspinheight = true;
 		}
+		else if (player->powers[pw_carry] == CR_PLAYER || player->powers[pw_carry] == CR_PTERABYTE) // You're slightly shorter while being carried
+			player->mo->height = FixedDiv(P_GetPlayerHeight(player), FixedDiv(14*FRACUNIT,10*FRACUNIT));
 		else
 			player->mo->height = P_GetPlayerHeight(player);
 
@@ -9142,7 +9162,7 @@ void P_NukeEnemies(mobj_t *inflictor, mobj_t *source, fixed_t radius)
 
 	for (think = thlist[THINK_MOBJ].next; think != &thlist[THINK_MOBJ]; think = think->next)
 	{
-		if (think->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+		if (think->removing)
 			continue;
 
 		mo = (mobj_t *)think;
@@ -9240,7 +9260,7 @@ mobj_t *P_LookForFocusTarget(player_t *player, mobj_t *exclude, SINT8 direction,
 
 	for (think = thlist[THINK_MOBJ].next; think != &thlist[THINK_MOBJ]; think = think->next)
 	{
-		if (think->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+		if (think->removing)
 			continue;
 
 		mo = (mobj_t *)think;
@@ -9359,7 +9379,7 @@ mobj_t *P_LookForEnemies(player_t *player, boolean nonenemies, boolean bullet)
 
 	for (think = thlist[THINK_MOBJ].next; think != &thlist[THINK_MOBJ]; think = think->next)
 	{
-		if (think->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+		if (think->removing)
 			continue;
 
 		mo = (mobj_t *)think;
@@ -9505,7 +9525,7 @@ void P_FindEmerald(void)
 	// to find all emeralds
 	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 	{
-		if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+		if (th->removing)
 			continue;
 
 		mo2 = (mobj_t *)th;
@@ -9813,7 +9833,7 @@ static CV_PossibleValue_t campos_cons_t[] = { {INT32_MIN, "MIN"}, {INT32_MAX, "M
 consvar_t cv_cam_dist = CVAR_INIT ("cam_curdist", "160", CV_FLOAT|CV_ALLOWLUA, campos_cons_t, NULL);
 consvar_t cv_cam_height = CVAR_INIT ("cam_curheight", "25", CV_FLOAT|CV_ALLOWLUA, campos_cons_t, NULL);
 consvar_t cv_cam_still = CVAR_INIT ("cam_still", "Off", CV_ALLOWLUA, CV_OnOff, NULL);
-consvar_t cv_cam_speed = CVAR_INIT ("cam_speed", "0.3", CV_FLOAT|CV_SAVE|CV_ALLOWLUA, CV_CamSpeed, NULL);
+consvar_t cv_cam_speed = CVAR_INIT ("cam_speed", "0.4", CV_FLOAT|CV_SAVE|CV_ALLOWLUA, CV_CamSpeed, NULL);
 consvar_t cv_cam_rotate = CVAR_INIT ("cam_rotate", "0", CV_CALL|CV_NOINIT|CV_ALLOWLUA, CV_CamRotate, CV_CamRotate_OnChange);
 consvar_t cv_cam_rotspeed = CVAR_INIT ("cam_rotspeed", "10", CV_SAVE|CV_ALLOWLUA, rotation_cons_t, NULL);
 consvar_t cv_cam_turnmultiplier = CVAR_INIT ("cam_turnmultiplier", "0.75", CV_FLOAT|CV_SAVE|CV_ALLOWLUA, multiplier_cons_t, NULL);
@@ -9822,7 +9842,7 @@ consvar_t cv_cam_adjust = CVAR_INIT ("cam_adjust", "On", CV_SAVE|CV_ALLOWLUA, CV
 consvar_t cv_cam2_dist = CVAR_INIT ("cam2_curdist", "160", CV_FLOAT|CV_ALLOWLUA, campos_cons_t, NULL);
 consvar_t cv_cam2_height = CVAR_INIT ("cam2_curheight", "25", CV_FLOAT|CV_ALLOWLUA, campos_cons_t, NULL);
 consvar_t cv_cam2_still = CVAR_INIT ("cam2_still", "Off", CV_ALLOWLUA, CV_OnOff, NULL);
-consvar_t cv_cam2_speed = CVAR_INIT ("cam2_speed", "0.3", CV_FLOAT|CV_SAVE|CV_ALLOWLUA, CV_CamSpeed, NULL);
+consvar_t cv_cam2_speed = CVAR_INIT ("cam2_speed", "0.4", CV_FLOAT|CV_SAVE|CV_ALLOWLUA, CV_CamSpeed, NULL);
 consvar_t cv_cam2_rotate = CVAR_INIT ("cam2_rotate", "0", CV_CALL|CV_NOINIT|CV_ALLOWLUA, CV_CamRotate, CV_CamRotate2_OnChange);
 consvar_t cv_cam2_rotspeed = CVAR_INIT ("cam2_rotspeed", "10", CV_SAVE|CV_ALLOWLUA, rotation_cons_t, NULL);
 consvar_t cv_cam2_turnmultiplier = CVAR_INIT ("cam2_turnmultiplier", "0.75", CV_FLOAT|CV_SAVE|CV_ALLOWLUA, multiplier_cons_t, NULL);
@@ -10906,7 +10926,7 @@ static mobj_t *P_GetAxis(INT32 num)
 
 	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 	{
-		if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+		if (th->removing)
 			continue;
 
 		mobj = (mobj_t *)th;
@@ -11495,6 +11515,18 @@ void P_DoTailsOverlay(player_t *player, mobj_t *tails)
 }
 
 // Metal Sonic's jet fume
+//
+// The follow object's state is set to its spawn state when deactivated.
+// When the player is on a moving animation, the follow object goes to its see state.
+// When dash mode is entered, the follow object switches to its melee state.
+//
+// If MF2_FRET is set, the jet fume will flash during dash mode.
+// MF2_AMBUSH can be used to enable Metal Sonic's skidding animation.
+// MF2_JUSTATTACKED will enable the color cycling.
+// If the follow item is MT_METALJETFUME, the above two effects are automatically applied.
+//
+// MF2_STRONGBOX is internally used to track if the jet fume is in its deactivated state or not.
+// MF2_BOSSNOTRAP is internally used to instantly reset the jet fume's scale to its intended scale.
 void P_DoMetalJetFume(player_t *player, mobj_t *fume)
 {
 	static const UINT8 FUME_SKINCOLORS[] =
@@ -11521,15 +11553,28 @@ void P_DoMetalJetFume(player_t *player, mobj_t *fume)
 	fixed_t heightoffset = ((mo->eflags & MFE_VERTICALFLIP) ? mo->height - (P_GetPlayerHeight(player) >> 1) : (P_GetPlayerHeight(player) >> 1));
 	panim_t panim = player->panim;
 	tic_t dashmode = min(player->dashmode, DASHMODE_MAX);
+	boolean ismetaljetfume = fume->type == MT_METALJETFUME;
+	boolean notmoving = panim != PA_WALK && panim != PA_RUN && panim != PA_DASH;
 	boolean underwater = mo->eflags & MFE_UNDERWATER;
 	statenum_t stat = fume->state-states;
 	boolean resetinterp = false;
 
-	if (panim != PA_WALK && panim != PA_RUN && panim != PA_DASH) // turn invisible when not in a coherent movement state
+	if (notmoving) // deactivate when not in a coherent movement state
 	{
-		if (stat != fume->info->spawnstate)
+		if ((fume->flags2 & MF2_STRONGBOX) == 0)
+		{
 			P_SetMobjState(fume, fume->info->spawnstate);
-		return;
+			fume->flags2 |= MF2_STRONGBOX;
+		}
+		if (P_MobjWasRemoved(fume) || ismetaljetfume)
+			return;
+	}
+
+	// Rotate on skid animation if follow item is MT_METALJETFUME, or if MF2_AMBUSH is set
+	if (player->mo->sprite2 == SPR2_SKID)
+	{
+		if ((ismetaljetfume && (player->charflags & SF_JETFUME)) || (fume->flags2 & MF2_AMBUSH))
+			angle += ANGLE_90;
 	}
 
 	if (underwater) // No fume underwater; spawn bubbles instead!
@@ -11567,54 +11612,82 @@ void P_DoMetalJetFume(player_t *player, mobj_t *fume)
 
 		if (panim == PA_WALK)
 		{
-			if (stat != fume->info->spawnstate)
+			if ((fume->flags2 & MF2_STRONGBOX) == 0)
 			{
-				fume->threshold = 0;
 				P_SetMobjState(fume, fume->info->spawnstate);
+				fume->threshold = 0;
+				fume->flags2 &= ~MF2_STRONGBOX;
 			}
-			return;
+			if (P_MobjWasRemoved(fume) || ismetaljetfume)
+				return;
 		}
 	}
 
-	if (stat == fume->info->spawnstate) // If currently inivisble, activate!
+	// If currently deactivated, activate!
+	if (!notmoving && !underwater && (fume->flags2 & MF2_STRONGBOX))
 	{
 		P_SetMobjState(fume, (stat = fume->info->seestate));
+		if (P_MobjWasRemoved(fume))
+			return;
 		P_SetScale(fume, mo->scale, false);
+		fume->flags2 &= ~MF2_STRONGBOX;
 		resetinterp = true;
 	}
 
-	if (dashmode > DASHMODE_THRESHOLD && stat != fume->info->seestate) // If in dashmode, grow really big and flash
+	// If in dash mode, grow really big
+	if (dashmode > DASHMODE_THRESHOLD && stat != fume->info->meleestate)
 	{
 		fume->destscale = mo->scale;
-		fume->flags2 ^= MF2_DONTDRAW;
 		fume->flags2 |= mo->flags2 & MF2_DONTDRAW;
+
+		// Flash if follow item is MT_METALJETFUME, or if MF2_FRET is set
+		if (ismetaljetfume || (fume->flags2 & MF2_FRET))
+			fume->flags2 ^= MF2_DONTDRAW;
 	}
 	else // Otherwise, pick a size and color depending on speed and proximity to dashmode
 	{
-		if (dashmode == DASHMODE_THRESHOLD && dashmode > (tic_t)fume->movecount) // If just about to enter dashmode, play the startup animation again
+		// If just about to enter dash mode, play the startup animation again
+		if (dashmode == DASHMODE_THRESHOLD && dashmode > (tic_t)fume->movecount)
 		{
-			P_SetMobjState(fume, (stat = fume->info->seestate));
+			P_SetMobjState(fume, fume->info->meleestate);
+			if (P_MobjWasRemoved(fume))
+				return;
 			P_SetScale(fume, 2*mo->scale, true);
 		}
+
 		fume->flags2 = (fume->flags2 & ~MF2_DONTDRAW) | (mo->flags2 & MF2_DONTDRAW);
 		fume->destscale = (mo->scale + FixedDiv(player->speed, player->normalspeed)) / (underwater ? 6 : 3);
-		fume->color = FUME_SKINCOLORS[(dashmode * sizeof(FUME_SKINCOLORS)) / (DASHMODE_MAX + 1)];
+
+		// Do color cycling if follow item is MT_METALJETFUME, or if MF2_JUSTATTACKED is set
+		if (ismetaljetfume || (fume->flags2 & MF2_JUSTATTACKED))
+			fume->color = FUME_SKINCOLORS[(dashmode * sizeof(FUME_SKINCOLORS)) / (DASHMODE_MAX + 1)];
 
 		if (underwater)
 		{
-			fume->frame = (fume->frame & FF_FRAMEMASK) | FF_ANIMATE | (P_RandomRange(0, 9) * FF_TRANS10);
+			fume->frame = (fume->frame & ~FF_TRANSMASK) | (P_RandomRange(0, 9) << FF_TRANSSHIFT);
 			fume->threshold = 1;
 		}
 		else if (fume->threshold)
 		{
-			fume->frame = (fume->frame & FF_FRAMEMASK) | fume->state->frame;
+			fume->frame = (fume->frame & FF_FRAMEMASK) | (fume->state->frame & ~FF_FRAMEMASK);
 			fume->threshold = 0;
 		}
 	}
 
-	fume->movecount = dashmode; // keeps track of previous dashmode value so we know whether Metal is entering or leaving it
-	fume->flags2 = (fume->flags2 & ~MF2_OBJECTFLIP) | (mo->flags2 & MF2_OBJECTFLIP); // Make sure to flip in reverse gravity!
-	fume->eflags = (fume->eflags & ~MFE_VERTICALFLIP) | (mo->eflags & MFE_VERTICALFLIP); // Make sure to flip in reverse gravity!
+	// keeps track of previous dash mode value so we know whether Metal is entering or leaving it
+	fume->movecount = dashmode;
+
+	// Make sure to flip in reverse gravity!
+	fume->flags2 = (fume->flags2 & ~MF2_OBJECTFLIP) | (mo->flags2 & MF2_OBJECTFLIP);
+	fume->eflags = (fume->eflags & ~MFE_VERTICALFLIP) | (mo->eflags & MFE_VERTICALFLIP);
+
+	// Set the appropriate scale at spawn
+	// This is... strange, but I had to choose a flag that a follow object would not ordinarily use.
+	if ((fume->flags2 & MF2_BOSSNOTRAP) == 0)
+	{
+		P_SetScale(fume, fume->destscale, true);
+		fume->flags2 |= MF2_BOSSNOTRAP;
+	}
 
 	// Finally, set its position
 	dist = -mo->radius - FixedMul(fume->info->radius, fume->destscale - mo->scale/3);
@@ -11624,9 +11697,10 @@ void P_DoMetalJetFume(player_t *player, mobj_t *fume)
 	fume->y = mo->y + P_ReturnThrustY(fume, angle, dist);
 	fume->z = mo->z + heightoffset - (fume->height >> 1);
 	P_SetThingPosition(fume);
-	if (resetinterp) R_ResetMobjInterpolationState(fume);
+	if (resetinterp)
+		R_ResetMobjInterpolationState(fume);
 
-	// If dashmode is high enough, spawn a trail
+	// If dash mode is high enough, spawn a trail
 	if (player->normalspeed >= skins[player->skin]->normalspeed*2)
 	{
 		mobj_t *ghost = P_SpawnGhostMobj(fume);
@@ -11640,6 +11714,8 @@ void P_DoFollowMobj(player_t *player, mobj_t *followmobj)
 {
 	if (LUA_HookFollowMobj(player, followmobj) || P_MobjWasRemoved(followmobj))
 		{;}
+	else if (player->charflags & SF_JETFUME)
+		P_DoMetalJetFume(player, followmobj);
 	else
 	{
 		switch (followmobj->type)
@@ -11988,7 +12064,7 @@ void P_PlayerThink(player_t *player)
 
 		for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 		{
-			if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+			if (th->removing)
 				continue;
 
 			mo2 = (mobj_t *)th;
@@ -12048,7 +12124,7 @@ void P_PlayerThink(player_t *player)
 				ticmiss++;
 
 			P_DoRopeHang(player);
-			P_DoJumpStuff(player, &player->cmd, false); // P_DoRopeHang would set PF_SPINDOWN, so no spinshieldhack here
+			P_DoJumpStuff(player, &player->cmd);
 		}
 		else //if (player->powers[pw_carry] == CR_ZOOMTUBE)
 		{
@@ -12128,6 +12204,10 @@ void P_PlayerThink(player_t *player)
 					break;
 				case CR_DUSTDEVIL:
 					player->drawangle += ANG20;
+					break;
+				case CR_FAN:
+					if (player->pflags & PF_ANALOGMODE) // Don't impact drawangle in any special way when on a fan
+						player->drawangle = player->mo->angle;
 					break;
 				/* -- in case we wanted to have the camera freely movable during zoom tubes
 				case CR_ZOOMTUBE:*/
@@ -12317,12 +12397,6 @@ void P_PlayerThink(player_t *player)
 		else
 			player->pflags &= ~PF_SPINDOWN;
 	}
-
-	// Check for Shield button
-	if (cmd->buttons & BT_SHIELD)
-		player->pflags |= PF_SHIELDDOWN;
-	else
-		player->pflags &= ~PF_SHIELDDOWN;
 
 	// IF PLAYER NOT HERE THEN FLASH END IF
 	if (player->quittime && player->powers[pw_flashing] < flashingtics - 1
@@ -12829,9 +12903,9 @@ void P_PlayerAfterThink(player_t *player)
 				else
 				{
 					if (tails->player)
-						P_TryMove(player->mo, tails->x + P_ReturnThrustX(tails, tails->player->drawangle, 4*FRACUNIT), tails->y + P_ReturnThrustY(tails, tails->player->drawangle, 4*FRACUNIT), true);
+						P_TryMove(player->mo, tails->x + P_ReturnThrustX(tails, tails->player->drawangle, 4*tails->scale), tails->y + P_ReturnThrustY(tails, tails->player->drawangle, 4*tails->scale), true);
 					else
-						P_TryMove(player->mo, tails->x + P_ReturnThrustX(tails, tails->angle, 4*FRACUNIT), tails->y + P_ReturnThrustY(tails, tails->angle, 4*FRACUNIT), true);
+						P_TryMove(player->mo, tails->x + P_ReturnThrustX(tails, tails->angle, 4*tails->scale), tails->y + P_ReturnThrustY(tails, tails->angle, 4*tails->scale), true);
 					player->mo->momx = tails->momx;
 					player->mo->momy = tails->momy;
 					player->mo->momz = tails->momz;
@@ -12845,7 +12919,7 @@ void P_PlayerAfterThink(player_t *player)
 						P_SetPlayerAngle(player, player->mo->angle);
 				}
 
-				if (P_AproxDistance(player->mo->x - tails->x, player->mo->y - tails->y) > player->mo->radius)
+				if (P_AproxDistance(player->mo->x - tails->x, player->mo->y - tails->y) > tails->radius)
 					player->powers[pw_carry] = CR_NONE;
 
 				if (player->powers[pw_carry] == CR_PLAYER)
@@ -13066,7 +13140,7 @@ void P_PlayerAfterThink(player_t *player)
 				player->mo->momy = ptera->momy;
 				player->mo->momz = ptera->momz;
 
-				if (P_AproxDistance(player->mo->x - ptera->x - ptera->watertop, player->mo->y - ptera->y - ptera->waterbottom) > player->mo->radius)
+				if (P_AproxDistance(player->mo->x - ptera->x - ptera->watertop, player->mo->y - ptera->y - ptera->waterbottom) > ptera->radius)
 					goto dropoff;
 
 				ptera->watertop >>= 1;
@@ -13143,7 +13217,8 @@ void P_PlayerAfterThink(player_t *player)
 						player->followmobj->colorized = true;
 						break;
 					default:
-						player->followmobj->flags2 |= MF2_LINKDRAW;
+						if ((player->charflags & SF_JETFUME) == 0)
+							player->followmobj->flags2 |= MF2_LINKDRAW;
 						break;
 				}
 			}

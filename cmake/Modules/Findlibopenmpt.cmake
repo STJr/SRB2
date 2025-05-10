@@ -1,14 +1,16 @@
 include(LibFindMacros)
 
-libfind_pkg_check_modules(libopenmpt_PKGCONF openmpt)
+libfind_pkg_check_modules(libopenmpt_PKGCONF openmpt libopenmpt)
 
 find_path(libopenmpt_INCLUDE_DIR
 	NAMES libopenmpt.h
 	PATHS
 		${libopenmpt_PKGCONF_INCLUDE_DIRS}
-		"${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/include/libopenmpt"
-		"/usr/include/libopenmpt"
-		"/usr/local/include/libopenmpt"
+		"${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/include"
+		"/usr/include"
+		"/usr/local/include"
+	PATH_SUFFIXES
++		libopenmpt
 )
 
 find_library(libopenmpt_LIBRARY

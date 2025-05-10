@@ -1,4 +1,4 @@
-#include "../doomdef.h"
+﻿#include "../doomdef.h"
 #include "../command.h"
 #include "../i_video.h"
 
@@ -76,4 +76,3 @@ void I_ReadScreen(UINT8 *scr)
 void I_BeginRead(void){}
 
 void I_EndRead(void){}
-

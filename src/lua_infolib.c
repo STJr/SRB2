@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2012-2016 by John "JTE" Muniz.
-// Copyright (C) 2012-2023 by Sonic Team Junior.
+// Copyright (C) 2012-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -242,17 +242,12 @@ static int lib_getSpriteInfo(lua_State *L)
 	UINT32 i = NUMSPRITES;
 	lua_remove(L, 1);
 
-	if (lua_isstring(L, 1))
+	if (lua_type(L, 1) == LUA_TSTRING)
 	{
 		const char *name = lua_tostring(L, 1);
 		INT32 spr = R_GetSpriteNumByName(name);
 		if (spr == NUMSPRITES)
-		{
-			char *check;
-			i = strtol(name, &check, 10);
-			if (check == name || *check != '\0')
-				return luaL_error(L, "unknown sprite name %s", name);
-		}
+			return luaL_error(L, "unknown sprite name %s", name);
 		i = spr;
 	}
 	else
@@ -1740,7 +1735,7 @@ static int lib_setSkinColor(lua_State *L)
 		else if (i == 6 || (str && fastcmp(str,"accessible"))) {
 			boolean v = lua_toboolean(L, 3);
 			if (cnum < FIRSTSUPERCOLOR && v != skincolors[cnum].accessible)
-				CONS_Alert(CONS_WARNING, "skincolors[] index %d is a standard color; accessibility changes are prohibited.", cnum);
+				CONS_Alert(CONS_WARNING, "skincolors[] index %d is a standard color; accessibility changes are prohibited.\n", cnum);
 			else
 				info->accessible = v;
 		}
@@ -1835,7 +1830,7 @@ static int skincolor_set(lua_State *L)
 	else if (fastcmp(field,"accessible")) {
 		boolean v = lua_toboolean(L, 3);
 		if (cnum < FIRSTSUPERCOLOR && v != skincolors[cnum].accessible)
-			CONS_Alert(CONS_WARNING, "skincolors[] index %d is a standard color; accessibility changes are prohibited.", cnum);
+			CONS_Alert(CONS_WARNING, "skincolors[] index %d is a standard color; accessibility changes are prohibited.\n", cnum);
 		else
 			info->accessible = v;
 	} else

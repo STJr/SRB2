@@ -33,4 +33,3 @@ FetchContent_MakeAvailable(ZLIB)
 add_library(ZLIB::ZLIB ALIAS zlibstatic)
 
 set(ZLIB_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/zlib" "${zlib_BINARY_DIR}" CACHE PATH "" FORCE)
-

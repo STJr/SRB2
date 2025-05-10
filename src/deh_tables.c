@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2025 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -506,6 +506,8 @@ const char *const PLAYERFLAG_LIST[] = {
 	"FORCESTRAFE", // Translate turn inputs into strafe inputs
 	"CANCARRY", // Can carry?
 	"FINISHED",
+
+	"SHIELDDOWN", // Shield has been pressed.
 
 	NULL // stop loop here.
 };
@@ -1258,7 +1260,9 @@ struct int_const_s const INT_CONST[] = {
 	{"SF_MARIODAMAGE",SF_MARIODAMAGE},
 	{"SF_MACHINE",SF_MACHINE},
 	{"SF_DASHMODE",SF_DASHMODE},
+	{"SF_FASTWAIT",SF_FASTWAIT},
 	{"SF_FASTEDGE",SF_FASTEDGE},
+	{"SF_JETFUME",SF_JETFUME},
 	{"SF_MULTIABILITY",SF_MULTIABILITY},
 	{"SF_NONIGHTSROTATION",SF_NONIGHTSROTATION},
 	{"SF_NONIGHTSSUPER",SF_NONIGHTSSUPER},
@@ -1606,8 +1610,7 @@ struct int_const_s const INT_CONST[] = {
 	{"ROTAXIS_Z",ROTAXIS_Z},
 
 	// Buttons (ticcmd_t)
-	{"BT_WEAPONMASK",BT_WEAPONMASK}, //our first three bits.
-	{"BT_SHIELD",BT_SHIELD},
+	{"BT_WEAPONMASK",BT_WEAPONMASK}, //our first four bits.
 	{"BT_WEAPONNEXT",BT_WEAPONNEXT},
 	{"BT_WEAPONPREV",BT_WEAPONPREV},
 	{"BT_ATTACK",BT_ATTACK}, // shoot rings
@@ -1766,7 +1769,6 @@ struct int_const_s const INT_CONST[] = {
 	{"JA_DIGITAL",JA_DIGITAL},
 	{"JA_JUMP",JA_JUMP},
 	{"JA_SPIN",JA_SPIN},
-	{"JA_SHIELD",JA_SHIELD},
 	{"JA_FIRE",JA_FIRE},
 	{"JA_FIRENORMAL",JA_FIRENORMAL},
 	{"JOYAXISRANGE",JOYAXISRANGE},
@@ -1788,7 +1790,9 @@ struct int_const_s const INT_CONST[] = {
 	{"GC_WEPSLOT5",GC_WEPSLOT5},
 	{"GC_WEPSLOT6",GC_WEPSLOT6},
 	{"GC_WEPSLOT7",GC_WEPSLOT7},
-	{"GC_SHIELD",GC_SHIELD},
+	{"GC_WEPSLOT8",GC_WEPSLOT8},
+	{"GC_WEPSLOT9",GC_WEPSLOT9},
+	{"GC_WEPSLOT10",GC_WEPSLOT10},
 	{"GC_FIRE",GC_FIRE},
 	{"GC_FIRENORMAL",GC_FIRENORMAL},
 	{"GC_TOSSFLAG",GC_TOSSFLAG},
@@ -1827,6 +1831,10 @@ struct int_const_s const INT_CONST[] = {
 	{"MB_BUTTON8",MB_BUTTON8},
 	{"MB_SCROLLUP",MB_SCROLLUP},
 	{"MB_SCROLLDOWN",MB_SCROLLDOWN},
+
+	// screen.h constants
+	{"BASEVIDWIDTH",BASEVIDWIDTH},
+	{"BASEVIDHEIGHT",BASEVIDHEIGHT},
 
 	{NULL,0}
 };

@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2025 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -37,6 +37,7 @@
 #endif
 
 #include "../doomdef.h"
+#include "../z_zone.h"
 
 #ifdef USE_WINSOCK1
 	#include <winsock.h>
@@ -87,6 +88,10 @@
 	#undef EHOSTUNREACH
 	#endif
 	#define EHOSTUNREACH WSAEHOSTUNREACH
+	#ifdef ENETUNREACH
+	#undef ENETUNREACH
+	#endif
+	#define ENETUNREACH WSAENETUNREACH
 	#ifndef IOC_VENDOR
 	#define IOC_VENDOR 0x18000000
 	#endif
@@ -120,8 +125,6 @@ typedef union
 	static boolean UPNP_support = true;
 	#endif // HAVE_MINIUPNC
 
-#define MAXBANS 100
-
 #include "../i_system.h"
 #include "i_net.h"
 #include "d_net.h"
@@ -140,7 +143,6 @@ typedef union
 #endif
 
 #include "i_addrinfo.h"
-#define SELECTTEST
 #define DEFAULTPORT "5029"
 
 #ifdef USE_WINSOCK
@@ -169,8 +171,8 @@ static mysockaddr_t clientaddress[MAXNETNODES+1];
 static mysockaddr_t broadcastaddress[MAXNETNODES+1];
 static size_t broadcastaddresses = 0;
 static boolean nodeconnected[MAXNETNODES+1];
-static mysockaddr_t banned[MAXBANS];
-static UINT8 bannedmask[MAXBANS];
+static mysockaddr_t *banned;
+static UINT8 *bannedmask;
 
 static size_t numbans = 0;
 static boolean SOCK_bannednode[MAXNETNODES+1]; /// \note do we really need the +1?
@@ -317,7 +319,11 @@ init_upnpc_once(struct upnpdata *upnpuserdata)
 		I_OutputMsg(M_GetText("Found UPnP device:\n desc: %s\n st: %s\n"),
 		           dev->descURL, dev->st);
 
+#if (MINIUPNPC_API_VERSION >= 18)
+		UPNP_GetValidIGD(devlist, &urls, &data, lanaddr, sizeof(lanaddr), NULL, 0);
+#else
 		UPNP_GetValidIGD(devlist, &urls, &data, lanaddr, sizeof(lanaddr));
+#endif
 		I_OutputMsg(M_GetText("Local LAN IP address: %s\n"), lanaddr);
 		descXML = miniwget(dev->descURL, &descXMLsize, scope_id, &status_code);
 		if (descXML)
@@ -380,6 +386,7 @@ static const char *SOCK_AddrToStr(mysockaddr_t *sk)
 	int v6 = 0;
 #endif
 	void *addr;
+	int e = 0; // save error code so it can't be modified later code and avoid calling WSAGetLastError() more then once
 
 	if(sk->any.sa_family == AF_INET)
 		addr = &sk->ip4.sin_addr;
@@ -393,7 +400,10 @@ static const char *SOCK_AddrToStr(mysockaddr_t *sk)
 	if(addr == NULL)
 		sprintf(s, "No address");
 	else if(inet_ntop(sk->any.sa_family, addr, &s[v6], sizeof (s) - v6) == NULL)
-		sprintf(s, "Unknown family type, error #%u", errno);
+	{
+		e = errno;
+		sprintf(s, "Unknown family type, error #%u: %s", e, strerror(e));
+	}
 #ifdef HAVE_IPV6
 	else if(sk->any.sa_family == AF_INET6)
 	{
@@ -450,6 +460,8 @@ static boolean SOCK_cmpipv6(mysockaddr_t *a, mysockaddr_t *b, UINT8 mask)
 {
 	UINT8 bitmask;
 	I_Assert(mask <= 128);
+	if (mask == 0)
+		mask = 128;
 	if (memcmp(&a->ip6.sin6_addr.s6_addr, &b->ip6.sin6_addr.s6_addr, mask / 8) != 0)
 		return false;
 	if (mask % 8 == 0)
@@ -624,56 +636,6 @@ static boolean SOCK_Get(void)
 	return false;
 }
 
-// check if we can send (do not go over the buffer)
-
-static fd_set masterset;
-
-#ifdef SELECTTEST
-static boolean FD_CPY(fd_set *src, fd_set *dst, SOCKET_TYPE *fd, size_t len)
-{
-	boolean testset = false;
-	FD_ZERO(dst);
-	for (size_t i = 0; i < len;i++)
-	{
-		if(fd[i] != (SOCKET_TYPE)ERRSOCKET &&
-		   FD_ISSET(fd[i], src) && !FD_ISSET(fd[i], dst)) // no checking for dups
-		{
-			FD_SET(fd[i], dst);
-			testset = true;
-		}
-	}
-	return testset;
-}
-
-static boolean SOCK_CanSend(void)
-{
-	struct timeval timeval_for_select = {0, 0};
-	fd_set tset;
-	int wselect;
-
-	if(!FD_CPY(&masterset, &tset, mysockets, mysocketses))
-		return false;
-	wselect = select(255, NULL, &tset, NULL, &timeval_for_select);
-	if (wselect >= 1)
-		return true;
-	return false;
-}
-
-static boolean SOCK_CanGet(void)
-{
-	struct timeval timeval_for_select = {0, 0};
-	fd_set tset;
-	int rselect;
-
-	if(!FD_CPY(&masterset, &tset, mysockets, mysocketses))
-		return false;
-	rselect = select(255, &tset, NULL, NULL, &timeval_for_select);
-	if (rselect >= 1)
-		return true;
-	return false;
-}
-#endif
-
 static inline ssize_t SOCK_SendToAddr(SOCKET_TYPE socket, mysockaddr_t *sockaddr)
 {
 	socklen_t d4 = (socklen_t)sizeof(struct sockaddr_in);
@@ -681,7 +643,6 @@ static inline ssize_t SOCK_SendToAddr(SOCKET_TYPE socket, mysockaddr_t *sockaddr
 	socklen_t d6 = (socklen_t)sizeof(struct sockaddr_in6);
 #endif
 	socklen_t d, da = (socklen_t)sizeof(mysockaddr_t);
-	ssize_t status;
 
 	switch (sockaddr->any.sa_family)
 	{
@@ -692,17 +653,15 @@ static inline ssize_t SOCK_SendToAddr(SOCKET_TYPE socket, mysockaddr_t *sockaddr
 		default:       d = da; break;
 	}
 
-	status = sendto(socket, (char *)&doomcom->data, doomcom->datalength, 0, &sockaddr->any, d);
-	if (status == -1)
-	{
-		CONS_Alert(CONS_WARNING, "Unable to send packet to %s: %s\n", SOCK_AddrToStr(sockaddr), strerror(errno));
-	}
-	return status;
+	return sendto(socket, (char *)&doomcom->data, doomcom->datalength, 0, &sockaddr->any, d);
 }
+
+#define ALLOWEDERROR(x) ((x) == ECONNREFUSED || (x) == EWOULDBLOCK || (x) == EHOSTUNREACH || (x) == ENETUNREACH || (x) == EADDRNOTAVAIL)
 
 static void SOCK_Send(void)
 {
 	ssize_t c = ERRSOCKET;
+	int e = 0; // save error code so it can't be modified later code and avoid calling WSAGetLastError() more then once
 
 	if (!nodeconnected[doomcom->remotenode])
 		return;
@@ -714,33 +673,52 @@ static void SOCK_Send(void)
 			for (size_t j = 0; j < broadcastaddresses; j++)
 			{
 				if (myfamily[i] == broadcastaddress[j].any.sa_family)
-					SOCK_SendToAddr(mysockets[i], &broadcastaddress[j]);
+				{
+					c = SOCK_SendToAddr(mysockets[i], &broadcastaddress[j]);
+					if (c == ERRSOCKET)
+					{
+						e = errno;
+						if (!ALLOWEDERROR(e))
+							break;
+					}
+				}
 			}
 		}
-		return;
 	}
 	else if (nodesocket[doomcom->remotenode] == (SOCKET_TYPE)ERRSOCKET)
 	{
 		for (size_t i = 0; i < mysocketses; i++)
 		{
 			if (myfamily[i] == clientaddress[doomcom->remotenode].any.sa_family)
-				SOCK_SendToAddr(mysockets[i], &clientaddress[doomcom->remotenode]);
+			{
+				c = SOCK_SendToAddr(mysockets[i], &clientaddress[doomcom->remotenode]);
+				if (c == ERRSOCKET)
+				{
+					e = errno;
+					if (!ALLOWEDERROR(e))
+						break;
+				}
+			}
 		}
-		return;
 	}
 	else
 	{
 		c = SOCK_SendToAddr(nodesocket[doomcom->remotenode], &clientaddress[doomcom->remotenode]);
+		if (c == ERRSOCKET)
+		{
+			e = errno;
+		}
 	}
 
-	if (c == ERRSOCKET)
+	if (c == ERRSOCKET && e != 0) // 0 means no socket for the address family was found
 	{
-		int e = errno; // save error code so it can't be modified later
-		if (e != ECONNREFUSED && e != EWOULDBLOCK && e != EHOSTUNREACH)
-			I_Error("SOCK_Send, error sending to node %d (%s) #%u: %s", doomcom->remotenode,
+		if (!ALLOWEDERROR(e))
+			I_Error("SOCK_Send, error sending to node %d (%s) #%u, %s", doomcom->remotenode,
 				SOCK_GetNodeAddress(doomcom->remotenode), e, strerror(e));
 	}
 }
+
+#undef ALLOWEDERROR
 
 static void SOCK_FreeNodenum(INT32 numnode)
 {
@@ -766,6 +744,8 @@ static SOCKET_TYPE UDP_Bind(int family, struct sockaddr *addr, socklen_t addrlen
 {
 	SOCKET_TYPE s = socket(family, SOCK_DGRAM, IPPROTO_UDP);
 	int opt;
+	int rc;
+	int e = 0; // save error code so it can't be modified later code and avoid calling WSAGetLastError() more then once
 	socklen_t opts;
 #ifdef FIONBIO
 	unsigned long trueval = true;
@@ -780,12 +760,17 @@ static SOCKET_TYPE UDP_Bind(int family, struct sockaddr *addr, socklen_t addrlen
 #ifdef USE_WINSOCK2
 		DWORD dwBytesReturned = 0;
 		BOOL bfalse = FALSE;
-		WSAIoctl(s, SIO_UDP_CONNRESET, &bfalse, sizeof(bfalse),
+		rc = WSAIoctl(s, SIO_UDP_CONNRESET, &bfalse, sizeof(bfalse),
 		         NULL, 0, &dwBytesReturned, NULL, NULL);
 #else
 		unsigned long falseval = false;
-		ioctl(s, SIO_UDP_CONNRESET, &falseval);
+		rc = ioctl(s, SIO_UDP_CONNRESET, &falseval);
 #endif
+		if (rc == -1)
+		{
+			e = errno;
+			I_OutputMsg("SIO_UDP_CONNRESET failed: #%u, %s\n", e, strerror(e));
+		}
 	}
 #endif
 
@@ -798,14 +783,22 @@ static SOCKET_TYPE UDP_Bind(int family, struct sockaddr *addr, socklen_t addrlen
 		{
 			opt = true;
 			opts = (socklen_t)sizeof(opt);
-			setsockopt(s, SOL_SOCKET, SO_REUSEADDR, (char *)&opt, opts);
+			rc = setsockopt(s, SOL_SOCKET, SO_REUSEADDR, (char *)&opt, opts);
+			if (rc <= -1)
+			{
+				e = errno;
+				I_OutputMsg("setting SO_REUSEADDR failed: #%u, %s\n", e, strerror(e));
+			}
 		}
 		// make it broadcastable
 		opt = true;
 		opts = (socklen_t)sizeof(opt);
-		if (setsockopt(s, SOL_SOCKET, SO_BROADCAST, (char *)&opt, opts))
+		rc = setsockopt(s, SOL_SOCKET, SO_BROADCAST, (char *)&opt, opts);
+		if (rc <= -1)
 		{
+			e = errno;
 			CONS_Alert(CONS_WARNING, M_GetText("Could not get broadcast rights\n")); // I do not care anymore
+			I_OutputMsg("setting SO_BROADCAST failed: #%u, %s\n", e, strerror(e));
 		}
 	}
 #ifdef HAVE_IPV6
@@ -815,24 +808,34 @@ static SOCKET_TYPE UDP_Bind(int family, struct sockaddr *addr, socklen_t addrlen
 		{
 			opt = true;
 			opts = (socklen_t)sizeof(opt);
-			setsockopt(s, SOL_SOCKET, SO_REUSEADDR, (char *)&opt, opts);
+			rc = setsockopt(s, SOL_SOCKET, SO_REUSEADDR, (char *)&opt, opts);
+			if (rc <= -1)
+			{
+				e = errno;
+				I_OutputMsg("setting SO_REUSEADDR failed: #%u, %s\n", e, strerror(e));
+			}
 		}
 #ifdef IPV6_V6ONLY
 		// make it IPv6 ony
 		opt = true;
 		opts = (socklen_t)sizeof(opt);
-		if (setsockopt(s, IPPROTO_IPV6, IPV6_V6ONLY, (char *)&opt, opts))
+		rc = setsockopt(s, IPPROTO_IPV6, IPV6_V6ONLY, (char *)&opt, opts);
+		if (rc <= -1)
 		{
+			e = errno;
 			CONS_Alert(CONS_WARNING, M_GetText("Could not limit IPv6 bind\n")); // I do not care anymore
+			I_OutputMsg("setting IPV6_V6ONLY failed: #%u, %s\n", e, strerror(e));
 		}
 #endif
 	}
 #endif
 
-	if (bind(s, addr, addrlen) == ERRSOCKET)
+	rc = bind(s, addr, addrlen);
+	if (rc == ERRSOCKET)
 	{
+		e = errno;
 		close(s);
-		I_OutputMsg("Binding failed\n");
+		I_OutputMsg("Binding failed: #%u, %s\n", e, strerror(e));
 		return (SOCKET_TYPE)ERRSOCKET;
 	}
 
@@ -846,9 +849,18 @@ static SOCKET_TYPE UDP_Bind(int family, struct sockaddr *addr, socklen_t addrlen
 
 			inet_pton(AF_INET6, IPV6_MULTICAST_ADDRESS, &maddr.ipv6mr_multiaddr);
 			maddr.ipv6mr_interface = 0;
-			if (setsockopt(s, IPPROTO_IPV6, IPV6_JOIN_GROUP, (const char *)&maddr, sizeof(maddr)) != 0)
+			rc = setsockopt(s, IPPROTO_IPV6, IPV6_JOIN_GROUP, (const char *)&maddr, sizeof(maddr));
+			if (rc <= -1)
 			{
+				e = errno;
 				CONS_Alert(CONS_WARNING, M_GetText("Could not register multicast address\n"));
+				if (e == ENODEV)
+				{
+					close(s);
+					I_OutputMsg("Binding failed: no IPv6 device\n");
+					return (SOCKET_TYPE)ERRSOCKET;
+				}
+				I_OutputMsg("setting IPV6_JOIN_GROUP failed: #%u, %s \n", e, strerror(e));
 			}
 		}
 	}
@@ -856,33 +868,56 @@ static SOCKET_TYPE UDP_Bind(int family, struct sockaddr *addr, socklen_t addrlen
 
 #ifdef FIONBIO
 	// make it non blocking
-	opt = true;
-	if (ioctl(s, FIONBIO, &trueval) != 0)
+	rc = ioctl(s, FIONBIO, &trueval);
+	if (rc == -1)
 	{
+		e = errno;
 		close(s);
-		I_OutputMsg("Seting FIOBIO on failed\n");
+		I_OutputMsg("FIOBIO failed: #%u, %s\n", e, strerror(e));
 		return (SOCKET_TYPE)ERRSOCKET;
 	}
 #endif
 
+	opt = 0;
 	opts = (socklen_t)sizeof(opt);
-	getsockopt(s, SOL_SOCKET, SO_RCVBUF, (char *)&opt, &opts);
+	rc = getsockopt(s, SOL_SOCKET, SO_RCVBUF, (char *)&opt, &opts);
+	if (rc <= -1)
+	{
+		e = errno;
+		I_OutputMsg("getting SO_RCVBUF failed: #%u, %s\n", e, strerror(e));
+	}
 	CONS_Printf(M_GetText("Network system buffer: %dKb\n"), opt>>10);
 
 	if (opt < 64<<10) // 64k
 	{
 		opt = 64<<10;
 		opts = (socklen_t)sizeof(opt);
-		setsockopt(s, SOL_SOCKET, SO_RCVBUF, (char *)&opt, opts);
-		getsockopt(s, SOL_SOCKET, SO_RCVBUF, (char *)&opt, &opts);
-		if (opt < 64<<10)
+		rc = setsockopt(s, SOL_SOCKET, SO_RCVBUF, (char *)&opt, opts);
+		if (rc <= -1)
+		{
+			e = errno;
+			I_OutputMsg("setting SO_RCVBUF failed: #%u, %s\n", e, strerror(e));
+		}
+		opt = 0;
+		rc = getsockopt(s, SOL_SOCKET, SO_RCVBUF, (char *)&opt, &opts);
+		if (rc <= -1)
+		{
+			e = errno;
+			I_OutputMsg("getting SO_RCVBUF failed: #%u, %s\n", e, strerror(e));
+		}
+		if (opt <= 64<<10)
 			CONS_Alert(CONS_WARNING, M_GetText("Can't set buffer length to 64k, file transfer will be bad\n"));
 		else
 			CONS_Printf(M_GetText("Network system buffer set to: %dKb\n"), opt>>10);
 	}
 
-	if (getsockname(s, &straddr.any, &len) == -1)
+	rc = getsockname(s, &straddr.any, &len);
+	if (rc != 0)
+	{
+		e = errno;
 		CONS_Alert(CONS_WARNING, M_GetText("Failed to get port number\n"));
+		I_OutputMsg("getsockname failed: #%u, %s\n", e, strerror(e));
+	}
 	else
 	{
 		if (family == AF_INET)
@@ -904,6 +939,7 @@ static boolean UDP_Socket(void)
 #ifdef HAVE_IPV6
 	const INT32 b_ipv6 = !M_CheckParm("-noipv6");
 #endif
+	const INT32 b_ipv4 = !M_CheckParm("-noipv4");
 	const char *serv;
 
 
@@ -911,7 +947,6 @@ static boolean UDP_Socket(void)
 		mysockets[s] = ERRSOCKET;
 	for (s = 0; s < MAXNETNODES+1; s++)
 		nodesocket[s] = ERRSOCKET;
-	FD_ZERO(&masterset);
 	s = 0;
 
 	memset(&hints, 0x00, sizeof (hints));
@@ -920,16 +955,45 @@ static boolean UDP_Socket(void)
 	hints.ai_socktype = SOCK_DGRAM;
 	hints.ai_protocol = IPPROTO_UDP;
 
+#ifdef HAVE_IPV6
+	if (!b_ipv6)
+		I_OutputMsg("Disabling IPv6 support at runtime\n");
+#else
+	I_OutputMsg("Compiled without IPv6 support\n");
+#endif
+
 	if (serverrunning)
 		serv = serverport_name;
 	else
 		serv = clientport_name;
 
-	if (M_CheckParm("-bindaddr"))
+	if (b_ipv4)
 	{
-		while (M_IsNextParm())
+		if (M_CheckParm("-bindaddr"))
 		{
-			gaie = I_getaddrinfo(M_GetNextParm(), serv, &hints, &ai);
+			while (M_IsNextParm())
+			{
+				gaie = I_getaddrinfo(M_GetNextParm(), serv, &hints, &ai);
+				if (gaie == 0)
+				{
+					runp = ai;
+					while (runp != NULL && s < MAXNETNODES+1)
+					{
+						mysockets[s] = UDP_Bind(runp->ai_family, runp->ai_addr, (socklen_t)runp->ai_addrlen);
+						if (mysockets[s] != (SOCKET_TYPE)ERRSOCKET)
+						{
+							myfamily[s] = hints.ai_family;
+							s++;
+						}
+						runp = runp->ai_next;
+					}
+					I_freeaddrinfo(ai);
+				}
+			}
+		}
+		else
+		{
+			gaie = I_getaddrinfo("0.0.0.0", serv, &hints, &ai);
 			if (gaie == 0)
 			{
 				runp = ai;
@@ -938,41 +1002,20 @@ static boolean UDP_Socket(void)
 					mysockets[s] = UDP_Bind(runp->ai_family, runp->ai_addr, (socklen_t)runp->ai_addrlen);
 					if (mysockets[s] != (SOCKET_TYPE)ERRSOCKET)
 					{
-						FD_SET(mysockets[s], &masterset);
 						myfamily[s] = hints.ai_family;
 						s++;
+#ifdef HAVE_MINIUPNPC
+						if (UPNP_support)
+						{
+							I_UPnP_rem(serverport_name, "UDP");
+							I_UPnP_add(NULL, serverport_name, "UDP");
+						}
+#endif
 					}
 					runp = runp->ai_next;
 				}
 				I_freeaddrinfo(ai);
 			}
-		}
-	}
-	else
-	{
-		gaie = I_getaddrinfo("0.0.0.0", serv, &hints, &ai);
-		if (gaie == 0)
-		{
-			runp = ai;
-			while (runp != NULL && s < MAXNETNODES+1)
-			{
-				mysockets[s] = UDP_Bind(runp->ai_family, runp->ai_addr, (socklen_t)runp->ai_addrlen);
-				if (mysockets[s] != (SOCKET_TYPE)ERRSOCKET)
-				{
-					FD_SET(mysockets[s], &masterset);
-					myfamily[s] = hints.ai_family;
-					s++;
-#ifdef HAVE_MINIUPNPC
-					if (UPNP_support)
-					{
-						I_UPnP_rem(serverport_name, "UDP");
-						I_UPnP_add(NULL, serverport_name, "UDP");
-					}
-#endif
-				}
-				runp = runp->ai_next;
-			}
-			I_freeaddrinfo(ai);
 		}
 	}
 #ifdef HAVE_IPV6
@@ -992,7 +1035,6 @@ static boolean UDP_Socket(void)
 						mysockets[s] = UDP_Bind(runp->ai_family, runp->ai_addr, (socklen_t)runp->ai_addrlen);
 						if (mysockets[s] != (SOCKET_TYPE)ERRSOCKET)
 						{
-							FD_SET(mysockets[s], &masterset);
 							myfamily[s] = hints.ai_family;
 							s++;
 						}
@@ -1013,7 +1055,6 @@ static boolean UDP_Socket(void)
 					mysockets[s] = UDP_Bind(runp->ai_family, runp->ai_addr, (socklen_t)runp->ai_addrlen);
 					if (mysockets[s] != (SOCKET_TYPE)ERRSOCKET)
 					{
-						FD_SET(mysockets[s], &masterset);
 						myfamily[s] = hints.ai_family;
 						s++;
 					}
@@ -1041,11 +1082,14 @@ static boolean UDP_Socket(void)
 
 	s = 0;
 
-	// setup broadcast adress to BROADCASTADDR entry
-	broadcastaddress[s].any.sa_family = AF_INET;
-	broadcastaddress[s].ip4.sin_port = htons(atoi(DEFAULTPORT));
-	broadcastaddress[s].ip4.sin_addr.s_addr = htonl(INADDR_BROADCAST);
-	s++;
+	if (b_ipv4)
+	{
+		// setup broadcast adress to BROADCASTADDR entry
+		broadcastaddress[s].any.sa_family = AF_INET;
+		broadcastaddress[s].ip4.sin_port = htons(atoi(DEFAULTPORT));
+		broadcastaddress[s].ip4.sin_addr.s_addr = htonl(INADDR_BROADCAST);
+		s++;
+	}
 
 #ifdef HAVE_IPV6
 	if (b_ipv6)
@@ -1139,16 +1183,13 @@ boolean I_InitTcpDriver(void)
 
 static void SOCK_CloseSocket(void)
 {
-	for (size_t i=0; i < MAXNETNODES+1; i++)
+	for (size_t i=0; i < mysocketses; i++)
 	{
-		if (mysockets[i] != (SOCKET_TYPE)ERRSOCKET
-		 && FD_ISSET(mysockets[i], &masterset))
-		{
-			FD_CLR(mysockets[i], &masterset);
+		if (mysockets[i] != (SOCKET_TYPE)ERRSOCKET)
 			close(mysockets[i]);
-		}
 		mysockets[i] = ERRSOCKET;
 	}
+	mysocketses = 0;
 }
 
 void I_ShutdownTcpDriver(void)
@@ -1177,7 +1218,7 @@ static SINT8 SOCK_NetMakeNodewPort(const char *address, const char *port)
 	DEBFILE(va("Creating new node: %s@%s\n", address, port));
 
 	memset (&hints, 0x00, sizeof (hints));
-	hints.ai_flags = 0;
+	hints.ai_flags = AI_ADDRCONFIG;
 	hints.ai_family = AF_UNSPEC;
 	hints.ai_socktype = SOCK_DGRAM;
 	hints.ai_protocol = IPPROTO_UDP;
@@ -1200,18 +1241,14 @@ static SINT8 SOCK_NetMakeNodewPort(const char *address, const char *port)
 		// test ip address of server
 		for (i = 0; i < mysocketses; ++i)
 		{
-			/* sendto tests that there is a network to this
-				address */
-			if (runp->ai_addr->sa_family == myfamily[i] &&
-					sendto(mysockets[i], NULL, 0, 0,
-						runp->ai_addr, runp->ai_addrlen) == 0)
+			if (runp->ai_addr->sa_family == myfamily[i])
 			{
 				memcpy(&clientaddress[newnode], runp->ai_addr, runp->ai_addrlen);
 				break;
 			}
 		}
 
-		if (i < mysocketses)
+		if (i >= mysocketses)
 			runp = runp->ai_next;
 		else
 			break;
@@ -1234,12 +1271,6 @@ static boolean SOCK_OpenSocket(void)
 	I_NetFreeNodenum = SOCK_FreeNodenum;
 	I_NetMakeNodewPort = SOCK_NetMakeNodewPort;
 
-#ifdef SELECTTEST
-	// seem like not work with libsocket : (
-	I_NetCanSend = SOCK_CanSend;
-	I_NetCanGet = SOCK_CanGet;
-#endif
-
 	// build the socket but close it first
 	SOCK_CloseSocket();
 	return UDP_Socket();
@@ -1249,9 +1280,9 @@ static boolean SOCK_Ban(INT32 node)
 {
 	if (node > MAXNETNODES)
 		return false;
-	if (numbans == MAXBANS)
-		return false;
 
+	banned = Z_Realloc(banned, sizeof(*banned) * (numbans+1), PU_STATIC, NULL);
+	bannedmask = Z_Realloc(bannedmask, sizeof(*bannedmask) * (numbans+1), PU_STATIC, NULL);
 	M_Memcpy(&banned[numbans], &clientaddress[node], sizeof (mysockaddr_t));
 	if (banned[numbans].any.sa_family == AF_INET)
 	{
@@ -1262,7 +1293,7 @@ static boolean SOCK_Ban(INT32 node)
 	else if (banned[numbans].any.sa_family == AF_INET6)
 	{
 		banned[numbans].ip6.sin6_port = 0;
-		bannedmask[numbans] = 128;
+		bannedmask[numbans] = 64;
 	}
 #endif
 	numbans++;
@@ -1274,7 +1305,7 @@ static boolean SOCK_SetBanAddress(const char *address, const char *mask)
 	struct my_addrinfo *ai, *runp, hints;
 	int gaie;
 
-	if (numbans == MAXBANS || !address)
+	if (!address)
 		return false;
 
 	memset(&hints, 0x00, sizeof(hints));
@@ -1289,15 +1320,17 @@ static boolean SOCK_SetBanAddress(const char *address, const char *mask)
 
 	runp = ai;
 
-	while(runp != NULL && numbans != MAXBANS)
+	while(runp != NULL)
 	{
+		banned = Z_Realloc(banned, sizeof(*banned) * (numbans+1), PU_STATIC, NULL);
+		bannedmask = Z_Realloc(bannedmask, sizeof(*bannedmask) * (numbans+1), PU_STATIC, NULL);
 		memcpy(&banned[numbans], runp->ai_addr, runp->ai_addrlen);
 
 		if (mask)
 			bannedmask[numbans] = (UINT8)atoi(mask);
 #ifdef HAVE_IPV6
 		else if (runp->ai_family == AF_INET6)
-			bannedmask[numbans] = 128;
+			bannedmask[numbans] = 64;
 #endif
 		else
 			bannedmask[numbans] = 32;
@@ -1306,7 +1339,7 @@ static boolean SOCK_SetBanAddress(const char *address, const char *mask)
 			bannedmask[numbans] = 32;
 #ifdef HAVE_IPV6
 		else if (bannedmask[numbans] > 128 && runp->ai_family == AF_INET6)
-			bannedmask[numbans] = 128;
+			bannedmask[numbans] = 64;
 #endif
 		numbans++;
 		runp = runp->ai_next;
@@ -1320,6 +1353,10 @@ static boolean SOCK_SetBanAddress(const char *address, const char *mask)
 static void SOCK_ClearBans(void)
 {
 	numbans = 0;
+	Z_Free(banned);
+	banned = NULL;
+	Z_Free(bannedmask);
+	bannedmask = NULL;
 }
 
 boolean I_InitTcpNetwork(void)
@@ -1374,7 +1411,6 @@ boolean I_InitTcpNetwork(void)
 		// FIXME:
 		// ??? and now ?
 		// server on a big modem ??? 4*isdn
-		net_bandwidth = 16000;
 		hardware_MAXPACKETLENGTH = INETPACKETLENGTH;
 
 		ret = true;
@@ -1403,7 +1439,6 @@ boolean I_InitTcpNetwork(void)
 			// so we're on a LAN
 			COM_BufAddText("connect any\n");
 
-			net_bandwidth = 800000;
 			hardware_MAXPACKETLENGTH = MAXPACKETLENGTH;
 		}
 	}

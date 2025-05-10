@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -54,30 +54,25 @@ boolean SV_ResendingSavegameToAnyone(void)
 void SV_SendSaveGame(INT32 node, boolean resending)
 {
 	size_t length, compressedlen;
-	UINT8 *savebuffer;
+	save_t savebuffer;
 	UINT8 *compressedsave;
 	UINT8 *buffertosend;
 
 	// first save it in a malloced buffer
-	savebuffer = (UINT8 *)malloc(SAVEGAMESIZE);
-	if (!savebuffer)
+	savebuffer.size = SAVEGAMESIZE;
+	savebuffer.buf = (UINT8 *)malloc(savebuffer.size);
+	if (!savebuffer.buf)
 	{
 		CONS_Alert(CONS_ERROR, M_GetText("No more free memory for savegame\n"));
 		return;
 	}
 
 	// Leave room for the uncompressed length.
-	save_p = savebuffer + sizeof(UINT32);
+	savebuffer.pos = sizeof(UINT32);
 
-	P_SaveNetGame(resending);
+	P_SaveNetGame(&savebuffer, resending);
 
-	length = save_p - savebuffer;
-	if (length > SAVEGAMESIZE)
-	{
-		free(savebuffer);
-		save_p = NULL;
-		I_Error("Savegame buffer overrun");
-	}
+	length = savebuffer.pos;
 
 	// Allocate space for compressed save: one byte fewer than for the
 	// uncompressed data to ensure that the compression is worthwhile.
@@ -85,15 +80,16 @@ void SV_SendSaveGame(INT32 node, boolean resending)
 	if (!compressedsave)
 	{
 		CONS_Alert(CONS_ERROR, M_GetText("No more free memory for savegame\n"));
+		free(savebuffer.buf);
 		return;
 	}
 
 	// Attempt to compress it.
-	if((compressedlen = lzf_compress(savebuffer + sizeof(UINT32), length - sizeof(UINT32), compressedsave + sizeof(UINT32), length - sizeof(UINT32) - 1)))
+	if((compressedlen = lzf_compress(savebuffer.buf + sizeof(UINT32), length - sizeof(UINT32), compressedsave + sizeof(UINT32), length - sizeof(UINT32) - 1)))
 	{
 		// Compressing succeeded; send compressed data
 
-		free(savebuffer);
+		free(savebuffer.buf);
 
 		// State that we're compressed.
 		buffertosend = compressedsave;
@@ -107,12 +103,12 @@ void SV_SendSaveGame(INT32 node, boolean resending)
 		free(compressedsave);
 
 		// State that we're not compressed
-		buffertosend = savebuffer;
-		WRITEUINT32(savebuffer, 0);
+		buffertosend = savebuffer.buf;
+		savebuffer.pos = 0;
+		P_WriteUINT32(&savebuffer, 0);
 	}
 
 	AddRamToSendQueue(node, buffertosend, length, SF_RAM, 0);
-	save_p = NULL;
 
 	// Remember when we started sending the savegame so we can handle timeouts
 	netnodes[node].sendingsavegame = true;
@@ -125,8 +121,7 @@ static consvar_t cv_dumpconsistency = CVAR_INIT ("dumpconsistency", "Off", CV_SA
 
 void SV_SavedGame(void)
 {
-	size_t length;
-	UINT8 *savebuffer;
+	save_t savebuffer;
 	char tmpsave[256];
 
 	if (!cv_dumpconsistency.value)
@@ -135,29 +130,22 @@ void SV_SavedGame(void)
 	sprintf(tmpsave, "%s" PATHSEP TMPSAVENAME, srb2home);
 
 	// first save it in a malloced buffer
-	save_p = savebuffer = (UINT8 *)malloc(SAVEGAMESIZE);
-	if (!save_p)
+	savebuffer.size = SAVEGAMESIZE;
+	savebuffer.buf = (UINT8 *)malloc(savebuffer.size);
+	if (!savebuffer.buf)
 	{
 		CONS_Alert(CONS_ERROR, M_GetText("No more free memory for savegame\n"));
 		return;
 	}
+	savebuffer.pos = 0;
 
-	P_SaveNetGame(false);
-
-	length = save_p - savebuffer;
-	if (length > SAVEGAMESIZE)
-	{
-		free(savebuffer);
-		save_p = NULL;
-		I_Error("Savegame buffer overrun");
-	}
+	P_SaveNetGame(&savebuffer, false);
 
 	// then save it!
-	if (!FIL_WriteFile(tmpsave, savebuffer, length))
+	if (!FIL_WriteFile(tmpsave, savebuffer.buf, savebuffer.pos))
 		CONS_Printf(M_GetText("Didn't save %s for netgame"), tmpsave);
 
-	free(savebuffer);
-	save_p = NULL;
+	free(savebuffer.pos);
 }
 
 #undef  TMPSAVENAME
@@ -167,33 +155,34 @@ void SV_SavedGame(void)
 
 void CL_LoadReceivedSavegame(boolean reloading)
 {
-	UINT8 *savebuffer = NULL;
-	size_t length, decompressedlen;
+	save_t savebuffer;
+	size_t decompressedlen;
 	char tmpsave[256];
 
 	FreeFileNeeded();
 
 	sprintf(tmpsave, "%s" PATHSEP TMPSAVENAME, srb2home);
 
-	length = FIL_ReadFile(tmpsave, &savebuffer);
+	savebuffer.size = FIL_ReadFile(tmpsave, &savebuffer.buf);
+	savebuffer.pos = 0;
 
-	CONS_Printf(M_GetText("Loading savegame length %s\n"), sizeu1(length));
-	if (!length)
+	CONS_Printf(M_GetText("Loading savegame length %s\n"), sizeu1(savebuffer.size));
+	if (!savebuffer.size)
 	{
 		I_Error("Can't read savegame sent");
 		return;
 	}
 
-	save_p = savebuffer;
-
 	// Decompress saved game if necessary.
-	decompressedlen = READUINT32(save_p);
+	decompressedlen = P_ReadUINT32(&savebuffer);
 	if(decompressedlen > 0)
 	{
 		UINT8 *decompressedbuffer = Z_Malloc(decompressedlen, PU_STATIC, NULL);
-		lzf_decompress(save_p, length - sizeof(UINT32), decompressedbuffer, decompressedlen);
-		Z_Free(savebuffer);
-		save_p = savebuffer = decompressedbuffer;
+		lzf_decompress(savebuffer.buf + sizeof(UINT32), savebuffer.size - sizeof(UINT32), decompressedbuffer, decompressedlen);
+		Z_Free(savebuffer.buf);
+		savebuffer.buf = decompressedbuffer;
+		savebuffer.size = decompressedlen;
+		savebuffer.pos = 0;
 	}
 
 	paused = false;
@@ -203,7 +192,7 @@ void CL_LoadReceivedSavegame(boolean reloading)
 	automapactive = false;
 
 	// load a base level
-	if (P_LoadNetGame(reloading))
+	if (P_LoadNetGame(&savebuffer, reloading))
 	{
 		const UINT8 actnum = mapheaderinfo[gamemap-1]->actnum;
 		CONS_Printf(M_GetText("Map is now \"%s"), G_BuildMapName(gamemap));
@@ -219,8 +208,7 @@ void CL_LoadReceivedSavegame(boolean reloading)
 	}
 
 	// done
-	Z_Free(savebuffer);
-	save_p = NULL;
+	Z_Free(savebuffer.buf);
 	if (unlink(tmpsave) == -1)
 		CONS_Alert(CONS_ERROR, M_GetText("Can't delete %s\n"), tmpsave);
 	consistancy[gametic%BACKUPTICS] = Consistancy();

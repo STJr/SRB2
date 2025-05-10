@@ -157,7 +157,7 @@ void I_wake_all_cond(I_cond *anchor)
 	pthread_mutex_lock(&thread_lock);
 	if (*anchor == NULL)
 	{
-		*anchor = malloc(sizeof(pthread_t));
+		*anchor = malloc(sizeof(pthread_cond_t));
 		pthread_cond_init(*anchor, NULL);
 	}
 	pthread_mutex_unlock(&thread_lock);
