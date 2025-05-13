@@ -238,6 +238,7 @@ static const struct {
 	{META_LUABANKS,     "luabanks[]"},
 
 	{META_KEYEVENT,     "keyevent_t"},
+	{META_TEXTEVENT,    "textevent_t"},
 	{META_MOUSE,        "mouse_t"},
 	{NULL,              NULL}
 };

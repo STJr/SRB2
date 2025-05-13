@@ -954,6 +954,9 @@ boolean CON_Responder(event_t *ev)
 
 		if ((key == gamecontrol[GC_CONSOLE][0] || key == gamecontrol[GC_CONSOLE][1]) && !shiftdown)
 		{
+			if (con_destlines == 0 && I_GetTextInputMode())
+				return false; // some other component is holding keyboard input, don't hijack it!
+
 			I_SetTextInputMode(con_destlines == 0); // inverse, since this is changed next tic.
 			consoletoggle = true;
 			return true;
