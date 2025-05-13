@@ -1421,12 +1421,21 @@ static void IdleUpdate(void)
 	{
 		if (players[i].ingame && playernode[i] != UINT8_MAX && !players[i].quittime && !players[i].spectator && !players[i].bot && gamestate == GS_LEVEL)
 		{
-			if (players[i].cmd.forwardmove || players[i].cmd.sidemove || players[i].cmd.buttons)
+			if (players[i].cmd.forwardmove
+				|| players[i].cmd.sidemove
+				|| players[i].cmd.buttons
+				|| D_GetExistingTextcmd(gametic, playernode[i])
+				|| D_GetExistingTextcmd(gametic + 1, playernode[i])) // might give false positives, but it's good enough
 				players[i].lastinputtime = 0;
 			else
 				players[i].lastinputtime++;
 
-			if (cv_idletime.value && !IsPlayerAdmin(i) && i != serverplayer && !(players[i].pflags & PF_FINISHED) && players[i].lastinputtime > (tic_t)cv_idletime.value * TICRATE * 60)
+			if (cv_idletime.value &&
+				!IsPlayerAdmin(i) &&
+				i != serverplayer &&
+				!(players[i].pflags & PF_FINISHED) &&
+				(!G_TagGametype() || players[i].pflags & PF_TAGIT) &&
+				players[i].lastinputtime > (tic_t)cv_idletime.value * TICRATE * 60)
 			{
 				players[i].lastinputtime = 0;
 				if (cv_idleaction.value == 2 && G_GametypeHasSpectators())
