@@ -54,7 +54,7 @@ static boolean IsDownloadingFile(void)
 static void DrawConnectionStatusBox(void)
 {
 	M_DrawTextBox(BASEVIDWIDTH/2-128-8, BASEVIDHEIGHT-16-8, 32, 1);
-	if (filedownload.current != -1 && cl_mode != CL_DOWNLOADSAVEGAME)
+	if (cl_mode != CL_DOWNLOADSAVEGAME && filedownload.current != -1)
 		M_DrawTextBox(BASEVIDWIDTH/2-128-8, BASEVIDHEIGHT-46-8, 32, 1);
 
 	if (cl_mode == CL_CONFIRMCONNECT || IsDownloadingFile())
