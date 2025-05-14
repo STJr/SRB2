@@ -3226,8 +3226,8 @@ static boolean P_TagDamage(mobj_t *target, mobj_t *inflictor, mobj_t *source, IN
 		return false;
 
 	// Ignore IT players shooting each other, unless friendlyfire is on.
-	if ((player->pflags & PF_TAGIT && !((cv_friendlyfire.value || (gametyperules & GTR_FRIENDLYFIRE) || (damagetype & DMG_CANHURTSELF)) &&
-		source && source->player && source->player->pflags & PF_TAGIT)))
+	if ((player->pflags & PF_TAGIT && source && source->player && !(((cv_friendlyfire.value || (gametyperules & GTR_FRIENDLYFIRE)) || ((damagetype & DMG_CANHURTSELF) && source->player == player)) &&
+		source->player->pflags & PF_TAGIT)))
 	{
 		if (inflictor->type == MT_LHRT && !(player->powers[pw_shield] & SH_NOSTACK))
 		{
@@ -3242,7 +3242,8 @@ static boolean P_TagDamage(mobj_t *target, mobj_t *inflictor, mobj_t *source, IN
 
 	// Don't allow players on the same team to hurt one another,
 	// unless cv_friendlyfire is on.
-	if (!(cv_friendlyfire.value || (gametyperules & GTR_FRIENDLYFIRE) || (damagetype & DMG_CANHURTSELF)) && (player->pflags & PF_TAGIT) == (source->player->pflags & PF_TAGIT))
+	if (source && source->player && !((cv_friendlyfire.value || (gametyperules & GTR_FRIENDLYFIRE)) || ((damagetype & DMG_CANHURTSELF) && source->player == player)) && 
+		(player->pflags & PF_TAGIT) == (source->player->pflags & PF_TAGIT))
 	{
 		if (inflictor->type == MT_LHRT && !(player->powers[pw_shield] & SH_NOSTACK))
 		{
@@ -3344,7 +3345,7 @@ static boolean P_PlayerHitsPlayer(mobj_t *target, mobj_t *inflictor, mobj_t *sou
 	// Tag handling
 	if (G_TagGametype())
 		return P_TagDamage(target, inflictor, source, damage, damagetype);
-	else if (damagetype & DMG_CANHURTSELF)
+	else if ((damagetype & DMG_CANHURTSELF) && source && source->player && source->player == player)
 		return true;
 	else if (G_GametypeHasTeams()) // CTF + Team Match
 	{
@@ -3413,18 +3414,20 @@ static void P_KillPlayer(player_t *player, mobj_t *source, INT32 damage)
 	if ((gametyperules & GTR_TEAMFLAGS) && (player->gotflag & (GF_REDFLAG|GF_BLUEFLAG)))
 	{
 		P_PlayerFlagBurst(player, false);
-		if (source && source->player)
+		if (source && source->player && source->player != player) // Don't score points against yourself
 		{
 			// Award no points when players shoot each other when cv_friendlyfire is on.
 			if (!G_GametypeHasTeams() || !(source->player->ctfteam == player->ctfteam && source != player->mo))
 				P_AddPlayerScore(source->player, 25);
 		}
 	}
-	if (source && source->player && !player->powers[pw_super]) //don't score points against super players
+	if (source && source->player && source->player != player && !player->powers[pw_super]) //don't score points against super players or yourself
 	{
 		// Award no points when players shoot each other when cv_friendlyfire is on.
 		if (!G_GametypeHasTeams() || !(source->player->ctfteam == player->ctfteam && source != player->mo))
+		{
 			P_AddPlayerScore(source->player, 100);
+		}
 	}
 
 	// If the player was super, tell them he/she ain't so super nomore.
@@ -3538,14 +3541,14 @@ static void P_ShieldDamage(player_t *player, mobj_t *inflictor, mobj_t *source, 
 	if ((gametyperules & GTR_TEAMFLAGS) && (player->gotflag & (GF_REDFLAG|GF_BLUEFLAG)))
 	{
 		P_PlayerFlagBurst(player, false);
-		if (source && source->player)
+		if (source && source->player && source->player != player) // Don't score points against yourself
 		{
 			// Award no points when players shoot each other when cv_friendlyfire is on.
 			if (!G_GametypeHasTeams() || !(source->player->ctfteam == player->ctfteam && source != player->mo))
 				P_AddPlayerScore(source->player, 25);
 		}
 	}
-	if (source && source->player && !player->powers[pw_super]) //don't score points against super players
+	if (source && source->player && source->player != player && !player->powers[pw_super]) //don't score points against super players or yourself
 	{
 		// Award no points when players shoot each other when cv_friendlyfire is on.
 		if (!G_GametypeHasTeams() || !(source->player->ctfteam == player->ctfteam && source != player->mo))
@@ -3562,7 +3565,7 @@ static void P_RingDamage(player_t *player, mobj_t *inflictor, mobj_t *source, IN
 	if (damagetype == DMG_SPIKE) // spikes
 		S_StartSound(player->mo, sfx_spkdth);
 
-	if (source && source->player && !player->powers[pw_super]) //don't score points against super players
+	if (source && source->player && source->player != player && !player->powers[pw_super]) //don't score points against super players
 	{
 		// Award no points when players shoot each other when cv_friendlyfire is on.
 		if (!G_GametypeHasTeams() || !(source->player->ctfteam == player->ctfteam && source != player->mo))
@@ -3572,7 +3575,7 @@ static void P_RingDamage(player_t *player, mobj_t *inflictor, mobj_t *source, IN
 	if ((gametyperules & GTR_TEAMFLAGS) && (player->gotflag & (GF_REDFLAG|GF_BLUEFLAG)))
 	{
 		P_PlayerFlagBurst(player, false);
-		if (source && source->player)
+		if (source && source->player && source->player != player) // Don't score points against yourself
 		{
 			// Award no points when players shoot each other when cv_friendlyfire is on.
 			if (!G_GametypeHasTeams() || !(source->player->ctfteam == player->ctfteam && source != player->mo))
@@ -3885,7 +3888,7 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 		// To reduce griefing potential, don't allow players to be killed
 		// by friendly fire. Spilling their rings and other items is enough.
 		else if (!force && G_GametypeHasTeams()
-			&& source && source->player && (source->player->ctfteam == player->ctfteam)
+			&& source && source->player && source->player != player && (source->player->ctfteam == player->ctfteam)
 			&& (cv_friendlyfire.value || (gametyperules & GTR_FRIENDLYFIRE)))
 		{
 			damage = 0;
