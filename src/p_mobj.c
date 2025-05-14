@@ -7013,14 +7013,6 @@ static void P_MobjScaleThink(mobj_t *mobj)
 		mobj->z -= (mobj->height - oldheight)/2;
 	else if (correctionType == 2)
 		mobj->z -= mobj->height - oldheight;
-
-	if (mobj->scale == mobj->destscale)
-		/// \todo Lua hook for "reached destscale"?
-		switch (mobj->type)
-		{
-		default:
-			break;
-		}
 }
 
 static void P_MaceSceneryThink(mobj_t *mobj)
