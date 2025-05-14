@@ -1451,12 +1451,12 @@ static luaL_Reg lib_hud[] = {
 // globalized client_side random functions.
 static luaL_Reg lib_randomclient[] = {
 	// m_random
-	{"localfixed",libd_RandomFixed},
-	{"localbyte",libd_RandomByte},
-	{"localkey",libd_RandomKey},
-	{"localrange",libd_RandomRange},
-	{"localsignedrandom",libd_SignedRandom}, // MACRO
-	{"localchance",libd_RandomChance}, // MACRO
+	{"localFixed",libd_RandomFixed},
+	{"localByte",libd_RandomByte},
+	{"localKey",libd_RandomKey},
+	{"localRange",libd_RandomRange},
+	{"localSignedRandom",libd_SignedRandom}, // MACRO
+	{"localChance",libd_RandomChance}, // MACRO
 	{NULL, NULL}
 };
 
