@@ -48,6 +48,10 @@
 #define FORCECLOSE 0x8000
 tic_t connectiontimeout = (10*TICRATE);
 
+INT16 numnetnodes;
+INT16 numslots;
+INT16 extratics;
+
 /// \brief network packet
 doomcom_t *doomcom = NULL;
 /// \brief network packet data, points inside doomcom
@@ -182,13 +186,9 @@ static node_t nodes[MAXNETNODES];
 //         0 if a = n (mod 256)
 //        >0 if a > b (mod 256)
 // mnemonic: to use it compare to 0: cmpack(a,b)<0 is "a < b" ...
-FUNCMATH static INT32 cmpack(UINT8 a, UINT8 b)
+FUNCMATH static inline INT32 cmpack(UINT8 a, UINT8 b)
 {
-	register INT32 d = a - b;
-
-	if (d >= 127 || d < -128)
-		return -d;
-	return d;
+	return (SINT8)(a - b);
 }
 
 /** Sets freeack to a free acknum and copies the netbuffer in the ackpak table
@@ -999,8 +999,8 @@ void D_SetDoomcom(void)
 {
 	if (doomcom) return;
 	doomcom = Z_Calloc(sizeof (doomcom_t), PU_STATIC, NULL);
-	doomcom->numslots = doomcom->numnodes = 1;
-	doomcom->extratics = 0;
+	numslots = numnetnodes = 1;
+	extratics = 0;
 }
 
 //
@@ -1046,10 +1046,10 @@ boolean D_CheckNetGame(void)
 	if (M_CheckParm("-extratic"))
 	{
 		if (M_IsNextParm())
-			doomcom->extratics = (INT16)atoi(M_GetNextParm());
+			extratics = (INT16)atoi(M_GetNextParm());
 		else
-			doomcom->extratics = 1;
-		CONS_Printf(M_GetText("Set extratics to %d\n"), doomcom->extratics);
+			extratics = 1;
+		CONS_Printf(M_GetText("Set extratics to %d\n"), extratics);
 	}
 
 	software_MAXPACKETLENGTH = hardware_MAXPACKETLENGTH;
@@ -1071,8 +1071,8 @@ boolean D_CheckNetGame(void)
 	if (netgame)
 		multiplayer = true;
 
-	if (doomcom->numnodes > MAXNETNODES)
-		I_Error("Too many nodes (%d), max:%d", doomcom->numnodes, MAXNETNODES);
+	if (numnetnodes > MAXNETNODES)
+		I_Error("Too many nodes (%d), max:%d", numnetnodes, MAXNETNODES);
 
 	netbuffer = (doomdata_t *)(void *)&doomcom->data;
 

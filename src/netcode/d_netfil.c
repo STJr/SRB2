@@ -129,7 +129,7 @@ boolean waitingforluafilecommand = false;
 char luafiledir[256 + 16] = "luafiles";
 
 // max file size to send to a player (in kilobytes)
-static CV_PossibleValue_t maxsend_cons_t[] = {{0, "MIN"}, {204800, "MAX"}, {0, NULL}};
+static CV_PossibleValue_t maxsend_cons_t[] = {{-1, "MIN"}, {999999999, "MAX"}, {0, NULL}};
 consvar_t cv_maxsend = CVAR_INIT ("maxsend", "4096", CV_SAVE|CV_NETVAR, maxsend_cons_t, NULL);
 
 consvar_t cv_noticedownload = CVAR_INIT ("noticedownload", "Off", CV_SAVE|CV_NETVAR, CV_OnOff, NULL);
@@ -206,7 +206,7 @@ UINT8 *PutFileNeeded(UINT16 firstfile)
 			// Store in the upper four bits
 			if (!cv_downloading.value)
 				filestatus += (WILLSEND_NO << 4); // Won't send
-			else if (wadfiles[i]->filesize <= (UINT32)cv_maxsend.value * 1024)
+			else if (cv_maxsend.value == -1 || wadfiles[i]->filesize <= (UINT32)cv_maxsend.value * 1024)
 				filestatus += (WILLSEND_YES << 4); // Will send if requested
 			else
 				filestatus += (WILLSEND_TOOLARGE << 4); // Won't send, too big
@@ -849,7 +849,7 @@ static boolean AddFileToSendQueue(INT32 node, UINT8 fileid)
 	strlcpy(p->id.filename, wadfiles[wadnum]->filename, MAX_WADPATH);
 
 	// Handle huge file requests (i.e. bigger than cv_maxsend.value KB)
-	if (wadfiles[wadnum]->filesize > (UINT32)cv_maxsend.value * 1024)
+	if (cv_maxsend.value != -1 && wadfiles[wadnum]->filesize > (UINT32)cv_maxsend.value * 1024)
 	{
 		// Too big
 		// Don't inform client (client sucks, man)
