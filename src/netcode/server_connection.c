@@ -245,7 +245,7 @@ static boolean SV_SendServerConfig(INT32 node)
 	netbuffer->packettype = PT_SERVERCFG;
 
 	netbuffer->u.servercfg.serverplayer = (UINT8)serverplayer;
-	netbuffer->u.servercfg.totalslotnum = (UINT8)(doomcom->numslots);
+	netbuffer->u.servercfg.totalslotnum = (UINT8)numslots;
 	netbuffer->u.servercfg.gametic = (tic_t)LONG(gametic);
 	netbuffer->u.servercfg.clientnode = (UINT8)node;
 	netbuffer->u.servercfg.gamestate = (UINT8)gamestate;

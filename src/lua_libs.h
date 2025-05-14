@@ -93,6 +93,7 @@ extern boolean ignoregameinputs;
 
 #define META_LUABANKS "LUABANKS[]*"
 
+#define META_TEXTEVENT "TEXTEVENT_T*"
 #define META_KEYEVENT "KEYEVENT_T*"
 #define META_MOUSE "MOUSE_T*"
 
