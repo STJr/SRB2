@@ -186,13 +186,9 @@ static node_t nodes[MAXNETNODES];
 //         0 if a = n (mod 256)
 //        >0 if a > b (mod 256)
 // mnemonic: to use it compare to 0: cmpack(a,b)<0 is "a < b" ...
-FUNCMATH static INT32 cmpack(UINT8 a, UINT8 b)
+FUNCMATH static inline INT32 cmpack(UINT8 a, UINT8 b)
 {
-	register INT32 d = a - b;
-
-	if (d >= 127 || d < -128)
-		return -d;
-	return d;
+	return (SINT8)(a - b);
 }
 
 /** Sets freeack to a free acknum and copies the netbuffer in the ackpak table
