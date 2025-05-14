@@ -10131,6 +10131,7 @@ static boolean P_FuseThink(mobj_t *mobj)
 //
 void P_MobjThinker(mobj_t *mobj)
 {
+	boolean ispushable;
 	I_Assert(mobj != NULL);
 	I_Assert(!P_MobjWasRemoved(mobj));
 
@@ -10156,8 +10157,10 @@ void P_MobjThinker(mobj_t *mobj)
 
 	tmfloorthing = tmhitthing = NULL;
 
+	ispushable = mobj->flags & MF_PUSHABLE || (mobj->info->flags & MF_PUSHABLE && mobj->fuse);
+
 	// Sector flag MSF_TRIGGERLINE_MOBJ allows ANY mobj to trigger a linedef exec
-	P_CheckMobjTrigger(mobj, false);
+	P_CheckMobjTrigger(mobj, ispushable);
 
 	if (mobj->scale != mobj->destscale)
 		P_MobjScaleThink(mobj); // Slowly scale up/down to reach your destscale.
@@ -10201,7 +10204,7 @@ void P_MobjThinker(mobj_t *mobj)
 
 	// if it's pushable, or if it would be pushable other than temporary disablement, use the
 	// separate thinker
-	if (mobj->flags & MF_PUSHABLE || (mobj->info->flags & MF_PUSHABLE && mobj->fuse))
+	if (ispushable)
 	{
 		if (!P_MobjPushableThink(mobj))
 			return;
@@ -10376,8 +10379,6 @@ void P_PushableThinker(mobj_t *mobj)
 {
 	I_Assert(mobj != NULL);
 	I_Assert(!P_MobjWasRemoved(mobj));
-
-	P_CheckMobjTrigger(mobj, true);
 
 	// it has to be pushable RIGHT NOW for this part to happen
 	if (mobj->flags & MF_PUSHABLE && !(mobj->momx || mobj->momy))
