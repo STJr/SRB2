@@ -1239,7 +1239,7 @@ static boolean CL_ServerConnectionTicker(const char *tmpsave, tic_t *oldtic, tic
 
 void CL_ConnectToServer(void)
 {
-	INT32 pnumnodes, nodewaited = doomcom->numnodes, i;
+	INT32 pnumnodes, nodewaited = numnetnodes, i;
 	tic_t oldtic;
 	tic_t asksent;
 	char tmpsave[256];
@@ -1265,7 +1265,7 @@ void CL_ConnectToServer(void)
 	if (gamestate == GS_INTERMISSION)
 		Y_EndIntermission(); // clean up intermission graphics etc
 
-	DEBFILE(va("waiting %d nodes\n", doomcom->numnodes));
+	DEBFILE(va("waiting %d nodes\n", numnetnodes));
 	G_SetGamestate(GS_WAITINGPLAYERS);
 	wipegamestate = GS_WAITINGPLAYERS;
 
@@ -1426,7 +1426,7 @@ void PT_ServerCFG(SINT8 node)
 
 	netnodes[(UINT8)servernode].ingame = true;
 	serverplayer = netbuffer->u.servercfg.serverplayer;
-	doomcom->numslots = SHORT(netbuffer->u.servercfg.totalslotnum);
+	numslots = SHORT(netbuffer->u.servercfg.totalslotnum);
 	mynode = netbuffer->u.servercfg.clientnode;
 	if (serverplayer >= 0)
 		playernode[(UINT8)serverplayer] = servernode;

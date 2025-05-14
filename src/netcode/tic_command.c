@@ -244,7 +244,7 @@ void PT_ServerTics(SINT8 node, INT32 netconsole)
 	if (realstart <= neededtic && realend > neededtic)
 	{
 		UINT8 *pak = (UINT8 *)&packet->cmds;
-		UINT8 *txtpak = (UINT8 *)&packet->cmds[packet->numslots * packet->numtics];
+		UINT8 *txtpak = (UINT8 *)&packet->cmds[numslots * packet->numtics];
 
 		for (tic_t i = realstart; i < realend; i++)
 		{
@@ -253,7 +253,7 @@ void PT_ServerTics(SINT8 node, INT32 netconsole)
 
 			// copy the tics
 			pak = G_ScpyTiccmd(netcmds[i%BACKUPTICS], pak,
-				packet->numslots*sizeof (ticcmd_t));
+				numslots*sizeof (ticcmd_t));
 
 			CL_CopyNetCommandsFromServerPacket(i, &txtpak);
 		}
@@ -320,7 +320,7 @@ static tic_t SV_CalculateNumTicsForPacket(SINT8 nodenum, tic_t firsttic, tic_t l
 
 	for (tic_t tic = firsttic; tic < lasttic; tic++)
 	{
-		size += sizeof (ticcmd_t) * doomcom->numslots;
+		size += sizeof (ticcmd_t) * numslots;
 		size += TotalTextCmdPerTic(tic);
 
 		if (size > software_MAXPACKETLENGTH)
@@ -337,7 +337,7 @@ static tic_t SV_CalculateNumTicsForPacket(SINT8 nodenum, tic_t firsttic, tic_t l
 				if (size > MAXPACKETLENGTH)
 					I_Error("Too many players: can't send %s data for %d players to node %d\n"
 							"Well sorry nobody is perfect....\n",
-							sizeu1(size), doomcom->numslots, nodenum);
+							sizeu1(size), numslots, nodenum);
 				else
 				{
 					lasttic++; // send it anyway!
@@ -394,20 +394,20 @@ void SV_SendTics(void)
 			netbuffer->packettype = PT_SERVERTICS;
 			netbuffer->u.serverpak.starttic = realfirsttic;
 			netbuffer->u.serverpak.numtics = (UINT8)(lasttictosend - realfirsttic);
-			netbuffer->u.serverpak.numslots = (UINT8)SHORT(doomcom->numslots);
+			netbuffer->u.serverpak.numslots = (UINT8)SHORT(numslots);
 
 			// Fill and send the packet
 			UINT8 *bufpos = (UINT8 *)&netbuffer->u.serverpak.cmds;
 			for (tic_t i = realfirsttic; i < lasttictosend; i++)
-				bufpos = G_DcpyTiccmd(bufpos, netcmds[i%BACKUPTICS], doomcom->numslots * sizeof (ticcmd_t));
+				bufpos = G_DcpyTiccmd(bufpos, netcmds[i%BACKUPTICS], numslots * sizeof (ticcmd_t));
 			for (tic_t i = realfirsttic; i < lasttictosend; i++)
 				SV_WriteNetCommandsForTic(i, &bufpos);
 			size_t packsize = bufpos - (UINT8 *)&(netbuffer->u);
 			HSendPacket(n, false, 0, packsize);
 
 			// When tics are too large, only one tic is sent so don't go backwards!
-			if (lasttictosend-doomcom->extratics > realfirsttic)
-				node->supposedtic = lasttictosend-doomcom->extratics;
+			if (lasttictosend-extratics > realfirsttic)
+				node->supposedtic = lasttictosend-extratics;
 			else
 				node->supposedtic = lasttictosend;
 			node->supposedtic = max(node->supposedtic, node->tic);

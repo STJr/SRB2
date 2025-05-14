@@ -690,6 +690,17 @@ int LUA_HookKey(event_t *event, int hook_type)
 	return hook.status;
 }
 
+int LUA_HookText(event_t *event, int hook_type)
+{
+	Hook_State hook;
+	if (prepare_hook(&hook, false, hook_type))
+	{
+		LUA_PushUserdata(gL, event, META_TEXTEVENT);
+		call_hooks(&hook, 1, res_true);
+	}
+	return hook.status;
+}
+
 void LUA_HookHUD(int hook_type, huddrawlist_h list)
 {
 	Hook_State hook;

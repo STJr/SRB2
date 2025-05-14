@@ -129,6 +129,18 @@ static int lib_getCursorPosition(lua_State *L)
 	return 2;
 }
 
+static int lib_setTextInputMode(lua_State *L)
+{
+	I_SetTextInputMode(luaL_checkboolean(L, 1));
+	return 0;
+}
+
+static int lib_getTextInputMode(lua_State *L)
+{
+	lua_pushinteger(L, I_GetTextInputMode());
+	return 1;
+}
+
 static luaL_Reg lib[] = {
 	{"gameControlDown", lib_gameControlDown},
 	{"gameControl2Down", lib_gameControl2Down},
@@ -143,6 +155,8 @@ static luaL_Reg lib[] = {
 	{"getMouseGrab", lib_getMouseGrab},
 	{"setMouseGrab", lib_setMouseGrab},
 	{"getCursorPosition", lib_getCursorPosition},
+	{"setTextInputMode", lib_setTextInputMode},
+	{"getTextInputMode", lib_getTextInputMode},
 	{NULL, NULL}
 };
 
@@ -220,6 +234,28 @@ static int lib_lenGameKeyDown(lua_State *L)
 	return 1;
 }
 
+////////////////
+// TEXT EVENT //
+////////////////
+
+static int textevent_get(lua_State *L)
+{
+	event_t *event = *((event_t **)luaL_checkudata(L, 1, META_TEXTEVENT));
+	const char *field = luaL_checkstring(L, 2);
+
+	I_Assert(event != NULL);
+
+	if (fastcmp(field,"text"))
+	{
+		char s[2] = { event->key, 0 };
+		lua_pushstring(L, s);
+	}
+	else
+		return luaL_error(L, "textevent_t has no field named %s", field);
+
+	return 1;
+}
+
 ///////////////
 // KEY EVENT //
 ///////////////
@@ -285,6 +321,7 @@ static int mouse_num(lua_State *L)
 
 int LUA_InputLib(lua_State *L)
 {
+	LUA_RegisterUserdataMetatable(L, META_TEXTEVENT, textevent_get, NULL, NULL);
 	LUA_RegisterUserdataMetatable(L, META_KEYEVENT, keyevent_get, NULL, NULL);
 	LUA_RegisterUserdataMetatable(L, META_MOUSE, mouse_get, NULL, mouse_num);
 
