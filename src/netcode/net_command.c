@@ -21,6 +21,16 @@
 #include "../z_zone.h"
 #include "../doomtype.h"
 
+typedef struct textcmdbuf_s textcmdbuf_t;
+
+struct textcmdbuf_s
+{
+	textcmdbuf_t *next;
+	UINT8 cmd[MAXTEXTCMD];
+};
+
+static textcmdbuf_t *textcmdbuf;
+static textcmdbuf_t *textcmdbuf2;
 textcmdtic_t *textcmds[TEXTCMD_HASH_SIZE] = {NULL};
 UINT8 localtextcmd[MAXTEXTCMD];
 UINT8 localtextcmd2[MAXTEXTCMD]; // splitscreen
@@ -37,21 +47,57 @@ void RegisterNetXCmd(netxcmd_t id, void (*cmd_f)(UINT8 **p, INT32 playernum))
 	listnetxcmd[id] = cmd_f;
 }
 
+static void WriteNetXCmd(UINT8 *cmd, netxcmd_t id, const void *param, size_t nparam)
+{
+	cmd[0]++;
+	cmd[cmd[0]] = (UINT8)id;
+	if (param && nparam)
+	{
+		M_Memcpy(&cmd[cmd[0]+1], param, nparam);
+		cmd[0] = (UINT8)(cmd[0] + (UINT8)nparam);
+	}
+}
+
 void SendNetXCmd(netxcmd_t id, const void *param, size_t nparam)
 {
 	if (localtextcmd[0]+2+nparam > MAXTEXTCMD)
 	{
+		textcmdbuf_t *buf = textcmdbuf;
+
+		if (2+nparam > MAXTEXTCMD)
+		{
+			CONS_Alert(CONS_ERROR, M_GetText("packet too large to fit NetXCmd, cannot add netcmd %d! (size: %s, max: %d)\n"), id, sizeu1(2+nparam), MAXTEXTCMD);
+			return;
+		}
+
 		// for future reference: if (cv_debug) != debug disabled.
-		CONS_Alert(CONS_ERROR, M_GetText("NetXCmd buffer full, cannot add netcmd %d! (size: %d, needed: %s)\n"), id, localtextcmd[0], sizeu1(nparam));
+		CONS_Alert(CONS_NOTICE, M_GetText("NetXCmd buffer full, delaying netcmd %d... (size: %d, needed: %s)\n"), id, localtextcmd[0], sizeu1(nparam));
+		if (buf == NULL)
+		{
+			textcmdbuf = Z_Malloc(sizeof(textcmdbuf_t), PU_STATIC, NULL);
+			textcmdbuf->cmd[0] = 0;
+			textcmdbuf->next = NULL;
+			WriteNetXCmd(textcmdbuf->cmd, id, param, nparam);
+			return;
+		}
+
+		while (buf->next != NULL)
+			buf = buf->next;
+
+		if (buf->cmd[0]+2+nparam > MAXTEXTCMD)
+		{
+			buf->next = Z_Malloc(sizeof(textcmdbuf_t), PU_STATIC, NULL);
+			buf->next->cmd[0] = 0;
+			buf->next->next = NULL;
+			WriteNetXCmd(buf->next->cmd, id, param, nparam);
+		}
+		else
+		{
+			WriteNetXCmd(buf->cmd, id, param, nparam);
+		}
 		return;
 	}
-	localtextcmd[0]++;
-	localtextcmd[localtextcmd[0]] = (UINT8)id;
-	if (param && nparam)
-	{
-		M_Memcpy(&localtextcmd[localtextcmd[0]+1], param, nparam);
-		localtextcmd[0] = (UINT8)(localtextcmd[0] + (UINT8)nparam);
-	}
+	WriteNetXCmd(localtextcmd, id, param, nparam);
 }
 
 // splitscreen player
@@ -59,16 +105,42 @@ void SendNetXCmd2(netxcmd_t id, const void *param, size_t nparam)
 {
 	if (localtextcmd2[0]+2+nparam > MAXTEXTCMD)
 	{
-		I_Error("No more place in the buffer for netcmd %d\n",id);
+		textcmdbuf_t *buf = textcmdbuf2;
+
+		if (2+nparam > MAXTEXTCMD)
+		{
+			CONS_Alert(CONS_ERROR, M_GetText("packet too large to fit NetXCmd, cannot add netcmd %d! (size: %s, max: %d)\n"), id, sizeu1(2+nparam), MAXTEXTCMD);
+			return;
+		}
+
+		// for future reference: if (cv_debug) != debug disabled.
+		CONS_Alert(CONS_NOTICE, M_GetText("NetXCmd buffer full, delaying netcmd %d... (size: %d, needed: %s)\n"), id, localtextcmd2[0], sizeu1(nparam));
+		if (buf == NULL)
+		{
+			textcmdbuf2 = Z_Malloc(sizeof(textcmdbuf_t), PU_STATIC, NULL);
+			textcmdbuf2->cmd[0] = 0;
+			textcmdbuf2->next = NULL;
+			WriteNetXCmd(textcmdbuf2->cmd, id, param, nparam);
+			return;
+		}
+
+		while (buf->next != NULL)
+			buf = buf->next;
+
+		if (buf->cmd[0]+2+nparam > MAXTEXTCMD)
+		{
+			buf->next = Z_Malloc(sizeof(textcmdbuf_t), PU_STATIC, NULL);
+			buf->next->cmd[0] = 0;
+			buf->next->next = NULL;
+			WriteNetXCmd(buf->next->cmd, id, param, nparam);
+		}
+		else
+		{
+			WriteNetXCmd(buf->cmd, id, param, nparam);
+		}
 		return;
 	}
-	localtextcmd2[0]++;
-	localtextcmd2[localtextcmd2[0]] = (UINT8)id;
-	if (param && nparam)
-	{
-		M_Memcpy(&localtextcmd2[localtextcmd2[0]+1], param, nparam);
-		localtextcmd2[0] = (UINT8)(localtextcmd2[0] + (UINT8)nparam);
-	}
+	WriteNetXCmd(localtextcmd2, id, param, nparam);
 }
 
 UINT8 GetFreeXCmdSize(void)
@@ -345,7 +417,16 @@ void CL_SendNetCommands(void)
 		M_Memcpy(netbuffer->u.textcmd,localtextcmd, localtextcmd[0]+1);
 		// All extra data have been sent
 		if (HSendPacket(servernode, true, 0, localtextcmd[0]+1)) // Send can fail...
+		{
 			localtextcmd[0] = 0;
+			if (textcmdbuf != NULL)
+			{
+				textcmdbuf_t *buf = textcmdbuf;
+				M_Memcpy(localtextcmd, textcmdbuf->cmd, textcmdbuf->cmd[0]+1);
+				textcmdbuf = textcmdbuf->next;
+				Z_Free(buf);
+			}
+		}
 	}
 
 	// Send extra data if needed for player 2 (splitscreen)
@@ -355,7 +436,16 @@ void CL_SendNetCommands(void)
 		M_Memcpy(netbuffer->u.textcmd, localtextcmd2, localtextcmd2[0]+1);
 		// All extra data have been sent
 		if (HSendPacket(servernode, true, 0, localtextcmd2[0]+1)) // Send can fail...
+		{
 			localtextcmd2[0] = 0;
+			if (textcmdbuf2 != NULL)
+			{
+				textcmdbuf_t *buf = textcmdbuf2;
+				M_Memcpy(localtextcmd2, textcmdbuf2->cmd, textcmdbuf2->cmd[0]+1);
+				textcmdbuf2 = textcmdbuf2->next;
+				Z_Free(buf);
+			}
+		}
 	}
 }
 
