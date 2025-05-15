@@ -467,7 +467,23 @@ static int libd_patchExists(lua_State *L)
 
 static int libd_cachePatch(lua_State *L)
 {
-	LUA_PushUserdata(L, W_CachePatchLongName(luaL_checkstring(L, 1), PU_PATCH), META_PATCH);
+	const char *name = luaL_checkstring(L, 1);
+	patch_t *patch = W_CachePatchLongName(name, PU_PATCH);
+
+#ifdef ROTSPRITE
+	if (lua_isnumber(L, 2))
+	{
+		angle_t rollangle = luaL_checkangle(L, 2);
+		INT32 rot = R_GetRollAngle(rollangle);
+		if (rot) {
+			patch_t *rotpatch = Patch_GetRotated(patch, rot, false);
+			LUA_PushUserdata(L, rotpatch, META_PATCH);
+			return 1;
+		}
+	}
+#endif
+	
+	LUA_PushUserdata(L, patch, META_PATCH);
 	return 1;
 }
 
