@@ -918,6 +918,22 @@ static void CON_InputDelChar(void)
 // ----
 //
 
+//
+// Same as CON_Responder, but is process before everything else, so it cannot be blocked.
+//
+boolean CON_PreResponder(event_t *ev)
+{
+	if (ev->type == ev_keydown && shiftdown == 1 && ev->key == KEY_ESCAPE)
+	{
+		I_SetTextInputMode(con_destlines == 0); // inverse, since this is changed next tic.
+		consoletoggle = true;
+		return true;
+	}
+
+	return false;
+}
+
+//
 // Handles console key input
 //
 boolean CON_Responder(event_t *ev)
