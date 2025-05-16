@@ -641,6 +641,7 @@ void CL_RemovePlayer(INT32 playernum, kickreason_t reason)
 void D_QuitNetGame(void)
 {
 	mousegrabbedbylua = true;
+	textinputmodeenabledbylua = false;
 	I_UpdateMouseGrab();
 
 	if (!netgame || !netbuffer)

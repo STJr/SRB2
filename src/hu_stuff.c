@@ -52,6 +52,7 @@
 #include "lua_hud.h"
 #include "lua_hudlib_drawlist.h"
 #include "lua_hook.h"
+#include "lua_libs.h"
 
 // coords are scaled
 #define HU_INPUTX 0
@@ -1016,7 +1017,7 @@ static void HU_sendChatMessage(void)
 void HU_clearChatChars(void)
 {
 	memset(w_chat, '\0', sizeof(w_chat));
-	I_SetTextInputMode(false);
+	I_SetTextInputMode(textinputmodeenabledbylua);
 	chat_on = false;
 	c_input = 0;
 
@@ -1153,7 +1154,7 @@ boolean HU_Responder(event_t *ev)
 			if (!CHAT_MUTE)
 				HU_sendChatMessage();
 
-			I_SetTextInputMode(false);
+			I_SetTextInputMode(textinputmodeenabledbylua);
 			chat_on = false;
 			c_input = 0; // reset input cursor
 			chat_scrollmedown = true; // you hit enter, so you might wanna autoscroll to see what you just sent. :)
@@ -1164,7 +1165,7 @@ boolean HU_Responder(event_t *ev)
 			|| c == gamecontrol[GC_TEAMKEY][0] || c == gamecontrol[GC_TEAMKEY][1])
 			&& c >= KEY_MOUSE1)) // If it's not a keyboard key, then the chat button is used as a toggle.
 		{
-			I_SetTextInputMode(false);
+			I_SetTextInputMode(textinputmodeenabledbylua);
 			chat_on = false;
 			c_input = 0; // reset input cursor
 			I_UpdateMouseGrab();

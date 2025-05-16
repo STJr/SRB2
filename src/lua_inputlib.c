@@ -10,16 +10,19 @@
 /// \brief input library for Lua scripting
 
 #include "doomdef.h"
+#include "doomstat.h"
 #include "fastcmp.h"
 #include "g_input.h"
 #include "g_game.h"
 #include "hu_stuff.h"
 #include "i_system.h"
+#include "console.h"
 
 #include "lua_script.h"
 #include "lua_libs.h"
 
 boolean mousegrabbedbylua = true;
+boolean textinputmodeenabledbylua = false;
 boolean ignoregameinputs = false;
 
 ///////////////
@@ -131,13 +134,15 @@ static int lib_getCursorPosition(lua_State *L)
 
 static int lib_setTextInputMode(lua_State *L)
 {
-	I_SetTextInputMode(luaL_checkboolean(L, 1));
+	textinputmodeenabledbylua = luaL_checkboolean(L, 1);
+	if (!(menuactive || CON_Ready() || chat_on))
+		I_SetTextInputMode(textinputmodeenabledbylua);
 	return 0;
 }
 
 static int lib_getTextInputMode(lua_State *L)
 {
-	lua_pushinteger(L, I_GetTextInputMode());
+	lua_pushinteger(L, textinputmodeenabledbylua);
 	return 1;
 }
 

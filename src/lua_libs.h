@@ -13,6 +13,7 @@
 extern lua_State *gL;
 
 extern boolean mousegrabbedbylua;
+extern boolean textinputmodeenabledbylua;
 extern boolean ignoregameinputs;
 
 #define MUTABLE_TAGS
