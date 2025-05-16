@@ -48,6 +48,7 @@
 #include "p_setup.h"
 #include "f_finale.h"
 #include "lua_hook.h"
+#include "lua_libs.h"
 
 #ifdef HWRENDER
 #include "hardware/hw_main.h"
@@ -3793,6 +3794,7 @@ void M_ClearMenus(boolean callexitmenufunc)
 	hidetitlemap = false;
 
 	I_UpdateMouseGrab();
+	I_SetTextInputMode(textinputmodeenabledbylua);
 }
 
 //
