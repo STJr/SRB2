@@ -3793,6 +3793,7 @@ void M_ClearMenus(boolean callexitmenufunc)
 	hidetitlemap = false;
 
 	I_UpdateMouseGrab();
+	I_SetTextInputMode(false);
 }
 
 //
