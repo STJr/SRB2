@@ -181,7 +181,7 @@ void V_DrawBlock(INT32 x, INT32 y, INT32 scrn, INT32 width, INT32 height, const 
 
 // fill a box with a single color
 void V_DrawFill(INT32 x, INT32 y, INT32 w, INT32 h, INT32 c);
-void V_DrawFixedFill(fixed_t x, fixed_t , fixed_t w, fixed_t, h, INT32 c)
+void V_DrawFixedFill(fixed_t x, fixed_t y, fixed_t w, fixed_t h, INT32 c);
 void V_DrawFillConsoleMap(INT32 x, INT32 y, INT32 w, INT32 h, INT32 c);
 // fill a box with a flat as a pattern
 void V_DrawFlatFill(INT32 x, INT32 y, INT32 w, INT32 h, lumpnum_t flatnum);
