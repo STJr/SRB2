@@ -1,0 +1,68 @@
+{
+  "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
+  "name": "srb2",
+  "version": "1.0.0",
+  "builtin-baseline": "d5ec528843d29e3a52d745a64b469f810b2cedbf",
+  "dependencies": [
+    {
+      "name": "curl",
+      "platform": "!wasm32"
+    },
+    "libgme",
+    {
+      "name":"libopenmpt",
+      "platform": "!wasm32"
+    },
+    "libpng",
+    "miniupnpc",
+    {
+      "name": "sdl2",
+      "default-features": false,
+      "features": [
+        {
+          "name": "wayland",
+          "platform": "linux"
+        },
+        {
+          "name": "x11",
+          "platform": "!windows"
+        }
+      ],
+      "platform": "!wasm32",
+      "version>=": "2.30.6#2"
+    },
+    {
+      "name": "sdl2-mixer-ext",
+      "features": [
+        {
+          "name":"fluidsynth",
+          "platform": "!static"
+        },
+        {
+          "name":"libflac",
+          "platform": "!wasm32"
+        },
+        "libgme",
+        "libmodplug",
+        {
+          "name":"libvorbis",
+          "platform": "!wasm32"
+        },
+        "libxmp",
+        {
+          "name":"mpg123",
+          "platform": "!wasm32"
+        },
+        {
+          "name":"opusfile",
+          "platform": "!wasm32"
+        },
+        "pxtone",
+        "timidity"
+      ],
+      "platform": "!wasm32",
+      "version>=": "2.6.0#0"
+    },
+    "zlib"
+  ]
+}

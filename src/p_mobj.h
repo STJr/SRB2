@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -313,6 +313,7 @@ typedef struct mobj_s
 
 	UINT32 renderflags; // render flags
 	INT32 blendmode; // blend mode
+	fixed_t alpha; // alpha
 	fixed_t spritexscale, spriteyscale;
 	fixed_t spritexoffset, spriteyoffset;
 	fixed_t old_spritexscale, old_spriteyscale, old_spritexscale2, old_spriteyscale2;
@@ -456,6 +457,7 @@ typedef struct precipmobj_s
 
 	UINT32 renderflags; // render flags
 	INT32 blendmode; // blend mode
+	fixed_t alpha; // alpha
 	fixed_t spritexscale, spriteyscale;
 	fixed_t spritexoffset, spriteyoffset;
 	fixed_t old_spritexscale, old_spriteyscale, old_spritexscale2, old_spriteyscale2;
@@ -536,6 +538,8 @@ void P_RingZMovement(mobj_t *mo);
 boolean P_SceneryZMovement(mobj_t *mo);
 void P_PlayerZMovement(mobj_t *mo);
 void P_EmeraldManager(void);
+
+mobj_t *P_FindNewPosition(UINT32 oldposition);
 
 extern INT32 modulothing;
 

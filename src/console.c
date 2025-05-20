@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -34,6 +34,7 @@
 #include "m_menu.h"
 #include "filesrch.h"
 #include "m_misc.h"
+#include "lua_libs.h"
 
 #ifdef _WINDOWS
 #include "win32/win_main.h"
@@ -918,12 +919,26 @@ static void CON_InputDelChar(void)
 // ----
 //
 
+//
+// Same as CON_Responder, but is process before everything else, so it cannot be blocked.
+//
+boolean CON_PreResponder(event_t *ev)
+{
+	if (ev->type == ev_keydown && shiftdown == 1 && ev->key == KEY_ESCAPE)
+	{
+		I_SetTextInputMode(con_destlines == 0 ? true : textinputmodeenabledbylua); // inverse, since this is changed next tic.
+		consoletoggle = true;
+		return true;
+	}
+
+	return false;
+}
+
+//
 // Handles console key input
 //
 boolean CON_Responder(event_t *ev)
 {
-	static UINT8 consdown = false; // console is treated differently due to rare usage
-
 	// sequential completions a la 4dos
 	static char completioncmd[80 + sizeof("find ")] = "find ";
 	static char *completion = &completioncmd[sizeof("find ")-1];
@@ -943,32 +958,31 @@ boolean CON_Responder(event_t *ev)
 	// let go keyup events, don't eat them
 	if (ev->type != ev_keydown && ev->type != ev_text && ev->type != ev_console)
 	{
-		if (ev->key == gamecontrol[GC_CONSOLE][0] || ev->key == gamecontrol[GC_CONSOLE][1])
-			consdown = false;
 		return false;
 	}
 
 	key = ev->key;
 
 	// check for console toggle key
-	if (ev->type != ev_console)
+	if (ev->type == ev_keydown)
 	{
 		if (modeattacking || metalrecording || marathonmode)
 			return false;
 
-		if (ev->type == ev_keydown && ((key == gamecontrol[GC_CONSOLE][0] || key == gamecontrol[GC_CONSOLE][1]) && !shiftdown))
+		if ((key == gamecontrol[GC_CONSOLE][0] || key == gamecontrol[GC_CONSOLE][1]) && !shiftdown)
 		{
-			if (consdown) // ignore repeat
-				return true;
+			if (con_destlines == 0 && I_GetTextInputMode())
+				return false; // some other component is holding keyboard input, don't hijack it!
+
+			I_SetTextInputMode(con_destlines == 0 ? true : textinputmodeenabledbylua); // inverse, since this is changed next tic.
 			consoletoggle = true;
-			consdown = true;
 			return true;
 		}
 
 		// check other keys only if console prompt is active
 		if (!consoleready && key < NUMINPUTS) // metzgermeister: boundary check!!
 		{
-			if (ev->type == ev_keydown && !menuactive && bindtable[key])
+			if (!menuactive && bindtable[key])
 			{
 				COM_BufAddText(bindtable[key]);
 				COM_BufAddText("\n");
@@ -980,14 +994,14 @@ boolean CON_Responder(event_t *ev)
 		// escape key toggle off console
 		if (key == KEY_ESCAPE)
 		{
+			I_SetTextInputMode(textinputmodeenabledbylua);
 			consoletoggle = true;
 			return true;
 		}
 	}
-
-	if (ev->type == ev_text)
+	else if (ev->type == ev_text)
 	{
-		if (!consoletoggle)
+		if (!consoletoggle && consoleready)
 			CON_InputAddChar(key);
 		return true;
 	}
@@ -1036,7 +1050,7 @@ boolean CON_Responder(event_t *ev)
 	}
 	else if (key == KEY_BACKSPACE)
 	{
-		if (ctrldown)
+		if (ctrldown && input_cur != 0)
 		{
 			input_sel = M_JumpWordReverse(inputlines[inputline], input_cur);
 			CON_InputDelSelection();
@@ -1094,7 +1108,9 @@ boolean CON_Responder(event_t *ev)
 
 		if (key == 'x' || key == 'X')
 		{
-			if (input_sel > input_cur)
+			if (input_sel == input_cur) // Don't replace the clipboard without a text selection
+				return true;
+			else if (input_sel > input_cur)
 				I_ClipboardCopy(&inputlines[inputline][input_cur], input_sel-input_cur);
 			else
 				I_ClipboardCopy(&inputlines[inputline][input_sel], input_cur-input_sel);
@@ -1104,7 +1120,9 @@ boolean CON_Responder(event_t *ev)
 		}
 		else if (key == 'c' || key == 'C')
 		{
-			if (input_sel > input_cur)
+			if (input_sel == input_cur) // Don't replace the clipboard without a text selection
+				return true;
+			else if (input_sel > input_cur)
 				I_ClipboardCopy(&inputlines[inputline][input_cur], input_sel-input_cur);
 			else
 				I_ClipboardCopy(&inputlines[inputline][input_sel], input_cur-input_sel);
@@ -1730,12 +1748,12 @@ static void CON_DrawBackpic(void)
 
 	// Get the lumpnum for CONSBACK, STARTUP (Only during game startup) or fallback into MISSING.
 	if (con_startup)
-		piclump = W_CheckNumForName("STARTUP");
+		piclump = W_CheckNumForPatchName("STARTUP");
 	else
-		piclump = W_CheckNumForName("CONSBACK");
+		piclump = W_CheckNumForPatchName("CONSBACK");
 
 	if (piclump == LUMPERROR)
-		piclump = W_GetNumForName("MISSING");
+		piclump = W_GetNumForPatchName("MISSING");
 
 	// Cache the patch.
 	con_backpic = W_CachePatchNum(piclump, PU_PATCH);

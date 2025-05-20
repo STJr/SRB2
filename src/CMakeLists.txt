@@ -104,6 +104,7 @@ add_executable(SRB2SDL2 MACOSX_BUNDLE WIN32
 	lua_hudlib_drawlist.c
 	lua_colorlib.c
 	lua_inputlib.c
+	lua_interceptlib.c
 )
 
 # This updates the modification time for comptime.c at the
@@ -134,9 +135,12 @@ add_dependencies(SRB2SDL2 _SRB2_reconf)
 
 if("${CMAKE_COMPILER_IS_GNUCC}" AND "${CMAKE_SYSTEM_NAME}" MATCHES "Windows")
 	target_link_options(SRB2SDL2 PRIVATE "-Wl,--disable-dynamicbase")
-	if(NOT "${SRB2_CONFIG_SYSTEM_LIBRARIES}" AND NOT "${SRB2_CONFIG_SHARED_INTERNAL_LIBRARIES}")
+	if("${SRB2_CONFIG_STATIC_STDLIB}")
 		# On MinGW with internal libraries, link the standard library statically
 		target_link_options(SRB2SDL2 PRIVATE "-static")
+	endif()
+	if(CMAKE_SIZEOF_VOID_P EQUAL 4)
+		target_link_options(SRB2SDL2 PRIVATE "-Wl,--large-address-aware")
 	endif()
 endif()
 
@@ -169,6 +173,11 @@ if("${CMAKE_SYSTEM_NAME}" MATCHES "Linux")
 	endif()
 endif()
 
+if("${CMAKE_SYSTEM_NAME}" MATCHES "Haiku")
+	target_compile_definitions(SRB2SDL2 PRIVATE -DNOEXECINFO)
+	target_link_libraries(SRB2SDL2 PRIVATE network)
+endif()
+
 if("${CMAKE_SYSTEM_NAME}" MATCHES "Darwin")
 	target_compile_definitions(SRB2SDL2 PRIVATE -DMACOSX)
 endif()
@@ -182,12 +191,7 @@ if("${SRB2_CONFIG_USE_GME}")
 	endif()
 endif()
 
-target_link_libraries(SRB2SDL2 PRIVATE openmpt)
-target_compile_definitions(SRB2SDL2 PRIVATE -DHAVE_OPENMPT)
-
-target_link_libraries(SRB2SDL2 PRIVATE ZLIB::ZLIB PNG::PNG CURL::libcurl)
-target_compile_definitions(SRB2SDL2 PRIVATE -DHAVE_ZLIB -DHAVE_PNG -DHAVE_CURL -D_LARGEFILE64_SOURCE)
-target_sources(SRB2SDL2 PRIVATE apng.c)
+target_compile_definitions(SRB2SDL2 PRIVATE -D_LARGEFILE64_SOURCE)
 
 set(SRB2_HAVE_THREADS ON)
 target_compile_definitions(SRB2SDL2 PRIVATE -DHAVE_THREADS)
@@ -231,9 +235,12 @@ endif()
 
 # Compatibility flag with later versions of GCC
 # We should really fix our code to not need this
-if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
-	if (CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|x64|amd64|AMD64|em64t|EM64T)")
-		target_compile_options(SRB2SDL2 PRIVATE -mno-ms-bitfields)
+if (NOT SRB2_CONFIG_FORCE_NO_MS_BITFIELDS)
+	if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+		check_cxx_compiler_flag("-mno-ms-bitfields" HAS_NO_MS_BITFIELDS)
+		if(HAS_NO_MS_BITFIELDS)
+			target_compile_options(SRB2SDL2 PRIVATE -mno-ms-bitfields)
+		endif()
 	endif()
 endif()
 
@@ -403,8 +410,71 @@ if(SRB2_CONFIG_PROFILEMODE AND "${CMAKE_C_COMPILER_ID}" STREQUAL "GNU")
 endif()
 
 add_subdirectory(sdl)
-if(SRB2_CONFIG_ENABLE_TESTS)
-	add_subdirectory(tests)
+
+if(TARGET ZLIB::ZLIB)
+	target_compile_definitions(SRB2SDL2 PRIVATE -DHAVE_ZLIB)
+	message(STATUS "Zlib Found")
+else()
+	message(STATUS "No Zlib Found")
+endif()
+
+if(TARGET PNG::PNG)
+	target_compile_definitions(SRB2SDL2 PRIVATE -DHAVE_PNG)
+	target_sources(SRB2SDL2 PRIVATE apng.c ${libapng_HEADER})
+	target_include_directories(SRB2SDL2 PRIVATE ${libapng_INCLUDE_DIRS} ${libpng_BINARY_DIR})
+	#message(STATUS "libpng inc DIRS at ${libapng_INCLUDE_DIRS}")
+	#message(STATUS "libpng bin DIRS at ${libpng_BINARY_DIR}")
+	#message(STATUS "png.h at ${libapng_HEADER}")
+	message(STATUS "libpng Found")
+else()
+	message(STATUS "No libpng Found")
+endif()
+
+if(TARGET PNG::PNG AND TARGET ZLIB::ZLIB)
+#libpng links zlib too?
+target_link_libraries(SRB2SDL2 PRIVATE PNG::PNG)
+endif()
+
+if(NOT TARGET PNG::PNG AND TARGET ZLIB::ZLIB)
+#got no libpng? we need zlib
+target_link_libraries(SRB2SDL2 PRIVATE ZLIB::ZLIB)
+endif()
+
+if(TARGET gme::gme)
+	target_compile_definitions(SRB2SDL2 PRIVATE -DHAVE_GME)
+	target_link_libraries(SRB2SDL2 PRIVATE gme::gme)
+	message(STATUS "libgme Found")
+else()
+	message(STATUS "No libgme Found")
+endif()
+
+if(TARGET libopenmpt::libopenmpt)
+	target_compile_definitions(SRB2SDL2 PRIVATE -DHAVE_OPENMPT)
+	target_link_libraries(SRB2SDL2 PRIVATE libopenmpt::libopenmpt)
+	message(STATUS "libopenmpt Found")
+else()
+	message(STATUS "No libopenmpt Found")
+endif()
+
+if(TARGET CURL::libcurl)
+	target_compile_definitions(SRB2SDL2 PRIVATE -DHAVE_CURL)
+	target_link_libraries(SRB2SDL2 PRIVATE CURL::libcurl)
+	message(STATUS "libcurl Found")
+else()
+	message(STATUS "No libcurl Found")
+endif()
+
+if(TARGET miniupnpc::miniupnpc)
+	if("${VCPKG_TARGET_TRIPLET}" MATCHES "-mingw-static$")
+		target_compile_definitions(SRB2SDL2 PRIVATE -DHAVE_MINIUPNPC -DMINIUPNP_STATICLIB)
+		target_link_libraries(SRB2SDL2 PRIVATE miniupnpc::miniupnpc -liphlpapi)
+	else()
+		target_compile_definitions(SRB2SDL2 PRIVATE -DHAVE_MINIUPNPC)
+		target_link_libraries(SRB2SDL2 PRIVATE miniupnpc::miniupnpc)
+	endif()
+	message(STATUS "miniupnpc Found")
+else()
+	message(STATUS "No miniupnpc Found")
 endif()
 
 # strip debug symbols into separate file when using gcc.

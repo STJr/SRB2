@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -65,6 +65,7 @@
 #include "i_video.h" // rendermode
 #include "md5.h"
 #include "lua_script.h"
+#include "lua_hook.h"
 #ifdef SCANTHINGS
 #include "p_setup.h" // P_ScanThings
 #endif
@@ -98,6 +99,7 @@ typedef struct lumpnum_cache_s
 {
 	char lumpname[32];
 	lumpnum_t lumpnum;
+	UINT32 hash;
 } lumpnum_cache_t;
 
 static lumpnum_cache_t lumpnumcache[LUMPNUMCACHESIZE];
@@ -306,12 +308,10 @@ static void W_LoadDehackedLumps(UINT16 wadnum, boolean mainfile)
   * \param resblock resulting MD5 checksum
   * \return 0 if MD5 checksum was made, and is at resblock, 1 if error was found
   */
+
+#ifndef NOMD5
 static INT32 W_MakeFileMD5(const char *filename, void *resblock)
 {
-#ifdef NOMD5
-	(void)filename;
-	memset(resblock, 0x00, 16);
-#else
 	FILE *fhandle;
 
 	if ((fhandle = fopen(filename, "rb")) != NULL)
@@ -328,9 +328,9 @@ static INT32 W_MakeFileMD5(const char *filename, void *resblock)
 		fclose(fhandle);
 		return 0;
 	}
-#endif
 	return 1;
 }
+#endif
 
 // Invalidates the cache of lump numbers. Call this whenever a wad is added.
 static void W_InvalidateLumpnumCache(void)
@@ -1010,6 +1010,10 @@ UINT16 W_InitFile(const char *filename, boolean mainfile, boolean startup)
 		break;
 	}
 
+	lua_lumploading++;
+	LUA_HookVoid(HOOK(AddonLoaded));
+	lua_lumploading--;
+
 	W_InvalidateLumpnumCache();
 	return wadfile->numlumps;
 }
@@ -1170,6 +1174,11 @@ UINT16 W_InitFolder(const char *path, boolean mainfile, boolean startup)
 	W_ReadFileShaders(wadfile);
 	W_LoadTrnslateLumps(numwadfiles - 1);
 	W_LoadDehackedLumpsPK3(numwadfiles - 1, mainfile);
+
+	lua_lumploading++;
+	LUA_HookVoid(HOOK(AddonLoaded));
+	lua_lumploading--;
+
 	W_InvalidateLumpnumCache();
 
 	return wadfile->numlumps;
@@ -1328,10 +1337,10 @@ UINT16 W_CheckNumForFolderStartPK3(const char *name, UINT16 wad, UINT16 startlum
 			/* SLADE is special and puts a single directory entry. Skip that. */
 			if (strlen(lump_p->fullname) == name_length)
 				i++;
-			break;
+			return i;
 		}
 	}
-	return i;
+	return INT16_MAX;
 }
 
 // In a PK3 type of resource file, it looks for the next lumpinfo entry that doesn't share the specified pathfile.
@@ -1475,6 +1484,63 @@ UINT16 W_CheckNumForFullNamePK3(const char *name, UINT16 wad, UINT16 startlump)
 	return INT16_MAX;
 }
 
+static lumpnum_t CheckLumpInCache(const char *name, boolean longname)
+{
+	if (longname)
+	{
+		UINT32 hash = quickncasehash(name, 32);
+
+		// Loop backwards so that we check most recent entries first
+		for (INT32 i = lumpnumcacheindex + LUMPNUMCACHESIZE; i > lumpnumcacheindex; i--)
+		{
+			if (lumpnumcache[i & (LUMPNUMCACHESIZE - 1)].hash == hash
+				&& stricmp(lumpnumcache[i & (LUMPNUMCACHESIZE - 1)].lumpname, name) == 0)
+			{
+				lumpnumcacheindex = i & (LUMPNUMCACHESIZE - 1);
+				return lumpnumcache[lumpnumcacheindex].lumpnum;
+			}
+		}
+	}
+	else
+	{
+		UINT32 hash = quickncasehash(name, 8);
+
+		// Loop backwards so that we check most recent entries first
+		for (INT32 i = lumpnumcacheindex + LUMPNUMCACHESIZE; i > lumpnumcacheindex; i--)
+		{
+			if (lumpnumcache[i & (LUMPNUMCACHESIZE - 1)].hash == hash
+				&& lumpnumcache[i & (LUMPNUMCACHESIZE - 1)].lumpname[8] == '\0'
+				&& strnicmp(lumpnumcache[i & (LUMPNUMCACHESIZE - 1)].lumpname, name, 8) == 0)
+			{
+				lumpnumcacheindex = i & (LUMPNUMCACHESIZE - 1);
+				return lumpnumcache[lumpnumcacheindex].lumpnum;
+			}
+		}
+	}
+
+	return LUMPERROR;
+}
+
+static void AddLumpToCache(lumpnum_t lumpnum, const char *name, boolean longname)
+{
+	if (longname && strlen(name) >= 32)
+		return;
+
+	lumpnumcacheindex = (lumpnumcacheindex + 1) & (LUMPNUMCACHESIZE - 1);
+	memset(lumpnumcache[lumpnumcacheindex].lumpname, '\0', 32);
+	if (longname)
+	{
+		strlcpy(lumpnumcache[lumpnumcacheindex].lumpname, name, 32);
+		lumpnumcache[lumpnumcacheindex].hash = quickncasehash(name, 32);
+	}
+	else
+	{
+		strncpy(lumpnumcache[lumpnumcacheindex].lumpname, name, 8);
+		lumpnumcache[lumpnumcacheindex].hash = quickncasehash(name, 8);
+	}
+	lumpnumcache[lumpnumcacheindex].lumpnum = lumpnum;
+}
+
 //
 // W_CheckNumForName
 // Returns LUMPERROR if name not found.
@@ -1487,17 +1553,10 @@ lumpnum_t W_CheckNumForName(const char *name)
 	if (!*name) // some doofus gave us an empty string?
 		return LUMPERROR;
 
-	// Check the lumpnumcache first. Loop backwards so that we check
-	// most recent entries first
-	for (i = lumpnumcacheindex + LUMPNUMCACHESIZE; i > lumpnumcacheindex; i--)
-	{
-		if (!lumpnumcache[i & (LUMPNUMCACHESIZE - 1)].lumpname[8]
-			&& strncmp(lumpnumcache[i & (LUMPNUMCACHESIZE - 1)].lumpname, name, 8) == 0)
-		{
-			lumpnumcacheindex = i & (LUMPNUMCACHESIZE - 1);
-			return lumpnumcache[lumpnumcacheindex].lumpnum;
-		}
-	}
+	// Check the lumpnumcache first.
+	lumpnum_t cachenum = CheckLumpInCache(name, false);
+	if (cachenum != LUMPERROR)
+		return cachenum;
 
 	// scan wad files backwards so patch lump files take precedence
 	for (i = numwadfiles - 1; i >= 0; i--)
@@ -1511,12 +1570,11 @@ lumpnum_t W_CheckNumForName(const char *name)
 	else
 	{
 		// Update the cache.
-		lumpnumcacheindex = (lumpnumcacheindex + 1) & (LUMPNUMCACHESIZE - 1);
-		memset(lumpnumcache[lumpnumcacheindex].lumpname, '\0', 32);
-		strncpy(lumpnumcache[lumpnumcacheindex].lumpname, name, 8);
-		lumpnumcache[lumpnumcacheindex].lumpnum = (i<<16)+check;
+		lumpnum_t lumpnum = (i << 16) + check;
 
-		return lumpnumcache[lumpnumcacheindex].lumpnum;
+		AddLumpToCache(lumpnum, name, false);
+
+		return lumpnum;
 	}
 }
 
@@ -1534,16 +1592,10 @@ lumpnum_t W_CheckNumForLongName(const char *name)
 	if (!*name) // some doofus gave us an empty string?
 		return LUMPERROR;
 
-	// Check the lumpnumcache first. Loop backwards so that we check
-	// most recent entries first
-	for (i = lumpnumcacheindex + LUMPNUMCACHESIZE; i > lumpnumcacheindex; i--)
-	{
-		if (strcmp(lumpnumcache[i & (LUMPNUMCACHESIZE - 1)].lumpname, name) == 0)
-		{
-			lumpnumcacheindex = i & (LUMPNUMCACHESIZE - 1);
-			return lumpnumcache[lumpnumcacheindex].lumpnum;
-		}
-	}
+	// Check the lumpnumcache first.
+	lumpnum_t cachenum = CheckLumpInCache(name, true);
+	if (cachenum != LUMPERROR)
+		return cachenum;
 
 	// scan wad files backwards so patch lump files take precedence
 	for (i = numwadfiles - 1; i >= 0; i--)
@@ -1556,16 +1608,12 @@ lumpnum_t W_CheckNumForLongName(const char *name)
 	if (check == INT16_MAX) return LUMPERROR;
 	else
 	{
-		if (strlen(name) < 32)
-		{
-			// Update the cache.
-			lumpnumcacheindex = (lumpnumcacheindex + 1) & (LUMPNUMCACHESIZE - 1);
-			memset(lumpnumcache[lumpnumcacheindex].lumpname, '\0', 32);
-			strlcpy(lumpnumcache[lumpnumcacheindex].lumpname, name, 32);
-			lumpnumcache[lumpnumcacheindex].lumpnum = (i << 16) + check;
-		}
+		// Update the cache.
+		lumpnum_t lumpnum = (i << 16) + check;
 
-		return (i << 16) + check;
+		AddLumpToCache(lumpnum, name, true);
+
+		return lumpnum;
 	}
 }
 
@@ -1643,6 +1691,166 @@ lumpnum_t W_GetNumForLongName(const char *name)
 
 	if (i == LUMPERROR)
 		I_Error("W_GetNumForLongName: %s not found!\n", name);
+
+	return i;
+}
+
+//
+// Same as W_CheckNumForNamePwad, but handles namespaces.
+//
+static UINT16 W_CheckNumForPatchNamePwad(const char *name, UINT16 wad, boolean longname)
+{
+	UINT16 i, start = INT16_MAX, end = INT16_MAX;
+	static char uname[8 + 1] = { 0 };
+	UINT32 hash = 0;
+	lumpinfo_t *lump_p;
+
+	if (!TestValidLump(wad,0))
+		return INT16_MAX;
+
+	if (!longname)
+	{
+		strlcpy(uname, name, sizeof uname);
+		strupr(uname);
+		hash = quickncasehash(uname, 8);
+	}
+
+	// SRB2 doesn't have a specific namespace for graphics, which means someone can do weird things
+	// like placing graphics inside a namespace it doesn't make sense for them to be in, like Sounds/ or SOC/
+	// So for now, this checks for lumps OUTSIDE of the flats namespace.
+	// When this situation changes, change the loops below to check for lumps INSIDE the namespaces to look in.
+	// TODO: cache namespace lump IDs
+	if (W_FileHasFolders(wadfiles[wad]))
+	{
+		start = W_CheckNumForFolderStartPK3("Flats/", wad, 0);
+		end = W_CheckNumForFolderEndPK3("Flats/", wad, start);
+
+		// if the start and end is the same, the folder is empty
+		if (end <= start)
+		{
+			start = INT16_MAX;
+			end = INT16_MAX;
+		}
+	}
+	else
+	{
+		start = W_CheckNumForMarkerStartPwad("F_START", wad, 0);
+		end = W_CheckNumForNamePwad("F_END", wad, start);
+		if (end != INT16_MAX)
+			end++;
+	}
+
+	lump_p = wadfiles[wad]->lumpinfo;
+
+	if (start == INT16_MAX)
+		start = wadfiles[wad]->numlumps;
+
+	for (i = 0; i < start; i++, lump_p++)
+	{
+		if ((!longname && lump_p->hash == hash && !strncmp(lump_p->name, uname, sizeof(uname) - 1))
+		|| (longname && stricmp(lump_p->longname, name) == 0))
+			return i;
+	}
+
+	if (end != INT16_MAX && start < end)
+	{
+		lump_p = wadfiles[wad]->lumpinfo + end;
+
+		for (i = end; i < wadfiles[wad]->numlumps; i++, lump_p++)
+		{
+			if ((!longname && lump_p->hash == hash && !strncmp(lump_p->name, uname, sizeof(uname) - 1))
+			|| (longname && stricmp(lump_p->longname, name) == 0))
+				return i;
+		}
+	}
+
+	// not found.
+	return INT16_MAX;
+}
+
+//
+// W_CheckNumForPatchNameInternal
+// Gets a lump number out of a patch name. Returns LUMPERROR if name not found.
+//
+static lumpnum_t W_CheckNumForPatchNameInternal(const char *name, boolean longname)
+{
+	INT32 i;
+	lumpnum_t check = INT16_MAX;
+
+	if (!*name) // some doofus gave us an empty string?
+		return LUMPERROR;
+
+	// Check the lumpnumcache first.
+	lumpnum_t cachenum = CheckLumpInCache(name, longname);
+	if (cachenum != LUMPERROR)
+		return cachenum;
+
+	// scan wad files backwards so patch lump files take precedence
+	for (i = numwadfiles - 1; i >= 0; i--)
+	{
+		check = W_CheckNumForPatchNamePwad(name,(UINT16)i,longname);
+		if (check != INT16_MAX)
+			break; //found it
+	}
+
+	if (check == INT16_MAX) return LUMPERROR;
+	else
+	{
+		// Update the cache.
+		lumpnum_t lumpnum = (i << 16) + check;
+
+		AddLumpToCache(lumpnum, name, longname);
+
+		return lumpnum;
+	}
+}
+
+//
+// W_CheckNumForPatchName
+// Wrapper for W_CheckNumForPatchNameInternal(name, false). Returns LUMPERROR if name not found.
+//
+lumpnum_t W_CheckNumForPatchName(const char *name)
+{
+	return W_CheckNumForPatchNameInternal(name, false);
+}
+
+//
+// Like W_CheckNumForPatchName, but can find entries with long names.
+// Wrapper for W_CheckNumForPatchNameInternal(name, true). Returns LUMPERROR if name not found.
+//
+lumpnum_t W_CheckNumForLongPatchName(const char *name)
+{
+	return W_CheckNumForPatchNameInternal(name, true);
+}
+
+//
+// W_GetNumForPatchName
+//
+// Calls W_CheckNumForPatchName, but bombs out if not found.
+//
+lumpnum_t W_GetNumForPatchName(const char *name)
+{
+	lumpnum_t i;
+
+	i = W_CheckNumForPatchName(name);
+
+	if (i == LUMPERROR)
+		I_Error("W_CheckNumForPatchName: %s not found!\n", name);
+
+	return i;
+}
+
+//
+// Like W_GetNumForPatchName, but can find entries with long names
+//
+lumpnum_t W_GetNumForLongPatchName(const char *name)
+{
+	lumpnum_t i;
+
+	i = W_CheckNumForLongPatchName(name);
+
+	if (i == LUMPERROR)
+		I_Error("W_GetNumForLongPatchName: %s not found!\n", name);
 
 	return i;
 }
@@ -2291,10 +2499,10 @@ void *W_CachePatchName(const char *name, INT32 tag)
 {
 	lumpnum_t num;
 
-	num = W_CheckNumForName(name);
+	num = W_CheckNumForPatchName(name);
 
 	if (num == LUMPERROR)
-		return W_CachePatchNum(W_GetNumForName("MISSING"), tag);
+		return W_CachePatchNum(W_GetNumForPatchName("MISSING"), tag);
 	return W_CachePatchNum(num, tag);
 }
 
@@ -2302,10 +2510,10 @@ void *W_CachePatchLongName(const char *name, INT32 tag)
 {
 	lumpnum_t num;
 
-	num = W_CheckNumForLongName(name);
+	num = W_CheckNumForLongPatchName(name);
 
 	if (num == LUMPERROR)
-		return W_CachePatchNum(W_GetNumForLongName("MISSING"), tag);
+		return W_CachePatchNum(W_GetNumForLongPatchName("MISSING"), tag);
 	return W_CachePatchNum(num, tag);
 }
 #ifndef NOMD5
@@ -2450,7 +2658,8 @@ static lumpchecklist_t folderblacklist[] =
 {
 	{"Lua/", 4},
 	{"SOC/", 4},
-	{"Sprites/",  8},
+	{"Sprites/", 8},
+	{"LongSprites/", 12},
 	{"Textures/", 9},
 	{"Patches/", 8},
 	{"Flats/", 6},
