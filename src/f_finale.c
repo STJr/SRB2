@@ -4589,9 +4589,9 @@ void F_TextPromptDrawer(void)
 		players[j].powers[pw_nocontrol] = 1;\
 		if (players[j].mo)\
 		{\
-			if (players[j].mo->state == states+S_PLAY_STND && players[j].mo->tics != -1)\
+			if (P_IsPlayerInState(&players[j], S_PLAY_STND) && players[j].mo->tics != -1)\
 				players[j].mo->tics++;\
-			else if (players[j].mo->state == states+S_PLAY_WAIT)\
+			else if (P_IsPlayerInState(&players[j], S_PLAY_WAIT))\
 				P_SetMobjState(players[j].mo, S_PLAY_STND);\
 		}\
 	}

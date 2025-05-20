@@ -412,7 +412,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 	{
 		if (special->type == MT_STEAM)
 		{
-			if (player && player->mo->state == &states[player->mo->info->painstate]) // can't use gas jets when player is in pain!
+			if (player && P_IsPlayerInState(player, S_PLAY_PAIN)) // can't use gas jets when player is in pain!
 				return;
 
 			fixed_t speed = special->info->mass; // gas jets use this for the vertical thrust
@@ -1820,7 +1820,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 
 			if (!player->climbing)
 			{
-				if (player->bot && player->bot != BOT_MPAI && toucher->state-states != S_PLAY_GASP)
+				if (player->bot && player->bot != BOT_MPAI && !P_IsPlayerInState(player, S_PLAY_GASP))
 					S_StartSound(toucher, special->info->deathsound); // Force it to play a sound for bots
 				P_SetMobjState(toucher, S_PLAY_GASP);
 				P_ResetPlayer(player);
@@ -1839,8 +1839,8 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				special->z = toucher->z+toucher->height-FixedMul(8*FRACUNIT, special->scale);
 				special->momz = 0;
 				special->flags |= MF_NOGRAVITY;
-				P_SetMobjState (special, special->info->deathstate);
-				S_StartSound (special, special->info->deathsound+(P_RandomKey(special->info->mass)));
+				P_SetMobjState(special, special->info->deathstate);
+				S_StartSound(special, special->info->deathsound+(P_RandomKey(special->info->mass)));
 			}
 			return;
 
