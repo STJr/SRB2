@@ -1173,10 +1173,12 @@ void HWR_DrawConsoleFill(INT32 x, INT32 y, INT32 w, INT32 h, INT32 color, UINT32
 void HWR_DrawFill(INT32 x, INT32 y, INT32 w, INT32 h, INT32 color)
 {
 	FOutVector v[4];
+	FBITFIELD flags;
 	FSurfaceInfo Surf;
 	float fx, fy, fw, fh;
 	RGBA_t *palette = HWR_GetTexturePalette();
 	UINT8 alphalevel = ((color & V_ALPHAMASK) >> V_ALPHASHIFT);
+	UINT8 blendmode = ((color & V_BLENDMASK) >> V_BLENDSHIFT);
 
 	UINT8 perplayershuffle = 0;
 
@@ -1341,6 +1343,8 @@ void HWR_DrawFill(INT32 x, INT32 y, INT32 w, INT32 h, INT32 color)
 
 	Surf.PolyColor = palette[color&0xFF];
 
+	flags = HWR_GetBlendModeFlag(blendmode+1)|PF_NoDepthTest|PF_NoTexture|PF_Modulated;
+
 	if (alphalevel)
 	{
 		if (alphalevel == 10) Surf.PolyColor.s.alpha = softwaretranstogl_lo[st_translucency]; // V_HUDTRANSHALF
@@ -1350,7 +1354,7 @@ void HWR_DrawFill(INT32 x, INT32 y, INT32 w, INT32 h, INT32 color)
 	}
 
 	HWD.pfnDrawPolygon(&Surf, v, 4,
-		PF_Modulated|PF_NoTexture|PF_NoDepthTest|PF_Translucent);
+		flags);
 }
 
 // -----------------+
@@ -1360,12 +1364,14 @@ void HWR_DrawFixedFill(fixed_t x, fixed_t y, fixed_t w, fixed_t h, INT32 color)
 {
 	FOutVector v[4];
 	FSurfaceInfo Surf;
+	FBITFIELD flags;
 	float fx = FIXED_TO_FLOAT(x);
 	float fy = FIXED_TO_FLOAT(y);
 	float fw = FIXED_TO_FLOAT(w);
 	float fh = FIXED_TO_FLOAT(h);
 	RGBA_t *palette = HWR_GetTexturePalette();
 	UINT8 alphalevel = ((color & V_ALPHAMASK) >> V_ALPHASHIFT);
+	UINT8 blendmode = ((color & V_BLENDMASK) >> V_BLENDSHIFT);
 
 	UINT8 perplayershuffle = 0;
 
@@ -1528,6 +1534,8 @@ void HWR_DrawFixedFill(fixed_t x, fixed_t y, fixed_t w, fixed_t h, INT32 color)
 
 	Surf.PolyColor = palette[color&0xFF];
 
+	flags = HWR_GetBlendModeFlag(blendmode+1)|PF_NoDepthTest|PF_NoTexture|PF_Modulated;
+
 	if (alphalevel)
 	{
 		if (alphalevel == 10) Surf.PolyColor.s.alpha = softwaretranstogl_lo[st_translucency]; // V_HUDTRANSHALF
@@ -1537,7 +1545,7 @@ void HWR_DrawFixedFill(fixed_t x, fixed_t y, fixed_t w, fixed_t h, INT32 color)
 	}
 
 	HWD.pfnDrawPolygon(&Surf, v, 4,
-		PF_Modulated|PF_NoTexture|PF_NoDepthTest|PF_Translucent);
+		flags);
 }
 
 #ifdef HAVE_PNG
