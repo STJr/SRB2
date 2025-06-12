@@ -122,13 +122,21 @@ HMS_on_read (char *s, size_t _1, size_t n, void *userdata)
 
 	buffer = userdata;
 
-	if (n >= (size_t)( buffer->end - buffer->needle ))
+	while (n >= (size_t)( buffer->end - buffer->needle ))
 	{
 		/* resize to next multiple of buffer size */
 		blocks = ( n / DEFAULT_BUFFER_SIZE + 1 );
 		buffer->end += ( blocks * DEFAULT_BUFFER_SIZE );
 
-		buffer->buffer = realloc(buffer->buffer, buffer->end);
+		void *tmp = realloc(buffer->buffer, buffer->end);
+		if (tmp == NULL)
+		{
+			// not enough memory to read it, bail
+			free(buffer->buffer);
+			buffer->buffer = NULL;
+			return 0;
+		}
+		buffer->buffer = tmp;
 	}
 
 	memcpy(&buffer->buffer[buffer->needle], s, n);
