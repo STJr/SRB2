@@ -1040,8 +1040,7 @@ static void R_DrawVisSprite(vissprite_t *vis)
 
 		pwidth = textures[movietexturenum]->width;
 		pheight = textures[movietexturenum]->height;
-		// Point to the first post instead of pixels
-		pcolumns = texturecache[movietexturenum] - 3;
+		pcolumns = texturecolumns[movietexturenum];
 	}
 	else
 	{

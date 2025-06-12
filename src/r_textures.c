@@ -659,9 +659,8 @@ void R_CheckMovieTextureCache(movie_t *movie, INT32 texnum)
 	texture_t *texture = textures[texnum];
 	texture->width = width;
 	texture->height = height;
-	texture->type = TEXTURETYPE_SINGLEPATCH;
+	texture->type = TEXTURETYPE_TEXTURE;
 	texture->patchcount = 1;
-	texture->holes = true;
 	texture->flip = 0;
 
 	texturewidth[texnum] = width;
@@ -1088,7 +1087,7 @@ static void R_FinishLoadingTextures(INT32 add)
 {
 	numtextures += add;
 
-	movietexturenum = R_CheckTextureNumForName("MOVIE");
+	movietexturenum = R_CheckTextureNumForName("MOVIE", TEXTURETYPE_TEXTURE);
 
 #ifdef HWRENDER
 	if (rendermode == render_opengl)

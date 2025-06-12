@@ -1360,7 +1360,7 @@ GLMapTexture_t *HWR_GetMovieMapTexture(movie_t *movie)
 	if (!image)
 		return (texture->data || texture->downloaded) ? &gl_movietexture : NULL;
 
-	FreeMapTexture(&gl_movietexture);
+	FreeMapTexture(&gl_movietexture, true);
 
 	INT32 width, height;
 	MovieDecode_GetDimensions(movie, &width, &height);
