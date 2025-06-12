@@ -1387,4 +1387,17 @@ GLMapTexture_t *HWR_GetMovieMapTexture(movie_t *movie)
 	return &gl_movietexture;
 }
 
+void HWR_SetMovieAsCurrentTexture(movie_t *movie)
+{
+	GLMipmap_t *texture = HWR_GetMovieTexture(movie);
+
+	// If hardware does not have the texture, then call pfnSetTexture to upload it
+	if (!texture->downloaded)
+		HWD.pfnSetTexture(texture);
+	HWR_SetCurrentTexture(texture);
+
+	// The system-memory data can be purged now.
+	Z_ChangeTag(texture->data, PU_HWRCACHE_UNLOCKED);
+}
+
 #endif //HWRENDER

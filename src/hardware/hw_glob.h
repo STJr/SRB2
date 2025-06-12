@@ -141,6 +141,7 @@ void HWR_ClearLightTables(void);
 
 GLMipmap_t *HWR_GetMovieTexture(movie_t *movie);
 GLMapTexture_t *HWR_GetMovieMapTexture(movie_t *movie);
+void HWR_SetMovieAsCurrentTexture(movie_t *movie);
 
 
 // --------

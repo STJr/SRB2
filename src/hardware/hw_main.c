@@ -3031,13 +3031,7 @@ static void HWR_SplitSprite(gl_vissprite_t *spr)
 
 	if (movietexture)
 	{
-		// If hardware does not have the texture, then call pfnSetTexture to upload it
-		if (!movietexture->downloaded)
-			HWD.pfnSetTexture(movietexture);
-		HWR_SetCurrentTexture(movietexture);
-
-		// The system-memory data can be purged now.
-		Z_ChangeTag(movietexture->data, PU_HWRCACHE_UNLOCKED);
+		HWR_SetMovieAsCurrentTexture(activemovie);
 	}
 	else
 	{
@@ -3540,13 +3534,7 @@ static void HWR_DrawSprite(gl_vissprite_t *spr)
 
 	if (movietexture)
 	{
-		// If hardware does not have the texture, then call pfnSetTexture to upload it
-		if (!movietexture->downloaded)
-			HWD.pfnSetTexture(movietexture);
-		HWR_SetCurrentTexture(movietexture);
-
-		// The system-memory data can be purged now.
-		Z_ChangeTag(movietexture->data, PU_HWRCACHE_UNLOCKED);
+		HWR_SetMovieAsCurrentTexture(activemovie);
 	}
 	else
 	{
