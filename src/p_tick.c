@@ -727,6 +727,7 @@ void P_Ticker(boolean run)
 		{
 			P_MapStart();
 			R_UpdateMobjInterpolators();
+			R_UpdateLevelInterpolators();
 			OP_ObjectplaceMovement(&players[0]);
 			P_MoveChaseCamera(&players[0], &camera, false);
 			R_UpdateViewInterpolation();
