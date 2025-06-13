@@ -575,7 +575,7 @@ static void ConvertRGBAToPatch(moviedecodeworker_t *worker, UINT8 * restrict src
 	// Write column offsets
 	INT32 bytespercolumn = GetBytesPerPatchColumn(worker);
 	for (INT32 x = 0; x < width; x++)
-		WRITEUINT32(dst, width * sizeof(UINT32) + x * bytespercolumn + (POST_BASE_BYTES - 1));
+		WRITEUINT32(dst, 8 + width * sizeof(UINT32) + x * bytespercolumn);
 
 	for (INT32 x = 0; x < width; x++)
 	{
