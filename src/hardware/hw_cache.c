@@ -750,12 +750,17 @@ GLMapTexture_t *HWR_GetTexture(INT32 tex, boolean chromakeyed)
 	}
 
 	GLMapTexture_t *grtex = (tex == movietexturenum) ? HWR_GetMovieMapTexture(activemovie) : NULL;
+	GLMipmap_t *grMipmap;
 
-	if (!grtex)
+	if (grtex)
+	{
+		grMipmap = &grtex->mipmap;
+	}
+	else
 	{
 		grtex = &gl_textures[tex];
 
-		GLMipmap_t *grMipmap = &grtex->mipmap;
+		grMipmap = &grtex->mipmap;
 		GLMipmap_t *originalMipmap = grMipmap;
 
 		if (!originalMipmap->downloaded)
@@ -790,8 +795,6 @@ GLMapTexture_t *HWR_GetTexture(INT32 tex, boolean chromakeyed)
 		if (!grMipmap->data)
 			HWR_GenerateTexture(tex, grtex, grMipmap);
 	}
-
-	GLMipmap_t *grMipmap = &grtex->mipmap;
 
 	if (!grMipmap->downloaded)
 		HWD.pfnSetTexture(grMipmap);
