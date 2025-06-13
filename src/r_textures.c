@@ -657,21 +657,42 @@ void R_CheckMovieTextureCache(movie_t *movie, INT32 texnum)
 	MovieDecode_GetDimensions(movie, &width, &height);
 
 	texture_t *texture = textures[texnum];
+
 	texture->width = width;
 	texture->height = height;
 	texture->type = TEXTURETYPE_TEXTURE;
+	texture->transparency = true;
 	texture->patchcount = 1;
 	texture->flip = 0;
 
 	texturewidth[texnum] = width;
 	textureheight[texnum] = height << FRACBITS;
 
-	INT32 blocksize = MovieDecode_GetPatchBytes(movie);
-	UINT8 *block = Z_Malloc(blocksize, PU_CACHE, &texturecache[texnum]);
-	memcpy(block, image, blocksize);
+	softwarepatch_t *swpatch = Z_Malloc(sizeof(softwarepatch_t) + MovieDecode_GetPatchBytes(movie), PU_STATIC, NULL);
+	swpatch->width = width;
+	swpatch->height = height;
+	swpatch->leftoffset = 0;
+	swpatch->topoffset = 0;
+	memcpy(swpatch->columnofs, image, MovieDecode_GetPatchBytes(movie));
+
+	size_t total_posts = 0;
+	size_t total_pixels = 0;
+	Patch_CalcDataSizes(swpatch, &total_pixels, &total_posts);
+
+	size_t blocksize = (sizeof(column_t) * texture->width) + (sizeof(post_t) * total_posts) + (sizeof(UINT8) * total_pixels);
+
+	UINT8 *block = Z_Calloc(blocksize, PU_STATIC, &texturecache[texnum]);
+
+	column_t *columns = (column_t *)(block + (sizeof(UINT8) * total_pixels));
+	post_t *posts = (post_t *)(block + (sizeof(UINT8) * total_pixels) + (sizeof(column_t) * texture->width));
+
+	texturecolumns[texnum] = columns;
+
+	Patch_MakeColumns(swpatch, texture->width, texture->width, block, columns, posts, 0);
+
+	Z_Free(swpatch);
 }
 
-// Note that this returns the column's first pixel, not the first post
 column_t *R_GetColumn(fixed_t tex, INT32 col)
 {
 	INT32 width = texturewidth[tex];
