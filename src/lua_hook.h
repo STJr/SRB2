@@ -67,7 +67,10 @@ automatically.
 	X (ViewpointSwitch),/* spy mode (no trickstabs) */\
 	X (SeenPlayer),/* MT_NAMECHECK */\
 	X (PlayerThink),/* P_PlayerThink */\
+	X (GameStart),\
 	X (GameQuit),\
+	X (GameEnd),\
+	X (SaveSelect),\
 	X (PlayerCmd),/* building the player's ticcmd struct (Ported from SRB2Kart) */\
 	X (MusicChange),\
 	X (PlayerHeight),/* override player height */\
@@ -141,6 +144,7 @@ int  LUA_HookText(event_t *event, int hook); // Hooks for text events
 void LUA_HookPreThinkFrame(void);
 void LUA_HookThinkFrame(void);
 void LUA_HookPostThinkFrame(void);
+void LUA_HookSaveFile(UINT32 slot, const char* name);
 int  LUA_HookMobjLineCollide(mobj_t *, line_t *);
 int  LUA_HookTouchSpecial(mobj_t *special, mobj_t *toucher);
 int  LUA_HookShouldDamage(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 damage, UINT8 damagetype);

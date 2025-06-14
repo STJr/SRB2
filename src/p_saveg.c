@@ -36,6 +36,7 @@
 #include "lua_script.h"
 #include "p_slopes.h"
 #include "hu_stuff.h"
+#include "lua_hook.h"
 
 savedata_t savedata;
 
@@ -5450,6 +5451,8 @@ boolean P_LoadNetGame(save_t *save_p, boolean reloading)
 	// so the thinkers would be deleted later. Therefore, P_SetupLevel will *not* spawn
 	// precipitation when loading a netgame save. Instead, precip has to be spawned here.
 	// This is done in P_NetUnArchiveSpecials now.
+
+	HOOK(GameStart);
 
 	return P_UnArchiveLuabanksAndConsistency(save_p);
 }

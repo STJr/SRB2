@@ -15,6 +15,7 @@
 #include "console.h"
 #include "d_main.h"
 #include "d_player.h"
+#include "netcode/d_netfil.h"
 #include "netcode/d_clisrv.h"
 #include "netcode/net_command.h"
 #include "f_finale.h"
@@ -4340,6 +4341,8 @@ static void G_DoContinued(void)
 // when something new is added.
 void G_EndGame(void)
 {
+	LUA_HookVoid(HOOK(GameEnd));
+
 	// Only do evaluation and credits in coop games.
 	if (gametyperules & GTR_CUTSCENES)
 	{
@@ -4821,6 +4824,8 @@ void G_LoadGame(UINT32 slot, INT16 mapoverride)
 
 	// done
 	Z_Free(savebuffer.buf);
+	const char* savenametemp = savegamename;
+	LUA_HookSaveFile(slot, (savenametemp + strlen(savenametemp) - nameonlylength(savenametemp)));
 
 	displayplayer = consoleplayer;
 	multiplayer = splitscreen = false;
@@ -5004,6 +5009,8 @@ void G_DeferedInitNew(boolean pultmode, const char *mapname, INT32 character, bo
 {
 	pickedchar = character;
 	paused = false;
+
+	LUA_HookVoid(HOOK(GameStart));
 
 	if (demoplayback)
 		COM_BufAddText("stopdemo\n");
