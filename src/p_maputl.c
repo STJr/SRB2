@@ -1056,7 +1056,7 @@ boolean P_BlockThingsIterator(INT32 x, INT32 y, boolean (*func)(mobj_t *), mobj_
 
 	boolean checkthing = false;
 	if (thing)
-			checkthing = true;
+		checkthing = true;
 
 	if (x < 0 || y < 0 || x >= bmapwidth || y >= bmapheight)
 		return true;
@@ -1434,7 +1434,7 @@ static boolean P_TraverseIntercepts(traverser_t func, fixed_t maxfrac)
 
 		if (dist > maxfrac)
 			return true; // Checked everything in range.
-
+		
 		if (!func(in))
 			return false; // Don't bother going farther.
 
@@ -1462,7 +1462,7 @@ boolean P_PathTraverse(fixed_t px1, fixed_t py1, fixed_t px2, fixed_t py2,
 
 	validcount++;
 	intercept_p = intercepts;
-
+	
 	if (((px1 - bmaporgx) & (MAPBLOCKSIZE-1)) == 0)
 		px1 += FRACUNIT; // Don't side exactly on a line.
 
@@ -1475,7 +1475,7 @@ boolean P_PathTraverse(fixed_t px1, fixed_t py1, fixed_t px2, fixed_t py2,
 	trace.dy = py2 - py1;
 
 	xt1 = px1>>MAPBLOCKSHIFT;
-	yt1 = py2>>MAPBLOCKSHIFT;
+	yt1 = py1>>MAPBLOCKSHIFT;
 	px1 = (unsigned)(px1 - bmaporgx);
 	py1 = (unsigned)(py1 - bmaporgy);
 
@@ -1624,6 +1624,7 @@ boolean P_PathTraverse(fixed_t px1, fixed_t py1, fixed_t px2, fixed_t py2,
 				break;
 		}
 	}
+	
 	// Go through the sorted list
 	return P_TraverseIntercepts(trav, FRACUNIT);
 }
