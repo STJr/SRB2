@@ -5424,7 +5424,7 @@ boolean P_LoadGame(save_t *save_p, INT16 mapoverride)
 
 boolean P_LoadNetGame(save_t *save_p, boolean reloading)
 {
-	CV_LoadNetVars(save_p);
+	CV_LoadNetVars(save_p);	
 	if (!P_NetUnArchiveMisc(save_p, reloading))
 		return false;
 	P_NetUnArchiveEmblems(save_p);
@@ -5451,8 +5451,6 @@ boolean P_LoadNetGame(save_t *save_p, boolean reloading)
 	// so the thinkers would be deleted later. Therefore, P_SetupLevel will *not* spawn
 	// precipitation when loading a netgame save. Instead, precip has to be spawned here.
 	// This is done in P_NetUnArchiveSpecials now.
-
-	HOOK(GameStart);
 
 	return P_UnArchiveLuabanksAndConsistency(save_p);
 }

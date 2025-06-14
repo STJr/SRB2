@@ -5010,8 +5010,6 @@ void G_DeferedInitNew(boolean pultmode, const char *mapname, INT32 character, bo
 	pickedchar = character;
 	paused = false;
 
-	LUA_HookVoid(HOOK(GameStart));
-
 	if (demoplayback)
 		COM_BufAddText("stopdemo\n");
 	G_FreeGhosts(); // TODO: do we actually need to do this?
