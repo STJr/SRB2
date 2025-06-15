@@ -93,6 +93,7 @@
 #endif
 
 #include "lua_script.h"
+#include "lua_hud.h"
 
 // Version numbers for netplay :upside_down_face:
 int    VERSION;
@@ -578,7 +579,7 @@ static void D_Display(void)
 		V_SetPalette(0);
 
 	// draw pause pic
-	if (paused && cv_showhud.value && (!menuactive || netgame))
+	if (paused && cv_showhud.value && LUA_HudEnabled(hud_paused) && (!menuactive || netgame))
 	{
 #if 0
 		INT32 py;

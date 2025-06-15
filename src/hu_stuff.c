@@ -1752,24 +1752,28 @@ static void HU_DrawDemoInfo(void)
 //
 void HU_Drawer(void)
 {
-	// draw chat string plus cursor
-	if (chat_on)
+
+	if (LUA_HudEnabled(hud_chat))
 	{
-		if (!OLDCHAT)
-			HU_DrawChat();
+		// draw chat string plus cursor
+		if (chat_on)
+		{
+			if (!OLDCHAT)
+				HU_DrawChat();
+			else
+				HU_DrawChat_Old();
+		}
 		else
-			HU_DrawChat_Old();
-	}
-	else
-	{
-		typelines = 1;
-		chat_scrolltime = 0;
+		{
+			typelines = 1;
+			chat_scrolltime = 0;
 
-		if (!OLDCHAT && cv_consolechat.value < 2 && netgame) // Don't display minimized chat if you set the mode to Window (Hidden)
-			HU_drawMiniChat(); // draw messages in a cool fashion.
+			if (!OLDCHAT && cv_consolechat.value < 2 && netgame) // Don't display minimized chat if you set the mode to Window (Hidden)
+				HU_drawMiniChat(); // draw messages in a cool fashion.
+		}
 	}
 
-	if (cechotimer)
+	if (cechotimer && LUA_HudEnabled(hud_cecho))
 		HU_DrawCEcho();
 
 	if (demoplayback && hu_showscores)

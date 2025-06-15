@@ -2745,7 +2745,7 @@ static void ST_overlayDrawer(void)
 			}
 		}
 
-		if (i == MAXPLAYERS && deadtimer >= 0)
+		if (i == MAXPLAYERS && deadtimer >= 0 && LUA_HudEnabled(hud_gameover))
 		{
 			INT32 lvlttlx = min(6*deadtimer, BASEVIDWIDTH/2);
 			UINT32 flags = V_PERPLAYER|(stplyr->spectator ? V_HUDTRANSHALF : V_HUDTRANS);
@@ -2796,7 +2796,7 @@ static void ST_overlayDrawer(void)
 			ST_drawRaceHUD();
 
 		// Emerald Hunt Indicators
-		if (!ST_doItemFinderIconsAndSound())
+		if (!ST_doItemFinderIconsAndSound() && LUA_HudEnabled(hud_itemhunt))
 			ST_doHuntIconsAndSound();
 
 		if(!P_IsLocalPlayer(stplyr))

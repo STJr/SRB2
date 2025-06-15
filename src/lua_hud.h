@@ -20,6 +20,10 @@ enum hud {
 	hud_textspectator,
 	hud_crosshair,
 	hud_powerups,
+	hud_gameover,
+	hud_paused,
+	hud_cecho,
+	hud_chat,
 	// Singleplayer / Co-op
 	hud_score,
 	hud_time,
@@ -30,6 +34,7 @@ enum hud {
 	hud_weaponrings,
 	hud_powerstones,
 	hud_teamscores,
+	hud_itemhunt,
 	// NiGHTS mode
 	hud_nightslink,
 	hud_nightsdrill,

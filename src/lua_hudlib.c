@@ -42,6 +42,10 @@ static const char *const hud_disable_options[] = {
 	"textspectator",
 	"crosshair",
 	"powerups",
+	"gameover",
+	"paused",
+	"cecho",
+	"chat",
 
 	"score",
 	"time",
@@ -52,6 +56,7 @@ static const char *const hud_disable_options[] = {
 	"weaponrings",
 	"powerstones",
 	"teamscores",
+	"itemhunt",
 
 	"nightslink",
 	"nightsdrill",
