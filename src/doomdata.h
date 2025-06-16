@@ -93,7 +93,7 @@ typedef union {
 // UDMF's Custom Arguments
 typedef struct customargs_s
 {
-	const char* name;
+	char* name;
 
 	udmf_field_type_t type;
 	udmf_field_value_t value;

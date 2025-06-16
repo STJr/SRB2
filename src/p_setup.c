@@ -1698,7 +1698,8 @@ static void ParseTextmapCustomFields(const char* param, const char* val, customa
 	// Setup
 	//
 
-	newnode->name = Z_StrDup(param + 5);
+	newnode->name = Z_Malloc(strlen(param + 5) + 1, PU_LEVEL, NULL);
+	M_Memcpy(newnode->name, param + 5, strlen(param + 5) + 1);
 
 	if (fastcmp(val, "true"))
 	{
