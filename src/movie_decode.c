@@ -685,7 +685,8 @@ static void FlushStream(moviedecodeworker_t *worker, moviedecodeworkerstream_t *
 	if (avcodec_send_packet(stream->codeccontext, NULL) < 0)
 		I_Error("FFmpeg: cannot flush decoder");
 
-	while (true) {
+	while (true)
+	{
 		int error = avcodec_receive_frame(stream->codeccontext, worker->frame);
 		if (error == 0)
 			continue;
