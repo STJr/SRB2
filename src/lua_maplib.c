@@ -1198,6 +1198,9 @@ static int line_get(lua_State *L)
 	case line_stringargs:
 		LUA_PushUserdata(L, line->stringargs, META_LINESTRINGARGS);
 		return 1;
+	case line_customargs:
+		LUA_PushUserdata(L, line->customargs, META_LINECUSTOMARGS);
+		return 1;
 	case line_sidenum:
 		LUA_PushUserdata(L, line->sidenum, META_SIDENUM);
 		return 1;
