@@ -4677,7 +4677,7 @@ static void P_ProcessZoomTube(player_t *player, mtag_t sectag, boolean end)
 	player->pflags &= ~(PF_JUMPED|PF_NOJUMPDAMAGE|PF_GLIDING|PF_BOUNCING|PF_SLIDING|PF_CANCARRY);
 	player->climbing = 0;
 
-	if (player->mo->state-states != S_PLAY_ROLL)
+	if (!P_IsPlayerInState(player, S_PLAY_ROLL))
 	{
 		P_SetMobjState(player->mo, S_PLAY_ROLL);
 		S_StartSound(player->mo, sfx_spin);
@@ -4758,7 +4758,7 @@ static void P_ProcessRopeHang(player_t *player, mtag_t sectag)
 	if (player->cmd.buttons & BT_SPIN)
 		return;
 
-	if (!(player->pflags & PF_SLIDING) && player->mo->state == &states[player->mo->info->painstate])
+	if (!(player->pflags & PF_SLIDING) && P_IsPlayerInState(player, S_PLAY_PAIN))
 		return;
 
 	if (player->exiting)
@@ -8805,7 +8805,7 @@ void T_Pusher(pusher_t *p)
 		if (thing->player && thing->player->powers[pw_carry] == CR_ROPEHANG)
 			continue;
 
-		if (thing->player && (thing->state == &states[thing->info->painstate]) && (thing->player->powers[pw_flashing] > (flashingtics/4)*3 && thing->player->powers[pw_flashing] <= flashingtics))
+		if (thing->player && P_IsPlayerInState(thing->player, S_PLAY_PAIN) && (thing->player->powers[pw_flashing] > (flashingtics/4)*3 && thing->player->powers[pw_flashing] <= flashingtics))
 			continue;
 
 		inFOF = touching = moved = false;

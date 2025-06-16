@@ -513,6 +513,7 @@
     <ClCompile Include="..\lua_hudlib_drawlist.c" />
     <ClCompile Include="..\lua_infolib.c" />
     <ClCompile Include="..\lua_inputlib.c" />
+	<ClCompile Include="..\lua_interceptlib.c" />
     <ClCompile Include="..\lua_maplib.c" />
     <ClCompile Include="..\lua_mathlib.c" />
     <ClCompile Include="..\lua_mobjlib.c" />
