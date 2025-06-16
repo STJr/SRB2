@@ -1848,6 +1848,8 @@ static void ParseTextmapSectorParameter(UINT32 i, const char *param, const char 
 		sectors[i].floorangle = FixedAngle(FLOAT_TO_FIXED(atof(val)));
 	else if (fastcmp(param, "rotationceiling"))
 		sectors[i].ceilingangle = FixedAngle(FLOAT_TO_FIXED(atof(val)));
+	else if (fastncmp(param, "user_", 5) && strlen(param) > 6) // the 6 is used to force modders to write just 'user_'
+		ParseTextmapCustomFields(param, val, &sectors[i].customargs);
 	else if (fastcmp(param, "floorplane_a"))
 	{
 		textmap_planefloor.defined |= PD_A;
@@ -2030,9 +2032,6 @@ static void ParseTextmapSectorParameter(UINT32 i, const char *param, const char 
 		if (fastcmp(val, "Mobj"))
 			sectors[i].triggerer = TO_MOBJ;
 	}
-
-	else if (fastncmp(param, "user_", 5) && strlen(param) > 6) // the 6 is used to force modders to write just 'user_'
-		ParseTextmapCustomFields(param, val, &lines[i].customargs);
 }
 
 static void ParseTextmapSidedefParameter(UINT32 i, const char *param, const char *val)
