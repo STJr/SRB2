@@ -11,6 +11,9 @@
 /// \file  p_setup.c
 /// \brief Do all the WAD I/O, get map description, set up initial state and misc. LUTs
 
+
+#include <errno.h>
+
 #include "doomdef.h"
 #include "d_main.h"
 #include "byteptr.h"

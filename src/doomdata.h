@@ -85,7 +85,7 @@ typedef enum {
 } udmf_field_type_t;
 
 typedef union {
-	const char* string;
+	char* string;
 	INT32 numeric;
 	boolean bool;
 } udmf_field_value_t;
