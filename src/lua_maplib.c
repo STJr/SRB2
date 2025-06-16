@@ -910,6 +910,7 @@ static int sector_get(lua_State *L)
 		return 1;
 	case sector_customargs:
 		LUA_PushUserdata(L, sector->customargs, META_SECTORCUSTOMARGS);
+		return 1;
 	}
 	return 0;
 }
