@@ -225,7 +225,8 @@ enum side_e {
 	side_lightabsolute_top,
 	side_lightabsolute_mid,
 	side_lightabsolute_bottom,
-	side_text
+	side_text,
+	side_customargs
 };
 
 static const char *const side_opt[] = {
@@ -262,6 +263,7 @@ static const char *const side_opt[] = {
 	"lightabsolute_mid",
 	"lightabsolute_bottom",
 	"text",
+	"customargs",
 	NULL};
 
 static int side_fields_ref = LUA_NOREF;
@@ -728,6 +730,11 @@ FUNCINLINE static ATTRINLINE int customargs_get(lua_State* L, const char* meta)
 static int sectorcustomargs_get(lua_State* L)
 {
 	return customargs_get(L, META_SECTORCUSTOMARGS);
+}
+
+static int sidecustomargs_get(lua_State* L)
+{
+	return customargs_get(L, META_SIDECUSTOMARGS);
 }
 
 static int linecustomargs_get(lua_State* L)
@@ -1422,6 +1429,9 @@ static int side_get(lua_State *L)
 	case side_lightabsolute_bottom:
 		lua_pushboolean(L, side->lightabsolute_bottom);
 		return 1;
+	case side_customargs:
+		LUA_PushUserdata(L, side->customargs, META_SIDECUSTOMARGS);
+		return 1;
 	// TODO: 2.3: Delete
 	case side_text:
 		{
@@ -1441,6 +1451,7 @@ static int side_get(lua_State *L)
 			return 1;
 		}
 	}
+
 	return 0;
 }
 
@@ -3137,6 +3148,7 @@ int LUA_MapLib(lua_State *L)
 	LUA_RegisterUserdataMetatable(L, META_LINEARGS, lineargs_get, NULL, lineargs_len);
 	LUA_RegisterUserdataMetatable(L, META_LINESTRINGARGS, linestringargs_get, NULL, linestringargs_len);
 	LUA_RegisterUserdataMetatable(L, META_LINECUSTOMARGS, linecustomargs_get, NULL, NULL);
+	LUA_RegisterUserdataMetatable(L, META_SIDECUSTOMARGS, sidecustomargs_get, NULL, NULL);
 	LUA_RegisterUserdataMetatable(L, META_SIDENUM, sidenum_get, NULL, NULL);
 	LUA_RegisterUserdataMetatable(L, META_SIDE, side_get, side_set, side_num);
 	LUA_RegisterUserdataMetatable(L, META_VERTEX, vertex_get, NULL, vertex_num);

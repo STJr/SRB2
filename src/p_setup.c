@@ -1376,6 +1376,8 @@ static void P_LoadSidedefs(UINT8 *data)
 		sd->light = sd->light_top = sd->light_mid = sd->light_bottom = 0;
 		sd->lightabsolute = sd->lightabsolute_top = sd->lightabsolute_mid = sd->lightabsolute_bottom = false;
 
+		sd->customargs = NULL;
+
 		P_SetSidedefSector(i, (UINT16)SHORT(msd->sector));
 
 		// Special info stored in texture fields!
@@ -2089,6 +2091,8 @@ static void ParseTextmapSidedefParameter(UINT32 i, const char *param, const char
 		sides[i].lightabsolute_mid = true;
 	else if (fastcmp(param, "lightabsolute_bottom") && fastcmp("true", val))
 		sides[i].lightabsolute_bottom = true;
+	else if (fastncmp(param, "user_", 5) && strlen(param) > 6) // the 6 is used to force mod developers to write more than just 'user_'
+		ParseTextmapCustomFields(param, val, &sides[i].customargs);
 }
 
 static void ParseTextmapLinedefParameter(UINT32 i, const char *param, const char *val)
@@ -2184,7 +2188,7 @@ static void ParseTextmapLinedefParameter(UINT32 i, const char *param, const char
 	else if (fastcmp(param, "transfer") && fastcmp("true", val))
 		lines[i].flags |= ML_TFERLINE;
 
-	else if (fastncmp(param, "user_", 5) && strlen(param) > 6) // the 6 is used to force modders to write just 'user_'
+	else if (fastncmp(param, "user_", 5) && strlen(param) > 6) // the 6 is used to force mod developers to write more than just 'user_'
 		ParseTextmapCustomFields(param, val, &lines[i].customargs);
 }
 
@@ -2245,7 +2249,7 @@ static void ParseTextmapThingParameter(UINT32 i, const char *param, const char *
 			return;
 		mapthings[i].args[argnum] = atol(val);
 	}
-	else if (fastncmp(param, "user_", 5) && strlen(param) > 6) // the 6 is used to force modders to write just 'user_'
+	else if (fastncmp(param, "user_", 5) && strlen(param) > 6) // the 6 is used to force mod developers to write more than just 'user_'
 		ParseTextmapCustomFields(param, val, &mapthings[i].customargs);
 }
 
@@ -3243,6 +3247,7 @@ static void P_LoadTextmap(void)
 		sd->repeatcnt = 0;
 		sd->light = sd->light_top = sd->light_mid = sd->light_bottom = 0;
 		sd->lightabsolute = sd->lightabsolute_top = sd->lightabsolute_mid = sd->lightabsolute_bottom = false;
+		sd->customargs = NULL;
 
 		TextmapParse(sidedefBlocks.pos[i], i, ParseTextmapSidedefParameter);
 

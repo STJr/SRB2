@@ -657,6 +657,7 @@ typedef struct
 	INT16 repeatcnt; // # of times to repeat midtexture
 
 	extracolormap_t *colormap_data; // storage for colormaps; not applied to sectors.
+	struct customargs_s* customargs;
 } side_t;
 
 //
