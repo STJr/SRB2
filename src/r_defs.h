@@ -556,6 +556,8 @@ typedef struct sector_s
 	// portals
 	UINT32 portal_floor;
 	UINT32 portal_ceiling;
+
+	struct customargs_s* customargs;
 } sector_t;
 
 //
@@ -618,6 +620,7 @@ typedef struct line_s
 	UINT32 secportal; // transferred sector portal
 
 	struct pslope_s *midtexslope;
+	struct customargs_s *customargs;
 } line_t;
 
 typedef struct

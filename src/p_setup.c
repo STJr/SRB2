@@ -1077,6 +1077,7 @@ static void P_LoadSectors(UINT8 *data)
 		ss->triggerer = TO_PLAYER;
 
 		ss->friction = ORIG_FRICTION;
+		ss->customargs = NULL;
 
 		P_InitializeSector(ss);
 	}
@@ -1198,6 +1199,8 @@ static void P_LoadLinedefs(UINT8 *data)
 			ld->sidenum[0] = NO_SIDEDEF;
 		if (ld->sidenum[1] == 0xffff)
 			ld->sidenum[1] = NO_SIDEDEF;
+
+		ld->customargs = NULL;
 
 		P_InitializeLinedef(ld);
 	}
@@ -1553,6 +1556,7 @@ static void P_LoadThings(UINT8 *data)
 			mt->z = mt->options >> ZSHIFT;
 
 		mt->mobj = NULL;
+		mt->customargs = NULL;
 	}
 }
 
@@ -1655,6 +1659,88 @@ static boolean TextmapCount(size_t size)
 	}
 
 	return true;
+}
+
+static void ParseTextmapCustomFields(const char* param, const char* val, customargs_t** headptr)
+{
+	if (val[0] == '\0')
+		return;
+
+	//
+	// GET latest node
+	//
+
+	customargs_t* newnode = Z_Malloc(sizeof(customargs_t), PU_LEVEL, NULL);
+
+	if (!newnode)
+		return;
+
+	newnode->next = NULL;
+
+	if (*headptr == NULL) {
+		*headptr = newnode;
+	}
+	else {
+		customargs_t* curr = *headptr;
+
+		while (curr->next != NULL) {
+			curr = curr->next;
+		}
+
+		curr->next = newnode;
+
+	}
+
+	//
+	// Setup
+	//
+
+	newnode->name = Z_StrDup(param + 5);
+
+	if (fastcmp(val, "true"))
+	{
+		newnode->type = UDMF_TYPE_BOOLEAN;
+		newnode->value.bool = true;
+	}
+	else if (fastcmp(val, "false"))
+	{
+		newnode->type = UDMF_TYPE_BOOLEAN;
+		newnode->value.bool = false;
+	}
+	else
+	{
+		char* endptr;
+		long lval;
+		float fval;
+
+		// Eval integer
+
+		errno = 0;
+		lval = strtol(val, &endptr, 10);
+
+		if (*endptr == '\0' && endptr != val && errno == 0) {
+			newnode->type = UDMF_TYPE_NUMERIC;
+			newnode->value.numeric = lval;
+			return;
+		}
+
+		// Eval float
+
+		errno = 0;
+		fval = strtof(val, &endptr);
+
+		if (*endptr == '\0' && endptr != val && errno == 0) {
+			newnode->type = UDMF_TYPE_FIXED;
+			newnode->value.numeric = FLOAT_TO_FIXED(fval);
+			return;
+		}
+
+		// Just string
+
+		newnode->type = UDMF_TYPE_STRING;
+		newnode->value.string = Z_Malloc(strlen(val) + 1, PU_LEVEL, NULL);
+		M_Memcpy(newnode->value.string, val, strlen(val) + 1);
+	}
 }
 
 static void ParseTextmapVertexParameter(UINT32 i, const char *param, const char *val)
@@ -1938,6 +2024,9 @@ static void ParseTextmapSectorParameter(UINT32 i, const char *param, const char 
 		if (fastcmp(val, "Mobj"))
 			sectors[i].triggerer = TO_MOBJ;
 	}
+
+	else if (fastncmp(param, "user_", 5) && strlen(param) > 6) // the 6 is used to force modders to write just 'user_'
+		ParseTextmapCustomFields(param, val, &lines[i].customargs);
 }
 
 static void ParseTextmapSidedefParameter(UINT32 i, const char *param, const char *val)
@@ -2090,6 +2179,9 @@ static void ParseTextmapLinedefParameter(UINT32 i, const char *param, const char
 		lines[i].flags |= ML_BOUNCY;
 	else if (fastcmp(param, "transfer") && fastcmp("true", val))
 		lines[i].flags |= ML_TFERLINE;
+
+	else if (fastncmp(param, "user_", 5) && strlen(param) > 6) // the 6 is used to force modders to write just 'user_'
+		ParseTextmapCustomFields(param, val, &lines[i].customargs);
 }
 
 static void ParseTextmapThingParameter(UINT32 i, const char *param, const char *val)
@@ -2149,6 +2241,8 @@ static void ParseTextmapThingParameter(UINT32 i, const char *param, const char *
 			return;
 		mapthings[i].args[argnum] = atol(val);
 	}
+	else if (fastncmp(param, "user_", 5) && strlen(param) > 6) // the 6 is used to force modders to write just 'user_'
+		ParseTextmapCustomFields(param, val, &mapthings[i].customargs);
 }
 
 /** From a given position table, run a specified parser function through a {}-encapsuled text.
@@ -3053,6 +3147,7 @@ static void P_LoadTextmap(void)
 		sc->triggerer = TO_PLAYER;
 
 		sc->friction = ORIG_FRICTION;
+		sc->customargs = NULL;
 
 		textmap_colormap.used = false;
 		textmap_colormap.lightcolor = 0;
@@ -3114,6 +3209,7 @@ static void P_LoadTextmap(void)
 		ld->executordelay = 0;
 		ld->sidenum[0] = NO_SIDEDEF;
 		ld->sidenum[1] = NO_SIDEDEF;
+		ld->customargs = NULL;
 
 		TextmapParse(linedefBlocks.pos[i], i, ParseTextmapLinedefParameter);
 
@@ -3167,6 +3263,7 @@ static void P_LoadTextmap(void)
 		memset(mt->args, 0, NUMMAPTHINGARGS*sizeof(*mt->args));
 		memset(mt->stringargs, 0x00, NUMMAPTHINGSTRINGARGS*sizeof(*mt->stringargs));
 		mt->mobj = NULL;
+		mt->customargs = NULL;
 
 		TextmapParse(mapthingBlocks.pos[i], i, ParseTextmapThingParameter);
 	}
