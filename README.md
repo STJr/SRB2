@@ -8,11 +8,11 @@
 [Sonic Robo Blast 2](https://srb2.org/) is a 3D Sonic the Hedgehog fangame based on a modified version of [Doom Legacy](http://doomlegacy.sourceforge.net/).
 
 ## Dependencies
-- SDL2 (Linux/OS X only)
-- SDL2-Mixer (Linux/OS X only)
-- libupnp (Linux/OS X only)
-- libgme (Linux/OS X only)
-- libopenmpt (Linux/OS X only)
+- SDL2 (Linux/macOS only)
+- SDL2-Mixer (Linux/macOS only)
+- libupnp (Linux/macOS only)
+- libgme (Linux/macOS only)
+- libopenmpt (Linux/macOS only)
 
 ## Compiling
 
