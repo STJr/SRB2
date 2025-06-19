@@ -34,6 +34,13 @@
 #define POST_MAX_HEIGHT 254
 #define POST_BASE_BYTES 4
 
+static void SwapAVImages(avimage_t *image1, avimage_t *image2)
+{
+	avimage_t tmp = *image1;
+	*image1 = *image2;
+	*image2 = tmp;
+}
+
 //
 // CIRCULAR BUFFER
 //
@@ -194,7 +201,7 @@ static INT64 GetAudioFrameEndSample(movieaudioframe_t *frame)
 	return frame->firstsampleposition + frame->numsamples;
 }
 
-static INT32 GetBytesPerPatchColumn(moviedecodeworker_t *worker)
+static INT32 GetBytesPerPatchColumn(const moviedecodeworker_t *worker)
 {
 	INT32 height = worker->videostream.codeccontext->height;
 	INT32 numpostspercolumn = (height + POST_MAX_HEIGHT - 1) / POST_MAX_HEIGHT;
@@ -251,14 +258,14 @@ static INT64 GetSamplesPerFrame(INT64 numsamples, INT64 inputsamplerate)
 // DECODING WORKER INITIALISATION
 //
 
-static void AllocateAVImage(moviedecodeworker_t *worker, avimage_t *image)
+static void AllocateAVImage(moviedecodeworker_t *worker, avimage_t *image, enum AVPixelFormat pixelformat, int alignment)
 {
 	AVCodecContext *context = worker->videostream.codeccontext;
 
 	image->datasize = av_image_alloc(
 		image->data, image->linesize,
 		context->width, context->height,
-		AV_PIX_FMT_RGBA, 1
+		pixelformat, alignment
 	);
 	if (image->datasize < 0)
 		I_Error("FFmpeg: cannot allocate image");
@@ -304,12 +311,12 @@ static void InitialiseImages(moviedecodeworker_t *worker)
 		}
 		else
 		{
-			AllocateAVImage(worker, &frame->image.rgba);
+			AllocateAVImage(worker, &frame->image.rgba, AV_PIX_FMT_RGBA, 1);
 		}
 	}
 
-	if (worker->usepatches)
-		AllocateAVImage(worker, &worker->tmpimage);
+	AllocateAVImage(worker, &worker->yuv444image, AV_PIX_FMT_YUV444P, 32); // 32-byte alignment, for SSE/AVX
+	AllocateAVImage(worker, &worker->rgbaimage, AV_PIX_FMT_RGBA, 1);
 }
 
 static void InitialiseVideoBuffer(movie_t *movie)
@@ -380,16 +387,28 @@ static void InitialiseVideoConversion(moviedecodeworker_t *worker)
 
 	int width = worker->videostream.codeccontext->width;
 	int height = worker->videostream.codeccontext->height;
-	worker->scalingcontext = sws_getContext(
+
+	worker->yuv444scalingcontext = sws_getContext(
 		width, height, worker->videostream.codeccontext->pix_fmt,
+		width, height, AV_PIX_FMT_YUV444P,
+		SWS_BILINEAR,
+		NULL,
+		NULL,
+		NULL
+	);
+	if (!worker->yuv444scalingcontext)
+		I_Error("FFmpeg: cannot create YUV444 scaling context");
+
+	worker->rgbascalingcontext = sws_getContext(
+		width, height, worker->usedithering ? AV_PIX_FMT_YUV444P : worker->videostream.codeccontext->pix_fmt,
 		width, height, AV_PIX_FMT_RGBA,
 		SWS_BILINEAR,
 		NULL,
 		NULL,
 		NULL
 	);
-	if (!worker->scalingcontext)
-		I_Error("FFmpeg: cannot create scaling context");
+	if (!worker->rgbascalingcontext)
+		I_Error("FFmpeg: cannot create RGBA scaling context");
 
 	InitColorLUT(&worker->colorlut, pMasterPalette, true);
 }
@@ -415,6 +434,7 @@ static void InitialiseDecodeWorker(movie_t *movie)
 	moviestream_t *vstream = &movie->videostream;
 
 	worker->usepatches = movie->usepatches;
+	worker->usedithering = movie->usedithering;
 	worker->videostream.index = vstream->index;
 	worker->audiostream.index = movie->audiostream.index;
 	worker->videostream.codeccontext = InitialiseDecoding(vstream->stream);
@@ -458,8 +478,8 @@ static void UninitialiseImages(movie_t *movie)
 			av_freep(&frame->image.rgba.data[0]);
 	}
 
-	if (movie->usepatches)
-		av_freep(&worker->tmpimage.data[0]);
+	av_freep(&worker->yuv444image.data[0]);
+	av_freep(&worker->rgbaimage.data[0]);
 }
 
 static void UninitialiseDecodeWorkerStream(movie_t *movie, moviestream_t *stream, moviedecodeworkerstream_t *workerstream)
@@ -501,7 +521,8 @@ static void UninitialiseDecodeWorker(movie_t *movie)
 	UninitialiseDecodeWorkerStream(movie, &movie->videostream, &worker->videostream);
 	UninitialiseDecodeWorkerStream(movie, &movie->audiostream, &worker->audiostream);
 	UninitialisePacketQueue(worker);
-	sws_freeContext(worker->scalingcontext);
+	sws_freeContext(worker->yuv444scalingcontext);
+	sws_freeContext(worker->rgbascalingcontext);
 	swr_free(&worker->resamplingcontext);
 	av_frame_free(&worker->frame);
 }
@@ -565,11 +586,45 @@ static boolean ReceiveFrame(moviedecodeworker_t *worker, moviedecodeworkerstream
 		I_Error("FFmpeg: cannot receive frame");
 }
 
-static void ConvertRGBAToPatch(moviedecodeworker_t *worker, UINT8 * restrict src, UINT8 * restrict dst)
+static INT8 dithermatrix[8][8] = {
+	{ -31.5,   0.5, -23.5,   8.5, -27.5,   4.5, -19.5,  12.5 },
+	{  16.5, -15.5,  24.5,  -7.5,  20.5, -11.5,  28.5,  -3.5 },
+	{  -9.5,  22.5, -29.5,   2.5, -13.5,  18.5, -25.5,   6.5 },
+	{  30.5,  -1.5,  14.5, -17.5,  26.5,  -5.5,  10.5, -21.5 },
+	{ -28.5,   3.5, -20.5,  11.5, -32.5,   0.5, -24.5,   8.5 },
+	{  19.5, -12.5,  27.5,  -4.5,  15.5, -16.5,  23.5,  -8.5 },
+	{  -6.5,  25.5, -17.5,  14.5, -10.5,  21.5, -26.5,   5.5 },
+	{  31.5,  -0.5,  13.5, -18.5,  29.5,  -2.5,   9.5, -22.5 },
+};
+
+// Assumes planar 4:4:4 Y'UV
+static void DitherYUVImage(const moviedecodeworker_t *worker, UINT8 *restrict *restrict data, const int *restrict linesize)
+{
+	UINT8 *uplane = data[1];
+	UINT8 *vplane = data[2];
+	UINT32 width = worker->frame->width;
+	UINT32 height = worker->frame->height;
+
+	for (UINT32 y = 0; y < height; y++)
+	{
+		UINT32 i = y * linesize[1];
+
+		for (UINT32 x = 0; x < width; x++)
+		{
+			INT32 offset = dithermatrix[y & 7][x & 7];
+			uplane[i] = min(max(uplane[i] + offset, 0), 255);
+			vplane[i] = min(max(vplane[i] - offset, 0), 255);
+
+			i++;
+		}
+	}
+}
+
+static void ConvertRGBAToPatch(const moviedecodeworker_t *worker, const UINT8 * restrict src, UINT8 * restrict dst)
 {
 	INT32 width = worker->frame->width;
 	INT32 height = worker->frame->height;
-	UINT16 *lut = worker->colorlut.table;
+	const UINT16 *lut = worker->colorlut.table;
 	INT32 stride = 4 * width;
 
 	// Write column offsets
@@ -580,7 +635,7 @@ static void ConvertRGBAToPatch(moviedecodeworker_t *worker, UINT8 * restrict src
 	for (INT32 x = 0; x < width; x++)
 	{
 		INT32 y = 0;
-		UINT8 *srcptr = &src[4 * x];
+		const UINT8 *srcptr = &src[4 * x];
 
 		// Write posts
 		while (y < height)
@@ -624,19 +679,50 @@ static void ParseVideoFrame(moviedecodeworker_t *worker)
 	frame->pts = worker->frame->pts;
 	frame->duration = worker->frame->pkt_duration;
 
-	avimage_t *image = worker->usepatches ? &worker->tmpimage : &frame->image.rgba;
-	sws_scale(
-		worker->scalingcontext,
-		(UINT8 const * const *)worker->frame->data,
-		worker->frame->linesize,
-		0,
-		worker->frame->height,
-		image->data,
-		image->linesize
-	);
+	if (worker->usedithering)
+	{
+		// Convert from original format to Y'UV 4:4:4, suitable for dithering
+		sws_scale(
+			worker->yuv444scalingcontext,
+			(UINT8 const * const *)worker->frame->data,
+			worker->frame->linesize,
+			0,
+			worker->frame->height,
+			worker->yuv444image.data,
+			worker->yuv444image.linesize
+		);
+
+		DitherYUVImage(worker, worker->yuv444image.data, worker->yuv444image.linesize);
+
+		// Convert back to RGBA
+		sws_scale(
+			worker->rgbascalingcontext,
+			(UINT8 const * const *)worker->yuv444image.data,
+			worker->yuv444image.linesize,
+			0,
+			worker->frame->height,
+			worker->rgbaimage.data,
+			worker->rgbaimage.linesize
+		);
+	}
+	else
+	{
+		// Convert from original format to RGBA
+		sws_scale(
+			worker->rgbascalingcontext,
+			(UINT8 const * const *)worker->frame->data,
+			worker->frame->linesize,
+			0,
+			worker->frame->height,
+			worker->rgbaimage.data,
+			worker->rgbaimage.linesize
+		);
+	}
 
 	if (worker->usepatches)
-		ConvertRGBAToPatch(worker, worker->tmpimage.data[0], frame->image.patch);
+		ConvertRGBAToPatch(worker, worker->rgbaimage.data[0], frame->image.patch);
+	else
+		SwapAVImages(&worker->rgbaimage, &frame->image.rgba);
 
 	I_lock_mutex(&worker->mutex);
 	DequeueBufferIntoBuffer(&worker->videostream.framequeue, &worker->videostream.framepool);
@@ -1032,7 +1118,7 @@ static void UpdateSeeking(movie_t *movie)
 // API
 //
 
-movie_t *MovieDecode_Play(const char *name, boolean usepatches)
+movie_t *MovieDecode_Play(const char *name, boolean usepatches, boolean usedithering)
 {
 	movie_t *movie;
 
@@ -1044,6 +1130,7 @@ movie_t *MovieDecode_Play(const char *name, boolean usepatches)
 	movie->position = 0;
 	movie->audioposition = 0;
 	movie->usepatches = usepatches;
+	movie->usedithering = usedithering;
 
 	CacheMovieLump(movie, name);
 	InitialiseDemuxing(movie);

@@ -28,8 +28,9 @@ static void CheckActiveMovie(lua_State *L)
 static int lib_play(lua_State *L)
 {
 	const char *name = luaL_checkstring(L, 1);
+	boolean usedithering = lua_opttrueboolean(L, 2);
 	MovieDecode_Stop(&activemovie);
-	activemovie = MovieDecode_Play(name, (rendermode == render_soft));
+	activemovie = MovieDecode_Play(name, (rendermode == render_soft), usedithering);
 	return 0;
 }
 

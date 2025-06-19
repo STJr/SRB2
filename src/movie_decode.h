@@ -23,8 +23,8 @@
 
 typedef struct {
 	INT32 datasize;
-	UINT8 *data[4];
-	INT32 linesize[4];
+	uint8_t *data[4];
+	int linesize[4];
 } avimage_t;
 
 typedef struct
@@ -71,11 +71,15 @@ typedef struct
 {
 	colorlookup_t colorlut;
 	boolean usepatches;
-	avimage_t tmpimage;
+	boolean usedithering;
 	UINT64 nextframeid;
 
+	avimage_t yuv444image;
+	avimage_t rgbaimage;
+
 	AVFrame *frame;
-	struct SwsContext *scalingcontext;
+	struct SwsContext *yuv444scalingcontext;
+	struct SwsContext *rgbascalingcontext;
 	SwrContext *resamplingcontext;
 
 	moviedecodeworkerstream_t videostream;
@@ -104,6 +108,7 @@ typedef struct
 {
 	UINT64 lastvideoframeusedid;
 	boolean usepatches;
+	boolean usedithering;
 	AVFormatContext *formatcontext;
 	moviedecodeworker_t decodeworker;
 	boolean seeking;
@@ -119,7 +124,7 @@ typedef struct
 	INT64 audioposition;
 } movie_t;
 
-movie_t *MovieDecode_Play(const char *name, boolean usepatches);
+movie_t *MovieDecode_Play(const char *name, boolean usepatches, boolean usedithering);
 void MovieDecode_Stop(movie_t **movieptr);
 void MovieDecode_SetPosition(movie_t *movie, INT64 ms);
 void MovieDecode_Seek(movie_t *movie, INT64 ms);
