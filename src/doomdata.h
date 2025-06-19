@@ -75,7 +75,7 @@ enum
 typedef struct
 {
 	INT16 x, y;
-}ATTRPACK  mapvertex_t;
+}ATTRPACK mapvertex_t;
 
 typedef enum {
 	UDMF_TYPE_STRING,
@@ -86,7 +86,8 @@ typedef enum {
 
 typedef union {
 	char* string;
-	INT32 numeric;
+	fixed_t fixed;
+	INT32 integer;
 	boolean bool;
 } udmf_field_value_t;
 
@@ -99,7 +100,7 @@ typedef struct customargs_s
 	udmf_field_value_t value;
 
 	struct customargs_s* next;
-}ATTRPACK  customargs_t;
+}ATTRPACK customargs_t;
 
 // A SideDef, defining the visual appearance of a wall,
 // by setting textures and offsets.

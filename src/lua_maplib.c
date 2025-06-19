@@ -705,10 +705,10 @@ FUNCINLINE static ATTRINLINE int customargs_get(lua_State* L, const char* meta)
 					lua_pushstring(L, current->value.string);
 					break;
 				case UDMF_TYPE_NUMERIC:
-					lua_pushinteger(L, current->value.numeric);
+					lua_pushinteger(L, current->value.integer);
 					break;
 				case UDMF_TYPE_FIXED:
-					lua_pushfixed(L, current->value.numeric);
+					lua_pushfixed(L, current->value.fixed);
 					break;
 				case UDMF_TYPE_BOOLEAN:
 					lua_pushboolean(L, current->value.bool);

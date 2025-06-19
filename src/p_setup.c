@@ -1726,7 +1726,7 @@ static void ParseTextmapCustomFields(const char* param, const char* val, customa
 
 		if (*endptr == '\0' && endptr != val && errno == 0) {
 			newnode->type = UDMF_TYPE_NUMERIC;
-			newnode->value.numeric = lval;
+			newnode->value.integer = lval;
 			return;
 		}
 
@@ -1737,7 +1737,7 @@ static void ParseTextmapCustomFields(const char* param, const char* val, customa
 
 		if (*endptr == '\0' && endptr != val && errno == 0) {
 			newnode->type = UDMF_TYPE_FIXED;
-			newnode->value.numeric = FLOAT_TO_FIXED(fval);
+			newnode->value.fixed = FLOAT_TO_FIXED(fval);
 			return;
 		}
 
@@ -1848,7 +1848,7 @@ static void ParseTextmapSectorParameter(UINT32 i, const char *param, const char 
 		sectors[i].floorangle = FixedAngle(FLOAT_TO_FIXED(atof(val)));
 	else if (fastcmp(param, "rotationceiling"))
 		sectors[i].ceilingangle = FixedAngle(FLOAT_TO_FIXED(atof(val)));
-	else if (fastncmp(param, "user_", 5) && strlen(param) > 6) // the 6 is used to force modders to write just 'user_'
+	else if (fastncmp(param, "user_", 5) && strlen(param) > 5)
 		ParseTextmapCustomFields(param, val, &sectors[i].customargs);
 	else if (fastcmp(param, "floorplane_a"))
 	{
@@ -2090,7 +2090,7 @@ static void ParseTextmapSidedefParameter(UINT32 i, const char *param, const char
 		sides[i].lightabsolute_mid = true;
 	else if (fastcmp(param, "lightabsolute_bottom") && fastcmp("true", val))
 		sides[i].lightabsolute_bottom = true;
-	else if (fastncmp(param, "user_", 5) && strlen(param) > 6) // the 6 is used to force mod developers to write more than just 'user_'
+	else if (fastncmp(param, "user_", 5) && strlen(param) > 5)
 		ParseTextmapCustomFields(param, val, &sides[i].customargs);
 }
 
@@ -2187,7 +2187,7 @@ static void ParseTextmapLinedefParameter(UINT32 i, const char *param, const char
 	else if (fastcmp(param, "transfer") && fastcmp("true", val))
 		lines[i].flags |= ML_TFERLINE;
 
-	else if (fastncmp(param, "user_", 5) && strlen(param) > 6) // the 6 is used to force mod developers to write more than just 'user_'
+	else if (fastncmp(param, "user_", 5) && strlen(param) > 5)
 		ParseTextmapCustomFields(param, val, &lines[i].customargs);
 }
 
@@ -2248,7 +2248,7 @@ static void ParseTextmapThingParameter(UINT32 i, const char *param, const char *
 			return;
 		mapthings[i].args[argnum] = atol(val);
 	}
-	else if (fastncmp(param, "user_", 5) && strlen(param) > 6) // the 6 is used to force mod developers to write more than just 'user_'
+	else if (fastncmp(param, "user_", 5) && strlen(param) > 5)
 		ParseTextmapCustomFields(param, val, &mapthings[i].customargs);
 }
 
