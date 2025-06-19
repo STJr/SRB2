@@ -1393,6 +1393,8 @@ GLMapTexture_t *HWR_GetMovieMapTexture(movie_t *movie)
 void HWR_SetMovieAsCurrentTexture(movie_t *movie)
 {
 	GLMipmap_t *texture = HWR_GetMovieTexture(movie);
+	if (!texture)
+		return;
 
 	// If hardware does not have the texture, then call pfnSetTexture to upload it
 	if (!texture->downloaded)
