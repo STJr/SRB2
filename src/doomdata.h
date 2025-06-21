@@ -84,11 +84,11 @@ typedef enum {
 	UDMF_TYPE_BOOLEAN
 } udmf_field_type_t;
 
-typedef union {
-	char* string;
-	fixed_t fixed;
-	INT32 integer;
-	boolean bool;
+typedef union { // v added to avoid random compilers cry about nonsense
+	char*	vstring;
+	fixed_t vfloat;
+	INT32	vint;
+	boolean vbool;
 } udmf_field_value_t;
 
 // UDMF's Custom Arguments

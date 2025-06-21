@@ -1706,12 +1706,12 @@ static void ParseTextmapCustomFields(const char* param, const char* val, customa
 	if (fastcmp(val, "true"))
 	{
 		newnode->type = UDMF_TYPE_BOOLEAN;
-		newnode->value.bool = true;
+		newnode->value.vbool = true;
 	}
 	else if (fastcmp(val, "false"))
 	{
 		newnode->type = UDMF_TYPE_BOOLEAN;
-		newnode->value.bool = false;
+		newnode->value.vbool = false;
 	}
 	else
 	{
@@ -1726,7 +1726,7 @@ static void ParseTextmapCustomFields(const char* param, const char* val, customa
 
 		if (*endptr == '\0' && endptr != val && errno == 0) {
 			newnode->type = UDMF_TYPE_NUMERIC;
-			newnode->value.integer = lval;
+			newnode->value.vint = lval;
 			return;
 		}
 
@@ -1737,15 +1737,15 @@ static void ParseTextmapCustomFields(const char* param, const char* val, customa
 
 		if (*endptr == '\0' && endptr != val && errno == 0) {
 			newnode->type = UDMF_TYPE_FIXED;
-			newnode->value.fixed = FLOAT_TO_FIXED(fval);
+			newnode->value.vfloat = FLOAT_TO_FIXED(fval);
 			return;
 		}
 
 		// Just string
 
 		newnode->type = UDMF_TYPE_STRING;
-		newnode->value.string = Z_Malloc(strlen(val) + 1, PU_LEVEL, NULL);
-		M_Memcpy(newnode->value.string, val, strlen(val) + 1);
+		newnode->value.vstring = Z_Malloc(strlen(val) + 1, PU_LEVEL, NULL);
+		M_Memcpy(newnode->value.vstring, val, strlen(val) + 1);
 	}
 }
 
