@@ -4824,8 +4824,6 @@ void G_LoadGame(UINT32 slot, INT16 mapoverride)
 
 	// done
 	Z_Free(savebuffer.buf);
-	const char* savenametemp = savegamename;
-	LUA_HookSaveFile(slot, (savenametemp + strlen(savenametemp) - nameonlylength(savenametemp)));
 
 	displayplayer = consoleplayer;
 	multiplayer = splitscreen = false;

@@ -804,17 +804,6 @@ void LUA_HookPostThinkFrame(void)
 	hook_think_frame(HOOK(PostThinkFrame));
 }
 
-void LUA_HookSaveFile(UINT32 slot, const char *name)
-{
-	Hook_State hook;
-	if (prepare_hook(&hook, 0, HOOK(SaveSelect)))
-	{
-		lua_pushnumber(gL, slot);
-		lua_pushstring(gL, name);
-		call_hooks(&hook, 0, res_none);
-	}
-}
-
 int LUA_HookMobjLineCollide(mobj_t *mobj, line_t *line)
 {
 	Hook_State hook;
