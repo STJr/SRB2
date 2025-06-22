@@ -757,9 +757,6 @@
     <ClCompile Include="..\hardware\hw_shaders.c">
       <Filter>Hw_Hardware</Filter>
     </ClCompile>
-    <ClCompile Include="..\hardware\u_list.c">
-      <Filter>Hw_Hardware</Filter>
-    </ClCompile>
     <ClCompile Include="..\filesrch.c">
       <Filter>I_Interface</Filter>
     </ClCompile>
@@ -1121,6 +1118,9 @@
     </ClCompile>
     <ClCompile Include="..\r_bbox.c">
       <Filter>R_Rend</Filter>
+    </ClCompile>
+    <ClCompile Include="i_threads.c">
+      <Filter>SDLApp</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
