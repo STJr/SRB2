@@ -49,7 +49,6 @@ static const char *whitelist[] = {
 
 	".json",
 	".yaml",
-	".yml",
 	".xml",
 	".csv",
 	".soc",
