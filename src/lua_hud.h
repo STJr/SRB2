@@ -21,7 +21,7 @@ enum hud {
 	hud_crosshair,
 	hud_powerups,
 	hud_gameover,
-	hud_paused,
+	hud_pause,
 	hud_cecho,
 	hud_chat,
 	// Singleplayer / Co-op

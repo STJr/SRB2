@@ -579,7 +579,7 @@ static void D_Display(void)
 		V_SetPalette(0);
 
 	// draw pause pic
-	if (paused && cv_showhud.value && LUA_HudEnabled(hud_paused) && (!menuactive || netgame))
+	if (paused && cv_showhud.value && LUA_HudEnabled(hud_pause) && (!menuactive || netgame))
 	{
 #if 0
 		INT32 py;

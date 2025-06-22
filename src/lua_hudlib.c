@@ -43,7 +43,7 @@ static const char *const hud_disable_options[] = {
 	"crosshair",
 	"powerups",
 	"gameover",
-	"paused",
+	"pause",
 	"cecho",
 	"chat",
 
