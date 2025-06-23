@@ -11,6 +11,9 @@
 /// \file  p_setup.c
 /// \brief Do all the WAD I/O, get map description, set up initial state and misc. LUTs
 
+
+#include <errno.h>
+
 #include "doomdef.h"
 #include "d_main.h"
 #include "byteptr.h"
@@ -1077,6 +1080,7 @@ static void P_LoadSectors(UINT8 *data)
 		ss->triggerer = TO_PLAYER;
 
 		ss->friction = ORIG_FRICTION;
+		ss->customargs = NULL;
 
 		P_InitializeSector(ss);
 	}
@@ -1198,6 +1202,8 @@ static void P_LoadLinedefs(UINT8 *data)
 			ld->sidenum[0] = NO_SIDEDEF;
 		if (ld->sidenum[1] == 0xffff)
 			ld->sidenum[1] = NO_SIDEDEF;
+
+		ld->customargs = NULL;
 
 		P_InitializeLinedef(ld);
 	}
@@ -1369,6 +1375,8 @@ static void P_LoadSidedefs(UINT8 *data)
 
 		sd->light = sd->light_top = sd->light_mid = sd->light_bottom = 0;
 		sd->lightabsolute = sd->lightabsolute_top = sd->lightabsolute_mid = sd->lightabsolute_bottom = false;
+
+		sd->customargs = NULL;
 
 		P_SetSidedefSector(i, (UINT16)SHORT(msd->sector));
 
@@ -1553,6 +1561,7 @@ static void P_LoadThings(UINT8 *data)
 			mt->z = mt->options >> ZSHIFT;
 
 		mt->mobj = NULL;
+		mt->customargs = NULL;
 	}
 }
 
@@ -1657,6 +1666,89 @@ static boolean TextmapCount(size_t size)
 	return true;
 }
 
+static void ParseTextmapCustomFields(const char* param, const char* val, customargs_t** headptr)
+{
+	if (val[0] == '\0')
+		return;
+
+	//
+	// GET latest node
+	//
+
+	customargs_t* newnode = Z_Malloc(sizeof(customargs_t), PU_LEVEL, NULL);
+
+	if (!newnode)
+		return;
+
+	newnode->next = NULL;
+
+	if (*headptr == NULL) {
+		*headptr = newnode;
+	}
+	else {
+		customargs_t* curr = *headptr;
+
+		while (curr->next != NULL) {
+			curr = curr->next;
+		}
+
+		curr->next = newnode;
+
+	}
+
+	//
+	// Setup
+	//
+
+	newnode->name = Z_Malloc(strlen(param + 5) + 1, PU_LEVEL, NULL);
+	M_Memcpy(newnode->name, param + 5, strlen(param + 5) + 1);
+
+	if (fastcmp(val, "true"))
+	{
+		newnode->type = UDMF_TYPE_BOOLEAN;
+		newnode->value.vbool = true;
+	}
+	else if (fastcmp(val, "false"))
+	{
+		newnode->type = UDMF_TYPE_BOOLEAN;
+		newnode->value.vbool = false;
+	}
+	else
+	{
+		char* endptr;
+		long lval;
+		float fval;
+
+		// Eval integer
+
+		errno = 0;
+		lval = strtol(val, &endptr, 10);
+
+		if (*endptr == '\0' && endptr != val && errno == 0) {
+			newnode->type = UDMF_TYPE_NUMERIC;
+			newnode->value.vint = lval;
+			return;
+		}
+
+		// Eval float
+
+		errno = 0;
+		fval = strtof(val, &endptr);
+
+		if (*endptr == '\0' && endptr != val && errno == 0) {
+			newnode->type = UDMF_TYPE_FIXED;
+			newnode->value.vfloat = FLOAT_TO_FIXED(fval);
+			return;
+		}
+
+		// Just string
+
+		newnode->type = UDMF_TYPE_STRING;
+		newnode->value.vstring = Z_Malloc(strlen(val) + 1, PU_LEVEL, NULL);
+		M_Memcpy(newnode->value.vstring, val, strlen(val) + 1);
+	}
+}
+
 static void ParseTextmapVertexParameter(UINT32 i, const char *param, const char *val)
 {
 	if (fastcmp(param, "x"))
@@ -1756,6 +1848,8 @@ static void ParseTextmapSectorParameter(UINT32 i, const char *param, const char 
 		sectors[i].floorangle = FixedAngle(FLOAT_TO_FIXED(atof(val)));
 	else if (fastcmp(param, "rotationceiling"))
 		sectors[i].ceilingangle = FixedAngle(FLOAT_TO_FIXED(atof(val)));
+	else if (fastncmp(param, "user_", 5) && strlen(param) > 5)
+		ParseTextmapCustomFields(param, val, &sectors[i].customargs);
 	else if (fastcmp(param, "floorplane_a"))
 	{
 		textmap_planefloor.defined |= PD_A;
@@ -1996,6 +2090,8 @@ static void ParseTextmapSidedefParameter(UINT32 i, const char *param, const char
 		sides[i].lightabsolute_mid = true;
 	else if (fastcmp(param, "lightabsolute_bottom") && fastcmp("true", val))
 		sides[i].lightabsolute_bottom = true;
+	else if (fastncmp(param, "user_", 5) && strlen(param) > 5)
+		ParseTextmapCustomFields(param, val, &sides[i].customargs);
 }
 
 static void ParseTextmapLinedefParameter(UINT32 i, const char *param, const char *val)
@@ -2090,6 +2186,9 @@ static void ParseTextmapLinedefParameter(UINT32 i, const char *param, const char
 		lines[i].flags |= ML_BOUNCY;
 	else if (fastcmp(param, "transfer") && fastcmp("true", val))
 		lines[i].flags |= ML_TFERLINE;
+
+	else if (fastncmp(param, "user_", 5) && strlen(param) > 5)
+		ParseTextmapCustomFields(param, val, &lines[i].customargs);
 }
 
 static void ParseTextmapThingParameter(UINT32 i, const char *param, const char *val)
@@ -2149,6 +2248,8 @@ static void ParseTextmapThingParameter(UINT32 i, const char *param, const char *
 			return;
 		mapthings[i].args[argnum] = atol(val);
 	}
+	else if (fastncmp(param, "user_", 5) && strlen(param) > 5)
+		ParseTextmapCustomFields(param, val, &mapthings[i].customargs);
 }
 
 /** From a given position table, run a specified parser function through a {}-encapsuled text.
@@ -3053,6 +3154,7 @@ static void P_LoadTextmap(void)
 		sc->triggerer = TO_PLAYER;
 
 		sc->friction = ORIG_FRICTION;
+		sc->customargs = NULL;
 
 		textmap_colormap.used = false;
 		textmap_colormap.lightcolor = 0;
@@ -3114,6 +3216,7 @@ static void P_LoadTextmap(void)
 		ld->executordelay = 0;
 		ld->sidenum[0] = NO_SIDEDEF;
 		ld->sidenum[1] = NO_SIDEDEF;
+		ld->customargs = NULL;
 
 		TextmapParse(linedefBlocks.pos[i], i, ParseTextmapLinedefParameter);
 
@@ -3143,6 +3246,7 @@ static void P_LoadTextmap(void)
 		sd->repeatcnt = 0;
 		sd->light = sd->light_top = sd->light_mid = sd->light_bottom = 0;
 		sd->lightabsolute = sd->lightabsolute_top = sd->lightabsolute_mid = sd->lightabsolute_bottom = false;
+		sd->customargs = NULL;
 
 		TextmapParse(sidedefBlocks.pos[i], i, ParseTextmapSidedefParameter);
 
@@ -3167,6 +3271,7 @@ static void P_LoadTextmap(void)
 		memset(mt->args, 0, NUMMAPTHINGARGS*sizeof(*mt->args));
 		memset(mt->stringargs, 0x00, NUMMAPTHINGSTRINGARGS*sizeof(*mt->stringargs));
 		mt->mobj = NULL;
+		mt->customargs = NULL;
 
 		TextmapParse(mapthingBlocks.pos[i], i, ParseTextmapThingParameter);
 	}

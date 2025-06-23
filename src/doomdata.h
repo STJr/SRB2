@@ -75,7 +75,32 @@ enum
 typedef struct
 {
 	INT16 x, y;
-}ATTRPACK  mapvertex_t;
+}ATTRPACK mapvertex_t;
+
+typedef enum {
+	UDMF_TYPE_STRING,
+	UDMF_TYPE_FIXED,
+	UDMF_TYPE_NUMERIC,
+	UDMF_TYPE_BOOLEAN
+} udmf_field_type_t;
+
+typedef union { // v added to avoid random compilers cry about nonsense
+	char*	vstring;
+	fixed_t vfloat;
+	INT32	vint;
+	boolean vbool;
+} udmf_field_value_t;
+
+// UDMF's Custom Arguments
+typedef struct customargs_s
+{
+	char* name;
+
+	udmf_field_type_t type;
+	udmf_field_value_t value;
+
+	struct customargs_s* next;
+}ATTRPACK customargs_t;
 
 // A SideDef, defining the visual appearance of a wall,
 // by setting textures and offsets.
@@ -218,6 +243,7 @@ typedef struct
 	fixed_t spritexscale, spriteyscale;
 	INT32 args[NUMMAPTHINGARGS];
 	char *stringargs[NUMMAPTHINGSTRINGARGS];
+	struct customargs_s* customargs;
 	struct mobj_s *mobj;
 } mapthing_t;
 
