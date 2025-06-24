@@ -36,7 +36,6 @@
 #include "lua_script.h"
 #include "p_slopes.h"
 #include "hu_stuff.h"
-#include "lua_hook.h"
 
 savedata_t savedata;
 
@@ -5424,7 +5423,7 @@ boolean P_LoadGame(save_t *save_p, INT16 mapoverride)
 
 boolean P_LoadNetGame(save_t *save_p, boolean reloading)
 {
-	CV_LoadNetVars(save_p);	
+	CV_LoadNetVars(save_p);
 	if (!P_NetUnArchiveMisc(save_p, reloading))
 		return false;
 	P_NetUnArchiveEmblems(save_p);

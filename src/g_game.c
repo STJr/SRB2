@@ -15,7 +15,6 @@
 #include "console.h"
 #include "d_main.h"
 #include "d_player.h"
-#include "netcode/d_netfil.h"
 #include "netcode/d_clisrv.h"
 #include "netcode/net_command.h"
 #include "f_finale.h"
