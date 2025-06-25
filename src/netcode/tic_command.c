@@ -421,6 +421,17 @@ void Local_Maketic(INT32 realtics)
 // create missed tic
 void SV_Maketic(void)
 {
+	INT32 i;
+	for (i = 0; i < MAXPLAYERS; i++)
+	{
+		packetloss[i][maketic % PACKETMEASUREWINDOW] = false;
+		if (!players[i].ingame)
+			continue;
+
+		if ((netcmds[maketic % BACKUPTICS][i].angleturn & TICCMD_RECEIVED) == 0)
+			packetloss[i][maketic % PACKETMEASUREWINDOW] = true;
+	}
+
 	G_MoveTiccmd(netcmds[maketic % BACKUPTICS], playercmds, MAXPLAYERS);
 	maketic++;
 }

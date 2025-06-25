@@ -42,6 +42,9 @@ boolean Net_GetNetStat(void);
 extern INT32 getbytes;
 extern INT64 sendbytes; // Realtime updated
 
+#define PACKETMEASUREWINDOW (TICRATE*2)
+extern boolean packetloss[MAXPLAYERS][PACKETMEASUREWINDOW];
+
 typedef struct netnode_s
 {
 	boolean ingame; // set false as nodes leave game

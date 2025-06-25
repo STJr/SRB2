@@ -302,6 +302,7 @@ typedef struct
 		INT32 filesneedednum;
 		filesneededconfig_pak filesneededcfg;
 		UINT32 pingtable[MAXPLAYERS+1];
+		UINT32 packetloss[MAXPLAYERS+1];
 	} u; // This is needed to pack diff packet types data together
 } ATTRPACK doomdata_t;
 

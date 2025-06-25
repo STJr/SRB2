@@ -86,6 +86,8 @@ static INT32 retransmit = 0, duppacket = 0;
 static INT32 sendackpacket = 0, getackpacket = 0;
 INT32 ticruned = 0, ticmiss = 0;
 
+boolean packetloss[MAXPLAYERS][PACKETMEASUREWINDOW];
+
 // globals
 INT32 getbps, sendbps;
 float lostpercent, duppercent, gamelostpercent;

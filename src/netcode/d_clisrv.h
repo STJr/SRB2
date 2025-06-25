@@ -68,6 +68,7 @@ extern tic_t connectiontimeout;
 extern UINT16 pingmeasurecount;
 extern UINT32 realpingtable[MAXPLAYERS];
 extern UINT32 playerpingtable[MAXPLAYERS];
+extern UINT32 playerpacketlosstable[MAXPLAYERS];
 extern tic_t servermaxping;
 
 extern consvar_t cv_netticbuffer, cv_resynchattempts, cv_blamecfail, cv_playbackspeed, cv_idletime, cv_idleaction, cv_dedicatedidletime;

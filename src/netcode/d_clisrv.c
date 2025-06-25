@@ -83,6 +83,7 @@ UINT8 playernode[MAXPLAYERS];
 UINT16 pingmeasurecount = 1;
 UINT32 realpingtable[MAXPLAYERS]; //the base table of ping where an average will be sent to everyone.
 UINT32 playerpingtable[MAXPLAYERS]; //table of player latency values.
+UINT32 playerpacketlosstable[MAXPLAYERS];
 static INT32 pingtimeout[MAXPLAYERS];
 tic_t servermaxping = 800; // server's max ping. Defaults to 800
 
@@ -1116,6 +1117,13 @@ static inline void PingUpdate(void)
 			doomdata_t *netbuffer = DOOMCOM_DATA(doomcom);
 			memcpy(netbuffer->u.pingtable, playerpingtable, sizeof(INT32) * MAXPLAYERS);
 
+			UINT32 lost = 0;
+			for (INT32 j = 0; j < PACKETMEASUREWINDOW; j++)
+				if (packetloss[i][j])
+					lost++;
+
+			netbuffer->u.packetloss[i] = lost;
+
 			// send the server's maxping as last element of our ping table. This is useful to let us know when we're about to get kicked.
 			netbuffer->u.pingtable[MAXPLAYERS] = cv_maxping.value;
 			HSendPacket(doomcom, true, 0);
@@ -1141,7 +1149,10 @@ static void PT_Ping(doomcom_t *doomcom, INT32 netconsole)
 	{
 		for (INT32 i = 0; i < MAXPLAYERS; i++)
 			if (players[i].ingame)
+			{
 				playerpingtable[i] = (tic_t)netbuffer->u.pingtable[i];
+				playerpacketlosstable[i] = netbuffer->u.packetloss[i];
+			}
 
 		servermaxping = (tic_t)netbuffer->u.pingtable[MAXPLAYERS];
 	}
