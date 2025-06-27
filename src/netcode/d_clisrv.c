@@ -506,7 +506,7 @@ static void Got_KickCmd(UINT8 **p, INT32 playernum)
 			break;
 		case KICK_MSG_IDLE:
 			HU_AddChatText(va("\x82*%s has left the game (Inactive for too long)", player_names[pnum]), false);
-			kickreason = KR_TIMEOUT;
+			kickreason = KR_IDLE;
 			break;
 	}
 
