@@ -1111,12 +1111,21 @@ static inline void PingUpdate(void)
 		UINT32 node = playernode[i];
 		if (node < MAXNETNODES)
 		{
-			if (sentpackets[node] == 0)
+			playerpacketlosstable[i] = 0;
+			UINT32 totalpackets = 0;
+			for (INT32 j = 0; j < PACKETLOSSCYCLES; j++)
+			{
+				playerpacketlosstable[i] += lostpackets[j][node];
+				totalpackets += sentpackets[j][node];
+			}
+			if (totalpackets == 0)
 				playerpacketlosstable[i] = 0;
 			else
-				playerpacketlosstable[i] = lostpackets[node] * 100 / sentpackets[node]; // measure in percentage
-			lostpackets[node] = 0;
-			sentpackets[node] = 0;
+				playerpacketlosstable[i] = playerpacketlosstable[i] * 100 / totalpackets; // measure in percentage
+			if (++plcycle > PACKETLOSSCYCLES)
+				plcycle = 0;
+			lostpackets[plcycle][node] = 0;
+			sentpackets[plcycle][node] = 0;
 		}
 	}
 

@@ -28,6 +28,7 @@
 #define BROADCASTADDR MAXNETNODES
 #define MAXSPLITSCREENPLAYERS 2 // Max number of players on a single computer
 //#define NETSPLITSCREEN // Kart's splitscreen netgame feature
+#define PACKETLOSSCYCLES 4 // amount of cycles to do when measuring packet loss
 
 #define FORCECLOSE 0x8000
 
@@ -41,8 +42,9 @@ extern INT32 packetheaderlength;
 boolean Net_GetNetStat(void);
 extern INT32 getbytes;
 extern INT64 sendbytes; // Realtime updated
-extern UINT32 sentpackets[MAXNETNODES];
-extern UINT32 lostpackets[MAXNETNODES];
+extern UINT8 plcycle;
+extern UINT32 sentpackets[PACKETLOSSCYCLES][MAXNETNODES];
+extern UINT32 lostpackets[PACKETLOSSCYCLES][MAXNETNODES];
 
 #define PACKETMEASUREWINDOW (TICRATE*2)
 extern boolean packetloss[MAXPLAYERS][PACKETMEASUREWINDOW];

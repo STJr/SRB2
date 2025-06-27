@@ -82,8 +82,9 @@ boolean *bannednode = NULL;
 static tic_t statstarttic;
 INT32 getbytes = 0;
 INT64 sendbytes = 0;
-UINT32 sentpackets[MAXNETNODES];
-UINT32 lostpackets[MAXNETNODES];
+UINT8 plcycle = 0;
+UINT32 sentpackets[PACKETLOSSCYCLES][MAXNETNODES];
+UINT32 lostpackets[PACKETLOSSCYCLES][MAXNETNODES];
 static INT32 retransmit = 0, duppacket = 0;
 static INT32 sendackpacket = 0, getackpacket = 0;
 INT32 ticruned = 0, ticmiss = 0;
@@ -880,17 +881,17 @@ void HGetPacket(void (*handler)(doomcom_t *doomcom))
 			continue; // discarded (duplicated)
 
 		// Measure packet loss
-		if ((INT32)netbuffer->packetindex - (INT32)nodes[doomcom->remotenode].recvnum <= 0)
+		if ((SINT8)(netbuffer->packetindex - nodes[doomcom->remotenode].recvnum) <= 0)
 		{
 			// got out of order packet, so compensate
-			lostpackets[doomcom->remotenode]--;
+			lostpackets[plcycle][doomcom->remotenode]--;
 		}
 		else
 		{
-			sentpackets[doomcom->remotenode] += (UINT32)netbuffer->packetindex - nodes[doomcom->remotenode].recvnum;
-			lostpackets[doomcom->remotenode] += (UINT32)netbuffer->packetindex - nodes[doomcom->remotenode].recvnum - 1;
+			sentpackets[plcycle][doomcom->remotenode] += (SINT8)(netbuffer->packetindex - nodes[doomcom->remotenode].recvnum);
+			lostpackets[plcycle][doomcom->remotenode] += (SINT8)(netbuffer->packetindex - nodes[doomcom->remotenode].recvnum) - 1;
+			nodes[doomcom->remotenode].recvnum = netbuffer->packetindex;
 		}
-		nodes[doomcom->remotenode].recvnum = netbuffer->packetindex;
 
 		// A packet with just ackreturn
 		if (netbuffer->packettype == PT_NOTHING)
