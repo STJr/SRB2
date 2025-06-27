@@ -752,8 +752,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				{
 					if (!playeringame[i] || players[i].spectator)
 						continue;
-
-					players[i].exiting = (14*TICRATE)/5 + 1;
+					P_DoPlayerExit(&players[i], true);
 				}
 				//S_StartSound(NULL, sfx_lvpass);
 			}
