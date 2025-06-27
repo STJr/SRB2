@@ -46,9 +46,6 @@ extern UINT8 plcycle;
 extern UINT32 sentpackets[PACKETLOSSCYCLES][MAXNETNODES];
 extern UINT32 lostpackets[PACKETLOSSCYCLES][MAXNETNODES];
 
-#define PACKETMEASUREWINDOW (TICRATE*2)
-extern boolean packetloss[MAXPLAYERS][PACKETMEASUREWINDOW];
-
 typedef struct netnode_s
 {
 	boolean ingame; // set false as nodes leave game
