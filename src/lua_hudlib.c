@@ -461,15 +461,29 @@ static int camera_set(lua_State *L)
 
 static int libd_patchExists(lua_State *L)
 {
-	HUDONLY
 	lua_pushboolean(L, W_LumpExists(luaL_checkstring(L, 1)));
 	return 1;
 }
 
 static int libd_cachePatch(lua_State *L)
 {
-	HUDONLY
-	LUA_PushUserdata(L, W_CachePatchLongName(luaL_checkstring(L, 1), PU_PATCH), META_PATCH);
+	const char *name = luaL_checkstring(L, 1);
+	patch_t *patch = W_CachePatchLongName(name, PU_PATCH);
+
+#ifdef ROTSPRITE
+	if (lua_isnumber(L, 2))
+	{
+		angle_t rollangle = luaL_checkangle(L, 2);
+		INT32 rot = R_GetRollAngle(rollangle);
+		if (rot) {
+			patch_t *rotpatch = Patch_GetRotated(patch, rot, false);
+			LUA_PushUserdata(L, rotpatch, META_PATCH);
+			return 1;
+		}
+	}
+#endif
+	
+	LUA_PushUserdata(L, patch, META_PATCH);
 	return 1;
 }
 
@@ -481,7 +495,6 @@ static int libd_getSpritePatch(lua_State *L)
 	UINT8 angle = 0;
 	spritedef_t *sprdef;
 	spriteframe_t *sprframe;
-	HUDONLY
 
 	if (lua_isnumber(L, 1)) // sprite number given, e.g. SPR_THOK
 	{
@@ -555,7 +568,6 @@ static int libd_getSprite2Patch(lua_State *L)
 	spritedef_t *sprdef;
 	spriteframe_t *sprframe;
 	boolean super = false; // add SPR2F_SUPER to sprite2 if true
-	HUDONLY
 
 	// get skin first!
 	if (lua_isnumber(L, 1)) // find skin by number
@@ -1130,12 +1142,11 @@ static int libd_levelTitleHeight(lua_State *L)
 
 static int libd_getColormap(lua_State *L)
 {
+	HUDONLY
 	INT32 skinnum = TC_DEFAULT;
 	skincolornum_t color = luaL_optinteger(L, 2, 0);
 	UINT8* colormap = NULL;
 	int translation_id = -1;
-
-	HUDONLY
 
 	if (lua_isnoneornil(L, 1))
 		; // defaults to TC_DEFAULT
@@ -1176,9 +1187,10 @@ static int libd_getColormap(lua_State *L)
 
 static int libd_getStringColormap(lua_State *L)
 {
+	HUDONLY
 	INT32 flags = luaL_checkinteger(L, 1);
 	UINT8* colormap = NULL;
-	HUDONLY
+
 	colormap = V_GetStringColormap(flags & V_CHARCOLORMASK);
 	if (colormap) {
 		LUA_PushUserdata(L, colormap, META_COLORMAP); // push as META_COLORMAP userdata, specifically for patches to use!
@@ -1189,6 +1201,7 @@ static int libd_getStringColormap(lua_State *L)
 
 static int libd_getSectorColormap(lua_State *L)
 {
+	HUDONLY
 	boolean has_sector = false;
 	sector_t *sector = NULL;
 	if (!lua_isnoneornil(L, 1))
@@ -1264,21 +1277,18 @@ static int libd_fadeScreen(lua_State *L)
 
 static int libd_width(lua_State *L)
 {
-	HUDONLY
 	lua_pushinteger(L, vid.width); // push screen width
 	return 1;
 }
 
 static int libd_height(lua_State *L)
 {
-	HUDONLY
 	lua_pushinteger(L, vid.height); // push screen height
 	return 1;
 }
 
 static int libd_dup(lua_State *L)
 {
-	HUDONLY
 	lua_pushinteger(L, vid.dup); // push integral scale (patch scale)
 	lua_pushfixed(L, vid.fdup); // push fixed point scale (position scale)
 	return 2;
@@ -1286,7 +1296,6 @@ static int libd_dup(lua_State *L)
 
 static int libd_renderer(lua_State *L)
 {
-	HUDONLY
 	switch (rendermode) {
 		case render_opengl: lua_pushliteral(L, "opengl");   break; // OpenGL renderer
 		case render_soft:   lua_pushliteral(L, "software"); break; // Software renderer
@@ -1300,14 +1309,12 @@ static int libd_renderer(lua_State *L)
 
 static int libd_RandomFixed(lua_State *L)
 {
-	HUDONLY
 	lua_pushfixed(L, M_RandomFixed());
 	return 1;
 }
 
 static int libd_RandomByte(lua_State *L)
 {
-	HUDONLY
 	lua_pushinteger(L, M_RandomByte());
 	return 1;
 }
@@ -1316,7 +1323,6 @@ static int libd_RandomKey(lua_State *L)
 {
 	INT32 a = (INT32)luaL_checkinteger(L, 1);
 
-	HUDONLY
 	lua_pushinteger(L, M_RandomKey(a));
 	return 1;
 }
@@ -1326,7 +1332,6 @@ static int libd_RandomRange(lua_State *L)
 	INT32 a = (INT32)luaL_checkinteger(L, 1);
 	INT32 b = (INT32)luaL_checkinteger(L, 2);
 
-	HUDONLY
 	lua_pushinteger(L, M_RandomRange(a, b));
 	return 1;
 }
@@ -1334,7 +1339,6 @@ static int libd_RandomRange(lua_State *L)
 // Macros.
 static int libd_SignedRandom(lua_State *L)
 {
-	HUDONLY
 	lua_pushinteger(L, M_SignedRandom());
 	return 1;
 }
@@ -1342,7 +1346,6 @@ static int libd_SignedRandom(lua_State *L)
 static int libd_RandomChance(lua_State *L)
 {
 	fixed_t p = luaL_checkfixed(L, 1);
-	HUDONLY
 	lua_pushboolean(L, M_RandomChance(p));
 	return 1;
 }
@@ -1351,7 +1354,6 @@ static int libd_RandomChance(lua_State *L)
 // Could as well be thrown in global vars for ease of access but I guess it makes sense for it to be a HUD fn
 static int libd_getlocaltransflag(lua_State *L)
 {
-	HUDONLY
 	lua_pushinteger(L, (10-st_translucency)*V_10TRANS);
 	return 1;
 }
@@ -1359,7 +1361,6 @@ static int libd_getlocaltransflag(lua_State *L)
 // Get cv_translucenthud's value for HUD rendering as a normal V_xxTRANS int
 static int libd_getusertransflag(lua_State *L)
 {
-	HUDONLY
 	lua_pushinteger(L, (10-cv_translucenthud.value)*V_10TRANS);	// A bit weird that it's called "translucenthud" yet 10 is fully opaque :V
 	return 1;
 }
@@ -1452,6 +1453,26 @@ static luaL_Reg lib_hud[] = {
 	{"disable", lib_huddisable},
 	{"enabled", lib_hudenabled},
 	{"add", lib_hudadd},
+	{"patchExists", libd_patchExists},
+	{"cachePatch", libd_cachePatch},
+	{"getSpritePatch", libd_getSpritePatch},
+	{"getSprite2Patch", libd_getSprite2Patch},
+	{"width", libd_width},
+	{"height", libd_height},
+	{"scale", libd_dup},
+	{"renderer", libd_renderer},
+	{NULL, NULL}
+};
+
+// globalized client_side random functions.
+static luaL_Reg lib_randomclient[] = {
+	// m_random
+	{"localFixed",libd_RandomFixed},
+	{"localByte",libd_RandomByte},
+	{"localKey",libd_RandomKey},
+	{"localRange",libd_RandomRange},
+	{"localSignedRandom",libd_SignedRandom}, // MACRO
+	{"localChance",libd_RandomChance}, // MACRO
 	{NULL, NULL}
 };
 
@@ -1478,6 +1499,7 @@ int LUA_HudLib(lua_State *L)
 	LUA_RegisterGlobalUserdata(L, "hudinfo", lib_getHudInfo, NULL, lib_hudinfolen);
 
 	luaL_register(L, "hud", lib_hud);
+	luaL_register(L, "random", lib_randomclient);
 	return 0;
 }
 

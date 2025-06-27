@@ -127,8 +127,8 @@ perfstatrow_t commoncounter_rows[] = {
 };
 
 perfstatrow_t interpolation_rows[] = {
-	{"intpfrc", "Interp frac: ", &ps_interp_frac, PS_TIME},
-	{"intplag", "Interp lag:  ", &ps_interp_lag, PS_TIME},
+	{"intpfrc", "Interp frac: ", &ps_interp_frac, 0}, // PS_TIME is not applicable here, as it is meant for I_GetPreciseTime
+	{"intplag", "Interp lag:  ", &ps_interp_lag, 0},
 	{0}
 };
 

@@ -3817,6 +3817,7 @@ void M_ClearMenus(boolean callexitmenufunc)
 	hidetitlemap = false;
 
 	I_UpdateMouseGrab();
+	I_SetTextInputMode(textinputmodeenabledbylua);
 }
 
 //
@@ -3916,6 +3917,9 @@ void M_Ticker(void)
 		M_SetupScreenshotMenu();
 
 #if defined (MASTERSERVER) && defined (HAVE_THREADS)
+	if (!netgame)
+		return;
+
 	I_lock_mutex(&ms_ServerList_mutex);
 	{
 		if (ms_ServerList)
@@ -11214,37 +11218,11 @@ static INT32 menuRoomIndex = 0;
 
 static void M_DrawRoomMenu(void)
 {
-	static fixed_t frame = -(12 << FRACBITS);
-	int dot_frame;
-	char text[4];
-
 	const char *rmotd;
 	const char *waiting_message;
 
-	int dots;
-
 	if (m_waiting_mode)
-	{
-		dot_frame = (int)(frame >> FRACBITS) / 4;
-		dots = dot_frame + 3;
-
-		strcpy(text, "   ");
-
-		if (dots > 0)
-		{
-			if (dot_frame < 0)
-				dot_frame = 0;
-
-			if (dot_frame != 3)
-				strncpy(&text[dot_frame], "...", min(dots, 3 - dot_frame));
-		}
-
-		frame += renderdeltatics;
-		while (frame >= (12 << FRACBITS))
-			frame -= 12 << FRACBITS;
-
-		currentMenu->menuitems[0].text = text;
-	}
+		currentMenu->menuitems[0].text = "...";
 
 	// use generic drawer for cursor, items and title
 	M_DrawGenericMenu();

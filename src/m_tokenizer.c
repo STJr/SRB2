@@ -1,6 +1,6 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
-// Copyright (C) 2013-2024 by Sonic Team Junior.
+// Copyright (C) 2013-2025 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -28,6 +28,7 @@ tokenizer_t *Tokenizer_Open(const char *inputString, size_t len, unsigned numTok
 	tokenizer->endPos = 0;
 	tokenizer->inputLength = 0;
 	tokenizer->inComment = 0;
+	tokenizer->stringNeedsEscaping = false;
 	tokenizer->inString = 0;
 	tokenizer->get = Tokenizer_Read;
 
@@ -92,6 +93,124 @@ static void DetectComment(tokenizer_t *tokenizer, UINT32 *pos)
 		tokenizer->inComment = 2;
 }
 
+// This function detects escape sequences in a string and attempts to convert them.
+static size_t EscapeString(char *output, const char *input, size_t inputLength)
+{
+	const char *end = input + inputLength;
+
+	size_t i = 0;
+
+	while (input < end)
+	{
+		char chr = *input++;
+
+		if (chr == '\\')
+		{
+			chr = *input++;
+
+			switch (chr)
+			{
+			case 'n':
+				output[i] = '\n';
+				i++;
+				break;
+			case 't':
+				output[i] = '\t';
+				i++;
+				break;
+			case '\\':
+				output[i] = '\\';
+				i++;
+				break;
+			case '"':
+				output[i] = '\"';
+				i++;
+				break;
+			case 'x': {
+				int out = 0, c;
+				int j = 0;
+
+				chr = *input++;
+
+				for (j = 0; j < 5 && isxdigit(chr); j++)
+				{
+					c = ((chr <= '9') ? (chr - '0') : (tolower(chr) - 'a' + 10));
+					out = (out << 4) | c;
+					chr = *input++;
+				}
+
+				input--;
+
+				switch (j)
+				{
+					case 4:
+						output[i] = (out >> 8) & 0xFF;
+						i++;
+						/* FALLTHRU */
+					case 2:
+						output[i] = out & 0xFF;
+						i++;
+						break;
+					default:
+						// TODO: Displaying parsing errors properly will require
+						// some refactoring of the tokenizer itself. For now,
+						// this function will silently return an empty string
+						// if it encounters a malformed escape sequence.
+						// This situation cannot happen for i.e. UDMF comments,
+						// so it's okay to do this right now.
+						// CONS_Alert(CONS_WARNING, "Escape sequence has wrong size\n");
+						i = 0;
+						goto done;
+				}
+
+				break;
+			}
+			default:
+				if (isdigit(chr))
+				{
+					int out = 0;
+					int j = 0;
+					do
+					{
+						out = 10*out + (chr - '0');
+						chr = *input++;
+					} while (++j < 3 && isdigit(chr));
+
+					input--;
+
+					if (out > 255)
+					{
+						// CONS_Alert(CONS_WARNING, "Escape sequence is too large\n");
+						i = 0;
+						goto done;
+					}
+
+					output[i] = out;
+					i++;
+				}
+				else
+				{
+					// CONS_Alert(CONS_WARNING, "Unknown escape sequence '\\%c'\n", chr);
+					i = 0;
+					goto done;
+				}
+				break;
+			}
+		}
+		else
+		{
+			output[i] = chr;
+			i++;
+		}
+	}
+
+done:
+	output[i] = '\0';
+	i++;
+
+	return i;
+}
+
 static void Tokenizer_ReadTokenString(tokenizer_t *tokenizer, UINT32 i)
 {
 	UINT32 tokenLength = tokenizer->endPos - tokenizer->startPos;
@@ -101,10 +220,46 @@ static void Tokenizer_ReadTokenString(tokenizer_t *tokenizer, UINT32 i)
 		// Assign the memory. Don't forget an extra byte for the end of the string!
 		tokenizer->token[i] = (char *)Z_Malloc(tokenizer->capacity[i] * sizeof(char), PU_STATIC, NULL);
 	}
+
 	// Copy the string.
-	M_Memcpy(tokenizer->token[i], tokenizer->input + tokenizer->startPos, (size_t)tokenLength);
-	// Make the final character NUL.
-	tokenizer->token[i][tokenLength] = '\0';
+	if (tokenizer->stringNeedsEscaping)
+	{
+		EscapeString(tokenizer->token[i], tokenizer->input + tokenizer->startPos, (size_t)tokenLength);
+	}
+	else
+	{
+		M_Memcpy(tokenizer->token[i], tokenizer->input + tokenizer->startPos, (size_t)tokenLength);
+
+		// Make the final character NUL.
+		tokenizer->token[i][tokenLength] = '\0';
+	}
+}
+
+static void ScanString(tokenizer_t *tokenizer)
+{
+	tokenizer->stringNeedsEscaping = false;
+
+	while (tokenizer->input[tokenizer->endPos] != '"' && tokenizer->endPos < tokenizer->inputLength)
+	{
+		if (!DetectLineBreak(tokenizer, tokenizer->endPos))
+		{
+			// Skip one character ahead if this looks like an escape sequence
+			if (tokenizer->input[tokenizer->endPos] == '\\')
+			{
+				tokenizer->stringNeedsEscaping = true;
+				tokenizer->endPos++;
+
+				// Oh. Naughty. We hit the end of the input.
+				// Stop scanning, then.
+				if (tokenizer->endPos == tokenizer->inputLength)
+					return;
+
+				DetectLineBreak(tokenizer, tokenizer->endPos);
+			}
+		}
+
+		tokenizer->endPos++;
+	}
 }
 
 const char *Tokenizer_Read(tokenizer_t *tokenizer, UINT32 i)
@@ -117,11 +272,7 @@ const char *Tokenizer_Read(tokenizer_t *tokenizer, UINT32 i)
 	// If in a string, return the entire string within quotes, except without the quotes.
 	if (tokenizer->inString == 1)
 	{
-		while (tokenizer->input[tokenizer->endPos] != '"' && tokenizer->endPos < tokenizer->inputLength)
-		{
-			DetectLineBreak(tokenizer, tokenizer->endPos);
-			tokenizer->endPos++;
-		}
+		ScanString(tokenizer);
 
 		Tokenizer_ReadTokenString(tokenizer, i);
 		tokenizer->inString = 2;
@@ -134,6 +285,7 @@ const char *Tokenizer_Read(tokenizer_t *tokenizer, UINT32 i)
 		tokenizer->token[i][0] = tokenizer->input[tokenizer->startPos];
 		tokenizer->token[i][1] = '\0';
 		tokenizer->inString = 0;
+		tokenizer->stringNeedsEscaping = false;
 		return tokenizer->token[i];
 	}
 
@@ -281,11 +433,7 @@ const char *Tokenizer_SRB2Read(tokenizer_t *tokenizer, UINT32 i)
 	else if (tokenizer->input[tokenizer->startPos] == '"')
 	{
 		tokenizer->endPos = ++tokenizer->startPos;
-		while (tokenizer->input[tokenizer->endPos] != '"' && tokenizer->endPos < tokenizer->inputLength)
-		{
-			DetectLineBreak(tokenizer, tokenizer->endPos);
-			tokenizer->endPos++;
-		}
+		ScanString(tokenizer);
 
 		Tokenizer_ReadTokenString(tokenizer, i);
 		tokenizer->endPos++;

@@ -93,26 +93,24 @@
     - - |
           # ccache_config
           echo -e "\e[0Ksection_start:`date +%s`:ccache_config[collapsed=true]\r\e[0KSetting up ccache config"
-      - mkdir --parents --verbose ~/.ccache/
-      - touch ~/.ccache/ccache.conf
       - |
           # cache.conf
           echo Adding ccache configution option
       - |
           # base_dir
-          echo base_dir = $CI_PROJECT_DIR                        | tee --append ~/.ccache/ccache.conf
+          ccache --set-config base_dir=$CI_PROJECT_DIR
       - |
           # cache_dir
-          echo cache_dir = $CI_PROJECT_DIR/build/ccache          | tee --append ~/.ccache/ccache.conf
+          ccache --set-config cache_dir=$CI_PROJECT_DIR/build/ccache
       - |
           # compiler_check
-          echo compiler_check = content                          | tee --append ~/.ccache/ccache.conf
+          ccache --set-config compiler_check=content
       - |
           # stats_log
-          echo stats_log = $CI_PROJECT_DIR/build/ccache_statslog | tee --append ~/.ccache/ccache.conf
+          ccache --set-config stats_log=$CI_PROJECT_DIR/build/ccache_statslog || true
       - |
           # max_size
-          echo max_size = 300M                                   | tee --append ~/.ccache/ccache.conf
+          ccache --set-config max_size=300M
       - |
           # ccache_config
           echo -e "\e[0Ksection_end:`date +%s`:ccache_config\r\e[0K"

@@ -130,6 +130,10 @@ boolean P_TryCameraMove(fixed_t x, fixed_t y, camera_t *thiscam);
 void P_SlideCameraMove(camera_t *thiscam);
 boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcalled);
 pflags_t P_GetJumpFlags(player_t *player);
+statenum_t P_GetCanonicalPlayerState(player_t *player, statenum_t state);
+boolean P_IsPlayerInState(player_t *player, statenum_t state);
+boolean P_IsPlayerInSuperTransformationState(player_t *player);
+boolean P_IsPlayerInNightsTransformationState(player_t *player);
 boolean P_PlayerInPain(player_t *player);
 void P_DoPlayerPain(player_t *player, mobj_t *source, mobj_t *inflictor);
 void P_ResetPlayer(player_t *player);
@@ -553,5 +557,6 @@ void P_DoSuperDetransformation(player_t *player);
 void P_ExplodeMissile(mobj_t *mo);
 void P_CheckGravity(mobj_t *mo, boolean affect);
 void P_SetPitchRollFromSlope(mobj_t *mo, pslope_t *slope);
+boolean P_IsMobjInPainState(mobj_t *mobj);
 
 #endif // __P_LOCAL__

@@ -13,6 +13,7 @@
 extern lua_State *gL;
 
 extern boolean mousegrabbedbylua;
+extern boolean textinputmodeenabledbylua;
 extern boolean ignoregameinputs;
 
 #define MUTABLE_TAGS
@@ -69,11 +70,15 @@ extern boolean ignoregameinputs;
 #ifdef MUTABLE_TAGS
 #define META_SECTORTAGLIST "sector_t.taglist"
 #endif
+#define META_SECTORCUSTOMARGS "SECTOR_T*CUSTOMARGS"
 #define META_SIDENUM "LINE_T*SIDENUM"
 #define META_LINEARGS "LINE_T*ARGS"
 #define META_LINESTRINGARGS "LINE_T*STRINGARGS"
+#define META_LINECUSTOMARGS "LINE_T*CUSTOMARGS"
+#define META_SIDECUSTOMARGS "SIDE_T*CUSTOMARGS"
 #define META_THINGARGS "MAPTHING_T*ARGS"
 #define META_THINGSTRINGARGS "MAPTHING_T*STRINGARGS"
+#define META_THINGCUSTOMARGS "MAPTHING_T*CUSTOMARGS"
 #define META_POLYOBJVERTICES "POLYOBJ_T*VERTICES"
 #define META_POLYOBJLINES "POLYOBJ_T*LINES"
 #ifdef HAVE_LUA_SEGS
@@ -93,8 +98,11 @@ extern boolean ignoregameinputs;
 
 #define META_LUABANKS "LUABANKS[]*"
 
+#define META_TEXTEVENT "TEXTEVENT_T*"
 #define META_KEYEVENT "KEYEVENT_T*"
 #define META_MOUSE "MOUSE_T*"
+
+#define META_INTERCEPT "INTERCEPT_T*"
 
 boolean luaL_checkboolean(lua_State *L, int narg);
 
@@ -116,3 +124,4 @@ int LUA_BlockmapLib(lua_State *L);
 int LUA_HudLib(lua_State *L);
 int LUA_ColorLib(lua_State *L);
 int LUA_InputLib(lua_State *L);
+int LUA_InterceptLib(lua_State *L);
