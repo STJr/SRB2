@@ -1111,7 +1111,10 @@ static inline void PingUpdate(void)
 		UINT32 node = playernode[i];
 		if (node < MAXNETNODES)
 		{
-			playerpacketlosstable[i] = lostpackets[node] * 100 / sentpackets[node]; // measure in percentage
+			if (sentpackets[node] == 0)
+				playerpacketlosstable[i] = 0;
+			else
+				playerpacketlosstable[i] = lostpackets[node] * 100 / sentpackets[node]; // measure in percentage
 			lostpackets[node] = 0;
 			sentpackets[node] = 0;
 		}

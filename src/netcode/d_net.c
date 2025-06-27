@@ -880,8 +880,16 @@ void HGetPacket(void (*handler)(doomcom_t *doomcom))
 			continue; // discarded (duplicated)
 
 		// Measure packet loss
-		sentpackets[doomcom->remotenode] += (UINT32)netbuffer->packetindex - nodes[doomcom->remotenode].recvnum;
-		lostpackets[doomcom->remotenode] += (UINT32)netbuffer->packetindex - nodes[doomcom->remotenode].recvnum - 1;
+		if ((INT32)netbuffer->packetindex - (INT32)nodes[doomcom->remotenode].recvnum <= 0)
+		{
+			// got out of order packet, so compensate
+			lostpackets[doomcom->remotenode]--;
+		}
+		else
+		{
+			sentpackets[doomcom->remotenode] += (UINT32)netbuffer->packetindex - nodes[doomcom->remotenode].recvnum;
+			lostpackets[doomcom->remotenode] += (UINT32)netbuffer->packetindex - nodes[doomcom->remotenode].recvnum - 1;
+		}
 		nodes[doomcom->remotenode].recvnum = netbuffer->packetindex;
 
 		// A packet with just ackreturn
