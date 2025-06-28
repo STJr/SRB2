@@ -1122,11 +1122,15 @@ static inline void PingUpdate(void)
 				playerpacketlosstable[i] = 0;
 			else
 				playerpacketlosstable[i] = playerpacketlosstable[i] * 100 / totalpackets; // measure in percentage
-			if (++plcycle >= PACKETLOSSCYCLES)
-				plcycle = 0;
-			lostpackets[plcycle][node] = 0;
-			sentpackets[plcycle][node] = 0;
 		}
+	}
+
+	if (++plcycle >= PACKETLOSSCYCLES)
+		plcycle = 0;
+	for (INT32 node = 0; node < MAXNETNODES; node++)
+	{
+		lostpackets[plcycle][node] = 0;
+		sentpackets[plcycle][node] = 0;
 	}
 
 	//send out our ping packets
