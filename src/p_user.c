@@ -12566,8 +12566,6 @@ void P_PlayerThink(player_t *player)
 	else
 		player->mo->flags2 &= ~MF2_DONTDRAW;
 
-	player->pflags &= ~PF_SLIDING;
-
 #define dashmode player->dashmode
 	// Dash mode - thanks be to VelocitOni
 	if ((player->charflags & SF_DASHMODE) && !player->gotflag && !player->powers[pw_carry] && !player->exiting && !(maptol & TOL_NIGHTS) && !metalrecording) // woo, dashmode! no nights tho.
@@ -12643,6 +12641,12 @@ void P_PlayerThink(player_t *player)
 #undef dashmode
 
 	LUA_HookPlayer(player, HOOK(PlayerThink));
+
+	// Remove PF_SLIDING *AFTER* PlayerThink hooks, because
+	// no one wants to add a ThinkFrame just for detecting this (i'm also very lazy)
+	// This is such a trivial change, I doubt it'll change anything major
+	// -luigi budd
+	player->pflags &= ~PF_SLIDING;
 
 /*
 //	Colormap verification
