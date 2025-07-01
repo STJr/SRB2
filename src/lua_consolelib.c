@@ -533,7 +533,7 @@ static int lib_cvRegisterVar(lua_State *L)
 		{
 			if (!lua_isstring(L, 4))
 			{
-				TYPEERROR("defaultvalue", LUA_TSTRING)
+				TYPEERROR("category", LUA_TSTRING)
 			}
 
 			cvar->category = Z_StrDup(lua_tostring(L, 4));
@@ -544,7 +544,7 @@ static int lib_cvRegisterVar(lua_State *L)
 		{
 			if (!lua_isstring(L, 4))
 			{
-				TYPEERROR("defaultvalue", LUA_TSTRING)
+				TYPEERROR("displayname", LUA_TSTRING)
 			}
 
 			cvar->displayname = Z_StrDup(lua_tostring(L, 4));

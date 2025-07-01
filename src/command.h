@@ -134,7 +134,7 @@ typedef struct CV_PossibleValue_s
 	const char *strvalue;
 } CV_PossibleValue_t;
 
-typedef struct consvar_s //NULL, NULL, 0, NULL, NULL |, 0, NULL, NULL, 0, 0, NULL
+typedef struct consvar_s //NULL, NULL, NULL, NULL, 0, NULL, NULL |, 0, NULL, NULL, 0, 0, NULL
 {
 	const char *name;
 	const char *defaultvalue;
@@ -167,7 +167,7 @@ typedef struct consvar_s //NULL, NULL, 0, NULL, NULL |, 0, NULL, NULL, 0, 0, NUL
 	struct consvar_s *next;
 } consvar_t;
 
-/* name, defaultvalue, category, displayname, flags, PossibleValue, func */
+/* name, defaultvalue, flags, PossibleValue, func */
 #define CVAR_INIT( ... ) \
 { __VA_ARGS__, NULL, NULL, NULL, 0, NULL, NULL, {0, {NULL}}, 0U, (char)0, NULL}
 
