@@ -808,6 +808,8 @@ void SV_SpawnServer(void)
 		if (!dedicated)
 			CL_ConnectToServer();
 		else numslots = 1;
+
+		LUA_HookVoid(HOOK(GameStart));
 	}
 }
 

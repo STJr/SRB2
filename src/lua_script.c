@@ -20,6 +20,7 @@
 #include "r_state.h"
 #include "r_sky.h"
 #include "g_game.h"
+#include "g_demo.h"
 #include "g_input.h"
 #include "f_finale.h"
 #include "byteptr.h"
@@ -394,6 +395,22 @@ int LUA_PushGlobals(lua_State *L, const char *word)
 		if ((!multiplayer || !netgame) && !playeringame[serverplayer])
 			return 0;
 		LUA_PushUserdata(L, &players[serverplayer], META_PLAYER);
+		return 1;
+	// demos booleans
+	} else if (fastcmp(word, "demoplayback")) {
+		lua_pushboolean(L, demoplayback);
+		return 1;
+	} else if (fastcmp(word, "titledemo")) {
+		lua_pushboolean(L, titledemo);
+		return 1;
+	} else if (fastcmp(word, "demorecording")) {
+		lua_pushboolean(L, demorecording);
+		return 1;
+	} else if (fastcmp(word, "timingdemo")) {
+		lua_pushboolean(L, timingdemo);
+		return 1;
+	} else if (fastcmp(word, "demosynced")) {
+		lua_pushboolean(L, demosynced);
 		return 1;
 	} else if (fastcmp(word,"emeralds")) {
 		lua_pushinteger(L, emeralds);

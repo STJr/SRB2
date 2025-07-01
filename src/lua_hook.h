@@ -67,7 +67,9 @@ automatically.
 	X (ViewpointSwitch),/* spy mode (no trickstabs) */\
 	X (SeenPlayer),/* MT_NAMECHECK */\
 	X (PlayerThink),/* P_PlayerThink */\
+	X (GameStart),\
 	X (GameQuit),\
+	X (GameEnd),\
 	X (PlayerCmd),/* building the player's ticcmd struct (Ported from SRB2Kart) */\
 	X (MusicChange),\
 	X (PlayerHeight),/* override player height */\

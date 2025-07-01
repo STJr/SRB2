@@ -4340,6 +4340,8 @@ static void G_DoContinued(void)
 // when something new is added.
 void G_EndGame(void)
 {
+	LUA_HookVoid(HOOK(GameEnd));
+
 	// Only do evaluation and credits in coop games.
 	if (gametyperules & GTR_CUTSCENES)
 	{
