@@ -366,9 +366,6 @@ static int lib_cvRegisterVar(lua_State *L)
 	cvar = ZZ_Calloc(sizeof(consvar_t));
 	LUA_PushUserdata(L, cvar, META_CVAR);
 
-	const char* category = NULL;
-	const char* menu_name = NULL;
-
 #define FIELDERROR(f, e) luaL_error(L, "bad value for " LUA_QL(f) " in table passed to " LUA_QL("CV_RegisterVar") " (%s)", e);
 #define TYPEERROR(f, t) FIELDERROR(f, va("%s expected, got %s", lua_typename(L, t), luaL_typename(L, -1)))
 
@@ -534,13 +531,23 @@ static int lib_cvRegisterVar(lua_State *L)
 			|| (cvar->flags & CV_CALL && i == 7))
 			|| (k && fasticmp(k, "category")))
 		{
-			category = lua_isnoneornil(L, 4) ? NULL : lua_tostring(L, 4);
+			if (!lua_isstring(L, 4))
+			{
+				TYPEERROR("defaultvalue", LUA_TSTRING)
+			}
+
+			cvar->category = Z_StrDup(lua_tostring(L, 4));
 		}
 		else if (((i == 6 && !(cvar->flags & CV_CALL))
 			|| (cvar->flags & CV_CALL && i == 8))
 			|| (k && fasticmp(k, "displayname")))
 		{
-			menu_name = lua_isnoneornil(L, 4) ? NULL : lua_tostring(L, 4);
+			if (!lua_isstring(L, 4))
+			{
+				TYPEERROR("defaultvalue", LUA_TSTRING)
+			}
+
+			cvar->displayname = Z_StrDup(lua_tostring(L, 4));
 		}
 
 		lua_pop(L, 1);
@@ -569,6 +576,19 @@ static int lib_cvRegisterVar(lua_State *L)
 		return luaL_error(L, M_GetText("Variable %s has CV_CALL without any callbacks"), cvar->name);
 	}
 
+	if (!cvar->displayname || cvar->displayname[0] == '\0')
+	{
+		cvar->displayname = cvar->name;
+	}
+
+	if (!cvar->category || cvar->category[0] == '\0')
+	{
+		char* temp = wadfiles[numwadfiles - 1]->filename;
+		temp += strlen(temp) - nameonlylength(temp);
+
+		cvar->category = temp;
+	}
+
 	cvar->flags |= CV_ALLOWLUA;
 	// actually time to register it to the console now! Finally!
 	cvar->flags |= CV_MODIFIED;
@@ -579,23 +599,8 @@ static int lib_cvRegisterVar(lua_State *L)
 		return luaL_error(L, "failed to register cvar (probable conflict with internal variable/command names)");
 	}
 
-	if (!((cvar->flags & CV_NOMENU)
-		|| (cvar->flags & CV_HIDEN))
-		|| (cvar->flags & CV_NOSHOWHELP))
-	{
-		if (!category)
-		{
-			char* temp = wadfiles[numwadfiles - 1]->filename;
-			temp += strlen(temp) - nameonlylength(temp);
-
-			category = temp;
-		}
-
-		if (menu_name && menu_name[0] != '\0')
-			M_FreeslotIntoCustomMenu(cvar, category, menu_name);
-		else
-			M_FreeslotIntoCustomMenu(cvar, category, cvar->name);
-	}
+	if (cvar->flags & CV_MENU)
+		M_RegisterCustomCVOption(cvar);
 
 	// return cvar userdata
 	return 1;
@@ -711,6 +716,8 @@ enum cvar_e
 	cvar_value,
 	cvar_string,
 	cvar_changed,
+	cvar_displayname,
+	cvar_category,
 };
 
 static const char *const cvar_opt[] = {
@@ -720,6 +727,8 @@ static const char *const cvar_opt[] = {
 	"value",
 	"string",
 	"changed",
+	"displayname",
+	"category",
 	NULL,
 };
 
@@ -749,6 +758,12 @@ static int cvar_get(lua_State *L)
 		break;
 	case cvar_changed:
 		lua_pushboolean(L, cvar->changed);
+		break;
+	case cvar_displayname:
+		lua_pushstring(L, cvar->displayname);
+		break;
+	case cvar_category:
+		lua_pushstring(L, cvar->category);
 		break;
 	default:
 		if (devparm)

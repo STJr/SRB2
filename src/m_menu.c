@@ -2226,13 +2226,13 @@ menu_t OP_ScreenshotOptionsDef =
 	NULL
 };
 
-INT16 addoncvarpos = 0;
+INT16 menu_cc_pos = 0;
 
 static void M_AddonsCvarOptions(INT32 choice)
 {
 	(void)choice;
 
-	if (addoncvarpos)
+	if (menu_cc_pos)
 		M_SetupNextMenu(&OP_AddonCustomOptionsDef);
 	else
 		M_StartMessage(M_GetText("No Custom Option was found.\nTry to load any Addon!\n(Press a key)\n"), NULL, MM_NOTHING);
@@ -6969,51 +6969,58 @@ static void M_SelectableClearMenus(INT32 choice)
 #define CCVHEIGHTHEADER 1
 #define CCVHEIGHTHEADERAFTER 6
 
-UINT16 addonvaralphakey = 4;
-INT16 addonlastheaderpos = 0;
+UINT16	menu_cc_lastoffset = 4;
+INT16	menu_cc_lastheader = 0;
 
-INT32 CVARSETUP;
+boolean CCSETUP = false;
 
-void M_FreeslotIntoCustomMenu(consvar_t* cvar, const char* category, const char* name)
+void M_RegisterCustomCVOption(consvar_t* cvar)
 {
-	if (addoncvarpos == INT16_MAX)
+	if (menu_cc_pos == INT16_MAX)
 		return;
 
-	if (addoncvarpos >= MAXADDONOPTIONS - 2)
+	if (menu_cc_pos >= MAXADDONOPTIONS - 2)
 	{
-		CONS_Printf("Failed to register the console variable '%s' into the menu. Custom Options menu most likely reached the hard limit.\n", name);
-		addoncvarpos = INT16_MAX;
+		CONS_Printf("Failed to register the console variable '%s' into the menu. Custom Options menu has reached its hard limit of %d.\n", cvar->displayname, MAXADDONOPTIONS);
+		menu_cc_pos = INT16_MAX;
 		return;
 	}
 
-	if (!CVARSETUP)
+	if (CCSETUP == false)
 	{
 		CONS_Printf("Custom Options menu initiation.\n");
-		for (CVARSETUP = 0; CVARSETUP < MAXADDONOPTIONS; ++CVARSETUP)
-			OP_AddonOptionsSlots[CVARSETUP] = (menuitem_t){ IT_DISABLED, NULL, "", 0, INT16_MAX };
+		
+		for (INT16 i = 0; i < MAXADDONOPTIONS; ++i)
+			OP_AddonOptionsSlots[i] = (menuitem_t){ IT_DISABLED, NULL, "", 0, INT16_MAX };
+
+		CCSETUP = true;
 	}
 
-	if (category && ((addoncvarpos == 0 && category[0] != '\0') || !fasticmp(category, OP_AddonOptionsSlots[addonlastheaderpos].text)))
+	if (
+		cvar->category && ((menu_cc_pos == 0 && cvar->category[0] != '\0') 
+		|| !fasticmp(cvar->category, OP_AddonOptionsSlots[menu_cc_lastheader].text)))
 	{
-		addonlastheaderpos = addoncvarpos;
-		addonvaralphakey += CCVHEIGHTHEADER;
+		menu_cc_lastheader = menu_cc_pos;
+		menu_cc_lastoffset += CCVHEIGHTHEADER;
 
-		OP_AddonOptionsSlots[addoncvarpos] = (menuitem_t){ IT_HEADER, NULL, Z_StrDup(category), NULL, addonvaralphakey };
-		addonvaralphakey += CCVHEIGHTHEADERAFTER;
+		OP_AddonOptionsSlots[menu_cc_pos] = (menuitem_t){ IT_HEADER, NULL, cvar->category, NULL, menu_cc_lastoffset };
+		menu_cc_lastoffset += CCVHEIGHTHEADERAFTER;
 
 
-		++addoncvarpos;
+		++menu_cc_pos;
 	}
 
-	if (cvar->PossibleValue && fasticmp(cvar->PossibleValue[0].strvalue, "MIN"))
-		OP_AddonOptionsSlots[addoncvarpos] = (menuitem_t){ IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, Z_StrDup(name), cvar, addonvaralphakey };
-	else if (cvar->flags & CV_FLOAT)
-		OP_AddonOptionsSlots[addoncvarpos] = (menuitem_t){ IT_STRING | IT_CVAR | IT_CV_FLOATSLIDER, NULL, Z_StrDup(name), cvar, addonvaralphakey };
-	else
-		OP_AddonOptionsSlots[addoncvarpos] = (menuitem_t){ IT_STRING | IT_CVAR, NULL, Z_StrDup(name), cvar, addonvaralphakey };
+	UINT16 status = IT_STRING | IT_CVAR;
 
-	addonvaralphakey += CCVHEIGHT;
-	++addoncvarpos;
+	if (cvar->flags & CV_FLOAT)
+		status |= IT_CV_FLOATSLIDER;
+	else if (cvar->PossibleValue && cvar->PossibleValue[0].strvalue && fasticmp(cvar->PossibleValue[0].strvalue, "MIN"))
+		status |= IT_CV_SLIDER;
+		
+	OP_AddonOptionsSlots[menu_cc_pos] = (menuitem_t){ status, NULL, cvar->displayname, cvar, menu_cc_lastoffset };
+	menu_cc_lastoffset += CCVHEIGHT;
+
+	++menu_cc_pos;
 }
 
 

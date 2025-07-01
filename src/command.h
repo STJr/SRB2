@@ -125,7 +125,7 @@ typedef enum
                    // used on menus
 	CV_CHEAT = 2048, // Don't let this be used in multiplayer unless cheats are on.
 	CV_ALLOWLUA = 4096,/* Let this be called from Lua */
-	CV_NOMENU = 8192, // Lua exclusive flag, to give choice to modders regarding custom options menu.
+	CV_MENU = 8192, // Lua exclusive flag, to give choice to modders regarding custom options menu.
 } cvflags_t;
 
 typedef struct CV_PossibleValue_s
@@ -138,10 +138,15 @@ typedef struct consvar_s //NULL, NULL, 0, NULL, NULL |, 0, NULL, NULL, 0, 0, NUL
 {
 	const char *name;
 	const char *defaultvalue;
+	
 	INT32 flags;            // flags see cvflags_t above
 	CV_PossibleValue_t *PossibleValue; // table of possible values
 	void (*func)(void);   // called on change, if CV_CALL set
 	boolean (*can_change)(const char*);   // called before change, if CV_CALL set
+
+	const char* displayname;
+	const char* category;
+
 	INT32 value;            // for INT32 and fixed_t
 	const char *string;   // value in string
 	char *zstring;        // Either NULL or same as string.
@@ -162,12 +167,12 @@ typedef struct consvar_s //NULL, NULL, 0, NULL, NULL |, 0, NULL, NULL, 0, 0, NUL
 	struct consvar_s *next;
 } consvar_t;
 
-/* name, defaultvalue, flags, PossibleValue, func */
+/* name, defaultvalue, category, displayname, flags, PossibleValue, func */
 #define CVAR_INIT( ... ) \
-{ __VA_ARGS__, NULL, 0, NULL, NULL, {0, {NULL}}, 0U, (char)0, NULL }
+{ __VA_ARGS__, NULL, NULL, NULL, 0, NULL, NULL, {0, {NULL}}, 0U, (char)0, NULL}
 
 #define CVAR_INIT_WITH_CALLBACKS( ... ) \
-{ __VA_ARGS__, 0, NULL, NULL, {0, {NULL}}, 0U, (char)0, NULL }
+{ __VA_ARGS__, NULL, NULL, 0, NULL, NULL, {0, {NULL}}, 0U, (char)0, NULL}
 
 #ifdef OLD22DEMOCOMPAT
 typedef struct old_demo_var old_demo_var_t;
