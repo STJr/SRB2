@@ -10006,14 +10006,41 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 
 	if (!(player->climbing || (player->powers[pw_carry] == CR_NIGHTSMODE) || player->playerstate == PST_DEAD || tutorialmode))
 	{
-		if (player->spectator) // force cam off for spectators
-			return true;
+		if (player->spectator || !thiscam->chase)
+		{
+			// set the values to the player's values so they can still be used
+			thiscam->x = player->mo->x;
+			thiscam->y = player->mo->y;
+			thiscam->z = player->viewz;
+			thiscam->momx = player->mo->momx;
+			thiscam->momy = player->mo->momy;
+			thiscam->momz = player->mo->momz;
 
-		if (!cv_chasecam.value && thiscam == &camera)
-			return true;
+			if (thiscam == &camera)
+			{
+				// when not spectating, use local angles
+				if (&players[displayplayer] == &players[consoleplayer]) {
+					thiscam->angle = localangle;
+					thiscam->aiming = localaiming;
+				}
+				else
+				{
+					thiscam->angle = players[displayplayer].cmd.angleturn << 16;
+					thiscam->aiming = players[displayplayer].cmd.aiming << 16;
+				}
+			} 
+			else if (thiscam == &camera2)
+			{
+				// i dont think secondarydisplayplayer changes, so we should be fine.
+				thiscam->angle = localangle2;
+				thiscam->aiming = localaiming2;
+			}
 
-		if (!cv_chasecam2.value && thiscam == &camera2)
+			thiscam->subsector = player->mo->subsector;
+			thiscam->floorz = player->mo->floorz;
+			thiscam->ceilingz = player->mo->ceilingz;
 			return true;
+		}
 	}
 
 	if (!thiscam->chase && !resetcalled)
@@ -12757,7 +12784,7 @@ void P_PlayerAfterThink(player_t *player)
 		// camera may still move when guy is dead
 		//if (!netgame)
 		{
-			if (thiscam && thiscam->chase)
+			if (thiscam)
 				P_MoveChaseCamera(player, thiscam, false);
 		}
 		if (player->followmobj)
@@ -13197,9 +13224,10 @@ void P_PlayerAfterThink(player_t *player)
 				player->viewz = player->mo->z + player->mo->height - player->viewheight;
 			else
 				player->viewz = player->mo->z + player->viewheight;
-			if (server || addedtogame)
-				P_MoveChaseCamera(player, thiscam, false); // calculate the camera movement
 		}
+
+		if (server || addedtogame)
+			P_MoveChaseCamera(player, thiscam, false); // calculate the camera movement
 	}
 
 	// spectator invisibility and nogravity.
