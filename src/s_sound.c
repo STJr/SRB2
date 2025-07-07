@@ -1801,6 +1801,27 @@ UINT32 S_GetMusicLength(void)
 	return I_GetSongLength();
 }
 
+//
+// S_MusicInfo
+//
+// Returns metadata about supplied music
+// If name is NULL, returns the currently playing music (if any)
+//
+musicdef_t *S_MusicInfo(const char *name)
+{
+	if (!name)
+		name = music_name;
+
+	musicdef_t *def;
+	for (def = musicdefstart; def; def = def->next)
+	{
+		if (strcasecmp(def->name, name) == 0)
+			return def;
+	}
+
+	return NULL;
+}
+
 boolean S_SetMusicLoopPoint(UINT32 looppoint)
 {
 	return I_SetSongLoopPoint(looppoint);
