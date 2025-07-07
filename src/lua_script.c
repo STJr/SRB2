@@ -430,6 +430,9 @@ int LUA_PushGlobals(lua_State *L, const char *word)
 	} else if (fastcmp(word, "token")) {
 		lua_pushinteger(L, token);
 		return 1;
+	} else if (fastcmp(word, "nummaprings")) {
+		lua_pushinteger(L, nummaprings);
+		return 1;
 	} else if (fastcmp(word, "gamestate")) {
 		lua_pushinteger(L, gamestate);
 		return 1;
@@ -455,6 +458,14 @@ int LUA_PushGlobals(lua_State *L, const char *word)
 	} else if (fastcmp(word, "chatactive")) {
 		lua_pushboolean(L, chat_on);
 		return 1;
+	} else if (fastcmp(word, "currentsaveslot")) {
+		if (multiplayer)
+			return 0;
+		lua_pushinteger(L, cursaveslot);
+		return 1;
+	} else if (fastcmp(word, "gamedatafilename")) {
+		lua_pushstring(L, strcmp(timeattackfolder, "main") ? timeattackfolder : "gamedata");
+		return 1;
 	}
 	return 0;
 }
@@ -478,6 +489,8 @@ int LUA_CheckGlobals(lua_State *L, const char *word)
 		emeralds = (UINT16)luaL_checkinteger(L, 2);
 	else if (fastcmp(word, "token"))
 		token = (UINT32)luaL_checkinteger(L, 2);
+	else if (fastcmp(word, "nummaprings"))
+		nummaprings = (INT32)luaL_checkinteger(L, 2);
 	else if (fastcmp(word, "gravity"))
 		gravity = (fixed_t)luaL_checkinteger(L, 2);
 	else if (fastcmp(word, "stoppedclock"))
