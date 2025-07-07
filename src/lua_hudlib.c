@@ -892,6 +892,28 @@ static int libd_drawFill(lua_State *L)
 	return 0;
 }
 
+static int libd_drawFixedFill(lua_State *L)
+{
+	huddrawlist_h list;
+	INT32 x = luaL_optinteger(L, 1, 0);
+	INT32 y = luaL_optinteger(L, 2, 0);
+	INT32 w = luaL_optinteger(L, 3, BASEVIDWIDTH << FRACBITS);
+	INT32 h = luaL_optinteger(L, 4, BASEVIDHEIGHT << FRACBITS);
+	INT32 c = luaL_optinteger(L, 5, 31);
+
+	HUDONLY
+
+	lua_getfield(L, LUA_REGISTRYINDEX, "HUD_DRAW_LIST");
+	list = (huddrawlist_h) lua_touserdata(L, -1);
+	lua_pop(L, 1);
+
+	if (LUA_HUD_IsDrawListValid(list))
+		LUA_HUD_AddDrawFixedFill(list, x, y, w, h, c);
+	else
+		V_DrawFixedFill(x, y, w, h, c);
+	return 0;
+}
+
 static int libd_drawString(lua_State *L)
 {
 	huddrawlist_h list;
@@ -1387,6 +1409,7 @@ static luaL_Reg lib_draw[] = {
 	{"drawNum", libd_drawNum},
 	{"drawPaddedNum", libd_drawPaddedNum},
 	{"drawFill", libd_drawFill},
+	{"drawFixedFill", libd_drawFixedFill},
 	{"drawString", libd_drawString},
 	{"drawNameTag", libd_drawNameTag},
 	{"drawScaledNameTag", libd_drawScaledNameTag},
