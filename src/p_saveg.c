@@ -4827,6 +4827,8 @@ static void P_NetArchiveMisc(save_t *save_p, boolean resending)
 	P_WriteUINT16(save_p, skincolor_redring);
 	P_WriteUINT16(save_p, skincolor_bluering);
 
+	P_WriteINT32(save_p, nummaprings);
+
 	P_WriteINT32(save_p, modulothing);
 
 	P_WriteINT16(save_p, autobalance);
@@ -4930,6 +4932,8 @@ static inline boolean P_NetUnArchiveMisc(save_t *save_p, boolean reloading)
 	skincolor_blueteam = P_ReadUINT16(save_p);
 	skincolor_redring = P_ReadUINT16(save_p);
 	skincolor_bluering = P_ReadUINT16(save_p);
+
+	nummaprings = P_ReadINT32(save_p);
 
 	modulothing = P_ReadINT32(save_p);
 
