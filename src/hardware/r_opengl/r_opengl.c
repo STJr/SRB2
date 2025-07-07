@@ -155,8 +155,9 @@ static const GLfloat byte2float[256] = {
 // -----------------+
 
 #ifdef DEBUG_TO_FILE
-FILE *gllogstream;
+FILE *gllogstream = NULL;
 #endif
+
 
 FUNCPRINTF void GL_DBG_Printf(const char *format, ...)
 {
@@ -164,14 +165,14 @@ FUNCPRINTF void GL_DBG_Printf(const char *format, ...)
 	char str[4096] = "";
 	va_list arglist;
 
-	if (!gllogstream)
-		gllogstream = fopen("ogllog.txt", "w");
+	if (gllogstream) 
+	{	
+		va_start(arglist, format);
+		vsnprintf(str, 4096, format, arglist);
+		va_end(arglist);
 
-	va_start(arglist, format);
-	vsnprintf(str, 4096, format, arglist);
-	va_end(arglist);
-
-	fwrite(str, strlen(str), 1, gllogstream);
+		fwrite(str, strlen(str), 1, gllogstream);
+	}
 #else
 	(void)format;
 #endif
