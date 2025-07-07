@@ -430,6 +430,10 @@ UINT8 *R_GenerateTexture(size_t texnum)
 				realpatch = W_CachePatchNumPwad(wadnum, lumpnum, PU_PATCH);
 		}
 
+		// Well, it's not valid...
+		if (realpatch == NULL)
+			continue;
+
 		x1 = patch->originx;
 		width = realpatch->width;
 		height = realpatch->height;

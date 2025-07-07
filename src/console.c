@@ -1757,6 +1757,8 @@ static void CON_DrawBackpic(void)
 
 	// Cache the patch.
 	con_backpic = W_CachePatchNum(piclump, PU_PATCH);
+	if (con_backpic == NULL)
+		return;
 
 	// Center the backpic, and draw a vertically cropped patch.
 	w = con_backpic->width * vid.dup;
