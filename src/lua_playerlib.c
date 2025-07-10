@@ -226,6 +226,7 @@ enum player_e
 	player_quittime,
 	player_lastinputtime,
 	player_ping,
+	player_muted,
 	player_fovadd
 };
 
@@ -374,6 +375,7 @@ static const char *const player_opt[] = {
 	"quittime",
 	"lastinputtime",
 	"ping",
+	"muted",
 	"fovadd",
 	NULL,
 };
@@ -834,6 +836,9 @@ static int player_get(lua_State *L)
 		break;
 	case player_ping:
 		lua_pushinteger(L, playerpingtable[plr - players]);
+		break;
+	case player_muted:
+		lua_pushboolean(L, plr->muted);
 		break;
 	case player_fovadd:
 		lua_pushfixed(L, plr->fovadd);
@@ -1358,6 +1363,9 @@ static int player_set(lua_State *L)
 		break;
 	case player_lastinputtime:
 		plr->lastinputtime = (tic_t)luaL_checkinteger(L, 3);
+		break;
+	case player_muted:
+		plr->muted = lua_toboolean(L, 3);
 		break;
 	case player_fovadd:
 		plr->fovadd = luaL_checkfixed(L, 3);
