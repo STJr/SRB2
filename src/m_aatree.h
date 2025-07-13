@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2025 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -20,12 +20,13 @@
 #define AATREE_ZUSER	1		// Treat values as z_zone-allocated blocks and set their user fields
 
 typedef struct aatree_s aatree_t;
-typedef void (*aatree_iter_t)(INT32 key, void *value);
+typedef void (*aatree_iter_t)(void* key, void *value);
+typedef INT32 (*aatree_comp_t)(void* key, void *value);
 
 aatree_t *M_AATreeAlloc(UINT32 flags);
 void M_AATreeFree(aatree_t *aatree);
-void M_AATreeSet(aatree_t *aatree, INT32 key, void* value);
-void *M_AATreeGet(aatree_t *aatree, INT32 key);
+void M_AATreeSet(aatree_t *aatree, void* key, void* value, aatree_comp_t callback);
+void *M_AATreeGet(aatree_t *aatree, void* key, aatree_comp_t callback);
 void M_AATreeIterate(aatree_t *aatree, aatree_iter_t callback);
 
 #endif

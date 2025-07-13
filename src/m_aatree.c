@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2025 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -20,7 +20,7 @@
 
 typedef struct aatree_node_s
 {
-	INT32	key;
+	void*	key;
 	void*	value;
 
 	struct aatree_node_s *left, *right;
@@ -103,9 +103,9 @@ static aatree_node_t *M_AATreeRebalance(aatree_node_t *node)
 	return node;
 }
 
-static aatree_node_t *M_AATreeSet_Node(aatree_node_t *node, UINT32 flags, INT32 key, void* value)
+static aatree_node_t *M_AATreeSet_Node(aatree_node_t *node, UINT32 flags, void* key, void* value, aatree_comp_t callback)
 {
-	if (!node)
+	if (!(node && callback))
 	{
 		// Nothing here, so just add where we are
 		node = Z_Malloc(sizeof (aatree_node_t), PU_STATIC, NULL);
@@ -116,10 +116,10 @@ static aatree_node_t *M_AATreeSet_Node(aatree_node_t *node, UINT32 flags, INT32 
 	}
 	else
 	{
-		if (key < node->key)
-			node->left = M_AATreeSet_Node(node->left, flags, key, value);
-		else if (key > node->key)
-			node->right = M_AATreeSet_Node(node->right, flags, key, value);
+		if (callback(key, node->key) < 0)
+			node->left = M_AATreeSet_Node(node->left, flags, key, value, callback);
+		else if (callback(key, node->key) > 0)
+			node->right = M_AATreeSet_Node(node->right, flags, key, value, callback);
 		else
 		{
 			if (value && (flags & AATREE_ZUSER)) Z_SetUser(value, &node->value);
@@ -132,31 +132,31 @@ static aatree_node_t *M_AATreeSet_Node(aatree_node_t *node, UINT32 flags, INT32 
 	return node;
 }
 
-void M_AATreeSet(aatree_t *aatree, INT32 key, void* value)
+void M_AATreeSet(aatree_t *aatree, void* key, void* value, aatree_comp_t callback)
 {
-	aatree->root = M_AATreeSet_Node(aatree->root, aatree->flags, key, value);
+	aatree->root = M_AATreeSet_Node(aatree->root, aatree->flags, key, value, callback);
 }
 
 // Caveat: we don't distinguish between nodes that don't exists
 // and nodes with value == NULL.
-static void *M_AATreeGet_Node(aatree_node_t *node, INT32 key)
+static void *M_AATreeGet_Node(aatree_node_t *node, void* key, aatree_comp_t callback)
 {
-	if (node)
+	if (node && callback)
 	{
-		if (node->key == key)
+		if (callback(key, node->key) == 0)
 			return node->value;
-		else if(node->key < key)
-			return M_AATreeGet_Node(node->right, key);
+		else if(callback(node->key, key) < 0)
+			return M_AATreeGet_Node(node->right, key, callback);
 		else
-			return M_AATreeGet_Node(node->left, key);
+			return M_AATreeGet_Node(node->left, key, callback);
 	}
 
 	return NULL;
 }
 
-void *M_AATreeGet(aatree_t *aatree, INT32 key)
+void *M_AATreeGet(aatree_t *aatree, void* key, aatree_comp_t callback)
 {
-	return M_AATreeGet_Node(aatree->root, key);
+	return M_AATreeGet_Node(aatree->root, key, callback);
 }
 
 static void M_AATreeIterate_Node(aatree_node_t *node, aatree_iter_t callback)
