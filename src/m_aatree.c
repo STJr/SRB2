@@ -103,7 +103,7 @@ static aatree_node_t *M_AATreeRebalance(aatree_node_t *node)
 	return node;
 }
 
-static aatree_node_t *M_AATreeSet_Node(aatree_node_t *node, UINT32 flags, void* key, void* value, aatree_comp_t callback)
+static aatree_node_t *M_AATreeSet_Node(aatree_node_t *node, UINT32 flags, void* key, void* value, aatree_comp_t callback, aatree_dealloc_t deallocator)
 {
 	if (!(node && callback))
 	{
@@ -117,9 +117,9 @@ static aatree_node_t *M_AATreeSet_Node(aatree_node_t *node, UINT32 flags, void* 
 	else
 	{
 		if (callback(key, node->key) < 0)
-			node->left = M_AATreeSet_Node(node->left, flags, key, value, callback);
+			node->left = M_AATreeSet_Node(node->left, flags, key, value, callback, deallocator);
 		else if (callback(key, node->key) > 0)
-			node->right = M_AATreeSet_Node(node->right, flags, key, value, callback);
+			node->right = M_AATreeSet_Node(node->right, flags, key, value, callback, deallocator);
 		else
 		{
 			if (value && (flags & AATREE_ZUSER)) Z_SetUser(value, &node->value);
@@ -129,34 +129,39 @@ static aatree_node_t *M_AATreeSet_Node(aatree_node_t *node, UINT32 flags, void* 
 		node = M_AATreeRebalance(node);
 	}
 
+	if (deallocator) deallocator(key);
 	return node;
 }
 
-void M_AATreeSet(aatree_t *aatree, void* key, void* value, aatree_comp_t callback)
+void M_AATreeSet(aatree_t *aatree, void* key, void* value, aatree_comp_t callback, aatree_dealloc_t deallocator)
 {
 	aatree->root = M_AATreeSet_Node(aatree->root, aatree->flags, key, value, callback);
 }
 
 // Caveat: we don't distinguish between nodes that don't exists
 // and nodes with value == NULL.
-static void *M_AATreeGet_Node(aatree_node_t *node, void* key, aatree_comp_t callback)
+static void *M_AATreeGet_Node(aatree_node_t *node, void* key, aatree_comp_t callback, aatree_dealloc_t deallocator)
 {
 	if (node && callback)
 	{
 		if (callback(key, node->key) == 0)
+		{
+			if (deallocator) deallocator(key);
 			return node->value;
+		}
 		else if(callback(node->key, key) < 0)
-			return M_AATreeGet_Node(node->right, key, callback);
+			return M_AATreeGet_Node(node->right, key, callback, deallocator);
 		else
-			return M_AATreeGet_Node(node->left, key, callback);
+			return M_AATreeGet_Node(node->left, key, callback, deallocator);
 	}
 
+	if (deallocator) deallocator(key);
 	return NULL;
 }
 
-void *M_AATreeGet(aatree_t *aatree, void* key, aatree_comp_t callback)
+void *M_AATreeGet(aatree_t *aatree, void* key, aatree_comp_t callback, aatree_dealloc_t deallocator)
 {
-	return M_AATreeGet_Node(aatree->root, key, callback);
+	return M_AATreeGet_Node(aatree->root, key, callback, deallocator);
 }
 
 static void M_AATreeIterate_Node(aatree_node_t *node, aatree_iter_t callback)

@@ -1334,6 +1334,11 @@ static INT32 W_CheckFolderKeys(void* key1, void* key2)
 	return strcmp((char *)key1, (char *)key2);
 }
 
+static void W_DeallocFolderKey(void* key)
+{
+	Z_Free(key);
+}
+
 // Look for the first lump from a folder.
 UINT16 W_CheckNumForFolderStartPK3(const char *name, UINT16 wad, UINT16 startlump)
 {
@@ -1342,7 +1347,7 @@ UINT16 W_CheckNumForFolderStartPK3(const char *name, UINT16 wad, UINT16 startlum
 	lumpinfo_t *lump_p = wadfiles[wad]->lumpinfo + startlump;
 	name_length = strlen(name);
 
-	void *val = M_AATreeGet(wadfiles[wad]->startfolders, Z_StrDup(name), W_CheckFolderKeys);
+	void *val = M_AATreeGet(wadfiles[wad]->startfolders, Z_StrDup(name), W_CheckFolderKeys, W_DeallocFolderKey);
 	if (val != NULL)
 		return (uintptr_t)val;
 
@@ -1370,7 +1375,7 @@ UINT16 W_CheckNumForFolderEndPK3(const char *name, UINT16 wad, UINT16 startlump)
 	lumpinfo_t *lump_p = wadfiles[wad]->lumpinfo + startlump;
 	size_t name_length = strlen(name);
 	
-	void *val = M_AATreeGet(wadfiles[wad]->endfolders, Z_StrDup(name), W_CheckFolderKeys);
+	void *val = M_AATreeGet(wadfiles[wad]->endfolders, Z_StrDup(name), W_CheckFolderKeys, W_DeallocFolderKey);
 	if (val != NULL)
 		return (uintptr_t)val;
 	
